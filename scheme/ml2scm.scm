@@ -3,7 +3,7 @@
 
 (define output-directory "/root/temp/")
 
-(define name 'Binarymap)
+(define name 'List)
 
 (define name-string (symbol->string name))
 
@@ -165,7 +165,7 @@
      (values '(#f)
              defined))
     ((list 'LongVId 'nil)
-     (values '(())
+     (values '((list))
              defined))
     ((list (or 'VId 'StrId 'LongVId 'SigId 'LongStrId) a)
      (cond ((regexp-match "([^\\.]*)\\.(.*)" (symbol->string a))
@@ -173,7 +173,8 @@
                  ((list _ module-string var-string)
                   (let ((module-name (string->symbol module-string))
                         (var-name (string->symbol var-string)))
-                    (values `((ml-dot ,module-name ,var-name))
+                    (set! requires (cons module-name requires))
+                    (values `((ml-dot ,(make-str-name module-name) ,var-name))
                             ;maybe need to open .data file for that module?
                             defined)))))
            (else
@@ -273,7 +274,7 @@
     ((list (or 'COLONPat 'COLONExp) _ v _)
      (translate v defined))
     ((list 'RECORDAtExp _)
-     (values '(())
+     (values '((list))
              defined))
     ((list 'RECORDAtExp _ p)
      (translate p defined))
@@ -284,7 +285,7 @@
      (values '(_)
              defined))
     ((list 'DOTSPatRow _)
-     (values `((list ,(gensym) ...))
+     (values `((list _ ...))
              defined))
     ((list 'LOCALStrDec _ locdef boddef)
      ;boddef should be translated to be list of definition expression
@@ -421,10 +422,12 @@
        ;update requires
        (set! requires (cons (car translated-p) requires))
        (values `((ml-open ,(make-str-name (car translated-p))))
-               (append! (with-input-from-file
-                            (string-append output-directory (symbol->string (car translated-p)) ".data")
-                          read)
-                        new-defined))))
+               (with-handlers ((value (lambda (_) new-defined)))
+                 (lset-union! eq?
+                              (with-input-from-file
+                                  (string-append output-directory (symbol->string (car translated-p)) ".data")
+                                read)
+                              new-defined)))))
     ((list 'ExDesc _ p)
      (let-values (((translated-p new-defined)
                    (translate p defined)))
@@ -445,8 +448,11 @@
     ((list 'EMPTYDec _)
      (values '()
              defined))
+    ((list (or 'DATATYPE2Spec 'DATATYPE2Dec) _ ...)
+     (values '()
+             defined))
     (else
-     (error (car else))
+     (error else)
      )))
 
 (define (beta-redex? literals body)
@@ -522,23 +528,15 @@
             (improve cond)
             (improve then)
             (improve else))))
+    ;remove direct match-lambda call
+    ((list (list-rest 'match-lambda clauses) arg)
+     `(match ,arg ,@clauses))
     ;match-lambda -> lambda
     ((list 'match-lambda (list (? symbol? literal) body))
      (if (beta-redex? (list literal) body)
          ;beta reduction (with curry)
          (improve (beta-reduct `(match-lambda (,literal ,body))))
          `(lambda (,literal) ,(improve body))))
-    ;match-lambda -> lambda, for Records
-    ;match-lambda -> match-lambda*
-    #;((list 'match-lambda
-             (list (list 'list-no-order (list 'cons (list 'quote (? number? _)) arg) ...) body) ...)
-       (if (and (= (length body) 1)
-                (andmap symbol? (car arg)))
-           (list* 'lambda (car arg) (improve body))
-           (cons 'match-lambda*
-                 (map (lambda (arg body)
-                        (list (cons 'list arg) (improve body)))
-                      arg body))))
     ;match-define -> define
     ((list 'match-define (? symbol? var) val)
      `(define ,var ,(improve val)))
@@ -548,9 +546,8 @@
                             lab val)
                      ,sym ...))
     ;recursion
-    ((cons p1 p2)
-     (cons (improve p1)
-           (improve p2)))
+    ((? list? p)
+     (map improve p))
     (else
      else)))
 
@@ -580,7 +577,7 @@
                (require ,@(map (lambda (id)
                                  (string-append (symbol->string id) ".ss"))
                                requires))
-               ,@(improve code)))
+               ,@(map improve code)))
   (my-write (string-append output-directory name-string ".data")
             defined))
 
@@ -594,4 +591,4 @@
                         ,@(map (lambda (id)
                                  (string-append (symbol->string id) ".ss"))
                                requires))
-               ,@(improve code))))
+               ,@(map improve code))))

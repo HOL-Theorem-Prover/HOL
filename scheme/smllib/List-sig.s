@@ -4,7 +4,7 @@
   (SIGDECTopDec /usr/local/mosml/src/mosmllib/List.sig:1.0.126.3
     (SigDec /usr/local/mosml/src/mosmllib/List.sig:1.0.126.3
       (SigBind /usr/local/mosml/src/mosmllib/List.sig:1.10.126.3
-        (SigId Binaryset)
+        (SigId List)
         (SIGSigExp /usr/local/mosml/src/mosmllib/List.sig:2.0.126.3
           (SEQSpec /usr/local/mosml/src/mosmllib/List.sig:6.0.126.0
             (DATATYPE2Spec /usr/local/mosml/src/mosmllib/List.sig:6.0.6.29
