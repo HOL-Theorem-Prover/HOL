@@ -270,6 +270,12 @@ val perm_UNION = store_thm(
     (setpm pm p (s1 UNION s2) = setpm pm p s1 UNION setpm pm p s2)``,
   SRW_TAC [][EXTENSION, perm_IN]);
 
+val perm_DIFF = store_thm(
+  "perm_DIFF",
+  ``is_perm pm ==> (setpm pm pi (s DIFF t) = 
+                    setpm pm pi s DIFF setpm pm pi t)``,
+  SRW_TAC [][EXTENSION, perm_IN]);
+
 val perm_DELETE = store_thm(
   "perm_DELETE",
   ``is_perm pm ==> (setpm pm p (s DELETE e) = setpm pm p s DELETE pm p e)``,
