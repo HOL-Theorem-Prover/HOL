@@ -1,0 +1,24 @@
+(Empty
+ SOME
+ NONE
+ LESS
+ EQUAL
+ GREATER
+ QUOTE
+ ANTIQUOTE
+ Out_of_memory
+ Invalid_argument
+ Graphic
+ Interrupt
+ Overflow
+ Fail
+ Ord
+ Match
+ Bind
+ Size
+ Div
+ SysErr
+ Subscript
+ Chr
+ Io
+ Domain)
