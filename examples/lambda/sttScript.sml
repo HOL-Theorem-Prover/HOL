@@ -264,7 +264,8 @@ val (hastype2_rules, hastype2_ind, hastype2_cases) = Hol_reln`
   (!Gamma m n A B. Gamma ||- m -: A --> B /\ Gamma ||- n -: A ==>
                    Gamma ||- m @@ n -: B) /\
   (!Gamma m x A B. (!v. ~(v IN ctxtFV Gamma) ==>
-                        (v,A) :: Gamma ||- [VAR v/x]m -: B) ==>
+                        (v,A) :: Gamma ||- [VAR v/x]m -: B) /\
+                   ~(x IN ctxtFV Gamma) ==>
                    Gamma ||- LAM x m -: A --> B)
 `;
 
@@ -279,11 +280,69 @@ val hastype2_swap = store_thm(
     METIS_TAC [basic_swapTheory.lswapstr_inverse]
   ]);
 
+val IN_ctxtFV_pm = store_thm(
+  "IN_ctxtFV_pm",
+  ``x IN ctxtFV (ctxtswap pi G) = lswapstr (REVERSE pi) x IN ctxtFV G``,
+  Induct_on `G` THEN SRW_TAC [][]);
+
+val hastype2_bvc_ind = store_thm(
+  "hastype2_bvc_ind",
+  ``!P fv.
+      (!x. FINITE (fv x)) /\
+      (!G s A x. 
+         valid_ctxt G /\ MEM (s,A) G ==> P G (VAR s) A x) 
+         /\
+      (!G m n A B x.
+          (!y. P G m (A --> B) y) /\ 
+          (!y. P G n A y) ==> 
+             P G (m @@ n) B x) /\
+
+      (!G m u A B x.
+          (!v y. ~(v IN ctxtFV G) ==> P ((v,A)::G) ([VAR v/u] m) B y) /\
+          ~(u IN ctxtFV G) /\ ~(u IN fv x) 
+        ==>
+          P G (LAM u m) (A --> B) x)
+    ==>
+      !G m ty. G ||- m -: ty ==> !x. P G m ty x``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN 
+  Q_TAC SUFF_TAC `!G m ty. G ||- m -: ty ==> 
+                           !pi x. P (ctxtswap pi G) (tpm pi m) ty x`
+        THEN1 METIS_TAC [tpm_NIL, ctxtswap_NIL] THEN 
+  HO_MATCH_MP_TAC hastype2_ind THEN 
+  SRW_TAC [][] THEN1 METIS_TAC [] THEN 
+  Q.MATCH_ABBREV_TAC `P GG (LAM vv MM) (A --> B) xx` THEN 
+  Q_TAC (NEW_TAC "z") `{vv} UNION FV MM UNION ctxtFV GG UNION fv xx` THEN 
+  `LAM vv MM = LAM z (tpm [(z,vv)] MM)`
+     by SRW_TAC [][tpm_ALPHA] THEN 
+  SRW_TAC [][] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN 
+  SRW_TAC [][] THEN 
+  FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [tpm_subst] THEN 
+  FIRST_X_ASSUM (Q.SPECL_THEN [`lswapstr (REVERSE ((z,vv)::pi)) v`,
+                               `(z,vv)::pi`, `y`]
+                 MP_TAC) THEN 
+  ASM_SIMP_TAC (srw_ss()) [basic_swapTheory.lswapstr_APPEND] THEN 
+  `~(vv IN ctxtFV GG)` by SRW_TAC [][Abbr`vv`, Abbr`GG`] THEN 
+  `ctxtswap ((z,vv)::pi) G = ctxtswap [(z,vv)] GG`
+     by SRW_TAC [][Abbr`GG`, GSYM ctxtswap_APPEND] THEN 
+  ` _ = GG` by SRW_TAC [][ctxtswap_fresh] THEN 
+  `tpm ((z,vv)::pi) m = tpm [(z,vv)] MM`
+     by SRW_TAC [][Abbr`MM`, GSYM tpm_APPEND] THEN 
+  SRW_TAC [][] THEN 
+  FIRST_X_ASSUM MATCH_MP_TAC THEN 
+  FULL_SIMP_TAC (srw_ss()) [IN_ctxtFV_pm, 
+                            basic_swapTheory.lswapstr_APPEND]);
+  
+val hastype2_bvc_ind0 = save_thm(
+  "hastype2_bvc_ind0",
+  (Q.GEN `P` o Q.GEN `X` o 
+   SIMP_RULE bool_ss [] o 
+   Q.SPECL [`\G m ty x. P G m ty`, `\x. X`] o 
+   INST_TYPE [alpha |-> ``:unit``]) hastype2_bvc_ind)
+
 val hastype2_valid_ctxt = store_thm(
   "hastype2_valid_ctxt",
   ``!G m A. G ||- m -: A ==> valid_ctxt G``,
-  HO_MATCH_MP_TAC hastype2_ind THEN SRW_TAC [][] THEN
-  Q_TAC (NEW_TAC "z") `ctxtFV G` THEN METIS_TAC []);
+  HO_MATCH_MP_TAC hastype2_ind THEN SRW_TAC [][] THEN METIS_TAC []);
 
 val hastype_FV = store_thm(
   "hastype_FV",
@@ -306,17 +365,7 @@ val hastype2_hastype = prove(
   HO_MATCH_MP_TAC hastype2_ind THEN REPEAT CONJ_TAC THENL [
     (* var case *) SRW_TAC [][hastype_rules],
     (* app case *) METIS_TAC [hastype_rules],
-    (* abs case; first state the goal, with IH etc *)
-    Q_TAC SUFF_TAC
-          `!G m x A B.
-              (!v. ~(v IN ctxtFV G) ==> (v,A) :: G |- [VAR v/x] m -: B) ==>
-              G |- LAM x m -: A --> B` THEN1 METIS_TAC [] THEN
-    REPEAT STRIP_TAC THEN
-    (* fresh z *)
-    Q_TAC (NEW_TAC "z") `FV m UNION ctxtFV G UNION {x}` THEN
-    `LAM x m = LAM z ([VAR z/x] m)`
-       by SRW_TAC [][SIMPLE_ALPHA] THEN
-    METIS_TAC [hastype_rules]
+    (* abs case *) METIS_TAC [hastype_rules, lemma14a]
   ]);
 
 val hastype_hastype2 = prove(
@@ -328,17 +377,15 @@ val hastype_hastype2 = prove(
     (* app case *) METIS_TAC [hastype2_rules],
     (* abs case; goal with IH is: *)
     MATCH_MP_TAC (last (CONJUNCTS hastype2_rules)) THEN
-    Q.HO_MATCH_ABBREV_TAC
-          `!u. ~(u IN ctxtFV G) ==> (u,A)::G ||- [VAR u/v] m -: B` THEN
-    Q.RM_ALL_ABBREVS_TAC THEN REPEAT STRIP_TAC THEN
-    Cases_on `v = u` THEN1 SRW_TAC [][lemma14a] THEN
+    SRW_TAC [][] THEN 
+    Cases_on `v = v'` THEN1 SRW_TAC [][lemma14a] THEN
     (* if v = x, proof is trivial; rest of tactic is for other case *)
-    `~(u IN FV m)`
+    `~(v' IN FV m)`
          by METIS_TAC [hastype2_hastype, hastype_FV, ctxtFV_def,
                        pairTheory.FST, pred_setTheory.IN_INSERT] THEN
-    `[VAR u/v] m = tpm [(u,v)] m` by SRW_TAC [][fresh_tpm_subst] THEN
+    `[VAR v'/v] m = tpm [(v',v)] m` by SRW_TAC [][fresh_tpm_subst] THEN
     Q_TAC SUFF_TAC
-          `(v,A) :: ctxtswap [(u,v)] G ||- m -: B`
+          `(v,A) :: ctxtswap [(v',v)] G ||- m -: A'`
           THEN1 SRW_TAC [][hastype2_swap_eqn] THEN
     SRW_TAC [][ctxtswap_fresh]
   ]);
