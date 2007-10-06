@@ -666,6 +666,82 @@ val perm_of_unchanged = store_thm(
   Induct THEN SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD] THEN
   SRW_TAC [][swapstr_def]);
 
+val patoms_APPEND = store_thm( 
+  "patoms_APPEND",
+  ``patoms (x ++ y) = patoms x UNION patoms y``,
+  Induct_on `x` THEN 
+  ASM_SIMP_TAC (srw_ss()) [EXTENSION, 
+                           pairTheory.FORALL_PROD] THEN 
+  METIS_TAC []);
+
+val patoms_REVERSE = store_thm(
+  "patoms_REVERSE",
+  ``patoms (REVERSE pi) = patoms pi``,
+  Induct_on `pi` THEN 
+  ASM_SIMP_TAC (srw_ss()) [EXTENSION, pairTheory.FORALL_PROD, 
+                           patoms_APPEND] THEN METIS_TAC []);
+
+
+val pm_cpmpm_cancel = prove(
+  ``is_perm pm ==> 
+     (pm [(x,y)] (pm (cpmpm [(x,y)] pi) (pm [(x,y)] t)) = pm pi t)``,
+  STRIP_TAC THEN Induct_on `pi` THEN 
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, is_perm_nil, 
+                           is_perm_sing_inv] THEN 
+  `!p q pi t. pm ((swapstr x y p, swapstr x y q)::pi) t = 
+              pm [(swapstr x y p, swapstr x y q)] (pm pi t)`
+     by SRW_TAC [][GSYM is_perm_decompose] THEN 
+  REPEAT GEN_TAC THEN 
+  POP_ASSUM (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) THEN 
+  ONCE_REWRITE_TAC [MP (GSYM is_perm_sing_to_back) 
+                       (ASSUME ``is_perm pm``)] THEN 
+  SRW_TAC [][] THEN 
+  SRW_TAC [][GSYM is_perm_decompose]);
+  
+val is_perm_supp_empty = store_thm(
+  "is_perm_supp_empty",
+  ``is_perm pm ==> (supp (fnpm cpmpm (fnpm pm pm)) pm = {})``,
+  STRIP_TAC THEN MATCH_MP_TAC supp_unique_apart THEN SRW_TAC [][] THEN 
+  SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, pm_cpmpm_cancel]);
+
+val supp_pm_fresh = store_thm(
+  "supp_pm_fresh",
+  ``is_perm pm /\ (supp pm x = {}) ==> (pm pi x = x)``,
+  Induct_on `pi` THEN 
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, is_perm_nil] THEN 
+  REPEAT STRIP_TAC THEN 
+  `pm ((p_1,p_2)::pi) x = pm [(p_1,p_2)] (pm pi x)`
+     by SIMP_TAC (srw_ss()) [GSYM is_perm_decompose, 
+                             ASSUME ``is_perm pm``] THEN 
+  SRW_TAC [][supp_fresh]);
+
+val pm_pm_cpmpm = store_thm(
+  "pm_pm_cpmpm",
+  ``is_perm pm ==> 
+        (pm pi1 (pm pi2 s) = pm (cpmpm pi1 pi2) (pm pi1 s))``,
+  STRIP_TAC THEN Q.MATCH_ABBREV_TAC `L = R` THEN 
+  `L = fnpm pm pm pi1 (pm pi2) (pm pi1 s)`
+     by SRW_TAC [][fnpm_def, is_perm_inverse] THEN 
+  `_ = fnpm cpmpm 
+            (fnpm pm pm) 
+            pi1 
+            pm
+            (cpmpm pi1 pi2) 
+            (pm pi1 s)`
+     by (ONCE_REWRITE_TAC [fnpm_def] THEN 
+         ONCE_REWRITE_TAC [fnpm_def] THEN 
+         SRW_TAC [][is_perm_inverse]) THEN 
+  `fnpm cpmpm (fnpm pm pm) pi1 pm = pm`
+     by SRW_TAC [][supp_pm_fresh, is_perm_supp_empty] THEN 
+  METIS_TAC []);
+
+val lswapstr_lswapstr_cpmpm = save_thm(
+  "lswapstr_lswapstr_cpmpm",
+  (SIMP_RULE (srw_ss()) []  o Q.INST [`pm` |-> `lswapstr`] o 
+   INST_TYPE [alpha |-> ``:string``]) pm_pm_cpmpm);
+
+
+
 (* support for honest to goodness permutations, not just their
    representations *)
 val perm_supp_SUBSET_plistvars = prove(
