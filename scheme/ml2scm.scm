@@ -1,9 +1,10 @@
 (require (lib "plt-match.ss")
-         (lib "pretty.ss"))
+         (lib "pretty.ss")
+         (lib "1.ss" "srfi"))
 
 (define output-directory "/root/temp/")
 
-(define name 'List)
+(define name 'Strbase)
 
 (define name-string (symbol->string name))
 
@@ -107,6 +108,8 @@
              ((list (list (or 'list 'list-no-order) (list 'cons (list 'quote (? number? _)) act-arg) ...)
                     (not #f))
               (cons scheme-f act-arg))
+             ((list act-arg (not #f))
+              (list scheme-f act-arg))
              (else
               (list f arg)))))
         ((and (pair? f)
@@ -173,7 +176,8 @@
                  ((list _ module-string var-string)
                   (let ((module-name (string->symbol module-string))
                         (var-name (string->symbol var-string)))
-                    (set! requires (cons module-name requires))
+                    (set! requires
+                          (lset-union! eq? requires (list module-name)))
                     (values `((ml-dot ,(make-str-name module-name) ,var-name))
                             ;maybe need to open .data file for that module?
                             defined)))))
@@ -230,6 +234,9 @@
      (translate p defined))
     ((list (or 'INTSCon 'REALSCon 'STRINGSCon) n)
      (values (list n)
+             defined))
+    ((list 'CHARSCon bytes)
+     (values (list (integer->char (bytes-ref bytes 0)))
              defined))
     ((list 'EMPTYStrDec _)
      (values ()
@@ -420,14 +427,14 @@
      (let-values (((translated-p new-defined)
                    (translate p defined)))
        ;update requires
-       (set! requires (cons (car translated-p) requires))
+       (set! requires
+             (lset-union! eq? requires (list (car translated-p))))
        (values `((ml-open ,(make-str-name (car translated-p))))
-               (with-handlers ((value (lambda (_) new-defined)))
-                 (lset-union! eq?
-                              (with-input-from-file
-                                  (string-append output-directory (symbol->string (car translated-p)) ".data")
-                                read)
-                              new-defined)))))
+               (lset-union! eq?
+                            (with-input-from-file
+                                (string-append output-directory (symbol->string (car translated-p)) ".data")
+                              read)
+                            new-defined))))
     ((list 'ExDesc _ p)
      (let-values (((translated-p new-defined)
                    (translate p defined)))
@@ -529,8 +536,8 @@
             (improve then)
             (improve else))))
     ;remove direct match-lambda call
-    ((list (list-rest 'match-lambda clauses) arg)
-     `(match ,arg ,@clauses))
+    #;((list (list-rest 'match-lambda clauses) arg)
+       `(match ,arg ,@clauses))
     ;match-lambda -> lambda
     ((list 'match-lambda (list (? symbol? literal) body))
      (if (beta-redex? (list literal) body)
@@ -563,10 +570,10 @@
 
 (define ml-buildin-datatypes ;including exceptions
   '(SOME NONE LESS EQUAL GREATER
-        QUOTE ANTIQUOTE
-        Out_of_memory Invalid_argument Graphic
-        Interrupt Overflow Fail Ord Match Bind
-        Size Div SysErr Subscript Chr Io Domain))
+         QUOTE ANTIQUOTE
+         Out_of_memory Invalid_argument Graphic
+         Interrupt Overflow Fail Ord Match Bind
+         Size Div SysErr Subscript Chr Io Domain))
 
 ;for signature
 (let-values (((code defined)
