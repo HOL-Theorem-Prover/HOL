@@ -25,8 +25,18 @@ local open Absyn
 in
 fun term_of_absyn absyn =
   let val clauses   = strip_conj absyn
-      val heads     = mk_set (map head clauses)
-      val names     = map dest heads
+      val heads     = map head clauses
+      val names     = mk_set (map dest heads)
+      val _ = 
+          case intersect names ["/\\", "\\/", "!"] of 
+            [] => ()
+          | h :: t => 
+            raise ERR
+                    "term_of_absyn"
+                    ("Abstract syntax looks to be trying to redefine "^h^" "^
+                     (if null t then "" else "(and others)") ^ 
+                     ". This is probably an error.\nIf you must, define with \
+                     \another name and use overload_on")
       val resdata   = List.map (fn s => (s, Parse.hide s)) names
       fun restore() =
         List.app (fn (s,d) => Parse.update_overload_maps s d) resdata
