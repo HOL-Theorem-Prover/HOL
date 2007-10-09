@@ -740,7 +740,11 @@ val lswapstr_lswapstr_cpmpm = save_thm(
   (SIMP_RULE (srw_ss()) []  o Q.INST [`pm` |-> `lswapstr`] o 
    INST_TYPE [alpha |-> ``:string``]) pm_pm_cpmpm);
 
-
+val patoms_cpmpm = store_thm(
+  "patoms_cpmpm",
+  ``patoms (cpmpm pi1 pi2) = setpm lswapstr pi1 (patoms pi2)``,
+  SIMP_TAC bool_ss [GSYM supp_cpmpm] THEN MATCH_MP_TAC perm_supp THEN 
+  SRW_TAC [][]);
 
 (* support for honest to goodness permutations, not just their
    representations *)
