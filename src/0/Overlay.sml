@@ -5,6 +5,7 @@
 
 structure CoreKernel :> CoreKernel =
 struct
+  structure Kind       = Kind
   structure Type       = Type
   structure Term       = Term
   structure Tag        = Tag : RestrictedTag
@@ -27,6 +28,7 @@ open CoreKernel;
 
 infix ++ && |-> THEN THEN1 THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ?>;
 infixr ##;
+infixr 3 ==>;
 infixr 3 -->;
 infix 8 via by;
 

@@ -30,10 +30,28 @@ fun id_to_string (ref p) = fullname p;
  * HOL types are somewhat akin to terms in first order logic.                *
  *---------------------------------------------------------------------------*)
 
-type tyconst = id * int
+(*---------------------------------------------------------------------------*
+ * The kind in type constants and variables regulates the formation of types.*
+ * The int in type constants and variables is the rank.                      *
+ * The rank is actually a natural number >= 0.                               *
+ * Universal types (TyAll) quantify over types of a given rank or lower.     *
+ * Bound type variables are represented internally using deBruijn indices    *
+ * and explicit substitution. Externally, as always, the interface is to a   *
+ * name-carrying syntax.                                                     *
+ *---------------------------------------------------------------------------*)
 
-datatype hol_type = Tyv of string
-                  | Tyapp of tyconst * hol_type list;
+datatype kind = Type
+              | Oper of kind * kind
+
+type tyconst  =  id * kind * int (* rank *)
+type tyvar = string * kind * int (* rank *)
+
+datatype hol_type = TyFv of tyvar
+                  | TyBv of int
+                  | TyCon of tyconst
+                  | TyApp of hol_type * hol_type
+                  | TyAll of tyvar * hol_type
+                  | TyAbs of tyvar * hol_type;
 
 
 (*---------------------------------------------------------------------------*
@@ -57,7 +75,9 @@ datatype term = Fv of string * hol_type
               | Bv of int
               | Const of tmconst
               | Comb  of term * term
+              | TComb of term * hol_type
               | Abs   of term * term
+              | TAbs  of tyvar * term
               | Clos  of term Subst.subs * term;
 
 (*---------------------------------------------------------------------------

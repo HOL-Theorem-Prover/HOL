@@ -1,6 +1,7 @@
 signature CoreKernel = sig
   structure Tag  : RestrictedTag
-  structure Type : Type
+  structure Kind : Kind
+  structure Type : Type             where type kind     = Kind.kind
   structure Term : Term             where type hol_type = Type.hol_type
 
   structure Thm  : Thm              where type hol_type = Type.hol_type

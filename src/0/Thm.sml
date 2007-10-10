@@ -415,6 +415,70 @@ fun SYM th =
  *
  *---------------------------------------------------------------------------*)
 
+(*---------------------------------------------------------------------------
+ * Set up a sharing table.
+ *---------------------------------------------------------------------------*)
+
+val table_size = 311
+val hash = Lib.hash table_size;
+
+val share_table = Array.array(table_size, [] :(Term.term * int)list);
+val taken = ref 0;
+
+fun reset_share_table () =
+  (taken := 0;
+   Lib.for_se 0 (table_size-1) (fn i => Array.update(share_table,i,[])));
+
+fun hash_type ty n =
+  hash(Type.dest_vartype ty) (0,n)
+  handle HOL_ERR _ =>
+     let val {Tyop,Thy,Args} = Type.dest_thy_type ty
+     in itlist hash_type Args (hash Thy (0, hash Tyop (0,n)))
+     end;
+
+fun hash_atom tm n =
+  let val (Name,Ty) = Term.dest_var tm
+  in hash_type Ty (hash Name (0,n))
+  end handle HOL_ERR _ =>
+       let val {Name,Thy,Ty} = Term.dest_thy_const tm
+       in hash_type Ty (hash Thy (0, hash Name (0,n)))
+       end;
+
+
+(*---------------------------------------------------------------------------
+ * Add an atom to the atom hash table, checking to see if it is already there
+ * first.
+ *---------------------------------------------------------------------------*)
+
+fun add tm =
+  let val i = hash_atom tm 0
+      val els = Array.sub(share_table, i)
+      fun loop [] =
+               (Array.update(share_table, i, (tm,!taken)::els);
+                taken := !taken + 1)
+        | loop ((x,index)::rst) = if x=tm then () else loop rst
+  in
+    loop els
+  end;
+
+
+(*---------------------------------------------------------------------------*)
+(* Get the vector index of an atom.                                          *)
+(*---------------------------------------------------------------------------*)
+
+fun index tm =
+  let val i = hash_atom tm 0
+      val els = Array.sub(share_table, i)
+      fun loop [] = raise ERR "index" "not found in table"
+        | loop ((x,index)::rst) = if x=tm then index else loop rst
+  in
+    loop els
+  end;
+
+val pp_raw = Term.pp_raw_term index;
+
+val term_to_string = PP.pp_to_string 72 pp_raw;
+
 fun TRANS th1 th2 =
    let val (lhs1,rhs1,ty) = Term.dest_eq_ty (concl th1)
        and (lhs2,rhs2,_)  = Term.dest_eq_ty (concl th2)
@@ -424,7 +488,14 @@ fun TRANS th1 th2 =
    in
      make_thm Count.Trans (ocls, hyps, mk_eq_nocheck ty lhs1 rhs2)
    end
-   handle HOL_ERR _ => ERR "TRANS" "";
+   handle HOL_ERR e  => (*let val (lhs1,rhs1,ty) = Term.dest_eq_ty (concl th1)
+                            and (lhs2,rhs2,_)  = Term.dest_eq_ty (concl th2)
+                            val s = term_to_string rhs1 ^ " <~> " ^
+                                    term_to_string lhs2
+                        in print (s ^ "\n");*)
+                           (print (Feedback.format_ERR e);
+                           ERR "TRANS" "")
+                        (*end*);
 
 
 (*---------------------------------------------------------------------------

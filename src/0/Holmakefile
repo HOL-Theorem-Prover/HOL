@@ -11,28 +11,34 @@ Sig.uo: Sig.sml KernelTypes.ui
 Raw-sig.uo: Raw-sig.sml Sig.uo
 	HOLMOSMLC -c -toplevel Sig.ui Raw-sig.sml
 
-Type.uo: Type.sml Raw-sig.uo
-	HOLMOSMLC -c -toplevel Raw-sig.ui Sig.ui Type.sml
+Kind.uo: Kind.sml Raw-sig.uo
+	HOLMOSMLC -c -toplevel Raw-sig.ui Sig.ui Kind.sml
 
-Term.uo: Term.sml Type.uo
-	HOLMOSMLC -c -toplevel Type.ui Raw-sig.ui Sig.ui Term.sml
+Type.uo: Type.sml Raw-sig.uo Kind.uo
+	HOLMOSMLC -c -toplevel Kind.ui Raw-sig.ui Sig.ui Type.sml
+
+Term.uo: Term.sml Raw-sig.uo Type.uo
+	HOLMOSMLC -c -toplevel Kind.ui Type.ui Raw-sig.ui Sig.ui Term.sml
 
 Thm.uo: Thm.sml Term.uo $(TAG_UID)
-	HOLMOSMLC -c -toplevel Raw-sig.ui Term.ui Type.ui Thm.sml
+	HOLMOSMLC -c -toplevel Raw-sig.ui Term.ui Kind.ui Type.ui Thm.sml
 
 TheoryPP.uo: TheoryPP.sml Thm.uo
-	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Thm.ui TheoryPP.sml
+	HOLMOSMLC -c -toplevel Raw-sig.ui Kind.ui Type.ui Term.ui Thm.ui TheoryPP.sml
 
 Theory.uo: Theory.sml TheoryPP.uo
-	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Thm.ui TheoryPP.ui Theory.sml
+	HOLMOSMLC -c -toplevel Raw-sig.ui Kind.ui Type.ui Term.ui Thm.ui TheoryPP.ui Theory.sml
 
 Definition.uo: Definition.sml Theory.uo
-	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Thm.ui Theory.ui Definition.sml
+	HOLMOSMLC -c -toplevel Raw-sig.ui Kind.ui Type.ui Term.ui Thm.ui Theory.ui Definition.sml
 
 Net.uo: Net.sml Term.uo
-	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Net.sml
+	HOLMOSMLC -c -toplevel Raw-sig.ui Kind.ui Type.ui Term.ui Net.sml
 
-Type-sig.uo: Type-sig.sml
+Kind-sig.uo: Kind-sig.sml
+	HOLMOSMLC -c -toplevel Kind-sig.sml
+
+Type-sig.uo: Type-sig.sml Subst.uo
 	HOLMOSMLC -c -toplevel Type-sig.sml
 
 Term-sig.uo: Term-sig.sml
@@ -50,21 +56,21 @@ Theory-sig.uo: Theory-sig.sml
 Definition-sig.uo: Definition-sig.sml
 	HOLMOSMLC -c -toplevel Definition-sig.sml
 
-CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo Type-sig.uo Term-sig.uo \
-                   Thm-sig.uo $(RTAG_UID) Theory-sig.uo \
+CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo Kind-sig.uo Type-sig.uo \
+                   Term-sig.uo Thm-sig.uo $(RTAG_UID) Theory-sig.uo \
                    TheoryPP-sig.uo Definition-sig.uo $(TAG_UID)
-	HOLMOSMLC -c -toplevel Type-sig.ui Term-sig.ui $(RTAG_UI) Thm-sig.ui \
-                               Theory-sig.ui TheoryPP-sig.ui Net-sig.ui \
-                               Definition-sig.ui CoreKernel-sig.sml
+	HOLMOSMLC -c -toplevel Kind-sig.ui Type-sig.ui Term-sig.ui $(RTAG_UI) \
+                               Thm-sig.ui Theory-sig.ui TheoryPP-sig.ui \
+                               Net-sig.ui Definition-sig.ui CoreKernel-sig.sml
 
 Net-sig.uo: Net-sig.sml
 	HOLMOSMLC -c -toplevel Net-sig.sml
 
-Overlay.uo: Overlay.sml CoreKernel-sig.uo Type.uo Term.uo $(RTAG_UID) Thm.uo \
-            TheoryPP.uo Theory.uo Definition.uo Net.uo
-	HOLMOSMLC -c -toplevel CoreKernel-sig.ui Type.ui Term.ui Thm.ui \
-                               TheoryPP.ui Definition.ui $(RTAG_UI) Theory.ui \
-                               Net.ui  Overlay.sml
+Overlay.uo: Overlay.sml CoreKernel-sig.uo Kind.uo Type.uo Term.uo $(RTAG_UID) \
+            Thm.uo TheoryPP.uo Theory.uo Definition.uo Net.uo
+	HOLMOSMLC -c -toplevel CoreKernel-sig.ui Kind.ui Type.ui Term.ui \
+                               Thm.ui TheoryPP.ui Definition.ui $(RTAG_UI) \
+                               Theory.ui Net.ui  Overlay.sml
 
 HolKernel.uo: Overlay.uo HolKernel.sml
 	HOLMOSMLC -c -structure Overlay.ui HolKernel.sml

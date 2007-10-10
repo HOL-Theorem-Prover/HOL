@@ -12,13 +12,24 @@
 structure Term : RawTerm =
 struct
 
-open Feedback Lib Subst KernelTypes
+(*
+In *scratch*, type
+(hol-set-executable mosml-executable)
+and type Ctrl-j.
+
+loadPath := "/usr/local/hol/kananaskis-5w/sigobj" :: !loadPath;
+app load ["Feedback","Lib","Subst","KernelTypes","Type","Sig","Lexis",
+          "Polyhash","Binarymap"];
+*)
+
+open Feedback Lib Subst KernelTypes Type;
 
 type 'a set = 'a HOLset.set;
 
 val ERR = mk_HOL_ERR "Term";
 val WARN = HOL_WARNING "Term";
 
+val ==> = Kind.==>;   infixr 3 ==>;
 val --> = Type.-->;   infixr 3 -->;
 
 infix |-> ##;
@@ -32,7 +43,7 @@ structure TermSig =
       fun key (Const(r,_)) = r
         | key _ = raise ERR "key" "not a constant"
       val ERR = ERR
-      val table_size = 1999)
+      val table_size = 1999);
 
 
 (*---------------------------------------------------------------------------*
@@ -53,18 +64,20 @@ end;
 (*---------------------------------------------------------------------------*
     Useful functions to hide explicit substitutions
     Important invariant: never delay subst on atoms, and compose Clos.
-    Therefore, in Clos{Env,Body}, Body is either a Comb or an Abs.
+    Therefore, in Clos{Env,Body}, Body is either a Comb, TComb, Abs, or TAbs.
     This invariant is enforced if we always use mk_clos instead of Clos.
  ---------------------------------------------------------------------------*)
 
-fun mk_clos (s, Bv i) =
-      (case (Subst.exp_rel(s,i))
-        of (0, SOME t) => t
+fun pair_comp (atm,btm) = Subst.comp mk_clos (atm,btm)
+
+and mk_clos (stm, Bv i) =
+      (case (Subst.exp_rel(stm,i))
+        of (0, SOME t) => mk_clos (Subst.id, t)
          | (k, SOME t) => mk_clos (Subst.shift(k,Subst.id), t)
          | (v, NONE)   => Bv v)
   | mk_clos (s, t as Fv _)     = t
   | mk_clos (s, t as Const _)  = t
-  | mk_clos (s,Clos(Env,Body)) = Clos(Subst.comp mk_clos (s,Env), Body)
+  | mk_clos (s,Clos(Env,Body)) = Clos(pair_comp (s,Env), Body)
   | mk_clos (s,t)              = Clos(s, t)
 ;
 
@@ -73,16 +86,19 @@ fun mk_clos (s, Bv i) =
     not a delayed substitution.
  ---------------------------------------------------------------------------*)
 
-fun push_clos (Clos(E, Comb(f,x))) = Comb(mk_clos(E,f), mk_clos(E,x))
-  | push_clos (Clos(E, Abs(v,M)))  = Abs(v, mk_clos (Subst.lift(1,E),M))
-  | push_clos _ = raise ERR "push_clos" "not a subst"
-;
+fun push_clos (Clos(E, Comb(f,x)))     = Comb(mk_clos(E,f), mk_clos(E,x))
+  | push_clos (Clos(E, TComb(f,ty)))   = TComb(mk_clos(E,f), ty)
+  | push_clos (Clos(E, Abs(v,M)))      = Abs(v, mk_clos(Subst.lift(1,E),M))
+  | push_clos (Clos(E, TAbs(a,M)))     = TAbs(a, mk_clos(E,M))
+  | push_clos _ = raise ERR "push_clos" "not a subst";
 
-(*---------------------------------------------------------------------------*
- * Computing the type of a term.                                             *
- *---------------------------------------------------------------------------*)
 
-local fun lookup 0 (ty::_)  = ty
+(*--------------------------------------------------------------------------*
+ * Computing the type of a term.                                            *
+ *--------------------------------------------------------------------------*)
+
+local open Subst
+      fun lookup 0 (ty::_)  = ty
         | lookup n (_::rst) = lookup (n-1) rst
         | lookup _ []       = raise ERR "type_of" "lookup"
       fun ty_of (Fv(_,Ty)) _           = Ty
@@ -90,8 +106,13 @@ local fun lookup 0 (ty::_)  = ty
         | ty_of (Const(_,POLY Ty)) _   = Ty
         | ty_of (Bv i) E               = lookup i E
         | ty_of (Comb(Rator, _)) E     = snd(Type.dom_rng(ty_of Rator E))
-	| ty_of (t as Clos _) E        = ty_of (push_clos t) E
+        | ty_of (TComb(Tm, Ty)) E      =
+                let val (Bty,TBody) = Type.dest_univ_type(ty_of Tm E)
+                in Type.type_subst[Bty |-> Ty] TBody
+                end
         | ty_of (Abs(Fv(_,Ty),Body)) E = Ty --> ty_of Body (Ty::E)
+        | ty_of (TAbs(Btyvar,Body)) E  = TyAll(Btyvar, ty_of Body E)
+	| ty_of (t as Clos _) E        = ty_of (push_clos t) E
         | ty_of _ _ = raise ERR "type_of" "term construction"
 in
 fun type_of tm = ty_of tm []
@@ -102,16 +123,23 @@ end;
                 Discriminators
  ---------------------------------------------------------------------------*)
 
-fun is_bvar (Bv _)    = true | is_bvar _  = false;
-fun is_var  (Fv _)    = true | is_var _   = false;
-fun is_const(Const _) = true | is_const _ = false;
-fun is_comb(Comb _) = true | is_comb(Clos(_,Comb _)) = true | is_comb _ = false
-fun is_abs(Abs _) = true | is_abs(Clos(_,Abs _)) = true | is_abs _ = false;
+fun is_bvar  (Bv _)    = true | is_bvar _  = false;
+fun is_var   (Fv _)    = true | is_var _   = false;
+fun is_const (Const _) = true | is_const (t as Clos _) = is_const (push_clos t)
+                              | is_const _ = false;
+fun is_comb  (Comb _)  = true | is_comb  (Clos(_,Comb _)) = true
+                              | is_comb _ = false
+fun is_tycomb(TComb _) = true | is_tycomb (Clos(_,TComb _)) = true
+                              | is_tycomb _ = false
+fun is_abs   (Abs _)   = true | is_abs (Clos(_,Abs _)) = true
+                              | is_abs _ = false
+fun is_tyabs (TAbs _)  = true | is_tyabs (Clos(_,TAbs _)) = true
+                              | is_tyabs _ = false;
 
 
-(*---------------------------------------------------------------------------*
- * The type variables of a lambda term. Tail recursive (from Ken Larsen).    *
- *---------------------------------------------------------------------------*)
+(*-----------------------------------------------------------------------------*
+ * The free type variables of a lambda term. Tail recursive (from Ken Larsen). *
+ *-----------------------------------------------------------------------------*)
 
 local fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
         | tyV (Bv _) k             = k []
@@ -119,8 +147,11 @@ local fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
         | tyV (Const(_,POLY Ty)) k = k (Type.type_vars Ty)
         | tyV (Comb(Rator,Rand)) k = tyV Rand (fn q1 =>
                                      tyV Rator(fn q2 => k (union q2 q1)))
+        | tyV (TComb(Rator,Ty)) k  = tyV Rator (fn q  =>
+                                         k (union q (Type.type_vars Ty)))
         | tyV (Abs(Bvar,Body)) k   = tyV Body (fn q1 =>
                                      tyV Bvar (fn q2 => k (union q2 q1)))
+        | tyV (TAbs(_,Body)) k     = tyV Body k
         | tyV (t as Clos _) k      = tyV (push_clos t) k
 in
 fun type_vars_in_term tm = tyV tm Lib.I
@@ -130,10 +161,12 @@ end;
  * The free variables of a lambda term. Tail recursive (from Ken Larsen).    *
  *---------------------------------------------------------------------------*)
 
-local fun FV (v as Fv _) A k   = k (Lib.insert v A)
-        | FV (Comb(f,x)) A k   = FV f A (fn q => FV x q k)
-        | FV (Abs(_,Body)) A k = FV Body A k
-        | FV (t as Clos _) A k = FV (push_clos t) A k
+local fun FV (v as Fv _) A k    = k (Lib.insert v A)
+        | FV (Comb(f,x)) A k    = FV f A (fn q => FV x q k)
+        | FV (TComb(f,ty)) A k  = FV f A k
+        | FV (Abs(_,Body)) A k  = FV Body A k
+        | FV (TAbs(_,Body)) A k = FV Body A k
+        | FV (t as Clos _) A k  = FV (push_clos t) A k
         | FV _ A k = k A
 in
 fun free_vars tm = FV tm [] Lib.I
@@ -148,7 +181,9 @@ fun free_vars_lr tm =
         | FV (Bv _::t) A          = FV t A
         | FV (Const _::t) A       = FV t A
         | FV (Comb(M,N)::t) A     = FV (M::N::t) A
+        | FV (TComb(M,ty)::t) A   = FV (M::t) A
         | FV (Abs(_,M)::t) A      = FV (M::t) A
+        | FV (TAbs(_,M)::t) A     = FV (M::t) A
 	| FV ((M as Clos _)::t) A = FV (push_clos M::t) A
         | FV [] A = rev A
   in 
@@ -161,7 +196,9 @@ fun free_vars_lr tm =
 
 local fun vars (v as Fv _) A        = Lib.insert v A
         | vars (Comb(Rator,Rand)) A = vars Rand (vars Rator A)
+        | vars (TComb(Rator,Ty)) A  = vars Rator A
         | vars (Abs(Bvar,Body)) A   = vars Body (vars Bvar A)
+        | vars (TAbs(_,Body)) A     = vars Body A
 	| vars (t as Clos _) A      = vars (push_clos t) A
         | vars _ A = A
 in
@@ -185,7 +222,7 @@ val empty_varset = HOLset.empty var_compare
 
 (* ----------------------------------------------------------------------
     A total ordering on terms that respects alpha equivalence.
-    Fv < Bv < Const < Comb < Abs
+    Fv < Bv < Const < Comb < TComb < Abs < TAbs
    ---------------------------------------------------------------------- *)
 
 fun compare p =
@@ -209,13 +246,27 @@ fun compare p =
     | (Comb(M,N),Comb(P,Q))  => (case compare (M,P)
                                   of EQUAL => compare (N,Q)
                                    | x => x)
+    | (Comb _, TComb _)      => LESS
     | (Comb _, Abs _)        => LESS
+    | (Comb _, TAbs _)       => LESS
     | (Comb _, _)            => GREATER
+    | (TComb(M,a),TComb(N,b))=> (case compare (M,N)
+                                  of EQUAL => Type.compare (a,b)
+                                   | x => x)
+    | (TComb _, Abs _)       => LESS
+    | (TComb _, TAbs _)      => LESS
+    | (TComb _, _)           => GREATER
     | (Abs(Fv(_, ty1),M),
        Abs(Fv(_, ty2),N))    => (case Type.compare(ty1,ty2)
                                   of EQUAL => compare (M,N)
                                    | x => x)
-    | (Abs _, _)             => GREATER;
+    | (Abs _, TAbs _)        => LESS
+    | (Abs _, _)             => GREATER
+    | (TAbs((_,k1,r1),M),
+       TAbs((_,k2,r2),N))    => (case Type.kind_rank_compare((k1,r1),(k2,r2))
+                                  of EQUAL => compare (M,N)
+                                   | x => x)
+    | (TAbs _, _)            => GREATER;
 
 val empty_tmset = HOLset.empty compare
 fun term_eq t1 t2 = compare(t1,t2) = EQUAL
@@ -227,7 +278,9 @@ fun term_eq t1 t2 = compare(t1,t2) = EQUAL
 fun FVL [] A = A
   | FVL ((v as Fv _)::rst) A      = FVL rst (HOLset.add(A,v))
   | FVL (Comb(Rator,Rand)::rst) A = FVL (Rator::Rand::rst) A
+  | FVL (TComb(Rator,Ty)::rst) A  = FVL (Rator::rst) A
   | FVL (Abs(_,Body)::rst) A      = FVL (Body::rst) A
+  | FVL (TAbs(_,Body)::rst) A     = FVL (Body::rst) A
   | FVL ((t as Clos _)::rst) A    = FVL (push_clos t::rst) A
   | FVL (_::rst) A                = FVL rst A
 
@@ -238,7 +291,9 @@ fun FVL [] A = A
 
 fun free_in tm =
    let fun f1 (Comb(Rator,Rand)) = (f2 Rator) orelse (f2 Rand)
+         | f1 (TComb(Rator,Ty)) = f2 Rator
          | f1 (Abs(_,Body)) = f2 Body
+         | f1 (TAbs(_,Body)) = f2 Body
 	 | f1 (t as Clos _) = f2 (push_clos t)
          | f1 _ = false
        and f2 t = term_eq t tm orelse f1 t
@@ -256,7 +311,9 @@ fun var_occurs M =
         | occ (Bv _)             = false
         | occ (Const _)          = false
         | occ (Comb(Rator,Rand)) = occ Rand orelse occ Rator
+        | occ (TComb(Rator,Ty))  = occ Rator
         | occ (Abs(_,Body))      = occ Body
+        | occ (TAbs(_,Body))     = occ Body
         | occ (t as Clos _)      = occ (push_clos t)
    in occ end
    handle HOL_ERR _ => raise ERR "var_occurs" "not a variable";
@@ -410,6 +467,47 @@ fun mk_comb(r as (Abs(Fv(_,Ty),_), Rand)) =
 val list_mk_comb = lmk_comb (INCOMPAT_TYPES "list_mk_comb")
 end;
 
+fun dest_comb (Comb r) = r
+  | dest_comb (t as Clos _) = dest_comb (push_clos t)
+  | dest_comb _ = raise ERR "dest_comb" "not a comb"
+
+(*---------------------------------------------------------------------------*
+ *        Making type applications                                           *
+ *---------------------------------------------------------------------------*)
+
+local val err  = Lib.C ERR "operator on type does not have universal type"
+      fun check_rank caller (TyFv (_,_,rank)) ty =
+          if Type.rank_of ty > rank
+          then raise ERR caller "universal type variable has insufficient rank"
+          else ()
+        | check_rank caller _ _ = raise ERR caller "not a type variable"
+      fun lmk_tcomb caller =
+        let val err = err caller
+            fun loop (A,_) [] = A
+              | loop (A,typ) (ty::rst) =
+                 let val (bty,ty2) = with_exn Type.dest_univ_type typ err
+                     val _ = check_rank caller bty ty
+                     val ty2' = Type.type_subst[bty |-> ty] ty2
+                 in loop(TComb(A,ty), ty2') rst
+                 end
+        in fn (f,L) => loop(f, type_of f) L
+        end
+      val mk_tcomb0 = lmk_tcomb "mk_tcomb"
+in
+
+fun mk_tycomb(r as (TAbs(btyvar,_), Ty)) =
+     (check_rank "mk_tycomb" (TyFv btyvar) Ty; TComb r)
+  | mk_tycomb(r as (Clos(_,TAbs(btyvar,_)), Ty)) =
+     (check_rank "mk_tycomb" (TyFv btyvar) Ty; TComb r)
+  | mk_tycomb(Rator,Ty) = mk_tcomb0 (Rator,[Ty])
+
+val list_mk_tycomb = lmk_tcomb "list_mk_tycomb"
+end;
+
+
+fun dest_tycomb (TComb r) = r
+  | dest_tycomb (t as Clos _) = dest_tycomb (push_clos t)
+  | dest_tycomb _ = raise ERR "dest_tycomb" "not a type comb"
 
 fun dest_var (Fv v) = v
   | dest_var _ = raise ERR "dest_var" "not a var"
@@ -430,9 +528,16 @@ local val EQ = Portable.pointer_eq
 in
 fun aconv t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
-  of (Comb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
+  of (Fv(M,ty1),Fv(N,ty2)) => M=N andalso aconv_ty ty1 ty2
+   | (Const(M,GRND ty1),Const(N,GRND ty2)) => M=N andalso aconv_ty ty1 ty2
+   | (Const(M,POLY ty1),Const(N,POLY ty2)) => M=N andalso aconv_ty ty1 ty2
+   | (Const _,Const _) => false
+   | (Comb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
+   | (TComb(M,ty1),TComb(P,ty2)) => Type.aconv_ty ty1 ty2 andalso aconv M P
    | (Abs(Fv(_,ty1),M),
-      Abs(Fv(_,ty2),N)) => ty1=ty2 andalso aconv M N
+      Abs(Fv(_,ty2),N)) => aconv_ty ty1 ty2 andalso aconv M N
+   | (TAbs((_,k1,r1),M),
+      TAbs((_,k2,r2),N)) => k1=k2 andalso r1=r2 andalso aconv M N
    | (Clos(e1,b1),
       Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
                        orelse aconv (push_clos t1) (push_clos t2)
@@ -450,7 +555,9 @@ fun beta_conv (Comb(Abs(_,Body), Bv 0)) = Body
   | beta_conv (Comb(Abs(_,Body), Rand)) =
      let fun subs((tm as Bv j),i)     = if i=j then Rand else tm
            | subs(Comb(Rator,Rand),i) = Comb(subs(Rator,i),subs(Rand,i))
+           | subs(TComb(Rator,Ty),i)  = TComb(subs(Rator,i),Ty)
            | subs(Abs(v,Body),i)      = Abs(v,subs(Body,i+1))
+           | subs(TAbs(a,Body),i)     = TAbs(a,subs(Body,i))
            | subs (tm as Clos _,i)    = subs(push_clos tm,i)
            | subs (tm,_) = tm
      in
@@ -481,15 +588,17 @@ fun lazy_beta_conv (Comb(Abs(_,Body),Rand)) =
 local fun pop (tm as Bv i, k) =
            if i=k then raise ERR "eta_conv" "not an eta-redex" else tm
         | pop (Comb(Rator,Rand),k) = Comb(pop(Rator,k), pop(Rand,k))
+        | pop (TComb(Rator,Ty),k)  = TComb(pop(Rator,k), Ty)
         | pop (Abs(v,Body), k)     = Abs(v,pop(Body, k+1))
+        | pop (TAbs(a,Body), k)    = TAbs(a,pop(Body, k))
         | pop (tm as Clos _, k)    = pop (push_clos tm, k)
         | pop (tm,k) = tm
       fun eta_body (Comb(Rator,Bv 0)) = pop (Rator,0)
         | eta_body (tm as Clos _)     = eta_body (push_clos tm)
         | eta_body _ = raise ERR "eta_conv" "not an eta-redex"
 in
-fun eta_conv (Abs(_,Body)) = eta_body Body
-  | eta_conv (tm as Clos _)  = eta_conv (push_clos tm)
+fun eta_conv (Abs(_,Body))  = eta_body Body
+  | eta_conv (tm as Clos _) = eta_conv (push_clos tm)
   | eta_conv _ = raise ERR "eta_conv" "not an eta-redex"
 end;
 
@@ -513,7 +622,9 @@ fun subst [] = I
     let val (fmap,b) = addb theta (emptysubst, true)
         fun vsubs (v as Fv _) = (case peek(fmap,v) of NONE => v | SOME y => y)
           | vsubs (Comb(Rator,Rand)) = Comb(vsubs Rator, vsubs Rand)
-          | vsubs (Abs(Bvar,Body)) = Abs(Bvar,vsubs Body)
+          | vsubs (TComb(Rator,Ty))  = TComb(vsubs Rator, Ty)
+          | vsubs (Abs(Bvar,Body))   = Abs(Bvar,vsubs Body)
+          | vsubs (TAbs(Bvar,Body))  = TAbs(Bvar,vsubs Body)
           | vsubs (c as Clos _) = vsubs (push_clos c)
           | vsubs tm = tm
         fun subs tm =
@@ -522,9 +633,11 @@ fun subst [] = I
 	    | NONE =>
               (case tm
                 of Comb(Rator,Rand) => Comb(subs Rator, subs Rand)
-                 | Abs(Bvar,Body) => Abs(Bvar,subs Body)
-	         | Clos _        => subs(push_clos tm)
-                 |   _         => tm)
+                 | TComb(Rator,Ty)  => TComb(subs Rator, Ty)
+                 | Abs(Bvar,Body)   => Abs(Bvar,subs Body)
+                 | TAbs(Bvar,Body)  => TAbs(Bvar,subs Body)
+	         | Clos _           => subs(push_clos tm)
+                 |   _              => tm)
     in
       (if b then vsubs else subs)
     end
@@ -546,15 +659,13 @@ fun inst [] tm = tm
      | inst1 (v as Fv(Name,Ty)) =
          (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
      | inst1 (Comb(Rator,Rand)) = Comb(inst1 Rator, inst1 Rand)
+     | inst1 (TComb(Rator,Ty))  = TComb(inst1 Rator, Type.type_subst theta Ty)
      | inst1 (Abs(Bvar,Body))   = Abs(inst1 Bvar, inst1 Body)
+     | inst1 (TAbs(Bvar,Body))  = TAbs(Bvar, inst1 Body)
      | inst1 (t as Clos _)      = inst1(push_clos t)
     in
       inst1 tm
     end;
-
-fun dest_comb (Comb r) = r
-  | dest_comb (t as Clos _) = dest_comb (push_clos t)
-  | dest_comb _ = raise ERR "dest_comb" "not a comb"
 
 
 (*---------------------------------------------------------------------------
@@ -587,11 +698,13 @@ fun list_mk_binder opt =
      val rvlist = enum vlist (length vlist - 1) []
      fun lookup v vmap = case peek vmap v of NONE => v | SOME i => Bv i
      fun increment vmap = transform (fn x => x+1) vmap
-     fun bind (v as Fv _) vmap k = k (lookup v vmap)
-       | bind (Comb(M,N)) vmap k = bind M vmap (fn m =>
-                                   bind N vmap (fn n => k (Comb(m,n))))
-       | bind (Abs(v,M)) vmap k  = bind M (increment vmap)
-                                          (fn q => k (Abs(v,q)))
+     fun bind (v as Fv _) vmap k   = k (lookup v vmap)
+       | bind (Comb(M,N)) vmap k   = bind M vmap (fn m =>
+                                     bind N vmap (fn n => k (Comb(m,n))))
+       | bind (TComb(M,Ty)) vmap k = bind M vmap (fn m => k (TComb(m,Ty)))
+       | bind (Abs(v,M)) vmap k    = bind M (increment vmap)
+                                            (fn q => k (Abs(v,q)))
+       | bind (TAbs(v,M)) vmap k   = bind M vmap (fn q => k (TAbs(v,q)))
        | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
        | bind tm vmap k = k tm
   in
@@ -606,7 +719,9 @@ val list_mk_abs = list_mk_binder NONE;
 fun mk_abs(Bvar as Fv _, Body) =
     let fun bind (v as Fv _) i        = if v=Bvar then Bv i else v
           | bind (Comb(Rator,Rand)) i = Comb(bind Rator i, bind Rand i)
+          | bind (TComb(Rator,Ty)) i  = TComb(bind Rator i, Ty)
           | bind (Abs(Bvar,Body)) i   = Abs(Bvar, bind Body (i+1))
+          | bind (TAbs(Bvar,Body)) i  = TAbs(Bvar, bind Body i)
           | bind (t as Clos _) i      = bind (push_clos t) i
           | bind tm _ = tm (* constant *)
     in
@@ -614,6 +729,94 @@ fun mk_abs(Bvar as Fv _, Body) =
     end
   | mk_abs _ = raise ERR "mk_abs" "Bvar not a variable"
 
+
+
+(*---------------------------------------------------------------------------
+       Making type abstractions. list_mk_tybinder is a relatively
+       efficient version for making terms with many consecutive
+       type abstractions.
+  ---------------------------------------------------------------------------*)
+
+
+local val FORMAT = ERR "list_mk_tybinder"
+   "expected first arg to be a constant of type :(<ty>_1 -> <ty>_2) -> <ty>_3"
+   fun check_opt NONE = Lib.I
+     | check_opt (SOME c) =
+        if not(is_const c) then raise FORMAT
+        else case total (fst o Type.dom_rng o fst o Type.dom_rng o type_of) c
+              of NONE => raise FORMAT
+               | SOME ty => (fn abs =>
+                   let val dom = fst(Type.dom_rng(type_of abs))
+                   in mk_comb (inst[ty |-> dom] c, abs)
+                   end)
+in
+fun list_mk_tybinder opt =
+ let val f = check_opt opt
+ in fn (vlist,tm) => 
+    if not (null (Lib.intersect vlist (type_varsl (map type_of (free_vars tm)))))
+    then raise ERR "list_mk_tyabs"
+         "bound variable occurs free in the type of a free variable of the body"
+    else
+    let open Polyhash
+     val varmap = mkPolyTable(length vlist, Fail "varmap")
+     fun enum [] _ A = A
+       | enum (h::t) i A = (insert varmap (h,i); enum t (i-1) (h::A))
+     val rvlist = enum vlist (length vlist - 1) []
+     fun lookup v vmap = case peek vmap v of NONE => v | SOME i => TyBv i
+     fun increment vmap = transform (fn x => x+1) vmap
+     fun bind (Fv(Name,Ty)) vmap k = bindty Ty vmap (fn ty => k (Fv(Name,ty)))
+       | bind (Const(N,Ty)) vmap k = bindpty Ty vmap (fn ty => k (Const(N,ty)))
+       | bind (Comb(M,N)) vmap k   = bind M vmap (fn m =>
+                                     bind N vmap (fn n => k (Comb(m,n))))
+       | bind (TComb(M,Ty)) vmap k = bind M vmap (fn m =>
+                                     bindty Ty vmap (fn ty => k (TComb(m,ty))))
+       | bind (Abs(v,M)) vmap k    = bind M vmap (fn q => k (Abs(v,q)))
+       | bind (TAbs(v,M)) vmap k   = bind M (increment vmap)
+                                            (fn q => k (TAbs(v,q)))
+       | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
+       | bind tm vmap k = k tm (* constant *)
+     and bindpty (GRND Ty) vmap k  = bindty Ty vmap (fn ty => k (GRND ty))
+       | bindpty (POLY Ty) vmap k  = bindty Ty vmap (fn ty => k (POLY ty))
+     and bindty (v as TyFv _) vmap k    = k (lookup v vmap)
+       | bindty (TyApp(Opr,Arg)) vmap k = bindty Opr vmap (fn opr =>
+                                          bindty Arg vmap (fn arg =>
+                                            k (TyApp(opr,arg))))
+       | bindty (TyAll(bv,Body)) vmap k = bindty Body (increment vmap)
+                                            (fn body => k (TyAll(bv,body)))
+       | bindty (TyAbs(bv,Body)) vmap k = bindty Body (increment vmap)
+                                            (fn body => k (TyAbs(bv,body)))
+       | bindty ty _ k = k ty (* constant *)
+  in
+     rev_itlist (fn TyFv a => fn M => f(TAbs(a,M))) rvlist (bind tm varmap I)
+  end
+  handle e => raise wrap_exn "Term" "list_mk_binder" e
+ end
+end;
+
+val list_mk_tyabs = list_mk_tybinder NONE;
+
+
+fun mk_tyabs(Bvar as TyFv Bvarty, Body) =
+    if mem Bvar (type_varsl (map type_of (free_vars Body)))
+    then raise ERR "mk_tyabs"
+         "bound variable occurs free in the type of a free variable of the body"
+    else
+    let fun bind (Fv(Name,Ty)) i      = Fv(Name, bindty Ty i)
+          | bind (Comb(Rator,Rand)) i = Comb(bind Rator i, bind Rand i)
+          | bind (TComb(Rator,Ty)) i  = TComb(bind Rator i, bindty Ty i)
+          | bind (Abs(Bvar,Body)) i   = Abs(bind Bvar i, bind Body i)
+          | bind (TAbs(Bvar,Body)) i  = TAbs(Bvar, bind Body (i+1))
+          | bind (t as Clos _) i      = bind (push_clos t) i
+          | bind tm _ = tm (* constant *)
+        and bindty (v as TyFv _) i    = if v=Bvar then TyBv i else v
+          | bindty (TyApp(opr,arg)) i = TyApp(bindty opr i, bindty arg i)
+          | bindty (TyAll(bv,Body)) i = TyAll(bv, bindty Body (i+1))
+          | bindty (TyAbs(bv,Body)) i = TyAbs(bv, bindty Body (i+1))
+          | bindty ty _ = ty (* constant *)
+    in
+      TAbs(Bvarty, bind Body 0)
+    end
+  | mk_tyabs _ = raise ERR "mk_tyabs" "not a type variable";
 
 (*---------------------------------------------------------------------------
             Taking terms apart
@@ -689,8 +892,10 @@ fun strip_binder opt =
             of SOME (PREFIX i) => k (add_vi capt (vmap i,i))
              | SOME BODY => k capt
              | NONE => (insertAVbody n; k capt))
-       | CVs(Comb(M,N)) capt k = CVs N capt (fn c => CVs M c k)
-       | CVs(Abs(_,M)) capt k  = CVs M capt k
+       | CVs(Comb(M,N)) capt k   = CVs N capt (fn c => CVs M c k)
+       | CVs(TComb(M,Ty)) capt k = CVs M capt k
+       | CVs(Abs(_,M)) capt k    = CVs M capt k
+       | CVs(TAbs(_,M)) capt k   = CVs M capt k
        | CVs(t as Clos _) capt k = CVs (push_clos t) capt k
        | CVs tm capt k = k capt
      fun unclash insert [] = ()
@@ -705,7 +910,9 @@ fun strip_binder opt =
      fun unbind (v as Bv i) j k = k (vmap(i-j) handle Subscript => v)
        | unbind (Comb(M,N)) j k = unbind M j (fn m =>
                                   unbind N j (fn n => k(Comb(m,n))))
+       | unbind (TComb(M,Ty)) j k = unbind M j (fn m => k(TComb(m,Ty)))
        | unbind (Abs(v,M)) j k  = unbind M (j+1) (fn q => k(Abs(v,q)))
+       | unbind (TAbs(a,M)) j k  = unbind M j (fn q => k(TAbs(a,q)))
        | unbind (t as Clos _) j k = unbind (push_clos t) j k
        | unbind tm j k = k tm
  in
@@ -724,7 +931,9 @@ fun dest_abs(Abs(Bvar as Fv(Name,Ty), Body)) =
     let fun dest (v as (Bv j), i)     = if i=j then Bvar else v
           | dest (v as Fv(s,_), _)    = if Name=s then raise CLASH else v
           | dest (Comb(Rator,Rand),i) = Comb(dest(Rator,i),dest(Rand,i))
+          | dest (TComb(Rator,Ty),i)  = TComb(dest(Rator,i),Ty)
           | dest (Abs(Bvar,Body),i)   = Abs(Bvar, dest(Body,i+1))
+          | dest (TAbs(Bvar,Body),i)  = TAbs(Bvar, dest(Body,i))
           | dest (t as Clos _, i)     = dest (push_clos t, i)
           | dest (tm,_) = tm
     in (Bvar, dest(Body,0))
@@ -735,10 +944,160 @@ fun dest_abs(Abs(Bvar as Fv(Name,Ty), Body)) =
   | dest_abs _ = raise ERR "dest_abs" "not a lambda abstraction"
 end;
 
+(* Now for stripping binders of type abstractions of terms. *)
+
+local fun peel f (t as Clos _) A = peel f (push_clos t) A
+        | peel f tm A =
+            case f tm of
+              SOME(TAbs(v,M)) => peel f M (TyFv v::A)
+            | otherwise => (A,tm)
+      datatype occtype = PREFIX of int | BODY
+      fun array_to_revlist A =
+        let val top = Array.length A - 1
+            fun For i B = if i>top then B else For (i+1) (Array.sub(A,i)::B)
+        in For 0 []
+        end
+      val vi_empty = HOLset.empty (fn ((v1,i1),(v2,i2)) => Type.compare(v1,v2))
+      fun add_vi viset vi =
+         if HOLset.member(viset,vi) then viset else HOLset.add(viset,vi)
+      fun trypush_clos (x as Clos _) = push_clos x
+        | trypush_clos t = t
+in
+fun strip_tybinder opt =
+ let val f =
+         case opt of
+           NONE => (fn (t as TAbs _) => SOME t
+                     | (t as Clos(_, TAbs _)) => SOME (push_clos t)
+                     | other => NONE)
+               | SOME c => (fn t => let val (rator,rand) = dest_comb t
+                                    in if same_const rator c
+                                       then SOME (trypush_clos rand)
+                                       else NONE
+                                    end handle HOL_ERR _ => NONE)
+ in fn tm =>
+   let val (prefixl,body) = peel f tm []
+     val prefix = Array.fromList prefixl
+     val vmap = curry Array.sub prefix
+     val (insertAVbody,insertAVprefix,lookAV,dupls) =
+        let open Polyhash  (* AV is hashtable  of (var,occtype) elems *)
+            val AV = mkPolyTable(Array.length prefix, Fail"AV")
+            fun insertl [] _ dupls = dupls
+              | insertl (x::rst) i dupls =
+                  let val n = #Name(dest_vartype_opr x)
+                  in case peekInsert AV (n,PREFIX i)
+                      of NONE => insertl rst (i+1) dupls
+                       | SOME _ => insertl rst (i+1) ((x,i)::dupls)
+                  end
+            val dupls = insertl prefixl 0 []
+        in ((fn s => insert AV (s,BODY)),         (* insertAVbody *)
+            (fn (s,i) => insert AV (s,PREFIX i)), (* insertAVprefix *)
+            peek AV,                              (* lookAV *)
+            dupls)
+        end
+     fun variantAV n =
+       let val next = Lexis.nameStrm n
+           fun loop s = case lookAV s of NONE => s | SOME _ => loop (next())
+       in loop n
+       end
+     fun CVs (Fv(n,Ty)) capt k   = CVts Ty capt k
+       | CVs(Const(_,Ty)) capt k = CVps Ty capt k
+       | CVs(Comb(M,N)) capt k   = CVs N capt (fn c => CVs M c k)
+       | CVs(TComb(M,Ty)) capt k = CVs M capt (fn c => CVts Ty c k)
+       | CVs(Abs(x,M)) capt k    = CVs x capt (fn c => CVs M c k)
+       | CVs(TAbs(a,M)) capt k   = CVts (TyFv a) capt (fn c => CVs M c k)
+       | CVs(t as Clos _) capt k = CVs (push_clos t) capt k
+       | CVs tm capt k = k capt
+     and CVps (GRND ty) capt k = CVts ty capt k
+       | CVps (POLY ty) capt k = CVts ty capt k
+     and CVts (v as TyFv (n,_,_)) capt k =
+          (case lookAV n
+            of SOME (PREFIX i) => k (add_vi capt (vmap i,i))
+             | SOME BODY => k capt
+             | NONE => (insertAVbody n; k capt))
+       | CVts (TyApp(Opr,A)) capt k = CVts Opr capt (fn c => CVts A c k)
+       | CVts (TyAll(bv,B)) capt k  = CVts B capt k
+       | CVts (TyAbs(bv,B)) capt k  = CVts B capt k
+       | CVts ty capt k = k capt
+     fun unclash insert [] = ()
+       | unclash insert ((v,i)::rst) =
+           let val {Name=n,Kind=kd,Rank=rk} = dest_vartype_opr v
+               val n' = variantAV n
+               val v' = mk_vartype_opr(n',kd,rk)
+           in Array.update(prefix,i,v')
+            ; insert (n',i)
+            ; unclash insert rst
+           end
+     fun unbind (Fv(n,Ty)) j k        = unbindt Ty j (fn ty => k(Fv(n,ty)))
+       | unbind (Const(n,Ty)) j k     = unbindp Ty j (fn ty => k(Const(n,ty)))
+       | unbind (Comb(M,N)) j k       = unbind M j (fn m =>
+                                        unbind N j (fn n => k(Comb(m,n))))
+       | unbind (TComb(M,Ty)) j k     = unbind M j (fn m =>
+                                        unbindt Ty j (fn ty => k(TComb(m,ty))))
+       | unbind (Abs(V,M)) j k        = unbind V j (fn v =>
+                                        unbind M j (fn m => k(Abs(v,m))))
+       | unbind (TAbs(a,M)) j k       = unbind M (j+1) (fn q => k(TAbs(a,q)))
+       | unbind (t as Clos _) j k     = unbind (push_clos t) j k
+       | unbind tm j k = k tm
+     and unbindp (GRND ty) j k        = unbindt ty j (fn q => k(GRND q))
+       | unbindp (POLY ty) j k        = unbindt ty j (fn q => k(POLY q))
+     and unbindt (v as TyBv i) j k   = k (vmap(i-j) handle Subscript => v)
+       | unbindt (TyApp(Opr,A))j k   = unbindt Opr j (fn opr =>
+                                       unbindt A j (fn a => k(TyApp(opr,a))))
+       | unbindt (TyAll(a,B)) j k    = unbindt B (j+1) (fn q => k(TyAll(a,q)))
+       | unbindt (TyAbs(a,B)) j k    = unbindt B (j+1) (fn q => k(TyAll(a,q)))
+       | unbindt ty j k = k ty
+ in
+     unclash insertAVprefix (List.rev dupls)
+   ; unclash (insertAVbody o fst) (HOLset.listItems(CVs body vi_empty I))
+   ; (array_to_revlist prefix, unbind body 0 I)
+ end
+ end
+end;
+
+val strip_tyabs = strip_tybinder NONE;
+
+local exception CLASH
+val variant_tyvar = Type.variant_tyvar
+val type_vars = Type.type_vars
+in
+fun dest_tyabs(TAbs(Bvar as (Name,Arity,Rank), Body)) =
+    let fun dest (Fv(Name,Ty)) i        = Fv(Name, destty Ty i)
+          | dest (Const(N,Ty)) i        = Const(N, destpty Ty i)
+          | dest (Comb(Rator,Rand)) i   = Comb(dest Rator i,dest Rand i)
+          | dest (TComb(Rator,Ty)) i    = TComb(dest Rator i,destty Ty i)
+          | dest (Abs(Bvar,Body)) i     = Abs(Bvar, dest Body i)
+          | dest (TAbs(Bvar,Body)) i    = TAbs(Bvar, dest Body (i+1))
+          | dest (t as Clos _) i        = dest (push_clos t) i
+          | dest tm _ = tm
+        and destpty (GRND ty) i         = GRND (destty ty i)
+          | destpty (POLY ty) i         = POLY (destty ty i)
+        and destty (v as TyBv j) i      = if i=j then TyFv Bvar else v
+          | destty (v as TyFv(s,_,_)) i = if Name=s then raise CLASH else v
+          | destty (TyApp(opr,arg)) i   = TyApp(destty opr i, destty arg i)
+          | destty (TyAll(bv,Body)) i   = TyAll(bv, destty Body (i+1))
+          | destty (TyAbs(bv,Body)) i   = TyAbs(bv, destty Body (i+1))
+          | destty opr _ = opr (* constant *)
+    in (TyFv Bvar, dest Body 0)
+       handle CLASH =>
+              dest_tyabs(TAbs(variant_tyvar (type_vars (type_of Body)) Bvar,
+                              Body))
+    end
+  | dest_tyabs (t as Clos _) = dest_tyabs (push_clos t)
+  | dest_tyabs _ = raise ERR "dest_tyabs" "not a type abstraction"
+end;
 
 fun break_abs(Abs(_,Body)) = Body
   | break_abs(t as Clos _) = break_abs (push_clos t)
   | break_abs _ = raise ERR "break_abs" "not an abstraction";
+
+fun break_tyabs(TAbs(_,Body)) = Body
+  | break_tyabs(t as Clos _) = break_abs (push_clos t)
+  | break_tyabs _ = raise ERR "break_tyabs" "not a type abstraction";
+
+
+
+
+
 
 fun dest_thy_const (Const(id,ty)) =
       let val (name,thy) = dest_id id
@@ -777,7 +1136,9 @@ local
   fun MERR s = raise ERR "raw_match_term error" s
   fun free (Bv i) n             = i<n
     | free (Comb(Rator,Rand)) n = free Rand n andalso free Rator n
+    | free (TComb(Rator,Ty)) n  = free Rator n
     | free (Abs(_,Body)) n      = free Body (n+1)
+    | free (TAbs(_,Body)) n     = free Body n
     | free (t as Clos _) n      = free (push_clos t) n
     | free _ _ = true
   fun lookup x ids =
@@ -788,35 +1149,34 @@ local
   val tymatch = Type.raw_match_type
 in
 fun RM [] theta = theta
-  | RM (((v as Fv(n,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS)
+  | RM (((v as Fv(_,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS)
      = if bound_by_scope scoped tm
        then MERR "variable bound by scope"
        else RM rst
             ((case lookup v Id tmS
-               of NONE => if v=tm then (tmS,HOLset.add(Id,v))
+               of NONE => if aconv v tm (* can't use = because of aconv_ty *)
+                                  then (tmS,HOLset.add(Id,v))
                                   else ((v |-> tm)::tmS,Id)
                 | SOME tm' => if aconv tm' tm then S1
-                              else MERR ("double bind on variable "^
-                                         Lib.quote n)),
+                              else MERR "double bind on variable"),
              tymatch Ty (type_of tm) tyS)
   | RM ((Const(c1,ty1),Const(c2,ty2),_)::rst) (tmS,tyS)
       = RM rst
-        (if c1 <> c2 then 
-          let val n1 = id_to_string c1
-              val n2 = id_to_string c2
-          in 
-           MERR ("different constants: "^n1^" matched against "^n2)
-          end
-         else
+        (if c1 <> c2 then MERR "different constants" else
          case (ty1,ty2)
-          of (GRND _, POLY _) => MERR"ground const vs. polymorphic const"
-           | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS)
+          of (GRND _,  POLY _)   => MERR"ground const vs. polymorphic const"
+           | (GRND pat,GRND obj) => if aconv_ty pat obj then (tmS,tyS)
                        else MERR"const-const with different (ground) types"
            | (POLY pat,GRND obj) => (tmS, tymatch pat obj tyS)
            | (POLY pat,POLY obj) => (tmS, tymatch pat obj tyS))
   | RM ((Abs(Fv(_,ty1),M),Abs(Fv(_,ty2),N),_)::rst) (tmS,tyS)
       = RM ((M,N,true)::rst) (tmS, tymatch ty1 ty2 tyS)
+  | RM ((TAbs((_,k1,r1),M), TAbs((_,k2,r2),N), s)::rst) S
+      = if k1=k2 andalso r1=r2 then RM ((M,N,true)::rst) S
+        else MERR "different type abstractions"
   | RM ((Comb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
+  | RM ((TComb(M,ty1),TComb(N,ty2),s)::rst) (tmS,tyS)
+      = RM ((M,N,s)::rst) (tmS, tymatch ty1 ty2 tyS)
   | RM ((Bv i,Bv j,_)::rst) S  = if i=j then RM rst S
                                  else MERR "Bound var. depth"
   | RM (((pat as Clos _),ob,s)::t) S = RM ((push_clos pat,ob,s)::t) S
@@ -872,20 +1232,24 @@ end;
    Full propagation of substitutions.
  ---------------------------------------------------------------------------*)
 
-local val subs_comp = Subst.comp mk_clos
-  fun vars_sigma_norm (s,t) =
+local val subs_comp = pair_comp
+  fun vars_sigma_norm (s, t) =
     case t of
       Comb(Rator,Rand) => Comb(vars_sigma_norm(s, Rator),
                                vars_sigma_norm(s, Rand))
+    | TComb(Rator,Ty) => TComb(vars_sigma_norm(s, Rator), Ty)
     | Bv i =>
         (case Subst.exp_rel(s,i) of
            (0, SOME v)   => vars_sigma_norm (Subst.id, v)
          | (lams,SOME v) => vars_sigma_norm (Subst.shift(lams,Subst.id),v)
          | (lams,NONE)   => Bv lams)
-    | Abs(Bvar,Body) => Abs(Bvar, vars_sigma_norm  (Subst.lift(1,s), Body))
     | Fv _ => t
+    | Const _ => t
+    | Abs(Bvar,Body) => Abs(Bvar, vars_sigma_norm (Subst.lift(1,s),
+                                                   Body))
+    | TAbs(Bvar,Body) => TAbs(Bvar,
+                        vars_sigma_norm (s, Body))
     | Clos(Env,Body) => vars_sigma_norm (subs_comp(s,Env), Body)
-    | _ => t  (* i.e., a const *)
 in
 fun norm_clos tm = vars_sigma_norm(Subst.id,tm)
 end
@@ -899,7 +1263,10 @@ fun trav f =
   let fun trv (a as Fv _) = f a
         | trv (a as Const _) = f a
         | trv (Comb(Rator,Rand)) = (trv Rator; trv Rand)
+        | trv (TComb(Rator,Ty))  =  trv Rator
         | trv (Abs(Bvar,Body))   = (trv Bvar; trv Body)
+        | trv (TAbs(Bvar,Body))  =  trv Body
+        | trv (t as Clos _)      =  trv (push_clos t)
         | trv _ = ()
   in
     trv o norm_clos
@@ -920,9 +1287,17 @@ fun pp_raw_term index pps tm =
           ( add_string "(\\";
             pp Bvar; add_string dot; add_break(1,0);
             pp Body; add_string ")" )
+      | pp (TAbs((name,kind,rank),Body)) =
+         ( add_string "(\\:";
+           add_string name; add_string dot; add_break(1,0);
+           pp Body; add_string ")" )
       | pp (Comb(Rator,Rand)) =
          ( add_string "("; pp Rator; add_break(1,0);
                            pp Rand; add_string ")")
+      | pp (TComb(Rator,Ty)) =
+         ( add_string "("; pp Rator; add_break(1,0);
+                           add_string "[type]";
+                           add_string ")" )
       | pp (Bv i) = add_string (dollar^Lib.int_to_string i)
       | pp a      = add_string (percent^Lib.int_to_string (index a))
  in

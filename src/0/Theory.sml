@@ -256,7 +256,17 @@ fun add_type {name,theory,arity}
              {thid,facts,con_wrt_disk,overwritten,adjoin} =
    {thid=thid, facts=facts, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
     overwritten = let open Type
-                  in case TypeSig.insert (mk_id(name,theory),arity)
+                  in case TypeSig.insert (mk_id(name,theory),
+                                          Kind.mk_arity arity,0)
+                      of TypeSig.INITIAL _ => overwritten
+                       | TypeSig.CLOBBER _ => true
+                  end};
+
+fun add_type_opr {name,theory,kind,rank}
+             {thid,facts,con_wrt_disk,overwritten,adjoin} =
+   {thid=thid, facts=facts, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
+    overwritten = let open Type
+                  in case TypeSig.insert (mk_id(name,theory),kind,rank)
                       of TypeSig.INITIAL _ => overwritten
                        | TypeSig.CLOBBER _ => true
                   end};
@@ -472,7 +482,7 @@ local datatype constkind = TY | TM
 
    and up2date_type CTname ty =
      if Type.is_vartype ty then true
-     else let val ((id,_),args) = Type.break_type ty
+     else let val ((id,_,_),args) = Type.break_type ty
           in up2date_id CTname id TY
              andalso Lib.all (up2date_type CTname) args
           end

@@ -672,6 +672,7 @@ fun swap_vars term = let
 
 
 local
+  nonfix ==>
   datatype binop   = /\ | \/ | ==>
   datatype quanty  = ? | !
   datatype direction = Left | Right

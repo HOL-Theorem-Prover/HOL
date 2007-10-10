@@ -22,6 +22,7 @@ local
       Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
   fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
 in
+  val _ = installPP (with_pp (Kind.pp_qkind))
   val _ = installPP (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
   val _ = installPP (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
   val _ = installPP (with_pp Hol_pp.pp_thm)
@@ -106,9 +107,9 @@ val build_stamp =
 val _ =
 TextIO.output(TextIO.stdOut,
   "\n-----------------------------------------------------------------\n"
-  ^"       HOL-4 ["
+  ^"    HOL-Omega ["
   ^Globals.release^" "^Lib.int_to_string(Globals.version)^build_stamp
-  ^"]\n\n       For introductory HOL help, type: help \"hol\";\n"
+  ^"]\n\n    For introductory HOL help, type: help \"hol\";\n"
   ^"-----------------------------------------------------------------\n\n");
 
 (* ----------------------------------------------------------------------

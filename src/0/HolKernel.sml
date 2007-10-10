@@ -1,14 +1,14 @@
 structure HolKernel =
 struct
 
-  open Feedback Globals Lib Type Term Thm Theory Definition
+  open Feedback Globals Lib Kind Type Term Thm Theory Definition
 
 
 (*---------------------------------------------------------------------------
      Miscellaneous other stuff that builds on top of kernel facilities.
  ---------------------------------------------------------------------------*)
 
-infixr -->;  infix |->;
+infixr ==>;  infixr -->;  infix |->;
 
 val ERR = mk_HOL_ERR "HolKernel";
 
