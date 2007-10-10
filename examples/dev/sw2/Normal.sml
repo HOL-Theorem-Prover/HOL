@@ -343,9 +343,8 @@ val ELIM_LET_RULE = SIMP_RULE bool_ss [ELIM_USELESS_LET]
 val FLATTEN_LET_RULE = SIMP_RULE std_ss [FLATTEN_LET]
 
 (*---------------------------------------------------------------------------*)
-(* Convert the normal form into SSA form                                     *)
-(* Ensure that each let-bound variable name in a term is different than the  *)
-(* others.                                                                   *)
+(* Convert the normal form into SSA form. Ensures that each let-bound        *)
+(* variable name in a term is different than the others.                     *)
 (*---------------------------------------------------------------------------*)
 
 fun to_ssa stem tm = 
