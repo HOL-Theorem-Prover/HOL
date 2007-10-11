@@ -444,43 +444,39 @@ val STRLEN_CAT = Q.store_thm
        Is one string a prefix of another?
  ---------------------------------------------------------------------------*)
 
-val isPREFIX_defn = Hol_defn "isPREFIX"
+val isPREFIX_def = 
+ tDefine 
+   "isPREFIX"
    `isPREFIX s1 s2 =
        case (DEST_STRING s1, DEST_STRING s2)
         of (NONE, _) -> T
         || (SOME __, NONE) -> F
-        || (SOME(c1,t1),SOME(c2,t2)) -> (c1=c2) /\ isPREFIX t1 t2`;
-
-val (isPREFIX_DEF,isPREFIX_IND_0) =
- Defn.tprove
-   (isPREFIX_defn,
-    WF_REL_TAC `measure (STRLEN o FST)`
+        || (SOME(c1,t1),SOME(c2,t2)) -> (c1=c2) /\ isPREFIX t1 t2`
+   (WF_REL_TAC `measure (STRLEN o FST)`
       THEN RW_TAC std_ss []
       THEN FULL_SIMP_TAC std_ss [DEST_STRING_LEMS]
       THEN RW_TAC arith_ss [STRLEN_DEF]);
 
-val isPREFIX_DEF = save_thm("isPREFIX_DEF",isPREFIX_DEF);
-
-val isPREFIX_IND = Q.store_thm
-("isPREFIX_IND",
+val isPREFIX_ind = Q.store_thm
+("isPREFIX_ind",
  `!P. (!s1 s2.
-         (!c1 c2 t1 t2.
-           (DEST_STRING s1 = SOME (c1,t1)) /\
-           (DEST_STRING s2 = SOME (c2,t2)) ==> P t1 t2) ==> P s1 s2)
+         (!c t1 t2.
+           (DEST_STRING s1 = SOME (c,t1)) /\
+           (DEST_STRING s2 = SOME (c,t2)) ==> P t1 t2) ==> P s1 s2)
        ==> !v v1. P v v1`,
- METIS_TAC [pairTheory.ABS_PAIR_THM,isPREFIX_IND_0]);
+ METIS_TAC [pairTheory.ABS_PAIR_THM,fetch "-" "isPREFIX_ind"]);
 
 
 val isPREFIX_STRCAT = Q.store_thm
 ("isPREFIX_STRCAT",
  `!s1 s2. isPREFIX s1 s2 = ?s3. s2 = STRCAT s1 s3`,
- recInduct isPREFIX_IND
+ recInduct isPREFIX_ind
    THEN REPEAT STRIP_TAC
-   THEN RW_TAC list_ss [Once isPREFIX_DEF]
+   THEN RW_TAC list_ss [Once isPREFIX_def]
    THEN REPEAT CASE_TAC
    THEN FULL_SIMP_TAC list_ss [DEST_STRING_LEMS,STRCAT_EQNS]
    THEN RW_TAC std_ss []
-   THEN PROVE_TAC[]);
+   THEN METIS_TAC[]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -491,7 +487,6 @@ val DATATYPE_STRING = Q.store_thm
 ("DATATYPE_STRING",
  `DATATYPE (string "" STRING)`,
  REWRITE_TAC [DATATYPE_TAG_THM]);
-
 
 
 (*---------------------------------------------------------------------------
@@ -573,7 +568,7 @@ val _ =
     :: MLSTRUCT "fun DEST_STRING s = if s= \"\" then NONE \n\
         \          else SOME(String.sub(s,0),String.extract(s,1,NONE));"
     :: map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
-       [EXPLODE_DEST_STRING, IMPLODE_STRING, STRLEN_THM, STRCAT_EXPLODE, isPREFIX_DEF])
+       [EXPLODE_DEST_STRING, IMPLODE_STRING, STRLEN_THM, STRCAT_EXPLODE, isPREFIX_def])
  end;
 
 val _ = export_theory();
