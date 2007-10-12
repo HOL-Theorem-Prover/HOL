@@ -3,7 +3,7 @@
 \TYPE {is_vartype : type -> bool}
 
 \SYNOPSIS
-Tests a type to see if it is a type variable.
+Tests a type to see if it is a type variable, including type operators.
 
 \FAILURE
 Never fails.
@@ -22,5 +22,5 @@ Never fails.
 
 
 \SEEALSO
-Type.mk_vartype, Type.dest_vartype.
+Type.mk_vartype, Type.mk_vartype_opr, Type.dest_vartype, Type.dest_vartype_opr.
 \ENDDOC

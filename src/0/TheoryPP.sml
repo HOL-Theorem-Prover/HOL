@@ -30,7 +30,8 @@ fun Thry s = s^"Theory";
 fun ThrySig s = Thry s
 
 fun pp_type mvartype mtype pps ty =
- let open Portable Type
+ let open Portable Kind Type
+     val pp_kind = pp_kind pps
      val pp_type = pp_type mvartype mtype pps
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
@@ -44,9 +45,9 @@ fun pp_type mvartype mtype pps ty =
          |  s   => add_string (mvartype^quote s)
   else
   case dest_thy_type ty
-   of {Tyop="bool",Thy="min", Args=[]} => add_string "bool"
-    | {Tyop="ind", Thy="min", Args=[]} => add_string "ind"
-    | {Tyop="fun", Thy="min", Args=[d,r]}
+   of {Tyop="bool", Thy="min", Args=[]} => add_string "bool"
+    | {Tyop="ind",  Thy="min", Args=[]} => add_string "ind"
+    | {Tyop="fun",  Thy="min", Args=[d,r]}
        => (add_string "(";
            begin_block INCONSISTENT 0;
              pp_type d;
@@ -62,6 +63,16 @@ fun pp_type mvartype mtype pps ty =
            begin_block INCONSISTENT 0;
            add_string (quote Tyop);
            add_break (1,0);
+(*
+           if Kind = typ then ()
+                         else (add_string ":: ";
+                               pp_kind Kind;
+                               add_break (1,0));
+           if Rank = 0   then ()
+                         else (add_string "<= ";
+                               add_string (Int.toString Rank);
+                               add_break (1,0));
+*)
            add_string (quote Thy);
            add_break (1,0);
            add_string "[";
@@ -72,6 +83,40 @@ fun pp_type mvartype mtype pps ty =
            add_string "]";
            end_block ()
          end
+  handle HOL_ERR _ =>
+    let val (opr,arg) = dest_app_type ty
+    in add_string "(";
+       begin_block INCONSISTENT 0;
+         pp_type arg;
+         add_break (1,0);
+         pp_type opr;
+       end_block ();
+       add_string ")"
+    end
+  handle HOL_ERR _ =>
+    let val (tyv,body) = dest_abs_type ty
+    in add_string "(";
+       begin_block INCONSISTENT 0;
+         add_string "\\";
+         pp_type tyv;
+         add_string ".";
+         add_break (1,0);
+         pp_type body;
+       end_block ();
+       add_string ")"
+    end
+  handle HOL_ERR _ =>
+    let val (tyv,body) = dest_univ_type ty
+    in add_string "(";
+       begin_block INCONSISTENT 0;
+         add_string "!";
+         pp_type tyv;
+         add_string ".";
+         add_break (1,0);
+         pp_type body;
+       end_block ();
+       add_string ")"
+    end
  end
 
 fun with_parens pfn pp x =
@@ -190,11 +235,29 @@ fun reset_share_table () =
   (taken := 0;
    Lib.for_se 0 (table_size-1) (fn i => Array.update(share_table,i,[])));
 
+fun hash_kind kd n =
+  if kd = Kind.typ then hash "*" (0,n)
+  else let val (dom,rng) = Kind.kind_dom_rng kd
+        in hash_kind rng (hash_kind dom n)
+        end;
+
 fun hash_type ty n =
-  hash(Type.dest_vartype ty) (0,n)
+  hash(#Name (Type.dest_vartype_opr ty)) (0,n)
   handle HOL_ERR _ =>
      let val {Tyop,Thy,Args} = Type.dest_thy_type ty
      in itlist hash_type Args (hash Thy (0, hash Tyop (0,n)))
+     end
+  handle HOL_ERR _ =>
+     let val (opr,arg) = Type.dest_app_type ty
+     in hash_type arg (hash_type opr n)
+     end
+  handle HOL_ERR _ =>
+     let val (tyv,body) = Type.dest_abs_type ty
+     in hash_type body (hash_type tyv n)
+     end
+  handle HOL_ERR _ =>
+     let val (tyv,body) = Type.dest_univ_type ty                             
+     in hash_type body (hash_type tyv n)
      end;
 
 fun hash_atom tm n =

@@ -3,7 +3,7 @@
 \TYPE {is_gen_tyvar : hol_type -> bool}
 
 \SYNOPSIS
-Checks if a type variable has been created by {gen_tyvar}.
+Checks if a type variable has been created by {gen_tyvar} or {gen_tyopvar}.
 
 \KEYWORDS
 variable, type.
@@ -16,11 +16,14 @@ Never fails.
 - is_gen_tyvar (gen_tyvar());
 > val it = true : bool
 
+- is_gen_tyvar (gen_tyopvar(typ ==> typ, 3));
+> val it = true : bool
+
 - is_gen_tyvar bool;
 > val it = false : bool
 }
 
 
 \SEEALSO
-Type.gen_tyvar.
+Type.gen_tyvar, Type.gen_tyopvar.
 \ENDDOC

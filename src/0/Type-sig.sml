@@ -21,7 +21,6 @@ sig
 
  val mk_type       : string * hol_type list -> hol_type
  val dest_type     : hol_type -> string * hol_type list
- val dest_type_opr : hol_type -> string * kind * int * hol_type list
  val is_type       : hol_type -> bool
  val mk_thy_type   : {Thy:string, Tyop:string, Args:hol_type list} -> hol_type
  val dest_thy_type : hol_type -> {Thy:string, Tyop:string, Args:hol_type list}
@@ -54,6 +53,7 @@ sig
  val kind_of       : hol_type -> kind
  val rank_of       : hol_type -> int
  val aconv_ty      : hol_type -> hol_type -> bool
+ val beta_conv_ty  : hol_type -> hol_type
 
  val decls         : string -> {Thy:string, Tyop:string} list
  val op_arity      : {Thy:string, Tyop:string} -> int option
@@ -88,6 +88,8 @@ sig
  val type_subst    : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
 
  val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
+
+ val match_type_opr : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
 
  val match_type_restr : hol_type list -> hol_type -> hol_type 
                         -> (hol_type,hol_type) Lib.subst

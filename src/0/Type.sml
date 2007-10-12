@@ -441,11 +441,14 @@ fun mk_vartype_opr ("'a", Type, 0) = alpha
   | mk_vartype_opr ("'e", Type, 0) = etyvar
   | mk_vartype_opr ("'f", Type, 0) = ftyvar
   | mk_vartype_opr (s, kind, rank) = 
+                if rank < 0 then
+                        raise ERR "mk_vartype_opr" "negative rank"
+                else
                 if Lexis.allowed_user_type_var s
-                then TyFv (s,kind,rank)
+                then TyFv (s, kind, rank)
                 else (if !varcomplain then
                         WARN "mk_vartype_opr" "non-standard syntax"
-                      else (); TyFv (s,kind,rank))
+                      else (); TyFv (s, kind, rank))
 
 fun mk_vartype s = mk_vartype_opr (s, Type, 0);
 
@@ -468,6 +471,9 @@ local val gen_tyvar_prefix = "%%gen_tyvar%%"
       val nameStrm = Lib.mk_istream (fn x => x+1) 0 num2name
 in
 fun gen_tyopvar (Kind,Rank) =
+       if Rank < 0 then
+               raise ERR "gen_tyopvar" "negative rank"
+       else
        TyFv(state(next nameStrm), Kind, Rank)
 fun gen_tyvar () = gen_tyopvar (Type, 0)
 
@@ -626,7 +632,7 @@ val ty12 =
 local open KernelTypes
 fun bk_ty f (TyCon c) A = (c,A)
   | bk_ty f (TyApp (Opr,Arg)) A = bk_ty f Opr (Arg::A)
-  | bk_ty f _ _ = raise ERR f "";
+  | bk_ty f _ _ = raise ERR f "not a sequence of type applications of a type constant";
 fun break_ty f ty = bk_ty f ty []
 in
 fun break_type ty = break_ty "break_type" ty;
@@ -1289,6 +1295,13 @@ fun match_type_in_context pat ob S = fst(raw_match_type pat ob (S,[]))
 fun match_type pat ob = match_type_in_context pat ob []
 
 fun match_type_opr pat ob = fst (raw_match_type_opr pat ob ([],[]))
+
+fun beta_conv_ty (TyApp(TyAbs((v,k,r),M),N))
+      = (let val theta = match_type_opr (TyFv(v,k,r)) N
+         in type_subst theta M
+         end
+         handle HOL_ERR _ => raise ERR "beta_conv_ty" "not a type beta redex")
+  | beta_conv_ty _ = raise ERR "beta_conv_ty" "not a type beta redex"
 
 
 (*---------------------------------------------------------------------------

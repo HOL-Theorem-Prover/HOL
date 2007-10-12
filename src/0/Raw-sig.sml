@@ -49,7 +49,6 @@ sig
   val op_rank       : {Thy:string,Tyop:string} -> int option
   val mk_type       : string * hol_type list -> hol_type
   val dest_type     : hol_type -> string * hol_type list
-  val dest_type_opr : hol_type -> string * kind * int * hol_type list
   val break_type    : hol_type -> KernelTypes.tyconst * hol_type list
   val decls         : string -> {Thy:string, Tyop:string} list
   val is_type       : hol_type -> bool
@@ -82,6 +81,7 @@ sig
   val is_abs_type   : hol_type -> bool
 
   val aconv_ty      : hol_type -> hol_type -> bool
+  val beta_conv_ty  : hol_type -> hol_type
   val polymorphic   : hol_type -> bool
   val universal     : hol_type -> bool
   val abstraction   : hol_type -> bool
@@ -111,6 +111,8 @@ sig
   val ftyvar        : hol_type
 
   val match_type    : hol_type -> hol_type -> (hol_type,hol_type)Lib.subst
+  val match_type_opr: hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
+
   val raw_match_type: hol_type -> hol_type
                       -> (hol_type,hol_type) Lib.subst * hol_type list
                       -> (hol_type,hol_type) Lib.subst * hol_type list

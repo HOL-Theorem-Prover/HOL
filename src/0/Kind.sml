@@ -95,9 +95,9 @@ fun pp_qkind pps kn =
      val pp_kind = pp_kind pps
  in
    begin_block INCONSISTENT 0;
-   add_string "`::";
+   add_string "``::";
    pp_kind kn;
-   add_string "`";
+   add_string "``";
    end_block()
  end;
 

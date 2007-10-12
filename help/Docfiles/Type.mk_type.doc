@@ -33,6 +33,10 @@ selecting which type operator to use. In such situations, it is
 preferable to use {mk_thy_type} since it allows one to specify
 exactly which type operator to use.
 
+{mk_type} is deprecated in HOL-Omega because the type system now includes
+type applications, type abstractions, and universal types. 
+
 \SEEALSO
-Type.mk_thy_type, Type.dest_type, Type.mk_vartype, Type.-->.
+Type.mk_thy_type, Type.mk_vartype, Type.-->,
+Type.mk_con_type, Type.mk_app_type, Type.mk_abs_type, Type.mk_univ_type.
 \ENDDOC

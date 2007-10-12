@@ -429,11 +429,29 @@ fun reset_share_table () =
   (taken := 0;
    Lib.for_se 0 (table_size-1) (fn i => Array.update(share_table,i,[])));
 
+fun hash_kind kd n =
+  if kd = Kind.typ then hash "*" (0,n)
+  else let val (dom,rng) = Kind.kind_dom_rng kd
+        in hash_kind rng (hash_kind dom n)
+        end;
+
 fun hash_type ty n =
-  hash(Type.dest_vartype ty) (0,n)
+  hash(#Name (Type.dest_vartype_opr ty)) (0,n)
   handle HOL_ERR _ =>
      let val {Tyop,Thy,Args} = Type.dest_thy_type ty
      in itlist hash_type Args (hash Thy (0, hash Tyop (0,n)))
+     end
+  handle HOL_ERR _ =>
+     let val (opr,arg) = Type.dest_app_type ty
+     in hash_type arg (hash_type opr n)
+     end
+  handle HOL_ERR _ =>
+     let val (tyv,body) = Type.dest_abs_type ty
+     in hash_type body (hash_type tyv n)
+     end
+  handle HOL_ERR _ =>
+     let val (tyv,body) = Type.dest_univ_type ty
+     in hash_type body (hash_type tyv n)
      end;
 
 fun hash_atom tm n =

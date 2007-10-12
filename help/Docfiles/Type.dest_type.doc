@@ -11,7 +11,7 @@ If {ty} is a compound type {(ty1,...,tyn)tyop}, then {dest_type ty}
 returns {(tyop,[ty1,...,tyn])}.
 
 \FAILURE
-Fails if {ty} is a type variable.
+Fails if {ty} is not a sequence of type applications of a type constant.
 
 \EXAMPLE
 {
@@ -20,13 +20,21 @@ Fails if {ty} is a type variable.
 
 - dest_type (alpha --> bool);
 > val it = ("fun", [`:'a`, `:bool`]) : string * hol_type list
-}
 
+- try dest_type (mk_univ_type(alpha, alpha --> alpha));
+
+Exception raised at Type.dest_type:
+not a sequence of type applications of a type constant
+}
 
 \COMMENTS
 A more precise alternative is {dest_thy_type}, which tells which theory 
 the type operator was declared in.
 
+{dest_type} is deprecated in HOL-Omega because the type system now includes
+type applications, type abstractions, and universal types. 
+
 \SEEALSO
-Type.mk_type, Type.dest_thy_type, Type.dest_vartype.
+Type.mk_type, Type.dest_thy_type, Type.dest_vartype,
+Type.dest_con_type, Type.dest_app_type, Type.dest_abs_type, Type.dest_univ_type.
 \ENDDOC
