@@ -5,9 +5,6 @@ sig
  eqtype hol_type
  type tyvar = string * kind * int (* rank *)
 
-(* val mk_clos       : hol_type Subst.subs * hol_type -> hol_type *)
-(* val norm_clos     : hol_type -> hol_type *)
-
  val mk_vartype    : string -> hol_type
  val mk_vartype_opr : tyvar -> hol_type
  val mk_primed_vartype : string -> hol_type

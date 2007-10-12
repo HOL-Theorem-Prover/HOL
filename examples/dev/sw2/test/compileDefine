@@ -9,7 +9,10 @@ loadPath := HOLDIR^"/examples/dev/sw2/" :: !loadPath;
 app load ["arm_compilerLib", "regAlloc", "closure", "inline"];
 open arm_compilerLib;
 open Normal inline closure regAlloc NormalTheory;
+open wordsSyntax numSyntax pairSyntax;
+val mapPartial = List.mapPartial;
 quietdec := false;
+
 
 numLib.prefer_num();
 Globals.priming := NONE;
@@ -22,6 +25,8 @@ val _ = abbrev_code := false;
 (*---------------------------------------------------------------------------*)
 (* To eventually go to wordsSyntax.                                          *)
 (*---------------------------------------------------------------------------*)
+
+val is_word_literal = is_n2w;
 
 fun strip_word_or tm = 
  let fun f tm = 
@@ -82,7 +87,6 @@ fun chunk s =
     word32_of_string s3,word32_of_string s4)
  end;
 
-       
 val zero32 = ``0w:word32``;
 val n8 = term_of_int 8;
 val n16 = term_of_int 16;
@@ -151,7 +155,7 @@ fun COND_CONST_ELIM_CONV tm =
 
 val pass0 = CONV_RULE (DEPTH_CONV IMMEDIATE_CONST_CONV);
 val pass0a = CONV_RULE (DEPTH_CONV COND_CONST_ELIM_CONV);
-val pass0b = Ho_Rewrite.PURE_REWRITE_RULE [FLATTEN_LET]
+val pass0b = Ho_Rewrite.PURE_REWRITE_RULE [FLATTEN_LET];
 
 (*---------------------------------------------------------------------------*)
 (* Compiling a list of functions.                                            *)
@@ -278,6 +282,11 @@ fun head eqns =
       (lhs(snd(strip_forall(hd
         (strip_conj(concl eqns))))));
 
+(*---------------------------------------------------------------------------*)
+(* Also want to show that the second definition satisfies the rec. eqn of    *)
+(* the first definition.                                                     *)
+(*---------------------------------------------------------------------------*)
+
 fun compileDefine (env,q) =
  let open TotalDefn pairSyntax
      val _ = HOL_MESG "Initial definition"
@@ -289,9 +298,11 @@ fun compileDefine (env,q) =
      val args = fst(dest_pabs(rhs(concl compiled)))
      val th1 = CONV_RULE (RHS_CONV pairLib.GEN_BETA_CONV) 
                          (AP_THM compiled args)
-     val th2 = SIMP_RULE bool_ss 
-                 [lift_cond_above_let,lift_cond_above_let1,
-                  lift_cond_above_trivlet,FLATTEN_LET] th1
+     val th2 = CONV_RULE 
+                (RHS_CONV (SIMP_CONV bool_ss 
+                             [lift_cond_above_let,lift_cond_above_let1,
+                              lift_cond_above_trivlet,FLATTEN_LET,
+                              COND_RATOR, COND_RAND])) th1
      val th3 = CONV_RULE (DEPTH_CONV ID_BIND_CONV) th2
      val vtm = subst [const |-> cvar] (concl th3)
      val _ = HOL_MESG "Second definition"
@@ -341,7 +352,12 @@ val (load_751_arm,_) = arm_compile load_751_def TRUTH InLineCode;
 
 val (field_neg_def,_,field_neg_arm) = 
  test_compile
-   `field_neg (x:word32) = if x = 0w then (0w:word32) else 751w - x`;
+   `field_neg (x:word32) = 
+     if x = 0w then (0w:word32) 
+     else 751w - x`;
+
+val field_neg_triple = 
+  REWRITE_RULE [fetch "-" "field_neg_code1_def"] field_neg_arm;
 
 val (field_add_def,_,field_add_arm) =
  test_compile
@@ -349,10 +365,13 @@ val (field_add_def,_,field_add_arm) =
      let z = x + y 
       in 
        if z < 751w then z else z - 751w`;
+val field_add_triple = 
+  REWRITE_RULE [fetch "-" "field_add_code1_def"] field_add_arm;
 
 val (field_sub_def,_,field_sub_arm) = 
   test_compile
    `field_sub (x:word32,y:word32) = field_add(x,field_neg y)`;
+REWRITE_RULE [fetch "-" "field_sub_code1_def"] field_sub_arm;
 
 val (field_mult_aux_def,_,field_mult_aux_arm) = 
   test_compile
@@ -364,13 +383,14 @@ val (field_mult_aux_def,_,field_mult_aux_arm) =
         acc' = (if y && 1w = 0w then acc else field_add (acc,x))
         in
           field_mult_aux (x',y',acc')`;
+REWRITE_RULE [fetch "-" "field_mult_aux1_def"] field_mult_aux_arm;
 
 val (field_mult_def,NONE) = 
- compileDefine([],
-  `field_mult (x,y) = field_mult_aux (x,y,0w)`);
+ test_compile
+   `field_mult (x,y) = field_mult_aux (x,y,0w)`;
 
-val (field_exp_aux_def, field_exp_aux_ind) = 
- compileDefine([],
+val (field_exp_aux_def, _, field_exp_aux_arm) = 
+ test_compile
   `field_exp_aux (x:word32,n:word32,acc:word32) =
       if n = 0w then acc
       else

@@ -20,7 +20,9 @@ end;
 val ORD_CHR_CONV = lemma o dest_chr o dest_ord;
 
 val char_eq_thms   = [CHR_ORD,CHAR_EQ_THM,ORD_11];
-val string_eq_thms = STRING_11::STRING_DISTINCT::char_eq_thms
+val string_eq_thms = TypeBase.one_one_of ``:string`` ::
+                     TypeBase.distinct_of ``:string`` ::
+                     GSYM (TypeBase.distinct_of ``:string``) :: char_eq_thms
 
 
 val dest_char_eq = (dest_chr ## dest_chr) o dest_eq;
@@ -54,7 +56,7 @@ val string_EQ_CONV =
      else raise ERR "string_EQ_CONV" "not a string eq"
    end;
 
-val string_rewrites = STRLEN_DEF::STRING_CASE_DEF::
+val string_rewrites = STRLEN_DEF::TypeBase.case_def_of ``:string``::
                       EXPLODE_EQNS::IMPLODE_EQNS::string_eq_thms;
 
 val _ = computeLib.add_funs string_rewrites;

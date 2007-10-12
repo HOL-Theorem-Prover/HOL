@@ -1,0 +1,73 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/x
+html1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="content-type"
+      content="text/html ; charset=US-ASCII" />
+<title>Release Notes for Kananaskis-5 version of HOL 4</title>
+</head>
+
+<body>
+<h1>Notes on HOL 4, Kananaskis-5 release</h1>
+
+<h2 id="contents">Contents</h2>
+<ul>
+  <li> <a href="#new-features">New features</a> </li>
+  <li> <a href="#bugs-fixed">Bugs fixed</a> </li>
+  <li> <a href="#new-theories">New theories</a> </li>
+  <li> <a href="#new-tools">New tools</a> </li>
+  <li> <a href="#new-examples">New examples</a> </li>
+  <li> <a href="#incompatibilities">Incompatibilities</a> </li>
+</ul>
+
+
+
+<h2 id="new-features">New features:</h2>
+
+<ul>
+</ul>
+
+<h2 id="bugs-fixed">Bugs fixed:</h2>
+
+<ul>
+</ul>
+
+
+<h2 id="new-theories">New theories:</h2>
+<ul>
+
+</ul>
+
+<h2 id="new-tools">New tools:</h2>
+
+<ul></ul>
+
+<h2 id="new-examples">New examples:</h2>
+
+<ul>
+</ul>
+
+<h2 id="incompatibilities">Incompatibilities:</h2>
+
+<ul>
+<li> The induction principles returned by <code>Define</code> are now
+  more accurate when the function being defined returns values of
+  type <code>:bool</code>.  This is because congruences for
+  conjunction and disjunction are now included by default.</li>
+
+<li> The <code>STRING_11</code> and <code>STRING_DISTINCT</code>
+  theorems in <code>stringTheory</code> have disappeared because
+  strings are now a standard algebraic type, defined
+  using <code>Hol_datatype</code>, and these theorems are present in
+  the <code>TypeBase</code>, as for all other algebraic types.</li>
+
+</ul>
+
+
+
+
+<hr />
+
+<p> <em><a href="http://hol.sourceforge.net">HOL 4, Kananaskis-5</a></em> </p>
+
+</body> </html>

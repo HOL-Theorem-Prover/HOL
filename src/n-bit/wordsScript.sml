@@ -614,10 +614,7 @@ val WORD_NOT_NOT = store_thm("WORD_NOT_NOT",
   `!a:'a word. ~(~a) = a`, BOOL_WORD_TAC);
 
 val WORD_DE_MORGAN_THM = store_thm("WORD_DE_MORGAN_THM",
-  `!a b. ~(a && b) = ~a !! ~b`, BOOL_WORD_TAC);
-
-val WORD_DE_MORGAN_THM = store_thm("WORD_DE_MORGAN_THM",
-  `!a b. ~(a && b) = ~a !! ~b`, BOOL_WORD_TAC);
+  `!a b. (~(a && b) = ~a !! ~b) /\ (~(a !! b) = ~a && ~b)`, BOOL_WORD_TAC);
 
 val WORD_AND_CLAUSES = store_thm("WORD_AND_CLAUSES",
   `!a:'a word.
@@ -681,6 +678,12 @@ val WORD_RIGHT_AND_OVER_OR = store_thm("WORD_RIGHT_AND_OVER_OR",
 
 val WORD_RIGHT_OR_OVER_AND = store_thm("WORD_RIGHT_OR_OVER_AND",
   `!a b c. (a && b) !! c = (a !! c) && (b !! c)`, BOOL_WORD_TAC);
+
+val WORD_LEFT_AND_OVER_OR = store_thm("WORD_LEFT_AND_OVER_OR",
+  `!a b c. a && (b !! c) = a && b !! a && c`, BOOL_WORD_TAC);
+
+val WORD_LEFT_OR_OVER_AND = store_thm("WORD_LEFT_OR_OVER_AND",
+  `!a b c. a !! b && c = (a !! b) && (a !! c)`, BOOL_WORD_TAC);
 
 val WORD_XOR = store_thm("WORD_XOR",
   `!a b. a ?? b = a && ~b !! b && ~a`, BOOL_WORD_TAC);

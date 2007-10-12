@@ -11,8 +11,11 @@
 (* for more information.                                                     *)
 (*---------------------------------------------------------------------------*)
 
-use "prelim";  
+Lib.with_flag (quietdec,true) use "prelim";  
+
+quietdec := true;
 open wordsTheory wordsLib pairTheory pairLib;
+quietdec := false;
 
 val KMATCH_MP_TAC = 
   MATCH_MP_TAC o 
@@ -135,7 +138,7 @@ val OneRound_Inversion = Q.store_thm("OneRound_Inversion",
  RW_TAC list_ss [Round_def, InvRound_def,WORD_ADD_SUB, LET_THM]);
 
 (*---------------------------------------------------------------------------*)
-(* Specialized version of Rounds induction.                                  *)
+(* Tweaked version of Rounds induction.                                      *)
 (*---------------------------------------------------------------------------*)
 
 val Rounds_ind' = Q.prove
@@ -155,7 +158,7 @@ val lemma1 = Q.prove
 (`!b k sum. ?b1. Round (b,k,sum) = (b1,k,sum+DELTA)`,
  SIMP_TAC std_ss [FORALL_PROD,Round_def,LET_THM]);
 
-val lemma2 = Q.prove
+val lemma = Q.prove
 (`!i b k s. ?b1. Rounds (i,b,k,s) = (b1,k,s + DELTA * i)`,
  recInduct Rounds_ind' THEN RW_TAC std_ss [] THEN
   ONCE_REWRITE_TAC [Rounds_def] THEN 
@@ -181,7 +184,7 @@ val TEA_CORRECT = Q.store_thm
      TEADecrypt (keys,TEAEncrypt (keys,plaintext)) = plaintext`,
  RW_TAC list_ss [TEAEncrypt_def, TEADecrypt_def, delta_shift] 
   THEN `(keys1 = keys) /\ (sum = DELTA * 32w)` 
-        by METIS_TAC [lemma2,WORD_ADD_0,PAIR_EQ] 
+        by METIS_TAC [lemma,WORD_ADD_0,PAIR_EQ] 
   THEN RW_TAC std_ss [] 
   THEN Q.PAT_ASSUM `Rounds x = y` (SUBST_ALL_TAC o SYM) 
   THEN POP_ASSUM MP_TAC 

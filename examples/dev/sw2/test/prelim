@@ -1,7 +1,7 @@
-quietdec :=true;
 loadPath := HOLDIR^"/examples/dev/sw2/" :: !loadPath;
 app load ["regAlloc", "closure", "inline", "SALGen", "wordsLib"];
 numLib.prefer_num();
+quietdec :=true;
 open Normal inline closure regAlloc NormalTheory SALGen;
 quietdec := false;
 
@@ -100,5 +100,6 @@ val compile2 = complist pass2;
 val compile3 = complist pass3;
 val compile4 = complist pass4;
 val compile4a = complist pass4a;
-val compile5 = complist pass5;
+(* val compile5 = complist pass5; *)
+
 
