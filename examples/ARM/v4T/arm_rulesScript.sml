@@ -201,7 +201,7 @@ val MEM_NO_TRANSFERS = prove(
 
 val get_ireg = prove(
   `!fpc a b.
-      GET_IREG T fpc (if fpc ' 1 then a # b else b # a) = THUMB_TO_ARM b`,
+      GET_IREG T fpc1 (if fpc1 then a # b else b # a) = THUMB_TO_ARM b`,
    SRW_TAC [] [GET_IREG]);
 
 val OUT_MEM =

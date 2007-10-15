@@ -45,12 +45,14 @@ val reg = set_registers empty_registers `[(pc,0x20w)]`;
 (* Initial program status register values *)
 
 val psr = set_status_registers empty_psrs
- `[(CPSR,SET_NZCV (F,F,F,F) (SET_IFTM F F F usr 0w))]`;
+ `[(CPSR,SET_NZCV (F,F,F,F) (SET_IFTM F F T usr 0w))]`;
 
-val prog = assemble exc_mem "modify.s";
+(*
+val prog = assemble exc_mem "mlton/thumb.s";
 
 val _ = evaluate(max,prog,reg,psr);
 val _ = evaluate3(max,prog,reg,psr);
+*)
 
 (* ------------------------------------------------------------------------- *)
 

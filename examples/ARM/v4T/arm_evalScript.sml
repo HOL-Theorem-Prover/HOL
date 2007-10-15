@@ -46,8 +46,8 @@ val lem = (SIMP_RULE (std_ss++SIZES_ss) [] o
   INST_TYPE [`:'a` |-> `:16`, `:'b` |-> `:16`, `:'c` |-> `:32`]) EXTRACT_CONCAT;
 
 val GET_IREG = store_thm("GET_IREG",
-  `!t fpc a b. GET_IREG t fpc (a # b) =
-              if t then THUMB_TO_ARM (if fpc ' 1 then b else a) else b @@ a`,
+  `!t fpc a b. GET_IREG t fpc1 (a # b) =
+              if t then THUMB_TO_ARM (if fpc1 then b else a) else b @@ a`,
   SRW_TAC [boolSimps.LET_ss] [GET_IREG_def,concat_thumb_def,lem]);
 
 (* ------------------------------------------------------------------------- *)

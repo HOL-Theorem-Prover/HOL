@@ -377,9 +377,9 @@ val OUT_MEM_def = Define`
 (* -------------------------------------------------------------------------- *)
 
 val GET_IREG_def = Define`
-  GET_IREG t (fpc:word32) (w:word32) =
+  GET_IREG t (fpc1:bool) (w:word32) =
     if t then
-      THUMB_TO_ARM (if fpc ' 1 then (31 >< 16) w else (15 >< 0) w)
+      THUMB_TO_ARM (if fpc1 then (31 >< 16) w else (15 >< 0) w)
     else
       w`;
 
@@ -389,7 +389,7 @@ val NEXT_ARM_1STAGE_def = Define`
     let ireg = if mem_out1.abort then
                  enc (UND AL)
                else
-                 GET_IREG ((CPSR_READ r.psr) ' 5) (FETCH_PC r.reg)
+                 GET_IREG ((CPSR_READ r.psr) ' 5) ((FETCH_PC r.reg) ' 1)
                    (HD mem_out1.data)
     in
       NEXT_ARM (state,ireg,inp2)`;
@@ -403,7 +403,7 @@ val OUT_ARM2_def = Define`
     let ireg = if mem_out1.abort then
                  enc (UND AL)
                else
-                 GET_IREG ((CPSR_READ r.psr) ' 5) (FETCH_PC r.reg)
+                 GET_IREG ((CPSR_READ r.psr) ' 5) ((FETCH_PC r.reg) ' 1)
                    (HD mem_out1.data)
     in
       OUT_ARM (state,ireg,rst)`;
@@ -481,7 +481,9 @@ val UPDATES_PC_def = Define`
          data_proc ->
            (let (I,opcode,S,Rn,Rd,opnd2) = DECODE_DATAP ireg in
               ~TEST_OR_COMP opcode /\ (Rd = 15w))
-      || mla_mul   -> ((19 >< 16) ireg = 15w:word4)
+      || mla_mul   ->
+           (let (L,Sgn,A,S,Rd,Rn,Rs,Rm) = DECODE_MLA_MUL ireg in
+              L /\ (Rn = 15w) \/ (Rd = 15w))
       || swi_ex    -> T
       || br        -> T
       || bx        -> T
@@ -506,56 +508,64 @@ val NEXT_ARM_3STAGE_def = Define`
         <| state := s; flush := (s.exception = software);
            ir1 := state3.ir1; ir2 := state3.ir2 |>
     else
-      if state3.flush then
-        if mem_out1.abort /\ NULL mem_out1.data then
-          <| state := NEXT_ARM (state3.state with exception := pabort,
-                                enc (UND AL),inp2);
-             flush := F; ir1 := state3.ir1; ir2 := state3.ir2 |>
-        else
-          let r = state3.state.regs in
-          let l = mem_out1.data in
-          let ireg = GET_IREG ((CPSR_READ r.psr) ' 5) (FETCH_PC r.reg) (HD l) in
-            <| state := NEXT_ARM (state3.state,ireg,inp2); flush :=  F;
-               ir1 := HD (TL (TL l)); ir2 := HD (TL l) |>
+      if state3.flush /\ mem_out1.abort /\ NULL mem_out1.data then
+        <| state := NEXT_ARM (state3.state with exception := pabort,
+                              enc (UND AL),inp2);
+           flush := F; ir1 := state3.ir1; ir2 := state3.ir2 |>
       else
         let r = state3.state.regs in
-        let ireg = GET_IREG ((CPSR_READ r.psr) ' 5)
-                     (FETCH_PC r.reg - 8w) state3.ir2 in
-        let s = NEXT_ARM (state3.state,ireg,inp2) in
+        let t = (CPSR_READ r.psr) ' 5
+        and fpc1 = (FETCH_PC r.reg) ' 1
+        and l = mem_out1.data in
+        let ireg = GET_IREG t fpc1 (if state3.flush then HD l else state3.ir2)
+        and fetch = (t ==> fpc1) in
+        let s = NEXT_ARM (state3.state,ireg,inp2)
+        and ir1 = if state3.flush then
+                    if fetch then HD (TL (TL l)) else HD (TL l)
+                  else
+                    if fetch then HD l else state3.ir1
+        and ir2 = if state3.flush then
+                    if fetch then HD (TL l) else HD l
+                  else
+                    if fetch then state3.ir1 else state3.ir2
+        in
           <| state := s;
              flush := (UPDATES_PC (state3.state,ireg) /\
                        (s.exception = software));
-             ir1 := HD mem_out1.data;
-             ir2 := state3.ir1 |>`;
+             ir1 := ir1; ir2 := ir2 |>`;
 
 val OUT_ARM1_3STAGE_def = Define`
   OUT_ARM1_3STAGE state3 =
     if ~(state3.state.exception = software) then
       []
-    else let fpc = FETCH_PC state3.state.regs.reg in
-      if state3.flush then
-        [MemRead fpc; MemRead (fpc + 4w); MemRead (fpc + 8w)]
-      else
-        [MemRead (fpc + 8w)]`;
+    else
+      let r = state3.state.regs in
+      let pc = FETCH_PC r.reg in
+      let fpc = (31 <> 2) pc in
+      let fetch = ((CPSR_READ r.psr) ' 5) ==> (pc ' 1) in
+        if state3.flush then
+          if fetch then
+            [MemRead fpc; MemRead (fpc + 4w); MemRead (fpc + 8w)]
+          else
+            [MemRead fpc; MemRead (fpc + 4w)]
+        else
+          if fetch then
+            [MemRead (fpc + 8w)]
+          else
+            []`;
 
 val OUT_ARM2_3STAGE_def = Define`
   OUT_ARM2_3STAGE (state3,mem_out1,rst) =
     if ~(state3.state.exception = software) then
       OUT_ARM (state3.state,state3.ir2,rst)
     else
-      if state3.flush then
-        if mem_out1.abort /\ NULL mem_out1.data then
-          OUT_ARM (state3.state with exception := pabort,enc (UND AL),rst)
-        else
-          let r = state3.state.regs in
-          let ireg = GET_IREG ((CPSR_READ r.psr) ' 5)
-                       (FETCH_PC r.reg) (HD mem_out1.data)
-          in
-            OUT_ARM (state3.state,ireg,rst)
+      if state3.flush /\ mem_out1.abort /\ NULL mem_out1.data then
+        OUT_ARM (state3.state with exception := pabort,enc (UND AL),rst)
       else
         let r = state3.state.regs in
-        let ireg = GET_IREG ((CPSR_READ r.psr) ' 5)
-                     (FETCH_PC r.reg - 8w) state3.ir2 in
+        let ireg = GET_IREG ((CPSR_READ r.psr) ' 5) ((FETCH_PC r.reg) ' 1)
+                     (if state3.flush then HD mem_out1.data else state3.ir2)
+        in
           OUT_ARM (state3.state,ireg,rst)`;
 
 val NEXT_3STAGE_def = Define`
