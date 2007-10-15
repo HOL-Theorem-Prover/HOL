@@ -38,6 +38,9 @@ fun WORD_ONLY_RULE n x =
       ((GEN_ALL o INST [n |-> `n2w (NUMERAL n)`]) y)
   end;
 
+val NEXT_SYSTEM_RULE = GEN_ALL o REWRITE_RULE [I_THM, NEXT_SYSTEM_def] o
+  SPEC `((a,c,m),r,f,i)` o GEN `x` o SPEC_ALL o REWRITE_RULE [FUN_EQ_THM];
+
 fun add_rws f rws =
 let val cmp_set = f()
     val _ = add_thms rws cmp_set
@@ -89,6 +92,7 @@ val _ = Lib.C add_thms arm_compset
    num2exceptions_thm,exception2mode_def,
    num2condition_thm,condition2num_thm,condition_case_def,
    literal_case_THM, iclass_case_def, data_case_def, APPLY_UPDATE_THM,
+   thumb_instruction_case_def,
 
    SET_NZC_def,NZCV_def,USER_def,mode_num_def,
    DECODE_IFTM_SET_NZCV,DECODE_NZCV_SET_NZCV,
@@ -118,6 +122,10 @@ val _ = Lib.C add_thms arm_compset
    arm_state_accfupds, arm_state_fupdfupds, arm_state_literal_11,
    arm_state_fupdfupds_comp, arm_state_fupdcanon,
    arm_state_fupdcanon_comp,
+   arm_state3_accessors, arm_state3_updates_eq_literal,
+   arm_state3_accfupds, arm_state3_fupdfupds, arm_state3_literal_11,
+   arm_state3_fupdfupds_comp, arm_state3_fupdcanon,
+   arm_state3_fupdcanon_comp,
    transfer_options_accessors, transfer_options_updates_eq_literal,
    transfer_options_accfupds, transfer_options_fupdfupds,
    transfer_options_literal_11, transfer_options_fupdfupds_comp,
@@ -130,10 +138,6 @@ val _ = Lib.C add_thms arm_compset
    arm_output_accfupds, arm_output_fupdfupds, arm_output_literal_11,
    arm_output_fupdfupds_comp, arm_output_fupdcanon,
    arm_output_fupdcanon_comp,
-   pipe_output_accessors, pipe_output_updates_eq_literal,
-   pipe_output_accfupds, pipe_output_fupdfupds, pipe_output_literal_11,
-   pipe_output_fupdfupds_comp, pipe_output_fupdcanon,
-   pipe_output_fupdcanon_comp,
    coproc_accessors, coproc_updates_eq_literal,
    coproc_accfupds, coproc_fupdfupds,
    coproc_literal_11, coproc_fupdfupds_comp,
@@ -201,16 +205,22 @@ val _ = Lib.C add_thms arm_compset
    THE_DEF,IS_SOME_DEF,IS_NONE_EQ_NONE,NOT_IS_SOME_EQ_NONE,
    option_case_ID,option_case_SOME_ID,
    option_case_def,SOME_11,NOT_SOME_NONE,
-   sumTheory.OUTL, sumTheory.OUTR, thumb_to_arm, NoTransfers_def,
+   sumTheory.OUTL, sumTheory.OUTR, NoTransfers_def,
 
-   RUN_ARM, WRITE_MEM_def, READ_MEM_def,
-   NEXT_ARM_def, OUT_ARM, INP_ARM1_def, INP_ARM2_def,
+   GET_IREG,
+   (SIMP_RULE (srw_ss()++boolSimps.LET_ss) [] o
+    SPECL [`F`,`fpc`,`enc i`]) GET_IREG_def,
+   (SIMP_RULE (srw_ss()++boolSimps.LET_ss) [] o
+    SPECL [`t`,`fpc`,`n2w n`]) GET_IREG_def,
+   RUN_ARM_def, WRITE_MEM_def, READ_MEM_def,
+   NEXT_ARM_def, SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] OUT_ARM_def,
+   NEXT_ARM_1STAGE_def, OUT_ARM1_def, OUT_ARM2_def,
+   NEXT_ARM_3STAGE_def, OUT_ARM1_3STAGE_def, OUT_ARM2_3STAGE_def,
+   INP_ARM1_def, INP_ARM2_def,
    NEXT_CP_def, OUT_CP_def, INP_CP1_def, INP_CP2_def,
    NEXT_MEM_def, OUT_MEM_def, INP_MEM_def,
-   NEXT_NO_PIPE_def, OUT_NO_PIPE_def,
-   (GEN_ALL o REWRITE_RULE [I_THM, NEXT_SYSTEM_def] o
-    SPEC `((a,c,m,()),r,f,i)` o GEN `x` o SPEC_ALL o
-    REWRITE_RULE [FUN_EQ_THM]) NEXT_1STAGE_def,
+   NEXT_SYSTEM_RULE NEXT_1STAGE_def,
+   NEXT_SYSTEM_RULE NEXT_3STAGE_def, UPDATES_PC_def,
 
    memop_case_def, fcpTheory.index_comp, decode_cp_enc_coproc,
    decode_27_enc_coproc, thumbTheory.decode_27_enc_coproc_,
@@ -799,17 +809,17 @@ fun set_status_registers psr rvs  = (rhsc o
 (* State & Input *)
 
 type sys_state =
-  {reg : term, psr : term, exc: term, cp_state : term, mem : term, pipe : term};
+  {reg : term, psr : term, exc: term, cp_state : term, mem : term};
 
 fun dest_state t =
   case strip_pair t of
-    [arm, cp, memory, pipe] =>
+    [arm, cp, memory] =>
      (case snd (TypeBase.dest_record arm) of
         [("regs", regs), ("exception", exc)] =>
          (case snd (TypeBase.dest_record regs) of
             [("reg", reg), ("psr", psr)] =>
               {reg = reg, psr = psr, exc = exc, cp_state = cp,
-               mem = memory, pipe = pipe}
+               mem = memory}
           | _ => raise ERR "dest_state" "regs")
       | _ => raise ERR "dest_state" "arm")
   | _ => raise ERR "dest_state" "tuple";
@@ -818,16 +828,13 @@ fun mk_state (x:sys_state) =
 let
   val cp_typ = type_of (#cp_state x)
   val mem_typ = type_of (#mem x)
-  val pipe_typ = type_of (#pipe x)
 in
   subst [``reg:registers`` |-> #reg x, ``psr:psrs`` |-> #psr x,
          ``exc:exceptions`` |-> #exc x,
          ``cp:^(ty_antiq cp_typ)`` |-> #cp_state x,
-         ``mem:^(ty_antiq mem_typ)`` |-> #mem x,
-         ``pipe:^(ty_antiq pipe_typ)`` |-> #pipe x]
+         ``mem:^(ty_antiq mem_typ)`` |-> #mem x]
     ``(<| regs := <| reg := reg; psr := psr |>; exception := exc |>,
-       cp:^(ty_antiq cp_typ), mem:^(ty_antiq mem_typ),
-       pipe:^(ty_antiq pipe_typ))``
+       cp:^(ty_antiq cp_typ), mem:^(ty_antiq mem_typ))``
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -854,7 +861,7 @@ end;
 
 (*
  val x = ``(<|regs := <|reg := I a; psr := I b|>; exception := I c|>,
-            I d : 'a, I e, I f : mem, I g : unit)``;
+            I d : 'a, I e : mem )``;
 
  reg  - rator rand rator rand rand rator
  psr  - rator rand rator rand rand rand
@@ -862,8 +869,7 @@ end;
 
  arm  - rator
  cp   - rand rator
- mem  - rand rand rator
- pipe - rand rand rand
+ mem  - rand rand
 *)
 
 fun REG_CONV c =
@@ -872,9 +878,10 @@ fun REG_CONV c =
 fun PSR_CONV c =
   RATOR_CONV (RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV (RAND_CONV c)))));
 
-fun COP_CONV c = RATOR_CONV (RATOR_CONV c);
 fun EXC_CONV c = RATOR_CONV (RAND_CONV (RAND_CONV c));
-fun MEM_CONV c = RAND_CONV (RAND_CONV (RATOR_CONV c));
+
+fun COP_CONV c = RAND_CONV (RATOR_CONV c);
+fun MEM_CONV c = RAND_CONV (RAND_CONV c);
 
 val NEXT_ARM_CONV =
   ARM_CONV THENC
@@ -959,17 +966,184 @@ fun eval_cp (n, x, y) = lstate (time,pc_ptr) x [init x y] n;
 
 fun evaluate (n, m, r, s) =
   evaluate_cp(n, (no_cp,mem_write,mem_read,no_irpts),
-   {cp_state = ``cp_state:'a``, pipe = ``()``, exc = ``software``,
-    mem = m, reg = r, psr = s});
+   {cp_state = ``cp_state:'a``, exc = ``software``, mem = m, reg = r, psr = s});
 
 fun eval (n, m, r, s) =
   eval_cp(n, (no_cp,mem_write,mem_read,no_irpts),
-   {cp_state = ``cp_state:'a``, pipe = ``()``, exc = ``software``,
-    mem = m, reg = r, psr = s});
+   {cp_state = ``cp_state:'a``, exc = ``software``, mem = m, reg = r, psr = s});
 
 (*
 val x = evaluate(valOf Int.maxInt, empty_memory, empty_registers, empty_psrs);
 *)
+
+(* ------------------------------------------------------------------------- *)
+
+type sys_state3 =
+  {state : sys_state, flush : term, ir1 : term, ir2 : term};
+
+fun dest_state3 t =
+  case strip_pair t of
+    [arm, cp, memory] =>
+     (case snd (TypeBase.dest_record arm) of
+        [("state", state), ("flush", f), ("ir1", a), (ir2, b)] =>
+          (case snd (TypeBase.dest_record state) of
+            [("regs", regs), ("exception", exc)] =>
+              (case snd (TypeBase.dest_record regs) of
+                [("reg", reg), ("psr", psr)] =>
+                  {state = {reg = reg, psr = psr, exc = exc, cp_state = cp,
+                   mem = memory}, flush = f, ir1 = a, ir2 = b}
+              | _ => raise ERR "dest_state" "regs")
+          | _ => raise ERR "dest_state" "arm")
+      | _ => raise ERR "dest_state" "arm3")
+  | _ => raise ERR "dest_state" "tuple";
+
+fun mk_state3 (y:sys_state3) =
+let
+  val x = #state y
+  val cp_typ = type_of (#cp_state x)
+  val mem_typ = type_of (#mem x)
+in
+  subst [``reg:registers`` |-> #reg x,
+         ``psr:psrs`` |-> #psr x,
+         ``exc:exceptions`` |-> #exc x,
+         ``cp:^(ty_antiq cp_typ)`` |-> #cp_state x,
+         ``mem:^(ty_antiq mem_typ)`` |-> #mem x,
+         ``f:bool`` |-> #flush y,
+         ``a:word32`` |-> #ir1 y,
+         ``b:word32`` |-> #ir2 y]
+   ``(<| state := <| regs := <| reg := reg; psr := psr |>; exception := exc |>;
+         flush := f; ir1 := a; ir2 := b |>,
+      cp:^(ty_antiq cp_typ), mem:^(ty_antiq mem_typ))``
+end;
+
+fun init3 (cp,write,read,i) s =
+let
+  val cp_typ    = type_of cp
+  val write_typ = type_of write
+  val read_typ  = type_of read
+  val state     = mk_state3 s
+  val state_typ = type_of state
+in
+  (PURE_ONCE_REWRITE_CONV [CONJUNCT1 STATE_3STAGE_def] o
+   subst [``cp:^(ty_antiq cp_typ)`` |-> cp,
+          ``write:^(ty_antiq write_typ)`` |-> write,
+          ``read:^(ty_antiq read_typ)`` |-> read,
+          ``s:^(ty_antiq state_typ)`` |-> state,
+          ``i:num -> regs option # bool # bool`` |-> i])
+  ``STATE_3STAGE (cp:^(ty_antiq cp_typ))
+       (write:^(ty_antiq write_typ)) (read:^(ty_antiq read_typ))
+       (s:^(ty_antiq state_typ),i) 0``
+end;
+
+(*
+val t = ``(<| state :=
+                <| regs := <|reg := I a; psr := I b|>; exception := I c|>;
+              flush := I d; ir1 := I e; ir2 := I f |>,I g : 'a,I h:mem)``;
+*)
+
+fun REG3_CONV c = RATOR_CONV (RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV
+  (RATOR_CONV (RAND_CONV (RAND_CONV (RATOR_CONV c))))))));
+
+fun PSR3_CONV c = RATOR_CONV (RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV
+  (RATOR_CONV (RAND_CONV (RAND_CONV (RAND_CONV c))))))));
+
+fun EXC3_CONV c = RATOR_CONV (RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV
+  (RAND_CONV c)))));
+
+val NEXT_ARM3_CONV =
+  ARM_CONV THENC
+  SORT_UPDATE_CONV THENC
+  REG3_CONV ARM_ASSEMBLE_CONV THENC
+  COP_CONV ARM_ASSEMBLE_CONV;
+
+fun next3 (cp,write,read,i) t =
+ let
+   val time      = snd (dest_comb (lhsc t))
+   val state     = rhsc t
+   val cp_typ    = type_of cp
+   val write_typ = type_of write
+   val read_typ  = type_of read
+   val state_typ = type_of state
+   val t1 =
+        (NEXT_ARM3_CONV o
+         subst [``cp:^(ty_antiq cp_typ)``              |-> cp,
+                ``write:^(ty_antiq write_typ)``        |-> write,
+                ``read:^(ty_antiq read_typ)``          |-> read,
+                ``s:^(ty_antiq state_typ)``            |-> state,
+                ``i:num -> regs option # bool # bool`` |-> i,
+                ``t:num``                              |-> time])
+      ``NEXT_3STAGE (cp:^(ty_antiq cp_typ)) (write:^(ty_antiq write_typ))
+          (read:^(ty_antiq read_typ)) (s:^(ty_antiq state_typ), i (t:num))``
+ in
+   numLib.REDUCE_RULE (MATCH_MP STATE_3STAGE (CONJ t t1))
+ end;
+
+fun done3 t = term_eq ``undefined`` (#exc (#state (dest_state3 (rhsc t))))
+
+fun lstate3 _ _ [] _ = []
+  | lstate3 (tmr,prtr) x (l as (t::ts)) n =
+      if n = 0 then l
+      else
+        if can prtr (rhsc t) then
+          let val nl = (tmr (uncurry next3) (x, t)) :: l in
+            if done3 t then nl else lstate3 (tmr,prtr) x nl (n - 1)
+          end
+      else
+       (print "Aborted: probably in the wrong Thumb/ARM mode.\n"; l);
+
+fun state3 (tmr,prtr) x t n =
+  if n = 0 then t else
+    if can prtr (rhsc t) then
+      let val nxt = tmr (uncurry next3) (x, t) in
+        if done3 t then nxt else state3 (tmr,prtr) x nxt (n - 1)
+      end
+    else
+      (print "Aborted: probably in the wrong Thumb/ARM mode.\n"; t);
+
+fun pc_ptr3 s =
+let
+  val y = dest_state3 s
+  val x = #state y
+  val pc = eval_word (get_pc (#reg x))
+in
+  if not (term_eq ``software`` (#exc x)) then
+    print ("0x" ^ Arbnum.toHexString pc ^ ": " ^
+           term_to_string (#exc x) ^ " exception\n")
+  else
+    let val thumb = term_eq T (#T (dest_psr (get_cpsr (#psr x))))
+        val inst = if term_eq T (#flush y) then
+                     read_mem_range (#mem x) pc 1
+                   else
+                     [(pc, #ir2 y)]
+    in
+      case to_halves inst of
+        [ireg] =>
+          (printn (mem_val_to_string ireg) before
+           (thumb andalso term_eq ``enc`` (fst (dest_comb (snd (ireg))))
+            andalso raise ERR "pc_ptr" "ARM in thumb mode"))
+      | [ireg1, ireg2] =>
+          (printn (mem_val_to_string
+                         (if Data.even (Data.div2 pc) then ireg1 else ireg2))
+           before (thumb orelse raise ERR "pc_ptr" "thumb in ARM mode"))
+      | _ => raise ERR "pc_ptr" "Cannot print instruction register"
+    end
+end;
+
+fun evaluate_cp3 (n, x, y) = state3 (A,pc_ptr3) x (init3 x y) n;
+
+fun eval_cp3 (n, x, y) = lstate3 (time,pc_ptr3) x [init3 x y] n;
+
+fun evaluate3 (n, m, r, s) =
+  evaluate_cp3(n, (no_cp,mem_write,mem_read,no_irpts),
+   {state = {cp_state = ``cp_state:'a``, exc = ``software``,
+             mem = m, reg = r, psr = s},
+    flush = ``T``, ir1 = ``ARB:word32``, ir2 = ``ARB:word32``});
+
+fun eval3 (n, m, r, s) =
+  eval_cp3(n, (no_cp,mem_write,mem_read,no_irpts),
+   {state = {cp_state = ``cp_state:'a``, exc = ``software``,
+             mem = m, reg = r, psr = s},
+    flush = ``T``, ir1 = ``ARB:word32``, ir2 = ``ARB:word32``});
 
 (* ------------------------------------------------------------------------- *)
 

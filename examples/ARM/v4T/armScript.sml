@@ -68,10 +68,10 @@ val _ = Hol_datatype`
                   Dabort : num option; Fiq : bool; Irq : bool |>`;
 
 val _ = Hol_datatype`
-  arm_input = <| ireg : word32 ; data : word32 list;
-                 interrupts : interrupts ; absent : bool |>`;
+  arm_input =
+    <| data : word32 list; interrupts : interrupts ; absent : bool |>`;
 
-val _ = Hol_datatype `pipe_output = <| ireg : word32; abort : bool |>`;
+val _ = Hol_datatype `mem_output = <| data : word32 list; abort : bool |>`;
 
 val _ = Hol_datatype `mode = usr | fiq | irq | svc | abt | und | sys | safe`;
 
@@ -988,14 +988,13 @@ val DECODE_ARM_def = Define`
       || __ -> cdp_und`;
 
 val RUN_ARM_def = Define`
-  RUN_ARM (state,inp) =
+  RUN_ARM (state,ireg,inp) =
     let r = state.regs in
     let (nzcv,i,f,t,m) = DECODE_PSR (CPSR_READ r.psr) in
       if ~(state.exception = software) then
         EXCEPTION r t state.exception
       else
-        let ireg = if t then THUMB_TO_ARM ((15 >< 0) inp.ireg) else inp.ireg
-        and inc_pc x = <| reg := INC_PC t x.reg; psr := x.psr |> in
+        let inc_pc x = <| reg := INC_PC t x.reg; psr := x.psr |> in
           if ~CONDITION_PASSED nzcv ireg then
             inc_pc r
           else let mode = DECODE_MODE m
@@ -1028,10 +1027,9 @@ val RUN_ARM_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val interrupt2exception_def = Define`
-  interrupt2exception (state,inp) cpsr' =
+  interrupt2exception (state,ireg,inp) cpsr' =
     let (flags,i,f,t,m) = DECODE_PSR (CPSR_READ state.regs.psr)
     and (flags',i',f',t',m') = DECODE_PSR cpsr' in
-    let ireg = if t then THUMB_TO_ARM ((15 >< 0) inp.ireg) else inp.ireg in
     let pass = (state.exception = software) /\ CONDITION_PASSED flags ireg
     and ic = DECODE_ARM ireg in
     let old_flags = pass /\ ((ic = mrs) \/ (ic = msr))
@@ -1056,41 +1054,38 @@ val interrupt2exception_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val NEXT_ARM_def = Define`
-  NEXT_ARM (state,inp) =
+  NEXT_ARM (state,ireg,inp) =
     let r = case inp.interrupts.Reset of
                SOME x -> x
-            || NONE -> RUN_ARM (state,inp)
+            || NONE -> RUN_ARM (state,ireg,inp)
     in
       <| regs := r;
-         exception := interrupt2exception (state,inp) (CPSR_READ r.psr) |>`;
+         exception :=
+           interrupt2exception (state,ireg,inp) (CPSR_READ r.psr) |>`;
 
 val NoTransfers_def = Define `NoTransfers = MemAccess (\x y. [])`;
 
 val OUT_ARM_def = Define`
-  OUT_ARM (state, x) =
+  OUT_ARM (state,ireg,rst) =
    let r = state.regs in
    let (nzcv,i,f,t,m) = DECODE_PSR (CPSR_READ r.psr) in
    let mode = DECODE_MODE m in
-     case x of
-        NONE -> <| transfers := NoTransfers; cpi := F; user := USER mode |>
-     || SOME n ->
-        let ireg = if t then THUMB_TO_ARM ((15 >< 0) n) else n in
-          if (state.exception = software) /\ CONDITION_PASSED nzcv ireg then
-            let ic = DECODE_ARM ireg in
-              <| transfers := 
-                 (case ic of
-                     ldr_str   -> OUTL (LDR_STR r t (CARRY nzcv) mode ireg NONE)
-                  || ldrh_strh -> OUTL (LDRH_STRH r t mode ireg NONE)
-                  || ldm_stm   -> OUTL (LDM_STM r t mode ireg NONE)
-                  || swp       -> OUTL (SWP r mode ireg NONE)
-                  || ldc_stc   -> OUTL (LDC_STC r mode ireg F)
-                  || mcr       -> MCR r.reg mode ireg
-                  || _         -> NoTransfers);
-                 cpi := (ic IN {cdp_und; mcr; mrc; ldc_stc});
-                 user := USER mode
-              |>
-          else
-             <| transfers := NoTransfers; cpi := F; user := USER mode |>`;
+     if ~rst /\ (state.exception = software) /\ CONDITION_PASSED nzcv ireg then
+       let ic = DECODE_ARM ireg in
+         <| transfers := 
+            (case ic of
+                ldr_str   -> OUTL (LDR_STR r t (CARRY nzcv) mode ireg NONE)
+             || ldrh_strh -> OUTL (LDRH_STRH r t mode ireg NONE)
+             || ldm_stm   -> OUTL (LDM_STM r t mode ireg NONE)
+             || swp       -> OUTL (SWP r mode ireg NONE)
+             || ldc_stc   -> OUTL (LDC_STC r mode ireg F)
+             || mcr       -> MCR r.reg mode ireg
+             || _         -> NoTransfers);
+            cpi := (ic IN {cdp_und; mcr; mrc; ldc_stc} /\ ireg ' 27);
+            user := USER mode
+         |>
+     else
+        <| transfers := NoTransfers; cpi := F; user := USER mode |>`;
 
 (* The output upon receiving a reset signal will actually be a prefix of     *)
 (* the "normal" output.  However, as a simplifying mechanism, this is        *)

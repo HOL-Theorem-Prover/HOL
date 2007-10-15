@@ -47,6 +47,11 @@ val reg = set_registers empty_registers `[(pc,0x20w)]`;
 val psr = set_status_registers empty_psrs
  `[(CPSR,SET_NZCV (F,F,F,F) (SET_IFTM F F F usr 0w))]`;
 
+val prog = assemble exc_mem "modify.s";
+
+val _ = evaluate(max,prog,reg,psr);
+val _ = evaluate3(max,prog,reg,psr);
+
 (* ------------------------------------------------------------------------- *)
 
 fun hs n = "0x" ^ Arbnum.toHexString n;
@@ -94,7 +99,7 @@ val eval_add17 = save_thm("eval_add17",
   EVAL (wordsSyntax.mk_word_add(mk_word544 a, mk_word544 b)));
 
 val prog = list_assemble
-  (assemble exc_mem "../code/add.s")
+  (assemble exc_mem "/home/acjf3/code/add.s")
  (["0x20:\
    \mov sp, #0xA000",
    "mov r0, sp",

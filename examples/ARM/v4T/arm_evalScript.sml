@@ -42,52 +42,13 @@ val _ = overload_on ("#", Term`$concat_thumb`);
 
 val _ = add_infix("#",720,HOLgrammars.RIGHT);
 
-val format_thumb_def = Define`
-  format_thumb (fpc:word32) (w:word32) =
-    FORMAT UnsignedHalfWord ((1 >< 0) fpc) w`;
-
-val thumb_to_arm_def = Define`
-  thumb_to_arm ireg = THUMB_TO_ARM ((15 >< 0) ireg)`;
-
-val OUT_NO_PIPE = save_thm("OUT_NO_PIPE",
-  REWRITE_RULE [GSYM format_thumb_def] OUT_NO_PIPE_def);
-
-val RUN_ARM = save_thm("RUN_ARM",
-  REWRITE_RULE [GSYM thumb_to_arm_def] RUN_ARM_def);
-
-val OUT_ARM = save_thm("OUT_ARM",
-  SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss)
-   [GSYM thumb_to_arm_def] OUT_ARM_def);
-
-val interrupt2exception = save_thm("interrupt2exception",
-  SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss)
-   [GSYM thumb_to_arm_def] interrupt2exception_def);
-
 val lem = (SIMP_RULE (std_ss++SIZES_ss) [] o
   INST_TYPE [`:'a` |-> `:16`, `:'b` |-> `:16`, `:'c` |-> `:32`]) EXTRACT_CONCAT;
 
-val format_thumb = store_thm("format_thumb",
-  `!fpc a b. format_thumb fpc (a # b) = w2w (if fpc ' 1 then b else a)`,
-  SRW_TAC [] [format_thumb_def, concat_thumb_def, FORMAT_def, GET_HALF_def, lem]
-    \\ FULL_SIMP_TAC (fcp_ss++ARITH_ss++SIZES_ss)
-         [word_extract_def, word_bits_def, w2w]);
-
-val lem = prove(
-  `!w:word32 i. (1 >< 0) w ' 1 = w ' 1`,
-  SRW_TAC [fcpLib.FCP_ss, ARITH_ss, SIZES_ss]
-          [word_extract_def,word_bits_def,w2w]);
-
-val thumb_to_arm = store_thm("thumb_to_arm",
-  `(!fpc a b. thumb_to_arm (format_thumb fpc (a # b)) =
-              THUMB_TO_ARM (if fpc ' 1 then b else a)) /\
-   !fpc n. thumb_to_arm (format_thumb fpc (n2w n)) =
-           THUMB_TO_ARM ((if fpc ' 1 then (31 >< 16) else (15 >< 0))
-                         (n2w n : word32))`,
-  SRW_TAC [SIZES_ss] [EXTRACT_ALL_BITS, thumb_to_arm_def, format_thumb,
-                      word_extract_w2w, w2w_id]
-    \\ ASM_SIMP_TAC (srw_ss()++SIZES_ss)
-         [word_extract_n2w, BITS_COMP_THM2, FORMAT_def, GET_HALF_def,
-          word_extract_w2w, format_thumb_def, lem]);
+val GET_IREG = store_thm("GET_IREG",
+  `!t fpc a b. GET_IREG t fpc (a # b) =
+              if t then THUMB_TO_ARM (if fpc ' 1 then b else a) else b @@ a`,
+  SRW_TAC [boolSimps.LET_ss] [GET_IREG_def,concat_thumb_def,lem]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -96,6 +57,12 @@ val STATE_1STAGE = store_thm("STATE_1STAGE",
              (NEXT_1STAGE ops write read (b,i t) = c) ==>
              (STATE_1STAGE ops write read (a,i) (t + 1) = c)`,
   RW_TAC bool_ss [STATE_1STAGE_def,GSYM arithmeticTheory.ADD1]);
+
+val STATE_3STAGE = store_thm("STATE_3STAGE",
+  `!t a b c. (STATE_3STAGE ops write read (a,i) t = b) /\
+             (NEXT_3STAGE ops write read (b,i t) = c) ==>
+             (STATE_3STAGE ops write read (a,i) (t + 1) = c)`,
+  RW_TAC bool_ss [STATE_3STAGE_def,GSYM arithmeticTheory.ADD1]);
 
 (* ------------------------------------------------------------------------- *)
 

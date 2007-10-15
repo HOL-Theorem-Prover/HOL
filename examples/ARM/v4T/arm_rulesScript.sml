@@ -194,31 +194,25 @@ val thumb_enc_ = SIMP_CONV (std_ss++wordsLib.SIZES_ss)
 
 val _ = augment_srw_ss [boolSimps.LET_ss, SIZES_ss];
 
-val INP_ARM2 = prove(
-  `!cp_out mem_out pipe_out RESET FIQ IRQ.
-   ((INP_ARM2 (cp_out, mem_out, pipe_out, RESET, FIQ, IRQ)).ireg =
-       pipe_out.ireg) /\
-   ((INP_ARM2 (cp_out, mem_out, pipe_out, RESET, FIQ, IRQ)).data =
-       mem_out.data ++ cp_out.data) /\
-   ((INP_ARM2 (cp_out, mem_out, pipe_out, RESET, FIQ, IRQ)).interrupts.Reset =
-     RESET) /\
-   ((INP_ARM2 (cp_out, mem_out, pipe_out, RESET, FIQ, IRQ)).interrupts.Dabort =
-       if mem_out.abort then SOME (LENGTH mem_out.data) else NONE) /\
-   ((INP_ARM2 (cp_out, mem_out, pipe_out, RESET, FIQ, IRQ)).absent =
-       cp_out.absent)`,
-  SRW_TAC [] [INP_ARM2_def]);
-
 val MEM_NO_TRANSFERS = prove(
   `(!write m. NEXT_MEM write read (m, []) = m) /\
     !write m. OUT_MEM write read (m, []) = <|data := []; abort := F|>`,
   SRW_TAC [] [NEXT_MEM_def, OUT_MEM_def, WRITE_MEM_def, READ_MEM_def]);
 
+val get_ireg = prove(
+  `!fpc a b.
+      GET_IREG T fpc (if fpc ' 1 then a # b else b # a) = THUMB_TO_ARM b`,
+   SRW_TAC [] [GET_IREG]);
+
+val OUT_MEM =
+  (SIMP_RULE (srw_ss()) [READ_MEM_def] o
+   SPECL [`write`,`read`,`s`,`[MemRead fpc]`]) OUT_MEM_def;
+
 (* ......................................................................... *)
 
 val EXCEPTION_CONTEXT_def = Define`
-  EXCEPTION_CONTEXT read state (mem:'b) cpsr e =
+  EXCEPTION_CONTEXT state cpsr e =
     Abbrev (cpsr = CPSR_READ state.regs.psr) /\
-    ~(OUT_NO_PIPE read ((), state, mem:'b)).abort /\
     (state.exception = e)`;
 
 val NOP_CONTEXT_def = Define`
@@ -227,7 +221,7 @@ val NOP_CONTEXT_def = Define`
     ~(cpsr:word32 ' 5) /\
     (state.exception = software) /\
     ~CONDITION_PASSED (NZCV cpsr) (enc i) /\
-    (OUT_NO_PIPE read ((), state, mem:'b) = <| ireg := enc i; abort := F |>)`;
+    (read mem (FETCH_PC state.regs.reg) = SOME (enc i))`;
 
 val ARM_CONTEXT_def = Define`
   ARM_CONTEXT read state (mem:'b) (Reg,mode,cpsr) i =
@@ -237,38 +231,28 @@ val ARM_CONTEXT_def = Define`
     ~(cpsr:word32 ' 5) /\
     (state.exception = software) /\
     CONDITION_PASSED (NZCV cpsr) (enc i) /\
-    (OUT_NO_PIPE read ((), state, mem:'b) = <| ireg := enc i; abort := F |>)`;
+    (read mem (FETCH_PC state.regs.reg) = SOME (enc i))`;
 
 val PABORT_CONTEXT_def = Define`
   PABORT_CONTEXT read state (mem:'b) cpsr =
     Abbrev (cpsr = CPSR_READ state.regs.psr) /\
     ~(cpsr:word32 ' 5) /\
     (state.exception = software) /\
-    (OUT_NO_PIPE read ((), state, mem:'b)).abort`;
-
-val PABORT_UNDEF = prove(
-  `!read state mem Reg mode cpsr.
-     PABORT_CONTEXT read state mem cpsr ==>
-      ((OUT_NO_PIPE read ((), state, mem:'b)).ireg = enc (UND AL))`,
-  SRW_TAC [] [PABORT_CONTEXT_def, OUT_NO_PIPE_def]
-    \\ Cases_on `read mem (FETCH_PC state.regs.reg)`
-    \\ FULL_SIMP_TAC (srw_ss()) []);
+    (read mem (FETCH_PC state.regs.reg) = NONE:word32 option)`;
 
 val THUMB_CONTEXT_def = Define`
-  THUMB_CONTEXT read state (mem:'b) (Reg,mode,cpsr) i =
+  THUMB_CONTEXT read state (mem:'b) (Reg,mode,cpsr) x i =
     Abbrev (cpsr = CPSR_READ state.regs.psr) /\
     Abbrev (mode = DECODE_MODE ((4 >< 0) cpsr)) /\
     Abbrev (Reg = REG_READ T state.regs.reg mode) /\
     cpsr ' 5 /\
     (state.exception = software) /\
-    (OUT_NO_PIPE read ((), state, mem:'b) =
-       <| ireg := w2w (enc_ i); abort := F |>)`;
+    (let fpc = FETCH_PC state.regs.reg in
+       (read mem fpc = SOME (if fpc ' 1 then x # enc_ i else enc_ i # x)))`;
 
 val CONTXT_ss = rewrites
  [EXCEPTION_CONTEXT_def,NOP_CONTEXT_def,ARM_CONTEXT_def,
-  GEN_ALL (MATCH_MP (METIS_PROVE [] ``(l = r) /\ (l ==> q) ==> (l = r /\ q)``)
-    (CONJ (SPEC_ALL PABORT_CONTEXT_def) (SPEC_ALL PABORT_UNDEF))),
-  THUMB_CONTEXT_def,
+  PABORT_CONTEXT_def,THUMB_CONTEXT_def,
   cond_pass_enc_data_proc, cond_pass_enc_data_proc2,
   cond_pass_enc_data_proc3, cond_pass_enc_coproc,
   cond_pass_enc_mla_mul, cond_pass_enc_br, cond_pass_enc_swi,
@@ -276,15 +260,18 @@ val CONTXT_ss = rewrites
   cond_pass_enc_swp, cond_pass_enc_mrs, cond_pass_enc_msr];
 
 val ARM_ss = rewrites
- [NEXT_1STAGE_def, NEXT_SYSTEM_def, NEXT_ARM_def, NEXT_CP_def, NEXT_NO_PIPE_def,
-  INP_ARM1_def, INP_ARM2_def, INP_CP1_def, INP_CP2_def, INP_MEM_def,
-  OUT_ARM_def, OUT_CP_def,
+ [NEXT_1STAGE_def, NEXT_SYSTEM_def, NEXT_CP_def, NEXT_ARM_def,
+  NEXT_ARM_1STAGE_def, INP_ARM1_def, INP_ARM2_def, INP_CP1_def, INP_CP2_def,
+  INP_MEM_def, OUT_MEM, OUT_ARM_def, OUT_ARM1_def, OUT_ARM2_def,
+  OUT_CP_def, get_ireg, (SIMP_RULE (srw_ss()) [] o SPEC `F`) GET_IREG_def,
   RUN_ARM_def, MEM_NO_TRANSFERS, DECODE_PSR_def, NoTransfers_def,
   thumb_enc_, thumbTheory.thumb_to_arm_enc, interrupt2exception_def,
   CARRY_NZCV, n2w_11, word_bits_n2w, w2n_w2w, word_index, BITS_THM, BIT_ZERO,
   FST_COND_RAND, SND_COND_RAND, (GEN_ALL o SPECL [`b`, `NUMERAL n`]) BIT_def,
   EVAL ``CONDITION_PASSED2 (NZCV x) AL``, CPSR_WRITE_READ,
   DECODE_IFTM_SET_IFTM, DECODE_IFTM_SET_NZCV, DECODE_IFTM_SET_THUMB,
+  EVAL ``CONDITION_PASSED (NZCV x) 0xE6000010w``,
+  EVAL ``DECODE_ARM 0xE6000010w``,
   cond_pass_enc_data_proc, cond_pass_enc_data_proc2,
   cond_pass_enc_data_proc3, cond_pass_enc_coproc,
   cond_pass_enc_mla_mul, cond_pass_enc_br, cond_pass_enc_swi,
@@ -294,7 +281,7 @@ val ARM_ss = rewrites
 fun SYMBOLIC_EVAL_CONV frags context =
 let val t = parse_in_context (free_vars context)
               `NEXT_1STAGE cp write read
-                 ((state, cp_state, mem, ()), (NONE, FIQ, IRQ))`
+                 ((state, cp_state, mem), (NONE, FIQ, IRQ))`
     val sset = foldl (fn (a,b) => b ++ a)
                  (srw_ss()++armLib.PBETA_ss++ARM_ss) frags
     val c = SIMP_RULE (std_ss++CONTXT_ss) [] (Thm.ASSUME context)
@@ -334,8 +321,15 @@ end;
 
 (* ......................................................................... *)
 
-val EXCEPTION_ss = rewrites
-  [EXCEPTION_def,decode_enc_swi,exception2mode_def,exceptions2num_thm];
+val ABORT_OVER_CASE = prove(
+  `!b d. (case b:word32 option of
+             NONE -> <|data := []; abort := T|>
+          || SOME d -> <|data := [d]; abort := F|>).abort =
+         IS_NONE b`,
+  Cases \\ SRW_TAC [] []);
+
+val EXCEPTION_ss = rewrites [EXCEPTION_def,ABORT_OVER_CASE,
+  decode_enc_swi,exception2mode_def,exceptions2num_thm];
 
 val EXCEPTION_CONV = SYMBOLIC_EVAL_CONV [EXCEPTION_ss] o exc_cntxt;
 
@@ -348,7 +342,7 @@ val ARM_EXC_INTERRUPT = EXCEPTION_CONV ``interrupt``;
 
 val ARM_RESET = SIMP_CONV (srw_ss()++armLib.PBETA_ss++ARM_ss) []
   ``NEXT_1STAGE cp write read
-      ((state, cp_state, mem, ()), (SOME r, FIQ, IRQ))``;
+      ((state, cp_state, mem), (SOME r, FIQ, IRQ))``;
 
 (* ......................................................................... *)
 
@@ -558,7 +552,7 @@ val BW = prove(
    (if c then g0 (f d) else g2 d)`, SRW_TAC [] []);
 
 val LDR_STR_ss =
-  rewrites [OUT_MEM_def,NEXT_MEM_def,READ_MEM_def,WRITE_MEM_def,
+  rewrites [NEXT_MEM_def,WRITE_MEM_def,OUT_MEM_def,READ_MEM_def,
     LDR_STR_def, LDRH_STRH_def, MEM_WRITE_def, BW, listTheory.HD,
     word_bits_n2w, w2w_n2w, BITS_THM, WORD_ADD_0, REG_READ_INC_PC,
     bool_case_EQ_COND, decode_enc_ldr_str, decode_enc_ldrh_strh,
@@ -633,7 +627,7 @@ val ARM_STRH_ABORT = SYMBOLIC_EVAL_CONV [LDR_STR_ss]
 (* ......................................................................... *)
 
 val SWP_ss =
-  rewrites [OUT_MEM_def,NEXT_MEM_def,READ_MEM_def,WRITE_MEM_def,
+  rewrites [NEXT_MEM_def,OUT_MEM_def,READ_MEM_def,WRITE_MEM_def,
     SWP_def,MEM_WRITE_def,BW, listTheory.HD,
     word_bits_n2w, w2w_n2w, BITS_THM, WORD_ADD_0,REG_READ_INC_PC,
     decode_enc_swp,decode_swp_enc];
@@ -1330,6 +1324,8 @@ val _ = save_thm("ARM_SWP_WRITE_ABORT", ARM_SWP_WRITE_ABORT);
 
 val _ = save_thm("ARM_MRS",ARM_MRS);
 val _ = save_thm("ARM_MSR",ARM_MSR);
+
+val _ = save_thm("ARM_PABORT", ARM_PABORT);
 
 val _ = save_thm("ARM_CDP", ARM_CDP);
 val _ = save_thm("ARM_LDC", ARM_LDC);

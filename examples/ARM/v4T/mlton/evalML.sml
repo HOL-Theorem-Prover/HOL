@@ -516,7 +516,7 @@ end;
 
 fun dest_state state =
 let
-  val (s,(cp,(mem,()))) = state
+  val (s,(cp,mem)) = state
   val regs = armML.arm_state_regs s
   val exc = armML.arm_state_exception s
   val reg = armML.regs_reg regs
@@ -629,8 +629,7 @@ fun printer (Wreg, Wmem, Wmode, Wflags, Wthumb, Wireg) cycle s ns =
       val (nzcv2, (i2, (f2, (t2, m2)))) = armML.DECODE_PSR cpsr2
 
       fun print_ireg ireg = print ("> " ^
-            (if t1 then assemblerML.decode_thumb else assemblerML.decode_arm)
-               NONE (num2Arbnum (wordsML.w2n ireg)) ^ "\n")
+            assemblerML.decode_arm NONE (num2Arbnum (wordsML.w2n ireg)) ^ "\n")
 
       fun print_reg i = print
             ("; " ^ register2string i ^ " := " ^ toHexString_w2n (reg2(i)))
@@ -652,10 +651,18 @@ fun printer (Wreg, Wmem, Wmode, Wflags, Wthumb, Wireg) cycle s ns =
       ((if Wireg then
           if exc1 = armML.software then
             let
-              val p = armML.OUT_NO_PIPE memoryML.MEM_READ
-                        ((), (pairML.FST s, mem1))
+              val arm_out1 = armML.OUT_ARM1 (pairML.FST s) 
+              val mem_out1 = armML.OUT_MEM memoryML.MEM_WRITE memoryML.MEM_READ
+                               (mem1, arm_out1)
             in
-              print_ireg (armML.pipe_output_ireg p)
+              if armML.mem_output_abort mem_out1 then
+                print "pre-fetch abort\n"
+              else
+                let val data = hd (armML.mem_output_data mem_out1)
+                    val ireg = armML.GET_IREG t1 (armML.FETCH_PC reg1) data
+                in
+                  print_ireg ireg
+                end
             end
           else
             print "> undefined exception\n"
@@ -777,7 +784,7 @@ val init_state =
 let
   val state = armML.arm_state (armML.regs (#reg e, psr), armML.software)
 in
-  (state,((),(init_mem, ())))
+  (state,((),init_mem))
 end;
 
 val NO_CP =
