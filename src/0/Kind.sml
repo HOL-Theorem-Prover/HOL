@@ -68,7 +68,8 @@ fun kind_compare (Type, Type)   = EQUAL
 (*---------------------------------------------------------------------------*
  *  Syntax prettyprinters for kinds.                                         *
  *                                                                           *
- * The following prettyprinter prints kinds which are arities as integers.   *
+ * The following prettyprinter prints kinds which are arities as "ar <n>".   *
+ * If possible, the simplest kind (Type) is printed as "*"; else as an arity.*
  * Otherwise, kinds which are not arities are printed using the infix "->".  *
  * "->" associates to the right, else, parentheses are printed as needed.    *
  *---------------------------------------------------------------------------*)
@@ -76,12 +77,13 @@ fun kind_compare (Type, Type)   = EQUAL
 fun pp_kind pps kn =
  let open Portable
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
-     fun pp1 paren (k as Oper(Rator,Rand)) =
+     fun pp1 paren (Type) = add_string "*"
+       | pp1 paren (Oper(Rator,Rand)) =
           ( if paren then (add_string "("; begin_block INCONSISTENT 0) else ();
             pp true Rator; add_string " ->"; add_break(1,0); pp false Rand;
             if paren then (end_block(); add_string ")") else () )
-       | pp1 paren (Type) = add_string "*"
-     and pp paren kn = add_string ("ar " ^ Lib.int_to_string (arity_of kn))
+     and pp paren Type = add_string "*"
+       | pp paren kn = add_string ("ar " ^ Lib.int_to_string (arity_of kn))
                        handle HOL_ERR _ => pp1 paren kn
  in
    begin_block INCONSISTENT 0;

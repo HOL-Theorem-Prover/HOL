@@ -22,7 +22,7 @@ or
 
 and type Ctrl-j.
 
-loadPath := "/usr/local/hol/hol98/kananaskis-5-2p/hol98/sigobj" :: !loadPath;
+loadPath := "/usr/local/hol/hol-omega/sigobj" :: !loadPath;
 app load ["Feedback","Lib","KernelTypes","Kind","Sig","Lexis","Polyhash",
           "Binarymap"];
 *)
@@ -1278,7 +1278,7 @@ fun RM [] theta = theta
   | RM all others                      = MERR "different constructors"
 end
 
-fun raw_match_type_opr pat ob (tyS,tyfixed) =
+fun raw_match_type pat ob (tyS,tyfixed) =
     let val tyfixed_set = HOLset.addList(empty_tyset, tyfixed)
         val (tyS',Id) =
               RM [(pat,ob,false)] (tyS,tyfixed_set)
@@ -1286,26 +1286,20 @@ fun raw_match_type_opr pat ob (tyS,tyfixed) =
      in (tyS',Id')
     end;
 
-fun raw_match_type pat ob (tyS,tyfixed) =
-    raw_match_type_opr pat ob (tyS,tyfixed);
+fun match_type_restr fixed pat ob  = fst (raw_match_type pat ob ([],fixed))
+fun match_type_in_context pat ob S = fst (raw_match_type pat ob (S,[]))
 
-fun match_type_restr fixed pat ob  = fst(raw_match_type pat ob ([],fixed))
-fun match_type_in_context pat ob S = fst(raw_match_type pat ob (S,[]))
+fun match_type pat ob = fst (raw_match_type pat ob ([],[]))
 
-fun match_type pat ob = match_type_in_context pat ob []
-
-fun match_type_opr pat ob = fst (raw_match_type_opr pat ob ([],[]))
-
-fun beta_conv_ty (TyApp(TyAbs((v,k,r),M),N))
-      = (let val theta = match_type_opr (TyFv(v,k,r)) N
-         in type_subst theta M
+fun beta_conv_ty (TyApp(M as TyAbs _, N))
+       = let val (btyv,body) = dest_abs_type M
+         in type_subst [btyv |-> N] body
          end
-         handle HOL_ERR _ => raise ERR "beta_conv_ty" "not a type beta redex")
   | beta_conv_ty _ = raise ERR "beta_conv_ty" "not a type beta redex"
 
 
 (*---------------------------------------------------------------------------
-   Full propagation of substitutions.
+   Full propagation of substitutions. (unnecessary if no type substitutions)
  ---------------------------------------------------------------------------*)
 
 local

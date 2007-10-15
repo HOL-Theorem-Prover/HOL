@@ -111,7 +111,6 @@ sig
   val ftyvar        : hol_type
 
   val match_type    : hol_type -> hol_type -> (hol_type,hol_type)Lib.subst
-  val match_type_opr: hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
 
   val raw_match_type: hol_type -> hol_type
                       -> (hol_type,hol_type) Lib.subst * hol_type list

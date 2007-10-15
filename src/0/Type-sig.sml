@@ -89,8 +89,6 @@ sig
 
  val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
 
- val match_type_opr : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
-
  val match_type_restr : hol_type list -> hol_type -> hol_type 
                         -> (hol_type,hol_type) Lib.subst
 
