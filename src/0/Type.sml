@@ -116,15 +116,15 @@ val bar  = TyCon bar_tyc;
        Function types
  ---------------------------------------------------------------------------*)
 
-infixr 3 -->;   fun (X --> Y) = TyApp (TyApp (TyCon fun_tyc, X), Y);
+infixr 3 -->;   fun (X --> Y) = TyApp (TyApp (TyCon fun_tyc, Y), X);
 
 local
-fun dom_of (TyApp(TyCon tyc, X)) =
-      if tyc = fun_tyc then X
+fun rng_of (TyApp(TyCon tyc, Y)) =
+      if tyc = fun_tyc then Y
       else raise ERR "dom_rng" "not a function type"
-  | dom_of _ = raise ERR "dom_rng" "not a function type"
+  | rng_of _ = raise ERR "dom_rng" "not a function type"
 in
-fun dom_rng (TyApp(funX, Y)) = (dom_of funX, Y)
+fun dom_rng (TyApp(funY, X)) = (X, rng_of funY)
   | dom_rng _ = raise ERR "dom_rng" "not a function type"
 end;
 
@@ -562,7 +562,7 @@ fun make_app_type Opr Arg (fnstr,name) =
   end;
 
 fun list_make_app_type Opr (Arg::Args) (fnstr,name) =
-    list_make_app_type (make_app_type Opr Arg (fnstr,name)) Args  (fnstr,name)
+    make_app_type (list_make_app_type Opr Args (fnstr,name)) Arg  (fnstr,name)
   | list_make_app_type Opr _ _ = Opr;
 
 fun make_type tyc Args (fnstr,name) =
@@ -629,10 +629,11 @@ val ty12 =
  *---------------------------------------------------------------------------*)
 
 local open KernelTypes
-fun bk_ty f (TyCon c) A = (c,A)
-  | bk_ty f (TyApp (Opr,Arg)) A = bk_ty f Opr (Arg::A)
-  | bk_ty f _ _ = raise ERR f "not a sequence of type applications of a type constant";
-fun break_ty f ty = bk_ty f ty []
+fun break_ty f (TyCon c) = (c,[])
+  | break_ty f (TyApp (Opr,Arg)) = let val (c,A) = break_ty f Opr
+                                   in (c, Arg::A)
+                                   end
+  | break_ty f _ = raise ERR f "not a sequence of type applications of a type constant"
 in
 fun break_type ty = break_ty "break_type" ty;
 
