@@ -436,7 +436,7 @@ fun hash_kind kd n =
         end;
 
 fun hash_type ty n =
-  hash(#Name (Type.dest_vartype_opr ty)) (0,n)
+  hash(#1 (Type.dest_vartype_opr ty)) (0,n)
   handle HOL_ERR _ =>
      let val {Tyop,Thy,Args} = Type.dest_thy_type ty
      in itlist hash_type Args (hash Thy (0, hash Tyop (0,n)))

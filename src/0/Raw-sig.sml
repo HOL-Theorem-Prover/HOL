@@ -40,7 +40,7 @@ sig
   val variant_tyvar : hol_type list -> tyvar -> tyvar
   val prim_variant_type : hol_type list -> hol_type -> hol_type
   val dest_vartype  : hol_type -> string
-  val dest_vartype_opr : hol_type -> {Name:string, Kind:kind, Rank:int}
+  val dest_vartype_opr : hol_type -> tyvar
   val is_vartype    : hol_type -> bool
   val is_gen_tyvar  : hol_type -> bool
 

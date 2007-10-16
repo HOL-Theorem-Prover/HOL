@@ -525,7 +525,7 @@ val prim_variant_type  = gen_variant (K false) "prim_variant_type";
 
 
 fun dest_vartype_opr (TyFv (s,kind,rank)) =
-           {Name=s,Kind=kind,Rank=rank}
+           (s,kind,rank)
   | dest_vartype_opr _ =
            raise ERR "dest_vartype_opr" "not a type variable";
 
@@ -542,11 +542,10 @@ dest_vartype ty11;
 *)
 
 
-fun variant_tyvar tys (tyv as (s,a,rk)) =
+fun variant_tyvar tys tyv =
        let val ty0 = TyFv tyv
            val ty = variant_type tys ty0
-           val {Name,Kind,Rank} = dest_vartype_opr ty
-        in (Name,Kind,Rank)
+        in dest_vartype_opr ty
        end;
 
 (*---------------------------------------------------------------------------*

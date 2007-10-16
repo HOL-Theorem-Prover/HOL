@@ -983,7 +983,7 @@ fun strip_tybinder opt =
             val AV = mkPolyTable(Array.length prefix, Fail"AV")
             fun insertl [] _ dupls = dupls
               | insertl (x::rst) i dupls =
-                  let val n = #Name(dest_vartype_opr x)
+                  let val n = #1(dest_vartype_opr x)
                   in case peekInsert AV (n,PREFIX i)
                       of NONE => insertl rst (i+1) dupls
                        | SOME _ => insertl rst (i+1) ((x,i)::dupls)
@@ -1020,7 +1020,7 @@ fun strip_tybinder opt =
        | CVts ty capt k = k capt
      fun unclash insert [] = ()
        | unclash insert ((v,i)::rst) =
-           let val {Name=n,Kind=kd,Rank=rk} = dest_vartype_opr v
+           let val (n,kd,rk) = dest_vartype_opr v
                val n' = variantAV n
                val v' = mk_vartype_opr(n',kd,rk)
            in Array.update(prefix,i,v')
