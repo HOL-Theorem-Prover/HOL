@@ -376,10 +376,18 @@ fun bind_restr_term l binder vlist restr tm (E as {scope=scope0,...}:env)=
    (F tm', {scope=scope0,free=free1})
    end;
 
-fun split ty =
+fun split (Pretype.PT(ty,locn)) = let
+  open Pretype
+  val pair_conty = Contype{Thy = "pair", Tyop = "prod", Kind = mk_arity 2,
+                           Rank = 0}
+in
   case ty of
-    Pretype.Tyop{Thy="pair",Tyop = "prod",Args} => Args
-  | _ => raise ERROR "split" "not a product";
+    TyApp(PT(TyApp(PT(con, _), arg1), _), arg2) => if con = pair_conty then
+                                                     [arg1, arg2]
+                                                   else
+                                                     raise ERROR "split" "not a prod"
+  | _ => raise ERROR "split" "not a product"
+end
 
 
 local open Preterm

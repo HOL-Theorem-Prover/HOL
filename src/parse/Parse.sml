@@ -114,18 +114,34 @@ fun remove_ty_aq t =
   if is_ty_antiq t then dest_ty_antiq t
   else raise ERROR "type parser" "antiquotation is not of a type"
 
-fun tyop_to_qtyop ((tyop,locn), args) =
+fun tyop_to_qtyop ((tyop,locn), args) = let
+  open Pretype
+in
   case Type.decls tyop of
     [] => raise ERRORloc "type parser" locn (tyop^" not a known type operator")
-  | {Thy,Tyop} :: _ => Pretype.Tyop{Thy = Thy, Tyop = Tyop, Args = args}
+  | (r as {Thy,Tyop}) :: _ =>
+      List.foldl (fn (arg,acc) => PT(TyApp(acc,arg),locn))
+                 (PT(Contype {Thy=Thy,Tyop=Tyop,Kind=mk_arity (length args),Rank = 0},
+                     locn))
+                 args
+end
 
-fun do_qtyop {Thy,Tyop,Locn,Args} = Pretype.Tyop {Thy=Thy,Tyop=Tyop,Args=Args}
+fun do_qtyop {Thy,Tyop,Locn,Args} = let
+  open Pretype
+in
+  List.foldl (fn (arg,acc) => PT(TyApp(acc,arg),Locn))
+             (PT(Contype {Thy=Thy,Tyop=Tyop, Kind=mk_arity (length Args),Rank = 0},
+                 Locn))
+             Args
+end
 
-val typ1_rec = {vartype = fn x => Pretype.Vartype (fst x), qtyop = do_qtyop,
+(* needs changing *)
+fun mk_basevarty(s,locn) = Pretype.PT(Pretype.Vartype(s,mk_arity 0,0), locn)
+val typ1_rec = {vartype = mk_basevarty, qtyop = do_qtyop,
                 tyop = tyop_to_qtyop,
                 antiq = fn x => Pretype.fromType (remove_ty_aq x)}
 
-val typ2_rec = {vartype = fn x => Pretype.Vartype (fst x), qtyop = do_qtyop,
+val typ2_rec = {vartype = mk_basevarty, qtyop = do_qtyop,
                 tyop = tyop_to_qtyop,
                 antiq = Pretype.fromType}
 
@@ -565,19 +581,13 @@ end
 local
   open Preterm Pretype
   fun name_eq s M = ((s = fst(dest_var M)) handle HOL_ERR _ => false)
-  fun has_any_uvars pty =
-    case pty
-     of UVar (ref NONE)        => true
-      | UVar (ref (SOME pty')) => has_any_uvars pty'
-      | Tyop{Args,...}         => List.exists has_any_uvars Args
-      | Vartype _              => false
   fun give_types_to_fvs ctxt boundvars tm = let
     val gtf = give_types_to_fvs ctxt
   in
     case tm of
       Var{Name, Ty, Locn} => let
       in
-        if has_any_uvars Ty andalso not(Lib.op_mem Preterm.eq tm boundvars) then
+        if has_free_uvar Ty andalso not(Lib.op_mem Preterm.eq tm boundvars) then
           case List.find (fn ctxttm => name_eq Name ctxttm) ctxt of
             NONE => ()
           | SOME ctxt_tm =>
@@ -809,11 +819,11 @@ end
 (* Apply a function to its argument. If it fails, revert the grammars        *)
 (*---------------------------------------------------------------------------*)
 
-fun try_grammar_extension f x = 
+fun try_grammar_extension f x =
  let val (tyG,tmG) = current_grammars()
      val updates = !grm_updates
  in
-    f x handle e 
+    f x handle e
     => (the_term_grammar := tmG;
         the_type_grammar := tyG;
         term_grammar_changed := true;

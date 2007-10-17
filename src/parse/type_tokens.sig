@@ -5,10 +5,14 @@ signature type_tokens = sig
       | QTypeIdent of string * string (* thy name * type name *)
       | TypeSymbol of string
       | TypeVar of string
+      | KindCst
+      | RankCst
+      | Univ
+      | Abst
       | Comma
       | LParen
       | RParen
-      | LBracket 
+      | LBracket
       | RBracket
       | AQ of 'a
       | Error of 'a base_tokens.base_token

@@ -72,22 +72,16 @@ fun clean shr =
  in cl
  end;
 
-local open Pretype
-in
-fun has_free_uvar (Tyop{Args,...})    = List.exists has_free_uvar Args
-  | has_free_uvar (UVar(ref(SOME t))) = has_free_uvar t
-  | has_free_uvar (UVar(ref NONE))    = true
-  | has_free_uvar (Vartype _)         = false
-end
+val has_free_uvar = Pretype.has_free_uvar
 
 fun tyVars ptm =  (* the pretype variables in a preterm *)
   case ptm of
-    Var{Ty,...}             => Pretype.tyvars Ty
-  | Const{Ty,...}           => Pretype.tyvars Ty
+    Var{Ty,...}             => map #1 (Pretype.tyvars Ty)
+  | Const{Ty,...}           => map #1 (Pretype.tyvars Ty)
   | Comb{Rator,Rand,...}    => Lib.union (tyVars Rator) (tyVars Rand)
   | Abs{Bvar,Body,...}      => Lib.union (tyVars Bvar) (tyVars Body)
   | Antiq{Tm,...}           => map Type.dest_vartype (Term.type_vars_in_term Tm)
-  | Constrained{Ptm,Ty,...} => Lib.union (tyVars Ptm) (Pretype.tyvars Ty)
+  | Constrained{Ptm,Ty,...} => Lib.union (tyVars Ptm) (map #1 (Pretype.tyvars Ty))
   | Overloaded _            => raise Fail "Preterm.tyVars: applied to Overloaded";
 
 
@@ -351,7 +345,7 @@ fun is_atom (Var _) = true
 
 
 local
-  fun ty1 --> ty2 = Pretype.Tyop{Thy = "min", Tyop = "fun", Args = [ty1, ty2]}
+  val op --> = Pretype.-->
   fun ptype_of (Var{Ty, ...}) = Ty
     | ptype_of (Const{Ty, ...}) = Ty
     | ptype_of (Comb{Rator, ...}) = Pretype.chase (ptype_of Rator)

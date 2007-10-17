@@ -1,25 +1,29 @@
 structure type_tokens :> type_tokens =
 struct
 
-datatype 'a type_token
-     = TypeIdent of string
-     | QTypeIdent of string * string
-     | TypeSymbol of string
-     | TypeVar of string
-     | Comma
-     | LParen
-     | RParen
-     | LBracket
-     | RBracket
-     | AQ of 'a
-     | Error of 'a base_tokens.base_token
-
+  datatype 'a type_token
+      = TypeIdent of string
+      | QTypeIdent of string * string (* thy name * type name *)
+      | TypeSymbol of string
+      | TypeVar of string
+      | KindCst
+      | RankCst
+      | Univ
+      | Abst
+      | Comma
+      | LParen
+      | RParen
+      | LBracket
+      | RBracket
+      | AQ of 'a
+      | Error of 'a base_tokens.base_token
 
 val ERR = Feedback.mk_HOL_ERR "type_tokens"
 
 open qbuf base_tokens
 
-fun special_symb c = c = #"(" orelse c = #")" orelse c = #","
+fun special_symb c = c = #"(" orelse c = #")" orelse c = #"," orelse
+                     c = #":" orelse c = #"!" orelse c = #"\\"
 
 fun split_and_check fb s locn = let
   (* if the first character of s is non-alphanumeric character, then it
@@ -34,15 +38,30 @@ fun split_and_check fb s locn = let
                                       locn'') fb),
            (tt,locn'))
         end
+  val error = ((fn () => advance fb), (Error (BT_Ident s), locn))
 in
   if Char.isAlpha s0 then ((fn () => advance fb), (TypeIdent s,locn))
   else if s0 = #"'" then ((fn () => advance fb), (TypeVar s,locn))
   else if s0 = #"(" then nadvance 1 LParen
   else if s0 = #")" then nadvance 1 RParen
+  else if s0 = #"!" then nadvance 1 Univ
+  else if s0 = #"\\" then nadvance 1 Abst
+  else if s0 = #":" then
+    if size s > 1 then
+      if String.sub(s,1) = #":" then
+        nadvance 2 KindCst
+      else error
+    else error
+  else if s0 = #"<" then
+    if size s > 1 then
+      if String.sub(s,1) = #"=" then
+        nadvance 2 RankCst
+      else error
+    else error
   else if s0 = #"," then nadvance 1 Comma
   else if s0 = #"[" then nadvance 1 LBracket
   else if s0 = #"]" then nadvance 1 RBracket
-  else if s0 = #"\"" then ((fn () => advance fb), (Error (BT_Ident s),locn))
+  else if s0 = #"\"" then error
   else let
       val (ssl, ssr) =
           Substring.splitl (not o special_symb) (Substring.all s)

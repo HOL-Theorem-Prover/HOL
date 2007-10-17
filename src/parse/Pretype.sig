@@ -1,15 +1,25 @@
 signature Pretype =
 sig
 
- datatype pretype
-    = Vartype of string
-    | Tyop of {Thy:string,Tyop:string, Args: pretype list}
+ datatype pretype0
+    = Vartype of Type.tyvar
+    | Contype of {Thy : string, Tyop : string, Kind : Type.kind, Rank : int}
+    | TyApp of pretype * pretype
+    | TyUniv of Type.tyvar * pretype
+    | TyAbst of Type.tyvar * pretype
     | UVar of pretype option ref
+ and pretype = PT of pretype0 locn.located
 
-val tyvars : pretype -> string list
+ val --> : pretype * pretype -> pretype
+
+val tyvars : pretype -> Type.tyvar list
 val new_uvar : unit -> pretype
+val uvars_of : pretype -> pretype option ref list
 val ref_occurs_in : pretype option ref * pretype -> bool
 val ref_equiv : pretype option ref * pretype -> bool
+val has_free_uvar : pretype -> bool
+
+
 
 (* first argument is a function which performs a binding between a
    pretype reference and another pretype, updating some sort of environment
@@ -35,7 +45,7 @@ val apply_subst : (pretype option ref * pretype) list -> pretype -> pretype
 val rename_typevars : pretype -> pretype
 val fromType : Type.hol_type -> pretype
 val remove_made_links : pretype -> pretype
-val replace_null_links : pretype -> (string list -> string list * unit option)
+val replace_null_links : pretype -> string list -> string list * unit option
 val clean : pretype -> Type.hol_type
 val toType : pretype -> Type.hol_type
 val chase : pretype -> pretype

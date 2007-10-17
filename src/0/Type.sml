@@ -116,15 +116,15 @@ val bar  = TyCon bar_tyc;
        Function types
  ---------------------------------------------------------------------------*)
 
-infixr 3 -->;   fun (X --> Y) = TyApp (TyApp (TyCon fun_tyc, Y), X);
+infixr 3 -->;   fun (X --> Y) = TyApp (TyApp (TyCon fun_tyc, X), Y);
 
 local
-fun rng_of (TyApp(TyCon tyc, Y)) =
+fun dom_of (TyApp(TyCon tyc, Y)) =
       if tyc = fun_tyc then Y
       else raise ERR "dom_rng" "not a function type"
-  | rng_of _ = raise ERR "dom_rng" "not a function type"
+  | dom_of _ = raise ERR "dom_rng" "not a function type"
 in
-fun dom_rng (TyApp(funY, X)) = (X, rng_of funY)
+fun dom_rng (TyApp(funX, Y)) = (dom_of funX, Y)
   | dom_rng _ = raise ERR "dom_rng" "not a function type"
 end;
 
@@ -440,7 +440,7 @@ fun mk_vartype_opr ("'a", Type, 0) = alpha
   | mk_vartype_opr ("'d", Type, 0) = delta
   | mk_vartype_opr ("'e", Type, 0) = etyvar
   | mk_vartype_opr ("'f", Type, 0) = ftyvar
-  | mk_vartype_opr (s, kind, rank) = 
+  | mk_vartype_opr (s, kind, rank) =
                 if rank < 0 then
                         raise ERR "mk_vartype_opr" "negative rank"
                 else
@@ -560,9 +560,8 @@ fun make_app_type Opr Arg (fnstr,name) =
           ", but was given kind ", kind_to_string kn])
   end;
 
-fun list_make_app_type Opr (Arg::Args) (fnstr,name) =
-    make_app_type (list_make_app_type Opr Args (fnstr,name)) Arg  (fnstr,name)
-  | list_make_app_type Opr _ _ = Opr;
+fun list_make_app_type Opr Args (fnstr,name) =
+    List.foldl (fn (Arg,acc) => make_app_type acc Arg (fnstr,name)) Opr Args
 
 fun make_type tyc Args (fnstr,name) =
   list_make_app_type (TyCon tyc) Args (fnstr,name);
@@ -628,11 +627,11 @@ val ty12 =
  *---------------------------------------------------------------------------*)
 
 local open KernelTypes
-fun break_ty f (TyCon c) = (c,[])
-  | break_ty f (TyApp (Opr,Arg)) = let val (c,A) = break_ty f Opr
-                                   in (c, Arg::A)
-                                   end
-  | break_ty f _ = raise ERR f "not a sequence of type applications of a type constant"
+fun break_ty0 f acc (TyCon c) = (c,acc)
+  | break_ty0 f acc (TyApp (Opr,Arg)) = break_ty0 f (Arg::acc) Opr
+  | break_ty0 f _ _ = raise ERR f "not a sequence of type applications of a \
+                                  \type constant"
+fun break_ty f ty = break_ty0 f [] ty
 in
 fun break_type ty = break_ty "break_type" ty;
 
@@ -648,7 +647,7 @@ fun dest_thy_type ty =
         {Thy=seg_of tyc,Tyop=name_of tyc,Args=A}
        end;
 
-fun dest_type_opr ty = 
+fun dest_type_opr ty =
        let val ((tyc,kd,rk),A) = break_ty "dest_type_opr" ty
        in (name_of tyc, kd, rk, A)
        end;
@@ -966,7 +965,7 @@ fun strip_univ_binder opt =
             ; insert (n',i)
             ; unclash insert rst
            end
-     fun unbind (v as TyBv i) j k = 
+     fun unbind (v as TyBv i) j k =
                  k (TyFv (vmap(i-j)) handle Subscript => v)
        | unbind (TyApp(opr,ty)) j k = unbind opr j (fn opr' =>
                                       unbind ty  j (fn ty' =>
@@ -993,7 +992,7 @@ fun dest_univ_type(TyAll(Bvar as (Name,_,_), Body)) =
           | dest (TyApp(opr, ty), i)    = TyApp(dest(opr,i), dest(ty,i))
           | dest (TyAll(Bvar,Body),i)   = TyAll(Bvar, dest(Body,i+1))
           | dest (TyAbs(Bvar,Body),i)   = TyAbs(Bvar, dest(Body,i+1))
-          | dest (ty,_) = ty 
+          | dest (ty,_) = ty
     in (TyFv Bvar, dest(Body,0))
        handle CLASH =>
               dest_univ_type(TyAll(variant_tyvar (type_vars Body) Bvar, Body))
@@ -1074,7 +1073,7 @@ fun strip_abs_binder opt =
             ; insert (n',i)
             ; unclash insert rst
            end
-     fun unbind (v as TyBv i) j k = 
+     fun unbind (v as TyBv i) j k =
                  k (TyFv (vmap(i-j)) handle Subscript => v)
        | unbind (TyApp(opr,ty)) j k = unbind opr j (fn opr' =>
                                       unbind ty  j (fn ty' =>
@@ -1101,7 +1100,7 @@ fun dest_abs_type(TyAbs(Bvar as (Name,_,_), Body)) =
           | dest (TyApp(opr, ty), i)    = TyApp(dest(opr,i), dest(ty,i))
           | dest (TyAll(Bvar,Body),i)   = TyAll(Bvar, dest(Body,i+1))
           | dest (TyAbs(Bvar,Body),i)   = TyAbs(Bvar, dest(Body,i+1))
-          | dest (ty,_) = ty 
+          | dest (ty,_) = ty
     in (TyFv Bvar, dest(Body,0))
        handle CLASH =>
               dest_abs_type(TyAbs(variant_tyvar (type_vars Body) Bvar, Body))
@@ -1348,7 +1347,7 @@ fun pp_raw_type pps ty =
             pp Body; add_string ")" )
       | pp (TyApp(Rator as TyApp(TyCon(id,_,_),Rand1),Rand2)) =
           if name_of id = "fun"
-          then 
+          then
           ( add_string "("; pp Rand2;
             add_string " ->"; add_break(1,0);
             pp Rand1; add_string ")" )

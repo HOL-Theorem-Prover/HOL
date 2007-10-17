@@ -840,9 +840,15 @@ fun parse_term (G : grammar) typeparser = let
     | [((Terminal TypeTok,rlocn), PreType ty), ((Terminal TypeColon,_), _)] =>
       let
         val nonterm0 = (QIDENT("bool", "the_value"), rlocn)
-        val type_annotation =
-            (Pretype.Tyop{Thy="bool", Tyop = "itself", Args = [ty]},
-             rlocn)
+        val type_annotation = let
+          open Pretype
+        in
+          (PT(TyApp(PT(Contype{Thy="bool", Tyop = "itself", Kind = Kind.mk_arity 1,
+                               Rank = 0}, locn.Loc_None),
+                    ty),
+              rlocn),
+           rlocn)
+        end
       in
         pop >> pop >>
         push ((NonTerminal (TYPED(nonterm0, type_annotation)), rlocn), XXX)
