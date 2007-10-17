@@ -51,6 +51,9 @@ in
   else raise ERR "dest_arraytype: not an array type"
 end
 
+val show_kinds = ref false
+val _ = Feedback.register_btrace("kinds", show_kinds)
+
 fun pp_type0 (G:grammar) = let
   fun lookup_tyop s = let
     fun recurse [] = NONE
@@ -71,16 +74,40 @@ fun pp_type0 (G:grammar) = let
   in
     recurse (rules G) : (int * single_rule) option
   end
+
   fun pr_ty pps ty grav depth = let
     val {add_string, add_break, begin_block, end_block,...} =
       with_ppstream pps
     fun pbegin b = if b then add_string "(" else ()
     fun pend b = if b then add_string ")" else ()
 
+    fun print_args grav0 args = let
+      val parens_needed = case args of [_] => false | _ => true
+      val grav = if parens_needed then Top else grav0
+    in
+      pbegin parens_needed;
+      begin_block INCONSISTENT 0;
+      pr_list (fn arg => pr_ty pps arg grav (depth - 1))
+              (fn () => add_string ",") (fn () => add_break (1, 0)) args;
+      end_block();
+      pend parens_needed
+    end
+
+    fun print_var (s,k,r) =
+        if k <> Kind.typ andalso !show_kinds then let
+          in
+            add_string "(";
+            add_string s;
+            add_string "::";
+            Kind.pp_kind pps k;
+            add_string ")"
+          end
+        else add_string s
+
   in
     if depth = 0 then add_string "..."
     else
-      if is_vartype ty then add_string (dest_vartype ty)
+      if is_vartype ty then print_var (dest_vartype_opr ty)
       else let
           val s = dest_numtype ty
         in
@@ -99,96 +126,137 @@ fun pp_type0 (G:grammar) = let
           pr_ty pps cty Top (depth - 1);
           add_string "]"
         end handle HOL_ERR _ =>
-        let
-          val (Tyop, Args) = type_grammar.abb_dest_type G ty
-          fun print_args grav0 args = let
-            val parens_needed = case Args of [_] => false | _ => true
-            val grav = if parens_needed then Top else grav0
-          in
-            pbegin parens_needed;
-            begin_block INCONSISTENT 0;
-            pr_list (fn arg => pr_ty pps arg grav (depth - 1))
-                    (fn () => add_string ",") (fn () => add_break (1, 0)) args;
-            end_block();
-            pend parens_needed
-          end
-          fun print_ghastly () = let
-            val {Thy,Tyop,...} = dest_thy_type ty
-          in
-            add_string "(";
-            begin_block INCONSISTENT 0;
-            if not (null Args) then (print_args Top Args; add_break(1,0))
-            else ();
-            add_string (Thy ^ "$" ^ Tyop);
-            end_block();
-            add_string ")"
-          end
-        in
-          case Args of
-            [] => let
+        if Lib.can dest_type ty then let
+            val (Tyop, Args) = type_grammar.abb_dest_type G ty
+            fun print_ghastly () = let
+              val {Thy,Tyop,...} = dest_thy_type ty
             in
-              case lookup_tyop Tyop of
-                NONE => print_ghastly ()
-              | _ => add_string Tyop
-            end
-          | [arg1, arg2] => (let
-              val (prec, rule) = valOf (lookup_tyop Tyop)
-            in
-              case rule of
-                SR => let
-                  val addparens =
-                      case grav of
-                        Rfx(n, _) => (n > prec)
-                      | _ => false
-                in
-                  pbegin addparens;
-                  begin_block INCONSISTENT 0;
-                  (* knowing that there are two args, we know that they will
-                     be printed with parentheses, so the gravity we pass in
-                     here makes no difference. *)
-                  print_args Top Args;
-                  add_break(1,0);
-                  add_string Tyop;
-                  end_block();
-                  pend addparens
-                end
-              | IR(assoc, printthis) => let
-                  val parens_needed =
-                      case grav of
-                        Sfx n => (n > prec)
-                      | Lfx (n, s) => if s = printthis then assoc <> LEFT
-                                      else (n >= prec)
-                      | Rfx (n, s) => if s = printthis then assoc <> RIGHT
-                                      else (n >= prec)
-                      | _ => false
-                in
-                  pbegin parens_needed;
-                  begin_block INCONSISTENT 0;
-                  pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
-                  add_break(1,0);
-                  add_string printthis;
-                  add_break(1,0);
-                  pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
-                  end_block();
-                  pend parens_needed
-                end
-            end handle Option => print_ghastly())
-          | _ => let
-              val (prec, _) = valOf (lookup_tyop Tyop)
-              val addparens =
-                  case grav of
-                    Rfx (n, _) => (n > prec)
-                  | _ => false
-            in
-              pbegin addparens;
+              add_string "(";
               begin_block INCONSISTENT 0;
-              print_args (Sfx prec) Args;
-              add_break(1,0);
-              add_string Tyop;
+              if not (null Args) then (print_args Top Args; add_break(1,0))
+              else ();
+              add_string (Thy ^ "$" ^ Tyop);
               end_block();
-              pend addparens
-            end handle Option => print_ghastly()
-        end
+              add_string ")"
+            end
+          in
+            case Args of
+              [] => let
+              in
+                case lookup_tyop Tyop of
+                  NONE => print_ghastly ()
+                | _ => add_string Tyop
+              end
+            | [arg1, arg2] =>
+              (let
+                 val (prec, rule) = valOf (lookup_tyop Tyop)
+               in
+                 case rule of
+                   SR => let
+                     val addparens =
+                         case grav of
+                           Rfx(n, _) => (n > prec)
+                         | _ => false
+                   in
+                     pbegin addparens;
+                     begin_block INCONSISTENT 0;
+                     (* knowing that there are two args, we know that they will
+                        be printed with parentheses, so the gravity we pass in
+                        here makes no difference. *)
+                     print_args Top Args;
+                     add_break(1,0);
+                     add_string Tyop;
+                     end_block();
+                     pend addparens
+                   end
+                 | IR(assoc, printthis) => let
+                     val parens_needed =
+                         case grav of
+                           Sfx n => (n > prec)
+                         | Lfx (n, s) => if s = printthis then assoc <> LEFT
+                                         else (n >= prec)
+                         | Rfx (n, s) => if s = printthis then assoc <> RIGHT
+                                         else (n >= prec)
+                         | _ => false
+                   in
+                     pbegin parens_needed;
+                     begin_block INCONSISTENT 0;
+                     pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
+                     add_break(1,0);
+                     add_string printthis;
+                     add_break(1,0);
+                     pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
+                     end_block();
+                     pend parens_needed
+                   end
+               end handle Option => print_ghastly())
+            | _ => let
+                val (prec, _) = valOf (lookup_tyop Tyop)
+                val addparens =
+                    case grav of
+                      Rfx (n, _) => (n > prec)
+                    | _ => false
+              in
+                pbegin addparens;
+                begin_block INCONSISTENT 0;
+                print_args (Sfx prec) Args;
+                add_break(1,0);
+                add_string Tyop;
+                end_block();
+                pend addparens
+              end handle Option => print_ghastly()
+          end
+        else let
+            (* not a normal "classic" type operator with arguments *)
+            open TypeView
+          in
+            case fromType ty of
+              TyV_App _ => let
+                val (base, args) = strip_app_type ty
+              in
+                begin_block INCONSISTENT 0;
+                print_args grav args;
+                add_break(1,0);
+                pr_ty pps base Top (depth - 1);
+                end_block ()
+              end
+            | TyV_Abs _ => let
+                val (vars, body) = strip_abs_type ty
+              in
+                pbegin true;
+                begin_block INCONSISTENT 0;
+                add_string "\\";
+                pr_list (fn arg => pr_ty pps arg grav (depth - 1))
+                        (fn () => ())
+                        (fn () => add_break (1, 0))
+                        vars;
+                add_string ".";
+                add_break (1,0);
+                pr_ty pps body Top (depth - 1);
+                end_block ();
+                pend true
+              end
+            | TyV_All _ => let
+                val (vars, body) = strip_univ_type ty
+                val parens = case grav of
+                               Lfx _ => true
+                             | _ => false
+              in
+                pbegin parens;
+                begin_block INCONSISTENT 0;
+                add_string "!";
+                pr_list (fn arg => pr_ty pps arg grav (depth - 1))
+                        (fn () => ())
+                        (fn () => add_break (1, 0))
+                        vars;
+                add_string ".";
+                add_break (1,0);
+                pr_ty pps body Top (depth - 1);
+                end_block ();
+                pend parens
+              end
+            | _ => raise Fail "type_pp: this can't happen"
+          end
   end
 in
   pr_ty
