@@ -32,17 +32,26 @@ fun MATCH_TYPE_mk_eq (t,t') =
     mk_eq (f t t',t') handle e => mk_eq (t,f t' t)
   end;
 
+val MOVE_STAR_THM_rw = SIMP_TAC (bool_ss ++ star_ss) [emp_STAR]
+val TOP_EMP_rw = let val [e1,e2] = CONJUNCTS (SPEC_ALL emp_STAR)
+                 in TRY_CONV (RAND_CONV (REWR_CONV e1 ORELSEC REWR_CONV e2))
+                 end
+val MOVE_STAR_THM_ac = TOP_EMP_rw THENC AC_CONV (STAR_ASSOC,STAR_SYM)
+
 fun MOVE_STAR_THM t t' =
   let 
     val tm  = (Parse.typedTerm t  ``:('a->bool)->bool`` handle e => Parse.Term t)
     val tm' = (Parse.typedTerm t' ``:('a->bool)->bool`` handle e => Parse.Term t')
     val goal = MATCH_TYPE_mk_eq (tm,tm')  
   in
-    prove(goal,
-    SIMP_TAC (bool_ss++star_ss) [emp_STAR]
-    THEN METIS_TAC [STAR_ASSOC,STAR_SYM,STAR_OVER_DISJ])    
+    EQT_ELIM (MOVE_STAR_THM_ac goal) handle _ => 
+      (print "MOVE_STAR_THM: AC_CONV failed.\n\n";
+       print_term goal; print "\n\n-----------------";
+       prove(goal,MOVE_STAR_THM_rw 
+       THEN METIS_TAC [STAR_ASSOC,STAR_SYM,STAR_OVER_DISJ]))    
   end;
 
+     
 fun ONCE_REWRITE_ASSUMS xs = 
   POP_ASSUM_LIST (fn thms => 
     (MAP_EVERY (ASSUME_TAC o ONCE_REWRITE_RULE xs)) (rev thms));
