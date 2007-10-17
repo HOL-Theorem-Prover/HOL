@@ -455,8 +455,8 @@ fun mk_vartype s = mk_vartype_opr (s, Type, 0);
 fun inST s = not(null(TypeSig.resolve s));
 
 fun mk_primed_vartype_opr (Name, Kind, Rank) =
-  let val next = Lexis.nameStrm Name
-      fun spin s = if inST s then spin (next()) else s
+  let val next = Lexis.tyvar_vary
+      fun spin s = if inST s then spin (next s) else s
   in mk_vartype_opr(spin Name, Kind, Rank)
   end;
 
@@ -506,12 +506,11 @@ fun gen_variant P caller =
   let fun var_name (TyFv(Name,_,_)) = Name
         | var_name _ = raise ERR caller "not a variable"
       fun vary vlist (TyFv(Name,Kind,Rank)) =
-          let val next = Lexis.nameStrm Name
-              val L = map var_name vlist
-              fun away s = if mem s L then away (next()) else s
+          let val L = map var_name vlist
+              val next = Lexis.gen_variant Lexis.tyvar_vary L
               fun loop name =
-                 let val s = away name
-                 in if P s then loop (next()) else s
+                 let val s = next name
+                 in if P s then loop s else s
                  end
           in mk_vartype_opr(loop Name, Kind, Rank)
           end
@@ -945,8 +944,8 @@ fun strip_univ_binder opt =
             dupls)
         end
      fun variantAV n =
-       let val next = Lexis.nameStrm n
-           fun loop s = case lookAV s of NONE => s | SOME _ => loop (next())
+       let val next = Lexis.tyvar_vary
+           fun loop s = case lookAV s of NONE => s | SOME _ => loop (next s)
        in loop n
        end
      fun CVs (TyFv(n,_,_)) capt k =
@@ -1053,8 +1052,8 @@ fun strip_abs_binder opt =
             dupls)
         end
      fun variantAV n =
-       let val next = Lexis.nameStrm n
-           fun loop s = case lookAV s of NONE => s | SOME _ => loop (next())
+       let val next = Lexis.tyvar_vary
+           fun loop s = case lookAV s of NONE => s | SOME _ => loop (next s)
        in loop n
        end
      fun CVs (TyFv(n,_,_)) capt k =
@@ -1350,9 +1349,9 @@ fun pp_raw_type pps ty =
       | pp (TyApp(Rator as TyApp(TyCon(id,_,_),Rand1),Rand2)) =
           if name_of id = "fun"
           then 
-          ( add_string "("; pp Rand1;
+          ( add_string "("; pp Rand2;
             add_string " ->"; add_break(1,0);
-            pp Rand2; add_string ")" )
+            pp Rand1; add_string ")" )
           else
           ( add_string "("; pp Rand2; add_break(1,0);
                             pp Rator; add_string ")")
