@@ -94,12 +94,22 @@ fun pp_type0 (G:grammar) = let
     end
 
     fun print_var (s,k,r) =
-        if k <> Kind.typ andalso !show_kinds then let
+        if (k <> Kind.typ orelse r <> 0) andalso !show_kinds then let
           in
             add_string "(";
             add_string s;
-            add_string "::";
-            Kind.pp_kind pps k;
+            if k <> Kind.typ then let
+                val p = r <> 0 andalso not (Kind.is_arity k)
+              in
+                add_string "::";
+                pbegin p;
+                Kind.pp_kind pps k;
+                pend p
+              end
+            else ();
+            if r <> 0 then (add_string " <= ";
+                            add_string (Int.toString r))
+            else ();
             add_string ")"
           end
         else add_string s
