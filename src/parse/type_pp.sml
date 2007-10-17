@@ -93,10 +93,12 @@ fun pp_type0 (G:grammar) = let
       pend parens_needed
     end
 
-    fun print_var (s,k,r) =
+    fun print_var grav (s,k,r) =
         if (k <> Kind.typ orelse r <> 0) andalso !show_kinds then let
+            val parens_needed =
+                 case grav of Top => false | _ => true
           in
-            add_string "(";
+            pbegin parens_needed;
             add_string s;
             if k <> Kind.typ then let
                 val p = r <> 0 andalso not (Kind.is_arity k)
@@ -110,14 +112,14 @@ fun pp_type0 (G:grammar) = let
             if r <> 0 then (add_string " <= ";
                             add_string (Int.toString r))
             else ();
-            add_string ")"
+            pend parens_needed
           end
         else add_string s
 
   in
     if depth = 0 then add_string "..."
     else
-      if is_vartype ty then print_var (dest_vartype_opr ty)
+      if is_vartype ty then print_var grav (dest_vartype_opr ty)
       else let
           val s = dest_numtype ty
         in
@@ -225,15 +227,18 @@ fun pp_type0 (G:grammar) = let
                 val (base, args) = strip_app_type ty
               in
                 begin_block INCONSISTENT 0;
-                print_args grav args;
+                print_args (Sfx 200) args;
                 add_break(1,0);
-                pr_ty pps base Top (depth - 1);
+                pr_ty pps base (Sfx 200) (depth - 1);
                 end_block ()
               end
             | TyV_Abs _ => let
                 val (vars, body) = strip_abs_type ty
+                val parens = case grav of
+                               Lfx _ => true
+                             | _ => false
               in
-                pbegin true;
+                pbegin parens;
                 begin_block INCONSISTENT 0;
                 add_string "\\";
                 pr_list (fn arg => pr_ty pps arg grav (depth - 1))
@@ -244,7 +249,7 @@ fun pp_type0 (G:grammar) = let
                 add_break (1,0);
                 pr_ty pps body Top (depth - 1);
                 end_block ();
-                pend true
+                pend parens
               end
             | TyV_All _ => let
                 val (vars, body) = strip_univ_type ty
