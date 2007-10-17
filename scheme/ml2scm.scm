@@ -1,6 +1,9 @@
 (require (lib "plt-match.ss")
          (lib "pretty.ss")
-         (lib "1.ss" "srfi"))
+         (lib "1.ss" "srfi")
+         (lib "string.ss")
+         (lib "pregexp.ss")
+         (only (lib "13.ss" "srfi") string-pad))
 
 (define output-directory "/root/temp/")
 
@@ -11,25 +14,39 @@
 (define requires null)
 
 ;read in the ML program, as a parsed S-exp (by haMLet)
+
+(define (char-dec->oct s)
+  (for-each (lambda (p)
+              (let* ((start (add1 (car p)))
+                     (end (cdr p))
+                     (dec-part (substring s start end))
+                     (n (string->number dec-part))
+                     (oct-part (string-pad (number->string n 8) 3 #\0)))
+                (string-copy! s start oct-part)))
+            (regexp-match-positions* (pregexp "\\\\\\d\\d\\d") s))
+  s)
+
+(define (readprogram filename)
+  (let ((p1 (open-input-file filename))
+        (p2 (open-output-string)))
+    (read-line p1)
+    (read-line p1)
+    (let lp ((l (read-line p1)))
+      (unless (eof-object? l)
+        (display (char-dec->oct l) p2)
+        (newline p2)
+        (lp (read-line p1))))
+    (read-from-string (get-output-string p2))))
+
 (define sigProgram
-  (with-input-from-file
-      (string-append output-directory
-                     name-string
-                     "-sig.s")
-    (lambda ()
-      (read)
-      (read)
-      (read))))
+  (readprogram (string-append output-directory
+                              name-string
+                              "-sig.s")))
 
 (define Program
-  (with-input-from-file
-      (string-append output-directory
-                     name-string
-                     ".s")
-    (lambda ()
-      (read)
-      (read)
-      (read))))
+  (readprogram (string-append output-directory
+                              name-string
+                              ".s")))
 
 (define (symbol-append sym str)
   (string->symbol
@@ -311,8 +328,8 @@
          (else
           (values
            `((let ()
-               ,translated-locdef
-               ,body))
+               ,@translated-locdef
+               ,@translated-boddef))
            defined)))))
     ((list 'DATATYPEDec _ p)
      (translate p defined))
