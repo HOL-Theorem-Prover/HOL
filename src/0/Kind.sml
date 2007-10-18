@@ -80,7 +80,7 @@ fun pp_kind pps kn =
      fun pp1 paren (Type) = add_string "*"
        | pp1 paren (Oper(Rator,Rand)) =
           ( if paren then (add_string "("; begin_block INCONSISTENT 0) else ();
-            pp true Rator; add_string " ->"; add_break(1,0); pp false Rand;
+            pp true Rator; add_string " =>"; add_break(1,0); pp false Rand;
             if paren then (end_block(); add_string ")") else () )
      and pp paren Type = add_string "*"
        | pp paren kn = add_string ("ar " ^ Lib.int_to_string (arity_of kn))
