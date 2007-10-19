@@ -51,8 +51,8 @@ in
   else raise ERR "dest_arraytype: not an array type"
 end
 
-val show_kinds = ref false
-val _ = Feedback.register_btrace("kinds", show_kinds)
+val show_kinds = ref 0
+val _ = Feedback.register_trace("kinds", show_kinds, 2)
 
 fun pp_type0 (G:grammar) = let
   fun lookup_tyop s = let
@@ -94,13 +94,15 @@ fun pp_type0 (G:grammar) = let
     end
 
     fun print_var grav (s,k,r) =
-        if (k <> Kind.typ orelse r <> 0) andalso !show_kinds then let
+        if (k <> Kind.typ orelse r <> 0) andalso !show_kinds = 1 orelse
+           !show_kinds = 2
+        then let
             val parens_needed =
                  case grav of Top => false | _ => true
           in
             pbegin parens_needed;
             add_string s;
-            if k <> Kind.typ then let
+            if k <> Kind.typ orelse !show_kinds = 2 then let
                 val p = r <> 0 andalso not (Kind.is_arity k)
               in
                 add_string "::";
@@ -109,8 +111,8 @@ fun pp_type0 (G:grammar) = let
                 pend p
               end
             else ();
-            if r <> 0 then (add_string " <= ";
-                            add_string (Int.toString r))
+            if r <> 0 orelse !show_kinds = 2 then
+              (add_string " <= "; add_string (Int.toString r))
             else ();
             pend parens_needed
           end
