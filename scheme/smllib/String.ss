@@ -3,6 +3,11 @@
   (require "String-sig.ss"
            "Strbase.ss"
            "List.ss")
+  
+  ;for name conflicts between Scheme and ML
+  (require (rename (lib "plt-mzscheme.ss" "lang") mz-substring substring))
+  (require (rename (lib "plt-mzscheme.ss" "lang") mz-map map))
+  
   (define-structure
     String@
     String^
@@ -14,22 +19,22 @@
          (call-with-exception-handler
           (lambda (x) (raise (struct Subscript ())))
           (lambda () (string-ref s i))))))
-    (define my-substring
+    (define substring
       (match-lambda
         ((list (cons '1 s) (cons '2 start) (cons '3 end))
          (call-with-exception-handler
           (lambda (x) (raise (struct Subscript ())))
-          (lambda () (substring s start end))))))
+          (lambda () (mz-substring s start end))))))
     (define extract
       (match-lambda
         ((list (cons '1 s) (cons '2 start) (cons '3 (struct NONE ())))
          (call-with-exception-handler
           (lambda (x) (raise (struct Subscript ())))
-          (lambda () (substring s start))))
+          (lambda () (mz-substring s start))))
         ((list (cons '1 s) (cons '2 start) (cons '3 (struct SOME (end))))
          (call-with-exception-handler
           (lambda (x) (raise (struct Subscript ())))
-          (lambda () (substring s start end))))))
+          (lambda () (mz-substring s start end))))))
     (define (concat lst)
       (apply string-append lst))
     (define ^
@@ -40,15 +45,15 @@
       (make-string 1 c))
     (define implode list->string)
     (define explode string->list)
-    (define my-map
+    (define map
       (lambda (f)
         (lambda (s)
-          (list->string (map f (string->list s))))))
+          (list->string (mz-map f (string->list s))))))
     (define translate
       (lambda (f)
         (lambda (s)
           (apply string-append
-                 (map f (string->list s))))))
+                 (mz-map f (string->list s))))))
     (define tokens (lambda (p) (lambda (s) (((ml-dot List@ map) substring) (((ml-dot Strbase@ tokens) p) (list (cons '1 s) (cons '2 0) (cons '3 (string-length s))))))))
     (define fields (lambda (p) (lambda (s) (((ml-dot List@ map) substring) (((ml-dot Strbase@ fields) p) (list (cons '1 s) (cons '2 0) (cons '3 (string-length s))))))))
     (define
