@@ -1,0 +1,37 @@
+(module Char-sig (lib "mlsig.scm" "lang")
+  (provide Char^)
+  (require)
+  (define-signature
+   Char^
+   (minChar
+     maxChar
+     maxOrd
+     chr
+     ord
+     succ
+     pred
+     isLower
+     isUpper
+     isDigit
+     isAlpha
+     isHexDigit
+     isAlphaNum
+     isPrint
+     isSpace
+     isPunct
+     isGraph
+     isAscii
+     isCntrl
+     toLower
+     toUpper
+     fromString
+     toString
+     fromCString
+     toCString
+     contains
+     notContains
+     <
+     <=
+     >
+     >=
+     compare)))
