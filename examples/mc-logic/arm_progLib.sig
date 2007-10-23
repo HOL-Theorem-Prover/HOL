@@ -36,6 +36,7 @@ sig
     val compose_ss          : simpLib.ssfrag
     val armINST_ss          : simpLib.ssfrag
 
+    val AUTO_COMPOSE        : thm -> thm -> thm
     val MATCH_COMPOSE       : thm -> thm -> thm
     val ARRANGE_COMPOSE     : thm -> thm -> thm
     val FRAME_COMPOSE       : thm -> thm -> thm
@@ -98,30 +99,26 @@ sig
     val EXTRACT_CODE        : thm -> thm
     val ABSORB_POST         : thm -> thm
     val DUPLICATE_COND      : thm -> thm 
-    val PROG2PROC           : term frag list -> thm -> thm
+    val PROG2PROC           : thm -> thm
 
     val FORCE_PBETA_CONV    : term -> thm
     val PAT_DISCH           : term -> thm -> thm
     val PAIR_GEN            : string -> term frag list -> thm -> thm
     val QGENL               : term frag list list -> thm -> thm
-    val INST_LDM_STM        : bool -> term frag list -> term frag list -> 
-                              thm -> term frag list -> thm
+    val INST_LDM_STM        : bool -> thm -> thm
 
     val show_enc            : bool ref
     val show_code           : bool ref
  
     val pp_enc              : unit -> unit
 
+    val REG_SORT_RULE       : thm -> thm
+
     (* experimental proof-producing functions *)
 
     val string_to_prog      : string -> string -> thm * string
-    val print_compositions  : (thm * string) list -> string -> string -> unit   
 
-    val make_spec           : string list -> unit
-    val make_spec'          : (string * bool) list -> unit
-
-    val compose_progs       : string list -> string -> string -> unit
-    val compose_progs'      : (string * bool) list -> string -> string -> unit
-    val compose_progs''     : (string * bool) list -> string -> string -> int -> unit
+    val make_spec           : int -> string list -> unit
+    val make_spec'          : int -> (string * bool) list -> unit
 
 end

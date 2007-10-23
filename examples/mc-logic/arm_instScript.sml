@@ -446,20 +446,25 @@ val xR_list_thm = prove(
       xR_list_sem xs s /\ ALL_DISTINCT (MAP FST xs) /\ 
       P (arm2set' (rs DIFF (LIST_TO_SET (MAP FST xs)),ns,st,ud,rt) s) /\
       (LIST_TO_SET (MAP FST xs)) SUBSET rs``,
-  Induct
-  THEN1 SRW_TAC [sep_ss] [xR_list_def,xR_list_sem_def,MAP,ALL_DISTINCT]
-  \\ REPEAT STRIP_TAC \\ Cases_on `h` \\ Cases_on `r`
-  \\ SIMP_TAC bool_ss [MAP,ALL_DISTINCT,pairTheory.FST,xR_list_sem_def,xR_list_def]
-  \\ ASM_REWRITE_TAC [GSYM STAR_ASSOC,xR_list_lemma]
-  \\ `LIST_TO_SET (q::MAP FST xs) SUBSET rs =
-      q IN rs /\ LIST_TO_SET (MAP FST xs) SUBSET rs` by SRW_TAC [] []
-  \\ `rs DIFF LIST_TO_SET (q::MAP FST xs) =
-      rs DELETE q DIFF LIST_TO_SET (MAP FST xs)` by 
-         SRW_TAC [] [EXTENSION,IN_DIFF,IN_DELETE,CONJ_ASSOC]
-  \\ `LIST_TO_SET (MAP FST xs) SUBSET rs DELETE q =
-      ~MEM q (MAP FST xs) /\ LIST_TO_SET (MAP FST xs) SUBSET rs` by 
-         (SRW_TAC [] [SUBSET_DEF,IN_DELETE] \\ METIS_TAC [])
-  \\ ASM_REWRITE_TAC [] \\ METIS_TAC []);
+  Induct << [
+    SIMP_TAC (std_ss++sep_ss) 
+      [xR_list_def,xR_list_sem_def,MAP,IN_LIST_TO_SET,MEM,SUBSET_DEF,ALL_DISTINCT]
+    \\ REPEAT STRIP_TAC
+    \\ MATCH_MP_TAC (METIS_PROVE [] ``(z = x) ==> (P (f (z,y) s) = P (f (x,y) s))``)
+    \\ ONCE_REWRITE_TAC [EXTENSION] \\ REWRITE_TAC [IN_DIFF,IN_LIST_TO_SET,MEM],
+    REPEAT STRIP_TAC \\ Cases_on `h` \\ Cases_on `r`
+    \\ SIMP_TAC bool_ss [MAP,ALL_DISTINCT,pairTheory.FST,xR_list_sem_def,xR_list_def]
+    \\ ASM_REWRITE_TAC [GSYM STAR_ASSOC,xR_list_lemma]
+    \\ `LIST_TO_SET (q::MAP FST xs) SUBSET rs =
+        q IN rs /\ LIST_TO_SET (MAP FST xs) SUBSET rs` by 
+       (SIMP_TAC bool_ss [SUBSET_DEF,IN_LIST_TO_SET,MEM] \\ METIS_TAC [])
+    \\ `rs DIFF LIST_TO_SET (q::MAP FST xs) =
+        rs DELETE q DIFF LIST_TO_SET (MAP FST xs)` by
+      SIMP_TAC bool_ss [EXTENSION,IN_DIFF,IN_DELETE,CONJ_ASSOC,IN_LIST_TO_SET,MEM]
+    \\ `LIST_TO_SET (MAP FST xs) SUBSET rs DELETE q =
+        ~MEM q (MAP FST xs) /\ LIST_TO_SET (MAP FST xs) SUBSET rs` by
+       (SIMP_TAC bool_ss [SUBSET_DEF,IN_DELETE,IN_LIST_TO_SET] \\ METIS_TAC [])
+    \\ ASM_REWRITE_TAC [] \\ REPEAT STRIP_TAC \\ EQ_TAC \\ SIMP_TAC bool_ss []]);
 
 val _ = Hol_datatype `
   xM_option = xM_seq of word30 # word32 list | 
@@ -1542,6 +1547,13 @@ val xR_list_sem_QSORT_INTRO = prove(
   REPEAT STRIP_TAC \\ MATCH_MP_TAC xR_list_sem_PERM \\ SIMP_TAC std_ss []
   \\ MATCH_MP_TAC PERM_MAP \\ METIS_TAC [SORTS_QSORT_FST_LOWER_EQ,SORTS_DEF]);
 
+val xR_list_sem_REVERSE_INTRO = prove(
+  ``!f xs. xR_list_sem (MAP f xs) = xR_list_sem ((MAP f o REVERSE) xs)``,
+  REPEAT STRIP_TAC \\ MATCH_MP_TAC xR_list_sem_PERM \\ SIMP_TAC std_ss []
+  \\ MATCH_MP_TAC PERM_MAP \\ Induct_on `xs`
+  \\ REWRITE_TAC [PERM_NIL,REVERSE,SNOC_APPEND]
+  \\ MATCH_MP_TAC CONS_PERM \\ ASM_REWRITE_TAC [APPEND_NIL]);
+
 val MEM_ALL_MEM_ALL_MAP = prove(
   ``!xs ys. (!a. MEM a xs = MEM a ys) ==> (!a. MEM a (MAP f xs) = MEM a (MAP f ys))``,
   REPEAT STRIP_TAC \\ REWRITE_TAC [MEM_MAP] \\ EQ_TAC \\ REPEAT STRIP_TAC
@@ -1677,6 +1689,21 @@ val IMP_ARM_NOP = prove(
 fun MAKE_ARM_NOP nop_rule = 
   MATCH_MP IMP_ARM_NOP ((Q.GEN `state` o Q.GEN `cpsr` o SPEC_ALL o SET_NO_CP) nop_rule);
 
+val reg_IGNORE_LDM_STATE = prove(
+  ``!r. ~(r = 15w) /\ ~(r = a) /\ ~MEM r (MAP FST xs) /\ 
+        ALL_DISTINCT (MAP FST xs) ==>
+        (reg r s = reg r (LDM_STATE a_mode x xs a s))``,
+  SIMP_TAC (srw_ss()) [IN_INSERT,IN_LIST_TO_SET,LDM_STATE_def,reg_def,state_mode_simp]
+  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP]
+  \\ ASM_SIMP_TAC bool_ss [LEAST_SORT_EQ_QSORT]
+  \\ Q.SPEC_TAC (`ADDR_MODE4_ADDR a_mode x (MAP FST xs)`,`ax`)
+  \\ Q.SPEC_TAC (`addr32 (ADDR_MODE4_WB a_mode x (MAP FST xs))`,`y`)
+  \\ REWRITE_TAC [xR_list_sem_QSORT_INTRO,MEM_MAP_QSORT_INTRO,
+                  ALL_DISTINCT_QSORT_INTRO,LENGTH_QSORT_INTRO]
+  \\ SIMP_TAC std_ss [] \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) xs`,`xs`)
+  \\ Induct \\ REWRITE_TAC [REG_WRITEL_def,MAP,LENGTH,ADDRESS_LIST'_def,ZIP,ALL_DISTINCT]
+  \\ ASM_SIMP_TAC std_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2,MEM,GSYM addr32_SUC])
+
 val arm_LDM = store_thm("arm_LDM",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
      (R30 a x * 
@@ -1705,16 +1732,46 @@ val arm_LDM = store_thm("arm_LDM",
   THEN1 ASM_SIMP_TAC bool_ss [reg_15_LDM_STATE,reg_wb_LDM_STATE,xR_list_sem_LDM_STATE,
      status_LDM_STATE,mem_LDM_STATE,ms_sem_LDM_STATE,undef_LDM_STATE]
   \\ REWRITE_TAC [arm2set''_EQ,mem_LDM_STATE,owrt_visible_LDM_STATE,mem_byte_def]
-  \\ SIMP_TAC (srw_ss()) [IN_INSERT,IN_LIST_TO_SET,LDM_STATE_def,reg_def,state_mode_simp]
-  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP]
-  \\ ASM_SIMP_TAC bool_ss [LEAST_SORT_EQ_QSORT]
-  \\ Q.SPEC_TAC (`ADDR_MODE4_ADDR a_mode x (MAP FST xs)`,`ax`)
-  \\ Q.SPEC_TAC (`addr32 (ADDR_MODE4_WB a_mode x (MAP FST xs))`,`y`)
-  \\ REWRITE_TAC [xR_list_sem_QSORT_INTRO,MEM_MAP_QSORT_INTRO,
-                  ALL_DISTINCT_QSORT_INTRO,LENGTH_QSORT_INTRO]
-  \\ SIMP_TAC std_ss [] \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) xs`,`xs`)
-  \\ Induct \\ REWRITE_TAC [REG_WRITEL_def,MAP,LENGTH,ADDRESS_LIST'_def,ZIP]
-  \\ ASM_SIMP_TAC std_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2,MEM,GSYM addr32_SUC]);
+  \\ SIMP_TAC std_ss [IN_INSERT,IN_LIST_TO_SET] \\ REPEAT STRIP_TAC
+  \\ MATCH_MP_TAC reg_IGNORE_LDM_STATE \\ ASM_REWRITE_TAC []);
+  
+val arm_LDM_ADDR = store_thm("arm_LDM_ADDR",
+  ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
+     (R30 a x * xR_list (MAP (\x.(FST x,NONE)) xs) * 
+      ms (ADDR_MODE4_ADDR a_mode x ((a,y)::xs)) (reg_values ((a,y)::xs)) * S (sN,sZ,sC,sV) * 
+      PASS c_flag (sN,sZ,sC,sV)) 
+     [enc (LDM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (a::MAP FST xs)))]
+     (xR_list (MAP (\x.(FST x,SOME (SND x))) ((a,y)::xs)) *
+      ms (ADDR_MODE4_ADDR a_mode x ((a,y)::xs)) (reg_values ((a,y)::xs)) * S (sN,sZ,sC,sV)
+       :^(ty_antiq ARMel_type) set -> bool) {}``,
+  REWRITE_TAC [ARM_PROG2_def,MAKE_ARM_NOP ARM_LDM_NOP] \\ ARM_PROG_INIT_TAC 
+  \\ FULL_SIMP_TAC bool_ss [xR_list_def,MAP,FST,SND]
+  \\ ASM_MOVE_STAR_TAC `a*xs*mm*st*cd*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud*cd`
+  \\ MOVE_STAR_TAC `a*xs*mm*st*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud`
+  \\ FULL_SIMP_TAC bool_ss [R30_def,LDM_PRE_EXPANSION,LDM_POST_EXPANSION,
+         LDM_SIMP_LEMMA,ALL_DISTINCT,MEM]
+  \\ `CONDITION_PASSED2 (status s) c_flag` by METIS_TAC []
+  \\ `mem (addr30 (reg 15w s)) s =
+      enc (LDM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (a::MAP FST xs)))` 
+         by METIS_TAC [addr30_addr32]
+  \\ `~(a = 15w)` by METIS_TAC []
+  \\ ASSUME_TAC ((repeat UNDISCH o  RW [MAP,FST,SND,ALL_DISTINCT,GSYM AND_IMP_INTRO] o 
+                  Q.INST [`p`|->`x`,`Rd`|->`a`,`c`|->`c_flag`,`am4`|->`a_mode`,`xs`|->`(a,y)::xs`]) ldm)
+  \\ ASM_REWRITE_TAC [] \\ Q.PAT_ASSUM `NEXT_ARM_MEM s = s'` (fn th => ALL_TAC)
+  \\ STRIP_TAC THEN1
+    (ASM_SIMP_TAC bool_ss [reg_15_LDM_STATE,reg_wb_LDM_STATE,xR_list_sem_LDM_STATE,
+     status_LDM_STATE,mem_LDM_STATE,ms_sem_LDM_STATE,undef_LDM_STATE]
+    \\ (IMP_RES_TAC o SIMP_RULE std_ss [ALL_DISTINCT,MAP,FST,xR_list_sem_def,GSYM AND_IMP_INTRO] o 
+       Q.INST [`xs`|->`(a,y)::xs`]) xR_list_sem_LDM_STATE
+    \\ ASM_REWRITE_TAC []
+    \\ MATCH_MP_TAC reg_15_LDM_STATE
+    \\ REWRITE_TAC [MAP,FST,ALL_DISTINCT,MEM] \\ METIS_TAC [])      
+  \\ REWRITE_TAC [arm2set''_EQ,mem_LDM_STATE,owrt_visible_LDM_STATE,mem_byte_def]
+  \\ SIMP_TAC std_ss [IN_INSERT,IN_LIST_TO_SET]  
+  \\ REPEAT STRIP_TAC
+  \\ `~MEM r (MAP FST ((a,y)::xs))` by ASM_REWRITE_TAC [MAP,MEM,FST] 
+  \\ MATCH_MP_TAC reg_IGNORE_LDM_STATE
+  \\ ASM_REWRITE_TAC [ALL_DISTINCT,MAP,FST,MEM]);
 
 val arm_LDM_PC = store_thm("arm_LDM_PC",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag 
@@ -1752,23 +1809,49 @@ val arm_LDM_PC = store_thm("arm_LDM_PC",
          MAP (\x. (FST x,SOME (SND x))) ((15w,addr32 p)::xs)` by SIMP_TAC std_ss [MAP]  
      \\ ASM_SIMP_TAC bool_ss [xR_list_sem_LDM_STATE])
   \\ REWRITE_TAC [arm2set''_EQ,mem_LDM_STATE,owrt_visible_LDM_STATE,mem_byte_def]
-  \\ SIMP_TAC (srw_ss()) [IN_INSERT,IN_LIST_TO_SET,LDM_STATE_def,reg_def,state_mode_simp]
-  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP]
-  \\ `15w::(MAP FST xs) = MAP FST ((15w,addr32 p)::xs)` by SIMP_TAC std_ss [MAP]
-  \\ ASM_SIMP_TAC bool_ss [LEAST_SORT_EQ_QSORT]
-  \\ Q.SPEC_TAC (`ADDR_MODE4_ADDR a_mode x (MAP FST ((15w,addr32 p)::xs))`,`ax`)
-  \\ Q.SPEC_TAC (`addr32 (ADDR_MODE4_WB a_mode x (MAP FST ((15w,addr32 p)::xs)))`,`y`)
-  \\ `!r a. ~(r = 15w) /\ ~(r = a) /\ ~MEM r (MAP FST xs) =
-         ~(r = 15w) /\ ~(r = a) /\ ~MEM r (MAP FST ((15w,addr32 p)::xs))` by 
-            (SIMP_TAC std_ss [MEM,MAP] \\ METIS_TAC [])
-  \\ `!p. SUC (LENGTH (MAP FST xs)) = LENGTH (MAP FST ((15w,addr32 p)::xs))` by 
-                         (SIMP_TAC std_ss [MEM,MAP,LENGTH] \\ METIS_TAC [])
-  \\ ASM_REWRITE_TAC [] \\ REWRITE_TAC [xR_list_sem_QSORT_INTRO,
-       MEM_MAP_QSORT_INTRO,ALL_DISTINCT_QSORT_INTRO,LENGTH_QSORT_INTRO]
-  \\ SIMP_TAC std_ss [] 
-  \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) ((15w,addr32 p)::xs)`,`xs`)
-  \\ Induct \\ REWRITE_TAC [REG_WRITEL_def,MAP,LENGTH,ADDRESS_LIST'_def,ZIP]
-  \\ ASM_SIMP_TAC std_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2,MEM,GSYM addr32_SUC]);
+  \\ SIMP_TAC std_ss [IN_INSERT,IN_LIST_TO_SET] \\ REPEAT STRIP_TAC
+  \\ MATCH_MP_TAC reg_IGNORE_LDM_STATE 
+  \\ ASM_REWRITE_TAC [ALL_DISTINCT,MAP,FST,MEM]);
+
+val arm_LDM_PC_ADDR = store_thm("arm_LDM_PC_ADDR",
+  ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag 
+     (R30 a x * 
+      xR_list (MAP (\x.(FST x,NONE)) xs) * 
+      ms (ADDR_MODE4_ADDR a_mode x ((15w,addr32 p)::(a,y)::xs)) 
+         (reg_values ((15w,addr32 p)::(a,y)::xs)) * S (sN,sZ,sC,sV) * PASS c_flag (sN,sZ,sC,sV)) 
+     [enc (LDM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (15w :: a :: MAP FST xs)))] SEP_F
+     {(xR_list (MAP (\x.(FST x,SOME (SND x))) ((a,y)::xs)) *
+       ms (ADDR_MODE4_ADDR a_mode x ((15w,addr32 p)::(a,y)::xs)) (reg_values ((15w,addr32 p)::(a,y)::xs)) * 
+       S (sN,sZ,sC,sV),pcSET p)}``,
+  REWRITE_TAC [ARM_PROG2_def,MAKE_ARM_NOP ARM_LDM_NOP]
+  \\ SIMP_TAC std_ss [xR_list_def,MAP,FST]
+  \\ ARM_PROG_INIT_TAC \\ SIMP_TAC (bool_ss++sep_ss) [pcSET_def] \\ REWRITE_TAC [SEP_F_def]
+  \\ ASM_MOVE_STAR_TAC `a*xs*mm*st*cd*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud*cd`
+  \\ MOVE_STAR_TAC `a*xs*mm*st*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud`
+  \\ FULL_SIMP_TAC bool_ss [R30_def,LDM_PRE_EXPANSION,LDM_POST_EXPANSION,
+         LDM_SIMP_LEMMA,ALL_DISTINCT,MEM]
+  \\ `CONDITION_PASSED2 (status s) c_flag` by METIS_TAC []
+  \\ `mem (addr30 (reg 15w s)) s =
+      enc (LDM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (15w::a::MAP FST xs)))` 
+         by METIS_TAC [addr30_addr32]
+  \\ `~(a = 15w)` by METIS_TAC []
+  \\ ASSUME_TAC ((UNDISCH_ALL o 
+                  SIMP_RULE std_ss [MAP,ALL_DISTINCT,GSYM AND_IMP_INTRO,MEM] o
+                  Q.INST [`p`|->`x`,`Rd`|->`a`,`xs`|->`(15w,addr32 p)::(a,y)::xs`,`am4`|->`a_mode`,`c`|->`c_flag`]) ldm)
+  \\ ASM_REWRITE_TAC [] \\ Q.PAT_ASSUM `NEXT_ARM_MEM s = s'` (fn th => ALL_TAC)
+  \\ `ALL_DISTINCT (MAP FST ((15w,addr32 p)::(a,y)::xs))` by ASM_SIMP_TAC std_ss [ALL_DISTINCT,MAP,MEM]
+  \\ `~MEM a (MAP FST ((15w,addr32 p)::xs))` by ASM_SIMP_TAC std_ss [MEM,MAP]
+  \\ ASM_SIMP_TAC bool_ss [reg_15_LDM_STATE,reg_wb_LDM_STATE,xR_list_sem_LDM_STATE,
+       status_LDM_STATE,mem_LDM_STATE,ms_sem_LDM_STATE,undef_LDM_STATE]
+  \\ STRIP_TAC THEN1 (
+    (IMP_RES_TAC o REWRITE_RULE [GSYM AND_IMP_INTRO] o
+     SIMP_RULE std_ss [ALL_DISTINCT,MAP,FST,MEM,xR_list_sem_def] o 
+     Q.INST [`xs`|->`(15w,addr32 p)::(a,y)::xs`]) xR_list_sem_LDM_STATE
+    \\ ASM_REWRITE_TAC [])  
+  \\ REWRITE_TAC [arm2set''_EQ,mem_LDM_STATE,owrt_visible_LDM_STATE,mem_byte_def]
+  \\ SIMP_TAC std_ss [IN_INSERT,IN_LIST_TO_SET] \\ REPEAT STRIP_TAC
+  \\ MATCH_MP_TAC reg_IGNORE_LDM_STATE 
+  \\ ASM_REWRITE_TAC [ALL_DISTINCT,MAP,FST,MEM]);
 
 
 (* STM instruction ------------------------------------------------------------- *)
@@ -1849,6 +1932,39 @@ val xR_list_sem_STM_STATE = prove(
       (addr32 (ADDR_MODE4_WB am4 x (MAP FST xs))))) (state_mode s) rp)) s.memory
       (ZIP (LEAST_SORT (MAP FST xs), ADDR_MODE4_ADDRESSES am4 x (MAP FST xs)))`,`fff`)
   \\ Q.SPEC_TAC (`ADDR_MODE4_WB am4 x (MAP FST xs)`,`wbwb`)
+  \\ Induct_on `xs` \\ SIMP_TAC std_ss [xR_list_sem_def,MAP]
+  \\ Cases \\ Cases_on `q = 15w` \\ ASM_SIMP_TAC std_ss [MEM] 
+  \\ ASM_SIMP_TAC (srw_ss()) [MEM,reg_def,state_mode_simp,
+       REG_READ_INC_PC,REG_READ_WRITE_NEQ2]);
+
+val xR_list_sem_STM_STATE_PC = prove(
+  ``xR_list_sem (MAP (\x. (FST x,SOME (SND x))) ((15w,addr32 p)::xs)) s /\
+    ~MEM 15w (MAP FST xs) /\ ~MEM a (MAP FST xs) /\ ~(15w = a) ==>
+    xR_list_sem (MAP (\x. (FST x,SOME (SND x))) ((15w,addr32 (p+1w))::xs)) (STM_STATE am4 x ((15w,addr32 p)::xs) a s)``,
+  REWRITE_TAC [STM_STATE_def]
+  \\ Q.PAT_ABBREV_TAC `nnnnn = FOLDL xdfgdfg s.memory (ZIP (y,u))` \\ POP_ASSUM (fn th => ALL_TAC)
+  \\ Q.SPEC_TAC (`ADDR_MODE4_WB am4 x (MAP FST ((15w,addr32 p)::xs))`,`wbwb`)
+  \\ SIMP_TAC std_ss [xR_list_sem_def,MAP,FST,SND]
+  \\ REPEAT STRIP_TAC << [
+    REWRITE_TAC [reg_def] \\ SRW_TAC [] [INC_PC_r15,REG_WRITE_r15]
+    \\ FULL_SIMP_TAC std_ss [reg_def,addr32_ADD,addr32_n2w],
+    Induct_on `xs` \\ SIMP_TAC std_ss [xR_list_sem_def,MAP]
+    \\ Cases \\ Cases_on `q = 15w` \\ ASM_SIMP_TAC std_ss [MEM] 
+    \\ ASM_SIMP_TAC (srw_ss()) [MEM,reg_def,state_mode_simp,
+         REG_READ_INC_PC,REG_READ_WRITE_NEQ2]]);
+
+val xR_list_sem_STM_STATE_IMP = prove(
+  ``xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs) s /\
+    ~MEM 15w (MAP FST xs) /\ ~MEM a (MAP FST xs) ==>
+    xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs) (STM_STATE am4 x ((15w,0w)::xs) a s)``,
+  REWRITE_TAC [STM_STATE_def]
+  \\ Q.SPEC_TAC (`FOLDL
+      (\mem (rp,rd). MEM_WRITE_WORD mem rd (REG_READ
+      (if HD (LEAST_SORT (MAP FST ((15w,0w)::xs))) = a then INC_PC s.registers else
+      INC_PC (REG_WRITE s.registers (state_mode s) a
+      (addr32 (ADDR_MODE4_WB am4 x (MAP FST ((15w,0w)::xs)))))) (state_mode s) rp)) s.memory
+      (ZIP (LEAST_SORT (MAP FST ((15w,0w)::xs)), ADDR_MODE4_ADDRESSES am4 x (MAP FST ((15w,0w)::xs))))`,`fff`)
+  \\ Q.SPEC_TAC (`ADDR_MODE4_WB am4 x (MAP FST ((15w,0w)::xs))`,`wbwb`)
   \\ Induct_on `xs` \\ SIMP_TAC std_ss [xR_list_sem_def,MAP]
   \\ Cases \\ Cases_on `q = 15w` \\ ASM_SIMP_TAC std_ss [MEM] 
   \\ ASM_SIMP_TAC (srw_ss()) [MEM,reg_def,state_mode_simp,
@@ -1955,6 +2071,140 @@ val ms_sem_STM_STATE = prove(
   \\ `REG_READ s.registers (state_mode s) q = r` by METIS_TAC [reg_def]
   \\ Cases_on `rt` \\ FULL_SIMP_TAC std_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2]);
 
+val LEAST_SORT_EXTRACT_15w = prove(
+  ``~MEM 15w (MAP FST xs) ==>
+    (LEAST_SORT (MAP FST ((15w,addr32 p)::xs)) = LEAST_SORT (MAP FST xs) ++ [15w:word4])``,
+  REWRITE_TAC [MAP,FST] \\ Q.SPEC_TAC (`MAP FST xs`,`xs`) \\ STRIP_TAC
+  \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC SORTED_LO_IMP_EQ
+  \\ REWRITE_TAC [MEM_LEAST_SORT,MEM_APPEND,MEM,SORTED_LEAST_SORT]  
+  \\ REPEAT STRIP_TAC << [
+    MATCH_MP_TAC SORTED_APPEND
+    \\ REWRITE_TAC [MEM_LEAST_SORT,MEM,transitive_def,SORTED_LEAST_SORT]
+    \\ REWRITE_TAC [SORTED_DEF,WORD_LOWER_TRANS]
+    \\ Cases_word \\ Cases_word    
+    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [n2w_11,word_lo_n2w,LESS_MOD]        
+    \\ Cases_on `n = 15` \\ ASM_REWRITE_TAC [] \\ REPEAT STRIP_TAC \\ DECIDE_TAC,
+    METIS_TAC []]);  
+
+(*
+val ms_sem_STM_STATE_PC = prove(
+  ``LENGTH xs <= 2**30 /\
+    ~MEM a (MAP FST xs) /\ ~MEM 15w (MAP FST xs) /\ ALL_DISTINCT (MAP FST xs) /\ 
+    xR_list_sem (MAP (\x. (FST x,SOME (SND x))) ((15w,addr32 p)::xs)) s ==>
+    ms_sem (ADDR_MODE4_ADDR am4 x ((15w,addr32 p)::xs)) (reg_values ((15w,addr32 (p+1w))::xs)) 
+      (STM_STATE am4 x ((15w,addr32 p)::xs) a s)``,
+  REWRITE_TAC [STM_STATE_def,ADDR_MODE4_WB_def,LENGTH_MAP]
+  \\ Q.SPEC_TAC (`HD (LEAST_SORT (MAP FST ((15w,addr32 p)::xs))) = a`,`rt`)
+  \\ REWRITE_TAC [LENGTH]
+  \\ Q.SPEC_TAC (`(if ADDR_MODE4_wb am4 then ADDR_MODE4_WB' am4 x (SUC (LENGTH xs)) else x)`,`rt'`)
+  \\ REWRITE_TAC [GSYM ADDR_MODE4_WB_def,ADDR_MODE4_ADDRESSES_def]  
+  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP] 
+  \\ `LENGTH ((15w,addr32 p)::xs) = LENGTH (MAP FST ((15w,addr32 p)::xs))` by METIS_TAC [LENGTH_MAP] 
+  \\ ASM_REWRITE_TAC [ADDR_MODE4_ADDR_def]
+  \\ REWRITE_TAC [GSYM ADDR_MODE4_ADDR_def]
+  \\ Q.SPEC_TAC (`ADDR_MODE4_ADDR am4 x (MAP FST ((15w,addr32 p)::xs))`,`ax`)
+  \\ SIMP_TAC bool_ss [LEAST_SORT_EXTRACT_15w]    
+  \\ SIMP_TAC bool_ss [MAP,FST,LENGTH,SND,xR_list_sem_def]
+  (* getting there *)  
+
+  \\ SIMP_TAC bool_ss [LEAST_SORT_EQ_QSORT,mem_def]
+
+  \\ REWRITE_TAC [xR_list_sem_QSORT_INTRO,MEM_MAP_QSORT_INTRO,
+                  ALL_DISTINCT_QSORT_INTRO,LENGTH_QSORT_INTRO]
+  \\ Q.SPEC_TAC (`s.memory`,`mmm`)
+  \\ SIMP_TAC std_ss [reg_values_def] 
+  \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) xs`,`xs`)
+  \\ SIMP_TAC (srw_ss()) [] \\ POP_ASSUM (fn th => ALL_TAC)
+  \\ Induct THEN1 REWRITE_TAC [ms_sem_def,MAP]
+  \\ Cases \\ SIMP_TAC std_ss [MAP,HD,MEM,LENGTH,ADDRESS_LIST'_def,ZIP,FOLDL,
+       ALL_DISTINCT,xR_list_sem_def,ms_sem_def,GSYM addr32_SUC] 
+  \\ Cases_on `q = 15w` \\ ASM_REWRITE_TAC []
+  \\ NTAC 5 STRIP_TAC \\ `LENGTH xs <= 1073741824` by DECIDE_TAC
+  \\ `LENGTH xs < 1073741824` by DECIDE_TAC 
+  \\ FULL_SIMP_TAC bool_ss [GSYM (EVAL ``2**30``)] 
+  \\ `~MEM (addr32 ax) (ADDRESS_LIST' (addr32 (ax + 1w)) (LENGTH xs))` 
+        by METIS_TAC [no_overlap_ADDRESS_LIST']
+  \\ ASM_SIMP_TAC bool_ss [ms_sem_STM_STATE_LEMMA]
+  \\ SIMP_TAC (srw_ss()) [mem_def,MEM_WRITE_WORD_def,ADDR30_def,
+         GSYM addr30_def,addr30_addr32,UPDATE_def]
+  \\ `REG_READ s.registers (state_mode s) q = r` by METIS_TAC [reg_def]
+  \\ Cases_on `rt` \\ FULL_SIMP_TAC std_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2]);
+*)
+
+val NOT_IN_PART = prove(
+  ``!xs g ys zs. (!y. MEM y xs ==> g y x) ==> (PART (\y. g y x) xs ys zs = (REVERSE xs ++ ys,zs))``,
+  Induct \\ FULL_SIMP_TAC std_ss [PART_DEF,MEM,APPEND,APPEND_NIL,REVERSE_DEF] 
+  \\ REPEAT STRIP_TAC \\ REWRITE_TAC [GSYM APPEND_ASSOC,APPEND]);
+
+val EXTRACT_FROM_QSORT = prove(
+  ``!xs x R. (!y. MEM y xs ==> R y x) ==>
+             (QSORT R (x::xs) = QSORT R (REVERSE xs) ++ [x])``,
+  SIMP_TAC bool_ss [QSORT_DEF,PARTITION_DEF,NOT_IN_PART]
+  \\ SIMP_TAC std_ss [LET_DEF,QSORT_DEF,APPEND_NIL]);
+
+val EXTRACT_15_FROM_QSORT = prove(
+  ``QSORT (\x y. FST x <=+ FST y) ((15w:word4,0w:word32)::xs) = 
+    QSORT (\x y. FST x <=+ FST y) (REVERSE xs) ++ [(15w,0w)]``,
+  MATCH_MP_TAC EXTRACT_FROM_QSORT \\ Cases
+  \\ ASSUME_TAC (INST_TYPE [``:'a``|->``:4``] w2n_lt)
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [FST,WORD_LS,w2n_n2w,DECIDE ``n <= 15 = n < 16``]); 
+
+val ALL_DISTINCT_SNOC = prove(
+  ``!xs y. ALL_DISTINCT (xs ++ [y]) = ALL_DISTINCT (y::xs)``,
+  Induct \\ ASM_REWRITE_TAC [APPEND,ALL_DISTINCT,MEM,MEM_APPEND] \\ METIS_TAC []);
+
+val ALL_DISTINCT_REVERSE = prove(
+  ``!xs. ALL_DISTINCT (REVERSE xs) = ALL_DISTINCT xs``,
+  Induct \\ ASM_REWRITE_TAC [ALL_DISTINCT,REVERSE,SNOC_APPEND,MEM_REVERSE,ALL_DISTINCT_SNOC]);
+
+(*
+val ms_sem_STM_STATE_IMP = prove(
+  ``SUC (LENGTH xs) <= 2**30 /\
+    ~MEM a (MAP FST xs) /\ ~MEM 15w (MAP FST xs) /\ ALL_DISTINCT (MAP FST xs) /\ 
+    xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs) s ==>
+    ms_sem (ADDR_MODE4_ADDR am4 x ((15w,0w)::xs)) (reg_values xs) (STM_STATE am4 x ((15w,0w)::xs) a s)``,
+  REWRITE_TAC [STM_STATE_def,ADDR_MODE4_WB_def,LENGTH_MAP]
+  \\ Q.SPEC_TAC (`HD (LEAST_SORT (MAP FST ((15w,0w)::xs))) = a`,`rt`)
+  \\ Q.SPEC_TAC (`(if ADDR_MODE4_wb am4 then ADDR_MODE4_WB' am4 x (LENGTH ((15w,0w)::xs)) else x)`,`rt'`)
+  \\ REWRITE_TAC [GSYM ADDR_MODE4_WB_def,ADDR_MODE4_ADDRESSES_def]  
+  \\ ASM_REWRITE_TAC [ADDR_MODE4_ADDR_def,LENGTH_MAP,LENGTH]
+  \\ Q.SPEC_TAC (`(ADDR_MODE4_ADDR' am4 x (ADDR_MODE4_WB' am4 x (SUC (LENGTH xs))))`,`ax`)
+  \\ REWRITE_TAC [MAP,FST]
+  \\ SIMP_TAC bool_ss [RW [MAP,FST,ALL_DISTINCT] (Q.ISPEC `(15w,0w)::xs` LEAST_SORT_EQ_QSORT)]
+  \\ REWRITE_TAC [EXTRACT_15_FROM_QSORT]
+  \\ Q.SPEC_TAC (`s.memory`,`mmm`)
+  \\ REWRITE_TAC [MAP_APPEND,MAP,FST]
+  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP] 
+  \\ ASM_REWRITE_TAC []
+  \\ ONCE_REWRITE_TAC [GSYM MEM_REVERSE]
+  \\ ONCE_REWRITE_TAC [GSYM LENGTH_REVERSE]
+  \\ ONCE_REWRITE_TAC [GSYM ALL_DISTINCT_REVERSE]
+  \\ ONCE_REWRITE_TAC [GSYM MAP_REVERSE]
+  \\ REWRITE_TAC [xR_list_sem_REVERSE_INTRO]
+  \\ ASM_REWRITE_TAC [xR_list_sem_QSORT_INTRO,MEM_MAP_QSORT_INTRO,
+                  ALL_DISTINCT_QSORT_INTRO,LENGTH_QSORT_INTRO]
+  \\ SIMP_TAC std_ss [reg_values_def] 
+
+
+  \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) (REVERSE xs)`,`xs`)
+
+  \\ SIMP_TAC (srw_ss()) [] \\ POP_ASSUM (fn th => ALL_TAC)
+  \\ Induct THEN1 REWRITE_TAC [ms_sem_def,MAP]
+  \\ Cases \\ SIMP_TAC std_ss [MAP,HD,MEM,LENGTH,ADDRESS_LIST'_def,ZIP,FOLDL,
+       ALL_DISTINCT,xR_list_sem_def,ms_sem_def,GSYM addr32_SUC] 
+  \\ Cases_on `q = 15w` \\ ASM_REWRITE_TAC []
+  \\ NTAC 5 STRIP_TAC \\ `LENGTH xs <= 1073741824` by DECIDE_TAC
+  \\ `LENGTH xs < 1073741824` by DECIDE_TAC 
+  \\ FULL_SIMP_TAC bool_ss [GSYM (EVAL ``2**30``)] 
+  \\ `~MEM (addr32 ax) (ADDRESS_LIST' (addr32 (ax + 1w)) (LENGTH xs))` 
+        by METIS_TAC [no_overlap_ADDRESS_LIST']
+  \\ ASM_SIMP_TAC bool_ss [ms_sem_STM_STATE_LEMMA]
+  \\ SIMP_TAC (srw_ss()) [mem_def,MEM_WRITE_WORD_def,ADDR30_def,
+         GSYM addr30_def,addr30_addr32,UPDATE_def]
+  \\ `REG_READ s.registers (state_mode s) q = r` by METIS_TAC [reg_def]
+  \\ Cases_on `rt` \\ FULL_SIMP_TAC std_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2]);
+*)
+
 val STM_PRE_EXPANSION = let
   val xs = `(15w,SOME x1)::(a,SOME x2)::xs`;
   val ys = `[xM_seq (b1,[y1]);xM_blank (b3,y3)]`;
@@ -1962,7 +2212,21 @@ val STM_PRE_EXPANSION = let
   val th = sep_pred_semantics (xs,ys,st,ud,rt,cd);
   in th end;
 
+val STM_PRE_EXPANSION_PC = let
+  val xs = `(a,SOME x2)::xs`;
+  val ys = `[xM_seq (b1,[y1]);xM_blank (b3,y3)]`;
+  val (st,ud,rt,cd) = (`(T,st)`,`(T,ud)`,`(F,rt)`,`(T,g)`);
+  val th = sep_pred_semantics (xs,ys,st,ud,rt,cd);
+  in th end;
+
 val STM_POST_EXPANSION = LDM_POST_EXPANSION;
+
+val STM_POST_EXPANSION_PC = let
+  val xs = `(a,SOME x2)::xs`
+  val ys = `[xM_seq (b1,[y1]);xM_seq (b3,y3)]`
+  val (st,ud,rt,cd) = (`(T,st)`,`(T,ud)`,`(F,rt)`,`(F,g)`)
+  val th = sep_pred_semantics (xs,ys,st,ud,rt,cd)
+  in th end;
 
 val addr32_ADD_IN_ms_address_set = prove(
   ``!n a b. 
@@ -2006,17 +2270,117 @@ val arm_STM = store_thm("arm_STM",
   \\ ASM_REWRITE_TAC [addr30_addr32,addr32_ADD_IN_ms_address_set] 
   \\ ASM_SIMP_TAC bool_ss [mem_STM_STATE]);
 
-val NOT_IN_PART = prove(
-  ``!xs g ys zs. (!y. MEM y xs ==> g y x) ==> (PART (\y. g y x) xs ys zs = (REVERSE xs ++ ys,zs))``,
-  Induct \\ FULL_SIMP_TAC std_ss [PART_DEF,MEM,APPEND,APPEND_NIL,REVERSE_DEF] 
-  \\ REPEAT STRIP_TAC \\ REWRITE_TAC [GSYM APPEND_ASSOC,APPEND]);
-  
-val EXTRACT_FROM_QSORT = prove(
-  ``!xs x f R. (!y. MEM y xs ==> R y x) ==>
-               (QSORT R (x::xs) = QSORT R (REVERSE xs) ++ [x])``,
-  SIMP_TAC bool_ss [QSORT_DEF,PARTITION_DEF,NOT_IN_PART]
-  \\ SIMP_TAC std_ss [LET_DEF,QSORT_DEF,APPEND_NIL]);
+(*
 
+  ``ARM_RUN 
+     (R30 a x * 
+      xR_list (MAP (\x.(FST x,SOME (SND x))) ((15w,addr32 p)::xs)) * 
+      blank_ms (ADDR_MODE4_ADDR a_mode x ((15w,addr32 p)::xs)) (LENGTH ((15w,addr32 p)::xs)) * 
+      S (sN,sZ,sC,sV) * PASS c_flag (sN,sZ,sC,sV) * 
+      ARMi (p,enc (STM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (MAP FST ((15w,addr32 p)::xs))))) * one (Undef F))
+     (R30 a (ADDR_MODE4_WB a_mode x ((15w,addr32 p)::xs)) *
+      xR_list (MAP (\x.(FST x,SOME (SND x))) ((15w,addr32 (p+1w))::xs)) *
+      ms (ADDR_MODE4_ADDR a_mode x ((15w,addr32 p)::xs)) (reg_values ((15w,addr32 p)::xs)) * S (sN,sZ,sC,sV) *
+      ARMi (p,enc (STM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (MAP FST ((15w,addr32 p)::xs))))) * one (Undef F))``,
+
+  REWRITE_TAC [ARM_RUN_SEMANTICS,ARMi_def,ARMpc_def,STAR_ASSOC,PASS_def] \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `1`
+  \\ SIMP_TAC std_ss [STATE_ARM_MEM_1,LET_DEF]
+  \\ ASM_MOVE_STAR_TAC `a*xs*mm*st*cd*cmd*ud` `a*xs*cmd*mm*st*ud*cd`
+  \\ MOVE_STAR_TAC `a*xs*mm*st*cmd*ud` `a*xs*cmd*mm*st*ud`    
+  \\ FULL_SIMP_TAC bool_ss [R30_def,STM_PRE_EXPANSION_PC,STM_POST_EXPANSION_PC,DISJOINT_SING,
+         LDM_SIMP_LEMMA,ALL_DISTINCT,MEM,LENGTH_reg_values,ALL_DISJOINT_def,EVERY_DEF]
+  \\ `CONDITION_PASSED2 (status s) c_flag` by METIS_TAC []
+  \\ `reg 15w s = addr32 p` by FULL_SIMP_TAC bool_ss [xR_list_sem_def,MAP,FST,SND]
+  \\ `mem (addr30 (reg 15w s)) s =
+      enc (STM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (MAP FST ((15w,addr32 p)::xs))))` 
+         by METIS_TAC [addr30_addr32]
+  \\ `~(a = 15w)` by METIS_TAC [MAP,FST,MEM]
+  \\ IMP_RES_TAC stm \\ FULL_SIMP_TAC bool_ss []
+  \\ Q.PAT_ASSUM `NEXT_ARM_MEM s = s'` (fn th => ALL_TAC)
+  \\ FULL_SIMP_TAC bool_ss [DISJOINT_INSERT,WORD_ADD_0,DISJOINT_EMPTY,LENGTH]
+  \\ ASM_SIMP_TAC bool_ss [status_STM_STATE,undef_STM_STATE,reg_15_STM_STATE,
+       reg_wb_STM_STATE,xR_list_sem_STM_STATE,mem_STM_STATE,ms_sem_STM_STATE]
+  \\ `!x. MAP FST ((15w,x:word32)::xs) = 15w::MAP FST xs` by SIMP_TAC bool_ss [MAP,FST]
+  \\ FULL_SIMP_TAC bool_ss [MEM,ALL_DISTINCT]
+  \\ REPEAT STRIP_TAC 
+  THEN1 (MATCH_MP_TAC xR_list_sem_STM_STATE_PC \\ ASM_SIMP_TAC bool_ss [])
+  
+    Q.PAT_ASSUM `mem p s = enc g` (fn th => REWRITE_TAC [GSYM th])
+    \\ MATCH_MP_TAC mem_STM_STATE \\ ASM_SIMP_TAC bool_ss [MEM,FST,ALL_DISTINCT,LENGTH]
+
+    ms_sem_STM_STATE
+
+
+
+  \\ FULL_SIMP_TAC bool_ss [ms_address_set_def,IN_INSERT,addr32_11,
+                            addr32_NEQ_addr32,NOT_IN_EMPTY,WORD_ADD_0]
+  \\ ASM_SIMP_TAC bool_ss [RW [WORD_ADD_0] xM_list_lemma_LEMMA2]
+  
+
+ ASSUME_TAC ((UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o 
+                  RW [MAP,ALL_DISTINCT,GSYM AND_IMP_INTRO] o Q.INST [`p`|->`x`,`Rd`|->`a`,`c`|->`c_flag`,`am4`|->`a_mode`,`xs`|->`(15w,0w)::xs`]) stm)
+  
+
+
+val arm_STM_PC = store_thm("arm_STM_PC",
+  ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag 
+     (R30 a x * 
+      xR_list (MAP (\x.(FST x,SOME (SND x))) xs) * 
+      blank_ms (ADDR_MODE4_ADDR a_mode x ((15w,0w)::xs)) (SUC (LENGTH xs)) * 
+      S (sN,sZ,sC,sV) * PASS c_flag (sN,sZ,sC,sV)) 
+     [enc (STM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (15w::(MAP FST xs))))]
+     (R30 a (ADDR_MODE4_WB a_mode x ((15w,0w)::xs)) *
+      xR_list (MAP (\x.(FST x,SOME (SND x))) xs) *
+      ~M (ADDR_MODE4_ADDR a_mode x ((15w,0w)::xs) + wLENGTH ((15w,0w)::xs)) *
+      ms (ADDR_MODE4_ADDR a_mode x ((15w,0w)::xs)) (reg_values xs) * S (sN,sZ,sC,sV)) {}``,
+  REWRITE_TAC [ARM_PROG2_def,MAKE_ARM_NOP ARM_STM_NOP]
+  \\ ARM_PROG_INIT_TAC 
+  \\ ASM_MOVE_STAR_TAC `a*xs*mm*st*cd*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud*cd`
+  \\ MOVE_STAR_TAC `a*xs*um*mm*st*cmd*pc*ud` `pc*a*xs*cmd*um*mm*st*ud`
+  \\ FULL_SIMP_TAC bool_ss [R30_def,STM_PRE_EXPANSION,STM_POST_EXPANSION2,DISJOINT_SING,
+         LDM_SIMP_LEMMA,ALL_DISTINCT,MEM,LENGTH_reg_values,ALL_DISJOINT_def,EVERY_DEF]
+  \\ `CONDITION_PASSED2 (status s) c_flag` by METIS_TAC []
+  \\ `mem (addr30 (reg 15w s)) s =
+      enc (STM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (15w::MAP FST xs)))` 
+         by METIS_TAC [addr30_addr32]
+  \\ `~(a = 15w)` by METIS_TAC []
+  \\ ASSUME_TAC ((UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o 
+                  RW [MAP,ALL_DISTINCT,GSYM AND_IMP_INTRO] o Q.INST [`p`|->`x`,`Rd`|->`a`,`c`|->`c_flag`,`am4`|->`a_mode`,`xs`|->`(15w,0w)::xs`]) stm)
+  \\ ASM_REWRITE_TAC [] \\ Q.PAT_ASSUM `NEXT_ARM_MEM s = s'` (fn th => ALL_TAC)
+  \\ FULL_SIMP_TAC bool_ss [DISJOINT_INSERT,WORD_ADD_0,DISJOINT_EMPTY,LENGTH]
+  \\ ASM_SIMP_TAC bool_ss [status_STM_STATE,undef_STM_STATE,reg_15_STM_STATE,
+       reg_wb_STM_STATE,xR_list_sem_STM_STATE,mem_STM_STATE,ms_sem_STM_STATE]
+  \\ FULL_SIMP_TAC bool_ss [ms_address_set_def,IN_INSERT,addr32_11,
+                            addr32_NEQ_addr32,NOT_IN_EMPTY,WORD_ADD_0]
+  \\ ASM_SIMP_TAC bool_ss [RW [WORD_ADD_0] xM_list_lemma_LEMMA2]
+  \\ REPEAT STRIP_TAC  
+
+    MATCH_MP_TAC xR_list_sem_STM_STATE_IMP \\ METIS_TAC []
+
+    Q.PAT_ASSUM `mem p s = enc bbb` (fn th => REWRITE_TAC [GSYM th])
+    \\ MATCH_MP_TAC mem_STM_STATE
+    \\ ASM_SIMP_TAC bool_ss [ms_address_set_def,LENGTH,IN_INSERT,ALL_DISTINCT,MAP,FST,addr32_11,addr32_NEQ_addr32]
+    
+    ...
+
+    DECIDE_TAC
+
+    ASM_SIMP_TAC bool_ss [arm2set''_EQ,owrt_visible_STM_STATE,IN_INSERT,
+       reg_STM_STATE,mem_STM_STATE,mem_byte_def]
+    \\ REPEAT STRIP_TAC
+    \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (f x = f y)``)
+    \\ STRIP_ASSUME_TAC (Q.SPEC `p'` EXISTS_addr32)
+    \\ FULL_SIMP_TAC bool_ss [addr30_addr32,WORD_ADD_0]
+    \\ MATCH_MP_TAC (GSYM mem_STM_STATE)
+    \\ FULL_SIMP_TAC bool_ss [LENGTH,ms_address_set_def,IN_INSERT,
+         WORD_ADD_0,MAP,FST,ALL_DISTINCT,addr32_NEQ_addr32,addr32_11]   
+
+    METIS_TAC [xM_list_lemma_LEMMA2,WORD_ADD_0]
+
+    \\ ASM_SIMP_TAC bool_ss [mem_STM_STATE]
+
+*)
+  
 val reg_values_EQ = prove(
   ``!x xs. ~MEM 15w (MAP FST xs) ==>
            (reg_values ((14w:word4,x:word32)::xs) = reg_values ((15w,x)::xs))``,  

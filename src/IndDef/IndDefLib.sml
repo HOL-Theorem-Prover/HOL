@@ -23,30 +23,29 @@ local open Absyn
         | dest other = raise ERRloc "names_of.reln_names.dest"
                                     (locn_of_absyn other) "Unexpected structure"
 in
-fun term_of_absyn absyn =
-  let val clauses   = strip_conj absyn
-      val heads     = map head clauses
-      val names     = mk_set (map dest heads)
-      val _ = 
-          case intersect names ["/\\", "\\/", "!"] of 
-            [] => ()
-          | h :: t => 
-            raise ERR
-                    "term_of_absyn"
-                    ("Abstract syntax looks to be trying to redefine "^h^" "^
-                     (if null t then "" else "(and others)") ^ 
-                     ". This is probably an error.\nIf you must, define with \
-                     \another name and use overload_on")
-      val resdata   = List.map (fn s => (s, Parse.hide s)) names
-      fun restore() =
-        List.app (fn (s,d) => Parse.update_overload_maps s d) resdata
-      val tm =
-        Parse.absyn_to_term (Parse.term_grammar()) absyn
-        handle e => (restore(); raise e)
+fun term_of_absyn absyn = let 
+  val clauses   = strip_conj absyn
+  fun checkcl a = let 
+    val nm = dest (head a)
   in
-    restore();
-    tm
+    if mem nm ["/\\", "\\/", "!"] then 
+      raise ERRloc "term_of_absyn" (locn_of_absyn a)
+                   ("Abstract syntax looks to be trying to redefine "^nm^". "^
+                     "This is probably an error.\nIf you must, define with \
+                     \another name and use overload_on")
+    else nm
   end
+  val names     = mk_set (map checkcl clauses)
+  val resdata   = List.map (fn s => (s, Parse.hide s)) names
+  fun restore() =
+      List.app (fn (s,d) => Parse.update_overload_maps s d) resdata
+  val tm =
+      Parse.absyn_to_term (Parse.term_grammar()) absyn
+      handle e => (restore(); raise e)
+in
+  restore();
+  tm
+end
 
 fun term_of q = term_of_absyn (Parse.Absyn q)
 

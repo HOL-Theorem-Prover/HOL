@@ -10,9 +10,9 @@ Make sure each working copy is updated;
 In RapidSVN, select Repository > Merge; brings up a dialog box. Fill in:
 
 First working copy or URL:                             Revision
-http://hol.svn.sf.net/svnroot/hol/branches/HOL-Omega   5651
+http://hol.svn.sf.net/svnroot/hol/HOL                  5651
 
-Second working copy or URL:                              Revision
+Second working copy or URL:                            Revision
 http://hol.svn.sf.net/svnroot/hol/HOL                  5659
 
 Destination path:

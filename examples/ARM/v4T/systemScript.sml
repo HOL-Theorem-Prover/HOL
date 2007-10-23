@@ -27,15 +27,22 @@ val _ = wordsLib.guess_lengths();
 (* Circuit specification for the complete ARM system (core, cp, memory, pipe) *)
 (* -------------------------------------------------------------------------- *)
 
-val STATE_2in_1out_def = Define`
-  STATE_2in_1out (next,out) state (inp1,inp2,outp) =
+val ARM_IO_def = Define`
+  ARM_IO (next,out1,out2) state (inp1,inp2,outp1,outp2) =
+    !t. (state(t+1) = next (state t, inp2 t)) /\
+        (outp1 t = out1 (state t)) /\
+        (outp2 t = out2 (state t, inp1 t))`;
+
+val MEM_IO_def = Define`
+  MEM_IO (next,out1,out2) state (inp1,inp2,outp1,outp2) =
+    !t. (state(t+1) = next (state t, inp2 t)) /\
+        (outp1 t = out1 (state t, inp1 t)) /\
+        (outp2 t = out2 (state t, inp2 t))`;
+
+val CP_IO_def = Define`
+  CP_IO (next,out) state (inp1,inp2,outp) =
     !t. (state(t+1) = next (state t, inp2 t)) /\
         (outp t = out (state t, inp1 t))`;
-
-val STATE_1in_1out_def = Define`
-  STATE_1in_1out (next,out) state (inp,outp) =
-    !t. (state(t+1) = next (state t, inp t)) /\
-        (outp t = out (state t, inp t))`;
 
 val MUX_2in_1out_def = Define`
   MUX_2in_1out f (inp1,inp2,outp) =
@@ -50,43 +57,41 @@ val MUX_6in_1out_def = Define`
     !t. outp t = f (inp1 t, inp2 t, inp3 t, inp4 t, inp5 t, inp6 t)`;
 
 val SYSTEM_def = Define`
-  SYSTEM (next_arm, out_arm, inp_arm1, inp_arm2,
+  SYSTEM (next_arm, out_arm1, out_arm2, inp_arm1, inp_arm2,
           next_cp,  out_cp,  inp_cp1, inp_cp2,
-          next_mem, out_mem, inp_mem,
-          next_pipe,out_pipe,inp_pipe)
-         (state_arm,state_cp,state_mem,state_pipe) (resets,fiqs,irqs) =
-  ?arm_in1 arm_in2 cp_in1 cp_in2 mem_in pipe_in arm_out cp_out mem_out pipe_out.
-     MUX_2in_1out inp_arm1 (pipe_out,resets,arm_in1) /\
-     MUX_2in_1out inp_cp1 (arm_out,pipe_out,cp_in1) /\
-     MUX_6in_1out inp_arm2 (cp_out,mem_out,pipe_out,resets,fiqs,irqs,arm_in2) /\
-     MUX_3in_1out inp_cp2 (arm_out,mem_out,pipe_out,cp_in2) /\
-     MUX_2in_1out inp_mem (arm_out,cp_out,mem_in) /\
-     MUX_2in_1out inp_pipe (state_arm,state_mem,pipe_in) /\
-     STATE_2in_1out (next_arm,out_arm) state_arm (arm_in1,arm_in2,arm_out) /\
-     STATE_2in_1out (next_cp,out_cp) state_cp (cp_in1,cp_in2,cp_out) /\
-     STATE_1in_1out (next_mem,out_mem) state_mem (mem_in,mem_out) /\
-     STATE_1in_1out (next_pipe,out_pipe) state_pipe (pipe_in,pipe_out)`;
+          next_mem, out_mem1, out_mem2, inp_mem)
+         (state_arm,state_cp,state_mem) (resets,fiqs,irqs) =
+  ?arm_in1 arm_in2 cp_in1 cp_in2 mem_in arm_out1 arm_out2 cp_out
+   mem_out1 mem_out2.
+    MUX_2in_1out inp_arm1 (mem_out1,resets,arm_in1) /\
+    MUX_6in_1out inp_arm2 (cp_out,mem_out1,mem_out2,resets,fiqs,irqs,arm_in2) /\
+    MUX_2in_1out inp_cp1 (arm_out2,mem_out1,cp_in1) /\
+    MUX_3in_1out inp_cp2 (arm_out2,mem_out1,mem_out2,cp_in2) /\
+    MUX_2in_1out inp_mem (arm_out2,cp_out,mem_in) /\
+    ARM_IO (next_arm,out_arm1,out_arm2) state_arm
+       (arm_in1,arm_in2,arm_out1,arm_out2) /\
+    CP_IO (next_cp,out_cp) state_cp (cp_in1,cp_in2,cp_out) /\
+    MEM_IO (next_mem,out_mem1,out_mem2) state_mem
+       (arm_out1,mem_in,mem_out1,mem_out2)`;
 
 (* The circuit above is implemented with the following next state function *)
 
 val NEXT_SYSTEM_def = Define`
   NEXT_SYSTEM
-      (next_arm, out_arm, inp_arm1, inp_arm2,
+      (next_arm, out_arm1, out_arm2, inp_arm1, inp_arm2,
        next_cp,  out_cp,  inp_cp1, inp_cp2,
-       next_mem, out_mem, inp_mem,
-       next_pipe,out_pipe,inp_pipe) ((a,c,m,p), (r,f,i)) =
-    let pipe_in  = inp_pipe (a, m) in
-    let pipe_out = out_pipe (p, pipe_in) in
-    let arm_in1  = inp_arm1 (pipe_out, r) in
-    let arm_out  = out_arm  (a, arm_in1) in
-    let cp_in1   = inp_cp1  (arm_out, pipe_out) in
+       next_mem, out_mem1, out_mem2, inp_mem) ((a,c,m), (r,f,i)) =
+    let arm_out1 = out_arm1 a in
+    let mem_out1 = out_mem1 (m, arm_out1) in
+    let arm_in1  = inp_arm1 (mem_out1, r) in
+    let arm_out2 = out_arm2 (a, arm_in1) in
+    let cp_in1   = inp_cp1  (arm_out2, mem_out1) in
     let cp_out   = out_cp   (c, cp_in1) in
-    let mem_in   = inp_mem  (arm_out, cp_out) in
-    let mem_out  = out_mem  (m, mem_in) in
-    let arm_in2  = inp_arm2 (cp_out, mem_out, pipe_out, r, f, i)
-    and cp_in2   = inp_cp2  (arm_out, mem_out, pipe_out) in
-      (next_arm(a, arm_in2), next_cp(c, cp_in2),
-       next_mem(m, mem_in), next_pipe(p, pipe_in))`;
+    let mem_in   = inp_mem  (arm_out2, cp_out) in
+    let mem_out2 = out_mem2 (m, mem_in) in
+    let arm_in2  = inp_arm2 (cp_out,mem_out1,mem_out2,r,f,i) in
+    let cp_in2   = inp_cp2  (arm_out2,mem_out1,mem_out2) in
+       (next_arm(a, arm_in2), next_cp(c, cp_in2), next_mem(m, mem_in))`;
 
 (* -------------------------------------------------------------------------- *)
 (* The coprocessor model is paramaterised by a collection of operations       *)
@@ -241,7 +246,7 @@ val DECODE_CP_def = Define`
 val NEXT_CP_def = Define`
   NEXT_CP cp (state, (cp_in, data)) =
     let ireg = cp_in.ireg and is_usr = cp_in.is_usr in
-      if cp_in.cpi /\ ireg ' 27 /\ ~cp.absent is_usr ireg then
+      if cp_in.cpi /\ ~cp.absent is_usr ireg then
         let ic = DECODE_CP ireg in
           if ic = mcr then
             cp.f_mcr state is_usr ireg (HD data)
@@ -261,9 +266,9 @@ val NEXT_CP_def = Define`
 (* -------------------------------------------------------------------------- *)
 
 val OUT_CP_def = Define`
-  OUT_CP cp (state, cp_in) =
+  OUT_CP cp (state, cp_in:cp_input) =
     let ireg = cp_in.ireg and is_usr = cp_in.is_usr in
-      if cp_in.cpi /\ ireg ' 27 /\ ~cp.absent is_usr ireg then
+      if cp_in.cpi /\ ~cp.absent is_usr ireg then
         let ic = DECODE_CP ireg in
           <| n_ldc :=
                if (ic = ldc_stc) /\ ireg ' 20 then
@@ -326,12 +331,6 @@ val MEM_WRITE_def = Define`
 val MEM_READ_def = Define `MEM_READ mem addr = mem (ADDR30 addr)`;
 
 (* -------------------------------------------------------------------------- *)
-(* MEM output                                                                 *)
-(* -------------------------------------------------------------------------- *)
-
-val _ = Hol_datatype `mem_output = <| data : word32 list; abort : bool |>`;
-
-(* -------------------------------------------------------------------------- *)
 (* NEXT_MEM                                                                   *)
 (* Takes read and write functions, the memory state state and the input       *)
 (* (memop list) and returns the next state                                    *)
@@ -374,62 +373,80 @@ val OUT_MEM_def = Define`
   OUT_MEM write read (state, memops) = READ_MEM write read state memops []`;
 
 (* -------------------------------------------------------------------------- *)
-(* 1-stage pipe (i.e. not pipelined)                                          *)
+(* 1-stage (i.e. not pipelined)                                               *)
 (* -------------------------------------------------------------------------- *)
 
-val NEXT_NO_PIPE_def = Define `NEXT_NO_PIPE ((), (s, m)) = ()`;
+val GET_IREG_def = Define`
+  GET_IREG t (fpc1:bool) (w:word32) =
+    if t then
+      THUMB_TO_ARM (if fpc1 then (31 >< 16) w else (15 >< 0) w)
+    else
+      w`;
 
-val OUT_NO_PIPE_def = Define`
-  OUT_NO_PIPE read ((), (s, m)) =
-    let t = (CPSR_READ s.regs.psr) ' 5
-    and fpc = FETCH_PC s.regs.reg in
-      case read m fpc of
-         SOME n -> <| ireg := if t then
-                                FORMAT UnsignedHalfWord ((1 >< 0) fpc) n
-                              else
-                                n;
-                      abort := F |>
-      || NONE   -> <| ireg := enc (UND AL); abort := T |>`;
+val NEXT_ARM_1STAGE_def = Define`
+  NEXT_ARM_1STAGE (state,mem_out1,inp2) =
+    let r = state.regs in
+    let ireg = if mem_out1.abort then
+                 enc (UND AL)
+               else
+                 GET_IREG ((CPSR_READ r.psr) ' 5) ((FETCH_PC r.reg) ' 1)
+                   (HD mem_out1.data)
+    in
+      NEXT_ARM (state,ireg,inp2)`;
+
+val OUT_ARM1_def = Define`
+  OUT_ARM1 s = [MemRead (FETCH_PC s.regs.reg)]`;
+
+val OUT_ARM2_def = Define`
+  OUT_ARM2 (state,mem_out1,rst) =
+    let r = state.regs in
+    let ireg = if mem_out1.abort then
+                 enc (UND AL)
+               else
+                 GET_IREG ((CPSR_READ r.psr) ' 5) ((FETCH_PC r.reg) ' 1)
+                   (HD mem_out1.data)
+    in
+      OUT_ARM (state,ireg,rst)`;
 
 (* -------------------------------------------------------------------------- *)
 (* Input functions.                                                           *)
 (* -------------------------------------------------------------------------- *)
 
 val INP_ARM1_def = Define`
-  INP_ARM1 (pipe_out:pipe_output, RESET) =
-    if IS_SOME RESET then NONE else SOME pipe_out.ireg`;
+  INP_ARM1 (mem_out1:mem_output, RESET) = (mem_out1, IS_SOME RESET)`;
 
 val INP_ARM2_def = Define`
-  INP_ARM2 (cp_out, mem_out, pipe_out, RESET, FIQ, IRQ) =
-    <| ireg := pipe_out.ireg;
-       data := (mem_out.data ++ cp_out.data);
-       interrupts :=
-         <| Reset := RESET;
-            Prefetch := pipe_out.abort;
-            Dabort := if mem_out.abort then
-                        SOME (LENGTH mem_out.data)
-                      else
-                        NONE;
-            Fiq := FIQ;
-            Irq := IRQ |>;
-       absent := cp_out.absent |>`;
+  INP_ARM2 (cp_out, mem_out1, mem_out2, RESET, FIQ, IRQ) =
+    (mem_out1,
+     <| data := (mem_out2.data ++ cp_out.data);
+        interrupts :=
+          <| Reset := RESET;
+             Prefetch := mem_out1.abort;
+             Dabort := if mem_out2.abort then
+                         SOME (LENGTH mem_out2.data)
+                       else
+                         NONE;
+             Fiq := FIQ;
+             Irq := IRQ |>;
+        absent := cp_out.absent |>)`;
 
 val INP_MEM_def = Define`
-  INP_MEM (arm_out:arm_output, cp_out) =
-    case arm_out.transfers of
+  INP_MEM (arm_out2:arm_output, cp_out:cp_output) =
+    case arm_out2.transfers of
        MemAccess f -> f cp_out.n_ldc cp_out.data
     || _ -> []`;
 
 val INP_CP1_def = Define`
-  INP_CP1 (arm_out:arm_output, pipe_out:pipe_output) =
-    <| is_usr := arm_out.user; cpi := arm_out.cpi; ireg := pipe_out.ireg |>`;
+  INP_CP1 (arm_out2:arm_output, mem_out1:mem_output) =
+    <| is_usr := arm_out2.user; cpi := arm_out2.cpi;
+       ireg := HD mem_out1.data |>`;
 
 val INP_CP2_def = Define`
-  INP_CP2 (arm_out, mem_out:mem_output, pipe_out) =
-    (INP_CP1 (arm_out, pipe_out),
-     case arm_out.transfers of
+  INP_CP2 (arm_out2, mem_out1, mem_out2:mem_output) =
+    (INP_CP1 (arm_out2, mem_out1),
+     case arm_out2.transfers of
         CPWrite d -> [d]
-     || _ ->  mem_out.data)`;
+     || _ ->  mem_out2.data)`;
 
 (* -------------------------------------------------------------------------- *)
 (* Parametrized next state and state function.                                *)
@@ -438,15 +455,130 @@ val INP_CP2_def = Define`
 val NEXT_1STAGE_def = Define`
   NEXT_1STAGE cp write read =
   NEXT_SYSTEM
-     (NEXT_ARM, OUT_ARM, INP_ARM1, INP_ARM2,
+     (NEXT_ARM_1STAGE, OUT_ARM1, OUT_ARM2, INP_ARM1, INP_ARM2,
       NEXT_CP cp, OUT_CP cp, INP_CP1, INP_CP2,
-      NEXT_MEM write read, OUT_MEM write read, INP_MEM,
-      NEXT_NO_PIPE, OUT_NO_PIPE read, I)`;
+      NEXT_MEM write read, OUT_MEM write read, OUT_MEM write read, INP_MEM)`;
 
 val STATE_1STAGE_def = Define`
   (STATE_1STAGE cp write read (s,i) 0 = s) /\
   (STATE_1STAGE cp write read (s,i) (SUC t) =
      NEXT_1STAGE cp write read (STATE_1STAGE cp write read (s,i) t, i t))`;
+
+(* -------------------------------------------------------------------------- *)
+(* 3-stage                                                                    *)
+(* -------------------------------------------------------------------------- *)
+
+val _ = Hol_datatype`
+  arm_state3 = <| state : arm_state; flush : bool;
+                  ir1 : word32; ir2 : word32 |>`;
+
+val UPDATES_PC_def = Define`
+  UPDATES_PC (state,ireg) =
+    ~(state.exception = software) \/
+    let (nzcv,i,f,t,m) = DECODE_PSR (CPSR_READ state.regs.psr) in
+      CONDITION_PASSED nzcv ireg /\
+     (case DECODE_ARM ireg of
+         data_proc ->
+           (let (I,opcode,S,Rn,Rd,opnd2) = DECODE_DATAP ireg in
+              ~TEST_OR_COMP opcode /\ (Rd = 15w))
+      || mla_mul   ->
+           (let (L,Sgn,A,S,Rd,Rn,Rs,Rm) = DECODE_MLA_MUL ireg in
+              L /\ (Rn = 15w) \/ (Rd = 15w))
+      || swi_ex    -> T
+      || br        -> T
+      || bx        -> T
+      || msr       -> F
+      || mrs       -> ((15 >< 12) ireg = 15w:word4)
+      || swp       -> ((15 >< 12) ireg = 15w:word4)
+      || ldm_stm   ->
+           (let (P,U,S,W,L,Rn,list) = DECODE_LDM_STM ireg in
+              L /\ list ' 15)
+      || ldr_str   ->
+           (let (I,P,U,B,W,L,Rn,Rd,offset) = DECODE_LDR_STR ireg in
+              (P ==> W) /\ (Rn = 15w) \/ L /\ (Rd = 15w))
+      || ldrh_strh ->
+           (let (P,U,I,W,L,Rn,Rd,offsetH,S,H,offsetL) = DECODE_LDRH_STRH ireg in
+              (P ==> W) /\ (Rn = 15w) \/ L /\ (Rd = 15w))
+      || _         -> F)`;
+
+val NEXT_ARM_3STAGE_def = Define`
+  NEXT_ARM_3STAGE (state3,mem_out1,inp2) =
+    if ~(state3.state.exception = software) then
+      let s = NEXT_ARM (state3.state,state3.ir2,inp2) in
+        <| state := s; flush := (s.exception = software);
+           ir1 := state3.ir1; ir2 := state3.ir2 |>
+    else
+      if state3.flush /\ mem_out1.abort /\ NULL mem_out1.data then
+        <| state := NEXT_ARM (state3.state with exception := pabort,
+                              enc (UND AL),inp2);
+           flush := F; ir1 := state3.ir1; ir2 := state3.ir2 |>
+      else
+        let r = state3.state.regs in
+        let t = (CPSR_READ r.psr) ' 5
+        and fpc1 = (FETCH_PC r.reg) ' 1
+        and l = mem_out1.data in
+        let ireg = GET_IREG t fpc1 (if state3.flush then HD l else state3.ir2)
+        and fetch = (t ==> fpc1) in
+        let s = NEXT_ARM (state3.state,ireg,inp2)
+        and ir1 = if state3.flush then
+                    if fetch then HD (TL (TL l)) else HD (TL l)
+                  else
+                    if fetch then HD l else state3.ir1
+        and ir2 = if state3.flush then
+                    if fetch then HD (TL l) else HD l
+                  else
+                    if fetch then state3.ir1 else state3.ir2
+        in
+          <| state := s;
+             flush := (UPDATES_PC (state3.state,ireg) /\
+                       (s.exception = software));
+             ir1 := ir1; ir2 := ir2 |>`;
+
+val OUT_ARM1_3STAGE_def = Define`
+  OUT_ARM1_3STAGE state3 =
+    if ~(state3.state.exception = software) then
+      []
+    else
+      let r = state3.state.regs in
+      let pc = FETCH_PC r.reg in
+      let fpc = (31 <> 2) pc in
+      let fetch = ((CPSR_READ r.psr) ' 5) ==> (pc ' 1) in
+        if state3.flush then
+          if fetch then
+            [MemRead fpc; MemRead (fpc + 4w); MemRead (fpc + 8w)]
+          else
+            [MemRead fpc; MemRead (fpc + 4w)]
+        else
+          if fetch then
+            [MemRead (fpc + 8w)]
+          else
+            []`;
+
+val OUT_ARM2_3STAGE_def = Define`
+  OUT_ARM2_3STAGE (state3,mem_out1,rst) =
+    if ~(state3.state.exception = software) then
+      OUT_ARM (state3.state,state3.ir2,rst)
+    else
+      if state3.flush /\ mem_out1.abort /\ NULL mem_out1.data then
+        OUT_ARM (state3.state with exception := pabort,enc (UND AL),rst)
+      else
+        let r = state3.state.regs in
+        let ireg = GET_IREG ((CPSR_READ r.psr) ' 5) ((FETCH_PC r.reg) ' 1)
+                     (if state3.flush then HD mem_out1.data else state3.ir2)
+        in
+          OUT_ARM (state3.state,ireg,rst)`;
+
+val NEXT_3STAGE_def = Define`
+  NEXT_3STAGE cp write read =
+  NEXT_SYSTEM
+     (NEXT_ARM_3STAGE, OUT_ARM1_3STAGE, OUT_ARM2_3STAGE, INP_ARM1, INP_ARM2,
+      NEXT_CP cp, OUT_CP cp, INP_CP1, INP_CP2,
+      NEXT_MEM write read, OUT_MEM write read, OUT_MEM write read, INP_MEM)`;
+
+val STATE_3STAGE_def = Define`
+  (STATE_3STAGE cp write read (s,i) 0 = s) /\
+  (STATE_3STAGE cp write read (s,i) (SUC t) =
+     NEXT_3STAGE cp write read (STATE_3STAGE cp write read (s,i) t, i t))`;
 
 (* -------------------------------------------------------------------------- *)
 
@@ -455,6 +587,14 @@ val STATE_1STAGE_NUM = save_thm("STATE_1STAGE_NUM",
     (GEN_ALL (CONJUNCT2 STATE_1STAGE_def)));
 
 val _ = computeLib.add_persistent_funs [("STATE_1STAGE_NUM", STATE_1STAGE_NUM)];
+
+val STATE_3STAGE_NUM = save_thm("STATE_3STAGE_NUM",
+  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV
+    (GEN_ALL (CONJUNCT2 STATE_3STAGE_def)));
+
+val _ = computeLib.add_persistent_funs [("STATE_3STAGE_NUM", STATE_3STAGE_NUM)];
+
+(* -------------------------------------------------------------------------- *)
 
 infix \\ << >>
 
@@ -466,8 +606,8 @@ val t =
 let val c = concl (SPEC_ALL SYSTEM_def)
     val l = lhs c
     val r = snd (strip_exists (rhs c))
-    val rr = ``?pipe_in pipe_out arm_in1 arm_out cp_in1 cp_out
-                mem_in mem_out arm_in2 cp_in2. ^r``
+    val rr = ``?arm_out1 mem_out1 arm_in1 arm_out2 cp_in1 cp_out
+                mem_in mem_out2 arm_in2 cp_in2. ^r``
 in
   mk_eq(l,rr)
 end;
@@ -491,31 +631,29 @@ in
 end;
 
 val SYSTEM_THM = store_thm("SYSTEM_THM",
-  `SYSTEM (next_arm, out_arm, inp_arm1, inp_arm2,
-           next_cp,  out_cp,  inp_cp1, inp_cp2,
-           next_mem, out_mem, inp_mem,
-           next_pipe,out_pipe,inp_pipe)
-         (state_arm,state_cp,state_mem,state_pipe) (resets,fiqs,irqs) =
-   !t. (state_arm(t+1), state_cp(t+1), state_mem(t+1), state_pipe(t+1)) =
+  `SYSTEM (next_arm, out_arm1, out_arm2, inp_arm1, inp_arm2,
+           next_cp,  out_cp, inp_cp1, inp_cp2,
+           next_mem, out_mem1, out_mem2, inp_mem)
+         (state_arm,state_cp,state_mem) (resets,fiqs,irqs) =
+   !t. (state_arm(t+1), state_cp(t+1), state_mem(t+1)) =
        NEXT_SYSTEM
-         (next_arm, out_arm, inp_arm1, inp_arm2,
-          next_cp,  out_cp,  inp_cp1, inp_cp2,
-          next_mem, out_mem, inp_mem,
-          next_pipe,out_pipe,inp_pipe)
-         ((state_arm t, state_cp t, state_mem t, state_pipe t),
+         (next_arm, out_arm1, out_arm2, inp_arm1, inp_arm2,
+           next_cp,  out_cp, inp_cp1, inp_cp2,
+           next_mem, out_mem1, out_mem2, inp_mem)
+         ((state_arm t, state_cp t, state_mem t),
           (resets t, fiqs t, irqs t))`,
   EQ_TAC << [
-    SRW_TAC [] [SYSTEM, MUX_6in_1out_def, MUX_3in_1out_def,
-                MUX_2in_1out_def, STATE_2in_1out_def, STATE_1in_1out_def]
+    SRW_TAC [] [SYSTEM, MUX_6in_1out_def, MUX_3in_1out_def, MUX_2in_1out_def,
+                ARM_IO_def, MEM_IO_def, CP_IO_def]
       \\ Induct_on `t`
       \\ SRW_TAC [boolSimps.LET_ss] [NEXT_SYSTEM_def],
     SRW_TAC [boolSimps.LET_ss]
             [NEXT_SYSTEM_def, SYSTEM, MUX_6in_1out_def, MUX_3in_1out_def,
-             MUX_2in_1out_def, STATE_2in_1out_def, STATE_1in_1out_def,
+             MUX_2in_1out_def, ARM_IO_def, MEM_IO_def, CP_IO_def,
              GSYM FORALL_AND_THM]
       \\ MAP_EVERY EXISTS_MATCH_STREAM_TAC
-           [`inp_pipe X`, `out_pipe X`, `inp_arm1 X`, `out_arm X`, `inp_cp1 X`,
-            `out_cp X`, `inp_mem X`, `out_mem X`, `inp_arm2 X`, `inp_cp2 X`]
+           [`out_arm1 X`, `out_mem1 X`, `inp_arm1 X`, `out_arm2 X`, `inp_cp1 X`,
+            `out_cp X`, `inp_mem X`, `out_mem2 X`, `inp_arm2 X`, `inp_cp2 X`]
       \\ SRW_TAC [] []]);
 
 (* ------------------------------------------------------------------------- *)
@@ -937,8 +1075,6 @@ val spec_word_rule12 =
 val mem_rule = REWRITE_RULE [GSYM mem_read_def, GSYM mem_write_def];
 val und_rule = REWRITE_RULE [EVAL ``enc (UND AL)``];
 
-val _ = ConstMapML.insert ``n2w_itself``;
-
 fun mk_word n =
   let val s = Int.toString n
       val w = "type word" ^ s ^ " = wordsML.word" ^ s
@@ -982,14 +1118,12 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
     :: DATATYPE
          (`interrupts = <| Reset : regs option; Prefetch : bool;
                            Dabort : num option; Fiq : bool; Irq : bool |>`)
-    :: DATATYPE
-         (`arm_input = <| ireg : word32; data : word32 list;
-                          interrupts : interrupts ; absent : bool |>`)
+    :: DATATYPE (`arm_input = <| data : word32 list; interrupts : interrupts;
+                                 absent : bool |>`)
     :: DATATYPE (`mem_output = <| data : word32 list; abort : bool |>`)
     :: DATATYPE (`cp_input = <| is_usr : bool; cpi : bool; ireg : word32 |>`)
     :: DATATYPE
          (`cp_output = <| n_ldc : num; data : word32 list; absent : bool |>`)
-    :: DATATYPE (`pipe_output = <| ireg : word32; abort : bool |>`)
     :: DATATYPE (`coproc =
            <| absent : bool -> word32 -> bool;
               f_cdp  : 'a -> bool -> word32 -> 'a;
@@ -1032,12 +1166,12 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
           ADDR_MODE4_def, LDM_LIST_def, STM_LIST_def, STM_DATA_def, LDM_STM_def,
           SWP_def, MRC_def, MCR_def, ADDR_MODE5_def, LDC_STC_def,
           CONDITION_PASSED2_def, CONDITION_PASSED_def, THUMB_TO_ARM_def,
-          RUN_ARM_def, interrupt2exception_def,
+          GET_IREG_def, RUN_ARM_def, interrupt2exception_def,
           WRITE_MEM_def, READ_MEM_def, NoTransfers_def,
-          NEXT_ARM_def, OUT_ARM_def, INP_ARM1_def, INP_ARM2_def,
-          NEXT_CP_def, OUT_CP_def, INP_CP1_def, INP_CP2_def,
+          NEXT_ARM_def, und_rule NEXT_ARM_1STAGE_def, OUT_ARM1_def, OUT_ARM_def,
+          und_rule OUT_ARM2_def, INP_ARM1_def, INP_ARM2_def,
+          NEXT_CP_def, OUT_CP_def, und_rule INP_CP1_def, INP_CP2_def,
           NEXT_MEM_def, OUT_MEM_def, INP_MEM_def,
-          NEXT_NO_PIPE_def, und_rule OUT_NO_PIPE_def,
           NEXT_SYSTEM_def, NEXT_1STAGE_def, empty_registers_def]))
  end;
 

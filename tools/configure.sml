@@ -340,19 +340,19 @@ val _ =
 
 
 (*---------------------------------------------------------------------------
-    Instantiate tools/hol98-mode.src, and put it in tools/hol98-mode.el
+    Instantiate tools/hol-mode.src, and put it in tools/hol-mode.el
  ---------------------------------------------------------------------------*)
 
 val _ =
  let open TextIO
-     val _ = echo "Making hol98-mode.el (for Emacs/XEmacs)"
-     val src = fullPath [holdir, "tools/hol98-mode.src"]
-    val target = fullPath [holdir, "tools/hol98-mode.el"]
+     val _ = echo "Making hol-mode.el (for Emacs/XEmacs)"
+     val src = fullPath [holdir, "tools/hol-mode.src"]
+    val target = fullPath [holdir, "tools/hol-mode.el"]
  in
     fill_holes (src, target)
-      ["(defvar hol98-executable HOL98-EXECUTABLE\n"
+      ["(defvar hol-executable HOL-EXECUTABLE\n"
         -->
-       ("(defvar hol98-executable \n  "^
+       ("(defvar hol-executable \n  "^
         quote (fullPath [holdir, "bin/hol"])^"\n")]
  end;
 

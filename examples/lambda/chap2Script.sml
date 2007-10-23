@@ -269,11 +269,9 @@ val lameq_S = store_thm(
          Q.EXISTS_TAC `"x"` THEN SRW_TAC [][S_def] THEN
         `LAM "y" (LAM "z" ((VAR "x" @@ VAR "z") @@ (VAR "y" @@ VAR "z"))) =
          LAM y (LAM z ((VAR "x" @@ VAR z) @@ (VAR y @@ VAR z)))` by
-           ASM_SIMP_TAC (srw_ss()) [SUB_THM, stringTheory.CHR_11,
-                                    stringTheory.STRING_11, alpha_lemma] THEN
+           ASM_SIMP_TAC (srw_ss()) [SUB_THM, alpha_lemma] THEN
         POP_ASSUM SUBST_ALL_TAC THEN
-        ASM_SIMP_TAC (srw_ss()) [SUB_THM, stringTheory.STRING_11,
-                                 stringTheory.CHR_11]) THEN
+        ASM_SIMP_TAC (srw_ss()) [SUB_THM]) THEN
   `S @@ A @@ B @@ C == S1 @@ B @@ C` by PROVE_TAC [lam_eq_rules] THEN
   Q_TAC SUFF_TAC `S1 @@ B @@ C == A @@ C @@ (B @@ C)` THEN1
     PROVE_TAC [lam_eq_rules] THEN
@@ -282,17 +280,13 @@ val lameq_S = store_thm(
      (Q_TAC SUFF_TAC `?M. (S1 = LAM y M) /\ (S2 = [B/y]M)` THEN1
         PROVE_TAC [lam_eq_rules] THEN
       NTAC 2 (FIRST_X_ASSUM (SUBST_ALL_TAC o SYM)) THEN
-      ASM_SIMP_TAC (srw_ss()) [SUB_THM, stringTheory.CHR_11,
-                               stringTheory.STRING_11, alpha_lemma,
-                               lemma14b]) THEN
+      ASM_SIMP_TAC (srw_ss()) [SUB_THM, alpha_lemma, lemma14b]) THEN
   Q_TAC SUFF_TAC `S2 @@ C == A @@ C @@ (B @@ C)` THEN1
       PROVE_TAC [lam_eq_rules] THEN
   Q_TAC SUFF_TAC `?M. (S2 = LAM z M) /\ (A @@ C @@ (B @@ C) = [C/z]M)` THEN1
       PROVE_TAC [lam_eq_rules] THEN
   NTAC 2 (FIRST_X_ASSUM (SUBST_ALL_TAC o SYM)) THEN
-  ASM_SIMP_TAC (srw_ss()) [SUB_THM, stringTheory.CHR_11,
-                           stringTheory.STRING_11, alpha_lemma,
-                           lemma14b]);
+  ASM_SIMP_TAC (srw_ss()) [SUB_THM, alpha_lemma, lemma14b]);
 
 val lameq_K = store_thm(
   "lameq_K",

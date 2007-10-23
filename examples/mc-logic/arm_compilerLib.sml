@@ -9,7 +9,7 @@ struct
 *)
  
 open HolKernel boolLib bossLib Parse;
-open listTheory wordsTheory pred_setTheory arithmeticTheory pairTheory wordsLib;
+open listTheory wordsTheory pred_setTheory arithmeticTheory pairTheory wordsLib markerTheory;
 open set_sepTheory progTheory arm_progTheory arm_instTheory set_sepLib arm_progLib;
  
 (*
@@ -42,8 +42,15 @@ val show_echo = ref true;
 val show_proof = ref false;
 
 fun echo st = if !Globals.interactive andalso !show_echo then print st else ();
+fun echo st = print st
 fun print_proof st = if !Globals.interactive andalso !show_proof then print st else ();
 
+fun n_times 0 f x = x | n_times n f x = n_times (n-1) f (f x) 
+val num_to_string = int_to_string o Arbint.toInt o Arbint.fromNat
+
+fun mk_substs_string [] name = []
+  | mk_substs_string (x::xs) name = 
+      ["  val "^name^" = Q.INST [" ^ foldl (fn (x,y) => x ^ "," ^ y) x xs ^ "] "^name^"\n"];
 
 
 (* ============================================================================== *)
@@ -60,61 +67,81 @@ val MOVE_POST1L_TERM = TERMS2Q MOVE_POST1L
 
 (* -- abbreviations -- *)
 
-(*
-  make_spec ["add r1,r2,r3","sub r2,r1,r4"]
+fun find_std_name_subst tm = let
+  val (x,z) = dest_comb tm
+  val z_str = fst (dest_var z)
+  val (x,y) = dest_comb x 
+  val n2w_to_string = num_to_string o numSyntax.dest_numeral o snd o dest_comb
+  in if fst (dest_const x) = "R" then let
+    val i = n2w_to_string y
+    val var = mk_var("r"^i,type_of z)
+    val subst = z |-> var
+    val subst_str = "`"^ z_str ^"`|->`r"^i^"`"  
+    in ([subst],[subst_str]) end 
+  else if fst (dest_const x) = "R30" andalso y = ``13w:word4`` then 
+       ([z|->``sp:word30``],["`"^ z_str ^"`|->`sp`"])
+  else let
+    val i = (snd o dest_comb) y handle e => ``0w:word30``
+    val i = n2w_to_string i 
+    val var_str = 
+         if i = "0" then "m" else
+         if (fst o dest_const o fst o dest_comb o fst o dest_comb) y = "word_add" 
+         then "m" else "n" handle e => "m"
+    val var = mk_var(var_str^i,type_of z)
+    val subst = z |-> var
+    val subst_str = "`"^ z_str ^"`|->`"^var_str^i^"`"  
+    in ([subst],[subst_str]) end handle e => ([],[]) end
 
-  val th1 = (*  add r1,r2,r3  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`1w`,`a`|->`2w`,`b`|->`3w`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1` ] arm_ADD3))
-  val th2 = (*  sub r2,r1,r4  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`2w`,`a`|->`1w`,`b`|->`4w`,`a_mode`|->`OneReg`,`x`|->`x2`,`y`|->`y2`,`z`|->`z2` ] arm_SUB3))
-  val th1 = ABBREV_ALL th1
-  val th2 = ABBREV_ALL th2
+fun standardise_names name terms th = let
+  (* rename variables, e.g. R 1w y3 --> R 1w r1 *)
+  fun renamer (tm,(th,xs,zs)) = let
+      val (y,z) = find_std_name_subst tm handle e => ([],[])
+      val tm = Term.subst y tm      
+      val th = INST y th
+      in (th, tm :: xs, z @ zs) end
+  val (th,terms,substs) = foldr renamer (th,[],[]) terms
+  val strs = mk_substs_string substs name
+  in (th,strs) end;
 
-  val xs1 = `x1*x2*x3*x4`
-  val xs2 = `(x1*x3*x4)*(x2)`
-  val ys1 = `x1*x2*x3*x4`
-  val ys2 = `(x3*x1*x4)*(x2)`
-  
-  val th = MOVE_COMPOSE th1 th2 `x1*x2*x3*x4` `(x1*x3*x4)*(x2)` `x1*x2*x3*x4` `(x3*x1*x4)*(x2)`
-  val th = ABBREV_ALL th
-  val th = AUTO_HIDE_STATUS th
-  show_assums := true;
-
-  val th = (*  add r1,r2,r3  *) (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`1w`,`a`|->`2w`,`b`|->`3w`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1` ] arm_ADD3))
-  val th = (*  sub r2,r3,r4  *) MOVE_COMPOSE th (FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`2w`,`a`|->`3w`,`b`|->`4w`,`a_mode`|->`OneReg`,`x`|->`x2`,`y`|->`y2`,`z`|->`z2` ] arm_SUB3))) `x1*x2*x3*x4` `(x1*x2*x4)*(x3)` `x1*x2*x3*x4` `(x3*x1*x4)*(x2)`
-  val th = AUTO_HIDE_STATUS th
-  val th = ABBREV_POSTS th
-  val th = UNABBREV_ALL th
-*)
-
-fun abbreviate tm th = let
-  val y = mk_eq(tm,genvar(type_of tm))
-  val cc = UNBETA_CONV tm THENC RAND_CONV (fn t => ASSUME y) THENC BETA_CONV
+fun abbreviate (var_name,tm) th = let
+  val y = snd (dest_comb tm)
+  val y = mk_eq(mk_var(var_name,type_of y),y)
+  val cc = UNBETA_CONV tm THENC (RAND_CONV o RAND_CONV) (fn t => GSYM (ASSUME y)) THENC BETA_CONV
   val th = CONV_RULE cc th
   in th end;
 
-fun ABBREV_POSTS th = let
+fun ABBREV_POSTS prefix th = let
   val (th,b) = let
     val xs = (list_dest_STAR o post1_ARM_PROG o concl) th
     val xs = xs @ (list_dest_STAR o post2_ARM_PROG o concl) th handle e => xs
     fun abbrevs [] = hd [] 
       | abbrevs (tm::xs) = let
       val (x,y) = dest_comb tm
-      in if is_SEP_HIDE x then abbrevs xs
-      else if is_var y then abbrevs xs
-      else if ((fst o dest_const) x = "S" handle e => false) then abbrevs xs
-      else if ((fst o dest_const o fst o dest_comb) y = "n2w" handle e => false) then abbrevs xs
-      else y end
+      val {redex = r', residue = r} = 
+        (hd o fst o find_std_name_subst) (mk_comb(x,mk_var("foo",type_of y)))
+      val tm' = mk_comb(x,r) 
+      val new_name = prefix ^ fst (dest_var r)
+      in if (fst o dest_var) y = new_name handle e => false then abbrevs xs else
+         if tm = tm' then abbrevs xs else   
+         if is_SEP_HIDE x then abbrevs xs else 
+         if ((fst o dest_const) x = "S" handle e => false) then abbrevs xs else
+         (new_name,tm) end 
     val th = abbreviate (abbrevs xs) th     
     in (th,true) end handle e => (th,false)
-  in if b then ABBREV_POSTS th else th end;
+  in if b then ABBREV_POSTS prefix th else th end;
 
-fun ABBREV_ALL th = ABBREV_POSTS th;
+fun ABBREV_ALL prefix th = let 
+  val terms = (list_dest_STAR o code_ARM_PROG o concl) th
+  val terms = (list_dest_STAR o pre_ARM_PROG o concl) th @ terms
+  val th = fst (standardise_names "th" terms th) 
+  val th = ABBREV_POSTS prefix th 
+  in th end;
 
 fun UNABBREV_ALL th = let
-  val th = DISCH_ALL th
   fun remove_abbrev th = let
     val (x,y) = (dest_eq o fst o dest_imp o concl) th
-    in MP (INST [y|->x] th) (REFL x) end handle e => UNDISCH th 
-  in repeat remove_abbrev th end;
+    in MP (INST [x|->y] th) (REFL y) end handle e => UNDISCH th 
+  in repeat remove_abbrev (DISCH_ALL th) end;
 
 (* -- compose new -- *)
 
@@ -129,6 +156,9 @@ val ARM_PROG_COMPOSE_FRAME = prove(
   \\ Q.EXISTS_TAC `Q1 * P2 * Q2` \\ STRIP_TAC
   << [MOVE_STAR_TAC `q*t*p` `(q*p)*t`,ALL_TAC] \\ METIS_TAC [ARM_PROG_FRAME]);
 
+val MOVE_COMPOSE_rw = REWRITE_CONV [setSTAR_CLAUSES,setINC_CLAUSES,UNION_EMPTY,APPEND];
+val MOVE_COMPOSE_rw1 = RW [STAR_ASSOC,emp_STAR]
+
 fun MOVE_COMPOSE th1 th2 xs1 xs2 ys1 ys2 = let
   val th1 = POST1_MOVE_STAR xs1 xs2 th1
   val th2 = PRE_MOVE_STAR ys1 ys2 th2
@@ -136,11 +166,10 @@ fun MOVE_COMPOSE th1 th2 xs1 xs2 ys1 ys2 = let
   val th2 = MATCH_MP ARM_PROG_COMPOSE_FRAME th2
   val th2 = MATCH_MP th2 th1
   val th2 = UNDISCH_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO] th2)
-  val rw = REWRITE_CONV [setSTAR_CLAUSES,setINC_CLAUSES,UNION_EMPTY]
-  val c1 = RAND_CONV rw
-  val c1 = c1 THENC (RATOR_CONV o RATOR_CONV o RAND_CONV) rw
-  val c1 = c1 THENC (RATOR_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV) rw
-  val th2 = RW [STAR_ASSOC,emp_STAR] (CONV_RULE c1 th2)
+  val c1 = RAND_CONV MOVE_COMPOSE_rw
+  val c1 = c1 THENC (RATOR_CONV o RATOR_CONV o RAND_CONV) MOVE_COMPOSE_rw
+  val c1 = c1 THENC (RATOR_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV) MOVE_COMPOSE_rw
+  val th2 = MOVE_COMPOSE_rw1 (CONV_RULE c1 th2)
   in th2 end;
 
 (* -- compose -- *)
@@ -174,6 +203,21 @@ fun extract_assum th = let
 (* ============================================================================= *)
 (* EXPERIMENTAL PROOF-PRODUCING FUNCTIONS                                        *)
 (* ============================================================================= *)
+
+datatype arm_code_format = 
+  InLineCode | SimpleProcedure | PushProcedure of string list * int;
+
+(* user changeable flags *)
+val optimise_code = ref true;
+val abbrev_code = ref false;
+
+(* list of compiled code (name,th,is_proc,code length,code definition) *)
+val compiled_specs = ref ([]:(string * thm * arm_code_format * int * thm) list);
+
+(* internal rewrite lists and counter *)
+val code1_abbreviations = ref ([]:thm list);
+val code2_abbreviations = ref ([]:thm list);
+val offset_counter = ref 0;
 
 (* handleing terms *)
 
@@ -214,29 +258,7 @@ fun subst_to_string_no_types xs indent =
   in "[" ^ replace_char #"\n" " " (list_to_string f xs ",") ^ "]" end;
 
 
-(* make code for composing basic specs *)
-
-(*
-make_spec ["mov r0,r0","mov r0,r0"]
-
-  val th1 = (*  mov r0,r0  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`a`|->`0w`,`a_mode`|->`OneReg`,`x`|->`x1` ] arm_MOV1))
-  val th2 = (*  mov r0,r0  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`a`|->`0w`,`a_mode`|->`OneReg`,`x`|->`x2` ] arm_MOV1))
-  val th1 = AUTO_HIDE_STATUS th1  
-
-  val th1 = (*  ldr r1,[sp]  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (0w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := T; Up := T; Wb := F|>`,`a`|->`1w`,`b`|->`13w`,`imm`|->`0w`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1` ] arm_LDR_NONALIGNED))
-  val th2 = (*  ldr r1,[sp]  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (0w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := T; Up := T; Wb := F|>`,`a`|->`1w`,`b`|->`13w`,`imm`|->`0w`,`x`|->`x2`,`y`|->`y2`,`z`|->`z2` ] arm_LDR_NONALIGNED))
-  val th1 = ALIGN_VARS ["y1"] th1  
-  val th1 = AUTO_HIDE_STATUS th1  
-  val th2 = ALIGN_VARS ["y2"] th2  
-
-  val th1 = (*  add r1,r2,r3  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`1w`,`a`|->`2w`,`b`|->`3w`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1` ] arm_ADD3))
-  val th2 = (*  ldr r1,[sp]   *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (0w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := T; Up := T; Wb := F|>`,`a`|->`1w`,`b`|->`13w`,`imm`|->`0w`,`x`|->`x2`,`y`|->`y2`,`z`|->`z2` ] arm_LDR_NONALIGNED))
-  val th1 = AUTO_HIDE_POST1 [`R 1w`] th1
-  val th2 = ALIGN_VARS ["y2"] th2
-  val th2 = APP_FRAME `~R 2w` th2
-  val name1 = "th1"
-  val name2 = "th2"
-*)
+(* code for finding and producing a composition of two theorems *)
 
 fun find_composition1 (th1,name1) (th2,name2) = let
   val (_,_,_,Q,_) = dest_ARM_PROG (concl th1)
@@ -268,7 +290,6 @@ fun find_composition1 (th1,name1) (th2,name2) = let
   val th = MOVE_COMPOSE2 th1 th2 xs1 xs2 ys1 ys2
   val str = "MOVE_COMPOSE2 "^ name1 ^" "^ name2 ^" `"^ 
             xs_str1 ^"` `"^ xs_str2 ^"` `"^ ys_str1 ^"` `"^ ys_str2 ^"`"
-  val _ = echo "m"
   in (th,str) end;
 
 fun find_composition2 (th1,name1) (th2,name2) = let
@@ -335,7 +356,6 @@ fun find_composition3 (th1,name1) (th2,name2) = let
 fun find_composition4 (th1,name1) (th2,name2) = let
   val th = FALSE_COMPOSE th1 th2  
   val str = "FALSE_COMPOSE "^name1^" "^name2
-  val _ = echo "f"
   in (th,str) end 
   handle e => find_composition3 (th1,name1) (th2,name2);
 
@@ -380,53 +400,10 @@ fun align_addresses th = let
   val st = if xs = [] then "" else st
   in (th,st) end;
 
+(* code for composing find and composing specs for paths through code *)
 
-
-
-(* ============================================================================= *)
-(* NEW EXPERIMENTAL PROOF-PRODUCING FUNCTIONS                                    *)
-(* ============================================================================= *)
-
-datatype arm_code_format = 
-  InLineCode | SimpleProcedure | PushProcedure of string list * int;
-
-(* user changeable flags *)
-val optimise_code = ref true;
-val abbrev_code = ref false;
-
-(* list of compiled code (name,th,is_proc,code length,code definition) *)
-val compiled_specs = ref ([]:(string * thm * arm_code_format * int * thm) list);
-
-(* internal rewrite lists and counter *)
-val code1_abbreviations = ref ([]:thm list);
-val code2_abbreviations = ref ([]:thm list);
-val offset_counter = ref 0;
-
-
-fun add_code_abbrevs code1_def c2 = let
-  val tm = mk_comb(``LENGTH:word32 list -> num``,(fst o dest_eq o concl o SPEC_ALL) code1_def)
-  val cc = code_length_conv()
-  val length_thm = (SIMP_CONV arith_ss [code1_def,LENGTH,LENGTH_APPEND] THENC cc) tm
-  val _ = code_length_rewrites := length_thm :: (!code_length_rewrites)
-  val _ = code1_abbreviations := code1_def :: (!code1_abbreviations)
-  fun g NONE = () | g (SOME code2_def) = 
-    (code2_abbreviations := code2_def :: (!code2_abbreviations))
-  in g c2 end;
-
-
-fun transpose [] = [] | transpose (x::xs) = let
-  val xs = rev (x::xs)  
-  fun t [] ys = ys | t (x::xs) ys = t xs (map (uncurry cons) (zip x ys))
-  in t (tl xs) (map (fn x => [x]) (hd xs)) end;
-
-(*
-val thms = (zip xs p)
-
-val [(name1,th1),(name2,th2),(name3,th3)] = xs
-val (th1,name1) = find_composition3 (th1,name1) (th2,name2)
-val (th2,name2) = (th3,name3)
-  find_composition3 (th1,name1) (th2,name2)
-*)  
+datatype mc_tree = LEAF of thm | SEQ of term list * mc_tree 
+                 | BRANCH of int * term * mc_tree * mc_tree;
 
 fun is_jump th = 
   ((fst o dest_const o post1_ARM_PROG o concl) th = "SEP_F") handle e => false;
@@ -455,23 +432,150 @@ fun get_number_of_specs n [] = 0
     val tm = mk_comb(``LENGTH:word32 list -> num``,(code_ARM_PROG o concl) th)
     val code_l = (numSyntax.int_of_term o snd o dest_eq o concl o code_length_conv()) tm
     in 1 + get_number_of_specs (n - code_l) xs end
-(*  
-make_spec ["add r1,r2,r3","sub r2,r3,r4","mul r3,r4,r5","orr r1,r2,r3","mov r4,r2"]
-make_spec ["b 16"]
-make_spec ["eor r3,r4,r3"]
 
-  val th1 = (*  add r1,r2,r3  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`1w`,`a`|->`2w`,`b`|->`3w`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1` ] arm_ADD3))
-  val th2 = (*  sub r2,r3,r4  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`2w`,`a`|->`3w`,`b`|->`4w`,`a_mode`|->`OneReg`,`x`|->`x2`,`y`|->`y2`,`z`|->`z2` ] arm_SUB3))
-  val thi = (*  b 16  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(sw2sw (2w :word24) :word30)``, EVAL ``(2w :word30) + (2w :word30)``] (Q.INST [`c_flag`|->`AL`,`offset`|->`2w` ] arm_B2))
-  val th3 = (*  mul r3,r4,r5  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`3w`,`a`|->`4w`,`b`|->`5w`,`x`|->`x3`,`y`|->`y3`,`z`|->`z3` ] arm_MUL3))
-  val th4 = (*  orr r1,r2,r3  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`1w`,`a`|->`2w`,`b`|->`3w`,`a_mode`|->`OneReg`,`x`|->`x4`,`y`|->`y4`,`z`|->`z4` ] arm_ORR3))
-  val th5 = (*  mov r4,r2     *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`b`|->`4w`,`a`|->`2w`,`a_mode`|->`OneReg`,`x`|->`x5`,`y`|->`y5` ] arm_MOV2))
-  val th6 = (*  eor r3,r4,r3  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`b`|->`3w`,`a`|->`4w`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1` ] arm_EOR2))
+fun remove_primes th = let
+  fun last s = substring(s,size s-1,1)
+  fun delete_last_prime s = if last s = "'" then substring(s,0,size(s)-1) else hd []
+  fun foo [] ys i = i
+    | foo (x::xs) ys i = let 
+      val name = (fst o dest_var) x 
+      val new_name = repeat delete_last_prime name
+      in if name = new_name then foo xs (x::ys) i else let 
+        val new_var = mk_var(new_name,type_of x)
+        in foo xs (new_var::ys) ((x |-> new_var) :: i) end end
+  val i = foo (free_varsl (concl th :: hyp th)) [] []
+  in INST i th end
 
-  val thms = [("th1",th1),("th2",th2),("thi",thi),("th3",th3),("th4",th4),("th5",th5),("th6",th6)]
-  val thms = []
-  val name = "result"
+fun basic_find_composition th1 th2 = let
+  val th = remove_primes (fst (find_composition (th1,"th1") (th2,"th2")))
+  fun f [] ys = ys | f (x::xs) ys = f xs ((fst o dest_eq) x :: ys handle e => ys) 
+  val th2_hyps = f (hyp th2) []
+  fun g tm = mem ((fst o dest_eq) tm) th2_hyps handle e => false
+  in (th,filter g (hyp th)) end
+
+fun find_cond_composition th1 th2 = let
+  val th = RW [ARM_PROG_MOVE_COND,ARM_PROG_FALSE_PRE] th2
+  val th = if concl th = T then hd [] else th
+  val th = CONV_RULE ((RATOR_CONV o RAND_CONV) (ONCE_REWRITE_CONV [GSYM Abbrev_def])) th
+  val th = RW [GSYM ARM_PROG_MOVE_COND] th
+  val (th,lets) = basic_find_composition th1 th
+  val th = SIMP_RULE (bool_ss++sep2_ss) [] th
+  val th = RW [ARM_PROG_MOVE_COND,GSYM AND_IMP_INTRO] th
+  fun imps tm xs = let val (x,y) = dest_imp tm in imps y (x::xs) end handle e => xs
+  fun is_Abbrev tm = (fst o dest_const o fst o dest_comb) tm = "Abbrev" handle e => false
+  val xs = filter is_Abbrev (imps (concl th) [])
+  val th = RW [GSYM ARM_PROG_MOVE_COND,Abbrev_def] th
+  in let val cond = snd (dest_comb (hd xs)) in 
+     let val cond = dest_neg cond in (cond,th) end 
+     handle e => (mk_neg cond,th) end 
+     handle e => (``F:bool``,th) end;
+
+fun negate tm = let val x = dest_neg tm in x end handle e => mk_neg tm
+fun tree_composition th [] conds = LEAF th
+  | tree_composition th ((i,th1,th2)::thms) conds = 
+     if is_jump th then let
+       val len = get_jump_length th
+       val xs = map (fn (i,th1,th2) => ("",th1)) ((i,th1,th2)::thms)
+       fun take 0 xs = [] | take n [] = [] | take n (x::xs) = x::take (n-1) xs    
+       fun drop 0 xs = xs | drop n [] = [] | drop n (x::xs) = drop (n-1) xs    
+       val number_of_specs = get_number_of_specs len xs
+       val ys = take number_of_specs xs
+       val _ = map (fn y => echo "o") ys
+       val cs = map (code_ARM_PROG o concl o snd) ys 
+       val th = APPEND_CODE th cs    
+     in tree_composition th (drop number_of_specs ((i,th1,th2)::thms)) conds end else let
+       val _ = echo "c"
+       val (cond,th2) = find_cond_composition th th2
+       in if mem (negate cond) conds 
+          then (* case: only second branch possible *)
+               tree_composition th2 thms conds
+          else if mem cond conds then hd [] 
+          else (* case: both branches possible *) let
+            val (th1,lets) = basic_find_composition th th1
+            val t1 = tree_composition th1 thms (cond::conds)
+            val _ = echo "\n"
+            val _ = n_times i (fn () => echo ".") ()
+            val t2 = tree_composition th2 thms (negate cond::conds)
+            val t1 = if length lets = 0 then t1 else SEQ (lets,t1)
+            in BRANCH (i,cond,t1,t2) end end
+     handle e => (* case: only first branch possible *) let 
+       val (th,lets) = basic_find_composition th th1
+       in if length lets = 0 then tree_composition th thms conds else
+         SEQ (lets,tree_composition th thms conds) end
+
+fun generate_basic_specs code = let
+  val _ = echo "\nGenerating instruction specifications.\n"
+  fun get_specs (s,(n,ys)) = 
+    if (substring(s,0,6) = "proc: ") handle e => false then let
+      val i = int_to_string n
+      val name = substring(s,6,size(s)-6)
+      val name = replace_char #" " "" name
+      fun match_name (n,_,_,_,_) = n = name 
+      val (_,th,proc,_,_) = hd (filter match_name (!compiled_specs))
+      val _ = offset_counter := !offset_counter + 1
+      val offset_name = "offset" ^ int_to_string (!offset_counter)
+      val th = if not (proc = InLineCode) then SIMP_RULE (std_ss++setINC_ss) [] (MATCH_MP (Q.INST [`offset`|->[QUOTE offset_name]] arm_BL) (PROG2PROC th)) else th
+      in (n+1,(ys @ [(n,th,TRUTH)])) end
+    else let
+      val i = int_to_string n
+      val th = fst (string_to_prog s i)
+      val th = RW [WORD_CMP_NORMALISE] th
+      val th = fst (align_addresses th)
+      val (th1,th2) = (FST_PROG2 th,SND_PROG2 th)
+      val th1 = ABBREV_ALL ("s"^i^"@") th1
+      in (n+1,(ys @ [(n,th1,th2)])) end
+  in snd (foldl get_specs (1,[]) code) end;
+
+(*
+  val name = "foo"
+  val code = ["cmp r1,r2","subeqs r1,r2,r3", "beq 8", "sub r1,r1,r3"]
+  val code = ["cmp r1,#0","mulne r2,r1,r2","subne r1,r1,#1","bne -8"]
 *)
+
+fun generate_spectree code = let 
+  val thms = generate_basic_specs code
+  val _ = echo "Forward simulation:\n"
+  val t = tree_composition ARM_PROG_EMPTY thms []
+  val _ = echo "\n\n"
+  in t end;
+
+fun spectree2thms (LEAF thm) thms = thm :: thms
+  | spectree2thms (SEQ (_,t)) thms = spectree2thms t thms
+  | spectree2thms (BRANCH (_,_,t1,t2)) thms = spectree2thms t1 (spectree2thms t2 thms)
+
+fun make_passes_th code = 
+  map (fn th => AUTO_HIDE_STATUS th) (spectree2thms (generate_spectree code) []);
+
+
+(* ============================================================================= *)
+(* NEW EXPERIMENTAL PROOF-PRODUCING FUNCTIONS                                    *)
+(* ============================================================================= *)
+
+fun add_code_abbrevs code1_def c2 = let
+  val tm = mk_comb(``LENGTH:word32 list -> num``,(fst o dest_eq o concl o SPEC_ALL) code1_def)
+  val cc = code_length_conv()
+  val length_thm = (SIMP_CONV arith_ss [code1_def,LENGTH,LENGTH_APPEND] THENC cc) tm
+  val _ = code_length_rewrites := length_thm :: (!code_length_rewrites)
+  val _ = code1_abbreviations := code1_def :: (!code1_abbreviations)
+  fun g NONE = () | g (SOME code2_def) = 
+    (code2_abbreviations := code2_def :: (!code2_abbreviations))
+  in g c2 end;
+
+fun transpose [] = [] | transpose (x::xs) = let
+  val xs = rev (x::xs)  
+  fun t [] ys = ys | t (x::xs) ys = t xs (map (uncurry cons) (zip x ys))
+  in t (tl xs) (map (fn x => [x]) (hd xs)) end;
+
+(*
+val thms = (zip xs p)
+
+val [(name1,th1),(name2,th2),(name3,th3)] = xs
+val (th1,name1) = find_composition3 (th1,name1) (th2,name2)
+val (th2,name2) = (th3,name3)
+  find_composition3 (th1,name1) (th2,name2)
+*)  
+
+(*
 fun mk_compose_pass thms name = let
   fun h ((name,th),0) = (("SND_PROG2 "^name, SND_PROG2 th) handle e => (name,th))
     | h ((name,th),n) = (("FST_PROG2 "^name, FST_PROG2 th) handle e => (name,th))   
@@ -495,23 +599,24 @@ fun mk_compose_pass thms name = let
        in (s::ys,th) end else let
          val (curr_name,curr_th) = hd xs
          val (th,s) = find_composition (prev_th,prev_name) (curr_th,"("^curr_name^")")
+         val _ = echo "m"
          val s = "  val "^name^" = "^s^"\n"
          val (ys,th) = find_compositions name th (tl xs)
        in (s::ys,th) end
   val (prev_name,prev_th) = hd xs
   val (strs,th) = find_compositions ("("^prev_name^")") prev_th (tl xs) 
   val th = AUTO_HIDE_STATUS th
- (* val _ = print ("\n\nBefore unabbreviation:\n\n"^(Parse.thm_to_string th)^"\n\n") *)
-  val th = RW [APPEND] (UNABBREV_ALL th)
- (* val _ = print ("\n\n----\n\n"^(Parse.thm_to_string th)^"\n\n") *)
+  val th = RW [APPEND] th
   val _ = echo ".\n" 
   in ([],th) end;
+*)
 
 fun pad_strings [] = [] | pad_strings (x::xs) = let
   val m = foldr (fn (m,n) => if m > n then m else n) (size x) (map size xs)
   fun pad s i = if i <= 0 then s else pad (s^" ") (i-1) 
   in map (fn s => pad s (m - size s)) (x::xs) end;
 
+(*
 fun make_passes_th code = let
   fun f (s,(ys,n)) = 
     if (substring(s,0,6) = "proc: ") handle e => false then let
@@ -522,8 +627,8 @@ fun make_passes_th code = let
       val (_,th,proc,_,_) = hd (filter match_name (!compiled_specs))
       val _ = offset_counter := !offset_counter + 1
       val offset_name = "offset" ^ int_to_string (!offset_counter)
-      val th = if not (proc = InLineCode) then SIMP_RULE (std_ss++setINC_ss) [] (MATCH_MP (Q.INST [`offset`|->[QUOTE offset_name]] arm_BL) (PROG2PROC `lr` th)) else th
-      val str = if not (proc = InLineCode) then "SIMP_RULE (std_ss++setINC_ss) [] (MATCH_MP arm_BL (PROG2PROC `lr` "^name^"_arm))" else name^"_arm"
+      val th = if not (proc = InLineCode) then SIMP_RULE (std_ss++setINC_ss) [] (MATCH_MP (Q.INST [`offset`|->[QUOTE offset_name]] arm_BL) (PROG2PROC th)) else th
+      val str = if not (proc = InLineCode) then "SIMP_RULE (std_ss++setINC_ss) [] (MATCH_MP arm_BL (PROG2PROC "^name^"_arm))" else name^"_arm"
       in ((ys @ [(s,"th"^i,str,th)]),n+1) end
     else let
       val i = int_to_string n
@@ -535,9 +640,10 @@ fun make_passes_th code = let
       in ((ys @ [(s,"th"^i,str,th)]),n+1) end
   val xs = pad_strings (map fst code)
   val xs = fst (foldl f ([],1) xs)  
-  fun abbrev_posts (s,name,str,th) = 
-    (s,name,"ABBREV_ALL ("^str^")",ABBREV_ALL th)
-  val xs = map abbrev_posts xs   
+  fun abbrev_posts ((s,name,str,th),(i,xs)) = 
+    let val prefix = "s" ^ int_to_string i ^ "@" 
+    in (i+1,xs @ [(s,name,"ABBREV_ALL \""^prefix^"\" ("^str^")",ABBREV_ALL prefix th)]) end
+  val xs = snd (foldl abbrev_posts (1,[]) xs)
   val paths = transpose (map snd code)
   fun to_str (s,i,str,th) = let
     val i = if size(i) < 4 then i ^ " " else i
@@ -552,18 +658,19 @@ fun make_passes_th code = let
   val th = zip pnames th
   val pnames = foldr (fn (x,y) => x^","^y) (last pnames) (butlast pnames)
   in (th,strs) end;
+*)
 
 (*
   val (i,ys,strs,pnames) = (1,[],strs,[])
   val p = hd paths
 *)
-
+(*
 fun make_passes code = 
   print (foldr (uncurry concat) "" (["\n\n\n"] @ snd (make_passes_th code) @ ["\n\n\n"]));
-
+*)
 (*
  val code = [
-("add r1,r2,r3",[1,1,1,1]),
+("adds r1,r2,r3",[1,1,1,1]),
 ("teq r1,#0   ",[1,1,1,1]),
 ("beq 12      ",[1,1,0,0]),
 ("sub r1,r1,r3",[0,0,1,1]),
@@ -580,7 +687,6 @@ fun make_passes code =
 (* generate ARM code *)
 
 fun string_remove_primes str = replace_char #"'" "" str;
-val num_to_string = int_to_string o Arbint.toInt o Arbint.fromNat
 
 fun code_length xs = let
   fun is_proc s = ((substring(s,0,6) = "proc: ") handle e => false)
@@ -723,10 +829,6 @@ fun make_block_conditional xs cond = let
   in (true,map f xs) end 
   handle e => (false,map (fn (cmd,t) => (replace_char #"%" "" cmd,t)) xs);
 
-(*
-  val tm = tm2
-*)
-
 (* intial phase: choose instructions *)
 fun make_inst_list1 tm = 
   let (* case: if-then-else *)
@@ -841,45 +943,6 @@ fun make_inst_list2 def = let
 
 
 (* build spec *)
-
-fun mk_substs_string [] name = []
-  | mk_substs_string (x::xs) name = 
-      ["  val "^name^" = Q.INST [" ^ foldl (fn (x,y) => x ^ "," ^ y) x xs ^ "] "^name^"\n"];
-
-fun standardise_names name terms th = let
-  (* rename variables, e.g. R 1w y3 --> R 1w r1 *)
-  fun find_subst tm = let
-    val (x,z) = dest_comb tm
-    val z_str = fst (dest_var z)
-    val (x,y) = dest_comb x 
-    val n2w_to_string = num_to_string o numSyntax.dest_numeral o snd o dest_comb
-    in if fst (dest_const x) = "R" then let
-      val i = n2w_to_string y
-      val var = mk_var("r"^i,type_of z)
-      val subst = z |-> var
-      val subst_str = "`"^ z_str ^"`|->`r"^i^"`"  
-      in ([subst],[subst_str]) end 
-    else if fst (dest_const x) = "R30" andalso y = ``13w:word4`` then 
-         ([z|->``sp:word30``],["`"^ z_str ^"`|->`sp`"])
-    else let
-      val i = (snd o dest_comb) y handle e => ``0w:word30``
-      val i = n2w_to_string i 
-      val var_str = 
-           if i = "0" then "m" else
-           if (fst o dest_const o fst o dest_comb o fst o dest_comb) y = "word_add" 
-           then "m" else "n" handle e => "m"
-      val var = mk_var(var_str^i,type_of z)
-      val subst = z |-> var
-      val subst_str = "`"^ z_str ^"`|->`"^var_str^i^"`"  
-      in ([subst],[subst_str]) end handle e => ([],[]) end
-  fun renamer (tm,(th,xs,zs)) = let
-      val (y,z) = find_subst tm handle e => ([],[])
-      val tm = Term.subst y tm      
-      val th = INST y th
-      in (th, tm :: xs, z @ zs) end
-  val (th,terms,substs) = foldr renamer (th,[],[]) terms
-  val strs = mk_substs_string substs name
-  in (th,strs) end;
 
 fun dest_tuple tm = 
   let val (x,y) = dest_pair tm in x :: dest_tuple y end handle e => [tm];
@@ -1223,9 +1286,6 @@ fun find_case tm cases = let
   in snd (hd xs) end;
 
 fun prove_step_cases post_tm hyps steps def strs = let
-(*
-  val (name,th) = hd (hyps)
-*)
   fun f (name,th) = let
     val th = DUPLICATE_COND (RW [GSYM ARM_PROG_MOVE_COND] (SPEC_ALL th))
     val temp = RW [ARM_PROG_MOVE_COND,AND_IMP_INTRO] th
@@ -1243,7 +1303,6 @@ fun prove_step_cases post_tm hyps steps def strs = let
     val th2 = SIMP_RULE (bool_ss++sep2_ss) [] (MOVE_POSTL_TERM ps th2)
     val th = MATCH_MP ARM_PROG_COMPOSE_I th 
     val th = MATCH_MP th th2
-
     val th = MP (FIND_INST th) TRUTH
     val th = SIMP_RULE (bool_ss++sep_ss) [UNION_IDEMPOT] th
     val th = ISPEC post_tm (MATCH_MP ARM_PROG_WEAKEN_POST1 th)
@@ -1262,11 +1321,6 @@ fun prove_step_cases post_tm hyps steps def strs = let
   val xs = map f hyps
   fun g ((name,th,strs),(thms,strs2)) = (thms @ [(name,th)],strs2 @ strs)   
   in foldl g ([],strs) xs end;
-
-(*
-val (name,th) = base
-val s = []
-*)
 
 fun merge_all_cases (name,th) hyps ind s = let
   val th = foldr (uncurry APP_MERGE) th (map snd hyps)
@@ -1430,7 +1484,6 @@ val SIMPLIFY_WORD_ADD_n2w_CONV =
   SIMP_CONV arith_ss [GSYM WORD_SUB_PLUS,word_add_n2w]
   THENC SIMP_CONV (arith_ss++wordsLib.SIZES_ss) [WORD_SUB_ADD_n2w,WORD_ADD_0];
 
-fun n_times 0 f x = x | n_times n f x = n_times (n-1) f (f x) 
 
 fun alter_stack_pointer th 0 = th
   | alter_stack_pointer th steps = let
@@ -1553,13 +1606,14 @@ fun build_definition name tm def_name tm_name = let
     val (x,y) = (fst (dest_var x),fst (dest_var y))
     in if size(x) = size(y) then (x < y) else size(x) < size(y) end 
   val xs = sort g (free_vars tm)
-  val xs = map (fn x => "("^fst (dest_var x) ^ (type_to_string (snd (dest_var x)))^")") xs
-  val str = foldl (fn (x,y) => y ^ " " ^ x) name xs
   val _ = Parse.hide name
-  val str = "("^str^")" ^ type_to_string (type_of tm) 
-  val tm = mk_eq(Parse.Term [QUOTE str],tm)
+  fun mk_fun_type (x,y) = mk_type("fun",[x,y])
+  val t = foldr mk_fun_type (type_of tm) (map type_of xs)
+  val d = mk_var(name,t)
+  val d = foldl (fn (x,y) => mk_comb (y,x)) d xs
+  val tm = mk_eq(d,tm)
   val code_def = Define [ANTIQUOTE tm]
-  val str = "  val "^def_name^" = Define [ANTIQUOTE (mk_eq(``"^str^"``,"^tm_name^"))]\n"
+  val str = "  val " (*^def_name^" = Define [ANTIQUOTE (mk_eq(``"^str^"``,"^tm_name^"))]\n" *)
   in (code_def,str) end;
 
 fun abbreviate_code name thms strs = 
@@ -1623,15 +1677,10 @@ val ARM_PROG_PREPEND_CODE = prove(
      \\ REWRITE_TAC [GSYM word_sub_def,WORD_SUB_REFL,WORD_ADD_0])
   \\ ASM_REWRITE_TAC []);
 
-val as_proc = (PushProcedure ([],0))
-fun arm_compile def ind as_proc = let
-  (* guess name *)
-  val tm = (fst o dest_eq o concl o SPEC_ALL) def
-  val name = (fst o dest_const) ((fst o dest_comb) tm handle e => tm)
-  (* generate code with path traces *)
-  val code = make_inst_list2 def
-  (* generate basic specs for each path *)
-  val (thms,strs) = make_passes_th code 
+val strs = []
+val as_proc = InLineCode
+
+fun arm_compile_backend name def ind as_proc thms strs = let
   (* collect procedure code *)
   val (thms,strs) = collect_procedure_code thms strs
   (* abbreviate the code using a definition *)
@@ -1669,6 +1718,17 @@ fun arm_compile def ind as_proc = let
   val _ = save_thm(name^"_arm",th)
   val _ = compiled_specs := result :: !compiled_specs
   in (th,strs) end
+
+fun arm_compile def ind as_proc = let
+  (* guess name *)
+  val tm = (fst o dest_eq o concl o SPEC_ALL) def
+  val name = (fst o dest_const) ((fst o dest_comb) tm handle e => tm)
+  (* generate code with path traces *)
+  val code = make_inst_list2 def
+  (* generate basic specs for each path *)
+  val thms = make_passes_th (map fst code) 
+  val thms = map (fn th => ("",UNABBREV_ALL th)) thms
+  in arm_compile_backend name def ind as_proc thms [] end;
 
 fun reset_compiled () = let
   val _ = compiled_specs := []
@@ -1807,6 +1867,174 @@ fun arm_flatten_code () = let
   val _ = print "\n\n"
   in th end;
 
+(* --------- decompiler ----------- 
+
+fun int_of_word w = let
+  val w = (snd o dest_eq o concl o (EVAL THENC ONCE_REWRITE_CONV [GSYM n2w_mod])) w
+  val (x,y) = (dest_comb o snd o dest_comb) w 
+  val x = (snd o dest_comb) x
+  val y = (snd o dest_eq o concl o SIMP_CONV (std_ss++SIZES_ss) []) y  
+  val b = subst [``n:num``|->x,``m:num``|->y] ``n < m DIV 2``  
+  fun test tm = ((snd o dest_eq o concl o EVAL) tm = T) handle e => false
+  in if test b then numSyntax.int_of_term x else 
+    let val n = (numSyntax.int_of_term o snd o dest_eq o concl o EVAL) 
+       (subst [``n:num``|->x,``m:num``|->y] ``((m + m) - n) MOD m``)
+    in ~ n end end
+
+val STATUS_MOVE = prove(
+  ``!P Q x. (S x * P = P * S x) /\ (P * S x * Q = P * Q * S x)``,
+  SIMP_TAC (bool_ss++star_ss) []);
+
+fun dest_next (k,th) = let
+  val (p,cs,c,q,j) = dest_ARM_PROG (concl (RW [STATUS_MOVE,F_STAR] th))
+  val (x,p) = dest_STAR p handle e => (p,p)
+  val x = snd (dest_STAR x) handle e => x
+  val (z,y) = dest_comb x
+  val x = (if fst (dest_const z) = "cond" then y else T) handle e => T 
+  in [(k,SOME 1,x,fst (match_term p (snd (dest_STAR q) handle e => q)))] handle e => let 
+    val (q,n) = (dest_pair o snd o dest_comb o fst o dest_comb) j
+    val i = fst (match_term p (snd (dest_STAR q) handle e => q))
+    val j = SOME ((int_of_word o snd o dest_comb) n) handle e => NONE 
+    in [(k,j,x,i)] end end handle e => []
+
+fun string_to_abs_inst (st,(i,xs)) = let
+  val th = fst (string_to_prog st (int_to_string i))
+  val (th,th2) = (FST_PROG2 th,SND_PROG2 th)
+  in (i+1,xs @ [(dest_next (1,th) @ dest_next (0,th2))]) end    
+
+fun remove_primes th = let
+  fun last s = substring(s,size s-1,1)
+  fun delete_last_prime s = if last s = "'" then substring(s,0,size(s)-1) else hd []
+  fun foo [] ys i = i
+    | foo (x::xs) ys i = let 
+      val name = (fst o dest_var) x 
+      val new_name = repeat delete_last_prime name
+      in if name = new_name then foo xs (x::ys) i else let 
+        val new_var = mk_var(new_name,type_of x)
+        in foo xs (new_var::ys) ((x |-> new_var) :: i) end end
+  val i = foo (free_varsl (concl th :: hyp th)) [] []
+  in INST i th end
+
+val code = [
+"cmp r1,r2",
+"subeqs r1,r2,r3",
+"beq 8",
+"sub r1,r2,r3",
+"mul r2,r3,r4"]
+
+fun find_forward_structure code = let
+  val cs = snd (foldl string_to_abs_inst (1,[]) code)
+  val init = map (fn (t,s,tm,i) => ([t],s,[tm],[i])) (hd cs)
+  fun crossprod [] xs = []
+    | crossprod (y::ys) xs = map (fn x => (y,x)) xs @ crossprod ys xs 
+  fun add_clause tm clauses = 
+    if mem tm clauses then clauses else
+    if mem (mk_neg tm) clauses then hd [] else
+    if (mem (dest_neg tm) clauses) handle e => false then hd [] else
+      tm::clauses 
+  fun compose (((ts,NONE,tms,is),(t,s2,tm,i)),xs) = xs
+    | compose (((ts,SOME k,tms,is),(t,s2,tm,i)),xs) = 
+      if not (k = 1) then (ts@[0],SOME (k-1),tms,is)::xs else let 
+        val tm = foldr (uncurry subst) tm is
+        val tms = add_clause tm tms                
+        in (ts@[t],s2,tms,is@[i])::xs end handle e => xs   
+  val ys = foldl (fn (x,y) => foldl compose [] (crossprod y x)) init (tl cs)
+  val ys = map (fn (ts,s,tms,is) => ts) ys
+  in ys end;
+
+
+
+  val cs = find_forward_structure code
+  val (thms,strs) = make_passes_th (zip code (transpose cs))
+  val thms = map (fn (n,th) => (n, remove_primes th)) thms
+  
+
+
+  fun hoo (x,th) = let
+    val xs = hyp th
+    val th' = SIMP_RULE (bool_ss++sep2_ss) [ARM_PROG_MOVE_COND,GSYM AND_IMP_INTRO] th
+    fun goo tm xs = let val (x,y) = dest_imp tm in goo y (x::xs) end handle e => xs
+    in (goo (concl th') [],hyp th) end
+
+*)
+
+
+(* --- decompiler 2 --- *)
+
+fun get_resvar_name v = let
+  val n = (fst o dest_var) v   
+  fun g [] = n | g (c::cs) = if c = #"@" then implode cs else g cs
+  in g (explode n) end
+
+fun list_mk_pair xs = pairSyntax.list_mk_pair xs handle e => ``()``
+
+fun spectree2fun (LEAF th) (res,f,res') = 
+      if ((fst o dest_const o post1_ARM_PROG o concl) th = "SEP_F" handle e => false) 
+      then mk_comb(f,list_mk_pair res') else list_mk_pair res
+  | spectree2fun (BRANCH (i,cond,t1,t2)) res =
+      if is_neg cond 
+      then mk_cond(dest_neg cond,spectree2fun t2 res, spectree2fun t1 res)
+      else mk_cond(cond,spectree2fun t1 res, spectree2fun t2 res)
+  | spectree2fun (SEQ ([],t)) res = spectree2fun t res
+  | spectree2fun (SEQ (x::xs,t)) (res1,f,res2) = let
+      val (x,y) = dest_eq(x)
+      val name = get_resvar_name x 
+      val res1' = map (fn v => if get_resvar_name v = name then x else v) res1
+      val res2' = map (fn v => if get_resvar_name v = name then x else v) res2
+      val tm = spectree2fun (SEQ (xs,t)) (res1',f,res2')
+      val xs = free_vars tm
+      fun h v = if not (mem v xs) then hd [] else mk_var((fst o dest_var) v ^ "'",type_of v)
+      val v = repeat h (mk_var(name,type_of x))
+      val tm = subst [x|->v] tm
+      in mk_let(mk_abs(v,tm),y) end
+
+fun thms2resources [] xs = xs
+  | thms2resources (th::thms) xs = let
+  val p = (list_dest_STAR o pre_ARM_PROG o concl) th
+  fun f (tm,tms) = let val v = (snd o dest_comb) tm in 
+    if is_var v andalso not (mem v tms) then v::tms else tms end handle e => tms
+  in thms2resources thms (foldr f xs p) end
+
+fun spectree2function name code = let
+  val t = generate_spectree code
+  val thms = spectree2thms t []
+  val sorter = sort (curry (fn (tm1,tm2) => (fst o dest_var) tm1 < (fst o dest_var) tm2))
+  val res_out = sorter (thms2resources thms [])
+  val output = list_mk_pair res_out
+  val f = mk_var(name,mk_type("fun",[type_of ``()``,type_of output]))
+  val tm = spectree2fun t (res_out,f,[])
+  val res_in = sorter (free_vars tm)
+  val res_in = filter (fn x => not (x = f)) res_in
+  val input = list_mk_pair res_in
+  val f = mk_var(name,mk_type("fun",[type_of input,type_of output]))
+  val tm = spectree2fun t (res_out,f,res_in)
+  val tm = mk_eq(mk_comb(f,input),tm)
+  in (tm,thms) end;
+
+(*
+  val name = "fac"
+  val code = ["cmp r1,#0","mulne r2,r1,r2","subne r1,r1,#1","bne -12"]
+
+  val name = "fib"
+  val code = ["cmp r0,#0","movne r3,r1","movne r1,r2","addne r2,r1,r2","subne r0,r0,#1","bne -20"]
+*)
+
+fun arm_decompiler name code = let
+  val (tm,thms) = spectree2function name code
+  val def = Define [ANTIQUOTE tm]
+  val ind = DB.fetch "-" (name^"_ind")
+  val rule = UNABBREV_ALL o SIMP_RULE (bool_ss++sep2_ss) [] o AUTO_HIDE_STATUS
+  val thms = map (fn th => ("",rule th)) thms
+  val th = fst (arm_compile_backend name def ind InLineCode thms [])
+  in (def,th) end; 
+
+(* 
+ - find structure of code
+ - use make_passes
+ - extract function from assums in spec 
+ - run the back-end of the compiler
+ - add support for procedure in-lineing
+*) 
 
 
 end;
