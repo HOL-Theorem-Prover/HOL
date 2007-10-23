@@ -13,16 +13,18 @@ open Type
       if is_vartype ty then TyV_Var (dest_vartype_opr ty)
       else if is_con_type ty then TyV_Const (dest_thy_con_type ty)
       else if is_app_type ty then TyV_App (dest_app_type ty)
+      else if is_abs_type ty then let
+          val (tyv, ty) = dest_abs_type ty
+        in
+          TyV_Abs (dest_vartype_opr tyv, ty)
+        end
       else if is_univ_type ty then let
           val (tyv,ty) = dest_univ_type ty
         in
           TyV_All (dest_vartype_opr tyv, ty)
         end
-      else let
-          val (tyv, ty) = dest_abs_type ty
-        in
-          TyV_Abs (dest_vartype_opr tyv, ty)
-        end
+      else raise Feedback.mk_HOL_ERR "TypeView" "fromType"
+            ("not a var, const, app, abs, or univ type: " ^ Type.type_to_string ty)
 
   fun toType tyv =
       case tyv of

@@ -11,7 +11,9 @@ fun mk_var{Name,Ty}         = Term.mk_var(Name,Ty)
 fun mk_primed_var{Name,Ty}  = Term.mk_primed_var(Name,Ty)
 fun mk_const{Name,Ty}       = Term.mk_const(Name,Ty)
 fun mk_comb{Rator,Rand}     = Term.mk_comb(Rator,Rand)
+fun mk_tycomb{Rator,Rand}   = Term.mk_tycomb(Rator,Rand)
 fun mk_abs{Bvar,Body}       = Term.mk_abs(Bvar,Body)
+fun mk_tyabs{Bvar,Body}     = Term.mk_tyabs(Bvar,Body)
 fun mk_eq{lhs,rhs}          = boolSyntax.mk_eq(lhs,rhs)
 fun mk_imp{ant,conseq}      = boolSyntax.mk_imp(ant,conseq)
 fun mk_forall{Bvar,Body}    = boolSyntax.mk_forall(Bvar,Body)
@@ -23,11 +25,13 @@ fun mk_disj{disj1,disj2}    = boolSyntax.mk_disj(disj1,disj2)
 fun mk_let{func,arg}        = boolSyntax.mk_let(func,arg)
 fun mk_cond{cond,larm,rarm} = boolSyntax.mk_cond(cond,larm,rarm);
 
-fun dest_type ty = let val (s,l) = Type.dest_type ty in {Tyop=s,Args=l} end
-fun dest_var M   = let val (s,ty) = Term.dest_var M in {Name=s,Ty=ty} end
-fun dest_const M = let val (s,ty) = Term.dest_const M in {Name=s,Ty=ty} end
-fun dest_comb M  = let val (f,x) = Term.dest_comb M in {Rator=f,Rand=x} end
-fun dest_abs M   = let val (v,N) = Term.dest_abs M in {Bvar=v,Body=N} end;
+fun dest_type ty  = let val (s,l)  = Type.dest_type ty in {Tyop=s,Args=l} end
+fun dest_var M    = let val (s,ty) = Term.dest_var M in {Name=s,Ty=ty} end
+fun dest_const M  = let val (s,ty) = Term.dest_const M in {Name=s,Ty=ty} end
+fun dest_comb M   = let val (f,x)  = Term.dest_comb M in {Rator=f,Rand=x} end
+fun dest_tycomb M = let val (f,ty) = Term.dest_tycomb M in {Rator=f,Rand=ty} end
+fun dest_abs M    = let val (v,N)  = Term.dest_abs M in {Bvar=v,Body=N} end
+fun dest_tyabs M  = let val (v,N)  = Term.dest_tyabs M in {Bvar=v,Body=N} end;
 
 fun dest_eq M  = let val (l,r) = boolSyntax.dest_eq M in {lhs=l,rhs=r} end;
 fun dest_imp M = let val (l,r) = boolSyntax.dest_imp M in {ant=l,conseq=r} end;
@@ -66,18 +70,23 @@ fun new_specification {name,sat_thm,consts} =
  end;
 
 datatype lambda 
-   = VAR   of {Name:string, Ty:hol_type}
-   | CONST of {Name:string, Thy:string, Ty:hol_type}
-   | COMB  of {Rator:term, Rand:term}
-   | LAMB  of {Bvar:term, Body:term};
+   = VAR    of {Name:string, Ty:hol_type}
+   | CONST  of {Name:string, Thy:string, Ty:hol_type}
+   | COMB   of {Rator:term, Rand:term}
+   | TYCOMB of {Rator:term, Rand:hol_type}
+   | LAMB   of {Bvar:term, Body:term}
+   | TYLAMB of {Bvar:hol_type, Body:term};
 
 local open Feedback
 in
-fun dest_term M = 
-  COMB(dest_comb M) handle HOL_ERR _ =>
-  LAMB(dest_abs M)  handle HOL_ERR _ =>
-  VAR (dest_var M)  handle HOL_ERR _ =>
-  CONST(Term.dest_thy_const M)
+
+fun dest_term M =
+  COMB  (dest_comb M)   handle HOL_ERR _ =>
+  TYCOMB(dest_tycomb M) handle HOL_ERR _ =>
+  LAMB  (dest_abs M)    handle HOL_ERR _ =>
+  TYLAMB(dest_tyabs M)  handle HOL_ERR _ =>
+  VAR   (dest_var M)    handle HOL_ERR _ =>
+  CONST (Term.dest_thy_const M)
 end;
 
 end (* Rsyntax *)

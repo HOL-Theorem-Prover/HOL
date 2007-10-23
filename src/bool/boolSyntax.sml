@@ -184,7 +184,9 @@ fun list_mk_imp(A,c) = list_mk_rbinop (curry mk_imp) (A@[c]);
 fun list_mk_icomb(f,args) = List.foldl (fn (a,t) => mk_icomb (t,a)) f args
 
 val strip_comb       = HolKernel.strip_comb
+val strip_tycomb     = HolKernel.strip_tycomb
 val strip_abs        = HolKernel.strip_abs
+val strip_tyabs      = HolKernel.strip_tyabs
 val strip_forall     = HolKernel.strip_binder (SOME universal)
 val strip_exists     = HolKernel.strip_binder (SOME existential)
 val strip_conj       = strip_binop (total dest_conj)

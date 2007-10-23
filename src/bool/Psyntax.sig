@@ -47,7 +47,9 @@ sig
      = VAR   of string * hol_type
      | CONST of {Name:string, Thy:string, Ty:hol_type}
      | COMB  of term * term
+     | TYCOMB of term * hol_type
      | LAMB  of term * term
+     | TYLAMB of hol_type * term
 
   val dest_term : term -> lambda
 end;

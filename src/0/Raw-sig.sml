@@ -123,6 +123,7 @@ sig
   val thy_types     : string -> (string * int) list
   val thy_type_oprs : string -> (string * kind * int) list
   val pp_raw_type   : ppstream -> hol_type -> unit
+  val type_to_string: hol_type -> string
 end;
 
 signature RawTerm =
@@ -150,34 +151,52 @@ sig
   val prim_variant  : term list -> term -> term
   val mk_var        : string * hol_type -> term
   val mk_primed_var : string * hol_type -> term
+  val dest_var      : term -> string * hol_type
+
   val decls         : string -> term list
   val all_consts    : unit -> term list
+  val mk_const      : string * hol_type -> term
   val prim_mk_const : {Thy:string,Name:string} -> term
   val mk_thy_const  : {Thy:string, Name:string, Ty:hol_type} -> term
-  val dest_thy_const: term -> {Thy:string, Name:string, Ty:hol_type}
-  val mk_const      : string * hol_type -> term
-  val list_mk_comb  : term * term list -> term
-  val mk_comb       : term * term -> term
-  val list_mk_binder: term option -> term list * term -> term
-  val list_mk_abs   : term list * term -> term
-  val mk_abs        : term * term -> term
-  val dest_var      : term -> string * hol_type
   val dest_const    : term -> string * hol_type
+  val dest_thy_const: term -> {Thy:string, Name:string, Ty:hol_type}
+
+  val mk_comb       : term * term -> term
+  val list_mk_comb  : term * term list -> term
   val dest_comb     : term -> term * term
+
+  val mk_tycomb     : term * hol_type -> term
+  val list_mk_tycomb: term * hol_type list -> term
+  val dest_tycomb   : term -> term * hol_type
+
+  val mk_abs        : term * term -> term
+  val list_mk_abs   : term list * term -> term
+  val list_mk_binder: term option -> term list * term -> term
   val dest_abs      : term -> term * term
   val strip_abs     : term -> term list * term
   val strip_binder  : term option -> term -> term list * term
+
+  val mk_tyabs      : hol_type * term -> term
+  val list_mk_tybinder : term option -> hol_type list * term -> term
+  val list_mk_tyabs : hol_type list * term -> term
+  val dest_tyabs    : term -> hol_type * term
+  val strip_tybinder: term option -> term -> hol_type list * term
+  val strip_tyabs   : term -> hol_type list * term
+
   val is_var        : term -> bool
+  val is_bvar       : term -> bool
   val is_genvar     : term -> bool
   val is_const      : term -> bool
   val is_comb       : term -> bool
+  val is_tycomb     : term -> bool
   val is_abs        : term -> bool
+  val is_tyabs      : term -> bool
   val rator         : term -> term
   val rand          : term -> term
   val bvar          : term -> term
   val body          : term -> term
   val rename_bvar   : string -> term -> term
-  val is_bvar       : term -> bool
+
   val same_const    : term -> term -> bool
   val aconv         : term -> term -> bool
   val beta_conv     : term -> term

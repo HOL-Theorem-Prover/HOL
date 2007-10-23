@@ -17,7 +17,7 @@ In *scratch*, type
 (hol-set-executable mosml-executable)
 and type Ctrl-j.
 
-loadPath := "/usr/local/hol/kananaskis-5w/sigobj" :: !loadPath;
+loadPath := "/usr/local/hol/hol-omega/sigobj" :: !loadPath;
 app load ["Feedback","Lib","Subst","KernelTypes","Type","Sig","Lexis",
           "Polyhash","Binarymap"];
 *)
@@ -504,10 +504,10 @@ fun mk_tycomb(r as (TAbs(btyvar,_), Ty)) =
 val list_mk_tycomb = lmk_tcomb "list_mk_tycomb"
 end;
 
-
 fun dest_tycomb (TComb r) = r
   | dest_tycomb (t as Clos _) = dest_tycomb (push_clos t)
   | dest_tycomb _ = raise ERR "dest_tycomb" "not a type comb"
+
 
 fun dest_var (Fv v) = v
   | dest_var _ = raise ERR "dest_var" "not a var"
@@ -944,6 +944,7 @@ fun dest_abs(Abs(Bvar as Fv(Name,Ty), Body)) =
   | dest_abs _ = raise ERR "dest_abs" "not a lambda abstraction"
 end;
 
+
 (* Now for stripping binders of type abstractions of terms. *)
 
 local fun peel f (t as Clos _) A = peel f (push_clos t) A
@@ -995,8 +996,8 @@ fun strip_tybinder opt =
             dupls)
         end
      fun variantAV n =
-       let val next = Lexis.nameStrm n
-           fun loop s = case lookAV s of NONE => s | SOME _ => loop (next())
+       let val next = Lexis.tyvar_vary
+           fun loop s = case lookAV s of NONE => s | SOME _ => loop (next s)
        in loop n
        end
      fun CVs (Fv(n,Ty)) capt k   = CVts Ty capt k
@@ -1065,7 +1066,7 @@ fun dest_tyabs(TAbs(Bvar as (Name,Arity,Rank), Body)) =
           | dest (Const(N,Ty)) i        = Const(N, destpty Ty i)
           | dest (Comb(Rator,Rand)) i   = Comb(dest Rator i,dest Rand i)
           | dest (TComb(Rator,Ty)) i    = TComb(dest Rator i,destty Ty i)
-          | dest (Abs(Bvar,Body)) i     = Abs(Bvar, dest Body i)
+          | dest (Abs(Bvar,Body)) i     = Abs(dest Bvar i, dest Body i)
           | dest (TAbs(Bvar,Body)) i    = TAbs(Bvar, dest Body (i+1))
           | dest (t as Clos _) i        = dest (push_clos t) i
           | dest tm _ = tm
@@ -1307,5 +1308,30 @@ fun pp_raw_term index pps tm =
    add_string "`";
    end_block()
  end;
+
+(*---------------------------------------------------------------------------*)
+(* Send the results of prettyprinting to a string                            *)
+(*---------------------------------------------------------------------------*)
+
+fun sprint pp x = PP.pp_to_string 72 pp x
+
+val term_to_string = sprint (pp_raw_term (fn t => ~1));
+
+(*
+val _ = installPP Kind.pp_kind;
+val _ = installPP pp_raw_type;
+val _ = installPP (pp_raw_term (fn t => ~1));
+*)
+
+(* Tests:
+
+val tm0 = mk_var("x", alpha);
+val tm1 = mk_abs(tm0, tm0);
+val tm2 = mk_tyabs(alpha, tm1);
+val (ty1,tm3) = dest_tyabs tm2;
+val tm4 = mk_tyabs(alpha, tm2);
+val (tys, tm5) = strip_tyabs tm4;
+
+*)
 
 end (* Term *)

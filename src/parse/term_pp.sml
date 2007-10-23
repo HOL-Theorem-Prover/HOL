@@ -436,6 +436,21 @@ fun pp_term (G : grammar) TyG = let
   in
     recurse [] tm
   end
+  fun my_dest_tyabs tm =
+      case dest_term tm of
+        TYLAMB p => p
+      | _ => raise PP_ERR "my_dest_tyabs" "term not a type abstraction"
+
+  fun my_is_tyabs tm = can my_dest_tyabs tm
+  fun my_strip_tyabs tm = let
+    fun recurse acc t = let
+      val (v, body) = my_dest_tyabs t
+    in
+      recurse (v::acc) body
+    end handle HOL_ERR _ => (List.rev acc, t)
+  in
+    recurse [] tm
+  end
 
   (* allow any constant that overloads to the string "LET" to be treated as
      a let. *)
@@ -522,6 +537,55 @@ fun pp_term (G : grammar) TyG = let
         if n <= 0 then (List.rev acc, tm)
         else let
             val (bvar, body) = dest_vstruct bnder res tm
+          in
+            strip (n - 1) (bvar :: acc) body
+          end
+  in
+    strip n [] tm
+  end
+
+
+  fun dest_tyvstruct bnder t =
+      case bnder of
+        NONE => let
+        in
+          case Lib.total my_dest_tyabs t of
+            (SOME (bv, body)) => (bv, body)
+          | (NONE) =>
+               raise PP_ERR "dest_tyvstruct" "term not a type abstraction"
+        end
+      | SOME s => let
+        in
+          case (dest_term t) of
+            COMB(Rator,Rand) => let
+            in
+              if has_name G s Rator andalso my_is_tyabs Rand then let
+                  val (bv, body) = my_dest_tyabs Rand
+                in
+                  (bv, body)
+                end
+              else
+                raise PP_ERR "dest_tyvstruct" "term not a type abstraction"
+            end
+          | _ => raise PP_ERR "dest_tyvstruct" "term not a type abstraction"
+        end
+
+
+  fun strip_tyvstructs bnder tm = let
+    fun strip acc t = let
+      val (bvar, body) = dest_tyvstruct bnder t
+    in
+      strip (bvar::acc) body
+    end handle HOL_ERR _ => (List.rev acc, t)
+  in
+    strip [] tm
+  end
+
+  fun strip_ntyvstructs bnder n tm = let
+    fun strip n acc tm =
+        if n <= 0 then (List.rev acc, tm)
+        else let
+            val (bvar, body) = dest_tyvstruct bnder tm
           in
             strip (n - 1) (bvar :: acc) body
           end
@@ -685,7 +749,9 @@ fun pp_term (G : grammar) TyG = let
     fun tm might_print str =
       case (dest_term tm) of
         COMB(Rator, Rand) => Rator might_print str orelse Rand might_print str
+      | TYCOMB(Rator, _) => Rator might_print str
       | LAMB(_,Body) => Body might_print str
+      | TYLAMB(_,Body) => Body might_print str
       | VAR(Name,Ty) => Name = str
       | CONST x => (lose_constrec_ty x) nmight_print str
 
@@ -747,6 +813,69 @@ fun pp_term (G : grammar) TyG = let
       bvars_seen := bvars_seen_here @ old_seen;
       pr_term body Top Top Top (decdepth depth);
       bvars_seen := old_seen;
+      end_block();
+      pend addparens
+    end
+
+    val pr_type = type_pp.pp_type_with_depth TyG pps (decdepth depth)
+
+    fun pr_typel s [] = raise PP_ERR "pp_term" "no bound variables in type abstraction"
+      | pr_typel s [ty] = pr_type ty
+      | pr_typel s (ty::tys) =
+              (pr_type ty;
+               add_string s;
+               add_break (1,0);
+               pr_typel s tys)
+
+    fun pr_tyabs tm = let
+      val addparens = lgrav <> RealTop orelse rgrav <> RealTop
+      val (bvars, body) = strip_tyvstructs NONE tm (* strip_tyabs tm *)
+(*
+      val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
+      val old_seen = !bvars_seen
+*)
+    in
+      pbegin addparens;
+      begin_block INCONSISTENT 2;
+      add_string (lambda ^ type_intro);
+      begin_block INCONSISTENT 0;
+      pr_typel "" bvars;
+      end_block();
+      add_string endbinding; add_break (1,0);
+(*
+      bvars_seen := bvars_seen_here @ old_seen;
+*)
+      pr_term body Top Top Top (decdepth depth);
+(*
+      bvars_seen := old_seen;
+*)
+      end_block();
+      pend addparens
+    end
+
+    fun pr_tycomb tm = let
+      val addparens = lgrav <> RealTop orelse rgrav <> RealTop
+      val (base, tys) = strip_tycomb tm
+(*
+      val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
+      val old_seen = !bvars_seen
+*)
+    in
+      pbegin addparens;
+      begin_block CONSISTENT 2;
+      pr_term base Top Top Top (decdepth depth);
+      add_break (1,0);
+      add_string "[";
+      add_string type_intro;
+      begin_block INCONSISTENT 0;
+      pr_typel "," tys;
+      end_block();
+      add_string type_intro;
+      add_string "]";
+(*
+      bvars_seen := bvars_seen_here @ old_seen;
+      bvars_seen := old_seen;
+*)
       end_block();
       pend addparens
     end
@@ -1679,7 +1808,9 @@ fun pp_term (G : grammar) TyG = let
             else pr_comb tm Rator Rand
           else maybe_pr_atomf()
         end
-      | LAMB(Bvar, Body) => pr_abs tm
+      | TYCOMB(Rator, Rand) => pr_tycomb tm
+      | LAMB  (Bvar,  Body) => pr_abs tm
+      | TYLAMB(Bvar,  Body) => pr_tyabs tm
   end handle SimpleExit => ()
   fun start_names() = {fvars_seen = ref [], bvars_seen = ref []}
 in

@@ -111,6 +111,7 @@ sig
   (* Construction of a term from a list of terms *)
 
   val list_mk_abs            : term list * term -> term
+  val list_mk_tyabs          : hol_type list * term -> term
   val list_mk_forall         : term list * term -> term
   val list_mk_exists         : term list * term -> term
   val list_mk_imp            : term list * term -> term
@@ -127,6 +128,8 @@ sig
 
   val strip_comb             : term -> term * term list
   val strip_abs              : term -> term list * term
+  val strip_tycomb           : term -> term * hol_type list
+  val strip_tyabs            : term -> hol_type list * term
   val strip_imp              : term -> term list * term
   val strip_imp_only         : term -> term list * term
   val strip_forall           : term -> term list * term

@@ -147,18 +147,31 @@ val strip_comb =
  in strip []
  end;
 
+val strip_tycomb =
+ let val destc = total dest_tycomb
+     fun strip rands M =
+      case destc M
+       of NONE => (M, rands)
+        | SOME(Rator,Rand) => strip (Rand::rands) Rator
+ in strip []
+ end;
+
 
 datatype lambda
-   = VAR   of string * hol_type
-   | CONST of {Name:string, Thy:string, Ty:hol_type}
-   | COMB  of term * term
-   | LAMB  of term * term;
+   = VAR    of string * hol_type
+   | CONST  of {Name:string, Thy:string, Ty:hol_type}
+   | COMB   of term * term
+   | TYCOMB of term * hol_type
+   | LAMB   of term * term
+   | TYLAMB of hol_type * term;
 
 fun dest_term M =
-  COMB(dest_comb M) handle HOL_ERR _ =>
-  LAMB(dest_abs M)  handle HOL_ERR _ =>
-  VAR (dest_var M)  handle HOL_ERR _ =>
-  CONST(dest_thy_const M);
+  COMB  (dest_comb M)   handle HOL_ERR _ =>
+  TYCOMB(dest_tycomb M) handle HOL_ERR _ =>
+  LAMB  (dest_abs M)    handle HOL_ERR _ =>
+  TYLAMB(dest_tyabs M)  handle HOL_ERR _ =>
+  VAR   (dest_var M)    handle HOL_ERR _ =>
+  CONST (dest_thy_const M);
 
 (*---------------------------------------------------------------------------*
  * Used to implement natural deduction style discharging of hypotheses. All  *
@@ -227,7 +240,9 @@ fun find_maximal_terms P t = let
         else
           case dest_term t of
             COMB(f,x) => recurse acc (f::x::ts)
+          | TYCOMB(f,ty) => recurse acc (f::ts)
           | LAMB(v,b) => recurse acc (b::ts)
+          | TYLAMB(ty,b) => recurse acc (b::ts)
           | _ => recurse acc ts
 in
   recurse empty_tmset [t]
@@ -249,7 +264,9 @@ fun term_size t = let
       | t::ts =>
         case dest_term t of
           COMB(f, x) => recurse acc (f::x::ts)
-        | LAMB(v,b) => recurse (1 + acc) (b::ts)
+        | TYCOMB(f, ty) => recurse (1 + acc) (f::ts)
+        | LAMB(v,b)     => recurse (1 + acc) (b::ts)
+        | TYLAMB(ty,b)  => recurse (1 + acc) (b::ts)
         | _ => recurse (1 + acc) ts
 in
   recurse 0 [t]

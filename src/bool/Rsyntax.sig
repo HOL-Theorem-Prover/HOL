@@ -47,10 +47,12 @@ sig
                            consts  : {const_name : string,
                                       fixity : Parse.fixity} list} -> thm
   datatype lambda 
-     = VAR   of {Name:string, Ty:hol_type}
-     | CONST of {Name:string, Thy:string, Ty:hol_type}
-     | COMB  of {Rator:term, Rand:term}
-     | LAMB  of {Bvar:term, Body:term};
+     = VAR    of {Name:string, Ty:hol_type}
+     | CONST  of {Name:string, Thy:string, Ty:hol_type}
+     | COMB   of {Rator:term, Rand:term}
+     | TYCOMB of {Rator:term, Rand:hol_type}
+     | LAMB   of {Bvar:term, Body:term}
+     | TYLAMB of {Bvar:hol_type, Body:term};
 
   val dest_term : term -> lambda
 end

@@ -99,5 +99,6 @@ sig
                       -> (hol_type,hol_type) Lib.subst * hol_type list
                       -> (hol_type,hol_type) Lib.subst * hol_type list
 
- val pp_raw_type   : ppstream -> hol_type -> unit
+ val pp_raw_type    : ppstream -> hol_type -> unit
+ val type_to_string : hol_type -> string
 end
