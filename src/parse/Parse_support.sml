@@ -24,6 +24,7 @@ fun add_scope(b,{scope,free}) = {scope=b::scope, free=free};
 
 val empty_env = {scope=[], free=[]};
 
+type pretype_in_env = env -> Pretype.pretype * env
 type preterm_in_env = env -> Preterm.preterm * env
 
 (*---------------------------------------------------------------------------*
@@ -53,7 +54,7 @@ fun make_preterm tm_in_e = fst(tm_in_e empty_env)
  *---------------------------------------------------------------------------*)
 
 fun make_aq l tm {scope,free} = let
-  open Term Preterm
+  open Pretype Term Preterm 
   fun from ltm (E as (lscope,scope,free)) =
     case ltm of
       VAR (v as (Name,Ty)) =>
@@ -75,12 +76,23 @@ fun make_aq l tm {scope,free} = let
            val (ptm2,E2) = from (dest_term Rand) E1
        in (Comb{Rator=ptm1, Rand=ptm2, Locn=l}, E2)
        end
+    | TYCOMB(Rator,Rand)   =>
+       let val (ptm,E1) = from (dest_term Rator) E
+           val pty = Pretype.fromType Rand
+       in (TyComb{Rator=ptm, Rand=pty, Locn=l}, E1)
+       end
     | LAMB(Bvar,Body) =>
        let val (s,ty) = dest_var Bvar
            val v' = {Name=s, Ty = Pretype.fromType ty, Locn=l}
            val (Body',(_,_,free')) = from (dest_term Body)
                                           (v'::lscope, scope, free)
        in (Abs{Bvar=Var v', Body=Body', Locn=l}, (lscope,scope,free'))
+       end
+    | TYLAMB(Bvar,Body) =>
+       let val v' = Pretype.fromType Bvar
+           val (Body',(_,_,free')) = from (dest_term Body)
+                                          (lscope, scope, free) (* <-- fix this; add tyvar scope? *)
+       in (TyAbs{Bvar=v', Body=Body', Locn=l}, (lscope,scope,free'))
        end
   val (ptm, (_,_,free)) = from (dest_term tm) ([],scope,free)
 in
@@ -129,6 +141,12 @@ fun make_binding_occ l s binder E =
     |  _   => ((fn b => Comb{Rator=gen_const l binder, Locn=locn.near (Preterm.locn b),
                                   Rand=Abs{Bvar=Var{Name=s,Ty=ntv,Locn=l}, Body=b, Locn=locn.near (Preterm.locn b)}}), E')
  end;
+
+fun make_tybinding_occ pty binder E =
+ let open Preterm
+ in ((fn b => TyAbs{Bvar=pty, Body=b, Locn=locn.near (Preterm.locn b)}), E)
+ end;
+  
 
 
 fun make_aq_binding_occ l aq binder E = let
@@ -293,6 +311,11 @@ fun list_make_comb l (tm1::(rst as (_::_))) E =
         in (Preterm.Comb{Rator = trm, Rand = tm', Locn=l}, e') end)     rst (tm1 E)
   | list_make_comb l _ _ = raise ERRORloc "list_make_comb" l "insufficient args";
 
+fun list_make_tycomb l tm1 (tys as (_::_)) E =
+     rev_itlist (fn ty => fn (trm,e) =>
+        (Preterm.TyComb{Rator = trm, Rand = ty, Locn=l}, e))     tys (tm1 E)
+  | list_make_tycomb l _ _ _ = raise ERRORloc "list_make_tycomb" l "insufficient args";
+
 (*---------------------------------------------------------------------------
  * Constraints
  *---------------------------------------------------------------------------*)
@@ -378,8 +401,8 @@ fun bind_restr_term l binder vlist restr tm (E as {scope=scope0,...}:env)=
 
 fun split (Pretype.PT(ty,locn)) = let
   open Pretype
-  val pair_conty = Contype{Thy = "pair", Tyop = "prod", Kind = mk_arity 2,
-                           Rank = 0}
+  val pair_conty = Contype{Thy = "pair", Tyop = "prod",
+                           Kind = Prekind.mk_arity 2, Rank = 0}
 in
   case ty of
     TyApp(PT(TyApp(PT(con, _), arg1), _), arg2) => if con = pair_conty then

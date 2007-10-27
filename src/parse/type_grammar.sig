@@ -1,6 +1,21 @@
 signature type_grammar =
 sig
 
+(* HOL-Omega concrete syntax (suggestive; without infixes, arrays, etc.:
+
+Type is the root nonterminal.
+
+Type   ::= TApp | Type TApp
+TApp   ::= Leaf | Tuple TApp
+Leaf   ::= string | '(' Type ')'
+Tuple ::= '(' Type ',' TupR ')'
+TupR  ::= Type | Type ',' TupR
+
+Could be
+TApp   ::= Leaf | Tuple Leaf
+
+*)
+
   datatype grammar_rule
     = SUFFIX of string list
     | ARRAY_SFX 

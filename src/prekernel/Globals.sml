@@ -68,6 +68,7 @@ end;
  * Prettyprinting flags                                                      *
  *---------------------------------------------------------------------------*)
 
+val kind_pp_prefix = ref "`"  and kind_pp_suffix = ref "`"
 val type_pp_prefix = ref "`"  and type_pp_suffix = ref "`"
 val term_pp_prefix = ref "`"  and term_pp_suffix = ref "`"
 

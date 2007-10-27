@@ -10,6 +10,6 @@ sig
 
   val ANDNOT : charclass * charclass -> charclass
   val OR : charclass * charclass -> charclass
-   val ITEMS : string -> charclass
+  val ITEMS : string -> charclass
   val ITEM : char -> charclass
 end

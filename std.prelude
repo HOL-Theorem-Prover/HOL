@@ -27,6 +27,7 @@ in
   val _ = installPP (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
   val _ = installPP (with_pp Hol_pp.pp_thm)
   val _ = installPP (with_pp Hol_pp.pp_theory)
+  val _ = installPP (with_pp kind_grammar.prettyprint_grammar)
   val _ = installPP (with_pp type_grammar.prettyprint_grammar)
   val _ = installPP (with_pp term_grammar.prettyprint_grammar)
 

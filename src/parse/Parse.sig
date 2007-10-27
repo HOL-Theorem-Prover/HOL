@@ -2,6 +2,7 @@ signature Parse = sig
 
   type term = Term.term
   type hol_type = Type.hol_type
+  type kind = Kind.kind
   type thm = Thm.thm
   type associativity = HOLgrammars.associativity
   type pp_element = term_grammar.pp_element
@@ -15,6 +16,23 @@ signature Parse = sig
      = RF of term_grammar.rule_fixity
      | Prefix
      | Binder
+
+  (* Parsing Kinds *)
+
+  val kind_grammar : unit -> kind_grammar.grammar
+  val Kind         : kind frag list -> kind
+  val ===          : kind frag list -> 'a -> kind
+
+  val add_kind : string -> unit
+  val temp_add_kind : string -> unit
+  val add_infix_kind : {Prec : int,
+                        ParseName : string option,
+                        Name : string,
+                        Assoc : associativity} -> unit
+  val temp_add_infix_kind : {Prec : int,
+                             ParseName : string option,
+                             Name : string,
+                             Assoc : associativity} -> unit
 
   (* Parsing Types *)
 
@@ -157,6 +175,7 @@ signature Parse = sig
 
   val pp_term : ppstream -> term -> unit
   val pp_type : ppstream -> hol_type -> unit
+  val pp_kind : ppstream -> kind -> unit
   val pp_thm : ppstream -> thm -> unit
   val pp_with_bquotes :
     (ppstream -> 'a -> unit) -> (ppstream -> 'a -> unit)
@@ -168,16 +187,21 @@ signature Parse = sig
   val type_pp_with_delimiters :
     (ppstream -> hol_type -> unit) ->
     ppstream -> hol_type -> unit
+  val kind_pp_with_delimiters :
+    (ppstream -> hol_type -> unit) ->
+    ppstream -> hol_type -> unit
   val get_term_printer : unit -> (ppstream -> term -> unit)
   val set_term_printer : (ppstream -> term -> unit) ->
                                ppstream -> term -> unit
 
   val term_to_string : term -> string
   val type_to_string : hol_type -> string
+  val kind_to_string : kind -> string
   val thm_to_string : thm -> string
 
   val print_thm : thm -> unit
   val print_type : hol_type -> unit
+  val print_kind : kind -> unit
   val print_term : term -> unit
 
   val export_theorems_as_docfiles : string -> (string * thm) list -> unit

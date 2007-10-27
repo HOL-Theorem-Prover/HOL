@@ -11,9 +11,11 @@ sig
   | Const of {Name : string, Thy : string, Ty : pretype, Locn : locn.locn}
   | Overloaded of overinfo
   | Comb of  {Rator: preterm, Rand : preterm, Locn : locn.locn}
+  | TyComb of {Rator:preterm, Rand : pretype, Locn : locn.locn}
   | Abs of   {Bvar : preterm, Body : preterm, Locn : locn.locn}
+  | TyAbs of {Bvar : pretype, Body : preterm, Locn : locn.locn}
   | Constrained of {Ptm:preterm, Ty:pretype, Locn:locn.locn}
-  | Antiq of {Tm:Term.term, Locn:locn.locn}
+  | Antiq of {Tm : Term.term, Locn : locn.locn}
   (* | HackHack of bool -> bool *)
   (* Because of the Locn fields, preterms should *not* be compared
      with the built-in equality, but should use eq defined below.

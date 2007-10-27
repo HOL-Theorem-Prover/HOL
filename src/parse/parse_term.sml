@@ -843,8 +843,8 @@ fun parse_term (G : grammar) typeparser = let
         val type_annotation = let
           open Pretype
         in
-          (PT(TyApp(PT(Contype{Thy="bool", Tyop = "itself", Kind = Kind.mk_arity 1,
-                               Rank = 0}, locn.Loc_None),
+          (PT(TyApp(PT(Contype{Thy="bool", Tyop = "itself",
+                               Kind = Prekind.mk_arity 1, Rank = 0}, locn.Loc_None),
                     ty),
               rlocn),
            rlocn)

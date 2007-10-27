@@ -15,7 +15,9 @@ sig
        | IDENT  of locn.locn * string
        | QIDENT of locn.locn * string * string
        | APP    of locn.locn * absyn * absyn
+       | TYAPP  of locn.locn * absyn * pretype
        | LAM    of locn.locn * vstruct * absyn
+       | TYLAM  of locn.locn * pretype * absyn
        | TYPED  of locn.locn * absyn * pretype
 
   val locn_of_absyn   : absyn -> locn.locn
@@ -24,7 +26,9 @@ sig
   val mk_AQ    : term -> absyn
   val mk_ident : string -> absyn
   val mk_app   : absyn * absyn -> absyn
+  val mk_tyapp : absyn * pretype -> absyn
   val mk_lam   : vstruct * absyn -> absyn
+  val mk_tylam : pretype * absyn -> absyn
   val mk_typed : absyn * pretype -> absyn
 
   val mk_eq      : absyn * absyn -> absyn
@@ -41,7 +45,9 @@ sig
   val dest_AQ      : absyn -> term
   val dest_ident   : absyn -> string
   val dest_app     : absyn -> absyn * absyn
+  val dest_tyapp   : absyn -> absyn * pretype
   val dest_lam     : absyn -> vstruct * absyn
+  val dest_tylam   : absyn -> pretype * absyn
   val dest_typed   : absyn -> absyn * pretype
   val dest_eq      : absyn -> absyn * absyn
   val dest_conj    : absyn -> absyn * absyn
@@ -55,7 +61,9 @@ sig
   val dest_binder  : string -> absyn -> vstruct * absyn
 
   val list_mk_app     : absyn * absyn list -> absyn
+  val list_mk_tyapp   : absyn * pretype list -> absyn
   val list_mk_lam     : vstruct list * absyn -> absyn
+  val list_mk_tylam   : pretype list * absyn -> absyn
   val list_mk_conj    : absyn list -> absyn
   val list_mk_disj    : absyn list -> absyn
   val list_mk_imp     : absyn list -> absyn
@@ -66,7 +74,9 @@ sig
   val list_mk_select  : vstruct list * absyn -> absyn
 
   val strip_app     : absyn -> absyn * absyn list
+  val strip_tyapp   : absyn -> absyn * pretype list
   val strip_lam     : absyn -> vstruct list * absyn
+  val strip_tylam   : absyn -> pretype list * absyn
   val strip_conj    : absyn -> absyn list
   val strip_disj    : absyn -> absyn list
   val strip_imp     : absyn -> absyn list
@@ -78,7 +88,9 @@ sig
 
   val is_ident   : absyn -> bool
   val is_app     : absyn -> bool
+  val is_tyapp   : absyn -> bool
   val is_lam     : absyn -> bool
+  val is_tylam   : absyn -> bool
   val is_AQ      : absyn -> bool
   val is_typed   : absyn -> bool
   val is_eq      : absyn -> bool

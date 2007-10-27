@@ -1,7 +1,7 @@
 structure Parse :> Parse =
 struct
 
-open Feedback HolKernel HOLgrammars GrammarSpecials term_grammar type_grammar
+open Feedback HolKernel HOLgrammars GrammarSpecials kind_grammar type_grammar term_grammar
 
 type pp_element = term_grammar.pp_element
 type PhraseBlockStyle = term_grammar.PhraseBlockStyle
@@ -66,6 +66,15 @@ val TruePrefix   = fn n => RF (term_grammar.TruePrefix n)
 
 
 (*---------------------------------------------------------------------------
+         pervasive kind grammar
+ ---------------------------------------------------------------------------*)
+
+(* kind grammar *)
+val the_kind_grammar = ref kind_grammar.empty_grammar
+val kind_grammar_changed = ref false
+fun kind_grammar() = !the_kind_grammar
+
+(*---------------------------------------------------------------------------
          pervasive type grammar
  ---------------------------------------------------------------------------*)
 
@@ -88,6 +97,7 @@ fun current_grammars() = (type_grammar(), term_grammar());
          local grammars
  ---------------------------------------------------------------------------*)
 
+val the_lkd_grm = ref kind_grammar.empty_grammar
 val the_lty_grm = ref type_grammar.empty_grammar
 val the_ltm_grm = ref term_grammar.stdhol
 fun current_lgrms() = (!the_lty_grm, !the_ltm_grm);
@@ -104,7 +114,124 @@ fun fixity s =
        Mysterious stuff
  ---------------------------------------------------------------------------*)
 
+(* ============ *)
+(* kind parsing *)
+(* ============ *)
+
+val kd_antiq = type_pp.kd_antiq;
+val dest_kd_antiq = type_pp.dest_kd_antiq;
+val is_kd_antiq = type_pp.is_kd_antiq;
+
+fun remove_kd_aq t =
+  if is_kd_antiq t then dest_kd_antiq t
+  else raise ERROR "kind parser" "antiquotation is not of a kind"
+
+(* "qkindop" refers to "qualified" kind operator, i.e., qualified by theory name. *)
+
+fun kindop_to_qkindop ((kindop,locn), args) = let
+  open Prekind
+in
+  if kindop = "*" then typ
+  else if kindop = "=>" then hd args ==> hd(tl args)
+  else raise ERROR "kind parser" (kindop ^ " not a known kind operator")
+end
+
+fun do_qkindop {Thy:string, Kindop, Locn:locn.locn, Args} =
+    kindop_to_qkindop ((Kindop,Locn), Args)
+
+fun arity ((s, locn), n) = Prekind.mk_arity n
+
+
+(* needs changing *)
+fun mk_basevarkd(s,locn) = Prekind.PK(Prekind.Varkind s, locn)
+val kind_p1_rec = {varkind = mk_basevarkd, qkindop = do_qkindop,
+                kindop = kindop_to_qkindop, arity = arity,
+                antiq = fn x => Prekind.fromKind (remove_kd_aq x)}
+
+val kind_p2_rec = {varkind = mk_basevarkd, qkindop = do_qkindop,
+                kindop = kindop_to_qkindop, arity = arity,
+                antiq = Prekind.fromKind}
+
+val kind_parser1 =
+  ref (parse_kind.parse_kind kind_p1_rec false (kind_grammar()))
+
+val kind_parser2 =
+  ref (parse_kind.parse_kind kind_p2_rec false (kind_grammar()))
+
+
+(*---------------------------------------------------------------------------
+        pretty printing kinds
+ ---------------------------------------------------------------------------*)
+
+val kind_printer = ref (kind_pp.pp_kind (kind_grammar()))
+
+fun update_kind_fns () =
+  if !kind_grammar_changed then let in
+     kind_parser1 := parse_kind.parse_kind kind_p1_rec false (kind_grammar());
+     kind_parser2 := parse_kind.parse_kind kind_p2_rec false (kind_grammar());
+     kind_printer := kind_pp.pp_kind (kind_grammar());
+     kind_grammar_changed := false
+  end
+  else ()
+
+fun pp_kind pps kind = let in
+   update_kind_fns();
+   Portable.add_string pps ":";
+   !kind_printer pps kind
+ end
+
+val kind_to_string = Portable.pp_to_string 75 pp_kind
+fun print_kind kind = Portable.output(Portable.std_out, kind_to_string kind);
+
+fun kind_pp_with_delimiters ppfn pp kind =
+  let open Portable Globals
+  in add_string pp (!kind_pp_prefix);
+     ppfn pp kind;
+     add_string pp (!kind_pp_suffix)
+  end
+
+
+(*---------------------------------------------------------------------------
+              Parsing kinds
+ ---------------------------------------------------------------------------*)
+
+local open parse_kind
+in
+fun parse_Kind parser q = let
+  open base_tokens qbuf
+  val qb = new_buffer q
+in
+  case qbuf.current qb of
+    (BT_Ident s,locn) =>
+    if String.size s < 2 orelse
+       String.sub(s, 0) <> #":" orelse String.sub(s, 1) <> #":" then
+      raise ERRORloc "parse_Kind" locn "kinds must begin with a double colon"
+    else let
+        val _ = if size s = 2 then advance qb
+                else let val locn' = locn.move_start 2 locn in
+                     replace_current (BT_Ident (String.extract(s, 2, NONE)),locn') qb end
+        val pk = parser qb
+      in
+        case current qb of
+            (BT_EOI,_) => Prekind.toKind pk
+          | (_,locn) => raise ERRORloc "parse_Kind" locn
+                                       ("Couldn't make any sense of remaining input.")
+      end
+  | (_,locn) => raise ERRORloc "parse_Kind" locn "kinds must begin with a double colon"
+end
+end (* local *)
+
+fun Kind q = let in
+   update_kind_fns();
+   parse_Kind (!kind_parser2) q
+ end
+
+fun === q x = Kind q;
+
+
+(* ============ *)
 (* type parsing *)
+(* ============ *)
 
 val ty_antiq = term_pp.ty_antiq;
 val dest_ty_antiq = term_pp.dest_ty_antiq;
@@ -114,8 +241,10 @@ fun remove_ty_aq t =
   if is_ty_antiq t then dest_ty_antiq t
   else raise ERROR "type parser" "antiquotation is not of a type"
 
+(* "qtyop" refers to "qualified" type operator, i.e., qualified by theory name. *)
+
 fun tyop_to_qtyop ((tyop,locn), args) = let
-  open Pretype
+  open Prekind Pretype
 in
   case Type.decls tyop of
     [] => raise ERRORloc "type parser" locn (tyop^" not a known type operator")
@@ -127,7 +256,7 @@ in
 end
 
 fun do_qtyop {Thy,Tyop,Locn,Args} = let
-  open Pretype
+  open Prekind Pretype
 in
   List.foldl (fn (arg,acc) => PT(TyApp(acc,arg),Locn))
              (PT(Contype {Thy=Thy,Tyop=Tyop, Kind=mk_arity (length Args),Rank = 0},
@@ -136,7 +265,7 @@ in
 end
 
 (* needs changing *)
-fun mk_basevarty(s,locn) = Pretype.PT(Pretype.Vartype(s,mk_arity 0,0), locn)
+fun mk_basevarty(s,locn) = Pretype.PT(Pretype.Vartype(s,Prekind.typ,0), locn)
 val typ1_rec = {vartype = mk_basevarty, qtyop = do_qtyop,
                 tyop = tyop_to_qtyop,
                 antiq = fn x => Pretype.fromType (remove_ty_aq x)}
@@ -485,6 +614,7 @@ local open Parse_support Absyn
     | binder(VPAIR(l,v1,v2))  = make_vstruct l [binder v1, binder v2] NONE
     | binder(VAQ (l,x))       = make_aq_binding_occ l x
     | binder(VTYPED(l,v,pty)) = make_vstruct l [binder v] (SOME pty)
+  val tybinder = make_tybinding_occ
   fun to_vstruct t =
       case t of
         APP(l, APP(_, IDENT (_, ","), t1), t2) => VPAIR(l, to_vstruct t1,
@@ -513,9 +643,11 @@ in
         make_seq_abs l (to_ptmInEnv t1, to_ptmInEnv t2)
 *)
     | APP(l, t1, t2)     => list_make_comb l (map to_ptmInEnv [t1, t2])
+    | TYAPP(l, tm, ty)   => list_make_tycomb l (to_ptmInEnv tm) [ty]
     | IDENT (l, s)       => make_atom ginfo l s
     | QIDENT (l, s1, s2) => make_qconst ginfo l (s1,s2)
     | LAM(l, vs, t)      => bind_term l "\\" [binder vs] (to_ptmInEnv t)
+    | TYLAM(l, tv, t)    => bind_term l "\\:" [tybinder tv] (to_ptmInEnv t)
     | TYPED(l, t, pty)   => make_constrained l (to_ptmInEnv t) pty
     | AQ (l, t)          => make_aq l t
   end
@@ -631,6 +763,47 @@ val grm_updates = ref [] : (string * string) list ref;
 
 fun update_grms fname p = grm_updates := (p :: !grm_updates);
 
+
+(* kinds *)
+
+fun temp_add_kind s = let open parse_kind in
+   the_kind_grammar := kind_grammar.new_kindop (!the_kind_grammar) s;
+   kind_grammar_changed := true;
+   type_grammar_changed := true;
+   term_grammar_changed := true
+ end;
+
+fun add_kind s = let in
+   temp_add_kind s;
+   update_grms "add_kind" ("temp_add_kind", Lib.quote s)
+ end
+
+fun temp_add_infix_kind {Name, ParseName, Assoc, Prec} =
+ let open parse_kind
+ in the_kind_grammar
+       := new_binary_kindop (!the_kind_grammar)
+              {precedence = Prec, infix_form = ParseName,
+               opname = Name, associativity = Assoc};
+    kind_grammar_changed := true;
+    type_grammar_changed := true;
+    term_grammar_changed := true
+ end
+
+fun add_infix_kind (x as {Name, ParseName, Assoc, Prec}) = let in
+  temp_add_infix_kind x;
+  update_grms "add_infix_kind"
+              ("temp_add_infix_kind",
+               String.concat
+                 ["{Name = ", quote Name,
+                  ", ParseName = ",
+                  case ParseName of NONE => "NONE"
+                                  | SOME s => "SOME "^quote s,
+                  ", Assoc = ", assocToString Assoc,
+                  ", Prec = ", Int.toString Prec, "}"])
+ end
+
+
+(* types *)
 
 fun temp_add_type s = let open parse_type in
    the_type_grammar := new_tyop (!the_type_grammar) s;

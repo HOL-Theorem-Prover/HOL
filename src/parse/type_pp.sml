@@ -13,7 +13,23 @@ datatype single_rule
    = SR
    | IR of associativity * string
 
+val PP_ERR = mk_HOL_ERR "type_pp";
+
 val ERR = mk_HOL_ERR "type_pp" "pp_type";
+
+(*---------------------------------------------------------------------------
+       Kind antiquotations (required in type parser)
+ ---------------------------------------------------------------------------*)
+
+fun kd_antiq kd = mk_vartype_opr("'kd_antiq",kd,0)
+
+fun dest_kd_antiq ty =
+  case Lib.with_exn dest_vartype_opr ty (PP_ERR "dest_kd_antiq" "not a kind antiquotation")
+   of ("'kd_antiq",Kd,0) => Kd
+    |  _ => raise PP_ERR "dest_kd_antiq" "not a kind antiquotation";
+
+val is_kd_antiq = Lib.can dest_kd_antiq
+
 
 val pp_num_types = ref true
 val _ = register_btrace("pp_num_types", pp_num_types)
@@ -51,8 +67,11 @@ in
   else raise ERR "dest_arraytype: not an array type"
 end
 
+(* This trace variable is now established in kind_pp.sml.
 val show_kinds = ref 0
 val _ = Feedback.register_trace("kinds", show_kinds, 2)
+*)
+val show_kinds = Feedback.get_tracefn "kinds"
 
 fun pp_type0 (G:grammar) = let
   fun lookup_tyop s = let
@@ -94,15 +113,15 @@ fun pp_type0 (G:grammar) = let
     end
 
     fun print_var grav (s,k,r) =
-        if (k <> Kind.typ orelse r <> 0) andalso !show_kinds = 1 orelse
-           !show_kinds = 2
+        if (k <> Kind.typ orelse r <> 0) andalso show_kinds() = 1 orelse
+           show_kinds() = 2
         then let
             val parens_needed =
                  case grav of Top => false | _ => true
           in
             pbegin parens_needed;
             add_string s;
-            if k <> Kind.typ orelse !show_kinds = 2 then let
+            if k <> Kind.typ orelse show_kinds() = 2 then let
                 val p = r <> 0 andalso not (Kind.is_arity k)
               in
                 add_string "::";
@@ -111,7 +130,7 @@ fun pp_type0 (G:grammar) = let
                 pend p
               end
             else ();
-            if r <> 0 orelse !show_kinds = 2 then
+            if r <> 0 orelse show_kinds() = 2 then
               (add_string " <= "; add_string (Int.toString r))
             else ();
             pend parens_needed

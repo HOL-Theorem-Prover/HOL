@@ -12,13 +12,15 @@ type term = Term.term
 type overinfo = {Name:string, Ty:pretype,
                  Info:Overload.overloaded_op_info, Locn:locn.locn}
 
-datatype preterm = Var   of {Name:string,  Ty:pretype, Locn:locn.locn}
-                 | Const of {Name:string,  Thy:string, Ty:pretype, Locn:locn.locn}
+datatype preterm = Var    of {Name:string,  Ty:pretype, Locn:locn.locn}
+                 | Const  of {Name:string,  Thy:string, Ty:pretype, Locn:locn.locn}
                  | Overloaded of overinfo
-                 | Comb  of {Rator:preterm, Rand:preterm, Locn:locn.locn}
-                 | Abs   of {Bvar:preterm, Body:preterm, Locn:locn.locn}
+                 | Comb   of {Rator:preterm, Rand:preterm, Locn:locn.locn}
+                 | TyComb of {Rator:preterm, Rand:pretype, Locn:locn.locn}
+                 | Abs    of {Bvar:preterm, Body:preterm, Locn:locn.locn}
+                 | TyAbs  of {Bvar:pretype, Body:preterm, Locn:locn.locn}
                  | Constrained of {Ptm:preterm, Ty:pretype, Locn:locn.locn}
-                 | Antiq of {Tm:Term.term, Locn:locn.locn}
+                 | Antiq  of {Tm:Term.term, Locn:locn.locn}
               (* | HackHack of bool -> bool *)
               (* Because of the Locn fields, preterms should *not* be compared
                  with the built-in equality, but should use eq defined below.
@@ -32,7 +34,9 @@ fun locn (Var{Locn,...})         = Locn
   | locn (Const{Locn,...})       = Locn
   | locn (Overloaded{Locn,...})  = Locn
   | locn (Comb{Locn,...})        = Locn
+  | locn (TyComb{Locn,...})      = Locn
   | locn (Abs{Locn,...})         = Locn
+  | locn (TyAbs{Locn,...})       = Locn
   | locn (Constrained{Locn,...}) = Locn
   | locn (Antiq{Locn,...})       = Locn
 
@@ -40,11 +44,15 @@ fun locn (Var{Locn,...})         = Locn
      Location-ignoring equality for preterms.
  ---------------------------------------------------------------------------*)
 
-fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...})                   = Name=Name' andalso Ty=Ty'
-  | eq (Const{Name=Name,Thy=Thy,Ty=Ty,...})        (Const{Name=Name',Thy=Thy',Ty=Ty',...})        = Name=Name' andalso Thy=Thy' andalso Ty=Ty'
-  | eq (Overloaded{Name=Name,Ty=Ty,Info=Info,...}) (Overloaded{Name=Name',Ty=Ty',Info=Info',...}) = Name=Name' andalso Ty=Ty' andalso Info=Info'
+val eq_type = Pretype.eq
+
+fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...})                   = Name=Name' andalso eq_type Ty Ty'
+  | eq (Const{Name=Name,Thy=Thy,Ty=Ty,...})        (Const{Name=Name',Thy=Thy',Ty=Ty',...})        = Name=Name' andalso Thy=Thy' andalso eq_type Ty Ty'
+  | eq (Overloaded{Name=Name,Ty=Ty,Info=Info,...}) (Overloaded{Name=Name',Ty=Ty',Info=Info',...}) = Name=Name' andalso eq_type Ty Ty' andalso Info=Info'
   | eq (Comb{Rator=Rator,Rand=Rand,...})           (Comb{Rator=Rator',Rand=Rand',...})            = eq Rator Rator' andalso eq Rand Rand'
+  | eq (TyComb{Rator=Rator,Rand=Rand,...})         (TyComb{Rator=Rator',Rand=Rand',...})          = eq Rator Rator' andalso eq_type Rand Rand'
   | eq (Abs{Bvar=Bvar,Body=Body,...})              (Abs{Bvar=Bvar',Body=Body',...})               = eq Bvar Bvar' andalso eq Body Body'
+  | eq (TyAbs{Bvar=Bvar,Body=Body,...})            (TyAbs{Bvar=Bvar',Body=Body',...})             = eq_type Bvar Bvar' andalso eq Body Body'
   | eq (Constrained{Ptm=Ptm,Ty=Ty,...})            (Constrained{Ptm=Ptm',Ty=Ty',...})             = eq Ptm Ptm' andalso Ty=Ty'
   | eq (Antiq{Tm=Tm,...})                          (Antiq{Tm=Tm',...})                            = Tm=Tm'
   | eq  _                                           _                                             = false
@@ -60,12 +68,16 @@ fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...}) 
      shr takes a location for now, until Preterm has a location built-in.
  ---------------------------------------------------------------------------*)
 
+val clean_type = Pretype.clean
+
 fun clean shr =
  let fun
    cl(Var{Name,Ty,Locn})            = Term.mk_var(Name, shr Locn Ty)
  | cl(Const{Name,Thy,Ty,Locn})      = Term.mk_thy_const{Name=Name,Thy=Thy,Ty=shr Locn Ty}
  | cl(Comb{Rator,Rand,...})         = Term.mk_comb(cl Rator,cl Rand)
+ | cl(TyComb{Rator,Rand,...})       = Term.mk_tycomb(cl Rator,clean_type Rand)
  | cl(Abs{Bvar,Body,...})           = Term.mk_abs(cl Bvar, cl Body)
+ | cl(TyAbs{Bvar,Body,...})         = Term.mk_tyabs(clean_type Bvar, cl Body)
  | cl(Antiq{Tm,...})                = Tm
  | cl(Constrained{Ptm,...})         = cl Ptm
  | cl(Overloaded{Name,Ty,Locn,...}) = Term.mk_const(Name, shr Locn Ty)
@@ -74,14 +86,28 @@ fun clean shr =
 
 val has_free_uvar = Pretype.has_free_uvar
 
+fun kindVars ptm =  (* the prekind variables in a preterm *)
+  case ptm of
+    Var{Ty,...}             => Pretype.kindvars Ty
+  | Const{Ty,...}           => Pretype.kindvars Ty
+  | Comb{Rator,Rand,...}    => Lib.union (kindVars Rator) (kindVars Rand)
+  | TyComb{Rator,Rand,...}  => Lib.union (kindVars Rator) (Pretype.kindvars Rand)
+  | Abs{Bvar,Body,...}      => Lib.union (kindVars Bvar) (kindVars Body)
+  | TyAbs{Bvar,Body,...}    => Lib.union (Pretype.kindvars Bvar) (kindVars Body)
+  | Antiq{Tm,...}           => [] (* kindVars (fromTerm Tm) *)
+  | Constrained{Ptm,Ty,...} => Lib.union (kindVars Ptm) (Pretype.kindvars Ty)
+  | Overloaded _            => raise Fail "Preterm.kindVars: applied to Overloaded";
+
 fun tyVars ptm =  (* the pretype variables in a preterm *)
   case ptm of
-    Var{Ty,...}             => map #1 (Pretype.tyvars Ty)
-  | Const{Ty,...}           => map #1 (Pretype.tyvars Ty)
+    Var{Ty,...}             => Pretype.tyvars Ty
+  | Const{Ty,...}           => Pretype.tyvars Ty
   | Comb{Rator,Rand,...}    => Lib.union (tyVars Rator) (tyVars Rand)
+  | TyComb{Rator,Rand,...}  => Lib.union (tyVars Rator) (Pretype.tyvars Rand)
   | Abs{Bvar,Body,...}      => Lib.union (tyVars Bvar) (tyVars Body)
+  | TyAbs{Bvar,Body,...}    => Lib.union (Pretype.tyvars Bvar) (tyVars Body)
   | Antiq{Tm,...}           => map Type.dest_vartype (Term.type_vars_in_term Tm)
-  | Constrained{Ptm,Ty,...} => Lib.union (tyVars Ptm) (map #1 (Pretype.tyvars Ty))
+  | Constrained{Ptm,Ty,...} => Lib.union (tyVars Ptm) (Pretype.tyvars Ty)
   | Overloaded _            => raise Fail "Preterm.tyVars: applied to Overloaded";
 
 
@@ -112,24 +138,38 @@ fun to_term tm =
           | Comb{Rator, Rand,...} => cleanup Rator >- (fn Rator'
                                   => cleanup Rand  >- (fn Rand'
                                   => return (Term.mk_comb(Rator', Rand'))))
+          | TyComb{Rator, Rand,...} => cleanup Rator >- (fn Rator'
+                                  => Pretype.replace_null_links Rand >- (fn _
+                                  => return (Term.mk_tycomb(Rator', clean Rand))))
           | Abs{Bvar, Body,...} => cleanup Bvar >- (fn Bvar'
                                 => cleanup Body >- (fn Body'
                                 => return (Term.mk_abs(Bvar', Body'))))
+          | TyAbs{Bvar, Body,...} => Pretype.replace_null_links Bvar >- (fn _
+                                => cleanup Body >- (fn Body'
+                                => return (Term.mk_tyabs(clean Bvar, Body'))))
           | Antiq{Tm,...} => return Tm
           | Constrained{Ptm,...} => cleanup Ptm
           | Overloaded _ => raise ERRloc "to_term" (locn tm)
                                          "applied to Overloaded"
         end
+        val K = kindVars tm
         val V = tyVars tm
-        val (newV, result) = cleanup tm V
+        val ((newK,newV), result) = cleanup tm (K,V)
+        val guessed_kindvars = List.take(newK, length newK - length K)
         val guessed_vars = List.take(newV, length newV - length V)
         val _ =
+           (if not (null guessed_kindvars) andalso !Globals.notify_on_tyvar_guess
+               andalso !Globals.interactive
+            then Feedback.HOL_MESG (String.concat
+                                      ("inventing new kind variable names: "
+                                       :: Lib.commafy (List.rev guessed_kindvars)))
+            else ();
             if not (null guessed_vars) andalso !Globals.notify_on_tyvar_guess
                andalso !Globals.interactive
             then Feedback.HOL_MESG (String.concat
                                       ("inventing new type variable names: "
                                        :: Lib.commafy (List.rev guessed_vars)))
-            else ()
+            else ())
       in
         valOf result
       end
@@ -162,7 +202,11 @@ fun remove_overloading_phase1 ptm =
   case ptm of
     Comb{Rator, Rand, Locn} => Comb{Rator = remove_overloading_phase1 Rator,
                                     Rand = remove_overloading_phase1 Rand, Locn = Locn}
+  | TyComb{Rator, Rand, Locn} => TyComb{Rator = remove_overloading_phase1 Rator,
+                                    Rand = Rand, Locn = Locn}
   | Abs{Bvar, Body, Locn} => Abs{Bvar = remove_overloading_phase1 Bvar,
+                                 Body = remove_overloading_phase1 Body, Locn = Locn}
+  | TyAbs{Bvar, Body, Locn} => TyAbs{Bvar = Bvar,
                                  Body = remove_overloading_phase1 Body, Locn = Locn}
   | Constrained{Ptm, Ty, Locn} => Constrained{Ptm = remove_overloading_phase1 Ptm, Ty = Ty, Locn = Locn}
   | Overloaded{Name,Ty,Info,Locn} =>
@@ -212,8 +256,12 @@ fun remove_overloading ptm = let
       Overloaded x => x::acc
     | Comb{Rator, Rand, ...} =>
         overloaded_subterms (overloaded_subterms acc Rand) Rator
+    | TyComb{Rator, Rand, ...} =>
+        overloaded_subterms acc Rator
     | Abs{Bvar,Body,...} =>
         overloaded_subterms (overloaded_subterms acc Body) Bvar
+    | TyAbs{Bvar,Body,...} =>
+        overloaded_subterms acc Body
     | Constrained{Ptm,...} => overloaded_subterms acc Ptm
     | _ => acc
   val overloads = overloaded_subterms [] ptm
@@ -244,7 +292,7 @@ end
 fun do_overloading_removal ptm0 = let
   open seq
   val ptm = remove_overloading_phase1 ptm0
-  val result = remove_overloading ptm []
+  val result = remove_overloading ptm ([],[])
   fun apply_subst subst = app (fn (r, value) => r := SOME value) subst
   fun do_csubst clist ptm =
     case clist of
@@ -261,12 +309,24 @@ fun do_overloading_removal ptm0 = let
           in
             (Comb{Rator = Rator', Rand = Rand', Locn = Locn}, clist'')
           end
+        | TyComb{Rator, Rand, Locn} => let
+            (* Rator only *)
+            val (Rator', clist') = do_csubst clist Rator
+          in
+            (TyComb{Rator = Rator', Rand = Rand, Locn = Locn}, clist')
+          end
         | Abs{Bvar, Body, Locn} => let
             (* Bvar before Body *)
             val (Bvar', clist') = do_csubst clist Bvar
             val (Body', clist'') = do_csubst clist' Body
           in
             (Abs{Bvar = Bvar', Body = Body', Locn = Locn}, clist'')
+          end
+        | TyAbs{Bvar, Body, Locn} => let
+            (* Body only *)
+            val (Body', clist') = do_csubst clist Body
+          in
+            (TyAbs{Bvar = Bvar, Body = Body', Locn = Locn}, clist')
           end
         | Constrained{Ptm,Ty,Locn} => let
             val (Ptm', clist') = do_csubst clist Ptm
@@ -280,12 +340,12 @@ in
   case cases result of
     NONE => raise ERRloc "do_overloading_removal" (locn ptm0)
       "Couldn't find a sensible resolution for overloaded constants"
-  | SOME ((env,clist),xs) =>
+  | SOME ((env as (kenv,tenv),clist),xs) =>
       if not (!Globals.guessing_overloads)
          orelse !Globals.notify_on_tyvar_guess
       then
         case cases xs
-         of NONE => (apply_subst env; #1 (do_csubst clist ptm))
+         of NONE => (apply_subst tenv; #1 (do_csubst clist ptm))
           | SOME _ => let in
               if not (!Globals.guessing_overloads)
                  then raise ERRloc "do_overloading_removal" (locn ptm0)
@@ -295,11 +355,11 @@ in
                 Feedback.HOL_MESG
                   "more than one resolution of overloading was possible"
               else ();
-              apply_subst env;
+              apply_subst tenv;
               #1 (do_csubst clist ptm)
             end
       else
-        (apply_subst env; #1 (do_csubst clist ptm))
+        (apply_subst tenv; #1 (do_csubst clist ptm))
 end
 
 fun remove_elim_magics ptm =
@@ -312,8 +372,12 @@ fun remove_elim_magics ptm =
       else Comb{Rator = rator, Rand = remove_elim_magics ptm1, Locn = Locn}
   | Comb{Rator, Rand, Locn} => Comb{Rator = remove_elim_magics Rator,
                                     Rand = remove_elim_magics Rand, Locn = Locn}
+  | TyComb{Rator, Rand, Locn} => TyComb{Rator = remove_elim_magics Rator,
+                                        Rand = Rand, Locn = Locn}
   | Abs{Bvar, Body, Locn} => Abs{Bvar = remove_elim_magics Bvar,
                                  Body = remove_elim_magics Body, Locn = Locn}
+  | TyAbs{Bvar, Body, Locn} => TyAbs{Bvar = Bvar,
+                                     Body = remove_elim_magics Body, Locn = Locn}
   | Constrained{Ptm, Ty, Locn} => Constrained{Ptm = remove_elim_magics Ptm, Ty = Ty, Locn = Locn}
   | Overloaded _ => raise Fail "Preterm.remove_elim_magics on Overloaded"
 
@@ -349,7 +413,14 @@ local
   fun ptype_of (Var{Ty, ...}) = Ty
     | ptype_of (Const{Ty, ...}) = Ty
     | ptype_of (Comb{Rator, ...}) = Pretype.chase (ptype_of Rator)
+    | ptype_of (TyComb{Rator, Rand, ...}) =
+        let val rator_ty = Pretype.toType (ptype_of Rator)
+            val (bvar,body) = Type.dest_univ_type rator_ty
+            val rand = Pretype.toType Rand
+        in Pretype.fromType (Type.type_subst [bvar |-> rand] body)
+        end
     | ptype_of (Abs{Bvar,Body,...}) = ptype_of Bvar --> ptype_of Body
+    | ptype_of (TyAbs{Bvar,Body,...}) = Pretype.mk_univ_type(Bvar, ptype_of Body)
     | ptype_of (Constrained{Ty,...}) = Ty
     | ptype_of (Antiq{Tm,...}) = Pretype.fromType (Term.type_of Tm)
     | ptype_of (Overloaded {Ty,...}) = Ty

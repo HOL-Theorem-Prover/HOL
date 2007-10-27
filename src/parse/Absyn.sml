@@ -21,7 +21,9 @@ val ERRloc = mk_HOL_ERRloc "Absyn";
        | IDENT  of locn.locn * string
        | QIDENT of locn.locn * string * string
        | APP    of locn.locn * absyn * absyn
+       | TYAPP  of locn.locn * absyn * pretype
        | LAM    of locn.locn * vstruct * absyn
+       | TYLAM  of locn.locn * pretype * absyn
        | TYPED  of locn.locn * absyn * pretype
 
 
@@ -69,7 +71,9 @@ fun locn_of_absyn x
       | IDENT (locn,_)   => locn
       | QIDENT(locn,_,_) => locn
       | APP   (locn,_,_) => locn
+      | TYAPP (locn,_,_) => locn
       | LAM   (locn,_,_) => locn
+      | TYLAM (locn,_,_) => locn
       | TYPED (locn,_,_) => locn
 
 fun locn_of_vstruct x
@@ -82,7 +86,9 @@ fun locn_of_vstruct x
 fun mk_AQ x        = AQ   (nolocn,x)
 fun mk_ident s     = IDENT(nolocn,s)
 fun mk_app (M,N)   = APP  (nolocn,M,N)
+fun mk_tyapp (M,t) = TYAPP(nolocn,M,t)
 fun mk_lam (v,M)   = LAM  (nolocn,v,M)
+fun mk_tylam (a,M) = TYLAM(nolocn,a,M)
 fun mk_typed(M,ty) = TYPED(nolocn,M,ty);
 
 fun binAQ f x locn err = let val (t1,t2) = f x
@@ -101,6 +107,12 @@ fun dest_ident (IDENT (_,s)) = s
 fun dest_app (APP(_,M,N))  = (M,N)
   | dest_app (AQ (locn,x)) = binAQ dest_comb x locn (ERRloc "dest_app" locn "AQ")
   | dest_app  t         = raise ERRloc "dest_app" (locn_of_absyn t) "Expected an application";
+
+fun dest_tyapp (TYAPP(_,M,ty)) = (M,ty)
+  | dest_tyapp (AQ (locn,x))   = (let val (M,ty) = dest_tycomb x
+                                  in (AQ(locn,M),Pretype.fromType ty)
+                                  end handle HOL_ERR _ => raise ERRloc "dest_tyapp" locn "AQ")
+  | dest_tyapp  t              = raise ERRloc "dest_app" (locn_of_absyn t) "Expected a type application";
 
 fun dest_AQ (AQ (_,x)) = x
   | dest_AQ t = raise ERRloc "dest_AQ" (locn_of_absyn t) "Expected an antiquotation";
@@ -130,9 +142,21 @@ fun dest_lam (LAM (_,v,M)) = (v,M)
            end
   | dest_lam t = raise ERRloc "dest_lam" (locn_of_absyn t) "Expected an abstraction"
 
+fun dest_tylam (TYLAM (_,a,M)) = (a,M)
+  | dest_tylam (AQ (locn,x)) =
+      let val (Bvar,Body) = Term.dest_tyabs x
+          val (s,kd,rk) = Type.dest_vartype_opr Bvar
+          val Bvar' = Pretype.fromType Bvar
+      in ((*Bvar'*)Pretype.PT(Pretype.Vartype(s, Prekind.fromKind kd, rk),locn), AQ (locn,Body))
+      end
+  | dest_tylam t = raise ERRloc "dest_tylam" (locn_of_absyn t) "Expected a type abstraction"
+
 
 fun list_mk_app (M,[]) = M
   | list_mk_app (M,h::t) = list_mk_app (mk_app(M,h),t);
+
+fun list_mk_tyapp (M,[]) = M
+  | list_mk_tyapp (M,ty::tys) = list_mk_tyapp (mk_tyapp(M,ty),tys);
 
 fun mk_binop s (M,N) = mk_app(mk_app(mk_ident s,M),N);
 fun list_mk_binop s = end_itlist (curry (mk_binop s));
@@ -183,6 +207,14 @@ fun strip_app t =
  in strip t []
  end;
 
+fun strip_tyapp t =
+ let fun strip tm accum =
+          let val (M,ty) = dest_tyapp tm
+          in strip M (ty::accum)
+          end handle HOL_ERR _ => (tm,accum)
+ in strip t []
+ end;
+
 val strip_conj = gen_strip dest_conj
 val strip_disj = gen_strip dest_disj
 val strip_imp  = gen_strip dest_imp;
@@ -195,6 +227,7 @@ val mk_exists1 = mk_binder "?!"
 val mk_select  = mk_binder "@";
 fun list_mk_binder mk_binder (L,M) = itlist (curry mk_binder) L M;
 val list_mk_lam     = list_mk_binder mk_lam
+val list_mk_tylam   = list_mk_binder mk_tylam
 val list_mk_forall  = list_mk_binder mk_forall
 val list_mk_exists  = list_mk_binder mk_exists
 val list_mk_exists1 = list_mk_binder mk_exists1
@@ -230,6 +263,7 @@ fun strip_front dest =
     in brk end;
 
 val strip_lam     = strip_front dest_lam
+val strip_tylam   = strip_front dest_tylam
 val strip_forall  = strip_front dest_forall
 val strip_exists  = strip_front dest_exists
 val strip_exists1 = strip_front dest_exists1
@@ -237,7 +271,9 @@ val strip_select  = strip_front dest_select;
 
 val is_ident   = Lib.can dest_forall
 val is_app     = Lib.can dest_app
+val is_tyapp   = Lib.can dest_tyapp
 val is_lam     = Lib.can dest_lam
+val is_tylam   = Lib.can dest_tylam
 val is_AQ      = Lib.can dest_AQ
 val is_typed   = Lib.can dest_typed
 val is_eq      = Lib.can dest_eq
