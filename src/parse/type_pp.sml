@@ -125,14 +125,14 @@ fun pp_type0 (G:grammar) = let
             if k <> Kind.typ orelse show_kinds() = 2 then let
                 val p = r <> 0 andalso not (Kind.is_arity k)
               in
-                add_string "::";
+                add_string ":";
                 pbegin p;
                 Kind.pp_kind pps k;
                 pend p
               end
             else ();
             if r <> 0 orelse show_kinds() = 2 then
-              (add_string " <= "; add_string (Int.toString r))
+              (add_string " :<= "; add_string (Int.toString r))
             else ();
             pend parens_needed
           end
