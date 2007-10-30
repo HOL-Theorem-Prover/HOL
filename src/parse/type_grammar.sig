@@ -18,6 +18,7 @@ TApp   ::= Leaf | Tuple Leaf
 
   datatype grammar_rule
     = SUFFIX of string list
+    | KINDCAST
     | ARRAY_SFX 
     | INFIX of {opname : string, parse_string : string} list *
                 HOLgrammars.associativity

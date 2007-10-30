@@ -5,7 +5,10 @@ sig
     {vartype : string locn.located -> 'a,
      tyop : (string locn.located * 'a list) -> 'a,
      qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
-     antiq : 'b -> 'a} ->
+     antiq : 'b -> 'a,
+     kindcast : {Ty: 'a, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
+     rankcast : {Ty: 'a, Rank:int, Locn:locn.locn} -> 'a,
+     kindparser : 'b qbuf.qbuf -> Prekind.prekind} ->
     bool ->
     type_grammar.grammar ->
     'b qbuf.qbuf -> 'a

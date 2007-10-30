@@ -126,13 +126,21 @@ fun remove_kd_aq t =
   if is_kd_antiq t then dest_kd_antiq t
   else raise ERROR "kind parser" "antiquotation is not of a kind"
 
+val kd_ty_antiq = term_pp.ty_antiq o kd_antiq;
+val dest_kd_ty_antiq = dest_kd_antiq o term_pp.dest_ty_antiq;
+val is_kd_ty_antiq = fn tm => term_pp.is_ty_antiq tm andalso is_kd_antiq (term_pp.dest_ty_antiq tm);
+
+fun remove_kd_ty_aq t =
+  if is_kd_ty_antiq t then dest_kd_ty_antiq t
+  else raise ERROR "kind parser" "antiquotation is not of a kind"
+
 (* "qkindop" refers to "qualified" kind operator, i.e., qualified by theory name. *)
 
 fun kindop_to_qkindop ((kindop,locn), args) = let
   open Prekind
 in
-  if kindop = "*" then typ
-  else if kindop = "=>" then hd args ==> hd(tl args)
+  if kindop = "ty" then PK(Typekind,locn)
+  else if kindop = "=>" then PK(Arrowkind(hd args, hd(tl args)), locn)
   else raise ERROR "kind parser" (kindop ^ " not a known kind operator")
 end
 
@@ -144,6 +152,10 @@ fun arity ((s, locn), n) = Prekind.mk_arity n
 
 (* needs changing *)
 fun mk_basevarkd(s,locn) = Prekind.PK(Prekind.Varkind s, locn)
+val kind_p0_rec = {varkind = mk_basevarkd, qkindop = do_qkindop,
+                kindop = kindop_to_qkindop, arity = arity,
+                antiq = fn x => Prekind.fromKind (remove_kd_ty_aq x)}
+
 val kind_p1_rec = {varkind = mk_basevarkd, qkindop = do_qkindop,
                 kindop = kindop_to_qkindop, arity = arity,
                 antiq = fn x => Prekind.fromKind (remove_kd_aq x)}
@@ -151,6 +163,9 @@ val kind_p1_rec = {varkind = mk_basevarkd, qkindop = do_qkindop,
 val kind_p2_rec = {varkind = mk_basevarkd, qkindop = do_qkindop,
                 kindop = kindop_to_qkindop, arity = arity,
                 antiq = Prekind.fromKind}
+
+val kind_parser0 =
+  ref (parse_kind.parse_kind kind_p0_rec false (kind_grammar()))
 
 val kind_parser1 =
   ref (parse_kind.parse_kind kind_p1_rec false (kind_grammar()))
@@ -167,6 +182,7 @@ val kind_printer = ref (kind_pp.pp_kind (kind_grammar()))
 
 fun update_kind_fns () =
   if !kind_grammar_changed then let in
+     kind_parser0 := parse_kind.parse_kind kind_p0_rec false (kind_grammar());
      kind_parser1 := parse_kind.parse_kind kind_p1_rec false (kind_grammar());
      kind_parser2 := parse_kind.parse_kind kind_p2_rec false (kind_grammar());
      kind_printer := kind_pp.pp_kind (kind_grammar());
@@ -264,15 +280,31 @@ in
              Args
 end
 
+fun do_kindcast {Ty,Kind,Locn} = let
+  open Pretype
+in
+  PT(TyKindConstr {Ty=Ty,Kind=Kind}, Locn)
+end
+
+fun do_rankcast {Ty,Rank,Locn} = let
+  open Pretype
+in
+  PT(TyRankConstr {Ty=Ty,Rank=Rank}, Locn)
+end
+
 (* needs changing *)
 fun mk_basevarty(s,locn) = Pretype.PT(Pretype.Vartype(s,Prekind.typ,0), locn)
 val typ1_rec = {vartype = mk_basevarty, qtyop = do_qtyop,
                 tyop = tyop_to_qtyop,
-                antiq = fn x => Pretype.fromType (remove_ty_aq x)}
+                antiq = fn x => Pretype.fromType (remove_ty_aq x),
+                kindcast = do_kindcast, rankcast = do_rankcast,
+                kindparser = (!kind_parser0)}
 
 val typ2_rec = {vartype = mk_basevarty, qtyop = do_qtyop,
                 tyop = tyop_to_qtyop,
-                antiq = Pretype.fromType}
+                antiq = Pretype.fromType,
+                kindcast = do_kindcast, rankcast = do_rankcast,
+                kindparser = (!kind_parser1)}
 
 val type_parser1 =
   ref (parse_type.parse_type typ1_rec false (type_grammar()))

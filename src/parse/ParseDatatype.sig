@@ -3,8 +3,20 @@ sig
 
  datatype pretype =
    dVartype of string
- | dTyop of {Tyop : string, Thy : string option, Args : pretype list}
+ | dContype of {Thy : string option, Tyop : string, Kind : Prekind.prekind, Rank : int}
+ | dTyApp  of pretype * pretype
+ | dTyUniv of pretype * pretype
+ | dTyAbst of pretype * pretype
+ | dTyKindConstr of {Ty : pretype, Kind : Prekind.prekind}
+ | dTyRankConstr of {Ty : pretype, Rank : int}
+(*
+ | dTyop of {Tyop : string, Thy : string option, Args : pretype list} *)
  | dAQ of Type.hol_type
+
+
+ val dTyop : {Tyop : string, Thy : string option, Args : pretype list} -> pretype
+ val dest_dTyop : pretype -> {Tyop : string, Thy : string option, Args : pretype list}
+
 
  val pretypeToType : pretype -> Type.hol_type
 

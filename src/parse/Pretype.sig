@@ -12,7 +12,8 @@ sig
     | TyApp  of pretype * pretype
     | TyUniv of pretype * pretype
     | TyAbst of pretype * pretype
-    | TyConstrained of {Ty : pretype, Kind : prekind, Rank : int}
+    | TyKindConstr of {Ty : pretype, Kind : prekind}
+    | TyRankConstr of {Ty : pretype, Rank : int}
     | UVar of pretype option ref
  and pretype = PT of pretype0 locn.located
 

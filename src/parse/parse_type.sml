@@ -14,7 +14,8 @@ fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 
 fun parse_type tyfns allow_unknown_suffixes G = let
   val G = rules G and abbrevs = abbreviations G
-  val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop} = tyfns
+  val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop,
+       kindcast, rankcast, kindparser} = tyfns
   fun structure_to_value (s,locn) args st =
       case st of
         TYOP {Args, Thy, Tyop} =>
@@ -35,6 +36,8 @@ fun parse_type tyfns allow_unknown_suffixes G = let
   fun is_LBracket t = case t of LBracket => true | _ => false
   fun is_RBracket t = case t of RBracket => true | _ => false
   fun is_Comma t = case t of Comma => true | _ => false
+  fun is_KindCst t = case t of KindCst => true | _ => false
+  fun is_RankCst t = case t of RankCst => true | _ => false
   fun itemP P fb = let
     val (adv, (t,locn)) = typetok_of fb (* TODO:KSW: use locn *)
   in
@@ -105,6 +108,12 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     | QTypeIdent(thy,ty) => qtyop{Thy=thy,Tyop=ty,Locn=locn,Args=args}
     | _ => raise Fail "parse_type.apply_tyop: can't happen"
 
+  fun apply_kindcast (ty, kd, locn) =
+    kindcast{Ty=ty, Kind=kd, Locn=locn}
+
+  fun apply_rankcast (ty, rk, locn) =
+    rankcast{Ty=ty, Rank=rk, Locn=locn}
+
   fun n_appls (ops, t) =
     case ops of
       [] => t
@@ -149,6 +158,31 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     val (rlocn, _) = itemP is_RBracket fb
   in
     ty
+  end
+
+  fun parse_num fb = let
+    val (adv,(t,locn)) = typetok_of fb
+  in
+    case t of
+      TypeIdent s => (adv(); case Int.fromString s of
+                               SOME i => (i, locn)
+                             | NONE => raise InternalFailure locn)
+    | _ => raise InternalFailure locn
+  end
+
+  fun parse_rankcast fb = let
+    val (llocn, _) = itemP is_RankCst fb
+    val (rk,rlocn) = parse_num fb
+  in
+    (rk, locn.between llocn rlocn)
+  end
+
+  fun parse_kindcast fb = let
+    val (llocn, _) = itemP is_KindCst fb 
+    val kd = kindparser fb
+    val (adv,(t,rlocn)) = typetok_of fb
+  in
+    (kd, locn.between llocn rlocn)
   end
 
   fun parse_tuple prse fb = let
@@ -215,6 +249,24 @@ fun parse_type tyfns allow_unknown_suffixes G = let
         val asfxs = many (parse_asfx (parse_term G)) strm
       in
         n_array_sfxs llocn (asfxs, ty1)
+      end
+    | KINDCAST => let
+        val ty1 = next_level strm
+        fun recurse acc =
+            let val (adv, (t,locn)) = typetok_of strm
+            in case t of
+                 KindCst =>
+                   (case totalify parse_kindcast strm of
+                       SOME (kd,locn) => recurse (apply_kindcast (acc, kd, locn))
+                     | NONE => acc)
+               | RankCst =>
+                   (case totalify parse_rankcast strm of
+                       SOME (rk,locn) => recurse (apply_rankcast (acc, rk, locn))
+                     | NONE => acc)
+               | _ => acc
+            end
+      in
+        recurse ty1
       end
     | SUFFIX slist => let
       in

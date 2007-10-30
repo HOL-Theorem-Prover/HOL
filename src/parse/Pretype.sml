@@ -18,7 +18,8 @@ val TCERR = mk_HOL_ERR "Pretype";
     | TyApp  of pretype * pretype
     | TyUniv of pretype * pretype
     | TyAbst of pretype * pretype
-    | TyConstrained of {Ty : pretype, Kind : prekind, Rank : int}
+    | TyKindConstr of {Ty : pretype, Kind : prekind}
+    | TyRankConstr of {Ty : pretype, Rank : int}
     | UVar of pretype option ref
  and pretype = PT of pretype0 locn.located
 
@@ -37,8 +38,10 @@ fun eq0 (Vartype v)                (Vartype v')              = eq_tyvar v v'
   | eq0 (TyApp(ty1,ty2))           (TyApp(ty1',ty2'))        = eq ty1 ty1' andalso eq ty2 ty2'
   | eq0 (TyUniv(ty1,ty2))          (TyUniv(ty1',ty2'))       = eq ty1 ty1' andalso eq ty2 ty2'
   | eq0 (TyAbst(ty1,ty2))          (TyAbst(ty1',ty2'))       = eq ty1 ty1' andalso eq ty2 ty2'
-  | eq0 (TyConstrained{Ty=ty, Kind=kd, Rank=rk })
-        (TyConstrained{Ty=ty',Kind=kd',Rank=rk'})            = eq ty ty' andalso eq_kind kd kd' andalso rk=rk'
+  | eq0 (TyKindConstr{Ty=ty, Kind=kd})
+        (TyKindConstr{Ty=ty',Kind=kd'})                      = eq ty ty' andalso eq_kind kd kd'
+  | eq0 (TyRankConstr{Ty=ty, Rank=rk })
+        (TyRankConstr{Ty=ty',Rank=rk'})                      = eq ty ty' andalso rk=rk'
   | eq0 (UVar (r as ref NONE))     (UVar (r' as ref NONE))   = r=r'
   | eq0 (UVar (ref (SOME ty)))     (UVar (ref (SOME ty')))   = eq ty ty'
   | eq0 _                          _                         = false
@@ -79,7 +82,8 @@ fun kindvars (PT (ty, loc)) =
   | TyApp (ty1, ty2) => Lib.union (kindvars ty1) (kindvars ty2)
   | TyUniv (tyv, ty) => Lib.union (kindvars tyv) (kindvars ty)
   | TyAbst (tyv, ty) => Lib.union (kindvars tyv) (kindvars ty)
-  | TyConstrained {Ty,Kind,...} => Lib.union (kindvars Ty) (Prekind.kindvars Kind)
+  | TyKindConstr {Ty,Kind} => Lib.union (kindvars Ty) (Prekind.kindvars Kind)
+  | TyRankConstr {Ty,... } => kindvars Ty
   | UVar (ref NONE) => []
   | UVar (ref (SOME ty')) => kindvars ty'
 
@@ -91,7 +95,8 @@ fun tyvars (PT (ty, loc)) =
   | TyApp (ty1, ty2) => Lib.union (tyvars ty1) (tyvars ty2)
   | TyUniv (tyv, ty) => Lib.union (tyvars tyv) (tyvars ty)
   | TyAbst (tyv, ty) => Lib.union (tyvars tyv) (tyvars ty)
-  | TyConstrained {Ty,...} => tyvars Ty
+  | TyKindConstr {Ty,...} => tyvars Ty
+  | TyRankConstr {Ty,...} => tyvars Ty
   | UVar (ref NONE) => []
   | UVar (ref (SOME ty')) => tyvars ty'
 
@@ -102,7 +107,8 @@ fun uvars_of (PT(ty, loc)) =
     | TyApp (ty1, ty2) => Lib.union (uvars_of ty1) (uvars_of ty2)
     | TyUniv (tyv, ty) => Lib.union (uvars_of tyv) (uvars_of ty)
     | TyAbst (tyv, ty) => Lib.union (uvars_of tyv) (uvars_of ty)
-    | TyConstrained {Ty, ...} => uvars_of Ty
+    | TyKindConstr {Ty, ...} => uvars_of Ty
+    | TyRankConstr {Ty, ...} => uvars_of Ty
     | _ => []
 
 fun new_uvar () = PT (UVar(ref NONE), locn.Loc_None)
@@ -116,7 +122,8 @@ fun r ref_occurs_in (PT(value, locn)) =
   | TyApp(ty1, ty2) => r ref_occurs_in ty1 orelse r ref_occurs_in ty2
   | TyUniv(tyv, ty) => r ref_occurs_in tyv orelse r ref_occurs_in ty
   | TyAbst(tyv, ty) => r ref_occurs_in tyv orelse r ref_occurs_in ty
-  | TyConstrained {Ty, Kind, Rank} => r ref_occurs_in Ty
+  | TyKindConstr {Ty, ...} => r ref_occurs_in Ty
+  | TyRankConstr {Ty, ...} => r ref_occurs_in Ty
   | UVar (r' as ref NONE) => r = r'
   | UVar (r' as ref (SOME t)) => r = r' orelse r ref_occurs_in t
 
@@ -136,7 +143,8 @@ fun r ref_equiv (PT(value, locn)) =
     | TyApp(ty1, ty2)        => has_free_uvar_kind ty1 orelse has_free_uvar_kind ty2
     | TyAbst(tyv, ty)        => has_free_uvar_kind tyv orelse has_free_uvar_kind ty
     | TyUniv(tyv, ty)        => has_free_uvar_kind tyv orelse has_free_uvar_kind ty
-    | TyConstrained {Ty, Kind, Rank} => has_free_uvar_kind Ty orelse Prekind.has_free_uvar Kind
+    | TyKindConstr {Ty, Kind} => has_free_uvar_kind Ty orelse Prekind.has_free_uvar Kind
+    | TyRankConstr {Ty, Rank} => has_free_uvar_kind Ty
 
   fun has_free_uvar (PT(pty,_)) =
     case pty of
@@ -147,7 +155,8 @@ fun r ref_equiv (PT(value, locn)) =
     | TyApp(ty1, ty2)        => has_free_uvar ty1 orelse has_free_uvar ty2
     | TyAbst(tyv, ty)        => has_free_uvar tyv orelse has_free_uvar ty
     | TyUniv(tyv, ty)        => has_free_uvar tyv orelse has_free_uvar ty
-    | TyConstrained {Ty, Kind, Rank} => has_free_uvar Ty
+    | TyKindConstr {Ty, ...} => has_free_uvar Ty
+    | TyRankConstr {Ty, ...} => has_free_uvar Ty
 
 
 (*
@@ -200,8 +209,10 @@ in
        gen_unify ty11 ty21 >> gen_unify ty12 ty22 >> return ()
   | (TyAbst(ty11, ty12), TyAbst(ty21, ty22)) =>
        gen_unify ty11 ty21 >> gen_unify ty12 ty22 >> return ()
-  | (TyConstrained{Ty=ty1,Kind=kd1,Rank=rk1}, TyConstrained{Ty=ty2,Kind=kd2,Rank=rk2}) =>
-       if rk1=rk2 then kind_unify kd1 kd2 >> gen_unify ty1 ty2 >> return () else fail
+  | (TyKindConstr{Ty=ty1,Kind=kd1}, TyKindConstr{Ty=ty2,Kind=kd2}) =>
+       kind_unify kd1 kd2 >> gen_unify ty1 ty2 >> return ()
+  | (TyRankConstr{Ty=ty1,Rank=rk1}, TyRankConstr{Ty=ty2,Rank=rk2}) =>
+       if rk1=rk2 then gen_unify ty1 ty2 >> return () else fail
   | _ => fail
  end e
 
@@ -251,7 +262,8 @@ local
                                (r ref_occurs_in ty) env
           | TyAbst(tyv, ty) => (r ref_occurs_in tyv) env orelse
                                (r ref_occurs_in ty) env
-          | TyConstrained{Ty,...} => (r ref_occurs_in Ty) env
+          | TyKindConstr{Ty,...} => (r ref_occurs_in Ty) env
+          | TyRankConstr{Ty,...} => (r ref_occurs_in Ty) env
           | _ => false
 
       fun kind_unify k1 k2 (env as (kenv,tenv)) =
@@ -279,8 +291,10 @@ fun apply_subst subst (pt as PT (pty, locn)) =
   | TyApp(ty1, ty2) => PT (TyApp(apply_subst subst ty1, apply_subst subst ty2), locn)
   | TyUniv(bty, body) => PT (TyUniv(apply_subst subst bty, apply_subst subst body), locn)
   | TyAbst(bty, body) => PT (TyAbst(apply_subst subst bty, apply_subst subst body), locn)
-  | TyConstrained {Ty, Kind, Rank} =>
-                 PT (TyConstrained {Ty=apply_subst subst Ty, Kind=Kind, Rank=Rank}, locn)
+  | TyKindConstr {Ty, Kind} =>
+                 PT (TyKindConstr {Ty=apply_subst subst Ty, Kind=Kind}, locn)
+  | TyRankConstr {Ty, Rank} =>
+                 PT (TyRankConstr {Ty=apply_subst subst Ty, Rank=Rank}, locn)
   | UVar (ref (SOME t)) => apply_subst subst t
   | UVar (r as ref NONE) =>
       case (Lib.assoc1 r subst) of
@@ -317,9 +331,12 @@ fun rename_tv (ty as PT(ty0, locn)) =
       rename_tv ty1 >-
       (fn ty1' => rename_tv ty2 >-
       (fn ty2' => return (PT(TyAbst(ty1', ty2'), locn))))
-  | TyConstrained {Ty, Kind, Rank} =>
+  | TyKindConstr {Ty, Kind} =>
       rename_tv Ty >-
-      (fn Ty' => return (PT(TyConstrained {Ty=Ty', Kind=Kind, Rank=Rank}, locn)))
+      (fn Ty' => return (PT(TyKindConstr {Ty=Ty', Kind=Kind}, locn)))
+  | TyRankConstr {Ty, Rank} =>
+      rename_tv Ty >-
+      (fn Ty' => return (PT(TyRankConstr {Ty=Ty', Rank=Rank}, locn)))
   | _ => return ty
 
 fun rename_typevars ty = valOf (#2 (rename_tv ty []))
@@ -363,8 +380,10 @@ fun remove_made_links (ty as PT(ty0,locn)) =
   | TyApp(ty1, ty2) => PT(TyApp (remove_made_links ty1, remove_made_links ty2), locn)
   | TyUniv(tyv, ty) => PT(TyUniv(remove_made_links tyv, remove_made_links ty), locn)
   | TyAbst(tyv, ty) => PT(TyAbst(remove_made_links tyv, remove_made_links ty), locn)
-  | TyConstrained {Ty, Kind, Rank} =>
-      PT(TyConstrained {Ty=remove_made_links Ty, Kind=Prekind.remove_made_links Kind, Rank=Rank}, locn)
+  | TyKindConstr {Ty, Kind} =>
+      PT(TyKindConstr {Ty=remove_made_links Ty, Kind=Prekind.remove_made_links Kind}, locn)
+  | TyRankConstr {Ty, Rank} =>
+      PT(TyRankConstr {Ty=remove_made_links Ty, Rank=Rank}, locn)
   | _ => ty
 
 val tyvariant = Lexis.gen_variant Lexis.tyvar_vary
@@ -392,19 +411,29 @@ in
   | TyApp (ty1,ty2) => replace_null_links ty1 >> replace_null_links ty2 >> ok
   | TyUniv (tyv, ty) => replace_null_links ty
   | TyAbst (tyv, ty) => replace_null_links ty
-  | TyConstrained {Ty,Kind,Rank} => replace_null_links Ty >> kind_replace_null_links Kind >> ok
+  | TyKindConstr {Ty,Kind} => replace_null_links Ty >> kind_replace_null_links Kind >> ok
+  | TyRankConstr {Ty,Rank} => replace_null_links Ty >> ok
   | Vartype (s,kd,rk) => kind_replace_null_links kd
   | Contype {Thy,Tyop,Kind,Rank} => kind_replace_null_links Kind
 end env
 
 fun clean (PT(ty, locn)) =
   case ty of
-    Vartype (s,kd,rk) => Type.mk_vartype_opr (s, Prekind.clean kd, rk)
+    TyRankConstr {Ty=PT(TyKindConstr {Ty=PT(Vartype (s,_,_),_), Kind=kd},_), Rank=rk} =>
+       Type.mk_vartype_opr (s, Prekind.clean kd, rk)
+  | TyKindConstr {Ty=PT(TyRankConstr {Ty=PT(Vartype (s,_,_),_), Rank=rk},_), Kind=kd} =>
+       Type.mk_vartype_opr (s, Prekind.clean kd, rk)
+  | TyKindConstr {Ty=PT(Vartype (s,_,rk),_), Kind=kd} =>
+       Type.mk_vartype_opr (s, Prekind.clean kd, rk)
+  | TyRankConstr {Ty=PT(Vartype (s,kd,_),_), Rank=rk} =>
+       Type.mk_vartype_opr (s, Kind.typ, rk)
+  | Vartype (s,kd,rk) => Type.mk_vartype_opr (s, Prekind.clean kd, rk)
   | Contype {Thy,Tyop,...} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop}
   | TyApp(ty1,ty2) => Type.mk_app_type (clean ty1, clean ty2)
   | TyUniv (tyv,ty) => Type.mk_univ_type (clean tyv, clean ty)
   | TyAbst (tyv,ty) => Type.mk_abs_type (clean tyv, clean ty)
-  | TyConstrained {Ty,Kind,Rank} => clean Ty
+  | TyKindConstr {Ty,Kind} => clean Ty
+  | TyRankConstr {Ty,Rank} => clean Ty
   | _ => raise Fail "Don't expect to see links remaining at this stage"
 
 fun toType ty =

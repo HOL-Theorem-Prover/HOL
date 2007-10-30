@@ -26,7 +26,13 @@ open Portable;
 
 datatype pretype
    = dVartype of string
-   | dTyop of {Tyop : string, Thy : string option, Args : pretype list}
+   | dContype of {Thy : string option, Tyop : string, Kind : Prekind.prekind, Rank : int}
+   | dTyApp  of pretype * pretype
+   | dTyUniv of pretype * pretype
+   | dTyAbst of pretype * pretype
+   | dTyKindConstr of {Ty : pretype, Kind : Prekind.prekind}
+   | dTyRankConstr of {Ty : pretype, Rank : int}
+ (*  | dTyop of {Tyop : string, Thy : string option, Args : pretype list} *)
    | dAQ of Type.hol_type
 
 type field = string * pretype
@@ -41,6 +47,14 @@ type AST = string * datatypeForm
 fun pretypeToType pty =
   case pty of
     dVartype s => Type.mk_vartype s
+  | dContype {Thy=SOME Thy,Tyop,Kind,Rank} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop}
+  | dContype {Thy=NONE,    Tyop,Kind,Rank} => Type.mk_con_type Tyop
+  | dTyApp  (opr,arg)   => Type.mk_app_type(pretypeToType opr, pretypeToType arg)
+  | dTyUniv (bvar,body) => Type.mk_univ_type(pretypeToType bvar, pretypeToType body)
+  | dTyAbst (bvar,body) => Type.mk_abs_type (pretypeToType bvar, pretypeToType body)
+  | dTyKindConstr {Ty,Kind} => pretypeToType Ty
+  | dTyRankConstr {Ty,Rank} => pretypeToType Ty
+(*
   | dTyop {Tyop = s, Thy, Args} => let
     in
       case Thy of
@@ -48,6 +62,7 @@ fun pretypeToType pty =
       | SOME t => Type.mk_thy_type{Tyop = s, Thy = t,
                                    Args = map pretypeToType Args}
     end
+*)
   | dAQ pty => pty
 
 val bads = CharSet.addString(CharSet.empty, "()\"")
@@ -117,12 +132,62 @@ in
                                    base_tokens.toString x^"\"")
 end
 
+fun dTyop {Tyop, Thy, Args} =
+  let fun mkprety acc [] = acc
+        | mkprety acc (arg::args) = mkprety (dTyApp(acc,arg)) args
+  in mkprety (dContype{Tyop=Tyop, Thy=Thy, Kind=Prekind.typ, Rank=0}) Args
+  end
+
+fun dest_dTyop (dContype {Thy,Tyop,Kind,Rank}) = {Tyop=Tyop, Thy=Thy, Args=[]}
+  | dest_dTyop (dTyApp(opr,arg)) = let val {Thy,Tyop,Args} = dest_dTyop opr
+                                   in {Thy=Thy,Tyop=Tyop,Args=Args @ [arg]}
+                                   end
+  | dest_dTyop _ = raise ERR "dest_dTyop" "not a dTyop"
+
 fun qtyop {Tyop, Thy, Locn, Args} = dTyop {Tyop = Tyop, Thy = SOME Thy, Args = Args}
 fun tyop ((s,locn), args) = dTyop {Tyop = s, Thy = NONE, Args = args}
 
+(* Building the kind parser: *)
+
+val kd_antiq = type_pp.kd_antiq;
+val dest_kd_antiq = type_pp.dest_kd_antiq;
+val is_kd_antiq = type_pp.is_kd_antiq;
+
+fun remove_kd_aq t =
+  if is_kd_antiq t then dest_kd_antiq t
+  else raise ERR "kind parser" "antiquotation is not of a kind"
+
+fun kindcast {Ty,Kind,Locn} =
+  dTyKindConstr {Ty=Ty,Kind=Kind}
+
+fun rankcast {Ty,Rank,Locn} =
+  dTyRankConstr {Ty=Ty,Rank=Rank}
+
+fun mk_basevarkd(s,locn) = Prekind.PK(Prekind.Varkind s, locn)
+
+fun kindop_to_qkindop ((kindop,locn), args) = let
+  open Prekind
+in
+  if kindop = "ty" then PK(Typekind,locn)
+  else if kindop = "=>" then PK(Arrowkind(hd args, hd(tl args)), locn)
+  else raise ERR "kind parser" (kindop ^ " not a known kind operator")
+end
+
+fun do_qkindop {Thy:string, Kindop, Locn:locn.locn, Args} =
+    kindop_to_qkindop ((Kindop,Locn), Args)
+
+fun arity ((s, locn), n) = Prekind.mk_arity n
+
+val kind_p1_rec = {varkind = mk_basevarkd, qkindop = do_qkindop,
+                kindop = kindop_to_qkindop, arity = arity,
+                antiq = fn x => Prekind.fromKind (remove_kd_aq x)}
+
+val kindparser = parse_kind.parse_kind kind_p1_rec true (Parse.kind_grammar())
+
 fun parse_type strm =
   parse_type.parse_type {vartype = dVartype o #1, tyop = tyop, qtyop = qtyop,
-                         antiq = dAQ} true
+                         antiq = dAQ, kindcast = kindcast, rankcast = rankcast,
+                         kindparser = kindparser} true
   (Parse.type_grammar()) strm
 
 val parse_constructor_id = ident

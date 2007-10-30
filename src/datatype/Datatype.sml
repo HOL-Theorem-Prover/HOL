@@ -234,7 +234,32 @@ fun to_tyspecs ASTs =
      val asts = map stage1 ASTs
      val new_type_names = map #1 asts
      fun mk_hol_type (dAQ ty) = ty
+       | mk_hol_type (dTyRankConstr{Ty=dTyKindConstr{Ty=dVartype s, Kind=kd}, Rank=rk}) =
+                 mk_vartype_opr (s,Prekind.toKind kd,rk)
+       | mk_hol_type (dTyKindConstr{Ty=dVartype s, Kind=kd}) = mk_vartype_opr (s,Prekind.toKind kd,0)
+       | mk_hol_type (dTyRankConstr{Ty=dVartype s, Rank=rk}) = mk_vartype_opr (s,Kind.typ,rk)
        | mk_hol_type (dVartype s) = mk_vartype s
+       | mk_hol_type (dTyUniv(bvar,body)) =
+            mk_univ_type(mk_hol_type bvar, mk_hol_type body)
+       | mk_hol_type (dTyAbst(bvar,body)) =
+            mk_abs_type(mk_hol_type bvar, mk_hol_type body)
+       | mk_hol_type (dTyKindConstr{Ty,...}) = mk_hol_type Ty
+       | mk_hol_type (dTyRankConstr{Ty,...}) = mk_hol_type Ty
+       | mk_hol_type (dTyApp(opr as dContype{Tyop = s, ...},arg)) =
+            if Lib.mem s new_type_names
+            then raise ERR "to_tyspecs"
+                     ("Omit arguments to new type:"^Lib.quote s)
+            else mk_app_type(mk_hol_type opr, mk_hol_type arg)
+       | mk_hol_type (dTyApp(opr,arg)) =
+            mk_app_type(mk_hol_type opr, mk_hol_type arg)
+       | mk_hol_type (dContype{Thy,Tyop = s,Kind,Rank}) =
+            if Lib.mem s new_type_names
+            then tyname_as_tyvar s
+            else
+            (case Thy of
+                SOME Thy' => mk_thy_con_type{Thy=Thy', Tyop=s}
+              | NONE     => mk_con_type s)
+(*
        | mk_hol_type (dTyop{Tyop = s, Args, Thy}) =
             if Lib.mem s new_type_names
             then if null Args then tyname_as_tyvar s
@@ -245,6 +270,7 @@ fun to_tyspecs ASTs =
                 NONE => mk_type(s, map mk_hol_type Args)
               | SOME t => mk_thy_type {Tyop = s, Thy = t,
                                        Args = map mk_hol_type Args}
+*)
      val mk_hol_type0 = mk_hol_type
      fun mk_hol_type pty = let
        val ty = mk_hol_type0 pty
@@ -354,8 +380,22 @@ fun pretype_ops acc ptysl =
         | (pty :: more_ptys) => let
           in
             case pty of
+              dContype {Thy,Tyop,Kind,Rank} =>
+                 pretype_ops (HOLset.add(acc, Tyop)) (more_ptys :: rest)
+            | dTyApp (opr,arg) =>
+                 pretype_ops acc ([opr,arg] :: more_ptys :: rest)
+            | dTyUniv (bvar,body) =>
+                 pretype_ops acc ([bvar,body] :: more_ptys :: rest)
+            | dTyAbst (bvar,body) =>
+                 pretype_ops acc ([bvar,body] :: more_ptys :: rest)
+            | dTyKindConstr {Ty,Kind} =>
+                 pretype_ops acc ([Ty] :: more_ptys :: rest)
+            | dTyRankConstr {Ty,Rank} =>
+                 pretype_ops acc ([Ty] :: more_ptys :: rest)
+(*
               dTyop {Args, Thy, Tyop} =>
-              pretype_ops (HOLset.add(acc, Tyop)) (Args :: more_ptys :: rest)
+                 pretype_ops (HOLset.add(acc, Tyop)) (Args :: more_ptys :: rest)
+*)
             | _ => pretype_ops acc (more_ptys :: rest)
           end
       end
@@ -910,6 +950,32 @@ local
     open ParseDatatype
   in
     case pty of
+      dTyUniv(bvar,body) => dTyUniv(reform_tyops prevtypes bvar,
+                                    reform_tyops prevtypes body)
+    | dTyAbst(bvar,body) => dTyAbst(reform_tyops prevtypes bvar,
+                                    reform_tyops prevtypes body)
+    | dTyApp(opr as dContype{Thy, Tyop, Kind, Rank}, arg) =>
+         dTyApp(opr, reform_tyops prevtypes arg)
+    | dTyApp(opr,arg)    => dTyApp (reform_tyops prevtypes opr,
+                                    reform_tyops prevtypes arg)
+    | dContype{Thy, Tyop, Kind, Rank} => let
+      in
+        case (Lib.assoc1 Tyop prevtypes) of
+          (SOME (_, strset)) => let
+            val thytyop =
+                case Thy of
+                  NONE => hd (Type.decls Tyop)
+                | SOME s => {Thy = s, Tyop = Tyop}
+            val arity = valOf (Type.op_arity thytyop)
+            val _ = arity = HOLset.numItems strset orelse
+                    raise ERR "reform_tyops" (Tyop ^ " has unexpected arity")
+          in
+            List.foldl (fn (arg,acc) => dTyApp(acc,arg)) pty
+                       (map dVartype (HOLset.listItems strset))
+          end
+        | _ => pty
+      end
+(*
       dTyop{Tyop, Thy, Args} => let
       in
         case (Lib.assoc1 Tyop prevtypes, Args) of
@@ -928,6 +994,7 @@ local
         | _ => dTyop{Tyop = Tyop, Thy = Thy,
                      Args = map (reform_tyops prevtypes) Args}
       end
+*)
     | _ => pty
   end
 
@@ -1005,7 +1072,15 @@ fun find_vartypes (pty, acc) =
     dVartype s => HOLset.add(acc, s)
   | dAQ ty => List.foldl (fn (ty, acc) => HOLset.add(acc, dest_vartype ty))
                          acc (Type.type_vars ty)
+  | dContype _ => acc
+  | dTyApp(opr,arg) => List.foldl find_vartypes acc [opr,arg]
+  | dTyUniv(bvar,body) => List.foldl find_vartypes acc [bvar,body]
+  | dTyAbst(bvar,body) => List.foldl find_vartypes acc [bvar,body]
+  | dTyKindConstr{Ty,...} => find_vartypes (Ty, acc)
+  | dTyRankConstr{Ty,...} => find_vartypes (Ty, acc)
+(*
   | dTyop {Args, ...} => List.foldl find_vartypes acc Args
+*)
  end
 
 fun dtForm_vartypes (dtf, acc) =

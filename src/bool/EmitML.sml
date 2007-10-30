@@ -701,21 +701,60 @@ fun internalize elems =
 local open ParseDatatype
 in
 fun replace f (v as dVartype _) = v
+  | replace f (cn as dContype{Thy, Tyop, Kind, Rank}) = (f Tyop handle _ => cn)
+  | replace f (dTyApp(opr,arg)) = dTyApp(replace f opr, replace f arg)
+  | replace f (dTyUniv(bvar,body)) = dTyUniv(replace f bvar, replace f body)
+  | replace f (dTyAbst(bvar,body)) = dTyAbst(replace f bvar, replace f body)
+  | replace f (dTyKindConstr{Ty,Kind}) = dTyKindConstr{Ty=replace f Ty, Kind=Kind}
+  | replace f (dTyRankConstr{Ty,Rank}) = dTyRankConstr{Ty=replace f Ty, Rank=Rank}
   | replace f (aq as dAQ _)     = aq
+(*
+  | replace f pty = (let val {Tyop,Thy,Args} = dest_dTyop pty
+                     in f Tyop handle _ => dTyop{Tyop=Tyop,Thy=Thy,Args=map (replace f) Args}
+                     end
+                     handle HOL_ERR _ => pty)
+*)
+(*
   | replace f (dTyop{Tyop,Thy,Args}) =
       f Tyop handle _ => dTyop{Tyop=Tyop,Thy=Thy,Args=map (replace f) Args}
+*)
 
 fun replaceForm f (Constructors alist) =
                    Constructors (map (I##map (replace f)) alist)
   | replaceForm f other = other
 
+
 fun pretype_of ty =
-   dVartype(dest_vartype ty)
-   handle _ =>
-     let val (s,args) = dest_type ty
-     in dTyop{Tyop=s,Thy=NONE,Args=map pretype_of args}
-     end
-end;
+  if Type.is_vartype ty then let
+      val (str, kd, rk) = dest_vartype_opr ty
+    in
+      dTyRankConstr{Ty=dTyKindConstr{Ty=dVartype str,
+                                     Kind=Prekind.fromKind kd},
+                    Rank=rk}
+    end
+  else if Type.is_con_type ty then let
+      val {Thy, Tyop, Kind, Rank} = dest_thy_con_type ty
+    in
+      dContype {Kind=Prekind.fromKind Kind,
+                  Thy=SOME Thy, Tyop=Tyop, Rank=Rank}
+    end
+  else if Type.is_app_type ty then let
+      val (ty1, ty2) = Type.dest_app_type ty
+    in
+      dTyApp(pretype_of ty1, pretype_of ty2)
+    end
+  else if Type.is_univ_type ty then let
+      val (ty1, ty2) = Type.dest_univ_type ty
+    in
+      dTyUniv(pretype_of ty1, pretype_of ty2)
+    end
+  else if Type.is_abs_type ty then let
+      val (ty1, ty2) = Type.dest_abs_type ty
+    in
+      dTyAbst(pretype_of ty1, pretype_of ty2)
+    end
+  else raise ERR "pretype_of" "Unexpected sort of type"
+end
 
 (*---------------------------------------------------------------------------*)
 (* Initially, datatype descriptions do not have arguments to the type        *)

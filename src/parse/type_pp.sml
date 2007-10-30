@@ -88,6 +88,7 @@ fun pp_type0 (G:grammar) = let
                 NONE => recurse xs
               | SOME r => SOME(p, IR(a,#parse_string r))
             end
+          | (p, KINDCAST) => recurse xs
           | (p, ARRAY_SFX) => recurse xs
         end
   in
