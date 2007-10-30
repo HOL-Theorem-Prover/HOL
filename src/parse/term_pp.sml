@@ -96,6 +96,10 @@ fun dest_ty_antiq tm =
 
 val is_ty_antiq = Lib.can dest_ty_antiq
 
+val kd_ty_antiq = ty_antiq o type_pp.kd_antiq;
+val dest_kd_ty_antiq = type_pp.dest_kd_antiq o dest_ty_antiq;
+val is_kd_ty_antiq = Lib.can dest_kd_ty_antiq
+
 val casesplit_munger = ref (NONE: (term -> term * (term * term)list) option)
 fun init_casesplit_munger f =
     case casesplit_munger of

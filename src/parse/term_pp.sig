@@ -10,6 +10,10 @@ sig
   val dest_ty_antiq : term -> Type.hol_type
   val is_ty_antiq   : term -> bool
 
+  val kd_ty_antiq      : Kind.kind -> term
+  val dest_kd_ty_antiq : term -> Kind.kind
+  val is_kd_ty_antiq   : term -> bool
+
   (* this initialises a reference storing a function for pulling apart
      case splits.  It's expected that the initialisation will be called
      from inside the TypeBase *)

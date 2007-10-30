@@ -126,9 +126,9 @@ fun remove_kd_aq t =
   if is_kd_antiq t then dest_kd_antiq t
   else raise ERROR "kind parser" "antiquotation is not of a kind"
 
-val kd_ty_antiq = term_pp.ty_antiq o kd_antiq;
-val dest_kd_ty_antiq = dest_kd_antiq o term_pp.dest_ty_antiq;
-val is_kd_ty_antiq = fn tm => term_pp.is_ty_antiq tm andalso is_kd_antiq (term_pp.dest_ty_antiq tm);
+val kd_ty_antiq = term_pp.kd_ty_antiq;
+val dest_kd_ty_antiq = term_pp.dest_kd_ty_antiq;
+val is_kd_ty_antiq = term_pp.is_kd_ty_antiq;
 
 fun remove_kd_ty_aq t =
   if is_kd_ty_antiq t then dest_kd_ty_antiq t
