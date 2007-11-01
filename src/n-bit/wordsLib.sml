@@ -17,8 +17,6 @@ fun is_fcp_thm s =
 
 val machine_sizes = (map snd o filter (is_fcp_thm o fst) o theorems) "words";
 
-val SIZES_ss = rewrites machine_sizes;
-
 val sizes_comp = new_compset machine_sizes;
 
 fun SIZES_CONV t = CHANGED_CONV (CBV_CONV sizes_comp) t
@@ -29,6 +27,12 @@ fun SIZES_CONV t = CHANGED_CONV (CBV_CONV sizes_comp) t
     in
       x
     end;
+
+fun size_conv t = {conv = K (K (SIZES_CONV)), trace = 3,
+                   name = "SIZES_CONV", key = SOME ([], t)};
+
+val SIZES_ss = simpLib.merge_ss (map (simpLib.conv_ss o size_conv)
+  [``dimindex(:'a)``, ``FINITE UNIV``, ``INT_MIN(:'a)``, ``dimword(:'a)``]);
 
 fun NUM_RULE l n x =
   let val y = SPEC_ALL x
