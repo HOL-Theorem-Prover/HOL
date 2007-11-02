@@ -85,10 +85,10 @@ src/integer
 src/hol88
 src/real
 src/prob
-src/muddy/muddyC
-src/muddy
-src/HolBdd
-src/HolCheck
+!examples/muddy/muddyC
+!examples/muddy
+!examples/HolBdd
+!examples/HolCheck
 src/temporal/src
 src/temporal/smv.2.4.3
 src/rational

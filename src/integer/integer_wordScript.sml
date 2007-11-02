@@ -157,5 +157,34 @@ val word_msb_i2w = store_thm(
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [word_msb_n2w_numeric, INT_MOD]
   ])
 
+val w2i_11 = store_thm("w2i_11",
+  ``!v w. (w2i v = w2i w) = (v = w)``,
+  NTAC 2 STRIP_TAC THEN EQ_TAC THEN SRW_TAC [] [WORD_EQ_NEG, w2i_def]);
+
+val WORD_LTi = store_thm("WORD_LTi",
+  ``!a b. a < b = w2i a < w2i b``,
+  RW_TAC std_ss [WORD_LT, GSYM WORD_LO, INT_LT_CALCULATE, WORD_NEG_EQ_0,
+                 w2i_def, w2n_eq_0]
+    THENL [
+      SRW_TAC [boolSimps.LET_ss] [word_lo_def,nzcv_def,
+               Once (DECIDE ``w2n ($- b) + a = a + w2n ($- b)``)]
+        THEN Cases_on `~BIT (dimindex (:'a)) (w2n a + w2n ($- b))`
+        THEN FULL_SIMP_TAC std_ss [] ,
+      DISJ1_TAC]
+    THEN FULL_SIMP_TAC (std_ss++fcpLib.FCP_ss) [word_0, word_msb_def]
+    THEN METIS_TAC [DECIDE ``0n < n ==> n - 1 < n``, DIMINDEX_GT_0]);
+
+val WORD_GTi = store_thm("WORD_GTi",
+  ``!a b. a > b = w2i a > w2i b``,
+  REWRITE_TAC [WORD_GREATER, int_gt, WORD_LTi]);
+
+val WORD_LEi = store_thm("WORD_LEi",
+  ``!a b. a <= b = w2i a <= w2i b``,
+  REWRITE_TAC [WORD_LESS_OR_EQ, INT_LE_LT, WORD_LTi, w2i_11]);
+
+val WORD_GEi = store_thm("WORD_GEi",
+  ``!a b. a >= b = w2i a >= w2i b``,
+  REWRITE_TAC [WORD_GREATER_EQ, int_ge, WORD_LEi]);
+
 val _ = export_theory()
 

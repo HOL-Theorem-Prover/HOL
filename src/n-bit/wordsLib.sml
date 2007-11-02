@@ -17,8 +17,6 @@ fun is_fcp_thm s =
 
 val machine_sizes = (map snd o filter (is_fcp_thm o fst) o theorems) "words";
 
-val SIZES_ss = rewrites machine_sizes;
-
 val sizes_comp = new_compset machine_sizes;
 
 fun SIZES_CONV t = CHANGED_CONV (CBV_CONV sizes_comp) t
@@ -29,6 +27,13 @@ fun SIZES_CONV t = CHANGED_CONV (CBV_CONV sizes_comp) t
     in
       x
     end;
+
+fun size_conv t = {conv = K (K (SIZES_CONV)), trace = 3,
+                   name = "SIZES_CONV", key = SOME ([], t)};
+
+val SIZES_ss = simpLib.merge_ss (map (simpLib.conv_ss o size_conv)
+  [``dimindex(:'a)``, ``FINITE (UNIV:'a set)``,
+   ``INT_MIN(:'a)``, ``dimword(:'a)``]);
 
 fun NUM_RULE l n x =
   let val y = SPEC_ALL x
@@ -306,5 +311,22 @@ end
 
 fun guess_lengths () = Parse.post_process_term :=
   (guess_word_lengths o fcpLib.guess_fcp_lengths o !Parse.post_process_term);
+
+val operators = [("+", ``($+ :bool['a] -> bool['a] -> bool['a])``),
+                 ("-", ``($- :bool['a] -> bool['a] -> bool['a])``),
+                 ("*", ``($* :bool['a] -> bool['a] -> bool['a])``),
+                 ("<", ``($< :bool['a] -> bool['a] -> bool)``),
+                 ("<=", ``($<= :bool['a] -> bool['a] -> bool)``),
+                 (">", ``($> :bool['a] -> bool['a] -> bool)``),
+                 (">=", ``($>= :bool['a] -> bool['a] -> bool)``)];
+
+fun deprecate_word () = let
+  fun losety {Name,Thy,Ty} = {Name = Name, Thy = Thy}
+  fun doit (s, t) = Parse.temp_remove_ovl_mapping s (losety (dest_thy_const t))
+in                 
+  app (ignore o doit) operators
+end
+
+fun prefer_word () = app temp_overload_on operators
 
 end
