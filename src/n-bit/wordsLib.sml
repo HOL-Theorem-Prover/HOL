@@ -32,7 +32,8 @@ fun size_conv t = {conv = K (K (SIZES_CONV)), trace = 3,
                    name = "SIZES_CONV", key = SOME ([], t)};
 
 val SIZES_ss = simpLib.merge_ss (map (simpLib.conv_ss o size_conv)
-  [``dimindex(:'a)``, ``FINITE UNIV``, ``INT_MIN(:'a)``, ``dimword(:'a)``]);
+  [``dimindex(:'a)``, ``FINITE (UNIV:'a set)``,
+   ``INT_MIN(:'a)``, ``dimword(:'a)``]);
 
 fun NUM_RULE l n x =
   let val y = SPEC_ALL x
@@ -310,5 +311,22 @@ end
 
 fun guess_lengths () = Parse.post_process_term :=
   (guess_word_lengths o fcpLib.guess_fcp_lengths o !Parse.post_process_term);
+
+val operators = [("+", ``($+ :bool['a] -> bool['a] -> bool['a])``),
+                 ("-", ``($- :bool['a] -> bool['a] -> bool['a])``),
+                 ("*", ``($* :bool['a] -> bool['a] -> bool['a])``),
+                 ("<", ``($< :bool['a] -> bool['a] -> bool)``),
+                 ("<=", ``($<= :bool['a] -> bool['a] -> bool)``),
+                 (">", ``($> :bool['a] -> bool['a] -> bool)``),
+                 (">=", ``($>= :bool['a] -> bool['a] -> bool)``)];
+
+fun deprecate_word () = let
+  fun losety {Name,Thy,Ty} = {Name = Name, Thy = Thy}
+  fun doit (s, t) = Parse.temp_remove_ovl_mapping s (losety (dest_thy_const t))
+in                 
+  app (ignore o doit) operators
+end
+
+fun prefer_word () = app temp_overload_on operators
 
 end

@@ -28,4 +28,7 @@ sig
     val notify_word_length_guesses : bool ref
     val guess_word_lengths         : term -> term
     val guess_lengths              : unit -> unit
+
+    val prefer_word    : unit -> unit
+    val deprecate_word : unit -> unit
 end
