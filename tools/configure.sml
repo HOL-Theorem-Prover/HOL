@@ -353,7 +353,11 @@ val _ =
       ["(defvar hol-executable HOL-EXECUTABLE\n"
         -->
        ("(defvar hol-executable \n  "^
-        quote (fullPath [holdir, "bin/hol"])^"\n")]
+        quote (fullPath [holdir, "bin/hol"])^"\n"),
+       "(defvar mosml-executable MOSML-EXECUTABLE\n"
+        -->
+       ("(defvar mosml-executable \n  "^
+        quote (fullPath [mosmldir, "mosml"])^"\n")]
  end;
 
 
@@ -440,7 +444,7 @@ val _ =
  let open TextIO
      val _ = echo "Setting up the muddy library Makefile."
      val src    = fullPath [holdir, "tools/makefile.muddy.src"]
-     val target = fullPath [holdir, "src/muddy/muddyC/Makefile"]
+     val target = fullPath [holdir, "examples/muddy/muddyC/Makefile"]
      val mosmlhome = Path.getParent mosmldir
  in
    case (CFLAGS, DLLIBCOMP, ALL) of

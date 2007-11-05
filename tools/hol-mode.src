@@ -23,6 +23,9 @@
 (defvar hol-executable HOL-EXECUTABLE
   "*Path-name for the HOL executable.")
 
+(defvar mosml-executable MOSML-EXECUTABLE
+  "*Path-name for the Moscow ML executable.")
+
 (defun hol-set-executable (filename)
   "*Set hol executable variable to be NAME."
   (interactive "fHOL executable: ")

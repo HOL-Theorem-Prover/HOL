@@ -17,9 +17,9 @@ In *scratch*, type
 (hol-set-executable mosml-executable)
 and type Ctrl-j.
 
-loadPath := "/usr/local/hol/hol-omega/sigobj" :: !loadPath;
+loadPath := "/Users/palantir/hol/hol-omega/sigobj" :: !loadPath;
 app load ["Feedback","Lib","Subst","KernelTypes","Type","Sig","Lexis",
-          "Polyhash","Binarymap"];
+          "Polyhash","Binarymap","combinTheory"];
 *)
 
 open Feedback Lib Subst KernelTypes Type;
@@ -802,12 +802,15 @@ fun mk_tyabs(Bvar as TyFv Bvarty, Body) =
          "bound variable occurs free in the type of a free variable of the body"
     else
     let fun bind (Fv(Name,Ty)) i      = Fv(Name, bindty Ty i)
+          | bind (Const(Name,Ty)) i   = Const(Name, bindpty Ty i)
           | bind (Comb(Rator,Rand)) i = Comb(bind Rator i, bind Rand i)
           | bind (TComb(Rator,Ty)) i  = TComb(bind Rator i, bindty Ty i)
           | bind (Abs(Bvar,Body)) i   = Abs(bind Bvar i, bind Body i)
           | bind (TAbs(Bvar,Body)) i  = TAbs(Bvar, bind Body (i+1))
           | bind (t as Clos _) i      = bind (push_clos t) i
           | bind tm _ = tm (* constant *)
+        and bindpty (GRND ty) i         = GRND (bindty ty i)
+          | bindpty (POLY ty) i         = POLY (bindty ty i)
         and bindty (v as TyFv _) i    = if v=Bvar then TyBv i else v
           | bindty (TyApp(opr,arg)) i = TyApp(bindty opr i, bindty arg i)
           | bindty (TyAll(bv,Body)) i = TyAll(bv, bindty Body (i+1))
@@ -1063,9 +1066,9 @@ val type_vars = Type.type_vars
 in
 fun dest_tyabs(TAbs(Bvar as (Name,Arity,Rank), Body)) =
     let fun dest (Fv(Name,Ty)) i        = Fv(Name, destty Ty i)
-          | dest (Const(N,Ty)) i        = Const(N, destpty Ty i)
-          | dest (Comb(Rator,Rand)) i   = Comb(dest Rator i,dest Rand i)
-          | dest (TComb(Rator,Ty)) i    = TComb(dest Rator i,destty Ty i)
+          | dest (Const(Name,Ty)) i     = Const(Name, destpty Ty i)
+          | dest (Comb(Rator,Rand)) i   = Comb(dest Rator i, dest Rand i)
+          | dest (TComb(Rator,Ty)) i    = TComb(dest Rator i, destty Ty i)
           | dest (Abs(Bvar,Body)) i     = Abs(dest Bvar i, dest Body i)
           | dest (TAbs(Bvar,Body)) i    = TAbs(Bvar, dest Body (i+1))
           | dest (t as Clos _) i        = dest (push_clos t) i
