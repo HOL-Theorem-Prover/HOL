@@ -63,6 +63,7 @@ val keepers =
 
      (* Integer *)
      "integerTheory.sig", "Cooper.sig", "intLib.sig", "intSyntax.sig",
+     "integer_wordTheory.sig",
 
      (* list *)
      "rich_listTheory.sig", "listTheory.sig", "listLib.sig",
