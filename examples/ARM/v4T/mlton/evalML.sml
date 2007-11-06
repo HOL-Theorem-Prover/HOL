@@ -659,7 +659,8 @@ fun printer (Wreg, Wmem, Wmode, Wflags, Wthumb, Wireg) cycle s ns =
                 print "pre-fetch abort\n"
               else
                 let val data = hd (armML.mem_output_data mem_out1)
-                    val ireg = armML.GET_IREG t1 (armML.FETCH_PC reg1) data
+                    val fpc1 = wordsML.word_bit numML.ONE (armML.FETCH_PC reg1)
+                    val ireg = armML.GET_IREG t1 fpc1 data
                 in
                   print_ireg ireg
                 end
