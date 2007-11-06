@@ -644,13 +644,13 @@ val decode_enc_mla_mul = store_thm("decode_enc_mla_mul",
    (!cond s rd rm rs rn.
       DECODE_ARM (enc (instruction$MLA cond s rd rm rs rn)) = mla_mul) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_ARM (enc (instruction$UMULL cond s rdhi rdlo rm rs)) = mla_mul) /\
+      DECODE_ARM (enc (instruction$UMULL cond s rdlo rdhi rm rs)) = mla_mul) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_ARM (enc (instruction$UMLAL cond s rdhi rdlo rm rs)) = mla_mul) /\
+      DECODE_ARM (enc (instruction$UMLAL cond s rdlo rdhi rm rs)) = mla_mul) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_ARM (enc (instruction$SMULL cond s rdhi rdlo rm rs)) = mla_mul) /\
+      DECODE_ARM (enc (instruction$SMULL cond s rdlo rdhi rm rs)) = mla_mul) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_ARM (enc (instruction$SMLAL cond s rdhi rdlo rm rs)) = mla_mul)`,
+      DECODE_ARM (enc (instruction$SMLAL cond s rdlo rdhi rm rs)) = mla_mul)`,
   SRW_TAC word_frags []);
 
 val decode_enc_ldr_str = store_thm("decode_enc_ldr_str",
@@ -992,16 +992,16 @@ val decode_mla_mul_enc = store_thm("decode_mla_mul_enc",
       DECODE_MLA_MUL (enc (instruction$MLA cond s rd rm rs rn)) =
       (F,F,T,s,rd,rn,rs,rm)) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_MLA_MUL (enc (instruction$UMULL cond s rdhi rdlo rm rs)) =
+      DECODE_MLA_MUL (enc (instruction$UMULL cond s rdlo rdhi rm rs)) =
       (T,F,F,s,rdhi,rdlo,rs,rm)) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_MLA_MUL (enc (instruction$UMLAL cond s rdhi rdlo rm rs)) =
+      DECODE_MLA_MUL (enc (instruction$UMLAL cond s rdlo rdhi rm rs)) =
       (T,F,T,s,rdhi,rdlo,rs,rm)) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_MLA_MUL (enc (instruction$SMULL cond s rdhi rdlo rm rs)) =
+      DECODE_MLA_MUL (enc (instruction$SMULL cond s rdlo rdhi rm rs)) =
       (T,T,F,s,rdhi,rdlo,rs,rm)) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_MLA_MUL (enc (instruction$SMLAL cond s rdhi rdlo rm rs)) =
+      DECODE_MLA_MUL (enc (instruction$SMLAL cond s rdlo rdhi rm rs)) =
       (T,T,T,s,rdhi,rdlo,rs,rm))`,
   REPEAT STRIP_TAC \\ SRW_TAC word_frags [DECODE_MLA_MUL_def]
     \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
@@ -1301,16 +1301,16 @@ val cond_pass_enc_mla_mul = store_thm("cond_pass_enc_mla_mul",
       CONDITION_PASSED flgs (enc (instruction$MLA cond s rd rm rs rn)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
-      CONDITION_PASSED flgs (enc (instruction$UMULL cond s rdhi rdlo rm rs)) =
+      CONDITION_PASSED flgs (enc (instruction$UMULL cond s rdlo rdhi rm rs)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
-      CONDITION_PASSED flgs (enc (instruction$UMLAL cond s rdhi rdlo rm rs)) =
+      CONDITION_PASSED flgs (enc (instruction$UMLAL cond s rdlo rdhi rm rs)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
-      CONDITION_PASSED flgs (enc (instruction$SMULL cond s rdhi rdlo rm rs)) =
+      CONDITION_PASSED flgs (enc (instruction$SMULL cond s rdlo rdhi rm rs)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
-      CONDITION_PASSED flgs (enc (instruction$SMLAL cond s rdhi rdlo rm rs)) =
+      CONDITION_PASSED flgs (enc (instruction$SMLAL cond s rdlo rdhi rm rs)) =
       CONDITION_PASSED2 flgs cond)`,
   PASS_TAC);
 

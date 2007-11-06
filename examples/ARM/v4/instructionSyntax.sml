@@ -151,10 +151,10 @@ fun mk_mla_mul (Instruction (x,c)) =
       (case (#L y, #Signed y, #A y) of
          (false,_,false)    => ``MUL c s rd rm rs``
        | (false,_,true)     => ``MLA c s rd rm rs rn``
-       | (true,false,false) => ``UMULL c s rd rn rm rs``
-       | (true,false,true)  => ``UMLAL c s rd rn rm rs``
-       | (true,true,false)  => ``SMULL c s rd rn rm rs``
-       | (true,true,true)   => ``SMLAL c s rd rn rm rs``)
+       | (true,false,false) => ``UMULL c s rn rd rm rs``
+       | (true,false,true)  => ``UMLAL c s rn rd rm rs``
+       | (true,true,false)  => ``SMULL c s rn rd rm rs``
+       | (true,true,true)   => ``SMLAL c s rn rd rm rs``)
   | _ => raise ERR "mk_mla_mul" "not a multiply instruction")
  | mk_mla_mul _ = raise ERR "mk_mla_mul" "not a multiply instruction";
 
@@ -583,23 +583,23 @@ in
          else if term_eq i ``instruction$UMULL`` then
            Instruction(Mla_mul {L = true, Signed = false,
              A = false, S = dest_bool s,
-             Rd = dest_register rd, Rm = dest_register rs,
-             Rs = dest_register rn, Rn = dest_register rm},dest_condition c)
+             Rd = dest_register rm, Rm = dest_register rs,
+             Rs = dest_register rn, Rn = dest_register rd},dest_condition c)
          else if term_eq i ``instruction$UMLAL`` then
            Instruction(Mla_mul {L = true, Signed = false,
              A = true, S = dest_bool s,
-             Rd = dest_register rd, Rm = dest_register rs,
-             Rs = dest_register rn, Rn = dest_register rm},dest_condition c)
+             Rd = dest_register rm, Rm = dest_register rs,
+             Rs = dest_register rn, Rn = dest_register rd},dest_condition c)
          else if term_eq i ``instruction$SMULL`` then
            Instruction(Mla_mul {L = true, Signed = true,
              A = false, S = dest_bool s,
-             Rd = dest_register rd, Rm = dest_register rs,
-             Rs = dest_register rn, Rn = dest_register rm},dest_condition c)
+             Rd = dest_register rm, Rm = dest_register rs,
+             Rs = dest_register rn, Rn = dest_register rd},dest_condition c)
          else if term_eq i ``instruction$SMLAL`` then
            Instruction(Mla_mul {L = true, Signed = true,
              A = true, S = dest_bool s,
-             Rd = dest_register rd, Rm = dest_register rs,
-             Rs = dest_register rn, Rn = dest_register rm},dest_condition c)
+             Rd = dest_register rm, Rm = dest_register rs,
+             Rs = dest_register rn, Rn = dest_register rd},dest_condition c)
          else
            raise err
     | _ => raise err)

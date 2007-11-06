@@ -274,16 +274,16 @@ val ARM_MLA_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
   ``enc (instruction$MLA c s Rd Rs Rm Rn)``);
 
 val ARM_UMULL_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
-  ``enc (instruction$UMULL c s RdHi RdLo Rs Rm)``);
+  ``enc (instruction$UMULL c s RdLo RdHi Rs Rm)``);
 
 val ARM_UMLAL_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
-  ``enc (instruction$UMLAL c s RdHi RdLo Rs Rm)``);
+  ``enc (instruction$UMLAL c s RdLo RdHi Rs Rm)``);
 
 val ARM_SMULL_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
-  ``enc (instruction$SMULL c s RdHi RdLo Rs Rm)``);
+  ``enc (instruction$SMULL c s RdLo RdHi Rs Rm)``);
 
 val ARM_SMLAL_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
-  ``enc (instruction$SMLAL c s RdHi RdLo Rs Rm)``);
+  ``enc (instruction$SMLAL c s RdLo RdHi Rs Rm)``);
 
 val ARM_B_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
   ``enc (instruction$B c offset)``);
@@ -445,22 +445,22 @@ val ARM_MLA = SYMBOLIC_EVAL_CONV MLA_MUL_ss (cntxt
 val ARM_UMULL = SYMBOLIC_EVAL_CONV MLA_MUL_ss (cntxt
   [``~(RdHi = 15w:word4)``,``~(RdLo = 15w:word4)``,``~(RdHi = RdLo:word4)``,
    ``~(RdHi = Rm:word4)``,``~(RdLo = Rm:word4)``]
-  ``enc (instruction$UMULL c s RdHi RdLo Rm Rs)``);
+  ``enc (instruction$UMULL c s RdLo RdHi Rm Rs)``);
 
 val ARM_UMLAL = SYMBOLIC_EVAL_CONV MLA_MUL_ss (cntxt
   [``~(RdHi = 15w:word4)``,``~(RdLo = 15w:word4)``,``~(RdHi = RdLo:word4)``,
    ``~(RdHi = Rm:word4)``,``~(RdLo = Rm:word4)``]
-  ``enc (instruction$UMLAL c s RdHi RdLo Rm Rs)``);
+  ``enc (instruction$UMLAL c s RdLo RdHi Rm Rs)``);
 
 val ARM_SMULL = SYMBOLIC_EVAL_CONV MLA_MUL_ss (cntxt
   [``~(RdHi = 15w:word4)``,``~(RdLo = 15w:word4)``,``~(RdHi = RdLo:word4)``,
    ``~(RdHi = Rm:word4)``,``~(RdLo = Rm:word4)``]
-  ``enc (instruction$SMULL c s RdHi RdLo Rm Rs)``);
+  ``enc (instruction$SMULL c s RdLo RdHi Rm Rs)``);
 
 val ARM_SMLAL = SYMBOLIC_EVAL_CONV MLA_MUL_ss (cntxt
   [``~(RdHi = 15w:word4)``,``~(RdLo = 15w:word4)``,``~(RdHi = RdLo:word4)``,
    ``~(RdHi = Rm:word4)``,``~(RdLo = Rm:word4)``]
-  ``enc (instruction$SMLAL c s RdHi RdLo Rm Rs)``);
+  ``enc (instruction$SMLAL c s RdLo RdHi Rm Rs)``);
 
 (* ......................................................................... *)
 
