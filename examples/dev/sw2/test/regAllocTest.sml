@@ -13,7 +13,7 @@ open regAlloc;
 val fact_def = Define
    `fact i = if i = 0 then 1 else i * fact (i - 1)`;
 
-val def = SSA_RULE (SIMP_RULE std_ss [Once LET_THM] (normalize fact_def));
+val def = (SSA_RULE o normalize) fact_def;
 
 (*
  |- fact =
