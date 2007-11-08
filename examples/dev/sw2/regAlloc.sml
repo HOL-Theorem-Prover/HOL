@@ -656,7 +656,7 @@ fun args_env args =
 fun reg_alloc def =
  let
    val (fname, fbody) = dest_eq (concl def)
-   val (args,body) = dest_pabs fbody
+   val (args,body) = dest_pabs fbody handle _ => (Term`()`, fbody)  (* no argument *) 
    val (sane,var_type) = pre_check(args,body)
  in
   if sane then
@@ -671,13 +671,16 @@ fun reg_alloc def =
       val tha = QCONV(SIMP_CONV pure_ss [LET_SAVE, LET_LOC, loc_def]) body2
       val th1 = SYM (PBETA_RULE tha)
       val body3 = lhs (concl th1)
-      val th2 = ALPHA fbody (mk_pabs (args1,body3)) handle e 
-                  => (print "the allocation is incomplete or incorrect"; 
-                      Raise e)
+      val fbody' = if args1 = Term`()` then body3
+                   else mk_pabs (args1,body3)
+      val th2 = ALPHA fbody fbody'
+                handle _ => prove (mk_eq(fbody, fbody'), SIMP_TAC std_ss [LET_THM])
+                handle e => (print "the allocation is incomplete or incorrect"; 
+                             Raise e)
       val th3 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [th1])) th2
       val th4 = TRANS def th3
-      val th5 = (BETA_RULE o REWRITE_RULE [save_def, loc_def]) th4
-      val th6 = refine_tail_recursion th5
+      val th5 = (PBETA_RULE o REWRITE_RULE [save_def, loc_def]) th4
+      val th6 = refine_tail_recursion th5 handle _ => th5
    in
      th6
    end

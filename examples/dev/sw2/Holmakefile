@@ -1,0 +1,1 @@
+INCLUDES = $(HOLDIR)/examples/ARM/v4 $(HOLDIR)/tools/mlyacc/mlyacclib $(HOLDIR)/examples/mc-logic

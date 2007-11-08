@@ -132,7 +132,7 @@ val tr_f = ref (``T``);    (* the name of a recursive function *)
 fun caller_save t =
   if is_let t then
     let val (v,M,N) = dest_plet t in
-      if is_comb M then
+      if is_comb M andalso not (is_atomic M) then
         let val (x,y) = dest_comb M in
            if is_fun x andalso not (x = !tr_f) then (* non-recursive function application *)
              let val (wS, next_slot) = M.find(!fmap, x)
@@ -194,7 +194,7 @@ fun callerSave defs =
  end
 
 (*----------------------------------------------------------------------------------------------*)
-(*                                                                                              *)
+(* For debugging                                                                                *)
 (*----------------------------------------------------------------------------------------------*)
 
 fun mm () =

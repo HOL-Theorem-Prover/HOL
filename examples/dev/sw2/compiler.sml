@@ -1,0 +1,260 @@
+
+structure compiler :> compiler =
+struct
+
+(* for interactive use
+fun load_path_add x = loadPath := !loadPath @ [concat Globals.HOLDIR x];
+val _ = load_path_add "/examples/mc-logic";
+val _ = load_path_add "/examples/ARM/v4";
+val _ = load_path_add "/tools/mlyacc/mlyacclib";
+(* load_path_add "/examples/dev/sw2"; *)
+
+quietdec := true;
+app load ["arm_compilerLib", "Normal", "inline", "closure", "regAlloc", "funcCall", "refine"];
+quietdec := false;
+
+*)
+
+open HolKernel Parse boolLib bossLib boolSyntax
+open arm_compilerLib;
+
+val _ = numLib.prefer_num();
+val _ = Globals.priming := NONE;
+
+(*---------------------------------------------------------------------------*)
+(* Interface Functions.                                                      *)
+(*---------------------------------------------------------------------------*)
+
+val normalize = Normal.normalize;
+val SSA_RULE = Normal.SSA_RULE;
+val expand_anonymous = inline.expand_anonymous;
+val expand_named = inline.expand_named;
+val optimize_norm = inline.optimize_norm;
+val close_one_by_one = closure.close_one_by_one;
+val close_all = closure.close_all;
+val closure_convert = closure.closure_convert;
+val parallel_move = regAlloc.parallel_move;
+val reg_alloc = regAlloc.reg_alloc;
+val callerSave = funcCall.callerSave;
+(*
+val printSAL = SALGen.printSAL;
+val certified_gen = SALGen.certified_gen;
+*)
+
+(*---------------------------------------------------------------------------*)
+(* Auxiliary functions.                                                      *)
+(*---------------------------------------------------------------------------*)
+
+fun resultOf (PASS x) = x;
+
+fun head eqns = strip_comb (lhs(snd(strip_forall(hd (strip_conj(concl eqns))))));
+
+(*---------------------------------------------------------------------------*)
+(* Compiling a list of functions.                                            *)
+(*---------------------------------------------------------------------------*)
+  
+fun defname th = 
+  fst(dest_const(fst(strip_comb(lhs(snd(strip_forall(concl th)))))));
+
+fun compenv comp = 
+ let fun compile (env,[]) = PASS(rev env)
+       | compile (env,h::t) =
+          let val name = defname h
+          in 
+            print ("Compiling "^name^" ... ");
+            case total comp (env,h)
+             of SOME def1 => (print "succeeded.\n"; compile(def1::env,t))
+              | NONE => (print "failed.\n"; FAIL(env,h::t))
+          end
+ in
+    compile
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Compile a list of definitions, accumulating the environment.              *)
+(*---------------------------------------------------------------------------*)
+
+fun complist passes deflist = compenv passes ([],deflist);
+
+(*---------------------------------------------------------------------------*)
+(* Conversion 1.                                                             *)
+(* Basic flattening via CPS and unique names                                 *)
+(*---------------------------------------------------------------------------*)
+
+fun convert1 (env,def) = 
+  Normal.SSA_RULE (refine.refine0b 
+    (refine.refine0a (refine.refine0 (normalize def))));
+
+(* All previous, plus inlining and optimizations                             *)
+
+fun convert1a (env,def) = 
+  let val def1 = convert1 def
+  in 
+   Normal.SSA_RULE (inline.optimize_norm env def1)
+  end;
+
+(* All previous, and closure conversion.                                     *)
+
+fun convert1b (env,def) = 
+  let val def1 = convert1a (env,def)
+  in case total closure.closure_convert def1
+      of SOME thm => Normal.SSA_RULE (inline.optimize_norm env thm)
+       | NONE => def1
+  end;
+
+(*---------------------------------------------------------------------------*)
+(* Conversion 2.                                                             *)
+(* All previous, and register allocation.                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun convert2 (env,def) = 
+  let val def1 = convert1 (env,def)
+      val def2 = regAlloc.reg_alloc def1
+  in
+    def2
+  end;
+
+(* Different convert2, in which some intermediate steps are skipped.         *)
+
+fun convert2a (env,def) = 
+  let val def1 = convert1a (env,def)
+  in 
+     regAlloc.reg_alloc def1
+  end;
+
+(*---------------------------------------------------------------------------*)
+(* Conversion 3.                                                             *)
+(* All previous, and refinement.                                             *)
+(*---------------------------------------------------------------------------*)
+
+fun convert3 (env,def) =
+  let val def1 = convert2 (env,def)
+  in
+    CONV_RULE (
+      RHS_CONV (
+        SIMP_CONV bool_ss 
+          [refine.lift_cond_above_let, refine.lift_cond_above_let1,
+           refine.lift_cond_above_trivlet, NormalTheory.FLATTEN_LET
+           (*, COND_RATOR, COND_RAND *)])) def1
+  end
+
+(*---------------------------------------------------------------------------*)
+(* Compiling a list of source functions.                                     *)
+(*---------------------------------------------------------------------------*)
+
+fun defname th = 
+  fst(dest_const(fst(strip_comb(lhs(snd(strip_forall(concl th)))))));
+
+fun compenv comp = 
+ let fun compile (env,[]) = PASS(rev env)
+       | compile (env,h::t) =
+          let val name = defname h
+          in 
+            print ("Compiling "^name^" ... ");
+            case total comp (env,h) 
+             of SOME def1 => (print "succeeded.\n"; compile(def1::env,t))
+              | NONE => (print "failed.\n"; FAIL(env,h::t))
+          end
+ in
+    compile 
+ end;
+
+(* Compile a list of definitions, accumulating the environment.              *)
+
+fun complist passes deflist = compenv passes ([],deflist);
+
+(*---------------------------------------------------------------------------*)
+(* Compilation phases in front end.                                          *)
+(*---------------------------------------------------------------------------*)
+
+(* Basic flattening via CPS and unique names                                 *)
+
+val pass1 = complist convert1
+
+(* All previous, and register allocation.                                    *)
+
+val pass2 = complist convert2
+
+(* All previous, and refinement.                                             *)
+
+val pass3 = complist convert3
+
+(* All previous, and the following:                                          *)
+(*  1. enforce caller-save-style function calls                              *)
+(*  2. tune the normal forms for the back-end                                *)  
+
+fun pass4 defs = 
+  case pass3 defs of
+     PASS v => PASS (funcCall.callerSave v) 
+   | FAIL v => FAIL v;
+
+(*---------------------------------------------------------------------------*)
+(* Front end.                                                                *)
+(*---------------------------------------------------------------------------*)
+
+fun f_compile defs = 
+ let
+
+  fun redefine def =
+   let 
+     val (fname, fbody) = dest_eq (concl def)
+     val (args,body) = pairSyntax.dest_pabs fbody
+     val def1 = CONV_RULE (RHS_CONV pairLib.GEN_BETA_CONV) (AP_THM def args)
+
+     val (cname, ctype) = dest_const fname
+     val new_name = cname ^ "'"
+     val cvar = mk_var(new_name, ctype)
+
+     val vtm = subst [fname |-> cvar] (concl def)
+     (* val _ = HOL_MESG "redefinition" *)
+     val PASS (defn2,tcs) = TotalDefn.std_apiDefine (cname,vtm)
+     val def2 = LIST_CONJ (Defn.eqns_of defn2)
+     val ind = Defn.ind_of defn2
+    
+     val lem = prove(mk_eq(mk_const(new_name, ctype), fname), 
+                     REWRITE_TAC [Once def, Once def2])
+     val ind2 = case ind of 
+                   SOME th => ONCE_REWRITE_RULE [lem] th
+                 | NONE => TRUTH
+   in
+     (def1,ind2)
+   end;
+
+   val result = pass4 defs
+ in
+   case result of 
+        PASS defs' => PASS (List.map redefine defs')
+     |  FAIL x => FAIL x
+ end
+
+(*---------------------------------------------------------------------------*)
+(* Join the front end with Magnus' backend                                   *)
+(*---------------------------------------------------------------------------*)
+
+val style = ref (InLineCode);
+
+fun b_compile norms =
+  let val _ = abbrev_code := true
+      val _ = reset_compiled()
+      val _ = optimise_code := true;
+
+      fun one_fun (def, ind) = 
+        let val (th,strs) = arm_compile (SPEC_ALL def) ind (!style)
+            val code = fetch "-" (#1 (dest_const (#1 (head def))) ^ "_code1_def")
+        in  (th, code)
+        end
+  in
+    case norms of 
+         PASS defs => PASS (List.map one_fun defs)
+      |  FAIL x => FAIL x
+  end
+
+(*---------------------------------------------------------------------------*)
+(* End-to-end compiler.                                                      *)
+(*---------------------------------------------------------------------------*)
+
+val pp_compile = b_compile o f_compile;
+
+(*---------------------------------------------------------------------------*)
+
+end

@@ -198,6 +198,13 @@ fun pre_check (args,body) =
   let
     val fv = free_vars (mk_pair(args,body))
     val var_type = type_of (hd (fv))
+                   handle _ =>  (* no argument *)
+                     let fun trav M =
+                           if is_plet M then trav (#1 (dest_plet M))
+                           else if is_comb M then trav (#2 (dest_comb M))
+                           else if is_pair M then trav (#1 (dest_pair M))
+                           else type_of M
+                     in trav body end
     val sane = List.all (fn x => type_of x = var_type) fv
   in
     (sane, var_type)
