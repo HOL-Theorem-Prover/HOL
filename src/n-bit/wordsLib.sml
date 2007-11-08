@@ -314,6 +314,7 @@ fun guess_lengths () = Parse.post_process_term :=
 
 val operators = [("+", ``($+ :bool['a] -> bool['a] -> bool['a])``),
                  ("-", ``($- :bool['a] -> bool['a] -> bool['a])``),
+                 ("-", ``($- :bool['a] -> bool['a])``),
                  ("*", ``($* :bool['a] -> bool['a] -> bool['a])``),
                  ("<", ``($< :bool['a] -> bool['a] -> bool)``),
                  ("<=", ``($<= :bool['a] -> bool['a] -> bool)``),
