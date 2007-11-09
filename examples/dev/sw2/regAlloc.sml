@@ -37,7 +37,7 @@ datatype alloc_result =
 
 val DEBUG = ref true;
 
-val numRegs = ref 10;
+val numRegs = ref 11;
 
 fun mk_regs() = 
   let 
@@ -537,7 +537,7 @@ fun parallel_move dst src exp =
 
    fun moves (t,[],[]) = t
      | moves (t, d::dL, s::sL) = 
-         if d = s then t
+         if d = s then moves(t, dL, sL)
          else
           if List.exists (equal d) sL (* d is still live *)
           then let val spot = get_avail_spot (d :: s :: sL)

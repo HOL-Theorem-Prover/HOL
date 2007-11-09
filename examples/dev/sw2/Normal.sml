@@ -37,6 +37,9 @@ val branch_join = ref false
 
 val PRE_PROCESS_RULE = SIMP_RULE arith_ss [AND_COND, OR_COND, BRANCH_NORM];
 
+val pre_process = PBETA_RULE o REWRITE_RULE [AND_COND, OR_COND] o 
+                   SIMP_RULE arith_ss [ELIM_USELESS_LET];
+
 (*---------------------------------------------------------------------------*)
 (* Normalization                                                             *)
 (* This intermediate language is a combination of K-normal forms             *)
@@ -268,9 +271,8 @@ fun K_Normalize exp =
 
 fun normalize def = 
  let val _ = branch_join := false     (* need not to introduce new binding for top level conditionals *)
-     val thm0 = SIMP_RULE arith_ss [ELIM_USELESS_LET] def  (* Basic simplification *)
      (* Break compound condition jumps *)
-     val thm1 = (PBETA_RULE o REWRITE_RULE [AND_COND, OR_COND]) thm0
+     val thm1 = def (* (PBETA_RULE o REWRITE_RULE [AND_COND, OR_COND]) thm0 *)
      val thm2 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [C_INTRO])) 
                           (SPEC_ALL thm1)
 

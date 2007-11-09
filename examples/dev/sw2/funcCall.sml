@@ -1,7 +1,7 @@
 structure funcCall (* :> funcCall *) =
 struct
 
-(* app load ["NormalTheory", "basic"] *)
+(* app load ["NormalTheory", "basic", "regAlloc"] *)
 
 open HolKernel Parse boolLib bossLib;
 open pairLib pairSyntax PairRules NormalTheory basic;
@@ -92,6 +92,18 @@ fun process_body body =
 
 (* Find all modified registers and the next available memory slot for all functions *)
 
+val fmap = ref (M.mkDict tvarOrder);
+
+fun investigate_def def = 
+   let
+     val (fname, fbody) = dest_eq (concl (SPEC_ALL def))
+     val (args,body) = dest_pabs fbody handle _ => (#2 (dest_comb fname), fbody)
+     val fname = if is_pabs fbody then fname else #1 (dest_comb fname)
+   in 
+     fmap := M.insert(!fmap, fname, ((args, identify_output body), process_body body))
+   end
+
+(*
 fun preprocess defs = 
   List.foldl (fn (def, m) => 
                let
@@ -99,12 +111,13 @@ fun preprocess defs =
                  val (args,body) = dest_pabs fbody handle _ => (#2 (dest_comb fname), fbody)
                  val fname = if is_pabs fbody then fname else #1 (dest_comb fname)
                in 
-                 M.insert(m, fname, process_body body)
+                 M.insert(m, fname, ((args, args), process_body body))
                end
              )
              (M.mkDict tvarOrder)
              defs
   ;
+*)
 
 (* Convert a function body into its call-save format *)
 
@@ -119,15 +132,31 @@ fun restore (wS, next_slot) exp =
    #1 (List.foldr (fn (r, (e, slot)) => 
                      (mk_plet (r, mk_atom (mk_var("m" ^ Int.toString(slot), !VarType)), e), slot + 1))
                   (exp, next_slot)
-                  (S.listItems wS)
+                  (rev (S.listItems wS))
       )
 
-val fmap = ref (M.mkDict tvarOrder);
 (* 
   fmap := preprocess defs;
 *)
 
 val tr_f = ref (``T``);    (* the name of a recursive function *)
+
+fun format_call (fname, dst, src, cont) =
+  let val ((src0, dst0), (s, next_slot)) = M.find(!fmap, fname)
+       (* handle NotFound => (investigate_def (DB.definition (#1 (dest_const fname) ^ "_def")); 
+                             M.find(!fmap, fname))
+       *)
+      val s1 = S.addList (S.addList(s, strip_pair src0), strip_pair dst0)
+      val s2 = S.difference(s1, S.addList(S.empty tvarOrder, strip_pair dst))
+
+      val t1 = restore (s2, next_slot) cont
+      val t2 = regAlloc.parallel_move dst dst0 t1
+      val t3 = mk_plet(dst0, mk_comb(fname, src0), t2)
+      val t4 = regAlloc.parallel_move src0 src t3
+      val t5 = save (s2, next_slot) t4
+  in
+      t5
+  end
 
 fun caller_save t =
   if is_let t then
@@ -135,12 +164,10 @@ fun caller_save t =
       if is_comb M andalso not (is_atomic M) then
         let val (x,y) = dest_comb M in
            if is_fun x andalso not (x = !tr_f) then (* non-recursive function application *)
-             let val (wS, next_slot) = M.find(!fmap, x)
-                 val wS' = S.difference (wS, S.addList(S.empty tvarOrder, strip_pair v))
-                 val e1 = restore (wS', next_slot) (caller_save N)
-                 val e2 = save (wS', next_slot) (mk_plet(v, (caller_save M), e1))
+             let 
+                 val (fname, dst, src, cont) = (x, v, y, caller_save N)
              in
-                 e2
+                 format_call (fname, dst, src, cont)
              end
            else
              mk_plet(v, caller_save M, caller_save N)
@@ -168,10 +195,29 @@ fun caller_save t =
 
 (* Process function calls in a caller-save style *)
 
+fun caller_save_call def =
+    let val (fname, fbody) = dest_eq (concl (SPEC_ALL def))
+        val (args,body) = dest_pabs fbody handle _ => (#2 (dest_comb fname), fbody)
+        val (sane,var_type) = pre_check(args,body)
+        val fname = if is_pabs fbody then fname else #1 (dest_comb fname)
+        val _ = (VarType := var_type; tr_f := fname)
+        val _ = investigate_def def   (* store the information of the current function into !fmap *)
+    in if sane then
+        let
+          val body' = caller_save body
+          val th0 = SYM (QCONV(SIMP_CONV pure_ss [LET_ATOM]) body')
+          val (r,t) = dest_eq(concl th0)
+          val lem1 = ALPHA body r
+          val th1 = TRANS lem1 th0
+          val th2 = REWRITE_RULE [Once th1] def
+          val th3 = REWRITE_RULE [ATOM_ID] th2
+        in SIMP_RULE bool_ss [ELIM_USELESS_LET] th3
+        end
+       else def
+    end
+
 fun callerSave defs =
  let
-   val _ = fmap := preprocess defs
-
    fun one_fun def = 
     let val (fname, fbody) = dest_eq (concl (SPEC_ALL def))
         val (args,body) = dest_pabs fbody handle _ => (#2 (dest_comb fname), fbody)
@@ -198,7 +244,7 @@ fun callerSave defs =
 (*----------------------------------------------------------------------------------------------*)
 
 fun mm () =
-  List.map (fn (fname, (wS, slot)) => (fname, (S.listItems wS, slot))) (M.listItems (!fmap))
+  List.map (fn (fname, ((src, dst), (wS, slot))) => (fname, (src, dst, S.listItems wS, slot))) (M.listItems (!fmap))
 
 
 end

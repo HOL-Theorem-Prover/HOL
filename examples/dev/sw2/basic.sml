@@ -191,6 +191,39 @@ fun abs_fun def =
   handle HOL_ERR _ => def           (* already an abstraction *)
 
 (*---------------------------------------------------------------------------*)
+(* Find the ouput of a term.                                                 *)
+(*---------------------------------------------------------------------------*)
+
+fun identify_output t = 
+ let
+  fun trav t =
+      if is_let t then
+        let val (v,M,N) = dest_plet t
+        in trav N end
+      else if is_cond t then
+             let val (J, M1, M2) = dest_cond t
+                 val t1 = trav M1
+                 val t2 = trav M2
+             in if t1 = t2 then t1
+                else case t1 of 
+                     SOME x => (case t2 of 
+                                   SOME y => raise Fail "the outputs of two branches are different!"
+                                 | NONE => SOME x
+                               )
+                 |  NONE => t1
+             end 
+      else if is_pabs t then
+           let val (M,N) = dest_pabs t in trav N end
+      else if is_comb t then
+           NONE
+      else if is_pair t orelse is_atomic t then
+           SOME t
+      else NONE
+ in
+   valOf (trav t)
+ end
+
+(*---------------------------------------------------------------------------*)
 (* Sanity check of the source program.                                       *)
 (*---------------------------------------------------------------------------*)
 

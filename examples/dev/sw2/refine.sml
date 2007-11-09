@@ -1,12 +1,16 @@
 
-structure refine (* :> refine *) = 
+structure refine :> refine = 
 struct
 
 (* app load ["wordsSyntax", "fcpLib", "wordsLib", "Normal"]; *)
 
-open HolKernel Parse boolLib bossLib wordsSyntax numSyntax pairSyntax;
+open HolKernel Parse boolLib bossLib wordsSyntax numSyntax pairSyntax NormalTheory;
 
-val mapPartial = List.mapPartial;
+(*---------------------------------------------------------------------------*)
+
+val C_tm = prim_mk_const{Name="C",Thy="Normal"};
+fun mk_C tm = mk_comb (inst [alpha |-> type_of tm, beta |-> type_of tm] C_tm, tm);
+val dest_C = dest_monop C_tm (ERR "dest_C" "");
 
 (*---------------------------------------------------------------------------*)
 (* To eventually go to wordsSyntax.                                          *)
@@ -80,7 +84,7 @@ val n24 = term_of_int 24;
 val n256 = Arbnum.fromInt 256;
 
 fun bytes_to_let (b1,b2,b3,b4) = 
- let val plist = mapPartial 
+ let val plist = List.mapPartial 
                    (fn p as (b,s) => if b = zero32 then NONE else SOME p)
                     [(b1,n24), (b2,n16), (b3,n8)]
      val plist' = enumerate 0 plist
@@ -142,28 +146,125 @@ val refine0 = CONV_RULE (DEPTH_CONV IMMEDIATE_CONST_CONV);
 val refine0a = CONV_RULE (DEPTH_CONV COND_CONST_ELIM_CONV);
 val refine0b = Ho_Rewrite.PURE_REWRITE_RULE [NormalTheory.FLATTEN_LET];
 
+val refine_const = refine0b o refine0a o refine0;
+
 (*---------------------------------------------------------------------------*)
 (* Some refinements after compilation                                        *)
 (*---------------------------------------------------------------------------*)
 
-val lift_cond_above_let = Q.prove
-(`(let x = (if v1 then v2 else v3) in rst x) = 
-  if v1 then (let x = v2 in rst x) else (let x = v3 in rst x)`,
+val LIFT_COND_ABOVE_LET = Q.prove
+(`!f v1 v2 v3. 
+  (let x = (if v1 then v2 else v3) in f x) = 
+    if v1 then (let x = v2 in f x) else (let x = v3 in f x)`,
  RW_TAC std_ss [LET_DEF]);
 
-val lift_cond_above_let1 = Q.prove
+val LIFT_COND_ABOVE_LET1 = Q.prove
 (`(let x = val in (if v1 then v2 x else v3 x)) = 
   if v1 then (let x = val in v2 x) else (let x = val in v3 x)`,
  RW_TAC std_ss [LET_DEF]);
 
-val lift_cond_above_trivlet = Q.prove
+val LIFT_COND_ABOVE_TRIVLET = Q.prove
 (`(let x = (if v1 then v2 else v3) in x) = 
   if v1 then v2 else v3`,
  SIMP_TAC std_ss [LET_DEF]);
 
-val id_let = Q.prove
+val ID_LET = Q.prove
 (`LET (\x.x) y = y`,
  SIMP_TAC std_ss [LET_DEF]);
+
+fun lift_cond def =
+  let
+    fun mk_flat_let (x, e1, e2) = 
+        if is_pair x andalso is_pair e1 then
+           let val (x1,x2) = dest_pair x
+               val (e1',e1'') = dest_pair e1
+           in  mk_flat_let(x1, e1', mk_flat_let(x2, e1'', e2))
+           end
+        else if basic.is_atomic e1 andalso basic.is_atomic x then
+           subst [x |-> e1] e2
+        else
+           mk_plet(x, e1, e2)
+
+    fun trav t =
+      if is_let t then
+        let val (v,M,N) = dest_plet t
+            val N' = trav N
+        in if is_cond M then
+             let val (J, M1, M2) = dest_cond M
+                 val M1' = mk_flat_let (v, trav M1, N')
+                 val M2' = mk_flat_let (v, trav M2, N')
+             in mk_cond (J, M1', M2') end
+           else
+             mk_flat_let(v, trav M, trav N)
+        end
+       else if is_comb t then
+            let val (M1,M2) = dest_comb t
+                val M1' = trav M1
+                val M2' = trav M2
+            in mk_comb(M1',M2')
+            end
+       else if is_pabs t then
+           let val (v,M) = dest_pabs t
+           in mk_pabs(v,trav M)
+           end
+       else t
+
+      val (fname, fbody) = dest_eq (concl (SPEC_ALL def))
+      val fbody' = trav fbody
+      val th1 = prove (mk_eq(fbody, fbody'), 
+		       SIMP_TAC bool_ss [LET_THM])
+                handle _ => prove (mk_eq(fbody, fbody'), 
+		                   RW_TAC std_ss [LET_THM])
+                handle _ => def 
+      val th2 = CONV_RULE (RHS_CONV (REWRITE_CONV [Once th1])) (SPEC_ALL def)
+  in
+     th2
+  end
+
+(*---------------------------------------------------------------------------*)
+(*   Convert a definiton to its equivalent refined format                    *)
+(*---------------------------------------------------------------------------*)
+
+(*
+val LIFT_COND_ABOVE_C = Q.prove (
+  `!f v1 v2 v3. C (let x = (if v1 then v2 else v3) in f x) = 
+     if v1 then C v2 (\x. C (f x)) else C v3 (\y. C (f y))`,
+  SIMP_TAC std_ss [C_def, LET_THM, FUN_EQ_THM] THEN
+  Cases_on `v1` THEN
+  RW_TAC std_ss []
+ );
+
+fun lift_cond exp =
+ let val t = dest_C exp               (* eliminate the C *)
+ in
+  if is_let t then                    (*  exp = LET (\v. N) M  *)
+    let val (v,M,N) = dest_plet t
+        val (th0, th1) = (lift_cond (mk_C M), lift_cond (mk_C N))
+    in  if is_cond M then
+          let val (J, M1, M2) = dest_cond M
+              val M1' = mk_plet (v, lift_cond M1, N')
+              val M2' = mk_plet (v, lift_cond M2, N')
+
+	      val th3 = 
+                     let val f = mk_pabs(v,N)
+                         val th = INST_TYPE [alpha |-> type_of N, 
+                                            beta  |-> type_of N, 
+                                            gamma |-> type_of v]
+                                 (LIFT_COND_ABOVE_C)
+                         val t2 = rhs (concl (SPECL [f, J, M1, M2] th))
+                         val th2 = prove (mk_eq(exp,t2), 
+					  RW_TAC std_ss [LET_THM, C_def])
+                     in
+			 PairRules.PBETA_RULE (SIMP_RULE std_ss [pairTheory.LAMBDA_PROD] th2)
+                     end
+    in
+       th5
+    end
+
+   else
+    REFL exp
+ end;
+*)
 
 (*---------------------------------------------------------------------------*)
 

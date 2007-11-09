@@ -3,6 +3,7 @@ sig
   include Abbrev
 
   val PRE_PROCESS_RULE : thm -> thm
+  val pre_process : thm -> thm
   val SUBST_2_RULE : thm * thm -> thm -> thm
   val Normalize_Atom_Cond : thm * thm * thm * thm -> conv
   val K_Normalize : conv

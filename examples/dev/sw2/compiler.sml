@@ -1,24 +1,25 @@
 
-structure compiler :> compiler =
+structure compiler (* :> compiler *) =
 struct
 
-(* for interactive use
+(* for interactive use  
 fun load_path_add x = loadPath := !loadPath @ [concat Globals.HOLDIR x];
 val _ = load_path_add "/examples/mc-logic";
 val _ = load_path_add "/examples/ARM/v4";
 val _ = load_path_add "/tools/mlyacc/mlyacclib";
 (* load_path_add "/examples/dev/sw2"; *)
 
-quietdec := true;
+val _ = quietdec := true;
 app load ["arm_compilerLib", "Normal", "inline", "closure", "regAlloc", "funcCall", "refine"];
-quietdec := false;
-
+val _ = quietdec := false;
 *)
 
-open HolKernel Parse boolLib bossLib boolSyntax
+open HolKernel Parse boolLib bossLib boolSyntax;
+
 open arm_compilerLib;
 
 val _ = numLib.prefer_num();
+
 val _ = Globals.priming := NONE;
 
 (*---------------------------------------------------------------------------*)
@@ -78,12 +79,18 @@ fun complist passes deflist = compenv passes ([],deflist);
 
 (*---------------------------------------------------------------------------*)
 (* Conversion 1.                                                             *)
+(* Simplify to standard format.                                              *)
 (* Basic flattening via CPS and unique names                                 *)
 (*---------------------------------------------------------------------------*)
 
+val cond_lift = ref true;
+
 fun convert1 (env,def) = 
-  Normal.SSA_RULE (refine.refine0b 
-    (refine.refine0a (refine.refine0 (normalize def))));
+  let val def1 = Normal.pre_process def
+      val def2 = if !cond_lift then refine.lift_cond def1 else def1
+  in
+      (Normal.SSA_RULE o refine.refine_const o normalize) def2
+  end;
 
 (* All previous, plus inlining and optimizations                             *)
 
@@ -130,12 +137,7 @@ fun convert2a (env,def) =
 fun convert3 (env,def) =
   let val def1 = convert2 (env,def)
   in
-    CONV_RULE (
-      RHS_CONV (
-        SIMP_CONV bool_ss 
-          [refine.lift_cond_above_let, refine.lift_cond_above_let1,
-           refine.lift_cond_above_trivlet, NormalTheory.FLATTEN_LET
-           (*, COND_RATOR, COND_RAND *)])) def1
+    funcCall.caller_save_call def1
   end
 
 (*---------------------------------------------------------------------------*)
@@ -183,11 +185,6 @@ val pass3 = complist convert3
 (*  1. enforce caller-save-style function calls                              *)
 (*  2. tune the normal forms for the back-end                                *)  
 
-fun pass4 defs = 
-  case pass3 defs of
-     PASS v => PASS (funcCall.callerSave v) 
-   | FAIL v => FAIL v;
-
 (*---------------------------------------------------------------------------*)
 (* Front end.                                                                *)
 (*---------------------------------------------------------------------------*)
@@ -205,27 +202,36 @@ fun f_compile defs =
      val new_name = cname ^ "'"
      val cvar = mk_var(new_name, ctype)
 
-     val vtm = subst [fname |-> cvar] (concl def)
+     val vtm = subst [fname |-> cvar] (concl def1)
      (* val _ = HOL_MESG "redefinition" *)
-     val PASS (defn2,tcs) = TotalDefn.std_apiDefine (cname,vtm)
+     val PASS (defn2,tcs) = TotalDefn.std_apiDefine (new_name,vtm)
      val def2 = LIST_CONJ (Defn.eqns_of defn2)
      val ind = Defn.ind_of defn2
     
-     val lem = prove(mk_eq(mk_const(new_name, ctype), fname), 
-                     REWRITE_TAC [Once def, Once def2])
-     val ind2 = case ind of 
+     val (def', ind') = 
+        let val lem = prove(mk_eq(mk_const(new_name, ctype), fname), 
+                 REWRITE_TAC [FUN_EQ_THM] THEN
+                 SIMP_TAC bool_ss [pairTheory.FORALL_PROD] THEN
+                 REWRITE_TAC [Once def1, Once def2])
+            val ind2 = case ind of 
                    SOME th => ONCE_REWRITE_RULE [lem] th
                  | NONE => TRUTH
+        in (def1, ind2) end
+        handle _ => (def2,  case ind of 
+                               SOME th => th
+                             | NONE => TRUTH)
    in
-     (def1,ind2)
+     (def',ind')
    end;
 
-   val result = pass4 defs
+   val result = pass3 defs
  in
    case result of 
         PASS defs' => PASS (List.map redefine defs')
      |  FAIL x => FAIL x
  end
+
+fun f_compile_one def = hd (resultOf (f_compile [def]));
 
 (*---------------------------------------------------------------------------*)
 (* Join the front end with Magnus' backend                                   *)
@@ -234,12 +240,12 @@ fun f_compile defs =
 val style = ref (InLineCode);
 
 fun b_compile norms =
-  let val _ = abbrev_code := true
-      val _ = reset_compiled()
+  let val _ = arm_compilerLib.abbrev_code := true
+      val _ = arm_compilerLib.reset_compiled()
       val _ = optimise_code := true;
 
       fun one_fun (def, ind) = 
-        let val (th,strs) = arm_compile (SPEC_ALL def) ind (!style)
+        let val (th,strs) = arm_compilerLib.arm_compile (SPEC_ALL def) ind (!style)
             val code = fetch "-" (#1 (dest_const (#1 (head def))) ^ "_code1_def")
         in  (th, code)
         end
