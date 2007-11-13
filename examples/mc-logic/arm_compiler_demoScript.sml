@@ -40,8 +40,7 @@ fun find_ind_thm def = let
 fun test_compile' as_proc q = let
   val def = Define q
   val ind = find_ind_thm def
-  val (th,strs) = arm_compile def ind as_proc
- (* val _ = map print (["\n\n\n"] @ strs @ ["\n\n\n"]) *)
+  val th = fst (arm_compile def ind as_proc)
   in (def,ind,th) end;
 
 fun test_compile q = test_compile' InLineCode q;

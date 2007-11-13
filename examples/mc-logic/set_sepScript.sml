@@ -21,6 +21,8 @@ val PAIR_EQ = pairTheory.PAIR_EQ;
 val emp_def = Define `emp = \s. (s = {})`;
 val one_def = Define `one x = \s. ({x} = s)`;
 val cond_def = Define `cond c = \s. (s = {}) /\ c`;
+val sidecond_def = Define `sidecond = cond`;
+val precond_def = Define `precond = cond`;
 
 val mute_def = Define `mute (x:'a set -> bool) = (x,emp)`;
 val immute_def = Define `immute (x:'a set -> bool) = (emp,x)`;
