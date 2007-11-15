@@ -322,7 +322,8 @@ in
       case OS of
         "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
                                       "muddy.so"])
-                           (fullPath [HOLDIR, "sigobj", "muddy.so"])
+                           (fullPath [HOLDIR, "examples", "muddy", "muddyC",
+                                      "muddy.so"])
       | other => if not (Gnumake dir) then
                    print(String.concat
                            ["\nmuddyLib has NOT been built!! ",
