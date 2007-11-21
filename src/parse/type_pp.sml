@@ -79,8 +79,11 @@ fun pp_type0 (G:grammar) = let
       | recurse (x::xs) = let
         in
           case x of
-            (p, SUFFIX slist) =>
+            (p, CONSTANT slist) =>
               if Lib.mem s slist then SOME (p, SR) else recurse xs
+          | (p, BINDER slist) => recurse xs
+          | (p, APPLICATION) => recurse xs
+          | (p, TUPLE_APPL)  => recurse xs
           | (p, INFIX (slist, a)) => let
               val res = List.find (fn r => #opname r = s) slist
             in
@@ -88,7 +91,31 @@ fun pp_type0 (G:grammar) = let
                 NONE => recurse xs
               | SOME r => SOME(p, IR(a,#parse_string r))
             end
-          | (p, KINDCAST) => recurse xs
+          | (p, CAST) => recurse xs
+          | (p, ARRAY_SFX) => recurse xs
+        end
+  in
+    recurse (rules G) : (int * single_rule) option
+  end
+
+  fun lookup_tybinder s = let
+    fun recurse [] = NONE
+      | recurse (x::xs) = let
+        in
+          case x of
+            (p, BINDER slist) =>
+              if Lib.mem s slist then SOME (p, SR) else recurse xs
+          | (p, CONSTANT slist) => recurse xs
+          | (p, APPLICATION) => recurse xs
+          | (p, TUPLE_APPL)  => recurse xs
+          | (p, INFIX (slist, a)) => let
+              val res = List.find (fn r => #opname r = s) slist
+            in
+              case res of
+                NONE => recurse xs
+              | SOME r => SOME(p, IR(a,#parse_string r))
+            end
+          | (p, CAST) => recurse xs
           | (p, ARRAY_SFX) => recurse xs
         end
   in
@@ -257,8 +284,10 @@ fun pp_type0 (G:grammar) = let
             | TyV_Abs _ => let
                 val (vars, body) = strip_abs_type ty
                 val parens = case grav of
-                               Lfx _ => true
-                             | _ => false
+                               Top => false
+                             | _ => true
+                         (*    Lfx _ => true
+                             | _ => false *)
               in
                 pbegin parens;
                 begin_block INCONSISTENT 0;
@@ -276,8 +305,10 @@ fun pp_type0 (G:grammar) = let
             | TyV_All _ => let
                 val (vars, body) = strip_univ_type ty
                 val parens = case grav of
-                               Lfx _ => true
-                             | _ => false
+                               Top => false
+                             | _ => true
+                         (*    Lfx _ => true
+                             | _ => false *)
               in
                 pbegin parens;
                 begin_block INCONSISTENT 0;
@@ -326,10 +357,10 @@ val G' = [(0, parse_type.INFIX("->", "fun", parse_type.RIGHT)),
      (1, parse_type.INFIX("=>", "fmap", parse_type.NONASSOC)),
      (2, parse_type.INFIX("+", "sum", parse_type.LEFT)),
      (3, parse_type.INFIX("#", "prod", parse_type.RIGHT)),
-     (100, parse_type.SUFFIX("list", true)),
-     (101, parse_type.SUFFIX("fun", false)),
-     (102, parse_type.SUFFIX("prod", false)),
-     (103, parse_type.SUFFIX("sum", false))];
+     (100, parse_type.CONSTANT("list", true)),
+     (101, parse_type.CONSTANT("fun", false)),
+     (102, parse_type.CONSTANT("prod", false)),
+     (103, parse_type.CONSTANT("sum", false))];
 fun p ty =
   Portable.pp_to_string 75
    (fn pp => fn ty => type_pp.pp_type G' pp ty type_pp.Top 100) ty;

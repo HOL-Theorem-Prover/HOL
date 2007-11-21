@@ -844,7 +844,7 @@ fun parse_term (G : grammar) typeparser = let
           open Pretype
         in
           (PT(TyApp(PT(Contype{Thy="bool", Tyop = "itself",
-                               Kind = Prekind.mk_arity 1, Rank = 0}, locn.Loc_None),
+                               Kind = Prekind.mk_arity 1, Rank = Prerank.Zerorank}, locn.Loc_None),
                     ty),
               rlocn),
            rlocn)
@@ -1269,15 +1269,16 @@ infix Gmerge
 
 
 Useful functions to test with:
+
 fun do_parse0 G ty = let
   val pt = parse_term G ty
 in
   fn q => let
     val ((cs, p), _) = pt (q, PStack {lookahead = [], stack = [],
-                                      in_vstruct = false})
+                                      in_vstruct = []})
   in
     case pstack p of
-      [(NonTerminal pt, _), (Terminal BOS, _)] => remove_specials pt
+      [((NonTerminal pt,locn), _), ((Terminal BOS,_), _)] => remove_specials (pt,locn)
     | _ => raise Fail "Parse failed "
   end
 end

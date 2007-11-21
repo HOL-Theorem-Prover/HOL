@@ -2,15 +2,22 @@ structure type_grammar :> type_grammar =
 struct
 
 datatype grammar_rule =
-  SUFFIX of string list
+  CONSTANT of string list
+| BINDER of string list
+| APPLICATION
+| TUPLE_APPL
+| CAST
 | ARRAY_SFX
-| KINDCAST
 | INFIX of {opname : string, parse_string : string} list *
            HOLgrammars.associativity
 
 datatype type_structure =
-         TYOP of {Thy : string, Tyop : string, Args : type_structure list}
-       | PARAM of int
+         TYCON  of {Thy : string, Tyop : string}
+       | TYAPP  of type_structure * type_structure
+       | TYUNIV of type_structure * type_structure
+       | TYABST of type_structure * type_structure
+       | TYVAR  of string * Kind.kind * int (* rank *)
+       | PARAM  of int
 
 datatype grammar = TYG of (int * grammar_rule) list *
                           (string, type_structure) Binarymap.dict *
@@ -36,26 +43,44 @@ fun pp_type g pps ty = (!type_printer) g pps ty
 
 fun structure_to_type st =
     case st of
+      TYCON {Thy,Tyop} => Type.mk_thy_con_type {Thy = Thy, Tyop = Tyop}
+    | TYAPP (opr,arg) => Type.mk_app_type(structure_to_type opr, structure_to_type arg)
+    | TYUNIV (bvar,body) => Type.mk_univ_type(structure_to_type bvar, structure_to_type body)
+    | TYABST (bvar,body) => Type.mk_abs_type(structure_to_type bvar, structure_to_type body)
+    | TYVAR (str,kd,rk) => Type.mk_vartype_opr(str,kd,rk)
+(*
       TYOP {Thy,Tyop,Args} =>
       Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
                         Args = map structure_to_type Args}
+*)
     | PARAM n => Type.mk_vartype ("'"^str (chr (n + ord #"a")))
 
 fun params0 acc (PARAM i) = Binaryset.add(acc, i)
+  | params0 acc (TYCON {Thy,Tyop}) = acc
+  | params0 acc (TYVAR (str,kd,rk)) = acc
+  | params0 acc (TYAPP (opr,arg)) = params0 (params0 acc opr) arg
+  | params0 acc (TYUNIV (bvar,body)) = params0 (params0 acc bvar) body
+  | params0 acc (TYABST (bvar,body)) = params0 (params0 acc bvar) body
+(*
   | params0 acc (TYOP{Args,...}) = foldl (fn (t,set) => params0 set t) acc Args
+*)
 val params = params0 (Binaryset.empty Int.compare)
 
 val num_params = Binaryset.numItems o params
 
 val std_suffix_precedence = 100
+val std_binder_precedence =  20
 
 
 
 fun merge r1 r2 =
   case (r1, r2) of
     (ARRAY_SFX, ARRAY_SFX) => ARRAY_SFX
-  | (KINDCAST, KINDCAST) => KINDCAST
-  | (SUFFIX slist1, SUFFIX slist2) => SUFFIX(Lib.union slist1 slist2)
+  | (CAST, CAST) => CAST
+  | (APPLICATION, APPLICATION) => APPLICATION
+  | (TUPLE_APPL, TUPLE_APPL) => TUPLE_APPL
+  | (CONSTANT slist1, CONSTANT slist2) => CONSTANT(Lib.union slist1 slist2)
+  | (BINDER slist1, BINDER slist2) => BINDER(Lib.union slist1 slist2)
   | (INFIX(rlist1, a1), INFIX(rlist2, a2)) => let
     in
       if a1 = a2 then INFIX(Lib.union rlist1 rlist2, a1)
@@ -79,17 +104,19 @@ fun insert_sorted0 (k, v) [] = [(k, v)]
 
 fun insert_sorted (k, v) (G0 : (int * grammar_rule) list) = let
   val G1 = insert_sorted0 (k,v) G0
-  fun merge_adj_suffixes [] = []
-    | merge_adj_suffixes [x] = [x]
-    | merge_adj_suffixes (x1::x2::xs) = let
+  fun merge_adj_constants [] = []
+    | merge_adj_constants [x] = [x]
+    | merge_adj_constants (x1::x2::xs) = let
       in
         case (x1, x2) of
-          ((p1, SUFFIX slist1), (p2, SUFFIX slist2)) =>
-            merge_adj_suffixes ((p1, SUFFIX (Lib.union slist1 slist2))::xs)
-        | _ => x1 :: merge_adj_suffixes (x2 :: xs)
+          ((p1, CONSTANT slist1), (p2, CONSTANT slist2)) =>
+            merge_adj_constants ((p1, CONSTANT (Lib.union slist1 slist2))::xs)
+        | ((p1, BINDER slist1), (p2, BINDER slist2)) =>
+            merge_adj_constants ((p1, BINDER (Lib.union slist1 slist2))::xs)
+        | _ => x1 :: merge_adj_constants (x2 :: xs)
       end
 in
-  merge_adj_suffixes G1
+  merge_adj_constants G1
 end
 
 
@@ -104,7 +131,7 @@ fun new_binary_tyop (TYG(G,abbrevs,pmap))
                                associativity))
           else (precedence, INFIX([{parse_string = opname, opname = opname}],
                                   associativity))
-      val rule2 = (std_suffix_precedence, SUFFIX[opname])
+      val rule2 = (std_suffix_precedence, CONSTANT[opname])
     in
       TYG (insert_sorted rule1 (insert_sorted rule2 G), abbrevs, pmap)
     end
@@ -126,9 +153,13 @@ end
 
 
 fun new_tyop (TYG(G,abbrevs,pmap)) name =
-  TYG (insert_sorted (std_suffix_precedence, SUFFIX[name]) G, abbrevs, pmap)
+  TYG (insert_sorted (std_suffix_precedence, CONSTANT[name]) G, abbrevs, pmap)
 
-val empty_grammar = TYG ([(98, KINDCAST),(99, ARRAY_SFX)], 
+fun new_tybinder (TYG(G,abbrevs,pmap)) name =
+  TYG (insert_sorted (std_binder_precedence, BINDER[name]) G, abbrevs, pmap)
+
+val empty_grammar = TYG ([(std_binder_precedence, BINDER[]),
+                          (96, APPLICATION),(97, TUPLE_APPL),(98, CAST),(99, ARRAY_SFX)], 
                          Binarymap.mkDict String.compare, 
                          TypeNet.empty)
 
@@ -137,7 +168,11 @@ fun abbreviations (TYG (G, dict, pmap)) = dict
 
 fun check_structure st = let
   fun param_numbers (PARAM i, pset) = Binaryset.add(pset, i)
-    | param_numbers (TYOP{Args,...}, pset) = foldl param_numbers pset Args
+    | param_numbers (TYCON _, pset) = pset
+    | param_numbers (TYVAR _, pset) = pset
+    | param_numbers (TYAPP(opr,arg), pset) = param_numbers (arg, param_numbers (opr,pset))
+    | param_numbers (TYUNIV(bvar,body), pset) = param_numbers (body, param_numbers (bvar,pset))
+    | param_numbers (TYABST(bvar,body), pset) = param_numbers (body, param_numbers (bvar,pset))
   val pset = param_numbers (st, Binaryset.empty Int.compare)
   val plist = Binaryset.listItems pset
   fun check_for_gaps expecting [] = ()
@@ -152,7 +187,7 @@ in
 end
 
 val abb_tstamp = ref 0
-fun new_abbreviation (TYG(G, dict0,pmap)) (s, st) = let
+fun new_abbreviation (TYG(G, dict0, pmap)) (s, st) = let
   val _ = check_structure st
   val G0 = TYG(G, Binarymap.insert(dict0,s,st),
                TypeNet.insert(pmap, structure_to_type st, (!abb_tstamp, s)))
@@ -237,6 +272,11 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
     add_string s
   end
 
+  fun print_binder s = let
+  in
+    add_string ("\"" ^ s ^ "\" <..binders..> \".\" TY")
+  end
+
   fun print_abbrev (s, st) = let
     fun print_lhs () =
       case num_params st of
@@ -290,7 +330,7 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
 
   fun print_rule0 r =
     case r of
-      SUFFIX sl => let
+      CONSTANT sl => let
       in
         add_string "TY  ::=  ";
         begin_block INCONSISTENT 0;
@@ -298,7 +338,17 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
                 (fn () => add_break(1,0)) sl;
         end_block ()
       end
-    | KINDCAST => add_string "TY  ::=  TY : KIND <= RANK (kind & rank cast of type)"
+    | BINDER sl => let
+      in
+        add_string "TY  ::=  ";
+        begin_block INCONSISTENT 0;
+        pr_list print_binder (fn () => add_string " |")
+                (fn () => add_break(1,0)) sl;
+        end_block ()
+      end
+    | CAST => add_string "TY  ::=  TY : KIND :<= RANK (kind or rank cast of type)"
+    | APPLICATION => add_string "TY  ::=  TY TY (type application)"
+    | TUPLE_APPL => add_string "TY  ::=  (TY,...,TY) TY  (tuple type application)"
     | ARRAY_SFX => add_string "TY  ::=  TY[TY] (array type)"
     | INFIX(oplist, assoc) => let
         val assocstring =

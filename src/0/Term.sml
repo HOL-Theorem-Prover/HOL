@@ -1100,9 +1100,6 @@ fun break_tyabs(TAbs(_,Body)) = Body
 
 
 
-
-
-
 fun dest_thy_const (Const(id,ty)) =
       let val (name,thy) = dest_id id
       in {Thy=thy, Name=name, Ty=to_hol_type ty}

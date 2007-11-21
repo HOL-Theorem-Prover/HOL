@@ -17,15 +17,27 @@ TApp   ::= Leaf | Tuple Leaf
 *)
 
   datatype grammar_rule
-    = SUFFIX of string list
-    | KINDCAST
+    = CONSTANT of string list
+    | BINDER of string list
+    | APPLICATION
+    | TUPLE_APPL
+    | CAST
     | ARRAY_SFX 
     | INFIX of {opname : string, parse_string : string} list *
                 HOLgrammars.associativity
 
+  datatype type_structure =
+      TYCON  of {Thy : string, Tyop : string}
+    | TYAPP  of type_structure * type_structure
+    | TYUNIV of type_structure * type_structure
+    | TYABST of type_structure * type_structure
+    | TYVAR  of string * Kind.kind * int (* rank *)
+    | PARAM  of int
+(*
   datatype type_structure
     = TYOP of {Thy : string, Tyop : string, Args : type_structure list}
     | PARAM of int
+*)
 
   type grammar
 
@@ -47,6 +59,7 @@ TApp   ::= Leaf | Tuple Leaf
   (* removes by infix symbol, i.e. "+", not "sum" *)
 
   val new_tyop         : grammar -> string -> grammar
+  val new_tybinder     : grammar -> string -> grammar
   val new_abbreviation : grammar -> string * type_structure -> grammar
   val remove_abbreviation : grammar -> string -> grammar
   val merge_grammars   : grammar * grammar -> grammar

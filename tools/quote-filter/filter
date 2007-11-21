@@ -52,7 +52,7 @@ type lexresult = (string * int)
 fun eof () = ("", 0)
 %%
 %structure filter
-%s string comment qcomment tmcomment tycomment tyquote tmquote quote ANTIQ;
+%s string comment qcomment tmcomment tycomment kdcomment tmquote tyquote kdquote quote ANTIQ;
 
 letter = [A-Za-z];
 digit = [0-9];
@@ -60,6 +60,7 @@ symbol = [-!%&$+/:<=>?@~|#*\\^];
 MLid = ({letter} ({letter} | {digit} | _ | "'")*) | {symbol}+;
 ws = [\ \t];
 newline = "\n" | "\015\n";
+lambda = "\\";
 locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 
 %%
@@ -71,7 +72,24 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <INITIAL>")" => (ECHO yytext; dec pardepth;
                  if !antiquote andalso !pardepth < 1 then (yytext,yypos)
                  else lex());
-<INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [('] | {digit}) => (
+<INITIAL>"``" {ws}* "::" ({letter} | {ws} | {newline} | [('] | {digit}) => (
+                 print ("(Parse.Kind [QUOTE \""^locpragma (yytext,yypos) 2);
+                 print (drop_upto #":" yytext);
+                 YYBEGIN kdquote;
+                 lex());
+<INITIAL>"``" {ws}* "::^" =>
+              (print ("(Parse.Kind [QUOTE \""^locpragma (yytext,yypos) 2^
+                      "::\", ANTIQUOTE (");
+               YYBEGIN ANTIQ;
+               lex();
+               YYBEGIN kdquote;
+               lex());
+<INITIAL>"``" {ws}* ":" {lambda} => (
+                 print ("(Parse.Type [QUOTE \""^locpragma (yytext,yypos) 2);
+                 print (":\\" ^ drop_upto #"\\" (drop_upto #":" yytext));
+                 YYBEGIN tyquote;
+                 lex());
+<INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [('!] | {digit}) => (
                  print ("(Parse.Type [QUOTE \""^locpragma (yytext,yypos) 2);
                  print (drop_upto #":" yytext);
                  YYBEGIN tyquote;
@@ -97,7 +115,7 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <string>{newline} => (newline(yypos,yytext); lex());
 <string>. => (ECHO yytext; lex());
 
-<comment,tmcomment,tycomment,qcomment>"(*" =>
+<comment,tmcomment,tycomment,kdcomment,qcomment>"(*" =>
                 (ECHO yytext; inc comdepth; lex());
 <comment>"*)" => (ECHO yytext; dec comdepth;
                   if !comdepth < 1 then YYBEGIN INITIAL else ();
@@ -108,33 +126,37 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <tycomment>"*)" => (ECHO yytext; dec comdepth;
                   if !comdepth < 1 then YYBEGIN tyquote else ();
                   lex());
+<kdcomment>"*)" => (ECHO yytext; dec comdepth;
+                  if !comdepth < 1 then YYBEGIN kdquote else ();
+                  lex());
 <qcomment>"*)" => (ECHO yytext; dec comdepth;
                   if !comdepth < 1 then YYBEGIN quote else ();
                   lex());
 <comment>{newline} => (newline(yypos,yytext); lex());
-<tmcomment,tycomment,qcomment>{newline} => (qnewline(yypos,yytext); lex());
-<tmcomment,tycomment,qcomment>"\\" => (ECHO "\\\\"; lex());
-<tmcomment,tycomment,qcomment>"\"" => (ECHO "\\\""; lex());
-<tmcomment,tycomment,qcomment>"\t" => (ECHO "\\t"; lex());
-<tmcomment,tycomment,qcomment>"^`" => (ECHO "`"; lex());
-<tmcomment,tycomment>"``" => (print "\"])"; YYBEGIN INITIAL; lex());
+<tmcomment,tycomment,kdcomment,qcomment>{newline} => (qnewline(yypos,yytext); lex());
+<tmcomment,tycomment,kdcomment,qcomment>"\\" => (ECHO "\\\\"; lex());
+<tmcomment,tycomment,kdcomment,qcomment>"\"" => (ECHO "\\\""; lex());
+<tmcomment,tycomment,kdcomment,qcomment>"\t" => (ECHO "\\t"; lex());
+<tmcomment,tycomment,kdcomment,qcomment>"^`" => (ECHO "`"; lex());
+<tmcomment,tycomment,kdcomment>"``" => (print "\"])"; YYBEGIN INITIAL; lex());
 <qcomment>"`" => (print "\"]"; YYBEGIN INITIAL; lex());
-<comment,tmcomment,tycomment,qcomment>. => (ECHO yytext; lex());
+<comment,tmcomment,tycomment,kdcomment,qcomment>. => (ECHO yytext; lex());
 
-<quote,tmquote,tyquote>"^"+{ws} => (ECHO yytext; lex());
-<quote,tmquote,tyquote>"^"+{newline} =>
+<quote,tmquote,tyquote,kdquote>"^"+{ws} => (ECHO yytext; lex());
+<quote,tmquote,tyquote,kdquote>"^"+{newline} =>
    (ECHO (String.substring(yytext,0,size yytext - 1)); qnewline(yypos,yytext);
     lex());
-<quote,tmquote,tyquote>"^^" => (ECHO "^"; lex());
-<quote,tmquote,tyquote>"^`" => (ECHO "`"; lex());
-<quote,tmquote,tyquote>{newline} => (qnewline(yypos,yytext); lex());
+<quote,tmquote,tyquote,kdquote>"^^" => (ECHO "^"; lex());
+<quote,tmquote,tyquote,kdquote>"^`" => (ECHO "`"; lex());
+<quote,tmquote,tyquote,kdquote>{newline} => (qnewline(yypos,yytext); lex());
 
 <quote>"`" => (print "\"]"; YYBEGIN INITIAL; lex());
-<tmquote,tyquote>"``" => (print "\"])"; YYBEGIN INITIAL; lex());
+<tmquote,tyquote,kdquote>"``" => (print "\"])"; YYBEGIN INITIAL; lex());
 
 <quote>"(*" => (ECHO yytext; YYBEGIN qcomment; lex());
 <tmquote>"(*" => (ECHO yytext; YYBEGIN tmcomment; lex());
 <tyquote>"(*" => (ECHO yytext; YYBEGIN tycomment; lex());
+<kdquote>"(*" => (ECHO yytext; YYBEGIN kdcomment; lex());
 
 <quote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
                YYBEGIN quote; lex());
@@ -142,9 +164,11 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
                  YYBEGIN tmquote; lex());
 <tyquote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
                  YYBEGIN tyquote; lex());
+<kdquote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
+                 YYBEGIN kdquote; lex());
 
 
-<quote,tmquote,tyquote>. => (ECHO (String.toString yytext); lex());
+<quote,tmquote,tyquote,kdquote>. => (ECHO (String.toString yytext); lex());
 
 <ANTIQ>{MLid} => (ECHO yytext;
                   print ("),QUOTE \""^locpragma (yytext,yypos) 0);

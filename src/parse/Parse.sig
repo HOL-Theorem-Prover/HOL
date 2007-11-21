@@ -39,7 +39,11 @@ signature Parse = sig
   val type_grammar : unit -> type_grammar.grammar
   val Type         : hol_type frag list -> hol_type
   val ==           : hol_type frag list -> 'a -> hol_type
+  val to_ptyInEnv  : Pretype.pretype -> Parse_support.env ->
+                        Pretype.pretype * Parse_support.env
 
+  val add_type_binder : string -> unit
+  val temp_add_type_binder : string -> unit
   val add_type : string -> unit
   val temp_add_type : string -> unit
   val add_infix_type : {Prec : int,
@@ -61,6 +65,9 @@ signature Parse = sig
   val post_process_term: (term -> term) ref
   val absyn_to_term    : term_grammar.grammar -> Absyn.absyn -> term
   val absyn_to_preterm : Absyn.absyn -> Preterm.preterm
+  val absyn_to_preterm_in_env : Overload.overload_info -> Absyn.absyn
+                                   -> Parse_support.env
+                                   -> Preterm.preterm * Parse_support.env
   val Absyn            : term frag list -> Absyn.absyn
   val Preterm          : term frag list -> Preterm.preterm
   val Term             : term frag list -> term

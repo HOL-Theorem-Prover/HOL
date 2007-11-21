@@ -7,9 +7,8 @@ signature type_tokens = sig
       | TypeVar of string
       | KindCst
       | RankCst
-      | Univ
-      | Abst
       | Comma
+      | Period
       | LParen
       | RParen
       | LBracket

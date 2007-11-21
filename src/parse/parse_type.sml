@@ -10,22 +10,52 @@ exception InternalFailure of locn.locn
 val ERR = Feedback.mk_HOL_ERR "Parse" "parse_type"
 val ERRloc = Feedback.mk_HOL_ERRloc "Parse" "parse_type"
 
+val debug = ref 0
+val _ = Feedback.register_trace("debug_parse_type", debug, 1)
+fun is_debug() = (!debug) > 0;
+
+
 fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 
-fun parse_type tyfns allow_unknown_suffixes G = let
+fun parse_type (tyfns :
+    {vartype : (string * Prekind.prekind * Prerank.prerank) locn.located -> 'a,
+     tyop : (string locn.located * 'a list) -> 'a,
+     qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
+     antiq : 'b -> 'a,
+     kindcast : {Ty: 'a, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
+     rankcast : {Ty: 'a, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
+     tycon  : {Thy:string, Tyop:string, Locn:locn.locn} -> 'a,
+     tyapp  : ('a * 'a) -> 'a,
+     tyuniv : ('a * 'a) -> 'a,
+     tyabs  : ('a * 'a) -> 'a,
+     kindparser : 'b qbuf.qbuf -> Prekind.prekind})
+               allow_unknown_suffixes G = let
   val G = rules G and abbrevs = abbreviations G
   val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop,
-       kindcast, rankcast, kindparser} = tyfns
+       kindcast, rankcast,
+       tycon = pConType,
+       tyapp = pAppType, tyuniv = pUnivType, tyabs = pAbstType,
+       kindparser} = tyfns
   fun structure_to_value (s,locn) args st =
+    let val stv = structure_to_value (s,locn) args
+    in
       case st of
+        TYCON  {Thy, Tyop} => pConType {Thy = Thy, Tyop = Tyop, Locn = locn}
+      | TYAPP  (opr,arg)   => pAppType (stv opr,  stv arg)
+      | TYUNIV (bvar,body) => pUnivType(stv bvar, stv body)
+      | TYABST (bvar,body) => pAbstType(stv bvar, stv body)
+      | TYVAR  (str,kd,rk) => pVartype ((str, Prekind.fromKind kd, Prerank.fromRank rk), locn)
+(*
         TYOP {Args, Thy, Tyop} =>
         qtyop {Args = map (structure_to_value (s,locn) args) Args,
                Thy = Thy, Tyop = Tyop, Locn = locn}
+*)
       | PARAM n => List.nth(args, n)
         handle Subscript =>
                Feedback.Raise
                  (ERRloc locn ("Insufficient arguments to abbreviated operator " ^
                                Lib.quote s))
+    end
 
   (* extra fails on next two definitions will effectively make the stream
      push back the unwanted token *)
@@ -36,6 +66,7 @@ fun parse_type tyfns allow_unknown_suffixes G = let
   fun is_LBracket t = case t of LBracket => true | _ => false
   fun is_RBracket t = case t of RBracket => true | _ => false
   fun is_Comma t = case t of Comma => true | _ => false
+  fun is_Period t = case t of Period => true | _ => false
   fun is_KindCst t = case t of KindCst => true | _ => false
   fun is_RankCst t = case t of RankCst => true | _ => false
   fun itemP P fb = let
@@ -72,8 +103,7 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     recurse 0
   end
 
-  fun generate_fcpbit ((s,locn), args) = let
-    val _ = null args orelse raise ERRloc locn "Number types take no arguments"
+  fun generate_fcpbit (s,locn) = let
     val n = Arbnum.fromString s
     val _ = n <> Arbnum.zero orelse
             raise ERRloc locn "Zero is not a valid number type"
@@ -95,24 +125,49 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     build one (recurse [] n)
   end
 
-  fun apply_tyop (t,locn) args =
+  fun const_tyop (t,locn) =
+let val res =
     case t of
       TypeIdent s => let
+        val _ = if is_debug() then print ("const_tyop of " ^ s ^ "\n") else ()
       in
-        if is_numeric s then generate_fcpbit((s,locn), args)
-        else
-          case Binarymap.peek(abbrevs, s) of
-            NONE => pType((s,locn),args)
-          | SOME st => structure_to_value (s,locn) args st
+        if is_numeric s then generate_fcpbit(s,locn)
+        else pType((s,locn),[])
+             handle _ => raise InternalFailure locn (* if s not a known type name *)
       end
-    | QTypeIdent(thy,ty) => qtyop{Thy=thy,Tyop=ty,Locn=locn,Args=args}
-    | _ => raise Fail "parse_type.apply_tyop: can't happen"
+    | QTypeIdent(thy,ty) =>  let
+        val _ = if is_debug() then print ("const_tyop of " ^ thy ^ "$" ^ ty ^ "\n") else ()
+      in
+        qtyop{Thy=thy,Tyop=ty,Locn=locn,Args=[]}
+      end
+    | _ => raise Fail "parse_type.const_tyop: can't happen"
+in (if is_debug() then (print "Did const_tyop; got res "; print "\n") else (); res)
+end
+
+  fun list_pAppType(ty,[]) = ty
+    | list_pAppType(ty,(ty1::tys)) = list_pAppType(pAppType(ty,ty1),tys)
+
+  fun apply_tyop (ty,locn) args =
+    list_pAppType(ty,args)
+    handle e => (if is_debug() then print ("apply_tyop fails!\n") else (); Feedback.Raise e)
+
+  fun apply_binop (t,locn) args =
+    list_pAppType(const_tyop (t,locn),args)
 
   fun apply_kindcast (ty, kd, locn) =
     kindcast{Ty=ty, Kind=kd, Locn=locn}
 
   fun apply_rankcast (ty, rk, locn) =
     rankcast{Ty=ty, Rank=rk, Locn=locn}
+
+  fun list_apply_binder(mk_ty, alphas, body) =
+    List.foldr mk_ty body alphas
+
+  fun apply_univ(alphas, body) =
+    list_apply_binder(pUnivType, alphas, body)
+
+  fun apply_abst(alphas, body) =
+    list_apply_binder(pAbstType, alphas, body)
 
   fun n_appls (ops, t) =
     case ops of
@@ -128,6 +183,19 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     List.foldl build ty sfxs
   end
 
+  fun parse_abbrev args fb = let
+    val (adv, (t,locn)) = typetok_of fb
+  in
+    case t of
+      TypeIdent s =>
+        if is_numeric s then raise InternalFailure locn
+        else
+         (case Binarymap.peek(abbrevs, s) of
+             NONE => raise InternalFailure locn
+           | SOME st => (adv(); (structure_to_value (s,locn) args st, locn)))
+    | _ => raise InternalFailure locn
+  end
+
   fun parse_op slist fb = let
     val (adv, (t,locn)) = typetok_of fb
   in
@@ -136,6 +204,121 @@ fun parse_type tyfns allow_unknown_suffixes G = let
                        (adv(); (t,locn))
                      else raise InternalFailure locn
     | QTypeIdent _ => (adv(); (t,locn))
+    | _ => raise InternalFailure locn
+  end
+
+  fun parse_atom prse fb = let 
+    val (adv, (t,locn)) = typetok_of fb
+    val ts = type_tokens.token_string t handle _ => "<unknown>"
+    val _ = if is_debug() then print ("=> parse_atom of " ^ ts ^ "\n") else ()
+    fun try_const_tyop(t,locn) =
+        let val ty = const_tyop(t,locn) (* may throw InternalFailure *)
+        in (adv(); ty)                  (* if failure, don't adv()   *)
+        end
+  in
+    case t of 
+      LParen => let val ty1 = (adv(); prse fb)
+                    val (adv,(t,rlocn)) = typetok_of fb
+                in
+                  case t of
+                    RParen => (adv(); ty1 (*,locn.between locn rlocn*) )
+                  | _ => raise InternalFailure locn
+                end
+    | TypeVar s => (adv(); pVartype ((s,Prekind.new_uvar(),Prerank.new_uvar()), locn))
+    | AQ x => (adv(); pAQ x)
+    | QTypeIdent (s0,s) => try_const_tyop(t,locn)
+    | TypeIdent s => try_const_tyop(t,locn)
+    | _ => raise InternalFailure locn
+  end
+
+  fun parse_num fb = let
+    val (adv,(t,locn)) = typetok_of fb
+  in
+    case t of
+      TypeIdent s => (adv(); case Int.fromString s of
+                               SOME i => (i, locn)
+                             | NONE => raise InternalFailure locn)
+    | _ => raise InternalFailure locn
+  end
+
+  fun parse_kindcast fb = let
+    val (llocn, _) = itemP is_KindCst fb 
+    val kd = kindparser fb
+    val (adv,(t,rlocn)) = typetok_of fb
+  in
+    (kd, locn.between llocn rlocn)
+  end
+
+  fun parse_rankcast fb = let
+    val (llocn, _) = itemP is_RankCst fb
+    val (rk,rlocn) = parse_num fb
+    val prk = Prerank.fromRank rk
+  in
+    (prk, locn.between llocn rlocn)
+  end
+
+  fun parse_typevars parser strm = let
+    fun add_casts acc =
+        let val (adv, (t,locn)) = typetok_of strm
+        in case t of
+             KindCst =>
+               (case totalify parse_kindcast strm of
+                   SOME (kd,locn) => add_casts (apply_kindcast (acc, kd, locn))
+                 | NONE => acc)
+           | RankCst =>
+               (case totalify parse_rankcast strm of
+                   SOME (rk,locn) => add_casts (apply_rankcast (acc, rk, locn))
+                 | NONE => acc)
+           | _ => acc
+        end
+    fun recurse acc = let
+      val (adv, (t,locn)) = typetok_of strm
+    in case t of 
+         Period => (adv(); List.rev acc)
+(*
+       | TypeVar s => (adv(); let val v = pVartype ((s,Prekind.new_uvar(),0), locn)
+                                  val ty = add_casts v
+                              in recurse (ty :: acc))
+*)
+       | _ => let val ty = parse_atom parser strm
+              in recurse (add_casts ty :: acc)
+              end
+    end
+  in
+    recurse []
+  end
+
+  fun parse_binder slist parser fb = let
+    val (adv, (t,locn)) = typetok_of fb
+    val _ =
+    case t of
+      TypeIdent s => if Lib.mem s slist then
+                       (adv(); (t,locn))
+                     else raise InternalFailure locn
+    | QTypeIdent (_,s) => if Lib.mem s slist then
+                       (adv(); (t,locn))
+                     else raise InternalFailure locn
+    | TypeSymbol s => if Lib.mem s slist then
+                       (adv(); (t,locn))
+                     else raise InternalFailure locn
+    | _ => raise InternalFailure locn
+    val alphas = parse_typevars parser fb
+  in
+    ((t,locn),alphas)
+  end
+
+  fun apply_binder ((t,locn),alphas,body) = let
+  in
+    case t of
+      TypeIdent s  => if s = "\\" then apply_abst(alphas, body)
+                      else if s = "!" then apply_univ(alphas, body)
+                      else raise InternalFailure locn
+    | QTypeIdent (_,s) => if s = "\\" then apply_abst(alphas, body)
+                      else if s = "!" then apply_univ(alphas, body)
+                      else raise InternalFailure locn
+    | TypeSymbol s => if s = "\\" then apply_abst(alphas, body)
+                      else if s = "!" then apply_univ(alphas, body)
+                      else raise InternalFailure locn
     | _ => raise InternalFailure locn
   end
 
@@ -160,31 +343,6 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     ty
   end
 
-  fun parse_num fb = let
-    val (adv,(t,locn)) = typetok_of fb
-  in
-    case t of
-      TypeIdent s => (adv(); case Int.fromString s of
-                               SOME i => (i, locn)
-                             | NONE => raise InternalFailure locn)
-    | _ => raise InternalFailure locn
-  end
-
-  fun parse_rankcast fb = let
-    val (llocn, _) = itemP is_RankCst fb
-    val (rk,rlocn) = parse_num fb
-  in
-    (rk, locn.between llocn rlocn)
-  end
-
-  fun parse_kindcast fb = let
-    val (llocn, _) = itemP is_KindCst fb 
-    val kd = kindparser fb
-    val (adv,(t,rlocn)) = typetok_of fb
-  in
-    (kd, locn.between llocn rlocn)
-  end
-
   fun parse_tuple prse fb = let
     val (llocn,_) = itemP is_LParen fb
     val ty1 = prse fb
@@ -200,21 +358,10 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     recurse [ty1]
   end
 
-  fun parse_atom fb = let 
-    val (adv, (t,locn)) = typetok_of fb
-  in
-    case t of 
-      TypeVar s => (adv(); pVartype (s, locn))
-    | AQ x => (adv(); pAQ x)
-    | TypeIdent s => (adv(); apply_tyop(t,locn) []) 
-                     (* should only be a number *)
-    | _ => raise InternalFailure locn
-  end
-
   fun parse_term current strm =
       case current of
-        [] => parse_atom strm 
-      | (x::xs) => parse_rule x xs strm
+        [] => parse_atom (parse_term G) strm 
+      | (r::rs) => parse_rule r rs strm
   and parse_rule (r as (level, rule)) rs strm = let
     val next_level = parse_term rs
     val same_level = parse_rule r rs
@@ -225,23 +372,31 @@ fun parse_type tyfns allow_unknown_suffixes G = let
       in
         case totalify (parse_binop stlist) strm of
           NONE => ty1
-        | SOME opn => apply_tyop opn [ty1, next_level strm]
+        | SOME opn => apply_binop opn [ty1, next_level strm]
       end
     | INFIX (stlist, LEFT) => let
         val ty1 = next_level strm
         fun recurse acc =
             case totalify (parse_binop stlist) strm of
               NONE => acc
-            | SOME opn => recurse (apply_tyop opn [acc, next_level strm])
+            | SOME opn => recurse (apply_binop opn [acc, next_level strm])
       in
         recurse ty1
       end
     | INFIX (stlist, RIGHT) => let
+        val _ = if is_debug() then print ">> INFIX (RIGHT)\n" else ()
         val ty1 = next_level strm
       in
         case totalify (parse_binop stlist) strm of
-          NONE => ty1
-        | SOME opn => apply_tyop opn [ty1, same_level strm]
+          NONE => (if is_debug() then print "   INFIX (RIGHT) sees no infix\n" else (); ty1)
+        | SOME opn => (if is_debug() then print ("   INFIX (RIGHT) sees an infix " ^
+                              type_tokens.token_string (#1 opn) ^ "\n") else ();
+                       apply_binop opn [ty1, same_level strm])
+      end
+    | BINDER slist => let
+      in case totalify (parse_binder slist (parse_term G)) strm of
+            SOME ((t,locn),alphas) => apply_binder((t,locn), alphas, same_level strm)
+          | NONE => next_level strm
       end
     | ARRAY_SFX => let 
         val llocn = #2 (current strm)
@@ -250,7 +405,8 @@ fun parse_type tyfns allow_unknown_suffixes G = let
       in
         n_array_sfxs llocn (asfxs, ty1)
       end
-    | KINDCAST => let
+    | CAST => let
+        val _ = if is_debug() then print ">> CAST\n" else ()
         val ty1 = next_level strm
         fun recurse acc =
             let val (adv, (t,locn)) = typetok_of strm
@@ -268,36 +424,62 @@ fun parse_type tyfns allow_unknown_suffixes G = let
       in
         recurse ty1
       end
-    | SUFFIX slist => let
+    | CONSTANT slist => let
+        val _ = if is_debug() then print ">> CONSTANT\n" else ()
+      in case totalify (parse_op slist) strm of
+            SOME (op1,locn) => const_tyop (op1,locn)
+          | NONE => next_level strm
+      end
+    | APPLICATION => let
+        val _ = if is_debug() then print ">> APPLICATION\n" else ()
+        val ty1 = next_level strm
+        val _ = if is_debug() then print ("  APPLICATION got arg.\n") else ()
+        fun recurse acc = let
+          in case totalify (parse_abbrev [acc]) strm of
+                    SOME (ty2,locn) => recurse ty2
+                  | NONE => let
+                 val (adv, (t,locn1)) = typetok_of strm
+             in
+               case totalify next_level strm of
+                 NONE => (if is_debug() then print "  APPLICATION returns.\n" else (); acc)
+               | SOME ty2 => recurse (apply_tyop (ty2,locn1) [acc])
+             end
+          end
+      in recurse ty1
+      end
+    | TUPLE_APPL => let
+        val _ = if is_debug() then print ">> TUPLE_APPL\n" else ()
       in
         case totalify (parse_tuple (parse_term G)) strm of
-          NONE => let
-            val ty1 = let 
-              val op1 = parse_op slist strm
-            in 
-              apply_tyop op1 []
-            end handle InternalFailure l => next_level strm
-            val ops = many (parse_op slist) strm
-          in
-            n_appls(ops, ty1)
-          end
+          NONE => next_level strm
         | SOME (tyl,locn) => let
           in
-            case (many (parse_op slist) strm) of
-              [] => if length tyl <> 1 then
-                      raise ERRloc locn "tuple with no suffix"
-                    else
-                      hd tyl
-            | oplist => n_appls_l (oplist, tyl)
+            case totalify (parse_abbrev tyl) strm of
+               SOME (ty2,locn) => ty2
+             | NONE => let
+               val (adv, (t,locn1)) = typetok_of strm
+             in
+               case totalify same_level strm of
+                 NONE => if length tyl <> 1 then
+                           raise ERRloc locn "tuple with no suffix"
+                         else
+                           hd tyl
+               | SOME ty2 => apply_tyop (ty2,locn1) tyl
+             end
           end
       end
   end
 in
-  fn qb => parse_term G qb
+  fn (qb : 'b qbuf.qbuf) => let val ty = parse_term G qb
+                            in if is_debug() then print ("Parsed type successfully!\n\n")
+                                             else ();
+                               ty
+                            end
      handle InternalFailure locn =>
             raise ERRloc locn
                   ("Type parsing failure with remaining input: "^
                    qbuf.toString qb)
+     handle e => Feedback.Raise e
 end
 
 

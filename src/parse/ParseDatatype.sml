@@ -19,19 +19,22 @@
 structure ParseDatatype :> ParseDatatype =
 struct
 
+type prekind = Prekind.prekind
+type prerank = Prerank.prerank
+
 val ERR = Feedback.mk_HOL_ERR "ParseDatatype";
 val ERRloc = Feedback.mk_HOL_ERRloc "ParseDatatype";
 
 open Portable;
 
 datatype pretype
-   = dVartype of string
-   | dContype of {Thy : string option, Tyop : string, Kind : Prekind.prekind, Rank : int}
+   = dVartype of string * prekind * prerank
+   | dContype of {Thy : string option, Tyop : string, Kind : prekind, Rank : prerank}
    | dTyApp  of pretype * pretype
    | dTyUniv of pretype * pretype
    | dTyAbst of pretype * pretype
-   | dTyKindConstr of {Ty : pretype, Kind : Prekind.prekind}
-   | dTyRankConstr of {Ty : pretype, Rank : int}
+   | dTyKindConstr of {Ty : pretype, Kind : prekind}
+   | dTyRankConstr of {Ty : pretype, Rank : prerank}
  (*  | dTyop of {Tyop : string, Thy : string option, Args : pretype list} *)
    | dAQ of Type.hol_type
 
@@ -46,7 +49,7 @@ type AST = string * datatypeForm
 
 fun pretypeToType pty =
   case pty of
-    dVartype s => Type.mk_vartype s
+    dVartype (s,kd,rk) => Type.mk_vartype_opr (s, Prekind.toKind kd, Prerank.toRank rk)
   | dContype {Thy=SOME Thy,Tyop,Kind,Rank} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop}
   | dContype {Thy=NONE,    Tyop,Kind,Rank} => Type.mk_con_type Tyop
   | dTyApp  (opr,arg)   => Type.mk_app_type(pretypeToType opr, pretypeToType arg)
@@ -132,10 +135,12 @@ in
                                    base_tokens.toString x^"\"")
 end
 
+fun tycon {Thy, Tyop, Kind, Rank} = dContype{Tyop=Tyop, Thy=Thy, Kind=Kind, Rank=Rank}
+
 fun dTyop {Tyop, Thy, Args} =
   let fun mkprety acc [] = acc
         | mkprety acc (arg::args) = mkprety (dTyApp(acc,arg)) args
-  in mkprety (dContype{Tyop=Tyop, Thy=Thy, Kind=Prekind.typ, Rank=0}) Args
+  in mkprety (dContype{Tyop=Tyop, Thy=Thy, Kind=Prekind.typ, Rank=Prerank.Zerorank}) Args
   end
 
 fun dest_dTyop (dContype {Thy,Tyop,Kind,Rank}) = {Tyop=Tyop, Thy=Thy, Args=[]}
@@ -184,9 +189,14 @@ val kind_p1_rec = {varkind = mk_basevarkd, qkindop = do_qkindop,
 
 val kindparser = parse_kind.parse_kind kind_p1_rec true (Parse.kind_grammar())
 
+fun mk_conty{Thy,Tyop,Locn} =
+       dContype{Thy=SOME Thy,Tyop=Tyop,Kind=Prekind.new_uvar(),Rank=Prerank.new_uvar()}
+
 fun parse_type strm =
   parse_type.parse_type {vartype = dVartype o #1, tyop = tyop, qtyop = qtyop,
                          antiq = dAQ, kindcast = kindcast, rankcast = rankcast,
+                         tycon = mk_conty, tyapp = dTyApp,
+                         tyuniv = dTyUniv, tyabs = dTyAbst,
                          kindparser = kindparser} true
   (Parse.type_grammar()) strm
 

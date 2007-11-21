@@ -727,16 +727,19 @@ fun replaceForm f (Constructors alist) =
 fun pretype_of ty =
   if Type.is_vartype ty then let
       val (str, kd, rk) = dest_vartype_opr ty
-    in
-      dTyRankConstr{Ty=dTyKindConstr{Ty=dVartype str,
+    in dVartype (str, Prekind.fromKind kd, Prerank.fromRank rk)
+(*
+      dTyRankConstr{Ty=dTyKindConstr{Ty=dVartype (str, Prekind.fromKind kd, Prerank.fromRank rk),
                                      Kind=Prekind.fromKind kd},
                     Rank=rk}
+*)
     end
   else if Type.is_con_type ty then let
       val {Thy, Tyop, Kind, Rank} = dest_thy_con_type ty
     in
       dContype {Kind=Prekind.fromKind Kind,
-                  Thy=SOME Thy, Tyop=Tyop, Rank=Rank}
+                Rank=Prerank.fromRank Rank,
+                  Thy=SOME Thy, Tyop=Tyop}
     end
   else if Type.is_app_type ty then let
       val (ty1, ty2) = Type.dest_app_type ty
@@ -780,7 +783,9 @@ fun repair_type_decls (iDATATYPE decls) =
      end
   | repair_type_decls (iEQDATATYPE (tyvars,decls)) =
      let open ParseDatatype
-         val tyvarsl = map dVartype tyvars
+         fun mk_Vartype tyvar = dVartype(tyvar,Prekind.typ,Prerank.Zerorank)
+         (* may improve later if iEQDATATYPE expands args to include kind,rank info *)
+         val tyvarsl = map mk_Vartype tyvars
          val tynames = map fst decls
          val newtypes = map (fn s => dTyop{Tyop=s,Thy=NONE,Args=tyvarsl}) tynames
          val alist = zip tynames newtypes
@@ -896,11 +901,15 @@ fun pp_sig strm (s,elems) =
      end
     fun pp_valdec c =
      let val (_,name,ty) = ConstMapML.apply c
+            handle Match => (print "ConstMapML.apply on "; Hol_pp.print_term c; print " !!\n"; raise Match)
      in begin_block CONSISTENT 3;
         add_string "val ";
-        add_string name; add_break(1,0); add_string ": "; ppty ty;
+        add_string name; add_break(1,0); add_string ": "; ppty ty
+            handle Match => (print "ppty on "; Hol_pp.print_type ty; print " !!\n"; raise Match)
+;
         end_block()
      end
+            handle Match => (print "pp_valdec!!\n"; raise Match)
     fun pp_el (iDATATYPE astl) = pp_datatype (repair_type_decls (iDATATYPE astl))
       | pp_el (iEQDATATYPE (tyvarsl,astl)) = pp_eqdatatype true (tyvarsl,astl)
       | pp_el (iABSDATATYPE (tyvarsl,astl)) = pp_eqdatatype false (tyvarsl,astl)
@@ -1027,10 +1036,12 @@ fun generic_type c =
 
 fun term_eqtyvars tm =
  case dest_term tm
-  of CONST _     => const_eqtyvars (generic_type tm) tm
-   | VAR _       => []
-   | COMB(t1,t2) => union (term_eqtyvars t1) (term_eqtyvars t2)
-   | LAMB(_,tm)  => term_eqtyvars tm;
+  of CONST _      => const_eqtyvars (generic_type tm) tm
+   | VAR _        => []
+   | COMB(t1,t2)  => union (term_eqtyvars t1) (term_eqtyvars t2)
+   | TYCOMB(tm,_) => term_eqtyvars tm
+   | LAMB(_,tm)   => term_eqtyvars tm
+   | TYLAMB(_,tm) => term_eqtyvars tm;
 
 (*---------------------------------------------------------------------------*)
 (* Translate the type of a defined constant to reflect any uses of equality  *)

@@ -259,25 +259,27 @@ fun remove_ty_aq t =
 
 (* "qtyop" refers to "qualified" type operator, i.e., qualified by theory name. *)
 
+fun mk_conty{Thy,Tyop,Locn} = let
+  open Prekind Prerank Pretype
+  val con = Type.mk_thy_con_type {Thy=Thy,Tyop=Tyop}
+  val kind = fromKind (Type.kind_of con)
+  val rank = fromRank (Type.rank_of con)
+in
+  PT(Contype {Thy=Thy, Tyop=Tyop, Kind=kind, Rank=rank}, Locn)
+end
+
+fun do_qtyop {Thy,Tyop,Locn,Args} =
+  List.foldl (fn (arg,acc) => Pretype.PT(Pretype.TyApp(acc,arg),Locn))
+             (mk_conty{Thy=Thy,Tyop=Tyop,Locn=Locn})
+             Args
+
 fun tyop_to_qtyop ((tyop,locn), args) = let
   open Prekind Pretype
 in
   case Type.decls tyop of
     [] => raise ERRORloc "type parser" locn (tyop^" not a known type operator")
   | (r as {Thy,Tyop}) :: _ =>
-      List.foldl (fn (arg,acc) => PT(TyApp(acc,arg),locn))
-                 (PT(Contype {Thy=Thy,Tyop=Tyop,Kind=mk_arity (length args),Rank = 0},
-                     locn))
-                 args
-end
-
-fun do_qtyop {Thy,Tyop,Locn,Args} = let
-  open Prekind Pretype
-in
-  List.foldl (fn (arg,acc) => PT(TyApp(acc,arg),Locn))
-             (PT(Contype {Thy=Thy,Tyop=Tyop, Kind=mk_arity (length Args),Rank = 0},
-                 Locn))
-             Args
+      do_qtyop {Thy=Thy,Tyop=Tyop,Locn=locn,Args=args}
 end
 
 fun do_kindcast {Ty,Kind,Locn} = let
@@ -293,17 +295,22 @@ in
 end
 
 (* needs changing *)
-fun mk_basevarty(s,locn) = Pretype.PT(Pretype.Vartype(s,Prekind.typ,0), locn)
+fun mk_basevarty((s,kd,rk),locn) = Pretype.PT(Pretype.Vartype(s,kd,rk), locn)
+
 val typ1_rec = {vartype = mk_basevarty, qtyop = do_qtyop,
                 tyop = tyop_to_qtyop,
                 antiq = fn x => Pretype.fromType (remove_ty_aq x),
                 kindcast = do_kindcast, rankcast = do_rankcast,
+                tycon = mk_conty, tyapp = Pretype.mk_app_type,
+                tyuniv = Pretype.mk_univ_type, tyabs = Pretype.mk_abs_type,
                 kindparser = (!kind_parser0)}
 
 val typ2_rec = {vartype = mk_basevarty, qtyop = do_qtyop,
                 tyop = tyop_to_qtyop,
                 antiq = Pretype.fromType,
                 kindcast = do_kindcast, rankcast = do_rankcast,
+                tycon = mk_conty, tyapp = Pretype.mk_app_type,
+                tyuniv = Pretype.mk_univ_type, tyabs = Pretype.mk_abs_type,
                 kindparser = (!kind_parser1)}
 
 val type_parser1 =
@@ -387,8 +394,32 @@ end
               Parsing types
  ---------------------------------------------------------------------------*)
 
-local open parse_type
-in
+
+fun to_ptyInEnv ty = let
+  open Pretype Parse_support
+  val (PT(ty0,l)) = ty
+  fun binder_type(Pretype.PT(Pretype.Vartype(s,kd,rk),l)) = make_binding_type_occ l s
+    | binder_type(Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) =
+            make_kind_binding_occ l (binder_type Ty) Kind
+    | binder_type(Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) =
+            make_rank_binding_occ l (binder_type Ty) Rank
+    | binder_type _ = raise ERROR "to_ptyInEnv" "non-variable binder"
+in case ty0 of
+     Vartype(s,kd,rk) => make_type_atom l s
+   | Contype{Thy,Tyop,Kind,Rank} => make_type_constant l {Thy=Thy,Tyop=Tyop}
+   | TyApp(ty1,ty2) => list_make_app_type l (map to_ptyInEnv [ty1,ty2])
+   | TyUniv(bvar,body) => bind_type l "!"  [binder_type bvar] (to_ptyInEnv body)
+   | TyAbst(bvar,body) => bind_type l "\\" [binder_type bvar] (to_ptyInEnv body)
+   | TyKindConstr{Ty,Kind}     => make_kind_constr_type l (to_ptyInEnv Ty) Kind
+   | TyRankConstr{Ty,Rank}     => make_rank_constr_type l (to_ptyInEnv Ty) Rank
+   | UVar (r as ref NONE)      => make_uvar_type l r NONE
+   | UVar (r as ref (SOME ty)) => make_uvar_type l r (SOME (to_ptyInEnv ty))
+end
+
+fun parse_Pretype pfns pty =
+     Pretype.kindcheck pfns (Parse_support.make_pretype (to_ptyInEnv pty))
+
+
 fun parse_Type parser q = let
   open base_tokens qbuf
   val qb = new_buffer q
@@ -402,15 +433,15 @@ in
                 else let val locn' = locn.move_start 1 locn in
                      replace_current (BT_Ident (String.extract(s, 1, NONE)),locn') qb end
         val pt = parser qb
+        val pfns = SOME(type_to_string, kind_to_string)
       in
-        case current qb of
-            (BT_EOI,_) => Pretype.toType pt
+        case qbuf.current qb of
+            (BT_EOI,_) => parse_Pretype pfns pt
           | (_,locn) => raise ERRORloc "parse_Type" locn
                                        ("Couldn't make any sense of remaining input.")
       end
   | (_,locn) => raise ERRORloc "parse_Type" locn "types must begin with a colon"
 end
-end (* local *)
 
 fun Type q = let in
    update_type_fns();
@@ -646,7 +677,8 @@ local open Parse_support Absyn
     | binder(VPAIR(l,v1,v2))  = make_vstruct l [binder v1, binder v2] NONE
     | binder(VAQ (l,x))       = make_aq_binding_occ l x
     | binder(VTYPED(l,v,pty)) = make_vstruct l [binder v] (SOME pty)
-  val tybinder = make_tybinding_occ
+  fun tybinder(Pretype.PT(Pretype.Vartype(s,kd,rk),l)) = make_tybinding_occ l s
+    | tybinder _ = raise ERROR "tybinder" "not a variable type"
   fun to_vstruct t =
       case t of
         APP(l, APP(_, IDENT (_, ","), t1), t2) => VPAIR(l, to_vstruct t1,
@@ -675,12 +707,12 @@ in
         make_seq_abs l (to_ptmInEnv t1, to_ptmInEnv t2)
 *)
     | APP(l, t1, t2)     => list_make_comb l (map to_ptmInEnv [t1, t2])
-    | TYAPP(l, tm, ty)   => list_make_tycomb l (to_ptmInEnv tm) [ty]
+    | TYAPP(l, tm, ty)   => list_make_tycomb l (to_ptmInEnv tm) [to_ptyInEnv ty]
     | IDENT (l, s)       => make_atom ginfo l s
     | QIDENT (l, s1, s2) => make_qconst ginfo l (s1,s2)
     | LAM(l, vs, t)      => bind_term l "\\" [binder vs] (to_ptmInEnv t)
     | TYLAM(l, tv, t)    => bind_term l "\\:" [tybinder tv] (to_ptmInEnv t)
-    | TYPED(l, t, pty)   => make_constrained l (to_ptmInEnv t) pty
+    | TYPED(l, t, ty)    => make_constrained l (to_ptmInEnv t) (to_ptyInEnv ty)
     | AQ (l, t)          => make_aq l t
   end
 end;
@@ -707,7 +739,7 @@ fun absyn_to_term G =
  let val oinfo = term_grammar.overload_info G
  in
    fn absyn =>
-     Preterm.typecheck (SOME(term_to_string, type_to_string))
+     Preterm.typecheck (SOME(term_to_string, type_to_string, kind_to_string))
         (Parse_support.make_preterm
              (absyn_to_preterm_in_env oinfo absyn))
  end;
@@ -773,7 +805,7 @@ local
 in
   fun parse_preterm_in_context0 FVs ptm = let
   in
-    typecheck_phase1 (SOME(term_to_string, type_to_string)) ptm;
+    typecheck_phase1 (SOME(term_to_string, type_to_string, kind_to_string)) ptm;
     give_types_to_fvs FVs [] ptm;
     remove_case_magic (to_term (overloading_resolution ptm))
   end
@@ -848,6 +880,17 @@ fun add_type s = let in
    update_grms "add_type" ("temp_add_type", Lib.quote s)
  end
 
+fun temp_add_type_binder s = let open parse_type in
+   the_type_grammar := new_tybinder (!the_type_grammar) s;
+   type_grammar_changed := true;
+   term_grammar_changed := true
+ end;
+
+fun add_type_binder s = let in
+   temp_add_type s;
+   update_grms "add_type_binder" ("temp_add_type_binder", Lib.quote s)
+ end
+
 fun temp_add_infix_type {Name, ParseName, Assoc, Prec} =
  let open parse_type
  in the_type_grammar
@@ -876,17 +919,32 @@ fun temp_type_abbrev (s, ty) = let
   val (num_vars, pset) =
       List.foldl (fn (ty,(i,pset)) => (i + 1, Binarymap.insert(pset,ty,i)))
                  (0, Binarymap.mkDict Type.compare) params
-  fun mk_structure pset ty =
-      if is_vartype ty then type_grammar.PARAM (Binarymap.find(pset, ty))
-      else let
-          val {Thy,Tyop,Args} = dest_thy_type ty
-        in
-          type_grammar.TYOP {Thy = Thy, Tyop = Tyop,
-                             Args = map (mk_structure pset) Args}
+  fun mk_structure pset bvars ty =
+      if is_vartype ty then let
+          val tyvar as (str, kd, rk) = dest_vartype_opr ty
+        in if mem ty bvars then type_grammar.TYVAR(str,kd,rk)
+           else type_grammar.PARAM (Binarymap.find(pset, ty))
         end
+      else if is_con_type ty then let
+          val {Thy, Tyop, Kind, Rank} = dest_thy_con_type ty
+        in type_grammar.TYCON {Thy = Thy, Tyop = Tyop}
+        end
+      else if is_app_type ty then let
+          val (ty1, ty2) = Type.dest_app_type ty
+        in type_grammar.TYAPP (mk_structure pset bvars ty1, mk_structure pset bvars ty2)
+        end
+      else if is_univ_type ty then let
+          val (ty1, ty2) = Type.dest_univ_type ty
+        in type_grammar.TYUNIV (mk_structure pset bvars ty1, mk_structure pset (ty1::bvars) ty2)
+        end
+      else if is_abs_type ty then let
+          val (ty1, ty2) = Type.dest_abs_type ty
+        in type_grammar.TYABST (mk_structure pset bvars ty1, mk_structure pset (ty1::bvars) ty2)
+        end
+      else raise ERROR "temp_type_abbrev" "Unexpected sort of type"
 in
   the_type_grammar := type_grammar.new_abbreviation (!the_type_grammar)
-                                                    (s, mk_structure pset ty);
+                                                    (s, mk_structure pset [] ty);
   type_grammar_changed := true;
   term_grammar_changed := true
 end;
@@ -1639,6 +1697,7 @@ val TOK = term_grammar.RE o term_grammar.TOK
 val _ = List.app temp_add_type ["bool", "ind"];
 val _ = temp_add_infix_type
             {Name="fun", ParseName=SOME"->", Prec=50, Assoc=RIGHT};
+val _ = List.app temp_add_type_binder ["\\", "!"];
 
 val _ = List.app reveal ["=", "==>", "@"];
 val _ = temp_add_binder ("@", std_binder_precedence);

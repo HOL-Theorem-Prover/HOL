@@ -173,6 +173,22 @@ fun dest_term M =
   VAR   (dest_var M)    handle HOL_ERR _ =>
   CONST (dest_thy_const M);
 
+
+datatype omega_type
+   = TY_VAR of string * kind * int (* rank *)
+   | TY_CONST of {Thy:string, Tyop:string, Kind:kind, Rank:int}
+   | TY_APP  of hol_type * hol_type
+   | TY_UNIV of hol_type * hol_type
+   | TY_ABS  of hol_type * hol_type;
+
+fun destruct_type Ty =
+  TY_APP   (dest_app_type     Ty) handle HOL_ERR _ =>
+  TY_UNIV  (dest_univ_type    Ty) handle HOL_ERR _ =>
+  TY_ABS   (dest_abs_type     Ty) handle HOL_ERR _ =>
+  TY_VAR   (dest_vartype_opr  Ty) handle HOL_ERR _ =>
+  TY_CONST (dest_thy_con_type Ty);
+
+
 (*---------------------------------------------------------------------------*
  * Used to implement natural deduction style discharging of hypotheses. All  *
  * hypotheses alpha-convertible to the dischargee are removed.               *

@@ -1,6 +1,8 @@
 structure Parse_support :> Parse_support =
 struct
 
+type prekind = Prekind.prekind
+type prerank = Prerank.prerank
 type pretype = Pretype.pretype
 type preterm = Preterm.preterm
 type term    = Term.term
@@ -14,15 +16,26 @@ val ERRORloc = mk_HOL_ERRloc "Parse_support";
        Parsing environments
  ---------------------------------------------------------------------------*)
 
-type env = {scope : (string * pretype) list,
-            free  : (string * pretype) list};
+type env = {scope    : (string * pretype) list,
+            free     : (string * pretype) list,
+            scope_ty : (string * (prekind * prerank)) list,
+            free_ty  : (string * (prekind * prerank)) list };
 
 fun lookup_fvar(s,({free,...}:env)) = assoc s free;
 fun lookup_bvar(s,({scope,...}:env)) = assoc s scope;
-fun add_free(b,{scope,free}) = {scope=scope, free=b::free}
-fun add_scope(b,{scope,free}) = {scope=b::scope, free=free};
+fun add_free(b,{scope,free,scope_ty,free_ty}) =
+    {scope=scope, free=b::free, scope_ty=scope_ty, free_ty=free_ty}
+fun add_scope(b,{scope,free,scope_ty,free_ty}) =
+    {scope=b::scope, free=free, scope_ty=scope_ty, free_ty=free_ty};
 
-val empty_env = {scope=[], free=[]};
+fun lookup_ftyvar(s,({free_ty,...}:env)) = assoc s free_ty;
+fun lookup_btyvar(s,({scope_ty,...}:env)) = assoc s scope_ty;
+fun add_free_ty ((s,kd,rk),{scope,free,scope_ty,free_ty}) =
+    {scope=scope, free=free, scope_ty=scope_ty, free_ty=(s,(kd,rk))::free_ty}
+fun add_scope_ty((s,kd,rk),{scope,free,scope_ty,free_ty}) =
+    {scope=scope, free=free, scope_ty=(s,(kd,rk))::scope_ty, free_ty=free_ty};
+
+val empty_env = {scope=[], free=[], scope_ty=[], free_ty=[]};
 
 type pretype_in_env = env -> Pretype.pretype * env
 type preterm_in_env = env -> Preterm.preterm * env
@@ -32,7 +45,16 @@ type preterm_in_env = env -> Preterm.preterm * env
  * functions from preterm (the body) to preterm (the abstraction).           *
  *---------------------------------------------------------------------------*)
 
-type bvar_in_env = env -> (Preterm.preterm -> Preterm.preterm) * env
+type btyvar_in_env = env -> (Pretype.pretype -> Pretype.pretype) * env
+type bvar_in_env   = env -> (Preterm.preterm -> Preterm.preterm) * env
+
+(*---------------------------------------------------------------------------*
+ * Denotes a type variable bound by a binder ("\\" or "!").                  *
+ * Hence, it takes a binder and returns a function from                      *
+ * the body to a pretype (plus of course, any changes to the env).           *
+ *---------------------------------------------------------------------------*)
+
+type tybinder_in_env = string -> btyvar_in_env
 
 (*---------------------------------------------------------------------------*
  * Denotes a variable bound by a binder ("\\" or a constant, e.g.,           *
@@ -44,6 +66,12 @@ type binder_in_env = string -> bvar_in_env
 
 
 (*---------------------------------------------------------------------------*
+ * Top level parse types                                                     *
+ *---------------------------------------------------------------------------*)
+
+fun make_pretype ty_in_e = fst(ty_in_e empty_env)
+
+(*---------------------------------------------------------------------------*
  * Top level parse terms                                                     *
  *---------------------------------------------------------------------------*)
 
@@ -53,51 +81,194 @@ fun make_preterm tm_in_e = fst(tm_in_e empty_env)
  *       Antiquotes                                                          *
  *---------------------------------------------------------------------------*)
 
-fun make_aq l tm {scope,free} = let
-  open Pretype Term Preterm 
-  fun from ltm (E as (lscope,scope,free)) =
-    case ltm of
-      VAR (v as (Name,Ty)) =>
-       let val pty = Pretype.fromType Ty
-           val v' = {Name=Name, Ty=pty, Locn=l}
-       in if mem v' lscope then (Var v', E)
-          else
-          case assoc1 Name scope
-           of SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l}, Ty=pty, Locn=l}, E)
+(*
+fun make_aq_ty l ty {scope,free,scope_ty,free_ty} = let
+  open Pretype Term Preterm
+  fun from_ty lty (E as (lscope, scope, free, scope_ty, free_ty)) =
+    case lty of
+      TY_VAR (v as (Name,Kind,Rank)) =>
+       let val pkd = Prekind.fromKind Kind
+           val prk = Prerank.fromRank Rank
+           val v' = (Name, pkd, prk)
+       in case assoc1 Name scope_ty
+           of SOME(_,(nkv,nrk)) => (Prekind.unify pkd nkv; (PT(Vartype v',l), E))
+                                   (*(PT(TyRankConstr
+                                         {Ty=PT(TyKindConstr
+                                                  {Ty=PT(Vartype(Name,nkv,nrk),l),
+                                                   Kind=pkd}, l),
+                                          Rank=prk}, l), E)*)
             | NONE => let in
-               case assoc1 Name free
-                of NONE => (Var v', (lscope,scope, (Name,pty)::free))
-                 | SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l},Ty=pty,Locn=l}, E)
+               case assoc1 Name free_ty
+                of NONE => (PT(Vartype v',l),
+                            (lscope, scope, free, scope_ty, (Name,(pkd,prk))::free_ty))
+                 | SOME(_,(nkv,nrk)) => (Prekind.unify pkd nkv; (PT(Vartype v',l), E))
+                                        (*(PT(TyRankConstr
+                                              {Ty=PT(TyKindConstr
+                                                       {Ty=PT(Vartype(Name,nkv,nrk),l),
+                                                        Kind=pkd}, l),
+                                               Rank=prk}, l), E)*)
                end
        end
-    | CONST{Name,Thy,Ty} => (Const{Name=Name,Thy=Thy,Ty=Pretype.fromType Ty,Locn=l},E)
+    | TY_CONST{Thy,Tyop,Kind,Rank} =>
+        (PT(Contype{Thy=Thy,Tyop=Tyop,Kind=Prekind.fromKind Kind,Rank=Prerank.fromRank Rank}, l), E)
+    | TY_APP(opr,arg) =>
+       let val (pty1,E1) = from_ty (destruct_type opr) E
+           val (pty2,E2) = from_ty (destruct_type arg) E1
+       in (PT(TyApp(pty1,pty2),l), E2)
+       end
+    | TY_UNIV(bvar,body) =>
+       let val (s,kd,rk) = dest_vartype_opr bvar
+           val pkd = Prekind.fromKind kd
+           val prk = Prerank.fromRank rk
+           val v' = (s,pkd,prk)
+           val (body',(_,_,_,_,free_ty')) =
+                  from_ty (destruct_type body) (lscope, scope, free, (s,(pkd,rk))::scope_ty, free_ty)
+       in (PT(TyUniv(PT(Vartype v',l),body'),l), (lscope, scope, free, scope_ty, free_ty'))
+       end
+    | TY_ABS(bvar,body) =>
+       let val (s,kd,rk) = dest_vartype_opr bvar
+           val pkd = Prekind.fromKind kd
+           val prk = Prerank.fromRank rk
+           val v' = (s,pkd,prk)
+           val (body',(_,_,_,_,free_ty')) =
+                  from_ty (destruct_type body) (lscope, scope, free, (s,(pkd,rk))::scope_ty, free_ty)
+       in (PT(TyAbst(PT(Vartype v',l),body'),l), (lscope, scope, free, scope_ty, free_ty'))
+       end
+  val (pty, (_,_,free,_,free_ty)) = from_ty (destruct_type ty) ([],scope,free,scope_ty,free_ty)
+in
+  (pty, {scope=scope, free=free, scope_ty=scope_ty, free_ty=free_ty})
+end;
+*)
+
+local
+  open Pretype Term Preterm
+  fun from_ty l lty (E as (lscope, scope, free, scope_ty, free_ty)) =
+    case lty of
+      TY_VAR (v as (Name,Kind,Rank)) =>
+       let val pkd = Prekind.fromKind Kind
+           val prk = Prerank.fromRank Rank
+           val v' = (Name, pkd, prk)
+       in case assoc1 Name scope_ty
+           of SOME(_,(nkv,nrk)) => (Prekind.unify pkd nkv; (PT(Vartype v',l), E))
+                                   (*(PT(TyRankConstr
+                                         {Ty=PT(TyKindConstr
+                                                  {Ty=PT(Vartype(Name,nkv,nrk),l),
+                                                   Kind=pkd}, l),
+                                          Rank=Rank}, l), E)*)
+            | NONE => let in
+               case assoc1 Name free_ty
+                of NONE => (PT(Vartype v',l),
+                            (lscope, scope, free, scope_ty, (Name,(pkd,prk))::free_ty))
+                 | SOME(_,(nkv,nrk)) => (Prekind.unify pkd nkv; (PT(Vartype v',l), E))
+                                        (*(PT(TyRankConstr
+                                              {Ty=PT(TyKindConstr
+                                                       {Ty=PT(Vartype(Name,nkv,nrk),l),
+                                                        Kind=pkd}, l),
+                                               Rank=prk}, l), E)*)
+               end
+       end
+    | TY_CONST{Thy,Tyop,Kind,Rank} =>
+        (PT(Contype{Thy=Thy,Tyop=Tyop,Kind=Prekind.fromKind Kind,Rank=Prerank.fromRank Rank}, l), E)
+    | TY_APP(opr,arg) =>
+       let val (pty1,E1) = from_ty l (destruct_type opr) E
+           val (pty2,E2) = from_ty l (destruct_type arg) E1
+       in (PT(TyApp(pty1,pty2),l), E2)
+       end
+    | TY_UNIV(bvar,body) =>
+       let val (s,kd,rk) = dest_vartype_opr bvar
+           val pkd = Prekind.fromKind kd
+           val prk = Prerank.fromRank rk
+           val v' = (s,pkd,prk)
+           val (body',(_,_,_,_,free_ty')) =
+                  from_ty l (destruct_type body) (lscope, scope, free, (s,(pkd,prk))::scope_ty, free_ty)
+       in (PT(TyUniv(PT(Vartype v',l),body'),l), (lscope, scope, free, scope_ty, free_ty'))
+       end
+    | TY_ABS(bvar,body) =>
+       let val (s,kd,rk) = dest_vartype_opr bvar
+           val pkd = Prekind.fromKind kd
+           val prk = Prerank.fromRank rk
+           val v' = (s,pkd,prk)
+           val (body',(_,_,_,_,free_ty')) =
+                  from_ty l (destruct_type body) (lscope, scope, free, (s,(pkd,prk))::scope_ty, free_ty)
+       in (PT(TyAbst(PT(Vartype v',l),body'),l), (lscope, scope, free, scope_ty, free_ty'))
+       end
+
+  (*fun no_l (lscope, scope, free, scope_ty, free_ty) =
+         {scope=scope, free=free, scope_ty=scope_ty, free_ty=free_ty}*)
+  fun from l ltm (E as (lscope, scope, free, scope_ty, free_ty)) =
+    case ltm of
+      VAR (v as (Name,Ty)) =>
+       let val (pty,E1 as (lscope, scope, free, scope_ty, free_ty)) = (*make_aq_ty l Ty (no_l E)*)
+                                                                      from_ty l (destruct_type Ty) E
+                                                                      (*(Pretype.fromType Ty, E)*)
+           val v' = {Name=Name, Ty=pty, Locn=l}
+           fun eq {Name=Name1,Ty=Ty1,Locn=Locn1} {Name=Name2,Ty=Ty2,Locn=Locn2} =
+                   Name1=Name2 andalso Pretype.eq Ty1 Ty2
+       in if mem v' lscope then (Var v', E1)
+          else
+          case assoc1 Name scope
+           of SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l}, Ty=pty, Locn=l}, E1)
+            | NONE => let in
+               case assoc1 Name free
+                of NONE => (Var v', (lscope, scope, (Name,pty)::free, scope_ty, free_ty))
+                 | SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l},Ty=pty,Locn=l}, E1)
+               end
+       end
+    | CONST{Name,Thy,Ty} =>
+       let val (pTy,E1 as (lscope, scope, free, scope_ty, free_ty)) = (*make_aq_ty l Ty (no_l E)*)
+                                                                      from_ty l (destruct_type Ty) E
+                                                                      (*(Pretype.fromType Ty, E)*)
+       in (Const{Name=Name,Thy=Thy,Ty=pTy,Locn=l},E1)
+       end
     | COMB(Rator,Rand)   =>
-       let val (ptm1,E1) = from (dest_term Rator) E
-           val (ptm2,E2) = from (dest_term Rand) E1
+       let val (ptm1,E1) = from l (dest_term Rator) E
+           val (ptm2,E2) = from l (dest_term Rand) E1
        in (Comb{Rator=ptm1, Rand=ptm2, Locn=l}, E2)
        end
     | TYCOMB(Rator,Rand)   =>
-       let val (ptm,E1) = from (dest_term Rator) E
-           val pty = Pretype.fromType Rand
-       in (TyComb{Rator=ptm, Rand=pty, Locn=l}, E1)
+       let val (ptm,E1) = from l (dest_term Rator) E
+           val (pty,E2) = (*make_aq_ty l Rand (no_l E1)*)
+                          from_ty l (destruct_type Rand) E1
+                          (*(Pretype.fromType Rand, E1)*)
+       in (TyComb{Rator=ptm, Rand=pty, Locn=l}, E2)
        end
     | LAMB(Bvar,Body) =>
        let val (s,ty) = dest_var Bvar
-           val v' = {Name=s, Ty = Pretype.fromType ty, Locn=l}
-           val (Body',(_,_,free')) = from (dest_term Body)
-                                          (v'::lscope, scope, free)
-       in (Abs{Bvar=Var v', Body=Body', Locn=l}, (lscope,scope,free'))
+           val (pty,E1 as (lscope, scope, free, scope_ty, free_ty)) = (*make_aq_ty ty (no_l E)*)
+                                                                      from_ty l (destruct_type ty) E
+                                                                      (*(Pretype.fromType ty, E)*)
+           val v' = {Name=s, Ty = pty, Locn=l}
+           val (Body',(_,_,free',scope_ty',free_ty')) =
+                  from l (dest_term Body) (v'::lscope, scope, free, scope_ty, free_ty)
+       in (Abs{Bvar=Var v', Body=Body', Locn=l}, (lscope, scope, free', scope_ty', free_ty'))
        end
     | TYLAMB(Bvar,Body) =>
-       let val v' = Pretype.fromType Bvar
-           val (Body',(_,_,free')) = from (dest_term Body)
-                                          (lscope, scope, free) (* <-- fix this; add tyvar scope? *)
-       in (TyAbs{Bvar=v', Body=Body', Locn=l}, (lscope,scope,free'))
+       let val (s,kd,rk) = dest_vartype_opr Bvar
+           val pkd = Prekind.fromKind kd
+           val prk = Prerank.fromRank rk
+           val v' = (s,pkd,prk)
+           val (Body',(_,_,free',scope_ty',free_ty')) = from l (dest_term Body)
+                                          (lscope, scope, free, (s,(pkd,prk))::scope_ty, free_ty)
+       in (TyAbs{Bvar=PT(Vartype v',l), Body=Body', Locn=l}, (lscope, scope, free', scope_ty', free_ty'))
        end
-  val (ptm, (_,_,free)) = from (dest_term tm) ([],scope,free)
+
+in (* local *)
+
+fun make_aq_ty l ty {scope,free,scope_ty,free_ty} = let
+  open Pretype Term Preterm
+  val (pty, (_,_,free,_,free_ty)) = from_ty l (destruct_type ty) ([],scope,free,scope_ty,free_ty)
 in
-  (ptm, {scope=scope,free=free})
+  (pty, {scope=scope, free=free, scope_ty=scope_ty, free_ty=free_ty})
 end;
+
+fun make_aq l tm {scope,free,scope_ty,free_ty} = let
+  open Pretype Term Preterm
+  val (ptm, (_,_,free,_,free_ty)) = from l (dest_term tm) ([],scope,free,scope_ty,free_ty)
+in
+  (ptm, {scope=scope, free=free, scope_ty=scope_ty, free_ty=free_ty})
+end
+
+end; (* local *)
 
 
 (*---------------------------------------------------------------------------*
@@ -142,11 +313,19 @@ fun make_binding_occ l s binder E =
                                   Rand=Abs{Bvar=Var{Name=s,Ty=ntv,Locn=l}, Body=b, Locn=locn.near (Preterm.locn b)}}), E')
  end;
 
-fun make_tybinding_occ pty binder E =
- let open Preterm
+fun make_tybinding_occ l s binder E =
+ let open Pretype Preterm
+     val _ =
+       Lexis.allowed_user_type_var s orelse
+       raise ERRORloc "make_binding_occ" l
+         (s ^ " is not lexically permissible as a binding type variable")
+     val nkv = Prekind.new_uvar()
+     val nrv = Prerank.new_uvar()
+     val pty = PT(Vartype(s, nkv, nrv), l)
+     val E' = add_scope_ty((s, nkv, nrv),E)
  in ((fn b => TyAbs{Bvar=pty, Body=b, Locn=locn.near (Preterm.locn b)}), E)
  end;
-  
+
 
 
 fun make_aq_binding_occ l aq binder E = let
@@ -162,6 +341,51 @@ in
                              Rand=Abs{Bvar=Var v', Body=b, Locn=locn.near (Preterm.locn b)}}),  E')
 end
 
+fun make_binding_type_occ l s binder E =
+ let open Pretype
+     val _ =
+       Lexis.allowed_user_type_var s orelse
+       raise ERRORloc "make_binding_type_occ" l
+         (s ^ " is not lexically permissible as a binding type variable")
+     val nkv = Prekind.new_uvar()
+     val nrv = Prerank.new_uvar()
+     val pty = PT(Vartype(s, nkv, nrv), l)
+     val E' = add_scope_ty((s,nkv,nrv),E)
+ in
+  case binder
+   of "\\" => ((fn b => PT(TyAbst(pty,b), locn.near (tylocn b))), E')
+    | "!"  => ((fn b => PT(TyUniv(pty,b), locn.near (tylocn b))), E')
+    |  _   => raise ERROR "make_tybinding_occ" ("invalid binder: " ^ binder)
+ end;
+
+local open Pretype
+in
+fun cdomkd M [] = M
+  | cdomkd (PT(TyUniv(Bvar,Body),Locn)) (kd::rst) =
+       PT(TyUniv(PT(TyKindConstr{Ty=Bvar,Kind=kd},Locn), cdomkd Body rst), Locn)
+  | cdomkd (PT(TyAbst(Bvar,Body),Locn)) (kd::rst) =
+       PT(TyAbst(PT(TyKindConstr{Ty=Bvar,Kind=kd},Locn), cdomkd Body rst), Locn)
+  | cdomkd x y = raise ERRORloc "cdomkd" (Pretype.tylocn x) "missing case"
+end;
+
+fun cdomfkd (f,e) kd = ((fn ty => cdomkd (f ty) [kd]), e)
+
+fun make_kind_binding_occ l bty kd binder E = cdomfkd (bty binder E) kd;
+
+local open Pretype
+in
+fun cdomrk M [] = M
+  | cdomrk (PT(TyUniv(Bvar,Body),Locn)) (rk::rst) =
+       PT(TyUniv(PT(TyRankConstr{Ty=Bvar,Rank=rk},Locn), cdomrk Body rst), Locn)
+  | cdomrk (PT(TyAbst(Bvar,Body),Locn)) (rk::rst) =
+       PT(TyAbst(PT(TyRankConstr{Ty=Bvar,Rank=rk},Locn), cdomrk Body rst), Locn)
+  | cdomrk x y = raise ERRORloc "cdomrk" (Pretype.tylocn x) "missing case"
+end;
+
+fun cdomfrk (f,e) rk = ((fn ty => cdomrk (f ty) [rk]), e)
+
+fun make_rank_binding_occ l bty rk binder E = cdomfrk (bty binder E) rk;
+
 
 (*---------------------------------------------------------------------------
  * Free occurrences of variables.
@@ -176,11 +400,30 @@ fun make_free_var l (s,E) =
        end
  end
 
+fun make_free_tyvar l (s,E) =
+ let open Pretype
+ in let val (kd, rk) = lookup_ftyvar(s,E)
+    in (PT(Vartype(s, kd, rk), l), E)
+    end
+     handle HOL_ERR _ =>
+       let val kdv = Prekind.new_uvar()
+           val rkv = Prerank.new_uvar()
+           val v = (s, kdv, rkv)
+       in (PT(Vartype v, l), add_free_ty(v, E))
+       end
+ end
+
 (*---------------------------------------------------------------------------
  * Bound occurrences of variables.
  *---------------------------------------------------------------------------*)
 
 fun make_bvar l (s,E) = (Preterm.Var{Name=s, Ty=lookup_bvar(s,E), Locn=l}, E);
+
+fun make_btyvar l (s,E) =
+    let open Pretype
+        val (kind,rank) = lookup_btyvar(s,E)
+    in (PT(Vartype(s,kind,rank), l), E)
+    end;
 
 (* ----------------------------------------------------------------------
      Treatment of overloaded identifiers
@@ -301,6 +544,29 @@ fun make_atom oinfo l s E =
                      ("Record field "^String.extract(s, size rfn, NONE)^
                       " not registered"))
 
+fun make_type_constant l {Thy=Thy0,Tyop=Tyop0} E =
+ let open Pretype
+     val c = Type.mk_thy_con_type {Thy=Thy0,Tyop=Tyop0}
+     val {Thy,Tyop,Kind,Rank} = Type.dest_thy_con_type c
+     val Kind' = Prekind.fromKind Kind
+     val Rank' = Prerank.fromRank Rank
+ in (PT(Contype {Thy=Thy,Tyop=Tyop,Kind=Kind',Rank=Rank'}, l), E)
+ end
+
+fun make_type_atom l s E =
+ make_btyvar l (s,E)
+   handle HOL_ERR _ =>
+   make_free_tyvar l (s, E)
+
+fun make_uvar_type l r NONE E =
+    (Pretype.PT(Pretype.UVar r, l), E)
+  | make_uvar_type l r (SOME ty) E =
+    let val (ty', E') = ty E
+    in
+      r := SOME ty';
+      (Pretype.PT(Pretype.UVar r, l), E')
+    end;
+
 (*---------------------------------------------------------------------------
  * Combs
  *---------------------------------------------------------------------------*)
@@ -313,8 +579,15 @@ fun list_make_comb l (tm1::(rst as (_::_))) E =
 
 fun list_make_tycomb l tm1 (tys as (_::_)) E =
      rev_itlist (fn ty => fn (trm,e) =>
-        (Preterm.TyComb{Rator = trm, Rand = ty, Locn=l}, e))     tys (tm1 E)
+        let val (ty',e') = ty e
+        in (Preterm.TyComb{Rator = trm, Rand = ty', Locn=l}, e') end)   tys (tm1 E)
   | list_make_tycomb l _ _ _ = raise ERRORloc "list_make_tycomb" l "insufficient args";
+
+fun list_make_app_type l (ty1::(rst as (_::_))) E =
+     rev_itlist (fn ty => fn (typ,e) =>
+        let val (ty',e') = ty e
+        in (Pretype.PT(Pretype.TyApp(typ, ty'), l), e') end)     rst (ty1 E)
+  | list_make_app_type l _ _ = raise ERRORloc "list_make_app_type" l "insufficient args";
 
 (*---------------------------------------------------------------------------
  * Constraints
@@ -322,8 +595,23 @@ fun list_make_tycomb l tm1 (tys as (_::_)) E =
 
 fun make_constrained l tm ty E = let
   val (tm',E') = tm E
+  val (ty',E'') = ty E'
 in
-  (Preterm.Constrained{Ptm = tm', Ty = ty, Locn = l}, E')
+  (Preterm.Constrained{Ptm = tm', Ty = ty', Locn = l}, E'')
+end;
+
+fun make_kind_constr_type l ty kd E = let
+  val (ty',E') = ty E
+  open Pretype
+in
+  (PT(TyKindConstr{Ty = ty', Kind = kd}, l), E')
+end;
+
+fun make_rank_constr_type l ty rk E = let
+  val (ty',E') = ty E
+  open Pretype
+in
+  (PT(TyRankConstr{Ty = ty', Rank = rk}, l), E')
 end;
 
 
@@ -344,11 +632,18 @@ end;
   found in tm to E.
  ----------------------------------------------------------------------------*)
 
-fun bind_term _ binder alist tm (E as {scope=scope0,...}:env) =
+fun bind_term _ binder alist tm (E as {scope=scope0,scope_ty=scope_ty0,...}:env) =
    let val (E',F) = rev_itlist (fn a => fn (e,f) =>
              let val (g,e') = a binder e in (e', f o g) end) alist (E,I)
-       val (tm',({free=free1,...}:env)) = tm E'
-   in (F tm', {scope=scope0,free=free1})
+       val (tm',({free=free1,free_ty=free_ty1,...}:env)) = tm E'
+   in (F tm', {scope=scope0,free=free1,scope_ty=scope_ty0,free_ty=free_ty1})
+   end;
+
+fun bind_type _ binder alist ty (E as {scope=scope0,scope_ty=scope_ty0,...}:env) =
+   let val (E',F) = rev_itlist (fn a => fn (e,f) =>
+             let val (g,e') = a binder e in (e', f o g) end) alist (E,I)
+       val (ty',({free=free1,free_ty=free_ty1,...}:env)) = ty E'
+   in (F ty', {scope=scope0,free=free1,scope_ty=scope_ty0,free_ty=free_ty1})
    end;
 
 
@@ -383,7 +678,7 @@ fun restr_binder l s =
    => raise ERRORloc "restr_binder" l
                       ("no restriction associated with "^Lib.quote s)
 
-fun bind_restr_term l binder vlist restr tm (E as {scope=scope0,...}:env)=
+fun bind_restr_term l binder vlist restr tm (E as {scope=scope0,scope_ty=scope_ty0,...}:env)=
    let fun replicate_rbinder e =
             (gen_const l (restr_binder l binder),e)
              handle HOL_ERR _ => raise ERRORloc "bind_restr_term" l
@@ -394,15 +689,15 @@ fun bind_restr_term l binder vlist restr tm (E as {scope=scope0,...}:env)=
                     val (g,e'') = v "\\" e'
                     fun make_cmb ptm = Preterm.Comb{Rator=prefix,Rand=ptm,Locn=l}
                 in (e'', f o make_cmb o g) end)         vlist (E,I)
-       val (tm',({free=free1,...}:env)) = tm E'
+       val (tm',({free=free1,free_ty=free_ty1,...}:env)) = tm E'
    in
-   (F tm', {scope=scope0,free=free1})
+   (F tm', {scope=scope0,scope_ty=scope_ty0,free=free1,free_ty=free_ty1})
    end;
 
 fun split (Pretype.PT(ty,locn)) = let
   open Pretype
   val pair_conty = Contype{Thy = "pair", Tyop = "prod",
-                           Kind = Prekind.mk_arity 2, Rank = 0}
+                           Kind = Prekind.mk_arity 2, Rank = Prerank.Zerorank}
 in
   case ty of
     TyApp(PT(TyApp(PT(con, _), arg1), _), arg2) => if con = pair_conty then

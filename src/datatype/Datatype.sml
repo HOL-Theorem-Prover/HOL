@@ -234,11 +234,8 @@ fun to_tyspecs ASTs =
      val asts = map stage1 ASTs
      val new_type_names = map #1 asts
      fun mk_hol_type (dAQ ty) = ty
-       | mk_hol_type (dTyRankConstr{Ty=dTyKindConstr{Ty=dVartype s, Kind=kd}, Rank=rk}) =
-                 mk_vartype_opr (s,Prekind.toKind kd,rk)
-       | mk_hol_type (dTyKindConstr{Ty=dVartype s, Kind=kd}) = mk_vartype_opr (s,Prekind.toKind kd,0)
-       | mk_hol_type (dTyRankConstr{Ty=dVartype s, Rank=rk}) = mk_vartype_opr (s,Kind.typ,rk)
-       | mk_hol_type (dVartype s) = mk_vartype s
+       | mk_hol_type (dVartype (s,kd,rk)) =
+            mk_vartype_opr (s,Prekind.toKind kd,Prerank.toRank rk)
        | mk_hol_type (dTyUniv(bvar,body)) =
             mk_univ_type(mk_hol_type bvar, mk_hol_type body)
        | mk_hol_type (dTyAbst(bvar,body)) =
@@ -1070,7 +1067,10 @@ fun find_vartypes (pty, acc) =
  in
   case pty of
     dVartype s => HOLset.add(acc, s)
-  | dAQ ty => List.foldl (fn (ty, acc) => HOLset.add(acc, dest_vartype ty))
+  | dAQ ty => List.foldl (fn (ty, acc) => let val (s,kd,rk) = dest_vartype_opr ty
+                                              val kd' = Prekind.fromKind kd
+                                              val rk' = Prerank.fromRank rk
+                                          in HOLset.add(acc, (s,kd',rk')) end)
                          acc (Type.type_vars ty)
   | dContype _ => acc
   | dTyApp(opr,arg) => List.foldl find_vartypes acc [opr,arg]
@@ -1093,7 +1093,7 @@ fun dtForm_vartypes (dtf, acc) =
                           acc fldlist
 
 
-val empty_stringset = HOLset.empty String.compare
+val empty_pretyvarset = HOLset.empty Pretype.pretyvar_compare
 
 (*---------------------------------------------------------------------------*)
 (* prevtypes below is an association list mapping the names of types         *)
@@ -1109,7 +1109,7 @@ fun define_type_from_astl prevtypes db astl = let
     fun addtyi ((tyi, _), db) = TypeBasePure.add db tyi
     val alltyvars =
         List.foldl (fn ((_, dtf), acc) => dtForm_vartypes(dtf, acc))
-                   empty_stringset
+                   empty_pretyvarset
                    astl
   in
     (prevtypes @ map (fn (s, dtf) => (s, alltyvars)) astl,

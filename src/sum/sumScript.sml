@@ -32,6 +32,10 @@
 structure sumScript =
 struct
 
+(*
+app load ["HolKernel","Parse","boolLib","BasicProvers"];
+*)
+
 open HolKernel Parse boolLib BasicProvers;
 
 val _ = new_theory "sum";

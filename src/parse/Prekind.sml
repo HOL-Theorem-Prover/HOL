@@ -14,11 +14,12 @@ val TCERR = mk_HOL_ERR "Prekind";
     | UVarkind of prekind option ref
  and prekind = PK of prekind0 locn.located
 
-fun eq0 (Varkind s)                (Varkind s')                = s=s'
+fun eq0 (UVarkind (ref(SOME (PK(kd,l)))))    kd'               = eq0 kd kd'
+  | eq0 kd                 (UVarkind (ref(SOME (PK(kd',l)))) ) = eq0 kd kd'
+  | eq0 (Varkind s)                (Varkind s')                = s=s'
   | eq0 (Typekind)                 (Typekind)                  = true
   | eq0 (Arrowkind(kd1,kd2))       (Arrowkind(kd1',kd2'))      = eq kd1 kd1' andalso eq kd2 kd2'
   | eq0 (UVarkind (r as ref NONE)) (UVarkind (r' as ref NONE)) = r=r'
-  | eq0 (UVarkind (ref(SOME kd)))  (UVarkind (ref(SOME kd')) ) = eq kd kd'
   | eq0 _                          _                           = false
 and eq  (PK (value,locn))          (PK (value',locn'))         = eq0 value value'
 
@@ -31,6 +32,28 @@ fun ((kd1 as PK(_,loc1)) ==> (kd2 as PK(_,loc2))) =
 fun mk_arity 0 = typ
   | mk_arity n = if n > 0 then typ ==> mk_arity (n - 1)
                  else raise TCERR "mk_arity" "negative arity"
+
+
+(* ----------------------------------------------------------------------
+    A total ordering on prekinds.
+    UVarkind(NONE) < UVarkind(SOME) < Varkind < Typekind < Arrowkind
+   ---------------------------------------------------------------------- *)
+
+fun prekind_compare0 (UVarkind (r1 as ref NONE), UVarkind (r2 as ref NONE)) = EQUAL
+  | prekind_compare0 (UVarkind (ref NONE),       _)                         = LESS
+  | prekind_compare0 (UVarkind (ref (SOME _)),   UVarkind (ref NONE))       = GREATER
+  | prekind_compare0 (UVarkind (ref (SOME k1)),  UVarkind (ref (SOME k2)))  = prekind_compare(k1,k2)
+  | prekind_compare0 (UVarkind (ref (SOME _)),   _)                         = LESS
+  | prekind_compare0 (Varkind _,                 UVarkind _)                = GREATER
+  | prekind_compare0 (Varkind s1,                Varkind s2)                = String.compare(s1,s2)
+  | prekind_compare0 (Varkind _,                 _)                         = LESS
+  | prekind_compare0 (Typekind,                  Typekind)                  = EQUAL
+  | prekind_compare0 (Typekind,                  Arrowkind _)               = LESS
+  | prekind_compare0 (Typekind,                  _)                         = GREATER
+  | prekind_compare0 (Arrowkind p1,              Arrowkind p2)              =
+        Lib.pair_compare(prekind_compare,prekind_compare)(p1,p2)
+  | prekind_compare0 (Arrowkind p1,              _)                         = GREATER
+and prekind_compare (PK (value1,locn1), PK (value2,locn2)) = prekind_compare0 (value1,value2);
 
 fun kindvars (PK (kd, loc)) =
   case kd of
@@ -226,12 +249,20 @@ fun generate_new_name r used_so_far =
     (result::used_so_far, SOME ())
   end
 
+(* If kind inference did not define these kinds, *)
+(* then set them to the default kind, typ.       *)
+fun set_null_to_default r used_so_far =
+  let val _ = r := SOME typ
+  in
+    (used_so_far, SOME ())
+  end
+
 (* needs changing *)
 (* eta-expansion (see "env" after end below) *is* necessary *)
 fun replace_null_links (PK(kd,_)) env = let
 in
   case kd of
-    UVarkind (r as ref NONE) => generate_new_name r
+    UVarkind (r as ref NONE) => (*generate_new_name r*) set_null_to_default r
   | UVarkind (ref (SOME kd)) => replace_null_links kd
   | Arrowkind (kd1,kd2) => replace_null_links kd1 >> replace_null_links kd2 >> ok
   | Varkind _ => ok

@@ -2,13 +2,13 @@ signature ParseDatatype =
 sig
 
  datatype pretype =
-   dVartype of string
- | dContype of {Thy : string option, Tyop : string, Kind : Prekind.prekind, Rank : int}
+   dVartype of string * Prekind.prekind * Prerank.prerank
+ | dContype of {Thy : string option, Tyop : string, Kind : Prekind.prekind, Rank : Prerank.prerank}
  | dTyApp  of pretype * pretype
  | dTyUniv of pretype * pretype
  | dTyAbst of pretype * pretype
  | dTyKindConstr of {Ty : pretype, Kind : Prekind.prekind}
- | dTyRankConstr of {Ty : pretype, Rank : int}
+ | dTyRankConstr of {Ty : pretype, Rank : Prerank.prerank}
 (*
  | dTyop of {Tyop : string, Thy : string option, Args : pretype list} *)
  | dAQ of Type.hol_type

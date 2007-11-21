@@ -8,9 +8,8 @@ struct
       | TypeVar of string
       | KindCst
       | RankCst
-      | Univ
-      | Abst
       | Comma
+      | Period
       | LParen
       | RParen
       | LBracket
@@ -22,8 +21,8 @@ val ERR = Feedback.mk_HOL_ERR "type_tokens"
 
 open qbuf base_tokens
 
-fun special_symb c = c = #"(" orelse c = #")" orelse c = #"," orelse
-                     c = #":" orelse c = #"!" orelse c = #"\\"
+fun special_symb c = c = #"(" orelse c = #")" orelse c = #"," orelse c = #"." orelse
+                     c = #":" (* orelse c = #"!" orelse c = #"\\" *)
 
 fun split_and_check fb s locn = let
   (* if the first character of s is non-alphanumeric character, then it
@@ -44,8 +43,6 @@ in
   else if s0 = #"'" then ((fn () => advance fb), (TypeVar s,locn))
   else if s0 = #"(" then nadvance 1 LParen
   else if s0 = #")" then nadvance 1 RParen
-  else if s0 = #"!" then nadvance 1 Univ
-  else if s0 = #"\\" then nadvance 1 Abst
   else if s0 = #":" then
     if size s = 1 then nadvance 1 KindCst
     else if size s = 2 then error
@@ -69,6 +66,7 @@ in
     else error
 *)
   else if s0 = #"," then nadvance 1 Comma
+  else if s0 = #"." then nadvance 1 Period
   else if s0 = #"[" then nadvance 1 LBracket
   else if s0 = #"]" then nadvance 1 RBracket
   else if s0 = #"\"" then error

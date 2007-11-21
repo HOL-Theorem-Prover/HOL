@@ -1,21 +1,25 @@
 signature Pretype =
 sig
   type prekind = Prekind.prekind
+  type prerank = Prerank.prerank
   type kind = Kind.kind
   type hol_type = Type.hol_type
-  type pretyvar = string * prekind * int (* rank *)
+  type pretyvar = string * prekind * prerank
   type tyvar = Type.tyvar
+  type term = Term.term
 
  datatype pretype0
     = Vartype of pretyvar
-    | Contype of {Thy : string, Tyop : string, Kind : prekind, Rank : int}
+    | Contype of {Thy : string, Tyop : string, Kind : prekind, Rank : prerank}
     | TyApp  of pretype * pretype
     | TyUniv of pretype * pretype
     | TyAbst of pretype * pretype
     | TyKindConstr of {Ty : pretype, Kind : prekind}
-    | TyRankConstr of {Ty : pretype, Rank : int}
+    | TyRankConstr of {Ty : pretype, Rank : prerank}
     | UVar of pretype option ref
  and pretype = PT of pretype0 locn.located
+
+val tylocn : pretype -> locn.locn
 
 val eq : pretype -> pretype -> bool
 
@@ -27,6 +31,10 @@ val dest_univ_type : pretype -> pretype * pretype
 val mk_abs_type : pretype * pretype -> pretype
 val dest_abs_type : pretype -> pretype * pretype
 
+val pkind_of : pretype -> prekind
+val prank_of : pretype -> prerank
+val is_atom  : pretype -> bool
+
 val kindvars : pretype -> string list
 val tyvars : pretype -> string list
 val new_uvar : unit -> pretype
@@ -35,6 +43,8 @@ val ref_occurs_in : pretype option ref * pretype -> bool
 val ref_equiv : pretype option ref * pretype -> bool
 val has_free_uvar : pretype -> bool
 
+val prekind_rank_compare : (prekind * prerank) * (prekind * prerank) -> order
+val pretyvar_compare : pretyvar * pretyvar -> order
 
 
 (* first argument is a function which performs a binding between a
@@ -47,6 +57,7 @@ val has_free_uvar : pretype -> bool
 *)
 val gen_unify :
   (prekind -> prekind -> ('a -> 'a * unit option)) ->
+  (prerank -> prerank -> ('a -> 'a * unit option)) ->
   ((pretype -> pretype -> ('a -> 'a * unit option)) ->
    (pretype option ref -> (pretype -> ('a -> 'a * unit option)))) ->
   pretype -> pretype -> ('a -> 'a * unit option)
@@ -55,9 +66,10 @@ val can_unify : pretype -> pretype -> bool
 
 val safe_unify :
   pretype -> pretype ->
-  ((prekind option ref * prekind) list * (pretype option ref * pretype) list ->
-   ((prekind option ref * prekind) list * (pretype option ref * pretype) list) * unit option)
+  ((prekind option ref * prekind) list * (prerank option ref * prerank) list * (pretype option ref * pretype) list ->
+   ((prekind option ref * prekind) list * (prerank option ref * prerank) list * (pretype option ref * pretype) list) * unit option)
 val apply_subst : (pretype option ref * pretype) list -> pretype -> pretype
+val type_subst  : {redex : pretype, residue : pretype} list -> pretype -> pretype
 
 val rename_typevars : pretype -> pretype
 val fromType : hol_type -> pretype
@@ -67,4 +79,11 @@ val replace_null_links : pretype -> string list * string list
 val clean : pretype -> hol_type
 val toType : pretype -> hol_type
 val chase : pretype -> pretype
+
+val checkkind :
+      ((hol_type -> string) * (kind -> string)) option
+        -> pretype -> unit
+val kindcheck :
+      ((hol_type -> string) * (kind -> string)) option
+        -> pretype -> hol_type
 end

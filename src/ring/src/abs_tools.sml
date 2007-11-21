@@ -45,7 +45,7 @@ fun asm_store_thm(x,cl,tac) =
 fun Term q = let
     val pt = Parse.Absyn q
     val pt' = add_ip pt
-    val prfns = SOME(term_to_string, type_to_string)
+    val prfns = SOME(term_to_string, type_to_string, kind_to_string)
   in
     Preterm.typecheck prfns (absyn_to_preterm pt')
   end

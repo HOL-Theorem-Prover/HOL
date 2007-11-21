@@ -12,11 +12,86 @@
 structure boolScript =
 struct
 
+(*
+In *scratch*, type
+(hol-set-executable mosml-executable)
+or
+(hol-set-executable (concat hol-home "/bin/hol.bare"))
+
+and type Ctrl-j.
+
+quotation := true;
+loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/sigobj" :: !loadPath;
+loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/pair/src" :: !loadPath;
+app load ["HolKernel","Parse"];
+
+val q = `!x:'a. (f:'a->'b) (x:'a) = (z: 'b)`;
+Term q handle e => Raise e;
+val q = [QUOTE " (*#loc 192 10*):'a"] : hol_type frag list;
+val q = `:'a->bool`;
+Type q handle e => Raise e;
+*)
+
 open HolKernel Parse;
 
 infixr -->
 
 val _ = new_theory "bool";
+
+(*
+local
+  fun with_pp ppfn pps x =
+      Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
+  fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
+in
+  val _ = installPP (with_pp (Kind.pp_qkind))
+  val _ = installPP (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
+  val _ = installPP (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
+  val _ = installPP (with_pp Hol_pp.pp_thm)
+  val _ = installPP (with_pp Hol_pp.pp_theory)
+  val _ = installPP (with_pp kind_grammar.prettyprint_grammar)
+  val _ = installPP (with_pp type_grammar.prettyprint_grammar)
+  val _ = installPP (with_pp term_grammar.prettyprint_grammar)
+end;
+
+val q = `\x:'a. x:'a` : term frag list;
+val absyn = Absyn q
+val oinfo = term_grammar.overload_info (term_grammar())
+val ptm0 = Parse_support.make_preterm (absyn_to_preterm_in_env oinfo absyn);
+val pfns = (SOME(term_to_string, type_to_string, kind_to_string))
+val printers = pfns
+open Preterm;
+(* read interior of  TC *)
+
+val (  Abs{Bvar, Body, Locn}) = ptm0;
+check Bvar;
+val (Constrained{Ptm,Ty,Locn}) = Body;
+checkkind Ty;
+Prekind.unify (Pretype.pkind_of Ty) Prekind.typ;
+check Ptm;
+(* Pretype.unify (ptype_of Ptm) Ty; *)
+
+open Pretype;
+
+val ty1 = ptype_of Ptm and ty2 = Ty;
+
+val bind = unsafe_bind;
+val e = empty_env;
+
+val (ty1 as PT(t1,locn1)) = ty1 and (ty2 as PT(t2,locn2)) = ty2;
+val (UVar (r as ref (SOME t1)), t2) = (t1,t2);
+val (ty1,ty2) = (t1,ty2);
+val (ty1 as PT(t1,locn1)) = ty1 and (ty2 as PT(t2,locn2)) = ty2;
+val (Vartype (tv1 as (s1,k1,r1)), Vartype (tv2 as (s2,k2,r2))) = (t1,t2);
+kind_unify k1 k2 e
+val (e1,result) = rank_unify r1 r2 e
+eq_tyvar tv1 tv2
+
+
+val tm1 = Term `\x:'a. x:'a`;
+
+val tm2 = Term `\x:'a. (f:'a->'b) (x:'a) = (z: 'b)`;
+*)
 
 (*---------------------------------------------------------------------------*
  *             BASIC DEFINITIONS                                             *
@@ -185,7 +260,7 @@ val literal_case_DEF =
    ("literal_case_DEF",  Term `literal_case = \(f:'a->'b) x. f x`);
 
 val _ = List.app add_const ["ARB", "bool_case", "literal_case"];
-val _ = overload_on ("case", ``bool$literal_case``);
+val _ = overload_on ("case", Term `bool$literal_case`);
 
 val IN_DEF =
  Definition.new_definition

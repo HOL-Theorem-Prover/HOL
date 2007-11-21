@@ -58,7 +58,7 @@ val w2n_def = Define`
   w2n (w:'a word) = SUM ^WL (\i. SBIT (w %% i) i)`;
 
 val n2w_def = Define`
-  (n2w:num->('a word)) n = FCP i. BIT i n`;
+  (n2w:num->'a word) n = FCP i. BIT i n`;
 
 val w2w_def = Define`
   (w2w:'a word -> 'b word) w = n2w (w2n w)`;
@@ -76,13 +76,13 @@ val _ = add_bare_numeral_form (#"w", SOME "n2w");
 val _ = ai := true;
 
 val word_T_def = Define`
-  word_T = n2w:num->('a word) (UINT_MAX(:'a))`;
+  word_T = (n2w:num->'a word) (UINT_MAX(:'a))`;
 
 val word_L_def = Define`
-  word_L = n2w:num->('a word) (INT_MIN(:'a))`;
+  word_L = (n2w:num->'a word) (INT_MIN(:'a))`;
 
 val word_H_def = Define`
-  word_H = n2w:num->('a word) (INT_MAX(:'a))`;
+  word_H = (n2w:num->'a word) (INT_MAX(:'a))`;
 
 val _ = ai := false;
 
@@ -166,15 +166,15 @@ val _ = add_infix("><",350,HOLgrammars.RIGHT);
 
 val word_2comp_def = Define`
   word_2comp (w:'a word) =
-    n2w:num->('a word) (dimword(:'a) - w2n w)`;
+    (n2w:num->'a word) (dimword(:'a) - w2n w)`;
 
 val word_add_def = Define`
   word_add (v:'a word) (w:'a word) =
-    n2w:num->('a word) (w2n v + w2n w)`;
+    (n2w:num->'a word) (w2n v + w2n w)`;
 
 val word_mul_def = Define`
   word_mul (v:'a word) (w:'a word) =
-    n2w:num->('a word) (w2n v * w2n w)`;
+    (n2w:num->'a word) (w2n v * w2n w)`;
 
 val word_log2_def = Define`
   word_log2 (w:'a word) = (n2w (LOG2 (w2n w)):'a word)`;
@@ -186,7 +186,7 @@ val word_sub_def = Define`
 
 val word_div_def = Define`
   word_div (v: 'a word) (w: 'a word) =
-    n2w:num->('a word) (w2n v DIV w2n w)`;
+    (n2w:num->'a word) (w2n v DIV w2n w)`;
 
 val word_sdiv_def = Define`
   word_sdiv a b =
@@ -449,7 +449,7 @@ fun Cases_word (g as (_,w)) =
   end
 
 val n2w_mod = store_thm("n2w_mod",
-  `!n. n2w:num -> 'a word (n MOD dimword(:'a)) = n2w n`,
+  `!n. (n2w:num -> 'a word) (n MOD dimword(:'a)) = n2w n`,
   RW_TAC fcp_ss [dimword_def]
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ ASM_SIMP_TAC (fcp_ss++ARITH_ss)
