@@ -14,6 +14,8 @@ val debug = ref 0
 val _ = Feedback.register_trace("debug_parse_type", debug, 1)
 fun is_debug() = (!debug) > 0;
 
+fun one _ [ty] = ty
+  | one locn _ = raise ERRloc locn "tuple with no suffix"
 
 fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 
@@ -207,6 +209,21 @@ end
     | _ => raise InternalFailure locn
   end
 
+  fun parse_tuple prse fb = let
+    val (llocn,_) = itemP is_LParen fb
+    val ty1 = prse fb
+    fun recurse acc = let
+      val (adv,(t,locn)) = typetok_of fb
+    in
+      case t of
+        RParen => (adv(); (List.rev acc,locn.between llocn locn))
+      | Comma => (adv(); recurse (one locn (prse fb) :: acc))
+      | _ => raise InternalFailure locn
+    end
+  in
+    recurse ty1
+  end
+
   fun parse_atom prse fb = let 
     val (adv, (t,locn)) = typetok_of fb
     val ts = type_tokens.token_string t handle _ => "<unknown>"
@@ -217,17 +234,22 @@ end
         end
   in
     case t of 
-      LParen => let val ty1 = (adv(); prse fb)
+      LParen => let val (tys,locn) = parse_tuple prse fb
+                in if is_debug() then print ("<= parse_tuple returned "
+                         ^ Int.toString (length tys) ^ " types\n") else ();
+                   tys
+                end
+             (* let val ty1 = (adv(); prse fb)
                     val (adv,(t,rlocn)) = typetok_of fb
                 in
                   case t of
                     RParen => (adv(); ty1 (*,locn.between locn rlocn*) )
                   | _ => raise InternalFailure locn
-                end
-    | TypeVar s => (adv(); pVartype ((s,Prekind.new_uvar(),Prerank.new_uvar()), locn))
-    | AQ x => (adv(); pAQ x)
-    | QTypeIdent (s0,s) => try_const_tyop(t,locn)
-    | TypeIdent s => try_const_tyop(t,locn)
+                end *)
+    | TypeVar s => (adv(); [pVartype ((s,Prekind.new_uvar(),Prerank.new_uvar()), locn)])
+    | AQ x => (adv(); [pAQ x])
+    | QTypeIdent (s0,s) => [try_const_tyop(t,locn)]
+    | TypeIdent s => [try_const_tyop(t,locn)]
     | _ => raise InternalFailure locn
   end
 
@@ -280,7 +302,7 @@ end
                                   val ty = add_casts v
                               in recurse (ty :: acc))
 *)
-       | _ => let val ty = parse_atom parser strm
+       | _ => let val ty = one locn (parse_atom parser strm)
               in recurse (add_casts ty :: acc)
               end
     end
@@ -337,30 +359,15 @@ end
 
   fun parse_asfx prse fb = let 
     val (llocn, _) = itemP is_LBracket fb 
-    val ty = prse fb
+    val ty = one llocn (prse fb)
     val (rlocn, _) = itemP is_RBracket fb
   in
     ty
   end
 
-  fun parse_tuple prse fb = let
-    val (llocn,_) = itemP is_LParen fb
-    val ty1 = prse fb
-    fun recurse acc = let
-      val (adv,(t,locn)) = typetok_of fb
-    in
-      case t of
-        RParen => (adv(); (List.rev acc,locn.between llocn locn))
-      | Comma => (adv(); recurse (prse fb :: acc))
-      | _ => raise InternalFailure locn
-    end
-  in
-    recurse [ty1]
-  end
-
   fun parse_term current strm =
       case current of
-        [] => parse_atom (parse_term G) strm 
+        [] => parse_atom (parse_term G) strm
       | (r::rs) => parse_rule r rs strm
   and parse_rule (r as (level, rule)) rs strm = let
     val next_level = parse_term rs
@@ -368,42 +375,57 @@ end
   in
     case rule of
       INFIX (stlist, NONASSOC) => let
+        val (adv, (t,llocn)) = typetok_of strm
         val ty1 = next_level strm
+        val (adv, (t,rlocn)) = typetok_of strm
       in
         case totalify (parse_binop stlist) strm of
           NONE => ty1
-        | SOME opn => apply_binop opn [ty1, next_level strm]
+        | SOME opn => [apply_binop opn [one llocn ty1, one rlocn (next_level strm)]]
       end
     | INFIX (stlist, LEFT) => let
+        val (adv, (t,llocn)) = typetok_of strm
         val ty1 = next_level strm
-        fun recurse acc =
+        fun recurse (acc,llocn) =
             case totalify (parse_binop stlist) strm of
               NONE => acc
-            | SOME opn => recurse (apply_binop opn [acc, next_level strm])
+            | SOME opn => let
+                  val (adv, (t,rlocn)) = typetok_of strm
+                in recurse ([apply_binop opn [one llocn acc, one rlocn (next_level strm)]],rlocn)
+                end
       in
-        recurse ty1
+        recurse (ty1,llocn)
       end
     | INFIX (stlist, RIGHT) => let
         val _ = if is_debug() then print ">> INFIX (RIGHT)\n" else ()
+        val (adv, (t,llocn)) = typetok_of strm
         val ty1 = next_level strm
       in
         case totalify (parse_binop stlist) strm of
           NONE => (if is_debug() then print "   INFIX (RIGHT) sees no infix\n" else (); ty1)
-        | SOME opn => (if is_debug() then print ("   INFIX (RIGHT) sees an infix " ^
+        | SOME opn => let
+                        val (adv, (t,rlocn)) = typetok_of strm
+                      in [(if is_debug() then print ("   INFIX (RIGHT) sees an infix " ^
                               type_tokens.token_string (#1 opn) ^ "\n") else ();
-                       apply_binop opn [ty1, same_level strm])
+                           apply_binop opn [one llocn ty1, one rlocn (same_level strm)])]
+                      end
       end
     | BINDER slist => let
       in case totalify (parse_binder slist (parse_term G)) strm of
-            SOME ((t,locn),alphas) => apply_binder((t,locn), alphas, same_level strm)
+            SOME ((t,locn),alphas) => let
+                        val (adv, (_,rlocn)) = typetok_of strm
+                      in [apply_binder((t,locn), alphas, one rlocn (same_level strm))]
+                      end
           | NONE => next_level strm
       end
     | ARRAY_SFX => let 
         val llocn = #2 (current strm)
         val ty1 = next_level strm
-        val asfxs = many (parse_asfx (parse_term G)) strm
       in
-        n_array_sfxs llocn (asfxs, ty1)
+        if length ty1 <> 1 then ty1
+        else let val asfxs = many (parse_asfx (parse_term G)) strm
+             in [n_array_sfxs llocn (asfxs, one llocn ty1)]
+             end
       end
     | CAST => let
         val _ = if is_debug() then print ">> CAST\n" else ()
@@ -413,11 +435,11 @@ end
             in case t of
                  KindCst =>
                    (case totalify parse_kindcast strm of
-                       SOME (kd,locn) => recurse (apply_kindcast (acc, kd, locn))
+                       SOME (kd,locn) => recurse [apply_kindcast (one locn acc, kd, locn)]
                      | NONE => acc)
                | RankCst =>
                    (case totalify parse_rankcast strm of
-                       SOME (rk,locn) => recurse (apply_rankcast (acc, rk, locn))
+                       SOME (rk,locn) => recurse [apply_rankcast (one locn acc, rk, locn)]
                      | NONE => acc)
                | _ => acc
             end
@@ -427,7 +449,7 @@ end
     | CONSTANT slist => let
         val _ = if is_debug() then print ">> CONSTANT\n" else ()
       in case totalify (parse_op slist) strm of
-            SOME (op1,locn) => const_tyop (op1,locn)
+            SOME (op1,locn) => [const_tyop (op1,locn)]
           | NONE => next_level strm
       end
     | APPLICATION => let
@@ -435,18 +457,22 @@ end
         val ty1 = next_level strm
         val _ = if is_debug() then print ("  APPLICATION got arg.\n") else ()
         fun recurse acc = let
-          in case totalify (parse_abbrev [acc]) strm of
-                    SOME (ty2,locn) => recurse ty2
+          in case totalify (parse_abbrev acc) strm of
+                    SOME (ty2,locn) => (if is_debug() then print ("  APPLICATION did abbrev.\n") else ();
+                                        recurse [ty2])
                   | NONE => let
                  val (adv, (t,locn1)) = typetok_of strm
+                 val _ = if is_debug() then print ("  APPLICATION looking for operator;\n") else ()
              in
                case totalify next_level strm of
                  NONE => (if is_debug() then print "  APPLICATION returns.\n" else (); acc)
-               | SOME ty2 => recurse (apply_tyop (ty2,locn1) [acc])
+               | SOME ty2 => (if is_debug() then print "  APPLICATION found operator!\n" else ();
+                              recurse [apply_tyop (one locn1 ty2,locn1) acc])
              end
           end
       in recurse ty1
       end
+(*
     | TUPLE_APPL => let
         val _ = if is_debug() then print ">> TUPLE_APPL\n" else ()
       in
@@ -468,9 +494,11 @@ end
              end
           end
       end
+*)
   end
 in
-  fn (qb : 'b qbuf.qbuf) => let val ty = parse_term G qb
+  fn (qb : 'b qbuf.qbuf) => let val (adv, (t,locn)) = typetok_of qb
+                                val ty = one locn (parse_term G qb)
                             in if is_debug() then print ("Parsed type successfully!\n\n")
                                              else ();
                                ty

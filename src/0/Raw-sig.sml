@@ -201,6 +201,8 @@ sig
   val aconv         : term -> term -> bool
   val beta_conv     : term -> term
   val eta_conv      : term -> term
+  val ty_beta_conv  : term -> term
+  val ty_eta_conv   : term -> term
   val subst         : (term,term) Lib.subst -> term -> term
   val inst          : (hol_type,hol_type) subst -> term -> term
   val raw_match     : hol_type list -> term set

@@ -5,7 +5,6 @@ datatype grammar_rule =
   CONSTANT of string list
 | BINDER of string list
 | APPLICATION
-| TUPLE_APPL
 | CAST
 | ARRAY_SFX
 | INFIX of {opname : string, parse_string : string} list *
@@ -78,7 +77,6 @@ fun merge r1 r2 =
     (ARRAY_SFX, ARRAY_SFX) => ARRAY_SFX
   | (CAST, CAST) => CAST
   | (APPLICATION, APPLICATION) => APPLICATION
-  | (TUPLE_APPL, TUPLE_APPL) => TUPLE_APPL
   | (CONSTANT slist1, CONSTANT slist2) => CONSTANT(Lib.union slist1 slist2)
   | (BINDER slist1, BINDER slist2) => BINDER(Lib.union slist1 slist2)
   | (INFIX(rlist1, a1), INFIX(rlist2, a2)) => let
@@ -159,7 +157,7 @@ fun new_tybinder (TYG(G,abbrevs,pmap)) name =
   TYG (insert_sorted (std_binder_precedence, BINDER[name]) G, abbrevs, pmap)
 
 val empty_grammar = TYG ([(std_binder_precedence, BINDER[]),
-                          (96, APPLICATION),(97, TUPLE_APPL),(98, CAST),(99, ARRAY_SFX)], 
+                          (96, APPLICATION),(98, CAST),(99, ARRAY_SFX)], 
                          Binarymap.mkDict String.compare, 
                          TypeNet.empty)
 
@@ -348,7 +346,6 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
       end
     | CAST => add_string "TY  ::=  TY : KIND :<= RANK (kind or rank cast of type)"
     | APPLICATION => add_string "TY  ::=  TY TY (type application)"
-    | TUPLE_APPL => add_string "TY  ::=  (TY,...,TY) TY  (tuple type application)"
     | ARRAY_SFX => add_string "TY  ::=  TY[TY] (array type)"
     | INFIX(oplist, assoc) => let
         val assocstring =

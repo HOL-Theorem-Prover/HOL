@@ -29,6 +29,8 @@ val has_free_uvar : prerank -> bool
 val gen_unify :
   ((prerank -> prerank -> ('a -> 'a * unit option)) ->
    (prerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
+  ((prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (prerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
   prerank -> prerank -> ('a -> 'a * unit option)
 val unify : prerank -> prerank -> unit
 val can_unify : prerank -> prerank -> bool

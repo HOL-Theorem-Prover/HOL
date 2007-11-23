@@ -1,0 +1,50 @@
+val _ = set_trace "kinds" 1;
+val tm1 = ``x:bool (\'a:<=3.'a)``;
+val ty1 = type_of tm1;
+val kd1 = kind_of ty1;
+val rk1 = rank_of ty1;
+val (ty2,ty3) = dest_app_type ty1;
+val kd2 = kind_of ty2;
+val rk2 = rank_of ty2;
+val kd3 = kind_of ty3;
+val rk3 = rank_of ty3;
+val (ty4,ty5) = dest_abs_type ty2;
+(**)
+ty4 = ty5;
+aconv_ty ty4 ty5;
+(**)
+val kd4 = kind_of ty4;
+val rk4 = rank_of ty4;
+``:\'a 'b 'c. ('a 'b) ('b 'c) 'c``;
+``:\'a 'b:ar 1 'c:ar 1 => ar 1.
+       (('b:ar 1) ('c:ar 1 => ar 1), 'a ('b:ar 1)) ('c:ar 1 => ar 1)``;
+val ty7 = ``:\'a:ty=>ty 'b 'c. ('a 'b) ('b 'c) 'c``;
+val ty8 = ``:list ^ty7``;
+val ty9 = beta_conv_ty ty8;
+
+(* Now a couple of examples that throw exceptions, properly: *)
+(*
+``:\'a. 'a 'a``;
+``:\'a 'b. ('a 'b) ('b 'a)``;
+``:\'a 'b. ('a :<= 2) ((\'c. 'a) :<= 1) 'b`` handle e => Raise e;
+val ty10 = ``:\'a 'b. ('a :<= 2) (((!'c :<= 1. 'a) :<= 2) 'b)`` handle e => Raise e;
+val ty10 = ``:\'a 'b. ('a :<= 1) (((!'c :<= 1. 'a) :<= 2) 'b)`` handle e => Raise e;
+val ty10 = ``:\'a 'b. ('a :<= 1) (((!'c :<= 0. 'a) :<= 2) 'b)`` handle e => Raise e;
+val ty10 = ``:\'a 'b. ('a :<= 1) (((!'c :<= 0. 'a) :<= 1) 'b)`` handle e => Raise e;
+val ty10 = ``:\'a 'b. ('a :<= 1) (((!'c :<= 0. 'a) :<= 0) 'b)`` handle e => Raise e;
+val ty10 = ``:\'a :<= 1 'b. ((!'c :<= 3. 'a) :<= 0) 'b`` handle e => Raise e;
+*)
+(* More good examples: *)
+
+val ty10 = ``:\'a 'b. ('a :<= 2) ((\'c. 'a) :<= 2) 'b`` handle e => Raise e;
+
+val ty11 = ``:('a:<=2) : ar 5 :<= 2``;
+val ty12 = ``:('a) :<= 1``;
+
+val ty13 = ``:bool 'a prod``;
+val ty14 = ``:bool ('a) prod``;
+val ty15 = ``:bool ('a prod)``;
+
+val ty16 = ``:\'a :<= 1 'b. ((!'c. 'a) :<= 2) 'b`` handle e => Raise e;
+val ty17 = ``:\'a 'b. ((!'c. 'a) :<= 2) 'b`` handle e => Raise e;
+val ty18 = ``:\'a 'b. (!'c. (!'d. 'c) -> 'a) :<= 2 'b`` handle e => Raise e;

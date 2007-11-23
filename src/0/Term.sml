@@ -604,6 +604,64 @@ end;
 
 
 (*---------------------------------------------------------------------------*
+ *        Type Beta-reduction. Non-renaming.                                 *
+ *---------------------------------------------------------------------------*)
+
+fun ty_beta_conv (TComb(TAbs(Bvar as (Name,Kind,Rank),Body), Rand)) =
+     let fun subs(Fv(s,ty),i)         = Fv(s,subs_ty(ty,i))
+           | subs(Const(Name,Ty),i)   = Const(Name,subs_pty(Ty,i))
+           | subs(Comb(Rator,Rand),i) = Comb(subs(Rator,i),subs(Rand,i))
+           | subs(TComb(Rator,Ty),i)  = TComb(subs(Rator,i),subs_ty(Ty,i))
+           | subs(Abs(v,Body),i)      = Abs(subs(v,i),subs(Body,i))
+           | subs(TAbs(a,Body),i)     = TAbs(a,subs(Body,i+1))
+           | subs (tm as Clos _,i)    = subs(push_clos tm,i)
+           | subs (tm,_) = tm (* e.g., bound variables *)
+         and subs_pty (GRND ty,i)     = GRND (subs_ty(ty,i))
+           | subs_pty (POLY ty,i)     = POLY (subs_ty(ty,i))
+         and subs_ty (v as TyBv j,i)      = if i=j then Rand else v
+           | subs_ty (TyApp(opr,arg),i)   = TyApp(subs_ty(opr,i), subs_ty(arg,i))
+           | subs_ty (TyAll(bv,Body),i)   = TyAll(bv, subs_ty(Body,i+1))
+           | subs_ty (TyAbs(bv,Body),i)   = TyAbs(bv, subs_ty(Body,i+1))
+           | subs_ty (ty,_) = ty (* e.g., free type variables *)
+     in
+       subs (Body,0)
+     end
+  | ty_beta_conv (Comb(x as Clos _, Rand)) = ty_beta_conv (Comb(push_clos x, Rand))
+  | ty_beta_conv (x as Clos _) = ty_beta_conv (push_clos x)
+  | ty_beta_conv _ = raise ERR "ty_beta_conv" "not a type beta-redex";
+
+
+(*---------------------------------------------------------------------------*
+ *       Type Eta-conversion                                                 *
+ *---------------------------------------------------------------------------*)
+
+local fun pop (tm as Fv(s,ty),k)    = Fv(s,pop_ty(ty,k))
+        | pop (Const(Name,Ty),k)    = Const(Name,pop_pty(Ty,k))
+        | pop (Comb(Rator,Rand),k)  = Comb(pop(Rator,k), pop(Rand,k))
+        | pop (TComb(Rator,Ty),k)   = TComb(pop(Rator,k), pop_ty(Ty,k))
+        | pop (Abs(v,Body), k)      = Abs(pop(v,k), pop(Body, k+1))
+        | pop (TAbs(a,Body), k)     = TAbs(a,pop(Body, k))
+        | pop (tm as Clos _, k)     = pop (push_clos tm, k)
+        | pop (tm,k) = tm (* e.g., bound variables *)
+      and pop_pty (GRND ty,k)       = GRND (pop_ty(ty,k))
+        | pop_pty (POLY ty,k)       = POLY (pop_ty(ty,k))
+      and pop_ty (v as TyBv i,k)    =
+           if i=k then raise ERR "ty_eta_conv" "not a type eta-redex" else v
+        | pop_ty (TyApp(opr,arg),k) = TyApp(pop_ty(opr,k), pop_ty(arg,k))
+        | pop_ty (TyAll(bv,Body),k) = TyAll(bv, pop_ty(Body,k+1))
+        | pop_ty (TyAbs(bv,Body),k) = TyAbs(bv, pop_ty(Body,k+1))
+        | pop_ty (ty,_) = ty (* e.g., free type variables *)
+      fun ty_eta_body (TComb(Rator,TyBv 0)) = pop (Rator,0)
+        | ty_eta_body (tm as Clos _)        = ty_eta_body (push_clos tm)
+        | ty_eta_body _ = raise ERR "ty_eta_conv" "not a type eta-redex"
+in
+fun ty_eta_conv (TAbs(_,Body)) = ty_eta_body Body
+  | ty_eta_conv (tm as Clos _) = ty_eta_conv (push_clos tm)
+  | ty_eta_conv _ = raise ERR "ty_eta_conv" "not a type eta-redex"
+end;
+
+
+(*---------------------------------------------------------------------------*
  *    Replace arbitrary subterms in a term. Non-renaming.                    *
  *---------------------------------------------------------------------------*)
 

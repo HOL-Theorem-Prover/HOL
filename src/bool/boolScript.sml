@@ -22,6 +22,7 @@ and type Ctrl-j.
 
 quotation := true;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/sigobj" :: !loadPath;
+loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/sum" :: !loadPath;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/pair/src" :: !loadPath;
 app load ["HolKernel","Parse"];
 

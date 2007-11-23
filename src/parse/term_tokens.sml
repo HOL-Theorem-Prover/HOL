@@ -53,6 +53,7 @@ open qbuf
 fun split_ident nonagg_specs s locn qb = let
   val s0 = String.sub(s, 0)
   val is_char = s0 = #"#" andalso size s > 1 andalso String.sub(s,1) = #"\""
+  fun prefix2 c0 c1 = s0 = c0 andalso size s > 1 andalso String.sub(s,1) = c1
 in
   if Char.isAlpha s0 orelse s0 = #"\"" orelse s0 = #"_" orelse is_char then
     (advance qb; (s,locn))
@@ -73,6 +74,14 @@ in
       let val (s',locn') = split_ident nonagg_specs (String.extract(s, 1, NONE))
                                        (locn.move_start 1 locn) qb in
       ("$" ^ s', locn.move_start ~1 locn') end
+  (* As exceptions to non-aggregating symbolic characters, we recognize
+     "[:", and ":]" specially for HOL-Omega. *)
+  else if prefix2 #"[" #":" orelse prefix2 #":" #"]" then
+            if size s > 2 then
+              let val (locn',locn'') = locn.split_at 2 locn in
+              (replace_current (BT_Ident (String.extract(s, 2, NONE)),locn'') qb;
+               (String.extract (s, 0, SOME 2),locn')) end
+            else (advance qb; (s,locn))
   else (* have a symbolic identifier *)
     let
       val possible_nonaggs =

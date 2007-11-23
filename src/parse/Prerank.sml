@@ -83,7 +83,7 @@ fun r ref_equiv value =
 (* This unsafe_bind should not fail because of a SOME value, *)
 (* but merge the two preranks using Maxrank.                 *)
 
-fun unsafe_bind f r value =
+fun unsafe_bind_greater f r value =
   if r ref_equiv value
   then ok
   else if r ref_occurs_in value
@@ -92,7 +92,17 @@ fun unsafe_bind f r value =
          (((r, !r)::acc, SOME ())
           before r := SOME (case (!r) of
                               SOME value0 => Maxrank(value0,value)
-                            | NONE => value)))
+                            | NONE => value)));
+
+fun unsafe_bind_less f r value =
+  if r ref_equiv value
+  then ok
+  else if r ref_occurs_in value
+  then fail
+  else case (!r) of
+          SOME value0 => f value0 value
+        | NONE => (fn acc => (((r, !r)::acc, SOME ()) before r := SOME value));
+                         
 
 
 (* first argument is a function which performs a binding between a
@@ -106,30 +116,30 @@ fun unsafe_bind f r value =
 (* this will need changing *)
 (* eta-expansion *is* necessary *)
 
-fun gen_unify bind rk1 rk2 e = let
-  val gen_unify = gen_unify bind
+(* This rank unification is NOT SYMMETRIC!! *)
+(* The first rank is made to be less than or equal to the second rank. *)
+fun gen_unify bind_less bind_greater rk1 rk2 e = let
+  val gen_unify = gen_unify bind_less bind_greater
 in
   case (rk1, rk2) of
-    (UVarrank (r as ref NONE), _) => bind gen_unify r rk2
-  | (UVarrank (r as ref (SOME r1)), r2) => gen_unify r1 rk2 ++ bind gen_unify r rk2
-  | (_, UVarrank (r as ref NONE)) => bind gen_unify r rk1
-  | (_, UVarrank (r as ref (SOME r2))) => gen_unify rk1 r2 ++ bind gen_unify r rk1
-  | (Maxrank (r1,r2), _) => gen_unify r1 rk2 ++ gen_unify r2 rk2
-  | (_, Maxrank (r1,r2)) => gen_unify rk1 r1 ++ gen_unify rk1 r2
-  | (Zerorank, Zerorank) => ok
+    (UVarrank r, _) => bind_less gen_unify r rk2
+  | (_, UVarrank r) => bind_greater gen_unify r rk1
+  | (Maxrank (r1,r2), _) => gen_unify r1 rk2 >> gen_unify r2 rk2 >> ok
+  | (Zerorank, _) => ok
   | (Sucrank rk1, Sucrank rk2) => gen_unify rk1 rk2
+  | (_, Maxrank (r1,r2)) => gen_unify rk1 r1 ++ gen_unify rk1 r2
   | _ => fail
 end e;
 
-val unsafe_unify = gen_unify unsafe_bind
+val unsafe_unify = gen_unify unsafe_bind_less unsafe_bind_greater
 
 fun unify rk1 rk2 =
-  case (gen_unify unsafe_bind rk1 rk2 [])
+  case (gen_unify unsafe_bind_less unsafe_bind_greater rk1 rk2 [])
    of (bindings, SOME ()) => ()
     | (_, NONE) => raise TCERR "unify" "unify failed";
 
 fun can_unify rk1 rk2 = let
-  val (bindings, result) = gen_unify unsafe_bind rk1 rk2 []
+  val (bindings, result) = gen_unify unsafe_bind_less unsafe_bind_greater rk1 rk2 []
   val _ = app (fn (r, oldvalue) => r := oldvalue) bindings
 in
   isSome result
@@ -163,9 +173,17 @@ local
                                  (r ref_occurs_in rk2) env
           | _ => false
 in
-fun safe_bind unify r value env =
+fun safe_bind_less unify r value env =
   case Lib.assoc1 r env
    of SOME (_, v) => unify v value env
+    | NONE =>
+        if (r ref_equiv value) env then ok env else
+        if (r ref_occurs_in value) env then fail env
+        else ((r,value)::env, SOME ())
+
+fun safe_bind_greater unify r value env =
+  case Lib.assoc1 r env
+   of SOME (_, v) => unify value v env
     | NONE =>
         if (r ref_equiv value) env then ok env else
         if (r ref_occurs_in value) env then fail env
@@ -173,7 +191,7 @@ fun safe_bind unify r value env =
 end
 
 
-fun safe_unify t1 t2 = gen_unify safe_bind t1 t2
+fun safe_unify t1 t2 = gen_unify safe_bind_less safe_bind_greater t1 t2
 
 (* needs changing *)
 fun apply_subst subst prk =

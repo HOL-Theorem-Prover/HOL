@@ -83,7 +83,6 @@ fun pp_type0 (G:grammar) = let
               if Lib.mem s slist then SOME (p, SR) else recurse xs
           | (p, BINDER slist) => recurse xs
           | (p, APPLICATION) => recurse xs
-          | (p, TUPLE_APPL)  => recurse xs
           | (p, INFIX (slist, a)) => let
               val res = List.find (fn r => #opname r = s) slist
             in
@@ -107,7 +106,6 @@ fun pp_type0 (G:grammar) = let
               if Lib.mem s slist then SOME (p, SR) else recurse xs
           | (p, CONSTANT slist) => recurse xs
           | (p, APPLICATION) => recurse xs
-          | (p, TUPLE_APPL)  => recurse xs
           | (p, INFIX (slist, a)) => let
               val res = List.find (fn r => #opname r = s) slist
             in

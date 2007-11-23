@@ -20,7 +20,6 @@ TApp   ::= Leaf | Tuple Leaf
     = CONSTANT of string list
     | BINDER of string list
     | APPLICATION
-    | TUPLE_APPL
     | CAST
     | ARRAY_SFX 
     | INFIX of {opname : string, parse_string : string} list *
