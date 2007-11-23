@@ -177,7 +177,7 @@ val WORD_SMULL = store_thm("WORD_SMULL",
 (* ------------------------------------------------------------------------- *)
 
 val word_index = METIS_PROVE [word_index_n2w]
-  ``!i n. i < dimindex (:'a) ==> ((n2w n):'a word ' i = BIT i n)``;
+  ``!i n. i < dimindex (:'a) ==> (((n2w n):'a word) ' i = BIT i n)``;
 
 val CARRY_NZCV = METIS_PROVE [CARRY_def,NZCV_def] ``CARRY (NZCV x) = x ' 29``;
 
@@ -218,7 +218,7 @@ val EXCEPTION_CONTEXT_def = Define`
 val NOP_CONTEXT_def = Define`
   NOP_CONTEXT read state (mem:'b) cpsr i =
     Abbrev (cpsr = CPSR_READ state.regs.psr) /\
-    ~(cpsr:word32 ' 5) /\
+    ~((cpsr:word32) ' 5) /\
     (state.exception = software) /\
     ~CONDITION_PASSED (NZCV cpsr) (enc i) /\
     (read mem (FETCH_PC state.regs.reg) = SOME (enc i))`;
@@ -228,7 +228,7 @@ val ARM_CONTEXT_def = Define`
     Abbrev (cpsr = CPSR_READ state.regs.psr) /\
     Abbrev (mode = DECODE_MODE ((4 >< 0) cpsr)) /\
     Abbrev (Reg = REG_READ F state.regs.reg mode) /\
-    ~(cpsr:word32 ' 5) /\
+    ~((cpsr:word32) ' 5) /\
     (state.exception = software) /\
     CONDITION_PASSED (NZCV cpsr) (enc i) /\
     (read mem (FETCH_PC state.regs.reg) = SOME (enc i))`;
@@ -236,7 +236,7 @@ val ARM_CONTEXT_def = Define`
 val PABORT_CONTEXT_def = Define`
   PABORT_CONTEXT read state (mem:'b) cpsr =
     Abbrev (cpsr = CPSR_READ state.regs.psr) /\
-    ~(cpsr:word32 ' 5) /\
+    ~((cpsr:word32) ' 5) /\
     (state.exception = software) /\
     (read mem (FETCH_PC state.regs.reg) = NONE:word32 option)`;
 
