@@ -831,6 +831,9 @@ fun mk_word n =
     EmitML.MLSIG w
   end;
 
+val _ = type_pp.pp_num_types := false;
+val _ = type_pp.pp_array_types := false;
+
 val _ = let open EmitML in emitML (!Globals.emitMLDir) ("bsubst",
   OPEN ["num", "fcp", "words"]
     :: MLSIG "type 'a word = 'a wordsML.word"
@@ -856,8 +859,6 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("bsubst",
                MEM_WRITE_BYTE_def, MEM_WRITE_HALF_def,
                MEM_WRITE_WORD_def, MEM_WRITE_def])
 end;
-
-val _ = type_pp.pp_num_types := false;
 
 val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
   OPEN ["num", "option", "set", "fcp", "list", "rich_list", "bit", "words"]
@@ -927,7 +928,7 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
           SHIFT_REGISTER2_def, spec_word_rule12 SHIFT_IMMEDIATE_THM,
           spec_word_rule12 SHIFT_REGISTER_THM, ADDR_MODE1_def,
           SPEC `f` ALU_arith_def, ALU_logic_def,
-          numLib.REDUCE_RULE SUB_def, ADD_def, AND_def, EOR_def, ORR_def,
+          ADD_def, SUB_def, AND_def, EOR_def, ORR_def,
           ALU_def, ARITHMETIC_def, TEST_OR_COMP_def, DATA_PROCESSING_def,
           MRS_def, MSR_def, ALU_multiply_def, MLA_MUL_def,
           UP_DOWN_def, ADDR_MODE2_def, IMP_DISJ_THM, LDR_STR_def,

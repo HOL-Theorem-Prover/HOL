@@ -52,6 +52,13 @@ val prog = assemble exc_mem "mlton/thumb.s";
 
 val _ = evaluate(max,prog,reg,psr);
 val _ = evaluate3(max,prog,reg,psr);
+
+val _ =
+   evaluate(1,
+     assemble1 empty_memory "adds r0, r1, r2",
+     set_registers empty_registers `[(r15,0w); (r1,a); (r2,b)]`,
+     set_status_registers empty_psrs
+       `[(CPSR,SET_NZCV (F,F,F,F) (SET_IFTM F F F usr 0w))]`);
 *)
 
 (* ------------------------------------------------------------------------- *)

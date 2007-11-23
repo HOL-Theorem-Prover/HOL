@@ -454,7 +454,10 @@ end
       end
     | APPLICATION => let
         val _ = if is_debug() then print ">> APPLICATION\n" else ()
-        val ty1 = next_level strm
+        val ty1 = case totalify (parse_abbrev []) strm of
+                    SOME (ty2,locn) => (if is_debug() then print ("  APPLICATION did abbrev.\n") else ();
+                                        [ty2])
+                  | NONE => next_level strm
         val _ = if is_debug() then print ("  APPLICATION got arg.\n") else ()
         fun recurse acc = let
           in case totalify (parse_abbrev acc) strm of

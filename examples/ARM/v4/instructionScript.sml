@@ -183,16 +183,16 @@ val instruction_encode_def = Define`
     || MLA cond s Rd Rm Rs Rn ->
          condition_encode cond !! (if s then 0x300090w else 0x200090w) !!
          w2w Rd << 16 !! w2w Rn << 12 !! w2w Rs << 8 !! w2w Rm
-    || UMULL cond s RdHi RdLo Rm Rs ->
+    || UMULL cond s RdLo RdHi Rm Rs ->
          condition_encode cond !! (if s then 0x900090w else 0x800090w) !!
          w2w RdHi << 16 !! w2w RdLo << 12 !! w2w Rs << 8 !! w2w Rm
-    || UMLAL cond s RdHi RdLo Rm Rs ->
+    || UMLAL cond s RdLo RdHi Rm Rs ->
          condition_encode cond !! (if s then 0xB00090w else 0xA00090w) !!
          w2w RdHi << 16 !! w2w RdLo << 12 !! w2w Rs << 8 !! w2w Rm
-    || SMULL cond s RdHi RdLo Rm Rs ->
+    || SMULL cond s RdLo RdHi Rm Rs ->
          condition_encode cond !! (if s then 0xD00090w else 0xC00090w) !!
          w2w RdHi << 16 !! w2w RdLo << 12 !! w2w Rs << 8 !! w2w Rm
-    || SMLAL cond s RdHi RdLo Rm Rs ->
+    || SMLAL cond s RdLo RdHi Rm Rs ->
          condition_encode cond !! (if s then 0xF00090w else 0xE00090w) !!
          w2w RdHi << 16 !! w2w RdLo << 12 !! w2w Rs << 8 !! w2w Rm
     || LDRH cond s h options Rd Rn mode3 ->

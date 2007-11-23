@@ -117,6 +117,7 @@ sig
     (* experimental proof-producing functions *)
 
     val string_to_prog      : string -> string -> thm * string
+    val string_to_prog_seq  : string -> string -> thm * string
 
     val make_spec           : int -> string list -> unit
     val make_spec'          : int -> (string * bool) list -> unit

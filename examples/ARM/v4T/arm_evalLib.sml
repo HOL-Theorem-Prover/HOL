@@ -80,6 +80,8 @@ val arm_compset = wordsLib.words_compset();
 val _ = add_conv(``SET_BYTE``, 3, SET_BYTE_WORD_CONV) arm_compset;
 val _ = add_conv(``SET_HALF``, 3, SET_BYTE_WORD_CONV) arm_compset;
 
+val _ = Feedback.emit_MESG := false;
+
 val _ = Lib.C add_thms arm_compset
   [FST,SND,listTheory.EL_compute,HD,TL,MAP,FILTER,LENGTH,ZIP,FOLDL,
    APPEND,APPEND_NIL,ELL_compute,LAST_CONS,listTheory.FRONT_CONS,
@@ -230,6 +232,8 @@ val _ = Lib.C add_thms arm_compset
    MEM_WRITE_BYTE_def, MEM_WRITE_HALF_def, MEM_WRITE_WORD_def,
    MEM_WRITE_def, MEM_READ_def, BASIC_READ_def, BASIC_WRITE_def,
    NO_CP_def, NO_IRPTS_def];
+
+val _ = Feedback.emit_MESG := true;
 
 val ARM_CONV = CBV_CONV arm_compset;
 val ARM_RULE = CONV_RULE ARM_CONV;

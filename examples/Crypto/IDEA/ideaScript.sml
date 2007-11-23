@@ -197,7 +197,6 @@ val EvenRound_Inversion = Q.store_thm
  RESTR_EVAL_TAC [Mangler1, Mangler2] THEN
  SIMP_TAC std_ss [Mangler1_Lemma1, Mangler1_Lemma2, Mangler2_Lemma1, Mangler2_Lemma2]);
 
-
 val (Round_def,Round_ind) = 
   Defn.tprove 
     (Hol_defn 
@@ -210,7 +209,10 @@ val (Round_def,Round_ind) =
           Round (n-1) oddkeys (RotateEvenKeys evenkeys) (EvenRound (FST evenkeys) state)
         else 
           Round (n-1) (RotateOddKeys oddkeys) evenkeys (OddRound (FST oddkeys) state)`,    
-   WF_REL_TAC `measure (FST)`);
+   WF_REL_TAC `measure (FST)`
+   THEN CONJ_TAC
+   THEN REPEAT PairRules.PGEN_TAC
+   THEN SRW_TAC[ARITH_ss][]);
 
 val IdeaFwd_def = Define `IdeaFwd oddkeys evenkeys= Round 17 oddkeys evenkeys`;
 

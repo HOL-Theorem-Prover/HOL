@@ -736,9 +736,9 @@ in
             val h = mnemonic a (opc ^ condition2string c ^
                                 (if #S y then "s" else ""))
         in
-          h ^ reg2string (#Rd y) ^ ", " ^
-          (if #L y then reg2string (#Rn y) ^ ", " else "") ^
-          reg2string (#Rm y) ^ ", " ^ reg2string (#Rs y) ^
+          h ^ (if #L y then reg2string (#Rn y) ^ ", " else "") ^
+          reg2string (#Rd y) ^ ", " ^ reg2string (#Rm y) ^ ", " ^
+          reg2string (#Rs y) ^
           (if not (#L y) andalso #A y then ", " ^ reg2string (#Rn y) else "")
         end
     | _ => raise err)

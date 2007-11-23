@@ -385,10 +385,9 @@ val GET_IREG_def = Define`
 
 val NEXT_ARM_1STAGE_def = Define`
   NEXT_ARM_1STAGE (state,mem_out1,inp2) =
-    let r = state.regs in
     let ireg = if mem_out1.abort then
                  enc (UND AL)
-               else
+               else let r = state.regs in
                  GET_IREG ((CPSR_READ r.psr) ' 5) ((FETCH_PC r.reg) ' 1)
                    (HD mem_out1.data)
     in
@@ -399,10 +398,9 @@ val OUT_ARM1_def = Define`
 
 val OUT_ARM2_def = Define`
   OUT_ARM2 (state,mem_out1,rst) =
-    let r = state.regs in
     let ireg = if mem_out1.abort then
                  enc (UND AL)
-               else
+               else let r = state.regs in
                  GET_IREG ((CPSR_READ r.psr) ' 5) ((FETCH_PC r.reg) ' 1)
                    (HD mem_out1.data)
     in

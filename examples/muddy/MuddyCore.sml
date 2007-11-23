@@ -9,7 +9,7 @@ local
   val path = case Process.getEnv "MUDDYHOME" of
                 SOME p => Path.concat (p, "muddy.so")
               | NONE   => "muddy.so"
-  val path = Globals.HOLDIR^"/sigobj/muddy.so"
+  val path = Globals.HOLDIR^"/examples/muddy/muddyC/muddy.so"
   val hdl  = dlopen {lib = path, flag = RTLD_NOW, global = false}
 in
   val symb = dlsym hdl

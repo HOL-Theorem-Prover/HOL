@@ -37,6 +37,9 @@ val branch_join = ref false
 
 val PRE_PROCESS_RULE = SIMP_RULE arith_ss [AND_COND, OR_COND, BRANCH_NORM];
 
+val pre_process = PBETA_RULE o REWRITE_RULE [AND_COND, OR_COND] o 
+                   SIMP_RULE arith_ss [ELIM_USELESS_LET];
+
 (*---------------------------------------------------------------------------*)
 (* Normalization                                                             *)
 (* This intermediate language is a combination of K-normal forms             *)
@@ -140,7 +143,10 @@ fun K_Normalize exp =
   else if is_atomic t then ISPEC t C_ATOM_INTRO
   else if is_let t then                  (*  exp = LET (\v. N) M  *)
    let val (v,M,N) = dest_plet t
+       val branch_flag = !branch_join    (* save the branch_join flag *)
+       val _ = branch_join := (if is_cond M then true else false)     (* let v = if ... then ... else ... in ... *)
        val (th0, th1) = (K_Normalize (mk_C M), K_Normalize (mk_C N))
+       val _ = branch_join := branch_flag   (* restore the branch_join flag *)
        val th3 = SIMP_CONV bool_ss [Once C_LET] exp
 	         handle Conv.UNCHANGED (* case let (v1,v2,..) = ... in ... *)
 		 => 
@@ -264,9 +270,9 @@ fun K_Normalize exp =
 (*---------------------------------------------------------------------------*)
 
 fun normalize def = 
- let val thm0 = SIMP_RULE arith_ss [ELIM_USELESS_LET] def  (* Basic simplification *)
+ let val _ = branch_join := false     (* need not to introduce new binding for top level conditionals *)
      (* Break compound condition jumps *)
-     val thm1 = (PBETA_RULE o REWRITE_RULE [AND_COND, OR_COND]) thm0
+     val thm1 = def (* (PBETA_RULE o REWRITE_RULE [AND_COND, OR_COND]) thm0 *)
      val thm2 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [C_INTRO])) 
                           (SPEC_ALL thm1)
 

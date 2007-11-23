@@ -1457,6 +1457,8 @@ val _ = save_ARM_PROG "ARM_PROG_LOOP_MEASURE" PROG_LOOP_MEASURE;
 val _ = save_ARM_PROG "ARM_PROG_EXTRACT_POST" PROG_EXTRACT_POST;
 val _ = save_ARM_PROG "ARM_PROG_EXTRACT_CODE" PROG_EXTRACT_CODE;
 
+val ARM_PROG_HIDE_PRE = save_ARM_PROG "ARM_PROG_HIDE_PRE" PROG_HIDE_PRE;
+
 val ARM_PROG_EMPTY = store_thm("ARM_PROG_EMPTY",
   ``ARM_PROG emp [] {} emp {}``,
   REWRITE_TAC [ARM_PROG_def] \\ MATCH_MP_TAC PROG_EMPTY 
@@ -1556,6 +1558,26 @@ val ARM_PROG_CONTAINS_ms = store_thm("ARM_PROG_CONTAINS_ms",
     \\ Q.EXISTS_TAC `ms (a + 1w) t * ms (a + 1w) zs * F'`
     \\ SIMP_TAC (bool_ss++star_ss) [],
     IMP_RES_TAC ARM_PROG_CONTAINS_M_STAR_M \\ ASM_REWRITE_TAC []]);
+
+val ARM_PROG_HIDE_PRE_ms = store_thm("ARM_PROG_HIDE_PRE_ms",
+  ``!a P. ARM_PROG (P * blank_ms a n) code C Q Z =
+          !xs. (LENGTH xs = n) ==> ARM_PROG (P * ms a xs) code C Q Z``,
+  Induct_on `n` \\ ASM_SIMP_TAC bool_ss [LENGTH_NIL,blank_ms_def,ms_def,STAR_ASSOC]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC << [
+    Cases_on `xs` 
+    \\ FULL_SIMP_TAC bool_ss [LENGTH,DECIDE ``~(0 = n + 1)``,ADD1,EQ_ADD_RCANCEL]
+    \\ Q.PAT_ASSUM `!xs. b ==> c` 
+      (ASSUME_TAC o RW [GSYM ARM_PROG_HIDE_PRE] o 
+       MOVE_STAR_RULE `x*y*z` `x*z*y` o UNDISCH o Q.SPEC `t`)       
+    \\ REWRITE_TAC [ms_def]
+    \\ MOVE_STAR_TAC `x*(y*z)` `x*z*y`
+    \\ ASM_REWRITE_TAC [],
+    MOVE_STAR_TAC `x*y*z` `x*z*y`
+    \\ REWRITE_TAC [GSYM ARM_PROG_HIDE_PRE] \\ REPEAT STRIP_TAC
+    \\ MOVE_STAR_TAC `x*y*z` `x*(z*y)`
+    \\ REWRITE_TAC [GSYM ms_def]
+    \\ `LENGTH (y::xs) = SUC n` by ASM_REWRITE_TAC [LENGTH]
+    \\ METIS_TAC []]);
 
 
 (* theorems for ARM_PROC ------------------------------------------------------- *)

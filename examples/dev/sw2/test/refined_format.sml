@@ -222,3 +222,21 @@ normalize g1_def;
                 (if x <+ 20w then x1 else (if x <=+ x then x1 else x))))) : thm
 
 *)
+
+(* --------------------------------------------------------------------*)
+(* Refine the format of conditional statments.                         *)
+(* --------------------------------------------------------------------*)
+
+val g1_def = Define `
+  g1 (r0:word32) =
+   let r1 = if r0 > 1w then r0 + 1w else r0 in
+   let r2 = r1 - 2w in
+   (r1,r2)
+   `;
+
+val g2_def = Define `
+  g2 (x:word32) =
+   let ((y,z),i) = if x > 1w then ((x + 1w, x), x) else ((x, x+1w), x) in
+   let z = z - 2w in
+   (y,z, i)
+   `;

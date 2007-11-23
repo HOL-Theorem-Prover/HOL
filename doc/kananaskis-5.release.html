@@ -65,7 +65,28 @@ html1/DTD/xhtml1-strict.dtd">
   file <code>tools/hol-mode.el</code> (rather
   than <code>hol98-mode.el</code>) and all of the occurrences of the
   string <code>hol98</code> there have been replaced
-  by <code>hol</code>. </li> 
+  by <code>hol</code>. </li>
+
+<li> The <code>muddy</code> code, and the packages that depend on it
+(<code>HolBdd</code> and <code>HolCheck</code>) have moved from
+the <code>src</code> directory into <code>examples</code>.  If you
+wish to use any of these packages, you will now have to both build
+them (see below), and then explicitly include the directories in
+your <code>Holmakefile</code>s.  For example, the following line at
+the top of a <code>Holmakefile</code> will give access
+to <code>HolBdd</code> (and its dependency, <code>muddy</code>):
+<pre>
+         INCLUDES = $(protect $(HOLDIR)/examples/muddy) $(protect $(HOLDIR)/examples/HolBdd)
+</pre>
+<p> To build these libraries: </p>
+<ol>
+<li> On Windows, copy <code>tools\win-binaries\muddy.so</code>
+to <code>examples\muddy\muddyC</code>.  On other platforms,
+type <code>make</code> in <code>examples/muddy/muddyC</code>.</li>
+<li> Do <code>Holmake</code> in <code>examples/muddy</code>.</li>
+<li> Do <code>Holmake</code> in <code>examples/HolBdd</code>.</li>
+<li> Do <code>Holmake</code> in <code>examples/HolCheck</code>.</li>
+</ul>
 
 </ul>
 

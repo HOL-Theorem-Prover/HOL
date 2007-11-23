@@ -347,7 +347,7 @@ Inst:
       ( let val (c,l,sgn,a,s) = MULT4 in
           if l then
             Data.Instruction(Data.Mla_mul {L = true, Signed = sgn, A = a,
-              S = s, Rd = Reg1, Rm = Reg3, Rs = Reg4, Rn = Reg2},c)
+              S = s, Rd = Reg2, Rm = Reg3, Rs = Reg4, Rn = Reg1},c)
           else
             Data.Instruction(Data.Mla_mul {L = false, Signed = false, A = true,
               S = s, Rd = Reg1, Rm = Reg2, Rs = Reg3, Rn = Reg4},c)

@@ -462,7 +462,7 @@ val PSR_CONS = store_thm("PSR_CONS",
           `~(mode_num m = 0w)`
             by (Cases_on `m` \\ RW_TAC std_ss [mode_num_def] \\ EVAL_TAC)
             \\ POP_ASSUM MP_TAC \\ UNABBREV_TAC `m`
-            \\ `w ' i = ((4 >< 0) w):word5 ' i` by METIS_TAC [lem]
+            \\ `w ' i = (((4 >< 0) w):word5) ' i` by METIS_TAC [lem]
             \\ ASM_REWRITE_TAC [] \\ ABBREV_TAC `x = ((4 >< 0) w):word5`
             \\ Cases_on `(x = 16w) \/ (x = 17w) \/ (x = 18w) \/ (x = 19w) \/
                          (x = 23w) \/ (x = 27w) \/ (x = 31w)`
@@ -558,7 +558,7 @@ val shift_encode_lem = prove(
 
 val extract_out_of_range = prove(
   `!w:'a word i h.
-      (h - l < i) /\ i < dimindex(:'b) ==> ~(((h >< l) w):'b word ' i)`,
+      (h - l < i) /\ i < dimindex(:'b) ==> ~((((h >< l) w):'b word) ' i)`,
   SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [word_extract_def,word_bits_def,w2w]
     \\ Cases_on `i < dimindex (:'a)` \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] []);
 
@@ -636,13 +636,13 @@ val decode_enc_mla_mul = store_thm("decode_enc_mla_mul",
    (!cond s rd rm rs rn.
       DECODE_ARM (enc (instruction$MLA cond s rd rm rs rn)) = mla_mul) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_ARM (enc (instruction$UMULL cond s rdhi rdlo rm rs)) = mla_mul) /\
+      DECODE_ARM (enc (instruction$UMULL cond s rdlo rdhi rm rs)) = mla_mul) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_ARM (enc (instruction$UMLAL cond s rdhi rdlo rm rs)) = mla_mul) /\
+      DECODE_ARM (enc (instruction$UMLAL cond s rdlo rdhi rm rs)) = mla_mul) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_ARM (enc (instruction$SMULL cond s rdhi rdlo rm rs)) = mla_mul) /\
+      DECODE_ARM (enc (instruction$SMULL cond s rdlo rdhi rm rs)) = mla_mul) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_ARM (enc (instruction$SMLAL cond s rdhi rdlo rm rs)) = mla_mul)`,
+      DECODE_ARM (enc (instruction$SMLAL cond s rdlo rdhi rm rs)) = mla_mul)`,
   SRW_TAC word_frags []);
 
 val decode_enc_ldr_str = store_thm("decode_enc_ldr_str",
@@ -755,77 +755,77 @@ val decode_br_enc = store_thm("decode_br_enc",
          (SYM o EVAL) ``1179649 * 2 ** 4``]);
 
 val shift_immediate_enc_lem = prove(
-  `(!i r. w2w:word32->word8
+  `(!i r. (w2w:word32->word8)
     ((11 -- 7) (w2w (i:word5) << 7 !! w2w (r:word4))) = w2w i) /\
-   (!i r. w2w:word32->word8
+   (!i r. (w2w:word32->word8)
     ((11 -- 7) (w2w (i:word5) << 7 !! 32w !! w2w (r:word4))) = w2w i) /\
-   (!i r. w2w:word32->word8
+   (!i r. (w2w:word32->word8)
     ((11 -- 7) (w2w (i:word5) << 7 !! 64w !! w2w (r:word4))) = w2w i) /\
-   (!i r. w2w:word32->word8
+   (!i r. (w2w:word32->word8)
     ((11 -- 7) (w2w (i:word5) << 7 !! 96w !! w2w (r:word4))) = w2w i) /\
-   (!i r. w2w:word32->word2 ((6 -- 5) (i << 7 !! w2w (r:word4))) = 0w) /\
-   (!i r. w2w:word32->word2 ((6 -- 5) (i << 7 !! 32w !! w2w (r:word4))) = 1w) /\
-   (!i r. w2w:word32->word2 ((6 -- 5) (i << 7 !! 64w !! w2w (r:word4))) = 2w) /\
-   (!i r. w2w:word32->word2 ((6 -- 5) (i << 7 !! 96w !! w2w (r:word4))) = 3w) /\
-   (!i r. w2w:word32->word4 ((3 -- 0) (i << 7 !! w2w (r:word4))) = r) /\
-   (!i r. w2w:word32->word4 ((3 -- 0) (i << 7 !! 32w !! w2w (r:word4))) = r) /\
-   (!i r. w2w:word32->word4 ((3 -- 0) (i << 7 !! 64w !! w2w (r:word4))) = r) /\
-   (!i r. w2w:word32->word4 ((3 -- 0) (i << 7 !! 96w !! w2w (r:word4))) = r)`,
+   (!i r. (w2w:word32->word2) ((6 -- 5) (i << 7 !! w2w (r:word4))) = 0w) /\
+   (!i r. (w2w:word32->word2) ((6 -- 5) (i << 7 !! 32w !! w2w (r:word4))) = 1w) /\
+   (!i r. (w2w:word32->word2) ((6 -- 5) (i << 7 !! 64w !! w2w (r:word4))) = 2w) /\
+   (!i r. (w2w:word32->word2) ((6 -- 5) (i << 7 !! 96w !! w2w (r:word4))) = 3w) /\
+   (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 !! w2w (r:word4))) = r) /\
+   (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 !! 32w !! w2w (r:word4))) = r) /\
+   (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 !! 64w !! w2w (r:word4))) = r) /\
+   (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 !! 96w !! w2w (r:word4))) = r)`,
   SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
     \\ SRW_TAC word_frags []);
 
 val shift_immediate_enc_lem2 = prove(
-  `(!i r. w2w:word32->word8 ((11 -- 7)
+  `(!i r. (w2w:word32->word8) ((11 -- 7)
       (33554432w !! w2w (i:word5) << 7 !! w2w (r:word4))) = w2w i) /\
-   (!i r. w2w:word32->word8 ((11 -- 7)
+   (!i r. (w2w:word32->word8) ((11 -- 7)
       (33554432w !! w2w (i:word5) << 7 !! 32w !! w2w (r:word4))) = w2w i) /\
-   (!i r. w2w:word32->word8 ((11 -- 7)
+   (!i r. (w2w:word32->word8) ((11 -- 7)
       (33554432w !! w2w (i:word5) << 7 !! 64w !! w2w (r:word4))) = w2w i) /\
-   (!i r. w2w:word32->word8 ((11 -- 7)
+   (!i r. (w2w:word32->word8) ((11 -- 7)
       (33554432w !! w2w (i:word5) << 7 !! 96w !! w2w (r:word4))) = w2w i) /\
-   (!i r. w2w:word32->word2 ((6 -- 5)
+   (!i r. (w2w:word32->word2) ((6 -- 5)
       (33554432w !! i << 7 !! w2w (r:word4))) = 0w) /\
-   (!i r. w2w:word32->word2 ((6 -- 5)
+   (!i r. (w2w:word32->word2) ((6 -- 5)
       (33554432w !! i << 7 !! 32w !! w2w (r:word4))) = 1w) /\
-   (!i r. w2w:word32->word2 ((6 -- 5)
+   (!i r. (w2w:word32->word2) ((6 -- 5)
       (33554432w !! i << 7 !! 64w !! w2w (r:word4))) = 2w) /\
-   (!i r. w2w:word32->word2 ((6 -- 5)
+   (!i r. (w2w:word32->word2) ((6 -- 5)
       (33554432w !! i << 7 !! 96w !! w2w (r:word4))) = 3w) /\
-   (!i r. w2w:word32->word4 ((3 -- 0)
+   (!i r. (w2w:word32->word4) ((3 -- 0)
       (33554432w !! i << 7 !! w2w (r:word4))) = r) /\
-   (!i r. w2w:word32->word4 ((3 -- 0)
+   (!i r. (w2w:word32->word4) ((3 -- 0)
       (33554432w !! i << 7 !! 32w !! w2w (r:word4))) = r) /\
-   (!i r. w2w:word32->word4 ((3 -- 0)
+   (!i r. (w2w:word32->word4) ((3 -- 0)
       (33554432w !! i << 7 !! 64w !! w2w (r:word4))) = r) /\
-   (!i r. w2w:word32->word4 ((3 -- 0)
+   (!i r. (w2w:word32->word4) ((3 -- 0)
       (33554432w !! i << 7 !! 96w !! w2w (r:word4))) = r)`,
   SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
     \\ SRW_TAC word_frags []);
 
 val shift_register_enc_lem = prove(
-  `(!i r. w2w:word32->word4 ((11 -- 8)
+  `(!i r. (w2w:word32->word4) ((11 -- 8)
       (16w !! w2w (i:word4) << 8 !! w2w (r:word4))) = i) /\
-   (!i r. w2w:word32->word4 ((11 -- 8)
+   (!i r. (w2w:word32->word4) ((11 -- 8)
       (16w !! w2w (i:word4) << 8 !! 32w !! w2w (r:word4))) = i) /\
-   (!i r. w2w:word32->word4 ((11 -- 8)
+   (!i r. (w2w:word32->word4) ((11 -- 8)
       (16w !! w2w (i:word4) << 8 !! 64w !! w2w (r:word4))) = i) /\
-   (!i r. w2w:word32->word4 ((11 -- 8)
+   (!i r. (w2w:word32->word4) ((11 -- 8)
       (16w !! w2w (i:word4) << 8 !! 96w !! w2w (r:word4))) = i) /\
-   (!i r. w2w:word32->word2 ((6 -- 5)
+   (!i r. (w2w:word32->word2) ((6 -- 5)
       (16w !! i << 8 !! w2w (r:word4))) = 0w) /\
-   (!i r. w2w:word32->word2 ((6 -- 5)
+   (!i r. (w2w:word32->word2) ((6 -- 5)
       (16w !! i << 8 !! 32w !! w2w (r:word4))) = 1w) /\
-   (!i r. w2w:word32->word2 ((6 -- 5)
+   (!i r. (w2w:word32->word2) ((6 -- 5)
       (16w !! i << 8 !! 64w !! w2w (r:word4))) = 2w) /\
-   (!i r. w2w:word32->word2 ((6 -- 5)
+   (!i r. (w2w:word32->word2) ((6 -- 5)
       (16w !! i << 8 !! 96w !! w2w (r:word4))) = 3w) /\
-   (!i r. w2w:word32->word4 ((3 -- 0)
+   (!i r. (w2w:word32->word4) ((3 -- 0)
       (16w !! i << 8 !! w2w (r:word4))) = r) /\
-   (!i r. w2w:word32->word4 ((3 -- 0)
+   (!i r. (w2w:word32->word4) ((3 -- 0)
       (16w !! i << 8 !! 32w !! w2w (r:word4))) = r) /\
-   (!i r. w2w:word32->word4 ((3 -- 0)
+   (!i r. (w2w:word32->word4) ((3 -- 0)
       (16w !! i << 8 !! 64w !! w2w (r:word4))) = r) /\
-   (!i r. w2w:word32->word4 ((3 -- 0)
+   (!i r. (w2w:word32->word4) ((3 -- 0)
       (16w !! i << 8 !! 96w !! w2w (r:word4))) = r)`,
   SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
     \\ SRW_TAC word_frags []);
@@ -987,16 +987,16 @@ val decode_mla_mul_enc = store_thm("decode_mla_mul_enc",
       DECODE_MLA_MUL (enc (instruction$MLA cond s rd rm rs rn)) =
       (F,F,T,s,rd,rn,rs,rm)) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_MLA_MUL (enc (instruction$UMULL cond s rdhi rdlo rm rs)) =
+      DECODE_MLA_MUL (enc (instruction$UMULL cond s rdlo rdhi rm rs)) =
       (T,F,F,s,rdhi,rdlo,rs,rm)) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_MLA_MUL (enc (instruction$UMLAL cond s rdhi rdlo rm rs)) =
+      DECODE_MLA_MUL (enc (instruction$UMLAL cond s rdlo rdhi rm rs)) =
       (T,F,T,s,rdhi,rdlo,rs,rm)) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_MLA_MUL (enc (instruction$SMULL cond s rdhi rdlo rm rs)) =
+      DECODE_MLA_MUL (enc (instruction$SMULL cond s rdlo rdhi rm rs)) =
       (T,T,F,s,rdhi,rdlo,rs,rm)) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_MLA_MUL (enc (instruction$SMLAL cond s rdhi rdlo rm rs)) =
+      DECODE_MLA_MUL (enc (instruction$SMLAL cond s rdlo rdhi rm rs)) =
       (T,T,T,s,rdhi,rdlo,rs,rm))`,
   REPEAT STRIP_TAC \\ SRW_TAC word_frags [DECODE_MLA_MUL_def]
     \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
@@ -1300,16 +1300,16 @@ val cond_pass_enc_mla_mul = store_thm("cond_pass_enc_mla_mul",
       CONDITION_PASSED flgs (enc (instruction$MLA cond s rd rm rs rn)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
-      CONDITION_PASSED flgs (enc (instruction$UMULL cond s rdhi rdlo rm rs)) =
+      CONDITION_PASSED flgs (enc (instruction$UMULL cond s rdlo rdhi rm rs)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
-      CONDITION_PASSED flgs (enc (instruction$UMLAL cond s rdhi rdlo rm rs)) =
+      CONDITION_PASSED flgs (enc (instruction$UMLAL cond s rdlo rdhi rm rs)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
-      CONDITION_PASSED flgs (enc (instruction$SMULL cond s rdhi rdlo rm rs)) =
+      CONDITION_PASSED flgs (enc (instruction$SMULL cond s rdlo rdhi rm rs)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
-      CONDITION_PASSED flgs (enc (instruction$SMLAL cond s rdhi rdlo rm rs)) =
+      CONDITION_PASSED flgs (enc (instruction$SMLAL cond s rdlo rdhi rm rs)) =
       CONDITION_PASSED2 flgs cond)`,
   PASS_TAC);
 

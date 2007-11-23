@@ -247,7 +247,7 @@ val word_index = REWRITE_RULE [BIT_def] word_index;
 
 val extract_out_of_range = prove(
   `!w:'a word i h.
-      (h - l < i) /\ i < dimindex(:'b) ==> ~(((h >< l) w):'b word ' i)`,
+      (h - l < i) /\ i < dimindex(:'b) ==> ~((((h >< l) w):'b word) ' i)`,
   SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [word_extract_def,word_bits_def,w2w]
 \\ Cases_on `i < dimindex (:'a)` \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] []);
 
@@ -486,7 +486,7 @@ val thumb_to_arm_enc = Tactical.store_thm("thumb_to_arm_enc",
 (* ------------------------------------------------------------------------- *)
 
 val decode_27_enc_coproc_ = store_thm("decode_27_enc_coproc_",
-  `w2w (enc_ UND_): word32 ' 27 = F`, EVAL_TAC);
+  `(w2w (enc_ UND_): word32) ' 27 = F`, EVAL_TAC);
 
 (* ------------------------------------------------------------------------- *)
 

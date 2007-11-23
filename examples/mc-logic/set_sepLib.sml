@@ -1,9 +1,5 @@
 structure set_sepLib :> set_sepLib =
 struct
-
-(* 
-  app load ["set_sepTheory"];
-*)
  
 open HolKernel boolLib bossLib;
 open set_sepTheory;
@@ -69,12 +65,12 @@ fun MOVE_STAR_RULE t t' = CONV_RULE (MOVE_STAR_CONV t t');
 (* ----------------------------------------------------------------------------- *)
 
 val cond_ELIM = prove(
-  ``!c c' P . (cond c * cond c' = cond (c /\ c')) /\ 
-              (P * cond c * cond c' = P * cond (c /\ c'))``,
+  ``!c c' P . (cond c * cond c' = cond (c /\ c'):'a set -> bool) /\ 
+              (P * cond c * cond c' = P * cond (c /\ c'):'a set -> bool)``,
   REWRITE_TAC [GSYM STAR_ASSOC,SEP_cond_CLAUSES]);
   
 val cond_MOVE = prove(
-  ``!c P Q. (cond c * P = P * cond c) /\
+  ``!c P Q. (cond c * P = P * (cond c) :'a set -> bool) /\
             (P * cond c * Q = P * Q * cond c)``,
   SIMP_TAC (bool_ss++star_ss) []);
 
@@ -209,18 +205,20 @@ fun mk_str_list_quote [] = [QUOTE "emp"] : (term frag) list
   | mk_str_list_quote (x::xs) =
      [QUOTE (foldl (fn (i,s) => s^"*i"^int_to_string i) ("i"^int_to_string x) xs)];
 
-fun MOVE_OUT_TERM_CONV needle tm = let
+fun MOVE_OUT_AUX_CONV f tm = let
   val xs = list_dest_STAR tm
   fun list_nums 0 xs = xs |
       list_nums i xs = list_nums (i-1) (i::xs)
-  fun find_first n [] i = hd [] |
-      find_first n (x::xs) i =
-        if n = extract_domain x 
-        then map (fn j => j + i) (list_nums (length xs) []) @ [i]
-        else i :: find_first n xs (i+1)
+  fun find_first [] i = hd [] |
+      find_first (x::xs) i =
+        if f x then map (fn j => j + i) (list_nums (length xs) []) @ [i]
+               else i :: find_first xs (i+1)
   val from_list = mk_str_list_quote (list_nums (length(xs)) [])
-  val to_list = mk_str_list_quote (find_first needle xs 1)
+  val to_list = mk_str_list_quote (find_first xs 1)
   in (REWRITE_CONV [STAR_ASSOC] THENC MOVE_STAR_CONV from_list to_list) tm end;
+
+fun MOVE_OUT_TERM_CONV needle = 
+  MOVE_OUT_AUX_CONV (fn x => (get_sep_domain x = needle) handle e => false);
 
 fun MOVE_OUT_CONV t tm = let
   val needle = Parse.parse_in_context (free_vars tm) t

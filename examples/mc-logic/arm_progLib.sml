@@ -23,10 +23,13 @@ val op \\ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
 
+val car = fst o dest_comb
+val cdr = snd o dest_comb
+
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
-val EQ_IMP_IMP = METIS_PROVE [] ``(x=y) ==> x ==> y``;
+val EQ_IMP_IMP = METIS_PROVE [] ``(x:bool=y:bool) ==> x ==> y``;
 
 (* ============================================================================= *)
 (* STABLE CORE FUNCTIONS                                                         *)
@@ -74,6 +77,11 @@ fun SPLIT_PROG2 th = let
 val FST_PROG2 = fst o SPLIT_PROG2;
 val SND_PROG2 = snd o SPLIT_PROG2;
 
+fun PAIR_GEN name vs th = let 
+  val ctxt = free_varsl(concl th::hyp th)
+  val x = Parse.parse_in_context ctxt vs
+  in pairTools.PGEN (mk_var(name,type_of x)) x th end;
+
 (* -- simpsets -- *)
 
 val n2w_x_eq_0w = prove(
@@ -102,10 +110,12 @@ fun APP_FRAME x = RW [F_STAR] o Q.SPEC x o APP_BASIC_FRAME;
 (* -- hide pre -- *)
 
 val HIDE_PRE_LEMMA = MATCH_MP EQ_IMP_IMP (SPEC_ALL ARM_PROG_HIDE_PRE);
+val HIDE_PRE_LEMMA_ALT = RW [emp_STAR] (Q.INST [`P`|->`emp`] HIDE_PRE_LEMMA)
 fun HIDE_PRE th = let 
   val (P,_,_,_,_) = dest_ARM_PROG (concl th)
   val v = (snd o dest_comb o snd o dest_comb) P
-  in MATCH_MP HIDE_PRE_LEMMA (GEN v th) end;
+  val th = GEN v th
+  in MATCH_MP HIDE_PRE_LEMMA th handle e => MATCH_MP HIDE_PRE_LEMMA_ALT th end;
 
 (* -- hide post -- *)
 
@@ -154,13 +164,29 @@ fun GENERIC_AUTO_HIDE r c [] th = th
   | GENERIC_AUTO_HIDE r c (t::ts) th =
       GENERIC_AUTO_HIDE r c ts (r (c t th));
 
-val AUTO_HIDE_PRE   = GENERIC_AUTO_HIDE HIDE_PRE   MOVE_PRE;
-val AUTO_HIDE_POST  = GENERIC_AUTO_HIDE HIDE_POST  MOVE_POST;
-val AUTO_HIDE_POST1 = GENERIC_AUTO_HIDE HIDE_POST1 MOVE_POST1;
-
-val AUTO_HIDE_PRE_TERM   = GENERIC_AUTO_HIDE HIDE_PRE   MOVE_PRE_TERM;
+val AUTO_HIDE_POST       = GENERIC_AUTO_HIDE HIDE_POST  MOVE_POST;
+val AUTO_HIDE_POST1      = GENERIC_AUTO_HIDE HIDE_POST1 MOVE_POST1;
 val AUTO_HIDE_POST_TERM  = GENERIC_AUTO_HIDE HIDE_POST  MOVE_POST_TERM;
 val AUTO_HIDE_POST1_TERM = GENERIC_AUTO_HIDE HIDE_POST1 MOVE_POST1_TERM;
+
+fun list_dest_pair tm = let val (x,y) = dest_pair tm 
+  in list_dest_pair x @ list_dest_pair y end handle e => [tm];
+
+fun AUTO_HIDE_PRE_AUX th = let
+  val th = RW [STAR_ASSOC] th
+  val (P,_,_,_,_) = dest_ARM_PROG (concl th)
+  val v = (snd o dest_STAR) P handle e => P
+  val v = cdr v handle e => v     
+  val vs = list_dest_pair v
+  fun intersect xs ys = filter (fn y => mem y xs) ys
+  fun g x = not (intersect vs (free_vars (cdr x)) = []) handle e => false
+  val th = repeat (HIDE_POST o POST2_CONV_RULE (MOVE_OUT_AUX_CONV g)) th   
+  val th = repeat (HIDE_POST1 o POST1_CONV_RULE (MOVE_OUT_AUX_CONV g)) th   
+  val th = PAIR_GEN ((fst o dest_var o genvar o type_of) v) [ANTIQUOTE v] th
+  in MATCH_MP HIDE_PRE_LEMMA th handle e => MATCH_MP HIDE_PRE_LEMMA_ALT th end;
+
+val AUTO_HIDE_PRE      = GENERIC_AUTO_HIDE AUTO_HIDE_PRE_AUX MOVE_PRE;
+val AUTO_HIDE_PRE_TERM = GENERIC_AUTO_HIDE AUTO_HIDE_PRE_AUX MOVE_PRE_TERM;
 
 (* -- add exists to pre -- *)
 
@@ -188,7 +214,7 @@ fun ALIGN_VARS tms th = foldr (uncurry ALIGN_VAR) th tms;
 (* -- modify second post -- *)
 
 val ARM_PROG_ABSORB_POST_LEMMA = prove(
-  ``ARM_PROG P cs C SEP_F ((Q,pcADD x) INSERT Z) ==>
+  ``ARM_PROG (P:'a ARMset -> bool) cs C SEP_F ((Q,pcADD x) INSERT Z) ==>
     (x = wLENGTH cs) ==> ARM_PROG P cs C Q Z``,
   REPEAT STRIP_TAC \\ FULL_SIMP_TAC bool_ss [GSYM ARM_PROG_EXTRACT_POST,GSYM pcINC_def]);
 
@@ -206,7 +232,7 @@ fun HIDE_STATUS th =
     MATCH_MP HIDE_STATUS_LEMMA th handle e => MATCH_MP HIDE_STATUS_LEMMA_ALT th end;
 
 val STATUS_MOVE = prove(
-  ``!P Q x. (S x * P = P * S x) /\ (P * S x * Q = P * Q * S x)``,
+  ``!P Q x. (S x * P = P * S x) /\ (P * S x * Q = P * Q * (S x):'a ARMset -> bool)``,
   SIMP_TAC (bool_ss++star_ss) []);
 
 val AUTO_PRE_HIDE_STATUS   = HIDE_STATUS o MOVE_PRE `S`;
@@ -265,7 +291,7 @@ fun MATCH_COMPOSE th1 th2 =
   RW_COMPOSE (MATCH_MP (MATCH_MP MATCH_COMPOSE_ALT_LEMMA th1) th2);
 
 val ARRANGE_COMPOSE_LEMMA = prove(
-  ``!P M M' Q cs cs' C C' Z Z'.
+  ``!P:('a ARMset -> bool) M M' Q cs cs' C C' Z Z'.
       ARM_PROG P cs C M Z /\ ARM_PROG M' cs' C' Q Z' ==> (M = M') ==> 
       ARM_PROG P (cs ++ cs') (C UNION setINC cs C') Q (Z UNION setINC cs Z')``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC ARM_PROG_COMPOSE 
@@ -291,7 +317,8 @@ fun FRAME_COMPOSE th1 th2 = let
   in ARRANGE_COMPOSE th1 th2 end;
 
 val FALSE_COMPOSE_LEMMA = prove(
-  ``ARM_PROG P1 code1 C1 SEP_F Z1 /\ ARM_PROG P2 code2 C Q Z ==>
+  ``ARM_PROG (P1:('a ARMset -> bool)) code1 C1 SEP_F Z1 /\ 
+    ARM_PROG (P2:('b ARMset -> bool)) code2 C Q Z ==>
     ARM_PROG P1 (code1++code2) C1 SEP_F Z1``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC ARM_PROG_APPEND_CODE \\ ASM_REWRITE_TAC []);
 
@@ -374,7 +401,7 @@ val old_posts = []
 *)
 
 val ARM_PROG_COMPOSE_FRAME = prove(
-  ``ARM_PROG (Q1 * P2) c2 cc2 Q3 Z2 ==>
+  ``ARM_PROG (Q1 * P2:('a ARMset -> bool)) c2 cc2 Q3 Z2 ==>
     ARM_PROG P1 c1 cc1 (Q1 * Q2) Z1 ==> 
     ARM_PROG (P1 * P2) (c1 ++ c2) 
       (cc1 UNION setINC c1 cc2) (Q3 * Q2) 
@@ -459,7 +486,7 @@ fun APP_MERGE th1 th2 =
   in th end;
 
 val ARM_PROG_DUPLICATE_COND_LEMMA = prove(
-  ``ARM_PROG (P * cond h) code C Q Z ==>
+  ``ARM_PROG (P * cond h) code C (Q:('a ARMset -> bool)) Z ==>
     ARM_PROG (P * cond h) code C (Q * cond h) (setSTAR (cond h) Z)``,
   REPEAT STRIP_TAC \\ POP_ASSUM 
    (ASSUME_TAC o RW [GSYM STAR_ASSOC,SEP_cond_CLAUSES] o APP_FRAME `cond h`)
@@ -508,7 +535,7 @@ fun CLOSE_LOOP th = let
 (* others *)
 
 val ARM_PROG_EMPTY_CODE = prove(
-  ``ARM_PROG P cs (([],f) INSERT C) Q Z = ARM_PROG P cs C Q Z``,
+  ``ARM_PROG P cs (([],f) INSERT C) Q Z = ARM_PROG P cs C (Q:('a ARMset -> bool)) Z``,
   REWRITE_TAC [ARM_PROG_THM] \\ ONCE_REWRITE_TAC [INSERT_COMM]
   \\ REWRITE_TAC [ARM_GPROG_EMPTY_CODE]);
 
@@ -538,26 +565,25 @@ fun PAT_DISCH pat th = let
   val tm = hd (filter (can (match_term pat)) (hyp th))
   in DISCH tm th end;
 
-fun PAIR_GEN name vs th = let 
-  val ctxt = free_varsl(concl th::hyp th)
-  val x = Parse.parse_in_context ctxt vs
-  in pairTools.PGEN (mk_var(name,type_of x)) x th end;
-
 fun QGENL [] th = th | QGENL (x::xs) th = Q.GEN x (QGENL xs th);
 
 fun INST_LDM_STM do_eval th = let
   val th = RW [LENGTH,ADDR_MODE4_ADDR_def,ADDR_MODE4_ADDR'_def,
                ADDR_MODE4_WB'_def,ADDR_MODE4_UP_def,MAP,ADDR_MODE4_WB_def,
-               ADDR_MODE4_wb_def,xR_list_def,STAR_ASSOC,blank_ms_def] th
+               ADDR_MODE4_wb_def,xR_list_def,STAR_ASSOC,blank_ms_def,
+               ADDR_MODE4_ADDR32_def,ADDR_MODE4_ADDR32'_def,
+               ADDR_MODE4_WB32_def,ADDR_MODE4_WB32'_def,seq_addresses_def] th
   val th = REWRITE_RULE [ADD1,GSYM word_add_n2w,WORD_SUB_PLUS,WORD_SUB_ADD] th
   val th = CONV_RULE (DEPTH_CONV BETA_CONV) th  
   val th = RW [PASS_CASES,emp_STAR,FST,SND,xR_list_def,STAR_ASSOC] th
-  val tm = find_term (can (match_term ``reg_values (x:(word4 # word32) list)``)) (concl th) handle e => T
+  val tm = find_term (can (match_term ``QSORT (g:'a->'a->bool) h``)) (concl th) handle e =>
+           find_term (can (match_term ``reg_values (xs:(word4 # word32) list)``)) (concl th) handle e => T
   val th = if do_eval then RW [RW [GSYM (EVAL ``addr32 x``)] (EVAL tm),ms_def,STAR_ASSOC,emp_STAR] th else th
   val tm = find_term (can (match_term ``reg_bitmap x``)) (concl th) handle e => T
-  val th = if do_eval then RW [EVAL tm] th else th
+  val th = if do_eval then RW [EVAL tm,list_RD_def,ZIP,list_WR_def] th else th
   val th = RW [WORD_SUB_ADD,WORD_SUB_RZERO] th
-  val th = SIMP_RULE arith_ss [GSYM WORD_SUB_PLUS,word_add_n2w,WORD_SUB_RZERO,ADDR_MODE4_CMD_def] th
+  val th = SIMP_RULE arith_ss [GSYM WORD_SUB_PLUS,word_add_n2w,seq_addresses_def,
+              WORD_SUB_RZERO,ADDR_MODE4_CMD_def,MAP,FST,SND,xR_list_def,STAR_ASSOC,emp_STAR] th
   in th end;
 
 
@@ -690,11 +716,24 @@ val match_list =
    (arm_LDR1_NONALIGNED,"arm_LDR1_NONALIGNED"),(arm_LDR_NONALIGNED,"arm_LDR_NONALIGNED"),
    (arm_STR_NONALIGNED,"arm_STR_NONALIGNED")] @ basic_match_list;
 
+val match_list_select_seq = 
+  [(arm_SWP2_SEQ,"arm_SWP2_SEQ"),(arm_SWP3_SEQ,"arm_SWP3_SEQ"),
+   (arm_LDR1_SEQ,"arm_LDR1_SEQ"),(arm_LDR_SEQ,"arm_LDR_SEQ"),
+   (arm_STR_SEQ,"arm_STR_SEQ")] @ match_list;
 
-val inst_str = "ldmia r3, {r1, r2, r3, r4}"
+
+(*
+val inst_str = "strne a,[b]"
+val inst_str = "stmeqia r3!, {r1, r2, r4}"
+val inst_str = "ldmia  r0!, {r3, r4, r5, r6, r7}"
 val suffix = "2"
+val select_seq = true
 
-fun mk_arm_prog2_str_STM_LDM inst_str suffix = let
+show_types := true;
+*)
+
+fun mk_arm_prog2_str_STM_LDM inst_str suffix select_seq = let
+  val add_sidecond = select_seq
   fun take_until p [] ys = ([],ys) 
     | take_until p (x::xs) ys = if p x then (x::xs,ys) else take_until p xs (ys @ [x]) 
   val (tm,vs,do_eval) = let 
@@ -728,11 +767,11 @@ fun mk_arm_prog2_str_STM_LDM inst_str suffix = let
     | list_extract ({redex = x,residue=z}::xs) y = if x = y then z else list_extract xs y
   val varname = "r"^((int_to_string o numSyntax.int_of_term o snd o dest_comb o list_extract i) ``v1234:word4``)
                 handle e => fst (dest_var (list_extract i ``v1234:word4``))
-  val (form_th,th_str) = if substring(inst_str,0,3) = "stm" then (arm_STM,"arm_STM")
+  val (form_th,th_str) = if substring(inst_str,0,3) = "stm" then (if select_seq then (arm_STM_SEQ,"arm_STM_SEQ") else (arm_STM,"arm_STM"))
     else (if mem "r15" vs then (if mem varname vs then (arm_LDM_PC_ADDR,"arm_LDM_PC_ADDR") 
                                                   else (arm_LDM_PC,"arm_LDM_PC"))
                           else (if mem varname vs then (arm_LDM_ADDR,"arm_LDM_ADDR") 
-                                                  else (arm_LDM,"arm_LDM")))
+                                                  else (if select_seq then (arm_LDM_SEQ,"arm_LDM_SEQ") else (arm_LDM,"arm_LDM"))))
   val vs = delete varname (delete "r15" vs)
   val vs = map mk_var_pair vs
   val j = [``a:word4``|->list_extract i ``v1234:word4``]
@@ -748,19 +787,24 @@ fun mk_arm_prog2_str_STM_LDM inst_str suffix = let
   val x = g (list_extract2 opt "Pre" = ``T``,list_extract2 opt "Up" = ``T``) 
   val m = mk_comb(x,list_extract2 opt "Wb")
   val j = [``a_mode:abbrev_addr4``|->m] @ j
-  val xs = listSyntax.mk_list(vs,``:word4 # word32``)
-  val j = [``xs:(word4 # word32) list``|->xs] @ j
+  val select_seq = if substring(inst_str,0,3) = "stm" then false else select_seq
+  val xs = if not select_seq then listSyntax.mk_list(vs,``:word4 # word32``)
+           else listSyntax.mk_list((map (fst o dest_pair)) vs,``:word4``)
+  val j = if select_seq then [``xs:word4 list``|-> xs] @ j
+          else [``xs:(word4 # word32) list``|-> xs] @ j
   val fff = free_vars (concl form_th)
   val fff = filter (fn n => not (mem ((fst o dest_var)n) ["sV","sC","sZ","sN","a_mode","c_flag","xs","a"])) fff
   val j = j @ map (fn x => x |-> let val (v,t) = dest_var x in mk_var(v^suffix,t) end) fff
   val th = (INST j form_th)
+  val th = SIMP_RULE (bool_ss++sep2_ss) [] th
+  val th = if add_sidecond then RW [GSYM sidecond_def] th else th
   val th = INST_LDM_STM do_eval th
   val str = if do_eval then "true" else "false"
   val str = "INST_LDM_STM "^ str ^" (Q.INST "^ 
              subst_to_string_no_types j "  " ^ " " ^ th_str ^ ")"
   in (th,str) end
 
-fun mk_arm_prog2_str inst_str suffix = let
+fun mk_arm_prog2_str inst_str suffix select_seq = let
   val tm = mk_instruction inst_str
   fun extract_am1 pat tm = 
     (snd o dest_comb o fst o dest_comb o TERM_RW [GSYM ADDR_MODE1_CMD_def] o get_term pat) tm
@@ -771,13 +815,15 @@ fun mk_arm_prog2_str inst_str suffix = let
     val tm' = code_from_basic_ARM_PROG2 (concl th)
     val tm' = fix_ii tm'
     in can (match_term tm') tm end
-  val xs = filter filt match_list
+  val xs = filter filt (if select_seq then match_list_select_seq else match_list)
   val (th,name) = hd xs handle e => raise ERR "arm_str2prog" ("No match for: "^inst_str)
   val tm' = code_from_basic_ARM_PROG2 (concl th)
   val tm' = fix_ii tm'
   val (i,it) = match_term tm' tm
   val i = i @ ii
   val th = INST i th
+  val th = SIMP_RULE (bool_ss++sep2_ss) [] th
+  val th = if select_seq then RW [GSYM sidecond_def] th else th
   val th = SIMP_RULE (bool_ss ++ armINST_ss) [] th
   val vs = free_vars_lr (concl th)
   val vs' = free_vars_lr (code_from_basic_ARM_PROG2 (concl th))
@@ -798,13 +844,38 @@ fun mk_arm_prog2_str inst_str suffix = let
   val s = if evals = [] then "" else s
   val str = "SIMP_RULE (bool_ss++armINST_ss) ["^s^"] (Q.INST "^ 
              subst_to_string_no_types i "  " ^ " " ^ name ^ ")"
-  in (th,str) end handle e => mk_arm_prog2_str_STM_LDM inst_str suffix;
+  in (th,str) end handle e => mk_arm_prog2_str_STM_LDM inst_str suffix select_seq;
 
+(*
+string_to_prog_seq "ldr r1,[r2],#4 | ys" "2"
+val str = "ldr r1,[r2],#4 | ys"
+val suffix = "sdfg"
+*)
 
-val string_to_prog = mk_arm_prog2_str
+fun string_split c str = let
+  fun f [] ys = hd []
+    | f (x::xs) ys = if x = c then (implode (rev ys),implode xs) else f xs (x::ys)
+  in f (explode str) [] end
+
+val remove_blanks = implode o filter (fn x => not (x = #" ")) o explode;
+
+fun string_to_prog_seq str suffix = let
+  val (str,xs) = string_split #"|" str handle e => (str,"x")
+  val xs = remove_blanks xs
+  val (th,str) = mk_arm_prog2_str str suffix true
+  in let 
+    val tm = ((car o car o concl) th)
+    val tm = find_term (can (match_term ``(seq a xs):'a ARMset -> bool``)) tm
+    val i = [cdr tm|->mk_var(xs^"s",type_of (cdr tm))]
+    val i = [(cdr o car) tm|->mk_var(xs,type_of (cdr (car tm)))] @ i
+    val th = INST i th    
+    in (th,str) end 
+  handle e => (th,str) end;
+
+fun string_to_prog str suffix     = mk_arm_prog2_str str suffix false;
 
 fun mk_arm_prog2_string inst_str thm_name suffix indent = let
-  val (th,str) = mk_arm_prog2_str inst_str suffix
+  val (th,str) = string_to_prog inst_str suffix
   val str = indent ^"val " ^ thm_name ^ " = ("^"*  "^inst_str^"  *"^") "^str
   in (th,str) end;
 
@@ -867,7 +938,7 @@ fun compose_progs_string init [] = (TRUTH,"")
   | compose_progs_string init strs = let
   val xs = pad_strings (map fst strs)
   fun specs [] i = [] | specs (x::xs) i =
-    mk_arm_prog2_str x (int_to_string i) :: specs xs (i+1)
+    string_to_prog x (int_to_string i) :: specs xs (i+1)
   val xs = zip (zip (specs xs init) xs) (map snd strs)    
   fun unwrap (((th,s),n),true)  = (FST_PROG2 th, "FST_PROG2 ("^s^")",n) 
     | unwrap (((th,s),n),false) = (SND_PROG2 th, "SND_PROG2 ("^s^")",n) 
@@ -921,4 +992,3 @@ val REG_SORT_RULE = CONV_RULE REG_SORT_CONV;
    
 
 end
-

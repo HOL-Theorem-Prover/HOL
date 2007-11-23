@@ -323,7 +323,7 @@ val CLOSE_ONE = store_thm (
 
 val LET_ATOM = store_thm (
   "LET_ATOM",
-  ``(let x = atom x in f x) = f x``,
+  ``(let x = atom y in f x) = f y``,
    SIMP_TAC std_ss [LET_THM, atom_def]
   );
 

@@ -18,13 +18,13 @@ val _ = type_abbrev("block", ``:word32 # word32 # word32 # word32``);
 
 val _ = type_abbrev("key",   ``:word32 # word32 # word32 # word32``);
 
-val _ = type_abbrev("keysched", ``:
+val _ = type_abbrev("keysched", ``: 
 	word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
         word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
         word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
         word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
         word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
-        word32 # word32 # word32 # word32 # word32`);
+        word32 # word32 # word32 # word32 # word32``);
 
 (*---------------------------------------------------------------------------*)
 (* Case analysis on a block, a key schedule                                  *)
