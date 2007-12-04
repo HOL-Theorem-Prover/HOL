@@ -10,7 +10,7 @@ open HolKernel boolLib bossLib Parse;
 open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
 open arm_evalTheory armTheory listTheory bsubstTheory pairTheory systemTheory fcpTheory bitTheory; 
 open combinTheory rich_listTheory;
-open set_sepLib;
+open set_sepLib addressTheory;
 
 open set_sepTheory progTheory;
 
@@ -18,7 +18,6 @@ open set_sepTheory progTheory;
 (*
   quietdec := false;
 *)
-
 
 val _ = new_theory "arm_prog";
 
@@ -32,291 +31,6 @@ val op >> = op THEN1;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
-
-
-(* ----------------------------------------------------------------------------- *)
-(* Definition and lemmas for addr32 and addr30                                   *)
-(* ----------------------------------------------------------------------------- *)
-
-val word_app0_def = Define `word_app0 (x:'a word) = (w2w x << 1):('a + one) word`;
-val word_cut1_def = Define `word_cut1 (x:('a + one) word) = ((word_len x >< 1) x) :'a word`;
-
-val word_app0_n2w = prove(
-  ``!n. word_app0 ((n2w n):'a word) = n2w (2 * n)``,
-  REWRITE_TAC [word_app0_def,LSL_ONE,w2w_def,word_add_n2w,n2w_11,w2n_n2w,
-    DECIDE ``n + n = 2 * n``,dimword_def,EVAL ``dimindex(:'a + one)``]
-  \\ Cases_on `FINITE (UNIV :'a -> bool)` \\ ASM_REWRITE_TAC [finite_one] << [
-    REWRITE_TAC [GSYM ADD1,EXP]
-    \\ ASSUME_TAC (REWRITE_RULE [DECIDE ``1 = SUC 0``,GSYM LESS_EQ] DIMINDEX_GE_1)
-    \\ ASM_SIMP_TAC std_ss [GSYM MOD_COMMON_FACTOR],
-    ASSUME_TAC DIMINDEX_GE_1
-    \\ FULL_SIMP_TAC bool_ss [LESS_EQ_EXISTS,EXP_ADD,EVAL ``2**1``]
-    \\ ONCE_REWRITE_TAC [MULT_COMM] \\ SIMP_TAC std_ss [MOD_EQ_0]]);
-
-val word_cut1_n2w = prove(
-  ``FINITE (UNIV :'a -> bool) ==> 
-    !n. (word_cut1 (n2w n)):'a word = n2w (n DIV 2)``,
-  SIMP_TAC std_ss [word_cut1_def,word_extract_def,word_bits_n2w,
-    REWRITE_RULE [finite_one] (EVAL ``dimindex (:'a + unit)``),word_len_def,
-    w2w_def,n2w_11,w2n_n2w,dimword_def] \\ STRIP_TAC
-  \\ `!n. (n + 1 < n) = F` by DECIDE_TAC
-  \\ ASM_REWRITE_TAC [ADD_SUB,EVAL ``1-1``,MIN_DEF,EVAL ``1 < 0``]
-  \\ REWRITE_TAC [GSYM ADD1,EXP] \\ ONCE_REWRITE_TAC [MULT_COMM]
-  \\ ASSUME_TAC (REWRITE_RULE [DECIDE ``1 = SUC 0``,GSYM LESS_EQ] DIMINDEX_GE_1)
-  \\ ASM_SIMP_TAC std_ss [MOD_MULT_MOD,BITS_def,MOD_2EXP_def,DIV_2EXP_def]);
-
-val word_cut1_app0 = prove(
-  ``!w:'a word. FINITE (UNIV :'a -> bool) ==> (word_cut1 (word_app0 w) = w)``,  
-  Cases_word \\ SIMP_TAC bool_ss [word_cut1_n2w,word_app0_n2w]
-  \\ ONCE_REWRITE_TAC [MULT_COMM] \\ SIMP_TAC std_ss [MULT_DIV]);
-
-
-val addr32_def = Define `addr32 (x:word30) = (w2w x << 2):word32`;
-val addr30_def = Define `addr30 (x:word32) = ((31 >< 2) x):word30`;
-
-val w2n_mod = prove(
-  ``!x. (w2n (x:word30)) MOD (2**30) = w2n x``,
-  ASSUME_TAC (INST_TYPE [``:'a``|->``:30``] w2n_lt)
-  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) []);
-
-val lower_addr32_ADD = store_thm("lower_addr32_ADD",
-  ``!w x. (1 >< 0) (addr32 x + w) = ((1 >< 0) w):word2``,
-  wordsLib.Cases_word
-  \\ REWRITE_TAC [addr32_def,EVAL ``dimindex (:32)``,w2w_def,word_lsl_n2w]
-  \\ EVAL_TAC \\ REWRITE_TAC [BITS_def,MOD_2EXP_def,DIV_2EXP_def]
-  \\ EVAL_TAC \\ REWRITE_TAC [DIV_1]
-  \\ REWRITE_TAC [(GSYM o EVAL) ``4 * 1073741824``]
-  \\ `0 < 4 /\ 0 < 1073741824` by EVAL_TAC
-  \\ ASM_SIMP_TAC bool_ss [MOD_MULT_MOD,MOD_MOD,MOD_TIMES]);
-
-val addr32_eq_0 = store_thm("addr32_eq_0",
-  ``!x. (1 >< 0) (addr32 x) = 0w:word2``,
-  ONCE_REWRITE_TAC [(GSYM o REWRITE_CONV [WORD_ADD_0]) ``addr32 x + 0w``]
-  \\ REWRITE_TAC [lower_addr32_ADD] \\ EVAL_TAC);
-
-val addr32_n2w = store_thm ("addr32_n2w", 
-  ``!n. (addr32 (n2w n)  = n2w (4 * n))``,
-  REWRITE_TAC [addr32_def, DECIDE ``2 = 1 + 1``, GSYM LSL_ADD, 
-               LSL_ONE,w2w_def, word_add_n2w, n2w_11, dimword_32]
-  \\ `!n. n + n + (n + n) = 4*n` by DECIDE_TAC
-  \\ ASM_SIMP_TAC std_ss [w2n_n2w, dimword_30, MOD_COMMON_FACTOR]);
-
-val addr32_and_3w = store_thm("addr32_and_3w",
-  ``!x. (addr32 x) && 3w = 0w``,
-  wordsLib.Cases_word
-  \\ SIMP_TAC bool_ss [CART_EQ,word_0,word_and_def,FCP_BETA,addr32_n2w]
-  \\ ONCE_REWRITE_TAC [(Q.INST_TYPE [`:'a`|->`:32`] word_index_n2w)]
-  \\ SIMP_TAC bool_ss [] \\ REPEAT STRIP_TAC
-  \\ REWRITE_TAC [BIT_def,BITS_def,DIV_2EXP_def,MOD_2EXP_def]
-  \\ REWRITE_TAC [DECIDE ``!i. SUC i - i = 1``,EVAL ``2**1``]
-  \\ Cases_on `i` \\ EVAL_TAC \\ REWRITE_TAC [DIV_1] 
-  \\ `0 < 2 /\ ~(0 = 1)` by DECIDE_TAC
-  \\ ASM_SIMP_TAC bool_ss [DECIDE ``4*n = (2*n)*2``,MOD_EQ_0]
-  \\ Cases_on `n'` \\ EVAL_TAC
-  \\ ASM_SIMP_TAC bool_ss [DECIDE ``4*n = (2*n)*2``,MULT_DIV]
-  \\ ONCE_REWRITE_TAC [MULT_COMM] \\ ASM_SIMP_TAC bool_ss [MOD_EQ_0]
-  \\ REWRITE_TAC [EXP,MULT_ASSOC] \\ SIMP_TAC std_ss []
-  \\ DISJ2_TAC \\ MATCH_MP_TAC (DECIDE ``(m = 0) ==> ~(m = 1)``)
-  \\ `0 < 2 ** n''` by ASM_SIMP_TAC std_ss [ZERO_LT_EXP,EVAL ``0 < 2``]
-  \\ `3 < 4 * 2 ** n''` by DECIDE_TAC 
-  \\ ASM_SIMP_TAC bool_ss [LESS_DIV_EQ_ZERO] \\ SIMP_TAC std_ss [ZERO_MOD]);    
-
-val addr30_n2w = store_thm("addr30_n2w",
-  ``!n. addr30 (n2w n) = n2w (n DIV 4)``,
-  REWRITE_TAC [addr30_def] \\ EVAL_TAC
-  \\ REWRITE_TAC [(GSYM o EVAL) ``1073741824 * 4``]
-  \\ `0 < 4 /\ 0 < 1073741824` by EVAL_TAC
-  \\ ASM_SIMP_TAC bool_ss [MOD_MULT_MOD,MOD_MOD,MOD_TIMES]
-  \\ REWRITE_TAC [BITS_def,MOD_2EXP_def,DIV_2EXP_def]
-  \\ EVAL_TAC \\ ASM_SIMP_TAC bool_ss [MOD_MOD]);
-
-val addr30_addr32_ADD = store_thm("addr30_addr32_ADD",
-  ``!x y. addr30 (addr32 x + y) = x + addr30 y``,
-  wordsLib.Cases_word \\ wordsLib.Cases_word
-  \\ REWRITE_TAC [addr30_n2w,addr32_n2w,word_add_n2w]
-  \\ SIMP_TAC std_ss [ONCE_REWRITE_RULE [MULT_COMM] ADD_DIV_ADD_DIV]);
-
-val addr30_addr32_LEMMA = prove(
-  ``!a. (addr30 (addr32 a + 0w) = a) /\ 
-        (addr30 (addr32 a + 1w) = a) /\ 
-        (addr30 (addr32 a + 2w) = a) /\ 
-        (addr30 (addr32 a + 3w) = a)``,
-  SIMP_TAC std_ss [addr30_addr32_ADD,addr30_n2w,WORD_ADD_0]);
-
-val addr30_addr32 = store_thm("addr30_addr32",
-  ``!x. (addr30 (addr32 x) = x) /\
-        (addr30 (addr32 x + 0w) = x) /\ 
-        (addr30 (addr32 x + 1w) = x) /\ 
-        (addr30 (addr32 x + 2w) = x) /\ 
-        (addr30 (addr32 x + 3w) = x)``,
-  REWRITE_TAC [REWRITE_RULE [WORD_ADD_0] addr30_addr32_LEMMA,addr30_addr32_LEMMA]);
-
-val EXISTS_addr30 = store_thm("EXISTS_addr30",
-  ``!x. (x && 3w = 0w) ==> ?y. x = addr32 y``,
-  wordsLib.Cases_word
-  \\ STRIP_ASSUME_TAC (REWRITE_RULE [EVAL ``0 < 4``] (Q.SPECL [`n`,`4`] DA))
-  \\ Cases_on `r` \\ ASM_REWRITE_TAC []
-  THEN1 (REPEAT STRIP_TAC \\ Q.EXISTS_TAC `n2w q` 
-         \\ REWRITE_TAC [ADD_0,addr32_n2w] \\ METIS_TAC [MULT_COMM])
-  \\ SIMP_TAC bool_ss [CART_EQ,word_0,word_and_def,FCP_BETA,addr32_n2w]
-  \\ ONCE_REWRITE_TAC [(Q.INST_TYPE [`:'a`|->`:32`] word_index_n2w)] \\ SIMP_TAC bool_ss []
-  \\ REWRITE_TAC [BIT_def,BITS_def,DIV_2EXP_def,MOD_2EXP_def]
-  \\ REWRITE_TAC [DECIDE ``!i. SUC i - i = 1``,EVAL ``2**1``]
-  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [] \\ Cases_on `n'` << [ 
-    Q.PAT_ASSUM `!i.b` (ASSUME_TAC o REWRITE_RULE [EVAL ``0 < 32``] o Q.SPEC `0`)
-    \\ FULL_SIMP_TAC bool_ss [EVAL ``~((3 DIV 2 ** 0) MOD 2 = 1)``,EVAL ``2**0``,DIV_1]
-    \\ FULL_SIMP_TAC bool_ss [GSYM (EVAL ``2*2``),MULT_ASSOC]
-    \\ `SUC 0 < 2` by DECIDE_TAC \\ FULL_SIMP_TAC bool_ss [MOD_MULT,EVAL ``SUC 0``],
-    Cases_on `n''` << [
-      Q.PAT_ASSUM `!i.b` (ASSUME_TAC o REWRITE_RULE [EVAL ``1 < 32``] o Q.SPEC `1`)
-      \\ FULL_SIMP_TAC bool_ss [EVAL ``~((3 DIV 2 ** 1) MOD 2 = 1)``,EVAL ``2**1``]
-      \\ `q * 4 + 2 = (q * 2 + 1) * 2` by SIMP_TAC std_ss [RIGHT_ADD_DISTRIB,GSYM MULT_ASSOC]
-      \\ FULL_SIMP_TAC bool_ss [EVAL ``SUC (SUC 0)``,EVAL ``0<2``,
-            MULT_DIV,EVAL ``1 < 2``,MOD_MULT],        
-      Cases_on `n'` << [
-        Q.PAT_ASSUM `!i.b` (ASSUME_TAC o REWRITE_RULE [EVAL ``1 < 32``] o Q.SPEC `1`)
-        \\ FULL_SIMP_TAC bool_ss [EVAL ``~((3 DIV 2 ** 1) MOD 2 = 1)``,EVAL ``2**1``]
-        \\ `q * 4 + 3 = (q * 2 + 1) * 2 + 1` by 
-             SIMP_TAC std_ss [RIGHT_ADD_DISTRIB,GSYM MULT_ASSOC,GSYM ADD_ASSOC]
-        \\ `1 < 2` by DECIDE_TAC
-        \\ FULL_SIMP_TAC bool_ss [DIV_MULT,EVAL ``SUC (SUC (SUC 0))``,MOD_MULT],
-        FULL_SIMP_TAC std_ss [ADD1,GSYM ADD_ASSOC] \\ `~(n'' + 4 < 4)` by DECIDE_TAC]]]);
-
-val add32_addr30 = store_thm("addr32_addr30",
-  ``!x. (x && 3w = 0w) ==> (addr32 (addr30 x) = x)``,
-  REPEAT STRIP_TAC \\ IMP_RES_TAC EXISTS_addr30 \\ ASM_REWRITE_TAC [addr30_addr32]);
-
-val addr32_ADD = store_thm ("addr32_ADD", 
-  ``!v w. (addr32 (v + w)  = addr32 v + addr32 w)``,
-  Cases_word \\ Cases_word
-  \\ REWRITE_TAC [addr32_n2w,word_add_n2w,LEFT_ADD_DISTRIB]);
-
-val addr32_NEG = store_thm("addr32_NEG",
-  ``!w. addr32 ($- w) = $- (addr32 w)``,
-  wordsLib.Cases_word \\ REWRITE_TAC [addr32_n2w] 
-  \\ wordsLib.WORDS_TAC \\ REWRITE_TAC [addr32_n2w]
-  \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss) [n2w_11,LEFT_SUB_DISTRIB,MOD_COMMON_FACTOR]);
-
-val addr32_SUB = store_thm ("addr32_SUB", 
-  ``!v w. (addr32 (v - w)  = addr32 v - addr32 w)``,
-  REWRITE_TAC [word_sub_def,addr32_ADD,addr32_NEG]);
-  
-val addr32_SUC = store_thm("addr32_SUC",
-  ``!p. addr32 (p + 1w) = addr32 p + 4w``,
-  SRW_TAC [] [addr32_ADD,addr32_n2w]);
-
-val ADD_LSL = store_thm("ADD_LSL",
-  ``!v w n. (v + w) << n = (v << n) + (w << n)``,
-  Induct_on `n` 
-  \\ SIMP_TAC std_ss [SHIFT_ZERO,SUC_ONE_ADD,GSYM LSL_ADD,LSL_ONE]
-  \\ METIS_TAC [WORD_ADD_ASSOC,WORD_ADD_COMM]);
-
-val addr32_11 = store_thm("addr32_11",
-  ``!a b. ((addr32 a = addr32 b) = (a = b)) /\ 
-          ((addr32 a = addr32 b + 0w) = (a = b)) /\ 
-          ((addr32 a + 0w = addr32 b) = (a = b)) /\ 
-          ((addr32 a + 0w = addr32 b + 0w) = (a = b)) /\ 
-          ((addr32 a + 1w = addr32 b + 1w) = (a = b)) /\ 
-          ((addr32 a + 2w = addr32 b + 2w) = (a = b)) /\ 
-          ((addr32 a + 3w = addr32 b + 3w) = (a = b))``,
-  wordsLib.Cases_word \\ wordsLib.Cases_word 
-  \\ REWRITE_TAC [WORD_EQ_ADD_RCANCEL,WORD_ADD_0]
-  \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [addr32_n2w,n2w_11]
-  \\ `4 * n < 4294967296 /\ 4 * n' < 4294967296` by DECIDE_TAC
-  \\ ASM_SIMP_TAC std_ss [LESS_MOD,EQ_MULT_LCANCEL]);
-
-val addr32_EQ_0 = store_thm("addr32_EQ_0",
-  ``!a. (addr32 a = 0w) = (a = 0w)``,
-  REWRITE_TAC [SIMP_RULE std_ss [addr32_n2w] (Q.SPECL [`a`,`0w`] addr32_11)]);
-
-val addr32_NEQ_addr32_LEMMA = prove(
-  ``!a b. ~(addr32 a = addr32 b + 1w) /\ 
-          ~(addr32 a = addr32 b + 2w) /\ 
-          ~(addr32 a = addr32 b + 3w) /\ 
-          ~(addr32 a + 1w = addr32 b + 2w) /\ 
-          ~(addr32 a + 1w = addr32 b + 3w) /\ 
-          ~(addr32 a + 2w = addr32 b + 3w)``,
-  wordsLib.Cases_word \\ wordsLib.Cases_word
-  \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [addr32_n2w,word_add_n2w,n2w_11]
-  \\ REWRITE_TAC [GSYM (EVAL ``4 * 1073741824``)]
-  \\ `0 < 4 /\ 0 < 1073741824` by EVAL_TAC
-  \\ `4 * n' + 1 < 4 * 1073741824` by DECIDE_TAC
-  \\ `4 * n' + 2 < 4 * 1073741824` by DECIDE_TAC
-  \\ `4 * n' + 3 < 4 * 1073741824` by DECIDE_TAC
-  \\ `4 * n + 1 < 4 * 1073741824` by DECIDE_TAC
-  \\ `4 * n + 2 < 4 * 1073741824` by DECIDE_TAC
-  \\ ASM_SIMP_TAC bool_ss [GSYM MOD_COMMON_FACTOR,LESS_MOD]
-  \\ ONCE_REWRITE_TAC [MULT_SYM]
-  \\ `!k. (k * 4) MOD 4 = 0` by METIS_TAC [MOD_EQ_0]
-  \\ `!k. (k * 4 + 1) MOD 4 = 1` by METIS_TAC [MOD_MULT,EVAL ``1 < 4``]
-  \\ `!k. (k * 4 + 2) MOD 4 = 2` by METIS_TAC [MOD_MULT,EVAL ``2 < 4``]
-  \\ `!k. (k * 4 + 3) MOD 4 = 3` by METIS_TAC [MOD_MULT,EVAL ``3 < 4``]
-  \\ METIS_TAC [EVAL ``0 = 1``,EVAL ``0 = 2``,EVAL ``0 = 3``,
-                EVAL ``1 = 2``,EVAL ``1 = 3``,EVAL ``2 = 3``]);
-
-val addr32_NEQ_addr32 = store_thm("addr32_NEQ_addr32",
-  ``!a b. ~(addr32 a + 0w = addr32 b + 1w) /\ 
-          ~(addr32 a + 0w = addr32 b + 2w) /\ 
-          ~(addr32 a + 0w = addr32 b + 3w) /\ 
-          ~(addr32 a + 1w = addr32 b + 2w) /\ 
-          ~(addr32 a + 1w = addr32 b + 3w) /\ 
-          ~(addr32 a + 2w = addr32 b + 3w) /\
-          ~(addr32 a + 1w = addr32 b + 0w) /\ 
-          ~(addr32 a + 2w = addr32 b + 0w) /\ 
-          ~(addr32 a + 3w = addr32 b + 0w) /\ 
-          ~(addr32 a + 2w = addr32 b + 1w) /\ 
-          ~(addr32 a + 3w = addr32 b + 1w) /\ 
-          ~(addr32 a + 3w = addr32 b + 2w) /\ 
-          ~(addr32 a + 1w = addr32 b) /\ 
-          ~(addr32 a + 2w = addr32 b) /\ 
-          ~(addr32 a + 3w = addr32 b) /\
-          ~(addr32 a = addr32 b + 1w) /\ 
-          ~(addr32 a = addr32 b + 2w) /\ 
-          ~(addr32 a = addr32 b + 3w)``, 
-  REWRITE_TAC [WORD_ADD_0,addr32_NEQ_addr32_LEMMA,GSYM addr32_NEQ_addr32_LEMMA]);  
-
-val EXISTS_addr32 = store_thm("EXISTS_addr32",
-  ``!p. ?a. (p = addr32 a + 0w) \/ (p = addr32 a + 1w) \/ 
-            (p = addr32 a + 2w) \/ (p = addr32 a + 3w)``,
-  wordsLib.Cases_word
-  \\ STRIP_ASSUME_TAC (REWRITE_RULE [EVAL ``0 < 4``] (Q.SPECL [`n`,`4`] DA))
-  \\ ASM_REWRITE_TAC [] \\ Q.EXISTS_TAC `n2w q` \\ REWRITE_TAC [addr32_n2w,word_add_n2w]
-  \\ ONCE_REWRITE_TAC [DECIDE ``4 * n = n * 4``]
-  \\ Cases_on `r` \\ ASM_REWRITE_TAC []
-  \\ Cases_on `n'` \\ ASM_REWRITE_TAC [EVAL ``SUC 0``]
-  \\ Cases_on `n''` \\ ASM_REWRITE_TAC [EVAL ``SUC (SUC 0)``]
-  \\ Cases_on `n'` \\ ASM_REWRITE_TAC [EVAL ``SUC (SUC (SUC 0))``]
-  \\ FULL_SIMP_TAC std_ss [ADD1,GSYM ADD_ASSOC]
-  \\ `n'' < 0` by DECIDE_TAC \\ FULL_SIMP_TAC bool_ss [EVAL ``n < 0``]);
-
-val addr32_ABSORB_CONST = store_thm("addr32_ABSORB_CONST",
-  ``(addr32 x + 0w  = addr32 x) /\ 
-    (addr32 x + 4w  = addr32 (x + 1w)) /\ 
-    (addr32 x + 8w  = addr32 (x + 2w)) /\ 
-    (addr32 x + 12w = addr32 (x + 3w)) /\ 
-    (addr32 x + 16w = addr32 (x + 4w)) /\ 
-    (addr32 x + 20w = addr32 (x + 5w)) /\
-    (addr32 x + 24w = addr32 (x + 6w)) /\
-    (addr32 x + 28w = addr32 (x + 7w)) /\
-    (addr32 x + 32w = addr32 (x + 8w)) /\
-    (addr32 x + 36w = addr32 (x + 9w)) /\
-    (addr32 x + 40w = addr32 (x + 10w)) /\
-    (addr32 x - 0w  = addr32 (x - 0w)) /\
-    (addr32 x - 4w  = addr32 (x - 1w)) /\ 
-    (addr32 x - 8w  = addr32 (x - 2w)) /\ 
-    (addr32 x - 12w = addr32 (x - 3w)) /\ 
-    (addr32 x - 16w = addr32 (x - 4w)) /\ 
-    (addr32 x - 20w = addr32 (x - 5w)) /\
-    (addr32 x - 24w = addr32 (x - 6w)) /\
-    (addr32 x - 28w = addr32 (x - 7w)) /\
-    (addr32 x - 32w = addr32 (x - 8w)) /\
-    (addr32 x - 36w = addr32 (x - 9w)) /\
-    (addr32 x - 40w = addr32 (x - 10w))``,    
-  SIMP_TAC std_ss [addr32_ADD,addr32_SUB,addr32_n2w,WORD_ADD_0]);
-
-val ADDRESS_ROTATE = store_thm("ADDRESS_ROTATE",
-  ``!q:word32 z:word30. q #>> (8 * w2n ((1 >< 0) (addr32 z):word2)) = q``,
-  SIMP_TAC std_ss [addr32_eq_0,EVAL ``w2n (0w:word2)``] \\ STRIP_TAC \\ EVAL_TAC);
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -1082,6 +796,11 @@ val ARMpc_def   = Define `ARMpc p = R30 15w p * one (Undef F)`;
 val ARMproc_def = Define `ARMproc = (ARMsets,ARMnext_rel,ARMpc,ARMi)
   :('a ARMel,30,word32) processor`;
 
+val ARMi2_def = Define `ARMi2 (a,x) = ARMi (addr30 a,x)`;
+val ARMpc2_def   = Define `ARMpc2 p = R 15w p * one (Undef F) * cond (p && 3w = 0w)`;
+val ARM_MODEL_def = Define `ARM_MODEL = (ARMsets,ARMnext_rel,ARMpc2,ARMi2)
+  :('a ARMel,32,word32) processor`;
+
 val ARM_RUN_def   = Define `ARM_RUN   = RUN ARMproc`; 
 val ARM_GPROG_def = Define `ARM_GPROG = GPROG ARMproc`;
 val ARM_PROG_def  = Define `ARM_PROG  = PROG ARMproc`;
@@ -1194,6 +913,13 @@ val ARMproc_IN_PROCESSORS = prove(
   ``ARMproc IN PROCESSORS``,
   REWRITE_TAC [GSPECIFICATION,PROCESSORS_def] \\ Q.EXISTS_TAC `ARMproc`
   \\ SIMP_TAC std_ss [ARMproc_def,ARMnext_rel_def]
+  \\ SIMP_TAC bool_ss [ARMnext_def,RES_FORALL]
+  \\ REPEAT STRIP_TAC \\ SRW_TAC [] [ARMsets_def] \\ METIS_TAC []);
+
+val ARM_MODEL_IN_PROCESSORS = prove(
+  ``ARM_MODEL IN PROCESSORS``,
+  REWRITE_TAC [GSPECIFICATION,PROCESSORS_def] \\ Q.EXISTS_TAC `ARM_MODEL`
+  \\ SIMP_TAC std_ss [ARM_MODEL_def,ARMnext_rel_def]
   \\ SIMP_TAC bool_ss [ARMnext_def,RES_FORALL]
   \\ REPEAT STRIP_TAC \\ SRW_TAC [] [ARMsets_def] \\ METIS_TAC []);
 
@@ -1399,6 +1125,23 @@ val ARM_RUN_M_11 = store_thm("ARM_RUN_M_11",
   \\ MOVE_STAR_TAC `b1*b2*b3*b4*(b5*b6*b7*b8)*t` `b4*b8*(b2*b3*b1*b6*b7*b5*t)`
   \\ REWRITE_TAC [ARM_RUN_byte_11]);
 
+val M_NEQ_M = store_thm("M_NEQ_M",
+  ``!a x b y. ~(a = b) ==> ~(M a x = M b y)``,
+  ONCE_REWRITE_TAC [FUN_EQ_THM]
+  \\ SIMP_TAC std_ss [M_def,byte_def,one_def,STAR_def,SPLIT_def]
+  \\ REWRITE_TAC [INSERT_UNION_EQ,UNION_EMPTY]
+  \\ REPEAT STRIP_TAC \\ CCONTR_TAC \\ FULL_SIMP_TAC bool_ss []
+  \\ Q.PAT_ASSUM `!x.b` (ASSUME_TAC o Q.SPEC `
+         {Mem (addr32 a + 3w) ((31 >< 24) (x:word32));
+          Mem (addr32 a + 2w) ((23 >< 16) x);
+          Mem (addr32 a + 1w) ((15 >< 8) x);
+          Mem (addr32 a + 0w) ((7 >< 0) x)}`)
+  \\ FULL_SIMP_TAC bool_ss [SET_EQ_SUBSET,INSERT_SUBSET,IN_INSERT,NOT_IN_EMPTY]
+  \\ SRW_TAC [] []
+  \\ Q.PAT_ASSUM `~(a = b)` ASSUME_TAC
+  \\ FULL_SIMP_TAC bool_ss [addr32_NEQ_addr32,addr32_11]
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [])
+
 
 (* theorems for ARM_GPROG ------------------------------------------------------ *)
 
@@ -1592,6 +1335,142 @@ val ARM_PROC_CALL = store_thm("ARM_PROC_CALL",
   \\ Q.EXISTS_TAC `R30 14w` \\ ASM_REWRITE_TAC []);
 
 val _ = save_thm("ARM_PROC_RECURSION",PROC_RECURSION);
+
+(* spec model *)
+
+val ARM_SPEC2_def = Define `
+  ARM_SPEC2 c (P,p) C (Q,q) =
+    SPEC (ARM_MODEL :('a ARMel, 32, bool[32]) processor)
+      (P,p) {(C,p)} (Q,q) /\
+    !x. SPEC (ARM_MODEL :('a ARMel, 32, bool[32]) processor)
+        (S x * nPASS c x,p) {(C,p)} (S x,p + 4w)`;
+
+val RUN_ARM_MODEL_LEMMA = prove(
+  ``!P Q. RUN ARMproc P Q = RUN ARM_MODEL P Q``,
+  REWRITE_TAC [ARMproc_def,ARM_MODEL_def,RUN_def]
+  \\ REWRITE_TAC [GSYM ARMproc_def,GSYM ARM_MODEL_def]
+  \\ REWRITE_TAC [ARMproc_IN_PROCESSORS,ARM_MODEL_IN_PROCESSORS]);
+
+val mpool_LEMMA = prove(
+  ``mpool g p {([c],f)} = g (f p,c)``,
+  SIMP_TAC std_ss [mpool_def,IN_INSERT,NOT_IN_EMPTY]
+  \\ `{mset g p z | z = ([c],f)} = {mset g p ([c],f)}` by ALL_TAC << [  
+    ONCE_REWRITE_TAC [EXTENSION]
+    \\ REWRITE_TAC [IN_INSERT,NOT_IN_EMPTY,GSPECIFICATION]
+    \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
+    THEN1 (Cases_on `x'` \\ FULL_SIMP_TAC bool_ss [PAIR_EQ])
+    \\ Q.EXISTS_TAC `([c],f)` \\ ASM_SIMP_TAC std_ss [],
+    `g (f p,c) = BIGSTAR (BIGUNION {{g (f p,c)}})` by ALL_TAC << [    
+      REWRITE_TAC [BIGUNION_INSERT,BIGUNION_EMPTY,UNION_EMPTY]
+      \\ REWRITE_TAC [BIGSTAR_ONE],  
+      ONCE_ASM_REWRITE_TAC []
+      \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> 
+          (BIGSTAR (BIGUNION {x}) = BIGSTAR (BIGUNION {y}))``)
+      \\ REWRITE_TAC [mset_def,LENGTH,DECIDE ``n < SUC 0 = (n = 0)``]
+      \\ ONCE_REWRITE_TAC [EXTENSION]
+      \\ REWRITE_TAC [IN_INSERT,NOT_IN_EMPTY,GSPECIFICATION]
+      \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
+      THEN1 (Cases_on `x'` \\ FULL_SIMP_TAC std_ss [EL,HD,WORD_ADD_0])
+      \\ Q.EXISTS_TAC `(c,0)` \\ ASM_SIMP_TAC std_ss [EL,HD,WORD_ADD_0]]]);
+
+val SPEC_ARM_MODEL_INTRO = store_thm("SPEC_ARM_MODEL_INTRO",
+  ``ARM_PROG P [c] {} Q {} ==>
+    !p:word32. SPEC ARM_MODEL (P,p) {([c],p)} (Q,p + 4w)``,
+  REWRITE_TAC [ARM_PROG_THM,ARM_MODEL_def,ARM_GPROG_def]
+  \\ SIMP_TAC std_ss [SPEC_def,setAPP_CLAUSES,pcINC_def,pcADD_def,fix_pos_def,set_apply_CLAUSES]
+  \\ REWRITE_TAC [GPROG_def,ARMproc_def,ARM_MODEL_def]  
+  \\ REWRITE_TAC [GSYM ARMproc_def,GSYM ARM_MODEL_def,RUN_ARM_MODEL_LEMMA]  
+  \\ REWRITE_TAC [GPROG_DISJ_CLAUSES]
+  \\ REWRITE_TAC [ARMpc_def,ARMpc2_def]
+  \\ SIMP_TAC (std_ss++sep2_ss) [mpool_LEMMA,GSYM RUN_MOVE_COND]
+  \\ SIMP_TAC std_ss [wLENGTH_def,LENGTH,ARMi_def,ARMi2_def,R30_def]
+  \\ SIMP_TAC (bool_ss++sep2_ss) [GSYM aligned_def,
+       SIMP_RULE std_ss [word_mul_n2w] (Q.SPECL [`x`,`1w`] aligned_MULT)]
+  \\ SIMP_TAC std_ss [addr32_ADD,addr32_n2w]
+  \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [WORD_ADD_COMM]))
+  \\ REPEAT STRIP_TAC
+  \\ IMP_RES_TAC (GSYM (RW [GSYM aligned_def] addr32_addr30))
+  \\ ONCE_ASM_REWRITE_TAC []  
+  \\ Q.PAT_ASSUM `x = y` (fn th => ALL_TAC)
+  \\ ASM_REWRITE_TAC [addr30_addr32]);
+
+val SPEC_ARM_MODEL_INTRO_pcSET = store_thm("SPEC_ARM_MODEL_INTRO_pcSET",
+  ``ARM_PROG P [c] {} SEP_F {(Q,pcSET (addr30 x))} ==>
+    !p:word32. SPEC ARM_MODEL (P * cond (x && 3w = 0w),p) {([c],p)} (Q,x)``,
+  REWRITE_TAC [ARM_PROG_THM,ARM_MODEL_def,ARM_GPROG_def,GPROG_FALSE_POST]
+  \\ SIMP_TAC std_ss [SPEC_def,setAPP_CLAUSES,pcINC_def,pcADD_def,fix_pos_def,set_apply_CLAUSES]
+  \\ REWRITE_TAC [GPROG_def,ARMproc_def,ARM_MODEL_def]  
+  \\ REWRITE_TAC [GSYM ARMproc_def,GSYM ARM_MODEL_def,RUN_ARM_MODEL_LEMMA]  
+  \\ REWRITE_TAC [GPROG_DISJ_CLAUSES]
+  \\ REWRITE_TAC [ARMpc_def,ARMpc2_def]
+  \\ SIMP_TAC (std_ss++sep2_ss) [mpool_LEMMA,GSYM RUN_MOVE_COND]
+  \\ SIMP_TAC std_ss [wLENGTH_def,LENGTH,ARMi_def,ARMi2_def,R30_def,pcSET_def]
+  \\ SIMP_TAC (bool_ss++sep2_ss) [GSYM aligned_def,
+       SIMP_RULE std_ss [word_mul_n2w] (Q.SPECL [`x`,`1w`] aligned_MULT)]
+  \\ SIMP_TAC std_ss [addr32_ADD,addr32_n2w]
+  \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [WORD_ADD_COMM]))
+  \\ REPEAT STRIP_TAC 
+  \\ IMP_RES_TAC (GSYM (RW [GSYM aligned_def] addr32_addr30))
+  \\ ONCE_ASM_REWRITE_TAC []  
+  \\ NTAC 2 (Q.PAT_ASSUM `x = y` (fn th => ALL_TAC))
+  \\ ASM_REWRITE_TAC [addr30_addr32]);
+
+val SPEC_ARM_MODEL_INTRO_pcADD = store_thm("SPEC_ARM_MODEL_INTRO_pcSET",
+  ``ARM_PROG P [c] {} SEP_F {(Q,pcADD x)} ==>
+    !p:word32. SPEC ARM_MODEL (P,p) {([c],p)} (Q,p + addr32 x)``,
+  REWRITE_TAC [ARM_PROG_THM,ARM_MODEL_def,ARM_GPROG_def,GPROG_FALSE_POST]
+  \\ SIMP_TAC std_ss [SPEC_def,setAPP_CLAUSES,pcINC_def,pcADD_def,fix_pos_def,set_apply_CLAUSES]
+  \\ REWRITE_TAC [GPROG_def,ARMproc_def,ARM_MODEL_def]  
+  \\ REWRITE_TAC [GSYM ARMproc_def,GSYM ARM_MODEL_def,RUN_ARM_MODEL_LEMMA]  
+  \\ REWRITE_TAC [GPROG_DISJ_CLAUSES]
+  \\ REWRITE_TAC [ARMpc_def,ARMpc2_def]
+  \\ SIMP_TAC (std_ss++sep2_ss) [mpool_LEMMA,GSYM RUN_MOVE_COND]
+  \\ SIMP_TAC std_ss [wLENGTH_def,LENGTH,ARMi_def,ARMi2_def,R30_def,pcSET_def]
+  \\ SIMP_TAC (bool_ss++sep2_ss) [GSYM aligned_def,
+       SIMP_RULE std_ss [word_mul_n2w] (Q.SPECL [`x`,`1w`] aligned_MULT)]
+  \\ SIMP_TAC std_ss [addr32_ADD,addr32_n2w]
+  \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [WORD_ADD_COMM]))
+  \\ REPEAT STRIP_TAC 
+  \\ IMP_RES_TAC (GSYM (RW [GSYM aligned_def] addr32_addr30))
+  \\ ONCE_ASM_REWRITE_TAC []  
+  \\ SIMP_TAC (bool_ss++sep2_ss) [GSYM addr32_ADD,aligned_addr32]
+  \\ Q.PAT_ASSUM `z = y` (fn th => ALL_TAC)
+  \\ ASM_REWRITE_TAC [addr30_addr32,addr32_ADD]);
+
+val ARM_SPEC2_INTRO1 = store_thm("ARM_SPEC2_INTRO1",
+  ``ARM_PROG2 c P [cmd] Q {} ==> ARM_SPEC2 c (P,p) [cmd] (Q,p+4w)``,
+  SIMP_TAC bool_ss [ARM_PROG2_def,ARM_SPEC2_def,SPEC_ARM_MODEL_INTRO]);  
+
+val ARM_SPEC2_INTRO2 = store_thm("ARM_SPEC2_INTRO2",
+  ``ARM_PROG2 c P [cmd] SEP_F {(Q,pcSET (addr30 x))} ==> 
+    ARM_SPEC2 c (P * cond (x && 3w = 0w),p) [cmd] (Q,x)``,
+  SIMP_TAC bool_ss [ARM_PROG2_def,ARM_SPEC2_def,SPEC_ARM_MODEL_INTRO]
+  \\ SIMP_TAC bool_ss [SPEC_ARM_MODEL_INTRO_pcSET]);  
+
+val ARM_SPEC2_INTRO3 = store_thm("ARM_SPEC2_INTRO3",
+  ``ARM_PROG2 c P [cmd] SEP_F {(Q,pcADD x)} ==>
+    ARM_SPEC2 c (P,p) [cmd] (Q,p + addr32 x)``,
+  SIMP_TAC bool_ss [ARM_PROG2_def,ARM_SPEC2_def,SPEC_ARM_MODEL_INTRO]
+  \\ SIMP_TAC bool_ss [SPEC_ARM_MODEL_INTRO_pcADD]);  
+
+val SPEC_ARM_MODEL_EMPTY = store_thm("SPEC_ARM_MODEL_EMPTY",
+  ``!p. SPEC ARM_MODEL (emp,p) {} (emp,p)``,
+  REWRITE_TAC [ARM_MODEL_def,SPEC_def,set_apply_CLAUSES]
+  \\ REWRITE_TAC [GPROG_def,ARM_MODEL_def,fix_pos_def,GPROG_DISJ_CLAUSES]
+  \\ REWRITE_TAC [emp_STAR,RUN_def,rel_sequence_def]
+  \\ SIMP_TAC std_ss [GSYM ARM_MODEL_def,ARM_MODEL_IN_PROCESSORS,RES_FORALL]
+  \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `0` \\ ASM_REWRITE_TAC []);
+
+val SPEC_ARM_MODEL_EQ_ARM_RUN = store_thm("SPEC_ARM_MODEL_EQ_ARM_RUN",
+  ``SPEC ARM_MODEL (P,p) {([C],c)} (Q,q) =
+    ARM_RUN (P * R 15w p * M (addr30 c) C * one (Undef F) * cond (p && 3w = 0w)) 
+            (Q * R 15w q * M (addr30 c) C * one (Undef F) * cond (q && 3w = 0w))``,
+  REWRITE_TAC [SPEC_def,GPROG_def,ARM_MODEL_def]
+  \\ REWRITE_TAC [GSYM ARM_MODEL_def,ARM_RUN_def,RUN_ARM_MODEL_LEMMA]
+  \\ REWRITE_TAC [GPROG_DISJ_CLAUSES,set_apply_CLAUSES,fix_pos_def,ARMpc2_def]
+  \\ REWRITE_TAC [mpool_LEMMA,ARMi2_def,ARMi_def]  
+  \\ SIMP_TAC (bool_ss++star_ss) []);
+
 
 
 val _ = export_theory();

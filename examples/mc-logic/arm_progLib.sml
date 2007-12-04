@@ -11,7 +11,7 @@ struct
 open HolKernel boolLib bossLib;
 open listTheory wordsTheory pred_setTheory arithmeticTheory pairTheory wordsLib;
 open set_sepTheory progTheory arm_progTheory arm_instTheory set_sepLib;
-open instructionSyntax;
+open instructionSyntax addressTheory;
  
 (*
   quietdec := false;
@@ -580,7 +580,7 @@ fun INST_LDM_STM do_eval th = let
            find_term (can (match_term ``reg_values (xs:(word4 # word32) list)``)) (concl th) handle e => T
   val th = if do_eval then RW [RW [GSYM (EVAL ``addr32 x``)] (EVAL tm),ms_def,STAR_ASSOC,emp_STAR] th else th
   val tm = find_term (can (match_term ``reg_bitmap x``)) (concl th) handle e => T
-  val th = if do_eval then RW [EVAL tm,list_RD_def,ZIP,list_WR_def] th else th
+  val th = if do_eval then RW [EVAL tm,list_read_def,ZIP,list_update_def] th else th
   val th = RW [WORD_SUB_ADD,WORD_SUB_RZERO] th
   val th = SIMP_RULE arith_ss [GSYM WORD_SUB_PLUS,word_add_n2w,seq_addresses_def,
               WORD_SUB_RZERO,ADDR_MODE4_CMD_def,MAP,FST,SND,xR_list_def,STAR_ASSOC,emp_STAR] th
