@@ -63,6 +63,11 @@ fun SUBST_2_RULE (lem1,lem2) =
                       RAND_CONV (PABS_CONV (RATOR_CONV
                                      (REWRITE_CONV [Once lem2]))))));
 
+(* CONV_RULE (RHS_CONV (PABS_CONV (
+          RAND_CONV (PABS_CONV (RATOR_CONV
+                       (REWRITE_CONV [Once lem2])))))) th3
+*)
+
 (* Normalize multiplication expressions *)
 
 fun norm_mult (th0,th1) (d0,d1) exp =
@@ -157,7 +162,7 @@ fun K_Normalize exp =
                                  (GEN_ALL C_LET)
                          val t2 = rhs (concl (SPECL [t1, M] th))
                          (* val theta = match_type (type_of exp) (type_of t2) *)
-                         val th2 = prove (mk_eq(exp,t2), 
+                         val th2 = prove (mk_eq(exp,t2), (* set_goal([],mk_eq(exp,t2)) *) 
 					  SIMP_TAC bool_ss [LET_THM, C_def])
                      in
 			 PBETA_RULE th2

@@ -34,46 +34,15 @@ val field_mult_aux_def =
         in
           field_mult_aux (x',y',acc')`;
 
-val (def1, ind1) =  f_compile_one field_mult_aux_def;
-
-(*
-` field_mult_aux' (r0,r1,r2) =
-       (if r1 = 0w then
-          r2
-        else
-          (let m1 = r1 in
-           let m0 = r0 in
-           let r1' = r0 in
-           let r0' = field_add (r0,r1') in
-           let r3 = r0' in
-           let r1'' = m1 in
-           let r0'' = m0 in
-           let r4 = r1'' >>> 1 in
-           let r1''' = r1'' && 1w in
-             (if r1''' = 0w then
-                (let r0''' = r3 in
-                 let r1'''' = r4 in
-                   field_mult_aux' (r0''',r1'''',r2))
-              else
-                (let r5 = r0'' in
-                 let r0''' = r2 in
-                 let r1'''' = r5 in
-                 let r0'''' = field_add (r0''',r1'''') in
-                 let r5' = r0'''' in
-                 let r0''''' = r3 in
-                 let r1''''' = r4 in
-                 let r2' = r5' in
-                   field_mult_aux' (r0''''',r1''''',r2')))))
-`
-*)
-
 (* --------------------------------------------------------------------*)
 
 val field_mult_def = 
  Define
    `field_mult (x,y) = field_mult_aux (x,y,0w)`;
 
-val (def2, ind2) =  f_compile_one field_mult_def;
+val defs1 = [field_neg_def, field_add_def, field_sub_def, field_mult_aux_def, field_mult_def];
+
+val code1 =  pp_compile defs1;
 
 (* --------------------------------------------------------------------*)
 
@@ -88,11 +57,13 @@ val field_exp_aux_def =
         in
           field_exp_aux (x',n',acc')`;
 
-val (def3, ind3) =  f_compile_one field_exp_aux_def;
-
 (*
- `
- field_exp_aux' (r0,r1,r2) =
+val (def2, ind2) =  f_compile_one field_exp_aux_def;
+
+val defs2 = [field_neg_def, field_add_def, field_sub_def, field_mult_aux_def, field_mult_def, field_exp_aux_def, field_exp_aux_def];
+val code2 =  pp_compile defs2;
+
+ `field_exp_aux' (r0,r1,r2) =
         (if r1 = 0w then
            r2
          else

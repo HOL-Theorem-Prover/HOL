@@ -1,5 +1,5 @@
 
-structure compiler (* :> compiler *) =
+structure compiler :> compiler =
 struct
 
 (* for interactive use  
@@ -15,7 +15,6 @@ val _ = quietdec := false;
 *)
 
 open HolKernel Parse boolLib bossLib boolSyntax;
-
 open arm_compilerLib;
 
 val _ = numLib.prefer_num();
@@ -25,6 +24,8 @@ val _ = Globals.priming := NONE;
 (*---------------------------------------------------------------------------*)
 (* Interface Functions.                                                      *)
 (*---------------------------------------------------------------------------*)
+
+(* val arm_compile = arm_compilerLib.arm_compile; *)
 
 val normalize = Normal.normalize;
 val SSA_RULE = Normal.SSA_RULE;
@@ -36,7 +37,6 @@ val close_all = closure.close_all;
 val closure_convert = closure.closure_convert;
 val parallel_move = regAlloc.parallel_move;
 val reg_alloc = regAlloc.reg_alloc;
-val callerSave = funcCall.callerSave;
 (*
 val printSAL = SALGen.printSAL;
 val certified_gen = SALGen.certified_gen;
@@ -45,6 +45,8 @@ val certified_gen = SALGen.certified_gen;
 (*---------------------------------------------------------------------------*)
 (* Auxiliary functions.                                                      *)
 (*---------------------------------------------------------------------------*)
+
+structure M = Binarymap;
 
 fun resultOf (PASS x) = x;
 
@@ -89,7 +91,7 @@ fun convert1 (env,def) =
   let val def1 = Normal.pre_process def
       val def2 = if !cond_lift then refine.lift_cond def1 else def1
   in
-      (Normal.SSA_RULE o refine.refine_const o normalize) def2
+      (Normal.SSA_RULE o refine.refine_const o normalize (* o refine.refine_const *)) def2
   end;
 
 (* All previous, plus inlining and optimizations                             *)
@@ -185,12 +187,27 @@ val pass3 = complist convert3
 (*  1. enforce caller-save-style function calls                              *)
 (*  2. tune the normal forms for the back-end                                *)  
 
+
+(*---------------------------------------------------------------------------*)
+(* Replace function f with f' when f is called.                              *)
+(*---------------------------------------------------------------------------*)
+
+val renamed = ref (M.mkDict regAlloc.tvarOrder)  (* Format: [function's old name |-> function's new name] *)
+
+fun renamed_rules () =
+    List.foldl
+      (fn ((f,f'),ys) => (f |-> f') :: ys)
+      [] (M.listItems (!renamed));
+
+val only_one = ref false;        
+
 (*---------------------------------------------------------------------------*)
 (* Front end.                                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun f_compile defs = 
+fun f_compile_basic defs flag = (* the flag indicates whether we start all over *)
  let
+  val _ = if flag then (renamed := M.mkDict regAlloc.tvarOrder) else ()
 
   fun redefine def =
    let 
@@ -203,11 +220,11 @@ fun f_compile defs =
      val cvar = mk_var(new_name, ctype)
 
      val vtm = subst [fname |-> cvar] (concl def1)
+     val vtm1 = subst (renamed_rules ()) vtm    (* rename the function name in function application *)
      (* val _ = HOL_MESG "redefinition" *)
-     val PASS (defn2,tcs) = TotalDefn.std_apiDefine (new_name,vtm)
+     val PASS (defn2,tcs) = TotalDefn.std_apiDefine (new_name,vtm1)
      val def2 = LIST_CONJ (Defn.eqns_of defn2)
      val ind = Defn.ind_of defn2
-    
      val (def', ind') = 
         let val lem = prove(mk_eq(mk_const(new_name, ctype), fname), 
                  REWRITE_TAC [FUN_EQ_THM] THEN
@@ -217,9 +234,12 @@ fun f_compile defs =
                    SOME th => ONCE_REWRITE_RULE [lem] th
                  | NONE => TRUTH
         in (def1, ind2) end
-        handle _ => (def2,  case ind of 
-                               SOME th => th
-                             | NONE => TRUTH)
+        handle _ => 
+          let val _ = renamed := M.insert(!renamed, fname, mk_const(new_name, ctype))
+          in  (def2,  case ind of 
+                         SOME th => th
+                       | NONE => TRUTH)
+          end
    in
      (def',ind')
    end;
@@ -231,7 +251,8 @@ fun f_compile defs =
      |  FAIL x => FAIL x
  end
 
-fun f_compile_one def = hd (resultOf (f_compile [def]));
+fun f_compile_one def = hd (resultOf (f_compile_basic [def] false));
+fun f_compile defs = f_compile_basic defs true;
 
 (*---------------------------------------------------------------------------*)
 (* Join the front end with Magnus' backend                                   *)
@@ -239,19 +260,20 @@ fun f_compile_one def = hd (resultOf (f_compile [def]));
 
 val style = ref (InLineCode);
 
+fun b_compile_one (def, ind) = 
+  let 
+    val (th,strs) = arm_compilerLib.arm_compile (SPEC_ALL def) ind (!style)
+    val code = fetch "-" (#1 (dest_const (#1 (head def))) ^ "_code1_def")
+  in  (th, code)
+  end
+
 fun b_compile norms =
   let val _ = arm_compilerLib.abbrev_code := true
       val _ = arm_compilerLib.reset_compiled()
       val _ = optimise_code := true;
-
-      fun one_fun (def, ind) = 
-        let val (th,strs) = arm_compilerLib.arm_compile (SPEC_ALL def) ind (!style)
-            val code = fetch "-" (#1 (dest_const (#1 (head def))) ^ "_code1_def")
-        in  (th, code)
-        end
   in
     case norms of 
-         PASS defs => PASS (List.map one_fun defs)
+         PASS defs => PASS (List.map b_compile_one defs)
       |  FAIL x => FAIL x
   end
 
@@ -259,6 +281,7 @@ fun b_compile norms =
 (* End-to-end compiler.                                                      *)
 (*---------------------------------------------------------------------------*)
 
+val pp_compile_one = b_compile_one o f_compile_one;
 val pp_compile = b_compile o f_compile;
 
 (*---------------------------------------------------------------------------*)
