@@ -493,6 +493,16 @@ val ARM_STR = SYMBOLIC_EVAL_CONV LDR_STR_ss
  (cntxt [abbrev_mode2,``~(Rd = 15w:word4)``,``~(Rn = 15w:word4)``]
   ``enc (instruction$STR c b opt Rd Rn offset)``);
 
+val ARM_LDR_PC = SIMP_RULE (std_ss++PC_ss) []
+ (SYMBOLIC_EVAL_CONV LDR_STR_ss
+ (cntxt [abbrev_mode2,``Rn = 15w:word4``]
+  ``enc (instruction$LDR c b opt Rd Rn offset)``));
+
+val ARM_STR_PC = SIMP_RULE (std_ss++PC_ss) []
+ (SYMBOLIC_EVAL_CONV LDR_STR_ss
+ (cntxt [abbrev_mode2,``~(Rd = 15w:word4)``,``Rn = 15w:word4``]
+  ``enc (instruction$STR c b opt Rd Rn offset)``));
+
 (* ......................................................................... *)
 
 val SWP_ss =
@@ -771,6 +781,8 @@ val _ = save_thm("ARM_STR", ARM_STR);
 val _ = save_thm("ARM_LDM", ARM_LDM);
 val _ = save_thm("ARM_STM", ARM_STM);
 val _ = save_thm("ARM_SWP", ARM_SWP);
+val _ = save_thm("ARM_LDR_PC", ARM_LDR_PC);
+val _ = save_thm("ARM_STR_PC", ARM_STR_PC);
 
 val _ = save_thm("ARM_MRS",ARM_MRS);
 val _ = save_thm("ARM_MSR",ARM_MSR);
