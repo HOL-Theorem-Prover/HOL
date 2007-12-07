@@ -60,6 +60,7 @@ sig
   val assoc1        : ''a -> (''a * 'b) list -> (''a * 'b) option
   val assoc2        : ''a -> ('b * ''a) list -> ('b * ''a) option
   val appi          : (int -> 'a -> unit) -> 'a list -> unit
+  val mapi          : (int -> 'a -> 'b) -> 'a list -> 'b list
 
   type ('a,'b) subst = {redex:'a, residue:'b} list
   val subst_assoc   : ('a -> bool) -> ('a,'b)subst -> 'b option
