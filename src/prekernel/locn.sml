@@ -25,7 +25,7 @@ struct
             LocA(row+r,c)
     | rel_to_abs row col locp
       = locp
-      
+
   datatype locn = Loc of locn_point * locn_point (* start and end character *)
                 | Loc_None                       (* compiler-generated *)
                 | Loc_Unknown
@@ -72,6 +72,22 @@ struct
       = "in unknown location"
     | toString (Loc_Near(locn))
       = "roughly "^toString locn
+
+  fun toShortString loc = let
+    fun p2str lp =
+        case lp of
+          LocP(f,l,c) => "f"^Int.toString f^":"^Int.toString l^":"^
+                         Int.toString c
+        | LocA(l,c) => Int.toString (l+1)^":"^ Int.toString (c+1)
+        | LocPBeg i => "f"^Int.toString i
+        | LocPEnd i => "f"^Int.toString i
+  in
+    case loc of
+      Loc(p1,p2) => p2str p1 ^ "-" ^ p2str p2
+    | Loc_None => "<no loc>"
+    | Loc_Unknown => "<??>"
+    | Loc_Near loc => "~" ^ toShortString loc
+  end
 
   fun locp p = Loc(p,p)
 

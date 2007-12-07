@@ -11,7 +11,7 @@ signature locn = sig
 
   val locn_point_toString : locn_point -> string
 
-  (* add a line,char pair to a relative location point *)                                          
+  (* add a line,char pair to a relative location point *)
   val rel_to_abs : int -> int -> locn_point -> locn_point
 
   (* a type representing a location (region) in the source file *)
@@ -31,6 +31,7 @@ signature locn = sig
       claim the new token is near where the old one was *)
 
   val toString : locn -> string
+  val toShortString : locn -> string (* less verbose form *)
 
   (* single-point region *)
   val locp : locn_point -> locn
