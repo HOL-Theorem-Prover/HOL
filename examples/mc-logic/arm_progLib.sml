@@ -89,7 +89,8 @@ val n2w_x_eq_0w = prove(
   ONCE_REWRITE_TAC [GSYM n2w_mod] \\ SIMP_TAC (std_ss++SIZES_ss) []);
 
 val armINST_ss = rewrites 
-  [SND,FST,ADDR_MODE1_VAL_def,ADDR_MODE1_CMD_def,ADDR_MODE2_CASES',PASS_CASES,emp_STAR];
+  [SND,FST,ADDR_MODE1_VAL_def,ADDR_MODE1_CMD_def,ADDR_MODE2_CASES',
+   PASS_CASES,emp_STAR,F_STAR,emp_STAR,SEP_cond_CLAUSES,addr30_n2w];
 
 val pcINC_ss = rewrites 
   [pcADD_pcADD,pcADD_pcINC,pcINC_pcADD,pcINC_pcINC,pcADD_0,pcINC_0,pcSET_ABSORB];
@@ -341,7 +342,7 @@ fun AUTO_COMPOSE th1 th2 = let
     in if is_SEP_HIDE x then (y,NONE) else (x,SOME y) end
   val posts = (map extract_pre_post_part o list_dest_STAR o post1_ARM_PROG o concl) th1
   val pres  = (map extract_pre_post_part o list_dest_STAR o pre_ARM_PROG o concl) th2
-  fun is_R_or_M tm = mem ((fst o dest_const o fst o dest_comb) tm) ["R","M"] handle e => false 
+  fun is_R_or_M tm = mem ((fst o dest_const o fst o dest_comb) tm) ["R","M","byte"] handle e => false 
   val posts = filter (is_R_or_M o fst) posts
   val pres = filter (is_R_or_M o fst) pres
   (* match individual post-pre pairs *)
@@ -387,8 +388,18 @@ fun AUTO_COMPOSE th1 th2 = let
            val pres = map (apply_opt (fix (i2,j2))) pres
            val q = apply_opt (fix (i1,j1)) q
            in compose th1 th2 posts pres [] (q::matched_pairs) end end
-  (* perform composition *)
+  (* find and equalise status bits *)
+  fun is_S (tm,_) = mem ((fst o dest_const) tm) ["S"] handle e => false 
+  fun equalise_status thA thB = let
+    fun f g = snd o hd o filter is_S o map extract_pre_post_part o list_dest_STAR o g o concl
+    fun h NONE NONE = (thA,thB)
+      | h (SOME x) NONE = (AUTO_HIDE_POST1 [`S`] thA,thB)
+      | h NONE (SOME x) = (thA,AUTO_HIDE_PRE [`S`] thB)
+      | h (SOME x) (SOME y) = let val (i,j) = match_term y x in (thA,INST i (INST_TYPE j thB)) end
+    in h (f post1_ARM_PROG thA) (f pre_ARM_PROG thB) end
+  (* perform composition substitutions *)
   val (thA,thB) = compose th1 th2 posts pres [] []
+  val (thA,thB) = equalise_status thA thB
   val th = FRAME_COMPOSE thA thB
   (* postprocessing *)
   val th = RW [GSYM R30_def,GSYM M30_def,GSYM addr32_ADD,GSYM addr32_SUB] th
@@ -680,9 +691,10 @@ fun mk_QINST_string i name1 name2 indent = let
 
 (* construct code for spec specialisation *)
 
-val code_from_basic_ARM_PROG2 = 
-  snd o dest_comb o snd o dest_comb o fst o dest_comb o 
-  snd o dest_comb o fst o dest_comb o fst o dest_comb;
+val car = fst o dest_comb;
+val cdr = snd o dest_comb;
+
+val code_from_basic_ARM_PROG2 = (cdr o cdr o car o cdr o car o car o car);
 
 val basic_match_list = 
   [(arm_ADC1,"arm_ADC1"),(arm_ADC2,"arm_ADC2"),(arm_ADC2',"arm_ADC2'"),(arm_ADC2'',"arm_ADC2''"),(arm_ADC3,"arm_ADC3"),
@@ -713,6 +725,7 @@ val basic_match_list =
 val match_list = 
   [(arm_MOV_PC_GENERAL,"arm_MOV_PC_GENERAL"),(arm_B2,"arm_B2"),(arm_LDR_PC,"arm_LDR_PC"),
    (arm_SWP2_NONALIGNED,"arm_SWP2_NONALIGNED"),(arm_SWP3_NONALIGNED,"arm_SWP3_NONALIGNED"),
+   (arm_LDR_PC_NONALIGNED,"arm_LDR_PC_NONALIGNED"),
    (arm_LDR1_NONALIGNED,"arm_LDR1_NONALIGNED"),(arm_LDR_NONALIGNED,"arm_LDR_NONALIGNED"),
    (arm_STR_NONALIGNED,"arm_STR_NONALIGNED")] @ basic_match_list;
 
@@ -804,18 +817,23 @@ fun mk_arm_prog2_str_STM_LDM inst_str suffix select_seq = let
              subst_to_string_no_types j "  " ^ " " ^ th_str ^ ")"
   in (th,str) end
 
+fun replace_char c str = 
+  String.translate (fn x => if x = c then str else implode [x]);
+
 fun mk_arm_prog2_str inst_str suffix select_seq = let
-  val tm = mk_instruction inst_str
+  val tm = mk_instruction inst_str 
+           handle e => decode_instruction_hex (replace_char #" " "" inst_str) 
   fun extract_am1 pat tm = 
     (snd o dest_comb o fst o dest_comb o TERM_RW [GSYM ADDR_MODE1_CMD_def] o get_term pat) tm
-  val ii = [``a_mode:abbrev_addr1``|-> extract_am1 ``Dp_immediate m n`` tm] handle e =>
+  val ii = [``a_mode:abbrev_addr1``|-> extract_am1 ``Dp_immediate 0w n`` tm] handle e =>
+           [``a_mode:abbrev_addr1``|-> extract_am1 ``Dp_immediate m n`` tm] handle e =>
            [``a_mode:abbrev_addr1``|-> extract_am1 ``Dp_shift_immediate m n`` tm] handle e => [];
   val fix_ii = TERM_RW [ADDR_MODE1_CMD_def] o subst ii
   fun filt (th,name) = let
     val tm' = code_from_basic_ARM_PROG2 (concl th)
     val tm' = fix_ii tm'
     in can (match_term tm') tm end
-  val xs = filter filt (if select_seq then match_list_select_seq else match_list)
+  val xs = filter filt (if select_seq then match_list_select_seq else match_list)  
   val (th,name) = hd xs handle e => raise ERR "arm_str2prog" ("No match for: "^inst_str)
   val tm' = code_from_basic_ARM_PROG2 (concl th)
   val tm' = fix_ii tm'
@@ -837,16 +855,33 @@ fun mk_arm_prog2_str inst_str suffix select_seq = let
   val evals = evals @ list_get_term ``(n2w m) = ((n2w n):'qqq word)`` (concl th)
   val evals = evals @ list_get_term ``(w2n ((n2w n):'qqq word)):num`` (concl th)  
   val evals = evals @ list_get_term ``(sw2sw ((n2w n):'qqq word)):'zzz word`` (concl th)  
-  val th = RW (map EVAL evals) th
+  val evals = evals @ list_get_term ``IMMEDIATE (c:bool) (opn2:word12)`` (concl th)  
+  val evals = evals @ list_get_term ``x.Up`` (concl th)  
+  val evals = evals @ list_get_term ``x.Pre`` (concl th)  
+  val evals = evals @ list_get_term ``x.Wb`` (concl th)  
+  val th = RW (addr30_n2w::(map EVAL evals)) th
   val evals = evals @ list_get_term ``(n2w m) + (n2w n):'qqq word`` (concl th)
+  val evals = evals @ list_get_term ``(n2w m) - (n2w n):'qqq word`` (concl th)
+  val evals = evals @ list_get_term ``(n2w m) && 3w = 0w:'qqq word`` (concl th)
+  val th = RW (addr30_n2w::(map EVAL evals)) th
+  val evals = evals @ list_get_term ``(n2w (n DIV 4)):'qqq word`` (concl th)
   val th = RW (map EVAL evals) th
   val s = "EVAL ``" ^ list_to_string term_to_string_show_types evals "``, EVAL ``" ^ "``"
   val s = if evals = [] then "" else s
+  val th = SIMP_RULE (bool_ss++armINST_ss) [] th
   val str = "SIMP_RULE (bool_ss++armINST_ss) ["^s^"] (Q.INST "^ 
              subst_to_string_no_types i "  " ^ " " ^ name ^ ")"
   in (th,str) end handle e => mk_arm_prog2_str_STM_LDM inst_str suffix select_seq;
 
+
 (*
+val inst_str = "tst r1,#6"
+val inst_str = "e311020e"
+val select_seq = false
+val inst_str = "ldr r1, [pc, #124]"
+
+  val tm = mk_instruction inst_str handle e => decode_instruction_hex inst_str 
+
 string_to_prog_seq "ldr r1,[r2],#4 | ys" "2"
 val str = "ldr r1,[r2],#4 | ys"
 val suffix = "sdfg"
@@ -937,8 +972,8 @@ fun pad_strings [] = [] | pad_strings (x::xs) = let
 fun compose_progs_string init [] = (TRUTH,"")
   | compose_progs_string init strs = let
   val xs = pad_strings (map fst strs)
-  fun specs [] i = [] | specs (x::xs) i =
-    string_to_prog x (int_to_string i) :: specs xs (i+1)
+  fun specs [] i = [] 
+    | specs (x::xs) i = string_to_prog x (int_to_string i) :: specs xs (i+1)
   val xs = zip (zip (specs xs init) xs) (map snd strs)    
   fun unwrap (((th,s),n),true)  = (FST_PROG2 th, "FST_PROG2 ("^s^")",n) 
     | unwrap (((th,s),n),false) = (SND_PROG2 th, "SND_PROG2 ("^s^")",n) 
@@ -964,6 +999,7 @@ fun compose_progs_string init [] = (TRUTH,"")
 fun make_spec' counter strs = print ("\n\n"^ snd (compose_progs_string counter strs) ^"\n\n");
 fun make_spec counter strs = make_spec' counter (map (fn name => (name,true)) strs)
 
+
 (* -- term sorter - makes it easier to read pre and postconditions -- *)
 
 val term_sorter = let
@@ -976,8 +1012,6 @@ val term_sorter = let
       in if size(x) < 3 then "AA 0"^x else "AA "^x end 
     else term_to_string tm end
   in sort (curry (fn (tm1,tm2) => sep_to_string tm1 < sep_to_string tm2)) end
-
-val tm = ``R 1w x * R 7w j * M 5w u * R 2w i``
 
 val sort_conv = let
   fun part_sort_conv tm = let

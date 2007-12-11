@@ -807,9 +807,9 @@ val ARM_PROG_def  = Define `ARM_PROG  = PROG ARMproc`;
 val ARM_PROC_def  = Define `ARM_PROC P Q C = PROC ARMproc (R30 14w) P (Q * ~R 14w) C`;
 
 val ARM_PROG2_def = Define `
-  ARM_PROG2 c P cs (Q:'a ARMset -> bool) Z = 
-    ARM_PROG P cs {} Q Z /\ 
-    !x. ARM_PROG (S x * nPASS c x) cs {} ((S x):'a ARMset -> bool) {}`;
+  ARM_PROG2 c P cs C (Q:'a ARMset -> bool) Z = 
+    ARM_PROG P cs C Q Z /\ 
+    !x. ARM_PROG (S x * nPASS c x) cs C ((S x):'a ARMset -> bool) {}`;
 
 
 (* lemmas about mpool and msequence -------------------------------------------- *)
@@ -1142,6 +1142,28 @@ val M_NEQ_M = store_thm("M_NEQ_M",
   \\ FULL_SIMP_TAC bool_ss [addr32_NEQ_addr32,addr32_11]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [])
 
+val M_NEQ_M2 = store_thm("M_NEQ_M2",
+  ``!a x y. ~(x = y) ==> ~(M a x = M a y)``,
+  ONCE_REWRITE_TAC [FUN_EQ_THM]
+  \\ SIMP_TAC std_ss [M_def,byte_def,one_def,STAR_def,SPLIT_def]
+  \\ REWRITE_TAC [INSERT_UNION_EQ,UNION_EMPTY]
+  \\ REPEAT STRIP_TAC \\ CCONTR_TAC \\ FULL_SIMP_TAC bool_ss []
+  \\ Q.PAT_ASSUM `!x.b` (ASSUME_TAC o Q.SPEC `
+         {Mem (addr32 a + 3w) ((31 >< 24) (x:word32));
+          Mem (addr32 a + 2w) ((23 >< 16) x);
+          Mem (addr32 a + 1w) ((15 >< 8) x);
+          Mem (addr32 a + 0w) ((7 >< 0) x)}`)
+  \\ FULL_SIMP_TAC bool_ss [SET_EQ_SUBSET,INSERT_SUBSET,IN_INSERT,NOT_IN_EMPTY]
+  \\ SRW_TAC [] []
+  \\ Q.PAT_ASSUM `~(x = y)` ASSUME_TAC
+  \\ FULL_SIMP_TAC bool_ss [addr32_NEQ_addr32,addr32_11]
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) []
+  \\ METIS_TAC [concat_bytes]);
+
+val M_EQ_M = store_thm("M_EQ_M",
+  ``!a b x y. (M a x = M b y) = (a = b) /\ (x = y)``,
+  METIS_TAC [M_NEQ_M,M_NEQ_M2]);
+
 
 (* theorems for ARM_GPROG ------------------------------------------------------ *)
 
@@ -1322,6 +1344,32 @@ val ARM_PROG_HIDE_PRE_ms = store_thm("ARM_PROG_HIDE_PRE_ms",
     \\ `LENGTH (y::xs) = SUC n` by ASM_REWRITE_TAC [LENGTH]
     \\ METIS_TAC []]);
 
+val mset_SING = prove(
+  ``mset ARMi p ([y],g) = {M (g p) y}``,
+  ONCE_REWRITE_TAC [EXTENSION]
+  \\ SIMP_TAC std_ss [mset_def,GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [ARMi_def,LENGTH,DECIDE ``k<1=(k=0)``]  
+  THEN1 (Cases_on `x'` \\ FULL_SIMP_TAC std_ss [EL,HD,WORD_ADD_0])
+  \\ Q.EXISTS_TAC `(y,0)`  \\ SIMP_TAC std_ss [EL,HD,WORD_ADD_0]);
+
+val IMP_ARM_RUN_mpool = store_thm("IMP_ARM_RUN_mpool",
+  ``ARM_RUN ((M (f p) x * M (g p) y * P):'a ARMset -> bool) (M (f p) x * M (g p) y * Q) ==>
+    ((f p = g p) /\ (x = y) ==> ARM_RUN (M (f p) x * P) (M (f p) x * Q)) ==>
+    ARM_RUN (mpool ARMi p {([x],f);([y],g)} * P) 
+            (mpool ARMi p {([x],f);([y],g)} * Q)``,
+  `BIGUNION {mset ARMi p z | z IN {([x],f); ([y],g)}} = {M (f p) x; M (g p) y}` by 
+   (`{mset ARMi p z | z IN {([x],f); ([y],g)}} = {{M (f p) x}; {M (g p) y}}` by 
+       (ONCE_REWRITE_TAC [EXTENSION]
+        \\ SIMP_TAC std_ss [GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY]
+        \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
+        \\ ASM_SIMP_TAC std_ss [mset_SING] \\ METIS_TAC [mset_SING])
+    \\ ASM_REWRITE_TAC [BIGUNION_INSERT,INSERT_UNION_EQ,UNION_EMPTY,BIGUNION_EMPTY])        
+  \\ Cases_on `M (f p) x = M (g p) y`
+  \\ ASM_SIMP_TAC std_ss [INSERT_INSERT,BIGSTAR_ONE,mpool_def,GSYM M_EQ_M] 
+  \\ `~(M (f p) x IN {M (g p) y})` by ASM_SIMP_TAC bool_ss [IN_INSERT,NOT_IN_EMPTY]
+  \\ ASM_SIMP_TAC bool_ss [BIGSTAR_INSERT,BIGSTAR_ONE]);
+
 
 (* theorems for ARM_PROC ------------------------------------------------------- *)
 
@@ -1341,9 +1389,9 @@ val _ = save_thm("ARM_PROC_RECURSION",PROC_RECURSION);
 val ARM_SPEC2_def = Define `
   ARM_SPEC2 c (P,p) C (Q,q) =
     SPEC (ARM_MODEL :('a ARMel, 32, bool[32]) processor)
-      (P,p) {(C,p)} (Q,q) /\
+      (P,p) C (Q,q) /\
     !x. SPEC (ARM_MODEL :('a ARMel, 32, bool[32]) processor)
-        (S x * nPASS c x,p) {(C,p)} (S x,p + 4w)`;
+        (S x * nPASS c x,p) C (S x,p + 4w)`;
 
 val RUN_ARM_MODEL_LEMMA = prove(
   ``!P Q. RUN ARMproc P Q = RUN ARM_MODEL P Q``,
@@ -1438,18 +1486,18 @@ val SPEC_ARM_MODEL_INTRO_pcADD = store_thm("SPEC_ARM_MODEL_INTRO_pcSET",
   \\ ASM_REWRITE_TAC [addr30_addr32,addr32_ADD]);
 
 val ARM_SPEC2_INTRO1 = store_thm("ARM_SPEC2_INTRO1",
-  ``ARM_PROG2 c P [cmd] Q {} ==> ARM_SPEC2 c (P,p) [cmd] (Q,p+4w)``,
+  ``ARM_PROG2 c P [cmd] {} Q {} ==> ARM_SPEC2 c (P,p) {([cmd],p)} (Q,p+4w)``,
   SIMP_TAC bool_ss [ARM_PROG2_def,ARM_SPEC2_def,SPEC_ARM_MODEL_INTRO]);  
 
 val ARM_SPEC2_INTRO2 = store_thm("ARM_SPEC2_INTRO2",
-  ``ARM_PROG2 c P [cmd] SEP_F {(Q,pcSET (addr30 x))} ==> 
-    ARM_SPEC2 c (P * cond (x && 3w = 0w),p) [cmd] (Q,x)``,
+  ``ARM_PROG2 c P [cmd] {} SEP_F {(Q,pcSET (addr30 x))} ==> 
+    ARM_SPEC2 c (P * cond (x && 3w = 0w),p) {([cmd],p)} (Q,x)``,
   SIMP_TAC bool_ss [ARM_PROG2_def,ARM_SPEC2_def,SPEC_ARM_MODEL_INTRO]
   \\ SIMP_TAC bool_ss [SPEC_ARM_MODEL_INTRO_pcSET]);  
 
 val ARM_SPEC2_INTRO3 = store_thm("ARM_SPEC2_INTRO3",
-  ``ARM_PROG2 c P [cmd] SEP_F {(Q,pcADD x)} ==>
-    ARM_SPEC2 c (P,p) [cmd] (Q,p + addr32 x)``,
+  ``ARM_PROG2 c P [cmd] {} SEP_F {(Q,pcADD x)} ==>
+    ARM_SPEC2 c (P,p) {([cmd],p)} (Q,p + addr32 x)``,
   SIMP_TAC bool_ss [ARM_PROG2_def,ARM_SPEC2_def,SPEC_ARM_MODEL_INTRO]
   \\ SIMP_TAC bool_ss [SPEC_ARM_MODEL_INTRO_pcADD]);  
 
