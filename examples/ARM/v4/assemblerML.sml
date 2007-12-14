@@ -418,9 +418,11 @@ in
     | _ => raise Data.Parse "Not an instruction";
 end;
 
+val armErr = ref TextIO.stdErr;
+
 fun invoke lexstream = let
   fun print_error (s,i:int,_) =
-      TextIO.output(TextIO.stdErr, Int.toString i ^ ": " ^ s ^ "\n")
+      TextIO.output(!armErr, Int.toString i ^ ": " ^ s ^ "\n")
 in
   #1 (armParser.parse(0,lexstream,print_error,()))
 end;
