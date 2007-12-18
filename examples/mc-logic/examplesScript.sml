@@ -28,6 +28,102 @@ val EQ_IMP_IMP = METIS_PROVE [] ``(x=y) ==> x ==> y``;
 
 
 (* ----------------------------------------------------------------------------- *)
+(* Theorems about context switches used by the compiler in arm_compilerLib.sml   *)
+(* ----------------------------------------------------------------------------- *)
+
+val ENCLOSE_STR_LDR_PC = save_thm("ENCLOSE_STR_LDR_PC",let
+  val assum = ASSUME
+    ``ARM_PROG (P * R30 a x * ~R 14w * ~S) code c ((Q * R30 a x * ~R 14w * ~S):'a ARMset -> bool) {}``
+  val th = (*  str r14,[a,#-4]!  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (4w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := T; Up := F; Wb := T|>`,`a`|->`14w`,`b`|->`a`,`imm`|->`4w`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1`] arm_STR_NONALIGNED))
+  val th = ALIGN_VARS ["y1"] (AUTO_HIDE_STATUS th)
+  val th = AUTO_HIDE_POST1 [`R 14w`] th
+  val th = RW [WORD_ADD_SUB] (Q.INST [`y1`|->`x+1w`,`x1`|->`addr32 p`] th)
+  val th = FRAME_COMPOSE th assum  
+  val th1 = AUTO_HIDE_PRE [`M x`] th
+  val th = (*  ldr r15,[a], #4  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (4w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := F; Up := T; Wb := T|>`,`imm`|->`1w`,`x`|->`x1`,`y`|->`y1`] arm_LDR_PC))
+  val th = RW [ADDR_MODE2_ADDR_def,ADDR_MODE2_WB_def] th
+  val th = RW [EVAL ``<|Pre := F; Up := T; Wb := T|>.Pre``] th
+  val th = RW [EVAL ``<|Pre := F; Up := T; Wb := T|>.Up``] th
+  val th = RW [EVAL ``<|Pre := F; Up := T; Wb := T|>.Wb``] th
+  val th = RW [EVAL ``(w2w (1w:word8) << 2):word12``,EVAL ``w2w (1w :word8) :word30``] th
+  val th = ALIGN_VARS ["y1"] (AUTO_HIDE_STATUS th)
+  val th = RW [WORD_ADD_SUB] (Q.INST [`y1`|->`p`,`x1`|->`x`] th)
+  val th = FRAME_COMPOSE th1 th    
+  val th = AUTO_HIDE_POST [`M x`] th
+  val th = foldl (uncurry MOVE_POST) th [`R30 a`,`R 14w`,`M x`,`S`]  
+  val th = foldl (uncurry MOVE_PRE) th [`R30 a`,`R 14w`,`M x`,`S`]  
+  val th = DISCH_ALL (RW [GSYM R30_def] th)
+  in th end);  
+
+val HIDE1_xR_list = prove(
+  ``ARM_PROG (P:'a ARMset -> bool) 
+               code c (Q * xR_list (MAP (\x. (FST x, SOME (SND x))) xs)) Z ==>
+    ARM_PROG P code c (Q * xR_list (MAP (\x. (FST x, NONE)) xs)) Z``,
+  (MATCH_MP_TAC o GEN_ALL o RW [GSYM AND_IMP_INTRO] o RW1 [CONJ_COMM] o 
+   RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH o SPEC_ALL)
+       ARM_PROG_PART_WEAKEN_POST1
+  \\ Induct_on `xs` \\ REWRITE_TAC [MAP,SEP_IMP_REFL]
+  \\ Cases \\ SIMP_TAC std_ss [MAP,xR_list_def]
+  \\ MATCH_MP_TAC SEP_IMP_STAR \\ ASM_REWRITE_TAC []
+  \\ SIMP_TAC std_ss [SEP_HIDE_THM,SEP_IMP_def,SEP_EXISTS] \\ METIS_TAC []);
+
+val ENCLOSE_STM_LDM = save_thm("ENCLOSE_STM_LDM",let
+  val assum = ASSUME
+    ``ARM_PROG (P * R30 a x * xR_list (MAP (\x. (FST x,NONE)) (xs:(word4 # word32) list)) * ~R 14w * ~S) 
+        code c ((Q * R30 a x * xR_list (MAP (\x. (FST x,NONE)) xs) * ~R 14w * ~S):'a ARMset -> bool) {}``
+  val th = Q.INST [`c_flag`|->`AL`,`a_mode`|->`am4_DB T`] arm_STM_R14
+  val th = AUTO_HIDE_STATUS (FST_PROG2 (RW [PASS_CASES] th))
+  val th = RW [ADDR_MODE4_ADDR_def,ADDR_MODE4_ADDR'_def,ADDR_MODE4_WB'_def,ADDR_MODE4_wb_def,ADDR_MODE4_WB_def,ADDR_MODE4_UP_def,LENGTH] th
+  val th = Q.INST [`x`|->`x + n2w (SUC (LENGTH (xs:(word4 # word32) list)))`] th
+  val th = RW [WORD_ADD_SUB] th
+  val th = MOVE_STAR_RULE `a*x*mm*ss` `a*mm*ss*x` th
+  val th = RW [blank_ms_EQ_blank] th
+  val th = MATCH_MP HIDE1_xR_list th
+  val th = SIMP_RULE std_ss [xR_list_def,MAP,FST,SND,STAR_ASSOC] th
+  val th1 = FRAME_COMPOSE th assum
+  val th = Q.INST [`c_flag`|->`AL`,`a_mode`|->`am4_IA T`] arm_LDM_PC
+  val th = AUTO_HIDE_STATUS (FST_PROG2 (RW [PASS_CASES] th))
+  val th = RW [ADDR_MODE4_ADDR_def,ADDR_MODE4_ADDR'_def,ADDR_MODE4_WB'_def,ADDR_MODE4_wb_def,ADDR_MODE4_WB_def,ADDR_MODE4_UP_def,LENGTH] th
+  val th = MOVE_STAR_RULE `a*x*mm*ss` `a*mm*ss*x` th
+  val th = RW [blank_ms_EQ_blank] th
+  val th = FRAME_COMPOSE th1 th
+  val th = MOVE_POST `ms x` th
+  val th = RW [ADDR_MODE4_CMD_def] th
+  val th = APP_PART_WEAKEN th 
+    `blank_ms x (LENGTH (reg_values ((15w:word4,addr32 p)::xs)))`
+    (REWRITE_TAC [SEP_IMP_ms_blank_ms])
+  val th = RW [blank_ms_EQ_blank,LENGTH_reg_values,LENGTH] th
+  val th = foldl (uncurry MOVE_POST) th [`R30 a`,`xR_list`,`R 14w`,`blank_ms x`,`S`]  
+  val th = foldl (uncurry MOVE_PRE) th [`R30 a`,`xR_list`,`R 14w`,`blank_ms x`,`S`]  
+  val th = DISCH_ALL (RW [GSYM R30_def] th)
+  in th end);
+
+val ENCLOSE_STACK_ALTER_LEMMA = prove(
+  ``!x n. addr32 x + w2w ((n2w (4 * n)):word8) = addr32 (x + n2w (n MOD 64))``,
+  Cases_word \\ SIMP_TAC (arith_ss++SIZES_ss) 
+    [addr32_n2w,word_add_n2w,word_mul_n2w,w2w_def,LEFT_ADD_DISTRIB,w2n_n2w]
+  \\ SIMP_TAC arith_ss [MOD_COMMON_FACTOR]);
+
+val ENCLOSE_STACK_ALTER = save_thm("ENCLOSE_STACK_ALTER",let
+  val assum = ASSUME
+    ``ARM_PROG (P * R30 13w sp * ~S) code c ((Q * R30 13w sp * ~S):'a ARMset -> bool) {}``
+  val th = (*  sub sp,sp,#y  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (12w :word8) :word32)``] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`a`|->`13w`,`a_mode`|->`Imm y`,`x`|->`sp`] arm_SUB1))
+  val th = AUTO_HIDE_STATUS th
+  val th = RW [WORD_ADD_SUB] (Q.INST [`sp`|->`sp + w2w (y:word8)`] th)
+  val th = ALIGN_VARS ["sp"] th
+  val th1 = FRAME_COMPOSE th assum    
+  val th = (*  add sp,sp,#y  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (12w :word8) :word32)``] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`a`|->`13w`,`a_mode`|->`Imm y`,`x`|->`sp`] arm_ADD1))
+  val th = AUTO_HIDE_STATUS th
+  val th = ALIGN_VARS ["sp"] th
+  val th = FRAME_COMPOSE th1 th
+  val th = MOVE_PRE `S` (MOVE_PRE `R 13w` th)
+  val th = MOVE_POST1 `S` (MOVE_POST1 `R 13w` th)  
+  val th = Q.INST [`y`|->`n2w (4 * n)`] th
+  val th = RW [GSYM R30_def,ENCLOSE_STACK_ALTER_LEMMA] th
+  in DISCH_ALL th end);
+
+
+(* ----------------------------------------------------------------------------- *)
 (* Specialising basic instruction specifications                                 *)
 (* ----------------------------------------------------------------------------- *)
 

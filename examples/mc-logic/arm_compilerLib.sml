@@ -10,7 +10,7 @@ struct
  
 open HolKernel boolLib bossLib Parse;
 open listTheory wordsTheory pred_setTheory arithmeticTheory pairTheory wordsLib markerTheory;
-open set_sepTheory progTheory arm_progTheory arm_instTheory set_sepLib arm_progLib addressTheory;
+open set_sepTheory progTheory arm_progTheory arm_instTheory set_sepLib arm_progLib addressTheory examplesTheory;
  
 (*
   quietdec := false;
@@ -99,7 +99,7 @@ fun find_std_name_subst tm = let
     in ([subst],[subst_str]) end 
   else if fst (dest_const x) = "R30" andalso y = ``13w:word4`` then 
        ([z|->``sp:word30``],["`"^ z_str ^"`|->`sp`"])
-  else if fst (dest_const x) = "seq" then let
+  else if fst (dest_const x) = "heap" then let
     val s = ((fst o dest_var) y) ^ "s"
     in ([z |-> mk_var(s,type_of z)],["`"^z_str^"`|->`"^s^"`"]) end        
   else let
@@ -184,43 +184,18 @@ fun ABBREV_STATUS prefix th = let
   in th end
 
 (*
-fun ABBREV_STATUS th = let
-  val tm' = ``S (sN,sZ,sC,sV):'a ARMset -> bool``
-  val f = can (match_term tm') 
-  val tm = (find_term f o cdr o concl o RW1 [ARM_PROG_EXTRACT_POST]) th
-  val _ = if tm = tm' then hd [] else ()
-  fun t {redex = r , residue = r'} = ((fst o dest_var) r,r')
-  val i = (map t o fst o match_term tm') tm
-  fun get s = let 
-    val t = snd (hd (filter (fn x => fst x = s) i))  
-    in ASSUME (mk_eq(mk_var(prefix^s,type_of t),t)) end 
-    handle e => REFL (mk_var(s,``:bool``))
-  fun MAKE_PAIR th1 th2 = RW [GSYM PAIR_EQ] (CONJ th1 th2)
-  val th2 = MAKE_PAIR (get "sC") (get "sV")
-  val th2 = MAKE_PAIR (get "sZ") th2
-  val th2 = MAKE_PAIR (get "sN") th2
-  val th2 = SYM th2
-  val cc = UNBETA_CONV ((cdr o car o concl) th2) THENC RAND_CONV (fn x => th2) THENC BETA_CONV
-  in CONV_RULE cc th end handle e => th;
-
-fun ABBREV_POSTS_AND_STATUS prefic keep_status th = let
-  val th = ABBREV_POSTS prefix th
-  val th = if keep_status then ABBREV_STATUS th else th
-  in th end;
-*)
-
-(*
 val prefix = "tata@"
 val (i,th,th2) = (hd o tl o tl) thms
 val th = UNABBREV_ALL th
 val th = ABBREV_ALL prefix th
+val th = th1
 *)
 
 fun ABBREV_ALL prefix th = let 
   val terms = (list_dest_STAR o code_ARM_PROG o concl) th
   val terms = (list_dest_STAR o pre_ARM_PROG o concl) th @ terms
-  fun is_seq tm = ((fst o dest_const o fst o dest_comb o fst o dest_comb) tm = "seq") handle e => false
-  val terms = filter (not o is_seq) terms
+  fun is_heap tm = ((fst o dest_const o fst o dest_comb o fst o dest_comb) tm = "heap") handle e => false
+  val terms = filter (not o is_heap) terms
   val th = fst (standardise_names "th" terms th) 
   val th = (SIMP_RULE (bool_ss++sep2_ss) [sidecond_def] o RW [GSYM precond_def]) th
   val th = RW [ARM_PROG_MOVE_COND] th
@@ -268,17 +243,6 @@ fun UNABBREV_ALL th = let
 
 (* -- compose new -- *)
 
-val ARM_PROG_COMPOSE_FRAME = prove(
-  ``(b ==> ARM_PROG (Q1 * P2) cs2 cc2 Q3 Z2) ==>
-    ARM_PROG (P1:'a ARMset -> bool) cs1 cc1 (Q1 * Q2) Z1 ==> b ==>
-    ARM_PROG (P1 * P2) (cs1 ++ cs2) 
-      (cc1 UNION setINC cs1 cc2) (Q3 * Q2) 
-      (setSTAR P2 Z1 UNION setINC cs1 (setSTAR Q2 Z2))``,
-  REPEAT STRIP_TAC \\ MATCH_MP_TAC ARM_PROG_COMPOSE
-  \\ Q.PAT_ASSUM `b ==> bbb` IMP_RES_TAC
-  \\ Q.EXISTS_TAC `Q1 * P2 * Q2` \\ STRIP_TAC
-  << [MOVE_STAR_TAC `q*t*p` `(q*p)*t`,ALL_TAC] \\ METIS_TAC [ARM_PROG_FRAME]);
-
 val MOVE_COMPOSE_rw = REWRITE_CONV [setSTAR_CLAUSES,setINC_CLAUSES,UNION_EMPTY,APPEND];
 val MOVE_COMPOSE_rw1 = RW [STAR_ASSOC,emp_STAR]
 
@@ -286,7 +250,7 @@ fun MOVE_COMPOSE th1 th2 xs1 xs2 ys1 ys2 = let
   val th1 = POST1_MOVE_STAR xs1 xs2 th1
   val th2 = PRE_MOVE_STAR ys1 ys2 th2
   val th2 = PURE_REWRITE_RULE [AND_IMP_INTRO] (DISCH ``T:bool`` (DISCH_ALL th2))
-  val th2 = MATCH_MP ARM_PROG_COMPOSE_FRAME th2
+  val th2 = MATCH_MP ARM_PROG_COMPOSE_FRAME2 th2
   val th2 = MATCH_MP th2 th1
   val th2 = UNDISCH_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO] th2)
   val c1 = RAND_CONV MOVE_COMPOSE_rw
@@ -1135,7 +1099,9 @@ fun get_input_list def = let
   fun f x = if not (type_of x = ``:word32``) then true else 
     let val y = (string_to_int o implode o tl o explode o fst o dest_var) x 
     in true end handle e => false
-  in map (fst o dest_var) (filter f tm) end handle e => [];
+  val xs = map (fst o dest_var) (filter f tm)
+  val xs = filter (fn x => not (mem (x^"s") xs)) xs
+  in xs end handle e => [];
   
 fun get_output_list def = let
   val tm = (snd o dest_eq o concl o SPEC_ALL) def
@@ -1162,11 +1128,11 @@ fun term_to_name tm = let
   val f = num_to_string o numSyntax.dest_numeral o snd o dest_comb
   val i = f y handle e => (f o snd o dest_comb) y handle e => "0"         
   val j = string_to_int i
-  fun select "R"   = "r"^i
-    | select "R30" = "sp"
-    | select "M"   = if 0 <= j then "m"^i else "n"^int_to_string(0 - j)
-    | select "seq" = (fst o dest_var) y ^ "s"
-    | select _     = hd []
+  fun select "R"    = "r"^i
+    | select "R30"  = "sp"
+    | select "M"    = if 0 <= j then "m"^i else "n"^int_to_string(0 - j)
+    | select "heap" = (fst o dest_var) y ^ "s"
+    | select _      = hd []
   in select (fst (dest_const x)) end handle e => term_to_string tm;  
 
 (* attempts to do the opposite of term_to_name *)
@@ -1426,10 +1392,6 @@ fun merge_base_cases thms pre strs = let
   val (steps,s4) = foldl f ([],[]) steps
   in ((name,th),steps,spec,strs @ s1 @ s2 @ s3 @ s4) end;
       
-val EXPAND_PAIR = prove(
-  ``!x:'a y:'b z. ((x,y) = z) = (x = FST z) /\ (y = SND z)``,
-  Cases_on `z` \\ REWRITE_TAC [PAIR_EQ,FST,SND]);
-
 fun instatiate_induction spec def ind s ind_str = let
   val pair = (snd o dest_comb o fst o dest_eq o concl) def
   val s = s @ ["  val pair = (snd o dest_comb o fst o dest_eq o concl) def\n"]
@@ -1459,16 +1421,6 @@ fun extract_ind_hyps ind s = let
   val (hyps,s) = extract_conjuncts asm "a" "asm" 1 [] s
   val s = if length hyps = 1 then s @ ["  val a1 = asm\n"] else s
   in (hyps,s) end;
-
-(*
-val ARM_PROG_COMPOSE_I = prove(  (* delete *)
-  ``!P code C1 C2 Q1 Q2 Q4 Q5 Q6 Z1 Z2.
-         ARM_PROG (Q2 * Q6) code C2 Q4 Z2 ==>
-         ARM_PROG P code C1 Q1 ((Q2 * Q5,I) INSERT Z1) ==>
-         SEP_IMP Q5 Q6 ==>
-         ARM_PROG P code (C1 UNION C2) (Q1 \/ Q4) (Z1 UNION Z2)``,
-  METIS_TAC [arm_progTheory.ARM_PROG_COMPOSE_I]);
-*)
 
 fun dest_eq_genvar tm = let
   val (x,y) = dest_eq tm
@@ -1514,18 +1466,8 @@ fun find_case tm cases = let
   val xs = filter (fn (c,x) => stronger_decide_implies tm c) cases
   in snd (hd xs) end;
 
-val prove_step_lemma = prove(
-  ``!P cc cs Q Q' c b f Z. 
-      ARM_PROG (P: 'a ARMset -> bool) cs cc Q ((Q' * cond c * sidecond b,f) INSERT Z) ==>
-      (c ==> (b' = b)) ==> ARM_PROG P cs cc Q ((Q' * cond c * sidecond b',f) INSERT Z)``,
-  Cases_on `c` \\ SIMP_TAC (bool_ss++sep2_ss) []);
-
-val sidecond_CONJ = prove(
-  ``sidecond (p /\ q) = sidecond p * (cond q):'a ARMset -> bool``,
-  SIMP_TAC (bool_ss++sep2_ss) [sidecond_def]);
-
 fun fix_sidecondition th2 def2' = let
-  val th3 = MATCH_MP prove_step_lemma th2
+  val th3 = MATCH_MP COMPILER_STEP_LEMMA th2
   val tm = (fst o dest_imp o concl) th3
   val (x,y) = dest_imp tm
   val y = (snd o dest_eq) y
@@ -1583,75 +1525,6 @@ fun merge_all_cases (name,th) hyps ind pre s = let
     val s = s @ ["  val th = SPECL xs (MATCH_MP ind (GENL xs (DISCH_ALL th)))\n"]
     in (th,s) end else (th,s) end;
 
-(* begin temporarily here *)
-
-val ENCLOSE_STR_LDR_PC = let
-  val assum = ASSUME
-    ``ARM_PROG (P * R30 a x * ~R 14w * ~S) code c ((Q * R30 a x * ~R 14w * ~S):'a ARMset -> bool) {}``
-  val th = (*  str r14,[a,#-4]!  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (4w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := T; Up := F; Wb := T|>`,`a`|->`14w`,`b`|->`a`,`imm`|->`4w`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1`] arm_STR_NONALIGNED))
-  val th = ALIGN_VARS ["y1"] (AUTO_HIDE_STATUS th)
-  val th = AUTO_HIDE_POST1 [`R 14w`] th
-  val th = RW [WORD_ADD_SUB] (Q.INST [`y1`|->`x+1w`,`x1`|->`addr32 p`] th)
-  val th = FRAME_COMPOSE th assum  
-  val th1 = AUTO_HIDE_PRE [`M x`] th
-  val th = (*  ldr r15,[a], #4  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (4w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := F; Up := T; Wb := T|>`,`imm`|->`1w`,`x`|->`x1`,`y`|->`y1`] arm_LDR_PC))
-  val th = RW [ADDR_MODE2_ADDR_def,ADDR_MODE2_WB_def] th
-  val th = RW [EVAL ``<|Pre := F; Up := T; Wb := T|>.Pre``] th
-  val th = RW [EVAL ``<|Pre := F; Up := T; Wb := T|>.Up``] th
-  val th = RW [EVAL ``<|Pre := F; Up := T; Wb := T|>.Wb``] th
-  val th = RW [EVAL ``(w2w (1w:word8) << 2):word12``,EVAL ``w2w (1w :word8) :word30``] th
-  val th = ALIGN_VARS ["y1"] (AUTO_HIDE_STATUS th)
-  val th = RW [WORD_ADD_SUB] (Q.INST [`y1`|->`p`,`x1`|->`x`] th)
-  val th = FRAME_COMPOSE th1 th    
-  val th = AUTO_HIDE_POST [`M x`] th
-  val th = foldl (uncurry MOVE_POST) th [`R30 a`,`R 14w`,`M x`,`S`]  
-  val th = foldl (uncurry MOVE_PRE) th [`R30 a`,`R 14w`,`M x`,`S`]  
-  val th = DISCH_ALL (RW [GSYM R30_def] th)
-  in th end;  
-
-val HIDE1_xR_list = prove(
-  ``ARM_PROG (P:'a ARMset -> bool) 
-               code c (Q * xR_list (MAP (\x. (FST x, SOME (SND x))) xs)) Z ==>
-    ARM_PROG P code c (Q * xR_list (MAP (\x. (FST x, NONE)) xs)) Z``,
-  (MATCH_MP_TAC o GEN_ALL o RW [GSYM AND_IMP_INTRO] o RW1 [CONJ_COMM] o 
-   RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH o SPEC_ALL)
-       ARM_PROG_PART_WEAKEN_POST1
-  \\ Induct_on `xs` \\ REWRITE_TAC [MAP,SEP_IMP_REFL]
-  \\ Cases \\ SIMP_TAC std_ss [MAP,xR_list_def]
-  \\ MATCH_MP_TAC SEP_IMP_STAR \\ ASM_REWRITE_TAC []
-  \\ SIMP_TAC std_ss [SEP_HIDE_THM,SEP_IMP_def,SEP_EXISTS] \\ METIS_TAC []);
-
-val ENCLOSE_STM_LDM = let
-  val assum = ASSUME
-    ``ARM_PROG (P * R30 a x * xR_list (MAP (\x. (FST x,NONE)) (xs:(word4 # word32) list)) * ~R 14w * ~S) 
-        code c ((Q * R30 a x * xR_list (MAP (\x. (FST x,NONE)) xs) * ~R 14w * ~S):'a ARMset -> bool) {}``
-  val th = Q.INST [`c_flag`|->`AL`,`a_mode`|->`am4_DB T`] arm_STM_R14
-  val th = AUTO_HIDE_STATUS (FST_PROG2 (RW [PASS_CASES] th))
-  val th = RW [ADDR_MODE4_ADDR_def,ADDR_MODE4_ADDR'_def,ADDR_MODE4_WB'_def,ADDR_MODE4_wb_def,ADDR_MODE4_WB_def,ADDR_MODE4_UP_def,LENGTH] th
-  val th = Q.INST [`x`|->`x + n2w (SUC (LENGTH (xs:(word4 # word32) list)))`] th
-  val th = RW [WORD_ADD_SUB] th
-  val th = MOVE_STAR_RULE `a*x*mm*ss` `a*mm*ss*x` th
-  val th = RW [blank_ms_EQ_blank] th
-  val th = MATCH_MP HIDE1_xR_list th
-  val th = SIMP_RULE std_ss [xR_list_def,MAP,FST,SND,STAR_ASSOC] th
-  val th1 = FRAME_COMPOSE th assum
-  val th = Q.INST [`c_flag`|->`AL`,`a_mode`|->`am4_IA T`] arm_LDM_PC
-  val th = AUTO_HIDE_STATUS (FST_PROG2 (RW [PASS_CASES] th))
-  val th = RW [ADDR_MODE4_ADDR_def,ADDR_MODE4_ADDR'_def,ADDR_MODE4_WB'_def,ADDR_MODE4_wb_def,ADDR_MODE4_WB_def,ADDR_MODE4_UP_def,LENGTH] th
-  val th = MOVE_STAR_RULE `a*x*mm*ss` `a*mm*ss*x` th
-  val th = RW [blank_ms_EQ_blank] th
-  val th = FRAME_COMPOSE th1 th
-  val th = MOVE_POST `ms x` th
-  val th = RW [ADDR_MODE4_CMD_def] th
-  val th = APP_PART_WEAKEN th 
-    `blank_ms x (LENGTH (reg_values ((15w:word4,addr32 p)::xs)))`
-    (REWRITE_TAC [SEP_IMP_ms_blank_ms])
-  val th = RW [blank_ms_EQ_blank,LENGTH_reg_values,LENGTH] th
-  val th = foldl (uncurry MOVE_POST) th [`R30 a`,`xR_list`,`R 14w`,`blank_ms x`,`S`]  
-  val th = foldl (uncurry MOVE_PRE) th [`R30 a`,`xR_list`,`R 14w`,`blank_ms x`,`S`]  
-  val th = DISCH_ALL (RW [GSYM R30_def] th)
-  in th end;
-
 fun MATCH_MP_ARM_PROG th1 th2 = let
   val ts1 = (list_dest_STAR o pre_ARM_PROG o fst o dest_imp o concl) th1
   val ts2 = (list_dest_STAR o pre_ARM_PROG o concl) th2
@@ -1688,33 +1561,6 @@ fun REMOVE_PRIMES th = let
   val ts = map (fn (ty,s1,s2) => mk_var(s1,ty) |-> mk_var(s2,ty)) ts
   in INST ts th end;   
 
-val ENCLOSE_STACK_ALTER_LEMMA = prove(
-  ``!x n. addr32 x + w2w ((n2w (4 * n)):word8) = addr32 (x + n2w (n MOD 64))``,
-  Cases_word \\ SIMP_TAC (arith_ss++SIZES_ss) 
-    [addr32_n2w,word_add_n2w,word_mul_n2w,w2w_def,LEFT_ADD_DISTRIB,w2n_n2w]
-  \\ SIMP_TAC arith_ss [MOD_COMMON_FACTOR]);
-
-val ENCLOSE_STACK_ALTER = let
-  val assum = ASSUME
-    ``ARM_PROG (P * R30 13w sp * ~S) code c ((Q * R30 13w sp * ~S):'a ARMset -> bool) {}``
-  val th = (*  sub sp,sp,#y  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (12w :word8) :word32)``] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`a`|->`13w`,`a_mode`|->`Imm y`,`x`|->`sp`] arm_SUB1))
-  val th = AUTO_HIDE_STATUS th
-  val th = RW [WORD_ADD_SUB] (Q.INST [`sp`|->`sp + w2w (y:word8)`] th)
-  val th = ALIGN_VARS ["sp"] th
-  val th1 = FRAME_COMPOSE th assum    
-  val th = (*  add sp,sp,#y  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (12w :word8) :word32)``] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`a`|->`13w`,`a_mode`|->`Imm y`,`x`|->`sp`] arm_ADD1))
-  val th = AUTO_HIDE_STATUS th
-  val th = ALIGN_VARS ["sp"] th
-  val th = FRAME_COMPOSE th1 th
-  val th = MOVE_PRE `S` (MOVE_PRE `R 13w` th)
-  val th = MOVE_POST1 `S` (MOVE_POST1 `R 13w` th)  
-  val th = Q.INST [`y`|->`n2w (4 * n)`] th
-  val th = RW [GSYM R30_def,ENCLOSE_STACK_ALTER_LEMMA] th
-  in DISCH_ALL th end;
-
-
-(* end temporarily here *)
-
 val WORD_SUB_ADD_n2w = prove(
   ``!x m n. x - n2w n + n2w m :'a word = 
             x + n2w ((dimword(:'a) - n MOD dimword(:'a) + m) MOD dimword(:'a))``,
@@ -1724,7 +1570,6 @@ val WORD_SUB_ADD_n2w = prove(
 val SIMPLIFY_WORD_ADD_n2w_CONV = 
   SIMP_CONV arith_ss [GSYM WORD_SUB_PLUS,word_add_n2w]
   THENC SIMP_CONV (arith_ss++wordsLib.SIZES_ss) [WORD_SUB_ADD_n2w,WORD_ADD_0];
-
 
 fun alter_stack_pointer th 0 = th
   | alter_stack_pointer th steps = let
@@ -1779,15 +1624,6 @@ fun append_return name th InLineCode strs = (th,strs)
   val th = SIMP_RULE arith_ss [setADD_CLAUSES,pcADD_pcADD,APPEND,GSYM WORD_ADD_ASSOC] th2
   val th = Q.INST [`p`|->`lr`] (RW [WORD_ADD_ASSOC] th)
   in (th,strs) end
-
-val ARM_PROG_SUBSET_CODE = prove(
-  ``!P:('a ARMset -> bool) code C1 Q Z.
-      ARM_PROG P code C1 Q Z ==> !C2. C1 SUBSET C2 ==> ARM_PROG P code C2 Q Z``,
-  REPEAT STRIP_TAC
-  \\ `?X. C2 = C1 UNION X` by ALL_TAC << [ 
-    Q.EXISTS_TAC `C2` \\ FULL_SIMP_TAC bool_ss [EXTENSION,IN_UNION,SUBSET_DEF] 
-    \\ METIS_TAC [],
-    ASM_REWRITE_TAC [] \\ MATCH_MP_TAC ARM_PROG_ADD_CODE \\ ASM_REWRITE_TAC []]);
 
 fun collect_procedure_code thms strs = let
   val code = map (code_set_ARM_PROG o concl o snd) thms
@@ -1856,30 +1692,6 @@ fun calc_code_length th = let
   val th2 = (code_length_conv()) tm
   in (numSyntax.int_of_term o snd o dest_eq o concl) th2 end;
 
-val ARM_PROG_APPEND_CODE_SET = prove(
-  ``ARM_PROG (P:'a ARMset -> bool) cs1 {(cs2,pcADD x)} SEP_F Z ==>
-    (wLENGTH cs1 = x) ==> ARM_PROG P (cs1 ++ cs2) {} SEP_F Z``,
-  ONCE_REWRITE_TAC [ARM_PROG_EXTRACT_CODE]
-  \\ ONCE_REWRITE_TAC [GSYM ARM_PROG_MERGE_CODE]
-  \\ SIMP_TAC std_ss [pcINC_def]);
-
-val ARM_PROG_EMPTY_CODE = prove(
-  ``ARM_PROG (P:'a ARMset -> bool) cs (([],f) INSERT c) Q Z = ARM_PROG P cs c Q Z``,
-  REWRITE_TAC [ARM_PROG_THM] \\ ONCE_REWRITE_TAC [INSERT_COMM]
-  \\ REWRITE_TAC [ARM_GPROG_EMPTY_CODE]);
-
-val ARM_PROG_PREPEND_CODE = prove(
-  ``ARM_PROG (P:'a ARMset -> bool) [] {(cs1,f)} Q Z ==> 
-    !cs2. ARM_PROG P [] {(cs2 ++ cs1,pcADD (0w - wLENGTH cs2) o f)} Q Z``,
-  REPEAT STRIP_TAC
-  \\ POP_ASSUM (ASSUME_TAC o RW [INSERT_UNION_EQ,UNION_EMPTY] o RW1 [UNION_COMM] o Q.SPEC `{(cs2,pcADD (0w - wLENGTH cs2) o f)}` o MATCH_MP ARM_PROG_ADD_CODE)
-  \\ ONCE_REWRITE_TAC [GSYM ARM_PROG_MERGE_CODE]
-  \\ REWRITE_TAC [pcINC_def,pcADD_pcADD]
-  \\ `!x:word30 f:word30->word30. pcADD x o pcADD (0w - x) o f = f` by
-    (SIMP_TAC std_ss [FUN_EQ_THM,pcADD_def,WORD_SUB_LZERO,WORD_ADD_ASSOC]
-     \\ REWRITE_TAC [GSYM word_sub_def,WORD_SUB_REFL,WORD_ADD_0])
-  \\ ASM_REWRITE_TAC []);
-
 val stays = []
 val strs = []
 val as_proc = InLineCode
@@ -1891,6 +1703,7 @@ fun arm_compile_backend name def ind def2 pre stays as_proc thms strs = let
   (* abbreviate the code using a definition *)
   val (thms,c1_def,c2_def,strs) = abbreviate_code name thms strs 
   (* normalise names and fill using frame *)
+
   val thms = rename_and_fill_preconditions thms def
   (* hide irrelevant pre and post elements *)  
   val thms = hide_pre_post_elements thms def stays
@@ -1907,7 +1720,6 @@ fun arm_compile_backend name def ind def2 pre stays as_proc thms strs = let
     if length(steps) > 0 (* = function is recursive *) then let
       val (ind,strs) = instatiate_induction spec def' ind strs (name^"_ind")
       val (hyps,strs) = extract_ind_hyps ind strs    
-
       val (hyps,strs) = prove_step_cases post_tm hyps steps def' def2' strs  
       val (th,strs) = merge_all_cases base hyps ind pre strs
       in (th,strs) end 
@@ -1965,13 +1777,6 @@ fun reset_compiled () = let
 val n2w_sw2sw_n2w = prove(
   ``!n m x. n2w n + sw2sw (x:'b word) + n2w m = sw2sw x + n2w (n + m):'a word``,
   SIMP_TAC bool_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,GSYM word_add_n2w]);
-
-val ARM_PROG_MERGE_CODE_pcADD = prove(
-  ``ARM_PROG (P:'a ARMset -> bool) code ((cs1,pcADD x) INSERT (cs2,pcADD y) INSERT C) Q Z ==>
-    (wLENGTH cs1 = y - x) ==>
-    ARM_PROG P code ((cs1 ++ cs2,pcADD x) INSERT C) Q Z``,
-  REPEAT STRIP_TAC
-  \\ ASM_REWRITE_TAC [GSYM ARM_PROG_MERGE_CODE,pcINC_def,pcADD_pcADD,WORD_SUB_ADD]);
 
 fun SWAP_INSERT_CONV tm = let
   val (x,y) = pred_setSyntax.dest_insert tm  
@@ -2189,24 +1994,35 @@ val code = ["add r1,r2,r3","teq r1,r2"]
 val keep_status = false
 *)
 
+val var_sorter = let (* sorts in alphabetical order except for r1,r2,r3 which will come first "a" *)
+  fun dest_reg_var tm = let
+    val xs = explode (fst (dest_var tm))
+    in if hd xs = #"r" then string_to_int (implode (tl xs)) else hd [] end
+  fun is_reg_var tm = let val v = dest_reg_var tm in true end handle e => false 
+  fun cmp tm1 tm2 = 
+    if is_reg_var tm1 = is_reg_var tm2 
+    then (dest_reg_var tm1 < dest_reg_var tm2 
+          handle e => (fst o dest_var) tm1 < (fst o dest_var) tm2)
+    else is_reg_var tm1
+  in sort cmp end
+
 fun spectree2function name code keep_status hide_list = let
   val t = generate_spectree true keep_status code
   val t = sort_SEQ_in_tree keep_status t  
   val thms = spectree2thms t []
   val status_vars = [``sN:bool``,``sZ:bool``,``sC:bool``,``sV:bool``]
-  val sorter = sort (curry (fn (tm1,tm2) => (fst o dest_var) tm1 < (fst o dest_var) tm2))
   val stays_same = (map (fst o dest_var) o thms2resources thms) []
   val res_out = tree2modified_vars t []
   val modified = map (fst o dest_var) res_out
   val stays_same = filter (fn x => not (mem x modified)) stays_same
-  val res_out = sorter res_out 
+  val res_out = var_sorter res_out 
   val res_out = filter (fn x => not (mem (fst (dest_var x)) hide_list)) res_out
   val res_out = res_out @ (if keep_status then status_vars else [])  
   val output = list_mk_pair res_out
   val f = mk_var(name,mk_type("fun",[type_of ``()``,type_of output]))
   val tm = spectree2fun t keep_status (res_out,f,[])
   val tm = subst [mk_var("cond",``:bool``)|->``T:bool``] tm
-  val res_in = sorter (free_vars tm)
+  val res_in = var_sorter (free_vars tm)
   val res_in = filter (fn x => not (mem x (f::status_vars))) res_in
   val res_in = res_in @ (if keep_status then status_vars else [])
   val input = list_mk_pair res_in
@@ -2319,10 +2135,13 @@ fun decompiler_define name tm1 tm2 (SOME tac) = let
   val name = "foo1"
   val code = ["cmp r1,#3","proc: foo","proc: foo"]
 
+  val keep_status = false
+  val hide_list = []
+
   arm_decompiler name code (pre,termination_tac,keep_status,hide_list)
 *)
 
-fun arm_decompiler name code (pre,termination_tac,keep_status,hide_list) = let
+fun arm_decompiler_options name code pre termination_tac keep_status hide_list = let
   (* create function and specs *)
   val (tm1,tm2,stays,thms) = spectree2function name code keep_status hide_list
   val (tm1,tm2,pre) = format_function_terms tm1 tm2 pre
@@ -2332,23 +2151,15 @@ fun arm_decompiler name code (pre,termination_tac,keep_status,hide_list) = let
   val th = fst (arm_compile_backend name def ind def2 pre stays InLineCode thms [])
   in (def,th) end; 
 
+fun arm_decompiler name pre termination_tac hide_list code = 
+  arm_decompiler_options name code pre termination_tac false hide_list;
+
 (*
   
   (* factorial example - basic loop *)
-  val (pre,termination_tac) = (`T`,NONE)
   val name = "fac"
-  val code = ["cmp r1,#0","mulne r2,r1,r2","subne r1,r1,#1","bne -12"]
-  val hide_list = ["r1"]
-  val keep_status = false
-  val (def,th) = arm_decompiler name code (pre,termination_tac,keep_status,hide_list)
-
-  (* factorial example - basic loop *)
-  val (pre,termination_tac) = (`T`,NONE)
-  val name = "fac"
-  val code = ["cmp r1,#0","str r1,[r2],#4","subne r1,r1,#1","bne -12"]
-  val hide_list = ["r1"]
-  val keep_status = false
-  val (def,th) = arm_decompiler name code (pre,termination_tac,keep_status,hide_list)
+  val code = ["cmp r10,#0","mulne r2,r10,r2","subne r10,r10,#1","bne -12"]
+  val (def,th) = arm_decompiler name code `T` NONE
 
   (* division example - user has to supply termination proof *)
   val name = "div"
@@ -2363,8 +2174,7 @@ fun arm_decompiler name code (pre,termination_tac,keep_status,hide_list) = let
   \\ REWRITE_TAC [GSYM word_add_n2w,WORD_ADD_SUB,ADD_SUB]
   \\ ONCE_REWRITE_TAC [WORD_ADD_COMM] 
   \\ REWRITE_TAC [WORD_SUB_PLUS,WORD_SUB_REFL,WORD_SUB_LZERO]);
-  val termination_tac = 
-SOME
+  val termination_tac = SOME
    (WF_REL_TAC `measure (w2n o FST o SND)` \\ Cases_word \\ Cases_word
     \\ ASM_SIMP_TAC bool_ss [WORD_LO,n2w_11,w2n_n2w,LESS_MOD,ZERO_LT_dimword]
     \\ REWRITE_TAC [DECIDE ``~(n<m:num) = m <= n``]
@@ -2373,30 +2183,21 @@ SOME
     \\ REPEAT STRIP_TAC \\ DECIDE_TAC)
   val hide_list = ["r1"]
   val keep_status = false
-
   val (def,th) = arm_decompiler name code (pre,termination_tac,keep_status,hide_list)
 
-  (* addition exmaple - carry bits are preserved *)
-  val name = "adds"
-  val code = [
-"ldmia  r0!, {r3, r4, r5, r6, r7}",
-"ldmia  r1!, {r8, r9, sl, fp, ip}",
-"adcs   r3, r3, r8",
-"adcs   r4, r4, r9",
-"adcs   r5, r5, sl",
-"adcs   r6, r6, fp",
-"adcs   r7, r7, ip",
-"stmia  r2!, {r3, r4, r5, r6, r7}"]
+  (* store r2 example - loop with store instruction *)
   val (pre,termination_tac) = (`T`,NONE)
-  val hide_list = ["r3","r4","r5","r6","r7","r8","r9","r10","r11","r12"]
-  val keep_status = true
-  val (def,th) = arm_decompiler name code (pre,termination_tac,keep_status,hide_list)
-  
-  
+  val name = "store_loop"
+  val code = ["cmp r1,#0","strne r1,[r2],#4","subne r1,r1,#1","bne -12"]
+  val hide_list = ["r1"]
+  val keep_status = false
+  val (def,th) = arm_decompiler name code (pre,termination_tac,keep_status,hide_list)  
 
  known bugs:
  - keeping track of status bits doesn't work when 
    the last instruction isn't executed
+
+  open combinTheory
 
 *) 
 

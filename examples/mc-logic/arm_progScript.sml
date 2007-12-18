@@ -1371,6 +1371,121 @@ val IMP_ARM_RUN_mpool = store_thm("IMP_ARM_RUN_mpool",
   \\ ASM_SIMP_TAC bool_ss [BIGSTAR_INSERT,BIGSTAR_ONE]);
 
 
+(* theorems for the lib files -------------------------------------------------- *)
+
+val ARM_PROG_EMPTY_CODE = store_thm("ARM_PROG_EMPTY_CODE",
+  ``ARM_PROG P cs (([],f) INSERT C) Q Z = ARM_PROG P cs C (Q:('a ARMset -> bool)) Z``,
+  REWRITE_TAC [ARM_PROG_THM] \\ ONCE_REWRITE_TAC [INSERT_COMM,ARM_GPROG_def]
+  \\ REWRITE_TAC [GPROG_EMPTY_CODE]);
+
+val ARM_PROG_ABSORB_POST_LEMMA = store_thm("ARM_PROG_ABSORB_POST_LEMMA",
+  ``ARM_PROG (P:'a ARMset -> bool) cs C SEP_F ((Q,pcADD x) INSERT Z) ==>
+    (x = wLENGTH cs) ==> ARM_PROG P cs C Q Z``,
+  REPEAT STRIP_TAC 
+  \\ FULL_SIMP_TAC bool_ss [GSYM PROG_EXTRACT_POST,GSYM pcINC_def,ARM_PROG_def]);
+
+val STATUS_MOVE = store_thm("STATUS_MOVE",
+  ``!P Q x. (S x * P = P * S x) /\ (P * S x * Q = P * Q * (S x):'a ARMset -> bool)``,
+  SIMP_TAC (bool_ss++star_ss) []);
+
+val ARRANGE_COMPOSE_LEMMA = store_thm("ARRANGE_COMPOSE_LEMMA",
+  ``!P:('a ARMset -> bool) M M' Q cs cs' C C' Z Z'.
+      ARM_PROG P cs C M Z /\ ARM_PROG M' cs' C' Q Z' ==> (M = M') ==> 
+      ARM_PROG P (cs ++ cs') (C UNION setINC cs C') Q (Z UNION setINC cs Z')``,
+  REWRITE_TAC [ARM_PROG_def] \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC PROG_COMPOSE 
+  \\ Q.EXISTS_TAC `M'` \\ FULL_SIMP_TAC std_ss []);
+
+val FALSE_COMPOSE_LEMMA = store_thm("FALSE_COMPOSE_LEMMA",
+  ``ARM_PROG (P1:('a ARMset -> bool)) code1 C1 SEP_F Z1 /\ 
+    ARM_PROG (P2:('b ARMset -> bool)) code2 C Q Z ==>
+    ARM_PROG P1 (code1++code2) C1 SEP_F Z1``,
+  REWRITE_TAC [ARM_PROG_def] \\ REPEAT STRIP_TAC 
+  \\ MATCH_MP_TAC PROG_APPEND_CODE \\ ASM_REWRITE_TAC []);
+
+val ARM_PROG_COMPOSE_FRAME = store_thm("ARM_PROG_COMPOSE_FRAME",
+  ``ARM_PROG (Q1 * P2:('a ARMset -> bool)) c2 cc2 Q3 Z2 ==>
+    ARM_PROG P1 c1 cc1 (Q1 * Q2) Z1 ==> 
+    ARM_PROG (P1 * P2) (c1 ++ c2) 
+      (cc1 UNION setINC c1 cc2) (Q3 * Q2) 
+      (setSTAR P2 Z1 UNION setINC c1 (setSTAR Q2 Z2))``,
+  REWRITE_TAC [ARM_PROG_def] \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC PROG_COMPOSE
+  \\ Q.EXISTS_TAC `Q1 * P2 * Q2` \\ STRIP_TAC
+  << [MOVE_STAR_TAC `q*t*p` `(q*p)*t`,ALL_TAC] \\ METIS_TAC [PROG_FRAME]);
+
+val ARM_PROG_DUPLICATE_COND_LEMMA = store_thm("ARM_PROG_DUPLICATE_COND_LEMMA",
+  ``ARM_PROG (P * cond h) code C (Q:('a ARMset -> bool)) Z ==>
+    ARM_PROG (P * cond h) code C (Q * cond h) (setSTAR (cond h) Z)``,
+  REWRITE_TAC [ARM_PROG_def,PROG_MOVE_COND] \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC (bool_ss++sep2_ss) []  
+  \\ `setSTAR emp Z = Z` by ALL_TAC THENL [ALL_TAC,METIS_TAC []] 
+  \\ SIMP_TAC std_ss [EXTENSION,setSTAR_def,GSPECIFICATION,emp_STAR]  
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
+  THEN1 (Cases_on `x'` \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC [])
+  \\ Q.EXISTS_TAC `x` \\ Cases_on `x` \\ ASM_SIMP_TAC std_ss []);
+
+val ARM_PROG_COMPOSE_FRAME2 = store_thm("ARM_PROG_COMPOSE_FRAME2",
+  ``(b ==> ARM_PROG (Q1 * P2) cs2 cc2 Q3 Z2) ==>
+    ARM_PROG (P1:'a ARMset -> bool) cs1 cc1 (Q1 * Q2) Z1 ==> b ==>
+    ARM_PROG (P1 * P2) (cs1 ++ cs2) 
+      (cc1 UNION setINC cs1 cc2) (Q3 * Q2) 
+      (setSTAR P2 Z1 UNION setINC cs1 (setSTAR Q2 Z2))``,
+  REWRITE_TAC [ARM_PROG_def] \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC PROG_COMPOSE
+  \\ Q.PAT_ASSUM `b ==> bbb` IMP_RES_TAC
+  \\ Q.EXISTS_TAC `Q1 * P2 * Q2` \\ STRIP_TAC
+  << [MOVE_STAR_TAC `q*t*p` `(q*p)*t`,ALL_TAC] \\ METIS_TAC [PROG_FRAME]);
+
+val EQ_IMP_IMP = store_thm("EQ_IMP_IMP",``(x:bool=y:bool) ==> x ==> y``,METIS_TAC []);
+
+val EXPAND_PAIR = store_thm("EXPAND_PAIR",
+  ``!x:'a y:'b z. ((x,y) = z) = (x = FST z) /\ (y = SND z)``,
+  Cases_on `z` \\ REWRITE_TAC [PAIR_EQ,FST,SND]);
+
+val COMPILER_STEP_LEMMA = store_thm("COMPILER_STEP_LEMMA",
+  ``!P cc cs Q Q' c b f Z. 
+      ARM_PROG (P: 'a ARMset -> bool) cs cc Q ((Q' * cond c * sidecond b,f) INSERT Z) ==>
+      (c ==> (b' = b)) ==> ARM_PROG P cs cc Q ((Q' * cond c * sidecond b',f) INSERT Z)``,
+  Cases_on `c` \\ SIMP_TAC (bool_ss++sep2_ss) []);
+
+val sidecond_CONJ = store_thm("sidecond_CONJ",
+  ``sidecond (p /\ q) = sidecond p * (cond q):'a ARMset -> bool``,
+  SIMP_TAC (bool_ss++sep2_ss) [sidecond_def]);
+
+val ARM_PROG_SUBSET_CODE = store_thm("ARM_PROG_SUBSET_CODE",
+  ``!P:('a ARMset -> bool) code C1 Q Z.
+      ARM_PROG P code C1 Q Z ==> !C2. C1 SUBSET C2 ==> ARM_PROG P code C2 Q Z``,
+  REWRITE_TAC [ARM_PROG_def] \\ REPEAT STRIP_TAC
+  \\ `?X. C2 = C1 UNION X` by ALL_TAC << [ 
+    Q.EXISTS_TAC `C2` \\ FULL_SIMP_TAC bool_ss [EXTENSION,IN_UNION,SUBSET_DEF] 
+    \\ METIS_TAC [],
+    ASM_REWRITE_TAC [] \\ MATCH_MP_TAC PROG_ADD_CODE \\ ASM_REWRITE_TAC []]);
+
+val ARM_PROG_APPEND_CODE_SET = store_thm("ARM_PROG_APPEND_CODE_SET",
+  ``ARM_PROG (P:'a ARMset -> bool) cs1 {(cs2,pcADD x)} SEP_F Z ==>
+    (wLENGTH cs1 = x) ==> ARM_PROG P (cs1 ++ cs2) {} SEP_F Z``,
+  REWRITE_TAC [ARM_PROG_def] \\ ONCE_REWRITE_TAC [PROG_EXTRACT_CODE]
+  \\ ONCE_REWRITE_TAC [GSYM PROG_MERGE_CODE]
+  \\ SIMP_TAC std_ss [pcINC_def]);
+
+val ARM_PROG_PREPEND_CODE = store_thm("ARM_PROG_PREPEND_CODE",
+  ``ARM_PROG (P:'a ARMset -> bool) [] {(cs1,f)} Q Z ==> 
+    !cs2. ARM_PROG P [] {(cs2 ++ cs1,pcADD (0w - wLENGTH cs2) o f)} Q Z``,
+  REWRITE_TAC [ARM_PROG_def] \\ REPEAT STRIP_TAC
+  \\ POP_ASSUM (ASSUME_TAC o RW [INSERT_UNION_EQ,UNION_EMPTY] o RW1 [UNION_COMM] o Q.SPEC `{(cs2,pcADD (0w - wLENGTH cs2) o f)}` o MATCH_MP PROG_ADD_CODE)
+  \\ ONCE_REWRITE_TAC [GSYM PROG_MERGE_CODE]
+  \\ REWRITE_TAC [pcINC_def,pcADD_pcADD]
+  \\ `!x:word30 f:word30->word30. pcADD x o pcADD (0w - x) o f = f` by
+    (SIMP_TAC std_ss [FUN_EQ_THM,pcADD_def,WORD_SUB_LZERO,WORD_ADD_ASSOC]
+     \\ REWRITE_TAC [GSYM word_sub_def,WORD_SUB_REFL,WORD_ADD_0])
+  \\ ASM_REWRITE_TAC []);
+
+val ARM_PROG_MERGE_CODE_pcADD = store_thm("ARM_PROG_MERGE_CODE_pcADD",
+  ``ARM_PROG (P:'a ARMset -> bool) code ((cs1,pcADD x) INSERT (cs2,pcADD y) INSERT C) Q Z ==>
+    (wLENGTH cs1 = y - x) ==>
+    ARM_PROG P code ((cs1 ++ cs2,pcADD x) INSERT C) Q Z``,
+  REWRITE_TAC [ARM_PROG_def] \\ REPEAT STRIP_TAC
+  \\ ASM_REWRITE_TAC [GSYM PROG_MERGE_CODE,pcINC_def,pcADD_pcADD,WORD_SUB_ADD]);
+
+
 (* theorems for ARM_PROC ------------------------------------------------------- *)
 
 val ARM_PROC_CALL = store_thm("ARM_PROC_CALL",

@@ -2158,14 +2158,18 @@ val arm_LDM_SEQ_LEMMA = prove(
   ``!zs. MAP FST (MAP (\x. (x,NONE)) zs) = zs``,
   Induct \\ ASM_SIMP_TAC bool_ss [MAP,FST]);
 
+val ALL_DISTINCT_MAP = prove(
+  ``!xs. ALL_DISTINCT (MAP FST xs) ==> ALL_DISTINCT xs``,
+  Induct \\ ASM_SIMP_TAC std_ss [ALL_DISTINCT,MAP,MEM_MAP] \\ METIS_TAC []);
+
 val arm_LDM_SEQ_THM = prove(
   ``!ys. (LENGTH ys = LENGTH xs) ==>
     (ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
-     (R a x * xR_list (MAP (\x.(x,NONE)) xs) * S (sN,sZ,sC,sV) * cond (x && 3w = 0w) *
+     (R a x * xR_list (MAP (\x.(FST x,SOME (SND x))) xs) * S (sN,sZ,sC,sV) * cond (x && 3w = 0w) *
       PASS c_flag (sN,sZ,sC,sV) * ms (addr30 (ADDR_MODE4_ADDR32 a_mode x xs)) ys) 
-     [enc (LDM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap xs))] {}
+     [enc (LDM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (MAP FST xs)))] {}
      ((\ys. R a (ADDR_MODE4_WB32 a_mode x xs) *
-      xR_list (MAP (\x.(FST x,SOME (SND x))) (ZIP (QSORT $<=+ xs,ys))) *
+      xR_list (MAP (\x.(FST x,SOME (SND x))) (ZIP (QSORT $<=+ (MAP FST xs),ys))) *
       S (sN,sZ,sC,sV)) ys * ms (addr30 (ADDR_MODE4_ADDR32 a_mode x xs)) ys
        :^(ty_antiq ARMel_type) set -> bool) {}``,
   REPEAT STRIP_TAC \\ POP_ASSUM (ASSUME_TAC o GSYM)
@@ -2187,27 +2191,32 @@ val arm_LDM_SEQ_THM = prove(
   \\ ASM_SIMP_TAC bool_ss [GSYM LEAST_SORT_EQ_QSORT_BASIC]
   \\ `CONDITION_PASSED2 (status s) c_flag` by METIS_TAC []
   \\ `mem (addr30 (reg 15w s)) s =
-      enc (LDM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap xs))` 
+      enc (LDM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (MAP FST xs)))` 
          by METIS_TAC [addr30_addr32]
   \\ `~(a = 15w)` by METIS_TAC []
-  \\ (ASSUME_TAC o UNDISCH_ALL o 
-      Q.INST [`p`|->`x`,`Rd`|->`a`,`c`|->`c_flag`,`am4`|->`a_mode`]) ldm2
+  \\ `LENGTH (MAP FST xs) = LENGTH ys` by METIS_TAC [LENGTH_MAP]
+  \\ `NEXT_ARM_MEM s = LDM_STATE2 a_mode x (MAP FST xs) a s` by 
+   (MATCH_MP_TAC (RW [AND_IMP_INTRO] (GEN_ALL ldm2))
+    \\ Q.EXISTS_TAC `ys` \\ Q.EXISTS_TAC `c_flag`
+    \\ ASM_SIMP_TAC bool_ss [])
   \\ ASM_REWRITE_TAC [] \\ Q.PAT_ASSUM `NEXT_ARM_MEM s = s'` (fn th => ALL_TAC)
   \\ STRIP_TAC << [
-    `LENGTH (LEAST_SORT xs) = LENGTH ys` by METIS_TAC [LENGTH_LEAST_SORT] 
-    \\ `LIST_TO_SET (LEAST_SORT xs) = LIST_TO_SET xs` by
+    `LENGTH (LEAST_SORT (MAP FST xs)) = LENGTH ys` by METIS_TAC [LENGTH_LEAST_SORT] 
+    \\ `LIST_TO_SET (LEAST_SORT (MAP FST xs)) = LIST_TO_SET (MAP FST xs)` by
          (REWRITE_TAC [EXTENSION,IN_LIST_TO_SET,MEM_LEAST_SORT])
     \\ ASM_SIMP_TAC bool_ss [reg_15_LDM_STATE2,reg_wb_LDM_STATE2,MAP_FST_ZIP,
          ALL_DISTINCT_LEAST_SORT,MEM_LEAST_SORT,
          status_LDM_STATE2,mem_LDM_STATE2,ms_sem_LDM_STATE2,undef_LDM_STATE2]
-    \\ MATCH_MP_TAC xR_list_sem_LDM_STATE2 \\ ASM_REWRITE_TAC [],    
+    \\ ASM_REWRITE_TAC [ADDR_MODE4_WB_def]
+    \\ MATCH_MP_TAC xR_list_sem_LDM_STATE2 \\ ASM_REWRITE_TAC []
+    \\ FULL_SIMP_TAC std_ss [ADDR_MODE4_ADDR_def] \\ METIS_TAC [],    
     REWRITE_TAC [arm2set''_EQ,mem_LDM_STATE2,owrt_visible_LDM_STATE2,mem_byte_def]
     \\ SIMP_TAC std_ss [IN_INSERT,IN_LIST_TO_SET] \\ REPEAT STRIP_TAC
     \\ MATCH_MP_TAC reg_IGNORE_LDM_STATE2 \\ ASM_REWRITE_TAC []]);
   
 val arm_LDM_SEQ = save_thm("arm_LDM_SEQ",let
   val th = ARM_PROG_INTRO_SEQ_LIST_RD
-  val th = Q.INST [`qs`|->`MAP (\x.4w) (qs:word4 list)`] th
+  val th = Q.INST [`qs`|->`MAP (\x.4w) (qs:(word4 # word32) list)`] th
   val th = RW [LENGTH_MAP,seq_addresses_MAP,list_read_MAP] th
   val th = MATCH_MP th arm_LDM_SEQ_THM
   val th = SIMP_RULE std_ss [] th
@@ -3390,7 +3399,7 @@ val arm_LDR1_SEQ_LEMMA = prove(
   \\ METIS_TAC [arm_LDR1_NONALIGNED,ARM_PROG2_def]);
 
 val arm_LDR1_SEQ = save_thm("arm_LDR1_SEQ",let
-  val th = MATCH_MP ARM_PROG_INTRO_SEQ_RD arm_LDR_SEQ_LEMMA
+  val th = MATCH_MP ARM_PROG_INTRO_SEQ_RD arm_LDR1_SEQ_LEMMA
   val th = SPEC_ALL (SIMP_RULE std_ss [] th)
   in th end);
 
