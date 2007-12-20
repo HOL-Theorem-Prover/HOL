@@ -248,6 +248,7 @@ in
       map (fn b => (binder_to_string G b, PREFIX (BINDER [b]))) list
   | SUFFIX (STD_suffix list) => map suffix list
   | SUFFIX TYPE_annotation => []
+  | SUFFIX TYPE_application => []
   | INFIX (STD_infix(list, a)) => map (mkifix a) list
   | INFIX RESQUAN_OP => [(resquan_special, grule)]
   | INFIX (FNAPP lst) =>
@@ -318,7 +319,8 @@ fun first_tok [] = raise Fail "Shouldn't happen term_pp 133"
 fun decdepth n = if n < 0 then n else n - 1
 
 fun pp_term (G : grammar) TyG = let
-  val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
+  val {restr_binders,lambda,type_lambda,endbinding,
+       type_intro,type_lbracket,type_rbracket,res_quanop} = specials G
   val overload_info = overload_info G
   val spec_table =
        let val toks = grammar_tokens G
@@ -430,7 +432,9 @@ fun pp_term (G : grammar) TyG = let
         end
       | _ => raise PP_ERR "my_dest_abs" "term not an abstraction"
 
+  fun my_dest_tyabs tm = dest_tyabs tm
   fun my_is_abs tm = can my_dest_abs tm
+  fun my_is_tyabs tm = can my_dest_tyabs tm
   fun my_strip_abs tm = let
     fun recurse acc t = let
       val (v, body) = my_dest_abs t
@@ -841,7 +845,7 @@ fun pp_term (G : grammar) TyG = let
     in
       pbegin addparens;
       begin_block INCONSISTENT 2;
-      add_string (lambda ^ type_intro);
+      add_string type_lambda;
       begin_block INCONSISTENT 0;
       pr_typel "" bvars;
       end_block();
@@ -869,13 +873,11 @@ fun pp_term (G : grammar) TyG = let
       begin_block CONSISTENT 2;
       pr_term base Top Top Top (decdepth depth);
       add_break (1,0);
-      add_string "[";
-      add_string type_intro;
+      add_string type_lbracket;
       begin_block INCONSISTENT 0;
       pr_typel "," tys;
       end_block();
-      add_string type_intro;
-      add_string "]";
+      add_string type_rbracket;
 (*
       bvars_seen := bvars_seen_here @ old_seen;
       bvars_seen := old_seen;
@@ -915,7 +917,10 @@ fun pp_term (G : grammar) TyG = let
       else ();
       if showtypes then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth TyG pps (decdepth depth) (#2 (dom_rng injty)))
+         let val ty = #2 (dom_rng injty)
+         in if is_univ_type ty then add_break (1,0) else ();
+            type_pp.pp_type_with_depth TyG pps (decdepth depth) ty
+         end)
       else ();
       pend showtypes
     end
@@ -1279,7 +1284,10 @@ fun pp_term (G : grammar) TyG = let
       pr_term t2 prec prec rprec (decdepth depth);
       if comb_show_type then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth TyG pps (decdepth depth) (type_of tm))
+         let val ty = type_of tm
+         in if is_univ_type ty then add_break (1,0) else ();
+            type_pp.pp_type_with_depth TyG pps (decdepth depth) ty
+         end)
       else ();
       end_block();
       pend (addparens orelse comb_show_type)
@@ -1386,6 +1394,8 @@ fun pp_term (G : grammar) TyG = let
         end
       | SUFFIX TYPE_annotation =>
         raise Fail "Type annotation shouldn't arise"
+      | SUFFIX TYPE_application =>
+        raise Fail "Type application shouldn't arise"
       | PREFIX (STD_prefix lst) => let
           val rr = hd lst
           val elements = #elements rr
@@ -1542,6 +1552,7 @@ fun pp_term (G : grammar) TyG = let
       add_string "(ty_antiq(";
       add_break(0,0);
       add_string "`:";
+      if is_univ_type ty then add_break (1,0) else ();
       type_pp.pp_type_with_depth TyG pps (decdepth depth) ty;
       add_string "`))";
       end_block()
@@ -1580,6 +1591,7 @@ fun pp_term (G : grammar) TyG = let
           fun add_type () = let
           in
             add_string (" "^type_intro); add_break (0,0);
+            if is_univ_type Ty then add_break (1,0) else ();
             type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty
           end
           val new_freevar =
@@ -1607,6 +1619,7 @@ fun pp_term (G : grammar) TyG = let
             pbegin true;
             action();
             add_string (" "^type_intro);
+            if is_univ_type Ty then add_break (1,0) else ();
             type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty;
             pend true
           end
@@ -1630,6 +1643,7 @@ fun pp_term (G : grammar) TyG = let
                 add_string "(";
                 begin_block CONSISTENT 0;
                 add_string type_intro;
+                if is_univ_type (hd Args) then add_break (1,0) else ();
                 type_pp.pp_type_with_depth TyG pps depth (hd Args);
                 end_block ();
                 add_string ")"
@@ -1743,6 +1757,14 @@ fun pp_term (G : grammar) TyG = let
                             f = f} args Rand
                          else
                            pr_comb tm Rator Rand
+                   | SOME (TypeBinderString bs) =>
+                         if isSome restr_binder_rule then
+                           pr_comb_with_rule(#2(valOf restr_binder_rule))
+                           {fprec = #1 (valOf restr_binder_rule),
+                            fname = binder_to_string G (valOf restr_binder),
+                            f = f} args Rand
+                         else
+                           pr_comb tm Rator Rand
                  end
              | SOME crules0 =>
               let fun suitable_rule rule =
@@ -1812,7 +1834,7 @@ fun pp_term (G : grammar) TyG = let
             else pr_comb tm Rator Rand
           else maybe_pr_atomf()
         end
-      | TYCOMB(Rator, Rand) => pr_tycomb tm
+      | TYCOMB(Rator, Rand) => Feedback.trace("pp_avoids_symbol_merges",0) pr_tycomb tm
       | LAMB  (Bvar,  Body) => pr_abs tm
       | TYLAMB(Bvar,  Body) => pr_tyabs tm
   end handle SimpleExit => ()

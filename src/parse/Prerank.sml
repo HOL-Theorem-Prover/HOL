@@ -236,7 +236,7 @@ fun clean rk =
     Zerorank => 0
   | Sucrank rk' => clean rk' + 1
   | Maxrank (rk1,rk2) => Int.max(clean rk1, clean rk2)
-  | _ => raise Fail "Don't expect to see links remaining at this stage"
+  | _ => raise Fail "Don't expect to see links remaining at this stage of rank inference"
 
 fun toRank rk =
   let val _ = replace_null_links rk []

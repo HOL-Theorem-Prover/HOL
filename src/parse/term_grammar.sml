@@ -72,9 +72,12 @@ fun update_rr_pref b
   {term_name = term_name, elements = elements, preferred = b,
    block_style = block_style, paren_style = paren_style}
 
-datatype binder = LAMBDA | BinderString of string
-datatype prefix_rule = STD_prefix of rule_record list | BINDER of binder list
-datatype suffix_rule = STD_suffix of rule_record list | TYPE_annotation
+datatype binder = LAMBDA | BinderString of string | TypeBinderString of string
+datatype prefix_rule = STD_prefix of rule_record list
+                     | BINDER of binder list
+datatype suffix_rule = STD_suffix of rule_record list
+                     | TYPE_annotation
+                     | TYPE_application
 datatype infix_rule =
          STD_infix of rule_record list * associativity
        | RESQUAN_OP
@@ -99,7 +102,10 @@ type parser_info = (string,unit) Binarymap.dict
 type printer_info =
   ({Name:string,Thy:string},term_pp_types.userprinter) Binarymap.dict
 type special_info = {type_intro : string,
+                     type_lbracket : string,
+                     type_rbracket : string,
                      lambda : string,
+                     type_lambda : string,
                      endbinding : string,
                      restr_binders : (binder * string) list,
                      res_quanop : string}
@@ -183,8 +189,9 @@ fun update_restr_binders rb
          restr_binders = rb, res_quanop = res_quanop}
 
 fun fupdate_restr_binders f
-  {lambda, endbinding, type_intro, restr_binders, res_quanop} =
-  {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
+  {lambda, type_lambda, endbinding, type_intro, type_lbracket, type_rbracket, restr_binders, res_quanop} =
+  {lambda = lambda, type_lambda = type_lambda, endbinding = endbinding,
+   type_intro = type_intro, type_lbracket = type_lbracket, type_rbracket = type_rbracket,
    restr_binders = f restr_binders, res_quanop = res_quanop}
 
 fun map_rrfn_rule f r =
@@ -199,6 +206,7 @@ fun map_rrfn_rule f r =
 
   | SUFFIX (STD_suffix rlist) => SUFFIX (STD_suffix (map f rlist))
   | SUFFIX TYPE_annotation => r
+  | SUFFIX TYPE_application => r
 
   | CLOSEFIX rlist => CLOSEFIX (map f rlist)
   | LISTRULE _ => r
@@ -228,6 +236,7 @@ fun binder_to_string (G:grammar) b =
   case b of
     LAMBDA => #lambda (specials G)
   | BinderString s => s
+  | TypeBinderString s => s
 
 fun binders (G: grammar) = let
   fun binders0 [] acc = acc
@@ -255,8 +264,8 @@ fun associate_restriction G (b, s) =
 fun is_binder G = let val bs = binders G in fn s => Lib.mem s bs end
 
 datatype stack_terminal =
-  STD_HOL_TOK of string | BOS | EOS | Id  | TypeColon | TypeTok | EndBinding |
-  VS_cons | ResquanOpTok
+  STD_HOL_TOK of string | BOS | EOS | Id  | TypeColon | TypeTok | TypeListTok |
+  EndBinding | VS_cons | ResquanOpTok
 
 fun STtoString (G:grammar) x =
   case x of
@@ -267,6 +276,7 @@ fun STtoString (G:grammar) x =
   | Id => "<identifier>"
   | TypeColon => #type_intro (specials G)
   | TypeTok => "<type>"
+  | TypeListTok => "<type list>"
   | EndBinding => #endbinding (specials G) ^ " (end binding)"
   | ResquanOpTok => #res_quanop (specials G)^" (res quan operator)"
 
@@ -282,7 +292,7 @@ fun nthy_compare ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
 
 val stdhol : grammar =
   GCONS
-  {rules = [(SOME 0, PREFIX (BINDER [LAMBDA])),
+  {rules = [(SOME 0, PREFIX (BINDER [LAMBDA,TypeBinderString "\\:"])),
             (SOME 4, INFIX RESQUAN_OP),
             (SOME 5, INFIX VSCONS),
             (SOME 450,
@@ -305,6 +315,7 @@ val stdhol : grammar =
                                                 (PP.CONSISTENT, 0)),
                                 paren_style = OnlyIfNecessary}], RIGHT))),
             (SOME 1000, SUFFIX TYPE_annotation),
+            (SOME 1200, SUFFIX TYPE_application),
             (SOME 2000, INFIX (FNAPP [])),
             (SOME 2500,
              INFIX (STD_infix ([{term_name = recsel_special,
@@ -327,7 +338,9 @@ val stdhol : grammar =
                         rightdelim = [RE (TOK "|>")],
                         block_info = (PP.INCONSISTENT, 0),
                         cons = reccons_special, nilstr = recnil_special}])],
-   specials = {lambda = "\\", type_intro = ":", endbinding = ".",
+   specials = {lambda = "\\", type_lambda = "\\:",
+               type_intro = ":", endbinding = ".",
+               type_lbracket = "[:", type_rbracket = ":]",
                restr_binders = [], res_quanop = "::"},
    numeral_info = [],
    overload_info = Overload.null_oinfo,
@@ -357,7 +370,9 @@ local
         mmap add (map (binder_to_string G) b)
     | SUFFIX(STD_suffix rules) =>
         mmap (specials_from_elm o rule_elements o #elements) rules
-    | SUFFIX TYPE_annotation => add (#type_intro (specials G))
+    | SUFFIX TYPE_annotation  => add (#type_intro (specials G))
+    | SUFFIX TYPE_application => add (#type_lbracket (specials G)) >>
+                                 add (#type_rbracket (specials G))
     | INFIX(STD_infix (rules, _)) =>
         mmap (specials_from_elm o rule_elements o #elements) rules
     | INFIX RESQUAN_OP => ok
@@ -392,6 +407,7 @@ val rel_list_to_toklist =
 (* right hand elements of suffix and closefix rules *)
 fun find_suffix_rhses (G : grammar) = let
   fun select (SUFFIX TYPE_annotation) = [[TypeTok]]
+    | select (SUFFIX TYPE_application) = [[STD_HOL_TOK (#type_rbracket (specials G))]]
     | select (SUFFIX (STD_suffix rules)) = let
       in
         map (rel_list_to_toklist o rule_elements o #elements) rules
@@ -473,6 +489,7 @@ fun merge_rules (r1, r2) =
     (SUFFIX (STD_suffix sl1), SUFFIX (STD_suffix sl2)) =>
       SUFFIX (STD_suffix (Lib.union sl1 sl2))
   | (SUFFIX TYPE_annotation, SUFFIX TYPE_annotation) => r1
+  | (SUFFIX TYPE_application, SUFFIX TYPE_application) => r1
   | (PREFIX (STD_prefix pl1), PREFIX (STD_prefix pl2)) =>
       PREFIX (STD_prefix (Lib.union pl1 pl2))
   | (PREFIX (BINDER b1), PREFIX (BINDER b2)) =>
@@ -583,7 +600,9 @@ end
 fun remove_form s rule = let
   fun rr_ok (r:rule_record) = #term_name r <> s
   fun lr_ok (ls:listspec) = #cons ls <> s andalso #nilstr ls <> s
-  fun stringbinder LAMBDA = false | stringbinder (BinderString s0) = s0 = s
+  fun stringbinder LAMBDA = false
+    | stringbinder (BinderString s0) = s0 = s
+    | stringbinder (TypeBinderString s0) = s0 = s
 in
   case rule of
     SUFFIX (STD_suffix slist) => SUFFIX (STD_suffix (List.filter rr_ok slist))
@@ -767,14 +786,18 @@ fun remove_numeral_form G c =
   fupdate_numinfo (List.filter (fn (k,v) => k <> (check c))) G
 
 fun merge_specials S1 S2 = let
-  val {type_intro = typ1, lambda = lam1, endbinding = end1,
+  val {type_intro = typ1, type_lbracket = tylbk1, type_rbracket = tyrbk1,
+       lambda = lam1, type_lambda = tylam1, endbinding = end1,
        restr_binders = res1, res_quanop = resq1} = S1
-  val {type_intro = typ2, lambda = lam2, endbinding = end2,
+  val {type_intro = typ2, type_lbracket = tylbk2, type_rbracket = tyrbk2,
+       lambda = lam2, type_lambda = tylam2, endbinding = end2,
        restr_binders = res2, res_quanop = resq2} = S2
 in
-  if typ1 = typ2 andalso lam1 = lam2 andalso end1 = end2 andalso resq1 = resq2
+  if typ1 = typ2 andalso tylbk1 = tylbk2 andalso tyrbk1 = tyrbk2 andalso
+     lam1 = lam2 andalso tylam1 = tylam2 andalso end1 = end2 andalso resq1 = resq2
   then
-    {type_intro = typ1, lambda = lam1, endbinding = end1,
+    {type_intro = typ1, type_lbracket = tylbk1, type_rbracket = tyrbk1,
+     lambda = lam1, type_lambda = tylam1, endbinding = end1,
      restr_binders = Lib.union res1 res2, res_quanop = resq1}
   else
     raise GrammarError "Specials in two grammars don't agree"
@@ -874,6 +897,7 @@ fun prettyprint_grammar pstrm (G :grammar) = let
       case b of
         LAMBDA => #lambda (specials G)
       | BinderString s => s
+      | TypeBinderString s => s
     val bname = "\"" ^ bname0 ^ "\""
     val endb = "\"" ^ #endbinding (specials G) ^ "\""
   in
@@ -899,6 +923,12 @@ fun prettyprint_grammar pstrm (G :grammar) = let
         val type_intro = #type_intro (specials G)
       in
         add_string ("TM \""^type_intro^"\" TY  (type annotation)")
+      end
+    | SUFFIX TYPE_application => let
+        val type_lbracket = #type_lbracket (specials G)
+        val type_rbracket = #type_rbracket (specials G)
+      in
+        add_string ("TM \""^type_lbracket^"\" TY, ..., TY \""^type_rbracket^"\"  (type application)")
       end
     | INFIX (STD_infix (rrl, a)) => let
         val assocstring =

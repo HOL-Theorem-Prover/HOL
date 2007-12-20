@@ -46,6 +46,7 @@ sig
   datatype binder
      = LAMBDA
      | BinderString of string
+     | TypeBinderString of string
 
   datatype prefix_rule
      = STD_prefix of rule_record list
@@ -54,6 +55,7 @@ sig
   datatype suffix_rule
      = STD_suffix of rule_record list
      | TYPE_annotation
+     | TYPE_application
 
   datatype infix_rule
      = STD_infix of rule_record list * associativity
@@ -102,7 +104,10 @@ sig
 
 
   type special_info = {type_intro    : string,
+                       type_lbracket : string,
+                       type_rbracket : string,
                        lambda        : string,
+                       type_lambda   : string,
                        endbinding    : string,
                        restr_binders : (binder * string) list,
                        res_quanop    : string}
@@ -142,6 +147,7 @@ sig
      | Id
      | TypeColon
      | TypeTok
+     | TypeListTok
      | EndBinding
      | VS_cons
      | ResquanOpTok

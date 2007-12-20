@@ -43,6 +43,7 @@ TApp   ::= Leaf | Tuple Leaf
   val empty_grammar    : grammar
   val rules            : grammar -> (int * grammar_rule) list
   val abbreviations    : grammar -> (string,type_structure) Binarymap.dict
+  val var_grammar      : grammar -> grammar
 
   val abb_dest_type : grammar -> Type.hol_type -> string * Type.hol_type list
   val disable_abbrev_printing : string -> grammar -> grammar

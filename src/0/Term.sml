@@ -407,7 +407,7 @@ fun prim_mk_const {Name,Thy} =
 fun ground x = Lib.all (fn {redex,residue} => not(Type.polymorphic residue)) x;
 
 fun create_const errstr (const as Const(_,GRND pat)) Ty =
-      if Ty=pat then const else raise ERR "create_const" "not a type match"
+      if aconv_ty Ty pat then const else raise ERR "create_const" "not a type match"
   | create_const errstr (const as Const(r,POLY pat)) Ty =
      ((case Type.raw_match_type pat Ty ([],[])
         of ([],_) => const
@@ -449,7 +449,7 @@ local val INCOMPAT_TYPES  = Lib.C ERR "incompatible types"
         let fun loop (A,_) [] = A
               | loop (A,typ) (tm::rst) =
                  let val (ty1,ty2) = with_exn Type.dom_rng typ err
-                 in if type_of tm = ty1
+                 in if aconv_ty (type_of tm) ty1
                     then loop(Comb(A,tm),ty2) rst
                     else raise err
                  end
@@ -459,9 +459,9 @@ local val INCOMPAT_TYPES  = Lib.C ERR "incompatible types"
 in
 
 fun mk_comb(r as (Abs(Fv(_,Ty),_), Rand)) =
-      if type_of Rand = Ty then Comb r else raise INCOMPAT_TYPES "mk_comb"
+      if aconv_ty (type_of Rand) Ty then Comb r else raise INCOMPAT_TYPES "mk_comb"
   | mk_comb(r as (Clos(_,Abs(Fv(_,Ty),_)), Rand)) =
-      if type_of Rand = Ty then Comb r else raise INCOMPAT_TYPES "mk_comb"
+      if aconv_ty (type_of Rand) Ty then Comb r else raise INCOMPAT_TYPES "mk_comb"
   | mk_comb(Rator,Rand) = mk_comb0 (Rator,[Rand])
 
 val list_mk_comb = lmk_comb (INCOMPAT_TYPES "list_mk_comb")

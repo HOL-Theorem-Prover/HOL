@@ -37,10 +37,39 @@ signature Parse = sig
   (* Parsing Types *)
 
   val type_grammar : unit -> type_grammar.grammar
+  val type_var_grammar : unit -> type_grammar.grammar
   val Type         : hol_type frag list -> hol_type
   val ==           : hol_type frag list -> 'a -> hol_type
   val to_ptyInEnv  : Pretype.pretype -> Parse_support.env ->
                         Pretype.pretype * Parse_support.env
+
+  val typ1_rec :
+    {antiq : term -> Pretype.pretype,
+     kindcast : {Kind : Prekind.prekind, Locn : locn.locn, Ty : Pretype.pretype} -> Pretype.pretype,
+     kindparser : term qbuf.qbuf -> Prekind.prekind,
+     qtyop :
+       {Args : Pretype.pretype list, Locn : locn.locn, Thy : string, Tyop : string} ->
+       Pretype.pretype,
+     rankcast : {Locn : locn.locn, Rank : Prerank.prerank, Ty : Pretype.pretype} -> Pretype.pretype,
+     tyabs : Pretype.pretype * Pretype.pretype -> Pretype.pretype, tyapp : Pretype.pretype * Pretype.pretype -> Pretype.pretype,
+     tycon : {Locn : locn.locn, Thy : string, Tyop : string} -> Pretype.pretype,
+     tyop : (string * locn.locn) * Pretype.pretype list -> Pretype.pretype,
+     tyuniv : Pretype.pretype * Pretype.pretype -> Pretype.pretype,
+     vartype : (string * Prekind.prekind * Prerank.prerank) * locn.locn -> Pretype.pretype}
+
+  val typ2_rec :
+    {antiq : hol_type -> Pretype.pretype,
+     kindcast : {Kind : Prekind.prekind, Locn : locn.locn, Ty : Pretype.pretype} -> Pretype.pretype,
+     kindparser : hol_type qbuf.qbuf -> Prekind.prekind,
+     qtyop :
+       {Args : Pretype.pretype list, Locn : locn.locn, Thy : string, Tyop : string} ->
+       Pretype.pretype,
+     rankcast : {Locn : locn.locn, Rank : Prerank.prerank, Ty : Pretype.pretype} -> Pretype.pretype,
+     tyabs : Pretype.pretype * Pretype.pretype -> Pretype.pretype, tyapp : Pretype.pretype * Pretype.pretype -> Pretype.pretype,
+     tycon : {Locn : locn.locn, Thy : string, Tyop : string} -> Pretype.pretype,
+     tyop : (string * locn.locn) * Pretype.pretype list -> Pretype.pretype,
+     tyuniv : Pretype.pretype * Pretype.pretype -> Pretype.pretype,
+     vartype : (string * Prekind.prekind * Prerank.prerank) * locn.locn -> Pretype.pretype}
 
   val add_type_binder : string -> unit
   val temp_add_type_binder : string -> unit

@@ -26,6 +26,8 @@ loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/sum" :: !loadPath;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/pair/src" :: !loadPath;
 app load ["HolKernel","Parse"];
 
+load "stringLib";
+val tm5 = ``( (f: !'a 'b 'c 'd. ('a # 'b # 'c # 'd)) [: bool, num, ind, char :] , f)`` handle e => Raise e;
 val q = `!x:'a. (f:'a->'b) (x:'a) = (z: 'b)`;
 Term q handle e => Raise e;
 val q = [QUOTE " (*#loc 192 10*):'a"] : hol_type frag list;
@@ -55,14 +57,283 @@ in
   val _ = installPP (with_pp term_grammar.prettyprint_grammar)
 end;
 
+(* Read Parse.sml up to typ1_rec (or -- ) BUT NOT datatype defns *)
+
+val G = term_grammar();
+val ty = parse_type.parse_type typ1_rec false (type_grammar());
+type_var_grammar();
+val tyv = parse_type.parse_type typ1_rec false (type_var_grammar());
+val typeparser = ty;
+val type_var_parser = tyv;
+(* do_parse *)
+open parse_term;
+val ERROR = mk_HOL_ERR "Parse";
+val ERRORloc = mk_HOL_ERRloc "Parse";
+
+val pt = parse_term G ty tyv
+    handle PrecConflict(st1, st2) =>
+           raise ERROR "Term"
+             (String.concat
+               ["Grammar introduces precedence conflict between tokens ",
+                term_grammar.STtoString G st1, " and ",
+                term_grammar.STtoString G st2]);
+open base_tokens qbuf;
+
+val q = `\:'a. I:'a -> 'a` : term frag list;
+val q = `\:'a :<= 2. \myI:'a -> 'a. myI` : term frag list;
+
+(* val ((qb,p), _) = pt (new_buffer q, initial_pstack)
+         handle base_tokens.LEX_ERR (s,locn) =>
+                Raise (ERRORloc "Absyn" locn ("Lexical error - "^s)); *)
+
+(* read in parse_term and the body of the function "parse_term" *)
+
+val qb = new_buffer q and p = initial_pstack : term PStack;
+val p0 = p;
+
+val ((_,p1),SOME()) = push ((Terminal BOS,locn.Loc_None), XXX) (qb,p0);
+val ((_,p2),SOME()) = get_item (qb,p1);
+
+val ((_,p3),SOME optt) = current_input (qb,p2);
+val ((_,p4),SOME true) = return true (qb,p3);
+(* or, if optt = NONE,
+val ((_,p5),SOME t) = topterm (qb,p4);
+val t1 = (#1 (#1 t) <> Terminal BOS);
+top_nonterminal p5;
+
+*)
+
+val ((_,p2),SOME()) = basic_action (qb,p4);
+
+val ((_,p4),SOME()) = basic_action (qb,p4);
+
+(* basic_action *)
+val ((_,p5),SOME tt) = current_input (qb,p4);
+val ((_,p6),SOME top) = topterm (qb,p5);
+val ((_,p7),SOME invs) = invstructp (qb,p6);
+
+val ((_,p8),SOME()) = doit (tt,top,invs) (qb,p7);
+val p2 = p8;
+
+val (tt, (top_item, top_token), in_vs) = (tt, top, invs);
+
+(* read in "doit (page 9) *)
+
+    val (input_term, itlocn, _) = transform (hd in_vs) tt
+    val top = dest_terminal top_item
+    val toplocn = #2 top_item
+    val ttt = Terminal input_term
+    fun less_action stack =
+      (* if the next thing in the lookahead might begin a whole new phrase,
+         i.e. is a closed lhs, and the top thing on the stack is a non-terminal
+         then we should insert the magical function application operator *)
+      case stack of
+        ((NonTerminal _,locn), _)::_ => let
+          val fnt = (LA_Symbol (STD_HOL_TOK fnapp_special),locn.Loc_Near locn)
+        in
+          if mem input_term closed_lefts then
+            current_la >- (fn oldla => set_la (fnt::oldla))
+          else
+            shift
+        end
+      | ((NonTermVS _,locn), _) :: _ => let
+          val fnt = (LA_Symbol VS_cons,locn.Loc_Near locn)
+        in
+          if mem input_term closed_lefts then
+            current_la >- (fn oldla => set_la (fnt::oldla))
+          else
+            shift
+        end
+      | _ => shift
+    (* a "paren escape" is a CAML style escaping of what would otherwise
+       be a special token by parenthesising it.  Thus (/\) instead of $/\.
+       The analysis is done at this level rather than inside the lexer to
+       allow for white-space etc.  People will have to write ( * ) to escape
+       the multiplication symbol, because without the space, it will look like
+       a comment *)
+    val check_for_paren_escape = let
+      fun require (s:string option) =
+          getstack >-
+          (fn [] => fail
+            | (tt :: _ ) => let
+              in
+                case tt of
+                  ((Terminal (STD_HOL_TOK s'),locn), _) => let
+                  in
+                    case s of
+                      NONE => pop >> return (s',locn)
+                    | SOME s'' => if s' = s'' then pop >> return (s',locn)
+                                  else fail
+                  end
+                | _ => fail
+              end)
+    in
+      if input_term = STD_HOL_TOK ")" then
+          require NONE >-
+          (fn (s,_) =>
+              if s = ")" orelse s = "(" then
+                fail  (* don't want to paren-escape "())" or  "(()" *)
+              else
+                require (SOME "(") >-
+                (fn (_,locn) => let val lrlocn = locn.between locn itlocn
+                  in
+                  shift >> pop >>
+                  (if is_binder s then leave_binder else return ()) >>
+                  invstructp >- (return o #1 o hd) >-
+                  (fn vstate =>
+                      if vstate <> VSRES_VS then
+                        push ((NonTerminal (VAR s),lrlocn), XXX)
+                      else
+                        push ((NonTermVS [(SIMPLE s,lrlocn)],lrlocn), XXX))
+                  end ))
+      else fail
+    end
+    val usual_action =
+      check_for_paren_escape ++
+      (fn x =>
+          (case Polyhash.peek prec_matrix (top, input_term) of
+             NONE => let
+             in
+               print ("Don't expect to find a "^STtoString G input_term^
+                      " in this position after a "^STtoString G top^"\n"^
+                      locn.toString itlocn^" and "^ locn.toString toplocn^".\n");
+               fail
+             end
+           | SOME order => let
+             in
+               case order of
+                 LESS => getstack >- less_action
+               | EQUAL => shift
+               | GREATER => do_reduction
+             end) x)
+
+case input_term of
+
+val 
+Polyhash.peek prec_matrix (top, input_term)
+
+val ((_,p8),SOME stack) = getstack (qb,p7);
+
+val ((_,p9),SOME stack()) = shift (qb,p8);
+
+
+is_final_pstack p;
+val (BT_EOI,locn) = current qb;
+top_nonterminal p handle ParseTermError (s,locn) => Raise (ERRORloc "Term" locn s);
+
+open Parse;
 val q = `\x:'a. x:'a` : term frag list;
+val q = `\:'a:<=4. \myI:'a -> 'a. myI`;
+val q = `x [: bool :]` : term frag list;
 val absyn = Absyn q
 val oinfo = term_grammar.overload_info (term_grammar())
 val ptm0 = Parse_support.make_preterm (absyn_to_preterm_in_env oinfo absyn);
+(*
+open Parse;
+val ERROR = mk_HOL_ERR "Parse";
+val ERRORloc = mk_HOL_ERRloc "Parse";
+val WARN  = HOL_WARNING "Parse";
+open Parse_support Absyn;
+  fun binder(VIDENT (l,s))    = make_binding_occ l s
+    | binder(VPAIR(l,v1,v2))  = make_vstruct l [binder v1, binder v2] NONE
+    | binder(VAQ (l,x))       = make_aq_binding_occ l x
+    | binder(VTYPED(l,v,pty)) = make_vstruct l [binder v] (SOME pty)
+  fun tybinder(Pretype.PT(Pretype.Vartype(s,_,_),l)) = (make_tybinding_occ l s) : binder_in_env
+    | tybinder(Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) = make_kind_tybinding_occ l (tybinder Ty) Kind
+    | tybinder(Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) = make_rank_tybinding_occ l (tybinder Ty) Rank
+    | tybinder _ = raise ERROR "tybinder" "not a variable type"
+  fun to_vstruct t =
+      case t of
+        APP(l, APP(_, IDENT (_, ","), t1), t2) => VPAIR(l, to_vstruct t1,
+                                                        to_vstruct t2)
+      | AQ p => VAQ p
+      | IDENT p  => VIDENT p
+      | TYPED(l, t, pty) => VTYPED(l, to_vstruct t, pty)
+      | _ => raise ERRORloc "Term" (locn_of_absyn t)
+                            "Bad variable-structure"
+
+val ginfo = oinfo and t = absyn;
+val to_ptmInEnv = absyn_to_preterm_in_env ginfo;
+
+val TYLAM(l, tv, t) = t;
+(* bind_term l "\\:" [tybinder tv] (to_ptmInEnv t) *)
+
+val binder_ = "\\:" and alist = [tybinder tv] and tm = (to_ptmInEnv t);
+val E = empty_env;
+val {scope=scope0,scope_ty=scope_ty0,...} = get_env E;
+val (E',F) = rev_itlist (fn a => fn (e,f) =>
+             let val (g,e') = a binder_ e in (e', f o g) end) alist (E,I)
+get_env E';
+
+(* to_ptmInEnv t E' *)
+
+val LAM(l, vs, t) = t;
+(* bind_term l "\\" [binder vs] (to_ptmInEnv t) *)
+
+val binder_ = "\\" and alist = [binder vs] and tm = (to_ptmInEnv t);
+val E = E';
+val {scope=scope0,scope_ty=scope_ty0,...} = get_env E;
+val (E',F) = rev_itlist (fn a => fn (e,f) =>
+             let val (g,e') = a binder_ e in (e', f o g) end) alist (E,I)
+(* val (g,e') = (hd alist) binder_ E; *)
+(* binder vs binder_ E *)
+val (VTYPED(l,v,pty)) = vs;
+(* make_vstruct l [binder v] (SOME pty) *)
+
+val bvl = [binder v] and tyo = (SOME pty);
+
+  open Preterm
+  fun loop ([v],E) = v "\\" E
+    | loop ((v::rst),E) = let
+        val (f,e) = v "\\" E
+        val (F,E') = loop(rst,e)
+      in
+        ((fn b => Comb{Rator=gen_const l "UNCURRY",Rand=f(F b),Locn=l}), E')
+      end
+    | loop _ = raise ERRORloc "make_vstruct" l "impl. error, empty vstruct"
+  val (F,E') =
+    case tyo of
+      NONE    => loop(bvl,E)
+    | SOME ty => cdomf (hd bvl "\\" E) ty
+
+
+val (E',F) = (e', I o g);
+get_env E';
+
+
+
+
+
+(*
+val (tm',E'') = tm E';
+*)
+
+
+get_env E'';
+val {free=free1,free_ty=free_ty1,...} = get_env E'';
+
+
+*)
+
+
 val pfns = (SOME(term_to_string, type_to_string, kind_to_string))
 val printers = pfns
 open Preterm;
-(* read interior of  TC *)
+(* read Preterm (except datatype) and interior of  TC inside Preterm *)
+
+val (TyComb{Rator, Rand, Locn}) = ptm0;
+val bvar = Pretype.new_uvar()
+check Rator;
+checkkind Rand;
+Pretype.unify (ptype_of Rator)
+   (Pretype.mk_univ_type(bvar, Pretype.new_uvar()));
+Prekind.unify (Pretype.pkind_of Rand) (Pretype.pkind_of bvar);
+Prerank.unify (Pretype.prank_of Rand) (* <= *) (Pretype.prank_of bvar)
+
+val (TyAbs{Bvar, Body, Locn}) = ptm0;
+checkkind Bvar;
+check Body;
+
 
 val (  Abs{Bvar, Body, Locn}) = ptm0;
 check Bvar;

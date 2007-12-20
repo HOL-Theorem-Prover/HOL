@@ -82,6 +82,7 @@ fun kind_grammar() = !the_kind_grammar
 val the_type_grammar = ref type_grammar.empty_grammar
 val type_grammar_changed = ref false
 fun type_grammar() = !the_type_grammar
+fun type_var_grammar() = type_grammar.var_grammar (type_grammar())
 
 (*---------------------------------------------------------------------------
          pervasive term grammar
@@ -319,6 +320,9 @@ val type_parser1 =
 val type_parser2 =
   ref (parse_type.parse_type typ2_rec false (type_grammar()))
 
+val type_var_parser1 =
+  ref (parse_type.parse_type typ1_rec false (type_var_grammar()))
+
 
 (*---------------------------------------------------------------------------
         pretty printing types
@@ -347,6 +351,7 @@ fun update_type_fns () =
   if !type_grammar_changed then let in
      type_parser1 := parse_type.parse_type typ1_rec false (type_grammar());
      type_parser2 := parse_type.parse_type typ2_rec false (type_grammar());
+     type_var_parser1 := parse_type.parse_type typ1_rec false (type_var_grammar());
      type_printer := type_pp.pp_type (type_grammar());
      type_grammar_changed := false
   end
@@ -355,6 +360,7 @@ fun update_type_fns () =
 fun pp_type pps ty = let in
    update_type_fns();
    Portable.add_string pps ":";
+   if is_univ_type ty then Portable.add_break pps (1,0) else ();
    !type_printer pps ty
  end
 
@@ -403,7 +409,7 @@ fun to_ptyInEnv ty = let
             make_kind_binding_occ l (binder_type Ty) Kind
     | binder_type(Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) =
             make_rank_binding_occ l (binder_type Ty) Rank
-    | binder_type _ = raise ERROR "to_ptyInEnv" "non-variable binder"
+    | binder_type _ = raise ERROR "to_ptyInEnv" "non-variable type binder"
 in case ty0 of
      Vartype(s,kd,rk) => make_type_atom l s
    | Contype{Thy,Tyop,Kind,Rank} => make_type_constant l {Thy=Thy,Tyop=Tyop}
@@ -455,9 +461,9 @@ fun == q x = Type q;
              Parsing into abstract syntax
  ---------------------------------------------------------------------------*)
 
-fun do_parse G ty = let
+fun do_parse G ty tyv = let
   open parse_term
-  val pt = parse_term G ty
+  val pt = parse_term G ty tyv
       handle PrecConflict(st1, st2) =>
              raise ERROR "Term"
                (String.concat
@@ -487,7 +493,7 @@ end;
 
 
 val the_absyn_parser: (term frag list -> Absyn.absyn) ref =
-    ref (do_parse (!the_term_grammar) (!type_parser1))
+    ref (do_parse (!the_term_grammar) (!type_parser1) (!type_var_parser1))
 
 fun update_term_fns() = let
   val _ = update_type_fns()
@@ -495,7 +501,7 @@ in
   if !term_grammar_changed then let
   in
     grammar_term_printer := term_pp.pp_term (term_grammar()) (type_grammar());
-    the_absyn_parser := do_parse (!the_term_grammar) (!type_parser1);
+    the_absyn_parser := do_parse (!the_term_grammar) (!type_parser1) (!type_var_parser1);
     term_grammar_changed := false
   end
   else ()
@@ -676,9 +682,11 @@ local open Parse_support Absyn
   fun binder(VIDENT (l,s))    = make_binding_occ l s
     | binder(VPAIR(l,v1,v2))  = make_vstruct l [binder v1, binder v2] NONE
     | binder(VAQ (l,x))       = make_aq_binding_occ l x
-    | binder(VTYPED(l,v,pty)) = make_vstruct l [binder v] (SOME pty)
-  fun tybinder(Pretype.PT(Pretype.Vartype(s,kd,rk),l)) = make_tybinding_occ l s
-    | tybinder _ = raise ERROR "tybinder" "not a variable type"
+    | binder(VTYPED(l,v,pty)) = make_vstruct l [binder v] (SOME (to_ptyInEnv pty))
+  fun tybinder(Pretype.PT(Pretype.Vartype(s,_,_),l)) = (make_tybinding_occ l s)
+    | tybinder(Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) = make_kind_tybinding_occ l (tybinder Ty) Kind
+    | tybinder(Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) = make_rank_tybinding_occ l (tybinder Ty) Rank
+    | tybinder(Pretype.PT(_,l)) = raise ERROR "tybinder" "not a variable type"
   fun to_vstruct t =
       case t of
         APP(l, APP(_, IDENT (_, ","), t1), t2) => VPAIR(l, to_vstruct t1,
@@ -765,7 +773,8 @@ fun parse_from_grammars (tyG, tmG) = let
   val ty_parser = parse_type.parse_type typ2_rec false tyG
   (* this next parser is used within the term parser *)
   val ty_parser' = parse_type.parse_type typ1_rec false tyG
-  val tm_parser = absyn_to_term tmG o remove_lets o do_parse tmG ty_parser'
+  val ty_var_parser' = parse_type.parse_type typ1_rec false (type_grammar.var_grammar tyG)
+  val tm_parser = absyn_to_term tmG o remove_lets o do_parse tmG ty_parser' ty_var_parser'
 in
   (parse_Type ty_parser, tm_parser)
 end

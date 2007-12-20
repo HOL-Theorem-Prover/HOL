@@ -299,6 +299,22 @@ fun type_varsl L = rev(TVl L [] Lib.I)
 end;
 
 (*---------------------------------------------------------------------------*
+ * All the type variables in a type.  Tail recursive (from Ken Larsen).      *
+ *---------------------------------------------------------------------------*)
+
+local fun ATV (v as TyFv _) A k    = k (Lib.insert v A)
+        | ATV (TyApp(opr, ty)) A k = ATV opr A (fn q => ATV ty q k)
+        | ATV (TyAll(bv,ty)) A k   = ATV (TyFv bv) A (fn q => ATV ty q k)
+        | ATV (TyAbs(bv,ty)) A k   = ATV (TyFv bv) A (fn q => ATV ty q k)
+        | ATV _ A k = k A
+      and ATVl (ty::tys) A k       = ATV ty A (fn q => ATVl tys q k)
+        | ATVl _ A k = k A
+in
+fun all_type_vars ty = rev(ATV ty [] Lib.I)
+fun all_type_varsl L = rev(ATVl L [] Lib.I)
+end;
+
+(*---------------------------------------------------------------------------*
  * The free type variables of a type, in textual order.                      *
  *---------------------------------------------------------------------------*)
 
@@ -1248,8 +1264,10 @@ fun RM [] theta = theta
   | RM (((v as TyFv(_,kd,rk)),ty,scoped)::rst) (S1 as (tyS,Id))
      = if bound_by_scope scoped ty
        then MERR "type variable bound by scope"
+(* Incorrect to test for rank here; types should match at any rank:
        else if rk < rank_of ty
        then MERR "type variable of insufficient rank"
+*)
        else if kd <> kind_of ty
        then MERR "type variable has different kind"
        else RM rst

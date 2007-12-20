@@ -169,19 +169,22 @@ fun is_var_type(PT(Vartype v,loc)) = true
 fun mk_app_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyApp(ty1,ty2), locn.between loc1 loc2)
 
-fun dest_app_type(ty as PT(TyApp(ty1,ty2),loc)) = (ty1,ty2)
+fun dest_app_type(PT(UVar(ref(SOME ty)),loc)) = dest_app_type ty
+  | dest_app_type(ty as PT(TyApp(ty1,ty2),loc)) = (ty1,ty2)
   | dest_app_type _ = raise TCERR "dest_app_type" "not a type application";
 
 fun mk_univ_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyUniv(ty1,ty2), locn.between loc1 loc2)
 
-fun dest_univ_type(ty as PT(TyUniv(ty1,ty2),loc)) = (ty1,ty2)
+fun dest_univ_type(PT(UVar(ref(SOME ty)),loc)) = dest_univ_type ty
+  | dest_univ_type(ty as PT(TyUniv(ty1,ty2),loc)) = (ty1,ty2)
   | dest_univ_type _ = raise TCERR "dest_univ_type" "not a universal type";
 
 fun mk_abs_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyAbst(ty1,ty2), locn.between loc1 loc2)
 
-fun dest_abs_type(ty as PT(TyAbst(ty1,ty2),loc)) = (ty1,ty2)
+fun dest_abs_type(PT(UVar(ref(SOME ty)),loc)) = dest_abs_type ty
+  | dest_abs_type(ty as PT(TyAbst(ty1,ty2),loc)) = (ty1,ty2)
   | dest_abs_type _ = raise TCERR "dest_abs_type" "not a type abstraction";
 
 (* returns a list of strings, names of all kind variables mentioned *)
@@ -683,8 +686,8 @@ in
     UVar (r as ref NONE) => generate_new_name r
   | UVar (ref (SOME ty)) => replace_null_links ty
   | TyApp (ty1,ty2) => replace_null_links ty1 >> replace_null_links ty2 >> ok
-  | TyUniv (tyv, ty) => replace_null_links ty
-  | TyAbst (tyv, ty) => replace_null_links ty
+  | TyUniv (tyv, ty) => replace_null_links tyv >> replace_null_links ty >> ok
+  | TyAbst (tyv, ty) => replace_null_links tyv >> replace_null_links ty >> ok
   | TyKindConstr {Ty,Kind} => replace_null_links Ty >> kind_replace_null_links Kind >> ok
   | TyRankConstr {Ty,Rank} => replace_null_links Ty >> ok
   | Vartype (s,kd,rk) => kind_replace_null_links kd
@@ -693,16 +696,6 @@ end env
 
 fun clean (PT(ty, locn)) =
   case ty of
-(*
-    TyRankConstr {Ty=PT(TyKindConstr {Ty=PT(Vartype (s,_,_),_), Kind=kd},_), Rank=rk} =>
-       Type.mk_vartype_opr (s, Prekind.toKind kd, rk)
-  | TyKindConstr {Ty=PT(TyRankConstr {Ty=PT(Vartype (s,_,_),_), Rank=rk},_), Kind=kd} =>
-       Type.mk_vartype_opr (s, Prekind.toKind kd, rk)
-  | TyKindConstr {Ty=PT(Vartype (s,_,rk),_), Kind=kd} =>
-       Type.mk_vartype_opr (s, Prekind.toKind kd, rk)
-  | TyRankConstr {Ty=PT(Vartype (s,kd,_),_), Rank=rk} =>
-       Type.mk_vartype_opr (s, Kind.typ, rk)
-*)
     Vartype (s,kd,rk) => Type.mk_vartype_opr (s, Prekind.toKind kd, Prerank.toRank rk)
   | Contype {Thy,Tyop,...} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop}
   | TyApp(ty1,ty2)  => Type.mk_app_type  (clean ty1, clean ty2)
@@ -710,7 +703,7 @@ fun clean (PT(ty, locn)) =
   | TyAbst (tyv,ty) => Type.mk_abs_type  (clean tyv, clean ty)
   | TyKindConstr {Ty,Kind} => clean Ty
   | TyRankConstr {Ty,Rank} => clean Ty
-  | _ => raise Fail "Don't expect to see links remaining at this stage"
+  | _ => raise Fail "Don't expect to see links remaining at this stage of type inference"
 
 fun toType ty =
   let 

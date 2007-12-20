@@ -36,6 +36,7 @@ fun add_scope_ty((s,kd,rk),{scope,free,scope_ty,free_ty}) =
     {scope=scope, free=free, scope_ty=(s,(kd,rk))::scope_ty, free_ty=free_ty};
 
 val empty_env = {scope=[], free=[], scope_ty=[], free_ty=[]};
+fun get_env (e:env) = e;
 
 type pretype_in_env = env -> Pretype.pretype * env
 type preterm_in_env = env -> Preterm.preterm * env
@@ -323,7 +324,7 @@ fun make_tybinding_occ l s binder E =
      val nrv = Prerank.new_uvar()
      val pty = PT(Vartype(s, nkv, nrv), l)
      val E' = add_scope_ty((s, nkv, nrv),E)
- in ((fn b => TyAbs{Bvar=pty, Body=b, Locn=locn.near (Preterm.locn b)}), E)
+ in ((fn b => TyAbs{Bvar=pty, Body=b, Locn=locn.near (Preterm.locn b)}), E')
  end;
 
 
@@ -386,6 +387,30 @@ fun cdomfrk (f,e) rk = ((fn ty => cdomrk (f ty) [rk]), e)
 
 fun make_rank_binding_occ l bty rk binder E = cdomfrk (bty binder E) rk;
 
+local open Preterm Pretype
+in
+fun cdomkd2 M [] = M
+  | cdomkd2 (TyAbs{Bvar,Body,Locn}) (kd::rst) =
+       TyAbs{Bvar=PT(TyKindConstr{Ty=Bvar,Kind=kd},Locn), Body=cdomkd2 Body rst, Locn=Locn}
+  | cdomkd2 x y = raise ERRORloc "cdomkd2" (Preterm.locn x) "missing case"
+end;
+
+fun cdomfkd2 (f,e) kd = ((fn tm => cdomkd2 (f tm) [kd]), e)
+
+fun make_kind_tybinding_occ l bty kd binder E = cdomfkd2 (bty binder E) kd;
+
+local open Preterm Pretype
+in
+fun cdomrk2 M [] = M
+  | cdomrk2 (TyAbs{Bvar,Body,Locn}) (rk::rst) =
+       TyAbs{Bvar=PT(TyRankConstr{Ty=Bvar,Rank=rk},Locn), Body=cdomrk2 Body rst, Locn=Locn}
+  | cdomrk2 x y = raise ERRORloc "cdomrk2" (Preterm.locn x) "missing case"
+end;
+
+fun cdomfrk2 (f,e) rk = ((fn tm => cdomrk2 (f tm) [rk]), e)
+
+fun make_rank_tybinding_occ l bty rk binder E = cdomfrk2 (bty binder E) rk;
+
 
 (*---------------------------------------------------------------------------
  * Free occurrences of variables.
@@ -422,6 +447,11 @@ fun make_bvar l (s,E) = (Preterm.Var{Name=s, Ty=lookup_bvar(s,E), Locn=l}, E);
 fun make_btyvar l (s,E) =
     let open Pretype
         val (kind,rank) = lookup_btyvar(s,E)
+(*
+        val _ = print (">> looking up bound type variable \""^s^"\": found "^
+                       "kind="^Kind.kind_to_string (Prekind.toKind kind)^
+                       ", rank="^Int.toString (Prerank.toRank rank)^"\n")
+*)
     in (PT(Vartype(s,kind,rank), l), E)
     end;
 
@@ -639,6 +669,13 @@ fun bind_term _ binder alist tm (E as {scope=scope0,scope_ty=scope_ty0,...}:env)
    in (F tm', {scope=scope0,free=free1,scope_ty=scope_ty0,free_ty=free_ty1})
    end;
 
+fun tybind_term _ binder alist tm (E as {scope=scope0,scope_ty=scope_ty0,...}:env) =
+   let val (E',F) = rev_itlist (fn a => fn (e,f) =>
+             let val (g,e') = a binder e in (e', f o g) end) alist (E,I)
+       val (tm',({free=free1,free_ty=free_ty1,...}:env)) = tm E'
+   in (F tm', {scope=scope0,free=free1,scope_ty=scope_ty0,free_ty=free_ty1})
+   end;
+
 fun bind_type _ binder alist ty (E as {scope=scope0,scope_ty=scope_ty0,...}:env) =
    let val (E',F) = rev_itlist (fn a => fn (e,f) =>
              let val (g,e') = a binder e in (e', f o g) end) alist (E,I)
@@ -733,7 +770,9 @@ fun make_vstruct l bvl tyo binder E = let
   val (F,E') =
     case tyo of
       NONE    => loop(bvl,E)
-    | SOME ty => cdomf (hd bvl "\\" E) ty
+    | SOME ty => let val (ty',E') = ty E
+                 in cdomf (hd bvl "\\" E') ty'
+                 end
 in
   case binder of
     "\\" => (F,E')

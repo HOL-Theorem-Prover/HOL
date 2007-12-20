@@ -274,7 +274,7 @@ fun clean (PK(ty, locn)) =
     Varkind s => Kind.typ
   | Typekind => Kind.typ
   | Arrowkind(kd1,kd2) => Kind.==>(clean kd1, clean kd2)
-  | _ => raise Fail "Don't expect to see links remaining at this stage"
+  | _ => raise Fail "Don't expect to see links remaining at this stage of kind inference"
 
 fun toKind kd =
   let val _ = replace_null_links kd (kindvars kd)

@@ -164,6 +164,10 @@ val empty_grammar = TYG ([(std_binder_precedence, BINDER[]),
 fun rules (TYG (G, dict, pmap)) = G
 fun abbreviations (TYG (G, dict, pmap)) = dict
 
+fun is_var_rule (_,CAST) = true
+  | is_var_rule _        = false
+fun var_grammar (TYG(G,abbrevs,pmap)) = TYG(List.filter is_var_rule G,abbrevs,pmap)
+
 fun check_structure st = let
   fun param_numbers (PARAM i, pset) = Binaryset.add(pset, i)
     | param_numbers (TYCON _, pset) = pset
@@ -344,7 +348,7 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
                 (fn () => add_break(1,0)) sl;
         end_block ()
       end
-    | CAST => add_string "TY  ::=  TY : KIND :<= RANK (kind or rank cast of type)"
+    | CAST => add_string "TY  ::=  TY : KIND | TY :<= RANK (kind or rank cast of type)"
     | APPLICATION => add_string "TY  ::=  TY TY (type application)"
     | ARRAY_SFX => add_string "TY  ::=  TY[TY] (array type)"
     | INFIX(oplist, assoc) => let

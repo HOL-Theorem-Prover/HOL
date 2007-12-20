@@ -15,6 +15,11 @@ sig
   type tybinder_in_env  = string -> btyvar_in_env
 
   val empty_env             : env
+  val get_env               : env ->
+           {scope    : (string * pretype) list,
+            free     : (string * pretype) list,
+            scope_ty : (string * (prekind * prerank)) list,
+            free_ty  : (string * (prekind * prerank)) list }
   val gen_overloaded_const  : term_grammar.overload_info -> locn.locn -> string -> preterm
   val make_pretype          : pretype_in_env -> pretype
   val make_preterm          : preterm_in_env -> preterm
@@ -25,6 +30,8 @@ sig
   val make_binding_type_occ : locn.locn -> string -> tybinder_in_env
   val make_kind_binding_occ : locn.locn -> tybinder_in_env -> prekind -> tybinder_in_env
   val make_rank_binding_occ : locn.locn -> tybinder_in_env -> prerank -> tybinder_in_env
+  val make_kind_tybinding_occ : locn.locn -> binder_in_env -> prekind -> binder_in_env
+  val make_rank_tybinding_occ : locn.locn -> binder_in_env -> prerank -> binder_in_env
   val make_atom             : term_grammar.overload_info
                                -> locn.locn -> string -> preterm_in_env
   val make_type_atom        : locn.locn -> string -> pretype_in_env
@@ -43,7 +50,7 @@ sig
                                -> preterm_in_env -> preterm_in_env
                                 -> preterm_in_env
   val make_vstruct          : locn.locn -> binder_in_env list
-                               -> pretype option -> binder_in_env
+                               -> pretype_in_env option -> binder_in_env
   val make_constrained      : locn.locn -> preterm_in_env -> pretype_in_env -> preterm_in_env
   val make_kind_constr_type : locn.locn -> pretype_in_env -> prekind -> pretype_in_env
   val make_rank_constr_type : locn.locn -> pretype_in_env -> prerank -> pretype_in_env
