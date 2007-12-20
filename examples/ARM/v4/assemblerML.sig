@@ -1,5 +1,7 @@
 signature assemblerML =
 sig
+   val armErr          : TextIO.outstream ref
+
    val register2int   : Data.register -> int
    val int2register   : int -> Data.register
 

@@ -13,4 +13,5 @@ sig
   val reset : unit -> unit
   val parallel_move : term -> term -> term -> term
   val reg_alloc : thm -> thm
+  val tvarOrder : term * term -> order
 end

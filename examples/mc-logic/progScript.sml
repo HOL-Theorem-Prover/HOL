@@ -1175,4 +1175,101 @@ val PROG_RECURSION = store_thm("PROC_RECURSION",
   REPEAT STRIP_TAC \\ completeInduct_on `v x` \\ METIS_TAC [UNION_IDEMPOT]);
 
 
+(* ----------------------------------------------------------------------------- *)
+(* Theorems for SPEC                                                             *)
+(* ----------------------------------------------------------------------------- *)
+
+val set_apply_def = Define `
+  set_apply f set = { f x | x IN set }`;
+
+val fix_pos_def = Define `
+  fix_pos (x:'a,y:'b word) = (x,\z:'b word.y)`;
+
+val SPEC_def = Define `
+  SPEC (x:('a,'b,'c)processor) (P,p) C (Q,q) =
+    GPROG x {(P,\x.p)} (set_apply fix_pos C) {(Q,\x.q)}`;
+
+(* theorems *)
+
+val IN_set_apply = prove(
+  ``!x f s. x IN set_apply f s = ?a. (x = f a) /\ a IN s``,
+  SIMP_TAC std_ss [GSPECIFICATION,set_apply_def]);
+
+val set_apply_UNION = prove(
+  ``!f x y. set_apply f (x UNION y) = set_apply f x UNION set_apply f y``,
+  REWRITE_TAC [EXTENSION,IN_set_apply,IN_UNION] \\ METIS_TAC []);
+
+val set_apply_CLAUSES = store_thm("set_apply_CLAUSES",
+  ``!f x s.
+      (set_apply f {} = {}) /\
+      (set_apply f (x INSERT s) = f x INSERT set_apply f s)``,
+  SIMP_TAC std_ss [EXTENSION,set_apply_def,GSPECIFICATION,NOT_IN_EMPTY,IN_INSERT]
+  \\ METIS_TAC []);
+
+(* SPEC theorems *)
+
+val SPEC_FRAME = store_thm("SPEC_FRAME",
+  ``!x P p C Q q. 
+      SPEC x (P,p) C (Q,q) ==> !R. SPEC x (P * R,p) C (Q * R,q)``,
+  REWRITE_TAC [SPEC_def,fix_pos_def] \\ REPEAT STRIP_TAC
+  \\ MOVE_STAR_TAC `x*y*z` `x*z*y`
+  \\ METIS_TAC [GPROG_FRAME,setSTAR_CLAUSES]);
+
+val SPEC_FALSE_PRE = store_thm("SPEC_FALSE_PRE",
+  ``!x P p C Q q. SPEC x (SEP_F,p) C (Q,q)``,
+  INIT_TAC \\ REWRITE_TAC [SPEC_def,fix_pos_def,GPROG_FALSE_PRE]
+  \\ REWRITE_TAC [GPROG_def,GPROG_DISJ_EMPTY,RUN_FALSE_PRE]);
+
+val SPEC_STRENGTHEN = store_thm("SPEC_STRENGTHEN",
+  ``!x P p C Q q. 
+      SPEC x (P,p) C (Q,q) ==> 
+      !P'. SEP_IMP P' P ==> SPEC x (P',p) C (Q,q)``,
+  REWRITE_TAC [SPEC_def,fix_pos_def] \\ REPEAT STRIP_TAC
+  \\ MATCH_MP_TAC GPROG_STRENGTHEN_PRE \\ Q.EXISTS_TAC `P`
+  \\ ASM_SIMP_TAC std_ss []);
+
+val SPEC_WEAKEN = store_thm("SPEC_WEAKEN",
+  ``!x P p C Q q. 
+      SPEC x (P,p) C (Q,q) ==> 
+      !Q'. SEP_IMP Q Q' ==> SPEC x (P,p) C (Q',q)``,
+  REWRITE_TAC [SPEC_def,fix_pos_def] \\ REPEAT STRIP_TAC
+  \\ MATCH_MP_TAC GPROG_WEAKEN_POST \\ Q.EXISTS_TAC `Q`
+  \\ ASM_SIMP_TAC std_ss []);
+
+val SPEC_HIDE_PRE = store_thm("SPEC_HIDE_PRE",
+  ``!x P P' p C Q q. 
+      (!y:'var. SPEC x (P * P' y,p) C (Q,q)) = 
+                SPEC x (P * ~ P',p) C (Q,q)``,
+  INIT_TAC \\ REWRITE_TAC [SPEC_def,fix_pos_def] \\ REPEAT STRIP_TAC
+  \\ SIMP_TAC (bool_ss++sep_ss) [GPROG_def,GPROG_DISJ_CLAUSES] 
+  \\ MOVE_STAR_TAC `p*p'*m*pp` `p*m*pp*p'`
+  \\ ASM_SIMP_TAC std_ss [GSYM RUN_HIDE_PRE] \\ METIS_TAC []);
+
+val SPEC_HIDE_POST = store_thm("SPEC_HIDE_POST",
+  ``!x P p cs c Q Q' y q Z. 
+      SPEC x (P,p) C (Q * Q' y,q) ==> 
+      SPEC x (P,p) C (Q * ~Q',q)``,
+  METIS_TAC [SPEC_WEAKEN,SEP_HIDE_INTRO]);
+
+val SPEC_MOVE_COND = store_thm("SPEC_MOVE_COND",
+  ``!x g P p cs c Q q Z. 
+      SPEC x (P * cond g,p) C (Q,q) = g ==> SPEC x (P,p) C (Q,q)``, 
+  REPEAT STRIP_TAC \\ Cases_on `g` 
+  \\ SIMP_TAC (bool_ss++sep2_ss) [SPEC_FALSE_PRE]);
+
+val SPEC_COMPOSE = store_thm("SPEC_COMPOSE",
+  ``!x P p C Q q C' Q' q'. 
+      SPEC x (P,p) C (Q,q) ==> 
+      SPEC x (Q,q) C' (Q',q') ==>
+      SPEC x (P,p) (C UNION C') (Q',q')``,
+  REWRITE_TAC [SPEC_def,set_apply_UNION]
+  \\ REPEAT STRIP_TAC \\ (MATCH_MP_TAC o GEN_ALL o RW [UNION_EMPTY] o 
+   Q.INST [`Z`|->`{}`,`Y'`|->`{}`] o SPEC_ALL) GPROG_COMPOSE
+  \\ METIS_TAC []);
+
+val SPEC_ADD_CODE = store_thm("SPEC_ADD_CODE",
+  ``!x P p C Q q. 
+      SPEC x (P,p) C (Q,q) ==> !C'. SPEC x (P,p) (C UNION C') (Q,q)``,
+  REWRITE_TAC [SPEC_def,set_apply_UNION] \\ METIS_TAC [GPROG_ADD_CODE]);
+
 val _ = export_theory();

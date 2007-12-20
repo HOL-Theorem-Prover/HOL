@@ -754,22 +754,22 @@ end;
 (* ========================================================================= *)
 
 
-fun check_definition schemevars tm = let
+fun check_definition schemevars clocs tm = let
   (* check that tm has no extra type variables or free variables other than *)
   (* the heads of clauses *)
-  val nclauses = Lib.enumerate 1 (strip_conj tm)
+  val clauses = strip_conj tm
   fun ind_concl tm = #2 (dest_imp tm) handle HOL_ERR _ => tm
   val relvars =
       HOLset.addList(empty_tmset,
-                     map (#1 o strip_comb o ind_concl o #2 o strip_forall o #2)
-                         nclauses)
+                     map (#1 o strip_comb o ind_concl o #2 o strip_forall)
+                         clauses)
   val okvars = foldl (fn (v,s) => HOLset.add(s,v)) relvars schemevars
   val empty_tyset = HOLset.empty Type.compare
   val reltyvars = HOLset.foldl (fn (tm,tyvset) =>
                                    HOLset.addList(tyvset,
                                                   type_vars_in_term tm))
                                empty_tyset relvars
-  fun check_tyvars (n, c) = let
+  fun check_tyvars n c = let
     val tyvs = HOLset.addList(empty_tyset, type_vars_in_term c)
   in
     if not (HOLset.isSubset(tyvs, reltyvars)) then let
@@ -778,24 +778,23 @@ fun check_definition schemevars tm = let
                                       [] really_free
         val free_list = Lib.commafy free_list0
         val tmstring = trace ("types", 1) (indented_term_to_string 2) c
+        val loc = List.nth (clocs, n) handle Subscript => locn.Loc_None
       in
-        raise HOL_ERR {origin_function = "check_clause",
-                       origin_structure = "InductiveDefinition",
-                       message =
-                       String.concat ("Clause #" :: Int.toString n ::
-                                      ":\n" :: tmstring ::
-                                      "\ncontains free type variable"^
-                                      (if length free_list > 1 then "s"
-                                       else "")^": " ::
-                                      free_list)}
+        raise mk_HOL_ERRloc
+                  "InductiveDefinition" "check_clause" loc
+                  (String.concat ("Clause #" :: Int.toString (n + 1)::
+                                  ":\n" :: tmstring ::
+                                  "\ncontains free type variable"^
+                                  (if length free_list > 1 then "s" else "")^
+                                  ": " :: free_list))
       end
     else
       ()
   end
-  val _ = app check_tyvars nclauses
+  val _ = appi check_tyvars clauses
 
   (* here, generalise on the extra free variables if we're not being strict *)
-  fun check_clause (n, c) = let
+  fun check_clause n c = let
     val fvs = FVL [c] empty_tmset
   in
     if not (HOLset.isSubset(fvs, okvars)) then let
@@ -804,29 +803,33 @@ fun check_definition schemevars tm = let
             HOLset.foldr (fn (v,sl) => Lib.quote (#1 (dest_var v)) :: sl)
                          [] really_free
         val free_list = Lib.commafy free_list0
+        val loc = List.nth(clocs, n) handle Subscript => locn.Loc_None
       in
         if !inddef_strict then let
             val tmstring = trace ("types", 1) (indented_term_to_string 2) c
           in
-            raise HOL_ERR {origin_function = "check_clause",
-                           origin_structure = "InductiveDefinition",
-                           message =
-                           String.concat ("Clause #" :: Int.toString n ::
-                                          ",\n" :: tmstring ::
-                                          "\ncontains free variables: " ::
-                                          free_list)}
+            raise mk_HOL_ERRloc
+                      "InductiveDefinition"
+                      "check_clause"
+                      loc
+                      (String.concat ("Clause #" :: Int.toString n ::
+                                      ",\n" :: tmstring ::
+                                      "\ncontains free variables: " ::
+                                      free_list))
           end
         else
           (HOL_MESG ("Generalising variable" ^
                      (if length free_list > 1 then "s " else " ")^
                      String.concat free_list ^
-                     " in clause #"^Int.toString n);
+                     " in clause #"^Int.toString n ^
+                     (if loc = locn.Loc_None then ""
+                      else " ("^locn.toShortString loc^")"));
            list_mk_forall (HOLset.listItems really_free, c))
       end
     else c
   end
 in
-  list_mk_conj (map check_clause nclauses)
+  list_mk_conj (mapi check_clause clauses)
 end
 
 
@@ -853,7 +856,7 @@ fun prove_inductive_relations_exist monoset tm =
  let val clauses = strip_conj tm
      val (clauses',fvs) = unschematize_clauses clauses
      val th0 = derive_nonschematic_inductive_relations
-                 (check_definition fvs (list_mk_conj clauses'))
+                 (check_definition fvs [] (list_mk_conj clauses'))
      val th1 = prove_monotonicity_hyps monoset th0
      val th2 = generalize_schematic_variables fvs th1
  in derive_existence th2
@@ -862,11 +865,11 @@ fun prove_inductive_relations_exist monoset tm =
                              "prove_inductive_relations_exist" e);
 
 
-fun new_inductive_definition monoset tm =
+fun new_inductive_definition monoset (tm,clocs) =
  let val clauses = strip_conj tm
      val (clauses',fvs) = unschematize_clauses clauses
      val th0 = derive_nonschematic_inductive_relations
-                 (check_definition fvs (list_mk_conj clauses'))
+                 (check_definition fvs clocs (list_mk_conj clauses'))
      val th1 = prove_monotonicity_hyps monoset th0
      val th2 = generalize_schematic_variables fvs th1
      val th3 = make_definitions th2

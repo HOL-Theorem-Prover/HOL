@@ -24,6 +24,28 @@
 <h2 id = "Build"> Build Failures and Warnings</h2>
 
 <dl>
+<dt> 
+<strong>I can&rsquo;t build on Ubuntu (or some other recent Linux),
+  where I have Moscow&nbsp;ML executables in <code>/usr/bin/</code>, and
+  the Moscow&nbsp;ML library files in <code>/usr/lib/</code>.</strong>
+<dd>
+<p>You will need to write a <code>config-override</code> file in the
+  root directory of the HOL installation, and put in it the line</p>
+<pre>
+    val mosmldir = "/usr/bin/"
+</pre>
+<p>You should then be able to run </p>
+<pre>
+    $ mosml < tools/smart-configure.sml
+</pre>
+<p>and</p>
+<pre>
+    $ bin/build 
+</pre>
+<p>as normal.</p>
+</dd>
+
+
 <dt>
 <strong>HOL is failing to complete the build process.  It stops when trying
  to create the HolBdd theory.  Why is this, and what should I do?</strong></dt>

@@ -103,22 +103,6 @@ fun investigate_def def =
      fmap := M.insert(!fmap, fname, ((args, identify_output body), process_body body))
    end
 
-(*
-fun preprocess defs = 
-  List.foldl (fn (def, m) => 
-               let
-                 val (fname, fbody) = dest_eq (concl (SPEC_ALL def))
-                 val (args,body) = dest_pabs fbody handle _ => (#2 (dest_comb fname), fbody)
-                 val fname = if is_pabs fbody then fname else #1 (dest_comb fname)
-               in 
-                 M.insert(m, fname, ((args, args), process_body body))
-               end
-             )
-             (M.mkDict tvarOrder)
-             defs
-  ;
-*)
-
 (* Convert a function body into its call-save format *)
 
 fun save (wS, next_slot) exp =
@@ -193,6 +177,53 @@ fun caller_save t =
     end
   else t
 
+(* Function "trav" traverses a term and adds pre-call saving and post-call saving instructions 
+   for each function call; it also make the outputs of the two branches of a conditional 
+   statement match, i.e. both branches have the same outputs.
+*)
+
+fun trav t output =
+  if is_let t then
+    let val (v,M,N) = dest_plet t
+        val (M', _) =  trav M NONE
+    in
+      if is_comb M andalso not (is_atomic M) then
+        let val (x,y) = dest_comb M in
+           if is_fun x andalso not (x = !tr_f) then (* non-recursive function application *)
+             let 
+                 val (N', output') = trav N output
+                 val (fname, dst, src, cont) = (x, v, y, N')
+                 val t' = format_call (fname, dst, src, cont)
+             in
+                 (t', output')
+             end
+           else
+             let val (N', output') = trav N output
+             in (mk_plet(v, M', N'), output') end
+        end
+      else 
+        let val (N', output') = trav N output
+        in (mk_plet(v, M', N'), output') end (* not function application *)
+    end
+  else if is_cond t then
+    let val (J,M1,M2) = dest_cond t
+        val (M1', output1) = trav M1 output
+        val (M2', output2) = trav M2 output1
+    in  
+        (mk_cond(J, M1', M2'), output1)
+    end
+  else if is_pair t orelse is_atomic t then
+    case output of 
+         NONE => (t, SOME t)
+      |  SOME x => (regAlloc.parallel_move x t x, output)
+  else if is_pabs t then
+    let val (M,N) = dest_pabs t
+        val (N', _) = trav N NONE
+    in
+        (mk_pabs (M, N'), output)
+    end
+  else (t, output)
+
 (* Process function calls in a caller-save style *)
 
 fun caller_save_call def =
@@ -204,7 +235,7 @@ fun caller_save_call def =
         val _ = investigate_def def   (* store the information of the current function into !fmap *)
     in if sane then
         let
-          val body' = caller_save body
+          val (body', _) = trav body NONE
           val th0 = SYM (QCONV(SIMP_CONV pure_ss [LET_ATOM]) body')
           val (r,t) = dest_eq(concl th0)
           val lem1 = ALPHA body r
@@ -216,6 +247,7 @@ fun caller_save_call def =
        else def
     end
 
+(*
 fun callerSave defs =
  let
    fun one_fun def = 
@@ -238,6 +270,7 @@ fun callerSave defs =
  in
    List.map one_fun defs
  end
+*)
 
 (*----------------------------------------------------------------------------------------------*)
 (* For debugging                                                                                *)

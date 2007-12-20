@@ -99,8 +99,8 @@ fun tryfind f =
  end;
 
 (* Counting starts from 1 *)
-fun el n l = 
- if n<1 then raise ERR "el" "index too small" else 
+fun el n l =
+ if n<1 then raise ERR "el" "index too small" else
  let fun elem (_, [])     = raise ERR "el" "index too large"
        | elem (1, h::_)   = h
        | elem (n, _::rst) = elem (n-1, rst)
@@ -203,9 +203,9 @@ fun combine(l1,l2) = zip l1 l2
 val split = unzip
 
 fun mapfilter f list =
-  itlist(fn i => fn L => (f i::L) 
-                handle Interrupt => raise Interrupt 
-                     | otherwise => L) 
+  itlist(fn i => fn L => (f i::L)
+                handle Interrupt => raise Interrupt
+                     | otherwise => L)
      list [];
 
 fun flatten [] = []
@@ -264,6 +264,15 @@ fun appi f lst = let
       | h :: t => (f n h; recurse (n + 1) t)
 in
   recurse 0 lst
+end
+
+fun mapi f lst = let
+  fun recurse n acc lst =
+      case lst of
+        [] => acc
+      | h :: t => recurse (n + 1) (f n h :: acc) t
+in
+  List.rev (recurse 0 [] lst)
 end
 
 type 'a cmp = 'a * 'a -> order

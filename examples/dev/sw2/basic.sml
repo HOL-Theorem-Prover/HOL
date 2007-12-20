@@ -214,10 +214,10 @@ fun identify_output t =
              end 
       else if is_pabs t then
            let val (M,N) = dest_pabs t in trav N end
-      else if is_comb t then
-           NONE
       else if is_pair t orelse is_atomic t then
            SOME t
+      else if is_comb t then
+           NONE
       else NONE
  in
    valOf (trav t)

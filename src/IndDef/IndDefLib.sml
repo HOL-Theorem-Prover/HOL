@@ -23,12 +23,12 @@ local open Absyn
         | dest other = raise ERRloc "names_of.reln_names.dest"
                                     (locn_of_absyn other) "Unexpected structure"
 in
-fun term_of_absyn absyn = let 
+fun term_of_absyn absyn = let
   val clauses   = strip_conj absyn
-  fun checkcl a = let 
+  fun checkcl a = let
     val nm = dest (head a)
   in
-    if mem nm ["/\\", "\\/", "!"] then 
+    if mem nm ["/\\", "\\/", "!"] then
       raise ERRloc "term_of_absyn" (locn_of_absyn a)
                    ("Abstract syntax looks to be trying to redefine "^nm^". "^
                      "This is probably an error.\nIf you must, define with \
@@ -44,7 +44,7 @@ fun term_of_absyn absyn = let
       handle e => (restore(); raise e)
 in
   restore();
-  tm
+  (tm, map locn_of_absyn clauses)
 end
 
 fun term_of q = term_of_absyn (Parse.Absyn q)
