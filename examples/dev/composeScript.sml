@@ -351,8 +351,10 @@ val SEQ_def =
 (*****************************************************************************)
 (* Data flip-flop                                                            *)
 (*****************************************************************************)
-val DFF_def = Define `DFF (d,sel,q) = (!t. q (t+1) = (POSEDGE sel (t+1) =>
-                                                     d (t+1) | q t))`
+val DFF_def = 
+ Define 
+  `DFF (d,sel,q) = 
+    !t. q (t+1) = if POSEDGE sel (t+1) then d (t+1) else q t`;
 
 
 (*****************************************************************************)
@@ -689,7 +691,7 @@ val SAFE_SEQ =
 
 val DFF_SUC = Q.store_thm("DFF_SUC",
               `DFF (d,sel,q) ==> 
-                (!t. t > 0 ==> (q t = (POSEDGE sel t => d t | q (t-1))))`,
+                (!t. t > 0 ==> (q t = if POSEDGE sel t then d t else q (t-1)))`,
               RW_TAC arith_ss [] 
               THEN Cases_on `t`
               THENL [(* `~(0 > 0)` by RW_TAC arith_ss [],*)
