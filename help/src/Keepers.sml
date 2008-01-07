@@ -27,11 +27,6 @@ val keepers =
      (* jrh ind_defs *)
      "IndDefLib.sig", "InductiveDefinition.sig", "IndDefRules.sig",
 
-     (* HolBdd *)
-     "MachineTransitionTheory.sig",
-     "PrimitiveBddRules.sig", "DerivedBddRules.sig",
-     "PrintBdd.sig", "Varmap.sig",
-
      (* multisets *)
      "bagTheory.sig", "bagLib.sig", "bagSimps.sig", "bagSyntax.sig",
      "containerTheory.sig",
@@ -178,7 +173,7 @@ val keepers =
      "bword_numTheory.sig","word_bitopTheory.sig",
 
      (* HolSat *)
-     "HolSatLib.sig", 
+     "HolSatLib.sig",
 
      (* simpsets *)
      "optionSimps.sig", "intSimps",
@@ -198,8 +193,5 @@ val keepers =
 
      (* Fixed point and floating point arithmetic *)
      "floatTheory.sig", "ieeeTheory.sig",
-     "fxpTheory.sig",
-
-     (* HolCheck model checker *)
-     "holCheckLib.sig"
+     "fxpTheory.sig"
   ];
