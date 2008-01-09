@@ -440,6 +440,9 @@ val SLICE_ZERO = store_thm("SLICE_ZERO",
   `!h l n. h < l ==> (SLICE h l n = 0)`,
   RW_TAC arith_ss [SLICE_THM,BITS_ZERO]);
 
+val SLICE_ZERO2 = save_thm("SLICE_ZERO2",
+  SIMP_CONV std_ss [SLICE_THM, BITS_ZERO2] ``SLICE h l 0``);
+
 (* ------------------------------------------------------------------------- *)
 
 val BITS_SUM = store_thm("BITS_SUM",
@@ -745,6 +748,19 @@ val BITWISE_ONE_COMP_LEM = store_thm("BITWISE_ONE_COMP_LEM",
     ]
 );
 
+val BIT_EXP_SUB1 = store_thm("BIT_EXP_SUB1",
+  `!b n. BIT b (2 ** n - 1) = b < n`,
+  REPEAT STRIP_TAC
+    \\ Cases_on `n` >> SIMP_TAC std_ss [BIT_ZERO]
+    \\ REWRITE_TAC [(GSYM o SIMP_RULE std_ss [BITS_ZERO2] o
+         SPECL [`n`,`0`,`ARB`]) BITWISE_ONE_COMP_LEM]
+    \\ Cases_on `b < SUC n'`
+    \\ SRW_TAC [ARITH_ss] [BITWISE_THM, BIT_ZERO]
+    \\ FULL_SIMP_TAC std_ss [NOT_LESS, BIT_def]
+    \\ `BITWISE (SUC n') (\x y. ~x) 0 ARB < 2 ** b`
+    by METIS_TAC [BITWISE_LT_2EXP, LESS_LESS_EQ_TRANS, TWOEXP_MONO2]
+    \\ SRW_TAC [] [BITS_LT_LOW]);
+
 (* ------------------------------------------------------------------------- *)
 
 val BIT_SET_NOT_ZERO = prove(
@@ -760,7 +776,7 @@ val BIT_SET_NOT_ZERO_COR = prove(
 val BIT_SET_NOT_ZERO_COR2 =
   REWRITE_RULE [DIV_1,EXP] (SPEC `0` BIT_SET_NOT_ZERO_COR);
 
-val BIT_DIV2 = prove(
+val BIT_DIV2 = store_thm("BIT_DIV2",
   `!i. BIT n (i DIV 2) = BIT (SUC n) i`,
   RW_TAC arith_ss [BIT_def,BITS_THM,EXP,ZERO_LT_TWOEXP,DIV_DIV_DIV_MULT]);
 
@@ -889,6 +905,30 @@ val BIT_REVERSE_THM = store_thm("BIT_REVERSE_THM",
         \\ Cases_on `n = 0` >> ASM_SIMP_TAC arith_ss []
         \\ `1 <= n /\ 1 <= x` by DECIDE_TAC
         \\ ASM_SIMP_TAC std_ss [ADD1,SUB_SUB,ADD_SUB,SUB_ADD]]);
+
+(* ------------------------------------------------------------------------- *)
+
+val NOT_BIT_GT_TWOEXP = store_thm("NOT_BIT_GT_TWOEXP",
+  `!i n.  n < 2 ** i ==> ~BIT i n`,
+  SRW_TAC [ARITH_ss] [BIT_def,BITS_THM,LESS_DIV_EQ_ZERO]);
+
+val NOT_BIT_GT_LOG2 = store_thm("NOT_BIT_GT_LOG2",
+  `!i n. LOG2 n < i ==> ~BIT i n`,
+  NTAC 3 STRIP_TAC \\ MATCH_MP_TAC NOT_BIT_GT_TWOEXP
+    \\ Cases_on `n = 0` >> ASM_SIMP_TAC std_ss [ZERO_LT_TWOEXP]
+    \\ `0 < n /\ SUC (LOG2 n) <= i` by DECIDE_TAC
+    \\ SPECL_THEN [`2`,`n`] ASSUME_TAC logrootTheory.LOG
+    \\ FULL_SIMP_TAC arith_ss [LOG2_def] \\ RES_TAC
+    \\ `2n ** SUC (LOG 2 n) <= 2 ** i` by IMP_RES_TAC TWOEXP_MONO2
+    \\ DECIDE_TAC);
+
+val NOT_BIT_GT_BITWISE = store_thm("NOT_BIT_GT_BITWISE",
+  `!i n op a b. n <= i ==> ~BIT i (BITWISE n op a b)`,
+  NTAC 6 STRIP_TAC
+    \\ `BITWISE n op a b < 2 ** i`
+    by METIS_TAC [BITWISE_LT_2EXP, TWOEXP_MONO2,
+                  ZERO_LT_TWOEXP, LESS_LESS_EQ_TRANS]
+    \\ ASM_SIMP_TAC std_ss [NOT_BIT_GT_TWOEXP]);
 
 (* ------------------------------------------------------------------------- *)
 

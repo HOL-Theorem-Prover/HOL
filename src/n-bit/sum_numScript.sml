@@ -137,6 +137,9 @@ val SUM_LESS = save_thm("SUM_LESS",
 val SUM_EQUAL = save_thm("SUM_EQUAL",
   (SIMP_RULE arith_ss [SYM_SUM] o SPEC `0`) GSUM_EQUAL);
 
+val SUM_FUN_EQUAL = save_thm("SUM_FUN_EQUAL",
+  (SIMP_RULE arith_ss [SYM_SUM] o SPECL [`0`,`n`]) GSUM_FUN_EQUAL);
+
 val SUM_ZERO = save_thm("SUM_ZERO",
   (SIMP_RULE arith_ss [SYM_SUM] o SPEC `0`) GSUM_ZERO);
 

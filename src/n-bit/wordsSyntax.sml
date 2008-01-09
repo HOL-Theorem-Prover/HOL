@@ -32,6 +32,7 @@ fun dim_of tm = dest_word_type(type_of tm);
 val word_T_tm       = prim_mk_const{Name = "word_T", Thy = "words"}
 val word_L_tm       = prim_mk_const{Name = "word_L", Thy = "words"}
 val word_H_tm       = prim_mk_const{Name = "word_H", Thy = "words"}
+val word_L2_tm      = prim_mk_const{Name = "word_L2", Thy = "words"};
 val word_modify_tm  = prim_mk_const{Name = "word_modify", Thy = "words"}
 val word_reverse_tm = prim_mk_const{Name = "word_reverse", Thy="words"}
 val nzcv_tm         = prim_mk_const{Name = "nzcv", Thy = "words"}
@@ -86,6 +87,10 @@ fun mk_word_L ty =
 fun mk_word_H ty = 
   inst[alpha |-> ty] word_H_tm
   handle HOL_ERR _ => raise ERR "mk_word_H" "";
+
+fun mk_word_L2 ty =
+  inst[alpha |-> ty] word_L2_tm
+  handle HOL_ERR _ => raise ERR "mk_word_L2" "";
 
 fun mk_word_modify(f,w) = 
   list_mk_comb(inst[alpha |-> dim_of w] word_modify_tm,[f,w])
@@ -258,6 +263,11 @@ fun dest_word_H tm =
    then dim_of tm 
     else raise ERR "dest_word_H" "";
 
+fun dest_word_L2 tm =
+  if same_const word_L2_tm tm
+   then dim_of tm
+    else raise ERR "dest_word_L2" "";
+
 val dest_word_modify = 
   dest_binop word_modify_tm (ERR "dest_word_modify" "");
 
@@ -382,6 +392,7 @@ val dest_w2n =
 val is_word_T = Lib.can dest_word_T
 val is_word_L = Lib.can dest_word_L
 val is_word_H = Lib.can dest_word_H
+val is_word_L2 = Lib.can dest_word_L2;
 val is_word_modify = Lib.can dest_word_modify
 val is_word_reverse = Lib.can dest_word_reverse
 val is_nzcv = Lib.can dest_nzcv
