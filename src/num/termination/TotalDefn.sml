@@ -357,6 +357,7 @@ fun guessR defn =
        let val domty  = fst(dom_rng(type_of R))
            val (_,tcs0) = Lib.pluck isWFR (tcs_of defn)
            val tcs = map (rhs o concl o QCONV (SIMP_CONV bool_ss [])) tcs0
+           val tcs = filter (not o equal T) tcs
            val matrix  = map dest tcs
            val check1  = map (map (uncurry proper_subterm)) matrix
            val chf1    = projects check1
