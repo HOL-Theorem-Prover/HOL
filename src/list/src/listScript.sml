@@ -136,6 +136,7 @@ val APPEND = new_recursive_definition
        rec_axiom = list_Axiom,
        def = --`(!l:'a list. APPEND [] l = l) /\
                   (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)`--};
+val _ = export_rewrites ["APPEND"]
 
 val _ = set_fixity "++" (Infixl 440);
 val _ = overload_on ("++", Term`APPEND`);
@@ -151,6 +152,7 @@ val LENGTH = new_recursive_definition
        rec_axiom = list_Axiom,
        def = --`(LENGTH []     = 0) /\
      (!(h:'a) t. LENGTH (h::t) = SUC (LENGTH t))`--};
+val _ = export_rewrites ["LENGTH"]
 
 val MAP = new_recursive_definition
       {name = "MAP",
@@ -992,6 +994,72 @@ val FILTER_APPEND_DISTRIB = Q.store_thm
    GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC
     THEN RW_TAC bool_ss [FILTER,APPEND]);
 
+
+(* ----------------------------------------------------------------------
+    TAKE and DROP
+   ---------------------------------------------------------------------- *)
+
+(* these are FIRSTN and BUTFIRSTN from rich_listTheory, but made total *)
+
+val TAKE_def = Define`
+  (TAKE n [] = []) /\
+  (TAKE n (x::xs) = if n = 0 then [] else x :: TAKE (n - 1) xs)
+`;
+val _ = export_rewrites ["TAKE_def"]
+
+val DROP_def = Define`
+  (DROP n [] = []) /\
+  (DROP n (x::xs) = if n = 0 then x::xs else DROP (n - 1) xs)
+`;
+val _ = export_rewrites ["DROP_def"]
+
+val TAKE_0 = store_thm(
+  "TAKE_0",
+  ``TAKE 0 l = []``,
+  Cases_on `l` THEN SRW_TAC [][]);
+val _  = export_rewrites ["TAKE_0"]
+
+val TAKE_LENGTH_ID = store_thm(
+  "TAKE_LENGTH_ID",
+  ``TAKE (LENGTH l) l = l``,
+  Induct_on `l` THEN SRW_TAC [][]);
+val _ = export_rewrites ["TAKE_LENGTH_ID"]
+
+val LENGTH_TAKE = store_thm(
+  "LENGTH_TAKE",
+  ``!n. n <= LENGTH l ==> (LENGTH (TAKE n l) = n)``,
+  Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss][]);
+val _ = export_rewrites ["LENGTH_TAKE"]
+
+val TAKE_APPEND1 = store_thm(
+  "TAKE_APPEND1",
+  ``!n. n <= LENGTH l1 ==> (TAKE n (APPEND l1 l2) = TAKE n l1)``,
+  Induct_on `l1` THEN SRW_TAC [numSimps.ARITH_ss][]);
+
+val TAKE_APPEND2 = store_thm(
+  "TAKE_APPEND2",
+  ``!n. LENGTH l1 < n ==> (TAKE n (l1 ++ l2) = l1 ++ TAKE (n - LENGTH l1) l2)``,
+  Induct_on `l1` THEN SRW_TAC [numSimps.ARITH_ss][arithmeticTheory.ADD1]);
+
+val DROP_0 = store_thm(
+  "DROP_0",
+  ``DROP 0 l = l``,
+  Induct_on `l` THEN SRW_TAC [][])
+val _ = export_rewrites ["DROP_0"]
+
+val TAKE_DROP = store_thm(
+  "TAKE_DROP",
+  ``!n. TAKE n l ++ DROP n l = l``,
+  Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss][]);
+val _ = export_rewrites ["TAKE_DROP"]
+
+val LENGTH_DROP = store_thm(
+  "LENGTH_DROP",
+  ``!n. LENGTH (DROP n l) = LENGTH l - n``,
+  Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss][]);
+val _ = export_rewrites ["LENGTH_DROP"]
+
+
 (* ----------------------------------------------------------------------
     ALL_DISTINCT
    ---------------------------------------------------------------------- *)
@@ -1147,8 +1215,8 @@ val _ = adjoin_to_theory
  end)};
 
 val _ = BasicProvers.export_rewrites
-          ["APPEND", "APPEND_11", "EL", "FLAT", "HD",
-           "LENGTH", "MAP", "MAP2", "NULL_DEF",
+          ["APPEND_11", "EL", "FLAT", "HD",
+           "MAP", "MAP2", "NULL_DEF",
            "SUM", "TL", "APPEND_ASSOC", "CONS", "CONS_11",
            "LENGTH_APPEND", "LENGTH_MAP", "MAP_APPEND",
            "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL", "APPEND_NIL",

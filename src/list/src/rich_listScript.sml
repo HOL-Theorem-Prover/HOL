@@ -382,37 +382,25 @@ val OR_EL_DEF = new_definition("OR_EL_DEF", ``OR_EL = SOME_EL I``);
 (*      LAST [x0;...;xn-1] = [xn-1]                             *)
 (*--------------------------------------------------------------*)
 
-val FIRSTN =
-    let val thm1 = prove_rec_fn_exists num_Axiom
-        (--`(firstn 0 (l:'a list) = []) /\
-         (firstn (SUC k) l = CONS (HD l) (firstn k (TL l)))`--)
-    val thm = prove(
-       (--`?firstn. (!l:'a list. firstn 0 l = []) /\
-         (!n x (l:'a list). firstn (SUC n) (CONS x l) = CONS x (firstn n l))`--),
-        STRIP_ASSUME_TAC thm1 THEN EXISTS_TAC (--`firstn:num->('a)list->('a)list`--)
-        THEN ASM_REWRITE_TAC[HD,TL])
-   in
-    Rsyntax.new_specification{name = "FIRSTN",
-                      sat_thm = thm,
-                      consts =  [{const_name = "FIRSTN", fixity = Prefix}]
-                     }
-   end;
+open BasicProvers
+val _ = overload_on ("FIRSTN", ``list$TAKE``)
+val _ = overload_on ("TAKE", ``list$TAKE``)
+           (* makes TAKE preferred printing form *)
 
-val BUTFIRSTN =
-    let val thm2 = prove_rec_fn_exists num_Axiom
-        (--`(butfirstn 0 (l:'a list) = l) /\
-         (butfirstn (SUC k) l = butfirstn k (TL l))`--)
-    val thm = prove(
-       (--`?butfirstn. (!l:'a list. butfirstn 0 l = l) /\
-         (!n x (l:'a list). butfirstn (SUC n) (CONS x l) = butfirstn n l)`--),
-        STRIP_ASSUME_TAC thm2 THEN EXISTS_TAC (--`butfirstn:num->('a)list->('a)list`--)
-        THEN ASM_REWRITE_TAC[HD,TL])
-   in
-    Rsyntax.new_specification{name = "BUTFIRSTN",
-                      sat_thm = thm,
-                      consts =  [{const_name = "BUTFIRSTN", fixity = Prefix}]
-                     }
-   end;
+val FIRSTN = store_thm(
+  "FIRSTN",
+  ``(!l : 'a list.     FIRSTN 0 l = []) /\
+    (!n x l : 'a list. FIRSTN (SUC n) (CONS x l) = CONS x (FIRSTN n l))``,
+  SRW_TAC [][]);
+
+val _ = overload_on ("BUTFIRSTN", ``list$DROP``)
+val _ = overload_on ("DROP", ``list$DROP``)
+
+val BUTFIRSTN = store_thm(
+  "BUTFIRSTN",
+  ``(!l : 'a list.     BUTFIRSTN 0 l = l) /\
+    (!n x l : 'a list. BUTFIRSTN (SUC n) (CONS x l) = BUTFIRSTN n l)``,
+  SRW_TAC [][]);
 
 (*----------------------------------------------------------------*)
 (*- Segment                                                     -*)
@@ -2270,8 +2258,6 @@ val ELL_SEG = store_thm("ELL_SEG",
         THEN IMP_RES_TAC SUB_LESS_0 THEN IMP_RES_THEN SUBST1_TAC SUC_PRE
         THEN MATCH_ACCEPT_TAC SUB_LESS_EQ]
     end);
-
-val REWRITE1_TAC = fn t => REWRITE_TAC[t];
 
 val SNOC_FOLDR = store_thm ("SNOC_FOLDR",
     (--`!(x:'a) l. SNOC x l = FOLDR CONS [x] l `--),

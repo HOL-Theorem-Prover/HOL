@@ -39,16 +39,19 @@ structure ListConv1 :> ListConv1 =
 struct
 
 open HolKernel Parse boolLib Num_conv Rsyntax Prim_rec listSyntax;
-infix ## |-> THEN THENL THENC;
 
 fun mk_list {els,ty} = listSyntax.mk_list(els,ty)
 
 val ERR = mk_HOL_ERR "List_conv";
 
-local  (* Fix the grammar used by this file *)
-  val ambient_grammars = Parse.current_grammars();
-  val _ = Parse.temp_set_grammars rich_listTheory.rich_list_grammars
-in
+structure Parse =
+struct
+ open Parse
+ val (Type,Term) = parse_from_grammars rich_listTheory.rich_list_grammars
+ fun -- q x = Term q
+ fun == q x = Type q
+end
+open Parse
 
 val % = Term;
 val alpha_ty = Type.alpha
@@ -1064,7 +1067,7 @@ val BUTFIRSTN_CONV =
 	    end
     in
   fn tm =>
-   let val (_,[K,L]) = ((check_const"BUTFIRSTN")## I)(strip_comb tm)
+   let val (_,[K,L]) = ((check_const"DROP")## I)(strip_comb tm)
 	val k = int_of_term K and (lis,lty) = dest_list L  in
 	    if (k > (length lis))
 		then raise ERR "BUTFIRSTN_CONV"
@@ -1098,7 +1101,7 @@ val FIRSTN_CONV =
 	    end
     in
   fn tm =>
-   (let val (_,[K,L]) = ((check_const"FIRSTN")## I)(strip_comb tm)
+   (let val (_,[K,L]) = ((check_const"TAKE")## I)(strip_comb tm)
 	val k = int_of_term K and (lis,lty) = dest_list L
     in
 	if k > length lis
@@ -1265,8 +1268,5 @@ val AND_EL_CONV =
 
 val OR_EL_CONV =
     list_FOLD_CONV rich_listTheory.OR_EL_FOLDR (REWRITE_CONV[OR_CLAUSES]);
-
-val _ = Parse.temp_set_grammars ambient_grammars
-end;
 
 end; (* List_conv1 *)
