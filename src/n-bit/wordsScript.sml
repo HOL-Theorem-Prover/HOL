@@ -1256,6 +1256,38 @@ val WORD_EXTRACT_OVER_BITWISE = store_thm("WORD_EXTRACT_OVER_BITWISE",
   SIMP_TAC std_ss
     [word_extract_def, GSYM WORD_BITS_OVER_BITWISE, WORD_w2w_OVER_BITWISE]);
 
+local
+  fun Cases_on_word tm =
+   Q.ISPEC_THEN tm FULL_STRUCT_CASES_TAC ranged_word_nchotomy;
+in
+val WORD_w2w_OVER_ADD = Q.store_thm("WORD_w2w_OVER_ADD",
+  `!a b:'a word.
+     (w2w (a + b) = (dimindex(:'a) - 1 -- 0) (w2w a + w2w b))`,
+  REPEAT STRIP_TAC
+    \\ Cases_on_word `a:'a word`
+    \\ Cases_on_word `b:'a word`
+    \\ `n < 2 ** SUC (dimindex (:'a) - 1) /\ n' < 2 ** SUC (dimindex (:'a) - 1)`
+    by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0,
+         DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
+    \\ SRW_TAC [ARITH_ss] [WORD_w2w_EXTRACT, word_extract_n2w, word_bits_n2w,
+         MOD_DIMINDEX, BITS_COMP_THM2, MIN_DEF, BITS_ZEROL, WORD_BITS_EXTRACT]    \\ SRW_TAC [ARITH_ss] [word_add_n2w, word_extract_n2w,  MOD_DIMINDEX,         BITS_COMP_THM2]    \\ SRW_TAC [ARITH_ss] [MIN_DEF]);
+
+val WORD_w2w_OVER_MUL = Q.store_thm("WORD_w2w_OVER_MUL",
+  `!a b:'a word.
+     (w2w (a * b) = (dimindex(:'a) - 1 -- 0) (w2w a * w2w b))`,
+  REPEAT STRIP_TAC
+    \\ Cases_on_word `a:'a word`
+    \\ Cases_on_word `b:'a word`
+    \\ `n < 2 ** SUC (dimindex (:'a) - 1) /\ n' < 2 ** SUC (dimindex (:'a) - 1)`
+    by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0,
+         DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
+    \\ SRW_TAC [ARITH_ss] [WORD_w2w_EXTRACT, word_extract_n2w, word_bits_n2w,
+         MOD_DIMINDEX, BITS_COMP_THM2, MIN_DEF, BITS_ZEROL, WORD_BITS_EXTRACT]
+    \\ SRW_TAC [ARITH_ss] [word_mul_n2w, word_extract_n2w,  MOD_DIMINDEX,
+         BITS_COMP_THM2]
+    \\ SRW_TAC [ARITH_ss] [MIN_DEF]);
+end
+
 val BIT_SET_lem_ = prove(
   `!i j n. i < j ==> ~(i IN BIT_SET j n)`,
   completeInduct_on `n` \\ ONCE_REWRITE_TAC [BIT_SET_def]
@@ -1796,6 +1828,10 @@ val ROR_CYCLE = store_thm("ROR_CYCLE",
 val ROR_MOD = store_thm("ROR_MOD",
   `!w:'a word n. (w #>> (n MOD ^WL) = w #>> n)`,
   SHIFT_WORD_TAC);
+
+val ROL_MOD = store_thm("ROL_MOD",
+  `!w:'a word n. w #<< (n MOD dimindex (:'a)) = w #<< n`,
+  SRW_TAC [] [word_rol_def, DIMINDEX_GT_0]);
 
 val SPEC1_RULE = (GEN_ALL o REWRITE_RULE [EXP_1] o
   ONCE_REWRITE_RULE [MULT_COMM] o SPECL [`i`,`x`,`1`]);
