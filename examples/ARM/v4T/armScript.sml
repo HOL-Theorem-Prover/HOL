@@ -15,9 +15,6 @@ open Q wordsTheory rich_listTheory updateTheory;
 
 val _ = new_theory "arm";
 
-val _ = set_fixity "'" (Infixl 2000);
-val _ = overload_on ("'", Term`$index`);
-
 (* ------------------------------------------------------------------------- *)
 (*  The ARM State Space                                                      *)
 (* ------------------------------------------------------------------------- *)
