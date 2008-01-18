@@ -22,7 +22,7 @@ val addr30_def = Define `addr30 (x:word32) = ((31 >< 2) x):word30`;
 
 val ZERO_word30 = store_thm("ZERO_word30",
   ``1073741824w = 0w:word30``,
-  SRW_TAC [WORD_ss, WORD_ARITH_EQ_ss] []);
+  SRW_TAC [WORD_ARITH_EQ_ss] []);
 
 val lem = (GEN_ALL o SIMP_RULE std_ss [AND_IMP_INTRO] o
    Q.DISCH `dimindex (:'b) - 1 = h` o
@@ -31,11 +31,11 @@ val lem = (GEN_ALL o SIMP_RULE std_ss [AND_IMP_INTRO] o
 
 val lower_addr32_ADD = store_thm("lower_addr32_ADD",
   ``!w x. (1 >< 0) (addr32 x + w) = ((1 >< 0) w):word2``,
-  SRW_TAC [ARITH_ss, WORD_ss, WORD_EXTRACT_ss] [lem, addr32_def]);
+  SRW_TAC [ARITH_ss, WORD_EXTRACT_ss] [lem, addr32_def]);
 
 val addr32_eq_0 = store_thm("addr32_eq_0",
   ``!x. (1 >< 0) (addr32 x) = 0w:word2``,
-  SRW_TAC [ARITH_ss, WORD_ss, WORD_EXTRACT_ss] [addr32_def]);
+  SRW_TAC [ARITH_ss, WORD_EXTRACT_ss] [addr32_def]);
 
 val addr32_n2w = store_thm ("addr32_n2w", 
   ``!n. (addr32 (n2w n)  = n2w (4 * n))``,
@@ -101,7 +101,7 @@ val addr30_addr32 = store_thm("addr30_addr32",
 val EXISTS_addr30 = store_thm("EXISTS_addr30",
   ``!x. (x && 3w = 0w) ==> ?y. x = addr32 y``,
   SRW_TAC [] [addr32_def] \\ Q.EXISTS_TAC `(31 >< 2) x`
-    \\ SRW_TAC [WORD_ss, WORD_EXTRACT_ss] []
+    \\ SRW_TAC [WORD_EXTRACT_ss] []
     \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss) []);
 
 val add32_addr30 = store_thm("addr32_addr30",
@@ -145,7 +145,7 @@ val addr32_11 = store_thm("addr32_11",
           ((addr32 a + 1w = addr32 b + 1w) = (a = b)) /\ 
           ((addr32 a + 2w = addr32 b + 2w) = (a = b)) /\ 
           ((addr32 a + 3w = addr32 b + 3w) = (a = b))``,
-  SRW_TAC [] [WORD_EQ_ADD_RCANCEL, WORD_ADD_0,
+  SRW_TAC [] [WORD_EQ_ADD_RCANCEL,
     simpLib.SIMP_PROVE (std_ss++WORD_BIT_EQ_ss) [addr32_def]
       ``(addr32 a = addr32 b) = (a = b)``]);
 
@@ -178,14 +178,13 @@ val addr32_NEQ_addr32 = store_thm("addr32_NEQ_addr32",
           ~(addr32 a = addr32 b + 1w) /\ 
           ~(addr32 a = addr32 b + 2w) /\ 
           ~(addr32 a = addr32 b + 3w)``, 
-  SRW_TAC [] [lem, WORD_ADD_0, WORD_ADD_OR]
-    \\ SRW_TAC [WORD_BIT_EQ_ss] [addr32_def]);
+  SRW_TAC [] [lem, WORD_ADD_OR] \\ SRW_TAC [WORD_BIT_EQ_ss] [addr32_def]);
 
 val EXISTS_addr32 = store_thm("EXISTS_addr32",
   ``!p. ?a. (p = addr32 a + 0w) \/ (p = addr32 a + 1w) \/ 
             (p = addr32 a + 2w) \/ (p = addr32 a + 3w)``,
   STRIP_TAC \\ Q.EXISTS_TAC `(31 >< 2) p`
-    \\ SRW_TAC [] [lem, WORD_ADD_0, WORD_ADD_OR]
+    \\ SRW_TAC [] [lem, WORD_ADD_OR]
     \\ SRW_TAC [WORD_BIT_EQ_ss] [addr32_def]
     \\ DECIDE_TAC);
 
@@ -216,7 +215,7 @@ val addr32_ABSORB_CONST = store_thm("addr32_ABSORB_CONST",
 
 val ADDRESS_ROTATE = store_thm("ADDRESS_ROTATE",
   ``!q:word32 z:word30. q #>> (8 * w2n ((1 >< 0) (addr32 z):word2)) = q``,
-  SIMP_TAC std_ss [addr32_eq_0,EVAL ``w2n (0w:word2)``] \\ STRIP_TAC \\ EVAL_TAC);
+  SIMP_TAC std_ss [addr32_eq_0,word_0_n2w] \\ STRIP_TAC \\ EVAL_TAC);
 
 val addr30_THM = store_thm("addr30_THM",
   ``!x. addr30 x = n2w (w2n x DIV 4)``,
@@ -228,7 +227,7 @@ val addr32_THM = store_thm("addr32_THM",
 
 val aligned_THM = store_thm("aligned_THM",
   ``!p. aligned p = ?k. p = k * 4w``,
-  SRW_TAC [] [aligned_def] \\ EQ_TAC \\ SRW_TAC [WORD_ss, WORD_MUL_LSL_ss] []
+  SRW_TAC [] [aligned_def] \\ EQ_TAC \\ SRW_TAC [WORD_MUL_LSL_ss] []
     << [Q.EXISTS_TAC `(31 >< 2) p`, ALL_TAC]
     \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss) []);
 
