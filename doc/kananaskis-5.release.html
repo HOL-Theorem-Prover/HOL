@@ -35,7 +35,7 @@ flag <code>pp_num_types</code>. </p>
 
 <p> This removes the need for type abbreviations <code>i32</code> and
 others, and also the function <code>fcpLib.mk_index_type</code>, which
-has been removed. </p>
+has been removed. </p></li>
 
 <li> <p> The finite cartesian product &ldquo;array&rdquo; type can now
 be written with square brackets rather than with the
@@ -45,14 +45,12 @@ booleans, and indeed is the type used for what had been previously
 called <code>word32</code>. The pretty-printing of array types can be
 turned off with the trace flag <code>pp_array_types</code>. </p>
 
-<!--
 <p> Unfortunately, because of lists, at the term level one can not
 index arrays with square brackets.  Instead, we recommend the
 infix <code>'</code> (that's an apostrophe) operator.  For
 example, <code>array ' 3</code> is the value of the fourth element
 of <code>array</code> (indexing starts at zero!)</p>
 </li>
--->
 
 <li> <p> Errors in inductive relation definitions (made
 with <code>Hol_reln</code>) are now accompanied by better location
@@ -70,13 +68,13 @@ multiple-directory developments.</p>
 </li>
 
 <li> <p> The <code>tautLib</code> decision procedure for propositional
-logic now uses external sat-solvers (through
+    logic now uses external SAT solvers (through
 the <code>HolSatLib</code> code) for all but the smallest goals,
 translating proofs back through the HOL kernel.</p></li>
 
 <li> <p> In the Emacs mode: provide a new option to the
 work-horse <code>M-h&nbsp;M-r</code> command: if you precede it by
-hitting <code>control-u</code> twice, it will
+hitting <code>C-u</code> twice, it will
 toggle <code>quietdec</code> around what is to be pasted into the HOL
 session.  This can be useful if you're opening a whole slew of big
 theories and don't want to have to watch grammar guff scroll
@@ -100,18 +98,17 @@ right-shifting. </p></li>
 </pre>
 <p>
 When possible, word lengths are guessed for the extract and
-concatenate functions.  That is, <code>``(a >< b) w``</code> is given
+concatenate functions.  That is, <code>``(a &gt;&lt; b) w``</code> is given
 type <code>``:(a + 1 - b) word``</code> and <code>``(a: a word) @@ (b: b word)``</code> is
 given type <code>``:(a + b)&nbsp;word``</code>.</p>
 
 <p>For example:</p>
 <pre>
          - val _ = Parse.post_process_term := wordsLib.guess_word_lengths;
-         - ``(3 >< 0) a @@ (7 >< 4) a @@ (16 >< 8) a``;
-         <<HOL message: inventing new type variable names: 'a, 'b, 'c, 'd, 'e, 'f>>
-         <<HOL message: assigning word length(s): 'a <- 4, 'b <- 13, 'c <- 17, 'e <- 4 an
-         d 'f <- 9>>
-         > val it = ``(3 >< 0) a @@ (7 >< 4) a @@ (16 >< 8) a`` : term
+         - ``(3 &gt;&lt; 0) a @@ (7 &gt;&lt; 4) a @@ (16 &gt;&lt; 8) a``;
+         &lt;&lt;HOL message: inventing new type variable names: 'a, 'b, 'c, 'd, 'e, 'f&gt;&gt;
+         &lt;&lt;HOL message: assigning word length(s): 'a &lt;- 4, 'b &lt;- 13, 'c &lt;- 17, 'e &lt;- 4 and 'f &lt;- 9&gt;&gt;
+         > val it = ``(3 &gt;&lt; 0) a @@ (7 &gt;&lt; 4) a @@ (16 &gt;&lt; 8) a`` : term
 </pre>
 <p>
 The assignment message is controlled by the trace variable
@@ -119,18 +116,18 @@ The assignment message is controlled by the trace variable
 </li>
 
 <li>
-<p> <code>wordLib</code> now supports evaluation over non-standard
+<p> <code>wordsLib</code> now supports evaluation over non-standard
 word-sizes:</p>
 <pre>
          - load "wordsLib";
          > val it = () : unit
-         - EVAL ``123w + 321w:56 word``;
+         - EVAL ``123w + 321w:bool[56]``;
          > val it = |- 123w + 321w = 444w : thm
 </pre>
 <p>Non-standard word sizes will evaluate more slowly when first used.
 However, size theorems are then added to the compset, so subsequent
 evaluations will be quicker.
-</p>
+</p></li>
 
 </ul>
 
@@ -160,7 +157,53 @@ controlling reference variable <code>max_depth</code>.</p></li>
 <h2 id="new-tools">New tools:</h2>
 
 <ul>
-<li>None this time!</li>
+<li><p>There are a number of new facilities in <code>wordsLib</code>.
+The main additions are:</p>
+
+<dl>
+<dt><code>WORD_ss</code>:</dt> <dd> Does some basic simplification,
+evaluation and AC rewriting
+(over <code>*</code>, <code>+</code>, <code>&amp;&amp;</code>
+and <code>!!</code>).  For example,
+<pre>
+         ``a * 3w + a``  --&gt;  ``4w * a``
+</pre>
+and
+<pre>
+         ``a &amp;&amp; 3w !! a &amp;&amp; 2w``  --&gt;  ``3w &amp;&amp; a``
+</pre></dd>
+
+<dt><code>BIT_ss</code>:</dt> <dd>For example, <code>``BIT&nbsp;n&nbsp;3``&nbsp;--&gt;&nbsp;``n&nbsp;IN&nbsp;{0;&nbsp;1}``</code></dd>
+
+<dt><code>WORD_MUL_LSL_ss</code>:</dt>
+<dd>Converts multiplications to left-shifts e.g.
+  <code>``2w * a`` --> ``a&nbsp;&lt;&lt;&nbsp;1``</code></dd>
+
+<dt><code>WORD_BIT_EQ_ss</code>:</dt>
+<dd>Can be used to establish bit-wise (in)equality <i>e.g.</i>
+  <code>``a &amp;&amp; ~a = 0w``&nbsp;--&gt;&nbsp;``T``</code>
+Does not work with <code>*</code>, <code>+</code> <i>etc.</i></dd>
+
+<dt><code>WORD_ARITH_EQ_ss</code>:</dt>
+<dd> Can be used to establish arithmetic (in)equality <i>e.g.</i>
+  <code>``~(b + 1w = b + 4294967295w:word32)`` --&gt; ``T``</code>
+</dd>
+
+<dt><code>WORD_EXTRACT_ss</code>:</dt>
+<dd>
+Simplification for shifts and bit extraction.
+Simplifies <code>--</code>, <code>w2w</code>, <code>sw2sw</code>, <code>#>></code>, <code>@@</code> <i>etc.</i> and expresses operations
+  using <code>&gt;&lt;</code>, <code>&lt;&lt;</code> and <code>!!</code>.</dd>
+
+<dt><code>WORD_DECIDE</code>:</dt>
+<dd>A decision procedure.  Will solve Boolean (bitwise) problems
+  and some problems over &lt;, &lt;+ etc.</dd>
+</dl>
+
+
+
+
+</li>
 </ul>
 
 <h2 id="new-examples">New examples:</h2>
@@ -211,7 +254,7 @@ type <code>make</code> in <code>examples/muddy/muddyC</code>.</li>
 <li> Do <code>Holmake</code> in <code>examples/muddy</code>.</li>
 <li> Do <code>Holmake</code> in <code>examples/HolBdd</code>.</li>
 <li> Do <code>Holmake</code> in <code>examples/HolCheck</code>.</li>
-</ol>
+</ol></li>
 
 <li> <p>The <code>FIRSTN</code> and <code>BUTFIRSTN</code> constants from
 the theory <code>rich_list</code> are now defined in the
@@ -221,7 +264,9 @@ the old names are overloaded so that parsing existing theories should
 continue to work.  The change may cause pain if you have code that
 expects the constants to have their old names (for a call
 to <code>mk_const</code> say), or if you have variables or constants
-of your own using the names <code>TAKE</code> and <code>DROP</code>.</p></li>
+of your own using the names <code>TAKE</code>
+and <code>DROP</code>.</p>
+</li>
 
 </ul>
 
