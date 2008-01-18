@@ -185,9 +185,9 @@ fun cntxt c i = list_mk_conj
   (c @ basic_context));
 
 val word_index = METIS_PROVE [word_index_n2w]
-  ``!i n. i < dimindex (:'a) ==> ((n2w n):'a word %% i = BIT i n)``;
+  ``!i n. i < dimindex (:'a) ==> ((n2w n):'a word ' i = BIT i n)``;
 
-val CARRY_NZCV = METIS_PROVE [CARRY_def,NZCV_def] ``CARRY (NZCV x) = x %% 29``;
+val CARRY_NZCV = METIS_PROVE [CARRY_def,NZCV_def] ``CARRY (NZCV x) = x ' 29``;
 
 fun DISCH_AND_IMP t =
   (GEN_ALL o SIMP_RULE (srw_ss()) [REG_WRITE_INC_PC,AND_IMP_INTRO] o
@@ -385,7 +385,7 @@ val DP_ss =
    decode_enc_data_proc3,decode_data_proc_enc3];
 
 val abbrev_mode1 =
-  ``Abbrev (op2 = ADDR_MODE1 state.registers mode (cpsr:word32 %% 29)
+  ``Abbrev (op2 = ADDR_MODE1 state.registers mode (cpsr:word32 ' 29)
       (IS_DP_IMMEDIATE Op2) ((11 >< 0) (addr_mode1_encode Op2)))``;
 
 val ARM_TST = SYMBOLIC_EVAL_CONV DP_ss (cntxt
@@ -479,7 +479,7 @@ val LDR_STR_ss =
     decode_enc_ldr_str,decode_ldr_str_enc];
 
 val abbrev_mode2 =
-  ``Abbrev (addr_mode2 = ADDR_MODE2 state.registers mode (cpsr:word32 %% 29)
+  ``Abbrev (addr_mode2 = ADDR_MODE2 state.registers mode (cpsr:word32 ' 29)
                 (IS_DT_SHIFT_IMMEDIATE offset) opt.Pre opt.Up Rn
                 ((11 >< 0) (addr_mode2_encode offset))) /\
     Abbrev (addr = FST addr_mode2) /\
@@ -616,14 +616,14 @@ val ARM_STM = (GEN_ALL o Thm.DISCH abbrev_mode4 o
 
 (*
 val lem = METIS_PROVE [DECIDE ``!i. ~(28 <= i \/ i <= 7) = 8 <= i /\ i <= 27``]
- ``!rm. (\i b. 28 <= i /\ (rm:word32) %% i \/
-                8 <= i /\ i <= 27 /\ b \/ i <= 7 /\ rm %% i) =
-   (\i b. if i <= 7 \/ 28 <= i then rm %% i else b)``;
+ ``!rm. (\i b. 28 <= i /\ (rm:word32) ' i \/
+                8 <= i /\ i <= 27 /\ b \/ i <= 7 /\ rm ' i) =
+   (\i b. if i <= 7 \/ 28 <= i then rm ' i else b)``;
 
 val lem2 = METIS_PROVE [DECIDE ``!i. ~(28 <= i) = 8 <= i /\ i <= 27 \/ i <= 7``]
- ``!rm. (\i b. 28 <= i /\ (rm:word32) %% i \/
+ ``!rm. (\i b. 28 <= i /\ (rm:word32) ' i \/
                 8 <= i /\ i <= 27 /\ b \/ i <= 7 /\ b) =
-   (\i b. if 28 <= i then rm %% i else b)``;
+   (\i b. if 28 <= i then rm ' i else b)``;
 
 val lem3 = SIMP_RULE (std_ss++armLib.PBETA_ss) [] (prove(
   `!op2 c.  let (I,R,bit19,bit16,Rm,opnd) =

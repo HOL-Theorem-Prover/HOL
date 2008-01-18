@@ -94,7 +94,7 @@ val GET_BYTE_def = Define`
 
 val GET_HALF_def = Define`
   GET_HALF (oareg:word2) (data:word32) =
-    if oareg %% 1 then
+    if oareg ' 1 then
       (31 >< 16) data
     else
       (15 >< 0) data`;
@@ -152,8 +152,8 @@ val SET_NZCV_def = Define`
                        (i = 29) /\ C \/ (i = 28) /\ V \/
                        (i < 28) /\ b) w`;
 
-val SET_NZC_def = Define `SET_NZC (N,Z,C) w = SET_NZCV (N,Z,C,w %% 28) w`;
-val SET_NZ_def  = Define `SET_NZ (N,Z) w = SET_NZC (N,Z,w %% 29) w`;
+val SET_NZC_def = Define `SET_NZC (N,Z,C) w = SET_NZCV (N,Z,C,w ' 28) w`;
+val SET_NZ_def  = Define `SET_NZ (N,Z) w = SET_NZC (N,Z,w ' 29) w`;
 
 val mode_num_def = Define`
   mode_num mode =
@@ -171,7 +171,7 @@ val SET_IFMODE_def = Define`
   SET_IFMODE irq' fiq' mode w:word32 =
      word_modify (\i b. (7 < i \/ (i = 5)) /\ b \/
                         (i = 7) /\ irq' \/ (i = 6) /\ fiq' \/
-                        (i < 5) /\ (mode_num mode) %% i) w`;
+                        (i < 5) /\ (mode_num mode) ' i) w`;
 
 val DECODE_MODE_def = Define`
   DECODE_MODE (m:word5) =
@@ -185,10 +185,10 @@ val DECODE_MODE_def = Define`
     || 31w -> sys
     || _ -> safe`;
 
-val NZCV_def = Define `NZCV (w:word32) = (w %% 31, w %% 30, w %% 29, w %% 28)`;
+val NZCV_def = Define `NZCV (w:word32) = (w ' 31, w ' 30, w ' 29, w ' 28)`;
 
 val DECODE_PSR_def = Define`
-  DECODE_PSR (cpsr:word32) = (NZCV cpsr, cpsr %% 7, cpsr %% 6, (4 >< 0) cpsr)`;
+  DECODE_PSR (cpsr:word32) = (NZCV cpsr, cpsr ' 7, cpsr ' 6, (4 >< 0) cpsr)`;
 
 val CARRY_def = Define `CARRY (n,z,c,v) = c`;
 
@@ -232,7 +232,7 @@ val exception2mode_def = Define`
 val EXCEPTION_def = Define`
   EXCEPTION r type =
     let cpsr = CPSR_READ r.psr in
-    let fiq' = ((type = reset) \/ (type = fast)) \/ cpsr %% 6
+    let fiq' = ((type = reset) \/ (type = fast)) \/ cpsr ' 6
     and mode' = exception2mode type
     and pc = n2w (4 * exceptions2num type):word32 in
     let reg' = REG_WRITE r.reg mode' 14w (FETCH_PC r.reg + 4w) in
@@ -245,7 +245,7 @@ val EXCEPTION_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val DECODE_BRANCH_def = Define`
-  DECODE_BRANCH (w:word32) = (w %% 24, (23 >< 0) w)`;
+  DECODE_BRANCH (w:word32) = (w ' 24, (23 >< 0) w)`;
 
 val BRANCH_def = Define`
   BRANCH r mode ireg =
@@ -266,22 +266,22 @@ val BRANCH_def = Define`
 val LSL_def = Define`
   LSL (m:word32) (n:word8) c =
     if n = 0w then (c, m) else
-      (n <=+ 32w /\ m %% (32 - w2n n), m << w2n n)`;
+      (n <=+ 32w /\ m ' (32 - w2n n), m << w2n n)`;
 
 val LSR_def = Define`
   LSR (m:word32) (n:word8) c =
     if n = 0w then LSL m 0w c else
-      (n <=+ 32w /\ m %% (w2n n - 1), m >>> w2n n)`;
+      (n <=+ 32w /\ m ' (w2n n - 1), m >>> w2n n)`;
 
 val ASR_def = Define`
   ASR (m:word32) (n:word8) c =
     if n = 0w then LSL m 0w c else
-      (m %% MIN 31 (w2n n - 1), m >> w2n n)`;
+      (m ' (MIN 31 (w2n n - 1)), m >> w2n n)`;
 
 val ROR_def = Define`
   ROR (m:word32) (n:word8) c =
     if n = 0w then LSL m 0w c else
-      (m %% (w2n ((w2w n):word5) - 1), m #>> w2n n)`;
+      (m ' (w2n ((w2w n):word5) - 1), m #>> w2n n)`;
 
 val IMMEDIATE_def = Define`
   IMMEDIATE C (opnd2:word12) =
@@ -328,7 +328,7 @@ val ADDR_MODE1_def = Define`
   ADDR_MODE1 reg mode C Im opnd2 =
     if Im then
       IMMEDIATE C opnd2
-    else if opnd2 %% 4 then
+    else if opnd2 ' 4 then
       SHIFT_REGISTER reg mode C opnd2
     else
       SHIFT_IMMEDIATE reg mode C opnd2`;
@@ -378,21 +378,21 @@ val ALU_def = Define`
 
 val ARITHMETIC_def = Define`
   ARITHMETIC (opcode:word4) =
-    (opcode %% 2 \/ opcode %% 1) /\ (~(opcode %% 3) \/ ~(opcode %% 2))`;
+    (opcode ' 2 \/ opcode ' 1) /\ (~(opcode ' 3) \/ ~(opcode ' 2))`;
 
 val TEST_OR_COMP_def = Define`
   TEST_OR_COMP (opcode:word4) = ((3 -- 2 ) opcode = 2w)`;
 
 val DECODE_DATAP_def = Define`
   DECODE_DATAP (w:word32) =
-    (w %% 25,(24 >< 21) w,w %% 20,(19 >< 16) w,(15 >< 12) w,(11 >< 0) w)`;
+    (w ' 25,(24 >< 21) w,w ' 20,(19 >< 16) w,(15 >< 12) w,(11 >< 0) w)`;
 
 val DATA_PROCESSING_def = Define`
   DATA_PROCESSING r C mode ireg =
     let (I,opcode,S,Rn,Rd,opnd2) = DECODE_DATAP ireg in
     let (C_s,op2) = ADDR_MODE1 r.reg mode C I opnd2
     and pc_reg = INC_PC r.reg in
-    let rn = REG_READ (if ~I /\ (opnd2 %% 4) then pc_reg else r.reg) mode Rn in
+    let rn = REG_READ (if ~I /\ (opnd2 ' 4) then pc_reg else r.reg) mode Rn in
     let ((N,Z,C_alu,V),res) = ALU opcode rn op2 C
     and tc = TEST_OR_COMP opcode in
       <| reg := if tc then pc_reg else REG_WRITE pc_reg mode Rd res;
@@ -408,7 +408,7 @@ val DATA_PROCESSING_def = Define`
 (* The PSR Transfer instruction class (mrs and msr)                          *)
 (* ------------------------------------------------------------------------- *)
 
-val DECODE_MRS_def = Define `DECODE_MRS (w:word32) = (w %% 22,(15 >< 12) w)`;
+val DECODE_MRS_def = Define `DECODE_MRS (w:word32) = (w ' 22,(15 >< 12) w)`;
 
 val MRS_def = Define`
   MRS r mode ireg =
@@ -420,7 +420,7 @@ val MRS_def = Define`
 
 val DECODE_MSR_def = Define`
   DECODE_MSR (w:word32) =
-    (w %% 25,w %% 22,w %% 19,w %% 16,(3 >< 0) w,(11 >< 0) w)`;
+    (w ' 25,w ' 22,w ' 19,w ' 16,(3 >< 0) w,(11 >< 0) w)`;
 
 val MSR_def = Define`
   MSR r mode ireg =
@@ -431,9 +431,9 @@ val MSR_def = Define`
       let psrd = if R then SPSR_READ r.psr mode else CPSR_READ r.psr
       and  src = if I then SND (IMMEDIATE F opnd) else REG_READ r.reg mode Rm in
       let psrd' = word_modify
-             (\i b. (28 <= i) /\ (if bit19 then src %% i else b) \/
+             (\i b. (28 <= i) /\ (if bit19 then src ' i else b) \/
                     (8 <= i) /\ (i <= 27) /\ b \/
-                    (i <= 7) /\ (if bit16 /\ ~USER mode then src %% i else b))
+                    (i <= 7) /\ (if bit16 /\ ~USER mode then src ' i else b))
              psrd
       in
         <| reg := INC_PC r.reg;
@@ -464,7 +464,7 @@ val ALU_multiply_def = Define`
         (word_msb resLo,resLo = 0w,rd,resLo)`;
 
 val DECODE_MLA_MUL_def = Define`
-  DECODE_MLA_MUL (w:word32) = (w %% 23,w %% 22,w %% 21,w %% 20,
+  DECODE_MLA_MUL (w:word32) = (w ' 23,w ' 22,w ' 21,w ' 20,
     (19 >< 16) w,(15 >< 12) w,(11 >< 8) w,(3 >< 0) w)`;
 
 val MLA_MUL_def = Define`
@@ -505,7 +505,7 @@ val ADDR_MODE2_def = Define`
 
 val DECODE_LDR_STR_def = Define`
   DECODE_LDR_STR (w:word32) =
-     (w %% 25,w %% 24,w %% 23,w %% 22,w %% 21,w %% 20,
+     (w ' 25,w ' 24,w ' 23,w ' 22,w ' 21,w ' 20,
       (19 >< 16) w,(15 >< 12) w,(11 >< 0) w)`;
 
 val LDR_STR_def = Define`
@@ -548,8 +548,8 @@ val ADDR_MODE3_def = Define`
 
 val DECODE_LDRH_STRH_def = Define`
   DECODE_LDRH_STRH (w:word32) =
-     (w %% 24,w %% 23,w %% 22,w %% 21,w %% 20,
-      (19 >< 16) w,(15 >< 12) w,(11 >< 8) w,w %% 6,w %% 5,(3 >< 0) w)`;
+     (w ' 24,w ' 23,w ' 22,w ' 21,w ' 20,
+      (19 >< 16) w,(15 >< 12) w,(11 >< 8) w,w ' 6,w ' 5,(3 >< 0) w)`;
 
 val LDRH_STRH_def = Define`
   LDRH_STRH r mode ireg input =
@@ -588,7 +588,7 @@ val LDRH_STRH_def = Define`
 
 val REGISTER_LIST_def = Define`
   REGISTER_LIST (list:word16) =
-    (MAP SND o FILTER FST) (GENLIST (\i. (list %% i,(n2w i):word4)) 16)`;
+    (MAP SND o FILTER FST) (GENLIST (\i. (list ' i,(n2w i):word4)) 16)`;
 
 val ADDRESS_LIST_def = Define`
   ADDRESS_LIST (start:word32) n = GENLIST (\i. start + 4w * n2w i) n`;
@@ -619,12 +619,12 @@ val STM_LIST_def = Define`
 
 val DECODE_LDM_STM_def = Define`
   DECODE_LDM_STM (w:word32) =
-    (w %% 24,w %% 23,w %% 22,w %% 21,w %% 20,(19 >< 16) w,(15 >< 0) w)`;
+    (w ' 24,w ' 23,w ' 22,w ' 21,w ' 20,(19 >< 16) w,(15 >< 0) w)`;
 
 val LDM_STM_def = Define`
   LDM_STM r mode ireg input =
     let (P,U,S,W,L,Rn,list) = DECODE_LDM_STM ireg in
-    let pc_in_list = list %% 15
+    let pc_in_list = list ' 15
     and rn = REG_READ r.reg mode Rn in
     let (rp_list,addr_list,rn') = ADDR_MODE4 P U rn list
     and mode' = if S /\ (L ==> ~pc_in_list) then usr else mode
@@ -663,7 +663,7 @@ val LDM_STM_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val DECODE_SWP_def = Define`
-  DECODE_SWP (w:word32) = (w %% 22,(19 >< 16) w,(15 >< 12) w,(3 >< 0) w)`;
+  DECODE_SWP (w:word32) = (w ' 22,(19 >< 16) w,(15 >< 12) w,(3 >< 0) w)`;
 
 val SWP_def = Define`
   SWP r mode ireg input =
@@ -714,7 +714,7 @@ val MCR_OUT_def = Define`
 
 val DECODE_LDC_STC_def = Define`
   DECODE_LDC_STC (w:word32) =
-    (w %% 24,w %% 23,w %% 22,w %% 21,w %% 20,
+    (w ' 24,w ' 23,w ' 22,w ' 21,w ' 20,
      (19 >< 16) w,(15 >< 12) w,(11 >< 8) w,(7 >< 0) w)`;
 
 val ADDR_MODE5_def = Define`
@@ -766,7 +766,7 @@ val CONDITION_PASSED_def = Define`
   CONDITION_PASSED flags (ireg:word32) =
     let pass = CONDITION_PASSED2 flags (num2condition (w2n ((31 -- 29) ireg)))
     in
-      if ireg %% 28 then ~pass else pass`;
+      if ireg ' 28 then ~pass else pass`;
 
 (* ------------------------------------------------------------------------- *)
 (* Top-level decode and run functions                                        *)
@@ -774,7 +774,7 @@ val CONDITION_PASSED_def = Define`
 
 val DECODE_ARM_def = Define`
   DECODE_ARM (ireg : word32) =
-    let b n = ireg %% n in
+    let b n = ireg ' n in
       case (b 27,b 26,b 25,b 24,b 23,b 22,b 21,b 20,b 7,b 6,b 5,b 4) of
          (F,F,F, T , F ,_22,b21, F , F, F, F, F) -> if b21 then msr else mrs
       || (F,F,F,_24,_23,_22,_21,_20,_7,_6,_5, F) -> data_proc
