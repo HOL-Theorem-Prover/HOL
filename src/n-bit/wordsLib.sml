@@ -146,7 +146,6 @@ val pats =
   [``sw2sw (n2w (NUMERAL a) :'a word) : 'b word``,
    ``word_reverse (n2w (NUMERAL a) :'a word)``,
    ``word_len (a:'a word)``,
-   ``word_modify f (0w :'a word)``,
    ``word_msb (n2w (NUMERAL a) :'a word)``,
    ``word_join (0w:'b word) (x :'a word)``,
    ``word_bit 0 (n2w (NUMERAL a) :'a word)``,
@@ -166,7 +165,11 @@ val pats =
    ``BITS 0 0 (NUMERAL b)``,
    ``BITS 0 (NUMERAL a) (NUMERAL b)``,
    ``BITS (NUMERAL a) 0 (NUMERAL b)``,
-   ``BITS (NUMERAL a) (NUMERAL b) (NUMERAL c)``
+   ``BITS (NUMERAL a) (NUMERAL b) (NUMERAL c)``,
+   ``TIMES_2EXP 0 a``,
+   ``TIMES_2EXP (NUMERAL a) b``,
+   ``DIV_2EXP 0 a``,
+   ``DIV_2EXP (NUMERAL a) b``
   ] @ List.concat
    (map (fn th => [subst [``x :'a word`` |-> ``n2w (NUMERAL a) :'a word``] th,
                    subst [``x :'a word`` |-> ``$- 1w :'a word``] th])
@@ -174,7 +177,6 @@ val pats =
       ``w2w (x :'a word) : 'b word``,
       ``w2n (x :'a word)``,
       ``word_log2 (x :'a word)``,
-      ``word_modify f (x :'a word)``,
       ``word_join (x :'a word) (0w:'b word)``,
       ``word_concat (0w:'b word) (x :'a word) : 'c word``,
       ``word_concat (x :'a word) (0w:'b word) : 'c word``,
@@ -295,9 +297,9 @@ fun WORD_LITERAL_REDUCE_CONV t =
 
 fun is_word_literal t =
   if wordsSyntax.is_word_2comp t then
-    wordsSyntax.is_n2w (wordsSyntax.dest_word_2comp t)
+    wordsSyntax.is_word_literal (wordsSyntax.dest_word_2comp t)
   else
-    wordsSyntax.is_n2w t;
+    wordsSyntax.is_word_literal t;
 
 fun is_word_zero t =
   wordsSyntax.is_n2w t andalso
@@ -805,6 +807,8 @@ val WORD_CONV = SIMP_CONV (std_ss++WORD_ss)
   [WORD_LEFT_ADD_DISTRIB, WORD_RIGHT_ADD_DISTRIB,
    WORD_LEFT_AND_OVER_OR, WORD_RIGHT_AND_OVER_OR, WORD_XOR];
 
+val _ = augment_srw_ss [WORD_ss];
+
 (* ------------------------------------------------------------------------- *)
 
 val LESS_THM =
@@ -846,15 +850,15 @@ local
   val word_join = SIMP_RULE (std_ss++boolSimps.LET_ss) [] word_join_def
   val rw1 = [word_0,word_T,word_L,word_xor_def,word_or_def,word_and_def,
              word_1comp_def, REWRITE_RULE [SYM WORD_NEG_1] word_T,
-             SPEC `NUMERAL n` n2w_def]
+             SPEC `NUMERAL n` n2w_def,
+             pred_setTheory.NOT_IN_EMPTY,
+             ISPEC `0` pred_setTheory.IN_INSERT,
+             ISPEC `NUMERAL n` pred_setTheory.IN_INSERT]
   val rw2 = [fcpTheory.FCP_UPDATE_def,LESS_COR,sw2sw,w2w,
              word_join,word_concat_def,word_reverse_def,word_modify_def,
              word_lsl_def,word_lsr_def,word_asr_def,word_ror_def,
              word_rol_def,word_rrx_def,word_msb_def,word_lsb_def,
-             word_extract_def,word_bits_def,word_slice_def,word_bit_def,
-             pred_setTheory.NOT_IN_EMPTY,
-             ISPEC `0` pred_setTheory.IN_INSERT,
-             ISPEC `NUMERAL n` pred_setTheory.IN_INSERT]
+             word_extract_def,word_bits_def,word_slice_def,word_bit_def]
   val thms = [WORD_ADD_LEFT_LO, WORD_ADD_LEFT_LS,
               WORD_ADD_RIGHT_LS, WORD_ADD_RIGHT_LO]
   val rw3 = [WORD_LT_LO, WORD_LE_LS, WORD_GREATER, WORD_GREATER_EQ,
@@ -886,7 +890,7 @@ in
           simpLib.conv_ss
             {conv = K (K (CHANGED_CONV FORALL_AND_CONV)), trace = 3,
              name = "FORALL_AND_CONV",
-             key = SOME([], ``!x. P /\ Q``)}]
+             key = SOME([], ``!x:'a. P /\ Q``)}]
   fun WORD_DP_PROVE dp t =
         let val thm1 = QCONV (
                         WORD_CONV
