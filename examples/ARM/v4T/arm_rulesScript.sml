@@ -913,14 +913,14 @@ val w2w_w2w_ = prove(
 
 val concat4 = prove(
   `!w:word8. ((7 >< 4) w :word4) @@ ((3 >< 0) w : word4) = (7 >< 0) w : word32`,
-  SRW_TAC [WORD_ss, WORD_EXTRACT_ss] []);
+  SRW_TAC [WORD_EXTRACT_ss] []);
 
 val WORD_ROL_LSL = prove(
   `!n w:'a word.
         n < dimindex(:'a) /\
         ((dimindex(:'a) - 1 -- dimindex(:'a) - n) w = 0w) ==>
         (w #<< n = w << n)`,
-  STRIP_TAC \\ Cases_on `n = 0` \\ SRW_TAC [WORD_ss, WORD_EXTRACT_ss]
+  STRIP_TAC \\ Cases_on `n = 0` \\ SRW_TAC [WORD_EXTRACT_ss]
          [DECIDE ``0 < a /\ ~(b = 0) ==> (a - b < a)``]
     \\ SRW_TAC [WORD_BIT_EQ_ss] []
     \\ Cases_on `n <= i` \\ FULL_SIMP_TAC arith_ss []);
@@ -928,17 +928,17 @@ val WORD_ROL_LSL = prove(
 val ROR_30_LSL_2 = prove(
   `(!w:word7. (w2w w):word32 #>> w2n (2w * 15w:word8) = w2w w << 2) /\
     !w:word8. (w2w w):word32 #>> w2n (2w * 15w:word8) = w2w w << 2`,
-  SRW_TAC [WORD_ss, WORD_EXTRACT_ss] []);
+  SRW_TAC [WORD_EXTRACT_ss] []);
 
 val w2w_const_mul_w2w = prove(
   `(!w:word5. w2w (4w:word12 * w2w w) = 4w:word32 * w2w w) /\
    (!w:word5. w2w (2w:word8 * w2w w) = 2w:word32 * w2w w) /\
     !w:word8. w2w (4w:word12 * w2w w) = 4w:word32 * w2w w`,
-  SRW_TAC [WORD_ss, WORD_EXTRACT_ss, WORD_MUL_LSL_ss] []);
+  SRW_TAC [WORD_EXTRACT_ss, WORD_MUL_LSL_ss] []);
 
 val imm_sw2sw = prove(
   `!w:11 word. (10 >< 0) (sw2sw w : word24) = w`,
-  SRW_TAC [WORD_ss, WORD_EXTRACT_ss] []);
+  SRW_TAC [WORD_EXTRACT_ss] []);
 
 val INC_PC_T = prove(
   `!r. REG_WRITE r usr 15w (FETCH_PC r + 2w) = INC_PC T r`,

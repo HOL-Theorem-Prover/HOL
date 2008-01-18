@@ -254,14 +254,14 @@ val thrms =
 val extract_w2w_0 = prove(
   `!h l w:'a word. dimindex(:'a) <= l ==>
      ((h >< l) ((w2w w):'b word) = 0w:'c word)`,
-  SRW_TAC [WORD_ss, WORD_EXTRACT_ss] []);
+  SRW_TAC [WORD_EXTRACT_ss] []);
 
 val extract_w2w_w2w = prove(
   `!w:'a word. (h = dimindex(:'a) - 1) /\
           dimindex(:'a) <= dimindex(:'b) /\
           dimindex(:'a) <= dimindex(:'c) ==>
       ((h >< 0) ((w2w w):'b word) = w2w ((w2w w):'c word))`,
-  SRW_TAC [ARITH_ss, WORD_ss, WORD_EXTRACT_ss]
+  SRW_TAC [ARITH_ss, WORD_EXTRACT_ss]
     [simpLib.SIMP_PROVE arith_ss [MIN_DEF]
        ``a <= b ==> (MIN a b = a) /\ (MIN b a = a)``]);
 
@@ -293,27 +293,29 @@ val LESS_THM =
 
 val split_word4 = prove(
   `!w:word4. w2w w = (3 >< 3) w << 3 !! (2 >< 0) w : word32`,
-  SRW_TAC [WORD_ss, WORD_EXTRACT_ss] []);
+  SRW_TAC [WORD_EXTRACT_ss] []);
 
 val immediate8_times4 = prove(
   `!i:word8. w2w (4w:word12 * w2w i) = (w2w i << 2) : word32`,
-  SRW_TAC [WORD_ss, WORD_EXTRACT_ss, WORD_MUL_LSL_ss] []);
+  SRW_TAC [WORD_EXTRACT_ss, WORD_MUL_LSL_ss] []);
 
 val immediate5_times4 = prove(
   `!i:word5. w2w (4w:word12 * w2w i) = (w2w i << 2) : word32`,
-  SRW_TAC [WORD_ss, WORD_EXTRACT_ss, WORD_MUL_LSL_ss] []);
+  SRW_TAC [WORD_EXTRACT_ss, WORD_MUL_LSL_ss] []);
 
 val immediate5_times2 = prove(
   `(!i:word5. (7 >< 4) (2w:word8 * w2w i) = ((4 >< 3) i) : word32) /\
     !i:word5. (3 >< 0) (2w:word8 * w2w i) = ((2 >< 0) i << 1) : word32`,
-  SRW_TAC [WORD_ss, WORD_EXTRACT_ss, WORD_MUL_LSL_ss] []);
+  SRW_TAC [WORD_EXTRACT_ss, WORD_MUL_LSL_ss] []);
+
+val w2n_lt8 = ((REWRITE_RULE [dimword_3] o INST_TYPE [`:'a` |-> `:3`]) w2n_lt);
 
 val BLOCK_lem = prove(
   `!Rd:word3 imm:word8.
-     ((51200w:word16 !! w2w Rd << 8 !! w2w imm) ' (w2n (w2w Rd : word32))) =
+     (((w2w imm !! w2w Rd << 8) !! 51200w:word16) ' (w2n (w2w Rd : word32))) =
      (imm ' (w2n Rd))`,
   NTAC 2 STRIP_TAC  \\ Cases_on_word `imm`
-    \\ SRW_TAC [wordsLib.SIZES_ss,ARITH_ss] [w2n_w2w, w2w_n2w]
+    \\ RW_TAC (arith_ss++wordsLib.SIZES_ss) [w2n_w2w, w2w_n2w]
     \\ SPEC_THEN `Rd` ASSUME_TAC
          ((REWRITE_RULE [dimword_3] o INST_TYPE [`:'a` |-> `:3`]) w2n_lt)
     \\ `MIN 7 (w2n Rd) = w2n Rd` by SRW_TAC [ARITH_ss] [MIN_DEF]
@@ -325,14 +327,14 @@ val BLOCK_lem = prove(
 
 val BLOCK_lem2 = prove(
   `(!Rd:word3 imm:word8.
-      (21 :+ T) (3901751296w:word32 !! w2w Rd << 16 !! w2w imm) =
-      3903848448w !! w2w Rd << 16 !! w2w imm) /\
+      (21 :+ T) ((w2w imm !! w2w Rd << 16) !! 3901751296w:word32) =
+      (w2w imm !! w2w Rd << 16) !! 3903848448w) /\
    (!Rd:word3 imm:word8.
-      (21 :+ T) (3902799872w:word32 !! w2w Rd << 16 !! w2w imm) =
-      3902799872w !! w2w Rd << 16 !! w2w imm) /\
+      (21 :+ T) ((w2w imm !! w2w Rd << 16) !! 3902799872w:word32) =
+      (w2w imm !! w2w Rd << 16) !! 3902799872w) /\
     !Rd:word3 imm:word8.
-      (21 :+ F) (3901751296w:word32 !! w2w Rd << 16 !! w2w imm) =
-      3901751296w !! w2w Rd << 16 !! w2w imm`,
+      (21 :+ F) ((w2w imm !! w2w Rd << 16) !! 3901751296w:word32) =
+      (w2w imm !! w2w Rd << 16) !! 3901751296w`,
   SRW_TAC [WORD_BIT_EQ_ss] []);
 
 val COND_lem = prove(
@@ -393,8 +395,7 @@ val thumb_to_arm_enc = Tactical.store_thm("thumb_to_arm_enc",
          word_extract_w2w, extract_w2w_0, extract_w2w_w2w_, w2w_id,
          word_lsl_n2w, word_or_n2w, word_modify_n2w, word_extract_n2w,
          w2w_n2w, w2w_0, w2w_w2w_, BLOCK_lem, BLOCK_lem2, COND_lem3, COND_lem4,
-         immediate5_times4, immediate8_times4, immediate5_times2, split_word4]
-    \\ SRW_TAC [WORD_LOGIC_ss] []);
+         immediate5_times4, immediate8_times4, immediate5_times2, split_word4]);
 
 (* ------------------------------------------------------------------------- *)
 

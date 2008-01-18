@@ -42,7 +42,7 @@ val _ = add_infix("#",720,HOLgrammars.RIGHT);
 val GET_IREG = store_thm("GET_IREG",
   `!t fpc a b. GET_IREG t fpc1 (a # b) =
               if t then THUMB_TO_ARM (if fpc1 then b else a) else b @@ a`,
-  SRW_TAC [boolSimps.LET_ss, WORD_ss, WORD_EXTRACT_ss]
+  SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
     [GET_IREG_def,concat_thumb_def]);
 
 (* ------------------------------------------------------------------------- *)
@@ -410,8 +410,7 @@ val SPSR_WRITE_READ = store_thm("SPSR_WRITE_READ",
 val mode_num_DECODE_MODE = prove(
   `!w. ~(DECODE_MODE w = safe) ==> (mode_num (DECODE_MODE w) = w)`,
   STRIP_TAC \\ Cases_on `w IN {16w; 17w; 18w; 19w; 23w; 27w; 31w}`
-    \\ FULL_SIMP_TAC (srw_ss()++listSimps.LIST_ss++SIZES_ss)
-         [DECODE_MODE_def, mode_num_def]);
+    \\ FULL_SIMP_TAC (srw_ss()++SIZES_ss) [DECODE_MODE_def, mode_num_def]);
 
 val PSR_CONS = store_thm("PSR_CONS",
    `!w:word32. w =
@@ -422,7 +421,7 @@ val PSR_CONS = store_thm("PSR_CONS",
            SET_NZCV (w ' 31, w ' 30, w ' 29, w ' 28)
              (SET_IFTM (w ' 7) (w ' 6) (w ' 5) m (0xFFFFF20w && w))`,
   SRW_TAC [boolSimps.LET_ss] [SET_NZCV_def, SET_IFTM_def, mode_num_DECODE_MODE]
-    \\ SRW_TAC [WORD_BIT_EQ_ss] []);
+    \\ CONV_TAC WORD_BIT_EQ_CONV);
 
 val word_modify_PSR = save_thm("word_modify_PSR",
   SIMP_CONV std_ss [SET_NZCV_def,SET_IFTM_def]
@@ -1032,7 +1031,7 @@ val condition_code_lem3 = prove(
       || MI -> MI || PL -> MI || VS -> VS || VC -> VS
       || HI -> HI || LS -> HI || GE -> GE || LT -> GE
       || GT -> GT || LE -> GT || AL -> AL || NV -> AL`,
-  Cases \\ SRW_TAC [WORD_ss,boolSimps.LET_ss]
+  Cases \\ SRW_TAC [boolSimps.LET_ss]
        [condition_encode_def,condition2num_thm,num2condition_thm,word_bits_n2w,
         word_rol_def,word_ror_n2w,word_lsl_n2w,w2w_n2w,w2n_n2w]
     \\ EVAL_TAC);
