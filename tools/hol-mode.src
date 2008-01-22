@@ -509,7 +509,8 @@ file to \"use\" first."
                                  )))
             ; below, use visit parameter = 1 to stop message in mini-buffer
             (write-region (point-min) (point-max) fname nil 1)
-            (send-raw-string-to-hol (format "use \"%s\"" fname)))
+            (send-raw-string-to-hol (format "use \"%s\"" fname))
+            (delete-file fname))
     (send-raw-string-to-hol (buffer-string) echoit)))
 
 (defun send-raw-string-to-hol (string &optional echoit)
