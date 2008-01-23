@@ -383,7 +383,7 @@ val set2mem_arm2set = prove(
   SRW_TAC [] [set2mem_byte_def,arm2set_def,set2mem_def]
   \\ ONCE_REWRITE_TAC [GSYM (BETA_CONV ``(\a. mem_byte a s) a``)]
   \\ REWRITE_TAC [GSYM FUN_EQ_THM,SELECT_REFL]
-  \\ SIMP_TAC std_ss [mem_byte_addr32,concat_bytes,mem_def]
+  \\ SIMP_TAC bool_ss [RW [WORD_ADD_0] mem_byte_addr32,concat_bytes,mem_def]
   \\ SIMP_TAC std_ss [FUN_EQ_THM]);
 
 val set2psrs_arm2set = prove(
@@ -1136,11 +1136,12 @@ val M_NEQ_M = store_thm("M_NEQ_M",
           Mem (addr32 a + 2w) ((23 >< 16) x);
           Mem (addr32 a + 1w) ((15 >< 8) x);
           Mem (addr32 a + 0w) ((7 >< 0) x)}`)
-  \\ FULL_SIMP_TAC bool_ss [SET_EQ_SUBSET,INSERT_SUBSET,IN_INSERT,NOT_IN_EMPTY]
-  \\ SRW_TAC [] []
+  \\ FULL_SIMP_TAC bool_ss [SET_EQ_SUBSET,INSERT_SUBSET,IN_INSERT,NOT_IN_EMPTY,EMPTY_SUBSET]
   \\ Q.PAT_ASSUM `~(a = b)` ASSUME_TAC
-  \\ FULL_SIMP_TAC bool_ss [addr32_NEQ_addr32,addr32_11]
-  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [])
+  \\ FULL_SIMP_TAC bool_ss [DISJOINT_DEF,ARMel_11,
+       WORD_EQ_ADD_RCANCEL,addr32_11,addr32_NEQ_addr32]  
+  \\ FULL_SIMP_TAC bool_ss [INSERT_INTER,INTER_EMPTY,IN_INSERT,NOT_IN_EMPTY,
+       DISJOINT_DEF,ARMel_11,WORD_EQ_ADD_RCANCEL,addr32_11,addr32_NEQ_addr32]);
 
 val M_NEQ_M2 = store_thm("M_NEQ_M2",
   ``!a x y. ~(x = y) ==> ~(M a x = M a y)``,
@@ -1153,11 +1154,12 @@ val M_NEQ_M2 = store_thm("M_NEQ_M2",
           Mem (addr32 a + 2w) ((23 >< 16) x);
           Mem (addr32 a + 1w) ((15 >< 8) x);
           Mem (addr32 a + 0w) ((7 >< 0) x)}`)
-  \\ FULL_SIMP_TAC bool_ss [SET_EQ_SUBSET,INSERT_SUBSET,IN_INSERT,NOT_IN_EMPTY]
-  \\ SRW_TAC [] []
+  \\ FULL_SIMP_TAC bool_ss [SET_EQ_SUBSET,INSERT_SUBSET,IN_INSERT,NOT_IN_EMPTY,EMPTY_SUBSET]
   \\ Q.PAT_ASSUM `~(x = y)` ASSUME_TAC
-  \\ FULL_SIMP_TAC bool_ss [addr32_NEQ_addr32,addr32_11]
-  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) []
+  \\ FULL_SIMP_TAC bool_ss [DISJOINT_DEF,ARMel_11,
+       WORD_EQ_ADD_RCANCEL,addr32_11,addr32_NEQ_addr32]  
+  \\ FULL_SIMP_TAC bool_ss [INSERT_INTER,INTER_EMPTY,IN_INSERT,NOT_IN_EMPTY,
+       DISJOINT_DEF,ARMel_11,WORD_EQ_ADD_RCANCEL,addr32_11,addr32_NEQ_addr32]
   \\ METIS_TAC [concat_bytes]);
 
 val M_EQ_M = store_thm("M_EQ_M",
