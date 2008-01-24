@@ -58,7 +58,7 @@ val w2n_def = Define`
   w2n (w:'a word) = SUM ^WL (\i. SBIT (w ' i) i)`;
 
 val n2w_def = Define`
-  (n2w:num->('a word)) n = FCP i. BIT i n`;
+  (n2w:num->'a word) n = FCP i. BIT i n`;
 
 val w2w_def = Define`
   (w2w:'a word -> 'b word) w = n2w (w2n w)`;
@@ -76,13 +76,13 @@ val _ = add_bare_numeral_form (#"w", SOME "n2w");
 val _ = ai := true;
 
 val word_T_def = Define`
-  word_T = n2w:num->('a word) (UINT_MAX(:'a))`;
+  word_T = (n2w:num->'a word) (UINT_MAX(:'a))`;
 
 val word_L_def = Define`
-  word_L = n2w:num->('a word) (INT_MIN(:'a))`;
+  word_L = (n2w:num->'a word) (INT_MIN(:'a))`;
 
 val word_H_def = Define`
-  word_H = n2w:num->('a word) (INT_MAX(:'a))`;
+  word_H = (n2w:num->'a word) (INT_MAX(:'a))`;
 
 val _ = ai := false;
 
@@ -176,15 +176,15 @@ val _ = add_infix("><",350,HOLgrammars.RIGHT);
 
 val word_2comp_def = Define`
   word_2comp (w:'a word) =
-    n2w:num->('a word) (dimword(:'a) - w2n w)`;
+    (n2w:num->'a word) (dimword(:'a) - w2n w)`;
 
 val word_add_def = Define`
   word_add (v:'a word) (w:'a word) =
-    n2w:num->('a word) (w2n v + w2n w)`;
+    (n2w:num->'a word) (w2n v + w2n w)`;
 
 val word_mul_def = Define`
   word_mul (v:'a word) (w:'a word) =
-    n2w:num->('a word) (w2n v * w2n w)`;
+    (n2w:num->'a word) (w2n v * w2n w)`;
 
 val word_log2_def = Define`
   word_log2 (w:'a word) = (n2w (LOG2 (w2n w)):'a word)`;
@@ -196,7 +196,7 @@ val word_sub_def = Define`
 
 val word_div_def = Define`
   word_div (v: 'a word) (w: 'a word) =
-    n2w:num->('a word) (w2n v DIV w2n w)`;
+    (n2w:num->'a word) (w2n v DIV w2n w)`;
 
 val word_sdiv_def = Define`
   word_sdiv a b =
@@ -416,7 +416,7 @@ val SUM_SBIT_LT = prove(
     \\ METIS_TAC [EXP,DECIDE ``!a b c. a <= b /\ c < b ==> a + c < 2 * b``]);
 
 val w2n_n2w_lem = prove(
-  `!n. SUM ^WL (\i. SBIT ((FCP i. BIT i n):'a word ' i) i) =
+  `!n. SUM ^WL (\i. SBIT (((FCP i. BIT i n):'a word) ' i) i) =
        SUM ^WL (\i. SLICE i i n)`,
   STRIP_TAC \\ REWRITE_TAC [SUM] \\ MATCH_MP_TAC GSUM_FUN_EQUAL
     \\ RW_TAC (fcp_ss++ARITH_ss) [BIT_SLICE_THM]);
@@ -463,7 +463,7 @@ fun Cases_word (g as (_,w)) =
   end
 
 val n2w_mod = store_thm("n2w_mod",
-  `!n. n2w:num -> 'a word (n MOD dimword(:'a)) = n2w n`,
+  `!n. (n2w:num -> 'a word) (n MOD dimword(:'a)) = n2w n`,
   RW_TAC fcp_ss [dimword_def]
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ ASM_SIMP_TAC (fcp_ss++ARITH_ss)
@@ -622,13 +622,13 @@ val word_T = store_thm("word_T",
                    UINT_MAX_def, dimword_def]);
 
 val word_L = store_thm("word_L",
-  `!n. n < dimindex(:'a) ==> (INT_MINw:'a word ' n = (n = dimindex(:'a) - 1))`,
+  `!n. n < dimindex(:'a) ==> ((INT_MINw:'a word) ' n = (n = dimindex(:'a) - 1))`,
   SRW_TAC [fcpLib.FCP_ss] [word_L_def, n2w_def, INT_MIN_def]
     \\ Cases_on `n = dimindex (:'a) - 1`
     \\ SRW_TAC [] [BIT_B_NEQ, BIT_B]);
 
 val word_H = store_thm("word_H",
-  `!n. n < dimindex(:'a) ==> (INT_MAXw:'a word ' n = (n < dimindex(:'a) - 1))`,
+  `!n. n < dimindex(:'a) ==> ((INT_MAXw:'a word) ' n = (n < dimindex(:'a) - 1))`,
   SRW_TAC [fcpLib.FCP_ss] [word_H_def, n2w_def, INT_MAX_def, INT_MIN_def]
     \\ Cases_on `n < dimindex (:'a) - 1`
     \\ SRW_TAC [] [BIT_B_NEQ, BIT_B, BIT_EXP_SUB1]);
@@ -762,7 +762,7 @@ val WORD_ADD_OR = store_thm("WORD_ADD_OR",
     \\ Cases_on_word `b`
     \\ FULL_SIMP_TAC (std_ss++fcpLib.FCP_ss) [n2w_def]
     \\ `!n j. j < dimindex (:'a) ==>
-           ((\i'. SBIT ((FCP i. BIT i n):'a word ' i') i') j =
+           ((\i'. SBIT (((FCP i. BIT i n):'a word) ' i') i') j =
             (\i'. SBIT (BIT i' n) i') j)`
     by SRW_TAC [fcpLib.FCP_ss] []
     \\ POP_ASSUM (fn th => ASSUME_TAC (MATCH_MP SUM_FUN_EQUAL (SPEC `n` th))
@@ -776,7 +776,7 @@ val WORD_ADD_OR = store_thm("WORD_ADD_OR",
 
 val w2w = store_thm("w2w",
   `!w:'a word i. i < dimindex (:'b) ==>
-      ((w2w w):'b word ' i = i < ^WL /\ w ' i)`,
+      (((w2w w):'b word) ' i = i < ^WL /\ w ' i)`,
   Cases_word \\ SIMP_TAC std_ss [w2w_def,w2n_n2w]
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> beta] EXISTS_HB)
@@ -787,7 +787,7 @@ val w2w = store_thm("w2w",
 
 val sw2sw = store_thm("sw2sw",
   `!w:'a word i. i < dimindex(:'b) ==>
-     (sw2sw w :'b word ' i =
+     ((sw2sw w :'b word) ' i =
        if i < dimindex (:'a) \/ dimindex(:'b) < dimindex(:'a) then
          w ' i
        else
@@ -881,11 +881,11 @@ val word_bit_n2w = store_thm("word_bit_n2w",
          DECIDE ``0 < b /\ a <= b - 1 ==> a < b:num``]);
 
 val word_index_n2w = store_thm("word_index_n2w",
-  `!n. (n2w n):'a word ' i =
+  `!n. ((n2w n):'a word) ' i =
       if i < dimindex (:'a) then
         BIT i n
       else
-        (n2w n):'a word ' i`,
+        ((n2w n):'a word) ' i`,
   RW_TAC arith_ss [word_bit,word_bit_n2w]);
 
 val MIN_lem = prove(

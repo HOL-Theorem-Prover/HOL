@@ -940,7 +940,7 @@ val FCPi_def = Define `FCPi (f, (:'b)) = ($FCP f):'a ** 'b`;
 val mk_fcp_def = Define `mk_fcp = FCPi`;
 
 val index_comp = store_thm("index_comp",
-  `!f n. ($FCP f):'a ** 'b ' n =
+  `!f n. (($FCP f):'a ** 'b) ' n =
       if n < dimindex (:'b) then
         f n
       else
