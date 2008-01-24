@@ -497,6 +497,10 @@ If DIR-FLAG is non-nil, create a new empty directory instead of a file."
       nil)
     file))
 
+(defvar hol-mode-to-delete nil
+  "String optionally containing name of last temporary file used to transmit
+HOL sources to a running session (using \"use\")")
+
 (defun send-buffer-to-hol-maybe-via-file (&optional echoit)
   "Send the contents of current buffer to HOL, possibly putting it into a
 file to \"use\" first."
@@ -507,10 +511,13 @@ file to \"use\" first."
                               ;; else
                                     (make-temp-file-xemacs "hol")
                                  )))
+            (if (stringp hol-mode-to-delete) 
+                (progn (delete-file hol-mode-to-delete) 
+                       (setq hol-mode-to-delete nil)))
             ; below, use visit parameter = 1 to stop message in mini-buffer
             (write-region (point-min) (point-max) fname nil 1)
             (send-raw-string-to-hol (format "use \"%s\"" fname))
-            (delete-file fname))
+            (setq hol-mode-to-delete fname))
     (send-raw-string-to-hol (buffer-string) echoit)))
 
 (defun send-raw-string-to-hol (string &optional echoit)
