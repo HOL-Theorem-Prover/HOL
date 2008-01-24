@@ -29,9 +29,11 @@ fun dim_of tm = dest_word_type(type_of tm);
 (* Constants for word operations                                             *)
 (*---------------------------------------------------------------------------*)
 
+val index_tm        = prim_mk_const{Name = "index", Thy = "fcp"}
 val word_T_tm       = prim_mk_const{Name = "word_T", Thy = "words"}
 val word_L_tm       = prim_mk_const{Name = "word_L", Thy = "words"}
 val word_H_tm       = prim_mk_const{Name = "word_H", Thy = "words"}
+val word_L2_tm      = prim_mk_const{Name = "word_L2", Thy = "words"};
 val word_modify_tm  = prim_mk_const{Name = "word_modify", Thy = "words"}
 val word_reverse_tm = prim_mk_const{Name = "word_reverse", Thy="words"}
 val nzcv_tm         = prim_mk_const{Name = "nzcv", Thy = "words"}
@@ -75,6 +77,10 @@ val sw2sw_tm        = prim_mk_const{Name = "sw2sw", Thy="words"};
 (* Constructors                                                              *)
 (*---------------------------------------------------------------------------*)
 
+fun mk_index(w,n) = 
+  list_mk_comb(inst[alpha |-> bool, beta |-> dim_of w] index_tm,[w,n])
+  handle HOL_ERR _ => raise ERR "mk_index" "";
+
 fun mk_word_T ty = 
   inst[alpha |-> ty] word_T_tm
   handle HOL_ERR _ => raise ERR "mk_word_T" "";
@@ -86,6 +92,10 @@ fun mk_word_L ty =
 fun mk_word_H ty = 
   inst[alpha |-> ty] word_H_tm
   handle HOL_ERR _ => raise ERR "mk_word_H" "";
+
+fun mk_word_L2 ty =
+  inst[alpha |-> ty] word_L2_tm
+  handle HOL_ERR _ => raise ERR "mk_word_L2" "";
 
 fun mk_word_modify(f,w) = 
   list_mk_comb(inst[alpha |-> dim_of w] word_modify_tm,[f,w])
@@ -243,6 +253,8 @@ fun mk_sw2sw(w,ty) =
 (* Destructors                                                               *)
 (*---------------------------------------------------------------------------*)
 
+val dest_index = dest_binop index_tm (ERR "dest_index" "");
+
 fun dest_word_T tm = 
   if same_const word_T_tm tm 
    then dim_of tm 
@@ -257,6 +269,11 @@ fun dest_word_H tm =
   if same_const word_H_tm tm 
    then dim_of tm 
     else raise ERR "dest_word_H" "";
+
+fun dest_word_L2 tm =
+  if same_const word_L2_tm tm
+   then dim_of tm
+    else raise ERR "dest_word_L2" "";
 
 val dest_word_modify = 
   dest_binop word_modify_tm (ERR "dest_word_modify" "");
@@ -379,9 +396,11 @@ val dest_w2n =
 (* Discriminators                                                            *)
 (*---------------------------------------------------------------------------*)
 
+val is_index = Lib.can dest_index
 val is_word_T = Lib.can dest_word_T
 val is_word_L = Lib.can dest_word_L
 val is_word_H = Lib.can dest_word_H
+val is_word_L2 = Lib.can dest_word_L2;
 val is_word_modify = Lib.can dest_word_modify
 val is_word_reverse = Lib.can dest_word_reverse
 val is_nzcv = Lib.can dest_nzcv
@@ -419,6 +438,9 @@ val is_w2w = Lib.can dest_w2w
 val is_n2w = Lib.can dest_n2w
 val is_w2n = Lib.can dest_w2n
 val is_sw2sw = Lib.can dest_sw2sw
+
+fun is_word_literal t =
+  is_n2w t andalso numSyntax.is_numeral (fst (dest_n2w t));
 
 end
 

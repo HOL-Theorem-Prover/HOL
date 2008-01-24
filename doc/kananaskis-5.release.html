@@ -25,56 +25,227 @@ html1/DTD/xhtml1-strict.dtd">
 <h2 id="new-features">New features:</h2>
 
 <ul>
+<li> <p> Types can now be numerals, as long as <code>fcpTheory</code>
+(the theory of finite cartesian products) is loaded.  A numeral type
+has no interesting properties except that the cardinality of its
+universe has exactly the size given by the numeral.  This implies that
+negative number types and the type :0 do not exist.  The
+pretty-printing of numeral types can be turned off with the trace
+flag <code>pp_num_types</code>. </p>
+
+<p> This removes the need for type abbreviations <code>i32</code> and
+others, and also the function <code>fcpLib.mk_index_type</code>, which
+has been removed. </p></li>
+
+<li> <p> The finite cartesian product &ldquo;array&rdquo; type can now
+be written with square brackets rather than with the
+infix <code>**</code> operator.  This combines well with the numeric
+types above.  For example, <code>:bool[32]</code> is a type of 32
+booleans, and indeed is the type used for what had been previously
+called <code>word32</code>. The pretty-printing of array types can be
+turned off with the trace flag <code>pp_array_types</code>. </p>
+
+<p> Unfortunately, because of lists, at the term level one can not
+index arrays with square brackets.  Instead, we recommend the
+infix <code>'</code> (that's an apostrophe) operator.  For
+example, <code>array ' 3</code> is the value of the fourth element
+of <code>array</code> (indexing starts at zero!)</p>
+</li>
+
+<li> <p> Errors in inductive relation definitions (made
+with <code>Hol_reln</code>) are now accompanied by better location
+information. </p></li>
+
+<li> <p> Errors in quotient type definitions (made with entry-points
+in <code>quotientLib</code>) are now accompanied by better
+diagnostics about problems like missing respectfulness results.</p></li>
+
+<li><p> If HOL is started in a directory with
+<code>INCLUDES</code> specified in a <code>Holmakefile</code>, then
+those same includes are put onto the <code>loadPath</code> that is
+used interactively.  This should help interactive debugging of
+multiple-directory developments.</p>
+</li>
+
+<li> <p> The <code>tautLib</code> decision procedure for propositional
+    logic now uses external SAT solvers (through
+the <code>HolSatLib</code> code) for all but the smallest goals,
+translating proofs back through the HOL kernel.</p></li>
+
+<li> <p> In the Emacs mode: provide a new option to the
+work-horse <code>M-h&nbsp;M-r</code> command: if you precede it by
+hitting <code>C-u</code> twice, it will
+toggle <code>quietdec</code> around what is to be pasted into the HOL
+session.  This can be useful if you're opening a whole slew of big
+theories and don't want to have to watch grammar guff scroll
+by.</p></li>
+
+<li> <p> The termination prover under <code>Define</code> is now
+smarter.  It now does a better job of guessing termination relations,
+using a relevance criterion to cut down the number of lexicographic
+combinations that are tried.  It can handle <code>DIV</code>
+and <code>MOD</code> now, through the <code>termination_simps</code>
+variable, which can be added to in order to support other destructor
+functions.</p>
+
+<p> Termination proofs for functions defined recursively over words
+are also supported.  The system knows about subtracting 1 and also
+right-shifting. </p></li>
+
+<li> <p> Post processing for word parsing is supported with the function:</p>
+<pre>
+         wordsLib.guess_word_lengths : term -> term
+</pre>
+<p>
+When possible, word lengths are guessed for the extract and
+concatenate functions.  That is, <code>``(a &gt;&lt; b) w``</code> is given
+type <code>``:(a + 1 - b) word``</code> and <code>``(a: a word) @@ (b: b word)``</code> is
+given type <code>``:(a + b)&nbsp;word``</code>.</p>
+
+<p>For example:</p>
+<pre>
+         - val _ = Parse.post_process_term := wordsLib.guess_word_lengths;
+         - ``(3 &gt;&lt; 0) a @@ (7 &gt;&lt; 4) a @@ (16 &gt;&lt; 8) a``;
+         &lt;&lt;HOL message: inventing new type variable names: 'a, 'b, 'c, 'd, 'e, 'f&gt;&gt;
+         &lt;&lt;HOL message: assigning word length(s): 'a &lt;- 4, 'b &lt;- 13, 'c &lt;- 17, 'e &lt;- 4 and 'f &lt;- 9&gt;&gt;
+         > val it = ``(3 &gt;&lt; 0) a @@ (7 &gt;&lt; 4) a @@ (16 &gt;&lt; 8) a`` : term
+</pre>
+<p>
+The assignment message is controlled by the trace variable
+<code>"notify word length guesses"</code>.</p>
+</li>
+
+<li>
+<p> <code>wordsLib</code> now supports evaluation over non-standard
+word-sizes:</p>
+<pre>
+         - load "wordsLib";
+         > val it = () : unit
+         - EVAL ``123w + 321w:bool[56]``;
+         > val it = |- 123w + 321w = 444w : thm
+</pre>
+<p>Non-standard word sizes will evaluate more slowly when first used.
+However, size theorems are then added to the compset, so subsequent
+evaluations will be quicker.
+</p></li>
+
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
 
 <ul>
+<li> <code>EVAL ``BIGUNION {}``</code> now works.</li>
+
+<li> <p> Fixed a subtle bug in termination condition extraction,
+whereby multiple <code>let</code>-bindings for a variable would
+cause <code>Define</code> to be unpredictable and sometimes broken.
+Now variables get renamed in order to make the definition process
+succeed. </p></li>
+
+<li> <p> <code>ASM_MESON_TAC</code> (which lives
+beneath <code>PROVE_TAC</code>) now properly pays attention to the
+controlling reference variable <code>max_depth</code>.</p></li>
+
+<li><p> Fixed an error in the build process when
+building <code>mlyacc</code> from sources on Windows.</p></li>
+
 </ul>
 
 
 <h2 id="new-theories">New theories:</h2>
 <ul>
-
+<li>None this time!</li>
 </ul>
 
 <h2 id="new-tools">New tools:</h2>
 
-<ul></ul>
+<ul>
+<li><p>There are a number of new facilities in <code>wordsLib</code>.
+The main additions are:</p>
+
+<dl>
+<dt><code>WORD_ss</code>:</dt> <dd> Does some basic simplification,
+evaluation and AC rewriting
+(over <code>*</code>, <code>+</code>, <code>&amp;&amp;</code>
+and <code>!!</code>).  For example,
+<pre>
+         ``a * 3w + a``  --&gt;  ``4w * a``
+</pre>
+and
+<pre>
+         ``a &amp;&amp; 3w !! a &amp;&amp; 2w``  --&gt;  ``3w &amp;&amp; a``
+</pre></dd>
+
+<dt><code>BIT_ss</code>:</dt> <dd>For example, <code>``BIT&nbsp;n&nbsp;3``&nbsp;--&gt;&nbsp;``n&nbsp;IN&nbsp;{0;&nbsp;1}``</code></dd>
+
+<dt><code>WORD_MUL_LSL_ss</code>:</dt>
+<dd>Converts multiplications to left-shifts e.g.
+  <code>``2w * a`` --> ``a&nbsp;&lt;&lt;&nbsp;1``</code></dd>
+
+<dt><code>WORD_BIT_EQ_ss</code>:</dt>
+<dd>Can be used to establish bit-wise (in)equality <i>e.g.</i>
+  <code>``a &amp;&amp; ~a = 0w``&nbsp;--&gt;&nbsp;``T``</code>
+Does not work with <code>*</code>, <code>+</code> <i>etc.</i></dd>
+
+<dt><code>WORD_ARITH_EQ_ss</code>:</dt>
+<dd> Can be used to establish arithmetic (in)equality <i>e.g.</i>
+  <code>``~(b + 1w = b + 4294967295w:word32)`` --&gt; ``T``</code>
+</dd>
+
+<dt><code>WORD_EXTRACT_ss</code>:</dt>
+<dd>
+Simplification for shifts and bit extraction.
+Simplifies <code>--</code>, <code>w2w</code>, <code>sw2sw</code>, <code>#>></code>, <code>@@</code> <i>etc.</i> and expresses operations
+  using <code>&gt;&lt;</code>, <code>&lt;&lt;</code> and <code>!!</code>.</dd>
+
+<dt><code>WORD_DECIDE</code>:</dt>
+<dd>A decision procedure.  Will solve Boolean (bitwise) problems
+  and some problems over &lt;, &lt;+ etc.</dd>
+</dl>
+
+
+
+
+</li>
+</ul>
 
 <h2 id="new-examples">New examples:</h2>
 
 <ul>
+<li> <p> <code>examples/hol_dpllScript.sml</code> contains a very
+simplistic HOL implementation of DPLL with unit propagation, with
+proofs of termination, completeness and soundness. </p> </li>
+
 </ul>
 
 <h2 id="incompatibilities">Incompatibilities:</h2>
 
 <ul>
-<li> The induction principles returned by <code>Define</code> are now
+<li> <p> The induction principles returned by <code>Define</code> are now
   more accurate when the function being defined returns values of
   type <code>:bool</code>.  This is because congruences for
-  conjunction and disjunction are now included by default.</li>
+  conjunction and disjunction are now included by default. </p> </li>
 
-<li> The <code>STRING_11</code> and <code>STRING_DISTINCT</code>
+<li> <p> The <code>STRING_11</code> and <code>STRING_DISTINCT</code>
   theorems in <code>stringTheory</code> have disappeared because
   strings are now a standard algebraic type, defined
   using <code>Hol_datatype</code>, and these theorems are present in
-  the <code>TypeBase</code>, as for all other algebraic types.</li>
+  the <code>TypeBase</code>, as for all other algebraic types.</p></li>
 
-<li> The <code>emacs</code> mode is now found in the
+<li><p> The <code>emacs</code> mode is now found in the
   file <code>tools/hol-mode.el</code> (rather
   than <code>hol98-mode.el</code>) and all of the occurrences of the
   string <code>hol98</code> there have been replaced
-  by <code>hol</code>. </li>
+  by <code>hol</code>.</p> </li>
 
-<li> The <code>muddy</code> code, and the packages that depend on it
+<li> <p> The <code>muddy</code> code, and the packages that depend on it
 (<code>HolBdd</code> and <code>HolCheck</code>) have moved from
 the <code>src</code> directory into <code>examples</code>.  If you
 wish to use any of these packages, you will now have to both build
 them (see below), and then explicitly include the directories in
 your <code>Holmakefile</code>s.  For example, the following line at
 the top of a <code>Holmakefile</code> will give access
-to <code>HolBdd</code> (and its dependency, <code>muddy</code>):
+to <code>HolBdd</code> (and its dependency, <code>muddy</code>):</p>
 <pre>
          INCLUDES = $(protect $(HOLDIR)/examples/muddy) $(protect $(HOLDIR)/examples/HolBdd)
 </pre>
@@ -86,7 +257,19 @@ type <code>make</code> in <code>examples/muddy/muddyC</code>.</li>
 <li> Do <code>Holmake</code> in <code>examples/muddy</code>.</li>
 <li> Do <code>Holmake</code> in <code>examples/HolBdd</code>.</li>
 <li> Do <code>Holmake</code> in <code>examples/HolCheck</code>.</li>
-</ul>
+</ol></li>
+
+<li> <p>The <code>FIRSTN</code> and <code>BUTFIRSTN</code> constants from
+the theory <code>rich_list</code> are now defined in the
+theory <code>list</code>, with names <code>TAKE</code>
+and <code>DROP</code>.  If you load <code>rich_listTheory</code>, then
+the old names are overloaded so that parsing existing theories should
+continue to work.  The change may cause pain if you have code that
+expects the constants to have their old names (for a call
+to <code>mk_const</code> say), or if you have variables or constants
+of your own using the names <code>TAKE</code>
+and <code>DROP</code>.</p>
+</li>
 
 </ul>
 

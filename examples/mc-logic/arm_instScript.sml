@@ -116,14 +116,16 @@ val SET_NO_CP = RW [GSYM NEXT_ARM_MEM_def] o Q.INST [`cp`|->`NO_CP`] o SPEC_ALL;
 (* Lemmas for heap assertions                                                    *)
 (* ----------------------------------------------------------------------------- *)
 
+val update_def = prove(
+  ``!a b. a =+ b = (\f k. (if k = a then b else f k))``,
+  SIMP_TAC std_ss [UPDATE_def,FUN_EQ_THM] \\ METIS_TAC []);
+
 val heap_def = Define `
   heap d f = BIGSTAR { M x (f (addr32 x)) | addr32 x IN d }`;
 
-val update_def = Define `update x y f = \z:word32. if x = z then y:word32 else f z`;
-
 val list_update_def = Define `
   (list_update x [] f = f) /\
-  (list_update x (y::ys) f = list_update (x+4w) ys (update x y f))`;
+  (list_update x (y::ys) f = list_update (x+4w) ys ((x =+ y) f))`;
 
 val list_read_def = Define `
   (list_read x [] f = []) /\
@@ -134,11 +136,11 @@ val seq_addresses_def = Define `
   (seq_addresses a (x::xs) = a INSERT seq_addresses (a+4w) xs)`;
 
 val update_update = prove(
-  ``!x y q f. update x y (update x q f) = update x y f``,
+  ``!x y q f. (x =+ y) ((x =+ q) f) = (x =+ y) f``,
   SIMP_TAC std_ss [FUN_EQ_THM,update_def]);
 
 val read_update = prove(
-  ``!x y f. (update x y f) x = y``,
+  ``!x y f. ((x =+ y) f) x = y``,
   SIMP_TAC std_ss [FUN_EQ_THM,update_def]);
 
 val list_read_MAP = prove(
@@ -165,9 +167,9 @@ val IN_seq_addresses = prove(
       [MULT_CLAUSES,WORD_ADD_0,ADD1,LT_ADD_RCANCEL,word_add_n2w,GSYM WORD_ADD_ASSOC]]);
 
 val list_read_update = prove(
-  ``!ys x h f. 
+  ``!ys x h f:word32->word32. 
       ~(z IN seq_addresses x ys) ==> 
-      (list_read x ys (update z h f) = list_read x ys f)``,
+      (list_read x ys ((z =+ h) f) = list_read x ys f)``,
   Induct \\ FULL_SIMP_TAC std_ss 
     [list_read_def,LENGTH,update_def,seq_addresses_def,IN_INSERT]);
 
@@ -187,32 +189,30 @@ val seq_addresses_LEMMA = prove(
   \\ ASM_SIMP_TAC bool_ss [LESS_MOD] \\ DECIDE_TAC);
 
 val list_read_list_update = prove(
-  ``!qs x f. LENGTH qs <= 16 ==> (list_read x qs (list_update x qs f) = qs)``,
+  ``!qs x (f:word32->word32). LENGTH qs <= 16 ==> (list_read x qs (list_update x qs f) = qs)``,
   Induct \\ ASM_SIMP_TAC bool_ss 
     [list_read_def,list_update_def,CONS_11,DECIDE ``SUC n <= m ==> n <= m``,LENGTH]
   \\ REPEAT STRIP_TAC \\ `LENGTH qs <= 16` by DECIDE_TAC 
   \\ `~(x IN seq_addresses (x + 4w) qs)` by METIS_TAC [seq_addresses_LEMMA]
-  \\ IMP_RES_TAC read_list_update \\ ASM_SIMP_TAC bool_ss [update_def]);
+  \\ ASM_SIMP_TAC bool_ss [read_list_update,read_update]);
 
 val list_update_update = prove(
   ``!ys x z h f q. 
-      ~(z = q) ==> (list_update x ys (update z h f) q = list_update x ys f q)``,
+      ~(z = q) ==> (list_update x ys ((z =+ h) f) q = list_update x ys f q)``,
   Induct THEN1 ASM_SIMP_TAC bool_ss [list_update_def,update_def]
   \\ REPEAT STRIP_TAC \\ REWRITE_TAC [list_update_def] 
   \\ Cases_on `x = z` \\ ASM_REWRITE_TAC []
   THEN1 SIMP_TAC bool_ss [update_def] 
-  \\ `update x h (update z h' f) = update z h' (update x h f)` by ALL_TAC  
-  \\ ASM_REWRITE_TAC [FUN_EQ_THM] \\ REPEAT STRIP_TAC   
-  \\ ASM_SIMP_TAC bool_ss [update_def] \\ METIS_TAC []);
+  \\ METIS_TAC [UPDATE_COMMUTES]);
     
 val list_update_list_update = prove(
-  ``!qs x f. 
+  ``!qs x (f:word32->word32). 
       LENGTH qs <= 16 ==> 
       (list_update x qs (list_update x qs f) = list_update x qs f)``,
   Induct \\ ASM_SIMP_TAC bool_ss [list_update_def,LENGTH] \\ REPEAT STRIP_TAC
   \\ `LENGTH qs <= 16` by DECIDE_TAC
-  \\ `!f. update x h (list_update (x + 4w) qs f) = 
-          list_update (x + 4w) qs (update x h f)` by ALL_TAC
+  \\ `!f. (x =+ h) (list_update (x + 4w) qs f) = 
+          list_update (x + 4w) qs ((x =+ h) f)` by ALL_TAC
   \\ ASM_SIMP_TAC bool_ss [FUN_EQ_THM,update_update] \\ REPEAT STRIP_TAC
   \\ Cases_on `x' = x` \\ IMP_RES_TAC seq_addresses_LEMMA
   \\ ASM_SIMP_TAC bool_ss [read_list_update,update_def,list_update_update]);
@@ -224,10 +224,10 @@ val LENGTH_list_READ = prove(
 val heap_SPLIT = prove(
   ``!f d x. aligned x /\ x IN d ==>
             (heap d f = M (addr30 x) (f x) * 
-             heap (d DELETE x) (update x y f) :'a ARMset -> bool)``,
+             heap (d DELETE x) ((x =+ y) f) :'a ARMset -> bool)``,
   REWRITE_TAC [heap_def,aligned_def] \\ REPEAT STRIP_TAC THEN
   `{M x (f (addr32 x)) | addr32 x IN d} = ((M (addr30 x) (f x)):'a ARMset -> bool) INSERT 
-   {M x' (update x y f (addr32 x')) | x' | addr32 x' IN d DELETE x}` by ALL_TAC << [
+   {M x' ((x =+ y) f (addr32 x')) | x' | addr32 x' IN d DELETE x}` by ALL_TAC << [
     IMP_RES_TAC EXISTS_addr30
     \\ FULL_SIMP_TAC bool_ss [addr30_addr32]
     \\ ONCE_REWRITE_TAC [EXTENSION]
@@ -290,7 +290,7 @@ val ARM_PROG_INTRO_SEQ_RD = prove(
 val ARM_PROG_INTRO_SEQ_RD_WR = prove(
   ``(!y. ARM_PROG2 c (P * M (addr30 x) y) code C (Q y * M (addr30 x) q) {}) ==>
     ARM_PROG2 c (P * heap d f * cond (x IN d /\ aligned x)) code C 
-                (Q (f x) * heap d (update x q f)) {}``,
+                (Q (f x) * heap d ((x =+ q) f)) {}``,
   REWRITE_TAC [ARM_PROG_MOVE_COND,ARM_PROG2_def] 
   \\ ONCE_REWRITE_TAC [CONJ_COMM] \\ REPEAT STRIP_TAC THEN1 METIS_TAC []
   \\ IMP_RES_TAC heap_SPLIT \\ ASM_REWRITE_TAC [STAR_ASSOC,update_update,read_update]
@@ -541,7 +541,7 @@ val ADDR_MODE2_WB'_THM = prove(
   Cases \\ Cases_on `b` \\ Cases_on `b0` \\ Cases_on `b1` 
   \\ SRW_TAC [] [ADDR_MODE2_WB'_def,immediate_enc2,IS_DT_SHIFT_IMMEDIATE_def]
   \\ ASM_SIMP_TAC bool_ss [ADDR_MODE2_def,LET_DEF,pairTheory.FST,UP_DOWN_def,
-       SND,REG_WRITE_READ]);
+       SND,REG_WRITE_READ] \\ SRW_TAC [] []);
 
 val ADDR_MODE2_ADDR'_THM = prove(
   ``!opt imm state. 
@@ -555,7 +555,7 @@ val ADDR_MODE2_ADDR'_THM = prove(
   Cases \\ Cases_on `b` \\ Cases_on `b0` \\ Cases_on `b1` 
   \\ SRW_TAC [] [ADDR_MODE2_ADDR'_def,immediate_enc2,IS_DT_SHIFT_IMMEDIATE_def]
   \\ ASM_SIMP_TAC bool_ss [ADDR_MODE2_def,LET_DEF,pairTheory.FST,UP_DOWN_def,
-       SND,REG_WRITE_READ]);
+       SND,REG_WRITE_READ] \\ SRW_TAC [] []);
 
 val ADDR_MODE2_CASES' = store_thm("ADDR_MODE2_CASES'",
   ``!imm x u.
@@ -2082,8 +2082,8 @@ val IMP_ARM_NOP = prove(
   \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `1` \\ REWRITE_TAC [STATE_ARM_MEM_1]
   \\ `s.memory (addr30 (s.registers r15)) = cmd` by METIS_TAC [addr30_addr32]
   \\ Q.PAT_ASSUM `!state. b:bool` (STRIP_ASSUME_TAC o Q.SPEC `s`)
-  \\ FULL_SIMP_TAC (srw_ss()) [status_THM,INC_PC_r15,pcADD_def,GSYM addr32_SUC]
-  \\ STRIP_TAC THEN1 METIS_TAC [WORD_ADD_COMM] 
+  \\ FULL_SIMP_TAC bool_ss [status_THM,INC_PC_r15,pcADD_def,GSYM addr32_SUC]
+  \\ STRIP_TAC THEN1 (SRW_TAC [] [INC_PC_r15,addr32_SUC] \\ METIS_TAC [WORD_ADD_COMM]) 
   \\ REWRITE_TAC [arm2set''_EQ,IN_INSERT,NOT_IN_EMPTY]
   \\ ASM_SIMP_TAC (srw_ss()) [reg_def,mem_def,REG_READ_INC_PC,state_mode_def,
       owrt_visible_def,set_status_def,owrt_visible_regs_def,REG_OWRT_ALL,mem_byte_def]);  
@@ -2573,51 +2573,6 @@ val LEAST_SORT_EXTRACT_15w = prove(
     \\ Cases_on `n = 15` \\ ASM_REWRITE_TAC [] \\ REPEAT STRIP_TAC \\ DECIDE_TAC,
     METIS_TAC []]);  
 
-(*
-val ms_sem_STM_STATE_PC = prove(
-  ``LENGTH xs <= 2**30 /\
-    ~MEM a (MAP FST xs) /\ ~MEM 15w (MAP FST xs) /\ ALL_DISTINCT (MAP FST xs) /\ 
-    xR_list_sem (MAP (\x. (FST x,SOME (SND x))) ((15w,addr32 p)::xs)) s ==>
-    ms_sem (ADDR_MODE4_ADDR am4 x ((15w,addr32 p)::xs)) (reg_values ((15w,addr32 (p+1w))::xs)) 
-      (STM_STATE am4 x ((15w,addr32 p)::xs) a s)``,
-  REWRITE_TAC [STM_STATE_def,ADDR_MODE4_WB_def,LENGTH_MAP]
-  \\ Q.SPEC_TAC (`HD (LEAST_SORT (MAP FST ((15w,addr32 p)::xs))) = a`,`rt`)
-  \\ REWRITE_TAC [LENGTH]
-  \\ Q.SPEC_TAC (`(if ADDR_MODE4_wb am4 then ADDR_MODE4_WB' am4 x (SUC (LENGTH xs)) else x)`,`rt'`)
-  \\ REWRITE_TAC [GSYM ADDR_MODE4_WB_def,ADDR_MODE4_ADDRESSES_def]  
-  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP] 
-  \\ `LENGTH ((15w,addr32 p)::xs) = LENGTH (MAP FST ((15w,addr32 p)::xs))` by METIS_TAC [LENGTH_MAP] 
-  \\ ASM_REWRITE_TAC [ADDR_MODE4_ADDR_def]
-  \\ REWRITE_TAC [GSYM ADDR_MODE4_ADDR_def]
-  \\ Q.SPEC_TAC (`ADDR_MODE4_ADDR am4 x (MAP FST ((15w,addr32 p)::xs))`,`ax`)
-  \\ SIMP_TAC bool_ss [LEAST_SORT_EXTRACT_15w]    
-  \\ SIMP_TAC bool_ss [MAP,FST,LENGTH,SND,xR_list_sem_def]
-  (* getting there *)  
-
-  \\ SIMP_TAC bool_ss [LEAST_SORT_EQ_QSORT,mem_def]
-
-  \\ REWRITE_TAC [xR_list_sem_QSORT_INTRO,MEM_MAP_QSORT_INTRO,
-                  ALL_DISTINCT_QSORT_INTRO,LENGTH_QSORT_INTRO]
-  \\ Q.SPEC_TAC (`s.memory`,`mmm`)
-  \\ SIMP_TAC std_ss [reg_values_def] 
-  \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) xs`,`xs`)
-  \\ SIMP_TAC (srw_ss()) [] \\ POP_ASSUM (fn th => ALL_TAC)
-  \\ Induct THEN1 REWRITE_TAC [ms_sem_def,MAP]
-  \\ Cases \\ SIMP_TAC std_ss [MAP,HD,MEM,LENGTH,ADDRESS_LIST'_def,ZIP,FOLDL,
-       ALL_DISTINCT,xR_list_sem_def,ms_sem_def,GSYM addr32_SUC] 
-  \\ Cases_on `q = 15w` \\ ASM_REWRITE_TAC []
-  \\ NTAC 5 STRIP_TAC \\ `LENGTH xs <= 1073741824` by DECIDE_TAC
-  \\ `LENGTH xs < 1073741824` by DECIDE_TAC 
-  \\ FULL_SIMP_TAC bool_ss [GSYM (EVAL ``2**30``)] 
-  \\ `~MEM (addr32 ax) (ADDRESS_LIST' (addr32 (ax + 1w)) (LENGTH xs))` 
-        by METIS_TAC [no_overlap_ADDRESS_LIST']
-  \\ ASM_SIMP_TAC bool_ss [ms_sem_STM_STATE_LEMMA]
-  \\ SIMP_TAC (srw_ss()) [mem_def,MEM_WRITE_WORD_def,ADDR30_def,
-         GSYM addr30_def,addr30_addr32,UPDATE_def]
-  \\ `REG_READ s.registers (state_mode s) q = r` by METIS_TAC [reg_def]
-  \\ Cases_on `rt` \\ FULL_SIMP_TAC std_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2]);
-*)
-
 val NOT_IN_PART = prove(
   ``!xs g ys zs. (!y. MEM y xs ==> g y x) ==> (PART (\y. g y x) xs ys zs = (REVERSE xs ++ ys,zs))``,
   Induct \\ FULL_SIMP_TAC std_ss [PART_DEF,MEM,APPEND,APPEND_NIL,REVERSE_DEF] 
@@ -2643,54 +2598,6 @@ val ALL_DISTINCT_SNOC = prove(
 val ALL_DISTINCT_REVERSE = prove(
   ``!xs. ALL_DISTINCT (REVERSE xs) = ALL_DISTINCT xs``,
   Induct \\ ASM_REWRITE_TAC [ALL_DISTINCT,REVERSE,SNOC_APPEND,MEM_REVERSE,ALL_DISTINCT_SNOC]);
-
-(*
-val ms_sem_STM_STATE_IMP = prove(
-  ``SUC (LENGTH xs) <= 2**30 /\
-    ~MEM a (MAP FST xs) /\ ~MEM 15w (MAP FST xs) /\ ALL_DISTINCT (MAP FST xs) /\ 
-    xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs) s ==>
-    ms_sem (ADDR_MODE4_ADDR am4 x ((15w,0w)::xs)) (reg_values xs) (STM_STATE am4 x ((15w,0w)::xs) a s)``,
-  REWRITE_TAC [STM_STATE_def,ADDR_MODE4_WB_def,LENGTH_MAP]
-  \\ Q.SPEC_TAC (`HD (LEAST_SORT (MAP FST ((15w,0w)::xs))) = a`,`rt`)
-  \\ Q.SPEC_TAC (`(if ADDR_MODE4_wb am4 then ADDR_MODE4_WB' am4 x (LENGTH ((15w,0w)::xs)) else x)`,`rt'`)
-  \\ REWRITE_TAC [GSYM ADDR_MODE4_WB_def,ADDR_MODE4_ADDRESSES_def]  
-  \\ ASM_REWRITE_TAC [ADDR_MODE4_ADDR_def,LENGTH_MAP,LENGTH]
-  \\ Q.SPEC_TAC (`(ADDR_MODE4_ADDR' am4 x (ADDR_MODE4_WB' am4 x (SUC (LENGTH xs))))`,`ax`)
-  \\ REWRITE_TAC [MAP,FST]
-  \\ SIMP_TAC bool_ss [RW [MAP,FST,ALL_DISTINCT] (Q.ISPEC `(15w,0w)::xs` LEAST_SORT_EQ_QSORT)]
-  \\ REWRITE_TAC [EXTRACT_15_FROM_QSORT]
-  \\ Q.SPEC_TAC (`s.memory`,`mmm`)
-  \\ REWRITE_TAC [MAP_APPEND,MAP,FST]
-  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP] 
-  \\ ASM_REWRITE_TAC []
-  \\ ONCE_REWRITE_TAC [GSYM MEM_REVERSE]
-  \\ ONCE_REWRITE_TAC [GSYM LENGTH_REVERSE]
-  \\ ONCE_REWRITE_TAC [GSYM ALL_DISTINCT_REVERSE]
-  \\ ONCE_REWRITE_TAC [GSYM MAP_REVERSE]
-  \\ REWRITE_TAC [xR_list_sem_REVERSE_INTRO]
-  \\ ASM_REWRITE_TAC [xR_list_sem_QSORT_INTRO,MEM_MAP_QSORT_INTRO,
-                  ALL_DISTINCT_QSORT_INTRO,LENGTH_QSORT_INTRO]
-  \\ SIMP_TAC std_ss [reg_values_def] 
-
-
-  \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) (REVERSE xs)`,`xs`)
-
-  \\ SIMP_TAC (srw_ss()) [] \\ POP_ASSUM (fn th => ALL_TAC)
-  \\ Induct THEN1 REWRITE_TAC [ms_sem_def,MAP]
-  \\ Cases \\ SIMP_TAC std_ss [MAP,HD,MEM,LENGTH,ADDRESS_LIST'_def,ZIP,FOLDL,
-       ALL_DISTINCT,xR_list_sem_def,ms_sem_def,GSYM addr32_SUC] 
-  \\ Cases_on `q = 15w` \\ ASM_REWRITE_TAC []
-  \\ NTAC 5 STRIP_TAC \\ `LENGTH xs <= 1073741824` by DECIDE_TAC
-  \\ `LENGTH xs < 1073741824` by DECIDE_TAC 
-  \\ FULL_SIMP_TAC bool_ss [GSYM (EVAL ``2**30``)] 
-  \\ `~MEM (addr32 ax) (ADDRESS_LIST' (addr32 (ax + 1w)) (LENGTH xs))` 
-        by METIS_TAC [no_overlap_ADDRESS_LIST']
-  \\ ASM_SIMP_TAC bool_ss [ms_sem_STM_STATE_LEMMA]
-  \\ SIMP_TAC (srw_ss()) [mem_def,MEM_WRITE_WORD_def,ADDR30_def,
-         GSYM addr30_def,addr30_addr32,UPDATE_def]
-  \\ `REG_READ s.registers (state_mode s) q = r` by METIS_TAC [reg_def]
-  \\ Cases_on `rt` \\ FULL_SIMP_TAC std_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2]);
-*)
 
 val STM_PRE_EXPANSION = let
   val xs = `(15w,SOME x1)::(a,SOME x2)::xs`;
@@ -2784,118 +2691,6 @@ val arm_STM_SEQ_THM = prove(
 val arm_STM_SEQ = save_thm("arm_STM_SEQ",let
   val th = MATCH_MP ARM_PROG_INTRO_SEQ_LIST_WR arm_STM_SEQ_THM
   in th end);
-
-
-(*
-
-  ``ARM_RUN 
-     (R30 a x * 
-      xR_list (MAP (\x.(FST x,SOME (SND x))) ((15w,addr32 p)::xs)) * 
-      blank_ms (ADDR_MODE4_ADDR a_mode x ((15w,addr32 p)::xs)) (LENGTH ((15w,addr32 p)::xs)) * 
-      S (sN,sZ,sC,sV) * PASS c_flag (sN,sZ,sC,sV) * 
-      ARMi (p,enc (STM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (MAP FST ((15w,addr32 p)::xs))))) * one (Undef F))
-     (R30 a (ADDR_MODE4_WB a_mode x ((15w,addr32 p)::xs)) *
-      xR_list (MAP (\x.(FST x,SOME (SND x))) ((15w,addr32 (p+1w))::xs)) *
-      ms (ADDR_MODE4_ADDR a_mode x ((15w,addr32 p)::xs)) (reg_values ((15w,addr32 p)::xs)) * S (sN,sZ,sC,sV) *
-      ARMi (p,enc (STM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (MAP FST ((15w,addr32 p)::xs))))) * one (Undef F))``,
-
-  REWRITE_TAC [ARM_RUN_SEMANTICS,ARMi_def,ARMpc_def,STAR_ASSOC,PASS_def] \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `1`
-  \\ SIMP_TAC std_ss [STATE_ARM_MEM_1,LET_DEF]
-  \\ ASM_MOVE_STAR_TAC `a*xs*mm*st*cd*cmd*ud` `a*xs*cmd*mm*st*ud*cd`
-  \\ MOVE_STAR_TAC `a*xs*mm*st*cmd*ud` `a*xs*cmd*mm*st*ud`    
-  \\ FULL_SIMP_TAC bool_ss [R30_def,STM_PRE_EXPANSION_PC,STM_POST_EXPANSION_PC,DISJOINT_SING,
-         LDM_SIMP_LEMMA,ALL_DISTINCT,MEM,LENGTH_reg_values,ALL_DISJOINT_def,EVERY_DEF]
-  \\ `CONDITION_PASSED2 (status s) c_flag` by METIS_TAC []
-  \\ `reg 15w s = addr32 p` by FULL_SIMP_TAC bool_ss [xR_list_sem_def,MAP,FST,SND]
-  \\ `mem (addr30 (reg 15w s)) s =
-      enc (STM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (MAP FST ((15w,addr32 p)::xs))))` 
-         by METIS_TAC [addr30_addr32]
-  \\ `~(a = 15w)` by METIS_TAC [MAP,FST,MEM]
-  \\ IMP_RES_TAC stm \\ FULL_SIMP_TAC bool_ss []
-  \\ Q.PAT_ASSUM `NEXT_ARM_MEM s = s'` (fn th => ALL_TAC)
-  \\ FULL_SIMP_TAC bool_ss [DISJOINT_INSERT,WORD_ADD_0,DISJOINT_EMPTY,LENGTH]
-  \\ ASM_SIMP_TAC bool_ss [status_STM_STATE,undef_STM_STATE,reg_15_STM_STATE,
-       reg_wb_STM_STATE,xR_list_sem_STM_STATE,mem_STM_STATE,ms_sem_STM_STATE]
-  \\ `!x. MAP FST ((15w,x:word32)::xs) = 15w::MAP FST xs` by SIMP_TAC bool_ss [MAP,FST]
-  \\ FULL_SIMP_TAC bool_ss [MEM,ALL_DISTINCT]
-  \\ REPEAT STRIP_TAC 
-  THEN1 (MATCH_MP_TAC xR_list_sem_STM_STATE_PC \\ ASM_SIMP_TAC bool_ss [])
-  
-    Q.PAT_ASSUM `mem p s = enc g` (fn th => REWRITE_TAC [GSYM th])
-    \\ MATCH_MP_TAC mem_STM_STATE \\ ASM_SIMP_TAC bool_ss [MEM,FST,ALL_DISTINCT,LENGTH]
-
-    ms_sem_STM_STATE
-
-
-
-  \\ FULL_SIMP_TAC bool_ss [ms_address_set_def,IN_INSERT,addr32_11,
-                            addr32_NEQ_addr32,NOT_IN_EMPTY,WORD_ADD_0]
-  \\ ASM_SIMP_TAC bool_ss [RW [WORD_ADD_0] xM_list_lemma_LEMMA2]
-  
-
- ASSUME_TAC ((UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o 
-                  RW [MAP,ALL_DISTINCT,GSYM AND_IMP_INTRO] o Q.INST [`p`|->`x`,`Rd`|->`a`,`c`|->`c_flag`,`am4`|->`a_mode`,`xs`|->`(15w,0w)::xs`]) stm)
-  
-
-
-val arm_STM_PC = store_thm("arm_STM_PC",
-  ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag 
-     (R30 a x * 
-      xR_list (MAP (\x.(FST x,SOME (SND x))) xs) * 
-      blank_ms (ADDR_MODE4_ADDR a_mode x ((15w,0w)::xs)) (SUC (LENGTH xs)) * 
-      S (sN,sZ,sC,sV) * PASS c_flag (sN,sZ,sC,sV)) 
-     [enc (STM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (15w::(MAP FST xs))))]
-     (R30 a (ADDR_MODE4_WB a_mode x ((15w,0w)::xs)) *
-      xR_list (MAP (\x.(FST x,SOME (SND x))) xs) *
-      ~M (ADDR_MODE4_ADDR a_mode x ((15w,0w)::xs) + wLENGTH ((15w,0w)::xs)) *
-      ms (ADDR_MODE4_ADDR a_mode x ((15w,0w)::xs)) (reg_values xs) * S (sN,sZ,sC,sV)) {}``,
-  REWRITE_TAC [ARM_PROG2_def,MAKE_ARM_NOP ARM_STM_NOP]
-  \\ ARM_PROG_INIT_TAC 
-  \\ ASM_MOVE_STAR_TAC `a*xs*mm*st*cd*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud*cd`
-  \\ MOVE_STAR_TAC `a*xs*um*mm*st*cmd*pc*ud` `pc*a*xs*cmd*um*mm*st*ud`
-  \\ FULL_SIMP_TAC bool_ss [R30_def,STM_PRE_EXPANSION,STM_POST_EXPANSION2,DISJOINT_SING,
-         LDM_SIMP_LEMMA,ALL_DISTINCT,MEM,LENGTH_reg_values,ALL_DISJOINT_def,EVERY_DEF]
-  \\ `CONDITION_PASSED2 (status s) c_flag` by METIS_TAC []
-  \\ `mem (addr30 (reg 15w s)) s =
-      enc (STM c_flag F (ADDR_MODE4_CMD a_mode) a (reg_bitmap (15w::MAP FST xs)))` 
-         by METIS_TAC [addr30_addr32]
-  \\ `~(a = 15w)` by METIS_TAC []
-  \\ ASSUME_TAC ((UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o 
-                  RW [MAP,ALL_DISTINCT,GSYM AND_IMP_INTRO] o Q.INST [`p`|->`x`,`Rd`|->`a`,`c`|->`c_flag`,`am4`|->`a_mode`,`xs`|->`(15w,0w)::xs`]) stm)
-  \\ ASM_REWRITE_TAC [] \\ Q.PAT_ASSUM `NEXT_ARM_MEM s = s'` (fn th => ALL_TAC)
-  \\ FULL_SIMP_TAC bool_ss [DISJOINT_INSERT,WORD_ADD_0,DISJOINT_EMPTY,LENGTH]
-  \\ ASM_SIMP_TAC bool_ss [status_STM_STATE,undef_STM_STATE,reg_15_STM_STATE,
-       reg_wb_STM_STATE,xR_list_sem_STM_STATE,mem_STM_STATE,ms_sem_STM_STATE]
-  \\ FULL_SIMP_TAC bool_ss [ms_address_set_def,IN_INSERT,addr32_11,
-                            addr32_NEQ_addr32,NOT_IN_EMPTY,WORD_ADD_0]
-  \\ ASM_SIMP_TAC bool_ss [RW [WORD_ADD_0] xM_list_lemma_LEMMA2]
-  \\ REPEAT STRIP_TAC  
-
-    MATCH_MP_TAC xR_list_sem_STM_STATE_IMP \\ METIS_TAC []
-
-    Q.PAT_ASSUM `mem p s = enc bbb` (fn th => REWRITE_TAC [GSYM th])
-    \\ MATCH_MP_TAC mem_STM_STATE
-    \\ ASM_SIMP_TAC bool_ss [ms_address_set_def,LENGTH,IN_INSERT,ALL_DISTINCT,MAP,FST,addr32_11,addr32_NEQ_addr32]
-    
-    ...
-
-    DECIDE_TAC
-
-    ASM_SIMP_TAC bool_ss [arm2set''_EQ,owrt_visible_STM_STATE,IN_INSERT,
-       reg_STM_STATE,mem_STM_STATE,mem_byte_def]
-    \\ REPEAT STRIP_TAC
-    \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (f x = f y)``)
-    \\ STRIP_ASSUME_TAC (Q.SPEC `p'` EXISTS_addr32)
-    \\ FULL_SIMP_TAC bool_ss [addr30_addr32,WORD_ADD_0]
-    \\ MATCH_MP_TAC (GSYM mem_STM_STATE)
-    \\ FULL_SIMP_TAC bool_ss [LENGTH,ms_address_set_def,IN_INSERT,
-         WORD_ADD_0,MAP,FST,ALL_DISTINCT,addr32_NEQ_addr32,addr32_11]   
-
-    METIS_TAC [xM_list_lemma_LEMMA2,WORD_ADD_0]
-
-    \\ ASM_SIMP_TAC bool_ss [mem_STM_STATE]
-
-*)
   
 val reg_values_EQ = prove(
   ``!x xs. ~MEM 15w (MAP FST xs) ==>
@@ -3122,7 +2917,9 @@ fun ARM_PROG2_RULE_TAC facts th =
 
 val ARM_PROG2_HAMMER_TAC = 
   ASM_SIMP_TAC bool_ss [mem_SIMP,status_SIMP,undefined_SIMP,arm2set''_EQ]  
-  \\ FULL_SIMP_TAC (srw_ss()++ARM_PROG_PROVER_ss) [];
+  \\ FULL_SIMP_TAC (srw_ss()++ARM_PROG_PROVER_ss) 
+      [SIMP_RULE (srw_ss()) [] WORD_EQ_SUB_ZERO,
+       RW1[WORD_ADD_COMM](SIMP_RULE (srw_ss()) [] WORD_EQ_SUB_ZERO)];
 
 val xR1  = `[(a1,SOME x1)]`;
 val xR2  = `[(a1,SOME x1);(a2,SOME x2)]`;
@@ -3448,10 +3245,9 @@ val mem_byte_SIMP2 = prove(
   \\ ASSUME_TAC (EVAL ``((1 >< 0) (1w:word32)):word2``) 
   \\ ASSUME_TAC (EVAL ``((1 >< 0) (2w:word32)):word2``) 
   \\ ASSUME_TAC (EVAL ``((1 >< 0) (3w:word32)):word2``) 
-  \\ FULL_SIMP_TAC (srw_ss()) [mem_byte_def,mem_def,MEM_WRITE_BYTE_def,
+  \\ FULL_SIMP_TAC bool_ss [mem_byte_def,mem_def,MEM_WRITE_BYTE_def,
           UPDATE_def,ADDR30_def,GSYM addr30_def,addr30_addr32,LET_DEF,lower_addr32_ADD,addr32_11]
-  \\ Cases_on `a' = a` \\ ASM_REWRITE_TAC [] 
-  \\ MATCH_MP_TAC GET_BYTE_SET_BYTE_NEQ \\ EVAL_TAC);
+  \\ SRW_TAC [] [] \\ MATCH_MP_TAC GET_BYTE_SET_BYTE_NEQ \\ EVAL_TAC);
 
 val mem_byte_SIMP3 = prove(
   ``(mem_byte q
@@ -3534,10 +3330,11 @@ val arm_STR_NONALIGNED = store_thm("arm_STR_NONALIGNED",
   \\ ARM_PROG2_EXPAND_TAC xR3 xMmm
   \\ ASSUME_TAC (UNDISCH_ALL (simple_clean str []))
   \\ ARM_PROG2_HAMMER_TAC
-  \\ SIMP_TAC (srw_ss()) [mem_SIMP_EQ,mem_SIMP_avoid_LEMMA]
+  \\ REWRITE_TAC [RW[WORD_ADD_0]mem_SIMP_avoid_LEMMA]   
+  \\ SIMP_TAC bool_ss [mem_byte_SIMP_avoid]
   \\ FULL_SIMP_TAC bool_ss [ALL_DISJOINT_def,EVERY_DEF,DISJOINT_INSERT,IN_INSERT,NOT_IN_EMPTY,addr32_11]
-  \\ ASM_SIMP_TAC bool_ss [mem_SIMP_avoid,mem_byte_SIMP_avoid]);
-
+  \\ ASM_SIMP_TAC bool_ss [mem_SIMP_EQ,mem_SIMP_avoid]);
+  
 val arm_STR = save_thm("arm_STR",AM2_ALIGN_ADDRESSES `y` arm_STR_NONALIGNED);
 
 val arm_STR_SEQ = save_thm("arm_STR_SEQ",let
@@ -3613,7 +3410,7 @@ val arm_SWP3_NONALIGNED = store_thm("arm_SWP3_NONALIGNED",
   \\ FULL_SIMP_TAC std_ss [ALL_DISJOINT_def,EVERY_DEF,DISJOINT_INSERT,
        IN_INSERT,NOT_IN_EMPTY,addr32_11]
   \\ ASM_SIMP_TAC bool_ss [mem_byte_SIMP4]
-  \\ ASM_SIMP_TAC (srw_ss()) [mem_SIMP_EQ,mem_SIMP_avoid_LEMMA,
+  \\ ASM_SIMP_TAC bool_ss [mem_SIMP_EQ,RW[WORD_ADD_0]mem_SIMP_avoid_LEMMA,
        mem_SIMP_avoid,mem_byte_SIMP_avoid]);
 
 val arm_SWP3_SEQ_LEMMA = prove(
@@ -3657,7 +3454,7 @@ val arm_SWP2_NONALIGNED = store_thm("arm_SWP2_NONALIGNED",
   \\ FULL_SIMP_TAC std_ss [ALL_DISJOINT_def,EVERY_DEF,DISJOINT_INSERT,
        IN_INSERT,NOT_IN_EMPTY,addr32_11]
   \\ ASM_SIMP_TAC bool_ss [mem_byte_SIMP4]
-  \\ ASM_SIMP_TAC (srw_ss()) [mem_SIMP_EQ,mem_SIMP_avoid_LEMMA,
+  \\ ASM_SIMP_TAC bool_ss [mem_SIMP_EQ,RW[WORD_ADD_0]mem_SIMP_avoid_LEMMA,
        mem_SIMP_avoid,mem_byte_SIMP_avoid]);
 
 val arm_SWP2_SEQ_LEMMA = prove(
@@ -4434,7 +4231,8 @@ val arm_RSC1 = store_thm("arm_RSC1",
   \\ ARM_PROG2_EXPAND_TAC xR2 xMm
   \\ ASSUME_TAC 
        (simple_clean_AM1 [`Rd`|->`a`,`Rn`|->`a`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_RSC)))
-  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
+  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC
+  \\ ONCE_REWRITE_TAC [GSYM WORD_EQ_SUB_ZERO] \\ SRW_TAC [] [WORD_LEFT_ADD_DISTRIB]);
 
 val arm_SBC1 = store_thm("arm_SBC1",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
@@ -4458,7 +4256,8 @@ val arm_SBC1 = store_thm("arm_SBC1",
   \\ ARM_PROG2_EXPAND_TAC xR2 xMm
   \\ ASSUME_TAC 
        (simple_clean_AM1 [`Rd`|->`a`,`Rn`|->`a`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC)))
-  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
+  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC
+  \\ ONCE_REWRITE_TAC [GSYM WORD_EQ_SUB_ZERO] \\ SRW_TAC [] [WORD_LEFT_ADD_DISTRIB]);
 
 val arm_SUB1 = store_thm("arm_SUB1",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
@@ -4660,7 +4459,8 @@ val arm_RSC2 = store_thm("arm_RSC2",
   \\ ARM_PROG2_EXPAND_TAC xR3 xMm
   \\ ASSUME_TAC 
        (simple_clean_AM1 [`Rd`|->`b`,`Rn`|->`b`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_RSC)))
-  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
+  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC
+  \\ ONCE_REWRITE_TAC [GSYM WORD_EQ_SUB_ZERO] \\ SRW_TAC [] [WORD_LEFT_ADD_DISTRIB]);
 
 val arm_SBC2 = store_thm("arm_SBC2",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
@@ -4684,7 +4484,8 @@ val arm_SBC2 = store_thm("arm_SBC2",
   \\ ARM_PROG2_EXPAND_TAC xR3 xMm
   \\ ASSUME_TAC 
        (simple_clean_AM1 [`Rd`|->`b`,`Rn`|->`b`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC)))
-  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
+  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC
+  \\ ONCE_REWRITE_TAC [GSYM WORD_EQ_SUB_ZERO] \\ SRW_TAC [] [WORD_LEFT_ADD_DISTRIB]);
 
 val arm_SUB2 = store_thm("arm_SUB2",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
@@ -4885,7 +4686,8 @@ val arm_RSC2' = store_thm("arm_RSC2'",
   \\ ARM_PROG2_EXPAND_TAC xR3 xMm
   \\ ASSUME_TAC 
        (simple_clean_AM1 [`Rd`|->`a`,`Rn`|->`b`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_RSC)))
-  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
+  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC
+  \\ ONCE_REWRITE_TAC [GSYM WORD_EQ_SUB_ZERO] \\ SRW_TAC [] [WORD_LEFT_ADD_DISTRIB]);
 
 val arm_SBC2' = store_thm("arm_SBC2'",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
@@ -4909,7 +4711,8 @@ val arm_SBC2' = store_thm("arm_SBC2'",
   \\ ARM_PROG2_EXPAND_TAC xR3 xMm
   \\ ASSUME_TAC 
        (simple_clean_AM1 [`Rd`|->`a`,`Rn`|->`b`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC)))
-  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
+  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC
+  \\ ONCE_REWRITE_TAC [GSYM WORD_EQ_SUB_ZERO] \\ SRW_TAC [] [WORD_LEFT_ADD_DISTRIB]);
 
 val arm_SUB2' = store_thm("arm_SUB2'",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
@@ -5111,7 +4914,8 @@ val arm_RSC2'' = store_thm("arm_RSC2''",
   \\ ARM_PROG2_EXPAND_TAC xR3 xMm
   \\ ASSUME_TAC 
        (simple_clean_AM1 [`Rd`|->`b`,`Rn`|->`a`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_RSC)))
-  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
+  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC
+  \\ ONCE_REWRITE_TAC [GSYM WORD_EQ_SUB_ZERO] \\ SRW_TAC [] [WORD_LEFT_ADD_DISTRIB]);
 
 val arm_SBC2'' = store_thm("arm_SBC2''",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
@@ -5135,7 +4939,8 @@ val arm_SBC2'' = store_thm("arm_SBC2''",
   \\ ARM_PROG2_EXPAND_TAC xR3 xMm
   \\ ASSUME_TAC 
        (simple_clean_AM1 [`Rd`|->`b`,`Rn`|->`a`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC)))
-  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
+  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC
+  \\ ONCE_REWRITE_TAC [GSYM WORD_EQ_SUB_ZERO] \\ SRW_TAC [] [WORD_LEFT_ADD_DISTRIB]);
 
 val arm_SUB2'' = store_thm("arm_SUB2''",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
@@ -5337,7 +5142,8 @@ val arm_RSC3 = store_thm("arm_RSC3",
   \\ ARM_PROG2_EXPAND_TAC xR4 xMm
   \\ ASSUME_TAC 
        (simple_clean_AM1 [`Rd`|->`c`,`Rn`|->`b`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_RSC)))
-  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
+  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC
+  \\ ONCE_REWRITE_TAC [GSYM WORD_EQ_SUB_ZERO] \\ SRW_TAC [] [WORD_LEFT_ADD_DISTRIB]);
 
 val arm_SBC3 = store_thm("arm_SBC3",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
@@ -5361,7 +5167,8 @@ val arm_SBC3 = store_thm("arm_SBC3",
   \\ ARM_PROG2_EXPAND_TAC xR4 xMm
   \\ ASSUME_TAC 
        (simple_clean_AM1 [`Rd`|->`c`,`Rn`|->`b`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC)))
-  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
+  \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC
+  \\ ONCE_REWRITE_TAC [GSYM WORD_EQ_SUB_ZERO] \\ SRW_TAC [] [WORD_LEFT_ADD_DISTRIB]);
 
 val arm_SUB3 = store_thm("arm_SUB3",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
@@ -5462,7 +5269,7 @@ val arm_B_AL = store_thm("arm_B_AL",
   \\ FULL_SIMP_TAC bool_ss []
   \\ ASSUME_TAC 
       ((UNDISCH_ALL o RW [CONDITION_PASSED2_AL] o Q.INST [`c`|->`AL`]) (simple_clean ARM_B []))
-  \\ ARM_PROG2_HAMMER_TAC \\ REWRITE_TAC [PC_SIMP]);
+  \\ ARM_PROG2_HAMMER_TAC \\ REWRITE_TAC [GSYM PC_SIMP] \\ SRW_TAC [] []);
 
 val arm_b_nop = let
   val th = SPEC_ALL ARM_B_NOP
@@ -5486,7 +5293,7 @@ val arm_B = store_thm("arm_B",
   \\ Cases_on `CONDITION_PASSED2 (status s) c_flag` 
   \\ ONCE_ASM_REWRITE_TAC [] \\ REWRITE_TAC [] << [  
     ASSUME_TAC ((UNDISCH_ALL o Q.INST [`c`|->`c_flag`]) (simple_clean ARM_B []))
-    \\ ARM_PROG2_HAMMER_TAC \\ REWRITE_TAC [PC_SIMP],
+    \\ ARM_PROG2_HAMMER_TAC \\ REWRITE_TAC [GSYM PC_SIMP] \\ SRW_TAC [] [],
     ASSUME_TAC arm_b_nop \\ ARM_PROG2_HAMMER_TAC]);  
 
 val arm_B2 = store_thm("arm_B2",
@@ -5500,7 +5307,7 @@ val arm_B2 = store_thm("arm_B2",
   \\ REWRITE_TAC [SEP_F_def]
   \\ ARM_PROG2_EXPAND_TAC' xR1 xMm xR1 xMm
   \\ ASSUME_TAC ((UNDISCH_ALL o Q.INST [`c`|->`c_flag`]) (simple_clean ARM_B []))
-  \\ ARM_PROG2_HAMMER_TAC \\ REWRITE_TAC [PC_SIMP]);
+  \\ ARM_PROG2_HAMMER_TAC \\ REWRITE_TAC [GSYM PC_SIMP] \\ SRW_TAC [] []);
 
 (* procedure returns *)
 
@@ -5519,7 +5326,8 @@ val arm_MOV_PC_GENERAL = store_thm("arm_MOV_PC_GENERAL",
   \\ ASSUME_TAC 
        (simple_clean_AM1 [`Rd`|->`a`,`Rn`|->`a`,`s_flag`|->`F`] 
           (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_MOV_PC)))
-  \\ ARM_PROG2_HAMMER_TAC \\ ASM_SIMP_TAC std_ss [pcSET_def,addr32_addr30]);
+  \\ ARM_PROG2_HAMMER_TAC 
+  \\ ASM_SIMP_TAC std_ss [pcSET_def,SIMP_RULE (srw_ss()) [] addr32_addr30]);
 
 val arm_MOV_PC = save_thm("arm_MOV_PC",let
   val th = Q.INST [`a_mode`|->`OneReg`,`x`|->`addr32 x`] arm_MOV_PC_GENERAL
@@ -5542,7 +5350,8 @@ val arm_MOV_PC_PRECISE = store_thm("arm_MOV_PC_PRECISE",
   \\ ASSUME_TAC 
        (simple_clean_AM1 [`Rd`|->`a`,`Rn`|->`a`,`s_flag`|->`F`] 
           (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_MOV_PC)))
-  \\ ARM_PROG2_HAMMER_TAC \\ ASM_SIMP_TAC std_ss [pcSET_def,addr32_addr30]);  
+  \\ ARM_PROG2_HAMMER_TAC
+  \\ ASM_SIMP_TAC std_ss [pcSET_def,SIMP_RULE (srw_ss()) [] addr32_addr30]);
 
 (* procedure calls *)
 
@@ -5577,12 +5386,12 @@ val ARM_SPEC_BL = prove(
   \\ `CONDITION_PASSED2 (status s) c` by METIS_TAC []
   \\ ASSUME_TAC (UNDISCH_ALL (simple_clean ARM_BL []))
   \\ ARM_PROG2_HAMMER_TAC
-  \\ FULL_SIMP_TAC std_ss [WORD_LSL_EQ_MULT,GSYM aligned_def,GSYM WORD_ADD_ASSOC]
-  \\ MATCH_MP_TAC aligned_ADD \\ ASM_REWRITE_TAC []
-  \\ MATCH_MP_TAC aligned_ADD 
-  \\ ASM_REWRITE_TAC [aligned_THM] \\ STRIP_TAC
-  THEN1 (Q.EXISTS_TAC `2w` \\ SIMP_TAC std_ss [word_mul_n2w])  
-  \\ METIS_TAC []);
+  \\ SIMP_TAC std_ss [WORD_MUL_LSL]
+  \\ REWRITE_TAC [GSYM (SIMP_RULE (srw_ss()) [] aligned_def)]
+  \\ MATCH_MP_TAC aligned_ADD
+  \\ REWRITE_TAC [GSYM (EVAL ``addr32 2w``),aligned_addr32]
+  \\ MATCH_MP_TAC aligned_MULT
+  \\ FULL_SIMP_TAC (srw_ss()) [aligned_def]);
 
 val arm_BL = store_thm("arm_BL",
   ``!(P:^(ty_antiq ARMel_type) set -> bool) Q C k.
@@ -5596,7 +5405,6 @@ val arm_BL = store_thm("arm_BL",
   \\ FULL_SIMP_TAC (std_ss++sep_ss) [LET_DEF,STATE_ARM_MEM_1,ARMpc_def,R30_def,pcINC_def, 
        SIMP_RULE std_ss [LENGTH] (Q.SPEC `[cmd]` mpool_eq_ms),ms_def,STAR_ASSOC,
        wLENGTH_def,LENGTH,GSYM PC_SIMP]
-
   \\ FULL_MOVE_STAR_TAC `a*pc*ud*m` `a*pc*m*ud`  
   \\ FULL_SIMP_TAC bool_ss [arm_blal_pre,arm_blal_post]
   \\ IMP_RES_TAC mem_EQ_mem_pc

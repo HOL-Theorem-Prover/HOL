@@ -1,0 +1,2 @@
+selftest.exe: selftest.uo rich_listTheory.uo
+	$(HOLMOSMLC) -o $@ $<

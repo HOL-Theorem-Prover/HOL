@@ -40,7 +40,11 @@ fun split_and_check fb s locn = let
   val error = ((fn () => advance fb), (Error (BT_Ident s), locn))
 in
   if Char.isAlpha s0 then ((fn () => advance fb), (TypeIdent s,locn))
-  else if s0 = #"'" then ((fn () => advance fb), (TypeVar s,locn))
+  else if s0 = #"'"  then ((fn () => advance fb), (TypeVar s,locn))
+(*
+  else if s0 = #"'"  then if size s > 1 then ((fn () => advance fb), (TypeVar s,locn))
+                                        else (print ">>>"; print s; print (":" ^ Int.toString(size s) ^ "!!!\n"); error)
+*)
   else if s0 = #"(" then nadvance 1 LParen
   else if s0 = #")" then nadvance 1 RParen
   else if s0 = #":" then

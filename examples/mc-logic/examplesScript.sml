@@ -897,8 +897,9 @@ fun EXISTS_PRE var th =
 
 *)
 
+val lemma = GSYM (SIMP_CONV (srw_ss()) [] ``x - y:'a word``)
 
-val PROG_INST = HIDE_STATUS o HIDE_POST1 o FST_PROG2 o 
+val PROG_INST = HIDE_STATUS o HIDE_POST1 o FST_PROG2 o RW [lemma] o 
                 SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `F` `AL`  
 
 val _ = Hol_datatype `BTree = Leaf | Node of BTree # word32 # BTree`;
@@ -1262,6 +1263,7 @@ val case2 = let
   val th = SIMP_RULE (srw_ss()++sep_ss) [] (ALIGN_VARS ["y3","x1","z7"] th)
   val th = AUTO_PRE_HIDE_STATUS (AUTO_POST1_HIDE_STATUS th)
   val th = SIMP_RULE (std_ss++sep2_ss) [GSYM WORD_SUB_PLUS,word_add_n2w,GSYM M30_def] th
+  val th = RW [GSYM (SIMP_CONV (srw_ss()) [] ``x - 1w:word30``),GSYM (SIMP_CONV (srw_ss()) [] ``x - 2w:word30``)] th
   in th end;
 
 val case3 = let
@@ -1515,23 +1517,6 @@ val _ = save_thm("ARM_GCD_PROGRAM_FIXED",ARM_GCD_PROGRAM_FIXED);
 val _ = save_thm("ARM_GCD_PROGRAM_BETTER",ARM_GCD_PROGRAM_BETTER);
 val _ = save_thm("ARM_SUM_BTREE_PROCEDURE",ARM_SUM_BTREE_PROCEDURE);
 val _ = save_thm("ARM_SUM_BTREE_PROCEDURE_TR",ARM_SUM_BTREE_PROCEDURE_TR);
-
-
-(* ----------------------------------------------------------------------------- *)
-(* Instantiation of STM and LDM instructions                                     *)
-(* ----------------------------------------------------------------------------- *)
-
-val th = SET_AM `am4_FA F` arm_STM
-val th = Q.INST [`xs`|->`[(b1,y1);(b2,y2);(b3,y3)]`] th
-val th = REWRITE_RULE  [blank_ms_def,LENGTH,ADDR_MODE4_ADDR_def,ADDR_MODE4_ADDR'_def,
-              ADDR_MODE4_WB'_def,ADDR_MODE4_UP_def,MAP,ADDR_MODE4_WB_def,
-              ADDR_MODE4_wb_def,xR_list_def,STAR_ASSOC] th
-val th = REWRITE_RULE [ADD1,GSYM word_add_n2w,WORD_SUB_PLUS,WORD_SUB_ADD] th
-val th = SIMP_RULE arith_ss [GSYM WORD_SUB_PLUS,word_add_n2w,WORD_SUB_RZERO] th
-val th = SIMP_RULE (std_ss++sep_ss) [MAP,xR_list_def,STAR_ASSOC,ADDR_MODE4_CMD_def,GSYM WORD_ADD_ASSOC,word_add_n2w] th
-
-val th = Q.INST [`b1`|->`0w`,`b2`|->`1w`,`b3`|->`2w`] th
-val th = RW [EVAL ``reg_values [(0w:word4,y1); (1w,y2); (2w,y3)]``,ms_def,STAR_ASSOC,emp_STAR] th
 
 
 

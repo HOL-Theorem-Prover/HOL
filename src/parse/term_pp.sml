@@ -964,6 +964,7 @@ fun pp_term (G : grammar) TyG = let
       val _ = (* check for set comprehensions *)
         if
           is_const t1 andalso fst (dest_const t1) = "GSPEC" andalso
+          isSome (Overload.overloading_of_term overload_info t1) andalso
           my_is_abs t2
         then let
             val (vs, body) = my_dest_abs t2

@@ -4116,7 +4116,6 @@ val count_EQN = Q.store_thm
   THEN RW_TAC arith_ss [GSPEC_F]
   THEN RW_TAC set_ss [EXTENSION,IN_SING,IN_INSERT]);
 
-
 val _ = export_rewrites
     [
      (* BIGUNION/BIGINTER theorems *)

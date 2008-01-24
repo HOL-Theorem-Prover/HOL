@@ -74,11 +74,21 @@ end;
 (*	|- x IN {x1;...;xn} = F						*)
 (*									*)
 (* if conv proves |- (x=xi)=F for all 1<=i<=n.				*)
+(*									*)
+(* A call to                                                            *)
+(*									*)
+(*	IN_CONV conv `x IN UNIV`                                        *)
+(*									*)
+(* returns:								*)
+(*									*)
+(*	|- x IN UNIV = T						*)
+(*									*)
 (* =====================================================================*)
 
 local val inI = pred_setTheory.IN_INSERT
       val inE = GEN (--`x:'a`--)
                  (EQF_INTRO (SPEC (--`x:'a`--) pred_setTheory.NOT_IN_EMPTY))
+      val inUNIV = pred_setTheory.IN_UNIV
       val gv = genvar bool
       val DISJ = AP_TERM boolSyntax.disjunction
       val F_OR = el 3 (CONJUNCTS (SPEC gv OR_CLAUSES))
@@ -115,14 +125,17 @@ local val inI = pred_setTheory.IN_INSERT
                  else raise ERR "IN_CONV" ""
               end
         end
-        handle HOL_ERR _
-         => let val _ = check_const empty_tm S in eth end
+        handle HOL_ERR _ => let val _ = check_const empty_tm S in eth end
 in
 fun IN_CONV conv tm =
  let val (_,[x,S]) = (check_const in_tm ## I) (strip_comb tm)
-     val ith = ISPEC x inI
-     val eth = ISPEC x inE
- in in_conv conv (eth,ith) x S
+ in if same_const pred_setSyntax.univ_tm S
+    then EQT_INTRO (ISPEC x inUNIV)
+    else 
+     let val ith = ISPEC x inI
+         val eth = ISPEC x inE
+     in in_conv conv (eth,ith) x S
+     end
  end
  handle e => raise wrap_exn "PFset_conv" "IN_CONV" e
 end;

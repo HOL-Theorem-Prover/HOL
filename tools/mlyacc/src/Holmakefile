@@ -28,7 +28,7 @@ yacc-grm.uo: yacc-grm.sml yacc-grm-sig.uo
 	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui hdr.ui yacc-grm-sig.ui $<
 
 yacc.lex.sml: yacc.lex
-	$(HOLDIR)/tools/mllex/mllex.exe $<
+	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
 
 yacc.lex.uo: yacc.lex.sml yacc-grm-sig.uo sigs.uo hdr.uo
 	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui hdr.ui yacc-grm-sig.ui $<

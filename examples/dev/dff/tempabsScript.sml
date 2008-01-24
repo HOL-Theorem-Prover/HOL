@@ -14,19 +14,12 @@
 
 
 (*
-load "bossLib";
 load "hol88Lib";
 load "nextTheory";
 load "stableTheory";
 *)
 
 open Globals HolKernel Parse boolLib goalstackLib;
-infixr 3 -->;
-infix 8 by;
-infix &&;
-infix ++;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
 open Psyntax;
 open bossLib;
 open arithmeticTheory;
@@ -36,7 +29,6 @@ open hol88Lib;
 open pairTheory;
 open numLib;
 open numTheory;
-
 open nextTheory;
 open stableTheory;
 
@@ -577,7 +569,7 @@ val Dev =
     new_definition
     ("Dev",
      ``Dev f g (c,a,b,s) = 
-       !t:num. s(t+1) = (c t => f (a t) (b t) (s t) | g (a t) (s t))``);
+       !t:num. s(t+1) = if c t then f (a t) (b t) (s t) else g (a t) (s t)``);
 
 val tempabs = 
     prove_thm

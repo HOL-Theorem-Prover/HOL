@@ -129,10 +129,8 @@ val ALU_MLA = prove(
     \\ SIMP_TAC (arith_ss++fcpLib.FCP_ss++SIZES_ss) [GSYM word_add_n2w,n2w_w2n,
           GSYM word_mul_def,word_bits_n2w_32,word_bits_def]);
 
-val concat32 = (SIMP_RULE (std_ss++SIZES_ss)
-   [fcpTheory.index_sum,w2w_id,EXTRACT_ALL_BITS] o SPECL [`63`,`31`,`0`] o
-   INST_TYPE [`:'a` |-> `:64`, `:'b` |-> `:32`,
-              `:'c` |-> `:32`, `:'d` |-> `:64`]) CONCAT_EXTRACT;
+val concat32 = simpLib.SIMP_PROVE (std_ss++WORD_ss++WORD_EXTRACT_ss) []
+    ``!w:word64. (((63 >< 32) w):word32) @@ (((31 >< 0) w):word32) = w``;
 
 val mul32 = prove(
   `!a b:word32. (31 >< 0) (((w2w a):word64) * w2w b) = a * b`,
@@ -188,8 +186,7 @@ fun DISCH_AND_IMP t =
 val SPEC_TO_PC = (SIMP_RULE (std_ss++arm_rulesLib.ARM_REG_ss) [] o
    INST [`Rd` |-> `15w:word4`] o SPEC_ALL);
 
-val thumb_enc_ = SIMP_CONV (std_ss++wordsLib.SIZES_ss)
-  [word_extract_w2w, w2w_id, EXTRACT_ALL_BITS]
+val thumb_enc_ = SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss) []
   ``(15 >< 0) (w2w (enc_ i) :word32)``;
 
 val _ = augment_srw_ss [boolSimps.LET_ss, SIZES_ss];
@@ -894,9 +891,7 @@ val ARM_MCR =
 (* ------------------------------------------------------------------------- *)
 
 val WORD3_NOT_PC = prove(
-  `!w:word3. ~(w2w w = 15w:word4)`,
-  STRIP_TAC \\ ISPEC_THEN `w` ASSUME_TAC w2n_lt
-    \\ FULL_SIMP_TAC (srw_ss()++ARITH_ss) [w2w_def, n2w_11]);
+  `!w:word3. ~(w2w w = 15w:word4)`, SRW_TAC [WORD_BIT_EQ_ss] []);
 
 val SHIFT_BY_ZERO_COND = prove(
   `(!w s. (if s = 0w then w else w << w2n s) = w << w2n s) /\
@@ -908,13 +903,8 @@ val SHIFT_BY_ZERO_COND = prove(
 val w2w_eq_0 = store_thm("w2w_eq_0",
   `!w:'a word. dimindex(:'a) < dimindex(:'b) ==>
        ((w2w w = 0w:'b word) = (w = 0w))`,
-  REPEAT STRIP_TAC \\ EQ_TAC \\ SRW_TAC [] [w2w_0]
-    \\ Cases_on_word `w`
-    \\ FULL_SIMP_TAC (srw_ss())
-         [(GSYM o CONJUNCT2) EXP, DECIDE ``0 < n ==> (SUC (n - 1) = n)``,
-          DIMINDEX_GT_0, INT_MIN_def, w2w_def, n2w_11, dimword_def]
-    \\ `n < 2 ** dimindex (:'b)` by METIS_TAC [TWOEXP_MONO, LESS_TRANS]
-    \\ FULL_SIMP_TAC arith_ss []);
+  REPEAT STRIP_TAC \\ EQ_TAC \\ SRW_TAC [WORD_BIT_EQ_ss] []
+    \\ METIS_TAC [LESS_TRANS]);
 
 val w2w_w2w_ = prove(
   `!w:'a word. dimindex(:'a) <= dimindex(:'b) ==>
@@ -923,63 +913,32 @@ val w2w_w2w_ = prove(
 
 val concat4 = prove(
   `!w:word8. ((7 >< 4) w :word4) @@ ((3 >< 0) w : word4) = (7 >< 0) w : word32`,
-  SRW_TAC [boolSimps.LET_ss,ARITH_ss,fcpLib.FCP_ss]
-          [word_extract_def, word_concat_def, word_join_def, word_bits_def,
-           word_or_def, word_lsl_def, w2w, fcpTheory.index_sum]
-    \\ Cases_on `i < 8`
-    \\ Cases_on `4 <= i`
-    \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [w2w, fcpTheory.index_sum]);
+  SRW_TAC [WORD_EXTRACT_ss] []);
 
 val WORD_ROL_LSL = prove(
   `!n w:'a word.
         n < dimindex(:'a) /\
         ((dimindex(:'a) - 1 -- dimindex(:'a) - n) w = 0w) ==>
         (w #<< n = w << n)`,
-  SRW_TAC [boolSimps.LET_ss,ARITH_ss,fcpLib.FCP_ss]
-         [word_rol_def, word_ror_def, word_bits_def, word_lsl_def, word_0]
-    \\ PAT_ASSUM `n < dimindex (:'a)` MP_TAC
-    \\ PAT_ASSUM `!i. P` (SPEC_THEN `i` IMP_RES_TAC)
-    \\ FULL_SIMP_TAC arith_ss [DIMINDEX_GT_0, NOT_LESS_EQUAL]
-    << [`n <= i` by DECIDE_TAC,
-        Cases_on `n <= i` \\ FULL_SIMP_TAC arith_ss [] <<
-        [ALL_TAC, METIS_TAC [SUB_LEFT_ADD, DECIDE ``n < m ==> ~(m <= n:num)``]]]
-    \\ ASM_SIMP_TAC std_ss [DIMINDEX_GT_0, LESS_IMP_LESS_OR_EQ,
-         ADD_MODULUS_LEFT, ONCE_REWRITE_RULE [ADD_COMM] LESS_EQ_ADD_SUB]
-    \\ ASM_SIMP_TAC arith_ss []);
-
-val lem = prove(
-  `(!w:word8. (dimindex(:32) - 1 -- dimindex(:32) - 2) (w2w w :word32) = 0w) /\
-    !w:word7. (dimindex(:32) - 1 -- dimindex(:32) - 2) (w2w w :word32) = 0w`,
-  SRW_TAC [wordsLib.SIZES_ss] [WORD_BITS_ZERO3, word_bits_w2w, w2w_0]);
-
-val lem2 = SIMP_RULE (std_ss++wordsLib.SIZES_ss) [lem]
-           (CONJ (ISPECL [`2`, `w2w (w:word8) :word32`] WORD_ROL_LSL)
-                 (ISPECL [`2`, `w2w (w:word7) :word32`] WORD_ROL_LSL));
+  STRIP_TAC \\ Cases_on `n = 0` \\ SRW_TAC [WORD_EXTRACT_ss]
+         [DECIDE ``0 < a /\ ~(b = 0) ==> (a - b < a)``]
+    \\ SRW_TAC [WORD_BIT_EQ_ss] []
+    \\ Cases_on `n <= i` \\ FULL_SIMP_TAC arith_ss []);
 
 val ROR_30_LSL_2 = prove(
   `(!w:word7. (w2w w):word32 #>> w2n (2w * 15w:word8) = w2w w << 2) /\
     !w:word8. (w2w w):word32 #>> w2n (2w * 15w:word8) = w2w w << 2`,
-  REPEAT STRIP_TAC
-    \\ ISPECL_THEN [`w2w w :word32`, `2`]
-         (ASSUME_TAC o SYM o SIMP_RULE (std_ss++wordsLib.SIZES_ss) [])
-         word_rol_def
-    \\ SRW_TAC [] [EVAL ``w2n (2w * 15w:word8)``, lem2]);
+  SRW_TAC [WORD_EXTRACT_ss] []);
 
 val w2w_const_mul_w2w = prove(
   `(!w:word5. w2w (4w:word12 * w2w w) = 4w:word32 * w2w w) /\
    (!w:word5. w2w (2w:word8 * w2w w) = 2w:word32 * w2w w) /\
     !w:word8. w2w (4w:word12 * w2w w) = 4w:word32 * w2w w`,
-  REPEAT STRIP_TAC
-    \\ ISPEC_THEN `w` (ASSUME_TAC o CONV_RULE EVAL) w2n_lt
-    \\ ASM_SIMP_TAC (arith_ss++SIZES_ss) [w2w_def,word_mul_n2w,word_extract_def,
-         word_bits_n2w,w2n_n2w_bits,BITS_COMP_THM2,BITS_ZEROL]);
-
-val dimindex_11 = EVAL ``dimindex(:11)``;
+  SRW_TAC [WORD_EXTRACT_ss, WORD_MUL_LSL_ss] []);
 
 val imm_sw2sw = prove(
   `!w:11 word. (10 >< 0) (sw2sw w : word24) = w`,
-  SRW_TAC [ARITH_ss,fcpLib.FCP_ss]
-    [word_extract_def, word_bits_def, dimindex_11, w2w, sw2sw]);
+  SRW_TAC [WORD_EXTRACT_ss] []);
 
 val INC_PC_T = prove(
   `!r. REG_WRITE r usr 15w (FETCH_PC r + 2w) = INC_PC T r`,
@@ -1176,6 +1135,8 @@ val STMIA_  =
           (SND (SND (ADDR_MODE4 F T (Reg (w2w Rd)) (w2w list)))))` o
    SIMP_RULE std_ss [ZIP_STM_DATA])
   (thumb_rule [] ``instruction$STMIA_ Rd list``);
+
+val dimindex_11 = EVAL ``dimindex(:11)``;
 
 val BRANCH_ss = rewrites
   [BRANCH_def,BRANCH_EXCHANGE_def,decode_enc_br,decode_br_enc,sw2sw_sw2sw,

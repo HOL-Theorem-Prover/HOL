@@ -22,12 +22,6 @@ load "tempabsTheory";
 *)
 
 open Globals HolKernel Parse boolLib goalstackLib;
-infixr 3 -->;
-infix 8 by;
-infix &&;
-infix ++;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
 open Psyntax;
 open bossLib;
 open arithmeticTheory;
@@ -37,7 +31,6 @@ open hol88Lib;
 open pairTheory;
 open numLib;
 open numTheory;
-
 open nextTheory;
 open stableTheory;
 open tempabsTheory;
@@ -56,7 +49,7 @@ val Dtype =
     new_definition
         ("Dtype",
          ``!ck d q. 
-	   Dtype(ck,d,q) = !t. q(t+1) = (Rise ck t => d(t) | q(t))``);
+	   Dtype(ck,d,q) = !t. q(t+1) = if Rise ck t then d(t) else q(t)``);
 
 (* Unit delay								*)
 val Del =

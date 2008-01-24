@@ -62,7 +62,7 @@ val _ = AddBinop ("EQ",   (``UNCURRY $= : num#num->bool``, "=="));
 (*****************************************************************************)
 val (FactIter,FactIter_ind,FactIter_dev) =
  hwDefine
-  `FactIter (n,acc) =
+  `FactIter (n,acc:num) =
       if n = 0 then (n,acc) else FactIter (n - 1,n * acc)`;
 
 (*****************************************************************************)
@@ -71,8 +71,8 @@ val (FactIter,FactIter_ind,FactIter_dev) =
 (*****************************************************************************)
 val (MultIter,MultIter_ind,MultIter_dev) =
  hwDefine
-  `MultIter (m,n,acc) =
-      if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc)`;
+  `MultIter (m,n:num,acc:num) =
+      if m = 0n then (0,n,acc) else MultIter(m-1,n,n + acc)`;
 
 
 (*****************************************************************************)

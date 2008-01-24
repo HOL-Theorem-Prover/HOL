@@ -28,9 +28,6 @@ val op >> = op THEN1;
 val std_ss = std_ss ++ boolSimps.LET_ss;
 val arith_ss = arith_ss ++ boolSimps.LET_ss;
 
-val fcp_ss   = armLib.fcp_ss;
-val SIZES_ss = wordsLib.SIZES_ss;
-
 val _ = wordsLib.guess_lengths();
 
 (* ------------------------------------------------------------------------- *)
@@ -42,13 +39,11 @@ val _ = overload_on ("#", Term`$concat_thumb`);
 
 val _ = add_infix("#",720,HOLgrammars.RIGHT);
 
-val lem = (SIMP_RULE (std_ss++SIZES_ss) [] o
-  INST_TYPE [`:'a` |-> `:16`, `:'b` |-> `:16`, `:'c` |-> `:32`]) EXTRACT_CONCAT;
-
 val GET_IREG = store_thm("GET_IREG",
   `!t fpc a b. GET_IREG t fpc1 (a # b) =
               if t then THUMB_TO_ARM (if fpc1 then b else a) else b @@ a`,
-  SRW_TAC [boolSimps.LET_ss] [GET_IREG_def,concat_thumb_def,lem]);
+  SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
+    [GET_IREG_def,concat_thumb_def]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -270,9 +265,6 @@ val REG_WRITE_WRITE = store_thm("REG_WRITE_WRITE",
 
 (* ------------------------------------------------------------------------- *)
 
-val LESS_THM =
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
-
 fun Cases_on_nzcv tm =
   FULL_STRUCT_CASES_TAC (SPEC tm (armLib.tupleCases
   ``(n,z,c,v):bool#bool#bool#bool``));
@@ -280,15 +272,14 @@ fun Cases_on_nzcv tm =
 val SET_NZCV_IDEM = store_thm("SET_NZCV_IDEM",
   `!a b c. SET_NZCV a (SET_NZCV b c) = SET_NZCV a c`,
   REPEAT STRIP_TAC \\ Cases_on_nzcv `a` \\ Cases_on_nzcv `b`
-    \\ RW_TAC (fcp_ss++boolSimps.CONJ_ss++ARITH_ss++SIZES_ss)
-         [SET_NZCV_def,word_modify_def]);
+    \\ SRW_TAC [WORD_BIT_EQ_ss]  [SET_NZCV_def]);
 
 val DECODE_NZCV_SET_NZCV = store_thm("DECODE_NZCV_SET_NZCV",
    `(!a b c d n. (SET_NZCV (a,b,c,d) n) ' 31 = a) /\
     (!a b c d n. (SET_NZCV (a,b,c,d) n) ' 30 = b) /\
     (!a b c d n. (SET_NZCV (a,b,c,d) n) ' 29 = c) /\
     (!a b c d n. (SET_NZCV (a,b,c,d) n) ' 28 = d)`,
-  RW_TAC (fcp_ss++SIZES_ss) [SET_NZCV_def,word_modify_def]);
+  SRW_TAC [WORD_BIT_EQ_ss]  [SET_NZCV_def]);
 
 val DECODE_IFTM_SET_NZCV = store_thm("DECODE_IFTM_SET_NZCV",
    `(!a n. (27 -- 8) (SET_NZCV a n) = (27 -- 8) n) /\
@@ -296,51 +287,42 @@ val DECODE_IFTM_SET_NZCV = store_thm("DECODE_IFTM_SET_NZCV",
     (!a n. (SET_NZCV a n) ' 6 = n ' 6) /\
     (!a n. (SET_NZCV a n) ' 5 = n ' 5) /\
     (!a n. (4 >< 0) (SET_NZCV a n) = (4 >< 0) n)`,
-  RW_TAC bool_ss [] \\ Cases_on_nzcv `a`
-    \\ SIMP_TAC (fcp_ss++boolSimps.CONJ_ss++ARITH_ss++SIZES_ss)
-         [SET_NZCV_def,word_modify_def,word_extract_def,word_bits_def]);
+  REPEAT STRIP_TAC \\ Cases_on_nzcv `a`
+    \\ SRW_TAC [WORD_BIT_EQ_ss]  [SET_NZCV_def]);
 
 val DECODE_IFTM_SET_IFTM = store_thm("DECODE_IFTM_SET_IFTM",
    `(!i f t m n. (SET_IFTM i f t m n) ' 7 = i) /\
     (!i f t m n. (SET_IFTM i f t m n) ' 6 = f) /\
     (!i f t m n. (SET_IFTM i f t m n) ' 5 = t) /\
     (!i f t m n. (4 >< 0) (SET_IFTM i f t m n) = mode_num m)`,
-   RW_TAC (fcp_ss++ARITH_ss++SIZES_ss) [SET_IFTM_def,word_modify_def,
-     word_extract_def,word_bits_def,w2w]);
+   SRW_TAC [WORD_BIT_EQ_ss] [SET_IFTM_def]);
 
 val DECODE_IFTM_SET_THUMB = store_thm("DECODE_IFTM_SET_THUMB",
    `(!t n. (SET_THUMB t n) ' 7 = n ' 7) /\
     (!t n. (SET_THUMB t n) ' 6 = n ' 6) /\
     (!t n. (SET_THUMB t n) ' 5 = t) /\
     (!t n. (4 >< 0) (SET_THUMB t n) = (4 >< 0) n)`,
-   RW_TAC (fcp_ss++ARITH_ss++SIZES_ss) [SET_THUMB_def,BIT_UPDATE,
-     word_modify_def,word_extract_def,word_bits_def,w2w]);
+   SRW_TAC [WORD_BIT_EQ_ss] [SET_THUMB_def]);
 
 val SET_IFTM_IDEM = store_thm("SET_IFTM_IDEM",
   `!a b c d e f g h i.
      SET_IFTM a b c d (SET_IFTM e f g h i) = SET_IFTM a b c d i`,
-  SIMP_TAC (fcp_ss++boolSimps.CONJ_ss++ARITH_ss++SIZES_ss)
-    [SET_IFTM_def,word_modify_def]);
+   SRW_TAC [WORD_BIT_EQ_ss] [SET_IFTM_def]);
 
 val SET_THUMB_IFTM = store_thm("SET_THUMB_IFTM",
   `!a b c d t i.  SET_THUMB t (SET_IFTM a b c d i) = SET_IFTM a b t d i`,
-  NTAC 2 (SRW_TAC [fcpLib.FCP_ss, ARITH_ss, SIZES_ss]
-    [SET_IFTM_def,BIT_UPDATE,SET_THUMB_def,word_modify_def]));
+   SRW_TAC [WORD_BIT_EQ_ss] [SET_THUMB_def,SET_IFTM_def]);
 
 val SET_THUMB_NZCV = store_thm("SET_THUMB_NZCV",
   `!a b c d t i.  SET_THUMB t (SET_NZCV (a, b, c, d) i) =
                   SET_NZCV (a, b, c, d) (SET_THUMB t i)`,
-  NTAC 2 (SRW_TAC [fcpLib.FCP_ss, ARITH_ss, SIZES_ss]
-    [SET_NZCV_def,BIT_UPDATE,SET_THUMB_def,word_modify_def]));
+   SRW_TAC [WORD_BIT_EQ_ss] [SET_THUMB_def,SET_NZCV_def]);
 
 val SET_IFTM_NZCV_SWP = store_thm("SET_IFTM_NZCV_SWP",
   `!a b c d e f.
       SET_IFTM a b c d (SET_NZCV e f) = SET_NZCV e (SET_IFTM a b c d f)`,
   REPEAT STRIP_TAC \\ Cases_on_nzcv `e`
-    \\ RW_TAC (fcp_ss++boolSimps.CONJ_ss++ARITH_ss++SIZES_ss)
-         [SET_NZCV_def,SET_IFTM_def,word_modify_def]
-    \\ Cases_on `i < 5` \\ ASM_SIMP_TAC arith_ss []
-    \\ Cases_on `i < 28` \\ ASM_SIMP_TAC arith_ss []);
+    \\ SRW_TAC [WORD_BIT_EQ_ss] [SET_IFTM_def,SET_NZCV_def]);
 
 val DECODE_NZCV_SET_IFTM = store_thm("DECODE_NZCV_SET_IFTM",
   `(!i f t m n. (SET_IFTM i f t m n) ' 31 = n ' 31) /\
@@ -348,8 +330,7 @@ val DECODE_NZCV_SET_IFTM = store_thm("DECODE_NZCV_SET_IFTM",
    (!i f t m n. (SET_IFTM i f t m n) ' 29 = n ' 29) /\
    (!i f t m n. (SET_IFTM i f t m n) ' 28 = n ' 28) /\
    (!i f t m n. (27 -- 8) (SET_IFTM i f t m n) = (27 -- 8) n)`,
-  RW_TAC (fcp_ss++boolSimps.CONJ_ss++ARITH_ss++SIZES_ss)
-    [SET_IFTM_def,word_modify_def,word_bits_def]);
+   SRW_TAC [WORD_BIT_EQ_ss] [SET_IFTM_def]);
 
 val DECODE_NZCV_SET_THUMB = store_thm("DECODE_NZCV_SET_THUMB",
   `(!t n. (SET_THUMB t n) ' 31 = n ' 31) /\
@@ -357,13 +338,11 @@ val DECODE_NZCV_SET_THUMB = store_thm("DECODE_NZCV_SET_THUMB",
    (!t n. (SET_THUMB t n) ' 29 = n ' 29) /\
    (!t n. (SET_THUMB t n) ' 28 = n ' 28) /\
    (!t n. (27 -- 8) (SET_THUMB t n) = (27 -- 8) n)`,
-  RW_TAC (fcp_ss++boolSimps.CONJ_ss++ARITH_ss++SIZES_ss)
-    [SET_THUMB_def,BIT_UPDATE,word_modify_def,word_bits_def]);
+   SRW_TAC [WORD_BIT_EQ_ss] [SET_THUMB_def]);
 
 val SET_NZCV_ID = store_thm("SET_NZCV_ID",
   `!a. SET_NZCV (a ' 31,a ' 30,a ' 29,a ' 28) a = a`,
-  SRW_TAC [fcpLib.FCP_ss,SIZES_ss] [SET_NZCV_def,word_modify_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM]);
+  SRW_TAC [WORD_BIT_EQ_ss] [SET_NZCV_def]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -428,15 +407,10 @@ val SPSR_WRITE_READ = store_thm("SPSR_WRITE_READ",
 
 (* ------------------------------------------------------------------------- *)
 
-val word_ss = armLib.fcp_ss ++ wordsLib.SIZES_ss ++ ARITH_ss;
-
-val lem = prove(
-  `!w:word32 i. i < 5 ==> (((4 >< 0) w) ' i = w ' i)`,
-  RW_TAC word_ss [word_extract_def,word_bits_def,w2w]);
-
-val w2n_mod = prove(
-  `!a:'a word b. (a = n2w b) = (w2n a = b MOD dimword (:'a))`,
-  Cases_word \\ REWRITE_TAC [n2w_11,w2n_n2w]);
+val mode_num_DECODE_MODE = prove(
+  `!w. ~(DECODE_MODE w = safe) ==> (mode_num (DECODE_MODE w) = w)`,
+  STRIP_TAC \\ Cases_on `w IN {16w; 17w; 18w; 19w; 23w; 27w; 31w}`
+    \\ FULL_SIMP_TAC (srw_ss()++SIZES_ss) [DECODE_MODE_def, mode_num_def]);
 
 val PSR_CONS = store_thm("PSR_CONS",
    `!w:word32. w =
@@ -446,31 +420,8 @@ val PSR_CONS = store_thm("PSR_CONS",
          else
            SET_NZCV (w ' 31, w ' 30, w ' 29, w ' 28)
              (SET_IFTM (w ' 7) (w ' 6) (w ' 5) m (0xFFFFF20w && w))`,
-  RW_TAC word_ss [SET_IFTM_def,SET_NZCV_def,word_modify_def,n2w_def]
-    \\ RW_TAC word_ss [word_bits_def]
-    << [
-      `(i = 31) \/ (i = 30) \/ (i = 29) \/ (i = 28) \/ (i < 28)`
-        by DECIDE_TAC
-        \\ ASM_SIMP_TAC arith_ss [],
-      `(i = 31) \/ (i = 30) \/ (i = 29) \/ (i = 28) \/
-       (7 < i /\ i < 28) \/ (i = 7) \/ (i = 6) \/ (i = 5) \/ (i < 5)`
-        by DECIDE_TAC
-        \\ ASM_SIMP_TAC (word_ss++ARITH_ss) [word_and_def]
-        << [
-          FULL_SIMP_TAC std_ss [LESS_THM]
-            \\ FULL_SIMP_TAC arith_ss [] \\ EVAL_TAC,
-          `~(mode_num m = 0w)`
-            by (Cases_on `m` \\ RW_TAC std_ss [mode_num_def] \\ EVAL_TAC)
-            \\ POP_ASSUM MP_TAC \\ UNABBREV_TAC `m`
-            \\ `w ' i = (((4 >< 0) w):word5) ' i` by METIS_TAC [lem]
-            \\ ASM_REWRITE_TAC [] \\ ABBREV_TAC `x = ((4 >< 0) w):word5`
-            \\ Cases_on `(x = 16w) \/ (x = 17w) \/ (x = 18w) \/ (x = 19w) \/
-                         (x = 23w) \/ (x = 27w) \/ (x = 31w)`
-            \\ FULL_SIMP_TAC std_ss [] \\ SRW_TAC
-                 [fcpLib.FCP_ss,wordsLib.SIZES_ss,ARITH_ss,boolSimps.LET_ss]
-                 [DECODE_MODE_def,mode_num_def]
-            \\ POP_ASSUM MP_TAC
-            \\ FULL_SIMP_TAC (srw_ss()++wordsLib.SIZES_ss) [w2n_mod]]]);
+  SRW_TAC [boolSimps.LET_ss] [SET_NZCV_def, SET_IFTM_def, mode_num_DECODE_MODE]
+    \\ CONV_TAC WORD_BIT_EQ_CONV);
 
 val word_modify_PSR = save_thm("word_modify_PSR",
   SIMP_CONV std_ss [SET_NZCV_def,SET_IFTM_def]
@@ -533,54 +484,21 @@ val IS_MSR_IMMEDIATE_def = Define`
   (IS_MSR_IMMEDIATE (Msr_immediate rot i) = T) /\
   (IS_MSR_IMMEDIATE (Msr_register r) = F)`;
 
-fun Cases_on_nzcv tm = FULL_STRUCT_CASES_TAC (SPEC tm (armLib.tupleCases
-  ``(n,z,c,v):bool#bool#bool#bool``));
-
-val word_index = METIS_PROVE [word_index_n2w]
-  ``!i n. i < dimindex (:'a) ==> (((n2w n):'a word) ' i = BIT i n)``;
-
-val fcp_ss = arith_ss++fcpLib.FCP_ss++wordsLib.SIZES_ss;
-
 val condition_encode_lem = prove(
   `!cond i. i < 28 ==> ~(condition_encode cond ' i)`,
-  SIMP_TAC (arith_ss++fcpLib.FCP_ss++wordsLib.SIZES_ss)
-    [condition_encode_def,word_index,w2w,word_lsl_def]);
-
-fun b_of_b t = (GEN_ALL o SIMP_RULE std_ss [BITS_THM] o
-  SPECL [`6`,`0`,`x`,t]) BIT_OF_BITS_THM2;
+  SRW_TAC [WORD_BIT_EQ_ss] [condition_encode_def]);
 
 val shift_encode_lem = prove(
   `!r. (!i. 6 < i /\ i < 32 ==> ~(shift_encode r ' i)) /\
        ~(shift_encode r ' 4)`,
-  Cases \\ SIMP_TAC (arith_ss++fcpLib.FCP_ss++wordsLib.SIZES_ss)
-    [shift_encode_def,word_index,w2w,word_or_def,
-     b_of_b `32`, b_of_b `64`, b_of_b `96`] \\ EVAL_TAC);
-
-val extract_out_of_range = prove(
-  `!w:'a word i h.
-      (h - l < i) /\ i < dimindex(:'b) ==> ~((((h >< l) w):'b word) ' i)`,
-  SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [word_extract_def,word_bits_def,w2w]
-    \\ Cases_on `i < dimindex (:'a)` \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] []);
+  Cases \\ SRW_TAC [WORD_BIT_EQ_ss, BIT_ss] [shift_encode_def]);
 
 val INDEX_RAND =
  (GEN_ALL o SIMP_RULE bool_ss [] o ISPEC `\x:word32. x ' i`) COND_RAND;
 
-val BIT_NUMERAL = CONJ (SPECL [`0`,`NUMERAL n`] BIT_def)
-                       (SPECL [`NUMERAL b`,`NUMERAL n`] BIT_def);
-
-val BITS_NUMERAL = (GEN_ALL o SPECL [`h`,`l`,`NUMERAL n`]) BITS_def;
-
-val BITS_NUMERAL_ss = let open numeral_bitTheory numeralTheory in rewrites
-  [BITS_NUMERAL, BITS_ZERO2, NUMERAL_DIV_2EXP, NUMERAL_iDIV2,
-   NUMERAL_SFUNPOW_iDIV2, NUMERAL_SFUNPOW_iDUB, NUMERAL_SFUNPOW_FDUB,
-   FDUB_iDIV2, FDUB_iDUB, FDUB_FDUB, iDUB_removal,
-   numeral_suc, numeral_imod_2exp, MOD_2EXP, NORM_0]
-end;
-
-val word_frags = [fcpLib.FCP_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss,
-  rewrites [SIMP_RULE std_ss [] DECODE_ARM_THM, INDEX_RAND,BIT_def,
-    shift_encode_lem,word_or_def,word_index,w2w,word_lsl_def,
-    condition_encode_lem,instruction_encode_def]];
+val WORD_FRAGS_ss = simpLib.merge_ss [WORD_BIT_EQ_ss,
+  rewrites [SIMP_RULE std_ss [] DECODE_ARM_THM, INDEX_RAND,
+    shift_encode_lem, condition_encode_lem, instruction_encode_def]];
 
 (* ......................................................................... *)
 
@@ -588,23 +506,23 @@ val decode_enc_br = store_thm("decode_enc_br",
   `(!cond offset. DECODE_ARM (enc (instruction$B cond offset)) = br) /\
    (!cond offset. DECODE_ARM (enc (instruction$BL cond offset)) = br) /\
    (!cond offset. DECODE_ARM (enc (instruction$BX cond offset)) = bx)`,
-  SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss] []);
 
 val decode_enc_swi = store_thm("decode_enc_swi",
   `!cond imm. DECODE_ARM (enc (instruction$SWI cond imm)) = swi_ex`,
-  SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss] []);
 
 val decode_enc_data_proc_ = prove(
   `!cond op s rd rn Op2. ~(op ' 3) \/ (op ' 2) ==>
       (DECODE_ARM (data_proc_encode cond op s rn rd Op2) = data_proc)`,
   Cases_on `Op2`
-    \\ SRW_TAC word_frags [data_proc_encode_def,addr_mode1_encode_def]);
+    \\ SRW_TAC [WORD_FRAGS_ss] [data_proc_encode_def,addr_mode1_encode_def]);
 
 val decode_enc_data_proc__ = prove(
   `!cond op s rd rn Op2.
       (DECODE_ARM (data_proc_encode cond op T rd 0w Op2) = data_proc)`,
   Cases_on `Op2`
-    \\ SRW_TAC word_frags [data_proc_encode_def,addr_mode1_encode_def]);
+    \\ SRW_TAC [WORD_FRAGS_ss] [data_proc_encode_def,addr_mode1_encode_def]);
 
 val decode_enc_data_proc = prove(
   `!f. f IN {instruction$AND; instruction$EOR;
@@ -614,8 +532,7 @@ val decode_enc_data_proc = prove(
              instruction$ORR; instruction$BIC} ==>
    (!cond s rd rn Op2. DECODE_ARM (enc (f cond s rd rn Op2)) = data_proc)`,
   SRW_TAC [] [instruction_encode_def]
-    \\ SRW_TAC [fcpLib.FCP_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss]
-               [BIT_def,word_index,decode_enc_data_proc_]);
+    \\ SRW_TAC [WORD_BIT_EQ_ss] [decode_enc_data_proc_]);
 
 val decode_enc_data_proc2 = prove(
   `!f. f IN {instruction$TST; instruction$TEQ;
@@ -627,8 +544,7 @@ val decode_enc_data_proc3 = prove(
   `!f. f IN {instruction$MOV; instruction$MVN} ==>
    (!cond s rd Op2. DECODE_ARM (enc (f cond s rd Op2)) = data_proc)`,
   SRW_TAC [] [instruction_encode_def]
-    \\ SRW_TAC [fcpLib.FCP_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss]
-               [BIT_def,word_index,decode_enc_data_proc_]);
+    \\ SRW_TAC [WORD_BIT_EQ_ss] [decode_enc_data_proc_]);
 
 val decode_enc_mla_mul = store_thm("decode_enc_mla_mul",
   `(!cond s rd rm rs.
@@ -643,7 +559,7 @@ val decode_enc_mla_mul = store_thm("decode_enc_mla_mul",
       DECODE_ARM (enc (instruction$SMULL cond s rdlo rdhi rm rs)) = mla_mul) /\
    (!cond s rdhi rdlo rm rs.
       DECODE_ARM (enc (instruction$SMLAL cond s rdlo rdhi rm rs)) = mla_mul)`,
-  SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss] []);
 
 val decode_enc_ldr_str = store_thm("decode_enc_ldr_str",
   `(!cond b opt rd rn offset.
@@ -651,7 +567,7 @@ val decode_enc_ldr_str = store_thm("decode_enc_ldr_str",
    (!cond b opt rd rn offset.
       DECODE_ARM (enc (instruction$STR cond b opt rd rn offset)) = ldr_str)`,
   REPEAT STRIP_TAC \\ Cases_on `offset` \\ TRY (Cases_on `s`)
-    \\ SRW_TAC word_frags [addr_mode2_encode_def,options_encode_def,
+    \\ SRW_TAC [WORD_FRAGS_ss] [addr_mode2_encode_def,options_encode_def,
          shift_encode_def,word_modify_def]);
 
 val decode_enc_ldrh_strh = store_thm("decode_enc_ldrh_strh",
@@ -661,8 +577,7 @@ val decode_enc_ldrh_strh = store_thm("decode_enc_ldrh_strh",
    (!cond opt rd rn offset.
       DECODE_ARM (enc (instruction$STRH cond opt rd rn offset)) = ldrh_strh)`,
   REPEAT STRIP_TAC \\ Cases_on `offset`
-    \\ SRW_TAC word_frags [addr_mode3_encode_def,options_encode2_def,
-         word_modify_def,extract_out_of_range]
+    \\ SRW_TAC [WORD_FRAGS_ss] [addr_mode3_encode_def,options_encode2_def]
     \\ METIS_TAC []);
 
 val decode_enc_ldm_stm = store_thm("decode_enc_ldm_stm",
@@ -670,20 +585,20 @@ val decode_enc_ldm_stm = store_thm("decode_enc_ldm_stm",
       DECODE_ARM (enc (instruction$LDM cond s opt rn list)) = ldm_stm) /\
    (!cond s opt rn list.
       DECODE_ARM (enc (instruction$STM cond s opt rn list)) = ldm_stm)`,
-  SRW_TAC word_frags [options_encode_def,word_modify_def]);
+  SRW_TAC [WORD_FRAGS_ss] [options_encode_def,word_modify_def]);
 
 val decode_enc_swp = store_thm("decode_enc_swp",
   `!cond b rd rm rn. DECODE_ARM (enc (instruction$SWP cond b rd rm rn)) = swp`,
-  SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss] []);
 
 val decode_enc_mrs = store_thm("decode_enc_mrs",
   `!cond r rd. DECODE_ARM (enc (instruction$MRS cond r rd)) = mrs`,
-  SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss] []);
 
 val decode_enc_msr = store_thm("decode_enc_msr",
   `!cond psrd op.  DECODE_ARM (enc (instruction$MSR cond psrd op)) = msr`,
   REPEAT STRIP_TAC \\ Cases_on `psrd` \\ Cases_on `op`
-    \\ SRW_TAC word_frags [msr_psr_encode_def,msr_mode_encode_def]);
+    \\ SRW_TAC [WORD_FRAGS_ss] [msr_psr_encode_def,msr_mode_encode_def]);
 
 val decode_enc_coproc = store_thm("decode_enc_coproc",
   `(!cond cpn cop1 crd crn crm cop2.
@@ -701,7 +616,7 @@ val decode_enc_coproc = store_thm("decode_enc_coproc",
    (!cond n opt cpn crd rn offset.
       DECODE_ARM (enc (instruction$LDC cond n opt cpn crd rn offset)) =
       ldc_stc)`,
-  SRW_TAC word_frags [options_encode_def,word_modify_def]);
+  SRW_TAC [WORD_FRAGS_ss] [options_encode_def,word_modify_def]);
 
 val decode_cp_enc_coproc = store_thm("decode_cp_enc_coproc",
   `(!cond cpn cop1 crd crn crm cop2.
@@ -718,7 +633,7 @@ val decode_cp_enc_coproc = store_thm("decode_cp_enc_coproc",
    (!cond n opt cpn crd rn offset.
       DECODE_CP (enc (instruction$LDC cond n opt cpn crd rn offset)) =
       ldc_stc)`,
-  SRW_TAC word_frags [DECODE_CP_def,options_encode_def,word_modify_def]);
+  SRW_TAC [WORD_FRAGS_ss] [DECODE_CP_def,options_encode_def,word_modify_def]);
 
 val decode_27_enc_coproc = store_thm("decode_27_enc_coproc",
   `(!cond cpn cop1 crd crn crm cop2.
@@ -732,15 +647,9 @@ val decode_27_enc_coproc = store_thm("decode_27_enc_coproc",
       enc (instruction$STC cond n opt cpn crd rn offset) ' 27) /\
    (!cond n opt cpn crd rn offset.
       enc (instruction$LDC cond n opt cpn crd rn offset) ' 27)`,
-  SRW_TAC word_frags [options_encode_def,word_modify_def]);
+  SRW_TAC [WORD_FRAGS_ss] [options_encode_def,word_modify_def]);
 
 (* ......................................................................... *)
-
-val word_frags =
-  [ARITH_ss,fcpLib.FCP_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss,
-   rewrites [INDEX_RAND,word_or_def,word_index,w2w,word_lsl_def,
-     word_bits_def,word_extract_def,condition_encode_lem,
-     instruction_encode_def,shift_encode_lem,BIT_NUMERAL,BIT_ZERO]];
 
 val decode_br_enc = store_thm("decode_br_enc",
   `(!cond offset.
@@ -749,10 +658,7 @@ val decode_br_enc = store_thm("decode_br_enc",
       DECODE_BRANCH (enc (instruction$BL cond offset)) = (T, offset)) /\
    (!cond Rd.
       (3 >< 0) (enc (instruction$BX cond Rd)) = Rd)`,
-  SRW_TAC word_frags [DECODE_BRANCH_def]
-    \\ ASM_SIMP_TAC bool_ss [BIT_SHIFT_THM3,
-         (SYM o EVAL) ``11 * 2 ** 24``,(SYM o EVAL) ``10 * 2 ** 24``,
-         (SYM o EVAL) ``1179649 * 2 ** 4``]);
+  SRW_TAC [WORD_FRAGS_ss] [DECODE_BRANCH_def]);
 
 val shift_immediate_enc_lem = prove(
   `(!i r. (w2w:word32->word8)
@@ -771,8 +677,7 @@ val shift_immediate_enc_lem = prove(
    (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 !! 32w !! w2w (r:word4))) = r) /\
    (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 !! 64w !! w2w (r:word4))) = r) /\
    (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 !! 96w !! w2w (r:word4))) = r)`,
-  SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
-    \\ SRW_TAC word_frags []);
+  SRW_TAC [WORD_BIT_EQ_ss] []);
 
 val shift_immediate_enc_lem2 = prove(
   `(!i r. (w2w:word32->word8) ((11 -- 7)
@@ -799,8 +704,7 @@ val shift_immediate_enc_lem2 = prove(
       (33554432w !! i << 7 !! 64w !! w2w (r:word4))) = r) /\
    (!i r. (w2w:word32->word4) ((3 -- 0)
       (33554432w !! i << 7 !! 96w !! w2w (r:word4))) = r)`,
-  SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
-    \\ SRW_TAC word_frags []);
+  SRW_TAC [WORD_BIT_EQ_ss] []);
 
 val shift_register_enc_lem = prove(
   `(!i r. (w2w:word32->word4) ((11 -- 8)
@@ -827,42 +731,40 @@ val shift_register_enc_lem = prove(
       (16w !! i << 8 !! 64w !! w2w (r:word4))) = r) /\
    (!i r. (w2w:word32->word4) ((3 -- 0)
       (16w !! i << 8 !! 96w !! w2w (r:word4))) = r)`,
-  SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
-    \\ SRW_TAC word_frags []);
+  SRW_TAC [WORD_BIT_EQ_ss] []);
 
 val immediate_enc = store_thm("immediate_enc",
   `(!c r i. IMMEDIATE c ((11 >< 0) (addr_mode1_encode (Dp_immediate r i))) =
       arm$ROR (w2w i) (2w * w2w r) c) /\
     !c r i. IMMEDIATE c ((11 >< 0) (msr_mode_encode (Msr_immediate r i))) =
       arm$ROR (w2w i) (2w * w2w r) c`,
-  SRW_TAC (boolSimps.LET_ss::word_frags)
+  SRW_TAC [boolSimps.LET_ss, WORD_MUL_LSL_ss]
          [IMMEDIATE_def,addr_mode1_encode_def,msr_mode_encode_def]
-    \\ (MATCH_MP_TAC (METIS_PROVE [] ``!a b c d x. (a = b) /\ (c = d) ==>
+    \\ MATCH_MP_TAC (METIS_PROVE [] ``!a b c d x. (a = b) /\ (c = d) ==>
          (ROR a c x = ROR b d x)``)
-    \\ STRIP_TAC << [ALL_TAC,
-         MATCH_MP_TAC (PROVE [] ``!a b. (a = b) ==> (2w:word8 * a = 2w * b)``)]
-    \\ SRW_TAC word_frags [WORD_EQ]
-    << [Cases_on `i' < 12` \\ SRW_TAC word_frags []
-        \\ Cases_on `i' < 8` \\ SRW_TAC word_frags [],
-      Cases_on `i' < 4` \\ SRW_TAC word_frags []]
-    \\ POP_ASSUM_LIST (ASSUME_TAC o hd)
-    \\ FULL_SIMP_TAC std_ss [LESS_THM]
-    \\ SRW_TAC word_frags []));
+    \\ SRW_TAC [WORD_BIT_EQ_ss] []);
 
 val immediate_enc2 = store_thm("immediate_enc2",
   `!i. (11 >< 0) (addr_mode2_encode (Dt_immediate i)) = i`,
-  SRW_TAC word_frags [addr_mode2_encode_def,w2w]
-    \\ Cases_on `i' < 12` \\ SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss] [addr_mode2_encode_def,w2w]);
 
 val immediate_enc3 = store_thm("immediate_enc3",
   `(!i. (11 >< 8) (addr_mode3_encode (Dth_immediate i)) = (7 >< 4) i) /\
      !i. (3 >< 0) (addr_mode3_encode (Dth_immediate i)) = (3 >< 0) i`,
-  SRW_TAC word_frags [addr_mode3_encode_def,w2w]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss] [addr_mode3_encode_def]);
 
 val register_enc3 = store_thm("register_enc3",
   `!i. (3 >< 0) (addr_mode3_encode (Dth_register r)) = r`,
-  SRW_TAC word_frags [addr_mode3_encode_def,w2w]);
+  SRW_TAC [WORD_FRAGS_ss] [addr_mode3_encode_def]);
+
+val EXTRACT_ss = simpLib.merge_ss [SIZES_ss, WORD_LOGIC_ss, WORD_SHIFT_ss,
+  WORD_GROUND_ss, WORD_EXTRACT_ss];
+
+val lem = simpLib.SIMP_PROVE (std_ss++WORD_BIT_EQ_ss) []
+  ``~(i = 0w:word5) ==> ~((4 >< 0) i = 0w:word8)``;
+
+val lem2 = simpLib.SIMP_PROVE (std_ss++WORD_ARITH_ss++WORD_ARITH_EQ_ss) []
+  ``$- 1w = 3w:word2``;
 
 val shift_immediate_enc = store_thm("shift_immediate_enc",
   `!reg m c sh i. SHIFT_IMMEDIATE reg t m c
@@ -879,13 +781,10 @@ val shift_immediate_enc = store_thm("shift_immediate_enc",
         || LSR Rm -> arm$LSR (REG_READ t reg m Rm) (w2w i) c
         || ASR Rm -> arm$ASR (REG_READ t reg m Rm) (w2w i) c
         || ROR Rm -> arm$ROR (REG_READ t reg m Rm) (w2w i) c`,
-  REPEAT STRIP_TAC \\ Cases_on `sh`
-    \\ SRW_TAC [wordsLib.SIZES_ss,boolSimps.LET_ss]
-        [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode1_encode_def,
-         WORD_BITS_COMP_THM,shift_encode_def,w2w_w2w,word_extract_def,
-         word_bits_w2w,shift_immediate_enc_lem,n2w_11]
-    \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss)
-        [EVAL ``w2w:word5->word8 0w``,word_0_n2w,w2n_w2w,GSYM w2n_11]);
+  REPEAT STRIP_TAC \\ Cases_on `sh` \\ Cases_on `i = 0w` \\ IMP_RES_TAC lem
+    \\ SRW_TAC [boolSimps.LET_ss, EXTRACT_ss]
+         [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode1_encode_def,
+          shift_encode_def,shift_immediate_enc_lem,lem2]);
 
 val shift_immediate_enc2 = store_thm("shift_immediate_enc2",
   `!reg m c sh i. SHIFT_IMMEDIATE reg t m c
@@ -902,13 +801,10 @@ val shift_immediate_enc2 = store_thm("shift_immediate_enc2",
         || LSR Rm -> arm$LSR (REG_READ t reg m Rm) (w2w i) c
         || ASR Rm -> arm$ASR (REG_READ t reg m Rm) (w2w i) c
         || ROR Rm -> arm$ROR (REG_READ t reg m Rm) (w2w i) c`,
-  REPEAT STRIP_TAC \\ Cases_on `sh`
-    \\ SRW_TAC [wordsLib.SIZES_ss,boolSimps.LET_ss]
+  REPEAT STRIP_TAC \\ Cases_on `sh` \\ Cases_on `i = 0w` \\ IMP_RES_TAC lem
+    \\ SRW_TAC [boolSimps.LET_ss, EXTRACT_ss]
         [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode2_encode_def,
-         WORD_BITS_COMP_THM,shift_encode_def,w2w_w2w,word_extract_def,
-         word_bits_w2w,shift_immediate_enc_lem2,n2w_11]
-    \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss)
-        [EVAL ``w2w:word5->word8 0w``,word_0_n2w,w2n_w2w,GSYM w2n_11]);
+         shift_encode_def,shift_immediate_enc_lem2,lem2]);
 
 val shift_register_enc = store_thm("shift_register_enc",
   `!reg m c sh r. SHIFT_REGISTER reg t m c
@@ -920,14 +816,13 @@ val shift_register_enc = store_thm("shift_register_enc",
         || ASR Rm -> arm$ASR (REG_READ t (INC_PC t reg) m Rm) rs c
         || ROR Rm -> arm$ROR (REG_READ t (INC_PC t reg) m Rm) rs c`,
   REPEAT STRIP_TAC \\ Cases_on `sh`
-    \\ SRW_TAC [wordsLib.SIZES_ss,boolSimps.LET_ss]
+    \\ SRW_TAC [boolSimps.LET_ss, EXTRACT_ss]
         [SHIFT_REGISTER_def,SHIFT_REGISTER2_def,addr_mode1_encode_def,
-         WORD_BITS_COMP_THM,shift_encode_def,w2w_w2w,word_extract_def,
-         word_bits_w2w,shift_register_enc_lem,n2w_11]);
+         shift_encode_def,shift_register_enc_lem,lem2]);
 
 val shift_register_enc2 = store_thm("shift_register_enc2",
   `!r. (3 >< 0) ((11 >< 0) (msr_mode_encode (Msr_register r))) = r`,
-  SRW_TAC (boolSimps.LET_ss::word_frags) [msr_mode_encode_def]);
+  SRW_TAC [boolSimps.LET_ss, WORD_FRAGS_ss] [msr_mode_encode_def]);
 
 val shift_immediate_shift_register = store_thm("shift_immediate_shift_register",
   `(!reg m c sh r.
@@ -935,17 +830,15 @@ val shift_immediate_shift_register = store_thm("shift_immediate_shift_register",
    (!reg m c sh i.
      ~((11 >< 0) (addr_mode1_encode (Dp_shift_immediate sh i)) ' 4))`,
   NTAC 6 STRIP_TAC \\ Cases_on `sh`
-    \\ SRW_TAC word_frags [addr_mode1_encode_def]);
+    \\ SRW_TAC [WORD_FRAGS_ss] [addr_mode1_encode_def]);
 
 val decode_data_proc_enc_ = prove(
   `!cond op s rd rn Op2.
       DECODE_DATAP (data_proc_encode cond op s rn rd Op2) =
         (IS_DP_IMMEDIATE Op2,op,s,rn,rd,(11 >< 0) (addr_mode1_encode Op2))`,
   Cases_on `Op2`
-    \\ SRW_TAC word_frags [IS_DP_IMMEDIATE_def,DECODE_DATAP_def,
-         addr_mode1_encode_def,data_proc_encode_def]
-    \\ ASM_SIMP_TAC bool_ss [BIT_SHIFT_THM3,(SYM o EVAL) ``256 * 2 ** 12``]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+    \\ SRW_TAC [WORD_FRAGS_ss] [IS_DP_IMMEDIATE_def,DECODE_DATAP_def,
+         addr_mode1_encode_def,data_proc_encode_def]);
 
 val decode_data_proc_enc = prove(
   `!f. f IN {instruction$AND; instruction$EOR;
@@ -998,8 +891,7 @@ val decode_mla_mul_enc = store_thm("decode_mla_mul_enc",
    (!cond s rdhi rdlo rm rs.
       DECODE_MLA_MUL (enc (instruction$SMLAL cond s rdlo rdhi rm rs)) =
       (T,T,T,s,rdhi,rdlo,rs,rm))`,
-  REPEAT STRIP_TAC \\ SRW_TAC word_frags [DECODE_MLA_MUL_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+ SRW_TAC [WORD_FRAGS_ss] [DECODE_MLA_MUL_def]);
 
 val decode_ldr_str_enc = Count.apply store_thm("decode_ldr_str_enc",
   `(!cond b opt rd rn offset.
@@ -1011,9 +903,8 @@ val decode_ldr_str_enc = Count.apply store_thm("decode_ldr_str_enc",
       (IS_DT_SHIFT_IMMEDIATE offset, opt.Pre, opt.Up, b, opt.Wb,
        F, rn, rd, (11 >< 0) (addr_mode2_encode offset)))`,
   REPEAT STRIP_TAC \\ Cases_on `offset` \\ TRY (Cases_on `sh`)
-    \\ SRW_TAC word_frags [DECODE_LDR_STR_def,IS_DT_SHIFT_IMMEDIATE_def,
-         addr_mode2_encode_def,options_encode_def,word_modify_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+    \\ SRW_TAC [WORD_FRAGS_ss] [DECODE_LDR_STR_def,IS_DT_SHIFT_IMMEDIATE_def,
+         addr_mode2_encode_def,options_encode_def,word_modify_def]);
 
 val decode_ldrh_strh_enc = Count.apply store_thm("decode_ldrh_strh_enc",
   `(!cond s h opt rd rn offset.
@@ -1027,9 +918,8 @@ val decode_ldrh_strh_enc = Count.apply store_thm("decode_ldrh_strh_enc",
         (opt.Pre, opt.Up, IS_DTH_IMMEDIATE offset, opt.Wb, F,
          rn, rd, (11 >< 8) x, F, T, (3 >< 0) x))`,
   SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC \\ Cases_on `offset`
-    \\ SRW_TAC word_frags [DECODE_LDRH_STRH_def,IS_DTH_IMMEDIATE_def,
-         addr_mode3_encode_def,options_encode2_def,word_modify_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+    \\ SRW_TAC [WORD_FRAGS_ss] [DECODE_LDRH_STRH_def,IS_DTH_IMMEDIATE_def,
+         addr_mode3_encode_def,options_encode2_def,word_modify_def]);
 
 val decode_ldm_stm_enc = store_thm("decode_ldm_stm_enc",
   `(!cond s opt rn l.
@@ -1038,20 +928,17 @@ val decode_ldm_stm_enc = store_thm("decode_ldm_stm_enc",
    (!cond s opt rn l.
       DECODE_LDM_STM (enc (instruction$STM cond s opt rn l)) =
       (opt.Pre, opt.Up, s, opt.Wb, F, rn, l))`,
-  SRW_TAC word_frags [DECODE_LDM_STM_def,options_encode_def,word_modify_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss]
+    [DECODE_LDM_STM_def,options_encode_def,word_modify_def]);
 
 val decode_swp_enc = store_thm("decode_swp_enc",
   `!cond b rd rm rn.
       DECODE_SWP (enc (instruction$SWP cond b rd rm rn)) = (b,rn,rd,rm)`,
-  SRW_TAC word_frags [DECODE_SWP_def] \\ FULL_SIMP_TAC std_ss [LESS_THM]
-    \\ SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss] [DECODE_SWP_def]);
 
 val decode_mrs_enc = store_thm("decode_mrs_enc",
   `!cond r rd. DECODE_MRS (enc (instruction$MRS cond r rd)) = (r, rd)`,
-  SRW_TAC word_frags [DECODE_MRS_def]
-    \\ ASM_SIMP_TAC (bool_ss++ARITH_ss) [BIT_SHIFT_THM3,
-         (SYM o EVAL) ``271 * 2 ** 16``,(SYM o EVAL) ``335 * 2 ** 16``]);
+  SRW_TAC [WORD_FRAGS_ss] [DECODE_MRS_def]);
 
 val decode_msr_enc = store_thm("decode_msr_enc",
   `!cond psrd Op2.
@@ -1060,21 +947,16 @@ val decode_msr_enc = store_thm("decode_msr_enc",
         and opnd = (11 >< 0) (msr_mode_encode Op2) in
           (IS_MSR_IMMEDIATE Op2,r,bit19,bit16,(3 >< 0) opnd,opnd)`,
   REPEAT STRIP_TAC \\ Cases_on `Op2` \\ Cases_on `psrd`
-    \\ SRW_TAC (boolSimps.LET_ss::word_frags) [DECODE_MSR_def,DECODE_PSRD_def,
-         IS_MSR_IMMEDIATE_def,msr_psr_encode_def,msr_mode_encode_def]
-    \\ ASM_SIMP_TAC (bool_ss++ARITH_ss) [BIT_SHIFT_THM3,
-         (SYM o EVAL) ``4623 * 2 ** 12``, (SYM o EVAL) ``1168 * 2 ** 12``,
-         (SYM o EVAL) ``1152 * 2 ** 12``, (SYM o EVAL) ``1040 * 2 ** 12``,
-         (SYM o EVAL) ``144 * 2 ** 12``, (SYM o EVAL) ``128 * 2 ** 12``,
-         (SYM o EVAL) ``16 * 2 ** 12``]);
+    \\ SRW_TAC [boolSimps.LET_ss, WORD_FRAGS_ss]
+         [DECODE_MSR_def, DECODE_PSRD_def, IS_MSR_IMMEDIATE_def,
+          msr_psr_encode_def, msr_mode_encode_def]);
 
 val decode_mrc_mcr_rd_enc = store_thm("decode_mrc_mcr_rd_enc",
   `(!cond cpn cop1 rd crn crm cop2.
       (15 >< 12) (enc (instruction$MRC cond cpn cop1 rd crn crm cop2)) = rd) /\
    !cond cpn cop1 rd crn crm cop2.
       (15 >< 12) (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) = rd`,
-  SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
-    \\ SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss] []);
 
 val decode_ldc_stc_enc = store_thm("decode_ldc_stc_enc",
   `(!cond n opt cpn crd rn offset.
@@ -1083,16 +965,16 @@ val decode_ldc_stc_enc = store_thm("decode_ldc_stc_enc",
    (!cond n opt cpn crd rn offset.
       DECODE_LDC_STC (enc (instruction$STC cond n opt cpn crd rn offset)) =
       (opt.Pre, opt.Up, n, opt.Wb, F, rn, crd, cpn, offset))`,
-  SRW_TAC word_frags [DECODE_LDC_STC_def,options_encode_def,word_modify_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss]
+    [DECODE_LDC_STC_def,options_encode_def,word_modify_def]);
 
 val decode_ldc_stc_20_enc = store_thm("decode_ldc_stc_20_enc",
   `(!cond n opt cpn crd rn offset.
       enc (instruction$LDC cond n opt cpn crd rn offset) ' 20) /\
     !cond n opt cpn crd rn offset.
       ~(enc (instruction$STC cond n opt cpn crd rn offset) ' 20)`,
-  SRW_TAC word_frags [DECODE_LDC_STC_def,options_encode_def,word_modify_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss]
+    [DECODE_LDC_STC_def,options_encode_def,word_modify_def]);
 
 val decode_cdp_enc = store_thm("decode_cdp_enc",
   `(!cond cpn cop1 crd crn crm cop2.
@@ -1100,8 +982,7 @@ val decode_cdp_enc = store_thm("decode_cdp_enc",
         (cop1,crn,crd,cpn,cop2,crm)) /\
     !cond cpn cop1 crd crn crm cop2.
       DECODE_CPN (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) = cpn`,
-  SRW_TAC word_frags [DECODE_CDP_def,DECODE_CPN_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss] [DECODE_CDP_def,DECODE_CPN_def]);
 
 val decode_mrc_mcr_enc = store_thm("decode_mrc_mcr_enc",
   `(!cond cpn cop1 rd crn crm cop2.
@@ -1114,33 +995,24 @@ val decode_mrc_mcr_enc = store_thm("decode_mrc_mcr_enc",
         (cop1,crn,rd,cpn,cop2,crm)) /\
    (!cond cpn cop1 rd crn crm cop2.
       DECODE_CPN (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) = cpn)`,
-  SRW_TAC word_frags [DECODE_MRC_MCR_def,DECODE_CPN_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+  SRW_TAC [WORD_FRAGS_ss] [DECODE_MRC_MCR_def,DECODE_CPN_def]);
 
 (* ......................................................................... *)
 
-val BITS_ZERO5 = prove(
-  `!h l n.  n < 2 ** l ==> (BITS h l n = 0)`,
-  SRW_TAC [] [BITS_THM,LESS_DIV_EQ_ZERO,ZERO_LT_TWOEXP]);
-
 val BITS_w2n_ZERO = prove(
   `!w:'a word. dimindex (:'a) <= l ==> (BITS h l (w2n w) = 0)`,
-  METIS_TAC [dimword_def,TWOEXP_MONO2,LESS_LESS_EQ_TRANS,BITS_ZERO5,w2n_lt]);
+  METIS_TAC [dimword_def,TWOEXP_MONO2,LESS_LESS_EQ_TRANS,BITS_LT_LOW,w2n_lt]);
 
 val WORD_BITS_LSL = prove(
   `!h l n w:'a word.
       n <= h /\ n <= l /\ l <= h /\ h < dimindex (:'a) ==>
       ((h -- l) (w << n) = ((h - n) -- (l - n)) w)`,
-  SRW_TAC [fcpLib.FCP_ss] [WORD_EQ,word_lsl_def,word_bits_def]
-    \\ Cases_on `i + l < dimindex (:'a)`
-    \\ FULL_SIMP_TAC (arith_ss++fcpLib.FCP_ss) [NOT_LESS_EQUAL,NOT_LESS]);
+  SRW_TAC [WORD_BIT_EQ_ss] [] \\ Cases_on `i + l < dimindex (:'a)`
+    \\ SRW_TAC [WORD_BIT_EQ_ss] []);
 
 val condition_code_lem = prove(
   `!cond. condition_encode cond ' 28 = cond IN {NE;CC;PL;VC;LS;LT;LE;NV}`,
-  Cases \\ RW_TAC (std_ss++wordsLib.SIZES_ss++
-     pred_setSimps.PRED_SET_ss++BITS_NUMERAL_ss)
-   [BIT_def,condition2num_thm,word_rol_def,word_ror_n2w,word_lsl_n2w,
-    w2w_n2w,word_index,condition_encode_def]);
+  Cases \\ SRW_TAC [WORD_BIT_EQ_ss] [condition_encode_def, condition2num_thm]);
 
 val condition_code_lem2 = prove(
   `!cond. ~(condition_encode cond ' 28) = cond IN {EQ;CS;MI;VS;HI;GE;GT;AL}`,
@@ -1159,20 +1031,17 @@ val condition_code_lem3 = prove(
       || MI -> MI || PL -> MI || VS -> VS || VC -> VS
       || HI -> HI || LS -> HI || GE -> GE || LT -> GE
       || GT -> GT || LE -> GT || AL -> AL || NV -> AL`,
-  Cases \\ SRW_TAC [wordsLib.SIZES_ss,boolSimps.LET_ss,BITS_NUMERAL_ss]
-    [condition_encode_def,condition2num_thm,num2condition_thm,word_bits_n2w,
-     word_rol_def,word_ror_n2w,word_lsl_n2w,w2w_n2w,w2n_n2w]);
+  Cases \\ SRW_TAC [boolSimps.LET_ss]
+       [condition_encode_def,condition2num_thm,num2condition_thm,word_bits_n2w,
+        word_rol_def,word_ror_n2w,word_lsl_n2w,w2w_n2w,w2n_n2w]
+    \\ EVAL_TAC);
 
-val word_ss = srw_ss()++fcpLib.FCP_ss++wordsLib.SIZES_ss++BITS_NUMERAL_ss++
-  rewrites [word_or_def,word_index,w2w,word_lsl_def,word_bits_def,
-    shift_encode_lem,BIT_def];
-
-val word_frags = [fcpLib.FCP_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss,
-  rewrites [word_or_def,word_index,w2w,word_lsl_def,word_bits_def,
-    shift_encode_lem,BIT_def]];
+val word_ss = srw_ss()++fcpLib.FCP_ss++wordsLib.SIZES_ss++WORD_GROUND_ss++
+  rewrites [word_or_def,n2w_def,w2w,word_lsl_def,word_bits_def,
+    shift_encode_lem,BIT_def,condition_code_lem3];
 
 val pass_frags =
- [ARITH_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss,boolSimps.LET_ss,
+ [ARITH_ss,SIZES_ss,WORD_GROUND_ss,boolSimps.LET_ss,
   rewrites [CONDITION_PASSED_def,CONDITION_PASSED2_def,
     GSYM WORD_BITS_OVER_BITWISE,WORD_OR_CLAUSES,BITS_w2n_ZERO,WORD_BITS_LSL,
     word_bits_n2w,w2w_def,instruction_encode_def,condition_code_lem3]];
@@ -1181,54 +1050,43 @@ val condition_addr_mode1 = prove(
   `(!op2. (31 -- 29) (addr_mode1_encode op2) = 0w) /\
     !op2. ~((addr_mode1_encode op2) ' 28)`,
   NTAC 2 STRIP_TAC \\ Cases_on `op2` \\ TRY (Cases_on `s`)
-    \\ SRW_TAC pass_frags [addr_mode1_encode_def,shift_encode_def]
-    \\ SRW_TAC word_frags [BITS_w2n_ZERO]);
+    \\ SRW_TAC [WORD_BIT_EQ_ss] [addr_mode1_encode_def,shift_encode_def]);
 
 val condition_addr_mode2 = prove(
   `(!op2. (31 -- 29) (addr_mode2_encode op2) = 0w) /\
     !op2. ~((addr_mode2_encode op2) ' 28)`,
   NTAC 2 STRIP_TAC \\ Cases_on `op2` \\ TRY (Cases_on `s`)
-    \\ SRW_TAC pass_frags [addr_mode2_encode_def,shift_encode_def]
-    \\ SRW_TAC word_frags [BITS_w2n_ZERO]);
+    \\ SRW_TAC [WORD_BIT_EQ_ss] [addr_mode2_encode_def,shift_encode_def]);
 
 val condition_addr_mode3 = prove(
   `(!op2. (31 -- 29) (addr_mode3_encode op2) = 0w) /\
     !op2. ~((addr_mode3_encode op2) ' 28)`,
   NTAC 2 STRIP_TAC \\ Cases_on `op2`
-    \\ SRW_TAC pass_frags [addr_mode3_encode_def]
-    \\ SRW_TAC word_frags [BITS_w2n_ZERO,extract_out_of_range]
-    << [
-      Cases_on `i + 21 < 32`,
-      Cases_on `i + 29 < 32`
-    ] \\ SRW_TAC (ARITH_ss::word_frags) [extract_out_of_range]);
+    \\ SRW_TAC [WORD_BIT_EQ_ss] [addr_mode3_encode_def]);
 
 val condition_msr_mode = prove(
   `(!op2. (31 -- 29) (msr_mode_encode op2) = 0w) /\
     !op2. ~((msr_mode_encode op2) ' 28)`,
   NTAC 2 STRIP_TAC \\ Cases_on `op2`
-    \\ SRW_TAC pass_frags [msr_mode_encode_def]
-    \\ SRW_TAC word_frags [BITS_w2n_ZERO]);
+    \\ SRW_TAC [WORD_BIT_EQ_ss] [msr_mode_encode_def]);
 
 val condition_msr_psr = prove(
   `(!psrd. (31 -- 29) (msr_psr_encode psrd) = 0w) /\
     !psrd. ~((msr_psr_encode psrd) ' 28)`,
   NTAC 2 STRIP_TAC \\ Cases_on `psrd`
-    \\ SRW_TAC pass_frags [msr_psr_encode_def]
-    \\ SRW_TAC word_frags []);
+    \\ SRW_TAC [WORD_BIT_EQ_ss] [msr_psr_encode_def]);
 
 val condition_options = prove(
   `(!x opt. (31 -- 29) (options_encode x opt) = 0w) /\
     !x opt. ~((options_encode x opt) ' 28)`,
-  NTAC 2 STRIP_TAC \\ SRW_TAC pass_frags [options_encode_def,word_modify_def]
-    \\ SRW_TAC word_frags [] \\ Cases_on `i + 29 < 32`
-    \\ SRW_TAC (ARITH_ss::word_frags) []);
+  NTAC 2 STRIP_TAC
+    \\ SRW_TAC [WORD_BIT_EQ_ss] [options_encode_def,word_modify_def]);
 
 val condition_options2 = prove(
   `(!x opt. (31 -- 29) (options_encode2 x opt) = 0w) /\
     !x opt. ~((options_encode2 x opt) ' 28)`,
-  NTAC 2 STRIP_TAC \\ SRW_TAC pass_frags [options_encode2_def,word_modify_def]
-    \\ SRW_TAC word_frags [] \\ Cases_on `i + 29 < 32`
-    \\ SRW_TAC (ARITH_ss::word_frags) []);
+  NTAC 2 STRIP_TAC
+    \\ SRW_TAC [WORD_BIT_EQ_ss] [options_encode2_def,word_modify_def]);
 
 val PASS_TAC = REPEAT STRIP_TAC \\ Cases_on_nzcv `flgs`
   \\ SRW_TAC pass_frags [condition_addr_mode1,condition_addr_mode2,

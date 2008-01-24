@@ -8,7 +8,7 @@
 
 (* interactive use:
   app load ["pred_setSimps", "rich_listTheory", "wordsLib", "wordsSyntax",
-            "armLib", "systemTheory"];
+            "armLib", "instructionTheory"];
 *)
 
 open HolKernel boolLib Parse bossLib;
@@ -190,56 +190,6 @@ val the_goal =
 
 (* ------------------------------------------------------------------------- *)
 
-local
-  fun bitwise_or_compset () =
-  let val cmp = reduceLib.num_compset()
-      val _ = computeLib.add_thms
-                [numeral_bitTheory.NUMERAL_BITWISE, numeral_bitTheory.iBITWISE,
-                 SPECL [`NUMERAL n`, `NUMERAL m`] word_or_n2w] cmp
-      val _ = computeLib.add_conv
-                (``dimindex:'a itself->num``, 1, wordsLib.SIZES_CONV) cmp
-  in
-    cmp
-  end;
-
-  val BITWISE_OR_CONV =
-    REWRITE_CONV [WORD_OR_CLAUSES] THENC
-    computeLib.CBV_CONV (bitwise_or_compset ());
-
-  fun is_word_literal t =
-    wordsSyntax.is_n2w t andalso
-    numSyntax.is_numeral (fst (wordsSyntax.dest_n2w t));
-
-  val word_or_clauses = CONJUNCTS (SPEC `a` WORD_OR_CLAUSES);
-
-  val SYM_WORD_OR_ASSOC = GSYM WORD_OR_ASSOC;
-
-  val gci_or = GenPolyCanon.GCI
-    {dest = wordsSyntax.dest_word_or,
-     is_literal = is_word_literal,
-     assoc_mode = GenPolyCanon.R,
-     assoc = SYM_WORD_OR_ASSOC,
-     symassoc = WORD_OR_ASSOC,
-     comm = WORD_OR_COMM,
-     l_asscomm = GenPolyCanon.derive_l_asscomm SYM_WORD_OR_ASSOC WORD_OR_COMM,
-     r_asscomm = GenPolyCanon.derive_r_asscomm SYM_WORD_OR_ASSOC WORD_OR_COMM,
-     non_coeff = fn t =>
-                   if is_word_literal t then
-                     inst [``:'a`` |->  wordsSyntax.dim_of t]
-                       ``UINT_MAXw:'a word``
-                   else
-                     t,
-     merge = BITWISE_OR_CONV,
-     postnorm = Thm.REFL,
-     left_id = hd word_or_clauses,
-     right_id = hd (tl word_or_clauses),
-     reducer = Thm.REFL}
-in
-  val OR_CANON_CONV = GenPolyCanon.gencanon gci_or
-end;
-
-(* ------------------------------------------------------------------------- *)
-
 val word_index = METIS_PROVE [word_index_n2w]
   ``!i n. i < dimindex (:'a) ==> (((n2w n):'a word) ' i = BIT i n)``;
 
@@ -280,8 +230,7 @@ end;
 
 val condition_encode__lem = prove(
   `!cond. ~(condition_encode_ cond ' 13)`,
-  SRW_TAC [fcpLib.FCP_ss, wordsLib.SIZES_ss, ARITH_ss]
-    [condition_encode__def, word_index, w2w, word_lsl_def]);
+  SRW_TAC [WORD_BIT_EQ_ss] [condition_encode__def]);
 
 val dimindex_11 = EVAL ``dimindex(:11)``;
 
@@ -305,23 +254,16 @@ val thrms =
 val extract_w2w_0 = prove(
   `!h l w:'a word. dimindex(:'a) <= l ==>
      ((h >< l) ((w2w w):'b word) = 0w:'c word)`,
-  REPEAT STRIP_TAC
-    \\ Cases_on `h < l` >> ASM_SIMP_TAC std_ss [WORD_EXTRACT_ZERO]
-    \\ SRW_TAC [] [WORD_BITS_COMP_THM, WORD_BITS_ZERO,
-                   word_extract_def, word_bits_w2w, w2w_w2w]
-    \\ Cases_on `h < dimindex (:'b) - 1`
-    \\ ASM_SIMP_TAC arith_ss [DIMINDEX_GT_0, MIN_DEF, WORD_BITS_ZERO3, w2w_0]);
+  SRW_TAC [WORD_EXTRACT_ss] []);
 
 val extract_w2w_w2w = prove(
   `!w:'a word. (h = dimindex(:'a) - 1) /\
           dimindex(:'a) <= dimindex(:'b) /\
           dimindex(:'a) <= dimindex(:'c) ==>
       ((h >< 0) ((w2w w):'b word) = w2w ((w2w w):'c word))`,
-  SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_extract_def, w2w, word_bits_def]
-    \\ Cases_on `i < dimindex(:'a)`
-    \\ Cases_on `i < dimindex(:'b)`
-    \\ Cases_on `i < dimindex(:'c)`
-    \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [w2w]);
+  SRW_TAC [ARITH_ss, WORD_EXTRACT_ss]
+    [simpLib.SIMP_PROVE arith_ss [MIN_DEF]
+       ``a <= b ==> (MIN a b = a) /\ (MIN b a = a)``]);
 
 val extract_w2w_w2w_ = LIST_CONJ
   (map (fn a => (SIMP_RULE (std_ss++wordsLib.SIZES_ss)
@@ -351,48 +293,29 @@ val LESS_THM =
 
 val split_word4 = prove(
   `!w:word4. w2w w = (3 >< 3) w << 3 !! (2 >< 0) w : word32`,
-  SRW_TAC [wordsLib.SIZES_ss, fcpLib.FCP_ss, ARITH_ss]
-          [word_extract_def, w2w, word_or_def, word_bits_def, word_lsl_def]
-    \\ Cases_on `i < 4`
-    \\ SRW_TAC [wordsLib.SIZES_ss, fcpLib.FCP_ss, ARITH_ss] []
-    << [PAT_ASSUM `i < 32` (K ALL_TAC) \\ FULL_SIMP_TAC arith_ss [LESS_THM],
-        Cases_on `i < 7`
-           \\ SRW_TAC [wordsLib.SIZES_ss, fcpLib.FCP_ss, ARITH_ss] []]);
+  SRW_TAC [WORD_EXTRACT_ss] []);
 
 val immediate8_times4 = prove(
   `!i:word8. w2w (4w:word12 * w2w i) = (w2w i << 2) : word32`,
-  ASSUME_TAC (REWRITE_RULE [dimword_8] (INST_TYPE [`:'a` |-> `:8`] w2n_lt))
-    \\ STRIP_TAC
-    \\ POP_ASSUM (SPEC_THEN `i` ASSUME_TAC)
-    \\ `4 * w2n i < 1024` by DECIDE_TAC
-    \\ SRW_TAC [wordsLib.SIZES_ss,ARITH_ss]
-         [LESS_MOD, w2w_def, word_lsl_n2w, word_mul_n2w]);
+  SRW_TAC [WORD_EXTRACT_ss, WORD_MUL_LSL_ss] []);
 
 val immediate5_times4 = prove(
   `!i:word5. w2w (4w:word12 * w2w i) = (w2w i << 2) : word32`,
-  ASSUME_TAC (REWRITE_RULE [dimword_5] (INST_TYPE [`:'a` |-> `:5`] w2n_lt))
-    \\ STRIP_TAC
-    \\ POP_ASSUM (SPEC_THEN `i` ASSUME_TAC)
-    \\ `4 * w2n i < 128` by DECIDE_TAC
-    \\ SRW_TAC [wordsLib.SIZES_ss,ARITH_ss]
-         [LESS_MOD, w2w_def, word_lsl_n2w, word_mul_n2w]);
+  SRW_TAC [WORD_EXTRACT_ss, WORD_MUL_LSL_ss] []);
 
 val immediate5_times2 = prove(
   `(!i:word5. (7 >< 4) (2w:word8 * w2w i) = ((4 >< 3) i) : word32) /\
     !i:word5. (3 >< 0) (2w:word8 * w2w i) = ((2 >< 0) i << 1) : word32`,
-  SRW_TAC [wordsLib.SIZES_ss,ARITH_ss] [SHIFT_ZERO, WORD_EXTRACT_LSL, w2w_def,
-    (GSYM o ONCE_REWRITE_RULE [WORD_MULT_COMM] o
-     SIMP_RULE (std_ss++wordsLib.SIZES_ss) [GSYM word_mul_n2w] o
-     SPEC `1` o INST_TYPE [`:'a` |-> `:8`]) word_lsl_n2w]
-    \\ SRW_TAC [wordsLib.SIZES_ss,ARITH_ss]
-         [WORD_EXTRACT_MIN_HIGH, GSYM w2w_def, word_extract_w2w]);
+  SRW_TAC [WORD_EXTRACT_ss, WORD_MUL_LSL_ss] []);
+
+val w2n_lt8 = ((REWRITE_RULE [dimword_3] o INST_TYPE [`:'a` |-> `:3`]) w2n_lt);
 
 val BLOCK_lem = prove(
   `!Rd:word3 imm:word8.
-     ((51200w:word16 !! w2w Rd << 8 !! w2w imm) ' (w2n (w2w Rd : word32))) =
+     (((w2w imm !! w2w Rd << 8) !! 51200w:word16) ' (w2n (w2w Rd : word32))) =
      (imm ' (w2n Rd))`,
   NTAC 2 STRIP_TAC  \\ Cases_on_word `imm`
-    \\ SRW_TAC [wordsLib.SIZES_ss,ARITH_ss] [w2n_w2w, w2w_n2w]
+    \\ RW_TAC (arith_ss++wordsLib.SIZES_ss) [w2n_w2w, w2w_n2w]
     \\ SPEC_THEN `Rd` ASSUME_TAC
          ((REWRITE_RULE [dimword_3] o INST_TYPE [`:'a` |-> `:3`]) w2n_lt)
     \\ `MIN 7 (w2n Rd) = w2n Rd` by SRW_TAC [ARITH_ss] [MIN_DEF]
@@ -404,22 +327,15 @@ val BLOCK_lem = prove(
 
 val BLOCK_lem2 = prove(
   `(!Rd:word3 imm:word8.
-      (21 :+ T) (3901751296w:word32 !! w2w Rd << 16 !! w2w imm) =
-      3903848448w !! w2w Rd << 16 !! w2w imm) /\
+      (21 :+ T) ((w2w imm !! w2w Rd << 16) !! 3901751296w:word32) =
+      (w2w imm !! w2w Rd << 16) !! 3903848448w) /\
    (!Rd:word3 imm:word8.
-      (21 :+ T) (3902799872w:word32 !! w2w Rd << 16 !! w2w imm) =
-      3902799872w !! w2w Rd << 16 !! w2w imm) /\
+      (21 :+ T) ((w2w imm !! w2w Rd << 16) !! 3902799872w:word32) =
+      (w2w imm !! w2w Rd << 16) !! 3902799872w) /\
     !Rd:word3 imm:word8.
-      (21 :+ F) (3901751296w:word32 !! w2w Rd << 16 !! w2w imm) =
-      3901751296w !! w2w Rd << 16 !! w2w imm`,
-  SRW_TAC [fcpLib.FCP_ss,wordsLib.SIZES_ss,ARITH_ss] [fcpTheory.FCP_UPDATE_def,
-           BIT_def, word_or_def, w2w_def, word_lsl_def,n2w_def]
-    \\ FULL_SIMP_TAC (std_ss++BITS_NUMERAL_ss) [LESS_THM, NOT_BITS2]
-    \\ SPEC_THEN `Rd` ASSUME_TAC
-         ((REWRITE_RULE [dimword_3] o INST_TYPE [`:'a` |-> `:3`]) w2n_lt)
-    \\ SPEC_THEN `imm` ASSUME_TAC
-         ((REWRITE_RULE [dimword_8] o INST_TYPE [`:'a` |-> `:8`]) w2n_lt)
-    \\ SRW_TAC [ARITH_ss] [BITS_LT_LOW]);
+      (21 :+ F) ((w2w imm !! w2w Rd << 16) !! 3901751296w:word32) =
+      (w2w imm !! w2w Rd << 16) !! 3901751296w`,
+  SRW_TAC [WORD_BIT_EQ_ss] []);
 
 val COND_lem = prove(
   `(!c. (c = NV) = condition_encode_ c ' 11 /\ condition_encode_ c ' 10 /\
@@ -479,9 +395,7 @@ val thumb_to_arm_enc = Tactical.store_thm("thumb_to_arm_enc",
          word_extract_w2w, extract_w2w_0, extract_w2w_w2w_, w2w_id,
          word_lsl_n2w, word_or_n2w, word_modify_n2w, word_extract_n2w,
          w2w_n2w, w2w_0, w2w_w2w_, BLOCK_lem, BLOCK_lem2, COND_lem3, COND_lem4,
-         immediate5_times4, immediate8_times4, immediate5_times2, split_word4]
-    \\ CONV_TAC (BINOP_CONV OR_CANON_CONV)
-    \\ REFL_TAC);
+         immediate5_times4, immediate8_times4, immediate5_times2, split_word4]);
 
 (* ------------------------------------------------------------------------- *)
 

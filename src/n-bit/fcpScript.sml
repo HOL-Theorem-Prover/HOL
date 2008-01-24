@@ -216,22 +216,25 @@ val _ = add_infix_type {Prec = 60, ParseName = SOME "**", Name = "cart",
 val index_def = new_infixl_definition("index",
   `$index x i = dest_cart x (finite_index i)`,500);
 
-val _ = add_infix("%%",500,HOLgrammars.LEFT);
+val _ = set_fixity "%%" (Infixl 500);
 val _ = overload_on ("%%", Term`$index`);
+
+val _ = set_fixity "'" (Infixl 2000);
+val _ = overload_on ("'", Term`$index`);
 
 val CART_EQ = store_thm("CART_EQ",
   `!(x:'a ** 'b) y.
-    (x = y) = (!i. i < dimindex(:'b) ==> (x %% i = y %% i))`,
+    (x = y) = (!i. i < dimindex(:'b) ==> (x ' i = y ' i))`,
   REPEAT GEN_TAC THEN SIMP_TAC std_ss [index_def, GSYM FORALL_FINITE_INDEX] THEN
   REWRITE_TAC[GSYM FUN_EQ_THM, ETA_AX] THEN PROVE_TAC[cart_tybij]);
 
 val FCP = new_binder_definition("FCP",
   ``($FCP) = \g.
-     @(f:'a ** 'b). (!i. i < dimindex(:'b) ==> (f %% i = g i))``);
+     @(f:'a ** 'b). (!i. i < dimindex(:'b) ==> (f ' i = g i))``);
 
 val FCP_BETA = store_thm("FCP_BETA",
   `!i. i < dimindex(:'b)
-       ==> (((FCP) g:'a ** 'b) %% i = g i)`,
+       ==> (((FCP) g:'a ** 'b) ' i = g i)`,
   SIMP_TAC std_ss [FCP] THEN CONV_TAC SELECT_CONV THEN
   EXISTS_TAC `mk_cart(\k. g(@i. i < dimindex(:'b) /\
                                 (finite_index i = k))):'a ** 'b` THEN
@@ -242,12 +245,12 @@ val FCP_BETA = store_thm("FCP_BETA",
 
 val FCP_UNIQUE = prove
  (`!(f:'a ** 'b) g.
-        (!i. i < dimindex(:'b) ==> (f %% i = g i)) =
+        (!i. i < dimindex(:'b) ==> (f ' i = g i)) =
         ((FCP) g = f)`,
   SIMP_TAC std_ss [CART_EQ, FCP_BETA] THEN PROVE_TAC[]);
 
 val FCP_ETA = store_thm("FCP_ETA",
-  `!g. (FCP i. g %% i) = g`,
+  `!g. (FCP i. g ' i) = g`,
   SIMP_TAC std_ss [CART_EQ, FCP_BETA]);
 
 (* ------------------------------------------------------------------------- *)
@@ -735,7 +738,7 @@ val _ = set_fixity ":+"  (Infixl 325);
 val _ = computeLib.auto_import_definitions := false;
 
 val FCP_UPDATE_def = xDefine "FCP_UPDATE"
-  `$:+ a b = \m:'a ** 'b. (FCP c. if a = c then b else m %% c):'a ** 'b`;
+  `$:+ a b = \m:'a ** 'b. (FCP c. if a = c then b else m ' c):'a ** 'b`;
 
 val FCP_UPDATE_COMMUTES = store_thm ("FCP_UPDATE_COMMUTES",
   `!m a b c d.  ~(a = b) ==>
@@ -749,18 +752,18 @@ val FCP_UPDATE_EQ = store_thm("FCP_UPDATE_EQ",
     \\ SRW_TAC [FCP_ss] [FCP_UPDATE_def]);
 
 val FCP_UPDATE_IMP_ID = store_thm("FCP_UPDATE_IMP_ID",
-  `!m a v. (m %% a = v) ==> ((a :+ v) m = m)`,
+  `!m a v. (m ' a = v) ==> ((a :+ v) m = m)`,
   SRW_TAC [FCP_ss] [FCP_UPDATE_def] \\ RW_TAC std_ss []);
 
 val APPLY_FCP_UPDATE_ID = store_thm("APPLY_FCP_UPDATE_ID",
-  `!m a. (a :+ (m %% a)) m = m`, SRW_TAC [FCP_ss] [FCP_UPDATE_def]);
+  `!m a. (a :+ (m ' a)) m = m`, SRW_TAC [FCP_ss] [FCP_UPDATE_def]);
 
 val FCP_APPLY_UPDATE_THM = store_thm("FCP_APPLY_UPDATE_THM",
-  `!(m:'a ** 'b) a w b. ((a :+ w) m) %% b =
+  `!(m:'a ** 'b) a w b. ((a :+ w) m) ' b =
        if b < dimindex(:'b) then
-         if a = b then w else m %% b
+         if a = b then w else m ' b
        else
-         ((a :+ w) m) %% b`,
+         ((a :+ w) m) ' b`,
   SRW_TAC [FCP_ss] [FCP_UPDATE_def]);
 
 (* ------------------------------------------------------------------------ *)
@@ -768,23 +771,23 @@ val FCP_APPLY_UPDATE_THM = store_thm("FCP_APPLY_UPDATE_THM",
 open listTheory;
 
 val FCP_TL_def = Define `
-  FCP_TL v = (FCP i. v %% (SUC i))`;
+  FCP_TL v = (FCP i. v ' (SUC i))`;
 val FCP_HD_def = Define `
-  FCP_HD v = v %% 0`;
+  FCP_HD v = v ' 0`;
 val FCP_CONS_def = Define `
-  FCP_CONS h (v:'a ** 'b) = (0 :+ h) (FCP i. v %% (PRE i))`;
+  FCP_CONS h (v:'a ** 'b) = (0 :+ h) (FCP i. v ' (PRE i))`;
 
 val FCP_MAP_def = Define `
-  FCP_MAP f (v:'a ** 'c) = (FCP i. f (v %% i)):'b ** 'c`;
+  FCP_MAP f (v:'a ** 'c) = (FCP i. f (v ' i)):'b ** 'c`;
 val FCP_EXISTS_def = Define `
-  FCP_EXISTS P (v:'b ** 'a) = ?i. i < dimindex (:'a) /\ P (v %% i)`;
+  FCP_EXISTS P (v:'b ** 'a) = ?i. i < dimindex (:'a) /\ P (v ' i)`;
 val FCP_EVERY_def = Define `
-  FCP_EVERY P (v:'b ** 'a) = !i. dimindex (:'a) <= i \/ P (v %% i)`;
+  FCP_EVERY P (v:'b ** 'a) = !i. dimindex (:'a) <= i \/ P (v ' i)`;
 
 val V2L_def = Define `
   V2L (v:'a ** 'b) = 
     @L. (LENGTH L = dimindex (:'b)) /\ 
-        !i. i < dimindex (:'b) ==> (EL i L = (v:'a ** 'b) %% i)`;
+        !i. i < dimindex (:'b) ==> (EL i L = (v:'a ** 'b) ' i)`;
 val L2V_def = Define `
   L2V L = FCP i. EL i L`;
 
@@ -792,10 +795,10 @@ val L2V_def = Define `
 
 val exists_v2l_lem = prove(
   `!n. n <= dimindex (:'b)
-   ==> ?x. (LENGTH x = n) /\ !i. i < n ==> (EL i x = (v:'a ** 'b) %% i)`,
+   ==> ?x. (LENGTH x = n) /\ !i. i < n ==> (EL i x = (v:'a ** 'b) ' i)`,
   Induct THEN RW_TAC arith_ss [] THEN FULL_SIMP_TAC arith_ss [] THENL [
     Q.EXISTS_TAC `[]`,
-    Q.EXISTS_TAC `x ++ [v %% n]`] THEN 
+    Q.EXISTS_TAC `x ++ [v ' n]`] THEN 
   REWRITE_TAC [LENGTH,LENGTH_APPEND] THEN
   CONJ_TAC THEN REPEAT STRIP_TAC THEN1 DECIDE_TAC THEN
   `i < n \/ (i = n)` by DECIDE_TAC THEN
@@ -859,7 +862,7 @@ val LENGTH_V2L = store_thm(
 
 val EL_V2L = store_thm(
   "EL_V2L",
-  `i < dimindex (:'b) ==> (EL i (V2L v) = (v:'a ** 'b)  %% i)`,
+  `i < dimindex (:'b) ==> (EL i (V2L v) = (v:'a ** 'b)  ' i)`,
   ELIM_V2L_TAC THEN RW_TAC arith_ss []);
 
 val FCP_MAP = store_thm(
@@ -922,12 +925,12 @@ val V2L_RECURSIVE = store_thm(
 
 val READ_TL = store_thm(
   "READ_TL",
-  `i < dimindex (:'b) ==> (((FCP_TL a):'a ** 'b) %% i = (a:'a ** 'c) %% SUC i)`,
+  `i < dimindex (:'b) ==> (((FCP_TL a):'a ** 'b) ' i = (a:'a ** 'c) ' (SUC i))`,
   RW_TAC arith_ss [FCP_TL_def,FCP_BETA]);
 
 val READ_L2V = store_thm(
   "READ_L2V",
-  `i < dimindex (:'b) ==> ((L2V a:'a ** 'b) %% i = EL i a)`,
+  `i < dimindex (:'b) ==> ((L2V a:'a ** 'b) ' i = EL i a)`,
   RW_TAC arith_ss [L2V_def,FCP_BETA]);
 
 (* ------------------------------------------------------------------------ *)
@@ -937,11 +940,11 @@ val FCPi_def = Define `FCPi (f, (:'b)) = ($FCP f):'a ** 'b`;
 val mk_fcp_def = Define `mk_fcp = FCPi`;
 
 val index_comp = store_thm("index_comp",
-  `!f n. ($FCP f):'a ** 'b %% n =
+  `!f n. (($FCP f):'a ** 'b) ' n =
       if n < dimindex (:'b) then
         f n
       else
-        FAIL $%% ^(mk_var("FCP out of bounds",bool))
+        FAIL $' ^(mk_var("FCP out of bounds",bool))
              (($FCP f):'a ** 'b) n`,
   SRW_TAC [FCP_ss] [combinTheory.FAIL_THM]);
 
