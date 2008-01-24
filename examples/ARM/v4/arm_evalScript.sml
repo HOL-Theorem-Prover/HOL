@@ -471,7 +471,7 @@ val PSR_CONS = store_thm("PSR_CONS",
           `~(mode_num m = 0w)`
             by (Cases_on `m` \\ RW_TAC std_ss [mode_num_def] \\ EVAL_TAC)
             \\ POP_ASSUM MP_TAC \\ UNABBREV_TAC `m`
-            \\ `w ' i = ((4 >< 0) w):word5 ' i` by METIS_TAC [lem]
+            \\ `w ' i = (((4 >< 0) w):word5) ' i` by METIS_TAC [lem]
             \\ ASM_REWRITE_TAC [] \\ ABBREV_TAC `x = ((4 >< 0) w):word5`
             \\ Cases_on `(x = 16w) \/ (x = 17w) \/ (x = 18w) \/ (x = 19w) \/
                          (x = 23w) \/ (x = 27w) \/ (x = 31w)`
@@ -567,7 +567,7 @@ val shift_encode_lem = prove(
 
 val extract_out_of_range = prove(
   `!w:'a word i h.
-      (h + 1 - l < i) /\ i < dimindex(:'b) ==> ~(((h >< l) w):'b word ' i)`,
+      (h + 1 - l < i) /\ i < dimindex(:'b) ==> ~((((h >< l) w):'b word) ' i)`,
   SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [word_extract_def,word_bits_def,w2w]
     \\ Cases_on `i < dimindex (:'a)` \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] []);
 

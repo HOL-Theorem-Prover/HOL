@@ -185,7 +185,7 @@ fun cntxt c i = list_mk_conj
   (c @ basic_context));
 
 val word_index = METIS_PROVE [word_index_n2w]
-  ``!i n. i < dimindex (:'a) ==> ((n2w n):'a word ' i = BIT i n)``;
+  ``!i n. i < dimindex (:'a) ==> (((n2w n):'a word) ' i = BIT i n)``;
 
 val CARRY_NZCV = METIS_PROVE [CARRY_def,NZCV_def] ``CARRY (NZCV x) = x ' 29``;
 
@@ -385,7 +385,7 @@ val DP_ss =
    decode_enc_data_proc3,decode_data_proc_enc3];
 
 val abbrev_mode1 =
-  ``Abbrev (op2 = ADDR_MODE1 state.registers mode (cpsr:word32 ' 29)
+  ``Abbrev (op2 = ADDR_MODE1 state.registers mode ((cpsr:word32) ' 29)
       (IS_DP_IMMEDIATE Op2) ((11 >< 0) (addr_mode1_encode Op2)))``;
 
 val ARM_TST = SYMBOLIC_EVAL_CONV DP_ss (cntxt
@@ -479,7 +479,7 @@ val LDR_STR_ss =
     decode_enc_ldr_str,decode_ldr_str_enc];
 
 val abbrev_mode2 =
-  ``Abbrev (addr_mode2 = ADDR_MODE2 state.registers mode (cpsr:word32 ' 29)
+  ``Abbrev (addr_mode2 = ADDR_MODE2 state.registers mode ((cpsr:word32) ' 29)
                 (IS_DT_SHIFT_IMMEDIATE offset) opt.Pre opt.Up Rn
                 ((11 >< 0) (addr_mode2_encode offset))) /\
     Abbrev (addr = FST addr_mode2) /\
