@@ -25,9 +25,12 @@ fun warn ss = if !Globals.interactive andalso !sat_warn
 fun replay_proof is_proved sva nr in_name solver vc clauseth lfn ntm proof = 
     if is_proved then 
 	((case getSolverPostExe solver of (* post-process proof, if required *)
-	     SOME post_exe => 
-	     let val (fin,fout) = (in_name,in_name^"."^(getSolverName solver))
-	     in ignore(Systeml.systeml ((getSolverPostRun solver) post_exe (fin,fout))) end
+	     SOME post_exe => let
+               val (fin,fout) = (in_name,in_name^"."^(getSolverName solver))
+	     in 
+               ignore(Systeml.system_ps 
+                        (getSolverPostRun solver post_exe (fin,fout))) 
+             end
 	   | NONE => ()); 
 	(case replayProof sva nr in_name solver vc clauseth lfn proof of
 	     SOME th => th

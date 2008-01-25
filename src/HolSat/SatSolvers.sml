@@ -25,9 +25,9 @@ datatype sat_solver =
    URL            : string,
    executable     : string,    
    post_exe       : string option,    
-   notime_run     : string -> string * string -> string list,    
-   time_run       : string -> (string * string) * int -> string list,  
-   post_run       : string -> (string * string) -> string list,
+   notime_run     : string -> string * string -> string ,    
+   time_run       : string -> (string * string) * int -> string,  
+   post_run       : string -> (string * string) -> string ,
    only_true      : bool,
    failure_string : string,
    start_string   : string,  
@@ -43,6 +43,12 @@ fun getSolverFail (SatSolver {failure_string,...}) = failure_string
 fun getSolverStart (SatSolver {start_string,...}) = start_string
 fun getSolverEnd (SatSolver {end_string,...}) = end_string
 
+val p = Systeml.protect
+fun spacify [] = ""
+  | spacify [h] = h
+  | spacify (h::t) = h ^ " " ^ spacify t
+
+
 val zchaff =
  SatSolver
   {name           = "zchaff", 
@@ -55,14 +61,16 @@ val zchaff =
 		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL 
 			  then Globals.HOLDIR^"/src/HolSat/sat_solvers/zc2hs/zc2hs.exe"
 			  else Globals.HOLDIR^"/src/HolSat/sat_solvers/zc2hs/zc2hs"),
-   notime_run     = (fn ex => fn (infile,outfile) => [ex,infile,">",outfile]),
+   notime_run     = (fn ex => fn (infile,outfile) => 
+                        spacify [p ex, p infile,">", p outfile]),
    time_run       = (fn ex => fn ((infile,outfile),time) => 
-                      [ex, infile, Int.toString time,">", outfile]),
+                        spacify [p ex, p infile, p (Int.toString time), ">", 
+                                 p outfile]),
    post_run        = (fn ex => fn (infile,outfile) => 
-                                  [ex,infile,"-m", 
-                                   outfile ^ ".proof", 
-                                   "-z",
-                                   "resolve_trace", ">", "zc2hs_trace"]),
+                        spacify [p ex, p infile, "-m", 
+                                 p (outfile ^ ".proof"), 
+                                 "-z",
+                                 "resolve_trace", ">", "zc2hs_trace"]),
    only_true      = false,
    failure_string = "UNSAT",
    start_string   = "Instance Satisfiable",
@@ -78,11 +86,13 @@ val minisatp =
 		    else Globals.HOLDIR^"/src/HolSat/sat_solvers/minisat/minisat",
    post_exe       = NONE,
    notime_run     = (fn ex => fn (infile,outfile) => 
-                      [ex, "-r", outfile, "-p",  outfile^".proof", infile, 
-                       "-x", ">",  outfile ^".stats"]),
+                      spacify [p ex, "-r", p outfile, "-p",  
+                               p (outfile^".proof"), p infile, "-x", ">",  
+                               p (outfile ^".stats")]),
    time_run       = (fn ex => fn ((infile,outfile),time) => 
-                      [ex, infile, Int.toString time,  ">",  outfile]),
-   post_run        = (fn _ => fn _ => []),
+                      spacify [p ex, p infile, p (Int.toString time),  ">",  
+                               p outfile]),
+   post_run        = (fn _ => fn _ => ""),
    only_true      = false,
    failure_string = "UNSAT",
    start_string   = "SAT",
