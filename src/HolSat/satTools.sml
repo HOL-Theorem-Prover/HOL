@@ -61,6 +61,10 @@ fun isSuccess s = (s = Process.success);
 ** as a string of integers) or NONE, if unsatisfiable
 *)
 
+fun spacify [] = ""
+  | spacify [h] = h
+  | spacify (h::t) = h ^ " " ^ spacify t
+
 fun invokeSat sat_solver tm vc nr svm sva infile =
  let 
       val (name,executable,notime_run,only_true,
@@ -70,11 +74,11 @@ fun invokeSat sat_solver tm vc nr svm sva infile =
 	  getSolverEnd sat_solver)
      val outfile    = infile ^ "." ^ name
      val run_cmd    = notime_run executable (infile,outfile)
-     val code       = Process.system run_cmd
+     val code       = Systeml.systeml run_cmd
      val _          = if isSuccess code orelse (name="minisat" orelse name="minisatp") 
 		      then () (* minisat returns non-std exit code on success *)
                       else print("Warning:\n Process.system reports failure signal returned by\n "
-				 ^ run_cmd ^ "\n")
+				 ^ spacify run_cmd ^ "\n")
      val ins        = TextIO.openIn outfile
      val sat_res_ss = Substring.all (TextIO.inputAll ins)
      val _          = TextIO.closeIn ins
