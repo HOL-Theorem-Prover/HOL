@@ -8,7 +8,8 @@
 
 open HolKernel boolLib bossLib Parse;
 open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
-open arm_evalTheory armTheory listTheory bsubstTheory pairTheory systemTheory fcpTheory bitTheory; 
+open arm_evalTheory armTheory listTheory bsubstTheory pairTheory 
+     systemTheory fcpTheory bitTheory; 
 open combinTheory rich_listTheory;
 open set_sepLib addressTheory;
 

@@ -1,4 +1,3 @@
-
 (*****************************************************************************)
 (* High level (TFL) specification and implementation of factorial            *)
 (*****************************************************************************)
@@ -10,35 +9,37 @@
 (******************************************************************************
 * Load theories
 ******************************************************************************)
-(*
+(*  For working interactively
 quietdec := true;
 loadPath :="dff" :: !loadPath;
-map load  ["compile","intLib","vsynth"];
-open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
+map load  ["compile","vsynth"];
+open arithmeticTheory pairLib pairTheory PairRules combinTheory
      devTheory composeTheory compileTheory compile vsynth;
 infixr 3 THENR;
 infixr 3 ORELSER;
-val _ = intLib.deprecate_int();
+val _ = numLib.prefer_num();
 quietdec := false;
 *)
 
 (******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
+ * Boilerplate needed for compilation. Batch mode.
+ ******************************************************************************)
+
 open HolKernel Parse boolLib bossLib;
 
 (******************************************************************************
-* Open theories
-******************************************************************************)
+ * Open theories. Batch mode.
+ ******************************************************************************)
 open arithmeticTheory pairLib pairTheory PairRules combinTheory 
      composeTheory compile vsynth;
 infixr 3 THENR;
 infixr 3 ORELSER;
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+ * Set default parsing to natural numbers rather than integers
+ ******************************************************************************)
+
+val _ = numLib.prefer_num();
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -47,11 +48,14 @@ val _ = intLib.deprecate_int();
 (*****************************************************************************)
 (* Start new theory "Fact"                                                   *)
 (*****************************************************************************)
+
 val _ = new_theory "Fact";
 
 (*****************************************************************************)
-(* Define arithmetic operators used and their Verilog implementations.       *)
+(* Define arithmetic operators used and associate them with their Verilog    *)
+(* implementations.                                                          *)
 (*****************************************************************************)
+
 val _ = AddBinop ("ADD",  (``UNCURRY $+ : num#num->num``,  "+"));
 val _ = AddBinop ("SUB",  (``UNCURRY $- : num#num->num``,  "-"));
 val _ = AddBinop ("LESS", (``UNCURRY $< : num#num->bool``, "<"));
@@ -60,15 +64,46 @@ val _ = AddBinop ("EQ",   (``UNCURRY $= : num#num->bool``, "=="));
 (*****************************************************************************)
 (* Implement iterative function as a step to implementing factorial          *)
 (*****************************************************************************)
+
 val (FactIter,FactIter_ind,FactIter_dev) =
  hwDefine
   `FactIter (n,acc:num) =
-      if n = 0 then (n,acc) else FactIter (n - 1,n * acc)`;
+      if n = 0 then (n,acc) else FactIter (n - 1, n * acc)`;
+
+(*****************************************************************************)
+(* Lemma showing how FactIter computes factorial                             *)
+(*****************************************************************************)
+
+val FactIterRecThm =  (* proof from KXS *)
+ Q.store_thm
+  ("FactIterRecThm",
+   `!n acc. SND(FactIter (n,acc)) = acc * FACT n`,
+    recInduct FactIter_ind THEN RW_TAC arith_ss []
+      THEN RW_TAC arith_ss [Once FactIter,FACT]
+      THEN Cases_on `n` 
+      THEN RW_TAC std_ss [FACT, AC MULT_ASSOC MULT_SYM]);
+
+(*****************************************************************************)
+(* Implement a function Fact to compute SND(FactIter (n,1))                  *)
+(*****************************************************************************)
+
+val (Fact,_,Fact_dev) = hwDefine `Fact n = SND(FactIter (n,1))`;
+
+(*****************************************************************************)
+(* Verify Fact is indeed the factorial function                              *)
+(*****************************************************************************)
+
+val FactThm =
+ Q.store_thm
+  ("FactThm",
+   `Fact = FACT`,
+   RW_TAC arith_ss [FUN_EQ_THM,Fact,FactIterRecThm]);
 
 (*****************************************************************************)
 (* To implement ``$*`` we build a naive iterative multiplier function        *)
 (* (works by repeated addition)                                              *)
 (*****************************************************************************)
+
 val (MultIter,MultIter_ind,MultIter_dev) =
  hwDefine
   `MultIter (m,n:num,acc:num) =
@@ -76,37 +111,40 @@ val (MultIter,MultIter_ind,MultIter_dev) =
 
 
 (*****************************************************************************)
-(* Verify that MultIter does compute multiplication                          *)
+(* Two argument multiplication, defined in terms of MultIter                 *)
 (*****************************************************************************)
-val MultIterRecThm =  (* proof adapted from similar one from KXS *)
- save_thm
-  ("MultIterRecThm",
-   Q.prove
-    (`!m n acc. SND(SND(MultIter (m,n,acc))) = (m * n) + acc`,
-     recInduct MultIter_ind THEN RW_TAC std_ss []
-      THEN RW_TAC arith_ss [Once MultIter]
-      THEN Cases_on `m` 
-      THEN FULL_SIMP_TAC arith_ss [MULT]));
 
-(*****************************************************************************)
-(* Create an implementation of a multiplier from MultIter                    *)
-(*****************************************************************************)
 val (Mult,_,Mult_dev) =
  hwDefine
   `Mult(m,n) = SND(SND(MultIter(m,n,0)))`;
 
 (*****************************************************************************)
+(* Verify that MultIter does compute accumulator-style multiplication        *)
+(*****************************************************************************)
+
+val MultIterRecThm =  (* proof adapted from similar one from KXS *)
+ Q.store_thm
+  ("MultIterRecThm",
+   `!m n acc. SND(SND(MultIter (m,n,acc))) = (m * n) + acc`,
+    recInduct MultIter_ind THEN RW_TAC std_ss []
+      THEN RW_TAC arith_ss [Once MultIter]
+      THEN Cases_on `m` 
+      THEN FULL_SIMP_TAC arith_ss [MULT]);
+
+(*****************************************************************************)
 (* Verify Mult is actually multiplication                                    *)
 (*****************************************************************************)
+
 val MultThm =
- store_thm
+ Q.store_thm
   ("MultThm",
-   Term`Mult = UNCURRY $*`,
+   `Mult = UNCURRY $*`,
    RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult,MultIterRecThm]);
 
 (*****************************************************************************)
 (* Theorem used in an example in the README file                             *)
 (*****************************************************************************)
+
 val FactIter_TOTAL =
  store_thm
   ("FactIter_TOTAL",
@@ -121,59 +159,34 @@ val FactIter_TOTAL =
 (*****************************************************************************)
 (* Use Mult_dev to refine ``DEV (UNCURRY $* )`` in FactIter_dev              *)
 (*****************************************************************************)
+
 val FactIter1_dev =
  REFINE (DEPTHR(LIB_REFINE[SUBS [MultThm] Mult_dev])) FactIter_dev;
 
 (*****************************************************************************)
 (* Use MultIter_dev to refine ``DEV MultIter`` in FactIter1_dev              *)
 (*****************************************************************************)
+
 val FactIter2_dev =
  REFINE (DEPTHR(LIB_REFINE[MultIter_dev])) FactIter1_dev;
 
 (*****************************************************************************)
-(* Lemma showing how FactIter computes factorial                             *)
-(*****************************************************************************)
-val FactIterRecThm =  (* proof from KXS *)
- save_thm
-  ("FactIterRecThm",
-   Q.prove
-    (`!n acc. SND(FactIter (n,acc)) = acc * FACT n`,
-     recInduct FactIter_ind THEN RW_TAC arith_ss []
-      THEN RW_TAC arith_ss [Once FactIter,FACT]
-      THEN Cases_on `n` 
-      THEN RW_TAC std_ss [FACT, AC MULT_ASSOC MULT_SYM]));
-
-(*****************************************************************************)
-(* Implement a function Fact to compute SND(FactIter (n,1))                  *)
-(*****************************************************************************)
-val (Fact,_,Fact_dev) =
- hwDefine
-  `Fact n = SND(FactIter (n,1))`;
-
-(*****************************************************************************)
-(* Verify Fact is indeed the factorial function                              *)
-(*****************************************************************************)
-val FactThm =
- Q.store_thm
-  ("FactThm",
-   `Fact = FACT`,
-   RW_TAC arith_ss [FUN_EQ_THM,Fact,FactIterRecThm]);
-
-(*****************************************************************************)
 (* Use FactIter2_dev to refine ``DEV FactIter`` in Fact_dev                  *)
 (*****************************************************************************)
+
 val Fact1_dev =
- REFINE (DEPTHR(LIB_REFINE[FactIter2_dev])) Fact_dev;
+  REFINE (DEPTHR(LIB_REFINE[FactIter2_dev])) Fact_dev;
 
 (*****************************************************************************)
 (* REFINE all remaining DEVs to ATM                                          *)
 (*****************************************************************************)
-val Fact2_dev =
- REFINE (DEPTHR ATM_REFINE) Fact1_dev;
+
+val Fact2_dev = REFINE (DEPTHR ATM_REFINE) Fact1_dev;
 
 (*****************************************************************************)
 (* Alternative derivation using refinement combining combinators             *)
 (*****************************************************************************)
+
 val Fact3_dev =
  REFINE
   (DEPTHR(LIB_REFINE[FactIter_dev])
@@ -185,6 +198,7 @@ val Fact3_dev =
 (*****************************************************************************)
 (* Finally, create implementation of FACT (HOL's native factorial function)  *)
 (*****************************************************************************)
+
 val FACT_dev =
  save_thm
   ("FACT_dev",
@@ -193,7 +207,7 @@ val FACT_dev =
 val FACT_net =
  save_thm
   ("Fact_net",
-   time MAKE_NETLIST FACT_dev);
+   Count.apply MAKE_NETLIST FACT_dev);
 
 val FACT_cir =
  save_thm
@@ -203,6 +217,7 @@ val FACT_cir =
 (*****************************************************************************)
 (* Print Verilog to file FACT.vl                                             *)
 (*****************************************************************************)
+
 val _ = PRINT_VERILOG FACT_cir;  (* N.B. FACT.vl overwritten by stuff below! *)
 
 (*****************************************************************************)
@@ -219,7 +234,7 @@ val _ = PRINT_VERILOG FACT_cir;  (* N.B. FACT.vl overwritten by stuff below! *)
 (*****************************************************************************)
 (* Temporary hack to work around a system prettyprinter bug                  *)
 (*****************************************************************************)
+
 val _ = temp_overload_on(" * ", numSyntax.mult_tm);
 
 val _ = export_theory();
-

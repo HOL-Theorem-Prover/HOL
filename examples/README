@@ -1,4 +1,4 @@
-This is the examples directory.
+1This is the examples directory.
 
 Currently here are the following:
 
@@ -116,3 +116,7 @@ Currently here are the following:
          "Types summer school'99: Theory and practice of formal proofs",
          Giens, France, August 30 - September 10, 1999.
 
+  * PropLogic
+
+      This file contains a development of propositional logic, up 
+      to the completeness theorem.

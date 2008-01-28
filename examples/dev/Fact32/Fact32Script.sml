@@ -1,44 +1,32 @@
 (*****************************************************************************)
-(* Theorems for word32 values needed for compile Fact32 example.             *)
+(* Factorial over 32-bit words and how it implements mathematical factorial. *)
+(* This theory doesn't deal with hardware generation at all; rather, it      *)
+(* proves a data refinement result.                                          *)
 (*****************************************************************************)
  
+(* For working interactively
+quietdec := true;
+load "wordsLib";
+open wordsLib arithmeticTheory pairLib pairTheory PairRules combinTheory;
+val _ = numLib.prefer_num();
+quietdec := false;
+*) 
+
 (*****************************************************************************) 
 (* START BOILERPLATE                                                         *) 
 (*****************************************************************************) 
-(****************************************************************************** 
-* Load theories 
-******************************************************************************) 
-(* 
-quietdec := true;
-loadPath := "../" :: "word32" :: "../dff/" :: !loadPath;
-map load
- ["metisLib","intLib","word32Theory","word32Lib",
-  "devTheory","compileTheory","compile","vsynth"];
-open metisLib word32Theory word32Lib;
-open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
-     devTheory composeTheory compileTheory compile vsynth 
-     dffTheory tempabsTheory;
-val _ = intLib.deprecate_int();
-quietdec := false;
-*) 
- 
-(****************************************************************************** 
-* Boilerplate needed for compilation 
-******************************************************************************) 
 
 (****************************************************************************** 
-* Open theories 
-******************************************************************************) 
-open HolKernel Parse boolLib bossLib; 
-open compile metisLib word32Theory word32Lib;
-open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
-     devTheory composeTheory compileTheory compile vsynth 
-     dffTheory tempabsTheory;
+ * Open theories 
+ ******************************************************************************) 
+open HolKernel Parse boolLib bossLib wordsLib 
+     wordsTheory arithmeticTheory pairLib pairTheory PairRules combinTheory;
  
 (****************************************************************************** 
-* Set default parsing to natural numbers rather than integers 
-******************************************************************************) 
-val _ = intLib.deprecate_int(); 
+ * Set default parsing to natural numbers rather than integers 
+ ******************************************************************************) 
+
+val _ = numLib.prefer_num(); 
  
 (*****************************************************************************) 
 (* END BOILERPLATE                                                           *) 
@@ -47,8 +35,12 @@ val _ = intLib.deprecate_int();
 (*****************************************************************************) 
 (* Start new theory "Fact32"                                                 *) 
 (*****************************************************************************) 
+
 val _ = new_theory "Fact32"; 
 
+(*---------------------------------------------------------------------------*)
+(* Iterative multiplication on nums                                          *)
+(*---------------------------------------------------------------------------*)
 
 val MultIter_def =
  Define
@@ -58,61 +50,71 @@ val MultIter_def =
 val MultIter_ind = fetch "-" "MultIter_ind";
 
 (*****************************************************************************)
+(* Verify that MultIter does compute multiplication                          *)
+(*****************************************************************************)
+
+val MultIterThm =                 (* proof adapted from similar one from KXS *)
+ Q.store_thm
+  ("MultIterThm",
+   `!m n acc. MultIter (m,n,acc) = (0, n, (m * n) + acc)`,
+   recInduct MultIter_ind THEN RW_TAC std_ss []
+      THEN RW_TAC arith_ss [Once MultIter_def]
+      THEN Cases_on `m` 
+      THEN FULL_SIMP_TAC arith_ss [MULT]);
+
+(*****************************************************************************)
 (* Create an implementation of a multiplier from MultIter                    *)
 (*****************************************************************************)
+
 val Mult_def =
  Define
   `Mult(m,n) = SND(SND(MultIter(m,n,0)))`;
 
 (*****************************************************************************)
-(* Verify that MultIter does compute multiplication                          *)
-(*****************************************************************************)
-val MultIterThm =                 (* proof adapted from similar one from KXS *)
- save_thm
-  ("MultIterThm",
-   prove
-    (``!m n acc. MultIter (m,n,acc) = (0, n, (m * n) + acc)``,
-     recInduct MultIter_ind THEN RW_TAC std_ss []
-      THEN RW_TAC arith_ss [Once MultIter_def]
-      THEN Cases_on `m` 
-      THEN FULL_SIMP_TAC arith_ss [MULT]));
-
-(*****************************************************************************)
 (* Verify Mult is actually multiplication                                    *)
 (*****************************************************************************)
+
 val MultThm =
- store_thm
+ Q.store_thm
   ("MultThm",
-   ``Mult = UNCURRY $*``,
+   `Mult = UNCURRY $*`,
    RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult_def,MultIterThm]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Iterative multiplication on word32s                                       *)
+(*---------------------------------------------------------------------------*)
 
 val Mult32Iter_def = 
  Define
-   `Mult32Iter (m,n,acc) =
-       if m = 0w then (0w,n,acc) else Mult32Iter(m-1w,n,n + acc)`;
+   `Mult32Iter (m:word32,n:word32,acc) =
+       if m = 0w then (0w:word32,n,acc) else Mult32Iter(m-1w,n,n + acc)`;
 
 val Mult32Iter_ind = fetch "-" "Mult32Iter_ind";
 
 (*****************************************************************************)
 (* Create an implementation of a multiplier from Mult32Iter                  *)
 (*****************************************************************************)
-val Mult32_def =
- Define
-  `Mult32(m,n) = SND(SND(Mult32Iter(m,n,0w)))`;
+
+val Mult32_def = Define `Mult32(m,n) = SND(SND(Mult32Iter(m,n,0w)))`;
+
+(*---------------------------------------------------------------------------*)
+(* Equivalence of MultIter and Mult32Iter                                    *)
+(*---------------------------------------------------------------------------*)
 
 val MultIterAbs =
- store_thm
+ Q.store_thm
   ("MultIterAbs",
-   ``!m n acc.
+   `!m n acc.
       n < 2 ** WL /\ (m * n) + acc < 2 ** WL
       ==> 
       (MultIter(m,n,acc) = 
        ((w2n ## w2n ## w2n) o Mult32Iter o (n2w ## n2w ## n2w))
-        (m,n,acc))``,
-    recInduct MultIter_ind THEN RW_TAC std_ss []
+        (m,n,acc))`,
+   recInduct MultIter_ind THEN RW_TAC std_ss []
      THEN RW_TAC arith_ss [Once MultIter_def,Once Mult32Iter_def]
      THENL
-      [CONV_TAC WORD_CONV,
+      [RW_TAC (srw_ss()) [],
        FULL_SIMP_TAC arith_ss [MULT,w2n_EVAL,MOD_WL_def,WL_def,HB_def,word_H_def],
        FULL_SIMP_TAC arith_ss [MULT,w2n_EVAL,MOD_WL_def,WL_def,HB_def,word_H_def],
        FULL_SIMP_TAC arith_ss 
@@ -136,19 +138,22 @@ val MultIterAbs =
         THEN RW_TAC arith_ss [ADD_EVAL]]);
 
 val FUN_PAIR_REDUCE =
- store_thm
+ Q.store_thm
   ("FUN_PAIR_REDUCE",
-   ``((n2w ## f) ((w2n ## g) p) = (FST p, f(g(SND p))))``,
-   Cases_on `p`
-    THEN RW_TAC std_ss [w2n_ELIM]);
+   `((n2w ## f) ((w2n ## g) p) = (FST p, f(g(SND p))))`,
+   Cases_on `p` THEN RW_TAC std_ss [w2n_ELIM]);
+
+(*---------------------------------------------------------------------------*)
+(* Equivalence of Mult32Iter and palin old multiplication.                   *)
+(*---------------------------------------------------------------------------*)
 
 val MultIterAbsCor =
- store_thm
+ Q.store_thm
   ("MultIterAbsCor",
-   ``!m n acc.
+   `!m n acc.
       (m * n) + acc < 2 ** WL
       ==> 
-      (Mult32Iter (n2w m, n2w n, n2w acc) = (0w, n2w n, (n2w m) * (n2w n) + (n2w acc)))``,
+      (Mult32Iter (n2w m,n2w n,n2w acc) = (0w,n2w n,(n2w m) * (n2w n) + (n2w acc)))`,
    RW_TAC std_ss []
     THEN IMP_RES_TAC MultIterAbs
     THEN FULL_SIMP_TAC std_ss [MultIterThm]
@@ -157,41 +162,45 @@ val MultIterAbsCor =
      [RW_TAC arith_ss [Once Mult32Iter_def,WORD_MULT_CLAUSES,WORD_ADD_CLAUSES],
       `?p. m = p+1` by PROVE_TAC[COOPER_PROVE ``~(n = 0) ==> ?p. n = p+1``]
        THEN FULL_SIMP_TAC std_ss [RIGHT_ADD_DISTRIB,MULT_CLAUSES]
-        THEN `n < 2 ** WL` by DECIDE_TAC
-        THEN RES_TAC
-        THEN POP_ASSUM(ASSUME_TAC o GSYM o AP_TERM ``n2w ## n2w ## n2w``)
-        THEN FULL_SIMP_TAC std_ss [FUN_PAIR_REDUCE, w2n_ELIM]
-        THEN RW_TAC arith_ss 
-              [GSYM MUL_EVAL, GSYM ADD_EVAL, w2n_ELIM,WORD_RIGHT_ADD_DISTRIB,WORD_MULT_CLAUSES]]);
+       THEN `n < 2 ** WL` by DECIDE_TAC
+       THEN RES_TAC
+       THEN POP_ASSUM(ASSUME_TAC o GSYM o AP_TERM ``n2w ## n2w ## n2w``)
+       THEN FULL_SIMP_TAC std_ss [FUN_PAIR_REDUCE, w2n_ELIM]
+       THEN RW_TAC arith_ss [GSYM MUL_EVAL,
+                 GSYM ADD_EVAL,w2n_ELIM,WORD_RIGHT_ADD_DISTRIB,WORD_MULT_CLAUSES]]);
 
 val MultAbs =
- store_thm
+ Q.store_thm
   ("MultAbs",
-   ``!m n.
+   `!m n.
       m * n < 2 ** WL
       ==> 
-      (Mult(m,n) = w2n(Mult32(n2w m, n2w n)))``,
+      (Mult(m,n) = w2n(Mult32(n2w m, n2w n)))`,
    RW_TAC arith_ss [Mult_def, Mult32_def,Once MultIterThm]
     THEN RW_TAC arith_ss [MultIterAbsCor,WORD_ADD_CLAUSES,MUL_EVAL,w2n_EVAL]
     THEN PROVE_TAC[MOD_WL_IDEM,LT_WL_def]);
 
 val MultAbsCor1 =
- store_thm
+ Q.store_thm
   ("MultAbsCor1",
-   ``!m n.
+   `!m n.
       m * n < 2 ** WL
       ==> 
-      (m * n = w2n(Mult32(n2w m, n2w n)))``,
+      (m * n = w2n(Mult32(n2w m, n2w n)))`,
    RW_TAC arith_ss [SIMP_RULE std_ss [MultThm] MultAbs]);
 
 val MultAbsCor2 =
- store_thm
+ Q.store_thm
   ("MultAbsCor2",
-   ``!m n.
+   `!m n.
       m * n < 2 ** WL
       ==> 
-      (Mult32(n2w m, n2w n) = n2w m * n2w n)``,
+      (Mult32(n2w m, n2w n) = n2w m * n2w n)`,
    PROVE_TAC[w2n_ELIM,MUL_EVAL,MultAbsCor1]);
+
+(*---------------------------------------------------------------------------*)
+(* Iterative factorial on nums                                               *)
+(*---------------------------------------------------------------------------*)
 
 val FactIter_def = 
  Define
@@ -203,35 +212,36 @@ val FactIter_ind = fetch "-" "FactIter_ind";
 (*****************************************************************************)
 (* Lemma showing how FactIter computes factorial                             *)
 (*****************************************************************************)
+
 val FactIterThm =                                       (* proof from KXS *)
- save_thm
+ Q.store_thm
   ("FactIterThm",
-   prove
-    (``!n acc. FactIter (n,acc) = (0, acc * FACT n)``,
-     recInduct FactIter_ind THEN RW_TAC arith_ss []
-      THEN RW_TAC arith_ss [Once FactIter_def,FACT]
-      THEN Cases_on `n` 
-      THEN FULL_SIMP_TAC arith_ss [FACT]));
+   `!n acc. FactIter (n,acc) = (0, acc * FACT n)`,
+   recInduct FactIter_ind THEN RW_TAC arith_ss []
+     THEN RW_TAC arith_ss [Once FactIter_def,FACT]
+     THEN Cases_on `n` 
+     THEN FULL_SIMP_TAC arith_ss [FACT]));
 
 (*****************************************************************************)
-(* Implement iterative function as a step to implementing factorial          *)
+(* Iterative factorial on word32                                             *)
 (*****************************************************************************)
+
 val Fact32Iter_def = 
  Define
    `Fact32Iter (n,acc) =
        if n = 0w then (n,acc) else Fact32Iter(n-1w, Mult32(n,acc))`;
 
 val FACT_0 =
- store_thm
+ Q.store_thm
   ("FACT_0",
-   ``!n. 0 < FACT n``,
+   `!n. 0 < FACT n`,
    Induct
     THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]);
 
 val FACT_LESS_EQ =
- store_thm
+ Q.store_thm
   ("FACT_LESS_EQ",
-   ``!n. n <= FACT n``,
+   `!n. n <= FACT n`,
    Induct
     THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]
     THEN `0 < FACT n` by PROVE_TAC[FACT_0]
@@ -239,9 +249,9 @@ val FACT_LESS_EQ =
     THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]);
 
 val FACT_LESS =
- store_thm
+ Q.store_thm
   ("FACT_LESS",
-   ``!n. (n = 0) \/ (n = 1) \/ (n = 2) \/ n < FACT n``,
+   `!n. (n = 0) \/ (n = 1) \/ (n = 2) \/ n < FACT n`,
    Induct
     THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]
     THEN CONV_TAC EVAL
@@ -250,20 +260,24 @@ val FACT_LESS =
     THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]);
 
 val MULT_LESS_LEMMA =
- store_thm
+ Q.store_thm
   ("MULT_LESS_LEMMA",
-   ``!n. 0 < n ==>  m <= m * n``,
+   `!n. 0 < n ==>  m <= m * n`,
    Induct
     THEN RW_TAC arith_ss [MULT_CLAUSES]);
 
+(*---------------------------------------------------------------------------*)
+(* Equivalence of FactIter and Fact32Iter                                    *)
+(*---------------------------------------------------------------------------*)
+
 val FactIterAbs =
- store_thm
+ Q.store_thm
   ("FactIterAbs",
-   ``!n acc.
+   `!n acc.
       acc * FACT n < 2 ** WL
       ==> 
       (FactIter(n,acc) = 
-       (w2n ## w2n)(Fact32Iter((n2w ## n2w)(n,acc))))``,
+       (w2n ## w2n)(Fact32Iter((n2w ## n2w)(n,acc))))`,
     recInduct FactIter_ind THEN RW_TAC std_ss []
      THEN RW_TAC arith_ss [Once FactIter_def,Once Fact32Iter_def]
      THEN FULL_SIMP_TAC arith_ss [FACT]
@@ -302,23 +316,23 @@ val FactIterAbs =
 (*****************************************************************************)
 (* Lemma showing how FactIter computes factorial                             *)
 (*****************************************************************************)
+
 val FactIterThm =                                       (* proof from KXS *)
- save_thm
+ Q.store_thm
   ("FactIterThm",
-   prove
-    (``!n acc. FactIter (n,acc) = (0, acc * FACT n)``,
+   `!n acc. FactIter (n,acc) = (0, acc * FACT n)`,
      recInduct FactIter_ind THEN RW_TAC arith_ss []
       THEN RW_TAC arith_ss [Once FactIter_def,FACT]
       THEN Cases_on `n` 
       THEN FULL_SIMP_TAC arith_ss [FACT]));
 
 val FactIterAbsCor =
- store_thm
+ Q.store_thm
   ("FactIterAbsCor",
-   ``!m n acc.
+   `!m n acc.
       acc * FACT n < 2 ** WL
       ==>
-      (Fact32Iter (n2w n, n2w acc) = (0w, n2w acc * n2w(FACT n)))``,
+      (Fact32Iter (n2w n, n2w acc) = (0w, n2w acc * n2w(FACT n)))`,
    RW_TAC std_ss []
     THEN IMP_RES_TAC FactIterAbs
     THEN POP_ASSUM(ASSUME_TAC o GSYM o AP_TERM ``n2w ## n2w``)
@@ -327,14 +341,15 @@ val FactIterAbsCor =
 (*****************************************************************************)
 (* Implement a function Fact32 to compute SND(Fact32Iter (n,1))              *)
 (*****************************************************************************)
+
 val Fact32_def =
  Define
   `Fact32 n = SND(Fact32Iter (n,1w))`;
 
 val FactAbs =
- store_thm
+ Q.store_thm
   ("FactAbs",
-   ``!n. FACT n < 2 ** WL ==> (FACT n = w2n(Fact32(n2w n)))``,
+   `!n. FACT n < 2 ** WL ==> (FACT n = w2n(Fact32(n2w n)))`,
    RW_TAC arith_ss [Fact32_def,Once Fact32Iter_def]
     THENL
      [CONV_TAC WORD_CONV
@@ -357,7 +372,7 @@ val FactAbs =
        THEN RW_TAC arith_ss [w2n_EVAL,MOD_WL_def]]);
 
 (*
-|- FACT 12 < 2 ** WL = T : thm 
-|- FACT 13 < 2 ** WL = F : thm 
+  |- FACT 12 < 2 ** WL = T : thm 
+  |- FACT 13 < 2 ** WL = F : thm 
 *)
 val _ = export_theory();

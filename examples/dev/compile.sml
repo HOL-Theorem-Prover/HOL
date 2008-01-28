@@ -2260,6 +2260,7 @@ val NEW_MAKE_CIRCUIT =
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
     Ite_def,Par_def,Seq_def,Let_def,o_THM])));
 
+
 val NEW_MAKE_CIRCUIT' =
  (DISCH_ALL o
   (ptime "15" LIST_ANTE_EXISTS_INTRO)                                        o 
@@ -2291,7 +2292,6 @@ val NEW_MAKE_CIRCUIT' =
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
     Ite_def,Par_def,Seq_def,Let_def,o_THM])));
-
 
 
 val NEW_MAKE_CIRCUIT'' =
@@ -2341,6 +2341,7 @@ fun EXPAND_COMPONENTS th = (* Eta expanded to block !hwDefineLib evaluation  *)
 (* Invoke hwDefine and then apply MAKE_CIRCUIT, EXPAND_COMPONENTS and        *)
 (* REFINE_ALL to the device                                                  *)
 (*****************************************************************************)
+
 fun cirDefine qdef =
  let val (def,ind,dev) = hwDefine qdef
  in
