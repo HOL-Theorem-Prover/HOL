@@ -360,7 +360,6 @@ val ARM_FAC_PROGRAM = let
   val th = (MOVE_POST1 `S` o MOVE_POST1 `R b`) th
 in th end;
 
-make_spec ["add r1,r2,r3","rsb r3,r2,r1","mul r2,r3,r2"];
 
 (* verified implementations:
 

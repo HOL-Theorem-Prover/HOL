@@ -414,14 +414,6 @@ val (fac32_def,_,fac32_arm) = test_compile `
     let r0 = r1 in
       r0`;
 
-val (fac32_def,_,fac32_arm) = test_compile `
-  fac32 (r0:word32) =
-    let r1 = 1w in
-    let r1 = fac32_acc (r0:word32,r1:word32) in
-    let r1 = fac32_acc (r0:word32,r1:word32) in
-    let r0 = r1 in
-      r0`;
-
 (* Here fac32_acc was compiled using the option "SimpleProcedure", which means 
    that it will keep the return address in the link register (register 14) 
    rather than push it onto the stack. Functions compiled with the option 
