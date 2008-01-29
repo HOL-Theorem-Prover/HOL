@@ -149,6 +149,9 @@ val NRC = new_recursive_definition {
   def = ``(NRC R 0 x y = (x = y)) /\ 
           (NRC R (SUC n) x y = ?z. R x z /\ NRC R n z y)``};
 
+val _ = overload_on ("RELPOW", ``NRC``)
+val _ = overload_on ("NRC", ``NRC``)
+
 (*---------------------------------------------------------------------------
                         THEOREMS
  ---------------------------------------------------------------------------*)
