@@ -81,7 +81,8 @@ C. Enter the "tools" directory and type
 
    for example. The OS, holdir and mosmldir parameters must be given
    as ML strings, while dynlib_available must be an ML boolean (either
-   true or false).
+   true or false).  The value for mosmldir must be the directory
+   containing the Moscow ML executables (mosml, mosmlc, etc).
 
    The valid values for OS are "linux", "unix", "solaris", "macosx"
    and "winNT".  If you are on a unix operating system that is not
@@ -118,8 +119,8 @@ D. Now perform the following shell command:
    forcing any subsequent builds to rebuild everything, regardless of
    where changes might have occurred.
 
-E. If bin/build completes, successfully, you are done. From <hol-dir>
-   you can now access
+E. If bin/build completes (it takes a while!), successfully, you are
+   done. From <hol-dir> you can now access
 
       bin/hol              * The standard HOL interactive system;
       bin/hol.noquote      * The interactive system with quote
