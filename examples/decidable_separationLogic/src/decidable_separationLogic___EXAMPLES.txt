@@ -1,3 +1,7 @@
+(*This is an example file. It is intended to be executed interactively. It will not 
+compile due to syntax errors!*)
+
+
 open HolKernel Parse boolLib bossLib;
 
 (*
