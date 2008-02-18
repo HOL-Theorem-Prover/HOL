@@ -56,6 +56,7 @@ src/num/termination
 src/num/extra_theories
 src/num
 src/IndDef
+src/pred_set/src
 src/datatype/equiv
 src/datatype/record
 src/datatype
@@ -70,7 +71,6 @@ src/boss
 src/sort
 src/string
 !examples/ind_def
-src/pred_set/src
 src/res_quan/src
 src/quotient/src
 src/finite_map

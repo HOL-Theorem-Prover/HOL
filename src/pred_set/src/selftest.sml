@@ -1,6 +1,6 @@
 open HolKernel boolLib Parse PFset_conv
 
-val s = IMAGE_CONV bossLib.EVAL NO_CONV
+val s = IMAGE_CONV computeLib.EVAL_CONV NO_CONV
 
 fun test (problem, result) = let
   val padr = StringCvt.padRight #" "

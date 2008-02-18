@@ -14,6 +14,7 @@ val _ = new_theory "finite_developments";
 fun Save_Thm(n, th) = save_thm(n,th) before export_rewrites [n]
 fun Store_Thm(n, t, tac) = store_thm(n, t, tac) before export_rewrites [n]
 
+val _ = hide "set"
 
 val RUNION_COMM = relationTheory.RUNION_COMM
 val RUNION = relationTheory.RUNION

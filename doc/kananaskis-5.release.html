@@ -271,6 +271,28 @@ of your own using the names <code>TAKE</code>
 and <code>DROP</code>.</p>
 </li>
 
+<li> <p> The <code>SET_TO_LIST</code> constant is now defined
+in <code>listTheory</code> (moved from <code>containerTheory</code>),
+which now depends on the theory of sets (<code>pred_setTheory</code>).
+The <code>LIST_TO_SET</code> constant is now also overloaded to the
+easier-to-type name <code>set</code>.  A number of theorems about both
+functions are now in <code>listTheory</code>, and because the theory
+of lists depends on that of sets, so too does the standard HOL
+environment loaded by <code>bossLib</code>.  All of the theorems
+from <code>containerTheory</code> are still accessible in the same
+place, even though they are now just copies of theorems proved
+in <code>listTheory</code>.</p>
+
+<p>If the presence of a constant called <code>set</code> causes pain
+because you have used the same string as a variable name and don't
+wish to change it, the constant
+can be hidden, and the interference halted, by
+using <code>hide</code>:</p>
+<pre>
+         hide "set";
+</pre>
+</li>
+
 </ul>
 
 

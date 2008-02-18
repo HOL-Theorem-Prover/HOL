@@ -70,7 +70,7 @@ val IN_swapset_lemma = prove(
   SRW_TAC [][swapset_def, swapstr_def] THEN METIS_TAC []);
 
 val swapstr_IN_swapset0 = prove(
-  ``swapstr x y s IN swapset x y set = s IN set``,
+  ``swapstr x y s IN swapset x y Set = s IN Set``,
   SIMP_TAC (srw_ss()) [IN_swapset_lemma] THEN
   MAP_EVERY Cases_on [`s = x`, `s = y`] THEN SRW_TAC [][] THEN
   SRW_TAC [][swapstr_def]);
