@@ -861,10 +861,14 @@ local
              word_extract_def,word_bits_def,word_slice_def,word_bit_def]
   val thms = [WORD_ADD_LEFT_LO, WORD_ADD_LEFT_LS,
               WORD_ADD_RIGHT_LS, WORD_ADD_RIGHT_LO]
+  val thms2 = map (GEN_ALL o SPEC `n2w n`)
+               [WORD_ADD_LEFT_LO2, WORD_ADD_LEFT_LS2,
+                WORD_ADD_RIGHT_LO2, WORD_ADD_RIGHT_LS2]
   val rw3 = [WORD_LT_LO, WORD_LE_LS, WORD_GREATER, WORD_GREATER_EQ,
              CONV_RULE WORD_ARITH_CONV WORD_LS_T,
              CONV_RULE WORD_ARITH_CONV WORD_LESS_EQ_H] @
-             map (SPECL [`n2w m`, `n2w n`]) thms
+             map (SPECL [`n2w m`, `n2w n`]) thms @
+             thms2 @ map (ONCE_REWRITE_RULE [WORD_ADD_COMM]) thms2
   val rw4 = [SPECL [`w`,`n2w m`, `n2w n`] WORD_ADD_EQ_SUB,
              SPECL [`w`,`$- (n2w m)`, `n2w n`] WORD_ADD_EQ_SUB,
              REWRITE_RULE [GSYM w2n_11, word_0_n2w] NOT_INT_MIN_ZERO,
