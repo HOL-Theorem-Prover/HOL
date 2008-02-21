@@ -31,6 +31,8 @@ val op \\ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
 
+val _ = Parse.hide "set";
+
 val arm_state_type = ``:'a arm_sys_state``;
 
 val ARMel_type = ``:'a ARMel``;

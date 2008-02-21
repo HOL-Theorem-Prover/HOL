@@ -39,9 +39,9 @@ val INFINITE_UNIV___STRING = store_thm ("INFINITE_UNIV___STRING",
 
 SIMP_TAC std_ss [INFINITE_UNIV] THEN
 Q.EXISTS_TAC `STRING c` THEN
-SIMP_TAC std_ss [stringTheory.STRING_11] THEN
+SIMP_TAC std_ss [stringTheory.string_11] THEN
 Q.EXISTS_TAC `""` THEN
-SIMP_TAC std_ss [stringTheory.STRING_DISTINCT]);
+SIMP_TAC std_ss [stringTheory.string_distinct]);
 
 
 

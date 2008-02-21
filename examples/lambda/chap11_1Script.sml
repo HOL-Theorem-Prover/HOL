@@ -24,8 +24,8 @@ val lsize_supp_lemma = prove(
   ``supp (fnpm (pairpm (K I) ltpm) (pairpm (K I) ltpm))
          (\aN. f (FST aN), LAMi n v M (SND aN)) =
     FV M DELETE v``,
-  Q.MATCH_ABBREV_TAC `supp p g = set` THEN
-  `support p g set`
+  Q.MATCH_ABBREV_TAC `supp p g = Set` THEN
+  `support p g Set`
      by (Q.UNABBREV_ALL_TAC THEN
          SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM] THEN
          SRW_TAC [][lLAMi_eq_thm, basic_swapTheory.swapstr_def] THEN

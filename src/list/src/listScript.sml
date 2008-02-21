@@ -25,7 +25,7 @@ struct
  * are "arithmetic" and "pair".                                              *
  *---------------------------------------------------------------------------*)
 
-local open arithmeticTheory pairTheory in end;
+local open arithmeticTheory pairTheory pred_setTheory in end;
 
 
 (*---------------------------------------------------------------------------
@@ -1184,6 +1184,122 @@ val REVERSE_REV = Q.store_thm
 ("REVERSE_REV",
  `!L. REVERSE L = REV L []`,
  PROVE_TAC [REV_REVERSE_LEM,APPEND_NIL]);
+
+
+(* ----------------------------------------------------------------------
+    Theorems relating (finite) sets and lists
+   ---------------------------------------------------------------------- *)
+
+open pred_setTheory
+val _ = Defn.def_suffix := "";
+
+(*---------------------------------------------------------------------------
+       Map finite sets into lists.
+ ---------------------------------------------------------------------------*)
+
+val SET_TO_LIST_defn = Defn.Hol_defn "SET_TO_LIST"
+  `SET_TO_LIST s =
+     if FINITE s then
+        if s={} then []
+        else CHOICE s :: SET_TO_LIST (REST s)
+     else ARB`;
+
+(*---------------------------------------------------------------------------
+       Termination of SET_TO_LIST.
+ ---------------------------------------------------------------------------*)
+
+val (SET_TO_LIST_EQN, SET_TO_LIST_IND) =
+ Defn.tprove (SET_TO_LIST_defn,
+   TotalDefn.WF_REL_TAC `measure CARD` THEN
+   PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
+
+(*---------------------------------------------------------------------------
+      Desired recursion equation.
+
+      FINITE s |- SET_TO_LIST s = if s = {} then []
+                               else CHOICE s::SET_TO_LIST (REST s)
+
+ ---------------------------------------------------------------------------*)
+
+val SET_TO_LIST_THM = save_thm("SET_TO_LIST_THM",
+ DISCH_ALL (ASM_REWRITE_RULE [ASSUME ``FINITE s``] SET_TO_LIST_EQN));
+
+val SET_TO_LIST_IND = save_thm("SET_TO_LIST_IND",SET_TO_LIST_IND);
+
+val LIST_TO_SET_THM = Q.store_thm
+("LIST_TO_SET_THM",
+ `(LIST_TO_SET []     = {}) /\
+  (LIST_TO_SET (h::t) = h INSERT (LIST_TO_SET t))`,
+ SRW_TAC [][EXTENSION]);
+
+val _ = export_rewrites ["LIST_TO_SET_THM"];
+
+
+(*---------------------------------------------------------------------------
+            Some consequences
+ ---------------------------------------------------------------------------*)
+
+val SET_TO_LIST_INV = Q.store_thm("SET_TO_LIST_INV",
+`!s. FINITE s ==> (LIST_TO_SET(SET_TO_LIST s) = s)`,
+ recInduct SET_TO_LIST_IND
+   THEN RW_TAC bool_ss []
+   THEN ONCE_REWRITE_TAC [UNDISCH SET_TO_LIST_THM]
+   THEN RW_TAC bool_ss [LIST_TO_SET_THM]
+   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, CHOICE_INSERT_REST]);
+
+val SET_TO_LIST_CARD = Q.store_thm("SET_TO_LIST_CARD",
+`!s. FINITE s ==> (LENGTH (SET_TO_LIST s) = CARD s)`,
+ recInduct SET_TO_LIST_IND
+   THEN REPEAT STRIP_TAC
+   THEN SRW_TAC [][Once (UNDISCH SET_TO_LIST_THM)]
+   THEN `FINITE (REST s)` by METIS_TAC [REST_DEF,FINITE_DELETE]
+   THEN `~(CARD s = 0)` by METIS_TAC [CARD_EQ_0]
+   THEN SRW_TAC [numSimps.ARITH_ss][REST_DEF, CHOICE_DEF]);
+
+val SET_TO_LIST_IN_MEM = Q.store_thm("SET_TO_LIST_IN_MEM",
+`!s. FINITE s ==> !x. x IN s = MEM x (SET_TO_LIST s)`,
+ recInduct SET_TO_LIST_IND
+   THEN RW_TAC bool_ss []
+   THEN ONCE_REWRITE_TAC [UNDISCH SET_TO_LIST_THM]
+   THEN RW_TAC bool_ss [MEM,NOT_IN_EMPTY]
+   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, IN_INSERT, CHOICE_INSERT_REST]);
+
+(* this version of the above is a more likely rewrite: a complicated LHS
+   turns into a simple RHS *)
+val MEM_SET_TO_LIST = Q.store_thm("MEM_SET_TO_LIST",
+`!s. FINITE s ==> !x. MEM x (SET_TO_LIST s) = x IN s`,
+ METIS_TAC [SET_TO_LIST_IN_MEM]);
+val _ = export_rewrites ["MEM_SET_TO_LIST"];
+
+val SET_TO_LIST_SING = store_thm(
+  "SET_TO_LIST_SING",
+  ``SET_TO_LIST {x} = [x]``,
+  SRW_TAC [][SET_TO_LIST_THM]);
+val _ = export_rewrites ["SET_TO_LIST_SING"]
+
+val UNION_APPEND = Q.store_thm
+ ("UNION_APPEND",
+  `!l1 l2.
+     (LIST_TO_SET l1) UNION (LIST_TO_SET l2) = LIST_TO_SET (APPEND l1 l2)`,
+  Induct
+   THEN RW_TAC bool_ss [LIST_TO_SET_THM,UNION_EMPTY,APPEND]
+   THEN PROVE_TAC [INSERT_UNION_EQ]);
+
+(* I think this version is the more likely rewrite *)
+val LIST_TO_SET_APPEND = Q.store_thm
+("LIST_TO_SET_APPEND",
+ `!l1 l2. LIST_TO_SET (APPEND l1 l2) = LIST_TO_SET l1 UNION LIST_TO_SET l2`,
+ REWRITE_TAC [UNION_APPEND]);
+val _ = export_rewrites ["LIST_TO_SET_APPEND"]
+
+val FINITE_LIST_TO_SET = Q.store_thm
+("FINITE_LIST_TO_SET",
+ `!l. FINITE (LIST_TO_SET l)`,
+ Induct THEN SRW_TAC [][]);
+
+val _ = export_rewrites ["FINITE_LIST_TO_SET"];
+val _ = overload_on ("set", ``LIST_TO_SET : 'a list -> 'a set``);
+
 
 (* --------------------------------------------------------------------- *)
 

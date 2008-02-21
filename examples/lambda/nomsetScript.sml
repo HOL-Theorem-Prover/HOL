@@ -272,7 +272,7 @@ val perm_UNION = store_thm(
 
 val perm_DIFF = store_thm(
   "perm_DIFF",
-  ``is_perm pm ==> (setpm pm pi (s DIFF t) = 
+  ``is_perm pm ==> (setpm pm pi (s DIFF t) =
                     setpm pm pi s DIFF setpm pm pi t)``,
   SRW_TAC [][EXTENSION, perm_IN]);
 
@@ -558,14 +558,14 @@ val supp_apart = store_thm(
 (* lemma3_4_i from Pitts & Gabbay - New Approach to Abstract Syntax *)
 val supp_smallest = store_thm(
   "supp_smallest",
-  ``is_perm pm /\ support pm x set /\ FINITE set ==> supp pm x SUBSET set``,
+  ``is_perm pm /\ support pm x s /\ FINITE s ==> supp pm x SUBSET s``,
   REPEAT STRIP_TAC THEN
   REWRITE_TAC [SUBSET_DEF] THEN
   Q.X_GEN_TAC `a` THEN
   SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
-  `!b. ~(b IN set) ==> (pm [(a,b)] x = x)`
+  `!b. ~(b IN s) ==> (pm [(a,b)] x = x)`
      by METIS_TAC [support_def] THEN
-  `{b | ~(pm [(a,b)] x = x)} SUBSET set`
+  `{b | ~(pm [(a,b)] x = x)} SUBSET s`
      by (SRW_TAC [][SUBSET_DEF] THEN METIS_TAC []) THEN
   `FINITE {b | ~(pm [(a,b)] x = x)}` by METIS_TAC [SUBSET_FINITE] THEN
   FULL_SIMP_TAC (srw_ss()) [supp_def, INFINITE_DEF]);
@@ -580,9 +580,9 @@ val lemma = prove(
 
 val supp_unique = store_thm(
   "supp_unique",
-  ``is_perm pm /\ support pm x set /\ FINITE set /\
-    (!s'. support pm x s' /\ FINITE s' ==> set SUBSET s') ==>
-    (supp pm x = set)``,
+  ``is_perm pm /\ support pm x s /\ FINITE s /\
+    (!s'. support pm x s' /\ FINITE s' ==> s SUBSET s') ==>
+    (supp pm x = s)``,
   SRW_TAC [][] THEN
   `FINITE (supp pm x)` by METIS_TAC [supp_smallest, SUBSET_FINITE] THEN
   `support pm x (supp pm x)` by METIS_TAC [supp_supports] THEN
@@ -666,84 +666,84 @@ val perm_of_unchanged = store_thm(
   Induct THEN SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD] THEN
   SRW_TAC [][swapstr_def]);
 
-val patoms_APPEND = store_thm( 
+val patoms_APPEND = store_thm(
   "patoms_APPEND",
   ``patoms (x ++ y) = patoms x UNION patoms y``,
-  Induct_on `x` THEN 
-  ASM_SIMP_TAC (srw_ss()) [EXTENSION, 
-                           pairTheory.FORALL_PROD] THEN 
+  Induct_on `x` THEN
+  ASM_SIMP_TAC (srw_ss()) [EXTENSION,
+                           pairTheory.FORALL_PROD] THEN
   METIS_TAC []);
 
 val patoms_REVERSE = store_thm(
   "patoms_REVERSE",
   ``patoms (REVERSE pi) = patoms pi``,
-  Induct_on `pi` THEN 
-  ASM_SIMP_TAC (srw_ss()) [EXTENSION, pairTheory.FORALL_PROD, 
+  Induct_on `pi` THEN
+  ASM_SIMP_TAC (srw_ss()) [EXTENSION, pairTheory.FORALL_PROD,
                            patoms_APPEND] THEN METIS_TAC []);
 
 
 val pm_cpmpm_cancel = prove(
-  ``is_perm pm ==> 
+  ``is_perm pm ==>
      (pm [(x,y)] (pm (cpmpm [(x,y)] pi) (pm [(x,y)] t)) = pm pi t)``,
-  STRIP_TAC THEN Induct_on `pi` THEN 
-  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, is_perm_nil, 
-                           is_perm_sing_inv] THEN 
-  `!p q pi t. pm ((swapstr x y p, swapstr x y q)::pi) t = 
+  STRIP_TAC THEN Induct_on `pi` THEN
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, is_perm_nil,
+                           is_perm_sing_inv] THEN
+  `!p q pi t. pm ((swapstr x y p, swapstr x y q)::pi) t =
               pm [(swapstr x y p, swapstr x y q)] (pm pi t)`
-     by SRW_TAC [][GSYM is_perm_decompose] THEN 
-  REPEAT GEN_TAC THEN 
-  POP_ASSUM (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) THEN 
-  ONCE_REWRITE_TAC [MP (GSYM is_perm_sing_to_back) 
-                       (ASSUME ``is_perm pm``)] THEN 
-  SRW_TAC [][] THEN 
+     by SRW_TAC [][GSYM is_perm_decompose] THEN
+  REPEAT GEN_TAC THEN
+  POP_ASSUM (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) THEN
+  ONCE_REWRITE_TAC [MP (GSYM is_perm_sing_to_back)
+                       (ASSUME ``is_perm pm``)] THEN
+  SRW_TAC [][] THEN
   SRW_TAC [][GSYM is_perm_decompose]);
-  
+
 val is_perm_supp_empty = store_thm(
   "is_perm_supp_empty",
   ``is_perm pm ==> (supp (fnpm cpmpm (fnpm pm pm)) pm = {})``,
-  STRIP_TAC THEN MATCH_MP_TAC supp_unique_apart THEN SRW_TAC [][] THEN 
+  STRIP_TAC THEN MATCH_MP_TAC supp_unique_apart THEN SRW_TAC [][] THEN
   SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, pm_cpmpm_cancel]);
 
 val supp_pm_fresh = store_thm(
   "supp_pm_fresh",
   ``is_perm pm /\ (supp pm x = {}) ==> (pm pi x = x)``,
-  Induct_on `pi` THEN 
-  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, is_perm_nil] THEN 
-  REPEAT STRIP_TAC THEN 
+  Induct_on `pi` THEN
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, is_perm_nil] THEN
+  REPEAT STRIP_TAC THEN
   `pm ((p_1,p_2)::pi) x = pm [(p_1,p_2)] (pm pi x)`
-     by SIMP_TAC (srw_ss()) [GSYM is_perm_decompose, 
-                             ASSUME ``is_perm pm``] THEN 
+     by SIMP_TAC (srw_ss()) [GSYM is_perm_decompose,
+                             ASSUME ``is_perm pm``] THEN
   SRW_TAC [][supp_fresh]);
 
 val pm_pm_cpmpm = store_thm(
   "pm_pm_cpmpm",
-  ``is_perm pm ==> 
+  ``is_perm pm ==>
         (pm pi1 (pm pi2 s) = pm (cpmpm pi1 pi2) (pm pi1 s))``,
-  STRIP_TAC THEN Q.MATCH_ABBREV_TAC `L = R` THEN 
+  STRIP_TAC THEN Q.MATCH_ABBREV_TAC `L = R` THEN
   `L = fnpm pm pm pi1 (pm pi2) (pm pi1 s)`
-     by SRW_TAC [][fnpm_def, is_perm_inverse] THEN 
-  `_ = fnpm cpmpm 
-            (fnpm pm pm) 
-            pi1 
+     by SRW_TAC [][fnpm_def, is_perm_inverse] THEN
+  `_ = fnpm cpmpm
+            (fnpm pm pm)
+            pi1
             pm
-            (cpmpm pi1 pi2) 
+            (cpmpm pi1 pi2)
             (pm pi1 s)`
-     by (ONCE_REWRITE_TAC [fnpm_def] THEN 
-         ONCE_REWRITE_TAC [fnpm_def] THEN 
-         SRW_TAC [][is_perm_inverse]) THEN 
+     by (ONCE_REWRITE_TAC [fnpm_def] THEN
+         ONCE_REWRITE_TAC [fnpm_def] THEN
+         SRW_TAC [][is_perm_inverse]) THEN
   `fnpm cpmpm (fnpm pm pm) pi1 pm = pm`
-     by SRW_TAC [][supp_pm_fresh, is_perm_supp_empty] THEN 
+     by SRW_TAC [][supp_pm_fresh, is_perm_supp_empty] THEN
   METIS_TAC []);
 
 val lswapstr_lswapstr_cpmpm = save_thm(
   "lswapstr_lswapstr_cpmpm",
-  (SIMP_RULE (srw_ss()) []  o Q.INST [`pm` |-> `lswapstr`] o 
+  (SIMP_RULE (srw_ss()) []  o Q.INST [`pm` |-> `lswapstr`] o
    INST_TYPE [alpha |-> ``:string``]) pm_pm_cpmpm);
 
 val patoms_cpmpm = store_thm(
   "patoms_cpmpm",
   ``patoms (cpmpm pi1 pi2) = setpm lswapstr pi1 (patoms pi2)``,
-  SIMP_TAC bool_ss [GSYM supp_cpmpm] THEN MATCH_MP_TAC perm_supp THEN 
+  SIMP_TAC bool_ss [GSYM supp_cpmpm] THEN MATCH_MP_TAC perm_supp THEN
   SRW_TAC [][]);
 
 (* support for honest to goodness permutations, not just their

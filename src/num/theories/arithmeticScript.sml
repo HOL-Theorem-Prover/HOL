@@ -143,6 +143,14 @@ val FUNPOW = new_recursive_definition
     def = --`(FUNPOW f 0 x = x) /\
              (FUNPOW f (SUC n) x = FUNPOW f n (f x))`--};
 
+val NRC = new_recursive_definition { 
+  name = "NRC",
+  rec_axiom = num_Axiom,
+  def = ``(NRC R 0 x y = (x = y)) /\ 
+          (NRC R (SUC n) x y = ?z. R x z /\ NRC R n z y)``};
+
+val _ = overload_on ("RELPOW", ``NRC``)
+val _ = overload_on ("NRC", ``NRC``)
 
 (*---------------------------------------------------------------------------
                         THEOREMS
@@ -3056,6 +3064,47 @@ val FUNPOW_SUC = store_thm
    THENL [REWRITE_TAC [FUNPOW],
           ONCE_REWRITE_TAC [FUNPOW]
           THEN ASM_REWRITE_TAC []]);
+
+val NRC_0 = save_thm("NRC_0", CONJUNCT1 NRC);
+val _ = export_rewrites ["NRC_0"]
+
+val NRC_1 = store_thm(
+  "NRC_1",
+  ``NRC R 1 x y = R x y``,
+  SRW_TAC [][ONE, NRC]);
+val _ = export_rewrites ["NRC_1"]
+  
+val NRC_ADD_I = store_thm(
+  "NRC_ADD_I",
+  ``!m n x y z. NRC R m x y /\ NRC R n y z ==> NRC R (m + n) x z``,
+  INDUCT_TAC THEN SRW_TAC [][NRC, ADD] THEN METIS_TAC []);
+
+val NRC_ADD_E = store_thm(
+  "NRC_ADD_E",
+  ``!m n x z. NRC R (m + n) x z ==> ?y. NRC R m x y /\ NRC R n y z``,
+  INDUCT_TAC THEN SRW_TAC [][NRC, ADD] THEN METIS_TAC []);
+
+val NRC_ADD_EQN = store_thm(
+  "NRC_ADD_EQN",
+  ``NRC R (m + n) x z = ?y. NRC R m x y /\ NRC R n y z``,
+  METIS_TAC [NRC_ADD_I, NRC_ADD_E]);
+
+val NRC_SUC_RECURSE_LEFT = store_thm(
+  "NRC_SUC_RECURSE_LEFT",
+  ``NRC R (SUC n) x y = ?z. NRC R n x z /\ R z y``,
+  METIS_TAC [NRC_1, NRC_ADD_EQN, ADD1]);
+  
+val NRC_RTC = store_thm(
+  "NRC_RTC",
+  ``!n x y. NRC R n x y ==> RTC R x y``,
+  INDUCT_TAC THEN SRW_TAC [][NRC, relationTheory.RTC_RULES] THEN 
+  METIS_TAC [relationTheory.RTC_RULES]);
+
+val RTC_NRC = store_thm(
+  "RTC_NRC",
+  ``!x y. RTC R x y ==> ?n. NRC R n x y``,
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN 
+  PROVE_TAC [NRC] (* METIS_TAC bombs *));
 
 val LESS_EQUAL_DIFF = store_thm
   ("LESS_EQUAL_DIFF",

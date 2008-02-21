@@ -2976,6 +2976,62 @@ val WORD_LT_LO = save_thm("WORD_LT_LO",
 val WORD_LE_LS = save_thm("WORD_LE_LS",
   SIMP_RULE std_ss [WORD_MSB_INT_MIN_LS, WORD_NOT_LOWER_EQUAL] WORD_LE_LS);
 
+val WORD_LESS_NEG_LEFT = store_thm("WORD_LESS_NEG_LEFT",
+  `!a b. $- a <+ b = ~(b = 0w) /\ ((a = 0w) \/ $- b <+ a)`,
+  SRW_TAC [ARITH_ss, boolSimps.LET_ss] [word_lo_def, nzcv_def]
+    \\ Cases_on `a = 0w` \\ Cases_on `b = 0w`
+    \\ SRW_TAC [] [WORD_NEG_0, word_0_n2w]
+    \\ SPEC_THEN `$- b` ASSUME_TAC w2n_lt
+    \\ FULL_SIMP_TAC std_ss [dimword_def, bitTheory.NOT_BIT_GT_TWOEXP]);
+
+val WORD_LESS_NEG_RIGHT = store_thm("WORD_LESS_NEG_RIGHT",
+  `!a b. a <+ $- b = ~(b = 0w) /\ ((a = 0w) \/ b <+ $- a)`,
+  SRW_TAC [ARITH_ss, boolSimps.LET_ss]
+        [WORD_NEG_NEG, WORD_NEG_EQ_0, word_lo_def, nzcv_def]
+    \\ Cases_on `a = 0w` \\ Cases_on `b = 0w`
+    \\ SRW_TAC [] [word_0_n2w]
+    \\ SPEC_THEN `b` ASSUME_TAC w2n_lt
+    \\ FULL_SIMP_TAC std_ss [dimword_def, bitTheory.NOT_BIT_GT_TWOEXP]);
+
+val WORD_LS_word_0 = store_thm("WORD_LS_word_0",
+  `!n. n <=+ 0w = (n = 0w)`,
+  REWRITE_TAC [WORD_LOWER_OR_EQ, GSYM WORD_NOT_LOWER_EQUAL, WORD_0_LS]);
+
+val WORD_LO_word_0 = store_thm("WORD_LO_word_0",
+  `(!n. 0w <+ n = ~(n = 0w)) /\
+   (!n. ~(n <+ 0w))`,
+  REWRITE_TAC [WORD_NOT_LOWER, WORD_0_LS]
+    \\ REWRITE_TAC [GSYM WORD_NOT_LOWER_EQUAL, WORD_LS_word_0]);
+
+val WORD_ADD_LEFT_LO2 = save_thm("WORD_ADD_LEFT_LO2",
+  (GEN_ALL o SIMP_RULE (arith_ss++boolSimps.CONJ_ss++boolSimps.LET_ss)
+     [WORD_LOWER_EQ_REFL, WORD_ADD_0, WORD_LO_word_0,
+      WORD_LOWER_OR_EQ, WORD_NEG_EQ, Once WORD_LESS_NEG_LEFT] o
+   SPECL [`a`, `a`, `c`]) WORD_ADD_LEFT_LO);
+
+val WORD_ADD_LEFT_LS2 = save_thm("WORD_ADD_LEFT_LS2",
+  (GEN_ALL o REWRITE_RULE [GSYM WORD_LOWER_OR_EQ] o
+   SIMP_RULE (arith_ss++boolSimps.CONJ_ss++boolSimps.LET_ss)
+     [WORD_LOWER_EQ_REFL, WORD_ADD_0, WORD_LS_word_0,
+      WORD_LOWER_OR_EQ, WORD_NEG_EQ, Once WORD_LESS_NEG_LEFT,
+      DECIDE ``a \/ b /\ (~a /\ c \/ d) = a \/ b /\ (c \/ d)``] o
+   SPECL [`a`, `a`, `c`]) WORD_ADD_LEFT_LS);
+
+val WORD_ADD_RIGHT_LO2 = save_thm("WORD_ADD_RIGHT_LO2",
+  (GEN_ALL o SIMP_RULE (arith_ss++boolSimps.CONJ_ss++boolSimps.LET_ss)
+     [WORD_LOWER_EQ_REFL, WORD_ADD_0, WORD_LO_word_0,
+      WORD_LOWER_OR_EQ, WORD_NEG_EQ, Once WORD_LESS_NEG_RIGHT,
+      DECIDE ``a \/ ~a /\ b = a \/ b``] o
+   SPECL [`a`, `a`, `c`]) WORD_ADD_RIGHT_LO);
+
+val WORD_ADD_RIGHT_LS2 = save_thm("WORD_ADD_RIGHT_LS2",
+  (GEN_ALL o REWRITE_RULE [GSYM WORD_LOWER_OR_EQ] o
+   SIMP_RULE (arith_ss++boolSimps.CONJ_ss++boolSimps.LET_ss)
+     [WORD_LOWER_EQ_REFL, WORD_ADD_0, WORD_0_LS,
+      WORD_LOWER_OR_EQ, WORD_NEG_EQ, Once WORD_LESS_NEG_RIGHT,
+      DECIDE ``a \/ ~a /\ b = a \/ b``] o
+   SPECL [`a`, `a`, `c`]) WORD_ADD_RIGHT_LS);
+
 (* ------------------------------------------------------------------------- *)
 
 val WORD_ss = rewrites
@@ -3152,22 +3208,12 @@ val WORD_LS_word_T = store_thm("WORD_LS_word_T",
          [WORD_LS_T, WORD_NOT_LOWER] ``~(word_T <+ n)``]
     \\ METIS_TAC []);
 
-val WORD_LS_word_0 = store_thm("WORD_LS_word_0",
-  `!n. n <=+ 0w = (n = 0w)`,
-  REWRITE_TAC [WORD_LOWER_OR_EQ, GSYM WORD_NOT_LOWER_EQUAL, WORD_0_LS]);
-
 val WORD_LO_word_T = store_thm("WORD_LO_word_T",
   `(!n. ~($- 1w <+ n)) /\
    (!n. n <+ $- 1w = ~(n = $- 1w))`,
   REWRITE_TAC [WORD_NOT_LOWER, WORD_NEG_1, WORD_LS_T]
     \\ REWRITE_TAC [GSYM WORD_NOT_LOWER_EQUAL,
          GSYM WORD_NEG_1, WORD_LS_word_T]);
-
-val WORD_LO_word_0 = store_thm("WORD_LO_word_0",
-  `(!n. 0w <+ n = ~(n = 0w)) /\
-   (!n. ~(n <+ 0w))`,
-  REWRITE_TAC [WORD_NOT_LOWER, WORD_0_LS]
-    \\ REWRITE_TAC [GSYM WORD_NOT_LOWER_EQUAL, WORD_LS_word_0]);
 
 val WORD_LESS_0_word_T = store_thm("WORD_LESS_0_word_T",
   `~(0w < $- 1w) /\ ~(0w <= $- 1w) /\ $- 1w < 0w /\ $- 1w <= 0w`,

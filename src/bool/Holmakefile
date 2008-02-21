@@ -3,6 +3,9 @@ MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
 EXTRA_CLEANS = DiskFiles.grm-sig.sml DiskFiles.grm.sml
 
+mustbuild: selftest.exe
+.PHONY: mustbuild
+
 DiskFiles.grm.sml DiskFiles.grm-sig.sml: DiskFiles.grm
 	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<
 	$(MV) DiskFiles.grm.sig DiskFiles.grm-sig.sml

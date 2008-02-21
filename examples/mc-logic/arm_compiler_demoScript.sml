@@ -3,6 +3,7 @@
   load_path_add "/examples/mc-logic";
   load_path_add "/examples/ARM/v4";
   load_path_add "/tools/mlyacc/mlyacclib";
+  app load ["arm_compilerLib"];
 *)
 
 
@@ -45,7 +46,7 @@ fun test_compile' as_proc q = let
   in (def,ind,th) end;
 
 fun test_compile q = test_compile' InLineCode q;
-val test_compile_proc = test_compile'
+val test_compile_proc = test_compile';
 
 (* 
 
@@ -214,7 +215,7 @@ val (guard_loop_def,guard_loop_ind,guard_loop_arm) = test_compile `
       if r0 < 3w then 
         let r0 = r0 - 1w in guard_loop(r0)
       else 
-        let r0 = r0 - 1w in guard_loop(r0)`
+        let r0 = r0 - 1w in guard_loop(r0)`;
 
 (* Notice that one of the branches in same_guard_def is unreachable.
    The compiler will be unable to prove the unreachable path and drops it.
@@ -414,15 +415,15 @@ val (fac32_def,_,fac32_arm) = test_compile `
       r0`;
 
 (* Here fac32_acc was compiled using the option "SimpleProcedure", which means 
-   that it will keep the return address in the link register (register 14) rather
-   than push it onto the stack. Functions compiled with the option 
+   that it will keep the return address in the link register (register 14) 
+   rather than push it onto the stack. Functions compiled with the option 
    "SimpleProcedure" must not contain any procedure calls or direct use of 
    register 14. 
 
-   Use the option "PushProcedure ([],0)" when the function to be compiled contains 
-   procedure calls or uses register 14 as a temporary (which is allowed!).
-   The option "PushProcedure ([],0)" will push the return address onto the stack and
-   hence allows nested procedure calls.
+   Use the option "PushProcedure ([],0)" when the function to be compiled 
+   contains procedure calls or uses register 14 as a temporary (which is 
+   allowed!). The option "PushProcedure ([],0)" will push the return address
+   onto the stack and hence allows nested procedure calls.
 *)
 
 val (b1_def,_,b1_arm) = test_compile_proc (PushProcedure ([],0)) `
@@ -597,6 +598,7 @@ val (temp_mem2_def,_,temp_mem2_arm) = test_compile_proc (PushProcedure (["r1"],3
 
      ...|address'|u1|t1|t2|t3|
 *)
+
 
 
 

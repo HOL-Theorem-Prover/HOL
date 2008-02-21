@@ -17,6 +17,8 @@ val op \\ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
 
+val _ = Parse.hide "set";
+
 
 (* ----------------------------------------------------------------------------- *)
 (* Definitions                                                                   *)

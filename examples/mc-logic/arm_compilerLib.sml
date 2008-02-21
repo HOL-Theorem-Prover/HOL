@@ -712,123 +712,10 @@ fun transpose [] = [] | transpose (x::xs) = let
   fun t [] ys = ys | t (x::xs) ys = t xs (map (uncurry cons) (zip x ys))
   in t (tl xs) (map (fn x => [x]) (hd xs)) end;
 
-(*
-val thms = (zip xs p)
-
-val [(name1,th1),(name2,th2),(name3,th3)] = xs
-val (th1,name1) = find_composition3 (th1,name1) (th2,name2)
-val (th2,name2) = (th3,name3)
-  find_composition3 (th1,name1) (th2,name2)
-*)  
-
-(*
-fun mk_compose_pass thms name = let
-  fun h ((name,th),0) = (("SND_PROG2 "^name, SND_PROG2 th) handle e => (name,th))
-    | h ((name,th),n) = (("FST_PROG2 "^name, FST_PROG2 th) handle e => (name,th))   
-  val _ = echo "composing specs: "
-  val xs = map h thms
-  fun find_compositions prev_name prev_th [] = ([],prev_th) 
-    | find_compositions prev_name prev_th xs = 
-       if is_jump prev_th then let
-         val th = prev_th
-         val len = get_jump_length th
-         fun take 0 xs = [] | take n [] = [] | take n (x::xs) = x::take (n-1) xs    
-         fun drop 0 xs = xs | drop n [] = [] | drop n (x::xs) = drop (n-1) xs    
-         val number_of_specs = get_number_of_specs len xs
-         val ys = take number_of_specs xs
-         val _ = map (fn y => echo "-") ys
-         val cs = map (code_ARM_PROG o concl o snd) ys 
-         val th = APPEND_CODE th cs    
-         val s = list_to_string fst ys ","
-         val s = "  val "^name^" = APPEND_CODE "^name^" (map (code_ARM_PROG o concl) ["^s^"])\n"
-         val (ys,th) = find_compositions name th (drop number_of_specs xs)
-       in (s::ys,th) end else let
-         val (curr_name,curr_th) = hd xs
-         val (th,s) = find_composition (prev_th,prev_name) (curr_th,"("^curr_name^")")
-         val _ = echo "m"
-         val s = "  val "^name^" = "^s^"\n"
-         val (ys,th) = find_compositions name th (tl xs)
-       in (s::ys,th) end
-  val (prev_name,prev_th) = hd xs
-  val (strs,th) = find_compositions ("("^prev_name^")") prev_th (tl xs) 
-  val th = AUTO_HIDE_STATUS th
-  val th = RW [APPEND] th
-  val _ = echo ".\n" 
-  in ([],th) end;
-*)
-
 fun pad_strings [] = [] | pad_strings (x::xs) = let
   val m = foldr (fn (m,n) => if m > n then m else n) (size x) (map size xs)
   fun pad s i = if i <= 0 then s else pad (s^" ") (i-1) 
   in map (fn s => pad s (m - size s)) (x::xs) end;
-
-(*
-fun make_passes_th code = let
-  fun f (s,(ys,n)) = 
-    if (substring(s,0,6) = "proc: ") handle e => false then let
-      val i = int_to_string n
-      val name = substring(s,6,size(s)-6)
-      val name = replace_char #" " "" name
-      fun match_name (n,_,_,_,_) = n = name 
-      val (_,th,proc,_,_) = hd (filter match_name (!compiled_specs))
-      val _ = offset_counter := !offset_counter + 1
-      val offset_name = "offset" ^ int_to_string (!offset_counter)
-      val th = if not (proc = InLineCode) then SIMP_RULE (std_ss++setINC_ss) [] (MATCH_MP (Q.INST [`offset`|->[QUOTE offset_name]] arm_BL) (PROG2PROC th)) else th
-      val str = if not (proc = InLineCode) then "SIMP_RULE (std_ss++setINC_ss) [] (MATCH_MP arm_BL (PROG2PROC "^name^"_arm))" else name^"_arm"
-      in ((ys @ [(s,"th"^i,str,th)]),n+1) end
-    else let
-      val i = int_to_string n
-      val (th,str) = string_to_prog s i
-      val th = RW [WORD_CMP_NORMALISE] th
-      val str = "RW [WORD_CMP_NORMALISE] (" ^ str ^ ")"
-      val (th,str2) = align_addresses th 
-      val str = if str2 = "" then str else str2 ^ "(" ^ str ^ ")" 
-      in ((ys @ [(s,"th"^i,str,th)]),n+1) end
-  val xs = pad_strings (map fst code)
-  val xs = fst (foldl f ([],1) xs)  
-  fun abbrev_posts ((s,name,str,th),(i,xs)) = 
-    let val prefix = "s" ^ int_to_string i ^ "@" 
-    in (i+1,xs @ [(s,name,"ABBREV_ALL \""^prefix^"\" ("^str^")",ABBREV_ALL prefix th)]) end
-  val xs = snd (foldl abbrev_posts (1,[]) xs)
-  val paths = transpose (map snd code)
-  fun to_str (s,i,str,th) = let
-    val i = if size(i) < 4 then i ^ " " else i
-    in "  val "^i^" = ("^"*  "^s^"  *"^") "^str^"\n" end
-  val strs = map to_str xs  
-  val xs = map (fn (s,name,str,th) => (name,th)) xs
-  fun f (p,(i,ys,strs,pnames)) = let
-    val pname = "p"^int_to_string i
-    val (strs2,th) = mk_compose_pass (zip xs p) pname
-    in (i+1,ys @ [th],strs @ strs2,pnames @ [pname]) end;
-  val (_,th,strs,pnames) = foldl f (1,[],strs,[]) paths
-  val th = zip pnames th
-  val pnames = foldr (fn (x,y) => x^","^y) (last pnames) (butlast pnames)
-  in (th,strs) end;
-*)
-
-(*
-  val (i,ys,strs,pnames) = (1,[],strs,[])
-  val p = hd paths
-*)
-(*
-fun make_passes code = 
-  print (foldr (uncurry concat) "" (["\n\n\n"] @ snd (make_passes_th code) @ ["\n\n\n"]));
-*)
-(*
- val code = [
-("adds r1,r2,r3",[1,1,1,1]),
-("teq r1,#0   ",[1,1,1,1]),
-("beq 12      ",[1,1,0,0]),
-("sub r1,r1,r3",[0,0,1,1]),
-("mul r2,r3,r2",[0,0,1,1]),
-("mov r3,r1   ",[1,1,1,1]),
-("mov r3,r1   ",[1,1,1,1]),
-("mov r3,r1   ",[1,1,1,1]),
-("mov r3,r1   ",[1,1,1,1]),
-("mov r3,r1   ",[1,1,1,1]),
-("tst r2,r1   ",[1,1,1,1]),
-("bne -44   "  ,[0,1,0,1])]
-*)
 
 (* generate ARM code *)
 
@@ -1703,7 +1590,6 @@ fun arm_compile_backend name def ind def2 pre stays as_proc thms strs = let
   (* abbreviate the code using a definition *)
   val (thms,c1_def,c2_def,strs) = abbreviate_code name thms strs 
   (* normalise names and fill using frame *)
-
   val thms = rename_and_fill_preconditions thms def
   (* hide irrelevant pre and post elements *)  
   val thms = hide_pre_post_elements thms def stays
@@ -1897,44 +1783,67 @@ fun arm_flatten_code () = let
 
 (* --- decompiler --- *)
 
+datatype ftree_type = 
+    FUN_IF of term * ftree_type * ftree_type 
+  | FUN_LET of term * term * ftree_type
+  | FUN_COND of term * ftree_type
+  | FUN_VAL of term;
+
+fun tm2ftree tm = let
+  val (b,x,y) = dest_cond tm
+  in FUN_IF (b,tm2ftree x,tm2ftree y) end handle e => let
+  val (x,y) = pairSyntax.dest_anylet tm
+  val z = tm2ftree y
+  val v = mk_var("cond",``:bool``)
+  fun g((x,y),z) = if not (x = v) then FUN_LET (x,y,z) else 
+    if fst(dest_conj(y)) = v then FUN_COND (cdr y,z) else FUN_COND (y,z)
+  in foldr g z x end handle e => FUN_VAL tm;
+
+fun ftree2tm (FUN_VAL tm) = tm
+  | ftree2tm (FUN_IF (tm,x,y)) = mk_cond(tm, ftree2tm x, ftree2tm y)
+  | ftree2tm (FUN_LET (tm,tn,x)) = pairSyntax.mk_anylet([(tm,tn)],ftree2tm x)
+  | ftree2tm (FUN_COND (tm,x)) = let
+      val v = mk_var("cond",``:bool``)
+      in pairSyntax.mk_anylet([(v,mk_conj(v,tm))],ftree2tm x) end
+
 fun get_resvar_name v = let
-  val n = (fst o dest_var) v   
+  val n = (fst o dest_var) v
   fun g [] = n | g (c::cs) = if c = #"@" then implode cs else g cs
   in g (explode n) end
 
-fun spectree2fun (LEAF th) keep_status (res,f,res') =
-      if has_jump_to_top (concl th) 
-      then mk_comb(f,list_mk_pair res') else list_mk_pair res
-  | spectree2fun (BRANCH (i,cond,t1,t2)) st res =
-      if is_neg cond 
-      then mk_cond(dest_neg cond,spectree2fun t2 st res, spectree2fun t1 st res)
-      else mk_cond(cond,spectree2fun t1 st res, spectree2fun t2 st res)
-  | spectree2fun (SEQ ([],t)) keep_status res = spectree2fun t keep_status res
-  | spectree2fun (SEQ (x::xs,t)) keep_status (res1,f,res2) = let
+fun get_resvar v = mk_var(get_resvar_name v,type_of v);
+
+fun resvar_subst xs tm = let
+  fun find_subst [] v = v |-> v
+    | find_subst (x::xs) v = if v = get_resvar x then v |-> x else find_subst xs v
+  in subst (map (find_subst xs) (free_vars tm)) tm end;
+
+fun spectree2fun (LEAF th) (result,call) s =
+      FUN_VAL (resvar_subst s (if has_jump_to_top (concl th) then call else result))
+  | spectree2fun (BRANCH (i,cond,t1,t2)) i s =
+      FUN_IF (cond,spectree2fun t1 i s,spectree2fun t2 i s)
+  | spectree2fun (SEQ ([],t)) i s = spectree2fun t i s
+  | spectree2fun (SEQ (x::xs,t)) i s = let
       val (x,y) = dest_eq(x) 
-      val names = map (fn x => (get_resvar_name x,x)) (list_dest_pair x)
-      fun replace (name,value) [] = value
-        | replace (name,value) ((x,v)::xs) = if name = x then v else 
-            replace (name,value) xs 
-      val res1' = map (fn v => replace (get_resvar_name v,v) names) res1
-      val res2' = map (fn v => replace (get_resvar_name v,v) names) res2
-      val tm = spectree2fun (SEQ (xs,t)) keep_status (res1',f,res2')
-      val xs = free_vars tm
-      fun h v = if not (mem v xs) then hd [] else mk_var((fst o dest_var) v ^ "'",type_of v)
-      fun new_name (n,x) = repeat h (mk_var(n,type_of x))
-      val new_name_list = map (fn (n,x) => (x,new_name (n,x))) names
-      val subst_list = map (fn (x,y) => x |-> y) new_name_list
-      val tm = subst subst_list tm
-      val vars = list_mk_pair (map snd new_name_list) 
-      in pairSyntax.mk_anylet([(vars,y)],tm) end
-      handle e => let
-      val cond_var = mk_var("cond",``:bool``)
-      val (x,y) = ((fst o dest_abs o car) x,mk_conj(cond_var,cdr x))
-      val name = get_resvar_name x 
-      val res1' = map (fn v => if get_resvar_name v = name then x else v) res1
-      val res2' = map (fn v => if get_resvar_name v = name then x else v) res2
-      val tm = spectree2fun (SEQ (xs,t)) keep_status (res1',f,res2')
-      in mk_let(mk_abs(cond_var,tm),y) end
+      in FUN_LET (x,y,spectree2fun (SEQ (xs,t)) i (list_dest_pair x @ s)) end 
+      handle e => FUN_COND (cdr x,spectree2fun (SEQ (xs,t)) i s)
+
+fun simplify_names ftree = let
+  fun aux (FUN_VAL tm)      = tm
+    | aux (FUN_COND (c,t))  = ftree2tm (FUN_COND (c,FUN_VAL (aux t)))
+    | aux (FUN_IF (a,b,c))  = ftree2tm (FUN_IF (a,FUN_VAL (aux b),FUN_VAL (aux c)))
+    | aux (FUN_LET (v,x,t)) = let
+       val tm = aux t
+       val names = map (fn x => (get_resvar_name x,x)) (list_dest_pair v)
+       val xs = free_vars tm
+       fun h v = if not (mem v xs) then hd [] else mk_var((fst o dest_var) v ^ "'",type_of v)
+       fun new_name (n,x) = repeat h (mk_var(n,type_of x))
+       val new_name_list = map (fn (n,x) => (x,new_name (n,x))) names
+       val subst_list = map (fn (x,y) => x |-> y) new_name_list
+       val tm = subst subst_list tm
+       val vars = list_mk_pair (map snd new_name_list) 
+       in ftree2tm (FUN_LET (vars,x,FUN_VAL tm)) end
+  in tm2ftree (aux ftree) end
 
 fun tree2modified_vars (LEAF th) xs = xs
   | tree2modified_vars (BRANCH (i,cond,t1,t2)) xs = 
@@ -1970,30 +1879,6 @@ fun sort_SEQ_in_tree keep_status (SEQ (xs,t)) = let
       BRANCH(n,c,sort_SEQ_in_tree keep_status t1,sort_SEQ_in_tree keep_status t2)
   | sort_SEQ_in_tree keep_status t = t
 
-fun split_function tm = let 
-  val (b,x,y) = dest_cond tm
-  val (xtm1,xtm2) = split_function x
-  val (ytm1,ytm2) = split_function y
-  in (mk_cond(b,xtm1,ytm1),mk_cond(b,xtm2,ytm2)) end handle e => let
-  val (x,y) = dest_let tm
-  val (v,x) = dest_abs x
-  val (tm1,tm2) = split_function x
-  val tm1 = if dest_var v = ("cond",``:bool``) then tm1
-            else mk_let(mk_abs(v,tm1),y)
-  val tm2 = mk_let(mk_abs(v,tm2),y)  
-  in (tm1,tm2) end handle e => let
-  val (x,y) = dest_comb tm  
-  val (n,t) = dest_var x
-  val t = mk_type("fun",[(hd o snd o dest_type) t,``:bool``])
-  val tm2 = mk_comb(mk_var(n^"_pre",t),y)
-  in (tm,mk_conj(tm2,mk_var("cond",``:bool``))) end handle e =>
-  (tm,mk_var("cond",``:bool``));
-  
-(*
-val code = ["add r1,r2,r3","teq r1,r2"]
-val keep_status = false
-*)
-
 val var_sorter = let (* sorts in alphabetical order except for r1,r2,r3 which will come first "a" *)
   fun dest_reg_var tm = let
     val xs = explode (fst (dest_var tm))
@@ -2006,12 +1891,21 @@ val var_sorter = let (* sorts in alphabetical order except for r1,r2,r3 which wi
     else is_reg_var tm1
   in sort cmp end
 
-fun spectree2function name code keep_status hide_list = let
+fun erase_conds (FUN_VAL tm) = FUN_VAL tm
+  | erase_conds (FUN_COND (c,t)) = erase_conds t
+  | erase_conds (FUN_IF (a,b,c)) = FUN_IF (a,erase_conds b,erase_conds c)
+  | erase_conds (FUN_LET (x,y,t)) = FUN_LET (x,y,erase_conds t)
+
+fun option_apply f NONE y = y | option_apply f (SOME x) y = f x
+
+fun extract_function name code pre keep_status hide_list = let
+  (* generate spectree *)
   val t = generate_spectree true keep_status code
   val t = sort_SEQ_in_tree keep_status t  
   val thms = spectree2thms t []
   val status_vars = [``sN:bool``,``sZ:bool``,``sC:bool``,``sV:bool``]
   val stays_same = (map (fst o dest_var) o thms2resources thms) []
+  (* determine output *)
   val res_out = tree2modified_vars t []
   val modified = map (fst o dest_var) res_out
   val stays_same = filter (fn x => not (mem x modified)) stays_same
@@ -2019,66 +1913,43 @@ fun spectree2function name code keep_status hide_list = let
   val res_out = filter (fn x => not (mem (fst (dest_var x)) hide_list)) res_out
   val res_out = res_out @ (if keep_status then status_vars else [])  
   val output = list_mk_pair res_out
+  (* determine input *)
   val f = mk_var(name,mk_type("fun",[type_of ``()``,type_of output]))
-  val tm = spectree2fun t keep_status (res_out,f,[])
-  val tm = subst [mk_var("cond",``:bool``)|->``T:bool``] tm
-  val res_in = var_sorter (free_vars tm)
-  val res_in = filter (fn x => not (mem x (f::status_vars))) res_in
+  val c = mk_var("cond",``:bool``)
+  val ftree = spectree2fun t (output,mk_comb(f,``()``)) []
+  val vars = free_vars (ftree2tm ftree)
+  val pre_tm = Parse.parse_in_context vars pre
+  val vars = list_union vars (free_vars pre_tm)
+  val res_in = var_sorter vars
+  val res_in = filter (fn x => not (mem x (f::c::status_vars))) res_in
   val res_in = res_in @ (if keep_status then status_vars else [])
   val input = list_mk_pair res_in
-  val f1 = mk_var(name,mk_type("fun",[type_of input,type_of output]))
-  val f2 = mk_var(name^"_pre",mk_type("fun",[type_of input,``:bool``]))
-  val tm = spectree2fun t keep_status (res_out,f1,res_in)
-  val tm = subst [mk_var("cond",``:bool``)|->``T:bool``] tm
-  val (tm1,tm2) = split_function tm
+  (* create data function *)
+  val f1 = mk_comb(mk_var(name,mk_type("fun",[type_of input,type_of output])),input)
+  val ftree = spectree2fun t (output,f1) []
+  val tm1 = ftree2tm (simplify_names (erase_conds ftree))
+  (* create precondition function *)
+  val f2 = mk_comb(mk_var(name^"_pre",mk_type("fun",[type_of input,``:bool``])),input)
+  val call2 = mk_conj(f2,mk_conj(mk_var("cond",``:bool``),pre_tm))
+  val ftree = spectree2fun t (mk_var("cond",``:bool``),call2) []
+  val tm2 = ftree2tm (simplify_names ftree)
   val tm2 = subst [mk_var("cond",``:bool``)|->``T:bool``] tm2
-  val tm1 = mk_eq(mk_comb(f1,input),tm1)
-  val tm2 = mk_eq(mk_comb(f2,input),tm2)
   val tm2 = (cdr o concl o REWRITE_CONV []) tm2 handle e => tm2
+  (* test whether the precondition function is T *)
+  val ftree = tm2ftree tm2
+  val tm2 = if (ftree = erase_conds ftree) andalso (pre_tm = ``T``) 
+            then NONE else SOME tm2
+  (* add conditioning on the precondition and LHS of defintion *)  
+  fun finalise_term f tm = 
+    if pre_tm = ``T`` then mk_eq(f,tm) else   
+      mk_eq(f,mk_cond(pre_tm,tm,mk_arb(type_of tm)))
+  val tm1 = finalise_term f1 tm1
+  val tm2 = option_apply (fn tm => SOME (finalise_term f2 tm)) tm2 NONE
+  (* polish the specs *)  
   val rule = UNABBREV_ALL o SIMP_RULE (bool_ss++sep2_ss) [precond_def] o 
              (if keep_status then I else AUTO_HIDE_STATUS)
   val thms = map (fn th => ("",rule th)) thms
-  in (tm1,tm2,stays_same,thms) end;
-
-fun format_function_terms tm1 tm2 pre = let
-  val pre = Parse.parse_in_context (free_vars tm1) pre
-  fun insert_precond pre tm = let
-    val (x,y) = dest_eq tm
-    in mk_eq(x,mk_cond(pre,y,mk_arb (type_of y))) end
-  val tm1 = if pre = ``T:bool`` then tm1 else insert_precond pre tm1
-  val tm2 = if pre = ``T:bool`` then tm2 else insert_precond pre tm2
-  fun intersect xs ys = filter (fn y => mem y xs) ys
-  fun insert_precond_call tm pre do_insert = let 
-    val (x,y) = dest_eq tm
-    in mk_eq(x,insert_precond_call y pre do_insert) end handle e => let
-    val (b,x,y) = dest_cond tm
-    val x = insert_precond_call x pre do_insert
-    val y = insert_precond_call y pre do_insert
-    in mk_cond(b,x,y) end handle e => let
-    val (x,y) = pairSyntax.dest_anylet tm
-    val vars = foldl (fn (x,ys) => list_dest_pair (fst x) @ ys) [] x
-    val do_insert = if intersect (free_vars(pre)) vars = [] then do_insert else true
-    in pairSyntax.mk_anylet(x,insert_precond_call y pre do_insert) end handle e => let
-    val (x,y) = dest_comb tm  
-    in if do_insert then mk_conj(tm,pre) else tm end handle e => tm;
-  val x = insert_precond_call tm2 pre false
-  fun tm_conv c tm = (cdr o concl o c) tm handle e => tm 
-  val x = tm_conv (REWRITE_CONV []) x 
-  fun end_nodes_T tm = let
-    val (x,y) = dest_eq tm
-    in end_nodes_T y end handle e => let
-    val (b,x,y) = dest_cond tm
-    in end_nodes_T x andalso end_nodes_T y end handle e => let
-    val (x,y) = dest_let tm
-    val (v,x) = dest_abs x
-    in end_nodes_T x end handle e => 
-    not (is_conj tm) andalso
-    ((is_comb tm) orelse (tm = ``T:bool``) orelse (is_arb tm))
-  val tm2 = if end_nodes_T x then NONE else SOME x
-  in (tm1,tm2,pre) end
-
-fun option_apply f NONE y = y
-  | option_apply f (SOME x) y = f x
+  in (tm1,tm2,pre_tm,stays_same,thms) end;
 
 exception TERMINATION_ERR;
 
@@ -2098,54 +1969,23 @@ fun decompiler_define name tm1 tm2 (SOME tac) = let
   val _ = print "-----\n\nUnable to prove termination.\n"
   val _ = echo "Please supply a tactic for proving termination of the function:\n\n"
   val _ = print_term tm1
-  val _ = echo "\n\nTermination goal has been pushed onto goal stack.\n\n\n"
   val _ = Defn.tgoal(Hol_defn name [ANTIQUOTE tm1])
+  val _ = echo "\n\nTermination goal has been pushed onto goal stack.\n\n\n"
   in raise TERMINATION_ERR end
   
-
 (*
-
-  PASS_CASES
-
-  val name = "fib"
-  val code = ["cmp r0,#0","movne r3,r1","movne r1,r2","addne r2,r1,r2","subne r0,r0,#1","bne -20"]
-
-  val name = "cmp_cmp"
-  val code = ["cmp r1,r4","cmpeq r2,r5","cmpeq r3,r6","moveq r0,#1","movne r0,#0"]
-
-  val name = "save1"
-  val code = ["cmp r2,#0","strne r1, [r0], #4","subne r2,r2,#1","bne -12"]
-
-  arm_decompiler name code (``T``,NONE)
-
   val keep_status = false
-
-  val termination_tac = NONE
-  val keep_status = true
-  val name = "test_stat"
-  val pre = `T`
-
   val keep_status = true
   val (pre,termination_tac) = (`T`,NONE)
   val name = "foo"
   val code = ["adcs r1,r2,r3"]
-
-  val keep_status = false
-  val (pre,termination_tac) = (`T`,NONE)
-  val name = "foo1"
-  val code = ["cmp r1,#3","proc: foo","proc: foo"]
-
-  val keep_status = false
-  val hide_list = []
-
   arm_decompiler name code (pre,termination_tac,keep_status,hide_list)
 *)
 
 fun arm_decompiler_options name code pre termination_tac keep_status hide_list = let
-  (* create function and specs *)
-  val (tm1,tm2,stays,thms) = spectree2function name code keep_status hide_list
-  val (tm1,tm2,pre) = format_function_terms tm1 tm2 pre
-  (* define function *)
+  (* construct function terms and simulation runs *)
+  val (tm1,tm2,pre,stays,thms) = extract_function name code pre keep_status hide_list
+  (* define functions *)
   val (def,ind,def2) = decompiler_define name tm1 tm2 termination_tac
   (* prove that the function implements the code *)
   val th = fst (arm_compile_backend name def ind def2 pre stays InLineCode thms [])
@@ -2156,48 +1996,9 @@ fun arm_decompiler name pre termination_tac hide_list code =
 
 (*
   
-  (* factorial example - basic loop *)
-  val name = "fac"
-  val code = ["cmp r10,#0","mulne r2,r10,r2","subne r10,r10,#1","bne -12"]
-  val (def,th) = arm_decompiler name code `T` NONE
-
-  (* division example - user has to supply termination proof *)
-  val name = "div"
-  val code = ["cmp r1,r2","addcs r0,r0,#1","subcs r1,r1,r2","bcs -12"]
-  val pre = `~(r2 = 0w)`
-  val word_sub_n2w = prove(
-  ``!m n. n2w n - n2w m = if m <= n then n2w (n - m) else $- (n2w (m - n))``,
-  REPEAT STRIP_TAC \\ Cases_on `m <= n` \\ ASM_REWRITE_TAC []
-  \\ IMP_RES_TAC (DECIDE ``~(m <= n) ==> n <= m:num``)  
-  \\ IMP_RES_TAC LESS_EQUAL_ADD 
-  \\ ASM_REWRITE_TAC [] \\ ONCE_REWRITE_TAC [ADD_COMM]
-  \\ REWRITE_TAC [GSYM word_add_n2w,WORD_ADD_SUB,ADD_SUB]
-  \\ ONCE_REWRITE_TAC [WORD_ADD_COMM] 
-  \\ REWRITE_TAC [WORD_SUB_PLUS,WORD_SUB_REFL,WORD_SUB_LZERO]);
-  val termination_tac = SOME
-   (WF_REL_TAC `measure (w2n o FST o SND)` \\ Cases_word \\ Cases_word
-    \\ ASM_SIMP_TAC bool_ss [WORD_LO,n2w_11,w2n_n2w,LESS_MOD,ZERO_LT_dimword]
-    \\ REWRITE_TAC [DECIDE ``~(n<m:num) = m <= n``]
-    \\ `n - n' < dimword (:32)` by DECIDE_TAC
-    \\ ASM_SIMP_TAC bool_ss [word_sub_n2w,w2n_n2w,LESS_MOD] 
-    \\ REPEAT STRIP_TAC \\ DECIDE_TAC)
-  val hide_list = ["r1"]
-  val keep_status = false
-  val (def,th) = arm_decompiler name code (pre,termination_tac,keep_status,hide_list)
-
-  (* store r2 example - loop with store instruction *)
-  val (pre,termination_tac) = (`T`,NONE)
-  val name = "store_loop"
-  val code = ["cmp r1,#0","strne r1,[r2],#4","subne r1,r1,#1","bne -12"]
-  val hide_list = ["r1"]
-  val keep_status = false
-  val (def,th) = arm_decompiler name code (pre,termination_tac,keep_status,hide_list)  
-
  known bugs:
  - keeping track of status bits doesn't work when 
    the last instruction isn't executed
-
-  open combinTheory
 
 *) 
 

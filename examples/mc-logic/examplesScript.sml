@@ -1,8 +1,9 @@
 (*
   quietdec := true;
   val armDir = concat Globals.HOLDIR "/examples/ARM/v4";
+  val mcLogicDir = concat Globals.HOLDIR "/examples/mc-logic";
   val yaccDir = concat Globals.HOLDIR "/tools/mlyacc/mlyacclib";
-  loadPath := !loadPath @ [armDir,yaccDir];
+  loadPath := !loadPath @ [armDir,yaccDir,mcLogicDir];
 *)
 
 open HolKernel boolLib bossLib Parse;
@@ -358,7 +359,6 @@ val ARM_FAC_PROGRAM = let
   val th = (SIMP_RULE (bool_ss++sep2_ss) [] o MOVE_PRE `S` o AUTO_HIDE_PRE [`R b`]) th
   val th = (MOVE_POST1 `S` o MOVE_POST1 `R b`) th
 in th end;
-
 
 
 (* verified implementations:
