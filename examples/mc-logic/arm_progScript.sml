@@ -23,6 +23,7 @@ open set_sepTheory progTheory;
 val _ = new_theory "arm_prog";
 
 val _ = Parse.hide "regs"
+val _ = Parse.hide "set";
 
 infix \\ << >>
 
