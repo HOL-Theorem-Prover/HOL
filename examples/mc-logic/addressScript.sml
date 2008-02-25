@@ -231,6 +231,17 @@ val aligned_THM = store_thm("aligned_THM",
     << [Q.EXISTS_TAC `(31 >< 2) p`, ALL_TAC]
     \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss) []);
 
+val aligned_NEG_lemma = prove(
+  ``!x. aligned x ==> aligned ($- x)``,
+  ASM_SIMP_TAC std_ss  [aligned_THM,w2n_n2w,LESS_MOD]
+  \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `n2w (2**30) - k` 
+  \\ ASM_SIMP_TAC (std_ss++WORD_ARITH_EQ_ss) [WORD_RIGHT_SUB_DISTRIB]            
+  \\ ASM_SIMP_TAC (std_ss++WORD_ss) []);
+
+val aligned_NEG = store_thm("aligned_NEG",
+  ``!x. aligned ($- x) = aligned x``,
+  METIS_TAC [aligned_NEG_lemma,WORD_NEG_NEG]);
+
 val aligned_and_1 = store_thm("aligned_and_1",
   ``!x. aligned x ==> (x && 1w = 0w)``,        
   REWRITE_TAC [aligned_THM] \\ NTAC 2 STRIP_TAC

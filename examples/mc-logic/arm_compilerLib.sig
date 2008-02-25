@@ -8,8 +8,12 @@ sig
     val arm_compile         : thm -> thm -> arm_code_format -> thm * string list
     val arm_flatten_code    : unit -> thm
     val reset_compiled      : unit -> unit
-    val arm_decompiler      : string -> term frag list -> tactic option -> 
-                              string list -> string list -> thm * thm
+
+    val arm_decompiler        : string -> term frag list -> tactic option -> 
+                                string list -> term frag list -> thm * thm * thm
+    val arm_decompiler_status : string -> term frag list -> tactic option -> 
+                                string list -> term frag list -> thm * thm * thm
+    val append_ret          : thm -> thm
 
     val map_compiled        : (thm -> thm) -> unit 
     val fetch_compiled      : string -> thm

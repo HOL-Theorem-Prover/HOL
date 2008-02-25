@@ -532,6 +532,15 @@ val show_code = ref true;
 fun blanks 0 = [] | blanks n = #" "::blanks (n-1);
 fun blank_str n = implode (blanks (if n < 0 then 0 else n));
 
+fun pad_string s l = s ^ blank_str (l-size(s));
+
+fun char_string c l = let
+  fun repeatc 0 c = [] | repeatc n c = c::repeatc (n-1) c 
+  in if l < 0 then "" else implode (repeatc l c) end;
+
+fun left_pad_string c s l = char_string c (l-size(s)) ^ s; 
+fun right_pad_string c s l = s ^ char_string c (l-size(s)); 
+  
 fun print_enc_inst sys (gl,gc,gr) d pps t = 
   if !show_enc andalso !show_code then raise term_pp_types.UserPP_Failed else
   let open Portable term_pp_types in 
@@ -557,6 +566,51 @@ fun print_enc_inst sys (gl,gc,gr) d pps t =
   end handle e => raise term_pp_types.UserPP_Failed;
 
 fun pp_enc() = Parse.temp_add_user_printer ({Tyop = "cart", Thy = "fcp"}, print_enc_inst);
+val _ = pp_enc();
+
+fun int_of_term_mod tm v = let
+  val eval = cdr o concl o EVAL
+  val sub = subst [``m:num``|->tm,``n:num``|->v]
+  in if eval (sub ``m < (n:num DIV 2)``) = T then numSyntax.int_of_term tm else 
+    0 - numSyntax.int_of_term (eval (sub ``n - m:num``))
+  end;
+
+fun enc_list_to_string tm = 
+  if not (type_of tm = ``:word32 list``) then 
+    raise term_pp_types.UserPP_Failed
+  else let
+    val xs = fst (listSyntax.dest_list tm)
+    val m = size (int_to_string (length xs))   
+    fun line_number i = "L" ^ left_pad_string #"0" (int_to_string i) m
+    fun fetch_from_rec_list [] k = hd []
+      | fetch_from_rec_list ({redex = u, residue = v}::xs) k =
+          (if u = k then v else fetch_from_rec_list xs k)
+    fun branch_to_string pattern (tm,i) = let
+      val k = fetch_from_rec_list (fst (match_term pattern (cdr tm))) ``k2:num``
+      val j = line_number (int_of_term_mod k ``2**24:num`` + i + 2)
+      val s = instructionSyntax.dest_instruction NONE (cdr tm)            
+      val s = hd (String.fields (fn s => if s = #" " then true else false) s) 
+      in s ^ " " ^ j end
+    fun enc_to_string (tm,i) =
+      branch_to_string ``B k1 (n2w k2)`` (tm,i) handle e =>
+      branch_to_string ``BL k1 (n2w k2)`` (tm,i) handle e =>
+      instructionSyntax.dest_instruction NONE (cdr tm)
+    fun inst_to_string (tm,(result,i)) = 
+      (result @ [line_number i ^ ":  " ^ enc_to_string (tm,i)], i+1)
+  in fst (foldl inst_to_string ([],0) xs) end;    
+
+fun print_enc_list sys (gl,gc,gr) d pps t = 
+  if !show_enc andalso !show_code then raise term_pp_types.UserPP_Failed else
+  let open Portable term_pp_types in 
+    if not (!show_code) then () else let 
+      fun g s = (begin_block pps INCONSISTENT 0; 
+                 add_string pps ("    " ^ right_pad_string #" " s 60); 
+                 end_block pps; add_break pps (1,0) )
+      val _ = map g (enc_list_to_string t) 
+      in () end 
+  end handle e => raise term_pp_types.UserPP_Failed;
+
+fun pp_enc() = Parse.temp_add_user_printer ({Tyop = "list", Thy = "list"}, print_enc_list);
 val _ = pp_enc();
 
 
@@ -663,8 +717,13 @@ val match_list_select_seq =
 val inst_str = "strne a,[b]"
 val inst_str = "stmeqia r3!, {r1, r2, r4}"
 val inst_str = "ldmfa  r0!, {r3, r4, r5, r6, r7}"
+val stm1 = "stmea  r0, {r3, r4, r5, r6, r7}"
+val ldm1 = "ldmea  r0, {r3, r4, r5, r6, r7}"
 val suffix = "2"
 val select_seq = true
+
+mk_instruction "stmdb  r0, {r3, r4, r5, r6, r7}"
+mk_instruction "ldmdb  r0, {r3, r4, r5, r6, r7}"
 
 show_types := true;
 *)
@@ -704,7 +763,7 @@ fun mk_arm_prog2_str_STM_LDM inst_str suffix select_seq = let
     | list_extract ({redex = x,residue=z}::xs) y = if x = y then z else list_extract xs y
   val varname = "r"^((int_to_string o numSyntax.int_of_term o snd o dest_comb o list_extract i) ``v1234:word4``)
                 handle e => fst (dest_var (list_extract i ``v1234:word4``))
-  val (form_th,th_str) = if substring(inst_str,0,3) = "stm" then (if select_seq then (arm_STM_SEQ,"arm_STM_SEQ") else (arm_STM,"arm_STM"))
+  val (form_th,th_str) = if mem (substring(inst_str,0,3)) ["stm","STM"] then (if select_seq then (arm_STM_SEQ,"arm_STM_SEQ") else (arm_STM,"arm_STM"))
     else (if mem "r15" vs then (if mem varname vs then (arm_LDM_PC_ADDR,"arm_LDM_PC_ADDR") 
                                                   else (arm_LDM_PC,"arm_LDM_PC"))
                           else (if mem varname vs then (arm_LDM_ADDR,"arm_LDM_ADDR") 
@@ -810,6 +869,8 @@ val suffix = "2"
 string_to_prog_seq "ldr r1,[r2],#4 | ys" "2"
 val str = "ldr r1,[r2],#4 | ys"
 val suffix = "sdfg"
+
+val str = "STMIA r3!, {r8,r9} "
 *)
 
 fun string_split c str = let
@@ -825,7 +886,7 @@ fun string_to_prog_seq str suffix = let
   val (th,str) = mk_arm_prog2_str str suffix true
   in let 
     val tm = ((car o car o concl) th)
-    val tm = find_term (can (match_term ``(heap a xs):'a ARMset -> bool``)) tm
+    val tm = find_term (can (match_term ``(MEMORY a xs):'a ARMset -> bool``)) tm
     val i = [cdr tm|->mk_var(xs^"s",type_of (cdr tm))]
     val i = [(cdr o car) tm|->mk_var(xs,type_of (cdr (car tm)))] @ i
     val th = INST i th    
