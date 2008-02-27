@@ -10,6 +10,7 @@ sig
   datatype rule_element
      = TOK of string
      | TM
+  val RE_compare : rule_element * rule_element -> order
 
   datatype pp_element
      = PPBlock of pp_element list * block_info
@@ -146,6 +147,7 @@ sig
      | EndBinding
      | VS_cons
      | ResquanOpTok
+  val ST_compare : stack_terminal * stack_terminal -> order
 
   val STtoString : grammar -> stack_terminal -> string
 

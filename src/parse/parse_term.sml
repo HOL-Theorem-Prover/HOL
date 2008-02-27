@@ -72,16 +72,33 @@ fun first_tok [] = raise Fail "Shouldn't happen parse_term 133"
   | first_tok (RE (TOK s)::_) = s
   | first_tok (_ :: t) = first_tok t
 
+structure Polyhash =
+struct
+   fun peek (ref dict) k = Binarymap.peek(dict,k)
+   fun peekInsert (r as ref dict) (k,v) =
+       case Binarymap.peek(dict,k) of
+         NONE => (r := Binarymap.insert(dict,k,v); NONE)
+       | x => x
+   fun insert (r as ref dict) (k,v) =
+       r := Binarymap.insert(dict,k,v)
+   fun listItems (ref dict) = Binarymap.listItems dict
+   fun mkDict cmp = let
+     val newref = ref (Binarymap.mkDict cmp)
+   in
+     newref
+   end
+end
+
 fun mk_prec_matrix G = let
-  exception NotFound
+  exception NotFound = Binarymap.NotFound
   exception BadTokList
   val {lambda, endbinding, type_intro, restr_binders, ...} = specials G
   val specs = grammar_tokens G
   val Grules = term_grammar.grammar_rules G
   val alltoks =
     ResquanOpTok :: VS_cons :: STD_HOL_TOK fnapp_special :: all_tokens specs
-  val matrix:(stack_terminal * stack_terminal, order) Polyhash.hash_table =
-    Polyhash.mkPolyTable (length specs * length specs, NotFound)
+  val matrix:(stack_terminal * stack_terminal, order) Binarymap.dict ref =
+      Polyhash.mkDict (pair_compare(ST_compare,ST_compare))
   val rule_elements = term_grammar.rule_elements o #elements
   val complained_this_iteration = ref false
   fun insert k v = let
@@ -388,8 +405,8 @@ fun summary_toString rs =
 
 fun mk_ruledb (G:grammar) = let
   val Grules = term_grammar.grammar_rules G
-  val table:(rule_element list, rule_summary)Polyhash.hash_table =
-       Polyhash.mkPolyTable (2 * length Grules, Fail "")
+  val table:(rule_element list, rule_summary)Binarymap.dict ref =
+       Polyhash.mkDict (Lib.list_compare RE_compare)
   fun insert_rule f g (rr:rule_record) =
     Polyhash.insert table (g (term_grammar.rule_elements (#elements rr)),
                            f (#term_name rr))
@@ -546,8 +563,8 @@ fun parse_term (G : grammar) typeparser = let
   fun lifted_typeparser (qb, ps) = ((qb, ps), SOME (typeparser qb))
 
 
-  val keyword_table = Polyhash.mkPolyTable (50, Fail "")
-  val _ = app (fn v => Polyhash.insert keyword_table (v, ())) grammar_tokens
+  val keyword_table =
+      HOLset.addList(HOLset.empty String.compare, grammar_tokens)
 
   (* transform takes an input token (of the sort that comes out of the
      lexer), and turns it into a token of the sort used internally by the
@@ -570,7 +587,7 @@ fun parse_term (G : grammar) typeparser = let
             else if s = vs_cons_special then (VS_cons, locn, SOME tt)
             else if s = endbinding andalso nparens = 0 andalso
               vs_state <> VSRES_Normal then (EndBinding, locn, SOME tt)
-            else if isSome (Polyhash.peek keyword_table s) then
+            else if HOLset.member(keyword_table, s) then
               (STD_HOL_TOK s, locn, SOME tt)
             else (Id, locn, SOME tt)
         | Antiquote _ => (Id, locn, SOME tt)
