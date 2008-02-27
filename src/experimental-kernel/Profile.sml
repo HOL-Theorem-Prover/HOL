@@ -1,14 +1,11 @@
 structure Profile :> Profile =
 struct
 
-open Polyhash
-
-exception ProfileEntryNotFound
-
-val ptable = mkPolyTable (100, ProfileEntryNotFound)
+open Binarymap
 
 type time = Time.time
 type call_info = {gc : time, sys : time, usr : time, n : int}
+val ptable = ref (Binarymap.mkDict String.compare : (string,call_info)dict)
 
 datatype 'a result = OK of 'a | Ex of exn
 
@@ -23,28 +20,29 @@ in
 end
 
 fun profile nm f x =
-    case peek ptable nm of
+    case peek (!ptable, nm) of
       NONE => let
         val (result, {usr,sys,gc}) = time f x
-        val _ = insert ptable (nm, {usr = usr, gc = gc, sys = sys, n = 1})
       in
+        ptable := insert (!ptable, nm, {usr = usr, gc = gc, sys = sys, n = 1});
         return result
       end
     | SOME {usr = usr0, sys = sys0, gc = gc0, n = n0} => let
         val (result, {usr = usr1, sys = sys1, gc = gc1}) = time f x
         open Time
-        val _ = insert ptable (nm, {usr = usr0 + usr1, gc = gc0 + gc1,
-                                    sys = sys0 + sys1, n = Int.+(n0,1)})
       in
+        ptable := insert (!ptable, nm, {usr = usr0 + usr1, gc = gc0 + gc1,
+                                     sys = sys0 + sys1, n = Int.+(n0,1)});
         return result
       end
 
-fun reset1 nm = ignore (remove ptable nm) handle ProfileEntryNotFound => ()
+fun reset1 nm =
+    ptable := #1 (remove (!ptable, nm)) handle Binarymap.NotFound => ()
 
-fun reset_all () = filter (fn x => false) ptable
+fun reset_all () = ptable := Binarymap.mkDict String.compare
 
 fun results () = Listsort.sort (fn (i1, i2) => String.compare(#1 i1, #1 i2))
-                               (listItems ptable)
+                               (listItems (!ptable))
 
 
 fun output_profile_result outstr (nm, {usr, sys, gc, n}) = let
@@ -58,7 +56,7 @@ in
   ()
 end
 
-fun output_profile_results out = app (output_profile_result out)
+fun output_profile_results out = List.app (output_profile_result out)
 
 val print_profile_result = output_profile_result TextIO.stdOut
 
