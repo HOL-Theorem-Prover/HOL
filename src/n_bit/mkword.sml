@@ -1,6 +1,6 @@
 fun UseErr() =
 (print("Usage: " ^ CommandLine.name() ^ " [-sys] [-MLdir p] n\n");
-                Process.exit Process.failure);
+                OS.Process.exit OS.Process.failure);
 
 (* --------------------------------------------------------------------- *)
 
@@ -51,8 +51,8 @@ val MOSMLC = fullPath [Systeml.MOSMLDIR,"mosmlc"];
 val thy_file = "word" ^ sn ^ "Theory";
 val lib_file = "word" ^ sn ^ "Lib";
 
-fun failonerror f x = if f x = Process.success then ()
-                      else Process.exit Process.failure
+fun failonerror f x = if f x = OS.Process.success then ()
+                      else OS.Process.exit OS.Process.failure
 
 val _ =
     failonerror
