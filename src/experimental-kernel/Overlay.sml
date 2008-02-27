@@ -14,3 +14,6 @@ infix 8 via by;
 structure Term = Term :> RestrictedTerm where type term = Term.term
 structure Tag = Tag :> RestrictedTag where type tag = Tag.tag
 
+structure Process = OS.Process
+
+

@@ -53,8 +53,10 @@ val version_number = 5
 val release_string = "Kananaskis"
 
 val _ = Meta.quietdec := true;
-app load ["FileSys", "Process", "Path",
-          "Substring", "BinIO", "Lexing", "Nonstdio"];
+app load ["OS", "Substring", "BinIO", "Lexing", "Nonstdio"];
+structure FileSys = OS.FileSys
+structure Process = OS.Process
+structure Path = OS.Path
 
 fun check_is_dir role dir =
     (FileSys.isDir dir handle e => false) orelse
@@ -160,6 +162,7 @@ val _ = let
   val srcfile = fullPath [holmakedir, OSkind ^"-systeml.sml"]
   val destfile = fullPath [holmakedir, "Systeml.sml"]
   val sigfile = fullPath [holmakedir, "Systeml.sig"]
+  val preprocess_file = fullPath [holmakedir, "PreProcess.sml"]
 in
   print "\nLoading system specific functions\n";
   use sigfile;
@@ -172,6 +175,7 @@ in
    "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available^"\n"),
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
    "val release ="  --> ("val release = "^quote release_string^"\n")];
+  use preprocess_file;
   use destfile
 end;
 
@@ -198,8 +202,9 @@ in
   if sigfile_newer then (systeml [compiler, "-c", "Systeml.sig"];
                          app to_sigobj ["Systeml.sig", "Systeml.ui"];
                          print "sig ") else ();
+  systeml [compiler, "-c", "PreProcess.sml"];
   systeml [compiler, "-c", "Systeml.sml"];
-  to_sigobj "Systeml.uo";
+  app to_sigobj ["Systeml.uo", "PreProcess.ui", "PreProcess.uo"];
   print "sml)\n";
   FileSys.chDir dir_0
 end;

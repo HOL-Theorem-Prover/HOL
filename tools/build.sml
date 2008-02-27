@@ -2,6 +2,10 @@
                 An ML script for building HOL
  ---------------------------------------------------------------------------*)
 
+structure build =
+struct
+
+structure Process = OS.Process
 
 (* utilities *)
 
@@ -446,7 +450,7 @@ fun clean_sigobj() =
       let val f = Path.file s
           val n = lowcase (hd (String.fields (equal #".") f))
       in
-         if mem n ["systeml", "cvs", "", "readme"]
+         if mem n ["systeml", "cvs", "", "readme", "preprocess"]
           then ()
           else rem_file s
       end
@@ -683,3 +687,5 @@ val _ =
     | ["small"]     => build_hol mv
     | ["help"]      => build_help()
     | otherwise     => errmsg help_mesg
+
+end (* struct *)

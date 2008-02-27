@@ -1,6 +1,6 @@
 quietdec := true;
 app load ["Mosml", "Process", "Path", "FileSys", "Timer", "Real", "Int",
-          "Bool"] ;
+          "Bool", "OS"] ;
 open Mosml;
 
 (* utility functions *)
