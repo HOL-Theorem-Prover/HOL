@@ -1,4 +1,3 @@
-
 \chapter{Example: Euclid's Theorem}
 \label{chap:euclid}
 
@@ -8,74 +7,55 @@ In this chapter, we prove in \holn{} that for every number, there is a
 prime number that is larger, \ie, that the prime numbers form an
 infinite sequence. This proof has been excerpted and adapted from a
 much larger example due to John Harrison, in which he proved the $n =
-4$ case of Fermat's Last Theorem. The proof development will be
-performed using the facilities of \ml{bossLib}, one of \HOL's
-libraries, and is intended to serve as an introduction to performing
-high-level interactive proofs in \holn.  Many of the details may be
-difficult to grasp for the novice reader; nonetheless, it is
-recommended that the example be followed through in order to gain a
-true taste of using \HOL{} to prove non-trivial theorems.
+4$ case of Fermat's Last Theorem. The proof development is intended 
+to serve as an introduction to performing high-level interactive proofs 
+in \holn.\footnote{The proofs discussed below may be found in 
+\texttt{examples/euclid.sml} of the \holn distribution.}
+Many of the details may be difficult to grasp for the novice reader; 
+nonetheless, it is recommended that the example be followed through in 
+order to gain a true taste of using \HOL{} to prove non-trivial theorems.
 
 Some tutorial descriptions of proof systems show the system performing
-amazing feats of automated theorem proving. In this example, we will
-{\it not\/} take this approach; instead, we try to show how one
+amazing feats of automated theorem proving. In this example, we have
+\textit{not} taken this approach; instead, we try to show how one
 actually goes about the business of proving theorems in \holn{}: when
 more than one way to prove something is possible, we will consider the
-choices; when a difficulty rears its ugly head, we will attempt to
-explain how to fight one's way clear.
+choices; when a difficulty arises, we will attempt to explain how to fight 
+one's way clear.
 
 One `drives' \holn{} by interacting with the ML top-level loop. In this
 interaction style, ML function calls are made to bring in
-already-established logical context (usually via \ml{load}), to define
-new context (via \ml{Hol\_datatype} and \ml{Define} from
-\ml{bossLib}), and to perform proofs using the goalstack interface, and
+already-established logical context, \eg, via \ml{load}; to define
+new concepts, \eg, via \ml{Hol\_datatype},  \ml{Define}, and \ml{Hol\_reln};
+and to perform proofs using the goalstack interface, and
 the proof tools from \ml{bossLib} (or if they fail to do the job, from
 lower-level libraries).
 
-First, we start the system, with the command \ml{<holdir>/bin/hol}.
-Now, we ``\ml{open}'' the arithmetic theory, and specialize the
-rewriter provided by \ml{bossLib} to a simplification set that knows
-about arithmetic.  The former means that all of the \ML{} bindings
-from the \HOL{} theory of arithmetic are available at the top level.
-The latter is not necessary, but is a convenient abbreviation and
-serves to make some of the proofs typeset more nicely.
+Let's get started. First, we start the system, with the command \ml{<holdir>/bin/hol}.
+We then ``\ml{open}'' the arithmetic theory; this means that all of the \ML{} bindings
+from the \HOL{} theory of arithmetic are made available at the top level.
 \begin{session}
 \begin{verbatim}
 - open arithmeticTheory;
   ...
-
-- val ARW_TAC = RW_TAC arith_ss;
-> val ARW_TAC =
-    fn
-    : thm list -> term list * term ->
-      (term list * term) list * (thm list -> thm)
 \end{verbatim}
 \end{session}
-The ML type of \ml{ARW\_TAC} is $\mbox{\it thm list} \longrightarrow
-\mbox{\it tactic}$. When \ml{ARW\_TAC} is applied to a list of theorems, the
-theorems will be added to \verb+arith_ss+ as rewrite rules.  We will see
-that \ml{ARW\_TAC} is fairly knowledgeable about
-arithmetic.\footnote{Linear arithmetic especially: purely universal
-statements involving the operators {\tt SUC}, $+$, $-$, numeric
-literals, $<$, $\leq$, $>$, $\geq$, $=$, and multiplication by numeric
-literals.}
-
-We now begin the formalization. In order to define the concept of  \emph
-{prime} number, we first need to define the \emph{divisibility} relation:
+We now begin the formalization. In order to define the concept of  
+prime number, we first need to define the \emph{divisibility} relation:
 
 \begin{session}
 \begin{verbatim}
-- val divides = Define `divides a b = ?x. b = a * x`;
+- val divides_def = Define `divides a b = ?x. b = a * x`;
 
 Definition has been stored under "divides_def".
-> val divides = |- !a b. divides a b = ?x. b = a * x : thm
+> val divides_def = |- !a b. divides a b = ?x. b = a * x : thm
 \end{verbatim}
 \end{session}
 
 The definition is added to the current theory with the name
 \ml{divides\_def}, and also returned from the invocation of
 \ml{Define}. We take advantage of this and make an \ML{} binding of
-the name \ml{divides} to the definition. In the usual way of
+the name \ml{divides\_def} to the definition. In the usual way of
 interacting with \HOL, such an \ML{} binding is made for each
 definition and (useful) proved theorem: the \ML{} environment is thus
 being used as a convenient place to hold definitions and theorems for
@@ -87,60 +67,91 @@ We want to treat \ml{divides} as a (right associative) infix:
 - set_fixity "divides" (Infixr 450);
 \end{verbatim}
 \end{session}
-Now we can define the property of a number being \emph{prime}: a number $p$ is
+Next we define the property of a number being \emph{prime}: a number $p$ is
 prime if and only if it is not equal to $1$ and it has no divisors other
 than $1$ and itself:
 
 \begin{session}
 \begin{verbatim}
-- val prime =
+- val prime_def =
     Define `prime p = ~(p=1) /\ !x. x divides p ==> (x=1) \/ (x=p)`;
 
 Definition has been stored under "prime_def".
-> val prime =
+> val prime_def =
     |- !p. prime p = ~(p = 1) /\ !x. x divides p ==> (x = 1) \/ (x = p)
     : thm
 \end{verbatim}
 \end{session}
 
 That concludes the definitions to be made. Now we ``just'' have to prove
-that there are an infinite number of primes. If we were coming to this
+that there are infinitely many prime numbers. If we were coming to this
 problem fresh, then we would have to go through a not-well-understood
 and often tremendously difficult process of finding the right lemmas
 required to prove our target theorem.\footnote{This is of course a
 general problem in doing any kind of proof.} Fortunately, we are working
-from a detailed and accurate source and can devote ourselves to the far
+from an already completed proof and can devote ourselves to the far
 simpler problem of explaining how to prove the required theorems.
 
+\paragraph{Proof tools}
 The development will illustrate that there is often more than one way to
 tackle a HOL proof, even if one has only a single (informal) proof in
-mind. We often \emph{find} the proof using \ml{ARW\_TAC} to unwind
-definitions and perform basic simplifications, \ie, to reduce the goal
-to its essence. Sometimes this proves the goal immediately. Often
-however, we are left with a goal that requires some study before one
+mind. In this example, we often \emph{find} proofs by using 
+the rewriter \ml{RW\_TAC} to unwind definitions and perform basic 
+simplifications, often reducing a goal to its essence.
+\begin{session}
+\begin{verbatim}
+RW_TAC;
+val it = fn :simpset -> thm list -> term list * term -> 
+             (term list * term) list * (thm list -> thm)
+\end{verbatim}
+\end{session}
+The ML type of \ml{RW\_TAC} is 
+\ml{:simpset -> thm list -> tactic}.\footnote{Unfortunately, the MoscowML system does not print out
+the type of tactics in its abbreviated form.} 
+When \ml{RW\_TAC} is applied to a \textit{simpset}---for this example it will 
+always be \ml{arith\_ss}---and a list of theorems, the
+theorems will be added to the simpset as supplementary rewrite rules. 
+We will see that \ml{arith\_ss} is also somewhat knowledgeable about
+arithmetic.\footnote{Linear arithmetic especially: purely universal
+formulas involving the operators {\tt SUC}, $+$, $-$, numeric
+literals, $<$, $\leq$, $>$, $\geq$, $=$, and multiplication by numeric
+literals.}
+Sometimes simplification with \ml{RW\_TAC} proves the goal immediately. 
+Often however, we are left with a goal that requires some study before one
 realizes what lemmas are needed to conclude the proof. Once these lemmas
-have been proven (or located in ancestor theories), \ml{PROVE\_TAC} can
+have been proven, or located in ancestor theories, 
+\ml{METIS\_TAC}\footnote{\ml{METIS\_TAC}
+performs resolution-style first-order proof search.} can
 be invoked with them, with the expectation that it will find the right
-instantiations needed to finish the proof. (These two operations do not
-suffice to perform all proofs; in particular, our development will also need
-case analysis and induction.)
+instantiations needed to finish the proof. Note that these two operations,
+simplification and resolution-style automatic proof search, will not suffice to 
+perform all the proofs in this example; in particular, our development will 
+also need case analysis and induction.
 
+\paragraph{Finding theorems}
 This raises the following question: how does one find the right lemmas
-to use? This is quite a problem, especially when the number of
-theorems in ancestor theories is large. There are are couple of
-possibilities: the help system can be used to look up definitions and
+and rewrite rules to use? This is quite a problem, especially since the number of
+ancestor theories, and the theorems in them,  is large. There are several
+possibilities
+\begin{itemize}
+\item The help system can be used to look up definitions and
 theorems, as well as proof procedures; for example, an invocation of
-\[
-\mbox{\texttt{help "arithmeticTheory"}}
-\]
+{\small
+\begin{verbatim}
+   help "arithmeticTheory"
+\end{verbatim}}
 will display all the definitions and theorems that have been stored in
 the theory of arithmetic. However, the complete name of the item being
-searched for must be known before the help system is useful.
-Alternatively, the functions in \verb+DB+ are often easier to use.
-\verb+DB.match+ allows the use of first order patterns to look for the
-relevant items, while \verb+DB.find+ will use fragments of names as
-keys with which to lookup information.
+searched for must be known before the help system is useful, so the following
+two search facilities are often more useful.
+\item  \verb+DB.match+ allows the use of patterns to locate the
+sought-for theorem. Any stored theorem having an instance of the pattern
+as a subterm will be returned.
+\item \verb+DB.find+ will use fragments of names as keys with which to 
+lookup information.
+\end{itemize}
 
+\paragraph{Tactic composition}
 Once a proof of a proposition has been found, it is customary, although
 not necessary, to embark on a process of \emph{revision}, in which the
 original sequence of tactics is composed into a single tactic. Sometimes
@@ -154,14 +165,14 @@ following, we will show how this is done in a few cases.
 
 We start by proving a number of theorems about the \verb+divides+
 relation.  We will see that each of these initial theorems can be
-proved with a single invocation of \ml{PROVE\_TAC}. Both \ml{ARW\_TAC}
-and \ml{PROVE\_TAC} are quite powerful reasoners, and the choice of a
+proved with a single invocation of \ml{METIS\_TAC}. Both \ml{RW\_TAC}
+and \ml{METIS\_TAC} are quite powerful reasoners, and the choice of a
 reasoner in a particular situation is a matter of experience.  The
-major reason that \ml{PROVE\_TAC} works so well is that \verb+divides+
-is defined by means of an existential quantifier, and \ml{PROVE\_TAC}
+major reason that \ml{METIS\_TAC} works so well is that \verb+divides+
+is defined by means of an existential quantifier, and \ml{METIS\_TAC}
 is quite good at automatically instantiating existentials in the
 course of proof. For a simple example, consider proving $\forall x.\
-x\; \mbox{\tt divides}\; 0$. A new proposition to be proved is entered
+x\; \mathtt{divides}\; 0$. A new proposition to be proved is entered
 to the proof manager via ``\ml{g}'', which starts a fresh goalstack:
 
 \begin{session}
@@ -184,7 +195,7 @@ keep distinct the $x$ of the goal and the $x$ in the definition of
 \ml{divides}:
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC [divides]);
+- e (RW_TAC arith_ss [divides_def]);
 
 OK..
 1 subgoal:
@@ -207,7 +218,7 @@ OK..
 Then a simplification step finishes the proof.
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC []);
+- e (RW_TAC arith_ss []);
 OK..
 
 Goal proved.
@@ -221,12 +232,12 @@ Goal proved.
 \end{verbatim}
 \end{session}
 
-What just happened here? The application of \ml{ARW\_TAC} to the goal
+What just happened here? The application of \ml{RW\_TAC} to the goal
 decomposed it to an empty list of subgoals; in other words the goal was
-proved by \ml{ARW\_TAC}.  Once a goal has been proved, it is popped off
+proved by \ml{RW\_TAC}.  Once a goal has been proved, it is popped off
 the goalstack, prettyprinted to the output, and the theorem becomes
 available for use by the level of the stack. When all the sub-goals
-required by {\it that\/} level are proven, the corresponding goal at
+required by \textit{that} level are proven, the corresponding goal at
 that level can be proven too.  This `unwinding' process continues until
 the stack is empty, or until it hits a goal with more than one remaining
 unproved subgoal. This process may be hard to
@@ -243,16 +254,17 @@ take just one step:
 - restart();
 >   ...
 
-- e (ARW_TAC [divides] THEN EXISTS_TAC ``0`` THEN ARW_TAC[]);
-
+- e (RW_TAC arith_ss [divides_def] THEN EXISTS_TAC ``0`` 
+     THEN RW_TAC arith_ss []);
 OK..
+
 > val it =
     Initial goal proved.
     |- !x. x divides 0
 \end{verbatim}
 \end{session}
 We have seen one way to prove the theorem. However, as mentioned
-earlier, there is another: one can let \ml{PROVE\_TAC} expand the
+earlier, there is another: one can let \ml{METIS\_TAC} expand the
 definition of \ml{divides} and find the required instantiation for
 \verb+x'+ from the theorem \ml{MULT\_CLAUSES}.\footnote{You might
   like to try typing \ml{MULT\_CLAUSES} into the interactive loop
@@ -262,16 +274,16 @@ definition of \ml{divides} and find the required instantiation for
 - restart();
 >   ...
 
-- e (PROVE_TAC [divides, MULT_CLAUSES]);
-
+- e (METIS_TAC [divides_def, MULT_CLAUSES]);
 OK..
-Meson search level: .....
+metis: r[+0+10]+0+0+0+1+2#
 > val it =
     Initial goal proved.
     |- !x. x divides 0
 \end{verbatim}
 \end{session}
-    In any case, having done our proof inside the goalstack package,
+As it runs, \ml{METIS\_TAC} prints out some possibly interesting
+diagnostics. In any case, having done our proof inside the goalstack package,
     we now want to have access to the theorem value that we have
     proved.  We use the \ml{top\_thm} function to do this, and then
     use \ml{drop} to dispose of the stack:
@@ -287,72 +299,72 @@ OK..
 \end{verbatim}
 \end{session}
 
-We have used \ml{PROVE\_TAC} in this way to prove the following
+We have used \ml{METIS\_TAC} in this way to prove the following
 collection of theorems about \ml{divides}. As mentioned previously, the
-theorems supplied to \ml{PROVE\_TAC} in the following proofs did not
+theorems supplied to \ml{METIS\_TAC} in the following proofs did not
 (usually) come from thin air: in most cases some exploratory work with
-\ml{ARW\_TAC} was done to open up definitions and see what lemmas would
-be required by \ml{PROVE\_TAC}.
+\ml{RW\_TAC} was done to open up definitions and see what lemmas would
+be required by \ml{METIS\_TAC}.
 
 \begin{description}
 \label{euclid:extra-proofs}
 \item [\small{({\it DIVIDES\_0\/})}]
 \begin{tabular}[t]{l}
 \verb+!x. x divides 0+ \\ \hline
- \verb+PROVE_TAC [divides, MULT_CLAUSES]+
+ \verb+METIS_TAC [divides_def, MULT_CLAUSES]+
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_ZERO\/})}]
 \begin{tabular}[t]{l}
 \verb+!x. 0 divides x = (x = 0)+ \\ \hline
- \verb+PROVE_TAC [divides, MULT_CLAUSES]+
+ \verb+METIS_TAC [divides_def, MULT_CLAUSES]+
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_ONE\/})}]
 \begin{tabular}[t]{l}
 \verb+!x. x divides 1 = (x = 1)+ \\ \hline
- \verb+PROVE_TAC [divides, MULT_CLAUSES, MULT_EQ_1]+
+ \verb+METIS_TAC [divides_def, MULT_CLAUSES, MULT_EQ_1]+
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_REFL\/})}]
 \begin{tabular}[t]{l}
 \verb+!x. x divides x+ \\ \hline
- \verb+PROVE_TAC [divides, MULT_CLAUSES]+ \\
+ \verb+METIS_TAC [divides_def, MULT_CLAUSES]+ \\
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_TRANS\/})}]
 \begin{tabular}[t]{l}
 \verb+!a b c. a divides b /\ b divides c ==> a divides c+ \\ \hline
- \verb+PROVE_TAC [divides, MULT_ASSOC]+ \\
+ \verb+METIS_TAC [divides_def, MULT_ASSOC]+ \\
 \end{tabular}
 \item[\small{({\it DIVIDES\_ADD\/})}]
 \begin{tabular}[t]{l}
 \verb|!d a b. d divides a /\ d divides b ==> d divides (a+b)| \\ \hline
- \verb|PROVE_TAC [divides,LEFT_ADD_DISTRIB]|
+ \verb|METIS_TAC [divides_def,LEFT_ADD_DISTRIB]|
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_SUB\/})}]
 \begin{tabular}[t]{l}
 \verb+!d a b. d divides a /\ d divides b ==> d divides (a-b)+ \\ \hline
- \verb+PROVE_TAC [divides, LEFT_SUB_DISTRIB]+ \\
+ \verb+METIS_TAC [divides_def, LEFT_SUB_DISTRIB]+ \\
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_ADDL\/})}]
 \begin{tabular}[t]{l}
 \verb|!d a b. d divides a /\ d divides (a+b) ==> d divides b| \\ \hline
- \verb+PROVE_TAC [ADD_SUB, ADD_SYM, DIVIDES_SUB]+ \\
+ \verb+METIS_TAC [ADD_SUB, ADD_SYM, DIVIDES_SUB]+ \\
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_LMUL\/})}]
 \begin{tabular}[t]{l}
 \verb+!d a x. d divides a ==> d divides (x * a)+ \\ \hline
- \verb+PROVE_TAC [divides, MULT_ASSOC, MULT_SYM]+ \\
+ \verb+METIS_TAC [divides_def, MULT_ASSOC, MULT_SYM]+ \\
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_RMUL\/})}]
 \begin{tabular}[t]{l}
 \verb+!d a x. d divides a ==> d divides (a * x)+ \\ \hline
- \verb+PROVE_TAC [MULT_SYM, DIVIDES_LMUL]+ \\
+ \verb+METIS_TAC [MULT_SYM, DIVIDES_LMUL]+ \\
 \end{tabular}
 
 \end{description}
@@ -360,14 +372,14 @@ be required by \ml{PROVE\_TAC}.
 \noindent We'll assume that the above proofs have been performed, and
 that the appropriate ML names have been given to all of the theorems.
 Now we encounter a lemma about divisibility that doesn't succumb to a
-single invocation of \ml{PROVE\_TAC}:
+single invocation of \ml{METIS\_TAC}:
 \begin{description}
 \item [\small{({\it DIVIDES\_LE\/})}]
 \begin{tabular}[t]{l}
 \verb+!m n. m divides n ==> m <= n \/ (n = 0)+ \\ \hline
-\verb+ARW_TAC [divides]+ \\
+\verb+RW_TAC arith_ss [divides_def]+ \\
 \verb+   THEN Cases_on `x`+ \\
-\verb+   THEN ARW_TAC [MULT_CLAUSES]+ \\
+\verb+   THEN RW_TAC arith_ss [MULT_CLAUSES]+ \\
 \end{tabular}
 \end{description}
 Let's see how this is proved. The easiest way to start is to simplify
@@ -377,7 +389,7 @@ with the definition of \ml{divides}:
 - g `!m n . m divides n ==> m <= n \/ (n = 0)`;
 >   ...
 
-- e (ARW_TAC [divides]);
+- e (RW_TAC arith_ss [divides_def]);
 
 1 subgoal:
 > val it =
@@ -387,7 +399,7 @@ with the definition of \ml{divides}:
 
 Considering the goal, we basically have three choices: (1) find a
 collection of lemmas that together imply the goal and use
-\ml{PROVE\_TAC}; (2) do a case split on $m$; or (3) do a case split on
+\ml{METIS\_TAC}; (2) do a case split on $m$; or (3) do a case split on
 $x$. The first doesn't seem simple, because the goal doesn't really fit
 in the `shape' of any pre-proved theorem(s) that the author knows
 about. Although option (2) will be rejected in the end, let's try it
@@ -399,7 +411,6 @@ be whether $m$ is $0$ or a successor.
 \begin{session}
 \begin{verbatim}
 - e (Cases_on `m`);
-
 OK..
 2 subgoals:
 > val it =
@@ -412,8 +423,7 @@ OK..
 
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC []);
-
+- e (RW_TAC arith_ss []);
 OK..
 
 Goal proved.
@@ -424,25 +434,29 @@ Remaining subgoals:
     SUC n <= SUC n * x \/ (SUC n * x = 0)
 \end{verbatim}
 \end{session}
-\noindent Let's try \ml{ARW\_TAC} again:
+\noindent Let's try \ml{RW\_TAC} again:
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC []);
-
+- e (RW_TAC arith_ss []);
 OK..
 1 subgoal:
 > val it =
-    SUC n <= SUC n * x \/ (x = 0)
+    SUC n <= x * SUC n \/ (x = 0)
 \end{verbatim}
 \end{session}
 The right disjunct has been simplified; however, the left disjunct has
 failed to expand the definition of multiplication in the expression
-$\mbox{\tt SUC}\ n * x$, which would have been convenient. Why not, when
-\verb+arith_ss+ and hence \ml{ARW\_TAC} is supposed to be expert in
-arithmetic? The answer is that the recursive clauses for addition and
+$\mathtt{SUC}\ n * x$, which would have been convenient. In fact, it has
+changed it to $x * \mathtt{SUC}\ n$, which is inconvenient. 
+Why, when \verb+arith_ss+ and hence \ml{RW\_TAC} is supposed to be expert in
+arithmetic? The answer is twofold: first, the recursive clauses for addition and
 multiplication are not in \verb+arith_ss+ because uncontrolled
 application of them by the rewriter seems, in general, to make some
-proofs \emph{more} complicated, rather than simpler. OK, so let's
+proofs \emph{more} complicated, rather than simpler; second, the simplifier
+will rearrange arithmetical terms to make some automated proofs simpler. So
+the absence of the recursive clauses for multiplication
+means that $\mathtt{SUC}\ n * x$ does not expand to $(n * x) + x$;
+instead, the rearrangement yields $x * \mathtt{SUC}\; n$. OK, so let's
 add in the definition of multiplication. This uncovers a new problem: how
 to locate this definition. The function
 \begin{boxed}
@@ -511,7 +525,10 @@ choose the latter.
 
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC [MULT_CLAUSES]);
+- b();
+  ...
+
+e (RW_TAC arith_ss [MULT_CLAUSES]);
 
 OK..
 1 subgoal:
@@ -521,13 +538,9 @@ OK..
 \end{session}
 Now we see that, in order to make progress in the proof, we will have to
 do a case split on $x$ anyway, and that we should have split on it
-originally. Hence we backup. We will have to backup (undo) four times:
+originally. Hence we backup. We will have to backup (undo) three times:
 \begin{session}
 \begin{verbatim}
-- b();
-> val it =
-    SUC n <= SUC n * x \/ (x = 0)
-
 - b();
 > val it =
     SUC n <= SUC n * x \/ (SUC n * x = 0)
@@ -547,7 +560,7 @@ originally. Hence we backup. We will have to backup (undo) four times:
 
 Now we can go forward and do case analysis on $x$. We will also make a
 compound tactic invocation, since we already know that we'll have to
-invoke \ml{ARW\_TAC} in both branches of the case split. This can be
+invoke \ml{RW\_TAC} in both branches of the case split. This can be
 done using \ml{THEN}.  When $t_1 \ \mbox{\ml{THEN}}\ t_2$ is applied
 to a goal $g$, first $t_1$ is applied to $g$, giving a list of new
 subgoals, then $t_2$ is applied to each member of the list. All goals
@@ -555,8 +568,7 @@ resulting from these applications of $t_2$ are gathered together and
 returned.
 \begin{session}
 \begin{verbatim}
-- e (Cases_on `x` THEN ARW_TAC [MULT_CLAUSES]);
-
+- e (Cases_on `x` THEN RW_TAC arith_ss [MULT_CLAUSES]);
 OK..
 
 Goal proved.
@@ -579,9 +591,9 @@ under the given name.
 - val DIVIDES_LE = store_thm (
      "DIVIDES_LE",
      ``!m n. m divides n ==> m <= n \/ (n = 0)``,
-     ARW_TAC [divides]
+     RW_TAC arith_ss  [divides_def]
        THEN Cases_on `x`
-       THEN ARW_TAC [MULT_CLAUSES]);
+       THEN RW_TAC arith_ss  [MULT_CLAUSES]);
 
 > val DIVIDES_LE = |- !m n. m divides n ==> m <= n \/ (n = 0) : thm
 \end{verbatim}
@@ -594,7 +606,7 @@ in section~\ref{sec:script-to-theory}.
 \subsection{Divisibility and factorial}
 
 The next lemma, {\small{\it DIVIDES\_FACT\/}}, says that every number
-greater than $0$ and less-than-or-equal-to $n$ divides the factorial of
+greater than $0$ and $\leq n$ divides the factorial of
 $n$. Factorial is found at \verb+arithmeticTheory.FACT+ and has been
 defined by primitive recursion:
 \begin{description}
@@ -608,17 +620,17 @@ defined by primitive recursion:
 \end{description}
 A polished proof of {\small{\it DIVIDES\_FACT\/}} is the
 following\footnote{This and subsequent proofs use the theorems proved
-  on page~\pageref{euclid:extra-proofs}, which we've assumed are
-  now part of the \ML{} environment.}:
+  on page~\pageref{euclid:extra-proofs}, which were added to the \ML{} environment
+  after being proved.}:
 \begin{description}
 \item [\small{({\it DIVIDES\_FACT\/})}]
 \begin{tabular}[t]{l}
 \verb+!m n. 0 < m /\ m <= n ==> m divides (FACT n)+ \\ \hline
-\verb+ARW_TAC [LESS_EQ_EXISTS]+ \\
+\verb+RW_TAC arith_ss [LESS_EQ_EXISTS]+ \\
 \verb+ THEN Induct_on `p`+ \\
-\verb+ THEN ARW_TAC [FACT,ADD_CLAUSES]+ \\
+\verb+ THEN RW_TAC arith_ss [FACT,ADD_CLAUSES]+ \\
 \verb+ THENL [Cases_on `m`, ALL_TAC]+ \\
-\verb+ THEN PROVE_TAC [FACT, DECIDE ``!x. ~(x < x)``,+ \\
+\verb+ THEN METIS_TAC [FACT, DECIDE ``!x. ~(x < x)``,+ \\
 \verb+                 DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]+ \\
 \end{tabular}
 \end{description}
@@ -657,8 +669,7 @@ variable, obtained by use of the theorem \verb+LESS_EQ_EXISTS+.
 - LESS_EQ_EXISTS;
 > val it = |- !m n. m <= n = (?p. n = m + p) : thm
 
-- e (ARW_TAC [LESS_EQ_EXISTS]);
-
+- e (RW_TAC arith_ss [LESS_EQ_EXISTS]);
 OK..
 1 subgoal:
 > val it =
@@ -671,7 +682,6 @@ OK..
 \begin{session}
 \begin{verbatim}
 - e (Induct_on `p`);
-
 OK..
 2 subgoals:
 > val it =
@@ -688,8 +698,7 @@ OK..
 \noindent The first goal can obviously be simplified:
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC []);
-
+- e (RW_TAC arith_ss []);
 OK..
 1 subgoal:
 > val it =
@@ -705,7 +714,6 @@ trivial goal; if it is a successor, then we can use the definition of
 \begin{session}
 \begin{verbatim}
 - e (Cases_on `m`);
-
 OK..
 2 subgoals:
 > val it =
@@ -719,22 +727,21 @@ OK..
 \end{verbatim}
 \end{session}
 
-    Here the first sub-goal goal has an assumption that is false.  We
-    can demonstrate this to the system by using the \ml{DECIDE}
-    function to prove a simple fact about arithmetic (namely, that no
-    number $x$ is less than itself), and then passing the resulting
-    theorem to \ml{PROVE\_TAC}, which can combine this with the
-    contradictory assumption.\footnote{Note how the interactive system
-      prints out the proved theorem with \ml{[.]} before the
-      turnstile.  This notation indicates that a theorem has an
-    assumption (the false $0 < 0$ in this case).}
+ Here the first sub-goal goal has an assumption that is false.  We
+ can demonstrate this to the system by using the \ml{DECIDE}
+function to prove a simple fact about arithmetic (namely, that no
+number $x$ is less than itself), and then passing the resulting
+theorem to \ml{METIS\_TAC}, which can combine this with the
+contradictory assumption.\footnote{Note how the interactive system
+  prints out the proved theorem with \ml{[.]} before the
+  turnstile.  This notation indicates that a theorem has an
+ assumption (the false $0 < 0$ in this case).}
 
 \begin{session}
 \begin{verbatim}
-- e (PROVE_TAC [DECIDE ``!x. ~(x < x)``]);
-
+- e (METIS_TAC [DECIDE ``!x. ~(x < x)``]);
 OK..
-Meson search level: ..
+metis: r[+0+4]#
 
 Goal proved.
  [.] |- 0 divides FACT 0
@@ -746,13 +753,12 @@ Remaining subgoals:
       0 < SUC n
 \end{verbatim}
 \end{session}
-Using the theorems identified above, this, the second sub-goal, can
-be proved with \ml{ARW\_TAC}.
+Using the theorems identified above the remaining sub-goal can
+be proved with \ml{RW\_TAC}.
 
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
-
+- e (RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]);
 OK..
 
 Goal proved.   ...
@@ -765,15 +771,17 @@ Remaining subgoals:
       1.  m divides FACT (m + p)
 \end{verbatim}
 \end{session}
-Note that this last step (the invocation of \ml{ARW\_TAC})
-could also have been accomplished with \ml{PROVE\_TAC}:
+This last step, namely the invocation of \ml{RW\_TAC},
+could also have been accomplished with \ml{METIS\_TAC}. Note that
+the only difference is the use of \ml{DIVIDES\_LMUL} in the simplifier
+\emph{versus} \ml{DIVIDES\_RMUL} in \ml{METIS\_TAC}. This is due to the
+already mentioned algebraic rearrangement of arithmetical terms in the simplifier.
 \begin{session}
 \begin{verbatim}
 - b();
-
 > ...
 
-- e (PROVE_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
+- e (METIS_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
 OK..
 
 Goal proved.  ...
@@ -784,25 +792,25 @@ step case. An obvious thing to try is simplification with the
 definitions of addition and factorial:
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC [FACT, ADD_CLAUSES]);
+- e (RW_TAC arith_ss [FACT, ADD_CLAUSES]);
 
 OK..
 1 subgoal:
 > val it =
-    m divides SUC (m + p) * FACT (m + p)
+    m divides FACT (m + p) * SUC (m + p)
     ------------------------------------
       0.  0 < m
       1.  m divides FACT (m + p)
 \end{verbatim}
 \end{session}
-\noindent And now, by \ml{DIVIDES\_LMUL} and the inductive hypothesis, we are
+\noindent And now, by \ml{DIVIDES\_RMUL} and the inductive hypothesis, we are
 done:
 \begin{session}
 \begin{verbatim}
-- e (PROVE_TAC [DIVIDES_LMUL]);
-
+- e (METIS_TAC [DIVIDES_RMUL]);
 OK..
-Meson search level: ...
+metis: r[+0+5]+0+0+0+0+1#
+
 Goal proved.
   ...
 > val it =
@@ -817,34 +825,34 @@ track of in a file or a text editor buffer. We would thus have something
 like the following:
 \begin{hol}
 \begin{verbatim}
-    e (ARW_TAC [LESS_EQ_EXISTS]);
+    e (RW_TAC arith_ss [LESS_EQ_EXISTS]);
     e (Induct_on `p`);
     (*1*)
-    e (ARW_TAC []);
+    e (RW_TAC arith_ss  []);
     e (Cases_on `m`);
     (*1.1*)
-    e (PROVE_TAC [DECIDE ``!x. ~(x < x)``]);
+    e (METIS_TAC [DECIDE ``!x. ~(x < x)``]);
     (*1.2*)
-    e (ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
+    e (RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]);
     (*2*)
-    e (ARW_TAC [FACT, ADD_CLAUSES]);
-    e (PROVE_TAC [DIVIDES_LMUL]);
+    e (RW_TAC arith_ss [FACT, ADD_CLAUSES]);
+    e (METIS_TAC [DIVIDES_RMUL]);
 \end{verbatim}
 \end{hol}
 \noindent
 
 We have added a numbering scheme to keep track of the branches in the
-proof. We can stitch the above directly into the following compound
+proof. We can stitch the above together directly into the following compound
 tactic:
 
 \begin{hol}
 \begin{verbatim}
-    ARW_TAC [LESS_EQ_EXISTS]
+    RW_TAC arith_ss [LESS_EQ_EXISTS]
      THEN Induct_on `p`
-     THENL [ARW_TAC [] THEN Cases_on `m`
-            THENL [PROVE_TAC [DECIDE ``!x. ~(x < x)``],
-                   ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]],
-            ARW_TAC [FACT, ADD_CLAUSES] THEN PROVE_TAC [DIVIDES_LMUL]]
+     THENL [RW_TAC arith_ss [] THEN Cases_on `m`
+            THENL [METIS_TAC [DECIDE ``!x. ~(x < x)``],
+                   RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]],
+            RW_TAC arith_ss [FACT, ADD_CLAUSES] THEN METIS_TAC [DIVIDES_RMUL]]
 \end{verbatim}
 \end{hol}
 
@@ -853,18 +861,17 @@ tactic:
 \begin{session}
 \begin{verbatim}
 - restart();
-
 > ...
 
-- e (ARW_TAC [LESS_EQ_EXISTS]
-       THEN Induct_on `p`
-       THENL [ARW_TAC [] THEN Cases_on `m`
-              THENL [PROVE_TAC [DECIDE ``!x. ~(x < x)``],
-                     ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]],
-              ARW_TAC [FACT, ADD_CLAUSES] THEN PROVE_TAC [DIVIDES_LMUL]]);
+- e (RW_TAC arith_ss [LESS_EQ_EXISTS]
+       THEN Induct_on `p` THENL 
+       [RW_TAC arith_ss [] THEN Cases_on `m` THENL 
+          [METIS_TAC [DECIDE ``!x. ~(x < x)``],
+           RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]],
+        RW_TAC arith_ss [FACT, ADD_CLAUSES] THEN METIS_TAC [DIVIDES_RMUL]]);
 OK..
-Meson search level: ...
-Meson search level: ..
+metis: r[+0+5]+0+0+0+0+1#
+metis: r[+0+4]#
 > val it =
     Initial goal proved.
     |- !m n. 0 < m /\ m <= n ==> m divides FACT n
@@ -874,48 +881,47 @@ Meson search level: ..
 For many users, this would be the end of dealing with this proof: the
 tactic can now be packaged into an invocation of
 \ml{prove}\footnote{The \ml{prove} function takes a term and a tactic
-  and attempts to prove the term using the supplied tactic.  It
-  returns the proved theorem if the tactic succeeds.  It doesn't save
-  the theorem to the developing theory.} or \ml{store\_thm} and that
-would be the end of it. However, another class of user would notice
+and attempts to prove the term using the supplied tactic.  It
+returns the proved theorem if the tactic succeeds.  It doesn't save
+the theorem to the developing theory.} or \ml{store\_thm} and that
+would be the end of it. However, another user might notice
 that this tactic could be shortened.
 
 To start, both arms of the induction start with an invocation of
-\ml{ARW\_TAC}, and the semantics of \ml{THEN} allow us to merge the
-occurrences of \ml{ARW\_TAC} above the \ml{THENL}. The recast tactic
+\ml{RW\_TAC}, and the semantics of \ml{THEN} allow us to merge the
+occurrences of \ml{RW\_TAC} above the \ml{THENL}. The recast tactic
 is
 \begin{hol}
 \begin{verbatim}
-    ARW_TAC [LESS_EQ_EXISTS]
-      THEN Induct_on `p`
-      THEN ARW_TAC [FACT, ADD_CLAUSES]
-      THENL [Cases_on `m`
-              THENL [PROVE_TAC [DECIDE ``!x. ~(x < x)``],
-                     ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]],
-             PROVE_TAC [DIVIDES_LMUL]]
+ RW_TAC arith_ss [LESS_EQ_EXISTS]
+   THEN Induct_on `p`
+   THEN RW_TAC arith_ss [FACT, ADD_CLAUSES]
+   THENL [Cases_on `m` THENL 
+            [METIS_TAC [DECIDE ``!x. ~(x < x)``],
+             RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]],
+          METIS_TAC [DIVIDES_RMUL]]
 \end{verbatim}
 \end{hol}
 (Of course, when a tactic has been revised, it should be tested to see
-if it still proves the goal!) Now recall that the use of \ml{ARW\_TAC}
-in the base case could be replaced by a call to \ml{PROVE\_TAC}. Thus
+if it still proves the goal!) Now recall that the use of \ml{RW\_TAC}
+in the base case could be replaced by a call to \ml{METIS\_TAC}. Thus
 it seems possible to merge the two sub-cases of the base case into a
-single invocation of \ml{PROVE\_TAC}:
+single invocation of \ml{METIS\_TAC}:
 
 \begin{hol}
 \begin{verbatim}
-    ARW_TAC [LESS_EQ_EXISTS]
-      THEN Induct_on `p`
-      THEN ARW_TAC [FACT, ADD_CLAUSES]
-      THENL [Cases_on `m`
-              THEN PROVE_TAC [DECIDE ``!x. ~(x < x)``,
-                              FACT, DIVIDES_RMUL, DIVIDES_REFL],
-             PROVE_TAC [DIVIDES_LMUL]]
+ RW_TAC arith_ss [LESS_EQ_EXISTS]
+   THEN Induct_on `p`
+   THEN RW_TAC arith_ss [FACT, ADD_CLAUSES]
+   THENL [Cases_on `m` THEN 
+            METIS_TAC[DECIDE ``!x. ~(x<x)``,FACT,DIVIDES_RMUL,DIVIDES_REFL],
+          METIS_TAC [DIVIDES_RMUL]]
 \end{verbatim}
 \end{hol}
 
 \noindent
-Finally, pushing this dubious revisionism nearly to its limit, we'd
-like there to be only a single invocation of \ml{PROVE\_TAC} to finish
+Finally, pushing this revisionism nearly to its limit, we'd
+like there to be only a single invocation of \ml{METIS\_TAC} to finish
 the proof off. The semantics of \ml{THEN} and \ml{ALL\_TAC} come to
 our rescue: we will split on the construction of $m$ in the base case,
 as in the current incarnation of the tactic, but we will let the
@@ -924,20 +930,40 @@ by using \verb+ALL_TAC+, which is a tactic that acts as an identity
 function on the goal.
 \begin{hol}
 \begin{verbatim}
-    ARW_TAC [LESS_EQ_EXISTS]
-      THEN Induct_on `p`
-      THEN ARW_TAC [FACT, ADD_CLAUSES]
-      THENL [Cases_on `m`, ALL_TAC]
-      THEN PROVE_TAC [DECIDE ``!x. ~(x < x)``, FACT,
-                      DIVIDES_RMUL, DIVIDES_REFL, DIVIDES_LMUL]
+   RW_TAC arith_ss [LESS_EQ_EXISTS]
+     THEN Induct_on `p`
+     THEN RW_TAC arith_ss [FACT, ADD_CLAUSES]
+     THENL [Cases_on `m`, ALL_TAC]
+     THEN METIS_TAC [DECIDE ``!x. ~(x < x)``, 
+                     FACT, DIVIDES_RMUL, DIVIDES_REFL]
 \end{verbatim}
 \end{hol}
 
 \noindent
 The result is that there will be three subgoals emerging from the
 \ml{THENL}: the two sub-cases in the base case and the unaltered step
-case. Each is proved with a call to \ml{PROVE\_TAC}. We have now
-finished our exercise in tactic polishing.
+case. Each is proved with a call to \ml{METIS\_TAC}. Are we now done?
+Not necessarily. For example, the explicit case split, namely \ml{Cases\_on `m`},
+can be replaced by provided the \emph{cases} theorem for natural numbers
+(\ml{num\_CASES}) to \ml{METIS\_TAC}. With this, the case split on $m$ will be 
+automatically generated by \ml{METIS\_TAC} as it searches for the proof. Hence we 
+can shorten the tactic again.
+\begin{session}
+\begin{verbatim}
+- num_CASES;
+> val it = |- !m. (m = 0) \/ ?n. m = SUC n : thm
+
+- restart();
+- e (RW_TAC arith_ss [LESS_EQ_EXISTS]
+     THEN Induct_on `p`
+     THEN METIS_TAC [DECIDE ``!x. ~(x < x)``, FACT, num_CASES,
+                     DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL, ADD_CLAUSES]);
+\end{verbatim}
+\end{session}
+We have now finished our exercise in tactic revision. Certainly, it
+would be hard to foresee that this final tactic would prove the
+goal; the required lemmas for the final invocation of \ml{METIS\_TAC}
+have been found by an incremental process of revision.
 
 \subsection{Divisibility and factorial (again!)}
 
@@ -991,8 +1017,9 @@ OK..
 \end{verbatim}
 \end{session}
 Looking at the first goal, we reason that if $0 = n - m$ and $m
-\leq n$, then $m = n$. We can prove this fact, and add it to the
-hypotheses by use of the infix operator ``\ml{by}'':
+\leq n$, then $m = n$. We can prove this fact, using \ml{DECIDE\_TAC}\footnote
+{\ml{DECIDE\_TAC} is a decision procedure for a useful class of arithmetical formulas.}
+and add it to the hypotheses by use of the infix operator ``\ml{by}'':
 \begin{session}
 \begin{verbatim}
 - e (`m = n` by DECIDE_TAC);
@@ -1008,11 +1035,11 @@ OK..
 \end{verbatim}
 \end{session}
 
-We can now use \ml{ARW\_TAC} to propagate the newly derived equality
+\noindent We can now use \ml{RW\_TAC} to propagate the newly derived equality
 throughout the goal.
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC []);
+- e (RW_TAC arith_ss []);
 
 OK..
 1 subgoal:
@@ -1025,16 +1052,16 @@ OK..
 \end{verbatim}
 \end{session}
     At this point in the previous proof we did a case analysis on $m$.
-    However, we already have the hypothesis that $m$ is positive. Thus
-    we know that $m$ is the successor of some number $k$. We might
-    wish to assert this fact with an invocation of ``\ml{by}'' as
-    follows:
+    However, we already have the hypothesis that $m$ is positive
+    (along with two other now useless hypotheses). Thus we know that
+    $m$ is the successor of some number $k$. We might wish to assert
+    this fact with an invocation of ``\ml{by}'' as follows:
 \[
     \mbox{\ml{`?k. m = SUC k` by <tactic>}}
 \]
 But what is the tactic? If we try \ml{DECIDE\_TAC}, it will fail since
 it doesn't handle existential statements. An application of
-\ml{ARW\_TAC} will also prove to be unsatisfactory. What to do?
+\ml{RW\_TAC} will also prove to be unsatisfactory. What to do?
 
 When such situations occur, it is often best to start a new proof for
 the required lemma. This can be done simply by invoking ``\ml{g}''
@@ -1073,7 +1100,7 @@ printed:
         y) = x}.} function.
 \begin{session}
 \begin{verbatim}
-- e (Cases THEN ARW_TAC []);
+- e (Cases THEN RW_TAC arith_ss []);
 
 OK..
 > val it =
@@ -1109,10 +1136,9 @@ current sub-goal of the proof can be displayed using the function
 \begin{session}
 \begin{verbatim}
 - e (`?k. m = SUC k` by
-      PROVE_TAC [lem] THEN ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
-
+     METIS_TAC[lem] THEN RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]);
 OK..
-Meson search level: ...
+metis: r[+0+6]+0+0+0+0+0+1#
 
 Goal proved.   ...
 
@@ -1134,10 +1160,9 @@ Remaining subgoals:
     the previous proof:
 \begin{session}
 \begin{verbatim}
-- e (`0 < n` by DECIDE_TAC THEN `?k. n = SUC k` by PROVE_TAC [lem]);
-
+- e (`0 < n` by DECIDE_TAC THEN `?k. n = SUC k` by METIS_TAC [lem]);
 OK..
-Meson search level: ...
+metis: r[+0+8]+0+0+0+0+0+0+2#
 1 subgoal:
 > val it =
     m divides FACT n
@@ -1153,8 +1178,7 @@ Meson search level: ...
 \noindent The proof now finishes in much the same manner as the previous one:
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC [FACT, DIVIDES_RMUL]);
-
+- e (RW_TAC arith_ss [FACT, DIVIDES_RMUL]);
 OK..
 
 Goal proved.  ...
@@ -1177,20 +1201,20 @@ primes are positive. These are all quite simple to prove.
 \item [\small{({\it NOT\_PRIME\_0\/})}]
 \begin{tabular}[t]{l}
 \verb+~prime 0+ \\ \hline
-\verb+ARW_TAC [prime,DIVIDES_0]+ \\
+\verb+RW_TAC arith_ss [prime_def,DIVIDES_0]+ \\
 \end{tabular}
 
 \item [\small{({\it NOT\_PRIME\_1\/})}]
 \begin{tabular}[t]{l}
 \verb+~prime 1+ \\ \hline
-\verb+ARW_TAC [prime]+ \\
+\verb+RW_TAC arith_ss [prime_def]+ \\
 \end{tabular}
 
 \item [\small{({\it PRIME\_2\/})}]
 \begin{tabular}[t]{l}
 \verb+prime 2+ \\ \hline
-\verb+ARW_TAC [prime]+ \\
-\verb+ THEN PROVE_TAC [DIVIDES_LE, DIVIDES_ZERO,+ \\
+\verb+RW_TAC arith_ss [prime_def]+ \\
+\verb+ THEN METIS_TAC [DIVIDES_LE, DIVIDES_ZERO,+ \\
 \verb+                 DECIDE ``~(2=1)``, DECIDE ``~(2=0)``,+ \\
 \verb+                 DECIDE ``x <= 2 = (x=0) \/ (x=1) \/ (x=2)``]+ \\
 \end{tabular}
@@ -1198,7 +1222,7 @@ primes are positive. These are all quite simple to prove.
 \item [\small{({\it PRIME\_POS\/})}]
 \begin{tabular}[t]{l}
 \verb+!p. prime p ==> 0<p+ \\ \hline
-\verb+Cases THEN ARW_TAC[NOT_PRIME_0]+ \\
+\verb+Cases THEN RW_TAC arith_ss [NOT_PRIME_0]+ \\
 \end{tabular}
 \end{description}
 
@@ -1222,12 +1246,12 @@ or $n$.  The polished tactic is the following:
 \begin{tabular}[t]{l}
 \verb+!n. ~(n = 1) ==> ?p. prime p /\ p divides n+ \\ \hline
 \verb+completeInduct_on `n`+ \\
-\verb+  THEN ARW_TAC []+ \\
+\verb+  THEN RW_TAC arith_ss []+ \\
 \verb+  THEN Cases `prime n` THENL+ \\
-\verb+  [PROVE_TAC [DIVIDES_REFL], + \\
+\verb+  [METIS_TAC [DIVIDES_REFL], + \\
 \verb+   `?x. x divides n /\ ~(x=1) /\ ~(x=n)` + \\
-\verb+    by PROVE_TAC[prime]+ \\
-\verb+     THEN PROVE_TAC [LESS_OR_EQ, PRIME_2, +\\
+\verb+    by METIS_TAC[prime_def]+ \\
+\verb+     THEN METIS_TAC [LESS_OR_EQ, PRIME_2, +\\
 \verb+                  DIVIDES_LE,DIVIDES_TRANS,DIVIDES_0]]+ \\
 \end{tabular}
 \end{description}
@@ -1238,7 +1262,6 @@ hypothesis that holds at every number $m$ strictly smaller than $n$:
 - g `!n. ~(n = 1) ==> ?p. prime p /\ p divides n`;
 
 - e (completeInduct_on `n`);
-
 OK..
 1 subgoal:
 > val it =
@@ -1252,7 +1275,7 @@ split. Notice that the term given to \ml{Cases\_on} need not occur in
 the goal:
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC [] THEN Cases_on `prime n`);
+- e (RW_TAC arith_ss [] THEN Cases_on `prime n`);
 OK..
 2 subgoals:
 > val it =
@@ -1273,10 +1296,9 @@ OK..
 divisibility:
 \begin{session}
 \begin{verbatim}
-- e (PROVE_TAC [DIVIDES_REFL]);
-
+- e (METIS_TAC [DIVIDES_REFL]);
 OK..
-Meson search level: ...
+metis: r[+0+7]+0+0+0+0+1#
 
 Goal proved.  ...
 \end{verbatim}
@@ -1286,10 +1308,9 @@ In the second case, we can get a divisor of $n$ that isn't $1$ or $n$
 (since $n$ is not prime):
 \begin{session}
 \begin{verbatim}
-- e (`?x. x divides n /\ ~(x=1) /\ ~(x=n)` by PROVE_TAC [prime]);
-
+- e (`?x. x divides n /\ ~(x=1) /\ ~(x=n)` by METIS_TAC [prime_def]);
 OK..
-Meson search level: ............
+metis: r[+0+11]+0+0+0+0+0+0+1+1+1+1+0+1+1#
 1 subgoal:
 > val it =
     ?p. prime p /\ p divides n
@@ -1302,16 +1323,15 @@ Meson search level: ............
       5.  ~(x = n)
 \end{verbatim}
 \end{session}
-At this point, the polished tactic simply invokes \ml{PROVE\_TAC} with
+At this point, the polished tactic simply invokes \ml{METIS\_TAC} with
 a collection of theorems. We will attempt a more detailed
 exposition. Given the hypotheses, and by {\small\it DIVIDES\_LE}, we can
 assert $x < n \lor n = 0$ and thus split the proof into two cases:
 \begin{session}
 \begin{verbatim}
-- e (`x < n \/ (n=0)` by PROVE_TAC [DIVIDES_LE,LESS_OR_EQ]);
-
+- e (`x < n \/ (n=0)` by METIS_TAC [DIVIDES_LE,LESS_OR_EQ]);
 OK..
-Meson search level: ......
+metis: r[+0+14]+0+0+0+0+0+0+0+0+0+0+1+0+1#
 2 subgoals:
 > val it =
     ?p. prime p /\ p divides n
@@ -1341,18 +1361,17 @@ transitivity of divisibility to get the fact that this divisor of $x$ is
 also a divisor of $n$, thus finishing this branch of the proof:
 \begin{session}
 \begin{verbatim}
-- e (PROVE_TAC [DIVIDES_TRANS]);
-
+- e (METIS_TAC [DIVIDES_TRANS]);
 OK..
-Meson search level: .........
+metis: r[+0+11]+0+0+0+0+0+0+0+1+0+4+1+0+3+0+2+2+1#
+
 Goal proved.
 \end{verbatim}
 \end{session}
 \noindent The remaining goal can be clarified by simplification:
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC []);
-
+- e (RW_TAC arith_ss  []);
 OK..
 1 subgoal:
 > val it =
@@ -1366,11 +1385,9 @@ OK..
       5.  ~(x = 0)
 
 - DIVIDES_0;
-
 > val it = |- !x. x divides 0 : thm
 
-- e (ARW_TAC [it]);
-
+- e (RW_TAC arith_ss  [it]);
 OK..
 1 subgoal:
 > val it =
@@ -1388,10 +1405,9 @@ The two steps of exploratory simplification have led us to a state where
 all we have to do is exhibit a prime. And we already have one to hand:
 \begin{session}
 \begin{verbatim}
-- e (PROVE_TAC [PRIME_2]);
-
+- e (METIS_TAC [PRIME_2]);
 OK..
-Meson search level: ..
+metis: r[+0+6]#
 
 Goal proved.   ...
 > val it =
@@ -1401,7 +1417,9 @@ Goal proved.   ...
 \end{session}
 Again, work now needs to be done to compose and perhaps polish a single
 tactic from the individual proof steps, but we will not describe
-it. Instead we move forward, because our ultimate goal is in reach.
+it.\footnote{Indeed, the tactic can be simplified into complete induction
+ followed by an invocation of \ml{METIS\_TAC} with suitable lemmas.}
+ Instead we move forward, because our ultimate goal is in reach.
 
 \section{Euclid's theorem}
 
@@ -1422,8 +1440,8 @@ A HOL rendition of the proof may be given as follows:
 \verb+!n. ?p. n < p /\ prime p+ \\ \hline
 \verb+SPOSE_NOT_THEN STRIP_ASSUME_TAC+ \\
 \verb!  THEN MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR)! \\
-\verb+  THEN ARW_TAC [FACT_LESS, DECIDE ``~(x=0) = 0<x``]+ \\
-\verb+  THEN PROVE_TAC [NOT_PRIME_1, NOT_LESS, PRIME_POS, + \\
+\verb+  THEN RW_TAC arith_ss [FACT_LESS, DECIDE ``~(x=0) = 0<x``]+ \\
+\verb+  THEN METIS_TAC [NOT_PRIME_1, NOT_LESS, PRIME_POS, + \\
 \verb+                  DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE]+ \\
 \end{tabular}
 \end{description}
@@ -1442,7 +1460,6 @@ quantification on $n$.
 - g `!n. ?p. n < p /\ prime p`;
 
 - e (SPOSE_NOT_THEN STRIP_ASSUME_TAC);
-
 OK..
 1 subgoal:
 > val it =
@@ -1465,11 +1482,9 @@ function {\tt SPEC} implements the rule of universal specialization.}
 \begin{session}
 \begin{verbatim}
 - PRIME_FACTOR;
-
 > val it = |- !n. ~(n = 1) ==> (?p. prime p /\ p divides n) : thm
 
 - val th = SPEC ``FACT n + 1`` PRIME_FACTOR;
-
 > val th =
     |- ~(FACT n + 1 = 1) ==> (?p. prime p /\ p divides FACT n + 1)
 \end{verbatim}
@@ -1483,7 +1498,6 @@ situ}. We choose the latter approach.
 \begin{session}
 \begin{verbatim}
 - e (MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR));
-
 OK..
 1 subgoal:
 > val it =
@@ -1497,12 +1511,11 @@ OK..
     simplify:
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC []);
-
+- e (RW_TAC arith_ss []);
 OK..
 2 subgoals:
 > val it =
-    ~(p divides FACT n + 1)
+    ~prime p \/ ~(p divides FACT n + 1)
     ------------------------------------
       0.  !p. n < p ==> ~prime p
       1.  prime p
@@ -1517,28 +1530,50 @@ OK..
     solve the top goal by simplification:
 \begin{session}
 \begin{verbatim}
-- e (ARW_TAC [FACT_LESS, DECIDE ``!x. ~(x=0) = 0 < x``]);
-
+- e (RW_TAC arith_ss [FACT_LESS, DECIDE ``!x. ~(x=0) = 0 < x``]);
 OK..
 Goal proved.  ...
 \end{verbatim}
 \end{session}
-Notice the `on-the-fly' use of \verb+DECIDE+ to provide an {\it ad hoc\/}
+Notice the `on-the-fly' use of \verb+DECIDE+ to provide an \textit{ad hoc}
 rewrite. Looking at the remaining goal, one might think that our aim, to
-prove falsity, has been lost. But this is not so: a goal $\neg
-M$ is equivalent to $M \supset \mbox{\tt F}$. We can quickly proceed to
-show that $p \ \mbox{\tt divides}\ (\mbox{\tt FACT}\ n)$, and thus that
-$p = 1$, hence that $p$ is not prime, at which point we are done. This
-can all be packaged into a single invocation of \ml{PROVE\_TAC}:
+prove falsity, has been lost. But this is not so: a goal 
+$\neg P \lor \neg Q$ is logically equivalent to $P \imp Q \imp \mathtt{F}$. 
+In the following invocation, we use the equality 
+$\vdash A \imp B = \neg A \lor B$ as a rewrite rule oriented right to left by
+use of \ml{GSYM}.\footnote{Loosely speaking, \ml{GSYM} swaps the left and 
+right hand sides of any equations it finds.}
 \begin{session}
 \begin{verbatim}
-- e (PROVE_TAC [PRIME_POS, NOT_LESS, DIVIDES_FACT,
-                DIVIDES_ADDL, DIVIDES_ONE, NOT_PRIME_1]);
+- IMP_DISJ_THM;
+> val it = |- !A B. A ==> B = ~A \/ B : thm
+
+- e (RW_TAC arith_ss [GSYM IMP_DISJ_THM]);
 OK..
-Meson search level: ............
+1 subgoal:
+> val it =
+    ~(p divides FACT n + 1)
+    ------------------------------------
+      0.  !p. n < p ==> ~prime p
+      1.  prime p
+     : goalstack
+\end{verbatim}
+\end{session}
+
+We can quickly proceed to show that $p \ \mathtt{divides}\ (\mathtt{FACT}\; n)$, 
+and thus that $p = 1$, hence that $p$ is not prime, at which point we are done. 
+This can all be packaged into a single invocation of \ml{METIS\_TAC}:
+\begin{session}
+\begin{verbatim}
+- e (METIS_TAC [DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE,
+                NOT_PRIME_1, NOT_LESS, PRIME_POS]);
+metis: r[+0+12]+0+0+0+0+0+0+0+1+1+0+0+0+0+1+1+1+1+4#
 
 Goal proved.
  [..] |- ~(p divides FACT n + 1)
+
+Goal proved.
+ [.] |- ~prime p \/ ~(p divides FACT n + 1)
 
 Goal proved.
  [.]
@@ -1548,7 +1583,7 @@ Goal proved.
  [.] |- F
 > val it =
     Initial goal proved.
-    |- !n. ?p. n < p /\ prime p
+    |- !n. ?p. n < p /\ prime p : goalstack
 \end{verbatim}
 \end{session}
     Euclid's theorem is now proved, and we can rest. However, this
@@ -1569,18 +1604,18 @@ Goal proved.
 \begin{tabular}[t]{l}
 \verb+!n. ?p. n < p /\ prime p+ \\ \hline
 \verb|CCONTR_TAC THEN | \\
-\verb|`?n. !p. n < p ==> ~prime p`  by PROVE_TAC []             THEN| \\
-\verb|`~(FACT n + 1 = 1)`           by ARW_TAC [FACT_LESS,| \\
+\verb|`?n. !p. n < p ==> ~prime p`  by METIS_TAC []             THEN| \\
+\verb|`~(FACT n + 1 = 1)`           by RW_TAC arith_ss  [FACT_LESS,| \\
 \verb|                                    DECIDE``~(x=0)=0<x``] THEN| \\
 \verb|`?p. prime p /\  | \\
-\verb|     p divides (FACT n + 1)`  by PROVE_TAC [PRIME_FACTOR] THEN| \\
-\verb|`0 < p`                       by PROVE_TAC [PRIME_POS]    THEN| \\
-\verb|`p <= n`                      by PROVE_TAC [NOT_LESS]     THEN| \\
-\verb|`p divides FACT n`            by PROVE_TAC [DIVIDES_FACT] THEN| \\
-\verb|`p divides 1`                 by PROVE_TAC [DIVIDES_ADDL] THEN| \\
-\verb|`p = 1`                       by PROVE_TAC [DIVIDES_ONE]  THEN| \\
-\verb|`~prime p`                    by PROVE_TAC [NOT_PRIME_1]  THEN| \\
-\verb|PROVE_TAC []| \\
+\verb|     p divides (FACT n + 1)`  by METIS_TAC [PRIME_FACTOR] THEN| \\
+\verb|`0 < p`                       by METIS_TAC [PRIME_POS]    THEN| \\
+\verb|`p <= n`                      by METIS_TAC [NOT_LESS]     THEN| \\
+\verb|`p divides FACT n`            by METIS_TAC [DIVIDES_FACT] THEN| \\
+\verb|`p divides 1`                 by METIS_TAC [DIVIDES_ADDL] THEN| \\
+\verb|`p = 1`                       by METIS_TAC [DIVIDES_ONE]  THEN| \\
+\verb|`~prime p`                    by METIS_TAC [NOT_PRIME_1]  THEN| \\
+\verb|METIS_TAC []| \\
 \end{tabular}
 \end{description}
 
@@ -1730,18 +1765,18 @@ support development was required to set the stage for Euclid's classic
 argument.
 
 \item The proof support offered by \ml{bossLib}
-(\verb+RW_TAC+, \ml{PROVE\_TAC}, \ml{DECIDE\_TAC}, \ml{DECIDE},
+(\verb+RW_TAC+, \ml{METIS\_TAC}, \ml{DECIDE\_TAC}, \ml{DECIDE},
 \ml{Cases\_on}, \ml{Induct\_on}, and the ``\ml{by}'' construct) was
 nearly complete for this example: it was rarely necessary to resort to
 lower-level tactics.
 
 \item Simplification is a workhorse tactic; even when an automated
-reasoner like \ml{PROVE\_TAC} is used, its application has often been
+reasoner such as \ml{METIS\_TAC} is used, its application has often been
 set up by some exploratory simplifications. It therefore pays to become
 familiar with the strengths and weaknesses of the simplifier.
 
 \item A common problem with interactive proof systems is dealing with
-hypotheses. Often \ml{PROVE\_TAC} and the ``\ml{by}'' construct allow
+hypotheses. Often \ml{METIS\_TAC} and the ``\ml{by}'' construct allow
 the use of hypotheses without directly resorting to indexing into them
 (or naming them, which amounts to the same thing). This is desirable,
 since the hypotheses are notionally a {\it set}, and moreover,
@@ -1792,7 +1827,7 @@ On the other hand, one of the advantages of having a mechanized logic
 is that the machine can be used as a formal expression calculator,
 and thus the user can use it to quickly and accurately explore various
 proof possibilities.
-\item High powered tools like \ml{PROVE\_TAC}, \ml{DECIDE\_TAC}, and
+\item High powered tools like \ml{METIS\_TAC}, \ml{DECIDE\_TAC}, and
 \ml{RW\_TAC} are the principal way of advancing a proof in
 \ml{bossLib}. In many cases, they do exactly what is desired, or even
 manage to surprise the user with their power. In the formalization of
