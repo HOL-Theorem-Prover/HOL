@@ -4,6 +4,10 @@ structure Systeml :> Systeml = struct
    It is the very first thing compiled by the HOL build process so it
    absolutely can not depend on any other HOL source code. *)
 
+structure Process = OS.Process
+structure Path = OS.Path
+structure FileSys = OS.FileSys
+
 fun dquote s = concat ["\"", s, "\""]
 
 fun concat_wspaces munge acc strl =

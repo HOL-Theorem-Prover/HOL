@@ -9,7 +9,7 @@ struct
 *)
  
 open HolKernel boolLib bossLib Parse;
-open listTheory wordsTheory pred_setTheory arithmeticTheory pairTheory wordsLib markerTheory;
+open listTheory wordsTheory pred_setTheory arithmeticTheory pairTheory wordsLib markerTheory combinTheory;
 open set_sepTheory progTheory arm_progTheory arm_instTheory set_sepLib arm_progLib addressTheory examplesTheory;
  
 (*
@@ -99,7 +99,7 @@ fun find_std_name_subst tm = let
     in ([subst],[subst_str]) end 
   else if fst (dest_const x) = "R30" andalso y = ``13w:word4`` then 
        ([z|->``sp:word30``],["`"^ z_str ^"`|->`sp`"])
-  else if fst (dest_const x) = "heap" then let
+  else if fst (dest_const x) = "MEMORY" then let
     val s = ((fst o dest_var) y) ^ "s"
     in ([z |-> mk_var(s,type_of z)],["`"^z_str^"`|->`"^s^"`"]) end        
   else let
@@ -194,8 +194,8 @@ val th = th1
 fun ABBREV_ALL prefix th = let 
   val terms = (list_dest_STAR o code_ARM_PROG o concl) th
   val terms = (list_dest_STAR o pre_ARM_PROG o concl) th @ terms
-  fun is_heap tm = ((fst o dest_const o fst o dest_comb o fst o dest_comb) tm = "heap") handle e => false
-  val terms = filter (not o is_heap) terms
+  fun is_MEMORY tm = ((fst o dest_const o fst o dest_comb o fst o dest_comb) tm = "MEMORY") handle e => false
+  val terms = filter (not o is_MEMORY) terms
   val th = fst (standardise_names "th" terms th) 
   val th = (SIMP_RULE (bool_ss++sep2_ss) [sidecond_def] o RW [GSYM precond_def]) th
   val th = RW [ARM_PROG_MOVE_COND] th
@@ -312,6 +312,9 @@ fun map_compiled f =
 fun fetch_compiled name = let
   val (n,th,i,l,c) = hd (filter (fn (n,th,i,l,c) => n = name) (!compiled_specs));
   in th end;
+
+fun add_compiled name th = 
+  (compiled_specs := (name,th,SimpleProcedure,0,TRUTH) :: !compiled_specs);
 
 (* handleing terms *)
 
@@ -632,15 +635,17 @@ fun generate_basic_specs seq keep_status code = let
   val _ = echo "\nGenerating instruction specifications.\n"
   val count = length code
   fun get_specs (s,(n,ys)) = 
-    if (substring(s,0,6) = "proc: ") handle e => false then let
+    if (substring(s,0,7) = "insert:") handle e => false then let
       val i = int_to_string n
-      val name = substring(s,6,size(s)-6)
+      val name = substring(s,7,size(s)-7)
       val name = replace_char #" " "" name
       fun match_name (n,_,_,_,_) = n = name 
       val (_,th,proc,_,_) = hd (filter match_name (!compiled_specs))
       val _ = offset_counter := !offset_counter + 1
       val offset_name = "offset" ^ int_to_string (!offset_counter)
       val th = if not (proc = InLineCode) then SIMP_RULE (std_ss++setINC_ss) [] (MATCH_MP (Q.INST [`offset`|->[QUOTE offset_name]] arm_BL) (PROG2PROC th)) else th
+      val th = SIMP_RULE (bool_ss++sep2_ss) [sidecond_def] th
+      val th = RW [GSYM sidecond_def] th
       val th = ABBREV_CALL ("s"^i^"@") th  
       val _ = echo "."
       in (n+1,(ys @ [(n,th,TRUTH)])) end
@@ -722,9 +727,9 @@ fun pad_strings [] = [] | pad_strings (x::xs) = let
 fun string_remove_primes str = replace_char #"'" "" str;
 
 fun code_length xs = let
-  fun is_proc s = ((substring(s,0,6) = "proc: ") handle e => false)
+  fun is_proc s = ((substring(s,0,7) = "insert:") handle e => false)
   val (xs,procs) = (filter (not o is_proc) xs, filter is_proc xs)
-  fun f st = hd (filter (fn (n,_,_,_,_) => n = substring(st,6,size(st)-6)) (!compiled_specs))
+  fun f st = hd (filter (fn (n,_,_,_,_) => n = substring(st,8,size(st)-8)) (!compiled_specs))
   val procs = map ((fn (n,th,p,l,_) => (p,l)) o f) procs
   fun f ((InLineCode,i),sum) = sum + i | f ((_,i),sum) = sum + 1
   in length xs + foldr f 0 procs end;
@@ -824,7 +829,7 @@ fun find_assignment_code var exp =
     ["str% "^dest_reg_var exp^", [sp,#"^dest_mem_var var^"]"]
   handle e => let (* code for procedure call *)
     val name = fst (dest_const (fst (dest_comb exp) handle e => exp))       
-    in ["proc: "^name] end;
+    in ["insert: "^name] end;
 
 fun pull_out_shared_front xs ys = let
   fun share x y = (x = y) andalso not (replace_char #"%" "" (fst x) = fst x)
@@ -1015,11 +1020,11 @@ fun term_to_name tm = let
   val f = num_to_string o numSyntax.dest_numeral o snd o dest_comb
   val i = f y handle e => (f o snd o dest_comb) y handle e => "0"         
   val j = string_to_int i
-  fun select "R"    = "r"^i
-    | select "R30"  = "sp"
-    | select "M"    = if 0 <= j then "m"^i else "n"^int_to_string(0 - j)
-    | select "heap" = (fst o dest_var) y ^ "s"
-    | select _      = hd []
+  fun select "R"      = "r"^i
+    | select "R30"    = "sp"
+    | select "M"      = if 0 <= j then "m"^i else "n"^int_to_string(0 - j)
+    | select "MEMORY" = (fst o dest_var) y ^ "s"
+    | select _        = hd []
   in select (fst (dest_const x)) end handle e => term_to_string tm;  
 
 (* attempts to do the opposite of term_to_name *)
@@ -1086,7 +1091,7 @@ fun hide_pre_post_elements thms def stays = let
   val in_list = list_union stays (get_input_list def @ ["sp"])
   val out_list = list_union stays (get_output_list def @ ["sp"])
   val in_list = if mem "sN" in_list then in_list @ ["S"] else in_list
-  val out_list = if mem "sN" in_list then out_list @ ["S"] else out_list
+  val out_list = if mem "sN" out_list then out_list @ ["S"] else out_list
   val in_list = map (replace_char #"'" "") in_list
   val out_list = map (replace_char #"'" "") out_list
   (* mark which theorems exit the loop, pick out post *)
@@ -1153,7 +1158,7 @@ fun get_pre_post_terms def_name thms def def2 strs = let
   val ps = sorter ps
   val qs = sorter qs
   (* substitute in the result of the def function *)
-  val out = get_output_list def  
+  val out = map (replace_char #"'" "") (get_output_list def)  
   val out' = flatten_pairs ((fst o dest_eq o concl o SPEC_ALL) def) []
   fun fix_S [] = []
     | fix_S (x::xs) = if not (fst x = "sN") then x :: fix_S xs else [("S",cdr (snd x))]  
@@ -1164,7 +1169,7 @@ fun get_pre_post_terms def_name thms def def2 strs = let
     val xs = filter (fn y => fst y = x) out
     val y = snd (hd xs) 
     in mk_comb(tm,y) end handle e => tm
-  val qs = map f qs
+  val qs = map f qs  
   (* wrap it up *)
   val pre_tm = list_mk_STAR ps
   val post_tm = list_mk_STAR qs
@@ -1512,6 +1517,8 @@ fun append_return name th InLineCode strs = (th,strs)
   val th = Q.INST [`p`|->`lr`] (RW [WORD_ADD_ASSOC] th)
   in (th,strs) end
 
+fun append_ret th = fst(append_return "." th SimpleProcedure []);
+
 fun collect_procedure_code thms strs = let
   val code = map (code_set_ARM_PROG o concl o snd) thms
   val code = foldr pred_setSyntax.mk_union ``{}:(word32 list # (word30->word30)) set`` code
@@ -1796,7 +1803,7 @@ fun tm2ftree tm = let
   val z = tm2ftree y
   val v = mk_var("cond",``:bool``)
   fun g((x,y),z) = if not (x = v) then FUN_LET (x,y,z) else 
-    if fst(dest_conj(y)) = v then FUN_COND (cdr y,z) else FUN_COND (y,z)
+    if ((fst(dest_conj(y)) = v) handle e => false) then FUN_COND (cdr y,z) else FUN_COND (y,z)
   in foldr g z x end handle e => FUN_VAL tm;
 
 fun ftree2tm (FUN_VAL tm) = tm
@@ -1910,8 +1917,9 @@ fun extract_function name code pre keep_status hide_list = let
   val modified = map (fst o dest_var) res_out
   val stays_same = filter (fn x => not (mem x modified)) stays_same
   val res_out = var_sorter res_out 
-  val res_out = filter (fn x => not (mem (fst (dest_var x)) hide_list)) res_out
+  val res_out = filter (fn x => not (mem x status_vars)) res_out
   val res_out = res_out @ (if keep_status then status_vars else [])  
+  val res_out = filter (fn x => not (mem (fst (dest_var x)) hide_list)) res_out
   val output = list_mk_pair res_out
   (* determine input *)
   val f = mk_var(name,mk_type("fun",[type_of ``()``,type_of output]))
@@ -1940,11 +1948,11 @@ fun extract_function name code pre keep_status hide_list = let
   val tm2 = if (ftree = erase_conds ftree) andalso (pre_tm = ``T``) 
             then NONE else SOME tm2
   (* add conditioning on the precondition and LHS of defintion *)  
-  fun finalise_term f tm = 
+  fun finalise_term d f tm = 
     if pre_tm = ``T`` then mk_eq(f,tm) else   
-      mk_eq(f,mk_cond(pre_tm,tm,mk_arb(type_of tm)))
-  val tm1 = finalise_term f1 tm1
-  val tm2 = option_apply (fn tm => SOME (finalise_term f2 tm)) tm2 NONE
+      mk_eq(f,mk_cond(pre_tm,tm,d))
+  val tm1 = finalise_term (mk_arb(type_of tm1)) f1 tm1
+  val tm2 = option_apply (fn tm => SOME (finalise_term ``F:bool`` f2 tm)) tm2 NONE
   (* polish the specs *)  
   val rule = UNABBREV_ALL o SIMP_RULE (bool_ss++sep2_ss) [precond_def] o 
              (if keep_status then I else AUTO_HIDE_STATUS)
@@ -1974,6 +1982,7 @@ fun decompiler_define name tm1 tm2 (SOME tac) = let
   in raise TERMINATION_ERR end
   
 (*
+  val hide_list = []
   val keep_status = false
   val keep_status = true
   val (pre,termination_tac) = (`T`,NONE)
@@ -1982,17 +1991,40 @@ fun decompiler_define name tm1 tm2 (SOME tac) = let
   arm_decompiler name code (pre,termination_tac,keep_status,hide_list)
 *)
 
-fun arm_decompiler_options name code pre termination_tac keep_status hide_list = let
+fun quote_to_strings s = let
+  fun get_QUOTE (QUOTE t) = t | get_QUOTE _ = hd []
+  val xs = explode (get_QUOTE (hd s))
+  fun strip_comments l [] = []
+    | strip_comments l (x::xs) =
+        if x = #"(" then strip_comments (l+1) xs else
+        if x = #")" then strip_comments (l-1) xs else
+        if 0 < l    then strip_comments l xs else x :: strip_comments l xs
+  fun strip_space [] = []
+    | strip_space (x::xs) = 
+        if mem x [#" ",#"\t",#"\n"] then strip_space xs else x::xs
+  fun lines [] [] = [] 
+    | lines xs [] = [implode (strip_space (rev xs))]
+    | lines xs (y::ys) = 
+        if y = #"\n" then implode (strip_space (rev xs)) :: lines [] ys 
+                     else lines (y::xs) ys   
+  val ys = (rev o strip_space o rev o strip_space o strip_comments 0) xs
+  in lines [] ys end;  
+
+fun arm_decompiler_options name qcode hide_list pre termination_tac keep_status = let
+  val code = quote_to_strings qcode
   (* construct function terms and simulation runs *)
   val (tm1,tm2,pre,stays,thms) = extract_function name code pre keep_status hide_list
   (* define functions *)
   val (def,ind,def2) = decompiler_define name tm1 tm2 termination_tac
   (* prove that the function implements the code *)
   val th = fst (arm_compile_backend name def ind def2 pre stays InLineCode thms [])
-  in (def,th) end; 
+  in (def,def2,th) end; 
 
-fun arm_decompiler name pre termination_tac hide_list code = 
-  arm_decompiler_options name code pre termination_tac false hide_list;
+fun arm_decompiler_status name pre termination_tac hide_list qcode = 
+  arm_decompiler_options name qcode hide_list pre termination_tac true;
+
+fun arm_decompiler name pre termination_tac hide_list qcode = 
+  arm_decompiler_options name qcode hide_list pre termination_tac false;
 
 (*
   

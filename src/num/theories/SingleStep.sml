@@ -339,7 +339,8 @@ fun recInduct thm =
 
 fun SPOSE_NOT_THEN ttac =
   CCONTR_TAC THEN
-  POP_ASSUM (fn th => ttac (simpLib.SIMP_RULE boolSimps.bool_ss [] th))
+  POP_ASSUM (fn th => ttac (simpLib.SIMP_RULE boolSimps.bool_ss 
+                                     [GSYM boolTheory.IMP_DISJ_THM] th))
 
 (*---------------------------------------------------------------------------
      Assertional style reasoning

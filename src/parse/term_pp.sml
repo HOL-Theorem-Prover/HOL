@@ -323,30 +323,26 @@ fun pp_term (G : grammar) TyG = let
        type_intro,type_lbracket,type_rbracket,res_quanop} = specials G
   val overload_info = overload_info G
   val spec_table =
-       let val toks = grammar_tokens G
-           val table = Polyhash.mkPolyTable(50, Fail "")
-       in app (fn s => Polyhash.insert table (s, ())) toks;
-          table
-       end
+      HOLset.addList (HOLset.empty String.compare, grammar_tokens G)
   val num_info = numeral_info G
-  val rule_table = Polyhash.mkPolyTable(50, Fail "")
-  fun insert (grule, n) = let
+  fun insert (grule, (n, acc)) = let
     val keys_n_rules = grule_term_names G grule
-    fun myinsert t (k, v) = let
-      val existing = Polyhash.peek t k
+    fun myinsert n ((k, v), acc) = let
+      val existing = Binarymap.peek(acc, k)
       val newvalue =
         case existing of
-          NONE => [v]
-        | SOME vs => v::vs
+          NONE => [(n,v)]
+        | SOME vs => (n,v)::vs
     in
-      Polyhash.insert t (k, newvalue)
+      Binarymap.insert(acc, k, newvalue)
     end
   in
-    app (fn (s,rule) => myinsert rule_table (s, (n, rule))) keys_n_rules;
-    n + 1
+    (n + 1, List.foldl (myinsert n) acc keys_n_rules)
   end
-  val _ = foldl insert 0 (grammar_rules G)
-  fun lookup_term s = Polyhash.peek rule_table s
+  val (_, rule_table) = List.foldl insert
+                                   (0,Binarymap.mkDict String.compare)
+                                   (grammar_rules G)
+  fun lookup_term s = Binarymap.peek(rule_table, s)
   val comb_prec = #1 (hd (valOf (lookup_term fnapp_special)))
     handle Option =>
       raise PP_ERR "pp_term" "Grammar has no function application"
@@ -1319,8 +1315,7 @@ fun pp_term (G : grammar) TyG = let
           case rules of
             [LISTRULE _] => add_string n
           | _ =>
-              if isSome (Polyhash.peek spec_table n) then
-                dollarise add_string n
+              if HOLset.member(spec_table, n) then dollarise add_string n
               else add_string n
         end
     end
@@ -1604,12 +1599,11 @@ fun pp_term (G : grammar) TyG = let
             showtypes andalso (binderp orelse new_freevar)
         in
           begin_block INCONSISTENT 2; pbegin print_type;
-          if isSome vrule then pr_sole_name vname (map #2 (valOf vrule))
+          if isSome vrule then
+            pr_sole_name vname (map #2 (valOf vrule))
           else
-            if isSome (Polyhash.peek spec_table vname) then
-              dollarise add_string vname
-            else
-              add_string vname;
+            if HOLset.member(spec_table, vname) then dollarise add_string vname
+            else add_string vname;
           if print_type then add_type() else ();
           pend print_type; end_block()
         end

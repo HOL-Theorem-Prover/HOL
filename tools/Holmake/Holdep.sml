@@ -8,7 +8,9 @@
   sources, first by Ken Larsen and later by Konrad Slind and
   Michael Norrish.
 *)
+structure Holdep = struct
 
+structure Process = OS.Process
 
 fun normPath s = Path.toString(Path.fromString s)
 fun manglefilename s = normPath s
@@ -215,3 +217,4 @@ fun main assumes debug sl =
   end
    handle e as OS.SysErr (str, _) => (errMsg str; raise e)
 
+end (* struct *)

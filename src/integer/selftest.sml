@@ -10,6 +10,8 @@ val (Type,Term) = parse_from_grammars integerTheory.integer_grammars
 end
 open Parse
 
+structure Process = OS.Process;
+
 fun die s = (print (s^"\n"); Process.exit Process.failure)
 
 val _ = print "Testing normalisers\n"

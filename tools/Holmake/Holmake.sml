@@ -12,10 +12,15 @@
 (* linked executable as Interrupt exceptions                                 *)
 (*---------------------------------------------------------------------------*)
 
+structure Holmake =
+struct
+
 prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
 open Systeml;
+
+structure Process = OS.Process
 
 
 val execname = Path.file (CommandLine.name())
@@ -1320,6 +1325,8 @@ val _ =
       else exit failure
     end
 
+
+end (* struct *)
 
 (** Local variable rubbish *)
 (* local variables: *)

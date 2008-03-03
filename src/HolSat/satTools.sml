@@ -53,7 +53,7 @@ fun parseSat (s1,s2) ss =
 ** Moscow ML, and Process.status will lose eqtype status
 *)
 
-fun isSuccess s = (s = Process.success);
+fun isSuccess s = (s = OS.Process.success);
 
 (*
 ** invokeSat solver t

@@ -9,6 +9,10 @@ type nthy_rec = {Name : string, Thy : string}
 
   type block_info = PP.break_style * int
   datatype rule_element = TOK of string | TM
+  fun RE_compare (TOK s1, TOK s2) = String.compare(s1,s2)
+    | RE_compare (TOK _, TM) = LESS
+    | RE_compare (TM, TOK _) = GREATER
+    | RE_compare (TM, TM) = EQUAL
   datatype pp_element =
     PPBlock of pp_element list * block_info |
     EndInitialBlock of block_info | BeginFinalBlock of block_info |
@@ -266,6 +270,23 @@ fun is_binder G = let val bs = binders G in fn s => Lib.mem s bs end
 datatype stack_terminal =
   STD_HOL_TOK of string | BOS | EOS | Id  | TypeColon | TypeTok | TypeListTok |
   EndBinding | VS_cons | ResquanOpTok
+
+fun STi st =
+    case st of
+      STD_HOL_TOK _ => 0
+    | BOS => 1
+    | EOS => 2
+    | Id => 3
+    | TypeColon => 4
+    | TypeTok => 5
+    | TypeListTok => 6
+    | EndBinding => 7
+    | VS_cons => 8
+    | ResquanOpTok => 9
+fun ST_compare (p as (st1,st2)) =
+    case p of
+      (STD_HOL_TOK s1, STD_HOL_TOK s2) => String.compare(s1,s2)
+    | _ => Lib.measure_cmp STi p
 
 fun STtoString (G:grammar) x =
   case x of

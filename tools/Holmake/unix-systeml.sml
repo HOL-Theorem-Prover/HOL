@@ -4,6 +4,10 @@ structure Systeml :> Systeml = struct
    very first thing compiled by the HOL build process so it absolutely
    can not depend on any other HOL source code. *)
 
+structure Path =  OS.Path
+structure Process = OS.Process
+structure FileSys = OS.FileSys
+
 local
   open Process
   fun concat_wspaces munge acc strl =
@@ -33,7 +37,7 @@ in
   fun xable_string s = s
 
   fun mk_xable file =
-      if systeml ["chmod", "a+x", file] = success then file
+      if PreProcess.isSuccess (systeml ["chmod", "a+x", file]) then file
       else if FileSys.access (file,[FileSys.A_EXEC]) then
           (* if we can execute it, then continue with a warning *)
           (* NB: MoSML docs say FileSys.access uses real uid/gid, not effective uid/gid,

@@ -54,7 +54,7 @@ fun structure_to_type st =
 *)
     | PARAM n => Type.mk_vartype ("'"^str (chr (n + ord #"a")))
 
-fun params0 acc (PARAM i) = Binaryset.add(acc, i)
+fun params0 acc (PARAM i) = HOLset.add(acc, i)
   | params0 acc (TYCON {Thy,Tyop}) = acc
   | params0 acc (TYVAR (str,kd,rk)) = acc
   | params0 acc (TYAPP (opr,arg)) = params0 (params0 acc opr) arg
@@ -63,9 +63,9 @@ fun params0 acc (PARAM i) = Binaryset.add(acc, i)
 (*
   | params0 acc (TYOP{Args,...}) = foldl (fn (t,set) => params0 set t) acc Args
 *)
-val params = params0 (Binaryset.empty Int.compare)
+val params = params0 (HOLset.empty Int.compare)
 
-val num_params = Binaryset.numItems o params
+val num_params = HOLset.numItems o params
 
 val std_suffix_precedence = 100
 val std_binder_precedence =  20
@@ -169,14 +169,14 @@ fun is_var_rule (_,CAST) = true
 fun var_grammar (TYG(G,abbrevs,pmap)) = TYG(List.filter is_var_rule G,abbrevs,pmap)
 
 fun check_structure st = let
-  fun param_numbers (PARAM i, pset) = Binaryset.add(pset, i)
+  fun param_numbers (PARAM i, pset) = HOLset.add(pset, i)
     | param_numbers (TYCON _, pset) = pset
     | param_numbers (TYVAR _, pset) = pset
     | param_numbers (TYAPP(opr,arg), pset) = param_numbers (arg, param_numbers (opr,pset))
     | param_numbers (TYUNIV(bvar,body), pset) = param_numbers (body, param_numbers (bvar,pset))
     | param_numbers (TYABST(bvar,body), pset) = param_numbers (body, param_numbers (bvar,pset))
-  val pset = param_numbers (st, Binaryset.empty Int.compare)
-  val plist = Binaryset.listItems pset
+  val pset = param_numbers (st, HOLset.empty Int.compare)
+  val plist = HOLset.listItems pset
   fun check_for_gaps expecting [] = ()
     | check_for_gaps expecting (h::t) =
       if h <> expecting then

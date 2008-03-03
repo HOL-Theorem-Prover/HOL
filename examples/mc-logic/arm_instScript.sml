@@ -115,15 +115,15 @@ val SET_NO_CP = RW [GSYM NEXT_ARM_MEM_def] o Q.INST [`cp`|->`NO_CP`] o SPEC_ALL;
 
 
 (* ----------------------------------------------------------------------------- *)
-(* Lemmas for heap assertions                                                    *)
+(* Lemmas for MEMORY assertions                                                    *)
 (* ----------------------------------------------------------------------------- *)
 
 val update_def = prove(
   ``!a b. a =+ b = (\f k. (if k = a then b else f k))``,
   SIMP_TAC std_ss [UPDATE_def,FUN_EQ_THM] \\ METIS_TAC []);
 
-val heap_def = Define `
-  heap d f = BIGSTAR { M x (f (addr32 x)) | addr32 x IN d }`;
+val MEMORY_def = Define `
+  MEMORY d f = BIGSTAR { M x (f (addr32 x)) | addr32 x IN d }`;
 
 val list_update_def = Define `
   (list_update x [] f = f) /\
@@ -223,11 +223,11 @@ val LENGTH_list_READ = prove(
   ``!qs x f. LENGTH (list_read x qs f) = LENGTH qs``,
   Induct \\ ASM_REWRITE_TAC [list_read_def,LENGTH]);
 
-val heap_SPLIT = prove(
+val MEMORY_SPLIT = prove(
   ``!f d x. aligned x /\ x IN d ==>
-            (heap d f = M (addr30 x) (f x) * 
-             heap (d DELETE x) ((x =+ y) f) :'a ARMset -> bool)``,
-  REWRITE_TAC [heap_def,aligned_def] \\ REPEAT STRIP_TAC THEN
+            (MEMORY d f = M (addr30 x) (f x) * 
+             MEMORY (d DELETE x) ((x =+ y) f) :'a ARMset -> bool)``,
+  REWRITE_TAC [MEMORY_def,aligned_def] \\ REPEAT STRIP_TAC THEN
   `{M x (f (addr32 x)) | addr32 x IN d} = ((M (addr30 x) (f x)):'a ARMset -> bool) INSERT 
    {M x' ((x =+ y) f (addr32 x')) | x' | addr32 x' IN d DELETE x}` by ALL_TAC << [
     IMP_RES_TAC EXISTS_addr30
@@ -249,7 +249,7 @@ val heap_SPLIT = prove(
     \\ DISJ1_TAC \\ MATCH_MP_TAC M_NEQ_M   
     \\ ASM_SIMP_TAC bool_ss [addr30_addr32] \\ METIS_TAC []]);
 
-val heap_list_SPLIT_LEMMA = prove(
+val MEMORY_list_SPLIT_LEMMA = prove(
   ``!ys y x. 
       LENGTH (y::ys) <= 16 ==> 
       (seq_addresses x (y::ys) SUBSET d = 
@@ -258,15 +258,15 @@ val heap_list_SPLIT_LEMMA = prove(
   \\ `LENGTH ys <= 16` by DECIDE_TAC \\ IMP_RES_TAC seq_addresses_LEMMA
   \\ REWRITE_TAC [SUBSET_DEF,IN_DELETE] \\ METIS_TAC []);
 
-val heap_list_SPLIT = prove(
+val MEMORY_list_SPLIT = prove(
   ``!ys f d x. 
       LENGTH ys <= 16 ==>
       seq_addresses x ys SUBSET d /\ aligned x ==>
-      (heap d f = ((ms (addr30 x) (list_read x ys f)):'a ARMset -> bool) * 
-                  heap (d DIFF seq_addresses x ys) (list_update x ys f))``,
+      (MEMORY d f = ((ms (addr30 x) (list_read x ys f)):'a ARMset -> bool) * 
+                  MEMORY (d DIFF seq_addresses x ys) (list_update x ys f))``,
   Induct THEN1 REWRITE_TAC [ms_def,list_read_def,emp_STAR,seq_addresses_def,
                DIFF_EMPTY,list_update_def,INSERT_SUBSET,DIFF_INSERT]
-  \\ SIMP_TAC bool_ss [heap_list_SPLIT_LEMMA]
+  \\ SIMP_TAC bool_ss [MEMORY_list_SPLIT_LEMMA]
   \\ REWRITE_TAC [ms_def,list_read_def,emp_STAR,seq_addresses_def,
                DIFF_EMPTY,list_update_def,INSERT_SUBSET,DIFF_INSERT]
   \\ REPEAT STRIP_TAC
@@ -274,7 +274,7 @@ val heap_list_SPLIT = prove(
   \\ FULL_SIMP_TAC std_ss [addr30_ADD,LENGTH]
   \\ `LENGTH ys <= 16` by DECIDE_TAC
   \\ Q.PAT_ASSUM `!f.b` IMP_RES_TAC
-  \\ IMP_RES_TAC heap_SPLIT  
+  \\ IMP_RES_TAC MEMORY_SPLIT  
   \\ Q.PAT_ASSUM `!y f. b` (ASSUME_TAC o Q.SPEC `h`)
   \\ ASM_REWRITE_TAC [GSYM STAR_ASSOC]  
   \\ IMP_RES_TAC seq_addresses_LEMMA
@@ -282,20 +282,20 @@ val heap_list_SPLIT = prove(
 
 val ARM_PROG_INTRO_SEQ_RD = prove(
   ``(!y. ARM_PROG2 c (P * M (addr30 x) y) code C (Q y * M (addr30 x) y) {}) ==>
-    ARM_PROG2 c (P * heap d f * cond (x IN d /\ aligned x)) code C
-                (Q (f x) * heap d f) {}``,
+    ARM_PROG2 c (P * MEMORY d f * cond (x IN d /\ aligned x)) code C
+                (Q (f x) * MEMORY d f) {}``,
   REWRITE_TAC [ARM_PROG_MOVE_COND,ARM_PROG2_def] 
   \\ ONCE_REWRITE_TAC [CONJ_COMM] \\ REPEAT STRIP_TAC THEN1 METIS_TAC []
-  \\ IMP_RES_TAC heap_SPLIT \\ ASM_REWRITE_TAC [STAR_ASSOC]
+  \\ IMP_RES_TAC MEMORY_SPLIT \\ ASM_REWRITE_TAC [STAR_ASSOC]
   \\ METIS_TAC [ARM_PROG_FRAME,setSTAR_CLAUSES]);    
 
 val ARM_PROG_INTRO_SEQ_RD_WR = prove(
   ``(!y. ARM_PROG2 c (P * M (addr30 x) y) code C (Q y * M (addr30 x) q) {}) ==>
-    ARM_PROG2 c (P * heap d f * cond (x IN d /\ aligned x)) code C 
-                (Q (f x) * heap d ((x =+ q) f)) {}``,
+    ARM_PROG2 c (P * MEMORY d f * cond (x IN d /\ aligned x)) code C 
+                (Q (f x) * MEMORY d ((x =+ q) f)) {}``,
   REWRITE_TAC [ARM_PROG_MOVE_COND,ARM_PROG2_def] 
   \\ ONCE_REWRITE_TAC [CONJ_COMM] \\ REPEAT STRIP_TAC THEN1 METIS_TAC []
-  \\ IMP_RES_TAC heap_SPLIT \\ ASM_REWRITE_TAC [STAR_ASSOC,update_update,read_update]
+  \\ IMP_RES_TAC MEMORY_SPLIT \\ ASM_REWRITE_TAC [STAR_ASSOC,update_update,read_update]
   \\ METIS_TAC [ARM_PROG_FRAME,setSTAR_CLAUSES]);    
 
 val ARM_PROG_INTRO_SEQ_WR = 
@@ -304,11 +304,11 @@ val ARM_PROG_INTRO_SEQ_WR =
 val ARM_PROG_INTRO_SEQ_LIST_WR = prove(
   ``(!ys. (LENGTH ys = LENGTH qs) ==> 
           ARM_PROG2 c (P * ms (addr30 x) ys) [code] C (Q * ms (addr30 x) qs) {}) ==>
-    ARM_PROG2 c (P * heap d f * cond (seq_addresses x qs SUBSET d /\ aligned x /\ LENGTH qs <= 16)) [code] C 
-                (Q * heap d (list_update x qs f)) {}``,
+    ARM_PROG2 c (P * MEMORY d f * cond (seq_addresses x qs SUBSET d /\ aligned x /\ LENGTH qs <= 16)) [code] C 
+                (Q * MEMORY d (list_update x qs f)) {}``,
   REWRITE_TAC [ARM_PROG_MOVE_COND,ARM_PROG2_def] 
   \\ ONCE_REWRITE_TAC [CONJ_COMM] \\ REPEAT STRIP_TAC THEN1 METIS_TAC []
-  \\ IMP_RES_TAC heap_list_SPLIT
+  \\ IMP_RES_TAC MEMORY_list_SPLIT
   \\ ASM_SIMP_TAC bool_ss [list_read_list_update,list_update_list_update]
   \\ REWRITE_TAC [STAR_ASSOC] 
   \\ METIS_TAC [ARM_PROG_FRAME,setSTAR_CLAUSES,LENGTH_list_READ]);    
@@ -316,11 +316,11 @@ val ARM_PROG_INTRO_SEQ_LIST_WR = prove(
 val ARM_PROG_INTRO_SEQ_LIST_RD = prove(
   ``(!ys. (LENGTH ys = LENGTH (qs:word32 list)) ==> 
           ARM_PROG2 c (P * ms (addr30 x) ys) [code] C (Q ys * ms (addr30 x) ys) {}) ==>
-    ARM_PROG2 c (P * heap d f * cond (seq_addresses x qs SUBSET d /\ aligned x /\ LENGTH qs <= 16)) [code] C
-                (Q (list_read x qs f) * heap d f) {}``,
+    ARM_PROG2 c (P * MEMORY d f * cond (seq_addresses x qs SUBSET d /\ aligned x /\ LENGTH qs <= 16)) [code] C
+                (Q (list_read x qs f) * MEMORY d f) {}``,
   REWRITE_TAC [ARM_PROG_MOVE_COND,ARM_PROG2_def] 
   \\ ONCE_REWRITE_TAC [CONJ_COMM] \\ REPEAT STRIP_TAC THEN1 METIS_TAC []
-  \\ IMP_RES_TAC heap_list_SPLIT
+  \\ IMP_RES_TAC MEMORY_list_SPLIT
   \\ ASM_SIMP_TAC bool_ss [list_read_list_update,list_update_list_update]
   \\ REWRITE_TAC [STAR_ASSOC] 
   \\ METIS_TAC [ARM_PROG_FRAME,setSTAR_CLAUSES,LENGTH_list_READ]);  

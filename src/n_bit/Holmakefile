@@ -9,7 +9,7 @@ wordFunctorLib.uo: wordFunctorLib.sml bitsTheory.uo numeral_bitsTheory.uo bitsLi
 	$(HOLMOSMLC) -c -toplevel Overlay.ui wordFunctorLib.sml
 
 mkword.uo: wordFunctor.uo mkword.sml
-	$(HOLMOSMLC) -c -toplevel wordFunctor.ui mkword.sml
+	$(HOLMOSMLC) -c -toplevel Overlay.ui wordFunctor.ui mkword.sml
 
 mkword.exe: mkword.uo wordFunctorLib.uo
 	$(HOLMOSMLC) -o $@ mkword.uo
