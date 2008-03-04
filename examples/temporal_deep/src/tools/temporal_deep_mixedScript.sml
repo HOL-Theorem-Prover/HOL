@@ -570,7 +570,7 @@ val IN_BETA_THM =
 
 
 val PRED_SET_FORALL_def =
-  Define `PRED_SET_FORALL P set = !s. s IN set ==> P s`;
+  Define `PRED_SET_FORALL P aset = !s. s IN aset ==> P s`;
 
 
 val PRED_SET_FORALL_EMPTY =
@@ -581,7 +581,7 @@ val PRED_SET_FORALL_EMPTY =
 
 val PRED_SET_FORALL_INSERT =
   store_thm ("PRED_SET_FORALL_INSERT",
-    ``!P s set. PRED_SET_FORALL P (s INSERT set) = (P s /\ PRED_SET_FORALL P set)``,
+    ``!P s aset. PRED_SET_FORALL P (s INSERT aset) = (P s /\ PRED_SET_FORALL P aset)``,
 
     SIMP_TAC std_ss [PRED_SET_FORALL_def, IN_INSERT] THEN
     PROVE_TAC[]);
