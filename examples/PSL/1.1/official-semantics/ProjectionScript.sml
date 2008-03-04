@@ -453,11 +453,11 @@ val FIRSTN_TAKE_FIRSTN =
           [TAKE_FIRST_def,TAKE_FIRSTN_def,FIRSTN]
     THEN Induct_on `l`
     THEN RW_TAC list_ss
-          [TAKE_FIRST_def,TAKE_FIRSTN_def,FIRSTN]
+          [TAKE_FIRST_def,TAKE_FIRSTN_def,FIRSTN,GSYM COND_RAND]
     THEN FULL_SIMP_TAC list_ss [BUTFIRSTN_ONE,BUTFIRSTN]
     THENL
-     [REWRITE_TAC[GSYM ADD1,FIRSTN]
-       THEN RW_TAC list_ss [],
+     [FIRST_ASSUM (fn th => ONCE_REWRITE_TAC[GSYM th])
+       THEN SIMP_TAC list_ss [],
       RW_TAC list_ss [FIRSTN,DECIDE``m + SUC n = SUC(m + n)``]]);
 
 val FIRSTN_FILTER_TAKE_FIRSTN =
@@ -473,11 +473,7 @@ val FIRSTN_FILTER_TAKE_FIRSTN =
     THEN Induct_on `l`
     THEN RW_TAC list_ss
           [TAKE_FIRST_def,TAKE_FIRSTN_def,FIRSTN]
-    THEN FULL_SIMP_TAC list_ss []
-    THENL
-     [REWRITE_TAC[ONE]
-       THEN RW_TAC list_ss [BUTFIRSTN],
-      RW_TAC list_ss [BUTFIRSTN]]);
+    THEN FULL_SIMP_TAC list_ss []);
 
 val REVERSE_REVERSE_EQ =
  store_thm
@@ -586,7 +582,7 @@ val LENGTH_FILTER_BUTFIRSTN =
            LENGTH(FILTER P l) - 1``,
    GEN_TAC
     THEN Induct
-    THEN RW_TAC list_ss [TAKE_FIRST_def,BUTFIRSTN,BUTFIRSTN_ONE]);
+    THEN RW_TAC list_ss [TAKE_FIRST_def,BUTFIRSTN,BUTFIRSTN_ONE,GSYM COND_RAND]);
 
 val LENGTH_1_BUTFIRSTN =
  store_thm
@@ -596,7 +592,7 @@ val LENGTH_1_BUTFIRSTN =
            (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l = [])``,
    GEN_TAC
     THEN Induct
-    THEN RW_TAC list_ss [TAKE_FIRST_def,BUTFIRSTN,BUTFIRSTN_ONE,HOLDS_LAST_def]
+    THEN RW_TAC list_ss [TAKE_FIRST_def,BUTFIRSTN,BUTFIRSTN_ONE,HOLDS_LAST_def,GSYM COND_RAND]
     THENL
      [Cases_on `l = []`
        THEN RW_TAC list_ss []
@@ -1280,7 +1276,7 @@ val LENGTH_TAKE_FIRST_GREATER =
    Induct
     THEN RW_TAC list_ss [TAKE_FIRSTN_def]
     THEN Induct_on `l`
-    THEN RW_TAC list_ss [TAKE_FIRST_def,TAKE_FIRSTN_def,BUTFIRSTN_ONE]
+    THEN RW_TAC list_ss [TAKE_FIRST_def,TAKE_FIRSTN_def,BUTFIRSTN_ONE,GSYM COND_RAND]
     THEN RES_TAC
     THEN POP_ASSUM(ASSUME_TAC o SPEC_ALL)
     THEN RW_TAC list_ss [DECIDE ``SUC n <= m + SUC p = n <= m + p``]
@@ -1446,10 +1442,10 @@ val S_PROJ_S_FUSION_LEMMA3 =
     THEN IMP_RES_TAC S_PROJ_S_FUSION_LEMMA2
     THEN `LAST(FILTER (CLOCK c) (TAKE_FIRSTN (CLOCK c) (SUC (LENGTH v1)) l)) = l'`
           by PROVE_TAC[LAST_SINGLETON]
-    THEN `0 < SUC (LENGTH v1)` by DECIDE_TAC
     THEN `LENGTH(FILTER (CLOCK c) l) =  LENGTH(v1 <> [l'] <> v2)`
           by PROVE_TAC[]
     THEN FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH]
+    THEN `0 < SUC (LENGTH v1)` by DECIDE_TAC
     THEN `SUC (LENGTH v1) <= LENGTH(FILTER (CLOCK c) l)`
           by DECIDE_TAC
     THEN `CLOCK c (LAST (TAKE_FIRSTN (CLOCK c) (SUC (LENGTH v1)) l))`
@@ -2028,7 +2024,7 @@ val FUN_FILTER_COUNT_EXISTS =
        THEN Cases_on `P (f i)`
        THEN RW_TAC arith_ss []
        THEN IMP_RES_TAC LESS_LEAST
-       THEN POP_ASSUM(STRIP_ASSUME_TAC o SIMP_RULE std_ss [])]);
+       THEN POP_ASSUM(STRIP_ASSUME_TAC o REWRITE_RULE[GSYM NOT_LESS] o SIMP_RULE std_ss [])]);
 
 val NOT_FUN_FILTER_COUNT =
  store_thm
@@ -2165,7 +2161,8 @@ val LENGTH_PATH_FILTER_NON_ZERO_EXISTS =
              (STRIP_ASSUME_TAC o
               ONCE_REWRITE_RULE
                [SIMP_RULE std_ss []
-                (GSYM(ISPEC ``\i:num. !j. i <= j ==> ~(P:'a->bool) ((f:num->'a) j)`` LEAST0))]),
+                (GSYM(ISPEC ``\i:num. !j. i <= j ==> ~(P:'a->bool) ((f:num->'a) j)`` LEAST0))] o
+              REWRITE_RULE[ZERO_LESS_EQ]),
             FULL_SIMP_TAC std_ss []
              THEN PROVE_TAC[]]]]);
 
