@@ -108,7 +108,7 @@ val STABLE_SUC =
     THEN ASSUME_TAC(SPEC (--`x1:num`--) LESS_SUC_REFL)
     THEN RES_TAC
     THEN ASM_REWRITE_TAC[]);
-   
+
 val SUC_LEMMA =
  let val [th1,th2,th3,th4] = CONJUNCTS ADD_CLAUSES
  in save_thm("SUC_LEMMA",LIST_CONJ[th1,th2,SYM th3,th4])
@@ -164,7 +164,7 @@ val NEXT_LEMMA2 =
 
 val assm = 
  ASSUME (--`(!x. (done x = f(s x)) /\ (s(SUC x) = g(i x,s x))) /\
-            (!a b. (FN:('a#'b)->'b)(a,b) = (f b => b | FN(a,g(a,b))))`--) ;
+            (!a b. (FN:('a#'b)->'b)(a,b) = (if f b then b else FN(a,g(a,b))))`--) ;
 
 val [done_s,FN] = CONJUNCTS assm;
 
@@ -185,7 +185,7 @@ val NEXT_THM =
       !(i:num->'a).
       !(s:num->'b).
       ((!x. (done x = f(s x)) /\ (s(x+1) = g(i x,s x))) /\
-      (!a b. FN(a,b) = (f b => b | FN(a,g(a,b)))))    ==>
+      (!a b. FN(a,b) = (if f b then b else FN(a,g(a,b)))))    ==>
       (!d x.
         (NEXT(x,x+d)done /\ STABLE(x,x+d)i) ==> 
         (s(x+d) = FN(i x,g(i x,s x))))`--,
@@ -239,12 +239,12 @@ val SUB       = arithmeticTheory.SUB;
 val MULT_FUN_CURRY = new_recursive_definition
    {name = "MULT_FUN_CURRY", rec_axiom = num_Axiom,
     def = --`(MULT_FUN_CURRY 0 i1 i2 m t =
-                  (t => (m,0,t) | ((i1=0)=>m|i2+m),0,T))
+                  (if t then (m,0,t) else (if i1=0 then m else i2+m,0,T)))
              /\
              (MULT_FUN_CURRY (SUC n) i1 i2 m t =
-                  (t => (m,SUC n,t)
-                   | MULT_FUN_CURRY n i1 i2 ((i1=0)=>m|i2+m)
-                                    (((n-1)=0) \/ (i2=0))))`--};
+                  (if t then (m,SUC n,t)
+                   else MULT_FUN_CURRY n i1 i2 (if i1=0 then m else i2+m)
+                                       (((n-1)=0) \/ (i2=0))))`--};
 
 (*---------------------------------------------------------------------------
  * Rewriting ambiguity between SUC_SUB1 and SUB means that hol88
@@ -256,8 +256,8 @@ val MULT_FUN_CURRY = new_recursive_definition
  *   ("MULT_FUN_CURRY_THM",
  *    --`!i1 i2 m n t.
  *      MULT_FUN_CURRY n i1 i2 m t =
- *       (t => (m,n,t)
- *          |  MULT_FUN_CURRY (n-1) i1 i2 ((i1=0) => m | i2+m) 
+ *       (if t then (m,n,t)
+ *        else MULT_FUN_CURRY (n-1) i1 i2 (if i1=0 then m else i2+m) 
  *                            ((((n-1)-1)=0) \/ (i2=0)))`--,
  *    REPEAT GEN_TAC
  *     THEN STRUCT_CASES_TAC(SPEC (--`n:num`--) num_CASES)
@@ -268,8 +268,8 @@ val MULT_FUN_CURRY = new_recursive_definition
 val MULT_FUN_CURRY_THM = store_thm("MULT_FUN_CURRY_THM",
    --`!i1 i2 m n t.
       MULT_FUN_CURRY n i1 i2 m t =
-       (t => (m,n,t)
-        | MULT_FUN_CURRY(n-1) i1 i2 ((i1=0)=>m|i2+m) (((n-1)-1=0)\/(i2=0)))`--,
+       (if t then (m,n,t)
+        else MULT_FUN_CURRY(n-1) i1 i2 (if i1=0 then m else i2+m) (((n-1)-1=0)\/(i2=0)))`--,
    REPEAT GEN_TAC
     THEN STRUCT_CASES_TAC(SPEC (--`n:num`--) num_CASES)
     THEN ASM_CASES_TAC (--`t:bool`--)
@@ -283,8 +283,8 @@ val MULT_FUN = new_definition("MULT_FUN",
 val MULT_FUN_DEF = store_thm("MULT_FUN_DEF",
    --`!i1 i2 m n t.
      MULT_FUN((i1,i2),m,n,t) =
-      (t => (m,n,t)
-         |  MULT_FUN ((i1,i2), ((i1=0) => m | i2+m), (n-1),
+      (if t then (m,n,t)
+       else MULT_FUN ((i1,i2), (if i1=0 then m else i2+m), (n-1),
                      ((((n-1)-1)=0) \/ (i2=0))))`--,
    REPEAT GEN_TAC
     THEN REWRITE_TAC[MULT_FUN]
@@ -331,7 +331,7 @@ val MULT_FUN_F =
   ("MULT_FUN_F",
    --`!i1 i2 m n.
      MULT_FUN((i1,i2),m,n,F) = 
-     MULT_FUN((i1,i2),((i1=0)=>m|i2+m),(n-1),((((n-1)-1)=0) \/ (i2=0)))`--,
+     MULT_FUN((i1,i2),(if i1=0 then m else i2+m),(n-1),((((n-1)-1)=0) \/ (i2=0)))`--,
    REPEAT GEN_TAC
     THEN ASM_CASES_TAC (--`t:bool`--)
     THEN REWRITE_TAC[INST[--`t:bool`-- |-> --`F`--] (SPEC_ALL MULT_FUN_DEF)]);
@@ -401,11 +401,13 @@ val MULT_FUN_THM =
   ("MULT_FUN_THM",
    --`!n i1 i2 m t.
      MULT_FUN((i1,i2),m,n,t) =
-      (t => 
-       (m,n,t) |
-       (((n-1)=0)\/(i2=0)) =>
-        (((i1=0)=>m|i2+m),(n-1),T) |
-        (((i1=0)=>m|((n-1)*i2)+m),1,T))`--,
+       if t then 
+       (m,n,t)
+       else
+       (if ((n-1)=0)\/(i2=0) then
+        ((if i1=0 then m else i2+m),(n-1),T)
+        else
+        ((if i1=0 then m else ((n-1)*i2)+m),1,T))`--,
        INDUCT_TAC
        THEN REPEAT GEN_TAC
        THEN ASM_CASES_TAC (--`t:bool`--) 
@@ -434,8 +436,8 @@ val MULT_FUN_LEMMA =
      store_thm
       ("MULT_FUN_LEMMA",
        --`!i1 i2.
-	 (MULT_FUN((i1,i2),((i1=0)=>0|i2),i1,(((i1-1)=0)\/(i2=0)))) =
-	  ((i1*i2), ((((i1-1)=0)\/(i2=0))=>i1|1), T)`--,
+	 (MULT_FUN((i1,i2),(if i1=0 then 0 else i2),i1,(((i1-1)=0)\/(i2=0)))) =
+	  ((i1*i2), (if ((i1-1)=0)\/(i2=0) then i1 else 1), T)`--,
        REPEAT GEN_TAC
 	THEN ASM_CASES_TAC (--`i1=0`--)
 	THEN ASM_CASES_TAC (--`i2=0`--)
@@ -461,7 +463,7 @@ val _ = new_theory "prims";
 val [MUX,REG,FLIPFLOP,DEC,ADDER,ZERO_TEST,OR_GATE,IS_ZERO] =
  map new_definition
  [("MUX"      , --`MUX(switch,(i1:num->num),(i2:num->num),out) =
-                      !(x:num). out x = (switch x => i1 x | i2 x)`--),
+                      !(x:num). out x = (if switch x then i1 x else i2 x)`--),
 
   ("REG"      , --`REG((i:num->num),out) = !x. out(x+1) = i x`--),
 
@@ -486,6 +488,8 @@ val _ = export_theory();
  *---------------------------------------------------------------------------*)
 
 val _ = new_theory "MULT_IMP";
+
+val _ = ``prims$MUX``;
 
 val MULT_IMP = new_definition
  ("MULT_IMP",
@@ -541,13 +545,14 @@ val COND_ADD_LEMMA = store_thm("COND_ADD_LEMMA",
 val MULT_FUN_EXPANDED_DEF = store_thm("MULT_FUN_EXPANDED_DEF",
    --`!i1 i2 m n t.
      MULT_FUN((i1,i2),m,n,t) =
-      (t =>
-       (m,n,t) |
+      (if t then
+       (m,n,t)
+       else
        MULT_FUN
         ((i1, i2),
-         (t => ((i1 = 0) => 0 | i2) | ((i1 = 0) => 0 | i2) + m),
-         (t => i1 | n - 1),
-         (((t => i1 - 1 | (n - 1) - 1) = 0) \/ (i2 = 0))))`--,
+         (if t then (if i1 = 0 then 0 else i2) else (if i1 = 0 then 0 else i2) + m),
+         (if t then i1 else n - 1),
+         (((if t then i1 - 1 else (n - 1) - 1) = 0) \/ (i2 = 0))))`--,
     REPEAT GEN_TAC
      THEN ASM_CASES_TAC (--`t:bool`--)
      THEN ASM_REWRITE_TAC[MULT_FUN_T,MULT_FUN_F,COND_ADD_LEMMA,ADD_CLAUSES]);
@@ -556,9 +561,9 @@ val MULT_FUN_EXPANDED_DEF = store_thm("MULT_FUN_EXPANDED_DEF",
 val G_FUN = new_definition("G_FUN",
  --`!i1 i2 m n t.
     G_FUN((i1,i2),(m,n,t)) =
-    ((t => ((i1 = 0) => 0 | i2) | ((i1 = 0) => 0 | i2) + m),
-     (t => i1 | n - 1),
-     (((t => i1 - 1 | (n - 1) - 1) = 0) \/ (i2 = 0)))`--);
+    ((if t then (if i1 = 0 then 0 else i2) else (if i1 = 0 then 0 else i2) + m),
+     (if t then i1 else n - 1),
+     (((if t then i1 - 1 else (n - 1) - 1) = 0) \/ (i2 = 0)))`--);
 
 val NEXT_THM' = 
  INST_TYPE[alpha |-> Type`:num#num`, beta  |-> Type`:num#num#bool`] NEXT_THM;
@@ -614,9 +619,9 @@ val MULT_FUN_LEMMA2 = store_thm("MULT_FUN_LEMMA2",
  --`(done:num->bool) x ==>
     (MULT_FUN((i1 x,i2 x),G_FUN((i1 x,i2 x),o2 x,o1 x,done x)) =
              ((i1 x * i2 x),
-              ((((i1 x - 1) = 0) \/ (i2 x = 0))
-               => i1 x
-                | 1),
+              (if ((i1 x - 1) = 0) \/ (i2 x = 0)
+               then i1 x
+               else 1),
               T))`--,
    DISCH_TAC THEN ASM_REWRITE_TAC[MULT_FUN_LEMMA1,G_FUN]);
 
