@@ -841,7 +841,7 @@ val LOOKUP_IDEMPOTENT_LEMMA =
     THENL
      [Cases_on `(sym_name = "") /\ (pkg_name = q)`
        THEN RW_TAC std_ss [],
-      Cases_on `(sym_name = STRING c ^(mk_var("str",``:string``))) /\ (pkg_name = q)`
+      Cases_on `(sym_name = STRING c ^(mk_var("s",``:string``))) /\ (pkg_name = q)`
        THEN RW_TAC std_ss []]);
 
 val LOOKUP_IDEMPOTENT =
