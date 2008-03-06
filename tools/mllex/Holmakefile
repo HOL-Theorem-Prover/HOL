@@ -1,15 +1,20 @@
+# currently, the configuration builds this directory without using Holmake
+# because we used to require mllex before we can build Holmake.  That isn't
+# currently the case, but I expect it will be again.
+
 OBJ = mllex.exe
-EXTRA_CLEANS = $(OBJ)
+EXTRA_CLEANS = $(OBJ) mllex.o
 OPTIONS = NO_SIGOBJ
+OBJ_DEPS = $(if $(MOSMLC),mllex.uo mosmlmain.uo,mllex.sml poly-mllex.ML)
 
-# also builds under mlton with
-#   mlton -basis 1997 mllex.sml
-# as the commandline, though this creates mllex rather than mllex.exe
-# as below.  (MLton on Windows is still something of a work in
-# progress I believe.)
+$(OBJ): $(OBJ_DEPS)
+	$(if $(MOSMLC),$(MOSMLC) -o $@ $(OBJ_DEPS),\
+             poly < poly-mllex.ML && \
+             gcc -o $@ mllex.o $(POLYLIBS) -lpolymain -lpolyml)
 
-# (To get rid of the 1997 reference, replace Substring.all with
-# Substring.full in mllex.sml)
+mosmlmain.uo mosmlmain.ui: mosmlmain.sml mllex.ui
+	$(MOSMLC) -c mllex.ui $<
 
-$(OBJ): mllex.sml
-	$(MOSMLC) -toplevel -o $@ $<
+mllex.uo mllex.ui: mllex.sml
+	$(MOSMLC) -toplevel -c $<
+

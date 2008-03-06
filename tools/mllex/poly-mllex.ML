@@ -1,8 +1,10 @@
+(* this is an -*- sml -*- file *)
+val _ = PolyML.print_depth 0
 structure Substring = struct
   open Substring
   val all = full
 end;
-use "tools/poly/mllex.sml";
+use "mllex.sml";
 
 fun main() = let
   val name = CommandLine.name()
