@@ -2,12 +2,13 @@
 structure PolyGeneral = General
 structure PolyArray = Array
 structure PolySubstring = Substring
-structure PolyWord8Vector = Word8Vector
+structure PolyWord8Vector = Word8Vector;
 
 use "tools/poly/PP.sig";
 use "tools/poly/PP.sml";
 
 (* awfulness to make the environment look like Moscow ML's *)
+structure Meta = struct fun loaded () = [] fun load s = () end
 structure General = struct
   open PolyGeneral
   type ppstream = PP.ppstream
@@ -138,10 +139,30 @@ quse "Parse_support";
 quse "type_pp";
 quse "term_pp";
 quse "Parse";
+quse "ParseDatatype";
 quse "Hol_pp";
+
+(* install pretty-printers *)
+fun pp2polypp (f :  ppstream -> 'a -> unit)
+              (putString : string -> unit,
+               beginBlock : int * bool -> unit,
+               spaceBlock : int * int -> unit,
+               endBlock : unit -> unit)
+              (dpth_limit : int)
+              recursive_print
+              (e : 'a) = putString (f e)
+fun dq (f : 'a -> string) x = "``" ^ f x ^ "``"
+
+val _ = PolyML.install_pp (pp2polypp (dq Parse.term_to_string))
+val _ = PolyML.install_pp (pp2polypp Parse.thm_to_string)
+val _ = PolyML.install_pp (pp2polypp (dq Parse.type_to_string))
+
 
 (* bools *)
 val _ = qdir := "src/bool/";
+
+
+
 (* ----------------------------------------------------------------------
     A version of "use" that filters quotations. The native PolyML version
     of "use" is found in the "PolyML" structure.
@@ -184,12 +205,61 @@ fun use s =
   else PolyML.use s
 end;
 
+(* quse needs redefining too *)
+fun quse s = (use (!qdir ^ s ^ ".sig"); use (!qdir ^ s ^ ".sml"))
+
+
 val _ = qdir := "src/bool/";
 quse "DB";
 use "src/bool/boolScript.sml";
-structure boolScript = struct end;
 
 use "boolTheory.sig";
-use "boolTheory.sml";
 
+structure boolTheory :> boolTheory = struct
+  open boolScript
+  val DISJ_COMM = DISJ_SYM
+  val CONJ_COMM = CONJ_SYM
+  val itself_TY_DEF = DB.definition "itself_TY_DEF"
+  val bool_grammars = Parse.current_lgrms()
+end;
 
+quse "boolSyntax";
+quse "DefnBase";
+quse "Abbrev";
+quse "Rsyntax";
+quse "Drule";
+
+open Portable; (* need to see frag type constructor *)
+quse "Tactical";
+quse "Psyntax";
+quse "Thm_cont";
+quse "Conv";
+quse "Pmatch";
+quse "simpfrag";
+quse "Tactic";
+quse "Rewrite";
+quse "Prim_rec";
+quse "TypeBasePure";
+quse "TypeBase";
+quse "ConstMapML";
+quse "Ho_Net";
+quse "Ho_Rewrite";
+quse "EmitML";
+use "src/bool/boolLib.sml";
+quse "dep_rewrite";
+quse "Mutual";
+
+(* goalstack *)
+val _ = qdir := "src/goalstack/";
+quse "Bwd";
+quse "History";
+quse "GoalstackPure";
+quse "goalstackLib";
+
+val _ = PolyML.install_pp
+            (pp2polypp (PP.pp_to_string 75 goalstackLib.pp_goalstack))
+val _ = PolyML.install_pp
+            (pp2polypp (PP.pp_to_string 75 goalstackLib.pp_proofs))
+open HolKernel Parse boolLib goalstackLib;
+
+PolyML.export("polyhol.bare", PolyML.rootFunction);
