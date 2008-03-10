@@ -33,7 +33,7 @@ val APPEND_CASES = store_thm(
   ]);
 
 (* ----------------------------------------------------------------------
-    ordering positions 
+    ordering positions
    ---------------------------------------------------------------------- *)
 
 val posn_lt_def = Define`
@@ -118,7 +118,7 @@ val _ = export_rewrites ["valid_posns_thm"]
 val valid_posns_vsubst = Store_Thm(
   "valid_posns_vsubst",
   ``!M. valid_posns ([VAR v/u] M) = valid_posns M``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
 
@@ -153,7 +153,7 @@ val _ = export_rewrites ["var_posns_thm"]
 val var_posns_vsubst_invariant = Store_Thm(
   "var_posns_vsubst_invariant",
   ``!M. var_posns ([VAR v/u]M) = var_posns M``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
 val var_posns_FINITE = Store_Thm(
@@ -180,22 +180,22 @@ open metisLib
 
 val silly_lemma = prove(
   ``(?a:string. ~(a = v))``,
-  Q_TAC (NEW_TAC "z") `{v}` THEN 
+  Q_TAC (NEW_TAC "z") `{v}` THEN
   Q.EXISTS_TAC `z` THEN SRW_TAC [][]);
 val v_posns_exists =
-    (SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM] o 
-     GEN_ALL o 
+    (SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM] o
+     GEN_ALL o
      SIMP_RULE (srw_ss()) [nomsetTheory.fnpm_def, silly_lemma,
                            GSYM basic_swapTheory.swapstr_eq_left] o
-     CONV_RULE (LAND_CONV (ONCE_REWRITE_CONV [FUN_EQ_THM])) o 
-     CONV_RULE (LAND_CONV (ONCE_REWRITE_CONV [FUN_EQ_THM])) o 
+     CONV_RULE (LAND_CONV (ONCE_REWRITE_CONV [FUN_EQ_THM])) o
+     CONV_RULE (LAND_CONV (ONCE_REWRITE_CONV [FUN_EQ_THM])) o
      SIMP_RULE (srw_ss()) [nomsetTheory.support_def] o
      Q.INST [`apm` |-> `K I`,
              `A` |-> `{v}`,
              `vr` |-> `^vp'_var`,
              `ap` |-> `^vp'_app`,
              `lm` |-> `^vp'_lam`] o
-     SPEC_ALL o 
+     SPEC_ALL o
      INST_TYPE [alpha |-> ``:posn set``])
     termTheory.tm_recursion
 
@@ -205,15 +205,15 @@ val v_posns_def = new_specification("v_posns_def", ["v_posns"],
 val v_posns_tpm_invariant = Store_Thm(
   "v_posns_tpm_invariant",
   ``!M. v_posns v (tpm pi M) = v_posns (lswapstr (REVERSE pi) v) M``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN 
-  Q.EXISTS_TAC `{v; lswapstr (REVERSE pi) v}` THEN 
-  SRW_TAC [][v_posns_def, basic_swapTheory.lswapstr_eql] THEN 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN
+  Q.EXISTS_TAC `{v; lswapstr (REVERSE pi) v}` THEN
+  SRW_TAC [][v_posns_def, basic_swapTheory.lswapstr_eql] THEN
   FULL_SIMP_TAC (srw_ss()) []);
 
 val v_posns_FV = store_thm(
   "v_posns_FV",
   ``!t. ~(v IN FV t) ==> (v_posns v t = {})``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{v}` THEN 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{v}` THEN
   SRW_TAC [][v_posns_def]);
 
 val v_posns_LAM = prove(
@@ -223,7 +223,7 @@ val v_posns_LAM = prove(
 
 val v_posns_thm = Save_Thm(
   "v_posns_thm",
-  LIST_CONJ (butlast (CONJUNCTS (CONJUNCT1 v_posns_def)) @ 
+  LIST_CONJ (butlast (CONJUNCTS (CONJUNCT1 v_posns_def)) @
              [GEN_ALL v_posns_LAM]))
 
 val v_posns_vsubst = store_thm(
@@ -300,7 +300,7 @@ val var_posns_subst = store_thm(
   ]);
 
 (* ----------------------------------------------------------------------
-    positions of the bound variables underneath an abstraction 
+    positions of the bound variables underneath an abstraction
    ---------------------------------------------------------------------- *)
 
 val (bv_posns_thm, _) = define_recursive_term_function
@@ -316,7 +316,7 @@ val bv_posns_vsubst = Store_Thm(
   SRW_TAC [][SUB_THM, SUB_VAR, v_posns_vsubst]);
 
 (* ----------------------------------------------------------------------
-    positions of all a term's abstractions 
+    positions of all a term's abstractions
    ---------------------------------------------------------------------- *)
 
 val (lam_posns_thm, _) = define_recursive_term_function`
@@ -330,7 +330,7 @@ val _ = export_rewrites ["lam_posns_thm"]
 val lam_posns_vsubst = Store_Thm(
   "lam_posns_vsubst",
   ``!M. lam_posns ([VAR v/u]M) = lam_posns M``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
 val lam_posns_SUBSET_valid_posns = store_thm(
@@ -342,13 +342,14 @@ val lam_posns_SUBSET_valid_posns = store_thm(
 val lam_posns_var_posns = store_thm(
   "lam_posns_var_posns",
   ``!t p. ~(p IN lam_posns t /\ p IN var_posns t)``,
+  Q_TAC SUFF_TAC `!t p. p IN lam_posns t ==> ~(p IN var_posns t)`
+        THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][var_posns_thm, lam_posns_thm] THEN
-  SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN PROVE_TAC []);
+  METIS_TAC []);
 
 (* ----------------------------------------------------------------------
-    positions of all a term's redexes 
+    positions of all a term's redexes
    ---------------------------------------------------------------------- *)
 
 val (redex_posns_thm, _) = define_recursive_term_function`
@@ -363,7 +364,7 @@ val (redex_posns_thm, _) = define_recursive_term_function`
 val redex_posns_vsubst_invariant = Store_Thm(
   "redex_posns_vsubst_invariant",
   ``!M. redex_posns ([VAR v/u]M) = redex_posns M``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR, redex_posns_thm]);
 
 val redex_posns_are_valid = store_thm(
@@ -380,8 +381,8 @@ val redex_posns_are_valid = store_thm(
    ---------------------------------------------------------------------- *)
 
 val bv_posns_at_exists0 =
-    (SIMP_RULE (srw_ss()) [] o 
-     Q.INST [`apm` |-> `K I`, 
+    (SIMP_RULE (srw_ss()) [] o
+     Q.INST [`apm` |-> `K I`,
              `vr` |-> `\s l. {}`,
              `ap` |-> `\rt ru t u l.
                            case l of
@@ -393,7 +394,7 @@ val bv_posns_at_exists0 =
                               [] -> bv_posns (LAM v t)
                            || In::rest -> IMAGE (CONS In) (rt rest)
                            || _ -> {}`] o
-     INST_TYPE [alpha |-> ``:redpos list -> redpos list set``] o 
+     INST_TYPE [alpha |-> ``:redpos list -> redpos list set``] o
      SPEC_ALL)
     tm_recursion_nosideset
 
@@ -426,8 +427,8 @@ val bv_posns_at_swap_invariant = Save_Thm(
 val bv_posns_at_vsubst = Store_Thm(
   "bv_posns_at_vsubst",
   ``!t p. bv_posns_at p ([VAR v/u] t) = bv_posns_at p t``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN 
-  SRW_TAC [][SUB_THM, SUB_VAR, v_posns_vsubst, bv_posns_at_thm, 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR, v_posns_vsubst, bv_posns_at_thm,
              bv_posns_thm])
 
 val bv_posns_at_SUBSET_var_posns = store_thm(
