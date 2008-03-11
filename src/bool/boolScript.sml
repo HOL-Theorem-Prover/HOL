@@ -319,21 +319,28 @@ fun EXT th =
    TRANS (TRANS(SYM(ETA_CONV (mk_abs(x, t1x)))) th2)
          (ETA_CONV (mk_abs(x,t2x)))
    end;
+
 fun DISCH_ALL th = DISCH_ALL (DISCH (hd (hyp th)) th) handle _ => th;
 
 fun PROVE_HYP ath bth = MP (DISCH (concl ath) bth) ath;
 
 fun CONV_RULE conv th = EQ_MP (conv(concl th)) th;
+
 fun RAND_CONV conv tm =
    let val (Rator,Rand) = dest_comb tm
    in AP_TERM Rator (conv Rand)
    end;
+
 fun RATOR_CONV conv tm =
    let val (Rator,Rand) = dest_comb tm in AP_THM (conv Rator) Rand end;
+
 fun ABS_CONV conv tm =
    let val (Bvar,Body) = dest_abs tm in ABS Bvar (conv Body) end;
+
 fun QUANT_CONV conv = RAND_CONV(ABS_CONV conv);
+
 fun RIGHT_BETA th = TRANS th (BETA_CONV(snd(dest_eq(concl th))));
+
 fun UNDISCH th = MP th (ASSUME(fst(dest_imp(concl th))));
 
 fun FALSITY_CONV tm = DISCH F (SPEC tm (EQ_MP F_DEF (ASSUME F)))
@@ -436,6 +443,7 @@ fun SELECT_EQ x =
  end
 
 fun GENL varl thm = itlist GEN varl thm;
+
 fun SPECL tm_list th = rev_itlist SPEC tm_list th
 
 fun GEN_ALL th = itlist GEN (set_diff (free_vars(concl th))
@@ -2884,6 +2892,41 @@ val AND_CONG =
 
 val _ = save_thm("AND_CONG", AND_CONG);
 
+(*---------------------------------------------------------------------------
+  LEFT_AND_CONG = 
+       |- !P P' Q Q'.
+          (P = P') /\ (P' ==> (Q = Q'))
+                  ==>
+          (P /\ Q = P' /\ Q')
+ ---------------------------------------------------------------------------*)
+
+val LEFT_AND_CONG =
+ let val P = mk_var("P",Type.bool)
+     val P' = mk_var("P'",Type.bool)
+     val Q = mk_var("Q",Type.bool)
+     val Q' = mk_var("Q'",Type.bool)
+     val PandQ = mk_conj(P,Q)
+     val P'andQ' = mk_conj(P',Q')
+     val ctm1 = mk_eq(P,P')
+     val ctm2 = mk_imp(P', mk_eq(Q,Q'))
+     val th1 = ASSUME PandQ
+     val th2 = ASSUME ctm1
+     val th3 = SUBS [th2] (CONJUNCT1 th1)
+     val th3a = MP (ASSUME ctm2) th3
+     val th4 = DISCH PandQ (SUBS[th2,th3a] th1)
+     val th5 = ASSUME P'andQ'
+     val th6 = SUBS [SYM th2] (CONJUNCT1 th5)
+     val th7 = SYM(MP (ASSUME ctm2) (CONJUNCT1 th5))
+     val th8 = DISCH P'andQ' (SUBS[SYM th2,th7] th5)
+     val th9 = IMP_ANTISYM_RULE th4 th8
+     val th10 = SUBS [SPECL [ctm1,ctm2,concl th9] AND_IMP_INTRO]
+                     (DISCH ctm1 (DISCH ctm2 th9))
+ in
+   GENL [P,P',Q,Q'] th10
+ end;
+
+val _ = save_thm("LEFT_AND_CONG", LEFT_AND_CONG);
+
 
 (*---------------------------------------------------------------------------
    val OR_CONG =
@@ -2940,6 +2983,44 @@ val OR_CONG =
  end;
 
 val _ = save_thm("OR_CONG", OR_CONG);
+
+
+(*---------------------------------------------------------------------------
+   val LEFT_OR_CONG =
+       |- !P P' Q Q'.
+         (P = P') /\ (~P' ==> (Q = Q'))
+                  ==>
+          (P \/ Q = P' \/ Q')
+ ---------------------------------------------------------------------------*)
+
+val LEFT_OR_CONG =
+ let fun mk_boolvar s = mk_var(s,Type.bool)
+     val [P,P',Q,Q'] = map mk_boolvar ["P","P'","Q","Q'"]
+     val notP = mk_neg P
+     val notP' = mk_neg P'
+     val PorQ = mk_disj(P,Q)
+     val P'orQ' = mk_disj(P',Q')
+     val PeqP' = mk_eq(P,P')
+     val ctm = mk_imp(notP',mk_eq(Q,Q'))
+     val th1 = ASSUME ctm
+     val th2 = ASSUME PeqP'
+     val th3 = DISJ1 (SUBS [th2] (ASSUME P)) Q'
+     val th4 = MP th1 (SUBS [th2] (ASSUME notP))
+     val th5 = DISJ2 P' (SUBS [th4] (ASSUME Q))
+     val th6 = DISJ_CASES (SPEC P EXCLUDED_MIDDLE) th3 th5
+     val th7 = DISCH PorQ (DISJ_CASES (ASSUME PorQ) th3 th6)
+     val th8 = DISJ1 (SUBS [SYM th2] (ASSUME P')) Q
+     val th9 = MP th1 (ASSUME notP')
+     val th10 = DISJ2 P (SUBS [SYM th9] (ASSUME Q'))
+     val th11 = DISJ_CASES (SPEC P' EXCLUDED_MIDDLE) th8 th10
+     val th12 = DISCH P'orQ' (DISJ_CASES (ASSUME P'orQ') th8 th11)
+     val th13 = DISCH PeqP' (DISCH ctm (IMP_ANTISYM_RULE th7 th12))
+     val th14 = SUBS[SPECL [PeqP',ctm,mk_eq(PorQ,P'orQ')] AND_IMP_INTRO] th13
+ in
+   GENL [P,P',Q,Q'] th14
+ end;
+
+val _ = save_thm("LEFT_OR_CONG", LEFT_OR_CONG);
 
 
 (*---------------------------------------------------------------------------
