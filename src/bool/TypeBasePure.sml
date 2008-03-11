@@ -28,7 +28,7 @@ fun thm_of (ORIG x)     = x
 (* Support both constructor-style datatypes and other types as well.         *)
 (*---------------------------------------------------------------------------*)
 
-type dtyinfo = (string*string) *
+type dtyinfo =
            {ty           : hol_type,
             axiom        : shared_thm,
             induction    : shared_thm,
@@ -60,75 +60,73 @@ datatype tyinfo = DFACTS of dtyinfo
                   Projections
  ---------------------------------------------------------------------------*)
 
-fun ty_name_of (DFACTS(sp,_)) = sp
-  | ty_name_of (NFACTS(ty,_)) =
-     let val {Thy,Tyop,Args} = dest_thy_type ty in (Thy,Tyop) end;
-
-fun ty_of (DFACTS(_,{ty,...})) = ty
+fun ty_of (DFACTS {ty,...}) = ty
   | ty_of (NFACTS(ty,_)) = ty;
 
-fun constructors_of (DFACTS(_, {constructors,...})) = constructors
+val ty_name_of = type_names o ty_of
+
+fun constructors_of (DFACTS {constructors,...}) = constructors
   | constructors_of (NFACTS _) = [];
 
-fun case_const_of (DFACTS(_,{case_const,...})) = case_const
+fun case_const_of (DFACTS {case_const,...}) = case_const
   | case_const_of (NFACTS _) = raise ERR "case_const_of" "not a datatype";
 
-fun case_cong_of (DFACTS(_,{case_cong,...})) = case_cong
+fun case_cong_of (DFACTS {case_cong,...}) = case_cong
   | case_cong_of (NFACTS _) = raise ERR "case_cong_of" "not a datatype";
 
-fun case_def_of (DFACTS(_,{case_def,...})) = case_def
+fun case_def_of (DFACTS {case_def,...}) = case_def
   | case_def_of (NFACTS _) = raise ERR "case_def_of" "not a datatype";
 
-fun induction_of0 (DFACTS(_,{induction,...})) = induction
+fun induction_of0 (DFACTS {induction,...}) = induction
   | induction_of0 (NFACTS _) = raise ERR "induction_of0" "not a datatype";
 
-fun induction_of (DFACTS(_,{induction,...})) = thm_of induction
+fun induction_of (DFACTS {induction,...}) = thm_of induction
   | induction_of (NFACTS _) = raise ERR "induction_of" "not a datatype";
 
-fun nchotomy_of (DFACTS(_,{nchotomy,...})) = nchotomy
+fun nchotomy_of (DFACTS {nchotomy,...}) = nchotomy
   | nchotomy_of (NFACTS(_,{nchotomy=SOME th,...})) = th
   | nchotomy_of (NFACTS(_,{nchotomy=NONE,...})) =
          raise ERR "nchotomy_of" "no theorem available";
 
-fun distinct_of (DFACTS(_,{distinct,...})) = distinct
+fun distinct_of (DFACTS {distinct,...}) = distinct
   | distinct_of (NFACTS _) = raise ERR "distinct_of" "not a datatype";
 
-fun one_one_of (DFACTS(_,{one_one,...})) = one_one
+fun one_one_of (DFACTS {one_one,...}) = one_one
   | one_one_of (NFACTS _) = raise ERR "one_one_of" "not a datatype";
 
-fun fields_of (DFACTS(_,{fields,...})) = fields
+fun fields_of (DFACTS {fields,...}) = fields
   | fields_of (NFACTS _) = [];
 
-fun accessors_of (DFACTS(_,{accessors,...})) = accessors
+fun accessors_of (DFACTS {accessors,...}) = accessors
   | accessors_of (NFACTS _) = [];
 
-fun updates_of (DFACTS(_,{updates,...})) = updates
+fun updates_of (DFACTS {updates,...}) = updates
   | updates_of (NFACTS _) = [];
 
-fun simpls_of (DFACTS(_,{simpls,...})) = simpls
+fun simpls_of (DFACTS {simpls,...}) = simpls
   | simpls_of (NFACTS _) = simpfrag.empty_simpfrag;
 
-fun axiom_of0 (DFACTS(_,{axiom,...})) = axiom
+fun axiom_of0 (DFACTS {axiom,...}) = axiom
   | axiom_of0 (NFACTS _) = raise ERR "axiom_of0" "not a datatype";
 
-fun axiom_of (DFACTS(_,{axiom,...})) = thm_of axiom
+fun axiom_of (DFACTS {axiom,...}) = thm_of axiom
   | axiom_of (NFACTS _) = raise ERR "axiom_of" "not a datatype";
 
-fun size_of0 (DFACTS(_,{size,...})) = size
+fun size_of0 (DFACTS {size,...}) = size
   | size_of0 (NFACTS _) = raise ERR "size_of0" "not a datatype";
 
-fun size_of (DFACTS(_,{size=NONE,...})) = NONE
-  | size_of (DFACTS(_,{size=SOME(tm,def),...})) = SOME(tm,thm_of def)
+fun size_of (DFACTS {size=NONE,...}) = NONE
+  | size_of (DFACTS {size=SOME(tm,def),...}) = SOME(tm,thm_of def)
   | size_of (NFACTS(_,{size,...})) = size;
 
-fun encode_of0(DFACTS(_,{encode,...})) = encode
+fun encode_of0(DFACTS {encode,...}) = encode
   | encode_of0(NFACTS _) = raise ERR "encode_of0" "not a datatype";
 
-fun encode_of(DFACTS(_,{encode=NONE,...})) = NONE
-  | encode_of(DFACTS(_,{encode=SOME(tm,def),...})) = SOME(tm,thm_of def)
+fun encode_of(DFACTS {encode=NONE,...}) = NONE
+  | encode_of(DFACTS {encode=SOME(tm,def),...}) = SOME(tm,thm_of def)
   | encode_of(NFACTS(_,{encode,...})) = encode;
 
-fun lift_of(DFACTS(_,{lift,...})) = lift
+fun lift_of(DFACTS {lift,...}) = lift
   | lift_of(NFACTS _) = raise ERR "lift_of" "not a datatype";
 ;
 
@@ -136,121 +134,122 @@ fun lift_of(DFACTS(_,{lift,...})) = lift
                     Making alterations
  ---------------------------------------------------------------------------*)
 
-fun put_nchotomy th (DFACTS(sp,
+fun put_nchotomy th (DFACTS
       {ty,axiom, case_const,case_cong,case_def, constructors,
        induction, nchotomy, distinct, one_one, fields,
-        accessors, updates, simpls, size, encode, lift}))
-    = DFACTS(sp,{ty=ty,axiom=axiom, case_const=case_const,
+        accessors, updates, simpls, size, encode, lift})
+    = DFACTS{ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
             induction=induction, nchotomy=th, distinct=distinct,
             one_one=one_one, fields=fields,
             accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=encode,lift=lift})
+            size=size, encode=encode,lift=lift}
   | put_nchotomy th (NFACTS(ty,{nchotomy,size,encode})) =
       NFACTS(ty,{nchotomy=SOME th,size=size,encode=encode});
 
-fun put_simpls thl (DFACTS(sp,
+fun put_simpls thl (DFACTS
  {ty,axiom, case_const, case_cong, case_def, constructors,
   induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode,lift}))
+  accessors, updates, simpls, size, encode,lift})
   =
-  DFACTS(sp, {ty=ty,axiom=axiom, case_const=case_const,
+  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields, accessors=accessors, updates=updates,
-            simpls=thl, size=size, encode=encode,lift=lift})
+            simpls=thl, size=size, encode=encode,lift=lift}
  | put_simpls _ _ = raise ERR "put_simpls" "not a datatype";
 
-fun put_induction th (DFACTS(sp,
+fun put_induction th (DFACTS
  {ty,axiom, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode,lift}))
+  accessors, updates, simpls, size, encode,lift})
   =
-  DFACTS(sp, {ty=ty,axiom=axiom, case_const=case_const,
-            case_cong=case_cong,case_def=case_def, constructors=constructors,
-            induction=th, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, fields=fields, accessors=accessors, updates=updates,
-            simpls=simpls, size=size, encode=encode,lift=lift})
+  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
+          case_cong=case_cong,case_def=case_def, constructors=constructors,
+          induction=th, nchotomy=nchotomy, distinct=distinct,
+          one_one=one_one, fields=fields, accessors=accessors, updates=updates,
+          simpls=simpls, size=size, encode=encode,lift=lift}
  | put_induction _ _ = raise ERR "put_induction" "not a datatype";
 
-fun put_size (size_tm,size_rw) (DFACTS(sp,
+fun put_size (size_tm,size_rw) (DFACTS
        {ty,axiom, case_const,case_cong,case_def,constructors,
         induction, nchotomy, distinct, one_one, fields,
-        accessors, updates, simpls, size, encode,lift}))
+        accessors, updates, simpls, size, encode,lift})
     =
-    DFACTS(sp, {ty=ty,axiom=axiom, case_const=case_const,
+    DFACTS {ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
             accessors=accessors, updates=updates, simpls=simpls,
-            size=SOME(size_tm,size_rw), encode=encode,lift=lift})
+            size=SOME(size_tm,size_rw), encode=encode,lift=lift}
   | put_size (size_tm,size_rw) (NFACTS(ty,{nchotomy,size,encode})) =
-      NFACTS(ty,{nchotomy=nchotomy,size=SOME(size_tm,thm_of size_rw),encode=encode});
+      NFACTS(ty,{nchotomy=nchotomy,size=SOME(size_tm,thm_of size_rw),
+                 encode=encode});
 
-fun put_encode (encode_tm,encode_rw) (DFACTS(sp,
+fun put_encode (encode_tm,encode_rw) (DFACTS
        {ty,axiom, case_const,case_cong,case_def,constructors,
         induction, nchotomy, distinct, one_one, fields,
-        accessors, updates, simpls, size, encode,lift}))
+        accessors, updates, simpls, size, encode,lift})
      =
-     DFACTS(sp, {ty=ty,axiom=axiom, case_const=case_const,
+     DFACTS{ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
             accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=SOME(encode_tm,encode_rw), lift=lift})
+            size=size, encode=SOME(encode_tm,encode_rw), lift=lift}
   | put_encode (encode_tm,encode_rw) (NFACTS(ty,{nchotomy,size,encode})) =
      NFACTS(ty,{nchotomy=nchotomy,size=size,encode=SOME(encode_tm,thm_of encode_rw)});
 
-fun put_lift lift_tm (DFACTS(sp,
+fun put_lift lift_tm (DFACTS
  {ty,axiom, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift}))
+  accessors, updates, simpls, size, encode, lift})
   =
-  DFACTS(sp, {ty=ty,axiom=axiom, case_const=case_const,
+  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
             accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=encode, lift=SOME lift_tm})
+            size=size, encode=encode, lift=SOME lift_tm}
  | put_lift _ _ = raise ERR "put_lift" "not a datatype";
 
-fun put_fields flds (DFACTS(sp,
+fun put_fields flds (DFACTS
  {ty,axiom, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift}))
+  accessors, updates, simpls, size, encode, lift})
   =
-  DFACTS(sp, {ty=ty,axiom=axiom, case_const=case_const,
+  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=flds,
             accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=encode, lift=lift})
+            size=size, encode=encode, lift=lift}
  | put_fields _ _ = raise ERR "put_fields" "not a datatype";
 
-fun put_accessors thl (DFACTS(sp,
+fun put_accessors thl (DFACTS
  {ty,axiom, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift}))
+  accessors, updates, simpls, size, encode, lift})
   =
-  DFACTS(sp, {ty=ty,axiom=axiom, case_const=case_const,
+  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
             accessors=thl, updates=updates, simpls=simpls,
-            size=size, encode=encode, lift=lift})
+            size=size, encode=encode, lift=lift}
  | put_accessors _ _ = raise ERR "put_accessors" "not a datatype";
 
-fun put_updates thl (DFACTS(sp,
+fun put_updates thl (DFACTS
  {ty,axiom, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift}))
+  accessors, updates, simpls, size, encode, lift})
   =
-  DFACTS(sp, {ty=ty,axiom=axiom, case_const=case_const,
+  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
             accessors=accessors, updates=thl, simpls=simpls,
-            size=size, encode=encode, lift=lift})
+            size=size, encode=encode, lift=lift}
  | put_updates _ _ = raise ERR "put_updates" "not a datatype";
 
 (*---------------------------------------------------------------------------*
@@ -286,7 +285,7 @@ fun mk_datatype_info {ax,case_def,case_cong,induction,
       val inj = case one_one of NONE => [] | SOME x => [x]
       val D  = case distinct of NONE => [] | SOME x => CONJUNCTS x
   in
-   DFACTS(ty_names,
+   DFACTS
      {ty           = ty,
       constructors = constructors,
       case_const   = defn_const case_def,
@@ -303,7 +302,7 @@ fun mk_datatype_info {ax,case_def,case_cong,induction,
       size         = size,
       encode       = encode,
       lift         = lift,
-      axiom        = ax})
+      axiom        = ax}
   end;
 
 
@@ -349,7 +348,7 @@ fun mk_nondatatype_info (ty,record) = NFACTS(ty,record);
 
 fun name_pair(s1,s2) = s1^"$"^s2;
 
-fun pp_tyinfo ppstrm (DFACTS(ty_names,recd)) =
+fun pp_tyinfo ppstrm (d as DFACTS recd) =
  let open Portable
      val {add_string,add_break,begin_block,end_block,...}
           = with_ppstream ppstrm
@@ -358,7 +357,7 @@ fun pp_tyinfo ppstrm (DFACTS(ty_names,recd)) =
      val {ty,constructors, case_const, case_def, case_cong, induction,
           nchotomy,one_one,distinct,simpls,size,encode,lift,axiom,
           fields, accessors, updates} = recd
-     val ty_namestring = name_pair ty_names
+     val ty_namestring = name_pair (ty_name_of d)
  in
    begin_block CONSISTENT 0;
      begin_block INCONSISTENT 0;
@@ -459,32 +458,28 @@ fun pp_tyinfo ppstrm (DFACTS(ty_names,recd)) =
 (* Databases of facts. We have separate ones for datatypes and non-datatypes *)
 (*---------------------------------------------------------------------------*)
 
-type datatypeBase = dtyinfo HOLset.set;
+type datatypeBase = ((string * string), dtyinfo) Binarymap.dict
 type nondatatypeBase = ntyinfo list;
 
 type typeBase = datatypeBase * nondatatypeBase;
 
 val empty : typeBase =
-   (HOLset.empty (fn ((sp1,_),(sp2,_)) =>
-     Lib.pair_compare (String.compare,String.compare) (sp1,sp2)),
-    ([]:ntyinfo list));
+    (Binarymap.mkDict (Lib.pair_compare (String.compare,String.compare)),
+     ([]:ntyinfo list));
 
 fun prim_get ((db,_):typeBase) (sp:string*string) =
-  case HOLset.find (fn (sp1,_) => (sp = sp1)) db
-  of NONE => NONE
-   | SOME dtyinfo => SOME (DFACTS dtyinfo);
-
+    Option.map DFACTS (Binarymap.peek(db,sp))
 
 fun get (db,_) s =
- HOLset.foldr
-   (fn (tyi as ((_,tyn),_), acc) => if tyn = s then DFACTS tyi::acc else acc)
-   [] db;
+    Binarymap.foldr
+        (fn ((_,tyn), tyi, acc) => if tyn = s then DFACTS tyi::acc else acc)
+        [] db;
 
-fun add (db,ndb) (DFACTS x) = (HOLset.add(db,x),ndb)
+fun add (db,ndb) (d as DFACTS x) = (Binarymap.insert(db,ty_name_of d, x),ndb)
   | add (db,ndb) (NFACTS _) = raise ERR "add" "not a datatype";
 
 fun listItems (db,ndb) =
-  map DFACTS (HOLset.listItems db) @ map NFACTS ndb;
+  map (DFACTS o #2) (Binarymap.listItems db) @ map NFACTS ndb;
 
 (*---------------------------------------------------------------------------*)
 (* If ty1 is an instance of ty2, then return the record                      *)
