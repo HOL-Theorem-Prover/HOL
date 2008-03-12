@@ -2192,7 +2192,7 @@ val PREFIX_COVER_STAR_PREFIXFREE = store_thm
        ++ RW_TAC std_ss [prefix_cover_level_def, append_sets_fn_def,
                          GSPECIFICATION, NOT_IN_EMPTY, IN_SING])
    ++ STRIP_TAC
-   ++ Know `l'' = l'''`
+   ++ Know `l' = l''`
    >> PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]
    ++ STRIP_TAC
    ++ Q.PAT_ASSUM `IS_PREFIX X Y` MP_TAC
@@ -2652,8 +2652,8 @@ val PREFIX_COVER_STAR_FIXES_FN = store_thm
    ++ RW_TAC std_ss [UNCURRY]
    ++ Q.PAT_ASSUM `!a l s. P a l s /\ Q a l s ==> R a l s`
       (fn th =>
-       MP_TAC (Q.SPECL [`a`, `l''`, `prefix_seq (APPEND l'' y)`] th)
-       ++ MP_TAC (Q.SPECL [`a`, `l''`, `s`] th))
+       MP_TAC (Q.SPECL [`a`, `l'`, `prefix_seq (APPEND l' y)`] th)
+       ++ MP_TAC (Q.SPECL [`a`, `l'`, `s`] th))
    ++ Cond >> PROVE_TAC [SDROP_APPEND, PREFIX_SET_APPEND, PREFIX_SEQ]
    ++ Rewr
    ++ Cond >> PROVE_TAC [SDROP_APPEND, PREFIX_SET_APPEND, PREFIX_SEQ]
@@ -2662,8 +2662,8 @@ val PREFIX_COVER_STAR_FIXES_FN = store_thm
    ++ Q.PAT_ASSUM `!a l s. P a l s`
       (MP_TAC o
        Q.SPECL [`FST ((b : 'a -> (num -> bool) -> 'a # (num -> bool)) a
-                      (prefix_seq (l'' : bool list)))`, `y`,
-                `sdrop (LENGTH (l'' : bool list)) s`])
+                      (prefix_seq (l' : bool list)))`, `y`,
+                `sdrop (LENGTH (l' : bool list)) s`])
    ++ Cond >> PROVE_TAC [SDROP_APPEND]
    ++ Cond >> PROVE_TAC []
    ++ Rewr
