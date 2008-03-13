@@ -73,6 +73,7 @@ src/string
 !examples/ind_def
 src/res_quan/src
 src/quotient/src
+!src/quotient/examples
 src/finite_map
 src/bag
 src/n_bit
@@ -83,6 +84,8 @@ src/llist
 src/ring/src
 src/integer
 src/hol88
+!src/quotient/examples/lambda
+!src/quotient/examples/sigma
 src/real
 src/prob
 !examples/muddy/muddyC
