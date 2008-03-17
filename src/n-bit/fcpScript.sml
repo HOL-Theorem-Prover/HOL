@@ -254,7 +254,7 @@ val fcp_tyinfo = TypeBasePure.gen_datatype_info {
   ind = fcp_ind,
   case_defs = [fcp_case_def]
 };
-val _ = TypeBase.write array_tyinfo
+val _ = TypeBase.write fcp_tyinfo
 
 local (* and here the palaver to make this persistent; this should be easier
          (even without the faff I went through with PP-blocks etc to make it 
@@ -269,9 +269,9 @@ in
   Blk 2;
   S "val tyi = "; Brk (0,0);
   Blk 2; S "TypeBasePure.gen_datatype_info {"; Brk (0,0); 
-  S "ax = array_Axiom,"; Brk (1,0); 
-  S "ind = array_ind,";  Brk (1,0); 
-  S "case_defs = [array_case_def]"; Brk (1,~2);
+  S "ax = fcp_Axiom,"; Brk (1,0); 
+  S "ind = fcp_ind,";  Brk (1,0); 
+  S "case_defs = [fcp_case_def]"; Brk (1,~2);
   S "}";
   EBlk(); EBlk();
   Brk (1,~2);
