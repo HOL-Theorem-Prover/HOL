@@ -222,6 +222,73 @@ val _ = overload_on ("%%", Term`$index`);
 val _ = set_fixity "'" (Infixl 2000);
 val _ = overload_on ("'", Term`$index`);
 
+(* ----------------------------------------------------------------------
+    Establish arrays as an algebraic datatype, with constructor
+    mk_cart, even though no user would want to define functions that way. 
+ 
+    When the datatype package handles function-spaces (recursing on
+    the right), this will allow the datatype package to define types
+    that recurse through arrays. 
+   ---------------------------------------------------------------------- *)
+
+val fcp_Axiom = store_thm(
+  "fcp_Axiom",
+  `! f : ('b finite_image -> 'a) -> 'c. 
+      ?g : 'a['b] -> 'c.
+         !h. g (mk_cart h) = f h`,
+  STRIP_TAC THEN Q.EXISTS_TAC `f o dest_cart` THEN SRW_TAC [][cart_tybij]);
+
+val fcp_ind = store_thm(
+  "fcp_ind",
+  `!P. (!f. P (mk_cart f)) ==> !a. P a`,
+  SRW_TAC [][] THEN 
+  Q.SPEC_THEN `a` (SUBST1_TAC o SYM) (CONJUNCT1 cart_tybij) THEN 
+  SRW_TAC [][]);
+
+val fcp_case_def = new_specification(
+  "fcp_case_def", ["fcp_case"],
+  SIMP_RULE (srw_ss()) [SKOLEM_THM] fcp_Axiom);
+
+val fcp_tyinfo = TypeBasePure.gen_datatype_info {
+  ax = fcp_Axiom,
+  ind = fcp_ind,
+  case_defs = [fcp_case_def]
+};
+val _ = TypeBase.write array_tyinfo
+
+local (* and here the palaver to make this persistent; this should be easier
+         (even without the faff I went through with PP-blocks etc to make it 
+         look pretty) *)
+fun out pps = let 
+  val S = PP.add_string pps 
+  val Brk = PP.add_break pps
+  val Blk = PP.begin_block pps PP.CONSISTENT
+  fun EBlk() = PP.end_block pps
+in
+  Blk 2; S "val _ = let"; Brk (1,0); 
+  Blk 2;
+  S "val tyi = "; Brk (0,0);
+  Blk 2; S "TypeBasePure.gen_datatype_info {"; Brk (0,0); 
+  S "ax = array_Axiom,"; Brk (1,0); 
+  S "ind = array_ind,";  Brk (1,0); 
+  S "case_defs = [array_case_def]"; Brk (1,~2);
+  S "}";
+  EBlk(); EBlk();
+  Brk (1,~2);
+  S "in"; Brk(1,0);
+  S "TypeBase.write tyi"; Brk(1,~2);
+  S "end"; EBlk()
+end
+in
+val _ = adjoin_to_theory {
+  sig_ps = NONE,
+  struct_ps = SOME out
+}
+end
+
+      
+  
+
 val CART_EQ = store_thm("CART_EQ",
   `!(x:'a ** 'b) y.
     (x = y) = (!i. i < dimindex(:'b) ==> (x ' i = y ' i))`,
