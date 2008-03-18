@@ -17,7 +17,9 @@ default:
 	@echo ""
 	@echo "5) type \"make quick\" to make only the Quick Reference, or"
 	@echo ""
-	@echo "6) type \"make all\" to create the entire manual."
+	@echo "6) type \"make interaction\" to make only the Guide to HOL Interaction, or"
+	@echo ""
+	@echo "7) type \"make all\" to create the entire manual."
 
 tutorial:
 	(cd Tutorial; make all; cd ..)
@@ -26,6 +28,10 @@ tutorial:
 description:
 	(cd Description; make all; cd ..)
 	@echo "====> DESCRIPTION made"
+
+interaction:
+	(cd Interaction; make; cd ..)
+	@echo "====> Quick Reference made"
 
 reference:
 	(cd Reference; make all; cd ..)
@@ -44,6 +50,6 @@ quick:
 	@echo "====> Quick Reference made"
 
 all:
-	make tutorial;make description; make reference;make covers;make quick
+	make tutorial; make description; make interaction; make reference; make covers; make quick
 	@echo "=======> MANUAL made"
 

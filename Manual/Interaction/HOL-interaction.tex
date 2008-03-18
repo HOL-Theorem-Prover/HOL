@@ -1,0 +1,512 @@
+\documentclass[a4paper,10pt]{article}
+
+\usepackage{color}
+\usepackage{latexsym}
+\usepackage{amssymb}
+\usepackage{alltt}
+
+\addtolength{\voffset}{-1em}
+\addtolength{\textheight}{-2em}
+\addtolength{\textwidth}{0.5em}
+\setlength{\arraycolsep}{0.1em}
+
+\begin{document}
+
+\title{\bf\Large Guide to HOL4 interaction and basic proofs\vspace{-0.3em}}
+
+\author{\normalsize Magnus O. Myreen}
+\date{~\vspace{-2em}}
+
+\maketitle
+
+\newcommand{\etal}{\emph{et al{.}}}
+\newcommand{\eg}{\emph{e{.}g{.}}}
+\newcommand{\ie}{\emph{i{.}e{.}}}
+
+\newenvironment{code}{\begin{quote}\begin{alltt}\small}{\end{alltt}\end{quote}}
+\newenvironment{enum}{\begin{enumerate}
+\setlength{\itemsep}{-\parsep}
+}{\end{enumerate}}
+
+
+\newcommand{\conj}{\(\begin{array}{c}\texttt{\bf\scriptsize/\textbackslash}\\[0.18em]\end{array}\)}
+\newcommand{\mysec}[1]{\section{\large #1}}
+\newcommand{\mysubsec}[1]{\subsection{\normalsize#1}}
+
+\mysec{Introduction}
+
+This document gives readers, with no experience in using HOL4, the most
+minimum knowledge needed to start using HOL4. The aim is to give a
+concise description of the basics in a format usable as a beginners'
+reference manual.
+\begin{enum}
+\item[~] Section \ref{interaction}:~~Interaction with HOL4 (via emacs or xemacs)
+\item[~] Section \ref{search}:~~Searching for theorems and theories
+\item[~] Section \ref{tactics}:~~Common proof tactics
+\item[~] Section \ref{reading}:~~Further reading and general advice
+\end{enum}
+The text assumes that the reader has HOL4 installed from: {\tt\small http://hol.sf.net/}.
+
+\mysec{Interaction with HOL4 (via emacs or xemacs)\label{interaction}}
+
+Michael Norrish has written an emacs script which makes interaction
+with HOL easy. To install the script add this line to your {\tt
+.emacs} file:
+\begin{code}
+(load "<path>/HOL/tools/hol-mode")
+\end{code}
+Replace {\tt <path>} with the full path to your HOL4 installation. To make
+emacs highlight the active region, also add the following line to your 
+{\tt .emacs} file:
+\begin{code}
+(transient-mark-mode 1)
+\end{code}
+Restart emacs to make these changes take effect.
+
+\mysubsec{Starting a HOL4 session}
+
+\begin{enum}
+\item Start emacs.
+\item Press {\tt C-x C-f} to open a file for your proof script.
+\item Press {\tt C-x 3} to split the emacs window into two columns.
+\item Press {\tt M-h h} to start HOL4.
+\item Press {\tt C-x o} to move cursor to the other window (where we type).
+\end{enum}
+The HOL window should look something like this:
+\begin{code}
+-----------------------------------------------------------------
+       HOL-4 [Kananaskis 5 (built Thu Feb 21 08:37:11 2008)]
+
+       For introductory HOL help, type: help "hol";
+-----------------------------------------------------------------
+
+[loading theories and proof tools ............. ]
+[closing file "/local/scratch/user/HOL/tools/end-init-boss.sml"]
+- 
+\end{code}
+
+\mysubsec{Copying input into HOL4 (Opening a theory)\label{copy}}
+
+\begin{enum}
+\item Select text by pressing {\tt C-space} at one end of the text.
+\item Copy the region into HOL4 by pressing {\tt M-h M-r} at the other end.
+\end{enum}
+For example, pressing {\tt C-space} then {\tt M-h M-r} around the following line
+\begin{code}
+open arithmeticTheory listTheory;
+\end{code}
+makes HOL4 open the library theories for arithmetic (over natural numbers)
+and lists. HOL4 prints a long list of definitions and already proved results.
+
+\mysubsec{Starting a goal-oriented proof}
+
+Most HOL4 proofs are constructed using an interactive \emph{goal
+  stack} and then put together using the ML function {\tt prove}
+(Section~\ref{prove1}, \ref{prove2}). To start the goal stack:
+\begin{enum}
+\item Write a goal, \eg{} {\tt `!n. n < n + 1`}, (we write $\forall$ as {\tt !} in HOL4).
+\item Move the cursor inside the back-quotes ({\tt `}).
+\item Press {\tt M-h g} to push the goal onto the goal stack.
+\end{enum}
+The HOL4 window should look something like this:
+\begin{code}
+- > val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         !n. n < n + 1
+         
+     : proofs
+- > val it = () : unit
+\end{code}
+
+\mysubsec{Applying a tactic\label{apply}} 
+
+Make progress in a proof using \emph{proof tactics}.
+
+\begin{enum}
+\item Write the name of a tactic, \eg{} {\tt DECIDE\_TAC},~see Section~\ref{tactics} for more tactics
+\item Press {\tt C-space} at one end of the text.
+\item Move the cursor to the other end of the text.
+\item Press {\tt C-h e} to apply the tactic.
+\end{enum}
+A tactic makes HOL4 update the current goal. The HOL4 window will either
+display the new goal(s) or print:
+\begin{code}
+    Initial goal proved.
+    |- !n. n < n + 1 : goalstack
+\end{code}
+You can undo the effect of the applied tactic by pressing {\tt C-h b}. Press {\tt C-h p} to view the current goal.
+
+\mysubsec{Ending a goal-oriented proof}
+
+One can pop goals off the goal stack by pressing {\tt M-h d}, which gives:
+\begin{code}
+- - OK..
+> val it = There are currently no proofs. : proofs
+\end{code}
+
+\mysubsec{Saving the resulting theorem\label{prove1}} 
+
+One can use {\tt prove} to store the result of a proof (called a
+\emph{theorem}), \eg{} the following stores the theorem $\forall n.\;n < n +
+1$ in an ML variable {\tt LESS\_ADD\_1}:
+\begin{code}
+val LESS_ADD_1 = prove({`}` !n. n < n + 1 {`}`,DECIDE_TAC);
+\end{code}
+When the above line is copied into HOL4 (using {\tt C-space} then
+{\tt M-h M-r}, as described in Section~\ref{copy}), HOL4 responds with:
+\begin{code}
+- > val LESS_ADD_1 = |- !n. n < n + 1 : thm
+\end{code}
+
+\mysubsec{Saving proofs based on multiple tactics\label{prove2}} 
+
+Suppose we have proved the goal {\tt `!n. n <= n * n`} with the following tactics:
+\begin{code}
+Induct_on `n`                   (* comment: induction on n  *)
+
+  DECIDE_TAC                    (* comment: solve base case *)
+
+  ASM_SIMP_TAC bool_ss [MULT]   (* comment: simplify goal   *)
+  DECIDE_TAC                    (* comment: solve step case *)
+\end{code}
+Tactics can be pieced together for {\tt prove} using {\tt THEN} and {\tt THENL}:
+\begin{code}
+val LESS_EQ_MULT = prove({`}` !n. n <= n * n {`}`,
+  Induct_on `n` THENL [
+    DECIDE_TAC,
+    ASM_SIMP_TAC bool_ss [MULT] THEN
+    DECIDE_TAC]);                  
+\end{code}
+Copy the above into HOL4 using {\tt C-space} then
+{\tt M-h M-r}, as in Section~\ref{copy}.
+
+\newcommand{\itemz}[2]{\texttt{#1}\; &-\;\; \textrm{#2}}
+\newcommand{\itemy}[2]{#1&\quad\quad&#2\\}
+
+\begin{figure}[t]
+\hrule
+
+\begin{displaymath}
+\begin{array}{lllll}
+\itemy{\itemz{\rule{0em}{1.5em}M-h h}{start HOL}}{\itemz{M-h g}{push goal onto goal stack}}
+\itemy{\itemz{M-h M-r}{copy region into HOL}}{\itemz{M-h e}{apply tactic to goal}}
+\itemy{\itemz{M-h C-t}{display types on/off}}{\itemz{M-h b}{move back in proof}}
+\itemy{\itemz{M-h C-c}{interrupt HOL}}{\itemz{M-h p}{print current goal}}
+\itemy{&}{\itemz{M-h d}{drop current goal}}
+\end{array}
+\end{displaymath}
+\caption{Most important key bindings in the emacs HOL4 mode.}
+
+\rule{0em}{1.5em}\hrule
+\end{figure}
+
+\mysubsec{Displaying types in HOL4}
+
+HOL4 does not by default display types. Press {\tt M-h C-t} to switch
+printing of type information on or off.
+
+\mysubsec{Interrupting HOL4}
+
+Press {\tt M-h C-c} to interrupt HOL4 --- useful when a tactic fails to terminate
+(\eg{} {\tt\small METIS\_TAC} often fails to terminate when unsuccessfully applied).
+
+\mysubsec{Making a definition\label{definition}} 
+
+Function can be defined using {\tt Define}, \eg{} square is defined as follows.
+\begin{code}
+val SQUARE_def = Define `SQUARE n = n * n`;                  
+\end{code}
+
+\noindent
+Data-types are defined using {\tt Hol\_datatype}, \eg{} a binary tree
+which holds values of type {\tt 'a} (a type variable) at the leaves:
+\begin{code}
+val _ = Hol_datatype `TREE = LEAF of 'a | BRANCH of TREE => TREE`;
+\end{code}
+
+\noindent
+A valid tree is \eg{} {\tt BRANCH (LEAF 5) (BRANCH (LEAF 1) (LEAF 7))}
+with type {\tt num TREE}, where {\tt  num} is the type name for a natural
+number. We can define recursive functions, \eg{}
+\begin{code}
+val MAP_TREE_def = Define `
+  (MAP_TREE f (LEAF n) = LEAF (f n)) \conj{}
+  (MAP_TREE f (BRANCH u v) = BRANCH (MAP_TREE f u) (MAP_TREE f v))`;                  
+\end{code} 
+{\tt  SQUARE\_def} and {\tt  MAP\_TREE\_def} are theorems containing the
+above definitions. Theorems describing {\tt  TREE} can be retrieved by coping
+the following into HOL4 (by pressing {\tt C-space} then {\tt M-h M-r}, Section~\ref{copy}).
+\begin{code}
+val TREE_11 = fetch "-" "TREE_11";
+val TREE_distinct = fetch "-" "TREE_distinct";
+\end{code} 
+
+\mysubsec{Making a theory} 
+
+Proofs and definitions are stored in files called scripts, \eg{} we
+can store the definitions from above in a file called {\tt
+  mytreeScript.sml}, which should begin with the lines
+\begin{code}
+open HolKernel boolLib bossLib Parse;
+val _ = new_theory "mytree";
+\end{code} 
+and end with the line
+\begin{code}
+val _ = export_theory();
+\end{code} 
+Replace {\tt prove} by {\tt store\_thm} for results you
+wish to export from the theory, \eg{}
+\begin{code}
+val LESS_ADD_1 = store_thm("LESS_ADD_1",{`}`!n.n<n+1{`}`,DECIDE_TAC);
+\end{code}
+Make sure your script only consists of ML definitions ({\tt \small val
+  x = y}, {\tt \small fun g x = y}), open commands ({\tt \small
+  open x y z}) and comments {\tt \small (* comment *)}.
+
+The theory {\tt mytreeTheory} is created by executing {\tt Holmake} in
+the directory where {\tt mytreeScript.sml} is stored. A
+readable version of the theory is stored under {\tt mytreeTheory.sig}.
+
+\newpage
+
+\mysec{Searching for theorems and theories\label{search}}
+
+\newcommand{\itemx}[2]{\texttt{\small #1} &\;\textrm{--}\;& \textrm{#2} \\}
+
+HOL4 has a large collection of library theories. The most commonly used are:
+\begin{displaymath}
+\begin{array}{lcl}
+\itemx{arithmeticTheory}{natural numbers, \eg{} {\tt\small 0, 1, 2, SUC 0, SUC 6}}
+\itemx{listTheory}{lists, \eg{} {\tt\small [1;2;3] = 1::2::3::[], HD xs}}
+\itemx{pred\_setTheory}{simple sets\ \eg{} {\tt\small \{1;2;3\}, x IN s UNION t}}
+\itemx{pairTheory}{pairs/tuples\ \eg{} {\tt\small (1,x), (2,3,4,5), HD (x,y)}}
+\itemx{wordsTheory}{n-bit words\ \eg{} {\tt\small 0w:word32, 1w:'a word, x !! 1w}}
+\end{array}
+\end{displaymath}
+Other standard theories include:
+\begin{code}
+arithmeticTheory  bagTheory  boolTheory  combinTheory  fcpTheory 
+finite_mapTheory  fixedPointTheory  floatTheory  integerTheory 
+limTheory  optionTheory  probTheory  ratTheory  realTheory  
+relationTheory  rich_listTheory  ringTheory  seqTheory  
+sortingTheory  state_transformerTheory  stringTheory  sumTheory  
+topologyTheory  transcTheory  whileTheory 
+\end{code}
+The library theories are conveniently browsed using the following HTML reference page (created when HOL4 is compiled). 
+Replace {\tt <path>} with the path to your HOL4 installation.
+\begin{code}
+<path>/HOL/help/HOLindex.html
+\end{code}
+
+Once theories has been opened (see Section~\ref{copy}) one can search for theorems in the current
+context using {\tt DB.match}, \eg{} with {\tt arithmeticTheory} opened,
+\begin{code}
+DB.match [] {`}`n DIV m <= k{`}`
+\end{code}
+prints a list of theorems containing $n\; \texttt{\small DIV} \;m \leq k$ for some $n,m,k$:
+\begin{code}
+[(("arithmetic", "DIV_LE_MONOTONE"),
+  (|- !n x y. 0 < n \conj{} x <= y ==> x DIV n <= y DIV n, Thm)),
+ (("arithmetic", "DIV_LE_X"),
+  (|- !x y z. 0 < z ==> (y DIV z <= x = y < (x + 1) * z), Thm)),
+ (("arithmetic", "DIV_LESS_EQ"), 
+  (|- !n. 0 < n ==> !k. k DIV n <= k, Thm))]
+\end{code}
+Try to write increasingly specific queries if the returned list is long, \eg{}
+{\tt\small DB.match [] {`}`n DIV m{`}`} returns a list of length 32. Note that {\tt\small DB.match [] {`}`DIV{`}`}
+does not work since {\tt\small DIV} is an infix operator, but {\tt\small DB.match [] {`}`\$DIV{`}`} works.
+
+\mysec{Common proof tactics\label{tactics}}
+
+Most HOL4 proofs are carried out by stating a goal and then applying
+\emph{proof tactics} that reduce the goal.  This section describes
+basic use of the most important proof tactics.  Press {\tt\small
+  C-space} then {\tt\small M-h e} to apply a tactic
+(Section~\ref{apply}).
+
+
+\mysubsec{Automatic provers}
+
+Simple goals can often be proved automatically by {\tt\small
+  METIS\_TAC}, {\tt\small DECIDE\_TAC} or {\tt\small EVAL\_TAC}.
+{\tt\small METIS\_TAC} is first-order prover which is good at general
+problems, but requires the user to supply a list of relevant theorems,
+\eg{} the following goal is proved by {\tt\small METIS\_TAC
+  [MOD\_TIMES2,MOD\_MOD,MOD\_PLUS]}.
+\begin{code}
+!k. 0 < k ==> !m p n. (m MOD k * p + n) MOD k = (m * p + n) MOD k
+\end{code} 
+
+\noindent
+{\tt\small DECIDE\_TAC} handles linear arithmetic over natural
+numbers, \eg{} {\tt\small DECIDE\_TAC} solves:
+\begin{code}
+!m n k. m < n \conj{} n < m+k \conj{} k <= 3 \conj{} ~(n = m+1) ==> (n = m+2)
+\end{code}
+{\tt\small EVAL\_TAC} is good at fully instantiated goals, \eg{} {\tt\small EVAL\_TAC} solves:
+\begin{code}
+0 < 5 \conj{} (HD [4;5;6;7] + 2**32 = 3500 DIV 7 + 4294966800)
+\end{code}
+
+\mysubsec{Proof set-up}
+
+Goals that contain top-level universal quantifiers ({\tt !x.}),
+implication ({\tt ==>}) or conjunction ({\tt \conj{}}) are often
+taken apart using {\tt\small REPEAT STRIP\_TAC} or just {\tt\small
+  STRIP\_TAC}, \eg{} the goal {\tt\small `!x. (!z. x < h z) ==> ?y. f x = y`}
+becomes the following. (Assumptions are written under the line.)
+\begin{code}
+    ?y. f x = y
+    ------------------------------------
+      !z. x < h z
+\end{code}
+
+\mysubsec{Existential quantifiers}
+
+Goals that have a top-level existential quantifier can be given a
+witness using {\tt \small Q.EXISTS\_TAC}, \eg{} {\tt \small
+  Q.EXISTS\_TAC `1`} applied to goal {\tt \small ?n. !k. n * k = k}
+produces goal {\tt \small !k. 1 * k = k}.
+
+\mysubsec{Rewrites}
+
+Most HOL4 proofs are based on rewriting using equality theorems, \eg{}
+\begin{code}
+ADD_0:            |- !n. n + 0 = n
+LESS_MOD:         |- !n k. k < n ==> (k MOD n = k)
+\end{code} {\tt \small ASM\_SIMP\_TAC} and {\tt \small FULL\_SIMP\_TAC} are two
+commonly used rewriting tactics, \eg{} suppose the goal is the following:
+\begin{code}
+    5 + 0 + m = (m MOD 10) + (5 MOD 8) 
+    ------------------------------------
+      0.  p = 2 + 0 + (m MOD 10)
+      1.  m < 10
+\end{code}
+{\tt \small ASM\_SIMP\_TAC bool\_ss
+  [ADD\_0,LESS\_MOD]} rewrites the
+goal using the supplied theorems together with the current goal's
+assumptions and some boolean simplifications {\tt \small bool\_ss}:
+\begin{code}
+    5 + m = m + (5 MOD 8) 
+    ------------------------------------
+      0.  p = 2 + 0 + (m MOD 10)
+      1.  m < 10
+\end{code} 
+{\tt \small FULL\_SIMP\_TAC bool\_ss [ADD\_0,LESS\_MOD]}
+does the same except that it also applies the rewrites to the
+assumptions:
+\begin{code}
+    5 + m = m + (5 MOD 8) 
+    ------------------------------------
+      0.  p = 2 + m
+      1.  m < 10
+\end{code} 
+
+{\tt \small bool\_ss} can be replaced by {\tt \small std\_ss}, 
+which is a stronger simplification set that would
+infer {\tt \small 5 < 8} and hence simplify {\tt\small 5 MOD 8} 
+as well. I recommend that the interested read also reads about 
+{\tt\small AC} and {\tt\small ONCE\_REWRITE\_TAC}.
+
+\mysubsec{Induction}
+
+Use the tactic {\tt\small Induct\_on `x`} to start an induction on {\tt\small x}.
+Here {\tt x} can be any variable with a recursively defined type,
+\eg{} a natural number, a list or a {\tt\small TREE} as defined in
+Section~\ref{definition}.  One can start a complete (or strong)
+induction over the natural number {\tt\small n} using {\tt\small
+  completeInduct\_on `n`}.
+
+\mysubsec{Case splits}
+
+A goal can be split into cases using {\tt\small Cases\_on `x`}. The
+goal is split according to the constructors of the type of {\tt\small
+  x}, \eg{} for the following goal
+\begin{code}
+    !x. ~(x = []) ==> (x = HD x::TL x) 
+\end{code}
+{\tt\small Cases\_on `x`} splits the goal into two:
+\begin{code}
+    ~(h::t = []) ==> (h::t = HD (h::t)::TL (h::t))
+    
+    ~([] = []) ==> ([] = HD []::TL [])
+\end{code}
+Case splits on a boolean expressions are also useful, \eg{} {\tt\small Cases\_on `n < 5`}. 
+
+\mysubsec{Subproofs}
+
+It is often useful to start a mini-proof inside a larger proof, \eg{} for the goal
+\begin{code}
+    foo n 
+    ------------------------------------
+      0 < n
+\end{code}
+we might want to prove {\tt\small h n = g n} assuming {\tt\small 0 < n}. 
+We can start such a subproof 
+by typing {\tt\small `h n = g n` by ALL\_TAC}. The new goal stack:
+\begin{code}
+    foo n
+    ------------------------------------
+      0.  0 < n
+      1.  h n = g n
+    
+    h n = g n
+    ------------------------------------
+      0 < n
+\end{code}
+If {\tt\small `h n = g n`} can be proved in one step, \eg{} using {\tt\small METIS\_TAC [MY\_LEMMA]}, then 
+apply {\tt\small `h n = g n` by METIS\_TAC [MY\_LEMMA]} instead of {\tt\small `h n = g n` by ALL\_TAC}.
+
+\mysubsec{Proof by contradiction}
+
+Use {\tt\small CCOMTR\_TAC} to add the negation of the goal to the
+assumptions.  The task is then to prove that one of the assumptions of
+the goal is false. One can \eg{} add more assumptions using 
+{\tt\small `...` by ALL\_TAC}, described above, until one assumption is the
+negation of another assumption (and then apply {\tt\small METIS\_TAC []}).
+
+\mysubsec{More tactics\label{html}}
+
+An HTML reference of all tactics and proof tools is created when HOL4 is compiled.
+Replace {\tt\small <path>} with the path to your HOL4 installation.
+\begin{code}
+<path>/HOL4/help/src/htmlsigs/idIndex.html
+\end{code}
+The reference provides an easy way to access both the implementations of
+tactics as well as their documentation (where such exists).
+The interested reader may want to look up the following:
+\begin{code}
+CONV_TAC  DISJ1_TAC  DISJ2_TAC  MATCH_MP_TAC  MP_TAC  PAT_ASSUM  Q
+\end{code}
+
+\mysec{Further reading and general advice\label{reading}}
+
+General advice on using HOL4:
+\begin{enum}
+\item State definitions carefully with the subsequent proofs in mind.
+\item Make proofs reusable by splitting them into multiple small lemmas.
+\item Strive to make the most of library theories and rewriting.
+\end{enum}
+One can only learn HOL4 via examples, so try proving something.
+Example problems and solutions are presented in the \emph{HOL
+  Tutorial}, available under:
+\begin{code}
+http://hol.sf.net/documentation.html
+\end{code}
+The same page also contains:
+\begin{enum}
+\item[~]\emph{HOL Description} -- a description of the HOL4 system
+\item[~]\emph{HOL Reference} -- a detailed descriptions of proof tactics and other tools
+\item[~]\emph{HOL Logic} -- a presentation of the underlying logic
+\end{enum}
+For day-to-day look-ups, I find {\tt DB.match} (illustrated in
+Section~\ref{search}) and the HTML reference (mentioned in
+Section~\ref{html}) most helpful.
+
+\end{document}
+
+
+
+  
