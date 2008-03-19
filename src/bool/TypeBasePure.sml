@@ -458,43 +458,98 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
 (* Databases of facts. We have separate ones for datatypes and non-datatypes *)
 (*---------------------------------------------------------------------------*)
 
-type datatypeBase = ((string * string), dtyinfo) Binarymap.dict
-type nondatatypeBase = ntyinfo list;
+type typeBase = tyinfo TypeNet.typenet
 
-type typeBase = datatypeBase * nondatatypeBase;
+val empty : typeBase = TypeNet.empty
 
-val empty : typeBase =
-    (Binarymap.mkDict (Lib.pair_compare (String.compare,String.compare)),
-     ([]:ntyinfo list));
+fun next_ty ty = mk_vartype(Lexis.tyvar_vary (dest_vartype ty))
+fun normalise_ty ty = let
+  fun recurse (acc as (dict,usethis)) tylist =
+      case tylist of
+        [] => acc
+      | ty :: rest => let
+        in
+          if is_vartype ty then
+            case Binarymap.peek(dict,ty) of
+                NONE => recurse (Binarymap.insert(dict,ty,usethis),
+                                 next_ty usethis)
+                                rest
+              | SOME _ => recurse acc rest
+          else let
+              val {Args,...} = dest_thy_type ty
+            in
+              recurse acc (Args @ rest)
+            end
+        end
+  val (inst0, _) = recurse (Binarymap.mkDict Type.compare, Type.alpha) [ty]
+  val inst = Binarymap.foldl (fn (tyk,tyv,acc) => (tyk |-> tyv)::acc)
+                             []
+                             inst0
+in
+  Type.type_subst inst ty
+end
 
-fun prim_get ((db,_):typeBase) (sp:string*string) =
-    Option.map DFACTS (Binarymap.peek(db,sp))
+fun prim_get (db:typeBase) (thy,tyop) =
+    case Type.op_arity {Thy = thy, Tyop = tyop} of
+      NONE => NONE
+    | SOME i => let
+        fun genargs (acc,nextty) n = if n = 0 then List.rev acc
+                                 else genargs (nextty :: acc, next_ty nextty)
+                                              (n - 1)
+        val ty = mk_thy_type {Thy = thy, Tyop = tyop,
+                              Args = genargs ([], alpha) i}
+      in
+        TypeNet.peek (db, ty)
+      end
 
-fun get (db,_) s =
-    Binarymap.foldr
-        (fn ((_,tyn), tyi, acc) => if tyn = s then DFACTS tyi::acc else acc)
-        [] db;
+fun add db (d as DFACTS x) = TypeNet.insert(db, normalise_ty (ty_of d), d)
+  | add db (NFACTS _) = raise ERR "add" "not a datatype"
+fun listItems db = map #2 (TypeNet.listItems db)
 
-fun add (db,ndb) (d as DFACTS x) = (Binarymap.insert(db,ty_name_of d, x),ndb)
-  | add (db,ndb) (NFACTS _) = raise ERR "add" "not a datatype";
-
-fun listItems (db,ndb) =
-  map (DFACTS o #2) (Binarymap.listItems db) @ map NFACTS ndb;
+fun get db s = let
+  fun foldthis (ty,tyi as DFACTS _,acc) =
+      if #2 (type_names ty) = s then tyi::acc else acc
+    | foldthis (ty, _, acc) = acc
+in
+  TypeNet.fold foldthis [] db
+end
 
 (*---------------------------------------------------------------------------*)
 (* If ty1 is an instance of ty2, then return the record                      *)
 (*---------------------------------------------------------------------------*)
 
-fun match ty1 (ty2,record) = (match_type ty2 ty1; (ty2,record));
+fun tysize ty =
+    if Type.is_vartype ty then 1
+    else let
+        val {Args,...} = Type.dest_thy_type ty
+      in
+        1 + List.foldl (fn (ty,acc) => tysize ty + acc) 0 Args
+      end
+
+fun mymatch pat ty = let
+  val (i, sames) = Type.raw_match_type pat ty ([], [])
+in
+  i @ (map (fn ty => ty |-> ty) sames)
+end
+fun instsize i =
+    List.foldl (fn ({redex,residue},acc) => tysize residue + acc) 0 i
+
+fun check_match ty (pat, data) =
+    SOME(instsize (mymatch pat ty), data) handle HOL_ERR _ => NONE
+
 
 fun fetch tbase ty =
-  case prim_get tbase (type_names ty)
-   of NONE => (SOME (NFACTS(tryfind (match ty) (snd tbase)))
-               handle HOL_ERR _ => NONE)
-    | other => other;
+    case TypeNet.match (tbase, ty) of
+      [] => NONE
+    | matches0 => let
+        val matches = List.mapPartial (check_match ty) matches0
+        val sorted = Listsort.sort (measure_cmp fst) matches
+      in
+        SOME (#2 (hd sorted))
+      end
 
 fun insert dbs (x as DFACTS _) = add dbs x
-  | insert (db,ndb) (NFACTS x) = (db,x::ndb);
+  | insert db (x as NFACTS _) = TypeNet.insert(db,normalise_ty (ty_of x),x)
 
 
 (*---------------------------------------------------------------------------
