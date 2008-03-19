@@ -168,13 +168,6 @@ val noteteeszegtz = prove_thm (
 
 (*---------------------------*)
 
-val noteteeszegtz = prove_thm (
-  "noteteeszegtz",
-  (--` (&0:real) < &8388608`--),
-  REAL_ARITH_TAC);
-
-(*---------------------------*)
-
 val lt1eqmul = prove_thm (
   "lt1eqmul",
   (--`x < &1:real = x * &8388608:real < &8388608:real`--),
