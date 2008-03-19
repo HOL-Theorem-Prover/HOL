@@ -150,7 +150,7 @@ val mode_reg2num_15 = (GEN_ALL o SIMP_RULE (arith_ss++SIZES_ss) [w2n_n2w] o
   SPECL [`m`,`15w`]) mode_reg2num_def;
 
 val not_reg_eq_lem = prove(`!v w. ~(v = w) ==> ~(w2n v = w2n w)`,
-  REPEAT Cases_word \\ SIMP_TAC std_ss [w2n_n2w,n2w_11]);
+  REPEAT Cases \\ SIMP_TAC std_ss [w2n_n2w,n2w_11]);
 
 val not_reg_eq = store_thm("not_reg_eq",
   `!v w m1 m2. ~(v = w) ==> ~(mode_reg2num m1 v = mode_reg2num m2 w)`,

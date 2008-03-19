@@ -470,7 +470,7 @@ val ADDR_MODE1_VAL_THM = prove(
   THEN1 SRW_TAC [] [ROR_def,w2w_def,LSL_def,LSR_def,word_mul_n2w]
   THEN1 SRW_TAC [] [ROR_def,w2w_def,LSL_def,LSR_def,word_mul_n2w]
   \\ Q.SPEC_TAC (`c'`,`c`)
-  THENL [ALL_TAC,Cases_word,Cases_word,Cases_word,Cases_word]
+  THENL [ALL_TAC,Cases,Cases,Cases,Cases]
   \\ ASM_SIMP_TAC bool_ss [n2w_11,LESS_MOD,ZERO_LT_dimword,w2w_def,w2n_n2w] << [
     Cases_on `p` \\ SIMP_TAC (srw_ss()) [ADDR_MODE1_CMD_def,IS_DP_IMMEDIATE_def,
       addr_mode1_encode_def,PAIR,ADDR_MODE1_VAL_def],
@@ -604,7 +604,7 @@ val n2w_lsl = prove(
 
 val w2w_ror_w2w = prove(
   ``!w. w2w (((w2w (w:word8)):word12) << 2):word32 = (w2w w) << 2``,
-  wordsLib.Cases_word
+  Cases
   \\ REWRITE_TAC [w2w_def,n2w_11,n2w_lsl]
   \\ ASM_SIMP_TAC bool_ss [w2n_n2w]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (x MOD g = y MOD g)``)
@@ -624,8 +624,7 @@ val MULT_MOD_MULT = prove(
 
 val ADD_MODE2_ADD_LEMMA = prove(
   ``!x imm. w2w (x:word30) << 2 + w2w (imm:word8) << 2 = (w2w (x + w2w imm) << 2) :word32``,
-  wordsLib.Cases_word
-  \\ wordsLib.Cases_word
+  NTAC 2 Cases
   \\ REWRITE_TAC [w2w_def,n2w_lsl,word_add_n2w,GSYM RIGHT_ADD_DISTRIB]
   \\ REWRITE_TAC [GSYM word_add_n2w]
   \\ REWRITE_TAC [word_add_def] 
@@ -639,8 +638,7 @@ val ADD_MODE2_ADD_LEMMA = prove(
   
 val ADD_MODE2_SUB_LEMMA = prove(
   ``!x imm. w2w (x:word30) << 2 - w2w (imm:word8) << 2 = (w2w (x - w2w imm) << 2) :word32``,
-  wordsLib.Cases_word
-  \\ wordsLib.Cases_word
+  NTAC 2 Cases
   \\ REWRITE_TAC [w2w_def,n2w_lsl]
   \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD]
   \\ REWRITE_TAC [word_sub_def,word_2comp_n2w]
@@ -797,7 +795,7 @@ val IN_ms_address_set_ADD1 = prove(
 
 val xM_list_lemma_LEMMA1 = prove(
   ``!a n ns. ~(addr32 a IN ms_address_set (a + 1w) n) ==> SUC n <= 2 ** 30``,
-  wordsLib.Cases_word \\ REWRITE_TAC [IN_ms_address_set,word_add_n2w,addr32_n2w]
+  Cases \\ REWRITE_TAC [IN_ms_address_set,word_add_n2w,addr32_n2w]
   \\ CONV_TAC (RAND_CONV (ALPHA_CONV ``m:num``))
   \\ FULL_SIMP_TAC (bool_ss++wordsLib.SIZES_ss) [dimword_def] \\ REPEAT STRIP_TAC
   \\ CCONTR_TAC \\ `2 ** 30 <= m` by DECIDE_TAC  
@@ -2570,7 +2568,7 @@ val LEAST_SORT_EXTRACT_15w = prove(
     MATCH_MP_TAC SORTED_APPEND
     \\ REWRITE_TAC [MEM_LEAST_SORT,MEM,transitive_def,SORTED_LEAST_SORT]
     \\ REWRITE_TAC [SORTED_DEF,WORD_LOWER_TRANS]
-    \\ Cases_word \\ Cases_word    
+    \\ NTAC 2 Cases
     \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [n2w_11,word_lo_n2w,LESS_MOD]        
     \\ Cases_on `n = 15` \\ ASM_REWRITE_TAC [] \\ REPEAT STRIP_TAC \\ DECIDE_TAC,
     METIS_TAC []]);  
@@ -2855,7 +2853,7 @@ val BIT32_LEMMA = prove(
   ``!x:word32 y:word32. 
       (BIT 32 (w2n x + w2n y + 1) = 2**32 <= w2n x + w2n y + 1) /\
       (BIT 32 (w2n x + w2n y) = 2**32 <= w2n x + w2n y)``,
-  wordsLib.Cases_word \\ wordsLib.Cases_word 
+  NTAC 2 Cases
   \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD]
   \\ REWRITE_TAC [BIT_def,BITS_def,DIV_2EXP_def,MOD_2EXP_def]
   \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [DIV_MOD_MOD_DIV]
@@ -2997,7 +2995,7 @@ val ldr_pc = (UNDISCH_ALL o Q.INST [`Rd`|->`a`,`c`|->`c_flag`] o DISCH_ALL) ldr_
 
 val w2w_and_3 = prove(
    ``!i. ((i:word12) && 3w = 0w) ==> ((w2w i) && 3w:word32 = 0w)``,
-   Cases_word
+   Cases
    \\ `n MOD 4 < 4` by METIS_TAC [DIVISION,DECIDE ``0<4``]
    \\ `n MOD 4 < 4096` by DECIDE_TAC
    \\ `n MOD 4 < 4294967296` by DECIDE_TAC
@@ -5362,7 +5360,7 @@ val arm_blal_post = sep_pred_semantics (xR2,xMm,`(F,st)`,`(T,ud)`,`(F,rt)`,`(F,g
 
 val WORD_LSL_EQ_MULT = prove(
   ``!x. x << n = x * n2w (2 ** n)``,
-  Cases_word \\ REWRITE_TAC [word_lsl_n2w,word_mul_n2w]
+  Cases \\ REWRITE_TAC [word_lsl_n2w,word_mul_n2w]
   \\ Cases_on `dimindex (:'a) - 1 < n`
   \\ ASM_REWRITE_TAC [n2w_11]
   \\ `dimindex (:'a) <= n` by DECIDE_TAC

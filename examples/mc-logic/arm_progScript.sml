@@ -117,7 +117,7 @@ val mem_byte_EQ_mem = store_thm("mem_byte_EQ_mem",
 
 val word2_CASES = prove(
   ``!w:word2. (w = 0w) \/ (w = 1w) \/ (w = 2w) \/ (w = 3w)``,
-  wordsLib.Cases_word 
+  Cases
   \\ STRIP_ASSUME_TAC ((REWRITE_RULE [EVAL ``0 < 4``] o Q.SPECL [`n`,`4`]) DA)
   \\ ASM_SIMP_TAC (bool_ss++wordsLib.SIZES_ss) [n2w_11,EVAL ``2*2``]
   \\ ASM_SIMP_TAC std_ss [MOD_MULT]

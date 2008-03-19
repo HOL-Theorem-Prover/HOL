@@ -144,7 +144,7 @@ val mode_reg2num_lt = store_thm("mode_reg2num_lt",
          DECIDE ``a < 16 /\ ~(a = 15) ==> (a + 16 < 31)``]);
 
 val not_reg_eq_lem = prove(`!v w. ~(v = w) ==> ~(w2n v = w2n w)`,
-  REPEAT Cases_word \\ SIMP_TAC std_ss [w2n_n2w,n2w_11]);
+  REPEAT Cases \\ SIMP_TAC std_ss [w2n_n2w,n2w_11]);
 
 val not_reg_eq = store_thm("not_reg_eq",
   `!v w m1 m2. ~(v = w) ==> ~(mode_reg2num m1 v = mode_reg2num m2 w)`,
@@ -444,7 +444,7 @@ val lem = prove(
 
 val w2n_mod = prove(
   `!a:'a word b. (a = n2w b) = (w2n a = b MOD dimword (:'a))`,
-  Cases_word \\ REWRITE_TAC [n2w_11,w2n_n2w]);
+  Cases \\ REWRITE_TAC [n2w_11,w2n_n2w]);
 
 val PSR_CONS = store_thm("PSR_CONS",
    `!w:word32. w =

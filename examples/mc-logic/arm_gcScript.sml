@@ -202,7 +202,7 @@ val PF_FIX_TAIL = prove(
       (PF a w (i - 1w) ys = PF a w i ys) /\
       (NF a w (i - 1w) ys = NF a w i ys)``,
   REWRITE_TAC [PF_def,NF_def]
-  \\ Cases_word \\ Cases_on `n` \\ ASM_SIMP_TAC bool_ss [LESS_MOD,n2w_11,ZERO_LT_dimword]
+  \\ Cases \\ Cases_on `n` \\ ASM_SIMP_TAC bool_ss [LESS_MOD,n2w_11,ZERO_LT_dimword]
   \\ REWRITE_TAC [ADD1,GSYM word_add_n2w,WORD_ADD_SUB] 
   \\ REWRITE_TAC [word_add_n2w,GSYM ADD1] \\ `n' < dimword (:'a)` by DECIDE_TAC
   \\ ASM_SIMP_TAC bool_ss [LESS_MOD,w2n_n2w]
@@ -218,7 +218,7 @@ val PF_UNROLL = prove(
       (NF a w i ((a + w * i,x)::ys) = NF a w i ys)``,
   SIMP_TAC bool_ss [PF_def,FILTER,NF_def] \\ REWRITE_TAC [GSYM PF_def,GSYM NF_def]
   \\ SIMP_TAC bool_ss [PF_FIX_TAIL]
-  \\ Cases_word \\ Cases_on `n` \\ ASM_SIMP_TAC bool_ss [LESS_MOD,n2w_11,ZERO_LT_dimword]
+  \\ Cases \\ Cases_on `n` \\ ASM_SIMP_TAC bool_ss [LESS_MOD,n2w_11,ZERO_LT_dimword]
   \\ REWRITE_TAC [ADD1,GSYM word_add_n2w,WORD_ADD_SUB]
   \\ REWRITE_TAC [word_add_n2w,GSYM ADD1]
   \\ ASM_SIMP_TAC bool_ss [LESS_MOD,w2n_n2w] \\ NTAC 5 STRIP_TAC
@@ -230,7 +230,7 @@ val PF_UNROLL = prove(
 val PF_CONTRACT_LEMMA = prove(
   ``!i a w. ~(i = 0w) /\ ALL_DISTINCT (addresses (a+w) w (w2n i)) ==>
             ~MEM (a + w * i) (addresses (a+w) w (w2n (i - 1w)))``,
-  Cases_word \\ Cases_on `n` \\ REWRITE_TAC [ADD1,GSYM word_add_n2w,WORD_ADD_SUB]
+  Cases \\ Cases_on `n` \\ REWRITE_TAC [ADD1,GSYM word_add_n2w,WORD_ADD_SUB]
   \\ REWRITE_TAC [word_add_n2w,GSYM ADD1] \\ `n' < dimword (:'a)` by DECIDE_TAC
   \\ ASM_SIMP_TAC bool_ss [LESS_MOD,w2n_n2w] \\ REWRITE_TAC [ADD1]
   \\ REWRITE_TAC [WORD_MULT_CLAUSES,WORD_ADD_ASSOC,ADD1,GSYM word_add_n2w]
@@ -272,7 +272,7 @@ val PF_BODY_LEMMA = prove(
       ALL_DISTINCT (MAP FST xs) /\ ~(i = 0w) ==>
       MEM (a + w * i) (MAP FST xs) /\ ALL_DISTINCT (MAP FST xs) /\
       ALL_DISTINCT (addresses (a + w) w (w2n i)) /\ ~(i = 0w)``,
-  Cases_word \\ Cases_on `n` \\ SIMP_TAC bool_ss [WORD_LS] \\ REPEAT STRIP_TAC
+  Cases \\ Cases_on `n` \\ SIMP_TAC bool_ss [WORD_LS] \\ REPEAT STRIP_TAC
   \\ `w2n (n2w (SUC n'):'i word) = SUC n'` by ASM_SIMP_TAC bool_ss [LESS_MOD,w2n_n2w] << [
     IMP_RES_TAC PERM_MEM_EQ \\ ASM_REWRITE_TAC []
     \\ FULL_SIMP_TAC bool_ss [WORD_LS,MEM_addresses]
@@ -334,7 +334,7 @@ val PF_BODY = let
 val PERM_addresses = prove(
   ``!n y w.
        PERM (addresses (y + w * n + $- w) ($- w) (w2n n)) (addresses y w (w2n n))``,
-  Cases_word \\ ASM_SIMP_TAC bool_ss [LESS_MOD,w2n_n2w] 
+  Cases \\ ASM_SIMP_TAC bool_ss [LESS_MOD,w2n_n2w] 
   \\ POP_ASSUM (fn th => ALL_TAC) \\ Induct_on `n'`
   THEN1 REWRITE_TAC [addresses_def,PERM_REFL] \\ REPEAT STRIP_TAC
   \\ CONV_TAC (RAND_CONV (REWRITE_CONV [ADD1,addresses_ADD]))
@@ -394,7 +394,7 @@ val addr32f_def = Define `
 
 val addr32f_TEST = prove(
   ``!x b. (addr32f x b && 1w = 0w) = ~b``,
-  Cases_word \\ Cases \\ REWRITE_TAC [b2w_def,addr32_n2w,word_add_n2w,ADD_0,addr32f_def]
+  NTAC 2 Cases \\ REWRITE_TAC [b2w_def,addr32_n2w,word_add_n2w,ADD_0,addr32f_def]
   \\ SIMP_TAC bool_ss [CART_EQ,word_and_def] \\ REPEAT STRIP_TAC << [
     Q.EXISTS_TAC `0` \\ ONCE_REWRITE_TAC [word_index_n2w]
     \\ SIMP_TAC (std_ss++SIZES_ss) [BIT_def,BITS_def,MOD_2EXP_def,DIV_2EXP_def,FCP_BETA] 
@@ -432,7 +432,7 @@ val w2n_CLAUSES = prove(
 
 val addr32f_SET = prove(
   ``!x b. addr32f x b !! 1w = addr32f x T``,
-  Cases_word
+  Cases
   \\ SIMP_TAC std_ss [addr32f_def,b2w_def,addr32_n2w,CART_EQ,word_or_def,FCP_BETA,word_add_def]
   \\ ONCE_REWRITE_TAC [word_index_n2w] 
   \\ SIMP_TAC bool_ss [] \\ REPEAT STRIP_TAC \\ REWRITE_TAC [BIT_THM,w2n_n2w]

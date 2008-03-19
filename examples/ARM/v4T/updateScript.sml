@@ -101,7 +101,7 @@ val APPLY_LUPDATE_THM = store_thm("APPLY_LUPDATE_THM",
       let na = w2n a and nb = w2n b in
       let d = nb - na in
         if na <= nb /\ d < LENGTH l then EL d l else m b`,
-  NTAC 2 wordsLib.Cases_word
+  NTAC 2 Cases
     \\ RW_TAC (std_ss++boolSimps.LET_ss) [WORD_LS,LUPDATE_def]
     \\ FULL_SIMP_TAC arith_ss []);
 

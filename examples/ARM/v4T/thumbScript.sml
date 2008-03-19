@@ -314,7 +314,7 @@ val BLOCK_lem = prove(
   `!Rd:word3 imm:word8.
      (((w2w imm !! w2w Rd << 8) !! 51200w:word16) ' (w2n (w2w Rd : word32))) =
      (imm ' (w2n Rd))`,
-  NTAC 2 STRIP_TAC  \\ Cases_on_word `imm`
+  NTAC 2 STRIP_TAC  \\ Cases_on `imm`
     \\ RW_TAC (arith_ss++wordsLib.SIZES_ss) [w2n_w2w, w2w_n2w]
     \\ SPEC_THEN `Rd` ASSUME_TAC
          ((REWRITE_RULE [dimword_3] o INST_TYPE [`:'a` |-> `:3`]) w2n_lt)

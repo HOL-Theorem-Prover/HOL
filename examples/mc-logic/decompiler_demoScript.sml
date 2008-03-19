@@ -45,7 +45,7 @@ val (arm_fac_def,_,th) = arm_decompiler "arm_fac" `T` NONE ["r1"] `
 (* example: mod 10 --------- *)
 
 val termination_tac = SOME
- (WF_REL_TAC `measure w2n` \\ Cases_word
+ (WF_REL_TAC `measure w2n` \\ Cases
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_LO,n2w_11,w2n_n2w,
        LESS_MOD,ZERO_LT_dimword,addressTheory.word_arith_lemma2]
   \\ REPEAT STRIP_TAC \\ `n - 10 < 4294967296` by DECIDE_TAC
@@ -60,7 +60,7 @@ val (arm_mod10_def,_,th) = arm_decompiler "arm_mod10" `T` termination_tac [] `
 (* example: simple division --------- *)
 
 val termination_tac = SOME
- (WF_REL_TAC `measure (w2n o FST o SND)` \\ Cases_word \\ Cases_word
+ (WF_REL_TAC `measure (w2n o FST o SND)` \\ NTAC 2 Cases
   \\ ASM_SIMP_TAC bool_ss [WORD_LO,n2w_11,w2n_n2w,LESS_MOD,ZERO_LT_dimword]
   \\ `n - n' < dimword (:32)` by DECIDE_TAC
   \\ ASM_SIMP_TAC bool_ss [addressTheory.word_arith_lemma2,w2n_n2w,LESS_MOD] 
@@ -286,7 +286,7 @@ val ref_cheney_def = Define `
 
 val ref_addr_NOT_ZERO = prove(
   ``!a. ref_cheney (m,e) (a,d,xs,ys) /\ x <= e /\ ~(x = 0) ==> ~(ref_addr a x = 0w)``,
-  Cases_word \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [ref_cheney_def,ref_addr_def,
+  Cases \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [ref_cheney_def,ref_addr_def,
     word_add_n2w,n2w_11,valid_address_def,w2n_n2w] \\ REPEAT STRIP_TAC
   \\ `(n + 12 * x) < 4294967296` by DECIDE_TAC
   \\ `n + 12 * x = 0` by METIS_TAC [LESS_MOD] \\ DECIDE_TAC);
@@ -294,7 +294,7 @@ val ref_addr_NOT_ZERO = prove(
 val ref_addr_NEQ = prove(
   ``!a i j. ~(i = j) /\ valid_address a i /\ valid_address a j ==> 
             ~(ref_addr a i = ref_addr a j)``,
-  Cases_word \\ Cases \\ Cases 
+  NTAC 3 Cases
   \\ SIMP_TAC std_ss [ref_addr_def,valid_address_def,word_add_n2w]
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w,LESS_MOD,n2w_11,DECIDE ``~(SUC n = 0)``]
   \\ STRIP_TAC \\ IMP_RES_TAC (DECIDE ``m + n + 8 < l ==> m + n + 4 < l /\ m + n < l``)
@@ -305,7 +305,7 @@ val ref_addr_ADD_NEQ = prove(
             ~(ref_addr a i + 4w = ref_addr a j) /\
             ~(ref_addr a i + 8w = ref_addr a j) /\
             ~(ref_addr a i + 4w = ref_addr a j + 8w)``,
-  Cases_word \\ Cases \\ Cases
+  NTAC 3 Cases
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [ref_addr_def,word_add_n2w,n2w_11,LESS_MOD,valid_address_def,w2n_n2w,DECIDE ``~(SUC n = 0)``]
   \\ STRIP_TAC \\ IMP_RES_TAC (DECIDE ``m + n + 8 < l ==> m + n + 4 < l /\ m + n < l``)
   \\ ASM_SIMP_TAC bool_ss [LESS_MOD,MULT_CLAUSES]
@@ -336,7 +336,7 @@ val ref_cheney_d = prove(
       GSYM word_add_n2w,WORD_ADD_ASSOC] \\ DECIDE_TAC);
 
 fun UPDATE_ref_addr_prove (c,tm) = prove(tm,
-  Cases_word \\ Cases_word \\ REPEAT STRIP_TAC
+  NTAC 2 Cases \\ REPEAT STRIP_TAC
   \\ c by ALL_TAC \\ ASM_REWRITE_TAC [APPLY_UPDATE_THM]
   \\ FULL_SIMP_TAC std_ss [ref_addr_def,EVAL ``1=0``,word_add_n2w,valid_address_def,
       w2n_n2w,n2w_11,WORD_LO]
@@ -570,7 +570,7 @@ val ref_cheney_step_thm = prove(
         
 val w2n_ADD_w2n = prove(
   ``!x:'a word y. w2n x + w2n y < dimword(:'a) ==> (w2n (x + y) = w2n x + w2n y)``,
-  Cases_word \\ Cases_word \\ ASM_SIMP_TAC bool_ss [LESS_MOD,w2n_n2w,word_add_n2w]);
+  NTAC 2 Cases \\ ASM_SIMP_TAC bool_ss [LESS_MOD,w2n_n2w,word_add_n2w]);
 
 val ref_cheney_loop_lemma = prove(
   ``valid_address a j /\ i < j ==>
@@ -629,7 +629,7 @@ val ref_cheney_loop_th = prove(
     \\ `i2 < j2` by DECIDE_TAC \\ Q.UNDISCH_TAC `i2 < j2`
     \\ ASM_SIMP_TAC std_ss [ref_addr_def]
     \\ REPEAT (POP_ASSUM (K ALL_TAC))
-    \\ Q.SPEC_TAC (`a:word32`,`a:word32`) \\ Cases_word
+    \\ Q.SPEC_TAC (`a:word32`,`a:word32`) \\ Cases
     \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [word_add_n2w,w2n_n2w,valid_address_def]
     \\ REPEAT STRIP_TAC
     \\ `n + 12 * i2 + 12 < 4294967296 /\ n + 12 * i2 < 4294967296` by DECIDE_TAC
@@ -658,7 +658,7 @@ val roots_in_mem_def = Define `
 val NOT_ref_addr = prove(
   ``!x a. valid_address a i /\ x <+ ref_addr a 1 /\ ~(i = 0) ==> 
           ~(x = ref_addr a i) /\ ~(x = ref_addr a i + 4w) /\ ~(x = ref_addr a i + 8w)``,
-  Cases_word \\ Cases_word \\ ASM_SIMP_TAC (std_ss++SIZES_ss) 
+  NTAC 2 Cases \\ ASM_SIMP_TAC (std_ss++SIZES_ss) 
        [ref_addr_def,word_add_n2w,n2w_11,WORD_LO,w2n_n2w,valid_address_def,LESS_MOD]
   \\ REPEAT STRIP_TAC
   \\ `n' + 12 * i < 4294967296 /\ n' + 12 < 4294967296` by DECIDE_TAC
@@ -929,7 +929,7 @@ val arm_alloc_aux_lemma = prove(
 val LO_IMP_ref_addr = prove(
   ``!b a. b <+ ref_addr a 1 /\ valid_address a i /\ ~(i = 0) ==> 
           ~(ref_addr a i = b) /\ ~(ref_addr a i + 4w = b) /\ ~(ref_addr a i + 8w = b)``,
-  Cases_word \\ Cases_word
+  NTAC 2 Cases
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [ref_addr_def,WORD_LO,w2n_n2w,valid_address_def,word_add_n2w,n2w_11]
   \\ REPEAT STRIP_TAC
   \\ `n' + 12 * i + 4 < 4294967296 /\ n' + 12 * i < 4294967296` by DECIDE_TAC
@@ -1108,7 +1108,7 @@ val ch_word_def = Define `
 val ch_mem_lemma1 = prove(
   ``!a. n < 2**32 /\ k < 2**32 /\ n <= w2n a /\ 
         w2n a + k < 2**32 /\ ~(a = 0w) /\ ~(k = 0) ==> (a:word32 - n2w n <+ a + n2w k)``,
-  Cases_word
+  Cases
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [word_arith_lemma2,WORD_LO,WORD_LS,w2n_n2w,
       LESS_MOD,GSYM AND_IMP_INTRO,word_add_n2w,DECIDE ``n <= n' = ~(n' < n:num)``,n2w_11]
   \\ REPEAT STRIP_TAC \\ `(n' - n) < 4294967296` by DECIDE_TAC
@@ -1117,7 +1117,7 @@ val ch_mem_lemma1 = prove(
 val ch_mem_lemma2 = prove(
   ``!a. n < 2**32 /\ k < 2**32 /\ n <= w2n a /\ k < w2n a /\ 
         ~(a = 0w) /\ (k < n) ==> (a:word32 - n2w n <+ a - n2w k)``,
-  Cases_word
+  Cases
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_arith_lemma2,WORD_LO,WORD_LS,w2n_n2w,
       LESS_MOD,GSYM AND_IMP_INTRO,word_add_n2w,DECIDE ``n < n' ==> ~(n' < n:num)``,n2w_11,
       DECIDE ``n <= n' ==> ~(n' < n:num)``]
@@ -1129,7 +1129,7 @@ val ch_mem_lemma2 = prove(
 val ch_mem_lemma3 = prove(
   ``!a. n < 2**32 /\ k < 2**32 /\ w2n a + n < 2**32 /\ w2n a + k < 2**32 /\ 
         ~(a = 0w) /\ ~(k = 0) /\ (n < k) ==> ((a:word32) + n2w n <+ a + n2w k)``,
-  Cases_word
+  Cases
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_arith_lemma2,WORD_LO,WORD_LS,w2n_n2w,
       LESS_MOD,GSYM AND_IMP_INTRO,word_add_n2w,DECIDE ``n < n' ==> ~(n' < n:num)``,n2w_11,
       DECIDE ``n <= n' ==> ~(n' < n:num)``]
@@ -1139,7 +1139,7 @@ val ch_mem_lemma4 = RW [WORD_ADD_0] (Q.INST [`n`|->`0`] ch_mem_lemma3)
 
 val ch_mem_lemma5 = prove(
   ``!a. n < 2**32 /\ n <= w2n a /\ ~(a = 0w) /\ ~(n = 0) ==> (a:word32 - n2w n <+ a)``,
-  Cases_word
+  Cases
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_arith_lemma2,WORD_LO,WORD_LS,w2n_n2w,
       LESS_MOD,GSYM AND_IMP_INTRO,word_add_n2w,DECIDE ``n <= n' = ~(n' < n:num)``,n2w_11]
   \\ REPEAT STRIP_TAC \\ `(n' - n) < 4294967296` by DECIDE_TAC

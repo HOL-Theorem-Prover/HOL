@@ -53,7 +53,7 @@ val ALU_ADD = prove(
      let r = a + b + (if c then 1w else 0w) in
        ((word_msb r, r = 0w, BIT 32 (w2n a + w2n b + (if c then 1 else 0)),
         (word_msb a = word_msb b) /\ ~(word_msb a = word_msb r)), r)`,
-  REPEAT STRIP_TAC \\ Cases_on_word `a` \\ Cases_on_word `b`
+  REPEAT STRIP_TAC \\ Cases_on `a` \\ Cases_on `b`
     \\ RW_TAC arith_ss [ADD_def,ALU_arith_def,DIVMOD_2EXP,SBIT_def,WORD_ADD_0]
     \\ SIMP_TAC std_ss [ADD_ASSOC,GSYM word_add_n2w,w2n_n2w,n2w_mod,
          MOD_2EXP_32,MOD_PLUS,ZERO_LT_TWOEXP]
@@ -96,7 +96,7 @@ val ALU_SUB = prove(
          else
            BIT 32 (w2n a + w2n ~b),
          ~(word_msb a = word_msb b) /\ ~(word_msb a = word_msb r)), r)`,
-  REPEAT STRIP_TAC \\ Cases_on_word `a` THEN Cases_on_word `b`
+  REPEAT STRIP_TAC \\ Cases_on `a` THEN Cases_on `b`
     \\ RW_TAC arith_ss [SUB_def,ADD_def,ALU_arith_def,DIVMOD_2EXP,WORD_ADD_0,
          word_hs_def,nzcv_def]
     \\ RW_TAC std_ss [ADD_ASSOC,GSYM word_add_n2w,w2n_n2w,n2w_w2n,n2w_mod,
@@ -441,7 +441,7 @@ val ARM_UND =
 
 val LSL_NOT_ZERO = prove(
   `!n. ~(n = 0w:word5) ==> ~(w2w n = 0w:word8)`,
-  Cases_word \\ RW_TAC bool_ss [dimword_def,ZERO_MOD,ZERO_LT_TWOEXP,
+  Cases \\ RW_TAC bool_ss [dimword_def,ZERO_MOD,ZERO_LT_TWOEXP,
          w2w_def,n2w_11,w2n_n2w,dimindex_5,dimindex_8]
     \\ ASSUME_TAC (DECIDE ``5 < 8``) \\ IMP_RES_TAC TWOEXP_MONO
     \\ METIS_TAC [MOD_2EXP_LT,LESS_TRANS,LESS_MOD]);

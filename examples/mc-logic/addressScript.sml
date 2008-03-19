@@ -58,14 +58,14 @@ val n2w_and_3 = store_thm("n2w_and_3",
 
 val aligned_MULT = store_thm("aligned_MULT",
   ``!x y. aligned x ==> aligned (x + 4w * y)``,
-  Cases_word \\ Cases_word
+  NTAC 2 Cases
   \\ REWRITE_TAC [word_add_n2w,word_mul_n2w,aligned_def,n2w_and_3]
   \\ ONCE_REWRITE_TAC [ADD_COMM] \\ ONCE_REWRITE_TAC [MULT_COMM] 
   \\ SIMP_TAC std_ss [MOD_TIMES]);
 
 val addr32_and_3w = store_thm("addr32_and_3w",
   ``!x. (addr32 x) && 3w = 0w``,
-  wordsLib.Cases_word \\ REWRITE_TAC [addr32_n2w,n2w_and_3]
+  Cases \\ REWRITE_TAC [addr32_n2w,n2w_and_3]
   \\ SIMP_TAC std_ss [RW1 [MULT_COMM] MOD_EQ_0]);
 
 val aligned_addr32 = store_thm("aligned_addr32",
@@ -78,7 +78,7 @@ val addr30_n2w = store_thm("addr30_n2w",
 
 val addr30_addr32_ADD = store_thm("addr30_addr32_ADD",
   ``!x y. addr30 (addr32 x + y) = x + addr30 y``,
-  wordsLib.Cases_word \\ wordsLib.Cases_word
+  NTAC 2 Cases
   \\ REWRITE_TAC [addr30_n2w,addr32_n2w,word_add_n2w]
   \\ SIMP_TAC std_ss [ONCE_REWRITE_RULE [MULT_COMM] ADD_DIV_ADD_DIV]);
 
@@ -111,12 +111,12 @@ val add32_addr30 = store_thm("addr32_addr30",
 
 val addr32_ADD = store_thm ("addr32_ADD", 
   ``!v w. (addr32 (v + w)  = addr32 v + addr32 w)``,
-  Cases_word \\ Cases_word
+  NTAC 2 Cases
   \\ REWRITE_TAC [addr32_n2w,word_add_n2w,LEFT_ADD_DISTRIB]);
 
 val addr32_NEG = store_thm("addr32_NEG",
   ``!w. addr32 ($- w) = $- (addr32 w)``,
-  wordsLib.Cases_word \\ REWRITE_TAC [addr32_n2w] 
+  Cases \\ REWRITE_TAC [addr32_n2w] 
   \\ wordsLib.WORD_EVAL_TAC \\ REWRITE_TAC [addr32_n2w]
   \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss)
        [n2w_11,LEFT_SUB_DISTRIB,MOD_COMMON_FACTOR]);
@@ -131,7 +131,7 @@ val addr32_SUC = store_thm("addr32_SUC",
 
 val addr30_ADD = store_thm("addr30_ADD",
   ``!x m. addr30 x + n2w m = addr30 (x + n2w (4 * m))``,
-  Cases_word \\ REWRITE_TAC [addr30_n2w,word_add_n2w]
+  Cases \\ REWRITE_TAC [addr30_n2w,word_add_n2w]
   \\ ONCE_REWRITE_TAC [ADD_COMM]
   \\ SIMP_TAC std_ss [GSYM ADD_DIV_ADD_DIV,AC MULT_COMM MULT_ASSOC]);  
 
@@ -219,11 +219,11 @@ val ADDRESS_ROTATE = store_thm("ADDRESS_ROTATE",
 
 val addr30_THM = store_thm("addr30_THM",
   ``!x. addr30 x = n2w (w2n x DIV 4)``,
-  Cases_word \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD,addr30_n2w]);
+  Cases \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD,addr30_n2w]);
 
 val addr32_THM = store_thm("addr32_THM",
   ``!x. addr32 x = n2w (4 * w2n x)``,
-  Cases_word \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD,addr32_n2w]);
+  Cases \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD,addr32_n2w]);
 
 val aligned_THM = store_thm("aligned_THM",
   ``!p. aligned p = ?k. p = k * 4w``,

@@ -101,7 +101,7 @@ val ENCLOSE_STM_LDM = save_thm("ENCLOSE_STM_LDM",let
 
 val ENCLOSE_STACK_ALTER_LEMMA = prove(
   ``!x n. addr32 x + w2w ((n2w (4 * n)):word8) = addr32 (x + n2w (n MOD 64))``,
-  Cases_word \\ SIMP_TAC (arith_ss++SIZES_ss) 
+  Cases \\ SIMP_TAC (arith_ss++SIZES_ss) 
     [addr32_n2w,word_add_n2w,word_mul_n2w,w2w_def,LEFT_ADD_DISTRIB,w2n_n2w]
   \\ SIMP_TAC arith_ss [MOD_COMMON_FACTOR]);
 
@@ -958,7 +958,7 @@ val MULT_MOD_MULT = prove(
 
 val addr32_0 = prove(
   ``!x. (addr32 x = 0w) = (x = 0w)``,
-  Cases_word \\ REWRITE_TAC [addr32_def] \\ CONV_TAC (SYM_CONV)
+  Cases \\ REWRITE_TAC [addr32_def] \\ CONV_TAC (SYM_CONV)
   \\ EQ_TAC \\ SIMP_TAC std_ss []
   THEN1 EVAL_TAC
   \\ ASM_SIMP_TAC std_ss [w2w_def,w2n_n2w]

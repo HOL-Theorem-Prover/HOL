@@ -456,12 +456,6 @@ val _ = export_rewrites ["n2w_w2n"]
 val word_nchotomy = store_thm("word_nchotomy",
   `!w. ?n. w = n2w n`, PROVE_TAC [n2w_w2n]);
 
-fun Cases_on_word tm = FULL_STRUCT_CASES_TAC (SPEC tm word_nchotomy);
-fun Cases_word (g as (_,w)) =
-  let val (Bvar,_) = with_exn dest_forall w (ERR "Cases_word" "not a forall")
-  in (STRIP_TAC \\ STRUCT_CASES_TAC (Thm.SPEC Bvar word_nchotomy)) g
-  end
-
 val n2w_mod = store_thm("n2w_mod",
   `!n. (n2w:num -> 'a word) (n MOD dimword(:'a)) = n2w n`,
   RW_TAC fcp_ss [dimword_def]
@@ -487,10 +481,15 @@ val ranged_word_nchotomy = store_thm("ranged_word_nchotomy",
     \\ Q.EXISTS_TAC `n MOD dimword(:'a)`
     \\ SIMP_TAC (srw_ss()) [dimword_def, MOD_MOD, DIVISION])
 
+val _ = TypeBase.write [TypeBasePure.mk_nondatatype_info
+   (``:'a word``,
+     {nchotomy = SOME ranged_word_nchotomy, encode=NONE,
+      size = SOME (``\(v1:bool->num) (v2:'a->num) (v3:'a word). w2n v3``,
+                   CONJUNCT1 (SPEC_ALL AND_CLAUSES))})];
+
 val w2n_11 = store_thm("w2n_11",
   `!v w. (w2n v = w2n w) = (v = w)`,
-  REPEAT Cases_word
-    \\ REWRITE_TAC [w2n_n2w,n2w_11]);
+  REPEAT Cases \\ REWRITE_TAC [w2n_n2w,n2w_11]);
 val _ = export_rewrites ["w2n_11"]
 
 val w2n_lt = store_thm("w2n_lt",
@@ -758,8 +757,8 @@ val WORD_ADD_OR = store_thm("WORD_ADD_OR",
   `!a b. (a && b = 0w) ==> (a + b = a !! b)`,
   SRW_TAC [fcpLib.FCP_ss] [word_and_def, word_add_def, word_or_def,
          word_0, n2w_def, w2n_def]
-    \\ Cases_on_word `a`
-    \\ Cases_on_word `b`
+    \\ Cases_on `a`
+    \\ Cases_on `b`
     \\ FULL_SIMP_TAC (std_ss++fcpLib.FCP_ss) [n2w_def]
     \\ `!n j. j < dimindex (:'a) ==>
            ((\i'. SBIT (((FCP i. BIT i n):'a word) ' i') i') j =
@@ -777,7 +776,7 @@ val WORD_ADD_OR = store_thm("WORD_ADD_OR",
 val w2w = store_thm("w2w",
   `!w:'a word i. i < dimindex (:'b) ==>
       (((w2w w):'b word) ' i = i < ^WL /\ w ' i)`,
-  Cases_word \\ SIMP_TAC std_ss [w2w_def,w2n_n2w]
+  Cases \\ POP_ASSUM (K ALL_TAC) \\ SIMP_TAC std_ss [w2w_def,w2n_n2w]
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> beta] EXISTS_HB)
     \\ RW_TAC (fcp_ss++ARITH_ss) [n2w_def,BIT_def,BITS_COMP_THM2,
@@ -902,7 +901,7 @@ val MIN_FST = prove(
 val word_bits_w2w = store_thm("word_bits_w2w",
   `!w. (h -- l) (w2w (w:'a word)):'b word =
        w2w ((MIN h (dimindex (:'b) - 1) -- l) w)`,
-  Cases_word \\ SIMP_TAC arith_ss [word_bits_n2w,w2w_def,w2n_n2w,dimword_def]
+  Cases \\ SIMP_TAC arith_ss [word_bits_n2w,w2w_def,w2n_n2w,dimword_def]
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> beta] EXISTS_HB)
     \\ ASM_SIMP_TAC arith_ss [n2w_11,GSYM BITS_ZERO3,BITS_COMP_THM2,
@@ -929,7 +928,7 @@ val w2n_w2w = store_thm("w2n_w2w",
         w2n w
       else
         w2n ((dimindex (:'b) - 1 -- 0) w)`,
-  Cases_word
+  Cases
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> beta] EXISTS_HB)
     \\ ASM_SIMP_TAC arith_ss [BITS_COMP_THM2,w2w_def,word_bits_n2w,
@@ -971,7 +970,7 @@ val WORD_w2w_EXTRACT = store_thm("WORD_w2w_EXTRACT",
 
 val WORD_EQ = store_thm("WORD_EQ",
   `!v:'a word w. (!x. x < ^WL ==> (word_bit x v = word_bit x w)) = (v = w)`,
-  REPEAT Cases_word \\ FIELD_WORD_TAC);
+  REPEAT Cases \\ FIELD_WORD_TAC);
 
 val BIT_UPDATE = store_thm("BIT_UPDATE",
   `!n x. (n :+ x) = word_modify (\i b. if i = n then x else b)`,
@@ -991,7 +990,7 @@ val lem2 = GEN_ALL (MATCH_MP LESS_LESS_EQ_TRANS (CONJ
 
 val WORD_BIT_BITS = store_thm("WORD_BIT_BITS",
   `!b w. word_bit b w = ((b -- b) w = 1w)`,
-  STRIP_TAC \\ Cases_word
+  STRIP_TAC \\ Cases
     \\ RW_TAC arith_ss [MIN_DEF,BIT_def,word_bit_n2w,word_bits_n2w,n2w_11,
          LESS_MOD,lem,lem2,dimword_def]
     \\ STRIP_ASSUME_TAC EXISTS_HB
@@ -1006,7 +1005,7 @@ val lem = prove(`MIN d (l1 + MIN h2 d) = MIN (h2 + l1) d`,
 val WORD_BITS_COMP_THM = store_thm("WORD_BITS_COMP_THM",
   `!h1 l1 h2 l2 w. (h2 -- l2) ((h1 -- l1) w) =
                    ((MIN h1 (h2 + l1)) -- (l2 + l1)) w`,
-  REPEAT STRIP_TAC \\ Cases_on_word `w`
+  REPEAT STRIP_TAC \\ Cases_on `w`
     \\ RW_TAC arith_ss [word_bits_n2w,lem,BITS_COMP_THM2,
          AC MIN_ASSOC MIN_COMM]);
 
@@ -1021,7 +1020,7 @@ val WORD_BITS_LSR = store_thm("WORD_BITS_LSR",
 
 val WORD_BITS_ZERO = store_thm("WORD_BITS_ZERO",
   `!h l w. h < l ==> ((h -- l) w = 0w)`,
-  NTAC 2 STRIP_TAC \\ Cases_word
+  NTAC 2 STRIP_TAC \\ Cases
     \\ RW_TAC arith_ss [word_bits_n2w,BITS_ZERO,MIN_DEF]);
 
 val WORD_BITS_ZERO2 = store_thm("WORD_BITS_ZERO2",
@@ -1034,7 +1033,7 @@ val WORD_BITS_ZERO3 = store_thm("WORD_BITS_ZERO3",
 
 val WORD_BITS_LT = store_thm("WORD_BITS_LT",
   `!h l w. w2n ((h -- l) w) < 2 ** (SUC h - l)`,
-  NTAC 2 STRIP_TAC \\ Cases_word
+  NTAC 2 STRIP_TAC \\ Cases
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC arith_ss [word_bits_n2w,w2n_n2w,GSYM BITS_ZERO3,
          BITS_COMP_THM2,MIN_DEF,BITSLT_THM,dimword_def]
@@ -1061,7 +1060,7 @@ val WORD_SLICE_THM = store_thm("WORD_SLICE_THM",
 
 val WORD_SLICE_ZERO = store_thm("WORD_SLICE_ZERO",
   `!h l w. h < l ==> ((h <> l) w = 0w)`,
-  NTAC 2 STRIP_TAC \\ Cases_word
+  NTAC 2 STRIP_TAC \\ Cases
     \\ RW_TAC arith_ss [word_slice_n2w,SLICE_ZERO,MIN_DEF]);
 
 val WORD_SLICE_ZERO2 = save_thm("WORD_SLICE_ZERO2",
@@ -1072,7 +1071,7 @@ val WORD_SLICE_BITS_THM = store_thm("WORD_SLICE_BITS_THM",
 
 val WORD_BITS_SLICE_THM = store_thm("WORD_BITS_SLICE_THM",
   `!h l w. (h -- l) ((h <> l) w) = (h -- l) w`,
-  NTAC 2 STRIP_TAC \\ Cases_word
+  NTAC 2 STRIP_TAC \\ Cases
     \\ RW_TAC arith_ss [word_slice_n2w,word_bits_n2w,BITS_SLICE_THM]);
 
 val WORD_SLICE_COMP_THM = store_thm("WORD_SLICE_COMP_THM",
@@ -1111,7 +1110,7 @@ val WORD_EXTRACT_BITS_COMP = save_thm("WORD_EXTRACT_BITS_COMP",
 
 val WORD_ALL_BITS = store_thm("WORD_ALL_BITS",
   `!w:'a word. (dimindex (:'a) - 1 <= h) ==> ((h -- 0) w = w)`,
-  Cases_word 
+  Cases
     \\ SRW_TAC [] [word_bits_n2w,GSYM MOD_DIMINDEX,DIVISION,DIMINDEX_GT_0,
          simpLib.SIMP_PROVE arith_ss [MIN_DEF] ``l <= h ==> (MIN h l = l)``]);
 
@@ -1256,28 +1255,27 @@ val WORD_EXTRACT_OVER_BITWISE = store_thm("WORD_EXTRACT_OVER_BITWISE",
   SIMP_TAC std_ss
     [word_extract_def, GSYM WORD_BITS_OVER_BITWISE, WORD_w2w_OVER_BITWISE]);
 
-local
-  fun Cases_on_word tm =
-   Q.ISPEC_THEN tm FULL_STRUCT_CASES_TAC ranged_word_nchotomy;
-in
 val WORD_w2w_OVER_ADD = Q.store_thm("WORD_w2w_OVER_ADD",
   `!a b:'a word.
      (w2w (a + b) = (dimindex(:'a) - 1 -- 0) (w2w a + w2w b))`,
   REPEAT STRIP_TAC
-    \\ Cases_on_word `a:'a word`
-    \\ Cases_on_word `b:'a word`
+    \\ Cases_on `a:'a word`
+    \\ Cases_on `b:'a word`
     \\ `n < 2 ** SUC (dimindex (:'a) - 1) /\ n' < 2 ** SUC (dimindex (:'a) - 1)`
     by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0,
          DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
     \\ SRW_TAC [ARITH_ss] [WORD_w2w_EXTRACT, word_extract_n2w, word_bits_n2w,
-         MOD_DIMINDEX, BITS_COMP_THM2, MIN_DEF, BITS_ZEROL, WORD_BITS_EXTRACT]    \\ SRW_TAC [ARITH_ss] [word_add_n2w, word_extract_n2w,  MOD_DIMINDEX,         BITS_COMP_THM2]    \\ SRW_TAC [ARITH_ss] [MIN_DEF]);
+         MOD_DIMINDEX, BITS_COMP_THM2, MIN_DEF, BITS_ZEROL, WORD_BITS_EXTRACT]
+    \\ SRW_TAC [ARITH_ss] [word_add_n2w, word_extract_n2w,  MOD_DIMINDEX,
+         BITS_COMP_THM2]
+    \\ SRW_TAC [ARITH_ss] [MIN_DEF]);
 
 val WORD_w2w_OVER_MUL = Q.store_thm("WORD_w2w_OVER_MUL",
   `!a b:'a word.
      (w2w (a * b) = (dimindex(:'a) - 1 -- 0) (w2w a * w2w b))`,
   REPEAT STRIP_TAC
-    \\ Cases_on_word `a:'a word`
-    \\ Cases_on_word `b:'a word`
+    \\ Cases_on `a:'a word`
+    \\ Cases_on `b:'a word`
     \\ `n < 2 ** SUC (dimindex (:'a) - 1) /\ n' < 2 ** SUC (dimindex (:'a) - 1)`
     by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0,
          DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
@@ -1286,7 +1284,6 @@ val WORD_w2w_OVER_MUL = Q.store_thm("WORD_w2w_OVER_MUL",
     \\ SRW_TAC [ARITH_ss] [word_mul_n2w, word_extract_n2w,  MOD_DIMINDEX,
          BITS_COMP_THM2]
     \\ SRW_TAC [ARITH_ss] [MIN_DEF]);
-end
 
 val BIT_SET_lem_ = prove(
   `!i j n. i < j ==> ~(i IN BIT_SET j n)`,
@@ -1476,7 +1473,7 @@ val WORD_ss = rewrites [word_add_n2w,word_mul_n2w,word_sub_def,word_2comp_def,
   LEFT_SUB_DISTRIB,RIGHT_SUB_DISTRIB];
 
 val ARITH_WORD_TAC =
-  REPEAT Cases_word
+  REPEAT Cases
     \\ ASM_SIMP_TAC (fcp_ss++ARITH_ss++numSimps.ARITH_AC_ss++WORD_ss) [];
 
 (* -- *)
@@ -1490,7 +1487,7 @@ val WORD_ADD_ASSOC = store_thm("WORD_ADD_ASSOC",
 
 val WORD_MULT_ASSOC = store_thm("WORD_MULT_ASSOC",
   `!v:'a word w x. v * (w * x) = v * w * x`,
-  REPEAT Cases_word \\ ASM_SIMP_TAC (fcp_ss++WORD_ss) [MULT_ASSOC]);
+  REPEAT Cases \\ ASM_SIMP_TAC (fcp_ss++WORD_ss) [MULT_ASSOC]);
 
 val WORD_ADD_COMM = store_thm("WORD_ADD_COMM",
   `!v:'a word w. v + w = w + v`, ARITH_WORD_TAC);
@@ -1552,12 +1549,12 @@ val WORD_ADD_EQ_SUB = store_thm("WORD_ADD_EQ_SUB",
 
 val WORD_ADD_INV_0_EQ = store_thm("WORD_ADD_INV_0_EQ",
   `!v:'a word w. (v + w = v) = (w = 0w)`,
-  REPEAT Cases_word
+  REPEAT Cases
     \\ ASM_SIMP_TAC std_ss [word_add_n2w,lift_rule ADD_INV_0_EQ_mod]);
 
 val WORD_EQ_ADD_LCANCEL = store_thm("WORD_EQ_ADD_LCANCEL",
   `!v:'a word w x. (v + w = v + x) = (w = x)`,
-  REPEAT Cases_word
+  REPEAT Cases
     \\ ASM_SIMP_TAC std_ss [word_add_n2w,lift_rule EQ_ADD_LCANCEL_mod]);
 val _ = export_rewrites ["WORD_EQ_ADD_LCANCEL"]
 
@@ -1568,7 +1565,7 @@ val _ = export_rewrites ["WORD_EQ_ADD_RCANCEL"]
 
 val WORD_NEG = store_thm("WORD_NEG",
   `!w:'a word. $- w = ~w + 1w`,
-  REPEAT Cases_word
+  REPEAT Cases
     \\ ASM_SIMP_TAC (fcp_ss++ARITH_ss) [word_add_n2w,word_2comp_n2w,
          word_1comp_n2w,lift_rule WORD_NEG_mod,dimword_def]);
 
@@ -1704,12 +1701,12 @@ val WORD_NEG_T = store_thm("WORD_NEG_T",
 
 val WORD_MULT_SUC  = store_thm("WORD_MULT_SUC",
   `!v:'a word n. v * n2w (n + 1) = v * n2w n + v`,
-  Cases_word \\
+  Cases \\
     SIMP_TAC arith_ss [word_mul_n2w,word_add_n2w,LEFT_ADD_DISTRIB]);
 
 val WORD_NEG_LMUL = store_thm("WORD_NEG_LMUL",
   `!v:'a word w. $- (v * w) = ($- v) * w`,
-  REPEAT Cases_word
+  REPEAT Cases \\ POP_ASSUM (K ALL_TAC)
     \\ Induct_on `n'` >> REWRITE_TAC [WORD_MULT_CLAUSES,WORD_NEG_0]
     \\ ASM_REWRITE_TAC [WORD_NEG_ADD,ADD1,WORD_MULT_SUC,GSYM word_mul_n2w]);
 
@@ -1838,7 +1835,7 @@ val SPEC1_RULE = (GEN_ALL o REWRITE_RULE [EXP_1] o
 
 val LSL_ONE = store_thm("LSL_ONE",
   `!w:'a word. w << 1 = w + w`,
-  STRIP_TAC \\ Cases_on_word `w` \\ REWRITE_TAC [word_add_def,w2n_n2w,dimword_def]
+  Cases \\ REWRITE_TAC [word_add_def,w2n_n2w,dimword_def]
     \\ SHIFT_WORD_TAC \\ Cases_on `1 <= i`
     \\ ASM_SIMP_TAC arith_ss [SPEC1_RULE BIT_SHIFT_THM2,
                               SPEC1_RULE BIT_SHIFT_THM3]
@@ -2077,7 +2074,7 @@ val word_asr = store_thm("word_asr",
 
 val WORD_MUL_LSL = store_thm("WORD_MUL_LSL",
   `!a n. a << n = n2w (2 ** n) * a`,
-  STRIP_TAC \\ Cases_on_word `a`
+  Cases
     \\ SRW_TAC [ARITH_ss] [word_lsl_n2w, word_mul_n2w, dimword_def]
     \\ `dimindex (:'a) <= n'` by DECIDE_TAC
     \\ IMP_RES_TAC LESS_EQUAL_ADD
@@ -2255,7 +2252,7 @@ val SLICE_COMP_MSB = prove(
 val MSB_THM1 = prove(
   `!a:'a word. ~(^HB = 0) /\ word_msb a ==>
         (w2n a = ^INT_MIN_ML + BITS (^HB - 1) 0 (w2n a))`,
-  Cases_word \\ STRIP_ASSUME_TAC EXISTS_HB
+  Cases \\ POP_ASSUM (K ALL_TAC) \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC arith_ss [word_msb_n2w,w2n_n2w,GSYM BITS_ZERO3,BITS_COMP_MSB,
                         dimword_def]
     \\ IMP_RES_TAC BIT_SLICE_THM2 \\ POP_ASSUM (SUBST1_TAC o SYM)
@@ -2264,7 +2261,7 @@ val MSB_THM1 = prove(
 val MSB_THM2 = prove(
   `!a:'a word. ~(^HB = 0) /\ word_msb a ==>
         (w2n ($- a) = ^INT_MIN_ML - BITS (^HB - 1) 0 (w2n a))`,
-  Cases_word \\ REPEAT STRIP_TAC \\ IMP_RES_TAC MSB_THM1
+  Cases \\ POP_ASSUM (K ALL_TAC) \\ REPEAT STRIP_TAC \\ IMP_RES_TAC MSB_THM1
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC arith_ss [word_msb_n2w,word_2comp_n2w,w2n_n2w,
          BITS_COMP_MSB,GSYM BITS_ZERO3, dimword_def]
@@ -2278,7 +2275,7 @@ val MSB_THM2 = prove(
 val MSB_THM3 = prove(
   `!a:'a word. ~(^HB = 0) /\ ~word_msb a ==>
         (w2n a = BITS (^HB - 1) 0 (w2n a))`,
-  Cases_word \\ STRIP_ASSUME_TAC EXISTS_HB
+  Cases \\ POP_ASSUM (K ALL_TAC) \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC arith_ss [word_msb_n2w,w2n_n2w,GSYM BITS_ZERO3,BITS_COMP_MSB,
                         dimword_def]
     \\ `~(m = 0)` by DECIDE_TAC
@@ -2291,7 +2288,7 @@ val MSB_THM4 = prove(
   `!a:'a word. ~(^HB = 0) /\ ~(a = 0w) /\ ~word_msb a ==>
        (w2n ($- a) = ^dimword_ML - BITS (^HB - 1) 0 (w2n a)) /\
        ~(BITS (^HB - 1) 0 (w2n a) = 0)`,
-  Cases_word \\ REPEAT STRIP_TAC \\ IMP_RES_TAC MSB_THM3
+  Cases \\ POP_ASSUM (K ALL_TAC) \\ REPEAT STRIP_TAC \\ IMP_RES_TAC MSB_THM3
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC arith_ss [word_msb_n2w,word_2comp_n2w,w2n_n2w,n2w_11,
          GSYM BITS_ZERO3,BITS_ZERO2,BITS_COMP_MSB,dimword_def]
@@ -2302,13 +2299,13 @@ val MSB_THM4 = prove(
 
 val HB_0_MSB = prove(
   `!a:'a word. (^HB = 0) /\ word_msb a ==> (a = 1w)`,
-  Cases_word \\ STRIP_ASSUME_TAC EXISTS_HB
+  Cases \\ POP_ASSUM (K ALL_TAC) \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC bool_ss [word_msb_n2w,w2n_n2w,n2w_11,BIT_def,SUC_SUB1,dimword_def]
     \\ FULL_SIMP_TAC arith_ss [BITS_ZERO3]);
 
 val HB_0_NOT_MSB = prove(
   `!a:'a word. (^HB = 0) /\ ~word_msb a ==> (a = 0w)`,
-  Cases_word \\ STRIP_ASSUME_TAC EXISTS_HB
+  Cases \\ POP_ASSUM (K ALL_TAC) \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC fcp_ss [word_msb_n2w,n2w_11,ZERO_MOD,ZERO_LT_TWOEXP,
          GSYM BITS_ZERO3,dimword_def]
     \\ METIS_TAC [DECIDE ``SUC m <= 1 = (m = 0)``,BIT_def,NOT_BITS2]);
@@ -2354,7 +2351,7 @@ val BITS_MSB_LTEQ = prove(
 val TWO_COMP_POS = prove(
   `!a:'a word. ~word_msb a ==>
           (if a = 0w then ~word_msb ($- a) else word_msb ($- a))`,
-  Cases_word
+  Cases
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC bool_ss [WORD_NEG_0]
     \\ Cases_on `^HB = 0` >> PROVE_TAC [HB_0_NOT_MSB]
@@ -2396,7 +2393,7 @@ val TWO_COMP_NEG = store_thm("TWO_COMP_NEG",
       \\ ASM_SIMP_TAC arith_ss [word_msb_n2w,word_T_def,WORD_NEG_1,
            DIMINDEX_GT_0,ONE_COMP_0_THM,UINT_MAX_def,dimword_def],
     ASM_REWRITE_TAC [WORD_NEG_L],
-    FULL_SIMP_TAC bool_ss [] \\ Cases_on_word `a`
+    FULL_SIMP_TAC bool_ss [] \\ Cases_on `a`
       \\ MAP_EVERY IMP_RES_TAC [MSB_THM2,w2n_mod,TWO_COMP_NEG_lem]
       \\ STRIP_ASSUME_TAC EXISTS_HB \\ `~(m = 0)` by DECIDE_TAC
       \\ FULL_SIMP_TAC arith_ss [BITS_COMP_THM2,MIN_DEF,BIT_def,
@@ -2443,7 +2440,7 @@ val SUB_EQUAL_WORD_L_INT_MIN = prove(
   `!a:'a word b:'a word. ~(^HB = 0) /\ (a - b = word_L) ==>
       ~(word_msb a = word_msb b)`,
   RW_TAC bool_ss [WORD_EQ_SUB_RADD] \\ STRIP_ASSUME_TAC EXISTS_HB
-    \\ `~(m = 0)` by DECIDE_TAC \\ Cases_on_word `b`
+    \\ `~(m = 0)` by DECIDE_TAC \\ Cases_on `b`
     \\ ASM_REWRITE_TAC [word_msb_n2w,word_L_def,SUC_SUB1,INT_MIN_def]
     \\ SUBST1_TAC ((SYM o SPEC `n`) n2w_mod)
     \\ ASM_REWRITE_TAC [word_msb_n2w,word_add_n2w,SUC_SUB1,
@@ -2608,8 +2605,9 @@ val WORD_GE = save_thm("WORD_GE",
 
 val w2n_2comp = prove(
   `!a:'a word. w2n ($- a) = if a = 0w then 0 else ^dimword_ML - w2n a`,
-  RW_TAC bool_ss [WORD_NEG_0,w2n_0] \\ Cases_on_word `a`
-    \\ FULL_SIMP_TAC bool_ss [GSYM w2n_11,w2n_0,w2n_n2w,word_2comp_n2w,dimword_def]
+  RW_TAC bool_ss [WORD_NEG_0,w2n_0] \\ Cases_on `a` \\ POP_ASSUM (K ALL_TAC)
+    \\ FULL_SIMP_TAC bool_ss
+         [GSYM w2n_11,w2n_0,w2n_n2w,word_2comp_n2w,dimword_def]
     \\ `^dimword_ML - n MOD ^dimword_ML < ^dimword_ML`
           by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
     \\ ASM_SIMP_TAC bool_ss [LESS_MOD]);
@@ -2853,7 +2851,7 @@ fun bound_tac th1 th2 =
     \\ Cases_on `word_msb a` \\ ASM_REWRITE_TAC []
     \\ Cases_on `^HB = 0`
     >> (IMP_RES_TAC th1 \\ ASM_SIMP_TAC arith_ss [])
-    \\ Cases_on_word `a`
+    \\ Cases_on `a` \\ POP_ASSUM (K ALL_TAC)
     \\ FULL_SIMP_TAC bool_ss [w2n_n2w,word_msb_n2w,dimword_def]
     \\ MAP_EVERY IMP_RES_TAC [th2,SLICE_COMP_MSB]
     \\ POP_ASSUM (SPEC_THEN `n` ASSUME_TAC)
@@ -2896,13 +2894,9 @@ val WORD_LS_T = store_thm("WORD_LS_T",
   SRW_TAC [] [WORD_LS, word_T_def, UINT_MAX_def, w2n_lt,
     DECIDE ``a < b ==> a <= b - 1``]);
 
-local
-  fun Cases_on_word tm =
-   Q.ISPEC_THEN tm FULL_STRUCT_CASES_TAC ranged_word_nchotomy;
-in
-  val tac =
+val tac =
     RW_TAC (std_ss++boolSimps.LET_ss) [WORD_LO, WORD_LS, w2n_n2w]
-    \\ MAP_EVERY Cases_on_word [`a`,`b`,`c`]
+    \\ MAP_EVERY Cases_on [`a`,`b`,`c`]
     \\ FULL_SIMP_TAC std_ss [word_add_n2w, w2n_n2w, word_2comp_n2w]
     \\ IMP_RES_TAC (DECIDE ``~(a <= b) ==> (b <= a:num)``)
     \\ Cases_on `n + n' < dimword (:'a)`
@@ -2914,7 +2908,6 @@ in
           \\ IMP_RES_TAC LESS_EQUAL_ADD
           \\ SRW_TAC [ARITH_ss] [ZERO_LT_dimword, ADD_MODULUS])
     \\ SRW_TAC [ARITH_ss] [ZERO_LT_dimword, ADD_MODULUS]
-end;
 
 val WORD_ADD_LEFT_LO = store_thm("WORD_ADD_LEFT_LO",
   `!b c a. a + b <+ c =
@@ -2966,7 +2959,7 @@ val INT_MIN_LT_dimword = prove(
 
 val WORD_MSB_INT_MIN_LS = store_thm("WORD_MSB_INT_MIN_LS",
   `!a. word_msb a = INT_MINw <=+ a`,
-  STRIP_TAC \\ Cases_on_word `a`
+  Cases_on `a`
     \\ SRW_TAC [] [word_L_def, word_msb_n2w_numeric, WORD_LS,
          INT_MIN_LT_dimword]);
 
@@ -3223,14 +3216,9 @@ val WORD_LESS_0_word_T = store_thm("WORD_LESS_0_word_T",
 (* Support for termination proofs                                            *)
 (* ------------------------------------------------------------------------- *)
 
-fun Cases_word' (g as (_,w)) =
-  let val (Bvar,_) = with_exn dest_forall w (ERR "Cases_word" "not a forall")
-  in (STRIP_TAC THEN STRUCT_CASES_TAC (Drule.ISPEC Bvar ranged_word_nchotomy)) g
-  end;
-
 val SUC_WORD_PRED = store_thm("SUC_WORD_PRED", 
   `!x:'a word. ~(x = 0w) ==> (SUC (w2n (x - 1w)) = w2n x)`,
-  Cases_word' \\ Cases_on `n`
+  Cases \\ Cases_on `n`
   \\ FULL_SIMP_TAC std_ss [ADD1,GSYM word_add_n2w,WORD_ADD_SUB]
   \\ REPEAT STRIP_TAC
   \\ CONV_TAC (RAND_CONV (REWRITE_CONV [word_add_n2w]))
@@ -3252,7 +3240,7 @@ Cases THEN RW_TAC arith_ss [EXP] THEN
 
 val w2n_lsr = store_thm ("w2n_lsr",
   `!w m. w2n (w >>> m) = (w2n w) DIV (2**m)`,
-  Cases_word THEN 
+  Cases THEN 
   SIMP_TAC std_ss [ONCE_REWRITE_RULE [GSYM w2n_11] word_lsr_n2w,
        simpLib.SIMP_PROVE arith_ss [MIN_DEF] ``MIN a (a + b) = a``,
        word_bits_n2w,w2n_n2w,MOD_DIMINDEX,bitTheory.BITS_COMP_THM2] THEN
@@ -3266,7 +3254,7 @@ val LSR_LESS = store_thm("LSR_LESS",
 
 val word_sub_w2n = store_thm("word_sub_w2n", 
   `!x:'a word y:'a word. y <=+ x ==> (w2n (x - y) = w2n x - w2n y)`,
-  Cases_word' \\ Cases_word'
+  Cases \\ Cases
   \\ FULL_SIMP_TAC std_ss [WORD_LS,w2n_n2w]
   \\ REPEAT STRIP_TAC
   \\ `?k. n = k + n'` by METIS_TAC [LESS_EQ_EXISTS,ADD_COMM]
@@ -3281,18 +3269,18 @@ val ZERO_LE_TOP_FALSE = prove(
 
 val WORD_LE_EQ_LS = store_thm("WORD_LE_EQ_LS",
   `!x y. 0w <= x /\ 0w <= y ==> (x <= y = x <=+ y)`,
-  Cases_word' \\ Cases_word'
+  Cases \\ Cases
   \\ FULL_SIMP_TAC std_ss [WORD_LS,w2n_n2w,word_le_n2w,LET_DEF,ZERO_LE_TOP_FALSE]);
 
 val WORD_LT_EQ_LO = store_thm("WORD_LT_EQ_LO",
   `!x y. 0w <= x /\ 0w <= y ==> (x < y = x <+ y)`,
-  Cases_word' \\ Cases_word'
+  Cases \\ Cases
   \\ FULL_SIMP_TAC std_ss [WORD_LO,w2n_n2w,word_lt_n2w,LET_DEF,ZERO_LE_TOP_FALSE]);
 
 val WORD_ZERO_LE = store_thm("WORD_ZERO_LE",
   `!w:'a word. 0w <= w = w2n w < INT_MIN (:'a)`,
-  Cases_word' \\ REWRITE_TAC [ZERO_LE_TOP_FALSE,GSYM word_msb_n2w,
-                              word_msb_n2w_numeric,w2n_n2w,NOT_LESS_EQUAL]);
+  Cases \\ REWRITE_TAC [ZERO_LE_TOP_FALSE,GSYM word_msb_n2w,
+                        word_msb_n2w_numeric,w2n_n2w,NOT_LESS_EQUAL]);
 
 val WORD_ZERO_LE_SUB_LEMMA = prove(
   `!x:'a word y. 0w <= x /\ y <=+ x ==> 0w <= x - y`,
@@ -3344,6 +3332,35 @@ val WORD_SUB_LE = store_thm("WORD_SUB_LE",
   `!x:'a word y. 0w <= y /\ y <= x ==> 0w <= x - y /\ x - y <= x`,
   SIMP_TAC bool_ss [WORD_LE_SUB_UPPER,WORD_ZERO_LE_SUB]);
 
+(* ------------------------------------------------------------------------- *)
+(* ------------------------------------------------------------------------- *)
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME
+ (fn ppstrm => let
+   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ in
+   S "val _ = TotalDefn.termination_simps := ";
+   S "   LSR_LESS :: WORD_PRED_THM :: !TotalDefn.termination_simps";
+   S " ";
+   S "val _ = ";
+   S "  let open Lib boolSyntax numSyntax";
+   S "      val word_type = type_of (fst(dest_forall(concl word_nchotomy)))";
+   S "      val w2n_tm = fst(strip_comb(lhs(snd(dest_forall(concl w2n_def)))))";
+   S "      val w2n_abs = list_mk_abs([mk_var(\"v1\",bool-->num),";
+   S "                                  mk_var(\"v2\",alpha-->num),";
+   S "                                  mk_var(\"v3\",word_type)],";
+   S "                                 mk_comb(w2n_tm,mk_var(\"v3\",word_type)))";
+   S "  in";
+   S "  TypeBase.write";
+   S "  [TypeBasePure.mk_nondatatype_info";
+   S "   (word_type, ";
+   S "     {nchotomy = SOME ranged_word_nchotomy,";
+   S "      size = SOME (w2n_abs,CONJUNCT1(Drule.SPEC_ALL boolTheory.AND_CLAUSES)),";
+   S "      encode=NONE})]";
+   S "  end;"
+ end)};
 
 (* ------------------------------------------------------------------------- *)
 (* Create a few word sizes                                                   *)
@@ -3397,34 +3414,6 @@ fun mk_index i =
   in
     [EmitML.MLSTRUCT w, EmitML.MLSIG w]
   end;
-
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME
- (fn ppstrm => let
-   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
- in
-   S "val _ = TotalDefn.termination_simps := ";
-   S "   LSR_LESS :: WORD_PRED_THM :: !TotalDefn.termination_simps";
-   S " ";
-   S "val _ = ";
-   S "  let open Lib boolSyntax numSyntax";
-   S "      val word_type = type_of (fst(dest_forall(concl word_nchotomy)))";
-   S "      val w2n_tm = fst(strip_comb(lhs(snd(dest_forall(concl w2n_def)))))";
-   S "      val w2n_abs = list_mk_abs([mk_var(\"v1\",bool-->num),";
-   S "                                  mk_var(\"v2\",alpha-->num),";
-   S "                                  mk_var(\"v3\",word_type)],";
-   S "                                 mk_comb(w2n_tm,mk_var(\"v3\",word_type)))";
-   S "  in";
-   S "  TypeBase.write";
-   S "  [TypeBasePure.mk_nondatatype_info";
-   S "   (word_type, ";
-   S "     {nchotomy = SOME word_nchotomy,";
-   S "      size = SOME (w2n_abs,CONJUNCT1(Drule.SPEC_ALL boolTheory.AND_CLAUSES)),";
-   S "      encode=NONE})]";
-   S "  end;"
- end)};
 
 val _ = ConstMapML.insert ``n2w_itself``;
 

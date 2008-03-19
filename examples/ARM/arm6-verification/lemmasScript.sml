@@ -152,7 +152,7 @@ val TEST_OR_COMP_LEM = prove(
 val start_tac =
   SIMP_TAC (arith_ss++SIZES_ss) [TEST_OR_COMP_def,ARITHMETIC_def,
          WORD_BITS_COMP_THM,word_extract_def,word_bits_w2w]
-    \\ Cases_word \\ SIMP_TAC (std_ss++SIZES_ss) [word_bits_n2w,w2w_def]
+    \\ Cases \\ SIMP_TAC (std_ss++SIZES_ss) [word_bits_n2w,w2w_def]
     \\ ASM_SIMP_TAC bool_ss [w2n_n2w,n2w_11,MOD_DIMINDEX];
 
 val TEST_OR_COMP_THM = store_thm("TEST_OR_COMP_THM",
@@ -199,7 +199,7 @@ val mode_reg2num_lt = store_thm("mode_reg2num_lt",
          DECIDE ``a < 16 /\ ~(a = 15) ==> (a + 16 < 31)``]);
 
 val not_reg_eq_lem = prove(`!v w. ~(v = w) ==> ~(w2n v = w2n w)`,
-  REPEAT Cases_word \\ SIMP_TAC std_ss [w2n_n2w,n2w_11]);
+  REPEAT Cases \\ SIMP_TAC std_ss [w2n_n2w,n2w_11]);
 
 val not_reg_eq = store_thm("not_reg_eq",
   `!v w m1 m2. ~(v = w) ==> ~(mode_reg2num m1 v = mode_reg2num m2 w)`,
@@ -301,7 +301,7 @@ val UP_DOWN_THM = store_thm("UP_DOWN_THM",
 val DECODE_INST_NOT_UNEXEC = store_thm("DECODE_INST_NOT_UNEXEC",
   `!n. ~(DECODE_INST n = unexec)`, RW_TAC std_ss [DECODE_INST_def]);
 
-val tac = Cases_word 
+val tac = Cases 
   \\ RW_TAC bool_ss [combinTheory.o_THM,MIN_DEF,DECODE_INST_def,BITS_COMP_THM2,
        MOD_DIMINDEX,w2w_def,w2n_n2w,word_extract_def,word_bits_n2w]
   \\ FULL_SIMP_TAC (fcp_ss++SIZES_ss++ARITH_ss)
@@ -393,7 +393,7 @@ val SLICE_ROR_THM = store_thm("SLICE_ROR_THM",
   `!h l a. ((h <> l) a) #>> l = (h -- l) a`,
   REPEAT STRIP_TAC \\ Cases_on `l = 0`
     >> ASM_REWRITE_TAC [WORD_SLICE_BITS_THM,SHIFT_ZERO]
-    \\ Cases_on_word `a`
+    \\ Cases_on `a`
     \\ RW_TAC arith_ss [MIN_DEF,word_slice_n2w,word_bits_n2w,BITS_COMP_THM2,
          SLICE_THM,w2n_n2w]
     << [

@@ -405,7 +405,7 @@ val WORD_SUB_CARRY = prove(
   ``!c x y.
       dimword (:'a) <= w2n x + w2n ~y + b2n c =
       if c then y <=+ x else dimword (:'a) <= w2n (x:'a word) + w2n ~(y:'a word)``,
-  Cases \\ REWRITE_TAC [b2w_def,b2n_def,ADD_0] \\ Cases_word \\ Cases_word
+  Cases \\ REWRITE_TAC [b2w_def,b2n_def,ADD_0] \\ NTAC 2 Cases
   \\ `0 < dimword (:'a)` by REWRITE_TAC [ZERO_LT_dimword]
   \\ `dimword (:'a) - 1 - n' < dimword(:'a)` by DECIDE_TAC
   \\ ASM_SIMP_TAC bool_ss [LESS_MOD,w2n_n2w,word_ls_n2w,word_1comp_n2w]
@@ -582,7 +582,7 @@ val single_mul_cases32 = store_thm("single_mul_cases32",
   ``!x:word32 y:word32 c:word32.
       (FST (single_mul x y c) = (31 >< 0) ((0w:word32) @@ c + w2w x * (w2w y):word64)) /\
       (SND (single_mul x y c) = (63 >< 32) ((0w:word32) @@ c + w2w x * (w2w y):word64))``,
-  NTAC 3 Cases_word 
+  NTAC 3 Cases
   \\ ASM_SIMP_TAC std_ss [w2w_def,w2n_n2w,LESS_MOD,single_mul_def,
       LET_DEF,word_mul_n2w,n2w_mod,ZERO_concat_n2w,word_add_n2w]
   \\ SIMP_TAC std_ss [word_extract_def,word_bits_n2w,
@@ -1087,7 +1087,7 @@ val mw_add_mul_EQ_mw_add_mul_mult = prove(
     !x y i k m n.
       mw_add_mul y (n2mw i n) (mw_add_mul x (n2mw i m) (n2mw i k)) =
       FST (mw_add_mul_mult (n2mw i m) (n2mw i n) (n2mw i k) x y 0w (0w:'a word))``,
-  STRIP_TAC \\ Cases_word \\ Cases_word \\ REPEAT STRIP_TAC
+  STRIP_TAC \\ NTAC 2 Cases \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC bool_ss [FST_mw_add_mul_mult,mw_add_mul_spec_simple]
   \\ SIMP_TAC bool_ss [w2n_n2w,AC ADD_COMM ADD_ASSOC,AC MULT_COMM MULT_ASSOC]);
 
@@ -1593,7 +1593,7 @@ val add_double_mul_thm = store_thm("add_double_mul_thm",
     (ONCE_REWRITE_TAC [GSYM n2w_mod] \\ SIMP_TAC bool_ss [DIVMOD_ID,ZERO_LT_dimword,LESS_MOD])
   \\ ASM_SIMP_TAC std_ss [add_double_mul_def,n2w_w2n,single_mul_def,WORD_MULT_CLAUSES,
     GSYM word_add_n2w,GSYM word_mul_n2w,single_add_def,LET_DEF,b2w_def,b2n_def,WORD_ADD_0]
-  \\ NTAC 7 Cases_word \\ ASM_SIMP_TAC std_ss [w2n_n2w,LESS_MOD,word_add_n2w,word_mul_n2w]
+  \\ NTAC 7 Cases \\ ASM_SIMP_TAC std_ss [w2n_n2w,LESS_MOD,word_add_n2w,word_mul_n2w]
   \\ STRIP_TAC THEN1 SIMP_TAC bool_ss [AC ADD_ASSOC ADD_COMM,AC MULT_ASSOC MULT_COMM]
   \\ `!n. n MOD dimword (:'a) < dimword (:'a)` by 
         ASM_SIMP_TAC bool_ss [GSYM DIVISION, ZERO_LT_dimword]
@@ -1778,7 +1778,7 @@ val MONO_exp_step3 = store_thm("MONO_exp_step3",
       h x ==> (g x = g y) ==>
       (g (FST (exp_step3 f i j x y)) = g x) /\
       (g (SND (exp_step3 f i j x y)) = g x)``,
-  STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC \\ Cases_word \\ Induct_on `n`
+  STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC \\ Cases \\ Induct_on `n`
   \\ ONCE_REWRITE_TAC [exp_step3_def]
   THEN1 SIMP_TAC bool_ss [FST,SND]
   \\ SIMP_TAC bool_ss [n2w_11,LESS_MOD,ZERO_LT_dimword,DECIDE ``~(SUC n = 0)``]      
@@ -1847,7 +1847,7 @@ val n2w_and_1w = prove(
     
 val WORD_EQ_EVEN = prove(
   ``!x. (x && 1w = 0w) = EVEN (w2n x)``,
-  Cases_word \\ ASM_SIMP_TAC bool_ss [n2w_and_1w,w2n_n2w,LESS_MOD]
+  Cases \\ ASM_SIMP_TAC bool_ss [n2w_and_1w,w2n_n2w,LESS_MOD]
   \\ Cases_on `EVEN n` \\ ASM_REWRITE_TAC []
   \\ FULL_SIMP_TAC bool_ss [GSYM ODD_EVEN]
   \\ FULL_SIMP_TAC bool_ss [EVEN_EXISTS,ODD_EXISTS,ADD1]
@@ -1861,7 +1861,7 @@ val exp_last_spec = prove(
   ``!x:'a word f g i m k. 
       (!m n. f (g m) (g n) = g (m * n)) ==>  
       (exp_last f x (g m) (g k) = g (m * k ** w2n x))``,
-  Cases_word \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD]
+  Cases \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD]
   \\ completeInduct_on `n` \\ Cases_on `n` 
   \\ ONCE_REWRITE_TAC [exp_last_def] \\ SIMP_TAC bool_ss 
        [EXP,MULT_CLAUSES,DECIDE ``~(SUC n = 0)``,n2w_11,LESS_MOD,ZERO_LT_dimword]
@@ -1880,7 +1880,7 @@ val exp_step3_spec = prove(
       (!m n. f (g m) (g n) = g (m * n)) ==>  
       (exp_step3 f i x (g m) (g k) = 
        (g (m * k ** (w2n x MOD 2 ** w2n i)), g (k ** (2 ** w2n i))))``,
-  Cases_word \\ Cases_word \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD]
+  NTAC 2 Cases \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD]
   \\ Q.UNDISCH_TAC `n' < dimword (:'a)` \\ Q.SPEC_TAC (`n'`,`j`)
   \\ Induct_on `n` \\ ONCE_REWRITE_TAC [exp_step3_def]
   \\ REWRITE_TAC [EXP,MOD_1,MULT_CLAUSES]
