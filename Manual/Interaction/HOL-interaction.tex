@@ -56,7 +56,7 @@ with HOL easy. To install the script add this line to your {\tt
 (load "<path>/HOL/tools/hol-mode")
 \end{code}
 Replace {\tt <path>} with the full path to your HOL4 installation. To make
-emacs highlight the active region, also add the following line to your 
+emacs highlight the active region, also add the following line to your
 {\tt .emacs} file:
 \begin{code}
 (transient-mark-mode 1)
@@ -82,14 +82,16 @@ The HOL window should look something like this:
 
 [loading theories and proof tools ............. ]
 [closing file "/local/scratch/user/HOL/tools/end-init-boss.sml"]
-- 
+-
 \end{code}
 
 \mysubsec{Copying input into HOL4 (Opening a theory)\label{copy}}
 
 \begin{enum}
 \item Select text by pressing {\tt C-space} at one end of the text.
-\item Copy the region into HOL4 by pressing {\tt M-h M-r} at the other end.
+\item Copy the region into HOL4 by pressing {\tt M-h M-r} at the other
+  end. (You can also use drag the mouse to select text to be sent to
+  HOL.)
 \end{enum}
 For example, pressing {\tt C-space} then {\tt M-h M-r} around the following line
 \begin{code}
@@ -115,12 +117,12 @@ The HOL4 window should look something like this:
     1. Incomplete:
          Initial goal:
          !n. n < n + 1
-         
+
      : proofs
 - > val it = () : unit
 \end{code}
 
-\mysubsec{Applying a tactic\label{apply}} 
+\mysubsec{Applying a tactic\label{apply}}
 
 Make progress in a proof using \emph{proof tactics}.
 
@@ -128,7 +130,7 @@ Make progress in a proof using \emph{proof tactics}.
 \item Write the name of a tactic, \eg{} {\tt DECIDE\_TAC},~see Section~\ref{tactics} for more tactics
 \item Press {\tt C-space} at one end of the text.
 \item Move the cursor to the other end of the text.
-\item Press {\tt C-h e} to apply the tactic.
+\item Press {\tt M-h e} to apply the tactic.
 \end{enum}
 A tactic makes HOL4 update the current goal. The HOL4 window will either
 display the new goal(s) or print:
@@ -136,7 +138,7 @@ display the new goal(s) or print:
     Initial goal proved.
     |- !n. n < n + 1 : goalstack
 \end{code}
-You can undo the effect of the applied tactic by pressing {\tt C-h b}. Press {\tt C-h p} to view the current goal.
+You can undo the effect of the applied tactic by pressing {\tt M-h b}. Press {\tt C-h p} to view the current goal.
 
 \mysubsec{Ending a goal-oriented proof}
 
@@ -146,7 +148,7 @@ One can pop goals off the goal stack by pressing {\tt M-h d}, which gives:
 > val it = There are currently no proofs. : proofs
 \end{code}
 
-\mysubsec{Saving the resulting theorem\label{prove1}} 
+\mysubsec{Saving the resulting theorem\label{prove1}}
 
 One can use {\tt prove} to store the result of a proof (called a
 \emph{theorem}), \eg{} the following stores the theorem $\forall n.\;n < n +
@@ -160,7 +162,7 @@ When the above line is copied into HOL4 (using {\tt C-space} then
 - > val LESS_ADD_1 = |- !n. n < n + 1 : thm
 \end{code}
 
-\mysubsec{Saving proofs based on multiple tactics\label{prove2}} 
+\mysubsec{Saving proofs based on multiple tactics\label{prove2}}
 
 Suppose we have proved the goal {\tt `!n. n <= n * n`} with the following tactics:
 \begin{code}
@@ -177,7 +179,7 @@ val LESS_EQ_MULT = prove({`}` !n. n <= n * n {`}`,
   Induct_on `n` THENL [
     DECIDE_TAC,
     ASM_SIMP_TAC bool_ss [MULT] THEN
-    DECIDE_TAC]);                  
+    DECIDE_TAC]);
 \end{code}
 Copy the above into HOL4 using {\tt C-space} then
 {\tt M-h M-r}, as in Section~\ref{copy}.
@@ -212,11 +214,11 @@ printing of type information on or off.
 Press {\tt M-h C-c} to interrupt HOL4 --- useful when a tactic fails to terminate
 (\eg{} {\tt\small METIS\_TAC} often fails to terminate when unsuccessfully applied).
 
-\mysubsec{Making a definition\label{definition}} 
+\mysubsec{Making a definition\label{definition}}
 
 Function can be defined using {\tt Define}, \eg{} square is defined as follows.
 \begin{code}
-val SQUARE_def = Define `SQUARE n = n * n`;                  
+val SQUARE_def = Define `SQUARE n = n * n`;
 \end{code}
 
 \noindent
@@ -233,17 +235,17 @@ number. We can define recursive functions, \eg{}
 \begin{code}
 val MAP_TREE_def = Define `
   (MAP_TREE f (LEAF n) = LEAF (f n)) \conj{}
-  (MAP_TREE f (BRANCH u v) = BRANCH (MAP_TREE f u) (MAP_TREE f v))`;                  
-\end{code} 
+  (MAP_TREE f (BRANCH u v) = BRANCH (MAP_TREE f u) (MAP_TREE f v))`;
+\end{code}
 {\tt  SQUARE\_def} and {\tt  MAP\_TREE\_def} are theorems containing the
 above definitions. Theorems describing {\tt  TREE} can be retrieved by coping
 the following into HOL4 (by pressing {\tt C-space} then {\tt M-h M-r}, Section~\ref{copy}).
 \begin{code}
 val TREE_11 = fetch "-" "TREE_11";
 val TREE_distinct = fetch "-" "TREE_distinct";
-\end{code} 
+\end{code}
 
-\mysubsec{Making a theory} 
+\mysubsec{Making a theory}
 
 Proofs and definitions are stored in files called scripts, \eg{} we
 can store the definitions from above in a file called {\tt
@@ -251,11 +253,11 @@ can store the definitions from above in a file called {\tt
 \begin{code}
 open HolKernel boolLib bossLib Parse;
 val _ = new_theory "mytree";
-\end{code} 
+\end{code}
 and end with the line
 \begin{code}
 val _ = export_theory();
-\end{code} 
+\end{code}
 Replace {\tt prove} by {\tt store\_thm} for results you
 wish to export from the theory, \eg{}
 \begin{code}
@@ -287,14 +289,14 @@ HOL4 has a large collection of library theories. The most commonly used are:
 \end{displaymath}
 Other standard theories include:
 \begin{code}
-arithmeticTheory  bagTheory  boolTheory  combinTheory  fcpTheory 
-finite_mapTheory  fixedPointTheory  floatTheory  integerTheory 
-limTheory  optionTheory  probTheory  ratTheory  realTheory  
-relationTheory  rich_listTheory  ringTheory  seqTheory  
-sortingTheory  state_transformerTheory  stringTheory  sumTheory  
-topologyTheory  transcTheory  whileTheory 
+arithmeticTheory  bagTheory  boolTheory  combinTheory  fcpTheory
+finite_mapTheory  fixedPointTheory  floatTheory  integerTheory
+limTheory  optionTheory  probTheory  ratTheory  realTheory
+relationTheory  rich_listTheory  ringTheory  seqTheory
+sortingTheory  state_transformerTheory  stringTheory  sumTheory
+topologyTheory  transcTheory  whileTheory
 \end{code}
-The library theories are conveniently browsed using the following HTML reference page (created when HOL4 is compiled). 
+The library theories are conveniently browsed using the following HTML reference page (created when HOL4 is compiled).
 Replace {\tt <path>} with the path to your HOL4 installation.
 \begin{code}
 <path>/HOL/help/HOLindex.html
@@ -311,7 +313,7 @@ prints a list of theorems containing $n\; \texttt{\small DIV} \;m \leq k$ for so
   (|- !n x y. 0 < n \conj{} x <= y ==> x DIV n <= y DIV n, Thm)),
  (("arithmetic", "DIV_LE_X"),
   (|- !x y z. 0 < z ==> (y DIV z <= x = y < (x + 1) * z), Thm)),
- (("arithmetic", "DIV_LESS_EQ"), 
+ (("arithmetic", "DIV_LESS_EQ"),
   (|- !n. 0 < n ==> !k. k DIV n <= k, Thm))]
 \end{code}
 Try to write increasingly specific queries if the returned list is long, \eg{}
@@ -337,7 +339,7 @@ problems, but requires the user to supply a list of relevant theorems,
   [MOD\_TIMES2,MOD\_MOD,MOD\_PLUS]}.
 \begin{code}
 !k. 0 < k ==> !m p n. (m MOD k * p + n) MOD k = (m * p + n) MOD k
-\end{code} 
+\end{code}
 
 \noindent
 {\tt\small DECIDE\_TAC} handles linear arithmetic over natural
@@ -379,7 +381,7 @@ LESS_MOD:         |- !n k. k < n ==> (k MOD n = k)
 \end{code} {\tt \small ASM\_SIMP\_TAC} and {\tt \small FULL\_SIMP\_TAC} are two
 commonly used rewriting tactics, \eg{} suppose the goal is the following:
 \begin{code}
-    5 + 0 + m = (m MOD 10) + (5 MOD 8) 
+    5 + 0 + m = (m MOD 10) + (5 MOD 8)
     ------------------------------------
       0.  p = 2 + 0 + (m MOD 10)
       1.  m < 10
@@ -389,26 +391,26 @@ commonly used rewriting tactics, \eg{} suppose the goal is the following:
 goal using the supplied theorems together with the current goal's
 assumptions and some boolean simplifications {\tt \small bool\_ss}:
 \begin{code}
-    5 + m = m + (5 MOD 8) 
+    5 + m = m + (5 MOD 8)
     ------------------------------------
       0.  p = 2 + 0 + (m MOD 10)
       1.  m < 10
-\end{code} 
+\end{code}
 {\tt \small FULL\_SIMP\_TAC bool\_ss [ADD\_0,LESS\_MOD]}
 does the same except that it also applies the rewrites to the
 assumptions:
 \begin{code}
-    5 + m = m + (5 MOD 8) 
+    5 + m = m + (5 MOD 8)
     ------------------------------------
       0.  p = 2 + m
       1.  m < 10
-\end{code} 
+\end{code}
 
-{\tt \small bool\_ss} can be replaced by {\tt \small std\_ss}, 
-which is a stronger simplification set that would
-infer {\tt \small 5 < 8} and hence simplify {\tt\small 5 MOD 8} 
-as well. I recommend that the interested read also reads about 
-{\tt\small AC} and {\tt\small ONCE\_REWRITE\_TAC}.
+{\tt \small bool\_ss} can be replaced by {\tt \small std\_ss}, which
+is a stronger simplification set that would infer {\tt \small 5 < 8}
+and hence simplify {\tt\small 5 MOD 8} as well. I recommend that the
+interested reader also reads about {\tt\small AC}, {\tt\small Once}
+and {\tt\small SRW\_TAC}.
 
 \mysubsec{Induction}
 
@@ -425,45 +427,50 @@ A goal can be split into cases using {\tt\small Cases\_on `x`}. The
 goal is split according to the constructors of the type of {\tt\small
   x}, \eg{} for the following goal
 \begin{code}
-    !x. ~(x = []) ==> (x = HD x::TL x) 
+    !x. ~(x = []) ==> (x = HD x::TL x)
 \end{code}
 {\tt\small Cases\_on `x`} splits the goal into two:
 \begin{code}
     ~(h::t = []) ==> (h::t = HD (h::t)::TL (h::t))
-    
+
     ~([] = []) ==> ([] = HD []::TL [])
 \end{code}
-Case splits on a boolean expressions are also useful, \eg{} {\tt\small Cases\_on `n < 5`}. 
+Case splits on a boolean expressions are also useful, \eg{} {\tt\small Cases\_on `n < 5`}.
 
 \mysubsec{Subproofs}
 
 It is often useful to start a mini-proof inside a larger proof, \eg{} for the goal
 \begin{code}
-    foo n 
+    foo n
     ------------------------------------
       0 < n
 \end{code}
-we might want to prove {\tt\small h n = g n} assuming {\tt\small 0 < n}. 
-We can start such a subproof 
-by typing {\tt\small `h n = g n` by ALL\_TAC}. The new goal stack:
+we might want to prove {\tt\small h n = g n} assuming {\tt\small 0 <
+  n}.  We can start such a subproof by typing {\tt\small `h n = g n`
+  by ALL\_TAC}.\footnote{You can also use the emacs binding {\tt\small
+    M-h M-s} with the cursor inside the sub-goal.} The new goal stack:
 \begin{code}
     foo n
     ------------------------------------
       0.  0 < n
       1.  h n = g n
-    
+
     h n = g n
     ------------------------------------
       0 < n
 \end{code}
-If {\tt\small `h n = g n`} can be proved in one step, \eg{} using {\tt\small METIS\_TAC [MY\_LEMMA]}, then 
-apply {\tt\small `h n = g n` by METIS\_TAC [MY\_LEMMA]} instead of {\tt\small `h n = g n` by ALL\_TAC}.
+If {\tt\small `h n = g n`} can be proved in one step, \eg{} using {\tt\small METIS\_TAC [MY\_LEMMA]}, then
+apply {\tt\small `h n = g n` by METIS\_TAC [MY\_LEMMA]} instead of
+{\tt\small `h n = g n` by ALL\_TAC}.  If the sub-goal requires
+multiple steps the tactic after the \texttt{by} will need to be
+parenthesised: {\tt\small`\textit{goal}` by ($\mathit{tac}_1$ THEN
+  $\mathit{tac}_2$ ...)}
 
 \mysubsec{Proof by contradiction}
 
 Use {\tt\small CCOMTR\_TAC} to add the negation of the goal to the
 assumptions.  The task is then to prove that one of the assumptions of
-the goal is false. One can \eg{} add more assumptions using 
+the goal is false. One can \eg{} add more assumptions using
 {\tt\small `...` by ALL\_TAC}, described above, until one assumption is the
 negation of another assumption (and then apply {\tt\small METIS\_TAC []}).
 
@@ -509,4 +516,4 @@ Section~\ref{html}) most helpful.
 
 
 
-  
+

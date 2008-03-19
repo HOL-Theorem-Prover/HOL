@@ -1,6 +1,6 @@
 \DOC ONCE_REWRITE_TAC
 
-\TYPE {ONCE_REWRITE_TAC : (thm list -> tactic)}
+\TYPE {ONCE_REWRITE_TAC : thm list -> tactic}
 
 \SYNOPSIS
 Rewrites a goal only once with {basic_rewrites} and the supplied list
@@ -33,20 +33,20 @@ the tactic {ONCE_REWRITE_TAC thl} can be iterated as
 required without diverging:
 {
    - ONCE_REWRITE_TAC thl ([], Term `P (a:'a) :bool`);
-   > val it = ([([], `P b`)], fn) 
+   > val it = ([([], `P b`)], fn)
       : (term list * term) list * (thm list -> thm)
 }
 
 {
-   - (ONCE_REWRITE_TAC thl THEN ONCE_REWRITE_TAC thl) 
+   - (ONCE_REWRITE_TAC thl THEN ONCE_REWRITE_TAC thl)
      ([], Term `P a`);
-   > val it = ([([], `P c`)], fn) 
+   > val it = ([([], `P c`)], fn)
       : (term list * term) list * (thm list -> thm)
 }
 
 {
    - (NTAC 3 (ONCE_REWRITE_TAC thl)) ([], Term `P a`);
-   > val it = ([([], `P a`)], fn) 
+   > val it = ([([], `P a`)], fn)
       : (term list * term) list * (thm list -> thm)
 }
 
@@ -56,5 +56,5 @@ required without diverging:
 rewriting would diverge.  It can also be used to save inference steps.
 
 \SEEALSO
-Rewrite.ASM_REWRITE_TAC, Rewrite.ONCE_ASM_REWRITE_TAC, Rewrite.PURE_ASM_REWRITE_TAC, Rewrite.PURE_ONCE_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC, Rewrite.REWRITE_TAC, Tactic.SUBST_TAC.
+Rewrite.ASM_REWRITE_TAC, Drule.Once, Rewrite.ONCE_ASM_REWRITE_TAC, Rewrite.PURE_ASM_REWRITE_TAC, Rewrite.PURE_ONCE_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC, Rewrite.REWRITE_TAC, Tactic.SUBST_TAC.
 \ENDDOC

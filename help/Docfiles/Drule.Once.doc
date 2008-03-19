@@ -9,8 +9,8 @@ Rewriting control
 Rewriting, simplification.
 
 \DESCRIBE
-When used as an argument to the rewriter or simplifier, {Once th} 
-is a directive saying that {th} should be used at most once in the 
+When used as an argument to the rewriter or simplifier, {Once th}
+is a directive saying that {th} should be used at most once in the
 rewriting process. This is useful for controlling looping rewrites.
 
 \FAILURE
@@ -42,17 +42,17 @@ invocation can be made
 \COMMENTS
 Use of {Once} does not compose well. For example,
 {
-   tac1 THENL [SIMP_TAC std_ss [Once th], 
+   tac1 THENL [SIMP_TAC std_ss [Once th],
                SIMP_TAC std_ss [Once th]]
 }
-is not equivalent in behaviour to 
+is not equivalent in behaviour to
 {
    tac1 THEN SIMP_TAC std_ss [Once th].
 }
-In the first call two rewrites using {th} can occur; in the 
+In the first call two rewrites using {th} can occur; in the
 second, only one can occur.
 
 \SEEALSO
-Drule.Ntimes, Tactical.THEN, simpLib.SIMP_TAC, bossLib.RW_TAC, Rewrite.REWRITE_TAC
+Drule.Ntimes, Tactical.THEN, simpLib.SIMP_TAC, bossLib.RW_TAC, Rewrite.ONCE_REWRITE_TAC.
 
 \ENDDOC
