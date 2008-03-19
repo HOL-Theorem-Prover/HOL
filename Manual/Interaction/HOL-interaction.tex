@@ -106,7 +106,7 @@ Most HOL4 proofs are constructed using an interactive \emph{goal
   stack} and then put together using the ML function {\tt prove}
 (Section~\ref{prove1}, \ref{prove2}). To start the goal stack:
 \begin{enum}
-\item Write a goal, \eg{} {\tt `!n. n < n + 1`}, (we write $\forall$ as {\tt !} in HOL4).
+\item Write a goal, \eg{} {\tt `!n{.}~n < n + 1`}, (we write $\forall$ as {\tt !} in HOL4).
 \item Move the cursor inside the back-quotes ({\tt `}).
 \item Press {\tt M-h g} to push the goal onto the goal stack.
 \end{enum}
@@ -138,7 +138,7 @@ display the new goal(s) or print:
     Initial goal proved.
     |- !n. n < n + 1 : goalstack
 \end{code}
-You can undo the effect of the applied tactic by pressing {\tt M-h b}. Press {\tt C-h p} to view the current goal.
+You can undo the effect of the applied tactic by pressing {\tt M-h b}. Press {\tt M-h p} to view the current goal.
 
 \mysubsec{Ending a goal-oriented proof}
 
@@ -164,7 +164,7 @@ When the above line is copied into HOL4 (using {\tt C-space} then
 
 \mysubsec{Saving proofs based on multiple tactics\label{prove2}}
 
-Suppose we have proved the goal {\tt `!n. n <= n * n`} with the following tactics:
+Suppose we have proved the goal {\tt `!n{.}~n <= n * n`} with the following tactics:
 \begin{code}
 Induct_on `n`                   (* comment: induction on n  *)
 
@@ -284,7 +284,7 @@ HOL4 has a large collection of library theories. The most commonly used are:
 \itemx{listTheory}{lists, \eg{} {\tt\small [1;2;3] = 1::2::3::[], HD xs}}
 \itemx{pred\_setTheory}{simple sets\ \eg{} {\tt\small \{1;2;3\}, x IN s UNION t}}
 \itemx{pairTheory}{pairs/tuples\ \eg{} {\tt\small (1,x), (2,3,4,5), HD (x,y)}}
-\itemx{wordsTheory}{n-bit words\ \eg{} {\tt\small 0w:word32, 1w:'a word, x !! 1w}}
+\itemx{wordsTheory}{n-bit words\ \eg{} {\tt\small 0w:word32, 1w:'a word, x {!!}~1w}}
 \end{array}
 \end{displaymath}
 Other standard theories include:
@@ -302,7 +302,7 @@ Replace {\tt <path>} with the path to your HOL4 installation.
 <path>/HOL/help/HOLindex.html
 \end{code}
 
-Once theories has been opened (see Section~\ref{copy}) one can search for theorems in the current
+Once theories has been opened (see Section~\ref{copy}), one can search for theorems in the current
 context using {\tt DB.match}, \eg{} with {\tt arithmeticTheory} opened,
 \begin{code}
 DB.match [] {`}`n DIV m <= k{`}`
@@ -357,7 +357,7 @@ numbers, \eg{} {\tt\small DECIDE\_TAC} solves:
 Goals that contain top-level universal quantifiers ({\tt !x.}),
 implication ({\tt ==>}) or conjunction ({\tt \conj{}}) are often
 taken apart using {\tt\small REPEAT STRIP\_TAC} or just {\tt\small
-  STRIP\_TAC}, \eg{} the goal {\tt\small `!x. (!z. x < h z) ==> ?y. f x = y`}
+  STRIP\_TAC}, \eg{} the goal {\tt\small `!x{.}~(!z{.}~x < h z) ==> ?y{.}~f x = y`}
 becomes the following. (Assumptions are written under the line.)
 \begin{code}
     ?y. f x = y
@@ -369,8 +369,8 @@ becomes the following. (Assumptions are written under the line.)
 
 Goals that have a top-level existential quantifier can be given a
 witness using {\tt \small Q.EXISTS\_TAC}, \eg{} {\tt \small
-  Q.EXISTS\_TAC `1`} applied to goal {\tt \small ?n. !k. n * k = k}
-produces goal {\tt \small !k. 1 * k = k}.
+  Q.EXISTS\_TAC `1`} applied to goal {\tt \small ?n{.}~!k{.}~n * k = k}
+produces goal {\tt \small !k{.}~1 * k = k}.
 
 \mysubsec{Rewrites}
 
@@ -435,7 +435,7 @@ goal is split according to the constructors of the type of {\tt\small
 
     ~([] = []) ==> ([] = HD []::TL [])
 \end{code}
-Case splits on a boolean expressions are also useful, \eg{} {\tt\small Cases\_on `n < 5`}.
+Case splits on boolean expressions are also useful, \eg{} {\tt\small Cases\_on `n < 5`}.
 
 \mysubsec{Subproofs}
 
