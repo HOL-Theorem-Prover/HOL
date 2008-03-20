@@ -1219,7 +1219,7 @@ local
      | CONST _  => (tm,S)
      | COMB(Rator,Rand) =>
         let val (Rator',S')  = tm_exp Rator S
-            val (Rand', S'') = tm_exp Rand S
+            val (Rand', S'') = tm_exp Rand S'
         in (mk_comb(Rator', Rand'), S'')
         end
      | LAMB _ => raise ERR "tm_exp" "abstraction in pattern"
