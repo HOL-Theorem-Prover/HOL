@@ -108,6 +108,7 @@ sig
     val INST_LDM_STM        : bool -> thm -> thm
 
     val show_enc            : bool ref
+    val show_hex            : bool ref
     val show_code           : bool ref
  
     val pp_enc              : unit -> unit

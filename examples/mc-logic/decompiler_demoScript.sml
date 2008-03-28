@@ -286,7 +286,7 @@ val ref_cheney_def = Define `
 
 val ref_addr_NOT_ZERO = prove(
   ``!a. ref_cheney (m,e) (a,d,xs,ys) /\ x <= e /\ ~(x = 0) ==> ~(ref_addr a x = 0w)``,
-  Cases \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [ref_cheney_def,ref_addr_def,
+  Cases_word \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [ref_cheney_def,ref_addr_def,
     word_add_n2w,n2w_11,valid_address_def,w2n_n2w] \\ REPEAT STRIP_TAC
   \\ `(n + 12 * x) < 4294967296` by DECIDE_TAC
   \\ `n + 12 * x = 0` by METIS_TAC [LESS_MOD] \\ DECIDE_TAC);
@@ -294,7 +294,7 @@ val ref_addr_NOT_ZERO = prove(
 val ref_addr_NEQ = prove(
   ``!a i j. ~(i = j) /\ valid_address a i /\ valid_address a j ==> 
             ~(ref_addr a i = ref_addr a j)``,
-  NTAC 3 Cases
+  Cases_word \\ Cases \\ Cases
   \\ SIMP_TAC std_ss [ref_addr_def,valid_address_def,word_add_n2w]
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w,LESS_MOD,n2w_11,DECIDE ``~(SUC n = 0)``]
   \\ STRIP_TAC \\ IMP_RES_TAC (DECIDE ``m + n + 8 < l ==> m + n + 4 < l /\ m + n < l``)
@@ -305,7 +305,7 @@ val ref_addr_ADD_NEQ = prove(
             ~(ref_addr a i + 4w = ref_addr a j) /\
             ~(ref_addr a i + 8w = ref_addr a j) /\
             ~(ref_addr a i + 4w = ref_addr a j + 8w)``,
-  NTAC 3 Cases
+  Cases_word \\ Cases \\ Cases
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [ref_addr_def,word_add_n2w,n2w_11,LESS_MOD,valid_address_def,w2n_n2w,DECIDE ``~(SUC n = 0)``]
   \\ STRIP_TAC \\ IMP_RES_TAC (DECIDE ``m + n + 8 < l ==> m + n + 4 < l /\ m + n < l``)
   \\ ASM_SIMP_TAC bool_ss [LESS_MOD,MULT_CLAUSES]
@@ -336,7 +336,7 @@ val ref_cheney_d = prove(
       GSYM word_add_n2w,WORD_ADD_ASSOC] \\ DECIDE_TAC);
 
 fun UPDATE_ref_addr_prove (c,tm) = prove(tm,
-  NTAC 2 Cases \\ REPEAT STRIP_TAC
+  Cases \\ Cases_word \\ REPEAT STRIP_TAC
   \\ c by ALL_TAC \\ ASM_REWRITE_TAC [APPLY_UPDATE_THM]
   \\ FULL_SIMP_TAC std_ss [ref_addr_def,EVAL ``1=0``,word_add_n2w,valid_address_def,
       w2n_n2w,n2w_11,WORD_LO]
@@ -570,7 +570,7 @@ val ref_cheney_step_thm = prove(
         
 val w2n_ADD_w2n = prove(
   ``!x:'a word y. w2n x + w2n y < dimword(:'a) ==> (w2n (x + y) = w2n x + w2n y)``,
-  NTAC 2 Cases \\ ASM_SIMP_TAC bool_ss [LESS_MOD,w2n_n2w,word_add_n2w]);
+  NTAC 2 Cases_word \\ ASM_SIMP_TAC bool_ss [LESS_MOD,w2n_n2w,word_add_n2w]);
 
 val ref_cheney_loop_lemma = prove(
   ``valid_address a j /\ i < j ==>
@@ -629,7 +629,7 @@ val ref_cheney_loop_th = prove(
     \\ `i2 < j2` by DECIDE_TAC \\ Q.UNDISCH_TAC `i2 < j2`
     \\ ASM_SIMP_TAC std_ss [ref_addr_def]
     \\ REPEAT (POP_ASSUM (K ALL_TAC))
-    \\ Q.SPEC_TAC (`a:word32`,`a:word32`) \\ Cases
+    \\ Q.SPEC_TAC (`a:word32`,`a:word32`) \\ Cases_word
     \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [word_add_n2w,w2n_n2w,valid_address_def]
     \\ REPEAT STRIP_TAC
     \\ `n + 12 * i2 + 12 < 4294967296 /\ n + 12 * i2 < 4294967296` by DECIDE_TAC
@@ -658,7 +658,7 @@ val roots_in_mem_def = Define `
 val NOT_ref_addr = prove(
   ``!x a. valid_address a i /\ x <+ ref_addr a 1 /\ ~(i = 0) ==> 
           ~(x = ref_addr a i) /\ ~(x = ref_addr a i + 4w) /\ ~(x = ref_addr a i + 8w)``,
-  NTAC 2 Cases \\ ASM_SIMP_TAC (std_ss++SIZES_ss) 
+  NTAC 2 Cases_word \\ ASM_SIMP_TAC (std_ss++SIZES_ss) 
        [ref_addr_def,word_add_n2w,n2w_11,WORD_LO,w2n_n2w,valid_address_def,LESS_MOD]
   \\ REPEAT STRIP_TAC
   \\ `n' + 12 * i < 4294967296 /\ n' + 12 < 4294967296` by DECIDE_TAC
@@ -929,7 +929,7 @@ val arm_alloc_aux_lemma = prove(
 val LO_IMP_ref_addr = prove(
   ``!b a. b <+ ref_addr a 1 /\ valid_address a i /\ ~(i = 0) ==> 
           ~(ref_addr a i = b) /\ ~(ref_addr a i + 4w = b) /\ ~(ref_addr a i + 8w = b)``,
-  NTAC 2 Cases
+  NTAC 2 Cases_word
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [ref_addr_def,WORD_LO,w2n_n2w,valid_address_def,word_add_n2w,n2w_11]
   \\ REPEAT STRIP_TAC
   \\ `n' + 12 * i + 4 < 4294967296 /\ n' + 12 * i < 4294967296` by DECIDE_TAC
@@ -1083,6 +1083,8 @@ val roots_in_mem_IMP_addr_list = prove(
   ``!p a b xs. roots_in_mem p (a,b,xs) ==> addr_list p (a,b,xs)``,
   Induct \\ ASM_SIMP_TAC std_ss [addr_list_def,roots_in_mem_def]);
 
+
+
 val ch_mem_def = Define `
   ch_mem (i,e,rs,l,u,m) (a,x,xs) =
     ?x1 x2 x3 x4 x5 x6 x7. 
@@ -1108,7 +1110,7 @@ val ch_word_def = Define `
 val ch_mem_lemma1 = prove(
   ``!a. n < 2**32 /\ k < 2**32 /\ n <= w2n a /\ 
         w2n a + k < 2**32 /\ ~(a = 0w) /\ ~(k = 0) ==> (a:word32 - n2w n <+ a + n2w k)``,
-  Cases
+  Cases_word
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [word_arith_lemma2,WORD_LO,WORD_LS,w2n_n2w,
       LESS_MOD,GSYM AND_IMP_INTRO,word_add_n2w,DECIDE ``n <= n' = ~(n' < n:num)``,n2w_11]
   \\ REPEAT STRIP_TAC \\ `(n' - n) < 4294967296` by DECIDE_TAC
@@ -1117,7 +1119,7 @@ val ch_mem_lemma1 = prove(
 val ch_mem_lemma2 = prove(
   ``!a. n < 2**32 /\ k < 2**32 /\ n <= w2n a /\ k < w2n a /\ 
         ~(a = 0w) /\ (k < n) ==> (a:word32 - n2w n <+ a - n2w k)``,
-  Cases
+  Cases_word
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_arith_lemma2,WORD_LO,WORD_LS,w2n_n2w,
       LESS_MOD,GSYM AND_IMP_INTRO,word_add_n2w,DECIDE ``n < n' ==> ~(n' < n:num)``,n2w_11,
       DECIDE ``n <= n' ==> ~(n' < n:num)``]
@@ -1129,7 +1131,7 @@ val ch_mem_lemma2 = prove(
 val ch_mem_lemma3 = prove(
   ``!a. n < 2**32 /\ k < 2**32 /\ w2n a + n < 2**32 /\ w2n a + k < 2**32 /\ 
         ~(a = 0w) /\ ~(k = 0) /\ (n < k) ==> ((a:word32) + n2w n <+ a + n2w k)``,
-  Cases
+  Cases_word
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_arith_lemma2,WORD_LO,WORD_LS,w2n_n2w,
       LESS_MOD,GSYM AND_IMP_INTRO,word_add_n2w,DECIDE ``n < n' ==> ~(n' < n:num)``,n2w_11,
       DECIDE ``n <= n' ==> ~(n' < n:num)``]
@@ -1139,7 +1141,7 @@ val ch_mem_lemma4 = RW [WORD_ADD_0] (Q.INST [`n`|->`0`] ch_mem_lemma3)
 
 val ch_mem_lemma5 = prove(
   ``!a. n < 2**32 /\ n <= w2n a /\ ~(a = 0w) /\ ~(n = 0) ==> (a:word32 - n2w n <+ a)``,
-  Cases
+  Cases_word
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_arith_lemma2,WORD_LO,WORD_LS,w2n_n2w,
       LESS_MOD,GSYM AND_IMP_INTRO,word_add_n2w,DECIDE ``n <= n' = ~(n' < n:num)``,n2w_11]
   \\ REPEAT STRIP_TAC \\ `(n' - n) < 4294967296` by DECIDE_TAC
@@ -1222,7 +1224,7 @@ val ch_arm_def = Define `ch_arm s c = ?t. ch_inv s t /\ ch_word t c`;
 
 val ch_arm_alloc = store_thm("ch_arm_alloc",
   ``(arm_alloc (d,v1,v2,v3,v4,v5,v6,v7,a,x,xs) = (w1,w2,w3,w4,w5,w6,w7,a',xs')) ==>
-    CARD (reachables (t1::t2::ts) (cheney$set h)) < l ==>
+    CARD (reachables (t1::t2::ts) (ch_set h)) < l ==>
     ch_arm (t1::t2::ts,h,l) (v1,v2,v3,v4,v5,v6,v7,a,x,xs) ==> 
     ch_arm (fresh h::t2::ts,h |+ (fresh h,t1,t2,d),l) (w1,w2,w3,w4,w5,w6,w7,a',x,xs') /\
     (a' = a) /\ arm_alloc_pre (d,v1,v2,v3,v4,v5,v6,v7,a,x,xs)``,
@@ -1249,7 +1251,7 @@ val _ = Parse.hide "r0";
 val ARM_HEAP_alloc = save_thm("ARM_HEAP_alloc",let
 val th = arm_alloc_thm
 val th = APP_FRAME `cond (ch_arm ([v1;v2;v3;v4;v5;v6;v7],h,l) (r3,r4,r5,r6,r7,r8,r9,r10,x,xs) /\ 
-                          CARD (reachables [v1;v2;v3;v4;v5;v6;v7] (cheney$set h)) < l)` th
+                          CARD (reachables [v1;v2;v3;v4;v5;v6;v7] (ch_set h)) < l)` th
 val th = APP_WEAKEN1 th `
     R 0w r0 * HEAP (r10,l) (fresh h,v2,v3,v4,v5,v6,v7,h |+ (fresh h,v1,v2,r0)) * ~S`
  (REWRITE_TAC [SEP_IMP_MOVE_COND] \\ REPEAT STRIP_TAC
@@ -1277,7 +1279,7 @@ val th = EXISTS_PRE `r4` th
 val th = EXISTS_PRE `r3` th
 val th = APP_STRENGTHEN th `
     R 0w r0 * HEAP (r10,l) (v1,v2,v3,v4,v5,v6,v7,h) * ~S * 
-    cond (CARD (reachables [v1;v2;v3;v4;v5;v6;v7] (cheney$set h)) < l)`
+    cond (CARD (reachables [v1;v2;v3;v4;v5;v6;v7] (ch_set h)) < l)`
  (REWRITE_TAC [SEP_IMP_MOVE_COND] \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC (bool_ss++sep2_ss) [FST,SND,HEAP_def] 
   \\ IMP_RES_TAC ch_arm_alloc
@@ -1300,6 +1302,48 @@ val th = APP_STRENGTHEN th `
   \\ FULL_SIMP_TAC (bool_ss++star_ss) []) 
 val th = append_ret th
 in th end);
+
+val _ = add_compiled "ACA" ARM_HEAP_alloc;
+
+val (alloc_list_def,alloc_list_pre_def,th) = arm_decompiler "alloc_list" `T` NONE ["r0"] `
+  cmp   r0,#0
+  beq   16
+  insert: ACA
+  sub   r0,r0,#1
+  b     -16`;
+
+val fresh_NOT_IN_reachables = prove(
+  ``!h v1 v2 x. ~((fresh h,v1,v2,x) IN reachables vs (ch_set h))``,
+  SIMP_TAC bool_ss [IN_DEF,reachables_def]
+  \\ SIMP_TAC bool_ss [ch_set_def,fresh_NOT_IN_FDOM]);
+
+val reachables_lemma = prove(
+  ``reachables [v1; v2; v2; v3; v4; v5; v6; v7] s = 
+    reachables [v1; v2; v3; v4; v5; v6; v7] s``,
+  REWRITE_TAC [METIS_PROVE [PAIR] ``(f = g) = !a x y d. f (a,x,y,d) = g (a,x,y,d)``]
+  \\ SIMP_TAC std_ss [reachables_def,MEM] \\ METIS_TAC []);
+
+val WORD_INDUCT = prove(
+ ``!P. P 0w /\ (!n. SUC n < dimword(:'a) ==> P (n2w n) ==> P (n2w (SUC n))) ==>
+       !x:'a word. P x``,
+ STRIP_TAC \\ STRIP_TAC \\ Cases_word \\ Induct_on `n`
+ \\ METIS_TAC [DECIDE ``SUC n < m ==> n < m``]);
+
+val alloc_list_pre_thm = prove(
+  ``!r0 h v1. alloc_list_pre (r0,h,l,v1,v2,v3,v4,v5,v6,v7) =
+      CARD (reachables [v1; v2; v3; v4; v5; v6; v7] (ch_set h)) + w2n r0 <= l \/ (r0 = 0w)``,
+  recInduct WORD_INDUCT \\ REPEAT STRIP_TAC
+  THEN1 (ONCE_REWRITE_TAC [alloc_list_pre_def] \\ METIS_TAC [])
+  \\ ONCE_REWRITE_TAC [alloc_list_pre_def]
+  \\ ASM_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword,DECIDE ``~(SUC n = 0)``,LET_DEF]
+  \\ Q.PAT_ASSUM `SUC n < dimword (:32)` ASSUME_TAC
+  \\ `n < dimword (:32)` by DECIDE_TAC
+  \\ FULL_SIMP_TAC std_ss [w2n_n2w,LESS_MOD]
+  \\ ASM_SIMP_TAC std_ss [ADD1,GSYM word_add_n2w,WORD_ADD_SUB]
+  \\ ASM_SIMP_TAC bool_ss [reachables_fresh,CARD_INSERT,FINITE_reachables,
+       fresh_NOT_IN_reachables,reachables_lemma,n2w_11,LESS_MOD,ZERO_LT_dimword]  
+  \\ DECIDE_TAC);
+
 
 
 val _ = export_theory();

@@ -260,6 +260,20 @@ val aligned_add_1_and_1 = store_thm("aligned_add_1_and_1",
   \\ REWRITE_TAC [GSYM (EVAL ``2*2``),MULT_ASSOC]
   \\ SIMP_TAC (std_ss++SIZES_ss) [MOD_TIMES]);
 
+val tac = 
+  REWRITE_TAC [aligned_THM] \\ NTAC 2 STRIP_TAC
+  \\ ASM_REWRITE_TAC [] \\ POP_ASSUM (fn th => ALL_TAC)
+  \\ Q.SPEC_TAC (`k`,`k`) \\ Cases
+  \\ REWRITE_TAC [word_mul_n2w,word_add_n2w,n2w_and_3,n2w_11]
+  \\ SIMP_TAC (std_ss++SIZES_ss) [MOD_TIMES];
+
+val aligned_add_1_and_3 = store_thm("aligned_add_1_and_3",
+  ``!x. aligned x ==> (x + 1w && 3w = 1w)``,tac);
+val aligned_add_2_and_3 = store_thm("aligned_add_2_and_3",
+  ``!x. aligned x ==> (x + 2w && 3w = 2w)``,tac);
+val aligned_add_3_and_3 = store_thm("aligned_add_3_and_3",
+  ``!x. aligned x ==> (x + 3w && 3w = 3w)``,tac);
+
 val aligned_ADD = store_thm("aligned_ADD",
   ``!x y. aligned x /\ aligned y ==> aligned (x + y)``,
   REWRITE_TAC [aligned_THM] \\ REPEAT STRIP_TAC
@@ -295,6 +309,31 @@ val word_arith_lemma4 = store_thm("word_arith_lemma4",
   \\ REWRITE_TAC [GSYM word_sub_def,word_arith_lemma2]
   \\ REPEAT STRIP_TAC \\ Cases_on `n<m` \\ ASM_REWRITE_TAC [word_sub_def]);
 
+val addr32_ADD_EQ_ZERO_LEMMA = prove(
+  ``!x m. 0 < m /\ w2n x + m < dimword (:'a) ==> ~((x:'a word) + n2w m = 0w)``,
+  Cases_word
+  \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD,word_add_n2w,n2w_11,ZERO_LT_dimword] 
+  \\ DECIDE_TAC);
+
+val addr32_ADD_EQ_ZERO = store_thm("addr32_ADD_EQ_ZERO",
+  ``!x. ~(addr32 x + 1w = 0w) /\ ~(addr32 x + 2w = 0w) /\ ~(addr32 x + 3w = 0w)``,
+  Cases_word \\ REWRITE_TAC [addr32_n2w] \\ REPEAT STRIP_TAC \\ POP_ASSUM MP_TAC 
+  \\ REWRITE_TAC [] \\ MATCH_MP_TAC addr32_ADD_EQ_ZERO_LEMMA
+  \\ `4 * n < 4 * dimword (:30)` by DECIDE_TAC       
+  \\ FULL_SIMP_TAC (bool_ss++SIZES_ss) [w2n_n2w,LESS_MOD,EVAL ``4 * 1073741824``]
+  \\ DECIDE_TAC);
+
+val addr32_ADD_AND_EQ_ZERO = store_thm("addr32_ADD_AND_EQ_ZERO",
+  ``!x. ~(addr32 x + 1w && 3w = 0w) /\ ~(addr32 x + 2w && 3w = 0w) /\ ~(addr32 x + 3w && 3w = 0w)``,
+  Cases_word \\ SIMP_TAC std_ss [addr32_n2w,word_add_n2w,n2w_and_3]
+  \\ ONCE_REWRITE_TAC [MULT_COMM] \\ SIMP_TAC std_ss [MOD_TIMES] \\ EVAL_TAC);
+
+(*
+
+six characters per symbol:
+
+EVAL ``31**6 < 2**30``      
+*)
 
 
 val _ = export_theory();

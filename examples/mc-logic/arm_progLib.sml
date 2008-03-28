@@ -528,6 +528,7 @@ fun INST_LDM_STM do_eval th = let
 
 val show_enc = ref false;
 val show_code = ref true;
+val show_hex = ref false;
 
 fun blanks 0 = [] | blanks n = #" "::blanks (n-1);
 fun blank_str n = implode (blanks (if n < 0 then 0 else n));
@@ -591,12 +592,15 @@ fun enc_list_to_string tm =
       val s = instructionSyntax.dest_instruction NONE (cdr tm)            
       val s = hd (String.fields (fn s => if s = #" " then true else false) s) 
       in s ^ " " ^ j end
+    fun pad8 s = left_pad_string #"0" s 8
+    val enc_to_hex = if not (!show_hex) then (fn x => "") else
+      (pad8 o Arbnum.toHexString o numSyntax.dest_numeral o cdr o cdr o concl o EVAL)
     fun enc_to_string (tm,i) =
       branch_to_string ``B k1 (n2w k2)`` (tm,i) handle e =>
       branch_to_string ``BL k1 (n2w k2)`` (tm,i) handle e =>
       instructionSyntax.dest_instruction NONE (cdr tm)
     fun inst_to_string (tm,(result,i)) = 
-      (result @ [line_number i ^ ":  " ^ enc_to_string (tm,i)], i+1)
+      (result @ [enc_to_hex tm ^ "  " ^ line_number i ^ ":  " ^ enc_to_string (tm,i)], i+1)
   in fst (foldl inst_to_string ([],0) xs) end;    
 
 fun print_enc_list sys (gl,gc,gr) d pps t = 

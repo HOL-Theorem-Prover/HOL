@@ -114,6 +114,15 @@ fun find_std_name_subst tm = let
     val subst_str = "`"^ z_str ^"`|->`"^var_str^i^"`"  
     in ([subst],[subst_str]) end handle e => ([],[]) end
 
+fun find_some_subst tm ps = let
+  val (tm1,tm2) = dest_comb tm
+  fun find_some_subst_aux [] = hd []
+    | find_some_subst_aux (x::xs) = 
+    let val (x1,x2) = dest_comb x
+    in if x1 = tm1 then match_term x2 tm2 
+                   else find_some_subst_aux xs end  
+  in find_some_subst_aux ps end;
+
 fun standardise_names name terms th = let
   (* rename variables, e.g. R 1w y3 --> R 1w r1 *)
   fun renamer (tm,(th,xs,zs)) = let
@@ -145,10 +154,13 @@ val th = th1
 val keep_status = true
 
 val (var_name,tm) = (abbrevs xs)
+val xs = tl xs
+val tm = hd xs
 *)
 
 fun ABBREV_POSTS prefix th = let
   val (th,b) = let
+    val ps = (list_dest_STAR o pre_ARM_PROG o concl) th
     val xs = (list_dest_STAR o post1_ARM_PROG o concl) th
     val xs = xs @ (list_dest_STAR o post2_ARM_PROG o concl) th handle e => xs
     fun abbrevs [] = hd [] 
@@ -184,6 +196,7 @@ fun ABBREV_STATUS prefix th = let
   in th end
 
 (*
+val th = ARM_HEAP_alloc
 val prefix = "tata@"
 val (i,th,th2) = (hd o tl o tl) thms
 val th = UNABBREV_ALL th
@@ -191,7 +204,29 @@ val th = ABBREV_ALL prefix th
 val th = th1
 *)
 
+fun ABBREV_NONSTANDARD prefix th = let
+  val ps = (list_dest_STAR o pre_ARM_PROG o concl) th
+  val xs = (list_dest_STAR o post1_ARM_PROG o concl) th
+  val xs = xs @ (list_dest_STAR o post2_ARM_PROG o concl) th handle e => xs
+  val ys = map (fn x => get_sep_domain x handle e => x) xs
+  fun is_standard x = mem (fst (dest_const x)) ["S","SEP_F","cond"] handle e =>
+    mem (fst (dest_const (car x))) ["MEMORY","M","R"]
+  val y = hd (filter (not o is_standard) ys)
+  val tm1 = (cdr o hd o filter (fn x => car x = y handle e => false)) ps
+  val tm2 = (cdr o hd o filter (fn x => car x = y handle e => false)) xs
+  val tm1s = list_dest_pair tm1
+  val tm2s = list_dest_pair tm2
+  fun prefix_name tm = mk_var(prefix^fst (dest_var tm),type_of tm)
+  fun prefix_pairs (x,y) = if x = y then (x,y) else (prefix_name x,y)
+  val tms = map prefix_pairs (zip tm1s tm2s)
+  val rw = mk_eq (list_mk_pair (map snd tms),list_mk_pair (map fst tms)) 
+  val th = CONV_RULE (ONCE_DEPTH_CONV (REWRITE_CONV [ASSUME rw])) th    
+  val th = RW [GSYM PAIR_EQ] (RW [PAIR_EQ] (DISCH rw th))
+  val th = UNDISCH (CONV_RULE (RATOR_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) th)
+  in th end handle e => th;
+
 fun ABBREV_ALL prefix th = let 
+  val th = ABBREV_NONSTANDARD prefix th
   val terms = (list_dest_STAR o code_ARM_PROG o concl) th
   val terms = (list_dest_STAR o pre_ARM_PROG o concl) th @ terms
   fun is_MEMORY tm = ((fst o dest_const o fst o dest_comb o fst o dest_comb) tm = "MEMORY") handle e => false
@@ -274,7 +309,8 @@ fun MOVE_COMPOSE2 th1 th2 xs1 xs2 ys1 ys2 = let
 (* others *)
 
 fun COMPILER_FORMAT_DEF th = 
-  CONV_RULE (REWRITE_CONV [LET_DEF] THENC DEPTH_CONV (FORCE_PBETA_CONV)) th;
+  CONV_RULE (REWRITE_CONV [LET_DEF] THENC DEPTH_CONV (FORCE_PBETA_CONV)
+             THENC REWRITE_CONV [FST,SND]) th;
 
 fun list_dest_forall tm = let
   val (v,x) = dest_forall tm 
@@ -670,7 +706,7 @@ fun generate_basic_specs seq keep_status code = let
   val n = 2
   val s = "str r1, [r0, #4]!"
   val seq = true
-  val s = "adds r1,r2,r3"
+  val s = "add r1,r2,r3"
   val s = hd (rev code)
   val name = "foo"
   val code = ["str r1, [r0], #4 | x","str r2, [r0], #4 | x","strne r3, [r0], #4 | x"]
@@ -1066,7 +1102,8 @@ fun rename_and_fill_preconditions thms def = let
   val in_list = get_input_list def
   val pre_names = map (term_to_name o get_sep_domain) pre_elements
   fun g x = not (mem x pre_names) andalso not (mem x ["sN","sZ","sC","sV"])
-  val extras = map (name_to_term term_type) (filter g in_list)
+  val extras = map (name_to_term term_type) 
+        (filter (can (name_to_term term_type)) (filter g in_list))
   val pre_elements = pre_elements @ extras
   (* insert missing elements into specs *)
   fun delete xs ys = let
@@ -1087,6 +1124,11 @@ fun list_union [] xs = xs
   | list_union (y::ys) xs = 
       if mem y xs then list_union ys xs else list_union ys (y::xs);
 
+fun is_standard tm = let
+  val s = dest_const tm handle e => dest_const (car tm) 
+          handle e => dest_const (car (car tm)) 
+  in mem (fst s) ["SEP_F","S","M","R","MEMORY","cond","SEP_HIDE"] end;
+
 fun hide_pre_post_elements thms def stays = let
   val in_list = list_union stays (get_input_list def @ ["sp"])
   val out_list = list_union stays (get_output_list def @ ["sp"])
@@ -1104,7 +1146,7 @@ fun hide_pre_post_elements thms def stays = let
   (* hide posts and pres *)
   fun get_hide_list xs names name func_name = let
     fun h tm = (not o is_SEP_HIDE o fst o dest_comb) tm handle e => true
-    val xs = filter h xs
+    val xs = filter is_standard (filter h xs)
     fun h tm = not (mem ((term_to_name o fst o dest_comb) tm) names) handle e => false
     fun k tm = "`" ^ term_to_string tm ^ "`"
     val xs = map (fst o dest_comb) (filter h xs) 
@@ -1168,17 +1210,20 @@ fun get_pre_post_terms def_name thms def def2 strs = let
     val x = term_to_name tm 
     val xs = filter (fn y => fst y = x) out
     val y = snd (hd xs) 
-    in mk_comb(tm,y) end handle e => tm
+    in mk_comb(tm,y) end handle e => 
+    if is_standard tm then tm else let
+      val (tm1,tm2) = dest_comb tm
+      val tm3 = (cdr o hd o filter (fn x => car x = tm1 handle e => false)) ps
+      fun find_and_replace x =
+        snd (hd (filter (fn y => fst y = fst (dest_var x) handle e => false) out))
+        handle e => x;
+      val tm = list_mk_pair (map find_and_replace (list_dest_pair tm3))
+      in mk_comb (tm1,tm) end
   val qs = map f qs  
   (* wrap it up *)
   val pre_tm = list_mk_STAR ps
   val post_tm = list_mk_STAR qs
-  (* print it out *)
-  val s1 = "  val pre  = `" ^ replace_char #"\n" " " (term_to_string pre_tm) ^ "`\n"
-  val s2 = "  val post = `" ^ replace_char #"\n" " " (term_to_string post_tm) ^ "`\n"
-  val s3 = "  val def  = COMPILER_FORMAT_DEF " ^ def_name ^ "\n"
-  val strs = s1::s2::s3::strs
-  in (pre_tm,post_tm,strs) end;
+  in (pre_tm,post_tm,[]) end;
 
 fun RAND_SIMP_SEP_IMP2 def th = let
   val cc = RAND_CONV (ONCE_REWRITE_CONV [def])
@@ -1204,9 +1249,7 @@ fun weaken_strengthen thms def' def2' pre pre_tm post_tm = let
   fun dup (name,b,th,strs) = let
     val th = RW [GSYM ARM_PROG_MOVE_COND] (DISCH (mk_conj(``1+1=2``,pre)) th)
     val th = DUPLICATE_COND th
-    val str1 = ["  val "^name^" = RW [GSYM ARM_PROG_MOVE_COND] (DISCH ``1+1=2`` "^name^")\n"]
-    val str2 = ["  val "^name^" = DUPLICATE_COND "^name^"\n"]
-    in (name,b,th,strs @ str1 @ str2) end
+    in (name,b,th,strs) end
   val thms = map dup thms  
   (* weaken posts in base cases *)
   fun weak (name,true,th,strs) = (true,(name,true,th,strs))
@@ -1232,17 +1275,15 @@ fun weaken_strengthen thms def' def2' pre pre_tm post_tm = let
       SIMP_TAC (bool_ss++star_ss) [SEP_IMP_REFL])
     val th = MATCH_MP th lemma
     val th = PRE_CONV_RULE (ONCE_REWRITE_CONV [STAR_COMM]) th
-    val str1 = ["  val "^name^" = PRE_CONV_RULE (ONCE_REWRITE_CONV [STAR_COMM]) "^name^"\n"]
-    val str2 = ["  val "^name^" = APP_PART_STRENGTHEN "^name^" pre (SIMP_TAC (bool_ss++star_ss) [SEP_IMP_REFL])\n"]
-    val str3 = ["  val "^name^" = RW [EVAL ``1+1``] "^name^"\n"] 
-    val (th,str3) = if b then (RW [EVAL ``1+1``] th,str3) else (th,[]) 
-    in (name,b,th,strs @ str1 @ str2 @ str1 @ str3) end
+    val th = if b then RW [EVAL ``1+1``] th else th
+    in (name,b,th,strs) end
   val thms = map strength thms
   (* add sidecond *)
   val IMP_COMM = RW [GSYM AND_IMP_INTRO] (RW1 [CONJ_COMM] AND_IMP_INTRO)
   fun add_sidecond (name,b,th,strs) = let
+    val th = SIMP_RULE (bool_ss++sep2_ss) [] th
     val th = if hyp th = [] then DISCH ``2+2=4`` th else DISCH_ALL th
-    val th = SIMP_RULE (bool_ss++sep2_ss) [AND_IMP_INTRO] th
+    val th = RW [AND_IMP_INTRO] th
     val th = RW1 [IMP_COMM] (RW [ARM_PROG_MOVE_COND] th)
     val tm1 = (fst o dest_imp o concl) th
     val th = UNDISCH th
@@ -1982,12 +2023,23 @@ fun decompiler_define name tm1 tm2 (SOME tac) = let
   in raise TERMINATION_ERR end
   
 (*
+  val keep_status = true
+  val keep_status = false
+
   val hide_list = []
   val keep_status = false
-  val keep_status = true
   val (pre,termination_tac) = (`T`,NONE)
-  val name = "foo"
-  val code = ["adcs r1,r2,r3"]
+  val name = "foo2"
+  val qcode = `
+cmp r0,#0
+beq 16
+insert: ACA
+sub r0,r0,#1
+b -16
+`
+
+
+["add r1,r2,r3","insert: ACA"]
   arm_decompiler name code (pre,termination_tac,keep_status,hide_list)
 *)
 

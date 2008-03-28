@@ -8,6 +8,7 @@ sig
     val arm_compile         : thm -> thm -> arm_code_format -> thm * string list
     val arm_flatten_code    : unit -> thm
     val reset_compiled      : unit -> unit
+    val add_compiled        : string -> thm -> unit
 
     val arm_decompiler        : string -> term frag list -> tactic option -> 
                                 string list -> term frag list -> thm * thm * thm
