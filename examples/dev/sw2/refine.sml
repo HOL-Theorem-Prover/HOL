@@ -1,4 +1,3 @@
-
 structure refine :> refine = 
 struct
 

@@ -279,8 +279,8 @@ val defn_const =
  *---------------------------------------------------------------------------*)
 
 fun mk_datatype_info {ax,case_def,case_cong,induction,
-               nchotomy,size,encode,lift,one_one,
-               fields, accessors, updates, distinct} =
+                      nchotomy,size,encode,lift,one_one,
+                      fields, accessors, updates, distinct} =
   let val (ty,ty_names,constructors) = basic_info case_def
       val inj = case one_one of NONE => [] | SOME x => [x]
       val D  = case distinct of NONE => [] | SOME x => CONJUNCTS x
@@ -329,7 +329,8 @@ fun gen_datatype_info {ax, ind, case_defs} =
                  "Number of theorems automatically proved doesn't match up"
      val tyinfo_1 = mk_datatype_info
            {ax=ORIG ax, induction=ORIG ind,
-            case_def=hd case_defs, case_cong=hd case_congs, nchotomy=hd nchotomyl,
+            case_def = hd case_defs, case_cong = hd case_congs, 
+            nchotomy = hd nchotomyl,
             size=NONE, encode=NONE, lift=NONE,
             fields=[], accessors=[],updates=[],
             one_one=hd one_ones, distinct=hd distincts}
@@ -402,9 +403,10 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
 
    begin_block CONSISTENT 1;
    add_string "Induction:"; add_break (1,0);
-       (case induction
-         of ORIG thm  => pp_thm thm
-          | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp))); end_block();
+    (case induction
+      of ORIG thm  => pp_thm thm
+       | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp))); 
+   end_block();
    add_break(1,0);
    begin_block CONSISTENT 1; add_string "Case completeness:";
    add_break (1,0); pp_thm nchotomy; end_block();
@@ -455,7 +457,7 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
 
 
 (*---------------------------------------------------------------------------*)
-(* Databases of facts. We have separate ones for datatypes and non-datatypes *)
+(* Database of facts.                                                        *)
 (*---------------------------------------------------------------------------*)
 
 type typeBase = tyinfo TypeNet.typenet
@@ -463,6 +465,15 @@ type typeBase = tyinfo TypeNet.typenet
 val empty : typeBase = TypeNet.empty
 
 fun next_ty ty = mk_vartype(Lexis.tyvar_vary (dest_vartype ty))
+
+(*---------------------------------------------------------------------------*)
+(* Rename type variables in a type so that they occur in alphabetical order, *)
+(* from left-to-right, and start from 'a. Example:                           *)
+(*                                                                           *)
+(*  normalise_ty ``:('k#'a) list`` = ``:('a#'b) list                         *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
 fun normalise_ty ty = let
   fun recurse (acc as (dict,usethis)) tylist =
       case tylist of
@@ -504,6 +515,7 @@ fun prim_get (db:typeBase) (thy,tyop) =
 
 fun add db (d as DFACTS x) = TypeNet.insert(db, normalise_ty (ty_of d), d)
   | add db (NFACTS _) = raise ERR "add" "not a datatype"
+
 fun listItems db = map #2 (TypeNet.listItems db)
 
 fun get db s = let
@@ -531,12 +543,12 @@ fun mymatch pat ty = let
 in
   i @ (map (fn ty => ty |-> ty) sames)
 end
+
 fun instsize i =
     List.foldl (fn ({redex,residue},acc) => tysize residue + acc) 0 i
 
 fun check_match ty (pat, data) =
     SOME(instsize (mymatch pat ty), data) handle HOL_ERR _ => NONE
-
 
 fun fetch tbase ty =
     case TypeNet.match (tbase, ty) of
@@ -853,21 +865,20 @@ fun is_case1 tybase M =
 fun is_case tybase M = is_literal_case M orelse is_case1 tybase M
 
 local fun dest tybase (pat,rhs) =
-  let val patvars = free_vars pat
-  in if is_case tybase rhs
-     then let val (case_tm,exp,clauses) = dest_case tybase rhs
-              val (pats,rhsides) = unzip clauses
-          in if is_eq exp
-             then let val (v,e) = dest_eq exp
-                      val fvs = free_vars v
-                      val pat0 = if is_var v then subst [v |-> e] pat
-                                             else e (* fails if pat ~= v *)
-                      (* val theta = fst (match_term v e) handle HOL_ERR _ => [] *)
+ let val patvars = free_vars pat
+ in if is_case tybase rhs
+    then let val (case_tm,exp,clauses) = dest_case tybase rhs
+             val (pats,rhsides) = unzip clauses
+         in if is_eq exp
+            then let val (v,e) = dest_eq exp
+                     val fvs = free_vars v
+                     val pat0 = if is_var v then subst [v |-> e] pat
+                                else e (* fails if pat ~= v *)
+                  (* val theta = fst (match_term v e) handle HOL_ERR _ => [] *)
                   in if null (subtract fvs patvars)
-                        (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
-                     then flatten
-                            (map (dest tybase)
-                               (zip [pat0, pat] rhsides))
+                  (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
+                     then flatten (map (dest tybase)
+                                       (zip [pat0, pat] rhsides))
                      else [(pat,rhs)]
                   end
              else let val fvs = free_vars exp
@@ -876,7 +887,7 @@ local fun dest tybase (pat,rhs) =
                      then flatten
                             (map (dest tybase)
                                (zip (map (fn p =>
-                                           subst (fst (match_term exp p)) pat) pats)
+                                      subst (fst (match_term exp p)) pat) pats)
                                     rhsides))
                      else [(pat,rhs)]
                   end
@@ -884,7 +895,7 @@ local fun dest tybase (pat,rhs) =
           end
      else [(pat,rhs)]
   end
-  handle e => raise (Feedback.wrap_exn "TypeBasePure" "strip_case(dest)" e)
+  handle e => raise Feedback.wrap_exn "TypeBasePure" "strip_case(dest)" e
 in
 fun strip_case1 tybase M =
  (case total (dest_case1 tybase) M
@@ -988,9 +999,9 @@ fun is_record tybase = can (dest_record tybase);
 
 fun mk_record tybase (ty,fields) =
  if is_record_type tybase ty
-  then let val (Thy,Tyop) = type_names ty
-        val upd_names = map (fn p => String.concat [Tyop,"_",fst p,"_fupd"]) fields
-        val updfns = map (fn n => prim_mk_const{Name=n,Thy=Thy}) upd_names
+ then let val (Thy,Tyop) = type_names ty
+        val fupds = map (fn p => String.concat[Tyop,"_",fst p,"_fupd"]) fields
+        val updfns = map (fn n => prim_mk_const{Name=n,Thy=Thy}) fupds
         fun ifn c = let val (_,ty') = strip_fun (type_of c)
                         val theta = match_type ty' ty
                     in inst theta c

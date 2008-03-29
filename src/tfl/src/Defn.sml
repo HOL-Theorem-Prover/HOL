@@ -675,7 +675,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      (* and now induction *)
 
      val aux_ind = Induction.mk_induction theory1
-                       {fconst=faux_const, R=R1,SV=SV,
+                       {fconst=faux_const, R=R1, SV=SV,
                         pat_TCs_list=pat_TCs_list}
      val ics = strip_conj(fst(dest_imp(snd(dest_forall(concl aux_ind)))))
      fun dest_ic tm = if is_imp tm then strip_conj (fst(dest_imp tm)) else []
@@ -1128,9 +1128,8 @@ fun prim_mk_defn stem eqns =
        (free_in f rhs andalso
         raise ERR "mk_defn" "Simple nullary definition recurses") orelse
        (let val fvs = free_vars rhs
-        in
-              not (null fvs) andalso
-              raise ERR "mk_defn"
+        in not (null fvs) andalso
+           raise ERR "mk_defn"
                     ("Free variables (" ^
                      String.concat (Lib.commafy (map (#1 o dest_var) fvs)) ^
                      ") on RHS of nullary definition")
@@ -1317,17 +1316,17 @@ fun parse_defn absyn0 =
    (tm, fn_names)
  end;
 
-fun Hol_defn bindstem q =
+fun Hol_defn stem q =
  let val absyn0 = Parse.Absyn q
      val eqns = fst (parse_defn absyn0)
  in
-  mk_defn bindstem eqns
+  mk_defn stem eqns
   handle e => raise wrap_exn_loc "Defn" "Hol_defn" 
                        (Absyn.locn_of_absyn absyn0) e
  end;
 
-fun Hol_Rdefn bindstem Rquote eqs_quote =
-  let val defn = Hol_defn bindstem eqs_quote
+fun Hol_Rdefn stem Rquote eqs_quote =
+  let val defn = Hol_defn stem eqs_quote
   in case reln_of defn
       of NONE => defn
        | SOME Rvar =>

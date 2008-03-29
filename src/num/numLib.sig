@@ -32,4 +32,4 @@ sig
 
  val prefer_num               : unit -> unit
  val deprecate_num            : unit -> unit
-end;
+end

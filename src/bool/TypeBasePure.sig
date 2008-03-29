@@ -76,9 +76,9 @@ sig
 
    val empty           : typeBase
    val insert          : typeBase -> tyinfo -> typeBase
-   val fetch           : typeBase -> hol_type -> tyinfo option
-
    val add             : typeBase -> tyinfo -> typeBase
+
+   val fetch           : typeBase -> hol_type -> tyinfo option
    val prim_get        : typeBase -> string * string -> tyinfo option
    val get             : typeBase -> string -> tyinfo list
        (* get returns list of tyinfos for types with that tyop *)

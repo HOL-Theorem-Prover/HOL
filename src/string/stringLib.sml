@@ -62,6 +62,9 @@ val string_rewrites = STRLEN_DEF::TypeBase.case_def_of ``:string``::
 val _ = computeLib.add_funs string_rewrites;
 val _ = computeLib.add_convs [(ord_tm, 1, ORD_CHR_CONV)];
 
+val _ = Defn.const_eq_ref := 
+          (!Defn.const_eq_ref ORELSEC char_EQ_CONV ORELSEC string_EQ_CONV);
+
 (*---------------------------------------------------------------------------
       Examples.
 

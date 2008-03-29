@@ -3245,13 +3245,13 @@ val ITSET_IND = fetch "-" "ITSET_ind";
 
 val ITSET_THM =
 W (GENL o rev o free_vars o concl)
-  (DISCH_ALL(ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] ITSET_def));
+  (DISCH_ALL(ASM_REWRITE_RULE [ASSUME ``FINITE s``] ITSET_def));
 
 val _ = save_thm("ITSET_IND",ITSET_IND);
 val _ = save_thm("ITSET_THM",ITSET_THM);
 val _ = save_thm("ITSET_EMPTY",
                   REWRITE_RULE []
-                      (MATCH_MP (SPEC (Term`{}`) ITSET_THM) FINITE_EMPTY));
+                      (MATCH_MP (SPEC ``{}`` ITSET_THM) FINITE_EMPTY));
 
 (* Could also prove by
 

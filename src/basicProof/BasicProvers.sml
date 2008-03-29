@@ -91,6 +91,8 @@ fun grab P f v =
 
 fun ASSUM_TAC f P = W (fn (asl,_) => grab P f NO_TAC asl)
 
+val VAR_EQ_TAC = ASSUM_TAC VSUBST_TAC var_eq;
+
 fun ASSUMS_TAC f P = W (fn (asl,_) =>
   case filter P asl
    of []     => NO_TAC
@@ -100,8 +102,6 @@ fun CONCL_TAC f P = W (fn (_,c) => if P c then f else NO_TAC);
 
 fun LIFT_SIMP ss tm =
   UNDISCH_THEN tm (STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []);
-
-val VAR_EQ_TAC = ASSUM_TAC VSUBST_TAC var_eq;
 
 local
   fun DTHEN ttac = fn (asl,w) =>
@@ -303,7 +303,7 @@ fun PRIM_STP_TAC ss finisher =
     PRIM_NORM_TAC: preliminary attempt at keeping the goal in a
     fully constructor-reduced format. The idea is that there should
     be no equations between constructor terms anywhere in the goal.
-    (This is what PRIM_STP_TAC does.)
+    (This is what PRIM_STP_TAC already does.)
 
     Also, no conditionals should occur in the resulting goal.
     This seems to be an expensive test, especially since the work

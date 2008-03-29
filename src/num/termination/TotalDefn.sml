@@ -154,11 +154,12 @@ val WF_thms =
 
 val paired_forall_ss =
  let open simpLib pairTools
+     val fvar = mk_var("f",alpha-->beta-->bool)
  in
     conv_ss 
       {name  = "ELIM_TUPLED_QUANT_CONV (remove paired quantification)",
        trace = 2,
-       key   = SOME ([],``$! (UNCURRY (f:'a->'b->bool))``),
+       key   = SOME ([],``$! (UNCURRY ^fvar)``),
        conv  = K (K ELIM_TUPLED_QUANT_CONV)}
  end;
 
@@ -344,7 +345,8 @@ fun known_fun tm =
 
 fun relevant (tm,_) = known_fun tm;
 
-local open Defn numSyntax simpLib boolSimps
+local 
+ open Defn numSyntax simpLib boolSimps
  fun tysize ty = TypeBasePure.type_size (TypeBase.theTypeBase()) ty
  fun size_app v = mk_comb(tysize (type_of v),v)
 in

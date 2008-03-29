@@ -43,8 +43,6 @@ fun pp_goalstack ppstrm (GOALSTACK g) = project (Bwd.pp_gstk ppstrm) g;
 val set_goal_pp = Bwd.set_goal_pp;
 val std_goal_pp = Bwd.std_pp_goal;
 
-
-
 (*---------------------------------------------------------------------------
  * A type that collects groups of goalstacks into one place.
  *---------------------------------------------------------------------------*)

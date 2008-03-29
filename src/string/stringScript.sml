@@ -161,6 +161,13 @@ val STRLEN_def = Define`
 val _ = export_rewrites ["STRLEN_def"]
 val STRLEN_DEF = save_thm("STRLEN_DEF", STRLEN_def);
 
+val STRLEN_EQ_0 = Q.store_thm
+("STRLEN_EQ_0",
+ `!x. (STRLEN x = 0) = (x="")`,
+ Cases THEN SRW_TAC [][STRLEN_DEF]);
+
+val _ = export_rewrites ["STRLEN_EQ_0"]
+
 (*---------------------------------------------------------------------------*)
 (* Destruct a string. This will be used to re-phrase the HOL development     *)
 (* with an ML definition of DEST_STRING in terms of the Basis String struct. *)
@@ -290,7 +297,7 @@ val STRCAT_EQ_EMPTY = Q.store_thm
 ("STRCAT_EQ_EMPTY",
  `!x y. (STRCAT x y = "") = (x="") /\ (y="")`,
  SRW_TAC [][STRCAT]);
-
+val _ = export_rewrites ["STRCAT_EQ_EMPTY"]
 (*---------------------------------------------------------------------------
      String length and concatenation
  ---------------------------------------------------------------------------*)

@@ -2,8 +2,6 @@
      A battery of tests for the "Define" function in bossLib.
  ---------------------------------------------------------------------------*)
 
-open TotalDefn bossLib;
-
 (*---------------------------------------------------------------------------
         First, a few straightforward recursions, some with 
         extended pattern matching.
@@ -44,6 +42,7 @@ val Tot_def =
      (Tot (0::t) = Tot t) /\
      (Tot (SUC n::t) = 1 + Tot (n::t))`;
 
+(* FAIL *)
 val Tot_def = 
   Define
     `(Tot [] = 0) /\
@@ -80,7 +79,6 @@ val percent2 =
      (%% (SUC x) 0  = SUC x)  /\
      (%% (SUC x) (SUC y) = if y <= x then %% (x-y) (SUC y) 
                                      else %% (SUC x) (y-x))`;
-
 val map2_def = 
  Define
   `(map2(f, []:'a list,L:'b list) = []:'c list) /\
@@ -101,8 +99,8 @@ Define
                   else part(P,rst,  l1,  h::l2))`;
 
 val div_def = Define
-   `(div(0,x) = (0,0)) /\
-    (div(SUC x, y) = 
+   `(div (0,x) = (0,0)) /\
+    (div (SUC x, y) = 
       let (q,r) = div(x,y)
       in (if y <= SUC r then (SUC q,0) else (q, SUC r)))`;
 
@@ -135,6 +133,7 @@ val min_def = Define
 
 Hol_datatype `colour = Red | White | Blue`;
 
+(* FAIL *)
 val Swap_def =
  Define 
    `(Swap  []                = NONE) 
@@ -360,7 +359,7 @@ Hol_datatype `prop = VAR of 'a
                    | OR  of prop => prop`;
 
 val Pr_def = 
- Defn.Hol_defn "Pr"
+ Hol_defn "Pr"
     `(Pr vl [] (VAR v::r)   vr = Pr vl [] r (v::vr))
  /\  (Pr vl [] (NOT x::r)   vr = Pr vl [x] r vr)
  /\  (Pr vl [] (OR x y::r)  vr = Pr vl [] (x::y::r) vr)
@@ -514,7 +513,7 @@ val N = Define `N x = if x>100 then x-10 else N(N(x+11))`; (* Fails *)
 val Ndef = Hol_defn "ninety1"
                     `N x = if x>100 then x-10 else N(N(x+11))`;
 
-xDefine "percentage" `% x = if x>100 then x-10 else %(%(x+11))`;  
+xDefine "percentage" `% x = if x>100 then x-10 else %(%(x+11))`;
 
 (*---------------------------------------------------------------------------
               Mutual recursion
@@ -554,19 +553,15 @@ val nnf_mutrec_eqns =
       been installed.
  ---------------------------------------------------------------------------*)
 
-val sumf_cong = prove
-(Term
-  `!l1 l2 f f'. 
+val sumf_cong = Q.prove
+(`!l1 l2 f f'. 
     (l1=l2) /\ (!x. MEM x l2 ==> (f x = f' x))
           ==>
     (sumf f l1 = sumf f' l2)`,
-Induct 
-  THEN NTAC 2 (RW_TAC list_ss [sumf_def,listTheory.MEM]));
+Induct THEN NTAC 2 (RW_TAC list_ss [sumf_def,listTheory.MEM]));
 
-local open DefnBase
-in 
-  val _ = write_congs (sumf_cong::read_congs())
-end;
+DefnBase.add_cong sumf_cong;
+
   
 (*---------------------------------------------------------------------------
         Now some "higher-order recursive" functions over a type of 
@@ -580,24 +575,23 @@ val _ = Hol_datatype `ltree = LNODE of 'a => ltree list`;
 val ltree_size_def = snd (TypeBase.size_of ``:'a ltree``);
 
 val ltree_map_def =
-  Defn.Hol_defn "ltree_map"
-    `ltree_map f (LNODE v tl) = LNODE (f v) (MAP (ltree_map f) tl)`;
+ tDefine 
+    "ltree_map"
+    `ltree_map f (LNODE v tl) = LNODE (f v) (MAP (ltree_map f) tl)`
+    (WF_REL_TAC `measure \(v,y). ltree_size (\v. 0) y`
+      THEN Induct 
+      THEN RW_TAC list_ss [MEM,list_size_def,ltree_size_def]
+      THENL [ARITH_TAC,
+             METIS_TAC [DECIDE ``x < 1+y ==> x < y + (z + 2)``]]);
 
-val (ltree_map_eqn, ltree_map_ind) =
- Defn.tprove
- (ltree_map_def, 
-   WF_REL_TAC `^(hd(tl (TotalDefn.guessR ltree_map_def)))`
-    THEN Induct 
-    THEN RW_TAC list_ss [MEM,list_size_def,ltree_size_def]
-    THENL [ARITH_TAC,
-           PROVE_TAC [DECIDE (Term`x < 1+y ==> x < y + (z + 2)`)]]);
+val ltree_map_ind = fetch "-" "ltree_map_ind";
 
 val ltree_map_o = Q.prove(
 `!g t f. ltree_map f (ltree_map g t) = ltree_map (f o g) t`,
 recInduct ltree_map_ind
-  THEN RW_TAC std_ss [ltree_map_eqn]
+  THEN RW_TAC std_ss [ltree_map_def]
   THEN Induct_on `tl` 
-  THEN ZAP_TAC list_ss [listTheory.MEM]);
+  THEN ZAP_TAC list_ss [MEM]);
 
 val ltree_occurs_def =
  Hol_defn "ltree_occurs"
@@ -609,18 +603,17 @@ val ltree_occurs_def =
        `ltree_occurs (LNODE v tl) = (x=v) \/ EXISTS ltree_occurs tl`
  ---------------------------------------------------------------------------*)
 
-val collect_defn =
- Hol_defn "collect"
-    `collect f (LNODE v tl) = FOLDR (\h a. APPEND (collect f h) a) [f v] tl`;
-
-val (collect_eqn, collect_ind) =
- Defn.tprove
- (collect_defn,
-  WF_REL_TAC `^(Lib.el 2 (TotalDefn.guessR ltree_map_def))`
+val collect_def =
+ tDefine 
+    "collect"
+    `collect f (LNODE v tl) = FOLDR (\h a. collect f h ++ a) [f v] tl`
+ (WF_REL_TAC `measure (ltree_size (\v.0) o SND)`
     THEN Induct 
     THEN RW_TAC list_ss [MEM,list_size_def,ltree_size_def]
     THENL [ARITH_TAC,
-           PROVE_TAC [ARITH_PROVE (Term`x < 1+y ==> x < y + (z + 2)`)]]);
+           PROVE_TAC [DECIDE ``x < 1+y ==> x < y + (z + 2)``]]);
+
+val collect_ind = fetch "-" "collect_ind";
 
 val ltree_size_def2 =
  Hol_defn "ltree_size2"
@@ -637,9 +630,6 @@ val ltree_SIZE_def =
 
 load "stringTheory";
 
-val _ = set_fixity "<>" (Infixl 500);
-val _ = overload_on ("<>", Term`APPEND`);
-
 Hol_datatype `regexp =
    Any                       (* Any character *)
  | Epsilon                   (* Empty string *)
@@ -652,7 +642,7 @@ Hol_datatype `regexp =
 val SPLIT_def = Define
   `(SPLIT P [] acc = NONE) /\
    (SPLIT P (h::t) acc = if P h then SOME (acc, h, t)
-                                else SPLIT P t (acc<>[h]))`;
+                                else SPLIT P t (acc++[h]))`;
 
 val csp_def = Define
   `(csp [] ns = []) 
@@ -672,7 +662,7 @@ val nS_defn = Hol_defn
     || SOME (l1, (bad_r, bad_w, bad_s), z) ->
          case SPLIT (\x. ?s. x = (bad_r, bad_w, s)) l1 []
           of NONE -> []
-          || SOME (x1, (rl,w1,s1), y) -> nS (x1 <> [(rl, w1, s1)] <> csp z s1)`;
+          || SOME (x1, (rl,w1,s1), y) -> nS (x1 ++ [(rl, w1, s1)] ++ csp z s1)`;
 
 Hol_defn "foo" 
   `foo L = case SPLIT ($= 3) L []
@@ -680,7 +670,7 @@ Hol_defn "foo"
             || SOME(L1,x,L2) ->
                 case SPLIT ($=2) L1 []
                  of NONE -> []
-                 || SOME (L1a,y, L1b) -> foo (L1a <> [y] <> L2)`;
+                 || SOME (L1a,y, L1b) -> foo (L1a ++ [y] ++ L2)`;
 
 Hol_defn "foo" 
   `bar L = case L 
@@ -688,3 +678,105 @@ Hol_defn "foo"
             || h::t -> case t
                         of [] -> 2
                         || h1::t1 -> bar t1`;
+
+
+(*---------------------------------------------------------------------------*)
+(* Multiple rebindings of variables                                          *)
+(*---------------------------------------------------------------------------*)
+
+load "wordsTheory";
+
+val _ = Define `
+  field_neg (r1:word32,r10:word32) =
+    if r1 = 0w then (r1,r10) else 
+      let r1 = r10 - r1 in (r1,r10)`;
+
+val _ = Define `
+  field_add (r0:word32,r1:word32,r10:word32) =
+    let r0 = r1 + r0 in
+      if r0 < r10 then (r0,r10) else 
+        let r0 = r0 - r10 in 
+          (r0,r10)`;
+
+val _ = Define `
+  field_sub (r0,r1,r10) =
+    let (r1,r10) = field_neg (r1,r10) in 
+    let (r0,r10) = field_add (r0,r1,r10) in 
+      (r0,r10)`;
+
+val _ = Define `
+  field_add222 (r2:word32,r10:word32) =
+    let r2 = r2 + r2 in
+      if r2 < r10 then (r2,r10) else 
+        let r2 = r2 - r10 in 
+          (r2,r10)`;
+
+val _ = Define `
+  field_add424 (r2:word32,r4:word32,r10:word32) =
+    let r4 = r4 + r2 in
+      if r4 < r10 then (r2,r4,r10) else 
+        let r4 = r4 - r10 in 
+          (r2,r4,r10)`;
+
+val _ = Define `
+  field_mult_aux (r2:word32,r3:word32,r4:word32,r10:word32) =
+    if r3 = 0w then (r4,r10) else
+      if r3 && 1w = 0w then 
+          let r3 = r3 >>> 1 in 
+          let (r2,r10) = field_add222 (r2,r10) in
+            field_mult_aux (r2:word32,r3:word32,r4:word32,r10:word32)
+        else
+          let r3 = r3 >>> 1 in 
+          let (r2,r4,r10) = field_add424 (r2,r4,r10) in
+          let (r2,r10) = field_add222 (r2,r10) in
+            field_mult_aux (r2:word32,r3:word32,r4:word32,r10:word32)`;
+
+val _ = Define `
+  field_mult (r2,r3,r10) = 
+    let r4 = 0w in
+    let (r4,r10) = field_mult_aux (r2,r3,r4,r10) in
+      (r4,r10)`;
+
+Define`
+  field_exp_aux (r5:word32,r6:word32,r7:word32,r10) =
+    if r6 = 0w then (r7,r10) else
+      if r6 && 1w = 0w then 
+          let r6 = r6 >>> 1 in 
+          let r2 = r5 in
+          let r3 = r5 in
+          let (r4,r10) = field_mult (r2,r3,r10) in
+          let r5 = r4 in
+            field_exp_aux (r5:word32,r6:word32,r7:word32,r10)
+        else
+          let r6 = r6 >>> 1 in 
+          let r2 = r7 in
+          let r3 = r5 in
+          let (r4,r10) = field_mult (r2,r3,r10) in
+          let r7 = r4 in
+          let r2 = r5 in
+          let r3 = r5 in
+          let (r4,r10) = field_mult (r2,r3,r10) in
+          let r5 = r4 in
+            field_exp_aux (r5:word32,r6:word32,r7:word32,r10)`;
+
+Define`
+  field_exp_aux (r5:word32,r6:word32,r7:word32,r10) =
+    if r6 = 0w then (r7,r10) else
+      if r6 && 1w = 0w then 
+          let r6 = r6 >>> 1 in 
+          let r2 = r5 in
+          let r3 = r5 in
+          let (r4,r10) = field_mult (r2,r3,r10) in
+          let r5 = r4 in
+            field_exp_aux (r5:word32,r6:word32,r7:word32,r10)
+        else
+          let r6 = r6 >>> 1 in 
+          let r2 = r7 in
+          let r3 = r5 in
+          let (r4,r10) = field_mult (r2,r3,r10) in
+          let r7 = r4 in
+          let r2 = r5 in
+          let r3 = r5 in
+          let (r4,r10) = field_mult (r2,r3,r10) in
+          let r5 = r4 in
+            field_exp_aux (r5:word32,r6:word32,r7:word32,r10)`;

@@ -160,7 +160,8 @@ fun relaxed_dest_string_lit tm =
  else let val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
       in if is_emptystring e
          then String.implode (itlist (cons o fromHOLchar) front [])
-         else raise ERR "relaxed_dest_string_lit" "not terminated by EMPTYSTRING"
+         else raise ERR "relaxed_dest_string_lit" 
+                        "not terminated by EMPTYSTRING"
       end
 end;
 
@@ -177,5 +178,9 @@ in
 end
 
 fun is_literal tm = is_numeral tm orelse is_string_lit tm orelse is_char_lit tm
+
+fun is_pure_literal x = 
+  is_literal x andalso not (is_zero x) andalso not (is_emptystring x);
+
 
 end (* Literal *)
