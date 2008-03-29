@@ -301,6 +301,16 @@ fun is_word_literal t =
   else
     wordsSyntax.is_word_literal t;
 
+(*---------------------------------------------------------------------------*)
+(* Tell the function definition mechanism about words.                       *)
+(*---------------------------------------------------------------------------*)
+
+val _ = 
+ let val others = !Literal.other_literals
+ in Literal.other_literals := (fn x => others x orelse is_word_literal x)
+ end;;
+
+
 fun is_word_zero t =
   wordsSyntax.is_n2w t andalso
   numLib.dest_numeral (fst (wordsSyntax.dest_n2w t)) = Arbnum.zero;

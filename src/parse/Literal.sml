@@ -177,7 +177,18 @@ in
   recurse (emptystring, String.size s - 1)
 end
 
-fun is_literal tm = is_numeral tm orelse is_string_lit tm orelse is_char_lit tm
+(*---------------------------------------------------------------------------*)
+(* There are other possible literals, e.g. for word[n]. This ref cell is     *)
+(* updated when a new class of literals is created. This is used by the      *)
+(* function definition package to help process definitions with literals in  *)
+(* patterns.                                                                 *)
+(*---------------------------------------------------------------------------*)
+
+val other_literals = ref (fn _:term => false);
+
+fun is_literal tm = 
+ is_numeral tm orelse is_string_lit tm orelse is_char_lit tm
+               orelse !other_literals tm
 
 fun is_pure_literal x = 
   is_literal x andalso not (is_zero x) andalso not (is_emptystring x);
