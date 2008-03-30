@@ -8,7 +8,7 @@
 (* ===================================================================== *)
 
 (*
-  app load ["stringLib", "listTheory", "bossLib"];
+  app load ["stringLib"];
 *)
 
 structure algebraScript =
@@ -19,12 +19,8 @@ struct
 (* other libraries.                                                      *)
 (* --------------------------------------------------------------------- *)
 
-local open stringTheory in end;
-
-open HolKernel Parse boolLib bossLib IndDefRules IndDefLib listTheory;
-
-infix ## |-> THEN THENL ORELSE;  infixr 3 -->;
-
+open HolKernel Parse boolLib bossLib 
+     listTheory IndDefRules IndDefLib stringLib;
 
 val _ = new_theory "algebra";
 
@@ -51,55 +47,15 @@ val _ = new_theory "algebra";
 (* abbreviation for :string.						 *)
 (* --------------------------------------------------------------------- *)
 
-val label = Type`:string`;
+val _ = type_abbrev ("label",``:string``);
 
-val _ = Hol_datatype `agent
-                         = Nil
-                         | Pre of  ^label => agent
-                         | Sum of   agent => agent
-                         | Prod of  agent => agent`;
+val _ = 
+ Hol_datatype 
+    `agent = Nil
+           | Pre of  label => agent
+           | Sum of  agent => agent
+           | Prod of agent => agent`;
 
-
-(* ===================================================================== *)
-(* Standard syntactic theory, derived by the recursive types package.	 *)
-(* ===================================================================== *)
-
-val SOME agentfacts = TypeBase.read {Thy="algebra", Tyop="agent"};
-
-(* --------------------------------------------------------------------- *)
-(* structural induction theorem for agent.                               *)
-(* --------------------------------------------------------------------- *)
-
-val induct = TypeBase.induction_of ``:agent``;
-
-(* --------------------------------------------------------------------- *)
-(* cases theorem for agent.                                              *)
-(* --------------------------------------------------------------------- *)
-
-val cases = TypeBase.nchotomy_of ``:agent``;
-
-(* --------------------------------------------------------------------- *)
-(* The constructors of the type :agent yield syntactically distinct      *)
-(* values. One typically needs all symmetric forms of the inequalities,  *)
-(* so we package them all together here.                                 *)
-(* --------------------------------------------------------------------- *)
-
-val distinct =
-   let val distinct = TypeBase.distinct_of ``:agent``
-       val ths = CONJUNCTS distinct
-       val rths = map (GEN_ALL o NOT_EQ_SYM o SPEC_ALL) ths
-   in
-     LIST_CONJ (ths @ rths)
-   end;
-
-(* --------------------------------------------------------------------- *)
-(* The constructors Pre, Sum and Prod are one-to-one.                    *)
-(* --------------------------------------------------------------------- *)
-
-val agent11 =
-   let val one2 = TypeBase.one_one_of ``:agent``
-   in CONJUNCTS one2
-   end;
 
 (* ===================================================================== *)
 (* Definition of a maximal trace semantics for the process algebra.	 *)
@@ -110,7 +66,7 @@ val agent11 =
 (* labels, represented here by lists.					 *)
 (* --------------------------------------------------------------------- *)
 
-val trace = ty_antiq(Type`:^label list`);
+val _ = type_abbrev("trace", ``:label list``);
 
 (* --------------------------------------------------------------------- *)
 (* Inductive definition of a trace relation MTRACE.  This is defined so	 *)
@@ -135,70 +91,12 @@ val trulel = CONJUNCTS trules;
 val tsind = derive_strong_induction (trules,tind);
 
 (* --------------------------------------------------------------------- *)
-(* Standard rule induction tactic for MTRACE. This uses the weaker form  *)
-(* of the rule induction theorem, and both premisses and side conditions *)
-(* are just assumed (in stripped form).  				 *)
-(* --------------------------------------------------------------------- *)
-
-val MTRACE_INDUCT_TAC =
-    RULE_INDUCT_THEN tind STRIP_ASSUME_TAC STRIP_ASSUME_TAC;
-
-(* --------------------------------------------------------------------- *)
-(* Tactics for each of the rules defining MTRACE.			 *)
-(* --------------------------------------------------------------------- *)
-
-val [Nil_TAC,Pre_TAC,SumL_TAC,SumR_TAC,Prod_TAC] = map RULE_TAC trulel;
-
-(* --------------------------------------------------------------------- *)
-(* Given the tactics defined above for each rule, we now define a tactic *)
-(* that searches for a proof that a process has some particular maximal  *)
-(* trace, given some assumptions about maximal traces.  Note that there	 *)
-(* are two Sum rules, so our tactic may have to do some backtracking in  *)
-(* the proof.  In addition to seaching using the MTRACE rules, the 	 *)
-(* looks for solutions among the assumptions as well as back-chaining 	 *)
-(* with any implications among the assumptions. The tactics fails unless *)
-(* it completely solves the goal.					 *)
-(* --------------------------------------------------------------------- *)
-
-fun MTRACE_TAC g =
-   (REPEAT STRIP_TAC THEN
-    FIRST [Nil_TAC,
-           FIRST_ASSUM MATCH_ACCEPT_TAC,
-           Pre_TAC THEN MTRACE_TAC,
-           SumL_TAC THEN MTRACE_TAC,
-           SumR_TAC THEN MTRACE_TAC,
-           Prod_TAC  THEN MTRACE_TAC,
-   	   FIRST_ASSUM MATCH_MP_TAC THEN MTRACE_TAC]) g ;
-
-
-(* --------------------------------------------------------------------- *)
-(* The following is a little rule for getting simplified instances of	 *)
-(* the tcases theorem.  All it does is to specialize tcases to the 	 *)
-(* supplied process, rewrite using the distinctness and injectivity of	 *)
-(* constructors, and eliminate redundant equations using REDUCE. Examples*)
-(* of using MTCASE are:							 *)
-(*									 *)
-(*   #MTCASE (--`Prod P Q`--);						 *)
-(*   |- !P Q A. MTRACE(Prod P Q)A = MTRACE P A /\ MTRACE Q A		 *)
-(*									 *)
-(*   #MTCASE (--`Sum P Q`--);						 *)
-(*   |- !P Q A. MTRACE(Sum P Q)A = MTRACE P A \/ MTRACE Q A		 *)
-(*									 *)
-(* --------------------------------------------------------------------- *)
-
-val MTCASE =
-   let val SIMPLIFY = REWRITE_RULE (distinct :: agent11)
-   in fn tm => let val th1 = SIMPLIFY (SPEC tm tcases)
-               in GEN_ALL (CONV_RULE (ONCE_DEPTH_CONV REDUCE) th1)
-               end
-   end;
-
-(* --------------------------------------------------------------------- *)
 (* Definition of a terminal process: one with [] as a maximal trace.	 *)
 (* --------------------------------------------------------------------- *)
 
-val TERMINAL_DEF =
-  Q.new_definition ("TERMINAL_DEF", `TERMINAL P = MTRACE P []`);
+val TERMINAL_def =
+ Define
+   `TERMINAL P = MTRACE P []`;
 
 (* ===================================================================== *)
 (* Inductive definition of a labelled transition system.                 *)
@@ -225,37 +123,6 @@ val lrulel = CONJUNCTS lrules;
 
 val lsind = derive_strong_induction (lrules,lind);
 
-(* --------------------------------------------------------------------- *)
-(* Standard rule induction tactic for TRANS. This again just uses the	 *)
-(* weaker form of rule induction theorem.  Both premisses and side 	 *)
-(* conditions are assumed (in stripped form).  				 *)
-(* --------------------------------------------------------------------- *)
-
-val TRANS_INDUCT_TAC =
-    RULE_INDUCT_THEN lind STRIP_ASSUME_TAC STRIP_ASSUME_TAC;
-
-(* --------------------------------------------------------------------- *)
-(* Tactics for the TRANS rules.						 *)
-(* --------------------------------------------------------------------- *)
-
-val [TPre_TAC,TSumL_TAC,TSumR_TAC,TProd_TAC] = map RULE_TAC lrulel;
-
-(* --------------------------------------------------------------------- *)
-(* Given the tactics defined above for each rule, we construct a tactic  *)
-(* that searches for a proof of TRANS P a Q, with becktracking in the 	 *)
-(* Sum case.  The tactic also looks for the solution on the assumption	 *)
-(* list of the goal, with backchaining through implications. 		 *)
-(* --------------------------------------------------------------------- *)
-
-fun TRANS_TAC g =
-   (REPEAT STRIP_TAC THEN
-    FIRST [FIRST_ASSUM MATCH_ACCEPT_TAC,
-           TPre_TAC,
-           TSumL_TAC THEN TRANS_TAC,
-           TSumR_TAC THEN TRANS_TAC,
-           TProd_TAC  THEN TRANS_TAC,
-   	   FIRST_ASSUM MATCH_MP_TAC THEN TRANS_TAC]) g;
-
 
 (* ===================================================================== *)
 (* Inductive definition of a trace transition system                	 *)
@@ -268,9 +135,8 @@ fun TRANS_TAC g =
 (* --------------------------------------------------------------------- *)
 
 val (Lrules, Lind, Lcases) = Hol_reln
-    `(!P. TRANSIT P [] P)
- /\  (!P P' B a.
-         (?Q. TRANS P a Q /\ TRANSIT Q B P') ==> TRANSIT P (a::B) P')`;
+   `(!P. TRANSIT P [] P)
+/\  (!P P' B a Q. TRANS P a Q /\ TRANSIT Q B P' ==> TRANSIT P (a::B) P')`;
 
 val Lrulel = CONJUNCTS Lrules;
 
@@ -279,20 +145,6 @@ val Lrulel = CONJUNCTS Lrules;
 (* --------------------------------------------------------------------- *)
 
 val Lsind = derive_strong_induction (Lrules,Lind);
-
-(* --------------------------------------------------------------------- *)
-(* Rule induction tactic for TRANSIT.					 *)
-(* --------------------------------------------------------------------- *)
-
-val TRANSIT_INDUCT_TAC = RULE_INDUCT_THEN Lind ASSUME_TAC ASSUME_TAC;
-
-(* --------------------------------------------------------------------- *)
-(* A tactic for each TRANSIT rule. If matching conclusions to goals,     *)
-(* the two rules are mutually exclusive---so only the following single	 *)
-(* tactic is needed.							 *)
-(* --------------------------------------------------------------------- *)
-
-val TRANSIT_TAC = MAP_FIRST RULE_TAC Lrulel;
 
 (* ===================================================================== *)
 (* Theorem 1: Maximal trace semantics "agrees' with transition semantics *)
@@ -311,10 +163,13 @@ val TRANSIT_TAC = MAP_FIRST RULE_TAC Lrulel;
 
 val Lemma1 = Q.prove
 (`!P a Q. TRANS P a Q ==> !A. MTRACE Q A ==> MTRACE P (a::A)`,
- TRANS_INDUCT_TAC THEN REPEAT GEN_TAC THEN
- let val PCASES = PURE_ONCE_REWRITE_RULE [MTCASE (--`Prod P Q`--)]
- in DISCH_THEN (STRIP_ASSUME_TAC o PCASES) THEN MTRACE_TAC
- end);
+ HO_MATCH_MP_TAC lind THEN RW_TAC std_ss [] THENL
+ [METIS_TAC trulel,
+  METIS_TAC trulel,
+  METIS_TAC trulel,
+  RULE_ASSUM_TAC (REWRITE_RULE [Once tcases]) THEN 
+   FULL_SIMP_TAC list_ss [] THEN RW_TAC list_ss [] THEN
+   METIS_TAC [trules]]);
 
 (* --------------------------------------------------------------------- *)
 (* Theorem 1:  |- !P A Q. TRANSIT P A Q ==> TERMINAL Q ==> MTRACE P A    *)
@@ -326,13 +181,12 @@ val Lemma1 = Q.prove
 (* through a maximal trace of P.					 *)
 (* --------------------------------------------------------------------- *)
 
-val Theorem1 =
-    store_thm
-    ("Theorem1",
-     (--`!P A Q. TRANSIT P A Q ==> TERMINAL Q ==> MTRACE P A`--),
-     PURE_ONCE_REWRITE_TAC [TERMINAL_DEF] THEN
-     TRANSIT_INDUCT_TAC THEN REPEAT STRIP_TAC THEN
-     RES_TAC THEN IMP_RES_TAC Lemma1);
+val Theorem1 = Q.store_thm
+("Theorem1",
+ `!P A Q. TRANSIT P A Q ==> TERMINAL Q ==> MTRACE P A`,
+ REWRITE_TAC [TERMINAL_def] THEN
+ HO_MATCH_MP_TAC Lind THEN METIS_TAC [Lemma1]);
+
 
 (* --------------------------------------------------------------------- *)
 (* Corollary 1: !P A Q. TRANSIT P A Nil ==> MTRACE P A                   *)
@@ -340,51 +194,15 @@ val Theorem1 =
 (* Note that the converse does not hold.				 *)
 (* --------------------------------------------------------------------- *)
 
-val Corollary1 =
-    store_thm
-    ("Corollary1",
-     (--`!P A. TRANSIT P A Nil ==> MTRACE P A`--),
-     REPEAT STRIP_TAC THEN
-     IMP_RES_THEN MATCH_MP_TAC Theorem1 THEN
-     PURE_ONCE_REWRITE_TAC [TERMINAL_DEF] THEN
-     MTRACE_TAC);
+val Corollary1 = Q.store_thm
+("Corollary1",
+ `!P A. TRANSIT P A Nil ==> MTRACE P A`,
+ METIS_TAC (TERMINAL_def::Theorem1::trulel));
+
 
 (* ===================================================================== *)
 (* Theorem 2: Transition semantics "agrees" with maximal trace semantics *)
 (* ===================================================================== *)
-
-(* --------------------------------------------------------------------- *)
-(* The following tactic is for solving existentially-quantified goals,	 *)
-(* the bodies of which are conjunctions of assertions of membership in	 *)
-(* one or more of the inductively-defined relations we're working with.  *)
-(* All it does is to reduce the goal with the supplied witness, and then *)
-(* apply the tactic for the relevant relation.				 *)
-(* --------------------------------------------------------------------- *)
-
-fun EXISTS_SEARCH_TAC tm =
-     EXISTS_TAC tm THEN REPEAT STRIP_TAC THEN
-       TRY(FIRST [TRANS_TAC, MTRACE_TAC, TRANSIT_TAC]);
-
-(* --------------------------------------------------------------------- *)
-(* A little tactic for case analysis on the trace-transition system. 	 *)
-(* When supplied with a term (--`TRANSIT P A Q`--), which should be one  *)
-(* of the assumptions of the current goal, the tactic gets the           *)
-(* corresponding instance of the TRANSIT case analysis theorem,          *)
-(* simplifies out any false case, and enriches the goal with the         *)
-(* remaining facts, either by assuming them or, in the case of equations,*)
-(* by substitution.		                                         *)
-(* --------------------------------------------------------------------- *)
-
-val TRANSIT_CASES_TAC =
-  let fun SUBST_ASSUME th = SUBST_ALL_TAC th ORELSE STRIP_ASSUME_TAC th
-      val TTAC = REPEAT_TCL STRIP_THM_THEN SUBST_ASSUME
-  in fn tm =>
-      let val th1 = UNDISCH(fst(EQ_IMP_RULE(REWR_CONV Lcases tm)))
-          val th2 = REWRITE_RULE [NOT_CONS_NIL,NOT_NIL_CONS,CONS_11] th1
-      in
-        REPEAT_TCL STRIP_THM_THEN SUBST_ASSUME th2
-      end
-  end;
 
 (* --------------------------------------------------------------------- *)
 (* Lemma 2 shows that the trace of a product is just the trace of its	 *)
@@ -396,10 +214,8 @@ val TRANSIT_CASES_TAC =
 val Lemma2 = Q.prove
 (`!A P Q P' Q'.
     TRANSIT P A Q /\ TRANSIT P' A Q' ==> TRANSIT (Prod P P') A (Prod Q Q')`,
- Induct
-   THEN PURE_ONCE_REWRITE_TAC [Lcases]
-   THEN RW_TAC std_ss []
-   THEN EXISTS_SEARCH_TAC (--`Prod Q'' Q'''`--));
+ Induct THEN PURE_ONCE_REWRITE_TAC [Lcases] THEN 
+  RW_TAC std_ss [] THEN METIS_TAC lrulel);
 
 (* --------------------------------------------------------------------- *)
 (* Theorem 2:  |- !P A. MTRACE P A ==> ?Q. TRANSIT P A Q /\ TERMINAL Q	 *)
@@ -414,31 +230,29 @@ val Lemma2 = Q.prove
 (* witnesses required for the two TRANSIT rules.			 *)
 (* --------------------------------------------------------------------- *)
 
-val Theorem2 = Q.store_thm ("Theorem2",
-`!P A. MTRACE P A ==> ?Q. TRANSIT P A Q /\ TERMINAL Q`,
- PURE_ONCE_REWRITE_TAC [TERMINAL_DEF]
-   THEN MTRACE_INDUCT_TAC THEN REPEAT GEN_TAC THENL
-   [EXISTS_SEARCH_TAC (--`Nil`--),
-    MAP_EVERY EXISTS_SEARCH_TAC [(--`Q:agent`--),(--`P:agent`--)],
-    TRANSIT_CASES_TAC (--`TRANSIT P A Q'`--) THENL
-      [EXISTS_SEARCH_TAC (--`Sum P Q`--),
-       MAP_EVERY EXISTS_SEARCH_TAC [(--`Q':agent`--), (--`Q'':agent`--)]],
-    TRANSIT_CASES_TAC (--`TRANSIT Q A Q'`--) THENL
-      [EXISTS_SEARCH_TAC (--`Sum P Q`--),
-       MAP_EVERY EXISTS_SEARCH_TAC [(--`Q':agent`--), (--`Q'':agent`--)]],
-    IMP_RES_TAC Lemma2 THEN EXISTS_SEARCH_TAC (--`Prod Q' Q''`--)]);
+val Theorem2 = Q.store_thm 
+("Theorem2",
+ `!P A. MTRACE P A ==> ?Q. TRANSIT P A Q /\ TERMINAL Q`,
+ HO_MATCH_MP_TAC tind THEN RW_TAC std_ss [] THENL
+ [METIS_TAC (TERMINAL_def::Lrulel@trulel@lrulel),
+  METIS_TAC (Lrulel@trulel@lrulel),
+  RULE_ASSUM_TAC (REWRITE_RULE [Once Lcases]) 
+    THEN RW_TAC list_ss [] 
+    THEN METIS_TAC (TERMINAL_def::Lrulel@trulel@lrulel),
+  RULE_ASSUM_TAC (REWRITE_RULE [Once Lcases]) 
+    THEN RW_TAC list_ss [] 
+    THEN METIS_TAC (TERMINAL_def::Lrulel@trulel@lrulel),
+  METIS_TAC (Lemma2::TERMINAL_def::Lrulel@trulel@lrulel)]);
+
 
 (* ===================================================================== *)
 (* Theorem3: The transition and maximal trace semantics "agree".	 *)
 (* ===================================================================== *)
 
-val Theorem3 =
-    store_thm
-    ("Theorem3",
-     (--`!P A. MTRACE P A = ?Q. TRANSIT P A Q /\ TERMINAL Q`--),
-     REPEAT (EQ_TAC ORELSE STRIP_TAC) THENL
-     [MATCH_MP_TAC Theorem2 THEN FIRST_ASSUM ACCEPT_TAC,
-      IMP_RES_TAC Theorem1]);
+val Theorem3 = Q.store_thm
+("Theorem3",
+ `!P A. MTRACE P A = ?Q. TRANSIT P A Q /\ TERMINAL Q`,
+ METIS_TAC [Theorem1,Theorem2]);
 
 
 (* ===================================================================== *)
@@ -450,10 +264,12 @@ val Theorem3 =
 (* if they have the same maximal traces.				 *)
 (* --------------------------------------------------------------------- *)
 
-val MEQUIV_DEF =
- new_infixl_definition
-    ("MEQUIV_DEF",
-     (--`MEQUIV P Q = !A. MTRACE P A = MTRACE Q A`--),701);
+val _ = set_fixity "MEQUIV" (Infixl 701);
+val _ = set_fixity "BEQUIV" (Infixl 701);
+
+val MEQUIV_def =
+ Define
+  `(P MEQUIV Q) = !A. MTRACE P A = MTRACE Q A`;
 
 (* --------------------------------------------------------------------- *)
 (* Bisimulation equivalence.  A binary relation s:agent->agent->bool is  *)
@@ -463,16 +279,15 @@ val MEQUIV_DEF =
 (* the bisimulation (simulation whose inverse is also a simulation).	 *)
 (* --------------------------------------------------------------------- *)
 
-val SIM_DEF =
- Q.new_definition
-  ("SIM_DEF",
-   `SIM s =
-      !P Q. s P Q ==> !a P'. TRANS P a P' ==> ?Q'. TRANS Q a Q' /\ s P' Q'`);
+val SIM_def =
+ Define
+   `SIM s = !P Q. s P Q ==> 
+                   !a P'. TRANS P a P' ==> 
+                           ?Q'. TRANS Q a Q' /\ s P' Q'`;
 
-val BEQUIV_DEF =
-    new_infixl_definition
-    ("BEQUIV_DEF",
-     (--`BEQUIV P Q = ?s. SIM s /\ s P Q /\ SIM(\x y. s y x)`--),701);
+val BEQUIV_def =
+ Define
+   `(P BEQUIV Q) = ?s. SIM s /\ s P Q /\ SIM(\x y. s y x)`;
 
 
 (* --------------------------------------------------------------------- *)
