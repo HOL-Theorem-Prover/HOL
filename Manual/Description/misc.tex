@@ -222,13 +222,18 @@ After that, the theory is usable as an ML module.
 \holmake{} only works properly on the current directory.  \holmake{}
 will rebuild files in the current directory if something it depends on
 from another directory is fresher than it is, but it will not do any
-analysis on files in other directories.  If one is developing a system
-over more than one directory, one should write a master Makefile (or
-shell script) that invokes \holmake{} in the subsidiary directories,
-in the correct order, \ie., such that there never is an out-of-date
-dependence leading outside of the current directory. This should
-always be achievable, simply by ordering the directories in the order
-that one would have to ``\verb+use+'' files in them.
+analysis on files in other directories.
+
+However, one can indicate that there is a dependency on other
+directories by using the \texttt{-I} flag, or the \texttt{INCLUDES}
+variable in a \texttt{Holmakefile}.  Such a specification will cause
+\holmake{} to look in the specified directories for other theory files
+that the current directory may depend on.  Moreover, by default
+\holmake{} will recursively call itself on all those ``include''
+directories before doing anything in the current directory.  In this
+way, one can get a staged application of \holmake{} across multiple
+directories.\footnote{See \emph{Recursive Make Considered
+    Harmful} by Peter Miller for why this is not ideal.}
 
 \subsection{\holmake{}'s command-line arguments}
 
@@ -255,7 +260,8 @@ with the following command-line options:
 \item[\tt -I <directory>] Look in specified directory for additional
   Moscow~ML object files, including other HOL theories.  This option
   can be repeated, with multiple {\tt -I}'s to allow for multiple
-  directories to be referenced.
+  directories to be referenced.  As above, directories specified in
+  this way will also be rebuilt before the current targets are built.
 \item[\tt -d <file>] Ignore the given file and don't try to build it.
   The file may be rebuilt anyway if other files you have specified
   depend on it.  This is useful to stop Holmake from attempting to
@@ -301,6 +307,8 @@ with the following command-line options:
   this option makes the compilation not use the overlay file.  This
   option is also used in building the kernel before the overlay itself
   has been compiled.
+\item[\texttt{--no\_prereqs}] Do not recursively attempt to build
+  ``include'' directories before working in the current directory.
 \item[\texttt{--no\_sigobj}] Do not link against HOL system's
   directory of HOL system files.  Use of this option goes some way
   towards turning

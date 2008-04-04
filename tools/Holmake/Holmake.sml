@@ -102,6 +102,208 @@ end
 
 fun exists_readable s = FileSys.access(s, [FileSys.A_READ])
 
+(*---------------------------------------------------------------------------
+     Support for handling the preprocessing of files containing ``
+ ---------------------------------------------------------------------------*)
+
+(* does the file have an occurrence of `` *)
+fun has_dq filename = let
+  val istrm = TextIO.openIn filename
+  fun loop() =
+    case TextIO.input1 istrm of
+      NONE => false
+    | SOME #"`" => (case TextIO.input1 istrm of
+                      NONE => false
+                    | SOME #"`" => true
+                    | _ => loop())
+    | _ => loop()
+in
+  loop() before TextIO.closeIn istrm
+end
+
+fun variant str =  (* get an unused file name in the current directory *)
+ if FileSys.access(str,[])
+ then let fun vary i =
+           let val s = str^Int.toString i
+           in if FileSys.access(s,[])  then vary (i+1) else s
+           end
+      in vary 0
+      end
+ else str;
+
+
+(*
+   Rather than continually have to deal with strings corresponding to
+   file-names and mess with nasty suffixes and the like, we define a
+   structured datatype into which file-names can be translated once
+   and for all.
+*)
+
+(** Definition of structured file type *)
+
+datatype CodeType
+    = Theory of string
+    | Script of string
+    | Other of string
+
+datatype File
+    = SML of CodeType
+    | SIG of CodeType
+    | UO of CodeType
+    | UI of CodeType
+    | Unhandled of string
+
+fun string_part0 (Theory s) = s
+  | string_part0 (Script s) = s
+  | string_part0 (Other s) = s
+fun string_part (UO c)  = string_part0 c
+  | string_part (UI c)  = string_part0 c
+  | string_part (SML c) = string_part0 c
+  | string_part (SIG c) = string_part0 c
+  | string_part (Unhandled s) = s
+
+fun isProperSuffix s1 s2 = let
+  val sz1 = size s1
+  val sz2 = size s2
+  open Substring
+in
+  if sz1 >= sz2 then NONE
+  else let
+    val (prefix, suffix) = splitAt(all s2, sz2 - sz1)
+  in
+    if string suffix = s1 then SOME (string prefix) else NONE
+  end
+end
+
+fun split_file s = let
+  open Substring
+  val (base, ext) = splitr (fn c => c <> #".") (all s)
+in
+  if (size base <> 0) then
+    (string (slice(base, 0, SOME (size base - 1))), string ext)
+  else
+    (s, "")
+end
+
+fun toCodeType s = let
+  val possprefix = isProperSuffix "Theory" s
+in
+  if (isSome possprefix) then Theory (valOf possprefix)
+  else let
+    val possprefix = isProperSuffix "Script" s
+  in
+    if isSome possprefix then Script (valOf possprefix)
+    else Other s
+  end
+end
+
+fun toFile s0 =
+  case split_file s0 of
+    (s, "sml") => SML (toCodeType s)
+  | (s, "sig") => SIG (toCodeType s)
+  | (s, "uo")  => UO (toCodeType s)
+  | (s, "ui")  => UI (toCodeType s)
+  |    _       => Unhandled s0
+
+fun codeToString c =
+  case c of
+    Theory s => s ^ "Theory"
+  | Script s => s ^ "Script"
+  | Other s  => s
+
+fun fromFile f =
+  case f of
+    UO c  => codeToString c ^ ".uo"
+  | UI c  => codeToString c ^ ".ui"
+  | SIG c => codeToString c ^ ".sig"
+  | SML c => codeToString c ^ ".sml"
+  | Unhandled s => s
+
+fun file_compare (f1, f2) = String.compare (fromFile f1, fromFile f2)
+
+(*** Construct primary dependencies *)
+(* Next, construct the primary dependency chain, for a given target *)
+fun primary_dependent f =
+    case f of
+      UO c => SOME (SML c)
+    | UI c => SOME (SIG c)
+    | SML (Theory s) => SOME (SML (Script s))
+    | SIG (Theory s) => SOME (SML (Script s))
+    | _ => NONE
+
+(*** Construction of secondary dependencies *)
+
+fun mk_depfile_name s = fullPath [DEPDIR, s^".d"]
+
+
+(* pull out a list of files that target depends on from depfile.  *)
+(* All files on the right of a colon are assumed to be dependencies.
+   This is despite the fact that holdep produces two entries when run
+   on fooScript.sml files, one for fooScript.uo, and another for fooScript
+   itself, we actually want all of those dependencies in one big chunk
+   because the production of fooTheory.{sig,sml} is done as one
+   atomic step from fooScript.sml. *)
+fun first f [] = NONE
+  | first f (x::xs) = case f x of NONE => first f xs | res => res
+
+fun get_dependencies_from_file depfile = let
+  fun get_whole_file s = let
+    open TextIO
+    val instr = openIn (normPath s)
+  in
+    inputAll instr before closeIn instr
+  end
+  fun parse_result s = let
+    val lines = String.fields (fn c => c = #"\n") (collapse_bslash_lines s)
+    fun process_line line = let
+      val (lhs0, rhs0) = Substring.splitl (fn c => c <> #":")
+                                          (Substring.all line)
+      val lhs = Substring.string lhs0
+      val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
+        handle Subscript => ""
+    in
+      realspace_delimited_fields rhs
+    end
+    val result = List.concat (map process_line lines)
+  in
+    List.map toFile result
+  end
+in
+  parse_result (get_whole_file depfile)
+end
+
+(**** get_dependencies *)
+(* figures out whether or not a dependency file is a suitable place to read
+   information about current target or not, and then either does so, or makes
+   the dependency file and then reads from it.
+
+     f1 forces_update_of f2
+     iff
+     f1 exists /\ (f2 exists ==> f1 is newer than f2)
+*)
+
+infix forces_update_of
+fun (f1 forces_update_of f2) = let
+  open Time
+in
+  FileSys.access(f1, []) andalso
+  (not (FileSys.access(f2, [])) orelse FileSys.modTime f1 > FileSys.modTime f2)
+end
+
+(* a function that given a product file, figures out the argument that
+   should be passed to runholdep in order to get back secondary
+   dependencies. *)
+
+fun holdep_arg (UO c) = SOME (SML c)
+  | holdep_arg (UI c) = SOME (SIG c)
+  | holdep_arg (SML (Theory s)) = SOME (SML (Script s))
+  | holdep_arg (SIG (Theory s)) = SOME (SML (Script s))
+  | holdep_arg _ = NONE
+
+(**** get dependencies from file *)
+
+
+
 (** Command line parsing *)
 
 (*** list functions *)
@@ -190,6 +392,7 @@ fun parse_command_line list = let
   val (rem, fastfiles) = find_pairs "-f" rem
   val (rem, qofp) = find_toggle "--qof" rem
   val (rem, no_hmakefile) = find_toggle "--no_holmakefile" rem
+  val (rem, no_prereqs) = find_toggle "--no_prereqs" rem
   val (rem, user_hmakefile) =
     find_one_pairtag "--holmakefile" NONE SOME rem
   val (rem, no_overlay) = find_toggle "--no_overlay" rem
@@ -205,7 +408,8 @@ in
    always_rebuild_deps=rebuild_deps,
    additional_includes=includes,
    dontmakes=dontmakes, no_sigobj = no_sigobj,
-   quit_on_failure = qofp, no_hmakefile = no_hmakefile,
+   quit_on_failure = qofp, no_prereqs = no_prereqs,
+   no_hmakefile = no_hmakefile,
    allfast = allfast, fastfiles = fastfiles,
    user_hmakefile = user_hmakefile,
    no_overlay = no_overlay,
@@ -240,7 +444,7 @@ val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      always_rebuild_deps, interactive_flag,
      additional_includes = cline_additional_includes,
      cmdl_HOLDIR, cmdl_MOSMLDIR,
-     no_sigobj = cline_no_sigobj,
+     no_sigobj = cline_no_sigobj, no_prereqs,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
      user_overlay, keep_going_flag, quiet_flag, do_logging_flag} =
   parse_command_line (CommandLine.arguments())
@@ -263,17 +467,6 @@ val hostname = if Systeml.isUnix then
                  | _ => ""
                else "" (* what to do under windows? *)
 
-val () = if do_logging_flag then
-           if FileSys.access (logfilename, []) then
-             warn "Make log exists; new logging will concatenate on this file"
-           else let
-               (* touch the file *)
-               val outs = TextIO.openOut logfilename
-             in
-               TextIO.closeOut outs
-             end handle Io _ => warn "Couldn't set up make log"
-         else ()
-
 fun finish_logging buildok = let
 in
   if do_logging_flag andalso FileSys.access(logfilename, []) then let
@@ -282,12 +475,14 @@ in
       val newname0 = hostname^timestamp
       val newname = (if buildok then "" else "bad-") ^ newname0
     in
-      FileSys.rename {old = logfilename, new = newname}
+      FileSys.rename {old = logfilename, new = newname};
+      buildok
     end
-  else ()
-end handle Io _ => warn "Had problems making permanent record of make log"
+  else buildok
+end handle Io _ => (warn "Had problems making permanent record of make log";
+                    buildok)
 
-val _ = Process.atExit (fn () => finish_logging false)
+val _ = Process.atExit (fn () => ignore (finish_logging false))
 
 
 (* find HOLDIR and MOSMLDIR by first looking at command-line, then looking
@@ -318,13 +513,6 @@ in
   Process.exit Process.failure
 end
 
-val hmakefile =
-  case user_hmakefile of
-    NONE => "Holmakefile"
-  | SOME s =>
-      if exists_readable s then s
-      else die_with ("Couldn't read/find makefile: "^s)
-
 fun base_environment s = let
   open Holmake_types
   val p = Systeml.protect
@@ -344,6 +532,62 @@ in
           | SOME v => [LIT v])
 end
 
+(* turn a variable name into a list *)
+fun envlist env id = let
+  open Holmake_types
+in
+  map dequote (tokenize (perform_substitution env [VREF id]))
+end
+
+fun process_hypat_options s = let
+  open Substring
+  val ss = all s
+  fun recurse (noecho, ignore_error, ss) =
+      if noecho andalso ignore_error then
+        (true, true, string (dropl (fn c => c = #"@" orelse c = #"-") ss))
+      else
+        case getc ss of
+          NONE => (noecho, ignore_error, "")
+        | SOME (c, ss') =>
+          if c = #"@" then recurse (true, ignore_error, ss')
+          else if c = #"-" then recurse (noecho, true, ss')
+          else (noecho, ignore_error, string ss)
+in
+  recurse (false, false, ss)
+end
+
+
+(* directory specific stuff here *)
+exception LoopingDir
+fun Holmake visiteddirs cline_additional_includes dir targets = let
+  val _ = not (Binaryset.member(visiteddirs,dir)) orelse
+          (warn ("Directories have looping INCLUDE dependencies through "^
+                 dir);
+           raise LoopingDir)
+  val _ = OS.FileSys.chDir dir
+
+
+(* prepare to do logging *)
+val () = if do_logging_flag then
+           if FileSys.access (logfilename, []) then
+             warn "Make log exists; new logging will concatenate on this file"
+           else let
+               (* touch the file *)
+               val outs = TextIO.openOut logfilename
+             in
+               TextIO.closeOut outs
+             end handle Io _ => warn "Couldn't set up make log"
+         else ()
+
+
+
+val hmakefile =
+  case user_hmakefile of
+    NONE => "Holmakefile"
+  | SOME s =>
+      if exists_readable s then s
+      else die_with ("Couldn't read/find makefile: "^s)
+
 val hmakefile_toks =
   if exists_readable hmakefile andalso not no_hmakefile
   then let
@@ -356,13 +600,7 @@ val hmakefile_toks =
   else []
 
 val hmakefile_env0 = Holmake_types.extend_env hmakefile_toks base_environment
-
-
-fun envlist id = let
-  open Holmake_types
-in
-  map dequote (tokenize (perform_substitution hmakefile_env0 [VREF id]))
-end
+val envlist = envlist hmakefile_env0
 
 val hmake_includes = envlist "INCLUDES"
 val hmake_options = envlist "OPTIONS"
@@ -381,9 +619,6 @@ val _ =
     warn "quit on (tactic) failure ignored for fast built theories"
   else
     ()
-
-
-
 
 val no_sigobj = cline_no_sigobj orelse hmake_no_sigobj
 val actual_overlay =
@@ -429,22 +664,6 @@ fun extra_rule_for t = Binarymap.peek(extra_rules, t)
 infix in_target
 fun (s in_target t) = case extra_deps t of NONE => false | SOME l => member s l
 
-fun process_hypat_options s = let
-  open Substring
-  val ss = all s
-  fun recurse (noecho, ignore_error, ss) =
-      if noecho andalso ignore_error then
-        (true, true, string (dropl (fn c => c = #"@" orelse c = #"-") ss))
-      else
-        case getc ss of
-          NONE => (noecho, ignore_error, "")
-        | SOME (c, ss') =>
-          if c = #"@" then recurse (true, ignore_error, ss')
-          else if c = #"-" then recurse (noecho, true, ss')
-          else (noecho, ignore_error, string ss)
-in
-  recurse (false, false, ss)
-end
 
 fun run_extra_command tgt c = let
   open Holmake_types
@@ -534,94 +753,7 @@ end else ()
    Another problem is that we might need to build a dependency DAG but
    in a situation where elements of the principal dependency chain
    were themselves out of date.
-
-   Rather than continually have to deal with strings corresponding to
-   file-names and mess with nasty suffixes and the like, we define a
-   structured datatype into which file-names can be translated once
-   and for all.
 *)
-
-(** Definition of structured file type *)
-
-datatype CodeType
-    = Theory of string
-    | Script of string
-    | Other of string
-
-datatype File
-    = SML of CodeType
-    | SIG of CodeType
-    | UO of CodeType
-    | UI of CodeType
-    | Unhandled of string
-
-fun string_part0 (Theory s) = s
-  | string_part0 (Script s) = s
-  | string_part0 (Other s) = s
-fun string_part (UO c)  = string_part0 c
-  | string_part (UI c)  = string_part0 c
-  | string_part (SML c) = string_part0 c
-  | string_part (SIG c) = string_part0 c
-  | string_part (Unhandled s) = s
-
-fun isProperSuffix s1 s2 = let
-  val sz1 = size s1
-  val sz2 = size s2
-  open Substring
-in
-  if sz1 >= sz2 then NONE
-  else let
-    val (prefix, suffix) = splitAt(all s2, sz2 - sz1)
-  in
-    if string suffix = s1 then SOME (string prefix) else NONE
-  end
-end
-
-fun split_file s = let
-  open Substring
-  val (base, ext) = splitr (fn c => c <> #".") (all s)
-in
-  if (size base <> 0) then
-    (string (slice(base, 0, SOME (size base - 1))), string ext)
-  else
-    (s, "")
-end
-
-fun toCodeType s = let
-  val possprefix = isProperSuffix "Theory" s
-in
-  if (isSome possprefix) then Theory (valOf possprefix)
-  else let
-    val possprefix = isProperSuffix "Script" s
-  in
-    if isSome possprefix then Script (valOf possprefix)
-    else Other s
-  end
-end
-
-fun toFile s0 =
-  case split_file s0 of
-    (s, "sml") => SML (toCodeType s)
-  | (s, "sig") => SIG (toCodeType s)
-  | (s, "uo")  => UO (toCodeType s)
-  | (s, "ui")  => UI (toCodeType s)
-  |    _       => Unhandled s0
-
-fun codeToString c =
-  case c of
-    Theory s => s ^ "Theory"
-  | Script s => s ^ "Script"
-  | Other s  => s
-
-fun fromFile f =
-  case f of
-    UO c  => codeToString c ^ ".uo"
-  | UI c  => codeToString c ^ ".ui"
-  | SIG c => codeToString c ^ ".sig"
-  | SML c => codeToString c ^ ".sml"
-  | Unhandled s => s
-
-fun file_compare (f1, f2) = String.compare (fromFile f1, fromFile f2)
 
 (** Construction of the dependency graph
     ------------------------------------
@@ -630,20 +762,6 @@ fun file_compare (f1, f2) = String.compare (fromFile f1, fromFile f2)
    dependency graph:
 
 *)
-
-(*** Construct primary dependencies *)
-(* Next, construct the primary dependency chain, for a given target *)
-fun primary_dependent f =
-    case f of
-      UO c => SOME (SML c)
-    | UI c => SOME (SIG c)
-    | SML (Theory s) => SOME (SML (Script s))
-    | SIG (Theory s) => SOME (SML (Script s))
-    | _ => NONE
-
-(*** Construction of secondary dependencies *)
-
-fun mk_depfile_name s = fullPath [DEPDIR, s^".d"]
 
 (**** runholdep *)
 (* The primary dependency chain does not depend on anything in the
@@ -700,75 +818,6 @@ in
   | Failure s => raise HolDepFailed
 end
 
-(* a function that given a product file, figures out the argument that
-   should be passed to runholdep in order to get back secondary
-   dependencies. *)
-
-fun holdep_arg (UO c) = SOME (SML c)
-  | holdep_arg (UI c) = SOME (SIG c)
-  | holdep_arg (SML (Theory s)) = SOME (SML (Script s))
-  | holdep_arg (SIG (Theory s)) = SOME (SML (Script s))
-  | holdep_arg _ = NONE
-
-(**** get dependencies from file *)
-(* pull out a list of files that target depends on from depfile.  *)
-(* All files on the right of a colon are assumed to be dependencies.
-   This is despite the fact that holdep produces two entries when run
-   on fooScript.sml files, one for fooScript.uo, and another for fooScript
-   itself, we actually want all of those dependencies in one big chunk
-   because the production of fooTheory.{sig,sml} is now done as one
-   atomic step from fooScript.sml. *)
-fun first f [] = NONE
-  | first f (x::xs) = let
-      val res = f x
-    in
-      if isSome res then res else first f xs
-    end
-
-fun get_dependencies_from_file depfile = let
-  fun get_whole_file s = let
-    open TextIO
-    val instr = openIn (normPath s)
-  in
-    inputAll instr before closeIn instr
-  end
-  fun parse_result s = let
-    val lines = String.fields (fn c => c = #"\n") (collapse_bslash_lines s)
-    fun process_line line = let
-      val (lhs0, rhs0) = Substring.splitl (fn c => c <> #":")
-                                          (Substring.all line)
-      val lhs = Substring.string lhs0
-      val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
-        handle Subscript => ""
-    in
-      realspace_delimited_fields rhs
-    end
-    val result = List.concat (map process_line lines)
-  in
-    List.map toFile result
-  end
-in
-  parse_result (get_whole_file depfile)
-end
-
-(**** get_dependencies *)
-(* figures out whether or not a dependency file is a suitable place to read
-   information about current target or not, and then either does so, or makes
-   the dependency file and then reads from it.
-
-     f1 forces_update_of f2
-     iff
-     f1 exists /\ (f2 exists ==> f1 is newer than f2)
-*)
-
-infix forces_update_of
-fun (f1 forces_update_of f2) = let
-  open Time
-in
-  FileSys.access(f1, []) andalso
-  (not (FileSys.access(f2, [])) orelse FileSys.modTime f1 > FileSys.modTime f2)
-end
-
 fun get_direct_dependencies (f : File) : File list = let
   val fname = fromFile f
   val arg = holdep_arg f  (* arg is file to analyse for dependencies *)
@@ -811,7 +860,7 @@ fun get_implicit_dependencies (f: File) : File list = let
       case actual_overlay of
         NONE => file_dependencies0
       | SOME s => if isSome (holdep_arg f) then
-                      toFile (fullPath [SIGOBJ, s]) :: file_dependencies0
+                    toFile (fullPath [SIGOBJ, s]) :: file_dependencies0
                   else
                     file_dependencies0
   fun is_thy_file (SML (Theory _)) = true
@@ -865,6 +914,8 @@ in
     file_dependencies
 end
 
+
+
 fun get_explicit_dependencies (f : File) : File list =
     case (extra_deps (fromFile f)) of
       SOME deps => map toFile deps
@@ -876,34 +927,6 @@ datatype buildcmds = MOSMLC
                    | BuildScript of string
 
 (*** Pre-processing of files that use `` *)
-(*---------------------------------------------------------------------------
-     Support for handling the preprocessing of files containing ``
- ---------------------------------------------------------------------------*)
-
-(* does the file have an occurrence of `` *)
-fun has_dq filename = let
-  val istrm = TextIO.openIn filename
-  fun loop() =
-    case TextIO.input1 istrm of
-      NONE => false
-    | SOME #"`" => (case TextIO.input1 istrm of
-                      NONE => false
-                    | SOME #"`" => true
-                    | _ => loop())
-    | _ => loop()
-in
-  loop() before TextIO.closeIn istrm
-end
-
-fun variant str =  (* get an unused file name in the current directory *)
- if FileSys.access(str,[])
- then let fun vary i =
-           let val s = str^Int.toString i
-           in if FileSys.access(s,[])  then vary (i+1) else s
-           end
-      in vary 0
-      end
- else str;
 
 
 (*** Compilation of files *)
@@ -1083,7 +1106,8 @@ in
             if (List.exists
                 (fn dep =>
                  (fromFile dep) forces_update_of (fromFile target))
-                (pdep::secondaries)) then
+                (pdep::secondaries))
+            then
               (done_some_work := true;
                cache_insert (target,
                              do_a_build_command target pdep secondaries))
@@ -1254,27 +1278,48 @@ in
 end
 
 
-fun deal_with_targets list = let
-  open TextIO
-  fun stop_on_failure tgts =
+fun stop_on_failure tgts =
+    case tgts of
+      [] => true
+    | (t::ts) => do_target t andalso stop_on_failure ts
+fun keep_going tgts = let
+  fun recurse acc tgts =
       case tgts of
-        [] => true
-      | (t::ts) => do_target t andalso stop_on_failure ts
-  fun keep_going tgts = let
-    fun recurse acc tgts =
-        case tgts of
-          [] => acc
-        | (t::ts) => recurse (do_target t andalso acc) ts
-  in
-    recurse true tgts
-  end
-  fun strategy tgts = let
-    val tgts = if always_rebuild_deps then "cleanDeps" :: tgts else tgts
-  in
-    if keep_going_flag then keep_going tgts else stop_on_failure tgts
-  end
+        [] => acc
+      | (t::ts) => recurse (do_target t andalso acc) ts
 in
-  case list of
+  recurse true tgts
+end
+fun strategy tgts = let
+  val tgts = if always_rebuild_deps then "cleanDeps" :: tgts else tgts
+in
+  if keep_going_flag then keep_going tgts else stop_on_failure tgts
+end
+
+fun maybe_recurse() = let
+  fun recurse newdir = let
+    val _ = warn ("Recursively calling Holmake in "^newdir)
+  in
+    (Holmake (Binaryset.add(visiteddirs, dir))
+             []
+             newdir
+             []
+             handle LoopingDir => false)
+    before
+    FileSys.chDir dir
+  end
+  fun do_em [] = true
+    | do_em (x::xs) = recurse x andalso do_em xs
+in
+  if no_prereqs then true
+  else
+    do_em (remove_duplicates (cline_additional_includes @
+                              envlist "PRE_INCLUDES" @
+                              hmake_includes))
+end
+
+in
+  case targets of
     [] => let
       val targets = generate_all_plausible_targets ()
       val _ =
@@ -1282,9 +1327,16 @@ in
         print("Generated targets are: "^print_list (map fromFile targets)^"\n")
         else ()
     in
-      strategy  (map (fromFile) targets)
+      maybe_recurse() andalso
+      finish_logging (strategy  (map (fromFile) targets))
     end
-  | x =>  strategy x
+  | xs => let
+      fun isPhony x = member x ["clean", "cleanDeps", "cleanAll"] orelse
+                      x in_target ".PHONY"
+    in
+      if List.all isPhony xs then finish_logging (strategy xs)
+      else maybe_recurse() andalso finish_logging (strategy xs)
+    end
 end
 
 
@@ -1311,6 +1363,7 @@ val _ =
      "    --mosmldir directory : use specified directory as MoscowML root\n",
      "    --no_holmakefile     : don't use any Holmakefile\n",
      "    --no_overlay         : don't use an overlay file\n",
+     "    --no_prereqs         : don't recursively build in INCLUDES\n",
      "    --no_sigobj | -n     : don't use any HOL files from sigobj\n",
      "    --overlay <file>     : use given .ui file as overlay\n",
      "    --qof                : quit on tactic failure\n",
@@ -1318,10 +1371,15 @@ val _ =
      "    --rebuild_deps | -r  : always rebuild dependency info files \n"]
   else let
       open Process
-      val result = deal_with_targets targets
-        handle Fail s => (print ("Fail exception: "^s^"\n"); exit failure)
+      val result =
+          Holmake (Binaryset.empty String.compare)
+                  cline_additional_includes
+                  (OS.FileSys.getDir())
+                  targets
+                  handle Fail s => (print ("Fail exception: "^s^"\n");
+                                    exit failure)
     in
-      if result then (finish_logging true; exit success)
+      if result then exit success
       else exit failure
     end
 
