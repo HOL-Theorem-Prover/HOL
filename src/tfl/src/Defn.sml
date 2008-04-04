@@ -1204,6 +1204,8 @@ fun names_of (AQ(_,tm)) S = union (map (fst o Term.dest_var) (all_vars tm)) S
   | names_of (APP(_,IDENT(_,"case_arrow__magic"), _)) S = S
   | names_of (APP(_,M,N)) S = names_of M (names_of N S)
   | names_of (LAM(_,v,M)) S = names_of M (vnames_of v S)
+  | names_of (TYAPP(_,M,_)) S = names_of M S
+  | names_of (TYLAM(_,_,M)) S = names_of M S
   | names_of (TYPED(_,M,_)) S = names_of M S
   | names_of (QIDENT(_,_,_)) S = S
 end;
@@ -1219,10 +1221,15 @@ local
      | CONST _  => (tm,S)
      | COMB(Rator,Rand) =>
         let val (Rator',S')  = tm_exp Rator S
-            val (Rand', S'') = tm_exp Rand S
+            val (Rand', S'') = tm_exp Rand S'
         in (mk_comb(Rator', Rand'), S'')
         end
      | LAMB _ => raise ERR "tm_exp" "abstraction in pattern"
+     | TYCOMB(Rator,Rand) =>
+        let val (Rator',S')  = tm_exp Rator S
+        in (mk_tycomb(Rator', Rand), S')
+        end
+     | TYLAMB _ => raise ERR "tm_exp" "type abstraction in pattern"
   open Absyn
 in
 fun exp (AQ(locn,tm)) S = 
@@ -1240,9 +1247,14 @@ fun exp (AQ(locn,tm)) S =
           val (N', S'') = exp N S'
       in (APP (locn,M',N'), S'')
       end
+  | exp (TYAPP(locn,M,pty)) S =
+      let val (M',S')   = exp M S
+      in (TYAPP (locn,M',pty), S')
+      end
   | exp (TYPED(locn,M,pty)) S = 
       let val (M',S') = exp M S in (TYPED(locn,M',pty),S') end
   | exp (LAM(locn,_,_)) _ = raise ERRloc "exp" locn "abstraction in pattern"
+  | exp (TYLAM(locn,_,_)) _ = raise ERRloc "exp" locn "type abstraction in pattern"
 
 fun expand_wildcards asy (asyl,S) =
    let val (asy',S') = exp asy S in (asy'::asyl, S') end
@@ -1261,8 +1273,12 @@ local
             raise ERRloc "dest_head" locn "qual. ident."
     | dest_head (Absyn.APP(locn,_,_)) = 
             raise ERRloc "dest_head" locn "app. node"
+    | dest_head (Absyn.TYAPP(locn,_,_)) = 
+            raise ERRloc "dest_head" locn "tyapp. node"
     | dest_head (Absyn.LAM(locn,_,_)) = 
             raise ERRloc "dest_head" locn "lam. node"
+    | dest_head (Absyn.TYLAM(locn,_,_)) = 
+            raise ERRloc "dest_head" locn "tylam. node"
   fun strip_tyannote0 acc absyn =
       case absyn of
         Absyn.TYPED(locn, a, ty) => strip_tyannote0 ((ty,locn)::acc) a

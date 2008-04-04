@@ -54,6 +54,8 @@ sig
  val rank_of       : hol_type -> int
  val aconv_ty      : hol_type -> hol_type -> bool
  val beta_conv_ty  : hol_type -> hol_type
+ val deep_beta_conv_ty : hol_type -> hol_type
+ val abconv_ty     : hol_type -> hol_type -> bool
 
  val decls         : string -> {Thy:string, Tyop:string} list
  val op_arity      : {Thy:string, Tyop:string} -> int option

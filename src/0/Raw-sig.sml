@@ -42,6 +42,7 @@ sig
   val dest_vartype  : hol_type -> string
   val dest_vartype_opr : hol_type -> tyvar
   val is_vartype    : hol_type -> bool
+  val is_bvartype   : hol_type -> bool
   val is_gen_tyvar  : hol_type -> bool
 
   val op_arity      : {Thy:string,Tyop:string} -> int option
@@ -82,6 +83,8 @@ sig
 
   val aconv_ty      : hol_type -> hol_type -> bool
   val beta_conv_ty  : hol_type -> hol_type
+  val deep_beta_conv_ty : hol_type -> hol_type
+  val abconv_ty     : hol_type -> hol_type -> bool
   val polymorphic   : hol_type -> bool
   val universal     : hol_type -> bool
   val abstraction   : hol_type -> bool
@@ -122,6 +125,7 @@ sig
                               -> (hol_type,hol_type)Lib.subst
   val thy_types     : string -> (string * int) list
   val thy_type_oprs : string -> (string * kind * int) list
+  val unbound_ty    : hol_type -> bool
   val pp_raw_type   : ppstream -> hol_type -> unit
   val type_to_string: hol_type -> string
 end;
@@ -145,6 +149,7 @@ sig
   val all_varsl     : term list -> term list
   val type_vars_in_term : term -> hol_type list
   val var_occurs    : term -> term -> bool
+  val tyvar_occurs  : hol_type -> term -> bool
   val genvar        : hol_type -> term
   val genvars       : hol_type -> int -> term list
   val variant       : term list -> term -> term
@@ -205,6 +210,7 @@ sig
   val ty_eta_conv   : term -> term
   val subst         : (term,term) Lib.subst -> term -> term
   val inst          : (hol_type,hol_type) subst -> term -> term
+
   val raw_match     : hol_type list -> term set
                       -> term -> term
                       -> (term,term)subst * (hol_type,hol_type)subst
@@ -230,7 +236,8 @@ sig
   val prim_mk_imp    : term -> term -> term
   val break_const    : term -> KernelTypes.id * hol_type
   val break_abs      : term -> term
-  val trav           : (term -> unit) -> term -> unit
+  val trav           : (hol_type -> unit) -> (term -> unit) -> term -> unit
+  val ty2tm          : hol_type -> term
   val pp_raw_term    : (term -> int) -> Portable.ppstream -> term -> unit
 end;
 
@@ -254,13 +261,16 @@ sig
   val ASSUME        : term -> thm
   val REFL          : term -> thm
   val BETA_CONV     : term -> thm
+  val TY_BETA_CONV  : term -> thm
   val ABS           : term -> thm -> thm
+  val TY_ABS        : hol_type -> thm -> thm
   val DISCH         : term -> thm -> thm
   val MP            : thm -> thm -> thm
   val SUBST         : (term,thm)Lib.subst -> term -> thm -> thm
   val INST_TYPE     : (hol_type,hol_type)Lib.subst -> thm -> thm
   val ALPHA         : term -> term -> thm
   val MK_COMB       : thm * thm -> thm
+  val TY_COMB       : hol_type -> thm -> thm
   val AP_TERM       : term -> thm -> thm
   val AP_THM        : thm -> term -> thm
   val ETA_CONV      : term -> thm
@@ -287,6 +297,8 @@ sig
   val Eta           : thm -> thm
   val Mk_comb       : thm -> thm * thm * (thm -> thm -> thm)
   val Mk_abs        : thm -> term * thm * (thm -> thm)
+  val Mk_tycomb     : thm -> thm * hol_type * (thm -> thm)
+  val Mk_tyabs      : thm -> hol_type * thm * (thm -> thm)
   val Specialize    : term -> thm -> thm
   val GEN_ABS       : term option -> term list -> thm -> thm
   val mk_oracle_thm : string -> term list * term -> thm
@@ -297,6 +309,8 @@ sig
   val disk_thm      : term vector
                        -> string list * 'a Portable.frag list list
                                       * 'a Portable.frag list -> thm
+  val debug_type    : hol_type -> unit
+  val debug_term    : term -> unit
 end;
 
 signature RawTheoryPP =
@@ -306,7 +320,8 @@ sig
  type ppstream = Portable.ppstream
  type num = Arbnum.num
 
- val pp_type : string -> string -> ppstream -> hol_type -> unit
+ val pp_type : string -> string -> string -> string -> string ->
+               string -> string -> ppstream -> hol_type -> unit
 
  val pp_sig :
    (ppstream -> thm -> unit)

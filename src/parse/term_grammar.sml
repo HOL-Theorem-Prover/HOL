@@ -242,6 +242,14 @@ fun binder_to_string (G:grammar) b =
   | BinderString s => s
   | TypeBinderString s => s
 
+local
+open Lib
+fun is_term_binder (TypeBinderString _) = false
+  | is_term_binder _ = true
+fun is_type_binder (TypeBinderString _) = true
+  | is_type_binder _ = false
+in
+
 fun binders (G: grammar) = let
   fun binders0 [] acc = acc
     | binders0 ((_, x)::xs) acc = let
@@ -252,6 +260,34 @@ fun binders (G: grammar) = let
       end
 in
   binders0 (rules G) []
+end
+
+fun term_binders (G: grammar) = let
+  fun binders0 [] acc = acc
+    | binders0 ((_, x)::xs) acc = let
+      in
+        case x of
+          PREFIX (BINDER sl) => binders0 xs (map (binder_to_string G)
+                                                 (filter is_term_binder sl) @ acc)
+        | _ => binders0 xs acc
+      end
+in
+  binders0 (rules G) []
+end
+
+fun type_binders (G: grammar) = let
+  fun binders0 [] acc = acc
+    | binders0 ((_, x)::xs) acc = let
+      in
+        case x of
+          PREFIX (BINDER sl) => binders0 xs (map (binder_to_string G)
+                                                 (filter is_type_binder sl) @ acc)
+        | _ => binders0 xs acc
+      end
+in
+  binders0 (rules G) []
+end
+
 end
 
 fun resquan_op (G: grammar) = #res_quanop (specials G)
@@ -266,6 +302,10 @@ fun associate_restriction G (b, s) =
   fupdate_specials (fupdate_restr_binders (update_assoc (b, s))) G
 
 fun is_binder G = let val bs = binders G in fn s => Lib.mem s bs end
+
+fun is_term_binder G = let val bs = term_binders G in fn s => Lib.mem s bs end
+
+fun is_type_binder G = let val bs = type_binders G in fn s => Lib.mem s bs end
 
 datatype stack_terminal =
   STD_HOL_TOK of string | BOS | EOS | Id  | TypeColon | TypeTok | TypeListTok |
@@ -704,6 +744,9 @@ fun add_grule G0 r = G0 Gmerge [r]
 fun add_binder G0 (s, prec) =
   G0 Gmerge [(SOME prec, PREFIX (BINDER [BinderString s]))]
 
+fun add_type_binder G0 (s, prec) =
+  G0 Gmerge [(SOME prec, PREFIX (BINDER [TypeBinderString s]))]
+
 fun add_listform G lrule = let
   fun ok_el e =
       case e of
@@ -921,8 +964,13 @@ fun prettyprint_grammar pstrm (G :grammar) = let
       | TypeBinderString s => s
     val bname = "\"" ^ bname0 ^ "\""
     val endb = "\"" ^ #endbinding (specials G) ^ "\""
+    val lname =
+      case b of
+        LAMBDA => "binders"
+      | BinderString s => "binders"
+      | TypeBinderString s => "type binders"
   in
-    add_string (bname ^ " <..binders..>  " ^ endb ^ " TM")
+    add_string (bname ^ " <.." ^ lname ^ "..>  " ^ endb ^ " TM")
   end
 
 

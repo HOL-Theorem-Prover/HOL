@@ -273,8 +273,19 @@ in
   end handle UNCHANGED => AP_TERM Rator (conv Rand)
 end
 
+fun TY_COMB_CONV conv tm = let
+  val {Rator, Rand} = dest_tycomb tm
+in TY_COMB Rand (conv Rator)
+end
+
+fun TY_ABS_CONV conv tm = let
+  val {Bvar, Body} = dest_tyabs tm
+in Thm.TY_ABS Bvar (conv Body)
+end
+
 fun SUB_CONV conv =
-    TRY_CONV (COMB_CONV conv ORELSEC ABS_CONV conv)
+    TRY_CONV (COMB_CONV conv ORELSEC ABS_CONV conv ORELSEC
+              TY_COMB_CONV conv ORELSEC TY_ABS_CONV conv)
 
 fun FORK_CONV (conv1,conv2) tm = let
   open Term (* get rid of overlying Rsyntax *)

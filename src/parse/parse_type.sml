@@ -38,6 +38,15 @@ fun parse_type (tyfns :
        tycon = pConType,
        tyapp = pAppType, tyuniv = pUnivType, tyabs = pAbstType,
        kindparser} = tyfns
+  fun structure_num_args st =
+    let val max = Int.max
+        fun nargs (PARAM n) = n + 1
+          | nargs (TYAPP  (opr, arg )) = max (nargs opr,  nargs arg)
+          | nargs (TYUNIV (bvar,body)) = max (nargs bvar, nargs body)
+          | nargs (TYABST (bvar,body)) = max (nargs bvar, nargs body)
+          | nargs _ = 0
+    in nargs st
+    end
   fun structure_to_value (s,locn) args st =
     let val stv = structure_to_value (s,locn) args
     in
@@ -187,6 +196,11 @@ end
 
   fun parse_abbrev args fb = let
     val (adv, (t,locn)) = typetok_of fb
+    fun split 0 l = ([],l)
+      | split n (h::t) = let val (l,r) = split (n-1) t
+                         in (h::l,r)
+                         end
+      | split _ l = (l,[])
   in
     case t of
       TypeIdent s =>
@@ -194,7 +208,11 @@ end
         else
          (case Binarymap.peek(abbrevs, s) of
              NONE => raise InternalFailure locn
-           | SOME st => (adv(); (structure_to_value (s,locn) args st, locn)))
+           | SOME st => let val nargs = structure_num_args st
+                            val (largs,rargs) = split nargs args
+                            val res = structure_to_value (s,locn) largs st
+                        in (adv(); (apply_tyop (res,locn) rargs, locn))
+                        end)
     | _ => raise InternalFailure locn
   end
 

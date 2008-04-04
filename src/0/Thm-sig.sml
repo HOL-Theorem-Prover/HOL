@@ -29,6 +29,8 @@ sig
   val MP            : thm -> thm -> thm
   val SUBST         : (term,thm)Lib.subst -> term -> thm -> thm
   val INST_TYPE     : (hol_type,hol_type)Lib.subst -> thm -> thm
+  val TY_ABS        : hol_type -> thm -> thm
+  val TY_BETA_CONV  : term -> thm
 
 
   (* Now some derivable-but-primitive rules of inference *)
@@ -38,6 +40,7 @@ sig
 
   val ALPHA         : term -> term -> thm
   val MK_COMB       : thm * thm -> thm
+  val TY_COMB       : hol_type -> thm -> thm
   val AP_TERM       : term -> thm -> thm
   val AP_THM        : thm -> term -> thm
   val ETA_CONV      : term -> thm
@@ -96,6 +99,8 @@ sig
   val Eta           : thm -> thm
   val Mk_comb       : thm -> thm * thm * (thm -> thm -> thm)
   val Mk_abs        : thm -> term * thm * (thm -> thm)
+  val Mk_tycomb     : thm -> thm * hol_type * (thm -> thm)
+  val Mk_tyabs      : thm -> hol_type * thm * (thm -> thm)
   val Specialize    : term -> thm -> thm
 
   (* Multiple binders *)
@@ -113,4 +118,9 @@ sig
   val disk_thm      : term vector
                        -> string list * 'a Portable.frag list list
                                       * 'a Portable.frag list -> thm
+
+  (* Debugging output *)
+
+  val debug_type    : hol_type -> unit
+  val debug_term    : term -> unit
 end;

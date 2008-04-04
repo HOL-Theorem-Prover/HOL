@@ -603,6 +603,12 @@ fun pp_term (G : grammar) TyG = let
 
   fun pr_term binderp showtypes showtypes_v vars_seen pps ppfns ratorp tm
               pgrav lgrav rgrav depth = let
+    fun pr_term1 binderp showtypes showtypes_v vars_seen pps ppfns ratorp tm
+              pgrav lgrav rgrav depth
+      = pr_term binderp showtypes showtypes_v vars_seen pps ppfns ratorp tm
+              pgrav lgrav rgrav depth
+              handle e => Raise (wrap_exn "term_pp.pr_term" "<entrance>" e) (* debugging *)
+    val pr_term = pr_term1
     val _ =
         if printers_exist then let
             fun sysprint (pg,lg,rg) depth tm =
@@ -912,9 +918,9 @@ fun pp_term (G : grammar) TyG = let
       end
       else ();
       if showtypes then
-        (add_string (" "^type_intro); add_break (0,0);
+        (add_string (" "^type_intro);
          let val ty = #2 (dom_rng injty)
-         in if is_univ_type ty then add_break (1,0) else ();
+         in if is_univ_type ty then add_break (1,0) else add_break (0,0);
             type_pp.pp_type_with_depth TyG pps (decdepth depth) ty
          end)
       else ();
@@ -1280,9 +1286,9 @@ fun pp_term (G : grammar) TyG = let
       add_break (1, 0);
       pr_term t2 prec prec rprec (decdepth depth);
       if comb_show_type then
-        (add_string (" "^type_intro); add_break (0,0);
+        (add_string (" "^type_intro);
          let val ty = type_of tm
-         in if is_univ_type ty then add_break (1,0) else ();
+         in if is_univ_type ty then add_break (1,0) else add_break (0,0);
             type_pp.pp_type_with_depth TyG pps (decdepth depth) ty
          end)
       else ();
@@ -1412,7 +1418,39 @@ fun pp_term (G : grammar) TyG = let
           print_ellist (Top, prec, rprec) (pp_elements, real_args);
           endblock(); pend addparens
         end
-      | PREFIX (BINDER _) => let
+      | PREFIX (BINDER _) =>
+        if is_tyabs tm orelse is_tyabs Rand then let
+          val (bvars, body) = strip_tyvstructs (SOME fname) tm (* strip_tyabs tm *)
+(*
+          val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
+          val old_seen = !bvars_seen
+*)
+          val addparens =
+            case rgrav of
+              Prec(n, _) => n > fprec
+            | _ => false
+        in
+          pbegin addparens;
+          begin_block INCONSISTENT 2;
+          add_string fname;
+          spacep (not (symbolic fname));
+          begin_block INCONSISTENT 0;
+          pr_typel "" bvars;
+          end_block();
+          add_string endbinding; spacep true;
+          begin_block CONSISTENT 0;
+(*
+          bvars_seen := bvars_seen_here @ old_seen;
+*)
+          pr_term body Top Top Top (decdepth depth);
+(*
+          bvars_seen := old_seen;
+*)
+          end_block ();
+          end_block();
+          pend addparens
+        end
+        else let
           fun find (BinderString bs, s) = if bs = fname then SOME s else NONE
             | find _ = NONE
           val restr_binder = find_partial find restr_binders
@@ -1586,8 +1624,8 @@ fun pp_term (G : grammar) TyG = let
           val vrule = lookup_term vname
           fun add_type () = let
           in
-            add_string (" "^type_intro); add_break (0,0);
-            if is_univ_type Ty then add_break (1,0) else ();
+            add_string (" "^type_intro);
+            if is_univ_type Ty then add_string " " else ();
             type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty
           end
           val new_freevar =
@@ -1612,10 +1650,12 @@ fun pp_term (G : grammar) TyG = let
           fun with_type action = let
           in
             pbegin true;
+            begin_block CONSISTENT 0;
             action();
             add_string (" "^type_intro);
-            if is_univ_type Ty then add_break (1,0) else ();
+            if is_univ_type Ty then add_string " " else ();
             type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty;
+            end_block ();
             pend true
           end
           val r = {Name = Name, Thy = Thy}
@@ -1638,7 +1678,7 @@ fun pp_term (G : grammar) TyG = let
                 add_string "(";
                 begin_block CONSISTENT 0;
                 add_string type_intro;
-                if is_univ_type (hd Args) then add_break (1,0) else ();
+                if is_univ_type (hd Args) then add_string " " else ();
                 type_pp.pp_type_with_depth TyG pps depth (hd Args);
                 end_block ();
                 add_string ")"
@@ -1771,7 +1811,7 @@ fun pp_term (G : grammar) TyG = let
                   | PREFIX (STD_prefix list) =>
                       numTMs (rule_elements (#elements (hd list))) =
                       length args
-                  | PREFIX (BINDER _) => my_is_abs Rand andalso length args = 0
+                  | PREFIX (BINDER _) => (my_is_abs Rand orelse my_is_tyabs Rand) andalso length args = 0
                   | SUFFIX (STD_suffix list) =>
                       numTMs (rule_elements (#elements (hd list))) =
                       length args

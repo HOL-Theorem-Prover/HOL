@@ -22,9 +22,12 @@ and type Ctrl-j.
 
 quotation := true;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/sigobj" :: !loadPath;
-loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/sum" :: !loadPath;
+loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/bool" :: !loadPath;
+loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/HolSat" :: !loadPath;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/pair/src" :: !loadPath;
-app load ["HolKernel","Parse"];
+app load ["Kind","Type","Term","Thm","Theory"];
+app load ["Globals","HolKernel","Parse"];
+app load ["Globals","HolKernel","Parse","Drule","Thm","boolTheory","Tactical","Tactic","Rerite"];
 
 load "stringLib";
 val tm5 = ``( (f: !'a 'b 'c 'd. ('a # 'b # 'c # 'd)) [: bool, num, ind, char :] , f)`` handle e => Raise e;
@@ -369,6 +372,12 @@ val tm2 = Term `\x:'a. (f:'a->'b) (x:'a) = (z: 'b)`;
  *             BASIC DEFINITIONS                                             *
  *---------------------------------------------------------------------------*)
 
+(* Fundamental type combinators: *)
+
+val _ = type_abbrev ("I", Type `: \'a. 'a`);
+val _ = type_abbrev ("K", Type `: \'a 'b. 'a`);
+val _ = type_abbrev ("S", Type `: \'a 'b 'c. 'c 'b ('c 'a)`);
+
 val T_DEF =
  Definition.new_definition
    ("T_DEF",          Term `T = ((\x:bool. x) = \x:bool. x)`);
@@ -417,6 +426,43 @@ Definition.new_definition
                                     $? P /\ !x y. P x /\ P y ==> (x=y)`);
 
 val _ = (add_binder ("?!", std_binder_precedence); add_const "?!")
+
+
+val TYFORALL_DEF =
+ Definition.new_definition
+   ("TYFORALL_DEF",     Term `!: = \P. ((\:'a. P [:'a:]) = (\:'a. T))`);
+
+val _ = (add_type_binder("!:", std_binder_precedence); add_const "!:");
+
+val TYEXISTS_DEF =
+ Definition.new_definition
+   ("TYEXISTS_DEF",     Term `?: = \P. ~((\:'a. P [:'a:]) = (\:'a. F))`);
+
+val _ = (add_type_binder("?:", std_binder_precedence); add_const "?:");
+
+(* Test of HOL-Omega definitions; uncomment to test:
+
+val _ = print "about to test monad...\n"
+
+val monad_def = Definition.new_definition
+  ("monad_def", Term
+   `monad = \(unit: !'a. 'a -> 'a 'M)
+             (bind: !'a 'b. 'a 'M -> ('a -> 'b 'M) -> 'b 'M).
+      (* Left unit *)
+          (!:'a 'b. !(a:'a) (k:'a -> 'b 'M).
+                bind[:'a,'b:] (unit[:'a:] a) k = k a) /\
+      (* Right unit *)
+          (!:'a. !(m:'a 'M).
+                bind[:'a,'a:] m (unit[:'a:]) = m) /\
+      (* Associative *)
+          (!:'a 'b 'c. !(m:'a 'M) (k:'a -> 'b 'M) (h:'b -> 'c 'M).
+                bind[:'a,'c:] m (\a. bind[:'b,'c:] (k a) (\b. h b))
+              = bind[:'b,'c:] (bind[:'a,'b:] m (\a. k a)) (\b. h b))
+     `) handle e => Raise e;
+
+val _ = print "created monad\n"
+
+*)
 
 val LET_DEF =
  Definition.new_definition

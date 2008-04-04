@@ -175,18 +175,18 @@ fun dest_term M =
 
 
 datatype omega_type
-   = TY_VAR of string * kind * int (* rank *)
-   | TY_CONST of {Thy:string, Tyop:string, Kind:kind, Rank:int}
-   | TY_APP  of hol_type * hol_type
-   | TY_UNIV of hol_type * hol_type
-   | TY_ABS  of hol_type * hol_type;
+   = TYVAR of string * kind * int (* rank *)
+   | TYCONST of {Thy:string, Tyop:string, Kind:kind, Rank:int}
+   | TYAPP  of hol_type * hol_type
+   | TYUNIV of hol_type * hol_type
+   | TYABS  of hol_type * hol_type;
 
 fun destruct_type Ty =
-  TY_APP   (dest_app_type     Ty) handle HOL_ERR _ =>
-  TY_UNIV  (dest_univ_type    Ty) handle HOL_ERR _ =>
-  TY_ABS   (dest_abs_type     Ty) handle HOL_ERR _ =>
-  TY_VAR   (dest_vartype_opr  Ty) handle HOL_ERR _ =>
-  TY_CONST (dest_thy_con_type Ty);
+  TYAPP   (dest_app_type     Ty) handle HOL_ERR _ =>
+  TYUNIV  (dest_univ_type    Ty) handle HOL_ERR _ =>
+  TYABS   (dest_abs_type     Ty) handle HOL_ERR _ =>
+  TYVAR   (dest_vartype_opr  Ty) handle HOL_ERR _ =>
+  TYCONST (dest_thy_con_type Ty);
 
 
 (*---------------------------------------------------------------------------*

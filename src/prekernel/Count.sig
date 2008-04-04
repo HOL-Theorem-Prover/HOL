@@ -18,6 +18,7 @@ sig
                 | Conj | Conjunct1 | Conjunct2
                 | Disj1 | Disj2 | DisjCases
                 | NotIntro | NotElim  | Ccontr | GenAbs
+                | TyAbs | TyComb | TyBeta (* these are for HOL-Omega *)
                 | Definition | Axiom | Disk | Oracle;
 
   val counting_thms   : bool -> unit
@@ -41,6 +42,7 @@ sig
     DISJ2 : int, DISJ_CASES : int, 
     NOT_INTRO : int, NOT_ELIM : int, 
     CCONTR : int, GEN_ABS : int,
+    TY_ABS : int, TY_COMB : int, TY_BETA_CONV : int, (* these are for HOL-Omega *)
     definition : int, axiom : int, 
     from_disk : int, oracle :int,  
     total :int }

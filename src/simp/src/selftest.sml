@@ -20,7 +20,7 @@ fun infloop_protect (startstr : string) (endfn : 'a -> bool)
 
 (* earlier versions of the simplifier would go into an infinite loop on
    terms of this form. *)
-val const_term = ``ARB : bool -> bool (ARB : bool -> bool ARB)``
+val const_term = ``(ARB : bool -> bool) ((ARB : bool -> bool) ARB)``
 val test_term = ``^const_term /\ x /\ y``
 
 val (test1_flag, result1) =

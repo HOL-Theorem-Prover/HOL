@@ -724,11 +724,14 @@ fun EQF_ELIM th =
 fun ISPEC t th =
    let val (Bvar,_) = dest_forall(concl th) handle HOL_ERR _
                       => raise ERR"ISPEC"
-                           ": input theorem not universally quantified"
+                           "input theorem not universally quantified"
        val (_,inst) = match_term Bvar t handle HOL_ERR _
                       => raise ERR "ISPEC"
-                           ": can't type-instantiate input theorem"
-   in SPEC t (INST_TYPE inst th) handle HOL_ERR _
+                           "can't type-instantiate input theorem"
+       val ith = INST_TYPE inst th handle HOL_ERR {message,...}
+                      => raise ERR "ISPEC"
+                           ("failed to type-instantiate input theorem:\n" ^ message)
+   in SPEC t ith handle HOL_ERR _
          => raise ERR "ISPEC" ": type variable free in assumptions"
    end;
 

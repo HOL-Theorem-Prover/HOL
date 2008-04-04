@@ -9,11 +9,13 @@ open HolKernel boolTheory boolSyntax Drule Conv Abbrev;
  * term-like  structure.
  *---------------------------------------------------------------------------*)
 
-datatype ('a,'b,'c) stack =
+datatype ('a,'b,'c,'d,'e) stack =
     Ztop
-  | Zrator of { Rand : 'a, Ctx : ('a,'b,'c) stack }
-  | Zrand of { Rator : 'b, Ctx : ('a,'b,'c) stack }
-  | Zabs of { Bvar : 'c, Ctx : ('a,'b,'c) stack }
+  | Zrator of { Rand : 'a, Ctx : ('a,'b,'c,'d,'e) stack }
+  | Zrand of { Rator : 'b, Ctx : ('a,'b,'c,'d,'e) stack }
+  | Zabs of { Bvar : 'c, Ctx : ('a,'b,'c,'d,'e) stack }
+  | Ztyrator of { Rand : 'd, Ctx : ('a,'b,'c,'d,'e) stack }
+  | Ztyabs of { Bvar : 'e, Ctx : ('a,'b,'c,'d,'e) stack }
 ;
 
 fun RULES_ERR function message =

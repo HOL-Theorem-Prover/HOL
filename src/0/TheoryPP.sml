@@ -29,22 +29,57 @@ fun thm_terms th = Thm.concl th :: Thm.hyp th;
 fun Thry s = s^"Theory";
 fun ThrySig s = Thry s
 
-fun pp_type mvartype mtype pps ty =
- let open Portable Kind Type
+fun pp_kind pps kd =
+ let open Portable
      val pp_kind = pp_kind pps
-     val pp_type = pp_type mvartype mtype pps
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
  in
+  if kd = Kind.typ then add_string "typ"
+  else let val (d,r) = Kind.kind_dom_rng kd
+       in (add_string "(";
+           begin_block INCONSISTENT 0;
+             pp_kind d;
+             add_break (1,0);
+             add_string "==>";
+             add_break (1,0);
+             pp_kind r;
+           end_block ();
+           add_string ")")
+       end
+ end
+
+fun pp_type mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps ty =
+ let open Portable Type
+     val pp_kind = pp_kind pps
+     val pp_type = pp_type mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps
+     val {add_string,add_break,begin_block,end_block,
+          add_newline,flush_ppstream,...} = with_ppstream pps
+     fun pp_type_par ty = if mem ty [alpha,beta,gamma,delta] then pp_type ty
+                          else if can dom_rng ty then pp_type ty
+                          else (add_string "("; pp_type ty; add_string ")")
+ in
   if is_vartype ty
-  then case dest_vartype ty
-        of "'a" => add_string "alpha"
-         | "'b" => add_string "beta"
-         | "'c" => add_string "gamma"
-         | "'d" => add_string "delta"
-         |  s   => add_string (mvartype^quote s)
+  then let val (s,kd,rk) = dest_vartype_opr ty
+       in if kd = Kind.typ andalso rk = 0 then
+            case dest_vartype ty
+             of "'a" => add_string "alpha"
+              | "'b" => add_string "beta"
+              | "'c" => add_string "gamma"
+              | "'d" => add_string "delta"
+              |  s   => add_string ("("^mvartype^quote s^")")
+          else
+              (add_string mvartypeopr;
+               begin_block INCONSISTENT 0;
+                 add_string (quote s);
+                 add_break (1,0);
+                 pp_kind kd;
+                 add_break (1,0);
+                 add_string (Int.toString rk);
+               end_block ())
+       end
   else
-  case dest_thy_type ty
+  (case dest_thy_type ty
    of {Tyop="bool", Thy="min", Args=[]} => add_string "bool"
     | {Tyop="ind",  Thy="min", Args=[]} => add_string "ind"
     | {Tyop="fun",  Thy="min", Args=[d,r]}
@@ -63,16 +98,6 @@ fun pp_type mvartype mtype pps ty =
            begin_block INCONSISTENT 0;
            add_string (quote Tyop);
            add_break (1,0);
-(*
-           if Kind = typ then ()
-                         else (add_string ":: ";
-                               pp_kind Kind;
-                               add_break (1,0));
-           if Rank = 0   then ()
-                         else (add_string "<= ";
-                               add_string (Int.toString Rank);
-                               add_break (1,0));
-*)
            add_string (quote Thy);
            add_break (1,0);
            add_string "[";
@@ -82,41 +107,53 @@ fun pp_type mvartype mtype pps ty =
            end_block ();
            add_string "]";
            end_block ()
-         end
+         end)
   handle HOL_ERR _ =>
-    let val (opr,arg) = dest_app_type ty
-    in add_string "(";
-       begin_block INCONSISTENT 0;
-         pp_type arg;
-         add_break (1,0);
-         pp_type opr;
-       end_block ();
-       add_string ")"
-    end
-  handle HOL_ERR _ =>
-    let val (tyv,body) = dest_abs_type ty
-    in add_string "(";
-       begin_block INCONSISTENT 0;
-         add_string "\\";
-         pp_type tyv;
-         add_string ".";
-         add_break (1,0);
-         pp_type body;
-       end_block ();
-       add_string ")"
-    end
-  handle HOL_ERR _ =>
-    let val (tyv,body) = dest_univ_type ty
-    in add_string "(";
-       begin_block INCONSISTENT 0;
-         add_string "!";
-         pp_type tyv;
-         add_string ".";
-         add_break (1,0);
-         pp_type body;
-       end_block ();
-       add_string ")"
-    end
+(* shouldn't need code for is_con_type, subsumed by above: *)
+  if is_con_type ty then
+       let val {Tyop,Thy,Kind,Rank} = dest_thy_con_type ty
+       in
+           add_string mcontype;
+           begin_block INCONSISTENT 0;
+           add_string (quote Tyop);
+           add_break (1,0);
+           add_string (quote Thy);
+           end_block ()
+       end
+  else if is_app_type ty then
+       let val (Rator,Rand) = dest_app_type ty
+       in
+           add_string mapptype;
+           begin_block INCONSISTENT 0;
+           add_break (1,0);
+           pp_type_par Rator;
+           add_break (1,0);
+           pp_type_par Rand;
+           end_block ()
+       end
+  else if is_abs_type ty then
+       let val (Bvar,Body) = dest_abs_type ty
+       in
+           add_string mabstype;
+           begin_block INCONSISTENT 0;
+           add_break (1,0);
+           pp_type_par Bvar;
+           add_break (1,0);
+           pp_type_par Body;
+           end_block ()
+       end
+  else if is_univ_type ty then
+       let val (Bvar,Body) = dest_univ_type ty
+       in
+           add_string munivtype;
+           begin_block INCONSISTENT 0;
+           add_break (1,0);
+           pp_type_par Bvar;
+           add_break (1,0);
+           pp_type_par Body;
+           end_block ()
+       end
+  else raise ERR "pp_type" "unrecognized type"
  end
 
 fun with_parens pfn pp x =
@@ -241,11 +278,46 @@ fun hash_kind kd n =
         in hash_kind rng (hash_kind dom n)
         end;
 
+local open Type in
+fun debug_type ty =
+    if is_vartype ty then let
+        val (s,kd,rk) = dest_vartype_opr ty
+      in print s
+      end 
+    else if is_bvartype ty then let
+      in print "<bound type var>"
+      end 
+    else if is_con_type ty then let
+        val {Tyop,Thy,Kind,Rank} = dest_thy_con_type ty
+      in print Tyop
+      end
+    else if is_app_type ty then let
+        val (f,a) = dest_app_type ty
+      in print "("; debug_type a; print " ";
+         debug_type f; print ")"
+      end
+    else if is_abs_type ty then let
+        val (v,b) = dest_abs_type ty
+      in print "(\\"; debug_type v; print ". ";
+         debug_type b; print ")"
+      end
+    else if is_univ_type ty then let
+        val (v,b) = dest_univ_type ty
+      in print "(!"; debug_type v; print ". ";
+         debug_type b; print ")"
+      end
+    else print "debug_type: unrecognized type\n"
+end
+
 fun hash_type ty n =
   hash(#1 (Type.dest_vartype_opr ty)) (0,n)
   handle HOL_ERR _ =>
      let val {Tyop,Thy,Args} = Type.dest_thy_type ty
      in itlist hash_type Args (hash Thy (0, hash Tyop (0,n)))
+     end
+  handle HOL_ERR _ =>
+     let val {Tyop,Thy,Kind,Rank} = Type.dest_thy_con_type ty
+     in hash_kind Kind (hash Thy (0, hash Tyop (0,n)))
      end
   handle HOL_ERR _ =>
      let val (opr,arg) = Type.dest_app_type ty
@@ -258,15 +330,53 @@ fun hash_type ty n =
   handle HOL_ERR _ =>
      let val (tyv,body) = Type.dest_univ_type ty                             
      in hash_type body (hash_type tyv n)
-     end;
+     end
+  handle HOL_ERR e => (debug_type ty; Raise (HOL_ERR e))
+
+local open Term in
+fun debug_term tm =
+    if is_var tm then let
+        val (s,ty) = dest_var tm
+      in print s
+      end
+    else if is_const tm then let
+        val (s,ty) = dest_const tm
+      in print s
+      end
+    else if is_comb tm then let
+        val (f,a) = dest_comb tm
+      in print "("; debug_term f; print " ";
+         debug_term a; print ")"
+      end
+    else if is_abs tm then let
+        val (v,b) = dest_abs tm
+      in print "(\\"; debug_term v; print ". ";
+         debug_term b; print ")"
+      end
+    else if is_tycomb tm then let
+        val (f,a) = dest_tycomb tm
+      in print "("; debug_term f; print " ";
+         print "[:<type>:]"; print ")"
+      end
+    else (* if is_tyabs tm then *) let
+        val (v,b) = dest_tyabs tm
+      in print "(\\:<type>. ";
+         debug_term b; print ")"
+      end
+end
 
 fun hash_atom tm n =
   let val (Name,Ty) = Term.dest_var tm
+      val h1 = hash Name (0,n)
+      val h2 = hash_type Ty h1
   in hash_type Ty (hash Name (0,n))
   end handle HOL_ERR _ =>
        let val {Name,Thy,Ty} = Term.dest_thy_const tm
        in hash_type Ty (hash Thy (0, hash Name (0,n)))
-       end;
+       end (* handle e =>
+            (print "hash_atom failed on "; debug_term tm;
+             print " : "; debug_type (Term.type_of tm);
+             print "\n"; Raise e) *);
 
 
 (*---------------------------------------------------------------------------
@@ -284,6 +394,8 @@ fun add tm =
   in
     loop els
   end;
+
+fun addty ty = add (Term.ty2tm ty);
 
 
 (*---------------------------------------------------------------------------*)
@@ -306,11 +418,13 @@ in
 fun check V thml =
   let val _ = HOL_MESG "Checking consistency of sharing scheme"
       fun chk tm =
-         if (Vector.sub(V, index tm) = tm)
+         if Type.unbound_ty(Term.type_of tm) then ()
+         else if (Vector.sub(V, index tm) = tm)
           then ()
            else (HOL_MESG "FAILURE in sharing scheme!";
                  raise ERR "check" "failure in sharing scheme")
-  in List.app (app (Term.trav chk) o thm_terms o snd) thml;
+      fun chkty ty = chk (Term.ty2tm ty)
+  in List.app (app (Term.trav chkty chk) o thm_terms o snd) thml;
      HOL_MESG "Completed successfully"
   end
 end;
@@ -318,14 +432,14 @@ end;
 
 fun share_thy check_share thms =
   let val _ = reset_share_table()
-      val _ = List.app (app (Term.trav add) o thm_terms o snd) thms
+      val _ = List.app (app (Term.trav addty add) o thm_terms o snd) thms
       val L0 = Array.foldr (op @) [] share_table
       val L1 = Lib.sort (fn (_,i0) => fn (_,i1) => i0<=i1) L0
       val slist = map fst L1
       val _ = if check_share then check (Vector.fromList slist) thms else ()
   in
     slist
-  end;
+  end handle e => Raise e;
 
 (*---------------------------------------------------------------------------
  * Need to replace a backslash by two backslashes because one of them
@@ -372,7 +486,7 @@ fun pp_struct info_record ppstrm =
      val {add_string,add_break,begin_block,end_block, add_newline,
           flush_ppstream,...} = Portable.with_ppstream ppstrm
      val pp_tm = pp_raw ppstrm
-     val pp_ty = with_parens (pp_type "U" "T") ppstrm
+     val pp_ty = with_parens (pp_type "U" "R" "T" "O" "P" "B" "N") ppstrm
      val pp_tag = Tag.pp_to_disk ppstrm
      fun pblock(header, ob_pr, obs) =
          case obs
@@ -458,6 +572,7 @@ fun pp_struct info_record ppstrm =
                         pp_sml_list pp_tm asl; add_string","; add_break(1,0);
                         pp_tm w; end_block();
          add_string")";
+         add_string" handle e => Feedback.Raise e";
          end_block()
       end
      val thml = axioms@definitions@theorems
@@ -516,14 +631,19 @@ fun pp_struct info_record ppstrm =
       begin_block CONSISTENT 0;
       add_string ("val _ = if !Globals.print_thy_loads then print \"Loading "^
                   Thry name^" ... \" else ()"); add_newline();
-      add_string "open Type Term Thm"; add_newline();
-      add_string "infixr -->"; add_newline();
+      add_string "open Kind Type Term Thm"; add_newline();
+      add_string "infixr ==> -->"; add_newline();
       add_string"fun C s t ty = mk_thy_const{Name=s,Thy=t,Ty=ty}";
       add_newline();
       add_string"fun T s t A = mk_thy_type{Tyop=s, Thy=t,Args=A}";
       add_newline();
-      add_string"fun V s q = mk_var(s,q)";     add_newline();
-      add_string"val U     = mk_vartype";              add_newline();
+      add_string"fun V s q   = mk_var(s,q)";     add_newline();
+      add_string"val U       = mk_vartype";              add_newline();
+      add_string"fun R s k r = mk_vartype_opr(s,k,r)";   add_newline();
+      add_string"fun O s t   = mk_thy_con_type{Tyop=s,Thy=t}";        add_newline();
+      add_string"fun P a b   = mk_app_type(a,b)";        add_newline();
+      add_string"fun B a b   = mk_abs_type(a,b)";        add_newline();
+      add_string"fun N a b   = mk_univ_type(a,b)";       add_newline();
    (*   add_string("val _ = print \"Loading theory: "^Thry name^"\\n\""); *)
       add_newline();
       pblock ("Parents", add_string o pparent,

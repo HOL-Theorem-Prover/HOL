@@ -90,6 +90,8 @@ and 'a dterm
     | Cst of term * ('a * int option) ref
     | App of 'a dterm * 'a dterm list  (* order: outermost ahead *)
     | Abs of 'a dterm
+    | TyApp of 'a dterm * hol_type list (* perhaps types not needed *)
+    | TyAbs of hol_type * 'a dterm (* perhaps bound type var not needed *)
 ;
 
 (* Invariant: the first arg of App never is an App. *)
@@ -98,17 +100,25 @@ fun appl(App(a,l1),arg) = App(a,arg::l1)
   | appl(t,arg) = App(t,[arg])
 ;
 
+fun tyappl(TyApp(a,l1),arg) = TyApp(a,arg::l1)
+  | tyappl(t,arg) = TyApp(t,[arg])
+;
+
 (*---------------------------------------------------------------------------
  * Type variable instantiation in dterm. Make it tail-recursive ?
  *---------------------------------------------------------------------------*)
 
 fun inst_type_dterm ([],v) = v
   | inst_type_dterm (tysub,v) =
-      let fun tyi_dt (Cst(c,dbsk)) = Cst(Term.inst tysub c, dbsk)
-            | tyi_dt (App(h,l))  = App(tyi_dt h, map tyi_dt l)
-  	    | tyi_dt (Abs v)     = Abs(tyi_dt v)
-  	    | tyi_dt v           = v
-      in tyi_dt v end
+      let fun tyi_dt S (Cst(c,dbsk)) = Cst(Term.inst S c, dbsk)
+            | tyi_dt S (App(h,l))    = App(tyi_dt S h, map (tyi_dt S) l)
+  	    | tyi_dt S (Abs v)       = Abs(tyi_dt S v)
+  	    | tyi_dt S (TyApp(h,tl)) = TyApp(tyi_dt S h, map (type_subst tysub) tl)
+  	    | tyi_dt S (TyAbs(ty,v)) = let val S' = filter (fn {redex,...} => redex <> ty) S
+                                       in TyAbs(ty,tyi_dt S' v)
+                                       end
+  	    | tyi_dt S v             = v
+      in tyi_dt tysub v end
 ;
 
 
@@ -196,12 +206,16 @@ fun from_term (rws,env,t) =
   	| CONST{Name,Thy,...} => up(Cst (t,assoc_clause rws (Name,Thy)),c)
   	| COMB(Rator,Rand) => down(env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
   	| LAMB(Bvar,Body) => down(Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})
+  	| TYCOMB(Rator,Rand) => down(env,Rator,Ztyrator{Rand=Rand,Ctx=c})
+  	| TYLAMB(Bvar,Body) => down(env, Body, Ztyabs{Bvar=Bvar, Ctx=c})
 
       and up (dt, Ztop) = dt
 	| up (dt, Zrator{Rand=(env,arg), Ctx=c}) =
 	    down (env,arg,Zrand{Rator=dt, Ctx=c})
 	| up (dt, Zrand{Rator=dr, Ctx=c}) = up (appl(dr,dt), c)
 	| up (dt, Zabs{Ctx=c,...}) = up(Abs dt, c)
+	| up (dt, Ztyrator{Rand=arg, Ctx=c}) = up(tyappl(dt,arg), c)
+	| up (dt, Ztyabs{Bvar=ty, Ctx=c}) = up(TyAbs(ty,dt), c)
   in down (env,t,Ztop)
   end
 ;

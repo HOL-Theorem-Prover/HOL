@@ -318,6 +318,20 @@ fun var_occurs M =
    in occ end
    handle HOL_ERR _ => raise ERR "var_occurs" "not a variable";
 
+fun tyvar_occurs aty =
+  let val tyocc = (case aty of TyFv _ => type_var_in aty | _ => raise ERR "" "")
+      fun occ (Fv(n,ty))          = tyocc ty
+        | occ (Bv _)              = false
+        | occ (Const (_,POLY ty)) = tyocc ty
+        | occ (Const (_,GRND ty)) = tyocc ty
+        | occ (Comb(Rator,Rand))  = occ Rand  orelse occ Rator
+        | occ (TComb(Rator,Ty))   = occ Rator orelse tyocc Ty
+        | occ (Abs(Bvar,Body))    = occ Bvar  orelse occ Body
+        | occ (TAbs(Ty,Body))     = tyocc (TyFv Ty)  orelse occ Body
+        | occ (t as Clos _)       = occ (push_clos t)
+   in occ end
+   handle HOL_ERR _ => raise ERR "tyvar_occurs" "not a type variable";
+
 
 (*---------------------------------------------------------------------------*
  * Making variables                                                          *
@@ -406,10 +420,12 @@ fun prim_mk_const {Name,Thy} =
 
 fun ground x = Lib.all (fn {redex,residue} => not(Type.polymorphic residue)) x;
 
+val bconv = deep_beta_conv_ty
+
 fun create_const errstr (const as Const(_,GRND pat)) Ty =
-      if aconv_ty Ty pat then const else raise ERR "create_const" "not a type match"
+      if abconv_ty Ty pat then const else raise ERR "create_const" "not a type match"
   | create_const errstr (const as Const(r,POLY pat)) Ty =
-     ((case Type.raw_match_type pat Ty ([],[])
+     ((case Type.raw_match_type (bconv pat) (bconv Ty) ([],[])
         of ([],_) => const
          | (S,[]) => Const(r, if ground S then GRND Ty else POLY Ty)
          | (S, _) => Const(r,POLY Ty))
@@ -449,7 +465,7 @@ local val INCOMPAT_TYPES  = Lib.C ERR "incompatible types"
         let fun loop (A,_) [] = A
               | loop (A,typ) (tm::rst) =
                  let val (ty1,ty2) = with_exn Type.dom_rng typ err
-                 in if aconv_ty (type_of tm) ty1
+                 in if abconv_ty (type_of tm) ty1
                     then loop(Comb(A,tm),ty2) rst
                     else raise err
                  end
@@ -459,9 +475,9 @@ local val INCOMPAT_TYPES  = Lib.C ERR "incompatible types"
 in
 
 fun mk_comb(r as (Abs(Fv(_,Ty),_), Rand)) =
-      if aconv_ty (type_of Rand) Ty then Comb r else raise INCOMPAT_TYPES "mk_comb"
+      if abconv_ty (type_of Rand) Ty then Comb r else raise INCOMPAT_TYPES "mk_comb"
   | mk_comb(r as (Clos(_,Abs(Fv(_,Ty),_)), Rand)) =
-      if aconv_ty (type_of Rand) Ty then Comb r else raise INCOMPAT_TYPES "mk_comb"
+      if abconv_ty (type_of Rand) Ty then Comb r else raise INCOMPAT_TYPES "mk_comb"
   | mk_comb(Rator,Rand) = mk_comb0 (Rator,[Rand])
 
 val list_mk_comb = lmk_comb (INCOMPAT_TYPES "list_mk_comb")
@@ -515,6 +531,7 @@ fun dest_var (Fv v) = v
 
 (*---------------------------------------------------------------------------*
  *                  Alpha conversion                                         *
+ *     This includes deep beta conversion of types.                          *
  *---------------------------------------------------------------------------*)
 
 fun rename_bvar s t =
@@ -528,14 +545,14 @@ local val EQ = Portable.pointer_eq
 in
 fun aconv t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
-  of (Fv(M,ty1),Fv(N,ty2)) => M=N andalso aconv_ty ty1 ty2
-   | (Const(M,GRND ty1),Const(N,GRND ty2)) => M=N andalso aconv_ty ty1 ty2
-   | (Const(M,POLY ty1),Const(N,POLY ty2)) => M=N andalso aconv_ty ty1 ty2
+  of (Fv(M,ty1),Fv(N,ty2)) => M=N andalso abconv_ty ty1 ty2
+   | (Const(M,GRND ty1),Const(N,GRND ty2)) => M=N andalso abconv_ty ty1 ty2
+   | (Const(M,POLY ty1),Const(N,POLY ty2)) => M=N andalso abconv_ty ty1 ty2
    | (Const _,Const _) => false
    | (Comb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
-   | (TComb(M,ty1),TComb(P,ty2)) => Type.aconv_ty ty1 ty2 andalso aconv M P
+   | (TComb(M,ty1),TComb(P,ty2)) => abconv_ty ty1 ty2 andalso aconv M P
    | (Abs(Fv(_,ty1),M),
-      Abs(Fv(_,ty2),N)) => aconv_ty ty1 ty2 andalso aconv M N
+      Abs(Fv(_,ty2),N)) => abconv_ty ty1 ty2 andalso aconv M N
    | (TAbs((_,k1,r1),M),
       TAbs((_,k2,r2),N)) => k1=k2 andalso r1=r2 andalso aconv M N
    | (Clos(e1,b1),
@@ -1224,7 +1241,7 @@ fun RM [] theta = theta
         (if c1 <> c2 then MERR "different constants" else
          case (ty1,ty2)
           of (GRND _,  POLY _)   => MERR"ground const vs. polymorphic const"
-           | (GRND pat,GRND obj) => if aconv_ty pat obj then (tmS,tyS)
+           | (GRND pat,GRND obj) => if abconv_ty pat obj then (tmS,tyS)
                        else MERR"const-const with different (ground) types"
            | (POLY pat,GRND obj) => (tmS, tymatch pat obj tyS)
            | (POLY pat,POLY obj) => (tmS, tymatch pat obj tyS))
@@ -1316,15 +1333,24 @@ end
 (*---------------------------------------------------------------------------*
  * Traverse a term, performing a given (side-effecting) operation at the     *
  * leaves. For our purposes, bound variables can be ignored.                 *
+ * The two function arguments are the operations at types and at terms.      *
  *---------------------------------------------------------------------------*)
 
-fun trav f =
-  let fun trv (a as Fv _) = f a
-        | trv (a as Const _) = f a
+fun trav tyf tmf =
+  let fun trvty (a as TyFv _) = tyf a
+        | trvty (a as TyCon _) = tyf a
+        | trvty (TyApp(Opr,Arg)) = (trvty Arg; trvty Opr)
+        | trvty (TyAbs(Bvar,Body)) = (trvty (TyFv Bvar); trvty Body)
+        | trvty (TyAll(Bvar,Body)) = (trvty (TyFv Bvar); trvty Body)
+        | trvty _ = ()
+      fun try_tmf a =
+          if unbound_ty(type_of a) then trvty (type_of a) else tmf a
+      fun trv (a as Fv _) = try_tmf a
+        | trv (a as Const _) = try_tmf a
         | trv (Comb(Rator,Rand)) = (trv Rator; trv Rand)
-        | trv (TComb(Rator,Ty))  =  trv Rator
+        | trv (TComb(Rator,Ty))  = (trv Rator; trvty Ty)
         | trv (Abs(Bvar,Body))   = (trv Bvar; trv Body)
-        | trv (TAbs(Bvar,Body))  =  trv Body
+        | trv (TAbs(Bvar,Body))  = (trvty (TyFv Bvar); trv Body)
         | trv (t as Clos _)      =  trv (push_clos t)
         | trv _ = ()
   in
@@ -1337,35 +1363,70 @@ fun trav f =
 
 val dot     = "."
 val dollar  = "$"
-val percent = "%";
+val percent = "%"
+val slash   = "/"
+val colon   = ":";
+
+fun ty2tm ty = mk_var("carrier",ty);
 
 fun pp_raw_term index pps tm =
  let open Portable
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     fun ppty (TyApp(Opr,Arg)) =
+          ( add_string "("; ppty Arg; add_break(1,0);
+            ppty Opr; add_string ")" )
+       | ppty (TyAbs(Bvar,Body)) =
+          ( add_string "(\\";
+            ppty (TyFv Bvar); add_string dot; add_break(1,0);
+            ppty Body; add_string ")" )
+       | ppty (TyAll(Bvar,Body)) =
+          ( add_string "(!";
+            ppty (TyFv Bvar); add_string dot; add_break(1,0);
+            ppty Body; add_string ")" )
+       | ppty (TyBv i) = add_string (dollar^Lib.int_to_string i)
+       | ppty a        = add_string (percent^Lib.int_to_string (index (ty2tm a)))
+
+     fun ppunb (Fv(n,Ty)) =
+          ( add_string "(@";
+            add_string (quote n); add_break(1,0);
+            ppty Ty; add_string ")" )
+       | ppunb (Const(id,Ty)) =
+          let val (nm,thy) = dest_id id
+              val (opr,ty) = case Ty of POLY t => ("=",t) | GRND t => ("-",t)
+          in
+          ( add_string "(";
+            add_string opr;
+            add_string (quote nm);  add_break(1,0);
+            add_string (quote thy); add_break(1,0);
+            ppty ty; add_string ")" )
+          end
+       | ppunb _ = raise ERR "pp_raw_term" "non-atom: can't happen"
+
      fun pp (Abs(Bvar,Body)) =
           ( add_string "(\\";
             pp Bvar; add_string dot; add_break(1,0);
             pp Body; add_string ")" )
-      | pp (TAbs((name,kind,rank),Body)) =
-         ( add_string "(\\:";
-           add_string name; add_string dot; add_break(1,0);
-           pp Body; add_string ")" )
-      | pp (Comb(Rator,Rand)) =
-         ( add_string "("; pp Rator; add_break(1,0);
-                           pp Rand; add_string ")")
-      | pp (TComb(Rator,Ty)) =
-         ( add_string "("; pp Rator; add_break(1,0);
-                           add_string "[type]";
-                           add_string ")" )
-      | pp (Bv i) = add_string (dollar^Lib.int_to_string i)
-      | pp a      = add_string (percent^Lib.int_to_string (index a))
+       | pp (TAbs(Btyvar,Body)) =
+          ( add_string "(/";
+            ppty (TyFv Btyvar); add_string dot; add_break(1,0);
+            pp Body; add_string ")" )
+       | pp (Comb(Rator,Rand)) =
+          ( add_string "("; pp Rator; add_break(1,0);
+                            pp Rand; add_string ")")
+       | pp (TComb(Rator,Ty)) =
+          ( add_string "(:"; pp Rator; add_break(1,0);
+                             ppty Ty; add_string ")" )
+       | pp (Bv i) = add_string (dollar^Lib.int_to_string i)
+       | pp a      = if unbound_ty(type_of a) (* free variable or constant *)
+                     then ppunb a                               
+                     else add_string (percent^Lib.int_to_string (index a))
  in
    begin_block INCONSISTENT 0;
    add_string "`";
    pp (norm_clos tm);
    add_string "`";
    end_block()
- end;
+ end handle e => Raise e;
 
 (*---------------------------------------------------------------------------*)
 (* Send the results of prettyprinting to a string                            *)

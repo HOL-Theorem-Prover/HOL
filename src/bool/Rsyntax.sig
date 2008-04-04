@@ -10,6 +10,8 @@ sig
   val mk_const      : {Name:string, Ty:hol_type} -> term
   val mk_abs        : {Bvar:term, Body:term} -> term
   val mk_comb       : {Rand:term, Rator:term} -> term
+  val mk_tyabs      : {Bvar:hol_type, Body:term} -> term
+  val mk_tycomb     : {Rand:hol_type, Rator:term} -> term
   val mk_cond       : {cond:term, larm:term, rarm:term} -> term
   val mk_conj       : {conj1:term, conj2:term} -> term
   val mk_disj       : {disj1:term, disj2:term} -> term
@@ -26,6 +28,8 @@ sig
   val dest_const    : term -> {Name:string, Ty:hol_type}
   val dest_abs      : term -> {Body:term, Bvar:term}
   val dest_comb     : term -> {Rand:term, Rator:term}
+  val dest_tyabs    : term -> {Body:term, Bvar:hol_type}
+  val dest_tycomb   : term -> {Rand:hol_type, Rator:term}
   val dest_cond     : term -> {cond:term, larm:term, rarm:term}
   val dest_conj     : term -> {conj1:term, conj2:term}
   val dest_disj     : term -> {disj1:term, disj2:term}

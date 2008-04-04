@@ -567,14 +567,27 @@ fun variant_tyvar tys tyv =
  * Create a compound type, in a specific segment, and in the current theory. *
  *---------------------------------------------------------------------------*)
 
+local
+fun dest_con_type (TyCon (tyc,kd,rk)) = (name_of tyc,kd,rk)
+  | dest_con_type _ = raise ERR "dest_con_type" "not a constant type";
+in
 fun make_app_type Opr Arg (fnstr,name) =
-  let val (dom,rng) = kind_dom_rng (kind_of Opr)
+  let val name = if name <> "" then name
+                 else if is_con_type Opr then #1(dest_con_type Opr)
+                 else if is_vartype Opr then #1(dest_vartype_opr Opr)
+                 else "<not a type constant or variable>"
+      val (dom,rng) = kind_dom_rng (kind_of Opr)
+                      handle HOL_ERR e =>
+                        raise ERR fnstr (String.concat
+         ["type not well-kinded: ", name,
+          " is not a type operator, but is applied as one"])
       val kn = kind_of Arg
   in if dom = kn then TyApp(Opr,Arg) else
      raise ERR fnstr (String.concat
          ["type not well-kinded: ", name, " needs kind ", kind_to_string dom,
           ", but was given kind ", kind_to_string kn])
-  end;
+  end
+end;
 
 fun list_make_app_type Opr Args (fnstr,name) =
     List.foldl (fn (Arg,acc) => make_app_type acc Arg (fnstr,name)) Opr Args
@@ -1183,10 +1196,10 @@ local
   open Binarymap
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
-      addb t (if rank_of redex >= rank_of residue
-              then (insert(A,redex,residue),
-                    is_vartype redex andalso b)
-              else raise ERR "type_subst" "redex has lower rank than residue")
+      addb t ( (* if rank_of redex >= rank_of residue
+              then *) (insert(A,redex,residue),
+                       is_vartype redex andalso b)
+               (* else raise ERR "type_subst" "redex has lower rank than residue" *) )
 in
 fun type_subst [] = I
   | type_subst theta =
@@ -1313,6 +1326,239 @@ fun beta_conv_ty (TyApp(M as TyAbs _, N))
          end
   | beta_conv_ty _ = raise ERR "beta_conv_ty" "not a type beta redex"
 
+exception UNCHANGEDTY;
+
+fun qconv_ty c ty = c ty handle UNCHANGEDTY => ty
+
+(* ---------------------------------------------------------------------*)
+(* rand_conv_ty conv ``:t2 t1`` applies conv to t2                      *)
+(* ---------------------------------------------------------------------*)
+
+fun rand_conv_ty conv ty = let
+  val (Rator,Rand) =
+    dest_app_type ty handle HOL_ERR e => raise ERR "rand_conv_ty" "not a type app"
+  val Newrand = conv ty
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+      if Lib.mem origin_function
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty"]
+         andalso origin_structure = "Type"
+      then
+        raise ERR "rand_conv_ty" message
+      else
+        raise ERR "rand_conv_ty" (origin_function ^ ": " ^ message)
+in
+  mk_app_type(Rator, Newrand) handle (HOL_ERR {message,...}) =>
+    raise ERR "rand_conv_ty" ("Application of mk_app_type failed: "^message)
+end
+
+(* ---------------------------------------------------------------------*)
+(* rator_conv_ty conv ``:t2 t1`` applies conv to t1                     *)
+(* ---------------------------------------------------------------------*)
+
+fun rator_conv_ty conv ty = let
+  val (Rator,Rand) =
+    dest_app_type ty handle HOL_ERR e => raise ERR "rator_conv_ty" "not a type app"
+  val Newrator = conv ty
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+      if Lib.mem origin_function
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty"]
+         andalso origin_structure = "Type"
+      then
+        raise ERR "rator_conv_ty" message
+      else
+        raise ERR "rator_conv_ty" (origin_function ^ ": " ^ message)
+in
+  mk_app_type(Newrator, Rand) handle (HOL_ERR {message,...}) =>
+    raise ERR "rator_conv_ty" ("Application of mk_app_type failed: "^message)
+end
+
+(* ----------------------------------------------------------------------
+    abs_conv_ty conv ``: \'a. t['a]`` applies conv to t['a]
+   ---------------------------------------------------------------------- *)
+
+fun abs_conv_ty conv ty = let
+  val (Bvar,Body) =
+    dest_abs_type ty handle HOL_ERR e => raise ERR "abs_conv_ty" "not a type abstraction"
+  val Newbody = conv Body
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+      if Lib.mem origin_function
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty"]
+         andalso origin_structure = "Type"
+      then
+        raise ERR "abs_conv_ty" message
+      else
+        raise ERR "abs_conv_ty" (origin_function ^ ": " ^ message)
+in
+  mk_abs_type(Bvar, Newbody) handle (HOL_ERR {message,...}) =>
+    raise ERR "abs_conv_ty" ("Application of mk_abs_type failed: "^message)
+end
+
+(* ----------------------------------------------------------------------
+    univ_conv_ty conv ``: !'a. t['a]`` applies conv to t['a]
+   ---------------------------------------------------------------------- *)
+
+fun univ_conv_ty conv ty = let
+  val (Bvar,Body) =
+    dest_univ_type ty handle HOL_ERR e => raise ERR "univ_conv_ty" "not a universal type"
+  val Newbody = conv Body
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+      if Lib.mem origin_function
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty"]
+         andalso origin_structure = "Type"
+      then
+        raise ERR "univ_conv_ty" message
+      else
+        raise ERR "univ_conv_ty" (origin_function ^ ": " ^ message)
+in
+  mk_univ_type(Bvar, Newbody) handle (HOL_ERR {message,...}) =>
+    raise ERR "univ_conv_ty" ("Application of mk_univ_type failed: "^message)
+end
+
+(*---------------------------------------------------------------------------
+ * Conversion that always fails;  identity element for orelse_ty.
+ *---------------------------------------------------------------------------*)
+
+fun no_conv_ty _ = raise ERR "no_conv_ty" "";
+
+(* ----------------------------------------------------------------------
+    Conversion that always succeeds, but does nothing.
+    Indicates this by raising the UNCHANGEDTY exception.
+   ---------------------------------------------------------------------- *)
+
+fun all_conv_ty _ = raise UNCHANGEDTY;
+
+(* ----------------------------------------------------------------------
+    Apply two conversions in succession;  fail if either does.  Handle
+    UNCHANGED appropriately.
+   ---------------------------------------------------------------------- *)
+
+infix then_ty orelse_ty;
+
+fun (conv1 then_ty conv2) ty = let
+  val ty1 = conv1 ty
+in
+  conv2 ty1 handle UNCHANGEDTY => ty1
+end handle UNCHANGEDTY => conv2 ty
+
+(* ----------------------------------------------------------------------
+    Apply conv1;  if it raises a HOL_ERR then apply conv2. Note that
+    interrupts and other exceptions (including UNCHANGEDTY) will sail on
+    through.
+   ---------------------------------------------------------------------- *)
+
+fun (conv1 orelse_ty conv2) ty = conv1 ty handle HOL_ERR _ => conv2 ty;
+
+
+(*---------------------------------------------------------------------------*
+ * Perform the first successful conversion of those in the list.             *
+ *---------------------------------------------------------------------------*)
+
+fun first_conv_ty [] ty = no_conv_ty ty
+  | first_conv_ty (a::rst) ty = a ty handle HOL_ERR _ => first_conv_ty rst ty;
+
+(*---------------------------------------------------------------------------
+ * Perform every conversion in the list.
+ *---------------------------------------------------------------------------*)
+
+fun every_conv_ty convl ty =
+   itlist (curry (op then_ty)) convl all_conv_ty ty
+   handle HOL_ERR _ => raise ERR "every_conv_ty" "";
+
+
+(*---------------------------------------------------------------------------
+ * Cause the conversion to fail if it does not change its input.
+ *---------------------------------------------------------------------------*)
+
+fun changed_conv_ty conv ty =
+   let val ty1 = conv ty
+           handle UNCHANGEDTY => raise ERR "changed_conv_ty" "Input type unchanged"
+   in if aconv_ty ty ty1 then raise ERR"changed_conv_ty" "Input type unchanged"
+      else ty1
+   end;
+
+(* ----------------------------------------------------------------------
+    Cause a failure if the conversion causes the UNCHANGED exception to
+    be raised.  Doesn't "waste time" doing an equality check.  Mnemonic:
+    "quick changed_conv".
+   ---------------------------------------------------------------------- *)
+
+fun qchanged_conv_ty conv ty =
+    conv ty
+    handle UNCHANGEDTY => raise ERR "qchanged_conv_ty" "Input type unchanged"
+
+(*---------------------------------------------------------------------------
+ * Apply a conversion zero or more times.
+ *---------------------------------------------------------------------------*)
+
+fun repeat_ty conv ty =
+    ((qchanged_conv_ty conv then_ty (repeat_ty conv)) orelse_ty all_conv_ty) ty;
+
+fun try_conv_ty conv = conv orelse_ty all_conv_ty;
+
+fun app_conv_ty conv ty = let
+  val (Rator, Rand) = dest_app_type ty
+in
+  let
+    val Rator' = conv Rator
+  in
+    mk_app_type (Rator', conv Rand) handle UNCHANGEDTY => mk_app_type (Rator', Rand)
+  end handle UNCHANGEDTY => mk_app_type (Rator, conv Rand)
+end
+
+fun sub_conv_ty conv =
+    try_conv_ty (app_conv_ty conv orelse_ty abs_conv_ty conv orelse_ty univ_conv_ty conv)
+
+(* ----------------------------------------------------------------------
+    traversal conversionals.
+
+    depth_conv_ty c
+      bottom-up, recurse over sub-terms, and then repeatedly apply c at
+      top-level.
+
+    redepth_conv_ty c
+      bottom-up. recurse over sub-terms, apply c at top, and if this
+      succeeds, repeat from start.
+
+    top_depth_conv_ty c
+      top-down. Repeatdly apply c at top-level, then descend.  If descending
+      doesn't change anything then stop.  If there was a change then
+      come back to top and try c once more at top-level.  If this succeeds
+      repeat.
+
+    top_sweep_conv_ty c
+      top-down.  Like top_depth_conv_ty but only makes one pass over the term,
+      never coming back to the top level once descent starts.
+
+    once_depth_conv_ty c
+      top-down (confusingly).  Descends term looking for position at
+      which c works.  Does this "in parallel", so c may be applied multiple
+      times at highest possible positions in distinct sub-terms.
+
+   ---------------------------------------------------------------------- *)
+
+fun depth_conv_ty conv ty =
+    (sub_conv_ty (depth_conv_ty conv) then_ty repeat_ty conv) ty
+
+fun redepth_conv_ty conv ty =
+    (sub_conv_ty (redepth_conv_ty conv) then_ty
+     try_conv_ty (conv then_ty redepth_conv_ty conv)) ty
+
+fun top_depth_conv_ty conv ty =
+    (repeat_ty conv then_ty
+     try_conv_ty (changed_conv_ty (sub_conv_ty (top_depth_conv_ty conv)) then_ty
+               try_conv_ty (conv then_ty top_depth_conv_ty conv))) ty
+
+fun once_depth_conv_ty conv ty =
+    try_conv_ty (conv orelse_ty sub_conv_ty (once_depth_conv_ty conv)) ty
+
+fun top_sweep_conv_ty conv ty =
+    (repeat_ty conv then_ty sub_conv_ty (top_sweep_conv_ty conv)) ty
+
+val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
+
+
+fun abconv_ty t1 t2 = aconv_ty (deep_beta_conv_ty t1) (deep_beta_conv_ty t2)
+
 
 (*---------------------------------------------------------------------------
    Full propagation of substitutions. (unnecessary if no type substitutions)
@@ -1337,6 +1583,21 @@ local
 in
 fun norm_clos ty = tyvars_sigma_norm(Subst.id,ty)
 end
+
+
+(*---------------------------------------------------------------------------*
+ *       Does a type contain unbound "bound variables" (Bv's)?               *
+ *---------------------------------------------------------------------------*)
+
+local fun unb (v as TyBv i,k)    = k <= i
+        | unb (TyApp(opr,arg),k) = unb(opr,k) orelse unb(arg,k)
+        | unb (TyAll(bv,Body),k) = unb(Body,k+1)
+        | unb (TyAbs(bv,Body),k) = unb(Body,k+1)
+        | unb (_,_) = false (* e.g., free type variables, constants *)
+in
+fun unbound_ty ty = unb(ty,0)
+end;
+
 
 (*---------------------------------------------------------------------------*
  *  Raw syntax prettyprinter for types.                                      *

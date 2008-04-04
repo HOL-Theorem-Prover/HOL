@@ -12,6 +12,8 @@ sig
    val RATOR_CONV            : conv -> conv
    val ABS_CONV              : conv -> conv
    val COMB_CONV             : conv -> conv
+   val TY_ABS_CONV           : conv -> conv
+   val TY_COMB_CONV          : conv -> conv
    val FORK_CONV             : conv * conv -> conv
    val BINOP_CONV            : conv -> conv
    val EVERY_DISJ_CONV       : conv -> conv

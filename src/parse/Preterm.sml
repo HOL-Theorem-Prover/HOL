@@ -70,12 +70,13 @@ fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...}) 
      shr takes a location for now, until Preterm has a location built-in.
  ---------------------------------------------------------------------------*)
 
-val clean_type = Pretype.clean
+val clean_type = fn ty => Pretype.toType ty
 
 fun clean shr =
  let fun
    cl(Var{Name,Ty,Locn})            = Term.mk_var(Name, shr Locn Ty)
- | cl(Const{Name,Thy,Ty,Locn})      = Term.mk_thy_const{Name=Name,Thy=Thy,Ty=shr Locn Ty}
+ | cl(Const{Name,Thy,Ty,Locn})      = (Term.mk_thy_const{Name=Name,Thy=Thy,Ty=shr Locn Ty}
+             handle e => raise (wrap_exn "Preterm" "clean" e))
  | cl(Comb{Rator,Rand,...})         = Term.mk_comb(cl Rator,cl Rand)
  | cl(TyComb{Rator,Rand,...})       = Term.mk_tycomb(cl Rator,clean_type Rand)
  | cl(Abs{Bvar,Body,...})           = Term.mk_abs(cl Bvar, cl Body)
@@ -181,7 +182,10 @@ fun to_term tm =
               raise ERRloc "typecheck.to_term" l
                            "Unconstrained type variable (and Globals.\
                            \guessing_tyvars is false)"
-            else Pretype.clean (Pretype.remove_made_links ty)
+            else Pretype.toType ty
+                 (* let val _ = Pretype.replace_null_links ty (Pretype.kindvars ty, Pretype.tyvars ty)
+                 in Pretype.clean (Pretype.remove_made_links ty)
+                 end *)
       in
         clean shr tm
       end
@@ -223,7 +227,8 @@ fun remove_overloading_phase1 ptm =
       case possible_ops of
         [] =>
         raise phase1_exn(Locn, "No possible type for overloaded constant "^Name^"\n",
-                         Pretype.toType Ty)
+                         Pretype.toType Ty
+                         handle e => raise (wrap_exn "Preterm" "remove_overloading_phase1" e))
       | [{Ty = ty,Name,Thy}] => let
           val pty = Pretype.rename_typevars (Pretype.fromType ty)
           val _ = Pretype.unify pty Ty
@@ -295,7 +300,7 @@ fun do_overloading_removal ptm0 = let
   open seq
   val ptm = remove_overloading_phase1 ptm0
   val result = remove_overloading ptm ([],[],[])
-  fun apply_subst subst = app (fn (r, value) => r := SOME value) subst
+  fun apply_subst subst = app (fn (r, value) => r := Pretype.SOMEU value) subst
   fun do_csubst clist ptm =
     case clist of
       [] => (ptm, [])
@@ -422,7 +427,6 @@ fun TC printers = let
       case printers
        of SOME (x,y,z) =>
           let val kdprint = Lib.say o z
-              val typrint = Lib.say o y
               fun typrint ty =
                   if Type.is_con_type ty
                   then (Lib.say (y ty ^ " " ^ z (Type.kind_of ty)
@@ -450,10 +454,12 @@ fun TC printers = let
        => let val tmp = !Globals.show_types
               val _ = Globals.show_types := true
               val Rator_ty = Pretype.toType (ptype_of Rator)
+                         handle e => raise (wrap_exn "Preterm" "ptype_of.TyComb" e)
               val Rator' = to_term (overloading_resolution0 Rator)
                 handle e => (Globals.show_types := tmp; raise e)
               val Pretype.PT(_,rand_locn) = Rand
-              val Rand' = Pretype.toType Rand
+              val Rand' = (Pretype.toType Rand
+                           handle e => raise (wrap_exn "Preterm" "ptype_of.TyComb" e))
                 handle e => (Globals.show_types := tmp; raise e)
           in
             Lib.say "\nType inference failure: unable to form \
@@ -483,7 +489,7 @@ fun TC printers = let
       (check Rator;
        check Rand;
        Pretype.unify (ptype_of Rator)
-       (ptype_of Rand --> Pretype.new_uvar())
+       (ptype_of Rand --> Pretype.all_new_uvar())
        handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                      origin_function="unify",message})
        => let val tmp = !Globals.show_types
@@ -524,14 +530,14 @@ fun TC printers = let
                              val kd = Prekind.new_uvar()
                              val rk = Prerank.new_uvar()
                              val bvar = PT(Vartype(s,kd,rk),locn.Loc_None)
-                             val P = new_uvar()
-                         in (bvar, mk_app_type(P,bvar))
+                             val P = all_new_uvar()
+                         in (bvar, Pretype.mk_app_type(P,bvar))
                          end
           in
              check Rator;
              checkkind Rand;
              Pretype.unify (ptype_of Rator)
-                (Pretype.mk_univ_type(bvar, Pretype.new_uvar()));
+                (Pretype.mk_univ_type(bvar, Pretype.all_new_uvar()));
              Prekind.unify (Pretype.pkind_of Rand) (Pretype.pkind_of bvar);
              Prerank.unify (Pretype.prank_of Rand) (* <= *) (Pretype.prank_of bvar)
           end
@@ -542,10 +548,12 @@ fun TC printers = let
        => let val tmp = !Globals.show_types
               val _ = Globals.show_types := true
               val Rator_ty = Pretype.toType (ptype_of Rator)
+                         handle e => raise (wrap_exn "Preterm" "check.TyComb(Rator)" e)
               val Rator' = to_term (overloading_resolution0 Rator)
                 handle e => (Globals.show_types := tmp; raise e)
               val Pretype.PT(_,rand_locn) = Rand
               val Rand' = Pretype.toType Rand
+                         handle e => raise (wrap_exn "Preterm" "check.TyComb(Rand)" e)
                 handle e => (Globals.show_types := tmp; raise e)
           in
             Lib.say "\nType inference failure: unable to form \
@@ -570,10 +578,12 @@ fun TC printers = let
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
               val Rator_ty = Pretype.toType (ptype_of Rator)
+                         handle e => raise (wrap_exn "Preterm" "check.TyComb3" e)
               val Rator' = to_term (overloading_resolution0 Rator)
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
               val Pretype.PT(_,rand_locn) = Rand
-              val Rand' = Pretype.toType Rand
+              val Rand' = (Pretype.toType Rand
+                         handle e => raise (wrap_exn "Preterm" "check.TyComb4" e))
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
           in
             Lib.say "\nType inference failure: unable to infer a type \
@@ -605,11 +615,13 @@ fun TC printers = let
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
               val Rator_ty = Pretype.toType (ptype_of Rator)
+                         handle e => raise (wrap_exn "Preterm" "check.TyComb5" e)
               val Rator' = to_term (overloading_resolution0 Rator)
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
               val Rator_ty' = Term.type_of Rator'
               val Pretype.PT(_,rand_locn) = Rand
-              val Rand' = Pretype.toType Rand
+              val Rand' = (Pretype.toType Rand
+                         handle e => raise (wrap_exn "Preterm" "check.TyComb6" e))
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
           in
             Lib.say "\nType inference failure: unable to infer a type \
@@ -646,7 +658,8 @@ fun TC printers = let
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
-              val real_type = Pretype.toType Ty
+              val real_type = (Pretype.toType Ty
+                         handle e => raise (wrap_exn "Preterm" "check.Var" e))
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
           in
             Lib.say "\nKind inference failure: the variable ";
@@ -673,7 +686,8 @@ fun TC printers = let
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
-              val real_type = Pretype.toType Ty
+              val real_type = (Pretype.toType Ty
+                         handle e => raise (wrap_exn "Preterm" "check.Const" e))
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
           in
             Lib.say "\nKind inference failure: the constant ";
@@ -705,7 +719,8 @@ fun TC printers = let
               val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
-              val real_type = Pretype.toType Ty
+              val real_type = (Pretype.toType Ty
+                         handle e => raise (wrap_exn "Preterm" "check.Constrained" e))
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
           in
             Lib.say "\nKind inference failure: the term\n\n";
@@ -731,7 +746,8 @@ fun TC printers = let
               val _ = Globals.show_types := true
               val real_term = to_term (overloading_resolution0 Ptm)
                 handle e => (Globals.show_types := tmp; raise e)
-              val real_type = Pretype.toType Ty
+              val real_type = (Pretype.toType Ty
+                         handle e => raise (wrap_exn "Preterm" "check.Constrained2" e))
                 handle e => (Globals.show_types := tmp; raise e)
           in
             Lib.say "\nType inference failure: the term\n\n";

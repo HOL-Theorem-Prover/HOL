@@ -100,3 +100,6 @@ src/Boolify/src
 src/float
 src/fxp
 !!examples/miller
+!!examples/ARM/v4
+!!!examples/ARM/v4T
+!!examples/mc-logic

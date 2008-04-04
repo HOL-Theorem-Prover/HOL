@@ -19,8 +19,8 @@ datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstType
               | Exists | Choose
               | Conj | Conjunct1 | Conjunct2
               | Disj1 | Disj2 | DisjCases
-              | NotIntro | NotElim | Ccontr
-              | GenAbs
+              | NotIntro | NotElim | Ccontr | GenAbs
+              | TyAbs | TyComb | TyBeta (* these are for HOL-Omega *)
               | Definition  | Axiom | Disk | Oracle;
 
 val count = {ASSUME     = ref 0, REFL = ref 0,
@@ -40,6 +40,8 @@ val count = {ASSUME     = ref 0, REFL = ref 0,
              DISJ_CASES = ref 0, NOT_INTRO = ref 0,
              NOT_ELIM   = ref 0, CCONTR = ref 0,
              GEN_ABS    = ref 0,
+             TY_ABS     = ref 0, TY_COMB = ref 0,
+             TY_BETA_CONV = ref 0,
              DEFINITION = ref 0,
              AXIOM      = ref 0, FROM_DISK  = ref 0,
              ORACLE     = ref 0,
@@ -80,6 +82,9 @@ fun inc_count R =
        | NotElim    => inc (#NOT_ELIM count)
        | Ccontr     => inc (#CCONTR count)
        | GenAbs     => inc (#GEN_ABS count)
+       | TyAbs      => inc (#TY_ABS count)
+       | TyComb     => inc (#TY_COMB count)
+       | TyBeta     => inc (#TY_BETA_CONV count)
        | Definition => inc (#DEFINITION count)
        | Axiom      => inc (#AXIOM count)
        | Disk       => inc (#FROM_DISK count)
@@ -122,6 +127,9 @@ fun reset_thm_count() =
      zero (#NOT_ELIM count);
      zero (#CCONTR count);
      zero (#GEN_ABS count);
+     zero (#TY_ABS count);
+     zero (#TY_COMB count);
+     zero (#TY_BETA_CONV count);
      zero (#DEFINITION count);
      zero (#AXIOM count);
      zero (#FROM_DISK count);
@@ -141,7 +149,8 @@ fun prims() =
    !(#CONJ count) + !(#CONJUNCT1 count) + !(#CONJUNCT2 count) +
    !(#DISJ1 count) + !(#DISJ2 count) + !(#DISJ_CASES count) +
    !(#NOT_INTRO count) + !(#NOT_ELIM count) + !(#CCONTR count) +
-   !(#GEN_ABS count);
+   !(#GEN_ABS count) +
+   !(#TY_ABS count) + !(#TY_COMB count) + !(#TY_BETA_CONV count); (* these are for HOL-Omega *)
 
 fun defns()     = !(#DEFINITION count)
 fun axioms()    = !(#AXIOM count)
@@ -168,6 +177,8 @@ fun thm_count() =
   DISJ2 = !(#DISJ2 count),  DISJ_CASES = !(#DISJ_CASES count),
   NOT_INTRO = !(#NOT_INTRO count),  NOT_ELIM = !(#NOT_ELIM count),
   CCONTR = !(#CCONTR count), GEN_ABS = !(#GEN_ABS count),
+  TY_ABS = !(#TY_ABS count), TY_COMB = !(#TY_COMB count),
+  TY_BETA_CONV = !(#TY_BETA_CONV count),
   definition = !(#DEFINITION count),  axiom = !(#AXIOM count),
   from_disk = !(#FROM_DISK count),    oracle = !(#ORACLE count),
   total  = total() }

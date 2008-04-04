@@ -130,7 +130,11 @@ sig
   val known_constants : grammar -> string list
 
   val binders          : grammar -> string list
+  val term_binders     : grammar -> string list
+  val type_binders     : grammar -> string list
   val is_binder        : grammar -> string -> bool
+  val is_term_binder   : grammar -> string -> bool
+  val is_type_binder   : grammar -> string -> bool
   val binder_to_string : grammar -> binder -> string
 
   val resquan_op            : grammar -> string
@@ -163,6 +167,7 @@ sig
   val find_prefix_lhses : grammar -> stack_terminal list
 
   val add_binder : grammar -> (string * int) -> grammar
+  val add_type_binder : grammar -> (string * int) -> grammar
   val add_listform : grammar -> listspec -> grammar
   datatype rule_fixity
      = Infix of associativity * int

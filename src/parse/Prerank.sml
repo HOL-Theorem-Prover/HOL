@@ -209,6 +209,8 @@ fun remove_made_links rk =
   case rk of
     UVarrank(ref (SOME rk')) => remove_made_links rk'
   | Sucrank rk' => Sucrank(remove_made_links rk')
+  | Maxrank (rk1,rk2) => Maxrank(remove_made_links rk1,
+                                 remove_made_links rk2)
   | _ => rk
 
 (* If rank inference did not define these ranks, *)

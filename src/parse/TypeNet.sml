@@ -3,15 +3,21 @@ struct
 
 open HolKernel
 
-datatype label = TV | TOP of {Thy : string, Tyop : string}
+datatype label = TV | TOP of {Thy : string, Tyop : string} | TAB | TUN
 
 fun labcmp p =
     case p of
       (TV, TV) => EQUAL
-    | (TV, TOP _) => LESS
+    | (TV, _) => LESS
     | (TOP{Thy = thy1, Tyop = op1}, TOP{Thy = thy2, Tyop = op2}) =>
       pair_compare(String.compare, String.compare) ((op1,thy1),(op2,thy2))
     | (TOP _, TV) => GREATER
+    | (TOP _, _) => LESS
+    | (TAB, TUN) => LESS
+    | (TAB, TAB) => EQUAL
+    | (TAB, _) => GREATER
+    | (TUN, TUN) => EQUAL
+    | (TUN, _) => GREATER
 
 datatype 'a N = LF of (hol_type,'a) Binarymap.dict
               | ND of (label,'a N) Binarymap.dict
@@ -27,11 +33,28 @@ fun mkempty () = ND (Binarymap.mkDict labcmp)
 
 fun ndest_type ty =
     if is_vartype ty then (TV, [])
-    else let
-        val  {Thy,Tyop,Args} = dest_thy_type ty
+    else if is_con_type ty then let
+        val {Thy,Tyop,Kind,Rank} = dest_thy_con_type ty
       in
-        (TOP{Thy=Thy,Tyop=Tyop}, Args)
+        (TOP{Thy=Thy,Tyop=Tyop}, [])
       end
+    else if is_app_type ty then let
+        val (Opr,Arg) = dest_app_type ty
+        val (lab, rest) = ndest_type Opr
+      in
+        (lab, rest @ [Arg])
+      end
+    else if is_abs_type ty then let
+        val (Bvar,Body) = dest_abs_type ty
+      in
+        (TAB, [Bvar,Body])
+      end
+    else if is_univ_type ty then let
+        val (Bvar,Body) = dest_univ_type ty
+      in
+        (TUN, [Bvar,Body])
+      end
+    else raise Fail "TypeNet.ndest_type: unrecognized type"
 
 fun insert ((net,sz), ty, item) = let
   fun newnode labs =

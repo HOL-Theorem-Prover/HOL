@@ -360,7 +360,7 @@ fun update_type_fns () =
 fun pp_type pps ty = let in
    update_type_fns();
    Portable.add_string pps ":";
-   if is_univ_type ty then Portable.add_break pps (1,0) else ();
+   if is_univ_type ty then Portable.add_string pps " " else ();
    !type_printer pps ty
  end
 
@@ -411,15 +411,15 @@ fun to_ptyInEnv ty = let
             make_rank_binding_occ l (binder_type Ty) Rank
     | binder_type _ = raise ERROR "to_ptyInEnv" "non-variable type binder"
 in case ty0 of
-     Vartype(s,kd,rk) => make_type_atom l s
+     Vartype(s,kd,rk)  => make_type_atom l (s,kd,rk)
    | Contype{Thy,Tyop,Kind,Rank} => make_type_constant l {Thy=Thy,Tyop=Tyop}
-   | TyApp(ty1,ty2) => list_make_app_type l (map to_ptyInEnv [ty1,ty2])
+   | TyApp(ty1,ty2   ) => list_make_app_type l (map to_ptyInEnv [ty1,ty2])
    | TyUniv(bvar,body) => bind_type l "!"  [binder_type bvar] (to_ptyInEnv body)
    | TyAbst(bvar,body) => bind_type l "\\" [binder_type bvar] (to_ptyInEnv body)
    | TyKindConstr{Ty,Kind}     => make_kind_constr_type l (to_ptyInEnv Ty) Kind
    | TyRankConstr{Ty,Rank}     => make_rank_constr_type l (to_ptyInEnv Ty) Rank
-   | UVar (r as ref NONE)      => make_uvar_type l r NONE
-   | UVar (r as ref (SOME ty)) => make_uvar_type l r (SOME (to_ptyInEnv ty))
+   | UVar (r as ref (NONEU _)) => make_uvar_type l r NONE
+   | UVar (r as ref (SOMEU ty)) => make_uvar_type l r (SOME (to_ptyInEnv ty))
 end
 
 fun parse_Pretype pfns pty =
@@ -889,15 +889,15 @@ fun add_type s = let in
    update_grms "add_type" ("temp_add_type", Lib.quote s)
  end
 
-fun temp_add_type_binder s = let open parse_type in
+fun temp_add_binder_type s = let open parse_type in
    the_type_grammar := new_tybinder (!the_type_grammar) s;
    type_grammar_changed := true;
    term_grammar_changed := true
  end;
 
-fun add_type_binder s = let in
-   temp_add_type s;
-   update_grms "add_type_binder" ("temp_add_type_binder", Lib.quote s)
+fun add_binder_type s = let in
+   temp_add_binder_type s;
+   update_grms "add_binder_type" ("temp_add_binder_type", Lib.quote s)
  end
 
 fun temp_add_infix_type {Name, ParseName, Assoc, Prec} =
@@ -944,11 +944,11 @@ fun temp_type_abbrev (s, ty) = let
         end
       else if is_univ_type ty then let
           val (ty1, ty2) = Type.dest_univ_type ty
-        in type_grammar.TYUNIV (mk_structure pset bvars ty1, mk_structure pset (ty1::bvars) ty2)
+        in type_grammar.TYUNIV (mk_structure pset (ty1::bvars) ty1, mk_structure pset (ty1::bvars) ty2)
         end
       else if is_abs_type ty then let
           val (ty1, ty2) = Type.dest_abs_type ty
-        in type_grammar.TYABST (mk_structure pset bvars ty1, mk_structure pset (ty1::bvars) ty2)
+        in type_grammar.TYABST (mk_structure pset (ty1::bvars) ty1, mk_structure pset (ty1::bvars) ty2)
         end
       else raise ERROR "temp_type_abbrev" "Unexpected sort of type"
 in
@@ -965,7 +965,7 @@ in
               ("temp_type_abbrev",
                String.concat ["(", mlquote s, ", ",
                               PP.pp_to_string (!Globals.linewidth)
-                                              (TheoryPP.pp_type "U" "T")
+                                              (TheoryPP.pp_type "U" "R" "T" "O" "P" "B" "N")
                                               ty,
                               ")"])
 end;
@@ -1113,6 +1113,18 @@ fun temp_add_binder(name, prec) = let in
 fun add_binder (name, prec) = let in
     temp_add_binder(name, prec);
     update_grms "add_binder" ("temp_add_binder",
+                              String.concat
+                                ["(", quote name, ", std_binder_precedence)"])
+  end
+
+fun temp_add_type_binder(name, prec) = let in
+   the_term_grammar := add_type_binder (!the_term_grammar) (name, prec);
+   term_grammar_changed := true
+ end
+
+fun add_type_binder (name, prec) = let in
+    temp_add_type_binder(name, prec);
+    update_grms "add_type_binder" ("temp_add_type_binder",
                               String.concat
                                 ["(", quote name, ", std_binder_precedence)"])
   end
@@ -1706,7 +1718,7 @@ val TOK = term_grammar.RE o term_grammar.TOK
 val _ = List.app temp_add_type ["bool", "ind"];
 val _ = temp_add_infix_type
             {Name="fun", ParseName=SOME"->", Prec=50, Assoc=RIGHT};
-val _ = List.app temp_add_type_binder ["\\", "!"];
+val _ = List.app temp_add_binder_type ["\\", "!"];
 
 val _ = List.app reveal ["=", "==>", "@"];
 val _ = temp_add_binder ("@", std_binder_precedence);

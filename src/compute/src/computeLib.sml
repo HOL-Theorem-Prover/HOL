@@ -14,12 +14,17 @@ val new_compset = from_list;
 type cbv_stack =
   ((thm->thm->thm) * (thm * db fterm),
    (thm->thm->thm) * bool * (thm * db fterm),
-   (thm->thm)) stack;
+   (thm->thm),
+   (thm->thm),
+   (thm->thm)
+  ) stack;
 
 fun stack_out(th, Ztop) = th
   | stack_out(th, Zrator{Rand=(mka,(thb,_)), Ctx}) = stack_out(mka th thb,Ctx)
   | stack_out(th,Zrand{Rator=(mka,_,(tha,_)),Ctx}) = stack_out(mka tha th, Ctx)
-  | stack_out(th, Zabs{Bvar=mkl, Ctx})             = stack_out (mkl th, Ctx)
+  | stack_out(th, Zabs{Bvar=mkl, Ctx})             = stack_out(mkl th, Ctx)
+  | stack_out(th, Ztyrator{Rand=mk1, Ctx})         = stack_out(mk1 th, Ctx)
+  | stack_out(th, Ztyabs{Bvar=mkl, Ctx})           = stack_out(mkl th, Ctx)
 ;
 
 

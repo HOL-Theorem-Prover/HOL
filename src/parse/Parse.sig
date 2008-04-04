@@ -71,10 +71,10 @@ signature Parse = sig
      tyuniv : Pretype.pretype * Pretype.pretype -> Pretype.pretype,
      vartype : (string * Prekind.prekind * Prerank.prerank) * locn.locn -> Pretype.pretype}
 
-  val add_type_binder : string -> unit
-  val temp_add_type_binder : string -> unit
   val add_type : string -> unit
   val temp_add_type : string -> unit
+  val add_binder_type : string -> unit
+  val temp_add_binder_type : string -> unit
   val add_infix_type : {Prec : int,
                         ParseName : string option,
                         Name : string,
@@ -124,6 +124,7 @@ signature Parse = sig
   val add_infix  : string * int * associativity -> unit
   val std_binder_precedence : int
   val add_binder : string * int -> unit
+  val add_type_binder : string * int -> unit
   val add_rule   : {term_name : string, fixity :fixity,
                     pp_elements: pp_element list, paren_style : ParenStyle,
                     block_style : PhraseBlockStyle * block_info} -> unit
@@ -163,6 +164,7 @@ signature Parse = sig
 
   val temp_set_grammars : (type_grammar.grammar * term_grammar.grammar) -> unit
   val temp_add_binder : (string * int) -> unit
+  val temp_add_type_binder : (string * int) -> unit
   val temp_add_rule :
     {term_name : string, fixity : fixity,
      pp_elements: pp_element list, paren_style : ParenStyle,

@@ -3,6 +3,7 @@ sig
   type prekind = Prekind.prekind
   type prerank = Prerank.prerank
   type pretype = Pretype.pretype
+  type uvartype = Pretype.uvartype
   type preterm = Preterm.preterm
   type term    = Term.term
 
@@ -34,8 +35,8 @@ sig
   val make_rank_tybinding_occ : locn.locn -> binder_in_env -> prerank -> binder_in_env
   val make_atom             : term_grammar.overload_info
                                -> locn.locn -> string -> preterm_in_env
-  val make_type_atom        : locn.locn -> string -> pretype_in_env
-  val make_uvar_type        : locn.locn -> pretype option ref -> pretype_in_env option -> pretype_in_env
+  val make_type_atom        : locn.locn -> (string * prekind * prerank) -> pretype_in_env
+  val make_uvar_type        : locn.locn -> uvartype ref -> pretype_in_env option -> pretype_in_env
   val make_type_constant    : locn.locn -> {Thy:string,Tyop:string} -> pretype_in_env
   val make_qconst           : term_grammar.overload_info
                                -> locn.locn -> string * string -> preterm_in_env

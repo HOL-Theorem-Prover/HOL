@@ -22,8 +22,14 @@ val ERRloc = mk_HOL_ERRloc "Pretype"
     | TyAbst of pretype * pretype
     | TyKindConstr of {Ty : pretype, Kind : prekind}
     | TyRankConstr of {Ty : pretype, Rank : prerank}
-    | UVar of pretype option ref
+    | UVar of uvartype ref
+ and uvartype
+    = SOMEU of pretype
+    | NONEU of prekind * prerank
  and pretype = PT of pretype0 locn.located
+
+fun isSomeU (SOMEU _) = true
+  | isSomeU (NONEU _) = false
 
 fun tylocn (PT(_,locn)) = locn
 
@@ -60,8 +66,9 @@ fun eq_env0 e1 e2 (Vartype v)                (Vartype v')              = eq_vart
                   (TyKindConstr{Ty=ty',Kind=kd'})                      = eq_env e1 e2 ty ty' andalso eq_kind kd kd'
   | eq_env0 e1 e2 (TyRankConstr{Ty=ty, Rank=rk })
                   (TyRankConstr{Ty=ty',Rank=rk'})                      = eq_env e1 e2 ty ty' andalso eq_rank rk rk'
-  | eq_env0 e1 e2 (UVar (r as ref NONE))     (UVar (r' as ref NONE))   = r=r'
-  | eq_env0 e1 e2 (UVar (ref (SOME ty)))     (UVar (ref (SOME ty')))   = eq_env e1 e2 ty ty'
+  | eq_env0 e1 e2 (UVar (r  as ref (NONEU(kd, rk ))))
+                  (UVar (r' as ref (NONEU(kd',rk'))))                  = r=r'
+  | eq_env0 e1 e2 (UVar (ref (SOMEU ty)))    (UVar (ref (SOMEU ty')))  = eq_env e1 e2 ty ty'
   | eq_env0 e1 e2 _                          _                         = false
 and eq_env  e1 e2 (PT (value,locn))          (PT (value',locn'))       = eq_env0 e1 e2 value value'
 
@@ -146,11 +153,11 @@ and compare0 (ty1,ty2) =
                             Lib.pair_compare(compare,Prerank.prerank_compare)
                                             ((ty1,rk1),(ty2,rk2))
     | (TyRankConstr _, _)                => GREATER
-    | (UVar (ref NONE), UVar (ref(SOME _))) => LESS
-    | (UVar (ref NONE), UVar (ref NONE)) => EQUAL
-    | (UVar (ref NONE), _)               => GREATER
-    | (UVar (ref(SOME ty1)), UVar (ref(SOME ty2))) => compare(ty1,ty2)
-    | (UVar (ref(SOME _)), _)            => GREATER
+    | (UVar (ref(NONEU _)), UVar (ref(SOMEU _))) => LESS
+    | (UVar (ref(NONEU(k1,rk1))), UVar (ref(NONEU(k2,rk2)))) => prekind_rank_compare ((k1,rk1),(k2,rk2))
+    | (UVar (ref(NONEU _)), _)               => GREATER
+    | (UVar (ref(SOMEU ty1)), UVar (ref(SOMEU ty2))) => compare(ty1,ty2)
+    | (UVar (ref(SOMEU _)), _)           => GREATER
 ;
 
 
@@ -169,21 +176,21 @@ fun is_var_type(PT(Vartype v,loc)) = true
 fun mk_app_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyApp(ty1,ty2), locn.between loc1 loc2)
 
-fun dest_app_type(PT(UVar(ref(SOME ty)),loc)) = dest_app_type ty
+fun dest_app_type(PT(UVar(ref(SOMEU ty)),loc)) = dest_app_type ty
   | dest_app_type(ty as PT(TyApp(ty1,ty2),loc)) = (ty1,ty2)
   | dest_app_type _ = raise TCERR "dest_app_type" "not a type application";
 
 fun mk_univ_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyUniv(ty1,ty2), locn.between loc1 loc2)
 
-fun dest_univ_type(PT(UVar(ref(SOME ty)),loc)) = dest_univ_type ty
+fun dest_univ_type(PT(UVar(ref(SOMEU ty)),loc)) = dest_univ_type ty
   | dest_univ_type(ty as PT(TyUniv(ty1,ty2),loc)) = (ty1,ty2)
   | dest_univ_type _ = raise TCERR "dest_univ_type" "not a universal type";
 
 fun mk_abs_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyAbst(ty1,ty2), locn.between loc1 loc2)
 
-fun dest_abs_type(PT(UVar(ref(SOME ty)),loc)) = dest_abs_type ty
+fun dest_abs_type(PT(UVar(ref(SOMEU ty)),loc)) = dest_abs_type ty
   | dest_abs_type(ty as PT(TyAbst(ty1,ty2),loc)) = (ty1,ty2)
   | dest_abs_type _ = raise TCERR "dest_abs_type" "not a type abstraction";
 
@@ -197,8 +204,8 @@ fun kindvars (PT (ty, loc)) =
   | TyAbst (tyv, ty) => Lib.union (kindvars tyv) (kindvars ty)
   | TyKindConstr {Ty,Kind} => Lib.union (kindvars Ty) (Prekind.kindvars Kind)
   | TyRankConstr {Ty,... } => kindvars Ty
-  | UVar (ref NONE) => []
-  | UVar (ref (SOME ty')) => kindvars ty'
+  | UVar (ref (NONEU(kd,_))) => Prekind.kindvars kd
+  | UVar (ref (SOMEU ty')) => kindvars ty'
 
 (* returns a list of strings, names of all type variables mentioned *)
 fun tyvars (PT (ty, loc)) =
@@ -210,8 +217,8 @@ fun tyvars (PT (ty, loc)) =
   | TyAbst (tyv, ty) => Lib.union (tyvars tyv) (tyvars ty)
   | TyKindConstr {Ty,...} => tyvars Ty
   | TyRankConstr {Ty,...} => tyvars Ty
-  | UVar (ref NONE) => []
-  | UVar (ref (SOME ty')) => tyvars ty'
+  | UVar (ref (NONEU _)) => []
+  | UVar (ref (SOMEU ty')) => tyvars ty'
 
 (* returns a list of references, refs of all unification variables mentioned *)
 fun uvars_of (PT(ty, loc)) =
@@ -224,245 +231,13 @@ fun uvars_of (PT(ty, loc)) =
     | TyRankConstr {Ty, ...} => uvars_of Ty
     | _ => []
 
-fun new_uvar () = PT (UVar(ref NONE), locn.Loc_None)
+fun new_uvar (kd,rk) = PT (UVar(ref (NONEU(kd,rk))), locn.Loc_None)
 
-infix ref_occurs_in
-
-fun r ref_occurs_in (PT(value, locn)) =
-  case value of
-    Vartype _ => false
-  | Contype _ => false
-  | TyApp(ty1, ty2) => r ref_occurs_in ty1 orelse r ref_occurs_in ty2
-  | TyUniv(tyv, ty) => r ref_occurs_in tyv orelse r ref_occurs_in ty
-  | TyAbst(tyv, ty) => r ref_occurs_in tyv orelse r ref_occurs_in ty
-  | TyKindConstr {Ty, ...} => r ref_occurs_in Ty
-  | TyRankConstr {Ty, ...} => r ref_occurs_in Ty
-  | UVar (r' as ref NONE) => r = r'
-  | UVar (r' as ref (SOME t)) => r = r' orelse r ref_occurs_in t
-
-infix ref_equiv
-fun r ref_equiv (PT(value, locn)) =
-  case value of
-    UVar (r' as ref NONE) => r = r'
-  | UVar (r' as ref (SOME t)) => r = r' orelse r ref_equiv t
-  | _ => false
-
-  fun has_free_uvar_kind (PT(pty,_)) =
-    case pty of
-      UVar (ref NONE)        => false
-    | UVar (ref (SOME pty')) => has_free_uvar_kind pty'
-    | Vartype (_,kd,_)       => Prekind.has_free_uvar kd
-    | Contype {Kind,...}     => Prekind.has_free_uvar Kind
-    | TyApp(ty1, ty2)        => has_free_uvar_kind ty1 orelse has_free_uvar_kind ty2
-    | TyAbst(tyv, ty)        => has_free_uvar_kind tyv orelse has_free_uvar_kind ty
-    | TyUniv(tyv, ty)        => has_free_uvar_kind tyv orelse has_free_uvar_kind ty
-    | TyKindConstr {Ty, Kind} => has_free_uvar_kind Ty orelse Prekind.has_free_uvar Kind
-    | TyRankConstr {Ty, Rank} => has_free_uvar_kind Ty
-
-  fun has_free_uvar (PT(pty,_)) =
-    case pty of
-      UVar (ref NONE)        => true
-    | UVar (ref (SOME pty')) => has_free_uvar pty'
-    | Vartype _              => false
-    | Contype _              => false
-    | TyApp(ty1, ty2)        => has_free_uvar ty1 orelse has_free_uvar ty2
-    | TyAbst(tyv, ty)        => has_free_uvar tyv orelse has_free_uvar ty
-    | TyUniv(tyv, ty)        => has_free_uvar tyv orelse has_free_uvar ty
-    | TyKindConstr {Ty, ...} => has_free_uvar Ty
-    | TyRankConstr {Ty, ...} => has_free_uvar Ty
-
-
-(*
-fun kind_bind f r value (kd_env,ty_env) =
-  let val (kd_env', result) = Prekind.safe_bind f r value kd_env
-  in ((kd_env',ty_env), result)
-  end
-*)
-
-fun kind_unify k1 k2 (kd_env,rk_env,ty_env) =
-  let val (kd_env', result) = Prekind.unsafe_unify k1 k2 kd_env
-  in ((kd_env',rk_env,ty_env), result)
-  end
-
-fun rank_unify r1 r2 (kd_env,rk_env,ty_env) =
-  let val (rk_env', result) = Prerank.unsafe_unify r1 r2 rk_env
-  in ((kd_env,rk_env',ty_env), result)
-  end
-
-fun unsafe_bind f r value =
-  if r ref_equiv value
-  then ok
-  else if r ref_occurs_in value orelse isSome (!r)
-       then fail
-    else (fn (kd_env,rk_env,acc) =>
-             (((kd_env,rk_env,(r, !r)::acc), SOME ()) before r := SOME value))
-
-
-(* first argument is a function which performs a binding between a
-   pretype reference and another pretype, updating some sort of environment
-   (the 'a), returning the new alpha and a unit option, SOME () for a
-   success, and a NONE, if not.
-
-   To further complicate things, the bind argument also gets a copy of
-   gen_unify to call, if it should choose.
-*)
-(* The environment "e" should be a triple:
-     a kind environment CROSS a rank environment CROSS the prior type environment.  *)
-(* this will need changing *)
-(* eta-expansion *is* necessary *)
-fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
-              (rank_unify:prerank -> prerank -> ('a -> 'a * unit option))
-              bind (ty1 as PT(t1,locn1)) (ty2 as PT(t2,locn2)) e = let
-  val gen_unify = gen_unify kind_unify rank_unify bind
-in
-  case (t1, t2) of
-    (UVar (r as ref NONE), _) => bind gen_unify r ty2
-  | (UVar (r as ref (SOME t1)), t2) => gen_unify t1 ty2
-  | (_, UVar _) => gen_unify ty2 ty1
-  | (Vartype (tv1 as (s1,k1,r1)), Vartype (tv2 as (s2,k2,r2))) =>
-       kind_unify k1 k2 >> rank_unify r1 r2 >>
-           (fn e => (if eq_tyvar tv1 tv2 then ok else fail) e)
-  | (Contype {Kind=k1,Rank=r1,...}, Contype {Kind=k2,Rank=r2,...}) =>
-       kind_unify k1 k2 >> rank_unify r1 r2 >>
-           (fn e => (if eq0 t1 t2 then ok else fail) e)
-  | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
-       gen_unify ty11 ty21 >> gen_unify ty12 ty22 >> return ()
-  | (TyUniv(ty11, ty12), TyUniv(ty21, ty22)) =>
-       gen_unify ty11 ty21 >> gen_unify ty12 ty22 >> return ()
-  | (TyAbst(ty11, ty12), TyAbst(ty21, ty22)) =>
-       gen_unify ty11 ty21 >> gen_unify ty12 ty22 >> return ()
-  | (TyKindConstr{Ty=ty1,Kind=kd1}, TyKindConstr{Ty=ty2,Kind=kd2}) =>
-       kind_unify kd1 kd2 >> gen_unify ty1 ty2 >> return ()
-  | (TyRankConstr{Ty=ty1,Rank=rk1}, TyRankConstr{Ty=ty2,Rank=rk2}) =>
-       rank_unify rk1 rk2 >> gen_unify ty1 ty2 >> return ()
-  | _ => fail
- end e
-
-val empty_env = ([]:(prekind option ref * prekind option) list,
-                 []:(prerank option ref * prerank option) list,
-                 []:(pretype option ref * pretype option) list)
-
-fun unify t1 t2 =
-  case (gen_unify kind_unify rank_unify unsafe_bind t1 t2 empty_env)
-   of (bindings, SOME ()) => ()
-    | (_, NONE) => raise TCERR "unify" "unify failed";
-
-fun can_unify t1 t2 = let
-  val ((kind_bindings,rank_bindings,type_bindings), result) =
-        gen_unify kind_unify rank_unify unsafe_bind t1 t2 empty_env
-  val _ = app (fn (r, oldvalue) => r := oldvalue) kind_bindings
-  val _ = app (fn (r, oldvalue) => r := oldvalue) rank_bindings
-  val _ = app (fn (r, oldvalue) => r := oldvalue) type_bindings
-in
-  isSome result
-end
-
-local
-  fun (r ref_equiv (PT(value, locn))) (env as (kenv,renv,tenv)) =
-       case value of
-         UVar (r' as ref NONE) =>
-              r = r' orelse
-              let in
-                case Lib.assoc1 r' tenv
-                 of NONE => false
-                  | SOME (_, v) => (r ref_equiv v) env
-              end
-         | UVar (ref (SOME t)) => (r ref_equiv t) env
-         | _ => false
-
-      fun (r ref_occurs_in (PT(value, locn))) (env as (kenv,renv,tenv)) =
-        case value
-         of UVar (r' as ref NONE) =>
-              r = r' orelse
-              let in
-                case Lib.assoc1 r' tenv
-                 of NONE => false
-                  | SOME (_, v) => (r ref_occurs_in v) env
-              end
-          | UVar (ref (SOME t)) => (r ref_occurs_in t) env
-          | TyApp(ty1,ty2) => (r ref_occurs_in ty1) env orelse
-                              (r ref_occurs_in ty2) env
-          | TyUniv(tyv, ty) => (r ref_occurs_in tyv) env orelse
-                               (r ref_occurs_in ty) env
-          | TyAbst(tyv, ty) => (r ref_occurs_in tyv) env orelse
-                               (r ref_occurs_in ty) env
-          | TyKindConstr{Ty,...} => (r ref_occurs_in Ty) env
-          | TyRankConstr{Ty,...} => (r ref_occurs_in Ty) env
-          | _ => false
-
-      fun kind_unify k1 k2 (env as (kenv,renv,tenv)) =
-        let val (kenv', result) = Prekind.safe_unify k1 k2 kenv
-        in ((kenv',renv,tenv), result)
-        end
-
-      fun rank_unify r1 r2 (env as (kenv,renv,tenv)) =
-        let val (renv', result) = Prerank.safe_unify r1 r2 renv
-        in ((kenv,renv',tenv), result)
-        end
-
-in
-fun safe_bind unify r value (env as (kenv,renv,tenv)) =
-  case Lib.assoc1 r tenv
-   of SOME (_, v) => unify v value env
-    | NONE =>
-        if (r ref_equiv value) env then ok env else
-        if (r ref_occurs_in value) env then fail env
-        else ((kenv,renv,(r,value)::tenv), SOME ())
-
-fun safe_unify t1 t2 = gen_unify kind_unify rank_unify safe_bind t1 t2
-end
-
-
-fun apply_subst subst (pt as PT (pty, locn)) =
-  case pty of
-    Vartype _ => pt
-  | Contype _ => pt
-  | TyApp(ty1, ty2) => PT (TyApp(apply_subst subst ty1, apply_subst subst ty2), locn)
-  | TyUniv(bty, body) => PT (TyUniv(apply_subst subst bty, apply_subst subst body), locn)
-  | TyAbst(bty, body) => PT (TyAbst(apply_subst subst bty, apply_subst subst body), locn)
-  | TyKindConstr {Ty, Kind} =>
-                 PT (TyKindConstr {Ty=apply_subst subst Ty, Kind=Kind}, locn)
-  | TyRankConstr {Ty, Rank} =>
-                 PT (TyRankConstr {Ty=apply_subst subst Ty, Rank=Rank}, locn)
-  | UVar (ref (SOME t)) => apply_subst subst t
-  | UVar (r as ref NONE) =>
-      case (Lib.assoc1 r subst) of
-        NONE => pt
-      | SOME (_, value) => apply_subst subst value
-
-
-val op ==> = Prekind.==>
-fun pkind_of0 (Vartype(s,kd,rk)) = kd
-  | pkind_of0 (Contype{Kind, ...}) = Kind
-  | pkind_of0 (TyApp(opr,arg)) = Prekind.chase (pkind_of opr)
-  | pkind_of0 (TyUniv _) = Prekind.typ
-  | pkind_of0 (TyAbst(Bvar,Body)) = pkind_of Bvar ==> pkind_of Body
-  | pkind_of0 (TyKindConstr{Ty,Kind}) = Kind
-  | pkind_of0 (TyRankConstr{Ty,Rank}) = pkind_of Ty
-  | pkind_of0 (UVar (r as ref NONE)) = Prekind.new_uvar() (* a guess *)
-  | pkind_of0 (UVar (r as ref (SOME ty))) = pkind_of ty
-and pkind_of (PT(ty,locn)) = pkind_of0 ty
-
-local
-val zero = Prerank.Zerorank
-val inc  = Prerank.Sucrank
-val max  = Prerank.Maxrank
-in
-fun prank_of0 (Vartype(s,kd,rk)) = rk
-  | prank_of0 (Contype{Rank, ...}) = Rank
-  | prank_of0 (TyApp(opr,arg))     = max(prank_of opr,       prank_of arg)
-  | prank_of0 (TyUniv(Bvar,Body))  = max(inc(prank_of Bvar), prank_of Body)
-  | prank_of0 (TyAbst(Bvar,Body))  = max(prank_of Bvar,      prank_of Body)
-  | prank_of0 (TyKindConstr{Ty,Kind}) = prank_of Ty
-  | prank_of0 (TyRankConstr{Ty,Rank}) = Rank
-  | prank_of0 (UVar (r as ref NONE)) = zero (* a guess *)
-  | prank_of0 (UVar (r as ref (SOME ty))) = prank_of ty
-and prank_of (PT(ty,locn)) = prank_of0 ty
-end;
+fun all_new_uvar () = PT (UVar(ref (NONEU(Prekind.new_uvar(),Prerank.new_uvar()))), locn.Loc_None)
 
 
 (*---------------------------------------------------------------------------*
- * The free type variables in a pretype.  Tail recursive (from Ken Larsen).     *
+ * The free type variables in a pretype.  Tail recursive (from Ken Larsen).  *
  *---------------------------------------------------------------------------*)
 
 local fun TV (v as PT(Vartype _,_)) B A k = if mem v B then k A
@@ -473,8 +248,8 @@ local fun TV (v as PT(Vartype _,_)) B A k = if mem v B then k A
         | TV (PT(TyAbst(v,ty),_)) B A k   = TV ty (Lib.insert v B) A k
         | TV (PT(TyKindConstr{Ty,Kind},_)) B A k = TV Ty B A k
         | TV (PT(TyRankConstr{Ty,Rank},_)) B A k = TV Ty B A k
-        | TV (PT(UVar(ref NONE),_)) B A k = k A
-        | TV (PT(UVar(ref(SOME ty)),_)) B A k = TV ty B A k
+        | TV (PT(UVar(ref(NONEU _)),_)) B A k = k A
+        | TV (PT(UVar(ref(SOMEU ty)),_)) B A k = TV ty B A k
       and TVl (ty::tys) B A k             = TV ty B A (fn q => TVl tys B q k)
         | TVl _ B A k = k A
 in
@@ -511,6 +286,59 @@ fun gen_variant P caller =
   end;
 
 val variant_type       = gen_variant (K false) "variant_type";
+
+
+val op ==> = Prekind.==>
+fun pkind_of0 (Vartype(s,kd,rk)) = kd
+  | pkind_of0 (Contype{Kind, ...}) = Kind
+  | pkind_of0 (TyApp(opr,arg)) = Prekind.chase (pkind_of opr)
+  | pkind_of0 (TyUniv _) = Prekind.typ
+  | pkind_of0 (TyAbst(Bvar,Body)) = pkind_of Bvar ==> pkind_of Body
+  | pkind_of0 (TyKindConstr{Ty,Kind}) = Kind
+  | pkind_of0 (TyRankConstr{Ty,Rank}) = pkind_of Ty
+  | pkind_of0 (UVar (r as ref (NONEU(kd,rk)))) = kd
+  | pkind_of0 (UVar (r as ref (SOMEU ty))) = pkind_of ty
+and pkind_of (pty as PT(ty,locn)) = pkind_of0 ty
+
+
+local
+val zero = Prerank.Zerorank
+val inc  = Prerank.Sucrank
+val max  = Prerank.Maxrank
+in
+fun prank_of0 (Vartype(s,kd,rk)) = rk
+  | prank_of0 (Contype{Rank, ...}) = Rank
+  | prank_of0 (TyApp(opr,arg))     = max(prank_of opr,       prank_of arg)
+  | prank_of0 (TyUniv(Bvar,Body))  = max(inc(prank_of Bvar), prank_of Body)
+  | prank_of0 (TyAbst(Bvar,Body))  = max(prank_of Bvar,      prank_of Body)
+  | prank_of0 (TyKindConstr{Ty,Kind}) = prank_of Ty
+  | prank_of0 (TyRankConstr{Ty,Rank}) = Rank
+  | prank_of0 (UVar (r as ref (NONEU(_,rk)))) = rk
+  | prank_of0 (UVar (r as ref (SOMEU ty))) = prank_of ty
+and prank_of (PT(ty,locn)) = prank_of0 ty
+end;
+
+
+(*---------------------------------------------------------------------------*
+ *    Section on substitution.                                               *
+ *---------------------------------------------------------------------------*)
+
+fun apply_subst subst (pt as PT (pty, locn)) =
+  case pty of
+    Vartype _ => pt
+  | Contype _ => pt
+  | TyApp(ty1, ty2) => PT (TyApp(apply_subst subst ty1, apply_subst subst ty2), locn)
+  | TyUniv(bty, body) => PT (TyUniv(apply_subst subst bty, apply_subst subst body), locn)
+  | TyAbst(bty, body) => PT (TyAbst(apply_subst subst bty, apply_subst subst body), locn)
+  | TyKindConstr {Ty, Kind} =>
+                 PT (TyKindConstr {Ty=apply_subst subst Ty, Kind=Kind}, locn)
+  | TyRankConstr {Ty, Rank} =>
+                 PT (TyRankConstr {Ty=apply_subst subst Ty, Rank=Rank}, locn)
+  | UVar (ref (SOMEU t)) => apply_subst subst t
+  | UVar (r as ref (NONEU _)) =>
+      case (Lib.assoc1 r subst) of
+        NONE => pt
+      | SOME (_, value) => apply_subst subst value
 
 (*---------------------------------------------------------------------------*
  *    Replace arbitrary subpretypes in a pretype. Renaming.                  *
@@ -553,7 +381,7 @@ fun type_subst [] = I
                          TyKindConstr{Ty=vsubs fmap Ty,Kind=Kind}
           | vsubs0 fmap (TyRankConstr{Ty,Rank}) =
                          TyRankConstr{Ty=vsubs fmap Ty,Rank=Rank}
-          | vsubs0 fmap (UVar (r as ref(SOME ty))) = unloc_of (vsubs fmap ty)
+          | vsubs0 fmap (UVar (r as ref(SOMEU ty))) = unloc_of (vsubs fmap ty)
           | vsubs0 fmap t = t
         and vsubs fmap (PT(ty,locn)) = PT(vsubs0 fmap ty,locn)
 (*
@@ -572,47 +400,323 @@ fun type_subst [] = I
     end
 end;
 
+fun beta_conv_ty (PT(TyApp(M as PT(TyAbst(Bvar,Body), loc1), N), loc2))
+       = type_subst [Bvar |-> N] Body
+  | beta_conv_ty _ = raise ERR "beta_conv_ty" "not a type beta redex"
+
+local
+  fun conv0 ty =
+    case ty of
+      TyApp(Opr,Ty) => TyApp(conv Opr, conv Ty)
+    | TyUniv(Btyvar,Body) => TyUniv(Btyvar, conv Body)
+    | TyAbst(Btyvar,Body) => TyAbst(Btyvar, conv Body)
+    | TyKindConstr{Ty,Kind} => TyKindConstr{Ty=conv Ty,Kind=Kind}
+    | TyRankConstr{Ty,Rank} => TyRankConstr{Ty=conv Ty,Rank=Rank}
+    | UVar (r as ref (SOMEU ty1)) => (* (r := SOMEU (conv ty1); ty) *)
+                                     let val PT(ty0,_) = conv ty1 in ty0 end
+    | _ => ty  (* i.e., a variable or a const *)
+  and conv (ty as PT(ty0, locn)) = conv (beta_conv_ty ty)
+                                   handle HOL_ERR _ => PT(conv0 ty0, locn)
+in
+val deep_beta_conv_ty = conv
+end
+
+
+infix ref_occurs_in
+
+fun r ref_occurs_in (PT(value, locn)) =
+  case value of
+    Vartype _ => false
+  | Contype _ => false
+  | TyApp(ty1, ty2) => r ref_occurs_in ty1 orelse r ref_occurs_in ty2
+  | TyUniv(tyv, ty) => r ref_occurs_in tyv orelse r ref_occurs_in ty
+  | TyAbst(tyv, ty) => r ref_occurs_in tyv orelse r ref_occurs_in ty
+  | TyKindConstr {Ty, ...} => r ref_occurs_in Ty
+  | TyRankConstr {Ty, ...} => r ref_occurs_in Ty
+  | UVar (r' as ref (NONEU _)) => r = r'
+  | UVar (r' as ref (SOMEU t)) => r = r' orelse r ref_occurs_in t
+
+infix ref_equiv
+fun r ref_equiv (PT(value, locn)) =
+  case value of
+    UVar (r' as ref (NONEU _)) => r = r'
+  | UVar (r' as ref (SOMEU t)) => r = r' orelse r ref_equiv t
+  | _ => false
+
+  fun has_free_uvar_kind (PT(pty,_)) =
+    case pty of
+      UVar (ref (NONEU(kd,_))) => Prekind.has_free_uvar kd
+    | UVar (ref (SOMEU pty'))  => has_free_uvar_kind pty'
+    | Vartype (_,kd,_)         => Prekind.has_free_uvar kd
+    | Contype {Kind,...}       => Prekind.has_free_uvar Kind
+    | TyApp(ty1, ty2)          => has_free_uvar_kind ty1 orelse has_free_uvar_kind ty2
+    | TyAbst(tyv, ty)          => has_free_uvar_kind tyv orelse has_free_uvar_kind ty
+    | TyUniv(tyv, ty)          => has_free_uvar_kind tyv orelse has_free_uvar_kind ty
+    | TyKindConstr {Ty, Kind}  => has_free_uvar_kind Ty orelse Prekind.has_free_uvar Kind
+    | TyRankConstr {Ty, Rank}  => has_free_uvar_kind Ty
+
+  fun has_free_uvar (PT(pty,_)) =
+    case pty of
+      UVar (ref (NONEU _))    => true
+    | UVar (ref (SOMEU pty')) => has_free_uvar pty'
+    | Vartype _               => false
+    | Contype _               => false
+    | TyApp(ty1, ty2)         => has_free_uvar ty1 orelse has_free_uvar ty2
+    | TyAbst(tyv, ty)         => has_free_uvar tyv orelse has_free_uvar ty
+    | TyUniv(tyv, ty)         => has_free_uvar tyv orelse has_free_uvar ty
+    | TyKindConstr {Ty, ...}  => has_free_uvar Ty
+    | TyRankConstr {Ty, ...}  => has_free_uvar Ty
+
+
+(*
+fun kind_bind f r value (kd_env,ty_env) =
+  let val (kd_env', result) = Prekind.safe_bind f r value kd_env
+  in ((kd_env',ty_env), result)
+  end
+*)
+
+fun kind_unify k1 k2 (kd_env,rk_env,ty_env) =
+  let val (kd_env', result) = Prekind.unsafe_unify k1 k2 kd_env
+  in ((kd_env',rk_env,ty_env), result)
+  end
+
+fun rank_unify r1 r2 (kd_env,rk_env,ty_env) =
+  let val (rk_env', result) = Prerank.unsafe_unify r1 r2 rk_env
+  in ((kd_env,rk_env',ty_env), result)
+  end
+
+fun unsafe_bind f r value =
+  if r ref_equiv value
+  then ok
+  else if r ref_occurs_in value orelse isSomeU (!r)
+       then fail
+    else (fn (kd_env,rk_env,acc) =>
+             (((kd_env,rk_env,(r, !r)::acc), SOME ()) before r := SOMEU value))
+
+
+(* first argument is a function which performs a binding between a
+   pretype reference and another pretype, updating some sort of environment
+   (the 'a), returning the new alpha and a unit option, SOME () for a
+   success, and a NONE, if not.
+
+   To further complicate things, the bind argument also gets a copy of
+   gen_unify to call, if it should choose.
+*)
+(* The environment "e" should be a triple:
+     a kind environment CROSS a rank environment CROSS the prior type environment.  *)
+(* this will need changing *)
+(* eta-expansion *is* necessary *)
+fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
+              (rank_unify:prerank -> prerank -> ('a -> 'a * unit option))
+              bind c1 c2 (ty1 as PT(t1,locn1)) (ty2 as PT(t2,locn2)) e = let
+  val gen_unify = gen_unify kind_unify rank_unify bind
+  (* unify_var's input should be a pretype variable (possibly constrained),
+       not a constant, application, abstraction, or universal type.
+     unify_var's result should be either Vartype or UVar(NONEU). *)
+  fun unify_var (PT(TyKindConstr{Ty=ty,Kind=kd},_)) =
+         kind_unify (pkind_of ty) kd >> unify_var ty
+    | unify_var (PT(TyRankConstr{Ty=ty,Rank=rk},_)) =
+         rank_unify (prank_of ty) rk >> unify_var ty
+    | unify_var (PT(UVar (r as ref (SOMEU ty)),_))  = unify_var ty
+    | unify_var (ty as PT(UVar (ref (NONEU _)),_))  = return ty
+    | unify_var (ty as PT(Vartype _,_))             = return ty
+    | unify_var ty = fail
+  (* bvar_unify's inputs are reduced to either Vartype or UVar(NONEU),
+     and then unified, returning the reduced types *)
+  fun bvar_unify (PT(UVar (r as ref (NONEU(kd,rk))),_)) ty2 =
+         kind_unify kd (pkind_of ty2) >>
+         rank_unify rk (prank_of ty2) >>
+         bind (gen_unify c1 c2) r ty2 >>
+         unify_var ty2 >- (fn ty2' => return (ty2',ty2'))
+    | bvar_unify ty1 (PT(UVar (r as ref (NONEU(kd,rk))),_)) =
+         kind_unify (pkind_of ty1) kd >>
+         rank_unify (prank_of ty1) rk >>
+         bind (gen_unify c1 c2) r ty1 >> 
+         unify_var ty1 >- (fn ty1' => return (ty1',ty1'))
+    | bvar_unify (ty1 as PT(Vartype (tv1 as (s1,k1,r1)),_))
+                 (ty2 as PT(Vartype (tv2 as (s2,k2,r2)),_)) =
+         kind_unify k1 k2 >> rank_unify r1 r2 >> return (ty1,ty2)
+    | bvar_unify ty1 ty2 =
+         unify_var ty1 >- (fn ty1' =>
+         unify_var ty2 >- (fn ty2' =>
+         bvar_unify ty1' ty2'))
+in
+  case (t1, t2) of
+    (UVar (r as ref (NONEU(kd,rk))), _) => kind_unify kd (pkind_of ty2) >>
+                                           rank_unify rk (prank_of ty2) >>
+                                           bind (gen_unify c1 c2) r ty2
+  | (UVar (r as ref (SOMEU t1)), t2) => gen_unify c1 c2 t1 ty2
+  | (_, UVar _) => gen_unify c2 c1 ty2 ty1
+  | (Vartype (tv1 as (s1,k1,r1)), Vartype (tv2 as (s2,k2,r2))) =>
+       kind_unify k1 k2 >> rank_unify r1 r2 >>
+           (fn e => (if eq_varty c1 c2 tv1 tv2 then ok else fail) e)
+  | (Contype {Kind=k1,Rank=r1,...}, Contype {Kind=k2,Rank=r2,...}) =>
+       kind_unify k1 k2 >> rank_unify r1 r2 >>
+           (fn e => (if eq0 t1 t2 then ok else fail) e)
+  | (TyKindConstr{Ty=ty1',Kind=kd1}, _) =>
+       kind_unify kd1 (pkind_of ty1') >> gen_unify c1 c2 ty1' ty2 >> return ()
+  | (_, TyKindConstr _) => gen_unify c2 c1 ty2 ty1
+  | (TyRankConstr{Ty=ty1',Rank=rk1}, _) =>
+       rank_unify rk1 (prank_of ty1') >> gen_unify c1 c2 ty1' ty2 >> return ()
+  | (_, TyRankConstr _) => gen_unify c2 c1 ty2 ty1
+  | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
+       gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()
+  | (TyUniv(ty11, ty12), TyUniv(ty21, ty22)) =>
+       bvar_unify ty11 ty21 >- (fn (PT(ty11',_),PT(ty21',_)) =>
+       case (ty11',ty21') of
+          (Vartype tv1, Vartype tv2) =>
+            gen_unify (tv1::c1) (tv2::c2) ty12 ty22
+        | _ => gen_unify c1 c2 ty12 ty22)
+  | (TyAbst(ty11, ty12), TyAbst(ty21, ty22)) =>
+       bvar_unify ty11 ty21 >- (fn (PT(ty11',_),PT(ty21',_)) =>
+       case (ty11',ty21') of
+          (Vartype tv1, Vartype tv2) =>
+            gen_unify (tv1::c1) (tv2::c2) ty12 ty22
+        | _ => gen_unify c1 c2 ty12 ty22)
+(* older version:
+  | (TyUniv(ty11, ty12), TyUniv(ty21, ty22)) =>
+       ((gen_unify ty11 ty21 >> gen_unify ty12 ty22) ++
+        (gen_unify ty12 (type_subst [ty12 |-> ty11] ty22))) >> return ()
+  | (TyAbst(ty11, ty12), TyAbst(ty21, ty22)) =>
+       ((gen_unify ty11 ty21 >> gen_unify ty12 ty22) ++
+        (gen_unify ty12 (type_subst [ty12 |-> ty11] ty22))) >> return ()
+*)
+  | _ => fail
+ end e
+
+val empty_env = ([]:(prekind option ref * prekind option) list,
+                 []:(prerank option ref * prerank option) list,
+                 []:(      uvartype ref * uvartype      ) list)
+
+fun unify t1 t2 =
+ let val t1' = deep_beta_conv_ty t1
+     and t2' = deep_beta_conv_ty t2
+ in
+  case (gen_unify kind_unify rank_unify unsafe_bind [] [] t1 t2 empty_env)
+   of (bindings, SOME ()) => ()
+    | (_, NONE) => raise TCERR "unify" "unify failed"
+ end;
+
+fun can_unify t1 t2 = let
+  val ((kind_bindings,rank_bindings,type_bindings), result) =
+        gen_unify kind_unify rank_unify unsafe_bind [] [] t1 t2 empty_env
+  val _ = app (fn (r, oldvalue) => r := oldvalue) kind_bindings
+  val _ = app (fn (r, oldvalue) => r := oldvalue) rank_bindings
+  val _ = app (fn (r, oldvalue) => r := oldvalue) type_bindings
+in
+  isSome result
+end
+
+local
+  fun (r ref_equiv (PT(value, locn))) (env as (kenv,renv,tenv)) =
+       case value of
+         UVar (r' as ref (NONEU _)) =>
+              r = r' orelse
+              let in
+                case Lib.assoc1 r' tenv
+                 of NONE => false
+                  | SOME (_, v) => (r ref_equiv v) env
+              end
+         | UVar (ref (SOMEU t)) => (r ref_equiv t) env
+         | _ => false
+
+      fun (r ref_occurs_in (PT(value, locn))) (env as (kenv,renv,tenv)) =
+        case value
+         of UVar (r' as ref (NONEU _)) =>
+              r = r' orelse
+              let in
+                case Lib.assoc1 r' tenv
+                 of NONE => false
+                  | SOME (_, v) => (r ref_occurs_in v) env
+              end
+          | UVar (ref (SOMEU t)) => (r ref_occurs_in t) env
+          | TyApp(ty1,ty2) => (r ref_occurs_in ty1) env orelse
+                              (r ref_occurs_in ty2) env
+          | TyUniv(tyv, ty) => (r ref_occurs_in tyv) env orelse
+                               (r ref_occurs_in ty) env
+          | TyAbst(tyv, ty) => (r ref_occurs_in tyv) env orelse
+                               (r ref_occurs_in ty) env
+          | TyKindConstr{Ty,...} => (r ref_occurs_in Ty) env
+          | TyRankConstr{Ty,...} => (r ref_occurs_in Ty) env
+          | _ => false
+
+      fun kind_unify k1 k2 (env as (kenv,renv,tenv)) =
+        let val (kenv', result) = Prekind.safe_unify k1 k2 kenv
+        in ((kenv',renv,tenv), result)
+        end
+
+      fun rank_unify r1 r2 (env as (kenv,renv,tenv)) =
+        let val (renv', result) = Prerank.safe_unify r1 r2 renv
+        in ((kenv,renv',tenv), result)
+        end
+
+in
+fun safe_bind unify r value (env as (kenv,renv,tenv)) =
+  case Lib.assoc1 r tenv
+   of SOME (_, v) => unify v value env
+    | NONE =>
+        if (r ref_equiv value) env then ok env else
+        if (r ref_occurs_in value) env then fail env
+        else ((kenv,renv,(r,value)::tenv), SOME ())
+
+fun safe_unify t1 t2 = gen_unify kind_unify rank_unify safe_bind [] [] t1 t2
+end
+
 
 
 (*---------------------------------------------------------------------------*
- * Passes over a type, turning all of the type variables into fresh          *
- * UVars, but doing so consistently by using an env, which is an alist       *
- * from variable names to type variable refs.                                *
+ * Passes over a type, turning all of the free type variables into fresh     *
+ * UVars, but doing so consistently by using a pair of envs (for bound and   *
+ * free), which is are alists from variable names to type variable refs.     *
+ * Bound variables are not renamed, but are recognized as masking free vars. *
  *---------------------------------------------------------------------------*)
 
-local fun replace s env =
+local fun replace (s,kd,rk) env =
         case Lib.assoc1 s env
-         of NONE =>
-              let val r = new_uvar()
+         of SOME (_, r) => (env, SOME r)
+          | NONE =>
+              let val r = new_uvar(kd,rk)
               in ((s, r)::env, SOME r)
               end
-          | SOME (_, r) => (env, SOME r)
+      fun add_bvar (v as PT(Vartype (s,kd,rk), _)) benv =
+              let val r = new_uvar(kd,rk)
+              in ((s, r)::benv, v (*or r, if renaming bound vars*))
+              end
+        | add_bvar (PT(TyKindConstr {Ty,Kind}, _)) benv =
+              add_bvar Ty benv
+        | add_bvar (PT(TyRankConstr {Ty,Rank}, _)) benv =
+              add_bvar Ty benv
+        | add_bvar _ _ = raise TCERR "rename_typevars" "add_bvar: arg is not variable"
 in
-(* needs changing *)
-fun rename_tv (ty as PT(ty0, locn)) =
+fun rename_tv (ty as PT(ty0, locn)) benv =
   case ty0 of
-    Vartype s => replace s
+    Vartype (v as (s,kd,rk)) =>
+      (case Lib.assoc1 s benv
+         of SOME _ => return ty
+          | NONE   => replace v)
   | TyApp (ty1, ty2) =>
-      rename_tv ty1 >-
-      (fn ty1' => rename_tv ty2 >-
+      rename_tv ty1 benv >-
+      (fn ty1' => rename_tv ty2 benv >-
       (fn ty2' => return (PT(TyApp(ty1', ty2'), locn))))
   | TyUniv (ty1, ty2) =>
-      rename_tv ty1 >-
-      (fn ty1' => rename_tv ty2 >-
-      (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn))))
+      let val (benv',ty1') = add_bvar ty1 benv in
+      rename_tv ty2 benv' >-
+      (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn)))
+      end
   | TyAbst (ty1, ty2) =>
-      rename_tv ty1 >-
-      (fn ty1' => rename_tv ty2 >-
-      (fn ty2' => return (PT(TyAbst(ty1', ty2'), locn))))
+      let val (benv',ty1') = add_bvar ty1 benv in
+      rename_tv ty2 benv' >-
+      (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn)))
+      end
   | TyKindConstr {Ty, Kind} =>
-      rename_tv Ty >-
+      rename_tv Ty benv >-
       (fn Ty' => return (PT(TyKindConstr {Ty=Ty', Kind=Kind}, locn)))
   | TyRankConstr {Ty, Rank} =>
-      rename_tv Ty >-
+      rename_tv Ty benv >-
       (fn Ty' => return (PT(TyRankConstr {Ty=Ty', Rank=Rank}, locn)))
   | _ => return ty
 
-fun rename_typevars ty = valOf (#2 (rename_tv ty []))
+fun rename_typevars ty = valOf (#2 (rename_tv ty [] []))
 end
 
 fun fromType t =
@@ -646,29 +750,53 @@ fun fromType t =
   else raise TCERR "fromType" "Unexpected sort of type"
 
 
+fun pretype_to_string (ty as PT(ty0,locn)) =
+  case ty0 of
+    UVar(ref (SOMEU ty')) => pretype_to_string ty'
+  | UVar(ref (NONEU(kd,rk))) => "<uvar>"
+  | Vartype(s,kd,rk) => let val kd1 = Prekind.toKind kd
+                            val rk1 = Prerank.toRank rk
+                        in s ^ (if kd1 = typ then ""  else ":" ^ kind_to_string kd1)
+                             ^ (if rk1 = 0   then "0" else ":<=" ^ Int.toString rk1)
+                        end
+  | Contype {Thy, Tyop, Kind, Rank} =>
+                        let val kd1 = Prekind.toKind Kind
+                            val rk1 = Prerank.toRank Rank
+                        in Tyop ^ (if kd1 = typ then ""  else ":" ^ kind_to_string kd1)
+                                ^ (if rk1 = 0   then "0" else ":<=" ^ Int.toString rk1)
+                        end
+  | TyApp(ty1, ty2) => pretype_to_string ty2 ^ " " ^ pretype_to_string ty1
+  | TyUniv(tyv, ty) => "!"  ^ pretype_to_string tyv ^ ". " ^ pretype_to_string ty
+  | TyAbst(tyv, ty) => "\\" ^ pretype_to_string tyv ^ ". " ^ pretype_to_string ty
+  | TyKindConstr {Ty, Kind} => pretype_to_string Ty ^ " : " ^ kind_to_string(Prekind.toKind Kind)
+  | TyRankConstr {Ty, Rank} => pretype_to_string Ty ^ " :<= " ^ Int.toString(Prerank.toRank Rank)
+
+
 
 
 fun remove_made_links (ty as PT(ty0,locn)) =
   case ty0 of
-    UVar(ref (SOME ty')) => remove_made_links ty'
-  | Vartype(s,kd,rk) => PT(Vartype(s, Prekind.remove_made_links kd, rk), locn)
+    UVar(ref (SOMEU ty')) => remove_made_links ty'
+  | Vartype(s,kd,rk) => PT(Vartype(s, Prekind.remove_made_links kd,
+                                      Prerank.remove_made_links rk), locn)
   | Contype {Thy, Tyop, Kind, Rank} =>
-      PT(Contype {Kind=Prekind.remove_made_links Kind, Thy=Thy, Tyop=Tyop, Rank=Rank}, locn)
+      PT(Contype {Kind=Prekind.remove_made_links Kind, Thy=Thy, Tyop=Tyop,
+                  Rank=Prerank.remove_made_links Rank}, locn)
   | TyApp(ty1, ty2) => PT(TyApp (remove_made_links ty1, remove_made_links ty2), locn)
   | TyUniv(tyv, ty) => PT(TyUniv(remove_made_links tyv, remove_made_links ty), locn)
   | TyAbst(tyv, ty) => PT(TyAbst(remove_made_links tyv, remove_made_links ty), locn)
   | TyKindConstr {Ty, Kind} =>
       PT(TyKindConstr {Ty=remove_made_links Ty, Kind=Prekind.remove_made_links Kind}, locn)
   | TyRankConstr {Ty, Rank} =>
-      PT(TyRankConstr {Ty=remove_made_links Ty, Rank=Rank}, locn)
+      PT(TyRankConstr {Ty=remove_made_links Ty, Rank=Prerank.remove_made_links Rank}, locn)
   | _ => ty
 
 val tyvariant = Lexis.gen_variant Lexis.tyvar_vary
 
 (* needs changing *)
-fun generate_new_name r (kenv, used_so_far) =
+fun generate_new_name r (kd,rk) (kenv, used_so_far) =
   let val result = tyvariant used_so_far "'a"
-      val _ = r := SOME (PT(Vartype (result,Prekind.typ,Prerank.Zerorank), locn.Loc_None))
+      val _ = r := SOMEU (PT(Vartype (result,kd,rk), locn.Loc_None))
   in
     ((kenv, result::used_so_far), SOME ())
   end
@@ -683,8 +811,8 @@ fun kind_replace_null_links kd (kenv,tenv) =
 fun replace_null_links (PT(ty,_)) env = let
 in
   case ty of
-    UVar (r as ref NONE) => generate_new_name r
-  | UVar (ref (SOME ty)) => replace_null_links ty
+    UVar (r as ref (NONEU(kd,rk))) => generate_new_name r (kd,rk)
+  | UVar (ref (SOMEU ty)) => replace_null_links ty
   | TyApp (ty1,ty2) => replace_null_links ty1 >> replace_null_links ty2 >> ok
   | TyUniv (tyv, ty) => replace_null_links tyv >> replace_null_links ty >> ok
   | TyAbst (tyv, ty) => replace_null_links tyv >> replace_null_links ty >> ok
@@ -694,16 +822,22 @@ in
   | Contype {Thy,Tyop,Kind,Rank} => kind_replace_null_links Kind
 end env
 
-fun clean (PT(ty, locn)) =
+fun clean (pty as PT(ty, locn)) =
+(
   case ty of
     Vartype (s,kd,rk) => Type.mk_vartype_opr (s, Prekind.toKind kd, Prerank.toRank rk)
   | Contype {Thy,Tyop,...} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop}
-  | TyApp(ty1,ty2)  => Type.mk_app_type  (clean ty1, clean ty2)
+  | TyApp(ty1,ty2)  => (Type.mk_app_type  (clean ty1, clean ty2)
+                          handle Feedback.HOL_ERR e =>
+                            (print ("Applying " ^ type_to_string (clean ty1)
+                                    ^ " to " ^ type_to_string (clean ty2) ^ "\n");
+                             raise Feedback.mk_HOL_ERR "Pretype" "clean" (#message e)))
   | TyUniv (tyv,ty) => Type.mk_univ_type (clean tyv, clean ty)
   | TyAbst (tyv,ty) => Type.mk_abs_type  (clean tyv, clean ty)
   | TyKindConstr {Ty,Kind} => clean Ty
   | TyRankConstr {Ty,Rank} => clean Ty
   | _ => raise Fail "Don't expect to see links remaining at this stage of type inference"
+) handle e => raise (wrap_exn "Pretype.clean" (pretype_to_string pty) e)
 
 fun toType ty =
   let 
@@ -711,15 +845,24 @@ fun toType ty =
   in
     clean (remove_made_links ty)
   end
+  handle e => raise (wrap_exn "Pretype" "toType" e)
+
 
 val fun_tyc0 = Contype{Tyop = "fun", Thy = "min",
                        Kind = Prekind.mk_arity 2, Rank = Prerank.Zerorank}
 
 (* chase returns the effective range of an effective function type *)
 
+fun beta_conv_ty (PT(TyApp(PT(TyAbst(bv, body), _), arg), locn)) =
+    (type_subst [bv |-> arg] body
+     handle e as HOL_ERR _ =>  raise wrap_exn_loc "Pretype" "beta_conv_ty" locn e)
+  | beta_conv_ty (PT(_, locn)) = raise ERRloc "beta_conv_ty" locn "not a type beta redex"
+
 fun chase (PT(TyApp(PT(TyApp(PT(tyc, _), _), _), ty), _)) =
     if eq0 tyc fun_tyc0 then ty else raise Fail "chase applied to non-function type"
-  | chase (PT(UVar(ref (SOME ty)), _)) = chase ty
+  | chase (ty as PT(TyApp(PT(TyAbst(_, _), _), _), _)) =
+    (chase (beta_conv_ty ty) handle _ => raise Fail "chase applied to non-function type")
+  | chase (PT(UVar(ref (SOMEU ty)), _)) = chase ty
   | chase _ = raise Fail "chase applied to non-function type"
 
 
@@ -732,8 +875,8 @@ fun is_atom0 (Vartype _) = true
   | is_atom0 (Contype _) = true
   | is_atom0 (TyKindConstr{Ty,...}) = is_atom Ty
   | is_atom0 (TyRankConstr{Ty,...}) = is_atom Ty
-  | is_atom0 (UVar (r as ref NONE)) = false
-  | is_atom0 (UVar (r as ref (SOME ty))) = is_atom ty
+  | is_atom0 (UVar (r as ref (NONEU _))) = false
+  | is_atom0 (UVar (r as ref (SOMEU ty))) = is_atom ty
   | is_atom0 ty = false
 and is_atom (PT(pty,locn)) = is_atom0 pty
 
@@ -750,7 +893,7 @@ fun KC printers = let
       case printers
        of SOME (y,z) =>
           let val kdprint = Lib.say o z
-              val typrint = Lib.say o y
+              val typrint = Lib.say o y 
               fun typrint ty =
                   if Type.is_con_type ty
                   then (Lib.say (y ty ^ " : " ^ z (Type.kind_of ty)

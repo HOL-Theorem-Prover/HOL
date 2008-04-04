@@ -482,9 +482,25 @@ local datatype constkind = TY | TM
 
    and up2date_type CTname ty =
      if Type.is_vartype ty then true
-     else let val ((id,_,_),args) = Type.break_type ty
+     else if Type.is_type ty then
+          let val ((id,_,_),args) = Type.break_type ty
           in up2date_id CTname id TY
              andalso Lib.all (up2date_type CTname) args
+          end
+     else if Type.is_app_type ty then
+          let val (Opr,Ty) = Type.dest_app_type ty
+          in up2date_type CTname Opr
+             andalso up2date_type CTname Ty
+          end
+     else if Type.is_abs_type ty then
+          let val (Bvar,Body) = Type.dest_abs_type ty
+          in up2date_type CTname Bvar
+             andalso up2date_type CTname Body
+          end
+     else (* Type.if is_univ_type ty then *)
+          let val (Bvar,Body) = Type.dest_univ_type ty
+          in up2date_type CTname Bvar
+             andalso up2date_type CTname Body
           end
 
    and up2date_term CTname tm =
@@ -494,12 +510,20 @@ local datatype constkind = TY | TM
              in up2date_id CTname id TM
                 andalso up2date_type CTname ty
              end
-        else case (is_var tm, is_comb tm, is_abs tm)
-             of (true,_,_) => up2date_type CTname (type_of tm)
-              | (_,true,_) => up2date_term CTname (rator tm) andalso
-                              up2date_term CTname (rand tm)
-              | (_,_,true) => up2date_term CTname (bvar tm) andalso
-                              up2date_term CTname (body tm)
+        else case (is_var tm, is_comb tm, is_abs tm, is_tycomb tm, is_tyabs tm)
+             of (true,_,_,_,_) => up2date_type CTname (type_of tm)
+              | (_,true,_,_,_) => up2date_term CTname (rator tm) andalso
+                                  up2date_term CTname (rand tm)
+              | (_,_,true,_,_) => up2date_term CTname (bvar tm) andalso
+                                  up2date_term CTname (body tm)
+              | (_,_,_,true,_) => let val (Rator,Rand) = dest_tycomb tm
+                                  in up2date_term CTname Rator andalso
+                                     up2date_type CTname Rand
+                                  end
+              | (_,_,_,_,true) => let val (Bvar,Body) = dest_tyabs tm
+                                  in up2date_type CTname Bvar andalso
+                                     up2date_term CTname Body
+                                  end
               | otherwise  => raise ERR "up2date_term" "unexpected case"
      end
 
@@ -774,7 +798,7 @@ fun export_theory () =
           else ()
 
         end
-        handle e => (Lib.say "\nFailure while writing theory!\n"; raise e))
+        handle e => (Lib.say "\nFailure while writing theory!\n"; Raise e))
 
      | badnames => (HOL_MESG
           (String.concat

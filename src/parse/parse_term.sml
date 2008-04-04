@@ -427,12 +427,13 @@ in
   (* these next equality pairs will never have terms interfering between
      them, so we can insert the equality relation between them after doing
      the above *)
-  insert (STD_HOL_TOK type_lambda, TypeListTok) EQUAL;
+  (* insert (STD_HOL_TOK type_lambda, TypeListTok) EQUAL; *) (* included in next line *)
+  app (fn b => insert (STD_HOL_TOK b, TypeListTok) EQUAL) (type_binders G);
   insert (TypeListTok, EndBinding) EQUAL;
   insert (STD_HOL_TOK type_lbracket, TypeListTok) EQUAL;
   insert (TypeListTok, STD_HOL_TOK type_rbracket) EQUAL;
   insert (TypeColon, TypeTok) EQUAL;
-  app (fn b => insert (STD_HOL_TOK b, EndBinding) EQUAL) (binders G);
+  app (fn b => insert (STD_HOL_TOK b, EndBinding) EQUAL) (binders G); (* type & term *)
   insert_rhs_relns () ;
   insert_lhs_relns () ;
   apply_them_all process_rule Grules;
@@ -614,7 +615,8 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
       orelse raise Fail "Grammar must allow type application"
   val prec_matrix = mk_prec_matrix G
   val rule_db = mk_ruledb G
-  val is_binder = is_binder G
+  val is_binder = fn s => is_binder G s
+  val is_type_binder = is_type_binder G
   val grammar_tokens = term_grammar.grammar_tokens G
   val lex  = let
     val specials = endbinding::grammar_tokens @ term_grammar.known_constants G
@@ -1039,11 +1041,17 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
        ((Terminal (STD_HOL_TOK binder),llocn), _)::rest) => let
         val lrlocn = locn.between llocn rlocn
         fun tyabs_fn (v,t) = (TYABS(v,t),lrlocn)
+        fun comb_tyabs_fn(v,t) =
+              (COMB((VAR binder,llocn), (TYABS(v, t),locn.between (#2 v) (#2 t))),
+               locn.between llocn rlocn)
         val tysl = map (fn ty => (ty,tlocn)) tys
-        val tyabs_t = List.foldr tyabs_fn (t,rlocn) tysl
-      in if binder = type_lambda then
+        val tyabs_t =
+          List.foldr (if binder = type_lambda then tyabs_fn else comb_tyabs_fn)
+                     (t,rlocn) tysl
+        (* val tyabs_t = List.foldr tyabs_fn (t,rlocn) tysl *) (* works for \: alone *)
+      in (*if binder = type_lambda then*)
            repeatn 4 pop >> push (liftlocn NonTerminal tyabs_t, XXX)
-         else (WARNloc "parse_term" lrlocn ("Illegal binder of type variables: "^binder); fail)
+         (*else (WARNloc "parse_term" lrlocn ("Illegal binder of type variables: "^binder); fail)*)
       end
     | (((Terminal(STD_HOL_TOK ")"),rlocn), _)::(vsl as ((NonTermVS _,_),_))::
        ((Terminal(STD_HOL_TOK "("),llocn), _)::rest) => let
@@ -1249,27 +1257,6 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
       in
         current_la >- action_on_la
       end
-    | STD_HOL_TOK "\\:" => let
-      (* behaviour has to be slightly more tricksy in this case:
-           - we need to make sure that the next things that appear in
-             the stream of tokens are complete types separated by commas.
-           - The way we do this is by calling the type parser on the
-             remaining input stream and putting the results into the
-             lookahead list behind the colon.
-           - We only do this once, so the following action checks to
-             see that the lookahead list is only one long, otherwise
-             it can do the normal action
-       *)
-        fun action_on_la la =
-          case la of
-            [x as (_,locn)] =>
-              lifted_type_var_list_parser >-  (fn tys =>
-                          set_la [x, (PreTypeList tys,locn.Loc_Near locn)])
-              (* TODO: if lifted_typeparser returned a location, use that *)
-          | _ => usual_action
-      in
-        current_la >- action_on_la
-      end
     | STD_HOL_TOK "[:" => let
       (* behaviour has to be slightly more tricksy in this case:
            - we need to make sure that the next things that appear in
@@ -1291,7 +1278,53 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
       in
         current_la >- action_on_la
       end
+(*
+    | STD_HOL_TOK "\\:" => let
+      (* behaviour has to be slightly more tricksy in this case:
+           - we need to make sure that the next things that appear in
+             the stream of tokens are complete types separated by commas.
+           - The way we do this is by calling the type parser on the
+             remaining input stream and putting the results into the
+             lookahead list behind the colon.
+           - We only do this once, so the following action checks to
+             see that the lookahead list is only one long, otherwise
+             it can do the normal action
+       *)
+        fun action_on_la la =
+          case la of
+            [x as (_,locn)] =>
+              lifted_type_var_list_parser >-  (fn tys =>
+                          set_la [x, (PreTypeList tys,locn.Loc_Near locn)])
+              (* TODO: if lifted_typeparser returned a location, use that *)
+          | _ => usual_action
+      in
+        current_la >- action_on_la
+      end
     | STD_HOL_TOK s => usual_action
+*)
+    | STD_HOL_TOK binder => let
+      (* behaviour has to be slightly more tricksy in this case:
+           - we need to make sure that the next things that appear in
+             the stream of tokens are complete types separated by commas.
+           - The way we do this is by calling the type parser on the
+             remaining input stream and putting the results into the
+             lookahead list behind the colon.
+           - We only do this once, so the following action checks to
+             see that the lookahead list is only one long, otherwise
+             it can do the normal action
+       *)
+        fun action_on_la la =
+          case la of
+            [x as (_,locn)] =>
+              lifted_type_var_list_parser >-  (fn tys =>
+                          set_la [x, (PreTypeList tys,locn.Loc_Near locn)])
+              (* TODO: if lifted_typeparser returned a location, use that *)
+          | _ => usual_action
+      in
+        if is_type_binder binder
+        then current_la >- action_on_la
+        else usual_action
+      end
     | _ => usual_action
   end
 
