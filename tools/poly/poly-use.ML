@@ -143,7 +143,7 @@ quse "ParseDatatype";
 quse "Hol_pp";
 
 (* install pretty-printers *)
-fun pp2polypp (f :  ppstream -> 'a -> unit)
+fun pp2polypp (f :  'a -> string)
               (putString : string -> unit,
                beginBlock : int * bool -> unit,
                spaceBlock : int * int -> unit,
