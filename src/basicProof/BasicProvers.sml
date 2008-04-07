@@ -235,13 +235,13 @@ fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
 
 fun tyinfol() = TypeBasePure.listItems (TypeBase.theTypeBase());
 
-fun hash_const c = Polyhash.hash (#Name(dest_thy_const c));
-
 fun mkCSET () =
- let val CSET = Polyhash.mkTable (hash_const, uncurry same_const)
-                                 (31, ERR "CSET" "not found")
-     val inCSET = Option.isSome o Polyhash.peek CSET
-     fun addCSET c = Polyhash.insert CSET (c,c)
+ let val CSET =
+         ref (HOLset.empty (inv_img_cmp (fn {Thy,Name,Ty} =>(Thy,Name))
+                                        (pair_compare(String.compare,
+                                                      String.compare))))
+     fun inCSET t = HOLset.member(!CSET, dest_thy_const t)
+     fun addCSET c = (CSET := HOLset.add(!CSET, dest_thy_const c))
      val _ = List.app
                (List.app addCSET o TypeBasePure.constructors_of) (tyinfol())
      fun constructed tm =
@@ -393,7 +393,7 @@ fun augment_srw_ss ssdl =
     else
       pending_updates := !pending_updates @ ssdl;
 
-fun update_fn tyi = 
+fun update_fn tyi =
   augment_srw_ss ([tyi_to_ssdata tyi] handle HOL_ERR _ => [])
 
 val () =
