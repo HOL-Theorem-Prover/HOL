@@ -196,11 +196,6 @@ end
 
   fun parse_abbrev args fb = let
     val (adv, (t,locn)) = typetok_of fb
-    fun split 0 l = ([],l)
-      | split n (h::t) = let val (l,r) = split (n-1) t
-                         in (h::l,r)
-                         end
-      | split _ l = (l,[])
   in
     case t of
       TypeIdent s =>
@@ -209,9 +204,10 @@ end
          (case Binarymap.peek(abbrevs, s) of
              NONE => raise InternalFailure locn
            | SOME st => let val nargs = structure_num_args st
-                            val (largs,rargs) = split nargs args
-                            val res = structure_to_value (s,locn) largs st
-                        in (adv(); (apply_tyop (res,locn) rargs, locn))
+                            val (largs,rargs) = if nargs = 0 then ([],args) else (args,[])
+                            val abr = structure_to_value (s,locn) largs st
+                            val res = apply_tyop (abr,locn) rargs
+                        in (adv(); (res, locn))
                         end)
     | _ => raise InternalFailure locn
   end
