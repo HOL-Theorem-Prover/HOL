@@ -984,7 +984,7 @@ val GC_ASSUMPTION_def = Define `
   ARM_PROG
    (uvs xs ys ax px zs * 
     R30 p px * R30 a ax * R30 a1 a1x * ~R t * ~R a2 * ~S * 
-    cond (MEM (ax,a1x,a2x,x,y) xs) * P : ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n, 'o) ARMset -> bool)
+    cond (MEM (ax,a1x,a2x,x,y) xs) * P : 'a ARMset -> bool)
    [] C SEP_F {
    (uvs' xs ys ax px zs ax * R30 p px * R30 a ax * ~R a1 * ~R t * ~R a2 * ~S * cond (zs = []),pcADD 40w);   
    ((SEP_EXISTS pa1x pa2x p_x p_y. 
@@ -2609,7 +2609,7 @@ val loop = let
   val th = SIMP_RULE (bool_ss++setINC_ss) [lemma1,lemma2,lemma3,UNION_IDEMPOT] th
   val th = RW1 [ARM_PROG_EXTRACT_CODE] th
   val (_,_,c,_,_) = dest_ARM_PROG ((concl o SPEC_ALL) th)
-  val goal = subst [mk_var("c",type_of c)|->c,``P:('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n, 'o) ARMset -> bool``|->``emp:('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n, 'o) ARMset -> bool``] 
+  val goal = subst [mk_var("c",type_of c)|->c,``P:'a ARMset -> bool``|->``emp:'a ARMset -> bool``] 
     ``GC_ASSUMPTION a p a1 a2 t P c xs``
   val th' = REWRITE_CONV [GC_ASSUMPTION_def] goal
   val th = EQ_MP (GSYM th') th
