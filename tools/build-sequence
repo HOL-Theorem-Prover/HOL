@@ -70,11 +70,11 @@ src/boss
 !examples/RSA
 src/sort
 src/string
-!examples/ind_def
 src/res_quan/src
 src/quotient/src
 !src/quotient/examples
 src/finite_map
+!examples/ind_def
 src/bag
 src/n_bit
 src/n-bit
