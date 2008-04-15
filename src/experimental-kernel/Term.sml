@@ -714,7 +714,7 @@ end (* local *)
 
 local
   exception NeedToRename of term
-  structure Map = Redblackmap
+  structure Map = struct open Redblackmap end
   fun inst1 theta ctxt t =
       case t of
         (c as Const(r, ty)) => (case ty_sub theta ty of
