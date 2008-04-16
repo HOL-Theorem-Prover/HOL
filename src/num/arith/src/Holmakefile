@@ -9,6 +9,6 @@ GenRelNorm.uo: GenRelNorm.sml $(BOOLLIB)
 	HOLMOSMLC -toplevel -c Overlay.ui $<
 
 NumRelNorms.uo: NumRelNorms.sml NumRelNorms.ui GenRelNorm.uo \
-                $(BOOLLIB) $(NUMTHY)
-	$(HOLMOSMLC) -c Overlay.ui GenRelNorm.ui $<
+                GenPolyCanon.uo $(BOOLLIB) $(NUMTHY)
+	HOLMOSMLC -c Overlay.ui GenRelNorm.ui $<
 
