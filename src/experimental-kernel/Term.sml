@@ -87,18 +87,30 @@ in
   Const(newdata, ty)
 end
 
-fun uptodate_term tm =
-    case tm of
-      Var(s, ty) => uptodate_type ty
-    | Const(info, ty) => #uptodate (!info) andalso uptodate_type ty
-    | App(f, x) => uptodate_term f andalso uptodate_term x
-    | Abs(v, body) => uptodate_term v andalso uptodate_term body
+fun uptodate_term tm = let 
+  fun recurse tmlist = 
+      case tmlist of 
+        [] => true
+      | tm :: rest => let
+        in
+          case tm of
+            Var(s, ty) => uptodate_type ty andalso recurse rest
+          | Const(info, ty) => #uptodate (!info) andalso 
+                               uptodate_type ty andalso
+                               recurse rest
+          | App(f, x) => recurse (f::x::rest)
+          | Abs(v, body) => recurse (v::body::rest)
+        end
+in
+  recurse [tm]
+end
 
 fun thy_consts s = let
-  fun f (k, info) = if #Thy k = s then SOME(Const(info, #base_type (!info)))
-                    else NONE
+  fun f (k, info, acc) = 
+      if #Thy k = s then Const(info, #base_type (!info)) :: acc
+      else acc
 in
-  List.mapPartial f (Map.listItems (!const_table))
+  Map.foldl f [] (!const_table)
 end
 
 fun del_segment s = let
