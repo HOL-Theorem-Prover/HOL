@@ -27,15 +27,13 @@ type tyspec       = hol_type * constructor list
 val ERR = mk_HOL_ERR "ind_types";
 
 (* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = 
- let val (tyg1,tmg1) = arithmeticTheory.arithmetic_grammars
-     val (tyg2,tmg2) = sumTheory.sum_grammars
- in Parse.temp_set_grammars 
-     (type_grammar.merge_grammars(tyg1,tyg2),
-      term_grammar.merge_grammars(tmg1,tmg2))
- end;
-
+structure Parse = struct
+open Parse
+val (Type,Term) = parse_from_grammars ind_typeTheory.ind_type_grammars
+fun -- q x = Term q
+fun == q x = Type q
+end
+open Parse
 
 (*---------------------------------------------------------------------------
    First some JRH HOL-Light portability stuff.
@@ -1189,10 +1187,11 @@ fun SCRUB_ASSUMPTION th =
     MP (Thm.INST [l |-> r] (DISCH eqn th)) (REFL r)
  end
 
+val safepfx = " @ind_type"
 val safeid_genvar = let
   val count = ref 0
   fun vary_to_avoid_constants () = let
-    val nm = current_theory() ^ Int.toString (!count)
+    val nm = safepfx ^ current_theory() ^ Int.toString (!count)
   in
     if (not (null (decls nm))) then (count := !count + 100;
                                      vary_to_avoid_constants())
@@ -1476,6 +1475,30 @@ local
         (n,ith6,rth6)
       end
     end
+  fun remove_intermediate_junk () = let 
+    val cs = Term.thy_consts (current_theory())
+    fun is_substring s1 s2 = let 
+      val s2' = Substring.all s2
+      val (_,s) = Substring.position s1 s2'
+    in
+      not (Substring.isEmpty s)
+    end
+    fun c_appthis c = let 
+      val cn = #Name (dest_thy_const c) 
+    in 
+      if is_substring safepfx cn then
+        Theory.delete_const cn
+      else ()
+    end
+                    
+    val tys = Type.thy_types (current_theory())
+    fun ty_appthis (tyn,arity) = 
+        if is_substring safepfx tyn then Theory.delete_type tyn
+        else ()
+  in
+    List.app c_appthis cs;
+    List.app ty_appthis tys
+  end
 in
 val define_type_nested = fn def =>
  let val newtys = map fst def
@@ -1494,7 +1517,8 @@ val define_type_nested = fn def =>
      val retval = (p,ith1,rth1)
   in
     {induction = munge_ind_thm ith1,
-     recursion = canonicalise_tyvars def rth1}
+     recursion = canonicalise_tyvars def rth1} before
+    remove_intermediate_junk()
   end
 end
 
@@ -1539,7 +1563,5 @@ fun define_type d =
    val (bozz_ind, bozz_rec) = define_type_nested def;
 
 *)
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end;
