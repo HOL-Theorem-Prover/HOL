@@ -1475,24 +1475,24 @@ local
         (n,ith6,rth6)
       end
     end
-  fun remove_intermediate_junk () = let 
-    val cs = Term.thy_consts (current_theory())
-    fun is_substring s1 s2 = let 
+  fun remove_intermediate_junk () = let
+    val cs = Theory.constants (current_theory())
+    fun is_substring s1 s2 = let
       val s2' = Substring.all s2
       val (_,s) = Substring.position s1 s2'
     in
       not (Substring.isEmpty s)
     end
-    fun c_appthis c = let 
-      val cn = #Name (dest_thy_const c) 
-    in 
+    fun c_appthis c = let
+      val cn = #Name (dest_thy_const c)
+    in
       if is_substring safepfx cn then
         Theory.delete_const cn
       else ()
     end
-                    
-    val tys = Type.thy_types (current_theory())
-    fun ty_appthis (tyn,arity) = 
+
+    val tys = Theory.types (current_theory())
+    fun ty_appthis (tyn,arity) =
         if is_substring safepfx tyn then Theory.delete_type tyn
         else ()
   in

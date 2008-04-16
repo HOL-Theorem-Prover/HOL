@@ -685,7 +685,7 @@ in
                                    PP.pp_to_string (!Globals.linewidth)
                                                    (TheoryPP.pp_type "U" "T")
                                                    ty,
-                                   ")"], 
+                                   ")"],
                     SOME (mk_thy_const{Name = "ARB", Thy = "bool", Ty = ty})
                    )
 end;
@@ -811,11 +811,11 @@ end
 (* Apply a function to its argument. If it fails, revert the grammars        *)
 (*---------------------------------------------------------------------------*)
 
-fun try_grammar_extension f x = 
+fun try_grammar_extension f x =
  let val (tyG,tmG) = current_grammars()
      val updates = !grm_updates
  in
-    f x handle e 
+    f x handle e
     => (the_term_grammar := tmG;
         the_type_grammar := tyG;
         term_grammar_changed := true;
@@ -1017,10 +1017,10 @@ end
 
 fun overload_on_by_nametype s (r as {Name, Thy}) = let in
    temp_overload_on_by_nametype s r;
-   full_update_grms 
+   full_update_grms
      ("(temp_overload_on_by_nametype "^quote s^")",
       String.concat
-        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"], 
+        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"],
       SOME (prim_mk_const r)
      )
  end
@@ -1320,8 +1320,9 @@ in
                             (fn () => add_break(0,0))  L;
             EB(); add_string "]"; EB())
          fun pp_update(f,x,topt) =
-             if isSome topt andalso not (Term.uptodate_term (valOf topt)) then 
-               () 
+             if isSome topt andalso
+                not (Theory.uptodate_term (valOf topt))
+             then ()
              else
                (B 5;
                 add_string "val _ = update_grms"; add_break(1,0);
