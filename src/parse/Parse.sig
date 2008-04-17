@@ -183,6 +183,7 @@ signature Parse = sig
   val export_theorems_as_docfiles : string -> (string * thm) list -> unit
 
   val update_grms   : ('a -> unit) -> 'a -> unit
+  val pending_updates : unit -> (string * string * term option) list
   val mk_local_grms
     : (string * (type_grammar.grammar * term_grammar.grammar)) list -> unit
 

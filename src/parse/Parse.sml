@@ -619,6 +619,8 @@ end
 
 val grm_updates = ref [] : (string * string * term option) list ref;
 
+fun pending_updates() = !grm_updates
+
 fun update_grms fname (x,y) = grm_updates := ((x,y,NONE) :: !grm_updates);
 fun full_update_grms (x,y,opt) = grm_updates := ((x,y,opt) :: !grm_updates)
 
