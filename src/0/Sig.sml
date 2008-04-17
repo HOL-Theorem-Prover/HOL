@@ -6,14 +6,13 @@ sig
   type witness = KernelTypes.witness
 
   type entry = {const   : ty,
-                witness : witness option, 
-                utd     : bool ref}
+                witness : witness option}
+  val id_of       : ty -> id
 
-  datatype status 
+  datatype status
        = INITIAL of entry
        | CLOBBER of entry
 
-  val id_of       : entry -> id
   val insert      : ty -> status
   val delete      : string * string -> bool
   val lookup      : string * string -> entry option
@@ -25,23 +24,24 @@ sig
   val filter      : (entry -> bool) -> unit
   val scope       : (entry -> bool) -> unit
   val del_segment : string -> unit
-  val anachronize : string -> unit
   val all_entries : unit -> entry list
 end;
 
 
 (*---------------------------------------------------------------------------
-     An abstract HOL signature, to be instantiated to 
+     An abstract HOL signature, to be instantiated to
      types and terms.
  ---------------------------------------------------------------------------*)
 
 functor SIG (type ty
-             val key : ty -> KernelTypes.id
-             val ERR : string -> string -> exn 
+             val key : ty -> string * string (* name * theory *)
+             val id_of : ty -> KernelTypes.id
+             val ERR : string -> string -> exn
              val table_size : int) : Sig =
 struct
 
 type ty = ty;
+val id_of = id_of
 
 open Lib KernelTypes;
 
@@ -50,11 +50,9 @@ open Lib KernelTypes;
  ---------------------------------------------------------------------------*)
 
 type entry = {const   : ty,
-              witness : witness option, 
-              utd     : bool ref}
+              witness : witness option}
 
-fun id_of {const,witness,utd} = key const;
-fun retire const = KernelTypes.retire (key const);
+fun retire const = KernelTypes.retire (id_of const);
 
 (*---------------------------------------------------------------------------
         Hash tables are used to represent signatures
@@ -74,13 +72,13 @@ fun hash s = hasher s (0,0);
        CLOBBER entry  -- an existing entry e was overwritten by entry
  ---------------------------------------------------------------------------*)
 
-datatype status 
+datatype status
      = INITIAL of entry
      | CLOBBER of entry
 
 
 (*---------------------------------------------------------------------------
-       Insert an element into the signature, perhaps replacing 
+       Insert an element into the signature, perhaps replacing
        a previous version. It is externally enforced that the
        replacement can only happen in the current theory segment.
  ---------------------------------------------------------------------------*)
@@ -88,12 +86,12 @@ datatype status
 local val clobbered = ref false
 in
 fun insert item =
- let val p as (name,_) = dest_id (key item)
+ let val p as (name,_) = key item
      val i = hash name
-     val entry = {const=item, witness=NONE, utd=ref true}
+     val entry = {const=item, witness=NONE}
      fun add [] = [entry]  (* new addition *)
        | add ((e as {const, ...}) :: rst)
-          = if p = dest_id (key const) (* replace an existing resident *)
+          = if p = key const (* replace an existing resident *)
             then (retire const; clobbered := true; entry::rst)
             else e::add rst
  in
@@ -113,9 +111,9 @@ fun add_witness (name, theory, wit) =
      val i = hash name
      val L = Array.sub(theSig, i)
      fun get [] = raise ERR "add_witness" "no such constant"
-       | get ((e as {const, witness, utd}) :: rst)
-           = if p = dest_id (key const)
-             then {const=const, utd=utd, witness=SOME wit} :: rst
+       | get ((e as {const, witness}) :: rst)
+           = if p = key const
+             then {const=const, witness=SOME wit} :: rst
              else e::get rst
  in
     Array.update(theSig, i, get L)
@@ -130,8 +128,8 @@ fun add_witness (name, theory, wit) =
 fun delete (p as (name,_)) =
  let val i = hash name
      fun del [] = raise ERR "" ""
-       | del ((e as {const,witness,utd}) :: rst) =
-          if p = dest_id (key const) then (retire const; rst) else e::del rst
+       | del ((e as {const,witness}) :: rst) =
+          if p = key const then (retire const; rst) else e::del rst
  in
    Array.update(theSig, i, del (Array.sub(theSig, i)))
    ; true
@@ -145,7 +143,8 @@ fun delete (p as (name,_)) =
 
 fun lookup (p as (name,_)) =
  let fun look [] = NONE
-       | look (e::rst) = if p = dest_id (id_of e) then SOME e else look rst
+       | look ((e as {const,witness})::rst) = if p = key const then SOME e
+                                              else look rst
  in
    look (Array.sub(theSig, hash name))
  end;
@@ -157,8 +156,8 @@ fun lookup (p as (name,_)) =
 
 fun resolve name =
  let fun look [] = []
-       | look (e::rst) = 
-           if name = name_of(id_of e) then e::look rst else look rst
+       | look ((e as {const,witness})::rst) =
+           if name = #1 (key const) then e::look rst else look rst
  in
    look (Array.sub(theSig, hash name))
  end;
@@ -175,23 +174,13 @@ fun app f =
 fun filter P = app (Lib.gather P)
 fun scope P  = app (op@ o Lib.partition P);
 
-fun del_segment seg = 
-    let fun doit e = if seg = seg_of (id_of e) then 
-                       (retire (#const e); false) 
-                     else true
+fun del_segment seg =
+    let fun doit (e as {witness,const}) =
+            if seg = #2 (key const) then (retire const; false)
+            else true
     in
-      filter doit 
+      filter doit
     end
-
-fun app_se f =   (* apply a s.e. function to each entry *)
-  for_se 0 (table_size - 1)
-      (fn i => List.app f (Array.sub(theSig,i)))
-
-fun anachronize thy = 
-  let fun unset_utd {const, utd, witness} = 
-         if seg_of (key const) = thy then utd := false else ()
-  in app_se unset_utd
-  end;
 
 (*---------------------------------------------------------------------------
       Find all elements in a specified segment.
@@ -200,7 +189,9 @@ fun anachronize thy =
 fun foldl f b = Array.foldl (fn (L, A) => List.foldl f A L) b theSig;
 
 fun slice segment =
-  foldl (fn (e,D) => if segment = seg_of(id_of e) then e::D else D) [];
+  foldl (fn (e as {witness,const},D) => if segment = #2 (key const) then e::D
+                                        else D)
+        [];
 
 fun all_entries() = foldl (op::) [];;
 

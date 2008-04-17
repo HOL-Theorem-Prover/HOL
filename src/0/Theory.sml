@@ -440,121 +440,73 @@ fun install_const(s,ty,thy) = add_termCT {name=s, htype=ty, theory=thy}
  * uptodate.
  *---------------------------------------------------------------------------*)
 
-local datatype constkind = TY | TM
+fun up2date_id id = KernelTypes.uptodate_id id
 
-      fun dest_tm_entry NONE = NONE
-        | dest_tm_entry (SOME{const,utd,witness}) = SOME(utd,witness)
-      fun dest_ty_entry NONE = NONE
-        | dest_ty_entry (SOME{const,utd,witness}) = SOME(utd,witness)
-
-   fun init () =
-     let val thy = CTname()
-     in Type.TypeSig.anachronize thy;
-        Term.TermSig.anachronize thy
-     end
-
-   fun up2date_entry CTname (utd,witness) =
-     if !utd then true
-     else if up2date_witness CTname witness
-          then (utd := true; true)
-          else false
-
-   and up2date_id CTname id constkind =
-     if seg_of id <> CTname then true  (* not current theory *)
-     else let open Type Term
-              val entryinfo = case constkind
-                     of TY => dest_ty_entry(TypeSig.lookup (dest_id id))
-                      | TM => dest_tm_entry(TermSig.lookup (dest_id id))
-           in case entryinfo
-               of NONE => false  (* entry has been deleted *)
-                | SOME uw => up2date_entry CTname uw
-           end
-
-   and up2date_type CTname ty =
-     if Type.is_vartype ty then true
-     else let val ((id,_),args) = Type.break_type ty
-          in up2date_id CTname id TY
-             andalso Lib.all (up2date_type CTname) args
-          end
-
-   and up2date_term CTname tm =
-     let open Term
-     in if is_const tm
-        then let val (id,ty) = break_const tm
-             in up2date_id CTname id TM
-                andalso up2date_type CTname ty
-             end
-        else case (is_var tm, is_comb tm, is_abs tm)
-             of (true,_,_) => up2date_type CTname (type_of tm)
-              | (_,true,_) => up2date_term CTname (rator tm) andalso
-                              up2date_term CTname (rand tm)
-              | (_,_,true) => up2date_term CTname (bvar tm) andalso
-                              up2date_term CTname (body tm)
-              | otherwise  => raise ERR "up2date_term" "unexpected case"
-     end
-
-   and up2date_thm CTname thm =
-     Lib.all (up2date_term CTname) (Thm.concl thm::Thm.hyp thm)
-       andalso
-     up2date_axioms CTname (Tag.axioms_of (Thm.tag thm))
-
-   and up2date_witness _ NONE = true
-     | up2date_witness CTname (SOME(TERM tm)) = up2date_term CTname tm
-     | up2date_witness CTname (SOME(THEOREM th)) = up2date_thm CTname th
-
-   and up2date_axioms _ [] = true
-     | up2date_axioms CTname rlist =
-        let val axs = map (drop_Axkind o snd) (thy_axioms(theCT()))
-        in Lib.all (up2date_term CTname
-                     o Thm.concl o Lib.C Lib.assoc axs) rlist
-        end handle HOL_ERR _ => false
-in
 fun uptodate_type ty =
-   if #overwritten (theCT())
-   then (init(); up2date_type (CTname()) ty) else true
+    if Type.is_vartype ty then true
+    else let val ((id,_),args) = Type.break_type ty
+         in up2date_id id
+            andalso Lib.all uptodate_type args
+         end
 
 fun uptodate_term tm =
-   if #overwritten (theCT())
-   then (init (); up2date_term (CTname()) tm) else true
+    let open Term
+    in if is_const tm
+       then let val (id,ty) = break_const tm
+            in up2date_id id andalso uptodate_type ty
+            end
+       else case (is_var tm, is_comb tm, is_abs tm)
+             of (true,_,_) => uptodate_type (type_of tm)
+              | (_,true,_) => uptodate_term (rator tm) andalso
+                              uptodate_term (rand tm)
+              | (_,_,true) => uptodate_term (bvar tm) andalso
+                              uptodate_term (body tm)
+              | otherwise  => raise ERR "uptodate_term" "unexpected case"
+    end
 
 fun uptodate_thm thm =
-   if #overwritten (theCT())
-   then (init (); up2date_thm (CTname()) thm) else true
+    Lib.all uptodate_term (Thm.concl thm::Thm.hyp thm)
+    andalso
+    up2date_axioms (Tag.axioms_of (Thm.tag thm))
 
-fun scrub_sig CT =
-  let open Type Term
-  in
-    TypeSig.filter (fn {witness,utd,...} => up2date_entry CT (utd,witness));
-    TermSig.filter (fn {witness,utd,...} => up2date_entry CT (utd,witness))
-  end
+and up2date_axioms [] = true
+  | up2date_axioms rlist =
+    let val axs = map (drop_Axkind o snd) (thy_axioms(theCT()))
+    in Lib.all (uptodate_term o Thm.concl o Lib.C Lib.assoc axs) rlist
+    end handle HOL_ERR _ => false
 
-fun scrub_ax CTname {thid,con_wrt_disk,facts,overwritten,adjoin} =
-   let fun check (_, Thm _ ) = true
-         | check (_, Defn _) = true
-         | check (_, Axiom(_,th)) = up2date_term CTname (Thm.concl th)
-   in
+fun scrub_sig () =
+    let open Type Term
+    in
+      TypeSig.filter (fn {const,...} => up2date_id (TypeSig.id_of const));
+      TermSig.filter (fn {const,...} => up2date_id (TermSig.id_of const))
+    end
+
+fun scrub_ax {thid,con_wrt_disk,facts,overwritten,adjoin} =
+    let fun check (_, Thm _ ) = true
+          | check (_, Defn _) = true
+          | check (_, Axiom(_,th)) = uptodate_term (Thm.concl th)
+    in
       {thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
        facts=Lib.gather check facts,overwritten=overwritten}
-   end
+    end
 
-fun scrub_thms CTname {thid,con_wrt_disk,facts,overwritten,adjoin} =
-   let fun check (_, Axiom _) = true
-         | check (_, Thm th ) = up2date_thm CTname th
-         | check (_, Defn th) = up2date_thm CTname th
-   in {thid=thid, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
+fun scrub_thms {thid,con_wrt_disk,facts,overwritten,adjoin} =
+    let fun check (_, Axiom _) = true
+          | check (_, Thm th ) = uptodate_thm th
+          | check (_, Defn th) = uptodate_thm th
+    in {thid=thid, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
         facts=Lib.gather check facts, overwritten=overwritten}
-   end
+    end
 
-fun scrub () =
-   let val  _  = init()
-       val thy = CTname()
-       val  _  = scrub_sig thy
-       val {thid,con_wrt_disk,facts,overwritten,adjoin}
-             = scrub_thms thy (scrub_ax thy (theCT()))
-   in makeCT {overwritten=false, thid=thid,
-              con_wrt_disk=con_wrt_disk, facts=facts, adjoin=adjoin}
-   end
-end;
+fun scrub () = let
+  val  _  = scrub_sig ()
+  val {thid,con_wrt_disk,facts,overwritten,adjoin} =
+      scrub_thms (scrub_ax (theCT()))
+in
+  makeCT {overwritten=false, thid=thid,
+          con_wrt_disk=con_wrt_disk, facts=facts, adjoin=adjoin}
+end
 
 fun scrubCT() = (scrub(); theCT());
 
@@ -843,42 +795,42 @@ fun new_theory str =
 (*---------------------------------------------------------------------------*)
 
 (* Overly complex definition commented out
-fun attempt_theory_extension is_ok f x = 
+fun attempt_theory_extension is_ok f x =
   let infix ?>
       open Term
       val tnames1 = map fst (types"-")
       val cnames1 = map (fst o dest_const) (constants"-")
-      fun revert _ = 
+      fun revert _ =
         let val tnames2 = map fst (types"-")
             val cnames2 = map (fst o dest_const) (constants"-")
             val new_tnames = Lib.set_diff tnames2 tnames1
             val new_cnames = Lib.set_diff cnames2 cnames1
-        in map delete_type new_tnames; 
-           map delete_const new_cnames; 
+        in map delete_type new_tnames;
+           map delete_const new_cnames;
            scrub()
         end
-  in 
+  in
     case (verdict f revert x ?> verdict (assert is_ok) revert)
      of PASS y => PASS y
       | FAIL((),e) => FAIL (wrap_exn "Theory" "attempt_theory_extension" e)
   end;
 *)
 
-fun try_theory_extension f x = 
+fun try_theory_extension f x =
   let infix ?>
       open Term
       val tnames1 = map fst (types"-")
       val cnames1 = map (fst o dest_const) (constants"-")
-      fun revert _ = 
+      fun revert _ =
         let val tnames2 = map fst (types"-")
             val cnames2 = map (fst o dest_const) (constants"-")
             val new_tnames = Lib.set_diff tnames2 tnames1
             val new_cnames = Lib.set_diff cnames2 cnames1
-        in map delete_type new_tnames; 
-           map delete_const new_cnames; 
+        in map delete_type new_tnames;
+           map delete_const new_cnames;
            scrub()
         end
-  in 
+  in
     f x handle e => (revert(); raise e)
   end;
 

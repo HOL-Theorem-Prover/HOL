@@ -1503,7 +1503,8 @@ in
 val define_type_nested = fn def =>
  let val newtys = map fst def
      val truecons = itlist (curry op@) (map (map fst o snd) def) []
-     val (p,ith0,rth0) = define_type_nested def
+     val (p,ith0,rth0) = with_flag (Globals.checking_const_names, false)
+                                   define_type_nested def
      val (avs,etm) = strip_forall(concl rth0)
      val allcls = conjuncts(snd(strip_exists etm))
      val relcls = fst(chop_list (length truecons) allcls)

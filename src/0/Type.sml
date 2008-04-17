@@ -28,7 +28,8 @@ val WARN = HOL_WARNING "Type";
 
 structure TypeSig =
   SIG(type ty = KernelTypes.tyconst
-      fun key (r,_) = r
+      fun key (r,_) = dest_id r
+      fun id_of (r,_) = r
       val ERR = ERR
       val table_size = 311)
 
@@ -131,7 +132,7 @@ fun op_arity {Thy,Tyop} =
  ---------------------------------------------------------------------------*)
 
 fun thy_types s =
-  let fun xlate {const=(id,arity),witness,utd} = (KernelTypes.name_of id, arity)
+  let fun xlate {const=(id,arity),witness} = (KernelTypes.name_of id, arity)
   in map xlate (TypeSig.slice s)
   end;
 
@@ -239,7 +240,7 @@ fun tymatch [] [] Sids = Sids
      tymatch ps obs
        (case lookup v ids S
          of NONE => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
-          | SOME ty1 => if ty1=ty then Sids else 
+          | SOME ty1 => if ty1=ty then Sids else
                         MERR ("double bind on type variable "^name))
   | tymatch (Tyapp(c1,A1)::ps) (Tyapp(c2,A2)::obs) Sids =
       if c1=c2 then tymatch (A1@ps) (A2@obs) Sids

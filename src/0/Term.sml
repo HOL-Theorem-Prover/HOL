@@ -29,8 +29,10 @@ infix |-> ##;
 
 structure TermSig =
   SIG(type ty = term
-      fun key (Const(r,_)) = r
+      fun key (Const(r,_)) = dest_id r
         | key _ = raise ERR "key" "not a constant"
+      fun id_of (Const(r,_)) = r
+        | id_of _ = raise ERR "id_of" "not a constant"
       val ERR = ERR
       val table_size = 1999)
 
@@ -151,7 +153,7 @@ fun free_vars_lr tm =
         | FV (Abs(_,M)::t) A      = FV (M::t) A
 	| FV ((M as Clos _)::t) A = FV (push_clos M::t) A
         | FV [] A = rev A
-  in 
+  in
      FV [tm] []
   end;
 
@@ -801,10 +803,10 @@ fun RM [] theta = theta
              tymatch Ty (type_of tm) tyS)
   | RM ((Const(c1,ty1),Const(c2,ty2),_)::rst) (tmS,tyS)
       = RM rst
-        (if c1 <> c2 then 
+        (if c1 <> c2 then
           let val n1 = id_to_string c1
               val n2 = id_to_string c2
-          in 
+          in
            MERR ("different constants: "^n1^" matched against "^n2)
           end
          else
