@@ -1,0 +1,22 @@
+To build HOL with PolyML: 
+  1) edit configure.sml with the location of your Poly ML
+  2) run "poly < smart-configure" from the tools-poly directory
+  3) run "build -expk -symlink" (only the experimental kernel is supported)
+
+This is currently experimental, and probably fragile.  The help system doesn't
+work; also ctrl-c may not work reliably.
+
+According to the build log on my machine Moscow ML takes 1670s of proof and
+Poly takes 262s.  Total time to build the system is 50m on Moscow and 23m on
+Poly.
+
+Porting notes:
+
+For src/metic/mlibOmegaint.sml I defined hash:IntInf.int->int to be the
+identity function, which works only because Poly's native integers are
+arbitrary precision.  I used a similar trick for src/integer/OmegaMLShadow.sml,
+and additionally hashed a Vector of ints in a particularly naive way.
+
+The executables in bin are huge.
+
+The build script always rebuilds the executables.

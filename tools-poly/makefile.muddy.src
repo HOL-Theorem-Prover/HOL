@@ -1,0 +1,42 @@
+# Point this to where you unpacked mosml
+MOSMLHOME=
+
+MOSMLBIN=$(MOSMLHOME)/bin
+MOSMLRUNTIME=$(MOSMLHOME)/include
+MOSMLC=$(MOSMLBIN)/mosmlc -c
+
+# Your C compiler
+CC=
+
+BUDDYDIR=buddy
+OPTS=-Wall -O3
+CINCLUDE=-I$(MOSMLRUNTIME) -I./$(BUDDYDIR)/src
+CFLAGS= -Dunix $(OPTS) $(CINCLUDE)
+LIBS=-L./$(BUDDYDIR)/src -lbdd
+
+CFILES=muddy.c
+COBJS=muddy.o
+
+BUDDYLIB=./$(BUDDYDIR)/src/libbdd.a
+
+
+.SUFFIXES :
+.SUFFIXES : .c .o
+
+all:
+
+muddy.so: $(COBJS) $(BUDDYLIB)
+	DLLIBCOMP
+
+$(BUDDYLIB):
+	cd $(BUDDYDIR); make
+
+
+.c.o:
+	$(CC) -c $(CFLAGS) -o $@ $<
+
+clean:
+	rm -f *.u? 
+	rm -f *.o *.so
+	rm -f Makefile.bak
+	cd $(BUDDYDIR); make clean

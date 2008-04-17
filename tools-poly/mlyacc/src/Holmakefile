@@ -1,0 +1,87 @@
+INCLUDES = ../mlyacclib
+EXTRA_CLEANS = mlyacc.exe yacc.lex.sml
+
+MLYLIBUIS = $(patsubst %,MLY_%.ui,base-sig lrtable parser2 join)
+
+mlyacc.exe: main.uo
+	$(MOSMLC) -o $@ $<
+
+utils-sig.uo: utils-sig.sml
+	$(MOSMLC) -toplevel -c utils-sig.sml
+
+utils.uo: utils.sml utils-sig.uo
+	$(MOSMLC) -toplevel -c utils-sig.ui $<
+
+sigs.uo: utils-sig.uo sigs.sml
+	$(MOSMLC) -toplevel -c utils-sig.ui  $(MLYLIBUIS) sigs.sml
+
+core.uo: core.sml utils-sig.uo utils.uo sigs.uo
+	$(MOSMLC) -toplevel -c utils-sig.ui utils.ui sigs.ui $(MLYLIBUIS) $<
+
+hdr.uo: hdr.sml sigs.uo
+	$(MOSMLC) -toplevel -c sigs.ui $<
+
+yacc-grm-sig.uo: yacc-grm-sig.sml hdr.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) hdr.ui  $<
+
+yacc-grm.uo: yacc-grm.sml yacc-grm-sig.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui hdr.ui yacc-grm-sig.ui $<
+
+yacc.lex.sml: yacc.lex
+	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
+
+yacc.lex.uo: yacc.lex.sml yacc-grm-sig.uo sigs.uo hdr.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui hdr.ui yacc-grm-sig.ui $<
+
+parse.uo: parse.sml sigs.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui $<
+
+grammar.uo: grammar.sml sigs.uo utils.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) utils.ui sigs.ui $<
+
+coreutils.uo: coreutils.sml sigs.uo utils.uo
+	$(MOSMLC) -toplevel -c sigs.ui utils.ui $<
+
+graph.uo: graph.sml sigs.uo utils.uo
+	$(MOSMLC) -toplevel -c sigs.ui utils.ui $<
+
+look.uo: look.sml sigs.uo utils.uo
+	$(MOSMLC) -toplevel -c sigs.ui utils.ui $<
+
+lalr.uo: lalr.sml sigs.uo utils.uo
+	$(MOSMLC) -toplevel -c sigs.ui utils.ui $<
+
+mklrtable.uo: mklrtable.sml sigs.uo utils.uo core.uo coreutils.uo graph.uo \
+              look.uo lalr.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui utils.ui core.ui \
+                               coreutils.ui graph.ui look.ui lalr.ui $<
+
+mkprstruct.uo: mkprstruct.sml sigs.uo utils.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui utils.ui $<
+
+shrink.uo: shrink.sml sigs.uo utils.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui utils.ui $<
+
+verbose.uo: verbose.sml sigs.uo utils.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui utils.ui $<
+
+yacc.uo: yacc.sml sigs.uo utils.uo absyn-sig.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui utils.ui absyn-sig.ui $<
+
+absyn-sig.uo: absyn-sig.sml sigs.uo utils.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui utils.ui $<
+
+absyn.uo: absyn.sml absyn-sig.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui utils.ui absyn-sig.ui $<
+
+link.uo: link.sml verbose.uo yacc-grm.uo hdr.uo yacc.lex.uo parse.uo \
+                  mklrtable.uo sigs.uo lalr.uo look.uo graph.uo core.uo \
+                  coreutils.uo grammar.uo mkprstruct.uo shrink.uo yacc.uo \
+                  absyn.uo
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui hdr.ui verbose.ui \
+                      yacc.lex.ui yacc-grm.ui parse.ui mklrtable.ui core.ui \
+                      shrink.ui yacc.ui grammar.ui mkprstruct.ui absyn.ui $<
+
+main.uo: main.sml link.uo
+	$(MOSMLC) -toplevel -c link.ui $<
+

@@ -1,0 +1,16 @@
+\documentclass[10pt]{article}
+
+\usepackage{geometry}
+\usepackage{holdoc}
+\usepackage{ltsmunge}
+
+\makeatletter
+\newcommand{\ps@idstyle}{%
+  \def\@evenhead{\thepage\hfil\slshape\rightmark}%
+  \def\@oddhead{{\slshape\leftmark}\hfil\thepage}%
+  \def\@evenfoot{\hfil\slshape\footnotesize Rule version: \rulesrcsid\hfil}%
+  \let\@oddfoot\@evenfoot
+}
+\makeatother
+
+\pagestyle{idstyle}

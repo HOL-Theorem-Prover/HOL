@@ -1,0 +1,16 @@
+OPTIONS = NO_OVERLAY
+EXTRA_CLEANS = filter.sml quote-filter selftest
+DEPS = $(if $(MOSMLC),quote-filter.uo filter.uo,poly-unquote.ML filter.sml)
+
+all: quote-filter selftest
+
+quote-filter: $(DEPS)
+	$(if $(MOSMLC), $(MOSMLC) -o quote-filter quote-filter.uo,\
+           poly < poly-unquote.ML && \
+           gcc -o quote-filter unquote.o $(POLYLIBS) -lpolymain -lpolyml)
+
+filter.sml : filter
+	$(if $(MOSMLC),$(protect $(HOLDIR)/tools/mllex/mllex.exe),../mllex/mllex.exe) filter
+
+selftest: selftest.sml
+	MOSMLC -o selftest selftest.sml

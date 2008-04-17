@@ -1,0 +1,48 @@
+open List
+
+fun print s = TextIO.print;
+fun printb s = print (s ^ " ");
+
+%%
+
+%eop EOF
+%term EQUALS | NULL | OPEN | STAR | INCLUDE | ID of string | EOF | 
+      QUAL_ID of string
+%name SimpleSML
+
+%pos int
+
+%nonterm MLtext of string list | MLfrag of string list | 
+         MLseq of string list | UnitName_seq of string list |
+         LongIdent of string list | UnitName of string | Ident of string
+
+%%
+MLtext :
+    MLseq EOF		( MLseq1 )
+  | EOF			( [] )
+
+MLfrag :
+    NULL		( [] )
+  | LongIdent		( LongIdent1 )
+  | OPEN UnitName_seq  	( UnitName_seq1 )
+  | INCLUDE UnitName_seq( UnitName_seq1 )
+
+MLseq :
+    MLfrag MLseq	( MLfrag1 @ MLseq1 )
+  | MLfrag              ( MLfrag1 )
+
+UnitName_seq :
+    UnitName UnitName_seq	( UnitName1 :: UnitName_seq1 )
+  | (* empty *)			( [] )
+
+UnitName :
+    Ident       	( Ident1 )
+  | EQUALS      	( "=" )
+
+Ident :
+    ID          	( ID1 )
+  | STAR        	( "*" )
+
+LongIdent :
+    Ident       	( [] )
+  | QUAL_ID     	( [QUAL_ID1] )

@@ -1,0 +1,195 @@
+Wishlist for HOLDoc munger
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file contains a list of feature requests for the HOLDoc munging
+system.  See also the wishlist at the end of holdoc-guide.txt
+
+* ------------------------------------------------------------------ *
+
+  Correctly parse ([[x]]) in TeX mode - at present, ([[ is parsed as a
+  single token and the [[ is thereby missed.  The problem is that
+  Keith was too lazy to complement the regexp in hollex.mll by hand -
+  see comments there at tnormal.
+
+* ------------------------------------------------------------------ *
+
+  Deal with subscripts properly:
+
+Subject: munger questions
+From: Xxxxx Xxxxxx <Xxxxx.Xxxxxx@xxxxx.xx>
+Date: Tue, 15 Oct 2002 11:44:50 +0200
+To: Keith Wansbrough <Keith.Wansbrough@xx.xxx.xx.xx>
+
+Dear K,
+
+What is the "right way" to munge labelled arrows and turnstiles?
+
+E.g. I'd like to write
+
+   [[ e -->_hm e' ]]
+
+and get
+
+   e \longrightarrow_{\mathit{hm}} e'
+
+I though of making "-->_" a curried function, but it seems that only
+alpha chars are accepted.
+
+Ta, J
+
+Subject: Re: munger questions
+From: Keith Wansbrough <kw217@xx.xxx.xx.xx>
+Date: Tue, 15 Oct 2002 11:03:07 +0100
+To: Xxxxx Xxxxxx <Xxxxx.Xxxxxx@xxxxx.xx>
+Cc: pes20, mn200
+
+> Dear K,
+>
+> What is the "right way" to munge labelled arrows and turnstiles?
+
+Hmm!  No way at present.  Basically, subscripts and superscripts are
+not properly handled at present, and I'm thinking of adding them
+throughout.
+
+I'm not entirely sure of the best approach, though.  At the moment, an
+underscore is an alphanumeric, rather than a symbol.  So x_hm' parses
+as a single token, but -->_hm' parses as two tokens.  It's important
+to have _ as alpha, because we fairly often write
+a_big_long_symbol_name.
+
+x_hm' could be mapped to \mathit{x}_{\mathit{hm'}} by simply looking
+for identifiers with a single underscore near the end, and rendering
+them specially.  There is already some magic to do this for numeric
+subscripts.
+
+-->_hm', however, is trickier - maybe "_hm'" should render as
+"_{\mathit{hm'}}", and TeX should be relied upon to do the right
+thing.
+
+None of these solutions deal with -->_x+y or -->_(x+y) however.  You
+could define "_" as a curried function of one argument that removed
+the parentheses, and give it a definition of "_{#1}".  Then you could
+write "x _ hm'" and "-->_ hm'" and "-->_ (x+y)".  Not entirely
+satisfactory (the spaces are required), but better.
+
+Other suggestions welcome!
+
+--KW 8-)
+--
+Keith Wansbrough <kw217@xx.xxx.xx.xx>
+http://www.xx.xxx.xx.xx/users/kw217/
+University of Cambridge Computer Laboratory.
+
+* ------------------------------------------------------------------ *
+
+  Give error messages if the "tokens" mentioned in directives are not
+  in fact single tokens of the right type:
+
+
+
+Subject: Re: munger questions
+From: Xxxxx Xxxxxx <Xxxxx.Xxxxxx@xxxxx.xx>
+Date: Tue, 15 Oct 2002 12:13:20 +0200
+To: Keith Wansbrough <Keith.Wansbrough@xx.xxx.xx.xx>
+
+>> > Other suggestions welcome!
+>>
+>> What goes wrong if we allow non-alphanumerics to be curried functions?
+>> Then we could have -->_ as a function, no?
+>
+> No, because _ is alpha:  the above parses as two tokens
+
+ok!
+
+something else, shouldn't there be an error message if we mistakenly
+put
+
+    __      "\Mhole "
+
+inside a HOL_SYM_ALIST?  (There's no error and nothing gets munged,
+i.e. [[ __ ]] shows up in red.)
+
+J
+
+* ------------------------------------------------------------------ *
+
+Expanded version of thoughts on possible 3rd Generation munger design,
+in response to Gilles' desire for sort checking:
+
+>> 1) check membership in the various inter-defined grammars of the
+>> hash-system, treating metavariables 'properly', ie with T'' in the
+>> type grammar, e2' in the expression grammar etc.
+>That's what I have in mind.
+
+but by the time you're doing all this, I wonder whether you're almost
+doing a reimplementation of the whole munger, which could include also
+some of its wishlist points...
+
+...thinking a bit more about that, I don't know much about classes of
+grammars, LALR etc, but perhaps yacc is enough, and what one should do
+is a front-end to ocamllex and yacc that takes a more structured .umn
+file, strips out the tokens to feed to lex and strips out the grammar
+to feed to yac.  I'm imagining the new .umn source to be something like:
+
+e ::=
+   ()                  { () }
+   ( COMMALIST(es) )   { ( COMMALIST(es) ) }
+   \x:T.e              { \lambda x : T. e }
+   col e hm T          { [ e ]_{ hm }^{ T } }
+
+From that we produce lex source with symbols
+
+  (  )  \ : . col e{index} T{index} etc
+
+and yacc source a bit like the above but with recursive munging on the
+right (and error reporting!) and with all the syntactic noise that
+means we don't want to write yacc source ourselves.
+
+If LALR(1) is not up to our informal grammars (or if yacc is too
+tiresome), we could think of taking advantage of the fact that we
+rarely want to munge much code at a time, so could use a class of
+grammars that is less efficiently (more simply?) parsable.
+
+
+notes:
+- metavariables on the right of a clause logically have [[ ]] around them
+
+- we do away with having to have definitions of latex macros such as
+    \newcommand{\Mcolour}[3]{[#1]_{#2}^{#3}}
+
+- some special magic needed for lists of things, I guess
+
+- by looking at the collection of all grammars we can pick out e, T
+    etc (and allow them to be subscripted and primed)
+
+- we want to retain the property that this can cope with hol-style lexing too
+
+- don't really want to have to write out the grammars twice, once in
+    .umn and once in the document, so should allow also commentary and
+    some way to produce tex output (either have the grammars in .umn and
+    have the munger define a tex command to generate the typeset version
+    of each, or (better?) have them in the .mng and have the munger-setup
+    pull them out.   eg
+
+      \x:T.e              { \lambda x : T. e }  {function abstraction}
+
+- need to allow interspersed latexery anywhere in expressions.  At least
+    & and \\ and spacing.  Maybe arbitrary latex commands that don't
+    clash with abstracted variables??  Maybe allow nesting cutting across
+    the expression grammar structure (eg for colouring etc)???
+
+- need some nice way of typesetting partial expressions (isolated
+    keywords [[if]] and things like [[if e then ...]], used in exposition,
+    which shouldn't be sort-checked much).  For keywords, have grammar
+    clauses as below, and use recursive munging?
+
+       if e then e1 else e2    { if \; e \; then \; e1 \; else \; e2 }
+       if                      { \kw{if} }
+       then                    { \kw{then} }
+
+    (but the if and then on the rhs shouldn't be recursively munged!)
+
+- need good control over conflicts - want the munger to warn if we
+    type an ambiguous expression, not just rely on yacc's random
+    resolution of shift/reduce conflicts??
+

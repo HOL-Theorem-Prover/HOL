@@ -1,0 +1,52 @@
+What's in this directory?
+
+HOLDoc is a system for automatically typesetting HOL scripts, and
+LaTeX documents with interspersed HOL text.
+
+
+Documentation:
+~~~~~~~~~~~~~~
+holdoc-guide.txt     explains how it all works.
+README               this file.
+WISHLIST             outstanding feature requests.
+                     
+                     
+Programs:            
+~~~~~~~~~            
+                     
+hol_to_latex         }
+lts_to_latex         } - see below
+mng_to_latex         }
+                     
+                     
+HOLery:              
+~~~~~~~              
+                     
+HolDoc.sml,sig       HOL library that automates the generation of .imn
+                     files for HOL theories.
+                     
+                     
+Source code:         
+~~~~~~~~~~~~         
+                     
+Makefile             makefile to build all the programs
+                     
+mng_to_latex.ml      render .mng-files (LaTeX with embedded HOL)
+                     into pure LaTeX
+                     - the most useful entry point
+lts_to_latex.ml      render HOL-encoded LTS into LaTeX
+                     - designed for use by the Netsem project
+hol_to_latex.ml      render HOL into LaTeX
+                     - not fully working
+                     
+simpledump.ml        debugging: dump tokens scanned to stdout
+simpletexdump.ml     debugging: dump TeXed tokens to stdout
+                     
+holdoc_munge.ml,mli  main module: do all the work
+hollex.mll,mli       lexer: lex the HOL or LaTeX source.
+holdoc_init.ml,mli   init module: read the init (.imn) files
+
+
+That's all, folks!
+
+--KW 8-)

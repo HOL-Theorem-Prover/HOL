@@ -1,0 +1,19 @@
+all: MLY_base-sig.uo MLY_join.uo MLY_parser2.uo MLY_stream.uo MLY_parser1.uo
+
+MLY_base-sig.uo: MLY_base-sig.sml
+	$(MOSMLC) -toplevel -c $<
+
+MLY_join.uo: MLY_join.sml
+	$(MOSMLC) -toplevel -c MLY_base-sig.ui $<
+
+MLY_lrtable.uo: MLY_lrtable.sml MLY_base-sig.uo MLY_join.uo
+	$(MOSMLC) -toplevel -c MLY_base-sig.ui MLY_join.ui $<
+
+MLY_stream.uo: MLY_stream.sml MLY_base-sig.uo
+	$(MOSMLC) -toplevel -c MLY_base-sig.ui $<
+
+MLY_parser2.uo: MLY_parser2.sml MLY_base-sig.uo MLY_stream.uo MLY_lrtable.uo
+	$(MOSMLC) -toplevel -c MLY_base-sig.ui MLY_lrtable.ui MLY_stream.ui $<
+
+MLY_parser1.uo: MLY_parser1.sml MLY_base-sig.uo MLY_stream.uo MLY_lrtable.uo
+	$(MOSMLC) -toplevel -c MLY_base-sig.ui MLY_lrtable.ui MLY_stream.ui $<
