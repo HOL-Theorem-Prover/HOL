@@ -1,0 +1,2 @@
+selftest.exe: selftest.uo quotient.uo
+	$(HOLMOSMLC) -o $@ $<
