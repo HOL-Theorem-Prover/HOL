@@ -12,6 +12,9 @@ list of hypotheses of the theorem.
 \FAILURE
 Never fails.
 
+\COMMENTS
+The order in which hypotheses are returned can not be relied on. 
+
 \SEEALSO
 Thm.dest_thm, Thm.concl.
 \ENDDOC
