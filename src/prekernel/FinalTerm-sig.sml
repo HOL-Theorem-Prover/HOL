@@ -1,8 +1,8 @@
-signature RestrictedTerm =
+signature FinalTerm =
 sig
 
   eqtype term
-  type hol_type = Type.hol_type
+  type hol_type
   type ('a,'b)subst = ('a,'b)Lib.subst
   type 'a set       = 'a HOLset.set
 
@@ -55,7 +55,6 @@ sig
   val same_const    : term -> term -> bool
   val aconv         : term -> term -> bool
   val beta_conv     : term -> term
-  val lazy_beta_conv: term -> term
   val eta_conv      : term -> term
   val subst         : (term,term) subst -> term -> term
   val inst          : (hol_type,hol_type) subst -> term -> term
@@ -78,22 +77,4 @@ sig
 
   val empty_tmset   : term set
   val empty_varset  : term set
-
-  (* initial terms *)
-  val imp           : term
-  val equality      : term
-  val select        : term
-  val dest_eq_ty    : term -> (term * term * hol_type)
-
-  (* symbol table manipulations *)
-  val prim_new_const : {Thy:string, Name:string} -> hol_type -> term
-  val prim_delete_const : {Thy:string, Name:string}  -> unit
-  val thy_consts : string -> term list
-  val del_segment : string -> unit
-  val uptodate_term : term -> bool
-
-  (* raw pretty-printer for theory export *)
-  val pp_raw_term : (term -> int) -> ppstream -> term -> unit
-
-
 end

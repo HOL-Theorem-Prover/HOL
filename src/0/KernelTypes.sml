@@ -7,30 +7,7 @@ struct
     create more than one such pair, and they need to be distinguished).
  ---------------------------------------------------------------------------*)
 
-type name   = string
-type segment = string
-
-(* bool field is: "up-to-date" status *)
-type id = (name * segment * bool) ref
-
-fun mk_id (n,t) = ref (n,t,true)
-fun dest_id ((ref (n,t,_)):id) = (n,t)
-fun name_of id = #1(dest_id id)
-fun seg_of id  = #2(dest_id id)
-fun retire (r as ref (n,t,utd)) = let
-  val (n,t) = dest_id r
-in
-  r := (Globals.old n, t, false)
-end
-fun uptodate_id (ref (n,t,utd)) = utd
-val same_id = (op=);
-fun compare (id1,id2) =
-  case String.compare (name_of id1, name_of id2)
-   of EQUAL => String.compare (seg_of id1, seg_of id2)
-    |   x   => x;
-
-fun fullname (name,thy) = Lib.quote(String.concat[thy,"$",name]);
-fun id_to_string (ref (n,t,_)) = fullname (n,t);
+type id = KernelSig.kernelid
 
 (*---------------------------------------------------------------------------*
  * HOL types are somewhat akin to terms in first order logic.                *

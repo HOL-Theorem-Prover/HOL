@@ -7,27 +7,11 @@ sig
     create more than one such pair, and they need to be distinguished.
  ---------------------------------------------------------------------------*)
 
-type name    = string
-type segment = string
-
-eqtype id
-
-  val mk_id        : name * segment -> id
-  val dest_id      : id -> name * segment
-  val uptodate_id  : id -> bool
-  val name_of      : id -> name
-  val seg_of       : id  -> segment
-  val compare      : id * id -> order
-  val same_id      : id * id -> bool
-  val retire       : id -> unit
-  val fullname     : name * segment -> string
-  val id_to_string : id -> string
-
-
 (*---------------------------------------------------------------------------*
  *                  HOL types                                                *
  *---------------------------------------------------------------------------*)
 
+type id = KernelSig.kernelid
 type tyconst = id * int
 
 datatype hol_type = Tyv of string

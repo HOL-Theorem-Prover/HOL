@@ -11,7 +11,7 @@
 (*                 July, 2000, Konrad Slind                              *)
 (* ===================================================================== *)
 
-structure Type : RawType =
+structure Type :> Type =
 struct
 
 open Feedback Lib KernelTypes;   infix |->;
@@ -26,12 +26,7 @@ val WARN = HOL_WARNING "Type";
               Create the signature for HOL types
  ---------------------------------------------------------------------------*)
 
-structure TypeSig =
-  SIG(type ty = KernelTypes.tyconst
-      fun key (r,_) = dest_id r
-      fun id_of (r,_) = r
-      val ERR = ERR
-      val table_size = 311)
+val typesig = KernelSig.new_table()
 
 
 (*---------------------------------------------------------------------------*
@@ -39,11 +34,12 @@ structure TypeSig =
  * signature, and it is convenient to nail them down here.                   *
  *---------------------------------------------------------------------------*)
 
-local open TypeSig
+local open KernelSig
 in
-val INITIAL{const=fun_tyc,...}  = insert (mk_id("fun",  "min"), 2);
-val INITIAL{const=bool_tyc,...} = insert (mk_id("bool", "min"), 0);
-val INITIAL{const=ind_tyc,...}  = insert (mk_id("ind",  "min"), 0);
+val fun_tyid = insert(typesig, {Thy = "min", Name = "fun"}, 2)
+val fun_tyc = (fun_tyid, 2)
+val bool_tyid = insert(typesig, {Thy = "min", Name = "bool"}, 0)
+val ind_tyid = insert(typesig, {Thy = "min", Name = "ind"}, 0)
 end
 
 
@@ -51,14 +47,15 @@ end
         Some basic values
  ---------------------------------------------------------------------------*)
 
-val bool = Tyapp (bool_tyc,[])
-val ind  = Tyapp (ind_tyc, []);
+val bool = Tyapp ((bool_tyid,0),[])
+val ind  = Tyapp ((ind_tyid,0), []);
 
 (*---------------------------------------------------------------------------
        Function types
  ---------------------------------------------------------------------------*)
 
-infixr 3 -->;   fun (X --> Y) = Tyapp (fun_tyc, [X,Y]);
+infixr 3 -->;
+fun (X --> Y) = Tyapp (fun_tyc, [X,Y]);
 
 fun dom_rng (Tyapp(tyc,[X,Y])) =
       if tyc=fun_tyc then (X,Y)
@@ -75,39 +72,47 @@ fun make_type (tyc as (_,arity)) Args (fnstr,name) =
       [name," needs ", int_to_string arity,
        " arguments, but was given ", int_to_string(length Args)]);
 
-fun mk_thy_type {Thy,Tyop,Args} =
- case TypeSig.lookup (Tyop,Thy)
-  of SOME{const,...} => make_type const Args ("mk_thy_type",fullname(Tyop,Thy))
-   | NONE => raise ERR "mk_thy_type"
-                ("the type operator "^quote Tyop^
-                 " has not been declared in theory "^quote Thy^".")
-
-local fun dest (e:TypeSig.entry) =
-        let val (c,_) = #const e
-        in {Tyop=KernelTypes.name_of c, Thy=KernelTypes.seg_of c}  end
+fun mk_thy_type {Thy,Tyop,Args} = let
+  open KernelSig
+  val knm = {Thy=Thy, Name = Tyop}
 in
-val decls = map dest o TypeSig.resolve
-end;
+  case peek(typesig,{Thy=Thy,Name=Tyop}) of
+    SOME const => make_type const Args ("mk_thy_type", name_toString knm)
+  | NONE => raise ERR "mk_thy_type"
+                      ("the type operator "^quote Tyop^
+                       " has not been declared in theory "^quote Thy^".")
+end
 
-fun first_decl fname Tyop =
- case TypeSig.resolve Tyop
-  of []           => raise ERR fname (Lib.quote Tyop^" has not been declared")
-   | [{const,...}] => const
-   | {const,...}::_ => (WARN fname "more than one possibility"; const)
+fun decls nm = let
+  fun foldthis({Thy,Name},_,acc) = if Name = nm then
+                                     {Tyop=Name,Thy=Thy} :: acc
+                                   else acc
+in
+  KernelSig.foldl foldthis [] typesig
+end
+
+local
+  fun first_decl Tyop = let
+    fun foldthis({Thy,Name},tycon,acc) =
+        if Name = Tyop then tycon :: acc
+        else acc
+  in
+    case KernelSig.foldl foldthis [] typesig of
+      [] => raise ERR "mk_type" (Lib.quote Tyop^" has not been declared")
+    | [c] => c
+    | c::_ => (WARN "mk_type" "more than one possibility"; c)
+  end
+in
 
 fun mk_type (Tyop,Args) =
-  make_type (first_decl "mk_type" Tyop) Args ("mk_type",Tyop);
-
-(* currently unused *)
-fun current_tyops s =
-  map (fn {const as (id,i),...} => (KernelTypes.dest_id id,i))
-      (TypeSig.resolve s);
+    make_type (first_decl Tyop) Args ("mk_type",Tyop);
+end
 
 (*---------------------------------------------------------------------------*
  * Take a type apart.                                                        *
  *---------------------------------------------------------------------------*)
 
-local open KernelTypes
+local open KernelTypes KernelSig
 in
 fun break_type (Tyapp p) = p | break_type _ = raise ERR "break_type" "";
 
@@ -123,18 +128,19 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun op_arity {Thy,Tyop} =
-    case TypeSig.lookup (Tyop,Thy) of
-      SOME {const = (id, a), ...} => SOME a
+    case KernelSig.peek(typesig,{Thy=Thy,Name=Tyop}) of
+      SOME (id, a) => SOME a
     | NONE => NONE
 
 (*---------------------------------------------------------------------------
        Declared types in a theory segment
  ---------------------------------------------------------------------------*)
 
-fun thy_types s =
-  let fun xlate {const=(id,arity),witness} = (KernelTypes.name_of id, arity)
-  in map xlate (TypeSig.slice s)
-  end;
+fun thy_types s = let
+  fun xlate (knm, (id,arity)) = (KernelSig.name_of id, arity)
+in
+  map xlate (KernelSig.listThy typesig s)
+end;
 
 
 (*---------------------------------------------------------------------------*
@@ -244,8 +250,8 @@ fun tymatch [] [] Sids = Sids
                         MERR ("double bind on type variable "^name))
   | tymatch (Tyapp(c1,A1)::ps) (Tyapp(c2,A2)::obs) Sids =
       if c1=c2 then tymatch (A1@ps) (A2@obs) Sids
-      else let val n1 = id_to_string (fst c1)
-               val n2 = id_to_string (fst c2)
+      else let val n1 = KernelSig.id_toString (fst c1)
+               val n2 = KernelSig.id_toString (fst c2)
            in MERR ("attempt to match different tyops: "^n1^" against "^n2)
            end
   | tymatch any other thing = MERR "different constructors"
@@ -268,7 +274,7 @@ fun compare (Tyv s1, Tyv s2) = String.compare (s1,s2)
   | compare (Tyv _, _) = LESS
   | compare (Tyapp _, Tyv _) = GREATER
   | compare (Tyapp((c1,_),A1), Tyapp((c2,_),A2)) =
-      case KernelTypes.compare (c1, c2)
+      case KernelSig.id_compare (c1, c2)
        of EQUAL => Lib.list_compare compare (A1,A2)
         |   x   => x;
 

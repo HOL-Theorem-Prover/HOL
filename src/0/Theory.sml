@@ -175,7 +175,6 @@ fun drop_Axkind (Axiom rth) = rth
 type segment = {thid  : thyid,                                 (* unique id  *)
                 facts : (string * thmkind) list,    (* stored ax,def,and thm *)
                 con_wrt_disk : bool,                (* consistency with disk *)
-                overwritten  : bool,                   (* parts overwritten? *)
                 adjoin       : thy_addon list}         (*  extras for export *)
 
 
@@ -188,8 +187,7 @@ type segment = {thid  : thyid,                                 (* unique id  *)
  *---------------------------------------------------------------------------*)
 
 fun fresh_segment s :segment =
-   {thid=new_thyid s,  facts=[],
-    con_wrt_disk=false, overwritten=false, adjoin=[]};
+   {thid=new_thyid s,  facts=[], con_wrt_disk=false, adjoin=[]};
 
 
 local val CT = ref (fresh_segment "scratch")
@@ -252,25 +250,20 @@ fun empty_segment ({thid,facts, ...}:segment) =
  *              ADDING TO THE SEGMENT                                        *
  *---------------------------------------------------------------------------*)
 
-fun add_type {name,theory,arity}
-             {thid,facts,con_wrt_disk,overwritten,adjoin} =
-   {thid=thid, facts=facts, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
-    overwritten = let open Type
-                  in case TypeSig.insert (mk_id(name,theory),arity)
-                      of TypeSig.INITIAL _ => overwritten
-                       | TypeSig.CLOBBER _ => true
-                  end};
+fun add_type {name,theory,arity} thy = let
+  open Type KernelSig
+in
+  insert(typesig, {Name=name,Thy=theory}, arity);
+  thy
+end
 
-fun add_term {name,theory,htype}
-             {thid,facts,con_wrt_disk,overwritten,adjoin}
-  = {thid=thid,facts=facts, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
-     overwritten =
-      let open Term
-          val tykind = (if Type.polymorphic htype then POLY else GRND) htype
-      in case TermSig.insert (Const(mk_id(name,theory),tykind))
-          of TermSig.INITIAL _ => overwritten
-           | TermSig.CLOBBER _ => true
-      end};
+fun add_term {name,theory,htype} thy = let
+  open Term KernelSig
+in
+  insert(termsig, {Name=name,Thy=theory},
+         (if Type.polymorphic htype then POLY else GRND) htype);
+  thy
+end
 
 local fun pluck1 x L =
         let fun get [] A = NONE
@@ -286,16 +279,14 @@ local fun pluck1 x L =
               of Thm _ => (p::l', false)
                |  _    => (p::l', true))
 in
-fun add_fact (th as (s,_)) {thid, con_wrt_disk,facts,overwritten,adjoin}
+fun add_fact (th as (s,_)) {thid, con_wrt_disk,facts,adjoin}
   = let val (X,b) = overwrite th facts
-    in {facts=X, overwritten = overwritten orelse b,
-        thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin}
+    in {facts=X, thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin}
     end
 end;
 
-fun new_addon a {thid, con_wrt_disk, facts, overwritten, adjoin} =
-    {adjoin = a::adjoin, facts=facts, overwritten=overwritten,
-     thid=thid, con_wrt_disk=con_wrt_disk};
+fun new_addon a {thid, con_wrt_disk, facts, adjoin} =
+    {adjoin = a::adjoin, facts=facts, thid=thid, con_wrt_disk=con_wrt_disk};
 
 local fun plucky x L =
        let fun get [] A = NONE
@@ -304,38 +295,44 @@ local fun plucky x L =
        in get L []
        end
 in
-fun set_MLbind (s1,s2) (rcd as {thid, con_wrt_disk,facts, overwritten,adjoin})
+fun set_MLbind (s1,s2) (rcd as {thid, con_wrt_disk,facts, adjoin})
  = case plucky s1 facts
    of NONE => (WARN "set_MLbind"
                (Lib.quote s1^" not found in current theory"); rcd)
     | SOME (X,(_,b),Y) =>
-        {facts=X@((s2,b)::Y), overwritten=overwritten,
-         adjoin=adjoin,thid=thid, con_wrt_disk=con_wrt_disk}
+        {facts=X@((s2,b)::Y), adjoin=adjoin,thid=thid,
+         con_wrt_disk=con_wrt_disk}
 end;
 
 (*---------------------------------------------------------------------------
             Deleting from the segment
  ---------------------------------------------------------------------------*)
 
-fun del_type (name,thyname) {thid,facts,con_wrt_disk,overwritten,adjoin}
-  = {thid=thid,facts=facts, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-     overwritten = Type.TypeSig.delete (name,thyname)
-         orelse
-         (WARN "del_type" (fullname(name,thyname)^" not found");
-          overwritten)}
+fun del_type (name,thyname) thy = let
+  open Type KernelSig
+  val knm = {Name = name, Thy = thyname}
+in
+  retire_name(typesig, knm) handle KernelSig.NotFound =>
+               WARN "del_type" (name_toString knm^" not found");
+  thy
+end
 
 (*---------------------------------------------------------------------------
         Remove a constant from the signature.
  ---------------------------------------------------------------------------*)
 
-fun del_const (name,thyname) {thid,facts,con_wrt_disk,overwritten,adjoin}
- = {thid=thid,facts=facts, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-     overwritten = Term.TermSig.delete (name,thyname) orelse
-       (WARN "del_const" (fullname(name,thyname)^" not found"); overwritten)}
+fun del_const (name,thyname) thy = let
+  open Term KernelSig
+  val knm = {Name=name, Thy=thyname}
+in
+  retire_name(termsig,knm) handle KernelSig.NotFound =>
+                  WARN "del_const" (name_toString knm^" not found");
+  thy
+end
 
-fun del_binding name {thid,facts,con_wrt_disk,overwritten,adjoin} =
+fun del_binding name {thid,facts,con_wrt_disk,adjoin} =
   {facts = filter (fn (s, _) => not(s=name)) facts,
-   thid=thid, adjoin=adjoin, con_wrt_disk=con_wrt_disk, overwritten=true};
+   thid=thid, adjoin=adjoin, con_wrt_disk=con_wrt_disk};
 
 (*---------------------------------------------------------------------------
    Clean out the segment. Note: this clears out the segment, and the
@@ -343,18 +340,14 @@ fun del_binding name {thid,facts,con_wrt_disk,overwritten,adjoin} =
    still be there, with its parents.
  ---------------------------------------------------------------------------*)
 
-fun zap_segment s {thid, con_wrt_disk, facts, overwritten, adjoin} =
- let val _ = Type.TypeSig.del_segment s
-     val _ = Term.TermSig.del_segment s
- in {overwritten=false, adjoin=[], facts=[],
-     con_wrt_disk=con_wrt_disk, thid=thid}
+fun zap_segment s {thid, con_wrt_disk, facts, adjoin} =
+ let val _ = KernelSig.del_segment(Type.typesig, s)
+     val _ = KernelSig.del_segment(Term.termsig, s)
+ in {adjoin=[], facts=[], con_wrt_disk=con_wrt_disk, thid=thid}
  end;
 
-fun set_consistency b {thid, con_wrt_disk, facts, overwritten, adjoin} =
-{con_wrt_disk=b, thid=thid,facts=facts, overwritten=overwritten,adjoin=adjoin}
-;
-fun set_overwritten b {thid, con_wrt_disk, facts, overwritten, adjoin} =
-{overwritten=b,con_wrt_disk=con_wrt_disk, thid=thid,facts=facts, adjoin=adjoin}
+fun set_consistency b {thid, con_wrt_disk, facts, adjoin} =
+{con_wrt_disk=b, thid=thid,facts=facts, adjoin=adjoin}
 ;
 
 (*---------------------------------------------------------------------------
@@ -440,7 +433,7 @@ fun install_const(s,ty,thy) = add_termCT {name=s, htype=ty, theory=thy}
  * uptodate.
  *---------------------------------------------------------------------------*)
 
-fun up2date_id id = KernelTypes.uptodate_id id
+fun up2date_id id = KernelSig.uptodate_id id
 
 fun uptodate_type ty =
     if Type.is_vartype ty then true
@@ -476,36 +469,39 @@ and up2date_axioms [] = true
     end handle HOL_ERR _ => false
 
 fun scrub_sig () =
-    let open Type Term
+    let
+      open Type Term KernelSig
+      fun appthis tab (knm,(kid,v)) =
+          if not (uptodate_id kid) then retire_name(tab,knm)
+          else ()
     in
-      TypeSig.filter (fn {const,...} => up2date_id (TypeSig.id_of const));
-      TermSig.filter (fn {const,...} => up2date_id (TermSig.id_of const))
+      KernelSig.app (appthis typesig) typesig;
+      KernelSig.app (appthis termsig) termsig
     end
 
-fun scrub_ax {thid,con_wrt_disk,facts,overwritten,adjoin} =
+fun scrub_ax {thid,con_wrt_disk,facts,adjoin} =
     let fun check (_, Thm _ ) = true
           | check (_, Defn _) = true
           | check (_, Axiom(_,th)) = uptodate_term (Thm.concl th)
     in
       {thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
-       facts=Lib.gather check facts,overwritten=overwritten}
+       facts=Lib.gather check facts}
     end
 
-fun scrub_thms {thid,con_wrt_disk,facts,overwritten,adjoin} =
+fun scrub_thms {thid,con_wrt_disk,facts,adjoin} =
     let fun check (_, Axiom _) = true
           | check (_, Thm th ) = uptodate_thm th
           | check (_, Defn th) = uptodate_thm th
     in {thid=thid, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-        facts=Lib.gather check facts, overwritten=overwritten}
+        facts=Lib.gather check facts}
     end
 
 fun scrub () = let
   val  _  = scrub_sig ()
-  val {thid,con_wrt_disk,facts,overwritten,adjoin} =
+  val {thid,con_wrt_disk,facts,adjoin} =
       scrub_thms (scrub_ax (theCT()))
 in
-  makeCT {overwritten=false, thid=thid,
-          con_wrt_disk=con_wrt_disk, facts=facts, adjoin=adjoin}
+  makeCT {thid=thid, con_wrt_disk=con_wrt_disk, facts=facts, adjoin=adjoin}
 end
 
 fun scrubCT() = (scrub(); theCT());
@@ -547,7 +543,7 @@ fun store_type_definition(name, s, witness, def) =
   in
     if uptodate_thm def then ()
     else raise DATED_ERR "store_type_definition" name
-    ; Type.TypeSig.add_witness (s,CTname(),witness)
+    (* ; Type.TypeSig.add_witness (s,CTname(),witness) *)
     ; add_defnCT(name,def)
     ; def
   end
@@ -556,7 +552,7 @@ fun store_definition (name, slist, witness, def) =
   let val ()  = check_name ("store_definition",name)
   in
     if uptodate_thm def then () else raise DATED_ERR "store_definition" name
-    ; map (fn s => Term.TermSig.add_witness (s,CTname(),witness)) slist
+    (* ; map (fn s => Term.TermSig.add_witness (s,CTname(),witness)) slist *)
     ; add_defnCT(name,def)
     ; def
   end
@@ -668,7 +664,7 @@ local
   end
 in
 fun export_theory () =
- let val {thid,con_wrt_disk,facts,adjoin,overwritten} = scrubCT()
+ let val {thid,con_wrt_disk,facts,adjoin} = scrubCT()
  in
  if con_wrt_disk
  then HOL_MESG ("\nTheory "^Lib.quote(thyid_name thid)^" already \
@@ -762,7 +758,7 @@ fun new_theory str =
   then raise ERR "new_theory"
          ("proposed theory name "^Lib.quote str^" is not an identifier")
   else
-  let val thy as {thid, facts, con_wrt_disk,overwritten,adjoin} = theCT()
+  let val thy as {thid, facts, con_wrt_disk,adjoin} = theCT()
       val thyname = thyid_name thid
       fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
                         makeCT(fresh_segment str); initialize thyname)

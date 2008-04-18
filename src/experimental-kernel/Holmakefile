@@ -1,15 +1,24 @@
 OPTIONS = NO_OVERLAY
-RTAGD = $(dprot $(SIGOBJ)/RestrictedTag-sig.ui)
-RTAG = $(protect $(SIGOBJ)/RestrictedTag-sig.ui)
+
+FTAGD = $(dprot $(SIGOBJ)/FinalTag-sig.ui)
+FTAG = $(protect $(SIGOBJ)/FinalTag-sig.ui)
+
+FTYPED = $(dprot $(SIGOBJ)/FinalType-sig.ui)
+FTYPE = $(protect $(SIGOBJ)/FinalType-sig.ui)
+
+FTERMD = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
+FTERM = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
+
+
 HOLSETD = $(dprot $(SIGOBJ)/HOLset.ui)
 
-Overlay.uo: Overlay.sml RestrictedTerm-sig.uo Definition.ui Net.ui $(RTAGD)
-	HOLMOSMLC -c -toplevel $(RTAG) RestrictedTerm-sig.ui Definition.ui \
-                               Net.ui Overlay.sml
+Overlay.uo: Overlay.sml Definition.ui Net.ui $(FTAGD) $(FTYPED) $(FTERMD)
+	$(HOLMOSMLC) -c -toplevel $(FTAG) $(FTYPE) $(FTERM) Definition.ui \
+                                  Net.ui Overlay.sml
 
-RestrictedTerm-sig.uo: Type.ui $(HOLSETD) RestrictedTerm-sig.sml
-	HOLMOSMLC -c -toplevel RestrictedTerm-sig.sml
+Type.ui : Type.sig $(FTYPED) $(dprot $(SIGOBJ)/KernelSig.ui)
+	$(HOLMOSMLC) -c $(FTYPE) Type.sig
 
-Term.ui: Term.sig RestrictedTerm-sig.uo
-	HOLMOSMLC -c RestrictedTerm-sig.ui Term.sig
+Term.ui: Term.sig $(FTERMD) Type.ui
+	$(HOLMOSMLC) -c $(FTERM) Term.sig
 

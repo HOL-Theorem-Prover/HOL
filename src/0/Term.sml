@@ -9,7 +9,7 @@
 (* Modified      : July 2000, Konrad Slind, for Moscow ML 2.00           *)
 (* ===================================================================== *)
 
-structure Term : RawTerm =
+structure Term :> Term =
 struct
 
 open Feedback Lib Subst KernelTypes
@@ -27,30 +27,28 @@ infix |-> ##;
                Create the signature for HOL terms
  ---------------------------------------------------------------------------*)
 
-structure TermSig =
-  SIG(type ty = term
-      fun key (Const(r,_)) = dest_id r
-        | key _ = raise ERR "key" "not a constant"
-      fun id_of (Const(r,_)) = r
-        | id_of _ = raise ERR "id_of" "not a constant"
-      val ERR = ERR
-      val table_size = 1999)
 
+val termsig = KernelSig.new_table()
 
 (*---------------------------------------------------------------------------*
  * Builtin constants. These are in every HOL signature, and it is            *
  * convenient to nail them down here.                                        *
  *---------------------------------------------------------------------------*)
 
-local open TermSig Type
-   val eq_const  = Const(mk_id("=",  "min"), POLY(alpha --> alpha --> bool))
-   val hil_const = Const(mk_id("@",  "min"), POLY((alpha --> bool) --> alpha))
-   val imp_const = Const(mk_id("==>","min"), GRND(bool --> bool --> bool))
+local
+  open KernelSig Type
+  val eq_ty = POLY (alpha --> alpha --> bool)
+  val hil_ty = POLY ((alpha --> bool) --> alpha)
+  val imp_ty = GRND (bool --> bool --> bool)
 in
-val INITIAL {const=eqc,...} = TermSig.insert eq_const
-val INITIAL {const=hil,...} = TermSig.insert hil_const
-val INITIAL {const=imp,...} = TermSig.insert imp_const
-end;
+  val eq_id = insert(termsig,{Name = "=", Thy = "min"}, eq_ty)
+  val hil_id = insert(termsig,{Name = "@", Thy = "min"}, hil_ty)
+  val imp_id = insert(termsig,{Name = "==>", Thy = "min"}, imp_ty)
+
+  val eqc = Const (eq_id,eq_ty)
+  val hil = Const (hil_id,hil_ty)
+  val imp = Const (imp_id,imp_ty)
+end
 
 (*---------------------------------------------------------------------------*
     Useful functions to hide explicit substitutions
@@ -203,7 +201,7 @@ fun compare p =
     | (Const _, Fv _)        => GREATER
     | (Const _, Bv _)        => GREATER
     | (Const(c1,ty1),
-       Const(c2,ty2))        => (case KernelTypes.compare (c1,c2)
+       Const(c2,ty2))        => (case KernelSig.id_compare (c1, c2)
                                   of EQUAL => Type.compare (to_hol_type ty1,
                                                             to_hol_type ty2)
                                    | x => x)
@@ -270,7 +268,7 @@ fun var_occurs M =
 
 val mk_var = Fv
 
-fun inST s = not(null(TermSig.resolve s));
+fun inST s = not(null(KernelSig.listName termsig s))
 
 fun mk_primed_var (Name,Ty) =
   let val next = Lexis.nameStrm Name
@@ -341,48 +339,51 @@ val prim_variant = gen_variant (K false) "prim_variant";
  * polymorphic.                                                              *
  *---------------------------------------------------------------------------*)
 
-val decls = map #const o TermSig.resolve;
+val decls = map (Const o #2) o KernelSig.listName termsig
 
-fun prim_mk_const {Name,Thy} =
- case TermSig.lookup (Name,Thy)
-  of SOME{const,...} => const
+fun prim_mk_const (knm as {Name,Thy}) =
+ case KernelSig.peek(termsig, knm)
+  of SOME c => Const c
    | NONE => raise ERR "prim_mk_const"
                (Lib.quote Name^" not found in theory "^Lib.quote Thy)
 
 fun ground x = Lib.all (fn {redex,residue} => not(Type.polymorphic residue)) x;
 
-fun create_const errstr (const as Const(_,GRND pat)) Ty =
-      if Ty=pat then const else raise ERR "create_const" "not a type match"
-  | create_const errstr (const as Const(r,POLY pat)) Ty =
+fun create_const errstr (const as (_,GRND pat)) Ty =
+      if Ty=pat then Const const
+      else raise ERR "create_const" "not a type match"
+  | create_const errstr (const as (r,POLY pat)) Ty =
      ((case Type.raw_match_type pat Ty ([],[])
-        of ([],_) => const
+        of ([],_) => Const const
          | (S,[]) => Const(r, if ground S then GRND Ty else POLY Ty)
          | (S, _) => Const(r,POLY Ty))
         handle HOL_ERR _ => raise ERR errstr
-             (String.concat["Not a type instance: ", id_to_string r]))
-  | create_const errstr _ _ = raise ERR errstr "non-constant in signature";
+             (String.concat["Not a type instance: ", KernelSig.id_toString r]))
 
 
-fun mk_thy_const {Thy,Name,Ty} =
-  case TermSig.lookup (Name,Thy)
-   of NONE => raise ERR "mk_thy_const" (fullname(Name,Thy)^" not found")
-    | SOME {const, ...} => create_const "mk_thy_const" const Ty
+fun mk_thy_const {Thy,Name,Ty} = let
+  val knm = {Thy=Thy,Name=Name}
+in
+  case KernelSig.peek(termsig, knm) of
+    NONE => raise ERR "mk_thy_const" (KernelSig.name_toString knm^" not found")
+  | SOME c => create_const "mk_thy_const" c Ty
+end
 
 fun first_decl fname Name =
-  case TermSig.resolve Name
+  case KernelSig.listName termsig Name
    of []             => raise ERR fname (Name^" not found")
-    | [{const,...}]  => const
-    | {const,...}::_ =>
+    | [(_, const)]  => const
+    | (_, const) :: _ =>
         (WARN fname (Lib.quote Name^": more than one possibility");
          const)
 
 val current_const = first_decl "current_const";
 fun mk_const(Name,Ty) = create_const"mk_const" (first_decl"mk_const" Name) Ty;
 
-val all_consts = map #const o TermSig.all_entries;
-val thy_consts = map #const o TermSig.slice;
+fun all_consts() = map (Const o #2) (KernelSig.listItems termsig)
+fun thy_consts s = map (Const o #2) (KernelSig.listThy termsig s)
 
-fun same_const (Const(id1,_)) (Const(id2,_)) = same_id (id1,id2)
+fun same_const (Const(id1,_)) (Const(id2,_)) = id1 = id2
   | same_const _ _ = false
 
 (*---------------------------------------------------------------------------*
@@ -737,14 +738,14 @@ fun dest_abs(Abs(Bvar as Fv(Name,Ty), Body)) =
   | dest_abs _ = raise ERR "dest_abs" "not a lambda abstraction"
 end;
 
-
+open KernelSig
 fun break_abs(Abs(_,Body)) = Body
   | break_abs(t as Clos _) = break_abs (push_clos t)
   | break_abs _ = raise ERR "break_abs" "not an abstraction";
 
 fun dest_thy_const (Const(id,ty)) =
-      let val (name,thy) = dest_id id
-      in {Thy=thy, Name=name, Ty=to_hol_type ty}
+      let val {Name,Thy} = name_of_id id
+      in {Thy=Thy, Name=Name, Ty=to_hol_type ty}
       end
   | dest_thy_const _ = raise ERR"dest_thy_const" "not a const"
 
@@ -804,8 +805,8 @@ fun RM [] theta = theta
   | RM ((Const(c1,ty1),Const(c2,ty2),_)::rst) (tmS,tyS)
       = RM rst
         (if c1 <> c2 then
-          let val n1 = id_to_string c1
-              val n2 = id_to_string c2
+          let val n1 = id_toString c1
+              val n2 = id_toString c2
           in
            MERR ("different constants: "^n1^" matched against "^n2)
           end

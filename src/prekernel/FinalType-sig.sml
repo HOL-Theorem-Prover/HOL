@@ -1,4 +1,4 @@
-signature Type =
+signature FinalType =
 sig
 
  eqtype hol_type
@@ -40,13 +40,13 @@ sig
 
  val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
 
- val match_type_restr : hol_type list -> hol_type -> hol_type 
+ val match_type_restr : hol_type list -> hol_type -> hol_type
                         -> (hol_type,hol_type) Lib.subst
 
- val match_type_in_context : hol_type -> hol_type 
+ val match_type_in_context : hol_type -> hol_type
                              -> (hol_type,hol_type)Lib.subst
                              -> (hol_type,hol_type)Lib.subst
- val raw_match_type: hol_type -> hol_type 
+ val raw_match_type: hol_type -> hol_type
                       -> (hol_type,hol_type) Lib.subst * hol_type list
                       -> (hol_type,hol_type) Lib.subst * hol_type list
 

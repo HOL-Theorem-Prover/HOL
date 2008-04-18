@@ -1,4 +1,4 @@
-signature RestrictedTag =
+signature FinalTag =
 sig
      type tag
 
