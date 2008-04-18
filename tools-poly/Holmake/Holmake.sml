@@ -543,7 +543,7 @@ val _ = OS.Process.atExit (fn () => ignore (finish_logging false))
 *)
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
 val POLYMLDIR =  case cmdl_POLYMLDIR of NONE => POLYMLDIR0 | SOME s => s
-val POLY =  case cmdl_POLY of NONE => fullPath [POLYMLDIR, "bin", "poly"] | SOME s => s
+val POLY =  case cmdl_POLY of NONE => fullPath [HOLDIR, "bin", "hol.noquote"] | SOME s => s
 val MOSMLCOMP = fullPath [HOLDIR, "tools-poly/polymlc"]
 val SIGOBJ    = normPath(OS.Path.concat(HOLDIR, "sigobj"));
 
@@ -766,9 +766,15 @@ end
 fun run_extra_command tgt c deps = let
   open Holmake_types
   val (noecho, ignore_error, c) = process_hypat_options c
+  val isHolmosmlcc =
+    String.isPrefix "HOLMOSMLC-C" c orelse 
+    String.isPrefix (perform_substitution hmakefile_env [VREF "HOLMOSMLC-C"]) c
+  val isHolmosmlc =
+    String.isPrefix "HOLMOSMLC" c orelse
+    String.isPrefix (perform_substitution hmakefile_env [VREF "HOLMOSMLC"]) c
   val isCompile =
-    String.isPrefix "HOLMOSMLC-C" c orelse
-    (String.isPrefix "HOLMOSMLC" c andalso
+    isHolmosmlcc orelse 
+    (isHolmosmlc andalso
      List.exists (fn x => x = "-c") (String.tokens (fn c => c = #" ") c))
 in
   if isCompile then
@@ -1127,7 +1133,7 @@ in
         val s = fullPath [OS.FileSys.getDir(), script']
         val res2 = systeml [HOLDIR ^ "/tools-poly/poly-wrapper", POLY, s];
         (*val res2    = Systeml.systeml [fullPath [OS.FileSys.getDir(), script']]*)
-        (*val _       = app OS.FileSys.remove [script', scriptuo, scriptui]*)
+        val _       = app OS.FileSys.remove [script', scriptuo, scriptui]
         val ()      = if not (isSuccess res2) then
                         failed_script_cache :=
                         Binaryset.add(!failed_script_cache, s)

@@ -8,11 +8,13 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => OS.Path.concat (chunk,path)) slist);
 
+(*
 fun fixPath findOverlay p =
   if findOverlay andalso OS.Path.base (OS.Path.file p) = "Overlay" then
     fullPath [Systeml.HOLDIR, "sigobj", "Overlay.uo"]
   else
     OS.Path.mkAbsolute {path=p, relativeTo=OS.FileSys.getDir ()}
+*)
 
 (*
 fun getDeps file =
@@ -70,7 +72,7 @@ fun link result files includes =
     TextIO.output (out, "end;\n");
     TextIO.output (out, "val _ = List.map load [" ^ 
                         String.concatWith "," 
-                                          (List.map (fn f => "\"" ^ OS.Path.base (fixPath false f) ^ "\"")
+                                          (List.map (fn f => "\"" ^ OS.Path.base f ^ "\"")
                                                     files) ^
                         "];\n");
     TextIO.closeOut out 

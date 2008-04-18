@@ -3,7 +3,7 @@ OPTIONS=NO_OVERLAY
 FinalTag-sig.uo: FinalTag-sig.sml
 	$(HOLMOSMLC) -c -toplevel $<
 
-FinalTerm-sig.uo: FinalTerm-sig.sml HOLset.ui
+FinalTerm-sig.uo: FinalTerm-sig.sml HOLset.ui Lib.uo
 	$(HOLMOSMLC) -c -toplevel $<
 
 FinalType-sig.uo: FinalType-sig.sml

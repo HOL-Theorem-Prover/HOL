@@ -304,6 +304,7 @@ val _ =
    systeml [polywrapper, poly, "poly-mllex.ML"];
    compile systeml lexer "mllex.o";
    copyfile lexer "../../tools/mllex/mllex.exe";
+   mk_xable "../../tools/mllex/mllex.exe";
    FileSys.chDir cdir)
    handle _ => die "Failed to build mllex.";
 
@@ -319,6 +320,7 @@ val _ =
    systeml [polywrapper, poly, "poly-mlyacc.ML"];
    compile systeml yaccer "mlyacc.o";
    copyfile yaccer "../../tools/mlyacc/src/mlyacc.exe";
+   mk_xable "../../tools/mlyacc/src/mlyacc.exe";
    FileSys.chDir cdir)
    handle _ => die "Failed to build mlyacc.";
 

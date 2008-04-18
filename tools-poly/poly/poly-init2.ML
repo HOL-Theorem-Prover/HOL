@@ -112,8 +112,10 @@ in
     ()
   else
     (loadedMods := Binaryset.add (!loadedMods, modName);
-     l ".ui";
-     l ".uo")
+     (l ".ui"; l ".uo")
+     handle e => 
+       (loadedMods := Binaryset.delete (!loadedMods, modName);
+        raise e))
 end;
 
 in

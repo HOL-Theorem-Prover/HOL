@@ -40,6 +40,65 @@ fun run cmd args inp =
 end;
 open Mosml;
 
+structure OS :> OS = struct
+  open OS;
+  structure Path = struct
+    open Path;
+
+    (* PolyML's mkCanonical appears broken.  mkCanonical "/x/y/../z" gives
+       "/x/y/z".  Here is the Moscow ML implementation of mkCanonical and
+       things that rely on it *)
+    
+    fun mkCanonical p =
+    let val {isAbs, vol, arcs} = fromString p 
+        fun backup []          = if isAbs then [] else [parentArc]
+          | backup (".."::res) = parentArc :: parentArc :: res
+          | backup ( _ :: res) = res
+        fun reduce arcs = 
+            let fun h []         []  = if isAbs then [""] else [currentArc]
+                  | h []         res = res
+                  | h (""::ar)   res = h ar res
+                  | h ("."::ar)  res = h ar res
+                  | h (".."::ar) res = h ar (backup res)
+                  | h (a1::ar)   res = h ar (a1 :: res)
+            in h arcs [] end
+    in
+        toString {isAbs=isAbs, vol=vol, arcs=List.rev (reduce arcs)}
+    end;
+
+    local
+
+    fun parentize []      = []
+      | parentize (_::ar) = parentArc :: parentize ar;
+    in
+
+    fun mkRelative {path=p1, relativeTo=p2} =
+        case (fromString p1, fromString (mkCanonical p2)) of
+            (_ ,                {isAbs=false,...}) => raise Path
+          | ({isAbs=false,...}, _                ) => p1
+          | ({vol=vol1, arcs=arcs1,...}, {vol=vol2, arcs=arcs2, ...}) =>
+                let fun h [] [] = ["."]
+                      | h a1 [] = a1
+                      | h [] a2 = parentize a2
+                      | h (a1 as (a11::a1r)) (a2 as (a21::a2r)) =
+                        if a11=a21 then h a1r a2r
+                        else parentize a2 @ (if arcs1 = [""] then [] else a1)
+                in
+                    if vol1 <> vol2 then raise Path 
+                    else toString {isAbs=false, vol="", arcs=h arcs1 arcs2}
+                end;
+
+
+    fun mkAbsolute {path=p1, relativeTo=p2} =
+        if isRelative p2 then raise Path
+        else if isAbsolute p1 then p1
+        else mkCanonical(concat(p2, p1));
+
+    fun isCanonical p = mkCanonical p = p;
+    end;
+  end;
+end;
+
 val _ = use "poly/Binarymap.sig";
 val _ = use "poly/Binarymap.sml";
 val _ = use "poly/Binaryset.sig";
