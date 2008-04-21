@@ -187,11 +187,11 @@ val SYSTEML = Systeml.systeml
 fun Holmake dir =
 let val wp = 
   case !phase of
-    Initial => fullPath [POLYMLDIR, "bin", "poly"]
+    Initial => POLY 
   | Bare => fullPath [HOLDIR, "bin", "hol.bare.noquote"]
   | Full => fullPath [HOLDIR, "bin", "hol.noquote"]
 in
-  if OS.Process.isSuccess (SYSTEML [HOLMAKE, "--qof", "--which_poly", wp]) then
+  if OS.Process.isSuccess (SYSTEML [HOLMAKE, "--qof", "--poly", wp]) then
     if do_selftests > 0 andalso
        OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
     then
@@ -415,20 +415,17 @@ fun upload ((src, regulardir), target, symlink) =
     (thus requiring only a single place to look for things).
  ---------------------------------------------------------------------------*)
 
-fun compile systeml exe obj = 
-  (systeml ["gcc", "-o", exe, obj, "-L" ^ POLYMLDIR ^ "lib", 
+fun compile (systeml : string list -> OS.Process.status) exe obj : unit = 
+  (systeml [Systeml.CC, "-o", exe, obj, "-L" ^ POLYMLLIBDIR, 
             "-lpolymain", "-lpolyml"];
    OS.FileSys.remove obj);
 
-fun make_exe name =
+fun make_exe (name:string) : unit =
  let val dir = OS.FileSys.getDir()
  in
    OS.FileSys.chDir (fullPath [HOLDIR, "tools-poly"]);
-   Systeml.systeml [fullPath [Systeml.HOLDIR, "tools-poly", "poly-wrapper"], 
-                    fullPath [Systeml.POLYMLDIR, "bin", "poly"],
-                    name ^ ".ML"];
-   compile systeml (fullPath [Systeml.HOLDIR, "bin", name])
-                   (name ^ ".o");
+   Systeml.system_ps (POLY ^ " < " ^ name ^ ".ML");
+   compile systeml (fullPath [Systeml.HOLDIR, "bin", name]) (name ^ ".o");
    OS.FileSys.chDir dir
  end
 

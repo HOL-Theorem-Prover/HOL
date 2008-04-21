@@ -57,7 +57,9 @@ fun fullPath slist =
 
 (* these values are filled in by configure.sml *)
 val HOLDIR =
-val POLYMLDIR =
+val POLYMLLIBDIR =
+val POLY =
+val CC =
 val OS =
 
 val DEPDIR =
@@ -72,12 +74,13 @@ val build_log_dir = fullPath [HOLDIR, "tools-poly", "build-logs"]
 val build_log_file = fullPath [build_log_dir, "current-build-log"]
 val make_log_file = "current-make-log"
 
+(*
   fun emit_hol_script target qend =
       let val ostrm = TextIO.openOut target
           fun output s = TextIO.output(ostrm, s)
           val sigobj = protect (fullPath [HOLDIR, "sigobj"])
           val std_prelude = protect (fullPath [HOLDIR, "std.prelude"])
-          val polyml = protect (fullPath [POLYMLDIR, "poly"])
+          val polyml = protect (poly)
       in
         output "#!/bin/sh\n";
         output "# The bare HOL script\n";
@@ -88,7 +91,7 @@ val make_log_file = "current-make-log"
         mk_xable target
       end
 
-
+      *)
   fun emit_hol_unquote_script target exe =
       let val ostrm = TextIO.openOut target
           fun output s = TextIO.output(ostrm, s)

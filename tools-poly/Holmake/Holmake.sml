@@ -32,7 +32,7 @@ fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
 
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
-val POLYMLDIR0 = Systeml.POLYMLDIR;
+val POLYMLLIBDIR0 = Systeml.POLYMLLIBDIR;
 val DEPDIR = ".HOLMK";
 val DEFAULT_OVERLAY = "Overlay.ui";
 
@@ -439,14 +439,14 @@ fun parse_command_line list = let
     find_one_pairtag "--holmakefile" NONE SOME rem
   val (rem, no_overlay) = find_toggle "--no_overlay" rem
   val (rem, user_overlay) = find_one_pairtag "--overlay" NONE SOME rem
-  val (rem, cmdl_POLYMLDIRs) = find_pairs "--mosmldir" rem
+  val (rem, cmdl_POLYMLLIBDIRs) = find_pairs "--polymllibdir" rem
   val (rem, interactive_flag) = find_alternative_tags ["--interactive", "-i"]
                                 rem
   val (rem, keep_going_flag) = find_alternative_tags ["-k", "--keep-going"] rem
   val (rem, quiet_flag) = find_toggle "--quiet" rem
   val (rem, do_logging_flag) = find_toggle "--logging" rem
 
-  val (rem, cmdl_POLYs) = find_pairs "--which_poly" rem
+  val (rem, cmdl_POLYs) = find_pairs "--poly" rem
 in
   {targets=rem, debug=debug, show_usage=help,
    always_rebuild_deps=rebuild_deps,
@@ -468,14 +468,14 @@ in
          warn "Ignoring all but last --holdir spec.";
          SOME (List.last cmdl_HOLDIRs)
        end,
-   cmdl_POLYMLDIR =
-     case cmdl_POLYMLDIRs of
+   cmdl_POLYMLLIBDIR =
+     case cmdl_POLYMLLIBDIRs of
        [] => NONE
      | [x] => SOME x
      | _ => let
        in
-         warn "Ignoring all but last --mosmldir spec.";
-         SOME (List.last cmdl_POLYMLDIRs)
+         warn "Ignoring all but last --polymllibdir spec.";
+         SOME (List.last cmdl_POLYMLLIBDIRs)
        end,
    cmdl_POLY =
      case cmdl_POLYs of
@@ -483,7 +483,7 @@ in
      | [x] => SOME x
      | _ => let
        in
-         warn "Ignoring all but last --which_poly spec.";
+         warn "Ignoring all but last --poly spec.";
          SOME (List.last cmdl_POLYs)
        end,
    keep_going_flag = keep_going_flag,
@@ -496,7 +496,7 @@ end
 val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      always_rebuild_deps, interactive_flag,
      additional_includes = cline_additional_includes,
-     cmdl_HOLDIR, cmdl_POLYMLDIR, cmdl_POLY,
+     cmdl_HOLDIR, cmdl_POLYMLLIBDIR, cmdl_POLY,
      no_sigobj = cline_no_sigobj, no_prereqs,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
      user_overlay, keep_going_flag, quiet_flag, do_logging_flag} =
@@ -542,15 +542,16 @@ val _ = OS.Process.atExit (fn () => ignore (finish_logging false))
    for a value compiled into the code.
 *)
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
-val POLYMLDIR =  case cmdl_POLYMLDIR of NONE => POLYMLDIR0 | SOME s => s
+val POLYMLLIBDIR =  case cmdl_POLYMLLIBDIR of NONE => POLYMLLIBDIR0 | SOME s => s
 val POLY =  case cmdl_POLY of NONE => fullPath [HOLDIR, "bin", "hol.noquote"] | SOME s => s
-val MOSMLCOMP = fullPath [HOLDIR, "tools-poly/polymlc"]
+(*val MOSMLCOMP = fullPath [HOLDIR, "tools-poly/polymlc"]*)
 val SIGOBJ    = normPath(OS.Path.concat(HOLDIR, "sigobj"));
 
 val UNQUOTER  = xable_string(fullPath [HOLDIR, "bin/unquote"])
 fun has_unquoter() = OS.FileSys.access(UNQUOTER, [OS.FileSys.A_EXEC])
 fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
 
+  (*
 fun compile debug args = let
   val _ = if debug then print ("  with command "^
                                spacify(MOSMLCOMP::args)^"\n")
@@ -558,6 +559,7 @@ fun compile debug args = let
 in
   SYSTEML (MOSMLCOMP::args)
 end;
+*)
 
 fun die_with message = let
   open TextIO
@@ -574,8 +576,8 @@ in
   case s of
     "HOLDIR" => [LIT HOLDIR]
   | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
-  | "POLYMLDIR" => [LIT POLYMLDIR]
-  | "MOSMLCOMP" => [VREF "protect $(HOLDIR)/tools-poly/polymlc"]
+  | "POLYMLLIBDIR" => [LIT POLYMLLIBDIR]
+(*  | "MOSMLCOMP" => [VREF "protect $(HOLDIR)/tools-poly/polymlc"]*)
   | "MOSMLLEX" => [VREF "protect $(POLYMLDIR)/mosmllex"]
   | "MOSMLYAC" => [VREF "protect $(POLYMLDIR)/mosmlyac"]
   | "UNQUOTE" => [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")]
@@ -755,6 +757,36 @@ case file of
      handle IO.Io _ => OS.Process.failure)
 end
 
+fun poly_link result files =
+let val out = TextIO.openOut result
+    fun p s = 
+      (TextIO.output (out, s); TextIO.output (out, "\n"))
+in
+  p "#!/bin/sh";
+  p (POLY ^ "<<'__end-of-file__'");
+  p "local";
+  p "val pd = PolyML.get_print_depth();";
+  p "val _ = PolyML.print_depth 0;";
+  p "val dir = OS.FileSys.getDir();";
+  p ("val _ = OS.FileSys.chDir (OS.Path.concat (\"" ^
+                 String.toString Systeml.HOLDIR ^ "\", \"tools-poly\"));");
+  p "in";
+  p "val _ = use \"poly/poly-init2.ML\";";
+  p "val _ = OS.FileSys.chDir dir;";
+  p "val _ = PolyML.print_depth pd;";
+  p "end;";
+  p ("val _ = List.map load [" ^ 
+                      String.concatWith "," 
+                                        (List.map (fn f => "\"" ^ OS.Path.base f ^ "\"")
+                                                  files) ^
+                      "] handle _ => OS.Process.exit OS.Process.failure;");
+  p "__end-of-file__";
+  TextIO.closeOut out;
+  OS.Process.success
+end
+handle IO.Io _ => OS.Process.failure
+
+
 fun command_to_file c =
 let val toks = String.tokens (fn c => c = #" ") c
     fun isSource t = OS.Path.ext t = SOME "sig" orelse
@@ -762,6 +794,42 @@ let val toks = String.tokens (fn c => c = #" ") c
 in
   List.find isSource (List.rev toks)
 end
+
+fun link_command_to_file c =
+let val toks = String.tokens (fn c => c = #" ") c
+    val c = ref false
+    val q = ref false
+    val toplevel = ref false
+    val obj = ref NONE
+    val I = ref []
+    val files = ref []
+    fun process_args [] = ()
+      | process_args ("-c"::rest) =
+          (c := true;
+           process_args rest)
+      | process_args ("-q"::rest) =
+          (q := true;
+           process_args rest)
+      | process_args ("-toplevel"::rest) =
+          (toplevel := true;
+           process_args rest)
+      | process_args ("-o"::arg::rest) =
+          (obj := SOME arg;
+           process_args rest)
+      | process_args ("-I"::arg::rest) =
+          (I := arg::(!I);
+           process_args rest)
+      | process_args (file::rest) =
+          (files := file::(!files);
+           process_args rest)
+in
+  process_args toks;
+  case (!obj, !files) of
+    (NONE, _) => NONE
+  | (_, []) => NONE
+  | (SOME obj, files) => SOME (obj, List.rev files)
+end;
+
 
 fun run_extra_command tgt c deps = let
   open Holmake_types
@@ -772,14 +840,22 @@ fun run_extra_command tgt c deps = let
   val isHolmosmlc =
     String.isPrefix "HOLMOSMLC" c orelse
     String.isPrefix (perform_substitution hmakefile_env [VREF "HOLMOSMLC"]) c
+  val isMosmlc =
+    String.isPrefix "MOSMLC" c orelse
+    String.isPrefix (perform_substitution hmakefile_env [VREF "MOSMLC"]) c
   val isCompile =
     isHolmosmlcc orelse 
-    (isHolmosmlc andalso
+    ((isHolmosmlc orelse isMosmlc) andalso
      List.exists (fn x => x = "-c") (String.tokens (fn c => c = #" ") c))
+  val isLink = (not isCompile) andalso (isHolmosmlc orelse isMosmlc)
 in
   if isCompile then
     case command_to_file c of
       SOME f =>  poly_compile (toFile f) deps
+    | NONE => OS.Process.failure
+  else if isLink then
+    case link_command_to_file c of
+      SOME (f, deps) =>  poly_link f deps
     | NONE => OS.Process.failure
   else
     let
@@ -829,7 +905,7 @@ fun run_extra_commands tgt commands deps =
 val _ = if (debug) then let
 in
   print ("HOLDIR = "^HOLDIR^"\n");
-  print ("POLYMLDIR = "^POLYMLDIR^"\n");
+  print ("POLYMLLIBDIR = "^POLYMLLIBDIR^"\n");
   print ("Targets = "^print_list targets^"\n");
   print ("Additional includes = "^print_list additional_includes^"\n");
   print ("Using HOL sigobj dir = "^Bool.toString (not no_sigobj) ^"\n")
@@ -1038,7 +1114,7 @@ fun get_explicit_dependencies (f : File) : File list =
 
 (** Build graph *)
 
-datatype buildcmds = MOSMLC of File list
+datatype buildcmds = Compile of File list
                    | BuildScript of string * File list
 
 (*** Pre-processing of files that use `` *)
@@ -1056,7 +1132,7 @@ fun build_command c arg = let
   exception FileNotFound
 in
   case c of
-    MOSMLC deps => let
+    Compile deps => let
       val file = fromFile arg
       val _ = exists_readable file orelse
               (print ("Wanted to compile "^file^", but it wasn't there\n");
@@ -1107,7 +1183,7 @@ in
       val scriptui = script^".ui"
       open OS.Process
       (* first thing to do is to create the Script.uo file *)
-      val b = build_command (MOSMLC deps) scriptsml_file
+      val b = build_command (Compile deps) scriptsml_file
       val _ = b orelse raise CompileFailed
       val _ = print ("Linking "^scriptuo^
                      " to produce theory-builder executable\n")
@@ -1121,8 +1197,7 @@ in
           if interactive_flag then "holmake_interactive.uo" :: objectfiles0
           else objectfiles0
     in
-      if isSuccess 
-          (compile debug (include_flags @ ["-o", script] @ objectfiles))
+      if isSuccess (poly_link script objectfiles)
       then let
         val script' = Systeml.mk_xable script
         val thysmlfile = s^"Theory.sml"
@@ -1130,9 +1205,7 @@ in
         val _ =
           app (fn s => OS.FileSys.remove s handle OS.SysErr _ => ())
           [thysmlfile, thysigfile]
-        val s = fullPath [OS.FileSys.getDir(), script']
-        val res2 = systeml [HOLDIR ^ "/tools-poly/poly-wrapper", POLY, s];
-        (*val res2    = Systeml.systeml [fullPath [OS.FileSys.getDir(), script']]*)
+        val res2 = systeml [fullPath [OS.FileSys.getDir(), script']];
         val _       = app OS.FileSys.remove [script', scriptuo, scriptui]
         val ()      = if not (isSuccess res2) then
                         failed_script_cache :=
@@ -1161,8 +1234,8 @@ fun do_a_build_command target pdep secondaries =
   | _ (* i.e., NONE or SOME [] *) => let
     in
       case target of
-         UO c           => build_command (MOSMLC secondaries) pdep
-       | UI c           => build_command (MOSMLC secondaries) pdep
+         UO c           => build_command (Compile secondaries) pdep
+       | UI c           => build_command (Compile secondaries) pdep
        | SML (Theory s) => build_command (BuildScript (s, secondaries)) pdep
        | SIG (Theory s) => build_command (BuildScript (s, secondaries)) pdep
        | x => raise Fail "Can't happen"
@@ -1479,7 +1552,8 @@ in
      "    --interactive | -i   : run HOL with \"interactive\" flag set\n",
      "    --keep-going | -k    : don't stop on failure\n",
      "    --logging            : do per-theory time logging\n",
-     "    --mosmldir directory : use specified directory as MoscowML root\n",
+     "    --polymllibdir directory : use specified directory as PolyML's libraries\n",
+     "    --poly file : use specified file as the PolyML executable\n",
      "    --no_holmakefile     : don't use any Holmakefile\n",
      "    --no_overlay         : don't use an overlay file\n",
      "    --no_prereqs         : don't recursively build in INCLUDES\n",

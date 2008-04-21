@@ -9,12 +9,14 @@ sig
 
 (* first argument to these are the name of the desired executable, the
    second is the name of the post-initialisation script to run. *)
-  val emit_hol_script : string -> string -> string
+  (*val emit_hol_script : string -> string -> string*)
   val emit_hol_unquote_script : string -> string -> string
 
   (* configuration time constants *)
   val HOLDIR : string
-  val POLYMLDIR : string
+  val POLYMLLIBDIR : string
+  val POLY : string
+  val CC : string
   val OS : string
   val DEPDIR : string
   val GNUMAKE : string

@@ -1,5 +1,5 @@
 (* this is an -*- sml -*- file *)
-val _ = PolyML.print_depth 0
+val _ = PolyML.print_depth 0;
 structure Substring = struct
   open Substring
   val all = full
@@ -15,5 +15,6 @@ in
   | args => List.app LexGen.lexGen args
 end;
 
-PolyML.export("mllex", main);
+val _ = PolyML.shareCommonData main;
+val _ = PolyML.export("mllex", main);
 

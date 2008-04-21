@@ -30,7 +30,8 @@
 *)
 
 
-val polymldir:string = "/home/so294/scratch/polyml.5.1/";
+val poly = "/home/so294/scratch/polyml.5.1/bin/poly";
+val polymllibdir = "/home/so294/scratch/polyml.5.1/lib";
 (*
 val holdir :string  =
 
@@ -47,7 +48,7 @@ val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
 
 fun compile systeml exe obj = 
-  (systeml [CC, "-o", exe, obj, "-L" ^ polymldir ^ "lib", 
+  (systeml [CC, "-o", exe, obj, "-L" ^ polymllibdir, 
             "-lpolymain", "-lpolyml"];
    OS.FileSys.remove obj);
 
@@ -72,7 +73,7 @@ fun check_is_dir role dir =
      print role; print "! ***\n";
      Process.exit Process.failure)
 
-val _ = check_is_dir "polymldir" polymldir
+val _ = check_is_dir "polymllibdir" polymllibdir
 val _ = check_is_dir "holdir" holdir
 val _ =
     if List.exists (fn s => s = OS)
@@ -92,8 +93,6 @@ fun fullPath slist = normPath
 fun quote s = String.concat ["\"",String.toString s,"\""]
 
 val holmakedir = fullPath [holdir, "tools-poly", "Holmake"];
-val poly = fullPath [polymldir, "bin", "poly"];
-(*val compiler = fullPath [mosmldir, "mosmlc"];*)
 
 (*---------------------------------------------------------------------------
       File handling. The following implements a very simple line
@@ -177,7 +176,9 @@ in
   use sigfile;
   fill_holes (srcfile, destfile)
   ["val HOLDIR ="   --> ("val HOLDIR = "^quote holdir^"\n"),
-   "val POLYMLDIR =" --> ("val POLYMLDIR = "^quote polymldir^"\n"),
+   "val POLYMLLIBDIR =" --> ("val POLYMLLIBDIR = "^quote polymllibdir^"\n"),
+   "val POLY =" --> ("val POLY = "^quote poly^"\n"),
+   "val CC =" --> ("val CC = "^quote CC^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
    "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
    "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"),
@@ -269,8 +270,6 @@ local
   val qfbin = fullPath [holdir, "bin", "unquote"]
   val lexer = fullPath [lexdir, "mllex.exe"]
   val yaccer = fullPath [yaccdir, "src", "mlyacc.exe"]
-  val polymlc = fullPath [toolsdir, "polymlc"]
-  val polywrapper = fullPath [toolsdir, "poly-wrapper"];
   fun copyfile from to = 
     let val instrm = BinIO.openIn from
         val ostrm = BinIO.openOut to
@@ -301,7 +300,7 @@ val _ = remove (fullPath [hmakedir, "Parser.grm.sml"]);
 val _ = 
   (echo "Making tools-poly/mllex/mllex.exe.";
    FileSys.chDir lexdir;
-   systeml [polywrapper, poly, "poly-mllex.ML"];
+   system_ps (POLY ^ " < poly-mllex.ML");
    compile systeml lexer "mllex.o";
    copyfile lexer "../../tools/mllex/mllex.exe";
    mk_xable "../../tools/mllex/mllex.exe";
@@ -317,7 +316,7 @@ val _ =
    FileSys.chDir "src";
    systeml [lexer, "yacc.lex"];
    FileSys.chDir yaccdir;
-   systeml [polywrapper, poly, "poly-mlyacc.ML"];
+   system_ps (POLY ^ " < poly-mlyacc.ML");
    compile systeml yaccer "mlyacc.o";
    copyfile yaccer "../../tools/mlyacc/src/mlyacc.exe";
    mk_xable "../../tools/mlyacc/src/mlyacc.exe";
@@ -331,7 +330,7 @@ val _ =
   (echo "Making bin/unquote.";
    FileSys.chDir qfdir;
    systeml [lexer, "filter"];
-   systeml [polywrapper, poly, "poly-unquote.ML"];
+   system_ps (POLY ^  " < poly-unquote.ML");
    compile systeml qfbin "unquote.o";
    FileSys.chDir cdir)
    handle _ => die "Failed to build unquote.";
@@ -346,8 +345,8 @@ val _ =
    systeml [lexer, "Lexer.lex"];
    systeml [yaccer, "Parser.grm"];
    FileSys.chDir toolsdir;
-   systeml [polywrapper, poly, "Holmake/poly-Holmake.ML"];
-   compile systeml hmakebin "Holmake/Holmake.o";
+   system_ps (POLY ^ " < " ^ fullPath ["Holmake", "poly-Holmake.ML"]);
+   compile systeml hmakebin (fullPath ["Holmake", "Holmake.o"]);
    FileSys.chDir cdir)
    handle _ => die "Failed to build Holmake.";
 
@@ -357,21 +356,10 @@ val _ =
 val _ =
   (echo "Making bin/build.";
    FileSys.chDir toolsdir;
-   systeml [polywrapper, poly, "poly-build.ML"];
+   system_ps (POLY ^ " < poly-build.ML");
    compile systeml buildbin "build.o";
    FileSys.chDir cdir)
    handle _ => die "Failed to build build.";
-
-(*---------------------------------------------------------------------------
-    Compile polymlc
- ---------------------------------------------------------------------------*)
-val _ =
-  (echo "Making tools-poly/polymlc.";
-   FileSys.chDir toolsdir;
-   systeml [polywrapper, poly, "polymlc.ML"];
-   compile systeml polymlc "polymlc.o";
-   FileSys.chDir cdir)
-   handle _ => die "Failed to build polymlc.";
 
 
 end;
@@ -383,14 +371,14 @@ end;
 val _ =
  let open TextIO
      val _ = echo "Making hol-mode.el (for Emacs/XEmacs)"
-     val src = fullPath [holdir, "tools-poly/hol-mode.src"]
-    val target = fullPath [holdir, "tools-poly/hol-mode.el"]
+     val src = fullPath [holdir, "tools-poly", "hol-mode.src"]
+    val target = fullPath [holdir, "tools-poly", "hol-mode.el"]
  in
     fill_holes (src, target)
       ["(defvar hol-executable HOL-EXECUTABLE\n"
         -->
        ("(defvar hol-executable \n  "^
-        quote (fullPath [holdir, "bin/hol"])^"\n")]
+        quote (fullPath [holdir, "bin", "hol"])^"\n")]
  end;
 
 
@@ -400,8 +388,8 @@ val _ =
 
 val _ =
  let val _ = echo "Generating bin/hol."
-     val target      = fullPath [holdir, "bin/hol.bare"]
-     val target_boss = fullPath [holdir, "bin/hol"]
+     val target      = fullPath [holdir, "bin", "hol.bare"]
+     val target_boss = fullPath [holdir, "bin", "hol"]
  in
    (* "unquote" scripts use the unquote executable to provide nice
       handling of double-backquote characters *)
