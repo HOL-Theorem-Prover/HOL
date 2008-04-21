@@ -34,8 +34,10 @@ fun index_type n =
 
 fun index_compset () =
   let val compset = reduceLib.num_compset()
-      val _ = add_thms [index_sum,index_one,index_bit0,index_bit1,
-                        finite_sum,finite_one,finite_bit0,finite_bit1] compset
+      val rule = REWRITE_RULE [arithmeticTheory.TIMES2, GSYM numeralTheory.iDUB]
+      val _ = add_thms [index_sum,index_one,rule index_bit0, rule index_bit1,
+                        finite_sum,finite_one,finite_bit0,finite_bit1,
+                        numeral_bitTheory.iDUB_NUMERAL] compset
 in
   compset
 end;

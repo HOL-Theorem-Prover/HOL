@@ -26,6 +26,10 @@ val op >> = op THEN1;
 
 (* ------------------------------------------------------------------------- *)
 
+val iDUB_NUMERAL = store_thm("iDUB_NUMERAL",
+  `numeral$iDUB (NUMERAL i) = NUMERAL (numeral$iDUB i)`,
+  REWRITE_TAC [arithmeticTheory.NUMERAL_DEF]);
+
 val BIT_REV_def =
   Prim_rec.new_recursive_definition
   {name = "BIT_REV_def",

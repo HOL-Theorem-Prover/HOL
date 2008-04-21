@@ -487,6 +487,12 @@ val _ = TypeBase.write [TypeBasePure.mk_nondatatype_info
       size = SOME (``\(v1:bool->num) (v2:'a->num) (v3:'a word). w2n v3``,
                    CONJUNCT1 (SPEC_ALL AND_CLAUSES))})];
 
+val WORD_INDUCT = store_thm("WORD_INDUCT",
+ `!P. P 0w /\ (!n. SUC n < dimword(:'a) ==> P (n2w n) ==> P (n2w (SUC n))) ==>
+       !x:'a word. P x`,
+ STRIP_TAC \\ STRIP_TAC \\ Cases \\ Induct_on `n`
+ \\ METIS_TAC [DECIDE ``SUC n < m ==> n < m``]);
+
 val w2n_11 = store_thm("w2n_11",
   `!v w. (w2n v = w2n w) = (v = w)`,
   REPEAT Cases \\ REWRITE_TAC [w2n_n2w,n2w_11]);
@@ -3161,15 +3167,6 @@ val extract_00 = prove(
     \\ Cases_on `i < dimindex (:'a)`
     \\ SRW_TAC [fcpLib.FCP_ss] []);
 
-val extract_0n = store_thm("extract_0n",
-  `(!n a:'a word. (0 -- n) a = if (n = 0) /\ word_lsb a then 1w else 0w) /\
-   (!n a:'a word. (0 <> n) a = if (n = 0) /\ word_lsb a then 1w else 0w) /\
-   (!n a:'a word. (0 >< n) a =
-      if (n = 0) /\ word_lsb a then 1w else 0w:'b word)`,
-  REPEAT STRIP_TAC \\ Cases_on `n = 0`
-    \\ SRW_TAC [ARITH_ss]
-         [extract_00, WORD_BITS_ZERO, WORD_SLICE_ZERO, WORD_EXTRACT_ZERO]);
-
 val lsr_1_word_T = store_thm("lsr_1_word_T",
   `$- 1w >>> 1 = INT_MAXw`,
   SRW_TAC [fcpLib.FCP_ss] [WORD_NEG_1, word_lsr_def, word_T, word_H]
@@ -3333,36 +3330,6 @@ val WORD_SUB_LE = store_thm("WORD_SUB_LE",
   SIMP_TAC bool_ss [WORD_LE_SUB_UPPER,WORD_ZERO_LE_SUB]);
 
 (* ------------------------------------------------------------------------- *)
-(* ------------------------------------------------------------------------- *)
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME
- (fn ppstrm => let
-   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
- in
-   S "val _ = TotalDefn.termination_simps := ";
-   S "   LSR_LESS :: WORD_PRED_THM :: !TotalDefn.termination_simps";
-   S " ";
-   S "val _ = ";
-   S "  let open Lib boolSyntax numSyntax";
-   S "      val word_type = type_of (fst(dest_forall(concl word_nchotomy)))";
-   S "      val w2n_tm = fst(strip_comb(lhs(snd(dest_forall(concl w2n_def)))))";
-   S "      val w2n_abs = list_mk_abs([mk_var(\"v1\",bool-->num),";
-   S "                                  mk_var(\"v2\",alpha-->num),";
-   S "                                  mk_var(\"v3\",word_type)],";
-   S "                                 mk_comb(w2n_tm,mk_var(\"v3\",word_type)))";
-   S "  in";
-   S "  TypeBase.write";
-   S "  [TypeBasePure.mk_nondatatype_info";
-   S "   (word_type, ";
-   S "     {nchotomy = SOME ranged_word_nchotomy,";
-   S "      size = SOME (w2n_abs,CONJUNCT1(Drule.SPEC_ALL boolTheory.AND_CLAUSES)),";
-   S "      encode=NONE})]";
-   S "  end;"
- end)};
-
-(* ------------------------------------------------------------------------- *)
 (* Create a few word sizes                                                   *)
 (* ------------------------------------------------------------------------- *)
 
@@ -3390,6 +3357,8 @@ fun mk_word_size n =
 val _ = List.app mk_word_size sizes;
 
 (* ------------------------------------------------------------------------- *)
+(* Some type "annotated" definitions for use with EmitML                     *)
+(* ------------------------------------------------------------------------- *)
 
 val word_index_def = Define `word_index (w:'a word) n = w ' n`;
 val n2w_itself_def = Define `n2w_itself (n, (:'a)) = (n2w n): 'a word`;
@@ -3406,6 +3375,43 @@ val word_concat_itself_def = Define`
 val fromNum_def = Define`
   fromNum (n, (:'a)) = n2w_itself (n MOD dimword (:'a),(:'a))`;
 
+val _ = ConstMapML.insert ``n2w_itself``;
+
+(*---------------------------------------------------------------------------*)
+(* Write some code into wordsTheory.sml                                      *)
+(*---------------------------------------------------------------------------*)
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME
+ (fn ppstrm => let
+   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ in
+   S "val _ = TotalDefn.termination_simps := ";
+   S "   LSR_LESS :: WORD_PRED_THM :: !TotalDefn.termination_simps";
+   S " ";
+   S "val _ = ";
+   S "  let open Lib boolSyntax numSyntax";
+   S "      val word_type = type_of (fst(dest_forall(concl word_nchotomy)))";
+   S "      val w2n_tm = fst(strip_comb(lhs(snd(dest_forall(concl w2n_def)))))";
+   S "      val w2n_abs = list_mk_abs([mk_var(\"v1\",bool-->num),";
+   S "                                 mk_var(\"v2\",alpha-->num),";
+   S "                                 mk_var(\"v3\",word_type)],";
+   S "                                 mk_comb(w2n_tm,mk_var(\"v3\",word_type)))";
+   S "  in";
+   S "  TypeBase.write";
+   S "  [TypeBasePure.mk_nondatatype_info";
+   S "   (word_type, ";
+   S "     {nchotomy = SOME ranged_word_nchotomy,";
+   S "      size = SOME (w2n_abs,CONJUNCT1(Drule.SPEC_ALL boolTheory.AND_CLAUSES)),";
+   S "      encode=NONE})]";
+   S "  end;";
+   S "";
+   S "val _ = ConstMapML.insert (Term.prim_mk_const{Name=\"n2w_itself\",Thy=\"words\"});"
+ end)};
+
+(* ------------------------------------------------------------------------- *)
+
 fun mk_index i =
   let val n = Arbnum.fromInt i
       val typ = fcpLib.index_type n
@@ -3414,22 +3420,6 @@ fun mk_index i =
   in
     [EmitML.MLSTRUCT w, EmitML.MLSIG w]
   end;
-
-val _ = ConstMapML.insert ``n2w_itself``;
-
-(*---------------------------------------------------------------------------*)
-(* Ensure that n2w_itself sticks in the ConstMap, by writing some code into  *)
-(* wordsTheory.sml                                                           *)
-(*---------------------------------------------------------------------------*)
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-      fun NL() = PP.add_newline ppstrm
-  in S "val _ = ConstMapML.insert (Term.prim_mk_const{Name=\"n2w_itself\",Thy=\"words\"});";
-     NL(); NL()
-  end)};
 
 val _ = type_pp.pp_num_types := false;
 val _ = type_pp.pp_array_types := false;

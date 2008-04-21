@@ -24,14 +24,37 @@ val machine_sizes = (map snd o filter (is_fcp_thm o fst) o theorems) "words";
 
 val sizes_comp = new_compset machine_sizes;
 
-fun SIZES_CONV t = CHANGED_CONV (CBV_CONV sizes_comp) t
-  handle HOL_ERR _ =>
-    let val x = (PURE_REWRITE_CONV [INT_MIN_def, dimword_IS_TWICE_INT_MIN]
-                   THENC fcpLib.INDEX_CONV) t
-        val _ = add_thms [x] sizes_comp
+val TIMES_2EXP1 =
+ (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
+  SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
+
+local
+  val compset = reduceLib.num_compset()
+  val _ = add_thms [NUMERAL_SFUNPOW_FDUB, NUMERAL_SFUNPOW_iDUB, iDUB_NUMERAL,
+                    FDUB_iDUB, FDUB_FDUB, NUMERAL_TIMES_2EXP] compset
+  val conv = CBV_CONV compset
+  val rule = REWRITE_RULE [TIMES_2EXP1, arithmeticTheory.TIMES2,
+                           GSYM numeralTheory.iDUB]
+in
+  fun SIZES_CONV t =
+    let val rtr = fst (dest_const (rator t)) handle HOL_ERR _ => ""
     in
-      x
-    end;
+      if (rtr = "dimword") orelse (rtr = "dimindex") orelse
+         (rtr = "INT_MIN") orelse (rtr = "FINITE")
+      then
+        CHANGED_CONV (CBV_CONV sizes_comp) t
+          handle HOL_ERR _ =>
+            let val x = (PURE_REWRITE_CONV [rule INT_MIN_def,
+                                            rule dimword_IS_TWICE_INT_MIN]
+                           THENC fcpLib.INDEX_CONV THENC conv) t
+                val _ = add_thms [x] sizes_comp
+            in
+              x
+            end
+      else
+        failwith "Term not: dimword, dimindex, INT_MIN or FINITE"
+    end
+end;
 
 fun size_conv t = {conv = K (K (SIZES_CONV)), trace = 3,
                    name = "SIZES_CONV", key = SOME ([], t)};
@@ -48,10 +71,10 @@ fun NUM_RULE l n x =
      ((GEN_ALL o INST [n |-> `NUMERAL n`]) y)
   end;
 
-val MOD_WL = 
+val MOD_WL =
   (CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (ONCE_REWRITE_CONV [GSYM n2w_mod]))));
 
-val MOD_WL1 = 
+val MOD_WL1 =
   (CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (RATOR_CONV
    (ONCE_REWRITE_CONV [GSYM n2w_mod])))));
 
@@ -81,10 +104,6 @@ val thms =
    word_bits_n2w, word_slice_n2w, fcp_n2w, word_extract_n2w,
    word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
    word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w];
-
-val TIMES_2EXP1 =
- (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
-  SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
 
 val thms =
   let fun mrw th = map (REWRITE_RULE [th])
@@ -121,7 +140,7 @@ val alpha_rws =
    word_bit_0, word_bit_0_word_T, w2w_0, sw2sw_0, sw2sw_word_T,
    word_0_n2w, word_1_n2w,
    word_reverse_0, word_reverse_word_T, word_log2_1, word_div_1,
-   word_join_0, word_concat_0, word_concat_word_T, word_join_word_T, extract_0n,
+   word_join_0, word_concat_0, word_concat_word_T, word_join_word_T,
    WORD_BITS_ZERO2, WORD_EXTRACT_ZERO2, WORD_SLICE_ZERO2,
    (REWRITE_RULE [LSB_ODD] o GSYM) LSB_def, BIT_ZERO, BITS_ZERO2];
 
@@ -289,7 +308,7 @@ val WORD_MULT_LEFT_1 = List.nth(word_mult_clauses,2);
 fun WORD_LITERAL_REDUCE_CONV t =
   if is_known_word_size t then
     (PURE_ONCE_REWRITE_CONV [GSYM n2w_mod]
-       THENC SIZES_CONV
+       THENC DEPTH_CONV SIZES_CONV
        THENC numLib.REDUCE_CONV
        THENC UINT_MAX_CONV) t
   else
@@ -305,7 +324,7 @@ fun is_word_literal t =
 (* Tell the function definition mechanism about words.                       *)
 (*---------------------------------------------------------------------------*)
 
-val _ = 
+val _ =
  let val others = !Literal.other_literals
  in Literal.other_literals := (fn x => others x orelse is_word_literal x)
  end;;
@@ -424,7 +443,7 @@ let val x = wordsSyntax.dest_word_2comp t in
     if is_known_word_size t andalso not (is_word_one x) then
       (REWR_CONV word_2comp_n2w
         THENC REWR_CONV (GSYM n2w_mod)
-        THENC SIZES_CONV THENC numLib.REDUCE_CONV) t
+        THENC DEPTH_CONV SIZES_CONV THENC numLib.REDUCE_CONV) t
     else
       if is_word_zero x then
         REWR_CONV WORD_NEG_0 t
@@ -443,7 +462,7 @@ let val (x,y) = dest_eq t in
        wordsSyntax.is_n2w y
     then
       (PURE_ONCE_REWRITE_CONV [n2w_11]
-        THENC SIZES_CONV
+        THENC DEPTH_CONV SIZES_CONV
         THENC numLib.REDUCE_CONV) t
     else
       if is_word_zero y then
@@ -533,7 +552,8 @@ val WORD_CONST_ss = simpLib.merge_ss [
      name = "WORD_CONST_CONV", key = SOME([], ``UINT_MAXw:'a word``)}];
 
 val WORD_ARITH_EQ_ss = simpLib.merge_ss
- [rewrites [WORD_LEFT_ADD_DISTRIB,WORD_RIGHT_ADD_DISTRIB],
+ [rewrites [WORD_LEFT_ADD_DISTRIB,WORD_RIGHT_ADD_DISTRIB,
+            WORD_LSL_NUMERAL,WORD_NOT,hd (CONJUNCTS SHIFT_ZERO)],
   simpLib.conv_ss
     {conv = K (K (WORD_EQ_CONV)), trace = 3,
      name = "WORD_EQ_CONV", key = SOME([], ``a = b:'a word``)}];
@@ -547,8 +567,7 @@ val WORD_ADD_CONV = SIMP_CONV (pure_ss++WORD_ADD_ss) [];
 val WORD_SUB_CONV = SIMP_CONV (pure_ss++WORD_SUB_ss) [];
 
 local
- val conv = SIMP_CONV (std_ss++WORD_ARITH_EQ_ss++WORD_ARITH_ss)
-             [WORD_LSL_NUMERAL,WORD_NOT,hd (CONJUNCTS SHIFT_ZERO)]
+ val conv = SIMP_CONV (std_ss++WORD_ARITH_EQ_ss++WORD_ARITH_ss) []
 in
   val WORD_ARITH_CONV =
      conv THENC (ONCE_DEPTH_CONV FIX_SIGN_OF_NEG_TERM_CONV) THENC conv
@@ -662,7 +681,7 @@ let val x = wordsSyntax.dest_word_1comp t in
       PURE_REWRITE_CONV [REWRITE_RULE [SYM WORD_NEG_1] WORD_NOT_0] t
     else
       (PURE_REWRITE_CONV [word_1comp_n2w]
-        THENC SIZES_CONV THENC numLib.REDUCE_CONV) t
+        THENC DEPTH_CONV SIZES_CONV THENC numLib.REDUCE_CONV) t
   else
     (PURE_REWRITE_CONV [WORD_NOT_NUMERAL]
       THENC numLib.REDUCE_CONV) t
@@ -714,39 +733,22 @@ val WORD_LOGIC_CONV = SIMP_CONV (bool_ss++WORD_LOGIC_ss)
 
 (* ------------------------------------------------------------------------- *)
 
-val ROR_ADD_MOD =
-  (GEN_ALL o CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [GSYM ROR_MOD])) o
-   SPEC_ALL) ROR_ADD;
-
-val ROL_ADD_MOD =
-  (GEN_ALL o CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [GSYM ROL_MOD])) o
-   SPEC_ALL) ROL_ADD;
-
-fun WORD_ROL_ROR_CONV t =
-  if is_known_word_size t then
-    (PURE_ONCE_REWRITE_CONV [ROR_ADD_MOD, ROL_ADD_MOD]
-       THENC SIZES_CONV
-       THENC numLib.REDUCE_CONV) t
-  else
-    (PURE_ONCE_REWRITE_CONV [ROR_ADD, ROL_ADD] THENC numLib.REDUCE_CONV) t;
+val ROL_ROR_MOD_RWT = prove(
+  ``!n w:'a word. dimindex (:'a) <= n ==>
+                 (w #<< n = w #<< (n MOD dimindex (:'a))) /\
+                 (w #>> n = w #>> (n MOD dimindex (:'a)))``,
+  SRW_TAC [] [Once (GSYM ROL_MOD), Once (GSYM ROR_MOD)]);
 
 val WORD_SHIFT_ss =
-  simpLib.merge_ss
-   [rewrites
-      ([SHIFT_ZERO, ZERO_SHIFT, word_rrx_0, word_rrx_word_T, lsr_1_word_T,
-        LSL_ADD, LSR_ADD, ASR_ADD, ROR_ROL,
-        WORD_ADD_LSL, GSYM WORD_2COMP_LSL,
-        GSYM LSL_BITWISE, GSYM LSR_BITWISE, GSYM ROR_BITWISE, GSYM ROL_BITWISE,
-        LSL_LIMIT, LSR_LIMIT, ASR_LIMIT] @
-      map (REWRITE_RULE [SYM WORD_NEG_1])
-       [ASR_UINT_MAX, ROR_UINT_MAX,
-        (REWRITE_RULE [ROR_UINT_MAX] o SPEC `UINT_MAXw`) word_rol_def]),
-    simpLib.conv_ss
-      {conv = K (K (WORD_ROL_ROR_CONV)), trace = 3,
-       name = "WORD_ROR_CONV", key = SOME ([], ``(a:'a word) #>> m #>> n``)},
-    simpLib.conv_ss
-      {conv = K (K (WORD_ROL_ROR_CONV)), trace = 3,
-       name = "WORD_ROR_CONV", key = SOME ([], ``(a:'a word) #<< m #<< n``)}];
+  rewrites
+    ([SHIFT_ZERO, ZERO_SHIFT, word_rrx_0, word_rrx_word_T, lsr_1_word_T,
+      LSL_ADD, LSR_ADD, ASR_ADD, ROR_ROL, ROR_ADD, ROL_ADD, ROL_ROR_MOD_RWT,
+      WORD_ADD_LSL, GSYM WORD_2COMP_LSL,
+      GSYM LSL_BITWISE, GSYM LSR_BITWISE, GSYM ROR_BITWISE, GSYM ROL_BITWISE,
+      LSL_LIMIT, LSR_LIMIT, ASR_LIMIT] @
+    map (REWRITE_RULE [SYM WORD_NEG_1])
+     [ASR_UINT_MAX, ROR_UINT_MAX,
+      (REWRITE_RULE [ROR_UINT_MAX] o SPEC `UINT_MAXw`) word_rol_def]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -841,7 +843,7 @@ local
   fun mk_bounds_thm t =
     let val x = wordsSyntax.dest_w2n t in
       if is_known_word_size x then
-        (CONV_RULE SIZES_CONV o Drule.ISPEC x) w2n_lt
+        (CONV_RULE (DEPTH_CONV SIZES_CONV) o Drule.ISPEC x) w2n_lt
       else
         failwith "Unknown size"
     end
@@ -855,6 +857,23 @@ in
       LIST_CONJ (map mk_bounds_thm l)
   end
 end;
+
+val EXISTS_NUMBER = prove(
+  ``(?w:'a word. P (w2n w)) = (?n. n < dimword(:'a) /\ P n)``,
+  EQ_TAC THEN SRW_TAC [] []
+    THENL [Q.EXISTS_TAC `w2n w`, Q.EXISTS_TAC `n2w n`]
+    THEN ASM_SIMP_TAC std_ss [w2n_lt, w2n_n2w]);
+
+fun EXISTS_WORD_CONV t =
+  if is_exists t then
+    let val v = fst (dest_exists t) in
+      if wordsSyntax.is_word_type (type_of v) then
+        (UNBETA_CONV v THENC SIMP_CONV (std_ss++SIZES_ss) [EXISTS_NUMBER]) t
+      else
+        failwith "Not an \"exists word\" term."
+    end
+  else
+    failwith "Not an exists term.";
 
 local
   val word_join = SIMP_RULE (std_ss++boolSimps.LET_ss) [] word_join_def
@@ -912,7 +931,8 @@ in
                                  WORD_UINT_MAX_ss) rw3
                           THENC SIMP_CONV (std_ss++boolSimps.LET_ss++
                                  WORD_UINT_MAX_ss++WORD_w2n_ss++WORD_SUB_ss++
-                                 WORD_ADD_ss) rw4) t
+                                 WORD_ADD_ss) rw4
+                          THENC DEPTH_CONV EXISTS_WORD_CONV) t
             val t1 = rhs (concl thm1)
             val bnds = mk_bounds_thms t1
             val t2 = mk_imp (concl bnds, t1)
@@ -921,17 +941,53 @@ in
         in
           MP (CONV_RULE conv thm2) bnds
         end
-   fun WORD_DP_CONV dp t =
-         if term_eq T t then
-           ALL_CONV t
-         else
-           (EQT_INTRO o WORD_DP_PROVE dp) t
-   fun WORD_DP dp t = EQT_ELIM
-        ((WORD_CONV
-            THENC DEPTH_CONV (WORD_BIT_EQ_CONV THENC EQ_CONV)
-            THENC WORD_DP_CONV dp) t)
-   val WORD_DECIDE = WORD_DP DECIDE;
+   fun WORD_DP dp tm =
+          let fun conv t =
+                if term_eq T t then
+                  ALL_CONV t
+                else if is_forall t then
+                  STRIP_QUANT_CONV (EQT_INTRO o (WORD_DP_PROVE dp)) t
+                else
+                  (EQT_INTRO o WORD_DP_PROVE dp) t
+          in
+            EQT_ELIM
+              ((WORD_CONV THENC DEPTH_CONV (WORD_BIT_EQ_CONV THENC EQ_CONV)
+                 THENC DEPTH_CONV (conv THENC EQ_CONV)
+                 THENC REWRITE_CONV []) tm)
+          end
+   val WORD_DECIDE = WORD_DP DECIDE
 end;
+
+fun is_word_term tm = let open numSyntax in
+  if is_forall tm then
+    is_word_term (#Body (Rsyntax.dest_forall tm))
+  else if is_exists tm then
+    is_word_term (#Body (Rsyntax.dest_exists tm))
+  else if is_neg tm then
+    is_word_term (dest_neg tm)
+  else if is_conj tm orelse is_disj tm orelse is_imp tm then
+    is_word_term (rand (rator tm)) andalso is_word_term (rand tm)
+  else if is_eq tm then
+    let val typ = type_of (rand tm) in
+      (typ = num) orelse is_word_type typ
+    end
+  else
+    is_less tm orelse is_leq tm orelse is_greater tm orelse is_geq tm orelse
+    is_index tm orelse
+    is_word_lt tm orelse is_word_le tm orelse
+    is_word_gt tm orelse is_word_ge tm orelse
+    is_word_hi tm orelse is_word_lo tm orelse
+    is_word_hs tm orelse is_word_ls tm
+end;
+
+fun MP_ASSUM_TAC tm (asl, w) =
+  let val (ob, asl') = Lib.pluck (Lib.equal tm) asl in
+    MP_TAC (Thm.ASSUME ob) (asl', w)
+  end;
+
+fun WORD_DECIDE_TAC (asl, w) =
+  (EVERY (map MP_ASSUM_TAC (List.filter is_word_term asl)) THEN
+    CONV_TAC (WORD_DP DECIDE)) (asl, w);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -975,6 +1031,14 @@ fun Cases_word (g as (_,w)) =
   let val (Bvar,_) = with_exn dest_forall w (ERR "Cases_word" "not a forall")
   in (STRIP_TAC THEN STRUCT_CASES_TAC (Drule.ISPEC Bvar ranged_word_nchotomy)) g
   end;
+
+val Induct_word =
+  recInduct WORD_INDUCT
+    THEN CONJ_TAC
+    THENL [ALL_TAC,
+      CONV_TAC (QCONV (TRY_CONV (STRIP_QUANT_CONV
+                  (RATOR_CONV (DEPTH_CONV SIZES_CONV)))))
+        THEN NTAC 3 STRIP_TAC];
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1153,7 +1217,7 @@ val operators = [("+", ``($+ :bool['a] -> bool['a] -> bool['a])``),
 fun deprecate_word () = let
   fun losety {Name,Thy,Ty} = {Name = Name, Thy = Thy}
   fun doit (s, t) = Parse.temp_remove_ovl_mapping s (losety (dest_thy_const t))
-in                 
+in
   app (ignore o doit) operators
 end
 
