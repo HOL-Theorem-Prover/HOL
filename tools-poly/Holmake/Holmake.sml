@@ -764,17 +764,14 @@ let val out = TextIO.openOut result
 in
   p "#!/bin/sh";
   p (POLY ^ "<<'__end-of-file__'");
-  p "local";
-  p "val pd = PolyML.get_print_depth();";
+  p "val _ = PolyML.Compiler.prompt1:=\"\";";
+  p "val _ = PolyML.Compiler.prompt2:=\"\";";
   p "val _ = PolyML.print_depth 0;";
   p "val dir = OS.FileSys.getDir();";
   p ("val _ = OS.FileSys.chDir (OS.Path.concat (\"" ^
                  String.toString Systeml.HOLDIR ^ "\", \"tools-poly\"));");
-  p "in";
   p "val _ = use \"poly/poly-init2.ML\";";
   p "val _ = OS.FileSys.chDir dir;";
-  p "val _ = PolyML.print_depth pd;";
-  p "end;";
   p ("val _ = List.map load [" ^ 
                       String.concatWith "," 
                                         (List.map (fn f => "\"" ^ OS.Path.base f ^ "\"")

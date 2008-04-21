@@ -1,3 +1,6 @@
+val _ = PolyML.Compiler.prompt1:="";
+val _ = PolyML.Compiler.prompt2:="";
+val _ = PolyML.print_depth 0;
 fun u f = use ("mlyacclib/" ^ f ^ ".sml");
 
 val _ = u "MLY_base-sig";

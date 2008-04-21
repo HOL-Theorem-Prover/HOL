@@ -3,8 +3,10 @@ app load ["Mosml", "Process", "Path", "FileSys", "Timer", "Real", "Int",
           "Bool", "OS"] ;
 open Mosml;
 *)
-
-use "poly/poly-init.ML";
+val _ = PolyML.Compiler.prompt1:="";
+val _ = PolyML.Compiler.prompt2:="";
+val _ = PolyML.print_depth 0;
+val _ = use "poly/poly-init.ML";
 
 (* utility functions *)
 fun readdir s = let

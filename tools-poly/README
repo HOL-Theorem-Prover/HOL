@@ -1,5 +1,6 @@
 To build HOL with PolyML: 
-  1) edit configure.sml with the location of your Poly ML
+  1) edit configure.sml with the location of your Poly ML binary and libraries,
+     and also your gcc.
   2) run "poly < smart-configure" from the tools-poly directory
   3) run "build -expk -symlink" (only the experimental kernel is supported)
 

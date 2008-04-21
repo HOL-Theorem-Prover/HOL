@@ -31,20 +31,22 @@ fun main() = let
                             " [<inputfile> <outputfile>]\n");
               exit failure)
 
-  val _ = filter.UserDeclarations.output_stream := outstream
-
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
 
+  val state = {output_stream=outstream, comdepth=ref 0, pardepth=ref 0, 
+               antiquote=ref false, row=ref 0, rowstart=ref 0};
+
+
   fun loop() = let
-    val lexer = filter.makeLexer (read_from_stream instream)
+    val lexer = filter.makeLexer (read_from_stream instream) state
   in
     lexer()
-    handle Thread.Thread.Interrupt => (let open filter.UserDeclarations
+    handle Interrupt => (let open filter.UserDeclarations
                          in
-                           comdepth := 0;
-                           pardepth := 0;
-                           antiquote := false;
+                           #comdepth state := 0;
+                           #pardepth state := 0;
+                           #antiquote state := false;
                            loop()
                          end)
   end

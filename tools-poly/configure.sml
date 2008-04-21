@@ -29,6 +29,7 @@
    "c:\dir1\dir2\mosml".
 *)
 
+val _ = PolyML.print_depth 0;
 
 val poly = "/home/so294/scratch/polyml.5.1/bin/poly";
 val polymllibdir = "/home/so294/scratch/polyml.5.1/lib";
@@ -245,7 +246,7 @@ in
   if FileSys.access(unquote, [FileSys.A_READ]) then
     (print "Removing old quotation filter from bin/\n";
      FileSys.remove unquote
-     handle Interrupt => raise Interrupt
+     handle Thread.Thread.Interrupt => raise Thread.Thread.Interrupt
           | _ => print "*** Tried to remove quotation filter from bin/ but \
                        \couldn't!  Proceeding anyway.\n")
   else ()

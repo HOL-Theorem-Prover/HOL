@@ -1,3 +1,6 @@
+val _ = PolyML.Compiler.prompt1:="";
+val _ = PolyML.Compiler.prompt2:="";
+val _ = PolyML.print_depth 0;
 val _ = use "poly/poly-init.ML";
 
 structure BasicIO = SML90;
