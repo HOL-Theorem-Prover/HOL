@@ -73,11 +73,12 @@ val correctness' =
 
 val N_aux_ind' = (* takes ages, because of subtraction? *)
   SIMP_RULE arith_ss [WF_measure,measure_thm,SUB_LEFT_LESS] 
-        (Q.INST [`R` |-> `measure \x. 101-x`] (DISCH_ALL N_aux_ind))
+        (Q.INST [`R` |-> `measure \x. 101-x`] (DISCH_ALL N_aux_ind));
 
 (*---------------------------------------------------------------------------*)
-(* Termination. We'll use NA to abbreviate the instantiated auxiliary        *)
-(* function: thus NA = N_aux(measure($- 101)). The proof goes as follows:    *)
+(* Termination. This is done the hard way, to prop up an obscure point.      *)
+(* We'll use NA to abbreviate the instantiated auxiliary function: thus      *)
+(* NA = N_aux(measure($- 101)). The proof goes as follows:                   *)
 (*                                                                           *)
 (* Induct on the termination relation, then tidy up the goal, obtaining the  *)
 (* goal "x < NA (x+11)". We now want to unroll NA(x+11). This requires       *)
@@ -111,33 +112,10 @@ val (N_def,N_ind) = Defn.tprove
     THEN STRIP_TAC THEN FULL_SIMP_TAC arith_ss [lem]
     THEN MP_TAC (Q.INST [`x` |-> `x+11`] condE)
     THEN RW_TAC arith_ss []  (* implicit case split *)
-    THEN `x+11 < NA (x+22)` by METIS_TAC[DECIDE ``x<x+11``,DECIDE``x+11+11=x+22``]
+    THEN `x+11 < NA(x+22)` by METIS_TAC[DECIDE``x<x+11``,DECIDE``x+11+11=x+22``]
     THEN RW_TAC std_ss [] THEN WEAKEN_TAC is_imp
     THEN MP_TAC (Q.INST [`x` |-> `NA(x+22)`] condE) 
-    THEN Q.UNABBREV_TAC`NA` THEN Q.ABBREV_TAC `NA = N_aux(measure(\x.101-x))`
-    THEN RW_TAC arith_ss [] (* implicit case split *)
-    THEN `x < NA (x+22) - 11 /\ ~(NA (x + 22) - 11 > 100)` by DECIDE_TAC
-    THEN `NA(x+22) - 11 < NA(NA(x+22) - 11 + 11)` by METIS_TAC[]
-    THEN POP_ASSUM MP_TAC
-    THEN FULL_SIMP_TAC arith_ss [DECIDE ``x+y < p ==> ((p-y)+y = p)``]);
-
-Defn.tgoal N_defn;
-e (WF_REL_TAC `measure \x. 101 - x`); 
-e (CONJ_TAC THENL [DECIDE_TAC, 
-    SIMP_TAC arith_ss [SUB_LEFT_LESS,unexpand_measure]]);
-e (recInduct N_aux_ind');
-e (Q.ABBREV_TAC `NA = N_aux (measure (\x. 101 - x))`)
-
-    THEN RW_TAC arith_ss [SUB_LEFT_LESS,unexpand_measure]
-    THEN Q.ABBREV_TAC `NA = N_aux (measure (\x. 101 - x))`
-    THEN measureInduct_on `(\m. 101 - m) x`
-    THEN STRIP_TAC THEN FULL_SIMP_TAC arith_ss [lem]
-    THEN MP_TAC (Q.INST [`x` |-> `x+11`] condE)
-    THEN RW_TAC arith_ss []  (* implicit case split *)
-    THEN `x+11 < NA (x+22)` by METIS_TAC[DECIDE ``x<x+11``,DECIDE``x+11+11=x+22``]
-    THEN RW_TAC std_ss [] THEN WEAKEN_TAC is_imp
-    THEN MP_TAC (Q.INST [`x` |-> `NA(x+22)`] condE) 
-    THEN Q.UNABBREV_TAC`NA` THEN Q.ABBREV_TAC `NA = N_aux(measure(\x.101-x))`
+    THEN Q.REABBREV_TAC
     THEN RW_TAC arith_ss [] (* implicit case split *)
     THEN `x < NA (x+22) - 11 /\ ~(NA (x + 22) - 11 > 100)` by DECIDE_TAC
     THEN `NA(x+22) - 11 < NA(NA(x+22) - 11 + 11)` by METIS_TAC[]

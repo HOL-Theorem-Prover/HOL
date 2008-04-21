@@ -68,7 +68,6 @@ fun orient th =
          end
  end;
 
-
 fun VSUBST_TAC tm = UNDISCH_THEN tm (SUBST_ALL_TAC o orient);
 
 fun var_eq tm =
@@ -174,8 +173,9 @@ val ABBREV_ss =
 
 fun LET_ELIM_TAC goal = let
   open simpLib pureSimps boolSimps
-  (* two successive calls to SIMP_TAC ensure that the LET_FORALL_ELIM
-     theorem is applied after all the movement is possible *)
+  (* first two successive calls to SIMP_CONV ensure that the 
+     LET_FORALL_ELIM theorem is applied after all the movement 
+     is possible *)
 in
   CONV_TAC
     (QCHANGED_CONV
@@ -184,7 +184,7 @@ in
                            combinTheory.literal_case_FORALL_ELIM ::
                            !let_movement_thms) THENC
         SIMP_CONV (pure_ss ++ ABBREV_ss ++ UNWIND_ss) [Cong IMP_CONG'])) THEN
-  REPEAT BOSS_STRIP_TAC
+  REPEAT BOSS_STRIP_TAC THEN Q.REABBREV_TAC
 end goal
 
 fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
@@ -279,11 +279,13 @@ fun PRIM_STP_TAC ss finisher =
         LET_ELIM_TAC might not have this problem... *)
      val do_lets = (simpLib.SIMP_CONV ss [] leave_lets_var ; false)
                    handle Conv.UNCHANGED => true
-     val LET_ELIM_TAC = if do_lets then
-                          (fn g as (asl, w) => if can (find_term is_let) w then
-                                                 LET_ELIM_TAC g
-                                               else NO_TAC g)
-                        else NO_TAC
+     val LET_ELIM_TAC = 
+        if do_lets then
+          (fn g as (_,w) => 
+                if can (find_term is_let) w 
+                   then LET_ELIM_TAC g
+                   else NO_TAC g)
+        else NO_TAC
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
      THEN REPEAT VAR_EQ_TAC
@@ -328,7 +330,6 @@ fun SPLIT_SIMP simp = TRY IF_CASES_TAC THEN simp ;
 fun PRIM_NORM_TAC ss =
  let val has_constr_eqn = mkCSET()
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
-(*     val IfCases =  *)
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
      THEN REPEAT VAR_EQ_TAC
@@ -341,7 +342,8 @@ fun PRIM_NORM_TAC ss =
                ORELSE ASSUM_TAC (LIFT_SIMP ss) breakable
                ORELSE CONCL_TAC ASM_SIMP has_constr_eqn
                ORELSE ASSUM_TAC (LIFT_SPLIT_SIMP ss ASM_SIMP) splittable
-               ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) splittable))
+               ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) splittable
+               ORELSE LET_ELIM_TAC))
   end
 
 

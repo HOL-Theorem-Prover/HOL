@@ -58,7 +58,8 @@ val DISJ2    = Thm.DISJ2 o btm;
 
 fun GEN [QUOTE s] th =
      let val V = free_vars (concl th)
-     in case Lib.assoc2 (Lib.deinitcomment s) (Lib.zip V (map (fst o Term.dest_var) V))
+     in case Lib.assoc2 (Lib.deinitcomment s) 
+                (Lib.zip V (map (fst o Term.dest_var) V))
          of NONE => raise Q_ERR "GEN" "variable not found"
          | SOME (v,_) => Thm.GEN v th
      end
@@ -270,15 +271,14 @@ end
 val INST_TYPE = Thm.INST_TYPE o mk_type_rsubst;
 
 
-(* ----------------------------------------------------------------------
-    Abbreviation tactics
+(*---------------------------------------------------------------------------*)
+(*    Abbreviation tactics                                                   *)
+(*---------------------------------------------------------------------------*)
 
-   ---------------------------------------------------------------------- *)
+val DeAbbrev = CONV_RULE (REWR_CONV markerTheory.Abbrev_def)
 
 fun Abbrev_wrap eqth =
     EQ_MP (SYM (Thm.SPEC (concl eqth) markerTheory.Abbrev_def)) eqth
-
-val DeAbbrev = CONV_RULE (REWR_CONV markerTheory.Abbrev_def)
 
 fun ABB l r =
     CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN
@@ -356,9 +356,35 @@ end g
 
 val RM_ALL_ABBREVS_TAC = REPEAT (FIRST_X_ASSUM (K ALL_TAC o DeAbbrev))
 
-(* ----------------------------------------------------------------------
-    ABBRS_THEN
-   ---------------------------------------------------------------------- *)
+(*---------------------------------------------------------------------------*)
+(* Ought to be called after LET_ELIM_TAC, which introduces an abbrev, but    *)
+(* doesn't propagate the abbrev. to the other assumptions. This gets taken   *)
+(* care of in basicProof/BasicProvers                                        *)
+(*---------------------------------------------------------------------------*)
+
+fun REABBREV_TAC (gl as (asl,_)) =
+ let open markerLib
+     val abbrevs = filter is_Abbrev asl
+     val lrs = map (dest_eq o rand) abbrevs
+ in UNABBREV_ALL_TAC THEN MAP_EVERY (uncurry ABB) lrs 
+ end gl;
+
+fun WITHOUT_ABBREVS tac = UNABBREV_ALL_TAC THEN tac THEN REABBREV_TAC;
+
+
+(*---------------------------------------------------------------------------*)
+(*  ABBRS_THEN: expand specified abbreviations before applying a tactic.     *)
+(* Typically, the abbreviations are designated in the thm list of a          *)
+(* simplification tactic thusly:                                             *)
+(*                                                                           *)
+(*     ASM_SIMP_TAC ss [ ... , markerLib.Abbr `m`, ... ]                     *)
+(*                                                                           *)
+(* which says to find and expand the abbreviation                            *)
+(*                                                                           *)
+(*      Abbrev (m = tm)                                                      *)
+(*                                                                           *)
+(* in the assumptions of the goal before proceeding with simplification.     *)
+(*---------------------------------------------------------------------------*)
 
 fun ABBRS_THEN ttac thl = 
  let open markerLib
@@ -367,4 +393,4 @@ fun ABBRS_THEN ttac thl =
   MAP_EVERY (UNABBREV_TAC o dest_Abbr) abbrs THEN ttac rest
  end
 
-end; (* Q *)
+end (* Q *)

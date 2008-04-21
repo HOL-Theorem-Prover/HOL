@@ -28,7 +28,11 @@ sig
   val Abbr                     : term quotation -> thm
   val dest_Abbr                : thm -> term quotation
   val is_Abbr                  : thm -> bool
-  val Abbrev_tm                : term
+
+  val Abbrev_tm   : term
+  val mk_Abbrev   : string * term -> term       
+  val dest_Abbrev : term -> string * term
+  val is_Abbrev   : term -> bool
 
 end
 

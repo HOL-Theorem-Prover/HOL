@@ -161,7 +161,6 @@ val L_EUCLIDES = store_thm("L_EUCLIDES",
   THEN ONCE_ASM_REWRITE_TAC[]
   THEN PROVE_TAC[EUCLIDES_AUX,DIVIDES_MULT,MULT_SYM,DIVIDES_REFL]);
 
-
 val P_EUCLIDES = store_thm(
   "P_EUCLIDES",
   Term `!p a b. prime p /\ divides p (a*b)
@@ -274,7 +273,8 @@ val gcd_lemma = prove(
     ASM_SIMP_TAC arith_ss []
   ]);
 
-open numSimps metisLib
+open numSimps metisLib;
+
 val GCD_EFFICIENTLY = store_thm(
   "GCD_EFFICIENTLY",
   ``!a b.

@@ -41,9 +41,9 @@ type convdata = {name  : string,
 datatype control = UNBOUNDED | BOUNDED of int ref
 
 
-fun appconv (c,UNBOUNDED) tm     = c tm
-  | appconv (c,BOUNDED(ref 0)) _ = failwith "exceeded rewrite bound"
-  | appconv (c,BOUNDED r) tm     = c tm before Portable.dec r;
+fun appconv (c,th,UNBOUNDED) tm     = c tm
+  | appconv (c,th,BOUNDED(ref 0)) _ = failwith "exceeded rewrite bound"
+  | appconv (c,th,BOUNDED r) tm     = c tm before Portable.dec r;
 
 fun dest_tagged_rewrite thm = let
   val (th, n) = DEST_BOUNDED thm
@@ -59,7 +59,7 @@ fun mk_rewr_convdata thm =
          key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
          trace = 100, (* no need to provide extra tracing here;
                          COND_REWR_CONV provides enough tracing itself *)
-         conv  = appconv (COND_REWR_CONV th, tag)} before
+         conv  = appconv (COND_REWR_CONV th, th, tag)} before
    trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
    handle HOL_ERR _ =>
           (trace (2, LZ_TEXT(fn () =>
@@ -264,30 +264,35 @@ end;
 
 
 (*---------------------------------------------------------------------------*)
-(*   SIMP_TAC      : simpset -> tactic                                       *)
-(*   ASM_SIMP_TAC  : simpset -> tactic                                       *)
-(*   FULL_SIMP_TAC : simpset -> tactic                                       *)
+(*   SIMP_TAC      : simpset -> thm list -> tactic                           *)
+(*   ASM_SIMP_TAC  : simpset -> thm list -> tactic                           *)
+(*   FULL_SIMP_TAC : simpset -> thm list -> tactic                           *)
 (*                                                                           *)
 (* FAILURE CONDITIONS                                                        *)
 (*                                                                           *)
 (* These tactics never fail, though they may diverge.                        *)
 (* --------------------------------------------------------------------------*)
 
+fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l);
+fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
+
 fun SIMP_TAC ss l = Q.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l
 
 fun ASM_SIMP_TAC ss l = let
-  fun base thl (asms, gl) = let
+  fun base thl (gl as (asms,_)) = let
     val working = labelLib.LLABEL_RESOLVE thl asms
   in
-    SIMP_TAC ss working (asms, gl)
+    SIMP_TAC ss working gl
   end
 in
   Q.ABBRS_THEN base l
 end
 
-fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l);
+fun ASM_SIMP_TAC ss = 
+   Q.ABBRS_THEN 
+    (fn thl => fn gl as (asl,_) => 
+         SIMP_TAC ss (labelLib.LLABEL_RESOLVE thl asl) gl);
 
-fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
 
 fun FULL_SIMP_TAC ss l =
  let fun drop n (asms,g) =

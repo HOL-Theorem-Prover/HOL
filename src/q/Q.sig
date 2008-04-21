@@ -43,11 +43,14 @@ sig
   val X_SKOLEM_CONV         : tmquote -> conv
   val store_thm             : string * tmquote * tactic -> thm
   val prove                 : tmquote * tactic -> thm
+  val ABB                   : term -> term -> tactic
   val ABBREV_TAC            : tmquote -> tactic
   val UNABBREV_TAC          : tmquote -> tactic
   val UNABBREV_ALL_TAC      : tactic
-  val RM_ABBREV_TAC        : tmquote -> tactic
-  val RM_ALL_ABBREVS_TAC   : tactic
+  val REABBREV_TAC          : tactic
+  val WITHOUT_ABBREVS       : tactic -> tactic
+  val RM_ABBREV_TAC         : tmquote -> tactic
+  val RM_ALL_ABBREVS_TAC    : tactic
   val PAT_ABBREV_TAC        : tmquote -> tactic
   val MATCH_ABBREV_TAC      : tmquote -> tactic
   val HO_MATCH_ABBREV_TAC   : tmquote -> tactic
