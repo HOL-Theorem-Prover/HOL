@@ -869,9 +869,6 @@ val register_enc3 = store_thm("register_enc3",
   `!i. (3 >< 0) (addr_mode3_encode (Dth_register r)) = r`,
   SRW_TAC word_frags [addr_mode3_encode_def,w2w]);
 
-val EXTRACT_ss = simpLib.merge_ss [SIZES_ss, WORD_LOGIC_ss, WORD_SHIFT_ss,
-  WORD_GROUND_ss, WORD_EXTRACT_ss];
-
 val lem = simpLib.SIMP_PROVE (std_ss++WORD_BIT_EQ_ss) []
   ``~(i = 0w:word5) ==> ~((4 >< 0) i = 0w:word8)``;
 
@@ -894,7 +891,7 @@ val shift_immediate_enc = store_thm("shift_immediate_enc",
         || ASR Rm -> arm$ASR (REG_READ reg m Rm) (w2w i) c
         || ROR Rm -> arm$ROR (REG_READ reg m Rm) (w2w i) c`,
   REPEAT STRIP_TAC \\ Cases_on `sh` \\ Cases_on `i = 0w` \\ IMP_RES_TAC lem
-    \\ SRW_TAC [boolSimps.LET_ss, EXTRACT_ss]
+    \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
          [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode1_encode_def,
           shift_encode_def,shift_immediate_enc_lem,lem2]);
 
@@ -914,7 +911,7 @@ val shift_immediate_enc2 = store_thm("shift_immediate_enc2",
         || ASR Rm -> arm$ASR (REG_READ reg m Rm) (w2w i) c
         || ROR Rm -> arm$ROR (REG_READ reg m Rm) (w2w i) c`,
   REPEAT STRIP_TAC \\ Cases_on `sh` \\ Cases_on `i = 0w` \\ IMP_RES_TAC lem
-    \\ SRW_TAC [boolSimps.LET_ss, EXTRACT_ss]
+    \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
         [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode2_encode_def,
          shift_encode_def,shift_immediate_enc_lem2,lem2]);
 
@@ -928,7 +925,7 @@ val shift_register_enc = store_thm("shift_register_enc",
         || ASR Rm -> arm$ASR (REG_READ (INC_PC reg) m Rm) rs c
         || ROR Rm -> arm$ROR (REG_READ (INC_PC reg) m Rm) rs c`,
   REPEAT STRIP_TAC \\ Cases_on `sh`
-    \\ SRW_TAC [boolSimps.LET_ss, EXTRACT_ss]
+    \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
         [SHIFT_REGISTER_def,SHIFT_REGISTER2_def,addr_mode1_encode_def,
          shift_encode_def,shift_register_enc_lem,lem2]);
 
