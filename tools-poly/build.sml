@@ -648,8 +648,10 @@ in
   SYSTEML cmd before OS.FileSys.chDir dir0
 end
 
-fun cleandir dir = ignore ([HOLMAKE, "clean"] called_in dir)
-fun cleanAlldir dir = ignore ([HOLMAKE, "cleanAll"] called_in dir)
+fun cleandir dir = 
+  ignore ([HOLMAKE, "clean"] called_in dir) handle OS.SysErr _ => ()
+fun cleanAlldir dir = 
+  ignore ([HOLMAKE, "cleanAll"] called_in dir) handle OS.SysErr _ => ()
 
 fun clean_dirs f =
     clean_sigobj() before
