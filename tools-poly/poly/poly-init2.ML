@@ -242,5 +242,3 @@ val _ = use "poly/Intset.sig";
 val _ = use "poly/Intset.sml";
 val _ = use "poly/Intmap.sig";
 val _ = use "poly/Intmap.sml";
-
-val xx__hol_initialization_is_loaded__xx = true;

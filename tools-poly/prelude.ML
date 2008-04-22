@@ -105,21 +105,7 @@ end
     Set interactive flag to true
    ---------------------------------------------------------------------- *)
 
-(*
 val _ = Globals.interactive := true;
-*)
-
-(*---------------------------------------------------------------------------*
- * Print a banner.                                                           *
- *---------------------------------------------------------------------------*)
-
-val build_stamp =
- let open TextIO Path;
-     val stampstr = openIn (concat(HOLDIR, concat("tools", "build-stamp")));
-     val stamp = inputAll stampstr before closeIn stampstr;
- in
-     stamp
- end handle _ => "";
 
 local
  fun has_dq file =
@@ -156,6 +142,20 @@ end;
 
 fun prelude_main () =
 let
+
+(*---------------------------------------------------------------------------*
+ * Print a banner.                                                           *
+ *---------------------------------------------------------------------------*)
+
+val build_stamp =
+ let open TextIO Path;
+     val stampstr = openIn (concat(HOLDIR, concat("tools-poly", "build-stamp")));
+     val stamp = inputAll stampstr before closeIn stampstr;
+ in
+     stamp
+ end handle _ => "";
+
+
 val _ =
 TextIO.output(TextIO.stdOut,
   "\n-----------------------------------------------------------------\n"

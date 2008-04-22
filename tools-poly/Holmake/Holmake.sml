@@ -447,6 +447,7 @@ fun parse_command_line list = let
   val (rem, do_logging_flag) = find_toggle "--logging" rem
 
   val (rem, cmdl_POLYs) = find_pairs "--poly" rem
+  val (rem, polynothol) = find_toggle "--poly_not_hol" rem
 in
   {targets=rem, debug=debug, show_usage=help,
    always_rebuild_deps=rebuild_deps,
@@ -486,6 +487,7 @@ in
          warn "Ignoring all but last --poly spec.";
          SOME (List.last cmdl_POLYs)
        end,
+   polynothol = polynothol,
    keep_going_flag = keep_going_flag,
    quiet_flag = quiet_flag,
    do_logging_flag = do_logging_flag}
@@ -496,7 +498,7 @@ end
 val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      always_rebuild_deps, interactive_flag,
      additional_includes = cline_additional_includes,
-     cmdl_HOLDIR, cmdl_POLYMLLIBDIR, cmdl_POLY,
+     cmdl_HOLDIR, cmdl_POLYMLLIBDIR, cmdl_POLY, polynothol,
      no_sigobj = cline_no_sigobj, no_prereqs,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
      user_overlay, keep_going_flag, quiet_flag, do_logging_flag} =
@@ -767,20 +769,21 @@ in
   p "val _ = PolyML.Compiler.prompt1:=\"\";";
   p "val _ = PolyML.Compiler.prompt2:=\"\";";
   p "val _ = PolyML.print_depth 0;";
-  p "val _ = if List.exists (fn s => s = \"xx__hol_initialization_is_loaded__xx\") (PolyML.Compiler.valueNames ()) then";
-  p "  ()";
-  p "else";
-  p "  let val dir = OS.FileSys.getDir();";
-  p ("      val _ = OS.FileSys.chDir (OS.Path.concat (\"" ^
-                 String.toString Systeml.HOLDIR ^ "\", \"tools-poly\"));");
-  p "       val _ = use \"poly/poly-init2.ML\";";
-  p "       val _ = OS.FileSys.chDir dir;";
-  p "  in () end;";
+  (if polynothol then
+     (p "local";
+      p "val dir = OS.FileSys.getDir();";
+      p ("val _ = OS.FileSys.chDir (OS.Path.concat (\"" ^
+                  String.toString Systeml.HOLDIR ^ "\", \"tools-poly\"));");
+      p "val _ = use \"poly/poly-init2.ML\";";
+      p "val _ = OS.FileSys.chDir dir;";
+      p "in end;")
+   else
+     ());
   p ("val _ = List.map load [" ^ 
                       String.concatWith "," 
                                         (List.map (fn f => "\"" ^ OS.Path.base f ^ "\"")
                                                   files) ^
-                      "] handle _ => OS.Process.exit OS.Process.failure;");
+                      "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); OS.Process.exit OS.Process.failure);");
   p "__end-of-file__";
   TextIO.closeOut out;
   OS.Process.success
@@ -1195,8 +1198,10 @@ in
           else if quit_on_failure then [scriptuo]
           else ["holmakebuild.uo", scriptuo]
       val objectfiles =
-          if interactive_flag then "holmake_interactive.uo" :: objectfiles0
-          else objectfiles0
+        if polynothol then
+          objectfiles0
+        else if interactive_flag then "holmake_interactive.uo" :: objectfiles0
+        else "holmake_not_interactive.uo" :: objectfiles0
     in
       if isSuccess (poly_link script objectfiles)
       then let
@@ -1553,8 +1558,9 @@ in
      "    --interactive | -i   : run HOL with \"interactive\" flag set\n",
      "    --keep-going | -k    : don't stop on failure\n",
      "    --logging            : do per-theory time logging\n",
-     "    --polymllibdir directory : use specified directory as PolyML's libraries\n",
-     "    --poly file : use specified file as the PolyML executable\n",
+     "    --polymllibdir directory : use specified directory for Poly/ML's libraries\n",
+     "    --poly file          : use specified file as the Poly/ML executable\n",
+     "    --poly_not_hol       : Treat the Poly/ML executable as plain, not as a hol-augmented executable",
      "    --no_holmakefile     : don't use any Holmakefile\n",
      "    --no_overlay         : don't use an overlay file\n",
      "    --no_prereqs         : don't recursively build in INCLUDES\n",

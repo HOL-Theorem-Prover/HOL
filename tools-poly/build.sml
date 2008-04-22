@@ -185,13 +185,13 @@ open Systeml;
 val SYSTEML = Systeml.systeml
 
 fun Holmake dir =
-let val wp = 
+let val (wp, hol) = 
   case !phase of
-    Initial => POLY 
-  | Bare => fullPath [HOLDIR, "bin", "hol.bare.noquote"]
-  | Full => fullPath [HOLDIR, "bin", "hol.noquote"]
+    Initial => (POLY, "--poly_not_hol")
+  | Bare => (fullPath [HOLDIR, "bin", "hol.bare.noquote"], "")
+  | Full => (fullPath [HOLDIR, "bin", "hol.noquote"], "")
 in
-  if OS.Process.isSuccess (SYSTEML [HOLMAKE, "--qof", "--poly", wp]) then
+  if OS.Process.isSuccess (SYSTEML [HOLMAKE, "--qof", "--poly", wp, hol]) then
     if do_selftests > 0 andalso
        OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
     then
