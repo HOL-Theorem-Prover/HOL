@@ -767,11 +767,15 @@ in
   p "val _ = PolyML.Compiler.prompt1:=\"\";";
   p "val _ = PolyML.Compiler.prompt2:=\"\";";
   p "val _ = PolyML.print_depth 0;";
-  p "val dir = OS.FileSys.getDir();";
-  p ("val _ = OS.FileSys.chDir (OS.Path.concat (\"" ^
+  p "val _ = if List.exists (fn s => s = \"xx__hol_initialization_is_loaded__xx\") (PolyML.Compiler.valueNames ()) then";
+  p "  ()";
+  p "else";
+  p "  let val dir = OS.FileSys.getDir();";
+  p ("      val _ = OS.FileSys.chDir (OS.Path.concat (\"" ^
                  String.toString Systeml.HOLDIR ^ "\", \"tools-poly\"));");
-  p "val _ = use \"poly/poly-init2.ML\";";
-  p "val _ = OS.FileSys.chDir dir;";
+  p "       val _ = use \"poly/poly-init2.ML\";";
+  p "       val _ = OS.FileSys.chDir dir;";
+  p "  in () end;";
   p ("val _ = List.map load [" ^ 
                       String.concatWith "," 
                                         (List.map (fn f => "\"" ^ OS.Path.base f ^ "\"")

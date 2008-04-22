@@ -45,9 +45,10 @@ structure OS :> OS = struct
   structure Path = struct
     open Path;
 
-    (* PolyML's mkCanonical appears broken.  mkCanonical "/x/y/../z" gives
+    (* PolyML 5.1 mkCanonical appears broken.  mkCanonical "/x/y/../z" gives
        "/x/y/z".  Here is the Moscow ML implementation of mkCanonical and
-       things that rely on it *)
+       things that rely on it.  This bug has been reported and fixed in Poly's
+       CVS. *)
     
     fun mkCanonical p =
     let val {isAbs, vol, arcs} = fromString p 

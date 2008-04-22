@@ -140,10 +140,7 @@ local
       systeml [HOLDIR ++ "bin" ++ "unquote", file1, file2];
 in
 fun use s =
-  if OS.Path.mkCanonical (OS.Path.mkAbsolute (s, OS.FileSys.getDir())) =
-     OS.Path.mkCanonical (OS.Path.mkAbsolute ("tools-poly/poly/poly-init2.ML", Systeml.HOLDIR)) then
-    ()
-  else if has_dq s then
+  if has_dq s then
     let
       val filename = OS.FileSys.tmpName()^".hol"
     in
