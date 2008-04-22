@@ -484,7 +484,7 @@ fun clean_sigobj() =
       let val f = OS.Path.file s
           val n = lowcase (hd (String.fields (equal #".") f))
       in
-         if mem n ["systeml", "cvs", "", "readme", "preprocess"]
+         if mem n ["systeml", "cvs", "", "readme"]
           then ()
           else rem_file s
       end
