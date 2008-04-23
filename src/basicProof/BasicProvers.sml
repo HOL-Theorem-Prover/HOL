@@ -184,7 +184,7 @@ in
                            combinTheory.literal_case_FORALL_ELIM ::
                            !let_movement_thms) THENC
         SIMP_CONV (pure_ss ++ ABBREV_ss ++ UNWIND_ss) [Cong IMP_CONG'])) THEN
-  REPEAT BOSS_STRIP_TAC THEN FULL_SIMP_TAC pure_ss []
+  REPEAT BOSS_STRIP_TAC (* THEN FULL_SIMP_TAC pure_ss [] *)
 end goal
 
 fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
