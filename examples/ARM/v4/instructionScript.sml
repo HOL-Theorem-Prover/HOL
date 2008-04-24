@@ -155,7 +155,7 @@ val data_proc_encode_def = Define`
     condition_encode cond !! w2w op << 21 !! (if s then 0x100000w else 0w) !!
        w2w Rn << 16 !! w2w Rd << 12 !! addr_mode1_encode Op2`;
 
-val instruction_encode_def = Define`
+val instruction_encode_def = with_flag (priming, SOME "") Define`
   instruction_encode i =
     case i of
        B  cond offset24 -> condition_encode cond !! 0xA000000w !! w2w offset24

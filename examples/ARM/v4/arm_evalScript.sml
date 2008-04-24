@@ -499,7 +499,7 @@ val SPSR_WRITE_n2w = save_thm("SPSR_WRITE_n2w", GEN_ALL
 
 (* ------------------------------------------------------------------------- *)
 
-val decode_opcode_def = Define`
+val decode_opcode_def = with_flag (priming, SOME "") Define`
   decode_opcode i =
     case i of
        AND cond s Rd Rn Op2 -> 0w:word4
