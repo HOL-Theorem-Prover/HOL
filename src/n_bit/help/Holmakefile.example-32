@@ -1,7 +1,0 @@
-BASE_DEPS = wordFunctor.ui wordFunctorLib.ui bitsTheory.ui bitsLib.ui
-DEPS = $(patsubst %,$(protect $(SIGOBJ)/%),$(BASE_DEPS))
-EXTRA_CLEANS = word32Lib.sml
-
-word32Theory.uo word32Theory.ui word32Lib.ui word32Lib.uo: $(DEPS)
-	$(protect $(HOLDIR)/bin/mkword.exe) 32
-
