@@ -1035,56 +1035,24 @@ val num2condition = prove(
 
 (*---------------------------------------------------------------------------*)
 
-val register_decl = `register =
- r0     | r1     | r2      | r3      | r4      | r5      | r6      | r7  |
- r8     | r9     | r10     | r11     | r12     | r13     | r14     | r15 |
- r8_fiq | r9_fiq | r10_fiq | r11_fiq | r12_fiq | r13_fiq | r14_fiq |
-                                                 r13_irq | r14_irq |
-                                                 r13_svc | r14_svc |
-                                                 r13_abt | r14_abt |
-                                                 r13_und | r14_und`;
-
-val psr_decl =
-  `psr = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und`;
-
-val exceptions_decl =
-  `exceptions = reset | undefined | software | pabort
-              | dabort | address |interrupt | fast`;
-
-val mode_decl = `mode = usr | fiq | irq | svc | abt | und | sys | safe`;
-
-val condition_decl =
-  `condition = EQ | CS | MI | VS | HI | GE | GT | AL
-             | NE | CC | PL | VC | LS | LT | LE | NV`;
-
-val iclass_decl =
-  `iclass = swp | mrs | msr | data_proc | mla_mul
-          | ldr_str | ldrh_strh | ldm_stm | br | bx | swi_ex
-          | cdp_und | mcr | mrc | ldc_stc | unexec`;
-
-val n2w_w2n_rule = GEN_ALL o SIMP_RULE bool_ss [wordsTheory.n2w_w2n];
-
-val spec_word_rule16 = n2w_w2n_rule o Q.SPEC `w2n (w:word16)`;
-val spec_word_rule32 = n2w_w2n_rule o Q.SPEC `w2n (w:word32)`;
-
-val spec_word_rule12 =
-  n2w_w2n_rule o INST [`opnd2` |-> `w2n (w:word12)`] o SPEC_ALL;
-
-val mem_rule = REWRITE_RULE [GSYM mem_read_def, GSYM mem_write_def];
-val und_rule = REWRITE_RULE [EVAL ``enc (UND AL)``];
-
-fun mk_word n =
-  let val s = Int.toString n
-      val w = "type word" ^ s ^ " = wordsML.word" ^ s
-  in
-    EmitML.MLSIG w
-  end;
-
 val _ = type_pp.pp_num_types := false;
 val _ = type_pp.pp_array_types := false;
 
-val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
-  OPEN ["num", "option", "set", "fcp", "list", "rich_list", "bit", "words"]
+val _ =
+ let open EmitML
+     fun f x = [QUOTE (EmitTeX.datatype_thm_to_string x)]
+     val g = GEN_ALL o SIMP_RULE bool_ss [wordsTheory.n2w_w2n]
+     val word12_rule = g o INST [`opnd2` |-> `w2n (w:word12)`] o SPEC_ALL
+     val word16_rule = g o Q.SPEC `w2n (w:word16)`
+     val word32_rule = g o Q.SPEC `w2n (w:word32)`
+     val mem_rule = REWRITE_RULE [GSYM mem_read_def, GSYM mem_write_def]
+     val und_rule = REWRITE_RULE [EVAL ``enc (UND AL)``]
+     fun mk_word n = let val s = Int.toString n in
+                       EmitML.MLSIG ("type word" ^ s ^ " = wordsML.word" ^ s)
+                     end
+ in
+   emitML (!Globals.emitMLDir) ("arm",
+    OPEN ["num", "option", "set", "fcp", "list", "rich_list", "bit", "words"]
     :: MLSIG "type 'a itself = 'a fcpML.itself"
     :: MLSIG "type 'a word = 'a wordsML.word"
     :: MLSIG "type ('a,'b) cart = ('a,'b) fcpML.cart"
@@ -1092,45 +1060,23 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
     :: MLSIG "type 'a bit0 = 'a fcpML.bit0"
     :: MLSIG "type 'a bit1 = 'a fcpML.bit1"
     :: MLSIG "type num = numML.num"
-    :: EQDATATYPE ([], iclass_decl)
-    :: map (fn decl => DATATYPE decl)
-         [register_decl, psr_decl, mode_decl, condition_decl, exceptions_decl]
-     @ map mk_word [2,3,4,5,8,12,16,24,30,32]
-     @ MLSTRUCT "type registers = register->word32"
+    :: map mk_word [2,3,4,5,8,12,16,24,30,32]
+     @ map (DATATYPE o f) [datatype_register, datatype_psr]
+     @ EQDATATYPE ([], f datatype_iclass)
+    :: MLSTRUCT "type registers = register->word32"
     :: MLSTRUCT "type psrs = psr->word32"
     :: MLSTRUCT "type mem = word30->word32"
     :: MLSIG "type registers = register->word32"
     :: MLSIG "type psrs = psr->word32"
     :: MLSIG "type mem = word30->word32"
-    :: DATATYPE (`regs = <| reg : registers; psr : psrs |>`)
-    :: DATATYPE (`arm_state = <| regs : regs; exception : exceptions |>`)
-    :: DATATYPE (`formats = SignedByte | UnsignedByte
-                          | SignedHalfWord | UnsignedHalfWord
-                          | UnsignedWord`)
-    :: DATATYPE (`data = Byte of word8 | Half of word16 | Word of word32`)
-    :: DATATYPE (`memop = MemRead of word32 | MemWrite of word32=>data`)
-    :: DATATYPE (`transfers = MemAccess of (num->word32 list->memop list)
-                            | CPWrite of word32`)
-    :: DATATYPE
-         (`arm_output = <| transfers : transfers; cpi : bool; user : bool |>`)
-    :: DATATYPE
-         (`interrupts = <| Reset : regs option; Prefetch : bool;
-                           Dabort : num option; Fiq : bool; Irq : bool |>`)
-    :: DATATYPE (`arm_input = <| data : word32 list; interrupts : interrupts;
-                                 absent : bool |>`)
-    :: DATATYPE (`mem_output = <| data : word32 list; abort : bool |>`)
-    :: DATATYPE (`cp_input = <| is_usr : bool; cpi : bool; ireg : word32 |>`)
-    :: DATATYPE
-         (`cp_output = <| n_ldc : num; data : word32 list; absent : bool |>`)
-    :: DATATYPE (`coproc =
-           <| absent : bool -> word32 -> bool;
-              f_cdp  : 'a -> bool -> word32 -> 'a;
-              f_mrc  : 'a -> bool -> word32 -> word32;
-              f_mcr  : 'a -> bool -> word32 -> word32 -> 'a;
-              f_stc  : 'a -> bool -> word32 -> word32 list;
-              f_ldc  : 'a -> bool -> word32 -> word32 list -> 'a;
-              n_ldc  : 'a -> bool -> word32 -> num |>`)
-    :: map (DEFN o wordsLib.WORDS_EMIT_RULE) (map spec_word_rule32
+    :: map (DATATYPE o f)
+         [datatype_mode, datatype_condition, datatype_exceptions,
+          datatype_regs, datatype_arm_state, datatype_formats,
+          datatype_data, datatype_memop, datatype_transfers,
+          datatype_arm_output, datatype_interrupts, datatype_arm_input,
+          datatype_mem_output, theorem "datatype_cp_input",
+          theorem "datatype_cp_output", theorem "datatype_coproc"]
+    @ map (DEFN o wordsLib.WORDS_EMIT_RULE) (map word32_rule
          [DECODE_PSR_THM, DECODE_BRANCH_THM, DECODE_DATAP_THM,
           DECODE_MRS_THM, DECODE_MSR_THM, DECODE_LDR_STR_THM,
            DECODE_MLA_MUL_THM, DECODE_LDM_STM_THM, DECODE_SWP_THM,
@@ -1152,14 +1098,14 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
           SPECL [`r`,`t`,`e`] EXCEPTION_def, BRANCH_def, BRANCH_EXCHANGE_def,
           LSL_def, LSR_def, ASR_def, ROR_def,
           IMMEDIATE_def, SHIFT_IMMEDIATE2_def,
-          SHIFT_REGISTER2_def, spec_word_rule12 SHIFT_IMMEDIATE_THM,
-          spec_word_rule12 SHIFT_REGISTER_THM, ADDR_MODE1_def,
+          SHIFT_REGISTER2_def, word12_rule SHIFT_IMMEDIATE_THM,
+          word12_rule SHIFT_REGISTER_THM, ADDR_MODE1_def,
           SPEC `f` ALU_arith_def, ALU_logic_def,
           ADD_def, SUB_def, AND_def, EOR_def, ORR_def,
           ALU_def, ARITHMETIC_def, TEST_OR_COMP_def, DATA_PROCESSING_def,
           MRS_def, MSR_def, ALU_multiply_def, MLA_MUL_def,
           UP_DOWN_def, ADDR_MODE2_def, IMP_DISJ_THM, LDR_STR_def,
-          ADDR_MODE3_def, LDRH_STRH_def,spec_word_rule16 REGISTER_LIST_THM,
+          ADDR_MODE3_def, LDRH_STRH_def, word16_rule REGISTER_LIST_THM,
           ADDRESS_LIST_def, WB_ADDRESS_def, FIRST_ADDRESS_def,
           ADDR_MODE4_def, LDM_LIST_def, STM_LIST_def, STM_DATA_def, LDM_STM_def,
           SWP_def, MRC_def, MCR_def, ADDR_MODE5_def, LDC_STC_def,
