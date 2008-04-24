@@ -9,7 +9,7 @@ struct
 open boolTheory boolSyntax Hol_pp
      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev DB;
 
-local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax EmitML in end
+local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
 val parse_from_grammars = Parse.parse_from_grammars;
 

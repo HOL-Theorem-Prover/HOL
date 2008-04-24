@@ -24,6 +24,10 @@ val keepers =
      "Rewrite.sig", "Rsyntax.sig", "Psyntax.sig",
      "TypeBase.sig", "TypeBasePure.sig", "DefnBase.sig", "Prim_rec.sig",
 
+     (* emit *)
+
+     "EmitML.sig",  "EmitTeX.sig",
+
      (* jrh ind_defs *)
      "IndDefLib.sig", "InductiveDefinition.sig", "IndDefRules.sig",
 
