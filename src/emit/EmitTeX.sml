@@ -7,7 +7,7 @@ open HolKernel boolLib;
 (* fix brackets for "i-t-e" and "let" *)
 
 (* ------------------------------------------------------------------------- *)
-(* datatype_theorems : string -> thm list                                        *)
+(* datatype_theorems : string -> (string * thm) list                         *)
 (*   Get a list of datatype theorems in the names theory.                    *)
 (*   These have the form |- DATATYPE x                                       *)
 (*                                                                           *)
@@ -602,13 +602,8 @@ fun pp_theories_as_tex ostrm names =
 
 local
  fun tex_suffix s =
-  let val ss = size s in
-    if ss = 0 then
-      failwith "Filename is the empty string."
-    else if ss < 4 orelse not (String.extract(s, ss - 4, NONE) = ".tex") then
-      s ^ ".tex"
-    else
-      s
+  let val {base, ext} = Path.splitBaseExt s in
+    if ext = SOME "tex" then s else s ^ ".tex"
   end;
 in
   fun print_theories_as_tex names path =
