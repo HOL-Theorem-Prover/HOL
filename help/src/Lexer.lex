@@ -167,14 +167,14 @@ fun splitQualId s =
   let open CharVector
       val len' = size s - 1
       fun parse n =
-        if n >= len' then
+        if n = 0 then
           ("", s)
         else if sub(s, n) = #"." then
           ( extract(s, 0, SOME n),
             extract(s, n + 1, SOME(len' - n)) )
         else
-          parse (n+1)
-  in parse 0 end;
+          parse (n-1)
+  in parse len' end;
 
 fun mkQualId lexbuf =
   let val (qual, id) = splitQualId(getLexeme lexbuf) in
@@ -343,10 +343,10 @@ and TokenId = parse
   | ( [`A`-`Z` `a`-`z`] [ `A`-`Z` `a`-`z` `0`-`9` `_` `'`]*
     | [`!` `%` `&` `$` `#` `+` `-` `/` `:` `<` `=` `>` `?` `@` `\\`
        `~` `\`` `^` `|` `*`]+ )
-    "."
+    ("."
     ( [`A`-`Z` `a`-`z`] [ `A`-`Z` `a`-`z` `0`-`9` `_` `'`]*
     | [`!` `%` `&` `$` `#` `+` `-` `/` `:` `<` `=` `>` `?` `@` `\\`
-       `~` `\`` `^` `|` `*`]+ )
+       `~` `\`` `^` `|` `*`]+ ))+
       { mkQualId lexbuf }
   | _
       { lexError "ill-formed token" lexbuf }
