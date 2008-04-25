@@ -32,6 +32,16 @@ fun index_type n =
         mk_type("bit1", [index_type (div2 (less1 n))])
   end;
 
+fun index_to_num typ =
+  let val pp_n = !type_pp.pp_num_types
+      val _ = type_pp.pp_num_types := true
+      fun skip1 s = String.extract(s, 1, NONE)
+  in
+    (if fst (dest_type typ) = "one" then Arbnum.one
+      else (Arbnum.fromString o skip1 o Hol_pp.type_to_string) typ) before
+     type_pp.pp_num_types := pp_n
+  end;
+
 fun index_compset () =
   let val compset = reduceLib.num_compset()
       val rule = REWRITE_RULE [arithmeticTheory.TIMES2, GSYM numeralTheory.iDUB]

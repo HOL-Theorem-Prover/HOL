@@ -41,16 +41,17 @@ sig
 
     val mk_word_size      : int -> unit
 
-    val pp_word           : (hol_type -> StringCvt.radix) -> unit
-    val pp_word_bin       : unit -> unit
-    val pp_word_oct       : unit -> unit
-    val pp_word_hex       : unit -> unit
-    val pp_word_dec       : unit -> term_pp_types.userprinter option
-
     val prefer_word       : unit -> unit
     val deprecate_word    : unit -> unit
+
+    val output_words_as     : (int * Arbnum.num -> StringCvt.radix) -> unit
+    val output_words_as_bin : unit -> unit
+    val output_words_as_oct : unit -> unit
+    val output_words_as_hex : unit -> unit
+    val output_words_as_dec : unit -> unit
 
     val notify_word_length_guesses : bool ref
     val guess_word_lengths         : term -> term
     val guess_lengths              : unit -> unit
+    val dont_guess_lengths         : unit -> unit
 end

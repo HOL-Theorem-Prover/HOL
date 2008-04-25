@@ -1042,31 +1042,45 @@ val Induct_word =
 
 (* ------------------------------------------------------------------------- *)
 
-fun print_word base_map sys gravs d pps t = let
+fun print_word f sys gravs d pps t = let
    open Portable term_pp_types
    val (n,x) = dest_n2w t
-   val m = numSyntax.dest_numeral n
+   val m = fcpLib.index_to_num x handle HOL_ERR _ => Arbnum.zero
+   val v = numSyntax.dest_numeral n
 in
   add_string pps
-   ((case base_map x of
-       StringCvt.DEC => Arbnum.toString m
-     | StringCvt.BIN => "0b"^(Arbnum.toBinString m)
-     | StringCvt.OCT => "0" ^(Arbnum.toOctString m)
-     | StringCvt.HEX => "0x"^(Arbnum.toHexString m)) ^ "w")
+   ((case f (Arbnum.toInt m, v) of
+       StringCvt.DEC => Arbnum.toString v
+     | StringCvt.BIN => "0b"^(Arbnum.toBinString v)
+     | StringCvt.OCT => if !base_tokens.allow_octal_input orelse
+                           Arbnum.<(v, Arbnum.fromInt 8)
+                        then
+                          "0" ^(Arbnum.toOctString v)
+                        else
+                          (Feedback.HOL_MESG "Octal output is only supported \
+                             \when base_tokens.allow_octal_input is true.";
+                           Arbnum.toString v)
+     | StringCvt.HEX => "0x"^(Arbnum.toHexString v)) ^ "w")
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-fun pp_word base_map = Parse.temp_add_user_printer
-  ({Tyop = "cart", Thy = "fcp"}, print_word base_map);
+fun output_words_as f = Parse.temp_add_user_printer
+  ({Tyop = "cart", Thy = "fcp"}, print_word f);
 
-fun pp_word_bin() = pp_word (fn x => StringCvt.BIN);
-fun pp_word_oct() = pp_word (fn x => StringCvt.OCT);
-fun pp_word_hex() = pp_word (fn x => StringCvt.HEX);
+fun output_words_as_bin() = output_words_as (K StringCvt.BIN);
+fun output_words_as_hex() = output_words_as (K StringCvt.HEX);
 
-fun pp_word_dec() = Parse.remove_user_printer {Tyop="cart", Thy="fcp"};
+fun output_words_as_oct() =
+  (base_tokens.allow_octal_input := true; output_words_as (K StringCvt.OCT));
 
-(* Example:
-val _ = pp_word (fn x => if Type.compare(x,``:i32``) = EQUAL then
-                           StringCvt.HEX else StringCvt.DEC);       *)
+fun output_words_as_dec() =
+  (Parse.remove_user_printer {Tyop="cart", Thy="fcp"}; ());
+
+val _ = output_words_as
+   (fn (l, v) =>
+       if Arbnum.<=(Arbnum.fromHexString "10000", v) then 
+         StringCvt.HEX
+       else
+         StringCvt.DEC);
 
 (* ------------------------------------------------------------------------- *)
 (* Guessing the word length for the result of extraction (><) and            *)
@@ -1074,16 +1088,6 @@ val _ = pp_word (fn x => if Type.compare(x,``:i32``) = EQUAL then
 (* ------------------------------------------------------------------------- *)
 
 val extract_tm = ``(a >< b) :'a word -> 'b word``;
-
-fun type_to_name t = String.extract(Hol_pp.type_to_string t, 1, NONE);
-
-fun numeric_type_to_num t =
-let val pp_n = !type_pp.pp_num_types
-    val _ = type_pp.pp_num_types := true
-in
-  Arbnum.fromString (type_to_name t) before
-  type_pp.pp_num_types := pp_n
-end;
 
 datatype WordOp =
    word_concat of hol_type * hol_type * hol_type
@@ -1149,11 +1153,11 @@ local
        (let val na = if Type.is_vartype a then
                        find(vmap, a)
                      else
-                       numeric_type_to_num a
+                       fcpLib.index_to_num a
             val nb = if Type.is_vartype b then
                        find(vmap, b)
                      else
-                     numeric_type_to_num b
+                       fcpLib.index_to_num b
             val n = Arbnum.+(na, nb)
         in
           case peek(vmap, ty) of
@@ -1183,8 +1187,10 @@ in
   fun comma_separate l = comma_separate_acc l ""
 end;
 
+fun type_name t = String.extract(Hol_pp.type_to_string t, 1, NONE);
+
 fun guess_to_string {redex = a, residue = b} =
-  type_to_name a ^ " <- " ^ type_to_name b;
+  type_name a ^ " <- " ^ type_name b;
 
 fun print_guesses l = Feedback.HOL_MESG
   ("assigning word length(s): " ^ comma_separate (map guess_to_string l));
@@ -1202,8 +1208,12 @@ in
   inst assigns t
 end
 
+val save_post_process_term = !Parse.post_process_term;
+
 fun guess_lengths () = Parse.post_process_term :=
   (guess_word_lengths o fcpLib.guess_fcp_lengths o !Parse.post_process_term);
+
+fun dont_guess_lengths () = Parse.post_process_term := save_post_process_term;
 
 val operators = [("+", ``($+ :bool['a] -> bool['a] -> bool['a])``),
                  ("-", ``($- :bool['a] -> bool['a] -> bool['a])``),
