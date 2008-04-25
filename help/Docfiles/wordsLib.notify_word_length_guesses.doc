@@ -1,0 +1,34 @@
+\DOC 
+
+\TYPE {notify_word_length_guesses : bool ref}
+
+\SYNOPSIS
+
+Controls notification of word length guesses.
+
+\DESCRIBE
+
+When the reference {notify_word_length_guesses} is true a HOL message is printed (in interactive sessions) when the function {guess_word_lengths} instantiates types in a term.
+
+\EXAMPLE
+{
+- load "wordsLib";
+...
+- wordsLib.notify_word_length_guesses := false;
+> val it = () : unit
+- wordsLib.guess_word_lengths ``(7 >< 5) a @@ (4 >< 0) a``;
+<<HOL message: inventing new type variable names: 'a, 'b, 'c, 'd>>
+> val it = ``(7 >< 5) a @@ (4 >< 0) a`` : term
+- type_of it;
+> val it = ``:bool[8]`` : hol_type
+}
+
+\COMMENTS
+
+By default {notify_word_length_guesses} is true.
+
+\SEEALSO
+
+wordsLib.dont_guess_lengths, wordsLib.guess_lengths, wordsLib.guess_word_lengths
+
+\ENDDOC
