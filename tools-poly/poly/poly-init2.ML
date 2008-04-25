@@ -94,10 +94,9 @@ let val i = TextIO.openIn uo;
     fun loadOne f =
       ((*print (modName ^ "\n");*)
        case OS.Path.ext f of
-         NONE => load f
-       | SOME "sml" => myuse f
+         SOME "sml" => myuse f
        | SOME "sig" => myuse f
-       | _ => raise (Fail ("Unknown file extension in " ^ f)));
+       | _ => load f);
 in
   List.app loadOne files
 end
@@ -105,7 +104,7 @@ and load modPath =
 let val modName = OS.Path.file modPath;
     fun l ext =
       case findUo (modPath ^ ext) ("."::(!loadPath)) of
-        NONE => raise (Fail ("Unknown module " ^ modPath ^ ext))
+        NONE => raise (Fail ("Cannot find file " ^ modPath ^ ext))
       | SOME uo => loadUo uo modName;
 in
   if Binaryset.member (!loadedMods, modName) then

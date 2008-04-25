@@ -7,13 +7,13 @@ To build HOL with PolyML:
 This is currently experimental, and probably fragile.  The help system doesn't
 work; also ctrl-c may not work reliably.
 
-According to the build log on my machine Moscow ML takes 1670s of proof and
+According to the build log on my machine, Moscow ML takes 1670s of proof and
 Poly takes 262s.  Total time to build the system is 50m on Moscow and 23m on
 Poly.
 
 Porting notes:
 
-For src/metic/mlibOmegaint.sml I defined hash:IntInf.int->int to be the
+For src/metis/mlibOmegaint.sml I defined hash:IntInf.int->int to be the
 identity function, which works only because Poly's native integers are
 arbitrary precision.  I used a similar trick for src/integer/OmegaMLShadow.sml,
 and additionally hashed a Vector of ints in a particularly naive way.
@@ -21,3 +21,21 @@ and additionally hashed a Vector of ints in a particularly naive way.
 The executables in bin are huge.
 
 The build script always rebuilds the executables.
+
+"loadPath" doesn't affect "use".
+
+"quietdec" doesn't work (use "PolyML.print_depth" instead).
+
+Documentation building doesn't work.  The lexer and parser need porting from
+mosmllex and mosmlyacc to mllex and mlyacc.
+
+Local installations of Poly/ML seem to need LD_LIBRARY_PATH set for executables
+to work (on Linux, not on Mac).
+
+ctrl-c requires a second input to break a loop. 
+
+Pretty printing looks a little rough around the edges in some cases.
+
+We're recording information in .uo and .ui files to minimize changes to
+Holmake, but it would be nice to have only .uo files (and use a different
+suffix).
