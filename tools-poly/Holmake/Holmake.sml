@@ -722,12 +722,22 @@ fun extra_rule_for t = Binarymap.peek(extra_rules, t)
 infix in_target
 fun (s in_target t) = case extra_deps t of NONE => false | SOME l => member s l
 
-fun addPath file = 
-  OS.Path.mkAbsolute {path = file, relativeTo=OS.FileSys.getDir()}
+fun addPath I file = 
+  if OS.Path.isAbsolute file then
+    file
+  else
+    let val p = List.find (fn p => 
+                            OS.FileSys.access (OS.Path.concat (p, file ^ ".ui"), []))
+                          (OS.FileSys.getDir() :: I)
+    in
+      case p of
+           NONE => OS.Path.concat (OS.FileSys.getDir(), file)
+         | SOME p => OS.Path.concat (p, file)
+    end;
 
-fun poly_compile file deps =
+fun poly_compile file I deps =
 let val modName = fromFileNoSuf file
-    val depMods = List.map (addPath o fromFileNoSuf) deps
+    val depMods = List.map (addPath I o fromFileNoSuf) deps
 in
 case file of
   SIG _ =>   
@@ -735,7 +745,7 @@ case file of
      in
        TextIO.output (outUi, String.concatWith "\n" depMods);
        TextIO.output (outUi, "\n");
-       TextIO.output (outUi, addPath (fromFile file) ^ "\n");
+       TextIO.output (outUi, addPath [] (fromFile file) ^ "\n");
        TextIO.closeOut outUi;
        OS.Process.success
      end
@@ -745,7 +755,7 @@ case file of
      in
        TextIO.output (outUo, String.concatWith "\n" depMods);
        TextIO.output (outUo, "\n");
-       TextIO.output (outUo, addPath (fromFile file) ^ "\n");
+       TextIO.output (outUo, addPath [] (fromFile file) ^ "\n");
        TextIO.closeOut outUo;
        (if OS.FileSys.access (modName ^ ".sig", []) then
           ()
@@ -781,7 +791,7 @@ in
      ());
   p ("val _ = List.map load [" ^ 
                       String.concatWith "," 
-                                        (List.map (fn f => "\"" ^ OS.Path.base f ^ "\"")
+                                        (List.map (fn f => "\"" ^ f ^ "\"")
                                                   files) ^
                       "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); OS.Process.exit OS.Process.failure);");
   p "__end-of-file__";
@@ -791,49 +801,50 @@ end
 handle IO.Io _ => OS.Process.failure
 
 
-fun command_to_file c =
-let val toks = String.tokens (fn c => c = #" ") c
-    fun isSource t = OS.Path.ext t = SOME "sig" orelse
-                     OS.Path.ext t = SOME "sml"
-in
-  List.find isSource (List.rev toks)
-end
+datatype cmd_line = Mosml_compile of string list * string
+                  | Mosml_link of string * string list
+                  | Mosml_error
 
-fun link_command_to_file c =
-let val toks = String.tokens (fn c => c = #" ") c
+fun process_mosml_args c =
+let fun isSource t = OS.Path.ext t = SOME "sig" orelse
+                     OS.Path.ext t = SOME "sml";
+    fun isObj t = OS.Path.ext t = SOME "uo" orelse
+                  OS.Path.ext t = SOME "ui";
+    val toks = String.tokens (fn c => c = #" ") c
     val c = ref false
     val q = ref false
     val toplevel = ref false
     val obj = ref NONE
     val I = ref []
-    val files = ref []
+    val obj_files = ref []
+    val src_file = ref NONE;
     fun process_args [] = ()
       | process_args ("-c"::rest) =
-          (c := true;
-           process_args rest)
+          (c := true; process_args rest)
       | process_args ("-q"::rest) =
-          (q := true;
-           process_args rest)
+          (q := true; process_args rest)
       | process_args ("-toplevel"::rest) =
-          (toplevel := true;
-           process_args rest)
+          (toplevel := true; process_args rest)
       | process_args ("-o"::arg::rest) =
-          (obj := SOME arg;
-           process_args rest)
+          (obj := SOME arg; process_args rest)
       | process_args ("-I"::arg::rest) =
-          (I := arg::(!I);
-           process_args rest)
+          (I := arg::(!I); process_args rest)
       | process_args (file::rest) =
-          (files := file::(!files);
-           process_args rest)
+          ((if isSource file then
+              src_file := SOME file
+            else if isObj file then
+              obj_files := (OS.Path.base file)::(!obj_files)
+            else
+              ());
+           process_args rest);
 in
   process_args toks;
-  case (!obj, !files) of
-    (NONE, _) => NONE
-  | (_, []) => NONE
-  | (SOME obj, files) => SOME (obj, List.rev files)
+  ((case (!c, !src_file, !obj_files, !obj) of
+         (true, SOME f, ofs, NONE) => Mosml_compile (List.rev ofs, f)
+       | (false, NONE, ofs, SOME f) => Mosml_link (f, List.rev ofs)
+       | _ => Mosml_error),
+   List.rev (!I))
 end;
-
 
 fun run_extra_command tgt c deps = let
   open Holmake_types
@@ -847,20 +858,13 @@ fun run_extra_command tgt c deps = let
   val isMosmlc =
     String.isPrefix "MOSMLC" c orelse
     String.isPrefix (perform_substitution hmakefile_env [VREF "MOSMLC"]) c
-  val isCompile =
-    isHolmosmlcc orelse 
-    ((isHolmosmlc orelse isMosmlc) andalso
-     List.exists (fn x => x = "-c") (String.tokens (fn c => c = #" ") c))
-  val isLink = (not isCompile) andalso (isHolmosmlc orelse isMosmlc)
 in
-  if isCompile then
-    case command_to_file c of
-      SOME f =>  poly_compile (toFile f) deps
-    | NONE => OS.Process.failure
-  else if isLink then
-    case link_command_to_file c of
-      SOME (f, deps) =>  poly_link f deps
-    | NONE => OS.Process.failure
+  if isHolmosmlcc orelse isHolmosmlc orelse isMosmlc then
+    case process_mosml_args (if isHolmosmlcc then " -c " ^ c else c) of
+         (Mosml_compile (objs, src), I) =>
+           poly_compile (toFile src) I (deps@(List.map toFile objs))
+       | (Mosml_link (result, objs), I) => poly_link result objs
+       | (Mosml_error, _) => OS.Process.failure
   else
     let
       fun vref_ify cmd s =
@@ -1130,6 +1134,7 @@ val failed_script_cache = ref (Binaryset.empty String.compare)
 fun build_command c arg = let
   val include_flags = hmake_preincludes @ std_include_flags @
                       additional_includes
+  val include_flags = List.filter (fn x => not (x = "-I")) include_flags
  (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
   val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
   exception CompileFailed
@@ -1161,7 +1166,7 @@ in
                                print ("Unquoting "^file^
                                       " raised exception\n");
                                raise CompileFailed)
-               then let val res = poly_compile arg deps
+               then let val res = poly_compile arg include_flags deps
                     in
                       revert();
                       res
@@ -1172,7 +1177,7 @@ in
                            print("Unable to compile: "^file^"\n");
                            raise CompileFailed)
             end
-          else poly_compile arg deps
+          else poly_compile arg include_flags deps
      in
         isSuccess res 
      end
@@ -1203,7 +1208,7 @@ in
         else if interactive_flag then "holmake_interactive.uo" :: objectfiles0
         else "holmake_not_interactive.uo" :: objectfiles0
     in
-      if isSuccess (poly_link script objectfiles)
+      if isSuccess (poly_link script (List.map OS.Path.base objectfiles))
       then let
         val script' = Systeml.mk_xable script
         val thysmlfile = s^"Theory.sml"
