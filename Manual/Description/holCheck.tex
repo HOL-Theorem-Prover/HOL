@@ -1,3 +1,25 @@
+\documentclass[12pt]{article}
+
+\usepackage{charter}
+\usepackage{latexsym}
+%\usepackage{amsmath}                                                                                                                                      
+\usepackage{amssymb}
+%\usepackage{amsbsy}                                                                                                                                      
+%\usepackage{amsthm}                                                                                                                                        
+\usepackage{makeidx}
+\usepackage{fleqn}
+\usepackage{alltt}
+\usepackage{../LaTeX/layout}
+\usepackage{graphicx}
+%\usepackage{pst-node}                                                                                                                                     
+\usepackage{epsfig}
+\usepackage{url}
+
+% ---------------------------------------------------------------------                                                                                     
+% Input defined macros and commands                                                                                                                         
+% ---------------------------------------------------------------------                                                                                     
+\input{../LaTeX/commands}
+
 \newcommand{\tsu}[1]{\textsf{\textup{#1}}}
 \newcommand{\semb}[1]{\ensuremath{[\![#1]\!]}}
 \newcommand{\rvset}{\ensuremath{V\!\!AR}}
@@ -9,6 +31,11 @@
 \newcommand{\hor}{\texttt{\char'134/}}
 \newcommand{\hnot}{\texttt{\~{}}}
 \setcounter{sessioncount}{0}
+\makeindex
+\title{HolCheck}
+\date{}
+\begin{document}
+\maketitle
 \index{holCheckLib|(}\index{model checking|see {holCheckLib}}
 This is a brief description of the \hc{}\index{holCheckLib!\hc{}} model checker, version 1.0. It assumes the reader is familiar with symbolic model checking, with \HOL{}, and, ideally, with \texttt{HolBddLib}, the \HOL{} interface to BDDs. It should be read with a working \HOL{} installation at hand.
 
@@ -550,6 +577,10 @@ A failure to discharge all assumptions means a completeness bug in the \hc{} pro
 For the moment, \hc{} does not support persistence for models. The theorems produced can however be saved to permanent storage as \HOL{} theorems.
 
 \index{holCheckLib|)}
+
+\printindex
+
+\end{document}
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "description"

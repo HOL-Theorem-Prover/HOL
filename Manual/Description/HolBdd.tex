@@ -1,15 +1,29 @@
-%\documentclass[12pt]{article}
+\documentclass[12pt]{book}
 
-%\usepackage{alltt}
-%\usepackage{epsfig}
-%\usepackage{pstricks}
-%\usepackage{makeidx}
-%\usepackage{url}
-%\usepackage{index}
-%\usepackage{multind}
-%\usepackage{fancyvrb}
+\usepackage{alltt}
+\usepackage{epsfig}
+\usepackage{pstricks}
+\usepackage{makeidx}
+\usepackage{url}
+\usepackage{index}
+\usepackage{multind}
+\usepackage{fancyvrb}
+\usepackage{charter}
+\usepackage{latexsym}
+%\usepackage{amsmath}                                                                                                                                       
+\usepackage{amssymb}
+%\usepackage{amsbsy}                                                                                                                                        
+%\usepackage{amsthm}                                                                                                                                        
+\usepackage{makeidx}
+\usepackage{fleqn}
+\usepackage{alltt}
+\usepackage{../LaTeX/layout}
+\usepackage{graphicx}
+%\usepackage{pst-node}                                                                                                                                      
+\usepackage{epsfig}
+\usepackage{url}
 
-%\makeindex
+\makeindex
 
 \newcommand{\hbc}[2]{
 \begin{minipage}{\minipagewidth}
@@ -68,11 +82,13 @@
 %\parindent 0mm
 %\parskip 1mm
 
-%\input{../LaTeX/commands}
+\input{../LaTeX/commands}
 
-%\setcounter{sessioncount}{0}
-
-%\begin{document}
+\setcounter{sessioncount}{0}
+%\title{HolBddLib}
+%\date{}
+\begin{document}
+\chapter{HolBddLib}
 \index{HolBddLib|(}
 
 This section describes {\tt HolBddLib}, a \HOL{} interface to an external BDD engine.\index{binary decision diagrams|see {HolBddLib}}\index{BDDs|see {HolBddLib}}
@@ -82,8 +98,7 @@ This section describes {\tt HolBddLib}, a \HOL{} interface to an external BDD en
 The development of {\tt HolBddLib} has gone through two phases.  The
 first phase consisted in experiments with different ways of linking
 higher order logic (HOL) terms to binary decision diagrams (BDDs).
-These are described in the paper {\it Reachability programming in
-HOL98 using BDDs\/} \cite{tphols2000-Gordon}. The first release of
+These are described in the paper {\it Reachability programming in HOL98 using BDDs\/} \cite{tphols2000-Gordon}. The first release of
 \t{HolBddLib}, now called Version~1, consisted of an ad hoc collection
 of tools developed for these experiments.  One of the approaches we
 experimented with was based on a protected type of `BDD representation
@@ -675,8 +690,7 @@ on large BDDs (since it involves copying the argument BDD from
 provided by \Muddy{} invokes \Buddy's \t{nodecount} function directly
 and so is space-efficient.
 
-The number of assignments {\it to all variables in use in the current
-session\/} that satisfy a BDD (i.e.~make it true) is given by the ML
+The number of assignments {\it to all variables in use in the current session\/} that satisfy a BDD (i.e.~make it true) is given by the ML
 function
 
 \begin{verbatim}
@@ -833,7 +847,7 @@ the following Postscript diagram of a BDD
 See the \Buddy{} documentation \cite{BuDDy} for further details. The dynamic reordering
 types and functions provided in ML via \Muddy{} are in the structure \t{bdd} and are
 
-{\footnotesize\begin{verbatim}
+\begin{verbatim}
     eqtype fixed
     FIXED            : fixed
     FREE             : fixed
@@ -861,7 +875,7 @@ types and functions provided in ML via \Muddy{} are in the structure \t{bdd} and
 
     varToLevel       : varnum -> int
     varAtLevel       : int -> varnum
-\end{verbatim}}
+\end{verbatim}
 
 \subsubsection{The \Muddy{} structure \t{fdd}}\label{fdd}\index{HolBddLib!finite domains}
 
@@ -876,7 +890,7 @@ $v_0=0$, $v_1=0$, $v_2=1$ and $v_3=1$.
 See the \Buddy{} documentation \cite{BuDDy} for further details. See the ML structure \t{fdd}
 for the \Buddy{} facilities provides in ML via \Muddy:
 
-{\footnotesize\begin{verbatim}
+\begin{verbatim}
    type fddvar
 
    extDomain  : int list -> fddvar list
@@ -888,7 +902,7 @@ for the \Buddy{} facilities provides in ML via \Muddy:
    ithSet     : fddvar -> bdd.varSet
    domain     : fddvar -> bdd.bdd
    setPairs   : (fddvar * fddvar) list -> bdd.pairSet
-\end{verbatim}}
+\end{verbatim}
 
 \subsubsection{The \Muddy{} structure \t{bvec}}\label{bvec}\index{HolBddLib!BDD!vectors}
 
@@ -898,7 +912,7 @@ of BDDs, where each BDD represents one bit of an expression.
 See the \Buddy{} documentation \cite{BuDDy} for further details. See the ML structure \t{bvec}
 for the \Buddy{} facilities provides in ML via \Muddy{}.
 
-{\footnotesize
+
 \begin{verbatim}
    type bvec
 
@@ -936,7 +950,7 @@ for the \Buddy{} facilities provides in ML via \Muddy{}.
    gte         : bvec * bvec -> bdd.bdd
    equ         : bvec * bvec -> bdd.bdd
    neq         : bvec * bvec -> bdd.bdd
-\end{verbatim}}
+\end{verbatim}
 
 \subsubsection{Storage allocation and garbage collection}\index{HolBddLib!BDD!garbage collection}
 \label{sec:technical-details}
@@ -1126,7 +1140,7 @@ The constructor \t{TermBdd} is not exported, so the only way to construct
 values of type \termbddty is using the following inference rules
 (which are described in more detail in the rest of this section).
 
-{\footnotesize\baselineskip 10pt\begin{verbatim}
+\begin{verbatim}
    BddExtendVarmap           : varmap->term_bdd->term_bdd
    BddFreevarsContractVarmap : term->term_bdd->term_bdd
    BddSupportContractVarmap  : term->term_bdd->term_bdd
@@ -1146,7 +1160,7 @@ values of type \termbddty is using the following inference rules
    BddEqMp                   : thm->term_bdd->term_bdd
    BddSimplify               : term_bdd*term_bdd->term_bdd
    BddFindModel              : term_bdd->term_bdd
-\end{verbatim}}
+\end{verbatim}
 
 Destructor functions \t{dest\_term\_bdd}, \t{getAssums}, \t{getVarmap}, \t{getTerm}
 and \t{getBdd} for values of type \termbddty are described in Section~\ref{misc}
@@ -2292,8 +2306,9 @@ is (somewhat arbitarily) taken to be (tb0,tb0). }
 \fbox{\usebox{\MakeSimpRecThm}}\index{HolBddLib!ML bindings!{MakeSimpRecThm}@\ml{MakeSimpRecThm}}
 
 \index{HolBddLib|)}
-%\bibliographystyle{plain} \bibliography{HolBdd} 
+\bibliographystyle{plain} 
+\bibliography{description} 
 
 %\printindex
 
-%\end{document}
+\end{document}

@@ -14,7 +14,7 @@ CHAPTERS = conv.tex drules.tex libraries.tex misc.tex \
 default: all
 
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind description.{ps,pdf} *.bbl *.blg
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind description.{ps,pdf} *.bbl *.blg HolBdd.{ps,pdf} holCheck.{ps,pdf}
 
 description.dvi: description.tex $(CHAPTERS) ../LaTeX/commands.tex
 #	(cd ../Logo ; make)  # makes the lantern logo
@@ -31,4 +31,24 @@ description.ps: description.dvi
 description.pdf: description.ps
 	ps2pdf description.ps
 
-all: description.ps description.pdf
+HolBdd.ps: 
+	latex HolBdd.tex
+	${BIBTEX} HolBdd
+	latex HolBdd.tex
+	latex HolBdd.tex
+	dvips -Ppdf -G0 -f HolBdd.dvi > HolBdd.ps.tmp
+	mv HolBdd.ps.tmp $@
+
+HolBdd.pdf: HolBdd.ps
+	ps2pdf HolBdd.ps
+
+holCheck.ps: 
+	latex holCheck.tex
+	latex holCheck.tex
+	dvips -Ppdf -G0 -f holCheck.dvi > holCheck.ps.tmp
+	mv holCheck.ps.tmp $@
+
+holCheck.pdf: holCheck.ps
+	ps2pdf holCheck.ps
+
+all: description.ps description.pdf HolBdd.pdf holCheck.pdf
