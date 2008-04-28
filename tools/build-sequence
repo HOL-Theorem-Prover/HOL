@@ -92,7 +92,7 @@ src/prob
 !examples/muddy/muddyC
 !examples/muddy
 !examples/HolBdd
-!examples/HolCheck
+!!examples/HolCheck
 src/temporal/src
 src/temporal/smv.2.4.3
 src/rational
