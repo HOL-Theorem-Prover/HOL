@@ -502,7 +502,7 @@ using constructors, since the type checker uses the heuristic that all
 variables in a term with the same name have the same type.  This is
 illustrated in the following session.
 %
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
 - ``x = (x = 1)``;
@@ -604,6 +604,7 @@ ranges from binding operators at very low (0) binding strength,
 through to function application (2000) and record selection (2500),
 which bind very tightly.
 
+\setcounter{sessioncount}{0}
 \begin{figure}[htbp]
 \begin{session}
 \begin{verbatim}
@@ -672,7 +673,7 @@ designate the constant $\mathit{const}$ declared in theory
 $\mathit{thy}$. In the following example, the less-than operator is
 explicitly specified.
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
 - ``prim_rec$< x y``
@@ -991,7 +992,7 @@ absence of \HOL{} quotation marks
 in the \ml{|-} context.  The session below illustrates the use of the
 destructor functions:
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
    - val th = BOOL_CASES_AX;
@@ -1018,7 +1019,6 @@ to be printed with hypotheses shown in full. These points are illustrated with a
 theorem inferred, for example purposes, from another axiom mentioned
 in \LOGIC, \ml{SELECT\_AX}.
 
-\setcounter{sessioncount}{1}
 \begin{session}
 \begin{verbatim}
 - val th = UNDISCH (SPEC_ALL SELECT_AX);
@@ -1377,7 +1377,7 @@ checking' for tactics.
 The tags in a theorem can be viewed by setting \verb+Globals.show_tags+ to
 true.
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
    - Globals.show_tags := true;
