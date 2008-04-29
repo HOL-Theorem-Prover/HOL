@@ -3,7 +3,7 @@ struct
 
 open HolKernel boolLib Parse bossLib
 
-open BasicProvers boolSimps
+open BasicProvers boolSimps markerLib;
 
 
 val _ = new_theory "llist";
@@ -1189,7 +1189,7 @@ val LFILTER = new_specification
         POP_ASSUM SUBST_ALL_TAC THEN
         FULL_SIMP_TAC (srw_ss()) [] THEN
         Q_TAC SUFF_TAC `n = 0` THEN1 SRW_TAC [][] THEN
-        CONV_TAC (UNBETA_CONV ``n:num``) THEN Q.UNABBREV_ALL_TAC THEN
+        CONV_TAC (UNBETA_CONV ``n:num``) THEN UNABBREV_ALL_TAC THEN
         MATCH_MP_TAC whileTheory.LEAST_ELIM THEN SRW_TAC [][] THENL [
           Q.EXISTS_TAC `0` THEN SRW_TAC [][],
           SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
@@ -1201,7 +1201,7 @@ val LFILTER = new_specification
            by (Q.UNABBREV_TAC `n` THEN
                Q.HO_MATCH_ABBREV_TAC `(LEAST) Q1 = SUC ((LEAST) Q2)` THEN
                `Q2 = Q1 o SUC`
-                  by (Q.UNABBREV_ALL_TAC THEN SRW_TAC [][FUN_EQ_THM]) THEN
+                  by (UNABBREV_ALL_TAC THEN SRW_TAC [][FUN_EQ_THM]) THEN
                POP_ASSUM SUBST1_TAC THEN
                Q.MATCH_ABBREV_TAC `LHS = RHS` THEN
                Q.UNABBREV_TAC `LHS` THEN
@@ -1209,13 +1209,13 @@ val LFILTER = new_specification
                POP_ASSUM SUBST1_TAC THEN
                Q.UNABBREV_TAC `RHS` THEN
                MATCH_MP_TAC least_lemma THEN
-               Q.UNABBREV_ALL_TAC  THEN
+               UNABBREV_ALL_TAC  THEN
                SRW_TAC [][] THEN
                `?m e. (SOME e = LNTH m t) /\ P e`
                    by METIS_TAC [exists_LNTH] THEN
                MAP_EVERY Q.EXISTS_TAC [`SUC m`, `e`] THEN
                SRW_TAC [][]) THEN
-        Q.RM_ALL_ABBREVS_TAC THEN SRW_TAC [][] THEN
+        RM_ALL_ABBREVS_TAC THEN SRW_TAC [][] THEN
         FIRST_X_ASSUM
           ((fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM th]))) o
            assert (is_forall o concl)) THEN

@@ -12,10 +12,7 @@
 *)
 
 open HolKernel boolLib Parse bossLib
-
-open binderLib metisLib BasicProvers
-
-open termTheory
+open binderLib metisLib termTheory;
 
 val _ = new_theory "stt";
 
@@ -184,7 +181,7 @@ val hastype_bvc_ind = store_thm(
     METIS_TAC [hastype_rules],
     Q.MATCH_ABBREV_TAC
       `P (ctxtswap pi G) (LAM (lswapstr pi v) (tpm pi m)) (A --> B) c` THEN
-    Q.RM_ALL_ABBREVS_TAC THEN
+    markerLib.RM_ALL_ABBREVS_TAC THEN
     Q_TAC (NEW_TAC "z") `lswapstr pi v INSERT ctxtFV (ctxtswap pi G) UNION
                          FV (tpm pi m) UNION fv c` THEN
     `LAM (lswapstr pi v) (tpm pi m) =

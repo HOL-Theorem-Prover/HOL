@@ -90,7 +90,7 @@ val Abbrev_def = new_definition("Abbrev_def", ``Abbrev (x:bool) = x``)
 
 (* ----------------------------------------------------------------------
    For telling the simplifier to case-split on if-then-else terms in
-   the goal
+   the goal. Not used as yet.
    ---------------------------------------------------------------------- *)
 
 val IfCases_def = new_definition("IfCases_def", ``IfCases = T``)
@@ -100,8 +100,25 @@ val IfCases_def = new_definition("IfCases_def", ``IfCases = T``)
 (* Support for the simplifier                                                *)
 (*---------------------------------------------------------------------------*)
 
-val AC_DEF = new_definition("AC_DEF", Term `AC b1 b2 = b1 /\ b2`);
-val Cong_def = new_definition("Cong_def", Term `Cong (x:bool) = x`);
+val AC_DEF = new_definition("AC_DEF", ``AC b1 b2 = b1 /\ b2``);
+val Cong_def = new_definition("Cong_def", ``Cong (x:bool) = x``);
+
+
+(*---------------------------------------------------------------------------*)
+(* Support for random user-supplied labels.                                  *)
+(*---------------------------------------------------------------------------*)
+
+val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 2)),
+                   fixity = Infix(NONASSOC, 80),
+                   paren_style = OnlyIfNecessary,
+                   pp_elements = [HardSpace 1, TOK ":-", BreakSpace(1,0)],
+                   term_name = ":-"};
+
+val _ = new_type ("label", 0);
+
+val label_def = new_definition(
+  "label_def",
+  ``((lab:label) :- (argument:bool)) = argument``);
 
 val _ = export_theory();
 

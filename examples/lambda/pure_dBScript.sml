@@ -968,7 +968,7 @@ val neta_dpm = store_thm(
   Q.MATCH_ABBREV_TAC `neta (dABS (dAPP tm (dV 0))) tm'` THEN
   Q_TAC SUFF_TAC `~(0 IN dFV tm) /\ (tm' = nsub u 0 tm)`
         THEN1 SRW_TAC [][neta_rules] THEN
-  Q.UNABBREV_ALL_TAC THEN
+  UNABBREV_ALL_TAC THEN
   SRW_TAC [][dpm_nsub,nipkow_eta_lemma, IN_dFV_dpm, REVERSE_inc_pm,
 	     lswapstr_inc_pm]);
 

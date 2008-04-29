@@ -65,7 +65,7 @@ val (test4_flag, _) =
     infloop_protect
       "Abbreviations + ASM_SIMP_TAC... "
       test4P
-      (ASM_SIMP_TAC boolSimps.bool_ss [markerLib.Abbr`y`])
+      (ASM_SIMP_TAC boolSimps.bool_ss [markerSyntax.Abbr`y`])
       ([``Abbrev (y:'b = f (x : 'a))``, ``P (y:'b) : bool``],
        ``Q (y:'b) : bool``)
 

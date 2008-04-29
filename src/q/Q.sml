@@ -10,7 +10,7 @@ open HolKernel boolLib;
 type tmquote = term quotation
 type tyquote = hol_type quotation
 
-val Q_ERR = mk_HOL_ERR "Q";
+val ERR = mk_HOL_ERR "Q";
 
 val ptm = Parse.Term
 val pty = Parse.Type;
@@ -60,10 +60,10 @@ fun GEN [QUOTE s] th =
      let val V = free_vars (concl th)
      in case Lib.assoc2 (Lib.deinitcomment s) 
                 (Lib.zip V (map (fst o Term.dest_var) V))
-         of NONE => raise Q_ERR "GEN" "variable not found"
+         of NONE => raise ERR "GEN" "variable not found"
          | SOME (v,_) => Thm.GEN v th
      end
-  | GEN _ _ = raise Q_ERR "GEN" "unexpected quote format"
+  | GEN _ _ = raise ERR "GEN" "unexpected quote format"
 
 fun SPEC q =
  W(Thm.SPEC o ptm_with_ty q o (type_of o fst o dest_forall o concl));
@@ -130,7 +130,7 @@ fun ID_SPEC_TAC q (g as (asl,w)) =
 fun EXISTS(q1,q2) thm = 
  let val tm1 = btm q1
      val exvartype = type_of (fst (dest_exists tm1))
-       handle HOL_ERR _ => raise Q_ERR "EXISTS" "first quotation not an exists"
+       handle HOL_ERR _ => raise ERR "EXISTS" "first quotation not an exists"
      val tm2 = ptm_with_ty q2 exvartype
  in
    Thm.EXISTS (tm1,tm2) thm
@@ -139,7 +139,7 @@ fun EXISTS(q1,q2) thm =
 fun EXISTS_TAC q (g as (asl, w)) =
  let val ctxt = free_varsl (w::asl)
      val exvartype = type_of (fst (dest_exists w))
-       handle HOL_ERR _ => raise Q_ERR "EXISTS_TAC" "goal not an exists"
+       handle HOL_ERR _ => raise ERR "EXISTS_TAC" "goal not an exists"
  in
   Tactic.EXISTS_TAC (ptm_with_ctxtty ctxt exvartype q) g
  end
@@ -147,7 +147,7 @@ fun EXISTS_TAC q (g as (asl, w)) =
 fun ID_EX_TAC(g as (_,w)) =
   Tactic.EXISTS_TAC (fst(dest_exists w)
                      handle HOL_ERR _ =>
-                       raise Q_ERR "ID_EX_TAC" "goal not an exists") g;
+                       raise ERR "ID_EX_TAC" "goal not an exists") g;
 
 
 fun REFINE_EXISTS_TAC q (asl, w) = let
@@ -165,7 +165,7 @@ end
 fun X_CHOOSE_THEN q ttac thm (g as (asl,w)) =
  let val ty = type_of (fst (dest_exists (concl thm)))
        handle HOL_ERR _ =>
-          raise Q_ERR "X_CHOOSE_THEN" "provided thm not an exists"
+          raise ERR "X_CHOOSE_THEN" "provided thm not an exists"
      val ctxt = free_varsl (w::asl)
  in
    Thm_cont.X_CHOOSE_THEN (ptm_with_ctxtty ctxt ty q) ttac thm g
@@ -225,7 +225,7 @@ fun skolem_ty tm =
  let val (V,tm') = strip_forall tm
  in if V<>[]
     then list_mk_fun (map type_of V, type_of(fst(dest_exists tm')))
-    else raise Q_ERR"XSKOLEM_CONV" "no universal prefix"
+    else raise ERR"XSKOLEM_CONV" "no universal prefix"
   end;
 
 fun X_SKOLEM_CONV q tm =
@@ -234,7 +234,6 @@ fun X_SKOLEM_CONV q tm =
  in
   Conv.X_SKOLEM_CONV (ptm_with_ctxtty ctxt ty q) tm
  end
-
 
 fun AP_TERM q th =
  let val ctxt = free_vars(concl th)
@@ -275,122 +274,47 @@ val INST_TYPE = Thm.INST_TYPE o mk_type_rsubst;
 (*    Abbreviation tactics                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val DeAbbrev = CONV_RULE (REWR_CONV markerTheory.Abbrev_def)
-
-fun Abbrev_wrap eqth =
-    EQ_MP (SYM (Thm.SPEC (concl eqth) markerTheory.Abbrev_def)) eqth
-
-fun ABB l r =
-    CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN
-                          ASSUME_TAC (Abbrev_wrap (SYM th)))
-                (Thm.EXISTS(mk_exists(l, mk_eq(r, l)), r) (Thm.REFL r))
-
-fun ABBREV_TAC q (g as (asl,w)) =
+fun ABBREV_TAC q (gl as (asl,w)) =
  let val ctxt = free_varsl(w::asl)
-     val (lhs,rhs) = dest_eq (Parse.parse_in_context ctxt q)
+     val eq = Parse.parse_in_context ctxt q
  in
-    ABB lhs rhs g
- end;
-
-fun PAT_ABBREV_TAC q (g as (asl, w)) =
-    let val fv_set = FVL (w::asl) empty_tmset
-        val ctxt = HOLset.listItems fv_set
-        val (l,r) = dest_eq(Parse.parse_in_context ctxt q)
-        fun matchr t = raw_match [] fv_set r t ([],[])
-        val l = variant (HOLset.listItems (FVL [r] fv_set)) l
-        fun finder t = not (is_var t orelse is_const t) andalso can matchr t
-    in
-      case Lib.total (find_term finder) w of
-        NONE => raise Q_ERR "PAT_ABBREV_TAC" "No matching term found"
-      | SOME t => ABB l t g
-    end
-
-fun MATCH_ABBREV_TAC q (g as (asl, w)) = let
-  val ctxt_set = FVL (w::asl) empty_tmset
-  val ctxt = HOLset.listItems ctxt_set
-  val pattern = ptm_with_ctxtty ctxt bool q
-  val fixed_tyvars = Lib.U (map type_vars_in_term
-                                (Lib.intersect ctxt (free_vars pattern)))
-  val (tminst, _) = match_terml fixed_tyvars ctxt_set pattern w
-  fun ABB' {redex = l, residue= r} = ABB l r
-in
-  MAP_EVERY ABB' tminst g
-end
-
-fun HO_MATCH_ABBREV_TAC q (g as (asl, w)) = let
-  val ctxt_set = FVL (w::asl) empty_tmset
-  val ctxt = HOLset.listItems ctxt_set
-  val pattern = ptm_with_ctxtty ctxt bool q
-  val fixed_tyvars = Lib.U (map type_vars_in_term
-                                (Lib.intersect ctxt (free_vars pattern)))
-  val (tminst, tyinst) = ho_match_term fixed_tyvars ctxt_set pattern w
-  val unbeta_goal =
-      Tactical.default_prover(mk_eq(w, subst tminst (inst tyinst pattern)),
-                              BETA_TAC THEN REFL_TAC)
-  fun ABB' {redex = l, residue= r} = ABB l r
-in
-  CONV_TAC (K unbeta_goal) THEN MAP_EVERY ABB' tminst
-end g
-
-fun UNABBREV_TAC q (g as (asl, w))= let
-  val v = Parse.parse_in_context (free_varsl (w::asl)) q
-in
-  FIRST_X_ASSUM(SUBST_ALL_TAC o assert(equal v o lhs o concl) o DeAbbrev)
-end g
-
-val UNABBREV_ALL_TAC = let
-  fun ttac th0 = let
-    val th = DeAbbrev th0
-  in
-    SUBST_ALL_TAC th ORELSE ASSUME_TAC th
-  end
-in
-  REPEAT (FIRST_X_ASSUM ttac)
-end
-
-fun RM_ABBREV_TAC q (g as (asl, w)) = let
-  val v = Parse.parse_in_context (free_varsl (w::asl)) q
-in
-  FIRST_X_ASSUM (K ALL_TAC o assert (equal v o lhs o concl) o DeAbbrev)
-end g
-
-val RM_ALL_ABBREVS_TAC = REPEAT (FIRST_X_ASSUM (K ALL_TAC o DeAbbrev))
-
-(*---------------------------------------------------------------------------*)
-(* Ought to be called after LET_ELIM_TAC, which introduces an abbrev, but    *)
-(* doesn't propagate the abbrev. to the other assumptions. This gets taken   *)
-(* care of in basicProof/BasicProvers                                        *)
-(*---------------------------------------------------------------------------*)
-
-fun REABBREV_TAC (gl as (asl,_)) =
- let open markerLib
-     val abbrevs = filter is_Abbrev asl
-     val lrs = map (dest_eq o rand) abbrevs
- in UNABBREV_ALL_TAC THEN MAP_EVERY (uncurry ABB) lrs 
+   markerLib.ABBREV_TAC eq
  end gl;
 
-fun WITHOUT_ABBREVS tac = UNABBREV_ALL_TAC THEN tac THEN REABBREV_TAC;
-
-
-(*---------------------------------------------------------------------------*)
-(*  ABBRS_THEN: expand specified abbreviations before applying a tactic.     *)
-(* Typically, the abbreviations are designated in the thm list of a          *)
-(* simplification tactic thusly:                                             *)
-(*                                                                           *)
-(*     ASM_SIMP_TAC ss [ ... , markerLib.Abbr `m`, ... ]                     *)
-(*                                                                           *)
-(* which says to find and expand the abbreviation                            *)
-(*                                                                           *)
-(*      Abbrev (m = tm)                                                      *)
-(*                                                                           *)
-(* in the assumptions of the goal before proceeding with simplification.     *)
-(*---------------------------------------------------------------------------*)
-
-fun ABBRS_THEN ttac thl = 
- let open markerLib
-     val (abbrs, rest) = List.partition is_Abbr thl
+fun PAT_ABBREV_TAC q (gl as (asl,w)) =
+ let val fv_set = FVL (w::asl) empty_tmset
+     val ctxt = HOLset.listItems fv_set
+     val eq = Parse.parse_in_context ctxt q
  in
-  MAP_EVERY (UNABBREV_TAC o dest_Abbr) abbrs THEN ttac rest
- end
+   markerLib.PAT_ABBREV_TAC fv_set eq
+ end gl;
+
+fun MATCH_ABBREV_TAC q (gl as (asl,w)) = 
+ let val fv_set = FVL (w::asl) empty_tmset
+     val ctxt = HOLset.listItems fv_set
+     val pattern = ptm_with_ctxtty ctxt bool q
+ in 
+  markerLib.MATCH_ABBREV_TAC fv_set pattern
+ end gl;
+
+fun HO_MATCH_ABBREV_TAC q (gl as (asl,w)) = 
+ let val fv_set = FVL (w::asl) empty_tmset
+     val ctxt = HOLset.listItems fv_set
+     val pattern = ptm_with_ctxtty ctxt bool q
+in
+  markerLib.HO_MATCH_ABBREV_TAC fv_set pattern
+end gl;
+
+fun UNABBREV_TAC q (gl as (asl,w))= 
+ let val v = Parse.parse_in_context (free_varsl (w::asl)) q
+ in
+   markerLib.UNABBREV_TAC (fst(dest_var v))
+ end gl;
+
+fun RM_ABBREV_TAC q (gl as (asl,w)) = 
+ let val v = Parse.parse_in_context (free_varsl (w::asl)) q
+ in
+   markerLib.RM_ABBREV_TAC (fst(dest_var v))
+ end gl;
 
 end (* Q *)

@@ -4,7 +4,6 @@ open HolKernel Parse boolLib
 open bossLib binderLib
 open pretermTheory basic_swapTheory nomsetTheory
 open pred_setTheory
-
 open BasicProvers
 
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before export_rewrites [s])
@@ -93,7 +92,7 @@ val cond16_implies_freshness_ok = prove(
           SRW_TAC [][fnpm_def, is_perm_sing_inv, perm_supp, perm_IN]) THEN
   Q_TAC (NEW_TAC "z") `{v;a} UNION A UNION sS UNION patoms pi` THEN
   `support (fnpm perm_of apm) h (v INSERT A UNION patoms pi UNION sS)`
-     by (Q.UNABBREV_ALL_TAC THEN MATCH_MP_TAC h_supported_by THEN
+     by (UNABBREV_ALL_TAC THEN MATCH_MP_TAC h_supported_by THEN
          SRW_TAC [][]) THEN
   Q.EXISTS_TAC `z` THEN SRW_TAC [][] THENL [
     `~(z IN v INSERT A UNION patoms pi UNION sS)` by SRW_TAC [][] THEN
@@ -161,7 +160,7 @@ val rawfinite_support = prove(
                   Q_TAC SUFF_TAC `fcond apm h` THEN1
                         SRW_TAC [][fresh_equivariant, is_perm_eql,
                                    is_perm_sing_inv, th]) THEN
-    Q.UNABBREV_ALL_TAC THEN
+    UNABBREV_ALL_TAC THEN
     `support (fnpm cpmpm apm) (fn t) (A UNION allatoms t)`
        by (SIMP_TAC (srw_ss()) [support_def, FUN_EQ_THM] THEN
            MAP_EVERY Q.X_GEN_TAC [`c`, `d`] THEN REPEAT STRIP_TAC THEN

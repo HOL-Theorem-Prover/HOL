@@ -89,6 +89,7 @@ sig
   val string_to_int : string -> int
   val sort          : ('a -> 'a -> bool) -> 'a list -> 'a list
   val int_sort      : int list -> int list
+  val topsort       : ('a -> 'a -> bool) -> 'a list -> 'a list
 
   val start_time    : unit -> Timer.cpu_timer
   val end_time      : Timer.cpu_timer -> unit

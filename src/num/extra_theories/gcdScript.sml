@@ -285,7 +285,7 @@ val GCD_EFFICIENTLY = store_thm(
   `(b = (b DIV a) * a + b MOD a) /\ b MOD a < a`
     by (MATCH_MP_TAC DIVISION THEN DECIDE_TAC) THEN
   Q.ABBREV_TAC `q = b DIV a` THEN Q.ABBREV_TAC `r = b MOD a` THEN
-  Q.RM_ALL_ABBREVS_TAC THEN
+  markerLib.RM_ALL_ABBREVS_TAC THEN
   FIRST_X_ASSUM SUBST_ALL_TAC THEN
   `q * a <= q * a + r` by DECIDE_TAC THEN
   `gcd a (q * a + r) = gcd a (q * a + r - q * a)`
@@ -298,6 +298,10 @@ val _ = computeLib.add_persistent_funs [("GCD_EFFICIENTLY",GCD_EFFICIENTLY)];
 val lcm_def = Define`
   lcm m n = if (m = 0) \/ (n = 0) then 0 else (m * n) DIV gcd m n
 `;
+
+val _ = computeLib.add_persistent_funs 
+      [("GCD_EFFICIENTLY",GCD_EFFICIENTLY),
+       ("lcm_def", lcm_def)];
 
 val LCM_IS_LEAST_COMMON_MULTIPLE = store_thm(
   "LCM_IS_LEAST_COMMON_MULTIPLE",

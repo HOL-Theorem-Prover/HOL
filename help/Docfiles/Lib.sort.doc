@@ -7,10 +7,11 @@ Sorts a list using a given transitive `ordering' relation.
 
 \DESCRIBE
 The call {sort opr list} where {opr} is a curried transitive relation
-on the elements of {list}, will topologically sort the list, i.e.,
-will permute it such that if {x opr y} but not {y opr x} then {x} will
+on the elements of {list}, will sort the list, i.e., will permute {list} 
+such that if {x opr y} but not {y opr x} then {x} will
 occur to the left of {y} in the sorted list. In particular if {opr} is 
-a total order, the list will be sorted in the usual sense of the word.
+a total order, the result list will be sorted in the usual sense of the 
+word.
 
 \FAILURE
 Never fails.
@@ -34,5 +35,5 @@ that the `ordering' is not antisymmetric.
 The Standard ML Basis Library also provides implementations of sorting.
 
 \SEEALSO
-Lib.int_sort.
+Lib.int_sort, Lib.topsort.
 \ENDDOC

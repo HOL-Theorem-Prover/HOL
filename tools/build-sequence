@@ -27,7 +27,6 @@ tools/mlyacc/mlyacclib
 src/parse
 src/bool
 src/goalstack
-
 src/emit
 src/compute/src
 src/HolSat/sat_solvers/minisat
@@ -37,7 +36,6 @@ src/taut
 src/marker
 src/q
 src/combin
-src/labels
 src/lite
 src/refute
 src/simp/src
@@ -84,6 +82,7 @@ src/n-bit
 src/llist
 src/ring/src
 src/integer
+
 src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma

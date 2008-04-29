@@ -193,7 +193,7 @@ val lrcc_bvc_b01_ind = store_thm(
   THENL [
     SRW_TAC [][ltpm_subst] THEN
     Q.MATCH_ABBREV_TAC `P (LAMi n vv MM NN) [] ([NN/vv]MM)` THEN
-    Q.RM_ALL_ABBREVS_TAC THEN
+    markerLib.RM_ALL_ABBREVS_TAC THEN
     Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN
     `LAMi n vv MM NN = LAMi n z (ltpm [(z,vv)] MM) NN`
        by SRW_TAC [][ltpm_ALPHAi] THEN
@@ -201,7 +201,7 @@ val lrcc_bvc_b01_ind = store_thm(
     SRW_TAC [][GSYM fresh_ltpm_subst],
     SRW_TAC [][ltpm_subst] THEN
     Q.MATCH_ABBREV_TAC `P (LAM vv MM @@ NN) [] ([NN/vv]MM)` THEN
-    Q.RM_ALL_ABBREVS_TAC THEN
+    markerLib.RM_ALL_ABBREVS_TAC THEN
     Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN
     `LAM vv MM = LAM z (ltpm [(z,vv)] MM)` by SRW_TAC [][ltpm_ALPHA] THEN
     `[NN/vv]MM = [NN/z] ([VAR z/vv] MM)` by SRW_TAC [][l15a] THEN
@@ -790,7 +790,7 @@ val supp_gack = prove(
      by (SRW_TAC [][Abbr`set`, EXTENSION] THEN
          EQ_TAC THEN SRW_TAC [][] THEN SRW_TAC [][] THEN
          METIS_TAC []) THEN
-  Q.RM_ALL_ABBREVS_TAC THEN SRW_TAC [][] THEN
+  markerLib.RM_ALL_ABBREVS_TAC THEN SRW_TAC [][] THEN
   MATCH_MP_TAC INTER_FINITE THEN
   SRW_TAC [][FINITE_BIGUNION_EQ] THENL [
     Q.HO_MATCH_ABBREV_TAC `FINITE (IMAGE (\ps. FV (g ps)) UNIV)` THEN
@@ -3171,7 +3171,7 @@ val weighted_reduction_reduces_ordering = store_thm(
              by PROVE_TAC [n_posn_valid_posns] THEN
           ASM_SIMP_TAC (srw_ss()) [weight_at_SUM_IMAGE] THEN
           MATCH_MP_TAC SUM_IMAGE_SUBSET_LE THEN
-          Q.UNABBREV_ALL_TAC THEN
+          UNABBREV_ALL_TAC THEN
           SRW_TAC [][SUBSET_DEF] THENL [
             MATCH_MP_TAC (MATCH_MP SUBSET_FINITE
                                    (Q.SPEC `strip_label t`

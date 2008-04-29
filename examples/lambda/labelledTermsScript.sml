@@ -168,7 +168,7 @@ val cond16_implies_freshness_ok = prove(
           SRW_TAC [][fnpm_def, is_perm_sing_inv, perm_supp]) THEN
   Q_TAC (NEW_TAC "a''") `{a;a'} UNION A UNION sS UNION patoms pi` THEN
   `support (fnpm perm_of apm) h (a INSERT A UNION patoms pi UNION sS)`
-     by (Q.UNABBREV_ALL_TAC THEN MATCH_MP_TAC h_supported_by THEN
+     by (UNABBREV_ALL_TAC THEN MATCH_MP_TAC h_supported_by THEN
          SRW_TAC [][]) THEN
   Q.EXISTS_TAC `a''` THEN SRW_TAC [][] THENL [
     `~(a'' IN a INSERT A UNION patoms pi UNION sS)` by SRW_TAC [][] THEN
@@ -197,7 +197,7 @@ val cond16i_implies_freshness_ok = prove(
   Q_TAC (NEW_TAC "a''") `{a;a'} UNION A UNION sS UNION patoms pi` THEN
   `support (fnpm perm_of (fnpm apm apm)) i
            (a INSERT A UNION patoms pi UNION sS)`
-     by (Q.UNABBREV_ALL_TAC THEN MATCH_MP_TAC i_supported_by THEN
+     by (UNABBREV_ALL_TAC THEN MATCH_MP_TAC i_supported_by THEN
          SRW_TAC [][]) THEN
   Q.EXISTS_TAC `a''` THEN SRW_TAC [][] THENL [
     `~(a'' IN a INSERT A UNION patoms pi UNION sS)`
@@ -270,7 +270,7 @@ val rawfinite_support = prove(
                   Q_TAC SUFF_TAC `fcond apm h` THEN1
                         SRW_TAC [][fresh_equivariant, is_perm_eql,
                                    is_perm_sing_inv, th]) THEN
-    Q.UNABBREV_ALL_TAC THEN
+    UNABBREV_ALL_TAC THEN
     `support (fnpm (cpmpm) apm) (fn t) (A UNION allatoms t)`
        by (SIMP_TAC (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def] THEN
            MAP_EVERY Q.X_GEN_TAC [`c`, `d`] THEN REPEAT STRIP_TAC THEN
@@ -327,7 +327,7 @@ val rawfinite_support = prove(
                              by SRW_TAC [][fnpm_def, is_perm_sing_inv] THEN
 
                          SRW_TAC [][fresh_equivariant, th])) THEN
-    Q.UNABBREV_ALL_TAC THEN
+    UNABBREV_ALL_TAC THEN
     `support (fnpm (cpmpm) apm) (fn t)
              (A UNION allatoms t)`
        by (SIMP_TAC (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def] THEN

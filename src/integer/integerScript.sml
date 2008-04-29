@@ -2108,7 +2108,7 @@ val INT_MOD_PLUS = store_thm(
   Q.ABBREV_TAC `Ri = i % k` THEN
   Q.ABBREV_TAC `Qj = j / k` THEN
   Q.ABBREV_TAC `Rj = j % k` THEN
-  Q.RM_ALL_ABBREVS_TAC THEN
+  markerLib.RM_ALL_ABBREVS_TAC THEN
   SRW_TAC [][] THEN
   `Qi * k + Ri + (Qj * k + Rj) = Qi * k + (Qj * k + (Ri + Rj))`
      by SRW_TAC [][AC INT_ADD_ASSOC INT_ADD_COMM] THEN
@@ -2127,7 +2127,7 @@ val INT_MOD_SUB = store_thm(
   Q.ABBREV_TAC `Ri = i % k` THEN
   Q.ABBREV_TAC `Qj = j / k` THEN
   Q.ABBREV_TAC `Rj = j % k` THEN
-  Q.RM_ALL_ABBREVS_TAC THEN
+  markerLib.RM_ALL_ABBREVS_TAC THEN
   SRW_TAC [][int_sub, INT_NEG_ADD, INT_NEG_LMUL] THEN
   `Qi * k + Ri + (~Qj * k + ~Rj) = Qi * k + (~Qj * k + (Ri + ~Rj))`
      by SRW_TAC [][AC INT_ADD_ASSOC INT_ADD_COMM] THEN

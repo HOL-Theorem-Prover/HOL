@@ -596,7 +596,7 @@ val grandbeta_bvc_gen_ind = store_thm(
     SRW_TAC [][],
     Q.MATCH_ABBREV_TAC `P (LAM (lswapstr p v0) (tpm p ML) @@ tpm p MR)
                           (tpm p ([NR/v0] NL)) ctx`  THEN
-    Q.RM_ALL_ABBREVS_TAC THEN
+    markerLib.RM_ALL_ABBREVS_TAC THEN
     SRW_TAC [][tpm_subst] THEN
     Q.ABBREV_TAC `v = lswapstr p v0` THEN
     Q.ABBREV_TAC `M1 = tpm p ML` THEN

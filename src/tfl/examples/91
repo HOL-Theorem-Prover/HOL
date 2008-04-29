@@ -115,7 +115,6 @@ val (N_def,N_ind) = Defn.tprove
     THEN `x+11 < NA(x+22)` by METIS_TAC[DECIDE``x<x+11``,DECIDE``x+11+11=x+22``]
     THEN RW_TAC std_ss [] THEN WEAKEN_TAC is_imp
     THEN MP_TAC (Q.INST [`x` |-> `NA(x+22)`] condE) 
-    THEN Q.REABBREV_TAC
     THEN RW_TAC arith_ss [] (* implicit case split *)
     THEN `x < NA (x+22) - 11 /\ ~(NA (x + 22) - 11 > 100)` by DECIDE_TAC
     THEN `NA(x+22) - 11 < NA(NA(x+22) - 11 + 11)` by METIS_TAC[]

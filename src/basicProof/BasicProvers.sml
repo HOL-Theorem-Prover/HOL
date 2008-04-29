@@ -9,7 +9,7 @@ struct
 
 type simpset = simpLib.simpset;
 
-open HolKernel boolLib labelLib;
+open HolKernel boolLib markerLib;
 
 val op++ = simpLib.++;
 val op&& = simpLib.&&;
@@ -156,7 +156,7 @@ val IMP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] (SPEC_ALL IMP_CONG)
 
 fun ABBREV_CONV tm = let
   val t = rand tm
-  val (l, r) = dest_eq t
+  val (l,r) = dest_eq t
 in
   if not (is_var l) orelse is_var r then
     REWR_CONV markerTheory.Abbrev_def THENC
@@ -171,12 +171,14 @@ val ABBREV_ss =
                                 trace = 2, name = "ABBREV_CONV"}],
                       dprocs = [], filter = NONE, rewrs = []}
 
-fun LET_ELIM_TAC goal = let
-  open simpLib pureSimps boolSimps
-  (* first two successive calls to SIMP_CONV ensure that the
-     LET_FORALL_ELIM theorem is applied after all the movement
-     is possible *)
-in
+(*---------------------------------------------------------------------------*)
+(* The staging of first two successive calls to SIMP_CONV ensure that the    *)
+(* LET_FORALL_ELIM theorem is applied after all the movement is possible.    *)
+(*---------------------------------------------------------------------------*)
+
+fun LET_ELIM_TAC goal = 
+ let open simpLib pureSimps boolSimps
+ in
   CONV_TAC
     (QCHANGED_CONV
        (SIMP_CONV pure_ss (!let_movement_thms) THENC
@@ -184,8 +186,8 @@ in
                            combinTheory.literal_case_FORALL_ELIM ::
                            !let_movement_thms) THENC
         SIMP_CONV (pure_ss ++ ABBREV_ss ++ UNWIND_ss) [Cong IMP_CONG'])) THEN
-  REPEAT BOSS_STRIP_TAC (* THEN FULL_SIMP_TAC pure_ss [] *)
-end goal
+  REPEAT BOSS_STRIP_TAC THEN markerLib.REABBREV_TAC
+ end goal
 
 fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
 
@@ -356,10 +358,11 @@ fun PRIM_NORM_TAC ss =
 fun STP_TAC ss finisher
   = PRIM_STP_TAC (rev_itlist add_simpls (tyinfol()) ss) finisher
 
-fun RW_TAC ss thl = Q.ABBRS_THEN (fn thl => STP_TAC (ss && thl) NO_TAC) thl
+fun RW_TAC ss thl = markerLib.ABBRS_THEN 
+                     (fn thl => STP_TAC (ss && thl) NO_TAC) thl
 
 fun NORM_TAC ss thl =
-    Q.ABBRS_THEN
+    markerLib.ABBRS_THEN
       (fn thl => PRIM_NORM_TAC (rev_itlist add_simpls (tyinfol()) (ss && thl)))
       thl
 
@@ -406,10 +409,10 @@ fun srw_ss () = initialise_srw_ss();
 fun SRW_TAC ssdl thl = let
   val ss = foldl (fn (ssd, ss) => ss ++ ssd) (srw_ss()) ssdl
 in
-  Q.ABBRS_THEN (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC) thl
+  markerLib.ABBRS_THEN (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC) thl
 end;
 
-val Abbr = markerLib.Abbr
+val Abbr = markerSyntax.Abbr
 
 (*---------------------------------------------------------------------------
        Make some additions to the srw_ss persistent

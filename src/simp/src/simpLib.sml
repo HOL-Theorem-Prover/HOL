@@ -15,7 +15,7 @@ infix |> oo;
 
 open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net;
 
-local open labelTheory in end;
+local open markerTheory in end;
 
 fun ERR x      = STRUCT_ERR "simpLib" x ;
 fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
@@ -230,7 +230,7 @@ end (* abstype for SS *)
 val Cong = markerLib.Cong
 val AC   = markerLib.AC;
 
-local open markerLib
+local open markerSyntax markerLib
    fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
    fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
@@ -245,7 +245,7 @@ local open markerLib
 in
 fun SIMP_CONV ss l =
   let val (ss', l') = process_tags ss l
-  in TRY_CONV (SIMP_QCONV ss' l')
+  in TRY_CONV (SIMP_QCONV ss' l') 
   end;
 
 fun SIMP_PROVE ss l =
@@ -276,22 +276,22 @@ end;
 fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l);
 fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
 
-fun SIMP_TAC ss l = Q.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l
+fun SIMP_TAC ss l = markerLib.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l
 
 fun ASM_SIMP_TAC ss l = let
   fun base thl (gl as (asms,_)) = let
-    val working = labelLib.LLABEL_RESOLVE thl asms
+    val working = markerLib.LLABEL_RESOLVE thl asms
   in
     SIMP_TAC ss working gl
   end
 in
-  Q.ABBRS_THEN base l
+  markerLib.ABBRS_THEN base l
 end
 
 fun ASM_SIMP_TAC ss = 
-   Q.ABBRS_THEN 
+   markerLib.ABBRS_THEN 
     (fn thl => fn gl as (asl,_) => 
-         SIMP_TAC ss (labelLib.LLABEL_RESOLVE thl asl) gl);
+         SIMP_TAC ss (markerLib.LLABEL_RESOLVE thl asl) gl);
 
 
 fun FULL_SIMP_TAC ss l =
@@ -312,7 +312,7 @@ fun FULL_SIMP_TAC ss l =
      fun f asms = MAP_EVERY STRIP_ASSUME_TAC' (foldl simp_asm [] asms)
                   THEN drop (length asms)
  in
-  Q.ABBRS_THEN (fn l => ASSUM_LIST f THEN ASM_SIMP_TAC ss l) l
+  markerLib.ABBRS_THEN (fn l => ASSUM_LIST f THEN ASM_SIMP_TAC ss l) l
  end
 
 (* ----------------------------------------------------------------------

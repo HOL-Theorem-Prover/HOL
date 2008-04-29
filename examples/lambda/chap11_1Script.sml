@@ -26,12 +26,12 @@ val lsize_supp_lemma = prove(
     FV M DELETE v``,
   Q.MATCH_ABBREV_TAC `supp p g = Set` THEN
   `support p g Set`
-     by (Q.UNABBREV_ALL_TAC THEN
+     by (UNABBREV_ALL_TAC THEN
          SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM] THEN
          SRW_TAC [][lLAMi_eq_thm, basic_swapTheory.swapstr_def] THEN
          SRW_TAC [][ltpm_fresh] THEN
          SRW_TAC [boolSimps.CONJ_ss][ltpm_flip_args]) THEN
-  Q.UNABBREV_ALL_TAC THEN
+  UNABBREV_ALL_TAC THEN
   MATCH_MP_TAC supp_unique_apart THEN
   SRW_TAC [][] THEN
   SRW_TAC [][fnpm_def, FUN_EQ_THM, lLAMi_eq_thm] THENL [

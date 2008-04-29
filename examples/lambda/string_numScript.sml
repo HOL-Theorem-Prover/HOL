@@ -1,20 +1,16 @@
-open HolKernel boolLib Parse bossLib stringTheory arithmeticTheory
-open BasicProvers
+open HolKernel boolLib Parse bossLib stringTheory arithmeticTheory markerLib;
 
 val _ = new_theory "string_num"
 
-val n2s_defn = Defn.Hol_defn "n2s" `
+val n2s_def = tDefine
+ "n2s" `
   n2s n = if n = 0 then ""
           else let r0 = n MOD 256 in
                let r = if r0 = 0 then 256 else r0 in
                let s0 = n2s ((n - r) DIV 256)
                in
-                 STRING (CHR (r - 1)) s0
-`
-
-val (n2s_def, n2s_ind) = Defn.tprove(
-  n2s_defn,
-  WF_REL_TAC `(<)` THEN REPEAT STRIP_TAC THEN
+                 STRING (CHR (r - 1)) s0`
+ (WF_REL_TAC `(<)` THEN REPEAT STRIP_TAC THEN
   Q.MATCH_ABBREV_TAC `M DIV 256 < n` THEN
   Q_TAC SUFF_TAC `M < n` THEN1
         (STRIP_TAC THEN MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
@@ -22,10 +18,7 @@ val (n2s_def, n2s_ind) = Defn.tprove(
          SRW_TAC [ARITH_ss][DIV_LESS] THEN
          MATCH_MP_TAC DIV_LE_MONOTONE THEN
          SRW_TAC [ARITH_ss][Abbr`M`]) THEN
-  SRW_TAC [ARITH_ss][Abbr`M`])
-
-val n2s_def = save_thm("n2s_def", n2s_def)
-val n2s_ind = save_thm("n2w_ind", n2s_ind)
+  SRW_TAC [ARITH_ss][Abbr`M`]);
 
 val s2n_def = Define`
   (s2n "" = 0) /\
@@ -55,7 +48,7 @@ val s2n_n2s = store_thm(
                       DECIDE ``0 < 256``] THEN
     `~(q = 0)` by (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
     `r = 256` by SRW_TAC [][Abbr`r`] THEN
-    Q.RM_ALL_ABBREVS_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    RM_ALL_ABBREVS_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     `q * 256 - 256 = (q - 1) * 256` by DECIDE_TAC THEN
     SRW_TAC [][MULT_DIV] THEN
     DECIDE_TAC,
@@ -78,7 +71,7 @@ val n2s_s2n = store_thm(
   `r0 = (ORD c + 1) MOD 256`
      by (SRW_TAC [][Abbr`r0`] THEN
          SRW_TAC [][GSYM ADD_ASSOC, MOD_TIMES]) THEN
-  Q.RM_ABBREV_TAC `r0` THEN
+  RM_ABBREV_TAC "r0" THEN
   Cases_on `r0 = 0` THENL [
     `ORD c < 256` by SRW_TAC [][ORD_BOUND] THEN
     `?q. ORD c + 1 = q * 256`
