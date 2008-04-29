@@ -184,12 +184,15 @@ val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
 open Systeml;
 val SYSTEML = Systeml.systeml
 
-fun Holmake dir =
-let val (wp, hol) = 
+fun which_hol () =
   case !phase of
     Initial => (POLY, "--poly_not_hol")
-  | Bare => (fullPath [HOLDIR, "bin", "hol.bare.noquote"], "")
-  | Full => (fullPath [HOLDIR, "bin", "hol.noquote"], "")
+  | Bare => (fullPath [HOLDIR, "bin", "hol.builder0"], "")
+  | Full => (fullPath [HOLDIR, "bin", "hol.builder"], "");
+
+
+fun Holmake dir =
+let val (wp, hol) = which_hol ();
 in
   if OS.Process.isSuccess (SYSTEML [HOLMAKE, "--qof", "--poly", wp, hol]) then
     if do_selftests > 0 andalso
@@ -420,19 +423,21 @@ fun compile (systeml : string list -> OS.Process.status) exe obj : unit =
             "-lpolymain", "-lpolyml"];
    OS.FileSys.remove obj);
 
-fun make_exe (name:string) : unit =
+fun make_exe (name:string) (POLY : string) (target:string) : unit =
  let val dir = OS.FileSys.getDir()
  in
    OS.FileSys.chDir (fullPath [HOLDIR, "tools-poly"]);
-   Systeml.system_ps (POLY ^ " < " ^ name ^ ".ML");
-   compile systeml (fullPath [Systeml.HOLDIR, "bin", name]) (name ^ ".o");
+   Systeml.system_ps (POLY ^ " < " ^ name);
+   compile systeml (fullPath [Systeml.HOLDIR, "bin", target]) (target ^ ".o");
    OS.FileSys.chDir dir
  end
 
 fun buildDir symlink s = 
   case #1 s of
-    "bin/hol.bare" => (make_exe "hol.bare.noquote"; phase := Bare)
-  | "bin/hol" => (make_exe "hol.noquote"; phase := Full)
+    "bin/hol.bare" => 
+      (make_exe "builder0.ML" (#1 (which_hol ())) "hol.builder0"; phase := Bare)
+  | "bin/hol" => 
+      (make_exe "builder.ML" (#1 (which_hol ())) "hol.builder"; phase := Full)
   | _ => (build_dir s; upload(s,SIGOBJ,symlink));
 
 fun do_sharing_table_transfer () = let

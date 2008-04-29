@@ -31,8 +31,8 @@
 
 val _ = PolyML.print_depth 0;
 
-val poly = "/home/so294/scratch/polyml.5.1/bin/poly";
-val polymllibdir = "/home/so294/scratch/polyml.5.1/lib";
+val poly = "~/polyml.5.1/bin/poly";
+val polymllibdir = "/Users/so294/polyml.5.1/lib";
 (*
 val holdir :string  =
 
@@ -394,8 +394,14 @@ val _ =
  in
    (* "unquote" scripts use the unquote executable to provide nice
       handling of double-backquote characters *)
-   emit_hol_unquote_script target "hol.bare.noquote";
-   emit_hol_unquote_script target_boss "hol.noquote"
+   emit_hol_unquote_script target "hol.builder0" 
+     ["prelude.ML"];
+   emit_hol_unquote_script target_boss "hol.builder" 
+     ["prelude.ML", "prelude2.ML"];
+   emit_hol_script (target ^ ".noquote") "hol.builder0" 
+     ["prelude.ML"];
+   emit_hol_script (target_boss ^ ".noquote") "hol.builder" 
+     ["prelude.ML", "prelude2.ML"]
  end;
 
  (*

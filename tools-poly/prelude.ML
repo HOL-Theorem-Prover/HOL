@@ -1,22 +1,6 @@
-val _ = use "poly/poly-init2.ML";
-
-(* ----------------------------------------------------------------------
-    Establish the basic environment and bring in the HOL kernel
-   ---------------------------------------------------------------------- *)
-
-val _ = 
-  loadPath := (OS.Path.concat (Systeml.HOLDIR, "sigobj")) :: (!loadPath);
-
-val _ = app load ["boolLib", "goalstackLib", "Arbrat"];
-
+val _ = PolyML.print_depth 0;
+local in
 open HolKernel Parse boolLib goalstackLib;
-
-(* Loading HolKernel installs the "standard" set of infixes, which are
-   set up in src/0/Overlay.sml *)
-
-(*---------------------------------------------------------------------------*
- *   Install prettyprinters                                                  *
- *---------------------------------------------------------------------------*)
 
 local
   open PP;
@@ -49,57 +33,6 @@ in
   val _ = PolyML.install_pp (pp2polypp (with_pp Arbint.pp_int));
   val _ = PolyML.install_pp (pp2polypp (with_pp Arbrat.pp_rat));
 end;
-
-
-(*---------------------------------------------------------------------------*
- * Set up the help paths.                                                    *
- *---------------------------------------------------------------------------*)
-
-(*
-local
-  open Path
-  fun HELP s = toString(fromString(concat(HOLDIR, concat("help",s))))
-  val SIGOBJ = toString(fromString(concat(HOLDIR, "sigobj")))
-in
-  val () = indexfiles := HELP "HOL.Help" :: !indexfiles
-  val () = helpdirs   := HOLDIR :: SIGOBJ :: !helpdirs
-  val () = Help.specialfiles :=
-             {file = "help/Docfiles/README.Hol98",
-              term = "hol", title = "Hol98 Overview"}
-             :: !Help.specialfiles
-end
-*)
-
-
-(*---------------------------------------------------------------------------*
- *  Set parameters for parsing and help.                                     *
- *---------------------------------------------------------------------------*)
-
-(*
-val _ = quotation := true
-val _ = Help.displayLines := 60;
-*)
-
-(*---------------------------------------------------------------------------*
- *  Set up compile_theory function                                           *
- *---------------------------------------------------------------------------*)
-(*
-fun compile_theory () = let
-  val name = current_theory()
-  val signame = name^"Theory.sig"
-  val smlname = name^"Theory.sml"
-  fun readable f = FileSys.access(f, [FileSys.A_READ])
-in
-  if readable signame andalso readable smlname then let
-  in
-     Meta.compileStructure ["Overlay"] signame;
-     Meta.compileStructure ["Overlay"] smlname;
-     print ("Compiled "^name^" theory files.\n")
-  end
-  else
-     print "No theory files on disk; perhaps export_theory() required.\n"
-end
-*)
 
 local
  fun has_dq file =
@@ -134,19 +67,7 @@ fun use s =
   else PolyML.use s;
 end;
 
-fun prelude_main () =
-let
-
-(* ----------------------------------------------------------------------
-    Set interactive flag to true
-   ---------------------------------------------------------------------- *)
-
 val _ = Globals.interactive := true;
-
-
-(*---------------------------------------------------------------------------*
- * Print a banner.                                                           *
- *---------------------------------------------------------------------------*)
 
 val build_stamp =
  let open TextIO Path;
@@ -156,7 +77,6 @@ val build_stamp =
      stamp
  end handle _ => "";
 
-
 val _ =
 TextIO.output(TextIO.stdOut,
   "\n-----------------------------------------------------------------\n"
@@ -164,11 +84,6 @@ TextIO.output(TextIO.stdOut,
   ^Globals.release^" "^Lib.int_to_string(Globals.version)^build_stamp
   ^"]\n\n       For introductory HOL help, type: help \"hol\";\n"
   ^"-----------------------------------------------------------------\n\n");
-
-(* ----------------------------------------------------------------------
-    if present, look at a Holmakefile in the current directory to see
-    if we should extend the loadPath
-   ---------------------------------------------------------------------- *)
 
 val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
             open Holmake_types;
@@ -195,14 +110,9 @@ val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
                            TextIO.flushOut TextIO.stdErr;
                            ())
         else ();
+
 val _ =
   (term_pp_prefix := "``";   term_pp_suffix := "``";
    type_pp_prefix  := "``";   type_pp_suffix := "``");
-in
-()
 end;
-
-
-(* Local variables: *)
-(* mode: sml *)
-(* end: *)
+val _ = PolyML.print_depth 100;
