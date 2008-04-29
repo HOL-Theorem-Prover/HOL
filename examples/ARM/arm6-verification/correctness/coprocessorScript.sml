@@ -244,7 +244,7 @@ val COPROC_BUSY_WAIT2 = prove(
     \\ POP_ASSUM IMP_RES_TAC
     \\ ASM_SIMP_TAC (arith_ss++STATE_INP_ss) [FUNPOW_SUC]
     \\ POP_ASSUM (K ALL_TAC)
-    \\ RM_ABBREV_TAC `w`
+    \\ markerLib.RM_ABBREV_TAC "w"
     \\ ABBREV_TAC `ointstart' =
          CP_INTERRUPT (onfq,ooonfq,oniq,oooniq,f,i,pipebabt) inp t`
     \\ IMP_RES_TAC EXISTS_BUSY_WAIT_IMP_BUSY_WAIT_DONE
@@ -427,7 +427,8 @@ val LDC_STC_THM = store_thm("LDC_STC_THM",
     \\ IMP_RES_TAC lem2
     \\ RES_MP_TAC [`w:num` |-> `w':num`] COPROC_BUSY_WAIT2
     \\ PAT_ASSUM `p + (1 + d) = t` (SUBST_ALL_TAC o SYM)
-    \\ ONCE_REWRITE_TAC [onestepTheory.FUNPOW_COMP] \\ RM_ABBREV_TAC `w'`
+    \\ ONCE_REWRITE_TAC [onestepTheory.FUNPOW_COMP]
+    \\ markerLib.RM_ABBREV_TAC "w'"
     \\ PAT_ASSUM `w' = 1 + d`
          (fn th => (SUBST_ALL_TAC o SYM) th \\ (ASSUME_TAC o Abbrev_wrap) th)
     \\ PAT_ASSUM `FUNPOW (SNEXT NEXT_ARM6) w' x = q` SUBST1_TAC
