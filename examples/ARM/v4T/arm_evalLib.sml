@@ -561,9 +561,12 @@ local
   val start = Arbnum.zero;
 
   fun label_table() =
+    ref (Redblackmap.mkDict String.compare);
+    (*
     Polyhash.mkPolyTable
       (100,HOL_ERR {message = "Cannot find ARM label\n",
                     origin_function = "", origin_structure = "arm_evalLib"});
+    *)
 
   fun advance_pc i n =
         case i of
@@ -582,7 +585,9 @@ local
     | mk_links (h::r) ht n =
        ((case h of
            Data.Label s =>
-             Polyhash.insert ht (s, "0x" ^ Arbnum.toHexString (mul2 n))
+             ht := Redblackmap.insert 
+                           (!ht, s, "0x" ^ Arbnum.toHexString (mul2 n))
+             (*Polyhash.insert ht (s, "0x" ^ Arbnum.toHexString (mul2 n))*)
          | _ => ());
         mk_links r ht (advance_pc h n));
 
@@ -598,7 +603,13 @@ local
   fun br_to_term i ht n =
         let val (xi, label) = x_label i
             val s = assembler_to_string NONE xi NONE
-            val address = Polyhash.find ht label
+            val address = 
+              Redblackmap.find (!ht, label)
+              handle Redblackmap.NotFound =>
+                raise (HOL_ERR {message = "Cannot find ARM label\n",
+                                    origin_function = "", origin_structure =
+                                    "arm_evalLib"})
+              (*Polyhash.find ht label*)
         in
           mk_instruction ("0x" ^ Arbnum.toHexString n ^ ": " ^ s ^ address)
         end;

@@ -506,10 +506,13 @@ local
   fun mul4 a = Arbnum.*(a,Arbnum.fromInt 4);
   val start = Arbnum.zero;
 
-  fun label_table() =
+  fun label_table() = 
+    ref (Redblackmap.mkDict String.compare);
+    (*
     Polyhash.mkPolyTable
       (100,HOL_ERR {message = "Cannot find ARM label\n",
                     origin_function = "", origin_structure = "arm_evalLib"});
+    *)
 
   fun mk_links [] ht n = ()
     | mk_links (h::r) ht n =
@@ -518,7 +521,9 @@ local
         | Data.BranchS b => mk_links r ht (add1 n)
         | Data.BranchN b => mk_links r ht (add1 n)
         | Data.Label s =>
-            (Polyhash.insert ht (s, "0x" ^ Arbnum.toHexString (mul4 n));
+            (ht := Redblackmap.insert 
+                          (!ht, s, "0x" ^ Arbnum.toHexString (mul4 n));
+            (*(Polyhash.insert ht (s, "0x" ^ Arbnum.toHexString (mul4 n));*)
              mk_links r ht n)
         | Data.Mark m => mk_links r ht (div4 m);
 
@@ -528,7 +533,13 @@ local
 
   fun br_to_term (cond,link,label) ht n =
     let val s = assembler_to_string NONE (Data.BranchS(cond,link,"")) NONE
-        val address = Polyhash.find ht label
+        val address = 
+          Redblackmap.find (!ht, label)
+          handle Redblackmap.NotFound =>
+            raise (HOL_ERR {message = "Cannot find ARM label\n",
+                                origin_function = "", origin_structure =
+                                "arm_evalLib"})
+          (*Polyhash.find ht label*)
     in
       mk_instruction ("0x" ^ Arbnum.toHexString (mul4 n) ^ ": " ^ s ^ address)
     end;
