@@ -2,11 +2,9 @@
 % HOL Manual LaTeX Source: logic
 % =====================================================================
 
-\documentclass[12pt]{book}
-\usepackage{charter}
+\documentclass[12pt,fleqn]{book}
 \usepackage{latexsym}
-\usepackage{fleqn}
-%\usepackage{amsmath}
+\usepackage{amsmath}
 \usepackage{amssymb}
 %\usepackage{amsbsy}
 %\usepackage{amsthm}
@@ -14,9 +12,6 @@
 \usepackage{alltt}
 \usepackage{../LaTeX/layout}
 \usepackage{graphicx}
-%\usepackage{pst-node}
-\usepackage{epsfig}
-\usepackage{url}
 
 % ---------------------------------------------------------------------
 % Input defined macros and commands
@@ -33,8 +28,8 @@
    % prelims
    % ---------------------------------------------------------------------
 
-   \pagenumbering{roman}                  % roman page numbers for prelims
-   \setcounter{page}{1}                   % start at page 1
+%   \pagenumbering{roman}                  % roman page numbers for prelims
+%   \setcounter{page}{1}                   % start at page 1
 
    \include{title}                        % description title page
    \include{preface}                      % preface to entire description
@@ -43,8 +38,8 @@
 
 
    \cleardoublepage
-   \pagenumbering{arabic}                % arabic page numbers
-   \setcounter{page}{1}                  % start at page 1
+%   \pagenumbering{arabic}                % arabic page numbers
+%   \setcounter{page}{1}
 
    \include{syntax}                      % Syntax and informal semantics
    \include{semantics}                   % formal semantics

@@ -4,39 +4,42 @@
 
 default: all
 
-tutorial:
-	(cd Tutorial; make all; cd ..)
-	@echo "====> TUTORIAL made"
+clean:
+	(cd Description; make clean; cd ..)
+	(cd Tutorial; make clean; cd ..)
+	(cd Logic; make clean; cd ..)
+	(cd Reference; make clean; cd ..)
+	(cd Interaction; make clean; cd ..)
+	(cd Quick; make clean; cd ..)
 
 description:
-	(cd Description; make all; cd ..)
+	(cd Description; make; cd ..)
 	@echo "====> DESCRIPTION made"
+
+logic:
+	(cd Logic; make; cd ..)
+	@echo "====> LOGIC made"
+
+tutorial:
+	(cd Tutorial; make; cd ..)
+	@echo "====> TUTORIAL made"
+
+reference:
+	(cd Reference; make; cd ..)
+	@echo "====> REFERENCE made"
 
 interaction:
 	(cd Interaction; make; cd ..)
 	@echo "====> Quick Reference made"
 
-reference:
-	(cd Reference; make all; cd ..)
-	@echo "====> REFERENCE made"
-
-logic:
-	(cd Logic; make all; cd ..)
-	@echo "====> LOGIC made"
+quick:
+	(cd Quick; make; cd ..)
+	@echo "====> Quick Reference made"
 
 # libraries:
 # 	(cd Libraries; make all; cd ..)
 # 	@echo "====> LIBRARIES made"
 
-covers:
-	(cd Covers; make all; cd ..)
-	@echo "====> Fancy covers made"
-
-quick:
-	(cd Quick; make all; cd ..)
-	@echo "====> Quick Reference made"
-
-all:
-	make tutorial; make description; make interaction; make reference; make covers; make quick ; make logic
+all: description tutorial logic reference interaction quick
 	@echo "=======> MANUAL made"
 

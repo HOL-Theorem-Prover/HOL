@@ -601,7 +601,7 @@ pre-proved in the theory \theoryimp{bool}. The following theorems
 illustrate how higher order logic allows concise expression of
 theorems supporting quantifier movement.
 
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
  LEFT_AND_FORALL_THM  |- !P Q. (!x. P x) /\ Q = !x. P x /\ Q
  RIGHT_AND_FORALL_THM |- !P Q. P /\ (!x. Q x) = !x. P /\ Q x
@@ -629,7 +629,7 @@ theorems supporting quantifier movement.
 
  SKOLEM_THM           |- !P. (!x. ?y. P x y) = ?f. !x. P x (f x)
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 Also, a theorem justifying Skolemization ({\small\verb+SKOLEM_THM+}) is
 proved. Many other theorems may be found in \theoryimp{bool} theory.
@@ -801,8 +801,8 @@ following characterizing theorem, by use of the function
 %
 \begin{hol}
 \begin{verbatim}
-   |- (!a. ABS_prod (REP_prod a) = a) /\
-      (!r. (\p. ?x y. p = (\a b. (a=x) /\ (b=y)) r = (REP_prod(ABS_prod r) = r)
+  |- (!a. ABS_prod (REP_prod a) = a) /\
+     (!r. (\p. ?x y. p = (\a b. (a=x) /\ (b=y)) r = (REP_prod(ABS_prod r) = r)
 \end{verbatim}
 \end{hol}
 
@@ -977,7 +977,7 @@ transformation:
 
 \vspace{1ex}
 
-As a result of this parser translation, a variable structure, such as \ml{(x,y)} in
+\noindent As a result of this parser translation, a variable structure, such as \ml{(x,y)} in
 \ml{\bs(x,y).x+y}, is not a subterm of the abstraction
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!subterms of}
 in which it occurs; it disappears on parsing.
@@ -1484,13 +1484,13 @@ which automatically proves the existence of primitive recursive
 functions and then makes a constant specification to introduce the constant
 that denotes such a function:
 
-\begin{boxed}
+\begin{holboxed}
 \index{new_recursive_definition@\ml{new\_recursive\_definition}|pin}
 \begin{verbatim}
    new_recursive_definition :
       {def : term, name : string, rec_axiom : thm} -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent In fact, \ml{new\_recursive\_definition} handles
 primitive recursive definitions over a range of types, not just the
@@ -1825,12 +1825,12 @@ Numerals are related to numbers built from \holtxt{0} and \holtxt{SUC}
 via the derived inference rule \ml{num\_CONV}, found in the
 \ml{numLib} library.
 
-\begin{boxed}
+\begin{holboxed}
 \index{num_CONV@\ml{num\_CONV}|pin}
 \begin{verbatim}
    num_CONV : term -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent \ml{num\_CONV} can be used to generate the `\ml{SUC}'
 equation for any non-zero numeral.  For example:
@@ -2313,7 +2313,7 @@ target word size will be $h + 1 - l$, but this need not be the case.}
 \end{figure}
 
 The function
-\holtxt{word\_modify:(\num\rarr\bool\rarr\bool)\rarr\worda\rarr\worda} changes
+\holtxt{word\_modify:(\num\,\rarr\,\bool\,\rarr\,\bool)\,\rarr\,\worda\,\rarr\,\worda} changes
 a word by applying a map at each bit position.
 This operation provides a very flexible and convenient mechanism for
 manipulating words \eg{}
@@ -2443,6 +2443,7 @@ listed in Table~\ref{tab:word:constants}.
 \label{tab:word:constants}
 \end{table}
 
+{\setlength{\tabcolsep}{4pt}
 \begin{table}[h!tdp]
 \caption{Word operations.}
 \begin{center}\small
@@ -2520,7 +2521,7 @@ than''  \\
 \end{tabular}
 \end{center}
 \label{tab:word:operations}
-\end{table}
+\end{table}}
 
 \index{n-bit words, the HOL theory of@$n$-bit words, the \HOL{} theory of|)}
 } % matches bracket at beginning of n-bit section, where some n-bit
@@ -3282,7 +3283,6 @@ character immediately followed by a string literal of length one.
 Thus:
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - val t = ``f #"c" #"\n"``;
 <<HOL message: inventing new type variable names: 'a>>
@@ -3291,7 +3291,6 @@ Thus:
 - dest_term ``#"\t"``;
 > val it = COMB(``CHR``, ``9``) : lambda
 \end{verbatim}
-\end{hol}
 \end{session}
 
 
@@ -3324,12 +3323,10 @@ sequences that are used in \ML{}.  For example, \ml{\bs{}n} for the
 newline character, and a backslash followed by three decimal digits
 for characters of the given number.
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - val t = ``"foo bar\n\001"``;
 > val t = ``"foo bar\n\^A"`` : term
 \end{verbatim}
-\end{hol}
 \end{session}
 Note that if one wants to use the control-character syntax with the
 caret that the pretty-printer has chosen to use in printing the given
@@ -3392,7 +3389,7 @@ Such an expression is translated to
 
 \paragraph {Length and concatenation}
 
-The length of a string (\holtxt{STRLEN}) is defined by primitive
+String length (\holtxt{STRLEN}) is defined by primitive
 recursion. The concatenation of strings (\holtxt{STRCAT}) may be expressed
 recursively (\holtxt{STRCAT\_EQNS}) or as a fold (\holtxt{STRCAT\_EXPLODE}):
 \begin{hol}
@@ -3754,10 +3751,10 @@ The special purpose set-theoretic notations
 by the \HOL{} parser and printer when the theory \theoryimp{pred\_set}
 is loaded.
 
-The normal interpretation of $\holtxt{\{}t_1 ;t_2 ; \ldots ;
-t_n\holtxt{\}}$ is the finite set containing just $t_1,t_2,\ldots,
+The normal interpretation of \lb$t_1 ;t_2 ; \ldots ; t_n$\rb{} is the finite set
+containing just $t_1,t_2,\ldots,
 t_n$. This can be modelled by starting with the empty set and
-performing a sequence of insertions. For example, \holtxt{\{1;2;3;4\}}
+performing a sequence of insertions. For example, \holtxt{\lb{}1;2;3;4\rb{}}
 parses to
 
 \begin{hol}
@@ -4206,7 +4203,7 @@ infix), inversion (\holtxt{inv}), domain (\holtxt{RDOM}), and range
 \end{verbatim}
 \end{hol}
 
-Set operations lifted to work on relations include subset
+\noindent Set operations lifted to work on relations include subset
 (\holtxt{RSUBSET}, infix), union (\holtxt{RUNION}, infix),
 intersection (\holtxt{RINTER}, infix), complement (\holtxt{RCOMPL}),
 and universe (\holtxt{RUNIV}).
@@ -4500,10 +4497,10 @@ main notions in the theory.
 \end{verbatim}
 \end{hol}
 
-The \HOL{} parser and printer will treat the syntax \verb+f ' x+ as
+The \HOL{} parser and printer will treat the syntax \holtxt{f\,'\,x} as
 the application of finite map \verb+f+ to argument \verb+x+, ie, as
-{\small\verb+FAPPLY f x+}. The notation \verb#f |+ (x,y)# represents
-{\small\verb+FUPDATE f (x,y)+}, \ie, the updating of finite map
+\holtxt{FAPPLY\,f\,x}. The notation \holtxt{f\,|+\,(x,y)} represents
+\holtxt{FUPDATE\,f\,(x,y)}, \ie, the updating of finite map
 \verb+f+ by the pair \verb+(x,y)+.
 
 The basic constants have obscure definitions, from which more useful
@@ -4533,9 +4530,7 @@ derived.
 \end{verbatim}
 \end{hol}
 Iterated updates (\holtxt{FUPDATE\_LIST}) to a map are useful. The
-infix notation \holtxt{|++} may also be used.  For example, \holtxt{fm
-  |++ [(k1,v1); (k2,v2)]} is equal to \holtxt{(fm |+ (k1,v1)) |+
-  (k2,v2)}.
+infix notation \holtxt{|++} may also be used.  For example, \holtxt{fm\,|++\,[(k1,v1);\,(k2,v2)]} is equal to \holtxt{(fm\,|+\,(k1,v1))\,|+\,(k2,v2)}.
 \begin{hol}
 \begin{verbatim}
    FUPDATE_LIST  |- FUPDATE_LIST = FOLDL FUPDATE
@@ -4606,7 +4601,7 @@ definition. Again, this concept has a alternate recursive presentation
 
 \paragraph {Union and sub-maps}
 
-Unlike the union of sets, the union of two finite maps
+Unlike set union, the union of two finite maps
 (\holtxt{FUNION\_DEF}) is not symmetric: the domain of the first map
 takes precedence. The notion of a finite map being a submap of another
 (\holtxt{SUBMAP}, infix) is an extension of how subsets are
@@ -4790,9 +4785,9 @@ Divisibility and the greatest common divisor.
 A theory of polynomials over $\mathbb{R}$, providing
 a collection of operations on polynomials, and theorems about them.
 \\
-\theoryimp{Temporal\_Logic}, \theoryimp{Omega\_Automata}
+\theoryimp{Temporal\_Logic},\newline \theoryimp{Omega\_Automata}
 &
-Klaus Schneider's development of temporal logic and $\omega$-automata.
+Klaus Schneider's development of temporal logic and\newline $\omega$-automata.
 \\
 \theoryimp{ctl}, \theoryimp{mu}
 &

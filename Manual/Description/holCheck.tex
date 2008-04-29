@@ -1,18 +1,13 @@
-\documentclass[12pt]{article}
-
-\usepackage{charter}
+\documentclass[12pt,fleqn]{article}
 \usepackage{latexsym}
-%\usepackage{amsmath}                                                                                                                                      
+%\usepackage{amsmath}
 \usepackage{amssymb}
-%\usepackage{amsbsy}                                                                                                                                      
-%\usepackage{amsthm}                                                                                                                                        
+%\usepackage{amsbsy}
+%\usepackage{amsthm}
 \usepackage{makeidx}
-\usepackage{fleqn}
 \usepackage{alltt}
 \usepackage{../LaTeX/layout}
 \usepackage{graphicx}
-%\usepackage{pst-node}                                                                                                                                     
-\usepackage{epsfig}
 \usepackage{url}
 
 % ---------------------------------------------------------------------                                                                                     
@@ -410,7 +405,7 @@ The last result is the same as the second and third, since B does not have a win
 
 Finally, note that both success theorems have some assumptions. If the term\_bdd's were examined, they would also have the corresponding assumptions. This is because \hc{} uses postponed proof verification to speed up the model checking work-flow (i.e. no time is wasted proving intermediate lemmas for properties that fail eventually). Any success theorems and term\_bdd's thus end up with several undischarged assumptions. The idea is that the time-consuming proof verification can be postponed to a later time, when the user is otherwise occupied (e.g., asleep).
 
-The assumptions are discharged as follows (HOL chatting messages have been elided).
+The assumptions are discharged as follows (chatting messages have been elided).
 
 \begin{session}\begin{verbatim}
 - val ttt3 = holCheckLib.prove_model ttt2;

@@ -455,11 +455,11 @@ explained in Chapter~\ref{avra_conv}.}
 \subsection{Adding an assumption}
 \index{derived rules, in HOL logic@derived rules, in \HOL{} logic!list and derivations of some|(}
 
-\begin{boxed}
+\begin{holboxed}
 \index{ADD_ASSUM@\ml{ADD\_ASSUM}|pin}
 \begin{verbatim}
    ADD_ASSUM : term -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 \vspace{12pt plus2pt minus1pt}
@@ -481,12 +481,12 @@ $$\Gamma\turn t\over \Gamma,\ t'\turn t$$
 \subsection{Undischarging}
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{implication, in HOL logic@implication, in \HOL\ logic!inference rules for}
 \index{UNDISCH@\ml{UNDISCH}|pin}
 \begin{verbatim}
    UNDISCH : thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 \vspace{12pt plus2pt minus1pt}
@@ -507,13 +507,13 @@ $$\Gamma\turn t_1\imp t_2 \over\Gamma,\ t_1\turn t_2$$
 \subsection{Symmetry of equality}
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{SYM@\ml{SYM}|pin}
 \index{symmetry of equality rule, in HOL logic@symmetry of equality rule, in \HOL\ logic}
 \index{equality, in HOL logic@equality, in \HOL\ logic!symmetry rule for}
 \begin{verbatim}
    SYM : thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 
@@ -534,13 +534,13 @@ $$\Gamma\turn t_1 = t_2\over \Gamma\turn t_2 = t_1$$
 \subsection{Transitivity of equality}
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{transitivity of equality rule, in HOL logic@transitivity of equality rule, in \HOL\ logic}
 \index{equality, in HOL logic@equality, in \HOL\ logic!transitivity rule for}
 \index{TRANS@\ml{TRANS}|pin}
 \begin{verbatim}
    TRANS : thm -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -559,11 +559,11 @@ $$\Gamma_1\turn t_1=t_2\qquad\qquad\qquad \Gamma_2\turn t_2=t_3 \over
 
 \subsection{Application of a term to a theorem}\index{function application, in HOL logic@function application, in \HOL\ logic!inference rules for}
 
-\begin{boxed}
+\begin{holboxed}
 \index{AP_TERM@\ml{AP\_TERM}|pin}
 \begin{verbatim}
    AP_TERM : term -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -581,11 +581,11 @@ $$\Gamma\turn t_1=t_2\over\Gamma\turn t\ t_1 = t\ t_2$$
 
 \subsection{Application of a theorem to a term}
 
-\begin{boxed}
+\begin{holboxed}
 \index{AP_THM@\ml{AP\_THM}|pin}
 \begin{verbatim}
    AP_THM : thm -> conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -604,12 +604,12 @@ $$\Gamma\turn t_1=t_2\over \Gamma\turn t_1\ t = t_2\ t$$
 \subsection{Modus Ponens for equality}
 \label{avra_eq_mp}
 
-\begin{boxed}
+\begin{holboxed}
 \index{EQ_MP@\ml{EQ\_MP}|pin}
 \index{equality, in HOL logic@equality, in \HOL\ logic!MP rule for@\ml{MP} rule for}
 \begin{verbatim}
    EQ_MP : thm -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -630,11 +630,11 @@ $$\Gamma_1\turn t_1=t_2\qquad\qquad\qquad \Gamma_2\turn t_1\over
 \subsection{Implication from equality}
 \index{equality, in HOL logic@equality, in \HOL\ logic!other rules for|(}
 \index{implication, in HOL logic@implication, in \HOL\ logic!inference rules for}
-\begin{boxed}
+\begin{holboxed}
 \index{EQ_IMP_RULE@\ml{EQ\_IMP\_RULE}|pin}
 \begin{verbatim}
    EQ_IMP_RULE : thm -> (thm # thm)
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -683,11 +683,11 @@ $$\turn\T$$
 
 \subsection{Equality-with-\T\ elimination}
 
-\begin{boxed}
+\begin{holboxed}
 \index{EQT_ELIM@\ml{EQT\_ELIM}|pin}
 \begin{verbatim}
    EQT_ELIM : thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -705,12 +705,12 @@ $$\Gamma\turn t = \T\over \Gamma\turn t$$
 
 \subsection{Specialization ($\forall$-elimination)}
 
-\begin{boxed}
+\begin{holboxed}
 \index{SPEC@\ml{SPEC}|pin}
 \index{specialization rule, in HOL logic@specialization rule, in \HOL\ logic}
 \begin{verbatim}
    SPEC : term -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \label{avra_spec}
 
@@ -749,11 +749,11 @@ become bound after substitution.
 
 \subsection{Equality-with-\T\ introduction}
 
-\begin{boxed}
+\begin{holboxed}
 \index{EQT_INTRO@\ml{EQT\_INTRO}|pin}
 \begin{verbatim}
    EQT_INTRO : thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 \vspace{12pt plus2pt minus1pt}
@@ -782,12 +782,12 @@ $$\Gamma\turn t\over\Gamma\turn t=\T$$
 \subsection{Generalization ($\forall$-introduction)}\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!inference rules for}
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{GEN@\ml{GEN}|pin}
 \index{generalization rule, in HOL logic@generalization rule, in \HOL\ logic}
 \begin{verbatim}
    GEN : term -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \label{avra_gen}
 
@@ -822,9 +822,9 @@ $$\Gamma\turn t\over\Gamma\turn\uquant{x} t$$
 
 \subsection{Simple $\alpha$-conversion}
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    SIMPLE_ALPHA
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -865,11 +865,11 @@ used in a subsequent derivation, but it is not actually in the
 
 \subsection{$\eta$-conversion}
 
-\begin{boxed}
+\begin{holboxed}
 \index{ETA_CONV@\ml{ETA\_CONV}|pin}
 \begin{verbatim}
    ETA_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 \vspace{12pt plus2pt minus1pt}
 
 $$\turn(\lquant{x'}t\ x') = t$$
@@ -893,12 +893,12 @@ to motivate the use of \rul{SIMPLE\_ALPHA} in the derivation below).
 \subsection{Extensionality}
 \index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!inference rules for}
 
-\begin{boxed}
+\begin{holboxed}
 \index{EXT@\ml{EXT}|pin}
 \index{extensionality rule, in HOL logic@extensionality rule, in \HOL\ logic}
 \begin{verbatim}
    EXT : thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -926,12 +926,12 @@ $$\Gamma\turn\uquant{x} t_1\ x = t_2\ x\over\Gamma\turn t_1=t_2$$
 
 \subsection{$\hilbert$-introduction}
 
-\begin{boxed}
+\begin{holboxed}
 \index{choice operator, in HOL logic@choice operator, in \HOL\ logic!inference rules for}
 \index{SELECT_INTRO@\ml{SELECT\_INTRO}|pin}
 \begin{verbatim}
    SELECT_INTRO : thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -952,12 +952,12 @@ type-instantiated axiom]
 
 \subsection{$\hilbert$-elimination}
 
-\begin{boxed}
+\begin{holboxed}
 \index{choice operator, in HOL logic@choice operator, in \HOL\ logic!inference rules for}
 \index{SELECT_ELIM@\ml{SELECT\_ELIM}|pin}
 \begin{verbatim}
    SELECT_ELIM : thm -> (term # thm) -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -985,11 +985,11 @@ hypothesis.
 \subsection{$\exists$-introduction}
 \index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!inference rules for|(}
 
-\begin{boxed}
+\begin{holboxed}
 \index{EXISTS@\ml{EXISTS}|pin}
 \begin{verbatim}
    EXISTS : (term # term) -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -1028,11 +1028,11 @@ doesn't become bound after substitution.
 
 \subsection{$\exists$-elimination}
 
-\begin{boxed}
+\begin{holboxed}
 \index{CHOOSE@\ml{CHOOSE}|pin}
 \begin{verbatim}
    CHOOSE : (term # thm) -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -1072,11 +1072,11 @@ bound after substitution.
 
 \subsection{Use of a definition}
 
-\begin{boxed}
+\begin{holboxed}
 \index{RIGHT_BETA@\ml{RIGHT\_BETA}|pin}
 \begin{verbatim}
    RIGHT_BETA : thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -1103,11 +1103,11 @@ t'[t]$\hfill [\rul{BETA\_CONV}]
 
 \subsection{Use of a definition}
 
-\begin{boxed}
+\begin{holboxed}
 \index{RIGHT_LIST_BETA@\ml{RIGHT\_LIST\_BETA}|pin}
 \begin{verbatim}
    RIGHT_LIST_BETA : thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -1139,12 +1139,12 @@ t'[t_1,\ldots,t_n]$\hfill [\rul{BETA\_CONV} (n times)]
 \label{avra_conj}
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{CONJ@\ml{CONJ}|pin}
 \index{conjunction, in HOL logic@conjunction, in \HOL\ logic!inference rule for}
 \begin{verbatim}
    CONJ : thm -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -1177,12 +1177,12 @@ $$\Gamma_1\turn t_1\qquad\qquad\qquad\Gamma_2\turn t_2\over
 \subsection{$\wedge$-elimination}
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{CONJUNCT1@\ml{CONJUNCT1}|pin}
 \index{CONJUNCT2@\ml{CONJUNCT2}|pin}
 \begin{verbatim}
    CONJUNCT1 : thm -> thm, CONJUNCT2 : thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -1217,11 +1217,11 @@ $$\Gamma\turn t_1\conj t_2\over
 
 \subsection{Right $\vee$-introduction}\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!inference rule for|(}
 
-\begin{boxed}
+\begin{holboxed}
 \index{DISJ1@\ml{DISJ1}|pin}
 \begin{verbatim}
    DISJ1 : thm -> conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -1251,11 +1251,11 @@ $$\Gamma\turn t_1\over \Gamma\turn t_1\disj t_2$$
 \subsection{Left $\vee$-introduction}
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{DISJ2@\ml{DISJ2}|pin}
 \begin{verbatim}
    DISJ2 : term -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 \vspace{12pt plus2pt minus1pt}
@@ -1283,11 +1283,11 @@ $$\Gamma\turn t_2\over \Gamma\turn t_1\disj t_2$$
 
 \subsection{$\vee$-elimination}
 
-\begin{boxed}
+\begin{holboxed}
 \index{DISJ_CASES@\ml{DISJ\_CASES}|pin}
 \begin{verbatim}
    DISJ_CASES : thm -> thm -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -1322,12 +1322,12 @@ $$\Gamma\turn t_1\disj t_2\qquad\qquad\qquad\Gamma_1,\ t_1\turn t
 \subsection{Classical contradiction rule}
 \index{F@\ml{F}!rules of inference for}
 
-\begin{boxed}
+\begin{holboxed}
 \index{CCONTR@\ml{CCONTR}|pin}
 \index{contradiction rule, in HOL logic@contradiction rule, in \HOL\ logic}
 \begin{verbatim}
    CCONTR : term -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 

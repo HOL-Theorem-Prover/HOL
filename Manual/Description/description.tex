@@ -2,20 +2,16 @@
 % HOL Manual LaTeX Source: description
 % =====================================================================
 
-\documentclass[12pt]{book}
-\usepackage{charter}
+\documentclass[12pt,fleqn]{book}
 \usepackage{latexsym}
 %\usepackage{amsmath}
 \usepackage{amssymb}
 %\usepackage{amsbsy}
 %\usepackage{amsthm}
 \usepackage{makeidx}
-\usepackage{fleqn}
 \usepackage{alltt}
 \usepackage{../LaTeX/layout}
 \usepackage{graphicx}
-%\usepackage{pst-node}
-\usepackage{epsfig}
 \usepackage{url}
 
 % ---------------------------------------------------------------------
@@ -43,8 +39,8 @@
    % prelims
    % ---------------------------------------------------------------------
 
-   \pagenumbering{roman}                  % roman page numbers for prelims
-   \setcounter{page}{1}                   % start at page 1
+%   \pagenumbering{roman}                  % roman page numbers for prelims
+%   \setcounter{page}{1}                   % start at page 1
 
    \include{title}                        % description title page
    \include{preface}                      % preface to entire description
@@ -52,9 +48,9 @@
    \tableofcontents                       % table of contents
 
 
-   \cleardoublepage
-   \pagenumbering{arabic}                % arabic page numbers
-   \setcounter{page}{1}                  % start at page 1
+%   \cleardoublepage
+%   \pagenumbering{arabic}                % arabic page numbers
+%   \setcounter{page}{1}                  % start at page 1
 
    % ---------------------------------------------------------------------
    % part 1: The HOL Logic
@@ -112,7 +108,8 @@
    % ---------------------------------------------------------------------
 
 
-
+\small
+\emergencystretch=14pt
 \printindex
 
 \end{document}

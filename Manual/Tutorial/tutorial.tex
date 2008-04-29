@@ -2,9 +2,8 @@
 % HOL Manual LaTeX Source: tutorial
 % =====================================================================
 
-\documentclass[12pt]{book}
-\usepackage{charter}
-\usepackage{fleqn}
+\documentclass[12pt,fleqn]{book}
+%\usepackage{amsmath}
 \usepackage{alltt}
 \usepackage{../LaTeX/layout}
 \usepackage{graphicx}
@@ -19,8 +18,7 @@
 \input{../LaTeX/pic-macros}
 %\input{../LaTeX/docmacros}
 \usepackage{url}
-\usepackage{pstricks}
-\usepackage{pst-node}
+\usepackage[line,arrow,frame,matrix]{xy}
 \usepackage{../LaTeX/proof}
 %\includeonly{title,contents,preface,../LaTeX/ack,intro,ml,logic,
 % proof,references,Studies/preface,Studies/parity/parity}
@@ -40,17 +38,17 @@
    % prelims
    % ---------------------------------------------------------------------
 
-   \pagenumbering{roman}                  % roman page numbers for prelims
-   \setcounter{page}{1}                   % start at page 1
+%   \pagenumbering{roman}                  % roman page numbers for prelims
+%   \setcounter{page}{1}                   % start at page 1
 
    \include{title}                        % tutorial title page
    \include{preface}                      % preface to entire tutorial
    \input{../LaTeX/ack}                 % global acknowledgements
    \tableofcontents
 
-   \newpage
-   \pagenumbering{arabic}                % arabic page numbers
-   \setcounter{page}{1}                  % start at page 1
+%   \newpage
+%   \pagenumbering{arabic}                % arabic page numbers
+%   \setcounter{page}{1}                  % start at page 1
 
    \include{intro}                       % intro: getting and installing hol
    \include{ml}                          % intro to ml

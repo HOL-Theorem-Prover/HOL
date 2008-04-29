@@ -2,22 +2,45 @@
 # Makefile for the hol REFERENCE manual
 # =====================================================================
 
+PDFLATEX=pdflatex
+DVILATEX=latex
+MAKEINDEX=makeindex
+
 # ---------------------------------------------------------------------
 # Pathnames: Helpd = hol help directory, MAKEINDEX = makeindex program
 # ---------------------------------------------------------------------
 Helpd=../../help
-MAKEINDEX=makeindex
 D2TSED=bin/doc-to-tex.sed
 
 HOLdir=../../
 THMDIR=$(Helpd)/THEOREMS/
 MAKEDOC=$(HOLdir)/Manual/Reference/bin/create-doc-files2
 
-default: all
+OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex \
+        ../LaTeX/ref-macros.tex
+
+default: pdf
+all: ps pdf
+ps: reference.ps
+pdf: reference.pdf
 
 clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind *.toc \
-         entries.tex theorems.tex
+         entries.tex theorems.tex reference.{ps,pdf}
+
+reference.pdf: ids reference.tex $(OTHER)
+	${PDFLATEX}  reference
+	${MAKEINDEX} reference
+	${PDFLATEX}  reference
+
+reference.dvi: ids reference.tex $(OTHER)
+	${DVILATEX}  reference
+	${MAKEINDEX} reference
+	${DVILATEX}  reference
+
+reference.ps: reference.dvi
+	dvips -Ppdf -G0 -f reference.dvi > reference.ps.tmp
+	mv reference.ps.tmp $@
 
 # Until we know how to generate the theorems that used to be part of the
 # reference, we leave off the theorems entry that used to follow ids below
@@ -58,20 +81,6 @@ theorems:
 	/bin/sh bin/doc-to-tex ${D2TSED} ${Helpd}/THEOREMS/tree theorems.tex
 	@echo "\section{Theorems used to define types}" >> theorems.tex
 	/bin/sh bin/doc-to-tex ${D2TSED} ${Helpd}/THEOREMS/tydefs theorems.tex
-
-reference.dvi: ids reference.tex
-	(cd ../Logo ; make)  # makes the lantern logo
-	latex reference.tex
-	${MAKEINDEX} reference.idx
-	latex reference.tex
-
-reference.pdf: reference.ps
-	ps2pdf reference.ps
-
-reference.ps: reference.dvi
-	dvips -Ppdf -G0 -f reference.dvi > reference.ps
-
-all: reference.ps reference.pdf
 
 thmdoc:
 	(cd $(THMDIR)axioms;    make thmdoc) ;

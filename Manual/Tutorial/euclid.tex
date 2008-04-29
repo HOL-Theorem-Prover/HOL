@@ -459,12 +459,12 @@ means that $\mathtt{SUC}\ n * x$ does not expand to $(n * x) + x$;
 instead, the rearrangement yields $x * \mathtt{SUC}\; n$. OK, so let's
 add in the definition of multiplication. This uncovers a new problem: how
 to locate this definition. The function
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
    DB.match : string list -> term
                 -> ((string * string) * (thm * class)) list
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent
 is often helpful for such tasks. It takes a list of theory names, and
@@ -1685,7 +1685,7 @@ the expression:
 \[
 \mbox{\ml{val \_{} = set\_fixity "divides" (Infixr 450)}}
 \]
-The only extra changes are to bracket the rest of the script file text
+The only extra changes are to bracket the rest of the script text
 with calls to \ml{new\_theory} and \ml{export\_theory}.  So,
 before the definition of \ml{divides}, we add:
 \[

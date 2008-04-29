@@ -24,29 +24,20 @@
 % 1 inch = 25.4 mm
 % ---------------------------------------------------------------------
 
-\ifAfour \hsize=159.2truemm \else \hsize=165.1truemm \fi
-\ifAfour \vsize=246.2truemm \else \vsize=228.6truemm \fi
+\ifAfour
+  \usepackage[a4paper,width=160truemm,height=225truemm,top=38mm,
+              headheight=16pt,headsep=20pt,footskip=13mm]{geometry}
+\else
+  \usepackage[letterpaper,width=160truemm,height=225truemm,top=32mm,
+              headheight=16pt,headsep=20pt,footskip=13mm]{geometry}
+\fi
 
 % ---------------------------------------------------------------------
-% PAGE LAYOUT
+% FONT
 % ---------------------------------------------------------------------
 
-\textwidth 160truemm
-\textheight 225truemm
-
-% ---------------------------------------------------------------------
-% POSITION ON PAPER  Adjusted for local conditions (see \Afour above)
-% ---------------------------------------------------------------------
-
-% Double sided
-\ifAfour \oddsidemargin=6.6truemm \else \oddsidemargin=8.55truemm \fi
-\ifAfour \evensidemargin=-7.4truemm \else \evensidemargin=-3.45truemm \fi
-
-% Single Sided
-%\ifAfour \oddsidemargin=6.6truemm \else \oddsidemargin=8.55truemm \fi
-%\ifAfour \evensidemargin=6.6truemm \else \evensidemargin=8.55truemm \fi
-
-\ifAfour \topmargin 1truemm \else \topmargin -4truemm \fi
+\renewcommand{\rmdefault}{bch}
+\def\@pnumwidth{8mm}
 
 % ---------------------------------------------------------------------
 % MATH INDENTATION.  = \tabcolsep + three small verbatim spaces  (!)
@@ -60,19 +51,6 @@
 \newbox\temp
 \setbox\temp=\hbox{\small\verb!   !}
 \addtolength{\mathindent}{\wd\temp}
-
-
-% ---------------------------------------------------------------------
-% HEAD: spacing to match header macro below.
-% ---------------------------------------------------------------------
-\headheight 16pt
-\headsep 20pt
-
-% ---------------------------------------------------------------------
-% FOOT: page number in 12 point font
-% ---------------------------------------------------------------------
-%\footheight 12pt
-\footskip 13mm
 
 % ---------------------------------------------------------------------
 % INDENTATION: 4mm indentation

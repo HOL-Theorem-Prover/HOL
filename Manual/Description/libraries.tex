@@ -16,7 +16,6 @@
 \newcommand{\simpset}{simpset}
 \newcommand{\Simpset}{Simpset}
 
-{
  \newcommand{\term}      {\mbox{\it term}}
  \newcommand{\vstr}      {\mbox{\it vstr}}
 
@@ -141,7 +140,6 @@ light-weight theory of numbers extended with an infinity, where the
 represeting type was \holtxt{num option} (\holtxt{NONE} would
 represent the infinity value).  One might set up an abbreviation
 \holtxt{infnum} that expanded to this underlying type.
-
 Polymorphic patterns are supported as well.  For example, as described
 in Section~\ref{sec:theory-of-sets}, the abbreviation \holtxt{set}, of
 one argument, is such that \holtxt{:'a set} expands into the type
@@ -252,7 +250,6 @@ system will inform us that overloading resolution is being performed.
 
 \setcounter{sessioncount}{1}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - load "integerTheory";
 > val it = () : unit
@@ -264,7 +261,6 @@ system will inform us that overloading resolution is being performed.
 - type_of it;
 > val it = `:bool` : hol_type
 \end{verbatim}
-\end{hol}
 \end{session}
 
 A priority mechanism is used to resolve multiple possible choices. In
@@ -277,7 +273,6 @@ while in the second, a type constraint ensures that \holtxt{\~{}\~{}x} has
 type \holtxt{:int}.
 
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - show_types := true;
 > val it = () : unit
@@ -289,7 +284,6 @@ type \holtxt{:int}.
 - Term `~(x:int = ~~x)`;
 > val it = `~((x :int) = ~~x)` : term
 \end{verbatim}
-\end{hol}
 \end{session}
 
 Note that the symbol \holtxt{\~{}} stands for two different constants in
@@ -440,11 +434,9 @@ parser in \HOL{}.
   \texttt{MEM} for \texttt{IS\_EL}.  We need to use the function
   \texttt{overload\_on} to overload the original constant for the new
   name:
-\begin{hol}
 \begin{verbatim}
    val _ = overload_on ("MEM", Term`IS_EL`);
 \end{verbatim}
-\end{hol}
 
 \item[Making addition right associative] If one has a number of old
   scripts that assume addition is right associative because this is
@@ -455,18 +447,14 @@ parser in \HOL{}.
   \ml{term\_grammar()}).  With just \ml{arithmeticTheory}
   loaded, the only infixes at level 500 are \holtxt{+} and
   \holtxt{-}.  So, we remove the rules for them:
-\begin{hol}
 \begin{verbatim}
    val _ = app temp_remove_rules_for_term ["+", "-"];
 \end{verbatim}
-\end{hol}
   \noindent And then we put them back with the appropriate
   associativity:
-\begin{hol}
 \begin{verbatim}
    val _ = app (fn s => temp_add_infix(s, 500, RIGHT)) ["+", "-"];
 \end{verbatim}
-\end{hol}
 \noindent Note that we use the \ml{temp\_} versions of these two
 functions so that other theories depending on this one won't be
 affected.  Further note that we can't have two infixes at the same
@@ -488,17 +476,15 @@ of expressions of this form.  In this case, it will be:
   appropriate fixity is \ml{TruePrefix}.  Knowing that the underlying
   term constant is called \holtxt{COND}, the simplest way to achieve
   the desired syntax is:
-\begin{hol}
 \begin{verbatim}
-  val _ = add_rule
-        {term_name = "COND", fixity = TruePrefix 70,
-         pp_elements = [TOK "if", BreakSpace(1,0), TM, BreakSpace(1,0),
-                        TOK "then", BreakSpace(1,0), TM, BreakSpace(1,0),
-                        TOK "else", BreakSpace(1,0)],
-         paren_style = Always,
-         block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
+val _ = add_rule
+   {term_name = "COND", fixity = TruePrefix 70,
+    pp_elements = [TOK "if", BreakSpace(1,0), TM, BreakSpace(1,0),
+                   TOK "then", BreakSpace(1,0), TM, BreakSpace(1,0),
+                   TOK "else", BreakSpace(1,0)],
+    paren_style = Always,
+    block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
 \end{verbatim}
-\end{hol}
 \noindent The actual rule is slightly more complicated, and
 may be found in the sources for the theory \theoryimp{bool}.
 
@@ -527,7 +513,6 @@ right.\footnote{Note that doing the same thing for the
 \[ \holtxt{if}\;P\;\holtxt{then}\;Q\;\holtxt{else} \]
 without the trailing argument.}
 The rule for this is thus:
-\begin{hol}
 \begin{verbatim}
   val _ = add_rule
            {term_name = "SUB", fixity = Closefix,
@@ -535,7 +520,6 @@ The rule for this is thus:
             paren_style = OnlyIfNecessary,
             block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2))};
 \end{verbatim}
-\end{hol}
 
 \end{description}
 
@@ -549,13 +533,13 @@ The rule for this is thus:
 The following function can be used to hide the constant status of a
 name from the quotation parser.
 
-\begin{boxed}
+\begin{holboxed}
 \index{hide@\ml{hide}|pin}
 \begin{verbatim}
   val hide   : string -> ({Name : string, Thy : string} list *
                           {Name : string, Thy : string} list)
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent Evaluating \ml{hide "$x$"}
 makes the quotation parser treat $x$ as a variable (lexical
@@ -573,23 +557,23 @@ an explanation of the return type.
 
 The function
 
-\begin{boxed}
+\begin{holboxed}
 \index{reveal@\ml{reveal}|pin}
 \begin{verbatim}
    reveal : string -> unit
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent undoes hiding.
 
 The function
 
-\begin{boxed}
+\begin{holboxed}
 \index{hidden@\ml{hidden}|pin}
 \begin{verbatim}
    hidden : string -> bool
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent tests whether a string is the name of a hidden constant.
 \index{HOL system@\HOL{} system!adjustment of user interface of}
@@ -602,12 +586,12 @@ The function
 The following \ML{} reference can be used to adjust the maximum depth
 of printing
 
-\begin{boxed}
+\begin{holboxed}
 \index{max_print_depth@\ml{max\_print\_depth}|pin}
 \begin{verbatim}
    max_print_depth : int ref
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \index{default print depth, for HOL logic@default print depth, for \HOL{} logic|(}
 
@@ -617,7 +601,6 @@ print depth are printed as \holtxt{...}. For example:
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - ADD_CLAUSES;
 > val it =
@@ -629,7 +612,6 @@ print depth are printed as \holtxt{...}. For example:
 - ADD_CLAUSES;
 > val it = |- (... + ... = m) /\ (... = ...) /\ ... /\ ... : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 \index{default print depth, for HOL logic@default print depth, for \HOL{} logic|)}
 
@@ -646,12 +628,10 @@ rather ugly because of the special filtering that is done to these
 values before the ML interpreter even sees them:
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - val q = `f x = 3`;
 > val 'a q = [QUOTE " (*#loc 1 11*)f x = 3"] : 'a frag list
 \end{verbatim}
-\end{hol}
 \end{session}
 Quotations (Moscow ML prints the type as \ml{'a frag list}) are the
 raw input form expected by the various HOL parsers.  They are also
@@ -665,7 +645,6 @@ double back-ticks as delimiters.  For the type parser, the first
 non-space character after the leading delimiter must also be a colon.
 Thus:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - val t = ``p /\ q``;
 > val t = ``p /\ q`` : term
@@ -673,7 +652,6 @@ Thus:
 - val ty = ``:'a -> bool``;
 > val ty = ``:'a -> bool`` : hol_type
 \end{verbatim}
-\end{hol}
 \end{session}
 
 The expression bound to ML variable \ml{t} above is actually expanded
@@ -697,7 +675,6 @@ passed to the HOL parser unchanged.  Otherwise, one caret can be
 obtained by writing two in a row. (This last rule is analogous to the
 way in \ML{} string syntax treats the back-slash.) Thus:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - ``f ^` x ``;
 <<HOL message: inventing new type variable names: 'a, 'b, 'c>>
@@ -707,14 +684,12 @@ way in \ML{} string syntax treats the back-slash.) Thus:
 <<HOL message: inventing new type variable names: 'a, 'b, 'c>>
 > val it = ``f ^ x`` : term
 \end{verbatim}
-\end{hol}
 \end{session}
 
 The rule for carets not followed by white-space is illustrated here,
 including an example of what happens when the quoting rule is not
 followed:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - ``f ^^+ x``;
 <<HOL message: inventing new type variable names: 'a, 'b, 'c>>
@@ -727,7 +702,6 @@ followed:
 !                                                  ^
 ! Ill-formed infix expression
 \end{verbatim}
-\end{hol}
 \end{session}
 
 The main use of the caret is to introduce \emph{antiquotations} (as
@@ -756,7 +730,6 @@ The following session illustrates antiquotation.
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - val y = ``x+1``;
 > val y = ``x + 1`` : term
@@ -767,13 +740,11 @@ val z = ``y = ^y``;
 - ``!x:num.?y:num.^z``;
 > val it = ``!x. ?y. y = x + 1`` : term
 \end{verbatim}
-\end{hol}
 \end{session}
 
 \noindent Types may be antiquoted as well:
 
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - val pred = ``:'a -> bool``;
 > val pred = ``:'a -> bool`` : hol_type
@@ -781,7 +752,6 @@ val z = ``y = ^y``;
 - ``:^pred -> bool``;
 > val it = ``:('a -> bool) -> bool`` : hol_type
 \end{verbatim}
-\end{hol}
 \end{session}
 
 \noindent Quotations are polymorphic, and the type variable of a
@@ -793,7 +763,6 @@ terms, antiquoting a type into a term quotation requires the use of
 \index{ty_antiq@\ml{ty\_antiq}}
 
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - ``!P:^pred. P x ==> Q x``;
 
@@ -808,7 +777,6 @@ terms, antiquoting a type into a term quotation requires the use of
 - ``!P:^(ty_antiq pred). P x ==> Q x``;
 > val it = `!P. P x ==> Q x` : term
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax|)}
@@ -1328,28 +1296,24 @@ The basic conversion is
 The first argument, a \simpset, is the standard way of providing a
 collection of rewrite rules (and other data, to be explained below) to
 the simplifier.  There are \simpset{}s accompanying most of \HOL's
-major theories.  For example, the \simpset{} \ml{boolSimps.bool\_ss}
-embodies all of the usual rewrite theorems one would want over boolean
+major theories.  For example, the \simpset{} \ml{bool\_ss}
+in \ml{boolSimps} embodies all of the usual rewrite theorems one would want over boolean
 formulas:
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - SIMP_CONV bool_ss [] ``p /\ T \/ ~(q /\ r)``;
 > val it = |- p /\ T \/ ~(q /\ r) = p \/ ~q \/ ~r : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 In addition to rewriting with the obvious theorems, \ml{bool\_ss} is
 also capable of performing simplifications that are not expressible as
 simple theorems:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - SIMP_CONV bool_ss [] ``?x. (\y. P (f y)) x /\ (x = z)``;
 > val it = |- (?x. (\y. P (f y)) x /\ (x = z)) = P (f z) : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 In this example, the simplifier performed a $\beta$-reduction in the
 first conjunct under the existential quantifier, and then did an
@@ -1371,12 +1335,10 @@ term size (there are two occurrences of $p$ on the right hand
 side of the theorem).  Nonetheless, it is clear that this theorem may
 be appropriate on occasion:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - SIMP_CONV bossLib.arith_ss [LEFT_ADD_DISTRIB] ``p * (n + 1)``;
 > val it = |- p * (n + 1) = p + n * p : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 Note how the \ml{arith\_ss} \simpset{} has not only simplified the
 intermediate \ml{(p * 1)} term, but also re-ordered the addition to
@@ -1410,7 +1372,6 @@ Like \ml{SIMP\_TAC}, \ml{ASM\_SIMP\_TAC} simplifies the current goal
 (leaving the assumptions untouched), but includes the goal's
 assumptions as extra rewrite rules.  Thus:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 1 subgoal:
 > val it =
@@ -1428,7 +1389,6 @@ OK..
       x = 3
      : goalstack
 \end{verbatim}
-\end{hol}
 \end{session}
 \noindent
 In this example, \ml{ASM\_SIMP\_TAC} used \holtxt{x = 3} as an
@@ -1447,7 +1407,7 @@ conclusion but its assumptions as well.  It proceeds by simplifying
 each assumption in turn, additionally using earlier assumptions in the
 simplification of later assumptions.  After being simplified, each
 assumption is added back into the goal's assumption list with the
-tactic \ml{STRIP\_ASSUME\_TAC}.  This means that assumptions that
+\ml{STRIP\_ASSUME\_TAC} tactic.  This means that assumptions that
 become conjunctions will have each conjunct assumed separately.
 Assumptions that become disjunctions will cause one new sub-goal to be
 created for each disjunct.  If an assumption is simplified to false,
@@ -1462,7 +1422,6 @@ way up the list of assumptions, from bottom to top.
 
 The following demonstrates a simple use of \ml{FULL\_SIMP\_TAC}:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
     x + y < z
     ------------------------------------
@@ -1480,7 +1439,6 @@ OK..
       1.  x = 4
      : goalstack
 \end{verbatim}
-\end{hol}
 \end{session}
 In this example, the assumption \holtxt{x = 4} caused the \holtxt{x}
 in the assumption \holtxt{f x < 10} to be replaced by \holtxt{4}.  The
@@ -1490,7 +1448,6 @@ have changed.
 
 The next session more demonstrates more interesting behaviour:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 > val it =
     f x + 1 < 10
@@ -1511,7 +1468,6 @@ OK..
       x < 4
      : goalstack
 \end{verbatim}
-\end{hol}
 \end{session}
 In this example, the goal was rewritten with the theorem stating
 \[
@@ -1568,7 +1524,7 @@ write
 \Simpset{} fragments are described below in
 Section~\ref{sec:simpset-fragments}.
 
-\ml{SRW\_TAC} performs the same mixture of simplification and
+The \ml{SRW\_TAC} tactic performs the same mixture of simplification and
 goal-splitting as does \ml{RW\_TAC}.  The main differences between the
 two tactics lie in the fact that the latter can be inefficient when
 working with a large \ml{TypeBase}, and in the fact that working with
@@ -1634,7 +1590,6 @@ explained in Section~\ref{sec:simplifier-rewriting} below, but can be
 illustrated by some examples (the first also demonstrates unwinding
 under a universal quantifier):
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - SIMP_CONV bool_ss [] ``!x. (x = 3) /\ P x ==> Q x /\ P 3``;
 > val it = |- (!x. (x = 3) /\ P x ==> Q x /\ P 3) = P 3 ==> Q 3 : thm
@@ -1643,7 +1598,6 @@ under a universal quantifier):
 > val it = |- (if ~(x = 3) then P x else Q x) =
               (if ~(x = 3) then P x else Q 3) : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 
 \subsubsection{\ml{std\_ss}}
@@ -1654,7 +1608,6 @@ The \ml{std\_ss} \simpset{} is defined in \ml{bossLib}, and adds
 rewrite rules pertinent to the types of sums, pairs, options and
 natural numbers to \ml{bool\_ss}.
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - SIMP_CONV std_ss [] ``FST (x,y) + OUTR (INR z)``;
 <<HOL message: inventing new type variable names: 'a, 'b>>
@@ -1663,14 +1616,12 @@ natural numbers to \ml{bool\_ss}.
 - SIMP_CONV std_ss [] ``case SOME x of NONE -> P || SOME y -> f y``;
 > val it = |- (case SOME x of NONE -> P || SOME v -> f v) = f x : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 
 With the natural numbers, the \ml{std\_ss} \simpset{} can calculate
 with ground values, and also includes a suite of ``obvious rewrites''
 for formulas including variables.
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - SIMP_CONV std_ss [] ``P (0 <= x) /\ Q (y + x - y)``;
 > val it = |- P (0 <= x) /\ Q (y + x - y) = P T /\ Q x : thm
@@ -1678,7 +1629,6 @@ for formulas including variables.
 - SIMP_CONV std_ss [] ``23 * 6 + 7 ** 2 - 31 DIV 3``;
 > val it = |- 23 * 6 + 7 ** 2 - 31 DIV 3 = 177 : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 
 \subsubsection{\ml{arith\_ss}}
@@ -1695,7 +1645,6 @@ Section~\ref{sec:numLib} below.
 These two facets of the \ml{arith\_ss} \simpset{} are demonstrated
 here:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - SIMP_CONV arith_ss [] ``x < 3 /\ P x ==> x < 20 DIV 2``;
 > val it = |- x < 3 /\ P x ==> x < 20 DIV 2 = T : thm
@@ -1703,19 +1652,16 @@ here:
 - SIMP_CONV arith_ss [] ``2 * x + y - x + y``;
 > val it = |- 2 * x + y - x + y = x + 2 * y : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 Note that subtraction over the natural numbers works in ways that can
 seem unintuitive.  In particular, coefficient normalisation may not
 occur when first expected:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - SIMP_CONV arith_ss [] ``2 * x + y - z + y``;
 ! Uncaught exception:
 ! UNCHANGED
 \end{verbatim}
-\end{hol}
 \end{session}
 Over the natural numbers, the expression $2 x + y - z + y$ is not
 equal to $2 x + 2 y - z$.  In particular, these expressions are not
@@ -1739,7 +1685,6 @@ Conveniently, \ml{list\_ss} also includes rewrites for the functions
 defined by primitive recursion over lists.  Examples include
 \holtxt{MAP}, \holtxt{FILTER} and \holtxt{LENGTH}.  Thus:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - SIMP_CONV list_ss [] ``MAP (\x. x + 1) [1;2;3;4]``;
 > val it = |- MAP (\x. x + 1) [1; 2; 3; 4] = [2; 3; 4; 5] : thm
@@ -1750,7 +1695,6 @@ defined by primitive recursion over lists.  Examples include
 - SIMP_CONV list_ss [] ``LENGTH (FILTER ODD [1;2;3;4;5])``;
 > val it = |- LENGTH (FILTER ODD [1; 2; 3; 4; 5]) = 3 : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 These examples demonstrate how the simplifier can be used as a general
 purpose symbolic evaluator for terms that look a great deal like those
@@ -1759,14 +1703,12 @@ this functionality is also provided by \ml{computeLib} (see
 Section~\ref{sec:computeLib} below); \ml{computeLib} is more
 efficient, but less general than the simplifier.  For example:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - EVAL ``FILTER (\x. x < 4) [1;2;y + 4]``;
 > val it =
     |- FILTER (\x. x < 4) [1; 2; y + 4] =
        1::2::(if y + 4 < 4 then [y + 4] else []) : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 
 \subsubsection{The ``stateful'' \simpset---\ml{srw\_ss()}}
@@ -1792,7 +1734,6 @@ all situations where the simplifier is used.
 
 This versatility is illustrated in the following example:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - Hol_datatype `tree = Leaf | Node of num => tree => tree`;
 <<HOL message: Defined type: "tree">>
@@ -1810,26 +1751,22 @@ This versatility is illustrated in the following example:
 - SIMP_CONV (srw_ss()) [] ``x IN { y | y < 6}``;
 > val it = |- x IN {y | y < 6} = x < 6 : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 Users can augment the stateful \simpset{} themselves with the function
 %
-\begin{boxed}
+\begin{holboxed}
 \index{export_rewrites@\ml{export\_rewrites}}
-\begin{hol}
 \begin{verbatim}
    BasicProvers.export_rewrites : string list -> unit
 \end{verbatim}
-\end{hol}
-\end{boxed}
+\end{holboxed}
 The strings passed to \ml{export\_rewrites} are the names of theorems
 in the current segment (those that will be exported when
 \ml{export\_theory} is called).  Not only are these theorems added to
 the underlying \simpset{} in the current session, but they will be
 added in future sessions when the current theory is reloaded.
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - val tsize_def = Define`
   (tsize Leaf = 0) /\
@@ -1845,7 +1782,6 @@ Definition has been stored under "tsize_def".
 - SIMP_CONV (srw_ss()) [] ``tsize (Node 4 (Node 6 Leaf Leaf) Leaf)``;
 > val it = |- tsize (Node 4 (Node 6 Leaf Leaf) Leaf) = 10 : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 
 As a general rule, \ml{(srw\_ss())} includes all of its context's
@@ -2199,15 +2135,13 @@ containing context.  The simplest congruence rules are built into the
 abstraction terms.  At this fundamental level, these congruence rules
 are little more than the rules of inference \ml{ABS}
 \[
-\Gamma \turn t_1 = t_2
-\over
-\Gamma \turn (\lquant{x}t_1) = (\lquant{x}t_2)
+\frac{\Gamma \turn t_1 = t_2}
+{\Gamma \turn (\lquant{x}t_1) = (\lquant{x}t_2)}
 \]
 (where $x\not\in\Gamma$) and \ml{MK\_COMB}
 \[
-\Gamma \turn f = g \qquad \qquad \Delta \turn x = y
-\over
-\Gamma \cup \Delta \turn f(x) = g(y)
+\frac{Gamma \turn f = g \qquad \qquad \Delta \turn x = y}
+{\Gamma \cup \Delta \turn f(x) = g(y)}
 \]
 When specifying the action of the simplifier, these rules should be
 read upwards.  With \ml{ABS}, for example, the rule says ``when
@@ -2349,13 +2283,11 @@ AC theorems can also be added to \simpset{}s via the theorem-list part
 of the tactic and conversion interface, using the special rewrite form
 \ml{AC}:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - SIMP_CONV bool_ss [AC DISJ_ASSOC DISJ_COMM] ``p /\ q \/ r \/ P z``;
 <<HOL message: inventing new type variable names: 'a>>
 > val it = |- p /\ q \/ r \/ P z = r \/ P z \/ p /\ q : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 See Section~\ref{sec:simp-special-rewrite-forms} for more on special
 rewrite forms.
@@ -2581,14 +2513,12 @@ augments this database with relevant definitions, that of Quicksort
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - load "sortingTheory";
 
   - EVAL ``QSORT (<=) [76;34;102;3;4]``;
   > val it = |- QSORT $<= [76; 34; 102; 3; 4] = [3; 4; 34; 76; 102] : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 Often, the argument to a function has no variables: in that case
 application of \ml{EVAL} ought to return a ground result,
@@ -2602,7 +2532,6 @@ in the input to allow the algorithm any traction, no expansion will
 take place.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - EVAL ``REVERSE [u;v;w;x;y;z]``;
   > val it = |- REVERSE [u; v; w; x; y; z] = [z; y; x; w; v; u] : thm
@@ -2610,7 +2539,6 @@ take place.
   - EVAL ``REVERSE alist``;
   > val it = |- REVERSE alist = REVERSE alist : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 
@@ -2622,18 +2550,15 @@ enormous terms. The usual cause is conditionals with variables in the
 test. For example, the following definition is provably equal to \holtxt{FACT},
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Define `fact n = if n=0 then 1 else n * fact (n-1)`;
   > val it = |- fact n = (if n = 0 then 1 else n * fact (n - 1)) : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 But the the two definitions evaluate completely differently.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   EVAL ``FACT n``;
   > val it = |- FACT n = FACT n : thm
@@ -2642,7 +2567,6 @@ But the the two definitions evaluate completely differently.
   <.... interrupt key struck ...>
   > Interrupted.
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The primitive-recursive definition of \holtxt{FACT} does not expand
@@ -2651,7 +2575,6 @@ expanding. A rudimentary monitoring facility shows the behaviour, first
 on a ground argument, then on a symbolic argument.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - val [fact] = decls "fact";
   - computeLib.monitoring := SOME (same_const fact);
@@ -2678,7 +2601,6 @@ on a ground argument, then on a symbolic argument.
      .
      .
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 In each recursive expansion, the test involves a variable, and hence
@@ -2714,7 +2636,7 @@ See \REFERENCE{} for more details.
 
 \paragraph{Dealing with Functions over Peano Numbers}
 
-A function defined by pattern-matching over Peano-style numbers is not
+Functions defined by pattern-matching over Peano-style numbers are not
 in the right format for \ml{EVAL}, since the calculations will be
 asymptotically inefficient. Instead, the same definition should be
 used over numerals, which is a positional notation described in

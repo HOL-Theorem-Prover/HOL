@@ -399,7 +399,7 @@ return values of type {\small\verb|thm|}.  An example of a rule of
 inference is {\it specialization\/} (or $\forall$-elimination).  In
 standard `natural deduction' notation this is:
 
-\[ \Gamma\turn \uquant{x}t\over \Gamma\turn t[t'/x]\]
+\[ \frac{\Gamma\turn \uquant{x}t}{\Gamma\turn t[t'/x]}\]
 
 \begin{itemize}
 \item $t[t'/x]$ denotes the result of substituting $t'$ for free
@@ -551,8 +551,8 @@ this case they will be unchanged.
     In \HOL\, the rule \ml{MP} of Modus Ponens is specified in
     conventional notation by:
 \[
-\Gamma_1 \turn t_1 \imp t_2 \qquad\qquad \Gamma_2\turn t_1\over
-\Gamma_1 \cup \Gamma_2 \turn t_2
+\frac{\Gamma_1 \turn t_1 \imp t_2 \qquad\qquad \Gamma_2\turn t_1}
+{\Gamma_1 \cup \Gamma_2 \turn t_2}
 \]
 The \ML{} function \ml{MP} takes argument theorems of the form
 \ml{$\cdots\ $|-$\ t_1$\ ==>\ $t_2$} and \ml{$\cdots\ $|-$\ t_1$} and
@@ -678,7 +678,7 @@ proof to add the hypothesis \ml{``t3``} to \ml{Th6}.
     carries out the proof above. In standard notation this would be
     described by:
 
-\[ \Gamma\turn t\over \Gamma,\ t'\turn t \]
+\[ \frac{\Gamma\turn t}{\Gamma,\ t'\turn t} \]
 
 \noindent The \ML{} definition is:
 
@@ -712,7 +712,7 @@ val it = [t1 ==> t2, t1, t3] |- t2 : thm
     Another example of a derived inference rule is \ml{UNDISCH}; this
     moves the antecedent of an implication to the assumptions.
 
-\[ \Gamma\turn t_1\imp t_2 \over\Gamma,\ t_1\turn t_2 \]
+\[ \frac{\Gamma\turn t_1\imp t_2}{\Gamma,\ t_1\turn t_2} \]
 
 \noindent An \ML{} derived rule that implements this is:
 
@@ -825,9 +825,9 @@ tactic is a function that does two things.
   is usually primitive.  In HOL the rule is called {\tt CONJ} and its
   derivation is given in \DESCRIPTION.}  shown below:
 
-\[ \Gamma_1\turn
-t_1\qquad\qquad\qquad\Gamma_2\turn t_2\over \Gamma_1\cup\Gamma_2 \turn t_1\conj
-t_2 \]
+\[ \frac{\Gamma_1\turn
+t_1\qquad\qquad\qquad\Gamma_2\turn t_2}{\Gamma_1\cup\Gamma_2 \turn t_1\conj
+t_2} \]
 
 
 \noindent In \HOL,  $\wedge$-introduction is  represented by  the \ML{} function
@@ -875,8 +875,7 @@ which will be an \ML{} derived inference rule, that can be used to
 infer an achievement of the original goal from achievements of the
 subgoals.
 
-If $T$ is a tactic (\ie\ an \ML{} function of type \ml{goal -> (goal
-  list * (thm list -> thm))}) and $g$ is a goal, then applying $T$ to
+If $T$ is a tactic (\ie\ an \ML{} function of type \ml{goal\,->\,(goal\,list\,*\,(thm\,list\,->\,thm))}) and $g$ is a goal, then applying $T$ to
 $g$ (\ie\ evaluating the \ML{} expression $T\ g$) will result in an
 object which is a pair whose first component is a list of goals and
 whose second component is a justification function, \ie\ a value with
@@ -934,7 +933,7 @@ in a theorem achieving the original goal:
    end
 \end{verbatim}\end{hol}
 
-\noindent The \ML{} function \ml{dest\_conj} splits a conjunction into its
+\noindent The function \ml{dest\_conj} splits a conjunction into its
 two conjuncts: If \ml{(asl,``$t_1$}{\small\verb|/\|}\ml{$t_2$``)} is a
 goal, then \ml{CONJ\_TAC} splits it into the list of two subgoals
 \ml{(asl,$t_1$)} and \ml{(asl,$t_2$)}. The justification function,
@@ -1181,7 +1180,7 @@ OK..
 \end{verbatim}\end{session}
 
 \noindent The compound tactic
-{\small\verb|INDUCT_TAC THENL [REWRITE_TAC[ADD];ASM_REWRITE_TAC[ADD]]|}
+{\small\verb|INDUCT_TAC THENL [REWRITE_TAC [ADD]; ASM_REWRITE_TAC [ADD]]|}
 first applies \ml{INDUCT\_TAC} and then applies
 \ml{REWRITE\_TAC[ADD]} to the first subgoal (the basis) and
 \ml{ASM\_REWRITE\_TAC[ADD]} to the second subgoal (the step).

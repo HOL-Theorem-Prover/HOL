@@ -2,25 +2,14 @@
 # Makefile for the hol Quick Reference
 # =====================================================================
 
-default:
-	@echo "INSTRUCTIONS: Type \"make all\" to make Quick Reference"
+default:  quick.pdf
+all: quick.ps quick.pdf
 
 clean:
-	rm -f *.aux *.log *.out quick.pdf
+	rm -f *.aux *.log *.out quick.{ps,pdf}
 
-cleanPS: clean
-	rm -f *.dvi *.ps
-
-cleanAll: cleanPS
-	rm underscore.sty
-
-underscore.sty:
-	wget http://www.tex.ac.uk/tex-archive/macros/latex/contrib/misc/underscore.sty
-
-quick.ps: quick.tex underscore.sty
+quick.ps: quick.tex
 	latex quick.tex; dvips -Ppdf -G0 -t landscape quick -o
 
-quick.pdf: quick.tex underscore.sty
+quick.pdf: quick.tex
 	pdflatex quick.tex
-
-all: quick.pdf

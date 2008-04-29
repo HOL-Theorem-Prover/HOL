@@ -37,10 +37,17 @@ in
 end
 
 fun print_verbblock (ss, ostr) =
+    (out(ostr,"\\begin{Verbatim}");
+     out(ostr, Substring.string ss);
+     out(ostr, "\\end{Verbatim}\n"))
+
+(*
+fun print_verbblock (ss, ostr) =
     (out(ostr, "{\\par\\samepage\\setseps\\small\n");
      out(ostr,"\\begin{verbatim}");
      out(ostr, Substring.string ss);
      out(ostr, "\\end{verbatim}}"))
+*)
 
 val lastminute_fixes =
     String.translate (fn #"#" => "\\#"

@@ -172,10 +172,10 @@ The \ml{install} function now sets the search path to:
 
 The function 
 
-\begin{boxed}\index{library_pathname@\ml{library\_pathname}}
+\begin{holboxed}\index{library_pathname@\ml{library\_pathname}}
 \begin{verbatim}
    library_pathname : void -> string
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent returns the internal pathname used by \HOL\ to
 load libraries.  This pathname, which is site-specific and is given an initial
@@ -215,10 +215,10 @@ whenever the library is loaded.
 The help system now uses \ml{cat} rather than \ml{more} as the default for
 displaying help files. This default can be changed with the \ML\ function:
 
-\begin{boxed}\index{set_help@\ml{set\_help}}
+\begin{holboxed}\index{set_help@\ml{set\_help}}
 \begin{verbatim}
    set_help : string -> string
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent This installs a new user-supplied help function, and returns the
 previous one as result. The effect of
@@ -247,13 +247,13 @@ For example,
 
 Two new functions:
 
-\begin{boxed}
+\begin{holboxed}
 \index{set_help_search_path@\ml{set\_help\_search\_path}}
 \index{help_search_path@\ml{help\_search\_path}}
 \begin{verbatim}
   set_help_search_path : string list -> void
   help_search_path     : void -> string list
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent have been added to the system for accessing the 
 internal search path used by \HOL\ to find online help files.  The help
@@ -317,10 +317,10 @@ defined in the theory \ml{bool} by:
 User-defined binders can also have restricted forms, which are set up
 with the function:
 
-\begin{boxed}\index{associate_restriction@\ml{associate\_restriction}}
+\begin{holboxed}\index{associate_restriction@\ml{associate\_restriction}}
 \begin{verbatim}
    associate_restriction : (string # string) -> *
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 \noindent If \m{B} is the name
@@ -453,13 +453,13 @@ is the set of all $t$s such that $p$. These interpretations are predefined for
 the library \ml{sets}, but the user can use the syntax for other purposes if
 he or she wishes using the functions:
 
-\begin{boxed}
+\begin{holboxed}
 \index{define_finite_set_syntax@\ml{define\_finite\_set\_syntax}}
 \index{define_set_abstraction_syntax@\ml{define\_set\_abstraction\_syntax}}
 \begin{alltt}
    define_finite_set_syntax      : (string # string) -> void
    define_set_abstraction_syntax : string -> void
-\end{alltt}\end{boxed}
+\end{alltt}\end{holboxed}
 
 Executing:
 
@@ -632,10 +632,10 @@ such that \ml{$P[x]$}.
 
 Proof support is supplied for this notation in the form of a conversion
 
-\begin{boxed}\index{SET_SPEC_CONV@\ml{SET\_SPEC\_CONV}}
+\begin{holboxed}\index{SET_SPEC_CONV@\ml{SET\_SPEC\_CONV}}
 \begin{verbatim}
    SET_SPEC_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent which implements the axiom of specification for generalized set
 specifications. 
@@ -681,10 +681,10 @@ specifications.
 The library \ml{sets} also makes available an induction principle for
 proving properties of finite sets.
 
-\begin{boxed}\index{SET_INDUCT_TAC@\ml{SET\_INDUCT\_TAC}}
+\begin{holboxed}\index{SET_INDUCT_TAC@\ml{SET\_INDUCT\_TAC}}
 \begin{verbatim}
    SET_INDUCT_TAC : tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{hol}\begin{alltt}
     "!\(s\). FINITE \(s\) ==>  \(P\)[\(s\)]"
@@ -716,10 +716,10 @@ details and examples.
 
 The ML function:
 
-\begin{boxed}\index{new_syntax_block@\ml{new\_syntax\_block}}
+\begin{holboxed}\index{new_syntax_block@\ml{new\_syntax\_block}}
 \begin{verbatim}
    new_syntax_block : string # string # string -> void
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 \noindent declares a new syntax block. The first argument is the start keyword
@@ -762,10 +762,10 @@ Hello: Mike
 The following function is useful with syntax blocks, because it enables
 backslash ({\small\verb%\%}) to be included in strings.
 
-\begin{boxed}\index{set_string_escape@\ml{set\_string\_escape}}
+\begin{holboxed}\index{set_string_escape@\ml{set\_string\_escape}}
 \begin{verbatim}
    set_string_escape : int -> int
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent This changes the escape character in strings to be the character with the
 supplied ascii code (initially this is {\small\verb%92%}, 
@@ -808,10 +808,10 @@ The definition of the \ML\ type {\small\verb%preterm%} is:
 
 The function:
 
-\begin{boxed}\index{preterm_to_term@\ml{preterm\_to\_term}}
+\begin{holboxed}\index{preterm_to_term@\ml{preterm\_to\_term}}
 \begin{verbatim}
    preterm_to_term : preterm -> term
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent invokes the standard \HOL\ typechecker on a preterm and returns the
 resulting typechecked term (or causes the standard error message).\index{preterms|)}
@@ -868,10 +868,10 @@ general interest are listed here.
 A new conversion:
 
 
-\begin{boxed}\index{PAIRED_BETA_CONV@\ml{PAIRED\_BETA\_CONV}}
+\begin{holboxed}\index{PAIRED_BETA_CONV@\ml{PAIRED\_BETA\_CONV}}
 \begin{verbatim}
    PAIRED_BETA_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent has been added to do
 generalized beta-conversion of tupled lambda abstractions applied to
@@ -901,10 +901,10 @@ The conversion works for arbitrarily nested tuples.  For example:
 
 The conversion:
 
-\begin{boxed}\index{ADD_CONV@\ml{ADD\_CONV}}
+\begin{holboxed}\index{ADD_CONV@\ml{ADD\_CONV}}
 \begin{verbatim}
    ADD_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent does addition by formal proof.
 If $n$ and $m$ are numerals then 
@@ -929,10 +929,10 @@ where $s$ is the numeral denoting the sum of $n$ and $m$.  For example:
 A new conversion has been added for deciding equality of natural number
 constants.  
 
-\begin{boxed}\index{num_EQ_CONV@\ml{num\_EQ\_CONV}}
+\begin{holboxed}\index{num_EQ_CONV@\ml{num\_EQ\_CONV}}
 \begin{verbatim}
    num_EQ_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent If $n$ and $m$ are terms constructed from numeral constants 
 and the successor function \ml{SUC}, then:
@@ -951,13 +951,13 @@ returns: {\small\verb%|- (%}$t$\ml{=}$t${\small\verb%) = T%}
 
 Two new conversions for lists are now built-in:
 
-\begin{boxed}
+\begin{holboxed}
 \index{LENGTH_CONV@\ml{LENGTH\_CONV}}
 \index{list_EQ_CONV@\ml{list\_EQ\_CONV}}
 \begin{verbatim}
    LENGTH_CONV : conv
    list_EQ_CONV: conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \ml{LENGTH\_CONV}: computes the length of a list.
 A call to:
@@ -1004,10 +1004,10 @@ for any $1\leq i \leq m$.
 
 A conversion for reducing {\tt let}-terms is now provided.
 
-\begin{boxed}\index{let_CONV@\ml{let\_CONV}}
+\begin{holboxed}\index{let_CONV@\ml{let\_CONV}}
 \begin{verbatim}
    let_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent Given a term:
 
@@ -1063,10 +1063,10 @@ rather than first-order Skolem constants).
 
 The conversion 
 
-\begin{boxed}\index{X_SKOLEM_CONV@\ml{X\_SKOLEM\_CONV}}
+\begin{holboxed}\index{X_SKOLEM_CONV@\ml{X\_SKOLEM\_CONV}}
 \begin{verbatim}
    X_SKOLEM_CONV : term -> conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent takes a variable parameter, \ml{$f$} say, and
 proves:

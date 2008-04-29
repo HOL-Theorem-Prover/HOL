@@ -2,24 +2,28 @@
 # Makefile for the hol TUTORIAL
 # =====================================================================
 
-CHAPTERS = preface.tex intro.tex ml.tex euclid.tex proof.tex theories.tex \
-           title.tex combin.tex more-examples.tex parity.tex
+PDFLATEX=pdflatex
+DVILATEX=latex
 
-all: tutorial.ps tutorial.pdf
+CHAPTERS = title.tex preface.tex intro.tex ml.tex logic.tex euclid.tex \
+           parity.tex combin.tex proof-tools.tex more-examples.tex references.tex
+OTHERS = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex \
+         ../LaTeX/proof.sty
+
+default: pdf
+all: ps pdf
+ps: tutorial.ps
+pdf: tutorial.pdf
 
 clean:
-	rm -f *.dvi *.aux *.toc *.log tutorial.ps tutorial.pdf
+	rm -f *.dvi *.aux *.toc *.log tutorial.{ps,pdf}
 
-tutorial.dvi: tutorial.tex $(CHAPTERS)
-	(cd ../Logo ; make)  # makes the lantern logo
-	latex tutorial.tex ; latex tutorial.tex
+tutorial.pdf: tutorial.tex $(CHAPTERS) $(OTHER)
+	${PDFLATEX} tutorial.tex ; ${PDFLATEX} tutorial.tex
+
+tutorial.dvi: tutorial.tex $(CHAPTERS) $(OTHER)
+	${DVILATEX} tutorial.tex ; ${DVILATEX} tutorial.tex
 
 tutorial.ps: tutorial.dvi
-	dvips -Ppdf -G0 -f $< > $@.tmp
-	mv $@.tmp $@
-
-tutorial.pdf: tutorial.ps
-	ps2pdf tutorial.ps
-
-
-
+	dvips -Ppdf -G0 -f tutorial.dvi > tutorial.ps.tmp
+	mv tutorial.ps.tmp $@

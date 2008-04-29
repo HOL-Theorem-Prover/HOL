@@ -555,8 +555,8 @@ order to generate the final name of the theorem.
   \rewruse
 \item[\texttt{\_fn\_updates}] The definitions of the functional update
   functions.
-\item[\texttt{\_accfupds}] A theorem stating simpler forms for
-  expressions of the form $\field{i}\, (\field{j}\update\;f\; r)$.  If
+\item[\texttt{\_accfupds}] A theorem that states simpler forms for
+  expressions that are of the form $\field{i}\, (\field{j}\update\;f\; r)$.  If
   $i = j$, then the RHS is $f (\field{i}(r))$, if not, it is $(\field{i}\;r)$.
   \rewruse
 \item[\texttt{\_component\_equality}] A theorem stating that $(r_1 =
@@ -618,7 +618,7 @@ more abstract level.  Both levels describe similar objects, but
 some details which are apparent at the lower level are no longer
 visible at the higher level.  The logic is simplified.
 
-However, simply forming a new type does not complete the quotient operation.
+Simply forming a new type does not complete the quotient operation.
 Rather, one wishes to recreate the
 %significant parts of the
 pre-existing logical environment at the new,
@@ -887,7 +887,7 @@ Deleting either group of rows would resolve the conflict,
 and make the expression valid.
 Note that the pattern \ml{0} is acceptable to either group.
 
-Patterns can also be nested, as shown in the next example, where
+Patterns can be nested as well, as shown in the next example, where
 the function \ml{parents} returns a pair containing the person's father
 and/or mother, where each is represented by \ml{NONE} if deceased.
 %
@@ -1289,7 +1289,6 @@ prover. Instead, we make an application of {\small\verb+Hol_defn+}:
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
  val qsort_def =
   Hol_defn "qsort"
@@ -1299,12 +1298,10 @@ prover. Instead, we make an application of {\small\verb+Hol_defn+}:
          ++ [h] ++
          qsort ord (FILTER (\x. ~(ord x h)) t))`
 \end{verbatim}
-\end{hol}
 \end{session}
 which returns the following value of type \ml{defn}, but does not try
 to prove termination.
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   HOL function definition (recursive)
 
@@ -1330,7 +1327,6 @@ to prove termination.
     1. !t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)
     2. WF R
 \end{verbatim}
-\end{hol}
 \end{session}
 
 The type \ml{defn} has a prettyprinter installed for it: the above
@@ -1340,7 +1336,6 @@ type \ml{defn}, it is more convenient to invoke
 \ml{Defn.tgoal}, which sets up a termination proof in a goalstack.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Defn.tgoal qsort_def;
 
@@ -1352,7 +1347,6 @@ type \ml{defn}, it is more convenient to invoke
            (!t h ord. R (ord,FILTER (\x. ~ord x h) t) (ord,h::t)) /\
            (!t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)) /\ WF R
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The goal is to find a wellfounded relation on the arguments to \holtxt{qsort}
@@ -1364,7 +1358,6 @@ measure function results in two subgoals, both of which are easy to
 prove.
 
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - e (WF_REL_TAC `measure (LENGTH o SND)`);
   OK..
@@ -1374,7 +1367,6 @@ prove.
 
      !t h ord. LENGTH (FILTER (\x. ~ord x h) t) < LENGTH (h::t)
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 Execution of \ml{WF\_REL\_TAC} has automatically proved the
@@ -1390,7 +1382,6 @@ $t$ then the recursion equations and induction theorem are stored
 in the current theory segment before the recursion equations are returned:
 
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - val qsort_def =  tDefine "qsort"
      `(qsort ord [] = []) /\
@@ -1405,14 +1396,12 @@ in the current theory segment before the recursion equations are returned:
             qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
             qsort ord (FILTER (\x. ~ord x h) t)) : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 
 The custom induction theorem for a function can be obtained by using \holtxt{fetch},
 which returns named elements in the specified theory.\footnote{In a call to \texttt{fetch}, the
 first argument denotes a theory; the current theory may be specified by \texttt{"-"}.}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - fetch "-" "qsort_ind";
   >  val qsort_ind =
@@ -1424,10 +1413,9 @@ first argument denotes a theory; the current theory may be specified by \texttt{
             ==>
            !v v1. P v v1  : thm
 \end{verbatim}
-\end{hol}
 \end{session}
 
-The induction theorem produced by \holtxt{Define} and \holtxt{tDefine} can 
+\noindent The induction theorem produced by \holtxt{Define} and \holtxt{tDefine} can 
 be applied by \ml{recInduct}. See Section \ref{sec:bossLib} for details.
 
 \subsubsection{Techniques for Proving Termination}
@@ -1450,7 +1438,6 @@ numbers:
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - val gcd_defn =
       Hol_defn "gcd"
@@ -1465,7 +1452,6 @@ numbers:
            Initial goal:
            ?R. WF R /\ !v2 n. R (n MOD SUC v2,SUC v2) (SUC v2,n)
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The invocation \holtxt{gcd(m,n)} recurses in its first argument, and
@@ -1484,7 +1470,6 @@ The definition of {measure} in \HOL{} is equivalent to
 Now we must pick out the argument position to measure and
 invoke \ml{WF\_REL\_TAC}:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - e (WF_REL_TAC `measure FST`);
   OK..
@@ -1492,7 +1477,6 @@ invoke \ml{WF\_REL\_TAC}:
   > val it =
      !v2 n. n MOD SUC v2 < SUC v2
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 This goal is easy to prove with a few simple arithmetic facts.
@@ -1506,7 +1490,6 @@ gets a \holtxt{Leaf} in the left branch, then it recurses into the right
 branch. At the end of execution the tree has been linearized.
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - Hol_datatype
       `btree = Leaf
@@ -1528,7 +1511,6 @@ branch. At the end of execution the tree has been linearized.
               (!bt. R bt (Brh Leaf bt)) /\
               !bt bt2 bt1. R (Brh bt1 (Brh bt2 bt)) (Brh (Brh bt1 bt2) bt)
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 Since the size of the tree is unchanged in the last clause in the
@@ -1537,19 +1519,16 @@ can assign weights to nodes in the tree such that the recursive calls of
 \holtxt{Unbal} decrease the total weight in every case. One such assignment is
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Define
    `(Weight (Leaf) = 0) /\
     (Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1)`
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 Now we can invoke \ml{WF\_REL\_TAC}:
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   e (WF_REL_TAC `measure Weight`);
   OK..
@@ -1561,7 +1540,6 @@ Now we can invoke \ml{WF\_REL\_TAC}:
    !bt bt2 bt1.
       Weight (Brh bt1 (Brh bt2 bt)) < Weight (Brh (Brh bt1 bt2) bt)
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 Both of these goals are quite easy to prove.
@@ -1585,7 +1563,6 @@ The fourth argument, $s$, is the string being searched.
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   val match_defn =
     Hol_defn "match"
@@ -1600,7 +1577,6 @@ The fourth argument, $s$, is the string being searched.
 
   - val Match = Define `Match pat str = match pat str pat str`;
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The first clause of the definition states that if $p$ becomes exhausted, then a match has 
@@ -1652,7 +1628,6 @@ of numbers $(m,n)$, where $m$ is the length of the fourth argument, and
 $n$ is the length of the second argument. These lengths are then
 compared lexicographically with respect to less-than ($<$).
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Defn.tgoal match_defn;
 
@@ -1668,7 +1643,6 @@ compared lexicographically with respect to less-than ($<$).
      LENGTH (TL s) < LENGTH s \/
      (LENGTH (TL s) = LENGTH s) /\ LENGTH (TL s) < LENGTH (b::ss)
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The first subgoal needs a case-split on \holtxt{s} before it is proved by
@@ -1780,12 +1754,10 @@ summing the results of a function in a list.
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Define `(SIGMA f [] = 0) /\
           (SIGMA f (h::t) = f h + SIGMA f t)`;
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 We then use \holtxt{SIGMA} in the definition of a function for
@@ -1793,7 +1765,6 @@ summing the results of a function in a arbitrarily
 (finitely) branching tree.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Hol_datatype `ltree = Node of 'a => ltree list`;
 
@@ -1801,7 +1772,6 @@ summing the results of a function in a arbitrarily
     "ltree_sigma"
     `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 In this definition, \holtxt{SIGMA} is applied to a partial application
@@ -1812,7 +1782,6 @@ to be made to extract the correct termination conditions. Otherwise,
 the following unhappy situation results:
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   HOL function definition (recursive)
 
@@ -1827,7 +1796,6 @@ the following unhappy situation results:
     0. WF R
     1. !tl v f a. R (f,a) (f,Node v tl) : defn
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The termination conditions for \holtxt{ltree\_sigma} seem to
@@ -1854,7 +1822,6 @@ the definition are now provable, since \holtxt{a} is a
 proper subterm of \holtxt{Node v tl}.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   val _ = DefnBase.add_cong SIGMA_CONG;
 
@@ -1872,7 +1839,6 @@ proper subterm of \holtxt{Node v tl}.
         0. WF R
         1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
 \end{verbatim}
-\end{hol}
 \end{session}
 
 \subsection{Recursion Schemas}
@@ -1910,7 +1876,6 @@ the definition of a schema):
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - TotalDefn.DefineSchema
       `linRec (x:'a) = if d(x) then e(x) else f(linRec(g x))`;
@@ -1924,7 +1889,6 @@ the definition of a schema):
      [..]
     |- linRec d e f g x = if d x then e x else f (linRec d e f g (g x))
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The hypotheses of the returned theorem hold the abstract termination
@@ -1932,12 +1896,10 @@ constraints. A similarly constrained induction theorem is also
 stored in the current theory segment.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   hyp it;
   > val it = [``!x. ~d x ==> R (g x) x``, ``WF R``] : term list
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 These constraints are abstract, since they place termination requirements
@@ -1993,7 +1955,6 @@ saved under the name \ml{<stem>\_ind}.
   for the relations, saved under the name \ml{<stem>\_cases}. A cases
   theorem is of the form
 %
-\begin{hol}
 \begin{verbatim}
    (!a0 .. an.  R1 a0 .. an = <R1's first rule possibility> \/
                               <R1's second rule possibility> \/ ...)
@@ -2003,14 +1964,13 @@ saved under the name \ml{<stem>\_ind}.
                    /\
    ...
 \end{verbatim}
-\end{hol}
 %
 and is used to decompose an element in the relation into the
 possible ways of obtaining it by the rules.
 \end{itemize}
 
 \paragraph{Strong Induction Principles}
-So called ``strong'' versions of induction principles (where instances
+So called ``strong'' versions of induction principles (in which instances
 of the relation being defined appear as extra hypotheses), can be
 automatically proved with a call to the function
 \[
@@ -2072,20 +2032,17 @@ the following:
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Hol_reln
     `EVEN 0 /\
      (!n. ODD n ==> EVEN (n + 1)) /\
      (!n. EVEN n ==> ODD (n + 1))`;
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The result is three theorems
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   > val it =
     (|- EVEN 0 /\
@@ -2105,7 +2062,6 @@ The result is three theorems
         (!a1. ODD a1 = ?n. (a1 = n + 1) /\ EVEN n)
     ) : thm * thm * thm
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The next example shows how to inductively define the reflexive and
@@ -2115,7 +2071,6 @@ appropriate because it is \holtxt{RTC R} that has the inductive
 characterisation, not \holtxt{RTC} itself.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - Hol_reln `(!x. RTC R x x) /\
              (!x z. (?y. R x y /\ RTC R y z) ==> RTC R x z)`;
@@ -2133,7 +2088,6 @@ characterisation, not \holtxt{RTC} itself.
       |- !R a0 a1. RTC R a0 a1 = (a1 = a0) \/ ?y. R a0 y /\ RTC R y a1
      ) : thm * thm * thm
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The \ml{Hol\_reln} function may be used to define multiple relations,

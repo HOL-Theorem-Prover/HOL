@@ -202,12 +202,12 @@ achieve this effect, two operators on
 conversions\index{conversions!operators on|(} are introduced.  The
 first one, infixed, is \ml{THENC}, which sequences conversions.
 
-\begin{boxed}
+\begin{holboxed}
 \index{THENC@\ml{THENC}|pin}
 \begin{verbatim}
    op THENC : conv -> conv -> conv
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent If $c_1\ t_1$ evaluates to $\Gamma_1\ml{ |- }t_1\ml{=}t_2$ and
 $c_2\ t_2$ evaluates to $\Gamma_2\ml{ |- }t_2\ml{=}t_3$, then
@@ -220,12 +220,12 @@ equality.
 The second, also infixed, is \ml{ORELSEC}; this applies a second
 conversion if the application of the first one fails.
 
-\begin{boxed}
+\begin{holboxed}
 \index{ORELSEC@\ml{ORELSEC}|pin}
 \begin{verbatim}
    op ORELSEC : conv -> conv -> conv
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent $\ml{(}c_1\ \ml{ORELSEC}\ c_2\ml{)}\ t$ evaluates to $c_1\ t$
 if that evaluation succeeds, and to $c_2\ t$ otherwise. (The failure
@@ -236,12 +236,12 @@ desired operator, \ml{REPEATC}\index{repetition!of conversions}, which
 successively\index{successive application!conversion operator for}
 applies a conversion until it fails:
 
-\begin{boxed}
+\begin{holboxed}
 \index{REPEATC@\ml{REPEATC}|pin}
 \begin{verbatim}
    REPEATC : conv -> conv
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent \ml{REPEATC}\ $c$ is intuitively equivalent to:
 
@@ -318,11 +318,11 @@ reduced, and the subterm at top level could be reduced:
 To produce, from a conversion $c$, a conversion that applies $c$ to every
 subterm of a term, the function \ml{DEPTH\_CONV} can be applied to $c$:
 
-\begin{boxed}
+\begin{holboxed}
 \index{DEPTH_CONV@\ml{DEPTH\_CONV}|pin}
 \begin{verbatim}
    DEPTH_CONV : conv -> conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent \ml{DEPTH\_CONV}$\ c$ is a conversion
 
@@ -370,11 +370,11 @@ to $v'$ by {\tt TOP\_DEPTH\_CONV}$\ c$.\footnote{Readers interested
 in characterizing the search strategy of {\tt TOP\_DEPTH\_CONV} should
 study the \ML\ definitions near the end of this section.}
 
-\begin{boxed}
+\begin{holboxed}
 \index{TOP_DEPTH_CONV@\ml{TOP\_DEPTH\_CONV}|pin}
 \begin{verbatim}
    TOP_DEPTH_CONV : conv -> conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent Thus:
 
@@ -385,11 +385,11 @@ study the \ML\ definitions near the end of this section.}
 
 Finally, the simpler function \ml{ONCE\_DEPTH\_CONV} is provided:
 
-\begin{boxed}
+\begin{holboxed}
 \index{ONCE_DEPTH_CONV@\ml{ONCE\_DEPTH\_CONV}|pin}
 \begin{verbatim}
    ONCE_DEPTH_CONV : conv -> conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent $\ml{ONCE\_DEPTH\_CONV}\ c\ t$ applies $c$ once to the first
 term (and only the first term)
@@ -410,13 +410,13 @@ a conversion can be converted to a rule or a tactic, using the functions
 \ml{CONV\_RULE} or \ml{CONV\_TAC}, respectively.
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{CONV_RULE@\ml{CONV\_RULE}|pin}
 \index{CONV_TAC@\ml{CONV\_TAC}|pin}
 \begin{verbatim}
    CONV_RULE : conv -> thm -> thm
    CONV_TAC  : conv -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent $\ml{CONV\_RULE}\ c\ \ml{(|- }t\ml{)}$ returns $\ml{|- }t'$, where
 $c\ t$ evaluates to the equation
@@ -433,11 +433,11 @@ uses \ml{EQ\_MP}\footnote{For \ml{EQ\_MP}, see ~\ref{avra_eq_mp}.}.)
 For example, the built-in rule \ml{BETA\_RULE} reduces some
 of the $\beta$-redex subterms of a term.
 
-\begin{boxed}
+\begin{holboxed}
 \index{BETA_RULE@\ml{BETA\_RULE}|pin}
 \begin{verbatim}
    BETA_RULE : thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent It is defined by:
 
@@ -496,11 +496,11 @@ The conversion \ml{NO\_CONV} is an identity for
 \ml{ORELSEC}\index{ORELSEC@\ml{ORELSEC}}, useful
 in building functions.
 
-\begin{boxed}
+\begin{holboxed}
 \index{NO_CONV@\ml{NO\_CONV}|pin}
 \begin{verbatim}
    NO_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent $\ml{NO\_CONV}\ t$ always fails.
 
@@ -508,11 +508,11 @@ The function \ml{FIRST\_CONV}
 returns $c\ t$ for the first conversion $c$, in a list of conversions,
 for which the evaluation of $c\ t$ succeeds.
 
-\begin{boxed}
+\begin{holboxed}
 \index{FIRST_CONV@\ml{FIRST\_CONV}|pin}
 \begin{verbatim}
    FIRST_CONV : conv list -> conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent $\ml{FIRST\_CONV [}c_1\ml{;}\ldots\ml{;}c_n\ml{]}$ is equivalent,
 intuitively, to:
@@ -533,22 +533,22 @@ intuitively, to:
 The conversion \ml{ALL\_CONV} is an identity for \ml{THENC},\index{THENC@\ml{THENC}} useful
 in building functions.
 
-\begin{boxed}
+\begin{holboxed}
 \index{ALL_CONV@\ml{ALL\_CONV}|pin}
 \begin{verbatim}
    ALL_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent \ml{ALL\_CONV\ $t$} evaluates to \ml{|-\ $t$=$t$}. It is
 defined as being identical to \ml{REFL}.\index{REFL@\ml{REFL}}
 
 The function \ml{EVERY\_CONV} applies a list of conversions in sequence.
 
-\begin{boxed}
+\begin{holboxed}
 \index{EVERY_CONV@\ml{EVERY\_CONV}|pin}
 \begin{verbatim}
    EVERY_CONV : conv list -> conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent $\ml{EVERY\_CONV [}c_1\ml{;}\ldots\ml{;}c_n\ml{]}$ is equivalent,
 intuitively, to:
@@ -569,11 +569,11 @@ intuitively, to:
 The operator \ml{CHANGED\_CONV} converts one conversion to another that
 fails on arguments that it cannot change.
 
-\begin{boxed}
+\begin{holboxed}
 \index{CHANGED_CONV@\ml{CHANGED\_CONV}|pin}
 \begin{verbatim}
    CHANGED_CONV : conv -> conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent If $c\ t$ evaluates to $\ml{|-}\ t\ml{=}t'$, then
 $\ml{CHANGED\_CONV}\ c\ t$  also evaluates to $\ml{|-}\ t\ml{=}t'$,
@@ -583,11 +583,11 @@ in which case it fails.
 The operator \ml{TRY\_CONV} maps one conversion to another that
 always succeeds, by replacing failures with the identity conversion.
 
-\begin{boxed}
+\begin{holboxed}
 \index{TRY_CONV@\ml{TRY\_CONV}|pin}
 \begin{verbatim}
    TRY_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent If $c\ t$ evaluates to $\ml{|-}\ t\ml{=}t'$, then
 $\ml{TRY\_CONV}\ c\ t$  also evaluates to $\ml{|-}\ t\ml{=}t'$. If
@@ -605,13 +605,13 @@ There are a number of operators for applying conversions to the
 immediate subterms of a term. These use the \ML\ functions:
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{MK_COMB@\ml{MK\_COMB}|pin}
 \index{MK_ABS@\ml{MK\_ABS}|pin}
 \begin{verbatim}
    MK_COMB : thm # thm -> thm
    MK_ABS  : thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent \ml{MK\_COMB} and \ml{MK\_ABS} implement the following derived rules:
 
@@ -626,11 +626,11 @@ $${\Gamma\ml{ |- !}x\ml{.}u\ml{=}v \over
 applies a conversion to the immediate subterms
 of a term.
 
-\begin{boxed}
+\begin{holboxed}
 \index{SUB_CONV@\ml{SUB\_CONV}|pin}
 \begin{verbatim}
    SUB_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent In particular:
 
@@ -666,7 +666,7 @@ Three other useful conversion operators, also for applying conversions
 to the immediate subterms of a term, are as follows:
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{RATOR_CONV@\ml{RATOR\_CONV}|pin}
 \index{RAND_CONV@\ml{RAND\_CONV}|pin}
 \index{ABS_CONV@\ml{ABS\_CONV}|pin}
@@ -674,7 +674,7 @@ to the immediate subterms of a term, are as follows:
    RATOR_CONV : conv -> conv
    RAND_CONV  : conv -> conv
    ABS_CONV   : conv -> conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent \ml{RATOR\_CONV}$\ c$ converts the operator of an application using
 $c$; \ml{RAND\_CONV}$\ c$ converts the operand of an application; and
@@ -751,10 +751,10 @@ general interest are listed here.
 The conversion:
 
 
-\begin{boxed}\index{PAIRED_BETA_CONV@\ml{PAIRED\_BETA\_CONV}|pin}
+\begin{holboxed}\index{PAIRED_BETA_CONV@\ml{PAIRED\_BETA\_CONV}|pin}
 \begin{verbatim}
    PAIRED_BETA_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent does
 generalized beta-conversion of tupled lambda abstractions applied to
@@ -784,10 +784,10 @@ Given the term:
 
 The conversion:
 
-\begin{boxed}\index{ADD_CONV@\ml{ADD\_CONV}|pin}
+\begin{holboxed}\index{ADD_CONV@\ml{ADD\_CONV}|pin}
 \begin{verbatim}
    ADD_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent does addition by formal proof.
 If $n$ and $m$ are numerals then
@@ -812,10 +812,10 @@ where $s$ is the numeral denoting the sum of $n$ and $m$.  For example:
 The next conversion decides the equality of natural number
 constants.
 
-\begin{boxed}\index{num_EQ_CONV@\ml{num\_EQ\_CONV}|pin}
+\begin{holboxed}\index{num_EQ_CONV@\ml{num\_EQ\_CONV}|pin}
 \begin{verbatim}
    num_EQ_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent If $n$ and $m$ are terms constructed from numeral constants
 and the successor function \ml{SUC}, then:
@@ -834,13 +834,13 @@ returns: {\small\verb%|- (%}$t$\ml{=}$t${\small\verb%) = T%}
 
 There are two useful built-in conversions for lists:
 
-\begin{boxed}
+\begin{holboxed}
 \index{LENGTH_CONV@\ml{LENGTH\_CONV}|pin}
 \index{list_EQ_CONV@\ml{list\_EQ\_CONV}|pin}
 \begin{verbatim}
    LENGTH_CONV : conv
    list_EQ_CONV: conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \ml{LENGTH\_CONV}: computes the length of a list.
 A call to:
@@ -887,10 +887,10 @@ for any $1\leq i \leq m$.
 
 A conversion for reducing {\tt let}-terms is now provided.
 
-\begin{boxed}\index{let_CONV@\ml{let\_CONV}|pin}
+\begin{holboxed}\index{let_CONV@\ml{let\_CONV}|pin}
 \begin{verbatim}
    let_CONV : conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent Given a term:
 
@@ -946,10 +946,10 @@ rather than first-order Skolem constants).
 
 The conversion
 
-\begin{boxed}\index{X_SKOLEM_CONV@\ml{X\_SKOLEM\_CONV}|pin}
+\begin{holboxed}\index{X_SKOLEM_CONV@\ml{X\_SKOLEM\_CONV}|pin}
 \begin{verbatim}
    X_SKOLEM_CONV : term -> conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent takes a variable parameter, \ml{$f$} say, and
 proves:
@@ -1121,11 +1121,11 @@ Certain new tools could also be built in a similar way.
 
 The rewriting primitive in \HOL\ is \ml{REWR\_CONV}:
 
-\begin{boxed}
+\begin{holboxed}
 \index{REWR_CONV@\ml{REWR\_CONV}|pin}
 \begin{verbatim}
    REWR_CONV : thm -> conv
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent $\ml{REWR\_CONV (}\Gamma\ml{ |- }u \ml{=}v\ml{) }t$ evaluates to a
 theorem $\Gamma\ml{ |- }t\ml{=}t'$
