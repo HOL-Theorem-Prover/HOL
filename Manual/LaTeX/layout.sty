@@ -159,17 +159,7 @@
 %       those in the body of the tutorial.  (I.e. different \bibitem name).
 % ---------------------------------------------------------------------
 
-\def\thebibliography#1{\chapter*{References\@mkboth
- {References}{References}} \addcontentsline{toc}{chapter}{References}
- \list {[\arabic{enumi}]}{\settowidth\labelwidth{[#1]}\leftmargin\labelwidth
- \advance\leftmargin\labelsep
- \usecounter{enumi}}
- \def\newblock{\hskip .11em plus .33em minus -.07em}
- \sloppy
- \sfcode`\.=1000\relax}
-\let\endthebibliography=\endlist
-
-\ps@headings  %to override previous
+\def\bibname{References}
 
 % ---------------------------------------------------------------------
 % To make the index
