@@ -4,7 +4,7 @@ sig
   val curry         : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
   val uncurry       : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
   val append        : 'a list -> 'a list -> 'a list
-  val concat        : string -> string -> string
+  val strcat        : string -> string -> string
   val equal         : ''a -> ''a -> bool
   val pair          : 'a -> 'b -> 'a * 'b
   val cons          : 'a -> 'a list -> 'a list

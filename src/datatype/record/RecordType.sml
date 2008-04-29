@@ -515,7 +515,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
         end
 
   val thm_str_list =
-     map (concat typename)
+     map (strcat typename)
      (["_accessors", "_updates_eq_literal", "_accfupds", 
        "_fupdfupds", "_literal_11", "_fupdfupds_comp"] 
       @

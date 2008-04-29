@@ -2,7 +2,7 @@ To build HOL with PolyML:
   1) edit configure.sml with the location of your Poly ML binary and libraries,
      and also your gcc.
   2) run "poly < smart-configure" from the tools-poly directory
-  3) run "build -expk -symlink" (only the experimental kernel is supported)
+  3) run "$HOLDIR/bin/build -expk -symlink" (only the experimental kernel is supported)
 
 This is currently experimental, and probably fragile.  The help system doesn't
 work; also ctrl-c may not work reliably.
@@ -39,3 +39,7 @@ Pretty printing looks a little rough around the edges in some cases.
 We're recording information in .uo and .ui files to minimize changes to
 Holmake, but it would be nice to have only .uo files (and use a different
 suffix).
+
+An option to Holmake to load file once "compiled" into .uo would help catch
+errors earlier.
+

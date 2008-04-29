@@ -39,7 +39,7 @@ fun W f x = f x x
 
 fun append l1 l2 = l1@l2
 fun equal x y = (x=y);
-val concat = curry (op ^)
+val strcat = curry (op ^)
 fun cons a L = a::L
 fun pair x y = (x,y)
 fun fst (x,_) = x   and   snd (_,y) = y;

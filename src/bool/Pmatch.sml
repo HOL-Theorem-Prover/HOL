@@ -416,8 +416,8 @@ fun no_repeat_vars pat =
        | check (v::rst) =
          if Lib.op_mem aconv v rst
          then raise ERR"no_repeat_vars"
-              (concat(quote(#1(dest_var v)))
-                     (concat" occurs repeatedly in the pattern "
+              (strcat(quote(#1(dest_var v)))
+                     (strcat" occurs repeatedly in the pattern "
                       (quote(Hol_pp.term_to_string pat))))
          else check rst
  in check (FV_multiset pat)
