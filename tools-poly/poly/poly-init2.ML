@@ -140,11 +140,15 @@ structure PolyOS = OS;
 structure PolyTextIO = TextIO;
 structure PolyTimer = Timer;
 (* awfulness to make the environment look like Moscow ML's *)
+
+(* In Poly/ML "before" is 'a * 'b -> 'a and General.before is 'a * unit -> 'a.
+   The Basis library says both should be 'a * unit -> 'a, but in Moscow ML,
+   before is 'a * 'b -> 'a too.  Ick. *)
 structure General = struct
   open PolyGeneral;
   type ppstream = PP.ppstream;
 end;
-open General;
+type ppstream = General.ppstream;
 structure Array = struct
   open PolyArray;
   fun extract (a, i, jopt) =
