@@ -545,7 +545,7 @@ val _ = OS.Process.atExit (fn () => ignore (finish_logging false))
 *)
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
 val POLYMLLIBDIR =  case cmdl_POLYMLLIBDIR of NONE => POLYMLLIBDIR0 | SOME s => s
-val POLY =  case cmdl_POLY of NONE => fullPath [HOLDIR, "bin", "hol.noquote"] | SOME s => s
+val POLY =  case cmdl_POLY of NONE => fullPath [HOLDIR, "bin", "hol.builder"] | SOME s => s
 (*val MOSMLCOMP = fullPath [HOLDIR, "tools-poly/polymlc"]*)
 val SIGOBJ    = normPath(OS.Path.concat(HOLDIR, "sigobj"));
 
