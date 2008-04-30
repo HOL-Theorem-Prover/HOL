@@ -3,9 +3,6 @@ struct
 
 open HolKernel boolLib;
 
-(* add an index *)
-(* fix brackets for "i-t-e" and "let" *)
-
 (* ------------------------------------------------------------------------- *)
 (* datatype_theorems : string -> (string * thm) list                         *)
 (*   Get a list of datatype theorems in the names theory.                    *)
@@ -304,9 +301,11 @@ fun index_string() =
 fun prefix_escape s = !texPrefix ^ (tex_command_escape s);
 
 fun prefix_string()     = prefix_escape (!current_theory_name);
-fun datatype_prefix()   = prefix_string() ^ "Datatype";
-fun definition_prefix() = prefix_string() ^ "Definition";
-fun theorem_prefix()    = prefix_string() ^ "Theorem";
+fun datatype_prefix()   = prefix_string() ^ "Datatypes";
+fun definition_prefix() = prefix_string() ^ "Definitions";
+fun theorem_prefix()    = prefix_string() ^ "Theorems";
+fun date_prefix()       = prefix_string() ^ "Date";
+fun time_prefix()       = prefix_string() ^ "Time";
 
 (* ------------------------------------------------------------------------- *)
 (* theorem2tex : string -> string                                            *)
@@ -409,6 +408,13 @@ fun pp_hol_as_tex_with_tag ostrm (p1,p2) s =
 
 (* ......................................................................... *)
 
+fun pp_newcommand ostrm c =
+  let val S = PP.add_string ostrm
+      fun NL() = PP.add_newline ostrm
+  in
+    S ("\\newcommand{\\" ^ c ^ "}{")
+  end;
+
 fun pp_datatypes_as_tex_commands ostrm thms =
   let val S = PP.add_string ostrm
       fun NL() = PP.add_newline ostrm
@@ -419,7 +425,7 @@ fun pp_datatypes_as_tex_commands ostrm thms =
     else
       (PP.begin_block ostrm PP.CONSISTENT 0;
        app (pp_hol_as_tex_command ostrm prefix) thms;
-       S ("\\newcommand{\\" ^ prefix ^ "s}{"); NL();
+       pp_newcommand ostrm prefix; NL();
        app (pp_hol_as_tex ostrm prefix o fst) thms;
        S "}"; NL();
        PP.end_block ostrm)
@@ -435,7 +441,7 @@ fun pp_defnitions_as_tex_commands ostrm thms =
     else
       (PP.begin_block ostrm PP.CONSISTENT 0;
        app (pp_hol_as_tex_command ostrm prefix) thms;
-       S ("\\newcommand{\\" ^ prefix ^ "s}{"); NL();
+       pp_newcommand ostrm prefix; NL();
        app (pp_hol_as_tex_with_tag ostrm (prefix, "HOLDfnTag") o fst) thms;
        S "}"; NL();
        PP.end_block ostrm)
@@ -451,7 +457,7 @@ fun pp_theorems_as_tex_commands ostrm thms =
     else
       (PP.begin_block ostrm PP.CONSISTENT 0;
        app (pp_hol_as_tex_command ostrm prefix) thms;
-       S ("\\newcommand{\\" ^ prefix ^ "s}{"); NL();
+       pp_newcommand ostrm prefix; NL();
        app (pp_hol_as_tex_with_tag ostrm (prefix, "HOLThmTag") o fst) thms;
        S "}"; NL();
        PP.end_block ostrm)
@@ -468,11 +474,16 @@ fun pp_theory_as_tex_commands ostrm name =
       fun thm_compare(a,b) = String.compare(fst a, fst b)
       val defns = Listsort.sort thm_compare defns
       val thms = Listsort.sort thm_compare thms
+      val time = Date.fromTimeLocal (stamp name)
   in
     if null typs andalso null defns andalso null thms then
       TextIO.output(TextIO.stdErr, name ^ "Theory is empty.\n")
     else
       (PP.begin_block ostrm PP.CONSISTENT 0;
+       pp_newcommand ostrm (date_prefix());
+       S (Date.fmt "%d %B %Y" time); S "}"; NL();
+       pp_newcommand ostrm (time_prefix());
+       S (Date.fmt "%H:%M" time); S "}"; NL();
        pp_datatypes_as_tex_commands ostrm typs;
        pp_defnitions_as_tex_commands ostrm defns;
        pp_theorems_as_tex_commands ostrm thms;
@@ -499,6 +510,14 @@ fun tex_commands_theory name =
 
 (* ......................................................................... *)
 
+val sec_divide =
+  "% :::::::::::::::::::::::::::::::::::::\
+    \:::::::::::::::::::::::::::::::::::::";
+
+val subsec_divide =
+  "% .....................................\
+    \.....................................";
+
 fun pp_parents_as_tex ostrm names =
   let val S = PP.add_string ostrm
       fun NL() = PP.add_newline ostrm
@@ -507,7 +526,8 @@ fun pp_parents_as_tex ostrm names =
     if null names then
       (S "% No parents"; NL())
     else
-      (S "\\subsection*{Parent Theories}"; NL(); NL();
+      (S "\\subsection*{Parent Theories}"; NL();
+       S subsec_divide; NL(); NL();
        app (fn x => S (x ^ ", ")) (List.take(names, length names - 1));
        S (last names); NL());
     PP.end_block ostrm
@@ -522,8 +542,10 @@ fun pp_datatypes_as_tex ostrm empty =
     if empty then
       (S "% No datatypes"; NL())
     else
-      (S "\\subsection{Datatypes}"; S i; S "}"; NL(); NL();
-       S ("\\" ^ datatype_prefix() ^ "s"); NL());
+      (S "\\subsection{Datatypes}"; NL();
+       S i; S "}"; NL();
+       S subsec_divide; NL(); NL();
+       S ("\\" ^ datatype_prefix()); NL());
     PP.end_block ostrm
   end;
 
@@ -536,8 +558,10 @@ fun pp_defnitions_as_tex ostrm empty =
     if empty then
       (S "% No definitions"; NL())
     else
-      (S "\\subsection{Definitions}"; S i; S "}"; NL(); NL();
-       S ("\\" ^ definition_prefix() ^ "s"); NL());
+      (S "\\subsection{Definitions}"; NL();
+       S i; S "}"; NL(); NL();
+       S subsec_divide; NL(); NL();
+       S ("\\" ^ definition_prefix()); NL());
     PP.end_block ostrm
   end;
 
@@ -550,8 +574,10 @@ fun pp_theorems_as_tex ostrm empty =
     if empty then
       (S "% No theorems"; NL())
     else
-      (S "\\subsection{Theorems}"; S i; S "}"; NL(); NL();
-       S ("\\" ^ theorem_prefix() ^ "s"); NL());
+      (S "\\subsection{Theorems}"; NL();
+       S i; S "}"; NL();
+       S subsec_divide; NL(); NL();
+       S ("\\" ^ theorem_prefix()); NL());
     PP.end_block ostrm
   end;
 
@@ -564,13 +590,17 @@ fun pp_theory_as_tex ostrm name =
       val defns = non_type_definitions name
       val thms = non_type_theorems name
       val (defns, thms) = fix_inductive_definitions(defns, thms)
+      val date_of_theory = Date.fmt "%d %B %Y" (Date.fromTimeLocal (stamp name))
+
   in
     if null names then
       ()
     else
       (PP.begin_block ostrm PP.CONSISTENT 0;
-       S "\\section{"; S name; S " Theory}";
-       S (index_string()); S "}"; NL(); NL();
+       S "\\section{"; S name; S " Theory}"; NL();
+       S (index_string()); S "}"; NL();
+       S ("\\subsection*{Built: " ^ "\\" ^ date_prefix() ^ "}"); NL();
+       S sec_divide; NL(); NL();
        pp_parents_as_tex ostrm names; NL();
        pp_datatypes_as_tex ostrm (null typs); NL();
        pp_defnitions_as_tex ostrm (null defns); NL();
@@ -601,13 +631,17 @@ fun pp_theories_as_tex ostrm names =
   end;
 
 local
- fun tex_suffix s =
-  let val {base, ext} = Path.splitBaseExt s in
-    if ext = SOME "tex" then s else s ^ ".tex"
-  end;
+  fun tex_suffix s =
+    if Path.ext s = SOME "tex" then s
+    else Path.joinBaseExt {base = s, ext = SOME "tex"}
 in
   fun print_theories_as_tex names path =
    let val {dir, file} = Path.splitDirFile path
+       val filename = Path.concat(dir, tex_suffix file)
+       val _ = not (FileSys.access (filename, [])) orelse
+                 (TextIO.output(TextIO.stdErr,
+                    "File " ^ path ^ " already exists.\n");
+                  failwith "File exists")
        val dir = if Path.isAbsolute path orelse !emitTeXDir = "" then
                    dir
                  else
@@ -615,7 +649,7 @@ in
        val _ = current_path := dir
        val _ = app tex_commands_theory names
        val _ = current_path := Path.currentArc
-       val ostrm = Portable.open_out (Path.concat(dir, tex_suffix file))
+       val ostrm = Portable.open_out filename
    in
      PP.with_pp {consumer = Portable.outputc ostrm, linewidth = 78,
                  flush = fn () => Portable.flush_out ostrm}

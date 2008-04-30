@@ -209,6 +209,12 @@ fun thy_theorems (th:segment)       = filter (is_theorem o #2) (#facts th)
 fun thy_defns (th:segment)          = filter (is_defn o #2)    (#facts th)
 fun thy_addons (th:segment)         = #adjoin th
 
+fun stamp thyname =
+  let val (_,sec,usec) = dest_thyid (fst (Graph.first
+                          (equal thyname o thyid_name o fst)))
+  in
+    Portable.mk_time {sec = sec, usec = usec}
+  end;
 
 local fun norm_name "-" = CTname()
         | norm_name s = s

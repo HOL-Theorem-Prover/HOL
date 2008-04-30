@@ -23,9 +23,9 @@
   \renewcommand{\sectionmark}[1]{\markboth{\textsl{\uppercase{##1}}}{}}
   \if@twoside
     \renewcommand{\subsectionmark}[1]{\markright{\textsl{##1}}}
-    \fancyhead[RO, LE]{\thepage}
-    \fancyfoot[LE, RO]{\leftmark}
-    \fancyfoot[RE, LO]{\rightmark}
+    \fancyfoot[RO, LE]{\thepage}
+    \fancyhead[LE, RO]{\leftmark}
+    \fancyhead[RE, LO]{\rightmark}
   \else
     \renewcommand{\subsectionmark}[1]{\markright{ - \textsl{##1}}}
     \lfoot{\leftmark\rightmark}

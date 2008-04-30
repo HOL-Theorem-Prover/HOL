@@ -118,6 +118,7 @@ sig
   val delete_const   : string -> unit
   val delete_binding : string -> unit
   val current_theory : unit -> string
+  val stamp          : string -> Time.time
   val parents        : string -> string list
   val ancestry       : string -> string list
   val types          : string -> (string * int) list
