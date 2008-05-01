@@ -1,7 +1,7 @@
-structure bsubstML :> bsubstML =
+structure updateML :> updateML =
 struct
   nonfix MEM_WRITE MEM_WRITE_WORD MEM_WRITE_HALF MEM_WRITE_BYTE SET_HALF
-         SET_BYTE FORMAT GET_BYTE GET_HALF ADDR30 mem_items empty_memory
+         SET_BYTE FORMAT GET_BYTE GET_HALF addr30 mem_items empty_memory
          mem_write_block mem_write mem_read |: data_size Word Half Byte
          formats_size UnsignedWord UnsignedHalfWord SignedHalfWord
          UnsignedByte SignedByte * / div mod + - ^ @ <> > < >= <= := o
@@ -54,7 +54,7 @@ struct
 
   fun mem_items m = Redblackmap.listItems m
     
-  fun ADDR30 addr =
+  fun addr30 addr =
         word_extract_itself (fcpML.ITSELF (numML.fromDecString"30"))
           (fromString"31") TWO addr
     
@@ -159,24 +159,24 @@ struct
           (if oareg then word_index hw (- i (fromString"16")) else x)) w
     
   fun MEM_WRITE_BYTE mem addr word =
-        let val addr30 = ADDR30 addr
+        let val a30 = addr30 addr
         in
-           mem_write mem addr30
+           mem_write mem a30
              (SET_BYTE
                 (word_extract_itself
                    (fcpML.ITSELF (numML.fromDecString"2")) ONE ZERO
-                   addr) word (mem_read (mem,addr30)))
+                   addr) word (mem_read (mem,a30)))
         end
     
   fun MEM_WRITE_HALF mem addr word =
-        let val addr30 = ADDR30 addr
+        let val a30 = addr30 addr
         in
-           mem_write mem addr30
+           mem_write mem a30
              (SET_HALF (word_index addr ONE) word
-                (mem_read (mem,addr30)))
+                (mem_read (mem,a30)))
         end
     
-  fun MEM_WRITE_WORD mem addr word = mem_write mem (ADDR30 addr) word
+  fun MEM_WRITE_WORD mem addr word = mem_write mem (addr30 addr) word
     
   fun MEM_WRITE mem addr d =
         case d

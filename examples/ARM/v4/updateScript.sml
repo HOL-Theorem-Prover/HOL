@@ -1,6 +1,6 @@
 (* ========================================================================= *)
-(* FILE          : bsubstScript.sml                                          *)
-(* DESCRIPTION   : Block substitution and Memory Operations                  *)
+(* FILE          : updateScript.sml                                          *)
+(* DESCRIPTION   : Function update using lists                               *)
 (*                                                                           *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
 (* DATE          : 2005-2007                                                 *)
@@ -14,7 +14,7 @@ open HolKernel boolLib bossLib;
 open Parse Q combinTheory arithmeticTheory wordsTheory;
 open listTheory rich_listTheory my_listTheory;
 
-val _ = new_theory "bsubst";
+val _ = new_theory "update";
 
 (* ------------------------------------------------------------------------- *)
 
@@ -204,6 +204,42 @@ val FCP_UPDATE_EQ_RULE = store_thm("FCP_UPDATE_EQ_RULE",
    ((a :+< e) ((a :+< d) m) = (a :+< e) m) /\
    ((a :+> e) ((a :+> d) m) = (a :+> e) m)`,
   REWRITE_TAC [FUa_def,FUb_def,fcpTheory.FCP_UPDATE_EQ]);
+
+val LIST_UPDATE_SORT_RULE1 = save_thm("LIST_UPDATE_SORT_RULE1",
+  METIS_PROVE [LUa_def,LUb_def,LUPDATE_LUPDATE]
+    ``!a b x y m. (a |:> y) ((b |:> x) m) =
+        let lx = LENGTH x and ly = LENGTH y in
+           if a <=+ b then
+             if w2n b - w2n a <= ly then
+               if ly - (w2n b - w2n a) < lx then
+                 (a |:> y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x) m
+               else
+                 (a |:> y) m
+             else
+               (a |:< y) ((b |:> x) m)
+           else (* b <+ a *)
+             if w2n a - w2n b < lx then
+               (b |:> JOIN (w2n a - w2n b) x y) m
+             else
+               (b |:> x) ((a |:> y) m)``);
+
+val LIST_UPDATE_SORT_RULE2 = save_thm("LIST_UPDATE_SORT_RULE2",
+  METIS_PROVE [LUa_def,LUb_def,LUPDATE_LUPDATE]
+    ``!a b x y m. (a |:> y) ((b |:< x) m) =
+        let lx = LENGTH x and ly = LENGTH y in
+           if a <=+ b then
+             if w2n b - w2n a <= ly then
+               if ly - (w2n b - w2n a) < lx then
+                 (a |:> y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x) m
+               else
+                 (a |:> y) m
+             else
+               (a |:< y) ((b |:< x) m)
+           else (* b <+ a *)
+             if w2n a - w2n b < lx then
+               (b |:> JOIN (w2n a - w2n b) x y) m
+             else
+               (b |:> x) ((a |:> y) m)``);
 
 (* ------------------------------------------------------------------------- *)
 

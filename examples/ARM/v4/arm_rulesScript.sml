@@ -12,7 +12,7 @@
 
 open HolKernel boolLib Parse bossLib;
 open Q arithmeticTheory bitTheory wordsTheory wordsLib;
-open bsubstTheory armTheory systemTheory arm_evalTheory;
+open updateTheory armTheory systemTheory arm_evalTheory;
 
 val _ = new_theory "arm_rules";
 
@@ -200,7 +200,7 @@ val SPEC_TO_PC = (SIMP_RULE (std_ss++PC_ss) [] o
 
 val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,NEXT_ARM_MMU,
   RUN_ARM_def,OUT_ARM_def,DECODE_PSR_def,TRANSFERS_def,TRANSFER_def,
-  FETCH_PC_def,ADDR30_def,CARRY_NZCV,n2w_11,word_bits_n2w,w2n_w2w,
+  FETCH_PC_def,addr30_def,CARRY_NZCV,n2w_11,word_bits_n2w,w2n_w2w,
   word_index,BITS_THM,BIT_ZERO,(GEN_ALL o SPECL [`b`,`NUMERAL n`]) BIT_def,
   OUT_CP_def, RUN_CP_def,
   cond_pass_enc_data_proc,
@@ -550,7 +550,7 @@ val TRANSFER_LDM2__ = prove(
 
 val TRANSFER_LDM2_ = prove(
   `!m d l. FST (SND (FOLDL (\x y. TRANSFER F x (MemRead y)) (cpin,d,m) l)) =
-             d ++ MAP (\x. m (ADDR30 x)) l`,
+             d ++ MAP (\x. m (addr30 x)) l`,
  Induct_on `l` \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss) [TRANSFER_def,
     GSYM rich_listTheory.SNOC_APPEND,my_listTheory.APPEND_SNOC1]);
 
@@ -560,7 +560,7 @@ val TRANSFER_LDM2 = prove(
        FIRSTN (LENGTH (FST addr_mode4))
          (FST (SND (FOLDL (\x y. TRANSFER F x (MemRead y)) (cpin,[],m)
             (FST (SND addr_mode4))))) =
-       MAP (m o ADDR30) (FST (SND addr_mode4))`,
+       MAP (m o addr30) (FST (SND addr_mode4))`,
   REPEAT STRIP_TAC
     \\ `!rd. FIRSTN (LENGTH (REGISTER_LIST l))
           (FST (SND (FOLDL (\x y. TRANSFER F x (MemRead y)) (cpin,[],m)

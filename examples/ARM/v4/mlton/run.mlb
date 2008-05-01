@@ -46,8 +46,8 @@ $(THEORY)/fcpML.sig
 $(THEORY)/fcpML.sml
 $(THEORY)/wordsML.sig
 $(THEORY)/wordsML.sml
-$(THEORY)/bsubstML.sig
-bsubstML.sml
+$(THEORY)/updateML.sig
+updateML.sml
 $(THEORY)/armML.sig
 $(THEORY)/armML.sml
 evalML.sml

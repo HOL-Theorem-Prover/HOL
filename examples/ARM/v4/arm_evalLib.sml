@@ -18,7 +18,7 @@ struct
 open HolKernel boolLib bossLib;
 open Q Parse computeLib combinTheory pairTheory wordsTheory wordsSyntax
      optionTheory rich_listTheory armTheory arm_evalTheory
-     bsubstTheory systemTheory instructionTheory instructionSyntax assemblerML;
+     updateTheory systemTheory instructionTheory instructionSyntax assemblerML;
 
 (* ------------------------------------------------------------------------- *)
 (* Some conversions *)
@@ -173,7 +173,7 @@ val _ = Lib.C add_thms arm_compset
    decode_27_enc_coproc, decode_cdp_enc, decode_mrc_mcr_enc,
 
    APPLY_LUPDATE_THM, fcpTheory.FCP_APPLY_UPDATE_THM,
-   ADDR30_def, SET_BYTE_def, SET_HALF_def, TRANSFERS_def, TRANSFER_def,
+   addr30_def, SET_BYTE_def, SET_HALF_def, TRANSFERS_def, TRANSFER_def,
 
    MEM_WRITE_BYTE_def, MEM_WRITE_HALF_def, MEM_WRITE_WORD_def,
    MEM_WRITE_def, OUT_CP_def, RUN_CP_def, NO_CP_def, NEXT_ARM_MMU];
@@ -194,15 +194,24 @@ in
 end;
 
 val SORT_UPDATE_CONV =
-let open arm_evalTheory fcpTheory
+let open arm_evalTheory fcpTheory updateTheory
+    val rule = SIMP_RULE std_ss [register2num_lt_neq, psr2num_lt_neq,
+                                 prim_recTheory.LESS_NOT_EQ]
+    fun rule1 t = (rule o ISPEC t) UPDATE_SORT_RULE1
+    fun rule2 t = (rule o ISPEC t) UPDATE_SORT_RULE2
+    val Ua_RULE4 = rule1 `\x y. register2num x < register2num y`
+    val Ub_RULE4 = rule2 `\x y. register2num x < register2num y`
+    val Ua_RULE_PSR = rule1 `\x y. psr2num x < psr2num y`
+    val Ub_RULE_PSR = rule2 `\x y. psr2num x < psr2num y`
+    val FUa_RULE = (rule o SPEC `\x y. x < y`) FCP_UPDATE_SORT_RULE1
+    val FUb_RULE = (rule o SPEC `\x y. x < y`) FCP_UPDATE_SORT_RULE2
     val compset = add_rws wordsLib.words_compset
-        [o_THM,register_EQ_register,register2num_thm,
-         psr_EQ_psr,psr2num_thm,
+        [o_THM,register_EQ_register,register2num_thm,psr_EQ_psr,psr2num_thm,
          SYM Ua_def,UPDATE_EQ_RULE,Ua_RULE4,Ub_RULE4,Ua_RULE_PSR,Ub_RULE_PSR,
          SYM FUa_def,FCP_UPDATE_EQ_RULE,FUa_RULE,FUb_RULE,
          LENGTH,SUC_RULE JOIN,BUTFIRSTN_compute,APPEND,
          PURE_REWRITE_RULE [SYM Ua_def] UPDATE_LUPDATE,
-         LUa_RULE,LUb_RULE,GSYM LUa_def,o_THM]
+         LIST_UPDATE_SORT_RULE1,LIST_UPDATE_SORT_RULE2,GSYM LUa_def]
 in
   computeLib.CBV_CONV compset
     THENC PURE_REWRITE_CONV [Ua_def,Ub_def,FUa_def,FUb_def,LUa_def,LUb_def]
@@ -281,19 +290,19 @@ fun mk_word32 n = mk_n2w(numSyntax.mk_numeral n,``:32``);
 fun eval_word t = (numSyntax.dest_numeral o rhsc o FOLD_UPDATE_CONV o mk_w2n) t;
 
 val subst_tm  = prim_mk_const{Name = "UPDATE", Thy = "combin"};
-val bsubst_tm = prim_mk_const{Name = "|:", Thy = "bsubst"};
+val lupdate_tm = prim_mk_const{Name = "|:", Thy = "update"};
 
 fun mk_subst (a,b,m) =
    list_mk_comb(inst[alpha |-> type_of a,beta |-> type_of b] subst_tm,[a,b,m])
    handle HOL_ERR _ => raise ERR "mk_subst" "";
 
-fun mk_bsubst (a,b,m) =
+fun mk_lupdate (a,b,m) =
    list_mk_comb(inst[alpha |-> dim_of a,beta |-> listSyntax.eltype b]
-     bsubst_tm,[a,b,m])
-   handle HOL_ERR _ => raise ERR "mk_bsubst" "";
+     lupdate_tm,[a,b,m])
+   handle HOL_ERR _ => raise ERR "mk_lupdate" "";
 
 val dest_subst  = dest_triop subst_tm  (ERR "dest_word_slice" "");
-val dest_bsubst = dest_triop bsubst_tm (ERR "dest_word_slice" "");
+val dest_lupdate = dest_triop lupdate_tm (ERR "dest_word_slice" "");
 
 local
   fun do_dest_subst_reg t a =
@@ -304,7 +313,7 @@ local
         end handle HOL_ERR _ => (``ARB:register``,t)::a;
 
   fun do_dest_subst_mem t a =
-       let val (i,d,m) = dest_bsubst t in
+       let val (i,d,m) = dest_lupdate t in
           do_dest_subst_mem m ((i,fst (listSyntax.dest_list d))::a)
        end handle HOL_ERR _ =>
          let val (i,d,m) = dest_subst t in
@@ -495,7 +504,7 @@ fun hol_assemble m a l = let
                   (curry mk_comb ``instruction_encode``) o Term) l
   val block = listSyntax.mk_list(code,``:word32``)
 in
-  rhsc (SORT_UPDATE_CONV (mk_bsubst(mk_word30 a,block,m)))
+  rhsc (SORT_UPDATE_CONV (mk_lupdate(mk_word30 a,block,m)))
 end;
 
 fun hol_assemble1 m a t = hol_assemble m a [t];
@@ -581,7 +590,7 @@ local
   fun assemble_assambler m a = let
     val l = do_links a
     val b = map (fn (m,c) => (mk_word30 m,listSyntax.mk_list(c,``:word32``))) l
-    val t = foldr (fn ((a,c),t) => mk_bsubst(a,c,t)) m b
+    val t = foldr (fn ((a,c),t) => mk_lupdate(a,c,t)) m b
   in
     rhsc (SORT_UPDATE_CONV t)
   end
@@ -629,7 +638,7 @@ in
         val l = List.tabulate(lines, fn i => read_word (data,4 * i + skip))
         val lterm = listSyntax.mk_list(l,``:word32``)
     in
-      rhsc (SORT_UPDATE_CONV (mk_bsubst(mk_word30 top_addr,lterm,m)))
+      rhsc (SORT_UPDATE_CONV (mk_lupdate(mk_word30 top_addr,lterm,m)))
     end
 end;
 

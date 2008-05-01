@@ -8,12 +8,12 @@
 
 (* interactive use:
   app load ["pred_setSimps", "rich_listTheory", "wordsLib", "armLib",
-            "bsubstTheory", "instructionTheory", "systemTheory"];
+            "updateTheory", "instructionTheory", "systemTheory"];
 *)
 
 open HolKernel boolLib Parse bossLib;
 open Q rich_listTheory arithmeticTheory wordsLib wordsTheory bitTheory;
-open combinTheory bsubstTheory armTheory systemTheory instructionTheory;
+open combinTheory updateTheory armTheory systemTheory instructionTheory;
 
 val _ = new_theory "arm_eval";
 
@@ -33,6 +33,177 @@ val SIZES_ss = wordsLib.SIZES_ss;
 
 val _ = Parse.post_process_term := wordsLib.guess_word_lengths;
 
+(* ------------------------------------------------------------------------- *)
+(* Magnus' theorems about addresses -- formally in examples/mc-logic         *)
+(* ------------------------------------------------------------------------- *)
+
+val lem = (GEN_ALL o SIMP_RULE std_ss [AND_IMP_INTRO] o
+   Q.DISCH `dimindex (:'b) - 1 = h` o
+   SIMP_RULE (arith_ss++WORD_EXTRACT_ss) [] o
+   Q.DISCH `dimindex(:'b) < dimindex(:'a)` o SPEC_ALL) WORD_w2w_OVER_ADD;
+
+val lower_addr32_ADD = store_thm("lower_addr32_ADD",
+  `!w x. (1 >< 0) (addr32 x + w) = ((1 >< 0) w):word2`,
+  SRW_TAC [ARITH_ss, WORD_EXTRACT_ss] [lem, addr32_def]);
+
+val addr32_eq_0 = store_thm("addr32_eq_0",
+  `!x. (1 >< 0) (addr32 x) = 0w:word2`,
+  SRW_TAC [ARITH_ss, WORD_EXTRACT_ss] [addr32_def]);
+
+val addr32_n2w = store_thm ("addr32_n2w", 
+  `!n. (addr32 (n2w n)  = n2w (4 * n))`,
+  SIMP_TAC (std_ss++WORD_MUL_LSL_ss) [GSYM word_mul_n2w, addr32_def]
+    \\ SRW_TAC [WORD_BIT_EQ_ss] [n2w_def]);
+
+val n2w_and_1 = (SIMP_RULE std_ss [] o SPEC `1`) WORD_AND_EXP_SUB1;
+val n2w_and_3 = (SIMP_RULE std_ss [] o SPEC `2`) WORD_AND_EXP_SUB1;
+
+val aligned_n2w = store_thm("aligned_n2w",
+  `!n. aligned (n2w n) = (n MOD 4 = 0)`,
+  STRIP_TAC
+  \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss) [n2w_and_3,aligned_def,n2w_11]
+  \\ `n MOD 4 < 4` by METIS_TAC [DIVISION,DECIDE ``0<4``]
+  \\ `n MOD 4 < 4294967296` by DECIDE_TAC
+  \\ ASM_SIMP_TAC std_ss [LESS_MOD]);
+
+val aligned_MULT = store_thm("aligned_MULT",
+  `!x y. aligned x ==> aligned (x + 4w * y)`,
+  Cases \\ Cases
+  \\ REWRITE_TAC [word_add_n2w,word_mul_n2w,aligned_def,n2w_and_3]
+  \\ ONCE_REWRITE_TAC [ADD_COMM] \\ ONCE_REWRITE_TAC [MULT_COMM] 
+  \\ SIMP_TAC std_ss [MOD_TIMES]);
+
+val addr32_and_3w = store_thm("addr32_and_3w",
+  `!x. (addr32 x) && 3w = 0w`,
+  Cases \\ REWRITE_TAC [addr32_n2w,n2w_and_3]
+  \\ SIMP_TAC std_ss [ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]);
+
+val aligned_addr32 = store_thm("aligned_addr32",
+  `!x. aligned (addr32 x)`,
+  REWRITE_TAC [aligned_def, addr32_and_3w]);
+
+val addr30_n2w = store_thm("addr30_n2w",
+  `!n. addr30 (n2w n) = n2w (n DIV 4)`,
+  SRW_TAC [SIZES_ss] [addr30_def, word_extract_n2w, BITS_THM]);
+
+val addr30_addr32_ADD = store_thm("addr30_addr32_ADD",
+  `!x y. addr30 (addr32 x + y) = x + addr30 y`,
+  Cases \\ Cases
+  \\ REWRITE_TAC [addr30_n2w,addr32_n2w,word_add_n2w]
+  \\ SIMP_TAC std_ss [ONCE_REWRITE_RULE [MULT_COMM] ADD_DIV_ADD_DIV]);
+
+val addr30_addr32_LEMMA = prove(
+  `!a. (addr30 (addr32 a + 0w) = a) /\ 
+        (addr30 (addr32 a + 1w) = a) /\ 
+        (addr30 (addr32 a + 2w) = a) /\ 
+        (addr30 (addr32 a + 3w) = a)`,
+  SIMP_TAC std_ss [addr30_addr32_ADD,addr30_n2w,WORD_ADD_0]);
+
+val addr30_addr32 = store_thm("addr30_addr32",
+  `!x. (addr30 (addr32 x) = x) /\
+        (addr30 (addr32 x + 0w) = x) /\ 
+        (addr30 (addr32 x + 1w) = x) /\ 
+        (addr30 (addr32 x + 2w) = x) /\ 
+        (addr30 (addr32 x + 3w) = x)`,
+  REWRITE_TAC
+    [REWRITE_RULE [WORD_ADD_0] addr30_addr32_LEMMA,addr30_addr32_LEMMA]);
+
+val EXISTS_addr30 = store_thm("EXISTS_addr30",
+  `!x. (x && 3w = 0w) ==> ?y. x = addr32 y`,
+  SRW_TAC [] [addr32_def] \\ Q.EXISTS_TAC `(31 >< 2) x`
+    \\ SRW_TAC [WORD_EXTRACT_ss] []
+    \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss) []);
+
+val add32_addr30 = store_thm("addr32_addr30",
+  `!x. (x && 3w = 0w) ==> (addr32 (addr30 x) = x)`,
+  REPEAT STRIP_TAC \\ IMP_RES_TAC EXISTS_addr30
+    \\ ASM_REWRITE_TAC [addr30_addr32]);
+
+val addr32_ADD = store_thm ("addr32_ADD", 
+  `!v w. (addr32 (v + w)  = addr32 v + addr32 w)`,
+  Cases \\ Cases
+  \\ REWRITE_TAC [addr32_n2w,word_add_n2w,LEFT_ADD_DISTRIB]);
+
+val addr32_NEG = store_thm("addr32_NEG",
+  `!w. addr32 ($- w) = $- (addr32 w)`,
+  Cases \\ REWRITE_TAC [addr32_n2w] 
+  \\ wordsLib.WORD_EVAL_TAC \\ REWRITE_TAC [addr32_n2w]
+  \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss)
+       [n2w_11,LEFT_SUB_DISTRIB,MOD_COMMON_FACTOR]);
+
+val addr32_SUB = store_thm ("addr32_SUB", 
+  `!v w. (addr32 (v - w)  = addr32 v - addr32 w)`,
+  REWRITE_TAC [word_sub_def,addr32_ADD,addr32_NEG]);
+  
+val addr32_SUC = store_thm("addr32_SUC",
+  `!p. addr32 (p + 1w) = addr32 p + 4w`,
+  SIMP_TAC std_ss [addr32_ADD,addr32_n2w]);
+
+val addr30_ADD = store_thm("addr30_ADD",
+  `!x m. addr30 x + n2w m = addr30 (x + n2w (4 * m))`,
+  Cases \\ REWRITE_TAC [addr30_n2w,word_add_n2w]
+  \\ ONCE_REWRITE_TAC [ADD_COMM]
+  \\ SIMP_TAC std_ss [GSYM ADD_DIV_ADD_DIV,AC MULT_COMM MULT_ASSOC]);  
+
+val addr32_11 = store_thm("addr32_11",
+  `!a b. ((addr32 a = addr32 b) = (a = b)) /\ 
+          ((addr32 a = addr32 b + 0w) = (a = b)) /\ 
+          ((addr32 a + 0w = addr32 b) = (a = b)) /\ 
+          ((addr32 a + 0w = addr32 b + 0w) = (a = b)) /\ 
+          ((addr32 a + 1w = addr32 b + 1w) = (a = b)) /\ 
+          ((addr32 a + 2w = addr32 b + 2w) = (a = b)) /\ 
+          ((addr32 a + 3w = addr32 b + 3w) = (a = b))`,
+  SRW_TAC [] [WORD_EQ_ADD_RCANCEL,
+    simpLib.SIMP_PROVE (std_ss++WORD_BIT_EQ_ss) [addr32_def]
+      ``(addr32 a = addr32 b) = (a = b)``]);
+
+val addr32_EQ_0 = store_thm("addr32_EQ_0",
+  `!a. (addr32 a = 0w) = (a = 0w)`,
+  REWRITE_TAC [SIMP_RULE std_ss [addr32_n2w] (Q.SPECL [`a`,`0w`] addr32_11)]);
+
+val ADDRESS_ROTATE = store_thm("ADDRESS_ROTATE",
+  `!q:word32 z:word30. q #>> (8 * w2n ((1 >< 0) (addr32 z):word2)) = q`,
+  SIMP_TAC std_ss [addr32_eq_0,word_0_n2w] \\ STRIP_TAC \\ EVAL_TAC);
+
+val addr30_THM = store_thm("addr30_THM",
+  `!x. addr30 x = n2w (w2n x DIV 4)`,
+  Cases \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD,addr30_n2w]);
+
+val addr32_THM = store_thm("addr32_THM",
+  `!x. addr32 x = n2w (4 * w2n x)`,
+  Cases \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD,addr32_n2w]);
+
+val aligned_THM = store_thm("aligned_THM",
+  `!p. aligned p = ?k. p = k * 4w`,
+  SRW_TAC [] [aligned_def] \\ EQ_TAC \\ SRW_TAC [WORD_MUL_LSL_ss] []
+  THENL [Q.EXISTS_TAC `(31 >< 2) p`, ALL_TAC]
+  \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss) []);
+
+val aligned_NEG_lemma = prove(
+  `!x. aligned x ==> aligned ($- x)`,
+  ASM_SIMP_TAC std_ss  [aligned_THM,w2n_n2w,LESS_MOD]
+  \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `n2w (2**30) - k` 
+  \\ ASM_SIMP_TAC (std_ss++WORD_ARITH_EQ_ss) [WORD_RIGHT_SUB_DISTRIB]            
+  \\ ASM_SIMP_TAC (std_ss++WORD_ss) []);
+
+val aligned_NEG = store_thm("aligned_NEG",
+  `!x. aligned ($- x) = aligned x`,
+  METIS_TAC [aligned_NEG_lemma,WORD_NEG_NEG]);
+
+val aligned_and_1 = store_thm("aligned_and_1",
+  `!x. aligned x ==> (x && 1w = 0w)`,        
+  REWRITE_TAC [aligned_THM] \\ NTAC 2 STRIP_TAC
+  \\ ASM_REWRITE_TAC [] \\ POP_ASSUM (fn th => ALL_TAC)
+  \\ Q.SPEC_TAC (`k`,`k`) \\ Cases
+  \\ REWRITE_TAC [word_mul_n2w,word_add_n2w,n2w_and_1,n2w_11]
+  \\ REWRITE_TAC [GSYM (EVAL ``2*2``),MULT_ASSOC]
+  \\ SIMP_TAC (std_ss++SIZES_ss) [MOD_EQ_0]);
+
+val aligned_ADD = store_thm("aligned_ADD",
+  `!x y. aligned x /\ aligned y ==> aligned (x + y)`,
+  REWRITE_TAC [aligned_THM] \\ REPEAT STRIP_TAC
+  \\ ASM_REWRITE_TAC [GSYM WORD_RIGHT_ADD_DISTRIB] \\ METIS_TAC []);
+  
 (* ------------------------------------------------------------------------- *)
 
 val REG_READ6_def = Define`
@@ -55,77 +226,13 @@ val STATE_ARM_MMU_NEXT = store_thm("STATE_ARM_MMU_NEXT",
 
 (* ------------------------------------------------------------------------- *)
 
-val register2num_lt = prove(
+val register2num_lt_neq = store_thm("register2num_lt_neq",
   `!x y. register2num x < register2num y ==> ~(x = y)`,
   METIS_TAC [prim_recTheory.LESS_NOT_EQ, register2num_11]);
 
-val psr2num_lt = prove(
+val psr2num_lt_neq = store_thm("psr2num_lt_neq",
   `!x y. psr2num x < psr2num y ==> ~(x = y)`,
   METIS_TAC [prim_recTheory.LESS_NOT_EQ, psr2num_11]);
-
-val Ua_RULE4 = save_thm("Ua_RULE4",
-  (SIMP_RULE std_ss [register2num_lt] o
-   ISPEC `\x y. register2num x < register2num y`) UPDATE_SORT_RULE1);
-
-val Ub_RULE4 = save_thm("Ub_RULE4",
-  (SIMP_RULE std_ss [register2num_lt] o
-   ISPEC `\x y. register2num x < register2num y`) UPDATE_SORT_RULE2);
-
-val Ua_RULE_PSR = save_thm("Ua_RULE_PSR",
-  (SIMP_RULE std_ss [psr2num_lt] o
-   ISPEC `\x y. psr2num x < psr2num y`) UPDATE_SORT_RULE1);
-
-val Ub_RULE_PSR = save_thm("Ub_RULE_PSR",
-  (SIMP_RULE std_ss [psr2num_lt] o
-   ISPEC `\x y. psr2num x < psr2num y`) UPDATE_SORT_RULE2);
-
-val FUa_RULE = save_thm("FUa_RULE",
-  (SIMP_RULE std_ss [prim_recTheory.LESS_NOT_EQ] o
-   SPEC `\x y. x < y`) FCP_UPDATE_SORT_RULE1);
-
-val FUb_RULE = save_thm("FUb_RULE",
-  (SIMP_RULE std_ss [prim_recTheory.LESS_NOT_EQ] o
-   SPEC `\x y. x < y`) FCP_UPDATE_SORT_RULE2);
-
-val tm1 = `!a b x y m. (a |:> y) ((b |:> x) m) =
-     let lx = LENGTH x and ly = LENGTH y in
-        if a <=+ b then
-          if w2n b - w2n a <= ly then
-            if ly - (w2n b - w2n a) < lx then
-              (a |:> y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x) m
-            else
-              (a |:> y) m
-          else
-            (a |:< y) ((b |:> x) m)
-        else (* b <+ a *)
-          if w2n a - w2n b < lx then
-            (b |:> JOIN (w2n a - w2n b) x y) m
-          else
-            (b |:> x) ((a |:> y) m)`
-
-val tm2 = `!a b x y m. (a |:> y) ((b |:< x) m) =
-     let lx = LENGTH x and ly = LENGTH y in
-        if a <=+ b then
-          if w2n b - w2n a <= ly then
-            if ly - (w2n b - w2n a) < lx then
-              (a |:> y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x) m
-            else
-              (a |:> y) m
-          else
-            (a |:< y) ((b |:< x) m)
-        else (* b <+ a *)
-          if w2n a - w2n b < lx then
-            (b |:> JOIN (w2n a - w2n b) x y) m
-          else
-            (b |:> x) ((a |:> y) m)`
-
-val LUa_RULE = store_thm("LUa_RULE", tm1,
-  METIS_TAC [LUa_def,LUb_def,LUPDATE_LUPDATE]);
-
-val LUb_RULE = store_thm("LUb_RULE", tm2,
-  METIS_TAC [LUa_def,LUb_def,LUPDATE_LUPDATE]);
-
-(* ------------------------------------------------------------------------- *)
 
 val REGISTER_RANGES =
   (SIMP_RULE (std_ss++SIZES_ss) [] o Thm.INST_TYPE [alpha |-> ``:4``]) w2n_lt;

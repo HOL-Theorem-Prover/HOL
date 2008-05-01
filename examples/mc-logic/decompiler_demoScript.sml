@@ -7,7 +7,7 @@
 
 open HolKernel boolLib bossLib Parse;
 
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory combinTheory addressTheory;
+open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory combinTheory systemTheory arm_evalTheory addressTheory;
 open arm_compilerLib;
 
 val _ = new_theory "decompiler_demo";

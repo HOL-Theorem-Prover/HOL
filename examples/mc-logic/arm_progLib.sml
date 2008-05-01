@@ -11,7 +11,7 @@ struct
 open HolKernel boolLib bossLib;
 open listTheory wordsTheory pred_setTheory arithmeticTheory pairTheory wordsLib;
 open set_sepTheory progTheory arm_progTheory arm_instTheory set_sepLib;
-open instructionSyntax addressTheory;
+open instructionSyntax arm_evalTheory addressTheory;
  
 (*
   quietdec := false;

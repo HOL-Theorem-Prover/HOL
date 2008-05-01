@@ -1545,7 +1545,7 @@ val ADDR_MODE4_32_INTRO = prove(
 
 val LDM_VALUES_def = Define `
   LDM_VALUES am4 x xs s = 
-    ZIP (LEAST_SORT xs, MAP (s.memory o ADDR30) (ADDR_MODE4_ADDRESSES am4 x xs))`;
+    ZIP (LEAST_SORT xs, MAP (s.memory o addr30) (ADDR_MODE4_ADDRESSES am4 x xs))`;
 
 val MEM_MAP_FST_ZIP = prove(
   ``!xs ys x. (LENGTH xs = LENGTH ys) ==> (MEM x (MAP FST (ZIP (xs,ys))) = MEM x xs)``,
@@ -1603,7 +1603,7 @@ val LDM_WRITEL_INTRO = prove(
        REG_WRITEL r m (LDM_VALUES am4 x xs s))``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC REG_WRITEL_INTRO
   \\ `LENGTH (LEAST_SORT xs) = 
-      LENGTH (MAP (s.memory o ADDR30) (ADDR_MODE4_ADDRESSES am4 x xs))`
+      LENGTH (MAP (s.memory o addr30) (ADDR_MODE4_ADDRESSES am4 x xs))`
              by ASM_SIMP_TAC std_ss [LENGTH_LEAST_SORT,LENGTH_ADDRESS_LIST',
                                      ADDR_MODE4_ADDRESSES_def,LENGTH_MAP]
   \\ IMP_RES_TAC ALL_DISTINCT_MAP_FST_ZIP
@@ -1619,7 +1619,7 @@ val LDM_STATE_def = Define `
               (state_mode s)
               (ZIP
                  (LEAST_SORT (MAP FST xs),
-                  MAP (s.memory o ADDR30)
+                  MAP (s.memory o addr30)
                     (ADDRESS_LIST'
                        (addr32 (ADDR_MODE4_ADDR am4 p (MAP FST xs)))
                        (LENGTH (MAP FST xs))))); psrs := s.psrs;
@@ -1635,7 +1635,7 @@ val LDM_STATE2_def = Define `
               (state_mode s)
               (ZIP
                  (LEAST_SORT xs,
-                  MAP (s.memory o ADDR30)
+                  MAP (s.memory o addr30)
                     (ADDRESS_LIST'
                        (addr32 (ADDR_MODE4_ADDR am4 p xs))
                        (LENGTH xs)))); psrs := s.psrs;
@@ -1730,7 +1730,7 @@ val LDM_VALUES_0 = prove(
   ``!xs.
       (0 = LENGTH xs) ==> 
       (ZIP (LEAST_SORT xs,
-            MAP (s.memory o ADDR30) (ADDRESS_LIST' (addr32 y) (LENGTH xs))) = [])``,
+            MAP (s.memory o addr30) (ADDRESS_LIST' (addr32 y) (LENGTH xs))) = [])``,
   Cases \\ SRW_TAC [] [LENGTH,LEAST_SORT_def,ADDR_MODE4_ADDRESSES_def,ADDRESS_LIST'_def]);
 
 val LDM_VALUES_SUC = prove(
@@ -1739,16 +1739,16 @@ val LDM_VALUES_SUC = prove(
       ?ys. 
         !y. (ZIP
               (LEAST_SORT xs,
-                MAP (s.memory o ADDR30) (ADDRESS_LIST' (addr32 y) (LENGTH xs))) = 
+                MAP (s.memory o addr30) (ADDRESS_LIST' (addr32 y) (LENGTH xs))) = 
               (LEAST_MEM xs,(s:^(ty_antiq arm_state_type)).memory y)::
                 ZIP
                   (LEAST_SORT ys,
-                 MAP (s.memory o ADDR30) (ADDRESS_LIST' (addr32 (y+1w)) (LENGTH ys)))) /\
+                 MAP (s.memory o addr30) (ADDRESS_LIST' (addr32 (y+1w)) (LENGTH ys)))) /\
            (n = LENGTH ys) /\ ALL_DISTINCT ys /\ !x. MEM x (LEAST_MEM xs::ys) = MEM x xs``,
   REPEAT STRIP_TAC \\ Cases_on `xs` 
   \\ FULL_SIMP_TAC std_ss [LENGTH] THEN1 METIS_TAC [SUC_NOT]
-  \\ FULL_SIMP_TAC std_ss [LEAST_SORT_def,LET_DEF,ADDRESS_LIST'_def,MAP,ADDR30_def,
-     GSYM addr30_def,addr30_addr32,ZIP,CONS_11]  
+  \\ FULL_SIMP_TAC std_ss [LEAST_SORT_def,LET_DEF,ADDRESS_LIST'_def,MAP,
+     addr30_addr32,ZIP,CONS_11]  
   \\ Q.EXISTS_TAC `FILTER (\x. ~(x = LEAST_MEM (h::t))) (h::t)`  
   \\ `MEM (LEAST_MEM (h::t)) (h::t)` by METIS_TAC [MEM_LEAST_MEM]
   \\ IMP_RES_TAC LENGTH_FILTER_NEQ  
@@ -1993,7 +1993,7 @@ val xR_list_sem_LDM_STATE = prove(
   \\ SIMP_TAC std_ss [] \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) xs`,`xs`)
   \\ Induct \\ REWRITE_TAC [MAP,xR_list_sem_def]
   \\ Cases \\ SIMP_TAC (srw_ss()) [xR_list_sem_def,reg_def,MEM,state_mode_simp,ms_sem_def]
-  \\ SIMP_TAC std_ss [ADDRESS_LIST'_def,MAP,ADDR30_def,GSYM addr30_def,addr30_addr32,ZIP]
+  \\ SIMP_TAC std_ss [ADDRESS_LIST'_def,MAP,addr30_addr32,ZIP]
   \\ SIMP_TAC bool_ss [REG_WRITEL_def,REG_READ_WRITE,mem_def,REG_WRITE_15]
   \\ ASM_SIMP_TAC bool_ss [xR_list_sem_IGNORE_REG_WRITE,GSYM addr32_SUC] \\ METIS_TAC []);
 
@@ -2024,7 +2024,7 @@ val xR_list_sem_LDM_STATE2 = prove(
   \\ STRIP_TAC \\ Cases \\ REWRITE_TAC [LENGTH,DECIDE ``~(0 = SUC n)``]
   \\ SIMP_TAC std_ss [ADDRESS_LIST'_def,MAP,ZIP]
   \\ REWRITE_TAC [ms_sem_def,ADD1,EQ_ADD_RCANCEL,ALL_DISTINCT]  
-  \\ SIMP_TAC bool_ss [ADDR30_def,GSYM addr30_def,addr30_addr32,mem_def]
+  \\ SIMP_TAC bool_ss [addr30_addr32,mem_def]
   \\ REWRITE_TAC [xR_list_sem_def,REG_WRITEL_def]  
   \\ SIMP_TAC (srw_ss()) [REG_WRITEL_def,REG_READ_WRITE,mem_def,REG_WRITE_15,reg_def,state_mode_simp]
   \\ REPEAT STRIP_TAC  
@@ -2478,7 +2478,7 @@ val mem_STM_STATE = prove(
 
   \\ Induct \\ ASM_SIMP_TAC std_ss [LENGTH,ADDRESS_LIST'_def,MAP,ZIP,
        FOLDL,GSYM addr32_SUC,ALL_DISTINCT,ms_address_set_def,IN_INSERT,WORD_ADD_0,addr32_11]
-  \\ SIMP_TAC std_ss [MEM_WRITE_WORD_def,UPDATE_def,ADDR30_def,GSYM addr30_def,addr30_addr32]);
+  \\ SIMP_TAC std_ss [MEM_WRITE_WORD_def,UPDATE_def,addr30_addr32]);
 
 val ms_sem_STM_STATE_LEMMA = prove(
   ``!mmm bx f. 
@@ -2497,8 +2497,8 @@ val ms_sem_STM_STATE_LEMMA = prove(
   \\ Cases \\ REPEAT STRIP_TAC
   \\ `!x. MEM_WRITE_WORD (MEM_WRITE_WORD mmm (addr32 ax) r) (addr32 bx) x = 
           MEM_WRITE_WORD (MEM_WRITE_WORD mmm (addr32 bx) x) (addr32 ax) r` by
-        (SRW_TAC [] [MEM_WRITE_WORD_def,UPDATE_def,FUN_EQ_THM,ADDR30_def,
-           GSYM addr30_def,addr30_addr32] \\ METIS_TAC [])
+        (SRW_TAC [] [MEM_WRITE_WORD_def,UPDATE_def,FUN_EQ_THM,
+           addr30_addr32] \\ METIS_TAC [])
   \\ ASM_REWRITE_TAC [] \\ ASM_SIMP_TAC std_ss []);
 
 val MEM_ADDRESS_LIST' = prove(
@@ -2553,8 +2553,8 @@ val ms_sem_STM_STATE = prove(
   \\ `~MEM (addr32 ax) (ADDRESS_LIST' (addr32 (ax + 1w)) (LENGTH xs))` 
         by METIS_TAC [no_overlap_ADDRESS_LIST']
   \\ ASM_SIMP_TAC bool_ss [ms_sem_STM_STATE_LEMMA]
-  \\ SIMP_TAC (srw_ss()) [mem_def,MEM_WRITE_WORD_def,ADDR30_def,
-         GSYM addr30_def,addr30_addr32,UPDATE_def]
+  \\ SIMP_TAC (srw_ss()) [mem_def,MEM_WRITE_WORD_def,
+         addr30_addr32,UPDATE_def]
   \\ `REG_READ s.registers (state_mode s) q = r` by METIS_TAC [reg_def]
   \\ Cases_on `rt` \\ FULL_SIMP_TAC std_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2]);
 
@@ -3246,7 +3246,7 @@ val mem_byte_SIMP2 = prove(
   \\ ASSUME_TAC (EVAL ``((1 >< 0) (2w:word32)):word2``) 
   \\ ASSUME_TAC (EVAL ``((1 >< 0) (3w:word32)):word2``) 
   \\ FULL_SIMP_TAC bool_ss [mem_byte_def,mem_def,MEM_WRITE_BYTE_def,
-          UPDATE_def,ADDR30_def,GSYM addr30_def,addr30_addr32,LET_DEF,lower_addr32_ADD,addr32_11]
+          UPDATE_def,addr30_addr32,LET_DEF,lower_addr32_ADD,addr32_11]
   \\ SRW_TAC [] [] \\ MATCH_MP_TAC GET_BYTE_SET_BYTE_NEQ \\ EVAL_TAC);
 
 val mem_byte_SIMP3 = prove(
@@ -3254,8 +3254,8 @@ val mem_byte_SIMP3 = prove(
          <|registers := r; psrs := p;
            memory := MEM_WRITE_BYTE s.memory q x; undefined := u; cp_state := cp|> =
      x)``,
-  SIMP_TAC (srw_ss()) [mem_byte_def,mem_def,MEM_WRITE_BYTE_def,UPDATE_def,ADDR30_def,
-    GSYM addr30_def,LET_DEF,GET_BYTE_SET_BYTE]);
+  SIMP_TAC (srw_ss()) [mem_byte_def,mem_def,MEM_WRITE_BYTE_def,UPDATE_def,
+    LET_DEF,GET_BYTE_SET_BYTE]);
 
 val mem_byte_SIMP4 = prove(
   ``~(p' = addr30 q) ==>
@@ -3263,8 +3263,8 @@ val mem_byte_SIMP4 = prove(
          <|registers := r; psrs := p;
            memory := MEM_WRITE_BYTE s.memory q x; undefined := u; cp_state := cp|> =
      mem p' s)``,
-  SIMP_TAC (srw_ss()) [mem_byte_def,mem_def,MEM_WRITE_BYTE_def,UPDATE_def,ADDR30_def,
-    GSYM addr30_def,LET_DEF,GET_BYTE_SET_BYTE]);
+  SIMP_TAC (srw_ss()) [mem_byte_def,mem_def,MEM_WRITE_BYTE_def,UPDATE_def,
+    LET_DEF,GET_BYTE_SET_BYTE]);
 
 val arm_STRB = store_thm("arm_STRB",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag 
@@ -3292,7 +3292,7 @@ val str = (UNDISCH_ALL o Q.INST [`Rd`|->`a`,`Rn`|->`b`,`c`|->`c_flag`] o DISCH_A
 val mem_SIMP_EQ = prove(
   ``mem (addr30 z) <|registers := r; psrs := p;
           memory := MEM_WRITE_WORD s.memory z x; undefined := u; cp_state := cp|> = x``,
-  SRW_TAC [] [mem_def,MEM_WRITE_WORD_def,UPDATE_def,ADDR30_def,addr30_def]);
+  SRW_TAC [] [mem_def,MEM_WRITE_WORD_def,UPDATE_def,addr30_def]);
 
 val mem_SIMP_avoid_LEMMA = prove(
   ``~(p = addr32 (addr30 y) + 0w) /\
@@ -3309,13 +3309,13 @@ val mem_byte_SIMP_avoid = prove(
        <|registers := r; psrs := p;
          memory := MEM_WRITE_WORD s.memory q x; undefined := F; cp_state := cp|> =
      mem_byte p' s)``,
-  SIMP_TAC (srw_ss()) [mem_byte_def,mem_def,MEM_WRITE_WORD_def,ADDR30_def,GSYM addr30_def,UPDATE_def]);
+  SIMP_TAC (srw_ss()) [mem_byte_def,mem_def,MEM_WRITE_WORD_def,UPDATE_def]);
 
 val mem_SIMP_avoid = prove(
   ``~(q = addr30 y) ==> (mem q
        <|registers := r; psrs := p;
          memory := MEM_WRITE_WORD s.memory y x; undefined := u; cp_state := cp|> = mem q s)``,
-  SRW_TAC [] [mem_def,MEM_WRITE_WORD_def,UPDATE_def,ADDR30_def,addr30_def]);
+  SRW_TAC [] [mem_def,MEM_WRITE_WORD_def,UPDATE_def,addr30_def]);
 
 val arm_STR_NONALIGNED = store_thm("arm_STR_NONALIGNED",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag

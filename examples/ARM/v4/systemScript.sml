@@ -12,7 +12,7 @@
 *)
 
 open HolKernel boolLib bossLib Parse;
-open Q wordsTheory rich_listTheory bsubstTheory;
+open Q wordsTheory rich_listTheory updateTheory;
 open armTheory;
 
 val _ = new_theory "system";
@@ -235,11 +235,13 @@ val RUN_CP_def = Define`
 (*     interrupts (fiq, irq)                                                  *)
 (* -------------------------------------------------------------------------- *)
 
-val ADDR30_def = Define `ADDR30 (addr:word32) = (31 >< 2) addr`;
+val aligned_def = Define `aligned (x:word32) = (x && 3w = 0w)`;
+val addr32_def  = Define `addr32 (x:word30) = (w2w x << 2):word32`;
+val addr30_def  = Define `addr30 (x:word32) = (31 >< 2) x`;
 
 val NEXT_ARM_SYS_def = Define`
   NEXT_ARM_SYS bus_op (cp:'a coproc) (state:'a arm_sys_state) =
-    let ireg = state.memory (ADDR30 (FETCH_PC state.registers)) in
+    let ireg = state.memory (addr30 (FETCH_PC state.registers)) in
     let s = <| regs := <| reg := state.registers; psr := state.psrs |>;
                ireg := ireg;
                exception := if state.undefined then undefined else software |>
@@ -286,16 +288,16 @@ val SET_HALF_def = Define`
 
 val MEM_WRITE_BYTE_def = Define`
   MEM_WRITE_BYTE (mem:mem) addr (word:word8) =
-    let addr30 = ADDR30 addr in
-      (addr30 =+ SET_BYTE ((1 >< 0) addr) word (mem addr30)) mem`;
+    let a30 = addr30 addr in
+      (a30 =+ SET_BYTE ((1 >< 0) addr) word (mem a30)) mem`;
 
 val MEM_WRITE_HALF_def = Define`
   MEM_WRITE_HALF (mem:mem) addr (word:word16) =
-    let addr30 = ADDR30 addr in
-      (addr30 =+ SET_HALF (addr ' 1) word (mem addr30)) mem`;
+    let a30 = addr30 addr in
+      (a30 =+ SET_HALF (addr ' 1) word (mem a30)) mem`;
 
 val MEM_WRITE_WORD_def = Define`
-  MEM_WRITE_WORD (mem:mem) addr word = (ADDR30 addr =+ word) mem`;
+  MEM_WRITE_WORD (mem:mem) addr word = (addr30 addr =+ word) mem`;
 
 val MEM_WRITE_def = Define`
   MEM_WRITE mem addr d =
@@ -311,9 +313,9 @@ val TRANSFER_def = Define`
          if cpi then
            let (f, b) = SPLITP IS_SOME cp_data in
              (b, data ++
-                MAP (\addr. mem (ADDR30 addr)) (ADDRESS_LIST a (LENGTH f)), mem)
+                MAP (\addr. mem (addr30 addr)) (ADDRESS_LIST a (LENGTH f)), mem)
          else
-           (cp_data, data ++ [mem (ADDR30 a)], mem)
+           (cp_data, data ++ [mem (addr30 a)], mem)
     || MemWrite a d ->
          if cpi then
            let (f, b) = SPLITP IS_NONE cp_data in
@@ -357,7 +359,7 @@ val TRANSFERS = prove(
 
 val NEXT_ARM_MMU = store_thm("NEXT_ARM_MMU",
  `NEXT_ARM_MMU cp state =
-    let ireg = state.memory (ADDR30 (FETCH_PC state.registers)) in
+    let ireg = state.memory (addr30 (FETCH_PC state.registers)) in
     let s = <| regs := <| reg := state.registers; psr := state.psrs |>;
                ireg := ireg;
                exception := if state.undefined then undefined else software |>
@@ -399,7 +401,7 @@ val STATE_ARM_MEM_def = Define `STATE_ARM_MEM = STATE_ARM_MMU NO_CP`;
 
 val NEXT_ARM_MEM = store_thm("NEXT_ARM_MEM",
   `NEXT_ARM_MEM state =
-     let ireg = state.memory (ADDR30 (FETCH_PC state.registers)) in
+     let ireg = state.memory (addr30 (FETCH_PC state.registers)) in
      let s = <| regs := <| reg := state.registers; psr := state.psrs |>;
                 ireg := ireg;
                 exception := if state.undefined then undefined else software |>
@@ -834,7 +836,7 @@ fun mk_word n =
 val _ = type_pp.pp_num_types := false;
 val _ = type_pp.pp_array_types := false;
 
-val _ = let open EmitML in emitML (!Globals.emitMLDir) ("bsubst",
+val _ = let open EmitML in emitML (!Globals.emitMLDir) ("update",
   OPEN ["num", "fcp", "words"]
     :: MLSIG "type 'a word = 'a wordsML.word"
     :: MLSIG "type num = numML.num"
@@ -853,7 +855,7 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("bsubst",
     :: DATATYPE (`data = Byte of word8 | Half of word16 | Word of word32`)
     :: map DEFN [LUPDATE_def, mem_read_def, mem_write_def, mem_write_block_def]
      @ map (DEFN o wordsLib.WORDS_EMIT_RULE o mem_rule)
-              [empty_memory_def, mem_items_def, ADDR30_def, GET_HALF_def,
+              [empty_memory_def, mem_items_def, addr30_def, GET_HALF_def,
                SIMP_RULE std_ss [literal_case_DEF] GET_BYTE_def,
                FORMAT_def, SET_BYTE_def, SET_HALF_def,
                MEM_WRITE_BYTE_def, MEM_WRITE_HALF_def,
@@ -877,12 +879,12 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
     :: map mk_word [2,3,4,5,8,12,16,24,30,32]
      @ MLSTRUCT "type registers = register->word32"
     :: MLSTRUCT "type psrs = psr->word32"
-    :: MLSTRUCT "type mem = bsubstML.mem"
-    :: MLSTRUCT "type data = bsubstML.data"
+    :: MLSTRUCT "type mem = updateML.mem"
+    :: MLSTRUCT "type data = updateML.data"
     :: MLSIG "type registers = register->word32"
     :: MLSIG "type psrs = psr->word32"
-    :: MLSIG "type mem = bsubstML.mem"
-    :: MLSIG "type data = bsubstML.data"
+    :: MLSIG "type mem = updateML.mem"
+    :: MLSIG "type data = updateML.data"
     :: DATATYPE (`regs = <| reg : registers; psr : psrs |>`)
     :: DATATYPE (`memop = MemRead of word32 | MemWrite of word32=>data |
                           CPWrite of word32`)

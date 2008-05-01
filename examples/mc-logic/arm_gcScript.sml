@@ -9,7 +9,7 @@
 open HolKernel boolLib bossLib Parse;
 open pred_setTheory res_quanTheory arithmeticTheory wordsLib wordsTheory bitTheory pairTheory;
 open listTheory rich_listTheory relationTheory pairTheory fcpTheory;
-open sortingTheory addressTheory;
+open sortingTheory arm_evalTheory addressTheory;
 
 open set_sepTheory set_sepLib progTheory arm_progTheory arm_instTheory arm_progLib;
 
