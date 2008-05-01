@@ -637,15 +637,15 @@ local
 in
   fun print_theories_as_tex names path =
    let val {dir, file} = Path.splitDirFile path
+       val dir = if Path.isAbsolute path orelse !emitTeXDir = "" then
+                   dir
+                 else
+                   Path.concat(!emitTeXDir, dir)
        val filename = Path.concat(dir, tex_suffix file)
        val _ = not (FileSys.access (filename, [])) orelse
                  (TextIO.output(TextIO.stdErr,
                     "File " ^ path ^ " already exists.\n");
                   failwith "File exists")
-       val dir = if Path.isAbsolute path orelse !emitTeXDir = "" then
-                   dir
-                 else
-                   Path.concat(!emitTeXDir, dir)
        val _ = current_path := dir
        val _ = app tex_commands_theory names
        val _ = current_path := Path.currentArc
