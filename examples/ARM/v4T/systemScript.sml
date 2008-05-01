@@ -292,7 +292,9 @@ val OUT_CP_def = Define`
 
 val _ = type_abbrev("mem", ``:word30->word32``);
 
-val ADDR30_def = Define `ADDR30 (addr:word32) = (31 >< 2) addr`;
+val aligned_def = Define `aligned (x:word32) = (x && 3w = 0w)`;
+val addr32_def  = Define `addr32 (x:word30) = (w2w x << 2):word32`;
+val addr30_def  = Define `addr30 (x:word32) = (31 >< 2) x`;
 
 val SET_BYTE_def = Define`
   SET_BYTE (oareg:word2) (b:word8) (w:word32) =
@@ -310,16 +312,16 @@ val SET_HALF_def = Define`
 
 val MEM_WRITE_BYTE_def = Define`
   MEM_WRITE_BYTE (mem:mem) addr (word:word8) =
-    let addr30 = ADDR30 addr in
-      (addr30 =+ SET_BYTE ((1 >< 0) addr) word (mem addr30)) mem`;
+    let a30 = addr30 addr in
+      (a30 =+ SET_BYTE ((1 >< 0) addr) word (mem a30)) mem`;
 
 val MEM_WRITE_HALF_def = Define`
   MEM_WRITE_HALF (mem:mem) addr (word:word16) =
-    let addr30 = ADDR30 addr in
-      (addr30 =+ SET_HALF (addr ' 1) word (mem addr30)) mem`;
+    let a30 = addr30 addr in
+      (a30 =+ SET_HALF (addr ' 1) word (mem a30)) mem`;
 
 val MEM_WRITE_WORD_def = Define`
-  MEM_WRITE_WORD (mem:mem) addr word = (ADDR30 addr =+ word) mem`;
+  MEM_WRITE_WORD (mem:mem) addr word = (addr30 addr =+ word) mem`;
 
 val MEM_WRITE_def = Define`
   MEM_WRITE mem addr d =
@@ -328,7 +330,7 @@ val MEM_WRITE_def = Define`
     || Half hw -> MEM_WRITE_HALF mem addr hw
     || Word w  -> MEM_WRITE_WORD mem addr w`;
 
-val MEM_READ_def = Define `MEM_READ mem addr = mem (ADDR30 addr)`;
+val MEM_READ_def = Define `MEM_READ mem addr = mem (addr30 addr)`;
 
 (* -------------------------------------------------------------------------- *)
 (* NEXT_MEM                                                                   *)
@@ -1083,7 +1085,7 @@ val _ =
            DECODE_LDC_STC_THM, DECODE_LDRH_STRH_THM, DECODE_CDP_THM,
            DECODE_MRC_MCR_THM]
        @ [LUPDATE_def, mem_read_def, mem_write_def, mem_write_block_def,
-          und_rule empty_memory_def, ADDR30_def, GET_HALF_def,
+          und_rule empty_memory_def, addr30_def, GET_HALF_def,
           GET_BYTE_def, FORMAT_def, SET_BYTE_def, SET_HALF_def,
           mem_rule MEM_WRITE_BYTE_def, mem_rule MEM_WRITE_HALF_def,
           mem_rule MEM_WRITE_WORD_def, MEM_WRITE_def, MEM_READ_def,

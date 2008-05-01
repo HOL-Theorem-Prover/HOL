@@ -228,7 +228,7 @@ val _ = Lib.C add_thms arm_compset
    decode_27_enc_coproc, thumbTheory.decode_27_enc_coproc_,
    decode_cdp_enc, decode_mrc_mcr_enc,
 
-   APPLY_LUPDATE_THM, fcpTheory.FCP_APPLY_UPDATE_THM, ADDR30_def,
+   APPLY_LUPDATE_THM, fcpTheory.FCP_APPLY_UPDATE_THM, addr30_def,
    MEM_WRITE_BYTE_def, MEM_WRITE_HALF_def, MEM_WRITE_WORD_def,
    MEM_WRITE_def, MEM_READ_def, BASIC_READ_def, BASIC_WRITE_def,
    NO_CP_def, NO_IRPTS_def];
@@ -247,14 +247,24 @@ in
 end;
 
 val SORT_UPDATE_CONV =
-let open arm_evalTheory fcpTheory
+let open arm_evalTheory fcpTheory updateTheory
+    val rule = SIMP_RULE std_ss [register2num_lt_neq, psr2num_lt_neq,
+                                 prim_recTheory.LESS_NOT_EQ]
+    fun rule1 t = (rule o ISPEC t) UPDATE_SORT_RULE1
+    fun rule2 t = (rule o ISPEC t) UPDATE_SORT_RULE2
+    val Ua_RULE4 = rule1 `\x y. register2num x < register2num y`
+    val Ub_RULE4 = rule2 `\x y. register2num x < register2num y`
+    val Ua_RULE_PSR = rule1 `\x y. psr2num x < psr2num y`
+    val Ub_RULE_PSR = rule2 `\x y. psr2num x < psr2num y`
+    val FUa_RULE = (rule o SPEC `\x y. x < y`) FCP_UPDATE_SORT_RULE1
+    val FUb_RULE = (rule o SPEC `\x y. x < y`) FCP_UPDATE_SORT_RULE2
     val compset = add_rws wordsLib.words_compset
         [o_THM,register_EQ_register,register2num_thm,psr_EQ_psr,psr2num_thm,
          SYM Ua_def,UPDATE_EQ_RULE,Ua_RULE4,Ub_RULE4,Ua_RULE_PSR,Ub_RULE_PSR,
          SYM FUa_def,FCP_UPDATE_EQ_RULE,FUa_RULE,FUb_RULE,
          LENGTH,SUC_RULE JOIN,BUTFIRSTN_compute,APPEND,
          PURE_REWRITE_RULE [SYM Ua_def] UPDATE_LUPDATE,
-         LUa_RULE,LUb_RULE,GSYM LUa_def]
+         LIST_UPDATE_SORT_RULE1,LIST_UPDATE_SORT_RULE2,GSYM LUa_def]
 in
   computeLib.CBV_CONV compset
     THENC PURE_REWRITE_CONV [Ua_def,Ub_def,FUa_def,FUb_def,LUa_def,LUb_def]
