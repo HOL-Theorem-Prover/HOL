@@ -775,6 +775,14 @@ val WORD_ADD_OR = store_thm("WORD_ADD_OR",
     \\ NTAC 2 (POP_ASSUM SUBST1_TAC)
     \\ SRW_TAC [] [ADD_OR_lem, BITWISE_THM]);
 
+val WORD_AND_EXP_SUB1 = store_thm("WORD_AND_EXP_SUB1",
+  `!m n. n2w n && n2w (2 ** m - 1) = n2w (n MOD 2 ** m)`,
+  Cases
+    \\ SRW_TAC [fcpLib.FCP_ss] [BIT_ZERO, BIT_EXP_SUB1, n2w_def, word_and_def]
+    \\ Cases_on `i < SUC n`
+    \\ SRW_TAC [ARITH_ss] [BITS_ZERO, MIN_DEF, BIT_def, BITS_COMP_THM2,
+         GSYM BITS_ZERO3]);
+
 (* ------------------------------------------------------------------------- *)
 (*  Bit field operations : theorems                                          *)
 (* ------------------------------------------------------------------------- *)

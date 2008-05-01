@@ -1045,7 +1045,7 @@ val Induct_word =
 fun print_word f sys gravs d pps t = let
    open Portable term_pp_types
    val (n,x) = dest_n2w t
-   val m = fcpLib.index_to_num x handle HOL_ERR _ => Arbnum.zero
+   val m = fcpLib.index_to_num x handle _ => Arbnum.zero
    val v = numSyntax.dest_numeral n
 in
   add_string pps
