@@ -100,12 +100,14 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
                  continue());
 <INITIAL>"\"" => (ECHO yyarg yytext; YYBEGIN string; continue());
 <INITIAL>{newline} => (newline yyarg (yypos,yytext); continue());
+<INITIAL>[^()*`"\n\015]+ => (ECHO yyarg yytext;continue());
 <INITIAL>. => (ECHO yyarg yytext;continue());
 
 <string>"\\\\" => (ECHO yyarg yytext; continue());
 <string>"\\\"" => (ECHO yyarg yytext; continue());
 <string>"\"" => (ECHO yyarg yytext; YYBEGIN INITIAL; continue());
 <string>{newline} => (newline yyarg (yypos,yytext); continue());
+<string>[^\\"\n\015]+ => (ECHO yyarg yytext; continue());
 <string>. => (ECHO yyarg yytext; continue());
 
 <comment,tmcomment,tycomment,qcomment>"(*" =>
@@ -130,6 +132,7 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <tmcomment,tycomment,qcomment>"^`" => (ECHO yyarg "`"; continue());
 <tmcomment,tycomment>"``" => (print yyarg "\"])"; YYBEGIN INITIAL; continue());
 <qcomment>"`" => (print yyarg "\"]"; YYBEGIN INITIAL; continue());
+<comment,tmcomment,tycomment,qcomment>[^\n\015\\"\t^`*()]+ => (ECHO yyarg yytext; continue());
 <comment,tmcomment,tycomment,qcomment>. => (ECHO yyarg yytext; continue());
 
 <quote,tmquote,tyquote>"^"+{ws} => (ECHO yyarg yytext; continue());
@@ -155,6 +158,7 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
                  YYBEGIN tyquote; continue());
 
 
+<quote,tmquote,tyquote>[^`\n\015^ \t(*]+ => (ECHO yyarg (String.toString yytext); continue());
 <quote,tmquote,tyquote>. => (ECHO yyarg (String.toString yytext); continue());
 
 <ANTIQ>{MLid} => (ECHO yyarg yytext;
