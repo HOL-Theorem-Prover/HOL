@@ -10,7 +10,7 @@ open HolKernel boolLib;
 (*                                                                           *)
 (* non_type_definitions : string -> (string * thm) list                      *)
 (*   A version of DB.definitions that filters out definitions created by     *)
-(*   Hol_datatype.                                                           *)
+(*   Hol_datatype and those containing WFREC.                                *)
 (*                                                                           *)
 (* non_type_theorems : string -> (string * thm) list                         *)
 (*   A version of DB.theorems that filters out theorems created by           *)
@@ -97,6 +97,9 @@ local
   let val thm_names = List.concat (map (type_thm_names s) (datatypes s)) in
     Redblackset.addList (Redblackset.empty String.compare, thm_names)
   end
+
+  val rec_thm = can (match_term
+         ``f = WFREC (a:'a -> 'a -> bool) (b:('a -> 'b) -> 'a -> 'b)``) o concl
 in
   fun is_datatype_thm thm =
         ((fst o dest_const o fst o dest_comb o concl) thm = "DATATYPE")
@@ -110,8 +113,9 @@ in
   end
 
   fun non_type_definitions s =
-    List.filter (fn x => not ((String.sub(fst x, 0) = #" ") orelse
-                              Redblackset.member(type_defn_set s, fst x)))
+    List.filter (fn (x,y) => not ((String.sub(x, 0) = #" ") orelse
+                              Redblackset.member(type_defn_set s, x) orelse
+                              rec_thm y))
                 (definitions s)
 
   fun non_type_theorems s =
@@ -144,11 +148,9 @@ local
         end
 
   fun is_ind_def ps s =
-        let fun f p = (s = p ^ "_primitive_def") orelse
-                      (s = p ^ "_tupled_primitive_def") orelse
-                      (s = p ^ "_curried_def")
+        let fun f p = (s = p ^ "_curried_def")
         in
-          foldl (fn (p, b) => b orelse f p) false ps
+          isSome (List.find f ps)
         end
 
   fun filter_ind_thms names [] a b = (a, b)
@@ -331,6 +333,7 @@ local
     | #">" :: #"=" :: #"+" :: l         => h2t l (s ^ token_string "Hs")
     | #"<" :: #"=" :: l                 => h2t l (s ^ token_string "Leq")
     | #">" :: #"=" :: l                 => h2t l (s ^ token_string "Geq")
+    | #"'" :: l                         => h2t l (s ^ token_string "Quote")
     | #"~" :: l                         => h2t l (s ^ token_string "Neg")
     | #"{"::l                           => h2t l (s ^ token_string "Leftbrace")
     | #"}"::l                           => h2t l (s ^ token_string "Rightbrace")
@@ -355,6 +358,7 @@ local
     case cs of
       [] => s
     | #"#" :: l                 => t2t l (s ^ token_string "Prod")
+    | #"'" :: l                 => t2t l (s ^ token_string "Quote")
     | #"=" :: #">" :: l         => t2t l (s ^ token_string "Imp")
     | #"|" :: #"-" :: #">" :: l => t2t l (s ^ token_string "Mapto")
     | #"-" :: #">" :: l         => t2t l (s ^ token_string "Map")
@@ -471,7 +475,9 @@ fun pp_theory_as_tex_commands ostrm name =
       val defns = non_type_definitions name
       val thms = non_type_theorems name
       val (defns, thms) = fix_inductive_definitions(defns, thms)
-      fun thm_compare(a,b) = String.compare(fst a, fst b)
+      val toLowercase = String.map Char.toLower
+      fun thm_compare(a,b) = String.compare(toLowercase (fst a),
+                                            toLowercase (fst b))
       val defns = Listsort.sort thm_compare defns
       val thms = Listsort.sort thm_compare thms
       val time = Date.fromTimeLocal (stamp name)
@@ -515,8 +521,7 @@ val sec_divide =
     \:::::::::::::::::::::::::::::::::::::";
 
 val subsec_divide =
-  "% .....................................\
-    \.....................................";
+  "% .....................................";
 
 fun pp_parents_as_tex ostrm names =
   let val S = PP.add_string ostrm
@@ -526,10 +531,12 @@ fun pp_parents_as_tex ostrm names =
     if null names then
       (S "% No parents"; NL())
     else
-      (S "\\subsection*{Parent Theories}"; NL();
-       S subsec_divide; NL(); NL();
+      (S "\\begin{flushleft}"; NL();
+       S ("\\textbf{Built:} " ^ "\\" ^ date_prefix() ^ " \\\\[2pt]"); NL();
+       S "\\textbf{Parent Theories:} ";
        app (fn x => S (x ^ ", ")) (List.take(names, length names - 1));
-       S (last names); NL());
+       S (last names); NL();
+       S "\\end{flushleft}"; NL());
     PP.end_block ostrm
   end;
 
@@ -559,7 +566,7 @@ fun pp_defnitions_as_tex ostrm empty =
       (S "% No definitions"; NL())
     else
       (S "\\subsection{Definitions}"; NL();
-       S i; S "}"; NL(); NL();
+       S i; S "}"; NL();
        S subsec_divide; NL(); NL();
        S ("\\" ^ definition_prefix()); NL());
     PP.end_block ostrm
@@ -590,18 +597,16 @@ fun pp_theory_as_tex ostrm name =
       val defns = non_type_definitions name
       val thms = non_type_theorems name
       val (defns, thms) = fix_inductive_definitions(defns, thms)
-      val date_of_theory = Date.fmt "%d %B %Y" (Date.fromTimeLocal (stamp name))
-
   in
     if null names then
       ()
     else
       (PP.begin_block ostrm PP.CONSISTENT 0;
+       S sec_divide; NL();
        S "\\section{"; S name; S " Theory}"; NL();
        S (index_string()); S "}"; NL();
-       S ("\\subsection*{Built: " ^ "\\" ^ date_prefix() ^ "}"); NL();
+       pp_parents_as_tex ostrm names;
        S sec_divide; NL(); NL();
-       pp_parents_as_tex ostrm names; NL();
        pp_datatypes_as_tex ostrm (null typs); NL();
        pp_defnitions_as_tex ostrm (null defns); NL();
        pp_theorems_as_tex ostrm (null thms);

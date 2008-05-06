@@ -38,11 +38,11 @@
 \definecolor{darkgreen}{rgb}{0,0.4,0}
 
 \newcommand{\HOLDfnTag}[2]{
-  \pagebreak[2]\textcolor{blue}{[\texttt{#2}]}\vspace{-1.2mm}
+  \pagebreak[2]\noindent\textcolor{blue}{[\texttt{#2}]}\vspace{-1.2mm}
   \index{#1 Theory@\textbf{#1 Theory}!Definitions!#2}}
 
 \newcommand{\HOLThmTag}[2]{
-  \pagebreak[2]\textcolor{darkgreen}{[\texttt{#2}]}\vspace{-1.2mm}
+  \pagebreak[2]\noindent\textcolor{darkgreen}{[\texttt{#2}]}\vspace{-1.2mm}
   \index{#1 Theory@\textbf{#1 Theory}!Theorems!#2}}
 
 \newcommand{\HOLTokenBackslash}{\tt \char'134}
@@ -60,6 +60,7 @@
 \newcommand{\HOLTokenMapto}{\ensuremath{\mapsto}}
 \newcommand{\HOLTokenConj}{\ensuremath{\wedge}}
 \newcommand{\HOLTokenDisj}{\ensuremath{\vee}}
+\newcommand{\HOLTokenQuote}{\textrm{'}}
 \newcommand{\HOLTokenNeg}{\ensuremath{\neg}}
 \newcommand{\HOLTokenProd}{\ensuremath{\times}}
 \newcommand{\HOLTokenLeq}{\ensuremath{\leq}}
