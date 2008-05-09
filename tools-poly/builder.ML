@@ -8,6 +8,9 @@ val _ = app load ["optionTheory", "pairLib", "sumTheory",
                   "SingleStep", "Datatype",
                   "listTheory", "bossLib"];
 val _ = PolyML.print_depth pd;
-val _ = PolyML.shareCommonData PolyML.rootFunction;
-val _ = PolyML.export ("hol.builder", PolyML.rootFunction);
+fun main () =
+  (List.app use (CommandLine.arguments ());
+   PolyML.rootFunction ());
+val _ = PolyML.shareCommonData main;
+val _ = PolyML.export ("hol.builder", main);
 end;
