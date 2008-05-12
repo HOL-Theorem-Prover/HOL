@@ -5,7 +5,7 @@
 
 quietdec := true;
 loadPath := "../" :: "../dff/" :: !loadPath;
-map load
+app load
  ["compileTheory","compile","metisLib", "wordsLib", "dffTheory","vsynth"];
 open compile metisLib wordsTheory wordsLib;
 open arithmeticTheory pairLib pairTheory PairRules combinTheory
@@ -21,13 +21,9 @@ numLib.prefer_num();
 (* words. Allows factorial and other iterations to be dealt with.            *)
 (*---------------------------------------------------------------------------*)
 
-val _ = 
-  compile.termination_simps := (word32Theory.WORD_PRED_THM :: 
-                                !compile.termination_simps);
-
-add_combinational ["MOD","WL","DIV"];
+add_combinational ["MOD","DIV"];
 add_combinational ["word_add","word_sub"];
-add_combinational ["BITS","HB","w2n","n2w"];
+add_combinational ["BITS","w2n","n2w"];
 
 (*****************************************************************************)
 (* Start new theory "Fact32"                                                 *)
@@ -65,7 +61,7 @@ val (Mult32Iter,Mult32Iter_ind,Mult32Iter_cir) =
 
 val (Mult32,_,Mult32_cir) =
  compile.cirDefine
-  `Mult32(m,n) = SND(SND(Mult32Iter(m,n,0w)))`;
+  `Mult32(m,n) = SND(SND(Mult32Iter(m:word32,n,0):word32 # num # num))`;
 
 (*****************************************************************************)
 (* Implement iterative function as a step to implementing factorial          *)

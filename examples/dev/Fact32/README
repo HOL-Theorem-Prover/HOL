@@ -17,7 +17,7 @@ exor32.ml ................. Simple example showing low-level interfaces used
 
 For running interactively (see examples listed above):
 
- loadPath := "../" :: "word32" :: !loadPath;
+ loadPath := "../" :: !loadPath;
 
 For compilation (currently no files to compile, but need to
 make word32Theory) do:

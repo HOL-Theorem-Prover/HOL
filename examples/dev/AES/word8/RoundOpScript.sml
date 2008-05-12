@@ -12,12 +12,12 @@
 
 (* For interactive work
   quietdec := true;
-  app load ["metisLib", "MultTheory", "tablesTheory", "word8Lib", "word8CasesLib"];
+  app load ["MultTheory", "tablesTheory", "wordsLib"];
   quietdec := false;
 *)
 
 open HolKernel Parse boolLib bossLib;
-open metisLib pairTheory word8Theory MultTheory word8Lib;
+open pairTheory wordsTheory MultTheory wordsLib;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
@@ -26,16 +26,12 @@ open metisLib pairTheory word8Theory MultTheory word8Lib;
 val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 
 val Sbox_Inversion = tablesTheory.Sbox_Inversion;
-val XOR8_AC = AC WORD_EOR_ASSOC WORD_EOR_COMM
-val XOR8_ZERO = WORD_EOR_ID
-val XOR8_INV = WORD_EOR_INV
 
 (*---------------------------------------------------------------------------*)
 (* Create the theory.                                                        *)
 (*---------------------------------------------------------------------------*)
 
 val _ = new_theory "RoundOp";
-
 
 (*---------------------------------------------------------------------------*)
 (* A block is 16 bytes. A state also has that type, although states have     *)
@@ -53,9 +49,12 @@ val _ = type_abbrev("key",   Type`:state`);
 val _ = type_abbrev("w8x4",  Type`:word8 # word8 # word8 # word8`);
 
 
-val ZERO_BLOCK_def = 
+val ZERO_BLOCK_def =
  Define
-   `ZERO_BLOCK = (0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w) : block`;
+   `ZERO_BLOCK = (0w,0w,0w,0w,
+                  0w,0w,0w,0w,
+                  0w,0w,0w,0w,
+                  0w,0w,0w,0w) : block`;
 
 (*---------------------------------------------------------------------------*)
 (* Case analysis on a block.                                                 *)
@@ -73,36 +72,37 @@ val FORALL_BLOCK = Q.store_thm
 (*---------------------------------------------------------------------------*)
 
 val XOR_BLOCK_def = Define
- `XOR_BLOCK ((a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15):block,
-             (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):block)
+ `XOR_BLOCK ((a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15):block)
+            ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):block)
        =
-      (a0 # b0,   a1 # b1,   a2 # b2,   a3 # b3,
-       a4 # b4,   a5 # b5,   a6 # b6,   a7 # b7,
-       a8 # b8,   a9 # b9,   a10 # b10, a11 # b11,
-       a12 # b12, a13 # b13, a14 # b14, a15 # b15)`;
+      (a0 ?? b0,   a1 ?? b1,   a2 ?? b2,   a3 ?? b3,
+       a4 ?? b4,   a5 ?? b5,   a6 ?? b6,   a7 ?? b7,
+       a8 ?? b8,   a9 ?? b9,   a10 ?? b10, a11 ?? b11,
+       a12 ?? b12, a13 ?? b13, a14 ?? b14, a15 ?? b15)`;
 
 val XOR_BLOCK_ZERO = Q.store_thm
 ("XOR_BLOCK_ZERO",
- `!x:block. XOR_BLOCK (x,ZERO_BLOCK) = x`,
- SIMP_TAC std_ss [FORALL_BLOCK,XOR_BLOCK_def, ZERO_BLOCK_def, XOR8_ZERO]);
+ `!x:block. XOR_BLOCK x ZERO_BLOCK = x`,
+ SIMP_TAC std_ss
+   [FORALL_BLOCK,XOR_BLOCK_def, ZERO_BLOCK_def, WORD_XOR_CLAUSES]);
 
 val XOR_BLOCK_INV = Q.store_thm
 ("XOR_BLOCK_INV",
- `!x:block. XOR_BLOCK (x,x) = ZERO_BLOCK`,
- SIMP_TAC std_ss [FORALL_BLOCK,XOR_BLOCK_def, ZERO_BLOCK_def, XOR8_INV]);
+ `!x:block. XOR_BLOCK x x = ZERO_BLOCK`,
+ SIMP_TAC std_ss
+   [FORALL_BLOCK,XOR_BLOCK_def, ZERO_BLOCK_def, WORD_XOR_CLAUSES]);
 
 val XOR_BLOCK_AC = Q.store_thm
 ("XOR_BLOCK_AC",
- `(!x y z. XOR_BLOCK(XOR_BLOCK(x,y),z) = XOR_BLOCK(x,XOR_BLOCK(y,z))) /\
-  (!x y. XOR_BLOCK (x,y) = XOR_BLOCK (y,x))`, 
- SIMP_TAC std_ss [FORALL_BLOCK,XOR_BLOCK_def, XOR8_AC]);
+ `(!x y z:block. XOR_BLOCK (XOR_BLOCK x y) z = XOR_BLOCK x (XOR_BLOCK y z)) /\
+  (!x y:block. XOR_BLOCK x y = XOR_BLOCK y x)`,
+ SIMP_TAC (srw_ss()) [FORALL_BLOCK,XOR_BLOCK_def]);
 
 val XOR_BLOCK_IDEM = Q.store_thm
 ("XOR_BLOCK_IDEM",
- `(!v u. XOR_BLOCK (XOR_BLOCK(v,u),u) = v) /\
-  (!v u. XOR_BLOCK (v,XOR_BLOCK (v,u)) = u)`,
+ `(!v u. XOR_BLOCK (XOR_BLOCK v u) u = v) /\
+  (!v u. XOR_BLOCK v (XOR_BLOCK v u) = u)`,
  METIS_TAC [XOR_BLOCK_INV,XOR_BLOCK_AC,XOR_BLOCK_ZERO]);
-
 
 (*---------------------------------------------------------------------------*)
 (*    Moving data into and out of a state                                    *)
@@ -223,96 +223,93 @@ val InvShiftRows_InvSubBytes_Commute = Q.store_thm
 
 val MultCol_def = Define
  `MultCol (a,b,c,d) = 
-   ((2w ** a) # (3w ** b) #  c        # d,
-     a        # (2w ** b) # (3w ** c) # d,
-     a        #  b        # (2w ** c) # (3w ** d),
-    (3w ** a) #  b        #  c        # (2w ** d))`;
+   ((2w ** a) ?? (3w ** b) ??  c        ?? d,
+     a        ?? (2w ** b) ?? (3w ** c) ?? d,
+     a        ??  b        ?? (2w ** c) ?? (3w ** d),
+    (3w ** a) ??  b        ??  c        ?? (2w ** d))`;
 
 val InvMultCol_def = Define
  `InvMultCol (a,b,c,d) = 
-   ((0xEw ** a) # (0xBw ** b) # (0xDw ** c) # (9w  ** d),
-    (9w  ** a) # (0xEw ** b) # (0xBw ** c) # (0xDw ** d),
-    (0xDw ** a) # (9w  ** b) # (0xEw ** c) # (0xBw ** d),
-    (0xBw ** a) # (0xDw ** b) # (9w  ** c) # (0xEw ** d))`;
+   ((0xEw ** a) ?? (0xBw ** b) ?? (0xDw ** c) ?? (9w   ** d),
+    (9w   ** a) ?? (0xEw ** b) ?? (0xBw ** c) ?? (0xDw ** d),
+    (0xDw ** a) ?? (9w   ** b) ?? (0xEw ** c) ?? (0xBw ** d),
+    (0xBw ** a) ?? (0xDw ** b) ?? (9w   ** c) ?? (0xEw ** d))`;
 
 (*---------------------------------------------------------------------------*)
 (* Inversion lemmas for column multiplication. Proved with an ad-hoc tactic  *)
 (*---------------------------------------------------------------------------*)
 
-fun w8Cases (asl,g) =
-  let val (v,_) = dest_forall g
-  in GEN_TAC THEN word8CasesLib.word8Cases_on `^v`
-  end (asl,g);
-
 val BYTE_CASES_TAC = 
-  SIMP_TAC std_ss []
-    THEN w8Cases 
+  Cases
+    THEN FULL_SIMP_TAC std_ss [wordsTheory.dimword_8,
+           CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM]
     THEN RW_TAC std_ss [fetch "Mult" "mult_tables"]
-    THEN WORD_TAC;
+    THEN REWRITE_TAC [fetch "Mult" "mult_tables"]
+    THEN WORD_EVAL_TAC;
 
 
 val lemma_a1 = Count.apply Q.prove
-(`!a. 0xEw ** (2w ** a) # 0xBw ** a # 0xDw ** a # 9w ** (3w ** a) = a`,
+(`!a. 0xEw ** (2w ** a) ?? 0xBw ** a ?? 0xDw ** a ?? 9w ** (3w ** a) = a`,
  BYTE_CASES_TAC);
 
 val lemma_a2 = Count.apply Q.prove
-(`!b. 0xEw ** (3w ** b) # 0xBw ** (2w ** b) # 0xDw ** b # 9w  ** b = 0w`,
+(`!b. 0xEw ** (3w ** b) ?? 0xBw ** (2w ** b) ?? 0xDw ** b ?? 9w  ** b = 0w`,
  BYTE_CASES_TAC);
 
 val lemma_a3 = Count.apply Q.prove
-(`!c. 0xEw ** c # 0xBw ** (3w ** c) # 0xDw ** (2w ** c) # 9w ** c = 0w`,
+(`!c. 0xEw ** c ?? 0xBw ** (3w ** c) ?? 0xDw ** (2w ** c) ?? 9w ** c = 0w`,
  BYTE_CASES_TAC);
 
 val lemma_a4 = Count.apply Q.prove
-(`!d. 0xEw ** d # 0xBw ** d # 0xDw ** (3w ** d) # 9w ** (2w ** d) = 0w`,
+(`!d. 0xEw ** d ?? 0xBw ** d ?? 0xDw ** (3w ** d) ?? 9w ** (2w ** d) = 0w`,
  BYTE_CASES_TAC);
 
 val lemma_b1 = Count.apply Q.prove
-(`!a. 9w ** (2w ** a) # 0xEw ** a # 0xBw ** a # 0xDw  ** (3w ** a) = 0w`,
+(`!a. 9w ** (2w ** a) ?? 0xEw ** a ?? 0xBw ** a ?? 0xDw  ** (3w ** a) = 0w`,
  BYTE_CASES_TAC);
 
 val lemma_b2 = Count.apply Q.prove
-(`!b. 9w ** (3w ** b) # 0xEw ** (2w ** b) # 0xBw ** b # 0xDw ** b = b`,
+(`!b. 9w ** (3w ** b) ?? 0xEw ** (2w ** b) ?? 0xBw ** b ?? 0xDw ** b = b`,
  BYTE_CASES_TAC);
 
 val lemma_b3 = Count.apply Q.prove
-(`!c. 9w ** c # 0xEw ** (3w ** c) # 0xBw ** (2w ** c) # 0xDw ** c = 0w`,
+(`!c. 9w ** c ?? 0xEw ** (3w ** c) ?? 0xBw ** (2w ** c) ?? 0xDw ** c = 0w`,
  BYTE_CASES_TAC);
 
 val lemma_b4 = Count.apply Q.prove
-(`!d. 9w ** d # 0xEw ** d # 0xBw ** (3w ** d) # 0xDw ** (2w ** d) = 0w`,
+(`!d. 9w ** d ?? 0xEw ** d ?? 0xBw ** (3w ** d) ?? 0xDw ** (2w ** d) = 0w`,
  BYTE_CASES_TAC);
 
 val lemma_c1 = Count.apply Q.prove
-(`!a. 0xDw ** (2w ** a) # 9w ** a # 0xEw ** a # 0xBw  ** (3w ** a) = 0w`,
+(`!a. 0xDw ** (2w ** a) ?? 9w ** a ?? 0xEw ** a ?? 0xBw  ** (3w ** a) = 0w`,
  BYTE_CASES_TAC THEN EVAL_TAC);
 
 val lemma_c2 = Count.apply Q.prove
-(`!b. 0xDw ** (3w ** b) # 9w ** (2w ** b) # 0xEw ** b # 0xBw ** b = 0w`,
+(`!b. 0xDw ** (3w ** b) ?? 9w ** (2w ** b) ?? 0xEw ** b ?? 0xBw ** b = 0w`,
  BYTE_CASES_TAC);
 
 val lemma_c3 = Count.apply Q.prove
-(`!c. 0xDw ** c # 9w ** (3w ** c) # 0xEw ** (2w ** c) # 0xBw ** c = c`,
+(`!c. 0xDw ** c ?? 9w ** (3w ** c) ?? 0xEw ** (2w ** c) ?? 0xBw ** c = c`,
  BYTE_CASES_TAC);
 
 val lemma_c4 = Count.apply Q.prove
-(`!d. 0xDw ** d # 9w ** d # 0xEw ** (3w ** d) # 0xBw ** (2w ** d) = 0w`,
+(`!d. 0xDw ** d ?? 9w ** d ?? 0xEw ** (3w ** d) ?? 0xBw ** (2w ** d) = 0w`,
  BYTE_CASES_TAC);
 
 val lemma_d1 = Count.apply Q.prove
-(`!a. 0xBw ** (2w ** a) # 0xDw ** a # 9w ** a # 0xEw  ** (3w ** a) = 0w`,
+(`!a. 0xBw ** (2w ** a) ?? 0xDw ** a ?? 9w ** a ?? 0xEw  ** (3w ** a) = 0w`,
  BYTE_CASES_TAC);
 
 val lemma_d2 = Count.apply Q.prove
-(`!b. 0xBw ** (3w ** b) # 0xDw ** (2w ** b) # 9w ** b # 0xEw ** b = 0w`,
+(`!b. 0xBw ** (3w ** b) ?? 0xDw ** (2w ** b) ?? 9w ** b ?? 0xEw ** b = 0w`,
  BYTE_CASES_TAC);
 
 val lemma_d3 = Count.apply Q.prove
-(`!c. 0xBw ** c # 0xDw ** (3w ** c) # 9w ** (2w ** c) # 0xEw ** c = 0w`,
+(`!c. 0xBw ** c ?? 0xDw ** (3w ** c) ?? 9w ** (2w ** c) ?? 0xEw ** c = 0w`,
  BYTE_CASES_TAC THEN EVAL_TAC);
 
 val lemma_d4 = Count.apply Q.prove
-(`!d. 0xBw ** d # 0xDw ** d # 9w ** (3w ** d) # 0xEw ** (2w ** d) = d`,
+(`!d. 0xBw ** d ?? 0xDw ** d ?? 9w ** (3w ** d) ?? 0xEw ** (2w ** d) = d`,
  BYTE_CASES_TAC);
 
 (*---------------------------------------------------------------------------*)
@@ -320,63 +317,60 @@ val lemma_d4 = Count.apply Q.prove
 (*---------------------------------------------------------------------------*)
 
 val rearrange_xors = Q.prove   
-(`(a1 # b1 # c1 # d1) #
-  (a2 # b2 # c2 # d2) #
-  (a3 # b3 # c3 # d3) #
-  (a4 # b4 # c4 # d4) 
+(`(a1 ?? b1 ?? c1 ?? d1) ??
+  (a2 ?? b2 ?? c2 ?? d2) ??
+  (a3 ?? b3 ?? c3 ?? d3) ??
+  (a4 ?? b4 ?? c4 ?? d4) 
      = 
-  (a1 # a2 # a3 # a4) #
-  (b1 # b2 # b3 # b4) #
-  (c1 # c2 # c3 # c4) #
-  (d1 # d2 # d3 # d4)`,
- RW_TAC std_ss [XOR8_AC]);
+  (a1 ?? a2 ?? a3 ?? a4) ??
+  (b1 ?? b2 ?? b3 ?? b4) ??
+  (c1 ?? c2 ?? c3 ?? c4) ??
+  (d1 ?? d2 ?? d3 ?? d4)`,
+ SRW_TAC [] []);
 
 val mix_lemma1 = Q.prove
 (`!a b c d. 
-   (0xEw ** ((2w ** a) # (3w ** b) # c # d)) #
-   (0xBw ** (a # (2w ** b) # (3w ** c) # d)) #
-   (0xDw ** (a # b # (2w ** c) # (3w ** d))) #
-   (9w  ** ((3w ** a) # b # c # (2w ** d)))
+   (0xEw ** ((2w ** a) ?? (3w ** b) ?? c ?? d)) ??
+   (0xBw ** (a ?? (2w ** b) ?? (3w ** c) ?? d)) ??
+   (0xDw ** (a ?? b ?? (2w ** c) ?? (3w ** d))) ??
+   (9w  ** ((3w ** a) ?? b ?? c ?? (2w ** d)))
       = a`,
  RW_TAC std_ss [ConstMultDistrib] 
    THEN ONCE_REWRITE_TAC [rearrange_xors] 
-   THEN RW_TAC std_ss [lemma_a1,lemma_a2,lemma_a3,lemma_a4,XOR8_ZERO]);
+   THEN RW_TAC std_ss [lemma_a1,lemma_a2,lemma_a3,lemma_a4,WORD_XOR_CLAUSES]);
 
 val mix_lemma2 = Q.prove
 (`!a b c d. 
-   (9w  ** ((2w ** a) # (3w ** b) # c # d)) #
-   (0xEw ** (a # (2w ** b) # (3w ** c) # d)) #
-   (0xBw ** (a # b # (2w ** c) # (3w ** d))) #
-   (0xDw ** ((3w ** a) # b # c # (2w ** d)))
+   (9w  ** ((2w ** a) ?? (3w ** b) ?? c ?? d)) ??
+   (0xEw ** (a ?? (2w ** b) ?? (3w ** c) ?? d)) ??
+   (0xBw ** (a ?? b ?? (2w ** c) ?? (3w ** d))) ??
+   (0xDw ** ((3w ** a) ?? b ?? c ?? (2w ** d)))
      = b`,
  RW_TAC std_ss [ConstMultDistrib] 
    THEN ONCE_REWRITE_TAC [rearrange_xors] 
-   THEN RW_TAC std_ss [lemma_b1,lemma_b2,lemma_b3,lemma_b4,
-                       XOR8_ZERO, ONCE_REWRITE_RULE [XOR8_AC] XOR8_ZERO]);
+   THEN RW_TAC std_ss [lemma_b1,lemma_b2,lemma_b3,lemma_b4,WORD_XOR_CLAUSES]);
 
 val mix_lemma3 = Q.prove
 (`!a b c d. 
-   (0xDw ** ((2w ** a) # (3w ** b) # c # d)) #
-   (9w  ** (a # (2w ** b) # (3w ** c) # d)) #
-   (0xEw ** (a # b # (2w ** c) # (3w ** d))) #
-   (0xBw ** ((3w ** a) # b # c # (2w ** d)))
+   (0xDw ** ((2w ** a) ?? (3w ** b) ?? c ?? d)) ??
+   (9w  ** (a ?? (2w ** b) ?? (3w ** c) ?? d)) ??
+   (0xEw ** (a ?? b ?? (2w ** c) ?? (3w ** d))) ??
+   (0xBw ** ((3w ** a) ?? b ?? c ?? (2w ** d)))
      = c`,
  RW_TAC std_ss [ConstMultDistrib] 
    THEN ONCE_REWRITE_TAC [rearrange_xors] 
-   THEN RW_TAC std_ss [lemma_c1,lemma_c2,lemma_c3,lemma_c4,
-                       XOR8_ZERO, ONCE_REWRITE_RULE [XOR8_AC] XOR8_ZERO]);
+   THEN RW_TAC std_ss [lemma_c1,lemma_c2,lemma_c3,lemma_c4,WORD_XOR_CLAUSES]);
 
 val mix_lemma4 = Q.prove
 (`!a b c d. 
-   (0xBw ** ((2w ** a) # (3w ** b) # c # d)) #
-   (0xDw ** (a # (2w ** b) # (3w ** c) # d)) #
-   (9w  ** (a # b # (2w ** c) # (3w ** d))) #
-   (0xEw ** ((3w ** a) # b # c # (2w ** d)))
+   (0xBw ** ((2w ** a) ?? (3w ** b) ?? c ?? d)) ??
+   (0xDw ** (a ?? (2w ** b) ?? (3w ** c) ?? d)) ??
+   (9w  ** (a ?? b ?? (2w ** c) ?? (3w ** d))) ??
+   (0xEw ** ((3w ** a) ?? b ?? c ?? (2w ** d)))
      = d`,
  RW_TAC std_ss [ConstMultDistrib] 
    THEN ONCE_REWRITE_TAC [rearrange_xors] 
-   THEN RW_TAC std_ss [lemma_d1,lemma_d2,lemma_d3,lemma_d4,
-                       XOR8_ZERO, ONCE_REWRITE_RULE [XOR8_AC] XOR8_ZERO]);
+   THEN RW_TAC std_ss [lemma_d1,lemma_d2,lemma_d3,lemma_d4,WORD_XOR_CLAUSES]);
 
 (*---------------------------------------------------------------------------*)
 (* Get the constants of various definitions                                  *)
@@ -420,7 +414,7 @@ val MixColumns_Inversion = Q.store_thm
     Pairwise XOR the state with the round key
  ---------------------------------------------------------------------------*)
 
-val AddRoundKey_def = Define `AddRoundKey a b = XOR_BLOCK(a,b)`;
+val AddRoundKey_def = Define `AddRoundKey = XOR_BLOCK`;
 
 (*---------------------------------------------------------------------------*)
 (* For alternative decryption scheme                                         *)
@@ -432,8 +426,8 @@ val InvMixColumns_Distrib = Q.store_thm
             = 
         AddRoundKey (InvMixColumns s) (InvMixColumns k)`,
  SIMP_TAC std_ss [FORALL_BLOCK] THEN
- RW_TAC std_ss [XOR_BLOCK_def, AddRoundKey_def, InvMixColumns_def, LET_THM,
-                genMixColumns_def, InvMultCol_def, ConstMultDistrib, XOR8_AC]);
+ SRW_TAC [] [XOR_BLOCK_def, AddRoundKey_def, InvMixColumns_def, LET_THM,
+             genMixColumns_def, InvMultCol_def, ConstMultDistrib]);
 
 
 val _ = export_theory();

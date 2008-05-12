@@ -5,8 +5,8 @@
 loadPath := "../" ::
             Path.concat(HOLDIR,"examples/dev") ::
             Path.concat(HOLDIR,"examples/dev/dff") :: !loadPath;
-app load ["word8CasesLib", "compile", "vsynth"];
-quietdec := true; open word8Theory word8CasesLib compile vsynth; quietdec := false;
+app load ["compile", "vsynth"];
+quietdec := true; open wordsTheory wordsLib compile vsynth; quietdec := false;
 
 monitor_netlist_construction := true;
 
@@ -24,7 +24,7 @@ val initial_combinational = !combinational_constants;
 val _ = 
  add_combinational 
    ["word_lsl","word_lsr", "bitwise_eor", "bitwise_and",
-    "MSB", "LSB", "n2w", "w2n"];
+    "word_msb", "word_lsb", "n2w", "w2n"];
 
 (*---------------------------------------------------------------------------*)
 (* Inform hwDefine about right shifts                                        *)
@@ -37,8 +37,8 @@ termination_simps := LSR1_LESS :: !termination_simps;
 (*---------------------------------------------------------------------------*)
 
 vsynth.AddBinop ("EQ8",    (``UNCURRY $=  : word8#word8->bool``,   "=="));
-vsynth.AddBinop ("XOR8",   (``UNCURRY $#  : word8#word8->word8``,  "^"));
-vsynth.AddBinop ("AND8",   (``UNCURRY $&  : word8#word8->word8``,  "&"));
+vsynth.AddBinop ("XOR8",   (``UNCURRY $?? : word8#word8->word8``,  "^"));
+vsynth.AddBinop ("AND8",   (``UNCURRY $&& : word8#word8->word8``,  "&"));
 vsynth.AddBinop ("LSL8",   (``UNCURRY $<< : word8#num->word8``,    "<<"));
 vsynth.AddBinop ("ASR8",   (``UNCURRY $>> : word8#num->word8``,    ">>"));
 
@@ -86,10 +86,10 @@ val XOR_BLOCK_def =
  `XOR_BLOCK ((a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15):block,
              ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):block))
        =
-      (a0 # b0,   a1 # b1,   a2 # b2,   a3 # b3,
-       a4 # b4,   a5 # b5,   a6 # b6,   a7 # b7,
-       a8 # b8,   a9 # b9,   a10 # b10, a11 # b11,
-       a12 # b12, a13 # b13, a14 # b14, a15 # b15)`;
+      (a0 ?? b0,   a1 ?? b1,   a2 ?? b2,   a3 ?? b3,
+       a4 ?? b4,   a5 ?? b5,   a6 ?? b6,   a7 ?? b7,
+       a8 ?? b8,   a9 ?? b9,   a10 ?? b10, a11 ?? b11,
+       a12 ?? b12, a13 ?? b13, a14 ?? b14, a15 ?? b15)`;
 
 add_combinational ["to_state", "from_state", "XOR_BLOCK"];
 
@@ -156,62 +156,60 @@ val InvShiftRows_def =
 (*---------------------------------------------------------------------------*)
 
 val MSB_THM = Q.prove
-(`!w. word8$MSB (w:word8) = (w & 128w = 128w)`,
- GEN_TAC THEN word8Cases_on `w` THEN POP_ASSUM SUBST_ALL_TAC
-  THEN EVAL_TAC);
+(`!w. word_msb (w:word8) = (w && 128w = 128w)`,
+ SRW_TAC [WORD_BIT_EQ_ss] []);
 
 val LSB_THM = Q.prove
-(`!w. word8$LSB (w:word8) = (w & 1w = 1w)`,
- GEN_TAC THEN word8Cases_on `w` THEN POP_ASSUM SUBST_ALL_TAC
-  THEN EVAL_TAC);
+(`!w. word_lsb (w:word8) = (w && 1w = 1w)`,
+ SRW_TAC [WORD_BIT_EQ_ss] []);
 
 val LSB_net = 
  netDefine 
-  `LSB w = (w & 1w = 1w)`;
+  `LSB w = (w && 1w = 1w)`;
 
 val MSB_net = 
  netDefine 
-  `MSB w = (w & 128w = 128w)`;
+  `MSB w = (w && 128w = 128w)`;
 
 val xtime_net = 
  netDefine
-  `xtime (w:word8) = w << 1 # (if MSB w then 0x1Bw else 0w)`;
+  `xtime (w:word8) = w << 1 ?? (if MSB w then 0x1Bw else 0w)`;
 
 add_combinational ["xtime"];
 
 (*---------------------------------------------------------------------------*)
 (*    |- (2w ** x = xtime x) /\                                              *)
-(*       (3w ** x = x # xtime x) /\                                          *)
-(*       (9w ** x = x # xtime (xtime (xtime x))) /\                          *)
-(*       (11w ** x = x # xtime (x # xtime (xtime x))) /\                     *)
-(*       (13w ** x = x # xtime (xtime (x # xtime x))) /\                     *)
-(*       (14w ** x = xtime (x # xtime (x # xtime x)))                        *)
+(*       (3w ** x = x ?? xtime x) /\                                         *)
+(*       (9w ** x = x ?? xtime (xtime (xtime x))) /\                         *)
+(*       (11w ** x = x ?? xtime (x ?? xtime (xtime x))) /\                   *)
+(*       (13w ** x = x ?? xtime (xtime (x ?? xtime x))) /\                   *)
+(*       (14w ** x = xtime (x ?? xtime (x ?? xtime x)))                      *)
 (*---------------------------------------------------------------------------*)
 
 val Two_net      = netDefine `Two w = xtime w`;
-val Three_net    = netDefine `Three w = w # xtime w`;
-val Nine_net     = netDefine `Nine w = w # xtime (xtime (xtime w))`;
-val Eleven_net   = netDefine `Eleven w = w # xtime (w # xtime (xtime w))`;
-val Thirteen_net = netDefine `Thirteen w = w # xtime (xtime (w # xtime w))`;
-val Fourteen_net = netDefine `Fourteen w = xtime (w # xtime (w # xtime w))`;
+val Three_net    = netDefine `Three w = w ?? xtime w`;
+val Nine_net     = netDefine `Nine w = w ?? xtime (xtime (xtime w))`;
+val Eleven_net   = netDefine `Eleven w = w ?? xtime (w ?? xtime (xtime w))`;
+val Thirteen_net = netDefine `Thirteen w = w ?? xtime (xtime (w ?? xtime w))`;
+val Fourteen_net = netDefine `Fourteen w = xtime (w ?? xtime (w ?? xtime w))`;
 
 add_combinational ["Two","Three","Nine","Eleven","Thirteen","Fourteen"];
 
 val MultCol_def = 
  netDefine
  `MultCol (a,b,c,d) = 
-   (Two a # Three b # c # d,
-     a # Two b # Three c # d,
-     a # b # Two c # Three d,
-    Three a # b # c # Two d)`;
+   (Two a ?? Three b ?? c ?? d,
+     a ?? Two b ?? Three c ?? d,
+     a ?? b ?? Two c ?? Three d,
+    Three a ?? b ?? c ?? Two d)`;
 
 val InvMultCol_def = 
  netDefine
  `InvMultCol (a,b,c,d) = 
-   (Fourteen a # Eleven b # Thirteen c # Nine d,
-    Nine a  # Fourteen b # Eleven c # Thirteen d,
-    Thirteen a # Nine b # Fourteen c # Eleven d,
-    Eleven a # Thirteen b # Nine c # Fourteen d)`;
+   (Fourteen a ?? Eleven b ?? Thirteen c ?? Nine d,
+    Nine a  ?? Fourteen b ?? Eleven c ?? Thirteen d,
+    Thirteen a ?? Nine b ?? Fourteen c ?? Eleven d,
+    Eleven a ?? Thirteen b ?? Nine c ?? Fourteen d)`;
 
 add_combinational ["MultCol", "InvMultCol"];
 

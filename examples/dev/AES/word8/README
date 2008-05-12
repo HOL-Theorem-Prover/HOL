@@ -10,9 +10,6 @@ block of bytes (8 bit words). We model the state by a 16-tuple of bytes.
 
 The dependencies are:
 
-      word8Theory     (definition of bytes and operations)
-         |
-         |
       tablesTheory    (definition of Sboxes)
          |
          |

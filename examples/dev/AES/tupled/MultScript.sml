@@ -65,6 +65,7 @@ val (ConstMult_def,ConstMult_ind) =
            then b2 # (RightShift b1 ** xtime b2)
            else      (RightShift b1 ** xtime b2)`,
    WF_REL_TAC `measure (BYTE_TO_NUM o FST)` THEN 
+   NTAC 10 PairRules.PSTRIP_TAC             THEN
    SIMP_TAC arith_ss [FORALL_BYTE_VARS]     THEN 
    RW_TAC arith_ss [ZERO_def,RightShift_def,BYTE_TO_NUM_def] THEN 
    RW_TAC arith_ss [B2N_def]);
@@ -97,6 +98,7 @@ val (IterConstMult_def,IterConstMult_ind) =
  Defn.tprove
   (defn,
    WF_REL_TAC `measure (BYTE_TO_NUM o FST)` THEN 
+   NTAC 10 PairRules.PSTRIP_TAC             THEN
    SIMP_TAC arith_ss [FORALL_BYTE_VARS]     THEN 
    RW_TAC arith_ss [ZERO_def,RightShift_def,BYTE_TO_NUM_def] THEN 
    RW_TAC arith_ss [B2N_def]);

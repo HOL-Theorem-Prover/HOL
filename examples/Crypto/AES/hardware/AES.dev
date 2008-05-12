@@ -2,10 +2,10 @@ loadPath := "../" ::
             Path.concat(HOLDIR,"examples/dev") ::
             Path.concat(HOLDIR,"examples/dev/dff") :: !loadPath;
 
-app load ["word8CasesLib", "compile", "vsynth", "aesTheory"];
+app load ["compile", "vsynth", "aesTheory"];
 
 quietdec := true;
-open word8Theory compile vsynth MultTheory RoundOpTheory aesTheory;
+open wordsTheory compile vsynth MultTheory RoundOpTheory aesTheory;
 quietdec := false;
 
 val _ = Globals.priming := SOME "";
@@ -20,7 +20,7 @@ val initial_combinational = !combinational_constants;
 
 val _ = 
  add_combinational 
-   ["word_lsl","word_lsr", "bitwise_eor", "MSB", "LSB", "n2w"];
+   ["word_lsl","word_lsr", "bitwise_eor", "word_mdb", "word_lsb", "n2w"];
 
 val _ = add_combinational ["Sbox","InvSbox"]; (* for {Inv}SubBytes *)
 
@@ -52,8 +52,8 @@ in
 val total_thm = Q.prove
 (`TOTAL(^fb,^f1,^f2)`,
  RW_TAC list_ss [composeTheory.TOTAL_def,pairTheory.FORALL_PROD] 
-  THEN WF_REL_TAC `w2n o FST` 
-  THEN RW_TAC std_ss [LSR_LESS])
+  THEN Q.EXISTS_TAC `w2n o FST` 
+  THEN SRW_TAC [ARITH_ss] [LSR_LESS])
 val iter_mult_dev = 
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] (RecCompileConvert defth total_thm);
 val iter_mult_atm = REFINE (DEPTHR ATM_REFINE) iter_mult_dev;
@@ -212,8 +212,8 @@ val REVKEYS_dev =
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL REVKEYS_def));
 
-val Round_def' = REWRITE_RULE [AddRoundKey_def] Round_def;
-val InvRound_def' = REWRITE_RULE [AddRoundKey_def] InvRound_def;
+val Round_def' = REWRITE_RULE [AddRoundKey_def] RoundTuple_def;
+val InvRound_def' = REWRITE_RULE [AddRoundKey_def] InvRoundTuple_def;
 
 local
  val defth = SPEC_ALL Round_def'
@@ -226,7 +226,9 @@ local
 in
 val totalRound = Q.prove
 (`TOTAL(^fb,^f1,^f2)`,
- RW_TAC list_ss [composeTheory.TOTAL_def] THEN WF_REL_TAC `FST`)
+ RW_TAC list_ss [composeTheory.TOTAL_def] THEN
+ Q.EXISTS_TAC `FST` THEN SRW_TAC [] [] THEN Cases_on `x` THEN
+ FULL_SIMP_TAC arith_ss [])
 end;
 
 local
@@ -240,7 +242,9 @@ local
 in
 val totalInvRound = Q.prove
 (`TOTAL(^fb,^f1,^f2)`,
- RW_TAC list_ss [composeTheory.TOTAL_def] THEN WF_REL_TAC `FST`)
+ RW_TAC list_ss [composeTheory.TOTAL_def] THEN
+ Q.EXISTS_TAC `FST` THEN SRW_TAC [] [] THEN Cases_on `x` THEN
+ FULL_SIMP_TAC arith_ss [])
 end;
 
 val Round_dev =

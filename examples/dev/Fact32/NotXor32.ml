@@ -6,11 +6,11 @@
 (* Boilerplate theory loading stuff                                          *)
 (*****************************************************************************)
 quietdec := true;
-loadPath := "../" :: "word32" :: "../dff/" :: !loadPath;
-map load
- ["compileTheory","compile","metisLib","intLib","word32Theory", "word32Lib",
+loadPath := "../" :: "../dff/" :: !loadPath;
+app load
+ ["compileTheory","compile","metisLib","intLib", "wordsLib",
   "dffTheory","vsynth"];
-open compile metisLib word32Theory;
+open compile metisLib wordsTheory;
 open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
      devTheory composeTheory compileTheory compile vsynth dffTheory;
 quietdec := false;
@@ -23,9 +23,9 @@ intLib.deprecate_int();
 (* More boilerplate. Declaring combinational logic functions.                *)
 (* Probably more than is needed.                                             *)
 (*****************************************************************************)
-add_combinational ["MOD","WL","DIV"];
+add_combinational ["MOD","DIV"];
 add_combinational ["word_add","word_sub"];
-add_combinational ["BITS","HB","w2n","n2w"];
+add_combinational ["BITS","w2n","n2w"];
 
 (*****************************************************************************)
 (* Start new theory "NotXor32"                                               *)
@@ -35,15 +35,17 @@ val _ = new_theory "NotXor32";
 (*****************************************************************************)
 (* Add definitions of XOR32 and NOT32                                        *)
 (*****************************************************************************)
-AddBinop ("XOR32", (``UNCURRY $# : word32#word32->word32``, "^"));
-AddUnop  ("NOT32", (``$~:word32->word32`` ,                 "~"));
+AddBinop ("XOR32", (``UNCURRY $?? : word32#word32->word32``, "^"));
+add_vsynth [(``word_1comp:word32->word32``, fn l => ("~ " ^ hd l))];
+add_vsynth [(``\(sel:bool,in1:word32,in2:word32). if sel then in1 else in2``,
+   fn [i1,i2,i3] => (i1 ^ " ? " ^ i2 ^ " : " ^ i3))];
 
 (*****************************************************************************)
 (* Implement an atomic device computing XOR                                  *)
 (*****************************************************************************)
 val (NotXor32,_,NotXor32_dev) =
  hwDefine
-  `NotXor32(in1,in2) = ((in1 # in2), ~(in1 # in2))`;
+  `NotXor32(in1:word32,in2) = ((in1 ?? in2), ~(in1 ?? in2))`;
 
 (*****************************************************************************)
 (* Derivation using refinement combining combinators                         *)
