@@ -1,0 +1,12 @@
+(*---------------------------------------------------------------------------*)
+(* Example encryption                                                        *)
+(*---------------------------------------------------------------------------*)
+
+app load ["teaTheory", "wordsLib"];
+
+val key = ``(1w,11w,21w,1212w): word32#word32#word32#word32``;
+val plaintext = ``(93w, 134w) : word32#word32``;
+
+Count.apply EVAL 
+   ``teaDecrypt(^key,teaEncrypt(^key,^plaintext)) = ^plaintext``;
+
