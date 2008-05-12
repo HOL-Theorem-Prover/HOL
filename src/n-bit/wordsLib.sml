@@ -90,7 +90,9 @@ val thms =
    NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
    NUM_RULE [BITS_ZERO2] `n`  BIT_def, INT_MIN_SUM,
    numeral_log2,numeral_ilog2,
-   n2w_11, n2w_w2n, w2n_n2w, MOD_WL1 w2w_n2w, sw2sw_def, word_len_def,
+   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV MOD_2EXP_EQ,
+   REWRITE_RULE [GSYM MOD_2EXP_EQ_def, MOD_2EXP_DIMINDEX] n2w_11,
+   n2w_w2n, w2n_n2w, MOD_WL1 w2w_n2w, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def,
    word_join_def, word_concat_def,
    word_reverse_n2w, word_modify_n2w, word_log2_n2w,
@@ -168,18 +170,18 @@ val pats =
    ``word_msb (n2w (NUMERAL a) :'a word)``,
    ``word_join (0w:'b word) (x :'a word)``,
    ``word_bit 0 (n2w (NUMERAL a) :'a word)``,
-   ``(n2w (NUMERAL a) :'a word) >> (NUMERAL n)``,
-   ``(n2w (NUMERAL a) :'a word) #>> (NUMERAL n)``,
-   ``(w :'a word) #<< (NUMERAL n)``,
+   ``word_asr (n2w (NUMERAL a) :'a word) (NUMERAL n)``,
+   ``word_ror (n2w (NUMERAL a) :'a word) (NUMERAL n)``,
+   ``word_rol (w :'a word) (NUMERAL n)``,
    ``word_rrx (F, n2w (NUMERAL a) :'a word)``,
    ``word_rrx (T, n2w (NUMERAL a) :'a word)``,
-   ``(n2w (NUMERAL a) :'a word) <+ (n2w (NUMERAL b))``,
-   ``(n2w (NUMERAL a) :'a word) <=+ (n2w (NUMERAL b))``,
-   ``(0w:'a word) <+ (n2w (NUMERAL b))``,
-   ``(0w:'a word) < (n2w (NUMERAL b))``,
-   ``(0w:'a word) <= (n2w (NUMERAL b))``,
-   ``(n2w (NUMERAL a) :'a word) < 0w``,
-   ``(n2w (NUMERAL a) :'a word) <= 0w``,
+   ``word_lo (n2w (NUMERAL a) :'a word) (n2w (NUMERAL b))``,
+   ``word_ls (n2w (NUMERAL a) :'a word) (n2w (NUMERAL b))``,
+   ``word_lo (0w:'a word) (n2w (NUMERAL b))``,
+   ``word_lt (0w:'a word) (n2w (NUMERAL b))``,
+   ``word_le (0w:'a word) (n2w (NUMERAL b))``,
+   ``word_lt (n2w (NUMERAL a) :'a word) 0w``,
+   ``word_le (n2w (NUMERAL a) :'a word) 0w``,
    ``BIT (NUMERAL a) (NUMERAL b)``,
    ``BITS 0 0 (NUMERAL b)``,
    ``BITS 0 (NUMERAL a) (NUMERAL b)``,
@@ -188,7 +190,8 @@ val pats =
    ``TIMES_2EXP 0 a``,
    ``TIMES_2EXP (NUMERAL a) b``,
    ``DIV_2EXP 0 a``,
-   ``DIV_2EXP (NUMERAL a) b``
+   ``DIV_2EXP (NUMERAL a) b``,
+   ``n2w (NUMERAL a) = n2w (NUMERAL b)``
   ] @ List.concat
    (map (fn th => [subst [``x :'a word`` |-> ``n2w (NUMERAL a) :'a word``] th,
                    subst [``x :'a word`` |-> ``$- 1w :'a word``] th])
@@ -200,14 +203,14 @@ val pats =
       ``word_concat (0w:'b word) (x :'a word) : 'c word``,
       ``word_concat (x :'a word) (0w:'b word) : 'c word``,
       ``word_bit (NUMERAL n) (x :'a word)``,
-      ``((NUMERAL n) -- 0) (x :'a word)``,
-      ``((NUMERAL m) -- (NUMERAL n)) (x :'a word)``,
-      ``((NUMERAL n) <> 0) (x :'a word)``,
-      ``((NUMERAL m) <> (NUMERAL n)) (x :'a word)``,
-      ``((NUMERAL n) >< 0) (x :'a word) : 'b word``,
-      ``((NUMERAL m) >< (NUMERAL n)) (x :'a word) : 'b word``,
-      ``(x :'a word) << (NUMERAL n)``,
-      ``(x :'a word) >>> (NUMERAL n)``
+      ``word_bits (NUMERAL n) 0 (x :'a word)``,
+      ``word_bits (NUMERAL m) (NUMERAL n) (x :'a word)``,
+      ``word_slice (NUMERAL n) 0 (x :'a word)``,
+      ``word_slice (NUMERAL m) (NUMERAL n) (x :'a word)``,
+      ``word_extract (NUMERAL n) 0 (x :'a word) : 'b word``,
+      ``word_extract (NUMERAL m) (NUMERAL n) (x :'a word) : 'b word``,
+      ``word_lsl (x :'a word) (NUMERAL n)``,
+      ``word_lsr (x :'a word) (NUMERAL n)``
      ]) @ List.concat
    (map (fn th => [subst [``x :'a word`` |-> ``n2w (NUMERAL a) :'a word``,
                           ``y :'b word`` |-> ``$- 1w :'b word``] th,
@@ -598,12 +601,15 @@ val BITWISE_CONV = computeLib.CBV_CONV (bitwise_compset ());
 
 val GSYM_WORD_OR_ASSOC = GSYM WORD_OR_ASSOC;
 val GSYM_WORD_AND_ASSOC = GSYM WORD_AND_ASSOC;
+val GSYM_WORD_XOR_ASSOC = GSYM WORD_XOR_ASSOC;
 
 val WORD_OR_CLAUSES2 = REWRITE_RULE [SYM WORD_NEG_1] WORD_OR_CLAUSES;
 val WORD_AND_CLAUSES2 = REWRITE_RULE [SYM WORD_NEG_1] WORD_AND_CLAUSES;
+val WORD_XOR_CLAUSES2 = REWRITE_RULE [SYM WORD_NEG_1] WORD_XOR_CLAUSES;
 
 val word_or_clauses = CONJUNCTS (SPEC `a` WORD_OR_CLAUSES2);
 val word_and_clauses = CONJUNCTS (SPEC `a` WORD_AND_CLAUSES2);
+val word_xor_clauses = CONJUNCTS (SPEC `a` WORD_XOR_CLAUSES2);
 
 val WORD_AND_LEFT_T = hd word_and_clauses;
 
@@ -642,36 +648,74 @@ local
                     else t
   fun add_coeff (t:term) : thm = if is_good t then ALL_CONV t
                     else REWR_CONV (GSYM WORD_AND_LEFT_T) t
-  val distrib = GSYM WORD_RIGHT_AND_OVER_OR
-  val WORD_REDUCE_CONV =
-         PURE_REWRITE_CONV [WORD_OR_CLAUSES2, WORD_LITERAL_OR_thms]
-           THENC BITWISE_CONV
-           THENC WORD_LITERAL_REDUCE_CONV
-  fun merge t = let
-    val (l,r) = wordsSyntax.dest_word_or t
-  in
-    if is_word_literal l andalso is_word_literal r then
-      WORD_REDUCE_CONV
-    else
-      Conv.BINOP_CONV add_coeff THENC
-      REWR_CONV distrib THENC LAND_CONV WORD_REDUCE_CONV
-  end t
 in
-  val gci_word_or = GenPolyCanon.GCI
-   {dest = wordsSyntax.dest_word_or,
-    is_literal = is_word_literal,
-    assoc_mode = GenPolyCanon.L,
-    assoc = GSYM_WORD_OR_ASSOC,
-    symassoc = WORD_OR_ASSOC,
-    comm = WORD_OR_COMM,
-    l_asscomm = GenPolyCanon.derive_l_asscomm GSYM_WORD_OR_ASSOC WORD_OR_COMM,
-    r_asscomm = GenPolyCanon.derive_r_asscomm GSYM_WORD_OR_ASSOC WORD_OR_COMM,
-    non_coeff = non_coeff,
-    merge = merge,
-    postnorm = PURE_REWRITE_CONV [WORD_OR_CLAUSES2],
-    left_id = hd word_or_clauses,
-    right_id = hd (tl word_or_clauses),
-    reducer = WORD_REDUCE_CONV}
+  local 
+    val distrib = GSYM WORD_RIGHT_AND_OVER_OR
+    val WORD_REDUCE_CONV =
+           PURE_REWRITE_CONV [WORD_OR_CLAUSES2, WORD_LITERAL_OR_thms]
+             THENC BITWISE_CONV
+             THENC WORD_LITERAL_REDUCE_CONV
+    fun merge t = let
+      val (l,r) = wordsSyntax.dest_word_or t
+    in
+      if is_word_literal l andalso is_word_literal r then
+        WORD_REDUCE_CONV
+      else
+        Conv.BINOP_CONV add_coeff THENC
+        REWR_CONV distrib THENC LAND_CONV WORD_REDUCE_CONV
+    end t
+  in
+    val gci_word_or = GenPolyCanon.GCI
+     {dest = wordsSyntax.dest_word_or,
+      is_literal = is_word_literal,
+      assoc_mode = GenPolyCanon.R,
+      assoc = GSYM_WORD_OR_ASSOC,
+      symassoc = WORD_OR_ASSOC,
+      comm = WORD_OR_COMM,
+      l_asscomm = GenPolyCanon.derive_l_asscomm GSYM_WORD_OR_ASSOC WORD_OR_COMM,
+      r_asscomm = GenPolyCanon.derive_r_asscomm GSYM_WORD_OR_ASSOC WORD_OR_COMM,
+      non_coeff = non_coeff,
+      merge = merge,
+      postnorm = PURE_REWRITE_CONV [WORD_OR_CLAUSES2],
+      left_id = hd word_or_clauses,
+      right_id = hd (tl word_or_clauses),
+      reducer = WORD_REDUCE_CONV}
+  end
+  local 
+    val distrib = GSYM WORD_RIGHT_AND_OVER_XOR
+    val WORD_REDUCE_CONV =
+           PURE_REWRITE_CONV [WORD_XOR_CLAUSES2]
+             THENC PURE_REWRITE_CONV [WORD_NOT_XOR, WORD_LITERAL_XOR]
+             THENC BITWISE_CONV
+             THENC WORD_LITERAL_REDUCE_CONV
+    fun merge t = let
+      val (l,r) = wordsSyntax.dest_word_xor t
+    in
+      if is_word_literal l andalso is_word_literal r then
+        WORD_REDUCE_CONV
+      else
+        Conv.BINOP_CONV add_coeff THENC
+        REWR_CONV distrib THENC LAND_CONV WORD_REDUCE_CONV
+    end t
+  in
+    val gci_word_xor = GenPolyCanon.GCI
+     {dest = wordsSyntax.dest_word_xor,
+      is_literal = is_word_literal,
+      assoc_mode = GenPolyCanon.R,
+      assoc = GSYM_WORD_XOR_ASSOC,
+      symassoc = WORD_XOR_ASSOC,
+      comm = WORD_XOR_COMM,
+      l_asscomm =
+        GenPolyCanon.derive_l_asscomm GSYM_WORD_XOR_ASSOC WORD_XOR_COMM,
+      r_asscomm =
+        GenPolyCanon.derive_r_asscomm GSYM_WORD_XOR_ASSOC WORD_XOR_COMM,
+      non_coeff = non_coeff,
+      merge = merge,
+      postnorm = PURE_REWRITE_CONV [WORD_XOR_CLAUSES2],
+      left_id = hd word_xor_clauses,
+      right_id = hd (tl word_xor_clauses),
+      reducer = WORD_REDUCE_CONV}
+  end
 end;
 
 fun WORD_COMP_CONV t =
@@ -699,10 +743,19 @@ fun WORD_OR_CANON_CONV t =
    else
      failwith "This convertion can only be applied to word terms";
 
+fun WORD_XOR_CANON_CONV t =
+   if wordsSyntax.is_word_type (type_of t) then
+     GenPolyCanon.gencanon gci_word_xor t
+   else
+     failwith "This convertion can only be applied to word terms";
+
 val WORD_COMP_ss =
   simpLib.merge_ss [
-    rewrites [WORD_DE_MORGAN_THM, WORD_NOT_NOT,
-              WORD_NOT_NEG_NUMERAL, WORD_NOT_NEG_0],
+    rewrites [WORD_DE_MORGAN_THM, WORD_NOT_NOT, WORD_NOT_NEG_0,
+      REWRITE_RULE [GSYM arithmeticTheory.PRE_SUB1] WORD_NOT_NEG_NUMERAL],
+    simpLib.conv_ss
+      {conv = K (K (reduceLib.PRE_CONV)), trace = 3,
+       name = "PRE_CONV", key = SOME ([], ``PRE (NUMERAL a)``)},
     simpLib.conv_ss
       {conv = K (K (WORD_COMP_CONV)), trace = 3,
        name = "WORD_COMP_CONV", key = SOME ([], ``~(n2w a) :'a word``)}];
@@ -713,23 +766,27 @@ val WORD_AND_ss =
     {conv = K (K (WORD_AND_CANON_CONV)), trace = 3,
      name = "WORD_AND_CANON_CONV", key = SOME ([], ``a && b:'a word``)}];
 
+val WORD_XOR_ss =
+  simpLib.merge_ss [rewrites [WORD_XOR_CLAUSES2, SYM WORD_NEG_1, WORD_NOT_XOR],
+  simpLib.conv_ss
+    {conv = K (K (WORD_XOR_CANON_CONV)), trace = 3,
+     name = "WORD_XOR_CANON_CONV", key = SOME ([], ``a ?? b:'a word``)}];
+
 val WORD_OR_ss = let val thm = REWRITE_RULE [SYM WORD_NEG_1] WORD_OR_COMP in
   simpLib.merge_ss
   [rewrites [WORD_OR_CLAUSES2, SYM WORD_NEG_1, WORD_AND_ABSORD, thm,
+   ONCE_REWRITE_RULE [WORD_AND_COMM] WORD_AND_ABSORD,
    ONCE_REWRITE_RULE [WORD_OR_COMM] thm],
    simpLib.conv_ss
      {conv = K (K (WORD_OR_CANON_CONV)), trace = 3,
       name = "WORD_OR_CANON_CONV", key = SOME ([], ``a !! b:'a word``)}]
 end;
 
-val WORD_LOGIC_ss = simpLib.merge_ss [WORD_COMP_ss,WORD_AND_ss,WORD_OR_ss];
-
-val WORD_COMP_CONV = SIMP_CONV (pure_ss++WORD_COMP_ss) [];
-val WORD_AND_CONV = SIMP_CONV (pure_ss++WORD_AND_ss) [];
-val WORD_OR_CONV = SIMP_CONV (pure_ss++WORD_OR_ss) [];
+val WORD_LOGIC_ss = simpLib.merge_ss
+  [WORD_COMP_ss,WORD_AND_ss,WORD_OR_ss,WORD_XOR_ss];
 
 val WORD_LOGIC_CONV = SIMP_CONV (bool_ss++WORD_LOGIC_ss)
-  [WORD_LEFT_AND_OVER_OR,WORD_RIGHT_AND_OVER_OR,WORD_XOR,REFL_CLAUSE];
+  [WORD_LEFT_AND_OVER_OR,WORD_RIGHT_AND_OVER_OR,REFL_CLAUSE];
 
 (* ------------------------------------------------------------------------- *)
 
@@ -817,7 +874,7 @@ val WORD_ss =
 
 val WORD_CONV = SIMP_CONV (std_ss++WORD_ss)
   [WORD_LEFT_ADD_DISTRIB, WORD_RIGHT_ADD_DISTRIB,
-   WORD_LEFT_AND_OVER_OR, WORD_RIGHT_AND_OVER_OR, WORD_XOR];
+   WORD_LEFT_AND_OVER_OR, WORD_RIGHT_AND_OVER_OR];
 
 val _ = augment_srw_ss [WORD_ss];
 

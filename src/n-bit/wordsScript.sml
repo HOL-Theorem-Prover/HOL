@@ -112,8 +112,8 @@ val _ = overload_on ("INT_MAXw",Term`word_H`);
 val _ = overload_on ("INT_MINw",Term`word_L`);
 
 val _ = add_infix("&&",400,HOLgrammars.RIGHT);
+val _ = add_infix("??",375,HOLgrammars.RIGHT);
 val _ = add_infix("!!",300,HOLgrammars.RIGHT);
-val _ = add_infix("??",300,HOLgrammars.RIGHT);
 
 (* ------------------------------------------------------------------------- *)
 (*  Bit field operations : definitions                                       *)
@@ -154,6 +154,9 @@ val BIT_SET_def = Define`
         i INSERT (BIT_SET (SUC i) (n DIV 2))
       else
         BIT_SET (SUC i) (n DIV 2)`;
+
+val MOD_2EXP_EQ_def = Define`
+  MOD_2EXP_EQ n a b = (MOD_2EXP n a = MOD_2EXP n b)`;
 
 val _ = ai := true;
 
@@ -674,6 +677,10 @@ val WORD_NOT_NOT = store_thm("WORD_NOT_NOT",
 val WORD_DE_MORGAN_THM = store_thm("WORD_DE_MORGAN_THM",
   `!a b. (~(a && b) = ~a !! ~b) /\ (~(a !! b) = ~a && ~b)`, BOOL_WORD_TAC);
 
+val WORD_NOT_XOR = store_thm("WORD_NOT_XOR",
+  `!a b. (~a ?? ~b = a ?? b) /\ (a ?? ~b = ~(a ?? b)) /\ (~a ?? b = ~(a ?? b))`,
+  RW_TAC (fcp_ss++WORD_ss) [] \\ DECIDE_TAC);
+
 val WORD_AND_CLAUSES = store_thm("WORD_AND_CLAUSES",
   `!a:'a word.
       (Tw && a = a) /\ (a && Tw = a) /\
@@ -737,11 +744,17 @@ val WORD_RIGHT_AND_OVER_OR = store_thm("WORD_RIGHT_AND_OVER_OR",
 val WORD_RIGHT_OR_OVER_AND = store_thm("WORD_RIGHT_OR_OVER_AND",
   `!a b c. (a && b) !! c = (a !! c) && (b !! c)`, BOOL_WORD_TAC);
 
+val WORD_RIGHT_AND_OVER_XOR = store_thm("WORD_RIGHT_AND_OVER_XOR",
+  `!a b c. (a ?? b) && c = a && c ?? b && c`, BOOL_WORD_TAC);
+
 val WORD_LEFT_AND_OVER_OR = store_thm("WORD_LEFT_AND_OVER_OR",
   `!a b c. a && (b !! c) = a && b !! a && c`, BOOL_WORD_TAC);
 
 val WORD_LEFT_OR_OVER_AND = store_thm("WORD_LEFT_OR_OVER_AND",
   `!a b c. a !! b && c = (a !! b) && (a !! c)`, BOOL_WORD_TAC);
+
+val WORD_LEFT_AND_OVER_XOR = store_thm("WORD_LEFT_AND_OVER_XOR",
+  `!a b c. a && (b ?? c) = a && b ?? a && c`, BOOL_WORD_TAC);
 
 val WORD_XOR = store_thm("WORD_XOR",
   `!a b. a ?? b = a && ~b !! b && ~a`, BOOL_WORD_TAC);
@@ -1315,6 +1328,17 @@ val BIT_SET_lem = prove(
 val BIT_SET = save_thm("BIT_SET",
   (REWRITE_RULE [ADD_0] o SPEC `0`) BIT_SET_lem);
 
+val MOD_2EXP_EQ = store_thm("MOD_2EXP_EQ",
+ `(!a b. MOD_2EXP_EQ 0 a b = T) /\
+  (!n a b. MOD_2EXP_EQ (SUC n) a b =
+     (ODD a = ODD b) /\ MOD_2EXP_EQ n (DIV2 a) (DIV2 b))`,
+  SRW_TAC [] [MOD_2EXP_EQ_def, MOD_2EXP_def, GSYM BITS_ZERO3]
+    \\ Cases_on `n`
+    \\ FULL_SIMP_TAC std_ss [GSYM BITS_ZERO3, SYM LSB_ODD, LSB_def,
+         GSYM BIT_BITS_THM, BIT_DIV2, DIV2_def]
+    \\ EQ_TAC \\ RW_TAC arith_ss []
+    \\ Cases_on `x` \\ RW_TAC arith_ss []);
+
 val lem = prove(
   `!i a b. MAX (LOG2 a) (LOG2 b) < i ==> ~BIT i a /\ ~BIT i b`,
   SRW_TAC [ARITH_ss] [NOT_BIT_GT_LOG2]);
@@ -1408,6 +1432,11 @@ val WORD_LITERAL_OR = save_thm("WORD_LITERAL_OR",
     [word_or_n2w_alpha, word_or_1comp_n2w_alpha,
      ONCE_REWRITE_RULE [WORD_OR_COMM] word_or_1comp_n2w_alpha,
      word_or_1comp_n2w_alpha2]);
+
+val WORD_LITERAL_XOR = store_thm("WORD_LITERAL_XOR",
+  `!n m. n2w n ?? n2w m =
+         n2w (BITWISE (SUC (MAX (LOG2 n) (LOG2 m))) (\x y. ~(x = y)) n m)`,
+  RW_TAC arith_ss [word_xor_n2w, GSYM WORD_EQ, word_bit_n2w, bitwise_log_max]);
 
 (* ------------------------------------------------------------------------- *)
 (*  Word arithmetic: theorems                                                *)
