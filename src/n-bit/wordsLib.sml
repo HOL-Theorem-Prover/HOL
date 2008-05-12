@@ -8,6 +8,9 @@ struct
 open HolKernel Parse boolLib bossLib computeLib;
 open bitTheory numeral_bitTheory wordsTheory wordsSyntax;
 
+val emit_mesg = !Feedback.emit_MESG;
+val _ = Feedback.emit_MESG := false;
+
 val ISPEC = Q.ISPEC;
 val SPEC  = Q.SPEC;
 val SPECL = Q.SPECL;;
@@ -191,7 +194,7 @@ val pats =
    ``TIMES_2EXP (NUMERAL a) b``,
    ``DIV_2EXP 0 a``,
    ``DIV_2EXP (NUMERAL a) b``,
-   ``n2w (NUMERAL a) = n2w (NUMERAL b)``
+   ``n2w (NUMERAL a) = n2w (NUMERAL b) : 'a word``
   ] @ List.concat
    (map (fn th => [subst [``x :'a word`` |-> ``n2w (NUMERAL a) :'a word``] th,
                    subst [``x :'a word`` |-> ``$- 1w :'a word``] th])
@@ -1289,5 +1292,7 @@ in
 end
 
 fun prefer_word () = app temp_overload_on operators
+
+val _ = Feedback.emit_MESG := emit_mesg
 
 end
