@@ -206,13 +206,11 @@ val tea_correct = Q.store_thm
 
 val _ = 
  let open EmitML wordsTheory
-     val RW = REWRITE_RULE[GSYM n2w_itself_def, GSYM w2w_itself_def,
-           GSYM sw2sw_itself_def, GSYM word_concat_itself_def,
-           GSYM word_extract_itself_def, word_T_def, word_L_def, word_H_def]
      val [DELTA_def, ShiftXor_def, Round_def, InvRound_def, 
           Rounds_def, InvRounds_def, teaEncrypt_def, teaDecrypt_def]
-         = map RW [DELTA_def, ShiftXor_def, Round_def, InvRound_def, 
-                   Rounds_def, InvRounds_def, teaEncrypt_def, teaDecrypt_def]
+         = map wordsLib.WORDS_EMIT_RULE
+              [DELTA_def, ShiftXor_def, Round_def, InvRound_def, 
+               Rounds_def, InvRounds_def, teaEncrypt_def, teaDecrypt_def]
      val elems = 
      MLSIG "type num = numML.num"::
      MLSIG "type word32 = wordsML.word32"::
