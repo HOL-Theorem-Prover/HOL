@@ -532,8 +532,7 @@ val LESS_THM =
 val Sbox_Inversion = Q.store_thm
 ("Sbox_Inversion",
  `!w:word8. InvSbox (Sbox w) = w`,
- Cases THEN FULL_SIMP_TAC std_ss [wordsTheory.dimword_8, LESS_THM]
-   THEN EVAL_TAC);
+ Cases_word_value THEN EVAL_TAC);
 
 (*  The following has been superseded by the construction
     of tables in MultScript. We'll keep it for info purposes.

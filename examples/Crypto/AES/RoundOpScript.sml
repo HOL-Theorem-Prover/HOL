@@ -240,9 +240,7 @@ val InvMultCol_def = Define
 (*---------------------------------------------------------------------------*)
 
 val BYTE_CASES_TAC = 
-  Cases
-    THEN FULL_SIMP_TAC std_ss [wordsTheory.dimword_8,
-           CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM]
+  Cases_word_value
     THEN RW_TAC std_ss [fetch "Mult" "mult_tables"]
     THEN REWRITE_TAC [fetch "Mult" "mult_tables"]
     THEN WORD_EVAL_TAC;
