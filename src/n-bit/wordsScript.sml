@@ -3451,11 +3451,20 @@ val _ = adjoin_to_theory
 
 fun mk_index i =
   let val n = Arbnum.fromInt i
+      val x = Int.toString i
       val typ = fcpLib.index_type n
       val s = String.extract(type_to_string typ, 1, NONE)
-      val w = "type word" ^ Int.toString i ^ " = " ^ s ^ " word"
+      val w = "type word" ^ x ^ " = " ^ s ^ " word"
+      val a = "fun toWord" ^ x ^
+                 " n = fromNum (n,ITSELF(numML.fromInt " ^ x ^ "))"
+      val b = "val toWord" ^ x ^ " : numML.num -> word" ^ x
+      val c = "val fromString" ^ x ^
+                 " = o(toWord" ^ x ^ ", numML.fromString) : string -> word" ^ x
+      val d = "val fromString" ^ x ^ " : string -> word" ^ x
   in
-    [EmitML.MLSTRUCT w, EmitML.MLSIG w]
+    [EmitML.MLSTRUCT w, EmitML.MLSIG w,
+     EmitML.MLSTRUCT a, EmitML.MLSIG b,
+     EmitML.MLSTRUCT c, EmitML.MLSIG d]
   end;
 
 val _ = type_pp.pp_num_types := false;
@@ -3501,8 +3510,7 @@ in
      :: MLSIG "type num = numML.num"
      :: MLSIG "datatype 'a word = n2w_itself of num * 'a itself"
      :: MLSTRUCT "datatype 'a word = n2w_itself of num * 'a itself"
-     :: List.concat (map mk_index sizes)
-      @ map (DEFN o REWRITE_RULE [GSYM n2w_itself_def, GSYM w2w_itself_def,
+     :: map (DEFN o REWRITE_RULE [GSYM n2w_itself_def, GSYM w2w_itself_def,
            GSYM sw2sw_itself_def, GSYM word_concat_itself_def,
            GSYM word_extract_itself_def, word_T_def, word_L_def, word_H_def,
            TIMES_2EXP1] o ALPHA_BETA_RULE)
@@ -3518,7 +3526,8 @@ in
            word_rrx_n2w, REWRITE_RULE [GSYM word_index_def] word_index_n2w,
            word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
            word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
-           fromNum_def])
+           fromNum_def]
+      @ List.concat (map mk_index sizes))
 end;
 
 (* ------------------------------------------------------------------------- *)

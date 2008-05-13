@@ -1084,13 +1084,26 @@ val WORDS_EMIT_RULE =
 
 (* ------------------------------------------------------------------------- *)
 
-fun Cases_on_word tm =
-   Q.ISPEC_THEN tm FULL_STRUCT_CASES_TAC ranged_word_nchotomy;
+val Cases_word = Cases;
+val Cases_on_word = Cases_on;
 
-fun Cases_word (g as (_,w)) =
-  let val (Bvar,_) = with_exn dest_forall w (ERR "Cases_word" "not a forall")
-  in (STRIP_TAC THEN STRUCT_CASES_TAC (Drule.ISPEC Bvar ranged_word_nchotomy)) g
-  end;
+val LESS_CONV =
+let val compset = reduceLib.num_compset()
+    val thm = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM
+    val _ = add_thms [thm] compset
+in
+ CBV_CONV compset
+end;
+
+local
+  val tac =
+    POP_ASSUM (fn th => STRIP_ASSUME_TAC 
+               (CONV_RULE (DEPTH_CONV SIZES_CONV THENC LESS_CONV) th)) THEN
+    POP_ASSUM SUBST1_TAC
+in
+  val Cases_word_value = Cases THEN tac
+  fun Cases_on_word_value t = Cases_on t THEN tac
+end;
 
 val Induct_word =
   recInduct WORD_INDUCT
@@ -1105,7 +1118,7 @@ val Induct_word =
 fun print_word f sys gravs d pps t = let
    open Portable term_pp_types
    val (n,x) = dest_n2w t
-   val m = fcpLib.index_to_num x handle _ => Arbnum.zero
+   val m = fcpLib.index_to_num x handle HOL_ERR _ => Arbnum.zero
    val v = numSyntax.dest_numeral n
 in
   add_string pps

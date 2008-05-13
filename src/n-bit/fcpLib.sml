@@ -32,15 +32,37 @@ fun index_type n =
         mk_type("bit1", [index_type (div2 (less1 n))])
   end;
 
-fun index_to_num typ =
-  let val pp_n = !type_pp.pp_num_types
-      val _ = type_pp.pp_num_types := true
-      fun skip1 s = String.extract(s, 1, NONE)
-  in
-    (if fst (dest_type typ) = "one" then Arbnum.one
-      else (Arbnum.fromString o skip1 o Hol_pp.type_to_string) typ) before
-     type_pp.pp_num_types := pp_n
-  end;
+local
+  fun index2num typ =
+  case dest_type typ of
+    ("one", []) => SOME Arbnum.one
+  | ("bool",[]) => SOME Arbnum.two
+  | ("num", []) => NONE
+  | ("int", []) => NONE
+  | ("string", []) => NONE
+  | ("list", [t]) => NONE
+  | ("bit0", [t]) => (case index2num t of
+                        SOME x => SOME (Arbnum.times2 x)
+                      | _ => NONE)
+  | ("bit1", [t]) => (case index2num t of
+                        SOME x => SOME (Arbnum.plus1 (Arbnum.times2 x))
+                      | _ => NONE)
+  | ("sum",  [t,p]) => (case (index2num t, index2num p) of
+                          (SOME x, SOME y) => SOME (Arbnum.+(x, y))
+                        | _ => NONE)
+  | ("prod", [t,p]) => (case (index2num t, index2num p) of
+                          (SOME x, SOME y) => SOME (Arbnum.*(x, y))
+                        | _ => NONE)
+  | ("fun",  [t,p]) => (case (index2num p, index2num t) of
+                          (SOME x, SOME y) => SOME (Arbnum.pow(x, y))
+                        | _ => NONE)
+  | ("cart", [t,p]) => (case (index2num t, index2num p) of
+                          (SOME x, SOME y) => SOME (Arbnum.pow(x, y))
+                        | _ => NONE)
+  | _ => failwith ("Can't compute size of type " ^ type_to_string typ);
+in
+  fun index_to_num typ = case index2num typ of SOME x => x | NONE => Arbnum.one
+end;
 
 fun index_compset () =
   let val compset = reduceLib.num_compset()

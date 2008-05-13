@@ -35,14 +35,16 @@ sig
 
     val WORDS_EMIT_RULE   : rule
 
-    val Cases_on_word     : term frag list -> tactic
-    val Cases_word        : tactic
-    val Induct_word       : tactic
+    val Induct_word         : tactic
+    val Cases_word          : tactic
+    val Cases_word_value    : tactic
+    val Cases_on_word       : term frag list -> tactic
+    val Cases_on_word_value : term frag list -> tactic
 
-    val mk_word_size      : int -> unit
+    val mk_word_size        : int -> unit
 
-    val prefer_word       : unit -> unit
-    val deprecate_word    : unit -> unit
+    val prefer_word         : unit -> unit
+    val deprecate_word      : unit -> unit
 
     val output_words_as     : (int * Arbnum.num -> StringCvt.radix) -> unit
     val output_words_as_bin : unit -> unit
