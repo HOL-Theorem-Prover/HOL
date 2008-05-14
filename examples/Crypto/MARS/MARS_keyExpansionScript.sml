@@ -1,12 +1,12 @@
 (* Interative use:
  quietdec := true;
- app load ["MARS_SboxTheory","word32Theory","MARS_DataTheory"];
- open listTheory word32Theory MARS_SboxTheory MARS_DataTheory;
+ app load ["MARS_SboxTheory","MARS_DataTheory"];
+ open listTheory wordsTheory MARS_SboxTheory MARS_DataTheory;
  quietdec := false;
 *)
 
 open HolKernel Parse boolLib bossLib 
-     listTheory word32Theory MARS_SboxTheory MARS_DataTheory;
+     listTheory wordsTheory MARS_SboxTheory MARS_DataTheory;
 
 val _ = new_theory "MARS_keyExpansion";
 
@@ -47,8 +47,8 @@ val LENGTH_UPDATE = Q.prove
 (*   some assistant functions                                                *)
 (* --------------------------------------------------------------------------*)
 
-val l8b_def = Define `l8b x = x & 0xffw`;
-val l9b_def = Define `l9b x = x & 0x1ffw`;
+val l8b_def = Define `l8b x = x && 0xffw : word32`;
+val l9b_def = Define `l9b x = x && 0x1ffw : word32`;
 
 
 (*--------------Initialize T[] with the original Key data k[]--------------- *)
@@ -69,11 +69,12 @@ val Init_T_def = Define `Init_T(key_list) =
 (*--------------Each iteration computes 10 words ----------------------------*)
 
 val  (linear_rnd_def, linear_rnd_ind)  = Defn.tprove (
-    Hol_defn "linear_rnd"
-    `linear_rnd i t j = 
-	if i > 14 then t else  
-	linear_rnd (i+1) (update(t, i, ((sub(t, (i-7) MOD 15) # sub(t,(i-2) MOD 15))
-           #<< 3) # (4w * n2w i + n2w j))) j`,
+  Hol_defn "linear_rnd"
+   `linear_rnd i t j = 
+     if i > 14 then t else  
+       linear_rnd (i+1)
+         (update(t, i, ((sub(t, (i-7) MOD 15) ?? sub(t,(i-2) MOD 15)) #<< 3) ??
+            (4w * n2w i + n2w j))) j`,
 	WF_REL_TAC `measure ($- 15 o FST)`);
 
 val linear_def = Define
@@ -85,7 +86,7 @@ val  (stiring_rnd_def, stiring_rnd_ind)  = Defn.tprove (
     `stiring_rnd i t j =
         if i > 14 then t else
         stiring_rnd (i+1) 
-           (update(t, i, (sub(t,i) + Sbox(l9b(sub(t, (i-1) MOD 15)))) #<< 9)) j`,
+          (update(t, i, (sub(t,i) + Sbox(l9b(sub(t, (i-1) MOD 15)))) #<< 9)) j`,
         WF_REL_TAC `measure ($- 15 o FST)`);
                                                                                       
 val stiring_step_def = Define
@@ -118,36 +119,36 @@ val INIT_K_LENGTH = Q.store_thm
 );
 
 
-(*-------------------------Modify multiplication keys---------------------------------------------*)
+(*--------------------Modify multiplication keys-----------------------------*)
 
 val BB_def = Define `BB =
-    [0xa4a8d57bw; 0x5b5d193bw; 0xc8a8309bw; 0x73f9a978w]`;
+    [0xa4a8d57bw; 0x5b5d193bw; 0xc8a8309bw; 0x73f9a978w] : word32 list`;
 
 val gen_mask_def = Define `
-  gen_mask(x) =
-    let m = (~x # (x >> 1)) & 0x7fffffffw in
-    let m = m & (m >> 1) & (m >> 2) in
-    let m = m & (m >> 3) & (m >> 6) in
+  gen_mask(x:word32) =
+    let m = (~x ?? (x >> 1)) && 0x7fffffffw in
+    let m = m && (m >> 1) && (m >> 2) in
+    let m = m && (m >> 3) && (m >> 6) in
     let m1 = m in
     let m = m << 1 in
-    let m = m | (m << 1) in
-    let m = m | (m << 2) in
-    let m = m | (m << 4) in
-    let m = m | (m << 1) & (~x) & 0x80000000w
-    in if m1=0w then 0w else m & 0xfffffffcw`;
+    let m = m !! (m << 1) in
+    let m = m !! (m << 2) in
+    let m = m !! (m << 4) in
+    let m = m !! (m << 1) && (~x) && 0x80000000w
+    in if m1=0w then 0w else m && 0xfffffffcw`;
 
 val mul_rnd_def = Define `
   mul_rnd(k:word32 list,i:num) =
-    (* Record the two lowest bits of K[i], by setting j = K[i] & 3, and then consider the
-	word with these two bits set to 1, w = K[i] | 3					*)
-    let j = w2n (sub(k,i) & 0x3w) in
-    let w = sub(k,i) | 0x3w in
+    (* Record the two lowest bits of K[i], by setting j = K[i] & 3, and then
+       consider the word with these two bits set to 1, w = K[i] | 3           *)
+    let j = w2n (sub(k,i) && 0x3w) in
+    let w = sub(k,i) !! 0x3w in
     
     let m = gen_mask(w) in
 
-    let r = w2n(sub(k,i-1) & 0x1fw) in
+    let r = w2n(sub(k,i-1) && 0x1fw) in
     let p = sub(BB,j) #<< r
-    in update(k, i, w # (p & m))`;
+    in update(k, i, w ?? (p && m))`;
                                                                                                            
 val mul_def = Define `
   mul (k) = mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd
