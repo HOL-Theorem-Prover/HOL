@@ -8,6 +8,8 @@ let
         ("                                   ____________ ]\r", "*")
       else ("", ".")
   fun dotload f = (print dotchar; load f)
+  val curdir = FileSys.getDir()
+  val () = FileSys.chDir (Path.concat(HOLDIR,"sigobj"))
 in
   print prelude;
   print "[loading theories and proof tools ";
@@ -16,7 +18,8 @@ in
                "numLib", "mesonLib", "BasicProvers",
                "SingleStep", "Datatype",
                "listTheory", "bossLib"];
-  print " ]\n"
+  print " ]\n";
+  FileSys.chDir curdir
 end;
 
 open bossLib;  (* Any others? *)
