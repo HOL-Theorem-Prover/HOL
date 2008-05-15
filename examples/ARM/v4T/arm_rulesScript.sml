@@ -798,12 +798,26 @@ val ARM_STM =
 
 (* ......................................................................... *)
 
-val MRS_MSR_ss = rewrites [MSR_def,MRS_def,DECODE_PSRD_def,
+val lem = prove(`!b r x y.
+   (if b then <| reg := r; psr := x |> else <| reg := r; psr := y |>) =
+   <| reg := r; psr := if b then x else y |>`, SRW_TAC [] []);
+
+val MRS_MSR_ss = rewrites [MSR_def,MRS_def,lem,
   immediate_enc,decode_enc_msr,decode_msr_enc,decode_enc_mrs,decode_mrs_enc];
 
 val ARM_MSR =
   SYMBOLIC_EVAL_CONV [MRS_MSR_ss]
-   (cntxt [`Abbrev ((R,flags,ctrl) = DECODE_PSRD psrd)`]
+   (cntxt [`Abbrev ((R,flags,ctrl) = DECODE_PSRD psrd) /\
+            Abbrev (src = if IS_MSR_IMMEDIATE op2 then
+                            SND (IMMEDIATE F ((11 >< 0) (msr_mode_encode op2)))
+                          else
+                            Reg ((3 >< 0) (((11 >< 0)
+                              (msr_mode_encode op2)) : word12))) /\
+            Abbrev (f:word32->word32 = word_modify (\i b.
+                                 28 <= i /\ (if flags then src ' i else b) \/
+                                 8 <= i /\ i <= 27 /\ b \/
+                                 i <= 7 /\
+                                 (if ctrl /\ ~USER mode then src ' i else b)))`]
      ``instruction$MSR c psrd op2``);
 
 val ARM_MRS =
