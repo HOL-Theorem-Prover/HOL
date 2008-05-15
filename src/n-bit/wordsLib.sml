@@ -81,6 +81,19 @@ val MOD_WL1 =
   (CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (RATOR_CONV
    (ONCE_REWRITE_CONV [GSYM n2w_mod])))));
 
+fun word_EQ_CONV t =
+let
+  val _ = (boolSyntax.is_eq t) andalso null (type_vars_in_term t) orelse
+            failwith "Contains type variables."
+  val comp = reduceLib.num_compset()
+  val _ = add_thms
+            [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV MOD_2EXP_EQ,
+             REWRITE_RULE [GSYM MOD_2EXP_EQ_def, MOD_2EXP_DIMINDEX] n2w_11] comp
+  val _ = add_conv(``dimindex:'a itself -> num``, 1, SIZES_CONV) comp
+in
+  CBV_CONV comp t
+end;
+
 val thms =
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
    iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SIGN_EXTEND_def, SBIT_def,
@@ -93,8 +106,6 @@ val thms =
    NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
    NUM_RULE [BITS_ZERO2] `n`  BIT_def, INT_MIN_SUM,
    numeral_log2,numeral_ilog2,
-   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV MOD_2EXP_EQ,
-   REWRITE_RULE [GSYM MOD_2EXP_EQ_def, MOD_2EXP_DIMINDEX] n2w_11,
    n2w_w2n, w2n_n2w, MOD_WL1 w2w_n2w, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def,
    word_join_def, word_concat_def,
@@ -123,6 +134,8 @@ fun words_compset () =
       val _ = add_conv(``dimindex:'a itself -> num``, 1, SIZES_CONV) compset
       val _ = add_conv(``dimword:'a itself -> num``, 1, SIZES_CONV) compset
       val _ = add_conv(``INT_MIN:'a itself -> num``, 1, SIZES_CONV) compset
+      val _ = add_conv(``$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)
+                compset
 in
   compset
 end;
