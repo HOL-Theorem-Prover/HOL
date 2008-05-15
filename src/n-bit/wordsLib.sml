@@ -91,7 +91,7 @@ let
              REWRITE_RULE [GSYM MOD_2EXP_EQ_def, MOD_2EXP_DIMINDEX] n2w_11] comp
   val _ = add_conv(``dimindex:'a itself -> num``, 1, SIZES_CONV) comp
 in
-  CBV_CONV comp t
+  CHANGED_CONV (CBV_CONV comp) t
 end;
 
 val thms =
