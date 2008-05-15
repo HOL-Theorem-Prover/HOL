@@ -18,6 +18,7 @@ sig
     val WORD_ss           : simpLib.ssfrag
 
     val SIZES_CONV        : conv
+    val word_EQ_CONV      : conv
 
     val WORD_ARITH_CONV   : conv
     val WORD_LOGIC_CONV   : conv

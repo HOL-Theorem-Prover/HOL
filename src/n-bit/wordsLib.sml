@@ -144,6 +144,8 @@ val _ = add_thms thms the_compset;
 val _ = add_conv(``dimindex:'a itself -> num``, 1, SIZES_CONV) the_compset;
 val _ = add_conv(``dimword:'a itself -> num``, 1, SIZES_CONV) the_compset;
 val _ = add_conv(``INT_MIN:'a itself -> num``, 1, SIZES_CONV) the_compset;
+val _ = add_conv(``$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)
+          the_compset;
 
 val WORD_EVAL_CONV = CBV_CONV (words_compset());
 val WORD_EVAL_RULE = CONV_RULE WORD_EVAL_CONV;
