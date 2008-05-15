@@ -14,14 +14,18 @@ sig
     val datatype_thm_to_string    : thm -> string
     val theory_datatypes          : string -> unit
 
-    val theorem_to_tex            : (string -> string) ref
-    val datatype_to_tex           : (string -> string) ref
+    val hol_to_tex                : (string -> string) ref
+    val type_to_tex               : (string -> string) ref
 
+    val pp_term_as_tex            : ppstream -> term -> unit
     val pp_theorem_as_tex         : ppstream -> thm -> unit
 
     val pp_theory_as_tex_commands : ppstream -> string -> unit
     val pp_theory_as_tex          : ppstream -> string -> unit
     val pp_theories_as_tex        : ppstream -> string list -> unit
+
+    val print_term_as_tex         : term -> unit
+    val print_theorem_as_tex      : thm -> unit
 
     val print_theory_as_tex       : string -> string -> unit
     val print_theories_as_tex     : string list -> string -> unit

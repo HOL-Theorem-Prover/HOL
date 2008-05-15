@@ -4,6 +4,56 @@ struct
 open HolKernel boolLib;
 
 (* ------------------------------------------------------------------------- *)
+(* Configuration                                                             *)
+(* ------------------------------------------------------------------------- *)
+
+val texLinewidth = 78;
+val texOptions = ref "11pt, twoside";
+val texPrefix  = ref "HOL";
+val emitTeXDir = ref "";
+
+val current_theory_name = ref "";
+val current_path        = ref Path.currentArc
+
+fun tex_command_escape s =
+  String.concat (map
+    (fn c =>
+       case c of
+         #"_" => "XX"
+       | #"'" => "YY"
+       | #"?" => "QQ"
+       | #"!" => "ZZ"
+       | #"0" => "Zero"
+       | #"1" => "One"
+       | #"2" => "Two"
+       | #"3" => "Three"
+       | #"4" => "Four"
+       | #"5" => "Five"
+       | #"6" => "Six"
+       | #"7" => "Seven"
+       | #"8" => "Eight"
+       | #"9" => "Nine"
+       | _ => String.str c)
+    (String.explode s));
+
+fun index_string() =
+  "\\index{" ^
+    (if !current_theory_name = "" then
+       ""
+     else
+       !current_theory_name ^ " Theory@\\textbf  {" ^
+       !current_theory_name ^ " Theory}");
+
+fun prefix_escape s = !texPrefix ^ (tex_command_escape s);
+
+fun prefix_string()     = prefix_escape (!current_theory_name);
+fun datatype_prefix()   = prefix_string() ^ "Datatypes";
+fun definition_prefix() = prefix_string() ^ "Definitions";
+fun theorem_prefix()    = prefix_string() ^ "Theorems";
+fun date_prefix()       = prefix_string() ^ "Date";
+fun time_prefix()       = prefix_string() ^ "Time";
+
+(* ------------------------------------------------------------------------- *)
 (* datatype_theorems : string -> (string * thm) list                         *)
 (*   Get a list of datatype theorems in the names theory.                    *)
 (*   These have the form |- DATATYPE x                                       *)
@@ -99,7 +149,8 @@ local
   end
 
   val rec_thm = can (match_term
-         ``f = WFREC (a:'a -> 'a -> bool) (b:('a -> 'b) -> 'a -> 'b)``) o concl
+         ``f = WFREC (a:'a -> 'a -> bool) (b:('a -> 'b) -> 'a -> 'b)``) o
+          concl o SPEC_ALL
 in
   fun is_datatype_thm thm =
         ((fst o dest_const o fst o dest_comb o concl) thm = "DATATYPE")
@@ -174,7 +225,7 @@ in
 end;
 
 (* ------------------------------------------------------------------------- *)
-(* pp_datatype_theorem : ppstream -> thm -> unit                                 *)
+(* pp_datatype_theorem : ppstream -> thm -> unit                             *)
 (*   Pretty-printer for datatype theorems                                    *)
 (* ------------------------------------------------------------------------- *)
 
@@ -254,60 +305,12 @@ in
   pp_datatype t; PP.flush_ppstream ostrm
 end;
 
-val datatype_thm_to_string = PP.pp_to_string 78 pp_datatype_theorem;
+val datatype_thm_to_string =
+  PP.pp_to_string (!Globals.linewidth) pp_datatype_theorem;
 
 fun theory_datatypes s =
   app (fn (_,x) => print (datatype_thm_to_string x ^ "\n"))
     (datatype_theorems s);
-
-(* ------------------------------------------------------------------------- *)
-(* Configuration                                                             *)
-(* ------------------------------------------------------------------------- *)
-
-val texOptions = ref "11pt, twoside";
-val texPrefix  = ref "HOL";
-val emitTeXDir = ref "";
-
-val current_theory_name = ref "";
-val current_path        = ref Path.currentArc
-
-fun tex_command_escape s =
-  String.concat (map
-    (fn c =>
-       case c of
-         #"_" => "XX"
-       | #"'" => "YY"
-       | #"?" => "QQ"
-       | #"!" => "ZZ"
-       | #"0" => "Zero"
-       | #"1" => "One"
-       | #"2" => "Two"
-       | #"3" => "Three"
-       | #"4" => "Four"
-       | #"5" => "Five"
-       | #"6" => "Six"
-       | #"7" => "Seven"
-       | #"8" => "Eight"
-       | #"9" => "Nine"
-       | _ => String.str c)
-    (String.explode s));
-
-fun index_string() =
-  "\\index{" ^
-    (if !current_theory_name = "" then
-       ""
-     else
-       !current_theory_name ^ " Theory@\\textbf  {" ^
-       !current_theory_name ^ " Theory}");
-
-fun prefix_escape s = !texPrefix ^ (tex_command_escape s);
-
-fun prefix_string()     = prefix_escape (!current_theory_name);
-fun datatype_prefix()   = prefix_string() ^ "Datatypes";
-fun definition_prefix() = prefix_string() ^ "Definitions";
-fun theorem_prefix()    = prefix_string() ^ "Theorems";
-fun date_prefix()       = prefix_string() ^ "Date";
-fun time_prefix()       = prefix_string() ^ "Time";
 
 (* ------------------------------------------------------------------------- *)
 (* theorem2tex : string -> string                                            *)
@@ -365,23 +368,32 @@ local
     | #"\n"::l                  => t2t l (s ^ "\n")
     | c::l                      => t2t l (s ^ Char.toString c)
 in
-  fun theorem2tex s  = h2t (explode s) ""
-  fun datatype2tex s = t2t (explode s) ""
+  fun hol2tex s  = h2t (explode s) ""
+  fun type2tex s = t2t (explode s) ""
 end;
 
-val theorem_to_tex  = ref theorem2tex;
-val datatype_to_tex = ref datatype2tex;
+val hol_to_tex  = ref hol2tex;
+val type_to_tex = ref type2tex;
 
 (* ------------------------------------------------------------------------- *)
 (* Various pretty-printers                                                   *)
 (* ------------------------------------------------------------------------- *)
 
+fun pp_term_as_tex ostrm t =
+   PP.add_string ostrm (!hol_to_tex (term_to_string t));
+
 fun pp_theorem_as_tex ostrm thm =
    PP.add_string ostrm
      (if is_datatype_thm thm then
-        !datatype_to_tex (datatype_thm_to_string thm)
+        !type_to_tex (datatype_thm_to_string thm)
       else
-        !theorem_to_tex (thm_to_string thm));
+        !hol_to_tex (thm_to_string thm));
+
+fun print_term_as_tex t =
+  print (PP.pp_to_string (!Globals.linewidth) pp_term_as_tex t);
+
+fun print_theorem_as_tex t =
+  print (PP.pp_to_string (!Globals.linewidth) pp_theorem_as_tex t);
 
 fun pp_hol_as_tex_command ostrm prefix (s, thm) =
   let val S = PP.add_string ostrm
@@ -507,7 +519,7 @@ fun tex_commands_theory name =
        val filename = Path.concat(path, prefix_escape name ^ ".tex")
        val ostrm = Portable.open_out filename
    in
-     PP.with_pp {consumer = Portable.outputc ostrm, linewidth = 78,
+     PP.with_pp {consumer = Portable.outputc ostrm, linewidth = texLinewidth,
                  flush = fn () => Portable.flush_out ostrm}
         (Lib.C pp_theory_as_tex_commands name)
      handle e => (Portable.close_out ostrm; raise e);
@@ -656,7 +668,7 @@ in
        val _ = current_path := Path.currentArc
        val ostrm = Portable.open_out filename
    in
-     PP.with_pp {consumer = Portable.outputc ostrm, linewidth = 78,
+     PP.with_pp {consumer = Portable.outputc ostrm, linewidth = texLinewidth,
                  flush = fn () => Portable.flush_out ostrm}
         (Lib.C pp_theories_as_tex names)
      handle e => (Portable.close_out ostrm; raise e);
