@@ -13,12 +13,14 @@
 (* For interactive work
   quietdec := true;
   app load ["arithmeticTheory","wordsLib"];
-  open arithmeticTheory wordsTheory pairTheory listTheory;
+  open arithmeticTheory wordsTheory pairTheory listTheory wordsLib;
   quietdec := false;
 *)
 
 open HolKernel Parse boolLib bossLib
      arithmeticTheory pairTheory listTheory wordsLib;
+
+val _ = Globals.priming := SOME"_";
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
@@ -179,35 +181,34 @@ val Whitening_Inversion = Q.store_thm
                      InvPreWhitening_def, PostWhitening_def]);
 
 (*---------------------------------------------------------------------------*)
-(* Round operations in the encryption and the decryption                     *)
+(* Round operations in the encryption and the decryption. Slow to define.    *)
 (*---------------------------------------------------------------------------*)
 
-val (Round_def, Round_ind) = Defn.tprove
- (Hol_defn "Round"
+val Round_def = 
+ tDefine
+   "Round"
    `Round n (k:keysched) (b:block) =
      if n=0
       then PostWhitening k b
-      else Round (n-1) (ROTKEYS k) (FwdRound b (GETKEYS k))`,
-  WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC);
+      else Round (n-1) (ROTKEYS k) (FwdRound b (GETKEYS k))`
+  (WF_REL_TAC `measure FST` THEN RW_TAC arith_ss [ELIM_UNCURRY]);
   
-val _ = save_thm ("Round_def", Round_def);
-val _ = save_thm ("Round_ind", Round_ind);
+val Round_ind = fetch "-" "Round_ind";
 
 (*---------------------------------------------------------------------------*)
 (* Note the difference between Round and InvRound -- we should make sure     *)
 (* that PreWhitening and PostWhitening use the same key pair                 *)
 (*---------------------------------------------------------------------------*)
 
-val (InvRound_def, InvRound_ind) = Defn.tprove
- (Hol_defn "Round"
+val InvRound_def = 
+ tDefine
+   "InvRound"
    `InvRound n k b =
       if n=0
        then InvPreWhitening k b
-       else BwdRound (InvRound (n-1) (ROTKEYS k) b) (GETKEYS k)`,
-  WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC);
+       else BwdRound (InvRound (n-1) (ROTKEYS k) b) (GETKEYS k)`
+  (WF_REL_TAC `measure FST` THEN RW_TAC arith_ss [ELIM_UNCURRY]);
 
-val _ = save_thm ("InvRound_def", InvRound_def);
-val _ = save_thm ("InvRound_ind", InvRound_ind);
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt                                                       *)
