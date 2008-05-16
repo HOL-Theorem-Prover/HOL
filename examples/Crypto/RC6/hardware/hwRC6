@@ -22,11 +22,10 @@ loadPath := ".." ::
             Path.concat(HOLDIR,"examples/dev/dff") :: !loadPath;
 
 quietdec := true;
-app load ["word32Lib", "compile", "vsynth"];
-open word32Theory word32Lib pairTheory arithmeticTheory compile ;
+app load ["wordsLib", "compile", "vsynth"];
+open wordsTheory wordsLib pairTheory arithmeticTheory compile ;
 quietdec := false;
 
-val ARW_TAC = RW_TAC arith_ss;
 val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 
 compile.monitor_netlist_construction := true;
@@ -41,8 +40,11 @@ fun newcirDefine qdef =
 (*  Rotation operators with word32 multiplicities                            *)
 (* --------------------------------------------------------------------------*)
 
-val LeftRotate_def =  Define `LeftRotate x w  = x #<< ((w2n w) MOD WL)`;
-val RightRotate_def = Define `RightRotate x w = x #>> ((w2n w) MOD WL)`;
+val LeftRotate_def =  Define`
+  LeftRotate (x:word32) (w:word32)  = x #<< (w2n w)`;
+
+val RightRotate_def = Define`
+  RightRotate (x:word32) (w:word32) = x #>> (w2n w)`;
 
 val _ = 
   (overload_on ("<<<",``$LeftRotate``); 
@@ -52,17 +54,16 @@ val _ =
   (overload_on (">>>",``$RightRotate``);
    set_fixity ">>>" (Infixl 625));
 
-
 (*---------------------------------------------------------------------------*)
 (* Tell the compiler which components are combinational                      *)
 (*---------------------------------------------------------------------------*)
 
 val _ = 
  add_combinational 
-   ["word_lsl","word_lsr", "bitwise_eor", "LeftRotate", "RightRotate",
+   ["word_lsl","word_lsr", "word_xor", "LeftRotate", "RightRotate",
     "word_mul", "word_add", "word_sub", "n2w","w2n"];
 
-vsynth.AddBinop ("XOR32",   (``UNCURRY $#  : word32#word32->word32``,  "^"));
+vsynth.AddBinop ("XOR32",   (``UNCURRY $?? : word32#word32->word32``,  "^"));
 vsynth.AddBinop ("MUL32",   (``UNCURRY $*  : word32#word32->word32``,  "*"));
 vsynth.AddBinop ("ADD32",   (``UNCURRY $+  : word32#word32->word32``,  "+"));
 vsynth.AddBinop ("SUB32",   (``UNCURRY $-  : word32#word32->word32``,  "-"));
@@ -103,14 +104,14 @@ add_combinational ["ut"];
 val (FwdRound_def,_,FwdRound_dev) = 
  hwDefine
     `FwdRound ((a,b,c,d):block,((k0,k1):key)) = 
-      (b, ((c#ut d) <<< ut b) + k1,  
-       d, ((a#ut b) <<< ut d) + k0)`;
+      (b, ((c ?? ut d) <<< ut b) + k1,  
+       d, ((a ?? ut b) <<< ut d) + k0)`;
 
 val (BwdRound_def,_,BwdRound_dev) = 
  hwDefine
     `BwdRound ((a,b,c,d):block,((k0,k1):key)) = 
-	(((d - k1) >>> ut c) # ut a, a,
-	 ((b - k0) >>> ut a) # ut c, c)`;
+	(((d - k1) >>> ut c) ?? ut a, a,
+	 ((b - k0) >>> ut a) ?? ut c, c)`;
 
 add_combinational ["FwdRound","BwdRound"];
 
@@ -165,9 +166,9 @@ val (Rounds_def,Rounds_ind) =
  Defn.tprove
   (Hol_defn
     "Rounds"
-    `Rounds (n,k:keysched,b:block) =
+    `Rounds (n:word32,k:keysched,b:block) =
        if n=0w
-        then (0w, ROTKEYS k, PostWhitening (b,GETKEYS k))
+        then (0w:word32, ROTKEYS k, PostWhitening (b,GETKEYS k))
         else Rounds (n-1w, ROTKEYS k, FwdRound (b,GETKEYS k))`,
    WF_REL_TAC `measure (w2n o FST)` THEN METIS_TAC [WORD_PRED_THM]);
  
@@ -176,23 +177,23 @@ val (InvRounds_def,InvRounds_ind) =
  Defn.tprove
   (Hol_defn
     "InvRounds"
-    `InvRounds (n,k:keysched,b:block) =
+    `InvRounds (n:word32,k:keysched,b:block) =
       if n=0w
-       then (0w, ROTKEYS k, InvPostWhitening (b,GETKEYS k))
+       then (0w:word32, ROTKEYS k, InvPostWhitening (b,GETKEYS k))
        else InvRounds (n-1w, ROTKEYS k, BwdRound(b,GETKEYS k))`,
    WF_REL_TAC `measure (w2n o FST)` THEN METIS_TAC [WORD_PRED_THM]);
 
 val Total_Rounds = 
  prove(getTotal Rounds_def,
    RW_TAC list_ss [composeTheory.TOTAL_def] THEN
-   WF_REL_TAC `(w2n o FST)` THEN 
-   METIS_TAC [WORD_PRED_THM]);
+   Q.EXISTS_TAC `(w2n o FST)` THEN 
+   Cases THEN RW_TAC arith_ss [WORD_PRED_THM]);
 
 val Total_InvRounds = 
  prove(getTotal InvRounds_def,
    RW_TAC list_ss [composeTheory.TOTAL_def] THEN
-   WF_REL_TAC `(w2n o FST)` THEN 
-   METIS_TAC [WORD_PRED_THM]);
+   Q.EXISTS_TAC `(w2n o FST)` THEN                                     
+   Cases THEN RW_TAC arith_ss [WORD_PRED_THM]);
 
 val Rounds_dev =
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
@@ -257,36 +258,21 @@ val FORALL_KEYS = Q.prove
 (* Rotation lemmas                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val lemma = Q.prove
-   (`!w. (w2n w) MOD WL < WL`,
-    ARW_TAC [WL_def, HB_def] THEN ARW_TAC [DIVISION]);
-
-val Rotate_Inversion = Q.store_thm
-  ("Rotate_Inversion",
-  `!s n. (s >>> n <<< n = s) /\ (s <<< n >>> n = s)`,
-  ASSUME_TAC lemma THEN
-  REWRITE_TAC [LeftRotate_def, RightRotate_def] THEN ARW_TAC [SHIFT_Inversion]);
-
 val OneRound_Inversion = Q.store_thm
   ("OneRound_Inversion",
   `!b:block k0 k1. BwdRound (FwdRound (b,k0,k1), k1,k0) = b`,
-  SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYS] THEN 
-  SIMP_TAC std_ss [FwdRound_def, BwdRound_def] THEN 
-  REWRITE_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0] THEN
-  REWRITE_TAC [Rotate_Inversion] THEN
-  METIS_TAC [WORD_EOR_ASSOC, WORD_EOR_INV, WORD_EOR_ID]  
-  );
+  SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYS]
+    THEN SRW_TAC [] [FwdRound_def, BwdRound_def,
+                     LeftRotate_def, RightRotate_def]);
 
 val Whitening_Inversion = Q.store_thm
 ("Whitening_Inversion",
  `!b k0 k1. 
     (InvPostWhitening (PreWhitening (b,(k0,k1)),(k1,k0)) = b) /\ 
     (InvPreWhitening (PostWhitening (b,(k0,k1)),(k1,k0)) = b)`,
-  SIMP_TAC std_ss [FORALL_BLOCK] THEN
-  SIMP_TAC std_ss [InvPostWhitening_def, PreWhitening_def, 
-                   InvPreWhitening_def, PostWhitening_def] THEN
-  METIS_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0] 
-  );
+  SIMP_TAC std_ss [FORALL_BLOCK]
+    THEN  SRW_TAC [] [InvPostWhitening_def, PreWhitening_def, 
+                      InvPreWhitening_def, PostWhitening_def]);
 
 (*---------------------------------------------------------------------------*)
 (* Main lemma                                                                *)
@@ -321,7 +307,7 @@ val RC6_LEMMA = Q.store_thm
 
 val LIST_TO_KEYS_def =
  Define
-  `(LIST_TO_KEYS [] acc = acc) /\
+  `(LIST_TO_KEYS [] acc = acc : keysched) /\
    (LIST_TO_KEYS (h::t) 
       (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,
        k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,
@@ -330,9 +316,7 @@ val LIST_TO_KEYS_def =
       LIST_TO_KEYS t 
        (h,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,
         k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,
-        k37,k38,k39,k40,k41,k42,k43))`,
-
-
+        k37,k38,k39,k40,k41,k42,k43))`;
 
 val DUMMY_KEYS_def =
  Define
@@ -341,11 +325,10 @@ val DUMMY_KEYS_def =
       0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
       0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
       0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
-      0w,0w,0w,0w)`;
+      0w,0w,0w,0w) : keysched`;
 
-val Pw_def = Define `Pw = 0xB7E15163w`;
-
-val Qw_def = Define `Qw = 0x9E3779B9w`;
+val Pw_def = Define `Pw = 0xB7E15163w : word32`;
+val Qw_def = Define `Qw = 0x9E3779B9w : word32`;
 
 val init_S_def = 
  Define 

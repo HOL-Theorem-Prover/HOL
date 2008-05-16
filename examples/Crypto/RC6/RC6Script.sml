@@ -12,20 +12,19 @@
 
 (* For interactive work
   quietdec := true;
-  app load ["arithmeticTheory","word32Theory"];
-  open arithmeticTheory word32Theory pairTheory listTheory;
+  app load ["arithmeticTheory","wordsLib"];
+  open arithmeticTheory wordsTheory pairTheory listTheory;
   quietdec := false;
 *)
 
-open HolKernel Parse boolLib bossLib 
-     arithmeticTheory pairTheory listTheory word32Theory;
+open HolKernel Parse boolLib bossLib
+     arithmeticTheory pairTheory listTheory wordsLib;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
 (*---------------------------------------------------------------------------*)
 
 val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
-val ARW_TAC = RW_TAC arith_ss;
 
 (*---------------------------------------------------------------------------*)
 (* Create the theory.                                                        *)
@@ -41,13 +40,13 @@ val _ = type_abbrev("block", ``:word32 # word32 # word32 # word32``);
 
 val _ = type_abbrev("key",   ``:word32 # word32``);
 
-val _ = type_abbrev("keysched", 
-        ``:word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
-           word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
-           word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
-           word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
-           word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
-           word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+val _ = type_abbrev("keysched",
+        ``:word32 # word32 # word32 # word32 # word32 # word32 # word32 #
+           word32 # word32 # word32 # word32 # word32 # word32 # word32 #
+           word32 # word32 # word32 # word32 # word32 # word32 # word32 #
+           word32 # word32 # word32 # word32 # word32 # word32 # word32 #
+           word32 # word32 # word32 # word32 # word32 # word32 # word32 #
+           word32 # word32 # word32 # word32 # word32 # word32 # word32 #
            word32 # word32``);
 
 val _ = type_abbrev("state", ``:word32#word32#word32#word32#word32#word32``);
@@ -57,7 +56,7 @@ val _ = type_abbrev("state", ``:word32#word32#word32#word32#word32#word32``);
 (*---------------------------------------------------------------------------*)
 
 val FORALL_BLOCK = Q.store_thm
-  ("FORALL_BLOCK", 
+  ("FORALL_BLOCK",
     `(!b:block. P b) = !v0 v1 v2 v3. P (v0,v1,v2,v3)`,
     SIMP_TAC std_ss [FORALL_PROD]);
 
@@ -70,16 +69,19 @@ val FORALL_KEYS = Q.prove
 (* --------------------------------------------------------------------------*)
 
 val LeftShift_def = Define
-   `LeftShift x n = x #<< ((w2n n) MOD WL)`;
-                                                                                                                                               
+   `LeftShift (x:word32) (n:word32) = x #<< (w2n n)`;
+
 val RightShift_def = Define
-   `RightShift x n = x #>> ((w2n n) MOD WL)`;
-                                                                                                                                               
+   `RightShift (x:word32) (n:word32) = x #>> (w2n n)`;
+
+val _ = augment_srw_ss [rewrites [LeftShift_def, RightShift_def]];
+
 val _ = overload_on ("<<<",Term`$LeftShift`);
 val _ = overload_on (">>>",Term`$RightShift`);
 val _ = set_fixity "<<<" (Infixl 625);
 val _ = set_fixity ">>>" (Infixl 625);
 
+(*
 val EX_Shift_Lemma = Q.store_thm
    ("EX_Shift_Lemma",
    `!n. w2n n MOD WL < WL`,
@@ -90,6 +92,7 @@ val EX_Shift_Inversion = Q.store_thm
   `!s n. (s >>> n <<< n = s) /\ (s <<< n >>> n = s)`,
   ASSUME_TAC EX_Shift_Lemma THEN
   REWRITE_TAC [LeftShift_def, RightShift_def] THEN ARW_TAC [SHIFT_Inversion]);
+*)
 
 (* --------------------------------------------------------------------------*)
 (*	One round forward computation and one round backward computation     *)
@@ -102,31 +105,27 @@ val EX_Shift_Inversion = Q.store_thm
 val r_def = Define `r = 20`;
 
 val CompUT_def = Define
-   `CompUT x = (x * (x + x + word_1)) #<< 5`;
+   `CompUT (x:word32) = (x * (x + x + 1w)) #<< 5`;
 
 val FwdRound_def = Define
-  `FwdRound ((a,b,c,d):block) ((k0,k1):key)  = 
-	(b, 
-	 ((c#CompUT d) <<< CompUT b) + k1,  (*c = (c xor u <<< t) + k1*)
+  `FwdRound ((a,b,c,d):block) ((k0,k1):key)  =
+	(b,
+	 ((c ?? CompUT d) <<< CompUT b) + k1,  (*c = (c xor u <<< t) + k1*)
 	 d,
-	 ((a#CompUT b) <<< CompUT d) + k0)`;
+	 ((a ?? CompUT b) <<< CompUT d) + k0)`;
 
 val BwdRound_def = Define
   `BwdRound ((a,b,c,d):block) ((k0,k1):key)  =  (* NB: (a,b,c,d) = (d,a,b,c) *)
-	(((d - k0) >>> CompUT c) # CompUT a,	(* a = ((a-k0) >>> u) xor t  *)
+	(((d - k0) >>> CompUT c) ?? CompUT a,	(* a = ((a-k0) >>> u) xor t  *)
 	 a,
-	 ((b - k1) >>> CompUT a) # CompUT c,	(* c = ((c-k1) >>> t) xor u  *)
+	 ((b - k1) >>> CompUT a) ?? CompUT c,	(* c = ((c-k1) >>> t) xor u  *)
 	 c)`;
 
 val OneRound_Inversion = Q.store_thm
   ("OneRound_Inversion",
   `!b:block k:key. BwdRound (FwdRound b k) k = b`,
-  SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYS] THEN 
-  SIMP_TAC std_ss [FwdRound_def, BwdRound_def] THEN 
-  REWRITE_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0] THEN
-  REWRITE_TAC [ EX_Shift_Inversion] THEN
-  METIS_TAC [WORD_EOR_ASSOC, WORD_EOR_INV, WORD_EOR_ID]  
-  );
+  SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYS]
+    THEN SRW_TAC [] [FwdRound_def, BwdRound_def]);
 
 (*---------------------------------------------------------------------------*)
 (* Rotate keys and get a pair of keys from the head of the key schedule      *)
@@ -136,7 +135,7 @@ val ROTKEYS_def =
  Define
    `ROTKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,
       k13,k14,k15,k16,k17,k18,k19,k20,k21,k22,k23,k24,k25,k26,k27,
-      k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43) 
+      k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43)
     =
      (k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,
       k19,k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,
@@ -146,9 +145,8 @@ val GETKEYS_def =
  Define
    `GETKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,
       k16,k17,k18,k19,k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,
-      k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43) 
+      k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43)
     = (k0,k1):key`;
-
 
 (*---------------------------------------------------------------------------*)
 (* Pre-Whitening and post-whitening in the encryption and the decryption     *)
@@ -174,43 +172,47 @@ val InvPostWhitening_def = Define
 
 val Whitening_Inversion = Q.store_thm
   ("Whitening_Inversion",
-  `!b k. (InvPostWhitening k (PreWhitening k b) = b) /\ 
+  `!b k. (InvPostWhitening k (PreWhitening k b) = b) /\
          (InvPreWhitening k (PostWhitening k b) = b)`,
-  SIMP_TAC std_ss [FORALL_BLOCK] THEN
-  SIMP_TAC std_ss [InvPostWhitening_def, PreWhitening_def, 
-                   InvPreWhitening_def, PostWhitening_def] THEN
-  METIS_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0] 
-  );
-
+  SIMP_TAC std_ss [FORALL_BLOCK]
+    THEN SRW_TAC [] [InvPostWhitening_def, PreWhitening_def,
+                     InvPreWhitening_def, PostWhitening_def]);
 
 (*---------------------------------------------------------------------------*)
 (* Round operations in the encryption and the decryption                     *)
 (*---------------------------------------------------------------------------*)
 
-val Round_def = 
- Define
+val (Round_def, Round_ind) = Defn.tprove
+ (Hol_defn "Round"
    `Round n (k:keysched) (b:block) =
      if n=0
       then PostWhitening k b
-      else Round (n-1) (ROTKEYS k) (FwdRound b (GETKEYS k))`;
+      else Round (n-1) (ROTKEYS k) (FwdRound b (GETKEYS k))`,
+  WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC);
+  
+val _ = save_thm ("Round_def", Round_def);
+val _ = save_thm ("Round_ind", Round_ind);
 
-   
 (*---------------------------------------------------------------------------*)
 (* Note the difference between Round and InvRound -- we should make sure     *)
 (* that PreWhitening and PostWhitening use the same key pair                 *)
 (*---------------------------------------------------------------------------*)
 
-val InvRound_def = 
- Define
+val (InvRound_def, InvRound_ind) = Defn.tprove
+ (Hol_defn "Round"
    `InvRound n k b =
       if n=0
        then InvPreWhitening k b
-       else BwdRound (InvRound (n-1) (ROTKEYS k) b) (GETKEYS k)`;
+       else BwdRound (InvRound (n-1) (ROTKEYS k) b) (GETKEYS k)`,
+  WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC);
+
+val _ = save_thm ("InvRound_def", InvRound_def);
+val _ = save_thm ("InvRound_ind", InvRound_ind);
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt                                                       *)
 (* The number of rounds is 20. It is easy to change it into any value, but in*)
-(* in this case you should redefine the type keysched 			     *) 
+(* in this case you should redefine the type keysched 			     *)
 (*---------------------------------------------------------------------------*)
 
 val RC6_FWD_def =
@@ -242,39 +244,39 @@ val RC6_LEMMA = Q.store_thm
 
 val LIST_TO_KEYS_def =
  Define
-  `(LIST_TO_KEYS [] acc = acc) /\
-   (LIST_TO_KEYS (h::t) 
+  `(LIST_TO_KEYS [] acc = acc : keysched) /\
+   (LIST_TO_KEYS (h::t)
       (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,
        k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,
        k38,k39,k40,k41,k42,k43)
      =
-      LIST_TO_KEYS t 
+      LIST_TO_KEYS t
        (h,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,
         k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,
         k37,k38,k39,k40,k41,k42,k43))`;
 
 val DUMMY_KEYS_def =
  Define
-  `DUMMY_KEYS = 
-     (word_0,word_0,word_0,word_0,word_0,word_0,word_0,word_0,word_0,word_0,
-      word_0,word_0,word_0,word_0,word_0,word_0,word_0,word_0,word_0,word_0,
-      word_0,word_0,word_0,word_0,word_0,word_0,word_0,word_0,word_0,word_0,
-      word_0,word_0,word_0,word_0,word_0,word_0,word_0,word_0,word_0,word_0,
-      word_0,word_0,word_0,word_0)`;
+  `DUMMY_KEYS =
+     (0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
+      0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
+      0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
+      0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
+      0w,0w,0w,0w) : keysched`;
 
 val Pw_def = Define `
-    Pw = 0xB7E15163w`;
+    Pw = 0xB7E15163w:word32`;
 
 val Qw_def = Define `
-    Qw = 0x9E3779B9w`;
+    Qw = 0x9E3779B9w:word32`;
 
 val init_S_def = Define `
    (init_S 0 = [Pw]) /\
    (init_S (SUC n) = (HD (init_S n) + Qw) :: (init_S n))`;
- 
+
 val setKeys_def = Define `
    (setKeys 0 S1 L a b = []) /\
-   (setKeys (SUC n) S1 L a b = 
+   (setKeys (SUC n) S1 L a b =
      let a = (HD S1 + a + b) #<< 3 in
      let b = (HD L + a + b) <<< (a+b) in
          a::setKeys n (TL S1 ++ [a]) (TL L ++ [b]) a b)`;
@@ -284,21 +286,21 @@ val mk_keysched_def = Define
 
 
 val setKeys_length = Q.prove
- (`!i S1 L a b. i>0 ==> 
+ (`!i S1 L a b. i>0 ==>
 	(LENGTH (setKeys i S1 L a b) = SUC(LENGTH (setKeys (i-1) S1 L a b)))`,
   Induct_on `i` THENL [
     RW_TAC list_ss [],
-    RW_TAC list_ss [Ntimes setKeys_def 1] THEN 
+    RW_TAC list_ss [Ntimes setKeys_def 1] THEN
     Cases_on `i=0` THENL [
 	RW_TAC list_ss [setKeys_def],
-	Q.SUBGOAL_THEN 
-         `!i S1 L1 a1 b1 S2 L2 a2 b2. 
-             LENGTH (setKeys i S1 L1 a1 b1) = LENGTH (setKeys i S2 L2 a2 b2)` 
+	Q.SUBGOAL_THEN
+         `!i S1 L1 a1 b1 S2 L2 a2 b2.
+             LENGTH (setKeys i S1 L1 a1 b1) = LENGTH (setKeys i S2 L2 a2 b2)`
         ASSUME_TAC THENL [
-    	    NTAC 4 (POP_ASSUM (K ALL_TAC)) THEN 
+    	    NTAC 4 (POP_ASSUM (K ALL_TAC)) THEN
     	    Induct_on `i` THENL [
 	        RW_TAC list_ss [setKeys_def],
-	        RW_TAC list_ss [setKeys_def] THEN RW_TAC list_ss [LENGTH]], 
+	        RW_TAC list_ss [setKeys_def] THEN RW_TAC list_ss [LENGTH]],
   	RW_TAC list_ss []]]]
   );
 
@@ -310,7 +312,7 @@ val keysched_length = Q.prove
  (`!L. LENGTH (mk_keysched L) = r*2+4`,
     RW_TAC list_ss [mk_keysched_def, r_def] THEN
     RW_TAC list_ss [setKeys_length] THEN
-    RW_TAC arith_ss [setKeys_def, LENGTH] 
+    RW_TAC arith_ss [setKeys_def, LENGTH]
   );
 
 (*---------------------------------------------------------------------------*)
