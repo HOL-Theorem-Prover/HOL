@@ -24,37 +24,41 @@ val string_eq_thms = TypeBase.one_one_of ``:string`` ::
                      TypeBase.distinct_of ``:string`` ::
                      GSYM (TypeBase.distinct_of ``:string``) :: char_eq_thms
 
-
-val dest_char_eq = (dest_chr ## dest_chr) o dest_eq;
-val is_char_eq = can dest_char_eq;
-
 val char_EQ_CONV =
-   let open computeLib reduceLib
-       val compset = num_compset ()
-       val _ = add_conv (ord_tm, 1, ORD_CHR_CONV) compset
-       val _ = add_thms char_eq_thms compset
-       val conv = CBV_CONV compset
-   in
-     fn tm =>
-     if is_char_eq tm then conv tm
-     else raise ERR "char_EQ_CONV" "not a char eq"
-   end;
+ let open computeLib reduceLib boolTheory
+     val compset = num_compset ()
+     val _ = add_conv (ord_tm, 1, ORD_CHR_CONV) compset
+     val _ = add_thms char_eq_thms compset
+     val conv = CBV_CONV compset
+     val REFL_CLAUSE_char = INST_TYPE [alpha |-> char_ty] REFL_CLAUSE
+     val is_char_lit = Lib.can fromHOLchar
+ in
+   fn tm =>
+    case total dest_eq tm
+     of NONE => raise ERR "char_EQ_CONV" "not a char equality"
+      | SOME(c1,c2) => 
+          if is_char_lit c1 andalso is_char_lit c2
+          then if c1=c2 then SPEC c1 REFL_CLAUSE_char else conv tm
+          else raise ERR "char_EQ_CONV" "not a char equality"
+ end;
 
-
-val dest_string_eq = (fromHOLstring ## fromHOLstring) o dest_eq;
-val is_string_eq = can dest_string_eq;
 
 val string_EQ_CONV =
-   let open computeLib reduceLib
-       val compset = num_compset ()
-       val _ = add_conv (ord_tm, 1, ORD_CHR_CONV) compset
-       val _ = add_thms string_eq_thms compset
-       val conv = CBV_CONV compset
-   in
-     fn tm =>
-     if is_string_eq tm then conv tm
-     else raise ERR "string_EQ_CONV" "not a string eq"
-   end;
+ let open computeLib reduceLib boolTheory
+     val compset = num_compset ()
+     val _ = add_conv (ord_tm, 1, ORD_CHR_CONV) compset
+     val _ = add_thms string_eq_thms compset
+     val conv = CBV_CONV compset
+     val REFL_CLAUSE_string = INST_TYPE [alpha |-> string_ty] REFL_CLAUSE
+ in
+   fn tm =>
+    case total dest_eq tm
+     of NONE => raise ERR "string_EQ_CONV" "not a string equality"
+      | SOME(s1,s2) => 
+          if is_string_literal s1 andalso is_string_literal s2 
+          then if s1=s2 then SPEC s1 REFL_CLAUSE_string else conv tm
+          else raise ERR "string_EQ_CONV" "not a string equality"
+ end;
 
 val string_rewrites = STRLEN_DEF::TypeBase.case_def_of ``:string``::
                       EXPLODE_EQNS::IMPLODE_EQNS::string_eq_thms;
@@ -77,24 +81,6 @@ val _ = Defn.const_eq_ref :=
   test`"abcdefghijklmnopqrstuvwxyz" = "abcdefghijklmnopqrstuvwxyz"`;
   test`"abcdefghijklmnopqrstuvwxyz" = "abcdefghijklmnopqrstuvwxyzA"`;
 
-  fun triv tm =
-    let val thm = REFL (lhs tm)
-    in if concl thm = tm then EQT_INTRO thm
-       else string_EQ_CONV tm
-    end;
-
-  val test1 = Count.apply (triv o Term);
-
-  test1`"" = ""`;
-  test1`"a" = ""`;
-  test1`"" = "a"`;
-  test1`"" = "abc"`;
-  test1`"abcdefghijklmnopqrstuvwxyz" = "abcdefghijklmnopqrstuvwxyz"`;
-  test1`"abcdefghijklmnopqrstuvwxyz" = "abcdefghijklmnopqrstuvwxyzA"`;
-
-  This shows that the reflexivity rewrite should be applied first, when
-  dealing with equality sub-terms. How do I teach the system to apply
-  it first?
 
  ---------------------------------------------------------------------------*)
 

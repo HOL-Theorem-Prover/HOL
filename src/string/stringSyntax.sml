@@ -31,6 +31,7 @@ val fromHOLchar =
  C (with_exn (Char.chr o Arbnum.toInt o dest_numeral o dest_chr))
    (ERR "fromHOLchar" "");
 
+
 (*---------------------------------------------------------------------------
         Strings
  ---------------------------------------------------------------------------*)

@@ -16,6 +16,8 @@ val SPEC  = Q.SPEC;
 val SPECL = Q.SPECL;;
 val INST  = Q.INST;
 
+val ERR = mk_HOL_ERR "wordsLib";
+
 (* ------------------------------------------------------------------------- *)
 
 fun is_fcp_thm s =
@@ -81,17 +83,26 @@ val MOD_WL1 =
   (CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (RATOR_CONV
    (ONCE_REWRITE_CONV [GSYM n2w_mod])))));
 
-fun word_EQ_CONV t =
+val word_EQ_CONV =
 let
-  val _ = (boolSyntax.is_eq t) andalso null (type_vars_in_term t) orelse
-            failwith "Contains type variables."
-  val comp = reduceLib.num_compset()
-  val _ = add_thms
-            [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV MOD_2EXP_EQ,
-             REWRITE_RULE [GSYM MOD_2EXP_EQ_def, MOD_2EXP_DIMINDEX] n2w_11] comp
-  val _ = add_conv(``dimindex:'a itself -> num``, 1, SIZES_CONV) comp
+ val comp = reduceLib.num_compset()
+ val _ = add_thms
+          [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV MOD_2EXP_EQ,
+           REWRITE_RULE [GSYM MOD_2EXP_EQ_def, MOD_2EXP_DIMINDEX] n2w_11] comp
+ val _ = add_conv(``dimindex:'a itself -> num``, 1, SIZES_CONV) comp
 in
-  CHANGED_CONV (CBV_CONV comp) t
+ fn tm => 
+  if not (null (type_vars_in_term tm))
+   then raise ERR "word_EQ_CONV" "contains type variables"
+   else 
+     case total dest_eq tm
+     of NONE => raise ERR "word_EQ_CONV" "not an equality"
+      | SOME(w1,w2) =>
+        if is_word_literal w1 andalso is_word_literal w2
+        then if w1=w2 
+               then Thm.SPEC w1 (INST_TYPE[alpha|->type_of w1] REFL_CLAUSE)
+               else CHANGED_CONV (CBV_CONV comp) tm
+        else raise ERR "word_eq_CONV" "non-literal in equality"
 end;
 
 val thms =
@@ -1321,6 +1332,9 @@ in
 end
 
 fun prefer_word () = app temp_overload_on operators
+
+val _ = 
+  Defn.const_eq_ref := (!Defn.const_eq_ref ORELSEC word_EQ_CONV);
 
 val _ = Feedback.emit_MESG := emit_mesg
 

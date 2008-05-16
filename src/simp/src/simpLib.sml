@@ -262,7 +262,6 @@ fun (ss && thl) =
 
 end;
 
-
 (*---------------------------------------------------------------------------*)
 (*   SIMP_TAC      : simpset -> thm list -> tactic                           *)
 (*   ASM_SIMP_TAC  : simpset -> thm list -> tactic                           *)
@@ -276,17 +275,7 @@ end;
 fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l);
 fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
 
-fun SIMP_TAC ss l = markerLib.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l
-
-fun ASM_SIMP_TAC ss l = let
-  fun base thl (gl as (asms,_)) = let
-    val working = markerLib.LLABEL_RESOLVE thl asms
-  in
-    SIMP_TAC ss working gl
-  end
-in
-  markerLib.ABBRS_THEN base l
-end
+fun SIMP_TAC ss l = markerLib.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l;
 
 fun ASM_SIMP_TAC ss = 
    markerLib.ABBRS_THEN 

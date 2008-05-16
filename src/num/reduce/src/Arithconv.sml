@@ -53,11 +53,18 @@ end
 (* NEQ_CONV "[x] = [y]" = |- ([x] = [y]) = [x=y -> T | F]                *)
 (*-----------------------------------------------------------------------*)
 
-local val NEQ_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_eq])
+local 
+ val NEQ_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_eq])
+ val REFL_CLAUSE_num = INST_TYPE [alpha |-> num] REFL_CLAUSE
 in
 fun NEQ_CONV tm =
- if is_eq tm then with_exn NEQ_RW tm (ERR "NEQ_CONV" "")
- else failwith "NEQ_CONV"
+ case total dest_eq tm
+  of NONE => failwith "NEQ_CONV" 
+   | SOME (n1,n2) =>
+      if is_numeral n1 andalso is_numeral n2 
+      then if n1=n2 then SPEC n1 REFL_CLAUSE_num
+           else with_exn NEQ_RW tm (ERR "NEQ_CONV" "")
+      else failwith "NEQ_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
