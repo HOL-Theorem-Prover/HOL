@@ -58,7 +58,7 @@ local
  val REFL_CLAUSE_num = INST_TYPE [alpha |-> num] REFL_CLAUSE
 in
 fun NEQ_CONV tm =
- case total dest_eq tm
+ case total boolLib.dest_eq tm
   of NONE => failwith "NEQ_CONV" 
    | SOME (n1,n2) =>
       if is_numeral n1 andalso is_numeral n2 
