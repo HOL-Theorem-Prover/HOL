@@ -84,7 +84,7 @@ in
               x
             end
       else
-        failwith "Term not: dimword, dimindex, INT_MIN or FINITE"
+        raise ERR "SIZES_CONV" "Term not dimword, dimindex, INT_MIN or FINITE"
     end
 end;
 
@@ -215,7 +215,8 @@ fun UINT_MAX_CONV t =
 
 fun WORD_GROUND_CONV t =
 let
-  val _ = null (type_vars_in_term t) orelse failwith "Contains type variables."
+  val _ = null (type_vars_in_term t) orelse
+            raise ERR "WORD_GROUND_CONV" "Contains type variables."
 in
   (computeLib.CBV_CONV (words_compset()) THENC UINT_MAX_CONV) t
 end;
@@ -459,7 +460,7 @@ in
          THENC DEPTH_CONV SIZES_CONV
          THENC numLib.REDUCE_CONV)) t
     else
-      failwith "Not UINT_MAXw of known size"
+      raise ERR "WORD_UINT_MAX_CONV" "Not UINT_MAXw of known size"
 
   fun WORD_w2n_CONV t =
   let val x = wordsSyntax.dest_w2n t in
@@ -469,7 +470,7 @@ in
       else
         CHANGED_CONV (PURE_REWRITE_CONV [word_0_n2w, word_1_n2w]) t
     else
-      failwith "Not w2n of word literal"
+      raise ERR "WORD_w2n_CONV" "Not w2n of word literal"
   end
 end;
 
@@ -484,13 +485,13 @@ let val x = wordsSyntax.dest_word_2comp t in
       if is_word_zero x then
         REWR_CONV WORD_NEG_0 t
       else
-        failwith "Negative 'a word literal"
+        raise ERR "WORD_NEG_CONV" "Negative 'a word literal"
   else
     (PURE_REWRITE_CONV [WORD_NEG_L]
        THENC PURE_ONCE_REWRITE_CONV [WORD_NEG_MUL]) t
 end;
 
-fun WORD_EQ_CONV t =
+fun WORD_ARITH_EQ_CONV t =
 let val (x,y) = dest_eq t in
   if wordsSyntax.is_word_type (type_of y) then
     if is_known_word_size x andalso
@@ -502,11 +503,11 @@ let val (x,y) = dest_eq t in
         THENC numLib.REDUCE_CONV) t
     else
       if is_word_zero y then
-        failwith "RHS is zero"
+        raise ERR "WORD_ARITH_EQ_CONV" "RHS is zero"
       else
         PURE_ONCE_REWRITE_CONV [GSYM WORD_EQ_SUB_ZERO] t
   else
-    failwith "Not word equality"
+    raise ERR "WORD_ARITH_EQ_CONV" "Not word equality"
 end;
 
 fun is_neg_term t =
@@ -531,20 +532,20 @@ let val (x,y) = dest_eq t in
    if is_word_zero y andalso is_neg_term x then
      REWR_CONV (GSYM WORD_NEG_EQ_0) t
    else
-     failwith "Not neg term with zero RHS"
+     raise ERR "FIX_SIGN_OF_NEG_TERM_CONV" "Not neg term with zero RHS"
 end;
 
 fun WORD_MULT_CANON_CONV t =
    if wordsSyntax.is_word_type (type_of t) then
      GenPolyCanon.gencanon gci_word_mul t
    else
-     failwith "This convertion can only be applied to word terms";
+     raise ERR "WORD_MULT_CANON_CONV" "Can only be applied to word terms";
 
 fun WORD_ADD_CANON_CONV t =
    if wordsSyntax.is_word_type (type_of t) then
      GenPolyCanon.gencanon gci_word_add t
    else
-     failwith "This convertion can only be applied to word terms";
+     raise ERR "WORD_ADD_CANON_CONV" "Can only be applied to word terms";
 
 val WORD_MULT_ss = simpLib.merge_ss [rewrites word_mult_clauses,
   simpLib.conv_ss
@@ -591,8 +592,8 @@ val WORD_ARITH_EQ_ss = simpLib.merge_ss
  [rewrites [WORD_LEFT_ADD_DISTRIB,WORD_RIGHT_ADD_DISTRIB,
             WORD_LSL_NUMERAL,WORD_NOT,hd (CONJUNCTS SHIFT_ZERO)],
   simpLib.conv_ss
-    {conv = K (K (WORD_EQ_CONV)), trace = 3,
-     name = "WORD_EQ_CONV", key = SOME([], ``a = b:'a word``)}];
+    {conv = K (K (WORD_ARITH_EQ_CONV)), trace = 3,
+     name = "WORD_ARITH_EQ_CONV", key = SOME([], ``a = b:'a word``)}];
 
 val WORD_ARITH_ss =
   simpLib.merge_ss
@@ -768,19 +769,19 @@ fun WORD_AND_CANON_CONV t =
    if wordsSyntax.is_word_type (type_of t) then
      GenPolyCanon.gencanon gci_word_and t
    else
-     failwith "This convertion can only be applied to word terms";
+     raise ERR "WORD_AND_CANON_CONV" "Can only be applied to word terms";
 
 fun WORD_OR_CANON_CONV t =
    if wordsSyntax.is_word_type (type_of t) then
      GenPolyCanon.gencanon gci_word_or t
    else
-     failwith "This convertion can only be applied to word terms";
+     raise ERR "WORD_OR_CANON_CONV" "Can only be applied to word terms";
 
 fun WORD_XOR_CANON_CONV t =
    if wordsSyntax.is_word_type (type_of t) then
      GenPolyCanon.gencanon gci_word_xor t
    else
-     failwith "This convertion can only be applied to word terms";
+     raise ERR "WORD_XOR_CANON_CONV" "Can only be applied to word terms";
 
 val WORD_COMP_ss =
   simpLib.merge_ss [
@@ -871,7 +872,7 @@ let val (l,r) = wordsSyntax.dest_word_mul t in
       EQT_ELIM thm
     end
   else
-    failwith "Not a term of the form: n2w n * x."
+    raise ERR "WORD_MUL_LSL_CONV" "Not a term of the form: n2w n * x."
 end;
 
 val WORD_MUL_LSL_ss =
@@ -935,7 +936,7 @@ local
       if is_known_word_size x then
         (CONV_RULE (DEPTH_CONV SIZES_CONV) o Drule.ISPEC x) w2n_lt
       else
-        failwith "Unknown size"
+        raise ERR "mk_bounds_thm" "Unknown size"
     end
 in
   fun mk_bounds_thms t =
@@ -960,10 +961,10 @@ fun EXISTS_WORD_CONV t =
       if wordsSyntax.is_word_type (type_of v) then
         (UNBETA_CONV v THENC SIMP_CONV (std_ss++SIZES_ss) [EXISTS_NUMBER]) t
       else
-        failwith "Not an \"exists word\" term."
+        raise ERR "EXISTS_WORD_CONV" "Not an \"exists word\" term."
     end
   else
-    failwith "Not an exists term.";
+    raise ERR "EXISTS_WORD_CONV" "Not an exists term.";
 
 local
   val word_join = SIMP_RULE (std_ss++boolSimps.LET_ss) [] word_join_def
@@ -1006,7 +1007,7 @@ in
              THENC REDEPTH_CONV FORALL_AND_CONV
              THENC SIMP_CONV arith_ss []) t)
         else
-          failwith "Not a word equality"
+          raise ERR "WORD_BIT_EQ_CONV" "Not a word equality"
   val WORD_BIT_EQ_ss =
         simpLib.merge_ss [ARITH_ss, fcpLib.FCP_ss, SIZES_ss, BIT2_ss,
           rewrites rw1, rewrites rw2,
