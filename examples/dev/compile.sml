@@ -61,7 +61,7 @@ fun dest_dev_imp tm =
  if is_comb tm
      andalso is_comb(rator tm) 
      andalso is_const(rator(rator tm))
-     andalso (fst(dest_const(rator(rator tm))) = "===>")
+     andalso (fst(dest_const(rator(rator tm))) = "DEV_IMP")
   then (rand(rator tm), rand tm)
   else raise ERR "dest_dev_imp" "attempt to dest a non-DEV";
 
@@ -639,7 +639,7 @@ fun RecCompileConvert defth totalth =
      val h = fst(dest_imp(concl impth))
      val _ = (show_types := true)
      val hthm = prove (h,
-           [QUOTE (term_to_string ``(^fb = ^fb') /\ (^f1 = ^f1') /\ (^f2 = ^f2')``)]
+              `(^fb = ^fb') /\ (^f1 = ^f1') /\ (^f2 = ^f2')`
                by RW_TAC std_ss [LAMBDA_PROD]
            THEN RW_TAC std_ss [totalth])
      val _ = (show_types := previousShowTypes)
