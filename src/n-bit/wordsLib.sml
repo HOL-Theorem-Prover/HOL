@@ -18,6 +18,33 @@ val INST  = Q.INST;
 
 val ERR = mk_HOL_ERR "wordsLib";
 
+(*---------------------------------------------------------------------------*)
+(* Tell the function definition mechanism about words.                       *)
+(*---------------------------------------------------------------------------*)
+
+fun is_word_literal t =
+  if wordsSyntax.is_word_2comp t then
+    wordsSyntax.is_word_literal (wordsSyntax.dest_word_2comp t)
+  else
+    wordsSyntax.is_word_literal t;
+
+val _ =
+ let val others = !Literal.other_literals
+ in Literal.other_literals := (fn x => others x orelse is_word_literal x)
+ end;
+
+fun is_word_zero t =
+  wordsSyntax.is_n2w t andalso
+  numLib.dest_numeral (fst (wordsSyntax.dest_n2w t)) = Arbnum.zero;
+
+fun is_word_one t =
+  wordsSyntax.is_n2w t andalso
+  term_eq ``1n`` (fst(wordsSyntax.dest_n2w t));
+
+fun is_uintmax t =
+  wordsSyntax.is_word_2comp t andalso
+  is_word_one (wordsSyntax.dest_word_2comp t);
+
 (* ------------------------------------------------------------------------- *)
 
 fun is_fcp_thm s =
@@ -85,24 +112,25 @@ val MOD_WL1 =
 
 val word_EQ_CONV =
 let
+ fun is_word_literal t = wordsSyntax.is_word_literal t orelse is_uintmax t
  val comp = reduceLib.num_compset()
  val _ = add_thms
-          [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV MOD_2EXP_EQ,
-           REWRITE_RULE [GSYM MOD_2EXP_EQ_def, MOD_2EXP_DIMINDEX] n2w_11] comp
+          (word_eq_n2w :: map (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV)
+            [MOD_2EXP_EQ, MOD_2EXP_MAX]) comp
  val _ = add_conv(``dimindex:'a itself -> num``, 1, SIZES_CONV) comp
 in
  fn tm => 
-  if not (null (type_vars_in_term tm))
-   then raise ERR "word_EQ_CONV" "contains type variables"
-   else 
-     case total dest_eq tm
-     of NONE => raise ERR "word_EQ_CONV" "not an equality"
-      | SOME(w1,w2) =>
-        if is_word_literal w1 andalso is_word_literal w2
-        then if w1=w2 
-               then Thm.SPEC w1 (INST_TYPE[alpha|->type_of w1] REFL_CLAUSE)
-               else CHANGED_CONV (CBV_CONV comp) tm
-        else raise ERR "word_eq_CONV" "non-literal in equality"
+   case total dest_eq tm
+   of NONE => raise ERR "word_EQ_CONV" "not an equality"
+    | SOME(w1,w2) =>
+      if is_word_literal w1 andalso is_word_literal w2
+      then if w1=w2 
+           then Thm.SPEC w1 (INST_TYPE[alpha|->type_of w1] REFL_CLAUSE)
+           else
+                if null (type_vars_in_term w1)
+                then CHANGED_CONV (CBV_CONV comp) tm
+                else raise ERR "word_EQ_CONV" "contains type variables"
+      else raise ERR "word_eq_CONV" "non-literal in equality"
 end;
 
 val thms =
@@ -219,8 +247,7 @@ val pats =
    ``TIMES_2EXP 0 a``,
    ``TIMES_2EXP (NUMERAL a) b``,
    ``DIV_2EXP 0 a``,
-   ``DIV_2EXP (NUMERAL a) b``,
-   ``n2w (NUMERAL a) = n2w (NUMERAL b) : 'a word``
+   ``DIV_2EXP (NUMERAL a) b``
   ] @ List.concat
    (map (fn th => [subst [``x :'a word`` |-> ``n2w (NUMERAL a) :'a word``] th,
                    subst [``x :'a word`` |-> ``$- 1w :'a word``] th])
@@ -248,6 +275,7 @@ val pats =
                    subst [``x :'a word`` |-> ``n2w (NUMERAL a) :'a word``,
                           ``y :'b word`` |-> ``n2w (NUMERAL a) :'b word``] th])
   [
+   ``x = y : 'a word``,
    ``(x :'a word) < y``,
    ``(x :'a word) <= y``,
    ``word_join (x :'a word) (y :'b word)``,
@@ -345,30 +373,6 @@ fun WORD_LITERAL_REDUCE_CONV t =
        THENC UINT_MAX_CONV) t
   else
     numLib.REDUCE_CONV t;
-
-fun is_word_literal t =
-  if wordsSyntax.is_word_2comp t then
-    wordsSyntax.is_word_literal (wordsSyntax.dest_word_2comp t)
-  else
-    wordsSyntax.is_word_literal t;
-
-(*---------------------------------------------------------------------------*)
-(* Tell the function definition mechanism about words.                       *)
-(*---------------------------------------------------------------------------*)
-
-val _ =
- let val others = !Literal.other_literals
- in Literal.other_literals := (fn x => others x orelse is_word_literal x)
- end;;
-
-
-fun is_word_zero t =
-  wordsSyntax.is_n2w t andalso
-  numLib.dest_numeral (fst (wordsSyntax.dest_n2w t)) = Arbnum.zero;
-
-fun is_word_one t =
-  wordsSyntax.is_n2w t andalso
-  term_eq ``1n`` (fst(wordsSyntax.dest_n2w t));
 
 val gci_word_mul = GenPolyCanon.GCI
     {dest = wordsSyntax.dest_word_mul,

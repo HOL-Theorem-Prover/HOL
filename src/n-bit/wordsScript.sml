@@ -155,9 +155,6 @@ val BIT_SET_def = Define`
       else
         BIT_SET (SUC i) (n DIV 2)`;
 
-val MOD_2EXP_EQ_def = Define`
-  MOD_2EXP_EQ n a b = (MOD_2EXP n a = MOD_2EXP n b)`;
-
 val _ = ai := true;
 
 val word_len_def = Define`
@@ -1327,17 +1324,6 @@ val BIT_SET_lem = prove(
 
 val BIT_SET = save_thm("BIT_SET",
   (REWRITE_RULE [ADD_0] o SPEC `0`) BIT_SET_lem);
-
-val MOD_2EXP_EQ = store_thm("MOD_2EXP_EQ",
- `(!a b. MOD_2EXP_EQ 0 a b = T) /\
-  (!n a b. MOD_2EXP_EQ (SUC n) a b =
-     (ODD a = ODD b) /\ MOD_2EXP_EQ n (DIV2 a) (DIV2 b))`,
-  SRW_TAC [] [MOD_2EXP_EQ_def, MOD_2EXP_def, GSYM BITS_ZERO3]
-    \\ Cases_on `n`
-    \\ FULL_SIMP_TAC std_ss [GSYM BITS_ZERO3, SYM LSB_ODD, LSB_def,
-         GSYM BIT_BITS_THM, BIT_DIV2, DIV2_def]
-    \\ EQ_TAC \\ RW_TAC arith_ss []
-    \\ Cases_on `x` \\ RW_TAC arith_ss []);
 
 val lem = prove(
   `!i a b. MAX (LOG2 a) (LOG2 b) < i ==> ~BIT i a /\ ~BIT i b`,
@@ -3069,6 +3055,14 @@ val WORD_ADD_RIGHT_LS2 = save_thm("WORD_ADD_RIGHT_LS2",
    SPECL [`a`, `a`, `c`]) WORD_ADD_RIGHT_LS);
 
 (* ------------------------------------------------------------------------- *)
+
+val word_eq_n2w = store_thm("word_eq_n2w",
+  `(!m n. (n2w m = n2w n : 'a word) = MOD_2EXP_EQ (dimindex (:'a)) m n) /\
+   (!n. (n2w n = $- 1w : 'a word) = MOD_2EXP_MAX (dimindex (:'a)) n) /\
+   (!n. ($- 1w = n2w n : 'a word) = MOD_2EXP_MAX (dimindex (:'a)) n)`,
+  SRW_TAC [] [GSYM MOD_2EXP_EQ_def, MOD_2EXP_DIMINDEX]
+    \\ SRW_TAC [] [WORD_NEG_1, MOD_2EXP_MAX_def, MOD_2EXP_def, UINT_MAX_def,
+         word_T_def, dimword_def] \\ DECIDE_TAC);
 
 val WORD_ss = rewrites
   [WORD_LT,WORD_GT,WORD_LE,WORD_GE,WORD_LS,WORD_HI,WORD_LO,WORD_HS,

@@ -56,6 +56,12 @@ val SIGN_EXTEND_def = Define
      let m = n MOD 2 ** l in
        if BIT (l - 1) n then 2 ** h - 2 ** l + m else m`;
 
+val MOD_2EXP_EQ_def = Define`
+  MOD_2EXP_EQ n a b = (MOD_2EXP n a = MOD_2EXP n b)`;
+
+val MOD_2EXP_MAX_def = Define`
+  MOD_2EXP_MAX n a = (MOD_2EXP n a = (2 ** n - 1))`;
+
 val LOG2_UNIQUE = save_thm("LOG2_UNIQUE",
   (REWRITE_RULE [GSYM LOG2_def] o INST [`a` |-> `2`]) LOG_UNIQUE);
 

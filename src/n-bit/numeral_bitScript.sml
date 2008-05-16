@@ -336,6 +336,36 @@ val numeral_log2 = store_thm("numeral_log2",
 
 (* ------------------------------------------------------------------------- *)
 
+val MOD_2EXP_EQ = store_thm("MOD_2EXP_EQ",
+ `(!a b. MOD_2EXP_EQ 0 a b = T) /\
+  (!n a b. MOD_2EXP_EQ (SUC n) a b =
+     (ODD a = ODD b) /\ MOD_2EXP_EQ n (DIV2 a) (DIV2 b))`,
+  SRW_TAC [] [MOD_2EXP_EQ_def, MOD_2EXP_def, GSYM BITS_ZERO3]
+    \\ Cases_on `n`
+    \\ FULL_SIMP_TAC std_ss [GSYM BITS_ZERO3, SYM LSB_ODD, LSB_def,
+         GSYM BIT_BITS_THM, BIT_DIV2, DIV2_def]
+    \\ EQ_TAC \\ RW_TAC arith_ss []
+    \\ Cases_on `x` \\ RW_TAC arith_ss []);
+
+val lem = prove( 
+  `!n. BITS n 0 (2 ** SUC n - 1) = 2 ** SUC n - 1`,
+  STRIP_TAC \\ MATCH_MP_TAC BITS_ZEROL
+    \\ SIMP_TAC std_ss [ZERO_LT_TWOEXP]);
+
+val MOD_2EXP_MAX = store_thm("MOD_2EXP_MAX",
+ `(!a. MOD_2EXP_MAX 0 a = T) /\
+  (!n a. MOD_2EXP_MAX (SUC n) a = ODD a /\ MOD_2EXP_MAX n (DIV2 a))`,
+  SRW_TAC [] [MOD_2EXP_MAX_def, MOD_2EXP_def, GSYM BITS_ZERO3]
+    \\ Cases_on `n`
+    >> SIMP_TAC std_ss [SYM LSB_ODD, LSB_def, BIT_def]
+    \\ ONCE_REWRITE_TAC [GSYM lem]
+    \\ SIMP_TAC std_ss [GSYM BITS_ZERO3, SYM LSB_ODD, LSB_def,
+         GSYM BIT_BITS_THM, BIT_DIV2, DIV2_def]
+    \\ EQ_TAC \\ RW_TAC arith_ss [BIT_EXP_SUB1]
+    \\ Cases_on `x` \\ RW_TAC arith_ss []);
+
+(* ------------------------------------------------------------------------- *)
+
 val PRE = prim_recTheory.PRE;
 val NOT_SUC = numTheory.NOT_SUC;
 
