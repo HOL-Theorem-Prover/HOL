@@ -45,6 +45,10 @@ val _ = type_abbrev("block", ``:word32 # word32``);
 val _ = type_abbrev("key",   ``:word32 # word32 # word32 # word32``);
 val _ = type_abbrev("state", ``:block # key # word32``);
 
+(*---------------------------------------------------------------------------*)
+(* Basic constants and operations.                                           *)
+(*---------------------------------------------------------------------------*)
+
 val DELTA_def = Define `DELTA = 0x9e3779b9w:word32`;
 
 val ShiftXor_def = 
@@ -131,16 +135,17 @@ val teaDecrypt_def =
 (* Case analysis on a state                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val FORALL_STATE = Q.prove
- (`(!x:state. P x) = !v0 v1 k0 k1 k2 k3 sum. P((v0,v1),(k0,k1,k2,k3),sum)`,
-    METIS_TAC [PAIR]
- );
+val FORALL_STATE = Q.store_thm
+("FORALL_STATE",
+ `(!x:state. P x) = !v0 v1 k0 k1 k2 k3 sum. P((v0,v1),(k0,k1,k2,k3),sum)`,
+    METIS_TAC [PAIR]);
 
 (*---------------------------------------------------------------------------*)
 (* Basic inversion lemma                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val OneRound_Inversion = Q.store_thm("OneRound_Inversion",
+val OneRound_Inversion = Q.store_thm
+("OneRound_Inversion",
  `!s:state. InvRound (Round s) = s`,
  SIMP_TAC std_ss [FORALL_STATE] THEN
  RW_TAC list_ss [Round_def, InvRound_def,WORD_ADD_SUB, LET_THM]);
@@ -167,7 +172,7 @@ val lemma1 = Q.prove
  SIMP_TAC std_ss [FORALL_PROD,Round_def,LET_THM]);
 
 val lemma2 = Q.prove
-(`!i b k s. ?b1. Rounds (i,b,k,s) = (b1,k,s + DELTA * i)`,
+(`!n b k s. ?b1. Rounds(n,b,k,s) = (b1,k,s + DELTA * n)`,
  recInduct Rounds_ind' THEN RW_TAC std_ss [] THEN
   ONCE_REWRITE_TAC [Rounds_def] THEN 
   RW_TAC arith_ss [WORD_MULT_CLAUSES, WORD_ADD_0] THEN
@@ -178,8 +183,9 @@ val lemma2 = Q.prove
    `?m. n = m + 1w` by METIS_TAC [WORD_PRED_EXISTS] THEN 
    RW_TAC std_ss [WORD_ADD_SUB,WORD_MULT_CLAUSES]]);
 
-val delta_shift = Q.prove
-(`DELTA << 5 = DELTA * 32w`, 
+val DELTA_SHIFT = Q.store_thm
+("DELTA_SHIFT",
+ `DELTA << 5 = DELTA * 32w`, 
  REWRITE_TAC [DELTA_def] THEN WORD_EVAL_TAC);
 
 (*---------------------------------------------------------------------------*)
@@ -190,7 +196,7 @@ val tea_correct = Q.store_thm
 ("tea_correct",
  `!plaintext keys.
      teaDecrypt (keys,teaEncrypt (keys,plaintext)) = plaintext`,
- RW_TAC list_ss [teaEncrypt_def, teaDecrypt_def, delta_shift] 
+ RW_TAC list_ss [teaEncrypt_def, teaDecrypt_def, DELTA_SHIFT] 
   THEN `(keys_1 = keys) /\ (sum = DELTA * 32w)` 
         by METIS_TAC [lemma2,WORD_ADD_0,PAIR_EQ] 
   THEN RW_TAC std_ss [] 
@@ -206,11 +212,6 @@ val tea_correct = Q.store_thm
 
 val _ = 
  let open EmitML wordsTheory
-     val [DELTA_def, ShiftXor_def, Round_def, InvRound_def, 
-          Rounds_def, InvRounds_def, teaEncrypt_def, teaDecrypt_def]
-         = map wordsLib.WORDS_EMIT_RULE
-              [DELTA_def, ShiftXor_def, Round_def, InvRound_def, 
-               Rounds_def, InvRounds_def, teaEncrypt_def, teaDecrypt_def]
      val elems = 
      MLSIG "type num = numML.num"::
      MLSIG "type word32 = wordsML.word32"::
@@ -225,19 +226,17 @@ val _ =
      MLSIG "val InvRounds : word32 * state -> state" ::
      MLSIG "val teaEncrypt : key * block -> block" ::
      MLSIG "val teaDecrypt : key * block -> block" ::
-     OPEN ["num","words"] :: 
+     OPEN ["num","words","fcp"] :: 
      MLSTRUCT "type word32 = wordsML.word32" ::
      MLSTRUCT "type block = word32 * word32" ::
      MLSTRUCT "type key   = word32 * (word32 * (word32 * word32))" ::
      MLSTRUCT "type state = block * (key * word32)" ::
-      [DEFN_NOSIG DELTA_def, DEFN_NOSIG ShiftXor_def, 
-       DEFN_NOSIG Round_def, DEFN_NOSIG InvRound_def, 
-       DEFN_NOSIG Rounds_def, DEFN_NOSIG InvRounds_def, 
-       DEFN_NOSIG teaEncrypt_def, DEFN_NOSIG teaDecrypt_def]
+     map (DEFN_NOSIG o wordsLib.WORDS_EMIT_RULE)
+         [DELTA_def, ShiftXor_def, Round_def, InvRound_def, 
+          Rounds_def, InvRounds_def, teaEncrypt_def, teaDecrypt_def] 
  in 
-   emitML "./ML/" ("tea",elems)
+   emitML "." ("tea",elems)
  end
  handle _ => ();
 
 val _ = export_theory();
-
