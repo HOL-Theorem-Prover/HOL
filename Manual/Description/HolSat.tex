@@ -67,7 +67,7 @@ The following example illustrates the use of {\tt{HolSatLib}} for proving propos
            |- (a ==> b) /\ (b ==> a) = (a = b) : thm
 
 - SAT_PROVE ``(a ==> b) ==> (a=b)`` 
-   handle minisatProve.SAT_cex th => th;
+   handle HolSatLib.SAT_cex th => th;
 > val it = [oracles: DISK_THM] [axioms: ] [] 
            |- ~a /\ b ==> ~((a ==> b) ==> (a = b)) : thm
 
@@ -86,7 +86,7 @@ The next example illustrates using {\tt{HolSatLib}} for satisfiability testing. 
 \begin{session}
 \begin{verbatim}
 - SAT_PROVE ``~((a ==> b) ==> (a=b))`` 
-   handle minisatProve.SAT_cex => th;
+   handle HolSatLib.SAT_cex => th;
 > val it = [oracles: DISK_THM ] [axioms: ] [] 
            |- a /\ ~b ==> ~~((a ==> b) ==> (a = b)) : thm
 

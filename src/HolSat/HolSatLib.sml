@@ -7,8 +7,10 @@
 
 structure HolSatLib :> HolSatLib = struct
 
+exception SAT_cex = minisatProve.SAT_cex
+
 open satTools dimacsTools SatSolvers minisatProve satConfig
 
-end
+end;
 
 

@@ -187,7 +187,7 @@ fun mk_sb sb t =
 
 (* return a satisfying assignment for t, as a HOL subst *)
 fun findAss t = 
-    let val th = SAT_PROVE (mk_neg t) handle minisatProve.SAT_cex th => th
+    let val th = SAT_PROVE (mk_neg t) handle HolSatLib.SAT_cex th => th
 	val t = strip_conj (fst(dest_imp (concl th)))
         val t1 = List.filter (fn v =>  (if is_neg v then not (is_genvar(dest_neg v)) else not (is_genvar v))) t
 	fun ncompx v = not (String.compare(term_to_string v, "x")=EQUAL)

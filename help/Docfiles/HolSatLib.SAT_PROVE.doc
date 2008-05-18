@@ -20,7 +20,7 @@ Fails if the supplied term is not a tautology. In this case, a theorem providing
 - SAT_PROVE ``(a ==> b) /\ (b ==> a) ==> (a=b)``;
 > val it = |- (a ==> b) /\ (b ==> a) ==> (a = b) : thm
 - SAT_PROVE ``~((a ==> b) /\ (b ==> a) ==> (a=b))`` 
-	handle minisatProve.SAT_cex th => th;
+	handle HolSatLib.SAT_cex th => th;
 > val it = |- ~b /\ a ==> ~~((a ==> b) /\ (b ==> a) ==> (a = b)) : thm
 }
  
