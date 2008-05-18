@@ -1747,6 +1747,15 @@ val WORD_NEG_MUL = store_thm("WORD_NEG_MUL",
   `!w. $- w = $- 1w * w`,
   SRW_TAC [] [WORD_NEG_EQ, WORD_NEG_LMUL, WORD_NEG_NEG, WORD_MULT_CLAUSES]);
 
+(*---------------------------------------------------------------------------*)
+(*  n2w_SUC |- !n. n2w (SUC n) = n2w n + 1w                                  *)
+(*---------------------------------------------------------------------------*)
+
+val n2w_SUC = save_thm
+("n2w_SUC",
+ SIMP_RULE std_ss [WORD_MULT_CLAUSES,GSYM ADD1]
+          (ISPEC `1w` WORD_MULT_SUC));
+
 val WORD_LEFT_SUB_DISTRIB = store_thm("WORD_LEFT_SUB_DISTRIB",
   `!v:'a word w x. v * (w - x) = v * w - v * x`,
   REWRITE_TAC [word_sub_def,WORD_LEFT_ADD_DISTRIB,WORD_NEG_RMUL]);
