@@ -180,7 +180,7 @@ struct
   (* FIXME: it *must* be possible to write union, equal, isSubset,
             intersection, and difference more elegant.
   *)
-  fun union (s1 as (compare, t1, n1), s2 as (_, t2, n2)) =
+  fun actual_union (s1 as (compare, t1, n1), s2 as (_, t2, n2)) =
       let fun loop x y stack1 stack2 res =
               case compare(x, y) of
                   EQUAL =>
@@ -210,6 +210,22 @@ struct
               in  (compare, buildAll digits, toInt digits) end
             | (_, SOME _) => s2
             | _           => s1 end
+
+  local 
+      val ln2 = Math.ln 2.0
+  in
+  fun union ((_, _, 0), s2) = s2
+    | union (s1,(_, _, 0)) = s1
+    | union (s1 as (_, _, n1), s2 as (_, _, n2)) =
+      let val ((smin,nmin),(smax,nmax)) = 
+	      if (n1<n2) then ((s1,Real.fromInt n1),(s2,Real.fromInt n2)) 
+	      else ((s2,Real.fromInt n2),(s1,Real.fromInt n1)) 
+      in 
+	  if Math.ln nmax / ln2 * nmin < nmin + nmax 
+	  then foldl (fn(x, res) => add(res, x)) smax smin
+	  else actual_union(s1,s2) 
+      end
+  end
 
   fun equal ((compare, t1, _), (_, t2, _)) =
       let fun loop x y stack1 stack2 =
