@@ -45,6 +45,19 @@ fun is_uintmax t =
   wordsSyntax.is_word_2comp t andalso
   is_word_one (wordsSyntax.dest_word_2comp t);
 
+val P = mk_var("P", bool);
+val Q = mk_var("Q", bool);
+val m = mk_var("m", numLib.num);
+val n = mk_var("n", numLib.num);
+val p = mk_var("p", numLib.num);
+val w = mk_var("w", ``:'a word``);
+val x = mk_var("x", ``:'b word``);
+val y = mk_var("y", ``:'a word``);
+val a = ``arithmetic$NUMERAL ^(mk_var("a", numLib.num))``;
+val b = ``arithmetic$NUMERAL ^(mk_var("b", numLib.num))``;
+val c = ``arithmetic$NUMERAL ^(mk_var("c", numLib.num))``;
+val n2w = ``words$n2w : num -> 'a word``;
+
 (* ------------------------------------------------------------------------- *)
 
 fun is_fcp_thm s =
@@ -93,14 +106,14 @@ fun size_conv t = {conv = K (K (SIZES_CONV)), trace = 3,
 
 val SIZES_ss = simpLib.merge_ss (rewrites [ONE_LT_dimword, DIMINDEX_GT_0]::
   (map (simpLib.conv_ss o size_conv)
-    [``dimindex(:'a)``, ``FINITE (UNIV:'a set)``,
-     ``INT_MIN(:'a)``, ``dimword(:'a)``]));
+    [``fcp$dimindex(:'a)``, ``pred_set$FINITE (pred_set$UNIV:'a set)``,
+     ``words$INT_MIN(:'a)``, ``words$dimword(:'a)``]));
 
 fun NUM_RULE l n x =
   let val y = SPEC_ALL x
   in CONJ
-     ((GEN_ALL o simpLib.SIMP_RULE bossLib.arith_ss l o INST [n |-> `0`]) y)
-     ((GEN_ALL o INST [n |-> `NUMERAL n`]) y)
+     ((GEN_ALL o simpLib.SIMP_RULE bossLib.arith_ss l o INST [n |-> `0n`]) y)
+     ((GEN_ALL o INST [n |-> `^a`]) y)
   end;
 
 val MOD_WL =
@@ -117,7 +130,7 @@ let
  val _ = add_thms
           (word_eq_n2w :: map (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV)
             [MOD_2EXP_EQ, MOD_2EXP_MAX]) comp
- val _ = add_conv(``dimindex:'a itself -> num``, 1, SIZES_CONV) comp
+ val _ = add_conv(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) comp
 in
  fn tm => 
    case total dest_eq tm
@@ -153,7 +166,7 @@ val thms =
    word_2comp_n2w, word_sub_def, word_div_def, word_sdiv_def,
    MOD_WL word_add_n2w, MOD_WL word_mul_n2w,
    word_asr_n2w, word_lsr_n2w, word_lsl_n2w,
-   (List.last o CONJUNCTS) SHIFT_ZERO, SPEC `NUMERAL n` word_ror_n2w,
+   (List.last o CONJUNCTS) SHIFT_ZERO, SPEC `^a` word_ror_n2w,
    word_rol_def, word_rrx_n2w,
    word_lsb_n2w, word_msb_n2w, word_bit_n2w, word_index_n2w,
    word_bits_n2w, word_slice_n2w, fcp_n2w, word_extract_n2w,
@@ -168,22 +181,22 @@ in
 end;
 
 fun words_compset () =
-  let val compset = reduceLib.num_compset()
-      val _ = add_thms thms compset
-      val _ = add_conv(``dimindex:'a itself -> num``, 1, SIZES_CONV) compset
-      val _ = add_conv(``dimword:'a itself -> num``, 1, SIZES_CONV) compset
-      val _ = add_conv(``INT_MIN:'a itself -> num``, 1, SIZES_CONV) compset
-      val _ = add_conv(``$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)
-                compset
+let val compset = reduceLib.num_compset()
+    val _ = add_thms thms compset
+    val _ = add_conv(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) compset
+    val _ = add_conv(``words$dimword:'a itself -> num``, 1, SIZES_CONV) compset
+    val _ = add_conv(``words$INT_MIN:'a itself -> num``, 1, SIZES_CONV) compset
+    val _ = add_conv(``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)
+              compset
 in
   compset
 end;
 
 val _ = add_thms thms the_compset;
-val _ = add_conv(``dimindex:'a itself -> num``, 1, SIZES_CONV) the_compset;
-val _ = add_conv(``dimword:'a itself -> num``, 1, SIZES_CONV) the_compset;
-val _ = add_conv(``INT_MIN:'a itself -> num``, 1, SIZES_CONV) the_compset;
-val _ = add_conv(``$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)
+val _ = add_conv(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) the_compset;
+val _ = add_conv(``words$dimword:'a itself -> num``, 1, SIZES_CONV) the_compset;
+val _ = add_conv(``words$INT_MIN:'a itself -> num``, 1, SIZES_CONV) the_compset;
+val _ = add_conv(``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)
           the_compset;
 
 val WORD_EVAL_CONV = CBV_CONV (words_compset());
@@ -222,65 +235,68 @@ in
 end;
 
 val pats =
-  [``sw2sw (n2w (NUMERAL a) :'a word) : 'b word``,
-   ``word_reverse (n2w (NUMERAL a) :'a word)``,
-   ``word_len (a:'a word)``,
-   ``word_msb (n2w (NUMERAL a) :'a word)``,
-   ``word_join (0w:'b word) (x :'a word)``,
-   ``word_bit 0 (n2w (NUMERAL a) :'a word)``,
-   ``word_asr (n2w (NUMERAL a) :'a word) (NUMERAL n)``,
-   ``word_ror (n2w (NUMERAL a) :'a word) (NUMERAL n)``,
-   ``word_rol (w :'a word) (NUMERAL n)``,
-   ``word_rrx (F, n2w (NUMERAL a) :'a word)``,
-   ``word_rrx (T, n2w (NUMERAL a) :'a word)``,
-   ``word_lo (n2w (NUMERAL a) :'a word) (n2w (NUMERAL b))``,
-   ``word_ls (n2w (NUMERAL a) :'a word) (n2w (NUMERAL b))``,
-   ``word_lo (0w:'a word) (n2w (NUMERAL b))``,
-   ``word_lt (0w:'a word) (n2w (NUMERAL b))``,
-   ``word_le (0w:'a word) (n2w (NUMERAL b))``,
-   ``word_lt (n2w (NUMERAL a) :'a word) 0w``,
-   ``word_le (n2w (NUMERAL a) :'a word) 0w``,
-   ``BIT (NUMERAL a) (NUMERAL b)``,
-   ``BITS 0 0 (NUMERAL b)``,
-   ``BITS 0 (NUMERAL a) (NUMERAL b)``,
-   ``BITS (NUMERAL a) 0 (NUMERAL b)``,
-   ``BITS (NUMERAL a) (NUMERAL b) (NUMERAL c)``,
-   ``TIMES_2EXP 0 a``,
-   ``TIMES_2EXP (NUMERAL a) b``,
-   ``DIV_2EXP 0 a``,
-   ``DIV_2EXP (NUMERAL a) b``
+  [``words$sw2sw (^n2w ^a) : 'b word``,
+   ``words$word_reverse (^n2w ^a)``,
+   ``words$word_len ^w``,
+   ``words$word_msb (^n2w ^a)``,
+   ``words$word_join (0w:'b word) ^w``,
+   ``words$word_bit 0n (^n2w ^a)``,
+   ``words$word_asr (^n2w ^a) ^b``,
+   ``words$word_ror (^n2w ^a) ^b``,
+   ``words$word_rol ^w ^a``,
+   ``words$word_rrx (F, ^n2w ^a)``,
+   ``words$word_rrx (T, ^n2w ^a)``,
+   ``words$word_lo (^n2w ^a) (^n2w ^b)``,
+   ``words$word_ls (^n2w ^a) (^n2w ^b)``,
+   ``words$word_lo (0w:'a word) (^n2w ^b)``,
+   ``words$word_lt (0w:'a word) (^n2w ^b)``,
+   ``words$word_le (0w:'a word) (^n2w ^b)``,
+   ``words$word_lt (^n2w ^a) 0w``,
+   ``words$word_le (^n2w ^a) 0w``,
+   ``bit$BIT ^a ^b``,
+   ``bit$BITS 0n 0n ^b``,
+   ``bit$BITS 0n ^a ^b``,
+   ``bit$BITS ^a 0n ^b``,
+   ``bit$BITS ^a ^b ^c``,
+   ``bit$TIMES_2EXP 0n ^n``,
+   ``bit$TIMES_2EXP ^a ^n``,
+   ``arithmetic$DIV_2EXP 0n ^n``,
+   ``arithmetic$DIV_2EXP ^a ^n``
   ] @ List.concat
-   (map (fn th => [subst [``x :'a word`` |-> ``n2w (NUMERAL a) :'a word``] th,
-                   subst [``x :'a word`` |-> ``$- 1w :'a word``] th])
+   (map (fn th => [subst [``^w`` |-> ``^n2w ^c``] th,
+                   subst [``^w`` |-> ``words$word_2comp 1w :'a word``] th])
      [
-      ``w2w (x :'a word) : 'b word``,
-      ``w2n (x :'a word)``,
-      ``word_log2 (x :'a word)``,
-      ``word_join (x :'a word) (0w:'b word)``,
-      ``word_concat (0w:'b word) (x :'a word) : 'c word``,
-      ``word_concat (x :'a word) (0w:'b word) : 'c word``,
-      ``word_bit (NUMERAL n) (x :'a word)``,
-      ``word_bits (NUMERAL n) 0 (x :'a word)``,
-      ``word_bits (NUMERAL m) (NUMERAL n) (x :'a word)``,
-      ``word_slice (NUMERAL n) 0 (x :'a word)``,
-      ``word_slice (NUMERAL m) (NUMERAL n) (x :'a word)``,
-      ``word_extract (NUMERAL n) 0 (x :'a word) : 'b word``,
-      ``word_extract (NUMERAL m) (NUMERAL n) (x :'a word) : 'b word``,
-      ``word_lsl (x :'a word) (NUMERAL n)``,
-      ``word_lsr (x :'a word) (NUMERAL n)``
+      ``words$w2w ^w : 'b word``,
+      ``words$w2n ^w``,
+      ``words$word_log2 ^w``,
+      ``words$word_join ^w (0w:'b word)``,
+      ``words$word_concat (0w:'b word) ^w : 'c word``,
+      ``words$word_concat ^w (0w:'b word) : 'c word``,
+      ``words$word_bit ^a ^w``,
+      ``words$word_bits ^a 0n ^w``,
+      ``words$word_bits ^a ^b ^w``,
+      ``words$word_slice ^a 0n ^w``,
+      ``words$word_slice ^a ^b ^w``,
+      ``words$word_extract ^a 0n ^w : 'b word``,
+      ``words$word_extract ^a ^b ^w : 'b word``,
+      ``words$word_lsl ^w ^a``,
+      ``words$word_lsr ^w ^a``
      ]) @ List.concat
-   (map (fn th => [subst [``x :'a word`` |-> ``n2w (NUMERAL a) :'a word``,
-                          ``y :'b word`` |-> ``$- 1w :'b word``] th,
-                   subst [``x :'a word`` |-> ``$- 1w :'a word``,
-                          ``y :'b word`` |-> ``n2w (NUMERAL a) :'b word``] th,
-                   subst [``x :'a word`` |-> ``n2w (NUMERAL a) :'a word``,
-                          ``y :'b word`` |-> ``n2w (NUMERAL a) :'b word``] th])
+   (map (fn th => [subst [``^w`` |-> ``^n2w ^a``,
+                          ``^x`` |-> ``words$word_1comp 1w : 'b word``,
+                          ``^y`` |-> ``words$word_1comp 1w : 'a word``] th,
+                   subst [``^w`` |-> ``words$word_1comp 1w : 'a word``,
+                          ``^x`` |-> ``words$n2w ^b : 'b word``,
+                          ``^y`` |-> ``^n2w ^a``] th,
+                   subst [``^w`` |-> ``^n2w ^a``,
+                          ``^x`` |-> ``words$n2w ^b : 'b word``,
+                          ``^y`` |-> ``^n2w ^b``] th])
   [
-   ``x = y : 'a word``,
-   ``(x :'a word) < y``,
-   ``(x :'a word) <= y``,
-   ``word_join (x :'a word) (y :'b word)``,
-   ``word_concat (x :'a word) (y :'b word) : 'c word``
+   ``^w = ^y``,
+   ``words$word_lt ^w ^y``,
+   ``words$word_le ^w ^y``,
+   ``words$word_join ^w ^x``,
+   ``words$word_concat ^w ^x : 'c word``
   ]);
 
 val WORD_GROUND_ss = simpLib.merge_ss (rewrites alpha_rws ::
@@ -300,23 +316,23 @@ val BIT_SET_CONV =
   REWR_CONV BIT_SET
     THENC RAND_CONV (computeLib.CBV_CONV (bit_set_compset()))
     THENC REWRITE_CONV [pred_setTheory.NOT_IN_EMPTY,
-            ISPEC `0` pred_setTheory.IN_INSERT,
-            ISPEC `NUMERAL n` pred_setTheory.IN_INSERT];
+            ISPEC `0n` pred_setTheory.IN_INSERT,
+            ISPEC `^a` pred_setTheory.IN_INSERT];
 
 val BIT_ss =
   simpLib.merge_ss [rewrites [BIT_ZERO],
     simpLib.conv_ss
       {conv = K (K (BIT_SET_CONV)), trace = 3,
-       name = "BITS_CONV", key = SOME ([], ``BIT b (NUMERAL n)``)}];
+       name = "BITS_CONV", key = SOME ([], ``bit$BIT ^n ^a``)}];
 
 val BIT2_ss =
   simpLib.merge_ss [rewrites [BIT_ZERO],
     simpLib.conv_ss
       {conv = K (K (BIT_SET_CONV)), trace = 3,
-       name = "BITS_CONV", key = SOME ([], ``BIT 0 (NUMERAL n)``)},
+       name = "BITS_CONV", key = SOME ([], ``bit$BIT 0n ^a``)},
     simpLib.conv_ss
       {conv = K (K (BIT_SET_CONV)), trace = 3,
-       name = "BITS_CONV", key = SOME ([], ``BIT (NUMERAL b) (NUMERAL n)``)}];
+       name = "BITS_CONV", key = SOME ([], ``bit$BIT ^a ^b``)}];
 
 val WORD_ORDER_ss = rewrites
   [WORD_HIGHER, WORD_HIGHER_EQ,
@@ -333,20 +349,20 @@ val WORD_ORDER_ss = rewrites
 
 val ADD1 = arithmeticTheory.ADD1;
 
-val WORD_LSL_NUMERAL = (GEN_ALL o SPECL [`a`,`NUMERAL n`]) WORD_MUL_LSL;
+val WORD_LSL_NUMERAL = (GEN_ALL o SPECL [`^w`,`^a`]) WORD_MUL_LSL;
 
 val WORD_NOT_NUMERAL =
   (SIMP_RULE std_ss [GSYM ADD1, WORD_LITERAL_ADD, word_sub_def] o
-   SPEC `n2w a`) WORD_NOT;
+   SPEC `^n2w ^n`) WORD_NOT;
 
 val WORD_NOT_NEG_NUMERAL =
   (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV o GEN_ALL o
    SIMP_RULE arith_ss
      [GSYM ADD1, WORD_LITERAL_ADD, word_sub_def, WORD_NEG_NEG] o
-   SPEC `$- (n2w (SUC a))`) WORD_NOT;
+   SPEC `words$word_2comp (^n2w (num$SUC ^n))`) WORD_NOT;
 
 val WORD_NOT_NEG_0 = SIMP_CONV std_ss [SYM WORD_NEG_1, WORD_NOT_0, WORD_NEG_0]
-  ``~($- 0w) : 'a word``;
+  ``words$word_1comp (words$word_2comp 0w) : 'a word``;
 
 val WORD_LITERAL_MULT_thms =
   [word_mul_n2w, WORD_LITERAL_MULT, word_L_MULT, word_L_MULT_NEG,
@@ -550,50 +566,52 @@ fun WORD_ADD_CANON_CONV t =
 val WORD_MULT_ss = simpLib.merge_ss [rewrites word_mult_clauses,
   simpLib.conv_ss
     {conv = K (K (CHANGED_CONV WORD_MULT_CANON_CONV)), trace = 3,
-     name = "WORD_MULT_CANON_CONV", key = SOME([], ``a * b:'a word``)}];
+     name = "WORD_MULT_CANON_CONV", key = SOME([], ``words$word_mul ^w ^y``)}];
 
 val WORD_ADD_ss = simpLib.conv_ss
   {conv = K (K (CHANGED_CONV WORD_ADD_CANON_CONV)), trace = 3,
-   name = "WORD_ADD_CANON_CONV", key = SOME([], ``a + b:'a word``)};
+   name = "WORD_ADD_CANON_CONV", key = SOME([], ```words$word_add ^w ^y``)};
 
 val WORD_SUB_ss = simpLib.merge_ss [rewrites [word_sub_def],
   simpLib.conv_ss
     {conv = K (K (WORD_NEG_CONV)), trace = 3,
-     name = "WORD_NEG_CONV", key = SOME([], ``$- a:'a word``)},
+     name = "WORD_NEG_CONV", key = SOME([], ``words$word_2comp ^w``)},
   simpLib.conv_ss
     {conv = K (K (WORD_NEG_CONV)), trace = 3,
-     name = "WORD_NEG_CONV", key = SOME([], ``a - b:'a word``)}];
+     name = "WORD_NEG_CONV", key = SOME([], ``words$word_sub ^w ^y``)}];
 
 val WORD_w2n_ss =
   simpLib.conv_ss
     {conv = K (K (WORD_w2n_CONV)), trace = 3,
-     name = "WORD_w2n_CONV", key = SOME([], ``w2n (n2w n :'a word)``)};
+     name = "WORD_w2n_CONV", key = SOME([], ``words$w2n (^n2w ^a)``)};
 
 val WORD_UINT_MAX_ss = simpLib.merge_ss [
   simpLib.conv_ss
     {conv = K (K (WORD_UINT_MAX_CONV)), trace = 3,
-     name = "WORD_UINT_MAX_CONV", key = SOME([], ``$- 1w :'a word``)},
+     name = "WORD_UINT_MAX_CONV",
+      key = SOME([], ``words$word_2comp 1w :'a word``)},
   simpLib.conv_ss
     {conv = K (K (WORD_UINT_MAX_CONV)), trace = 3,
-     name = "WORD_UINT_MAX_CONV", key = SOME([], ``UNINT_MAXw :'a word``)}];
+     name = "WORD_UINT_MAX_CONV",
+     key = SOME([], ``words$word_T :'a word``)}];
 
 val WORD_CONST_ss = simpLib.merge_ss [
   simpLib.conv_ss
     {conv = K (K (WORD_CONST_CONV)), trace = 3,
-     name = "WORD_CONST_CONV", key = SOME([], ``INT_MINw:'a word``)},
+     name = "WORD_CONST_CONV", key = SOME([], ``words$word_L :'a word``)},
   simpLib.conv_ss
     {conv = K (K (WORD_CONST_CONV)), trace = 3,
-     name = "WORD_CONST_CONV", key = SOME([], ``INT_MAXw:'a word``)},
+     name = "WORD_CONST_CONV", key = SOME([], ``words$word_H :'a word``)},
   simpLib.conv_ss
     {conv = K (K (WORD_CONST_CONV)), trace = 3,
-     name = "WORD_CONST_CONV", key = SOME([], ``UINT_MAXw:'a word``)}];
+     name = "WORD_CONST_CONV", key = SOME([], ``words$word_T :'a word``)}];
 
 val WORD_ARITH_EQ_ss = simpLib.merge_ss
  [rewrites [WORD_LEFT_ADD_DISTRIB,WORD_RIGHT_ADD_DISTRIB,
             WORD_LSL_NUMERAL,WORD_NOT,hd (CONJUNCTS SHIFT_ZERO)],
   simpLib.conv_ss
     {conv = K (K (WORD_ARITH_EQ_CONV)), trace = 3,
-     name = "WORD_ARITH_EQ_CONV", key = SOME([], ``a = b:'a word``)}];
+     name = "WORD_ARITH_EQ_CONV", key = SOME([], ``^w = ^y :'a word``)}];
 
 val WORD_ARITH_ss =
   simpLib.merge_ss
@@ -618,7 +636,7 @@ fun bitwise_compset () =
       val _ = computeLib.add_thms
                 [NUMERAL_BITWISE, iBITWISE, numeral_log2,numeral_ilog2] cmp
       val _ = computeLib.add_conv
-                (``dimindex:'a itself->num``, 1, SIZES_CONV) cmp
+                (``fcp$dimindex:'a itself->num``, 1, SIZES_CONV) cmp
   in
     cmp
   end;
@@ -789,22 +807,23 @@ val WORD_COMP_ss =
       REWRITE_RULE [GSYM arithmeticTheory.PRE_SUB1] WORD_NOT_NEG_NUMERAL],
     simpLib.conv_ss
       {conv = K (K (reduceLib.PRE_CONV)), trace = 3,
-       name = "PRE_CONV", key = SOME ([], ``PRE (NUMERAL a)``)},
+       name = "PRE_CONV", key = SOME ([], ``prim_rec$PRE ^a``)},
     simpLib.conv_ss
       {conv = K (K (WORD_COMP_CONV)), trace = 3,
-       name = "WORD_COMP_CONV", key = SOME ([], ``~(n2w a) :'a word``)}];
+       name = "WORD_COMP_CONV",
+       key = SOME ([], ``words$word_1comp (^n2w ^n) :'a word``)}];
 
 val WORD_AND_ss =
   simpLib.merge_ss [rewrites [WORD_AND_CLAUSES2, SYM WORD_NEG_1, WORD_AND_COMP],
   simpLib.conv_ss
     {conv = K (K (WORD_AND_CANON_CONV)), trace = 3,
-     name = "WORD_AND_CANON_CONV", key = SOME ([], ``a && b:'a word``)}];
+     name = "WORD_AND_CANON_CONV", key = SOME ([], ``words$word_and ^w ^y``)}];
 
 val WORD_XOR_ss =
   simpLib.merge_ss [rewrites [WORD_XOR_CLAUSES2, SYM WORD_NEG_1, WORD_NOT_XOR],
   simpLib.conv_ss
     {conv = K (K (WORD_XOR_CANON_CONV)), trace = 3,
-     name = "WORD_XOR_CANON_CONV", key = SOME ([], ``a ?? b:'a word``)}];
+     name = "WORD_XOR_CANON_CONV", key = SOME ([], ``words$word_xor ^w ^y``)}];
 
 val WORD_OR_ss = let val thm = REWRITE_RULE [SYM WORD_NEG_1] WORD_OR_COMP in
   simpLib.merge_ss
@@ -813,7 +832,7 @@ val WORD_OR_ss = let val thm = REWRITE_RULE [SYM WORD_NEG_1] WORD_OR_COMP in
    ONCE_REWRITE_RULE [WORD_OR_COMM] thm],
    simpLib.conv_ss
      {conv = K (K (WORD_OR_CANON_CONV)), trace = 3,
-      name = "WORD_OR_CANON_CONV", key = SOME ([], ``a !! b:'a word``)}]
+      name = "WORD_OR_CANON_CONV", key = SOME ([], ``words$word_or ^w ^y``)}]
 end;
 
 val WORD_LOGIC_ss = simpLib.merge_ss
@@ -825,9 +844,11 @@ val WORD_LOGIC_CONV = SIMP_CONV (bool_ss++WORD_LOGIC_ss)
 (* ------------------------------------------------------------------------- *)
 
 val ROL_ROR_MOD_RWT = prove(
-  ``!n w:'a word. dimindex (:'a) <= n ==>
-                 (w #<< n = w #<< (n MOD dimindex (:'a))) /\
-                 (w #>> n = w #>> (n MOD dimindex (:'a)))``,
+  ``!n w:'a word. fcp$dimindex (:'a) <= n ==>
+      (words$word_rol w n =
+       words$word_rol w (arithmetic$MOD n (fcp$dimindex (:'a)))) /\
+      (words$word_ror w n =
+       words$word_ror w (arithmetic$MOD n (fcp$dimindex (:'a))))``,
   SRW_TAC [] [Once (GSYM ROL_MOD), Once (GSYM ROR_MOD)]);
 
 val WORD_SHIFT_ss =
@@ -839,7 +860,8 @@ val WORD_SHIFT_ss =
       LSL_LIMIT, LSR_LIMIT, ASR_LIMIT] @
     map (REWRITE_RULE [SYM WORD_NEG_1])
      [ASR_UINT_MAX, ROR_UINT_MAX,
-      (REWRITE_RULE [ROR_UINT_MAX] o SPEC `UINT_MAXw`) word_rol_def]);
+      (REWRITE_RULE [ROR_UINT_MAX] o
+         SPEC `words$word_T`) word_rol_def]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -878,7 +900,7 @@ end;
 val WORD_MUL_LSL_ss =
   simpLib.conv_ss
     {conv = K (K (WORD_MUL_LSL_CONV)), trace = 3, name = "WORD_MUL_LSL_CONV",
-     key = SOME([], ``n2w (NUMERAL n) * a:'a word``)};
+     key = SOME([], ``words$word_mul (^n2w ^a) ^w:'a word``)};
 
 (* ------------------------------------------------------------------------- *)
 
@@ -895,7 +917,7 @@ val WORD_EXTRACT_ss =
       OR_AND_COMM_RULE EXTRACT_JOIN, OR_AND_COMM_RULE EXTRACT_JOIN_LSL,
       OR_AND_COMM_RULE EXTRACT_JOIN_ADD, OR_AND_COMM_RULE EXTRACT_JOIN_ADD_LSL,
       GSYM WORD_EXTRACT_OVER_BITWISE,
-      (GEN_ALL o ISPEC `(h >< l):'a word -> 'b word`) COND_RAND,
+      (GEN_ALL o ISPEC `words$word_extract h l :'a word -> 'b word`) COND_RAND,
       WORD_BITS_EXTRACT, WORD_w2w_EXTRACT, sw2sw_w2w, word_lsb, word_msb] @
     map (REWRITE_RULE [WORD_BITS_EXTRACT])
      [WORD_ALL_BITS, WORD_SLICE_THM, WORD_BIT_BITS]);
@@ -918,8 +940,10 @@ val LESS_THM =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
 
 val LESS_COR = REWRITE_RULE [DISJ_IMP_THM] (CONJ
-  ((GEN_ALL o REWRITE_CONV [LESS_THM]) ``m < NUMERAL (BIT1 n) ==> p``)
-  ((GEN_ALL o REWRITE_CONV [LESS_THM]) ``m < NUMERAL (BIT2 n) ==> p``));
+  ((GEN_ALL o REWRITE_CONV [LESS_THM])
+     ``(prim_rec$< ^m (arithmetic$NUMERAL (BIT1 ^n))) ==> ^P``)
+  ((GEN_ALL o REWRITE_CONV [LESS_THM])
+     ``(prim_rec$< ^m (arithmetic$NUMERAL (BIT2 ^n))) ==> ^P``));
 
 local
   fun w2n_of_known_size t =
@@ -950,9 +974,9 @@ in
 end;
 
 val EXISTS_NUMBER = prove(
-  ``(?w:'a word. P (w2n w)) = (?n. n < dimword(:'a) /\ P n)``,
-  EQ_TAC THEN SRW_TAC [] []
-    THENL [Q.EXISTS_TAC `w2n w`, Q.EXISTS_TAC `n2w n`]
+  ``!P. (?w:'a word. P (words$w2n w)) = (?n. n < words$dimword(:'a) /\ P n)``,
+  STRIP_TAC THEN EQ_TAC THEN SRW_TAC [] []
+    THENL [Q.EXISTS_TAC `words$w2n w`, Q.EXISTS_TAC `words$n2w n`]
     THEN ASM_SIMP_TAC std_ss [w2n_lt, w2n_n2w]);
 
 fun EXISTS_WORD_CONV t =
@@ -970,10 +994,9 @@ local
   val word_join = SIMP_RULE (std_ss++boolSimps.LET_ss) [] word_join_def
   val rw1 = [word_0,word_T,word_L,word_xor_def,word_or_def,word_and_def,
              word_1comp_def, REWRITE_RULE [SYM WORD_NEG_1] word_T,
-             SPEC `NUMERAL n` n2w_def,
-             pred_setTheory.NOT_IN_EMPTY,
-             ISPEC `0` pred_setTheory.IN_INSERT,
-             ISPEC `NUMERAL n` pred_setTheory.IN_INSERT]
+             SPEC `^a` n2w_def, pred_setTheory.NOT_IN_EMPTY,
+             ISPEC `0n` pred_setTheory.IN_INSERT,
+             ISPEC `^a` pred_setTheory.IN_INSERT]
   val rw2 = [fcpTheory.FCP_UPDATE_def,LESS_COR,sw2sw,w2w,
              word_join,word_concat_def,word_reverse_def,word_modify_def,
              word_lsl_def,word_lsr_def,word_asr_def,word_ror_def,
@@ -981,16 +1004,17 @@ local
              word_extract_def,word_bits_def,word_slice_def,word_bit_def]
   val thms = [WORD_ADD_LEFT_LO, WORD_ADD_LEFT_LS,
               WORD_ADD_RIGHT_LS, WORD_ADD_RIGHT_LO]
-  val thms2 = map (GEN_ALL o SPEC `n2w n`)
+  val thms2 = map (GEN_ALL o SPEC `^n2w ^n`)
                [WORD_ADD_LEFT_LO2, WORD_ADD_LEFT_LS2,
                 WORD_ADD_RIGHT_LO2, WORD_ADD_RIGHT_LS2]
   val rw3 = [WORD_LT_LO, WORD_LE_LS, WORD_GREATER, WORD_GREATER_EQ,
              CONV_RULE WORD_ARITH_CONV WORD_LS_T,
              CONV_RULE WORD_ARITH_CONV WORD_LESS_EQ_H] @
-             map (SPECL [`n2w m`, `n2w n`]) thms @
+             map (SPECL [`^n2w ^m`, `^n2w ^n`]) thms @
              thms2 @ map (ONCE_REWRITE_RULE [WORD_ADD_COMM]) thms2
-  val rw4 = [SPECL [`w`,`n2w m`, `n2w n`] WORD_ADD_EQ_SUB,
-             SPECL [`w`,`$- (n2w m)`, `n2w n`] WORD_ADD_EQ_SUB,
+  val rw4 = [SPECL [`^w`,`^n2w ^m`, `^n2w ^n`] WORD_ADD_EQ_SUB,
+             SPECL [`^w`,`words$word_2comp (^n2w ^m)`, `^n2w ^n`]
+               WORD_ADD_EQ_SUB,
              REWRITE_RULE [GSYM w2n_11, word_0_n2w] NOT_INT_MIN_ZERO,
              REWRITE_RULE [WORD_LO, word_0_n2w] ZERO_LO_INT_MIN,
              WORD_LO, WORD_LS, WORD_HI, WORD_HS, GSYM w2n_11]
@@ -1014,7 +1038,7 @@ in
           simpLib.conv_ss
             {conv = K (K (CHANGED_CONV FORALL_AND_CONV)), trace = 3,
              name = "FORALL_AND_CONV",
-             key = SOME([], ``!x:'a. P /\ Q``)}]
+             key = SOME([], ``!x:'a. ^P /\ ^Q``)}]
   fun WORD_DP_PROVE dp t =
         let val thm1 = QCONV (
                         WORD_CONV
@@ -1078,7 +1102,7 @@ fun MP_ASSUM_TAC tm (asl, w) =
 
 fun WORD_DECIDE_TAC (asl, w) =
   (EVERY (map MP_ASSUM_TAC (List.filter is_word_term asl)) THEN
-    CONV_TAC (WORD_DP DECIDE)) (asl, w);
+    CONV_TAC (EQT_INTRO o WORD_DP DECIDE)) (asl, w);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1192,7 +1216,7 @@ val _ = output_words_as
 (* concatenate (@@)                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val extract_tm = ``(a >< b) :'a word -> 'b word``;
+val extract_tm = ``words$word_extract ^m ^n :'a word -> 'b word``;
 
 datatype WordOp =
    word_concat of hol_type * hol_type * hol_type
@@ -1320,14 +1344,14 @@ fun guess_lengths () = Parse.post_process_term :=
 
 fun dont_guess_lengths () = Parse.post_process_term := save_post_process_term;
 
-val operators = [("+", ``($+ :bool['a] -> bool['a] -> bool['a])``),
-                 ("-", ``($- :bool['a] -> bool['a] -> bool['a])``),
-                 ("-", ``($- :bool['a] -> bool['a])``),
-                 ("*", ``($* :bool['a] -> bool['a] -> bool['a])``),
-                 ("<", ``($< :bool['a] -> bool['a] -> bool)``),
-                 ("<=", ``($<= :bool['a] -> bool['a] -> bool)``),
-                 (">", ``($> :bool['a] -> bool['a] -> bool)``),
-                 (">=", ``($>= :bool['a] -> bool['a] -> bool)``)];
+val operators = [("+", ``(words$word_add :bool['a] -> bool['a] -> bool['a])``),
+                 ("-", ``(words$word_sub :bool['a] -> bool['a] -> bool['a])``),
+                 ("-", ``(words$word_2comp :bool['a] -> bool['a])``),
+                 ("*", ``(words$word_mul :bool['a] -> bool['a] -> bool['a])``),
+                 ("<", ``(words$word_lt :bool['a] -> bool['a] -> bool)``),
+                 ("<=", ``(words$word_le :bool['a] -> bool['a] -> bool)``),
+                 (">", ``(words$word_gt :bool['a] -> bool['a] -> bool)``),
+                 (">=", ``(words$word_ge :bool['a] -> bool['a] -> bool)``)];
 
 fun deprecate_word () = let
   fun losety {Name,Thy,Ty} = {Name = Name, Thy = Thy}
