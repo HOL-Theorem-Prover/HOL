@@ -380,6 +380,7 @@ val DP_ss =
    REG_READ_INC_PC,WORD_NEG_cor,WORD_1COMP_ZERO,
    (SIMP_RULE bool_ss [] o ISPEC `\x:iclass. x = y`) COND_RAND,
    (SIMP_RULE bool_ss [] o ISPEC `\r. REG_READ r m n`) COND_RAND,
+   (SIMP_RULE (srw_ss()) [] o Q.ISPEC `\x. $- 1w * x`) COND_RAND,
    decode_enc_data_proc, decode_data_proc_enc,
    decode_enc_data_proc2,decode_data_proc_enc2,
    decode_enc_data_proc3,decode_data_proc_enc3];
@@ -614,32 +615,29 @@ val ARM_STM = (GEN_ALL o Thm.DISCH abbrev_mode4 o
 
 (* ......................................................................... *)
 
-(*
-val lem = METIS_PROVE [DECIDE ``!i. ~(28 <= i \/ i <= 7) = 8 <= i /\ i <= 27``]
- ``!rm. (\i b. 28 <= i /\ (rm:word32) ' i \/
-                8 <= i /\ i <= 27 /\ b \/ i <= 7 /\ rm ' i) =
-   (\i b. if i <= 7 \/ 28 <= i then rm ' i else b)``;
+val lem = prove(`!b r x y.
+   (if b then <| reg := r; psr := x |> else <| reg := r; psr := y |>) =
+   <| reg := r; psr := if b then x else y |>`, SRW_TAC [] []);
 
-val lem2 = METIS_PROVE [DECIDE ``!i. ~(28 <= i) = 8 <= i /\ i <= 27 \/ i <= 7``]
- ``!rm. (\i b. 28 <= i /\ (rm:word32) ' i \/
-                8 <= i /\ i <= 27 /\ b \/ i <= 7 /\ b) =
-   (\i b. if 28 <= i then rm ' i else b)``;
-
-val lem3 = SIMP_RULE (std_ss++armLib.PBETA_ss) [] (prove(
-  `!op2 c.  let (I,R,bit19,bit16,Rm,opnd) =
-              DECODE_MSR (enc (instruction$MSR c SPSR_a op2)) in
-     (R \/ (~bit19 /\ bit16)) \/ (~bit19 /\ ~bit16)`,
-  Cases \\ SIMP_TAC std_ss [DECODE_PSRD_def,decode_msr_enc]));
-*)
-
-val MRS_MSR_ss = rewrites [MSR_def,MRS_def,DECODE_PSRD_def,
+val MRS_MSR_ss = rewrites [MSR_def,MRS_def,lem,
   immediate_enc,decode_enc_msr,decode_msr_enc,decode_enc_mrs,decode_mrs_enc];
 
-val ARM_MSR = UNABBREVL_RULE [`Reg`]
-  (SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt []
-   ``enc (instruction$MSR c psrd op2)``));
+val ARM_MSR =
+  SYMBOLIC_EVAL_CONV MRS_MSR_ss
+  (cntxt [``Abbrev ((R,flags,ctrl) = DECODE_PSRD psrd) /\
+            Abbrev (src = if IS_MSR_IMMEDIATE op2 then
+                            SND (IMMEDIATE F ((11 >< 0) (msr_mode_encode op2)))
+                          else
+                            Reg (((3 >< 0) (((11 >< 0)
+                              (msr_mode_encode op2)) : word12)) : word4)) /\
+            Abbrev (f:word32->word32 = word_modify (\i b.
+                               28 <= i /\ (if flags then src ' i else b) \/
+                               8 <= i /\ i <= 27 /\ b \/
+                               i <= 7 /\
+                               (if ctrl /\ ~USER mode then src ' i else b)))``]
+   ``enc (instruction$MSR c psrd op2)``);
 
-val ARM_MRS = UNABBREVL_RULE [`Reg`]
+val ARM_MRS =
   (SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt [] ``enc (instruction$MRS c r Rd)``));
 
 (* ------------------------------------------------------------------------- *)
