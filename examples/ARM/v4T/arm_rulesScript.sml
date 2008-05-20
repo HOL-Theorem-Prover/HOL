@@ -471,6 +471,7 @@ val DP_ss =
    (SIMP_RULE bool_ss [] o ISPEC `\x:iclass. x = y`) COND_RAND,
    (SIMP_RULE bool_ss [] o ISPEC `\r. REG_READ F r m n`) COND_RAND,
    (SIMP_RULE bool_ss [] o ISPEC `\y. y ' n`) COND_RAND,
+   (SIMP_RULE (srw_ss()) [] o Q.ISPEC `\x. $- 1w * x`) COND_RAND,
    ISPEC `CPSR_READ` COND_RAND,
    PROVE [] ``(if a then (if b then d else c) else c) =
               (if a /\ b then d else c)``,
