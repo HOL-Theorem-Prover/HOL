@@ -2,11 +2,9 @@
 (*                         SBox                          *)
 (*********************************************************)
 
-open HolKernel Parse boolLib bossLib word4Theory 
-     word128Theory Serpent_Reference_UtilityTheory
-     listTheory rich_listTheory bitsTheory
-     markerTheory metisLib pairTheory arithmeticTheory
-     word4Lib word128Lib;
+open HolKernel Parse boolLib bossLib wordsTheory wordsLib
+     Serpent_Reference_UtilityTheory listTheory rich_listTheory bitTheory
+     markerTheory pairTheory arithmeticTheory;
 
 val _ = new_theory "Serpent_Reference_SBox";
 
@@ -14,7 +12,7 @@ val _ = new_theory "Serpent_Reference_SBox";
 (*sbox table used in encrytion
 *)
 val SBox_def=Define 
-`SBox=MAP (MAP word4$n2w)
+`SBox=MAP (MAP (n2w:num->word4))
 [[ 3; 8;15; 1;10; 6; 5;11;14;13; 4; 2; 7; 0; 9;12];
  [15;12; 2; 7; 9; 0; 5;10; 1;11;14; 8; 6;13; 3; 4];
  [ 8; 6; 7; 9; 3;12;10;15;13; 1;14; 4; 0;11; 5; 2];
@@ -28,7 +26,7 @@ val SBox_def=Define
 (*inverse sbox table used in decrytion
 *)
 val invSBox_def=Define
-`invSBox= MAP (MAP word4$n2w)
+`invSBox= MAP (MAP (n2w:num->word4))
 [[13; 3;11; 0;10; 6; 5;12; 1;14; 4; 7;15; 9; 8; 2];
  [ 5; 8; 2;14;15; 6;12; 3;11; 4; 7; 9; 1;13;10; 0];
  [12; 9;15; 4;11;14; 1; 2; 0; 3; 6;13; 5; 8;10; 7];
@@ -143,8 +141,7 @@ val invS_S_cancel=Q.store_thm(
 	(!n. n<16==> (invS  round (w2n (S round n))=n2w n))`, 
 
 SIMP_TAC arith_ss [BOUNDED_FORALL_THM] THEN
-	RW_TAC arith_ss [SBoxVal,word4Theory.w2n_EVAL,word4Theory.MOD_WL_def,
-	                 word4Theory.WL_def,word4Theory.HB_def,invSBoxVal]);
+  SRW_TAC [] [SBoxVal, invSBoxVal]);
 	
 val invSNibble_sNibble_cancel=Q.store_thm(
 "invSNibble_sNibble_cancel",
@@ -153,11 +150,8 @@ val invSNibble_sNibble_cancel=Q.store_thm(
 	==>
 	(invSNibble round (sNibble round w)=w)`,
 
-RW_TAC std_ss [invSNibble_def,sNibble_def] THEN
-`round MOD 8<8` by METIS_TAC [X_MOD_Y_EQ_X,LESS_MOD,MOD_MOD,DECIDE ``0<8``] THEN
-`word4$w2n w < 2**word4$WL` by METIS_TAC  [word4Theory.w2n_LT] THEN
-FULL_SIMP_TAC arith_ss  [invS_S_cancel,word4Theory.WL_def,word4Theory.HB_def,
-                         word4Theory.w2n_ELIM]);
+SRW_TAC [] [invSNibble_def,sNibble_def,invS_S_cancel,
+            WORD_DECIDE ``w2n (w:word4) < 16``]);
 
 val w4l_fact=Q.store_thm(
 "w4l_fact",

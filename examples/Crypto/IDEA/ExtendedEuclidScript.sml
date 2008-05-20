@@ -195,5 +195,4 @@ val i16_Lemma10 = Q.store_thm
  GEN_TAC THEN `& x * iu1 x = iu1 x * & x` by RW_TAC arith_ss [INT_MUL_COMM] THEN
  `& x * iu2 x = iu2 x * & x` by RW_TAC arith_ss [INT_MUL_COMM] THEN METIS_TAC [i16_Lemma9]);
 
-
 val () = export_theory();
