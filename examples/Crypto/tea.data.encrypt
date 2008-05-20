@@ -4,11 +4,11 @@
 
 loadPath := "TEA" :: !loadPath;
 
-app load ["modesTheory", "TEATheory", "word32Lib","CoderTheory","Encode"];
+app load ["modesTheory", "teaTheory", "wordsLib","CoderTheory","Encode"];
 
 quietdec := true;
 open combinTheory pairTheory listTheory arithmeticTheory
-     modesTheory TEATheory EncodeTheory DecodeTheory CoderTheory;
+     modesTheory teaTheory EncodeTheory DecodeTheory CoderTheory;
 quietdec := false;
 
 val _ = numLib.prefer_num();
@@ -53,19 +53,20 @@ val BLV_DEF =
 (* Let's get started                                                         *)
 (*---------------------------------------------------------------------------*)
 
+val TEADecrypt_def = Define `TEADecrypt = CURRY teaDecrypt`;
+val TEAEncrypt_def = Define `TEAEncrypt = CURRY teaEncrypt`;
+
 val TEA_LEMMA' = Q.prove
 (`!k. TEADecrypt k o TEAEncrypt k = I`,
- RW_TAC std_ss [TEA_LEMMA,o_DEF,FUN_EQ_THM]);
+ RW_TAC std_ss [tea_correct,TEADecrypt_def,TEAEncrypt_def,o_DEF,FUN_EQ_THM]);
 
 val XORB_DEF = 
-  Define `XORB (x1,x2) (y1,y2) = (x1#y1, x2#y2)`;
+  Define `XORB (x1,x2) (y1,y2) = (x1 ?? y1, x2 ?? y2) : word32 # word32`;
 
 val XORB_IDEM = Q.prove
 (`!x y. XORB (XORB x y) y = x`,
  SIMP_TAC std_ss [pairTheory.FORALL_PROD,XORB_DEF] THEN
- METIS_TAC[word32Theory.WORD_EOR_ASSOC,
-           word32Theory.WORD_EOR_INV,
-           word32Theory.WORD_EOR_ID]);
+ SRW_TAC [] []);
 
 (*---------------------------------------------------------------------------*)
 (* TEA_CBC_CORRECT =                                                         *)
@@ -280,7 +281,7 @@ val WORD32_DEF =
             b11::b12::b13::b14::b15::b16::b17::b18::
             b19::b20::b21::b22::b23::b24::b25::b26::
             b27::b28::b29::b30::b31::b32::t)
-     = word32$n2w
+     = n2w
          (BLV[b1;b2;b3;b4;b5;b6;b7;b8;b9;b10;b11;b12;b13;b14;
               b15;b16;b17;b18;b19;b20;b21;b22;b23;b24;b25;b26;
               b27;b28;b29;b30;b31;b32]) :: WORD32 t)`;
@@ -295,7 +296,7 @@ val NUM_TO_BITS32_DEF =
 
 val UNWORD32_DEF = Define 
    `(UNWORD32 [] = [] :bool list) /\
-    (UNWORD32 (w::t) = NUM_TO_BITS32 (word32$w2n w) ++ UNWORD32 t)`;
+    (UNWORD32 (w::t) = NUM_TO_BITS32 (w2n w) ++ UNWORD32 t)`;
 
 val WORD32_INVERSION = 
  mk_thm([], 
@@ -582,7 +583,7 @@ val ENCODE_THEN_ENCRYPT_CORRECT =
   (ISPEC ``TEADecrypt``
   (ISPEC ``TEAEncrypt``
   (SIMP_RULE std_ss [PAD_TO_UNPAD_THM]
-  (ISPEC ``UNPAD o UNWORD32 o UNBLOCK``
+  (ISPEC ``(UNPAD o UNWORD32 o UNBLOCK) : block list -> bool list``
   (ISPEC ``BLOCK o WORD32 o PAD``
   (SIMP_RULE std_ss [CODING_INVERSION]
   (ISPEC ``decode ^Dom_ty ^Dec_ty`` 
@@ -595,8 +596,8 @@ STOP;
 (*---------------------------------------------------------------------------*)
 
 val M = ``[(1,NONE); (13,SOME T); (257,SOME F)]``;
-val key = ``(1w,2w,3w,4w)``;
-val v =   ``(5w,10w)``;
+val key = ``(1w,2w,3w,4w) : key``;
+val v =   ``(5w,10w) : block``;
 
 EVAL ``encode_list (encode_prod encode_num (encode_option encode_bool))
         [(1,NONE); (13,SOME T); (257,SOME F)]``;
