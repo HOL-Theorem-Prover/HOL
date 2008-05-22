@@ -75,7 +75,6 @@ src/quotient/src
 src/finite_map
 !examples/ind_def
 src/bag
-src/n_bit
 src/n-bit
 !examples/ARM/arm6-verification
 !!examples/ARM/arm6-verification/correctness
@@ -97,8 +96,6 @@ src/temporal/smv.2.4.3
 src/rational
 src/path
 !examples/lambda
-src/word/theories
-src/word/src
 src/Boolify/src
 src/float
 src/fxp
