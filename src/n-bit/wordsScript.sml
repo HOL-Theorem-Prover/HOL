@@ -3533,6 +3533,9 @@ in
       @ List.concat (map mk_index sizes))
 end;
 
+val _ = type_pp.pp_num_types := true;
+val _ = type_pp.pp_array_types := true;
+
 (* ------------------------------------------------------------------------- *)
 
 val _ = export_theory();
