@@ -14,16 +14,16 @@ open HolKernel Parse boolLib;
  *---------------------------------------------------------------------------*)
 
 (*app load ["Psyntax", "hol88Lib", "numTheory", "prim_recTheory", "Ho_Rewrite", "ieeeTheory", "reduceLib", "tautLib",
-            "jrhUtils", "Canon_Port", "AC", "Arbint", "prim_recTheory", "bword_bitopTheory", "realTheory", "pred_setTheory",
-            "pairTheory", "mesonLib", "bossLib", "wordTheory", "Num_conv", "Canon_Port", "RealArith", "word_baseTheory",
-            "numLib", "arithmeticTheory", "listTheory", "rich_listTheory", "liteLib", "bword_numTheory", "res_quanTheory",
+            "jrhUtils", "Canon_Port", "AC", "Arbint", "prim_recTheory", "realTheory", "pred_setTheory",
+            "pairTheory", "mesonLib", "bossLib", "Num_conv", "Canon_Port", "RealArith",
+            "numLib", "arithmeticTheory", "listTheory", "rich_listTheory", "liteLib", "res_quanTheory",
             "transcTheory", "Lib"]; *)
 
 
 open Psyntax hol88Lib numTheory prim_recTheory Ho_Rewrite ieeeTheory reduceLib tautLib
-     jrhUtils Canon_Port AC Arbint prim_recTheory bword_bitopTheory realTheory pred_setTheory
-     pairTheory mesonLib  bossLib wordTheory  Num_conv Canon_Port RealArith word_baseTheory
-     numLib arithmeticTheory listTheory rich_listTheory liteLib bword_numTheory res_quanTheory
+     jrhUtils Canon_Port AC Arbint prim_recTheory realTheory pred_setTheory
+     pairTheory mesonLib  bossLib Num_conv Canon_Port RealArith
+     numLib arithmeticTheory listTheory rich_listTheory liteLib res_quanTheory
      transcTheory Lib;
 
 (*---------------------------------------------------------------------------*
