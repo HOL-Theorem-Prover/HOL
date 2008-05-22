@@ -200,7 +200,6 @@ val ShiftRows_Inversion = Q.store_thm
  `!s:state. InvShiftRows (ShiftRows s) = s`,
  SIMP_TAC std_ss [FORALL_BLOCK] THEN REPEAT STRIP_TAC THEN EVAL_TAC);
 
-
 (*---------------------------------------------------------------------------*)
 (* For alternative decryption scheme                                         *)
 (*---------------------------------------------------------------------------*)

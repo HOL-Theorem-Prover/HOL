@@ -39,24 +39,20 @@ val xtime_distrib = Q.store_thm
 
 val _ = set_fixity "**" (Infixl 675);
 
-val (ConstMult_def,ConstMult_ind) = 
- Defn.tprove
-  (Hol_defn "ConstMult"
-     `b1 ** b2 =
-        if b1 = 0w:word8 then 0w else 
-        if word_lsb b1
-           then b2 ?? ((b1 >>> 1) ** xtime b2)
-           else       ((b1 >>> 1) ** xtime b2)`,
-   WF_REL_TAC `measure (w2n o FST)`);
+val ConstMult_def = tDefine "ConstMult"
+   `b1 ** b2 =
+      if b1 = 0w:word8 then 0w else 
+      if word_lsb b1
+         then b2 ?? ((b1 >>> 1) ** xtime b2)
+         else       ((b1 >>> 1) ** xtime b2)`
+   (WF_REL_TAC `measure (w2n o FST)`);
 
-val _ = save_thm("ConstMult_def",ConstMult_def);
-val _ = save_thm("ConstMult_ind",ConstMult_ind);
 val _ = computeLib.add_persistent_funs [("ConstMult_def",ConstMult_def)];
 
 val ConstMultDistrib = Q.store_thm
 ("ConstMultDistrib",
  `!x y z. x ** (y ?? z) = (x ** y) ?? (x ** z)`,
- recInduct ConstMult_ind
+ recInduct (theorem "ConstMult_ind")
    THEN REPEAT STRIP_TAC
    THEN ONCE_REWRITE_TAC [ConstMult_def]
    THEN SRW_TAC [] [xtime_distrib]);
@@ -65,19 +61,13 @@ val ConstMultDistrib = Q.store_thm
 (* Iterative version                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val defn = Hol_defn 
-  "IterConstMult"
+val IterConstMult_def = tDefine "IterConstMult"
   `IterConstMult (b1,b2,acc) =
      if b1 = 0w:word8 then (b1,b2,acc)
      else IterConstMult (b1 >>> 1, xtime b2,
-                         if word_lsb b1 then (b2 ?? acc) else acc)`;
+                         if word_lsb b1 then (b2 ?? acc) else acc)`
+  (WF_REL_TAC `measure (w2n o FST)`);
 
-val (IterConstMult_def,IterConstMult_ind) = 
- Defn.tprove
-  (defn, WF_REL_TAC `measure (w2n o FST)`);
-
-val _ = save_thm("IterConstMult_def",IterConstMult_def);
-val _ = save_thm("IterConstMult_ind",IterConstMult_ind);
 val _ = computeLib.add_persistent_funs [("IterConstMult_def",IterConstMult_def)];
 
 (*---------------------------------------------------------------------------*)
@@ -87,7 +77,7 @@ val _ = computeLib.add_persistent_funs [("IterConstMult_def",IterConstMult_def)]
 val ConstMultEq = Q.store_thm
 ("ConstMultEq",
  `!b1 b2 acc. (b1 ** b2) ?? acc = SND(SND(IterConstMult (b1,b2,acc)))`,
- recInduct IterConstMult_ind THEN RW_TAC std_ss []
+ recInduct (theorem "IterConstMult_ind") THEN RW_TAC std_ss []
    THEN ONCE_REWRITE_TAC [ConstMult_def,IterConstMult_def]
    THEN FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [] []);
 
@@ -101,7 +91,7 @@ fun UNROLL_RULE 0 def = def
      (GEN_REWRITE_RULE (RHS_CONV o DEPTH_CONV) empty_rewrites [def]
                        (UNROLL_RULE (n - 1) def))
 val instantiate =
- SIMP_RULE (srw_ss()) [WORD_XOR_CLAUSES, GSYM xtime_distrib] o 
+ SIMP_RULE (srw_ss()) [GSYM xtime_distrib] o 
  ONCE_REWRITE_CONV [UNROLL_RULE 4 ConstMult_def]
 
 val IterMult2 = UNROLL_RULE 1 IterConstMult_def
@@ -121,7 +111,9 @@ val mult_unroll = save_thm("mult_unroll",
     [``0x2w ** x``, ``0x3w ** x``, ``0x9w ** x``,
      ``0xBw ** x``, ``0xDw ** x``, ``0xEw ** x``]));
 
-val eval_mult = WORD_EVAL_RULE o PURE_REWRITE_CONV [mult_unroll, xtime_def]
+val eval_mult = WORD_EVAL_RULE o PURE_REWRITE_CONV [mult_unroll,
+  CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (SIMP_CONV (srw_ss())
+    [WORD_MUL_LSL, COND_RAND]))) xtime_def]
 
 fun mk_word8 i = wordsSyntax.mk_n2w(numSyntax.term_of_int i, ``:8``);
 
