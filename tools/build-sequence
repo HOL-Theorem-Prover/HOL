@@ -98,5 +98,4 @@ src/path
 !examples/lambda
 src/Boolify/src
 src/float
-src/fxp
 !!examples/miller
