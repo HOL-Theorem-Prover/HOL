@@ -283,9 +283,9 @@ val pats =
       ``words$word_lsr ^w ^a``
      ]) @ List.concat
    (map (fn th => [subst [``^w`` |-> ``^n2w ^a``,
-                          ``^x`` |-> ``words$word_1comp 1w : 'b word``,
-                          ``^y`` |-> ``words$word_1comp 1w : 'a word``] th,
-                   subst [``^w`` |-> ``words$word_1comp 1w : 'a word``,
+                          ``^x`` |-> ``words$word_2comp 1w : 'b word``,
+                          ``^y`` |-> ``words$word_2comp 1w : 'a word``] th,
+                   subst [``^w`` |-> ``words$word_2comp 1w : 'a word``,
                           ``^x`` |-> ``words$n2w ^b : 'b word``,
                           ``^y`` |-> ``^n2w ^a``] th,
                    subst [``^w`` |-> ``^n2w ^a``,
