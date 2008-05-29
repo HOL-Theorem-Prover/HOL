@@ -233,6 +233,7 @@ fun derive_individual_specs tools (code:string list) = let
       val (name,(th,i,j)) = hd (filter (fn (x,y) => x = name) (!decompiler_memory))
       val th = RW [sidecond_def,hide_th,STAR_ASSOC] th
       val th = ABBREV_CALL ("s"^(int_to_string n)^"@") th
+      val _ = print ":"
       in (n+1,(ys @ [(n,(th,i,j),NONE)])) end
     else let
       val i = int_to_string n
@@ -262,7 +263,10 @@ fun spec_post_and_pre th1 th2 = let
 
 fun find_composition1 th1 th2 = let
   val (q,p,ty) = spec_post_and_pre th1 th2
-  fun mm x y = get_sep_domain x = get_sep_domain y
+  fun get_match_term tm = let
+    val v = get_sep_domain tm
+    in if can (dest_var o cdr) v then car v else v end;  
+  fun mm x y = get_match_term x = get_match_term y
   fun fetch_match x [] zs = hd []
     | fetch_match x (y::ys) zs = 
         if mm x y then (y, rev zs @ ys) else fetch_match x ys (y::zs)
@@ -299,6 +303,10 @@ fun find_composition2 th1 th2 = let
 
 val SPEC_COMPOSE = find_composition2;    
 
+(*
+val (_,(th1,_,_),_) = (hd o tl o tl) thms
+val (_,(th2,_,_),_) = (hd o tl o tl o tl) thms
+*)
 
 
 (* ------------------------------------------------------------------------------ *)
@@ -600,6 +608,24 @@ fun extract_next_subcomponent thms = let
 (* Prove that code executes a HOL function                                        *)
 (* ------------------------------------------------------------------------------ *)
 
+fun unhide_pre_elements thms tools = let
+  val (_,hide_th,_) = tools 
+  val sts = (fst o dest_eq o concl o SPEC_ALL) hide_th
+  fun show_pre_for_thm (th,loop) = let 
+    val (_,p,_) = spec_post_and_pre th th
+    val xs = filter (fn tm => can dest_sep_hide tm andalso (not (tm = sts))) p 
+    fun show_pre (tm,th) = let
+      val th = CONV_RULE (PRE_CONV (MOVE_OUT_CONV tm)) th
+      val th = RW [GSYM SPEC_HIDE_PRE] th
+      val (_,p,_) = spec_post_and_pre (SPEC_ALL th) (SPEC_ALL th)
+      val v = mk_var(name_for_abbrev (last p),(type_of o fst o dest_forall o concl) th)
+      val th = SPEC v th
+      in th end handle HOL_ERR e => th
+    val th = foldr show_pre th (map dest_sep_hide xs)
+    in (th,loop) end
+  val thms = map show_pre_for_thm thms
+  in thms end;
+
 val INSERT_INSERT_UNION = prove(
   ``x INSERT y INSERT s = {x} UNION (y INSERT s)``,
   REWRITE_TAC [GSYM INSERT_SING_UNION]);
@@ -638,10 +664,11 @@ fun fill_preconditions thms = let
   val thms = map fix_code thms
   in thms end;
    
-fun get_input_list def = (cdr o cdr o car o concl o SPEC_ALL) def handle e => ``()``;
+fun get_input_list def = 
+  (cdr o cdr o car o snd o dest_conj o concl o SPEC_ALL) def handle e => ``()``;
 
 fun get_output_list def = let
-  val t = (tm2ftree o snd o dest_eq o concl o SPEC_ALL) def
+  val t = (tm2ftree o snd o dest_eq o snd o dest_conj o concl o SPEC_ALL) def
   fun ftree2res (FUN_VAL tm) = [tm]
     | ftree2res (FUN_IF (tm,x,y)) = ftree2res x @ ftree2res y
     | ftree2res (FUN_LET (tm,tn,x)) = ftree2res x 
@@ -652,8 +679,8 @@ fun get_output_list def = let
 fun hide_pre_post_elements thms def tools = let
   val (_,_,pc) = tools
   val f = map (replace_char #"'" "") o map (fst o dest_var) 
-  val in_list = (f o dest_tuple o get_input_list o UNDISCH) def
-  val out_list = (f o dest_tuple o get_output_list o UNDISCH) def
+  val in_list = (f o dest_tuple o get_input_list) def
+  val out_list = (f o dest_tuple o get_output_list) def
   fun hide (f:term->thm->thm) (tm,th) = if tm = pc then th else f tm th
   fun hide_elements (th,loop) = let
     val (q,p,ty) = spec_post_and_pre th th
@@ -695,11 +722,24 @@ fun get_pre_post_terms thms def = let
            mk_comb(mk_comb(v,``df:word32 set``),``f:word32->word32``)
          else mk_comb(car tm,mk_var(name_for_abbrev tm,type_of (cdr tm))) end
   val q = map process_post q
-  val pre_tm = pairSyntax.list_mk_pabs([get_input_list (UNDISCH def)],list_mk_star p ty)
-  val post_tm = pairSyntax.list_mk_pabs([get_output_list (UNDISCH def)],list_mk_star q ty)
+  val pre_tm = pairSyntax.list_mk_pabs([get_input_list def],list_mk_star p ty)
+  val post_tm = pairSyntax.list_mk_pabs([get_output_list def],list_mk_star q ty)
   in (pre_tm,post_tm) end;
 
+fun CASES_ON_COND_TAC (hyps,goal) = let
+  val (b,_,_) = dest_cond (find_term is_cond goal)
+  val th = GSYM (ISPEC b CONTAINER_def)
+  in (PURE_ONCE_REWRITE_TAC [th] 
+      THEN Cases_on [ANTIQUOTE (snd (dest_eq (concl th)))]
+      THEN PURE_ASM_REWRITE_TAC []
+      THEN REPEAT (POP_ASSUM MP_TAC)
+      THEN PURE_REWRITE_TAC [CONTAINER_def]
+      THEN REPEAT STRIP_TAC THEN SIMP_TAC std_ss []
+      THEN REPEAT (POP_ASSUM MP_TAC) THEN SIMP_TAC std_ss []) (hyps,goal) end;
+
 fun prove_correspondence tools def thms = let
+  (* unhide all preconditions except status bits *)
+  val thms = unhide_pre_elements thms tools 
   (* make sure all preconditions mention the same resources *)
   val thms = fill_preconditions thms
   (* hide irrelevant pre and post elements *)  
@@ -710,10 +750,12 @@ fun prove_correspondence tools def thms = let
   val (pre_tm,post_tm) = get_pre_post_terms thms def
   (* construct the spec *)
   val conv = SIMP_CONV (bool_ss++tailrec_top_ss()) []
-  val temp = (snd o dest_eq o concl o conv o fst o dest_imp o concl) def
+  val temp = (snd o dest_eq o concl o conv o cdr o car o fst o dest_conj o concl) def
+  val temp2 = (snd o dest_eq o concl o conv o cdr o car o snd o dest_conj o concl) def
   val xs = list_dest dest_comb temp   
-  val th = ISPEC (el 3 xs) (ISPEC (el 2 xs) SPEC_TAILREC)
-  val th = SPECL [el 4 xs, el 5 xs] th
+  val ys = list_dest dest_comb temp2   
+  val th = ISPEC (el 3 ys) (ISPEC (el 2 ys) SPEC_TAILREC)
+  val th = SPECL [el 3 xs, el 4 xs] th
   val th = ISPECL [pre_tm,post_tm] th
   val th = SIMP_RULE (bool_ss++tailrec_reverse_ss()) [] th
   val (m,_,c,_) = (dest_spec o concl o fst o hd) thms  
@@ -730,9 +772,12 @@ fun prove_correspondence tools def thms = let
     MATCH_MP_TAC th THEN STRIP_TAC THEN SIMP_TAC bool_ss [FORALL_PROD]
     THEN SIMP_TAC (std_ss++tailrec_top_ss()) [LET_DEF]
     THEN SIMP_TAC (std_ss++tailrec_part_ss()) [LET_DEF]
+    THEN REPEAT STRIP_TAC THEN REPEAT (POP_ASSUM MP_TAC)
+    THEN REPEAT CASES_ON_COND_TAC
     THEN CONV_TAC (DEPTH_CONV FORCE_PBETA_CONV)
-    THEN SIMP_TAC std_ss [LET_DEF] THEN METIS_TAC rw)
-  val result = SPEC ((cdr o fst o dest_imp o concl) def) result
+    THEN SIMP_TAC std_ss [LET_DEF,FST,SND]
+    THEN REPEAT STRIP_TAC THEN METIS_TAC rw)
+  val result = SPEC ((cdr o cdr o car o fst o dest_conj o concl) def) result
   val result = SIMP_RULE std_ss [GSYM SPEC_MOVE_COND] result
   in result end
 
@@ -743,11 +788,17 @@ fun prove_correspondence tools def thms = let
 
 fun decompil_part tools name thms = let
   val (tm1,tm2,thms) = extract_function name thms tools []
+  val _ = print "Defining tail-recursion\n\n"
+  val _ = print_term tm1
+  val _ = print "\n\nwith side condition\n\n"
+  val _ = print_term tm2
+  val _ = print "\n\n"
   val def = tailrec_define tm1 tm2 
   val (_,code_length,_) = hd thms
   val code_exit = if length (filter (fn (x,y,z) => z = NONE) thms) = 0 
                   then SOME code_length else NONE
   val thms = map (fn (x,y,z) => (RW [WORD_ADD_0] (UNABBREV_ALL x), z = SOME 0)) thms 
+  val _ = print "Proving theorem relating code with function.\n"
   val res = prove_correspondence tools def thms
   in (def,(res,code_length,code_exit)) end;
 
@@ -758,20 +809,22 @@ fun prepare_for_reuse n (th,i,j) = let
 fun decompile (tools :decompiler_tools) name (qcode :term quotation) = let
   val code = quote_to_hex_list qcode
   val thms = derive_individual_specs tools code
+  val defs = TRUTH
+  val index = 1
   fun decompile_all_parts thms defs index = let
     val (thmsi,thms,thmsj) = extract_next_subcomponent thms
     val is_last = length (thmsi @ thmsj) = 0
     val part_name = if is_last then name else name ^ int_to_string index
     val index = index + 1        
-
     val (def,thmsx) = decompil_part tools part_name thms  
-    val defs = def :: defs
+    val defs = REWRITE_RULE [GSYM CONJ_ASSOC] (CONJ def defs)
     val (n,_,_) = hd thms 
     val thms = thmsi @ [prepare_for_reuse n thmsx] @ thmsj
-    val (result,_,_) = thmsx
-    in if is_last then (result,defs)
+    in if is_last then (thmsx,defs)
        else decompile_all_parts thms defs index end
-  in decompile_all_parts thms [] 1 end;
+  val ((result,i,j),defs) = decompile_all_parts thms defs index
+  val _ = decompiler_memory := (name,(result,i,j)) :: !decompiler_memory 
+  in (result,defs) end;
 
 val decompile_arm  = decompile arm_tools
 val decompile_ppc  = decompile ppc_tools

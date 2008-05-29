@@ -7,13 +7,13 @@ open tailrecTheory;
 val car = fst o dest_comb;
 val cdr = snd o dest_comb;
 
-val tailrec_simpset = ref (rewrites [TAILREC_NONREC]);  
-val tailrec_top_simpset = ref (rewrites []);  
-val tailrec_part_simpset = ref (rewrites [TAILREC_NONREC]);  
+val tailrec_simpset         = ref (rewrites []);  
+val tailrec_top_simpset     = ref (rewrites []);  
+val tailrec_part_simpset    = ref (rewrites []);  
 val tailrec_reverse_simpset = ref (rewrites []); 
-fun tailrec_ss() = !tailrec_simpset; 
-fun tailrec_top_ss() = !tailrec_top_simpset; 
-fun tailrec_part_ss() = !tailrec_part_simpset; 
+fun tailrec_ss()         = !tailrec_simpset; 
+fun tailrec_top_ss()     = !tailrec_top_simpset; 
+fun tailrec_part_ss()    = !tailrec_part_simpset; 
 fun tailrec_reverse_ss() = !tailrec_reverse_simpset; 
 
 datatype ftree_type = 
@@ -64,10 +64,11 @@ fun tailrec_define tm side_tm = let
   val input_type = type_of (cdr lhs)  
   val output_type = type_of lhs  
   val name = (fst o dest_var o car) lhs handle e => (fst o dest_const o car) lhs  
-  val guard = ftree2tm (format_ftree (mk_guard is_rec) f)
-  val guard = (cdr o concl o SIMP_CONV bool_ss []) guard handle e => guard
+  val guard_tm = ftree2tm (format_ftree (mk_guard is_rec) f)
+  val guard_tm = (cdr o concl o SIMP_CONV bool_ss []) guard_tm handle e => guard_tm
   val f1 = format_ftree (mk_branch (not o is_rec) (mk_arb input_type) cdr) f
   val f2 = format_ftree (mk_branch (is_rec) (mk_arb output_type) I) f
+  val guard_tm = if is_arb (ftree2tm (pull_arb f1)) then ``F:bool`` else guard_tm
   (* perform definitions *)
   fun do_define fun_name b = let
     val fv = mk_var(fun_name,mk_type("fun",[type_of (cdr lhs),type_of b]))
@@ -80,33 +81,37 @@ fun tailrec_define tm side_tm = let
       in Define [ANTIQUOTE fv] end   
   val step = do_define (name^"_step") (ftree2tm (pull_arb f1))
   val base = do_define (name^"_base") (ftree2tm (pull_arb f2))
-  val guard = do_guard_define (name^"_guard") guard
+  val guard = do_guard_define (name^"_guard") guard_tm
   val side = do_define (name^"_side") side_tm
-  val def = ``TAILREC:('a->'a)->('a->'b)->('a->bool)->('a->bool)->'a->'b``
+  val def = ``TAILREC:('a->'a)->('a->'b)->('a->bool)->'a->'b``
   val def = inst [``:'a``|->input_type,``:'b``|->output_type] def
-  val pre_def = ``TAILREC_PRE:('a->'a)->('a->'b)->('a->bool)->('a->bool)->'a->bool``
-  val pre_def = inst [``:'a``|->input_type,``:'b``|->output_type] pre_def
+  val pre_def = ``TAILREC_PRE:('a->'a)->('a->bool)->('a->bool)->'a->bool``
+  val pre_def = inst [``:'a``|->input_type] pre_def
   fun select i = (car o cdr o car o concl o SPEC_ALL) i 
                  handle e => (cdr o car o concl o SPEC_ALL) i
   val hh = mk_comb(mk_comb(mk_comb(def,select step),select base),select guard)
-  val hh = mk_comb(hh,select side) (*mk_abs(mk_var("x",input_type),``T``))*)
   val hh = mk_eq(mk_var(name,type_of hh),hh)  
-  val pre_hh = mk_comb(mk_comb(mk_comb(pre_def,select step),select base),select guard)
-  val pre_hh = mk_comb(pre_hh,select side)
+  val pre_hh = mk_comb(mk_comb(mk_comb(pre_def,select step),select guard),select side)
   val pre_hh = mk_eq(mk_var(name^"_pre",type_of pre_hh),pre_hh)  
   val pre_f_def = Define [ANTIQUOTE pre_hh]  
   val f_def = Define [ANTIQUOTE hh]  
   (* descriptive theorem *)
   val goal = subst[car lhs |-> (cdr o car o concl o SPEC_ALL) f_def] tm
-  val goal = mk_imp(mk_comb((cdr o car o concl o SPEC_ALL) pre_f_def,cdr lhs),goal)
-  val th = prove(goal,    
-    REWRITE_TAC [pre_f_def] THEN STRIP_TAC    
-    THEN CONV_TAC (RATOR_CONV (REWRITE_CONV [f_def]))
-    THEN IMP_RES_TAC TAILREC_THM THEN ASM_REWRITE_TAC []
-    THEN REPEAT (POP_ASSUM (K ALL_TAC))
-    THEN FULL_SIMP_TAC std_ss [base,step,guard,f_def,LET_DEF]
+  val pre = mk_comb((cdr o car o concl o SPEC_ALL) pre_f_def,cdr lhs)
+  val pre_th = SPECL [select step,select guard,select side,cdr lhs] 
+                 (INST_TYPE [``:'a``|->input_type] TAILREC_PRE_THM)
+  val pre_th = REWRITE_RULE [GSYM pre_f_def] pre_th
+  val pre_th = if guard_tm = ``F:bool`` then SIMP_RULE bool_ss [guard,side] pre_th else pre_th
+  val th = prove(goal,   
+(*
+  set_goal([],goal)
+*) 
+    CONV_TAC (RATOR_CONV (REWRITE_CONV [f_def]))
+    THEN ONCE_REWRITE_TAC [TAILREC_THM] 
+    THEN FULL_SIMP_TAC (std_ss++helperLib.pbeta_ss) [base,step,guard,f_def,LET_DEF]
     THEN Cases_on [ANTIQUOTE ((fst o dest_eq o concl o SPEC_ALL) guard)]
-    THEN FULL_SIMP_TAC std_ss [base,step,guard,f_def,LET_DEF])
+    THEN FULL_SIMP_TAC (std_ss++helperLib.pbeta_ss) [base,step,guard,f_def,LET_DEF])
+  val th = CONJ pre_th th
   (* update simpsets *)
   val top = rewrites [f_def,pre_f_def]
   val part = rewrites [step,base,guard,side]
@@ -127,29 +132,17 @@ fun TAILREC_EQ_TAC () = REPEAT (
     [lemma2,FUN_EQ_THM,pairTheory.FORALL_PROD,LET_DEF])
 
 (*
-       
-val tm = ``
-  l(x,y) = let y = y + 1 in
-           let (x,y) = (x + y - 7,FST (y,x)) in
-             (x,y)``
 
-val side_tm = ``x + y < 5``
-
+open wordsTheory;
 
 val tm = ``
-  k(x,y) = if x < 5 then x else
-             let y = y + 1 in
-             let (x,y) = (x + y - 7,FST (y,x)) in
-               k(x,y)``
+  test1 (r1:word32,r2:word32,dm:word32 set,m:word32->word32) =
+    if r1 = 0w then (r1,r2,dm,m) else
+      let r1 = m r1 in
+      let r2 = r2 + 1w in
+        test1 (r1,r2,dm,m)``
 
-val side_tm = ``T``
-
-val th = tailrec_define tm side_tm
-
-  SIMP_CONV (std_ss++tailrec_ss()) []``l(x,y)``
-
-
-
+val side_tm = ``ALIGNED (r1:word32)``
 
 *)
 

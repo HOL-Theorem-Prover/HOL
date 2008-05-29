@@ -178,15 +178,15 @@ val SPEC_REFL = store_thm("SPEC_REFL",
   \\ Q.EXISTS_TAC `0` \\ FULL_SIMP_TAC bool_ss [rel_sequence_def]);
 
 val SPEC_TAILREC = store_thm("SPEC_TAILREC",
-  ``!f1 f2 g p res res' c m.
-      (!x. TAILREC_PRE f1 (f2:'a->'b) g p x /\ p x /\ g x ==> 
+  ``!f1 (f2:'a->'b) g p res res' c m.
+      (!x. TAILREC_PRE f1 g p x /\ p x /\ g x ==> 
            SPEC m (res x) c (res (f1 x))) /\
-      (!x. TAILREC_PRE f1 (f2:'a->'b) g p x /\ p x /\ ~g x ==> 
+      (!x. TAILREC_PRE f1 g p x /\ p x /\ ~g x ==> 
            SPEC m (res x) c (res' (f2 x))) ==>
-      (!x. TAILREC_PRE f1 (f2:'a->'b) g p x ==> 
-           SPEC m (res x) c (res' (TAILREC f1 f2 g p x)))``,
+      (!x. TAILREC_PRE f1 g p x ==> 
+           SPEC m (res x) c (res' (TAILREC f1 f2 g x)))``,
   NTAC 9 STRIP_TAC THEN HO_MATCH_MP_TAC TAILREC_PRE_INDUCT
-  THEN METIS_TAC [TAILREC_def,UNION_IDEMPOT,SPEC_COMPOSE]);
+  THEN METIS_TAC [TAILREC_THM,UNION_IDEMPOT,SPEC_COMPOSE]);
 
 
 val _ = export_theory();

@@ -19,48 +19,25 @@ val (arm_th,arm_defs) = decompile_arm "arm_length" `
 
 val llist_def = Define `
   (llist [] (a:word32,dm,m:word32->word32) = (a = 0w)) /\
-  (llist (x::xs) (a,dm,m) = ~(a = 0w) /\  ALIGNED a /\ {a;a+4w} SUBSET dm /\
+  (llist (x::xs) (a,dm,m) = ~(a = 0w) /\ (a && 3w = 0w) /\ {a;a+4w} SUBSET dm /\
      ?a'. (m a = a') /\ (m (a+4w) = x) /\ llist xs (a',dm,m))`;
-
-val llist_11 = prove(   
-  ``!xs ys a m. llist xs (a,dm,m) ==> llist ys (a,dm,m) ==> (xs = ys)``,
-  Induct THEN1 (Cases THEN SIMP_TAC bool_ss [llist_def])
-  THEN STRIP_TAC THEN Cases THEN SIMP_TAC bool_ss [llist_def,CONS_11] THEN METIS_TAC []);
 
 (* verification proof *)
 
-val list_fun_pre_LEMMA = (SIMP_RULE std_ss [] o prove) (
-  ``(\(a,x,df,f). ?xs. llist xs (x,df,f)) (a,x,df,f) ==> arm_length1_pre (a,x,df,f)``,
-  SIMP_TAC (bool_ss++tailrec_ss()) [] 
-  THEN HO_MATCH_MP_TAC TAILREC_PRE_IMP
-  THEN FULL_SIMP_TAC (std_ss++tailrec_ss()) [pairTheory.FORALL_PROD,LET_DEF]
-  THEN STRIP_TAC THEN1 
-   (NTAC 4 STRIP_TAC THEN Cases_on `xs`
-    THEN FULL_SIMP_TAC bool_ss [llist_def,addressTheory.ALIGNED_def,INSERT_SUBSET])   
-  THEN Q.EXISTS_TAC `(\(a,x,dx,xs). @n. ?ys. llist ys (x,dx,xs) /\ (LENGTH ys = n))`
-  THEN SIMP_TAC std_ss [] THEN REPEAT STRIP_TAC
-  THEN1 (Cases_on `xs` THEN FULL_SIMP_TAC bool_ss [llist_def] THEN METIS_TAC [])
-  THEN `!ys. llist ys (p_1',p_1'',p_2) = (ys = xs)` by METIS_TAC [llist_11]
-  THEN Cases_on `xs` THEN FULL_SIMP_TAC bool_ss [llist_def]
-  THEN `!ys. llist ys (p_2 p_1',p_1'',p_2) = (ys = t)` by METIS_TAC [llist_11]
-  THEN ASM_SIMP_TAC std_ss [LENGTH,ADD1]);
-
-val list_fun_thm = prove(
-  ``!ys a y dm m. llist ys (a,dm,m) ==> 
+val arm_length1_thm = prove(
+  ``!ys a y dm m. llist ys (a,dm,m) ==> arm_length1_pre (y,a,dm,m) /\
                   (arm_length1 (y,a,dm,m) = (y + n2w (LENGTH ys),0w,dm,m))``,
-  Induct THEN SIMP_TAC (bool_ss++tailrec_ss()) [] THEN ONCE_REWRITE_TAC [TAILREC_def]
-  THEN SIMP_TAC (bool_ss++tailrec_reverse_ss()) []
-  THEN SIMP_TAC std_ss [] THEN REPEAT STRIP_TAC
-  THEN `arm_length1_pre (y,a,dm,m)` by METIS_TAC [list_fun_pre_LEMMA]
-  THEN FULL_SIMP_TAC (bool_ss++tailrec_ss()) [llist_def,LENGTH,WORD_ADD_0,LET_DEF,
-       ADD1,GSYM WORD_ADD_ASSOC,word_add_n2w, AC ADD_ASSOC ADD_COMM]);    
+  Induct THEN ONCE_REWRITE_TAC [arm_defs]
+  THEN SIMP_TAC (bool_ss++tailrec_part_ss()) [llist_def,LENGTH,WORD_ADD_0,LET_DEF,EMPTY_SUBSET, 
+    INSERT_SUBSET, ONCE_REWRITE_RULE [ADD_COMM] ADD1, GSYM word_add_n2w, WORD_ADD_ASSOC] 
+  THEN METIS_TAC [])
 
 val arm_length_thm = prove(
-  ``llist ys (a,dm,m) ==> 
-      arm_length_pre (a,dm,m) /\ (arm_length (a,dm,m) = (n2w (LENGTH ys),0w,dm,m))``,
-  SIMP_TAC (bool_ss++tailrec_ss()) [] 
-  THEN SIMP_TAC (bool_ss++tailrec_reverse_ss()++helperLib.pbeta_ss) [LET_DEF,list_fun_thm]
-  THEN METIS_TAC [WORD_ADD_0,list_fun_thm,list_fun_pre_LEMMA,pairTheory.PAIR]);
+  ``!ys y dm m. llist ys (y,dm,m) ==> arm_length_pre (y,dm,m) /\
+                (arm_length (y,dm,m) = (n2w (LENGTH ys),0w,dm,m))``,
+  ONCE_REWRITE_TAC [arm_defs]
+  THEN SIMP_TAC (std_ss++helperLib.pbeta_ss) [LET_DEF]
+  THEN METIS_TAC [arm_length1_thm,WORD_ADD_0]);
 
 (* combining the verification proof with the generated theorem *)
 

@@ -185,12 +185,13 @@ fun FORCE_PBETA_CONV tm = let
 
 val pbeta_ss = conv2ssfrag "pbeta_conv" FORCE_PBETA_CONV ``(f:'a # 'b->'c) x``;
 
-fun INST_SPEC spec_th abs_thm = let
+fun INST_SPEC spec_th abs_th = let
+  val abs_th = SPEC_ALL abs_th
   val th = SIMP_RULE (bool_ss++sep_cond_ss) [progTheory.SPEC_MOVE_COND] spec_th
   val tm = (fst o dest_imp o concl) th
-  val tx = find_term (can (fn t => match_term t tm)) (concl abs_thm)
+  val tx = find_term (can (fn t => match_term t tm)) (concl abs_th)
   val (i,t) = match_term tx tm
-  val thi = INST i (INST_TYPE t abs_thm)
+  val thi = INST i (INST_TYPE t abs_th)
   val th = MP th (el 1 (CONJUNCTS (UNDISCH thi)))
   val thi = el 2 (CONJUNCTS (UNDISCH thi))  
   val th = CONV_RULE (UNBETA_CONV ((fst o dest_eq o concl) thi) THENC RAND_CONV (fn x => thi)) th
