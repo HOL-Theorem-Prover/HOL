@@ -235,8 +235,6 @@ val RUN_CP_def = Define`
 (*     interrupts (fiq, irq)                                                  *)
 (* -------------------------------------------------------------------------- *)
 
-val aligned_def = Define `aligned (x:word32) = (x && 3w = 0w)`;
-val addr32_def  = Define `addr32 (x:word30) = (w2w x << 2):word32`;
 val addr30_def  = Define `addr30 (x:word32) = (31 >< 2) x`;
 
 val NEXT_ARM_SYS_def = Define`
