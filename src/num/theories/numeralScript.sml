@@ -778,6 +778,48 @@ val DIV_2EXP = Q.store_thm("DIV_2EXP",
        DIV2_def, DIV_2EXP_def, DIV_DIV_DIV_MULT, ZERO_LT_TWO, ZERO_LT_TWOEXP]));
 
 (* ----------------------------------------------------------------------
+    Rewrites to optimise calculations with powers of 2
+   ---------------------------------------------------------------------- *)
+
+val texp_help_def = new_recursive_definition {
+  name = "texp_help_def",
+  def = ``(texp_help 0 acc = BIT2 acc) /\
+          (texp_help (SUC n) acc = texp_help n (BIT1 acc))``,
+  rec_axiom = TypeBase.axiom_of ``:num``};
+
+val texp_help_thm = store_thm(
+  "texp_help_thm",
+  ``!n a. texp_help n a = 2 * (a + 1) * 2 EXP n``,
+  INDUCT_TAC THEN SRW_TAC [][texp_help_def] THENL [
+    SRW_TAC [][EXP, MULT_CLAUSES, ONE, TWO, ADD_CLAUSES, BIT2],
+    SRW_TAC [][EXP, MULT_ASSOC] THEN ONCE_REWRITE_TAC [MULT_COMM] THEN
+    SRW_TAC [][EQ_MULT_LCANCEL, EXP_EQ_0] THEN DISJ2_TAC THEN
+    SRW_TAC [][ONE, TWO, MULT_CLAUSES, BIT1, ADD_CLAUSES]
+  ]);
+
+val texp_help0 = store_thm(
+  "texp_help0",
+  ``texp_help n 0 = 2 ** (n + 1)``,
+  SRW_TAC [][texp_help_thm, ADD_CLAUSES, MULT_CLAUSES, EXP_ADD, EXP_1,
+             MULT_COMM]);
+
+val numeral_texp_help = store_thm(
+  "numeral_texp_help",
+  ``(texp_help ZERO acc = BIT2 acc) /\
+    (texp_help (BIT1 n) acc = texp_help (PRE (BIT1 n)) (BIT1 acc)) /\
+    (texp_help (BIT2 n) acc = texp_help (BIT1 n) (BIT1 acc))``,
+  SRW_TAC [][texp_help_def, BIT1, BIT2, ADD_CLAUSES, PRE, ALT_ZERO]);
+
+val TWO_EXP_THM = store_thm(
+  "TWO_EXP_THM",
+  ``(2 EXP 0 = 1) /\
+    (2 EXP (NUMERAL (BIT1 n)) = NUMERAL (texp_help (PRE (BIT1 n)) ZERO)) /\
+    (2 EXP (NUMERAL (BIT2 n)) = NUMERAL (texp_help (BIT1 n) ZERO))``,
+  SRW_TAC [][texp_help0, EXP, ALT_ZERO] THEN
+  SRW_TAC [][NUMERAL_DEF, EXP_BASE_INJECTIVE, numeral_lt] THEN
+  SRW_TAC [][BIT1, BIT2, PRE, ADD_CLAUSES, ALT_ZERO]);
+
+(* ----------------------------------------------------------------------
     hide the internal constants from this theory so that later name-
     spaces are not contaminated.   Constants can still be found by using
     numeral$cname syntax.
@@ -785,7 +827,7 @@ val DIV_2EXP = Q.store_thm("DIV_2EXP",
 
 val _ = app
           (fn s => remove_ovl_mapping s {Name = s, Thy = "numeral"})
-          ["iZ", "iiSUC", "iDUB", "iSUB", "iMOD_2EXP", "iSQR"]
+          ["iZ", "iiSUC", "iDUB", "iSUB", "iMOD_2EXP", "iSQR", "texp_help"]
 
 (*---------------------------------------------------------------------------*)
 (* Filter out the definitions and theorems needed to generate ML.            *)
