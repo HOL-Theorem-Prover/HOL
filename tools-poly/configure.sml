@@ -31,25 +31,23 @@
 
 val _ = PolyML.print_depth 0;
 
-val poly = "~/polyml.5.1/bin/poly";
-val polymllibdir = "/Users/so294/polyml.5.1/lib";
-(*
-val holdir :string  =
-
-val OS :string      =
-                           (* Operating system; choices are:
-                                "linux", "solaris", "unix", "macosx",
-                                "winNT"   *)
+(* the poly-includes.ML file must include
+     val poly = "<path to poly executable>"
+     val polymllibdir = "<path to directory containing poly's lib files>"
 *)
-
+val _ = if OS.FileSys.access ("poly-includes.ML", [OS.FileSys.A_READ]) then
+          use "poly-includes.ML"
+        else
+          (print "No poly-includes.ML file!\n";
+           OS.Process.exit OS.Process.failure)
 
 val CC:string       = "gcc";      (* C compiler                       *)
 val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
 
-fun compile systeml exe obj = 
-  (systeml [CC, "-o", exe, obj, "-L" ^ polymllibdir, 
+fun compile systeml exe obj =
+  (systeml [CC, "-o", exe, obj, "-L" ^ polymllibdir,
             "-lpolymain", "-lpolyml"];
    OS.FileSys.remove obj);
 
@@ -262,7 +260,7 @@ local
                               raise (Fail "")
                             else ()
   val toolsdir = fullPath [holdir, "tools-poly"]
-  val lexdir = fullPath [toolsdir, "mllex"]
+  val lexdir = fullPath [holdir, "tools", "mllex"]
   val yaccdir = fullPath [toolsdir, "mlyacc"]
   val qfdir = fullPath [toolsdir, "quote-filter"]
   val hmakedir = fullPath [toolsdir, "Holmake"]
@@ -271,7 +269,7 @@ local
   val qfbin = fullPath [holdir, "bin", "unquote"]
   val lexer = fullPath [lexdir, "mllex.exe"]
   val yaccer = fullPath [yaccdir, "src", "mlyacc.exe"]
-  fun copyfile from to = 
+  fun copyfile from to =
     let val instrm = BinIO.openIn from
         val ostrm = BinIO.openOut to
         val v = BinIO.inputAll instrm
@@ -290,20 +288,19 @@ val _ = remove buildbin;
 val _ = remove lexer;
 val _ = remove yaccer;
 val _ = remove qfbin;
-val _ = remove (fullPath [hmakedir, "Lexer.lex.sml"]);  
-val _ = remove (fullPath [hmakedir, "Parser.grm.sig"]);  
-val _ = remove (fullPath [hmakedir, "Parser.grm.sml"]);  
+val _ = remove (fullPath [hmakedir, "Lexer.lex.sml"]);
+val _ = remove (fullPath [hmakedir, "Parser.grm.sig"]);
+val _ = remove (fullPath [hmakedir, "Parser.grm.sml"]);
 
 
 (* ----------------------------------------------------------------------
     Compile our local copy of mllex
    ---------------------------------------------------------------------- *)
-val _ = 
+val _ =
   (echo "Making tools-poly/mllex/mllex.exe.";
    FileSys.chDir lexdir;
    system_ps (POLY ^ " < poly-mllex.ML");
-   compile systeml lexer "mllex.o";
-   copyfile lexer "../../tools/mllex/mllex.exe";
+   compile systeml "mllex.exe" "mllex.o";
    mk_xable "../../tools/mllex/mllex.exe";
    FileSys.chDir cdir)
    handle _ => die "Failed to build mllex.";
@@ -311,7 +308,7 @@ val _ =
 (* ----------------------------------------------------------------------
     Compile our local copy of mlyacc
    ---------------------------------------------------------------------- *)
-val _ = 
+val _ =
   (echo "Making tools-poly/mlyacc/mlyacc.exe.";
    FileSys.chDir yaccdir;
    FileSys.chDir "src";
@@ -394,13 +391,13 @@ val _ =
  in
    (* "unquote" scripts use the unquote executable to provide nice
       handling of double-backquote characters *)
-   emit_hol_unquote_script target "hol.builder0" 
+   emit_hol_unquote_script target "hol.builder0"
      ["prelude.ML"];
-   emit_hol_unquote_script target_boss "hol.builder" 
+   emit_hol_unquote_script target_boss "hol.builder"
      ["prelude.ML", "prelude2.ML"];
-   emit_hol_script (target ^ ".noquote") "hol.builder0" 
+   emit_hol_script (target ^ ".noquote") "hol.builder0"
      ["prelude.ML"];
-   emit_hol_script (target_boss ^ ".noquote") "hol.builder" 
+   emit_hol_script (target_boss ^ ".noquote") "hol.builder"
      ["prelude.ML", "prelude2.ML"]
  end;
 
