@@ -261,7 +261,7 @@ local
                             else ()
   val toolsdir = fullPath [holdir, "tools-poly"]
   val lexdir = fullPath [holdir, "tools", "mllex"]
-  val yaccdir = fullPath [toolsdir, "mlyacc"]
+  val yaccdir = fullPath [holdir, "tools", "mlyacc"]
   val qfdir = fullPath [toolsdir, "quote-filter"]
   val hmakedir = fullPath [toolsdir, "Holmake"]
   val hmakebin = fullPath [holdir, "bin", "Holmake"]
@@ -316,7 +316,6 @@ val _ =
    FileSys.chDir yaccdir;
    system_ps (POLY ^ " < poly-mlyacc.ML");
    compile systeml yaccer "mlyacc.o";
-   copyfile yaccer "../../tools/mlyacc/src/mlyacc.exe";
    mk_xable "../../tools/mlyacc/src/mlyacc.exe";
    FileSys.chDir cdir)
    handle _ => die "Failed to build mlyacc.";

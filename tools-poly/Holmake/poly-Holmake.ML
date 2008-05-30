@@ -5,7 +5,7 @@ val _ = use "poly/poly-init.ML";
 
 structure BasicIO = SML90;
 
-fun useH f = 
+fun useH f =
   (use ("Holmake/" ^ f ^ ".sig");
    use ("Holmake/" ^ f ^ ".sml"));
 
@@ -14,7 +14,7 @@ val _ = useH "internal_functions";
 val _ = useH "Holmake_types";
 val _ = useH "ReadHMF";
 
-fun u f = use ("mlyacc/mlyacclib/" ^ f ^ ".sml");
+fun u f = use ("../tools/mlyacc/mlyacclib/" ^ f ^ ".sml");
 val _ = u "MLY_base-sig";
 val _ = u "MLY_join";
 val _ = u "MLY_lrtable";
