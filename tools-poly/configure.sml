@@ -297,7 +297,7 @@ val _ = remove (fullPath [hmakedir, "Parser.grm.sml"]);
     Compile our local copy of mllex
    ---------------------------------------------------------------------- *)
 val _ =
-  (echo "Making tools-poly/mllex/mllex.exe.";
+  (echo "Making tools/mllex/mllex.exe.";
    FileSys.chDir lexdir;
    system_ps (POLY ^ " < poly-mllex.ML");
    compile systeml "mllex.exe" "mllex.o";
@@ -309,7 +309,7 @@ val _ =
     Compile our local copy of mlyacc
    ---------------------------------------------------------------------- *)
 val _ =
-  (echo "Making tools-poly/mlyacc/mlyacc.exe.";
+  (echo "Making tools/mlyacc/mlyacc.exe.";
    FileSys.chDir yaccdir;
    FileSys.chDir "src";
    systeml [lexer, "yacc.lex"];
