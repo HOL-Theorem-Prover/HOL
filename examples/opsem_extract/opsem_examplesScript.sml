@@ -9,27 +9,27 @@ open opsem_translatorLib integerTheory intLib arithmeticTheory;
 (* ====================================================================================== *)
 
 val (th,d_def) = time (DERIVE_SEP_TOTAL_SPEC "d") ``
-       (Seq (Assign "a" (Const 0i))
-            (While (Not (Equal (Var "n") (Const 0i)))
-                   (Seq (Assign "a" (Plus (Var "a") (Const 1i)))
-                        (Assign "n" (Sub (Var "n") (Const 2i))))))``;
+       (Seq (Assign "a" (Const 0))
+            (While (Not (Equal (Var "n") (Const 0)))
+                   (Seq (Assign "a" (Plus (Var "a") (Const 1)))
+                        (Assign "n" (Sub (Var "n") (Const 2))))))``;
 
 val d1_lemma = prove(
-  ``!n:num a. d_1_pre (a, 2 * (& n)) /\ (d_1 (a, 2 * (& n)) = ((& n) + a, 0))``,
+  ``!n:num a. d1_pre (a, 2 * (& n)) /\ (d1 (a, 2 * (& n)) = ((& n) + a, 0))``,
   Induct_on `n` THEN ONCE_REWRITE_TAC [d_def] 
   THEN1 ASM_SIMP_TAC int_ss [LET_DEF] 
   THEN ASM_SIMP_TAC std_ss [LET_DEF,INT,COOPER_PROVE ``(~(2 * & n + 2 = 0)) /\ (2*1 = 2)``,INT_LDISTRIB,
     ONCE_REWRITE_RULE [INT_ADD_COMM] INT_ADD_SUB] THEN COOPER_TAC);
 
 val d = prove(
-  ``!n a. EVEN n ==> (d(a,&n) = (&(n DIV 2), 0))``,
+  ``!n a. EVEN n ==> d_pre(a,&n) /\ (d(a,&n) = (&(n DIV 2), 0))``,
   SIMP_TAC std_ss [EVEN_EXISTS,d_def,LET_DEF] THEN REPEAT STRIP_TAC
   THEN ASM_SIMP_TAC std_ss [d1_lemma,ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV]
   THEN SIMP_TAC intLib.int_ss [SIMP_RULE (intLib.int_ss) [] d1_lemma]);
 
 
 (* ====================================================================================== *)
-(*  TRANSLATION EXAMPLES                                                                  *)
+(*  EXAMPLES WITH INTEGERS                                                                *)
 (* ====================================================================================== *)
 
 val (th,rw) = time (DERIVE_SEP_SPEC "AbsMinus") ``
@@ -141,6 +141,11 @@ val (th,rw) = time (DERIVE_SEP_SPEC "Ex1") ``
                                      (Plus (Var "result") (Var "i"))))
                                (Assign "result" (Var "k"))))))))))``;
 
+
+(* ====================================================================================== *)
+(*  EXAMPLES WITH LOOPS                                                                   *)
+(* ====================================================================================== *)
+
 val (th,rw) = time (DERIVE_SEP_SPEC "ConditionnalSum") ``
        (Seq (Assign "s" (Const 0))
           (Seq
@@ -215,6 +220,23 @@ val (th,SquareSum_def) = time (DERIVE_SEP_SPEC "SquareSum") ``
                 (Assign "Result" (Var "s")))))``;
 
 val th2 = SEP_SPEC_SEMANTICS th;
+
+
+(* ====================================================================================== *)
+(*  EXAMPLES WITH ARRAYS (AND LOOPS)                                                      *)
+(* ====================================================================================== *)
+
+val (th,Swap_def) = time (DERIVE_SEP_SPEC "Swap") ``
+       (Seq (Assign "temp" (Arr "a" (Var "i")))
+          (Seq (ArrayAssign "a" (Var "i") (Var "j"))
+               (ArrayAssign "a" (Var "j") (Var "temp"))))``;
+
+val (th,FindMin_def) = time (DERIVE_SEP_SPEC "FindMin") ``
+       (Seq (Assign "min" (Arr "a" (Var "j")))
+          (While (Less (Var "i") (Var "j"))
+             (Seq (Assign "j" (Sub (Var "j") (Const 1)))
+                  (Cond (Less (Arr "a" (Var "j")) (Var "min")) 
+                        (Assign "min" (Arr "a" (Var "j"))) Skip))))``;
 
 
 val _ = export_theory();

@@ -1,4 +1,4 @@
-(*=========================== newOpsem.ml =====================================
+(*==================== arrayOpsemScript.sml ===================================
 
 This file is an extension of the Melham-Camilleri opsem example
 distributed with HOL4 in the directory
@@ -12,6 +12,7 @@ The extensions are:
  1. New commands:
      - blocks with local variables (Local v c);
      - commands for runtime assertion checking (Assert p).
+     - arrays
 
  2. A small-step semantics proved equivalent to the original big-step
     semantics and a function, STEP, to run the small-step semantics;
@@ -112,116 +113,10 @@ could be proved, if needed.
      (!n. ?s2. RUN n c s1 = TIMEOUT s2) = 
      (!n. ?s2. STEP n ([c],s1) = ([],TIMEOUT s2))
 
-Here is an example: if absMinus (from Helene's University of Nice
-talk) is defined by:
-
-val absMinus =
-``Seq
-   (Assign "result" (Const 0))
-   (Seq
-     (Assign "k" (Const 0))
-     (Seq
-       (Cond (LessEq (Var "i") (Var "j")) 
-             (Assign "k" (Plus (Var "k") (Const 1))) 
-             Skip)
-       (Cond (And (Equal (Var "k") (Const 1)) (Not(Equal (Var "i") (Var "j"))))
-             (Assign "result" (Sub (Var "j") (Var "i")))
-             (Assign "result" (Sub (Var "i") (Var "j"))))))``;
-
-then executing symbolically with the big-step semantics:
-
-EVAL ``RUN 5 ^absMinus (FEMPTY |+ ("i",i) |+ ("j",j))``;
-> val it =
-    |- RUN 5
-         (Seq (Assign "result" (Const 0))
-            (Seq (Assign "k" (Const 0))
-               (Seq
-                  (Cond (LessEq (Var "i") (Var "j"))
-                     (Assign "k" (Plus (Var "k") (Const 1))) Skip)
-                  (Cond
-                     (And (Equal (Var "k") (Const 1))
-                        (Not (Equal (Var "i") (Var "j"))))
-                     (Assign "result" (Sub (Var "j") (Var "i")))
-                     (Assign "result" (Sub (Var "i") (Var "j")))))))
-         (FEMPTY |+ ("i",i) |+ ("j",j)) =
-       (if i <= j then
-          (if ~(i = j) then
-             RESULT
-               (FEMPTY |+ ("i",i) |+ ("j",j) |+ ("result",0) |+ ("k",0) |+
-                ("k",1) |+ ("result",j - i))
-           else
-             RESULT
-               (FEMPTY |+ ("i",i) |+ ("j",j) |+ ("result",0) |+ ("k",0) |+
-                ("k",1) |+ ("result",i - j)))
-        else
-          RESULT
-            (FEMPTY |+ ("i",i) |+ ("j",j) |+ ("result",0) |+ ("k",0) |+
-             ("result",i - j))) : thm
-
-but executing the same number of steps with the small-step semantics
-times out:
-
-EVAL ``STEP 5 ([^absMinus], (FEMPTY |+ ("i",i) |+ ("j",j)))``;
-> val it =
-    |- STEP 5
-         ([Seq (Assign "result" (Const 0))
-             (Seq (Assign "k" (Const 0))
-                (Seq
-                   (Cond (LessEq (Var "i") (Var "j"))
-                      (Assign "k" (Plus (Var "k") (Const 1))) Skip)
-                   (Cond
-                      (And (Equal (Var "k") (Const 1))
-                         (Not (Equal (Var "i") (Var "j"))))
-                      (Assign "result" (Sub (Var "j") (Var "i")))
-                      (Assign "result" (Sub (Var "i") (Var "j"))))))],
-          FEMPTY |+ ("i",i) |+ ("j",j)) =
-       ([Cond (LessEq (Var "i") (Var "j"))
-           (Assign "k" (Plus (Var "k") (Const 1))) Skip;
-         Cond
-           (And (Equal (Var "k") (Const 1))
-              (Not (Equal (Var "i") (Var "j"))))
-           (Assign "result" (Sub (Var "j") (Var "i")))
-           (Assign "result" (Sub (Var "i") (Var "j")))],
-        TIMEOUT (FEMPTY |+ ("i",i) |+ ("j",j) |+ ("result",0) |+ ("k",0))) : thm
-
-however, with a few more small steps we get the result:
-
-EVAL ``STEP 10 ([^absMinus], (FEMPTY |+ ("i",i) |+ ("j",j)))``;
-> val it =
-    |- STEP 10
-         ([Seq (Assign "result" (Const 0))
-             (Seq (Assign "k" (Const 0))
-                (Seq
-                   (Cond (LessEq (Var "i") (Var "j"))
-                      (Assign "k" (Plus (Var "k") (Const 1))) Skip)
-                   (Cond
-                      (And (Equal (Var "k") (Const 1))
-                         (Not (Equal (Var "i") (Var "j"))))
-                      (Assign "result" (Sub (Var "j") (Var "i")))
-                      (Assign "result" (Sub (Var "i") (Var "j"))))))],
-          FEMPTY |+ ("i",i) |+ ("j",j)) =
-       (if i <= j then
-          (if ~(i = j) then
-             ([],
-              RESULT
-                (FEMPTY |+ ("i",i) |+ ("j",j) |+ ("result",0) |+ ("k",0) |+
-                 ("k",1) |+ ("result",j - i)))
-           else
-             ([],
-              RESULT
-                (FEMPTY |+ ("i",i) |+ ("j",j) |+ ("result",0) |+ ("k",0) |+
-                 ("k",1) |+ ("result",i - j))))
-        else
-          ([],
-           RESULT
-             (FEMPTY |+ ("i",i) |+ ("j",j) |+ ("result",0) |+ ("k",0) |+
-              ("result",i - j)))) : thm
-
 =============================================================================*)
 
 (*===========================================================================*)
-(* Start of examples/ind_def/opsemScript.sml                                 *)
-(* (extended and modified for interative use)                                *)
+(* Start of text adapted from examples/ind_def/opsemScript.sml               *)
 (*===========================================================================*)
 
 (*===========================================================================*)
@@ -230,67 +125,134 @@ EVAL ``STEP 10 ([^absMinus], (FEMPTY |+ ("i",i) |+ ("j",j)))``;
 (* Camilleri.                                                                *)
 (*===========================================================================*)
 
-(* quietdec := true; (* turn off printing *)
-app load ["stringLib", "finite_mapTheory", "intLib"]; *)
+(* Stuff needed when running interactively
+quietdec := true; (* turn off printing *)
+app load ["stringLib", "finite_mapTheory", "intLib"];
 open HolKernel Parse boolLib bossLib 
      stringLib IndDefLib IndDefRules finite_mapTheory relationTheory;
-val _ = intLib.deprecate_int(); 
-(* quietdec := false; (* turn printing back on *) *)
+intLib.deprecate_int();
+quietdec := false; (* turn printing back on *)
+*)
+
+open HolKernel Parse boolLib bossLib 
+     stringLib IndDefLib IndDefRules finite_mapTheory relationTheory integerTheory;
+
+val _ = intLib.deprecate_int();
 
 val _ = new_theory "newOpsem";
+
+(* make infix ``$/`` equal to ``$DIV`` *)
+
+val DIV_AUX_def = xDefine "DIV_AUX" `m / n = m DIV n`;
+
+(*---------------------------------------------------------------------------*)
+(* A value is a scalar (number) or one-dimensional array                     *)
+(*---------------------------------------------------------------------------*)
+
+val _ =
+ Hol_datatype
+      `value = Scalar of int
+             | Array  of (int |-> int)`;
+
+val isScalar_def =
+ Define
+  `(isScalar(Scalar n) = T) /\ (isScalar(Array a) = F)`;
+
+val ScalarOf_def =
+ Define
+  `ScalarOf(Scalar n) = n`;
+
+val isArray_def =
+ Define
+  `(isArray(Array a) = T) /\ (isArray(Scalar n) = F)`;
+
+val ArrayOf_def =
+ Define
+  `ArrayOf(Array a) = a`;
 
 (*---------------------------------------------------------------------------*)
 (* Syntax of the programming language.					     *)
 (*                                                                           *)
 (* Program variables are represented by strings, and states are modelled by  *)
-(* finite maps from program variables to integers.	                     *)
+(* finite maps from program variables to values                              *)
 (*---------------------------------------------------------------------------*)
 
-val _ = type_abbrev("state", ``:string |-> int``);
+val _ = type_abbrev("state", ``:string |-> value``);
 
 (*---------------------------------------------------------------------------*)
-(* Natural number expressions and boolean expressions are defined by         *)
-(* datatypes with simple evaluation semantics. In the following proofs,      *)
-(* neval and beval don't end up playing a role.                              *)
+(* Integer (nexp), boolean (bexp) and array expressions (aexp)               *)
+(* are defined by datatypes with simple evaluation semantics.                *)
 (*---------------------------------------------------------------------------*)
 
 val _ = 
  Hol_datatype 
-      `nexp = Var of string 
-            | Const of int
-            | Plus of nexp => nexp
-            | Times of nexp => nexp
-            | Sub of nexp => nexp
-            | Div2 of nexp`;
+  `nexp = Var of string 
+        | Arr of string => nexp
+        | Const of int
+        | Plus of nexp => nexp
+        | Times of nexp => nexp
+        | Sub of nexp => nexp`;
 
 val _ = 
  Hol_datatype 
-      `bexp = Equal of nexp => nexp
-            | Less of nexp => nexp
-            | LessEq of nexp => nexp
-            | And of bexp => bexp
-            | Or of bexp => bexp
-            | Not of bexp
-            | Even of nexp`;
+  `bexp = Equal of nexp => nexp
+        | Less of nexp => nexp
+        | LessEq of nexp => nexp
+        | And of bexp => bexp
+        | Or of bexp => bexp
+        | Not of bexp`;
+
+val _ =
+ Hol_datatype
+  `aexp = ArrConst  of (int |-> int)           (* array constant *)
+        | ArrVar    of string                  (* array variable *)
+        | ArrUpdate of (aexp # nexp # nexp)`;  (* array update   *)
 
 val neval_def =  
  Define
-  `(neval (Var s) sigma = (sigma ' s)) /\
-   (neval (Const c) sigma = c) /\
-   (neval (Plus e1 e2) sigma = (integer$int_add :int->int->int) (neval e1 sigma) (neval e2 sigma)) /\
-   (neval (Times e1 e2) sigma = (integer$int_mul :int->int->int) (neval e1 sigma) (neval e2 sigma)) /\
-   (neval (Sub e1 e2) sigma = (integer$int_sub :int->int->int) (neval e1 sigma) (neval e2 sigma)) /\
-   (neval (Div2 e1) sigma = (integer$int_div:int->int->int) (neval e1 sigma) 2i)`;
+  `(neval (Var v) s = ScalarOf(s ' v)) /\
+   (neval (Arr a e) s = (ArrayOf(s ' a) ' (neval e s))) /\
+   (neval (Const c) s = c) /\
+   (neval (Plus e1 e2) s = integer$int_add (neval e1 s) (neval e2 s)) /\
+   (neval (Times e1 e2) s = integer$int_add (neval e1 s) (neval e2 s)) /\
+   (neval (Sub e1 e2) s = integer$int_sub (neval e1 s) (neval e2 s))`;
 
 val beval_def =  
  Define
-  `(beval (Equal e1 e2) sigma = (neval e1 sigma = neval e2 sigma)) /\
-   (beval (Less e1 e2) sigma = integer$int_lt (neval e1 sigma) (neval e2 sigma)) /\
-   (beval (LessEq e1 e2) sigma = integer$int_le (neval e1 sigma) (neval e2 sigma)) /\
-   (beval (And b1 b2) sigma = (beval b1 sigma /\ beval b2 sigma)) /\
-   (beval (Or b1 b2) sigma = (beval b1 sigma \/ beval b2 sigma)) /\
-   (beval (Not e) sigma = ~(beval e sigma)) /\
-   (beval (Even e1) sigma = EVEN (Num (neval e1 sigma)))`;
+  `(beval (Equal e1 e2) s = (neval e1 s = neval e2 s)) /\
+   (beval (Less e1 e2) s = integer$int_lt (neval e1 s) (neval e2 s)) /\
+   (beval (LessEq e1 e2) s = integer$int_le (neval e1 s) (neval e2 s)) /\
+   (beval (And b1 b2) s = (beval b1 s /\ beval b2 s)) /\
+   (beval (Or b1 b2) s = (beval b1 s \/ beval b2 s)) /\
+   (beval (Not e) s = ~(beval e s))`;
+
+val aeval_def =
+ Define
+  `(aeval (ArrConst f) s = f)
+   /\
+   (aeval (ArrVar v) s = ArrayOf(s ' v))
+   /\
+   (aeval (ArrUpdate(a,e1,e2)) s = aeval a s |+ (neval e1 s, neval e2 s))`;
+
+val Update_def =
+ Define
+  `(Update v (INL e) s = s |+ (v, Scalar(neval e s)))
+   /\
+   (Update v (INR a) s = s |+ (v, Array(aeval a s)))`;
+
+(* Convert a value or array to a constant expression *)
+val Exp_def =
+ Define
+  `(Exp(Scalar n) = INL(Const n))
+   /\
+   (Exp(Array f)  = INR(ArrConst f))`;
+
+val Update_Exp =
+ store_thm
+  ("Update_Exp",
+   ``!v val s. Update v (Exp val) s = s |+ (v, val)``,
+   Cases_on `val`
+    THEN RW_TAC std_ss [Update_def,Exp_def,aeval_def,neval_def]);
 
 (*---------------------------------------------------------------------------*)
 (* Datatype of programs                                                      *)
@@ -298,14 +260,24 @@ val beval_def =
 
 val _ = 
  Hol_datatype
-  `program = Skip                                  (* null command           *)
-           | Assign  of string => nexp             (* variable assignment    *)
-           | Dispose of string                     (* deallocate a variable  *)
-           | Seq     of program => program         (* sequencing             *)
-           | Cond    of bexp => program => program (* conditional            *)
-           | While   of bexp => program            (* while loop             *)
-           | Local   of string => program          (* local variable block   *)
-           | Assert  of (state->bool)`;            (* assertion check        *)
+  `program = Skip                                    (* null command         *)
+           | GenAssign of string => (nexp + aexp)    (* variable assignment  *)
+           | Dispose   of string                     (* deallocate variable  *)
+           | Seq       of program => program         (* sequencing           *)
+           | Cond      of bexp => program => program (* conditional          *)
+           | While     of bexp => program            (* while loop           *)
+           | Local     of string => program          (* local variable block *)
+           | Assert    of (state->bool)`;            (* assertion check      *)
+
+(* Simple variable assignment *)
+val Assign_def =
+ Define
+  `Assign v e = GenAssign v (INL e)`;
+
+(* Array assignment *)
+val ArrayAssign_def =
+ Define
+  `ArrayAssign v e1 e2 =  GenAssign v (INR(ArrUpdate(ArrVar v,e1,e2)))`;
 
 (*---------------------------------------------------------------------------*)
 (* Big-step operational semantics specified by an inductive relation.        *)
@@ -322,8 +294,10 @@ val _ =
 (*---------------------------------------------------------------------------*)
 
 val (rules,induction,ecases) = Hol_reln
-   `(!s. EVAL Skip s s)
- /\ (!s v e. EVAL (Assign v e) s (s |+ (v,neval e s)))
+   `(!s. 
+      EVAL Skip s s)
+ /\ (!s v e. 
+      EVAL (GenAssign v e) s (Update v e s))
  /\ (!s v. EVAL (Dispose v) s (s \\ v))
  /\ (!c1 c2 s1 s2 s3. EVAL c1 s1 s2 /\ EVAL c2 s2 s3 
       ==> EVAL (Seq c1 c2) s1 s3)
@@ -364,9 +338,9 @@ val SKIP_THM = store_thm
  ``!s1 s2. EVAL Skip s1 s2 = (s1 = s2)``,
  RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
 
-val ASSIGN_THM = store_thm 
-("ASSIGN_THM",
- ``!s1 s2 v e. EVAL (Assign v e) s1 s2 = (s2 = s1 |+ (v,neval e s1))``,
+val GEN_ASSIGN_THM = store_thm 
+("GEN_ASSIGN_THM",
+ ``!s1 s2 v e. EVAL (GenAssign v e) s1 s2 = (s2 = Update v e s1)``,
  RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
 
 val DISPOSE_THM = store_thm 
@@ -449,7 +423,7 @@ val EVAL_DETERMINISTIC = store_thm
 ("EVAL_DETERMINISTIC",
  ``!c st1 st2. EVAL c st1 st2 ==> !st3. EVAL c st1 st3 ==> (st2 = st3)``,
  HO_MATCH_MP_TAC induction THEN 
- RW_TAC std_ss [SKIP_THM,ASSIGN_THM,DISPOSE_THM,SEQ_THM,
+ RW_TAC std_ss [SKIP_THM,GEN_ASSIGN_THM,DISPOSE_THM,SEQ_THM,
                 IF_T_THM,IF_F_THM,WHILE_T_THM, 
                 WHILE_F_THM,LOCAL_THM,ASSERT_THM] THEN 
  METIS_TAC[]);
@@ -486,11 +460,11 @@ val DISPOSE_RULE = store_thm
 (* Assignment rule                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val ASSIGN_RULE = store_thm
-("ASSIGN_RULE",
+val GEN_ASSIGN_RULE = store_thm
+("GEN_ASSIGN_RULE",
  ``!P v e.
-      SPEC (\s. P (s |+ (v,neval e s))) (Assign v e) P``,
- RW_TAC std_ss [SPEC_def] THEN METIS_TAC [ASSIGN_THM]);
+      SPEC (P o Update v e) (GenAssign v e) P``,
+ RW_TAC std_ss [SPEC_def] THEN METIS_TAC [GEN_ASSIGN_THM]);
 
 (*---------------------------------------------------------------------------*)
 (* Dispose rule                                                              *)
@@ -613,10 +587,64 @@ val DISJ_TRIPLE = store_thm
                    ==> SPEC (\s. P1 s \/ P2 s) c (\s. Q1 s \/ Q2 s)``,
  RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]);
 
-
 (*===========================================================================*)
 (* End of HOL/examples/ind_def/opsemScript.sml                               *)
 (*===========================================================================*)
+
+
+(* ========================================================================= *)
+(*  TOTAL-CORRECTNESS HOARE TRIPLES                                          *)
+(* ========================================================================= *)
+
+val TOTAL_SPEC_def = Define `
+  TOTAL_SPEC p c q = SPEC p c q /\ !s1. p s1 ==> ?s2. EVAL c s1 s2`;
+
+val TOTAL_SKIP_RULE = store_thm("TOTAL_SKIP_RULE",
+  ``!P. TOTAL_SPEC P Skip P``,
+  SIMP_TAC std_ss [TOTAL_SPEC_def,SKIP_RULE] THEN REPEAT STRIP_TAC 
+  THEN Q.EXISTS_TAC `s1` THEN REWRITE_TAC [rules]);
+
+val TOTAL_GEN_ASSIGN_RULE = store_thm("TOTAL_GEN_ASSIGN_RULE",
+  ``!P v e. TOTAL_SPEC (P o Update v e) (GenAssign v e) P``,
+  SIMP_TAC std_ss [TOTAL_SPEC_def,GEN_ASSIGN_RULE] THEN REPEAT STRIP_TAC 
+  THEN Q.EXISTS_TAC `Update v e s1` THEN REWRITE_TAC [rules]);
+
+val TOTAL_SEQ_RULE = store_thm("TOTAL_SEQ_RULE",
+  ``!P c1 c2 Q R. TOTAL_SPEC P c1 Q /\ TOTAL_SPEC Q c2 R ==> TOTAL_SPEC P (Seq c1 c2) R``,
+  REWRITE_TAC [TOTAL_SPEC_def] THEN REPEAT STRIP_TAC
+  THEN1 (MATCH_MP_TAC SEQ_RULE THEN Q.EXISTS_TAC `Q` THEN ASM_REWRITE_TAC [])
+  THEN FULL_SIMP_TAC bool_ss [SEQ_THM,SPEC_def]
+  THEN RES_TAC THEN RES_TAC THEN METIS_TAC []);
+
+val TOTAL_COND_RULE = store_thm("TOTAL_COND_RULE",
+  ``!P b c1 c2 Q.
+      TOTAL_SPEC (\s. P s /\ beval b s) c1 Q /\
+      TOTAL_SPEC (\s. P s /\ ~beval b s) c2 Q ==>
+      TOTAL_SPEC P (Cond b c1 c2) Q``,
+  REWRITE_TAC [TOTAL_SPEC_def] THEN REPEAT STRIP_TAC
+  THEN1 (MATCH_MP_TAC COND_RULE THEN ASM_REWRITE_TAC [])
+  THEN FULL_SIMP_TAC std_ss []
+  THEN Cases_on `beval b s1` THEN RES_TAC 
+  THEN IMP_RES_TAC IF_T_THM THEN IMP_RES_TAC IF_F_THM
+  THEN Q.EXISTS_TAC `s2` THEN ASM_REWRITE_TAC []);
+
+val TOTAL_WHILE_F_THM = store_thm("TOTAL_WHILE_F_THM",
+  ``!P b c. TOTAL_SPEC (\s. P s /\ ~beval b s) (While b c) P``,
+  SIMP_TAC std_ss [TOTAL_SPEC_def,SPEC_def,GSYM AND_IMP_INTRO]
+  THEN ONCE_REWRITE_TAC [WHILE_THM] THEN SIMP_TAC std_ss []);
+
+val TOTAL_WHILE_T_THM = store_thm("TOTAL_WHILE_T_THM",
+  ``!P b c M Q.
+      TOTAL_SPEC (\s. P s /\ beval b s) c M /\ TOTAL_SPEC M (While b c) Q ==>
+      TOTAL_SPEC (\s. P s /\ beval b s) (While b c) Q``,
+  SIMP_TAC std_ss [TOTAL_SPEC_def,SPEC_def] THEN REPEAT STRIP_TAC
+  THEN ONCE_REWRITE_TAC [WHILE_THM] THEN ASM_REWRITE_TAC []
+  THEN RES_TAC THEN RES_TAC THEN METIS_TAC [WHILE_THM]);
+
+val TOTAL_GEN_ASSIGN_THM = store_thm("TOTAL_GEN_ASSIGN_THM",
+  ``!P c v e Q. SPEC P (GenAssign v e) Q = TOTAL_SPEC P (GenAssign v e) Q``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN SIMP_TAC std_ss [TOTAL_SPEC_def] THEN REPEAT STRIP_TAC 
+  THEN Q.EXISTS_TAC `Update v e s1` THEN REWRITE_TAC [rules]);
 
 
 (*===========================================================================*)
@@ -627,7 +655,7 @@ val (small_rules,small_induction,small_ecases) = Hol_reln
    `(!s l. 
       SMALL_EVAL (Skip :: l, s) (l, s))
  /\ (!s v e l. 
-      SMALL_EVAL (Assign v e :: l, s) (l, s |+ (v,neval e s)))
+      SMALL_EVAL (GenAssign v e :: l, s) (l, Update v e s))
  /\ (!s v l. 
       SMALL_EVAL (Dispose v :: l, s) (l, s \\ v))
  /\ (!s l c1 c2. 
@@ -651,7 +679,9 @@ val (small_rules,small_induction,small_ecases) = Hol_reln
  /\ (!s l v c.
       v IN FDOM s
       ==>
-      SMALL_EVAL (Local v c :: l, s) (c :: Assign v (Const(s ' v)) :: l, s))
+      SMALL_EVAL 
+       (Local v c :: l, s) 
+       (c :: GenAssign v (Exp(s ' v)) :: l, s))
  /\ (!s l v c.
       ~(v IN FDOM s)
       ==>
@@ -670,11 +700,11 @@ val SMALL_SKIP_THM = store_thm
      (l2 = l1) /\ (s2 = s1)``,
  RW_TAC std_ss [EQ_IMP_THM,Once small_ecases] THEN METIS_TAC small_rulel);
 
-val SMALL_ASSIGN_THM = store_thm 
-("SMALL_ASSIGN_THM",
+val SMALL_GEN_ASSIGN_THM = store_thm 
+("SMALL_GEN_ASSIGN_THM",
  ``!s1 s2 l1 l2 v e. 
-    SMALL_EVAL (Assign v e :: l1, s1) (l2, s2) = 
-     (l2 = l1) /\ (s2 = s1 |+ (v,neval e s1))``,
+    SMALL_EVAL (GenAssign v e :: l1, s1) (l2, s2) = 
+     (l2 = l1) /\ (s2 = Update v e s1)``,
  RW_TAC std_ss [EQ_IMP_THM,Once small_ecases] THEN METIS_TAC small_rulel);
 
 val SMALL_DISPOSE_THM = store_thm 
@@ -746,7 +776,7 @@ val SMALL_LOCAL_IN_THM = store_thm
      v IN FDOM s1
      ==>
      (SMALL_EVAL (Local v c :: l1, s1) (l2, s2) = 
-       (l2 = c :: Assign v (Const(s1 ' v)) :: l1)
+       (l2 = c :: GenAssign v (Exp(s1 ' v)) :: l1)
        /\ 
        (s2 = s1))``,
  RW_TAC std_ss [EQ_IMP_THM,Once small_ecases] THEN METIS_TAC(FUPDATE_EQ:: small_rulel));
@@ -766,7 +796,9 @@ val SMALL_LOCAL_THM = store_thm
  ("SMALL_LOCAL_THM",
   ``!s1 s2 l1 l2 v c. 
      SMALL_EVAL (Local v c :: l1, s1) (l2, s2) = 
-      (l2 = c :: (if v IN FDOM s1 then Assign v (Const(s1 ' v)) else Dispose v) :: l1)
+      (l2 = c :: (if v IN FDOM s1 
+                   then GenAssign v (Exp(s1 ' v)) 
+                   else Dispose v) :: l1)
       /\ 
       (s2 = s1)``,
  METIS_TAC[SMALL_LOCAL_IN_THM,SMALL_LOCAL_NOT_IN_THM]);
@@ -777,6 +809,7 @@ val SMALL_ASSERT_THM = store_thm
      SMALL_EVAL (Assert p :: l1, s1) (l2, s2) =
       p s1 /\ (l2 = l1) /\ (s2 = s1)``,
  RW_TAC std_ss [EQ_IMP_THM,Once small_ecases] THEN METIS_TAC small_rulel);
+
 
 val EVAL_IMP_SMALL_EVAL_LEMMA =
  store_thm
@@ -794,10 +827,14 @@ val EVAL_IMP_SMALL_EVAL_LEMMA =
       METIS_TAC[SMALL_IF_F_THM,TC_RULES],    (* Cond false *)
       METIS_TAC[SMALL_WHILE_T_THM,TC_RULES], (* While true *)
       IMP_RES_TAC small_rules                (* Local IN FDOM *)
-       THEN `!l. TC SMALL_EVAL (c::Assign v (Const (s1 ' v))::l,s1) (Assign v (Const (s1 ' v))::l,s2)`
+       THEN `!l. TC SMALL_EVAL 
+                  (c::GenAssign v (Exp(s1 ' v))::l,s1) 
+                  (GenAssign v (Exp(s1 ' v))::l,s2)`
              by METIS_TAC[]
-       THEN `!l. TC SMALL_EVAL (Assign v (Const (s1 ' v))::l,s2) (l, s2 |+ (v,s1 ' v))`
-             by METIS_TAC[small_rules,TC_RULES,neval_def]
+       THEN `!l. TC SMALL_EVAL 
+                  (GenAssign v (Exp(s1 ' v))::l,s2) 
+                  (l, s2 |+ (v,s1 ' v))`
+             by METIS_TAC[small_rules,TC_RULES,neval_def,Update_Exp]
        THEN METIS_TAC [TC_RULES],
       METIS_TAC                              (* Local not IN FDOM *)
        [SMALL_LOCAL_NOT_IN_THM,SMALL_DISPOSE_THM,TC_RULES]]);
@@ -863,8 +900,8 @@ val RANAN_FRAER_LEMMA =
    IndDefRules.RULE_TAC
     (IndDefRules.derive_mono_strong_induction [] (small_rules,small_induction))
     THEN RW_TAC list_ss 
-          [neval_def,Seql_def,
-           SKIP_THM,ASSIGN_THM,DISPOSE_THM,SEQ_THM,IF_THM,LOCAL_THM,ASSERT_THM]
+          [neval_def,Seql_def,Update_Exp,
+           SKIP_THM,GEN_ASSIGN_THM,DISPOSE_THM,SEQ_THM,IF_THM,LOCAL_THM,ASSERT_THM]
     THEN TRY(METIS_TAC[WHILE_THM]));
 
 val SMALL_EVAL_IMP_EVAL_LEMMA =
@@ -952,7 +989,7 @@ val RUN_def =
    (RUN (SUC n) c s =
     case c of
         Skip          -> RESULT s
-     || Assign v e    -> RESULT(s |+ (v,neval e s))
+     || GenAssign v e -> RESULT(Update v e s)
      || Dispose v     -> RESULT(s \\ v)
      || Seq c1 c2     -> (case RUN n c1 s of
                               TIMEOUT(s') -> TIMEOUT(s')
@@ -1004,7 +1041,7 @@ val EVAL_RUN_LEMMA =
        THEN RW_TAC arith_ss []
        THEN `?m. n = SUC m` by intLib.COOPER_TAC
        THEN RW_TAC std_ss [RUN_def],
-      Q.EXISTS_TAC `0`         (* Assign *)
+      Q.EXISTS_TAC `0`         (* GenAssign *)
        THEN RW_TAC arith_ss []
        THEN `?m. n = SUC m` by intLib.COOPER_TAC
        THEN RW_TAC std_ss [RUN_def],
@@ -1099,7 +1136,7 @@ val RUN =
        else
         case c of
             Skip          -> RESULT s
-         || Assign v e    -> RESULT(s |+ (v,neval e s))
+         || GenAssign v e -> RESULT(Update v e s)
          || Dispose v     -> RESULT(s \\ v)
          || Seq c1 c2     -> (case RUN (n-1) c1 s of
                                   TIMEOUT(s') -> TIMEOUT(s')
@@ -1138,104 +1175,6 @@ val _ = computeLib.add_funs
           pred_setTheory.NOT_IN_EMPTY
          ];
 
-(* RUN examples
-
-val fact =
- ``Seq
-    (Assign "fact" (Const 1))
-    (While
-      (Less (Const 1) (Var "n"))
-      (Seq
-        (Assign "fact" (Times (Var "fact") (Var "n")))
-        (Assign "n" (Sub (Var "n") (Const 1)))))``;
-
-EVAL ``RUN 100 ^fact (FEMPTY |+ ("n",10))``;
-EVAL ``RUN 5 ^fact (FEMPTY |+ ("n",n))``;
-EVAL ``RUN 10 ^fact (FEMPTY |+ ("n",n))``;
-
-val factCheck =
- ``Seq
-    (Assign "fact" (Const 1))
-    (While
-      (Less (Const 1) (Var "n"))
-      (Seq
-       (Seq
-        (Assign "fact" (Times (Var "fact") (Var "n")))
-        (Assign "n" (Sub (Var "n") (Const 1))))
-       (Assert(\s. (s ' "n") > 1))))``;
-
-EVAL ``RUN 100 ^factCheck (FEMPTY |+ ("n",10))``;
-
-val factLocal1 =
- ``Seq
-    (Assign "temp0" (Const 0))
-    (Seq
-     (Assign "fact" (Const 1))
-     (Local "temp"
-      (Seq
-       (Seq
-        (Assign "temp" (Var "fact"))
-        (While
-         (Less (Const 1) (Var "n"))
-         (Seq
-           (Assign "temp" (Times (Var "temp") (Var "n")))
-           (Assign "n" (Sub (Var "n") (Const 1))))))
-       (Assign "result" (Var "temp")))))``;
-
-EVAL ``RUN 100 ^factLocal1 (FEMPTY |+ ("n",10))``;
-
-val factLocal2 =
- ``Seq
-    (Assign "temp" (Const 0))
-    (Seq
-     (Assign "fact" (Const 1))
-     (Local "temp"
-      (Seq
-       (Seq
-        (Assign "temp" (Var "fact"))
-        (While
-         (Less (Const 1) (Var "n"))
-         (Seq
-           (Assign "temp" (Times (Var "temp") (Var "n")))
-           (Assign "n" (Sub (Var "n") (Const 1))))))
-       (Assign "result" (Var "temp")))))``;
-
-EVAL ``RUN 100 ^factLocal2 (FEMPTY |+ ("n",10))``;
-
-val square =
- ``Seq
-   (Assign "result" (Const 0))
-   (While
-      (Less (Const 0) (Var "i"))
-      (Seq
-         (While
-            (Less (Const 0) (Var "j"))
-            (Seq
-               (Assign "result" (Plus (Var "result") (Const 1)))
-               (Assign "j" (Sub (Var "j") (Const 1)))))
-         (Assign "i" (Sub (Var "i") (Const 1)))))``;
-
-
-EVAL ``RUN 4  ^square (FEMPTY |+ ("i",i) |+ ("j",j))``;
-EVAL ``RUN 6  ^square (FEMPTY |+ ("i",i) |+ ("j",j))``;
-
-val absMinus =
-``Seq
-   (Assign "result" (Const 0))
-   (Seq
-     (Assign "k" (Const 0))
-     (Seq
-       (Cond (LessEq (Var "i") (Var "j")) 
-             (Assign "k" (Plus (Var "k") (Const 1))) 
-             Skip)
-       (Cond (And (Equal (Var "k") (Const 1)) (Not(Equal (Var "i") (Var "j"))))
-             (Assign "result" (Sub (Var "j") (Var "i")))
-             (Assign "result" (Sub (Var "i") (Var "j"))))))``;
-
-EVAL `` RUN 5 ^absMinus (FEMPTY |+ ("i",i) |+ ("j",j))``;
-
-*)
-
 
 (*===========================================================================*)
 (* Small step next-state function                                            *)
@@ -1248,7 +1187,7 @@ val STEP1_def =
    /\
    (STEP1 (Skip :: l, s) = (l, RESULT s))
    /\ 
-   (STEP1 (Assign v e :: l, s) = (l, RESULT(s |+ (v,neval e s))))
+   (STEP1 (GenAssign v e :: l, s) = (l, RESULT(Update v e s)))
    /\ 
    (STEP1 (Dispose v :: l, s) = (l, RESULT(s \\ v)))
    /\ 
@@ -1266,7 +1205,7 @@ val STEP1_def =
    /\ 
    (STEP1 (Local v c :: l, s) =
      if v IN FDOM s 
-      then (c :: Assign v (Const(s ' v)) :: l, RESULT s)
+      then (c :: GenAssign v (Exp(s ' v)) :: l, RESULT s)
       else (c :: Dispose v :: l, RESULT s))
    /\ 
    (STEP1 (Assert p :: l, s) = 
@@ -1282,20 +1221,20 @@ val STEP1 =
         then (l, ERROR s)
         else
         case (HD l) of
-            Skip         -> (TL l, RESULT s)
-        ||  Assign v e   -> (TL l, RESULT(s |+ (v,neval e s)))
-        ||  Dispose v    -> (TL l, RESULT(s \\ v))
-        ||  Seq c1 c2    -> (c1 :: c2 :: TL l, RESULT s)
-        ||  Cond b c1 c2 -> if beval b s 
-                             then (c1 :: TL l, RESULT s) 
-                             else (c2 :: TL l, RESULT s)
-        ||  While b c    -> if beval b s 
-                             then (c :: While b c :: TL l, RESULT s) 
-                             else (TL l, RESULT s)
-        ||  Local v c    -> if v IN FDOM s 
-                             then (c :: Assign v (Const(s ' v)) :: TL l, RESULT s)
-                             else (c :: Dispose v :: TL l, RESULT s)
-        ||  Assert p     -> if p s then (TL l, RESULT s) else (TL l, ERROR s)``,
+            Skip          -> (TL l, RESULT s)
+        ||  GenAssign v e -> (TL l, RESULT(Update v e s))
+        ||  Dispose v     -> (TL l, RESULT(s \\ v))
+        ||  Seq c1 c2     -> (c1 :: c2 :: TL l, RESULT s)
+        ||  Cond b c1 c2  -> if beval b s 
+                              then (c1 :: TL l, RESULT s) 
+                              else (c2 :: TL l, RESULT s)
+        ||  While b c     -> if beval b s 
+                              then (c :: While b c :: TL l, RESULT s) 
+                              else (TL l, RESULT s)
+        ||  Local v c     -> if v IN FDOM s 
+                              then (c :: GenAssign v (Exp(s ' v)) :: TL l, RESULT s)
+                              else (c :: Dispose v :: TL l, RESULT s)
+        ||  Assert p      -> if p s then (TL l, RESULT s) else (TL l, ERROR s)``,
      Induct
       THEN RW_TAC list_ss [STEP1_def]
       THEN Cases_on `h`
@@ -1325,7 +1264,7 @@ val STEP1_IMP_SMALL_EVAL =
     Induct
      THEN RW_TAC std_ss 
            [STEP1_def,small_rules,neval_def,
-            SMALL_ASSIGN_THM,SMALL_DISPOSE_THM,SMALL_IF_THM,SMALL_SEQ_THM,
+            SMALL_GEN_ASSIGN_THM,SMALL_DISPOSE_THM,SMALL_IF_THM,SMALL_SEQ_THM,
             SMALL_LOCAL_THM,SMALL_ASSERT_THM]
      THEN METIS_TAC[small_rules]);
 
@@ -1356,7 +1295,7 @@ val NOT_SMALL_EVAL_ERROR =
        THEN Cases_on `con1` THEN Cases_on `q` THEN TRY(Cases_on `h`)
        THEN RW_TAC std_ss [STEP1_def]
        THEN METIS_TAC
-             [SMALL_SKIP_THM,SMALL_ASSIGN_THM,SMALL_DISPOSE_THM,SMALL_IF_THM,SMALL_SEQ_THM,
+             [SMALL_SKIP_THM,SMALL_GEN_ASSIGN_THM,SMALL_DISPOSE_THM,SMALL_IF_THM,SMALL_SEQ_THM,
               SMALL_LOCAL_THM,SMALL_ASSERT_THM,SMALL_WHILE_THM],
      Cases_on `con1` THEN Cases_on `con2` THEN Cases_on `q` THEN TRY(Cases_on `h`)
        THEN FULL_SIMP_TAC outcome_ss [STEP1_def]
@@ -1468,8 +1407,8 @@ val STEP =
      (STEP (SUC n) (Skip :: l, s) =
        STEP n (l, s))
      /\
-     (STEP (SUC n) (Assign v e :: l, s) =
-       STEP n (l, s |+ (v,neval e s)))
+     (STEP (SUC n) (GenAssign v e :: l, s) =
+       STEP n (l, Update v e s))
      /\ 
      (STEP (SUC n) (Dispose v :: l, s) = 
        STEP n (l, s \\ v))
@@ -1489,7 +1428,7 @@ val STEP =
      /\ 
      (STEP (SUC n) (Local v c :: l, s) =
        if v IN FDOM s 
-        then STEP n (c :: Assign v (Const(s ' v)) :: l, s)
+        then STEP n (c :: GenAssign v (Exp(s ' v)) :: l, s)
         else STEP n (c :: Dispose v :: l, s))
      /\
      (STEP (SUC n) (Assert p :: l, s) =
@@ -1644,54 +1583,6 @@ val RUN_STEP =
      (?n. RUN n c s1 = RESULT s2) = (?n. STEP n ([c],s1) = ([],RESULT s2))``,
    METIS_TAC[EVAL_SMALL_EVAL,EVAL_RUN,TC_SMALL_EVAL_STEP]);
 
-
-(* STEP examples
-
-val fact =
- ``Seq
-    (Assign "fact" (Const 1))
-    (While
-      (Less (Const 1) (Var "n"))
-      (Seq
-        (Assign "fact" (Times (Var "fact") (Var "n")))
-        (Assign "n" (Sub (Var "n") (Const 1)))))``;
-
-EVAL ``STEP 100 ([^fact], (FEMPTY |+ ("n",10)))``;
-EVAL ``STEP 20 ([^fact], (FEMPTY |+ ("n",n)))``;
-
-val square =
- ``Seq
-   (Assign "result" (Const 0))
-   (While
-      (Less (Const 0) (Var "i"))
-      (Seq
-         (While
-            (Less (Const 0) (Var "j"))
-            (Seq
-               (Assign "result" (Plus (Var "result") (Const 1)))
-               (Assign "j" (Sub (Var "j") (Const 1)))))
-         (Assign "i" (Sub (Var "i") (Const 1)))))``;
-
-EVAL ``STEP 100 ([^square], (FEMPTY |+ ("i",5) |+ ("j",9)))``;
-EVAL ``STEP 10 ([^square], (FEMPTY |+ ("i",i) |+ ("j",j)))``;
-
-val absMinus =
-``Seq
-   (Assign "result" (Const 0))
-   (Seq
-     (Assign "k" (Const 0))
-     (Seq
-       (Cond (LessEq (Var "i") (Var "j")) 
-             (Assign "k" (Plus (Var "k") (Const 1))) 
-             Skip)
-       (Cond (And (Equal (Var "k") (Const 1)) (Not(Equal (Var "i") (Var "j"))))
-             (Assign "result" (Sub (Var "j") (Var "i")))
-             (Assign "result" (Sub (Var "i") (Var "j"))))))``;
-
-EVAL ``STEP 100 ([^absMinus], (FEMPTY |+ ("i",5) |+ ("j",9)))``;
-EVAL ``STEP 6 ([^absMinus], (FEMPTY |+ ("i",i) |+ ("j",j)))``;
-EVAL ``STEP 20 ([^absMinus], (FEMPTY |+ ("i",i) |+ ("j",j)))``;
-
-*)
-
 val _ = export_theory();
+
+

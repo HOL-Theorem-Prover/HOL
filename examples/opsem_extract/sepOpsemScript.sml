@@ -13,8 +13,11 @@ val STAR_def = Define `STAR p q = (\s. ?f g. SPLIT s (f,g) /\ p f /\ q g)`;
 
 val emp_def = Define `emp = \s. s = FEMPTY`;
 
-val VAR_def = Define `
-  VAR (name:string) (value:int) = \s. (s = (FEMPTY |+ (name,value)))`;
+val GEN_VAR_def = Define `
+  GEN_VAR name value = \s:state. (s = (FEMPTY |+ (name,value)))`;
+
+val VAR_def = Define `VAR name value = GEN_VAR name (Scalar value)`;
+val ARRAY_def = Define `ARRAY name value = GEN_VAR name (Array value)`;
 
 val _ = overload_on ("*",Term`STAR`);
 
@@ -47,9 +50,9 @@ val emp_STAR = store_thm("emp_STAR",
   SIMP_TAC std_ss [STAR_def,SPLIT_def,emp_def,FDOM_FEMPTY,FUNION_FEMPTY_1,
     FUNION_FEMPTY_2,DISJOINT_EMPTY] THEN SIMP_TAC std_ss [FUN_EQ_THM]);
 
-val VAR_STAR = store_thm("VAR_STAR",
-  ``!v x p f. (VAR v x * p) f = v IN FDOM f /\ (f ' v = x) /\ p (f \\ v)``,
-  SIMP_TAC std_ss [STAR_def,VAR_def,SPLIT_def,FDOM_FUPDATE,FDOM_FEMPTY]
+val GEN_VAR_STAR = store_thm("GEN_VAR_STAR",
+  ``!v x p f. (GEN_VAR v x * p) f = v IN FDOM f /\ (f ' v = x) /\ p (f \\ v)``,
+  SIMP_TAC std_ss [STAR_def,GEN_VAR_def,SPLIT_def,FDOM_FUPDATE,FDOM_FEMPTY]
   THEN REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC
   THENL [ALL_TAC, Q.EXISTS_TAC `f \\ v`]
   THEN ASM_SIMP_TAC std_ss [FUNION_DEF,IN_UNION,FDOM_FUPDATE,IN_INSERT,FAPPLY_FUPDATE_THM] THENL [
@@ -66,61 +69,6 @@ val VAR_STAR = store_thm("VAR_STAR",
     THEN SIMP_TAC std_ss [DOMSUB_FAPPLY_THM,FAPPLY_FUPDATE_THM]
     THEN SIMP_TAC std_ss [FUNION_DEF,FDOM_FUPDATE,IN_INSERT,FDOM_FEMPTY,NOT_IN_EMPTY]
     THEN METIS_TAC []]);   
-
-
-(* ====================================================================================== *)
-(*  TOTAL-CORRECTNESS HOARE TRIPLES                                                       *)
-(* ====================================================================================== *)
-
-val TOTAL_SPEC_def = Define `
-  TOTAL_SPEC p c q = SPEC p c q /\ !s1. p s1 ==> ?s2. EVAL c s1 s2`;
-
-val TOTAL_SKIP_RULE = prove(
-  ``!P. TOTAL_SPEC P Skip P``,
-  SIMP_TAC std_ss [TOTAL_SPEC_def,SKIP_RULE] THEN REPEAT STRIP_TAC 
-  THEN Q.EXISTS_TAC `s1` THEN REWRITE_TAC [EVAL_rules]);
-
-val TOTAL_ASSIGN_RULE = prove(
-  ``!P v e. TOTAL_SPEC (\s. P (s |+ (v,neval e s))) (Assign v e) P``,
-  SIMP_TAC std_ss [TOTAL_SPEC_def,ASSIGN_RULE] THEN REPEAT STRIP_TAC 
-  THEN Q.EXISTS_TAC `(s |+ (v,neval e s))` THEN REWRITE_TAC [EVAL_rules]);
-
-val TOTAL_SEQ_RULE = prove(
-  ``!P c1 c2 Q R. TOTAL_SPEC P c1 Q /\ TOTAL_SPEC Q c2 R ==> TOTAL_SPEC P (Seq c1 c2) R``,
-  REWRITE_TAC [TOTAL_SPEC_def] THEN REPEAT STRIP_TAC
-  THEN1 (MATCH_MP_TAC SEQ_RULE THEN Q.EXISTS_TAC `Q` THEN ASM_REWRITE_TAC [])
-  THEN FULL_SIMP_TAC bool_ss [SEQ_THM,SPEC_def]
-  THEN RES_TAC THEN RES_TAC THEN METIS_TAC []);
-
-val TOTAL_COND_RULE = prove(
-  ``!P b c1 c2 Q.
-      TOTAL_SPEC (\s. P s /\ beval b s) c1 Q /\
-      TOTAL_SPEC (\s. P s /\ ~beval b s) c2 Q ==>
-      TOTAL_SPEC P (Cond b c1 c2) Q``,
-  REWRITE_TAC [TOTAL_SPEC_def] THEN REPEAT STRIP_TAC
-  THEN1 (MATCH_MP_TAC COND_RULE THEN ASM_REWRITE_TAC [])
-  THEN FULL_SIMP_TAC std_ss []
-  THEN Cases_on `beval b s1` THEN RES_TAC 
-  THEN IMP_RES_TAC IF_T_THM THEN IMP_RES_TAC IF_F_THM
-  THEN Q.EXISTS_TAC `s2` THEN ASM_REWRITE_TAC []);
-
-val TOTAL_WHILE_F_THM = prove(
-  ``!P b c. TOTAL_SPEC (\s. P s /\ ~beval b s) (While b c) P``,
-  SIMP_TAC std_ss [TOTAL_SPEC_def,SPEC_def,GSYM AND_IMP_INTRO]
-  THEN ONCE_REWRITE_TAC [WHILE_THM] THEN SIMP_TAC std_ss []);
-
-val TOTAL_WHILE_T_THM = prove(
-  ``!P b c M Q.
-      TOTAL_SPEC (\s. P s /\ beval b s) c M /\ TOTAL_SPEC M (While b c) Q ==>
-      TOTAL_SPEC (\s. P s /\ beval b s) (While b c) Q``,
-  SIMP_TAC std_ss [TOTAL_SPEC_def,SPEC_def] THEN REPEAT STRIP_TAC
-  THEN ONCE_REWRITE_TAC [WHILE_THM] THEN ASM_REWRITE_TAC []
-  THEN RES_TAC THEN RES_TAC THEN METIS_TAC [WHILE_THM]);
-
-val TOTAL_ASSIGN_THM = prove(
-  ``!P c v e Q. SPEC P (Assign v e) Q = TOTAL_SPEC P (Assign v e) Q``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN SIMP_TAC std_ss [TOTAL_SPEC_def] THEN REPEAT STRIP_TAC 
-  THEN Q.EXISTS_TAC `(s1 |+ (v,neval e s1))` THEN REWRITE_TAC [EVAL_rules]);
 
 
 (* ====================================================================================== *)
@@ -184,6 +132,9 @@ val SEP_GUARD_def = Define `
 val SEP_EXP_def = Define `
   SEP_EXP p e n = !r s x. (p x * r) s ==> (e x = neval n s)`;
 
+val SEP_ARRAY_EXP_def = Define `
+  SEP_ARRAY_EXP p e n = !r s x. (p x * r) s ==> (e x = aeval n s)`;
+
 
 (* ====================================================================================== *)
 (*  PARTIAL-CORRECTNESS THEOREMS                                                          *)
@@ -202,8 +153,8 @@ val SEP_SPEC_SKIP = store_thm("SEP_SPEC_SKIP",
   SIMP_TAC std_ss [SEP_SPEC_def,SKIP_RULE]);
 
 val SEP_SPEC_DISPOSE = store_thm("SEP_SPEC_DISPOSE",
-  ``SEP_SPEC (VAR v x) (Dispose v) emp``,
-  SIMP_TAC std_ss [SEP_SPEC_def,SPEC_def,DISPOSE_THM,VAR_STAR,emp_STAR]);
+  ``SEP_SPEC (GEN_VAR v x) (Dispose v) emp``,
+  SIMP_TAC std_ss [SEP_SPEC_def,SPEC_def,DISPOSE_THM,GEN_VAR_STAR,emp_STAR]);
 
 val SEP_SPEC_COND = store_thm("SEP_SPEC_COND",
   ``SEP_GUARD p g h ==>
@@ -219,11 +170,26 @@ val SEP_SPEC_ASSIGN = store_thm("SEP_SPEC_ASSIGN",
   ``!p v x z e y. 
        SEP_EXP (\x. VAR v (FST x) * p (SND x)) y e ==>
        SEP_SPEC (VAR v x * p z) (Assign v e) (VAR v (y (x,z)) * p z)``,
-  SIMP_TAC std_ss [SEP_SPEC_def,SEP_EXP_def,GSYM STAR_ASSOC,VAR_STAR,SPEC_def]
-  THEN SIMP_TAC std_ss [ASSIGN_THM,FAPPLY_FUPDATE_THM,FDOM_FUPDATE,IN_INSERT,
-         DOMSUB_FUPDATE_THM] THEN REPEAT STRIP_TAC
+  SIMP_TAC std_ss [SEP_SPEC_def,SEP_EXP_def,GSYM STAR_ASSOC,VAR_def,GEN_VAR_STAR,SPEC_def]
+  THEN REWRITE_TAC [Assign_def,GEN_ASSIGN_THM,Update_def]
+  THEN SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,FDOM_FUPDATE,IN_INSERT,DOMSUB_FUPDATE_THM] 
+  THEN REPEAT STRIP_TAC
   THEN Q.PAT_ASSUM `!r.bb` (ASSUME_TAC o Q.SPECL [`r`,`s1`,`x,z`])
   THEN FULL_SIMP_TAC std_ss []);
+
+val SEP_SPEC_ARRAY_ASSIGN = store_thm("SEP_SPEC_ARRAY_ASSIGN",
+  ``!p v x z e1 e2 y1 y2. 
+       SEP_EXP (\x. ARRAY v (FST x) * p (SND x)) y1 e1 ==>
+       SEP_EXP (\x. ARRAY v (FST x) * p (SND x)) y2 e2 ==>
+       SEP_SPEC (ARRAY v x * p z) (ArrayAssign v e1 e2) 
+                (ARRAY v (x |+ (y1 (x,z), y2 (x,z))) * p z)``,
+  SIMP_TAC std_ss [SEP_SPEC_def,SEP_EXP_def,GSYM STAR_ASSOC,ARRAY_def,GEN_VAR_STAR,SPEC_def]
+  THEN REWRITE_TAC [ArrayAssign_def,GEN_ASSIGN_THM,Update_def,aeval_def]
+  THEN SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,FDOM_FUPDATE,IN_INSERT,DOMSUB_FUPDATE_THM] 
+  THEN REPEAT STRIP_TAC
+  THEN REPEAT (Q.PAT_ASSUM `!r.bb` (ASSUME_TAC o Q.SPECL [`r`,`s1`,`(x,z)`]))
+  THEN FULL_SIMP_TAC std_ss []
+  THEN METIS_TAC [ArrayOf_def]);  
 
 val SPEC_FALSE_PRE = prove(``!c q. SPEC (\s.F) c q``,SIMP_TAC std_ss [SPEC_def]);  
 
@@ -304,6 +270,12 @@ val SEP_SPEC_WHILE = store_thm("SEP_SPEC_WHILE",
       THEN RES_TAC THEN Q.EXISTS_TAC `SUC n`
       THEN ASM_SIMP_TAC bool_ss [FUNPOW_SUC]]]);
 
+val SEP_SPEC_THM = store_thm("SEP_SPEC_THM",
+  ``SEP_SPEC p c q =
+    !r s1. (p * r) s1 ==> !s2. EVAL c s1 s2 ==> (q * r) s2``,
+  SIMP_TAC std_ss [SEP_SPEC_def,SPEC_def] THEN METIS_TAC []);
+
+
 (* ====================================================================================== *)
 (*  TOTAL-CORRECTNESS THEOREMS                                                            *)
 (* ====================================================================================== *)
@@ -333,9 +305,17 @@ val SEP_TOTAL_SPEC_COND = store_thm("SEP_TOTAL_SPEC_COND",
   THEN FULL_SIMP_TAC std_ss [TOTAL_SPEC_def,SPEC_def,SEP_GUARD_def] 
   THEN METIS_TAC []);
 
+val SEP_TOTAL_GEN_ASSIGN_THM = store_thm("SEP_TOTAL_GEN_ASSIGN_THM",
+  ``!P c v e Q. SEP_SPEC P (GenAssign v e) Q = SEP_TOTAL_SPEC P (GenAssign v e) Q``,
+  REWRITE_TAC [SEP_SPEC_def,SEP_TOTAL_SPEC_def,TOTAL_GEN_ASSIGN_THM]);
+
 val SEP_TOTAL_ASSIGN_THM = store_thm("SEP_TOTAL_ASSIGN_THM",
   ``!P c v e Q. SEP_SPEC P (Assign v e) Q = SEP_TOTAL_SPEC P (Assign v e) Q``,
-  REWRITE_TAC [SEP_SPEC_def,SEP_TOTAL_SPEC_def,TOTAL_ASSIGN_THM]);
+  REWRITE_TAC [Assign_def,SEP_TOTAL_GEN_ASSIGN_THM]);
+
+val SEP_TOTAL_ARRAY_ASSIGN_THM = store_thm("SEP_TOTAL_ARRAY_ASSIGN_THM",
+  ``!P c v e Q. SEP_SPEC P (ArrayAssign v e1 e2) Q = SEP_TOTAL_SPEC P (ArrayAssign v e1 e2) Q``,
+  REWRITE_TAC [ArrayAssign_def,SEP_TOTAL_GEN_ASSIGN_THM]);
 
 val SEP_TOTAL_SPEC_WHILE = store_thm("SEP_TOTAL_SPEC_WHILE",
   ``SEP_GUARD p g h ==>
@@ -358,5 +338,10 @@ val SEP_TOTAL_SPEC_WHILE = store_thm("SEP_TOTAL_SPEC_WHILE",
     THEN FULL_SIMP_TAC bool_ss [TOTAL_SPEC_def,SPEC_def,SEP_GUARD_def]
     THEN METIS_TAC []]);
 
+val SEP_TOTAL_SPEC_THM = store_thm("SEP_TOTAL_SPEC_THM",
+  ``SEP_TOTAL_SPEC p c q =
+    !r s1. (p * r) s1 ==> (?s2. EVAL c s1 s2) /\
+                          (!s2. EVAL c s1 s2 ==> (q * r) s2)``,
+  SIMP_TAC std_ss [SEP_TOTAL_SPEC_def,TOTAL_SPEC_def,SPEC_def] THEN METIS_TAC []);
 
 val _ = export_theory();
