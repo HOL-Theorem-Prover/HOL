@@ -56,8 +56,8 @@ val keepers =
      (* finite maps *)
      "finite_mapTheory.sig",
 
-     (* goalstackLib *)
-     "goalstackLib.sig",
+     (* proofManagerLib *)
+     "proofManagerLib.sig",
 
      (* hol88 *)
      "hol88Lib.sig",
