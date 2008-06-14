@@ -1,6 +1,6 @@
 val _ = PolyML.print_depth 0;
 local in
-open HolKernel Parse boolLib goalstackLib;
+open HolKernel Parse boolLib proofManagerLib;
 
 local
   open PP;
@@ -24,8 +24,8 @@ in
   val _ = PolyML.install_pp (pp2polypp (with_pp type_grammar.prettyprint_grammar));
   val _ = PolyML.install_pp (pp2polypp (with_pp term_grammar.prettyprint_grammar));
 
-  val _ = PolyML.install_pp (pp2polypp (with_pp goalstackLib.pp_proofs));
-  val _ = PolyML.install_pp (pp2polypp (with_pp goalstackLib.pp_goalstack));
+  val _ = PolyML.install_pp (pp2polypp (with_pp proofManagerLib.pp_proofs));
+  val _ = PolyML.install_pp (pp2polypp (with_pp proofManagerLib.pp_goalstack));
   val _ = PolyML.install_pp (pp2polypp (with_pp Rewrite.pp_rewrites));
   val _ = PolyML.install_pp (pp2polypp (with_pp TypeBasePure.pp_tyinfo));
   val _ = PolyML.install_pp (pp2polypp (with_pp DefnBase.pp_defn));

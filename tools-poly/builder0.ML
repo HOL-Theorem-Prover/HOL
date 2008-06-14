@@ -7,7 +7,7 @@ val _ = PolyML.print_depth pd;
 end;
 local
 val _ = loadPath := (OS.Path.concat (Systeml.HOLDIR, "sigobj")) :: (!loadPath);
-val _ = app load ["boolLib", "goalstackLib", "Arbrat"];
+val _ = app load ["boolLib", "proofManagerLib", "Arbrat"];
 fun main () = 
   (List.app use (CommandLine.arguments ());
    PolyML.rootFunction ());
