@@ -5,7 +5,7 @@ open HolKernel Parse boolLib;
 open pairLib Rules wfrecUtils Functional Induction DefnBase;
 
 type thry   = TypeBasePure.typeBase
-type proofs = GoalstackPure.proofs
+type proofs = Manager.proofs
 type absyn  = Absyn.absyn;
 
 val ERR = mk_HOL_ERR "Defn";
@@ -1376,10 +1376,10 @@ fun tgoal0 defn =
    if null (tcs_of defn)
    then raise ERR "tgoal" "no termination conditions"
    else let val (g,validation) = TC_TAC defn
-        in goalstackLib.add (GoalstackPure.prim_set_goal g validation)
+        in proofManagerLib.add (Manager.new_goalstack g validation)
         end handle HOL_ERR _ => raise ERR "tgoal" "";
 
-fun tgoal defn = Lib.with_flag (goalstackLib.chatting,false) tgoal0 defn;
+fun tgoal defn = Lib.with_flag (proofManagerLib.chatting,false) tgoal0 defn;
 
 (*---------------------------------------------------------------------------
      The error handling here is pretty coarse.
@@ -1387,20 +1387,20 @@ fun tgoal defn = Lib.with_flag (goalstackLib.chatting,false) tgoal0 defn;
 
 fun tprove0 (defn,tactic) =
   let val _ = tgoal0 defn
-      val _ = goalstackLib.expand tactic  (* should finish proof off *)
-      val th  = goalstackLib.top_thm ()
-      val _   = goalstackLib.drop()
+      val _ = proofManagerLib.expand tactic  (* should finish proof off *)
+      val th  = proofManagerLib.top_thm ()
+      val _   = proofManagerLib.drop()
       val eqns = CONJUNCT1 th
       val ind  = CONJUNCT2 th
   in
      (eqns,ind)
   end
-  handle e => (goalstackLib.drop(); raise (wrap_exn "Defn" "tprove" e))
+  handle e => (proofManagerLib.drop(); raise wrap_exn "Defn" "tprove" e)
 
 
 fun tprove p =
   let
-    val (eqns,ind) = Lib.with_flag (goalstackLib.chatting,false) tprove0 p
+    val (eqns,ind) = Lib.with_flag (proofManagerLib.chatting,false) tprove0 p
     val () = if not (!computeLib.auto_import_definitions) then ()
              else computeLib.add_funs
                     [eqns, CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) eqns]

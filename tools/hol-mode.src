@@ -259,7 +259,7 @@ how long this took."
   "Send selected region to HOL process as tactic."
   (interactive "r\nP")
   (let* ((region-string (with-hol-locpragma start (buffer-substring start end)))
-         (e-string (concat "goalstackLib." (if arg "expandf" "e")))
+         (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
          (tactic-string
           (format "%s (%s) handle e => Raise e" e-string region-string))
          (sender (if hol-emit-time-elapsed-p
@@ -269,9 +269,9 @@ how long this took."
 
 (defun send-string-as-hol-goal (s)
   (let ((goal-string
-         (format  "goalstackLib.g `%s` handle e => Raise e" s)))
+         (format  "proofManagerLib.g `%s` handle e => Raise e" s)))
     (send-raw-string-to-hol goal-string hol-echo-commands-p)
-    (send-raw-string-to-hol "goalstackLib.set_backup 100;")))
+    (send-raw-string-to-hol "proofManagerLib.set_backup 100;")))
 
 (defun hol-do-goal (arg)
   "Send term around point to HOL process as goal.
@@ -311,14 +311,14 @@ variable before and after the region is sent."
     (if (= (prefix-numeric-value arg) 16) (hol-toggle-quietdec))))
 
 (defun hol-name-top-theorem (string arg)
-  "Name the top theorem of the goalstackLib.
+  "Name the top theorem of the proofManagerLib.
 With prefix argument, drop the goal afterwards."
   (interactive "sName for top theorem: \nP")
   (if (not (string= string ""))
       (send-raw-string-to-hol
        (format "val %s = top_thm()" string)
        hol-echo-commands-p))
-  (if arg (send-raw-string-to-hol "goalstackLib.drop()" hol-echo-commands-p)))
+  (if arg (send-raw-string-to-hol "proofManagerLib.drop()" hol-echo-commands-p)))
 
 (defun remove-sml-comments (end)
   (let (done (start (point)))
@@ -536,17 +536,17 @@ file to \"use\" first."
 (defun hol-backup ()
   "Perform a HOL backup."
   (interactive)
-  (send-raw-string-to-hol "goalstackLib.b()" hol-echo-commands-p))
+  (send-raw-string-to-hol "proofManagerLib.b()" hol-echo-commands-p))
 
 (defun hol-print-goal ()
   "Print the current HOL goal."
   (interactive)
-  (send-raw-string-to-hol "goalstackLib.p()" hol-echo-commands-p))
+  (send-raw-string-to-hol "proofManagerLib.p()" hol-echo-commands-p))
 
 (defun hol-print-all-goals ()
   "Print all the current HOL goals."
   (interactive)
-  (send-raw-string-to-hol "goalstackLib.status()" hol-echo-commands-p))
+  (send-raw-string-to-hol "proofManagerLib.status()" hol-echo-commands-p))
 
 (defun hol-interrupt ()
   "Perform a HOL interrupt."
@@ -568,7 +568,7 @@ file to \"use\" first."
 (defun hol-rotate (arg)
   "Rotate the goal stack N times.  Once by default."
   (interactive "p")
-  (send-raw-string-to-hol (format "goalstackLib.r %d" arg)
+  (send-raw-string-to-hol (format "proofManagerLib.r %d" arg)
                           hol-echo-commands-p))
 
 (defun hol-scroll-up (arg)
@@ -755,12 +755,12 @@ argument N, sets the trace to that value in particular."
 (defun hol-restart-goal ()
   "Restarts the current goal."
   (interactive)
-  (send-raw-string-to-hol "goalstackLib.restart()" hol-echo-commands-p))
+  (send-raw-string-to-hol "proofManagerLib.restart()" hol-echo-commands-p))
 
 (defun hol-drop-goal ()
   "Drops the current goal."
   (interactive)
-  (send-raw-string-to-hol "goalstackLib.drop()" hol-echo-commands-p))
+  (send-raw-string-to-hol "proofManagerLib.drop()" hol-echo-commands-p))
 
 (defun hol-open-string (prefixp)
   "Opens HOL modules, prompting for the name of the module to load.
@@ -786,8 +786,8 @@ printed out.  (That's assuming that quietdec is false to start with.)"
   "Drops all HOL goals from the current proofs object."
   (interactive)
   (send-raw-string-to-hol
-   (concat "goalstackLib.dropn (case goalstackLib.status() of "
-           "GoalstackPure.PRFS l => List.length l)")))
+   (concat "proofManagerLib.dropn (case proofManagerLib.status() of "
+           "Manager.PRFS l => List.length l)")))
 
 (defun hol-subgoal-tactic ()
   "Sends term at point (delimited by backquote characters) as a
@@ -797,7 +797,7 @@ onto the assumption list of the old goal.  (Loads the Q module if not
 already loaded.)"
   (interactive)
   (send-string-to-hol
-   (format "goalstackLib.e (Q.SUBGOAL_THEN `%s` STRIP_ASSUME_TAC)"
+   (format "proofManagerLib.e (Q.SUBGOAL_THEN `%s` STRIP_ASSUME_TAC)"
            (hol-term-at-point))))
 
 ;; (defun hol-return-key ()

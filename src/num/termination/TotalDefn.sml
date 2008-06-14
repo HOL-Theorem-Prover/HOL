@@ -592,7 +592,7 @@ fun tDefine stem q tac =
                  val bind = stem ^ !Defn.def_suffix
              in been_stored (bind,def); def
              end
-        else let val (def,ind) = with_flag (goalstackLib.chatting,false)
+        else let val (def,ind) = with_flag (proofManagerLib.chatting,false)
                                          Defn.tprove0(defn,tac)
              in Defn.store(stem,def,ind) ; def
              end

@@ -26,7 +26,7 @@ tools/mlyacc/mlyacclib
 # these three directories are required to even run hol.bare.unquote
 src/parse
 src/bool
-src/goalstack
+src/proofman
 src/emit
 src/compute/src
 src/HolSat/sat_solvers/minisat

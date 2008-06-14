@@ -6,8 +6,8 @@
 app load ["wordsLib","llistTheory","teaTheory"];
 quietdec := true;
 *)
-open HolKernel Parse boolLib bossLib 
-     wordsTheory wordsLib pairTheory arithmeticTheory 
+open HolKernel Parse boolLib bossLib wordsLib
+     wordsTheory pairTheory arithmeticTheory 
      llistTheory optionTheory teaTheory;
 (*
 quietdec := false;
@@ -83,19 +83,19 @@ val lazy_teaDecrypt_def =
 (* Main lemmas                                                               *)
 (*---------------------------------------------------------------------------*)
 
-val lemma2 = Q.prove
+val lemma1 = Q.prove
 (`!a. FUNPOW Round 32 a = Rounds (32w,a)`, GEN_TAC THEN EVAL_TAC);
 
-val lemma3 = Q.prove
+val lemma2 = Q.prove
 (`!a. FUNPOW InvRound 32 a = InvRounds (32w,a)`, GEN_TAC THEN EVAL_TAC);
 
 val teaEncrypt_lemma = Q.prove
 (`teaEncrypt(k,t) = FST(FUNPOW Round 32 (t,k,0w))`,
- RW_TAC std_ss [teaEncrypt_def,lemma2] THEN RW_TAC std_ss []);
+ RW_TAC std_ss [teaEncrypt_def,lemma1] THEN RW_TAC std_ss []);
 
 val teaDecrypt_lemma = Q.prove
 (`teaDecrypt(k,t) = FST(FUNPOW InvRound 32 (t,k,DELTA << 5))`,
- RW_TAC std_ss [teaDecrypt_def,lemma3] THEN RW_TAC std_ss []);
+ RW_TAC std_ss [teaDecrypt_def,lemma2] THEN RW_TAC std_ss []);
 
 val lazy_tea_correct = Q.store_thm
 ("lazy_tea_correct",

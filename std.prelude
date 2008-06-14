@@ -6,9 +6,9 @@ val _ = quietdec := true;
    ---------------------------------------------------------------------- *)
 
 val _ = app load
-  ["Mosml", "Process", "Path", "boolLib", "goalstackLib", "Arbrat"];
+  ["Mosml", "Process", "Path", "boolLib", "proofManagerLib", "Arbrat"];
 
-open HolKernel Parse boolLib goalstackLib;
+open HolKernel Parse boolLib proofManagerLib;
 
 (* Loading HolKernel installs the "standard" set of infixes, which are
    set up in src/0/Overlay.sml *)
@@ -29,8 +29,8 @@ in
   val _ = installPP (with_pp type_grammar.prettyprint_grammar)
   val _ = installPP (with_pp term_grammar.prettyprint_grammar)
 
-  val _ = installPP (with_pp goalstackLib.pp_proofs)
-  val _ = installPP (with_pp goalstackLib.pp_goalstack)
+  val _ = installPP (with_pp proofManagerLib.pp_proof)
+  val _ = installPP (with_pp proofManagerLib.pp_proofs)
   val _ = installPP (with_pp Rewrite.pp_rewrites)
   val _ = installPP (with_pp TypeBasePure.pp_tyinfo)
   val _ = installPP (with_pp DefnBase.pp_defn)

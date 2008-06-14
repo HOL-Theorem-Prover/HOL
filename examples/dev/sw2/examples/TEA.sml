@@ -25,7 +25,9 @@ open compiler;
 (* Cipher types                                                              *)
 (*---------------------------------------------------------------------------*)
 
-val _ = type_abbrev("state", ``:word32 # word32 # word32 # word32 # word32 # word32 # word32``);
+val _ = 
+ type_abbrev("state", ``:word32 # word32 # word32 # 
+                         word32 # word32 # word32 # word32``);
 
 val DELTA_def = Define `DELTA = 1w`;  (* 0xe3779b9w:word32`; *)
 

@@ -24,6 +24,7 @@ end;
 
 open bossLib;  (* Any others? *)
 
+val _ = use (HOLDIR^"/src/proofman/expandq");
 (* val _ = use (HOLDIR^"/src/datatype/Interactive"); *)
 
 val _ = quietdec := false;
