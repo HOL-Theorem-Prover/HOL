@@ -1,6 +1,6 @@
 \DOC p
 
-\TYPE {p : unit -> goalstack}
+\TYPE {p : unit -> proof}
 
 \SYNOPSIS
 Prints the top levels of the subgoal package goal stack.
@@ -17,5 +17,5 @@ Never fails.
 Examining the proof state during an interactive proof session.
 
 \SEEALSO
-goalstackLib.b, goalstackLib.backup, backup_limit, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, get_state, print_state, goalstackLib.r, rotate, save_top_thm, goalstackLib.set_goal, set_state, goalstackLib.top_goal, goalstackLib.top_thm.
+proofManagerLib.b, proofManagerLib.backup, backup_limit, proofManagerLib.e, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.g, get_state, print_state, proofManagerLib.r, rotate, save_top_thm, proofManagerLib.set_goal, set_state, proofManagerLib.top_goal, proofManagerLib.top_thm.
 \ENDDOC

@@ -19,5 +19,5 @@ been completely proved.
 Examining the proof state after a proof fails.
 
 \SEEALSO
-goalstackLib.b, goalstackLib.backup, backup_limit, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, get_state, goalstackLib.p, print_state, goalstackLib.r, rotate, save_top_thm, goalstackLib.set_goal, set_state, goalstackLib.top_thm.
+proofManagerLib.b, proofManagerLib.backup, backup_limit, proofManagerLib.e, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.g, get_state, proofManagerLib.p, print_state, proofManagerLib.r, rotate, save_top_thm, proofManagerLib.set_goal, set_state, proofManagerLib.top_thm.
 \ENDDOC

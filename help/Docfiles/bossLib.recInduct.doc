@@ -54,6 +54,6 @@ A few simple tactic applications then prove this goal.
 \SEEALSO
 bossLib.Induct, bossLib.Induct_on, bossLib.completeInduct_on, 
 bossLib.measureInduct_on, Prim_rec.INDUCT_THEN, bossLib.Cases,
-bossLib.Hol_datatype, goalstackLib.g, goalstackLib.e.
+bossLib.Hol_datatype, proofManagerLib.g, proofManagerLib.e.
 
 \ENDDOC

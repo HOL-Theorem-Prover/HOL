@@ -1,6 +1,6 @@
 \DOC b
 
-\TYPE {b : unit -> goalstack}
+\TYPE {b : unit -> proof}
 
 \SYNOPSIS
 Restores the proof state undoing the effects of a previous expansion.
@@ -17,5 +17,5 @@ As for {backup}.
 Back tracking in a goal-directed proof to undo errors or try different tactics.
 
 \SEEALSO
-goalstackLib.backup, backup_limit, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, get_state, goalstackLib.p, print_state, goalstackLib.r, rotate, save_top_thm, goalstackLib.set_goal, set_state, goalstackLib.top_goal, goalstackLib.top_thm.
+proofManagerLib.backup, backup_limit, proofManagerLib.e, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.g, get_state, proofManagerLib.p, print_state, proofManagerLib.r, rotate, save_top_thm, proofManagerLib.set_goal, set_state, proofManagerLib.top_goal, proofManagerLib.top_thm.
 \ENDDOC

@@ -1,6 +1,6 @@
 \DOC expand
 
-\TYPE {expand : tactic -> goalstack}
+\TYPE {expand : tactic -> proof}
 
 \SYNOPSIS
 Applies a tactic to the current goal, stacking the resulting subgoals.
@@ -65,7 +65,7 @@ OK..
     
     HD [1; 2; 3] = 1
     
-     : goalstack
+     : proof
 
 - expand (REWRITE_TAC[listTheory.HD]);
 OK..
@@ -77,7 +77,7 @@ Remaining subgoals:
 > val it =
     TL [1; 2; 3] = [2; 3]
     
-     : goalstack
+     : proof
 
 - expand (REWRITE_TAC[listTheory.TL]);
 OK..
@@ -86,7 +86,7 @@ Goal proved.
 |- TL [1; 2; 3] = [2; 3]
 > val it =
     Initial goal proved.
-    |- (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3]) : goalstack
+    |- (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3]) : proof
 }
 In the following example an invalid tactic is used. It is invalid
 because it assumes something that is not on the assumption list of the goal.
@@ -116,5 +116,5 @@ Invalid tactic
 Doing a step in an interactive goal-directed proof.
 
 \SEEALSO
-goalstackLib.b, goalstackLib.backup, goalstackLib.e, goalstackLib.expandf, goalstackLib.g, goalstackLib.set_goal, goalstackLib.p, goalstackLib.r, goalstackLib.rotate, goalstackLib.top_goal, goalstackLib.top_thm, Tactical.VALID.
+proofManagerLib.b, proofManagerLib.backup, proofManagerLib.e, proofManagerLib.expandf, proofManagerLib.g, proofManagerLib.set_goal, proofManagerLib.p, proofManagerLib.r, proofManagerLib.rotate, proofManagerLib.top_goal, proofManagerLib.top_thm, Tactical.VALID.
 \ENDDOC

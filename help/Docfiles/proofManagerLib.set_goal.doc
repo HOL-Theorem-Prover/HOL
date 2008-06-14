@@ -63,5 +63,5 @@ saved.
 
 
 \SEEALSO
-goalstackLib.b, goalstackLib.backup, goalstackLib.set_backup, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, goalstackLib.p, goalstackLib.r, goalstackLib.top_goal, goalstackLib.top_thm.
+proofManagerLib.b, proofManagerLib.backup, proofManagerLib.set_backup, proofManagerLib.e, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.g, proofManagerLib.p, proofManagerLib.r, proofManagerLib.top_goal, proofManagerLib.top_thm.
 \ENDDOC

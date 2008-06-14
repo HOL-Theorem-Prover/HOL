@@ -1,6 +1,6 @@
 \DOC e
 
-\TYPE {e : tactic -> goalstack}
+\TYPE {e : tactic -> proof}
 
 \SYNOPSIS
 Applies a tactic to the current goal, stacking the resulting subgoals.
@@ -16,5 +16,5 @@ As for {expand}.
 Doing a step in an interactive goal-directed proof.
 
 \SEEALSO
-goalstackLib.b, goalstackLib.backup, backup_limit, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, get_state, goalstackLib.p, print_state, goalstackLib.r, rotate, save_top_thm, goalstackLib.set_goal, set_state, goalstackLib.top_goal, goalstackLib.top_thm, VALID.
+proofManagerLib.b, proofManagerLib.backup, backup_limit, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.g, get_state, proofManagerLib.p, print_state, proofManagerLib.r, rotate, save_top_thm, proofManagerLib.set_goal, set_state, proofManagerLib.top_goal, proofManagerLib.top_thm, VALID.
 \ENDDOC

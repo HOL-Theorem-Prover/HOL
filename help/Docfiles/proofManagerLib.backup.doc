@@ -1,6 +1,6 @@
 \DOC backup
 
-\TYPE {backup : unit -> goalstack}
+\TYPE {backup : unit -> proof}
 
 \SYNOPSIS
 Restores the proof state, undoing the effects of a previous expansion.
@@ -44,7 +44,7 @@ OK..
     
     HD [1; 2; 3] = 1
     
-     : goalstack
+     : proof
 
 - backup();
 > val it =
@@ -52,13 +52,13 @@ OK..
     
     (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
     
-     : goalstack
+     : proof
 
 - e (REWRITE_TAC[listTheory.HD, listTheory.TL]);
 OK..
 > val it =
     Initial goal proved.
-    |- (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3]) : goalstack
+    |- (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3]) : proof
 }
 
 
@@ -66,5 +66,5 @@ OK..
 Back tracking in a goal-directed proof to undo errors or try different tactics.
 
 \SEEALSO
-goalstackLib.b, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, goalstackLib.p, goalstackLib.r, goalstackLib.rotate, goalstackLib.set_goal, goalstackLib.top_goal, goalstackLib.top_thm, goalstackLib.restart, goalstackLib.drop, goalstackLib.dropn.
+proofManagerLib.b, proofManagerLib.e, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.g, proofManagerLib.p, proofManagerLib.r, proofManagerLib.rotate, proofManagerLib.set_goal, proofManagerLib.top_goal, proofManagerLib.top_thm, proofManagerLib.restart, proofManagerLib.drop, proofManagerLib.dropn.
 \ENDDOC

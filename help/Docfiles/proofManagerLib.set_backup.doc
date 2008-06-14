@@ -1,6 +1,6 @@
 \DOC set_backup
 
-\TYPE {goalstackLib.set_backup : int -> unit}
+\TYPE {proofManagerLib.set_backup : int -> unit}
 
 \SYNOPSIS
 Limits the number of proof states saved on the subgoal package backup list.
@@ -35,7 +35,7 @@ OK..
     
     HD [1; 2; 3] = 1
     
-     : goalstack
+     :proof
 
 - e (REWRITE_TAC[listTheory.HD]);
 OK..
@@ -47,7 +47,7 @@ Remaining subgoals:
 > val it =
     TL [1; 2; 3] = [2; 3]
     
-     : goalstack
+     : proof
 
 - b();
 > val it =
@@ -56,7 +56,7 @@ Remaining subgoals:
     
     HD [1; 2; 3] = 1
     
-     : goalstack
+     : proof
 
 - b();
 ! Uncaught exception: 
@@ -65,5 +65,5 @@ Remaining subgoals:
 
 
 \SEEALSO
-goalstackLib.b, goalstackLib.backup, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, goalstackLib.p, goalstackLib.r, goalstackLib.rotate, goalstackLib.set_goal, goalstackLib.top_goal, goalstackLib.top_thm.
+proofManagerLib.b, proofManagerLib.backup, proofManagerLib.e, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.g, proofManagerLib.p, proofManagerLib.r, proofManagerLib.rotate, proofManagerLib.set_goal, proofManagerLib.top_goal, proofManagerLib.top_thm.
 \ENDDOC
