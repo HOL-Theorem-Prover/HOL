@@ -206,7 +206,7 @@ val _ =
  Hol_datatype
   `aexp = ArrConst  of (int |-> int)           (* array constant *)
         | ArrVar    of string                  (* array variable *)
-        | ArrUpdate of (aexp # nexp # nexp)`;  (* array update   *)
+        | ArrUpdate of aexp => nexp => nexp`;  (* array update   *)
 
 val neval_def =  
  Define
@@ -232,7 +232,7 @@ val aeval_def =
    /\
    (aeval (ArrVar v) s = ArrayOf(s ' v))
    /\
-   (aeval (ArrUpdate(a,e1,e2)) s = aeval a s |+ (neval e1 s, neval e2 s))`;
+   (aeval (ArrUpdate a e1 e2) s = aeval a s |+ (neval e1 s, neval e2 s))`;
 
 val Update_def =
  Define
@@ -277,7 +277,7 @@ val Assign_def =
 (* Array assignment *)
 val ArrayAssign_def =
  Define
-  `ArrayAssign v e1 e2 =  GenAssign v (INR(ArrUpdate(ArrVar v,e1,e2)))`;
+  `ArrayAssign v e1 e2 =  GenAssign v (INR(ArrUpdate (ArrVar v) e1 e2))`;
 
 (*---------------------------------------------------------------------------*)
 (* Big-step operational semantics specified by an inductive relation.        *)
