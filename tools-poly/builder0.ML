@@ -1,5 +1,5 @@
 local
-val pd = PolyML.get_print_depth ();
+val pd = !PolyML.Compiler.printDepth;
 in
 val _ = PolyML.print_depth 0;
 val _ = use "poly/poly-init2.ML";

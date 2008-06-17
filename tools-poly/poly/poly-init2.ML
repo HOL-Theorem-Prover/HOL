@@ -56,7 +56,7 @@ fun quse s =
 fun myuse f =
   let val op ^ = OS.Path.concat
       val file = OS.Path.file f 
-      val pd = PolyML.get_print_depth ()
+      val pd = !PolyML.Compiler.printDepth
   in
     PolyML.print_depth 0;
     ((if List.exists (fn f => f = file) redirected_files then
