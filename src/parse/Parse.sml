@@ -1027,6 +1027,46 @@ fun overload_on_by_nametype s (r as {Name, Thy}) = let in
      )
  end
 
+fun temp_send_to_back_overload s {Name, Thy} = let
+  open term_grammar
+in
+  the_term_grammar :=
+    fupdate_overload_info
+    (Overload.send_to_back_overloading {opname=s, realname=Name, realthy=Thy})
+    (term_grammar());
+  term_grammar_changed := true
+end
+
+fun send_to_back_overload s (r as {Name, Thy}) = let in
+   temp_send_to_back_overload s r;
+   full_update_grms
+     ("(temp_send_to_back_overload "^quote s^")",
+      String.concat
+        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"],
+      SOME (prim_mk_const r)
+     )
+ end
+
+fun temp_bring_to_front_overload s {Name, Thy} = let
+  open term_grammar
+in
+  the_term_grammar :=
+    fupdate_overload_info
+    (Overload.bring_to_front_overloading {opname=s, realname=Name, realthy=Thy})
+    (term_grammar());
+  term_grammar_changed := true
+end
+
+fun bring_to_front_overload s (r as {Name, Thy}) = let in
+   temp_bring_to_front_overload s r;
+   full_update_grms
+     ("(temp_bring_to_front_overload "^quote s^")",
+      String.concat
+        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"],
+      SOME (prim_mk_const r)
+     )
+ end
+
 fun temp_overload_on (s, t) =
   temp_overload_on_by_nametype s (lose_constrec_ty (dest_thy_const t))
   handle Overload.OVERLOAD_ERR s => raise ERROR "temp_overload_on" s

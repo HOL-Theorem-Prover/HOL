@@ -47,6 +47,14 @@ sig
     {opname: string, realname: string, realthy : string} ->
     overload_info -> overload_info
 
+  val send_to_back_overloading:
+    {opname: string, realname: string, realthy : string} ->
+    overload_info -> overload_info
+
+  val bring_to_front_overloading:
+    {opname: string, realname: string, realthy : string} ->
+    overload_info -> overload_info
+
   val merge_oinfos : overload_info -> overload_info -> overload_info
 
   val known_constants : overload_info -> string list
