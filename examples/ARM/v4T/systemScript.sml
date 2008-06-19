@@ -208,19 +208,6 @@ val DECODE_CDP_def = Define`
      (3 >< 0) w)`; (* CRm  *)
 
 (* -------------------------------------------------------------------------- *)
-(* DECODE_MRC_MCR                                                             *)
-(* -------------------------------------------------------------------------- *)
-
-val DECODE_MRC_MCR_def = Define`
-  DECODE_MRC_MCR (w:word32) =
-    ((23 >< 21) w, (* Cop1 *)
-     (19 >< 16) w, (* CRn  *)
-     (15 >< 12) w, (* Rd   *)
-     (11 >< 8) w,  (* CPN  *)
-     (7 >< 5) w,   (* Cop2 *)
-     (3 >< 0) w)`; (* CRm  *)
-
-(* -------------------------------------------------------------------------- *)
 (* DECODE_CP                                                                  *)
 (* Determines the instruction class ** for a coprocessor instruction **       *)
 (* -------------------------------------------------------------------------- *)
@@ -577,20 +564,6 @@ val STATE_3STAGE_def = Define`
   (STATE_3STAGE cp write read (s,i) 0 = s) /\
   (STATE_3STAGE cp write read (s,i) (SUC t) =
      NEXT_3STAGE cp write read (STATE_3STAGE cp write read (s,i) t, i t))`;
-
-(* -------------------------------------------------------------------------- *)
-
-val STATE_1STAGE_NUM = save_thm("STATE_1STAGE_NUM",
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV
-    (GEN_ALL (CONJUNCT2 STATE_1STAGE_def)));
-
-val _ = computeLib.add_persistent_funs [("STATE_1STAGE_NUM", STATE_1STAGE_NUM)];
-
-val STATE_3STAGE_NUM = save_thm("STATE_3STAGE_NUM",
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV
-    (GEN_ALL (CONJUNCT2 STATE_3STAGE_def)));
-
-val _ = computeLib.add_persistent_funs [("STATE_3STAGE_NUM", STATE_3STAGE_NUM)];
 
 (* -------------------------------------------------------------------------- *)
 

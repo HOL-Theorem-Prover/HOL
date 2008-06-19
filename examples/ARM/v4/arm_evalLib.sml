@@ -237,7 +237,7 @@ val ARM_ASSEMBLE_CONV = let open instructionTheory
         transfer_options_fupdcanon,transfer_options_fupdcanon_comp,
         condition2num_thm,arm_instruction_case_def,addr_mode1_case_def,
         addr_mode2_case_def,addr_mode3_case_def,
-        msr_mode_case_def,condition_encode_def,
+        msr_mode_case_def,condition_encode,
         shift_encode_def,addr_mode1_encode_def,
         addr_mode2_encode_def,addr_mode3_encode_def,
         msr_mode_encode_def,msr_psr_encode_def,

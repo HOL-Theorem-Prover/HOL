@@ -1307,6 +1307,12 @@ val cond_pass_enc_coproc = store_thm("cond_pass_enc_coproc",
 
 (* ......................................................................... *)
 
+val condition_encode = save_thm("condition_encode",
+   LIST_CONJ (map (fn x => EVAL ``condition_encode ^x``)
+    ((snd o strip_comb o snd o dest_comb o concl) datatype_condition)));
+
+(* ......................................................................... *)
+
 fun MAP_SPEC t l = LIST_CONJ (map (fn x =>
   SIMP_RULE (srw_ss()++pred_setSimps.PRED_SET_ss)
     [decode_opcode_def] (SPEC x t)) l);
