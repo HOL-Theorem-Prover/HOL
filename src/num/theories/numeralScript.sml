@@ -867,7 +867,7 @@ val (div_eqns, mod_eqns) =
 (* Map 0 and ZERO to the same thing in generated ML.                         *)
 (*---------------------------------------------------------------------------*)
 
-val _ = ConstMapML.prim_insert(Term`0n`,("num","ZERO",Type`:num`));
+val _ = ConstMapML.prim_insert(Term`0n`,(true,"num","ZERO",Type`:num`));
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
@@ -876,7 +876,7 @@ val _ = adjoin_to_theory
       fun NL() = PP.add_newline ppstrm
   in S "val _ = ConstMapML.prim_insert "; NL();
      S "         (Term.prim_mk_const{Name=\"0\",Thy=\"num\"},"; NL();
-     S "          (\"num\",\"ZERO\",Type.mk_type(\"num\",[])));";
+     S "          (true,\"num\",\"ZERO\",Type.mk_type(\"num\",[])));";
      NL()
   end)};
 

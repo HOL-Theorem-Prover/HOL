@@ -45,7 +45,11 @@ sig
                 | MLSIG of string
                 | MLSTRUCT of string
 
-  val sigSuffix : string ref 
-  val structSuffix : string ref 
-  val emitML : string -> string * elem list -> unit
+  val sigSuffix        : string ref 
+  val structSuffix     : string ref 
+  val sigCamlSuffix    : string ref 
+  val structCamlSuffix : string ref 
+
+  val emitML   : string -> string * elem list -> unit
+  val emitCAML : string -> string * elem list -> unit
 end

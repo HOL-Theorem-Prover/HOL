@@ -24,8 +24,8 @@ fun unprime s = String.extract(s,1,NONE);
 (*---------------------------------------------------------------------------*)
 
 fun iconst (slist,n,thy) = 
-    inst (List.map (fn s => (mk_vartype (unprime s) |-> qmk_vartype s)) slist)
-         (prim_mk_const{Name=n,Thy=thy});
+  inst (List.map (fn s => (mk_vartype (unprime s) |-> qmk_vartype s)) slist)
+        (prim_mk_const{Name=n,Thy=thy});
 
 (*---------------------------------------------------------------------------*)
 (* The initial constant map has equality, conjunction, disjunction,          *)
@@ -33,7 +33,7 @@ fun iconst (slist,n,thy) =
 (* (structure name,value name, type).                                        *)
 (*---------------------------------------------------------------------------*)
 
-type constmap = (term, string*string*hol_type)dict
+type constmap = (term, bool*string*string*hol_type)dict
 
 (*---------------------------------------------------------------------------*)
 (* Need to call same_const in order to get the notion of equality desired,   *)
@@ -55,12 +55,12 @@ in
 val ConstMapRef = ref
   (insert(insert(insert(insert(insert(insert
     (initConstMap,
-     equality, ("","=",    eq_alpha-->eq_alpha-->bool)),
-     negation, ("","not",  bool-->bool)),
-     T,        ("","true", bool)),
-     F,        ("","false",bool)),
-     conj,     ("","andalso",bool-->bool-->bool)),
-     disj,     ("","orelse", bool-->bool-->bool)))
+     equality, (false,"","=",    eq_alpha-->eq_alpha-->bool)),
+     negation, (false,"","not",  bool-->bool)),
+     T,        (false,"","true", bool)),
+     F,        (false,"","false",bool)),
+     conj,     (false,"","andalso",bool-->bool-->bool)),
+     disj,     (false,"","orelse", bool-->bool-->bool)))
 end;
 
 fun theConstMap () = !ConstMapRef;
@@ -71,12 +71,12 @@ fun theConstMap () = !ConstMapRef;
 (* comment.                                                                  *)
 (*---------------------------------------------------------------------------*)
 
-local fun check_name(Thy,Name,Ty) =
+local fun check_name(is_type_cons,Thy,Name,Ty) =
        let val Name' = if String.sub(Name,0) = #"*" orelse
                           String.sub(Name,String.size Name -1) = #"*"
                        then " "^Name^" "
                        else Name
-       in (Thy,Name',Ty)
+       in (is_type_cons,Thy,Name',Ty)
        end
 in
 fun prim_insert (c,t) = (ConstMapRef := insert(theConstMap(),c,check_name t))
@@ -85,7 +85,12 @@ end;
 
 fun insert c = 
  let val {Name,Thy,Ty} = dest_thy_const c
- in prim_insert(c,(Thy,Name,Ty))
+ in prim_insert(c,(false,Thy,Name,Ty))
+ end;
+
+fun insert_cons c = 
+ let val {Name,Thy,Ty} = dest_thy_const c
+ in prim_insert(c,(true,Thy,Name,Ty))
  end;
 
 fun apply c =
