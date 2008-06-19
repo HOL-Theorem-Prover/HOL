@@ -431,7 +431,7 @@ fun pp_newcommand ostrm c =
     S ("\\newcommand{\\" ^ c ^ "}{")
   end;
 
-fun pp_datatypes_as_tex_commands ostrm thms =
+fun pp_datatypes_as_tex ostrm thms =
   let val S = PP.add_string ostrm
       fun NL() = PP.add_newline ostrm
       val prefix = datatype_prefix()
@@ -447,7 +447,7 @@ fun pp_datatypes_as_tex_commands ostrm thms =
        PP.end_block ostrm)
   end;
 
-fun pp_defnitions_as_tex_commands ostrm thms =
+fun pp_defnitions_as_tex ostrm thms =
   let val S = PP.add_string ostrm
       fun NL() = PP.add_newline ostrm
       val prefix = definition_prefix()
@@ -463,7 +463,7 @@ fun pp_defnitions_as_tex_commands ostrm thms =
        PP.end_block ostrm)
   end;
 
-fun pp_theorems_as_tex_commands ostrm thms =
+fun pp_theorems_as_tex ostrm thms =
   let val S = PP.add_string ostrm
       fun NL() = PP.add_newline ostrm
       val prefix = theorem_prefix()
@@ -479,7 +479,7 @@ fun pp_theorems_as_tex_commands ostrm thms =
        PP.end_block ostrm)
   end;
 
-fun pp_theory_as_tex_commands ostrm name =
+fun pp_theory_as_tex ostrm name =
   let val _ = current_theory_name := name
       val S = PP.add_string ostrm
       fun NL() = PP.add_newline ostrm
@@ -502,14 +502,14 @@ fun pp_theory_as_tex_commands ostrm name =
        S (Date.fmt "%d %B %Y" time); S "}"; NL();
        pp_newcommand ostrm (time_prefix());
        S (Date.fmt "%H:%M" time); S "}"; NL();
-       pp_datatypes_as_tex_commands ostrm typs;
-       pp_defnitions_as_tex_commands ostrm defns;
-       pp_theorems_as_tex_commands ostrm thms;
+       pp_datatypes_as_tex ostrm typs;
+       pp_defnitions_as_tex  ostrm defns;
+       pp_theorems_as_tex ostrm thms;
        PP.end_block ostrm);
     current_theory_name := ""
   end;
 
-fun tex_commands_theory name =
+fun print_theory_as_tex name =
    let val name = case name of "-" => current_theory() | _ => name
        val path = if !emitTeXDir = "" then !current_path else !emitTeXDir
        val path = if path = "" then Path.currentArc else path
@@ -521,7 +521,7 @@ fun tex_commands_theory name =
    in
      PP.with_pp {consumer = Portable.outputc ostrm, linewidth = texLinewidth,
                  flush = fn () => Portable.flush_out ostrm}
-        (Lib.C pp_theory_as_tex_commands name)
+        (Lib.C pp_theory_as_tex name)
      handle e => (Portable.close_out ostrm; raise e);
      Portable.close_out ostrm
    end;
@@ -535,7 +535,7 @@ val sec_divide =
 val subsec_divide =
   "% .....................................";
 
-fun pp_parents_as_tex ostrm names =
+fun pp_parents_as_tex_doc ostrm names =
   let val S = PP.add_string ostrm
       fun NL() = PP.add_newline ostrm
   in
@@ -552,7 +552,7 @@ fun pp_parents_as_tex ostrm names =
     PP.end_block ostrm
   end;
 
-fun pp_datatypes_as_tex ostrm empty =
+fun pp_datatypes_as_tex_doc ostrm empty =
   let val S = PP.add_string ostrm
       fun NL() = PP.add_newline ostrm
       val i = index_string() ^ "!Datatypes"
@@ -568,7 +568,7 @@ fun pp_datatypes_as_tex ostrm empty =
     PP.end_block ostrm
   end;
 
-fun pp_defnitions_as_tex ostrm empty =
+fun pp_defnitions_as_tex_doc ostrm empty =
   let val S = PP.add_string ostrm
       fun NL() = PP.add_newline ostrm
       val i = index_string() ^ "!Definitions"
@@ -584,7 +584,7 @@ fun pp_defnitions_as_tex ostrm empty =
     PP.end_block ostrm
   end;
 
-fun pp_theorems_as_tex ostrm empty =
+fun pp_theorems_as_tex_doc ostrm empty =
   let val S = PP.add_string ostrm
       fun NL() = PP.add_newline ostrm
       val i = index_string() ^ "!Theorems"
@@ -600,7 +600,7 @@ fun pp_theorems_as_tex ostrm empty =
     PP.end_block ostrm
   end;
 
-fun pp_theory_as_tex ostrm name =
+fun pp_theory_as_tex_doc ostrm name =
   let val _ = current_theory_name := name
       val S = PP.add_string ostrm
       fun NL() = PP.add_newline ostrm
@@ -617,18 +617,18 @@ fun pp_theory_as_tex ostrm name =
        S sec_divide; NL();
        S "\\section{"; S name; S " Theory}"; NL();
        S (index_string()); S "}"; NL();
-       pp_parents_as_tex ostrm names;
+       pp_parents_as_tex_doc ostrm names;
        S sec_divide; NL(); NL();
-       pp_datatypes_as_tex ostrm (null typs); NL();
-       pp_defnitions_as_tex ostrm (null defns); NL();
-       pp_theorems_as_tex ostrm (null thms);
+       pp_datatypes_as_tex_doc ostrm (null typs); NL();
+       pp_defnitions_as_tex_doc ostrm (null defns); NL();
+       pp_theorems_as_tex_doc ostrm (null thms);
        PP.end_block ostrm);
     current_theory_name := ""
   end;
 
 (* ......................................................................... *)
 
-fun pp_theories_as_tex ostrm names =
+fun pp_theories_as_tex_doc ostrm names =
   let val S = PP.add_string ostrm
       fun NL() = PP.add_newline ostrm
   in
@@ -641,7 +641,7 @@ fun pp_theories_as_tex ostrm names =
     S "\\tableofcontents"; NL();
     S "\\cleardoublepage"; NL();
     S "\\HOLpagestyle"; NL(); NL();
-    app (fn x => (pp_theory_as_tex ostrm x; NL())) names;
+    app (fn x => (pp_theory_as_tex_doc ostrm x; NL())) names;
     S "\\HOLindex"; NL(); NL();
     S "\\end{document}";
     PP.end_block ostrm
@@ -652,7 +652,7 @@ local
     if Path.ext s = SOME "tex" then s
     else Path.joinBaseExt {base = s, ext = SOME "tex"}
 in
-  fun print_theories_as_tex names path =
+  fun print_theories_as_tex_doc names path =
    let val {dir, file} = Path.splitDirFile path
        val dir = if Path.isAbsolute path orelse !emitTeXDir = "" then
                    dir
@@ -664,21 +664,21 @@ in
                     "File " ^ path ^ " already exists.\n");
                   failwith "File exists")
        val _ = current_path := dir
-       val _ = app tex_commands_theory names
+       val _ = app print_theory_as_tex names
        val _ = current_path := Path.currentArc
        val ostrm = Portable.open_out filename
    in
      PP.with_pp {consumer = Portable.outputc ostrm, linewidth = texLinewidth,
                  flush = fn () => Portable.flush_out ostrm}
-        (Lib.C pp_theories_as_tex names)
+        (Lib.C pp_theories_as_tex_doc names)
      handle e => (Portable.close_out ostrm; raise e);
      Portable.close_out ostrm
    end
 end
 
-fun print_theory_as_tex s =
-  print_theories_as_tex [case s of "-" => current_theory() | _ => s];
-
-fun tex_theory s = print_theory_as_tex s s;
+fun tex_theory s =
+let val c = case s of "-" => current_theory() | _ => s in
+  print_theories_as_tex_doc [c] c
+end;
 
 end
