@@ -2,7 +2,8 @@ structure wordsLib :> wordsLib =
 struct
 
 (* interactive use:
-  app load ["fcpLib", "numeral_bitTheory", "wordsTheory", "wordsSyntax"];
+  app load ["fcpLib", "numeral_bitTheory", "wordsTheory", "wordsSyntax",
+            "stringSyntax"];
 *)
 
 open HolKernel Parse boolLib bossLib computeLib;
@@ -49,13 +50,10 @@ val P = mk_var("P", bool);
 val Q = mk_var("Q", bool);
 val m = mk_var("m", numLib.num);
 val n = mk_var("n", numLib.num);
-val p = mk_var("p", numLib.num);
 val w = mk_var("w", ``:'a word``);
-val x = mk_var("x", ``:'b word``);
 val y = mk_var("y", ``:'a word``);
 val a = ``arithmetic$NUMERAL ^(mk_var("a", numLib.num))``;
 val b = ``arithmetic$NUMERAL ^(mk_var("b", numLib.num))``;
-val c = ``arithmetic$NUMERAL ^(mk_var("c", numLib.num))``;
 val n2w = ``words$n2w : num -> 'a word``;
 
 (* ------------------------------------------------------------------------- *)
@@ -132,18 +130,32 @@ let
             [MOD_2EXP_EQ, MOD_2EXP_MAX]) comp
  val _ = add_conv(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) comp
 in
- fn tm => 
+ fn tm =>
    case total dest_eq tm
    of NONE => raise ERR "word_EQ_CONV" "not an equality"
     | SOME(w1,w2) =>
       if is_word_literal w1 andalso is_word_literal w2
-      then if w1=w2 
+      then if w1=w2
            then Thm.SPEC w1 (INST_TYPE[alpha|->type_of w1] REFL_CLAUSE)
            else
                 if null (type_vars_in_term w1)
                 then CHANGED_CONV (CBV_CONV comp) tm
                 else raise ERR "word_EQ_CONV" "contains type variables"
       else raise ERR "word_eq_CONV" "non-literal in equality"
+end;
+
+fun l2n_pow2 i =
+let open Arbnum numSyntax
+    val t = mk_numeral (Arbnum.log2 (Arbnum.fromInt i))
+    val (l,r) = CONJ_PAIR l2n_pow2_compute in
+  SIMP_RULE std_ss [] (CONJ (Thm.SPEC t l) (Thm.SPEC t r))
+end;
+
+fun n2l_pow2 i =
+let open Arbnum numSyntax
+    val t = mk_numeral (Arbnum.log2 (Arbnum.fromInt i))
+in
+  SIMP_RULE std_ss [] (Thm.SPEC t n2l_pow2_compute)
 end;
 
 val thms =
@@ -157,7 +169,7 @@ val thms =
    NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` BITS_def,
    NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
    NUM_RULE [BITS_ZERO2] `n`  BIT_def, INT_MIN_SUM,
-   numeral_log2,numeral_ilog2,
+   numeral_log2,numeral_ilog2,LOG_compute,
    n2w_w2n, w2n_n2w, MOD_WL1 w2w_n2w, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def,
    word_join_def, word_concat_def,
@@ -171,7 +183,22 @@ val thms =
    word_lsb_n2w, word_msb_n2w, word_bit_n2w, word_index_n2w,
    word_bits_n2w, word_slice_n2w, fcp_n2w, word_extract_n2w,
    word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
-   word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w];
+   word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
+   l2n_def,n2l_def,s2n_def,n2s_def,l2w_def,w2l_def,s2w_def,w2s_def,
+   HEX_def,UNHEX_def,stringTheory.EXPLODE_EQNS,stringTheory.IMPLODE_EQNS,
+   num_from_bin_list_def,num_from_oct_list_def,num_from_dec_list_def,
+   num_from_hex_list_def,num_to_bin_list_def,num_to_oct_list_def,
+   num_to_dec_list_def,num_to_hex_list_def,num_from_bin_string_def,
+   num_from_oct_string_def,num_from_dec_string_def,num_from_hex_string_def,
+   num_to_bin_string_def,num_to_oct_string_def,num_to_dec_string_def,
+   num_to_hex_string_def,
+   word_from_bin_list_def,word_from_oct_list_def,word_from_dec_list_def,
+   word_from_hex_list_def,word_to_bin_list_def,word_to_oct_list_def,
+   word_to_dec_list_def,word_to_hex_list_def,word_from_bin_string_def,
+   word_from_oct_string_def,word_from_dec_string_def,word_from_hex_string_def,
+   word_to_bin_string_def,word_to_oct_string_def,word_to_dec_string_def,
+   word_to_hex_string_def]
+  @ map l2n_pow2 [2, 8, 16] @ map n2l_pow2 [2,8,16];
 
 val thms =
   let fun mrw th = map (REWRITE_RULE [th])
@@ -182,6 +209,7 @@ end;
 
 fun words_compset () =
 let val compset = reduceLib.num_compset()
+    val _ = listSimps.list_rws compset
     val _ = add_thms thms compset
     val _ = add_conv(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) compset
     val _ = add_conv(``words$dimword:'a itself -> num``, 1, SIZES_CONV) compset
@@ -207,102 +235,120 @@ val WORD_EVAL_TAC  = CONV_TAC WORD_EVAL_CONV;
 (* Simpsets                                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val alpha_rws =
-  [word_lsb_n2w, word_lsb_word_T, word_msb_0, word_msb_word_T, WORD_L_NEG,
-   word_bit_0, word_bit_0_word_T, w2w_0, sw2sw_0, sw2sw_word_T,
-   word_0_n2w, word_1_n2w,
-   word_reverse_0, word_reverse_word_T, word_log2_1, word_div_1,
-   word_join_0, word_concat_0, word_concat_word_T, word_join_word_T,
-   WORD_BITS_ZERO2, WORD_EXTRACT_ZERO2, WORD_SLICE_ZERO2,
-   (REWRITE_RULE [LSB_ODD] o GSYM) LSB_def, BIT_ZERO, BITS_ZERO2];
+local
+  fun name_thy t = let val {Name,Thy,...} = dest_thy_const t in (Thy,Name) end
 
-val is_known_word_size = not o is_vartype o wordsSyntax.dim_of;
+  fun name_thy_compare ((t1,n1),(t2,n2)) =
+    case String.compare (n1,n2) of
+      LESS => LESS
+    | GREATER => GREATER
+    | EQUAL => String.compare (t1,t2)
 
-fun UINT_MAX_CONV t =
-  if wordsSyntax.is_n2w t andalso is_known_word_size t then
-    let val thm = EVAL (wordsSyntax.mk_word_T (wordsSyntax.dim_of t)) in
-      PURE_REWRITE_CONV [GSYM thm, SYM WORD_NEG_1] t
-    end
-  else
-   raise UNCHANGED;
+  fun name_thy_set l = let open Redblackset in
+    addList (empty name_thy_compare, l)
+  end
 
-fun WORD_GROUND_CONV t =
-let
-  val _ = null (type_vars_in_term t) orelse
-            raise ERR "WORD_GROUND_CONV" "Contains type variables."
+  val l1 =
+     ["l2w","w2l","s2w","w2s",
+      "word_from_bin_list","word_from_oct_list","word_from_dec_list",
+      "word_from_hex_list","word_to_bin_list","word_to_oct_list",
+      "word_to_dec_list","word_to_hex_list","word_from_bin_string",
+      "word_from_oct_string","word_from_dec_string","word_from_hex_string",
+      "word_to_bin_string","word_to_oct_string","word_to_dec_string",
+      "word_to_hex_string",
+      "w2w","w2n","sw2sw","word_log2","word_reverse","word_msb",
+      "word_join","word_concat","word_bit","word_bits","word_slice",
+      "word_extract","word_asr","word_lsr","word_lsl","word_ror",
+      "word_rol","word_rrx","word_lo","word_ls","word_lt","word_le"]
+
+  val l2 =
+     ["l2n","n2l","s2n","n2s","HEX","UNHEX","SBIT","BIT","BITS","BITV",
+      "SLICE","TIMES_2EXP","DIVMOD_2EXP","LSB","LOG2","LOG","BITWISE",
+      "BIT_REVERSE","SIGN_EXTEND",
+      "num_from_bin_list","num_from_oct_list","num_from_dec_list",
+      "num_from_hex_list","num_to_bin_list","num_to_oct_list",
+      "num_to_dec_list","num_to_hex_list","num_from_bin_string",
+      "num_from_oct_string","num_from_dec_string","num_from_hex_string",
+      "num_to_bin_string","num_to_oct_string","num_to_dec_string",
+      "num_to_hex_string"]
+
+  val s = name_thy_set (("min","=")::("arithmetic","DIV_2EXP") ::
+             map (pair "words") l1 @ map (pair "bit") l2)
+
+  fun is_hex_digit_literal t =
+        numSyntax.is_numeral t andalso
+        numSyntax.int_of_term t < 16;
+
+  fun is_hex_digit_list t =
+        listSyntax.is_list t andalso
+        all is_hex_digit_literal (fst (listSyntax.dest_list t));
+
+  fun is_hex_string t =
+        stringSyntax.is_string_literal t andalso
+        all Char.isHexDigit (String.explode (stringSyntax.fromHOLstring t));
+
+  fun is_ground_arg t =
+    if pairSyntax.is_pair t then
+      let val (l,r) = pairSyntax.dest_pair t in
+        is_ground_arg l andalso is_ground_arg r
+      end
+    else
+      numSyntax.is_numeral t orelse
+      wordsSyntax.is_word_literal t orelse
+      is_uintmax t orelse
+      is_hex_digit_list t orelse
+      is_hex_string t orelse
+      term_eq t T orelse
+      term_eq t F orelse
+      term_eq t ``bit$HEX`` orelse
+      term_eq t ``bit$UNHEX`` orelse
+      term_eq t ``bool$/\`` orelse
+      term_eq t ``bool$\/``
+
+  fun is_ground_fn t =
+      is_comb t andalso
+      let val (f,l) = strip_comb t
+          val (tn as (thy,name)) = name_thy f
+          val typ = type_of (prim_mk_const{Name=name,Thy=thy})
+      in
+         (length (fst (strip_fun typ)) = length l) andalso
+         Redblackset.member(s,tn) andalso all is_ground_arg l
+      end
+
+  val alpha_rws =
+   [word_lsb_n2w, word_lsb_word_T, word_msb_0, word_msb_word_T, WORD_L_NEG,
+    word_bit_0, word_bit_0_word_T, w2w_0, sw2sw_0, sw2sw_word_T,
+    word_0_n2w, word_1_n2w,
+    word_len_def, word_reverse_0, word_reverse_word_T, word_log2_1, word_div_1,
+    word_join_0, word_concat_0, word_concat_word_T, word_join_word_T,
+    WORD_BITS_ZERO2, WORD_EXTRACT_ZERO2, WORD_SLICE_ZERO2,
+    (REWRITE_RULE [LSB_ODD] o GSYM) LSB_def, BIT_ZERO, BITS_ZERO2]
 in
-  (computeLib.CBV_CONV (words_compset()) THENC UINT_MAX_CONV) t
+  val is_known_word_size = not o is_vartype o wordsSyntax.dim_of
+
+  fun UINT_MAX_CONV t =
+    if wordsSyntax.is_n2w t andalso is_known_word_size t then
+      let val thm = EVAL (wordsSyntax.mk_word_T (wordsSyntax.dim_of t)) in
+        PURE_REWRITE_CONV [GSYM thm, SYM WORD_NEG_1] t
+      end
+    else
+     raise UNCHANGED
+
+  fun WORD_GROUND_CONV t =
+  let
+    val _ = null (type_vars_in_term t) andalso is_ground_fn t orelse
+              raise ERR "WORD_GROUND_CONV"
+                        "Term not ground or contains type variables."
+  in
+    (PURE_REWRITE_CONV alpha_rws THENC
+     computeLib.CBV_CONV (words_compset()) THENC UINT_MAX_CONV) t
+  end
+
+  val WORD_GROUND_ss = simpLib.merge_ss [rewrites alpha_rws,
+     simpLib.conv_ss
+      {conv = K (K (CHANGED_CONV WORD_GROUND_CONV)), trace = 3,
+       name = "WORD_GROUND_CONV", key = NONE}]
 end;
-
-val pats =
-  [``words$sw2sw (^n2w ^a) : 'b word``,
-   ``words$word_reverse (^n2w ^a)``,
-   ``words$word_len ^w``,
-   ``words$word_msb (^n2w ^a)``,
-   ``words$word_join (0w:'b word) ^w``,
-   ``words$word_bit 0n (^n2w ^a)``,
-   ``words$word_asr (^n2w ^a) ^b``,
-   ``words$word_ror (^n2w ^a) ^b``,
-   ``words$word_rol ^w ^a``,
-   ``words$word_rrx (F, ^n2w ^a)``,
-   ``words$word_rrx (T, ^n2w ^a)``,
-   ``words$word_lo (^n2w ^a) (^n2w ^b)``,
-   ``words$word_ls (^n2w ^a) (^n2w ^b)``,
-   ``words$word_lo (0w:'a word) (^n2w ^b)``,
-   ``words$word_lt (0w:'a word) (^n2w ^b)``,
-   ``words$word_le (0w:'a word) (^n2w ^b)``,
-   ``words$word_lt (^n2w ^a) 0w``,
-   ``words$word_le (^n2w ^a) 0w``,
-   ``bit$BIT ^a ^b``,
-   ``bit$BITS 0n 0n ^b``,
-   ``bit$BITS 0n ^a ^b``,
-   ``bit$BITS ^a 0n ^b``,
-   ``bit$BITS ^a ^b ^c``,
-   ``bit$TIMES_2EXP 0n ^n``,
-   ``bit$TIMES_2EXP ^a ^n``,
-   ``arithmetic$DIV_2EXP 0n ^n``,
-   ``arithmetic$DIV_2EXP ^a ^n``
-  ] @ List.concat
-   (map (fn th => [subst [``^w`` |-> ``^n2w ^c``] th,
-                   subst [``^w`` |-> ``words$word_2comp 1w :'a word``] th])
-     [
-      ``words$w2w ^w : 'b word``,
-      ``words$w2n ^w``,
-      ``words$word_log2 ^w``,
-      ``words$word_join ^w (0w:'b word)``,
-      ``words$word_concat (0w:'b word) ^w : 'c word``,
-      ``words$word_concat ^w (0w:'b word) : 'c word``,
-      ``words$word_bit ^a ^w``,
-      ``words$word_bits ^a 0n ^w``,
-      ``words$word_bits ^a ^b ^w``,
-      ``words$word_slice ^a 0n ^w``,
-      ``words$word_slice ^a ^b ^w``,
-      ``words$word_extract ^a 0n ^w : 'b word``,
-      ``words$word_extract ^a ^b ^w : 'b word``,
-      ``words$word_lsl ^w ^a``,
-      ``words$word_lsr ^w ^a``
-     ]) @ List.concat
-   (map (fn th => [subst [``^w`` |-> ``^n2w ^a``,
-                          ``^x`` |-> ``words$word_2comp 1w : 'b word``,
-                          ``^y`` |-> ``words$word_2comp 1w : 'a word``] th,
-                   subst [``^w`` |-> ``words$word_2comp 1w : 'a word``,
-                          ``^x`` |-> ``words$n2w ^b : 'b word``,
-                          ``^y`` |-> ``^n2w ^a``] th,
-                   subst [``^w`` |-> ``^n2w ^a``,
-                          ``^x`` |-> ``words$n2w ^b : 'b word``,
-                          ``^y`` |-> ``^n2w ^b``] th])
-  [
-   ``^w = ^y``,
-   ``words$word_lt ^w ^y``,
-   ``words$word_le ^w ^y``,
-   ``words$word_join ^w ^x``,
-   ``words$word_concat ^w ^x : 'c word``
-  ]);
-
-val WORD_GROUND_ss = simpLib.merge_ss (rewrites alpha_rws ::
-  map (fn p => simpLib.conv_ss
-    {conv = K (K (CHANGED_CONV WORD_GROUND_CONV)), trace = 3,
-     name = "WORD_GROUND_CONV", key = SOME([], p)}) pats);
 
 fun bit_set_compset () =
   let val cmp = words_compset()
@@ -701,7 +747,7 @@ local
   fun add_coeff (t:term) : thm = if is_good t then ALL_CONV t
                     else REWR_CONV (GSYM WORD_AND_LEFT_T) t
 in
-  local 
+  local
     val distrib = GSYM WORD_RIGHT_AND_OVER_OR
     val WORD_REDUCE_CONV =
            PURE_REWRITE_CONV [WORD_OR_CLAUSES2, WORD_LITERAL_OR_thms]
@@ -733,7 +779,7 @@ in
       right_id = hd (tl word_or_clauses),
       reducer = WORD_REDUCE_CONV}
   end
-  local 
+  local
     val distrib = GSYM WORD_RIGHT_AND_OVER_XOR
     val WORD_REDUCE_CONV =
            PURE_REWRITE_CONV [WORD_XOR_CLAUSES2]
@@ -1153,7 +1199,7 @@ end;
 
 local
   val tac =
-    POP_ASSUM (fn th => STRIP_ASSUME_TAC 
+    POP_ASSUM (fn th => STRIP_ASSUME_TAC
                (CONV_RULE (DEPTH_CONV SIZES_CONV THENC LESS_CONV) th)) THEN
     POP_ASSUM SUBST1_TAC
 in
@@ -1206,7 +1252,7 @@ fun output_words_as_dec() =
 
 val _ = output_words_as
    (fn (l, v) =>
-       if Arbnum.<=(Arbnum.fromHexString "10000", v) then 
+       if Arbnum.<=(Arbnum.fromHexString "10000", v) then
          StringCvt.HEX
        else
          StringCvt.DEC);
@@ -1344,25 +1390,21 @@ fun guess_lengths () = Parse.post_process_term :=
 
 fun dont_guess_lengths () = Parse.post_process_term := save_post_process_term;
 
-val operators = [("+", ``(words$word_add :bool['a] -> bool['a] -> bool['a])``),
-                 ("-", ``(words$word_sub :bool['a] -> bool['a] -> bool['a])``),
-                 ("-", ``(words$word_2comp :bool['a] -> bool['a])``),
-                 ("*", ``(words$word_mul :bool['a] -> bool['a] -> bool['a])``),
-                 ("<", ``(words$word_lt :bool['a] -> bool['a] -> bool)``),
-                 ("<=", ``(words$word_le :bool['a] -> bool['a] -> bool)``),
-                 (">", ``(words$word_gt :bool['a] -> bool['a] -> bool)``),
-                 (">=", ``(words$word_ge :bool['a] -> bool['a] -> bool)``)];
+val operators = [("+", "word_add"), ("-", "word_sub"), ("-", "word_2comp"),
+                 ("*", "word_mul"), ("<", "word_lt"), (">", "word_gt"),
+                 ("<=", "word_le"), (">=", "word_ge")];
 
-fun deprecate_word () = let
-  fun losety {Name,Thy,Ty} = {Name = Name, Thy = Thy}
-  fun doit (s, t) = Parse.temp_remove_ovl_mapping s (losety (dest_thy_const t))
-in
-  app (ignore o doit) operators
-end
+fun deprecate_word () =
+  app (fn (opname, name) =>
+         temp_send_to_back_overload opname {Name = name, Thy = "words"}
+         handle HOL_ERR _ => ()) operators;
 
-fun prefer_word () = app temp_overload_on operators
+fun prefer_word () =
+  app (fn (opname, name) =>
+         temp_bring_to_front_overload opname {Name = name, Thy = "words"}
+         handle HOL_ERR _ => ()) operators;
 
-val _ = 
+val _ =
   Defn.const_eq_ref := (!Defn.const_eq_ref ORELSEC word_EQ_CONV);
 
 val _ = Feedback.emit_MESG := emit_mesg

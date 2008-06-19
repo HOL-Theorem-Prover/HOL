@@ -69,11 +69,36 @@ val sw2sw_def = Define`
 
 val _ = add_bare_numeral_form (#"w", SOME "n2w");
 
+val _ = ai := true;
+
+val w2l_def = Define `w2l b w = n2l b (w2n w)`;
+val l2w_def = Define `l2w b l = n2w (l2n b l)`;
+val w2s_def = Define `w2s b f w = n2s b f (w2n w)`;
+val s2w_def = Define `s2w b f s = n2w (s2n b f s)`;
+
+val word_from_bin_list_def = Define `word_from_bin_list = l2w 2`;
+val word_from_oct_list_def = Define `word_from_oct_list = l2w 8`;
+val word_from_dec_list_def = Define `word_from_dec_list = l2w 10`;
+val word_from_hex_list_def = Define `word_from_hex_list = l2w 16`;
+
+val word_to_bin_list_def = Define `word_to_bin_list = w2l 2`;
+val word_to_oct_list_def = Define `word_to_oct_list = w2l 8`;
+val word_to_dec_list_def = Define `word_to_dec_list = w2l 10`;
+val word_to_hex_list_def = Define `word_to_hex_list = w2l 16`;
+
+val word_from_bin_string_def = Define `word_from_bin_string = s2w 2 UNHEX`;
+val word_from_oct_string_def = Define `word_from_oct_string = s2w 8 UNHEX`;
+val word_from_dec_string_def = Define `word_from_dec_string = s2w 10 UNHEX`;
+val word_from_hex_string_def = Define `word_from_hex_string = s2w 16 UNHEX`;
+
+val word_to_bin_string_def = Define `word_to_bin_string = w2s 2 HEX`;
+val word_to_oct_string_def = Define `word_to_oct_string = w2s 8 HEX`;
+val word_to_dec_string_def = Define `word_to_dec_string = w2s 10 HEX`;
+val word_to_hex_string_def = Define `word_to_hex_string = w2s 16 HEX`;
+
 (* ------------------------------------------------------------------------- *)
 (*  The Boolean operations : definitions                                     *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = ai := true;
 
 val word_T_def = Define`
   word_T = (n2w:num->'a word) (UINT_MAX(:'a))`;
@@ -608,6 +633,55 @@ val word_xor_n2w = store_thm("word_xor_n2w",
   `!n m. (n2w n):'a word ?? (n2w m) =
      n2w (BITWISE ^WL (\x y. ~(x = y)) n m)`,
   SIMP_TAC fcp_ss [word_xor_def,n2w_11,n2w_def,BITWISE_THM]);
+
+(* ......................................................................... *)
+
+val l2w_w2l = store_thm("l2n_n2l",
+  `!b w. 1 < b ==> (l2w b (w2l b w) = w)`,
+  SRW_TAC [ARITH_ss] [l2w_def, w2l_def, l2n_n2l]);
+
+val w2l_l2w = store_thm("w2l_l2w",
+  `!b l. w2l b (l2w b l : 'a word) = n2l b (l2n b l MOD dimword(:'a))`,
+  SRW_TAC [] [l2w_def, w2l_def]);
+
+val s2w_w2s = store_thm("s2w_w2s",
+  `!c2n n2c b w. 1 < b /\ (!x. x < b ==> (c2n (n2c x) = x)) ==>
+      (s2w b c2n (w2s b n2c w) = w)`,
+  SRW_TAC [] [s2w_def, w2s_def, s2n_n2s]);
+
+val w2s_s2w = store_thm("w2s_s2w",
+  `!b s. w2s b n2c (s2w b c2n s : 'a word) =
+         n2s b n2c (s2n b c2n s MOD dimword(:'a))`,
+  SRW_TAC [] [s2w_def, w2s_def]);
+
+val LESS_THM =
+  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
+
+val rwts = [FUN_EQ_THM, UNHEX_HEX, l2n_n2l, s2n_n2s, l2w_w2l, s2w_w2s,
+  word_from_bin_list_def,word_from_oct_list_def,word_from_dec_list_def,
+  word_from_hex_list_def,word_to_bin_list_def,word_to_oct_list_def,
+  word_to_dec_list_def,word_to_hex_list_def,word_from_bin_string_def,
+  word_from_oct_string_def,word_from_dec_string_def,word_from_hex_string_def,
+  word_to_bin_string_def,word_to_oct_string_def,word_to_dec_string_def,
+  word_to_hex_string_def];
+
+val word_bin_list = store_thm("word_bin_list",
+  `word_from_bin_list o word_to_bin_list = I`, SRW_TAC [ARITH_ss] rwts);
+val word_oct_list = store_thm("word_oct_list",
+  `word_from_oct_list o word_to_oct_list = I`, SRW_TAC [ARITH_ss] rwts);
+val word_dec_list = store_thm("word_dec_list",
+  `word_from_dec_list o word_to_dec_list = I`, SRW_TAC [ARITH_ss] rwts);
+val word_hex_list = store_thm("word_hex_list",
+  `word_from_hex_list o word_to_hex_list = I`, SRW_TAC [ARITH_ss] rwts);
+
+val word_bin_string = store_thm("word_bin_string",
+  `word_from_bin_string o word_to_bin_string = I`, SRW_TAC [ARITH_ss] rwts);
+val word_oct_string = store_thm("word_oct_string",
+  `word_from_oct_string o word_to_oct_string = I`, SRW_TAC [ARITH_ss] rwts);
+val word_dec_string = store_thm("word_dec_string",
+  `word_from_dec_string o word_to_dec_string = I`, SRW_TAC [ARITH_ss] rwts);
+val word_hex_string = store_thm("word_hex_string",
+  `word_from_hex_string o word_to_hex_string = I`, SRW_TAC [ARITH_ss] rwts);
 
 (* ------------------------------------------------------------------------- *)
 (*  The Boolean operations : theorems                                        *)
@@ -3415,40 +3489,38 @@ val word_concat_itself_def = Define`
 val fromNum_def = Define`
   fromNum (n, (:'a)) = n2w_itself (n MOD dimword (:'a),(:'a))`;
 
-val _ = ConstMapML.insert ``n2w_itself``;
+val _ = ConstMapML.insert_cons ``n2w_itself``;
 
 (*---------------------------------------------------------------------------*)
 (* Write some code into wordsTheory.sml                                      *)
 (*---------------------------------------------------------------------------*)
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME
- (fn ppstrm => let
-   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
- in
-   S "val _ = TotalDefn.termination_simps := ";
-   S "   LSR_LESS :: WORD_PRED_THM :: !TotalDefn.termination_simps";
-   S " ";
-   S "val _ = ";
-   S "  let open Lib boolSyntax numSyntax";
-   S "      val word_type = type_of (fst(dest_forall(concl word_nchotomy)))";
-   S "      val w2n_tm = fst(strip_comb(lhs(snd(dest_forall(concl w2n_def)))))";
-   S "      val w2n_abs = list_mk_abs([mk_var(\"v1\",bool-->num),";
-   S "                                 mk_var(\"v2\",alpha-->num),";
-   S "                                 mk_var(\"v3\",word_type)],";
-   S "                                 mk_comb(w2n_tm,mk_var(\"v3\",word_type)))";
-   S "  in";
-   S "  TypeBase.write";
-   S "  [TypeBasePure.mk_nondatatype_info";
-   S "   (word_type, ";
-   S "     {nchotomy = SOME ranged_word_nchotomy,";
-   S "      size = SOME (w2n_abs,CONJUNCT1(Drule.SPEC_ALL boolTheory.AND_CLAUSES)),";
-   S "      encode=NONE})]";
-   S "  end;";
-   S "";
-   S "val _ = ConstMapML.insert (Term.prim_mk_const{Name=\"n2w_itself\",Thy=\"words\"});"
- end)};
+fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
+  struct_ps = SOME (fn ppstrm =>
+    app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) l)};
+
+val _ = adjoin_to_theory_struct
+ ["val _ = TotalDefn.termination_simps := ",
+  "   LSR_LESS :: WORD_PRED_THM :: !TotalDefn.termination_simps",
+  "",
+  "val _ = let open Lib boolSyntax numSyntax",
+  "   val word_type = type_of (fst(dest_forall(concl word_nchotomy)))",
+  "   val w2n_tm = fst(strip_comb(lhs(snd(dest_forall(concl w2n_def)))))",
+  "   val w2n_abs = list_mk_abs([mk_var(\"v1\",bool-->num),",
+  "                              mk_var(\"v2\",alpha-->num),",
+  "                              mk_var(\"v3\",word_type)],",
+  "                              mk_comb(w2n_tm,mk_var(\"v3\",word_type)))",
+  "in",
+  " TypeBase.write",
+  " [TypeBasePure.mk_nondatatype_info",
+  "  (word_type,",
+  "    {nchotomy = SOME ranged_word_nchotomy,",
+  "     size = SOME(w2n_abs,CONJUNCT1(Drule.SPEC_ALL boolTheory.AND_CLAUSES)),",
+  "     encode=NONE})]",
+  "end;",
+  "",
+  "val _ = ConstMapML.insert_cons(\
+  \Term.prim_mk_const{Name=\"n2w_itself\",Thy=\"words\"});"];
 
 (* ------------------------------------------------------------------------- *)
 
@@ -3529,6 +3601,11 @@ in
            word_rrx_n2w, REWRITE_RULE [GSYM word_index_def] word_index_n2w,
            word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
            word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
+           w2l_def,w2s_def,
+           word_to_bin_list_def,word_to_oct_list_def,
+           word_to_dec_list_def,word_to_hex_list_def,
+           word_to_bin_string_def,word_to_oct_string_def,
+           word_to_dec_string_def,word_to_hex_string_def,
            fromNum_def]
       @ List.concat (map mk_index sizes))
 end;
