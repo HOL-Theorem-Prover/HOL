@@ -2,7 +2,6 @@ signature EmitTeX =
 sig
     include Abbrev
 
-    val texOptions                : string ref
     val texPrefix                 : string ref
     val emitTeXDir                : string ref
 
@@ -12,15 +11,16 @@ sig
 
     val pp_datatype_theorem       : ppstream -> thm -> unit
     val datatype_thm_to_string    : thm -> string
-    val theory_datatypes          : string -> unit
+    val print_datatypes           : string -> unit
 
     val hol_to_tex                : (string -> string) ref
-    val type_to_tex               : (string -> string) ref
 
     val pp_term_as_tex            : ppstream -> term -> unit
+    val pp_type_as_tex            : ppstream -> hol_type -> unit
     val pp_theorem_as_tex         : ppstream -> thm -> unit
 
     val print_term_as_tex         : term -> unit
+    val print_type_as_tex         : hol_type -> unit
     val print_theorem_as_tex      : thm -> unit
     val print_theory_as_tex       : string -> unit
 

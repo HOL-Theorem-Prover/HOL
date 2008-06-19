@@ -8,7 +8,8 @@ open HolKernel boolLib;
 (* ------------------------------------------------------------------------- *)
 
 val texLinewidth = 78;
-val texOptions = ref "11pt, twoside";
+val texOptions = "11pt, twoside";
+
 val texPrefix  = ref "HOL";
 val emitTeXDir = ref "";
 
@@ -237,6 +238,8 @@ let val S = PP.add_string ostrm
     fun EB() = PP.end_block ostrm
     val PT = pp_term ostrm
     val TP = type_pp.pp_type (Parse.type_grammar()) ostrm
+    val type_trace = get_tracefn "types" ();
+    val _ = set_trace "types" 0;
 
     fun strip_type t =
       if is_vartype t then
@@ -302,13 +305,13 @@ let val S = PP.add_string ostrm
 
     val t = map strip_comb (strip_conj (snd (dest_comb (concl thm))))
 in
-  pp_datatype t; PP.flush_ppstream ostrm
+  pp_datatype t; PP.flush_ppstream ostrm; set_trace "types" type_trace
 end;
 
 val datatype_thm_to_string =
   PP.pp_to_string (!Globals.linewidth) pp_datatype_theorem;
 
-fun theory_datatypes s =
+fun print_datatypes s =
   app (fn (_,x) => print (datatype_thm_to_string x ^ "\n"))
     (datatype_theorems s);
 
@@ -323,21 +326,40 @@ local
   fun h2t cs s =
     case cs of
       [] => s
+    | #"|" :: #"-" :: #">" :: l         => h2t l (s ^ token_string "Mapto")
     | #"-" :: #"-" :: #">" :: l         => h2t l (s ^ token_string "Longmap")
     | #"=" :: #"=" :: #"=" :: #">" :: l => h2t l (s ^ token_string "Longimp")
     | #"-" :: #">" :: l                 => h2t l (s ^ token_string "Map")
     | #"=" :: #"=" :: #">" :: l         => h2t l (s ^ token_string "Imp")
+    | #"=" :: #">" :: l                 => h2t l (s ^ token_string "Imp")
     | #"|" :: #"-" :: l                 => h2t l (s ^ token_string "Turnstile")
     | #"/" :: #"\\" :: l                => h2t l (s ^ token_string "Conj")
     | #"\\" :: #"/" :: l                => h2t l (s ^ token_string "Disj")
+    | #"<" :: #"|" :: l                 => h2t l (s ^ token_string "Leftrec")
+    | #"|" :: #">" :: l                 => h2t l (s ^ token_string "Rightrec")
     | #"<" :: #"+" :: l                 => h2t l (s ^ token_string "Lo")
     | #">" :: #"+" :: l                 => h2t l (s ^ token_string "Hi")
     | #"<" :: #"=" :: #"+" :: l         => h2t l (s ^ token_string "Ls")
     | #">" :: #"=" :: #"+" :: l         => h2t l (s ^ token_string "Hs")
     | #"<" :: #"=" :: l                 => h2t l (s ^ token_string "Leq")
     | #">" :: #"=" :: l                 => h2t l (s ^ token_string "Geq")
+    | #"{" :: #"}" :: l                 => h2t l (s ^ token_string "Empty")
+    | #"*" :: #"*" :: l                 => h2t l (s ^ token_string "Exp")
+    | #"#" :: #">" :: #">" :: l         => h2t l (s ^ token_string "Ror")
+    | #"#" :: #"<" :: #"<" :: l         => h2t l (s ^ token_string "Rol")
+    | #">" :: #">" :: #">" :: l         => h2t l (s ^ token_string "Lsr")
+    | #">" :: #">" :: l                 => h2t l (s ^ token_string "Asr")
+    | #"<" :: #"<" :: l                 => h2t l (s ^ token_string "Lsl")
+    | #"<" :: #">" :: l                 => h2t l (s ^ token_string "Slice")
+    | #">" :: #"<" :: l                 => h2t l (s ^ token_string "Extract")
+    | #"#" :: #"#" :: l                 => h2t l (s ^ "##")
+    | #"#" :: l                         => h2t l (s ^ token_string "Prod")
+    | #"|" :: l                         => h2t l (s ^ token_string "Bar")
     | #"'" :: l                         => h2t l (s ^ token_string "Quote")
     | #"~" :: l                         => h2t l (s ^ token_string "Neg")
+    | #"_" :: l                         => h2t l (s ^ token_string "Underscore")
+    | #"<"::l                           => h2t l (s ^ token_string "Lt")
+    | #">"::l                           => h2t l (s ^ token_string "Gt")
     | #"{"::l                           => h2t l (s ^ token_string "Leftbrace")
     | #"}"::l                           => h2t l (s ^ token_string "Rightbrace")
     | #"\n"::l                          => h2t l (s ^ "\n")
@@ -357,23 +379,11 @@ local
                          else
                            h2t (c :: l) (s ^ token_string "Backslash")
     | c::l => h2t l (s ^ Char.toString c)
-  fun t2t cs s =
-    case cs of
-      [] => s
-    | #"#" :: l                 => t2t l (s ^ token_string "Prod")
-    | #"'" :: l                 => t2t l (s ^ token_string "Quote")
-    | #"=" :: #">" :: l         => t2t l (s ^ token_string "Imp")
-    | #"|" :: #"-" :: #">" :: l => t2t l (s ^ token_string "Mapto")
-    | #"-" :: #">" :: l         => t2t l (s ^ token_string "Map")
-    | #"\n"::l                  => t2t l (s ^ "\n")
-    | c::l                      => t2t l (s ^ Char.toString c)
 in
   fun hol2tex s  = h2t (explode s) ""
-  fun type2tex s = t2t (explode s) ""
 end;
 
 val hol_to_tex  = ref hol2tex;
-val type_to_tex = ref type2tex;
 
 (* ------------------------------------------------------------------------- *)
 (* Various pretty-printers                                                   *)
@@ -382,15 +392,21 @@ val type_to_tex = ref type2tex;
 fun pp_term_as_tex ostrm t =
    PP.add_string ostrm (!hol_to_tex (term_to_string t));
 
+fun pp_type_as_tex ostrm t =
+   PP.add_string ostrm (!hol_to_tex (type_to_string t));
+
 fun pp_theorem_as_tex ostrm thm =
-   PP.add_string ostrm
+   PP.add_string ostrm (!hol_to_tex
      (if is_datatype_thm thm then
-        !type_to_tex (datatype_thm_to_string thm)
+        datatype_thm_to_string thm
       else
-        !hol_to_tex (thm_to_string thm));
+        thm_to_string thm));
 
 fun print_term_as_tex t =
   print (PP.pp_to_string (!Globals.linewidth) pp_term_as_tex t);
+
+fun print_type_as_tex t =
+  print (PP.pp_to_string (!Globals.linewidth) pp_type_as_tex t);
 
 fun print_theorem_as_tex t =
   print (PP.pp_to_string (!Globals.linewidth) pp_theorem_as_tex t);
@@ -492,7 +508,7 @@ fun pp_theory_as_tex ostrm name =
                                             toLowercase (fst b))
       val defns = Listsort.sort thm_compare defns
       val thms = Listsort.sort thm_compare thms
-      val time = Date.fromTimeLocal (stamp name)
+      val time = Date.fromTimeLocal (stamp name handle HOL_ERR _ => Time.now())
   in
     if null typs andalso null defns andalso null thms then
       TextIO.output(TextIO.stdErr, name ^ "Theory is empty.\n")
@@ -633,7 +649,7 @@ fun pp_theories_as_tex_doc ostrm names =
       fun NL() = PP.add_newline ostrm
   in
     PP.begin_block ostrm PP.CONSISTENT 0;
-    S "\\documentclass["; S (!texOptions); S "]{article}"; NL();
+    S "\\documentclass["; S texOptions; S "]{article}"; NL();
     S "\\usepackage{holtex}"; NL(); NL();
     S "\\makeindex"; NL(); NL();
     S "\\begin{document}"; NL(); NL();
