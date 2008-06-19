@@ -531,7 +531,7 @@ fun defnDefine term_tac defn =
          else (defn,NONE)
  in
     save_defn defn'
-  ; (LIST_CONJ (eqns_of defn'), ind_of defn', opt)
+  ; (LIST_CONJ (map GEN_ALL (eqns_of defn')), ind_of defn', opt)
  end
 end;
 

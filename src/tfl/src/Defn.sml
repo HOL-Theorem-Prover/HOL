@@ -424,12 +424,16 @@ fun store(stem,eqs,ind) =
         ".\nInduction stored under ", Lib.quote ind_bind, ".\n"])
   end;
 
-fun save_defn (ABBREV {bind,eqn, ...})       = been_stored (bind,eqn)
+local
+  val LIST_CONJ_GEN = LIST_CONJ o map GEN_ALL
+in
+  fun save_defn (ABBREV {bind,eqn, ...})     = been_stored (bind,eqn)
   | save_defn (PRIMREC{bind,eqs, ...})       = been_stored (bind,eqs)
   | save_defn (NONREC {eqs, ind, stem, ...}) = store(stem,eqs,ind)
-  | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,LIST_CONJ eqs,ind)
-  | save_defn (MUTREC {eqs,ind,stem,...})    = store(stem,LIST_CONJ eqs,ind)
-  | save_defn (NESTREC{eqs,ind,stem, ...})   = store(stem,LIST_CONJ eqs,ind)
+  | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,LIST_CONJ_GEN eqs,ind)
+  | save_defn (MUTREC {eqs,ind,stem,...})    = store(stem,LIST_CONJ_GEN eqs,ind)
+  | save_defn (NESTREC{eqs,ind,stem, ...})   = store(stem,LIST_CONJ_GEN eqs,ind)
+end
 
 
 (*---------------------------------------------------------------------------
