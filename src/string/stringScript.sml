@@ -11,7 +11,7 @@
             "BasicProvers", "Q", "SingleStep", "metisLib"];
 *)
 
-open HolKernel boolLib;
+open HolKernel boolLib Parse;
 open numLib numSyntax BasicProvers SingleStep listTheory bossLib metisLib;
 
 (* ---------------------------------------------------------------------*)
@@ -66,6 +66,70 @@ val ORD_BOUND = Q.store_thm
  `!c. ORD c < 256`,
  PROVE_TAC [ORD_ONTO]);
 
+val char_nchotomy = Q.store_thm("char_nchotomy",
+  `!c. ?n. c = CHR n`,
+  STRIP_TAC THEN Q.EXISTS_TAC `ORD c` THEN REWRITE_TAC [CHR_ORD]);
+
+val ranged_char_nchotomy = Q.store_thm("ranged_char_nchotomy",
+  `!c. ?n. (c = CHR n) /\ n < 256`,
+  STRIP_TAC THEN Q.EXISTS_TAC `ORD c` THEN REWRITE_TAC [CHR_ORD, ORD_BOUND]);
+
+val ordn = term_of_int o Char.ord;
+
+val isLower_def = Define`
+  isLower c = ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"z")`;
+
+val isUpper_def = Define`
+  isUpper c = ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"Z")`;
+
+val isDigit_def = Define`
+  isDigit c = ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9")`;
+
+val isAlpha_def = Define `isAlpha c = isLower c \/ isUpper c`;
+
+val isHexDigit_def = Define`
+  isHexDigit c = ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9") \/
+                 ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"f") \/
+                 ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"F")`;
+
+val isAlphaNum_def = Define `isAlphaNum c = isAlpha c \/ isDigit c`;
+
+val isPrint_def = Define`
+  isPrint c = ^(ordn #" ") <= ORD c /\ ORD c < 127`;
+
+val isSpace_def = Define`
+  isSpace c = (ORD c = ^(ordn #" ")) \/ 9 <= ORD c /\ ORD c <= 13`;
+
+val isGraph_def = Define `isGraph c = isPrint c /\ ~isSpace c`;
+
+val isPunct_def = Define `isPunct c = isGraph c /\ ~isAlphaNum c`;
+
+val isAscii_def = Define `isAscii c = ORD c <= 127`;
+
+val isCntrl_def = Define`
+  isCntrl c = ORD c < ^(ordn #" ") \/ 127 <= ORD c`;
+
+val toLower_def = Define`
+  toLower c = if isUpper c then CHR (ORD c + 32) else c`;
+
+val toUpper_def = Define`
+  toUpper c = if isLower c then CHR (ORD c - 32) else c`;
+
+val char_lt_def = Define `char_lt a b = ORD a < ORD b`;
+val char_le_def = Define `char_le a b = ORD a <= ORD b`;
+val char_gt_def = Define `char_gt a b = ORD a > ORD b`;
+val char_ge_def = Define `char_ge a b = ORD a >= ORD b`;
+
+val _ = overload_on ("<", Term`char_lt`);
+val _ = overload_on (">", Term`char_gt`);
+val _ = overload_on ("<=", Term`char_le`);
+val _ = overload_on (">=", Term`char_ge`);
+
+val _ = send_to_back_overload "<" {Name = "char_lt", Thy = "string"};
+val _ = send_to_back_overload ">" {Name = "char_gt", Thy = "string"};
+val _ = send_to_back_overload "<=" {Name = "char_le", Thy = "string"};
+val _ = send_to_back_overload ">=" {Name = "char_ge", Thy = "string"};
+
 (*---------------------------------------------------------------------------
     In our development, CHR is not a constructor. Is that really
     important? We can at least prove the following theorem about
@@ -95,6 +159,14 @@ REPEAT STRIP_TAC
 
 val _ = Hol_datatype`string = EMPTYSTRING | STRING of char => string`
 
+val GET_def = Define`
+  (GET (STRING x s) 0 = x) /\
+  (GET (STRING x s) (SUC n) = GET s n)`;
+
+val _ = set_fixity "'" (Infixl 2000);
+val _ = overload_on ("'", Term`$GET`);
+val _ = send_to_back_overload "'" {Name = "GET", Thy = "string"};
+
 val IMPLODE_def = Define`
   (IMPLODE [] = "") /\
   (IMPLODE (c::cs) = STRING c (IMPLODE cs))
@@ -106,6 +178,8 @@ val EXPLODE_def = Define`
   (EXPLODE (STRING c s) = c :: EXPLODE s)
 `;
 val _ = export_rewrites ["EXPLODE_def"]
+
+val TRANSFORM_def = Define `TRANSFORM f = IMPLODE o f o EXPLODE`;
 
 val IMPLODE_EXPLODE = store_thm(
   "IMPLODE_EXPLODE",
@@ -167,6 +241,11 @@ val STRLEN_EQ_0 = Q.store_thm
  Cases THEN SRW_TAC [][STRLEN_DEF]);
 
 val _ = export_rewrites ["STRLEN_EQ_0"]
+
+val GET = Q.store_thm
+("GET",
+  `!n s. n < STRLEN s ==> (GET s n = EL n (EXPLODE s))`,
+  Induct THEN Cases THEN SRW_TAC [ARITH_ss] [GET_def]);
 
 (*---------------------------------------------------------------------------*)
 (* Destruct a string. This will be used to re-phrase the HOL development     *)
@@ -349,25 +428,36 @@ val isPREFIX_STRCAT = Q.store_thm
 val _ = ConstMapML.insert(prim_mk_const{Name="DEST_STRING",Thy="string"});
 val _ = ConstMapML.insert(prim_mk_const{Name="STRING",Thy="string"});
 val _ = ConstMapML.prim_insert(prim_mk_const{Name="EMPTYSTRING",Thy="string"},
-                               ("","\"\"",Parse.Type`:string`));
+                               (false,"","\"\"",Parse.Type`:string`));
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-      fun NL() = PP.add_newline ppstrm
-  in S "val _ = ConstMapML.insert (prim_mk_const{Name=\"CHR\",Thy=\"string\"});";
-     NL();
-     S "val _ = ConstMapML.insert (prim_mk_const{Name=\"ORD\",Thy=\"string\"});";
-     NL();
-     S "val _ = ConstMapML.insert (prim_mk_const{Name=\"DEST_STRING\",Thy=\"string\"});";
-     NL();
-     S "val _ = ConstMapML.insert (prim_mk_const{Name=\"STRING\",Thy=\"string\"});";
-     NL();
-     S "val _ = ConstMapML.prim_insert(prim_mk_const{Name=\"EMPTYSTRING\",Thy=\"string\"},"; NL();
-     S "                   (\"\",\"\\\"\\\"\",mk_type(\"string\",[])));";
-     NL()
-  end)}
+fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
+  struct_ps = SOME (fn ppstrm =>
+    app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) l)};
+
+val _ = adjoin_to_theory_struct [
+  "val _ =",
+  "let open Lib boolSyntax numSyntax",
+  "    val char_type = type_of (fst(dest_forall(concl char_nchotomy)))",
+  "    val ORD_tm = fst(strip_comb(lhs(lhs(snd(strip_forall(concl ORD_11))))))",
+  "    val ORD_abs = list_mk_abs([mk_var(\"v1\",bool-->num),",
+  "                               mk_var(\"v2\",alpha-->num),",
+  "                               mk_var(\"v3\",char_type)],",
+  "                               mk_comb(ORD_tm,mk_var(\"v3\",char_type)))",
+  "in",
+  " TypeBase.write",
+  " [TypeBasePure.mk_nondatatype_info",
+  "  (char_type, ",
+  "    {nchotomy = SOME ranged_char_nchotomy,",
+  "     size = SOME(ORD_abs,CONJUNCT1(Drule.SPEC_ALL boolTheory.AND_CLAUSES)),",
+  "     encode = NONE})]",
+  "end;",
+  "",
+  "val _ = app (fn n => ConstMapML.insert\
+  \ (prim_mk_const{Name=n,Thy=\"string\"}))",
+  "      [\"CHR\",\"ORD\",\"DEST_STRING\",\"STRING\"]",
+  "val _ = ConstMapML.prim_insert(prim_mk_const{Name=\"EMPTYSTRING\",",
+  "          Thy=\"string\"},(false,\"\",\"\\\"\\\"\",mk_type(\"string\",[])));"
+  ];
 
 val _ =
  let open EmitML

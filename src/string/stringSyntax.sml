@@ -85,6 +85,7 @@ val fromMLstring =
 
 val fromHOLstring = Literal.dest_string_lit
 val is_string_literal = Literal.is_string_lit
+val is_char_literal = Literal.is_char_lit
 
 (*---------------------------------------------------------------------------*)
 (* For support of ML execution                                               *)
