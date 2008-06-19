@@ -924,7 +924,7 @@ val polywfs = [BV_subst_RSP,COND_RSP,CONS_RSP,NIL_RSP,COMMA_RSP,(*FST_RSP,SND_RS
                RES_EXISTS_EQUIV_RSP, RES_ABSTRACT_RSP];
 
 
-fun gg tm = goalstackLib.set_goal([],tm);
+fun gg tm = proofManagerLib.set_goal([],tm);
 
 
 val old_thms =

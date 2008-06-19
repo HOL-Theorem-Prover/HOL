@@ -1395,7 +1395,7 @@ val polywfs = [BV_subst_RSP, COND_RSP, CONS_RSP, NIL_RSP,
                RES_EXISTS_EQUIV_RSP, RES_ABSTRACT_RSP];
 
 
-fun gg tm = goalstackLib.set_goal([],tm);
+fun gg tm = proofManagerLib.set_goal([],tm);
 
 
 val term_EQ_IS_ALPHA =
