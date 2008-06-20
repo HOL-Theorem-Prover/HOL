@@ -448,7 +448,7 @@ val (CTL_NNF_def,CTL_NNF_ind) = Defn.tprove(cdefn,
  THEN FULL_SIMP_TAC arith_ss [ctl_pstv_size,bexp_pstv_size,C_AX_def,C_AR_def,C_AF_def,BEXP_NNF,B_OR_def,B_FALSE_def]*)
 
 val CTL_BOOL_SUB = Define `
-(CTL_BOOL_SUB g (B_PROP (b:'prop)) = (g = B_PROP b)) /\
+(CTL_BOOL_SUB g (B_PROP (b:'prop)) = ((g = B_PROP b) :bool)) /\
 (CTL_BOOL_SUB g (B_NOT be1) = (CTL_BOOL_SUB g be1) \/ (g = B_NOT be1)) /\
 (CTL_BOOL_SUB g (B_AND(be1,be2)) = (CTL_BOOL_SUB g be1) \/ (CTL_BOOL_SUB g be2) \/ (g = B_AND(be1,be2)))`;
 
