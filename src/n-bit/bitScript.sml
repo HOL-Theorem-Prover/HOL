@@ -863,7 +863,7 @@ val BIT_SET_NOT_ZERO_COR2 =
   REWRITE_RULE [DIV_1,EXP] (SPEC `0` BIT_SET_NOT_ZERO_COR);
 
 val BIT_DIV2 = store_thm("BIT_DIV2",
-  `!i. BIT n (i DIV 2) = BIT (SUC n) i`,
+  `!n i. BIT n (i DIV 2) = BIT (SUC n) i`,
   RW_TAC arith_ss [BIT_def,BITS_THM,EXP,ZERO_LT_TWOEXP,DIV_DIV_DIV_MULT]);
 
 val SBIT_MULT = store_thm("SBIT_MULT",
