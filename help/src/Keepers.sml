@@ -82,6 +82,7 @@ val keepers =
      (* n-bit *)
      "fcpTheory.sig",
      "bitTheory.sig",
+     "bitSyntax.sig",
      "wordsTheory.sig",
      "wordsSyntax.sig",
      "fcpLib.sig",
