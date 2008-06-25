@@ -418,15 +418,15 @@ val decode_Xrm32_def = Define `  (* sw2sw = sign-extension *)
       if  (g "Mod" = [F;F]) /\ (g "R/M" = [T;F;T]) then Xm NONE NONE (b2w g "disp32") else
       if ~(g "Mod" = [T;T]) /\ (g "R/M" = [F;F;T]) then decode_SIB g else
       if  (g "Mod" = [F;F]) then Xm NONE (SOME (b2reg g "R/M")) 0w else
-      if  (g "Mod" = [T;F]) then Xm NONE (SOME (b2reg g "R/M")) (sw2sw:word8->word32 (b2w g "disp8")) else
+      if  (g "Mod" = [T;F]) then Xm NONE (SOME (b2reg g "R/M")) ((sw2sw:word8->word32) (b2w g "disp8")) else
       if  (g "Mod" = [F;T]) then Xm NONE (SOME (b2reg g "R/M")) (b2w g "disp32") else
       if  (g "Mod" = [T;T]) then Xr (b2reg g "R/M") else Xr (b2reg g "reg") `;
 
 val decode_Xconst_def = Define `
   decode_Xconst name g = 
-   if name = "imm8"  then sw2sw:word8 ->word32 (b2w g "ib") else
-   if name = "rel8"  then sw2sw:word8 ->word32 (b2w g "cb") else
-   if name = "imm16" then sw2sw:word16->word32 (b2w g "iw") else
+   if name = "imm8"  then (sw2sw:word8 ->word32) (b2w g "ib") else
+   if name = "rel8"  then (sw2sw:word8 ->word32) (b2w g "cb") else
+   if name = "imm16" then (sw2sw:word16->word32) (b2w g "iw") else
    if name = "imm32" then b2w g "id" else
    if name = "rel32" then b2w g "cd" else 0w`;
 
