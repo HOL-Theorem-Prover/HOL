@@ -6,7 +6,7 @@ val _ = new_theory "swap"
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
 
-open basic_swapTheory ncTheory NEWLib pred_setTheory
+open basic_swapTheory ncTheory NEWLib pred_setTheory markerLib;
 
 (* ----------------------------------------------------------------------
     Swapping over sets of strings
@@ -525,7 +525,7 @@ val swap_RECURSION_pgeneric = store_thm(
             `LAM v t = LAM z ([VAR z/v] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
             Q.ABBREV_TAC `M = [VAR z/v] t` THEN
             `size t = size M` by SRW_TAC [][Abbr`M`] THEN
-            Q.RM_ABBREV_TAC `M` THEN
+            RM_ABBREV_TAC "M" THEN
             POP_ASSUM SUBST_ALL_TAC THEN
             POP_ASSUM SUBST_ALL_TAC THEN
             `hom (swap x y (LAM z M)) p =

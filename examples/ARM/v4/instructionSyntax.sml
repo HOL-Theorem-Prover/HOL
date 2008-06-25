@@ -11,6 +11,8 @@
             "assemblerML", "Data"];
 *)
 
+structure instructionSyntax :> instructionSyntax = struct
+
 open HolKernel boolLib Parse bossLib;
 open Q wordsSyntax instructionTheory Data assemblerML;
 
@@ -901,3 +903,4 @@ val mk_instruction = arm_to_term o string_to_arm;
 fun dest_instruction i t = arm_to_string i false (term_to_arm t);
 
 (* ------------------------------------------------------------------------- *)
+end;

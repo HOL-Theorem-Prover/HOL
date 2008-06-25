@@ -2,7 +2,7 @@
            Transformations for linear recursion.
  ---------------------------------------------------------------------------*)
 
-app load ["bossLib"]; open bossLib TotalDefn;
+open TotalDefn;
 
 show_assums := true;
 

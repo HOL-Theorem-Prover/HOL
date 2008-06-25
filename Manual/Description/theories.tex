@@ -601,7 +601,7 @@ pre-proved in the theory \theoryimp{bool}. The following theorems
 illustrate how higher order logic allows concise expression of
 theorems supporting quantifier movement.
 
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
  LEFT_AND_FORALL_THM  |- !P Q. (!x. P x) /\ Q = !x. P x /\ Q
  RIGHT_AND_FORALL_THM |- !P Q. P /\ (!x. Q x) = !x. P /\ Q x
@@ -629,7 +629,7 @@ theorems supporting quantifier movement.
 
  SKOLEM_THM           |- !P. (!x. ?y. P x y) = ?f. !x. P x (f x)
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 Also, a theorem justifying Skolemization ({\small\verb+SKOLEM_THM+}) is
 proved. Many other theorems may be found in \theoryimp{bool} theory.
@@ -801,8 +801,8 @@ following characterizing theorem, by use of the function
 %
 \begin{hol}
 \begin{verbatim}
-   |- (!a. ABS_prod (REP_prod a) = a) /\
-      (!r. (\p. ?x y. p = (\a b. (a=x) /\ (b=y)) r = (REP_prod(ABS_prod r) = r)
+  |- (!a. ABS_prod (REP_prod a) = a) /\
+     (!r. (\p. ?x y. p = (\a b. (a=x) /\ (b=y)) r = (REP_prod(ABS_prod r) = r)
 \end{verbatim}
 \end{hol}
 
@@ -977,7 +977,7 @@ transformation:
 
 \vspace{1ex}
 
-As a result of this parser translation, a variable structure, such as \ml{(x,y)} in
+\noindent As a result of this parser translation, a variable structure, such as \ml{(x,y)} in
 \ml{\bs(x,y).x+y}, is not a subterm of the abstraction
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!subterms of}
 in which it occurs; it disappears on parsing.
@@ -1484,13 +1484,13 @@ which automatically proves the existence of primitive recursive
 functions and then makes a constant specification to introduce the constant
 that denotes such a function:
 
-\begin{boxed}
+\begin{holboxed}
 \index{new_recursive_definition@\ml{new\_recursive\_definition}|pin}
 \begin{verbatim}
    new_recursive_definition :
       {def : term, name : string, rec_axiom : thm} -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent In fact, \ml{new\_recursive\_definition} handles
 primitive recursive definitions over a range of types, not just the
@@ -1825,12 +1825,12 @@ Numerals are related to numbers built from \holtxt{0} and \holtxt{SUC}
 via the derived inference rule \ml{num\_CONV}, found in the
 \ml{numLib} library.
 
-\begin{boxed}
+\begin{holboxed}
 \index{num_CONV@\ml{num\_CONV}|pin}
 \begin{verbatim}
    num_CONV : term -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent \ml{num\_CONV} can be used to generate the `\ml{SUC}'
 equation for any non-zero numeral.  For example:
@@ -2071,19 +2071,19 @@ the Miller-Rabin primality test.
 \index{n-bit words, the HOL theory of@$n$-bit words, the \HOL{} theory of|(}
 
 {
-\newcommand{\worda}{\ensuremath{\bool^\alpha}}
-\newcommand{\wordb}{\ensuremath{\bool^\beta}}
-\newcommand{\wordc}{\ensuremath{\bool^\gamma}}
-\newcommand{\fcp}[2]{\mbox{\ty{#1}\,\holtxt{**}\,\ty{#2}}}
+\newcommand{\fcp}[2]{\ty{#1}[\ty{#2}]}
+\newcommand{\worda}{\fcp{\bool}{\ensuremath\alpha}}
+\newcommand{\wordb}{\fcp{\bool}{\ensuremath\beta}}
+\newcommand{\wordc}{\fcp{\bool}{\ensuremath\gamma}}
 \newcommand{\rarr}{\ensuremath\rightarrow}
 \newcommand{\hash}{\,\holtxt{\#}\,}
-\newcommand{\oo}[2]{\mbox{\holtxt{#1}\,{\small\textrm{\%\%}}\,\holtxt{#2}}}
+\newcommand{\oo}[2]{\mbox{\holtxt{#1\,'\,#2}}}
 
 \HOL{} provides a theory of finite-length bit strings, or $n$-bit words.  Such
 data types are prevalent in computer architectures, where one finds:
 bytes/octets ($n = 8$), half-words ($n = 16$), words ($n = 32$) and long-words
 ($n = 64$).  In the theory \theoryimp{words}, bit strings are represented as
-\emph{finite Cartesian products}: an $n$-bit word is given type $\bool^\alpha$
+\emph{finite Cartesian products}: an $n$-bit word is given type $\worda$
 where the \emph{size} of the type $\alpha$ is the word length $n$.    This
 approach comes from an idea of John Harrison, which was presented at TPHOLs
 2005.\footnote{The current theory subsumes a previous $n$-bit word theory,
@@ -2109,32 +2109,25 @@ finite Cartesian products was ported from HOL Light.}  Conceptually, the type
 \begin{hol}
 $\underbrace{\ty{'a}\hash\ty{'a}\hash\cdots\hash\ty{'a}}_n$
 \end{hol}
-where $n$ is the size of \ty{'b}.  The type \ty{'b} could be
+where $n$ is the cardinality of the of \holtxt{UNIV:'b set}.  The type \ty{'b} could be
 infinite\footnote{\HOL{}'s type system does not allow type variables to range
-over finite types only.} and so the dimension $n$ is actually taken to be:
-\begin{hol}
-dimindex (:\ty{'b})
-\end{hol}
-where \holtxt{dimindex} has value one when the universe is infinite, and
-otherwise it is the cardinality of the set.  For example, \fcp{'a}{\num} is
+over finite types only.} and so the dimension $n$ is actually taken to be
+\holtxt{dimindex(:\ty{'b})}, where \holtxt{dimindex} has value one when the universe is infinite.  For example, \fcp{'a}{\num} is
 similar to \ty{'a}, and \fcp{'a}{\bool} is like \ty{'a}\hash\ty{'a}.
 
 The \emph{components} of a finite Cartesian product are accessed with an
 indexing function
 \begin{hol}
-\%\%:(\fcp{'a}{'b})\rarr\num\rarr\ty{'a}
+index : \fcp{'a}{'b}\rarr\num\rarr\ty{'a}
 \end{hol}
-where \oo{x}{i} is the value of \holtxt{x} at position \holtxt{i}.  Note that
-the index \holtxt{i} is a natural number; when the index is greater than or
-equal to the size of \ty{'b} the value of \oo{x}{i} cannot be determined, so
-indices are constrained to be less than the size of \ty{'b}.
+and \oo{x}{i} denotes the value of \holtxt{x} at position \holtxt{i}.  Note that, in practice, indices are constrained to be less than the size of \ty{'b}.
 
 The following theorem shows that two Cartesian products \holtxt{x} and
 \holtxt{y} are equal if, and only if, all of their components \oo{x}{i} and
 \oo{y}{i} are equal:
 \begin{hol}
 \begin{verbatim}
-CART_EQ: |- !x y. (x = y) = !i. i < dimindex (:'a) ==> (x %% i = y %% i)
+CART_EQ: |- !x y. (x = y) = !i. i < dimindex (:'a) ==> (x ' i = y ' i)
 \end{verbatim}
 \end{hol}
 
@@ -2142,8 +2135,8 @@ In order to define Cartesian products, the theory \theoryimp{fcp} introduces a
 binder \holtxt{FCP}, which is characterised by the following theorems:
 \begin{hol}
 \begin{verbatim}
-FCP_BETA: |- !i. i < dimindex (:'a) ==> ($FCP g %% i = g i)
-FCP_ETA:  |- !x. (FCP i. x %% i) = x
+FCP_BETA: |- !i. i < dimindex (:'a) ==> ($FCP g ' i = g i)
+FCP_ETA:  |- !x. (FCP i. x ' i) = x
 \end{verbatim}
 \end{hol}
 The theorem \ml{FCP\_BETA} shows that the components of \holtxt{\$FCP g} are
@@ -2158,7 +2151,7 @@ to say, the type \fcp{bool}{'a} can represent a binary word whose length
 corresponds with the size of the type \ty{'a}.  The binder \holtxt{FCP}
 provides a flexible means for defining words -- one can supply a function
 \holtxt{f:\num\rarr\bool} which gives the word's value at each bit position and
-then each bit can be accessed using the indexing map \holtxt{\%\%}.
+then each bit can be accessed using the indexing map.
 
 Numeral type names are supported, so one can freely work with indexing sets of any size \eg{} the type \ty{32} has thirty-two elements.
 
@@ -2166,7 +2159,7 @@ Numeral type names are supported, so one can freely work with indexing sets of a
 
 The theory \theoryimp{bit} defines some bit operations over the natural numbers
 e.g. \holtxt{BITS}, \holtxt{SLICE}, \holtxt{BIT}, \holtxt{BITWISE} and
-\holtxt{BIT\_MODIFY}. In this context, natural numbers are treated as words of
+\holtxt{BIT\_MODIFY}. In this context, natural numbers are treated as binary words of
 unbounded length.  The operations in \theoryimp{bit} are built on top of the
 theory \theoryimp{arithmetic} \ie{} they are defined using \holtxt{DIV},
 \holtxt{MOD} and \holtxt{EXP}.  For example, from the definition of
@@ -2183,22 +2176,12 @@ a mechanism for the efficient evaluation of some word operations via the theory
 
 \subsubsection{Words Theory}
 
-The theory \theoryimp{words} introduces types for a selection of
-standard word sizes \eg{} \ty{word8} and \ty{word32}.  Any additional
-word types can be introduced, as needed, with the function
-\ml{wordsLib.mk\_word\_size}.  Each word type is simply an abbreviation for
-\fcp{bool}{N}, where $N$ is the word length; for example, with type
-abbreviation printing turned off, \ty{word32} will print as
-\fcp{bool}{32}.  One can also use the notation \ty{N word} e.g. \ty{128 word}.
-
-A selection of polymorphic constants and operations are defined -- these can
-then be type instantiated for any given word size.  For example, word addition
+The theory \theoryimp{words} introduces a selection of polymorphic constants and operations -- these can be type instantiated to any word size.  For example, word addition
 has type:
 \begin{hol}
 +:\worda\rarr\worda\rarr\worda
 \end{hol}
-where the notation \worda is used to denote \fcp{bool}{'a}. If \ty{'a} is
-instantiated to \ty{32} then this operation corresponds with 32-bit addition.
+If \ty{'a} is instantiated to \ty{32} then this operation corresponds with 32-bit addition.
 All theorems about word operations apply for any word length.\footnote{Note
 that it is not possible to introduce words of length zero because all types
 must be inhabited, and hence their size will always be greater than or equal to
@@ -2207,12 +2190,11 @@ one.}
 \paragraph{Some basic operations}
 
 The function \holtxt{w2n:\worda\rarr\num} gives the natural number value of a
-word.  The natural number value for a word is defined as follows: if
-$x\in\bools^{\{0, 1, \ldots, n - 1\}}$ is a finite Cartesian product
-representing an $n$-bit word then its value is given by the function:
+word.  If $x\in\bools^{\{0, 1, \ldots, n - 1\}}$ is a finite Cartesian product
+representing an $n$-bit word then its natural number value is:
 \[ \mathrm{w2n}(x) = \sum_{i = 0}^{n - 1} \textbf{if } x_i \textbf{ then } 2^i
 \textbf{ else } 0\ .\]
-The length of a word (the number $n$) is returned by the function
+The length of a word (the number $n$) is given by the function
 \holtxt{word\_len:\worda\rarr\num}.
 The function \holtxt{n2w:\num\rarr\worda} maps from a number to a word and is
 defined in \HOL{} by:
@@ -2244,14 +2226,14 @@ word needs to be sign extended \ie{}
 The function \holtxt{sw2sw:\worda\rarr\wordb} is the sign extending version of
 \holtxt{w2w}.
 
-Words can be concatenated with the function
-\holtxt{word\_concat:\worda\rarr\wordb\rarr\wordc}.  This applies \holtxt{w2w}
-to the result of
-\holtxt{word\_join:\worda\rarr\wordb\rarr$\bool^{(\alpha+\beta)}$}, which is
+The function
+\holtxt{word\_concat:\worda\rarr\wordb\rarr\wordc} concatenates words -- it composes \holtxt{w2w}
+with
+\holtxt{word\_join:\worda\rarr\wordb\rarr\fcp{\bool}{\ensuremath{\alpha+\beta}}}, which is
 illustrated in Figure~\ref{fig:concat}.  The word-to-word conversion is needed
 because although the type $\alpha+\beta$ is of exactly the right size, it is
-often not the intended type \eg{} the type \ty{word32} will be preferred to
-\mbox{\ty{bool}\,\holtxt{**}\,(\ty{16}+\ty{16})}.
+often not the intended type \eg{} the type \fcp{\bool}{\ty{32}}will be preferred to
+\fcp{\bool}{\ty{16}+\ty{16}}.
 
 \begin{figure}
 \begin{center}
@@ -2289,12 +2271,13 @@ are defined quite naturally using the Cartesian product binder; for example,
 bitwise conjunction is defined by:
 \begin{hol}
 \begin{verbatim}
-|- !v w. v && w = FCP i. v %% i /\ w %% i .
+|- !v w. v && w = FCP i. v ' i /\ w ' i .
 \end{verbatim}
 \end{hol}
 
-A word's bit ordering can be flipped over with \holtxt{word\_reverse}; see
-Figure~\ref{fig:reverse}. Three operations are provided for selecting bit
+The functions \holtxt{word\_lsb}, \holtxt{word\_msb} and \holtxt{word\_bit i}
+give the truth value of a word at bit positions $0$, $n - 1$ and $i$
+respectively.  Three operations are provided for selecting bit
 ranges, or sub-words: \holtxt{word\_bits}, \holtxt{word\_slice} and
 \holtxt{word\_extract}.  These operations are illustrated in
 Figure~\ref{fig:bits}.
@@ -2303,21 +2286,11 @@ example, \holtxt{word\_bits} is defined as follows:
 \begin{hol}
 \begin{verbatim}
 |- !h l x.
-     (h -- l) x = FCP i. i + l <= MIN h (dimindex (:'a) - 1) /\ x %% (i + l) .
+     (h -- l) x = FCP i. i + l <= MIN h (dimindex (:'a) - 1) /\ x ' (i + l) .
 \end{verbatim}
 \end{hol}
-
-The functions \holtxt{word\_lsb}, \holtxt{word\_msb} and \holtxt{word\_bit i}
-give the truth value of a word at bit positions $0$, $n - 1$ and $i$
-respectively.
-
-\begin{figure}
-\begin{center}
-\scalebox{.8}{\includegraphics{figs/reverse}}
-\caption{Reversing the bit ordering: \holtxt{w = word\_reverse v}.}
-\label{fig:reverse}
-\end{center}
-\end{figure}
+A word's bit ordering can be flipped over with \holtxt{word\_reverse}; see
+Figure~\ref{fig:reverse}. 
 
 \begin{figure}
 \begin{center}
@@ -2331,9 +2304,17 @@ target word size will be $h + 1 - l$, but this need not be the case.}
 \end{center}
 \end{figure}
 
+\begin{figure}
+\begin{center}
+\scalebox{.8}{\includegraphics{figs/reverse}}
+\caption{Reversing the bit ordering: \holtxt{w = word\_reverse v}.}
+\label{fig:reverse}
+\end{center}
+\end{figure}
+
 The function
-\holtxt{word\_modify:(\num\rarr\bool\rarr\bool)\rarr\worda\rarr\worda} changes
-a word by applying a map at each bit position; see Figure~\ref{fig:modify}.
+\holtxt{word\_modify:(\num\,\rarr\,\bool\,\rarr\,\bool)\,\rarr\,\worda\,\rarr\,\worda} changes
+a word by applying a map at each bit position.
 This operation provides a very flexible and convenient mechanism for
 manipulating words \eg{}
 \begin{hol}
@@ -2343,14 +2324,6 @@ negates the bits of \holtxt{w} that are in even positions.  Of course, the
 binder \holtxt{FCP} also provides a very general means to represent words using
 a predicate \eg{} \holtxt{\$FCP ODD} represents a word where all the odd bits
 are set.
-
-\begin{figure}
-\begin{center}
-\scalebox{.8}{\includegraphics{figs/modify}}
-\caption{Modify a word using function $f$.}
-\label{fig:modify}
-\end{center}
-\end{figure}
 
 \paragraph{Shifts}
 
@@ -2362,7 +2335,7 @@ they are defined in a similar manner to the other bit field operations.  For
 example, rotating right is defined by:
 \begin{hol}
 \begin{verbatim}
-|- !w n. w #>> n = FCP i. w %% (i + n) MOD dimindex (:'a) .
+|- !w n. w #>> n = FCP i. w ' (i + n) MOD dimindex (:'a) .
 \end{verbatim}
 \end{hol}
 Rotating left by $x$ places is defined as rotating right by $n - x \bmod n$
@@ -2411,24 +2384,14 @@ with a plus; for example, \holtxt{<+} is unsigned ``less than''.
 \subsubsection{Evaluation}
 \index{printing, in HOL logic@printing, in \HOL{} logic!of n-bit word values@of $n$-bit word values}
 
-To evaluate ground terms, using \ml{EVAL}, the library \theoryimp{wordsLib}
-needs to be loaded.  This library also provides a conversion \ml{WORDS\_CONV}
-and a \emph{compset} \ml{words\_compset}, which can be used to build
-conversions that evaluate variable-free word expressions.  However, this
-\emph{compset} only contains the finiteness and size theorems for a standard
-selection of word sizes.\footnote{For evaluation with any non-standard word
-sizes (introduced with \ml{mk\_word\_size}), the size theorems must be added to
-the \emph{compset} manually.  The standard word sizes are listed at the end of
-the script file \ml{\$HOLDIR/src/n-bit/wordsScript.sml}.  By editing this list,
-it is of course possible to build a version of \HOL{} with a custom set of
-standard word sizes.} The \emph{simpset} fragment \ml{SIZES\_ss} contains this
-set of size theorems -- this fragment is useful when applying the simplifier to
-word expressions.
+To evaluate ground terms using \ml{EVAL} the library \theoryimp{wordsLib}
+needs to be loaded.  This library also provides a \emph{compset} \ml{words\_compset}, which
+can be used to build conversions that evaluate variable-free word expressions.
 
-Words can be pretty-printed using different number bases; for example,
-\ml{pp\_word\_bin} will select binary format for all words.  The function
-\ml{pp\_word} is more flexible and allows the number base to vary depending on
-the word length.  The session below demonstrates working with \ml{EVAL} and
+Words can be pretty-printed using different number bases. For example, the function
+\ml{output\_words\_as\_bin} will select binary format for all words;
+\ml{output\_words\_as} is more flexible and allows the number base to vary depending on
+the word length and numeric value.  The session below demonstrates working with \ml{EVAL} and
 pretty-printing.
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -2437,7 +2400,7 @@ pretty-printing.
 > val it = () : unit
 - EVAL ``8w + 9w:word4``;
 > val it = |- 8w + 9w = 1w : thm
-- wordsLib.pp_word_bin();
+- wordsLib.output_words_as_bin();
 > val it = () : unit
 - EVAL ``($FCP ODD):word16``;
 > val it = |- $FCP ODD = 0b1010101010101010w : thm
@@ -2445,8 +2408,8 @@ pretty-printing.
 > val it = |- 0b1011w @@ 0b10w = 0b101110w : thm
 - base_tokens.allow_octal_input:=true;
 > val it = () : unit
-- wordsLib.pp_word (fn x => if Type.compare(x,``:32``) = EQUAL then
-                           StringCvt.HEX else StringCvt.DEC);
+- wordsLib.output_words_as
+     (fn x => if fst x = 32 then StringCvt.HEX else StringCvt.DEC);
 > val it = () : unit
 - EVAL ``(word_log2 ## I) (66w:word32,044w:word8)``;
 > val it = |- (word_log2 ## I) (0x42w,36w) = (0x6w,36w) : thm
@@ -2480,7 +2443,8 @@ listed in Table~\ref{tab:word:constants}.
 \label{tab:word:constants}
 \end{table}
 
-\begin{table}[htdp]
+{\setlength{\tabcolsep}{4pt}
+\begin{table}[h!tdp]
 \caption{Word operations.}
 \begin{center}\small
 \begin{tabular}{lcll}
@@ -2507,7 +2471,7 @@ See Figure~\ref{fig:bits} \\
 \holtxt{word\_modify} & & (\num\rarr\bool\rarr\bool)\rarr & Apply a function to
 each bit \\
  & & \worda\rarr\worda \\
-\holtxt{word\_join} & & \worda\rarr\wordb\rarr$\bool^{(\alpha+\beta)}$ & Join
+\holtxt{word\_join} & & \worda\rarr\wordb\rarr\fcp{\bool}{$\alpha+\beta$} & Join
 words \\
 \holtxt{word\_concat} & \holtxt{@@} & \worda\rarr\wordb\rarr\wordc &
 Concatenate words \\
@@ -2557,7 +2521,7 @@ than''  \\
 \end{tabular}
 \end{center}
 \label{tab:word:operations}
-\end{table}
+\end{table}}
 
 \index{n-bit words, the HOL theory of@$n$-bit words, the \HOL{} theory of|)}
 } % matches bracket at beginning of n-bit section, where some n-bit
@@ -3319,7 +3283,6 @@ character immediately followed by a string literal of length one.
 Thus:
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - val t = ``f #"c" #"\n"``;
 <<HOL message: inventing new type variable names: 'a>>
@@ -3328,7 +3291,6 @@ Thus:
 - dest_term ``#"\t"``;
 > val it = COMB(``CHR``, ``9``) : lambda
 \end{verbatim}
-\end{hol}
 \end{session}
 
 
@@ -3361,12 +3323,10 @@ sequences that are used in \ML{}.  For example, \ml{\bs{}n} for the
 newline character, and a backslash followed by three decimal digits
 for characters of the given number.
 \begin{session}
-\begin{hol}
 \begin{verbatim}
 - val t = ``"foo bar\n\001"``;
 > val t = ``"foo bar\n\^A"`` : term
 \end{verbatim}
-\end{hol}
 \end{session}
 Note that if one wants to use the control-character syntax with the
 caret that the pretty-printer has chosen to use in printing the given
@@ -3429,7 +3389,7 @@ Such an expression is translated to
 
 \paragraph {Length and concatenation}
 
-The length of a string (\holtxt{STRLEN}) is defined by primitive
+String length (\holtxt{STRLEN}) is defined by primitive
 recursion. The concatenation of strings (\holtxt{STRCAT}) may be expressed
 recursively (\holtxt{STRCAT\_EQNS}) or as a fold (\holtxt{STRCAT\_EXPLODE}):
 \begin{hol}
@@ -3791,10 +3751,10 @@ The special purpose set-theoretic notations
 by the \HOL{} parser and printer when the theory \theoryimp{pred\_set}
 is loaded.
 
-The normal interpretation of $\holtxt{\{}t_1 ;t_2 ; \ldots ;
-t_n\holtxt{\}}$ is the finite set containing just $t_1,t_2,\ldots,
+The normal interpretation of \lb$t_1 ;t_2 ; \ldots ; t_n$\rb{} is the finite set
+containing just $t_1,t_2,\ldots,
 t_n$. This can be modelled by starting with the empty set and
-performing a sequence of insertions. For example, \holtxt{\{1;2;3;4\}}
+performing a sequence of insertions. For example, \holtxt{\lb{}1;2;3;4\rb{}}
 parses to
 
 \begin{hol}
@@ -4243,7 +4203,7 @@ infix), inversion (\holtxt{inv}), domain (\holtxt{RDOM}), and range
 \end{verbatim}
 \end{hol}
 
-Set operations lifted to work on relations include subset
+\noindent Set operations lifted to work on relations include subset
 (\holtxt{RSUBSET}, infix), union (\holtxt{RUNION}, infix),
 intersection (\holtxt{RINTER}, infix), complement (\holtxt{RCOMPL}),
 and universe (\holtxt{RUNIV}).
@@ -4537,10 +4497,10 @@ main notions in the theory.
 \end{verbatim}
 \end{hol}
 
-The \HOL{} parser and printer will treat the syntax \verb+f ' x+ as
+The \HOL{} parser and printer will treat the syntax \holtxt{f\,'\,x} as
 the application of finite map \verb+f+ to argument \verb+x+, ie, as
-{\small\verb+FAPPLY f x+}. The notation \verb#f |+ (x,y)# represents
-{\small\verb+FUPDATE f (x,y)+}, \ie, the updating of finite map
+\holtxt{FAPPLY\,f\,x}. The notation \holtxt{f\,|+\,(x,y)} represents
+\holtxt{FUPDATE\,f\,(x,y)}, \ie, the updating of finite map
 \verb+f+ by the pair \verb+(x,y)+.
 
 The basic constants have obscure definitions, from which more useful
@@ -4570,9 +4530,7 @@ derived.
 \end{verbatim}
 \end{hol}
 Iterated updates (\holtxt{FUPDATE\_LIST}) to a map are useful. The
-infix notation \holtxt{|++} may also be used.  For example, \holtxt{fm
-  |++ [(k1,v1); (k2,v2)]} is equal to \holtxt{(fm |+ (k1,v1)) |+
-  (k2,v2)}.
+infix notation \holtxt{|++} may also be used.  For example, \holtxt{fm\,|++\,[(k1,v1);\,(k2,v2)]} is equal to \holtxt{(fm\,|+\,(k1,v1))\,|+\,(k2,v2)}.
 \begin{hol}
 \begin{verbatim}
    FUPDATE_LIST  |- FUPDATE_LIST = FOLDL FUPDATE
@@ -4643,7 +4601,7 @@ definition. Again, this concept has a alternate recursive presentation
 
 \paragraph {Union and sub-maps}
 
-Unlike the union of sets, the union of two finite maps
+Unlike set union, the union of two finite maps
 (\holtxt{FUNION\_DEF}) is not symmetric: the domain of the first map
 takes precedence. The notion of a finite map being a submap of another
 (\holtxt{SUBMAP}, infix) is an extension of how subsets are
@@ -4827,9 +4785,9 @@ Divisibility and the greatest common divisor.
 A theory of polynomials over $\mathbb{R}$, providing
 a collection of operations on polynomials, and theorems about them.
 \\
-\theoryimp{Temporal\_Logic}, \theoryimp{Omega\_Automata}
+\theoryimp{Temporal\_Logic},\newline \theoryimp{Omega\_Automata}
 &
-Klaus Schneider's development of temporal logic and $\omega$-automata.
+Klaus Schneider's development of temporal logic and\newline $\omega$-automata.
 \\
 \theoryimp{ctl}, \theoryimp{mu}
 &

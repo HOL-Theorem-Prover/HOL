@@ -1,5 +1,5 @@
  
-structure minisatProve = 
+structure minisatProve :> minisatProve = 
 struct 
 
 local

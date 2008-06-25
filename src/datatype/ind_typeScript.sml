@@ -397,7 +397,7 @@ val ISO_USAGE = store_thm(
 
 val _ = app (fn s => remove_ovl_mapping s {Name = s, Thy = "ind_type"})
             ["NUMPAIR", "NUMSUM", "INJN", "INJA", "INJF", "INJP",
-             "ZCONSTR", "ZBOT", "BOTTOM", "CONSTR", "FNIL", "ISO"]
+             "FCONS", "ZCONSTR", "ZBOT", "BOTTOM", "CONSTR", "FNIL", "ISO"]
 
 val _ = export_theory();
 

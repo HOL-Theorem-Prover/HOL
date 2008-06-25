@@ -106,7 +106,7 @@ val MultIterAbs =
  Q.store_thm
   ("MultIterAbs",
    `!m n acc.
-      n < 2 ** WL /\ (m * n) + acc < 2 ** WL
+      n < dimword(:32) /\ (m * n) + acc < dimword(:32)
       ==> 
       (MultIter(m,n,acc) = 
        ((w2n ## w2n ## w2n) o Mult32Iter o (n2w ## n2w ## n2w))
@@ -115,33 +115,31 @@ val MultIterAbs =
      THEN RW_TAC arith_ss [Once MultIter_def,Once Mult32Iter_def]
      THENL
       [RW_TAC (srw_ss()) [],
-       FULL_SIMP_TAC arith_ss [MULT,w2n_EVAL,MOD_WL_def,WL_def,HB_def,word_H_def],
-       FULL_SIMP_TAC arith_ss [MULT,w2n_EVAL,MOD_WL_def,WL_def,HB_def,word_H_def],
-       FULL_SIMP_TAC arith_ss 
-        [MULT,w2n_EVAL,MOD_WL_def,WL_def,HB_def,word_H_def,MultIterThm]
-        THEN `w2n(n2w m) = 0` by PROVE_TAC[WORD_CONV ``w2n 0w``]
-        THEN FULL_SIMP_TAC arith_ss [MULT,w2n_EVAL,MOD_WL_def,WL_def,HB_def,word_H_def]
+       FULL_SIMP_TAC arith_ss [MULT,w2n_n2w],
+       FULL_SIMP_TAC arith_ss [MULT,w2n_n2w],
+       FULL_SIMP_TAC arith_ss [MULT,w2n_n2w,n2w_11,dimword_32,MultIterThm]
         THEN Cases_on `n = 0`
         THEN FULL_SIMP_TAC arith_ss []
-        THEN `?p. n = p+1` by PROVE_TAC[COOPER_PROVE ``~(n = 0) ==> ?p. n = p+1``]
+        THEN `?p. n = p+1`
+          by PROVE_TAC[intLib.COOPER_PROVE ``~(n = 0) ==> ?p. n = p+1``]
         THEN FULL_SIMP_TAC std_ss [LEFT_ADD_DISTRIB,MULT_CLAUSES]
         THEN `m < 4294967296` by DECIDE_TAC
         THEN IMP_RES_TAC LESS_MOD
         THEN DECIDE_TAC,
        FULL_SIMP_TAC arith_ss 
-        [MULT,w2n_EVAL,MOD_WL_def,WL_def,HB_def,word_H_def,MultIterThm,RIGHT_SUB_DISTRIB]
-        THEN `?p. m = p+1` by PROVE_TAC[COOPER_PROVE ``~(n = 0) ==> ?p. n = p+1``]
+        [MULT,w2n_n2w,n2w_11,dimword_32,MultIterThm,RIGHT_SUB_DISTRIB]
+        THEN `?p. m = p+1`
+          by PROVE_TAC[intLib.COOPER_PROVE ``~(n = 0) ==> ?p. n = p+1``]
         THEN FULL_SIMP_TAC std_ss [RIGHT_ADD_DISTRIB,MULT_CLAUSES]
         THEN `p * n + n - n + (acc + n) < 4294967296` by DECIDE_TAC
-        THEN RES_TAC
-        THEN RW_TAC arith_ss [GSYM ADD_EVAL,WORD_ADD_SUB]
-        THEN RW_TAC arith_ss [ADD_EVAL]]);
+        THEN RW_TAC arith_ss [GSYM word_add_n2w,WORD_ADD_SUB]
+        THEN PROVE_TAC [WORD_ADD_COMM]]);
 
 val FUN_PAIR_REDUCE =
  Q.store_thm
   ("FUN_PAIR_REDUCE",
    `((n2w ## f) ((w2n ## g) p) = (FST p, f(g(SND p))))`,
-   Cases_on `p` THEN RW_TAC std_ss [w2n_ELIM]);
+   Cases_on `p` THEN RW_TAC std_ss [n2w_w2n]);
 
 (*---------------------------------------------------------------------------*)
 (* Equivalence of Mult32Iter and palin old multiplication.                   *)
@@ -151,40 +149,43 @@ val MultIterAbsCor =
  Q.store_thm
   ("MultIterAbsCor",
    `!m n acc.
-      (m * n) + acc < 2 ** WL
+      (m * n) + acc < dimword(:32)
       ==> 
-      (Mult32Iter (n2w m,n2w n,n2w acc) = (0w,n2w n,(n2w m) * (n2w n) + (n2w acc)))`,
+      (Mult32Iter (n2w m,n2w n,n2w acc) =
+         (0w,n2w n,(n2w m) * (n2w n) + (n2w acc)))`,
    RW_TAC std_ss []
     THEN IMP_RES_TAC MultIterAbs
     THEN FULL_SIMP_TAC std_ss [MultIterThm]
     THEN Cases_on `m=0`
     THENL
-     [RW_TAC arith_ss [Once Mult32Iter_def,WORD_MULT_CLAUSES,WORD_ADD_CLAUSES],
-      `?p. m = p+1` by PROVE_TAC[COOPER_PROVE ``~(n = 0) ==> ?p. n = p+1``]
+     [RW_TAC arith_ss [Once Mult32Iter_def,WORD_MULT_CLAUSES,WORD_ADD_0],
+      `?p. m = p+1`
+         by PROVE_TAC[intLib.COOPER_PROVE ``~(n = 0) ==> ?p. n = p+1``]
        THEN FULL_SIMP_TAC std_ss [RIGHT_ADD_DISTRIB,MULT_CLAUSES]
-       THEN `n < 2 ** WL` by DECIDE_TAC
+       THEN `n < dimword(:32)` by DECIDE_TAC
        THEN RES_TAC
-       THEN POP_ASSUM(ASSUME_TAC o GSYM o AP_TERM ``n2w ## n2w ## n2w``)
-       THEN FULL_SIMP_TAC std_ss [FUN_PAIR_REDUCE, w2n_ELIM]
-       THEN RW_TAC arith_ss [GSYM MUL_EVAL,
-                 GSYM ADD_EVAL,w2n_ELIM,WORD_RIGHT_ADD_DISTRIB,WORD_MULT_CLAUSES]]);
+       THEN POP_ASSUM(ASSUME_TAC o GSYM o AP_TERM ``(n2w ## n2w ## n2w) :
+               num # num # num -> bool[32] # bool[32] # bool[32]``)
+       THEN FULL_SIMP_TAC std_ss [FUN_PAIR_REDUCE, n2w_w2n]
+       THEN RW_TAC arith_ss [GSYM word_mul_n2w, GSYM word_add_n2w, n2w_w2n,
+              WORD_RIGHT_ADD_DISTRIB,WORD_MULT_CLAUSES]]);
 
 val MultAbs =
  Q.store_thm
   ("MultAbs",
    `!m n.
-      m * n < 2 ** WL
+      m * n < dimword(:32)
       ==> 
       (Mult(m,n) = w2n(Mult32(n2w m, n2w n)))`,
    RW_TAC arith_ss [Mult_def, Mult32_def,Once MultIterThm]
-    THEN RW_TAC arith_ss [MultIterAbsCor,WORD_ADD_CLAUSES,MUL_EVAL,w2n_EVAL]
-    THEN PROVE_TAC[MOD_WL_IDEM,LT_WL_def]);
+    THEN RW_TAC arith_ss
+           [MultIterAbsCor,WORD_ADD_0,word_mul_n2w,n2w_w2n,w2n_n2w]);
 
 val MultAbsCor1 =
  Q.store_thm
   ("MultAbsCor1",
    `!m n.
-      m * n < 2 ** WL
+      m * n < dimword(:32)
       ==> 
       (m * n = w2n(Mult32(n2w m, n2w n)))`,
    RW_TAC arith_ss [SIMP_RULE std_ss [MultThm] MultAbs]);
@@ -193,10 +194,10 @@ val MultAbsCor2 =
  Q.store_thm
   ("MultAbsCor2",
    `!m n.
-      m * n < 2 ** WL
+      m * n < dimword(:32)
       ==> 
       (Mult32(n2w m, n2w n) = n2w m * n2w n)`,
-   PROVE_TAC[w2n_ELIM,MUL_EVAL,MultAbsCor1]);
+   PROVE_TAC[n2w_w2n,word_mul_n2w,MultAbsCor1]);
 
 (*---------------------------------------------------------------------------*)
 (* Iterative factorial on nums                                               *)
@@ -220,7 +221,7 @@ val FactIterThm =                                       (* proof from KXS *)
    recInduct FactIter_ind THEN RW_TAC arith_ss []
      THEN RW_TAC arith_ss [Once FactIter_def,FACT]
      THEN Cases_on `n` 
-     THEN FULL_SIMP_TAC arith_ss [FACT]));
+     THEN FULL_SIMP_TAC arith_ss [FACT]);
 
 (*****************************************************************************)
 (* Iterative factorial on word32                                             *)
@@ -274,7 +275,7 @@ val FactIterAbs =
  Q.store_thm
   ("FactIterAbs",
    `!n acc.
-      acc * FACT n < 2 ** WL
+      acc * FACT n < dimword(:32)
       ==> 
       (FactIter(n,acc) = 
        (w2n ## w2n)(Fact32Iter((n2w ## n2w)(n,acc))))`,
@@ -282,16 +283,16 @@ val FactIterAbs =
      THEN RW_TAC arith_ss [Once FactIter_def,Once Fact32Iter_def]
      THEN FULL_SIMP_TAC arith_ss [FACT]
      THENL
-      [CONV_TAC WORD_CONV,
-       PROVE_TAC[MOD_WL_IDEM,LT_WL_def,w2n_EVAL],
+      [REWRITE_TAC [word_0_n2w],
+       ASM_SIMP_TAC arith_ss [w2n_n2w],
        FULL_SIMP_TAC arith_ss 
-        [MULT,w2n_EVAL,MOD_WL_def,WL_def,HB_def,word_H_def,FactIterThm]
-        THEN `w2n(n2w n) = 0` by PROVE_TAC[WORD_CONV ``w2n 0w``]
-        THEN FULL_SIMP_TAC arith_ss [MULT,w2n_EVAL,MOD_WL_def,WL_def,HB_def,word_H_def]
+        [MULT,w2n_n2w,n2w_11,dimword_32,FactIterThm]
         THEN Cases_on `acc = 0`
         THEN FULL_SIMP_TAC arith_ss []
-        THEN `?p. acc = p+1` by PROVE_TAC[COOPER_PROVE ``~(n = 0) ==> ?p. n = p+1``]
-        THEN FULL_SIMP_TAC arith_ss [LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,MULT_CLAUSES]
+        THEN `?p. acc = p+1`
+          by PROVE_TAC[intLib.COOPER_PROVE ``~(n = 0) ==> ?p. n = p+1``]
+        THEN FULL_SIMP_TAC arith_ss
+             [LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,MULT_CLAUSES]
         THEN Cases_on `n=1`
         THEN FULL_SIMP_TAC arith_ss []
         THEN ASSUME_TAC(EVAL ``2 MOD 4294967296``)        
@@ -301,17 +302,17 @@ val FactIterAbs =
         THEN PROVE_TAC[LESS_MOD],
        `n = SUC(n-1)` by DECIDE_TAC
         THEN `FACT n = n * FACT(n-1)` by PROVE_TAC[FACT]
-        THEN `acc * n * FACT (n - 1) < 2 ** WL` by PROVE_TAC[MULT_SYM,MULT_ASSOC]
+        THEN `acc * n * FACT (n - 1) < dimword(:32)`
+          by PROVE_TAC[MULT_SYM,MULT_ASSOC]
         THEN RW_TAC arith_ss []
         THEN `1 <= n` by DECIDE_TAC
-        THEN `LT_WL 1` by PROVE_TAC[LT_WL_def, EVAL ``1 < 2 ** WL``]
-        THEN RW_TAC arith_ss [GSYM WORD_SUB_LT_EQ]
-        THEN `n * acc < 2 ** WL` 
+        THEN RW_TAC arith_ss [WORD_LITERAL_ADD, word_sub_def]
+        THEN `n * acc < dimword(:32)` 
               by PROVE_TAC
                   [FACT_0,MULT_LESS_LEMMA,MULT_SYM,
                    DECIDE``m:num <= n /\ n < p ==> m < p``]
         THEN ONCE_REWRITE_TAC [MULT_SYM]
-        THEN RW_TAC arith_ss [MultAbsCor1,w2n_ELIM]]);
+        THEN RW_TAC arith_ss [MultAbsCor1,n2w_w2n]]);
 
 (*****************************************************************************)
 (* Lemma showing how FactIter computes factorial                             *)
@@ -324,19 +325,21 @@ val FactIterThm =                                       (* proof from KXS *)
      recInduct FactIter_ind THEN RW_TAC arith_ss []
       THEN RW_TAC arith_ss [Once FactIter_def,FACT]
       THEN Cases_on `n` 
-      THEN FULL_SIMP_TAC arith_ss [FACT]));
+      THEN FULL_SIMP_TAC arith_ss [FACT]);
 
 val FactIterAbsCor =
  Q.store_thm
   ("FactIterAbsCor",
    `!m n acc.
-      acc * FACT n < 2 ** WL
+      acc * FACT n < dimword(:32)
       ==>
       (Fact32Iter (n2w n, n2w acc) = (0w, n2w acc * n2w(FACT n)))`,
    RW_TAC std_ss []
     THEN IMP_RES_TAC FactIterAbs
-    THEN POP_ASSUM(ASSUME_TAC o GSYM o AP_TERM ``n2w ## n2w``)
-    THEN FULL_SIMP_TAC std_ss [FUN_PAIR_REDUCE, w2n_ELIM,FactIterThm,MUL_EVAL]);
+    THEN POP_ASSUM(ASSUME_TAC o GSYM o AP_TERM ``(n2w ## n2w) :
+           num # num -> bool[32] # bool[32]``)
+    THEN FULL_SIMP_TAC std_ss
+           [FUN_PAIR_REDUCE,n2w_w2n,FactIterThm,word_mul_n2w]);
 
 (*****************************************************************************)
 (* Implement a function Fact32 to compute SND(Fact32Iter (n,1))              *)
@@ -349,30 +352,30 @@ val Fact32_def =
 val FactAbs =
  Q.store_thm
   ("FactAbs",
-   `!n. FACT n < 2 ** WL ==> (FACT n = w2n(Fact32(n2w n)))`,
+   `!n. FACT n < dimword(:32) ==> (FACT n = w2n(Fact32(n2w n)))`,
    RW_TAC arith_ss [Fact32_def,Once Fact32Iter_def]
     THENL
-     [CONV_TAC WORD_CONV
-       THEN `w2n(n2w n) = 0` by PROVE_TAC[WORD_CONV ``w2n 0w``]
-       THEN FULL_SIMP_TAC arith_ss [MULT,w2n_EVAL,MOD_WL_def,WL_def,HB_def,word_H_def]
-       THEN `n < 4294967296` by PROVE_TAC[DECIDE ``m:num <= n /\ n < p ==> m < p``,FACT_LESS_EQ]
+     [FULL_SIMP_TAC (srw_ss()) []
+       THEN `n < 4294967296`
+         by PROVE_TAC[DECIDE ``m:num <= n /\ n < p ==> m < p``,FACT_LESS_EQ]
        THEN `n = 0` by PROVE_TAC[LESS_MOD]
        THEN RW_TAC arith_ss [FACT],
-      `n < 2 ** WL` by PROVE_TAC[DECIDE ``m:num <= n /\ n < p ==> m < p``,FACT_LESS_EQ]
+      `n < dimword(:32)`
+         by PROVE_TAC[DECIDE ``m:num <= n /\ n < p ==> m < p``,FACT_LESS_EQ]
        THEN RW_TAC arith_ss [MultAbsCor2,MultAbsCor2,WORD_MULT_CLAUSES]
-       THEN `LT_WL 1` by PROVE_TAC[LT_WL_def, EVAL ``1 < 2 ** WL``]
+       THEN ASSUME_TAC (INST_TYPE [alpha |-> ``:32``] ONE_LT_dimword)
        THEN Cases_on `n=0`
        THEN FULL_SIMP_TAC arith_ss []
        THEN `1 <= n` by DECIDE_TAC
-       THEN RW_TAC arith_ss [WORD_SUB_LT_EQ]
+       THEN RW_TAC arith_ss [WORD_LITERAL_ADD, word_sub_def]
        THEN `SUC(n-1) = n` by DECIDE_TAC
-       THEN `n * FACT(n-1) < 2 ** WL` by PROVE_TAC[FACT]
-       THEN RW_TAC arith_ss [FactIterAbsCor,MUL_EVAL]
+       THEN `n * FACT(n-1) < dimword(:32)` by PROVE_TAC[FACT]
+       THEN RW_TAC arith_ss [FactIterAbsCor,word_mul_n2w]
        THEN `n * FACT(n-1) = FACT n` by PROVE_TAC[FACT]
-       THEN RW_TAC arith_ss [w2n_EVAL,MOD_WL_def]]);
+       THEN RW_TAC arith_ss [w2n_n2w]]);
 
 (*
-  |- FACT 12 < 2 ** WL = T : thm 
-  |- FACT 13 < 2 ** WL = F : thm 
+  |- FACT 12 < dimword(:32) = T : thm 
+  |- FACT 13 < dimword(:32) = F : thm 
 *)
 val _ = export_theory();

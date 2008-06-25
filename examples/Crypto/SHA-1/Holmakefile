@@ -1,9 +1,0 @@
-EXTRA_CLEANS = word8Lib.sml word32Lib.sml
-
-word8Theory.ui word8Theory.uo: \
-   $(SIGOBJ)/wordFunctor.ui $(SIGOBJ)/wordFunctorLib.ui $(SIGOBJ)/bitsTheory.ui
-	$(HOLDIR)/src/n_bit/mkword.exe 8
-
-word32Theory.ui word32Theory.uo: \
-   $(SIGOBJ)/wordFunctor.ui $(SIGOBJ)/wordFunctorLib.ui $(SIGOBJ)/bitsTheory.ui
-	$(HOLDIR)/src/n_bit/mkword.exe 32

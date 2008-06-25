@@ -41,7 +41,7 @@ OK..
 > val it =
     !(x,y). x + y = y + x
     
-     : goalstack
+     : proof
 }
 
 

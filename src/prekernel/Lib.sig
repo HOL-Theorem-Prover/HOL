@@ -4,7 +4,7 @@ sig
   val curry         : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
   val uncurry       : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
   val append        : 'a list -> 'a list -> 'a list
-  val concat        : string -> string -> string
+  val strcat        : string -> string -> string
   val equal         : ''a -> ''a -> bool
   val pair          : 'a -> 'b -> 'a * 'b
   val cons          : 'a -> 'a list -> 'a list
@@ -89,6 +89,7 @@ sig
   val string_to_int : string -> int
   val sort          : ('a -> 'a -> bool) -> 'a list -> 'a list
   val int_sort      : int list -> int list
+  val topsort       : ('a -> 'a -> bool) -> 'a list -> 'a list
 
   val start_time    : unit -> Timer.cpu_timer
   val end_time      : Timer.cpu_timer -> unit

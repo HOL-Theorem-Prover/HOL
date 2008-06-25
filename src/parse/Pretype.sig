@@ -27,12 +27,16 @@ val tylocn : pretype -> locn.locn
 val eq : pretype -> pretype -> bool
 
 val --> : pretype * pretype -> pretype
+val dest_var_type : pretype -> pretyvar
 val mk_app_type : pretype * pretype -> pretype
 val dest_app_type : pretype -> pretype * pretype
 val mk_univ_type : pretype * pretype -> pretype
 val dest_univ_type : pretype -> pretype * pretype
 val mk_abs_type : pretype * pretype -> pretype
 val dest_abs_type : pretype -> pretype * pretype
+
+val beta_conv_ty : pretype -> pretype
+val deep_beta_conv_ty : pretype -> pretype
 
 val pkind_of : pretype -> prekind
 val prank_of : pretype -> prerank

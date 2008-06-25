@@ -5,17 +5,12 @@
 structure sortingScript =
 struct
 
-(* interactive use:
-
-*)
-
 open HolKernel Parse boolLib bossLib;
 open combinTheory pairTheory relationTheory listTheory 
-     labelLib metisLib BasicProvers;
+     markerLib metisLib BasicProvers;
 
 
 val _ = new_theory "sorting";
-
 
 val _ = Defn.def_suffix := "_DEF";
 val _ = Defn.ind_suffix := "_IND";
@@ -290,7 +285,7 @@ fun remove_eq_asm th = let
   val th0 =
       CONV_RULE (LAND_CONV
                    (SIMP_CONV (bool_ss ++ boolSimps.ETA_ss)
-                              [GSYM FUN_EQ_THM, labelTheory.label_def]))
+                              [GSYM FUN_EQ_THM, markerTheory.label_def]))
                 (DISCH_ALL (REWRITE_RULE [perm_elim] th))
 in
   CONV_RULE Unwind.UNWIND_FORALL_CONV
@@ -400,7 +395,6 @@ RW_TAC bool_ss []
  THEN RW_TAC list_ss []);
 
 
-
 (*---------------------------------------------------------------------------
        Each element in the positive and negative partitions has
        the desired property. The simplifier loops on some of the
@@ -466,28 +460,20 @@ val PARTITION_DEF = Define`PARTITION P l = PART P l [] []`;
  *      Quicksort                                                            *
  *---------------------------------------------------------------------------*)
 
-val QSORT_defn =
- Hol_defn "QSORT"
-    `(QSORT ord [] = []) /\
-     (QSORT ord (h::t) =
-         let (l1,l2) = PARTITION (\y. ord y h) t
-         in
-            QSORT ord l1 ++ [h] ++ QSORT ord l2)`;
-
-
-(*---------------------------------------------------------------------------
- * Termination of QSORT
- *---------------------------------------------------------------------------*)
-
-val (QSORT_DEF,QSORT_IND) = Defn.tprove
- (QSORT_defn,
-  WF_REL_TAC `measure (LENGTH o SND)`
+val QSORT_DEF =
+ tDefine
+  "QSORT"
+  `(QSORT ord [] = []) /\
+   (QSORT ord (h::t) =
+       let (l1,l2) = PARTITION (\y. ord y h) t
+       in
+         QSORT ord l1 ++ [h] ++ QSORT ord l2)`
+ (WF_REL_TAC `measure (LENGTH o SND)`
      THEN RW_TAC list_ss [o_DEF,PARTITION_DEF]
      THEN IMP_RES_THEN MP_TAC PART_LENGTH_LEM
      THEN RW_TAC list_ss []);
 
-val _ = save_thm("QSORT_DEF",QSORT_DEF);
-val _ = save_thm("QSORT_IND",QSORT_IND);
+val QSORT_IND = fetch "-" "QSORT_IND";
 
 (*---------------------------------------------------------------------------*
  *           Properties of QSORT                                            *
@@ -515,7 +501,7 @@ val QSORT_PERM = Q.store_thm
   THEN REWRITE_TAC [GSYM APPEND_ASSOC, APPEND]
   THEN MATCH_MP_TAC CONS_PERM
   THEN MATCH_MP_TAC PERM_TRANS
-  THEN Q.EXISTS_TAC`l1 ++ l2`
+  THEN Q.EXISTS_TAC `l1 ++ l2`
   THEN RW_TAC std_ss [] THENL
   [METIS_TAC [APPEND,APPEND_NIL,PART_PERM],
    METIS_TAC [PERM_CONG]]);

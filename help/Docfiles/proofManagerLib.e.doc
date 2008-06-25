@@ -1,0 +1,20 @@
+\DOC e
+
+\TYPE {e : tactic -> proof}
+
+\SYNOPSIS
+Applies a tactic to the current goal, stacking the resulting subgoals.
+
+\DESCRIBE
+The function {e} is part of the subgoal package. It is an abbreviation for
+{expand}. For a description of the subgoal package, see {set_goal}.
+
+\FAILURE
+As for {expand}.
+
+\USES
+Doing a step in an interactive goal-directed proof.
+
+\SEEALSO
+proofManagerLib.b, proofManagerLib.backup, backup_limit, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.g, get_state, proofManagerLib.p, print_state, proofManagerLib.r, rotate, save_top_thm, proofManagerLib.set_goal, set_state, proofManagerLib.top_goal, proofManagerLib.top_thm, VALID.
+\ENDDOC

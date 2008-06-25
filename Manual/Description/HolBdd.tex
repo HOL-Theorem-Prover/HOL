@@ -1,17 +1,23 @@
-%\documentclass[12pt]{article}
-
-%\usepackage{alltt}
-%\usepackage{epsfig}
-%\usepackage{pstricks}
-%\usepackage{makeidx}
-%\usepackage{url}
+\documentclass[12pt,fleqn]{article}
+\usepackage{makeidx}
+\usepackage{url}
 %\usepackage{index}
-%\usepackage{multind}
-%\usepackage{fancyvrb}
+\usepackage{multind}
+\usepackage{fancyvrb}
+\usepackage{latexsym}
+%\usepackage{amsmath}
+\usepackage{amssymb}
+%\usepackage{amsbsy}
+\usepackage{alltt}
+\usepackage{../LaTeX/layout}
+\usepackage{graphicx}
+
+\input{../LaTeX/commands}
 
 %\makeindex
 
 \newcommand{\hbc}[2]{
+\addtolength{\minipagewidth}{-10pt}
 \begin{minipage}{\minipagewidth}
 \begin{footnotesize}
 {\texttt{#1}}
@@ -68,22 +74,21 @@
 %\parindent 0mm
 %\parskip 1mm
 
-%\input{../LaTeX/commands}
-
-%\setcounter{sessioncount}{0}
-
-%\begin{document}
+\setcounter{sessioncount}{0}
+\title{HolBddLib}
+\date{}
+\begin{document}
+\maketitle
 \index{HolBddLib|(}
 
-This section describes {\tt HolBddLib}, a \HOL{} interface to an external BDD engine.\index{binary decision diagrams|see {HolBddLib}}\index{BDDs|see {HolBddLib}}
+This document describes {\tt HolBddLib}, a \HOL{} interface to an external BDD engine.\index{binary decision diagrams|see {HolBddLib}}\index{BDDs|see {HolBddLib}}
 
-\subsection{Introduction}
+\section{Introduction}
 
 The development of {\tt HolBddLib} has gone through two phases.  The
 first phase consisted in experiments with different ways of linking
 higher order logic (HOL) terms to binary decision diagrams (BDDs).
-These are described in the paper {\it Reachability programming in
-HOL98 using BDDs\/} \cite{tphols2000-Gordon}. The first release of
+These are described in the paper {\it Reachability programming in HOL98 using BDDs\/} \cite{tphols2000-Gordon}. The first release of
 \t{HolBddLib}, now called Version~1, consisted of an ad hoc collection
 of tools developed for these experiments.  One of the approaches we
 experimented with was based on a protected type of `BDD representation
@@ -133,7 +138,7 @@ due to Ken Friis Larsen and Jakob Lichtenberg, and is described in Section~\ref{
 {\tt HolBddLib} is built on top of \Muddy{} and
 is described in Section~\ref{HolBddLib}.
 
-\subsubsection{Overview}\index{HolBddLib!overview}
+\subsection{Overview}\index{HolBddLib!overview}
 
 In the fully expansive (or `LCF style') approach, theorems are represented by an abstract type
 whose primitive operations are the axioms and inference rules of a
@@ -155,7 +160,7 @@ that models
 judgements $\termbdd{a}{\rho}{t}{b}$ analogously
 to the way the type $\ty{thm}$ models theorems $\vdash t$.
 
-\t{HolBddLib} currently contains two main structures: \t{PrimitiveBddRules}
+The structure \t{HolBddLib} currently contains two main structures: \t{PrimitiveBddRules}
 which defines a protected type \termbddty and rules for generating
 values of this type, and \t{DerivedBddRules} that contains derived
 rules for performing simple fixed-point calculations.  There is also a
@@ -164,7 +169,7 @@ reachability and fixed points needed by the derived rules,
 and two small subsidiary structures \t{Varmap} and \t{PrintBdd}.
 
 
-\subsubsection{Relation to the Voss system}\label{related}\index{HolBddLib!Voss, relation to}
+\subsection{Relation to the Voss system}\label{related}\index{HolBddLib!Voss, relation to}
 
 The Voss system \cite{SegerVoss} has strongly influenced and inspired
 the ideas described here. Voss consists of a lazy
@@ -236,7 +241,7 @@ platform.
 
 
 
-\subsection{\Muddy}\label{muddy}
+\section{\Muddy}\label{muddy}
 
 \Muddy{} is the Moscow ML interface to \Buddy{}. It provides ML functions for constructing and
 manipulating BDDs via three structures:
@@ -258,7 +263,7 @@ The current \HolBuddy{} system only uses \t{bdd} and so
 the documentation of \t{fdd} and \t{bvec} provided here is minimal
 (see Sections~\ref{fdd} and \ref{bvec} below).
 
-\subsubsection{Initialisation, termination and tuning sessions}\label{init}\index{HolBddLib!session!initialisation}\index{HolBddLib!session!termination}
+\subsection{Initialisation, termination and tuning sessions}\label{init}\index{HolBddLib!session!initialisation}\index{HolBddLib!session!termination}
 
 The \Buddy{} package must be initialised before any BDD operations are done.
 Initialisation is done with the ML function
@@ -373,7 +378,7 @@ Evaluating \t{setCacheratio~$n$} sets the cache ratio to $n$.
 For example, if $n$ is $4$ then the internal caches will a quarter the size of the
 nodetable.
 
-\subsubsection{BDDs representing {\t{true}} and {\t{false}}}\index{HolBddLib!BDD!constants}
+\subsection{BDDs representing {\t{true}} and {\t{false}}}\index{HolBddLib!BDD!constants}
 
 The atomic BDDs representing the two truthvalues are bound to the ML
 identifiers \t{TRUE} and \t{FALSE}, both of type \t{bdd}.
@@ -395,7 +400,7 @@ It raises the exception \t{Domain} on non-atomic BDDs.
 tests the equality of two BDDs. Thus \t{TRUE} is \t{equal} to \t{fromBool(true)} and 
 \t{FALSE} is \t{equal} to \t{fromBool(false)}.
 
-\subsubsection{Variables}\index{HolBddLib!BDD!variables}
+\subsection{Variables}\index{HolBddLib!BDD!variables}
 
 In \Buddy{}, BDD variables are encoded as integers (type \t{int} in ML) and the BDD variable ordering
 is the numerical ordering. Thus to build a BDD to represent a \HOL{} term with a
@@ -445,7 +450,7 @@ $\t{setVarnum}~m$ has not been previously evaluated for some $m$
 greater than $n$.
 
 
-\subsubsection{Sets of variables and quantification}\label{varSet}\index{HolBddLib!BDD!quantification}
+\subsection{Sets of variables and quantification}\label{varSet}\index{HolBddLib!BDD!quantification}
 
 \Buddy{} provides operations on BDDs for quantifying with respect to sets
 of variables. The module  \t{bdd} provides a type \t{varSet} to represent such
@@ -468,7 +473,7 @@ The following functions quantify BDDs with respect to sets of variables:
    exist  : varSet -> bdd -> bdd
 \end{verbatim}\index{HolBddLib!ML bindings!{forall}@\ml{forall}}\index{HolBddLib!ML bindings!{exist}@\ml{exist}}
 
-\subsubsection{Assignments, composition, replacement and restriction}\label{replace}\index{HolBddLib!BDD!assignments}\index{HolBddLib!BDD!composition}\index{HolBddLib!BDD!replacement}\index{HolBddLib!BDD!restriction}
+\subsection{Assignments, composition, replacement and restriction}\label{replace}\index{HolBddLib!BDD!assignments}\index{HolBddLib!BDD!composition}\index{HolBddLib!BDD!replacement}\index{HolBddLib!BDD!restriction}
 
 \Muddy{} provides a function for general purpose simultaneous
 substitution of arbitrary BDDs for variables in a given BDD (\t{veccompose}). It also
@@ -521,12 +526,12 @@ as argument a value of type \t{assignment}\index{HolBddLib!ML bindings!{assignme
    restrict      : bdd -> assignment -> bdd
 \end{verbatim}\index{HolBddLib!ML bindings!{restrict}@\ml{restrict}}\index{HolBddLib!ML bindings!{assignment}@\ml{assignment}}\index{HolBddLib!ML bindings!{getAssignment}@\ml{getAssignment}}
 
-Evaluating \t{assignment[($v_1$,$t_1$), $\ldots$ , ($v_n$,$t_n$)]}
+\noindent Evaluating \t{assignment[($v_1$,$t_1$), $\ldots$ , ($v_n$,$t_n$)]}
 creates an assignment specifying that each $v_i$ be instantiated to
 $\t{fromBool(}t_i\t{)}$ (for $1{\leq}i{\leq}n$). 
 
 
-\subsubsection{Finding satisfying assignments}\index{HolBddLib!BDD!satisfying assignments}
+\subsection{Finding satisfying assignments}\index{HolBddLib!BDD!satisfying assignments}
 
 An assignment satisfying a BDD can be computed via \Buddy{} using
 
@@ -561,7 +566,7 @@ same satisfying assignment, if more than one exists. Also,
 satisfy the BDD, so may not return an assignment giving values to all
 the variables.
 
-\subsubsection{Boolean operations on BDDs}\label{app}\index{HolBddLib!BDD!boolean operations}
+\subsection{Boolean operations on BDDs}\label{app}\index{HolBddLib!BDD!boolean operations}
 
 The structure \t{bdd} introduces a type \t{bddop}
 corresponding to Boolean operations on BDDs. 
@@ -621,7 +626,7 @@ to `$if~b~then~b_1~else~b_2$'.
 
 
 
-\subsubsection{Inspecting and counting nodes and states}\index{HolBddLib!BDD!nodes}\index{HolBddLib!BDD!states}
+\subsection{Inspecting and counting nodes and states}\index{HolBddLib!BDD!nodes}\index{HolBddLib!BDD!states}
 
 The integer labelling a BDD node and the BDDs corresponding to the high
 (i.e.~{\t{true}}) and low (i.e.~{\t{false}}) nodes are obtained,
@@ -675,8 +680,7 @@ on large BDDs (since it involves copying the argument BDD from
 provided by \Muddy{} invokes \Buddy's \t{nodecount} function directly
 and so is space-efficient.
 
-The number of assignments {\it to all variables in use in the current
-session\/} that satisfy a BDD (i.e.~make it true) is given by the ML
+The number of assignments {\it to all variables in use in the current session\/} that satisfy a BDD (i.e.~make it true) is given by the ML
 function
 
 \begin{verbatim}
@@ -724,7 +728,7 @@ If a BDD is representing a set of states, then \t{statecount} gives
 the number of states in the set (hence the name).
 
 
-\subsubsection{Coudert, Berthet \& Madre simplification}\index{HolBddLib!BDD!simplification}
+\subsection{Coudert, Berthet \& Madre simplification}\index{HolBddLib!BDD!simplification}
 
 The ML function
 
@@ -747,7 +751,7 @@ notes on BDDs \cite{HenrikNotes}, where
 the algorithm underlying \t{simplify} is described and attributed to a paper by
 Coudert, Berthet and Madre \cite{CoudertBerthetMadre}.
 
-\subsubsection{Saving, hashing and printing BDDs}\label{printing}\index{HolBddLib!BDD!saving}\index{HolBddLib!BDD!hashing}\index{HolBddLib!BDD!printing}
+\subsection{Saving, hashing and printing BDDs}\label{printing}\index{HolBddLib!BDD!saving}\index{HolBddLib!BDD!hashing}\index{HolBddLib!BDD!printing}
 
 BDDs can be saved on disk with the functions
 
@@ -824,16 +828,16 @@ executing ~\t{dot~-Tps~ex~>~ex.ps} (in Unix) results in
 the following Postscript diagram of a BDD
 
 \begin{center}
-\epsfig{file=figs/ex.ps, height=5cm, width=3cm} 
+\includegraphics[width=3cm, height=5cm]{figs/ex}
 \end{center}
 
-\subsubsection{Dynamic variable reordering}\index{HolBddLib!BDD!dynamic reordering}
+\subsection{Dynamic variable reordering}\index{HolBddLib!BDD!dynamic reordering}
 
 \Buddy{} provides functions for dynamic variable reordering using a variety of methods.
 See the \Buddy{} documentation \cite{BuDDy} for further details. The dynamic reordering
 types and functions provided in ML via \Muddy{} are in the structure \t{bdd} and are
 
-{\footnotesize\begin{verbatim}
+\begin{verbatim}
     eqtype fixed
     FIXED            : fixed
     FREE             : fixed
@@ -861,9 +865,9 @@ types and functions provided in ML via \Muddy{} are in the structure \t{bdd} and
 
     varToLevel       : varnum -> int
     varAtLevel       : int -> varnum
-\end{verbatim}}
+\end{verbatim}
 
-\subsubsection{The \Muddy{} structure \t{fdd}}\label{fdd}\index{HolBddLib!finite domains}
+\subsection{The \Muddy{} structure \t{fdd}}\label{fdd}\index{HolBddLib!finite domains}
 
 The structure \t{fdd} provides functions for manipulating values of finite domains.
 Functions are provided to allocate blocks of BDD variables to represent integer values instead
@@ -876,7 +880,7 @@ $v_0=0$, $v_1=0$, $v_2=1$ and $v_3=1$.
 See the \Buddy{} documentation \cite{BuDDy} for further details. See the ML structure \t{fdd}
 for the \Buddy{} facilities provides in ML via \Muddy:
 
-{\footnotesize\begin{verbatim}
+\begin{verbatim}
    type fddvar
 
    extDomain  : int list -> fddvar list
@@ -888,9 +892,9 @@ for the \Buddy{} facilities provides in ML via \Muddy:
    ithSet     : fddvar -> bdd.varSet
    domain     : fddvar -> bdd.bdd
    setPairs   : (fddvar * fddvar) list -> bdd.pairSet
-\end{verbatim}}
+\end{verbatim}
 
-\subsubsection{The \Muddy{} structure \t{bvec}}\label{bvec}\index{HolBddLib!BDD!vectors}
+\subsection{The \Muddy{} structure \t{bvec}}\label{bvec}\index{HolBddLib!BDD!vectors}
 
 The structure \t{bvec} provides tools for encoding integers as arrays
 of BDDs, where each BDD represents one bit of an expression.
@@ -898,7 +902,7 @@ of BDDs, where each BDD represents one bit of an expression.
 See the \Buddy{} documentation \cite{BuDDy} for further details. See the ML structure \t{bvec}
 for the \Buddy{} facilities provides in ML via \Muddy{}.
 
-{\footnotesize
+
 \begin{verbatim}
    type bvec
 
@@ -936,9 +940,9 @@ for the \Buddy{} facilities provides in ML via \Muddy{}.
    gte         : bvec * bvec -> bdd.bdd
    equ         : bvec * bvec -> bdd.bdd
    neq         : bvec * bvec -> bdd.bdd
-\end{verbatim}}
+\end{verbatim}
 
-\subsubsection{Storage allocation and garbage collection}\index{HolBddLib!BDD!garbage collection}
+\subsection{Storage allocation and garbage collection}\index{HolBddLib!BDD!garbage collection}
 \label{sec:technical-details}
 
 The heart of the \Muddy{} package is mostly stub code that mirrors the
@@ -971,7 +975,7 @@ Evaluating \t{verbosegc(SOME($pregc$,$postgc$))} instructs BuDDy to print
 $pregc$ when a BuDDy GC is initiated and print $postgc$ when the
 \Buddy{} GC is completed.
 
-\subsection{\t{HolBddLib}}\label{HolBddLib}
+\section{\t{HolBddLib}}\label{HolBddLib}
 
 \t{HolBddLib} currently consists of five modules
 
@@ -980,7 +984,7 @@ $pregc$ when a BuDDy GC is initiated and print $postgc$ when the
 often denoted by $\rho$,
 from HOL variables to BDD variables;
 
-\item \t{PrintBdd} provides rudimentary facilities for printing
+\item \t{PrintBdd} provides some rudimentary facilities for printing
 BDDs with respect to a varmap;
 
 \item \t{PrimitiveBddRules} defines the protected type \termbddty
@@ -1017,7 +1021,7 @@ If you want to perform your own \Buddy{} initialisation with different
 values, then instead of loading \t{HolBddLib}, load \t{bdd} and then
 call \t{bdd.init} with the parameters you want (see Section~\ref{init}).  
 
-\subsubsection{The structure \ml{Varmap}}\label{Varmap}\index{HolBddLib!termbdd@\ml{term\_bdd}!varmaps}
+\subsection{The structure \ml{Varmap}}\label{Varmap}\index{HolBddLib!termbdd@\ml{term\_bdd}!varmaps}
 
 The type \t{varmap} is defined by
 
@@ -1071,7 +1075,7 @@ with the semantics
 \t{Varmap.unify} &  compute smallest varmap that extends both arguments\\ \hline
 \end{tabular}
 
-\subsubsection{The structure \ml{PrintBdd}}\label{PrintBdd}\index{HolBddLib!termbdd@\ml{term\_bdd}!printing}
+\subsection{The structure \ml{PrintBdd}}\label{PrintBdd}\index{HolBddLib!termbdd@\ml{term\_bdd}!printing}
 
 \t{PrintBdd} builds on top of \Muddy's support for drawing BDDs using the \t{dot}
 program (see Section~\ref{printing}). Three functions are provided.
@@ -1109,7 +1113,7 @@ can be suppressed (i.e. set to be always the empty string) by assigning \t{false
 to the global reference \t{dotTermBddFlag}.
 \end{description}
 
-\subsubsection{The structure \t{PrimitiveBddRules}}\label{PrimitiveBddRules}\index{HolBddLib!termbdd@\ml{term\_bdd}!primitive rules}
+\subsection{The structure \t{PrimitiveBddRules}}\label{PrimitiveBddRules}\index{HolBddLib!termbdd@\ml{term\_bdd}!primitive rules}
 
 The structure \ml{PrimitiveBddRules} defines the type \termbddty{} by
 
@@ -1126,7 +1130,7 @@ The constructor \t{TermBdd} is not exported, so the only way to construct
 values of type \termbddty is using the following inference rules
 (which are described in more detail in the rest of this section).
 
-{\footnotesize\baselineskip 10pt\begin{verbatim}
+\begin{verbatim}
    BddExtendVarmap           : varmap->term_bdd->term_bdd
    BddFreevarsContractVarmap : term->term_bdd->term_bdd
    BddSupportContractVarmap  : term->term_bdd->term_bdd
@@ -1146,7 +1150,7 @@ values of type \termbddty is using the following inference rules
    BddEqMp                   : thm->term_bdd->term_bdd
    BddSimplify               : term_bdd*term_bdd->term_bdd
    BddFindModel              : term_bdd->term_bdd
-\end{verbatim}}
+\end{verbatim}
 
 Destructor functions \t{dest\_term\_bdd}, \t{getAssums}, \t{getVarmap}, \t{getTerm}
 and \t{getBdd} for values of type \termbddty are described in Section~\ref{misc}
@@ -1175,7 +1179,7 @@ will appear. Support for `local scopes' (combining judgements with
 different variable orders) is an area that may reveal incompleteness
 in the current rules.
 
-\subsubsection{Rules for generating representation judgements}\label{term-bdd-rules}
+\subsection{Rules for generating representation judgements}\label{term-bdd-rules}
 
 The notation $a_1 \cup a_2$ denotes the union of $a_1$ and $a_2$ 
 Assumptions of
@@ -1189,7 +1193,7 @@ $\termbdd{\emptyass}{\rho}{t}{b}$ is abbreviated to
 $\termbdd{}{\rho}{t}{b}$.
 
 
-\paragraph{Extending and contracting the varmap} {\(\)}\\  
+\subsection{Extending and contracting the varmap}
 
 \newsavebox\BddExtendVarmap
 \begin{lrbox}\BddExtendVarmap
@@ -1205,7 +1209,7 @@ $\termbdd{}{\rho}{t}{b}$.
 \vspace*{-2mm}
 
 $$\begin{array}{c}
-{\footnotesize\t{Varmap.extends}}~\rho_1~\rho_2 \qquad \termbdd{a}{\rho_1}{t}{b} 
+{\t{\footnotesize Varmap.extends}}~\rho_1~\rho_2 \qquad \termbdd{a}{\rho_1}{t}{b} 
 \\ \hline
 \termbdd{a}{\rho_2}{t}{b}
 \end{array}$$
@@ -1222,7 +1226,7 @@ Raises \t{BddExtendVarmapError} if $\rho_2$ doesn not extend $\rho_1$
 \bigskip
 
 \newsavebox\BddFreevarsContractVarmap
-\begin{lrbox}\BddFreevarsContractVarmap
+\noindent\begin{lrbox}\BddFreevarsContractVarmap
 \begin{minipage}{\minipagewidth}
 
 \begin{footnotesize}
@@ -1237,7 +1241,7 @@ Raises \t{BddExtendVarmapError} if $\rho_2$ doesn not extend $\rho_1$
 $$\begin{array}{c}
 \termbdd{a}{\rho}{t}{b} \qquad \mbox{$v$ not free in $t$}
 \\ \hline
-\termbdd{a}{({\footnotesize{\texttt{Varmap.remove~"}}}v{\footnotesize{\texttt{"}}}~\rho)}{t}{b}
+\termbdd{a}{({\texttt{\footnotesize{Varmap.remove~"}}}v{\texttt{\footnotesize{"}}}~\rho)}{t}{b}
 \end{array}$$
 
 \noindent \rule\minipagewidth{0.1pt}
@@ -1254,7 +1258,7 @@ Raises \t{BddFreevarsContractVarmapError} if $v$ not free in $t$
 \bigskip
 
 \newsavebox\BddSupportContractVarmap
-\begin{lrbox}\BddSupportContractVarmap
+\noindent\begin{lrbox}\BddSupportContractVarmap
 \begin{minipage}{\minipagewidth}
 
 \begin{footnotesize}
@@ -1269,7 +1273,7 @@ Raises \t{BddFreevarsContractVarmapError} if $v$ not free in $t$
 $$\begin{array}{c}
 \termbdd{a}{\rho}{t}{b} \qquad \mbox{$\rho(v)$ doesn't occur in $b$}
 \\ \hline
-\termbdd{a}{({\footnotesize{\texttt{Varmap.remove~"}}}v{\footnotesize{\texttt{"}}}~\rho)}{t}{b}
+\termbdd{a}{({\texttt{\footnotesize{Varmap.remove~"}}}v{\texttt{\footnotesize{"}}}~\rho)}{t}{b}
 \end{array}$$
 
 \noindent \rule\minipagewidth{0.1pt}
@@ -1282,7 +1286,7 @@ Raises \t{BddSupportContractVarmapError} if $\rho(v)$ not in the support of $b$
 \fbox{\usebox{\BddSupportContractVarmap}}\index{HolBddLib!ML bindings!{BddSupportContractVarmap}@\ml{BddSupportContractVarmap}}
 
 
-\paragraph{Variables and constants}{\(\)}\\  
+\subsection{Variables and constants}
 
 \newsavebox\BddVar
 \begin{lrbox}\BddVar
@@ -1301,16 +1305,16 @@ $$\begin{array}{c}
 \begin{array}{c}
 \rho(v)=n
 \\ \hline
-\termbdd{}{\rho}{v}{{\footnotesize\t{ithvar}}~n}
-\end{array} ~\footnotesize{\t{BddVar~true}}
+\termbdd{}{\rho}{v}{{\t{\footnotesize ithvar}}~n}
+\end{array} ~{\t{\footnotesize BddVar~true}}
 
 \\[8mm]
 
 \begin{array}{c}
 \rho(v)=n
 \\ \hline
-\termbdd{}{\rho}{\neg v}{{\footnotesize\t{nithvar}}~n}
-\end{array}~ {\footnotesize\t{BddVar~false}}
+\termbdd{}{\rho}{\neg v}{{\t{\footnotesize nithvar}}~n}
+\end{array}~ {\t{\footnotesize BddVar~false}}
 
 \end{array}$$
 
@@ -1326,7 +1330,7 @@ Raises \t{BddVarError} if $v$ not in the domain of $\rho$
 \bigskip
 
 \newsavebox\BddCon
-\begin{lrbox}\BddCon
+\noindent\begin{lrbox}\BddCon
 \begin{minipage}{\minipagewidth}
 
 \begin{footnotesize}
@@ -1342,15 +1346,15 @@ $$\begin{array}{c}
 \begin{array}{c}
 
 \\ \hline
-\termbdd{}{\rho}{{\footnotesize\t{T}}}{{\footnotesize\t{TRUE}}}
-\end{array} ~\footnotesize{\t{BddCon~true}}
+\termbdd{}{\rho}{{\t{\footnotesize T}}}{{\t{\footnotesize TRUE}}}
+\end{array} ~{\t{\footnotesize BddCon~true}}
 
 \\[8mm]
 
 \begin{array}{c}
 \\ \hline
-\termbdd{}{\rho}{{\footnotesize\t{F}}}{{\footnotesize\t{FALSE}}}
-\end{array}~ {\footnotesize\t{BddCon~false}}
+\termbdd{}{\rho}{{\t{\footnotesize F}}}{{\t{\footnotesize FALSE}}}
+\end{array}~ {\t{\footnotesize BddCon~false}}
 
 \end{array}$$
 
@@ -1363,7 +1367,7 @@ Always succeeds
 \end{lrbox}
 \fbox{\usebox{\BddCon}}\index{HolBddLib!ML bindings!{BddCon}@\ml{BddCon}}
 
-\paragraph{Boolean operations}{\(\)}\\  
+\subsection{Boolean operations}
 
 
 
@@ -1383,7 +1387,7 @@ Always succeeds
 $$\begin{array}{c}
 \termbdd{a}{\rho}{t}{b}
 \\ \hline
-\termbdd{a}{\rho}{\neg t}{{\footnotesize\t{NOT}}~b}
+\termbdd{a}{\rho}{\neg t}{{\t{\footnotesize NOT}}~b}
 \end{array}$$
 
 \noindent \rule\minipagewidth{0.1pt}
@@ -1398,7 +1402,7 @@ Always succeeds
 \bigskip
 
 \newsavebox\BddIte
-\begin{lrbox}\BddIte
+\noindent\begin{lrbox}\BddIte
 \begin{minipage}{\minipagewidth}
 
 \begin{footnotesize}
@@ -1413,13 +1417,13 @@ Always succeeds
 $$\begin{array}{c}
 \termbdd{a}{\rho}{t}{b} \qquad \termbdd{a_1}{\rho}{t_1}{b_1} \qquad \termbdd{a_2}{\rho}{t_2}{b_2}
 \\ \hline
-\termbdd{a \cup a_1 \cup a_2}{\rho}{\mbox{\footnotesize\t{(if~$t$~then~$t_1$~else~$t_2$)}}}{{\footnotesize\t{ITE}}~b~b_1~b_2}
+\termbdd{a \cup a_1 \cup a_2}{\rho}{\mbox{\t{\footnotesize (if~$t$~then~$t_1$~else~$t_2$)}}}{{\t{\footnotesize ITE}}~b~b_1~b_2}
 \end{array}$$
 
 \noindent \rule\minipagewidth{0.1pt}
 
 \begin{footnotesize}
-Raises {\footnotesize\t{BddIteError}} if the varmaps of the hypotheses are not all 
+Raises {\t{\footnotesize BddIteError}} if the varmaps of the hypotheses are not all 
 pointer equal
 \end{footnotesize}
 \end{minipage}
@@ -1430,7 +1434,7 @@ pointer equal
 \bigskip
 
 \newsavebox\BddOp
-\begin{lrbox}\BddOp
+\noindent\begin{lrbox}\BddOp
 \begin{minipage}{\minipagewidth}
 
 \begin{footnotesize}
@@ -1445,7 +1449,7 @@ pointer equal
 $$\begin{array}{c}
 \termbdd{a_1}{\rho}{t_1}{b_1} \qquad \termbdd{a_2}{\rho}{t_2}{b_2}
 \\ \hline
-\termbdd{a_1\cup a_2}{\rho}{{\footnotesize\t{(termApply}}~t_1~t_2~bddop{\footnotesize\t{)}}}{{\footnotesize\t{apply}}~b_1~b_2~bddop}
+\termbdd{a_1\cup a_2}{\rho}{{\t{\footnotesize (termApply}}~t_1~t_2~bddop{\t{\footnotesize )}}}{{\t{\footnotesize apply}}~b_1~b_2~bddop}
 \end{array}$$
 
 \noindent \rule\minipagewidth{0.1pt}
@@ -1455,14 +1459,14 @@ $$\begin{array}{c}
 the HOL operation
 corresponding to the \Buddy{} BDD operation $bddop$ to terms $t_1$ and $t_2$
 (see Section~\ref{misc}). The exception 
-{\footnotesize\t{BddOpError}} is raised if the varmaps of the hypotheses are not pointer equal
+{\t{\footnotesize BddOpError}} is raised if the varmaps of the hypotheses are not pointer equal
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
 \fbox{\usebox{\BddOp}}\index{HolBddLib!ML bindings!{BddOp}@\ml{BddOp}}
 
 
-\paragraph{Quantification}{\(\)}\\  
+\subsection{Quantification}
 
 \newsavebox\BddForall
 \begin{lrbox}\BddForall
@@ -1480,8 +1484,8 @@ corresponding to the \Buddy{} BDD operation $bddop$ to terms $t_1$ and $t_2$
 $$\begin{array}{c}
 \termbdd{a}{\rho}{t}{b} \qquad \rho(v_1)=n_1,~ $\ldots$~,~ \rho(v_i)=n_i
 \\ \hline
-\termbdd{a}{\rho}{({\footnotesize\forall} v_1~\cdots~v_i.~t)}%
-{{\footnotesize\t{forall~(makeset[}}n_1,\ldots,n_i{\footnotesize\t{])}}~b}
+\termbdd{a}{\rho}{({\scriptstyle\forall} v_1~\cdots~v_i.~t)}%
+{{\t{\footnotesize forall~(makeset[}}n_1,\ldots,n_i{\t{\footnotesize ])}}~b}
 \end{array}$$
 
 \noindent \rule\minipagewidth{0.1pt}
@@ -1499,7 +1503,7 @@ or occur free in any assumption
 
 
 \newsavebox\BddExists
-\begin{lrbox}\BddExists
+\noindent\begin{lrbox}\BddExists
 \begin{minipage}{\minipagewidth}
 
 \begin{footnotesize}
@@ -1514,8 +1518,8 @@ or occur free in any assumption
 $$\begin{array}{c}
 \termbdd{a}{\rho}{t}{b} \qquad \rho(v_1)=n_1,~ $\ldots$~,~ \rho(v_i)=n_i
 \\ \hline
-\termbdd{a}{\rho}{({\footnotesize\exists} v_1~\cdots~v_i.~t)}%
-{{\footnotesize\t{exist~(makeset[}}n_1,\ldots,n_i{\footnotesize\t{])}}~b}
+\termbdd{a}{\rho}{({\scriptstyle\exists} v_1~\cdots~v_i.~t)}%
+{{\t{\footnotesize exist~(makeset[}}n_1,\ldots,n_i{\t{\footnotesize ])}}~b}
 \end{array}$$
 
 \noindent \rule\minipagewidth{0.1pt}
@@ -1533,7 +1537,7 @@ or occur free in any assumption
 
 
 \newsavebox\BddAppall
-\begin{lrbox}\BddAppall
+\noindent\begin{lrbox}\BddAppall
 \begin{minipage}{\minipagewidth}
 
 \begin{footnotesize}
@@ -1551,11 +1555,11 @@ $$\begin{array}{c}
 \begin{array}{l}
 {a_1 \cup a_2}%
 ~{\rho}%
-~{({\footnotesize\forall} v_1~\cdots~v_i.~%
-{\footnotesize\t{termApply}}~t_1~t_2~bddop)}\\
+~{({\scriptstyle\forall} v_1~\cdots~v_i.~%
+{\t{\footnotesize termApply}}~t_1~t_2~bddop)}\\
 \mapsto\\
-{{\footnotesize\t{appall}}~b_1~b_2~bddop~%
-{\footnotesize\t{(makeset[}}n_1,\ldots,n_i{\footnotesize\t{])}}~b}
+{{\t{\footnotesize appall}}~b_1~b_2~bddop~%
+{\t{\footnotesize (makeset[}}n_1,\ldots,n_i{\t{\footnotesize ])}}~b}
 \end{array}
 \end{array}$$
 
@@ -1576,7 +1580,7 @@ or occur free in any assumption
 
 
 \newsavebox\BddAppex
-\begin{lrbox}\BddAppex
+\noindent\begin{lrbox}\BddAppex
 \begin{minipage}{\minipagewidth}
 
 \begin{footnotesize}
@@ -1594,11 +1598,11 @@ $$\begin{array}{c}
 \begin{array}{l}
 {a_1 \cup a_2}%
 ~{\rho}%
-~{({\footnotesize\exists} v_1~\cdots~v_i.~%
-{\footnotesize\t{termApply}}~t_1~t_2~bddop)}\\
+~{({\scriptstyle\exists} v_1~\cdots~v_i.~%
+{\t{\footnotesize termApply}}~t_1~t_2~bddop)}\\
 \mapsto\\
-{{\footnotesize\t{appex}}~b_1~b_2~bddop~%
-{\footnotesize\t{(makeset[}}n_1,\ldots,n_i{\footnotesize\t{])}}~b}
+{{\t{\footnotesize appex}}~b_1~b_2~bddop~%
+{\t{\footnotesize (makeset[}}n_1,\ldots,n_i{\t{\footnotesize ])}}~b}
 \end{array}
 \end{array}$$
 
@@ -1614,7 +1618,7 @@ or occur free in any assumption
 \end{lrbox}
 \fbox{\usebox{\BddAppex}}\index{HolBddLib!ML bindings!{BddAppex}@\ml{BddAppex}}
 
-\paragraph{Composition, repacement and restriction}{\(\)}\\  
+\subsection{Composition, repacement and restriction}
 
 
 \newsavebox\BddCompose
@@ -1636,8 +1640,8 @@ $$\begin{array}{c}
 \\ \hline
 \termbdd{a_1 \cup a_2 \cup a}
 {\rho}
-{(\mbox{\footnotesize\t{subst[$v_1$ |-> $t_1$] $t$}})}
-{\mbox{\footnotesize\t{compose(var $b_1$, $b_1'$) $b$}}}
+{(\mbox{\t{\footnotesize subst[$v_1$ |-> $t_1$] $t$}})}
+{\mbox{\t{\footnotesize compose(var $b_1$, $b_1'$) $b$}}}
 \end{array}$$
 
 \noindent \rule\minipagewidth{0.1pt}
@@ -1653,7 +1657,7 @@ or the term $v_1$ is not a variable
 \bigskip
 
 \newsavebox\BddListCompose
-\begin{lrbox}\BddListCompose
+\noindent\begin{lrbox}\BddListCompose
 \begin{minipage}{\minipagewidth}
 
 \begin{footnotesize}
@@ -1667,18 +1671,18 @@ or the term $v_1$ is not a variable
 
 $$\begin{array}{c}
 \begin{array}{l}
-{\footnotesize\t{[}} (\termbdd{a_1}{\rho}{v_1}{b_1},~~ \termbdd{a_1'}{\rho}{t_1}{b_1'}), \\
-\phantom{{\footnotesize\t{[}}(\termbdd{a_1}{\rho}{v_1}{b_1}} \vdots\\
-\phantom{{\footnotesize\t{[}}}(\termbdd{a_i}{\rho}{v_i}{b_i},~~~~ \termbdd{a_i'}{\rho}{t_i}{b_i'}){\footnotesize\t{]}}
+{\t{\footnotesize [}} (\termbdd{a_1}{\rho}{v_1}{b_1},~~ \termbdd{a_1'}{\rho}{t_1}{b_1'}), \\
+\phantom{{\t{\footnotesize [}}(\termbdd{a_1}{\rho}{v_1}{b_1}} \vdots\\
+\phantom{{\t{\footnotesize [}}}(\termbdd{a_i}{\rho}{v_i}{b_i},~~~~ \termbdd{a_i'}{\rho}{t_i}{b_i'}){\t{\footnotesize ]}}
 \qquad \termbdd{a}{\rho}{t}{b} 
 \end{array}
 \\ \hline
 \begin{array}{l}
 {a_1 \cup a_1'~\cup~\cdots~\cup~a_i \cup a_i' \cup a}\\
 {\rho}\\
-{\mbox{\footnotesize\t{subst[$v_1$ |-> $t_1$,~$\ldots$~,~$v_i$ |-> $t_i$] $t$}}}\\
+{\mbox{\t{\footnotesize subst[$v_1$ |-> $t_1$,~$\ldots$~,~$v_i$ |-> $t_i$] $t$}}}\\
 \mapsto\\
-{\mbox{\footnotesize\t{veccompose(composeSet[(var $b_1$, $b_1'$),~$\ldots$~,~(var $b_i$, $b_i'$)])$b$}}}
+{\mbox{\t{\footnotesize veccompose(composeSet[(var $b_1$, $b_1'$),~$\ldots$~,~(var $b_i$, $b_i'$)])$b$}}}
 \end{array}
 \end{array}$$
 
@@ -1696,7 +1700,7 @@ or if any of the terms $v_1,\ldots,v_i$ are repeated or are not variables
 \bigskip
 
 \newsavebox\BddRestrict
-\begin{lrbox}\BddRestrict
+\noindent\begin{lrbox}\BddRestrict
 \begin{minipage}{\minipagewidth}
 
 \begin{footnotesize}
@@ -1710,18 +1714,18 @@ or if any of the terms $v_1,\ldots,v_i$ are repeated or are not variables
 
 $$\begin{array}{c}
 \begin{array}{l}
-{\footnotesize\t{[}} (\termbdd{a_1}{\rho}{v_1}{b_1},~~ \termbdd{a_1'}{\rho}{c_1}{b_1'}), \\
-\phantom{{\footnotesize\t{[}}(\termbdd{a_1}{\rho}{v_1}{b_1}} \vdots\\
-\phantom{{\footnotesize\t{[}}}(\termbdd{a_i}{\rho}{v_i}{b_i},~~~~ \termbdd{a_i'}{\rho}{c_i}{b_i'}){\footnotesize\t{]}}
+{\t{\footnotesize [}} (\termbdd{a_1}{\rho}{v_1}{b_1},~~ \termbdd{a_1'}{\rho}{c_1}{b_1'}), \\
+\phantom{{\t{\footnotesize [}}(\termbdd{a_1}{\rho}{v_1}{b_1}} \vdots\\
+\phantom{{\t{\footnotesize [}}}(\termbdd{a_i}{\rho}{v_i}{b_i},~~~~ \termbdd{a_i'}{\rho}{c_i}{b_i'}){\t{\footnotesize ]}}
 \qquad \termbdd{a}{\rho}{t}{b} 
 \end{array}
 \\ \hline
 \begin{array}{l}
 {a_1 \cup a_1'~\cup~\cdots~\cup~a_i \cup a_i' \cup a}\\
 {\rho}\\
-{\mbox{\footnotesize\t{subst[$v_1$ |-> $c_1$,~$\ldots$~,~$v_i$ |-> $c_i$] $t$}}}\\
+{\mbox{\t{\footnotesize subst[$v_1$ |-> $c_1$,~$\ldots$~,~$v_i$ |-> $c_i$] $t$}}}\\
 \mapsto\\
-{\mbox{\footnotesize\t{restrict~$b$~(assignment[(var $b_1$, $\hat{c_1}$),~$\ldots$~,~(var $b_i$, $\hat{c_i}$)])}}}
+{\mbox{\t{\footnotesize restrict~$b$~(assignment[(var $b_1$, $\hat{c_1}$),~$\ldots$~,~(var $b_i$, $\hat{c_i}$)])}}}
 \end{array}
 \end{array}$$
 
@@ -1743,7 +1747,7 @@ or if any of $c_1,\ldots,c_i$ are not equal to \t{T} or \t{F}
 \bigskip
 
 \newsavebox\BddReplace
-\begin{lrbox}\BddReplace
+\noindent\begin{lrbox}\BddReplace
 \begin{minipage}{\minipagewidth}
 
 \begin{footnotesize}
@@ -1757,18 +1761,18 @@ or if any of $c_1,\ldots,c_i$ are not equal to \t{T} or \t{F}
 
 $$\begin{array}{c}
 \begin{array}{l}
-{\footnotesize\t{[}} (\termbdd{a_1}{\rho}{v_1}{b_1},~~ \termbdd{a_1'}{\rho}{v_1'}{b_1'}), \\
-\phantom{{\footnotesize\t{[}}(\termbdd{a_1}{\rho}{v_1}{b_1}} \vdots\\
-\phantom{{\footnotesize\t{[}}}(\termbdd{a_i}{\rho}{v_i}{b_i},~~~~ \termbdd{a_i'}{\rho}{v_i'}{b_i'}){\footnotesize\t{]}}
+{\t{\footnotesize [}} (\termbdd{a_1}{\rho}{v_1}{b_1},~~ \termbdd{a_1'}{\rho}{v_1'}{b_1'}), \\
+\phantom{{\t{\footnotesize [}}(\termbdd{a_1}{\rho}{v_1}{b_1}} \vdots\\
+\phantom{{\t{\footnotesize [}}}(\termbdd{a_i}{\rho}{v_i}{b_i},~~~~ \termbdd{a_i'}{\rho}{v_i'}{b_i'}){\t{\footnotesize ]}}
 \qquad \termbdd{a}{\rho}{t}{b} 
 \end{array}
 \\ \hline
 \begin{array}{l}
 {a_1 \cup a_1'~\cup~\cdots~\cup~a_i \cup a_i' \cup a}\\
 {\rho}\\
-{\mbox{\footnotesize\t{subst[$v_1$ |-> $v_1'$,~$\ldots$~,~$v_i$ |-> $v_i'$] $t$}}}\\
+{\mbox{\t{\footnotesize subst[$v_1$ |-> $v_1'$,~$\ldots$~,~$v_i$ |-> $v_i'$] $t$}}}\\
 \mapsto\\
-{\mbox{\footnotesize\t{replace~$b$~(makepairSet[(var $b_1$, var $b_1'$),~$\ldots$~,~(var $b_i$, var $b_i'$)])}}}
+{\mbox{\t{\footnotesize replace~$b$~(makepairSet[(var $b_1$, var $b_1'$),~$\ldots$~,~(var $b_i$, var $b_i'$)])}}}
 \end{array}
 \end{array}$$
 
@@ -1783,7 +1787,7 @@ or if any of the terms $v_1',\ldots,v_i'$ are repeated or are not variables
 \end{lrbox}
 \fbox{\usebox{\BddReplace}}\index{HolBddLib!ML bindings!{BddReplace}@\ml{BddReplace}}
 
-\paragraph{Coudert, Berthet \& Madre simplification}\label{BddSimplify}{\(\)}\\  
+\subsection{Coudert, Berthet \& Madre simplification}\label{BddSimplify}
 
 \vspace*{-1mm}
 
@@ -1803,14 +1807,14 @@ or if any of the terms $v_1',\ldots,v_i'$ are repeated or are not variables
 $$\begin{array}{c}
 \termbdd{a_1}{\rho}{t_1}{b_1} \qquad \termbdd{a_2}{\rho}{t_2}{b_2}
 \\ \hline
-\termbdd{a_1\cup a_2\cup \setass{t_1}}{\rho}{t_2}{{\footnotesize\t{simplify}}~b_1~b_2}
+\termbdd{a_1\cup a_2\cup \setass{t_1}}{\rho}{t_2}{{\t{\footnotesize simplify}}~b_1~b_2}
 \end{array}$$
 
 \noindent \rule\minipagewidth{0.1pt}
 
 \begin{footnotesize}
 The exception 
-{\footnotesize\t{BddSimplifyError}} is raised if the varmaps in the hypotheses are not pointer equal
+{\t{\footnotesize BddSimplifyError}} is raised if the varmaps in the hypotheses are not pointer equal
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
@@ -1818,7 +1822,7 @@ The exception
 
 \vspace*{-2mm}
 
-\paragraph{Finding a satisfying assignment}\label{BddFindModel}{\(\)}\\  
+\subsection{Finding a satisfying assignment}\label{BddFindModel}
 
 \vspace*{-1mm}
 
@@ -1838,7 +1842,7 @@ The exception
 $$\begin{array}{c}
 \termbdd{a}{\rho}{t}{b} 
 \\ \hline
-\termbdd{a\cup \setass{v_1=c_1,\ldots,v_p=c_p}}{\rho}{t}{{\footnotesize\t{TRUE}}}
+\termbdd{a\cup \setass{v_1=c_1,\ldots,v_p=c_p}}{\rho}{t}{{\t{\footnotesize TRUE}}}
 \end{array}$$
 
 \noindent \rule\minipagewidth{0.1pt}
@@ -1846,14 +1850,14 @@ $$\begin{array}{c}
 \begin{footnotesize}
 The set $\{v_1=c_1,\ldots,v_p=c_p\}$ is a satisfying assignment for $t$
 ($c_i$ is \T{} or \F{} for $1\leq i \leq p$). Exception 
-{\footnotesize\t{BddFindModelError}} is raised if {\footnotesize\t{satone}}
+{\t{\footnotesize BddFindModelError}} is raised if {\t{\footnotesize satone}}
 can't find a satisfying assignment.
 \end{footnotesize}
 \end{minipage}
 \end{lrbox}
 \fbox{\usebox{\BddFindModel}}\index{HolBddLib!ML bindings!{BddFindModel}@\ml{BddFindModel}}
 
-\subsubsection{Linking representation judgements to theorems}\label{oracle}\index{HolBddLib!termbdd@\ml{term\_bdd}!linking to theorems}
+\subsection{Linking representation judgements to theorems}\label{oracle}\index{HolBddLib!termbdd@\ml{term\_bdd}!linking to theorems}
 
 \noindent \newsavebox\BddThmOracle
 \begin{lrbox}\BddThmOracle
@@ -1917,7 +1921,7 @@ isn't $\alpha$-convertable to the term part of the representation judgement
 \end{lrbox}
 \fbox{\usebox{\BddEqMp}}\index{HolBddLib!ML bindings!{BddEqMp}@\ml{BddEqMp}}
 
-\subsubsection{Miscellaneous functions}\label{misc}
+\subsection{Miscellaneous functions}\label{misc}
 
 %\paragraph{\t{term\_bdd} destructors}
 
@@ -2010,11 +2014,11 @@ corresponding to $bddop$ to $t_1$ and $t_2$.
 \end{lrbox}
 \fbox{\usebox{\termApply}}\index{HolBddLib!ML bindings!{termApply}@\ml{termApply}}
 
-\subsubsection{The structure \t{DerivedBddRules}}\label{DerivedBddRules}\index{HolBddLib!termbdd@\ml{term\_bdd}!derived rules}
+\subsection{The structure \t{DerivedBddRules}}\label{DerivedBddRules}\index{HolBddLib!termbdd@\ml{term\_bdd}!derived rules}
 
-This section notes a few of the more commonly used functions available in \texttt{DerivedBddRules}.
+This section notes a few of the more commonly used functions available in the structure \texttt{DerivedBddRules}.
 
-\paragraph{Varmaps}${}$\\
+\subsection{Varmaps}
 
 \bigskip 
 
@@ -2033,7 +2037,7 @@ This section notes a few of the more commonly used functions available in \textt
 \end{lrbox}             
 \fbox{\usebox{\globalvarmap}}\index{HolBddLib!ML bindings!{global\_varmap}@\ml{global\_varmap}}
 
-\paragraph{Tests}${}$\\
+\subsection{Tests}
 
 \bigskip
 
@@ -2059,7 +2063,7 @@ This section notes a few of the more commonly used functions available in \textt
 \end{lrbox}
 \fbox{\usebox{\isFALSE}}\index{HolBddLib!ML bindings!{isFALSE}@\ml{isFALSE}}
 
-\paragraph{Conversion to terms}${}$\\
+\subsection{Conversion to terms}
 
 \bigskip 
 
@@ -2096,11 +2100,11 @@ This section notes a few of the more commonly used functions available in \textt
 
 \noindent \newsavebox\destBddOp
 \begin{lrbox}\destBddOp
-\hbc{dest\_BddOp : term -> bddop * term * term}{Destruct a term corresponding to a BuDDY BDD binary operation (bddop). Fails with \texttt{dest\_BddOpError} if not such a term.}
+\hbc{dest\_BddOp : term -> bddop * term * term}{Destruct a term corresponding to a BuDDY BDD binary operation (bddop). Fails with\newline \texttt{dest\_BddOpError} if not such a term.}
 \end{lrbox}
 \fbox{\usebox{\destBddOp}}\index{HolBddLib!ML bindings!{dest\_BddOp}@\ml{dest\_BddOp}}
 
-\paragraph{Extracting theorems}${}$\\
+\subsection{Extracting theorems}
 
 \bigskip 
 
@@ -2133,7 +2137,7 @@ This section notes a few of the more commonly used functions available in \textt
 \end{lrbox}             
 \fbox{\usebox{\findModel}}\index{HolBddLib!ML bindings!{findModel}@\ml{findModel}}
 
-\paragraph{Manipulating term\_bdd's}${}$\\
+\subsection{Manipulating term\_bdd's}
 
 \bigskip 
 
@@ -2238,7 +2242,7 @@ with the property that
 \end{lrbox}             
 \fbox{\usebox{\BddSatone}}\index{HolBddLib!ML bindings!{BddSatone}@\ml{BddSatone}}
 
-\paragraph{Fixed points and traces}${}$\\
+\subsection{Fixed points and traces}
 
 \bigskip 
 
@@ -2292,8 +2296,9 @@ is (somewhat arbitarily) taken to be (tb0,tb0). }
 \fbox{\usebox{\MakeSimpRecThm}}\index{HolBddLib!ML bindings!{MakeSimpRecThm}@\ml{MakeSimpRecThm}}
 
 \index{HolBddLib|)}
-%\bibliographystyle{plain} \bibliography{HolBdd} 
+\bibliographystyle{plain} 
+\bibliography{description} 
 
 %\printindex
 
-%\end{document}
+\end{document}

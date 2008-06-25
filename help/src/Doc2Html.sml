@@ -100,6 +100,13 @@ fun html (name,sectionl) ostrm =
 
      fun markout_section (FIELD ("KEYWORDS", _)) = ()
        | markout_section (FIELD ("DOC", _)) = ()
+       | markout_section (FIELD ("STRUCTURE", [TEXT s]))
+           = (out "<DT><SPAN class = \"FIELD-NAME\">STRUCTURE</SPAN></DT>\n";
+              out "<DD><DIV class = \"FIELD-BODY\">";
+              out "<A HREF = \"../../src/htmlsigs/";
+              out (Symbolic.unsymb(string s)); out ".html\">";
+              out (Symbolic.unsymb(string s));
+              out "</A></DIV></DD>\n")
        | markout_section (FIELD (tag, ss))
            = (out "<DT><SPAN class = \"FIELD-NAME\">";
               out (if tag = "DESCRIBE" then "DESCRIPTION" else tag);

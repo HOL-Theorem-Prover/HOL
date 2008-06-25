@@ -1,0 +1,35 @@
+(*---------------------------------------------------------------------------*)
+(* Example encryption, by deduction in HOL and also by running generated ML. *)
+(*---------------------------------------------------------------------------*)
+
+app load ["teaTheory", "wordsLib"];
+
+val key = ``(1w,11w,21w,1112w): word32#word32#word32#word32``;
+val plaintext = ``(93w, 134w) : word32#word32``;
+
+Count.apply EVAL 
+   ``teaDecrypt(^key,teaEncrypt(^key,^plaintext)) = ^plaintext``;
+
+
+(*---------------------------------------------------------------------------*)
+(* Now try the generated ML code. ML must be invoked so that it knows where  *)
+(* the rest of the generated ML code can be loaded from. For example, if in  *)
+(* a raw MoscowML session,                                                   *)
+(*                                                                           *)
+(*     mosml -I <holdir>/src/theoryML                                        *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+loadPath := (HOLDIR^"/src/theoryML/") :: !loadPath;  (* If in HOL *)
+
+load "teaML";
+
+val _ = installPP numML.pp_num;
+
+fun c32 i = wordsML.toWord32(numML.fromInt i);
+
+val key = (c32##c32##c32##c32) (1,(11,(21,1112)));
+val plaintext = (c32 93, c32 134);
+
+teaML.teaDecrypt
+ (key, teaML.teaEncrypt (key,plaintext)) = plaintext;

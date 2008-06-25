@@ -6,18 +6,15 @@
 (*===========================================================================*)
 
 (* interactive use
-app load ["word32Lib", "word8Lib", "stringLib", "numLib"];
+app load ["wordsLib", "stringLib", "numLib"];
 *)
 
 open HolKernel Parse boolLib bossLib
-     stringTheory listTheory arithmeticTheory 
-     word8Lib word32Lib word8Theory word32Theory;
+     stringTheory listTheory arithmeticTheory wordsLib wordsTheory;
 
 val _ = new_theory "SHA1";
 
 val _ = numLib.prefer_num();
-val _ = word8Lib.pp_word_unsigned_hex();
-val _ = word32Lib.pp_word_unsigned_hex();
 
 (*---------------------------------------------------------------------------*)
 (* Some support stuff on lists, in particular a definition of TAKE.          *)
@@ -51,72 +48,38 @@ val TAKE_LEM = Q.prove
 (*---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*)
-(* Left rotate a word                                                        *)
-(*---------------------------------------------------------------------------*)
-
-val rotl32_def = 
- Define 
-   `rotl_w32 (a:word32) (b:num) = a #>> (32 - b)`;
-
-val _ = set_fixity "<<#" (Infixl 680);
-val _ = temp_overload_on ("<<#", Term `$rotl_w32`);
-
-(*---------------------------------------------------------------------------*)
-(* Trivial abbreviations.                                                    *)
-(*---------------------------------------------------------------------------*)
-
-val W8  = Define `W8 = word8$fromNum`;
-val W32 = Define `W32 = word32$fromNum`;
-
-(*---------------------------------------------------------------------------*)
 (* 64 copies of ZERO                                                         *)
 (*---------------------------------------------------------------------------*)
 
 val ZEROx64_def = Define 
-   `ZEROx64 = [W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n;
-               W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n;
-               W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n;
-               W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n;
-               W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n;
-               W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n;
-               W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n;
-               W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n; W32 0n]`;
-
-(*---------------------------------------------------------------------------*)
-(* Convert from 8 bits to 32 bits                                            *)
-(*---------------------------------------------------------------------------*)
-
-val w8to32 = 
- Define 
-   `w8to32 word8 = W32(word8$w2n word8)`; 
+   `ZEROx64 = [0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w] : word32 list`;
 
 (*---------------------------------------------------------------------------*)
 (*    word32 <--> (word8 # word8 # word8 # word8)                            *)
 (*---------------------------------------------------------------------------*)
 
-val w8x4to32_def = 
- Define 
-   `w8x4to32 w1 w2 w3 w4 = (w8to32(w1) << 24n) | 
-                           (w8to32(w2) << 16n) | 
-                           (w8to32(w3) << 8n)  | 
-                           w8to32(w4)`;
+val _ = wordsLib.guess_lengths();
 
-val w32to8x4_def = 
- Define 
-   `w32to8x4 w = (W8 (word32$w2n((w:word32) >>> 24n)), 
-                  W8 (word32$w2n(w >>> 16n)), 
-                  W8 (word32$w2n(w >>> 8n)), 
-                  W8 (word32$w2n(w)))` ;
+val w8x4to32_def = Define`
+  w8x4to32 (w1:word8) (w2:word8) (w3:word8) (w4:word8) = w1 @@ w2 @@ w3 @@ w4`;
 
-val w32List_def = 
- Define 
-  `(w32List (b1::b2::b3::b4::t) = w8x4to32 b1 b2 b3 b4::w32List t) /\
-   (w32List other = [])`;
+val w32to8x4_def = Define`
+  w32to8x4 (w:word32) = ((31 >< 24) w, (23 >< 16) w, (15 >< 8) w, (7 >< 0) w)`;
 
-val w8List_def = 
- Define 
-  `(w8List [] = []) /\
-   (w8List (h::t) = let (b1,b2,b3,b4) = w32to8x4 h in b1::b2::b3::b4::w8List t)`;
+val w32List_def = Define`
+  (w32List (b1::b2::b3::b4::t) = w8x4to32 b1 b2 b3 b4::w32List t) /\
+  (w32List other = [])`;
+
+val w8List_def = Define`
+  (w8List [] = []) /\
+  (w8List (h::t) = let (b1,b2,b3,b4) = w32to8x4 h in b1::b2::b3::b4::w8List t)`;
 
 (*---------------------------------------------------------------------------*)
 (* Translate 5 32 bit words to a 20-tuple of 8-bit words.                    *)
@@ -133,7 +96,6 @@ val w32x5to8_def =
        in
         (w1b1,w1b2,w1b3,w1b4,w2b1,w2b2,w2b3,w2b4,
          w3b1,w3b2,w3b3,w3b4,w4b1,w4b2,w4b3,w4b4,w5b1,w5b2,w5b3,w5b4)`;
-
 
 (*---------------------------------------------------------------------------*)
 (*             Padding                                                       *)
@@ -156,10 +118,10 @@ val (pBits_def, pBits_ind) =
   "pBits"
   `pBits n : word8 list = 
        if n MOD 64 = 56 then [] 
-       else word8$word_0::pBits (n+1)`,
+       else 0w::pBits (n+1)`,
  WF_REL_TAC 
     `measure \n. if n MOD 64 <= 56 then 56 - n MOD 64 else 120 - n MOD 64`
-   THEN RW_TAC std_ss [] THENL
+   THEN RW_TAC std_ss [] THEN FULL_SIMP_TAC arith_ss [] THENL
    [`n MOD 64 < 56` by DECIDE_TAC 
       THEN WEAKEN_TAC (equal (Term `n MOD 64 <= 56`))
       THEN WEAKEN_TAC (equal (Term `~(n MOD 64 = 56)`))
@@ -185,32 +147,32 @@ val (pBits_def, pBits_ind) =
            THEN FULL_SIMP_TAC arith_ss []],
        DECIDE_TAC],
     ASSUME_TAC (CONJUNCT2 ndiv64) THEN DECIDE_TAC,
+    ASSUME_TAC (CONJUNCT2 ndiv64) THEN DECIDE_TAC,
     FULL_SIMP_TAC arith_ss [Once (GSYM MOD_PLUS)],
-    `56 < n MOD 64 /\ n MOD 64 < 64` by RW_TAC arith_ss [ndiv64] THEN
-    `56 < (n+1) MOD 64 /\ (n+1) MOD 64 < 64` by RW_TAC arith_ss [n1div64] 
-       THEN REPEAT (WEAKEN_TAC is_neg) 
-       THEN RW_TAC arith_ss [swap_lem]
-       THEN FULL_SIMP_TAC arith_ss [Once (GSYM MOD_PLUS)]
-       THEN `(n MOD 64 = 57) \/ (n MOD 64 = 58) \/ (n MOD 64 = 59) \/ 
-             (n MOD 64 = 60) \/ (n MOD 64 = 61) \/ (n MOD 64 = 62) \/
-             (n MOD 64 = 63)` by DECIDE_TAC THEN FULL_SIMP_TAC arith_ss []]);
+    FULL_SIMP_TAC arith_ss [Once (GSYM MOD_PLUS)]
+      THEN `56 < n MOD 64 /\ n MOD 64 < 64` by RW_TAC arith_ss [ndiv64]
+      THEN Q.PAT_ASSUM `~(a = b)` (K ALL_TAC)
+      THEN `(n MOD 64 = 57) \/ (n MOD 64 = 58) \/ (n MOD 64 = 59) \/ 
+            (n MOD 64 = 60) \/ (n MOD 64 = 61) \/ (n MOD 64 = 62) \/
+            (n MOD 64 = 63)` by DECIDE_TAC
+      THEN FULL_SIMP_TAC arith_ss [],
+    ASSUME_TAC (CONJUNCT2 ndiv64) THEN DECIDE_TAC]);
 
 val _ = save_thm("pBits_def",pBits_def);
 
 val PaddingBits = 
  Define
-   `PaddingBits len = W8(128)::pBits (len+1n)`;
+   `PaddingBits len = 128w :: pBits (len+1n)`;
 
 val lBits_def = 
  Define
    `lBits(len,i) = 
      if i = 0 then []
-     else W8(word32$WORD_BITS 7 0 (W32 len >> ((i-1)*8))) :: lBits(len,i-1)`;
+     else (7 >< 0) (n2w len : word32 >> ((i-1)*8)) :: lBits(len,i-1)`;
 
 val LengthBits_def = 
  Define 
    `LengthBits len = lBits(len * 8n, 8)`;
-
 
 (*---------------------------------------------------------------------------*)
 (* Trickery needed to save stack. Note that input is the whole message to    *)
@@ -235,25 +197,25 @@ val Pad_def =
 (* highly similar steps. Higher order functions to the rescue!               *)
 (*---------------------------------------------------------------------------*)
 
-val C1_def = Define `C1 = W32 1518500249`;
-val C2_def = Define `C2 = W32 1859775393`;
-val C3_def = Define `C3 = W32 2400959708`;
-val C4_def = Define `C4 = W32 3395469782`;
+val C1_def = Define `C1 = 1518500249w:word32`;
+val C2_def = Define `C2 = 1859775393w:word32`;
+val C3_def = Define `C3 = 2400959708w:word32`;
+val C4_def = Define `C4 = 3395469782w:word32`;
 
-val f1_def = Define `f1(a,b,c) = (c # (a & (b # c))) + C1`;
-val f2_def = Define `f2(a,b,c) = (a # b # c) + C2`;
-val f3_def = Define `f3(a,b,c) = ((a & b) | (c & (a | b))) + C3`;
-val f4_def = Define `f4(a,b,c) = (a # b # c) + C4`;
+val f1_def = Define `f1(a,b,c) = (c ?? (a && (b ?? c))) + C1 : word32`;
+val f2_def = Define `f2(a,b,c) = (a ?? b ?? c) + C2 : word32`;
+val f3_def = Define `f3(a,b,c) = ((a && b) !! (c && (a !! b))) + C3 : word32`;
+val f4_def = Define `f4(a,b,c) = (a ?? b ?? c) + C4 : word32`;
 
 
 val Helper_def = 
  Define
-   `Helper f n (a,b,c,d,e) w = 
-      if n = 0 then (a,(b <<# 30n),c,d,e+(a <<# 5n)+f(b,c,d)+w) else
-      if n = 1 then ((a <<# 30n),b,c,d+(e <<# 5n)+f(a,b,c)+w,e) else 
-      if n = 2 then (a,b,c+(d <<# 5n)+f(e,a,b)+w,d,e <<# 30n)   else 
-      if n = 3 then (a,b+(c <<# 5n)+f(d,e,a)+w,c,d <<# 30n,e)   
-               else (a+(b <<# 5n)+f(c,d,e)+w,b,c <<# 30n,d,e)`;
+   `Helper (f:word32#word32#word32->word32) n (a,b,c,d,e) w = 
+      if n = 0 then (a,(b #<< 30n),c,d,e+(a #<< 5n)+f(b,c,d)+w) else
+      if n = 1 then ((a #<< 30n),b,c,d+(e #<< 5n)+f(a,b,c)+w,e) else 
+      if n = 2 then (a,b,c+(d #<< 5n)+f(e,a,b)+w,d,e #<< 30n)   else 
+      if n = 3 then (a,b+(c #<< 5n)+f(d,e,a)+w,c,d #<< 30n,e)   
+               else (a+(b #<< 5n)+f(c,d,e)+w,b,c #<< 30n,d,e)`;
 
 val Round_def = 
  Define 
@@ -262,15 +224,19 @@ val Round_def =
       if i<20 then Round helper (i+1) (helper (i MOD 5) args w) t 
               else (args, w::t))`;
    
-val expand_def = 
- Define 
+val (expand_def, expand_ind) = Defn.tprove
+ (Hol_defn "expand"
   `(expand (w0::w1::w2::w3::w4::w5::w6::w7::w8::w9::
             w10::w11::w12::w13::w14::w15::w16::t) = 
-      let j = (w0 # w2 # w8 # w13) <<# 1n
+      let j = (w0 ?? w2 ?? w8 ?? w13) : word32 #<< 1n
        in w0::expand(w1::w2::w3::w4::w5::w6::w7::w8::
                      w9::w10::w11::w12::w13::w14::w15::j::t)) /\ 
-   (expand wlist = wlist)`;
+   (expand wlist = wlist)`,
+   WF_REL_TAC `measure LENGTH` THEN RW_TAC list_ss []);
 
+val _ = save_thm("expand_def",expand_def);
+
+val _ = computeLib.add_persistent_funs [("expand_def", expand_def)];
 
 (*---------------------------------------------------------------------------*)
 (* Digest a block	                                                     *)
@@ -300,6 +266,7 @@ val (digest_def,digest_ind) = Defn.tprove
      of NONE -> Hbar
      || SOME(next,rest) -> digest rest (digestBlock next Hbar)`,
  WF_REL_TAC `measure (LENGTH o FST)`
+  THEN REPEAT PairRules.PGEN_TAC
   THEN RW_TAC list_ss []
   THEN IMP_RES_TAC (GSYM TAKE_LEM)
   THEN DECIDE_TAC);
@@ -311,11 +278,11 @@ val _ = save_thm("digest_def",digest_def);
 (* Compute the message digest                                                *)
 (*---------------------------------------------------------------------------*)
 
-val H0_def = Define `H0 = W32 1732584193`;
-val H1_def = Define `H1 = W32 4023233417`;
-val H2_def = Define `H2 = W32 2562383102`;
-val H3_def = Define `H3 = W32 271733878`;
-val H4_def = Define `H4 = W32 3285377520`;
+val H0_def = Define `H0 = 1732584193w:word32`;
+val H1_def = Define `H1 = 4023233417w:word32`;
+val H2_def = Define `H2 = 2562383102w:word32`;
+val H3_def = Define `H3 = 271733878w:word32`;
+val H4_def = Define `H4 = 3285377520w:word32`;
 
 val computeMD_def = 
  Define 
@@ -326,7 +293,7 @@ val computeMD_def =
 (*---------------------------------------------------------------------------*)
 
 val string_to_w8_list_def = Define 
-   `string_to_w8_list s = MAP (W8 o ORD) (EXPLODE s)`;
+   `string_to_w8_list s = MAP (n2w o ORD) (EXPLODE s) : word8 list`;
 
 (*---------------------------------------------------------------------------*)
 (* Mapping strings to lists of 8 bit bytes.                                  *)
@@ -345,20 +312,25 @@ val _ = computeLib.add_persistent_funs
           ("pBits_def",pBits_def),
           ("digest_def",digest_def)];
 
+val _ = type_pp.pp_num_types := false;
+val _ = type_pp.pp_array_types := false;
 
 val _ = 
   let open EmitML
-  in exportML("sha1",
+      val string_to_w8_list = REWRITE_RULE [METIS_PROVE [combinTheory.o_THM]
+                                ``(n2w o ORD) = (\x. n2w (ORD x))``]
+                                string_to_w8_list_def
+  in emitML (!Globals.emitMLDir) ("sha1",
      MLSIG "type num = numML.num" ::
-     MLSIG "type word8 = word8ML.word8" ::
-     MLSIG "type word32 = word32ML.word32" ::
-     OPEN ["num", "list", "option"] :: 
-     MLSTRUCT "type word8 = word8ML.word8" ::
-     MLSTRUCT "type word32 = word32ML.word32"
+     MLSIG "type word8 = wordsML.word8" ::
+     MLSIG "type word32 = wordsML.word32" ::
+     OPEN ["num", "list", "option", "words"] :: 
+     MLSTRUCT "type word8 = wordsML.word8" ::
+     MLSTRUCT "type word32 = wordsML.word32"
      ::
-     map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
-     [ TAKE_def, rotl32_def, W8, W32, ZEROx64_def, 
-       w8to32, w8x4to32_def, w32to8x4_def, w32List_def, w8List_def,
+     map (DEFN o wordsLib.WORDS_EMIT_RULE)
+     [ TAKE_def, ZEROx64_def, 
+       w8x4to32_def, w32to8x4_def, w32List_def, w8List_def,
        w32x5to8_def, pBits_def, PaddingBits, 
        lBits_def, LengthBits_def, Pad_def,
        C1_def,C2_def,C3_def,C4_def, 
@@ -366,7 +338,7 @@ val _ =
        H0_def,H1_def,H2_def,H3_def,H4_def,
        Helper_def, Round_def, expand_def, 
        digestBlock_def, digest_def, 
-       computeMD_def, string_to_w8_list_def, stringMD_def ])
+       computeMD_def, string_to_w8_list, stringMD_def ])
   end;
 
 val _ = export_theory();

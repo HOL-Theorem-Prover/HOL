@@ -324,7 +324,7 @@ local
     val l = do_links a
     val b = map (fn (m,c) => (fromArbnum30 m, c)) l
   in
-    foldr (fn ((a,c),t) => bsubstML.mem_write_block t a c) m b
+    foldr (fn ((a,c),t) => updateML.mem_write_block t a c) m b
   end
 in
   fun assemble m file = assemble_assembler m (assemblerML.parse_arm file);
@@ -391,7 +391,7 @@ in
         val reg = armML.arm_sys_state_registers state
         val psr = armML.arm_sys_state_psrs state
         val mem = armML.arm_sys_state_memory state
-        val items = bsubstML.mem_items mem
+        val items = updateML.mem_items mem
     in
       TextIO.output(ostrm,"Instuctions Run:" ^ Int.toString count ^ "\n");
       TextIO.output(ostrm,"\nRegisters\n---------\n");
@@ -452,7 +452,7 @@ fun printer (Wreg, Wmem, Wmode, Wflags, Wireg) cycle s ns =
 
         fun print_mem a = print
               ("; mem[" ^ toHexString_w2n a ^ "] := " ^
-               toHexString_w2n (bsubstML.mem_read(mem2,a)))
+               toHexString_w2n (updateML.mem_read(mem2,a)))
 
         fun print_bool b = print (if b then "1" else "0")
         fun print_nzcv (n,(z,(c, v))) = (print "; NZCV := ";
@@ -466,12 +466,12 @@ fun printer (Wreg, Wmem, Wmode, Wflags, Wireg) cycle s ns =
             print "> undefined exception\n"
           else
             print_ireg
-              (bsubstML.mem_read(mem1,bsubstML.ADDR30 (armML.FETCH_PC reg1)))
+              (updateML.mem_read(mem1,updateML.addr30 (armML.FETCH_PC reg1)))
         else
           ());
        print ("- t = " ^ Int.toString cycle);
        (if Wreg then app print_reg (reg_updates reg1 reg2) else ());
-       (if Wmem then app print_mem (rev (!bsubstML.mem_updates)) else ());
+       (if Wmem then app print_mem (rev (!updateML.mem_updates)) else ());
        (if not Wflags orelse nzcv1 = nzcv2 then () else print_nzcv nzcv2);
        (if not Wmode orelse m1 = m2 then () else print_mode m2);
        print "\n")
@@ -531,7 +531,7 @@ fun STATE_ARM_MEM n s =
   if n = 0 then s
   else
     let val _ = count := !count + 1
-        val _ = bsubstML.mem_updates := []
+        val _ = updateML.mem_updates := []
         val ns = armML.NEXT_ARM_MEM s
         val _ = printer watches (!count) s ns
     in
@@ -544,7 +544,7 @@ fun STATE_ARM_MEM n s =
 (* ------------------------------------------------------------------------- *)
 
 val init_mem = if #E e then
-  list_assemble bsubstML.empty_memory
+  list_assemble updateML.empty_memory
     ["0x0: movs pc, #32",
      "label: b label",
      "movs pc, r14",
@@ -553,7 +553,7 @@ val init_mem = if #E e then
      "movs pc, r14",
      "subs pc, r14, #4",
      "subs pc, r14, #4"]
-  else bsubstML.empty_memory;
+  else updateML.empty_memory;
 
 val init_mem =
   let val m = #mem e in

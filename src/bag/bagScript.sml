@@ -1799,7 +1799,7 @@ val _ =
      val _ = new_type("bag",1)
   in try emitML (!Globals.emitMLDir)
    ("bag",
-    ABSDATATYPE (["'a"], `bag = EMPTY_BAG | BAG_INSERT of 'a => bag`)
+    ABSDATATYPE ([("'a",typ,0)], `bag = EMPTY_BAG | BAG_INSERT of 'a => bag`)
     :: OPEN ["num", "set"]
     :: MLSIG "type num = numML.num"
     :: MLSIG "type 'a set = 'a setML.set"

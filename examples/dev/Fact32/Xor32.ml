@@ -3,11 +3,11 @@
 (*****************************************************************************)
 
 quietdec := true;
-loadPath := "../" :: "word32" :: "../dff/" :: !loadPath;
+loadPath := "../" :: "../dff/" :: !loadPath;
 map load
- ["compileTheory","compile","metisLib","intLib","word32Theory", "word32Lib",
+ ["compileTheory","compile","metisLib","intLib","wordsLib",
   "dffTheory","vsynth"];
-open compile metisLib word32Theory;
+open compile metisLib wordsTheory;
 open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
      devTheory composeTheory compileTheory compile vsynth dffTheory;
 quietdec := false;
@@ -19,9 +19,9 @@ intLib.deprecate_int();
 (*****************************************************************************)
 (* Boilerplate. Probably more than is needed.                                *)
 (*****************************************************************************)
-add_combinational ["MOD","WL","DIV"];
+add_combinational ["MOD","DIV"];
 add_combinational ["word_add","word_sub"];
-add_combinational ["BITS","HB","w2n","n2w"];
+add_combinational ["BITS","w2n","n2w"];
 
 (*****************************************************************************)
 (* Start new theory "Xor32"                                                  *)
@@ -31,14 +31,14 @@ val _ = new_theory "Xor32";
 (*****************************************************************************)
 (* Add definition of XOR32                                                   *)
 (*****************************************************************************)
-AddBinop ("XOR32", (``UNCURRY $# : word32#word32->word32``, "^"));
+AddBinop ("XOR32", (``UNCURRY $?? : word32#word32->word32``, "^"));
 
 (*****************************************************************************)
 (* Implement an atomic device computing XOR                                  *)
 (*****************************************************************************)
 val (Xor32,_,Xor32_dev) =
  hwDefine
-  `Xor32(in1,in2) = in1 # in2`;
+  `Xor32(in1:word32,in2) = in1 ?? in2`;
 
 (*****************************************************************************)
 (* Derivation using refinement combining combinators                         *)

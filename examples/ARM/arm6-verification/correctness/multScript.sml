@@ -75,7 +75,7 @@ val MULX_DONE_def = prove(
         (MSHIFT mla_mul (BORROW2 rs n)
            ((1 >< 0) ((31 -- (2 * n)) rs)) (n2w n)) =
       MLA_MUL_DONE rs (SUC n))`,
-  STRIP_TAC \\ Cases_word
+  STRIP_TAC \\ Cases
     \\ RW_TAC (arith_ss++SIZES_ss) [MULX_def,MULZ_def,MSHIFT,MLA_MUL_DONE_def,
          MIN_LEM,BITS_COMP_THM2,NOT_LESS,word_bits_n2w,word_extract_def]
     \\ FULL_SIMP_TAC (arith_ss++SIZES_ss)
@@ -234,7 +234,7 @@ val word2_BITS = prove(
    (!w:word2. (w = 1w) = ~(w %% 1) /\  (w %% 0)) /\
    (!w:word2. (w = 2w) =  (w %% 1) /\ ~(w %% 0)) /\
     !w:word2. (w = 3w) =  (w %% 1) /\  (w %% 0)`,
-  REPEAT STRIP_TAC \\ Cases_on_word `w`
+  REPEAT STRIP_TAC \\ Cases_on `w`
     \\ SIMP_TAC (fcp_ss++ARITH_ss++SIZES_ss) [LESS_THM,n2w_def]
     \\ PROVE_TAC word2_bits);
 
@@ -284,7 +284,7 @@ val lem = (SIMP_RULE bool_ss [EXISTS_DONE] o
 val DONE_IMP_ZERO_MSBS = prove(
   `!n. (!m. m < n ==> ~MLA_MUL_DONE rs m) /\ MLA_MUL_DONE rs n ==>
         (w2n rs MOD 2 ** (2 * n) = w2n rs)`,
-  Cases_on_word `rs`
+  Cases_on `rs`
     \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> ``:32``] EXISTS_HB)
     \\ `Abbrev (m = 31)`
     by FULL_SIMP_TAC (arith_ss++SIZES_ss) [markerTheory.Abbrev_def]
@@ -335,12 +335,12 @@ val RD_INVARIANT_def = Define`
 
 val BORROW2_LEM1 = prove(
   `!rs:word32. rs %% 1 = ((1 >< 0) rs):word2 %% 1`,
-  Cases_word \\ SIMP_TAC (fcp_ss++SIZES_ss)
+  Cases \\ SIMP_TAC (fcp_ss++SIZES_ss)
     [n2w_def,word_extract_def,word_bits_def,w2w]);
 
 val MOD_4_BITS = prove(
   `!a:word32. w2n a MOD 4 = w2n ((1 -- 0) a)`,
-  Cases_word
+  Cases
     \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> ``:32``] EXISTS_HB)
     \\ ASM_SIMP_TAC bool_ss [dimword_def,GSYM BITS_ZERO3,BITS_COMP_THM2,
          (EQT_ELIM o EVAL) ``4 = 2 ** SUC 1``,word_bits_n2w,w2n_n2w]
@@ -401,7 +401,7 @@ val MULT_MOD_SUC_T = prove(
     \\ ASM_SIMP_TAC (arith_ss++SIZES_ss) [WORD_EQ_ADD_LCANCEL,SPEC_SLICE_COMP,
          word_extract_def,w2w_w2w,w2w_id,GSYM word_add_n2w,GSYM WORD_SLICE_THM,
          WORD_BITS_COMP_THM,WORD_LEFT_ADD_DISTRIB,WORD_ADD_COMM]
-    \\ Cases_on_word `b` \\ POP_ASSUM (K ALL_TAC)
+    \\ Cases_on `b` \\ POP_ASSUM (K ALL_TAC)
     \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> ``:32``] EXISTS_HB)
     \\ ASM_SIMP_TAC std_ss [dimword_def,GSYM BITS_ZERO3,SLICE_BITS_THM,SUC_SUB1,
          word_slice_n2w,w2n_n2w]);
@@ -413,7 +413,7 @@ val MULT_MOD_SUC_T = save_thm("MULT_MOD_SUC_T",
 
 val LSL_MULT_EXP = prove(
   `!w n. w << n = w * n2w (2 ** n)`,
-  Cases_word \\ POP_ASSUM (K ALL_TAC)
+  Cases \\ POP_ASSUM (K ALL_TAC)
     \\ RW_TAC bool_ss [word_lsl_n2w,word_mul_n2w]
     \\ IMP_RES_TAC LESS_ADD_1
     \\ POP_ASSUM (SUBST1_TAC o SIMP_RULE std_ss [DIMINDEX_GT_0,
@@ -470,11 +470,11 @@ val MSHIFT_lem2 = prove(
 
 val MUL_1EXP = prove(
   `!a n. a * 1w << n = a << n`,
-  Cases_word \\ RW_TAC arith_ss [WORD_MULT_CLAUSES,word_lsl_n2w,word_mul_n2w]);
+  Cases \\ RW_TAC arith_ss [WORD_MULT_CLAUSES,word_lsl_n2w,word_mul_n2w]);
 
 val MUL_2EXP = prove(
   `!a n. a * 2w << n = a << (n + 1)`,
-  Cases_word
+  Cases
     \\ RW_TAC arith_ss [WORD_MULT_CLAUSES,EXP_ADD,word_lsl_n2w,word_mul_n2w]
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC arith_ss [NOT_LESS]
@@ -486,7 +486,7 @@ val MUL_2EXP = prove(
 
 val MUL_3EXP = prove(
   `!a n. a * 3w << n = a << (n + 1) + a << n`,
-  Cases_word
+  Cases
     \\ RW_TAC arith_ss [WORD_MULT_CLAUSES,EXP_ADD,GSYM LEFT_ADD_DISTRIB,
          word_lsl_n2w,word_mul_n2w,word_add_n2w]
     \\ STRIP_ASSUME_TAC EXISTS_HB

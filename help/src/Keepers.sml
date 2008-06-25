@@ -25,6 +25,12 @@ val keepers =
      "Rewrite.sig", "Rsyntax.sig", "Psyntax.sig",
      "TypeBase.sig", "TypeBasePure.sig", "DefnBase.sig", "Prim_rec.sig",
 
+     (* marker *)
+     "markerLib.sig",  "markerSyntax.sig",
+
+     (* emit *)
+     "EmitML.sig",  "EmitTeX.sig",
+
      (* jrh ind_defs *)
      "IndDefLib.sig", "InductiveDefinition.sig", "IndDefRules.sig",
 
@@ -51,8 +57,8 @@ val keepers =
      (* finite maps *)
      "finite_mapTheory.sig",
 
-     (* goalstackLib *)
-     "goalstackLib.sig",
+     (* proofManagerLib *)
+     "proofManagerLib.sig",
 
      (* hol88 *)
      "hol88Lib.sig",
@@ -77,6 +83,7 @@ val keepers =
      (* n-bit *)
      "fcpTheory.sig",
      "bitTheory.sig",
+     "bitSyntax.sig",
      "wordsTheory.sig",
      "wordsSyntax.sig",
      "fcpLib.sig",
@@ -166,12 +173,6 @@ val keepers =
 
      (* unwind *)
      "unwindLib.sig",
-
-     (* word *)
-     "wordLib.sig",
-     "bword_arithTheory.sig","wordTheory.sig","word_numTheory.sig",
-     "bword_bitopTheory.sig","word_baseTheory.sig",
-     "bword_numTheory.sig","word_bitopTheory.sig",
 
      (* HolSat *)
      "HolSatLib.sig",

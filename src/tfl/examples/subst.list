@@ -14,8 +14,9 @@ quietdec := false;
 (*---------------------------------------------------------------------------*)
 
 val KMATCH_MP_TAC = MATCH_MP_TAC o 
-   Ho_Rewrite.REWRITE_RULE [AND_IMP_INTRO,
-                            METIS_PROVE [] ``(a ==> !x. b x) = !x. a ==> b x``]; 
+   Ho_Rewrite.REWRITE_RULE 
+         [AND_IMP_INTRO,
+          METIS_PROVE [] ``(a ==> !x. b x) = !x. a ==> b x``]; 
 
 val set_ss = list_ss ++ pred_setSimps.PRED_SET_ss;
 
@@ -73,7 +74,10 @@ val PRIME = Define `PRIME s = STRCAT s "'"`;
      Defer the termination proof.
  ---------------------------------------------------------------------------*)
 
-val AWAY_defn = Hol_defn "AWAY" `AWAY x = if MEM x L then AWAY (PRIME x) else x`;
+val AWAY_defn = 
+ Hol_defn 
+   "AWAY" 
+   `AWAY x = if MEM x L then AWAY(PRIME x) else x`;
 
 (*---------------------------------------------------------------------------
      The substitution algorithm
@@ -179,9 +183,9 @@ val (subst_eqns,subst_ind) = Defn.tprove
    [`lam_count (Sub (v,Var w,l)) <= lam_count l /\
      lam_count (Sub (v,Var w,l0)) <= lam_count l0`
          by METIS_TAC [lam_count_Comb,LESS_IMP_LESS_OR_EQ] THEN DECIDE_TAC,
-    MP_TAC(Q.INST[`x` |->`v`,  `Q` |-> `Var w`, `v` |-> `s`, `M` |-> `l`] Abs_eqn)
-      THEN RW_TAC arith_ss [FV,MEM,lam_count_def,DECIDE``x < y+1 = x<=y``,LET_THM]
-      THEN `lam_count l < lam_count (Abs s l)` by RW_TAC arith_ss [lam_count_def]
+    MP_TAC(Q.INST[`x`|->`v`, `Q` |-> `Var w`, `v` |-> `s`, `M` |-> `l`] Abs_eqn)
+      THEN RW_TAC arith_ss [FV,MEM,lam_count_def,DECIDE``x<y+1 = x<=y``,LET_THM]
+      THEN `lam_count l < lam_count(Abs s l)` by RW_TAC arith_ss [lam_count_def]
       THEN `lam_count (Sub (s,Var (AWAY (FV l [s]) s),l)) <= lam_count l`
             by METIS_TAC []
       THEN `lam_count (Sub (s,Var (AWAY (FV l [s]) s),l)) < lam_count (Abs s l)`
@@ -203,13 +207,14 @@ val (subst_eqns,subst_ind) = Defn.tprove
 val (AWAY,AWAY_IND) = Defn.tprove
 (AWAY_defn,
  WF_REL_TAC `measure (\x. CARD {s | MEM s L /\ isPREFIX x s})`
-   THEN RW_TAC std_ss [GSPEC_AND] 
-   THEN KMATCH_MP_TAC CARD_PSUBSET THEN CONJ_TAC THENL
-   [POP_ASSUM (K ALL_TAC) THEN KMATCH_MP_TAC INTER_FINITE
-      THEN Induct_on `L` 
-      THEN RW_TAC list_ss 
-            [GSPEC_F,FINITE_EMPTY,GSPEC_OR,GSPEC_EQ,FINITE_UNION,FINITE_SING],
-    RW_TAC set_ss [PSUBSET_DEF,SUBSET_DEF,INTER_DEF,isPREFIX_STRCAT,PRIME,EXTENSION]
+  THEN RW_TAC std_ss [GSPEC_AND] 
+  THEN KMATCH_MP_TAC CARD_PSUBSET THEN CONJ_TAC THENL
+  [POP_ASSUM (K ALL_TAC) THEN KMATCH_MP_TAC INTER_FINITE
+    THEN Induct_on `L` 
+    THEN RW_TAC list_ss 
+          [GSPEC_F,FINITE_EMPTY,GSPEC_OR,GSPEC_EQ,FINITE_UNION,FINITE_SING],
+    RW_TAC set_ss [PSUBSET_DEF,SUBSET_DEF,INTER_DEF,
+                   isPREFIX_STRCAT,PRIME,EXTENSION]
     THENL [METIS_TAC [STRCAT_ASSOC],
            Q.EXISTS_TAC `x` THEN 
            RW_TAC set_ss [GSYM STRCAT_ASSOC,STRCAT_ACYCLIC,STRCAT_EQ_EMPTY]]]);

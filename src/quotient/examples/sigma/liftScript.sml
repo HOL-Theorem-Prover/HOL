@@ -1008,7 +1008,7 @@ val object1_respects_Axiom_11_LEMMA = TAC_PROOF(([],
    );
 
 val object1_respects_Axiom_11_LEMMA2 = TAC_PROOF(([],
-    (--`!hom_o1 hom_o2 hom_d1 hom_d2 hom_e1 hom_e2 hom_m1 hom_m2 
+    (--`!hom_o1 hom_o2 hom_d1 hom_d2 hom_e1 hom_e2 hom_m1 hom_m2
          (var :var -> 'a) obj nvk upd cns (nil:'b)
            (par:'d -> string -> method1 -> 'c) sgm.
            hom_o1 IN respects (ALPHA_obj ===> $=) /\
@@ -1395,7 +1395,7 @@ val polywfs = [BV_subst_RSP, COND_RSP, CONS_RSP, NIL_RSP,
                RES_EXISTS_EQUIV_RSP, RES_ABSTRACT_RSP];
 
 
-fun gg tm = goalstackLib.set_goal([],tm);
+fun gg tm = proofManagerLib.set_goal([],tm);
 
 
 val term_EQ_IS_ALPHA =
@@ -1457,7 +1457,7 @@ val old_thms =
       ALPHA_CHANGE_ONE_VAR,
       CHANGE_ONE_VAR1,
       ALPHA_SIGMA_subst,
-      
+
       obj1_0,
       method1_0,
       invoke_method1_def,
@@ -1934,7 +1934,7 @@ val SIGMA_CHANGE_BOUND_VAR = store_thm
 val SIGMA_CLEAN_VAR = store_thm
    ("SIGMA_CLEAN_VAR",
     (--`!s x a. FINITE s ==>
-         ?x' o'. 
+         ?x' o'.
           ~(x' IN (FV_obj a DIFF {x})) /\ ~(x' IN s) /\
           (HEIGHT_obj a = HEIGHT_obj o') /\
           (SIGMA x a = SIGMA x' o')`--),
@@ -2053,7 +2053,7 @@ val EVERY_MAP = TAC_PROOF(([],
 val SIGMA_LIST_CLEAN_VAR = store_thm
    ("SIGMA_LIST_CLEAN_VAR",
     (--`!s x os. FINITE s ==>
-         ?z os'. 
+         ?z os'.
           ~(z IN s) /\
           EVERY (\a. ~(z IN (FV_obj a DIFF {x}))) os /\
           EVERY I (MAP2 (\a o'. HEIGHT_obj a = HEIGHT_obj o') os os') /\
@@ -2144,7 +2144,7 @@ val SIGMA_SUBST_SIMPLE = store_thm
 val SIGMA_SUBST_VAR = store_thm
    ("SIGMA_SUBST_VAR",
     (--`!x a s.
-         ?x' o'. 
+         ?x' o'.
           ~(x' IN (FV_obj a DIFF {x})) /\
           ~(x' IN FV_subst s (FV_obj a DIFF {x})) /\
           ~(x' IN FV_subst s (FV_obj o' DIFF {x'})) /\
@@ -2161,7 +2161,8 @@ val SIGMA_SUBST_VAR = store_thm
     THEN REWRITE_TAC[FINITE_UNION,FINITE_BV_subst]
     THEN DEP_REWRITE_TAC[FINITE_FV_subst,FINITE_DIFF]
     THEN REWRITE_TAC[FINITE_FV_object,IN_UNION,DE_MORGAN_THM]
-    THEN STRIP_TAC
+    THEN DISCH_THEN (Q.X_CHOOSE_THEN `x'`
+                                     (Q.X_CHOOSE_THEN `o'` STRIP_ASSUME_TAC))
     THEN EXISTS_TAC (--`x':var`--)
     THEN EXISTS_TAC (--`o':obj`--)
     THEN ASM_REWRITE_TAC[]

@@ -1,0 +1,99 @@
+% holdoc.sty  --  munging support for HOL / HOLDoc
+%
+% Keith Wansbrough and Peter Sewell 2001,2002,2003.
+
+%%% <identification>::
+
+\NeedsTeXFormat{LaTeX2e}[1998/06/01]
+\ProvidesPackage{holdoc}[2003/06/10 1.00 HOLDoc munging support]
+
+%%% <initial code>::
+
+% need the following packages:
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
+\RequirePackage{color}
+
+
+%%% <declaration of options>::
+
+%(no options)
+
+%%% <execution of options>::
+
+\ProcessOptions
+
+%%% <package loading>::
+
+%(no loading)
+
+%%% <main code>::
+
+% one style smaller in math mode:
+\newcommand{\smaller}[1]{%
+  \mathchoice{{\textstyle #1}}%
+             {{\scriptstyle #1}}%
+             {{\scriptscriptstyle #1}}%
+             {{\scriptscriptstyle #1}}%
+}
+
+% support for typesetting tokens:
+
+\newcommand{\tsrule}[1]{\mathit{#1}}
+\newcommand{\tscon}[1]{\textsc{#1}}
+\newcommand{\tsaux}[1]{\mathop{\mathrm{#1}}}
+\newcommand{\tsauxinfix}[1]{\mathbin{\mathrm{#1}}}
+\newcommand{\tstype}[1]{\mathsf{#1}}
+\newcommand{\tslib}[1]{\text{\usefont{T1}{phv}{bx}{n}#1}}
+\newcommand{\tsvar}[1]{{\mathit{#1}}}
+\newcommand{\tsholop}[1]{\mathop{\textbf{\lowercase{#1}}}}
+\newcommand{\tsunknown}[1]{{\color{red}#1}}
+
+
+\newcommand{\tscomm}[1]{\text{\rrsmall{(*#1*)}}}  % overridden in rrfoo
+\newcommand{\no@tscomm}[1]{#1}
+\newcommand{\tslongcomm}[1]{$\par\noindent{\rrsmall{(*#1*)}}\par\noindent$\displaystyle}  % overridden in rrfoo
+\newcommand{\tsholcomm}[1]{$\par\noindent{\rrsmall{(*#1*)}}\par\noindent$\displaystyle}   % overridden in rrfoo
+\newcommand{\un@comm}[1]{{\let\tscomm\no@tscomm\let\tslongcomm\no@tscomm\let\tsholcomm\no@tscomm #1}}
+
+% symbols:
+
+\newcommand{\Mwedge}{\mathbin{\smaller{\wedge}}}
+\newcommand{\Mvee}{\mathbin{\smaller{\vee}}}
+\newcommand{\Mlrec}{\langle\![}
+\newcommand{\Mrrec}{]\!\rangle}
+\newcommand{\Mexunq}{\exists!}
+\newcommand{\Mass}{\mathop{:=}}
+\newcommand{\Mcons}{\mathbin{::}}
+\newcommand{\Msome}{\mathord{\uparrow}}
+\newcommand{\Mtrue}{\textbf{T}}
+\newcommand{\Mfalse}{\textbf{F}}
+\newcommand{\Mif}{\textbf{if}\;}
+\newcommand{\Mthen}{\;\textbf{then}\;}
+\newcommand{\Melse}{\;\textbf{else}\;}
+\newcommand{\Mlet}{\textbf{let}\;}
+\newcommand{\Min}{\;\textbf{in}\;}
+\newcommand{\Mand}{\;\textbf{and}\;}
+\newcommand{\Mcase}{\textbf{case}\;}
+\newcommand{\Mof}{\;\textbf{of}\;}
+\newcommand{\Mexp}{\mathbin{{}^{**}}}
+\newcommand{\Mtotype}{\rightarrow}
+\newcommand{\MI}{\mathbf{I}}
+
+% curried symbols:
+
+\newcommand{\Mfupdate}[3]{#1\oplus(#2\mapsto #3)}
+\newcommand{\Mfapply}[2]{#1[#2]}
+\newcommand{\Mfdom}[1]{\textbf{dom}(#1)}
+\newcommand{\Mfrange}[1]{\textbf{rng}(#1)}
+\newcommand{\Mdrestrict}[2]{\left.#1\right|_{#2}}
+\newcommand{\Mcompl}[1]{\overline{#1}}
+\newcommand{\Mappend}[2]{#1\mathbin{@}#2}
+\newcommand{\Mspii}[2]{\;#1\;#2}
+\newcommand{\Mspiii}[3]{\;#1\;#2\;#3}
+\newcommand{\Mspmii}[2]{\;\begin{array}[t]{@{}l@{}}#1\end{array}%
+                        \;\begin{array}[t]{@{}l@{}}#2\end{array}}
+
+
+%
+% <end>

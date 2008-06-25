@@ -73,7 +73,7 @@ val (Round_def, Round_ind) = Defn.tprove
       else Round (n-1) (ROTKEYS keys)
             (AddRoundKey (FST keys) 
               (MixColumns (ShiftRows (SubBytes state))))`,
-  WF_REL_TAC `measure FST`);
+  WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC);
 
 
 val (InvRound_def,InvRound_ind) = Defn.tprove
@@ -85,7 +85,7 @@ val (InvRound_def,InvRound_ind) = Defn.tprove
        else InvRound (n-1) (ROTKEYS keys)
              (InvMixColumns 
                (AddRoundKey (FST keys) (InvSubBytes (InvShiftRows state))))`,
-  WF_REL_TAC `measure FST`);
+  WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC);
 
 val _ = save_thm ("Round_def", Round_def);
 val _ = save_thm ("Round_ind", Round_ind);

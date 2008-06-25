@@ -3,8 +3,7 @@ struct
 
 local open pred_setTheory in end
 
-open Abbrev HolKernel 
-     PFset_conv pred_setSyntax;
+open Abbrev HolKernel PFset_conv pred_setSyntax;
 
 val SET_SPEC_CONV  = PGspec.SET_SPEC_CONV pred_setTheory.GSPECIFICATION
 val SET_INDUCT_TAC = PSet_ind.SET_INDUCT_TAC pred_setTheory.FINITE_INDUCT

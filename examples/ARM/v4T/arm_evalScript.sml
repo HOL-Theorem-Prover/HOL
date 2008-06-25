@@ -61,77 +61,13 @@ val STATE_3STAGE = store_thm("STATE_3STAGE",
 
 (* ------------------------------------------------------------------------- *)
 
-val register2num_lt = prove(
+val register2num_lt_neq = store_thm("register2num_lt_neq",
   `!x y. register2num x < register2num y ==> ~(x = y)`,
   METIS_TAC [prim_recTheory.LESS_NOT_EQ, register2num_11]);
 
-val psr2num_lt = prove(
+val psr2num_lt_neq = store_thm("psr2num_lt_neq",
   `!x y. psr2num x < psr2num y ==> ~(x = y)`,
   METIS_TAC [prim_recTheory.LESS_NOT_EQ, psr2num_11]);
-
-val Ua_RULE4 = save_thm("Ua_RULE4",
-  (SIMP_RULE std_ss [register2num_lt] o
-   ISPEC `\x y. register2num x < register2num y`) UPDATE_SORT_RULE1);
-
-val Ub_RULE4 = save_thm("Ub_RULE4",
-  (SIMP_RULE std_ss [register2num_lt] o
-   ISPEC `\x y. register2num x < register2num y`) UPDATE_SORT_RULE2);
-
-val Ua_RULE_PSR = save_thm("Ua_RULE_PSR",
-  (SIMP_RULE std_ss [psr2num_lt] o
-   ISPEC `\x y. psr2num x < psr2num y`) UPDATE_SORT_RULE1);
-
-val Ub_RULE_PSR = save_thm("Ub_RULE_PSR",
-  (SIMP_RULE std_ss [psr2num_lt] o
-   ISPEC `\x y. psr2num x < psr2num y`) UPDATE_SORT_RULE2);
-
-val FUa_RULE = save_thm("FUa_RULE",
-  (SIMP_RULE std_ss [prim_recTheory.LESS_NOT_EQ] o
-   SPEC `\x y. x < y`) FCP_UPDATE_SORT_RULE1);
-
-val FUb_RULE = save_thm("FUb_RULE",
-  (SIMP_RULE std_ss [prim_recTheory.LESS_NOT_EQ] o
-   SPEC `\x y. x < y`) FCP_UPDATE_SORT_RULE2);
-
-val tm1 = `!a b x y m. (a |:> y) ((b |:> x) m) =
-     let lx = LENGTH x and ly = LENGTH y in
-        if a <=+ b then
-          if w2n b - w2n a <= ly then
-            if ly - (w2n b - w2n a) < lx then
-              (a |:> y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x) m
-            else
-              (a |:> y) m
-          else
-            (a |:< y) ((b |:> x) m)
-        else (* b <+ a *)
-          if w2n a - w2n b < lx then
-            (b |:> JOIN (w2n a - w2n b) x y) m
-          else
-            (b |:> x) ((a |:> y) m)`
-
-val tm2 = `!a b x y m. (a |:> y) ((b |:< x) m) =
-     let lx = LENGTH x and ly = LENGTH y in
-        if a <=+ b then
-          if w2n b - w2n a <= ly then
-            if ly - (w2n b - w2n a) < lx then
-              (a |:> y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x) m
-            else
-              (a |:> y) m
-          else
-            (a |:< y) ((b |:< x) m)
-        else (* b <+ a *)
-          if w2n a - w2n b < lx then
-            (b |:> JOIN (w2n a - w2n b) x y) m
-          else
-            (b |:> x) ((a |:> y) m)`
-
-val LUa_RULE = store_thm("LUa_RULE", tm1,
-  METIS_TAC [LUa_def,LUb_def,LUPDATE_LUPDATE]);
-
-val LUb_RULE = store_thm("LUb_RULE", tm2,
-  METIS_TAC [LUa_def,LUb_def,LUPDATE_LUPDATE]);
-
-(* ------------------------------------------------------------------------- *)
 
 val REGISTER_RANGES =
   (SIMP_RULE (std_ss++SIZES_ss) [] o Thm.INST_TYPE [alpha |-> ``:4``]) w2n_lt;
@@ -150,7 +86,7 @@ val mode_reg2num_15 = (GEN_ALL o SIMP_RULE (arith_ss++SIZES_ss) [w2n_n2w] o
   SPECL [`m`,`15w`]) mode_reg2num_def;
 
 val not_reg_eq_lem = prove(`!v w. ~(v = w) ==> ~(w2n v = w2n w)`,
-  REPEAT Cases_word \\ SIMP_TAC std_ss [w2n_n2w,n2w_11]);
+  REPEAT Cases \\ SIMP_TAC std_ss [w2n_n2w,n2w_11]);
 
 val not_reg_eq = store_thm("not_reg_eq",
   `!v w m1 m2. ~(v = w) ==> ~(mode_reg2num m1 v = mode_reg2num m2 w)`,
@@ -441,7 +377,7 @@ val SPSR_WRITE_n2w = save_thm("SPSR_WRITE_n2w", GEN_ALL
 
 (* ------------------------------------------------------------------------- *)
 
-val decode_opcode_def = Define`
+val decode_opcode_def = with_flag (priming, SOME "") Define`
   decode_opcode i =
     case i of
        AND cond s Rd Rn Op2 -> 0w:word4
@@ -757,9 +693,6 @@ val register_enc3 = store_thm("register_enc3",
   `!i. (3 >< 0) (addr_mode3_encode (Dth_register r)) = r`,
   SRW_TAC [WORD_FRAGS_ss] [addr_mode3_encode_def]);
 
-val EXTRACT_ss = simpLib.merge_ss [SIZES_ss, WORD_LOGIC_ss, WORD_SHIFT_ss,
-  WORD_GROUND_ss, WORD_EXTRACT_ss];
-
 val lem = simpLib.SIMP_PROVE (std_ss++WORD_BIT_EQ_ss) []
   ``~(i = 0w:word5) ==> ~((4 >< 0) i = 0w:word8)``;
 
@@ -782,7 +715,7 @@ val shift_immediate_enc = store_thm("shift_immediate_enc",
         || ASR Rm -> arm$ASR (REG_READ t reg m Rm) (w2w i) c
         || ROR Rm -> arm$ROR (REG_READ t reg m Rm) (w2w i) c`,
   REPEAT STRIP_TAC \\ Cases_on `sh` \\ Cases_on `i = 0w` \\ IMP_RES_TAC lem
-    \\ SRW_TAC [boolSimps.LET_ss, EXTRACT_ss]
+    \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
          [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode1_encode_def,
           shift_encode_def,shift_immediate_enc_lem,lem2]);
 
@@ -802,7 +735,7 @@ val shift_immediate_enc2 = store_thm("shift_immediate_enc2",
         || ASR Rm -> arm$ASR (REG_READ t reg m Rm) (w2w i) c
         || ROR Rm -> arm$ROR (REG_READ t reg m Rm) (w2w i) c`,
   REPEAT STRIP_TAC \\ Cases_on `sh` \\ Cases_on `i = 0w` \\ IMP_RES_TAC lem
-    \\ SRW_TAC [boolSimps.LET_ss, EXTRACT_ss]
+    \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
         [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode2_encode_def,
          shift_encode_def,shift_immediate_enc_lem2,lem2]);
 
@@ -816,7 +749,7 @@ val shift_register_enc = store_thm("shift_register_enc",
         || ASR Rm -> arm$ASR (REG_READ t (INC_PC t reg) m Rm) rs c
         || ROR Rm -> arm$ROR (REG_READ t (INC_PC t reg) m Rm) rs c`,
   REPEAT STRIP_TAC \\ Cases_on `sh`
-    \\ SRW_TAC [boolSimps.LET_ss, EXTRACT_ss]
+    \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
         [SHIFT_REGISTER_def,SHIFT_REGISTER2_def,addr_mode1_encode_def,
          shift_encode_def,shift_register_enc_lem,lem2]);
 
@@ -1036,12 +969,12 @@ val condition_code_lem3 = prove(
         word_rol_def,word_ror_n2w,word_lsl_n2w,w2w_n2w,w2n_n2w]
     \\ EVAL_TAC);
 
-val word_ss = srw_ss()++fcpLib.FCP_ss++wordsLib.SIZES_ss++WORD_GROUND_ss++
+val word_ss = srw_ss()++fcpLib.FCP_ss++
   rewrites [word_or_def,n2w_def,w2w,word_lsl_def,word_bits_def,
     shift_encode_lem,BIT_def,condition_code_lem3];
 
 val pass_frags =
- [ARITH_ss,SIZES_ss,WORD_GROUND_ss,boolSimps.LET_ss,
+ [ARITH_ss,boolSimps.LET_ss,
   rewrites [CONDITION_PASSED_def,CONDITION_PASSED2_def,
     GSYM WORD_BITS_OVER_BITWISE,WORD_OR_CLAUSES,BITS_w2n_ZERO,WORD_BITS_LSL,
     word_bits_n2w,w2w_def,instruction_encode_def,condition_code_lem3]];

@@ -1,6 +1,6 @@
 EXTRA_CLEANS = run paths mosrun.exe run.in run.out
 OPTIONS = NO_OVERLAY
-THEORY=$(HOLDIR)/src/theoryML
+INCLUDES=$(HOLDIR)/src/theoryML
 
 all: run mosrun.exe
 
@@ -8,13 +8,13 @@ paths:
 	@echo "MLYACC" $(HOLDIR)/tools/mlyacc/mlyacclib > paths
 	@echo "MLTON" $(HOLDIR)/tools/mlton/pre >> paths
 	@echo "PORTABLE" $(HOLDIR)/src/portableML >> paths
-	@echo "THEORY" $(THEORY) >> paths
+	@echo "INCLUDES" $(INCLUDES) >> paths
 
 run: run.mlb paths evalML.sml
 	mlton -verbose 1 -mlb-path-map paths run.mlb
 
 mosrun.exe: evalML.sml
-	HOLMOSMLC -toplevel -I $(THEORY) -I .. -o $@ evalML.sml
+	HOLMOSMLC -toplevel -I $(INCLUDES) -I .. -o $@ evalML.sml
 
 ppstream.uo:
 	@

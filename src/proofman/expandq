@@ -1,0 +1,55 @@
+(*---------------------------------------------------------------------------*)
+(* This file is only usable in the interactive system.                       *)
+(*---------------------------------------------------------------------------*)
+
+val tacticRef = ref ALL_TAC;
+
+val ERR = mk_HOL_ERR "expandq";
+
+(*---------------------------------------------------------------------------*)
+(* Evaluate a string in the current ML environment, via Meta.use, yielding a *)
+(* tactic.                                                                   *)
+(*---------------------------------------------------------------------------*)
+
+fun tactic_of_string s =
+  let open FileSys TextIO
+      val tmpfile = tmpName()
+      val ostrm = openOut tmpfile
+      val _ = output(ostrm,("tacticRef := ("^s^")\n"))
+      val _ = (flushOut ostrm; closeOut ostrm)
+      val _ = Lib.with_flag(Meta.quietdec,true) Meta.use tmpfile
+              handle e => (remove tmpfile; raise e)
+      val _ = remove tmpfile
+  in !tacticRef
+  end;
+ 
+fun expands s =
+  let open proofManagerLib
+      val tac = tactic_of_string s
+  in expandv(s,tac)
+  end
+  handle e => raise wrap_exn "expands" "expected string to denote a tactic" e;
+
+(*---------------------------------------------------------------------------*)
+(* Quotations come with location information in the first string. We drop    *)
+(* that on aesthetic grounds.                                                *)
+(*---------------------------------------------------------------------------*)
+
+fun drop_loc s = 
+ let open Substring
+     val subs = all s
+     val (_,subs1) = position "(*#loc" subs
+     val (_,subs2) = position "*)" subs1
+     val (_,subs3) = splitAt(subs2,2)
+ in 
+   if isEmpty subs1 orelse isEmpty subs2 
+     then s
+     else string subs3
+ end;
+
+fun expandq q =
+ case Portable.norm_quote q 
+  of [QUOTE s] => expands(drop_loc s)
+   | otherwise => raise ERR "expandq" "unable to handle antiquotation";
+
+val eq = expandq;

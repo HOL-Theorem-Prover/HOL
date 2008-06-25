@@ -195,14 +195,15 @@ type convs = { NormConv : conv, EqConv : conv,
 
 val no_such_ring = RING_ERR "" "No ring declared on that type"
 
-val rings = (Polyhash.mkPolyTable(7,no_such_ring) :
-	       (hol_type, convs) Polyhash.hash_table);
+val rings = 
+  ref (Redblackmap.mkDict Type.compare) : (hol_type, convs) Redblackmap.dict ref; 
 
-fun add_ring ty rng = Polyhash.insert rings (ty,rng);
+fun add_ring ty rng = 
+  rings := Redblackmap.insert (!rings, ty,rng);
 
-fun RING_NORM_CONV tm = #NormConv (Polyhash.find rings (type_of tm)) tm;
-fun RING_CONV tm      = #EqConv (Polyhash.find rings (#3 (dest_eq_ty tm))) tm;
-fun reify tml         = #Reify (Polyhash.find rings (type_of (hd tml))) tml;
+fun RING_NORM_CONV tm = #NormConv (Redblackmap.find (!rings, type_of tm)) tm;
+fun RING_CONV tm      = #EqConv (Redblackmap.find (!rings, #3 (dest_eq_ty tm))) tm;
+fun reify tml         = #Reify (Redblackmap.find (!rings, type_of (hd tml))) tml;
 
 
 fun declare_ring {RingThm,IsConst,Rewrites} =

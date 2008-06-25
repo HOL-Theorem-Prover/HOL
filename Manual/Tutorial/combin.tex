@@ -269,27 +269,13 @@ This suggests that we define confluent thus:
 \end{session}
 This property states of $R$ that we can ``complete the diamond'';
 if we have
-\[
-\begin{array}{ccc}
-  & \rnode{x}{x}\\[5mm]
-  \rnode{y}{y} && \rnode{z}{z}
-\end{array}
-\ncline[nodesep=1mm]{->}{x}{y} \nbput[labelsep=.5mm]{*}
-\ncline[nodesep=1mm]{->}{x}{z} \naput[labelsep=.5mm]{*}
-\] then there must be a $u$ such that
-\[
-\begin{array}{ccc}
-  & \rnode{x2}{x}\\[5mm]
-  \rnode{y2}{y} && \rnode{z2}{z}\\[5mm]
-  & \rnode{u}{u}
-  \psset{labelsep=.5mm}
-  \ncline[nodesep=1mm]{->}{x2}{y2}\nbput{*}
-  \ncline[nodesep=1mm]{->}{x2}{z2}\naput{*}
-  \ncline[nodesepB=1mm,linestyle=dotted]{->}{y2}{u}\nbput{*}
-  \ncline[nodesepB=1mm,linestyle=dotted]{->}{z2}{u}\naput{*}
-\end{array}
-\]
-
+\[\xymatrix @R=5mm @C=2.5mm {
+ & x \ar[dl]_{*} \ar[dr]^{*} & \\
+y & & z }\]
+\[\xymatrix @R=5mm @C=2.5mm {
+& x \ar[dl]_{*} \ar[dr]^{*} & \\
+y \ar@{.>}[dr]_{*} & & z \ar@{.>}[dl]^{*} \\
+& u}\]
 
 One nice property of confluent relations is that from any one starting
 point they produce no more than one \emph{normal form}, where a normal
@@ -434,52 +420,26 @@ val confluent_diamond_RTC = store_thm(
     the original relation has the diamond property, then maybe the
     reflexive and transitive closure will too.  The theorem we want is
     \[ \con{diamond}\;R \supset \con{diamond}\,(\con{RTC}\;R)\] Graphically,
-    this is hoping that from \[
-\begin{array}{ccc}
-& \rnode{x1}{x}\\[3mm]
-\rnode{y1}{y} && \rnode{z1}{z}\\[3mm]
-& \rnode{u1}{u}
-\end{array}
-\ncline[nodesep=1mm]{->}{x1}{y1}
-\ncline[nodesep=1mm]{->}{x1}{z1}
-\ncline[nodesepB=1mm,linestyle=dotted]{->}{z1}{u1}
-\ncline[nodesepB=1mm,linestyle=dotted]{->}{y1}{u1}
-\] we will be able to conclude \[
-\begin{array}{ccccc}
-& & \rnode{x2}{x}\\[3mm]
-& \rnode{y2}{y} && \rnode{z2}{z}\\[3mm]
-& & \rnode{u2}{u}\\[3mm]
- \;\;\;\;\rnode{p}{p}\;\;\;\; &&&& \;\;\;\;\rnode{q}{q}\;\;\;\;\\[15mm]
-&& \rnode{r}{r}
-\end{array}
-\ncline[nodesep=1mm]{->}{x2}{y2}
-\ncline[nodesep=1mm]{->}{x2}{z2}
-\ncline[nodesepB=1mm,linestyle=dotted]{->}{z2}{u2}
-\ncline[nodesepB=1mm,linestyle=dotted]{->}{y2}{u2}
-\ncline[nodesep=1mm,linestyle=dashed]{->}{y2}{p}
-\ncline[nodesep=1mm,linestyle=dashed]{->}{z2}{q}
-\ncline[nodesep=1mm,linestyle=dotted]{->}{p}{r}
-\ncline[nodesep=1mm,linestyle=dotted]{->}{q}{r}
-\] where the dashed lines indicate that these steps (from $x$ to $p$,
+    this is hoping that from 
+    \[\xymatrix @R=5mm @C=2.5mm {
+& x \ar[dl] \ar[dr] & \\
+y \ar@{.>}[dr] & & z \ar@{.>}[dl] \\
+& u}\]
+ we will be able to conclude\[\xymatrix @R=4mm @C=2mm {
+& & & x \ar[dl] \ar[dr] & \\
+& & y \ar@{.>}[dr] \ar@{-->}[ddll] & & z \ar@{.>}[dl] \ar@{-->}[ddrr] \\
+& & & u \\
+p \ar@{.>}[dddrrr] & & & & & & q \ar@{.>}[dddlll] \\ \\ \\
+& & & r}\] where the dashed lines indicate that these steps (from $x$ to $p$,
 for example) are using $\con{RTC}\;R$.  The presence of two instances
 of $\con{RTC}\;R$ is an indication that this proof will require two
 inductions.  With the first we will prove
-\[
-\begin{array}{ccccc}
-& & & \rnode{x3}{x}\\[3mm]
-& & \rnode{y3}{y} && \rnode{z3}{z}\\[3mm]
-& & & \rnode{u3}{u}\\[3mm]
- \rnode{p2}{p}\\[3mm]
-& \rnode{r2}{r}
-\end{array}
-\ncline[nodesep=1mm]{->}{x3}{y3}
-\ncline[nodesep=1mm]{->}{x3}{z3}
-\ncline[nodesepB=1mm,linestyle=dotted]{->}{z3}{u3}
-\ncline[nodesepB=1mm,linestyle=dotted]{->}{y3}{u3}
-\ncline[nodesep=1mm,linestyle=dashed]{->}{y3}{p2}
-\ncline[nodesepB=1mm,linestyle=dotted]{->}{u3}{r2}
-\ncline[nodesepB=1mm,linestyle=dotted]{->}{p2}{r2}
-\]
+\[\xymatrix @R=4mm @C=2mm {
+& & & x \ar[dl] \ar[dr] & \\
+& & y \ar@{.>}[dr] \ar@{-->}[ddll] & & z \ar@{.>}[dl] \\
+& & & u \ar@{.>}[ddll] \\
+p \ar@{.>}[dr] \\
+& r}\]
 In other words, we want to show that if we take one step in one
 direction (to $z$) and many steps in another (to $p$), then the
 diamond property for $R$ will guarantee us the existence of $r$,
@@ -804,17 +764,10 @@ the way.)
 \newcommand{\topk}{\KC\;\SC\;(\KC\;\KC\;\KC)} Sadly, it just isn't the
 case that $\rightarrow$, our one-step relation for combinators, has
 the diamond property.  A counter-example is $\topk$.  Its possible evolution
-can be described graphically: \[
-\begin{array}{ccc}
-& \rnode{top}{\topk}\\[5mm]
-\rnode{left}{\SC} & & \rnode{right}{\KC\;\SC\;\KC}\\[5mm]
-& \rnode{bottom}{\SC}
-\end{array}
-\psset{nodesep=1mm}
-\ncline{->}{top}{left}
-\ncline{->}{top}{right}
-\ncline{->}{right}{bottom}
-\]
+can be described graphically: \[\xymatrix @R=5mm @C=2.5mm {
+& \topk \ar[dl] \ar[dr] & \\
+\SC & & \KC\;\SC\;\KC \ar[dl] \\
+& \SC}\]
 If we had the diamond property, it should be possible to find a common
 destination for $\KC\;\SC\;\KC$ and $\SC$.  However, \SC{} doesn't
 admit any reductions whatsoever, so there isn't a common
@@ -1142,7 +1095,7 @@ Meson search level: ..
 \end{verbatim}
 \end{session}
     Note that wrapping \texttt{TRY} around \texttt{PROVE\_TAC} is not
-    always wise.  It can often take \texttt{PROVE\_TAC} an extremely
+    always wise.  It can often take the \texttt{PROVE\_TAC} tactic an extremely
     long time to exhaust its search space, and then give up with a
     failure.  Here, ``we got lucky''.
 
@@ -1298,7 +1251,7 @@ $\rightarrow^*$ and $\mathpredn^*$ are equal.  We state our goal:
          $-||->* = $-->*
 \end{verbatim}
 \end{session}
-We want to now appeal to extensionality.  This is best done with the
+We want to now appeal to extensionality.  This is best done by using the
 conversion \texttt{FUN\_EQ\_CONV}, thus:
 \begin{session}
 \begin{verbatim}
@@ -1641,24 +1594,12 @@ our next goal features a term \verb!K # z -||-> y! in the assumptions.
 We have a theorem that pertains to just this situation.  But before
 applying it willy-nilly, let us try to figure out exactly what the
 situation is.  A diagram of the current situation might look like
-\[
-\begin{array}{c@{\hspace{2cm}}c}
-  \Rnode{kzu}{\psframebox[linestyle=dotted]{
-    \Rnode{kz}{\psframebox[linestyle=dashed]{\texttt{K \# z}}}\;\texttt{\#}\;
-    \Rnode{u}{\psframebox[linestyle=dashed]{\texttt{u}}}}}
-  &
-  \Rnode{z}{\psframebox[linestyle=dotted]{\texttt{z}}}\\[7mm]
-  \Rnode{yv}{\psframebox[linestyle=dotted]{
-      \Rnode{y}{\psframebox[linestyle=dashed]{\texttt{y}}}
-      \;\texttt{\#}\;
-      \Rnode{v}{\psframebox[linestyle=dashed]{\texttt{v}}}}}
-  & \Rnode{q}{\texttt{?u?}}
-\ncline{->}{kz}{y}
-\ncline{->}{u}{v}
-\ncline{->}{kzu}{z}
-\ncline[linestyle=dotted]{->}{z}{q}
-\ncline[linestyle=dotted]{->}{v}{q}
-\end{array}\]
+\[\xymatrix @C=2cm {
+*+<4pt>[F--]\txt{\fbox{\texttt{K\kern2mm \#\kern2mm z}} \texttt{\#} \fbox{\texttt{u}}} \ar[r] & \txt{\texttt{z}} \ar@{.>}[d] \\
+*+<4pt>[F--]\txt{\fbox{\texttt{y}} \texttt{\#} \fbox{\texttt{v}}} \ar@{.>}[r] & \txt{\texttt{?u?}}
+\ar "1,1"!<-12pt,0pt>;"2,1"!<-12pt,0pt>
+\ar "1,1"!<28pt,0pt>;"2,1"!<11pt,0pt>
+} \]
 Our theorem tells us that \texttt{y} must actually be of the form
 \verb!K # w! for some \texttt{w}, and that there must be an arrow
 between \texttt{z} and \texttt{w}.  Thus:

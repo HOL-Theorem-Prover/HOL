@@ -1,15 +1,9 @@
-EXTRA_CLEANS = word32Lib.sml
-
-word32Theory.ui word32Theory.uo: \
-   $(SIGOBJ)/wordFunctor.ui $(SIGOBJ)/wordFunctorLib.ui $(SIGOBJ)/bitsTheory.ui
-	$(HOLDIR)/src/n_bit/mkword.exe 32 -MLpath ./ML/
-
 teaML : teaML.ui teaML.uo
 
 teaML.ui: \
-   TEATheory.ui TEATheory.uo
-	(cd ML; MOSMLC -I $(HOLDIR)/src/theoryML teaML.sig)
+   teaTheory.ui teaTheory.uo
+	($(MOSMLC) -I $(HOLDIR)/src/theoryML teaML.sig)
 
 teaML.uo: \
-   TEATheory.ui TEATheory.uo teaML.ui
-	(cd ML; MOSMLC -I $(HOLDIR)/src/theoryML teaML.sml)
+   teaTheory.ui teaTheory.uo teaML.ui
+	($(MOSMLC) -I $(HOLDIR)/src/theoryML teaML.sml)

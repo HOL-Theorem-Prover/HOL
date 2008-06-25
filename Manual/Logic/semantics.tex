@@ -152,9 +152,8 @@ number of (schematic) \emph{rules of inference},
 \index{inference rules, of HOL logic@inference rules, of \HOL{} logic!abstract form of primitive}
 which take the form
 \[
-\Gamma_1\turn t_1 \qquad\cdots\qquad\Gamma_n\turn t_n
-\over
-\Gamma \turn t
+\frac{\Gamma_1\turn t_1 \qquad\cdots\qquad\Gamma_n\turn t_n}
+{\Gamma \turn t}
 \]
 The sequents above the line are called the {\it
 hypotheses\/}\index{hypotheses!of inference rules} of the rule and the
@@ -185,22 +184,19 @@ below it.
 \subsubsection*{Assumption introduction [{\small\tt
 ASSUME}]}\index{assumption introduction, in HOL logic@assumption introduction, in \HOL{} logic!abstract form of}
 \[
-\over t
-\turn t
+\overline{t \turn t}
 \]
 
 \subsubsection*{Reflexivity [{\small\tt
 REFL}]}\index{REFL@\ml{REFL}}\index{reflexivity, in HOL logic@reflexivity, in \HOL{} logic!abstract form of}
 \[
-\over
-\turn t = t
+\overline{\turn t = t}
 \]
 
 \subsubsection*{Beta-conversion [{\small\tt BETA\_CONV}]}
 \index{beta-conversion, in HOL logic@beta-conversion, in \HOL{} logic!abstract form of}\index{BETA_CONV@\ml{BETA\_CONV}}
 \[
-\over
-\turn (\lquant{x}t_1)t_2 = t_1[t_2/x]
+\overline{\turn (\lquant{x}t_1)t_2 = t_1[t_2/x]}
 \]
 \begin{itemize}
 \item Where $t_1[t_2/x]$ is
@@ -212,10 +208,9 @@ in $t_2$ becoming bound after substitution.
 \subsubsection*{Substitution [{\small\tt
 SUBST}]}\index{SUBST@\ml{SUBST}} \index{substitution rule, in HOL logic@substitution rule, in \HOL{} logic!abstract form of}
 \[
-{\Gamma_1\turn t_1 = t_1'\qquad\cdots\qquad\Gamma_n\turn t_n =
-t_n'\qquad\qquad \Gamma\turn t[t_1,\ldots,t_n]
-\over
-\Gamma_1\cup\cdots\cup\Gamma_n\cup\Gamma\turn t[t_1',\ldots,t_n']}
+\frac{\Gamma_1\turn t_1 = t_1'\qquad\cdots\qquad\Gamma_n\turn t_n =
+t_n'\qquad\qquad \Gamma\turn t[t_1,\ldots,t_n]}
+{\Gamma_1\cup\cdots\cup\Gamma_n\cup\Gamma\turn t[t_1',\ldots,t_n']}
 \]
 \begin{itemize}
 \item Where $t[t_1,\ldots,t_n]$ denotes a term $t$ with some free
@@ -229,9 +224,8 @@ bound after substitution.
 \subsubsection*{Abstraction [{\small\tt ABS}]}
 \index{ABS@\ml{ABS}}\index{abstraction rule, in HOL logic@abstraction rule, in \HOL{} logic!abstract form of}
 \[
-\Gamma\turn t_1 = t_2
-\over
-\Gamma\turn (\lquant{x}t_1) = (\lquant{x}t_2)
+\frac{\Gamma\turn t_1 = t_2}
+{\Gamma\turn (\lquant{x}t_1) = (\lquant{x}t_2)}
 \]
 \begin{itemize}
 \item Provided $x$ is not free in $\Gamma$.
@@ -241,9 +235,8 @@ bound after substitution.
 \index{type instantiation, in HOL logic@type instantiation, in \HOL{} logic!abstract form of}
 \newcommand{\insttysub}{[\sigma_1,\ldots,\sigma_n/\alpha_1,\ldots,\alpha_n]}
 \[
-\Gamma\turn t
-\over
-\Gamma\insttysub\turn t\insttysub
+\frac{\Gamma\turn t}
+{\Gamma\insttysub\turn t\insttysub}
 \]
 \begin{itemize}
 \item Where $t\insttysub$ is the result of substituting, in parallel,
@@ -259,9 +252,8 @@ bound after substitution.
 \subsubsection*{Discharging an assumption [{\small\tt
 DISCH}]}\index{discharging assumptions, in HOL logic@discharging assumptions, in \HOL{} logic!abstract form of}\index{DISCH@\ml{DISCH}}
 \[
-\Gamma\turn t_2
-\over
-\Gamma -\{t_1\} \turn t_1 \imp t_2
+\frac{\Gamma\turn t_2}
+{\Gamma -\{t_1\} \turn t_1 \imp t_2}
 \]
 \begin{itemize}
 \item Where $\Gamma -\{t_1\}$ is the set subtraction of $\{t_1\}$
@@ -271,9 +263,8 @@ from $\Gamma$.
 \subsubsection*{Modus Ponens [{\small\tt
 MP}]}\index{MP@\ml{MP}}\index{Modus Ponens, in HOL logic@Modus Ponens, in \HOL{} logic!abstract form of}
 \[
-\Gamma_1 \turn t_1 \imp t_2  \qquad\qquad   \Gamma_2\turn t_1
-\over
-\Gamma_1 \cup \Gamma_2 \turn t_2
+\frac{\Gamma_1 \turn t_1 \imp t_2  \qquad\qquad   \Gamma_2\turn t_1}
+{\Gamma_1 \cup \Gamma_2 \turn t_2}
 \]
 
 In addition to these eight rules, there are also five {\it
@@ -1497,7 +1488,7 @@ $\cal U$. So defining
 \[
 S(X\!s) = \left\{\hspace{-1mm}
 \begin{array}{ll}
-\{y\in\den{\alpha\!s.\sigma}_{M}\, :\,\den{\alpha\!s,.p}(X\!s)(y)=1\}
+\{y\in\den{\alpha\!s.\sigma}_{M} : \den{\alpha\!s,.p}(X\!s)(y)=1\}
   & \mbox{\rm if $\den{\alpha\!s,.\gamma}_M(X\!s,X\!s')=1$, some $X\!s'$}\\
 1 & \mbox{\rm otherwise}
 \end{array}

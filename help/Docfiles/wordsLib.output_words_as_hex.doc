@@ -1,0 +1,24 @@
+\DOC 
+
+\TYPE {output_words_as_hex : unit -> unit}
+
+\SYNOPSIS
+
+Makes word literals pretty-print as hexadecimal.
+
+\DESCRIBE
+
+A call to {output_words_as_bin} will make word literals output in hexadecimal format.
+
+\EXAMPLE
+{
+- wordsLib.output_words_as_hex();
+- EVAL ``44w : word32 << 3``
+> val it = |- 0x2Cw << 3 = 0x160w : thm
+}
+
+\SEEALSO
+
+wordsLib.output_words_as, wordsLib.output_words_as_dec, wordsLib.output_words_as_bin, wordsLib.output_words_as_oct
+
+\ENDDOC

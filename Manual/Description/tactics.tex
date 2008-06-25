@@ -508,11 +508,11 @@ To simplify the use of tactics there are three standard functions
 \index{TAC_PROOF@\ml{TAC\_PROOF}|pin}
 \index{prove_thm@\ml{prove\_thm}|pin}
 \index{PROVE@\ml{PROVE}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    TAC_PROOF : (goal * tactic) -> thm
    store_thm : (string * term * tactic) -> thm
    prove     : (term * tactic) -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent \ml{TAC\_PROOF} takes a goal and a tactic, and applies the
 tactic to the goal; the goal can have assumptions.  Executing
@@ -548,10 +548,10 @@ It should be recalled that the \ML{} type \ml{thm\_tactic} abbreviates
 \subsection{Acceptance of a theorem}
 
 
-\begin{boxed}\index{ACCEPT_TAC@\ml{ACCEPT\_TAC}|pin}
+\begin{holboxed}\index{ACCEPT_TAC@\ml{ACCEPT\_TAC}|pin}
 \begin{verbatim}
    ACCEPT_TAC : thm_tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 
@@ -582,9 +582,9 @@ by \ml{T} (see Section~\ref{avra_thenl}).
 \subsection{Adding an assumption}
 
 \index{ASSUME_TAC@\ml{ASSUME\_TAC}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    ASSUME_TAC : thm_tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 
@@ -608,9 +608,9 @@ with definitions or previously proved theorems.
 \subsection{Specialization}\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!tactics for}
 
 \index{GEN_TAC@\ml{GEN\_TAC}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    GEN_TAC : tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 
@@ -640,9 +640,9 @@ applies {\small\verb%GEN_TAC%} to universally quantified goals.
 \subsection{Conjunction}
 
 \index{CONJ_TAC@\ml{CONJ\_TAC}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    CONJ_TAC : tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 
@@ -670,9 +670,9 @@ $t_1\ \ \ \ \ \ t_2$
 
 \index{implication, in HOL logic@implication, in \HOL{} logic!tactics for}
 \index{DISCH_TAC@\ml{DISCH\_TAC}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    DISCH_TAC : tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 
@@ -701,9 +701,9 @@ $v$ under the assumption.
 \subsection{Combined simple decompositions}
 
 \index{STRIP_TAC@\ml{STRIP\_TAC}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    STRIP_TAC : tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 
@@ -725,9 +725,9 @@ until it fails (see Section~\ref{avra_repeat}).
 \subsection{Substitution}
 
 \index{SUBST_TAC@\ml{SUBST\_TAC}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    SUBST_TAC : thm list -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 
@@ -749,9 +749,9 @@ or would loop.
 \index{case analysis, in HOL logic@case analysis, in \HOL{} logic!tactics for|(}
 
 \index{ASM_CASES_TAC@\ml{ASM\_CASES\_TAC}|(}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    ASM_CASES_TAC : term -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 
@@ -774,12 +774,12 @@ $\{u\}t\ \ \ \ \ \{${\small\verb%~%}$u\}t$
 \subsection{Case analysis on a disjunction}
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{DISJ_CASES_TAC@\ml{DISJ\_CASES\_TAC}|pin}
 \index{disjunction, in HOL logic@disjunction, in \HOL{} logic!tactic for case splits on}
 \begin{verbatim}
    DISJ_CASES_TAC : thm_tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 
@@ -816,11 +816,11 @@ the theorem {\small\verb%|- !t. t \/ ~t%}.
 \label{rewrite}
 
 \index{rewriting!main tactic for|(}
-\begin{boxed}
+\begin{holboxed}
 \index{REWRITE_TAC@\ml{REWRITE\_TAC}|pin}
 \begin{verbatim}
    REWRITE_TAC : thm list -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 \begin{itemize}
@@ -873,9 +873,9 @@ the standard rewrites.
 
 \index{implication, in HOL logic@implication, in \HOL{} logic!tactics for}
 \index{IMP_RES_TAC@\ml{IMP\_RES\_TAC}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    IMP_RES_TAC : thm -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 
@@ -935,9 +935,9 @@ tactics can use these new results.
 \subsection{Identity}
 
 \index{ALL_TAC@\ml{ALL\_TAC}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    ALL_TAC : tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 \index{identity tactic}\index{tactics!identity for}
@@ -963,9 +963,9 @@ tactic required.
 \subsection{Null}
 
 \index{NO_TAC@\ml{NO\_TAC}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    NO_TAC : tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 \item{\bf Summary:} Tactic that always fails.
@@ -977,12 +977,12 @@ tactic required.
 \subsection{Splitting logical equivalences}
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{EQ_TAC@\ml{EQ\_TAC}|pin}
 \index{equality, in HOL logic@equality, in \HOL{} logic!tactic for splitting}
 \begin{verbatim}
    EQ_TAC : tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 
@@ -1011,12 +1011,12 @@ $u\ \ml{==>}\ v\ \ \ \ \ v\ \ml{==>}\ u$
 \subsection{Solving existential goals}
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{EXISTS_TAC@\ml{EXISTS\_TAC}|pin}
 \index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!tactic for}
 \begin{verbatim}
    EXISTS_TAC : term -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{itemize}
 
@@ -1070,9 +1070,9 @@ For a complete list of the tacticals in \HOL{} see \REFERENCE.
 \subsection{Alternation}\index{alternation!of tactics|(}\index{tactics!alternation of}
 
 \index{ORELSE@\ml{ORELSE}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    ORELSE : tactic -> tactic -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 The tactical {\small\verb%ORELSE%}
@@ -1092,9 +1092,9 @@ as a curried infix by
 \subsection{First success}
 
 \index{FIRST@\ml{FIRST}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    FIRST : tactic list -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 The tactical \ml{FIRST} applies the first tactic, in a list
 of tactics, that succeeds.
@@ -1108,9 +1108,9 @@ of tactics, that succeeds.
 \subsection{Change detection}
 
 \index{CHANGED_TAC@\ml{CHANGED\_TAC}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    CHANGED_TAC : tactic -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 \ml{CHANGED\_TAC\ $T$\ $g$} fails if the subgoals
@@ -1134,10 +1134,10 @@ denote the same set (\ie\ contain the same elements).
 \index{tactics!sequencing of|(}
 \index{THEN@\ml{THEN}!ML implementation of@\ML{} implementation of|(}
 
-\begin{boxed}\index{THEN@\ml{THEN}|pin}
+\begin{holboxed}\index{THEN@\ml{THEN}|pin}
 \begin{verbatim}
    THEN : tactic -> tactic -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 The tactical {\small\verb%THEN%} is an \ML{} infix. If $T_1$ and $T_2$ are tactics,
@@ -1313,9 +1313,9 @@ achieving \ml{flat $gll$}, returns a theorem
 \subsection{Selective sequencing}
 
 \index{THENL@\ml{THENL}}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    THENL : tactic -> tactic list -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 \label{avra_thenl}
 
 \index{selective sequencing tactical}
@@ -1345,11 +1345,11 @@ Here is the definition of \ml{THENL}:
 
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{EVERY, the ML function@\ml{EVERY}, the \ML{} function|pin}
 \begin{verbatim}
    EVERY : tactic list -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \index{tacticals!for successive application}
 \index{successive application!tactical for}
@@ -1364,10 +1364,10 @@ The tactical \ml{EVERY} applies a list of tactics one after the other.
 
 \subsection{Repetition}
 
-\begin{boxed}\index{REPEAT@\ml{REPEAT}|pin}
+\begin{holboxed}\index{REPEAT@\ml{REPEAT}|pin}
 \begin{verbatim}
    REPEAT : tactic -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 \label{avra_repeat}
 
 If $T$ is a
@@ -1484,9 +1484,9 @@ from the assumption `stack',
 is illustrated using its main tool: the tactical \ml{POP\_ASSUM}.
 
 \index{POP_ASSUM@\ml{POP\_ASSUM}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    POP_ASSUM : (thm -> tactic) -> tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent Given a function $f$\ml{:thm -> tactic}, the tactic
 \ml{POP\_ASSUM}\ $f$ applies $f$ to the (assumed) first
@@ -1509,9 +1509,9 @@ The use of \ml{POP\_ASSUM}\ can be illustrated by applying it
 to a particular tactic, namely \ml{DISCH\_TAC} (Section~\ref{avradisch}).
 
 \index{DISCH_TAC@\ml{DISCH\_TAC}}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    DISCH_TAC : tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent On a goal whose conclusion is an implication $u \imp v$,
 \ml{DISCH\_TAC} reflects the natural strategy of attempting to prove
@@ -1538,9 +1538,9 @@ as a simple substitution, the tactic \ml{SUBST1\_TAC} is useful
 
 
 \index{SUBST1_TAC@\ml{SUBST1\_TAC}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    SUBST1_TAC : thm_tactic
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent \ml{SUBST1\_TAC} expects a theorem with an equational conclusion, and
 substitutes accordingly, into the conclusion of the goal. At this
@@ -2091,9 +2091,9 @@ Some of these do convenient inferences for the user.
 For example:
 
 \index{CHOOSE_THEN@\ml{CHOOSE\_THEN}|pin}
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    CHOOSE_THEN : thm_tactical
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent Where \ml{thm\_tactical} abbreviates
 {\small\verb%thm_tactic -> tactic%}.

@@ -1,0 +1,103 @@
+# This file specifies the sequence of directories that the build
+# program builds, after first building the kernel.  Each non-comment,
+# non-blank line specifies a directory which will be visited by the
+# build program.  Directories that are not absolute are interpreted
+# with respect to the root of the HOL directory. Build is
+# special-cased so that some directories are treated differently, but
+# the default behaviour is that in each, it will call Holmake --qof.
+
+# Comments can be added; all text on a line after a # symbol is
+# ignored.  Similarly blank lines are ignored.  If you are going to
+# edit this file, be aware that it does not record various
+# dependencies between the directories.  If dir1 is earlier than dir2,
+# then dir1 can not depend on dir2, but if dir1 is later than dir2,
+# then it may or may not depend on dir2.
+
+# if a directory name is preceded by an !, then it will only be built
+# if the -selftest flag is passed to Holmake, and the object files
+# that it builds will not be transferred to the sigobj directory.  If
+# there is more than one ! then the number of them indicates the level
+# of -selftest required in order to get that directory to be built at
+# all.  (If -selftest appears on its own, then that's level 1.  If you
+# write -selftest 2, that's level 2, which means directories with 2 !s
+# will get tested.)
+
+tools/mlyacc/mlyacclib
+# these three directories are required to even run hol.bare.unquote
+src/parse
+src/bool
+src/proofman
+bin/hol.bare
+
+src/emit
+src/compute/src
+src/HolSat/sat_solvers/minisat
+src/HolSat/sat_solvers/zc2hs
+src/HolSat
+src/taut
+src/marker
+src/q
+src/combin
+src/lite
+src/refute
+src/simp/src
+src/metis
+src/meson/src
+src/basicProof
+src/relation
+src/pair/src
+src/sum
+src/tfl/src
+src/one
+src/option
+src/num/theories
+src/num/reduce/src
+src/num/arith/src
+src/num/termination
+src/num/extra_theories
+src/num
+src/IndDef
+src/pred_set/src
+src/datatype/equiv
+src/datatype/record
+src/datatype
+src/list/src
+src/datatype/inftree
+src/unwind
+src/boss
+# Up to this point is needed for hol.unquote (which loads bossLib).
+# (Maybe unwind could be omitted).
+bin/hol
+
+!examples/RSA
+src/sort
+src/string
+src/res_quan/src
+src/quotient/src
+!src/quotient/examples
+src/finite_map
+!examples/ind_def
+src/bag
+src/n-bit
+!examples/ARM/arm6-verification
+!!examples/ARM/arm6-verification/correctness
+src/llist
+src/ring/src
+src/integer
+src/hol88
+!src/quotient/examples/lambda
+!src/quotient/examples/sigma
+src/real
+src/prob
+!examples/muddy/muddyC
+!examples/muddy
+!examples/HolBdd
+!!examples/HolCheck
+src/temporal/src
+src/temporal/smv.2.4.3
+src/rational
+src/path
+!examples/lambda
+src/Boolify/src
+src/float
+!!examples/miller

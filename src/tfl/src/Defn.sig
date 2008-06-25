@@ -3,7 +3,7 @@ sig
   include Abbrev
 
   type thry   = TypeBasePure.typeBase
-  type proofs = GoalstackPure.proofs
+  type proofs = Manager.proofs
   type absyn  = Absyn.absyn
   type pattern = Functional.pattern
 

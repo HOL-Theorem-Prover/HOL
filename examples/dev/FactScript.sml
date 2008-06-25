@@ -12,7 +12,7 @@
 (*  For working interactively
 quietdec := true;
 loadPath :="dff" :: !loadPath;
-map load  ["compile","vsynth"];
+app load  ["compile","vsynth"];
 open arithmeticTheory pairLib pairTheory PairRules combinTheory
      devTheory composeTheory compileTheory compile vsynth;
 infixr 3 THENR;

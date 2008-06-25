@@ -460,7 +460,10 @@ but it could look like
             THEN EXISTS_TAC r
             THEN ASM_REWRITE_TAC[])
 
-        fun DISCH_ONE th = DISCH (hd (hyp th)) th
+        fun DISCH_EQN th =
+            case List.find is_eq (hyp th) of
+              SOME t => DISCH t th
+            | NONE => raise Fail "quotient.DISCH_EQN: This should never happen"
         fun DISCH_ALL_REV th = foldr (fn (a,th) => DISCH a th) th (hyp th)
 
         val cty_ABS_11 =
@@ -474,7 +477,7 @@ but it could look like
                                  y |-> UNDISCH (SPEC r'tm th2)]
                                 (mk_eq{lhs=x, rhs=y})
                                 th1
-                val th4 = DISCH_ONE th3
+                val th4 = DISCH_EQN th3
                 val th5 = DISCH_ALL (AP_TERM cty_ABS (ASSUME req))
             in
                 GENL[r,r'tm] (DISCH_ALL_REV (IMP_ANTISYM_RULE th4 th5))
@@ -516,7 +519,8 @@ but it could look like
             (GEN atm o
              REWRITE_RULE[ABS_REP] o
              CHOOSE (r, SPEC atm ty_REP_REL) o
-             UNDISCH o CONV_RULE (REWR_CONV AND_IMP_INTRO) o DISCH_ALL o
+             UNDISCH o CONV_RULE (REWR_CONV AND_IMP_INTRO) o
+             DISCH_ALL o DISCH_EQN o
              REWRITE_RULE[SYM inst] o
              REWRITE_RULE[UNDISCH (SPEC r ty_REL_SELECT_REL)] o
              REWRITE_RULE[inst])

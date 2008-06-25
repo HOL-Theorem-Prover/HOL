@@ -9,7 +9,7 @@ struct
 
 type simpset = simpLib.simpset;
 
-open HolKernel boolLib labelLib;
+open HolKernel boolLib markerLib;
 
 val op++ = simpLib.++;
 val op&& = simpLib.&&;
@@ -68,7 +68,6 @@ fun orient th =
          end
  end;
 
-
 fun VSUBST_TAC tm = UNDISCH_THEN tm (SUBST_ALL_TAC o orient);
 
 fun var_eq tm =
@@ -91,6 +90,8 @@ fun grab P f v =
 
 fun ASSUM_TAC f P = W (fn (asl,_) => grab P f NO_TAC asl)
 
+val VAR_EQ_TAC = ASSUM_TAC VSUBST_TAC var_eq;
+
 fun ASSUMS_TAC f P = W (fn (asl,_) =>
   case filter P asl
    of []     => NO_TAC
@@ -100,8 +101,6 @@ fun CONCL_TAC f P = W (fn (_,c) => if P c then f else NO_TAC);
 
 fun LIFT_SIMP ss tm =
   UNDISCH_THEN tm (STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []);
-
-val VAR_EQ_TAC = ASSUM_TAC VSUBST_TAC var_eq;
 
 local
   fun DTHEN ttac = fn (asl,w) =>
@@ -157,7 +156,7 @@ val IMP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] (SPEC_ALL IMP_CONG)
 
 fun ABBREV_CONV tm = let
   val t = rand tm
-  val (l, r) = dest_eq t
+  val (l,r) = dest_eq t
 in
   if not (is_var l) orelse is_var r then
     REWR_CONV markerTheory.Abbrev_def THENC
@@ -172,11 +171,14 @@ val ABBREV_ss =
                                 trace = 2, name = "ABBREV_CONV"}],
                       dprocs = [], filter = NONE, rewrs = []}
 
-fun LET_ELIM_TAC goal = let
-  open simpLib pureSimps boolSimps
-  (* two successive calls to SIMP_TAC ensure that the LET_FORALL_ELIM
-     theorem is applied after all the movement is possible *)
-in
+(*---------------------------------------------------------------------------*)
+(* The staging of first two successive calls to SIMP_CONV ensure that the    *)
+(* LET_FORALL_ELIM theorem is applied after all the movement is possible.    *)
+(*---------------------------------------------------------------------------*)
+
+fun LET_ELIM_TAC goal = 
+ let open simpLib pureSimps boolSimps
+ in
   CONV_TAC
     (QCHANGED_CONV
        (SIMP_CONV pure_ss (!let_movement_thms) THENC
@@ -184,8 +186,8 @@ in
                            combinTheory.literal_case_FORALL_ELIM ::
                            !let_movement_thms) THENC
         SIMP_CONV (pure_ss ++ ABBREV_ss ++ UNWIND_ss) [Cong IMP_CONG'])) THEN
-  REPEAT BOSS_STRIP_TAC
-end goal
+  REPEAT BOSS_STRIP_TAC THEN markerLib.REABBREV_TAC
+ end goal
 
 fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
 
@@ -235,13 +237,13 @@ fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
 
 fun tyinfol() = TypeBasePure.listItems (TypeBase.theTypeBase());
 
-fun hash_const c = Polyhash.hash (#Name(dest_thy_const c));
-
 fun mkCSET () =
- let val CSET = Polyhash.mkTable (hash_const, uncurry same_const)
-                                 (31, ERR "CSET" "not found")
-     val inCSET = Option.isSome o Polyhash.peek CSET
-     fun addCSET c = Polyhash.insert CSET (c,c)
+ let val CSET =
+         ref (HOLset.empty (inv_img_cmp (fn {Thy,Name,Ty} =>(Thy,Name))
+                                        (pair_compare(String.compare,
+                                                      String.compare))))
+     fun inCSET t = HOLset.member(!CSET, dest_thy_const t)
+     fun addCSET c = (CSET := HOLset.add(!CSET, dest_thy_const c))
      val _ = List.app
                (List.app addCSET o TypeBasePure.constructors_of) (tyinfol())
      fun constructed tm =
@@ -279,11 +281,13 @@ fun PRIM_STP_TAC ss finisher =
         LET_ELIM_TAC might not have this problem... *)
      val do_lets = (simpLib.SIMP_CONV ss [] leave_lets_var ; false)
                    handle Conv.UNCHANGED => true
-     val LET_ELIM_TAC = if do_lets then
-                          (fn g as (asl, w) => if can (find_term is_let) w then
-                                                 LET_ELIM_TAC g
-                                               else NO_TAC g)
-                        else NO_TAC
+     val LET_ELIM_TAC =
+        if do_lets then
+          (fn g as (_,w) =>
+                if can (find_term is_let) w
+                   then LET_ELIM_TAC g
+                   else NO_TAC g)
+        else NO_TAC
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
      THEN REPEAT VAR_EQ_TAC
@@ -303,7 +307,7 @@ fun PRIM_STP_TAC ss finisher =
     PRIM_NORM_TAC: preliminary attempt at keeping the goal in a
     fully constructor-reduced format. The idea is that there should
     be no equations between constructor terms anywhere in the goal.
-    (This is what PRIM_STP_TAC does.)
+    (This is what PRIM_STP_TAC already does.)
 
     Also, no conditionals should occur in the resulting goal.
     This seems to be an expensive test, especially since the work
@@ -328,7 +332,6 @@ fun SPLIT_SIMP simp = TRY IF_CASES_TAC THEN simp ;
 fun PRIM_NORM_TAC ss =
  let val has_constr_eqn = mkCSET()
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
-(*     val IfCases =  *)
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
      THEN REPEAT VAR_EQ_TAC
@@ -341,7 +344,8 @@ fun PRIM_NORM_TAC ss =
                ORELSE ASSUM_TAC (LIFT_SIMP ss) breakable
                ORELSE CONCL_TAC ASM_SIMP has_constr_eqn
                ORELSE ASSUM_TAC (LIFT_SPLIT_SIMP ss ASM_SIMP) splittable
-               ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) splittable))
+               ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) splittable
+               ORELSE LET_ELIM_TAC))
   end
 
 
@@ -354,10 +358,11 @@ fun PRIM_NORM_TAC ss =
 fun STP_TAC ss finisher
   = PRIM_STP_TAC (rev_itlist add_simpls (tyinfol()) ss) finisher
 
-fun RW_TAC ss thl = Q.ABBRS_THEN (fn thl => STP_TAC (ss && thl) NO_TAC) thl
+fun RW_TAC ss thl = markerLib.ABBRS_THEN 
+                     (fn thl => STP_TAC (ss && thl) NO_TAC) thl
 
 fun NORM_TAC ss thl =
-    Q.ABBRS_THEN
+    markerLib.ABBRS_THEN
       (fn thl => PRIM_NORM_TAC (rev_itlist add_simpls (tyinfol()) (ss && thl)))
       thl
 
@@ -393,7 +398,7 @@ fun augment_srw_ss ssdl =
     else
       pending_updates := !pending_updates @ ssdl;
 
-fun update_fn tyi = 
+fun update_fn tyi =
   augment_srw_ss ([tyi_to_ssdata tyi] handle HOL_ERR _ => [])
 
 val () =
@@ -404,10 +409,10 @@ fun srw_ss () = initialise_srw_ss();
 fun SRW_TAC ssdl thl = let
   val ss = foldl (fn (ssd, ss) => ss ++ ssd) (srw_ss()) ssdl
 in
-  Q.ABBRS_THEN (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC) thl
+  markerLib.ABBRS_THEN (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC) thl
 end;
 
-val Abbr = markerLib.Abbr
+val Abbr = markerSyntax.Abbr
 
 (*---------------------------------------------------------------------------
        Make some additions to the srw_ss persistent

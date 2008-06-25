@@ -14,13 +14,14 @@
 structure arithmeticScript =
 struct
 
-open HolKernel boolLib Parse Prim_rec simpLib boolSimps metisLib;
-open BasicProvers
-
-
 (* interactive use:
+
    app load ["prim_recTheory", "Q", "metisLib", "boolSimps"];
 *)
+
+open HolKernel boolLib Parse 
+     Prim_rec simpLib boolSimps metisLib BasicProvers;
+
 
 val _ = new_theory "arithmetic";
 
@@ -470,7 +471,6 @@ val ADD1 = store_thm ("ADD1",
     REWRITE_TAC [ADD_CLAUSES, ONE],
     ASM_REWRITE_TAC [] THEN REWRITE_TAC [ONE, ADD_CLAUSES]
   ]);
-
 
 val SUC_SUB1 = store_thm("SUC_SUB1",
    --`!m. SUC m - 1 = m`--,
@@ -2559,7 +2559,7 @@ val DIV_MOD_MOD_DIV = store_thm(
   ASM_REWRITE_TAC [] THEN DISCH_THEN (Q.SPEC_THEN `m` STRIP_ASSUME_TAC) THEN
   Q.ABBREV_TAC `q = m DIV (n * k)` THEN
   Q.ABBREV_TAC `r = m MOD (n * k)` THEN
-  Q.RM_ALL_ABBREVS_TAC THEN
+  markerLib.RM_ALL_ABBREVS_TAC THEN
   ASM_REWRITE_TAC [] THEN
   Q.SUBGOAL_THEN `q * (n * k) = (q * k) * n` SUBST1_TAC THENL [
     SIMP_TAC bool_ss [AC MULT_ASSOC MULT_COMM],

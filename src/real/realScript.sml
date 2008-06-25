@@ -2,7 +2,6 @@
 (* Develop the theory of reals                                               *)
 (*---------------------------------------------------------------------------*)
 
-
 structure realScript =
 struct
 
@@ -18,7 +17,6 @@ app load ["numLib",
           "jrhUtils",
           "realaxTheory"];
 *)
-
 
 open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      arithmeticTheory numTheory prim_recTheory whileTheory
@@ -3653,8 +3651,8 @@ val NUM_FLOOR_EQNS = store_thm(
   SRW_TAC [][NUM_FLOOR_def] THEN LEAST_ELIM_TAC THENL [
     SIMP_TAC (srw_ss()) [real_gt, REAL_LT] THEN
     CONJ_TAC THENL
-     [Q.EXISTS_TAC`n` THEN RW_TAC old_arith_ss [],
-      Cases_on `n'` THEN FULL_SIMP_TAC old_arith_ss []
+     [Q.EXISTS_TAC `n` THEN RW_TAC old_arith_ss [],
+      Cases THEN FULL_SIMP_TAC old_arith_ss []
         THEN STRIP_TAC
         THEN Q.PAT_ASSUM `$! M` (MP_TAC o Q.SPEC `n''`)
         THEN RW_TAC old_arith_ss []],

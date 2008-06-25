@@ -832,10 +832,12 @@ end
      Making temporary and persistent changes to the grammars.
  ---------------------------------------------------------------------------*)
 
-val grm_updates = ref [] : (string * string) list ref;
+val grm_updates = ref [] : (string * string * term option) list ref;
 
-fun update_grms fname p = grm_updates := (p :: !grm_updates);
+fun pending_updates() = !grm_updates
 
+fun update_grms fname (x,y) = grm_updates := ((x,y,NONE) :: !grm_updates);
+fun full_update_grms (x,y,opt) = grm_updates := ((x,y,opt) :: !grm_updates)
 
 (* kinds *)
 
@@ -961,13 +963,15 @@ end;
 fun type_abbrev (s, ty) = let
 in
   temp_type_abbrev (s, ty);
-  update_grms "type_abbrev"
-              ("temp_type_abbrev",
-               String.concat ["(", mlquote s, ", ",
-                              PP.pp_to_string (!Globals.linewidth)
-                                              (TheoryPP.pp_type "U" "R" "T" "O" "P" "B" "N")
-                                              ty,
-                              ")"])
+  full_update_grms ("temp_type_abbrev",
+                    String.concat ["(", mlquote s, ", ",
+                                   PP.pp_to_string (!Globals.linewidth)
+                                                   (TheoryPP.pp_type "U" "R" "T" "O" "P" "B" "N")
+                                                   ty,
+                                   ")"],
+                    if kind_of ty <> typ then NONE else
+                    SOME (mk_thy_const{Name = "ARB", Thy = "bool", Ty = ty})
+                   )
 end;
 
 fun temp_disable_tyabbrev_printing s = let
@@ -1309,10 +1313,52 @@ end
 
 fun overload_on_by_nametype s (r as {Name, Thy}) = let in
    temp_overload_on_by_nametype s r;
-   update_grms "overload_on_by_nametype"
-               ("(temp_overload_on_by_nametype "^quote s^")",
-                String.concat
-                  [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"])
+   full_update_grms
+     ("(temp_overload_on_by_nametype "^quote s^")",
+      String.concat
+        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"],
+      SOME (prim_mk_const r)
+     )
+ end
+
+fun temp_send_to_back_overload s {Name, Thy} = let
+  open term_grammar
+in
+  the_term_grammar :=
+    fupdate_overload_info
+    (Overload.send_to_back_overloading {opname=s, realname=Name, realthy=Thy})
+    (term_grammar());
+  term_grammar_changed := true
+end
+
+fun send_to_back_overload s (r as {Name, Thy}) = let in
+   temp_send_to_back_overload s r;
+   full_update_grms
+     ("(temp_send_to_back_overload "^quote s^")",
+      String.concat
+        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"],
+      SOME (prim_mk_const r)
+     )
+ end
+
+fun temp_bring_to_front_overload s {Name, Thy} = let
+  open term_grammar
+in
+  the_term_grammar :=
+    fupdate_overload_info
+    (Overload.bring_to_front_overloading {opname=s, realname=Name, realthy=Thy})
+    (term_grammar());
+  term_grammar_changed := true
+end
+
+fun bring_to_front_overload s (r as {Name, Thy}) = let in
+   temp_bring_to_front_overload s r;
+   full_update_grms
+     ("(temp_bring_to_front_overload "^quote s^")",
+      String.concat
+        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"],
+      SOME (prim_mk_const r)
+     )
  end
 
 fun temp_overload_on (s, t) =
@@ -1582,7 +1628,6 @@ in
   | plist => map grm_string plist
  end;
 
-
 local fun sig_addn s = String.concat
        ["val ", s, "_grammars : type_grammar.grammar * term_grammar.grammar"]
       open Portable
@@ -1593,7 +1638,7 @@ in
     HOL_WARNING "Parse" "setup_grammars"
                 ("\"new_theory\" is throwing away grammar changes for "^
                  "theory "^oldname^":\n"^
-                 String.concat (map (fn (s1, s2) => s1 ^ " - " ^ s2 ^ "\n")
+                 String.concat (map (fn (s1, s2, _) => s1 ^ " - " ^ s2 ^ "\n")
                                     (!grm_updates)))
   else ();
   grm_updates := [];
@@ -1610,21 +1655,25 @@ in
                pr_list pfun (fn () => add_string ",")
                             (fn () => add_break(0,0))  L;
             EB(); add_string "]"; EB())
-         fun pp_update(f,x) =
-            (B 5;
-               add_string "val _ = update_grms"; add_break(1,0);
-               add_string f; add_break(1,0);
-               B 0; add_string x;  (* can be more fancy *)
-               EB(); EB())
+         fun pp_update(f,x,topt) =
+             if isSome topt andalso
+                not (Theory.uptodate_term (valOf topt))
+             then ()
+             else
+               (B 5;
+                add_string "val _ = update_grms"; add_break(1,0);
+                add_string f; add_break(1,0);
+                B 0; add_string x;  (* can be more fancy *)
+                EB(); EB())
          fun pp_pair f1 f2 (x,y) =
               (B 0; add_string"(";
                     B 0; f1 x;
                          add_string",";add_break(0,0);
                          f2 y;
                     EB(); add_string")"; EB())
-         val (names,rules) = partition (equal"reveal" o fst)
+         val (names,rules) = partition (equal"reveal" o #1)
                                 (List.rev(!grm_updates))
-         val reveals = map snd names
+         val reveals = map #2 names
          val _ = grm_updates := []
      in
        B 0;

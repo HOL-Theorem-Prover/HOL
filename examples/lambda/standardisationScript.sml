@@ -57,7 +57,7 @@ val ihr_bvc_ind = store_thm(
   HO_MATCH_MP_TAC is_head_redex_ind THEN
   SRW_TAC [][is_head_redex_rules] THENL [
     Q.MATCH_ABBREV_TAC `P [] (LAM vv MM @@ NN)` THEN
-    Q.RM_ALL_ABBREVS_TAC THEN
+    markerLib.RM_ALL_ABBREVS_TAC THEN
     Q_TAC (NEW_TAC "z") `FV MM UNION FV NN UNION X` THEN
     `LAM vv MM = LAM z (tpm [(z,vv)] MM)` by SRW_TAC [][tpm_ALPHA] THEN
     SRW_TAC [][],

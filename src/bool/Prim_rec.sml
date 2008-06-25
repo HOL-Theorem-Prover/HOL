@@ -405,7 +405,7 @@ fun num_variant vlist v =
       fun pass str =
          if (mem str (!slist))
          then ( counter := !counter + 1;
-                pass (Lib.concat Name (Lib.int_to_string(!counter))))
+                pass (Lib.strcat Name (Lib.int_to_string(!counter))))
          else (slist := str :: !slist; str)
   in
   mk_var(pass Name, Ty)

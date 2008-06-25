@@ -11,7 +11,7 @@
 (*                 July, 2000, Konrad Slind                              *)
 (* ===================================================================== *)
 
-structure Type : RawType =
+structure Type :> Type =
 struct
 
 (*
@@ -42,11 +42,7 @@ val WARN = HOL_WARNING "Type";
               Create the signature for HOL types
  ---------------------------------------------------------------------------*)
 
-structure TypeSig =
-  SIG(type ty = KernelTypes.tyconst
-      fun key (r,_,_) = r
-      val ERR = ERR
-      val table_size = 311);
+val typesig = KernelSig.new_table()
 
 (*
 val _ = installPP pp_kind;
@@ -83,19 +79,24 @@ arity_of k4; (* should fail *)
  * signature, and it is convenient to nail them down here.                   *
  *---------------------------------------------------------------------------*)
 
-local open TypeSig
+local open KernelSig
 in
-val INITIAL{const=fun_tyc,...}  = insert (mk_id("fun",  "min"), mk_arity 2, 0);
-val INITIAL{const=bool_tyc,...} = insert (mk_id("bool", "min"), mk_arity 0, 0);
-val INITIAL{const=ind_tyc,...}  = insert (mk_id("ind",  "min"), mk_arity 0, 0);
-end;
+val fun_tyid  = insert(typesig, {Thy = "min", Name = "fun"},  (mk_arity 2:kind, 0))
+val bool_tyid = insert(typesig, {Thy = "min", Name = "bool"}, (mk_arity 0, 0))
+val ind_tyid  = insert(typesig, {Thy = "min", Name = "ind"},  (mk_arity 0, 0))
+val fun_tyc  = ( fun_tyid, mk_arity 2, 0)
+val bool_tyc = (bool_tyid, mk_arity 0, 0)
+val ind_tyc  = ( ind_tyid, mk_arity 0, 0)
+end
 
 (* For testing:
 
 local open TypeSig
 in
-val INITIAL{const=foo_tyc,...} = insert (mk_id("foo", "min"), k3, 0);
-val INITIAL{const=bar_tyc,...} = insert (mk_id("bar", "min"), k4, 1);
+val foo_tyid  = insert(typesig, {Thy = "min", Name = "foo"},  (k3, 0))
+val bar_tyid  = insert(typesig, {Thy = "min", Name = "bar"},  (k4, 1))
+val foo_tyc  = ( foo_tyid, k3, 0)
+val bar_tyc  = ( bar_tyid, k4, 1)
 end;
 *)
 
@@ -116,7 +117,8 @@ val bar  = TyCon bar_tyc;
        Function types
  ---------------------------------------------------------------------------*)
 
-infixr 3 -->;   fun (X --> Y) = TyApp (TyApp (TyCon fun_tyc, X), Y);
+infixr 3 -->;
+fun (X --> Y) = TyApp (TyApp (TyCon fun_tyc, X), Y);
 
 local
 fun dom_of (TyApp(TyCon tyc, Y)) =
@@ -348,7 +350,7 @@ fun type_var_compare (TyFv u, TyFv v) = tyvar_compare (u,v)
   | type_var_compare _ =raise ERR "type_var_compare" "variables required";
 
 fun type_con_compare (TyCon(c1,k1,rk1), TyCon(c2,k2,rk2)) =
-       (case KernelTypes.compare (c1,c2)
+       (case KernelSig.id_compare (c1,c2)
          of EQUAL => kind_rank_compare ((k1,rk1),(k2,rk2))
           | x => x)
   | type_con_compare _ =raise ERR "type_con_compare" "constants required";
@@ -468,7 +470,11 @@ fun mk_vartype_opr ("'a", Type, 0) = alpha
 
 fun mk_vartype s = mk_vartype_opr (s, Type, 0);
 
-fun inST s = not(null(TypeSig.resolve s));
+fun inST s = let
+  fun foldthis({Thy,Name},_,acc) = (acc orelse (Name = s))
+in
+  KernelSig.foldl foldthis false typesig
+end
 
 fun mk_primed_vartype_opr (Name, Kind, Rank) =
   let val next = Lexis.tyvar_vary
@@ -568,7 +574,7 @@ fun variant_tyvar tys tyv =
  *---------------------------------------------------------------------------*)
 
 local
-fun dest_con_type (TyCon (tyc,kd,rk)) = (name_of tyc,kd,rk)
+fun dest_con_type (TyCon (tyc,kd,rk)) = (KernelSig.name_of tyc,kd,rk)
   | dest_con_type _ = raise ERR "dest_con_type" "not a constant type";
 in
 fun make_app_type Opr Arg (fnstr,name) =
@@ -595,34 +601,53 @@ fun list_make_app_type Opr Args (fnstr,name) =
 fun make_type tyc Args (fnstr,name) =
   list_make_app_type (TyCon tyc) Args (fnstr,name);
 
-fun mk_thy_type {Thy,Tyop,Args} =
- case TypeSig.lookup (Tyop,Thy)
-  of SOME{const,...} => make_type const Args ("mk_thy_type",fullname(Tyop,Thy))
-   | NONE => raise ERR "mk_thy_type"
-                ("the type operator "^quote Tyop^
-                 " has not been declared in theory "^quote Thy^".")
+fun mk_tyconst (id,(kind,rank)) = (id,kind,rank) :tyconst
 
-fun mk_thy_con_type {Thy,Tyop} =
- case TypeSig.lookup (Tyop,Thy)
-  of SOME{const,...} => TyCon const
-   | NONE => raise ERR "mk_thy_type_opr"
-                ("the type operator "^quote Tyop^
-                 " has not been declared in theory "^quote Thy^".")
-
-local fun dest (e:TypeSig.entry) =
-        let val (c,_,_) = #const e
-        in {Tyop=KernelTypes.name_of c, Thy=KernelTypes.seg_of c}  end
+fun mk_thy_type {Thy,Tyop,Args} = let
+  open KernelSig
+  val knm = {Thy=Thy, Name = Tyop}
 in
-val decls = map dest o TypeSig.resolve
-end;
+  case peek(typesig, {Thy=Thy,Name=Tyop}) of
+    SOME const => make_type (mk_tyconst const) Args
+                            ("mk_thy_type", name_toString knm)
+  | NONE => raise ERR "mk_thy_type"
+                      ("the type operator "^quote Tyop^
+                       " has not been declared in theory "^quote Thy^".")
+end
 
-fun first_decl fname Tyop =
- case TypeSig.resolve Tyop
-  of []           => raise ERR fname (Lib.quote Tyop^" has not been declared")
-   | [{const,...}] => const
-   | {const,...}::_ => (WARN fname "more than one possibility"; const)
+fun mk_thy_con_type {Thy,Tyop} = let
+  open KernelSig
+  val knm = {Thy=Thy, Name = Tyop}
+in
+  case peek(typesig,{Thy=Thy,Name=Tyop}) of
+    SOME const => TyCon (mk_tyconst const)
+  | NONE => raise ERR "mk_thy_con_type"
+                ("the type operator "^quote Tyop^
+                 " has not been declared in theory "^quote Thy^".")
+end
 
-fun mk_con_type Tyop = TyCon (first_decl "mk_con_type" Tyop);
+fun decls nm = let
+  fun foldthis({Thy,Name},_,acc) = if Name = nm then
+                                     {Tyop=Name,Thy=Thy} :: acc
+                                   else acc
+in
+  KernelSig.foldl foldthis [] typesig
+end
+
+local
+  fun first_decl Tyop = let
+    fun foldthis({Thy,Name},tycon,acc) =
+        if Name = Tyop then mk_tyconst tycon :: acc
+        else acc
+  in
+    case KernelSig.foldl foldthis [] typesig of
+      [] => raise ERR "mk_type" (Lib.quote Tyop^" has not been declared")
+    | [c] => c
+    | c::_ => (WARN "mk_type" "more than one possibility"; c)
+  end
+in
+
+fun mk_con_type Tyop = TyCon (first_decl Tyop);
 
 fun mk_app_type (Opr,Arg) = make_app_type Opr Arg ("mk_app_type","");
 
@@ -630,12 +655,8 @@ fun list_mk_app_type (Opr,Args) =
     list_make_app_type Opr Args ("list_mk_app_type","");
 
 fun mk_type (Tyop,Args) =
-  make_type (first_decl "mk_type" Tyop) Args ("mk_type",Tyop);
-
-(* currently unused *)
-fun current_tyops s =
-  map (fn {const as (id,i,rk),...} => (KernelTypes.dest_id id,i,rk))
-      (TypeSig.resolve s);
+    make_type (first_decl Tyop) Args ("mk_type",Tyop);
+end
 
 (*
 mk_con_type "fun";
@@ -655,7 +676,7 @@ val ty12 =
  * Take a (TyApp(TyCon)) type apart.                                         *
  *---------------------------------------------------------------------------*)
 
-local open KernelTypes
+local open KernelTypes KernelSig
 fun break_ty0 f acc (TyCon c) = (c,acc)
   | break_ty0 f acc (TyApp (Opr,Arg)) = break_ty0 f (Arg::acc) Opr
   | break_ty0 f _ _ = raise ERR f "not a sequence of type applications of a \
@@ -687,11 +708,11 @@ fun dest_type ty =
        end;
 end;
 
-fun dest_con_type (TyCon (tyc,kd,rk)) = (name_of tyc,kd,rk)
+fun dest_con_type (TyCon (tyc,kd,rk)) = (KernelSig.name_of tyc,kd,rk)
   | dest_con_type _ = raise ERR "dest_con_type" "not a constant type";
 
 fun dest_thy_con_type (TyCon (tyc,kd,rk)) =
-      {Thy=seg_of tyc,Tyop=name_of tyc,Kind=kd,Rank=rk}
+      {Thy=KernelSig.seg_of tyc,Tyop=KernelSig.name_of tyc,Kind=kd,Rank=rk}
   | dest_thy_con_type _ = raise ERR "dest_thy_con_type" "not a constant type";
 
 fun dest_app_type (TyApp (Opr,Ty)) = (Opr,Ty)
@@ -715,8 +736,8 @@ dest_type ty12;
  *---------------------------------------------------------------------------*)
 
 fun op_kind {Thy,Tyop} =
-    case TypeSig.lookup (Tyop,Thy) of
-      SOME {const = (id, kind, rk), ...} => SOME kind
+    case KernelSig.peek(typesig,{Thy=Thy,Name=Tyop}) of
+      SOME (id, (kind, rank)) => SOME kind
     | NONE => NONE
 
 fun op_arity r = case op_kind r
@@ -729,26 +750,27 @@ fun op_arity r = case op_kind r
  *---------------------------------------------------------------------------*)
 
 fun op_rank {Thy,Tyop} =
-    case TypeSig.lookup (Tyop,Thy) of
-      SOME {const = (id, kind, rank), ...} => SOME rank
+    case KernelSig.peek(typesig,{Thy=Thy,Name=Tyop}) of
+      SOME (id, (kind, rank)) => SOME rank
     | NONE => NONE
 
 (*---------------------------------------------------------------------------
        Declared types in a theory segment
  ---------------------------------------------------------------------------*)
 
-fun thy_types s =
-  let fun xlate {const=(id,kind,rank),witness,utd} =
-            (KernelTypes.name_of id, arity_of kind handle HOL_ERR _ =>
+fun thy_types s = let
+  fun xlate (knm, (id,(kind,rank))) =
+        (KernelSig.name_of id, arity_of kind handle HOL_ERR _ =>
                 raise ERR "thy_types" "non-arity kind in theory - use thy_type_oprs"
-            )
-  in map xlate (TypeSig.slice s)
-  end;
+        )
+in
+  map xlate (KernelSig.listThy typesig s)
+end;
 
-fun thy_type_oprs s =
-  let fun xlate {const=(id,kind,rank),witness,utd} =
-            (KernelTypes.name_of id, kind, rank)
-  in map xlate (TypeSig.slice s)
+fun thy_type_oprs s = let
+  fun xlate (knm, (id,(kind,rank))) =
+            (KernelSig.name_of id, kind, rank)
+  in map xlate (KernelSig.listThy typesig s)
   end;
 
 (*---------------------------------------------------------------------------*
@@ -1289,8 +1311,13 @@ fun RM [] theta = theta
                                   else ((v |-> ty)::tyS,Id)
                 | SOME ty' => if aconv_ty ty' ty then S1
                               else MERR "double bind on type variable")
-  | RM (((c1 as TyCon _),(c2 as TyCon _),s)::rst) tyS
-      = if c1 <> c2 then MERR "different type constants" else RM rst tyS
+  | RM (((TyCon c1),(TyCon c2),s)::rst) tyS
+      = if c1 = c2 then RM rst tyS
+        else let val n1 = KernelSig.id_toString (#1 c1)
+                 val n2 = KernelSig.id_toString (#1 c2)
+             in MERR ("attempt to match different type constants: "
+                      ^n1^" against "^n2)
+             end
   | RM ((TyApp(op1,ty1),TyApp(op2,ty2),s)::rst) tyS
       = RM (tasks [op1,ty1] [op2,ty2] s rst) tyS
   | RM ((TyAll((p as (_,a1,rk1)),M),TyAll((q as (_,a2,rk2)),N),_)::rst) tyS
@@ -1337,7 +1364,7 @@ fun qconv_ty c ty = c ty handle UNCHANGEDTY => ty
 fun rand_conv_ty conv ty = let
   val (Rator,Rand) =
     dest_app_type ty handle HOL_ERR e => raise ERR "rand_conv_ty" "not a type app"
-  val Newrand = conv ty
+  val Newrand = conv Rand
     handle HOL_ERR {origin_function, message, origin_structure} =>
       if Lib.mem origin_function
            ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty"]
@@ -1358,7 +1385,7 @@ end
 fun rator_conv_ty conv ty = let
   val (Rator,Rand) =
     dest_app_type ty handle HOL_ERR e => raise ERR "rator_conv_ty" "not a type app"
-  val Newrator = conv ty
+  val Newrator = conv Rator
     handle HOL_ERR {origin_function, message, origin_structure} =>
       if Lib.mem origin_function
            ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty"]
@@ -1546,7 +1573,7 @@ fun redepth_conv_ty conv ty =
 fun top_depth_conv_ty conv ty =
     (repeat_ty conv then_ty
      try_conv_ty (changed_conv_ty (sub_conv_ty (top_depth_conv_ty conv)) then_ty
-               try_conv_ty (conv then_ty top_depth_conv_ty conv))) ty
+                  try_conv_ty (conv then_ty top_depth_conv_ty conv))) ty
 
 fun once_depth_conv_ty conv ty =
     try_conv_ty (conv orelse_ty sub_conv_ty (once_depth_conv_ty conv)) ty
@@ -1625,7 +1652,7 @@ fun pp_raw_type pps ty =
             pp (TyFv Btyvar); add_string dot; add_break(1,0);
             pp Body; add_string ")" )
       | pp (TyApp(Rator as TyApp(TyCon(id,_,_),Rand1),Rand2)) =
-          if name_of id = "fun"
+          if KernelSig.name_of id = "fun"
           then
           ( add_string "("; pp Rand2;
             add_string " ->"; add_break(1,0);
@@ -1647,7 +1674,7 @@ fun pp_raw_type pps ty =
          ( add_string name;
            pp_kind_rank (kind,rank) )
       | pp (TyCon (id,kind,rank)) =
-         ( add_string ( (* seg_of id^dollar^ *) name_of id);
+         ( add_string ( (* seg_of id^dollar^ *) KernelSig.name_of id);
            pp_kind_rank (kind,rank) )
     and pps [] = ()
       | pps [ty] = pp ty

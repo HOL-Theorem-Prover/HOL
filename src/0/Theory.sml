@@ -175,7 +175,6 @@ fun drop_Axkind (Axiom rth) = rth
 type segment = {thid  : thyid,                                 (* unique id  *)
                 facts : (string * thmkind) list,    (* stored ax,def,and thm *)
                 con_wrt_disk : bool,                (* consistency with disk *)
-                overwritten  : bool,                   (* parts overwritten? *)
                 adjoin       : thy_addon list}         (*  extras for export *)
 
 
@@ -188,8 +187,7 @@ type segment = {thid  : thyid,                                 (* unique id  *)
  *---------------------------------------------------------------------------*)
 
 fun fresh_segment s :segment =
-   {thid=new_thyid s,  facts=[],
-    con_wrt_disk=false, overwritten=false, adjoin=[]};
+   {thid=new_thyid s,  facts=[], con_wrt_disk=false, adjoin=[]};
 
 
 local val CT = ref (fresh_segment "scratch")
@@ -216,6 +214,12 @@ fun thy_defns (th:segment)          = filter (is_defn o #2)    (#facts th)
 fun thy_addons (th:segment)         = #adjoin th
 fun thy_con_wrt_disk n (th:segment) = #con_wrt_disk th;
 
+fun stamp thyname =
+  let val (_,sec,usec) = dest_thyid (fst (Graph.first
+                          (equal thyname o thyid_name o fst)))
+  in
+    Portable.mk_time {sec = sec, usec = usec}
+  end;
 
 local fun norm_name "-" = CTname()
         | norm_name s = s
@@ -252,35 +256,27 @@ fun empty_segment ({thid,facts, ...}:segment) =
  *              ADDING TO THE SEGMENT                                        *
  *---------------------------------------------------------------------------*)
 
-fun add_type {name,theory,arity}
-             {thid,facts,con_wrt_disk,overwritten,adjoin} =
-   {thid=thid, facts=facts, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
-    overwritten = let open Type
-                  in case TypeSig.insert (mk_id(name,theory),
-                                          Kind.mk_arity arity,0)
-                      of TypeSig.INITIAL _ => overwritten
-                       | TypeSig.CLOBBER _ => true
-                  end};
+fun add_type {name,theory,arity} thy = let
+  open Type KernelSig
+in
+  insert(typesig, {Name=name,Thy=theory}, (Kind.mk_arity arity,0));
+  thy
+end
 
-fun add_type_opr {name,theory,kind,rank}
-             {thid,facts,con_wrt_disk,overwritten,adjoin} =
-   {thid=thid, facts=facts, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
-    overwritten = let open Type
-                  in case TypeSig.insert (mk_id(name,theory),kind,rank)
-                      of TypeSig.INITIAL _ => overwritten
-                       | TypeSig.CLOBBER _ => true
-                  end};
+fun add_type_opr {name,theory,kind,rank} thy = let
+  open Type KernelSig
+in
+  insert(typesig, {Name=name,Thy=theory}, (kind,rank));
+  thy
+end
 
-fun add_term {name,theory,htype}
-             {thid,facts,con_wrt_disk,overwritten,adjoin}
-  = {thid=thid,facts=facts, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
-     overwritten =
-      let open Term
-          val tykind = (if Type.polymorphic htype then POLY else GRND) htype
-      in case TermSig.insert (Const(mk_id(name,theory),tykind))
-          of TermSig.INITIAL _ => overwritten
-           | TermSig.CLOBBER _ => true
-      end};
+fun add_term {name,theory,htype} thy = let
+  open Term KernelSig
+in
+  insert(termsig, {Name=name,Thy=theory},
+         (if Type.polymorphic htype then POLY else GRND) htype);
+  thy
+end
 
 local fun pluck1 x L =
         let fun get [] A = NONE
@@ -296,16 +292,14 @@ local fun pluck1 x L =
               of Thm _ => (p::l', false)
                |  _    => (p::l', true))
 in
-fun add_fact (th as (s,_)) {thid, con_wrt_disk,facts,overwritten,adjoin}
+fun add_fact (th as (s,_)) {thid, con_wrt_disk,facts,adjoin}
   = let val (X,b) = overwrite th facts
-    in {facts=X, overwritten = overwritten orelse b,
-        thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin}
+    in {facts=X, thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin}
     end
 end;
 
-fun new_addon a {thid, con_wrt_disk, facts, overwritten, adjoin} =
-    {adjoin = a::adjoin, facts=facts, overwritten=overwritten,
-     thid=thid, con_wrt_disk=con_wrt_disk};
+fun new_addon a {thid, con_wrt_disk, facts, adjoin} =
+    {adjoin = a::adjoin, facts=facts, thid=thid, con_wrt_disk=con_wrt_disk};
 
 local fun plucky x L =
        let fun get [] A = NONE
@@ -314,38 +308,44 @@ local fun plucky x L =
        in get L []
        end
 in
-fun set_MLbind (s1,s2) (rcd as {thid, con_wrt_disk,facts, overwritten,adjoin})
+fun set_MLbind (s1,s2) (rcd as {thid, con_wrt_disk,facts, adjoin})
  = case plucky s1 facts
    of NONE => (WARN "set_MLbind"
                (Lib.quote s1^" not found in current theory"); rcd)
     | SOME (X,(_,b),Y) =>
-        {facts=X@((s2,b)::Y), overwritten=overwritten,
-         adjoin=adjoin,thid=thid, con_wrt_disk=con_wrt_disk}
+        {facts=X@((s2,b)::Y), adjoin=adjoin,thid=thid,
+         con_wrt_disk=con_wrt_disk}
 end;
 
 (*---------------------------------------------------------------------------
             Deleting from the segment
  ---------------------------------------------------------------------------*)
 
-fun del_type (name,thyname) {thid,facts,con_wrt_disk,overwritten,adjoin}
-  = {thid=thid,facts=facts, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-     overwritten = Type.TypeSig.delete (name,thyname)
-         orelse
-         (WARN "del_type" (fullname(name,thyname)^" not found");
-          overwritten)}
+fun del_type (name,thyname) thy = let
+  open Type KernelSig
+  val knm = {Name = name, Thy = thyname}
+in
+  retire_name(typesig, knm) handle KernelSig.NotFound =>
+               WARN "del_type" (name_toString knm^" not found");
+  thy
+end
 
 (*---------------------------------------------------------------------------
         Remove a constant from the signature.
  ---------------------------------------------------------------------------*)
 
-fun del_const (name,thyname) {thid,facts,con_wrt_disk,overwritten,adjoin}
- = {thid=thid,facts=facts, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-     overwritten = Term.TermSig.delete (name,thyname) orelse
-       (WARN "del_const" (fullname(name,thyname)^" not found"); overwritten)}
+fun del_const (name,thyname) thy = let
+  open Term KernelSig
+  val knm = {Name=name, Thy=thyname}
+in
+  retire_name(termsig,knm) handle KernelSig.NotFound =>
+                  WARN "del_const" (name_toString knm^" not found");
+  thy
+end
 
-fun del_binding name {thid,facts,con_wrt_disk,overwritten,adjoin} =
+fun del_binding name {thid,facts,con_wrt_disk,adjoin} =
   {facts = filter (fn (s, _) => not(s=name)) facts,
-   thid=thid, adjoin=adjoin, con_wrt_disk=con_wrt_disk, overwritten=true};
+   thid=thid, adjoin=adjoin, con_wrt_disk=con_wrt_disk};
 
 (*---------------------------------------------------------------------------
    Clean out the segment. Note: this clears out the segment, and the
@@ -353,18 +353,14 @@ fun del_binding name {thid,facts,con_wrt_disk,overwritten,adjoin} =
    still be there, with its parents.
  ---------------------------------------------------------------------------*)
 
-fun zap_segment s {thid, con_wrt_disk, facts, overwritten, adjoin} =
- let val _ = Type.TypeSig.del_segment s
-     val _ = Term.TermSig.del_segment s
- in {overwritten=false, adjoin=[], facts=[],
-     con_wrt_disk=con_wrt_disk, thid=thid}
+fun zap_segment s {thid, con_wrt_disk, facts, adjoin} =
+ let val _ = KernelSig.del_segment(Type.typesig, s)
+     val _ = KernelSig.del_segment(Term.termsig, s)
+ in {adjoin=[], facts=[], con_wrt_disk=con_wrt_disk, thid=thid}
  end;
 
-fun set_consistency b {thid, con_wrt_disk, facts, overwritten, adjoin} =
-{con_wrt_disk=b, thid=thid,facts=facts, overwritten=overwritten,adjoin=adjoin}
-;
-fun set_overwritten b {thid, con_wrt_disk, facts, overwritten, adjoin} =
-{overwritten=b,con_wrt_disk=con_wrt_disk, thid=thid,facts=facts, adjoin=adjoin}
+fun set_consistency b {thid, con_wrt_disk, facts, adjoin} =
+{con_wrt_disk=b, thid=thid,facts=facts, adjoin=adjoin}
 ;
 
 (*---------------------------------------------------------------------------
@@ -450,145 +446,105 @@ fun install_const(s,ty,thy) = add_termCT {name=s, htype=ty, theory=thy}
  * uptodate.
  *---------------------------------------------------------------------------*)
 
-local datatype constkind = TY | TM
+fun up2date_id id = KernelSig.uptodate_id id
 
-      fun dest_tm_entry NONE = NONE
-        | dest_tm_entry (SOME{const,utd,witness}) = SOME(utd,witness)
-      fun dest_ty_entry NONE = NONE
-        | dest_ty_entry (SOME{const,utd,witness}) = SOME(utd,witness)
-
-   fun init () =
-     let val thy = CTname()
-     in Type.TypeSig.anachronize thy;
-        Term.TermSig.anachronize thy
-     end
-
-   fun up2date_entry CTname (utd,witness) =
-     if !utd then true
-     else if up2date_witness CTname witness
-          then (utd := true; true)
-          else false
-
-   and up2date_id CTname id constkind =
-     if seg_of id <> CTname then true  (* not current theory *)
-     else let open Type Term
-              val entryinfo = case constkind
-                     of TY => dest_ty_entry(TypeSig.lookup (dest_id id))
-                      | TM => dest_tm_entry(TermSig.lookup (dest_id id))
-           in case entryinfo
-               of NONE => false  (* entry has been deleted *)
-                | SOME uw => up2date_entry CTname uw
-           end
-
-   and up2date_type CTname ty =
-     if Type.is_vartype ty then true
-     else if Type.is_type ty then
-          let val ((id,_,_),args) = Type.break_type ty
-          in up2date_id CTname id TY
-             andalso Lib.all (up2date_type CTname) args
-          end
-     else if Type.is_app_type ty then
-          let val (Opr,Ty) = Type.dest_app_type ty
-          in up2date_type CTname Opr
-             andalso up2date_type CTname Ty
-          end
-     else if Type.is_abs_type ty then
-          let val (Bvar,Body) = Type.dest_abs_type ty
-          in up2date_type CTname Bvar
-             andalso up2date_type CTname Body
-          end
-     else (* Type.if is_univ_type ty then *)
-          let val (Bvar,Body) = Type.dest_univ_type ty
-          in up2date_type CTname Bvar
-             andalso up2date_type CTname Body
-          end
-
-   and up2date_term CTname tm =
-     let open Term
-     in if is_const tm
-        then let val (id,ty) = break_const tm
-             in up2date_id CTname id TM
-                andalso up2date_type CTname ty
-             end
-        else case (is_var tm, is_comb tm, is_abs tm, is_tycomb tm, is_tyabs tm)
-             of (true,_,_,_,_) => up2date_type CTname (type_of tm)
-              | (_,true,_,_,_) => up2date_term CTname (rator tm) andalso
-                                  up2date_term CTname (rand tm)
-              | (_,_,true,_,_) => up2date_term CTname (bvar tm) andalso
-                                  up2date_term CTname (body tm)
-              | (_,_,_,true,_) => let val (Rator,Rand) = dest_tycomb tm
-                                  in up2date_term CTname Rator andalso
-                                     up2date_type CTname Rand
-                                  end
-              | (_,_,_,_,true) => let val (Bvar,Body) = dest_tyabs tm
-                                  in up2date_type CTname Bvar andalso
-                                     up2date_term CTname Body
-                                  end
-              | otherwise  => raise ERR "up2date_term" "unexpected case"
-     end
-
-   and up2date_thm CTname thm =
-     Lib.all (up2date_term CTname) (Thm.concl thm::Thm.hyp thm)
-       andalso
-     up2date_axioms CTname (Tag.axioms_of (Thm.tag thm))
-
-   and up2date_witness _ NONE = true
-     | up2date_witness CTname (SOME(TERM tm)) = up2date_term CTname tm
-     | up2date_witness CTname (SOME(THEOREM th)) = up2date_thm CTname th
-
-   and up2date_axioms _ [] = true
-     | up2date_axioms CTname rlist =
-        let val axs = map (drop_Axkind o snd) (thy_axioms(theCT()))
-        in Lib.all (up2date_term CTname
-                     o Thm.concl o Lib.C Lib.assoc axs) rlist
-        end handle HOL_ERR _ => false
-in
-fun uptodate_type ty =
-   if #overwritten (theCT())
-   then (init(); up2date_type (CTname()) ty) else true
+fun uptodate_type ty = let open Type in
+    if is_vartype ty then true
+    else let val ((id,_,_),args) = Type.break_type ty
+         in up2date_id id
+            andalso Lib.all uptodate_type args
+         end
+           handle HOL_ERR _ =>
+            if is_app_type ty then let
+                val (opr, arg) = dest_app_type ty
+              in
+                uptodate_type opr andalso
+                uptodate_type arg
+              end
+            else if is_abs_type ty then let
+                val (btyvar, body) = dest_abs_type ty
+              in
+                uptodate_type btyvar andalso
+                uptodate_type body
+              end
+            else if is_univ_type ty then let
+                val (btyvar, body) = dest_univ_type ty
+              in
+                uptodate_type btyvar andalso
+                uptodate_type body
+              end
+            else raise Fail "uptodate_type: this can't happen"
+    end;
 
 fun uptodate_term tm =
-   if #overwritten (theCT())
-   then (init (); up2date_term (CTname()) tm) else true
+    let open Term
+    in if is_const tm
+       then let val (id,ty) = break_const tm
+            in up2date_id id andalso uptodate_type ty
+            end
+       else case (is_var tm, is_comb tm, is_abs tm, is_tycomb tm, is_tyabs tm)
+             of (true,_,_,_,_) => uptodate_type (type_of tm)
+              | (_,true,_,_,_) => uptodate_term (rator tm) andalso
+                                  uptodate_term (rand tm)
+              | (_,_,true,_,_) => uptodate_term (bvar tm) andalso
+                                  uptodate_term (body tm)
+              | (_,_,_,true,_) => let val (uterm,tyarg) = dest_tycomb tm in
+                                     uptodate_term uterm andalso
+                                     uptodate_type tyarg
+                                  end
+              | (_,_,_,_,true) => let val (btyvar,body) = dest_tyabs tm in
+                                     uptodate_type btyvar andalso
+                                     uptodate_term body
+                                  end
+              | otherwise  => raise ERR "uptodate_term" "unexpected case"
+    end
 
 fun uptodate_thm thm =
-   if #overwritten (theCT())
-   then (init (); up2date_thm (CTname()) thm) else true
+    Lib.all uptodate_term (Thm.concl thm::Thm.hyp thm)
+    andalso
+    up2date_axioms (Tag.axioms_of (Thm.tag thm))
 
-fun scrub_sig CT =
-  let open Type Term
-  in
-    TypeSig.filter (fn {witness,utd,...} => up2date_entry CT (utd,witness));
-    TermSig.filter (fn {witness,utd,...} => up2date_entry CT (utd,witness))
-  end
+and up2date_axioms [] = true
+  | up2date_axioms rlist =
+    let val axs = map (drop_Axkind o snd) (thy_axioms(theCT()))
+    in Lib.all (uptodate_term o Thm.concl o Lib.C Lib.assoc axs) rlist
+    end handle HOL_ERR _ => false
 
-fun scrub_ax CTname {thid,con_wrt_disk,facts,overwritten,adjoin} =
-   let fun check (_, Thm _ ) = true
-         | check (_, Defn _) = true
-         | check (_, Axiom(_,th)) = up2date_term CTname (Thm.concl th)
-   in
+fun scrub_sig () =
+    let
+      open Type Term KernelSig
+      fun appthis tab (knm,(kid,v)) =
+          if not (uptodate_id kid) then retire_name(tab,knm)
+          else ()
+    in
+      KernelSig.app (appthis typesig) typesig;
+      KernelSig.app (appthis termsig) termsig
+    end
+
+fun scrub_ax {thid,con_wrt_disk,facts,adjoin} =
+    let fun check (_, Thm _ ) = true
+          | check (_, Defn _) = true
+          | check (_, Axiom(_,th)) = uptodate_term (Thm.concl th)
+    in
       {thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
-       facts=Lib.gather check facts,overwritten=overwritten}
-   end
+       facts=Lib.gather check facts}
+    end
 
-fun scrub_thms CTname {thid,con_wrt_disk,facts,overwritten,adjoin} =
-   let fun check (_, Axiom _) = true
-         | check (_, Thm th ) = up2date_thm CTname th
-         | check (_, Defn th) = up2date_thm CTname th
-   in {thid=thid, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-        facts=Lib.gather check facts, overwritten=overwritten}
-   end
+fun scrub_thms {thid,con_wrt_disk,facts,adjoin} =
+    let fun check (_, Axiom _) = true
+          | check (_, Thm th ) = uptodate_thm th
+          | check (_, Defn th) = uptodate_thm th
+    in {thid=thid, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
+        facts=Lib.gather check facts}
+    end
 
-fun scrub () =
-   let val  _  = init()
-       val thy = CTname()
-       val  _  = scrub_sig thy
-       val {thid,con_wrt_disk,facts,overwritten,adjoin}
-             = scrub_thms thy (scrub_ax thy (theCT()))
-   in makeCT {overwritten=false, thid=thid,
-              con_wrt_disk=con_wrt_disk, facts=facts, adjoin=adjoin}
-   end
-end;
+fun scrub () = let
+  val  _  = scrub_sig ()
+  val {thid,con_wrt_disk,facts,adjoin} =
+      scrub_thms (scrub_ax (theCT()))
+in
+  makeCT {thid=thid, con_wrt_disk=con_wrt_disk, facts=facts, adjoin=adjoin}
+end
 
 fun scrubCT() = (scrub(); theCT());
 
@@ -629,7 +585,7 @@ fun store_type_definition(name, s, witness, def) =
   in
     if uptodate_thm def then ()
     else raise DATED_ERR "store_type_definition" name
-    ; Type.TypeSig.add_witness (s,CTname(),witness)
+    (* ; Type.TypeSig.add_witness (s,CTname(),witness) *)
     ; add_defnCT(name,def)
     ; def
   end
@@ -638,7 +594,7 @@ fun store_definition (name, slist, witness, def) =
   let val ()  = check_name ("store_definition",name)
   in
     if uptodate_thm def then () else raise DATED_ERR "store_definition" name
-    ; map (fn s => Term.TermSig.add_witness (s,CTname(),witness)) slist
+    (* ; map (fn s => Term.TermSig.add_witness (s,CTname(),witness)) slist *)
     ; add_defnCT(name,def)
     ; def
   end
@@ -750,7 +706,7 @@ local
   end
 in
 fun export_theory () =
- let val {thid,con_wrt_disk,facts,adjoin,overwritten} = scrubCT()
+ let val {thid,con_wrt_disk,facts,adjoin} = scrubCT()
  in
  if con_wrt_disk
  then HOL_MESG ("\nTheory "^Lib.quote(thyid_name thid)^" already \
@@ -844,7 +800,7 @@ fun new_theory str =
   then raise ERR "new_theory"
          ("proposed theory name "^Lib.quote str^" is not an identifier")
   else
-  let val thy as {thid, facts, con_wrt_disk,overwritten,adjoin} = theCT()
+  let val thy as {thid, facts, con_wrt_disk,adjoin} = theCT()
       val thyname = thyid_name thid
       fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
                         makeCT(fresh_segment str); initialize thyname)
@@ -877,42 +833,42 @@ fun new_theory str =
 (*---------------------------------------------------------------------------*)
 
 (* Overly complex definition commented out
-fun attempt_theory_extension is_ok f x = 
+fun attempt_theory_extension is_ok f x =
   let infix ?>
       open Term
       val tnames1 = map fst (types"-")
       val cnames1 = map (fst o dest_const) (constants"-")
-      fun revert _ = 
+      fun revert _ =
         let val tnames2 = map fst (types"-")
             val cnames2 = map (fst o dest_const) (constants"-")
             val new_tnames = Lib.set_diff tnames2 tnames1
             val new_cnames = Lib.set_diff cnames2 cnames1
-        in map delete_type new_tnames; 
-           map delete_const new_cnames; 
+        in map delete_type new_tnames;
+           map delete_const new_cnames;
            scrub()
         end
-  in 
+  in
     case (verdict f revert x ?> verdict (assert is_ok) revert)
      of PASS y => PASS y
       | FAIL((),e) => FAIL (wrap_exn "Theory" "attempt_theory_extension" e)
   end;
 *)
 
-fun try_theory_extension f x = 
+fun try_theory_extension f x =
   let infix ?>
       open Term
       val tnames1 = map fst (types"-")
       val cnames1 = map (fst o dest_const) (constants"-")
-      fun revert _ = 
+      fun revert _ =
         let val tnames2 = map fst (types"-")
             val cnames2 = map (fst o dest_const) (constants"-")
             val new_tnames = Lib.set_diff tnames2 tnames1
             val new_cnames = Lib.set_diff cnames2 cnames1
-        in map delete_type new_tnames; 
-           map delete_const new_cnames; 
+        in map delete_type new_tnames;
+           map delete_const new_cnames;
            scrub()
         end
-  in 
+  in
     f x handle e => (revert(); raise e)
   end;
 

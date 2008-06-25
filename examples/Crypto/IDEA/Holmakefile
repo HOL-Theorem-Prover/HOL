@@ -1,5 +1,0 @@
-EXTRA_CLEANS = word16Lib.sml
-
-word16Theory.ui word16Theory.uo: \
-   $(SIGOBJ)/wordFunctor.ui $(SIGOBJ)/wordFunctorLib.ui $(SIGOBJ)/bitsTheory.ui
-	$(HOLDIR)/src/n_bit/mkword.exe 16

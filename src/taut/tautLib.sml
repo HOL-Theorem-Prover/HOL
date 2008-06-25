@@ -56,7 +56,7 @@ and is_F tm = (tm = F);
 fun TAUT_CHECK_CONV tm =     
     let val (vars,tm') = strip_forall tm
     in EQT_INTRO (GENL vars (SAT_PROVE tm')) end
-    handle minisatProve.SAT_cex th =>
+    handle HolSatLib.SAT_cex th =>
 	   let val (vars,tm') = strip_forall tm
 	       val g = list_mk_exists(vars,mk_neg tm')		   
 	       val cxm = List.foldl (fn (v,cxm) => 

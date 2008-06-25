@@ -15,7 +15,7 @@ infix |> oo;
 
 open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net;
 
-local open labelTheory in end;
+local open markerTheory in end;
 
 fun ERR x      = STRUCT_ERR "simpLib" x ;
 fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
@@ -41,9 +41,9 @@ type convdata = {name  : string,
 datatype control = UNBOUNDED | BOUNDED of int ref
 
 
-fun appconv (c,UNBOUNDED) tm     = c tm
-  | appconv (c,BOUNDED(ref 0)) _ = failwith "exceeded rewrite bound"
-  | appconv (c,BOUNDED r) tm     = c tm before Portable.dec r;
+fun appconv (c,th,UNBOUNDED) tm     = c tm
+  | appconv (c,th,BOUNDED(ref 0)) _ = failwith "exceeded rewrite bound"
+  | appconv (c,th,BOUNDED r) tm     = c tm before Portable.dec r;
 
 fun dest_tagged_rewrite thm = let
   val (th, n) = DEST_BOUNDED thm
@@ -59,7 +59,7 @@ fun mk_rewr_convdata thm =
          key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
          trace = 100, (* no need to provide extra tracing here;
                          COND_REWR_CONV provides enough tracing itself *)
-         conv  = appconv (COND_REWR_CONV th, tag)} before
+         conv  = appconv (COND_REWR_CONV th, th, tag)} before
    trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
    handle HOL_ERR _ =>
           (trace (2, LZ_TEXT(fn () =>
@@ -218,9 +218,9 @@ with
 
   fun traversedata_for_ss (ss as (SS ssdata)) =
       {rewriters=[rewriter_for_ss ss],
-    dprocs= #dprocs ssdata,
-    relation= boolSyntax.equality,
-    travrules= merge_travrules [EQ_tr,#travrules ssdata]};
+       dprocs= #dprocs ssdata,
+       relation= boolSyntax.equality,
+       travrules= merge_travrules [EQ_tr,#travrules ssdata]};
 
   fun SIMP_QCONV ss =
       TRAVERSE (traversedata_for_ss ss);
@@ -230,7 +230,7 @@ end (* abstype for SS *)
 val Cong = markerLib.Cong
 val AC   = markerLib.AC;
 
-local open markerLib
+local open markerSyntax markerLib
    fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
    fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
@@ -245,7 +245,7 @@ local open markerLib
 in
 fun SIMP_CONV ss l =
   let val (ss', l') = process_tags ss l
-  in TRY_CONV (SIMP_QCONV ss' l')
+  in TRY_CONV (SIMP_QCONV ss' l') 
   end;
 
 fun SIMP_PROVE ss l =
@@ -262,56 +262,47 @@ fun (ss && thl) =
 
 end;
 
-
 (*---------------------------------------------------------------------------*)
-(*   SIMP_TAC      : simpset -> tactic                                       *)
-(*   ASM_SIMP_TAC  : simpset -> tactic                                       *)
-(*   FULL_SIMP_TAC : simpset -> tactic                                       *)
+(*   SIMP_TAC      : simpset -> thm list -> tactic                           *)
+(*   ASM_SIMP_TAC  : simpset -> thm list -> tactic                           *)
+(*   FULL_SIMP_TAC : simpset -> thm list -> tactic                           *)
 (*                                                                           *)
 (* FAILURE CONDITIONS                                                        *)
 (*                                                                           *)
 (* These tactics never fail, though they may diverge.                        *)
 (* --------------------------------------------------------------------------*)
 
-fun SIMP_TAC ss l = Q.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l
-
-fun ASM_SIMP_TAC ss l = let
-  fun base thl (asms, gl) = let
-    val working = labelLib.LLABEL_RESOLVE thl asms
-  in
-    SIMP_TAC ss working (asms, gl)
-  end
-in
-  Q.ABBRS_THEN base l
-end
-
 fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l);
-
 fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
 
-fun FULL_SIMP_TAC ss l =
-       let fun drop n (asms,g) =
-	       let val l = length asms
-	           fun f asms =
-		       MAP_EVERY ASSUME_TAC
-                                 (rev (fst (split_after (l-n) asms)))
-	       in
-                 if (n > l) then ERR ("drop", "Bad cut off number")
-	         else POP_ASSUM_LIST f (asms,g)
-	       end
+fun SIMP_TAC ss l = markerLib.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l;
 
-           (* differs only in that it doesn't call DISCARD_TAC *)
-           val STRIP_ASSUME_TAC' =
-	       REPEAT_TCL STRIP_THM_THEN
-	                  (fn th => FIRST [CONTR_TAC th, ACCEPT_TAC th,
-                                           ASSUME_TAC th])
-	   fun simp_asm (t,l') = SIMP_RULE ss (l'@l) t::l'
-	   fun f asms =
-	       MAP_EVERY STRIP_ASSUME_TAC' (foldl simp_asm [] asms)
-	       THEN drop (length asms)
-       in
-         Q.ABBRS_THEN (fn l => ASSUM_LIST f THEN ASM_SIMP_TAC ss l) l
-       end
+fun ASM_SIMP_TAC ss = 
+   markerLib.ABBRS_THEN 
+    (fn thl => fn gl as (asl,_) => 
+         SIMP_TAC ss (markerLib.LLABEL_RESOLVE thl asl) gl);
+
+
+fun FULL_SIMP_TAC ss l =
+ let fun drop n (asms,g) =
+	let val l = length asms
+	    fun f asms = MAP_EVERY ASSUME_TAC
+                          (rev (fst (split_after (l-n) asms)))
+        in
+          if (n > l) then ERR ("drop", "Bad cut off number")
+	  else POP_ASSUM_LIST f (asms,g)
+	end
+
+     (* differs only in that it doesn't call DISCARD_TAC *)
+     val STRIP_ASSUME_TAC' =
+           REPEAT_TCL STRIP_THM_THEN
+            (fn th => FIRST [CONTR_TAC th, ACCEPT_TAC th, ASSUME_TAC th])
+     fun simp_asm (t,l') = SIMP_RULE ss (l'@l) t::l'
+     fun f asms = MAP_EVERY STRIP_ASSUME_TAC' (foldl simp_asm [] asms)
+                  THEN drop (length asms)
+ in
+  markerLib.ABBRS_THEN (fn l => ASSUM_LIST f THEN ASM_SIMP_TAC ss l) l
+ end
 
 (* ----------------------------------------------------------------------
     creating per-type ssdata values

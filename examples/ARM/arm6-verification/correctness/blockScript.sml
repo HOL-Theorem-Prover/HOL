@@ -91,7 +91,7 @@ val LENGTH_GEN_REG_LIST = prove(
 
 val BIT_w2n = prove(
   `!i w:bool ** 'a. i < ^WL ==> (BIT i (w2n w) = w %% i)`,
-  STRIP_TAC \\ Cases_word \\ STRIP_ASSUME_TAC EXISTS_HB
+  STRIP_TAC \\ Cases \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ ASM_SIMP_TAC (fcp_ss++ARITH_ss)
          [w2n_n2w,dimword_def,BIT_def,MIN_DEF,BITS_COMP_THM2,GSYM BITS_ZERO3]
     \\ ASM_SIMP_TAC fcp_ss [BIT_def,n2w_def]);
@@ -639,7 +639,7 @@ val PENCZ_THM = store_thm("PENCZ_THM",
 
 val PENCZ_THM2 = store_thm("PENCZ_THM2",
   `!list. (list = 0w) = (LENGTH (REGISTER_LIST list) = 0)`,
-  Cases_word \\ SIMP_TAC bool_ss
+  Cases \\ SIMP_TAC bool_ss
          [LENGTH_REGISTER_LIST,BITV_def,GSYM SUM_ZERO,BITS_COMP_THM2,w2n_n2w,
           MOD_DIMINDEX,GSYM WORD_EQ,word_bit_n2w,BIT_def,BITS_ZERO2,dimindex_16]
     \\ SIMP_TAC arith_ss [MIN_DEF,NOT_BITS2]);

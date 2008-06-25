@@ -152,6 +152,8 @@ fun to_term tm =
                                 => return (Term.mk_tyabs(clean Bvar, Body'))))
           | Antiq{Tm,...} => return Tm
           | Constrained{Ptm,...} => cleanup Ptm
+       (* | Constrained{Ptm,Ty,...} => Pretype.replace_null_links Ty >- (fn _
+                                    => cleanup Ptm) *)
           | Overloaded _ => raise ERRloc "to_term" (locn tm)
                                          "applied to Overloaded"
         end
@@ -413,6 +415,28 @@ fun is_atom (Var _) = true
            | Const{Name,...} => Name = nat_elim_term
            | _ => false)
   | is_atom t = false
+
+
+local
+  val op --> = Pretype.-->
+in
+fun ptype_of (Var{Ty, ...}) = Ty
+  | ptype_of (Const{Ty, ...}) = Ty
+  | ptype_of (Comb{Rator, ...}) = Pretype.chase (ptype_of Rator)
+  | ptype_of (TyComb{Rator, Rand, ...}) =
+      let val rator_ty = ptype_of Rator
+      in let val (Bvar,Body) = Pretype.dest_univ_type rator_ty
+         in Pretype.type_subst [Bvar |-> Rand] Body
+         end (*handle Feedback.HOL_ERR {origin_structure="Pretype",
+                                      origin_function="dest_univ_type",message}
+             => raise ERR "ptype_of" message*)
+      end
+  | ptype_of (Abs{Bvar,Body,...}) = ptype_of Bvar --> ptype_of Body
+  | ptype_of (TyAbs{Bvar,Body,...}) = Pretype.mk_univ_type(Bvar, ptype_of Body)
+  | ptype_of (Constrained{Ty,...}) = Ty
+  | ptype_of (Antiq{Tm,...}) = Pretype.fromType (Term.type_of Tm)
+  | ptype_of (Overloaded {Ty,...}) = Ty
+end;
 
 
 local

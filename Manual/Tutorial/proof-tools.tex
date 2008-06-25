@@ -442,7 +442,7 @@ result of simplifying $\phi$ under the additional assumption
 constraining $v$.
 
 The easiest way to add an assumption to a theorem is to use the
-derived rule \ml{ADD\_ASSUM}.  But in this situation, we also want to
+rule \ml{ADD\_ASSUM}.  But in this situation, we also want to
 simplify the conclusion of the theorem with the same assumption.  This
 means that it will be enough to rewrite with the theorem
 $\psi\vdash\psi$, where $\psi$ is the new assumption.  The action of
@@ -530,8 +530,7 @@ and the theorem \ml{BOOL\_CASES\_AX}:
 We can put these fragments together and write the top-level
 \ml{CoreDPLL} function, in Figure~\ref{fig:coredpll}.
 \begin{figure}[htbp]
-\begin{boxed}
-\begin{hol}
+\begin{holboxed}
 \begin{verbatim}
 fun CoreDPLL form = let
   val initial_th = ASSUME form
@@ -563,8 +562,7 @@ in
   | x => x
 end
 \end{verbatim}
-\end{hol}
-\end{boxed}
+\end{holboxed}
 \caption{The core of the DPLL function}
 \label{fig:coredpll}
 \end{figure}

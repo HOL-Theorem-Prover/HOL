@@ -150,7 +150,7 @@ script, the following ``boilerplate'':
    open HolKernel Parse boolLib;
 \end{verbatim}
 This will duplicate the starting environment that one obtains with
-\verb+hol.bare+ and \verb+hol.bare.noquote+.  If the script was
+\verb+hol.bare+ and \linebreak \verb+hol.bare.noquote+.  If the script was
 developed interactively with \texttt{hol} or \texttt{hol.noquote},
 then one must also add
 \begin{verbatim}
@@ -222,13 +222,18 @@ After that, the theory is usable as an ML module.
 \holmake{} only works properly on the current directory.  \holmake{}
 will rebuild files in the current directory if something it depends on
 from another directory is fresher than it is, but it will not do any
-analysis on files in other directories.  If one is developing a system
-over more than one directory, one should write a master Makefile (or
-shell script) that invokes \holmake{} in the subsidiary directories,
-in the correct order, \ie., such that there never is an out-of-date
-dependence leading outside of the current directory. This should
-always be achievable, simply by ordering the directories in the order
-that one would have to ``\verb+use+'' files in them.
+analysis on files in other directories.
+
+However, one can indicate that there is a dependency on other
+directories by using the \texttt{-I} flag, or the \texttt{INCLUDES}
+variable in a \texttt{Holmakefile}.  Such a specification will cause
+\holmake{} to look in the specified directories for other theory files
+that the current directory may depend on.  Moreover, by default
+\holmake{} will recursively call itself on all those ``include''
+directories before doing anything in the current directory.  In this
+way, one can get a staged application of \holmake{} across multiple
+directories.\footnote{See \emph{Recursive Make Considered
+    Harmful} by Peter Miller for why this is not ideal.}
 
 \subsection{\holmake{}'s command-line arguments}
 
@@ -249,13 +254,14 @@ special targets that can be used:
   the hidden dependency information.
 \end{description}
 
-\noindent Finally, the user can directly affect the workings of \holmake{}
+\noindent Finally, users can directly affect the workings of \holmake{}
 with the following command-line options:
 \begin{description}
 \item[\tt -I <directory>] Look in specified directory for additional
   Moscow~ML object files, including other HOL theories.  This option
   can be repeated, with multiple {\tt -I}'s to allow for multiple
-  directories to be referenced.
+  directories to be referenced.  As above, directories specified in
+  this way will also be rebuilt before the current targets are built.
 \item[\tt -d <file>] Ignore the given file and don't try to build it.
   The file may be rebuilt anyway if other files you have specified
   depend on it.  This is useful to stop Holmake from attempting to
@@ -301,6 +307,8 @@ with the following command-line options:
   this option makes the compilation not use the overlay file.  This
   option is also used in building the kernel before the overlay itself
   has been compiled.
+\item[\texttt{--no\_prereqs}] Do not recursively attempt to build
+  ``include'' directories before working in the current directory.
 \item[\texttt{--no\_sigobj}] Do not link against HOL system's
   directory of HOL system files.  Use of this option goes some way
   towards turning
@@ -316,7 +324,7 @@ with the following command-line options:
   build can continue and other theorems proved.
 \item[\texttt{--quiet}] Minimise the amount of output produced by
   \holmake{}.  Fatal error messages will still be written to the
-  standard error stream.  Other programs called by \holmake{} will not
+  standard error stream.  Note that other programs called by \holmake{} will not
   be affected.
 \item[{\tt --rebuild\_deps} or {\tt -r}] Forces \holmake{} to always
   rebuild the dependency information for files it examines, whether or
@@ -500,8 +508,7 @@ compiler.  This option gives the user a way of over-riding code in
 the core distribution if they choose as the compiler will find their
 own code before the distribution's.
 
-The \texttt{OPTIONS} variable is used for the specification of
-options.  There are currently just three possible (others are
+The \texttt{OPTIONS} variable is used for the specification of just three possible options (others are
 ignored): \texttt{NO\_SIGOBJ}, \texttt{NO\_OVERLAY}, and
 \texttt{QUIT\_ON\_FAILURE}.  These have the same effect as the
 corresponding command-line options. The \texttt{EXTRA\_CLEANS}
@@ -588,12 +595,12 @@ code is stored\\
 inferences, axioms, definitions and use of oracles.  Such recording is
 enabled with the function
 
-\begin{boxed}
+\begin{holboxed}
 \index{counting_thms@\ml{counting\_thms}|pin}
 \begin{verbatim}
    val counting_thms : bool -> unit
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent (This function as with all the others in this section is
 found in the \texttt{Count} structure.)
@@ -606,7 +613,7 @@ incremented.  A total count as well as counts per primitive inference
 are maintained.  The value of this counter is returned by the
 function:
 
-\begin{boxed}
+\begin{holboxed}
 \index{thm_count@\ml{thm\_count}|pin}
 \begin{verbatim}
   val thm_count : unit ->
@@ -619,26 +626,26 @@ function:
     DISJ2 : int, DISJ_CASES : int, NOT_INTRO : int, NOT_ELIM : int,
     CCONTR : int, GEN_ABS : int, definition : int, axiom : int,
     from_disk : int, oracle :int, total :int }
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent This counter can be reset with the function:
 
-\begin{boxed}
+\begin{holboxed}
 \index{reset_thm_count@\ml{reset\_thm\_count}|pin}
 \begin{verbatim}
    val reset_thm_count : unit -> unit
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 Finally, the \texttt{Count} structure also includes another function
 which easily enables the number of inferences performed by an \ML{}
 procedure to be assessed:
 
-\begin{boxed}
+\begin{holboxed}
 \index{Count.apply@\ml{Count.apply}|pin}
 \begin{verbatim}
    val apply : ('a -> 'b) -> 'a -> 'b
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 An invocation, \ml{Count.apply f x}, applies the function \ml{f} to
 the argument \ml{x} and performs a count of inferences during this

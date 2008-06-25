@@ -205,6 +205,9 @@ end
              NONE => raise InternalFailure locn
            | SOME st => let val nargs = structure_num_args st
                             val (largs,rargs) = if nargs = 0 then ([],args) else (args,[])
+                            val _ = if length largs <= nargs then () else
+                                          raise ERRloc locn ("type abbreviation " ^ s ^
+                                                             " given too many arguments")
                             val abr = structure_to_value (s,locn) largs st
                             val res = apply_tyop (abr,locn) rargs
                         in (adv(); (res, locn))

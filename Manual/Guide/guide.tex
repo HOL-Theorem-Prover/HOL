@@ -538,11 +538,11 @@ The format of this \doc\ file is as shown below:
 
 \smallskip
 
-\begin{boxed}\begin{alltt}
+\begin{holboxed}\begin{alltt}
 \bk{THEOREM}\vsp\meta{thmname}\vsp\meta{thyname}
 \(\vdots\)
 \bk{ENDTHEOREM}
-\end{alltt}\end{boxed}
+\end{alltt}\end{holboxed}
 
 \smallskip
 
@@ -584,11 +584,11 @@ theorems, the \doc\ format is:
 
 \smallskip
 
-\begin{boxed}\begin{alltt}
+\begin{holboxed}\begin{alltt}
 \bk{THEOREM}\vsp\meta{thmname}\vsp\bk{none}
 \(\vdots\)
 \bk{ENDTHEOREM}
-\end{alltt}\end{boxed}
+\end{alltt}\end{holboxed}
 
 \smallskip
 
@@ -604,13 +604,13 @@ Shown below is the \doc\ file for the built-in theorem \ml{PRIM\_REC\_THM}:
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \THEOREM PRIM_REC_THM prim_rec
 |- !x f.
     (PRIM_REC x f 0 = x) /\
     (!m. PRIM_REC x f(SUC m) = f(PRIM_REC x f m)m)
 \ENDTHEOREM
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -633,11 +633,11 @@ keyword `{\small\verb!\none!}' is used in the \meta{thyname} field:
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \THEOREM NOT_CLAUSES \none
 |- (!t. ~~t = t) /\ (~T = F) /\ (~F = T)
 \ENDTHEOREM
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -730,9 +730,9 @@ every \doc\ file.  There must be exactly one blank line between it and the
 
 An example {\small\verb!\DOC!} line is shown below:
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \DOC ACCEPT_TAC
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \subsubsection{The {\tt {\char'134}TYPE} line ({\it required})}
 
@@ -787,9 +787,9 @@ An example {\small\verb!\TYPE!} line is shown below:
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \TYPE {ACCEPT_TAC : thm_tactic}
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -871,10 +871,10 @@ An example {\small\verb!\SYNOPSIS!} field for the tactic
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \SYNOPSIS
 Solves a goal if supplied with the desired theorem (up to alpha-conversion).
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -890,10 +890,10 @@ Here is an example:
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \KEYWORDS
 assumptions, rewriting.
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -902,9 +902,9 @@ assumptions, rewriting.
 This section is present {\it only} in library documentation, and should be
 followed by a single space and the name of the library. For example:
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \LIBRARY reduce
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \subsubsection{The {\tt {\char'134}DESCRIBE} field ({\it optional})}
 
@@ -941,11 +941,11 @@ As an example, here is the {\small\verb!\DESCRIBE!} field for
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \DESCRIBE
 {ACCEPT_TAC} maps a given theorem {th} to a tactic that solves any goal whose
 conclusion is alpha-convertible to the conclusion of {th}.
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -985,11 +985,11 @@ Here is an example {\small\verb!\FAILURE!} field for
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \FAILURE
 {ACCEPT_TAC th (A,g)} fails if the term {g} is not alpha-convertible to the
 conclusion of the supplied theorem {th}.
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -1018,7 +1018,7 @@ documenting the package itself). It is still preferable to give complete \ML\
 sessions, but if that is impractical, then give a slightly higher-level
 description of what is going on. An example is given below:
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \EXAMPLE
 The goal:
 {
@@ -1028,7 +1028,7 @@ The goal:
 {
    EXISTS_TAC "T" THEN REFL_TAC
 }
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent Please remember the {\tt noindent} directive on intermediate
 non-verbatim lines, if there are any, and that all verbatim displays should be
@@ -1055,11 +1055,11 @@ contexts in which it might be used.  For example, suppose that the
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \SYNOPSIS
 Specializes the leading universally-quantified variable of a theorem to a
 supplied value.
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -1068,10 +1068,10 @@ something like:
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \USES
 Used for specializing universally-quantified theorems.
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -1080,11 +1080,11 @@ Used for specializing universally-quantified theorems.
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \USES
 Obtaining specific instances of already proved theorems; implementing
 efficient derived inference rules by appeal to pre-proved general theorems.
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -1136,12 +1136,12 @@ Here is a sample {\small\verb!\SEEALSO!} field for
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \SEEALSO
 FILTER_ASM_REWRITE_TAC, FILTER_ONCE_ASM_REWRITE_TAC, ONCE_ASM_REWRITE_TAC,
 ONCE_REWRITE_TAC, PURE_ASM_REWRITE_TAC, PURE_ONCE_ASM_REWRITE_TAC,
 PURE_ONCE_REWRITE_TAC, PURE_REWRITE_TAC, REWRITE_TAC, SUBST_TAC.
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -1194,14 +1194,14 @@ example of the correct use of the displayed verbatim format:
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 from this, we can see that the tactic:
 {
    FIRST_ASSUM (\th g. ACCEPT_TAC (SYM th) g ? NO_TAC g)
 }
 will search the assumption list for an equation whose symmetric form will
 solve the current goal.  This kind of tactic is very useful when dealing with
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -1215,7 +1215,7 @@ commentary, the `displayed' text is not indented.  For example, in:
 
 \smallskip
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \EXAMPLE
 {
 #length [];;
@@ -1224,7 +1224,7 @@ commentary, the `displayed' text is not indented.  For example, in:
 #length [1;2;7;1;1];;
 5 : int
 }
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \smallskip
 
@@ -1384,7 +1384,7 @@ Some examples of rule notation as described above are:
 \subsection{Format of a {\tt .doc} file}
 
 \begin{figure}[h]
-\begin{boxed}\begin{alltt}
+\begin{holboxed}\begin{alltt}
 \bk{DOC}\vsp\meta{name}                            ({\it required} )
 
 \bk{TYPE}\vsp\lb\meta{name}\vsp:\vsp\meta{type}\rb                 ({\it required} )
@@ -1415,7 +1415,7 @@ Some examples of rule notation as described above are:
 \(\vdots \)
 
 \bk{ENDDOC}                                ({\it required} )
-\end{alltt}\end{boxed}
+\end{alltt}\end{holboxed}
 \caption{Format of a \doc\ file.\label{doc-fig}}
 \end{figure}
 
@@ -1425,7 +1425,7 @@ Some examples of rule notation as described above are:
 
 Here is a sample \doc\ file for {\small\verb!ACCEPT_TAC!}:
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
 \DOC ACCEPT_TAC
 
 \TYPE {ACCEPT_TAC : thm_tactic}
@@ -1465,7 +1465,7 @@ or a lemma already proved.
 MATCH_ACCEPT_TAC.
 
 \ENDDOC
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \newpage
 \subsection{Example of a typeset {\tt .doc} file}

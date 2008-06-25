@@ -1,5 +1,13 @@
 OPTIONS=NO_OVERLAY
 
-RestrictedTag-sig.uo: RestrictedTag-sig.sml
-	HOLMOSMLC -c -toplevel $<
+FinalTag-sig.uo: FinalTag-sig.sml
+	$(HOLMOSMLC) -c -toplevel $<
 
+FinalTerm-sig.uo: FinalTerm-sig.sml HOLset.ui Lib.uo
+	$(HOLMOSMLC) -c -toplevel $<
+
+FinalType-sig.uo: FinalType-sig.sml
+	$(HOLMOSMLC) -c -toplevel $<
+
+FinalKind-sig.uo: FinalKind-sig.sml
+	$(HOLMOSMLC) -c -toplevel $<

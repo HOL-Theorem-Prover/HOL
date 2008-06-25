@@ -14,11 +14,11 @@
 (* Step 1                                                                    *)
 (* ------                                                                    *)
 (* Define the component in HOL                                               *)
-(* (assumes word32Theory loaded and open)                                    *)
+(* (assumes wordsTheory loaded and open)                                     *)
 (*****************************************************************************)
 val XOR32_def =
  Define 
-  `XOR32(in1,in2,out) = !t. out t = (in1 t) # (in2 t)`;
+  `XOR32(in1:num->word32,in2,out) = !t. out t = (in1 t) ?? (in2 t)`;
 
 (*****************************************************************************)
 (* Step 2                                                                    *)
@@ -28,7 +28,7 @@ val XOR32_def =
 val COMB_XOR32 =
  store_thm
   ("COMB_XOR32",
-   ``COMB (UNCURRY $#) (in1 <> in2, out) = XOR32(in1,in2,out)``,
+   ``COMB (UNCURRY $??) (in1 <> in2, out) = XOR32(in1,in2,out)``,
    RW_TAC std_ss [COMB_def,BUS_CONCAT_def,XOR32_def]);
 
 add_combinational_components[COMB_XOR32];

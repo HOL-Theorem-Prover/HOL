@@ -2,12 +2,13 @@
 % HOL Manual LaTeX Source: reference manual
 % =====================================================================
 
-\documentclass[12pt]{book}
-\usepackage{charter}
-\usepackage{fleqn}
+\documentclass[12pt,fleqn]{book}
+%\usepackage{amsmath}
 \usepackage{alltt}
 \usepackage{../LaTeX/layout}
 \usepackage{makeidx}
+\usepackage{alltt}
+\usepackage{fancyvrb}
 \usepackage{graphicx}
 
 % ---------------------------------------------------------------------
@@ -26,6 +27,8 @@
 
 \begin{document}
 
+   \emergencystretch=14pt
+
    \setlength{\unitlength}{1mm}           % unit of length = 1mm
    \setlength{\baselineskip}{16pt}        % line spacing = 16pt
 
@@ -33,8 +36,8 @@
    % prelims
    % ---------------------------------------------------------------------
 
-   \pagenumbering{roman}                  % roman page numbers for prelims
-   \setcounter{page}{1}                   % start at page 1
+%   \pagenumbering{roman}                  % roman page numbers for prelims
+%   \setcounter{page}{1}                   % start at page 1
 
    \include{title}                        % reference title page
    \include{preface}                      % preface to reference manual
@@ -45,9 +48,9 @@
    %
    % ---------------------------------------------------------------------
 
-   \cleardoublepage
-   \pagenumbering{arabic}                % arabic page numbers
-   \setcounter{page}{1}                  % start at page 1
+%   \cleardoublepage
+%   \pagenumbering{arabic}                % arabic page numbers
+%   \setcounter{page}{1}                  % start at page 1
 
    \include{entries}                     % manual entries
    % \include{theorems}                    % pre-proved theorems

@@ -170,15 +170,20 @@ fun is_skip (_, CST {Skip=SOME n,Args,...}) = (n <= List.length Args)
  *---------------------------------------------------------------------------*)
 
 datatype comp_rws
-   = RWS of (string * string, (db * int option) ref) Polyhash.hash_table;
+   = RWS of (string * string, (db * int option) ref) Redblackmap.dict ref;
 
-fun empty_rws () = RWS (Polyhash.mkPolyTable(29,CL_ERR "empty_rws" ""));
+fun lex_string_comp ((s1, s2), (s3, s4)) =
+  case String.compare (s1, s3) of
+    EQUAL => String.compare (s2, s4)
+  | x => x
+
+fun empty_rws () = RWS (ref (Redblackmap.mkDict lex_string_comp));
 
 fun assoc_clause (RWS rws) cst =
-  case Polyhash.peek rws cst
+  case Redblackmap.peek (!rws, cst)
    of SOME rl => rl
     | NONE => let val mt = ref (EndDb, NONE)
-              in Polyhash.insert rws (cst,mt)
+              in rws := Redblackmap.insert (!rws,cst,mt)
                ; mt
               end
 ;
@@ -196,7 +201,7 @@ fun set_skip (rws as RWS htbl) p sk =
 
 fun scrub_const (RWS htbl) c = 
   let val {Thy,Name,Ty} = dest_thy_const c
-  in Polyhash.remove htbl (Name,Thy) ; ()
+  in htbl := #1 (Redblackmap.remove (!htbl,(Name,Thy)))
   end;
 
 fun from_term (rws,env,t) =

@@ -9,7 +9,7 @@ struct
 open boolTheory boolSyntax Hol_pp
      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev DB;
 
-local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax EmitML in end
+local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
 val parse_from_grammars = Parse.parse_from_grammars;
 
@@ -95,6 +95,8 @@ val UNIQUE_SKOLEM_THM = prove
       REPEAT STRIP_TAC THEN BETA_TAC THEN COND_CASES_TAC THEN
       ASM_REWRITE_TAC[],
       DISCH_THEN(MP_TAC o C AP_THM ``x:'a``) THEN REWRITE_TAC[BETA_THM]]])
+
+
 
 end (* local open *)
 

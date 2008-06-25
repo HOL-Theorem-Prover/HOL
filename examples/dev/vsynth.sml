@@ -72,42 +72,13 @@ fun string2int s =
 (*****************************************************************************)
 (* Test if a ty is ``:word<n>`` for some n                                   *)
 (*****************************************************************************)
-fun is_word_type wty =
- let val (opr, tyargs) = dest_type wty
-     val oprl = explode opr
- in if (length tyargs) = 2 then (* e.g,  [``:bool``, ``:i16``] *)
-       let val (opr',tyargs') = dest_type (hd(tl tyargs))
-           val oprl' = explode opr'
-       in tyargs' = [] andalso
-          length oprl' > 1 andalso
-          el 1 oprl' = #"i" andalso
-          (case Int.fromString(implode(tl oprl')) of
-             SOME _ => true | NONE => false)
-       end
-    else tyargs = [] andalso
-         length oprl > 4  andalso
-         el 1 oprl = #"w" andalso
-         el 2 oprl = #"o" andalso
-         el 3 oprl = #"r" andalso
-         el 4 oprl = #"d" andalso
-         (case Int.fromString(implode(tl(tl(tl(tl oprl))))) of
-            SOME _ => true
-          | NONE   => false)
-  end;
+val is_word_type = wordsSyntax.is_word_type;
 
 (*****************************************************************************)
 (* Extraxt <n> from ``:word<n>``                                             *)
 (*****************************************************************************)
-fun dest_word_type wty =
- let val (opr, tyargs) = dest_type wty
-     val oprl = explode opr
- in if tyargs = [] then
-       string2int(implode(tl(tl(tl(tl oprl)))))
-    else let val (opr',_) = dest_type (hd(tl tyargs))
-             val oprl' = explode opr'
-         in string2int(implode(tl(oprl')))
-         end
- end;
+val dest_word_type =
+  Arbnum.toInt o fcpLib.index_to_num o wordsSyntax.dest_word_type;
 
 (*****************************************************************************)
 (* Test if a type can be represented in Verilog.                             *)
@@ -124,11 +95,11 @@ fun is_supported_type ty =
 fun ty2size ty =
  let val n = 
       if (ty = ``:bool``) then 1
-       else if (ty = ``:num``)
-       then 32
-       else if  is_word_type ty
-       then dest_word_type ty
-       else raise ERR "ty2size" "unsupported type"
+      else if (ty = ``:num``) then
+        32
+      else if is_word_type ty then
+        dest_word_type ty handle _ => 32
+      else raise ERR "ty2size" "unsupported type"
  in
   Int.toString(n-1)
  end;
@@ -141,11 +112,15 @@ fun ty2size ty =
 val numWarning = ref true;
 fun var2size tm =
  let val (str, [_,ty]) = dest_type(type_of tm)
-     val _ = if (ty = ``:num``) andalso (!numWarning)
+     val _ = if ((ty = ``:num``) orelse
+                 (is_word_type ty andalso not (null (type_vars_in_term tm))))
+                andalso (!numWarning)
               then 
                (print "Warning: type of ";
                 print_term tm ;
-                print " is ``:num``, but is compiled to [31:0].\n")
+                print " is ``";
+                print_type ty;
+                print "``, but is compiled to [31:0].\n")
               else ()
  in
   ty2size ty

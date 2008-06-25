@@ -254,33 +254,37 @@ fun compute_cst_arg_map (fv,impargs) strm =
   end
 ;
 
-fun export_param_theory () =
-  let val defs = rev (map fst (definitions"-"))
-      val thms = rev (map fst (theorems"-"))
-      fun struct_line ppstrm thn =
-            (S ppstrm thn; S ppstrm " = inst_fun "; S ppstrm thn)
-      fun sig_line ppstrm thn =
-            (S ppstrm thn; S ppstrm " : thm")
-      fun sep ppstrm () =
-            (S ppstrm ",";
-             NL ppstrm;
-             S ppstrm "    ")
-      val adj =  { sig_ps = SOME (fn ppstrm =>
-    	(S ppstrm "val IMPORT : abstraction.inst_infos ->"; NL ppstrm;
-	 S ppstrm "  { ";
-	 pr_list_sep (sig_line ppstrm) (sep ppstrm) (defs@thms);
-	 S ppstrm " }"; NL ppstrm)),
-		   struct_ps = SOME (fn ppstrm =>
-	(functor_header ppstrm;
-	 compute_cst_arg_map (!fv_ass, !impl_param_cstr) ppstrm;
-	 S ppstrm "  { ";
-	 pr_list_sep (struct_line ppstrm) (sep ppstrm) (defs@thms);
-	 S ppstrm " }"; NL ppstrm;
-	 S ppstrm "  end"; NL ppstrm ))}
-  in
+fun export_param_theory () = let 
+  val _ = Theory.scrub()
+  val defs = rev (map fst (definitions"-"))
+  val thms = rev (map fst (theorems"-"))
+  fun struct_line ppstrm thn =
+      (S ppstrm thn; S ppstrm " = inst_fun "; S ppstrm thn)
+  fun sig_line ppstrm thn =
+      (S ppstrm thn; S ppstrm " : thm")
+  fun sep ppstrm () =
+      (S ppstrm ",";
+       NL ppstrm;
+       S ppstrm "    ")
+  val adj = { 
+    sig_ps = 
+      SOME (fn ppstrm =>
+    	       (S ppstrm "val IMPORT : abstraction.inst_infos ->"; NL ppstrm;
+	        S ppstrm "  { ";
+	        pr_list_sep (sig_line ppstrm) (sep ppstrm) (defs@thms);
+	        S ppstrm " }"; NL ppstrm)),
+    struct_ps = 
+      SOME (fn ppstrm =>
+	       (functor_header ppstrm;
+	        compute_cst_arg_map (!fv_ass, !impl_param_cstr) ppstrm;
+	        S ppstrm "  { ";
+	        pr_list_sep (struct_line ppstrm) (sep ppstrm) (defs@thms);
+	        S ppstrm " }"; NL ppstrm;
+	        S ppstrm "  end"; NL ppstrm ))}
+in
   adjoin_to_theory adj;
   export_theory()
-  end;
+end;
 
 
 end;

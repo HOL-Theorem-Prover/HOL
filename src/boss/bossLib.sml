@@ -62,7 +62,7 @@ val RW_TAC         = BasicProvers.RW_TAC
 val SRW_TAC        = BasicProvers.SRW_TAC
 val srw_ss         = BasicProvers.srw_ss
 val augment_srw_ss = BasicProvers.augment_srw_ss
-val export_rewrites= BasicProvers.export_rewrites
+val export_rewrites = BasicProvers.export_rewrites
 
 val EVAL           = computeLib.EVAL_CONV;
 val EVAL_RULE      = computeLib.EVAL_RULE
@@ -139,5 +139,14 @@ val SPOSE_NOT_THEN    = SingleStep.SPOSE_NOT_THEN
 val op by             = SingleStep.by; (* infix 8 by *)
 
 val CASE_TAC          = SingleStep.CASE_TAC;
+
+(*---------------------------------------------------------------------------*)
+(* Working with abbreviations.                                               *)
+(*---------------------------------------------------------------------------*)
+
+val Abbr = markerLib.Abbr
+val UNABBREV_ALL_TAC = markerLib.UNABBREV_ALL_TAC
+val REABBREV_TAC = markerLib.REABBREV_TAC
+val WITHOUT_ABBREVS = markerLib.WITHOUT_ABBREVS
 
 end

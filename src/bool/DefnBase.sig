@@ -22,7 +22,8 @@ sig
 
   val read_congs  : unit -> thm list
   val write_congs : thm list -> unit
-  val add_cong : thm -> unit
+  val add_cong    : thm -> unit
+  val drop_cong   : term -> thm
 
   val export_cong : string -> unit
 

@@ -1,0 +1,21 @@
+\DOC b
+
+\TYPE {b : unit -> proof}
+
+\SYNOPSIS
+Restores the proof state undoing the effects of a previous expansion.
+
+\DESCRIBE
+The function {b} is part of the subgoal package. It is an abbreviation for the
+function {backup}. For a description of the subgoal package, see
+{set_goal}.
+
+\FAILURE
+As for {backup}.
+
+\USES
+Back tracking in a goal-directed proof to undo errors or try different tactics.
+
+\SEEALSO
+proofManagerLib.backup, backup_limit, proofManagerLib.e, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.g, get_state, proofManagerLib.p, print_state, proofManagerLib.r, rotate, save_top_thm, proofManagerLib.set_goal, set_state, proofManagerLib.top_goal, proofManagerLib.top_thm.
+\ENDDOC

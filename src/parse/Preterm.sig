@@ -26,6 +26,9 @@ sig
 
   val eq : preterm -> preterm -> bool
 
+  val ptype_of : preterm -> pretype
+  (* may throw HOL_ERR if a type combination's operator is not a universal type *)
+
 
   (* Performs the first phase of type-checking, altering the types
      attached to the various components of the preterm, but without

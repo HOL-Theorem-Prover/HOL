@@ -14,10 +14,8 @@ Tutorial	 : LaTeX sources for the HOL tutorial and case studies
 
 Reference	 : LaTeX sources for the HOL reference manual.
 
-Covers		 : LaTeX and PostScript sources for the fancy cover
-		   pages for the maual.  These require a PostScript printer
-		   and the psfig macros.  See the file Covers/READ-ME for
-		   further details.
+Interaction      : LaTeX sources for a guide to HOL interaction and 
+                   basic proofs (intended for complete beginners).
 
 LaTeX	 	 : layout files and LaTeX macros for the manual.
 

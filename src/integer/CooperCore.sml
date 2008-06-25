@@ -474,7 +474,7 @@ fun phase4_CONV tm = let
            CONV_RULE (RATOR_CONV (RAND_CONV (REWR_CONV INT_ADD_RID))) to get
               x < e + d
            CONV_RULE (REWR_CONV (GSYM INT_LT_SUB_RADD)) to get
-              x - d < e
+              x - d < e
            as required
 
          (B)   thm  = |- x - d < e

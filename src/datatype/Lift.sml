@@ -11,7 +11,7 @@ val ERR = mk_HOL_ERR "Lift";
 
 fun enum_list s 0 = []
   | enum_list s 1 = [s]
-  | enum_list s n = for 1 n (Lib.concat s o Int.toString);
+  | enum_list s n = for 1 n (Lib.strcat s o Int.toString);
 
 fun Undef ty =
   raise Fail ("Undef: "^Lib.quote (Parse.type_to_string ty)^

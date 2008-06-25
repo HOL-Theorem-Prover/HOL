@@ -1,3 +1,20 @@
+\documentclass[12pt,fleqn]{article}
+\usepackage{latexsym}
+%\usepackage{amsmath}
+\usepackage{amssymb}
+%\usepackage{amsbsy}
+%\usepackage{amsthm}
+\usepackage{makeidx}
+\usepackage{alltt}
+\usepackage{../LaTeX/layout}
+\usepackage{graphicx}
+\usepackage{url}
+
+% ---------------------------------------------------------------------                                                                                     
+% Input defined macros and commands                                                                                                                         
+% ---------------------------------------------------------------------                                                                                     
+\input{../LaTeX/commands}
+
 \newcommand{\tsu}[1]{\textsf{\textup{#1}}}
 \newcommand{\semb}[1]{\ensuremath{[\![#1]\!]}}
 \newcommand{\rvset}{\ensuremath{V\!\!AR}}
@@ -9,6 +26,11 @@
 \newcommand{\hor}{\texttt{\char'134/}}
 \newcommand{\hnot}{\texttt{\~{}}}
 \setcounter{sessioncount}{0}
+\makeindex
+\title{HolCheck}
+\date{}
+\begin{document}
+\maketitle
 \index{holCheckLib|(}\index{model checking|see {holCheckLib}}
 This is a brief description of the \hc{}\index{holCheckLib!\hc{}} model checker, version 1.0. It assumes the reader is familiar with symbolic model checking, with \HOL{}, and, ideally, with \texttt{HolBddLib}, the \HOL{} interface to BDDs. It should be read with a working \HOL{} installation at hand.
 
@@ -383,7 +405,7 @@ The last result is the same as the second and third, since B does not have a win
 
 Finally, note that both success theorems have some assumptions. If the term\_bdd's were examined, they would also have the corresponding assumptions. This is because \hc{} uses postponed proof verification to speed up the model checking work-flow (i.e. no time is wasted proving intermediate lemmas for properties that fail eventually). Any success theorems and term\_bdd's thus end up with several undischarged assumptions. The idea is that the time-consuming proof verification can be postponed to a later time, when the user is otherwise occupied (e.g., asleep).
 
-The assumptions are discharged as follows (HOL chatting messages have been elided).
+The assumptions are discharged as follows (chatting messages have been elided).
 
 \begin{session}\begin{verbatim}
 - val ttt3 = holCheckLib.prove_model ttt2;
@@ -550,6 +572,10 @@ A failure to discharge all assumptions means a completeness bug in the \hc{} pro
 For the moment, \hc{} does not support persistence for models. The theorems produced can however be saved to permanent storage as \HOL{} theorems.
 
 \index{holCheckLib|)}
+
+\printindex
+
+\end{document}
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "description"

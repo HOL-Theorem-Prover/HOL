@@ -1,8 +1,8 @@
 signature CoreKernel = sig
-  structure Tag  : RestrictedTag
-  structure Kind : Kind
-  structure Type : Type             where type kind     = Kind.kind
-  structure Term : Term             where type hol_type = Type.hol_type
+  structure Tag  : FinalTag
+  structure Kind : FinalKind
+  structure Type : FinalType        where type kind     = Kind.kind
+  structure Term : FinalTerm        where type hol_type = Type.hol_type
 
   structure Thm  : Thm              where type hol_type = Type.hol_type
                                       and type term     = Term.term

@@ -128,12 +128,8 @@ fun distinct [] = []
   | distinct (h::t) = h::distinct(rm h t);
    
 (*---------------------------------------------------------------------------*)
-(* 0 is both a literal and a constructor                                     *)
+(* Need to handle fact that 0 is both a literal and a constructor            *)
 (*---------------------------------------------------------------------------*)
-
-fun is_pure_literal x =
- Literal.is_literal x andalso 
- not (TypeBase.is_constructor x);
 
 type divide_ty
  = term list
@@ -160,7 +156,8 @@ fun mk_case ty_info FV thy =
           in mk{path=rstp, rows=zip pat_rectangle' rights'}
           end
 (*     else    
-     if exists is_pure_literal col0  (* column 0 matches against literals *)
+     if exists Literal.is_pure_literal col0  
+       (* column 0 matches against literals *)
      then 
 *)
      else (* column 0 matches against constructors *)
@@ -214,7 +211,7 @@ fun mk_case ty_info FV thy =
           in mk{path=rstp, rows=zip pat_rectangle' rights'}
           end
      else    
-     if exists is_pure_literal col0  (* column 0 matches against literals *)
+     if exists Literal.is_pure_literal col0  (* col0 matches against literals *)
      then let val lits = distinct col0
            val (litpats, varpats) = Lib.partition (not o is_var) lits
            val liteqs = map (curry mk_eq u) litpats

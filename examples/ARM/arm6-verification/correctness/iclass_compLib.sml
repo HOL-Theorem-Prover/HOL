@@ -12,6 +12,8 @@
            "lemmasTheory", "interruptsTheory", "iclass_compTheory"];
 *)
 
+structure iclass_compLib :> iclass_compLib = struct
+
 open HolKernel boolLib bossLib;
 open Q computeLib pairTheory
 open armTheory coreTheory lemmasTheory interruptsTheory iclass_compTheory;
@@ -133,3 +135,4 @@ val MLA_MUL_CONV =
   CBV_CONV (add_rws core_rws ((hd constant_fold_mul) @ basic_rws));
 
 (* ------------------------------------------------------------------------- *)
+end;

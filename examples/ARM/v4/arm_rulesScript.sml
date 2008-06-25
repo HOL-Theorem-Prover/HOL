@@ -12,7 +12,7 @@
 
 open HolKernel boolLib Parse bossLib;
 open Q arithmeticTheory bitTheory wordsTheory wordsLib;
-open bsubstTheory armTheory systemTheory arm_evalTheory;
+open updateTheory armTheory systemTheory arm_evalTheory;
 
 val _ = new_theory "arm_rules";
 
@@ -50,7 +50,7 @@ val ALU_ADD = prove(
      let r = a + b + (if c then 1w else 0w) in
        ((word_msb r, r = 0w, BIT 32 (w2n a + w2n b + (if c then 1 else 0)),
         (word_msb a = word_msb b) /\ ~(word_msb a = word_msb r)), r)`,
-  REPEAT STRIP_TAC \\ Cases_on_word `a` \\ Cases_on_word `b`
+  REPEAT STRIP_TAC \\ Cases_on `a` \\ Cases_on `b`
     \\ RW_TAC arith_ss [ADD_def,ALU_arith_def,DIVMOD_2EXP,SBIT_def,WORD_ADD_0]
     \\ SIMP_TAC std_ss [ADD_ASSOC,GSYM word_add_n2w,w2n_n2w,n2w_mod,
          MOD_2EXP_32,MOD_PLUS,ZERO_LT_TWOEXP]
@@ -93,7 +93,7 @@ val ALU_SUB = prove(
          else
            BIT 32 (w2n a + w2n ~b),
          ~(word_msb a = word_msb b) /\ ~(word_msb a = word_msb r)), r)`,
-  REPEAT STRIP_TAC \\ Cases_on_word `a` THEN Cases_on_word `b`
+  REPEAT STRIP_TAC \\ Cases_on `a` THEN Cases_on `b`
     \\ RW_TAC arith_ss [SUB_def,ADD_def,ALU_arith_def,DIVMOD_2EXP,WORD_ADD_0,
          word_hs_def,nzcv_def]
     \\ RW_TAC std_ss [ADD_ASSOC,GSYM word_add_n2w,w2n_n2w,n2w_w2n,n2w_mod,
@@ -200,7 +200,7 @@ val SPEC_TO_PC = (SIMP_RULE (std_ss++PC_ss) [] o
 
 val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,NEXT_ARM_MMU,
   RUN_ARM_def,OUT_ARM_def,DECODE_PSR_def,TRANSFERS_def,TRANSFER_def,
-  FETCH_PC_def,ADDR30_def,CARRY_NZCV,n2w_11,word_bits_n2w,w2n_w2w,
+  FETCH_PC_def,addr30_def,CARRY_NZCV,n2w_11,word_bits_n2w,w2n_w2w,
   word_index,BITS_THM,BIT_ZERO,(GEN_ALL o SPECL [`b`,`NUMERAL n`]) BIT_def,
   OUT_CP_def, RUN_CP_def,
   cond_pass_enc_data_proc,
@@ -357,7 +357,7 @@ val ARM_UND = UNABBREVL_RULE [`Reg`,`mode`]
 
 val LSL_NOT_ZERO = prove(
   `!n. ~(n = 0w:word5) ==> ~(w2w n = 0w:word8)`,
-  Cases_word \\ RW_TAC bool_ss [dimword_def,ZERO_MOD,ZERO_LT_TWOEXP,
+  Cases \\ RW_TAC bool_ss [dimword_def,ZERO_MOD,ZERO_LT_TWOEXP,
          w2w_def,n2w_11,w2n_n2w,dimindex_5,dimindex_8]
     \\ ASSUME_TAC (DECIDE ``5 < 8``) \\ IMP_RES_TAC TWOEXP_MONO
     \\ METIS_TAC [MOD_2EXP_LT,LESS_TRANS,LESS_MOD]);
@@ -380,6 +380,7 @@ val DP_ss =
    REG_READ_INC_PC,WORD_NEG_cor,WORD_1COMP_ZERO,
    (SIMP_RULE bool_ss [] o ISPEC `\x:iclass. x = y`) COND_RAND,
    (SIMP_RULE bool_ss [] o ISPEC `\r. REG_READ r m n`) COND_RAND,
+   (SIMP_RULE (srw_ss()) [] o Q.ISPEC `\x. $- 1w * x`) COND_RAND,
    decode_enc_data_proc, decode_data_proc_enc,
    decode_enc_data_proc2,decode_data_proc_enc2,
    decode_enc_data_proc3,decode_data_proc_enc3];
@@ -550,7 +551,7 @@ val TRANSFER_LDM2__ = prove(
 
 val TRANSFER_LDM2_ = prove(
   `!m d l. FST (SND (FOLDL (\x y. TRANSFER F x (MemRead y)) (cpin,d,m) l)) =
-             d ++ MAP (\x. m (ADDR30 x)) l`,
+             d ++ MAP (\x. m (addr30 x)) l`,
  Induct_on `l` \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss) [TRANSFER_def,
     GSYM rich_listTheory.SNOC_APPEND,my_listTheory.APPEND_SNOC1]);
 
@@ -560,7 +561,7 @@ val TRANSFER_LDM2 = prove(
        FIRSTN (LENGTH (FST addr_mode4))
          (FST (SND (FOLDL (\x y. TRANSFER F x (MemRead y)) (cpin,[],m)
             (FST (SND addr_mode4))))) =
-       MAP (m o ADDR30) (FST (SND addr_mode4))`,
+       MAP (m o addr30) (FST (SND addr_mode4))`,
   REPEAT STRIP_TAC
     \\ `!rd. FIRSTN (LENGTH (REGISTER_LIST l))
           (FST (SND (FOLDL (\x y. TRANSFER F x (MemRead y)) (cpin,[],m)
@@ -614,32 +615,29 @@ val ARM_STM = (GEN_ALL o Thm.DISCH abbrev_mode4 o
 
 (* ......................................................................... *)
 
-(*
-val lem = METIS_PROVE [DECIDE ``!i. ~(28 <= i \/ i <= 7) = 8 <= i /\ i <= 27``]
- ``!rm. (\i b. 28 <= i /\ (rm:word32) ' i \/
-                8 <= i /\ i <= 27 /\ b \/ i <= 7 /\ rm ' i) =
-   (\i b. if i <= 7 \/ 28 <= i then rm ' i else b)``;
+val lem = prove(`!b r x y.
+   (if b then <| reg := r; psr := x |> else <| reg := r; psr := y |>) =
+   <| reg := r; psr := if b then x else y |>`, SRW_TAC [] []);
 
-val lem2 = METIS_PROVE [DECIDE ``!i. ~(28 <= i) = 8 <= i /\ i <= 27 \/ i <= 7``]
- ``!rm. (\i b. 28 <= i /\ (rm:word32) ' i \/
-                8 <= i /\ i <= 27 /\ b \/ i <= 7 /\ b) =
-   (\i b. if 28 <= i then rm ' i else b)``;
-
-val lem3 = SIMP_RULE (std_ss++armLib.PBETA_ss) [] (prove(
-  `!op2 c.  let (I,R,bit19,bit16,Rm,opnd) =
-              DECODE_MSR (enc (instruction$MSR c SPSR_a op2)) in
-     (R \/ (~bit19 /\ bit16)) \/ (~bit19 /\ ~bit16)`,
-  Cases \\ SIMP_TAC std_ss [DECODE_PSRD_def,decode_msr_enc]));
-*)
-
-val MRS_MSR_ss = rewrites [MSR_def,MRS_def,DECODE_PSRD_def,
+val MRS_MSR_ss = rewrites [MSR_def,MRS_def,lem,
   immediate_enc,decode_enc_msr,decode_msr_enc,decode_enc_mrs,decode_mrs_enc];
 
-val ARM_MSR = UNABBREVL_RULE [`Reg`]
-  (SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt []
-   ``enc (instruction$MSR c psrd op2)``));
+val ARM_MSR =
+  SYMBOLIC_EVAL_CONV MRS_MSR_ss
+  (cntxt [``Abbrev ((R,flags,ctrl) = DECODE_PSRD psrd) /\
+            Abbrev (src = if IS_MSR_IMMEDIATE op2 then
+                            SND (IMMEDIATE F ((11 >< 0) (msr_mode_encode op2)))
+                          else
+                            Reg (((3 >< 0) (((11 >< 0)
+                              (msr_mode_encode op2)) : word12)) : word4)) /\
+            Abbrev (f:word32->word32 = word_modify (\i b.
+                               28 <= i /\ (if flags then src ' i else b) \/
+                               8 <= i /\ i <= 27 /\ b \/
+                               i <= 7 /\
+                               (if ctrl /\ ~USER mode then src ' i else b)))``]
+   ``enc (instruction$MSR c psrd op2)``);
 
-val ARM_MRS = UNABBREVL_RULE [`Reg`]
+val ARM_MRS =
   (SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt [] ``enc (instruction$MRS c r Rd)``));
 
 (* ------------------------------------------------------------------------- *)

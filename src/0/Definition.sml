@@ -143,13 +143,19 @@ fun new_type_definition (name,thm) =
 fun new_definition(name,M) =
  let val (dest,post) = !new_definition_hook
      val (V,eq)      = dest M
+                         handle e => raise (wrap_exn "new_definition" "dest M" e)
      val (lhs,rhs)   = with_exn dest_eq eq DEF_FORM_ERR
+                         handle e => raise (wrap_exn "new_definition" "dest_eq eq" e)
      val (Name,Ty)   = with_exn dest_atom lhs DEF_FORM_ERR
+                         handle e => raise (wrap_exn "new_definition" "dest_atom lhs" e)
      val checked     = check_free_vars rhs DEF_ERR
+                         handle e => raise (wrap_exn "new_definition" "check_free_vars" e)
      val checked     = check_tyvars (type_vars_in_term rhs) Ty DEF_ERR
+                         handle e => raise (wrap_exn "new_definition" "check_tyvars" e)
      val (wit,def)   = mk_def(TERM rhs, mk_eq(bind Name Ty, rhs))
+                         handle e => raise (wrap_exn "new_definition" "mk_def" e)
  in
-   Theory.store_definition (name, [Name], wit, post(V,def))
+   Theory.store_definition (name, [Name], wit, post(V,def) handle e => (print "post\n";Raise e))
  end
  handle e => raise (wrap_exn "Definition" "new_definition" e);
 

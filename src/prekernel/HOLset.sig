@@ -1,1 +1,1 @@
-signature HOLset = Redblackset
+signature HOLset = sig include Redblackset end

@@ -1,15 +1,18 @@
-
 structure refine :> refine = 
 struct
 
-(* app load ["wordsSyntax", "fcpLib", "wordsLib", "Normal"]; *)
+(* app load ["wordsLib", "Normal"]; 
+*)
 
-open HolKernel Parse boolLib bossLib wordsSyntax numSyntax pairSyntax NormalTheory;
+open HolKernel Parse boolLib bossLib 
+  wordsSyntax numSyntax pairSyntax NormalTheory;
 
 (*---------------------------------------------------------------------------*)
 
 val C_tm = prim_mk_const{Name="C",Thy="Normal"};
-fun mk_C tm = mk_comb (inst [alpha |-> type_of tm, beta |-> type_of tm] C_tm, tm);
+fun mk_C tm = 
+  mk_comb (inst [alpha |-> type_of tm, beta |-> type_of tm] C_tm, tm);
+
 val dest_C = dest_monop C_tm (ERR "dest_C" "");
 
 (*---------------------------------------------------------------------------*)
@@ -35,7 +38,8 @@ fun pflat [] = []
 (* Translating constants into compound expressions.                          *)
 (*---------------------------------------------------------------------------*)
 
-fun type_to_name t = String.extract(Hol_pp.type_to_string t, 1, NONE);
+fun type_to_name t = 
+ String.extract(Hol_pp.type_to_string t, 1, NONE);
 
 fun numeric_type_to_num t =
  Lib.with_flag(type_pp.pp_num_types,true)

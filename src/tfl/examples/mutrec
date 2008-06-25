@@ -43,7 +43,7 @@ val APART_IMP = prove(Term `!n. even n ==> ~odd n`,
 
 val _ = Hol_datatype `ltree = Node of 'a => ltree list`;
 
-val (size_tm,ltree_size_def_0) = TypeBase.size_of "ltree";
+val (size_tm,ltree_size_def_0) = TypeBase.size_of ``:'a ltree``;
 
 val ltree_size_def = Q.prove
 (`!x f l. ltree_size f (Node x l) = list_size (ltree_size f) l + f x + 1`,
@@ -55,7 +55,7 @@ val ltree_size_def = Q.prove
 
 val _ = TypeBase.write 
           [TypeBasePure.put_size (size_tm,TypeBasePure.ORIG ltree_size_def) 
-                (valOf (TypeBase.read "ltree"))];
+                (valOf (TypeBase.read {Tyop="ltree",Thy="scratch"}))];
 
 val fringe_fns_def = 
  xDefine "fringe_fns"
@@ -63,7 +63,7 @@ val fringe_fns_def =
  /\  (fringe (Node v l)  = fringes l)
 
  /\  (fringes []     = [])
- /\  (fringes (h::t) = APPEND (fringe h) (fringes t))`;
+ /\  (fringes (h::t) = (fringe h) ++ (fringes t))`;
 
 
 (*---------------------------------------------------------------------------
@@ -86,7 +86,7 @@ val list_contains_ltree_lem = Q.prove
 (`!ltr l f. MEM ltr l ==> ltree_size f ltr <= list_size (ltree_size f) l`,
  Induct_on `l` 
    THEN RW_TAC list_ss [listTheory.MEM,listTheory.list_size_def]
-   THENL [DECIDE_TAC, PROVE_TAC [DECIDE (Term `x:num <= y ==> x <= y+z`)]]);
+   THENL [DECIDE_TAC, PROVE_TAC [DECIDE ``x:num <= y ==> x <= y+z``]]);
 
 (*---------------------------------------------------------------------------
       Termination proof for Fringe
@@ -101,7 +101,7 @@ val (Fringe_eqns,Fringe_ind) =
      THEN RW_TAC list_ss [MEM,ltree_size_def,list_size_def]
      THENL [numLib.ARITH_TAC,
             PROVE_TAC [list_contains_ltree_lem, 
-                       DECIDE (Term `x:num <= y ==> x < y + (w+2)`)]])
+                       DECIDE ``x:num <= y ==> x < y + (w+2)``]])
 end;
 
 
@@ -152,10 +152,10 @@ val _ = Hol_datatype
                 | NOT of bexp`;
 
 
-val expty  = Type`:('a,'b)exp`
-val bexpty = Type`:('a,'b)bexp`
-val exp    = ty_antiq expty
-val bexp   = ty_antiq bexpty;
+val (_,size_def) = TypeBase.size_of ``:('a,'b)exp``;
+
+val exp  = ty_antiq ``:('a,'b)exp``;
+val bexp = ty_antiq ``:('a,'b)bexp``;
 
 
 (*---------------------------------------------------------------------------
@@ -179,8 +179,6 @@ val ELBdefn =
  /\  (EB (env, OR b1 b2)    = EB (env, b1) \/ EB (env, b2))
  /\  (EB (env, AND b1 b2)   = EB (env, b1) /\ EB (env, b2))`;
 
-
-val (_,size_def) = TypeBase.size_of "exp";
 
 val [_,guess] = TotalDefn.guessR ELBdefn;
 Defn.tgoal ELBdefn;
@@ -216,6 +214,6 @@ val (Evals_def,Evals_ind) =
         THEN RW_TAC arith_ss [size_def]
         THEN Induct_on `l` 
         THEN RW_TAC list_ss [size_def,listTheory.MEM]
-        THENL [PROVE_TAC [DECIDE (Term`x < y+(x+2n)`)],
-               PROVE_TAC [DECIDE (Term `x < y+1n ==> x < y+(z+2)`)]])
+        THENL [PROVE_TAC [DECIDE ``x < y+(x+2n)``],
+               PROVE_TAC [DECIDE ``x < y+1n ==> x < y+(z+2)``]])
  end;

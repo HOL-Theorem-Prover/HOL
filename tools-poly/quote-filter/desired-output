@@ -1,0 +1,19 @@
+"foo \
+	  \bar"
+(Parse.Term [QUOTE " (*#loc 3 3*)\"foo\""])
+[QUOTE " (*#loc 4 2*)foo = #\"`\""]
+[QUOTE " (*#loc 5 2*)\"\\\"\""]
+(Parse.Term [QUOTE " (*#loc 6 3*)\t"])
+(Parse.Term [QUOTE " (*#loc 7 3*)(* foo"])
+[QUOTE " (*#loc 8 2*)^"]
+"\"" (Parse.Term [QUOTE " (*#loc 9 8*)foo"])
+"\\" [QUOTE " (*#loc 10 7*)foo"]
+[QUOTE " (*#loc 11 2*)putting unescaped backticks into ", ANTIQUOTE ((antiquotes #"`")),QUOTE " (*#loc 11 53*) is fine"]
+(Parse.Term [QUOTE " (*#loc 12 3*)foo\n\
+\bar"])
+(Parse.Term [QUOTE " (*#loc 14 3*)\"an embedded string with \\\n\
+\\\protected newlines\""])
+[QUOTE " (*#loc 16 2*)s1 ^ s2"]
+[QUOTE " (*#loc 17 2*)s1 ^^\n\
+\s2"]
+(* ` *)

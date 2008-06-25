@@ -12,64 +12,41 @@ fun ERR f msg = HOL_ERR {origin_structure = "Type",
                          message = msg}
 
 type type_key = {Thy : string, Tyop : string }
-type type_info = { key : type_key, arity : int, uptodate : bool} ref
+type type_info = KernelSig.kernelid * int
 
-fun compare_key ({Thy = thy1, Tyop = op1}, {Thy = thy2, Tyop = op2}) =
-    case String.compare(op1, op2) of
-      EQUAL => String.compare(thy1, thy2)
-    | x => x
+val operator_table = KernelSig.new_table()
 
-structure Map = Binarymap
+fun prim_delete_type (k as {Thy, Tyop}) =
+    ignore (KernelSig.retire_name(operator_table, {Thy = Thy, Name = Tyop}))
 
-val operator_table = ref (Map.mkDict compare_key)
-
-fun prim_delete_type (k as {Thy, Tyop}) = let
-  val (newtable, v as ref {key = {Tyop,Thy}, arity, ...}) =
-      Map.remove(!operator_table, k)
-in
-  operator_table := newtable;
-  v := {key = {Tyop = Globals.old Tyop, Thy = Thy}, arity = arity,
-        uptodate = false}
-end handle Map.NotFound => raise ERR "prim_delete_type" "No such type"
-
-fun prim_new_type (k as {Thy, Tyop}) n = let
+fun prim_new_type {Thy,Tyop} n = let
   val _ = n >= 0 orelse failwith "invalid arity"
-  val newdata = ref {key = k, arity = n, uptodate = true}
-  val () = prim_delete_type k handle HOL_ERR _ => ()
 in
-  operator_table := Map.insert(!operator_table, k, newdata)
+  ignore (KernelSig.insert(operator_table,{Thy=Thy,Name=Tyop},n))
 end
-
-
 
 fun thy_types s = let
-  fun f (k, tinfo) = if #Thy k = s then
-                  SOME (#Tyop k, #arity (!tinfo))
-                else NONE
+  fun foldthis (kn,(_,arity),acc) =
+      if #Thy kn = s then (#Name kn, arity) :: acc
+      else acc
 in
-  List.mapPartial f (Map.listItems (!operator_table))
+  KernelSig.foldl foldthis [] operator_table
 end
 
-fun del_segment s = let
-  fun f (k, v) = if #Thy k = s then prim_delete_type k else ()
-  val m = !operator_table
-in
-  Map.app f m
-end
+fun del_segment s = KernelSig.del_segment(operator_table, s)
 
 fun minseg s = {Thy = "min", Tyop = s}
 val _ = prim_new_type (minseg "fun") 2
 val _ = prim_new_type (minseg "bool") 0
 val _ = prim_new_type (minseg "ind") 0
 
-val funref = Map.find(!operator_table, (minseg "fun"))
-
+val funref = #1 (KernelSig.find(operator_table, {Thy="min", Name = "fun"}))
 
 datatype hol_type = Tyv of string
-                  | Tyapp of type_info * hol_type list
+                  | Tyapp of KernelSig.kernelid * hol_type list
 
 fun uptodate_type (Tyv s) = true
-  | uptodate_type (Tyapp(info, args)) = #uptodate (!info) andalso
+  | uptodate_type (Tyapp(info, args)) = KernelSig.uptodate_id info andalso
                                         List.all uptodate_type args
 
 fun dest_vartype (Tyv s) = s
@@ -89,8 +66,7 @@ fun is_gen_tyvar (Tyv name) = String.isPrefix gen_tyvar_prefix name
   | is_gen_tyvar _ = false;
 
 fun first_decl caller s = let
-  val possibilities = filter (fn (k,_) => #Tyop k = s)
-                             (Map.listItems (!operator_table))
+  val possibilities = KernelSig.listName operator_table s
 in
   case possibilities of
     [] => raise ERR caller ("No such type: "^s)
@@ -99,11 +75,10 @@ in
 end
 
 fun mk_type (opname, args) = let
-  val info = first_decl "mk_type" opname
-  val aty = #arity (!info)
+  val (id,aty) = first_decl "mk_type" opname
 in
   if length args = aty then
-    Tyapp (info, args)
+    Tyapp (id, args)
   else
     raise ERR "mk_type"
               ("Expecting "^Int.toString aty^" arguments for "^opname)
@@ -113,33 +88,35 @@ val bool = mk_type("bool", [])
 val ind = mk_type("ind", [])
 
 fun dest_type (Tyv _) = raise ERR "dest_type" "Type a variable"
-  | dest_type (Tyapp(i, args)) = let
-      val {Thy, Tyop} = #key (!i)
+  | dest_type (Tyapp(id, args)) = let
+      val {Thy, Name} = KernelSig.name_of_id id
     in
-      (Tyop, args)
+      (Name, args)
     end
 
 fun is_type (Tyapp _) = true | is_type _ = false
 
 fun mk_thy_type {Thy, Tyop, Args} =
-    case Map.peek(!operator_table, {Thy = Thy, Tyop = Tyop}) of
+    case KernelSig.peek(operator_table, {Thy = Thy, Name = Tyop}) of
       NONE => raise ERR "mk_thy_type" ("No such type: "^Thy ^ "$" ^ Tyop)
-    | SOME (i as ref {arity,...}) =>
+    | SOME (i,arity) =>
       if arity = length Args then Tyapp(i, Args)
       else raise ERR "mk_thy_type" ("Expecting "^Int.toString arity^
                                     " arguments for "^Tyop)
 
 fun dest_thy_type (Tyv _) = raise ERR "dest_thy_type" "Type a variable"
-  | dest_thy_type (Tyapp(ref {key = {Thy,Tyop},...}, args)) =
-    {Thy = Thy, Tyop = Tyop, Args = args}
+  | dest_thy_type (Tyapp(id, args)) =
+    {Thy = KernelSig.seg_of id, Tyop = KernelSig.name_of id, Args = args}
 
 fun decls s = let
-  fun foldthis (k,v,acc) = if #Tyop k = s then k::acc else acc
+  fun foldthis ({Thy,Name},v,acc) = if Name = s then {Thy=Thy,Tyop=Name}::acc
+                                    else acc
 in
-  Map.foldl foldthis [] (!operator_table)
+  KernelSig.foldl foldthis [] operator_table
 end
 
-fun op_arity k = Option.map (#arity o !) (Map.peek(!operator_table, k))
+fun op_arity {Thy,Tyop} =
+    Option.map (#2) (KernelSig.peek(operator_table, {Thy=Thy,Name=Tyop}))
 
 fun type_vars_set acc [] = acc
   | type_vars_set acc ((t as Tyv s) :: rest) =
@@ -150,11 +127,11 @@ fun type_vars_set acc [] = acc
 fun compare0 (Tyv s1, Tyv s2) = String.compare(s1, s2)
   | compare0 (Tyv _, _) = LESS
   | compare0 (Tyapp _, Tyv _) = GREATER
-  | compare0 (Tyapp(iref, iargs), Tyapp(jref, jargs)) = let
+  | compare0 (Tyapp(i, iargs), Tyapp(j, jargs)) = let
     in
-      if iref = jref then
-        Lib.list_compare compare0 (iargs, jargs)
-      else compare_key(#key (!iref), #key (!jref))
+      case KernelSig.id_compare(i,j) of
+        EQUAL => Lib.list_compare compare0 (iargs, jargs)
+      | x => x
     end
 
 fun compare p = if Portable.pointer_eq p then EQUAL

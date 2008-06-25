@@ -256,6 +256,41 @@ in
   (opc, cop)
 end
 
+local
+  fun foverloading f {opname, realname, realthy} oinfo = let
+    val nthy_rec = {Name = realname, Thy = realthy}
+    val cnst = prim_mk_const nthy_rec
+      handle HOL_ERR _ =>
+        raise OVERLOAD_ERR ("No such constant: "^realthy^"$"^realname)
+    val (opc0, cop0) = oinfo
+    val opc =
+        case info_for_name oinfo opname of
+          SOME {base_type, actual_ops} => let
+            (* this name is overloaded *)
+            fun eq_nthy {Name,Thy,Ty} = Name = realname andalso Thy = realthy
+          in
+            case List.find eq_nthy actual_ops of
+              SOME x => (* the constant is in the map *)
+                Binarymap.insert(opc0, opname,
+                  {actual_ops = f (fn x => #Name x = realname andalso
+                                            #Thy x = realthy) actual_ops,
+                   base_type = base_type})
+            | NONE => raise OVERLOAD_ERR
+                        ("Constant not overloaded: "^realthy^"$"^realname)
+          end
+        | NONE => raise OVERLOAD_ERR
+                    ("No overloading for Operator: "^opname)
+  in
+    (opc, cop0)
+  end
+
+  fun send_to_back P l = let val (m,r) = Lib.pluck P l in r @ [m] end
+  fun bring_to_front P l = let val (m,r) = Lib.pluck P l in m::r end
+in
+  fun send_to_back_overloading x oinfo = foverloading send_to_back x oinfo
+  fun bring_to_front_overloading x oinfo = foverloading bring_to_front x oinfo
+end;
+  
 
 fun myfind f [] = NONE
   | myfind f (x::xs) = case f x of (v as SOME _) => v | NONE => myfind f xs

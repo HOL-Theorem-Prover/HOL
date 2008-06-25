@@ -42,14 +42,14 @@ elements such as {BreakSpace}.
 
 The {block_info} field is a pair consisting of a ``consistency''
 ({PP.CONSISTENT}, or {PP.INCONSISTENT}), and an indentation depth (an
-integer).  The standard value for this field is {(PP.INCONSISTENT,
-0)}, which will cause lists too long to fit in a single line to print
-with as many elements on the first line as will fit, and for
-subsequent elements to appear unindented on subsequent lines.
-Changing the ``consistency'' to {PP.CONSISTENT} would cause lists too
-long for a single line to print with one element per line.  The
-indentation level number specifies the number of extra spaces to be
-inserted when a line-break occurs.
+integer).  The standard value for this field is {(PP.INCONSISTENT,0)},
+which will cause lists too long to fit in a single line to print with
+as many elements on the first line as will fit, and for subsequent
+elements to appear unindented on subsequent lines.  Changing the
+``consistency'' to {PP.CONSISTENT} would cause lists too long for a
+single line to print with one element per line.  The indentation level
+number specifies the number of extra spaces to be inserted when a
+line-break occurs.
 
 In common with the {add_rule} function, there is no requirement that
 the {cons} and {nilstr} fields be the names of constants; the

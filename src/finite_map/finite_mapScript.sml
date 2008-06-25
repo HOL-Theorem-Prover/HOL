@@ -1437,7 +1437,8 @@ val _ =
  let open EmitML combinSyntax ParseDatatype arithmeticTheory
   in try emitML (!Globals.emitMLDir)
    ("fmap",
-    ABSDATATYPE (["'a","'b"], `fmap = FEMPTY | FUPDATE of fmap => 'a#'b`)
+    ABSDATATYPE ([("'a",typ,0),("'b",typ,0)],
+                  `fmap = FEMPTY | FUPDATE of fmap => 'a#'b`)
     :: OPEN ["num", "list", "set", "option"]
     :: MLSIG "type num = numML.num"
     :: MLSIG "type 'a set = 'a setML.set"

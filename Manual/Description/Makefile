@@ -2,33 +2,63 @@
 # Makefile for the hol DESCRIPTION
 # =====================================================================
 
-# ---------------------------------------------------------------------
-# Pathnames: MAKEINDEX = makeindex script
-# ---------------------------------------------------------------------
+PDFLATEX=pdflatex
+DVILATEX=latex
 MAKEINDEX=makeindex
 BIBTEX=bibtex
+
 CHAPTERS = conv.tex drules.tex libraries.tex misc.tex \
            preface.tex semantics.tex syntax.tex \
            tactics.tex theories.tex title.tex system.tex definitions.tex
+OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex
 
-default: all
+default: pdf
+all: ps pdf
+ps: description.ps HolBdd.ps holCheck.ps
+pdf: description.pdf HolBdd.pdf holCheck.pdf
 
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind description.{ps,pdf} *.bbl *.blg
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind description.{ps,pdf} \
+            *.bbl *.blg HolBdd.{ps,pdf} holCheck.{ps,pdf}
 
-description.dvi: description.tex $(CHAPTERS) ../LaTeX/commands.tex
-#	(cd ../Logo ; make)  # makes the lantern logo
-	latex description.tex
-	${MAKEINDEX} description.idx
-	${BIBTEX} description
-	latex description.tex
-	latex description.tex
+description.pdf: description.tex $(CHAPTERS) $(OTHER)
+	${PDFLATEX}  description
+	${MAKEINDEX} description
+	${BIBTEX}    description
+	${PDFLATEX}  description
+	${PDFLATEX}  description
+
+HolBdd.pdf: HolBdd.tex
+	${PDFLATEX} HolBdd
+	${BIBTEX}   HolBdd
+	${PDFLATEX} HolBdd
+	${PDFLATEX} HolBdd
+
+holCheck.pdf: holCheck.tex
+	${PDFLATEX} holCheck
+	${PDFLATEX} holCheck
+
+description.dvi: description.tex $(CHAPTERS) $(OTHER)
+	${DVILATEX}  description
+	${MAKEINDEX} description
+	${BIBTEX}    description
+	${DVILATEX}  description
+	${DVILATEX}  description
 
 description.ps: description.dvi
 	dvips -Ppdf -G0 -f description.dvi > description.ps.tmp
 	mv description.ps.tmp $@
 
-description.pdf: description.ps
-	ps2pdf description.ps
+HolBdd.ps:  HolBdd.tex
+	${DVILATEX} HolBdd
+	${BIBTEX}   HolBdd
+	${DVILATEX} HolBdd
+	${DVILATEX} HolBdd
+	dvips -Ppdf -G0 -f HolBdd.dvi > HolBdd.ps.tmp
+	mv HolBdd.ps.tmp $@
 
-all: description.ps description.pdf
+holCheck.ps: holCheck.tex
+	${DVILATEX} holCheck
+	${DVILATEX} holCheck
+	dvips -Ppdf -G0 -f holCheck.dvi > holCheck.ps.tmp
+	mv holCheck.ps.tmp $@

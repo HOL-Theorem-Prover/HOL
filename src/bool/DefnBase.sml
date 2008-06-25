@@ -101,16 +101,35 @@ end;
     are added to the congruence rules arising from datatype definitions.
  ---------------------------------------------------------------------------*)
 
+
 local open boolTheory
       val non_datatype_congs = 
-        ref [LET_CONG, COND_CONG, IMP_CONG, 
-             AND_CONG, OR_CONG, literal_case_CONG]
+        ref [LET_CONG, COND_CONG, IMP_CONG, literal_case_CONG]
 in
   fun read_congs() = !non_datatype_congs
   fun write_congs L = (non_datatype_congs := L)
 end;
 
-fun add_cong thm = write_congs (thm :: read_congs())
+fun add_cong thm = write_congs (thm :: read_congs());
+
+fun drop_cong c =
+ let open boolSyntax
+     val P = same_const c
+     val (cong,rst) = 
+         pluck (fn th => P (fst(strip_comb(lhs(snd
+                             (strip_imp(snd(strip_forall(concl th)))))))))
+               (read_congs())
+     val _ = write_congs rst
+ in
+   cong
+ end
+ handle e => raise wrap_exn "DefnBase.drop_cong"
+    (case total dest_thy_const c
+      of NONE => "expected a constant"
+       | SOME{Thy,Name,...} => 
+           ("congruence rule for "
+            ^Lib.quote(Thy^"$"^Name)
+            ^" was not found")) e;
 
 fun export_cong thmname = let
   val th = DB.fetch "-" thmname

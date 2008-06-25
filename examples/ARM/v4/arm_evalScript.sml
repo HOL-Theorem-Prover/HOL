@@ -8,12 +8,12 @@
 
 (* interactive use:
   app load ["pred_setSimps", "rich_listTheory", "wordsLib", "armLib",
-            "bsubstTheory", "instructionTheory", "systemTheory"];
+            "updateTheory", "instructionTheory", "systemTheory"];
 *)
 
 open HolKernel boolLib Parse bossLib;
 open Q rich_listTheory arithmeticTheory wordsLib wordsTheory bitTheory;
-open combinTheory bsubstTheory armTheory systemTheory instructionTheory;
+open combinTheory updateTheory armTheory systemTheory instructionTheory;
 
 val _ = new_theory "arm_eval";
 
@@ -55,77 +55,13 @@ val STATE_ARM_MMU_NEXT = store_thm("STATE_ARM_MMU_NEXT",
 
 (* ------------------------------------------------------------------------- *)
 
-val register2num_lt = prove(
+val register2num_lt_neq = store_thm("register2num_lt_neq",
   `!x y. register2num x < register2num y ==> ~(x = y)`,
   METIS_TAC [prim_recTheory.LESS_NOT_EQ, register2num_11]);
 
-val psr2num_lt = prove(
+val psr2num_lt_neq = store_thm("psr2num_lt_neq",
   `!x y. psr2num x < psr2num y ==> ~(x = y)`,
   METIS_TAC [prim_recTheory.LESS_NOT_EQ, psr2num_11]);
-
-val Ua_RULE4 = save_thm("Ua_RULE4",
-  (SIMP_RULE std_ss [register2num_lt] o
-   ISPEC `\x y. register2num x < register2num y`) UPDATE_SORT_RULE1);
-
-val Ub_RULE4 = save_thm("Ub_RULE4",
-  (SIMP_RULE std_ss [register2num_lt] o
-   ISPEC `\x y. register2num x < register2num y`) UPDATE_SORT_RULE2);
-
-val Ua_RULE_PSR = save_thm("Ua_RULE_PSR",
-  (SIMP_RULE std_ss [psr2num_lt] o
-   ISPEC `\x y. psr2num x < psr2num y`) UPDATE_SORT_RULE1);
-
-val Ub_RULE_PSR = save_thm("Ub_RULE_PSR",
-  (SIMP_RULE std_ss [psr2num_lt] o
-   ISPEC `\x y. psr2num x < psr2num y`) UPDATE_SORT_RULE2);
-
-val FUa_RULE = save_thm("FUa_RULE",
-  (SIMP_RULE std_ss [prim_recTheory.LESS_NOT_EQ] o
-   SPEC `\x y. x < y`) FCP_UPDATE_SORT_RULE1);
-
-val FUb_RULE = save_thm("FUb_RULE",
-  (SIMP_RULE std_ss [prim_recTheory.LESS_NOT_EQ] o
-   SPEC `\x y. x < y`) FCP_UPDATE_SORT_RULE2);
-
-val tm1 = `!a b x y m. (a |:> y) ((b |:> x) m) =
-     let lx = LENGTH x and ly = LENGTH y in
-        if a <=+ b then
-          if w2n b - w2n a <= ly then
-            if ly - (w2n b - w2n a) < lx then
-              (a |:> y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x) m
-            else
-              (a |:> y) m
-          else
-            (a |:< y) ((b |:> x) m)
-        else (* b <+ a *)
-          if w2n a - w2n b < lx then
-            (b |:> JOIN (w2n a - w2n b) x y) m
-          else
-            (b |:> x) ((a |:> y) m)`
-
-val tm2 = `!a b x y m. (a |:> y) ((b |:< x) m) =
-     let lx = LENGTH x and ly = LENGTH y in
-        if a <=+ b then
-          if w2n b - w2n a <= ly then
-            if ly - (w2n b - w2n a) < lx then
-              (a |:> y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x) m
-            else
-              (a |:> y) m
-          else
-            (a |:< y) ((b |:< x) m)
-        else (* b <+ a *)
-          if w2n a - w2n b < lx then
-            (b |:> JOIN (w2n a - w2n b) x y) m
-          else
-            (b |:> x) ((a |:> y) m)`
-
-val LUa_RULE = store_thm("LUa_RULE", tm1,
-  METIS_TAC [LUa_def,LUb_def,LUPDATE_LUPDATE]);
-
-val LUb_RULE = store_thm("LUb_RULE", tm2,
-  METIS_TAC [LUa_def,LUb_def,LUPDATE_LUPDATE]);
-
-(* ------------------------------------------------------------------------- *)
 
 val REGISTER_RANGES =
   (SIMP_RULE (std_ss++SIZES_ss) [] o Thm.INST_TYPE [alpha |-> ``:4``]) w2n_lt;
@@ -144,7 +80,7 @@ val mode_reg2num_lt = store_thm("mode_reg2num_lt",
          DECIDE ``a < 16 /\ ~(a = 15) ==> (a + 16 < 31)``]);
 
 val not_reg_eq_lem = prove(`!v w. ~(v = w) ==> ~(w2n v = w2n w)`,
-  REPEAT Cases_word \\ SIMP_TAC std_ss [w2n_n2w,n2w_11]);
+  REPEAT Cases \\ SIMP_TAC std_ss [w2n_n2w,n2w_11]);
 
 val not_reg_eq = store_thm("not_reg_eq",
   `!v w m1 m2. ~(v = w) ==> ~(mode_reg2num m1 v = mode_reg2num m2 w)`,
@@ -444,7 +380,7 @@ val lem = prove(
 
 val w2n_mod = prove(
   `!a:'a word b. (a = n2w b) = (w2n a = b MOD dimword (:'a))`,
-  Cases_word \\ REWRITE_TAC [n2w_11,w2n_n2w]);
+  Cases \\ REWRITE_TAC [n2w_11,w2n_n2w]);
 
 val PSR_CONS = store_thm("PSR_CONS",
    `!w:word32. w =
@@ -499,7 +435,7 @@ val SPSR_WRITE_n2w = save_thm("SPSR_WRITE_n2w", GEN_ALL
 
 (* ------------------------------------------------------------------------- *)
 
-val decode_opcode_def = Define`
+val decode_opcode_def = with_flag (priming, SOME "") Define`
   decode_opcode i =
     case i of
        AND cond s Rd Rn Op2 -> 0w:word4
@@ -869,9 +805,6 @@ val register_enc3 = store_thm("register_enc3",
   `!i. (3 >< 0) (addr_mode3_encode (Dth_register r)) = r`,
   SRW_TAC word_frags [addr_mode3_encode_def,w2w]);
 
-val EXTRACT_ss = simpLib.merge_ss [SIZES_ss, WORD_LOGIC_ss, WORD_SHIFT_ss,
-  WORD_GROUND_ss, WORD_EXTRACT_ss];
-
 val lem = simpLib.SIMP_PROVE (std_ss++WORD_BIT_EQ_ss) []
   ``~(i = 0w:word5) ==> ~((4 >< 0) i = 0w:word8)``;
 
@@ -894,7 +827,7 @@ val shift_immediate_enc = store_thm("shift_immediate_enc",
         || ASR Rm -> arm$ASR (REG_READ reg m Rm) (w2w i) c
         || ROR Rm -> arm$ROR (REG_READ reg m Rm) (w2w i) c`,
   REPEAT STRIP_TAC \\ Cases_on `sh` \\ Cases_on `i = 0w` \\ IMP_RES_TAC lem
-    \\ SRW_TAC [boolSimps.LET_ss, EXTRACT_ss]
+    \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
          [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode1_encode_def,
           shift_encode_def,shift_immediate_enc_lem,lem2]);
 
@@ -914,7 +847,7 @@ val shift_immediate_enc2 = store_thm("shift_immediate_enc2",
         || ASR Rm -> arm$ASR (REG_READ reg m Rm) (w2w i) c
         || ROR Rm -> arm$ROR (REG_READ reg m Rm) (w2w i) c`,
   REPEAT STRIP_TAC \\ Cases_on `sh` \\ Cases_on `i = 0w` \\ IMP_RES_TAC lem
-    \\ SRW_TAC [boolSimps.LET_ss, EXTRACT_ss]
+    \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
         [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode2_encode_def,
          shift_encode_def,shift_immediate_enc_lem2,lem2]);
 
@@ -928,7 +861,7 @@ val shift_register_enc = store_thm("shift_register_enc",
         || ASR Rm -> arm$ASR (REG_READ (INC_PC reg) m Rm) rs c
         || ROR Rm -> arm$ROR (REG_READ (INC_PC reg) m Rm) rs c`,
   REPEAT STRIP_TAC \\ Cases_on `sh`
-    \\ SRW_TAC [boolSimps.LET_ss, EXTRACT_ss]
+    \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
         [SHIFT_REGISTER_def,SHIFT_REGISTER2_def,addr_mode1_encode_def,
          shift_encode_def,shift_register_enc_lem,lem2]);
 
@@ -1371,6 +1304,12 @@ val cond_pass_enc_coproc = store_thm("cond_pass_enc_coproc",
         (enc (instruction$LDC cond n opt cpn crd rn offset)) =
       CONDITION_PASSED2 flgs cond)`,
   PASS_TAC);
+
+(* ......................................................................... *)
+
+val condition_encode = save_thm("condition_encode",
+   LIST_CONJ (map (fn x => EVAL ``condition_encode ^x``)
+    ((snd o strip_comb o snd o dest_comb o concl) datatype_condition)));
 
 (* ......................................................................... *)
 

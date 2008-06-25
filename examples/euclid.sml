@@ -6,10 +6,10 @@
 (*===========================================================================*)
 
 (*---------------------------------------------------------------------------*)
-(* First, open some relevant context, the theory of arithmetic. This theory  *)
-(* is already present, but the ML module arithmeticTheory needs to be opened *)
-(* before the definitions and theorems of the theory are available without   *)
-(* supplying the "arithmeticTheory." prefix.
+(* First, open required context: the theory of arithmetic. This theory is    *)
+(* automatically loaded when HOL starts, but the ML module arithmeticTheory  *)
+(* needs to be opened before the definitions and theorems of the theory are  *)
+(* available without supplying the "arithmeticTheory." prefix.               *)
 (*---------------------------------------------------------------------------*)
 
 open arithmeticTheory
@@ -107,18 +107,16 @@ val DIVIDES_FACT = store_thm
    THEN METIS_TAC [FACT, DECIDE ``!x. ~(x < x)``,
                    DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]);
 
-val DIVIDES_FACT = store_thm
- ("DIVIDES_FACT",
-  ``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
+val DIVIDES_FACT = prove
+ (``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
   RW_TAC arith_ss  [LESS_EQ_EXISTS]
    THEN Induct_on `p`
    THEN RW_TAC arith_ss  [FACT,ADD_CLAUSES]
    THEN METIS_TAC [FACT, DECIDE ``!x. ~(x < x)``, num_CASES,
                     DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]);
 
-val DIVIDES_FACT = store_thm
- ("DIVIDES_FACT",
-  ``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
+val DIVIDES_FACT = prove
+ (``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
   RW_TAC arith_ss  [LESS_EQ_EXISTS]
    THEN Induct_on `p`
    THEN METIS_TAC [FACT, DECIDE ``!x. ~(x < x)``, num_CASES,
@@ -172,7 +170,7 @@ val PRIME_POS = store_thm
 (* hand, if x <= n, there are two cases: if x<n then we can use the i.h. and *)
 (* by transitivity of divides we are done; otherwise, if x=n, then we have   *)
 (* a contradiction with the fact that x is not 1 or n.                       *)
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
 
 val PRIME_FACTOR = store_thm
  ("PRIME_FACTOR",
@@ -190,9 +188,8 @@ val PRIME_FACTOR = store_thm
 (* whether n is prime or not.                                                *)
 (*---------------------------------------------------------------------------*)
 
-val PRIME_FACTOR = store_thm
- ("PRIME_FACTOR",
-  ``!n. ~(n = 1) ==> ?p. prime p /\ p divides n``,
+val PRIME_FACTOR = prove
+ (``!n. ~(n = 1) ==> ?p. prime p /\ p divides n``,
   completeInduct_on `n` THEN 
   METIS_TAC [DIVIDES_REFL,prime_def,LESS_OR_EQ, PRIME_2,
              DIVIDES_LE, DIVIDES_TRANS, DIVIDES_0]);

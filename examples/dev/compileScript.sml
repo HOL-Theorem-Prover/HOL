@@ -42,9 +42,11 @@ val _ = new_theory "compile";
 (*****************************************************************************)
 (* |- f ===> g = !x. f x ==> g x                                             *)
 (*****************************************************************************)
-val _ = set_fixity "===>" (Infixr 540);
 val DEV_IMP_def =
- xDefine "DEV_IMP" `$===> f g = !x. f x ==> g x`;
+ Define `DEV_IMP f g = !x. f x ==> g x`;
+
+val _ = set_fixity "===>" (Infixr 450);
+val _ = overload_on("===>", ``$DEV_IMP``);
 
 val DEV_IMP_REFL =
  store_thm
@@ -434,7 +436,7 @@ val BUS_CONCAT_def =
  Define
   `BUS_CONCAT f g = \t. (f t, g t)`;
 
-val _ = set_fixity "<>" (Infixr 510);
+val _ = set_fixity "<>" (Infixr 375);
 val _ = overload_on ("<>", ``BUS_CONCAT``);
 
 (*****************************************************************************)

@@ -7,30 +7,20 @@ sig
     create more than one such pair, and they need to be distinguished.
  ---------------------------------------------------------------------------*)
 
-type name    = string
-type segment = string
-
-eqtype id
-
-  val mk_id    : name * segment -> id
-  val dest_id  : id -> name * segment
-  val name_of  : id -> name
-  val seg_of   : id  -> segment
-  val compare  : id * id -> order
-  val same_id  : id * id -> bool
-  val retire   : id -> unit
-  val fullname : name * segment -> string
-  val id_to_string : id -> string
-
-
 (*---------------------------------------------------------------------------*
  *                  HOL types                                                *
  *---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*
- * The first int in type constants and variables is the arity.               *
- * The second int in type constants and variables is the rank.               *
- * Both ints are actually natural numbers >= 0.                              *
+ * Type constants are a three-tuple, containing the following components:    *
+ *    1) kernel identifier                                                   *
+ *    2) kind                                                                *
+ *    3) rank                                                                *
+ * Type variables are a three-tuple, containing the following components:    *
+ *    1) string (identifier)                                                 *
+ *    2) kind                                                                *
+ *    3) rank                                                                *
+ * Ranks are actually natural numbers >= 0.                                  *
  * Universal types (TyAll) quantify over types of a given rank or lower.     *
  * Bound type variables are represented internally using deBruijn indices    *
  * and explicit substitution. Externally, as always, the interface is to a   *
@@ -40,8 +30,9 @@ eqtype id
 datatype kind = Type
               | Oper of kind * kind
 
-type tyconst  =  id * kind * int (* rank *)
-type tyvar = string * kind * int (* rank *)
+type id = KernelSig.kernelid
+type tyconst  =      id * kind * int (* rank *)
+type tyvar    =  string * kind * int (* rank *)
 
 datatype hol_type = TyFv of tyvar
                   | TyBv of int

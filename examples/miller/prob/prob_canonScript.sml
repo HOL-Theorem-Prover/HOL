@@ -97,7 +97,7 @@ val PROB_TWIN_SING = store_thm
     [Cases_on `l` >> PROVE_TAC [NOT_NIL_SNOC]
      ++ STRIP_TAC
      ++ NTAC 2 (POP_ASSUM MP_TAC)
-     ++ REVERSE (Cases_on `l'`) >> RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
+     ++ REVERSE (Cases_on `l`) >> RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
      ++ RW_TAC std_ss [SNOC],
      RW_TAC std_ss []
      ++ Q.EXISTS_TAC `[]`
@@ -106,7 +106,7 @@ val PROB_TWIN_SING = store_thm
     [Cases_on `l` >> PROVE_TAC [NOT_NIL_SNOC]
      ++ STRIP_TAC
      ++ NTAC 2 (POP_ASSUM MP_TAC)
-     ++ REVERSE (Cases_on `l'`) >> RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
+     ++ REVERSE (Cases_on `l`) >> RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
      ++ RW_TAC std_ss [SNOC],
      RW_TAC std_ss []
      ++ Q.EXISTS_TAC `[]`

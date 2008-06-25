@@ -43,8 +43,7 @@ of a \HOL{} variable
 \index{variables, in HOL logic@variables, in \HOL{} logic!names of|(}
 %
 can be any \ML{} string, but the quotation mechanism will parse only
-names that are identifiers (see Section~\ref{ident} below).  The use
-of non-identifiers as variable names is discouraged except in special
+names that are identifiers (see Section~\ref{ident} below).  Using non-identifiers as variable names is discouraged except in special
 circumstances (for example, when writing derived rules that generate
 variables with names that are guaranteed to be different from existing
 names). The name of a type variable
@@ -67,12 +66,10 @@ A \HOL{} identifier can be of two forms:
 \item A finite sequence of alphanumerics starting with a letter.
 \item A \emph{symbolic} identifier, \ie, a finite sequence formed by any
 combination of the following characters:
-\begin{hol}
 \begin{verbatim}
   #  ?  +  *  /  \  =  <  >  &  %  @  !  ,  :  ;  _  |  ~  -
   [  ]  (  )  {  }  ^  `
 \end{verbatim}
-\end{hol}
 Use of the characters in the second row above (the braces, brackets,
 parentheses, caret and back-tick) will typically cause lexical
 complexities; users of these characters should consult the
@@ -162,12 +159,12 @@ functions for values of type \ml{hol\_type}:
 \index{function types, in HOL logic@function types, in \HOL{} logic!constructors for}
 \index{mk_vartype@\ml{mk\_vartype}|pin}
 \index{mk_type@\ml{mk\_type}|pin}
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
    mk_vartype : string -> hol_type
    mk_thy_type : {Tyop:string, Thy:string, Args:hol_type list} -> hol_type
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 %
 The function \ml{mk\_vartype} constructs a type variable
 %
@@ -175,12 +172,11 @@ The function \ml{mk\_vartype} constructs a type variable
 %
 with a given name; it gives a warning if the name is not an allowable
 type variable name (\ie\ not a \ml{'} followed by an alphanumeric).
-
 The function \ml{mk\_thy\_type} constructs a compound type
 %
 \index{compound types, in HOL logic@compound types, in \HOL{} logic!constructors for}
 %
-from a record \ml{\{Tyop,Thy,Args\}} where \ml{Tyop} is a string
+from a record \ml{\lb Tyop,Thy,Args\rb{}} where \ml{Tyop} is a string
 representing the name of the type operator, \ml{Thy} is a string
 representing the theory that \ml{Tyop} was declared in, and \ml{Args}
 is a list of types representing the arguments to the operator.
@@ -201,7 +197,7 @@ fails if
 but its arity is not $n$.
 \end{myenumerate}
 %
-For example, \ml{mk\_thy\_type\{Tyop="bool", Thy="bool", Args=[]\}}
+For example, \ml{mk\_thy\_type\lb{}Tyop="bool", Thy="bool", Args=[]\rb{}}
 \index{truth values, in HOL logic@truth values, in \HOL{} logic}
 \index{bool, the type in HOL logic@\ml{bool}, the type in \HOL{} logic}
 evaluates to an \ML{} value of type \ml{term} representing the type
@@ -211,7 +207,7 @@ evaluates to an \ML{} value of type \ml{term} representing the type
 
 Type constants may be
 bound to \ML\ values and need not be repeatedly constructed: \eg, the type built by
-\ml{mk\_thy\_type\{Tyop="bool", Thy="bool", Args=[]\}} is abbreviated
+\ml{mk\_thy\_type\lb{}Tyop="bool", Thy="bool", Args=[]\rb{}} is abbreviated
 by the \ML\ value \ml{bool}. Similarly, function types may be constructed
 with the infix \ML\ function \ml{-->}. A few common type variables
 have been constructed and bound to \ML{} identifers, \eg, \ml{alpha}
@@ -235,7 +231,7 @@ There are two primitive destructor
 \index{type destructors, in HOL logic@type destructors, in \HOL{} logic}
 %
 functions for values of type \ml{hol\_type}:
-\begin{boxed}
+\begin{holboxed}
 \index{function types, in HOL logic@function types, in \HOL{} logic!destructors for}
 \index{dest_vartype@\ml{dest\_vartype}|pin}
 \index{dest_thy_type@\ml{dest\_thy\_type}|pin}
@@ -243,7 +239,7 @@ functions for values of type \ml{hol\_type}:
   dest_vartype : hol_type -> string
   dest_thy_type : hol_type -> {Tyop:string, Thy:string, Args:hol_type list}
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent The function \ml{dest\_vartype}
 %
@@ -274,22 +270,22 @@ There are four primitive constructor
 \index{term constructors, in HOL logic@term constructors, in \HOL{} logic}
 functions for values of type \ml{term}:
 
-\begin{boxed}
+\begin{holboxed}
 \index{mk_var@\ml{mk\_var}|pin}
 \begin{verbatim}
    mk_var : (string * hol_type) -> term
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent\ml{mk\_var($x$,$\sigma$)} evaluates to a variable
 with name $x$ and type $\sigma$; it always succeeds.
 
-\begin{boxed}
+\begin{holboxed}
 \index{mk_thy_const@\ml{mk\_const}|pin}
 \begin{verbatim}
    mk_thy_const : {Name:string, Thy:string, Ty:hol_type} -> term
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent $\mathtt{mk\_thy\_const}\{\mathtt{Name} = \mathit{c},\
 \mathtt{Thy} = \mathit{thyname},\ \mathtt{Ty} = \sigma\}$
@@ -304,11 +300,11 @@ with name $c$ and type $\sigma$; it fails if:
 see Section~\ref{theoryfns}).
 \end{myenumerate}
 
-\begin{boxed}\index{mk_comb@\ml{mk\_comb}|pin}
+\begin{holboxed}\index{mk_comb@\ml{mk\_comb}|pin}
 \begin{verbatim}
    mk_comb : (term * term) -> term
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent\ml{mk\_comb($t_1$,$t_2$)}
 %
@@ -325,12 +321,12 @@ $t_1\ t_2$. It fails if:
 type of $t_2$ is not equal to $\sigma'$.
 \end{myenumerate}
 
-\begin{boxed}
+\begin{holboxed}
 \index{mk_abs@\ml{mk\_abs}|pin}
 \begin{verbatim}
    mk_abs : (term * term) -> term
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent\ml{mk\_abs($x$,$t$)} evaluates to a term representing
 the abstraction
@@ -350,7 +346,7 @@ There are four primitive destructor functions on terms:
 \index{function application, in HOL logic@function application, in \HOL{} logic!destructor for}
 %
 
-\begin{boxed}
+\begin{holboxed}
 
 \index{dest_var@\ml{dest\_var}|pin}
 \index{dest_thy_const@\ml{dest\_thy\_const}|pin}
@@ -362,7 +358,7 @@ There are four primitive destructor functions on terms:
    dest_comb      : term -> (term * term)
    dest_abs       : term -> (term * term)
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 These are the inverses of \ml{mk\_var}, \ml{mk\_thy\_const},
 \ml{mk\_comb} and \ml{mk\_abs}, respectively. They fail when applied
@@ -377,21 +373,21 @@ See \REFERENCE\ for details.
 
 The function
 
-\begin{boxed}\index{type_of@\ml{type\_of}|pin}
+\begin{holboxed}\index{type_of@\ml{type\_of}|pin}
 \begin{verbatim}
    type_of : term -> hol_type
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent returns the type
 \index{types, in HOL logic@types, in \HOL{} logic!determination of}
 of a term. The function
 
-\begin{boxed}\index{aconv@\ml{aconv}|pin}
+\begin{holboxed}\index{aconv@\ml{aconv}|pin}
 \begin{verbatim}
    aconv : term -> term -> bool
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent implements the $\alpha$-convertibility test for
 $\lambda$-calculus terms.
@@ -400,9 +396,8 @@ $\lambda$-calculus terms.
 %
 From the point of view of the \HOL{} logic, $\alpha$-convertible terms
 are identical. A variety of other functions are available for
-performing substitution (\ml{subst}), type instantiation (\ml{inst}),
-$\beta$-reduction (\ml{beta\_conv}), $\eta$-reduction
-(\ml{eta\_conv}), computation of free variables (\ml{free\_vars}) and
+performing $\beta$-reduction (\ml{beta\_conv}), $\eta$-reduction
+(\ml{eta\_conv}), substitution (\ml{subst}), type instantiation (\ml{inst}), computation of free variables (\ml{free\_vars}) and
 other common term operations.  See \REFERENCE{} for more details.
 
 
@@ -444,18 +439,18 @@ can be used instead of\footnote{In order to be processed successfully,
 
 \begin{hol}
 \begin{verbatim}
-   let val numty = mk_thy_type{Tyop="num",Thy="num",Args=[]}
-   in
-    mk_abs
-     (mk_var("x",numty),
-      mk_comb(mk_comb
-       (mk_thy_const
-         {Name="+",Thy="arithmetic",Ty=numty --> numty --> numty},
-          mk_var("x", numty)),
-        mk_comb(mk_thy_const{Name="NUMERAL",Thy="arithmetic",Ty=numty-->numty},
-         mk_comb(mk_thy_const{Name="BIT1",Thy="arithmetic",Ty=numty-->numty},
-                 mk_thy_const{Name="ZERO",Thy="arithmetic",Ty=numty}))))
-   end
+  let val numty = mk_thy_type{Tyop="num",Thy="num",Args=[]}
+  in
+   mk_abs
+    (mk_var("x",numty),
+     mk_comb(mk_comb
+      (mk_thy_const
+        {Name="+",Thy="arithmetic",Ty=numty --> numty --> numty},
+         mk_var("x", numty)),
+       mk_comb(mk_thy_const{Name="NUMERAL",Thy="arithmetic",Ty=numty-->numty},
+        mk_comb(mk_thy_const{Name="BIT1",Thy="arithmetic",Ty=numty-->numty},
+                mk_thy_const{Name="ZERO",Thy="arithmetic",Ty=numty}))))
+  end
 \end{verbatim}
 \end{hol}
 
@@ -507,7 +502,7 @@ using constructors, since the type checker uses the heuristic that all
 variables in a term with the same name have the same type.  This is
 illustrated in the following session.
 %
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
 - ``x = (x = 1)``;
@@ -609,6 +604,7 @@ ranges from binding operators at very low (0) binding strength,
 through to function application (2000) and record selection (2500),
 which bind very tightly.
 
+\setcounter{sessioncount}{0}
 \begin{figure}[htbp]
 \begin{session}
 \begin{verbatim}
@@ -677,7 +673,7 @@ designate the constant $\mathit{const}$ declared in theory
 $\mathit{thy}$. In the following example, the less-than operator is
 explicitly specified.
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
 - ``prim_rec$< x y``
@@ -721,7 +717,9 @@ Type variable &
 {\small\verb+: '+}{\small $alphanum$}  & {\small\verb+mk_vartype("'+$alphanum$\verb+")+}   \\ \hline
 Type constant & $:op$ & {\small\verb+mk_type("+}$op${\small\verb+",[])+}   \\ \hline
  & $:\mathit{thy}$\verb+$+$\mathit{op}$
-  & {\small\verb+mk_thy_type{Thy="+}$\mathit{thy}${\small\verb+",Tyop="+}$\mathit{op}${\small\verb+",Args=[]}+}   \\ \hline
+  & \parbox{7cm}
+   {\small \holtxt{mk\_thy\_type\lb{}Thy="}$\mathit{thy}$\holtxt{",} \newline
+    \holtxt{\quad Tyop="}$\mathit{op}$\holtxt{", Args=[]\rb{}}}   \\ \hline
 Function type & $: \sigma_1$ {\small\verb+->+} $\sigma_2$ &
 $\sigma_1$ {\small\verb+-->+} $\sigma_2$ \\
 \hline
@@ -732,14 +730,10 @@ Compound type &
 \\
 \hline
 & {\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$\mathit{thy}$\verb+$+$\mathit{op}$
-& \begin{tabular}{l}
-   {\small\verb+mk_thy_type{Thy="+}$\mathit{thy}${\small\verb+",+} \\
-\quad \qquad {\small\verb+Tyop="+}$\mathit{op}${\small\verb+", Args=[+}
- $\sigma_1$ {\small\verb+,+} $\ldots$ {\small\verb+,+}
-  $\sigma_n${\small\verb+]}+}
-\end{tabular}
-\\ \hline
-
+& \parbox{7cm}
+   {\small \holtxt{mk\_thy\_type\lb{}Thy="}$\mathit{thy}$\holtxt{",} \newline
+    \holtxt{\quad Tyop="}$\mathit{op}$\holtxt{", Args=[} 
+ $\sigma_1, \ldots, \sigma_n$ \holtxt{]\rb{}}} \\ \hline
 \end{tabular}
 \end{center}
 
@@ -912,12 +906,12 @@ system by a value with the \ML{} abstract type \ml{thm}.
 %
 The type \ml{thm} has a destructor function
 
-\begin{boxed}
+\begin{holboxed}
 \index{dest_thm@\ml{dest\_thm}|pin}
 \begin{verbatim}
    dest_thm : thm -> (term list * term)
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent which returns a pair consisting of a list of the
 hypotheses
@@ -929,25 +923,25 @@ respectively, of a theorem.  The order of assumptions in the list
 should not be relied on.  A theorem's hypotheses are also available in
 the set form with the function
 
-\begin{boxed}
+\begin{holboxed}
 \index{hyp_set@\ml{hyp\_set}}
 \begin{verbatim}
    hyp_set : thm -> term HOLset.set
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 Using \ml{dest\_thm}, two further destructor
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!destructors for}
 functions are derived
 
-\begin{boxed}
+\begin{holboxed}
 \index{hyp@\ml{hyp}|pin}
 \index{concl@\ml{concl}|pin}
 \begin{verbatim}
    hyp   : thm -> term list
    concl : thm -> term
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent for extracting the hypothesis list and the conclusion, respectively,
 of a theorem. The \ML\ type \ml{thm} does not have
@@ -998,7 +992,7 @@ absence of \HOL{} quotation marks
 in the \ml{|-} context.  The session below illustrates the use of the
 destructor functions:
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
    - val th = BOOL_CASES_AX;
@@ -1025,7 +1019,6 @@ to be printed with hypotheses shown in full. These points are illustrated with a
 theorem inferred, for example purposes, from another axiom mentioned
 in \LOGIC, \ml{SELECT\_AX}.
 
-\setcounter{sessioncount}{1}
 \begin{session}
 \begin{verbatim}
 - val th = UNDISCH (SPEC_ALL SELECT_AX);
@@ -1085,11 +1078,11 @@ conclusion
 %
 \index{assumption introduction, in HOL logic@assumption introduction, in \HOL{} logic!ML function for@\ML{} function for}
 
-\begin{boxed}
+\begin{holboxed}
 \index{ASSUME@\ml{ASSUME}|pin}
 \begin{verbatim}
    ASSUME : term -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{center}
 \begin{tabular}{c}
@@ -1106,11 +1099,11 @@ Failure if $t$ is not of type \ml{bool}.
 
 \subsection{Reflexivity}\index{reflexivity, in HOL logic@reflexivity, in \HOL{} logic!ML function for@\ML\ function for}
 
-\begin{boxed}\index{REFL@\ml{REFL}|pin}
+\begin{holboxed}\index{REFL@\ml{REFL}|pin}
 \begin{verbatim}
    REFL : term -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \begin{center}
 \begin{tabular}{c}
@@ -1126,11 +1119,11 @@ Failure if $t$ is not of type \ml{bool}.
 
 \subsection{Beta-conversion}\index{beta-conversion, in HOL logic@beta-conversion, in \HOL{} logic!ML function for@\ML\ function for}
 
-\begin{boxed}\index{BETA_CONV@\ml{BETA\_CONV}|pin}
+\begin{holboxed}\index{BETA_CONV@\ml{BETA\_CONV}|pin}
 \begin{verbatim}
    BETA_CONV : term -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \begin{center}
 \begin{tabular}{c}
@@ -1156,10 +1149,10 @@ of the form \holtxt{(\bs$x$.$t_1$)$t_2$}.
 
 \subsection{Substitution}\index{substitution rule, in HOL logic@substitution rule, in \HOL{} logic!ML function for@\ML\ function for|(}\index{SUBST@\ml{SUBST}|(}
 
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
    SUBST : (thm * term)list -> term -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{center}
 \begin{tabular}{c}
@@ -1211,10 +1204,10 @@ $1\leq i\leq n$.
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!inference rules for}
 
 
-\begin{boxed}\index{ABS@\ml{ABS}|pin}
+\begin{holboxed}\index{ABS@\ml{ABS}|pin}
 \begin{verbatim}
    ABS : term -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 \begin{center}
@@ -1241,11 +1234,11 @@ Failure if $x$ is not a variable, or $x$
 \index{type instantiation, in HOL logic@type instantiation, in \HOL{} logic!ML function for@\ML\ function for}
 \index{types, in HOL logic@types, in \HOL{} logic!instantiation of}
 
-\begin{boxed}\index{INST_TYPE@\ml{INST\_TYPE}|pin}
+\begin{holboxed}\index{INST_TYPE@\ml{INST\_TYPE}|pin}
 \begin{verbatim}
    INST_TYPE : {redex : hol_type, residue : hol_type} list -> thm -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \begin{center}
 \begin{tabular}{c}
@@ -1257,10 +1250,10 @@ $\Gamma[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]${\small\verb+
 \bigskip
 
 \begin{itemize}
-\item $t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
+\item where $t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
 denotes the result of substituting (in parallel) the types $\sigma_1$,
 $\ldots$\ , $\sigma_n$ for the type variables $\alpha_1$, $\ldots$\ ,
-$\alpha_n$ in $t$.  Similarly, $\Gamma[\sigma_1,\ \ldots\
+$\alpha_n$ in the term $t$.  Similarly, $\Gamma[\sigma_1,\ \ldots\
 ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$ denotes the result of
 performing the same substitution to all of the hypotheses in the set
 $\Gamma$.
@@ -1274,7 +1267,7 @@ $\sigma_i$ (for $1 \leq i \leq n$). Failure occurs if an $\alpha_i$ is
 not a type variable.
 
 The polymorphic \ML{} infix function {\small\verb+|->+} is used to
-construct values of the \ml{redex-residue} record type.  It is defined
+construct values of the record type \ml{redex-residue}.  It is defined
 \begin{verbatim}
    fun ((x:'a) |-> (y:'b)) = {redex = x, residue = y}
 \end{verbatim}
@@ -1284,10 +1277,10 @@ construct values of the \ml{redex-residue} record type.  It is defined
 \subsection{Discharging an assumption}\index{discharging assumptions, in HOL logic@discharging assumptions, in \HOL{} logic!ML function for@\ML\ function for}
 
 
-\begin{boxed}\index{DISCH@\ml{DISCH}|pin}
+\begin{holboxed}\index{DISCH@\ml{DISCH}|pin}
 \begin{verbatim}
    DISCH : term -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{center}
 \begin{tabular}{c}
@@ -1316,10 +1309,10 @@ type \ml{bool}.
 \subsection{Modus Ponens}\index{Modus Ponens, in HOL logic@Modus Ponens, in \HOL{} logic!ML function for@\ML\ function for}
 
 
-\begin{boxed}\index{MP@\ml{MP}|pin}
+\begin{holboxed}\index{MP@\ml{MP}|pin}
 \begin{verbatim}
    MP : thm -> thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \begin{center}
 \begin{tabular}{c}
@@ -1355,22 +1348,22 @@ proved solely by deductive steps in the HOL logic.
 
 A tagged theorem can be created via
 
-\begin{boxed}
+\begin{holboxed}
 \index{mk_oracle_thm@\ml{mk\_oracle\_thm}!type of}
 \begin{verbatim}
    mk_oracle_thm : string -> term list * term -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 which directly creates the requested theorem and attaches the given
 tag to it. The tag is created with a call to
 
-\begin{boxed}
+\begin{holboxed}
 \index{Tag.read@\ml{Tag.read}!making tags}
 \begin{verbatim}
    Tag.read : string -> tag
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 As well as providing principled access to the results of external
 reasoners, tags are used to implement some useful `system' operations
@@ -1384,7 +1377,7 @@ checking' for tactics.
 The tags in a theorem can be viewed by setting \verb+Globals.show_tags+ to
 true.
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
    - Globals.show_tags := true;
@@ -1401,19 +1394,19 @@ tracking the use of axioms in proofs.} comprise the tags component and the
 third is the standard assumption list. The tag component of a theorem
 can be extracted by
 
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
    Thm.tag : thm -> tag
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent and prettyprinted by
 
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
    Tag.pp : ppstream -> tag -> unit.
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 
 \section{Theories}
@@ -1506,11 +1499,11 @@ represented by the current theory segment together with its
 ancestry. The name of the current theory segment is returned by the \ML\
 function:
 
-\begin{boxed}\index{current_theory@\ml{current\_theory}|pin}
+\begin{holboxed}\index{current_theory@\ml{current\_theory}|pin}
 \begin{verbatim}
    current_theory : unit -> string
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
   When an interactive \HOL{} session begins, some theories will
   already be in the logical context. The exact set of theories in
@@ -1521,12 +1514,12 @@ function:
 The exact set of theories loaded can be determined with the
 \ml{ancestry} command.
 %
-\begin{boxed}
+\begin{holboxed}
 \index{ancestry@\ml{ancestry}|pin}
 \begin{verbatim}
   ancestry : string -> string list
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 This function provides a general mechanism for examining the structure
 of the theory hierarchy.  The argument is the name of a theory (or
@@ -1534,7 +1527,7 @@ of the theory hierarchy.  The argument is the name of a theory (or
 \texttt{ancestry} will respondwith a list of the argument's ancestors
 in the theory hierarchy.
 
-\begin{boxed}
+\begin{holboxed}
 {\small
 \begin{verbatim}
    - ancestry "-";
@@ -1544,21 +1537,21 @@ in the theory hierarchy.
         "bool", "marker", "one", "option", "ind_type", "list"] : string list
 \end{verbatim}
 }
-\end{boxed}
+\end{holboxed}
 
 
 \paragraph{Creating a theory segment}
 
 \index{theories, in HOL logic@theories, in \HOL{} logic!creation of|(}
 %
-One creates a new theory segment by a call to \ml{new\_theory}.
+New theory segment are created by a call to \ml{new\_theory}.
 %
-\begin{boxed}
+\begin{holboxed}
 \index{new_theory@\ml{new\_theory}|pin}
 \begin{verbatim}
    new_theory : string -> unit
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 %
 This allocates a new `area' where subsequent theory
 operations take effect. If the current theory ($thy_1$ say) at the time
@@ -1605,11 +1598,11 @@ be altered.
 Since \HOL{} theories are represented by \ML\ modules, one imports an
 existing theory segment by simply importing the corresponding module.
 
-\begin{boxed}
+\begin{holboxed}
 \index{load@\ml{load}|pin}
 \begin{verbatim}
    load : string -> unit
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent
 Executing {\small\verb+load +}$name${\small\verb+Theory+} imports the
@@ -1628,12 +1621,12 @@ needed since higher-level definition facilities will invoke these as
 necessary. However, these functions can be useful for those writing
 proof tools and derived definition principles.
 
-\begin{boxed}
+\begin{holboxed}
 \index{new_type@\ml{new\_type}|pin}
 \begin{verbatim}
    new_type : int -> string -> unit
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 
 \noindent Executing \ml{new\_type}$\ n\ \ml{"\ty{op}"}$ makes \ty{op}
@@ -1642,12 +1635,12 @@ operators, in \HOL{} logic!declaration} in the current theory. If
 \ty{op} is not an allowed name for a type, a warning will be issued.
 
 
-\begin{boxed}
+\begin{holboxed}
 \index{new_constant@\ml{new\_constant}|pin}
 \begin{verbatim}
    new_constant : (string * type) -> unit
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent Executing {\small\verb+new_constant("+}$c${\small\verb+",+}$\sigma${\small\verb+)+} makes
 $c_{\sigma'}$ a new constant\index{constants, in HOL logic@constants, in \HOL{} logic!declaration of} of the current theory,
@@ -1657,16 +1650,16 @@ called the {\it generic type\/}\index{generic types, in HOL
   logic@generic types, in \HOL{} logic} of $c$.
 If $c$ is not an allowed name for a constant, a warning will be issued.
 
-\begin{boxed}
+\begin{holboxed}
 \index{new_axiom@\ml{new\_axiom}|pin}
 \begin{verbatim}
    new_axiom : (string * term) -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent Executing \ml{new\_axiom("}$name$\ml{",}$t$\ml{)} declares the
 sequent
-\ml{(\{\},$t$)} to be an axiom\index{axioms!declaration of, in HOL logic@declaration of, in \HOL{} logic} of the current theory with name $name$.
+\ml{(\lb\rb{},$t$)} to be an axiom\index{axioms!declaration of, in HOL logic@declaration of, in \HOL{} logic} of the current theory with name $name$.
 Failure if:
 \begin{myenumerate}
 \item the type of $t$ is not \verb+bool+.
@@ -1677,12 +1670,12 @@ Failure if:
 
 Once a theorem has been proved, it can be saved with the function
 
-\begin{boxed}
+\begin{holboxed}
 \index{save_thm@\ml{save\_thm}|pin}
 \begin{verbatim}
    save_thm : (string * thm) -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent
 Evaluating \ml{save\_thm("}$\mathit{name}$\ml{",}$\mathit{th}$\ml{)}
@@ -1699,12 +1692,12 @@ segment.
 Once a theory segment has been constructed, it can be written out to a
 file, which, after compilation, can be imported into future sessions.
 
-\begin{boxed}
+\begin{holboxed}
 \index{export_theory@\ml{export\_theory}|pin}
 \begin{verbatim}
     export_theory : unit -> unit
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 When {\small\verb+export_theory+} is called, all out-of-date entities
 are removed from the current segment. Also, the parenthood of the
@@ -1738,7 +1731,7 @@ cannot be extended in this way; they can be thought of as
 
 There are various functions for loading the contents of theory files:
 
-\begin{boxed}
+\begin{holboxed}
 \index{parents@\ml{parents}|pin}
 \index{types@\ml{types}|pin}
 \index{constants@\ml{constants}|pin}
@@ -1747,7 +1740,7 @@ There are various functions for loading the contents of theory files:
    types       : string -> (int * string) list
    constants   : string -> term list
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent The first argument is the name of a theory (which must be in the
 ancestry of the current theory segment); the result is a list of the
@@ -1763,7 +1756,7 @@ In the case of \ml{types} a list of arity-name pairs is returned.
 Individual axioms, definitions and theorems can be read from the
 current theory using the following \ML\ functions:
 
-\begin{boxed}
+\begin{holboxed}
 \index{axiom@\ml{axiom}|pin}
 \index{definition@\ml{definition}|pin}
 \index{theorem@\ml{theorem}|pin}
@@ -1772,14 +1765,14 @@ current theory using the following \ML\ functions:
    definition : string -> thm
    theorem    : string -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \noindent The first argument is the user supplied name of the axiom,
 definition or theorem in the current theory.  Further, a list of all
 of a theory's axioms, definitions and theorems can be retreived with
 the \ML{} functions:
 
-\begin{boxed}
+\begin{holboxed}
 \index{axioms@\ml{axioms}|pin}
 \index{theorems@\ml{theorems}|pin}
 \index{definitions@\ml{definitions}|pin}
@@ -1788,7 +1781,7 @@ the \ML{} functions:
    definitions : string -> (string * thm) list
    theorems    : string -> (string * thm) list
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 The contents of the current theory can be printed in a readable format
 using the function \ml{print\_theory}.
@@ -1840,18 +1833,18 @@ logically equivalent to:
 The following  \ML\ function  creates\index{defining mechanisms, for HOL logic@defining mechanisms, for \HOL{} logic} a  new definition in
 the current theory.
 
-\begin{boxed}
+\begin{holboxed}
 \index{new_definition@\ml{new\_definition}|pin}
 \begin{verbatim}
    new_definition : (string * term) -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 
 \noindent Evaluating
  \ml{new\_definition("$name$", \holquote{$c\ v_1\ \cdots\ v_n\ =\ t$})},
 declares the sequent
-\ml{(\{\},$c = \lambda v_1\ \cdots\ v_n.\  t$)} to be a constant definition
+\ml{(\lb\rb{},$c = \lambda v_1\ \cdots\ v_n.\  t$)} to be a constant definition
 \index{definitions, adding to HOL logic@definitions, adding to \HOL{} logic}
 of the current theory. The name associated with the definition in
 this theory is $name$.
@@ -1876,16 +1869,16 @@ is defined to be a pair:
 
 \[
 \langle(c_1,\ldots,c_n),\ \lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\small\ty{bool}}\rangle
+\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\rangle
 \]
 such that:
 
 \begin{myenumerate}
 \item $c_1$, $\dots$, $c_n$ are distinct names.
 \item $\lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\small\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$.
+\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$.
 \item $tyvars(\lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\small\ty{bool}})\ \subseteq\ tyvars(\sigma_i)$ for
+\cdots {x_n}_{\sigma_n}}t_{\ty{bool}})\ \subseteq\ tyvars(\sigma_i)$ for
 $1\leq i\leq n$.
 \item $\equant{{x_1}_{\sigma_1}\ \cdots\ {x_n}_{\sigma_n}}t
 \ \in\ {\sf Theorems}_{\cal T}$.
@@ -1893,12 +1886,12 @@ $1\leq i\leq n$.
 The following \ML\ function is used to make constant specifications in
 the \HOL{} system.
 
-\begin{boxed}
+\begin{holboxed}
 \index{new_specification@\ml{new\_specification}|pin}
 \begin{verbatim}
    new_specification : string * string list * thm -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 %
 Evaluating:
 {
@@ -1971,11 +1964,11 @@ $tyvars(p)\subseteq\{\alpha_1, \ldots , \alpha_n\}$.
 
 The following \ML\ function makes a type definition in the \HOL{} system.
 
-\begin{boxed}
+\begin{holboxed}
 \index{new_type_definition@\ml{new\_type\_definition}|pin}
 \begin{verbatim}
    new_type_definition : (string * term * thm) -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent If $t$ is a term of type
 $\sigma$\ml{->bool} containing $n$ distinct type variables, then
@@ -2028,12 +2021,12 @@ from the type it defines to the corresponding subset of an existing type.  To
 introduce constants that in fact denote such a bijection and its inverse, the
 following \ML\ function is provided:
 
-\begin{boxed}
+\begin{holboxed}
 \index{define_new_type_bijections@\ml{define\_new\_type\_bijections}|pin}
 \begin{verbatim}
    define_new_type_bijections
       : {name:string, ABS:string, REP:string, tyax:thm} -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent This function takes a record {\small\verb+{ABS, REP, name, tyax}+}
 The {\verb+tyax+} argument must be a definitional axiom of the form returned by
@@ -2053,8 +2046,8 @@ Evaluating:
 {\def\op{{\normalsize\sl op}}
 \begin{hol}\begin{alltt}
   define\_new\_type\_bijections
-       \{name="\m{name}", ABS="\m{abs}", REP="\m{rep}",
-         tyax = |- ?rep:newty->ty. TYPE\_DEFINITION \m{P} rep \}
+       \lb{}name="\m{name}", ABS="\m{abs}", REP="\m{rep}",
+        tyax = |- ?rep:newty->ty. TYPE\_DEFINITION \m{P} rep\rb{}
 \end{alltt}\end{hol}}
 
 \medskip
@@ -2092,7 +2085,7 @@ The following \ML\ functions are provided for proving that the bijections
 introduced by \ml{define\_new\_type\_bijections} are injective (one-to-one)
 and surjective (onto):
 
-\begin{boxed}
+\begin{holboxed}
 \index{prove_rep_fn_one_one@\ml{prove\_rep\_fn\_one\_one}|pin}
 \index{prove_rep_fn_onto@\ml{prove\_rep\_fn\_onto}|pin}
 \index{prove_abs_fn_one_one@\ml{prove\_abs\_fn\_one\_one}|pin}
@@ -2102,7 +2095,7 @@ and surjective (onto):
    prove_rep_fn_onto    : thm -> thm
    prove_abs_fn_one_one : thm -> thm
    prove_abs_fn_onto    : thm -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent The theorem argument to each of these functions must be a theorem
 of the form returned by \ml{define\_new\_type\_bijections}:
@@ -2155,10 +2148,10 @@ None of these functions saves anything in the current theory.
 %It is possible to introduce an abbreviation for a monomorphic type using the
 %function:
 %
-%\begin{boxed}\index{new_type_abbrev@\ml{new\_type\_abbrev}|pin}
+%\begin{holboxed}\index{new_type_abbrev@\ml{new\_type\_abbrev}|pin}
 %\begin{verbatim}
 %   new_type_abbrev : (string * type) -> unit
-%\end{verbatim}\end{boxed}
+%\end{verbatim}\end{holboxed}
 %
 %\noindent Evaluating \ml{new\_type\_abbrev(`}$name$\ml{`,":}$\sigma$\ml{")}
 %enables $name$ to be used in quotations instead of $\sigma$. The evaluation
@@ -2169,10 +2162,10 @@ None of these functions saves anything in the current theory.
 %activated. The list of currently active abbreviations in a theory
 %is given by the function:
 %
-%\begin{boxed}\index{type_abbrevs@\ml{type\_abbrevs}|pin}
+%\begin{holboxed}\index{type_abbrevs@\ml{type\_abbrevs}|pin}
 %\begin{verbatim}
 %   type_abbrevs : string -> (string * type) list
-%\end{verbatim}\end{boxed}
+%\end{verbatim}\end{holboxed}
 %
 %
 %Note that abbreviation can also be made using antiquotation\index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}, without the

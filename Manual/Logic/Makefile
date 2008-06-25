@@ -1,31 +1,34 @@
 # =====================================================================
-# Makefile for the hol DESCRIPTION
+# Makefile for the hol LOGIC
 # =====================================================================
 
-# ---------------------------------------------------------------------
-# Pathnames: MAKEINDEX = makeindex script
-# ---------------------------------------------------------------------
-MAKEINDEX=makeindex
+PDFLATEX=pdflatex
+DVILATEX=latex
 BIBTEX=bibtex
-CHAPTERS = syntax.tex preface.tex semantics.tex title.tex
 
-default: all
+CHAPTERS = syntax.tex preface.tex semantics.tex title.tex
+OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex
+
+default: pdf
+all: ps pdf
+ps: logic.ps
+pdf: logic.pdf
 
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind logic.{ps,pdf} *.bbl *.blg
+	rm -f *.dvi *.aux *.toc *.log logic.{ps,pdf}
 
-logic.dvi: logic.tex $(CHAPTERS) ../LaTeX/commands.tex
-#	(cd ../Logo ; make)  # makes the lantern logo
-	latex logic.tex
-	${BIBTEX} logic
-	latex logic.tex
-	latex logic.tex
+logic.pdf: logic.tex $(CHAPTERS) $(OTHER)
+	${PDFLATEX} logic
+	${BIBTEX}   logic
+	${PDFLATEX} logic
+	${PDFLATEX} logic
+
+logic.dvi: logic.tex $(CHAPTERS) $(OTHER)
+	${DVILATEX} logic
+	${BIBTEX}   logic
+	${DVILATEX} logic
+	${DVILATEX} logic
 
 logic.ps: logic.dvi
 	dvips -Ppdf -G0 -f logic.dvi > logic.ps.tmp
 	mv logic.ps.tmp $@
-
-logic.pdf: logic.ps
-	ps2pdf logic.ps
-
-all: logic.ps logic.pdf

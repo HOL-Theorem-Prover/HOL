@@ -49,7 +49,7 @@ struct
   fun mem_read (m,a) = Redblackmap.find(m:mem, a)
                          handle NotFound => fromNum32 "E6000010"
 
-  fun MEM_READ m a = SOME (mem_read (m,armML.ADDR30 a))
+  fun MEM_READ m a = SOME (mem_read (m,armML.addr30 a))
 
   fun mem_write m a w =
         (if isSome (List.find (fn b => word_compare(a, b) = EQUAL)
@@ -59,24 +59,24 @@ struct
            (mem_updates := a :: !mem_updates; m))
 
   fun MEM_WRITE_BYTE mem addr word =
-        let val addr30 = ADDR30 addr
+        let val a30 = addr30 addr
         in
-           mem_write mem addr30
+           mem_write mem a30
              (SET_BYTE
                 (word_extract_itself
                    (fcpML.ITSELF (numML.fromDecString"2")) ONE ZERO
-                   addr) word (mem_read (mem,addr30)))
+                   addr) word (mem_read (mem,a30)))
         end
    
   fun MEM_WRITE_HALF mem addr word =
-        let val addr30 = ADDR30 addr
+        let val a30 = addr30 addr
         in
-           mem_write mem addr30
+           mem_write mem a30
              (SET_HALF (word_index addr ONE) word
-                (mem_read (mem,addr30)))
+                (mem_read (mem,a30)))
         end
 
-  fun MEM_WRITE_WORD mem addr word = mem_write mem (ADDR30 addr) word
+  fun MEM_WRITE_WORD mem addr word = mem_write mem (addr30 addr) word
 
   fun MEM_WRITE mem addr data =
         SOME (case data

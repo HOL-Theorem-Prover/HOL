@@ -373,19 +373,21 @@ end
 
 fun eqTRANS new old = let
   (* allow for possibility that old might be labelled *)
-  open labelLib
-  val s = #1 (labelLib.dest_label (concl old))
+  open markerLib markerSyntax
+  val s = #1 (dest_label (concl old))
 in
   ASSUME_NAMED_TAC s (TRANS (DEST_LABEL old) new)
 end handle HOL_ERR _ => ASSUME_TAC (TRANS old new)
 
 fun is_labeq t = (* term is a possibly labelled equality *)
-    is_eq t orelse
-    labelLib.is_label t andalso is_eq (#2 (labelLib.dest_label t))
+ let open markerSyntax
+ in is_eq t orelse is_label t andalso is_eq (#2 (dest_label t))
+ end;
 
 fun labrhs t = (* term is a possibly labelled equality *)
-    if is_eq t then rhs t
-    else rhs (#2 (labelLib.dest_label t))
+ let open markerSyntax
+ in if is_eq t then rhs t else rhs (#2 (dest_label t))
+ end;
 
 fun (q by tac) (g as (asl,w)) = let
   val a = Absyn q

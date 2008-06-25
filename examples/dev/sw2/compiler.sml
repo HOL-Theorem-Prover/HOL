@@ -1,4 +1,3 @@
-
 structure compiler :> compiler =
 struct
 
@@ -10,7 +9,8 @@ val _ = load_path_add "/tools/mlyacc/mlyacclib";
 (* load_path_add "/examples/dev/sw2"; *)
 
 val _ = quietdec := true;
-app load ["arm_compilerLib", "Normal", "inline", "closure", "regAlloc", "funcCall", "refine"];
+app load ["arm_compilerLib", "Normal", "inline", "closure", 
+          "regAlloc", "funcCall", "refine"];
 val _ = quietdec := false;
 *)
 
@@ -50,7 +50,8 @@ structure M = Binarymap;
 
 fun resultOf (PASS x) = x;
 
-fun head eqns = strip_comb (lhs(snd(strip_forall(hd (strip_conj(concl eqns))))));
+fun head eqns = 
+  strip_comb (lhs(snd(strip_forall(hd (strip_conj(concl eqns))))));
 
 (*---------------------------------------------------------------------------*)
 (* Compiling a list of functions.                                            *)
@@ -192,7 +193,8 @@ val pass3 = complist convert3
 (* Replace function f with f' when f is called.                              *)
 (*---------------------------------------------------------------------------*)
 
-val renamed = ref (M.mkDict regAlloc.tvarOrder)  (* Format: [function's old name |-> function's new name] *)
+val renamed = (* Format: [function's old name |-> function's new name] *)
+ref (M.mkDict regAlloc.tvarOrder)  
 
 fun renamed_rules () =
     List.foldl
@@ -203,9 +205,10 @@ val only_one = ref false;
 
 (*---------------------------------------------------------------------------*)
 (* Front end.                                                                *)
+(* the flag indicates whether we start all over                              *)
 (*---------------------------------------------------------------------------*)
 
-fun f_compile_basic defs flag = (* the flag indicates whether we start all over *)
+fun f_compile_basic defs flag = 
  let
   val _ = if flag then (renamed := M.mkDict regAlloc.tvarOrder) else ()
 
@@ -220,7 +223,8 @@ fun f_compile_basic defs flag = (* the flag indicates whether we start all over 
      val cvar = mk_var(new_name, ctype)
 
      val vtm = subst [fname |-> cvar] (concl def1)
-     val vtm1 = subst (renamed_rules ()) vtm    (* rename the function name in function application *)
+     (* rename the function name in function application *)
+     val vtm1 = subst (renamed_rules ()) vtm    
      (* val _ = HOL_MESG "redefinition" *)
      val PASS (defn2,tcs) = TotalDefn.std_apiDefine (new_name,vtm1)
      val def2 = LIST_CONJ (Defn.eqns_of defn2)
@@ -235,8 +239,9 @@ fun f_compile_basic defs flag = (* the flag indicates whether we start all over 
                  | NONE => TRUTH
         in (def1, ind2) end
         handle _ => 
-          let val _ = renamed := M.insert(!renamed, fname, mk_const(new_name, ctype))
-          in  (def2,  case ind of 
+          let val newc = mk_const(new_name, ctype)
+              val _ = renamed := M.insert(!renamed, fname, newc)
+          in  (def2, case ind of 
                          SOME th => th
                        | NONE => TRUTH)
           end

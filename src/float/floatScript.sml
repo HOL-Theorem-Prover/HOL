@@ -9,24 +9,21 @@
 
 open HolKernel Parse boolLib;
 
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
 (*---------------------------------------------------------------------------*
  * Next, bring in extra tools used.                                          *
  *---------------------------------------------------------------------------*)
 
 (*app load ["Psyntax", "hol88Lib", "numTheory", "prim_recTheory", "Ho_Rewrite", "ieeeTheory", "reduceLib", "tautLib",
-            "jrhUtils", "Canon_Port", "AC", "Arbint", "prim_recTheory", "bword_bitopTheory", "realTheory", "pred_setTheory",
-            "pairTheory", "mesonLib", "bossLib", "wordTheory", "Num_conv", "Canon_Port", "RealArith", "word_baseTheory",
-            "numLib", "arithmeticTheory", "listTheory", "rich_listTheory", "liteLib", "bword_numTheory", "res_quanTheory",
+            "jrhUtils", "Canon_Port", "AC", "Arbint", "prim_recTheory", "realTheory", "pred_setTheory",
+            "pairTheory", "mesonLib", "bossLib", "Num_conv", "Canon_Port", "RealArith",
+            "numLib", "arithmeticTheory", "listTheory", "rich_listTheory", "liteLib", "res_quanTheory",
             "transcTheory", "Lib"]; *)
 
 
 open Psyntax hol88Lib numTheory prim_recTheory Ho_Rewrite ieeeTheory reduceLib tautLib
-     jrhUtils Canon_Port AC Arbint prim_recTheory bword_bitopTheory realTheory pred_setTheory
-     pairTheory mesonLib  bossLib wordTheory  Num_conv Canon_Port RealArith word_baseTheory
-     numLib arithmeticTheory listTheory rich_listTheory liteLib bword_numTheory res_quanTheory
+     jrhUtils Canon_Port AC Arbint prim_recTheory realTheory pred_setTheory
+     pairTheory mesonLib  bossLib Num_conv Canon_Port RealArith
+     numLib arithmeticTheory listTheory rich_listTheory liteLib res_quanTheory
      transcTheory Lib;
 
 (*---------------------------------------------------------------------------*
@@ -41,7 +38,7 @@ val Suff = Q_TAC SUFF_TAC ;
 (* Auxiliary lemmas.                                                            *)
 (* ---------------------------------------------------------------------------- *)
 
-val REAL_OF_NUM_LT = prove_thm (
+val REAL_OF_NUM_LT = store_thm (
   "REAL_OF_NUM_LT",
   (--`! m n. &m < &n = m < n`--),
   RW_TAC arith_ss [real_lt] THEN
@@ -49,7 +46,7 @@ val REAL_OF_NUM_LT = prove_thm (
 
 (*-----------------------*)
 
-val TWO_EXP_GE_1 = prove_thm (
+val TWO_EXP_GE_1 = store_thm (
   "TWO_EXP_GE_1",
   (--`!(n:num). (1 <= 2 EXP n)`--),
   REPEAT GEN_TAC THEN
@@ -59,21 +56,21 @@ val TWO_EXP_GE_1 = prove_thm (
 
 (*-----------------------*)
 
-val egtff = prove_thm (
+val egtff = store_thm (
   "egtff",
   (--`(8:num) = (4:num) + (4:num)`--),
   RW_TAC arith_ss []);
 
 (*-----------------------*)
 
-val ftt = prove_thm (
+val ftt = store_thm (
   "ftt",
   (--`(4:num) = (2:num) + (2:num)`--),
   RW_TAC arith_ss []);
 
 (*-----------------------*)
 
-val tpetfs = prove_thm (
+val tpetfs = store_thm (
   "tpetfs",
   (--`(&2 pow (8:num)) = &256`--),
   REWRITE_TAC[egtff] THEN
@@ -85,14 +82,14 @@ val tpetfs = prove_thm (
 
 (*-----------------------*)
 
-val egt1 = prove_thm (
+val egt1 = store_thm (
   "egt1",
   (--`&1 < &8`--),
   REAL_ARITH_TAC);
 
 (*-----------------------*)
 
-val temonz = prove_thm (
+val temonz = store_thm (
   "temonz",
   (--`~ ((2 EXP 8 - 1) = 0)`--),
   RW_TAC arith_ss [] THEN
@@ -106,14 +103,14 @@ val temonz = prove_thm (
 
 (*-----------------------*)
 
-val tteettto =  prove_thm (
+val tteettto =  store_thm (
   "tteettto",
   (--`(23:num) = (8:num) + (8:num) + (2:num) + (2:num) + (2:num) + (1:num)`--),
   RW_TAC arith_ss []);
 
 (*-----------------------*)
 
-val tptteteesze = prove_thm (
+val tptteteesze = store_thm (
   "tptteteesze",
   (--`(&2 pow (23:num)) = &8388608`--),
   REWRITE_TAC[tteettto] THEN
@@ -122,14 +119,14 @@ val tptteteesze = prove_thm (
 
 (*-----------------------*)
 
-val tfflttfs = prove_thm (
+val tfflttfs = store_thm (
   "tfflttfs",
   (--`& 255 < & 256`--),
   REAL_ARITH_TAC);
 
 (*--------------------------------------------------------------*)
 
-val inv23gt0 = prove_thm (
+val inv23gt0 = store_thm (
   "inv23gt0",
   (--`&0 < inv (&2 pow 23)`--),
   RW_TAC arith_ss [REAL_LT_INV_EQ] THEN
@@ -139,7 +136,7 @@ val inv23gt0 = prove_thm (
 
 (*-----------------------*)
 
-val v23not0 = prove_thm (
+val v23not0 = store_thm (
   "v23not0",
   (--` ~ ((&2 pow 23) = &0)`--),
   MATCH_MP_TAC POW_NZ THEN
@@ -150,7 +147,7 @@ val v23not0 = prove_thm (
 
 (*---------------------------*)
 
-val v127not0 = prove_thm (
+val v127not0 = store_thm (
   "v127not0",
   (--` ~ (((&2:real) pow (127:num)) = (&0:real))`--),
   MATCH_MP_TAC POW_NZ THEN
@@ -161,28 +158,21 @@ val v127not0 = prove_thm (
 
 (*---------------------------*)
 
-val noteteeszegtz = prove_thm (
+val noteteeszegtz = store_thm (
   "noteteeszegtz",
   (--` (&0:real) < &8388608`--),
   REAL_ARITH_TAC);
 
 (*---------------------------*)
 
-val noteteeszegtz = prove_thm (
-  "noteteeszegtz",
-  (--` (&0:real) < &8388608`--),
-  REAL_ARITH_TAC);
-
-(*---------------------------*)
-
-val lt1eqmul = prove_thm (
+val lt1eqmul = store_thm (
   "lt1eqmul",
   (--`x < &1:real = x * &8388608:real < &8388608:real`--),
   REAL_ARITH_TAC);
 
 (*---------------------------*)
 
-val twogz = prove_thm (
+val twogz = store_thm (
   "twogz",
   (--`!n. (&0:real) < (&2:real) pow n`--),
   MATCH_MP_TAC REAL_POW_LT THEN
@@ -190,14 +180,14 @@ val twogz = prove_thm (
 
 (*---------------------------*)
 
-val not2eqz = prove_thm (
+val not2eqz = store_thm (
   "not2eqz",
   (--`~ (&2:real = &0)`--),
   REAL_ARITH_TAC);
 
 (*---------------------------*)
 
-val tittfittt = prove_thm (
+val tittfittt = store_thm (
   "tittfittt",
   (--`&2:real * inv (&2 pow 24) = inv (&2 pow 23)`--),
   REWRITE_TAC [GSYM real_div] THEN
@@ -210,7 +200,7 @@ val tittfittt = prove_thm (
 
 (*---------------------------*)
 
-val ttpinv = prove_thm (
+val ttpinv = store_thm (
   "ttpinv" ,
   (--`(&2:real) * (&2:real) pow 127 * inv ((&2:real) pow 127) = (&2:real)`--),
   ONCE_REWRITE_TAC[REAL_ARITH (--`(a:real) * b * c = a * (b * c)`--)] THEN
@@ -218,18 +208,28 @@ val ttpinv = prove_thm (
 
 (*--------------------------------------*)
 
-val RRRC1 = prove_thm (
+val REAL_ARITH_ss = realSimps.REAL_ARITH_ss
+val rlemma1 = prove(
+  ``2 <= x /\ 2 <= y ==> x <= y * (x - 1r)``,
+  STRIP_TAC THEN
+  `x <= 2 * (x - 1)` by ASM_SIMP_TAC (std_ss ++ REAL_ARITH_ss) [] THEN
+  `2 * (x - 1) <= y * (x - 1)`
+     by ASM_SIMP_TAC (std_ss ++ REAL_ARITH_ss) [REAL_LE_RMUL_IMP] THEN
+  ASM_SIMP_TAC (std_ss ++ REAL_ARITH_ss) []);
+
+val RRRC1 = store_thm (
   "RRRC1",
-  (--`&2 * &8388608 <= &2 pow 254 * (&2 * &8388608 - &1)`--),
-  REWRITE_TAC [REAL_SUB_LDISTRIB] THEN
-  REWRITE_TAC[REAL_ARITH (--`(a <= b - c = a + c:real <= b)`--)] THEN
-  REWRITE_TAC [REAL_MUL_RID] THEN
-  REWRITE_TAC [REAL_OF_NUM_POW, REAL_OF_NUM_MUL, REAL_OF_NUM_ADD, REAL_OF_NUM_LE] THEN
-  RW_TAC arith_ss []);
+  ``2 * 8388608 <= 2 pow 254 * (2 * 8388608 - 1)``,
+  MATCH_MP_TAC rlemma1 THEN CONJ_TAC THENL [
+    SRW_TAC [][],
+    Q_TAC SUFF_TAC `2 pow 1 < 2 pow 254`
+          THEN1 SIMP_TAC bool_ss [POW_1, REAL_LT_IMP_LE] THEN
+    MATCH_MP_TAC REAL_POW_MONO_LT THEN SRW_TAC [][]
+  ]);
 
 (*-----------------------------------------------*)
 
-val RRRC2 = prove_thm (
+val RRRC2 = store_thm (
   "RRRC2",
   (--`2 pow 103 * (2 pow 24 * 2) - 2 pow 103 <= 2 pow 128`--),
   REWRITE_TAC[REAL_ARITH (--`(a:real * b - c <= d = a * b <= c + d)`--)] THEN
@@ -238,7 +238,7 @@ val RRRC2 = prove_thm (
 
 (*-----------------------------------------------*)
 
-val RRRC3 = prove_thm (
+val RRRC3 = store_thm (
   "RRRC3",
   (--`340282356779733661637539395458142568448 <= 2 pow 128` --),
   REWRITE_TAC [REAL_OF_NUM_POW, REAL_OF_NUM_LE] THEN
@@ -246,7 +246,7 @@ val RRRC3 = prove_thm (
 
 (*-----------------------------------------------*)
 
-val RRRC4 = prove_thm (
+val RRRC4 = store_thm (
   "RRRC4",
   (--`2 pow 128 - 2 pow 103 = 340282356779733661637539395458142568448`--),
   REWRITE_TAC[REAL_ARITH (--`((a:real - b = c) = (a = b + c))`--)] THEN
@@ -255,7 +255,7 @@ val RRRC4 = prove_thm (
 
 (*-----------------------------------------------*)
 
-val RRRC5 = prove_thm (
+val RRRC5 = store_thm (
   "RRRC5",
   (--`inv 1 < 2 pow 103 * (2 pow 24 * 2) - 2 pow 103`--),
   RW_TAC arith_ss [REAL_MUL_SYM ,GSYM pow,ADD1,GSYM REAL_POW_ADD] THEN
@@ -265,7 +265,7 @@ val RRRC5 = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val RRRC6 = prove_thm (
+val RRRC6 = store_thm (
   "RRRC6",
   (--`0 < 2 pow 150`--),
   REWRITE_TAC [REAL_OF_NUM_POW, REAL_OF_NUM_LT] THEN
@@ -273,7 +273,7 @@ val RRRC6 = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val RRRC7 = prove_thm (
+val RRRC7 = store_thm (
   "RRRC7",
   (--`2 pow 254 - 2 pow 229 < 2 pow 254`--),
   REWRITE_TAC[REAL_ARITH (--`((a:real - b < c) = (a < b + c))`--)] THEN
@@ -282,7 +282,7 @@ val RRRC7 = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val RRRC8 = prove_thm (
+val RRRC8 = store_thm (
   "RRRC8",
   (--`2 pow 103 * (2 pow 24 * 2) - 2 pow 103 = 340282356779733661637539395458142568448`--),
   REWRITE_TAC[REAL_ARITH (--`((a:real - b = c) = (a = b + c))`--)] THEN
@@ -291,7 +291,7 @@ val RRRC8 = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val RRRC9 = prove_thm (
+val RRRC9 = store_thm (
   "RRRC9",
   (--`2 pow 127 * 2 - 2 pow 104 < 340282356779733661637539395458142568448`--),
   REWRITE_TAC[REAL_ARITH (--`((a:real - b < c) = (a < b + c))`--)] THEN
@@ -300,7 +300,7 @@ val RRRC9 = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val RRRC10 = prove_thm ("RRRC10", (--`1 < 2 pow 254 - 2 pow 229`--),
+val RRRC10 = store_thm ("RRRC10", (--`1 < 2 pow 254 - 2 pow 229`--),
 
 REWRITE_TAC[REAL_ARITH (--`((a:real < b - c) = (a + c < b))`--)] THEN
 REWRITE_TAC [REAL_OF_NUM_POW, REAL_OF_NUM_ADD, REAL_OF_NUM_LT] THEN
@@ -308,7 +308,7 @@ RW_TAC arith_ss []);
 
 (* ------------------------------------------------------------------------- *)
 
-val RRRC11 = prove_thm (
+val RRRC11 = store_thm (
   "RRRC11",
   (--`340282356779733661637539395458142568448 * 2 pow 126 < 2 pow 254`--),
   REWRITE_TAC [REAL_OF_NUM_POW, REAL_OF_NUM_MUL, REAL_OF_NUM_LT] THEN
@@ -316,7 +316,7 @@ val RRRC11 = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val sucminmullt = prove_thm (
+val sucminmullt = store_thm (
   "sucminmullt",
   (--`(&2:real pow SUC 127 - &2:real pow 103) * &2 pow 126 < &2 pow 255`--),
   REWRITE_TAC[REAL_SUB_RDISTRIB] THEN REWRITE_TAC[GSYM POW_ADD] THEN
@@ -327,7 +327,7 @@ val sucminmullt = prove_thm (
 (* Useful lemmas.                                                            *)
 (* ------------------------------------------------------------------------- *)
 
-val SIGN = prove_thm (
+val SIGN = store_thm (
   "SIGN",
   (--`!(a:num#num#num). sign(a) = FST a`--),
   GEN_TAC THEN SUBST1_TAC(SYM(REWRITE_CONV[PAIR]
@@ -336,7 +336,7 @@ val SIGN = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val EXPONENT = prove_thm (
+val EXPONENT = store_thm (
   "EXPONENT",
   (--`!(a:num#num#num). exponent(a) = FST(SND a)`--),
   GEN_TAC THEN SUBST1_TAC(SYM(REWRITE_CONV[PAIR]
@@ -345,7 +345,7 @@ val EXPONENT = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val FRACTION = prove_thm (
+val FRACTION = store_thm (
   "FRACTION",
   (--`!(a:num#num#num). fraction(a) = SND(SND a)`--),
   GEN_TAC THEN SUBST1_TAC(SYM(REWRITE_CONV[PAIR]
@@ -354,7 +354,7 @@ val FRACTION = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val IS_VALID = prove_thm (
+val IS_VALID = store_thm (
   "IS_VALID",
   (--`!(X:num#num) (a:num#num#num). is_valid(X) a =
       (sign a < (2:num)) /\ (exponent a < (2:num) EXP (expwidth X)) /\
@@ -366,7 +366,7 @@ val IS_VALID = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val VALOF = prove_thm (
+val VALOF = store_thm (
   "VALOF",
   (--`!(X:num#num) (a:num#num#num). valof (X:num#num) (a:num#num#num) =
       if exponent(a) = 0 then ~(&1) pow sign(a) * (&2 / &2 pow bias(X)) *
@@ -380,14 +380,14 @@ val VALOF = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val IS_VALID_DEFLOAT = prove_thm (
+val IS_VALID_DEFLOAT = store_thm (
   "IS_VALID_DEFLOAT",
   (--`!(a:float). is_valid(float_format) (defloat a)`--),
   REWRITE_TAC[float_tybij]);
 
 (*-----------------------*)
 
-val ADD_SUB2 = prove_thm (
+val ADD_SUB2 = store_thm (
   "ADD_SUB2",
   (--`!(m:num) (n:num). (m + n) - m = n`--),
   ONCE_REWRITE_TAC[ADD_SYM] THEN
@@ -395,7 +395,7 @@ val ADD_SUB2 = prove_thm (
 
 (*-----------------------*)
 
-val REAL_OF_NUM_SUB = prove_thm (
+val REAL_OF_NUM_SUB = store_thm (
   "REAL_OF_NUM_SUB",
   (--`!(m:num) (n:num). m <= n ==> (&n - &m = &(n - m))`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[LESS_EQ_EXISTS] THEN
@@ -407,7 +407,7 @@ val REAL_OF_NUM_SUB = prove_thm (
 
 (*-----------------------*)
 
-val IS_FINITE_ALT1 = prove_thm (
+val IS_FINITE_ALT1 = store_thm (
   "IS_FINITE_ALT1",
   (--`!(a:num#num#num).(is_normal float_format a \/ is_denormal float_format a \/ is_zero float_format a) = exponent a < 255`--),
   REPEAT GEN_TAC THEN Cases_on `a` THEN Cases_on `r` THEN
@@ -419,14 +419,14 @@ val IS_FINITE_ALT1 = prove_thm (
 
 (*-----------------------*)
 
-val IS_FINITE_ALT = prove_thm (
+val IS_FINITE_ALT = store_thm (
   "IS_FINITE_ALT",
   (--`!(a:num#num#num). is_finite(float_format) a = ((is_valid(float_format) a) /\ (exponent(a) < (255:num)))`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[is_finite] THEN RW_TAC arith_ss [IS_FINITE_ALT1]);
 
 (*-----------------------*)
 
-val IS_FINITE_EXPLICIT = prove_thm (
+val IS_FINITE_EXPLICIT = store_thm (
   "IS_FINITE_EXPLICIT",
   (--`!(a:num#num#num). is_finite(float_format) a = sign(a) < (2:num) /\ exponent(a) < 255 /\ fraction(a) < (8388608:num)`--),
   GEN_TAC THEN REWRITE_TAC[IS_FINITE_ALT, IS_VALID] THEN REWRITE_TAC[expwidth, fracwidth, float_format] THEN
@@ -434,14 +434,14 @@ val IS_FINITE_EXPLICIT = prove_thm (
 
 (*-----------------------*)
 
-val LT_SUC_LE = prove_thm (
+val LT_SUC_LE = store_thm (
   "LT_SUC_LE",
   (--`!m n. (m < SUC n) = (m <= n)`--),
   RW_TAC arith_ss []);
 
 (*-----------------------*)
 
-val FLOAT_CASES = prove_thm (
+val FLOAT_CASES = store_thm (
   "FLOAT_CASES",
   ``!(a:float). Isnan(a) \/ Infinity(a) \/ Isnormal(a) \/ Isdenormal(a) \/
                 Iszero(a)``,
@@ -469,14 +469,14 @@ val FLOAT_CASES = prove_thm (
 
 (*-----------------------*)
 
-val FLOAT_CASES_FINITE = prove_thm (
+val FLOAT_CASES_FINITE = store_thm (
   "FLOAT_CASES_FINITE",
   (--`!a. Isnan(a) \/ Infinity(a) \/ Finite(a)`--),
   MESON_TAC[FLOAT_CASES, Finite]);
 
 (*-----------------------*)
 
-val FLOAT_DISTINCT = prove_thm (
+val FLOAT_DISTINCT = store_thm (
   "FLOAT_DISTINCT",
   (--`!(a:float). ~(Isnan(a) /\ Infinity(a)) /\
       ~(Isnan(a) /\ Isnormal(a)) /\
@@ -497,7 +497,7 @@ val FLOAT_DISTINCT = prove_thm (
 
 (*-----------------------*)
 
-val FLOAT_DISTINCT_FINITE = prove_thm (
+val FLOAT_DISTINCT_FINITE = store_thm (
   "FLOAT_DISTINCT_FINITE",
   (--`!(a:float). ~(Isnan(a) /\ Infinity(a)) /\
       ~(Isnan(a) /\ Finite(a)) /\
@@ -506,7 +506,7 @@ val FLOAT_DISTINCT_FINITE = prove_thm (
 
 (*-----------------------*)
 
-val FLOAT_INFINITIES_SIGNED = prove_thm (
+val FLOAT_INFINITIES_SIGNED = store_thm (
   "FLOAT_INFINITIES_SIGNED",
   (--`(sign (defloat Plus_infinity) = 0) /\ (sign (defloat Minus_infinity) = 1)`--),
   REWRITE_TAC[Plus_infinity, Minus_infinity] THEN
@@ -520,7 +520,7 @@ val FLOAT_INFINITIES_SIGNED = prove_thm (
 
 (*-----------------------*)
 
-val INFINITY_IS_INFINITY = prove_thm (
+val INFINITY_IS_INFINITY = store_thm (
   "INFINITY_IS_INFINITY",
   (--`Infinity(Plus_infinity) /\ Infinity(Minus_infinity)`--),
   REWRITE_TAC[Infinity, Plus_infinity, Minus_infinity] THEN
@@ -535,7 +535,7 @@ val INFINITY_IS_INFINITY = prove_thm (
 
 (*-----------------------*)
 
-val ZERO_IS_ZERO = prove_thm (
+val ZERO_IS_ZERO = store_thm (
   "ZERO_IS_ZERO",
   (--`Iszero(Plus_zero) /\ Iszero(Minus_zero)`--),
   REWRITE_TAC[Iszero, Plus_zero, Minus_zero] THEN
@@ -550,21 +550,21 @@ val ZERO_IS_ZERO = prove_thm (
 
 (*-----------------------*)
 
-val INFINITY_NOT_NAN = prove_thm (
+val INFINITY_NOT_NAN = store_thm (
   "INFINITY_NOT_NAN",
   (--`~(Isnan(Plus_infinity)) /\ ~(Isnan(Minus_infinity))`--),
   MESON_TAC[INFINITY_IS_INFINITY, FLOAT_DISTINCT_FINITE]);
 
 (*-----------------------*)
 
-val ZERO_NOT_NAN = prove_thm (
+val ZERO_NOT_NAN = store_thm (
   "ZERO_NOT_NAN",
   (--`~(Isnan(Plus_zero)) /\ ~(Isnan(Minus_zero))`--),
   MESON_TAC[ZERO_IS_ZERO, FLOAT_DISTINCT]);;
 
 (*-----------------------*)
 
-val FLOAT_INFINITIES = prove_thm (
+val FLOAT_INFINITIES = store_thm (
   "FLOAT_INFINITIES",
   (--`!(a:float). Infinity(a) = (( a float_eq Plus_infinity) \/ (a float_eq Minus_infinity))`--),
   GEN_TAC THEN REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC (SPEC (--`a:float`--) FLOAT_CASES_FINITE) THENL [
@@ -587,7 +587,7 @@ val FLOAT_INFINITIES = prove_thm (
 
 (*-----------------------*)
 
-val FLOAT_INFINITES_DISTINCT = prove_thm (
+val FLOAT_INFINITES_DISTINCT = store_thm (
   "FLOAT_INFINITES_DISTINCT",
   (--`!(a:float). ~(a float_eq Plus_infinity /\ a float_eq Minus_infinity)`--),
   let val lemma = prove ((--`((if b then x else y) = z) = if b then x = z else y = z`--),
@@ -617,27 +617,27 @@ val FLOAT_LIFT_TAC =
     REWRITE_TAC[Finite, Isnan, Infinity, Isnormal, Isdenormal, Iszero] THEN
     STRIP_TAC];
 
-val FLOAT_LT = prove_thm (
+val FLOAT_LT = store_thm (
   "FLOAT_LT",
   (--`!a b. Finite(a) /\ Finite(b) ==> (a < b = Val(a) < Val(b))`--),
   FLOAT_LIFT_TAC THEN ASM_REWRITE_TAC[float_lt, flt, fcompare, Val] THEN
   REPEAT COND_CASES_TAC THEN RW_TAC arith_ss []);
 
-val FLOAT_GT = prove_thm (
+val FLOAT_GT = store_thm (
   "FLOAT_GT",
   (--`!a b. Finite(a) /\ Finite(b) ==> (a > b = Val(a) > Val(b))`--),
   FLOAT_LIFT_TAC THEN ASM_REWRITE_TAC[float_gt, fgt, fcompare, Val] THEN
   REPEAT COND_CASES_TAC THEN RW_TAC arith_ss [] THEN
   ASM_REWRITE_TAC[real_gt, REAL_LT_REFL] THEN ASM_MESON_TAC[REAL_LT_ANTISYM, REAL_LT_TOTAL]);
 
-val FLOAT_LE = prove_thm (
+val FLOAT_LE = store_thm (
   "FLOAT_LE",
   (--`!a b. Finite(a) /\ Finite(b) ==> (a <= b = Val(a) <= Val(b))`--),
   FLOAT_LIFT_TAC THEN ASM_REWRITE_TAC[float_le, fle, fcompare, Val] THEN
   REPEAT COND_CASES_TAC THEN RW_TAC arith_ss [] THEN
   REWRITE_TAC[GSYM REAL_NOT_LT] THEN ASM_MESON_TAC[REAL_LT_ANTISYM, REAL_LT_TOTAL]);
 
-val FLOAT_GE = prove_thm (
+val FLOAT_GE = store_thm (
   "FLOAT_GE",
   (--`!a b. Finite(a) /\ Finite(b) ==> (a >= b = Val(a) >= Val(b))`--),
   FLOAT_LIFT_TAC THEN ASM_REWRITE_TAC[float_ge, fge, fcompare, Val] THEN
@@ -645,13 +645,13 @@ val FLOAT_GE = prove_thm (
   REWRITE_TAC[real_ge] THEN REWRITE_TAC[GSYM REAL_NOT_LT] THEN
   ASM_MESON_TAC[REAL_LT_ANTISYM, REAL_LT_TOTAL]);
 
-val FLOAT_EQ = prove_thm (
+val FLOAT_EQ = store_thm (
   "FLOAT_EQ",
   (--`!a b. Finite(a) /\ Finite(b) ==> (a float_eq b = (Val(a) = Val(b)))`--),
   FLOAT_LIFT_TAC THEN ASM_REWRITE_TAC[float_eq, feq, fcompare, Val] THEN
   REPEAT COND_CASES_TAC THEN RW_TAC arith_ss [] THEN ASM_MESON_TAC[REAL_LT_REFL]);
 
-val FLOAT_EQ_REFL = prove_thm (
+val FLOAT_EQ_REFL = store_thm (
   "FLOAT_EQ_REFL",
   (--`!a. (a float_eq a) = ~(Isnan(a))`--),
   GEN_TAC THEN REWRITE_TAC[float_eq, feq, fcompare, Isnan] THEN
@@ -662,7 +662,7 @@ val FLOAT_EQ_REFL = prove_thm (
 (* Various lemmas.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val EXP_GT_ZERO = prove_thm (
+val EXP_GT_ZERO = store_thm (
   "EXP_GT_ZERO",
   (--`!(n:num). (0 < 2 EXP n)`--),
   GEN_TAC THEN REWRITE_TAC[num_CONV(--`2:num`--)] THEN
@@ -672,7 +672,7 @@ val EXP_GT_ZERO = prove_thm (
 
 (*-----------------------*)
 
-val IS_VALID_SPECIAL = prove_thm (
+val IS_VALID_SPECIAL = store_thm (
   "IS_VALID_SPECIAL",
   (--`!(X:num#num). is_valid(X) (minus_infinity(X)) /\
       is_valid(X) (plus_infinity(X)) /\
@@ -687,7 +687,7 @@ val IS_VALID_SPECIAL = prove_thm (
 
 (*-----------------------*)
 
-val IS_CLOSEST_EXISTS = prove_thm (
+val IS_CLOSEST_EXISTS = store_thm (
   "IS_CLOSEST_EXISTS",
   (--`!(v:(num#num#num)->real) (x:real) (s:(num#num#num)->bool). FINITE(s) ==> ~(s = EMPTY) ==> ?(a:(num#num#num)). is_closest v s x a`--),
   GEN_TAC THEN GEN_TAC THEN HO_MATCH_MP_TAC FINITE_INDUCT THEN REWRITE_TAC[NOT_INSERT_EMPTY] THEN X_GEN_TAC (--`s:(num#num#num)->bool`--) THEN
@@ -711,7 +711,7 @@ val IS_CLOSEST_EXISTS = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val CLOSEST_IS_EVERYTHING = prove_thm (
+val CLOSEST_IS_EVERYTHING = store_thm (
   "CLOSEST_IS_EVERYTHING",
   (--`! (v:(num#num#num)->real) (p:(num#num#num)->bool) (s:(num#num#num)->bool) (x:real).
       FINITE(s) ==> ~(s = EMPTY) ==> is_closest v s x (closest v p s x) /\
@@ -723,7 +723,7 @@ val CLOSEST_IS_EVERYTHING = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val CLOSEST_IN_SET = prove_thm (
+val CLOSEST_IN_SET = store_thm (
   "CLOSEST_IN_SET",
   (--`! (v:(num#num#num)->real) (p:(num#num#num)->bool) (x : real) (s:(num#num#num)->bool).
       FINITE(s) ==> ~(s = EMPTY) ==> (closest v p s x) IN s`--),
@@ -732,7 +732,7 @@ val CLOSEST_IN_SET = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val CLOSEST_IS_CLOSEST = prove_thm (
+val CLOSEST_IS_CLOSEST = store_thm (
   "CLOSEST_IS_CLOSEST",
   (--`! (v:(num#num#num) ->real) (p:(num#num#num) -> bool) (x : real) (s : (num#num#num) -> bool).
       FINITE(s) ==> ~(s = EMPTY) ==> is_closest v s x (closest v p s x)`--),
@@ -741,7 +741,7 @@ val CLOSEST_IS_CLOSEST = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val FLOAT_FIRSTCROSS1 = prove_thm (
+val FLOAT_FIRSTCROSS1 = store_thm (
   "FLOAT_FIRSTCROSS1",
   (--`! (x:num # num # num) (m:num) (n:num) (p:num) . (?x'.
       (x = (\ (x,y,z). (x,y,z)) x') /\ FST x' < m /\ FST (SND x') < n /\
@@ -759,7 +759,7 @@ val FLOAT_FIRSTCROSS1 = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val FLOAT_FIRSTCROSS2 = prove_thm (
+val FLOAT_FIRSTCROSS2 = store_thm (
   "FLOAT_FIRSTCROSS2",
   (--`! (x:num # num # num) (m:num) (n:num) (p:num) . (FST x < m /\ FST (SND x) < n /\ SND (SND x) < p) ==>
     (? (x':num # num # num). ((x:num # num # num) = ( \ ((x:num),(y:num),(z:num)). ((x:num),(y:num),(z:num))) x') /\ FST x' < m /\ FST (SND x') < n /\ SND (SND x') < p)`--),
@@ -769,7 +769,7 @@ val FLOAT_FIRSTCROSS2 = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val FLOAT_FIRSTCROSS3 = prove_thm (
+val FLOAT_FIRSTCROSS3 = store_thm (
   "FLOAT_FIRSTCROSS3",
   ( --` ! (x:num # num # num) (m:num) (n:num) (p:num) . FST x < m /\ FST (SND x) < n /\ SND (SND x) < p =
     ?x'. ((x:num # num # num) = ( \ ((x:num),(y:num),(z:num)). ((x:num),(y:num),(z:num))) x') /\ FST x' < m /\ FST (SND x') < n /\ SND (SND x') < p`--),
@@ -780,7 +780,7 @@ EQ_TAC THENL [MP_TAC(SPECL [(--`(x:num # num # num)`--), (--`(m:num)`--), (--`(n
 
 (*-------------------------------------------------------*)
 
-val FLOAT_FIRSTCROSS = prove_thm (
+val FLOAT_FIRSTCROSS = store_thm (
   "FLOAT_FIRSTCROSS",
   (--`! (m:num) (n:num) (p:num). {(a: (num # num # num))| (FST (a) < m) /\ (FST(SND a) < n) /\ (SND (SND a) < p)} =
       IMAGE ( \ ((x: num), (y: num, z: num)). (x,y,z)) ({(x:num)| x < m} CROSS ({(y:num)| y < n} CROSS {(z:num) | z < p}))`--),
@@ -792,7 +792,7 @@ val FLOAT_FIRSTCROSS = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val FLOAT_COUNTINDUCT = prove_thm (
+val FLOAT_COUNTINDUCT = store_thm (
   "FLOAT_COUNTINDUCT",
   (--`! n:num. ({x:num | x < 0} = EMPTY) /\ ({x | x < SUC n} = n INSERT {x | x < n})`--),
   REPEAT GEN_TAC THEN PURE_REWRITE_TAC [EXTENSION,IN_INSERT] THEN
@@ -800,7 +800,7 @@ val FLOAT_COUNTINDUCT = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val FLOAT_FINITECOUNT = prove_thm (
+val FLOAT_FINITECOUNT = store_thm (
   "FLOAT_FINITECOUNT",
   (--`! n:num. FINITE {x:num | x < n}`--),
   INDUCT_TAC THENL [
@@ -808,14 +808,14 @@ val FLOAT_FINITECOUNT = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val FINITE_R3 = prove_thm (
+val FINITE_R3 = store_thm (
   "FINITE_R3",
   (--`! m:num n:num p:num . FINITE {a: (num # num # num) | FST (a) < m /\ FST (SND a) < n /\ SND (SND a) < p }`--),
   REPEAT GEN_TAC THEN RW_TAC arith_ss [FLOAT_FIRSTCROSS,FLOAT_FINITECOUNT,IMAGE_FINITE,FINITE_CROSS]);
 
 (*-------------------------------------------------------*)
 
-val REAL_OF_NUM_POW = prove_thm (
+val REAL_OF_NUM_POW = store_thm (
   "REAL_OF_NUM_POW",
   (--`!(x:num) (n:num). (&x) pow n = &(x EXP n)`--),
   GEN_TAC THEN INDUCT_TAC THENL [
@@ -824,14 +824,14 @@ val REAL_OF_NUM_POW = prove_thm (
 
 (*-----------------------*)
 
-val IS_VALID_FINITE = prove_thm (
+val IS_VALID_FINITE = store_thm (
   "IS_VALID_FINITE",
   (--`FINITE {(a:num#num#num) | is_valid(X:num#num) a}`--),
     REPEAT GEN_TAC THEN REWRITE_TAC[IS_VALID, SIGN, EXPONENT, FRACTION, FINITE_R3]) ;
 
 (*-----------------------*)
 
-val FLOAT_IS_FINITE_SUBSET = prove_thm (
+val FLOAT_IS_FINITE_SUBSET = store_thm (
   "FLOAT_IS_FINITE_SUBSET",
   (--`! (X:num#num). {(a:num#num#num) | is_finite (X) a} SUBSET {a | is_valid (X) a}`--),
   GEN_TAC THEN REWRITE_TAC [is_finite] THEN REWRITE_TAC [SUBSET_DEF] THEN
@@ -839,14 +839,14 @@ val FLOAT_IS_FINITE_SUBSET = prove_thm (
 
 (*-----------------------*)
 
-val MATCH_FLOAT_FINITE = prove_thm (
+val MATCH_FLOAT_FINITE = store_thm (
   "MATCH_FLOAT_FINITE",
   (--`! (X:num#num). ({(a:num#num#num) | is_finite (X) a} SUBSET {a | is_valid (X) a}) ==> FINITE {(a:num#num#num) | is_finite (X) a}`--),
   GEN_TAC THEN MATCH_MP_TAC SUBSET_FINITE THEN REWRITE_TAC [IS_VALID_FINITE]);
 
 (*-----------------------*)
 
-val IS_FINITE_FINITE = prove_thm (
+val IS_FINITE_FINITE = store_thm (
   "IS_FINITE_FINITE",
   (--`! (X:num#num). (FINITE {(a:num#num#num) | is_finite (X) a})`--),
   REPEAT GEN_TAC THEN MATCH_MP_TAC MATCH_FLOAT_FINITE THEN
@@ -854,7 +854,7 @@ val IS_FINITE_FINITE = prove_thm (
 
 (*-----------------------*)
 
-val IS_VALID_NONEMPTY = prove_thm (
+val IS_VALID_NONEMPTY = store_thm (
   "IS_VALID_NONEMPTY",
   (--`~ ({(a:num#num#num)|is_valid (X:num#num) a} = EMPTY)`--),
   REWRITE_TAC[EXTENSION, NOT_FORALL_THM] THEN
@@ -870,7 +870,7 @@ val IS_VALID_NONEMPTY = prove_thm (
 
 (*-----------------------*)
 
-val IS_FINITE_NONEMPTY = prove_thm (
+val IS_FINITE_NONEMPTY = store_thm (
   "IS_FINITE_NONEMPTY",
   (--`~ ({(a:num#num#num)| is_finite (X:num#num) a} = EMPTY)`--),
   REWRITE_TAC[EXTENSION, NOT_FORALL_THM] THEN
@@ -884,7 +884,7 @@ val IS_FINITE_NONEMPTY = prove_thm (
 
 (*-----------------------*)
 
-val IS_FINITE_CLOSEST = prove_thm (
+val IS_FINITE_CLOSEST = store_thm (
   "IS_FINITE_CLOSEST",
   (--`! (X:num#num) (v:(num#num#num) ->real) (p:(num#num#num) -> bool) (x : real). is_finite(X)
       (closest v p {a | is_finite(X) a} x)`--),
@@ -901,14 +901,14 @@ val IS_FINITE_CLOSEST = prove_thm (
 
 (*-----------------------*)
 
-val IS_VALID_CLOSEST = prove_thm (
+val IS_VALID_CLOSEST = store_thm (
   "IS_VALID_CLOSEST",
   (--`!(X:num#num) (v:(num#num#num) ->real) (p:(num#num#num) -> bool) (x : real). is_valid (X) (closest v p {a | is_finite(X) a} x)`--),
   REWRITE_TAC [Ho_Rewrite.GEN_REWRITE_RULE I [is_finite] (SPEC_ALL IS_FINITE_CLOSEST)]);
 
 (*-----------------------*)
 
-val IS_VALID_ROUND = prove_thm (
+val IS_VALID_ROUND = store_thm (
   "IS_VALID_ROUND",
   (--`!(X:num#num) (x:real). is_valid(X) (round(X) To_nearest x)`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[is_valid, round_def] THEN
@@ -918,7 +918,7 @@ val IS_VALID_ROUND = prove_thm (
 
 (*-----------------------*)
 
-val DEFLOAT_FLOAT_ROUND = prove_thm (
+val DEFLOAT_FLOAT_ROUND = store_thm (
   "DEFLOAT_FLOAT_ROUND",
   (--`! (X:num#num) (x:real). defloat(float(round(float_format) To_nearest x)) =
       round(float_format) To_nearest x`--),
@@ -926,7 +926,7 @@ val DEFLOAT_FLOAT_ROUND = prove_thm (
 
 (*-----------------------*)
 
-val DEFLOAT_FLOAT_ZEROSIGN_ROUND = prove_thm (
+val DEFLOAT_FLOAT_ZEROSIGN_ROUND = store_thm (
   "DEFLOAT_FLOAT_ZEROSIGN_ROUND",
   (--`! (x:real) (b:num). defloat(float(zerosign(float_format) b
       (round(float_format) To_nearest (x:real)))) =
@@ -938,7 +938,7 @@ val DEFLOAT_FLOAT_ZEROSIGN_ROUND = prove_thm (
 
 (*-----------------------*)
 
-val VALOF_DEFLOAT_FLOAT_ZEROSIGN_ROUND = prove_thm (
+val VALOF_DEFLOAT_FLOAT_ZEROSIGN_ROUND = store_thm (
   "VALOF_DEFLOAT_FLOAT_ZEROSIGN_ROUND",
   (--`! (x:real) (b:num). valof(float_format) (defloat(float(zerosign(float_format) b
       (round(float_format) To_nearest x)))) = valof(float_format) (round(float_format) To_nearest x)`--),
@@ -953,14 +953,14 @@ val VALOF_DEFLOAT_FLOAT_ZEROSIGN_ROUND = prove_thm (
 
 (*-----------------------*)
 
-val REAL_ABS_NUM = prove_thm (
+val REAL_ABS_NUM = store_thm (
   "REAL_ABS_NUM",
   (--`abs(&n) = &n`--),
   REWRITE_TAC[REAL_POS, abs]);
 
 (*--------------------------------------------------------------*)
 
-val REAL_ABS_POW = prove_thm (
+val REAL_ABS_POW = store_thm (
   "REAL_ABS_POW",
   (--`!(x:real) (n:num). abs(x pow n) = abs(x) pow n`--),
   GEN_TAC THEN INDUCT_TAC THEN
@@ -969,7 +969,7 @@ val REAL_ABS_POW = prove_thm (
 
 (*--------------------------------------------------------------*)
 
-val ISFINITE = prove_thm (
+val ISFINITE = store_thm (
   "ISFINITE",
   (--`!(a:float). Finite(a) = is_finite(float_format) (defloat a)`--),
   REWRITE_TAC[Finite, is_finite, Isnormal, Isdenormal, Iszero] THEN
@@ -977,7 +977,7 @@ val ISFINITE = prove_thm (
 
 (*--------------------------------------*)
 
-val REAL_ABS_INV = prove_thm (
+val REAL_ABS_INV = store_thm (
   "REAL_ABS_INV",
   (--`!x. abs(inv x) = inv(abs x)`--),
   GEN_TAC THEN CONV_TAC SYM_CONV THEN ASM_CASES_TAC (--`x = &0`--) THENL [
@@ -985,14 +985,14 @@ val REAL_ABS_INV = prove_thm (
 
 (*--------------------------------------*)
 
-val REAL_ABS_DIV = prove_thm (
+val REAL_ABS_DIV = store_thm (
   "REAL_ABS_DIV",
   (--`!(x:real) y. abs(x / y) = abs(x) / abs(y)`--),
   REWRITE_TAC[real_div, REAL_ABS_INV, REAL_ABS_MUL]);
 
 (*--------------------------------------*)
 
-val REAL_ABS_DIV = prove_thm (
+val REAL_ABS_DIV = store_thm (
   "REAL_ABS_DIV",
   (--`!(x:real) y. abs(x / y) = abs(x) / abs(y)`--),
   REWRITE_TAC[real_div, REAL_ABS_INV, REAL_ABS_MUL]);
@@ -1003,7 +1003,7 @@ val REAL_MUL_AC_4 = (REAL_MUL_ASSOC, REAL_MUL_SYM);
 
 (*--------------------------------------*)
 
-val REAL_POW_LE_1 =  prove_thm (
+val REAL_POW_LE_1 =  store_thm (
   "REAL_POW_LE_1",
   (--`!(n:num) (x:real). (&1:real) <= x ==> (&1:real) <= x pow n`--),
   INDUCT_TAC THENL [
@@ -1015,7 +1015,7 @@ val REAL_POW_LE_1 =  prove_thm (
 
 (*--------------------------------------*)
 
-val REAL_POW_MONO = prove_thm (
+val REAL_POW_MONO = store_thm (
   "REAL_POW_MONO",
   (--`!(m:num) n x. &1 <= x /\ m <= n ==> x pow m <= x pow n`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[LESS_EQ_EXISTS] THEN
@@ -1031,7 +1031,7 @@ val REAL_POW_MONO = prove_thm (
 
 (*--------------------------------------*)
 
-val VAL_FINITE = prove_thm (
+val VAL_FINITE = store_thm (
   "VAL_FINITE",
   (--`!(a:float). Finite(a) ==> abs(Val a) <= largest(float_format)`--),
   GEN_TAC THEN REWRITE_TAC[ISFINITE, Val] THEN
@@ -1121,7 +1121,7 @@ val VAL_FINITE = prove_thm (
 
 (*---------------------------------*)
 
-val ISFINITE_LEMMA = prove_thm (
+val ISFINITE_LEMMA = store_thm (
   "ISFINITE_LEMMA",
   (--`! s e f. s < 2 /\ e < 255 /\ f < 2 EXP 23
       ==> Finite(float(s,e,f)) /\ is_valid(float_format)(s,e,f)`--),
@@ -1139,7 +1139,7 @@ val ISFINITE_LEMMA = prove_thm (
 (* Explicit numeric value for threshold, to save repeated recalculation.     *)
 (* ------------------------------------------------------------------------- *)
 
-val FLOAT_THRESHOLD_EXPLICIT = prove_thm (
+val FLOAT_THRESHOLD_EXPLICIT = store_thm (
   "FLOAT_THRESHOLD_EXPLICIT",
   (--`threshold(float_format) = &340282356779733661637539395458142568448`--),
   REWRITE_TAC[threshold, float_format, emax, bias, fracwidth, expwidth] THEN
@@ -1155,7 +1155,7 @@ val FLOAT_THRESHOLD_EXPLICIT = prove_thm (
 
 (*-----------------------*)
 
-val VAL_THRESHOLD = prove_thm (
+val VAL_THRESHOLD = store_thm (
   "VAL_THRESHOLD",
   (--`!a. Finite(a) ==> abs(Val a) < threshold float_format`--),
   GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC REAL_LET_TRANS THEN
@@ -1181,7 +1181,7 @@ val error = Define `error (x:real) = Val(float(round(float_format) To_nearest x)
 
 (*-----------------------*)
 
-val BOUND_AT_WORST_LEMMA = prove_thm (
+val BOUND_AT_WORST_LEMMA = store_thm (
   "BOUND_AT_WORST_LEMMA",
   (--`! a x. abs(x) < threshold(float_format) /\ is_finite(float_format) a
       ==>  abs(valof(float_format) (round(float_format) To_nearest x) - x)
@@ -1197,14 +1197,14 @@ val BOUND_AT_WORST_LEMMA = prove_thm (
 
 (*-----------------------*)
 
-val ERROR_AT_WORST_LEMMA = prove_thm (
+val ERROR_AT_WORST_LEMMA = store_thm (
   "ERROR_AT_WORST_LEMMA",
   (--`!a x. abs(x) < threshold(float_format) /\ Finite(a) ==> abs(error(x)) <= abs(Val(a) - x)`--),
   REWRITE_TAC[ISFINITE, Val, error, BOUND_AT_WORST_LEMMA, Val, DEFLOAT_FLOAT_ROUND]);
 
 (*--------------------------------------------------------------*)
 
-val ERROR_IS_ZERO = prove_thm (
+val ERROR_IS_ZERO = store_thm (
   "ERROR_IS_ZERO",
   (--`!a x. Finite(a) /\ (Val(a) = x) ==> (error(x) = &0)`--),
   REPEAT GEN_TAC THEN DISCH_THEN(STRIP_ASSUME_TAC o GSYM) THEN MP_TAC(SPECL [(--`a:float`--), (--`x:real`--)] ERROR_AT_WORST_LEMMA) THEN
@@ -1239,7 +1239,7 @@ val ERROR_IS_ZERO = prove_thm (
 
 (*--------------------------------------------------------------*)
 
-val REAL_LT_LCANCEL_IMP = prove_thm (
+val REAL_LT_LCANCEL_IMP = store_thm (
   "REAL_LT_LCANCEL_IMP",
   (--`!(x:real) (y:real) (z:real). (&0 < x) /\ ((x * y) < (x * z)) ==> (y < z)`--),
   REPEAT GEN_TAC THEN
@@ -1248,14 +1248,14 @@ val REAL_LT_LCANCEL_IMP = prove_thm (
 
 (*--------------------------------------------------------------*)
 
-val REAL_OF_NUM_LT = prove_thm (
+val REAL_OF_NUM_LT = store_thm (
   "REAL_OF_NUM_LT",
   (--`! m n. (&m:real) < (&n:real) = m < n`--),
   RW_TAC arith_ss [real_lt] THEN RW_TAC arith_ss [REAL_OF_NUM_LE]);
 
 (*--------------------------------------------------------------*)
 
-val ERROR_BOUND_LEMMA1 = prove_thm (
+val ERROR_BOUND_LEMMA1 = store_thm (
   "ERROR_BOUND_LEMMA1",
   (--`! (x:real). (&0:real) <= (x:real) /\ x < (&1:real)
       ==> ?(n:num). n < (2:num) EXP (23:num) /\
@@ -1306,7 +1306,7 @@ val ERROR_BOUND_LEMMA1 = prove_thm (
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA2 = prove_thm (
+val ERROR_BOUND_LEMMA2 = store_thm (
   "ERROR_BOUND_LEMMA2",
   (--`! x:real. &0:real <= x /\ x < &1
       ==> ?n:num. n <= 2 EXP 23 /\ abs(x - &n / &2 pow 23) <= inv(&2 pow 24)`--),
@@ -1327,7 +1327,7 @@ val ERROR_BOUND_LEMMA2 = prove_thm (
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA3 = prove_thm (
+val ERROR_BOUND_LEMMA3 = store_thm (
   "ERROR_BOUND_LEMMA3",
   (--`! x:real. &1:real <= x /\ x < &2
       ==> ?n. n <= 2 EXP 23 /\ abs((&1 + &n / &2 pow 23) - x) <= inv(&2 pow 24)`--),
@@ -1340,7 +1340,7 @@ val ERROR_BOUND_LEMMA3 = prove_thm (
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA4 = prove_thm (
+val ERROR_BOUND_LEMMA4 = store_thm (
   "ERROR_BOUND_LEMMA4",
   (--`! x:real. (&1:real) <= x /\ x < (&2:real)
       ==> ?e f. abs(Val(float(0,e,f)) - x) <= inv(&2:real pow 24) /\
@@ -1373,7 +1373,7 @@ val ERROR_BOUND_LEMMA4 = prove_thm (
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA5 = prove_thm (
+val ERROR_BOUND_LEMMA5 = store_thm (
   "ERROR_BOUND_LEMMA5",
   (--`! (x:real). (&1:real) <= abs(x) /\ abs(x) < (&2:real)
       ==> ?s e f. abs(Val(float(s,e,f)) - x) <= inv(&2 pow 24) /\
@@ -1412,7 +1412,7 @@ val ERROR_BOUND_LEMMA5 = prove_thm (
 
 (*---------------------------*)
 
-val REAL_MUL_AC = prove_thm (
+val REAL_MUL_AC = store_thm (
   "REAL_MUL_AC",
   (--`((m:real) * n = n * m) /\ ((m * n) * p = m * (n * p)) /\ (m * (n * p) = n * (m * p))`--),
   REWRITE_TAC[REAL_MUL_ASSOC, EQT_INTRO(SPEC_ALL REAL_MUL_SYM)] THEN
@@ -1420,7 +1420,7 @@ val REAL_MUL_AC = prove_thm (
 
 (*---------------------------*)
 
-val REAL_LE_LCANCEL_IMP = prove_thm (
+val REAL_LE_LCANCEL_IMP = store_thm (
   "REAL_LE_LCANCEL_IMP",
   (--`!(x:real) (y:real) (z:real). &0 < x /\ x * y <= x * z ==> y <= z`--),
   REPEAT GEN_TAC THEN RW_TAC arith_ss [REAL_LE_LMUL] THEN
@@ -1429,7 +1429,7 @@ val REAL_LE_LCANCEL_IMP = prove_thm (
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA6 = prove_thm (
+val ERROR_BOUND_LEMMA6 = store_thm (
   "ERROR_BOUND_LEMMA6",
   (--`! (x:real). (&0:real) <= x /\ x < inv (&2 pow 126)
       ==> ?n. n <= 2 EXP 23 /\ abs (x - &2 / &2 pow 127 * &n / &2 pow 23) <= inv (&2 pow 150)`--),
@@ -1483,14 +1483,14 @@ val ERROR_BOUND_LEMMA6 = prove_thm (
 
 (*---------------------------*)
 
-val EXP_LT_0 = prove_thm (
+val EXP_LT_0 = store_thm (
   "EXP_LT_0",
   (--`!n x. 0 < x EXP n = ~(x = 0) \/ (n = 0)`--),
   REWRITE_TAC[GSYM NOT_LESS_EQUAL,LE, EXP_EQ_0, DE_MORGAN_THM]);
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA7 = prove_thm (
+val ERROR_BOUND_LEMMA7 = store_thm (
   "ERROR_BOUND_LEMMA7",
   (--`! (x:real). (&0:real) <= x /\ x < inv(&2 pow 126)
       ==> ?e f. abs(Val(float(0,e,f)) - x) <= inv(&2 pow 150) /\
@@ -1521,7 +1521,7 @@ val ERROR_BOUND_LEMMA7 = prove_thm (
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA8 = prove_thm (
+val ERROR_BOUND_LEMMA8 = store_thm (
   "ERROR_BOUND_LEMMA8",
   (--`! (x:real). abs(x) < inv(&2 pow 126)
       ==> ?s e f. abs(Val(float(s,e,f)) - x) <= inv(&2 pow 150) /\
@@ -1545,14 +1545,14 @@ val ERROR_BOUND_LEMMA8 = prove_thm (
 
 (*---------------------------*)
 
-val VALOF_SCALE_UP = prove_thm (
+val VALOF_SCALE_UP = store_thm (
   "VALOF_SCALE_UP",
   (--`!s e k f. ~(e = 0) ==> (valof(float_format) (s,e + k,f) = &2 pow k * valof(float_format) (s,e,f))`--),
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[valof, ADD_EQ_0] THEN RW_TAC arith_ss [REAL_POW_ADD, REAL_MUL_AC, real_div]);
 
 (*---------------------------*)
 
-val VALOF_SCALE_DOWN = prove_thm (
+val VALOF_SCALE_DOWN = store_thm (
   "VALOF_SCALE_DOWN",
   (--`! (s:num) (e:num) (k:num) (f:num). k < e ==> (valof(float_format) (s,(e - k):num,f) =
       inv(&2 pow k) * valof(float_format) (s,e,f))`--),
@@ -1568,7 +1568,7 @@ val VALOF_SCALE_DOWN = prove_thm (
 
 (*---------------------------*)
 
-val  REAL_LT_RCANCEL_IMP = prove_thm (
+val  REAL_LT_RCANCEL_IMP = store_thm (
   "REAL_LT_RCANCEL_IMP",
   (--`!x y z. &0 < z /\ x * z < y * z ==> x < y`--),
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
@@ -1576,7 +1576,7 @@ val  REAL_LT_RCANCEL_IMP = prove_thm (
 
 (*---------------------------*)
 
-val REAL_LE_RCANCEL_IMP = prove_thm (
+val REAL_LE_RCANCEL_IMP = store_thm (
   "REAL_LE_RCANCEL_IMP",
   (--`!x y z. &0 < z /\ x * z <= y * z ==> x <= y`--),
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
@@ -1584,7 +1584,7 @@ val REAL_LE_RCANCEL_IMP = prove_thm (
 
 (*---------------------------*)
 
-val REAL_POW_EQ_0 = prove_thm (
+val REAL_POW_EQ_0 = store_thm (
   "REAL_POW_EQ_0",
   (--`!x n. (x pow n = &0) = (x = &0) /\ ~(n = 0)`--),
   GEN_TAC THEN INDUCT_TAC THENL [
@@ -1593,7 +1593,7 @@ val REAL_POW_EQ_0 = prove_thm (
 
 (*---------------------------*)
 
-val REAL_POW_LE_1 = prove_thm (
+val REAL_POW_LE_1 = store_thm (
   "REAL_POW_LE_1",
   (--`!n x. (&1:real) <= x ==> (&1:real) <= x pow n`--),
   INDUCT_TAC THENL [
@@ -1608,7 +1608,7 @@ val REAL_POW_LE_1 = prove_thm (
 
 (*---------------------------*)
 
-val REAL_POW_MONO = prove_thm (
+val REAL_POW_MONO = store_thm (
   "REAL_POW_MONO",
   (--`!(m:num) (n:num) (x:real). &1 <= x /\ m <= n ==> x pow m <= x pow n`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[LESS_EQ_EXISTS ] THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
@@ -1620,7 +1620,7 @@ val REAL_POW_MONO = prove_thm (
 
 (*-------------------------------------------------------*)
 
-val ERROR_BOUND_BIG1 = prove_thm (
+val ERROR_BOUND_BIG1 = store_thm (
   "ERROR_BOUND_BIG1",
   (--`! x k. 2 pow k <= abs x /\ abs x < 2 pow SUC k /\ abs x < threshold float_format ==>
   ?a. Finite a /\ abs (Val a - x) <= 2 pow k / 2 pow 24`--),
@@ -1760,7 +1760,7 @@ val ERROR_BOUND_BIG1 = prove_thm (
 
 (*-----------------------------------------------*)
 
-val ERROR_BOUND_BIG = prove_thm (
+val ERROR_BOUND_BIG = store_thm (
   "ERROR_BOUND_BIG",
   (--`! (k:num) (x:real). (&2:real) pow k <= abs(x) /\ abs(x) < &2 pow (SUC k) /\
       abs(x) < threshold(float_format) ==> abs(error(x)) <= &2 pow (k:num) / (&2:real) pow (24:num)`--),
@@ -1772,7 +1772,7 @@ val ERROR_BOUND_BIG = prove_thm (
 
 (*-----------------------------------------------*)
 
-val REAL_LE_INV2 = prove_thm (
+val REAL_LE_INV2 = store_thm (
   "REAL_LE_INV2",
   (--`!x y. (&0:real) < x /\ x <= y ==> inv(y) <= inv(x)`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
@@ -1782,7 +1782,7 @@ val REAL_LE_INV2 = prove_thm (
 
 (*-----------------------------------------------*)
 
-val ERROR_BOUND_SMALL1 = prove_thm (
+val ERROR_BOUND_SMALL1 = store_thm (
   "ERROR_BOUND_SMALL1",
   (--`! x k. inv (2 pow SUC k) <= abs x /\ abs x < inv (2 pow k) /\ k < 126 ==>
       ?a. Finite a /\ abs (Val a - x) <= inv (2 pow SUC k * 2 pow 24)`--),
@@ -1852,7 +1852,7 @@ val ERROR_BOUND_SMALL1 = prove_thm (
 
 (*-------------------------------------*)
 
-val ERROR_BOUND_SMALL = prove_thm (
+val ERROR_BOUND_SMALL = store_thm (
   "ERROR_BOUND_SMALL",
   (--`! (k:num) (x:real). inv(&2 pow (SUC k)) <= abs(x) /\ abs(x) < inv(&2 pow k) /\ k < 126
       ==> abs(error(x)) <= inv(&2 pow (SUC k) * &2 pow 24)`--),
@@ -1874,7 +1874,7 @@ val ERROR_BOUND_SMALL = prove_thm (
 
 (*-----------------------------------------------*)
 
-val ERROR_BOUND_TINY = prove_thm (
+val ERROR_BOUND_TINY = store_thm (
   "ERROR_BOUND_TINY",
   (--`! x:real. abs(x) < inv(&2 pow (126:num)) ==> abs(error(x)) <= inv(&2 pow (150:num))`--),
   REPEAT STRIP_TAC THEN SUBGOAL_THEN (--`?a. Finite(a) /\ abs(Val(a) - x) <= inv(&2 pow 150:num)`--)
@@ -1911,7 +1911,7 @@ val ERROR_BOUND_TINY = prove_thm (
 (* Stronger versions not requiring exact location of the interval.           *)
 (* ------------------------------------------------------------------------- *)
 
-val ERROR_BOUND_NORM_STRONG = prove_thm (
+val ERROR_BOUND_NORM_STRONG = store_thm (
   "ERROR_BOUND_NORM_STRONG",
   (--`! (x:real) (j:num). abs(x) < threshold(float_format) /\ abs(x) < ((&2:real) pow (SUC j) / &2 pow (126:num))
       ==> abs(error(x)) <= &2 pow j / &2 pow (150:num)`--),
@@ -2107,7 +2107,7 @@ val normalizes = new_definition (
 
 (* ------------------------------------------------------------------------- *)
 
-val THRESHOLD_MUL_LT = prove_thm (
+val THRESHOLD_MUL_LT = store_thm (
   "THRESHOLD_MUL_LT",
   (--`threshold float_format * &2 pow 126 < (&2 pow (2 EXP 126))`--),
   REWRITE_TAC [threshold,float_format] THEN RW_TAC arith_ss [emax,bias,fracwidth,expwidth] THEN
@@ -2129,7 +2129,7 @@ val THRESHOLD_MUL_LT = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val THRESHOLD_LT_POW_INV = prove_thm (
+val THRESHOLD_LT_POW_INV = store_thm (
   "THRESHOLD_LT_POW_INV",
   (--`340282356779733661637539395458142568448 < 2 pow 254 * inv (2 pow 126)`--),
   SUBGOAL_THEN (--`340282356779733661637539395458142568448 < 2 pow 254 * inv (2 pow 126) =
@@ -2141,7 +2141,7 @@ val THRESHOLD_LT_POW_INV = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val LT_THRESHOLD_LT_POW_INV = prove_thm (
+val LT_THRESHOLD_LT_POW_INV = store_thm (
   "LT_THRESHOLD_LT_POW_INV",
   (--`!x:real. x < threshold (8,23) ==> x < 2 pow (emax (8,23) - 1) / 2 pow 126`--),
   RW_TAC arith_ss [FLOAT_THRESHOLD_EXPLICIT,(GSYM float_format),emax,expwidth,real_div] THEN
@@ -2150,7 +2150,7 @@ val LT_THRESHOLD_LT_POW_INV = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val REAL_POS_IN_BINADE = prove_thm (
+val REAL_POS_IN_BINADE = store_thm (
   "REAL_POS_IN_BINADE",
   (--`! (x:real). normalizes (x:real) /\ ((&0:real) <= x) ==> ?(j:num). j <= (emax float_format - 2) /\
       ((&2 pow j) / (&2 pow 126)) <= x /\ x < ((&2 pow (SUC j:num)) / (&2 pow 126))`--),
@@ -2207,7 +2207,7 @@ val REAL_POS_IN_BINADE = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val REAL_NEG_IN_BINADE = prove_thm (
+val REAL_NEG_IN_BINADE = store_thm (
   "REAL_NEG_IN_BINADE",
   (--`! (x:real). normalizes (x:real) /\ ((&0:real) <= ~x) ==> ?(j:num). j <= (emax float_format - 2) /\
       ((&2 pow j) / (&2 pow 126)) <= ~x /\ ~x < ((&2 pow (SUC j:num)) / (&2 pow 126))`--),
@@ -2217,7 +2217,7 @@ val REAL_NEG_IN_BINADE = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val REAL_IN_BINADE = prove_thm (
+val REAL_IN_BINADE = store_thm (
   "REAL_IN_BINADE",
   (--`! (x:real). normalizes (x:real) ==> ?(j:num). j <= (emax float_format - 2) /\
       ((&2 pow j) / (&2 pow 126)) <= abs x /\ abs x < ((&2 pow (SUC j:num)) / (&2 pow 126))`--),
@@ -2231,7 +2231,7 @@ val REAL_IN_BINADE = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val ERROR_BOUND_NORM_STRONG_NORMALIZE = prove_thm (
+val ERROR_BOUND_NORM_STRONG_NORMALIZE = store_thm (
   "ERROR_BOUND_NORM_STRONG_NORMALIZE",
   (--`! (x:real). normalizes (x:real) ==> ?(j:num). abs(error(x)) <= &2 pow j / &2 pow (150:num)`--),
   GEN_TAC THEN STRIP_TAC THEN MP_TAC REAL_IN_BINADE THEN DISCH_THEN (MP_TAC o SPEC (--`(x:real)`--)) THEN
@@ -2241,7 +2241,7 @@ val ERROR_BOUND_NORM_STRONG_NORMALIZE = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val RELATIVE_ERROR_POS = prove_thm (
+val RELATIVE_ERROR_POS = store_thm (
   "RELATIVE_ERROR_POS",
   (--`! (x:real). normalizes (x:real) /\ ((&0:real) < x) ==> ? (e:real). abs(e) <= ((&1:real) / &2 pow (24:num)) /\
       (Val (float (round float_format To_nearest x)) = x * ((&1:real) + e))`--),
@@ -2312,7 +2312,7 @@ val RELATIVE_ERROR_POS = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val RELATIVE_ERROR_NEG = prove_thm (
+val RELATIVE_ERROR_NEG = store_thm (
   "RELATIVE_ERROR_NEG",
   (--`! (x:real). normalizes (x:real) /\ (x < (&0:real)) ==> ? (e:real). abs(e) <= ((&1:real) / &2 pow (24:num)) /\
       (Val (float (round float_format To_nearest x)) = x * ((&1:real) + e))`--),
@@ -2385,7 +2385,7 @@ val RELATIVE_ERROR_NEG = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val RELATIVE_ERROR_ZERO = prove_thm (
+val RELATIVE_ERROR_ZERO = store_thm (
   "RELATIVE_ERROR_ZERO",
   (--`! (x:real). normalizes (x:real) /\ (x = (&0:real)) ==> ? (e:real). abs(e) <= ((&1:real) / &2 pow (24:num)) /\
       (Val (float (round float_format To_nearest x)) = x * ((&1:real) + e))`--),
@@ -2409,7 +2409,7 @@ val RELATIVE_ERROR_ZERO = prove_thm (
 
 (* ------------------------------------------------------------------------- *)
 
-val RELATIVE_ERROR = prove_thm (
+val RELATIVE_ERROR = store_thm (
   "RELATIVE_ERROR",
   (--`! (x:real). normalizes (x:real) ==> ? (e:real). abs(e) <= ((&1:real) / &2 pow (24:num)) /\
       (Val (float (round float_format To_nearest x)) = x * ((&1:real) + e))`--),
@@ -2426,7 +2426,7 @@ val RELATIVE_ERROR = prove_thm (
 (* We also want to ensure that the result is actually finite!                *)
 (* ------------------------------------------------------------------------- *)
 
-val DEFLOAT_FLOAT_ZEROSIGN_ROUND_FINITE = prove_thm (
+val DEFLOAT_FLOAT_ZEROSIGN_ROUND_FINITE = store_thm (
   "DEFLOAT_FLOAT_ZEROSIGN_ROUND_FINITE",
   (--`! b x. abs(x) < threshold(float_format) ==> is_finite(float_format)
       (defloat(float(zerosign(float_format) b (round float_format To_nearest x))))`--),
@@ -2450,7 +2450,7 @@ val DEFLOAT_FLOAT_ZEROSIGN_ROUND_FINITE = prove_thm (
 (* Lifting of arithmetic operations.                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val FLOAT_ADD = prove_thm (
+val FLOAT_ADD = store_thm (
   "FLOAT_ADD",
   (--`! (a:float) (b:float). Finite(a) /\ Finite(b) /\ abs(Val(a) + Val(b)) < threshold(float_format)
       ==> Finite(a float_add b) /\ ((Val(a float_add b)) = (Val(a) + Val(b)) + error(Val(a) + Val(b)))`--),
@@ -2465,7 +2465,7 @@ val FLOAT_ADD = prove_thm (
 
 (*-----------------------*)
 
-val FLOAT_SUB = prove_thm (
+val FLOAT_SUB = store_thm (
   "FLOAT_SUB",
   (--`! a b. Finite(a) /\ Finite(b) /\ abs(Val(a) - Val(b)) < threshold(float_format)
       ==> Finite(a - b) /\ (Val(a - b) = (Val(a) - Val(b)) + error(Val(a) - Val(b)))`--),
@@ -2480,7 +2480,7 @@ val FLOAT_SUB = prove_thm (
 
 (*-----------------------*)
 
-val FLOAT_MUL = prove_thm (
+val FLOAT_MUL = store_thm (
   "FLOAT_MUL",
   (--`! (a:float) (b:float). Finite(a) /\ Finite(b) /\ abs(Val(a) * Val(b)) < threshold(float_format)
       ==> Finite(a float_mul b) /\ (Val(a float_mul b) = (Val(a) * Val(b)) + error(Val(a) * Val(b)))`--),
@@ -2495,7 +2495,7 @@ val FLOAT_MUL = prove_thm (
 
 (*-----------------------*)
 
-val FLOAT_DIV = prove_thm (
+val FLOAT_DIV = store_thm (
   "FLOAT_DIV",
   (--`! a b. Finite(a) /\ Finite(b) /\ ~(Iszero(b)) /\ abs(Val(a) / Val(b)) < threshold(float_format)
       ==> Finite(a / b) /\ (Val(a / b) = (Val(a) / Val(b)) + error(Val(a) / Val(b)))`--),
@@ -2511,14 +2511,14 @@ val FLOAT_DIV = prove_thm (
 
 (*-----------------------*)
 
-val Val_FLOAT_ROUND_VALOF = prove_thm (
+val Val_FLOAT_ROUND_VALOF = store_thm (
   "Val_FLOAT_ROUND_VALOF",
   (--`!x:real. Val (float (round float_format To_nearest x)) = valof float_format (round float_format To_nearest x)`--),
   GEN_TAC THEN REWRITE_TAC[Val] THEN REWRITE_TAC[DEFLOAT_FLOAT_ROUND]);
 
 (*-----------------------*)
 
-val FLOAT_ADD_RELATIVE = prove_thm (
+val FLOAT_ADD_RELATIVE = store_thm (
   "FLOAT_ADD_RELATIVE",
   (--`! (a:float) (b:float). Finite(a) /\ Finite(b) /\ normalizes (Val(a) + Val(b))
       ==>  Finite(a + b) /\ ? (e:real). abs(e) <= ((&1:real) / &2 pow (24:num)) /\
@@ -2535,7 +2535,7 @@ val FLOAT_ADD_RELATIVE = prove_thm (
 
 (*-----------------------*)
 
-val FLOAT_SUB_RELATIVE = prove_thm (
+val FLOAT_SUB_RELATIVE = store_thm (
   "FLOAT_SUB_RELATIVE",
   (--`! (a:float) (b:float). Finite(a) /\ Finite(b) /\ normalizes (Val(a) - Val(b))
       ==> Finite(a - b) /\ ? (e:real). abs(e) <= ((&1:real) / &2 pow (24:num)) /\
@@ -2551,7 +2551,7 @@ val FLOAT_SUB_RELATIVE = prove_thm (
 
 (*-----------------------*)
 
-val FLOAT_MUL_RELATIVE = prove_thm (
+val FLOAT_MUL_RELATIVE = store_thm (
   "FLOAT_MUL_RELATIVE",
   (--`! (a:float) (b:float). Finite(a) /\ Finite(b) /\ normalizes (Val(a) * Val(b))
       ==> Finite(a * b) /\ ? (e:real). abs(e) <= ((&1:real) / &2 pow (24:num)) /\
@@ -2568,7 +2568,7 @@ val FLOAT_MUL_RELATIVE = prove_thm (
 
 (*-----------------------*)
 
-val FLOAT_DIV_RELATIVE = prove_thm (
+val FLOAT_DIV_RELATIVE = store_thm (
   "FLOAT_DIV_RELATIVE",
   (--`! (a:float) (b:float). Finite(a) /\ Finite(b) /\ ~(Iszero(b)) /\ normalizes (Val(a) / Val(b))
       ==>  Finite(a / b) /\ ? (e:real). abs(e) <= ((&1:real) / &2 pow (24:num)) /\
@@ -2585,7 +2585,7 @@ val FLOAT_DIV_RELATIVE = prove_thm (
 
 (*------------- *)
 
-val FLOAT_ADD_FINITE = prove_thm (
+val FLOAT_ADD_FINITE = store_thm (
   "FLOAT_ADD",
   (--`! (a:float) (b:float). Finite(a) /\ Finite(b) /\ abs(Val(a) + Val(b)) < threshold(float_format)
       ==>  Finite(a float_add b)`--),
@@ -2593,14 +2593,14 @@ val FLOAT_ADD_FINITE = prove_thm (
 
 (*------------- *)
 
-val FLOAT_SUB_FINITE = prove_thm (
+val FLOAT_SUB_FINITE = store_thm (
   "FLOAT_SUB_FINITE",
   (--`! a b. Finite(a) /\ Finite(b) /\ abs(Val(a) - Val(b)) < threshold(float_format) ==> Finite(a - b)`--),
   RW_TAC arith_ss [FLOAT_SUB]);
 
 (*------------- *)
 
-val FLOAT_MUL_FINITE = prove_thm (
+val FLOAT_MUL_FINITE = store_thm (
   "FLOAT_MUL_FINITE",
   (--`! (a:float) (b:float). Finite(a) /\ Finite(b) /\ abs(Val(a) * Val(b)) < threshold(float_format) ==> Finite(a float_mul b)`--),
   RW_TAC arith_ss [FLOAT_MUL]);

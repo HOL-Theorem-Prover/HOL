@@ -1422,7 +1422,7 @@ val LDM = Count.apply prove(
               ((aregn = 7w) ==> ~(CPSR_READ psr %% 6)) /\
               ((aregn = 6w) ==> ~(CPSR_READ psr %% 7))`
         by METIS_TAC [Abbr`aregn`]
-        \\ RM_ABBREV_TAC `aregn`
+        \\ markerLib.RM_ABBREV_TAC "aregn"
         \\ PAT_ASSUM `!sctrlreg reg psrfb. P` (K ALL_TAC)
         \\ `~IS_RESET inp (w + 1)`
         by METIS_TAC [DECIDE ``!w. 0 < w ==> w + 1 < 2 + (w - 1) + 1 + x``]
@@ -1868,7 +1868,7 @@ val STM = Count.apply prove(
                 ((aregn = 7w) ==> ~(CPSR_READ psr %% 6)) /\
                 ((aregn = 6w) ==> ~(CPSR_READ psr %% 7))`
             by METIS_TAC []
-            \\ RM_ABBREV_TAC `aregn`
+            \\ markerLib.RM_ABBREV_TAC "aregn"
             \\ PAT_ASSUM `!sctrlreg reg psrfb. P` (K ALL_TAC)
             \\ STRIP_TAC \\ UNABBREV_TAC `s` \\ CONJ_TAC
             << [
@@ -2104,7 +2104,7 @@ val ARM6_DATA_ABSTRACTION = store_thm("ARM6_DATA_ABSTRACTION",
            (CONJ STATE_ARM_THM3 STATE_ARM6_IMAP_INIT)]
     \\ Cases_on `a`
     \\ Q.MATCH_ABBREV_TAC `?b. ABS_ARM6 (INIT_ARM6 b) = ARM_EX s c e`
-    \\ Q.RM_ALL_ABBREVS_TAC \\ Cases_on `s`
+    \\ markerLib.RM_ALL_ABBREVS_TAC \\ Cases_on `s`
     \\ EXISTS_TAC `ARM6 (DP (ADD8_PC f) f0 areg din alua alub dout)
      (CTRL pipea pipeaval pipeb pipebval c iregval ointstart onewinst endinst
        obaselatch opipebll nxtic nxtis nopc1 oorst resetlatch onfq ooonfq
@@ -2209,7 +2209,7 @@ val TCON_SMPL_ARM6 = prove(
     \\ MAP_EVERY ASSUME_TAC [STATE_ARM6_IMAP,IMM_ARM6_UNIFORM,ARM6_TIME_CON_IMM]
     \\ IMP_RES_TAC (GSYM TCON_IMMERSION_COR)
     \\ X_GEN_TAC `t2` \\ Cases_on `x`
-    \\ ABBREV_TAC `inp = f` \\ RM_ABBREV_TAC `inp`
+    \\ ABBREV_TAC `inp = f` \\ markerLib.RM_ABBREV_TAC "inp"
     \\ `state_inp a inp = <| state:= a; inp := inp |>`
       by (SIMP_TAC (srw_ss()) [state_inp_component_equality])
     \\ FULL_SIMP_TAC (arith_ss++STATE_INP_ss) [GSYM ARM6_SPEC_STATE,

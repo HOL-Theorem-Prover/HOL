@@ -80,4 +80,11 @@ sig
   val SPOSE_NOT_THEN : (thm -> tactic) -> tactic
   val by             : term quotation * tactic -> tactic   (* infix *)
 
+  (* Abbreviations  (see also Q structure) *)
+
+  val Abbr             : term quotation -> thm
+  val UNABBREV_ALL_TAC : tactic
+  val REABBREV_TAC     : tactic
+  val WITHOUT_ABBREVS  : tactic -> tactic
+
 end

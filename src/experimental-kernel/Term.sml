@@ -30,102 +30,74 @@ end handle Unchanged => let val fy = f y
 
 
 
-type const_key = {Thy : string, Name : string}
-type const_info = {Thy : string, Name : string, base_type : hol_type,
-                   uptodate : bool} ref
+type const_key = KernelSig.kernelname
+type const_info = (KernelSig.kernelid * hol_type)
 type 'a set = 'a HOLset.set
 
-fun compare_key ({Thy = thy1, Name = op1}, {Thy = thy2, Name = op2}) =
-    case String.compare(op1, op2) of
-      EQUAL => String.compare(thy1, thy2)
-    | x => x
+val compare_key = KernelSig.name_compare
+val compare_cinfo = KernelSig.id_compare
 
-fun compare_cinfo (p as (c1 : const_info, c2 : const_info)) =
-    if c1 = c2 then EQUAL
-    else let
-        val ci1 = !c1 and ci2 = !c2
-      in
-        case String.compare(#Name ci1, #Name ci2) of
-          EQUAL => String.compare(#Thy ci1, #Thy ci2)
-        | x => x
-      end
+val c2string = KernelSig.id_toString
+val id2string  = KernelSig.name_toString
 
-fun c2string (ref {Thy, Name,...} : const_info) =
-    String.concat [Thy, "$", Name]
-fun id2string {Thy,Name} = String.concat [Thy, "$", Name]
+val const_table = KernelSig.new_table()
 
-structure Map = Binarymap
+fun prim_delete_const kn = ignore (KernelSig.retire_name(const_table, kn))
 
-val const_table =
-    ref (Map.mkDict compare_key : (const_key, const_info)Map.dict)
-
-
-fun prim_delete_const (k as {Thy, Name}) = let
-  val (newtable, v) = Map.remove(!const_table, k)
-  val {Name = oldname, Thy, base_type, uptodate} = !v
-in
-  const_table := newtable;
-  v := {Name = Globals.old oldname, Thy = Thy, base_type = base_type,
-        uptodate = false}
-end handle Map.NotFound =>
-           raise ERR "prim_delete_const" "No such constant"
-
-
-fun inST s = List.exists (fn (k, _) => #Name k = s)
-                         (Map.listItems (!const_table))
+fun inST s = not (null (KernelSig.listName const_table s))
 
 datatype term = Var of string * hol_type
               | App of term * term
-              | Const of const_info * hol_type
+              | Const of const_info
               | Abs of term * term
 
 fun prim_new_const (k as {Thy,Name}) ty = let
-  val newdata = ref {Thy = Thy, Name = Name, base_type = ty, uptodate = true}
-  val () = prim_delete_const k handle HOL_ERR _ => ()
+  val id = KernelSig.insert(const_table, k, ty)
 in
-  const_table := Map.insert(!const_table, k, newdata);
-  Const(newdata, ty)
+  Const(id, ty)
 end
 
-fun uptodate_term tm =
-    case tm of
-      Var(s, ty) => uptodate_type ty
-    | Const(info, ty) => #uptodate (!info) andalso uptodate_type ty
-    | App(f, x) => uptodate_term f andalso uptodate_term x
-    | Abs(v, body) => uptodate_term v andalso uptodate_term body
+fun uptodate_term tm = let
+  fun recurse tmlist =
+      case tmlist of
+        [] => true
+      | tm :: rest => let
+        in
+          case tm of
+            Var(s, ty) => uptodate_type ty andalso recurse rest
+          | Const(info, ty) => KernelSig.uptodate_id info andalso
+                               uptodate_type ty andalso
+                               recurse rest
+          | App(f, x) => recurse (f::x::rest)
+          | Abs(v, body) => recurse (v::body::rest)
+        end
+in
+  recurse [tm]
+end
 
 fun thy_consts s = let
-  fun f (k, info) = if #Thy k = s then SOME(Const(info, #base_type (!info)))
-                    else NONE
+  fun f (k, info, acc) =
+      if #Thy k = s then Const info :: acc
+      else acc
 in
-  List.mapPartial f (Map.listItems (!const_table))
+  KernelSig.foldl f [] const_table
 end
 
-fun del_segment s = let
-  fun f (k,v) = if #Thy k = s then prim_delete_const k else ()
-  val m = !const_table
-in
-  Map.app f m
-end
+fun del_segment s = KernelSig.del_segment(const_table, s)
 
-
-fun prim_decls s = let
-  fun foldthis (k,v,acc) = if #Name k = s then v::acc else acc
-in
-  Map.foldl foldthis [] (!const_table)
-end
+fun prim_decls s = KernelSig.listName const_table s
 
 fun decls s = let
   fun foldthis (k,v,acc) =
-      if #Name k = s then Const(v, #base_type (!v))::acc else acc
+      if #Name k = s then Const v::acc else acc
 in
-  Map.foldl foldthis  [] (!const_table)
+  KernelSig.foldl foldthis  [] const_table
 end
 
 fun all_consts () = let
-  fun foldthis (_,v,acc) = Const(v, #base_type (!v)) :: acc
+  fun foldthis (_,v,acc) = Const v :: acc
 in
-  Map.foldl foldthis [] (!const_table)
+  KernelSig.foldl foldthis [] const_table
 end
 
 
@@ -183,30 +155,29 @@ end;
 fun mk_const(s, ty) =
     case prim_decls s of
       [] => raise ERR "mk_const" ("No constant with name "^s)
-    | [x] => if can (match_type (#base_type (!x))) ty then
-                Const(x, ty)
-              else raise ERR "mk_const"
-                             ("Not a type instance: "^c2string x)
-    | (x::_) => if can (match_type (#base_type (!x))) ty then
-                   (WARN "mk_const" (s^": more than one possibility");
-                    Const(x, ty))
-                else raise ERR "mk_const"
-                               ("Not a type instance: "^c2string x)
+    | [(_, (id,basety))] => if can (match_type basety) ty then
+                         Const (id, ty)
+                       else raise ERR "mk_const"
+                                      ("Not a type instance: "^c2string id)
+    | (_, (id,basety))::_ =>
+         if can (match_type basety) ty then
+           (WARN "mk_const" (s^": more than one possibility"); Const (id,ty))
+         else raise ERR "mk_const" ("Not a type instance: "^ c2string id)
 
 fun prim_mk_const (k as {Thy, Name}) =
-    case Map.peek(!const_table, k) of
+    case KernelSig.peek(const_table, k) of
       NONE => raise ERR "prim_mk_const" ("No such constant: "^id2string k)
-    | SOME x => Const(x, #base_type (!x))
+    | SOME x => Const x
 
 fun mk_thy_const {Thy,Name,Ty} = let
   val k = {Thy = Thy, Name = Name}
 in
-  case Map.peek(!const_table, k) of
+  case KernelSig.peek(const_table, k) of
     NONE => raise ERR "mk_thy_const" ("No such constant: "^id2string k)
-  | SOME x => if can (match_type (#base_type (!x))) Ty then
-                Const(x, Ty)
-              else raise ERR "mk_thy_const"
-                             ("Not a type instance: "^id2string k)
+  | SOME (id,basety) => if can (match_type basety) Ty then
+                          Const(id, Ty)
+                        else raise ERR "mk_thy_const"
+                                       ("Not a type instance: "^id2string k)
 end
 
 (* constructors - applications *)
@@ -244,13 +215,16 @@ fun mk_abs(v, body) =
 fun dest_var (Var p) = p
   | dest_var _ = raise ERR "dest_var" "Term not a variable"
 
-fun dest_const(Const(r, ty)) = (#Name (!r), ty)
+fun dest_const(Const(r, ty)) = (KernelSig.name_of r, ty)
   | dest_const _ = raise ERR "dest_const" "Term not a constant"
 
-fun dest_thy_const t =
-    case t of
-      (Const(r, ty)) => {Thy = #Thy (!r), Name = #Name (!r), Ty = ty}
-    | _ => raise ERR "dest_thy_const" "Term not a constant"
+fun dest_thy_const t = let
+  open KernelSig
+in
+  case t of
+    Const(r, ty) => {Thy = seg_of r, Name = name_of r, Ty = ty}
+  | _ => raise ERR "dest_thy_const" "Term not a constant"
+end
 
 fun dest_comb(App p) = p
   | dest_comb _ = raise ERR "dest_comb" "Term not a comb"
@@ -363,7 +337,7 @@ fun free_varsl tm_list = itlist (union o free_vars) tm_list []
 fun all_varsl tm_list = itlist (union o all_vars) tm_list []
 
 (* term comparison *)
-
+structure Map = Binarymap
 val empty_env = Map.mkDict var_compare
 fun compare p = let
   open Map
@@ -714,7 +688,7 @@ end (* local *)
 
 local
   exception NeedToRename of term
-  structure Map = Redblackmap
+  structure Map = struct open Redblackmap end
   fun inst1 theta ctxt t =
       case t of
         (c as Const(r, ty)) => (case ty_sub theta ty of

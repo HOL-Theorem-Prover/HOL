@@ -309,12 +309,12 @@ fun CONGRUENCE_SIMP_TAC cs ss =
 
 fun ASM_CONGRUENCE_SIMP_TAC cs ss l = let
   fun base thl (asms, gl) = let
-    val working = labelLib.LLABEL_RESOLVE thl asms
+    val working = markerLib.LLABEL_RESOLVE thl asms
   in
     CONGRUENCE_SIMP_TAC cs ss working (asms, gl)
   end
 in
-  Q.ABBRS_THEN base l
+  markerLib.ABBRS_THEN base l
 end
 
 fun FULL_CONGRUENCE_SIMP_TAC cs ss l =
@@ -338,8 +338,8 @@ fun FULL_CONGRUENCE_SIMP_TAC cs ss l =
          MAP_EVERY STRIP_ASSUME_TAC' (foldl simp_asm [] asms)
          THEN drop (length asms)
        in
-         Q.ABBRS_THEN (fn l => ASSUM_LIST f THEN ASM_CONGRUENCE_SIMP_TAC cs ss l) l
+         markerLib.ABBRS_THEN 
+          (fn l => ASSUM_LIST f THEN ASM_CONGRUENCE_SIMP_TAC cs ss l) l
        end
-
 
 end

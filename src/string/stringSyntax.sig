@@ -51,6 +51,8 @@ sig
   val fromHOLchar       : term -> char
   val fromMLstring      : string -> term
   val fromHOLstring     : term -> string
+
+  val is_char_literal   : term -> bool
   val is_string_literal : term -> bool
    
   val lift_char         : hol_type -> char -> term

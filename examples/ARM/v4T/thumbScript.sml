@@ -32,7 +32,9 @@ val _ = wordsLib.guess_lengths();
 
 (* ------------------------------------------------------------------------- *)
 
-val the_goal =
+val _ = priming := SOME "";
+
+val the_goal = with_flag (priming, SOME "") I
  ``THUMB_TO_ARM (enc_ i) = enc
    (case i of
        LSL_1 Rd Rm imm5 ->
@@ -312,9 +314,9 @@ val w2n_lt8 = ((REWRITE_RULE [dimword_3] o INST_TYPE [`:'a` |-> `:3`]) w2n_lt);
 
 val BLOCK_lem = prove(
   `!Rd:word3 imm:word8.
-     (((w2w imm !! w2w Rd << 8) !! 51200w:word16) ' (w2n (w2w Rd : word32))) =
+     ((w2w imm !! w2w Rd << 8 !! 51200w:word16) ' (w2n (w2w Rd : word32))) =
      (imm ' (w2n Rd))`,
-  NTAC 2 STRIP_TAC  \\ Cases_on_word `imm`
+  NTAC 2 STRIP_TAC  \\ Cases_on `imm`
     \\ RW_TAC (arith_ss++wordsLib.SIZES_ss) [w2n_w2w, w2w_n2w]
     \\ SPEC_THEN `Rd` ASSUME_TAC
          ((REWRITE_RULE [dimword_3] o INST_TYPE [`:'a` |-> `:3`]) w2n_lt)
@@ -327,13 +329,13 @@ val BLOCK_lem = prove(
 
 val BLOCK_lem2 = prove(
   `(!Rd:word3 imm:word8.
-      (21 :+ T) ((w2w imm !! w2w Rd << 16) !! 3901751296w:word32) =
+      (21 :+ T) (w2w imm !! w2w Rd << 16 !! 3901751296w:word32) =
       (w2w imm !! w2w Rd << 16) !! 3903848448w) /\
    (!Rd:word3 imm:word8.
-      (21 :+ T) ((w2w imm !! w2w Rd << 16) !! 3902799872w:word32) =
+      (21 :+ T) (w2w imm !! w2w Rd << 16 !! 3902799872w:word32) =
       (w2w imm !! w2w Rd << 16) !! 3902799872w) /\
     !Rd:word3 imm:word8.
-      (21 :+ F) ((w2w imm !! w2w Rd << 16) !! 3901751296w:word32) =
+      (21 :+ F) (w2w imm !! w2w Rd << 16 !! 3901751296w:word32) =
       (w2w imm !! w2w Rd << 16) !! 3901751296w`,
   SRW_TAC [WORD_BIT_EQ_ss] []);
 

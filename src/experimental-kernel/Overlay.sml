@@ -11,8 +11,10 @@ infixr ##
 infixr 3 -->;
 infix 8 via by;
 
-structure Term = Term :> RestrictedTerm where type term = Term.term
-structure Tag = Tag :> RestrictedTag where type tag = Tag.tag
+structure Tag = Tag :> FinalTag where type tag = Tag.tag
+structure Type = Type :> FinalType where type hol_type = Type.hol_type
+structure Term = Term :> FinalTerm where type term = Term.term
+                                         and type hol_type = Type.hol_type
 
 structure Process = OS.Process
 

@@ -39,7 +39,7 @@ fun W f x = f x x
 
 fun append l1 l2 = l1@l2
 fun equal x y = (x=y);
-val concat = curry (op ^)
+val strcat = curry (op ^)
 fun cons a L = a::L
 fun pair x y = (x,y)
 fun fst (x,_) = x   and   snd (_,y) = y;
@@ -354,6 +354,25 @@ fun sort P =
 
 val int_sort = sort (curry (op <= :int*int->bool))
 
+
+(*---------------------------------------------------------------------------*)
+(* Topologically sort a list wrt partial order R.                            *)
+(*---------------------------------------------------------------------------*)
+
+fun topsort R = 
+ let fun preds_of y x = R x y
+   fun deps [] front acc = acc 
+     | deps (h::t) front acc =
+        let val hpreds = filter (preds_of h) (front @ t)
+        in deps t (h::front) ((h,hpreds)::acc)
+        end
+   fun loop [] = []
+     | loop l =
+        case partition (fn (_,dl) => null dl) (deps l [] [])
+         of ([],rst) => raise ERR "topsort" "cyclic dependency"
+          | (nodeps,rst) => map fst nodeps@loop (map fst rst)
+ in loop
+ end;
 
 (*---------------------------------------------------------------------------*
  * Substitutions.                                                            *

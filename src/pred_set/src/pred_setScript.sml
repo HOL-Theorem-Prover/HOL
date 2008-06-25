@@ -3245,13 +3245,13 @@ val ITSET_IND = fetch "-" "ITSET_ind";
 
 val ITSET_THM =
 W (GENL o rev o free_vars o concl)
-  (DISCH_ALL(ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] ITSET_def));
+  (DISCH_ALL(ASM_REWRITE_RULE [ASSUME ``FINITE s``] ITSET_def));
 
 val _ = save_thm("ITSET_IND",ITSET_IND);
 val _ = save_thm("ITSET_THM",ITSET_THM);
 val _ = save_thm("ITSET_EMPTY",
                   REWRITE_RULE []
-                      (MATCH_MP (SPEC (Term`{}`) ITSET_THM) FINITE_EMPTY));
+                      (MATCH_MP (SPEC ``{}`` ITSET_THM) FINITE_EMPTY));
 
 (* Could also prove by
 
@@ -4220,7 +4220,7 @@ val _ =
      val _ = new_type("set",1)
   in try emitML (!Globals.emitMLDir)
    ("set",
-    ABSDATATYPE (["'a"], `set = EMPTY | INSERT of 'a => set`)
+    ABSDATATYPE ([("'a",typ,0)], `set = EMPTY | INSERT of 'a => set`)
     :: OPEN ["num"]
     :: MLSIG "type num = numML.num"
     :: MLSIG "val EMPTY    : 'a set"

@@ -555,8 +555,8 @@ order to generate the final name of the theorem.
   \rewruse
 \item[\texttt{\_fn\_updates}] The definitions of the functional update
   functions.
-\item[\texttt{\_accfupds}] A theorem stating simpler forms for
-  expressions of the form $\field{i}\, (\field{j}\update\;f\; r)$.  If
+\item[\texttt{\_accfupds}] A theorem that states simpler forms for
+  expressions that are of the form $\field{i}\, (\field{j}\update\;f\; r)$.  If
   $i = j$, then the RHS is $f (\field{i}(r))$, if not, it is $(\field{i}\;r)$.
   \rewruse
 \item[\texttt{\_component\_equality}] A theorem stating that $(r_1 =
@@ -618,7 +618,7 @@ more abstract level.  Both levels describe similar objects, but
 some details which are apparent at the lower level are no longer
 visible at the higher level.  The logic is simplified.
 
-However, simply forming a new type does not complete the quotient operation.
+Simply forming a new type does not complete the quotient operation.
 Rather, one wishes to recreate the
 %significant parts of the
 pre-existing logical environment at the new,
@@ -887,7 +887,7 @@ Deleting either group of rows would resolve the conflict,
 and make the expression valid.
 Note that the pattern \ml{0} is acceptable to either group.
 
-Patterns can also be nested, as shown in the next example, where
+Patterns can be nested as well, as shown in the next example, where
 the function \ml{parents} returns a pair containing the person's father
 and/or mother, where each is represented by \ml{NONE} if deceased.
 %
@@ -1289,7 +1289,6 @@ prover. Instead, we make an application of {\small\verb+Hol_defn+}:
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
  val qsort_def =
   Hol_defn "qsort"
@@ -1299,12 +1298,10 @@ prover. Instead, we make an application of {\small\verb+Hol_defn+}:
          ++ [h] ++
          qsort ord (FILTER (\x. ~(ord x h)) t))`
 \end{verbatim}
-\end{hol}
 \end{session}
 which returns the following value of type \ml{defn}, but does not try
 to prove termination.
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   HOL function definition (recursive)
 
@@ -1330,7 +1327,6 @@ to prove termination.
     1. !t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)
     2. WF R
 \end{verbatim}
-\end{hol}
 \end{session}
 
 The type \ml{defn} has a prettyprinter installed for it: the above
@@ -1340,7 +1336,6 @@ type \ml{defn}, it is more convenient to invoke
 \ml{Defn.tgoal}, which sets up a termination proof in a goalstack.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Defn.tgoal qsort_def;
 
@@ -1352,20 +1347,17 @@ type \ml{defn}, it is more convenient to invoke
            (!t h ord. R (ord,FILTER (\x. ~ord x h) t) (ord,h::t)) /\
            (!t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)) /\ WF R
 \end{verbatim}
-\end{hol}
 \end{session}
 %
-The goal is to find a wellfounded relation on the arguments to \holtxt{qsort}.
-The function \ml{WF\_REL\_TAC} is almost invariably used at this point.
-When given a \ml{defn} and a quotation denoting a termination relation
-for the function, \ml{WF\_REL\_TAC} initiates the termination proof.
-The \ml{qsort} function terminates because the list argument gets
-shorter. Invoking \ml{WF\_REL\_TAC} with the appropriate measure
-function results in two subgoals, both of which are easy to
+The goal is to find a wellfounded relation on the arguments to \holtxt{qsort}
+and show that the arguments to \holtxt{qsort} are in the relation.
+The function \ml{WF\_REL\_TAC} is almost invariably used at this point to
+initiate the termination proof. Clearly, \ml{qsort} terminates because the list
+argument gets shorter. Invoking \ml{WF\_REL\_TAC} with the appropriate 
+measure function results in two subgoals, both of which are easy to
 prove.
 
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - e (WF_REL_TAC `measure (LENGTH o SND)`);
   OK..
@@ -1375,41 +1367,44 @@ prove.
 
      !t h ord. LENGTH (FILTER (\x. ~ord x h) t) < LENGTH (h::t)
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 Execution of \ml{WF\_REL\_TAC} has automatically proved the
-wellfoundedness of
-%
-\begin{hol}
-\begin{verbatim}
-   measure (LENGTH o SND)
-\end{verbatim}
-\end{hol}
-%
+wellfoundedness of the termination relation 
+\holtxt{measure (LENGTH o SND)}
 and the remainder of the goal has been simplified into a
 pair of easy goals. Once both goals are proved, we can encapsulate
-the termination proof with \ml{Defn.tprove}, which takes a \ml{defn},
-builds a termination goal from it, applies the given tactic, and, if the
-initial goal is proved, returns a pair comprising the requested
-equations and the induction theorem.
+the termination proof with \ml{tDefine}, which takes a quotation
+(representing desired recursion equations) and a tactic $t$, 
+defines the specified function, calculates the termination conditions,
+and applies $t$ to them. If the termination conditions are proved by 
+$t$ then the recursion equations and induction theorem are stored
+in the current theory segment before the recursion equations are returned:
 
 \begin{session}
-\begin{hol}
 \begin{verbatim}
-  - val (qsort_eqns,qsort_ind) =
-       Defn.tprove
-         (qsort_def,
-          WF_REL_TAC `measure (LENGTH o SND)`
-          THEN ...);
+  - val qsort_def =  tDefine "qsort"
+     `(qsort ord [] = []) /\
+      (qsort ord (h::t) =
+          qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
+          qsort ord (FILTER (\x. ~(ord x h)) t))`
+     (WF_REL_TAC `measure (LENGTH o SND)` THEN ...);
 
-  > val qsort_eqns =
+  > val qsort_def =
       |- (qsort ord [] = []) /\
          (qsort ord (h::t) =
             qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
             qsort ord (FILTER (\x. ~ord x h) t)) : thm
+\end{verbatim}
+\end{session}
 
-    val qsort_ind =
+The custom induction theorem for a function can be obtained by using \holtxt{fetch},
+which returns named elements in the specified theory.\footnote{In a call to \texttt{fetch}, the
+first argument denotes a theory; the current theory may be specified by \texttt{"-"}.}
+\begin{session}
+\begin{verbatim}
+  - fetch "-" "qsort_ind";
+  >  val qsort_ind =
       |- !P.
            (!ord. P ord []) /\
            (!ord h t.
@@ -1418,10 +1413,10 @@ equations and the induction theorem.
             ==>
            !v v1. P v v1  : thm
 \end{verbatim}
-\end{hol}
 \end{session}
-The custom induction theorem for a function can be applied by \ml{recInduct}.
-See Section \ref{sec:bossLib} for details.
+
+\noindent The induction theorem produced by \holtxt{Define} and \holtxt{tDefine} can 
+be applied by \ml{recInduct}. See Section \ref{sec:bossLib} for details.
 
 \subsubsection{Techniques for Proving Termination}
 
@@ -1443,7 +1438,6 @@ numbers:
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - val gcd_defn =
       Hol_defn "gcd"
@@ -1458,7 +1452,6 @@ numbers:
            Initial goal:
            ?R. WF R /\ !v2 n. R (n MOD SUC v2,SUC v2) (SUC v2,n)
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The invocation \holtxt{gcd(m,n)} recurses in its first argument, and
@@ -1477,16 +1470,13 @@ The definition of {measure} in \HOL{} is equivalent to
 Now we must pick out the argument position to measure and
 invoke \ml{WF\_REL\_TAC}:
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - e (WF_REL_TAC `measure FST`);
   OK..
-
   1 subgoal:
   > val it =
      !v2 n. n MOD SUC v2 < SUC v2
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 This goal is easy to prove with a few simple arithmetic facts.
@@ -1500,7 +1490,6 @@ gets a \holtxt{Leaf} in the left branch, then it recurses into the right
 branch. At the end of execution the tree has been linearized.
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - Hol_datatype
       `btree = Leaf
@@ -1522,7 +1511,6 @@ branch. At the end of execution the tree has been linearized.
               (!bt. R bt (Brh Leaf bt)) /\
               !bt bt2 bt1. R (Brh bt1 (Brh bt2 bt)) (Brh (Brh bt1 bt2) bt)
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 Since the size of the tree is unchanged in the last clause in the
@@ -1531,19 +1519,16 @@ can assign weights to nodes in the tree such that the recursive calls of
 \holtxt{Unbal} decrease the total weight in every case. One such assignment is
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Define
    `(Weight (Leaf) = 0) /\
     (Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1)`
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 Now we can invoke \ml{WF\_REL\_TAC}:
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   e (WF_REL_TAC `measure Weight`);
   OK..
@@ -1555,7 +1540,6 @@ Now we can invoke \ml{WF\_REL\_TAC}:
    !bt bt2 bt1.
       Weight (Brh bt1 (Brh bt2 bt)) < Weight (Brh (Brh bt1 bt2) bt)
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 Both of these goals are quite easy to prove.
@@ -1571,58 +1555,53 @@ then tries the termination proof to see if it works.
 Occasionally, there's a combination of factors that complicate the
 termination argument. For example, the following specification
 describes a naive pattern matching algorithm on strings (represented
-as lists here). The function takes four arguments: the first is the
-remainder of the pattern being matched. The second is the remainder of
-the string being searched.  The third argument holds the original
-pattern to be matched. The fourth argument is the string being
-searched. If the pattern (first argument) becomes exhausted, then a
-match has been found and the function returns \holtxt{T}. Otherwise, if the
-string being searched becomes exhausted, the function returns \holtxt{F}.
+as lists here). The function takes four arguments: the first, $p$,
+is the remainder of the pattern being matched. The second, 
+$\mathit{rst}$, is the remainder of the string being searched.  The third 
+argument, $p_0$, holds the original pattern to be matched. 
+The fourth argument, $s$, is the string being searched. 
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   val match_defn =
     Hol_defn "match"
       `(match [] __ __ __ = T)  /\
        (match __ [] __ __ = F)  /\
-       (match (p::pp) (s::ss) p0 rs =
-         if p=s then match pp ss p0 rs
+       (match (a::pp) (b::ss) p0 s =
+         if a=b then match pp ss p0 s
            else
-         if NULL rs then F
+         if NULL(s) then F
            else
-         match p0 (TL rs) p0 (TL rs))`;
+         match p0 (TL s) p0 (TL s))`;
 
   - val Match = Define `Match pat str = match pat str pat str`;
 \end{verbatim}
-\end{hol}
 \end{session}
 %
-The remaining case is when there's more searching to do; the function
-checks if the head of the pattern is the same as the head of the
-string being searched. If yes, then we recursively search, using the
-tail of the pattern and the tail of the string being searched. If no,
-that means that we have failed to match the pattern, so we should move
-one character ahead in the string being searched and try again. If the
-string being searched is empty, however, then we return \holtxt{F}. The
-second and third arguments both represent the string being
-searched. The second argument is a kind of `local` version of the
-string being searched; we recurse into it as long as there are matches
-with the pattern. However, if the search eventually fails, then the
-fourth argument, which `remembers` where the search started from, is
-used to restart the search.
+The first clause of the definition states that if $p$ becomes exhausted, then a match has 
+been found;  the function returns \holtxt{T}. The second clause represents the case
+where $s$ becomes exhausted but $p$ is not, in which case the function returns 
+\holtxt{F}. The remaining case is when there's more searching to do; the function
+checks if the head of the pattern $p$ is the same as the head of 
+$\mathit{rst}$. If yes, then the search proceeds recursively, using the
+tail of $p$ and the tail of $\mathit{rst}$. If no, that means that $p$ has
+failed to match, so the algorithm advances one character ahead in 
+$\mathit{s}$ and starts matching from the beginning of $p_0$. If 
+$\mathit{s}$ is empty, however, then we return \holtxt{F}. Note that 
+$\mathit{rst}$ and $s$ both represent the string being
+searched: $\mathit{rst}$ is a `local` version of $s$: we recurse into 
+$\mathit{rst}$  as long as there are matches with the pattern $p$. However, 
+if the search eventually fails, then $s$, which `remembers` where the search 
+started from, is used to restart the search.
 
 So much for the behaviour of the function. Why does it terminate? There
-are two recursive calls. The first call reduces the size of the first
-and second arguments, and leaves the other arguments unchanged. The
-second call can increase the size of the first and second arguments, but
-reduces the size of the fourth.
-
-This is a classic situation in which to use a lexicographic ordering:
-some arguments to the function are reduced in some recursive calls, and
-some others are reduced in other recursive calls.  Recall that \holtxt{LEX} is
-an infix operator, defined in \ml{pairTheory} as follows:
+are two recursive calls. The first call reduces the size of $p$ and $\mathit{rst}$, and 
+leaves the other arguments unchanged. The second call can increase the 
+size of $p$ and $\mathit{rst}$, but reduces the size $s$. This is a classic situation 
+in which to use a  lexicographic ordering: some arguments to the function are reduced in 
+some recursive calls, and some others are reduced in other recursive calls.  
+Recall that \holtxt{LEX} is an infix operator, defined in \ml{pairTheory} as follows:
 %
 \begin{hol}
 \begin{verbatim}
@@ -1630,15 +1609,13 @@ an infix operator, defined in \ml{pairTheory} as follows:
 \end{verbatim}
 \end{hol}
 %
-In the second recursive call, the length of \holtxt{rs} is reduced, and in
+In the second recursive call, the length of \holtxt{s} is reduced, and in
 the first it stays the same. This motivates having the length of the
-fourth argument be the first component of the lexicographic
-combination, and the length of the second argument as the second
-component.
-
-What we need now is to formalize this. We want to map from the
-four-tuple of arguments into a lexicographic combination of
-relations. This is enabled by \holtxt{inv\_image} from \ml{relationTheory}:
+$s$ be the first component of the lexicographic
+combination, and the length of $\mathit{rst}$ as the second
+component. Formally, we want to map from the four-tuple of 
+arguments into a lexicographic combination of relations. 
+This is enabled by \holtxt{inv\_image} from \ml{relationTheory}:
 %
 \begin{hol}
 \begin{verbatim}
@@ -1651,28 +1628,24 @@ of numbers $(m,n)$, where $m$ is the length of the fourth argument, and
 $n$ is the length of the second argument. These lengths are then
 compared lexicographically with respect to less-than ($<$).
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Defn.tgoal match_defn;
 
-  - e (WF_REL_TAC `inv_image ($< LEX $<)
-                    (\(w,x,y,z). (LENGTH z, LENGTH x))`);
-
+  - e (WF_REL_TAC `inv_image($< LEX $<) (\(w,x,y,z). (LENGTH z,LENGTH x))`);
   OK..
   2 subgoals:
   > val it =
-   !rs ss s p.
-     (p=s) ==> LENGTH rs < LENGTH rs \/ LENGTH ss < LENGTH (s::ss)
+   !s ss a b.
+     (a=b) ==> LENGTH s < LENGTH s \/ LENGTH ss < LENGTH (b::ss)
 
-   !ss rs s p.
-     ~(p = s) /\ ~NULL rs ==>
-     LENGTH (TL rs) < LENGTH rs \/
-     (LENGTH (TL rs) = LENGTH rs) /\ LENGTH (TL rs) < LENGTH (s::ss)
+   !ss s a b.
+     ~(a = b) /\ ~NULL s ==>
+     LENGTH (TL s) < LENGTH s \/
+     (LENGTH (TL s) = LENGTH s) /\ LENGTH (TL s) < LENGTH (b::ss)
 \end{verbatim}
-\end{hol}
 \end{session}
 %
-The first subgoal needs a case-split on \holtxt{rs} before it is proved by
+The first subgoal needs a case-split on \holtxt{s} before it is proved by
 rewriting, and the second is also easy to prove by rewriting.
 
 \subsubsection{How Termination Conditions are Synthesized}
@@ -1749,7 +1722,7 @@ do the following:
 
 The termination conditions are accumulated until the
 extraction process finishes, and appear as hypotheses in the final
-result. Thus the extracted termination conditions for {fact} are
+result. Thus the extracted termination conditions for \holtxt{fact} are
 %
 \begin{hol}
 \begin{verbatim}
@@ -1758,12 +1731,15 @@ result. Thus the extracted termination conditions for {fact} are
 \end{verbatim}
 \end{hol}
 %
-and are easy to prove.
+and are easy to prove. The notion of \emph{context} of a recursive call
+is defined by  the set of congruence rules used in extracting termination
+conditions. This set can be obtained by invoking \holtxt{DefnBase.read\_congs},
+and manipulated by \holtxt{DefnBase.add\_cong} and \holtxt{DefnBase.drop\_cong}.
 
-\paragraph{Higher Order Congruence Rules}
 
-Now we discuss congruence theorems for higher-order functions. A
-`higher-order` recursion is one in which a higher-order function is
+\paragraph{Higher Order Recursion and Congruence Rules}
+
+A `higher-order` recursion is one in which a higher-order function is
 used to apply the recursive function to arguments. In order for the
 correct termination conditions to be proved for such a recursion,
 congruence rules for the higher order function must be known to the
@@ -1778,12 +1754,10 @@ summing the results of a function in a list.
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Define `(SIGMA f [] = 0) /\
           (SIGMA f (h::t) = f h + SIGMA f t)`;
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 We then use \holtxt{SIGMA} in the definition of a function for
@@ -1791,7 +1765,6 @@ summing the results of a function in a arbitrarily
 (finitely) branching tree.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Hol_datatype `ltree = Node of 'a => ltree list`;
 
@@ -1799,18 +1772,16 @@ summing the results of a function in a arbitrarily
     "ltree_sigma"
     `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 In this definition, \holtxt{SIGMA} is applied to a partial application
 \holtxt{(ltree\_sigma f)} of the function being defined. Such a situation
-is called a higher-order recursion. Since the recursive call of
+is called a \emph{higher-order recursion}. Since the recursive call of
 \holtxt{ltree\_sigma} is not fully applied, special efforts have
 to be made to extract the correct termination conditions. Otherwise,
-we have the following unhappy situation:
+the following unhappy situation results:
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   HOL function definition (recursive)
 
@@ -1825,7 +1796,6 @@ we have the following unhappy situation:
     0. WF R
     1. !tl v f a. R (f,a) (f,Node v tl) : defn
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The termination conditions for \holtxt{ltree\_sigma} seem to
@@ -1847,16 +1817,13 @@ for \holtxt{SIGMA}. Such a congruence theorem is the following:
 \end{hol}
 %
 Once \ml{Hol\_defn} has been told about this theorem, via
-\ml{DefnBase.write\_congs}, the termination conditions extracted for
+\ml{DefnBase.add\_cong}, the termination conditions extracted for
 the definition are now provable, since \holtxt{a} is a
 proper subterm of \holtxt{Node v tl}.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
-  val _ = let open DefnBase
-          in write_congs (SIGMA_CONG::read_congs())
-          end;
+  val _ = DefnBase.add_cong SIGMA_CONG;
 
   Defn.Hol_defn
     "ltree_sigma"
@@ -1872,7 +1839,6 @@ proper subterm of \holtxt{Node v tl}.
         0. WF R
         1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
 \end{verbatim}
-\end{hol}
 \end{session}
 
 \subsection{Recursion Schemas}
@@ -1910,7 +1876,6 @@ the definition of a schema):
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - TotalDefn.DefineSchema
       `linRec (x:'a) = if d(x) then e(x) else f(linRec(g x))`;
@@ -1924,7 +1889,6 @@ the definition of a schema):
      [..]
     |- linRec d e f g x = if d x then e x else f (linRec d e f g (g x))
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The hypotheses of the returned theorem hold the abstract termination
@@ -1932,12 +1896,10 @@ constraints. A similarly constrained induction theorem is also
 stored in the current theory segment.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   hyp it;
   > val it = [``!x. ~d x ==> R (g x) x``, ``WF R``] : term list
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 These constraints are abstract, since they place termination requirements
@@ -1993,7 +1955,6 @@ saved under the name \ml{<stem>\_ind}.
   for the relations, saved under the name \ml{<stem>\_cases}. A cases
   theorem is of the form
 %
-\begin{hol}
 \begin{verbatim}
    (!a0 .. an.  R1 a0 .. an = <R1's first rule possibility> \/
                               <R1's second rule possibility> \/ ...)
@@ -2003,14 +1964,13 @@ saved under the name \ml{<stem>\_ind}.
                    /\
    ...
 \end{verbatim}
-\end{hol}
 %
 and is used to decompose an element in the relation into the
 possible ways of obtaining it by the rules.
 \end{itemize}
 
 \paragraph{Strong Induction Principles}
-So called ``strong'' versions of induction principles (where instances
+So called ``strong'' versions of induction principles (in which instances
 of the relation being defined appear as extra hypotheses), can be
 automatically proved with a call to the function
 \[
@@ -2072,20 +2032,17 @@ the following:
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   Hol_reln
     `EVEN 0 /\
      (!n. ODD n ==> EVEN (n + 1)) /\
      (!n. EVEN n ==> ODD (n + 1))`;
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The result is three theorems
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   > val it =
     (|- EVEN 0 /\
@@ -2105,7 +2062,6 @@ The result is three theorems
         (!a1. ODD a1 = ?n. (a1 = n + 1) /\ EVEN n)
     ) : thm * thm * thm
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The next example shows how to inductively define the reflexive and
@@ -2115,7 +2071,6 @@ appropriate because it is \holtxt{RTC R} that has the inductive
 characterisation, not \holtxt{RTC} itself.
 %
 \begin{session}
-\begin{hol}
 \begin{verbatim}
   - Hol_reln `(!x. RTC R x x) /\
              (!x z. (?y. R x y /\ RTC R y z) ==> RTC R x z)`;
@@ -2133,7 +2088,6 @@ characterisation, not \holtxt{RTC} itself.
       |- !R a0 a1. RTC R a0 a1 = (a1 = a0) \/ ?y. R a0 y /\ RTC R y a1
      ) : thm * thm * thm
 \end{verbatim}
-\end{hol}
 \end{session}
 %
 The \ml{Hol\_reln} function may be used to define multiple relations,

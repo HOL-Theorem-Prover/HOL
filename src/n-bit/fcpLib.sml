@@ -32,10 +32,44 @@ fun index_type n =
         mk_type("bit1", [index_type (div2 (less1 n))])
   end;
 
+local
+  fun index2num typ =
+  case dest_type typ of
+    ("one", []) => SOME Arbnum.one
+  | ("bool",[]) => SOME Arbnum.two
+  | ("num", []) => NONE
+  | ("int", []) => NONE
+  | ("string", []) => NONE
+  | ("list", [t]) => NONE
+  | ("bit0", [t]) => (case index2num t of
+                        SOME x => SOME (Arbnum.times2 x)
+                      | _ => NONE)
+  | ("bit1", [t]) => (case index2num t of
+                        SOME x => SOME (Arbnum.plus1 (Arbnum.times2 x))
+                      | _ => NONE)
+  | ("sum",  [t,p]) => (case (index2num t, index2num p) of
+                          (SOME x, SOME y) => SOME (Arbnum.+(x, y))
+                        | _ => NONE)
+  | ("prod", [t,p]) => (case (index2num t, index2num p) of
+                          (SOME x, SOME y) => SOME (Arbnum.*(x, y))
+                        | _ => NONE)
+  | ("fun",  [t,p]) => (case (index2num p, index2num t) of
+                          (SOME x, SOME y) => SOME (Arbnum.pow(x, y))
+                        | _ => NONE)
+  | ("cart", [t,p]) => (case (index2num t, index2num p) of
+                          (SOME x, SOME y) => SOME (Arbnum.pow(x, y))
+                        | _ => NONE)
+  | _ => failwith ("Can't compute size of type " ^ type_to_string typ);
+in
+  fun index_to_num typ = case index2num typ of SOME x => x | NONE => Arbnum.one
+end;
+
 fun index_compset () =
   let val compset = reduceLib.num_compset()
-      val _ = add_thms [index_sum,index_one,index_bit0,index_bit1,
-                        finite_sum,finite_one,finite_bit0,finite_bit1] compset
+      val rule = REWRITE_RULE [arithmeticTheory.TIMES2, GSYM numeralTheory.iDUB]
+      val _ = add_thms [index_sum,index_one,rule index_bit0, rule index_bit1,
+                        finite_sum,finite_one,finite_bit0,finite_bit1,
+                        numeral_bitTheory.iDUB_NUMERAL] compset
 in
   compset
 end;

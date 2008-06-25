@@ -1,0 +1,176 @@
+% ltsmunge.sty  --  munging support for LTS / HOL
+%
+% Keith Wansbrough and Peter Sewell 2001,2002,2003.
+
+%%% <identification>::
+
+\NeedsTeXFormat{LaTeX2e}[1998/06/01]
+\ProvidesPackage{ltsmunge}[2003/06/10 2.00 HOLDoc LTS munging support]
+
+%%% <initial code>::
+
+% need the following packages:
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
+
+
+%%% <declaration of options>::
+
+%(no options)
+
+%%% <execution of options>::
+
+\ProcessOptions
+
+%%% <package loading>::
+
+%(no loading)
+
+%%% <main code>::
+
+% Width of text within boxed figures
+\newlength{\shorttextwidth}%
+\setlength{\shorttextwidth}{\linewidth}%
+\addtolength{\shorttextwidth}{-0.0em}%
+
+% Indent of text below boxed figures
+\newlength{\shorterindentwidth}%
+\setlength{\shorterindentwidth}{4em}%
+
+% Width of text below boxed figures
+\newlength{\shortertextwidth}%
+\setlength{\shortertextwidth}{\shorttextwidth}%
+\addtolength{\shortertextwidth}{-\shorterindentwidth}%
+
+% Don't vertically stretch pages to fit
+\raggedbottom
+
+% gumph:
+
+\newcommand{\showrule}[1]{\par\vspace{1.0ex}\noindent#1\par\vspace{1.0ex}\noindent}
+
+\newcommand{\tran}[1]{\mathrel{\mbox{$\xrightarrow{{#1}}$}}}
+\newcommand{\inp}[1]{\tran{#1}}
+
+
+% typesetting rules:
+
+\newcommand{\rsection}[2]{\subsection{#1}\ \par{#2}}
+\newcommand{\rsubsection}[2]{\subsubsection*{#1}\ \par{#2}}
+
+\newcommand{\heading}[1]{\paragraph{#1}}
+
+\newcommand{\withcomment}[1]{#1}
+\newcommand{\withoutcomment}[1]{}
+\newcommand{\rulecomment}{\withcomment}
+
+\newcommand{\rrsmall}{\small}
+\newcommand{\rrnormalsize}{\normalsize}
+
+\newsavebox{\rrlhsbox}
+\newsavebox{\rrlabelbox}
+\newsavebox{\rrrhsbox}
+\newcommand{\rrulefront}[6]{%
+  \markboth{$#1$}{$#1$}%
+  \addcontentsline{toc}{subsection}{\protect\numberline{--}$#1$}%
+  $\tsrule{#1}$\quad\textbf{\underline{#2} \rrsmall\un@comm{#3}}%
+  \vspace*{0.5\baselineskip}%
+  \sbox{\rrlhsbox}{$\displaystyle\begin{array}[t]{@{}l@{}}#4\end{array}$}%
+  \sbox{\rrlabelbox}{$\displaystyle#5$}%
+  \sbox{\rrrhsbox}{$\displaystyle\begin{array}[t]{@{}l@{}}#6\end{array}$}%
+  \@tempdima\wd\rrlabelbox\advance\@tempdima\wd\rrrhsbox\advance\@tempdima1em%
+  \ifdim\@tempdima<\textwidth
+    \advance\@tempdima\wd\rrlhsbox\advance\@tempdima1em%
+    \ifdim\@tempdima<\textwidth
+      % |h --> h'
+      \par\noindent\box\rrlhsbox\quad\box\rrlabelbox\quad\box\rrrhsbox%
+    \else
+      % |  h
+      % |--> h'
+      \par\noindent\qquad\box\rrlhsbox%
+      \par\noindent\box\rrlabelbox\quad\box\rrrhsbox%
+    \fi
+  \else
+    % |  h
+    % |-->
+    % |  h'
+    \par\noindent\qquad\box\rrlhsbox%
+    \vspace*{1ex}%
+    \par\noindent\box\rrlabelbox%
+    \par\noindent\qquad\box\rrrhsbox%
+  \fi
+}
+
+% Non-enclosing figure brackets, by Keith Wansbrough
+%   (after Andy Gordon and Don Syme)
+\newlength{\BrackWidth}\setlength{\BrackWidth}{0.7pt}
+\newlength{\DashLength}\setlength{\DashLength}{6pt}
+\newcommand{\TopBracket}{%
+  \par\noindent
+  \rlap{\rule[-\DashLength]{\BrackWidth}{\DashLength}}%
+  \rule{\linewidth}{\BrackWidth}%
+  \llap{\rule[-\DashLength]{\BrackWidth}{\DashLength}}%
+  \par
+}
+\newcommand{\BottomBracket}{%
+  \par\noindent
+  \rlap{\rule{\BrackWidth}{\DashLength}}%
+  \rule{\linewidth}{\BrackWidth}%
+  \llap{\rule{\BrackWidth}{\DashLength}}%
+  \par
+}
+\newcommand{\rrenbox}[1]{%
+  \TopBracket
+  \rrnormalsize{}#1%
+  \BottomBracket
+}
+
+\newcommand{\rrnewline}{$\par\noindent$\displaystyle}
+\newcommand{\rrenside}[1]{%
+  \vspace*{1\baselineskip}%
+  {\let\\\rrnewline
+  \par\noindent$\displaystyle#1$}%
+}
+
+\newcommand{\rrencmt}[1]{%
+  \par\vspace{0.5ex}%
+  \begin{list}{}{\leftmargin\shorterindentwidth\rightmargin\shorterindentwidth}%
+  \item[]\rrsmall\un@comm{#1}{}%
+  \end{list}%
+}
+
+\newcommand{\rrulecc}[8]{%
+  \rrenbox{%
+    \rrulefront{#1}{#2}{#3}{#4}{#5}{#6}%
+    \rrenside{#7}%
+  }%
+  \rulecomment{\rrencmt{#8}}%
+}
+\newcommand{\rrulecn}[8]{%
+  \rrenbox{%
+    \rrulefront{#1}{#2}{#3}{#4}{#5}{#6}%
+    \rrenside{#7}%
+  }%
+}
+\newcommand{\rrulenc}[8]{%
+  \rrenbox{%
+    \rrulefront{#1}{#2}{#3}{#4}{#5}{#6}%
+  }%
+  \rulecomment{\rrencmt{#8}}%
+}
+\newcommand{\rrulenn}[8]{%
+  \rrenbox{%
+    \rrulefront{#1}{#2}{#3}{#4}{#5}{#6}%
+  }%
+}
+
+\newcommand{\ddefn}[2]{%
+  \markboth{$#1$}{$#1$}%
+  \addcontentsline{toc}{subsection}{\protect\numberline{--}$#1$}%
+  \rrenbox{%
+    \rrenside{#2}%
+  }%
+}
+
+%
+% <end>

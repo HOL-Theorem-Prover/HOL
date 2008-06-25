@@ -2,3 +2,6 @@ A formalisation of the proof that standard and algorithmic sub-typing
 relations coincide for two versions of sub-typing for "F sub", that is
 System F with subtyping.  Presentation taken from Benjamin Pierce's book,
 "Types and programming languages".
+
+(This theory file is broken for the moment while better, more general
+infrastructure for creating "nominal" datatypes is developed.)

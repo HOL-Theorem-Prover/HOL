@@ -17,6 +17,10 @@ val N_defn = Hol_defn "N" `N(x) = if x>100 then x-10 else N (N (x+11))`;
 val [Neqn] = Defn.eqns_of N_defn;
 val SOME Nind = Defn.ind_of N_defn;
 
+val SOME N_aux_defn = Defn.aux_defn N_defn;
+val SOME N_aux_ind = Defn.ind_of N_aux_defn;
+val [E] = map DISCH_ALL (Defn.eqns_of N_aux_defn);
+
 (*---------------------------------------------------------------------------
       Prove partial correctness for N, to see how such a proof
       works when the termination relation has not yet been supplied.
@@ -33,6 +37,17 @@ val Npartly_correct = Q.prove
    THEN ONCE_REWRITE_TAC [Neqn]
    THEN RW_TAC arith_ss []);
 
+val N_aux_partial_correctness = Q.prove
+(`WF R /\ 
+  (!x. ~(x > 100) ==> R (N_aux R (x + 11)) x) /\
+  (!x. ~(x > 100) ==> R (x + 11) x)
+    ==>
+  !n. N_aux R n = if n>100 then n-10 else 91`,
+ STRIP_TAC THEN recInduct N_aux_ind
+   THEN RW_TAC arith_ss [] 
+   THEN RW_TAC arith_ss [E]);
+
+
 (*---------------------------------------------------------------------------*)
 (* Termination of 91 is a bit tricky.                                        *)
 (*---------------------------------------------------------------------------*)
@@ -48,15 +63,22 @@ val unexpand_measure = Q.prove
 (* do some simplifications.                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val SOME N_aux_defn = Defn.aux_defn N_defn;
-val [E] = Defn.eqns_of N_aux_defn;
 val condE = 
   SIMP_RULE arith_ss [AND_IMP_INTRO,WF_measure,measure_thm,SUB_LEFT_LESS] 
-        (Q.INST [`R` |-> `measure \x. 101-x`] (DISCH_ALL E));
+        (Q.INST [`R` |-> `measure \x. 101-x`] E);
+
+val correctness' =
+  SIMP_RULE arith_ss [WF_measure,measure_thm,SUB_LEFT_LESS] 
+        (Q.INST [`R` |-> `measure \x. 101-x`] (N_aux_partial_correctness));
+
+val N_aux_ind' = (* takes ages, because of subtraction? *)
+  SIMP_RULE arith_ss [WF_measure,measure_thm,SUB_LEFT_LESS] 
+        (Q.INST [`R` |-> `measure \x. 101-x`] (DISCH_ALL N_aux_ind));
 
 (*---------------------------------------------------------------------------*)
-(* Termination. We'll use NA to abbreviate the instantiated auxiliary        *)
-(* function: thus NA = N_aux(measure($- 101)). The proof goes as follows:    *)
+(* Termination. This is done the hard way, to prop up an obscure point.      *)
+(* We'll use NA to abbreviate the instantiated auxiliary function: thus      *)
+(* NA = N_aux(measure($- 101)). The proof goes as follows:                   *)
 (*                                                                           *)
 (* Induct on the termination relation, then tidy up the goal, obtaining the  *)
 (* goal "x < NA (x+11)". We now want to unroll NA(x+11). This requires       *)
@@ -90,10 +112,9 @@ val (N_def,N_ind) = Defn.tprove
     THEN STRIP_TAC THEN FULL_SIMP_TAC arith_ss [lem]
     THEN MP_TAC (Q.INST [`x` |-> `x+11`] condE)
     THEN RW_TAC arith_ss []  (* implicit case split *)
-    THEN `x+11 < NA (x+22)` by METIS_TAC[DECIDE ``x<x+11``,DECIDE``x+11+11=x+22``]
+    THEN `x+11 < NA(x+22)` by METIS_TAC[DECIDE``x<x+11``,DECIDE``x+11+11=x+22``]
     THEN RW_TAC std_ss [] THEN WEAKEN_TAC is_imp
     THEN MP_TAC (Q.INST [`x` |-> `NA(x+22)`] condE) 
-    THEN Q.UNABBREV_TAC`NA` THEN Q.ABBREV_TAC `NA = N_aux(measure(\x.101-x))`
     THEN RW_TAC arith_ss [] (* implicit case split *)
     THEN `x < NA (x+22) - 11 /\ ~(NA (x + 22) - 11 > 100)` by DECIDE_TAC
     THEN `NA(x+22) - 11 < NA(NA(x+22) - 11 + 11)` by METIS_TAC[]

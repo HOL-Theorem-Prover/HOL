@@ -26,6 +26,10 @@ val op >> = op THEN1;
 
 (* ------------------------------------------------------------------------- *)
 
+val iDUB_NUMERAL = store_thm("iDUB_NUMERAL",
+  `numeral$iDUB (NUMERAL i) = NUMERAL (numeral$iDUB i)`,
+  REWRITE_TAC [arithmeticTheory.NUMERAL_DEF]);
+
 val BIT_REV_def =
   Prim_rec.new_recursive_definition
   {name = "BIT_REV_def",
@@ -296,6 +300,17 @@ val FDUB_FDUB = store_thm("FDUB_FDUB",
 
 (* ------------------------------------------------------------------------- *)
 
+val LOG_compute = store_thm("LOG_compute",
+  `!m n. LOG m n =
+         if m < 2 \/ (n = 0) then
+           FAIL LOG ^(mk_var("base < 2 or n = 0", bool)) m n
+         else
+           if n < m then
+             0
+           else
+             SUC (LOG m (n DIV m))`,
+  SRW_TAC [ARITH_ss] [LOG_RWT, combinTheory.FAIL_THM]);
+
 val iLOG2_def =
  Definition.new_definition("iLOG2_def", ``iLOG2 n = LOG2 (n + 1)``);
 
@@ -329,6 +344,36 @@ val numeral_log2 = store_thm("numeral_log2",
    (!n. LOG2 (NUMERAL (BIT2 n)) = iLOG2 (BIT1 n))`,
   RW_TAC bool_ss [ALT_ZERO,NUMERAL_DEF,BIT1,BIT2,iLOG2_def,numeralTheory.iDUB]
     \\ SIMP_TAC arith_ss []);
+
+(* ------------------------------------------------------------------------- *)
+
+val MOD_2EXP_EQ = store_thm("MOD_2EXP_EQ",
+ `(!a b. MOD_2EXP_EQ 0 a b = T) /\
+  (!n a b. MOD_2EXP_EQ (SUC n) a b =
+     (ODD a = ODD b) /\ MOD_2EXP_EQ n (DIV2 a) (DIV2 b))`,
+  SRW_TAC [] [MOD_2EXP_EQ_def, MOD_2EXP_def, GSYM BITS_ZERO3]
+    \\ Cases_on `n`
+    \\ FULL_SIMP_TAC std_ss [GSYM BITS_ZERO3, SYM LSB_ODD, LSB_def,
+         GSYM BIT_BITS_THM, BIT_DIV2, DIV2_def]
+    \\ EQ_TAC \\ RW_TAC arith_ss []
+    \\ Cases_on `x` \\ RW_TAC arith_ss []);
+
+val lem = prove( 
+  `!n. BITS n 0 (2 ** SUC n - 1) = 2 ** SUC n - 1`,
+  STRIP_TAC \\ MATCH_MP_TAC BITS_ZEROL
+    \\ SIMP_TAC std_ss [ZERO_LT_TWOEXP]);
+
+val MOD_2EXP_MAX = store_thm("MOD_2EXP_MAX",
+ `(!a. MOD_2EXP_MAX 0 a = T) /\
+  (!n a. MOD_2EXP_MAX (SUC n) a = ODD a /\ MOD_2EXP_MAX n (DIV2 a))`,
+  SRW_TAC [] [MOD_2EXP_MAX_def, MOD_2EXP_def, GSYM BITS_ZERO3]
+    \\ Cases_on `n`
+    >> SIMP_TAC std_ss [SYM LSB_ODD, LSB_def, BIT_def]
+    \\ ONCE_REWRITE_TAC [GSYM lem]
+    \\ SIMP_TAC std_ss [GSYM BITS_ZERO3, SYM LSB_ODD, LSB_def,
+         GSYM BIT_BITS_THM, BIT_DIV2, DIV2_def]
+    \\ EQ_TAC \\ RW_TAC arith_ss [BIT_EXP_SUB1]
+    \\ Cases_on `x` \\ RW_TAC arith_ss []);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -415,6 +460,71 @@ val TIMES_2EXP1 =
   (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
    Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
 
+(* ------------------------------------------------------------------------- *)
+
+val l2n_pow2_compute = store_thm("l2n_pow2_compute",
+  `(!p. l2n (2 ** p) [] = 0) /\
+   (!p h t. l2n (2 ** p) (h::t) =
+        MOD_2EXP p h + TIMES_2EXP p (l2n (2 ** p) t))`,
+  SRW_TAC [ARITH_ss] [l2n_def, TIMES_2EXP_def, MOD_2EXP_def]);
+
+val lem = (GEN_ALL o REWRITE_RULE [EXP] o SPECL [`n`,`0`] o
+           REWRITE_RULE [DECIDE ``1 < 2``] o SPEC `2`) EXP_BASE_LT_MONO;
+
+val n2l_pow2_compute = store_thm("n2l_pow2_compute",
+  `!p n. 0 < p ==>
+        (n2l (2 ** p) n =
+         let (q,r) = DIVMOD_2EXP p n in
+           if q = 0 then [r] else r::n2l (2 ** p) q)`,
+  SRW_TAC [] [Once n2l_def, DIVMOD_2EXP_def,
+              DECIDE ``x < 2 = (x = 0) \/ (x = 1)``]
+    \\ SRW_TAC [ARITH_ss] [LESS_DIV_EQ_ZERO]
+    \\ FULL_SIMP_TAC arith_ss [lem,DIV_0_IMP_LT]);
+
+val HEX_compute = prove(
+  `!n. HEX n =
+          if n = 0 then #"0"
+     else if n = 1 then #"1"
+     else if n = 2 then #"2"
+     else if n = 3 then #"3"
+     else if n = 4 then #"4"
+     else if n = 5 then #"5"
+     else if n = 6 then #"6"
+     else if n = 7 then #"7"
+     else if n = 8 then #"8"
+     else if n = 9 then #"9"
+     else if n = 10 then #"A"
+     else if n = 11 then #"B"
+     else if n = 12 then #"C"
+     else if n = 13 then #"D"
+     else if n = 14 then #"E"
+     else if n = 15 then #"F"
+     else FAIL HEX ^(mk_var("not a hex digit",bool)) n`,
+  SRW_TAC [] [HEX_def,combinTheory.FAIL_THM]);
+
+val UNHEX_compute = prove(
+  `!n. UNHEX c =
+          if c = #"0" then 0
+     else if c = #"1" then 1
+     else if c = #"2" then 2
+     else if c = #"3" then 3
+     else if c = #"4" then 4
+     else if c = #"5" then 5
+     else if c = #"6" then 6
+     else if c = #"7" then 7
+     else if c = #"8" then 8
+     else if c = #"9" then 9
+     else if c = #"A" then 10
+     else if c = #"B" then 11
+     else if c = #"C" then 12
+     else if c = #"D" then 13
+     else if c = #"E" then 14
+     else if c = #"F" then 15
+     else FAIL UNHEX ^(mk_var("not a hex digit",bool)) c`,
+  SRW_TAC [] [UNHEX_def,combinTheory.FAIL_THM]);
+
+(* ------------------------------------------------------------------------- *)
+
 val _ =
  let open EmitML
  in emitML (!Globals.emitMLDir)
@@ -422,11 +532,18 @@ val _ =
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
      map (DEFN o PURE_REWRITE_RULE [TIMES_2EXP1,arithmeticTheory.NUMERAL_DEF])
-         [TIMES_2EXP_compute,BITWISE_compute,
-          BIT_MODF_compute, BIT_MODIFY_EVAL,
-          BIT_REV_compute, BIT_REVERSE_EVAL,
-          LOG2_compute, DIVMOD_2EXP, SBIT_def, BITS_def,
-          BITV_def, BIT_def, SLICE_def, LSB_def, SIGN_EXTEND_def])
+       [TIMES_2EXP_compute,BITWISE_compute,LOG_compute,
+        l2n_def,n2l_def,s2n_def,n2s_def,HEX_compute,UNHEX_compute,
+        num_from_bin_list_def,num_from_oct_list_def,num_from_dec_list_def,
+        num_from_hex_list_def,num_to_bin_list_def,num_to_oct_list_def,
+        num_to_dec_list_def,num_to_hex_list_def,num_from_bin_string_def,
+        num_from_oct_string_def,num_from_dec_string_def,num_from_hex_string_def,
+        num_to_bin_string_def,num_to_oct_string_def,num_to_dec_string_def,
+        num_to_hex_string_def,
+        BIT_MODF_compute, BIT_MODIFY_EVAL,
+        BIT_REV_compute, BIT_REVERSE_EVAL,
+        LOG2_compute, DIVMOD_2EXP, SBIT_def, BITS_def,
+        BITV_def, BIT_def, SLICE_def, LSB_def, SIGN_EXTEND_def])
  end;
 
 val _ = export_theory();

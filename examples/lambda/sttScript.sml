@@ -1,15 +1,18 @@
-(* reasoning problems suggested by Randy Pollack:
+(* reasoning problems (mainly suggested by Randy Pollack):
      1. showing a weakening result for a typing relation over lambda calculus
         terms.  The typing is that of simple type theory.
+
+        1a. demonstrate that Randy's cofinite approach from POPL2008
+            works just as well on this example, saving us from having
+            to define a whole other relation in order to get slicker
+            proofs.
+
      2. showing that another relation, one with a universally quantified
         hypothesis, is equivalent to the original.
 *)
 
 open HolKernel boolLib Parse bossLib
-
-open binderLib metisLib BasicProvers
-
-open termTheory
+open binderLib metisLib termTheory;
 
 val _ = new_theory "stt";
 
@@ -178,7 +181,7 @@ val hastype_bvc_ind = store_thm(
     METIS_TAC [hastype_rules],
     Q.MATCH_ABBREV_TAC
       `P (ctxtswap pi G) (LAM (lswapstr pi v) (tpm pi m)) (A --> B) c` THEN
-    Q.RM_ALL_ABBREVS_TAC THEN
+    markerLib.RM_ALL_ABBREVS_TAC THEN
     Q_TAC (NEW_TAC "z") `lswapstr pi v INSERT ctxtFV (ctxtswap pi G) UNION
                          FV (tpm pi m) UNION fv c` THEN
     `LAM (lswapstr pi v) (tpm pi m) =
@@ -216,19 +219,19 @@ val subctxt_ctxtFV = store_thm(
 
 val hastype_lam_inversion = store_thm(
   "hastype_lam_inversion",
-  ``~(v IN ctxtFV G) ==> 
-        (G |- (LAM v M) -: Ty = 
+  ``~(v IN ctxtFV G) ==>
+        (G |- (LAM v M) -: Ty =
           ?Ty1 Ty2. ((v,Ty1)::G) |- M -: Ty2 /\
                     (Ty = Ty1 --> Ty2))``,
-  STRIP_TAC THEN 
-  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [hastype_cases])) THEN 
+  STRIP_TAC THEN
+  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [hastype_cases])) THEN
   SRW_TAC [][LAM_eq_thm] THEN SRW_TAC [][EQ_IMP_THM] THENL [
     `ctxtswap [(v,x)] ((x,A)::G) |- tpm [(v,x)] m -: B`
-       by SRW_TAC [][hastype_swap] THEN 
-    POP_ASSUM MP_TAC THEN 
-    `valid_ctxt ((x,A)::G)` by METIS_TAC [hastype_valid_ctxt] THEN 
-    `~(x IN ctxtFV G)` by (FULL_SIMP_TAC (srw_ss()) [] THEN 
-                           METIS_TAC [ctxtFV_MEM]) THEN 
+       by SRW_TAC [][hastype_swap] THEN
+    POP_ASSUM MP_TAC THEN
+    `valid_ctxt ((x,A)::G)` by METIS_TAC [hastype_valid_ctxt] THEN
+    `~(x IN ctxtFV G)` by (FULL_SIMP_TAC (srw_ss()) [] THEN
+                           METIS_TAC [ctxtFV_MEM]) THEN
     SRW_TAC [][ctxtswap_fresh],
     METIS_TAC []
   ]);
@@ -247,6 +250,86 @@ val weakening = store_thm(
     FULL_SIMP_TAC (srw_ss()) [ctxtFV_MEM, subctxt_def]
   ]);
 
+(* prove a cofinite version of the induction principle *)
+val hastype_cofin_ind = store_thm(
+  "hastype_cofin_ind",
+  ``!P.
+       (!G s A. valid_ctxt G /\ MEM (s,A) G ==> P G (VAR s) A) /\
+       (!G m n A B.
+            P G m (A --> B) /\ P G n A ==>
+            P G (m @@ n) B) /\
+       (!G v m A B X.
+            FINITE X /\
+            (!y. ~(y IN X) ==> P ((y,A)::G) ([VAR y/v]m) B) ==>
+            P G (LAM v m) (A --> B)) ==>
+       !G m A. G |- m -: A ==> P G m A``,
+  GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!G m A. G |- m -: A ==> !pi. P (ctxtswap pi G) (tpm pi m) A`
+        THEN1 METIS_TAC [tpm_NIL, ctxtswap_NIL] THEN
+  HO_MATCH_MP_TAC strong_hastype_ind THEN
+  SRW_TAC [][] THEN1 METIS_TAC [] THEN
+  Q_TAC (NEW_TAC "z") `FV (tpm pi m) UNION ctxtFV (ctxtswap pi G) UNION
+                       {x;lswapstr pi x} UNION FV m UNION ctxtFV G` THEN
+  `LAM (lswapstr pi x) (tpm pi m) = LAM z (tpm [(z,lswapstr pi x)] (tpm pi m))`
+     by SRW_TAC [][tpm_ALPHA] THEN
+  SRW_TAC [][] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  Q.EXISTS_TAC `ctxtFV (ctxtswap pi G) UNION FV (tpm pi m) UNION
+                {x; z; lswapstr pi x} UNION FV m UNION ctxtFV G` THEN
+  SRW_TAC [][] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `(y, lswapstr pi x) :: pi` MP_TAC) THEN
+  ASM_SIMP_TAC (srw_ss()) [] THEN
+  `~(x IN ctxtFV G)`
+     by (`valid_ctxt ((x,A)::G)` by METIS_TAC [hastype_valid_ctxt] THEN
+         FULL_SIMP_TAC (srw_ss()) [ctxtFV_MEM]) THEN
+  `ctxtswap ((y,lswapstr pi x)::pi) G =
+      ctxtswap [(y,lswapstr pi x)] (ctxtswap pi G)`
+     by SRW_TAC [][GSYM ctxtswap_APPEND] THEN
+  `_ = ctxtswap pi G` by SRW_TAC [][ctxtswap_fresh] THEN
+  `[VAR y/z] (tpm [(z,lswapstr pi x)] (tpm pi m)) =
+     tpm [(y,z)] (tpm [(z,lswapstr pi x)] (tpm pi m))`
+       by SRW_TAC [][fresh_tpm_subst] THEN
+  `_ = tpm [(lswapstr [(y,z)] z, lswapstr [(y,z)] (lswapstr pi x))]
+           (tpm [(y,z)] (tpm pi m))`
+       by SRW_TAC [][Once (GSYM tpm_sing_to_back)] THEN
+  `_ = tpm [(y,lswapstr pi x)] (tpm pi m)`
+       by SRW_TAC [][tpm_fresh, nomsetTheory.perm_of_is_perm,
+                     nomsetTheory.supp_apart] THEN
+  SRW_TAC [][GSYM tpm_APPEND]);
+
+(* and a "cofinite" introduction rule for the abstraction case *)
+val cofin_hastype_abs_I = store_thm(
+  "cofin_hastype_abs_I",
+  ``!X v M A B G.
+         FINITE X /\
+         (!u. ~(u IN X) ==> (u,A)::G |- [VAR u/v]M -: B)
+       ==>
+         G |- LAM v M -: (A --> B)``,
+  REPEAT STRIP_TAC THEN
+  Q_TAC (NEW_TAC "z") `X UNION FV M` THEN
+  `LAM v M = LAM z ([VAR z/v] M)` by SRW_TAC [][SIMPLE_ALPHA] THEN
+  SRW_TAC [][hastype_rules]);
+
+(* this then allows a nice, renaming free proof of weakening *)
+val weakening_cofin = prove(
+  ``!G m A. G |- m -: A ==> !D. G <= D /\ valid_ctxt D ==> D |- m -: A``,
+  HO_MATCH_MP_TAC hastype_cofin_ind THEN
+  SRW_TAC [][] THENL [
+    METIS_TAC [hastype_rules, subctxt_def],
+    METIS_TAC [hastype_rules],
+    MATCH_MP_TAC cofin_hastype_abs_I THEN
+    Q.EXISTS_TAC `X UNION ctxtFV D` THEN SRW_TAC [][] THEN
+    `valid_ctxt ((u,A)::D)` by FULL_SIMP_TAC (srw_ss()) [ctxtFV_MEM] THEN
+    `((u,A)::G) <= ((u,A)::D)`
+       by FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [subctxt_def] THEN
+    SRW_TAC [][]
+  ]);
+
+
+(* ----------------------------------------------------------------------
+    A more involved way of doing a similar "universal in the hypothesis"
+    thing.
+   ---------------------------------------------------------------------- *)
 
 (* now a slightly different typing relation, with different syntax: "||-"
    instead of "|-".  Underlying name of constant is "hastype2".  *)
@@ -289,54 +372,54 @@ val hastype2_bvc_ind = store_thm(
   "hastype2_bvc_ind",
   ``!P fv.
       (!x. FINITE (fv x)) /\
-      (!G s A x. 
-         valid_ctxt G /\ MEM (s,A) G ==> P G (VAR s) A x) 
+      (!G s A x.
+         valid_ctxt G /\ MEM (s,A) G ==> P G (VAR s) A x)
          /\
       (!G m n A B x.
-          (!y. P G m (A --> B) y) /\ 
-          (!y. P G n A y) ==> 
+          (!y. P G m (A --> B) y) /\
+          (!y. P G n A y) ==>
              P G (m @@ n) B x) /\
 
       (!G m u A B x.
           (!v y. ~(v IN ctxtFV G) ==> P ((v,A)::G) ([VAR v/u] m) B y) /\
-          ~(u IN ctxtFV G) /\ ~(u IN fv x) 
+          ~(u IN ctxtFV G) /\ ~(u IN fv x)
         ==>
           P G (LAM u m) (A --> B) x)
     ==>
       !G m ty. G ||- m -: ty ==> !x. P G m ty x``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN 
-  Q_TAC SUFF_TAC `!G m ty. G ||- m -: ty ==> 
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!G m ty. G ||- m -: ty ==>
                            !pi x. P (ctxtswap pi G) (tpm pi m) ty x`
-        THEN1 METIS_TAC [tpm_NIL, ctxtswap_NIL] THEN 
-  HO_MATCH_MP_TAC hastype2_ind THEN 
-  SRW_TAC [][] THEN1 METIS_TAC [] THEN 
-  Q.MATCH_ABBREV_TAC `P GG (LAM vv MM) (A --> B) xx` THEN 
-  Q_TAC (NEW_TAC "z") `{vv} UNION FV MM UNION ctxtFV GG UNION fv xx` THEN 
+        THEN1 METIS_TAC [tpm_NIL, ctxtswap_NIL] THEN
+  HO_MATCH_MP_TAC hastype2_ind THEN
+  SRW_TAC [][] THEN1 METIS_TAC [] THEN
+  Q.MATCH_ABBREV_TAC `P GG (LAM vv MM) (A --> B) xx` THEN
+  Q_TAC (NEW_TAC "z") `{vv} UNION FV MM UNION ctxtFV GG UNION fv xx` THEN
   `LAM vv MM = LAM z (tpm [(z,vv)] MM)`
-     by SRW_TAC [][tpm_ALPHA] THEN 
-  SRW_TAC [][] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN 
-  SRW_TAC [][] THEN 
-  FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [tpm_subst] THEN 
+     by SRW_TAC [][tpm_ALPHA] THEN
+  SRW_TAC [][] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+  SRW_TAC [][] THEN
+  FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [tpm_subst] THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`lswapstr (REVERSE ((z,vv)::pi)) v`,
                                `(z,vv)::pi`, `y`]
-                 MP_TAC) THEN 
-  ASM_SIMP_TAC (srw_ss()) [basic_swapTheory.lswapstr_APPEND] THEN 
-  `~(vv IN ctxtFV GG)` by SRW_TAC [][Abbr`vv`, Abbr`GG`] THEN 
+                 MP_TAC) THEN
+  ASM_SIMP_TAC (srw_ss()) [basic_swapTheory.lswapstr_APPEND] THEN
+  `~(vv IN ctxtFV GG)` by SRW_TAC [][Abbr`vv`, Abbr`GG`] THEN
   `ctxtswap ((z,vv)::pi) G = ctxtswap [(z,vv)] GG`
-     by SRW_TAC [][Abbr`GG`, GSYM ctxtswap_APPEND] THEN 
-  ` _ = GG` by SRW_TAC [][ctxtswap_fresh] THEN 
+     by SRW_TAC [][Abbr`GG`, GSYM ctxtswap_APPEND] THEN
+  ` _ = GG` by SRW_TAC [][ctxtswap_fresh] THEN
   `tpm ((z,vv)::pi) m = tpm [(z,vv)] MM`
-     by SRW_TAC [][Abbr`MM`, GSYM tpm_APPEND] THEN 
-  SRW_TAC [][] THEN 
-  FIRST_X_ASSUM MATCH_MP_TAC THEN 
-  FULL_SIMP_TAC (srw_ss()) [IN_ctxtFV_pm, 
+     by SRW_TAC [][Abbr`MM`, GSYM tpm_APPEND] THEN
+  SRW_TAC [][] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  FULL_SIMP_TAC (srw_ss()) [IN_ctxtFV_pm,
                             basic_swapTheory.lswapstr_APPEND]);
-  
+
 val hastype2_bvc_ind0 = save_thm(
   "hastype2_bvc_ind0",
-  (Q.GEN `P` o Q.GEN `X` o 
-   SIMP_RULE bool_ss [] o 
-   Q.SPECL [`\G m ty x. P G m ty`, `\x. X`] o 
+  (Q.GEN `P` o Q.GEN `X` o
+   SIMP_RULE bool_ss [] o
+   Q.SPECL [`\G m ty x. P G m ty`, `\x. X`] o
    INST_TYPE [alpha |-> ``:unit``]) hastype2_bvc_ind)
 
 val hastype2_valid_ctxt = store_thm(
@@ -377,9 +460,9 @@ val hastype_hastype2 = prove(
     (* app case *) METIS_TAC [hastype2_rules],
     (* abs case; goal with IH is: *)
     MATCH_MP_TAC (last (CONJUNCTS hastype2_rules)) THEN
-    SRW_TAC [][] THEN 
+    SRW_TAC [][] THEN
     Cases_on `v = v'` THEN1 SRW_TAC [][lemma14a] THEN
-    (* if v = x, proof is trivial; rest of tactic is for other case *)
+    (* if v' = v, proof is trivial; rest of tactic is for other case *)
     `~(v' IN FV m)`
          by METIS_TAC [hastype2_hastype, hastype_FV, ctxtFV_def,
                        pairTheory.FST, pred_setTheory.IN_INSERT] THEN

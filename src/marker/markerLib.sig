@@ -1,34 +1,55 @@
 signature markerLib =
 sig
   include Abbrev
+  type 'a set = 'a HOLset.set
 
-  val stmark_term              : conv
-
-  val stmark_conjunct          : (term -> bool) -> conv
-  val stmark_disjunct          : (term -> bool) -> conv
+  val stmark_term     : conv
+  val stmark_conjunct : (term -> bool) -> conv
+  val stmark_disjunct : (term -> bool) -> conv
 
   val move_stmarked_conj_left  : conv
   val move_stmarked_conj_right : conv
   val move_stmarked_disj_left  : conv
   val move_stmarked_disj_right : conv
 
-  val move_conj_left           : (term -> bool) -> conv
-  val move_conj_right          : (term -> bool) -> conv
-  val move_disj_left           : (term -> bool) -> conv
-  val move_disj_right          : (term -> bool) -> conv
+  val move_conj_left  : (term -> bool) -> conv
+  val move_conj_right : (term -> bool) -> conv
+  val move_disj_left  : (term -> bool) -> conv
+  val move_disj_right : (term -> bool) -> conv
 
-  val AC_tm                    : term
-  val AC                       : thm -> thm -> thm
-  val unAC                     : thm -> thm * thm
+  val AC     : thm -> thm -> thm
+  val unAC   : thm -> thm * thm
+  val Cong   : thm -> thm
+  val unCong : thm -> thm
 
-  val Cong_tm                  : term
-  val Cong                     : thm -> thm
-  val unCong                   : thm -> thm
+  val ABB                 : term -> term -> tactic
+  val ABBREV_TAC          : term -> tactic
+  val PAT_ABBREV_TAC      : term set -> term -> tactic
+  val MATCH_ABBREV_TAC    : term set -> term -> tactic
+  val HO_MATCH_ABBREV_TAC : term set -> term -> tactic
+  val UNABBREV_TAC        : string -> tactic
+  val UNABBREV_ALL_TAC    : tactic
+  val CNTXT_REABBREV_TAC  : term list -> tactic
+  val REABBREV_TAC        : tactic
+  val WITHOUT_ABBREVS     : tactic -> tactic
+  val RM_ABBREV_TAC       : string -> tactic
+  val RM_ALL_ABBREVS_TAC  : tactic
+  val ABBRS_THEN          : (thm list -> tactic) -> thm list -> tactic
+  val Abbr                : term quotation -> thm
 
-  val Abbr                     : term quotation -> thm
-  val dest_Abbr                : thm -> term quotation
-  val is_Abbr                  : thm -> bool
-  val Abbrev_tm                : term
+  val MK_LABEL         : string * thm -> thm
+  val DEST_LABEL       : thm -> thm
+  val DEST_LABELS      : thm -> thm
+  val DEST_LABEL_CONV  : conv
+  val DEST_LABELS_CONV : conv
+  val DEST_LABELS_TAC  : tactic
+
+  val find_labelled_assumption : thm -> term list -> thm
+
+  val ASSUME_NAMED_TAC : string -> thm -> tactic
+  val LABEL_ASSUM      : string -> thm_tactic -> tactic
+  val LABEL_X_ASSUM    : string -> thm_tactic -> tactic
+  val LLABEL_RESOLVE   : thm list -> term list -> thm list
 
 end
 
@@ -73,12 +94,5 @@ end
 
    [move_disj_right P t] moves a disjunct satisfying P to the right.
    Analogous to move_conj_left.
-
-   [Abbr q] encodes a quotation of the form [QUOTE s] into a theorem, such
-   that the string s can be extracted with dest_Abbr below.
-
-   [Abbrev_tm] is the term used to encode abbreviations in the assumptions
-
-   [dest_Abbr th] returns the quotation encoded by Abbr.
 
 *)

@@ -37,21 +37,6 @@ in
 end;
 
 fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
-fun fancyread (Thy,Tyop) =
-    if Thy = "" then
-      case get (theTypeBase()) Tyop of
-        [] => raise ERR "read" ("No type of name "^Tyop)
-      | [x] => x
-      | x::_ => (HOL_WARNING "TypeBase" "read"
-                             ("Multiple types of name "^Tyop);
-                 x)
-    else let
-        val Thy = if Thy = "-" then current_theory() else Thy
-      in
-        case prim_get (theTypeBase()) (Thy,Tyop) of
-          NONE => raise ERR "read" ("No such type: "^Thy^"$"^Tyop)
-        | SOME tyi => tyi
-      end
 
 fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
 

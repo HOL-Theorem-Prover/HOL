@@ -160,7 +160,8 @@ fun relaxed_dest_string_lit tm =
  else let val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
       in if is_emptystring e
          then String.implode (itlist (cons o fromHOLchar) front [])
-         else raise ERR "relaxed_dest_string_lit" "not terminated by EMPTYSTRING"
+         else raise ERR "relaxed_dest_string_lit" 
+                        "not terminated by EMPTYSTRING"
       end
 end;
 
@@ -176,6 +177,21 @@ in
   recurse (emptystring, String.size s - 1)
 end
 
-fun is_literal tm = is_numeral tm orelse is_string_lit tm orelse is_char_lit tm
+(*---------------------------------------------------------------------------*)
+(* There are other possible literals, e.g. for word[n]. This ref cell is     *)
+(* updated when a new class of literals is created. This is used by the      *)
+(* function definition package to help process definitions with literals in  *)
+(* patterns.                                                                 *)
+(*---------------------------------------------------------------------------*)
+
+val other_literals = ref (fn _:term => false);
+
+fun is_literal tm = 
+ is_numeral tm orelse is_string_lit tm orelse is_char_lit tm
+               orelse !other_literals tm
+
+fun is_pure_literal x = 
+  is_literal x andalso not (is_zero x) andalso not (is_emptystring x);
+
 
 end (* Literal *)

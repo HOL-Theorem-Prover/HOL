@@ -6,7 +6,7 @@
 (* DATE          : September 10, 2007                                    *)
 (* ===================================================================== *)
 
-structure Kind : RawKind =
+structure Kind :> Kind =
 struct
 
 (*

@@ -3070,7 +3070,7 @@ val LPLACE_def = Define `
 val LLEQ_THM = prove(``!s1 s2 x. LLEQ (MAP ORD (EXPLODE s1)) s2 = LEQ s1 (s2,x)``,
 	completeInduct_on `STRLEN s1 + STRLEN s2` THEN
 	Cases THEN Cases THEN RW_TAC arith_ss [LLEQ_def,LEQ_def,stringTheory.EXPLODE_EQNS,MAP,leq_def] THEN
-	POP_ASSUM (MP_TAC o SPEC ``STRLEN str + STRLEN str'``) THEN RW_TAC arith_ss [stringTheory.STRLEN_DEF] THEN
+	POP_ASSUM (MP_TAC o SPEC ``STRLEN s + STRLEN s'``) THEN RW_TAC arith_ss [stringTheory.STRLEN_DEF] THEN
 	METIS_TAC [LEQ_def]);
 
 val LPLACE_THM = prove(``!s1 s2 s3. PLACE s1 s2 s3 = 
@@ -3108,7 +3108,7 @@ val LOOKUP_AUX_RWR = prove(``
 	(LOOKUP_AUX ((name1,ACL2_USER)::a) (name2,ACL2_USER) = LOOKUP_AUX a (name2,ACL2_USER))``,
 	RW_TAC arith_ss [LOOKUP_AUX_def,ACL2_CL_def,ACL2_USER_def,ACL_USER_CL_def] THEN
 	METIS_TAC []);	
-	
+
 val CHECK_def = Define `CHECK (x,y,z) = ~(z = "") /\ ~(x = "ACL2-PKG-WITNESS")`;
 
 val VALID_PKG_TRIPLES_RWR = prove(``!l1.

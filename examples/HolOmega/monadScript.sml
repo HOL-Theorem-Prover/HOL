@@ -26,6 +26,54 @@ val _ = show_types := true;
 
 val _ = set_trace "kinds" 1;
 
+open Pretype
+val prk3 = let open Prerank in Sucrank (Sucrank (Sucrank Zerorank)) end;
+val pty0 = PT(Vartype("'a",Prekind.typ,prk3),locn.Loc_None);
+val pty1 = pty0 --> pty0;
+val pty2 = mk_abs_type(pty0,pty1);
+val pty3 = PT(Contype{Thy="min",Tyop="bool",Kind=Prekind.typ,Rank=Prerank.Zerorank},locn.Loc_None);
+val pty4 = mk_app_type(pty2,pty3);
+
+beta_conv_ty pty4;
+deep_beta_conv_ty pty4;
+
+val pty5 = all_new_uvar();
+val ptm0 = Preterm.Var{Name="x", Ty=pty5, Locn=locn.Loc_None}
+val ptm1 = Preterm.Constrained{Ptm=ptm0, Ty=pty4, Locn=locn.Loc_None}
+
+open Preterm
+
+val (Constrained{Ptm,Ty,Locn}) = ptm1;
+checkkind (SOME (type_to_string,kind_to_string)) Ty;
+Prekind.unify (pkind_of Ty) Prekind.typ;
+(* Preterm.check Ptm; *) (* expand *)
+   val (Var {Name=Name0, Ty=Ty0, Locn=Locn0}) = Ptm;
+   checkkind (SOME (type_to_string,kind_to_string)) Ty0;
+   Prekind.unify (Pretype.pkind_of Ty0) Prekind.typ;
+Pretype.unify (type_of Ptm) Ty handle e => Raise e;
+
+
+Preterm.to_term ptm1
+
+val (PT(TyApp(M as PT(TyAbst(Bvar,Body), loc1), N), loc2)) = pty4;
+
+Pretype.type_subst [Bvar |-> N] Body;
+
+val theta = [Bvar |-> N]
+val ty = Body
+
+val (PT(ty,locn)) = Body
+
+val (v as Vartype _) = ty
+
+val SOME (PT(y,_)) = peek(fmap,PT(v, locn.Loc_None))
+
+val res = PT(y,locn);
+
+val ty1 = ``:bool (\'a:<=3.'a)``;
+val kd1 = kind_of ty1;
+val rk1 = rank_of ty1;
+
 val tm1 = ``x:bool (\'a:<=3.'a)``;
 val ty1 = type_of tm1;
 val kd1 = kind_of ty1;

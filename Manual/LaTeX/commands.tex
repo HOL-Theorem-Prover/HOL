@@ -15,6 +15,8 @@
 \newcommand\LIBRARIES{{\footnotesize\sl LIBRARIES}}
 
 \newcommand{\bs}{\texttt{\symbol{92}}}
+\newcommand{\lb}{\texttt{\char'173}}
+\newcommand{\rb}{\texttt{\char'175}}
 
 \def\HOL{{\small HOL}}
 \def\holn{\HOL}  % i.e. hol n(inety-eight), no digits in
@@ -189,11 +191,11 @@
 % ---------------------------------------------------------------------
 % Macro for boxed ML functions, etc.
 %
-% Usage: (1) \begin{boxed}\begin{verbatim}
+% Usage: (1) \begin{holboxed}\begin{verbatim}
 %               .
 %               < lines giving names and types of mk functions >
 %               .
-%            \end{verbatim}\end{boxed}
+%            \end{verbatim}\end{holboxed}
 %
 %            typesets the given lines in a box.
 %
@@ -202,14 +204,14 @@
 %            that appear in the box.
 % ---------------------------------------------------------------------
 
-\newenvironment{boxed}{\begin{flushleft}
- \begin{tabular}{@{}|c@{}|@{}}\hline
- \begin{minipage}[b]{\hsbw}
+\newenvironment{holboxed}{\begin{flushleft}
+  \begin{tabular}{@{}|c@{}|@{}}\hline
+  \begin{minipage}[b]{\hsbw}
 % \vspace*{-.55in}
- \vspace*{.06in}
- \begingroup\small\baselineskip\HOLSpacing}{\endgroup\end{minipage}\\ \hline
- \end{tabular}
- \end{flushleft}}
+  \vspace*{.06in}
+  \begingroup\small\baselineskip\HOLSpacing}{\endgroup\end{minipage}\\ \hline
+  \end{tabular}
+  \end{flushleft}}
 
 % ---------------------------------------------------------------------
 % Macro for unboxed ML functions, etc.
@@ -266,15 +268,3 @@
 
 \newcommand{\two}%standard 2-element set
  {\mbox{\rm 2}}
-
-
-
-
-
-
-
-
-
-
-
-

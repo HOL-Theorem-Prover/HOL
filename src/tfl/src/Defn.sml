@@ -5,7 +5,7 @@ open HolKernel Parse boolLib;
 open pairLib Rules wfrecUtils Functional Induction DefnBase;
 
 type thry   = TypeBasePure.typeBase
-type proofs = GoalstackPure.proofs
+type proofs = Manager.proofs
 type absyn  = Absyn.absyn;
 
 val ERR = mk_HOL_ERR "Defn";
@@ -424,12 +424,16 @@ fun store(stem,eqs,ind) =
         ".\nInduction stored under ", Lib.quote ind_bind, ".\n"])
   end;
 
-fun save_defn (ABBREV {bind,eqn, ...})       = been_stored (bind,eqn)
+local
+  val LIST_CONJ_GEN = LIST_CONJ o map GEN_ALL
+in
+  fun save_defn (ABBREV {bind,eqn, ...})     = been_stored (bind,eqn)
   | save_defn (PRIMREC{bind,eqs, ...})       = been_stored (bind,eqs)
   | save_defn (NONREC {eqs, ind, stem, ...}) = store(stem,eqs,ind)
-  | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,LIST_CONJ eqs,ind)
-  | save_defn (MUTREC {eqs,ind,stem,...})    = store(stem,LIST_CONJ eqs,ind)
-  | save_defn (NESTREC{eqs,ind,stem, ...})   = store(stem,LIST_CONJ eqs,ind)
+  | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,LIST_CONJ_GEN eqs,ind)
+  | save_defn (MUTREC {eqs,ind,stem,...})    = store(stem,LIST_CONJ_GEN eqs,ind)
+  | save_defn (NESTREC{eqs,ind,stem, ...})   = store(stem,LIST_CONJ_GEN eqs,ind)
+end
 
 
 (*---------------------------------------------------------------------------
@@ -675,7 +679,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      (* and now induction *)
 
      val aux_ind = Induction.mk_induction theory1
-                       {fconst=faux_const, R=R1,SV=SV,
+                       {fconst=faux_const, R=R1, SV=SV,
                         pat_TCs_list=pat_TCs_list}
      val ics = strip_conj(fst(dest_imp(snd(dest_forall(concl aux_ind)))))
      fun dest_ic tm = if is_imp tm then strip_conj (fst(dest_imp tm)) else []
@@ -1128,9 +1132,8 @@ fun prim_mk_defn stem eqns =
        (free_in f rhs andalso
         raise ERR "mk_defn" "Simple nullary definition recurses") orelse
        (let val fvs = free_vars rhs
-        in
-              not (null fvs) andalso
-              raise ERR "mk_defn"
+        in not (null fvs) andalso
+           raise ERR "mk_defn"
                     ("Free variables (" ^
                      String.concat (Lib.commafy (map (#1 o dest_var) fvs)) ^
                      ") on RHS of nullary definition")
@@ -1333,17 +1336,17 @@ fun parse_defn absyn0 =
    (tm, fn_names)
  end;
 
-fun Hol_defn bindstem q =
+fun Hol_defn stem q =
  let val absyn0 = Parse.Absyn q
      val eqns = fst (parse_defn absyn0)
  in
-  mk_defn bindstem eqns
+  mk_defn stem eqns
   handle e => raise wrap_exn_loc "Defn" "Hol_defn" 
                        (Absyn.locn_of_absyn absyn0) e
  end;
 
-fun Hol_Rdefn bindstem Rquote eqs_quote =
-  let val defn = Hol_defn bindstem eqs_quote
+fun Hol_Rdefn stem Rquote eqs_quote =
+  let val defn = Hol_defn stem eqs_quote
   in case reln_of defn
       of NONE => defn
        | SOME Rvar =>
@@ -1393,10 +1396,10 @@ fun tgoal0 defn =
    if null (tcs_of defn)
    then raise ERR "tgoal" "no termination conditions"
    else let val (g,validation) = TC_TAC defn
-        in goalstackLib.add (GoalstackPure.prim_set_goal g validation)
+        in proofManagerLib.add (Manager.new_goalstack g validation)
         end handle HOL_ERR _ => raise ERR "tgoal" "";
 
-fun tgoal defn = Lib.with_flag (goalstackLib.chatting,false) tgoal0 defn;
+fun tgoal defn = Lib.with_flag (proofManagerLib.chatting,false) tgoal0 defn;
 
 (*---------------------------------------------------------------------------
      The error handling here is pretty coarse.
@@ -1404,20 +1407,20 @@ fun tgoal defn = Lib.with_flag (goalstackLib.chatting,false) tgoal0 defn;
 
 fun tprove0 (defn,tactic) =
   let val _ = tgoal0 defn
-      val _ = goalstackLib.expand tactic  (* should finish proof off *)
-      val th  = goalstackLib.top_thm ()
-      val _   = goalstackLib.drop()
+      val _ = proofManagerLib.expand tactic  (* should finish proof off *)
+      val th  = proofManagerLib.top_thm ()
+      val _   = proofManagerLib.drop()
       val eqns = CONJUNCT1 th
       val ind  = CONJUNCT2 th
   in
      (eqns,ind)
   end
-  handle e => (goalstackLib.drop(); raise (wrap_exn "Defn" "tprove" e))
+  handle e => (proofManagerLib.drop(); raise wrap_exn "Defn" "tprove" e)
 
 
 fun tprove p =
   let
-    val (eqns,ind) = Lib.with_flag (goalstackLib.chatting,false) tprove0 p
+    val (eqns,ind) = Lib.with_flag (proofManagerLib.chatting,false) tprove0 p
     val () = if not (!computeLib.auto_import_definitions) then ()
              else computeLib.add_funs
                     [eqns, CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) eqns]
