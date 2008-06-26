@@ -790,6 +790,13 @@ fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
          unify_var ty1 >- (fn ty1' =>
          unify_var ty2 >- (fn ty2' =>
          bvar_unify ty1' ty2'))
+  fun beta_conv_ty_m ty1 ty2 =
+     let val (ty1',red1) = (beta_conv_ty ty1,true) handle HOL_ERR _ => (ty1,false)
+         val (ty2',red2) = (beta_conv_ty ty2,true) handle HOL_ERR _ => (ty2,false)
+     in if red1 orelse red2
+        then return (ty1',ty2')
+        else fail
+     end
 in
   case (t1, t2) of
     (UVar (r as ref (NONEU(kd,rk))), _) => kind_unify kd (pkind_of ty2) >>
@@ -810,7 +817,12 @@ in
        rank_unify rk1 (prank_of ty1') >> gen_unify c1 c2 ty1' ty2 >> return ()
   | (_, TyRankConstr _) => gen_unify c2 c1 ty2 ty1
   | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
-       gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()
+       (gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()) ++
+       (beta_conv_ty_m ty1 ty2 >- (fn (ty1',ty2') => gen_unify c1 c2 ty1' ty2'))
+  | (TyApp _, _) =>
+        beta_conv_ty_m ty1 ty2 >- (fn (ty1',ty2') => gen_unify c1 c2 ty1' ty2')
+  | (_, TyApp _) =>
+        beta_conv_ty_m ty1 ty2 >- (fn (ty1',ty2') => gen_unify c1 c2 ty1' ty2')
   | (TyUniv(ty11, ty12), TyUniv(ty21, ty22)) =>
        bvar_unify ty11 ty21 >- (fn (PT(ty11',_),PT(ty21',_)) =>
        case (ty11',ty21') of
@@ -839,8 +851,8 @@ val empty_env = ([]:(prekind option ref * prekind option) list,
                  []:(      uvartype ref * uvartype      ) list)
 
 fun unify t1 t2 =
- let val t1' = deep_beta_conv_ty t1
-     and t2' = deep_beta_conv_ty t2
+ let val t1' = (* deep_beta_conv_ty *) t1
+     and t2' = (* deep_beta_conv_ty *) t2
  in
   case (gen_unify kind_unify rank_unify unsafe_bind [] [] t1 t2 empty_env)
    of (bindings, SOME ()) => ()
