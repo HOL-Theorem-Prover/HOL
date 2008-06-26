@@ -26,6 +26,7 @@ val _ = show_types := true;
 
 val _ = set_trace "kinds" 1;
 
+(*
 open Pretype
 val prk3 = let open Prerank in Sucrank (Sucrank (Sucrank Zerorank)) end;
 val pty0 = PT(Vartype("'a",Prekind.typ,prk3),locn.Loc_None);
@@ -69,6 +70,8 @@ val (v as Vartype _) = ty
 val SOME (PT(y,_)) = peek(fmap,PT(v, locn.Loc_None))
 
 val res = PT(y,locn);
+*)
+
 
 val ty1 = ``:bool (\'a:<=3.'a)``;
 val kd1 = kind_of ty1;
@@ -158,7 +161,7 @@ val tm4 = ``\x. (x : ('c,'d) (\'a 'b:ar 2. ('a,'b)'M),
 
 
 (* ----------------------------------------------------------------- *
- * The next example fails to type-check if type checking does not    *
+ * The next examples fail to type-check if type checking does not    *
  * include type beta-reduction of type beta-redexes during checking. *
  * ----------------------------------------------------------------- *)
 
@@ -264,7 +267,7 @@ val test1_def = Define q handle e => Raise e;
  ---------------------------------------------------------------------------*)
 
 
-val monad_def = Define
+val monad_def = new_definition("monad_def", Term
    `monad (unit: !'a. 'a -> 'a 'M,
            bind: !'a 'b. 'a 'M -> ('a -> 'b 'M) -> 'b 'M) =
       (* Left unit *)
@@ -277,8 +280,13 @@ val monad_def = Define
           (!:'a 'b 'c. !(m:'a 'M) (k:'a -> 'b 'M) (h:'b -> 'c 'M).
                 bind[:'a,'c:] m (\a. bind[:'b,'c:] (k a) (\b. h b))
               = bind[:'b,'c:] (bind[:'a,'b:] m (\a. k a)) (\b. h b))
-     `;
+     `);
 
+``I : 'a -> 'a I``;
+
+``\:'a. I : 'a -> 'a I``;
+
+g `monad (\:'a. I : 'a -> 'a I) (\:'a 'b. \(x:'a I) (f:'a -> 'b I). f x)`;
 
 
 val _ = export_theory();
