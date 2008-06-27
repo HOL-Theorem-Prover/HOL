@@ -672,6 +672,28 @@ val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
 
 
 
+fun kind_rank_to_string (kd,rk) =
+      let val kd1 = Prekind.toKind kd
+          val rk1 = Prerank.toRank rk
+      in   (if kd1 = typ then "" else ":" ^ kind_to_string kd1)
+         ^ (if rk1 = 0   then "" else ":<=" ^ Int.toString rk1)
+      end
+
+fun pretype_to_string (ty as PT(ty0,locn)) =
+  case ty0 of
+    UVar(ref (SOMEU ty')) => pretype_to_string ty'
+  | UVar(ref (NONEU(kd,rk))) => "<uvar>" ^ kind_rank_to_string(kd,rk)
+  | Vartype(s,kd,rk) => s ^ kind_rank_to_string(kd,rk)
+  | Contype {Thy, Tyop, Kind, Rank} => Tyop (* ^ kind_rank_to_string(Kind,Rank) *)
+  | TyApp(PT(TyApp(PT(Contype{Tyop="fun",...},_), ty1),_), ty2)
+                    => "(" ^ pretype_to_string ty1 ^ " -> " ^ pretype_to_string ty2 ^ ")"
+  | TyApp(ty1, ty2) => "(" ^ pretype_to_string ty2 ^ " " ^ pretype_to_string ty1 ^ ")"
+  | TyUniv(tyv, ty) => "!"  ^ pretype_to_string tyv ^ ". " ^ pretype_to_string ty
+  | TyAbst(tyv, ty) => "\\" ^ pretype_to_string tyv ^ ". " ^ pretype_to_string ty
+  | TyKindConstr {Ty, Kind} => pretype_to_string Ty ^ " : " ^ kind_to_string(Prekind.toKind Kind)
+  | TyRankConstr {Ty, Rank} => pretype_to_string Ty ^ " :<= " ^ Int.toString(Prerank.toRank Rank)
+
+
 infix ref_occurs_in
 
 fun r ref_occurs_in (PT(value, locn)) =
@@ -790,12 +812,12 @@ fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
          unify_var ty1 >- (fn ty1' =>
          unify_var ty2 >- (fn ty2' =>
          bvar_unify ty1' ty2'))
-  fun beta_conv_ty_m ty1 ty2 =
+  fun beta_conv_ty_m f ty1 ty2 m =
      let val (ty1',red1) = (beta_conv_ty ty1,true) handle HOL_ERR _ => (ty1,false)
          val (ty2',red2) = (beta_conv_ty ty2,true) handle HOL_ERR _ => (ty2,false)
      in if red1 orelse red2
-        then return (ty1',ty2')
-        else fail
+        then f ty1' ty2'
+        else m
      end
 in
   case (t1, t2) of
@@ -817,12 +839,10 @@ in
        rank_unify rk1 (prank_of ty1') >> gen_unify c1 c2 ty1' ty2 >> return ()
   | (_, TyRankConstr _) => gen_unify c2 c1 ty2 ty1
   | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
-       (gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()) ++
-       (beta_conv_ty_m ty1 ty2 >- (fn (ty1',ty2') => gen_unify c1 c2 ty1' ty2'))
-  | (TyApp _, _) =>
-        beta_conv_ty_m ty1 ty2 >- (fn (ty1',ty2') => gen_unify c1 c2 ty1' ty2')
-  | (_, TyApp _) =>
-        beta_conv_ty_m ty1 ty2 >- (fn (ty1',ty2') => gen_unify c1 c2 ty1' ty2')
+       beta_conv_ty_m (gen_unify c1 c2) ty1 ty2
+       (gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ())
+  | (TyApp _, _) => beta_conv_ty_m (gen_unify c1 c2) ty1 ty2 fail
+  | (_, TyApp _) => beta_conv_ty_m (gen_unify c1 c2) ty1 ty2 fail
   | (TyUniv(ty11, ty12), TyUniv(ty21, ty22)) =>
        bvar_unify ty11 ty21 >- (fn (PT(ty11',_),PT(ty21',_)) =>
        case (ty11',ty21') of
@@ -851,13 +871,12 @@ val empty_env = ([]:(prekind option ref * prekind option) list,
                  []:(      uvartype ref * uvartype      ) list)
 
 fun unify t1 t2 =
- let val t1' = (* deep_beta_conv_ty *) t1
-     and t2' = (* deep_beta_conv_ty *) t2
- in
   case (gen_unify kind_unify rank_unify unsafe_bind [] [] t1 t2 empty_env)
    of (bindings, SOME ()) => ()
     | (_, NONE) => raise TCERR "unify" "unify failed"
- end;
+                                    (* ("unify failed: " ^ pretype_to_string t1
+                                    ^ "\n      versus: " ^ pretype_to_string t2) *)
+  ;
 
 fun can_unify t1 t2 = let
   val ((kind_bindings,rank_bindings,type_bindings), result) =
@@ -1010,28 +1029,6 @@ fun fromType t =
       PT(TyAbst(fromType ty1, fromType ty2), locn.Loc_None)
     end
   else raise TCERR "fromType" "Unexpected sort of type"
-
-
-fun pretype_to_string (ty as PT(ty0,locn)) =
-  case ty0 of
-    UVar(ref (SOMEU ty')) => pretype_to_string ty'
-  | UVar(ref (NONEU(kd,rk))) => "<uvar>"
-  | Vartype(s,kd,rk) => let val kd1 = Prekind.toKind kd
-                            val rk1 = Prerank.toRank rk
-                        in s ^ (if kd1 = typ then ""  else ":" ^ kind_to_string kd1)
-                             ^ (if rk1 = 0   then "0" else ":<=" ^ Int.toString rk1)
-                        end
-  | Contype {Thy, Tyop, Kind, Rank} =>
-                        let val kd1 = Prekind.toKind Kind
-                            val rk1 = Prerank.toRank Rank
-                        in Tyop ^ (if kd1 = typ then ""  else ":" ^ kind_to_string kd1)
-                                ^ (if rk1 = 0   then "0" else ":<=" ^ Int.toString rk1)
-                        end
-  | TyApp(ty1, ty2) => pretype_to_string ty2 ^ " " ^ pretype_to_string ty1
-  | TyUniv(tyv, ty) => "!"  ^ pretype_to_string tyv ^ ". " ^ pretype_to_string ty
-  | TyAbst(tyv, ty) => "\\" ^ pretype_to_string tyv ^ ". " ^ pretype_to_string ty
-  | TyKindConstr {Ty, Kind} => pretype_to_string Ty ^ " : " ^ kind_to_string(Prekind.toKind Kind)
-  | TyRankConstr {Ty, Rank} => pretype_to_string Ty ^ " :<= " ^ Int.toString(Prerank.toRank Rank)
 
 
 
