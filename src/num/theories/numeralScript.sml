@@ -789,12 +789,14 @@ val texp_help_def = new_recursive_definition {
 
 val texp_help_thm = store_thm(
   "texp_help_thm",
-  ``!n a. texp_help n a = 2 * (a + 1) * 2 EXP n``,
+  ``!n a. texp_help n a = (a + 1) * 2 EXP (n + 1)``,
   INDUCT_TAC THEN SRW_TAC [][texp_help_def] THENL [
     SRW_TAC [][EXP, MULT_CLAUSES, ONE, TWO, ADD_CLAUSES, BIT2],
-    SRW_TAC [][EXP, MULT_ASSOC] THEN ONCE_REWRITE_TAC [MULT_COMM] THEN
-    SRW_TAC [][EQ_MULT_LCANCEL, EXP_EQ_0] THEN DISJ2_TAC THEN
-    SRW_TAC [][ONE, TWO, MULT_CLAUSES, BIT1, ADD_CLAUSES]
+    SRW_TAC [][EXP, ADD_CLAUSES] THEN
+    Q.SUBGOAL_THEN `BIT1 a = 2 * a + 1` ASSUME_TAC THEN1
+      SRW_TAC [][BIT1, TWO, ONE, MULT_CLAUSES, ADD_CLAUSES] THEN
+    SRW_TAC [][RIGHT_ADD_DISTRIB, MULT_CLAUSES, TIMES2, LEFT_ADD_DISTRIB,
+               AC ADD_ASSOC ADD_COMM, AC MULT_ASSOC MULT_COMM]
   ]);
 
 val texp_help0 = store_thm(
@@ -819,6 +821,201 @@ val TWO_EXP_THM = store_thm(
   SRW_TAC [][NUMERAL_DEF, EXP_BASE_INJECTIVE, numeral_lt] THEN
   SRW_TAC [][BIT1, BIT2, PRE, ADD_CLAUSES, ALT_ZERO]);
 
+val onecount_def = new_specification(
+  "onecount_def", ["onecount"],
+  (BETA_RULE o
+   ONCE_REWRITE_RULE [FUN_EQ_THM] o
+   Q.SPECL [`\a. a:num`,
+            `\ (n:num) (rf:num->num) (a:num). rf (SUC a)`,
+            `\ (n:num) (rf:num->num) (a:num). ZERO`] o
+   INST_TYPE [alpha |-> ``:num -> num``]) bit_initiality)
+val onecount0 = SIMP_RULE (srw_ss()) [ALT_ZERO] (CONJUNCT1 onecount_def)
+
+val exactlog_def = new_specification(
+  "exactlog_def", ["exactlog"],
+  (BETA_RULE o
+   Q.SPECL [`ZERO`,
+            `\ (n:num) (r:num). ZERO`,
+            `\ (n:num) (r:num). let x = onecount n ZERO
+                                in
+                                  if x = ZERO then ZERO
+                                  else BIT1 x`] o
+   INST_TYPE [alpha |-> ``:num``]) bit_initiality)
+
+val onecount_lemma1 = prove(
+  ``!n a. 0 < onecount n a ==> a <= onecount n a``,
+  HO_MATCH_MP_TAC bit_induction THEN
+  SRW_TAC [][onecount_def, LESS_EQ_REFL, ALT_ZERO, LESS_REFL] THEN
+  MATCH_MP_TAC LESS_EQ_TRANS THEN Q.EXISTS_TAC `SUC a` THEN
+  SRW_TAC [][LESS_EQ_SUC_REFL]);
+
+val onecount_lemma2 = prove(
+  ``!n. 0 < n ==> !a b. (onecount n a = 0) = (onecount n b = 0)``,
+  HO_MATCH_MP_TAC bit_induction THEN
+  SRW_TAC [][ALT_ZERO, LESS_REFL, onecount_def] THEN
+  Q.SPEC_THEN `n` FULL_STRUCT_CASES_TAC num_CASES THENL [
+    SRW_TAC [][onecount0, NOT_SUC, ALT_ZERO],
+    SRW_TAC [][LESS_0]
+  ]);
+
+val sub_eq' = prove(
+  ``(m - n = p) = if n <= m then m = p + n else (p = 0)``,
+  SRW_TAC [][SUB_RIGHT_EQ, EQ_IMP_THM, ADD_COMM, LESS_EQ_REFL, ADD_CLAUSES]
+  THENL [
+    FULL_SIMP_TAC (srw_ss()) [LESS_EQ_0, LESS_EQUAL_ANTISYM, ADD_CLAUSES],
+    FULL_SIMP_TAC (srw_ss()) [LESS_EQ_ADD],
+    FULL_SIMP_TAC (srw_ss()) [LESS_EQ_0],
+    FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL, LESS_OR_EQ]
+  ]);
+
+val sub_add' = prove(
+  ``m - n + p = if n <= m then m + p - n else p``,
+  SRW_TAC [][SUB_RIGHT_ADD] THENL [
+    Q.SUBGOAL_THEN `m = n` SUBST_ALL_TAC
+      THEN1 SRW_TAC [][LESS_EQUAL_ANTISYM] THEN
+    METIS_TAC [ADD_SUB, ADD_COMM],
+    METIS_TAC [NOT_LESS_EQUAL, LESS_ANTISYM]
+  ]);
+
+val onecount_lemma3 = prove(
+  ``!n a. 0 < onecount n (SUC a) ==>
+          (onecount n (SUC a) = SUC (onecount n a))``,
+  HO_MATCH_MP_TAC bit_induction THEN
+  SRW_TAC [][onecount_def, ALT_ZERO, LESS_REFL]);
+
+val onecount_characterisation = store_thm(
+  "onecount_characterisation",
+  ``!n a. 0 < onecount n a /\ 0 < n ==> (n = 2 EXP (onecount n a - a) - 1)``,
+  HO_MATCH_MP_TAC bit_induction THEN
+  SRW_TAC [][onecount_def] THENL [
+    FULL_SIMP_TAC (srw_ss()) [ALT_ZERO, LESS_REFL],
+    SRW_TAC [][onecount_lemma3, SUB, EXP] THENL [
+      Q.SUBGOAL_THEN `0 < n` STRIP_ASSUME_TAC
+        THEN1 (CCONTR_TAC THEN
+               FULL_SIMP_TAC (srw_ss()) [NOT_LESS, LESS_EQ_0, onecount0,
+                                         LESS_REFL]) THEN
+      Q.SUBGOAL_THEN `0 < onecount n a` STRIP_ASSUME_TAC
+        THEN1 METIS_TAC [onecount_lemma2, NOT_ZERO_LT_ZERO] THEN
+      METIS_TAC [onecount_lemma1, LESS_EQ_ANTISYM],
+      FULL_SIMP_TAC (srw_ss()) [NOT_LESS] THEN
+      ASM_CASES_TAC ``0 < n`` THENL [
+        Q.SUBGOAL_THEN `0 < onecount n a` STRIP_ASSUME_TAC
+          THEN1 METIS_TAC [onecount_lemma2, NOT_ZERO_LT_ZERO] THEN
+        Q.ABBREV_TAC `X = onecount n a - a` THEN
+        Q_TAC SUFF_TAC `n = 2 ** X - 1` THENL [
+          DISCH_THEN SUBST1_TAC THEN
+          SRW_TAC [][Once BIT1, sub_add'] THENL [
+            SRW_TAC [][SYM ONE, ADD_SUB, TIMES2],
+            FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL] THEN
+            FULL_SIMP_TAC (srw_ss()) [ONE, LESS_THM, NOT_LESS_0, EXP_EQ_0] THEN
+            FULL_SIMP_TAC (srw_ss()) [TWO, ONE, NOT_SUC]
+          ],
+          Q.UNABBREV_TAC `X` THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+          SRW_TAC [][]
+        ],
+        FULL_SIMP_TAC (srw_ss()) [NOT_LESS, LESS_EQ_0, onecount0, SUB_EQUAL_0,
+                                  EXP, MULT_CLAUSES] THEN
+        SRW_TAC [][TWO, ONE, BIT1, SUB, ADD_CLAUSES, LESS_REFL, LESS_SUC_REFL]
+      ]
+    ],
+    FULL_SIMP_TAC (srw_ss()) [ALT_ZERO, LESS_REFL]
+  ]);
+
+val onecount_thm = SIMP_RULE (srw_ss()) [SUB_0]
+                             (Q.SPECL [`n`, `0`] onecount_characterisation)
+
+val bit_cases = hd (Prim_rec.prove_cases_thm bit_induction)
+
+val exactlog_characterisation = store_thm(
+  "exactlog_characterisation",
+  ``!n m. (exactlog n = BIT1 m) ==> (n = 2 ** (m + 1))``,
+  REPEAT GEN_TAC THEN
+  Q.SPEC_THEN `n` STRUCT_CASES_TAC bit_cases THEN
+  SRW_TAC [][exactlog_def, numeral_eq, LET_THM] THEN
+  RULE_ASSUM_TAC (REWRITE_RULE [ALT_ZERO, NOT_ZERO_LT_ZERO]) THEN
+  ASM_CASES_TAC ``0 < n'`` THENL [
+    SIMP_TAC (srw_ss()) [Once BIT2] THEN
+    POP_ASSUM (fn zln =>
+                  POP_ASSUM
+                      (fn zloc => ASSUME_TAC (MATCH_MP (GEN_ALL onecount_thm)
+                                                       (CONJ zloc zln)))) THEN
+    POP_ASSUM (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) THEN
+    Q.ABBREV_TAC `X = onecount n' 0` THEN
+    Q.SUBGOAL_THEN `onecount n' ZERO = X` SUBST_ALL_TAC THEN1
+      SRW_TAC [][ALT_ZERO] THEN
+    SRW_TAC [][sub_add', SUB_LEFT_ADD] THENL [
+      FULL_SIMP_TAC (srw_ss()) [ADD_CLAUSES, ONE, LESS_EQ_MONO,
+                                NOT_SUC_LESS_EQ_0],
+      SRW_TAC [][ADD_CLAUSES, SUC_SUB1, EXP_ADD, EXP_1] THEN
+      METIS_TAC [MULT_COMM, TIMES2],
+      FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL, ONE, LESS_THM, NOT_LESS_0,
+                                EXP_EQ_0] THEN
+      FULL_SIMP_TAC (srw_ss()) [TWO, ONE, NOT_SUC]
+    ],
+    FULL_SIMP_TAC (srw_ss()) [onecount0, NOT_LESS, LESS_EQ_0, LESS_REFL]
+  ]);
+
+val internal_mult_def = new_definition(
+  "internal_mult_def",
+  ``internal_mult = $*``);
+
+val DIV2_BIT1 = store_thm(
+  "DIV2_BIT1",
+  ``DIV2 (BIT1 x) = x``,
+  SRW_TAC [][REWRITE_RULE [NUMERAL_DEF] numeral_div2]);
+
+val odd_lemma = prove(
+  ``!n. ODD n ==> ?m. n = BIT1 m``,
+  HO_MATCH_MP_TAC bit_induction THEN SRW_TAC [][numeral_evenodd, numeral_eq]);
+
+val enhanced_numeral_mult = prove(
+  ``x * y = if y = ZERO then ZERO
+            else if x = ZERO then ZERO
+            else
+              let m = exactlog x in
+              let n = exactlog y
+              in
+                if ODD m then texp_help (DIV2 m) (PRE y)
+                else if ODD n then texp_help (DIV2 n) (PRE x)
+                else internal_mult x y``,
+  SRW_TAC [][internal_mult_def, MULT_CLAUSES, ALT_ZERO] THEN
+  SRW_TAC [][] THENL [
+    IMP_RES_TAC odd_lemma THEN markerLib.UNABBREV_ALL_TAC THEN
+    SRW_TAC [][DIV2_BIT1, texp_help_thm] THEN
+    Q.SPEC_THEN `y` FULL_STRUCT_CASES_TAC num_CASES THEN1
+      FULL_SIMP_TAC (srw_ss()) [] THEN
+    SRW_TAC [][PRE, ADD1] THEN IMP_RES_TAC exactlog_characterisation THEN
+    SRW_TAC [][AC MULT_ASSOC MULT_COMM],
+
+    IMP_RES_TAC odd_lemma THEN markerLib.UNABBREV_ALL_TAC THEN
+    SRW_TAC [][DIV2_BIT1, texp_help_thm] THEN
+    Q.SPEC_THEN `x` FULL_STRUCT_CASES_TAC num_CASES THEN1
+      FULL_SIMP_TAC (srw_ss()) [] THEN
+    SRW_TAC [][PRE, ADD1] THEN IMP_RES_TAC exactlog_characterisation THEN
+    SRW_TAC [][AC MULT_ASSOC MULT_COMM]
+  ]);
+
+val sillylet = prove(``LET f ZERO = f ZERO``, REWRITE_TAC [LET_THM])
+val silly_exactlog =
+    prove(``exactlog (BIT1 x) = ZERO``, REWRITE_TAC [exactlog_def])
+
+fun gen_case x y =
+    SIMP_RULE bool_ss [numeral_eq, silly_exactlog, sillylet, numeral_evenodd]
+              (Q.INST [`x` |-> x, `y` |-> y] enhanced_numeral_mult)
+
+
+val enumeral_mult = save_thm(
+  "enumeral_mult",
+  LIST_CONJ (List.take(CONJUNCTS (SPEC_ALL numeral_mult), 2) @
+             [gen_case `BIT1 x` `BIT1 y`,
+              gen_case `BIT1 x` `BIT2 y`,
+              gen_case `BIT2 x` `BIT1 y`,
+              gen_case `BIT2 x` `BIT2 y`]))
+
+val internal_mult_characterisation = save_thm(
+  "internal_mult_characterisation",
+  REWRITE_RULE [SYM internal_mult_def] numeral_mult);
+
 (* ----------------------------------------------------------------------
     hide the internal constants from this theory so that later name-
     spaces are not contaminated.   Constants can still be found by using
@@ -827,7 +1024,8 @@ val TWO_EXP_THM = store_thm(
 
 val _ = app
           (fn s => remove_ovl_mapping s {Name = s, Thy = "numeral"})
-          ["iZ", "iiSUC", "iDUB", "iSUB", "iMOD_2EXP", "iSQR", "texp_help"]
+          ["iZ", "iiSUC", "iDUB", "iSUB", "iMOD_2EXP", "iSQR", "texp_help",
+           "onecount", "exactlog"]
 
 (*---------------------------------------------------------------------------*)
 (* Filter out the definitions and theorems needed to generate ML.            *)
