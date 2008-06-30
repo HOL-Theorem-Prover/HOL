@@ -1,12 +1,16 @@
 (* this is an -*- sml -*- file, or near enough *)
-val output_stream = ref TextIO.stdOut
-fun ECHO s = TextIO.output(!output_stream, s)
-fun print s = TextIO.output(!output_stream, s)
-val comdepth = ref 0
-val pardepth = ref 0
-val antiquote = ref false
 fun inc r = (r := !r + 1)
 fun dec r = (r := !r - 1)
+
+datatype qfs = QFS of {output_stream : TextIO.outstream,
+                       comdepth : int ref,
+                       pardepth : int ref,
+                       antiquote: bool ref,
+                       row      : int ref,
+                       rowstart : int ref}
+
+fun ECHO (QFS {output_stream , ...}) s = TextIO.output(output_stream, s)
+fun print (QFS {output_stream, ...}) s = TextIO.output(output_stream, s)
 
 fun drop_upto c s = let
   (* returns the substring of s that begins at the first occurrence of c *)
@@ -19,40 +23,48 @@ end
 
 (* generate location pragmas inside fragments (not antiquoted ones), for the lex
 er *)
+(*
 val row = ref 0
 val rowstart = ref 0
-fun nextline pos = (row := !row + 1; rowstart := pos)
-fun locpragma (s,pos) off
-  = " (*#loc "^Int.toString(!row + 1)^" "^
-    Int.toString(pos + size s - !rowstart - off + 1)^"*)"
+*)
+fun nextline (QFS {row, rowstart, ...}) pos = (inc row; rowstart := pos)
+fun locpragma (QFS {row, rowstart, ...}) (s,pos) off
+  = " (*#loc "^Int.toString((!row) + 1)^" "^
+    Int.toString(pos + size s - (!rowstart) - off + 1)^"*)"
     (* NB: the initial space is critical, or else the comment might not be recog
 nised
        when prepended by a paren or symbol char.  --KW
        See cvs log comment at rev 1.2 of src/parse/base_tokens.lex *)
+fun flushOut (QFS {output_stream,...}) = TextIO.flushOut output_stream
 
-fun newline(yypos,yytext) = (print "\n"; TextIO.flushOut (!output_stream);
-                             nextline (yypos + size yytext));
-fun qnewline(yypos,yytext) =
-    (nextline (yypos + size yytext);
-     print "\\n\\\n\\" ;
-     TextIO.flushOut (!output_stream))
+fun newline (arg as QFS q) (yypos,yytext) =
+  (print arg "\n";
+   flushOut arg;
+   nextline arg (yypos + size yytext));
 
-fun dolocpragma (s,pos)
+fun qnewline arg (yypos,yytext) =
+    (nextline arg (yypos + size yytext);
+     print arg "\\n\\\n\\" ;
+     flushOut arg)
+
+fun dolocpragma (arg as QFS {output_stream, row, rowstart, ...}) (s,pos)
   = let val ss = Substring.all s
         val sr = Substring.dropl (not o Char.isDigit) ss
         val sc = Substring.dropl (Char.isDigit) sr
     in
-      ECHO s;
+      ECHO arg s;
       row := valOf (Int.fromString(Substring.string sr)) - 1;
-      rowstart := pos + size s -
-                  (valOf (Int.fromString(Substring.string sc)) - 1)
+      rowstart := pos + size s - (valOf (Int.fromString(Substring.string sc)) - 1)
     end
+
 type lexresult = (string * int)
 
-fun eof () = ("", 0)
+fun eof arg = ("", 0)
 %%
 %structure filter
 %s string comment qcomment tmcomment tycomment tyquote tmquote quote ANTIQ;
+%arg (UserDeclarations.QFS {output_stream, comdepth, pardepth, antiquote, row, rowstart});
+
 
 letter = [A-Za-z];
 digit = [0-9];
@@ -64,104 +76,108 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 
 %%
 
-{locpragma} => (dolocpragma (yytext, yypos); lex());
+{locpragma} => (dolocpragma yyarg (yytext, yypos); continue());
 
-<INITIAL>"(*" => (ECHO yytext; inc comdepth; YYBEGIN comment; lex());
-<INITIAL>"(" => (ECHO yytext; inc pardepth; lex());
-<INITIAL>")" => (ECHO yytext; dec pardepth;
+<INITIAL>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN comment; continue());
+<INITIAL>"(" => (ECHO yyarg yytext; inc pardepth; continue());
+<INITIAL>")" => (ECHO yyarg yytext; dec pardepth;
                  if !antiquote andalso !pardepth < 1 then (yytext,yypos)
-                 else lex());
+                 else continue());
 <INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [('] | {digit}) => (
-                 print ("(Parse.Type [QUOTE \""^locpragma (yytext,yypos) 2);
-                 print (drop_upto #":" yytext);
+                 print yyarg ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2);
+                 print yyarg (drop_upto #":" yytext);
                  YYBEGIN tyquote;
-                 lex());
+                 continue());
 <INITIAL>"``" {ws}* ":^" =>
-              (print ("(Parse.Type [QUOTE \""^locpragma (yytext,yypos) 2^
+              (print yyarg ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2^
                       ":\", ANTIQUOTE (");
                YYBEGIN ANTIQ;
-               lex();
+               continue();
                YYBEGIN tyquote;
-               lex());
-<INITIAL>"``" => (print ("(Parse.Term [QUOTE \""^locpragma (yytext,yypos) 0);
-                  YYBEGIN tmquote; lex());
-<INITIAL>"`" => (print ("[QUOTE \""^locpragma (yytext,yypos) 0); YYBEGIN quote;
-                 lex());
-<INITIAL>"\"" => (ECHO yytext; YYBEGIN string; lex());
-<INITIAL>{newline} => (newline(yypos,yytext); lex());
-<INITIAL>. => (ECHO yytext;lex());
+               continue());
+<INITIAL>"``" => (print yyarg ("(Parse.Term [QUOTE \""^locpragma yyarg (yytext,yypos) 0);
+                  YYBEGIN tmquote; continue());
+<INITIAL>"`" => (print yyarg ("[QUOTE \""^locpragma yyarg (yytext,yypos) 0); YYBEGIN quote;
+                 continue());
+<INITIAL>"\"" => (ECHO yyarg yytext; YYBEGIN string; continue());
+<INITIAL>{newline} => (newline yyarg (yypos,yytext); continue());
+<INITIAL>[^()*`"\n\015]+ => (ECHO yyarg yytext;continue());
+<INITIAL>. => (ECHO yyarg yytext;continue());
 
-<string>"\\\\" => (ECHO yytext; lex());
-<string>"\\\"" => (ECHO yytext; lex());
-<string>"\"" => (ECHO yytext; YYBEGIN INITIAL; lex());
-<string>{newline} => (newline(yypos,yytext); lex());
-<string>. => (ECHO yytext; lex());
+<string>"\\\\" => (ECHO yyarg yytext; continue());
+<string>"\\\"" => (ECHO yyarg yytext; continue());
+<string>"\"" => (ECHO yyarg yytext; YYBEGIN INITIAL; continue());
+<string>{newline} => (newline yyarg (yypos,yytext); continue());
+<string>[^\\"\n\015]+ => (ECHO yyarg yytext; continue());
+<string>. => (ECHO yyarg yytext; continue());
 
 <comment,tmcomment,tycomment,qcomment>"(*" =>
-                (ECHO yytext; inc comdepth; lex());
-<comment>"*)" => (ECHO yytext; dec comdepth;
+                (ECHO yyarg yytext; inc comdepth; continue());
+<comment>"*)" => (ECHO yyarg yytext; dec comdepth;
                   if !comdepth < 1 then YYBEGIN INITIAL else ();
-                  lex());
-<tmcomment>"*)" => (ECHO yytext; dec comdepth;
+                  continue());
+<tmcomment>"*)" => (ECHO yyarg yytext; dec comdepth;
                   if !comdepth < 1 then YYBEGIN tmquote else ();
-                  lex());
-<tycomment>"*)" => (ECHO yytext; dec comdepth;
+                  continue());
+<tycomment>"*)" => (ECHO yyarg yytext; dec comdepth;
                   if !comdepth < 1 then YYBEGIN tyquote else ();
-                  lex());
-<qcomment>"*)" => (ECHO yytext; dec comdepth;
+                  continue());
+<qcomment>"*)" => (ECHO yyarg yytext; dec comdepth;
                   if !comdepth < 1 then YYBEGIN quote else ();
-                  lex());
-<comment>{newline} => (newline(yypos,yytext); lex());
-<tmcomment,tycomment,qcomment>{newline} => (qnewline(yypos,yytext); lex());
-<tmcomment,tycomment,qcomment>"\\" => (ECHO "\\\\"; lex());
-<tmcomment,tycomment,qcomment>"\"" => (ECHO "\\\""; lex());
-<tmcomment,tycomment,qcomment>"\t" => (ECHO "\\t"; lex());
-<tmcomment,tycomment,qcomment>"^`" => (ECHO "`"; lex());
-<tmcomment,tycomment>"``" => (print "\"])"; YYBEGIN INITIAL; lex());
-<qcomment>"`" => (print "\"]"; YYBEGIN INITIAL; lex());
-<comment,tmcomment,tycomment,qcomment>. => (ECHO yytext; lex());
+                  continue());
+<comment>{newline} => (newline yyarg (yypos,yytext); continue());
+<tmcomment,tycomment,qcomment>{newline} => (qnewline yyarg (yypos,yytext); continue());
+<tmcomment,tycomment,qcomment>"\\" => (ECHO yyarg "\\\\"; continue());
+<tmcomment,tycomment,qcomment>"\"" => (ECHO yyarg "\\\""; continue());
+<tmcomment,tycomment,qcomment>"\t" => (ECHO yyarg "\\t"; continue());
+<tmcomment,tycomment,qcomment>"^`" => (ECHO yyarg "`"; continue());
+<tmcomment,tycomment>"``" => (print yyarg "\"])"; YYBEGIN INITIAL; continue());
+<qcomment>"`" => (print yyarg "\"]"; YYBEGIN INITIAL; continue());
+<comment,tmcomment,tycomment,qcomment>[^\n\015\\"\t^`*()]+ => (ECHO yyarg yytext; continue());
+<comment,tmcomment,tycomment,qcomment>. => (ECHO yyarg yytext; continue());
 
-<quote,tmquote,tyquote>"^"+{ws} => (ECHO yytext; lex());
+<quote,tmquote,tyquote>"^"+{ws} => (ECHO yyarg yytext; continue());
 <quote,tmquote,tyquote>"^"+{newline} =>
-   (ECHO (String.substring(yytext,0,size yytext - 1)); qnewline(yypos,yytext);
-    lex());
-<quote,tmquote,tyquote>"^^" => (ECHO "^"; lex());
-<quote,tmquote,tyquote>"^`" => (ECHO "`"; lex());
-<quote,tmquote,tyquote>{newline} => (qnewline(yypos,yytext); lex());
+   (ECHO yyarg (String.substring(yytext,0,size yytext - 1)); qnewline yyarg (yypos,yytext);
+    continue());
+<quote,tmquote,tyquote>"^^" => (ECHO yyarg "^"; continue());
+<quote,tmquote,tyquote>"^`" => (ECHO yyarg "`"; continue());
+<quote,tmquote,tyquote>{newline} => (qnewline yyarg (yypos,yytext); continue());
 
-<quote>"`" => (print "\"]"; YYBEGIN INITIAL; lex());
-<tmquote,tyquote>"``" => (print "\"])"; YYBEGIN INITIAL; lex());
+<quote>"`" => (print yyarg "\"]"; YYBEGIN INITIAL; continue());
+<tmquote,tyquote>"``" => (print yyarg "\"])"; YYBEGIN INITIAL; continue());
 
-<quote>"(*" => (ECHO yytext; YYBEGIN qcomment; lex());
-<tmquote>"(*" => (ECHO yytext; YYBEGIN tmcomment; lex());
-<tyquote>"(*" => (ECHO yytext; YYBEGIN tycomment; lex());
+<quote>"(*" => (ECHO yyarg yytext; YYBEGIN qcomment; continue());
+<tmquote>"(*" => (ECHO yyarg yytext; YYBEGIN tmcomment; continue());
+<tyquote>"(*" => (ECHO yyarg yytext; YYBEGIN tycomment; continue());
 
-<quote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
-               YYBEGIN quote; lex());
-<tmquote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
-                 YYBEGIN tmquote; lex());
-<tyquote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
-                 YYBEGIN tyquote; lex());
+<quote>"^" => (print yyarg "\", ANTIQUOTE ("; YYBEGIN ANTIQ; continue();
+               YYBEGIN quote; continue());
+<tmquote>"^" => (print yyarg "\", ANTIQUOTE ("; YYBEGIN ANTIQ; continue();
+                 YYBEGIN tmquote; continue());
+<tyquote>"^" => (print yyarg "\", ANTIQUOTE ("; YYBEGIN ANTIQ; continue();
+                 YYBEGIN tyquote; continue());
 
 
-<quote,tmquote,tyquote>. => (ECHO (String.toString yytext); lex());
+<quote,tmquote,tyquote>[^`\n\015^ \t(*]+ => (ECHO yyarg (String.toString yytext); continue());
+<quote,tmquote,tyquote>. => (ECHO yyarg (String.toString yytext); continue());
 
-<ANTIQ>{MLid} => (ECHO yytext;
-                  print ("),QUOTE \""^locpragma (yytext,yypos) 0);
+<ANTIQ>{MLid} => (ECHO yyarg yytext;
+                  print yyarg ("),QUOTE \""^locpragma yyarg (yytext,yypos) 0);
                   (yytext,yypos));
 <ANTIQ>"(" => (let val oldanti = !antiquote
                    in
-                     ECHO yytext;
+                     ECHO yyarg yytext;
                      pardepth := 1;
                      antiquote := true;
                      YYBEGIN INITIAL;
-                     let val (yytext,yypos) = lex()
+                     let val (yytext,yypos) = continue()
                      in
-                       print ("),QUOTE \""^locpragma (yytext, yypos) 0);
+                       print yyarg ("),QUOTE \""^locpragma yyarg (yytext, yypos) 0);
                        antiquote := oldanti;
                        (yytext,yypos)
                      end
                end);
-<ANTIQ>{ws}+ => (lex());
-<ANTIQ>{newline} => (newline(yypos,yytext); lex());
-<ANTIQ>. => (ECHO yytext; (yytext,yypos));
+<ANTIQ>{ws}+ => (continue());
+<ANTIQ>{newline} => (newline yyarg (yypos,yytext); continue());
+<ANTIQ>. => (ECHO yyarg yytext; (yytext,yypos));
