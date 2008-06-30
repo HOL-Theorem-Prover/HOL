@@ -31,16 +31,6 @@
 
 val _ = PolyML.print_depth 0;
 
-(* the poly-includes.ML file must include
-     val poly = "<path to poly executable>"
-     val polymllibdir = "<path to directory containing poly's lib files>"
-*)
-val _ = if OS.FileSys.access ("poly-includes.ML", [OS.FileSys.A_READ]) then
-          use "poly-includes.ML"
-        else
-          (print "No poly-includes.ML file!\n";
-           OS.Process.exit OS.Process.failure)
-
 val CC:string       = "gcc";      (* C compiler                       *)
 val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)

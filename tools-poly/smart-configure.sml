@@ -6,7 +6,6 @@ open Mosml;
 val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
-val _ = use "poly/poly-init.ML";
 
 (* utility functions *)
 fun readdir s = let
@@ -58,10 +57,35 @@ fun determining s =
 print "\nHOL smart configuration.\n\n";
 
 print "Determining configuration parameters: ";
+
+val currentdir = OS.FileSys.getDir();
+
+fun dirify {arcs,isAbs,vol} =
+    OS.Path.toString {arcs = #1 (frontlast arcs), isAbs = isAbs, vol = vol};
+
+determining "holdir";
+
+val holdir = let
+  val cdir_files = readdir currentdir
+in
+  if mem "sigobj" cdir_files andalso mem "std.prelude" cdir_files then
+    currentdir
+  else if mem "smart-configure.sml" cdir_files andalso
+          mem "configure.sml" cdir_files
+  then dirify (OS.Path.fromString currentdir)
+  else (print "\n\n*** Couldn't determine holdir; ";
+        print "please run me from the root HOL directory\n";
+        OS.Process.exit OS.Process.failure)
+end;
+
+val _ = let
+in
+  OS.FileSys.chDir (OS.Path.concat (holdir, "tools-poly"));
+  use "poly/poly-init.ML";
+  OS.FileSys.chDir currentdir
+end;
+
 determining "OS";
-
-val currentdir = OS.FileSys.getDir()
-
 val OS = let
   val {vol,...} = OS.Path.fromString currentdir
 in
@@ -81,48 +105,41 @@ in
   else "winNT"
 end;
 
-(*
-determining "mosmldir";
 
-val mosmldir = let
-  val libdir = hd (!Meta.loadPath)
-  val {arcs, isAbs, vol} = OS.Path.fromString libdir
-  val _ = isAbs orelse
-          (print "\n\n*** ML library directory not specified with absolute";
-           print "filename --- aborting\n";
-           OS.Process.exit OS.Process.failure)
-  val (arcs', lib) = frontlast arcs
-  val _ =
-      if lib <> "lib" then
-        print "\nMosml library directory (from loadPath) not .../lib -- weird!\n"
-      else ()
-  val candidate =
-      OS.Path.toString {arcs = arcs' @ ["bin"], isAbs = true, vol = vol}
+determining "poly";
+
+fun check_poly candidate = let
+  open OS.FileSys
 in
-  candidate
-end;
-*)
+  access(OS.Path.concat(candidate,"poly"), [A_EXEC])
+end
 
-
-determining "holdir";
-
-val holdir = let
-  val cdir_files = readdir currentdir
+val poly = let
+  val nm = CommandLine.name()
+  val p as {arcs, isAbs, vol} = OS.Path.fromString nm
+  val cand =
+      if isAbs then SOME (dirify p)
+      else if length arcs > 1 then
+        SOME (OS.Path.mkAbsolute { path = dirify p,
+                                   relativeTo = OS.FileSys.getDir()})
+      else (* examine PATH variable *)
+        case OS.Process.getEnv "PATH" of
+          NONE => NONE
+        | SOME elist => let
+            val sep = case OS of "winNT" => #";" | _ => #":"
+            val search_these = String.fields (fn c => c = sep) elist
+          in
+            List.find check_poly search_these
+          end
 in
-  if mem "sigobj" cdir_files andalso mem "std.prelude" cdir_files then
-    currentdir
-  else if mem "smart-configure.sml" cdir_files andalso
-          mem "configure.sml" cdir_files
-  then let
-      val {arcs, isAbs, vol} = OS.Path.fromString currentdir
-      val (arcs', _) = frontlast arcs
-    in
-      OS.Path.toString {arcs = arcs', isAbs = isAbs, vol = vol}
-    end
-  else (print "\n\n*** Couldn't determine holdir; ";
-        print "please run me from the root HOL directory\n";
-        OS.Process.exit OS.Process.failure)
+  case cand of
+    NONE => ""
+  | SOME c => if check_poly c then OS.Path.concat(c,"poly")
+              else (print "Couldn't figure out location of poly executable\
+                          \ - hope you have poly-includes.ML to specify it";
+                    "")
 end;
+
 
 determining "dynlib_available";
 
@@ -134,8 +151,9 @@ val dynlib_available = false;
 
 print "\n";
 
+val polymllibdir = "";
 val _ = let
-  val override = OS.Path.concat(holdir, "config-override")
+  val override = OS.Path.concat(holdir, "tools-poly/poly-includes.ML")
 in
   if OS.FileSys.access (override, [OS.FileSys.A_READ]) then
     (print "\n[Using override file!]\n\n";
@@ -143,29 +161,21 @@ in
   else ()
 end;
 
-
-
 fun verdict (prompt, value) =
-    (print (StringCvt.padRight #" " 20 (prompt^":"));
-     print value;
-     print "\n");
+    if value = "" then
+      (print ("\n*** No value for "^prompt^
+              "!!  Use tools-poly/poly-includes.ML to fix this\n");
+       OS.Process.exit OS.Process.failure)
+    else
+      (print (StringCvt.padRight #" " 20 (prompt^":"));
+       print value;
+       print "\n");
 
 verdict ("OS", OS);
-(*verdict ("mosmldir", mosmldir);*)
+verdict ("poly", poly);
+verdict ("polymllibdir", polymllibdir);
 verdict ("holdir", holdir);
 verdict ("dynlib_available", Bool.toString dynlib_available);
-
-(*
-val _ = let
-  val mosml' = if OS = "winNT" then "mosmlc.exe" else "mosmlc"
-in
-  if OS.FileSys.access (OS.Path.concat(mosmldir, mosml'), [OS.FileSys.A_EXEC]) then
-    ()
-  else (print ("\nCouldn't find executable mosmlc in "^mosmldir^"\n");
-        print ("Giving up - please use config-override file to fix\n");
-        OS.Process.exit OS.Process.failure)
-end;
-*)
 
 print "\nConfiguration will begin with above values.  If they are wrong\n";
 print "press Control-C.\n\n";
