@@ -65,8 +65,9 @@ fun quote_to_strings q = let (* turns a quote `...` into a list of strings *)
   fun lines [] [] = [] 
     | lines xs [] = [implode (strip_space (rev xs))]
     | lines xs (y::ys) = 
-        if y = #"\n" then implode (strip_space (rev xs)) :: lines [] ys 
-                     else lines (y::xs) ys   
+        if mem y [#"\n",#"|"] 
+        then implode (strip_space (rev xs)) :: lines [] ys 
+        else lines (y::xs) ys   
   val ys = (rev o strip_space o rev o strip_space o strip_comments 0) xs
   in lines [] ys end;  
 
@@ -236,10 +237,11 @@ fun derive_individual_specs tools (code:string list) = let
       val _ = print ":"
       in (n+1,(ys @ [(n,(th,i,j),NONE)])) end
     else let
+      val _ = print ("  "^instruction^":")
       val i = int_to_string n
       val g = RW [precond_def] o ABBREV_ALL dont_abbrev_list ("s"^i^"@")
       val (x,y) = pair_apply g (f instruction)
-      val _ = print "."
+      val _ = print ".\n"
       in (n+1,(ys @ [(n,x,y)])) end
   val _ = print "\nDeriving specifications for individual instructions.\n"
   val res = snd (foldl get_specs (1,[]) code)
@@ -674,7 +676,9 @@ fun get_output_list def = let
     | ftree2res (FUN_LET (tm,tn,x)) = ftree2res x 
     | ftree2res (FUN_COND (tm,x)) = ftree2res x
   val res = filter (fn x => pairSyntax.is_pair x orelse is_var x) (ftree2res t)
-  in hd res end;
+  val result = dest_tuple (hd res)
+  fun deprime x = mk_var(replace_char #"'" "" (fst (dest_var x)), type_of x) handle e => x
+  in pairSyntax.list_mk_pair(map deprime result) end;
 
 fun hide_pre_post_elements thms def tools = let
   val (_,_,pc) = tools
@@ -771,6 +775,8 @@ fun prove_correspondence tools def thms = let
 *)
     MATCH_MP_TAC th THEN STRIP_TAC THEN SIMP_TAC bool_ss [FORALL_PROD]
     THEN SIMP_TAC (std_ss++tailrec_top_ss()) [LET_DEF]
+    THEN ONCE_REWRITE_TAC [tailrecTheory.TAILREC_PRE_THM]
+    THEN SIMP_TAC std_ss []
     THEN SIMP_TAC (std_ss++tailrec_part_ss()) [LET_DEF]
     THEN REPEAT STRIP_TAC THEN REPEAT (POP_ASSUM MP_TAC)
     THEN REPEAT CASES_ON_COND_TAC
@@ -807,7 +813,7 @@ fun prepare_for_reuse n (th,i,j) = let
   in (n,(ABBREV_CALL prefix th,i,j),NONE) end;
 
 fun decompile (tools :decompiler_tools) name (qcode :term quotation) = let
-  val code = quote_to_hex_list qcode
+  val code = filter (fn x => not (x = "")) (quote_to_hex_list qcode)
   val thms = derive_individual_specs tools code
   val defs = TRUTH
   val index = 1

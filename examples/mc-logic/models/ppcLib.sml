@@ -52,7 +52,9 @@ val else_none_conv =
               in INST i (INST_TYPE t else_none_lemma) end) end;
 
 fun ppc_step s = let
+  val _ = print (" decoding")
   val th = ppc_decode s;
+  val _ = print (", executing")
   val tm = (fst o dest_eq o fst o dest_imp o concl) th
   val th1 = SIMP_CONV (std_ss++ss++wordsLib.SIZES_ss) [] tm;
   fun cc th = CONV_RULE (ONCE_DEPTH_CONV else_none_conv) th handle e => th

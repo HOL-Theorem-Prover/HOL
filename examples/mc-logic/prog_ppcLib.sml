@@ -184,6 +184,7 @@ fun ppc_prove_one_spec th = let
 
 fun ppc_prove_specs s = let
   val th = ppc_step s
+  val _ = print ", deriving"
   val th = pre_process_thm th
   fun replace_conv th tm = if (fst o dest_eq o concl) th = tm then th else ALL_CONV tm
   in if can (find_term is_cond) (concl th) then let

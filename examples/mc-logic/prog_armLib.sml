@@ -140,6 +140,7 @@ val cond_CONTAINER = prove(
 
 fun arm_prove_specs s = let
   val thms = arm_step s
+  val _ = print ", deriving"
   fun derive_spec th = let
     val th = INST_TYPE [``:'a``|->``:unit``] th
     val th = Q.INST [`state`|->`s`,`cp`|->`NO_CP`] th

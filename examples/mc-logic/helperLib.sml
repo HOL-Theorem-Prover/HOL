@@ -16,7 +16,9 @@ val RW1 = ONCE_REWRITE_RULE;
 
 fun cache (f:string->'a) = let
   val dd = ref ((Binarymap.mkDict String.compare) : (String.string, 'a) Binarymap.dict)
-  in (fn x => Binarymap.find(!dd,x) 
+  in (fn x => let val y = Binarymap.find(!dd,x) 
+                  val _ = print "[ cache used ]"
+              in y end
       handle e => let val v = f x 
                   val _ = dd := Binarymap.insert(!dd,x,v) in v end) end
 
@@ -198,5 +200,15 @@ fun INST_SPEC spec_th abs_th = let
   val th = SIMP_RULE std_ss [] th
   val th = REWRITE_RULE [GSYM progTheory.SPEC_MOVE_COND] (DISCH_ALL th)
   in th end;  
+
+val EQ_IMP_IMP = prove(``(x = y) ==> x ==> y``,STRIP_TAC THEN ASM_REWRITE_TAC [])
+fun parse_in_thm q th = Parse.parse_in_context (free_varsl (concl th::hyp th)) q;
+val EXISTS_PRE_LEMMA = MATCH_MP EQ_IMP_IMP (SPEC_ALL progTheory.SPEC_PRE_EXISTS);
+fun EXISTS_PRE var th = let 
+  val v = parse_in_thm var th 
+  val th = CONV_RULE (PRE_CONV (UNBETA_CONV v)) th
+  val th = MATCH_MP EXISTS_PRE_LEMMA (GEN v th)   
+  val th = CONV_RULE (PRE_CONV (RAND_CONV (ALPHA_CONV v))) th
+  in BETA_RULE th end;
 
 end

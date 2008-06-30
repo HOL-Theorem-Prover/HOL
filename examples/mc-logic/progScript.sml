@@ -146,6 +146,12 @@ val SPEC_HIDE_PRE = store_thm("SPEC_HIDE_PRE",
   \\ REWRITE_TAC [SEP_CLAUSES,SEP_HIDE_def]
   \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC []);
 
+val SPEC_PRE_EXISTS = store_thm("SPEC_PRE_EXISTS",
+  ``!x p c q. (!y:'var. SPEC x (p y) c q) = SPEC x (SEP_EXISTS y. p y) c q``,
+  INIT_TAC \\ REPEAT STRIP_TAC \\ ONCE_REWRITE_TAC [STAR_COMM]
+  \\ SIMP_TAC std_ss [SEP_CLAUSES,SEP_HIDE_def,SPEC_def,RUN_def,SEP_CLAUSES]
+  \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC []);
+
 val SEP_HIDE_INTRO = prove(
   ``!p q x s. SEP_IMP (p * q x) (p * ~ q)``,
   SIMP_TAC std_ss [STAR_def,SEP_HIDE_def,SEP_IMP_def,SEP_EXISTS] \\ METIS_TAC []);
