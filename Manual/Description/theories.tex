@@ -2109,11 +2109,13 @@ finite Cartesian products was ported from HOL Light.}  Conceptually, the type
 \begin{hol}
 $\underbrace{\ty{'a}\hash\ty{'a}\hash\cdots\hash\ty{'a}}_n$
 \end{hol}
-where $n$ is the cardinality of the of \holtxt{UNIV:'b set}.  The type \ty{'b} could be
-infinite\footnote{\HOL{}'s type system does not allow type variables to range
-over finite types only.} and so the dimension $n$ is actually taken to be
-\holtxt{dimindex(:\ty{'b})}, where \holtxt{dimindex} has value one when the universe is infinite.  For example, \fcp{'a}{\num} is
-similar to \ty{'a}, and \fcp{'a}{\bool} is like \ty{'a}\hash\ty{'a}.
+where $n$ is the cardinality of the set \holtxt{UNIV:'b set}.  The
+type \ty{'b} could be infinite\footnote{\HOL{}'s type system does not
+  allow type variables to range over finite types only.} and so the
+dimension $n$ is actually taken to be \holtxt{dimindex(:\ty{'b})},
+where \holtxt{dimindex} has value one when the universe is infinite.
+For example, \fcp{'a}{\num} is similar to \ty{'a}, and \fcp{'a}{\bool}
+is like \ty{'a}\hash\ty{'a}.
 
 The \emph{components} of a finite Cartesian product are accessed with an
 indexing function
@@ -2290,7 +2292,7 @@ example, \holtxt{word\_bits} is defined as follows:
 \end{verbatim}
 \end{hol}
 A word's bit ordering can be flipped over with \holtxt{word\_reverse}; see
-Figure~\ref{fig:reverse}. 
+Figure~\ref{fig:reverse}.
 
 \begin{figure}
 \begin{center}
