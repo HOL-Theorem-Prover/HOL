@@ -1,11 +1,14 @@
 (* this is an -*- sml -*- file *)
-PolyML.print_depth 0;
-open OS.Process
+val _ = PolyML.Compiler.prompt1:="";
+val _ = PolyML.Compiler.prompt2:="";
+val _ = PolyML.print_depth 0;
 structure Substring = struct
   open Substring
   val all = full
 end;
+
 use "filter.sml";
+open OS.Process
 
 fun read_from_stream is n = TextIO.input is
 
@@ -37,20 +40,24 @@ fun main() = let
                             " [<inputfile> <outputfile>]\n");
               exit failure)
 
-  val _ = filter.UserDeclarations.output_stream := outstream
-
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
 
+  open filter.UserDeclarations
+  val state as QFS args =
+      QFS {output_stream=outstream, comdepth=ref 0, pardepth=ref 0,
+           antiquote=ref false, row=ref 0, rowstart=ref 0};
+
+
   fun loop() = let
-    val lexer = filter.makeLexer (read_from_stream instream)
+    val lexer = filter.makeLexer (read_from_stream instream) state
   in
     lexer()
-    handle Thread.Thread.Interrupt => (let open filter.UserDeclarations
+    handle Interrupt => (let open filter.UserDeclarations
                          in
-                           comdepth := 0;
-                           pardepth := 0;
-                           antiquote := false;
+                           #comdepth args := 0;
+                           #pardepth args := 0;
+                           #antiquote args := false;
                            loop()
                          end)
   end
@@ -60,4 +67,5 @@ in
   exit success
 end;
 
-PolyML.export("unquote", main);
+val _ = PolyML.shareCommonData main;
+val _ = PolyML.export("unquote", main);

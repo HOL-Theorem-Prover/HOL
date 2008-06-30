@@ -262,7 +262,7 @@ local
   val toolsdir = fullPath [holdir, "tools-poly"]
   val lexdir = fullPath [holdir, "tools", "mllex"]
   val yaccdir = fullPath [holdir, "tools", "mlyacc"]
-  val qfdir = fullPath [toolsdir, "quote-filter"]
+  val qfdir = fullPath [holdir, "tools", "quote-filter"]
   val hmakedir = fullPath [toolsdir, "Holmake"]
   val hmakebin = fullPath [holdir, "bin", "Holmake"]
   val buildbin = fullPath [holdir, "bin", "build"]
