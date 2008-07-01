@@ -173,20 +173,7 @@ in
    "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"),
    "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available^"\n"),
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
-   "val release ="  --> ("val release = "^quote release_string^"\n"),
-   "fun toggle_quietdec () =" -->
-        "local val qd = ref false \n\
-        \in\n\
-        \fun toggle_quietdec () = \n\
-        \  if !qd then (PolyML.Compiler.prompt1 := \"> \";\n\
-        \               PolyML.Compiler.prompt2 := \"# \";\n\
-        \               PolyML.print_depth 100;\n\
-        \               qd := false)\n\
-        \  else (PolyML.Compiler.prompt1 := \"\";\n\
-        \        PolyML.Compiler.prompt2 := \"\";\n\
-        \        PolyML.print_depth 0;\n\
-        \        qd := true)\n\
-        \end;"];
+   "val release ="  --> ("val release = "^quote release_string^"\n")];
   use destfile
 end;
 

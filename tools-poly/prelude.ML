@@ -115,8 +115,6 @@ val _ =
   (term_pp_prefix := "``";   term_pp_suffix := "``";
    type_pp_prefix  := "``";   type_pp_suffix := "``");
 end;
-val _ = PolyML.print_depth 100;
-
 structure HOL_Interactive = struct
   local val qd = ref false 
   in       
@@ -131,3 +129,6 @@ structure HOL_Interactive = struct
             qd := true)
   end
 end
+
+val _ = PolyML.print_depth 100;
+
