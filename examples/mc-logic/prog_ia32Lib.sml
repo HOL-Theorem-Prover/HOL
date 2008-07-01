@@ -253,6 +253,9 @@ val ia32_tools = (ia32_spec, ia32_status, ia32_pc)
   val th = ia32_spec "8B36";          (* mov esi, [esi] *)
   val th = ia32_spec "EBF7";          (* jmp L1 *)
 
+  val th = ia32_spec "0F44C1";        (* cmove eax, ecx *)
+
+
 *)
 
 end
