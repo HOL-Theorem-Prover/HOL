@@ -173,7 +173,20 @@ in
    "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"),
    "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available^"\n"),
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
-   "val release ="  --> ("val release = "^quote release_string^"\n")];
+   "val release ="  --> ("val release = "^quote release_string^"\n"),
+   "fun toggle_quietdec () =" -->
+        "local val qd = ref false \n\
+        \in\n\
+        \fun toggle_quietdec () = \n\
+        \  if !qd then (PolyML.Compiler.prompt1 := \"> \";\n\
+        \               PolyML.Compiler.prompt2 := \"# \";\n\
+        \               PolyML.print_depth 100;\n\
+        \               qd := false)\n\
+        \  else (PolyML.Compiler.prompt1 := \"\";\n\
+        \        PolyML.Compiler.prompt2 := \"\";\n\
+        \        PolyML.print_depth 0;\n\
+        \        qd := true)\n\
+        \end;"];
   use destfile
 end;
 
@@ -358,8 +371,8 @@ end;
 val _ =
  let open TextIO
      val _ = echo "Making hol-mode.el (for Emacs/XEmacs)"
-     val src = fullPath [holdir, "tools-poly", "hol-mode.src"]
-    val target = fullPath [holdir, "tools-poly", "hol-mode.el"]
+     val src = fullPath [holdir, "tools", "hol-mode.src"]
+    val target = fullPath [holdir, "tools", "hol-mode.el"]
  in
     fill_holes (src, target)
       ["(defvar hol-executable HOL-EXECUTABLE\n"
