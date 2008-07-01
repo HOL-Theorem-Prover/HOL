@@ -21,7 +21,6 @@ sig
   val DEPDIR : string
   val GNUMAKE : string
   val DYNLIB : bool
-  val toggle_quietdec : unit -> unit
 
   val isUnix : bool
 

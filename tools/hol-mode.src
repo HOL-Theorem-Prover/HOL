@@ -737,7 +737,7 @@ argument N, sets the trace to that value in particular."
 (defun hol-toggle-quietdec ()
   "Toggles quiet declarations in the interactive system."
   (interactive)
-  (send-raw-string-to-hol "Systeml.toggle_quietdec()"))
+  (send-raw-string-to-hol "HOL_Interactive.toggle_quietdec()"))
 
 (defun hol-toggle-show-times()
   "Toggles the elisp variable 'hol-emit-time-elapsed-p."

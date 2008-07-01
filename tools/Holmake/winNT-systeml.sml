@@ -56,7 +56,6 @@ val GNUMAKE =
 val DYNLIB =
 val version =
 val release =
-fun toggle_quietdec () = 
 
 val isUnix = false
 

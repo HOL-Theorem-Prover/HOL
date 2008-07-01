@@ -116,3 +116,18 @@ val _ =
    type_pp_prefix  := "``";   type_pp_suffix := "``");
 end;
 val _ = PolyML.print_depth 100;
+
+structure HOL_Interactive = struct
+  local val qd = ref false 
+  in       
+  fun toggle_quietdec () = 
+      if !qd then (PolyML.Compiler.prompt1 := \"> \";
+                   PolyML.Compiler.prompt2 := \"# \";
+                   PolyML.print_depth 100;
+                   qd := false)
+      else (PolyML.Compiler.prompt1 := \"\";
+            PolyML.Compiler.prompt2 := \"\";
+            PolyML.print_depth 0;
+            qd := true)
+  end
+end
