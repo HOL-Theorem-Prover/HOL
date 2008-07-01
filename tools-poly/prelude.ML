@@ -121,12 +121,12 @@ structure HOL_Interactive = struct
   local val qd = ref false 
   in       
   fun toggle_quietdec () = 
-      if !qd then (PolyML.Compiler.prompt1 := \"> \";
-                   PolyML.Compiler.prompt2 := \"# \";
+      if !qd then (PolyML.Compiler.prompt1 := "> ";
+                   PolyML.Compiler.prompt2 := "# ";
                    PolyML.print_depth 100;
                    qd := false)
-      else (PolyML.Compiler.prompt1 := \"\";
-            PolyML.Compiler.prompt2 := \"\";
+      else (PolyML.Compiler.prompt1 := "";
+            PolyML.Compiler.prompt2 := "";
             PolyML.print_depth 0;
             qd := true)
   end
