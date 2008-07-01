@@ -65,8 +65,9 @@ fun quote_to_strings q = let (* turns a quote `...` into a list of strings *)
   fun lines [] [] = [] 
     | lines xs [] = [implode (strip_space (rev xs))]
     | lines xs (y::ys) = 
-        if y = #"\n" then implode (strip_space (rev xs)) :: lines [] ys 
-                     else lines (y::xs) ys   
+        if mem y [#"\n",#"|"] 
+        then implode (strip_space (rev xs)) :: lines [] ys 
+        else lines (y::xs) ys   
   val ys = (rev o strip_space o rev o strip_space o strip_comments 0) xs
   in lines [] ys end;  
 
@@ -174,7 +175,10 @@ fun ABBREV_POSTS dont_abbrev_list prefix th = let
     val xs = list_dest dest_star q
     fun next_abbrev [] = hd [] 
       | next_abbrev (tm::xs) = 
-      if is_var (cdr tm) handle e => false then next_abbrev xs else 
+      if (is_var (cdr tm) andalso (name_for_abbrev tm = fst (dest_var (cdr tm))))
+         handle e => false then next_abbrev xs else 
+      if (prefix ^ (name_for_abbrev tm) = fst (dest_var (cdr tm))) 
+         handle e => false then next_abbrev xs else 
       if can dest_sep_hide tm then next_abbrev xs else 
       if dont_abbrev (car tm) then next_abbrev xs else
         (prefix ^ name_for_abbrev tm,tm)
@@ -236,10 +240,11 @@ fun derive_individual_specs tools (code:string list) = let
       val _ = print ":"
       in (n+1,(ys @ [(n,(th,i,j),NONE)])) end
     else let
+      val _ = print ("  "^instruction^":")
       val i = int_to_string n
       val g = RW [precond_def] o ABBREV_ALL dont_abbrev_list ("s"^i^"@")
       val (x,y) = pair_apply g (f instruction)
-      val _ = print "."
+      val _ = print ".\n"
       in (n+1,(ys @ [(n,x,y)])) end
   val _ = print "\nDeriving specifications for individual instructions.\n"
   val res = snd (foldl get_specs (1,[]) code)
@@ -626,14 +631,17 @@ fun unhide_pre_elements thms tools = let
   val thms = map show_pre_for_thm thms
   in thms end;
 
-val INSERT_INSERT_UNION = prove(
-  ``x INSERT y INSERT s = {x} UNION (y INSERT s)``,
-  REWRITE_TAC [GSYM INSERT_SING_UNION]);
-
-val fix_code_conv = 
-  REWRITE_CONV [INSERT_INSERT_UNION] THENC
-  SIMP_CONV bool_ss [AC UNION_COMM UNION_ASSOC] THENC
-  REWRITE_CONV [INSERT_UNION_EQ,UNION_EMPTY,INSERT_INSERT]
+fun sort_code c = let
+  val c = (cdr o concl o REWRITE_CONV [INSERT_UNION_EQ,UNION_EMPTY]) c handle e => c 
+  val xs = list_dest pred_setSyntax.dest_insert c
+  fun measure tm = (numSyntax.int_of_term o cdr o cdr o fst o dest_pair) tm handle e => 0
+  val xs = sort (fn x => fn y => measure x < measure y) xs
+  fun all_distinct [] = []
+    | all_distinct (x::xs) = x :: all_distinct (filter (fn y => not (x = y)) xs)
+  val xs = all_distinct xs
+  val xs = filter (not o pred_setSyntax.is_empty) xs
+  val c = foldr pred_setSyntax.mk_insert (pred_setSyntax.mk_empty(type_of (hd xs))) xs
+  in c end
 
 fun fill_preconditions thms = let
   (* extract list of pre elements from each theorem *)
@@ -655,15 +663,15 @@ fun fill_preconditions thms = let
   fun select_code (m,p,c,q) = c
   val cs = map (select_code o dest_spec o concl o fst) thms  
   val c = foldr pred_setSyntax.mk_union (hd cs) (tl cs)
-  val cc = (cdr o concl o fix_code_conv) c
+  val cc = sort_code c
   fun fix_code (th,loop) = let
     val th = SPEC cc (MATCH_MP SPEC_SUBSET_CODE th)
-    val rw = [INSERT_SUBSET,EMPTY_SUBSET,UNION_SUBSET,IN_INSERT]
-    val th = CONV_RULE ((RATOR_CONV o RAND_CONV) (SIMP_CONV bool_ss rw)) th
-    in (MP th TRUTH,loop) end
+    val tm = (fst o dest_imp o concl) th
+    val lemma = prove(tm,REWRITE_TAC [INSERT_SUBSET,IN_INSERT,NOT_IN_EMPTY,EMPTY_SUBSET])
+    in (MP th lemma,loop) end
   val thms = map fix_code thms
   in thms end;
-   
+
 fun get_input_list def = 
   (cdr o cdr o car o snd o dest_conj o concl o SPEC_ALL) def handle e => ``()``;
 
@@ -674,7 +682,9 @@ fun get_output_list def = let
     | ftree2res (FUN_LET (tm,tn,x)) = ftree2res x 
     | ftree2res (FUN_COND (tm,x)) = ftree2res x
   val res = filter (fn x => pairSyntax.is_pair x orelse is_var x) (ftree2res t)
-  in hd res end;
+  val result = dest_tuple (hd res)
+  fun deprime x = mk_var(replace_char #"'" "" (fst (dest_var x)), type_of x) handle e => x
+  in pairSyntax.list_mk_pair(map deprime result) end;
 
 fun hide_pre_post_elements thms def tools = let
   val (_,_,pc) = tools
@@ -741,12 +751,14 @@ fun prove_correspondence tools def thms = let
   (* unhide all preconditions except status bits *)
   val thms = unhide_pre_elements thms tools 
   (* make sure all preconditions mention the same resources *)
+  val _ = print " - sorting code\n"
   val thms = fill_preconditions thms
   (* hide irrelevant pre and post elements *)  
   val thms = hide_pre_post_elements thms def tools
   (* sort theorems *)  
   val thms = sort_sep_elements thms 
   (* generate pre- and postconditions *)
+  val _ = print " - generating specification\n"
   val (pre_tm,post_tm) = get_pre_post_terms thms def
   (* construct the spec *)
   val conv = SIMP_CONV (bool_ss++tailrec_top_ss()) []
@@ -765,12 +777,15 @@ fun prove_correspondence tools def thms = let
   val rw = map (REWRITE_RULE [SPEC_MOVE_COND] o DISCH_ALL o 
                 SIMP_RULE (bool_ss++sep_cond_ss) [] o fst) thms
   val goal = concl (UNDISCH th)
+  val _ = print " - proving specification\n"
   val result = prove(goal,
 (*
   set_goal([],goal)
 *)
     MATCH_MP_TAC th THEN STRIP_TAC THEN SIMP_TAC bool_ss [FORALL_PROD]
     THEN SIMP_TAC (std_ss++tailrec_top_ss()) [LET_DEF]
+    THEN ONCE_REWRITE_TAC [tailrecTheory.TAILREC_PRE_THM]
+    THEN SIMP_TAC std_ss []
     THEN SIMP_TAC (std_ss++tailrec_part_ss()) [LET_DEF]
     THEN REPEAT STRIP_TAC THEN REPEAT (POP_ASSUM MP_TAC)
     THEN REPEAT CASES_ON_COND_TAC
@@ -807,7 +822,7 @@ fun prepare_for_reuse n (th,i,j) = let
   in (n,(ABBREV_CALL prefix th,i,j),NONE) end;
 
 fun decompile (tools :decompiler_tools) name (qcode :term quotation) = let
-  val code = quote_to_hex_list qcode
+  val code = filter (fn x => not (x = "")) (quote_to_hex_list qcode)
   val thms = derive_individual_specs tools code
   val defs = TRUTH
   val index = 1

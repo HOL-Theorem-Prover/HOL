@@ -159,6 +159,18 @@ val tm3 = ``\x. (x : ('c,'d) (\'a 'b. ('a,'b)'M),
 val tm4 = ``\x. (x : ('c,'d) (\'a 'b:ar 2. ('a,'b)'M),
                  x : ('c,'d) (\'b:ar 1 'a. ('b,'a)'M))``;
 
+val ty1 =
+ ``:('c:ar 1, 'd:ar 2)
+    (\('a:ar 1) ('b:ar 2). ('a:ar 1, 'b:ar 2) ('M:ar 1 => ar 2 => ty))``
+and ty2 =
+ ``:('c:ar 1, 'd:ar 2)
+    (\('b:ar 1) ('a:ar 2). ('b:ar 1, 'a:ar 2) ('M:ar 1 => ar 2 => ty))``;
+
+(*
+aconv_ty ty1 ty2;
+abconv_ty ty1 ty2;
+*)
+
 
 (* ----------------------------------------------------------------- *
  * The next examples fail to type-check if type checking does not    *
@@ -282,11 +294,13 @@ val monad_def = new_definition("monad_def", Term
               = bind[:'b,'c:] (bind[:'a,'b:] m (\a. k a)) (\b. h b))
      `);
 
-``I : 'a -> 'a I``;
+val _ = ``I : 'a -> 'a I``;
 
-``\:'a. I : 'a -> 'a I``;
+val _ = ``\:'a. I : 'a -> 'a I``;
 
+(*
 g `monad ((\:'a. I) : !'a.'a -> 'a I, (\:'a 'b. \(x:'a I) (f:'a -> 'b I). f x))`;
+*)
 
 
 val _ = export_theory();

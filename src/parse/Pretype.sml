@@ -813,12 +813,20 @@ fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
          unify_var ty2 >- (fn ty2' =>
          bvar_unify ty1' ty2'))
   fun beta_conv_ty_m f ty1 ty2 m =
+     let val ty1' = deep_beta_conv_ty ty1
+         val ty2' = deep_beta_conv_ty ty2
+     in if eq ty1 ty1' andalso eq ty2 ty2'
+        then m (* do m if beta_conversion did not change the types *)
+        else f ty1' ty2'
+     end
+(*
      let val (ty1',red1) = (beta_conv_ty ty1,true) handle HOL_ERR _ => (ty1,false)
          val (ty2',red2) = (beta_conv_ty ty2,true) handle HOL_ERR _ => (ty2,false)
      in if red1 orelse red2
         then f ty1' ty2'
         else m
      end
+*)
 in
   case (t1, t2) of
     (UVar (r as ref (NONEU(kd,rk))), _) => kind_unify kd (pkind_of ty2) >>

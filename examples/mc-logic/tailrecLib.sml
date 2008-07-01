@@ -112,6 +112,7 @@ fun tailrec_define tm side_tm = let
     THEN Cases_on [ANTIQUOTE ((fst o dest_eq o concl o SPEC_ALL) guard)]
     THEN FULL_SIMP_TAC (std_ss++helperLib.pbeta_ss) [base,step,guard,f_def,LET_DEF])
   val th = CONJ pre_th th
+  val _ = save_thm(name,th)
   (* update simpsets *)
   val top = rewrites [f_def,pre_f_def]
   val part = rewrites [step,base,guard,side]

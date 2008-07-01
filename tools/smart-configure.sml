@@ -1,6 +1,6 @@
 quietdec := true;
 app load ["Mosml", "Process", "Path", "FileSys", "Timer", "Real", "Int",
-          "Bool", "OS"] ;
+          "Bool", "OS", "CommandLine"] ;
 open Mosml;
 
 (* utility functions *)
@@ -78,7 +78,13 @@ end;
 
 determining "mosmldir";
 
-val mosmldir = let
+fun check_mosml candidate = let
+  open FileSys
+in
+  access(Path.concat(candidate,"mosml"), [A_EXEC])
+end
+
+fun mosml_from_loadpath () = let
   val libdir = hd (!Meta.loadPath)
   val {arcs, isAbs, vol} = Path.fromString libdir
   val _ = isAbs orelse
@@ -93,9 +99,36 @@ val mosmldir = let
   val candidate =
       Path.toString {arcs = arcs' @ ["bin"], isAbs = true, vol = vol}
 in
-  candidate
+  if check_mosml candidate then candidate
+  else (print "\nCan't find mosml -- hope you have it in a \
+              \config-override file\n";
+        "")
 end;
 
+fun dirify {arcs,isAbs,vol} =
+    OS.Path.toString {arcs = #1 (frontlast arcs), isAbs = isAbs, vol = vol}
+
+val mosmldir = let
+  val nm = CommandLine.name()
+  val p as {arcs, isAbs, vol} = OS.Path.fromString nm
+  val cand =
+      if isAbs then SOME (dirify p)
+      else if length arcs > 1 then
+        SOME (OS.Path.mkAbsolute (dirify p, OS.FileSys.getDir()))
+      else (* examine PATH variable *)
+        case OS.Process.getEnv "PATH" of
+          NONE => NONE
+        | SOME elist => let
+            val sep = case OS of "winNT" => #";" | _ => #":"
+            val search_these = String.fields (fn c => c = sep) elist
+          in
+            List.find check_mosml search_these
+          end
+in
+  case cand of
+    NONE => mosml_from_loadpath ()
+  | SOME c => if check_mosml c then c else mosml_from_loadpath ()
+end;
 
 determining "holdir";
 

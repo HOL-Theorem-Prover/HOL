@@ -88,7 +88,7 @@ val ss = rewrites [x86_execute_def, x86_exec_def, LOCAL_def,
   eval_cond_def, x86_exec_def, x86_execute_def, option_parallel_def,
   opt_monop_the_def, opt_cond_def, opt_s_pop_def, if_some_lemma,
   XREAD_MEM_BYTES_thm, EVERY_DEF, word2bytes_thm, WORD_MULT_CLAUSES,
-  WORD_ADD_0, GSYM WORD_ADD_ASSOC, word_add_n2w, MAP, Xcond_distinct,
+  WORD_ADD_0, GSYM WORD_ADD_ASSOC, MAP, Xcond_distinct,
   APPLY_UPDATE_THM, option_fail_def, Xeflags_distinct];
 
 val else_none_conv = 
@@ -97,7 +97,9 @@ val else_none_conv =
               in INST i (INST_TYPE t else_none_lemma) end) end;
 
 fun ia32_step s = let
+  val _ = print (" decoding")
   val th = ia32_decode s
+  val _ = print (", executing")
   val tm = (fst o dest_eq o fst o dest_imp o concl) th
   val th1 = SIMP_CONV (std_ss++ss++wordsLib.SIZES_ss) [] tm;
   fun cc th = CONV_RULE (ONCE_DEPTH_CONV else_none_conv) th handle e => th
@@ -106,14 +108,31 @@ fun ia32_step s = let
   val th1 = SIMP_RULE std_ss [WORD_OR_IDEM, LET_DEF] (DISCH_ALL (cc th1))
   val th1 = SIMP_RULE std_ss [WORD_OR_IDEM, LET_DEF] (DISCH_ALL (cc th1))
   val th1 = DISCH_ALL (MATCH_MP th (UNDISCH_ALL th1))
-  val th1 = SIMP_RULE bool_ss [pull_if_lemma, pairTheory.SND] th1
+  val th1 = SIMP_RULE bool_ss [pull_if_lemma, pairTheory.SND,WORD_ADD_ASSOC] th1
   in REWRITE_RULE [AND_IMP_INTRO,GSYM CONJ_ASSOC] (DISCH_ALL th1) end;
 
 (*
 
   test cases:
 
-val s = "0538000000"
+  val s = "8B7204";          (* mov esi,[edx+4] *)
+
+  val th = ia32_step "F7C203000000";    (* test edx,3 *)
+  val th = ia32_step "751D";            (* jne L1 *)
+  val th = ia32_step "8B2A";            (* mov ebp,[edx] *)
+  val th = ia32_step "89EE";            (* mov esi,ebp *)
+  val th = ia32_step "81E603000000";    (* and esi,3 *)
+  val th = ia32_step "4E";              (* dec esi *)
+  val th = ia32_step "740D";            (* je L2 *)
+  val th = ia32_step "8B7204";          (* mov esi,[edx+4] *)
+  val th = ia32_step "8929";            (* mov [ecx],ebp *)
+  val th = ia32_step "897104";          (* mov [ecx+4],esi *)
+  val th = ia32_step "89CD";            (* mov ebp,ecx *)
+  val th = ia32_step "45";              (* inc ebp *)
+  val th = ia32_step "892A";            (* mov [edx],ebp *)
+  val th = ia32_step "89EA";            (* L2: mov edx,ebp *)
+  val th = ia32_step "4A";              (* dec edx *)
+
 
   val th = ia32_step "0538000000";      (* add eax,56 *)
   val th = ia32_step "810037020000";    (* add dword [eax],567 *)

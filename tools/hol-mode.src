@@ -738,9 +738,9 @@ argument N, sets the trace to that value in particular."
   (hol-toggle-var "Globals.show_assums"))
 
 (defun hol-toggle-quietdec ()
-  "Toggles the ML \"meta\" variable, quietdec."
+  "Toggles quiet declarations in the interactive system."
   (interactive)
-  (hol-toggle-var "Meta.quietdec"))
+  (send-raw-string-to-hol "HOL_Interactive.toggle_quietdec()"))
 
 (defun hol-toggle-show-times()
   "Toggles the elisp variable 'hol-emit-time-elapsed-p."

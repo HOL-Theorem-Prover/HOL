@@ -60,7 +60,9 @@ val UNABBREV_ALL_RULE = REWRITE_RULE [markerTheory.Abbrev_def] o
   in REWRITE_RULE [] (INST [x|->y] th) end) o SPEC_ALL;
 
 fun arm_step s = let
+  val _ = print (" decoding")
   val (tm,enc_th) = arm_decode s
+  val _ = print (", executing")
   val tm2 = repeat (fst o dest_comb) tm
   val thms = filter (can (find_term (can (match_term tm2))) o concl) arm_rule_thms
   fun format th = let

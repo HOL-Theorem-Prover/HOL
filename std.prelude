@@ -152,6 +152,10 @@ val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
                            ())
         else ()
 
+structure HOL_Interactive = struct
+  fun toggle_quietdec () = (Meta.quietdec := not (!Meta.quietdec))
+end
+
 (* Local variables: *)
 (* mode: sml *)
 (* end: *)

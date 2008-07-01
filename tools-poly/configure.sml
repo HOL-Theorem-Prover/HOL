@@ -31,16 +31,6 @@
 
 val _ = PolyML.print_depth 0;
 
-(* the poly-includes.ML file must include
-     val poly = "<path to poly executable>"
-     val polymllibdir = "<path to directory containing poly's lib files>"
-*)
-val _ = if OS.FileSys.access ("poly-includes.ML", [OS.FileSys.A_READ]) then
-          use "poly-includes.ML"
-        else
-          (print "No poly-includes.ML file!\n";
-           OS.Process.exit OS.Process.failure)
-
 val CC:string       = "gcc";      (* C compiler                       *)
 val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
@@ -262,7 +252,7 @@ local
   val toolsdir = fullPath [holdir, "tools-poly"]
   val lexdir = fullPath [holdir, "tools", "mllex"]
   val yaccdir = fullPath [holdir, "tools", "mlyacc"]
-  val qfdir = fullPath [toolsdir, "quote-filter"]
+  val qfdir = fullPath [holdir, "tools", "quote-filter"]
   val hmakedir = fullPath [toolsdir, "Holmake"]
   val hmakebin = fullPath [holdir, "bin", "Holmake"]
   val buildbin = fullPath [holdir, "bin", "build"]
@@ -368,8 +358,8 @@ end;
 val _ =
  let open TextIO
      val _ = echo "Making hol-mode.el (for Emacs/XEmacs)"
-     val src = fullPath [holdir, "tools-poly", "hol-mode.src"]
-    val target = fullPath [holdir, "tools-poly", "hol-mode.el"]
+     val src = fullPath [holdir, "tools", "hol-mode.src"]
+    val target = fullPath [holdir, "tools", "hol-mode.el"]
  in
     fill_holes (src, target)
       ["(defvar hol-executable HOL-EXECUTABLE\n"

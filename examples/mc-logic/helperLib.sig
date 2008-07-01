@@ -50,5 +50,6 @@ sig
     val PRE_CONV               : conv -> conv
     val FORCE_PBETA_CONV       : conv
     val INST_SPEC              : thm -> thm -> thm
+    val EXISTS_PRE             : term frag list -> thm -> thm
 
 end

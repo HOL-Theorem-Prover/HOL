@@ -1484,10 +1484,11 @@ local
       not (Substring.isEmpty s)
     end
     fun c_appthis c = let
-      val cn = #Name (dest_thy_const c)
+      val {Name, Thy, ...} = dest_thy_const c
     in
-      if is_substring safepfx cn then
-        Theory.delete_const cn
+      if is_substring safepfx Name then
+        (Parse.temp_remove_ovl_mapping Name {Name = Name, Thy = Thy};
+         Theory.delete_const Name)
       else ()
     end
 

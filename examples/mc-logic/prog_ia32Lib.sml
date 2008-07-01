@@ -40,7 +40,7 @@ val rewrite_reg_and_bit_names = rewrite_bit_names o rewrite_reg_names
 
 fun pre_process_thm th = let
   val th = Q.INST [`r`|->`xr`,`f`|->`xf`,`e`|->`xe`,`m`|->`xm`] th
-  val th = SIMP_RULE std_ss [word_arith_lemma1,XREAD_MEM_def] th
+  val th = SIMP_RULE std_ss [XREAD_MEM_def] th
   val xs = find_terml (can (match_term ``(THE p):'a``)) (concl th)
   val ys = map (snd o dest_comb) xs
   fun f tm = 
@@ -63,9 +63,13 @@ fun ia32_pre_post g s = let
   val mems2 = find_terml (can (match_term ``(xm:word32->word8 option x = SOME y)``)) h
   val select_address1 = snd o dest_comb o fst o dest_eq o snd o dest_comb
   val select_address2 = snd o dest_comb o fst o dest_eq
+  fun simp tm = 
+    (cdr o concl o SIMP_CONV std_ss [GSYM wordsTheory.WORD_ADD_ASSOC,word_arith_lemma1]) tm
+    handle e => tm
   val mems3 = map select_address1 mems1 @ map select_address2 mems2
   val mems = filter (fn x => not (``xe:word32`` = (cdr (car x) handle e => x))) mems3
   val assignments = find_terml (can (match_term ``x:'a =+ y:'b``)) h
+  val assignments = map simp assignments
   val assignments = map ((fn (x,y) => (snd (dest_comb x),y)) o dest_comb) assignments  
   fun get_assigned_value_aux x y [] = y
     | get_assigned_value_aux x y ((q,z)::zs) = 
@@ -73,7 +77,7 @@ fun ia32_pre_post g s = let
   fun get_assigned_value x y = get_assigned_value_aux x y assignments
   fun mk_pre_post_assertion x = let
     val (y,z) = process x
-    val q = get_assigned_value x z
+    val q = get_assigned_value (simp x) z
     in (mk_comb(y,z),mk_comb(y,q)) end   
   val pre_post = map mk_pre_post_assertion (regs @ bits @ mems) 
   val pre = list_mk_star (map fst pre_post) ``:ia32_set -> bool``
@@ -150,6 +154,9 @@ fun post_process_thm th = let
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w,SEP_CLAUSES] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
   val th = introduce_xMEMORY th
+  val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [GSYM wordsTheory.WORD_ADD_ASSOC,
+    word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4] th
+  val th = CONV_RULE FIX_WORD32_ARITH_CONV th
   in calculate_length_and_jump th end;
 
 fun calc_code s = let
@@ -192,13 +199,14 @@ fun ia32_prove_one_spec th c = let
     \\ NTAC 3 (FLIP_TAC \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO])
     \\ FLIP_TAC \\ REWRITE_TAC [AND_IMP_INTRO, GSYM CONJ_ASSOC] 
     \\ SIMP_TAC std_ss [] \\ FLIP_TAC \\ STRIP_TAC \\ STRIP_TAC 
-    THEN1 (FLIP_TAC \\ MATCH_MP_TAC th \\ 
+    THEN1 (FLIP_TAC \\ MATCH_MP_TAC (REWRITE_RULE [GSYM ALIGNED_def] th) \\ 
            FULL_SIMP_TAC std_ss [ALIGNED_def,word_arith_lemma1,CONTAINER_def])    
-    \\ ASM_SIMP_TAC std_ss [UPDATE_ia32_2set'',ALIGNED_CLAUSES])
+    \\ FULL_SIMP_TAC std_ss [UPDATE_ia32_2set'',word_arith_lemma1,ALIGNED_CLAUSES])
   in RW [STAR_ASSOC] th end;
 
 fun ia32_prove_specs s = let
   val th = ia32_step s
+  val _ = print ", deriving"
   val th = pre_process_thm th
   val (c,thms) = calc_code s
   val th = RW thms th
@@ -216,18 +224,37 @@ fun ia32_prove_specs s = let
          in post_process_thm th1 end
        in (prove_branch CONTAINER_IF_T th, SOME (prove_branch CONTAINER_IF_F th)) end
      else (post_process_thm (ia32_prove_one_spec th c),NONE) end
-       
+
 val ia32_spec = cache ia32_prove_specs;
 val ia32_tools = (ia32_spec, ia32_status, ia32_pc)
 
 (*
 
-val res = ia32_spec "813337020000";  (* xor dword [ebx],567 *)
-val res = ia32_spec "310B";          (* xor [ebx], ecx *)
-val res = ia32_spec "40";            (* inc eax *)
-val res = ia32_spec "E2FD";          (* loop L *)
-val res = ia32_spec "8B36";          (* mov esi, [esi] *)
-val res = ia32_spec "EBF7";          (* jmp L1 *)
+  val th = ia32_spec "F7C203000000";    (* test edx,3 *)
+  val th = ia32_spec "751D";            (* jne L1 *)
+  val th = ia32_spec "8B2A";            (* mov ebp,[edx] *)
+  val th = ia32_spec "89EE";            (* mov esi,ebp *)
+  val th = ia32_spec "81E603000000";    (* and esi,3 *)
+  val th = ia32_spec "4E";              (* dec esi *)
+  val th = ia32_spec "740D";            (* je L2 *)
+  val th = ia32_spec "8B7204";          (* mov esi,[edx+4] *)
+  val th = ia32_spec "8929";            (* mov [ecx],ebp *)
+  val th = ia32_spec "897104";          (* mov [ecx+4],esi *)
+  val th = ia32_spec "89CD";            (* mov ebp,ecx *)
+  val th = ia32_spec "45";              (* inc ebp *)
+  val th = ia32_spec "892A";            (* mov [edx],ebp *)
+  val th = ia32_spec "89EA";            (* L2: mov edx,ebp *)
+  val th = ia32_spec "4A";              (* dec edx *)
+
+  val th = ia32_spec "813337020000";  (* xor dword [ebx],567 *)
+  val th = ia32_spec "310B";          (* xor [ebx], ecx *)
+  val th = ia32_spec "40";            (* inc eax *)
+  val th = ia32_spec "E2FD";          (* loop L *)
+  val th = ia32_spec "8B36";          (* mov esi, [esi] *)
+  val th = ia32_spec "EBF7";          (* jmp L1 *)
+
+  val th = ia32_spec "0F44C1";        (* cmove eax, ecx *)
+
 
 *)
 
