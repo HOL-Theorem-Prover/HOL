@@ -108,11 +108,13 @@ end;
 
 determining "poly";
 
-fun check_poly candidate = let
+fun check_dir nm privs candidate = let
   open OS.FileSys
 in
-  access(OS.Path.concat(candidate,"poly"), [A_EXEC])
+  access(OS.Path.concat(candidate,nm), privs)
 end
+val check_poly = check_dir "poly" [OS.FileSys.A_EXEC]
+val check_libpoly = check_dir "libpolymain.a" [OS.FileSys.A_READ]
 
 val poly = let
   val nm = CommandLine.name()
@@ -140,18 +142,28 @@ in
                     "")
 end;
 
-
-determining "dynlib_available";
-
-(*
-val dynlib_available = (load "Dynlib"; true) handle _ => false;
-*)
+val polymllibdir = 
+    if poly <> "" then let 
+        val _ = determining "polymllibdir"
+        val p as {arcs,isAbs,vol} = OS.Path.fromString poly
+        val (dirname, _) = frontlast arcs
+        val (parent, probably_bin) = frontlast dirname
+        val _ = if probably_bin <> "bin" then 
+                  print "Surprised that poly is not in a \"bin\" directory\n"
+                else ()
+        val candidate = OS.Path.toString { arcs = parent @ ["lib"], vol = vol,
+                                           isAbs = isAbs }
+      in
+        if check_libpoly candidate then candidate
+        else (print "Couldn't find libpolymain.a in sister lib directory"; 
+              "")
+      end
+    else "";
 
 val dynlib_available = false;
 
 print "\n";
 
-val polymllibdir = "";
 val _ = let
   val override = OS.Path.concat(holdir, "tools-poly/poly-includes.ML")
 in
