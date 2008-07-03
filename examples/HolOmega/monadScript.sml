@@ -167,6 +167,10 @@ and ty2 =
     (\('b:ar 1) ('a:ar 2). ('b:ar 1, 'a:ar 2) ('M:ar 1 => ar 2 => ty))``;
 
 (*
+trace ("debug_pretype",1)
+      Term `\x. (x : ('c,'d) (\'a 'b:ar 2. ('a,'b)'M),
+                 x : ('c,'d) (\'b:ar 1 'a. ('b,'a)'M))`;
+traces();
 aconv_ty ty1 ty2;
 abconv_ty ty1 ty2;
 *)
@@ -177,13 +181,13 @@ abconv_ty ty1 ty2;
  * include type beta-reduction of type beta-redexes during checking. *
  * ----------------------------------------------------------------- *)
 
-(*
+
 val tm1 = ``\x. (x : 'a (\'b. 'b), x : 'a)`` handle e => Raise e;
 val tm2 = ``\x. (x : 'a I, x : 'a)`` handle e => Raise e;
-*)
+
 
 val _ = set_trace "kinds" 2;
-
+val _ = set_trace "kinds" 1;
 val _ = set_trace "kinds" 0;
 
 (*---------------------------------------------------------------------------

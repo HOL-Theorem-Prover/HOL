@@ -14,6 +14,7 @@ val typ : prekind
 val ==> : prekind * prekind -> prekind
 val mk_arity : int -> prekind
 val prekind_compare : prekind * prekind -> order
+val prekind_to_string : prekind -> string
 
 val kindvars : prekind -> string list
 val new_uvar : unit -> prekind

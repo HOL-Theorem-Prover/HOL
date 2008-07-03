@@ -11,6 +11,10 @@ infix >> >-;
   type pretyvar = string * prekind * prerank
   type tyvar = Type.tyvar
 
+val debug = ref 0
+val _ = Feedback.register_trace("debug_pretype", debug, 1)
+fun is_debug() = (!debug) > 0;
+
 val TCERR = mk_HOL_ERR "Pretype";
 val ERRloc = mk_HOL_ERRloc "Pretype"
 
@@ -175,7 +179,15 @@ fun is_var_type(PT(Vartype v,loc)) = true
   | is_var_type _ = false
 
 fun dest_var_type(PT(Vartype v,loc)) = v
+  | dest_var_type(PT(UVar(ref(SOMEU ty)),loc)) = dest_var_type ty
   | dest_var_type _ = raise TCERR "dest_var_type" "not a type variable";
+
+fun the_var_type(ty as PT(Vartype v,loc)) = ty
+  | the_var_type(PT(TyKindConstr{Ty,Kind},loc)) = the_var_type Ty
+  | the_var_type(PT(TyRankConstr{Ty,Rank},loc)) = the_var_type Ty
+  | the_var_type(PT(UVar(ref(SOMEU ty)),loc))   = the_var_type ty
+  | the_var_type(ty as PT(UVar(ref(NONEU _)),loc)) = ty
+  | the_var_type _ = raise TCERR "the_var_type" "not a type variable";
 
 fun mk_app_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyApp(ty1,ty2), locn.between loc1 loc2)
@@ -197,6 +209,12 @@ fun mk_abs_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
 fun dest_abs_type(PT(UVar(ref(SOMEU ty)),loc)) = dest_abs_type ty
   | dest_abs_type(ty as PT(TyAbst(ty1,ty2),loc)) = (ty1,ty2)
   | dest_abs_type _ = raise TCERR "dest_abs_type" "not a type abstraction";
+
+fun the_abs_type(PT(UVar(ref(SOMEU ty))  ,loc)) = the_abs_type ty
+  | the_abs_type(PT(TyKindConstr{Ty,Kind},loc)) = the_abs_type Ty
+  | the_abs_type(PT(TyRankConstr{Ty,Rank},loc)) = the_abs_type Ty
+  | the_abs_type(ty as PT(TyAbst(ty1,ty2),loc)) = ty
+  | the_abs_type _ = raise TCERR "the_abs_type" "not a type abstraction";
 
 (* returns a list of strings, names of all kind variables mentioned *)
 fun kindvars (PT (ty, loc)) =
@@ -252,7 +270,7 @@ local fun TV (v as PT(Vartype _,_)) B A k = if mem v B then k A
         | TV (PT(TyAbst(v,ty),_)) B A k   = TV ty (Lib.insert v B) A k
         | TV (PT(TyKindConstr{Ty,Kind},_)) B A k = TV Ty B A k
         | TV (PT(TyRankConstr{Ty,Rank},_)) B A k = TV Ty B A k
-        | TV (PT(UVar(ref(NONEU _)),_)) B A k = k A
+        | TV (PT(UVar(ref(NONEU _ )),_)) B A k = k A
         | TV (PT(UVar(ref(SOMEU ty)),_)) B A k = TV ty B A k
       and TVl (ty::tys) B A k             = TV ty B A (fn q => TVl tys B q k)
         | TVl _ B A k = k A
@@ -273,15 +291,15 @@ fun type_vars_subst (theta : (pretype,pretype)Lib.subst) = type_varsl (map #resi
  * confusing formulas occasionally being displayed in interactive sessions.  *
  *---------------------------------------------------------------------------*)
 
-fun gen_variant P caller =
+fun gen_variant caller =
   let fun var_name (PT(Vartype(Name,_,_),_)) = Name
         | var_name _ = raise ERR caller "not a variable"
       fun vary vlist (PT(Vartype(Name,Kind,Rank),locn)) =
           let val L = map var_name vlist
               val next = Lexis.gen_variant Lexis.tyvar_vary L
               fun loop name =
-                 let val s = next name
-                 in if P s then loop s else s
+                 let val s = if mem name L then next name else name
+                 in s
                  end
           in PT(Vartype(loop Name, Kind, Rank),locn)
           end
@@ -289,7 +307,7 @@ fun gen_variant P caller =
   in vary
   end;
 
-val variant_type       = gen_variant (K false) "variant_type";
+val variant_type       = gen_variant "variant_type";
 
 
 val op ==> = Prekind.==>
@@ -344,6 +362,40 @@ fun apply_subst subst (pt as PT (pty, locn)) =
         NONE => pt
       | SOME (_, value) => apply_subst subst value
 
+
+(*---------------------------------------------------------------------------*
+ *    Converting pretypes to strings, for printing.                          *
+ *---------------------------------------------------------------------------*)
+
+fun kind_rank_to_string (kd,rk) =
+      let open Prekind Prerank
+      in   (if prekind_compare(kd,typ) = EQUAL
+            then "" else "::" ^ prekind_to_string kd)
+         ^ (if prerank_compare(rk,Zerorank) = EQUAL
+            then "" else ":<=" ^ prerank_to_string rk)
+      end
+
+fun pretype_to_string (ty as PT(ty0,locn)) =
+  case ty0 of
+    UVar(ref (SOMEU ty')) => pretype_to_string ty'
+  | UVar(ref (NONEU(kd,rk))) => "<uvar>" ^ kind_rank_to_string(kd,rk)
+  | Vartype(s,kd,rk) => s ^ kind_rank_to_string(kd,rk)
+  | Contype {Thy, Tyop, Kind, Rank} => Tyop (* ^ kind_rank_to_string(Kind,Rank) *)
+  | TyApp(PT(TyApp(PT(Contype{Tyop="fun",...},_), ty1),_), ty2)
+                    => "(" ^ pretype_to_string ty1 ^ " -> " ^ pretype_to_string ty2 ^ ")"
+  | TyApp(ty1, ty2) => "(" ^ pretype_to_string ty2 ^ " " ^ pretype_to_string ty1 ^ ")"
+  | TyUniv(tyv, ty) => "!"  ^ pretype_to_string tyv ^ ". " ^ pretype_to_string ty
+  | TyAbst(tyv, ty) => "\\" ^ pretype_to_string tyv ^ ". " ^ pretype_to_string ty
+  | TyKindConstr {Ty, Kind} => pretype_to_string Ty ^ " : " ^ kind_to_string(Prekind.toKind Kind)
+  | TyRankConstr {Ty, Rank} => pretype_to_string Ty ^ " :<= " ^ Int.toString(Prerank.toRank Rank)
+
+fun pretypes_to_string tys = "[" ^ pretypes_to_string0 tys ^ "]"
+and pretypes_to_string0 [ty] = pretype_to_string ty
+  | pretypes_to_string0 (ty::tys) = pretype_to_string ty ^ ","
+                                     ^ pretypes_to_string0 tys
+  | pretypes_to_string0 [] = ""
+
+
 (*---------------------------------------------------------------------------*
  *    Replace arbitrary subpretypes in a pretype. Renaming.                  *
  *---------------------------------------------------------------------------*)
@@ -351,14 +403,14 @@ fun apply_subst subst (pt as PT (pty, locn)) =
 val emptysubst:(pretype,pretype)Binarymap.dict = Binarymap.mkDict compare
 local
   open Binarymap
-  val toRank = Prerank.toRank
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
-      addb t (if toRank(prank_of redex) >= toRank(prank_of residue)
+      addb t (if Prerank.leq (prank_of residue) (prank_of redex)
               then (insert(A,redex,residue),
                     is_var_type redex andalso b)
               else raise ERR "type_subst" "redex has lower rank than residue")
-  fun unloc_of (PT(ty,loc)) = ty
+  fun variant_ptype fvs v = if is_var_type v then variant_type fvs v else v
+  (* fun unloc_of (PT(ty,loc)) = ty *)
 in
 fun type_subst [] = I
   | type_subst theta =
@@ -368,24 +420,52 @@ fun type_subst [] = I
                (case peek(fmap,PT(v, locn.Loc_None)) of
                                      NONE => v
                                    | SOME (PT(y,_)) => y)
+          | vsubs0 fmap (v as UVar (ref(NONEU(kd,rk)))) =
+               (case peek(fmap,PT(v, locn.Loc_None)) of
+                                     NONE => v
+                                   | SOME (PT(y,_)) => y)
           | vsubs0 fmap (TyApp(opr,ty)) = TyApp(vsubs fmap opr, vsubs fmap ty)
           | vsubs0 fmap (TyUniv(Bvar,Body)) =
-               let val fvs = Lib.subtract (type_vars Body) [Bvar]
-                   val Bvar' = variant_type (Lib.union frees fvs) Bvar
-               in if eq Bvar Bvar' then TyUniv(Bvar, vsubs fmap Body)
-                  else TyUniv(Bvar', vsubs (insert(fmap,Bvar,Bvar')) Body)
+               let val Bvar1 = the_var_type Bvar
+                   val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
+                   val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
+               in if eq Bvar1 Bvar' then TyUniv(Bvar, vsubs fmap Body)
+                  else let val fmap' = insert(fmap,Bvar1,Bvar')
+                       in TyUniv(vsubs fmap' Bvar, vsubs fmap' Body)
+                       end
                end
           | vsubs0 fmap (TyAbst(Bvar,Body)) =
-               let val fvs = Lib.subtract (type_vars Body) [Bvar]
-                   val Bvar' = variant_type (Lib.union frees fvs) Bvar
-               in if eq Bvar Bvar' then TyAbst(Bvar, vsubs fmap Body)
-                  else TyAbst(Bvar', vsubs (insert(fmap,Bvar,Bvar')) Body)
+               let val Bvar1 = the_var_type Bvar
+(*
+                   val _ = if not(is_debug()) then () else
+                           print ("vsubs: Bvar1 = " ^
+                                  pretype_to_string Bvar1 ^ "\n")
+                   val _ = if not(is_debug()) then () else
+                           print ("vsubs: frees = " ^
+                                  pretypes_to_string frees ^ "\n")
+*)
+                   val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
+(*
+                   val _ = if not(is_debug()) then () else
+                           print ("vsubs: fvs   = " ^
+                                  pretypes_to_string fvs ^ "\n")
+*)
+                   val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
+(*
+                   val _ = if not(is_debug()) then () else
+                           print ("vsubs: Bvar' = " ^
+                                  pretype_to_string Bvar' ^ "\n")
+*)
+               in if eq Bvar1 Bvar' then TyAbst(Bvar, vsubs fmap Body)
+                  else let val fmap' = insert(fmap,Bvar1,Bvar')
+                       in TyAbst(vsubs fmap' Bvar, vsubs fmap' Body)
+                       end
                end
           | vsubs0 fmap (TyKindConstr{Ty,Kind}) =
                          TyKindConstr{Ty=vsubs fmap Ty,Kind=Kind}
           | vsubs0 fmap (TyRankConstr{Ty,Rank}) =
                          TyRankConstr{Ty=vsubs fmap Ty,Rank=Rank}
-          | vsubs0 fmap (UVar (r as ref(SOMEU ty))) = unloc_of (vsubs fmap ty)
+          | vsubs0 fmap (UVar (r as ref(SOMEU (PT(ty,_))))) = vsubs0 fmap ty
           | vsubs0 fmap t = t
         and vsubs fmap (PT(ty,locn)) = PT(vsubs0 fmap ty,locn)
 (*
@@ -404,9 +484,34 @@ fun type_subst [] = I
     end
 end;
 
-fun beta_conv_ty (PT(TyApp(M as PT(TyAbst(Bvar,Body), loc1), N), loc2))
-       = type_subst [Bvar |-> N] Body
-  | beta_conv_ty _ = raise ERR "beta_conv_ty" "not a type beta redex"
+local
+val BERR = ERR "beta_conv_ty" "not a type beta redex"
+in
+fun beta_conv_ty (PT(TyApp(M, N), _))
+       = let val _ = if not (is_debug()) then () else
+                     print ("beta_conv_ty: M = " ^ pretype_to_string M ^ "\n"
+                          ^ "              N = " ^ pretype_to_string N ^ "\n")
+             val (Bnd,Body) = dest_abs_type (the_abs_type M)
+                              handle HOL_ERR _ => raise BERR
+             val _ = if not (is_debug()) then () else
+                     print ("beta_conv_ty: Bnd  = " ^ pretype_to_string Bnd  ^ "\n"
+                          ^ "              Body = " ^ pretype_to_string Body ^ "\n")
+             val  Bvar      = the_var_type Bnd
+                              handle HOL_ERR _ => raise BERR
+             val _ = if not (is_debug()) then () else
+                     print ("beta_conv_ty: Bvar = " ^ pretype_to_string Bvar ^ "\n")
+             val _ = Prekind.unify (pkind_of N) (pkind_of Bvar);
+             val _ = Prerank.unify (prank_of N) (prank_of Bvar);
+             val _ = if not (is_debug()) then () else
+                     print ("beta_conv_ty: kind and rank unified; about to subst\n");
+             val Res = type_subst [Bvar |-> N] Body
+                       handle e => Raise e
+             val _ = if not (is_debug()) then () else
+                     print ("beta_conv_ty: Res  = " ^ pretype_to_string Res ^ "\n")
+         in Res
+         end
+  | beta_conv_ty _ = raise BERR
+end
 
 (* old version:
 local
@@ -672,28 +777,6 @@ val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
 
 
 
-fun kind_rank_to_string (kd,rk) =
-      let val kd1 = Prekind.toKind kd
-          val rk1 = Prerank.toRank rk
-      in   (if kd1 = typ then "" else ":" ^ kind_to_string kd1)
-         ^ (if rk1 = 0   then "" else ":<=" ^ Int.toString rk1)
-      end
-
-fun pretype_to_string (ty as PT(ty0,locn)) =
-  case ty0 of
-    UVar(ref (SOMEU ty')) => pretype_to_string ty'
-  | UVar(ref (NONEU(kd,rk))) => "<uvar>" ^ kind_rank_to_string(kd,rk)
-  | Vartype(s,kd,rk) => s ^ kind_rank_to_string(kd,rk)
-  | Contype {Thy, Tyop, Kind, Rank} => Tyop (* ^ kind_rank_to_string(Kind,Rank) *)
-  | TyApp(PT(TyApp(PT(Contype{Tyop="fun",...},_), ty1),_), ty2)
-                    => "(" ^ pretype_to_string ty1 ^ " -> " ^ pretype_to_string ty2 ^ ")"
-  | TyApp(ty1, ty2) => "(" ^ pretype_to_string ty2 ^ " " ^ pretype_to_string ty1 ^ ")"
-  | TyUniv(tyv, ty) => "!"  ^ pretype_to_string tyv ^ ". " ^ pretype_to_string ty
-  | TyAbst(tyv, ty) => "\\" ^ pretype_to_string tyv ^ ". " ^ pretype_to_string ty
-  | TyKindConstr {Ty, Kind} => pretype_to_string Ty ^ " : " ^ kind_to_string(Prekind.toKind Kind)
-  | TyRankConstr {Ty, Rank} => pretype_to_string Ty ^ " :<= " ^ Int.toString(Prerank.toRank Rank)
-
-
 infix ref_occurs_in
 
 fun r ref_occurs_in (PT(value, locn)) =
@@ -757,6 +840,7 @@ fun rank_unify r1 r2 (kd_env,rk_env,ty_env) =
   in ((kd_env,rk_env',ty_env), result)
   end
 
+
 fun unsafe_bind f r value =
   if r ref_equiv value
   then ok
@@ -781,7 +865,20 @@ fun unsafe_bind f r value =
 fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
               (rank_unify:prerank -> prerank -> ('a -> 'a * unit option))
               bind c1 c2 (ty1 as PT(t1,locn1)) (ty2 as PT(t2,locn2)) e = let
+  val ty1s = pretype_to_string ty1
+  val ty2s = pretype_to_string ty2
+  val ty1bs = pretype_to_string (deep_beta_conv_ty ty1)
+  val ty2bs = pretype_to_string (deep_beta_conv_ty ty2)
+  val _ = if is_debug() then print ("gen_unify " ^ ty1s
+                                ^ "\n   (beta) " ^ ty1bs
+                                ^ "\n      vs. " ^ ty2s
+                                ^ "\n   (beta) " ^ ty2bs ^ "\n")
+                        else ()
   val gen_unify = gen_unify kind_unify rank_unify bind
+  val fail = fn e => (if not (is_debug()) then () else
+                      print ("gen_unify fails on " ^ ty1s
+                         ^ "\n               vs. " ^ ty2s ^ "\n");
+                      fail e)
   (* unify_var's input should be a pretype variable (possibly constrained),
        not a constant, application, abstraction, or universal type.
      unify_var's result should be either Vartype or UVar(NONEU). *)
@@ -792,7 +889,7 @@ fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
     | unify_var (PT(UVar (r as ref (SOMEU ty)),_))  = unify_var ty
     | unify_var (ty as PT(UVar (ref (NONEU _)),_))  = return ty
     | unify_var (ty as PT(Vartype _,_))             = return ty
-    | unify_var ty = fail
+    | unify_var ty = (print ("unify_var fails on " ^ pretype_to_string ty ^ "\n"); fail)
   (* bvar_unify's inputs are reduced to either Vartype or UVar(NONEU),
      and then unified, returning the reduced types *)
   fun bvar_unify (PT(UVar (r as ref (NONEU(kd,rk))),_)) ty2 =
@@ -847,10 +944,14 @@ in
        rank_unify rk1 (prank_of ty1') >> gen_unify c1 c2 ty1' ty2 >> return ()
   | (_, TyRankConstr _) => gen_unify c2 c1 ty2 ty1
   | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
+       gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()
+(*
+  | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
        beta_conv_ty_m (gen_unify c1 c2) ty1 ty2
        (gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ())
   | (TyApp _, _) => beta_conv_ty_m (gen_unify c1 c2) ty1 ty2 fail
   | (_, TyApp _) => beta_conv_ty_m (gen_unify c1 c2) ty1 ty2 fail
+*)
   | (TyUniv(ty11, ty12), TyUniv(ty21, ty22)) =>
        bvar_unify ty11 ty21 >- (fn (PT(ty11',_),PT(ty21',_)) =>
        case (ty11',ty21') of
@@ -879,12 +980,24 @@ val empty_env = ([]:(prekind option ref * prekind option) list,
                  []:(      uvartype ref * uvartype      ) list)
 
 fun unify t1 t2 =
-  case (gen_unify kind_unify rank_unify unsafe_bind [] [] t1 t2 empty_env)
+  let val t1' = deep_beta_conv_ty t1
+      and t2' = deep_beta_conv_ty t2
+      val ty1s = pretype_to_string t1
+      val ty2s = pretype_to_string t2
+      val ty1s' = pretype_to_string t1'
+      val ty2s' = pretype_to_string t2'
+      val _ = if is_debug() then print ("unify  " ^ ty1s
+                                    ^ "\n(beta) " ^ ty1s'
+                                    ^ "\n   vs. " ^ ty2s
+                                    ^ "\n(beta) " ^ ty2s' ^ "\n")
+                            else ()
+  in
+  case (gen_unify kind_unify rank_unify unsafe_bind [] [] t1' t2' empty_env)
    of (bindings, SOME ()) => ()
     | (_, NONE) => raise TCERR "unify" "unify failed"
                                     (* ("unify failed: " ^ pretype_to_string t1
                                     ^ "\n      versus: " ^ pretype_to_string t2) *)
-  ;
+  end;
 
 fun can_unify t1 t2 = let
   val ((kind_bindings,rank_bindings,type_bindings), result) =

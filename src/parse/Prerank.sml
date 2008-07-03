@@ -23,6 +23,15 @@ fun eq (UVarrank (ref(SOME rk)))  rk'                         = eq rk rk'
   | eq (UVarrank (r as ref NONE)) (UVarrank (r' as ref NONE)) = r=r'
   | eq _                          _                           = false
 
+fun leq (UVarrank (ref(SOME rk)))  rk'                         = leq rk rk'
+  | leq rk                         (UVarrank (ref(SOME rk')))  = leq rk rk'
+  | leq (Zerorank)                 _                           = true
+  | leq (Sucrank rk)               (Sucrank rk')               = leq rk rk'
+  | leq (Maxrank(rk1,rk2))         rk                          = leq rk1 rk andalso leq rk2 rk
+  | leq rk                         (Maxrank(rk1,rk2))          = leq rk rk1 orelse leq rk rk2
+  | leq (UVarrank (r as ref NONE)) (UVarrank (r' as ref NONE)) = r=r'
+  | leq _                          _                           = false
+
 (* ----------------------------------------------------------------------
     A total ordering on preranks.
     UVarrank(NONE) < UVarrank(SOME) < Zerorank < Sucrank < Maxrank
@@ -42,6 +51,25 @@ fun prerank_compare (UVarrank (r1 as ref NONE), UVarrank (r2 as ref NONE)) = EQU
   | prerank_compare (Maxrank p1,                Maxrank p2)                =
                                              Lib.pair_compare(prerank_compare,prerank_compare)(p1,p2)
   | prerank_compare (Maxrank _,                 _)                         = GREATER
+
+fun is_num_rank (Zerorank) = true
+  | is_num_rank (Sucrank rk) = is_num_rank rk
+  | is_num_rank _ = false
+
+fun num_rank (Zerorank) = 0
+  | num_rank (Sucrank rk) = num_rank rk + 1
+  | num_rank _ = raise TCERR "num_rank" "not a simple numeric rank";
+
+fun prerank_to_string0 (UVarrank (ref NONE)) = "?"
+  | prerank_to_string0 (UVarrank (ref(SOME rk))) = prerank_to_string rk
+  | prerank_to_string0 (Zerorank) = "0"
+  | prerank_to_string0 (Sucrank rk) = prerank_to_string rk ^ "+1"
+  | prerank_to_string0 (Maxrank (rk1,rk2)) = "max(" ^ prerank_to_string rk1 ^ ","
+                                                   ^ prerank_to_string rk2 ^ ")"
+and prerank_to_string rk =
+    if is_num_rank rk then Int.toString(num_rank rk)
+                      else prerank_to_string0 rk
+
 
 fun fromRank 0 = Zerorank
   | fromRank i = if i < 0 then raise TCERR "fromRank" "negative rank"

@@ -33,6 +33,33 @@ fun mk_arity 0 = typ
   | mk_arity n = if n > 0 then typ ==> mk_arity (n - 1)
                  else raise TCERR "mk_arity" "negative arity"
 
+fun is_arity (PK(kd0,_)) =
+  case kd0 of
+    UVarkind(ref (SOME kd')) => is_arity kd'
+  | Typekind => true
+  | Arrowkind(PK(Typekind,_),kd2) => is_arity kd2
+  | _ => false
+
+and arity_of (PK(kd0,_)) =
+  case kd0 of
+    UVarkind(ref (SOME kd')) => arity_of kd'
+  | Typekind => 0
+  | Arrowkind(PK(Typekind,_),kd2) => 1 + arity_of kd2
+  | _ => ~1
+
+fun prekind_to_string (kd as PK(kd0,locn)) =
+  if is_arity kd then let val a = arity_of kd
+                      in if a = 0 then "ty"
+                                  else "ar " ^ Int.toString a
+                      end
+  else
+  case kd0 of
+    UVarkind(ref (SOME kd')) => prekind_to_string kd'
+  | UVarkind(ref (NONE)) => "?"
+  | Varkind s => s
+  | Typekind => "ty"
+  | Arrowkind(kd1, kd2) => "(" ^ prekind_to_string kd1 ^ " ==> " ^ prekind_to_string kd2 ^ ")"
+
 
 (* ----------------------------------------------------------------------
     A total ordering on prekinds.

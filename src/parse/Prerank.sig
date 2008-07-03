@@ -8,7 +8,9 @@ sig
     | UVarrank of prerank option ref
 
 val eq : prerank -> prerank -> bool
+val leq : prerank -> prerank -> bool
 val prerank_compare : prerank * prerank -> order
+val prerank_to_string : prerank -> string
 
 val new_uvar : unit -> prerank
 val uvars_of : prerank -> prerank option ref list
