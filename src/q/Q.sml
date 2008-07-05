@@ -42,7 +42,6 @@ fun mk_term_rsubst ctxt =
 
 val mk_type_rsubst = map (fn {redex,residue} => (pty redex |-> pty residue));
 
-val TAUT_CONV = tautLib.TAUT_CONV;
 fun store_thm(s,q,t) = Tactical.store_thm(s,btm q,t);
 fun prove (q, t) = Tactical.prove(btm q,t);
 fun new_definition(s,q) = Definition.new_definition(s,btm q);
@@ -58,7 +57,7 @@ val DISJ2    = Thm.DISJ2 o btm;
 
 fun GEN [QUOTE s] th =
      let val V = free_vars (concl th)
-     in case Lib.assoc2 (Lib.deinitcomment s) 
+     in case Lib.assoc2 (Lib.deinitcomment s)
                 (Lib.zip V (map (fst o Term.dest_var) V))
          of NONE => raise ERR "GEN" "variable not found"
          | SOME (v,_) => Thm.GEN v th
@@ -127,7 +126,7 @@ fun ID_SPEC_TAC q (g as (asl,w)) =
    Tactic.SPEC_TAC (tm, tm) g
  end
 
-fun EXISTS(q1,q2) thm = 
+fun EXISTS(q1,q2) thm =
  let val tm1 = btm q1
      val exvartype = type_of (fst (dest_exists tm1))
        handle HOL_ERR _ => raise ERR "EXISTS" "first quotation not an exists"
@@ -289,15 +288,15 @@ fun PAT_ABBREV_TAC q (gl as (asl,w)) =
    markerLib.PAT_ABBREV_TAC fv_set eq
  end gl;
 
-fun MATCH_ABBREV_TAC q (gl as (asl,w)) = 
+fun MATCH_ABBREV_TAC q (gl as (asl,w)) =
  let val fv_set = FVL (w::asl) empty_tmset
      val ctxt = HOLset.listItems fv_set
      val pattern = ptm_with_ctxtty ctxt bool q
- in 
+ in
   markerLib.MATCH_ABBREV_TAC fv_set pattern
  end gl;
 
-fun HO_MATCH_ABBREV_TAC q (gl as (asl,w)) = 
+fun HO_MATCH_ABBREV_TAC q (gl as (asl,w)) =
  let val fv_set = FVL (w::asl) empty_tmset
      val ctxt = HOLset.listItems fv_set
      val pattern = ptm_with_ctxtty ctxt bool q
@@ -305,13 +304,13 @@ in
   markerLib.HO_MATCH_ABBREV_TAC fv_set pattern
 end gl;
 
-fun UNABBREV_TAC q (gl as (asl,w))= 
+fun UNABBREV_TAC q (gl as (asl,w))=
  let val v = Parse.parse_in_context (free_varsl (w::asl)) q
  in
    markerLib.UNABBREV_TAC (fst(dest_var v))
  end gl;
 
-fun RM_ABBREV_TAC q (gl as (asl,w)) = 
+fun RM_ABBREV_TAC q (gl as (asl,w)) =
  let val v = Parse.parse_in_context (free_varsl (w::asl)) q
  in
    markerLib.RM_ABBREV_TAC (fst(dest_var v))

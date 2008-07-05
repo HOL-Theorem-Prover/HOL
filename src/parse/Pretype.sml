@@ -405,10 +405,13 @@ local
   open Binarymap
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
-      addb t (if Prerank.leq (prank_of residue) (prank_of redex)
+      addb t (if true (* Prerank.leq (prank_of residue) (prank_of redex) *)
+                      (* ignore rank for now; should we unify these ranks? *)
               then (insert(A,redex,residue),
                     is_var_type redex andalso b)
-              else raise ERR "type_subst" "redex has lower rank than residue")
+              else raise ERR "type_subst" ("redex has lower rank than residue:\n" ^
+                           "redex   : " ^ pretype_to_string redex ^ "\n" ^
+                           "residue : " ^ pretype_to_string residue))
   fun variant_ptype fvs v = if is_var_type v then variant_type fvs v else v
   (* fun unloc_of (PT(ty,loc)) = ty *)
 in
@@ -910,12 +913,24 @@ fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
          unify_var ty2 >- (fn ty2' =>
          bvar_unify ty1' ty2'))
   fun beta_conv_ty_m f ty1 ty2 m =
+     let val (ty1',red1) = (top_depth_conv_ty beta_conv_ty ty1, true)
+                           handle UNCHANGEDTY => (ty1, false)
+         val (ty2',red2) = (top_depth_conv_ty beta_conv_ty ty2, true)
+                           handle UNCHANGEDTY => (ty2, false)
+     in if red1 orelse red2
+        then f ty1' ty2'
+        else m
+     end
+(*val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)*)
+(*fun qconv_ty c ty = c ty handle UNCHANGEDTY => ty*)
+(*
      let val ty1' = deep_beta_conv_ty ty1
          val ty2' = deep_beta_conv_ty ty2
      in if eq ty1 ty1' andalso eq ty2 ty2'
         then m (* do m if beta_conversion did not change the types *)
         else f ty1' ty2'
      end
+*)
 (*
      let val (ty1',red1) = (beta_conv_ty ty1,true) handle HOL_ERR _ => (ty1,false)
          val (ty2',red2) = (beta_conv_ty ty2,true) handle HOL_ERR _ => (ty2,false)

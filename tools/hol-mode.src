@@ -740,7 +740,10 @@ argument N, sets the trace to that value in particular."
 (defun hol-toggle-quietdec ()
   "Toggles quiet declarations in the interactive system."
   (interactive)
-  (send-raw-string-to-hol "HOL_Interactive.toggle_quietdec()"))
+  (message "Toggling 'Quiet declaration'")
+  (send-raw-string-to-hol 
+   (concat "val _ = print (\"*** 'Quiet declaration' now \" ^"
+           "Bool.toString (HOL_Interactive.toggle_quietdec()) ^ \" ***\\n\")")))
 
 (defun hol-toggle-show-times()
   "Toggles the elisp variable 'hol-emit-time-elapsed-p."
