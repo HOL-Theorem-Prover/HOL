@@ -47,7 +47,7 @@ svn revert -R .
 ----------------------------
 Merge Log:
 
-6031:  Ported revisions 6022:6030 from HOL to HOL-Omega.
+6031:  Ported revisions 6022:6030 from HOL to HOL-Omega. 
 
 6024:  Ported revisions 6003:6021 from HOL to HOL-Omega.
 
