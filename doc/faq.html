@@ -29,7 +29,8 @@
   where I have Moscow&nbsp;ML executables in <code>/usr/bin/</code>, and
   the Moscow&nbsp;ML library files in <code>/usr/lib/</code>.</strong>
 <dd>
-<p>You will need to write a <code>config-override</code> file in the
+<p>If <code>configure</code> is not guessing the correct directories,
+you will need to write a <code>config-override</code> file in the
   root directory of the HOL installation, and put in it the line</p>
 <pre>
     val mosmldir = "/usr/bin/"
@@ -90,6 +91,21 @@ system before building:</p>
 </pre>
 <p> represent problems. </p>
 </dd>
+
+<dt><strong>How do I stop <code>Holmake</code> from proving false
+theorems?!</strong></dt>
+<dd> <p> The default behaviour of <code>Holmake</code> is to cause
+failing proofs (from calls to <code>prove</code>
+and <code>store_thm</code>) to be asserted as true
+with <code>mk_thm</code> (such results get oracle tags recording this
+fact).  This behaviour allows for more of a script file to be checked
+because the first failing proof doesn&rsquo;t abort the script.</p>
+
+<p> If you don&rsquo;want this behaviour, use the <code>--qof</code>
+(&ldquo;quit on failure&rdquo;) flag to <code>Holmake</code>, or use
+an <code>OPTIONS&nbsp;=&nbsp;QUIT_ON_FAILURE</code> line in
+a <code>Holmakefile</code>.</p></dd>
+
 
     <dt><strong> How do I build old versions of HOL, such as Taupo-6
     and Kananaskis-1?</strong></dt>
@@ -458,8 +474,8 @@ Use
 <pre>
     TypeBase.axiom_of ``:mytypename``
 </pre> Hopefully you won't need to do this very much because many of the
-     contexts in which you previously needed the axiom will be dealt
-     with more smoothly.  For example, cases, induction, one-one and
+     contexts in which you previously needed the axiom are dealt with
+     more smoothly.  For example, cases, induction, one-one and
      distinctness theorems are now proved automatically, and are
      available from the TypeBase.  For example,
 <pre>
