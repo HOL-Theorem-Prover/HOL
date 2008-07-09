@@ -103,9 +103,6 @@ val (n2l_tm,mk_n2l,dest_n2l,is_n2l)     = binop_systax_fns "n2l" "bit";
 val (divmod_2exp_tm,mk_divmod_2exp,dest_divmod_2exp,is_divmod_2exp) =
   binop_systax_fns "DIVMOD_2EXP" "bit";
 
-val (mod_2exp_eq_tm,mk_mod_2exp_eq,dest_mod_2exp_eq,is_mod_2exp_eq) =
-  binop_systax_fns "MOD_2EXP_EQ" "bit";
-
 val (times_2exp_tm,mk_times_2exp,dest_times_2exp,is_times_2exp) =
   binop_systax_fns "TIMES_2EXP" "bit";
 
@@ -122,6 +119,9 @@ in
      handle HOL_ERR _ => raise ERR ("mk_"^n) "", 
    dest, can dest)
 end;
+
+val (mod_2exp_eq_tm,mk_mod_2exp_eq,dest_mod_2exp_eq,is_mod_2exp_eq) =
+  triop_systax_fns "MOD_2EXP_EQ" "bit";
 
 val (bits_tm,mk_bits,dest_bits,is_bits)     = triop_systax_fns "BITS" "bit";
 val (slice_tm,mk_slice,dest_slice,is_slice) = triop_systax_fns "SLICE" "bit";
