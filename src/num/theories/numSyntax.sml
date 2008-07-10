@@ -51,23 +51,25 @@ struct
   fun mk_monop c tm = mk_comb(c,tm)
   fun mk_binop c (tm1,tm2) = mk_comb(mk_comb(c,tm1),tm2);
 
-  val mk_suc     = mk_monop suc_tm
-  val mk_pre     = mk_monop pre_tm
-  val mk_plus    = mk_binop plus_tm
-  val mk_minus   = mk_binop minus_tm
-  val mk_mult    = mk_binop mult_tm
-  val mk_exp     = mk_binop exp_tm
-  val mk_div     = mk_binop div_tm
-  val mk_mod     = mk_binop mod_tm
-  val mk_less    = mk_binop less_tm
-  val mk_greater = mk_binop greater_tm
-  val mk_geq     = mk_binop geq_tm
-  val mk_leq     = mk_binop leq_tm
-  val mk_even    = mk_monop even_tm
-  val mk_odd     = mk_monop odd_tm
-  val mk_min     = mk_binop min_tm
-  val mk_max     = mk_binop max_tm
-  val mk_fact    = mk_monop fact_tm
+  val mk_suc      = mk_monop suc_tm
+  val mk_pre      = mk_monop pre_tm
+  val mk_plus     = mk_binop plus_tm
+  val mk_minus    = mk_binop minus_tm
+  val mk_mult     = mk_binop mult_tm
+  val mk_exp      = mk_binop exp_tm
+  val mk_div      = mk_binop div_tm
+  val mk_mod      = mk_binop mod_tm
+  val mk_div2     = mk_monop div2_tm
+  val mk_mod_2exp = mk_binop mod_2exp_tm
+  val mk_less     = mk_binop less_tm
+  val mk_greater  = mk_binop greater_tm
+  val mk_geq      = mk_binop geq_tm
+  val mk_leq      = mk_binop leq_tm
+  val mk_even     = mk_monop even_tm
+  val mk_odd      = mk_monop odd_tm
+  val mk_min      = mk_binop min_tm
+  val mk_max      = mk_binop max_tm
+  val mk_fact     = mk_monop fact_tm
 
   fun mk_num_case(b,f,n) =
       list_mk_comb(inst[alpha |-> type_of b] num_case_tm, [b,f,n]);
@@ -95,24 +97,26 @@ struct
           Destructors
  ---------------------------------------------------------------------------*)
 
-  val dest_suc     = dest_monop suc_tm     (ERR "dest_suc" "")
-  val dest_pre     = dest_monop pre_tm     (ERR "dest_pre" "")
-  val dest_plus    = dest_binop plus_tm    (ERR "dest_plus" "")
-  val dest_minus   = dest_binop minus_tm   (ERR "dest_minus" "")
-  val dest_mult    = dest_binop mult_tm    (ERR "dest_mult" "")
-  val dest_exp     = dest_binop exp_tm     (ERR "dest_exp" "")
-  val dest_div     = dest_binop div_tm     (ERR "dest_div" "")
-  val dest_mod     = dest_binop mod_tm     (ERR "dest_mod" "")
-  val dest_less    = dest_binop less_tm    (ERR "dest_less" "")
-  val dest_greater = dest_binop greater_tm (ERR "dest_greater" "")
-  val dest_geq     = dest_binop geq_tm     (ERR "dest_geq" "")
-  val dest_leq     = dest_binop leq_tm     (ERR "dest_leq" "")
-  val dest_even    = dest_monop even_tm    (ERR "dest_even" "")
-  val dest_odd     = dest_monop odd_tm     (ERR "dest_odd" "");
-  val dest_min     = dest_binop min_tm     (ERR "dest_min" "")
-  val dest_max     = dest_binop max_tm     (ERR "dest_max" "")
-  val dest_fact    = dest_monop fact_tm    (ERR "dest_fact" "");
-  val dest_least   = dest_monop least_tm   (ERR "dest_least" "");
+  val dest_suc      = dest_monop suc_tm      (ERR "dest_suc" "")
+  val dest_pre      = dest_monop pre_tm      (ERR "dest_pre" "")
+  val dest_plus     = dest_binop plus_tm     (ERR "dest_plus" "")
+  val dest_minus    = dest_binop minus_tm    (ERR "dest_minus" "")
+  val dest_mult     = dest_binop mult_tm     (ERR "dest_mult" "")
+  val dest_exp      = dest_binop exp_tm      (ERR "dest_exp" "")
+  val dest_div      = dest_binop div_tm      (ERR "dest_div" "")
+  val dest_mod      = dest_binop mod_tm      (ERR "dest_mod" "")
+  val dest_div2     = dest_monop div2_tm     (ERR "dest_div2" "")
+  val dest_mod_2exp = dest_binop mod_2exp_tm (ERR "dest_mod_2exp" "")
+  val dest_less     = dest_binop less_tm     (ERR "dest_less" "")
+  val dest_greater  = dest_binop greater_tm  (ERR "dest_greater" "")
+  val dest_geq      = dest_binop geq_tm      (ERR "dest_geq" "")
+  val dest_leq      = dest_binop leq_tm      (ERR "dest_leq" "")
+  val dest_even     = dest_monop even_tm     (ERR "dest_even" "")
+  val dest_odd      = dest_monop odd_tm      (ERR "dest_odd" "");
+  val dest_min      = dest_binop min_tm      (ERR "dest_min" "")
+  val dest_max      = dest_binop max_tm      (ERR "dest_max" "")
+  val dest_fact     = dest_monop fact_tm     (ERR "dest_fact" "");
+  val dest_least    = dest_monop least_tm    (ERR "dest_least" "");
 
   fun dest_num_case tm =
     case strip_comb tm
@@ -174,6 +178,8 @@ struct
   val is_exp      = can dest_exp
   val is_div      = can dest_div
   val is_mod      = can dest_mod
+  val is_div2     = can dest_div2
+  val is_mod_2exp = can dest_mod_2exp
   val is_less     = can dest_less
   val is_greater  = can dest_greater
   val is_geq      = can dest_geq
