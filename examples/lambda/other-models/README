@@ -1,0 +1,52 @@
+dBScript.sml
+   develops a theory of (untyped) "locally nameless" de Bruijn terms.
+
+ncScript.sml
+   builds a theory of name-carrying terms, where terms are identified
+   up to alpha-conversion.  This development underlies the paper
+
+                "5 Axioms of Alpha Conversion",
+                 Andy Gordon and Tom Melham,
+                 Proceedings of TPHOLs'96, Springer LNCS 1125.
+
+diagsScript.sml
+   a type of rewriting style diagrams and how rewriting relations do
+   or do not satisfy them.  Also a proof that "diagram-satisfaction"
+   is preserved and reflected by strong onto homomorphisms.  (This is
+   discussed in the NICTA/JAIST technical report "Structural
+   preservation and reflection of diagrams", and is joint work with
+   Rene Vestergaard.)
+
+raw_syntaxScript.sml
+   proof that a raw syntax of lambda terms (not identified up to alpha
+   equivalence) with its own notions of substitution, alpha
+   equivalence and beta reduction can indeed be collapsed into the
+   type of terms from termTheory.  Use diagrams to show confluence for
+   beta-alpha reduction at this raw level by appeal to result in
+   barendregt/chap3Theory.
+
+string_numScript.sml
+   a proof by construction that strings and numbers are in bijection
+
+pure_dBScript.sml
+   mechanisation of the type of "pure" de Bruijn terms, following
+   Tobias Nipkow's paper "More Church-Rosser Proofs".  (They are
+   "pure" in contrast with Andy Gordon's de Bruijn terms, which have
+   indices for bound variables and strings for free variables.)
+
+   Demonstration that this type and its notions of beta- and
+   eta-reduction are isomorphic to the quotiented type in termTheory.
+   This work is described in
+
+         @InProceedings{norrish:tphols2007,
+           author =    {Michael Norrish and Ren\'e Vestergaard},
+           title =     {Proof Pearl: de~Bruijn Terms Really Do Work},
+           booktitle = {Theorem Proving in Higher Order Logics, 20th
+                        International Conference},
+           year =      2007,
+           editor =    {Klaus Schneider and Jens Brandt},
+           series =    {Lecture Notes in Computer Science},
+           publisher = {Springer},
+           volume =    4732,
+           pages =     {207--222}
+         }

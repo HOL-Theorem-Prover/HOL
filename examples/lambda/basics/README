@@ -1,0 +1,26 @@
+basic_swapScript.sml
+   Very basic theory of swaps over strings (the swapstr constant), and
+   permutations (which take a list of pairs of strings to swap).  Also
+   defines the NEW constant, which is used everywhere (including in
+   the dB and nc developments above).
+
+nomsetScript.sml
+   A more involved theory of permutations and their actions on
+   arbitrary types (the "nominal sets").  Includes the notion of
+   support.
+
+NEWLib.{sig,sml}
+   simple tactics to use with the NEW constant.
+
+binderLib.{sig,sml}
+   Tools for doing proofs with terms that include binders, including
+   function definition and facilities from NEWLib.
+
+pretermScript.sml termScript.sml
+   Using a quotient over raw syntax from pretermTheory, establishes a
+   type of lambda calculus terms, and defines substitution, the notion
+   of free variable and permutations over that type.  Proves some
+   simple lemmas about substitution.  For example,
+
+     lemma14a: |- [VAR x/x] t = t
+

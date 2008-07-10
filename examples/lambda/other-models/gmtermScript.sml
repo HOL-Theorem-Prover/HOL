@@ -5,7 +5,7 @@
 open HolKernel Parse boolLib bossLib BasicProvers boolSimps NEWLib
 open ncTheory swapTheory binderLib
 
-val _ = new_theory "term";
+val _ = new_theory "gmterm";
 
 val (constfree_def, _) = define_recursive_term_function`
   (constfree (nc$VAR s) = T) /\
@@ -441,7 +441,7 @@ val gm_recursion = prove(
 val ABS_def = Define`ABS f = to_term (nc$ABS (from_term o f))`
 
 val ABS_axiom = prove(
-  ``term$ABS (\y. [VAR y/v] t) = LAM v t``,
+  ``gmterm$ABS (\y. [VAR y/v] t) = LAM v t``,
   SRW_TAC [][LAM_def, ABS_def, SUB_def, combinTheory.o_ABS_R,
              fromto_inverse, VAR_def, ncTheory.ABS_DEF]);
 
@@ -456,7 +456,7 @@ val fresh_new_subst0 = prove(
 val lemma = (SIMP_RULE bool_ss [ABS_axiom, fresh_new_subst0,
                                 ASSUME ``FINITE (X:string set)``]o
              Q.INST [`lam` |->
-                        `\r t. let v = NEW (FV (term$ABS t) UNION X)
+                        `\r t. let v = NEW (FV (gmterm$ABS t) UNION X)
                                in
                                  lam (r v) v (t v)`] o
              INST_TYPE [beta |-> alpha] o
@@ -637,18 +637,18 @@ val term_info_string =
     \val term_info = \n\
     \   {nullfv = ``LAM \"\" (VAR \"\")``,\n\
     \    rewrites = [],\n\
-    \    inst = [\"rFV\" |-> (fn () => ``term$FV : term -> string set``),\n\
+    \    inst = [\"rFV\" |-> (fn () => ``gmterm$FV : gmterm -> string set``),\n\
     \            \"rswap\" |-> (fn () =>\n\
     \                            ``\\(x:string) (y:string) (t:term).\n\
     \                                   tpm [(x,y)] t``),\n\
     \            \"apm\" |-> (fn () =>\n\
-    \                           ``term$tpm : (string # string) list -> \n\
-    \                                          term$term -> term$term``)]}\n\
+    \                           ``gmterm$tpm : (string # string) list -> \n\
+    \                                          gmterm$term -> gmterm$term``)]}\n\
     \val _ = binderLib.range_database :=\n\
     \          Binarymap.insert(!binderLib.range_database, \"term\", \n\
     \                           term_info)\n\
     \val _ = binderLib.type_db :=\n\
-    \          Binarymap.insert(!binderLib.type_db, \"term\",\n\
+    \          Binarymap.insert(!binderLib.type_db, \"gmterm\",\n\
     \                           swap_RECURSION_nosideset)\n\
     \in end;\n"
 

@@ -1,4 +1,0 @@
-EXTRA_CLEANS = termScript.sml
-
-termScript.sml: qtermScript.ml
-	$(CP) $< $@
