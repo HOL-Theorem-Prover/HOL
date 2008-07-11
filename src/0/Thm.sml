@@ -304,7 +304,7 @@ fun check_subst_rank s =
 
 fun INST_TYPE [] th = th
   | INST_TYPE theta (THM(ocl,asl,c)) =
-    ((* check_subst_rank theta; *) (* impracticable; eliminates too many inferences *)
+    (check_subst_rank theta; (* impracticable? eliminates many inferences *)
      (* may be unsound without check *)
      make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c))
 

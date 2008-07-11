@@ -243,8 +243,8 @@ val test1_def = Define q handle e => Raise e;
 
 
 val monad_def = new_definition("monad_def", Term
-   `monad (unit: !'a. 'a -> 'a 'M,
-           bind: !'a 'b. 'a 'M -> ('a -> 'b 'M) -> 'b 'M) =
+   `monad (unit: !'a. 'a -> 'a 'M)
+          (bind: !'a 'b. 'a 'M -> ('a -> 'b 'M) -> 'b 'M) =
       (* Left unit *)
           (!:'a 'b. !(a:'a) (k:'a -> 'b 'M).
                 bind[:'a,'b:] (unit[:'a:] a) k = k a) /\
@@ -262,7 +262,7 @@ val _ = ``I : 'a -> 'a I``;
 val _ = ``\:'a. I : 'a -> 'a I``;
 
 (*
-g `monad ((\:'a. I) : !'a.'a -> 'a I, (\:'a 'b. \(x:'a I) (f:'a -> 'b I). f x))`;
+g `monad ((\:'a. I) : !'a.'a -> 'a I) (\:'a 'b. \(x:'a I) (f:'a -> 'b I). f x)` handle e => Raise e;
 *)
 
 
