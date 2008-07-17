@@ -1464,9 +1464,12 @@ val inv_INVOL = store_thm(
     composition of two relations, written O (Isabelle/HOL notation)
    ---------------------------------------------------------------------- *)
 
+(* This way 'round by analogy with function composition, where the
+   second argument to composition acts on the "input" first.  This is also
+   consistent with the way this constant is defined in Isabelle/HOL. *)
 val O_DEF = new_definition(
   "O_DEF",
-  ``(O) R1 R2 (x:'g) (z:'k) = ?y:'h. R1 x y /\ R2 y z``);
+  ``(O) R1 R2 (x:'g) (z:'k) = ?y:'h. R2 x y /\ R1 y z``);
 val _ = set_fixity "O" (Infixr 800)
 
 val inv_O = store_thm(

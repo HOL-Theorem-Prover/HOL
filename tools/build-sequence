@@ -95,7 +95,9 @@ src/temporal/src
 src/temporal/smv.2.4.3
 src/rational
 src/path
-!examples/lambda
+!examples/lambda/barendregt
+!!examples/lambda/other-models
+!!examples/lambda
 src/Boolify/src
 src/float
 !!examples/miller

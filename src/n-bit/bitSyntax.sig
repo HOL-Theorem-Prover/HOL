@@ -52,8 +52,8 @@ sig
   val mk_n2l         : term * term -> term
   val mk_bit_reverse : term * term -> term
   val mk_divmod_2exp : term * term -> term
-  val mk_mod_2exp_eq : term * term -> term
   val mk_times_2exp  : term * term -> term
+  val mk_mod_2exp_eq : term * term * term -> term
   val mk_bits        : term * term * term -> term
   val mk_bit_modify  : term * term * term -> term
   val mk_slice       : term * term * term -> term
@@ -90,8 +90,8 @@ sig
   val dest_n2l         : term -> term * term
   val dest_bit_reverse : term -> term * term
   val dest_divmod_2exp : term -> term * term
-  val dest_mod_2exp_eq : term -> term * term
   val dest_times_2exp  : term -> term * term
+  val dest_mod_2exp_eq : term -> term * term * term
   val dest_bits        : term -> term * term * term
   val dest_bit_modify  : term -> term * term * term
   val dest_slice       : term -> term * term * term
