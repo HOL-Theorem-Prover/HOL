@@ -568,6 +568,7 @@ CONJ_TAC THEN
   INDUCT_THEN list_INDUCT STRIP_ASSUME_TAC
    THEN REWRITE_TAC [CONS_11,NOT_NIL_CONS, NOT_CONS_NIL,APPEND]
    THEN GEN_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ);
+val _ = export_rewrites ["APPEND_eq_NIL"]
 
 val APPEND_11 = store_thm(
   "APPEND_11",
@@ -944,6 +945,12 @@ val MEM_REVERSE = store_thm(
   Induct THEN SRW_TAC [][] THEN PROVE_TAC []);
 
 val _ = export_rewrites ["MEM_REVERSE"]
+
+val REVERSE_EQ_NIL = store_thm(
+  "REVERSE_EQ_NIL",
+  ``!l. (REVERSE l = []) = (l = [])``,
+  Induct THEN SRW_TAC [][]);
+val _ = export_rewrites ["REVERSE_EQ_NIL"]
 
 
 (* ----------------------------------------------------------------------
@@ -1336,7 +1343,7 @@ val _ = BasicProvers.export_rewrites
            "SUM", "TL", "APPEND_ASSOC", "CONS", "CONS_11",
            "LENGTH_APPEND", "LENGTH_MAP", "MAP_APPEND",
            "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL", "APPEND_NIL",
-           "CONS_ACYCLIC", "list_case_def", "APPEND_eq_NIL", "ZIP",
+           "CONS_ACYCLIC", "list_case_def", "ZIP",
            "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
            "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS",
            "LAST_CONS", "FRONT_CONS", "FOLDL", "FOLDR", "FILTER",
