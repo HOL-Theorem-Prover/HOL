@@ -263,6 +263,7 @@ val _ = ``\:'a. I : 'a -> 'a I``;
 
 (*
 g `monad ((\:'a. I) : !'a.'a -> 'a I) (\:'a 'b. \(x:'a I) (f:'a -> 'b I). f x)` handle e => Raise e;
+REWRITE_TAC[monad_def]
 *)
 
 

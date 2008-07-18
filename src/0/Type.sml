@@ -465,7 +465,7 @@ fun mk_vartype_opr ("'a", Type, 0) = alpha
                 if Lexis.allowed_user_type_var s
                 then TyFv (s, kind, rank)
                 else (if !varcomplain then
-                        WARN "mk_vartype_opr" "non-standard syntax"
+                        WARN "mk_vartype_opr" ("non-standard syntax: " ^ s)
                       else (); TyFv (s, kind, rank))
 
 fun mk_vartype s = mk_vartype_opr (s, Type, 0);
@@ -1585,6 +1585,257 @@ val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
 
 
 fun abconv_ty t1 t2 = aconv_ty (deep_beta_conv_ty t1) (deep_beta_conv_ty t2)
+
+
+(*---------------------------------------------------------------------------
+       Higher order matching (from jrh via Michael Norrish - June 2001)
+       Adapted to HOL-Omega types by PVH - July 18, 2008
+ ---------------------------------------------------------------------------*)
+
+local
+  exception NOT_FOUND
+  fun find_residue_ty red [] = raise NOT_FOUND
+    | find_residue_ty red ({redex,residue}::rest) = if abconv_ty red redex then residue
+                                                    else find_residue_ty red rest
+  fun in_dom x [] = false
+    | in_dom x ({redex,residue}::rest) = (x = redex) orelse in_dom x rest
+  fun safe_insert_ty (n as {redex,residue}) l = let
+    val z = find_residue_ty redex l
+  in
+    if residue = z then l
+    else raise ERR "safe_insert_ty" "match"
+  end handle NOT_FOUND => n::l
+  fun safe_insert_tya (n as {redex,residue}) l = let
+    val z = find_residue_ty redex l
+  in
+    if abconv_ty residue z then l
+    else raise ERR "safe_insert_tya" "match"
+  end handle NOT_FOUND => n::l
+  val mk_dummy_ty = let
+    val name = dest_vartype(gen_tyvar())
+  in fn (kd,rk) => with_flag (varcomplain,false) mk_vartype_opr(name, kd, rk)
+  end
+  fun rator_type ty = fst (dest_app_type ty)
+
+
+  fun type_pmatch lconsts env vty cty (sofar as (insts,homs)) =
+    if is_vartype vty then let
+        val cty' = find_residue_ty vty env
+      in
+        if aconv_ty cty' cty then sofar else raise ERR "type_pmatch" "variable type mismatch"
+      end handle NOT_FOUND =>
+                 if HOLset.member(lconsts, vty) then
+                   if abconv_ty cty vty then sofar
+                   else raise ERR "type_pmatch" "can't instantiate local constant"
+                 else (safe_insert_tya (vty |-> cty) insts, homs)
+    else if is_con_type vty then let
+        val {Thy = vthy, Tyop = vname, Kind = vkd, Rank = vrk} = dest_thy_con_type vty
+        val {Thy = cthy, Tyop = cname, Kind = ckd, Rank = crk} = dest_thy_con_type cty
+      in
+        if vname = cname andalso vthy = cthy then
+          if ckd = vkd andalso crk = vrk then sofar
+          else (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
+        else raise ERR "type_pmatch" "constant type mismatch"
+      end
+    else if is_abs_type vty then let
+        val (vv,vbod) = dest_abs_type vty
+        val (cv,cbod) = dest_abs_type cty
+        val (_, vkd, vrk) = dest_vartype_opr vv
+        val (_, ckd, crk) = dest_vartype_opr cv
+        val sofar' = (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
+      in
+        type_pmatch lconsts ((vv |-> cv)::env) vbod cbod sofar'
+      end
+    else if is_univ_type vty then let
+        val (vv,vbod) = dest_univ_type vty
+        val (cv,cbod) = dest_univ_type cty
+        val (_, vkd, vrk) = dest_vartype_opr vv
+        val (_, ckd, crk) = dest_vartype_opr cv
+        val sofar' = (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
+      in
+        type_pmatch lconsts ((vv |-> cv)::env) vbod cbod sofar'
+      end
+    else (* is_app_type *) let
+        val vhop = repeat rator_type vty
+      in
+        if is_vartype vhop andalso not (HOLset.member(lconsts, vhop)) andalso
+           not (in_dom vhop env)
+        then let
+            val vkd = kind_of vty
+            val vrk = rank_of vty
+            val ckd = kind_of cty
+            val crk = rank_of cty
+            val insts' = if vkd = ckd andalso vrk = crk then insts
+                         else safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts
+          in
+            (insts', (env,cty,vty)::homs)
+          end
+        else let
+            val (lv,rv) = dest_app_type vty
+            val (lc,rc) = dest_app_type cty
+            val sofar' = type_pmatch lconsts env lv lc sofar
+          in
+            type_pmatch lconsts env rv rc sofar'
+          end
+      end
+
+
+fun separate_insts_ty (insts :{redex : hol_type, residue : hol_type} list) = let
+  val (realinsts, patterns) = partition (is_vartype o #redex) insts
+  val betacounts =
+      if patterns = [] then []
+      else
+        itlist (fn {redex = p,...} =>
+                   fn sof => let
+                        val (hop,args) = strip_app_type p
+                      in
+                        safe_insert_ty (hop |-> length args) sof
+                      end handle _ =>
+                                 (HOL_WARNING "" ""
+                                  "Inconsistent patterning in h.o. type match";
+                                  sof))
+        patterns []
+in
+  (betacounts,
+   mapfilter (fn {redex = x, residue = t} =>
+                   if t = x then raise ERR "separate_insts_ty" ""
+                            else {redex = x, residue = t}
+             ) realinsts
+  )
+end
+
+
+fun all_abconv [] [] = true
+  | all_abconv [] _ = false
+  | all_abconv _ [] = false
+  | all_abconv (h1::t1) (h2::t2) = abconv_ty h1 h2 andalso all_abconv t1 t2
+
+
+fun type_homatch lconsts (insts, homs) = let
+  (* local constants of types never change *)
+  val type_homatch = type_homatch lconsts
+in
+  if homs = [] then insts
+  else let
+      val (env,cty,vty) = hd homs
+    in
+      if is_vartype vty then
+        if aconv_ty cty vty then type_homatch (insts, tl homs)
+        else let
+            val newinsts = (vty |-> cty)::insts
+          in
+            type_homatch (newinsts, tl homs)
+          end
+      else (* vty not a type var *) let
+          val (vhop, vargs) = strip_app_type vty
+          val afvs = type_varsl vargs
+          (*val inst_fn = Type.inst (fst tyins)*)
+        in
+          (let
+             val tyins =
+                 map (fn a =>
+                         ((*inst_fn*) a |->
+                                  (find_residue_ty a env
+                                   handle _ =>
+                                          find_residue_ty a insts
+                                   handle _ =>
+                                          if HOLset.member(lconsts, a)
+                                          then a
+                                          else raise ERR "type_homatch" ""))) afvs
+             val pats0 = (*map inst_fn*) vargs
+             val pats = map (type_subst tyins) pats0
+             val vhop' = (*inst_fn*) vhop
+             val icty = list_mk_app_type(vhop', pats)
+             val ni = let
+               val (chop,cargs) = strip_app_type cty
+             in
+               if all_abconv cargs pats then
+                 if abconv_ty chop vhop then insts
+                 else safe_insert_tya (vhop |-> chop) insts
+               else let
+                   val ginsts = map (fn p => (p |->
+                                                (if is_vartype p then p
+                                                 else gen_tyopvar(kind_of p,rank_of p))))
+                                    pats
+                   val cty' = type_subst ginsts cty
+                   val gvs = map #residue ginsts
+                   val absty = list_mk_abs_type(gvs,cty')
+                   val vinsts = safe_insert_tya (vhop |-> absty) insts
+                   val icpair = (list_mk_app_type(vhop',gvs) |-> cty')
+                 in
+                   icpair::vinsts
+                 end
+             end
+           in
+             type_homatch (ni,tl homs)
+           end) handle _ => let
+                         val (lc,rc) = dest_app_type cty
+                         val (lv,rv) = dest_app_type vty
+                         val pinsts_homs' =
+                             type_pmatch lconsts env rv rc
+                                         (insts, (env,lc,lv)::(tl homs))
+                       in
+                         type_homatch pinsts_homs'
+                       end
+        end
+    end
+end
+
+in
+
+fun ho_match_type1 lconsts vty cty insts_homs = let
+  val pinsts_homs = type_pmatch lconsts [] vty cty insts_homs
+  val insts = type_homatch lconsts pinsts_homs
+in
+  separate_insts_ty insts
+end
+
+fun ho_match_type0 lconsts vty cty =
+    ho_match_type1 lconsts vty cty ([], [])
+
+fun ho_match_type lconsts vty cty = let
+  val (bcs, tyins) = ho_match_type0 lconsts vty cty
+in
+  tyins
+end handle e => raise (wrap_exn "HolKernel" "ho_match_type" e)
+
+(*
+val s0 = HOLset.empty Type.compare;
+val s1 = HOLset.add(s0,alpha);
+ho_match_type s1 ``:'a 'b`` ``:('a -> 'a) # 'c``;
+> val it = [{redex = ``:'b``, residue = ``:\'a. ('a -> 'a) # 'c``}] :
+  {redex : hol_type, residue : hol_type} list
+ho_match_type s0 ``:'a + 'b`` ``:('a -> 'a) # 'c`` handle e => Raise e;
+ho_match_type s1 ``:'a 'b`` ``:('a -> 'b) # 'a``;
+ho_match_type s0 ``:'a # 'b`` ``:('a -> 'b) # 'a`` handle e => Raise e;
+ho_match_type s0 ``:('a -> 'b) # 'b`` ``:'a # 'b`` handle e => Raise e;
+*)
+
+end (* local *)
+
+(* We redefine the main type matching functions here to use higher order matching. *)
+(* Original:
+fun raw_match_type pat ob (tyS,tyfixed) =
+    let val tyfixed_set = HOLset.addList(empty_tyset, tyfixed)
+        val (tyS',Id) =
+              RM [(pat,ob,false)] (tyS,tyfixed_set)
+        val Id' = HOLset.listItems Id
+     in (tyS',Id')
+    end;
+*)
+fun ho_raw_match_type pat ob (tyS,tyfixed) =
+    let val tyfixed_set = HOLset.addList(empty_tyset, tyfixed)
+        val (_,tyS') = ho_match_type1 tyfixed_set pat ob (tyS,[])
+        val Id = Lib.subtract (type_vars pat) (map #redex tyS')
+     in (tyS',Id)
+    end;
+
+val raw_match_type = ho_raw_match_type 
+
+fun match_type_restr fixed pat ob  = fst (ho_raw_match_type pat ob ([],fixed))
+fun match_type_in_context pat ob S = fst (ho_raw_match_type pat ob (S,[]))
+
+fun match_type pat ob = fst (ho_raw_match_type pat ob ([],[]))
 
 
 (*---------------------------------------------------------------------------

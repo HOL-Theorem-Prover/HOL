@@ -102,6 +102,14 @@ sig
   val match_type_in_context : hol_type -> hol_type
                               -> (hol_type,hol_type)Lib.subst
                               -> (hol_type,hol_type)Lib.subst
+  val ho_match_type1 : hol_type HOLset.set -> hol_type -> hol_type
+                       -> (hol_type,hol_type)Lib.subst *
+                          ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list
+                       -> (hol_type,int)Lib.subst * (hol_type,hol_type)Lib.subst
+  val ho_match_type0 : hol_type HOLset.set -> hol_type -> hol_type
+                       -> (hol_type,int)Lib.subst * (hol_type,hol_type)Lib.subst
+  val ho_match_type  : hol_type HOLset.set -> hol_type -> hol_type
+                       -> (hol_type,hol_type)Lib.subst
   val thy_types     : string -> (string * int) list
   val thy_type_oprs : string -> (string * kind * int) list
   val unbound_ty    : hol_type -> bool

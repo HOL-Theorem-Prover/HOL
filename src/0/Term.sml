@@ -419,12 +419,28 @@ fun prim_mk_const (knm as {Name,Thy}) =
 
 fun ground x = Lib.all (fn {redex,residue} => not(Type.polymorphic residue)) x;
 
+(*
+fun ids_of(S:(hol_type,'a)Lib.subst, frees) =
+    Lib.subtract frees (map #redex S)
+
+fun grounds (S,ty) = let val frees = type_vars ty
+                     in (frees = [] orelse ids_of(S,frees) = []) andalso ground S
+                     end
+
+val empty_type_set = HOLset.empty Type.compare
+*)
+
 val bconv = deep_beta_conv_ty
 
 fun create_const errstr (const as (_,GRND pat)) Ty =
       if abconv_ty Ty pat then Const const
       else raise ERR "create_const" "not a type match"
   | create_const errstr (const as (r,POLY pat)) Ty =
+(*
+     ((case Type.ho_match_type empty_type_set (bconv pat) (bconv Ty)
+        of [] => Const const
+         | S  => Const(r, if grounds(S,pat) then GRND Ty else POLY Ty))
+*)
      ((case Type.raw_match_type (bconv pat) (bconv Ty) ([],[])
         of ([],_) => Const const
          | (S,[]) => Const(r, if ground S then GRND Ty else POLY Ty)

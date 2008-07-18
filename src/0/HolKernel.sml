@@ -361,13 +361,13 @@ local
     val z = find_residue redex l
   in
     if residue = z then l
-    else failwith "match: safe_insert"
+    else raise ERR "safe_insert" "match"
   end handle NOT_FOUND => n::l  (* binding not there *)
   fun safe_inserta (n as {redex,residue}) l = let
     val z = find_residue redex l
   in
     if aconv residue z then l
-    else failwith "match: safe_inserta"
+    else raise ERR "safe_inserta" "match"
   end handle NOT_FOUND => n::l
   val mk_dummy = let
     val name = fst(dest_var(genvar Type.alpha))
@@ -379,21 +379,20 @@ local
     if is_var vtm then let
         val ctm' = find_residue vtm env
       in
-        if ctm' = ctm then sofar else failwith "term_pmatch"
+        if ctm' = ctm then sofar else raise ERR "term_pmatch" "constant mismatch"
       end handle NOT_FOUND =>
                  if HOLset.member(lconsts, vtm) then
                    if ctm = vtm then sofar
-                   else
-                     failwith "term_pmatch: can't instantiate local constant"
+                   else raise ERR "term_pmatch" "can't instantiate local constant"
                  else (safe_inserta (vtm |-> ctm) insts, homs)
     else if is_const vtm then let
         val {Thy = vthy, Name = vname, Ty = vty} = dest_thy_const vtm
         val {Thy = cthy, Name = cname, Ty = cty} = dest_thy_const ctm
       in
         if vname = cname andalso vthy = cthy then
-          if cty = vty then sofar
+          if abconv_ty cty vty then sofar
           else (safe_insert (mk_dummy vty |-> mk_dummy cty) insts, homs)
-        else failwith "term_pmatch"
+        else raise ERR "term_pmatch" "variable mismatch"
       end
     else if is_abs vtm then let
         val (vv,vbod) = dest_abs vtm
@@ -412,7 +411,7 @@ local
         then let
             val vty = type_of vtm
             val cty = type_of ctm
-            val insts' = if vty = cty then insts
+            val insts' = if abconv_ty vty cty then insts
                          else safe_insert (mk_dummy vty |-> mk_dummy cty) insts
           in
             (insts', (env,ctm,vtm)::homs)
@@ -426,26 +425,6 @@ local
           end
       end
 
-(*
-fun get_type_insts avoids L =
- let val avtys = itlist (fn ty => fn (p,o) => (ty-->p, ty-->o))
-                        avoids (bool,bool)
-     val (pat,ob) = itlist (fn {redex,residue} => fn (pat,ob) =>
-                               (type_of redex-->pat, type_of residue-->ob))
-                         L avtys
-
- in match_type pat ob
- end
-
-fun get_type_insts avoids L =
- let val tytheta = itlist (fn {redex,residue} =>
-          match_type_in_context (snd(dest_var redex)) (type_of residue))
-                     L []
- in if null(intersect avoids (map #residue tytheta))
-    then tytheta
-    else raise ERR "get_type_insts" "attempt to bind fixed type variable"
- end
-*)
 fun get_type_insts avoids L (tyS,Id) =
  itlist (fn {redex,residue} => fn Theta =>
           raw_match_type (snd(dest_var redex)) (type_of residue) Theta)
@@ -475,7 +454,8 @@ in
                               mk_var(xn, type_subst (#1 tyins) xty)
                             end
                  in
-                   if t = x' then failwith "" else {redex = x', residue = t}
+                   if t = x' then raise ERR "separate_insts" ""
+                             else {redex = x', residue = t}
                  end) realinsts,
    tyins)
 end
@@ -486,15 +466,15 @@ fun tyenv_find_residue x (env, idlist) = if mem x idlist then x
 fun tyenv_safe_insert (t as {redex,residue}) (E as (env, idlist)) = let
   val existing = tyenv_find_residue redex E
 in
-  if existing = residue then E else failwith "Type bindings clash"
+  if existing = residue then E else raise ERR "tyenv_safe_insert" "Type bindings clash"
 end handle NOT_FOUND => if redex = residue then (env, redex::idlist)
                         else (t::env, idlist)
-
 
 fun all_aconv [] [] = true
   | all_aconv [] _ = false
   | all_aconv _ [] = false
   | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
+
 
 fun term_homatch tyavoids lconsts tyins (insts, homs) = let
   (* local constants of both terms and types never change *)
@@ -528,7 +508,7 @@ in
                                    handle _ =>
                                           if HOLset.member(lconsts, a)
                                           then a
-                                          else failwith ""))) afvs
+                                          else raise ERR "term_homatch" ""))) afvs
              val pats0 = map inst_fn vargs
              val pats = map (Term.subst tmins) pats0
              val vhop' = inst_fn vhop
