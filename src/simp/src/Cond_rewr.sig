@@ -35,4 +35,7 @@ sig
    val QUANTIFY_CONDITIONS : thm -> thm list
    val stack_limit : int ref
 
+   val used_rewrites : thm list ref
+   val track_rewrites : bool ref
+
 end

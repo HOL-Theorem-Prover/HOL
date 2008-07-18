@@ -231,8 +231,8 @@ val Cong = markerLib.Cong
 val AC   = markerLib.AC;
 
 local open markerSyntax markerLib
-   fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
-   fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
+  fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
+  fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
   fun process_tags ss thl =
     let val (Congs,rst) = Lib.partition is_Cong thl
@@ -240,7 +240,7 @@ local open markerSyntax markerLib
     in
      if null Congs andalso null ACs then (ss,thl)
      else ((ss ++ SSFRAG{ac=map unAC ACs, congs=map unCong Congs,
-                        convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
+                         convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
     end
 in
 fun SIMP_CONV ss l =
@@ -272,7 +272,9 @@ end;
 (* These tactics never fail, though they may diverge.                        *)
 (* --------------------------------------------------------------------------*)
 
-fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l);
+
+fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l)
+
 fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
 
 fun SIMP_TAC ss l = markerLib.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l;
@@ -304,6 +306,13 @@ fun FULL_SIMP_TAC ss l =
   markerLib.ABBRS_THEN (fn l => ASSUM_LIST f THEN ASM_SIMP_TAC ss l) l
  end
 
+fun track f x = 
+ let val _ = (used_rewrites := [])
+     val res = Lib.with_flag(track_rewrites,true) f x
+ in used_rewrites := rev (!used_rewrites)
+  ; res
+ end;     
+
 (* ----------------------------------------------------------------------
     creating per-type ssdata values
    ---------------------------------------------------------------------- *)
@@ -312,7 +321,7 @@ fun type_ssfrag ty = let
   val {rewrs, convs} = TypeBase.simpls_of ty
 in
   SSFRAG {convs = convs, rewrs = rewrs, filter = NONE,
-           dprocs = [], ac = [], congs = []}
+          dprocs = [], ac = [], congs = []}
 end
 
 

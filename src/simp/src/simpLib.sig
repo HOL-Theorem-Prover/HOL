@@ -149,9 +149,13 @@ sig
    val SIMP_RULE     : simpset -> thm list -> thm -> thm
    val ASM_SIMP_RULE : simpset -> thm list -> thm -> thm
 
-   (* ---------------------------------------------------------------------
-    * Simpset pretty printing
-    * ---------------------------------------------------------------------*)
+   (* ---------------------------------------------------------------------*)
+   (* Accumulating the rewrite rules that are actually used.               *)
+   (* ---------------------------------------------------------------------*)
 
+   val used_rewrites : thm list ref
+   val track_rewrites : bool ref
+
+   val track : ('a -> 'b) -> 'a -> 'b
 
 end
