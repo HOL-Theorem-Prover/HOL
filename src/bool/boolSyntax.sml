@@ -28,6 +28,8 @@ val F            = prim_mk_const {Name="F",            Thy="bool"};
 val universal    = prim_mk_const {Name="!",            Thy="bool"};
 val existential  = prim_mk_const {Name="?",            Thy="bool"};
 val exists1      = prim_mk_const {Name="?!",           Thy="bool"};
+val ty_universal = prim_mk_const {Name="!:",           Thy="bool"};
+val ty_existential=prim_mk_const {Name="?:",           Thy="bool"};
 val conjunction  = prim_mk_const {Name="/\\",          Thy="bool"};
 val disjunction  = prim_mk_const {Name="\\/",          Thy="bool"};
 val negation     = prim_mk_const {Name="~",            Thy="bool"};
@@ -51,10 +53,12 @@ fun mk_imp(ant,conseq) =
  list_mk_comb(implication,[ant,conseq])
  handle HOL_ERR _ => raise ERR "mk_imp" "Non-boolean argument"
 
-val mk_select  = mk_binder select       "mk_select"
-val mk_forall  = mk_binder universal    "mk_forall"
-val mk_exists  = mk_binder existential  "mk_exists"
-val mk_exists1 = mk_binder exists1      "mk_exists1"
+val mk_select   = mk_binder select        "mk_select"
+val mk_forall   = mk_binder universal     "mk_forall"
+val mk_exists   = mk_binder existential   "mk_exists"
+val mk_exists1  = mk_binder exists1       "mk_exists1"
+val mk_tyforall = mk_tybinder ty_universal   "mk_tyforall"
+val mk_tyexists = mk_tybinder ty_existential "mk_tyexists"
 
 fun mk_conj(conj1,conj2) =
  list_mk_comb(conjunction,[conj1,conj2])
@@ -123,6 +127,8 @@ val dest_select  = dest_binder select      (ERR"dest_select" "not a \"@\"")
 val dest_forall  = dest_binder universal   (ERR"dest_forall" "not a \"!\"")
 val dest_exists  = dest_binder existential (ERR"dest_exists" "not a \"?\"")
 val dest_exists1 = dest_binder exists1     (ERR"dest_exists1" "not a \"?!\"")
+val dest_tyforall= dest_tybinder ty_universal   (ERR"dest_tyforall" "not a \"!:\"")
+val dest_tyexists= dest_tybinder ty_existential (ERR"dest_tyexists" "not a \"?:\"")
 val dest_conj    = dest_binop conjunction  (ERR"dest_conj"   "not a \"/\\\"")
 val dest_disj    = dest_binop disjunction  (ERR"dest_disj"   "not a \"\\/\"")
 val dest_let     = dest_binop let_tm       (ERR"dest_let"    "not a let term")

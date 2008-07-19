@@ -19,6 +19,8 @@ fun mk_imp{ant,conseq}      = boolSyntax.mk_imp(ant,conseq)
 fun mk_forall{Bvar,Body}    = boolSyntax.mk_forall(Bvar,Body)
 fun mk_exists{Bvar,Body}    = boolSyntax.mk_exists(Bvar,Body)
 fun mk_exists1{Bvar,Body}   = boolSyntax.mk_exists1(Bvar,Body)
+fun mk_tyforall{Bvar,Body}  = boolSyntax.mk_tyforall(Bvar,Body)
+fun mk_tyexists{Bvar,Body}  = boolSyntax.mk_tyexists(Bvar,Body)
 fun mk_select{Bvar,Body}    = boolSyntax.mk_select(Bvar,Body)
 fun mk_conj{conj1,conj2}    = boolSyntax.mk_conj(conj1,conj2)
 fun mk_disj{disj1,disj2}    = boolSyntax.mk_disj(disj1,disj2)
@@ -45,6 +47,10 @@ fun dest_exists M =
    let val (v,N) = boolSyntax.dest_exists M in {Bvar=v,Body=N} end;
 fun dest_exists1 M = 
    let val (v,N) = boolSyntax.dest_exists1 M in {Bvar=v,Body=N} end;
+fun dest_tyforall M = 
+   let val (v,N) = boolSyntax.dest_tyforall M in {Bvar=v,Body=N} end;
+fun dest_tyexists M = 
+   let val (v,N) = boolSyntax.dest_tyexists M in {Bvar=v,Body=N} end;
 fun dest_conj M = 
    let val (l,r) = boolSyntax.dest_conj M in {conj1=l,conj2=r} end;
 fun dest_disj M = 

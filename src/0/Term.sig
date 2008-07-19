@@ -105,6 +105,7 @@ sig
   val prim_mk_imp    : term -> term -> term
   val break_const    : term -> KernelTypes.id * hol_type
   val break_abs      : term -> term
+  val break_tyabs    : term -> term
   val trav           : (hol_type -> unit) -> (term -> unit) -> term -> unit
   val ty2tm          : hol_type -> term
   val pp_raw_term    : (term -> int) -> Portable.ppstream -> term -> unit

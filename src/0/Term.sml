@@ -1278,7 +1278,7 @@ fun RM [] theta = theta
   | RM ((Abs(Fv(_,ty1),M),Abs(Fv(_,ty2),N),_)::rst) (tmS,tyS)
       = RM ((M,N,true)::rst) (tmS, tymatch ty1 ty2 tyS)
   | RM ((TAbs((_,k1,r1),M), TAbs((_,k2,r2),N), s)::rst) S
-      = if k1=k2 andalso r1=r2 then RM ((M,N,true)::rst) S
+      = if k1=k2 andalso r1=r2 then RM ((M,N,s)::rst) S
         else MERR "different type abstractions"
   | RM ((Comb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
   | RM ((TComb(M,ty1),TComb(N,ty2),s)::rst) (tmS,tyS)

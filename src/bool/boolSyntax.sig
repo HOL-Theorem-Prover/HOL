@@ -15,6 +15,8 @@ sig
   val universal      : term
   val existential    : term
   val exists1        : term
+  val ty_universal   : term
+  val ty_existential : term
   val conjunction    : term
   val disjunction    : term
   val negation       : term
@@ -39,6 +41,8 @@ sig
   val mk_forall              : term * term -> term
   val mk_exists              : term * term -> term
   val mk_exists1             : term * term -> term
+  val mk_tyforall            : hol_type * term -> term
+  val mk_tyexists            : hol_type * term -> term
   val mk_conj                : term * term -> term
   val mk_disj                : term * term -> term
   val mk_neg                 : term -> term
@@ -69,6 +73,8 @@ sig
   val dest_forall            : term -> term * term
   val dest_exists            : term -> term * term
   val dest_exists1           : term -> term * term
+  val dest_tyforall          : term -> hol_type * term
+  val dest_tyexists          : term -> hol_type * term
   val dest_conj              : term -> term * term
   val dest_disj              : term -> term * term
   val dest_neg               : term -> term

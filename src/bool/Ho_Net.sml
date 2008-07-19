@@ -36,7 +36,9 @@ datatype term_label
    = Vnet
    | FVnet of string * int
    | Cnet of string * string * int
-   | Lnet of int;
+   | Lnet of int
+   | TCnet of int
+   | TLnet of int;
 
 fun label_cmp p =
     case p of
@@ -55,9 +57,15 @@ fun label_cmp p =
                     | x => x)
         | x => x
       end
-    | (Cnet _, Lnet _) => LESS
-    | (Lnet _, Cnet _) => GREATER
+    | (Cnet _, _) => LESS
+    | (_, Cnet _) => GREATER
     | (Lnet n1, Lnet n2) => Int.compare(n1, n2)
+    | (Lnet _, _) => LESS
+    | (_, Lnet _) => GREATER
+    | (TCnet n1, TCnet n2) => Int.compare(n1, n2)
+    | (TCnet _, _) => LESS
+    | (_, TCnet _) => GREATER
+    | (TLnet n1, TLnet n2) => Int.compare(n1, n2)
 
 
 fun stored_label (fvars,tm) =
@@ -65,10 +73,12 @@ fun stored_label (fvars,tm) =
       val args' = map (fn x => (fvars,x)) args
   in case dest_term oper
       of CONST {Name,Thy,...} => (Cnet(Name,Thy,length args),args')
-       | LAMB (Body,Bvar) => (Lnet(length args),
+       | LAMB (Bvar,Body) => (Lnet(length args),
                               (subtract fvars [Bvar],Body)::args')
        | VAR (Name,_) =>
           if mem oper fvars then (FVnet(Name,length args),args') else (Vnet,[])
+       | TYCOMB (Tm,Ty)      => (TCnet(length args), (fvars,Tm)::args')
+       | TYLAMB (Tyvar,Body) => (TLnet(length args), (fvars,Body)::args')
        | _ => fail()
     end;
 
@@ -77,8 +87,10 @@ fun label_for_lookup tm =
   let val (oper,args) = strip_comb tm
   in case dest_term oper
       of CONST {Name,Thy,...} => (Cnet(Name,Thy,length args),args)
-       | LAMB (Body,Bvar) => (Lnet(length args),Body::args)
-       | VAR (Name,_) => (FVnet(Name,length args),args)
+       | LAMB (Bvar,Body)     => (Lnet(length args),Body::args)
+       | VAR (Name,_)         => (FVnet(Name,length args),args)
+       | TYCOMB (Tm,Ty)       => (TCnet(length args),Tm::args)
+       | TYLAMB (Tyvar,Body)  => (TLnet(length args),Body::args)
        | _ => fail()
   end;
 

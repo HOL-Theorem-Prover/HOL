@@ -19,6 +19,8 @@ sig
   val mk_forall     : {Bvar:term, Body:term} -> term
   val mk_exists     : {Bvar:term, Body:term} -> term
   val mk_exists1    : {Bvar:term, Body:term} -> term
+  val mk_tyforall   : {Bvar:hol_type, Body:term} -> term
+  val mk_tyexists   : {Bvar:hol_type, Body:term} -> term
   val mk_select     : {Bvar:term, Body:term} -> term
   val mk_imp        : {ant:term, conseq:term} -> term
   val mk_let        : {arg:term, func:term} -> term
@@ -37,6 +39,8 @@ sig
   val dest_forall   : term -> {Bvar:term, Body:term}
   val dest_exists   : term -> {Bvar:term, Body:term}
   val dest_exists1  : term -> {Bvar:term, Body:term}
+  val dest_tyforall : term -> {Bvar:hol_type, Body:term}
+  val dest_tyexists : term -> {Bvar:hol_type, Body:term}
   val dest_select   : term -> {Bvar:term, Body:term}
   val dest_imp      : term -> {ant:term, conseq:term}
   val dest_imp_only : term -> {ant:term, conseq:term}

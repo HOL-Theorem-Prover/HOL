@@ -97,6 +97,16 @@ fun dest_exists tm =
  end
 end;
 
+local val err = thm_err "dest_tyexists" ""
+in
+fun dest_tyexists tm =
+ let val (Rator,Rand) = with_exn dest_comb tm err
+ in case with_exn dest_thy_const Rator err
+     of {Name="?:", Thy="bool",...} => with_exn dest_tyabs Rand err
+      | otherwise => raise err
+ end
+end;
+
 
 (*---------------------------------------------------------------------------*
  * The type of theorems and some basic operations on it.                     *
@@ -1073,6 +1083,133 @@ fun INST [] th = th
                   end
 
         | SOME _ => raise ERR "INST" "can only instantiate variables"
+
+
+(* We'll get these working later.
+
+(*---------------------------------------------------------------------------
+ * Type Generalization
+ *
+ *          A |- t
+ *   -------------------   (where 'a not free in A)
+ *       A |- !(\:'a.t)
+ *
+ *---------------------------------------------------------------------------*)
+
+local val truth = mk_const("T", Type.bool)
+
+val F = mk_const("F",bool)
+val T = mk_const("T",bool)
+
+fun FALSITY_CONV tm = DISCH F (SPEC tm (EQ_MP F_DEF (ASSUME F)))
+
+val IMP_ANTISYM_AX =
+ let val t1 = mk_var("t1",bool)
+     val t2 = mk_var("t1",bool)
+     fun dsch t1 t2 th = DISCH (mk_imp(t2,t1))
+                           (DISCH (mk_imp(t1,t2)) th)
+      fun sch t1 t2 = mk_imp(mk_imp(t1,t2), mk_imp(mk_imp(t2,t1), mk_eq(t1,t2)))
+      val abs = MP (FALSITY_CONV (mk_eq(F,T))) (MP (ASSUME (mk_imp(T,F))) TRUTH)
+      val tht = BOOL_CASE (sch T t2) t2 t2
+                          (dsch T T (REFL T)) (dsch F T (SYM abs))
+      val thf = BOOL_CASE (sch F t2) t2 t2
+                          (dsch T F abs) (dsch F F (REFL F))
+ in
+   GEN t1 (GEN t2 (BOOL_CASE (sch t1 t2) t1 t1 tht thf))
+ end
+
+  fun EQT_INTRO th =
+   let val t = concl th
+   in
+     MP (MP (SPEC truth (SPEC t IMP_ANTISYM_AX))
+            (DISCH t TRUTH))
+        (DISCH truth th)
+   end 
+in
+ 
+ fun TY_GEN x th =
+    let val th1 = TY_ABS x (EQT_INTRO th)
+       (* th1 = |- (\x. t1 x) = (\x. T)  --ABS does not behave this way --KLS*)
+        val fall_ty = mk_univ_type(x, bool) --> bool (* ``:(!^x. bool) -> bool`` *)
+        val fall = mk_thy_const{Name="!:",Thy="bool",Ty=fall_ty}
+        val abs = mk_tyabs(x, concl th) (* ``\:^x'. ^(concl th)`` *)
+        and v1 = genvar fall_ty
+        and v2 = genvar bool
+        val fall_abs = mk_comb(fall,abs)
+        val th2 = SUBST [v1 |-> TY_FORALL_DEF]
+                        (mk_eq(fall_abs, mk_comb(v1,abs))) (* ``($!: ^abs) = (^v1 ^abs)`` *)
+                        (REFL fall_abs)
+        (* th2 = |- (!x. t1 x) = (\P. P = (\x. T))(\x. t1 x) *)
+        val th3 = TRANS th2 (BETA_CONV(rhs(concl th2)))
+        (* th3 = |- (!x. t1 x) = ((\x. t1 x) = (\x. T)) *)
+        in
+        SUBST [v2 |-> SYM th3] v2 th1
+        end
+        handle _ => raise ERR "TY_GEN" ""
+end;
+
+(*---------------------------------------------------------------------------
+ *  |- !:'a. t    ---->    ty, |- t[ty/'a]
+ *---------------------------------------------------------------------------*)
+
+fun TY_SPEC ty th =
+     let val (F,body) = dest_comb(concl th)
+     in
+     if (not(fst(dest_const F)="!:"))
+     then raise ERR "TY_SPEC" "not a type forall"
+     else let val (a,u) = dest_tyabs body
+          and v1 = genvar(type_of F)
+          and v2 = genvar(type_of body)
+          val th1 = SUBST[v1 |-> TY_FORALL_DEF] (mk_comb(v1,body)) th
+          (* th1 = |- (\P. P = (\:a. T))(\:a. t1 [:a:]) *)
+          val th2 = BETA_CONV(concl th1)
+          (* th2 = |- (\P. P = (\:a. T))(\:a. t1 [:a:]) = ((\:a. t1 [:a:]) = (\:a. T)) *)
+          val th3 = EQ_MP th2 th1
+          (* th3 = |- (\:a. t1 [:a:]) = (\:a. T) *)
+          val s1 = mk_tycomb(body,ty)
+          val s2 = mk_tycomb(v2,ty)
+          val th4 = SUBST [v2 |-> th3] (mk_eq(s1,s2)) (* (--`^body [:^ty':] = ^v2 [:^ty':]`--) *)
+                          (REFL s1)
+          (* th4 = |- (\:a. t1 [:a:]) [:ty:] = (\:a. T) [:ty:] *)
+          val (ls,rs) = dest_eq(concl th4)
+          val th5 = TRANS(TRANS(SYM(TY_BETA_CONV ls))th4)(TY_BETA_CONV rs)
+          (* th5 = |- t1 [:ty:] = T *)
+          in
+          EQT_ELIM th5
+          end
+     end
+     handle _ => raise ERR "TY_SPEC" "";
+
+(*---------------------------------------------------------------------------
+ * Existential type elimination
+ *
+ *   A1 |- ?:x.t[x]   ,   A2, "t[v]" |- t'
+ *   ------------------------------------     (type variable v occurs nowhere)
+ *            A1 u A2 |- t'
+ *
+ *---------------------------------------------------------------------------*)
+
+fun TY_CHOOSE (v,th1) th2 =
+  let val (x,body) = dest_tyexists(concl th1)
+      and t'     = concl th2
+      and v1     = genvar `:bool`
+      val th3 = AP_THM(INST_TYPE[(type_of v, `:'a`)]EXISTS_DEF)`\(^x).^body`
+      (* th3 = |- (?x. t x) = (\P. P($@ P))(\x. t x) *)
+      val th4 = EQ_MP th3 th1
+      (* th4 = |- (\P. P($@ P))(\x. t x) *)
+      val th5 = EQ_MP (BETA_CONV(concl th4)) th4
+      (* th5 = |- (\x. t x)(@x. t x) *)
+      val th6 = BETA_CONV `(\(^x).^body)^v`
+      (* th6 = |- (\x. t x)v = t v *)
+      val Pa = snd(dest_eq(concl th6))
+      val th7 = UNDISCH(SUBST [(SYM th6,v1)] `^v1 ==> ^t'` (DISCH Pa th2))
+      (* th7 = |- t' *)
+  in
+  SELECT_ELIM th5 (v,th7)
+  end
+  handle _ => ERR{function = "CHOOSE",message = ""};
+
+*)
 
 
 (*---------------------------------------------------------------------------*

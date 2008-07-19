@@ -43,6 +43,13 @@ fun dest_binder c e M =
   in if same_const c c1 then p else raise e end
 end
 
+local fun dest M = let val (c,Rand) = dest_comb M in (c,dest_tyabs Rand) end
+in
+fun dest_tybinder c e M =
+  let val (c1,p) = with_exn dest M e
+  in if same_const c c1 then p else raise e end
+end
+
 
 local fun dest M =
        let val (Rator,Rand) = dest_comb M in (dest_thy_const Rator,Rand) end
@@ -124,6 +131,10 @@ fun list_mk_lbinop _ [] = raise ERR "list_mk_lbinop" "empty list"
 
 fun mk_binder c f (p as (Bvar,_)) =
    mk_comb(inst[alpha |-> type_of Bvar] c, mk_abs p)
+   handle HOL_ERR {message,...} => raise ERR f message;
+
+fun mk_tybinder c f (p as (Bvar,_)) =
+   mk_comb(c, mk_tyabs p)
    handle HOL_ERR {message,...} => raise ERR f message;
 
 fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys

@@ -803,6 +803,12 @@ fun CONV_TAC (conv:conv) :tactic = fn (asl,w) =>
 
 val BETA_TAC = CONV_TAC (DEPTH_CONV BETA_CONV);
 
+(*---------------------------------------------------------------------------
+     Tactic for (completely) type-beta-reducing a goal.
+ ---------------------------------------------------------------------------*)
+
+val TY_BETA_TAC = CONV_TAC (TOP_DEPTH_CONV TY_BETA_CONV);
+
 
 (* ---------------------------------------------------------------------*)
 (* Accept a theorem that, properly instantiated, satisfies the goal     *)

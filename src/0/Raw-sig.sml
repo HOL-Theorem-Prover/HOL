@@ -42,6 +42,10 @@ sig
   val SPEC          : term -> thm -> thm
   val GEN           : term -> thm -> thm
   val GENL          : term list -> thm -> thm
+(*
+  val TY_SPEC       : hol_type -> thm -> thm
+  val TY_GEN        : hol_type -> thm -> thm
+*)
   val EXISTS        : term * term -> thm -> thm
   val CHOOSE        : term * thm -> thm -> thm
   val CONJ          : thm -> thm -> thm

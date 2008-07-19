@@ -1618,7 +1618,14 @@ local
   fun rator_type ty = fst (dest_app_type ty)
 
 
-  fun type_pmatch lconsts env vty cty (sofar as (insts,homs)) =
+  fun type_pmatch lconsts env (TyBv i) (TyBv j) (sofar as (insts,homs))
+      = if i=j then sofar
+        else raise ERR "type_pmatch" "bound type variable mismatch"
+    | type_pmatch lconsts env (TyBv _) _ (sofar as (insts,homs))
+      = raise ERR "type_pmatch" "bound type variable mismatch"
+    | type_pmatch lconsts env _ (TyBv _) (sofar as (insts,homs))
+      = raise ERR "type_pmatch" "bound type variable mismatch"
+    | type_pmatch lconsts env vty cty (sofar as (insts,homs)) =
     if is_vartype vty then let
         val cty' = find_residue_ty vty env
       in
