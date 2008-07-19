@@ -40,7 +40,7 @@ sig
 
   val ALPHA         : term -> term -> thm
   val MK_COMB       : thm * thm -> thm
-  val TY_COMB       : hol_type -> thm -> thm
+  val TY_COMB       : thm -> hol_type -> thm
   val AP_TERM       : term -> thm -> thm
   val AP_THM        : thm -> term -> thm
   val ETA_CONV      : term -> thm

@@ -1814,23 +1814,15 @@ ho_match_type s0 ``:('a -> 'b) # 'b`` ``:'a # 'b`` handle e => Raise e;
 end (* local *)
 
 (* We redefine the main type matching functions here to use higher order matching. *)
-(* Original:
-fun raw_match_type pat ob (tyS,tyfixed) =
-    let val tyfixed_set = HOLset.addList(empty_tyset, tyfixed)
-        val (tyS',Id) =
-              RM [(pat,ob,false)] (tyS,tyfixed_set)
-        val Id' = HOLset.listItems Id
-     in (tyS',Id')
-    end;
-*)
+
 fun ho_raw_match_type pat ob (tyS,tyfixed) =
     let val tyfixed_set = HOLset.addList(empty_tyset, tyfixed)
         val (_,tyS') = ho_match_type1 tyfixed_set pat ob (tyS,[])
-        val Id = Lib.subtract (type_vars pat) (map #redex tyS')
+        val Id = Lib.subtract (Lib.union (type_vars pat) tyfixed) (map #redex tyS')
      in (tyS',Id)
     end;
 
-val raw_match_type = ho_raw_match_type 
+val raw_match_type = ho_raw_match_type
 
 fun match_type_restr fixed pat ob  = fst (ho_raw_match_type pat ob ([],fixed))
 fun match_type_in_context pat ob S = fst (ho_raw_match_type pat ob (S,[]))

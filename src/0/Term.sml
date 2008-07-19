@@ -558,6 +558,12 @@ fun rename_bvar s t =
     | Clos(_, Abs _) => rename_bvar s (push_clos t)
     | _ => raise ERR "rename_bvar" "not an abstraction";
 
+fun rename_btyvar s t =
+    case t of
+      TAbs((_, Kd, Rk), Body) => TAbs((s, Kd, Rk), Body)
+    | Clos(_, TAbs _) => rename_btyvar s (push_clos t)
+    | _ => raise ERR "rename_btyvar" "not a type abstraction";
+
 
 local val EQ = Portable.pointer_eq
 in
@@ -705,7 +711,7 @@ local
   open Binarymap
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
-      addb t (if type_of redex = type_of residue
+      addb t (if abconv_ty (type_of redex) (type_of residue)
               then (insert(A,redex,residue),
                     is_var redex andalso b)
               else raise ERR "subst" "redex has different type than residue")

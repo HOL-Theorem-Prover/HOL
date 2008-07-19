@@ -69,6 +69,7 @@ sig
   val bvar          : term -> term
   val body          : term -> term
   val rename_bvar   : string -> term -> term
+  val rename_btyvar : string -> term -> term
 
   val same_const    : term -> term -> bool
   val aconv         : term -> term -> bool

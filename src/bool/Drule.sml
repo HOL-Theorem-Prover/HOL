@@ -1164,6 +1164,32 @@ in
   ALPHA t t'
 end
 
+
+(*---------------------------------------------------------------------------
+ * Rename the bound variable of a lambda type-abstraction
+ *
+ *       "'a"   "(\:'b.t)"   --->   |- "\:'b.t = \:'a. t['a/'b]"
+ *
+ *---------------------------------------------------------------------------*)
+
+fun TYALPHA_CONV x t = let
+  (* avoid calling dest_tyabs *)
+  val (dty, _) = dest_univ_type (type_of t)
+                 handle HOL_ERR _ =>
+                        raise ERR "TYALPHA_CONV" "Term is not a type abstraction"
+  val (xstr, xkd, xrk) = with_exn dest_vartype_opr x
+                      (ERR "TYALPHA_CONV" "Type is not a type variable")
+  val _ = Kind.kind_compare(kind_of dty, xkd) = EQUAL
+          orelse raise ERR "TYALPHA_CONV"
+                           "Kind of type variable not compatible with type abstraction"
+  val _ = rank_of dty = xrk
+          orelse raise ERR "TYALPHA_CONV"
+                           "Rank of type variable not compatible with type abstraction"
+  val t' = rename_btyvar xstr t
+in
+  ALPHA t t'
+end
+
 (*----------------------------------------------------------------------------
  * Version of  ALPHA_CONV that renames "x" when necessary, but then it doesn't
  * meet the specification. Is that really a problem? Notice that this version

@@ -74,7 +74,8 @@ fun RAND_CONV conv tm = let
     dest_comb tm handle (HOL_ERR _) => raise ERR "RAND_CONV" "not a comb"
   val newrand = conv Rand
     handle HOL_ERR {origin_function, message, origin_structure} =>
-      if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
+      if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV",
+                                   "TY_COMB_CONV", "TY_ABS_CONV"]
          andalso origin_structure = "Conv"
       then
         raise ERR "RAND_CONV" message
@@ -101,7 +102,8 @@ fun RATOR_CONV conv tm = let
     dest_comb tm handle (HOL_ERR _) => raise ERR "RATOR_CONV" "not a comb"
   val newrator = conv Rator
     handle HOL_ERR {origin_function, origin_structure, message} =>
-      if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
+      if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV",
+                                   "TY_COMB_CONV", "TY_ABS_CONV"]
          andalso origin_structure = "Conv"
       then
         raise ERR "RATOR_CONV" message
@@ -146,8 +148,9 @@ fun ABS_CONV conv tm =
                  TRANS (TRANS th1 eq_thm') th2
                end
                  handle HOL_ERR {origin_function, origin_structure, message} =>
-                        if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV",
-                                                     "ABS_CONV"]
+                        if Lib.mem origin_function
+                                  ["RAND_CONV", "RATOR_CONV", "ABS_CONV",
+                                   "TY_COMB_CONV", "TY_ABS_CONV"]
                            andalso origin_structure = "Conv"
                         then
                           raise ERR "ABS_CONV" message
@@ -156,6 +159,67 @@ fun ABS_CONV conv tm =
                                     (origin_function ^ ": " ^ message)
       end
     | _ => raise ERR "ABS_CONV" "Term not an abstraction"
+
+
+(* ---------------------------------------------------------------------*)
+(* TY_COMB_CONV conv "tm [:ty:]" applies conv to tm			*)
+(* 									*)
+(* Added Peter Homeier 2008.07.18					*)
+(* ---------------------------------------------------------------------*)
+
+fun TY_COMB_CONV conv tm = let
+  val {Rator,Rand} =
+    dest_tycomb tm handle (HOL_ERR _) => raise ERR "TY_RATOR_CONV" "not a tycomb"
+  val newrator = conv Rator
+    handle HOL_ERR {origin_function, origin_structure, message} =>
+      if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV",
+                                   "TY_COMB_CONV", "TY_ABS_CONV"]
+         andalso origin_structure = "Conv"
+      then
+        raise ERR "TY_COMB_CONV" message
+      else
+        raise ERR "TY_COMB_CONV" (origin_function ^ ": " ^ message)
+in
+  TY_COMB newrator Rand handle  (HOL_ERR {message,...}) =>
+    raise ERR "TY_COMB_CONV" ("Application of TY_COMB failed: "^message)
+end
+
+(* ----------------------------------------------------------------------
+    TY_ABS_CONV conv "\:'a. t['a]" applies conv to t['a]
+
+    Added Peter Homeier 2008.07.18
+   ---------------------------------------------------------------------- *)
+
+fun TY_ABS_CONV conv tm =
+    case dest_term tm of
+      TYLAMB{Bvar,Body} => let
+        val newbody = conv Body
+      in
+        TY_ABS Bvar newbody
+        handle HOL_ERR _ =>
+               let
+                 val v = gen_tyopvar (kind_of Bvar, rank_of Bvar)
+                 val th1 = TYALPHA_CONV v tm
+                 val r = rhs (concl th1)
+                 val {Body = Body',...} = dest_tyabs r
+                 val eq_thm' = TY_ABS v (conv Body')
+                 val at = rhs (concl eq_thm')
+                 val v' = variant_type (type_vars_in_term at) Bvar
+                 val th2 = TYALPHA_CONV v' at
+               in
+                 TRANS (TRANS th1 eq_thm') th2
+               end
+                 handle HOL_ERR {origin_function, origin_structure, message} =>
+                        if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV",
+                                                     "TY_COMB_CONV", "TY_ABS_CONV"]
+                           andalso origin_structure = "Conv"
+                        then
+                          raise ERR "TY_ABS_CONV" message
+                        else
+                          raise ERR "TY_ABS_CONV"
+                                    (origin_function ^ ": " ^ message)
+      end
+    | _ => raise ERR "TY_ABS_CONV" "Term not a type abstraction"
 
 (* -------------------------------------------------------------------- *)
 (* LHS_CONV conv "t1 = t2" applies conv to t1                           *)
@@ -273,15 +337,17 @@ in
   end handle UNCHANGED => AP_TERM Rator (conv Rand)
 end
 
+(* See longer coded versions above.
 fun TY_COMB_CONV conv tm = let
   val {Rator, Rand} = dest_tycomb tm
-in TY_COMB Rand (conv Rator)
+in TY_COMB (conv Rator) Rand
 end
 
 fun TY_ABS_CONV conv tm = let
   val {Bvar, Body} = dest_tyabs tm
 in Thm.TY_ABS Bvar (conv Body)
 end
+*)
 
 fun SUB_CONV conv =
     TRY_CONV (COMB_CONV conv ORELSEC ABS_CONV conv ORELSEC
@@ -414,7 +480,6 @@ fun LAST_FORALL_CONV c tm =
       times at highest possible positions in distinct sub-terms.
 
    ---------------------------------------------------------------------- *)
-
 
 fun DEPTH_CONV conv tm =
     (SUB_CONV (DEPTH_CONV conv) THENC REPEATC conv) tm

@@ -60,6 +60,7 @@ sig
   val DISJ_CASES_UNION : thm -> thm -> thm -> thm
   val DISJ_CASESL      : thm -> thm list -> thm
   val ALPHA_CONV       : term -> term -> thm
+  val TYALPHA_CONV     : hol_type -> term -> thm
   val GEN_ALPHA_CONV   : term -> term -> thm
   val IMP_CONJ         : thm -> thm -> thm
   val EXISTS_IMP       : term -> thm -> thm

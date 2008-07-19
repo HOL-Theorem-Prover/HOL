@@ -154,13 +154,13 @@ val _ = set_trace "kinds" 0;
  ---------------------------------------------------------------------------*)
 
 val tha = REWRITE_CONV[combinTheory.I_THM] ``\:'b. !x:'b. I x = x`` handle e => Raise e;
-val thb = TY_COMB alpha tha;
+val thb = TY_COMB tha alpha;
 val thc = CONV_RULE (DEPTH_CONV TY_BETA_CONV) thb;
 
 (* Tests of failure; all these should fail:
-TY_COMB alpha (REFL ``!x:'b. I x = x``) handle e => Raise e;
-TY_COMB alpha TRUTH handle e => Raise e;
-TY_COMB ``:'a:<=1`` (REFL ``\:'b. !x:'b. I x = x``) handle e => Raise e;
+TY_COMB (REFL ``!x:'b. I x = x``) alpha handle e => Raise e;
+TY_COMB TRUTH alpha handle e => Raise e;
+TY_COMB (REFL ``\:'b. !x:'b. I x = x``) ``:'a:<=1`` handle e => Raise e;
 *)
 
 val TY_ABS_TAC :tactic = fn (asl,gl) =>
@@ -181,7 +181,7 @@ val TY_COMB_TAC :tactic = fn (asl,gl) =>
       val (op2,arg2) = dest_tycomb rhs
       val _ = assert (aconv_ty arg1) arg2
   in ([(asl,mk_eq(op1,op2))],
-      fn ths => TRANS (TY_COMB arg1 (hd ths))
+      fn ths => TRANS (TY_COMB (hd ths) arg1)
                       (ALPHA (mk_tycomb(op2,arg1)) rhs))
   end
   handle HOL_ERR e => raise HOL_ERR{message= #message e,
@@ -262,8 +262,37 @@ val _ = ``I : 'a -> 'a I``;
 val _ = ``\:'a. I : 'a -> 'a I``;
 
 (*
+val gl = ``monad ((\:'a. I) : !'a.'a -> 'a I) (\:'a 'b. \(x:'a I) (f:'a -> 'b I). f x)``;
 g `monad ((\:'a. I) : !'a.'a -> 'a I) (\:'a 'b. \(x:'a I) (f:'a -> 'b I). f x)` handle e => Raise e;
 REWRITE_TAC[monad_def]
+val MCONV = REWR_CONV monad_def;
+(SUB_CONV (DEPTH_CONV MCONV) THENC REPEATC MCONV) gl;
+(DEPTH_CONV MCONV) gl;
+
+(REPEATC MCONV THENC
+     TRY_CONV (CHANGED_CONV (SUB_CONV (TOP_DEPTH_CONV MCONV)) THENC
+               TRY_CONV (MCONV THENC TOP_DEPTH_CONV MCONV))) gl;
+
+(TOP_DEPTH_CONV MCONV) gl;
+
+set_goal([], gl);
+e(CONV_TAC (REWRITE_CONV[monad_def]));
+e(CONV_TAC (TOP_DEPTH_CONV MCONV));
+e(CONV_TAC (GEN_REWRITE_CONV TOP_DEPTH_CONV (implicit_rewrites()) [monad_def]));
+e(CONV_TAC (TOP_DEPTH_CONV (REWRITES_CONV (add_rewrites (implicit_rewrites()) [monad_def]))));
+
+trace ("Rewrite",1)
+e(CONV_TAC (TOP_DEPTH_CONV (REWRITES_CONV (add_rewrites (implicit_rewrites()) [monad_def]))));
+
+val rws = (add_rewrites (implicit_rewrites()) [monad_def]);
+val tm = gl;
+
+trace ("Rewrite",1) (REWRITES_CONV rws) tm handle e => Raise e;
+
+val net = net_of rws
+
+Net.match tm net;
+
 *)
 
 

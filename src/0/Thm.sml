@@ -511,7 +511,7 @@ fun MK_COMB (funth,argth) =
  *  end
  *---------------------------------------------------------------------------*)
 
-fun TY_COMB ty th =
+fun TY_COMB th ty =
  let val (lhs,rhs,ty1) = Term.dest_eq_ty (concl th) handle HOL_ERR _
                        => ERR "TY_COMB" "not an equality"
      val (bv,ty2) = Type.dest_univ_type ty1 handle HOL_ERR _
