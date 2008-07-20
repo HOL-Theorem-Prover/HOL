@@ -9,6 +9,7 @@ open HolKernel Parse boolLib bossLib;
 open combinTheory pairTheory relationTheory listTheory 
      markerLib metisLib BasicProvers;
 
+val export_rewrites = BasicProvers.export_rewrites "sorting";
 
 val _ = new_theory "sorting";
 

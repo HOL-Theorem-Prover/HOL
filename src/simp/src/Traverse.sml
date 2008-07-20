@@ -35,7 +35,8 @@ val equality = boolSyntax.equality;
 type context = exn   (* well known SML hack to allow any kind of data *)
 
 datatype reducer =
-  REDUCER of {initial: context,
+  REDUCER of {name : string option,
+              initial: context,
               addcontext : context * Thm.thm list -> context,
               apply: {solver:term list -> term -> thm, context: context,
                       stack: term list, relation : preorder} -> conv

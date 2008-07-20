@@ -1,6 +1,5 @@
 (* ---------------------------------------------------------------------*
- * A symbolic calculator for the HOL "num" arithmetic.  Does no proof   *
- * - it relies on some other tool to do the proof.                      *
+ * A symbolic calculator for the HOL "num" arithmetic.                  *
  *                                                                      *
  * When using this with natural arithmetic, note that the fact that     *
  * m-n=0 for n>m is not taken into account.  It assumes that            *
@@ -56,12 +55,13 @@ in
 val REDUCE_ss =
  let open numSyntax
  in simpLib.SSFRAG
-     {convs = mk_unary_rconv even_tm ::
-           mk_unary_rconv odd_tm  ::
-           mk_unary_rconv pre_tm  ::
-           mk_unary_rconv suc_tm ::
-           mk_unary_rconv div2_tm ::
-           map mk_redconv [mult_tm, plus_tm, minus_tm,
+     {name = SOME"REDUCE",
+      convs = mk_unary_rconv even_tm ::
+              mk_unary_rconv odd_tm  ::
+              mk_unary_rconv pre_tm  ::
+              mk_unary_rconv suc_tm ::
+              mk_unary_rconv div2_tm ::
+              map mk_redconv [mult_tm, plus_tm, minus_tm,
                            div_tm, mod_tm, exp_tm, mod_2exp_tm,
                            less_tm, leq_tm, greater_tm, geq_tm,
                            min_tm, max_tm, Term`$= : num -> num -> bool`],
@@ -135,8 +135,9 @@ end;
 
 val ARITH_RWTS_ss =
     simpLib.SSFRAG
-    { convs = [], rewrs = arithmetic_rewrites, congs = [],
-      filter = NONE, ac = [], dprocs = []};
+    {name=SOME"ARITH_RWTS",
+     convs = [], rewrs = arithmetic_rewrites, congs = [],
+     filter = NONE, ac = [], dprocs = []};
 
 (*---------------------------------------------------------------------------*)
 (* Add the ground reducer and the arithmetic rewrites to srw_ss. If you want *)
@@ -145,7 +146,6 @@ val ARITH_RWTS_ss =
 (*---------------------------------------------------------------------------*)
 
 val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
-
 
 
 (* ---------------------------------------------------------------------*
@@ -478,7 +478,8 @@ val ARITH_REDUCER = let
     CTXT (addthese @ get_ctxt ctxt)
   end
 in
-  REDUCER {addcontext = add_ctxt,
+  REDUCER {name=SOME"ARITH_REDUCER",
+           addcontext = add_ctxt,
            apply = fn args => CACHED_ARITH (get_ctxt (#context args)),
            initial = CTXT []}
 end;
@@ -488,15 +489,17 @@ end;
 (*---------------------------------------------------------------------------*)
 
 val ARITH_DP_ss =
-    SSFRAG { convs = [{conv = K (K MUL_CANON_CONV),
-                       key = SOME([], ``x * y``),
-                       name = "MUL_CANON_CONV", trace = 2}],
-             rewrs = [], congs = [],
-             filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+    SSFRAG {name=SOME"ARITH_DP",
+            convs = [{conv = K (K MUL_CANON_CONV),
+                      key = SOME([], ``x * y``),
+                      name = "MUL_CANON_CONV", trace = 2}],
+            rewrs = [], congs = [],
+            filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
 
 val old_dp_ss =
-    SSFRAG { convs = [], rewrs = [], congs = [], filter = NONE, ac = [],
-             dprocs = [ARITH_REDUCER]};
+    SSFRAG {name=SOME"OLD_ARITH_DP",
+            convs = [], rewrs = [], congs = [], filter = NONE, ac = [],
+            dprocs = [ARITH_REDUCER]};
 
 (*---------------------------------------------------------------------------*)
 (* And one containing the dec. proc. and the set of arithmetic rewrites. But *)
@@ -593,8 +596,9 @@ val SUC_FILTER_ss =
       end
  in
   simpLib.SSFRAG
-    { convs = [], rewrs = [], congs = [],
-      filter = SOME numfilter, ac = [], dprocs = []}
+    {name=SOME"SUC_FILTER",
+     convs = [], rewrs = [], congs = [],
+     filter = SOME numfilter, ac = [], dprocs = []}
  end;
 
 end (* numSimps *)

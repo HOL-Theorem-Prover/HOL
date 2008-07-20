@@ -35,7 +35,8 @@ val pred_set_rewrs
      IN_INTER, SET_EQ_EXT, SUBSET_DEF, IN_IMAGE, INTER_EMPTY,
      INTER_UNIV, UNION_EMPTY, UNION_UNIV, GSPECIFICATION];
 
-val pred_set_ss = simpLib.++(boolSimps.bool_ss, simpLib.SSFRAG {
+val pred_set_ss = simpLib.++(boolSimps.bool_ss, simpLib.SSFRAG 
+ {name = SOME"prob_pred_set",
   ac = [],
   convs = [],
   dprocs = [],
@@ -63,6 +64,7 @@ fun IN_LAMBDA_CONV ty tm
     end;
 
 fun pset_ss_ty ty = simpLib.++(boolSimps.bool_ss, simpLib.SSFRAG {
+  name = SOME"prob_pset",
   ac = [],
   convs = [{conv = (K o K) (IN_LAMBDA_CONV ty),
 	    key = SOME ([], ``(x:'a) IN y``),

@@ -28,7 +28,6 @@ in
   val _ = installPP (with_pp Hol_pp.pp_theory)
   val _ = installPP (with_pp type_grammar.prettyprint_grammar)
   val _ = installPP (with_pp term_grammar.prettyprint_grammar)
-
   val _ = installPP (with_pp proofManagerLib.pp_proof)
   val _ = installPP (with_pp proofManagerLib.pp_proofs)
   val _ = installPP (with_pp Rewrite.pp_rewrites)

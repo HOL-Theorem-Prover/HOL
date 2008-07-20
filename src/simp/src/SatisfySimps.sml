@@ -7,7 +7,8 @@ val SATISFY_REDUCER =
   let exception FACTDB of factdb;
       fun get_db e = (raise e) handle FACTDB db => db
   in REDUCER
-    {initial = FACTDB ([],[]),
+    {name=SOME"SATISFY",
+     initial = FACTDB ([],[]),
      apply=SATISFY_CONV o get_db o #context,
      addcontext=(fn (ctxt,thms) => FACTDB (add_facts (get_db ctxt) thms))}
   end;

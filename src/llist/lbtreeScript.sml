@@ -1,7 +1,9 @@
 open HolKernel Parse boolLib bossLib
 
-open boolSimps BasicProvers
-open llistTheory
+open boolSimps BasicProvers llistTheory;
+
+val export_rewrites = BasicProvers.export_rewrites "lbtree";
+
 
 (* ----------------------------------------------------------------------
     a theory of "lazy" binary trees; that is potentially infinite binary

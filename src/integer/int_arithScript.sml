@@ -837,6 +837,7 @@ val elim_eq_coeffs = store_thm(
 
 
 val int_acnorm_ss = SSFRAG{
+  name = SOME "int_acnorm",
   ac = [(SPEC_ALL INT_ADD_ASSOC, SPEC_ALL INT_ADD_COMM),
         (SPEC_ALL INT_MUL_ASSOC, SPEC_ALL INT_MUL_COMM)],
   convs = [], congs = [], dprocs = [], filter = NONE,

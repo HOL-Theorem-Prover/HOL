@@ -5,6 +5,8 @@
 open HolKernel Parse boolLib bossLib BasicProvers boolSimps NEWLib
 open ncTheory swapTheory binderLib
 
+val export_rewrites = export_rewrites "gmterm";
+
 val _ = new_theory "gmterm";
 
 val (constfree_def, _) = define_recursive_term_function`

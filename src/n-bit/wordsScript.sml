@@ -26,7 +26,7 @@ val op << = op THENL;
 val op >> = op THEN1;
 
 val Abbr = BasicProvers.Abbr;
-val export_rewrites = BasicProvers.export_rewrites
+val export_rewrites = BasicProvers.export_rewrites "words"
 val fcp_ss = std_ss ++ fcpLib.FCP_ss;
 val ai = computeLib.auto_import_definitions;
 

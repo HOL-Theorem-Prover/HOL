@@ -358,7 +358,7 @@ fun define_wrapper worker q = let
     val interesting_bit = CONJUNCT2 f_def
   in
     save_thm(fstr^"_swap_invariant", interesting_bit) before
-    BasicProvers.export_rewrites [fstr^"_swap_invariant"]
+    export_rewrites [fstr^"_swap_invariant"]
   end
 in
   (f_thm, f_invariants)

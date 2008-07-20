@@ -4,7 +4,8 @@ struct
 open simpLib;
 
 val PURE_ss = SSFRAG
-    {convs  = [],
+    {name = SOME "PURE",
+     convs  = [],
      rewrs  = [],
      congs  = [],
      ac     = [],

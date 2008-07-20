@@ -2,6 +2,8 @@ open HolKernel Parse boolLib
 
 open simpLib boolSimps bossLib BasicProvers metisLib
 
+val export_rewrites = export_rewrites "swap";
+
 val _ = new_theory "swap"
 
 val _ = augment_srw_ss [rewrites [LET_THM]]

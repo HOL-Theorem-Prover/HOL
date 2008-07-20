@@ -14,6 +14,8 @@ local open numeralTheory in end;
 
 val _ = new_theory "divides";
 
+val export_rewrites = export_rewrites "divides";
+
 val divides_def = Q.new_definition
   ("divides_def",
    `divides a b = ?q. b = q*a`);

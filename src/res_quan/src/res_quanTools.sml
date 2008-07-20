@@ -411,7 +411,8 @@ fun RESQ_REWRITE1_TAC th' =
 
 val resq_SS =
   simpLib.SSFRAG
-  {ac = [], congs = [],
+  {name=SOME"resq",
+   ac = [], congs = [],
    convs =
    [{conv = K (K RES_FORALL_CONV),
      key = SOME ([], Term `RES_FORALL (p:'a -> bool) m`),

@@ -9,6 +9,8 @@ open pred_setTheory
 open binderLib
 open basic_swapTheory nomsetTheory termTheory preltermTheory
 
+val export_rewrites = export_rewrites "labelledTerms";
+
 val _ = new_theory "labelledTerms"
 
 fun Store_Thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]

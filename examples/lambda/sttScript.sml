@@ -14,6 +14,8 @@
 open HolKernel boolLib Parse bossLib
 open binderLib metisLib termTheory;
 
+val export_rewrites = BasicProver.export_rewrites "stt";
+
 val _ = new_theory "stt";
 
 (* define simple types, the "funspace" constructor will get to be written

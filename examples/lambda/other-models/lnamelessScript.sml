@@ -16,6 +16,7 @@ open binderLib
 
 open nomsetTheory pred_setTheory
 
+val export_rewrites = export_rewrites "lnameless";
 fun Store_thm (p as (n,t,tac)) = store_thm p before export_rewrites [n]
 val lswapstr_APPEND = basic_swapTheory.lswapstr_APPEND
 

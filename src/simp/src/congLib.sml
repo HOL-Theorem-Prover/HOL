@@ -165,17 +165,18 @@ val cong_reducer =
         in 
           thm
         end
-  in REDUCER {addcontext=addcontext, apply=apply,
+  in REDUCER {name=SOME"cong_reducer",
+              addcontext=addcontext, apply=apply,
               initial=CONVNET (Ho_Net.empty_net)}
   end;
 
 
-fun reducer_addRwts (REDUCER {addcontext,apply,initial}) rwts =
-  REDUCER {addcontext=addcontext, apply=apply, initial=addcontext (initial,rwts)}
+fun reducer_addRwts (REDUCER {name,addcontext,apply,initial}) rwts =
+  REDUCER {name=name,addcontext=addcontext, apply=apply, initial=addcontext (initial,rwts)}
 
 
 fun eq_reducer_wrapper (eq_reducer as REDUCER (data))=
-  let 
+  let val name = #name data
       val initial = (#initial data);
       val addcontext = ((#addcontext data));
 
@@ -188,7 +189,7 @@ fun eq_reducer_wrapper (eq_reducer as REDUCER (data))=
         in 
           congThm
         end
-  in REDUCER {addcontext=addcontext, apply=apply,
+  in REDUCER {name=name,addcontext=addcontext, apply=apply,
               initial=initial}
   end;
 

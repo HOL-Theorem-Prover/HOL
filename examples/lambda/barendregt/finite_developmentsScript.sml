@@ -9,6 +9,8 @@ open pathTheory BasicProvers nomsetTheory pred_setTheory
 local open pred_setLib in end
 val _ = augment_srw_ss [boolSimps.LET_ss]
 
+val export_rewrites = export_rewrites "finite_developments";
+
 val _ = new_theory "finite_developments";
 
 fun Save_Thm(n, th) = save_thm(n,th) before export_rewrites [n]

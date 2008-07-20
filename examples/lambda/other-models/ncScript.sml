@@ -18,6 +18,8 @@ open HolKernel Parse boolLib
      bossLib arithmeticTheory pred_setTheory dBTheory
      BasicProvers basic_swapTheory
 
+val export_rewrites = export_rewrites "nc";
+
 val _ = new_theory "nc";
 
 
@@ -1048,8 +1050,7 @@ Induct THENL
  THEN RW_TAC list_ss
  [ISUB_def,DOM_DEF,FVS_DEF,FV_THM,IN_UNION,IN_SING,DE_MORGAN_THM,SUB_THM]);
 
-val _ = BasicProvers.export_rewrites ["nc_DISTINCT",
-                                      "nc_INJECTIVITY", "LAM_VAR_INJECTIVE"];
+val _ = export_rewrites ["nc_DISTINCT","nc_INJECTIVITY", "LAM_VAR_INJECTIVE"];
 
 
 val FV_SUB = store_thm(
@@ -1108,7 +1109,7 @@ val size_vsubst = store_thm(
   "size_vsubst",
   ``size ([VAR v/u] t) = size t``,
   SRW_TAC [][size_isub, SUB_ISUB_SINGLETON, RENAMING_DEF]);
-val _ = BasicProvers.export_rewrites ["size_vsubst"]
+val _ = export_rewrites ["size_vsubst"]
 
 val size_thm = save_thm(
   "size_thm",

@@ -16,6 +16,8 @@ fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before
 
 structure Q = struct open Q open OldAbbrevTactics end;
 
+val export_rewrites = export_rewrites "chap2";
+
 val _ = new_theory "chap2";
 
 val (ctxt_rules, ctxt_indn, ctxt_cases) =  (* p. 10 *)

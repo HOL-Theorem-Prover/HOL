@@ -6,6 +6,8 @@ open pretermTheory basic_swapTheory nomsetTheory
 open pred_setTheory
 open BasicProvers
 
+val export_rewrites = export_rewrites "term";
+
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before export_rewrites [s])
 fun Save_Thm(s, th) = (save_thm(s, th) before export_rewrites [s])
 

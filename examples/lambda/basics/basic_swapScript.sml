@@ -2,6 +2,8 @@ open HolKernel Parse boolLib bossLib BasicProvers boolSimps
 
 local open stringTheory pred_setTheory in end;
 
+val export_rewrites = export_rewrites "basic_swap";
+
 val _ = new_theory "basic_swap";
 
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before

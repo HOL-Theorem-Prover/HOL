@@ -3,6 +3,8 @@ open nomsetTheory
 
 local open stringTheory in end
 
+val export_rewrites = export_rewrites "MPlambda";
+
 fun Store_thm (n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
 
 val _ = new_theory "MPlambda"

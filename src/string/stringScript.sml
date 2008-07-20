@@ -14,6 +14,8 @@
 open HolKernel boolLib Parse;
 open numLib numSyntax BasicProvers SingleStep listTheory bossLib metisLib;
 
+val export_rewrites = BasicProvers.export_rewrites "string";
+
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
 (* ---------------------------------------------------------------------*)

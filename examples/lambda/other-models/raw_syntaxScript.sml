@@ -47,6 +47,8 @@ open chap3Theory
 
    ---------------------------------------------------------------------- *)
 
+val export_rewrites = export_rewrites "raw_syntax";
+
 val _ = new_theory "raw_syntax"
 
 val _ = Hol_datatype `raw_term = var of string

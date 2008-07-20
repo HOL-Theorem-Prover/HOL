@@ -67,7 +67,8 @@ local
   val rederr = ERR "RED_CONV" "Term not reducible"
 in
 val INT_REDUCE_ss = SSFRAG
-  {convs = map mk_conv (exp_pattern::(abs_patterns @ basic_op_patterns)),
+  {name=SOME"INT_REDUCE",
+   convs = map mk_conv (exp_pattern::(abs_patterns @ basic_op_patterns)),
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
 fun RED_CONV t =

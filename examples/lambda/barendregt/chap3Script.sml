@@ -1,5 +1,7 @@
 open HolKernel Parse boolLib bossLib metisLib basic_swapTheory
 
+val export_rewrites = export_rewrites "chap3";
+
 val _ = new_theory "chap3";
 
 local open pred_setLib in end;
@@ -97,7 +99,7 @@ val permutative_compat_closure_eqn = store_thm(
     FULL_SIMP_TAC (srw_ss()) [],
     METIS_TAC [permutative_def, compat_closure_permutative]
   ]);
-val _ = BasicProvers.export_rewrites ["permutative_compat_closure_eqn"]
+val _ = export_rewrites ["permutative_compat_closure_eqn"]
 
 val swap_eq_3substs = store_thm(
   "swap_eq_3substs",
@@ -656,7 +658,7 @@ val grandbeta_permutative_eqn = store_thm(
   "grandbeta_permutative_eqn",
   ``grandbeta (tpm pi M) (tpm pi N) = grandbeta M N``,
   METIS_TAC [tpm_inverse, grandbeta_permutative]);
-val _ = BasicProvers.export_rewrites ["grandbeta_permutative_eqn"]
+val _ = export_rewrites ["grandbeta_permutative_eqn"]
 
 val grandbeta_substitutive = store_thm(
   "grandbeta_substitutive",

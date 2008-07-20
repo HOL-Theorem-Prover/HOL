@@ -37,6 +37,8 @@ open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
+val export_rewrites = export_rewrites "list";
+
 val _ = new_theory "list";
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
@@ -192,7 +194,7 @@ val EVERY_DEF = new_recursive_definition
        rec_axiom = list_Axiom,
        def = --`(!P:'a->bool. EVERY P [] = T)  /\
                 (!P h t. EVERY P (h::t) = P h /\ EVERY P t)`--};
-val _ = BasicProvers.export_rewrites ["EVERY_DEF"]
+val _ = export_rewrites ["EVERY_DEF"]
 
 val EXISTS_DEF = new_recursive_definition
       {name = "EXISTS_DEF",
@@ -568,7 +570,6 @@ CONJ_TAC THEN
   INDUCT_THEN list_INDUCT STRIP_ASSUME_TAC
    THEN REWRITE_TAC [CONS_11,NOT_NIL_CONS, NOT_CONS_NIL,APPEND]
    THEN GEN_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ);
-val _ = export_rewrites ["APPEND_eq_NIL"]
 
 val APPEND_11 = store_thm(
   "APPEND_11",
@@ -945,12 +946,6 @@ val MEM_REVERSE = store_thm(
   Induct THEN SRW_TAC [][] THEN PROVE_TAC []);
 
 val _ = export_rewrites ["MEM_REVERSE"]
-
-val REVERSE_EQ_NIL = store_thm(
-  "REVERSE_EQ_NIL",
-  ``!l. (REVERSE l = []) = (l = [])``,
-  Induct THEN SRW_TAC [][]);
-val _ = export_rewrites ["REVERSE_EQ_NIL"]
 
 
 (* ----------------------------------------------------------------------
@@ -1337,13 +1332,13 @@ val _ = adjoin_to_theory
    S "  end;"
  end)};
 
-val _ = BasicProvers.export_rewrites
+val _ = export_rewrites 
           ["APPEND_11", "EL", "FLAT", "HD",
            "MAP", "MAP2", "NULL_DEF",
            "SUM", "TL", "APPEND_ASSOC", "CONS", "CONS_11",
            "LENGTH_APPEND", "LENGTH_MAP", "MAP_APPEND",
            "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL", "APPEND_NIL",
-           "CONS_ACYCLIC", "list_case_def", "ZIP",
+           "CONS_ACYCLIC", "list_case_def", "APPEND_eq_NIL", "ZIP",
            "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
            "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS",
            "LAST_CONS", "FRONT_CONS", "FOLDL", "FOLDR", "FILTER",

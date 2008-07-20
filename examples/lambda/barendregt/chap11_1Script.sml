@@ -6,6 +6,7 @@ open binderLib
 
 open nomsetTheory labelledTermsTheory termTheory chap3Theory
 
+val export_rewrites = export_rewrites "chap11_1";
 
 val _ = new_theory "chap11_1";
 

@@ -2,6 +2,8 @@ open HolKernel boolLib Parse bossLib BasicProvers metisLib
 
 open basic_swapTheory pred_setTheory nomsetTheory binderLib
 
+val export_rewrites = export_rewrites "preterm";
+
 val _ = new_theory "preterm";
 
 val _ = Hol_datatype `preterm = var of string

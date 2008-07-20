@@ -4,13 +4,14 @@ struct
 open Lib Parse simpLib pairTheory PairedLambda;
 
 
-(*------------------------------------------------------------------------
- * PAIR_ss
- *------------------------------------------------------------------------*)
+(*------------------------------------------------------------------------*)
+(* PAIR_ss                                                                *)
+(*------------------------------------------------------------------------*)
 
 val PAIR0_ss =
     SSFRAG
-      {convs=[{name="GEN_BETA_CONV (beta reduction)",
+      {name=SOME"PAIR",
+       convs=[{name="GEN_BETA_CONV (beta reduction)",
                trace=2,
                key=SOME ([],(--`(\(x,y):('a # 'b). y:'b) (z,w)`--)),
               conv=K (K GEN_BETA_CONV)}],

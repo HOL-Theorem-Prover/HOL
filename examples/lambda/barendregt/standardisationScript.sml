@@ -16,6 +16,8 @@ open chap11_1Theory
 
 local open containerTheory in end
 
+val export_rewrites = export_rewrites "standardisation";
+
 val _ = new_theory "standardisation"
 
 structure Q = struct open Q open OldAbbrevTactics end

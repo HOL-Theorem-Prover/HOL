@@ -6,6 +6,8 @@ open pred_setTheory
 
 open basic_swapTheory NEWLib
 
+val export_rewrites = export_rewrites "nomset";
+
 val _ = new_theory "nomset";
 
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before

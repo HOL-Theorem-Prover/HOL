@@ -1,5 +1,7 @@
 open HolKernel boolLib Parse bossLib stringTheory arithmeticTheory markerLib;
 
+val export_rewrites = export_rewrites "string_num";
+
 val _ = new_theory "string_num"
 
 val n2s_def = tDefine
