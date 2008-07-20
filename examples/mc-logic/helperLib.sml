@@ -111,7 +111,8 @@ fun get_sep_domain tm =
 
 (* simpsets *)
 
-fun conv2ssfrag name conv pattern = simpLib.SSFRAG{ ac = [], congs = [],
+fun conv2ssfrag name conv pattern = simpLib.SSFRAG{name=NONE,
+  ac = [], congs = [],
   convs = [{ name  = name, conv = K (K conv), key = SOME([], pattern), trace = 10 }],
   dprocs = [], filter = NONE, rewrs = []};
 

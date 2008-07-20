@@ -14,7 +14,7 @@
 open HolKernel boolLib Parse bossLib
 open binderLib metisLib termTheory;
 
-val export_rewrites = BasicProver.export_rewrites "stt";
+val export_rewrites = BasicProvers.export_rewrites "stt";
 
 val _ = new_theory "stt";
 

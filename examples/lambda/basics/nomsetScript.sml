@@ -11,7 +11,7 @@ val export_rewrites = export_rewrites "nomset";
 val _ = new_theory "nomset";
 
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before
-                            BasicProvers.export_rewrites [s])
+                            export_rewrites [s])
 
 (* permutations are represented as lists of pairs of strings.  These
    can be lifted to bijections on strings that only move finitely many

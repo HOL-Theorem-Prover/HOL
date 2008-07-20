@@ -7,7 +7,7 @@ val export_rewrites = export_rewrites "basic_swap";
 val _ = new_theory "basic_swap";
 
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before
-                            BasicProvers.export_rewrites [s])
+                            export_rewrites [s])
 
 (* ----------------------------------------------------------------------
     swapping over strings
