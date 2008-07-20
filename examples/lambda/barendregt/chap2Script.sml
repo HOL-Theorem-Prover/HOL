@@ -11,12 +11,13 @@ open termTheory BasicProvers
 val _ = augment_srw_ss [rewrites [LET_THM]]
 val std_ss = std_ss ++ rewrites [LET_THM]
 
+val export_rewrites = export_rewrites "chap2";
+
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before
                             export_rewrites [s])
 
 structure Q = struct open Q open OldAbbrevTactics end;
 
-val export_rewrites = export_rewrites "chap2";
 
 val _ = new_theory "chap2";
 

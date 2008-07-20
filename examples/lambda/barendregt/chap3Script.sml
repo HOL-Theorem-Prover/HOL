@@ -1,13 +1,13 @@
 open HolKernel Parse boolLib bossLib metisLib basic_swapTheory
 
-val export_rewrites = export_rewrites "chap3";
-
 val _ = new_theory "chap3";
 
 local open pred_setLib in end;
 
 open binderLib BasicProvers
 open termTheory chap2Theory
+
+val export_rewrites = export_rewrites "chap3";
 
 val SUBSET_DEF = pred_setTheory.SUBSET_DEF
 
