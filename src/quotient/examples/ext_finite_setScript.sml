@@ -1,14 +1,15 @@
 (* An alternative approach to creating finite sets as a quotient of lists.  *)
 (* This takes the extensionality principle as the definition of equivalence.*)
-(* Composed and contributed by Dr. Michael Norrish.                         *)
+(* Composed and contributed by Michael Norrish.                             *)
 (* June 24, 2005.                                                           *)
 
 open HolKernel Parse boolLib bossLib BasicProvers listTheory quotientLib
 
 val _ = new_theory "ext_finite_set";
 
+val export_rewrites = export_rewrites "ext_finite_set"
 fun Store_Thm(n,t,tac) = store_thm(n,t,tac) before
-                         BasicProvers.export_rewrites [n]
+                         export_rewrites [n]
 
 val leq_def = Define`leq x y = !e:'a. MEM e x = MEM e y`
 

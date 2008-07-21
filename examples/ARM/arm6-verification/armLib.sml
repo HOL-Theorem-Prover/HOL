@@ -21,7 +21,8 @@ in
     {convs = map conv_rec [``swp``,``mrs_msr``,``data_proc``,``reg_shift``,
              ``mla_mul``, ``ldr``,``str``,``ldm``,``stm``,``br``,``swi_ex``,
              ``cdp_und``, ``mcr``,``mrc``,``ldc``,``stc``,``unexec``],
-   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
+   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = [],
+   name = SOME "ICLASS"};
 end;
 
 local open fcpTheory in
@@ -70,7 +71,7 @@ fun tupleCases M =
 val PBETA_ss = simpLib.SSFRAG
  {convs = [{name="PBETA",trace = 3,conv=K (K PairRules.PBETA_CONV),
   key = SOME([],``(\(x:'a,y:'b). s1) s2:'c``)}], rewrs = [], congs = [],
-  filter = NONE, ac = [], dprocs = []};
+  filter = NONE, ac = [], dprocs = [], name = SOME "PBETA"};
 
 fun RES_MP1_TAC s t =
  let val a = (fst o dest_imp o concl o INST s o SPEC_ALL) t
