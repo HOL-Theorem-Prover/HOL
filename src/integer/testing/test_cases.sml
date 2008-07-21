@@ -231,7 +231,9 @@ val terms_to_test =
            (2i*e*bv_cout+e*wb_sum+wbs_sum = bv_cin+e*wb_a+e*wb_b+wbs_a+wbs_b)`,
      "AG_INT"),
   L (Term`x * y < y * x + 1i`, "IMUL_NORM"),
-  L (Term`x * y < y * x + 1n`, "NMUL_NORM")
+  L (Term`x * y < y * x + 1n`, "NMUL_NORM"),
+  L (``Num i < SUC (Num i)``, "Num1"),
+  L (``0 < i ==> (ODD (Num i) = ?j. i = 2 * j + 1)``, "Num2")
 ];
 
 val omega_test_terms = [
@@ -244,7 +246,11 @@ val omega_test_terms = [
   L (``i < (nb - 1) % 2147483648 /\ 0 <= nb /\ nb < 2147483648 /\ 0 <= i /\
        i < 2147483648 ==> i < (i + 1) % 2147483648``, "MATTHEWS_I2^31"),
   L (``i < (nb - 1) MOD 2147483648 /\ 0 <= nb /\ nb < 2147483648 /\ 0 <= i /\
-       i < 2147483648 ==> i < (i + 1) MOD 2147483648``, "MATTHEWS_N2^31")
+       i < 2147483648 ==> i < (i + 1) MOD 2147483648``, "MATTHEWS_N2^31"),
+  L (``0 <= i /\ i <= 100 ==> (Num i + 11 = (Num i + 11) MOD 429467296)``,
+     "MATTHEWS_Num"),
+  L (``0 <= i /\ i <= 100 ==> (Num (i + 11) = (Num i + 11) MOD 429467296)``,
+     "MATTHEWS_Num'")
 ]
 
 val cooper_test_terms = [
