@@ -233,7 +233,11 @@ val terms_to_test =
   L (Term`x * y < y * x + 1i`, "IMUL_NORM"),
   L (Term`x * y < y * x + 1n`, "NMUL_NORM"),
   L (``Num i < SUC (Num i)``, "Num1"),
-  L (``0 < i ==> (ODD (Num i) = ?j. i = 2 * j + 1)``, "Num2")
+  L (``0 < i ==> (ODD (Num i) = ?j. i = 2 * j + 1)``, "Num2"),
+  L (``0i < & (Num (ABS a1 - 1)) + 1``, "Num3"),
+  L (``0i < &(Num (f (x:'a) - 1)) + 1``, "Num4a"),
+  L (``0i < (if 0 <= f (x:'a) - 1i then f x - 1 else &(g (f x - 1))) + 1``,
+     "Num4b")
 ];
 
 val omega_test_terms = [

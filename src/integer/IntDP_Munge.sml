@@ -256,12 +256,19 @@ val op tTHEN = fn (t1, t2) => tacTHEN t1 t2
 infix tTHEN
 
 
+fun subtm_rel (t1, t2) =
+    case Int.compare(term_size t1, term_size t2) of
+      LESS => GREATER
+    | EQUAL => EQUAL
+    | GREATER => LESS
+
 local
   open arithmeticTheory numSyntax
   val Num_lemma = prove(
-    ``&(Num i) = if 0 <= i then i else (& o Num) i``,
+    ``&(Num i) = if 0 <= i then i else & ((Num o I) i)``,
     COND_CASES_TAC THEN
-    ASM_REWRITE_TAC [combinTheory.o_THM, integerTheory.INT_OF_NUM])
+    ASM_REWRITE_TAC [combinTheory.o_THM, integerTheory.INT_OF_NUM,
+                     combinTheory.I_THM])
 
   val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
                   GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
@@ -316,13 +323,6 @@ local
     term_size f + term_size x
   end handle HOL_ERR _ => term_size (body t) + 1
       handle HOL_ERR _ => 1
-
-  fun subtm_rel (t1, t2) =
-      case Int.compare(term_size t1, term_size t2) of
-        LESS => GREATER
-      | EQUAL => EQUAL
-      | GREATER => LESS
-
 
   (* two functions below derived from RJB's Sub_and_cond.sml *)
   fun op_of_app tm = op_of_app (rator tm) handle _ => tm
@@ -463,7 +463,9 @@ fun BASIC_CONV DPname DP tm = let
                   if goal_qtype tm = qsUNIV then
                     (tacCONV move_quants_up tTHEN tacRGEN) tm
                   else tacRGEN tm
-            val init_nonpbs = non_presburger_subterms0 [] igoal
+            val init_nonpbs =
+                Listsort.sort (inv_img_cmp #1 subtm_rel)
+                              (non_presburger_subterms0 [] igoal)
           in
             case List.find (fn (_, b) => not b) init_nonpbs of
               NONE =>
