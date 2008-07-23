@@ -158,6 +158,15 @@ fun DEPTH_CONSEQ_CONV conv t =
      in
         thm2
      end
+   else if (is_exists t) then
+     let
+        val (var, body) = dest_exists t;
+	val thm_body = DEPTH_CONSEQ_CONV conv body;
+        val thm = GEN_ASSUM var thm_body;
+        val thm2 = HO_MATCH_MP MONO_EXISTS thm;
+     in
+        thm2
+     end
    else 
      ((let
 	 val thm = (CONSEQ_CONV_WRAPPER conv) t;
@@ -168,6 +177,7 @@ fun DEPTH_CONSEQ_CONV conv t =
          thm3
      end handle HOL_ERR _ => REFL_IMP_CONV t)
          handle UNCHANGED => REFL_IMP_CONV t);
+
 
 
 (*like CHANGED_CONV*)
