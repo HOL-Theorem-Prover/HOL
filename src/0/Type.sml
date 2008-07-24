@@ -1276,6 +1276,7 @@ fun abstraction (TyAbs _)         = true
 (*---------------------------------------------------------------------------
     Matching (first order, modulo alpha conversion) of types, including
     sets of type variables to avoid binding.
+    Now replaced by higher order matching of types, modulo alpha-beta conversion.
  ---------------------------------------------------------------------------*)
 
 local
@@ -1593,7 +1594,9 @@ fun abconv_ty t1 t2 = aconv_ty (deep_beta_conv_ty t1) (deep_beta_conv_ty t2)
  ---------------------------------------------------------------------------*)
 
 local
+  fun MERR s = raise ERR "raw_match_type error" s
   exception NOT_FOUND
+  val abconv_ty = aconv_ty (* do beta-reduction first before entering these functions *)
   fun find_residue_ty red [] = raise NOT_FOUND
     | find_residue_ty red ({redex,residue}::rest) = if abconv_ty red redex then residue
                                                     else find_residue_ty red rest
@@ -1620,33 +1623,36 @@ local
 
   fun type_pmatch lconsts env (TyBv i) (TyBv j) (sofar as (insts,homs))
       = if i=j then sofar
-        else raise ERR "type_pmatch" "bound type variable mismatch"
+        else MERR "bound type variable mismatch"
     | type_pmatch lconsts env (TyBv _) _ (sofar as (insts,homs))
-      = raise ERR "type_pmatch" "bound type variable mismatch"
+      = MERR "bound type variable mismatch"
     | type_pmatch lconsts env _ (TyBv _) (sofar as (insts,homs))
-      = raise ERR "type_pmatch" "bound type variable mismatch"
+      = MERR "bound type variable mismatch"
     | type_pmatch lconsts env vty cty (sofar as (insts,homs)) =
     if is_vartype vty then let
         val cty' = find_residue_ty vty env
       in
-        if aconv_ty cty' cty then sofar else raise ERR "type_pmatch" "variable type mismatch"
+        if aconv_ty cty' cty then sofar else MERR "type variable mismatch"
       end handle NOT_FOUND =>
                  if HOLset.member(lconsts, vty) then
                    if abconv_ty cty vty then sofar
-                   else raise ERR "type_pmatch" "can't instantiate local constant"
+                   else MERR "can't instantiate local constant"
                  else (safe_insert_tya (vty |-> cty) insts, homs)
+               | HOL_ERR _ => MERR "free type variable mismatch"
     else if is_con_type vty then let
         val {Thy = vthy, Tyop = vname, Kind = vkd, Rank = vrk} = dest_thy_con_type vty
         val {Thy = cthy, Tyop = cname, Kind = ckd, Rank = crk} = dest_thy_con_type cty
+                handle HOL_ERR _ => MERR "type constant mismatched with non-constant"
       in
         if vname = cname andalso vthy = cthy then
           if ckd = vkd andalso crk = vrk then sofar
           else (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
-        else raise ERR "type_pmatch" "constant type mismatch"
+        else MERR "type constant mismatch"
       end
     else if is_abs_type vty then let
         val (vv,vbod) = dest_abs_type vty
         val (cv,cbod) = dest_abs_type cty
+                handle HOL_ERR _ => MERR "abstraction type mismatched with non-abstraction type"
         val (_, vkd, vrk) = dest_vartype_opr vv
         val (_, ckd, crk) = dest_vartype_opr cv
         val sofar' = (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
@@ -1656,6 +1662,7 @@ local
     else if is_univ_type vty then let
         val (vv,vbod) = dest_univ_type vty
         val (cv,cbod) = dest_univ_type cty
+                handle HOL_ERR _ => MERR "universal type mismatched with non-universal type"
         val (_, vkd, vrk) = dest_vartype_opr vv
         val (_, ckd, crk) = dest_vartype_opr cv
         val sofar' = (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
@@ -1680,6 +1687,7 @@ local
         else let
             val (lv,rv) = dest_app_type vty
             val (lc,rc) = dest_app_type cty
+                handle HOL_ERR _ => MERR "application type mismatched with non-application type"
             val sofar' = type_pmatch lconsts env lv lc sofar
           in
             type_pmatch lconsts env rv rc sofar'
@@ -1823,7 +1831,12 @@ end (* local *)
 (* We redefine the main type matching functions here to use higher order matching. *)
 
 fun ho_raw_match_type pat ob (tyS,tyfixed) =
-    let val tyfixed_set = HOLset.addList(empty_tyset, tyfixed)
+    let val pat = deep_beta_conv_ty pat
+        val ob  = deep_beta_conv_ty ob
+        fun beta_conv_S {redex,residue} =
+            {redex=redex, residue = deep_beta_conv_ty residue}
+        val tyS = map beta_conv_S tyS
+        val tyfixed_set = HOLset.addList(empty_tyset, tyfixed)
         val (_,tyS') = ho_match_type1 tyfixed_set pat ob (tyS,[])
         val Id = Lib.subtract (Lib.union (type_vars pat) tyfixed) (map #redex tyS')
      in (tyS',Id)

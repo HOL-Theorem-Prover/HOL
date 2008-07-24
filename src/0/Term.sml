@@ -326,7 +326,7 @@ fun tyvar_occurs aty =
         | occ (Comb(Rator,Rand))  = occ Rand  orelse occ Rator
         | occ (TComb(Rator,Ty))   = occ Rator orelse tyocc Ty
         | occ (Abs(Bvar,Body))    = occ Bvar  orelse occ Body
-        | occ (TAbs(Ty,Body))     = tyocc (TyFv Ty)  orelse occ Body
+        | occ (TAbs(Ty,Body))     = occ Body
         | occ (t as Clos _)       = occ (push_clos t)
    in occ end
    handle HOL_ERR _ => raise ERR "tyvar_occurs" "not a type variable";
@@ -441,7 +441,7 @@ fun create_const errstr (const as (_,GRND pat)) Ty =
         of [] => Const const
          | S  => Const(r, if grounds(S,pat) then GRND Ty else POLY Ty))
 *)
-     ((case Type.raw_match_type (bconv pat) (bconv Ty) ([],[])
+     ((case Type.raw_match_type pat Ty ([],[])
         of ([],_) => Const const
          | (S,[]) => Const(r, if ground S then GRND Ty else POLY Ty)
          | (S, _) => Const(r,POLY Ty))
@@ -838,15 +838,18 @@ fun mk_abs(Bvar as Fv _, Body) =
 
 
 local val FORMAT = ERR "list_mk_tybinder"
-   "expected first arg to be a constant of type :(<ty>_1 -> <ty>_2) -> <ty>_3"
+   "expected first arg to be a constant of type :(!:<ty>_1. <ty>_2) -> <ty>_3"
    fun check_opt NONE = Lib.I
      | check_opt (SOME c) =
         if not(is_const c) then raise FORMAT
-        else case total (fst o Type.dom_rng o fst o Type.dom_rng o type_of) c
+        else case total (fst o Type.dom_rng o type_of) c
               of NONE => raise FORMAT
-               | SOME ty => (fn abs =>
-                   let val dom = fst(Type.dom_rng(type_of abs))
-                   in mk_comb (inst[ty |-> dom] c, abs)
+               | SOME ty => case total (fst o Type.dest_univ_type) ty
+                  of NONE => raise FORMAT
+                   | SOME ty1 => (fn abs =>
+                   let val tya = type_of abs
+                       val theta = match_type ty tya
+                   in mk_comb(inst theta c, abs)
                    end)
 in
 fun list_mk_tybinder opt =
@@ -888,7 +891,7 @@ fun list_mk_tybinder opt =
   in
      rev_itlist (fn TyFv a => fn M => f(TAbs(a,M))) rvlist (bind tm varmap I)
   end
-  handle e => raise wrap_exn "Term" "list_mk_binder" e
+  handle e => raise wrap_exn "Term" "list_mk_tybinder" e
  end
 end;
 
@@ -1072,11 +1075,11 @@ fun strip_tybinder opt =
            NONE => (fn (t as TAbs _) => SOME t
                      | (t as Clos(_, TAbs _)) => SOME (push_clos t)
                      | other => NONE)
-               | SOME c => (fn t => let val (rator,rand) = dest_comb t
-                                    in if same_const rator c
-                                       then SOME (trypush_clos rand)
-                                       else NONE
-                                    end handle HOL_ERR _ => NONE)
+         | SOME c => (fn t => let val (rator,rand) = dest_comb t
+                              in if same_const rator c
+                                 then SOME (trypush_clos rand)
+                                 else NONE
+                              end handle HOL_ERR _ => NONE)
  in fn tm =>
    let val (prefixl,body) = peel f tm []
      val prefix = Array.fromList prefixl
@@ -1234,18 +1237,26 @@ val body = snd o dest_abs;
 
 local
   fun MERR s = raise ERR "raw_match_term error" s
-  fun free (Bv i) n             = i<n
-    | free (Comb(Rator,Rand)) n = free Rand n andalso free Rator n
-    | free (TComb(Rator,Ty)) n  = free Rator n
-    | free (Abs(_,Body)) n      = free Body (n+1)
-    | free (TAbs(_,Body)) n     = free Body n
-    | free (t as Clos _) n      = free (push_clos t) n
-    | free _ _ = true
+  fun freety (TyBv i) m         = i<m
+    | freety (TyApp(Opr,Arg)) m = freety Opr m andalso freety Arg m
+    | freety (TyAll(_,Body)) m  = freety Body (m+1)
+    | freety (TyAbs(_,Body)) m  = freety Body (m+1)
+    | freety _ _ = true
+  fun free (Bv i) n m             = i<n
+    | free (Fv(_,Ty)) n m         = freety Ty m
+    | free (Const(_,GRND Ty)) n m = freety Ty m
+    | free (Const(_,POLY Ty)) n m = freety Ty m
+    | free (Comb(Rator,Rand)) n m = free Rand n m andalso free Rator n m
+    | free (TComb(Rator,Ty)) n m  = free Rator n m andalso freety Ty m
+    | free (Abs(_,Body)) n m      = free Body (n+1) m
+    | free (TAbs(_,Body)) n m     = free Body n (m+1)
+    | free (t as Clos _) n m      = free (push_clos t) n m
+    | free _ _ _ = true
   fun lookup x ids =
    let fun look [] = if HOLset.member(ids,x) then SOME x else NONE
          | look ({redex,residue}::t) = if x=redex then SOME residue else look t
    in look end
-  fun bound_by_scope scoped M = if scoped then not (free M 0) else false
+  fun bound_by_scope scoped M = if scoped then not (free M 0 0) else false
   val tymatch = Type.raw_match_type
 in
 fun RM [] theta = theta
@@ -1278,7 +1289,7 @@ fun RM [] theta = theta
   | RM ((Abs(Fv(_,ty1),M),Abs(Fv(_,ty2),N),_)::rst) (tmS,tyS)
       = RM ((M,N,true)::rst) (tmS, tymatch ty1 ty2 tyS)
   | RM ((TAbs((_,k1,r1),M), TAbs((_,k2,r2),N), s)::rst) S
-      = if k1=k2 andalso r1=r2 then RM ((M,N,s)::rst) S
+      = if k1=k2 andalso r1=r2 then RM ((M,N,true)::rst) S
         else MERR "different type abstractions"
   | RM ((Comb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
   | RM ((TComb(M,ty1),TComb(N,ty2),s)::rst) (tmS,tyS)

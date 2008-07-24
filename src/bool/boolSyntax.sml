@@ -163,6 +163,8 @@ val is_select       = can dest_select
 val is_forall       = can dest_forall
 val is_exists       = can dest_exists
 val is_exists1      = can dest_exists1
+val is_tyforall     = can dest_tyforall
+val is_tyexists     = can dest_tyexists
 val is_conj         = can dest_conj
 val is_disj         = can dest_disj
 val is_neg          = can dest_neg
@@ -183,6 +185,8 @@ val list_mk_abs      = HolKernel.list_mk_abs
 
 val list_mk_forall   = list_mk_binder (SOME universal)
 val list_mk_exists   = list_mk_binder (SOME existential)
+val list_mk_tyforall = list_mk_tybinder (SOME ty_universal)
+val list_mk_tyexists = list_mk_tybinder (SOME ty_existential)
 val list_mk_conj     = list_mk_rbinop (curry mk_conj)
 val list_mk_disj     = list_mk_rbinop (curry mk_disj)
 fun list_mk_imp(A,c) = list_mk_rbinop (curry mk_imp) (A@[c]);
@@ -195,6 +199,8 @@ val strip_abs        = HolKernel.strip_abs
 val strip_tyabs      = HolKernel.strip_tyabs
 val strip_forall     = HolKernel.strip_binder (SOME universal)
 val strip_exists     = HolKernel.strip_binder (SOME existential)
+val strip_tyforall   = HolKernel.strip_tybinder (SOME ty_universal)
+val strip_tyexists   = HolKernel.strip_tybinder (SOME ty_existential)
 val strip_conj       = strip_binop (total dest_conj)
 val strip_disj       = strip_binop (total dest_disj)
 

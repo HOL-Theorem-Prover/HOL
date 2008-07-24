@@ -112,6 +112,7 @@ Definition.new_definition
 
 val _ = (add_binder ("?!", std_binder_precedence); add_const "?!")
 
+(* HOL-Omega type universal and existential quantification: *)
 
 val TY_FORALL_DEF =
  Definition.new_definition
@@ -353,10 +354,19 @@ val dest_disj   = sdest_binop("\\/","bool") (ERR"dest_disj" "");
 val dest_conj   = sdest_binop("/\\","bool") (ERR"dest_conj" "");
 val dest_forall = sdest_binder("!","bool")  (ERR"dest_forall" "");
 val dest_exists = sdest_binder("?","bool")  (ERR"dest_exists" "");
+val dest_tyforall = sdest_tybinder("!:","bool")  (ERR"dest_tyforall" "");
+val dest_tyexists = sdest_tybinder("?:","bool")  (ERR"dest_tyexists" "");
 fun strip_forall fm =
    if can dest_forall fm
    then let val (Bvar,Body) = dest_forall fm
             val (bvs,core) = strip_forall Body
+        in ((Bvar::bvs), core)
+        end
+   else ([],fm);
+fun strip_tyforall fm =
+   if can dest_tyforall fm
+   then let val (Bvar,Body) = dest_tyforall fm
+            val (bvs,core) = strip_tyforall Body
         in ((Bvar::bvs), core)
         end
    else ([],fm);
@@ -526,10 +536,17 @@ fun SELECT_EQ x =
 
 fun GENL varl thm = itlist GEN varl thm;
 
+fun TY_GENL tyvarl thm = itlist TY_GEN tyvarl thm;
+
 fun SPECL tm_list th = rev_itlist SPEC tm_list th
+
+fun TY_SPECL ty_list th = rev_itlist TY_SPEC ty_list th
 
 fun GEN_ALL th = itlist GEN (set_diff (free_vars(concl th))
                                       (free_varsl (hyp th))) th;
+
+fun TY_GEN_ALL th = itlist TY_GEN (set_diff (type_vars_in_term(concl th))
+                                      (HOLset.listItems (hyp_tyvars th))) th;
 
 local fun f v (vs,l) = let val v' = variant vs v in (v'::vs, v'::l) end
 in
@@ -539,6 +556,17 @@ fun SPEC_ALL th =
        and vars = fst(strip_forall con)
    in
      SPECL (snd(itlist f vars (hvs@fvs,[]))) th
+   end
+end;
+
+local fun f v (vs,l) = let val v' = variant_type vs v in (v'::vs, v'::l) end
+in
+fun TY_SPEC_ALL th =
+   let val (hvs,con) = (HOLset.listItems ## I) (hyp_tyvars th, concl th)
+       val fvs = type_vars_in_term con
+       and vars = fst(strip_tyforall con)
+   in
+     TY_SPECL (snd(itlist f vars (hvs@fvs,[]))) th
    end
 end;
 
@@ -715,8 +743,6 @@ val EXISTS_SIMP =
 val _ = save_thm("EXISTS_SIMP", EXISTS_SIMP);
 
 
-(* Prove these later.
-
 (*---------------------------------------------------------------------------*
  *  |- !t:'a. (\:'c. t) [:'b:] = t                                           *
  *---------------------------------------------------------------------------*)
@@ -734,33 +760,30 @@ val _ = save_thm("TY_ABS_SIMP", TY_ABS_SIMP);
 
 val TY_FORALL_SIMP =
  let val t = --`t:bool`--
-     val a = ty_antiq alpha
-     val all_t = --`!:^a.^t`--
+     val all_t = --`!:'a.^t`--
  in
  GEN t (IMP_ANTISYM_RULE
-        (DISCH all_t (TY_SPEC x (ASSUME all_t)))
-        (DISCH t (TY_GEN x (ASSUME t))))
+        (DISCH all_t (TY_SPEC alpha (ASSUME all_t)))
+        (DISCH t (TY_GEN alpha (ASSUME t))))
  end;
 
 val _ = save_thm("TY_FORALL_SIMP", TY_FORALL_SIMP);
 
 
 (*---------------------------------------------------------------------------
- *   |- !t. (?x.t)  =  t
+ *   |- !t. (?:'a.t)  =  t
  *---------------------------------------------------------------------------*)
 
 val TY_EXISTS_SIMP =
    let val t = --`t:bool`--
-       and x = --`x:'a`--
-       val ex_t = --`?^x.^t`--
+       val ex_t = --`?:'a.^t`--
    in
    GEN t (IMP_ANTISYM_RULE
-           (DISCH ex_t (TY_CHOOSE((--`p:'a`--), ASSUME ex_t) (ASSUME t)))
-           (DISCH t (TY_EXISTS(ex_t, --`r:'a`--) (ASSUME t))))
+           (DISCH ex_t (TY_CHOOSE(alpha, ASSUME ex_t) (ASSUME t)))
+           (DISCH t (TY_EXISTS(ex_t, alpha) (ASSUME t))))
    end;
 
 val _ = save_thm("TY_EXISTS_SIMP", TY_EXISTS_SIMP);
-*)
 
 
 (*---------------------------------------------------------------------------

@@ -72,6 +72,7 @@ sig
   val compare       : hol_type * hol_type -> order
   val tyvar_eq      : tyvar -> tyvar -> bool
   val type_eq       : hol_type -> hol_type -> bool
+  val empty_tyset   : hol_type  HOLset.set
 
   val ty_sub        : (hol_type,hol_type)Lib.subst
                         -> hol_type -> hol_type Lib.delta

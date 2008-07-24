@@ -13,8 +13,8 @@ sig
   datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstType
                 | MkComb | ApTerm | ApThm | Alpha | EtaConv 
                 | Sym | Trans | EqMp | EqImpRule | Inst
-                | Spec | Gen 
-                | Exists | Choose 
+                | Spec | Gen  | Exists | Choose
+                | TySpec | TyGen | TyExists | TyChoose (* these are for HOL-Omega *)
                 | Conj | Conjunct1 | Conjunct2
                 | Disj1 | Disj2 | DisjCases
                 | NotIntro | NotElim  | Ccontr | GenAbs
@@ -35,8 +35,11 @@ sig
     ETA_CONV : int,
     SYM : int, TRANS : int, 
     EQ_MP : int, EQ_IMP_RULE : int, 
-    INST : int, SPEC : int, GEN : int, 
+    INST : int,
+    SPEC : int, GEN : int, 
     EXISTS : int, CHOOSE : int,
+    TY_SPEC : int, TY_GEN : int,  (* these are for HOL-Omega *)
+    TY_EXISTS : int, TY_CHOOSE : int, (* these are for HOL-Omega *)
     CONJ : int, CONJUNCT1 : int, 
     CONJUNCT2 : int, DISJ1 : int, 
     DISJ2 : int, DISJ_CASES : int, 

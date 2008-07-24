@@ -15,8 +15,8 @@ val inc = Portable.inc
 datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstType
               | MkComb | ApTerm | ApThm | Alpha | EtaConv
               | Sym | Trans | EqMp | EqImpRule | Inst
-              | Spec | Gen
-              | Exists | Choose
+              | Spec | Gen | Exists | Choose
+              | TySpec | TyGen | TyExists | TyChoose (* these are for HOL-Omega *)
               | Conj | Conjunct1 | Conjunct2
               | Disj1 | Disj2 | DisjCases
               | NotIntro | NotElim | Ccontr | GenAbs
@@ -34,6 +34,8 @@ val count = {ASSUME     = ref 0, REFL = ref 0,
              EQ_IMP_RULE = ref 0, INST = ref 0,
              SPEC       = ref 0, GEN = ref 0,
              EXISTS     = ref 0, CHOOSE = ref 0,
+             TY_SPEC    = ref 0, TY_GEN = ref 0,
+             TY_EXISTS  = ref 0, TY_CHOOSE = ref 0,
              CONJ       = ref 0,
              CONJUNCT1  = ref 0, CONJUNCT2 = ref 0,
              DISJ1      = ref 0, DISJ2 = ref 0,
@@ -72,6 +74,10 @@ fun inc_count R =
        | Gen        => inc (#GEN count)
        | Exists     => inc (#EXISTS count)
        | Choose     => inc (#CHOOSE count)
+       | TySpec     => inc (#TY_SPEC count)
+       | TyGen      => inc (#TY_GEN count)
+       | TyExists   => inc (#TY_EXISTS count)
+       | TyChoose   => inc (#TY_CHOOSE count)
        | Conj       => inc (#CONJ count)
        | Conjunct1  => inc (#CONJUNCT1 count)
        | Conjunct2  => inc (#CONJUNCT2 count)
@@ -117,6 +123,10 @@ fun reset_thm_count() =
      zero (#GEN count);
      zero (#EXISTS count);
      zero (#CHOOSE count);
+     zero (#TY_SPEC count);
+     zero (#TY_GEN count);
+     zero (#TY_EXISTS count);
+     zero (#TY_CHOOSE count);
      zero (#CONJ count);
      zero (#CONJUNCT1 count);
      zero (#CONJUNCT2 count);
@@ -144,8 +154,11 @@ fun prims() =
    !(#AP_TERM count) + !(#AP_THM count) + !(#ALPHA count) +
    !(#ETA_CONV count) + !(#SYM count) + !(#TRANS count) +
    !(#EQ_MP count) + !(#EQ_IMP_RULE count) +
-   !(#INST count) + !(#SPEC count) + !(#GEN count) +
+   !(#INST count) +
+   !(#SPEC count) + !(#GEN count) +
    !(#EXISTS count) + !(#CHOOSE count) +
+   !(#TY_SPEC count) + !(#TY_GEN count) + (* these are for HOL-Omega *)
+   !(#TY_EXISTS count) + !(#TY_CHOOSE count) + (* these are for HOL-Omega *)
    !(#CONJ count) + !(#CONJUNCT1 count) + !(#CONJUNCT2 count) +
    !(#DISJ1 count) + !(#DISJ2 count) + !(#DISJ_CASES count) +
    !(#NOT_INTRO count) + !(#NOT_ELIM count) + !(#CCONTR count) +
@@ -170,8 +183,11 @@ fun thm_count() =
   AP_THM = !(#AP_THM count),        ALPHA = !(#ALPHA count),
   ETA_CONV = !(#ETA_CONV count), SYM = !(#SYM count), TRANS = !(#TRANS count),
   EQ_MP = !(#EQ_MP count),          EQ_IMP_RULE = !(#EQ_IMP_RULE count),
-  INST = !(#INST count),            SPEC = !(#SPEC count),
-  GEN = !(#GEN count),  EXISTS = !(#EXISTS count), CHOOSE = !(#CHOOSE count),
+  INST = !(#INST count),
+  SPEC = !(#SPEC count),            GEN = !(#GEN count),
+  EXISTS = !(#EXISTS count),        CHOOSE = !(#CHOOSE count),
+  TY_SPEC = !(#TY_SPEC count),      TY_GEN = !(#TY_GEN count),
+  TY_EXISTS = !(#TY_EXISTS count),  TY_CHOOSE = !(#TY_CHOOSE count),
   CONJ = !(#CONJ count),  CONJUNCT1 = !(#CONJUNCT1 count),
   CONJUNCT2 = !(#CONJUNCT2 count),  DISJ1 = !(#DISJ1 count),
   DISJ2 = !(#DISJ2 count),  DISJ_CASES = !(#DISJ_CASES count),

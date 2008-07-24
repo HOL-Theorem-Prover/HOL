@@ -257,20 +257,25 @@ val monad_def = new_definition("monad_def", Term
               = bind[:'b,'c:] (bind[:'a,'b:] m (\a. k a)) (\b. h b))
      `) handle e => Raise e;
 
-val _ = ``I : 'a -> 'a I``;
-
-val _ = ``\:'a. I : 'a -> 'a I``;
-
 (*
 val gl = ``monad ((\:'a. I) : !'a.'a -> 'a I) (\:'a 'b. \(x:'a I) (f:'a -> 'b I). f x)``;
 set_goal([], gl);
 
-e(REWRITE_TAC[monad_def]);
-e(CONV_TAC (TOP_DEPTH_CONV TY_BETA_CONV));
+e(PURE_REWRITE_TAC[monad_def]);
+e(TY_BETA_TAC);
 e(BETA_TAC);
 e(REWRITE_TAC[combinTheory.I_THM]);
 
 *)
+
+val identity_monad = store_thm
+  ("identity_monad",
+   ``monad ((\:'a. I) : !'a.'a -> 'a I) (\:'a 'b. \(x:'a I) (f:'a -> 'b I). f x)``,
+   REWRITE_TAC[monad_def]
+   THEN TY_BETA_TAC
+   THEN BETA_TAC
+   THEN REWRITE_TAC[combinTheory.I_THM]
+  );
 
 
 val _ = export_theory();

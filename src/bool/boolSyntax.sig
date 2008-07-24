@@ -99,6 +99,8 @@ sig
   val is_forall              : term -> bool
   val is_exists              : term -> bool
   val is_exists1             : term -> bool
+  val is_tyforall            : term -> bool
+  val is_tyexists            : term -> bool
   val is_conj                : term -> bool
   val is_disj                : term -> bool
   val is_neg                 : term -> bool
@@ -120,6 +122,8 @@ sig
   val list_mk_tyabs          : hol_type list * term -> term
   val list_mk_forall         : term list * term -> term
   val list_mk_exists         : term list * term -> term
+  val list_mk_tyforall       : hol_type list * term -> term
+  val list_mk_tyexists       : hol_type list * term -> term
   val list_mk_imp            : term list * term -> term
   val list_mk_conj           : term list -> term
   val list_mk_disj           : term list -> term
@@ -140,6 +144,8 @@ sig
   val strip_imp_only         : term -> term list * term
   val strip_forall           : term -> term list * term
   val strip_exists           : term -> term list * term
+  val strip_tyforall         : term -> hol_type list * term
+  val strip_tyexists         : term -> hol_type list * term
   val strip_conj             : term -> term list
   val strip_disj             : term -> term list
   val strip_neg              : term -> term * int

@@ -75,6 +75,7 @@ sig
  val compare       : hol_type * hol_type -> order
  val tyvar_eq      : tyvar -> tyvar -> bool
  val type_eq       : hol_type -> hol_type -> bool
+ val empty_tyset   : hol_type  HOLset.set
 
  val -->           : hol_type * hol_type -> hol_type  (* infixr 3 --> *)
  val dom_rng       : hol_type -> hol_type * hol_type  (* inverts -->  *)
@@ -100,6 +101,7 @@ sig
  val raw_match_type: hol_type -> hol_type 
                       -> (hol_type,hol_type) Lib.subst * hol_type list
                       -> (hol_type,hol_type) Lib.subst * hol_type list
+(*
  val ho_match_type1 : hol_type HOLset.set -> hol_type -> hol_type
                       -> (hol_type,hol_type)Lib.subst *
                          ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list
@@ -108,6 +110,7 @@ sig
                       -> (hol_type,int)Lib.subst * (hol_type,hol_type)Lib.subst
  val ho_match_type  : hol_type HOLset.set -> hol_type -> hol_type
                       -> (hol_type,hol_type)Lib.subst
+*)
 
  val pp_raw_type    : ppstream -> hol_type -> unit
  val type_to_string : hol_type -> string

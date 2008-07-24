@@ -83,6 +83,17 @@ fun sdest_binder (name,thy) e M =
   end
 end;
 
+local fun dest M =
+       let val (c, Rand) = dest_comb M
+       in (dest_thy_const c,dest_tyabs Rand)
+       end
+in
+fun sdest_tybinder (name,thy) e M =
+  let val ({Name,Thy,...}, p) = with_exn dest M e
+  in if Name=name andalso Thy=thy then p else raise e
+  end
+end;
+
 fun single x = [x];
 
 (* Breaks term down until binop no longer occurs at top level in result list *)

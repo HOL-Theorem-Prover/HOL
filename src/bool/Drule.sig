@@ -19,6 +19,8 @@ sig
   val UNDISCH          : thm -> thm
   val EQT_ELIM         : thm -> thm
   val SPECL            : term list -> thm -> thm
+  val TY_GENL          : hol_type list -> thm -> thm
+  val TY_SPECL         : hol_type list -> thm -> thm
   val SELECT_INTRO     : thm -> thm
   val SELECT_ELIM      : thm -> term * thm -> thm
   val SELECT_RULE      : thm -> thm
@@ -43,9 +45,11 @@ sig
   val ISPEC            : term -> thm -> thm
   val ISPECL           : term list -> thm -> thm
   val GEN_ALL          : thm -> thm
+  val TY_GEN_ALL       : thm -> thm
   val DISCH_ALL        : thm -> thm
   val UNDISCH_ALL      : thm -> thm
   val SPEC_ALL         : thm -> thm
+  val TY_SPEC_ALL      : thm -> thm
   val PROVE_HYP        : thm -> thm -> thm
   val CONJ_PAIR        : thm -> thm * thm
   val LIST_CONJ        : thm list -> thm

@@ -129,8 +129,8 @@ val bool_rewrites =
   add_rewrites empty_rewrites
      [REFL_CLAUSE,  EQ_CLAUSES,  NOT_CLAUSES,  AND_CLAUSES,
       OR_CLAUSES,   IMP_CLAUSES, COND_CLAUSES, FORALL_SIMP,
-      EXISTS_SIMP,  ABS_SIMP (*, TY_FORALL_SIMP, TY_EXISTS_SIMP,
-      TY_ABS_SIMP*)];
+      EXISTS_SIMP,  ABS_SIMP, TY_FORALL_SIMP, TY_EXISTS_SIMP,
+      TY_ABS_SIMP];
 
 val _ = set_implicit_rewrites bool_rewrites;
 

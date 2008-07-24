@@ -356,6 +356,27 @@ fun SPECL tml th =
   rev_itlist SPEC tml th handle HOL_ERR _ => raise ERR"SPECL" "";
 
 (*---------------------------------------------------------------------------
+ *
+ *      |- !x1 ... xn. t[xi]
+ *    --------------------------	TY_SPECL [t1; ...; tn]
+ *          |-  t[ti]
+ *---------------------------------------------------------------------------*)
+
+fun TY_SPECL tyl th =
+  rev_itlist TY_SPEC tyl th handle HOL_ERR _ => raise ERR "TY_SPECL" "";
+
+(*---------------------------------------------------------------------------
+ *
+ *          |- t[xi]
+ *    --------------------------	TY_GENL [t1; ...; tn]
+ *      |-  !x1 ... xn. t[ti]
+ *---------------------------------------------------------------------------*)
+
+fun TY_GENL tyl th =
+  itlist TY_SPEC tyl th handle HOL_ERR _ => raise ERR "TY_GENL" "";
+
+
+(*---------------------------------------------------------------------------
  * SELECT introduction
  *
  *    A |- P t
@@ -792,6 +813,20 @@ fun GEN_ALL th =
 
 
 (*---------------------------------------------------------------------------
+ * Generalise a theorem over all type variables free in conclusion but not in hyps
+ *
+ *         A |- t[a1,...,an]
+ *    ----------------------------                 TY_GEN_ALL
+ *     A |- !:a1...an.t[a1,...,an]
+ *---------------------------------------------------------------------------*)
+
+fun TY_GEN_ALL th =
+   HOLset.foldl (fn (v, th) => TY_GEN v th)
+       th
+      (HOLset.difference (HOLset.addList(empty_tyset, type_vars_in_term(concl th)), hyp_tyvars th))
+
+
+(*---------------------------------------------------------------------------
  *  Discharge all hypotheses
  *
  *       t1, ... , tn |- t
@@ -842,6 +877,32 @@ fun SPEC_ALL th =
         val vars = fst(strip_forall con)
       in
         SPECL (snd(itlist varyAcc vars (hvs@fvs,[]))) th
+      end
+    else th
+end;
+
+
+(* ---------------------------------------------------------------------*)
+(* TY_SPEC_ALL : thm -> thm						*)
+(*									*)
+(*     A |- !a1 ... an. t[ai]						*)
+(*    ------------------------   where the ai' are distinct 		*)
+(*        A |- t[ai'/ai]	 and not free in the input theorem	*)
+(*									*)
+(* BUGFIX: added the "distinct" part and code to make the ai's not free *)
+(* in the conclusion !a1...an.t[ai].		        [TFM 90.10.04]	*)
+(* ---------------------------------------------------------------------*)
+
+local fun varyAcc v (V,l) =
+       let val v' = prim_variant_type V v in (v'::V, v'::l) end
+in
+fun TY_SPEC_ALL th =
+    if is_tyforall (concl th) then let
+        val (hvs,con) = (HOLset.listItems ## I) (hyp_tyvars th, concl th)
+        val fvs = type_vars_in_term con
+        val vars = fst(strip_tyforall con)
+      in
+        TY_SPECL (snd(itlist varyAcc vars (hvs@fvs,[]))) th
       end
     else th
 end;

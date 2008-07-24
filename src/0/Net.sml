@@ -94,7 +94,7 @@ local
                                    (mtch Rator (net_assoc Cmb net)) [] 
                           end
               | TCmb   => let val (Rator,Rand) = Term.dest_tycomb tm
-                          in mtch Rator (net_assoc Cmb net)
+                          in mtch Rator (net_assoc TCmb net)
                           end
        in itlist (fn NODE [] => I | net => cons net) nets [Vnet]
        end
@@ -159,7 +159,7 @@ let fun enter _ _  (LEAF _) = raise ERR "insert" "LEAF: cannot insert"
             case label
              of Cmb  => let val (Rator,Rand) = Term.dest_comb tm
                         in enter (Rand::defd) Rator child end
-              | TCmb => let val (Rator,Rand) = Term.dest_comb tm
+              | TCmb => let val (Rator,Rand) = Term.dest_tycomb tm
                         in enter defd Rator child end
               | Lam  => enter defd (break_abs tm) child
               | TLam => enter defd (break_tyabs tm) child
