@@ -424,6 +424,30 @@ val isPREFIX_STRCAT = Q.store_thm
  recInduct (theorem "isPREFIX_ind") THEN SRW_TAC [][] THEN PROVE_TAC []);
 
 (*---------------------------------------------------------------------------
+       Orderings                           
+ ---------------------------------------------------------------------------*)
+
+val string_lt_def = Define`
+  (string_lt s EMPTYSTRING = F) /\
+  (string_lt EMPTYSTRING (STRING c s) = T) /\
+  (string_lt (STRING c1 s1) (STRING c2 s2) =
+     c1 < c2 \/ (c1 = c2) /\ string_lt s1 s2)`;
+
+val string_le_def = Define `string_le s1 s2 = (s1 = s2) \/ string_lt s1 s2`;
+val string_gt_def = Define `string_gt s1 s2 = string_lt s2 s1`;
+val string_ge_def = Define `string_ge s1 s2 = string_le s2 s1`;
+
+val _ = overload_on ("<", Term`string_lt`);
+val _ = overload_on (">", Term`string_gt`);
+val _ = overload_on ("<=", Term`string_le`);
+val _ = overload_on (">=", Term`string_ge`);
+
+val _ = send_to_back_overload "<" {Name = "string_lt", Thy = "string"};
+val _ = send_to_back_overload ">" {Name = "string_gt", Thy = "string"};
+val _ = send_to_back_overload "<=" {Name = "string_le", Thy = "string"};
+val _ = send_to_back_overload ">=" {Name = "string_ge", Thy = "string"};
+
+(*---------------------------------------------------------------------------
     Exportation
  ---------------------------------------------------------------------------*)
 
