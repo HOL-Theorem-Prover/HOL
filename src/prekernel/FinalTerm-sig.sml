@@ -15,6 +15,7 @@ sig
   val free_varsl    : term list -> term list
   val all_varsl     : term list -> term list
   val type_vars_in_term : term -> hol_type list
+  val type_vars_in_terml : term list -> hol_type list
   val var_occurs    : term -> term -> bool
   val tyvar_occurs  : hol_type -> term -> bool
 

@@ -3,11 +3,17 @@ sig
   include Abbrev
 
   val EXT              : thm -> thm
+  val TY_EXT           : thm -> thm
   val MK_ABS           : thm -> thm
+  val MK_TY_ABS        : thm -> thm
   val MK_EXISTS        : thm -> thm
+  val MK_TY_EXISTS     : thm -> thm
   val LIST_MK_EXISTS   : term list -> thm -> thm
+  val LIST_MK_TY_EXISTS: hol_type list -> thm -> thm
   val SIMPLE_EXISTS    : term -> thm -> thm
+  val SIMPLE_TY_EXISTS : hol_type -> thm -> thm
   val SIMPLE_CHOOSE    : term -> thm -> thm
+  val SIMPLE_TY_CHOOSE : hol_type -> thm -> thm
   val EQT_INTRO        : thm -> thm
   val GSUBS            : ((term,term)subst -> term -> term)
                            -> thm list -> thm -> thm
@@ -25,14 +31,20 @@ sig
   val SELECT_ELIM      : thm -> term * thm -> thm
   val SELECT_RULE      : thm -> thm
   val SPEC_VAR         : thm -> term * thm
+  val SPEC_TYVAR       : thm -> hol_type * thm
   val FORALL_EQ        : term -> thm -> thm
+  val TY_FORALL_EQ     : hol_type -> thm -> thm
   val EXISTS_EQ        : term -> thm -> thm
+  val TY_EXISTS_EQ     : hol_type -> thm -> thm
   val SELECT_EQ        : term -> thm -> thm
   val SUBS             : thm list -> thm -> thm
   val SUBS_OCCS        : (int list * thm) list -> thm -> thm
   val RIGHT_BETA       : thm -> thm
+  val RIGHT_TY_BETA    : thm -> thm
   val LIST_BETA_CONV   : term -> thm
+  val LIST_TY_BETA_CONV: term -> thm
   val RIGHT_LIST_BETA  : thm -> thm
+  val RIGHT_LIST_TY_BETA : thm -> thm
   val CONJUNCTS_CONV   : term * term -> thm
   val CONJ_SET_CONV    : term list -> term list -> thm
   val FRONT_CONJ_CONV  : term list -> term -> thm
@@ -64,10 +76,12 @@ sig
   val DISJ_CASES_UNION : thm -> thm -> thm -> thm
   val DISJ_CASESL      : thm -> thm list -> thm
   val ALPHA_CONV       : term -> term -> thm
-  val TYALPHA_CONV     : hol_type -> term -> thm
+  val TY_ALPHA_CONV    : hol_type -> term -> thm
   val GEN_ALPHA_CONV   : term -> term -> thm
+  val GEN_TY_ALPHA_CONV: hol_type -> term -> thm
   val IMP_CONJ         : thm -> thm -> thm
   val EXISTS_IMP       : term -> thm -> thm
+  val TY_EXISTS_IMP    : hol_type -> thm -> thm
   val INST_TY_TERM     : (term,term)subst * (hol_type,hol_type)subst
                           -> thm -> thm
   val GSPEC            : thm -> thm

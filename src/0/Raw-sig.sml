@@ -34,6 +34,7 @@ sig
   val AP_TERM       : term -> thm -> thm
   val AP_THM        : thm -> term -> thm
   val ETA_CONV      : term -> thm
+  val TY_ETA_CONV   : term -> thm
   val SYM           : thm -> thm
   val TRANS         : thm -> thm -> thm
   val EQ_MP         : thm -> thm -> thm
@@ -65,6 +66,7 @@ sig
   val Mk_tyabs      : thm -> hol_type * thm * (thm -> thm)
   val Specialize    : term -> thm -> thm
   val GEN_ABS       : term option -> term list -> thm -> thm
+  val GEN_TY_ABS    : term option -> hol_type list -> thm -> thm
   val mk_oracle_thm : string -> term list * term -> thm
   val add_tag       : tag * thm -> thm
   val mk_thm        : term list * term -> thm

@@ -68,7 +68,7 @@ in
 end
 
 (* This trace variable is now established in kind_pp.sml.
-val show_kinds = ref 0
+val show_kinds = ref 1
 val _ = Feedback.register_trace("kinds", show_kinds, 2)
 *)
 val show_kinds = Feedback.get_tracefn "kinds"

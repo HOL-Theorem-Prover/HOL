@@ -21,7 +21,7 @@ val _ = register_btrace("pp_arity_kinds", pp_arity_kinds)
 fun dest_arity_kind kd = Kind.arity_of kd
        handle HOL_ERR _ => raise ERR "not an arity kind"
 
-val show_kinds = ref 0
+val show_kinds = ref 1
 val _ = Feedback.register_trace("kinds", show_kinds, 2)
 
 fun pp_kind0 (G:grammar) = let

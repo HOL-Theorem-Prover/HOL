@@ -31,6 +31,7 @@ sig
   val INST_TYPE     : (hol_type,hol_type)Lib.subst -> thm -> thm
   val TY_ABS        : hol_type -> thm -> thm
   val TY_BETA_CONV  : term -> thm
+  val TY_ETA_CONV   : term -> thm
 
 
   (* Now some derivable-but-primitive rules of inference *)
@@ -110,6 +111,7 @@ sig
   (* Multiple binders *)
 
   val GEN_ABS       : term option -> term list -> thm -> thm
+  val GEN_TY_ABS    : term option -> hol_type list -> thm -> thm
 
   (* Oracle invocation *)
 

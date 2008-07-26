@@ -13,14 +13,14 @@ val inc = Portable.inc
 
 
 datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstType
-              | MkComb | ApTerm | ApThm | Alpha | EtaConv
+              | MkComb | ApTerm | ApThm | Alpha | EtaConv | TyEtaConv
               | Sym | Trans | EqMp | EqImpRule | Inst
               | Spec | Gen | Exists | Choose
               | TySpec | TyGen | TyExists | TyChoose (* these are for HOL-Omega *)
               | Conj | Conjunct1 | Conjunct2
               | Disj1 | Disj2 | DisjCases
               | NotIntro | NotElim | Ccontr | GenAbs
-              | TyAbs | TyComb | TyBeta (* these are for HOL-Omega *)
+              | TyAbs | GenTyAbs | TyComb | TyBeta (* these are for HOL-Omega *)
               | Definition  | Axiom | Disk | Oracle;
 
 val count = {ASSUME     = ref 0, REFL = ref 0,
@@ -29,7 +29,8 @@ val count = {ASSUME     = ref 0, REFL = ref 0,
              MP         = ref 0, INST_TYPE  = ref 0,
              MK_COMB    = ref 0, AP_TERM = ref 0,
              AP_THM     = ref 0, ALPHA = ref 0,
-             ETA_CONV   = ref 0, SYM = ref 0,
+             ETA_CONV   = ref 0, TY_ETA_CONV = ref 0,
+             SYM        = ref 0,
              TRANS      = ref 0, EQ_MP = ref 0,
              EQ_IMP_RULE = ref 0, INST = ref 0,
              SPEC       = ref 0, GEN = ref 0,
@@ -42,8 +43,8 @@ val count = {ASSUME     = ref 0, REFL = ref 0,
              DISJ_CASES = ref 0, NOT_INTRO = ref 0,
              NOT_ELIM   = ref 0, CCONTR = ref 0,
              GEN_ABS    = ref 0,
-             TY_ABS     = ref 0, TY_COMB = ref 0,
-             TY_BETA_CONV = ref 0,
+             TY_ABS     = ref 0, GEN_TY_ABS = ref 0,
+             TY_COMB    = ref 0, TY_BETA_CONV = ref 0,
              DEFINITION = ref 0,
              AXIOM      = ref 0, FROM_DISK  = ref 0,
              ORACLE     = ref 0,
@@ -65,6 +66,7 @@ fun inc_count R =
        | ApThm      => inc (#AP_THM count)
        | Alpha      => inc (#ALPHA count)
        | EtaConv    => inc (#ETA_CONV count)
+       | TyEtaConv  => inc (#TY_ETA_CONV count)
        | Sym        => inc (#SYM count)
        | Trans      => inc (#TRANS count)
        | EqMp       => inc (#EQ_MP count)
@@ -89,6 +91,7 @@ fun inc_count R =
        | Ccontr     => inc (#CCONTR count)
        | GenAbs     => inc (#GEN_ABS count)
        | TyAbs      => inc (#TY_ABS count)
+       | GenTyAbs   => inc (#GEN_TY_ABS count)
        | TyComb     => inc (#TY_COMB count)
        | TyBeta     => inc (#TY_BETA_CONV count)
        | Definition => inc (#DEFINITION count)
@@ -114,6 +117,7 @@ fun reset_thm_count() =
      zero (#AP_THM count);
      zero (#ALPHA count);
      zero (#ETA_CONV count);
+     zero (#TY_ETA_CONV count);
      zero (#SYM count);
      zero (#TRANS count);
      zero (#EQ_MP count);
@@ -138,6 +142,7 @@ fun reset_thm_count() =
      zero (#CCONTR count);
      zero (#GEN_ABS count);
      zero (#TY_ABS count);
+     zero (#GEN_TY_ABS count);
      zero (#TY_COMB count);
      zero (#TY_BETA_CONV count);
      zero (#DEFINITION count);
@@ -152,7 +157,8 @@ fun prims() =
    !(#SUBST count) + !(#ABS count) + !(#DISCH count) +
    !(#MP count) + !(#INST_TYPE count) + !(#MK_COMB count) +
    !(#AP_TERM count) + !(#AP_THM count) + !(#ALPHA count) +
-   !(#ETA_CONV count) + !(#SYM count) + !(#TRANS count) +
+   !(#ETA_CONV count) + !(#TY_ETA_CONV count) + (* TY_ETA_CONV for HOL-Omega *)
+   !(#SYM count) + !(#TRANS count) +
    !(#EQ_MP count) + !(#EQ_IMP_RULE count) +
    !(#INST count) +
    !(#SPEC count) + !(#GEN count) +
@@ -163,7 +169,7 @@ fun prims() =
    !(#DISJ1 count) + !(#DISJ2 count) + !(#DISJ_CASES count) +
    !(#NOT_INTRO count) + !(#NOT_ELIM count) + !(#CCONTR count) +
    !(#GEN_ABS count) +
-   !(#TY_ABS count) + !(#TY_COMB count) + !(#TY_BETA_CONV count); (* these are for HOL-Omega *)
+   !(#TY_ABS count) + !(#GEN_TY_ABS count) + !(#TY_COMB count) + !(#TY_BETA_CONV count); (* these are for HOL-Omega *)
 
 fun defns()     = !(#DEFINITION count)
 fun axioms()    = !(#AXIOM count)
@@ -175,26 +181,27 @@ fun total() =
   prims() + defns() + axioms() + from_disk() + oracles();
 
 fun thm_count() =
- {ASSUME     = !(#ASSUME count),    REFL       = !(#REFL count),
-  BETA_CONV  = !(#BETA_CONV count), SUBST      = !(#SUBST count),
-  ABS        = !(#ABS count),       DISCH      = !(#DISCH count),
-  MP         = !(#MP count),        INST_TYPE  = !(#INST_TYPE count),
-  MK_COMB = !(#MK_COMB count),      AP_TERM = !(#AP_TERM count),
-  AP_THM = !(#AP_THM count),        ALPHA = !(#ALPHA count),
-  ETA_CONV = !(#ETA_CONV count), SYM = !(#SYM count), TRANS = !(#TRANS count),
+ {ASSUME     = !(#ASSUME count),    REFL        = !(#REFL count),
+  BETA_CONV  = !(#BETA_CONV count), SUBST       = !(#SUBST count),
+  ABS        = !(#ABS count),       DISCH       = !(#DISCH count),
+  MP         = !(#MP count),        INST_TYPE   = !(#INST_TYPE count),
+  MK_COMB = !(#MK_COMB count),      AP_TERM     = !(#AP_TERM count),
+  AP_THM = !(#AP_THM count),        ALPHA       = !(#ALPHA count),
+  ETA_CONV = !(#ETA_CONV count),    TY_ETA_CONV = !(#TY_ETA_CONV count),
+  SYM = !(#SYM count),              TRANS       = !(#TRANS count),
   EQ_MP = !(#EQ_MP count),          EQ_IMP_RULE = !(#EQ_IMP_RULE count),
   INST = !(#INST count),
   SPEC = !(#SPEC count),            GEN = !(#GEN count),
   EXISTS = !(#EXISTS count),        CHOOSE = !(#CHOOSE count),
   TY_SPEC = !(#TY_SPEC count),      TY_GEN = !(#TY_GEN count),
   TY_EXISTS = !(#TY_EXISTS count),  TY_CHOOSE = !(#TY_CHOOSE count),
-  CONJ = !(#CONJ count),  CONJUNCT1 = !(#CONJUNCT1 count),
+  CONJ = !(#CONJ count),            CONJUNCT1 = !(#CONJUNCT1 count),
   CONJUNCT2 = !(#CONJUNCT2 count),  DISJ1 = !(#DISJ1 count),
-  DISJ2 = !(#DISJ2 count),  DISJ_CASES = !(#DISJ_CASES count),
+  DISJ2 = !(#DISJ2 count),          DISJ_CASES = !(#DISJ_CASES count),
   NOT_INTRO = !(#NOT_INTRO count),  NOT_ELIM = !(#NOT_ELIM count),
-  CCONTR = !(#CCONTR count), GEN_ABS = !(#GEN_ABS count),
-  TY_ABS = !(#TY_ABS count), TY_COMB = !(#TY_COMB count),
-  TY_BETA_CONV = !(#TY_BETA_CONV count),
+  CCONTR = !(#CCONTR count),        GEN_ABS = !(#GEN_ABS count),
+  TY_ABS = !(#TY_ABS count),        GEN_TY_ABS = !(#GEN_TY_ABS count),
+  TY_COMB = !(#TY_COMB count),      TY_BETA_CONV = !(#TY_BETA_CONV count),
   definition = !(#DEFINITION count),  axiom = !(#AXIOM count),
   from_disk = !(#FROM_DISK count),    oracle = !(#ORACLE count),
   total  = total() }

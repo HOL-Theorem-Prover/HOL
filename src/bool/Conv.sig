@@ -22,8 +22,14 @@ sig
    val BINDER_CONV           : conv -> conv
    val STRIP_BINDER_CONV     : term option -> conv -> conv
    val STRIP_QUANT_CONV      : conv -> conv
+   val TY_QUANT_CONV         : conv -> conv
+   val TY_BINDER_CONV        : conv -> conv
+   val STRIP_TY_BINDER_CONV  : term option -> conv -> conv
+   val STRIP_TY_QUANT_CONV   : conv -> conv
    val LAST_EXISTS_CONV      : conv -> conv
    val LAST_FORALL_CONV      : conv -> conv
+   val LAST_TY_EXISTS_CONV   : conv -> conv
+   val LAST_TY_FORALL_CONV   : conv -> conv
    val LHS_CONV              : conv -> conv
    val RHS_CONV              : conv -> conv
    val NO_CONV               : conv
@@ -44,7 +50,9 @@ sig
    val ONCE_DEPTH_CONV       : conv -> conv
    val CONV_RULE             : conv -> thm -> thm
    val BETA_RULE             : thm -> thm
+   val TY_BETA_RULE          : thm -> thm
    val UNBETA_CONV           : term -> conv
+   val TY_UNBETA_CONV        : hol_type -> conv
    val NOT_FORALL_CONV       : conv
    val NOT_EXISTS_CONV       : conv
    val EXISTS_NOT_CONV       : conv

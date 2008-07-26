@@ -303,6 +303,27 @@ fun GEN_ABS opt vlist (th as THM(ocl,asl,c)) =
     else ERR "GEN_ABS" "variable(s) free in the assumptions"
  end
 
+(*---------------------------------------------------------------------------*
+ *   A |- t1 = t2                                                            *
+ *  --------------------------------------  GEN_TY_ABS f [a1,...,an]         *
+ *   A |- (Q a1...an.t1) = (Q a1...an.t2)      (where no ai is free in A)    *
+ *---------------------------------------------------------------------------*)
+
+fun GEN_TY_ABS opt vlist (th as THM(ocl,asl,c)) =
+ let open HOLset
+     val vset = addList(Type.empty_tyset,vlist)
+     val hset = hyp_tyvars th
+ in if isEmpty (intersection(vset,hset))
+    then let val (lhs,rhs,ty) = with_exn Term.dest_eq_ty c
+                                  (thm_err "GEN_TY_ABS" "not an equality")
+             val lhs' = list_mk_tybinder opt (vlist,lhs)
+             val rhs' = list_mk_tybinder opt (vlist,rhs)
+         in make_thm Count.GenTyAbs
+               (ocl,asl,mk_eq_nocheck (Term.type_of lhs') lhs' rhs')
+         end
+    else ERR "GEN_TY_ABS" "variable(s) free in the assumptions"
+ end
+
 (*---------------------------------------------------------------------------
  *         A |- M
  *  --------------------  INST_TYPE theta
@@ -430,6 +451,34 @@ fun ETA_CONV tm =
    make_thm Count.EtaConv
       (empty_tag, empty_hyp, mk_eq_nocheck (type_of tm) tm (eta_conv tm))
    handle HOL_ERR _ => ERR"ETA_CONV" "";
+
+(*---------------------------------------------------------------------------
+ * Type eta-conversion
+ *
+ * 	"(\:a.t [:a:])"   --->    |- (\:a.t [:a:]) = t  (if a not free in t)
+ *
+ * There is a problem with the following code, in that TY_ETA_AX only works
+ * for terms t of type !'a.'b where 'a is of kind "typ".  TY_ETA_CONV should
+ * not be constrained in this way, which is good, but it means this code
+ * does not properly implement TY_ETA_CONV as a derived rule.  It is not
+ * possible to represent this in TY_ETA_AX without kind variables in HOL-Omega.
+ *
+ * fun TY_ETA_CONV (tm as TAbs((_,tkd,trk), tcmb as TComb(t,_))) =
+ *      (let val body_ty = type_of tcmb
+ *           val th = SPEC t (INST_TYPE [beta |-> body_ty] TY_ETA_AX)
+ *           (* th = |- (\:a. t [:a:]) = t *)
+ *       in
+ *       TRANS (SIMPLE_ALPHA(tm,lhs(concl th))) th
+ *       end
+ *       handle _ => ERR{function = "TY_ETA_CONV",message = ""})
+ *  | TY_ETA_CONV _ = ERR{function = "TY_ETA_CONV",message = ""};
+ *
+ *---------------------------------------------------------------------------*)
+
+fun TY_ETA_CONV tm =
+   make_thm Count.TyEtaConv
+      (empty_tag, empty_hyp, mk_eq_nocheck (type_of tm) tm (ty_eta_conv tm))
+   handle HOL_ERR _ => ERR"TY_ETA_CONV" "";
 
 
 (*---------------------------------------------------------------------------*

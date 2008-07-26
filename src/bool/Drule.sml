@@ -125,6 +125,16 @@ fun SPEC_VAR th =
    end;
 
 (*---------------------------------------------------------------------------
+ *  |- !:a. t    ---->    a', |- t[a'/a]
+ *---------------------------------------------------------------------------*)
+
+fun SPEC_TYVAR th =
+   let val (Bvar,_) = dest_tyforall (concl th)
+       val bv' = prim_variant_type (HOLset.listItems (hyp_tyvars th)) Bvar
+   in (bv', TY_SPEC bv' th)
+   end;
+
+(*---------------------------------------------------------------------------
  *
  *       A |-  (!x. t1 = t2)
  *   ---------------------------
@@ -155,6 +165,37 @@ fun MK_EXISTS bodyth =
  end
  handle HOL_ERR _ => raise ERR "MK_EXISTS" "";
 
+(*---------------------------------------------------------------------------
+ *
+ *       A |-  (!:a. t1 = t2)
+ *   ---------------------------
+ *    A |- (?:a.t1)  =  (?:a.t2)
+ *
+ * fun MK_TY_EXISTS bodyth =
+ *    let val {Bvar,Body} = dest_tyforall (concl bodyth)
+ *        val {lhs,rhs} = dest_eq Body
+ *    in
+ *    make_thm Count.MkTyExists (tag bodyth, hyp bodyth,
+ *                  mk_eq{lhs=mk_tyexists{Bvar=Bvar, Body=lhs},
+ *                        rhs=mk_tyexists{Bvar=Bvar, Body=rhs}})
+ *    end
+ *    handle _ => THM_ERR "MK_TY_EXISTS" "";
+ *---------------------------------------------------------------------------*)
+
+fun MK_TY_EXISTS bodyth =
+ let val (x, sth) = SPEC_TYVAR bodyth
+     val (a,b) = dest_eq (concl sth)
+     val (abimp,baimp) = EQ_IMP_RULE sth
+     fun HALF (p,q) pqimp =
+       let val xp = mk_tyexists(x,p)
+           and xq = mk_tyexists(x,q)
+       in DISCH xp (TY_CHOOSE (x,ASSUME xp) (TY_EXISTS (xq,x) (MP pqimp (ASSUME p))))
+       end
+ in
+    IMP_ANTISYM_RULE (HALF (a,b) abimp) (HALF (b,a) baimp)
+ end
+ handle HOL_ERR _ => raise ERR "MK_TY_EXISTS" "";
+
 
 (*---------------------------------------------------------------------------
  *               A |-  t1 = t2
@@ -164,12 +205,29 @@ fun MK_EXISTS bodyth =
 
 fun LIST_MK_EXISTS l th = itlist (fn x => fn th => MK_EXISTS(GEN x th)) l th;
 
+
+(*---------------------------------------------------------------------------
+ *               A |-  t1 = t2
+ *   ------------------------------------------- (ai not free in A)
+ *    A |- (?:a1 ... an. t1)  =  (?:a1 ... an. t2)
+ *---------------------------------------------------------------------------*)
+
+fun LIST_MK_TY_EXISTS l th = itlist (fn x => fn th => MK_TY_EXISTS(TY_GEN x th)) l th;
+
+
 fun SIMPLE_EXISTS v th = EXISTS (mk_exists(v, concl th), v) th
+
+fun SIMPLE_TY_EXISTS v th = TY_EXISTS (mk_tyexists(v, concl th), v) th
 
 fun SIMPLE_CHOOSE v th =
   case HOLset.find (fn _ => true) (Thm.hypset th) of
     SOME h => CHOOSE(v, ASSUME (boolSyntax.mk_exists(v,h))) th
   | NONE => raise ERR "SIMPLE_CHOOSE" "";
+
+fun SIMPLE_TY_CHOOSE v th =
+  case HOLset.find (fn _ => true) (Thm.hypset th) of
+    SOME h => TY_CHOOSE(v, ASSUME (boolSyntax.mk_tyexists(v,h))) th
+  | NONE => raise ERR "SIMPLE_TY_CHOOSE" "";
 
 
 
@@ -278,6 +336,41 @@ fun EXT th =
 
 
 (*---------------------------------------------------------------------------
+ * Type extensionality
+ *
+ *     A |- !:a. t1 [:a:] = t2 [:a:]
+ *    -------------------------------     (a not free in A, t1 or t2)
+ *             A |- t1 = t2
+ *
+ * fun TY_EXT th =
+ *  let val {Bvar,Body} = dest_tyforall(concl th)
+ *      val {lhs,rhs} = dest_eq Body
+ *      val {Rator=Rator1, Rand=v1} = dest_tycomb lhs
+ *      val {Rator=Rator2, Rand=v2} = dest_tycomb rhs
+ *      val fv = union (type_vars Rator1) (type_vars Rator2)
+ *      val _ = thm_assert (not(mem Bvar fv) andalso
+ *                          (Bvar=v1) andalso (Bvar=v2))  "" ""
+ *    in make_thm Count.TyExt(tag th, hyp th, mk_eq{lhs=Rator1, rhs=Rator2})
+ *    end
+ *    handle _ => THM_ERR "TY_EXT" "";
+ *---------------------------------------------------------------------------*)
+
+fun TY_EXT th =
+   let val (Bvar,_) = dest_tyforall(concl th)
+       val th1 = TY_SPEC Bvar th
+       (* th1 = |- t1 [:a:] = t2 [:a:] *)
+       val (t1x, t2x) = dest_eq(concl th1)
+       val x = snd(dest_tycomb t1x)
+       val th2 = TY_ABS x th1
+       (* th2 = |- (\:a. t1 [:a:]) = (\:a. t2 [:a:]) *)
+   in
+   TRANS (TRANS(SYM(TY_ETA_CONV (mk_tyabs(x, t1x)))) th2)
+         (TY_ETA_CONV (mk_tyabs(x,t2x)))
+   end
+   handle HOL_ERR _ => raise ERR "TY_EXT" "";
+
+
+(*---------------------------------------------------------------------------
  *       A |- !x. (t1 = t2)
  *     ----------------------
  *     A |- (\x.t1) = (\x.t2)
@@ -304,6 +397,36 @@ fun MK_ABS qth =
 	    (SYM (BETA_CONV (mk_comb(vfun,gv))))))
    end
    handle HOL_ERR _ => raise ERR"MK_ABS" "";
+
+
+(*---------------------------------------------------------------------------
+ *        A |- !:a. (t1 = t2)
+ *     ------------------------
+ *     A |- (\:a.t1) = (\:a.t2)
+ *
+ * fun MK_TY_ABS th =
+ *    let val {Bvar,Body} = dest_tyforall(concl th)
+ *        val {lhs,rhs} = dest_eq Body
+ *    in
+ *    make_thm Count.MkTyAbs(tag th, hyp th,
+ *                 mk_eq{lhs=mk_tyabs{Bvar=Bvar, Body=lhs},
+ *                       rhs=mk_tyabs{Bvar=Bvar, Body=rhs}})
+ *    end
+ *    handle _ => THM_ERR"MK_TY_ABS" "";
+ *---------------------------------------------------------------------------*)
+
+fun MK_TY_ABS qth =
+   let val (Bvar,Body) = dest_tyforall (concl qth)
+       val ufun = mk_tyabs(Bvar, lhs Body)
+       and vfun = mk_tyabs(Bvar, rhs Body)
+       val gv = gen_tyopvar (kind_of Bvar, rank_of Bvar)
+   in
+    TY_EXT (TY_GEN gv
+     (TRANS (TRANS (TY_BETA_CONV (mk_tycomb(ufun,gv))) (TY_SPEC gv qth))
+	    (SYM (TY_BETA_CONV (mk_tycomb(vfun,gv))))))
+   end
+   handle HOL_ERR _ => raise ERR"MK_TY_ABS" "";
+
 
 (*---------------------------------------------------------------------------
  *  Contradiction rule
@@ -457,6 +580,21 @@ fun FORALL_EQ x =
 
 
 (*---------------------------------------------------------------------------
+ * !: abstraction
+ *
+ *           A |- t1 = t2
+ *     --------------------------
+ *      A |- (!:a.t1) = (!:a.t2)
+ *---------------------------------------------------------------------------*)
+
+fun TY_FORALL_EQ a =
+  let val tyforall = AP_TERM boolSyntax.ty_universal
+  in fn th => tyforall (TY_ABS a th)
+  end
+  handle HOL_ERR _ => raise ERR "TY_FORALL_EQ" "";
+
+
+(*---------------------------------------------------------------------------
  * ? abstraction
  *
  *          A |- t1 = t2
@@ -469,6 +607,21 @@ fun EXISTS_EQ x =
    in fn th => exists (ABS x th)
    end
    handle HOL_ERR _ => raise ERR "EXISTS_EQ" "";
+
+
+(*---------------------------------------------------------------------------
+ * ?: abstraction
+ *
+ *           A |- t1 = t2
+ *     --------------------------
+ *      A |- (?:a.t1) = (?:a.t2)
+ *---------------------------------------------------------------------------*)
+
+fun TY_EXISTS_EQ a =
+  let val tyexists = AP_TERM boolSyntax.ty_existential
+   in fn th => tyexists (TY_ABS a th)
+   end
+   handle HOL_ERR _ => raise ERR "TY_EXISTS_EQ" "";
 
 
 (*---------------------------------------------------------------------------
@@ -499,6 +652,19 @@ fun RIGHT_BETA th =
  TRANS th (BETA_CONV(rhs(concl th)))
  handle HOL_ERR _ => raise ERR "RIGHT_BETA" "";
 
+
+(*---------------------------------------------------------------------------
+ * Type beta-conversion to the rhs of an equation
+ *
+ *   A |- t1 = (\:a.t2) [:ty:]
+ *  --------------------
+ *   A |- t1 = t2[ty/a]
+ *---------------------------------------------------------------------------*)
+
+fun RIGHT_TY_BETA th =
+ TRANS th (TY_BETA_CONV(rhs(concl th)))
+ handle HOL_ERR _ => raise ERR "RIGHT_TY_BETA" "";
+
 (*---------------------------------------------------------------------------
  *  "(\x1 ... xn.t)t1 ... tn" -->
  *    |- (\x1 ... xn.t)t1 ... tn = t[t1/x1] ... [tn/xn]
@@ -509,8 +675,20 @@ fun LIST_BETA_CONV tm =
    in RIGHT_BETA (AP_THM (LIST_BETA_CONV Rator) Rand)
    end handle HOL_ERR _ => REFL tm;
 
+(*---------------------------------------------------------------------------
+ *  "(\:a1 ... an.t) [:ty1, ... tyn:]" -->
+ *    |- (\:a1 ... an.t) [:ty1, ... tyn:] = t[ty1/a1] ... [tyn/an]
+ *---------------------------------------------------------------------------*)
+
+fun LIST_TY_BETA_CONV tm =
+   let val (Rator,Rand) = dest_tycomb tm
+   in RIGHT_TY_BETA (TY_COMB (LIST_TY_BETA_CONV Rator) Rand)
+   end handle HOL_ERR _ => REFL tm;
+
 
 fun RIGHT_LIST_BETA th = TRANS th (LIST_BETA_CONV(rhs(concl th)))
+
+fun RIGHT_LIST_TY_BETA th = TRANS th (LIST_TY_BETA_CONV(rhs(concl th)))
 
 
 (*---------------------------------------------------------------------------
@@ -1233,18 +1411,18 @@ end
  *
  *---------------------------------------------------------------------------*)
 
-fun TYALPHA_CONV x t = let
+fun TY_ALPHA_CONV x t = let
   (* avoid calling dest_tyabs *)
   val (dty, _) = dest_univ_type (type_of t)
                  handle HOL_ERR _ =>
-                        raise ERR "TYALPHA_CONV" "Term is not a type abstraction"
+                        raise ERR "TY_ALPHA_CONV" "Term is not a type abstraction"
   val (xstr, xkd, xrk) = with_exn dest_vartype_opr x
-                      (ERR "TYALPHA_CONV" "Type is not a type variable")
+                      (ERR "TY_ALPHA_CONV" "Type is not a type variable")
   val _ = Kind.kind_compare(kind_of dty, xkd) = EQUAL
-          orelse raise ERR "TYALPHA_CONV"
+          orelse raise ERR "TY_ALPHA_CONV"
                            "Kind of type variable not compatible with type abstraction"
   val _ = rank_of dty = xrk
-          orelse raise ERR "TYALPHA_CONV"
+          orelse raise ERR "TY_ALPHA_CONV"
                            "Rank of type variable not compatible with type abstraction"
   val t' = rename_btyvar xstr t
 in
@@ -1280,6 +1458,22 @@ fun GEN_ALPHA_CONV x t =
         in AP_TERM Rator (ALPHA_CONV x Rand)
         end
         handle HOL_ERR _ => raise ERR "GEN_ALPHA_CONV" "";
+
+(*---------------------------------------------------------------------------
+ * Rename bound variables
+ *
+ *       "a"   "(\:b.t)"   --->    |- "\:b.t  = \:a. t[a/b]"
+ *       "a"   "(!:b.t)"   --->    |- "!:b.t  = !:a. t[a/b]"
+ *       "a"   "(?:b.t)"   --->    |- "?:b.t  = ?:a. t[a/b]"
+ *---------------------------------------------------------------------------*)
+
+fun GEN_TY_ALPHA_CONV a t =
+   if is_tyabs t
+   then TY_ALPHA_CONV a t
+   else let val (Rator, Rand) = dest_comb t
+        in AP_TERM Rator (TY_ALPHA_CONV a Rand)
+        end
+        handle HOL_ERR _ => raise ERR "GEN_TY_ALPHA_CONV" "";
 
 
 
@@ -1320,6 +1514,27 @@ fun EXISTS_IMP x th =
        end
        handle HOL_ERR _ => raise ERR "EXISTS_IMP"
                             "variable free in assumptions";
+
+(* ---------------------------------------------------------------------*)
+(* TY_EXISTS_IMP : type existentially quantify the antecedent and 	*)
+(* conclusion of an implication.					*)
+(*									*)
+(*        A |- P ==> Q							*)
+(* ---------------------------- TY_EXISTS_IMP `:a`			*)
+(*   A |- (?:a.P) ==> (?:a.Q)						*)
+(*									*)
+(* ---------------------------------------------------------------------*)
+
+fun TY_EXISTS_IMP x th =
+  if not (is_vartype x)
+  then raise ERR "TY_EXISTS_IMP" "first argument not a type variable"
+  else let val (ant,conseq) = dest_imp(concl th)
+           val th1 = TY_EXISTS (mk_tyexists(x,conseq),x) (UNDISCH th)
+           val asm = mk_tyexists(x,ant)
+       in DISCH asm (TY_CHOOSE (x,ASSUME asm) th1)
+       end
+       handle HOL_ERR _ => raise ERR "TY_EXISTS_IMP"
+                            "type variable free in assumptions";
 
 
 (*---------------------------------------------------------------------------*

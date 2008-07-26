@@ -199,13 +199,13 @@ fun TY_ABS_CONV conv tm =
         handle HOL_ERR _ =>
                let
                  val v = gen_tyopvar (kind_of Bvar, rank_of Bvar)
-                 val th1 = TYALPHA_CONV v tm
+                 val th1 = TY_ALPHA_CONV v tm
                  val r = rhs (concl th1)
                  val {Body = Body',...} = dest_tyabs r
                  val eq_thm' = TY_ABS v (conv Body')
                  val at = rhs (concl eq_thm')
                  val v' = variant_type (type_vars_in_term at) Bvar
-                 val th2 = TYALPHA_CONV v' at
+                 val th2 = TY_ALPHA_CONV v' at
                in
                  TRANS (TRANS th1 eq_thm') th2
                end
@@ -433,13 +433,52 @@ in
          end
 end
 
-
 fun STRIP_QUANT_CONV conv tm =
  (if is_forall tm then STRIP_BINDER_CONV (SOME boolSyntax.universal) else
   if is_exists tm then STRIP_BINDER_CONV (SOME boolSyntax.existential) else
   if is_select tm then STRIP_BINDER_CONV (SOME boolSyntax.select) else
   if is_exists1 tm then STRIP_BINDER_CONV (SOME boolSyntax.exists1)
   else K conv) conv tm;
+
+
+fun TY_QUANT_CONV conv  = RAND_CONV(TY_ABS_CONV conv);
+fun TY_BINDER_CONV conv = TY_ABS_CONV conv ORELSEC TY_QUANT_CONV conv;
+
+fun STRIP_TY_BINDER_CONV opt conv tm = let
+  val (vlist,M) = strip_tybinder opt tm
+in
+  GEN_TY_ABS opt vlist (conv M)
+  handle HOL_ERR _ => let
+           fun kind_rank ty = let val (_,kd,rk) = dest_vartype_opr ty in (kd,rk) end
+           val gvs = map (gen_tyopvar o kind_rank) vlist
+           fun rename vs t =
+               case vs of
+                 [] => ALL_CONV t
+               | (v::vs) =>
+                 (GEN_TY_ALPHA_CONV v THENC TY_BINDER_CONV (rename vs)) t
+           fun variant_list acc avds [] = List.rev acc
+             | variant_list acc avds (v::vs) = let
+                 val v' = variant_type avds v
+               in
+                 variant_list (v'::acc) (v'::avds) vs
+               end
+           val th1 = rename gvs tm
+           val {rhs,...} = Rsyntax.dest_eq(Thm.concl th1)
+           val (_, M') = strip_tybinder opt rhs (* v = Bvar *)
+           val eq_thm' = GEN_TY_ABS opt gvs (conv M')
+           val at  = #rhs(Rsyntax.dest_eq(concl eq_thm'))
+           val vs'  = variant_list [] (type_vars_in_term at) vlist
+           val th2 = rename vs' at
+         in
+           TRANS (TRANS th1 eq_thm') th2
+         end
+end
+
+fun STRIP_TY_QUANT_CONV conv tm =
+ (if is_tyforall tm then STRIP_BINDER_CONV (SOME boolSyntax.ty_universal) else
+  if is_tyexists tm then STRIP_BINDER_CONV (SOME boolSyntax.ty_existential)
+  else K conv) conv tm;
+
 
 fun LAST_EXISTS_CONV c tm = let
   val (bv, body) = Psyntax.dest_exists tm
@@ -451,6 +490,18 @@ end
 fun LAST_FORALL_CONV c tm =
   if is_forall (#2 (Psyntax.dest_forall tm)) then
     BINDER_CONV (LAST_FORALL_CONV c) tm
+  else c tm
+
+fun LAST_TY_EXISTS_CONV c tm = let
+  val (bv, body) = Psyntax.dest_tyexists tm
+in
+  if is_tyexists body then TY_BINDER_CONV (LAST_TY_EXISTS_CONV c) tm
+  else c tm
+end
+
+fun LAST_TY_FORALL_CONV c tm =
+  if is_tyforall (#2 (Psyntax.dest_tyforall tm)) then
+    TY_BINDER_CONV (LAST_TY_FORALL_CONV c) tm
   else c tm
 
 (* ----------------------------------------------------------------------
@@ -511,6 +562,8 @@ fun CONV_RULE conv th = EQ_MP (conv(concl th)) th handle UNCHANGED => th
 
 val BETA_RULE = CONV_RULE(DEPTH_CONV BETA_CONV)
 
+val TY_BETA_RULE = CONV_RULE(TOP_DEPTH_CONV TY_BETA_CONV)
+
 fun UNBETA_CONV arg_t t = let
   open Term (* counteract prevailing Rsyntax *)
 in
@@ -524,6 +577,24 @@ in
       val newbody = Term.subst [arg_t |-> gv] t
     in
       SYM (BETA_CONV (Term.mk_comb(mk_abs(gv,newbody), arg_t)))
+    end
+end
+
+fun TY_UNBETA_CONV arg_t t = let
+  open Term (* counteract prevailing Rsyntax *)
+in
+  if is_vartype arg_t then
+    SYM (TY_BETA_CONV (mk_tycomb(mk_tyabs(arg_t,t), arg_t)))
+  else let
+      (* find all instances of arg_t in t, and convert t
+         to (\:v. t[v/arg_t]) [:arg_t:]
+         v can be a genvar because we expect to get rid of it later. *)
+      val gv = gen_tyopvar (kind_of arg_t, rank_of arg_t)
+      val newbody = Term.inst [arg_t |-> gv] t
+        (* probably wrong; inst cannot handle type expressions as redexes *)
+        (* need to build a new Term.subst_type function for this *)
+    in
+      SYM (TY_BETA_CONV (Term.mk_tycomb(mk_tyabs(gv,newbody), arg_t)))
     end
 end
 

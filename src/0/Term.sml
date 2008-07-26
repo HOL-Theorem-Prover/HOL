@@ -152,8 +152,12 @@ local fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
                                      tyV Bvar (fn q2 => k (union q2 q1)))
         | tyV (TAbs(_,Body)) k     = tyV Body k
         | tyV (t as Clos _) k      = tyV (push_clos t) k
+      fun tyVs (t::ts) k           = tyV t (fn q1 =>
+                                     tyVs ts (fn q2 => k (union q2 q1)))
+        | tyVs [] k                = k []
 in
 fun type_vars_in_term tm = tyV tm Lib.I
+fun type_vars_in_terml tms = tyVs tms Lib.I
 end;
 
 (*---------------------------------------------------------------------------*
