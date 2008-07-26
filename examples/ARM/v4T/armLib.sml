@@ -17,7 +17,8 @@ local
                     key = SOME([t],mk_eq(t,``x:iclass``))};
 in
   val ICLASS_ss = simpLib.SSFRAG
-    {convs = map conv_rec [``swp``,``mrs``,``msr``,``data_proc``,
+    {name = SOME"ICLASS",
+     convs = map conv_rec [``swp``,``mrs``,``msr``,``data_proc``,
              ``mla_mul``, ``ldr_str``,``ldrh_strh``, ``ldm_stm``,
              ``br``,``swi_ex``, ``cdp_und``, ``mcr``,``mrc``,``ldc_stc``,
              ``unexec``],
@@ -55,7 +56,8 @@ fun tupleCases M =
  end;
 
 val PBETA_ss = simpLib.SSFRAG
- {convs = [{name="PBETA",trace = 3,conv=K (K PairRules.PBETA_CONV),
+ {name = SOME "PBETA",
+  convs = [{name="PBETA",trace = 3,conv=K (K PairRules.PBETA_CONV),
   key = SOME([],``(\(x:'a,y:'b). s1) s2:'c``)}], rewrs = [], congs = [],
   filter = NONE, ac = [], dprocs = []};
 
