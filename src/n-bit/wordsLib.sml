@@ -58,6 +58,8 @@ val n2w = ``words$n2w : num -> 'a word``;
 
 (* ------------------------------------------------------------------------- *)
 
+val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
+
 fun is_fcp_thm s =
   not (s = "dimword_IS_TWICE_INT_MIN" orelse s = "INT_MIN_SUM") andalso
   (String.isPrefix "finite_" s orelse String.isPrefix "dimindex_" s orelse
@@ -126,8 +128,7 @@ let
  fun is_word_literal t = wordsSyntax.is_word_literal t orelse is_uintmax t
  val comp = reduceLib.num_compset()
  val _ = add_thms
-          (word_eq_n2w :: map (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV)
-            [MOD_2EXP_EQ, MOD_2EXP_MAX]) comp
+          (word_eq_n2w :: map (SUC_RULE) [MOD_2EXP_EQ, MOD_2EXP_MAX]) comp
  val _ = add_conv(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) comp
 in
  fn tm =>
@@ -170,7 +171,7 @@ val thms =
    NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
    (SIMP_RULE std_ss [GSYM ODD_MOD2_LEM,arithmeticTheory.MOD_2EXP_def,
       BITS_def,SUC_SUB] o NUM_RULE [BITS_ZERO2] `n`) BIT_def,
-   INT_MIN_SUM,
+   INT_MIN_SUM, SUC_RULE MOD_2EXP_EQ,
    numeral_log2,numeral_ilog2,LOG_compute,
    n2w_w2n, w2n_n2w, MOD_WL1 w2w_n2w, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def,
@@ -200,7 +201,7 @@ val thms =
    word_from_oct_string_def,word_from_dec_string_def,word_from_hex_string_def,
    word_to_bin_string_def,word_to_oct_string_def,word_to_dec_string_def,
    word_to_hex_string_def]
-  @ map l2n_pow2 [2, 8, 16] @ map n2l_pow2 [2,8,16];
+  @ map l2n_pow2 [2, 8, 16, 256] @ map n2l_pow2 [2, 8, 16, 256];
 
 val thms =
   let fun mrw th = map (REWRITE_RULE [th])
@@ -404,7 +405,7 @@ val WORD_NOT_NUMERAL =
    SPEC `^n2w ^n`) WORD_NOT;
 
 val WORD_NOT_NEG_NUMERAL =
-  (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV o GEN_ALL o
+  (SUC_RULE o GEN_ALL o
    SIMP_RULE arith_ss
      [GSYM ADD1, WORD_LITERAL_ADD, word_sub_def, WORD_NEG_NEG] o
    SPEC `words$word_2comp (^n2w (num$SUC ^n))`) WORD_NOT;
@@ -690,12 +691,10 @@ fun bitwise_compset () =
   end;
 
 val WORD_LITERAL_AND_thms =
-  (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV o
-   REWRITE_RULE [WORD_NOT_NUMERAL]) WORD_LITERAL_AND;
+  (SUC_RULE o REWRITE_RULE [WORD_NOT_NUMERAL]) WORD_LITERAL_AND;
 
 val WORD_LITERAL_OR_thms =
-  (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV o
-   REWRITE_RULE [WORD_NOT_NUMERAL]) WORD_LITERAL_OR;
+  (SUC_RULE o REWRITE_RULE [WORD_NOT_NUMERAL]) WORD_LITERAL_OR;
 
 val BITWISE_CONV = computeLib.CBV_CONV (bitwise_compset ());
 
@@ -984,8 +983,7 @@ val _ = augment_srw_ss [WORD_ss];
 
 (* ------------------------------------------------------------------------- *)
 
-val LESS_THM =
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
+val LESS_THM = SUC_RULE prim_recTheory.LESS_THM;
 
 val LESS_COR = REWRITE_RULE [DISJ_IMP_THM] (CONJ
   ((GEN_ALL o REWRITE_CONV [LESS_THM])
@@ -1193,7 +1191,7 @@ val Cases_on_word = Cases_on;
 
 val LESS_CONV =
 let val compset = reduceLib.num_compset()
-    val thm = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM
+    val thm = SUC_RULE prim_recTheory.LESS_THM
     val _ = add_thms [thm] compset
 in
  CBV_CONV compset
