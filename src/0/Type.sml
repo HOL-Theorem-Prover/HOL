@@ -190,8 +190,8 @@ local val max = Int.max
         | rk_of (TyCon(_,_,rk)) _        = rk
         | rk_of (TyBv i) E               = lookup i E
         | rk_of (TyApp(opr, ty)) E       = max (rk_of opr E, rk_of ty E)
-        | rk_of (TyAll((_,_,rk),Body)) E = max (rk + 1, rk_of Body (rk::E))
-        | rk_of (TyAbs((_,_,rk),Body)) E = max (rk,     rk_of Body (rk::E))
+        | rk_of (TyAll((_,_,rk),Body)) E = max (rk, rk_of Body (rk::E)) + 1
+        | rk_of (TyAbs((_,_,rk),Body)) E = max (rk, rk_of Body (rk::E))
 in
 fun rank_of ty = rk_of ty []
 end;

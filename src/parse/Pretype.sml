@@ -330,9 +330,9 @@ val max  = Prerank.Maxrank
 in
 fun prank_of0 (Vartype(s,kd,rk)) = rk
   | prank_of0 (Contype{Rank, ...}) = Rank
-  | prank_of0 (TyApp(opr,arg))     = max(prank_of opr,       prank_of arg)
-  | prank_of0 (TyUniv(Bvar,Body))  = max(inc(prank_of Bvar), prank_of Body)
-  | prank_of0 (TyAbst(Bvar,Body))  = max(prank_of Bvar,      prank_of Body)
+  | prank_of0 (TyApp(opr,arg))     =     max(prank_of opr,  prank_of arg)
+  | prank_of0 (TyUniv(Bvar,Body))  = inc(max(prank_of Bvar, prank_of Body))
+  | prank_of0 (TyAbst(Bvar,Body))  =     max(prank_of Bvar, prank_of Body)
   | prank_of0 (TyKindConstr{Ty,Kind}) = prank_of Ty
   | prank_of0 (TyRankConstr{Ty,Rank}) = Rank
   | prank_of0 (UVar (r as ref (NONEU(_,rk)))) = rk
