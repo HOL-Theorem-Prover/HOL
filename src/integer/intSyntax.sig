@@ -24,6 +24,7 @@ sig
   val divides_tm     : term
   val min_tm         : term
   val max_tm         : term
+  val Num_tm         : term (* the coercion from :int -> :num *)
   val int_injection  : term (* the injection from :num -> :int *)
 
   (* discriminators, constructors, etc *)
@@ -35,6 +36,10 @@ sig
   val mk_injected    : term -> term
   val dest_injected  : term -> term
   val is_injected    : term -> bool
+
+  val mk_Num         : term -> term
+  val dest_Num       : term -> term
+  val is_Num         : term -> bool
 
   val is_negated     : term -> bool  (* if a term is of form ~ e *)
   val mk_negated     : term -> term
@@ -66,6 +71,7 @@ sig
 
   val is_absval      : term -> bool
   val mk_absval      : term -> term
+  val dest_absval    : term -> term
 
   val is_less        : term -> bool
   val dest_less      : term -> (term * term)

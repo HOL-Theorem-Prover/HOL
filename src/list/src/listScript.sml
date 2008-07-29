@@ -37,6 +37,8 @@ open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
+val export_rewrites = export_rewrites "list";
+
 val _ = new_theory "list";
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
@@ -192,7 +194,7 @@ val EVERY_DEF = new_recursive_definition
        rec_axiom = list_Axiom,
        def = --`(!P:'a->bool. EVERY P [] = T)  /\
                 (!P h t. EVERY P (h::t) = P h /\ EVERY P t)`--};
-val _ = BasicProvers.export_rewrites ["EVERY_DEF"]
+val _ = export_rewrites ["EVERY_DEF"]
 
 val EXISTS_DEF = new_recursive_definition
       {name = "EXISTS_DEF",
@@ -1330,7 +1332,7 @@ val _ = adjoin_to_theory
    S "  end;"
  end)};
 
-val _ = BasicProvers.export_rewrites
+val _ = export_rewrites 
           ["APPEND_11", "EL", "FLAT", "HD",
            "MAP", "MAP2", "NULL_DEF",
            "SUM", "TL", "APPEND_ASSOC", "CONS", "CONS_11",

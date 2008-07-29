@@ -25,6 +25,8 @@ open HolKernel boolLib Parse
 
 val _ = new_theory "arithmetic";
 
+val export_rewrites = export_rewrites "ARITH";
+
 val NOT_SUC     = numTheory.NOT_SUC
 and INV_SUC     = numTheory.INV_SUC
 and INDUCTION   = numTheory.INDUCTION;

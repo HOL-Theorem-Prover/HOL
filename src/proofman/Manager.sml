@@ -12,6 +12,12 @@ val ERR = mk_HOL_ERR "Manager";
 datatype proof = GOALSTACK of goalStack.gstk history
                | GOALTREE of goalTree.gtree history;
 
+fun is_goalstack (GOALSTACK _) = true
+  | is_goalstack otherwise = false;
+
+fun is_goaltree (GOALTREE _) = true
+  | is_goaltree otherwise = false;
+
 (*---------------------------------------------------------------------------*)
 (* Lists of proof attempts.                                                  *)
 (*---------------------------------------------------------------------------*)
@@ -131,11 +137,11 @@ fun pp_proofs ppstrm =
        fun pr1 (GOALSTACK x) =
             if (project inactive_stack x)
             then (begin_block Portable.CONSISTENT 2;
-                  add_string"Completed:";  add_break(1,0);
+                  add_string"Completed goalstack:"; add_break(1,0);
                   pr_thm (project goalStack.extract_thm x);
                   end_block())
             else (begin_block Portable.CONSISTENT 2;
-                  add_string"Incomplete:";   add_break(1,0);
+                  add_string"Incomplete goalstack:"; add_break(1,0);
                   add_string"Initial goal:"; add_break(1,0);
                   pr_goal (project goalStack.initial_goal x);
                   if (project goalStack.is_initial x)
@@ -144,7 +150,21 @@ fun pp_proofs ppstrm =
                         add_break(1,0);
                         pr_goal (project goalStack.top_goal x));
                   end_block())
-         | pr1 (GOALTREE t) = project pr_gtree t
+         | pr1 (GOALTREE t) = 
+            if (project inactive_tree t)
+            then (begin_block Portable.CONSISTENT 2;
+                  add_string"Completed goaltree:"; add_break(1,0);
+                  project pr_gtree t;
+                  end_block())
+            else (begin_block Portable.CONSISTENT 2;
+                  add_string"Incomplete goaltree:"; add_break(1,0);
+                  add_string"Initial goal:"; add_break(1,0);
+                  pr_gtree (History.initialValue t);
+                  add_newline(); 
+                  add_string "Current goaltree:";
+                  add_break(1,0);
+                  project pr_gtree t;
+                  end_block())
 
        fun pr (PRFS extants) =
           let val len = length extants

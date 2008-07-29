@@ -10,15 +10,16 @@ Make sure each working copy is updated;
 In RapidSVN, select Repository > Merge; brings up a dialog box. Fill in:
 
 First working copy or URL:                             Revision
-http://hol.svn.sf.net/svnroot/hol/HOL                  5651
+https://hol.svn.sf.net/svnroot/hol/HOL                  5651
 
 Second working copy or URL:                            Revision
-http://hol.svn.sf.net/svnroot/hol/HOL                  5659
+https://hol.svn.sf.net/svnroot/hol/HOL                  5659
 
 Destination path:
 /usr/local/hol/hol-omega
 
-Don't use https.
+Do use https; required by SourceForge, see
+http://sourceforge.net/community/forum/topic.php?id=2969&page.
 
 With the "Recursive" button checked, but the "Force" button not checked,
 
@@ -46,6 +47,8 @@ svn revert -R .
 
 ----------------------------
 Merge Log:
+
+6070:  Ported revisions 6042:6069 from HOL to HOL-Omega. 
 
 6042:  Ported revisions 6031:6041 from HOL to HOL-Omega. 
 

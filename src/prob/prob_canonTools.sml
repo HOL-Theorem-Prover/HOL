@@ -8,6 +8,7 @@ struct
 open Drule bossLib rich_listTheory prob_canonTheory;
 
 val prob_canon_ss = simpLib.++(list_ss, simpLib.SSFRAG {
+  name = SOME "prob_canon",
   ac = [],
   convs = [],
   dprocs = [],

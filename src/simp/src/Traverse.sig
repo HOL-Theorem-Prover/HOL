@@ -60,13 +60,23 @@ sig
     * ---------------------------------------------------------------------*)
     
   datatype reducer = REDUCER of {
+         name : string option,
          initial: context,
          addcontext : context * thm list -> context,
          apply: {solver:term list -> term -> thm, 
 		 context: context,
 		 stack:term list,
      relation : Travrules.preorder} -> conv
-       };
+       }
+
+  val dest_reducer : reducer -> 
+        {name : string option,
+         initial: context,
+         addcontext : context * thm list -> context,
+         apply: {solver:term list -> term -> thm, 
+		 context: context,
+		 stack:term list,
+         relation : Travrules.preorder} -> conv}
 
    (* ---------------------------------------------------------------------
     * TRAVERSE : {rewriters: reducer list,

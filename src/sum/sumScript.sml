@@ -43,6 +43,7 @@ val _ = new_theory "sum";
 val o_DEF = combinTheory.o_DEF
 and o_THM = combinTheory.o_THM;
 
+val export_rewrites = export_rewrites "sum_rwts";
 
 (* ---------------------------------------------------------------------*)
 (* Introduce the new type.						*)

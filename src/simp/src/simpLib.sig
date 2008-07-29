@@ -48,12 +48,13 @@ sig
                     conv: (term list -> term -> thm) -> term list -> conv}
 
   datatype ssfrag = SSFRAG of
-    { convs: convdata list,
-      rewrs: thm list,
-         ac: (thm * thm) list,
-     filter: (thm -> thm list) option,
-     dprocs: Traverse.reducer list,
-      congs: thm list};
+    {name : string option,
+     convs: convdata list,
+     rewrs: thm list,
+        ac: (thm * thm) list,
+    filter: (thm -> thm list) option,
+    dprocs: Traverse.reducer list,
+     congs: thm list}
 
   (*------------------------------------------------------------------------*)
   (* Easy building of common kinds of ssfrag objects                        *)
@@ -62,11 +63,12 @@ sig
   val Cong        : thm -> thm
   val AC          : thm -> thm -> thm
 
+  val named_rewrites : string -> thm list -> ssfrag
   val rewrites    : thm list -> ssfrag
   val dproc_ss    : Traverse.reducer -> ssfrag
   val ac_ss       : (thm * thm) list -> ssfrag
   val conv_ss     : convdata -> ssfrag
-  val merge_ss    : ssfrag list -> ssfrag
+  val merge_ss    : ssfrag list -> ssfrag 
   val type_ssfrag : hol_type -> ssfrag
 
    (* ---------------------------------------------------------------------
@@ -84,6 +86,7 @@ sig
   type simpset
 
   val empty_ss   : simpset
+  val ssfrags_of : simpset -> ssfrag list
   val mk_simpset : ssfrag list -> simpset
   val ++         : simpset * ssfrag -> simpset  (* infix *)
   val &&         : simpset * thm list -> simpset  (* infix *)
@@ -149,9 +152,20 @@ sig
    val SIMP_RULE     : simpset -> thm list -> thm -> thm
    val ASM_SIMP_RULE : simpset -> thm list -> thm -> thm
 
-   (* ---------------------------------------------------------------------
-    * Simpset pretty printing
-    * ---------------------------------------------------------------------*)
+   (* ---------------------------------------------------------------------*)
+   (* Accumulating the rewrite rules that are actually used.               *)
+   (* ---------------------------------------------------------------------*)
 
+   val used_rewrites : thm list ref
+   val track_rewrites : bool ref
+
+   val track : ('a -> 'b) -> 'a -> 'b
+
+   (* ---------------------------------------------------------------------*)
+   (* Prettyprinters for ssfrags and simpsets.                             *)
+   (* ---------------------------------------------------------------------*)
+
+   val pp_ssfrag : ppstream -> ssfrag -> unit
+   val pp_simpset : ppstream -> simpset -> unit
 
 end

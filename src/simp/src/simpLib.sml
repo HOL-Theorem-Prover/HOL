@@ -55,7 +55,7 @@ fun mk_rewr_convdata thm =
  let val (tag,thm') = dest_tagged_rewrite thm
      val th = SPEC_ALL thm'
  in
-   SOME {name   = "<rewrite>",
+   SOME {name  = "<rewrite>",
          key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
          trace = 100, (* no need to provide extra tracing here;
                          COND_REWR_CONV provides enough tracing itself *)
@@ -73,7 +73,8 @@ fun mk_rewr_convdata thm =
 (*---------------------------------------------------------------------------*)
 
 datatype ssfrag = SSFRAG of
-   {convs  : convdata list,
+   {name   : string option,
+    convs  : convdata list,
     rewrs  : thm list,
     ac     : (thm * thm) list,
     filter : (thm -> thm list) option,
@@ -84,28 +85,51 @@ datatype ssfrag = SSFRAG of
 (* Operation on ssdata values                                                *)
 (*---------------------------------------------------------------------------*)
 
+fun named_rewrites s rewrs =
+   SSFRAG {name=SOME s,
+           convs=[],rewrs=rewrs,filter=NONE,ac=[],dprocs=[],congs=[]};
+
 fun rewrites rewrs =
-   SSFRAG {convs=[],rewrs=rewrs,filter=NONE,ac=[],dprocs=[],congs=[]};
+   SSFRAG {name=NONE,
+           convs=[],rewrs=rewrs,filter=NONE,ac=[],dprocs=[],congs=[]};
 
 fun dproc_ss dproc =
-   SSFRAG {convs=[],rewrs=[],filter=NONE,ac=[],dprocs=[dproc],congs=[]};
+   SSFRAG {name=NONE,
+           convs=[],rewrs=[],filter=NONE,ac=[],dprocs=[dproc],congs=[]};
 
 fun ac_ss aclist =
-   SSFRAG {convs=[],rewrs=[],filter=NONE,ac=aclist,dprocs=[],congs=[]};
+   SSFRAG {name=NONE,
+           convs=[],rewrs=[],filter=NONE,ac=aclist,dprocs=[],congs=[]};
 
 fun conv_ss conv =
-   SSFRAG {convs=[conv],rewrs=[],filter=NONE,ac=[],dprocs=[],congs=[]};
+   SSFRAG {name=NONE,
+           convs=[conv],rewrs=[],filter=NONE,ac=[],dprocs=[],congs=[]};
 
 fun D (SSFRAG s) = s;
 
+fun merge_names list =
+  itlist (fn (SOME x) => 
+              (fn NONE => SOME x
+                | SOME y => SOME (x^", "^y))
+           | NONE => 
+              (fn NONE => NONE
+                | SOME y => SOME y))
+         list NONE;
+
+(*---------------------------------------------------------------------------*)
+(* Possibly need to suppress duplicates in the merge?                        *)
+(*---------------------------------------------------------------------------*)
+
 fun merge_ss (s:ssfrag list) =
-    SSFRAG {convs=flatten (map (#convs o D) s),
+    SSFRAG {name=merge_names (map (#name o D) s),
+            convs=flatten (map (#convs o D) s),
              rewrs=flatten (map (#rewrs o D) s),
             filter=SOME (end_foldr (op oo) (mapfilter (the o #filter o D) s))
                     handle HOL_ERR _ => NONE,
                 ac=flatten (map (#ac o D) s),
 	    dprocs=flatten (map (#dprocs o D) s),
 	     congs=flatten (map (#congs o D) s)};
+
 
 (*---------------------------------------------------------------------------*)
 (* Simpsets and basic operations on them. Simpsets contain enough            *)
@@ -118,14 +142,18 @@ type net = ((term list -> term -> thm) -> term list -> conv) net;
 
 abstype simpset =
      SS of {mk_rewrs    : (thm -> thm list),
+            ssfrags     : ssfrag list,
             initial_net : net,
             dprocs      : reducer list,
             travrules   : travrules}
 with
 
  val empty_ss = SS {mk_rewrs=fn x => [x],
+                    ssfrags = [],
                     initial_net=empty_net,
                     dprocs=[],travrules=mk_travrules []};
+
+ fun ssfrags_of (SS x) = #ssfrags x;
 
   (* ---------------------------------------------------------------------
    * USER_CONV wraps a bit of tracing around a user conversion.
@@ -169,61 +197,64 @@ with
   * mk_simpset
   * ---------------------------------------------------------------------*)
 
-  fun mk_ac p A =
-     let val (a,b,c) = Drule.MK_AC_LCOMM p
-     in a::b::c::A
-     end handle HOL_ERR _ => A;
+ fun mk_ac p A =
+   let val (a,b,c) = Drule.MK_AC_LCOMM p
+   in a::b::c::A
+   end handle HOL_ERR _ => A;
 
-  fun ac_rewrites aclist = Lib.itlist mk_ac aclist [];
+ fun ac_rewrites aclist = Lib.itlist mk_ac aclist [];
 
+ fun same_frag (SSFRAG{name=SOME n1, ...}) (SSFRAG{name=SOME n2, ...}) = n1=n2
+   | same_frag other wise = false;
 
  fun add_to_ss
-    (SSFRAG {convs,rewrs,filter,ac,dprocs,congs},
-     SS {mk_rewrs=mk_rewrs',travrules,initial_net,dprocs=dprocs'})
+    (f as SSFRAG {convs,rewrs,filter,ac,dprocs,congs,...},
+     SS {mk_rewrs=mk_rewrs',ssfrags,travrules,initial_net,dprocs=dprocs'})
   = let val mk_rewrs = case filter of SOME f => f oo mk_rewrs' | _ => mk_rewrs'
         val rewrs' = flatten (map mk_rewrs (ac_rewrites ac@rewrs))
         val newconvdata = convs @ List.mapPartial mk_rewr_convdata rewrs'
         val net = net_add_convs initial_net newconvdata
     in
        SS {mk_rewrs=mk_rewrs,
-	initial_net=net,
-             dprocs=dprocs @ dprocs',
-          travrules=merge_travrules [travrules,mk_travrules congs]}
+           ssfrags = Lib.op_insert same_frag f ssfrags,
+           initial_net=net,
+           dprocs=dprocs @ dprocs',
+           travrules=merge_travrules [travrules,mk_travrules congs]}
     end;
 
  val mk_simpset = foldl add_to_ss empty_ss;
+
+ fun op ++ (ss,ssdata) = add_to_ss (ssdata,ss);
 
 (*---------------------------------------------------------------------------*)
 (* SIMP_QCONV : simpset -> thm list -> conv                                  *)
 (*---------------------------------------------------------------------------*)
 
-  fun op ++ (ss,ssdata) = add_to_ss (ssdata,ss);
+ exception CONVNET of net;
 
-  exception CONVNET of net;
+ fun rewriter_for_ss (SS{mk_rewrs,travrules,initial_net,...}) =
+   let fun addcontext (context,thms) =
+        let val net = (raise context) handle CONVNET net => net
+        in CONVNET (net_add_convs net
+                       (List.mapPartial mk_rewr_convdata
+                         (flatten (map mk_rewrs thms))))
+        end
+       fun apply {solver,context,stack,relation} tm =
+         let val net = (raise context) handle CONVNET net => net
+         in tryfind (fn conv => conv solver stack tm) (lookup tm net)
+         end
+   in REDUCER {name=SOME"rewriter_for_ss",
+               addcontext=addcontext, apply=apply,
+               initial=CONVNET initial_net}
+   end;
 
-  fun rewriter_for_ss (SS{mk_rewrs,travrules,initial_net,...}) =
-    let fun addcontext (context,thms) =
-          let val net = (raise context) handle CONVNET net => net
-          in CONVNET (net_add_convs net
-                         (List.mapPartial mk_rewr_convdata
-                           (flatten (map mk_rewrs thms))))
-          end
-        fun apply {solver,context,stack,relation} tm =
-          let val net = (raise context) handle CONVNET net => net
-          in tryfind (fn conv => conv solver stack tm) (lookup tm net)
-          end
-    in REDUCER {addcontext=addcontext, apply=apply,
-                initial=CONVNET initial_net}
-    end;
-
-  fun traversedata_for_ss (ss as (SS ssdata)) =
+ fun traversedata_for_ss (ss as (SS ssdata)) =
       {rewriters=[rewriter_for_ss ss],
        dprocs= #dprocs ssdata,
        relation= boolSyntax.equality,
        travrules= merge_travrules [EQ_tr,#travrules ssdata]};
 
-  fun SIMP_QCONV ss =
-      TRAVERSE (traversedata_for_ss ss);
+ fun SIMP_QCONV ss = TRAVERSE (traversedata_for_ss ss);
 
 end (* abstype for SS *)
 
@@ -231,16 +262,17 @@ val Cong = markerLib.Cong
 val AC   = markerLib.AC;
 
 local open markerSyntax markerLib
-   fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
-   fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
+  fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
+  fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
   fun process_tags ss thl =
     let val (Congs,rst) = Lib.partition is_Cong thl
         val (ACs,rst') = Lib.partition is_AC rst
     in
      if null Congs andalso null ACs then (ss,thl)
-     else ((ss ++ SSFRAG{ac=map unAC ACs, congs=map unCong Congs,
-                        convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
+     else ((ss ++ SSFRAG{name=SOME"Cong and/or AC",
+                         ac=map unAC ACs, congs=map unCong Congs,
+                         convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
     end
 in
 fun SIMP_CONV ss l =
@@ -272,7 +304,9 @@ end;
 (* These tactics never fail, though they may diverge.                        *)
 (* --------------------------------------------------------------------------*)
 
-fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l);
+
+fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l)
+
 fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
 
 fun SIMP_TAC ss l = markerLib.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l;
@@ -304,63 +338,99 @@ fun FULL_SIMP_TAC ss l =
   markerLib.ABBRS_THEN (fn l => ASSUM_LIST f THEN ASM_SIMP_TAC ss l) l
  end
 
+fun track f x = 
+ let val _ = (used_rewrites := [])
+     val res = Lib.with_flag(track_rewrites,true) f x
+ in used_rewrites := rev (!used_rewrites)
+  ; res
+ end;     
+
 (* ----------------------------------------------------------------------
     creating per-type ssdata values
    ---------------------------------------------------------------------- *)
 
-fun type_ssfrag ty = let
-  val {rewrs, convs} = TypeBase.simpls_of ty
+fun type_ssfrag ty = 
+ let val {Thy,Tyop,...} = dest_thy_type ty
+     val tyname = Thy^"$"^Tyop
+     val {rewrs, convs} = TypeBase.simpls_of ty
 in
-  SSFRAG {convs = convs, rewrs = rewrs, filter = NONE,
-           dprocs = [], ac = [], congs = []}
+  SSFRAG {name=SOME ("Datatype "^tyname),
+          convs = convs, rewrs = rewrs, filter = NONE,
+          dprocs = [], ac = [], congs = []}
 end
 
 
-(* ---------------------------------------------------------------------
- * Pretty printer for Simpsets
- * ---------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Pretty printers for ssfrags and simpsets                                  *)
+(*---------------------------------------------------------------------------*)
 
-(*
- open PP
+val CONSISTENT   = Portable.CONSISTENT
+val INCONSISTENT = Portable.INCONSISTENT;
 
- fun pp_simpset pp_thm_flags ppstrm (SS ssdata) =
-    let val {add_string,add_break,begin_block,end_block,add_newline,...} =
-               PPExtra.with_ppstream ppstrm
-        val how_many_rewrs = length (#rewrs ssdata)
-        val how_many_convs = length (#convdata ssdata)
-        val how_many_dprocs = length (#dprocs ssdata)
-    in begin_block PP.CONSISTENT 0;
-       add_string("Number of rewrite rules = "^
-		  int_to_string how_many_rewrs^" (use dest_ss to see them)");
-       add_newline();
-       add_string("Conversions:");
-       add_newline();
-       if (how_many_convs = 0)
-       then (add_string "<no conversions>")
-       else ( begin_block PP.INCONSISTENT 0;
-              PPExtra.pr_list (fn x => add_string (#name x))
-                      (fn () => add_string",")
-                      (fn () => add_break(1,0))
-                      (#convdata ssdata);
-              end_block());
-       add_newline();
-       add_string("Number of conversions = "^int_to_string how_many_convs);
-       add_newline();
-       pp_travrules pp_thm_flags ppstrm (#travrules ssdata);
+fun D (SSFRAG s) = s;
+fun dest_reducer (Traverse.REDUCER x) = x;
 
-       add_string("Decision Procedures: ");
-       if (how_many_dprocs = 0)
-       then (add_string "<none>")
-       else ( begin_block PP.INCONSISTENT 0;
-              PPExtra.pr_list (fn REDUCER dproc => add_string (quote (#name
-						      dproc)))
-                      (fn () => add_string",")
-                      (fn () => add_break(1,0)) (#dprocs ssdata);
-              end_block());
-       add_newline();
+fun merge_names list =
+  itlist (fn (SOME x) => 
+              (fn NONE => SOME x
+                | SOME y => SOME (x^", "^y))
+           | NONE => 
+              (fn NONE => NONE
+                | SOME y => SOME y))
+         list NONE;
 
-       end_block()
-     end;
-*)
+fun dest_convdata {name,key as SOME(_,tm),trace,conv} = (name,SOME tm)
+  | dest_convdata {name,...} = (name,NONE);
+
+fun pp_ssfrag ppstrm (SSFRAG {name,convs,rewrs,ac,dprocs,congs,...}) =
+ let open Portable
+     val name = (case name of SOME s => s | NONE => "<anonymous>")
+     val convs = map dest_convdata convs
+     val dps = case merge_names (map (#name o dest_reducer) dprocs)
+                of NONE => []
+                 | SOME n => [n]
+     val {add_string,add_break,begin_block,end_block, add_newline,
+          flush_ppstream,...} = Portable.with_ppstream ppstrm
+     val pp_thm = pp_thm ppstrm
+     val pp_term = Parse.term_pp_with_delimiters Hol_pp.pp_term ppstrm
+     fun pp_thm_pair (th1,th2) = 
+        (begin_block CONSISTENT 0;
+         pp_thm th1; add_break(2,0); pp_thm th2;
+         end_block())
+     fun pp_conv_info (n,SOME tm) = 
+          (begin_block CONSISTENT 0;
+           add_string (n^", keyed on pattern"); add_break(2,0); pp_term tm;
+           end_block())
+       | pp_conv_info (n,NONE) = add_string n
+     fun nl2() = (add_newline();add_newline());
+     fun vspace l = if null l then () else nl2();
+     fun vblock(header, ob_pr, obs) =
+       if null obs then ()
+       else 
+        ( begin_block CONSISTENT 3;
+          add_string (header^":");
+          add_newline();
+          Portable.pr_list ob_pr
+            (fn () => ()) add_newline obs;
+          end_block();
+          add_break(1,0))
+ in 
+  begin_block CONSISTENT 0;
+  add_string ("Simplification set: "^name);
+  add_newline();
+  vblock("Conversions",pp_conv_info,convs);
+  vblock("Decision procedures",add_string,dps);
+  vblock("Congruence rules",pp_thm,congs);
+  vblock("AC rewrites",pp_thm_pair,ac);
+  vblock("Rewrite rules",pp_thm,rewrs);
+  end_block ()
+ end
+ 
+fun pp_simpset ppstrm ss = 
+  let open Portable
+      val pp_ssfrag = pp_ssfrag ppstrm
+ in pr_list pp_ssfrag (fn () => ()) (fn () => add_newline ppstrm)
+            (rev (ssfrags_of ss))
+ end;
 
 end (* struct *)

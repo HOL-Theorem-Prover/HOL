@@ -8,6 +8,8 @@ fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
 
 infix >-
 
+val export_rewrites = BasicProvers.export_rewrites "bag";
+
 val _ = new_theory "bag";
 
 val _ = type_abbrev("bag", Type`:'a -> num`)
@@ -1339,7 +1341,7 @@ val BAG_FILTER_EMPTY = store_thm(
   ``BAG_FILTER P {||} = {||}``,
   SRW_TAC [][BAG_FILTER_DEF, FUN_EQ_THM] THEN
   SRW_TAC [][EMPTY_BAG]);
-val _ = BasicProvers.export_rewrites ["BAG_FILTER_EMPTY"]
+val _ = export_rewrites ["BAG_FILTER_EMPTY"]
 
 val BAG_FILTER_BAG_INSERT = store_thm(
   "BAG_FILTER_BAG_INSERT",
@@ -1347,7 +1349,7 @@ val BAG_FILTER_BAG_INSERT = store_thm(
                                     else BAG_FILTER P b``,
   SRW_TAC [][BAG_FILTER_DEF, FUN_EQ_THM] THEN
   SRW_TAC [][BAG_INSERT] THEN RES_TAC);
-val _ = BasicProvers.export_rewrites ["BAG_FILTER_BAG_INSERT"]
+val _ = export_rewrites ["BAG_FILTER_BAG_INSERT"]
 
 val FINITE_BAG_FILTER = store_thm(
   "FINITE_BAG_FILTER",

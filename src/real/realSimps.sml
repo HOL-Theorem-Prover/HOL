@@ -12,13 +12,15 @@ structure Parse = struct
   open Parse
   val (Type,Term) = parse_from_grammars realTheory.real_grammars
 end
+
 open Parse
 
 val arith_ss = boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ numSimps.ARITH_ss ++
                numSimps.REDUCE_ss
 
 val real_SS = simpLib.SSFRAG
-  {ac = [],
+  {name = SOME"real",
+   ac = [],
    congs = [],
    convs = [],
    dprocs = [],
@@ -62,6 +64,7 @@ val real_SS = simpLib.SSFRAG
             REAL_MAX_SUB]};
 
 val real_ac_SS = simpLib.SSFRAG {
+  name = SOME"real_ac",
   ac = [(SPEC_ALL REAL_ADD_ASSOC, SPEC_ALL REAL_ADD_SYM),
         (SPEC_ALL REAL_MUL_ASSOC, SPEC_ALL REAL_MUL_SYM)],
   convs = [],
@@ -317,10 +320,12 @@ val simpset_convs = map (fn p => {conv = K (K elim_common_factor),
                                   name = "realSimps.elim_common_factor",
                                   trace = 2}) ecf_patterns
 
-val REAL_REDUCE_ss = SSFRAG {ac = [], congs =[],
-                              convs = simpset_convs,
-                              dprocs = [], filter = NONE,
-                              rewrs = rwts}
+val REAL_REDUCE_ss = SSFRAG 
+  {name = SOME "REAL_REDUCE",
+   ac = [], congs =[],
+   convs = simpset_convs,
+   dprocs = [], filter = NONE,
+   rewrs = rwts}
 
 val real_ss = arith_ss ++ real_SS ++ REAL_REDUCE_ss
 
@@ -469,6 +474,7 @@ fun prim_dest_const t = let
 in
   (Thy,Name)
 end
+
 fun dpvars t = let
   fun recurse bnds acc t = let
     val (f, args) = strip_comb t
@@ -550,14 +556,16 @@ val ARITH_REDUCER = let
     CTXT (addthese @ get_ctxt ctxt)
   end
 in
-  REDUCER {addcontext = add_ctxt,
+  REDUCER {name = SOME"ARITH_REDUCER",
+           addcontext = add_ctxt,
            apply = fn args => CACHED_ARITH (get_ctxt (#context args)),
            initial = CTXT []}
 end;
 
 val REAL_ARITH_ss =
-    simpLib.SSFRAG
-    { convs = [], rewrs = [], congs = [],
+    SSFRAG
+    {name=SOME"REAL_ARITH",
+     convs = [], rewrs = [], congs = [],
       filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
 
 end

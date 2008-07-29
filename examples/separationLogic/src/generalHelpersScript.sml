@@ -11,7 +11,7 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
 show_assums := true;
 *)
 
-open finite_mapTheory relationTheory pred_setTheory congLib sortingTheory listTheory rich_listTheory arithmeticTheory operatorTheory containerTheory bagTheory;
+open finite_mapTheory relationTheory pred_setTheory congLib sortingTheory listTheory rich_listTheory arithmeticTheory operatorTheory containerTheory bagTheory stringLib;
 
 (*
 quietdec := false;
@@ -132,7 +132,7 @@ val EL_DISJOINT_FILTER = store_thm ("EL_DISJOINT_FILTER",
    Q.ABBREV_TAC `l1 = (FIRSTN (SUC n1) l)` THEN
    Q.ABBREV_TAC `l2 = (LASTN (LENGTH l - (SUC n1)) l)` THEN
    `(n1 < LENGTH l1) /\ (LENGTH l1 <= n2)` by ALL_TAC THEN1 (
-      Q.UNABBREV_ALL_TAC THEN
+      bossLib.UNABBREV_ALL_TAC THEN
       ASM_SIMP_TAC list_ss [LENGTH_FIRSTN]
    ) THEN
    FULL_SIMP_TAC list_ss [EL_APPEND2, EL_APPEND1] THEN
@@ -331,6 +331,16 @@ Induct_on `l` THENL [
 	SIMP_TAC list_ss [LIST_TO_BAG_def, NOT_IN_EMPTY_BAG],
 	ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_IN_BAG_INSERT]
 ]);
+
+
+val LIST_TO_BAG_EQ_EMPTY = store_thm ("LIST_TO_BAG_EQ_EMPTY",
+``!l. (LIST_TO_BAG l = EMPTY_BAG) = (l = [])``,
+
+Cases_on `l` THEN
+SIMP_TAC list_ss [containerTheory.LIST_TO_BAG_def,
+		  bagTheory.BAG_INSERT_NOT_EMPTY]);
+
+
 
 
 val BAG_INN_BAG_INSERT_STRONG = store_thm ("BAG_INN_BAG_INSERT_STRONG",
@@ -1291,6 +1301,17 @@ SIMP_TAC std_ss []);
 
 
 
+val COND_NONE_SOME_REWRITES2 = store_thm ("COND_NONE_SOME_REWRITES2",
+
+``(((if C then NONE else X) = (SOME Y)) = (~C /\ (X = SOME Y))) /\
+   (((if C then X else NONE) = (SOME Y)) = (C /\ (X = SOME Y))) /\
+   (((if C then NONE else X) = NONE) = C \/ (X = NONE)) /\
+   (((if C then X else NONE) = NONE) = ~C \/ (X = NONE))``,
+
+Cases_on `C` THEN Cases_on `X` THEN 
+SIMP_TAC std_ss []);
+
+
 
 
 val COND_REWRITES = store_thm ("COND_REWRITES",
@@ -1327,7 +1348,7 @@ Cases_on `x` THEN SIMP_TAC std_ss []);
 
 
 
-val COND_WRITES_EQ = store_thm ("COND_NONE_SOME_REWRITES_EQ",
+val COND_NONE_SOME_REWRITES_EQ = store_thm ("COND_NONE_SOME_REWRITES_EQ",
 ``
    (((if C1 then NONE else (SOME X)) =
     (if C2 then (SOME Y) else NONE)) = ((~C1 = C2) /\ (C2 ==> (X = Y)))) /\
@@ -1454,6 +1475,337 @@ val FINITE_INTER = store_thm ("FINITE_INTER",
    SIMP_TAC std_ss [SUBSET_DEF, IN_INTER]
 ) THEN
 METIS_TAC[SUBSET_FINITE]);
+
+
+val LIST_UNROLE_GIVEN_ELEMENT_NAMES_def = Define `
+    LIST_UNROLE_GIVEN_ELEMENT_NAMES l1 (l2:string list) =
+    (LENGTH l1 = LENGTH l2)
+`;
+
+val LIST_UNROLE_GIVEN_ELEMENT_NAMES___UNROLL = store_thm ("LIST_UNROLE_GIVEN_ELEMENT_NAMES___UNROLL",
+``(LIST_UNROLE_GIVEN_ELEMENT_NAMES x [] = (x = [])) /\
+  (LIST_UNROLE_GIVEN_ELEMENT_NAMES x (h::L) = 
+   ?h' L'. (x = h'::L') /\ (LIST_UNROLE_GIVEN_ELEMENT_NAMES L' L))``,
+
+Cases_on `x` THEN
+SIMP_TAC list_ss [LIST_UNROLE_GIVEN_ELEMENT_NAMES_def]);
+
+
+
+val LIST_UNROLE_GIVEN_ELEMENT_NAMES___MAP = store_thm("LIST_UNROLE_GIVEN_ELEMENT_NAMES___MAP",
+``LIST_UNROLE_GIVEN_ELEMENT_NAMES (MAP f L) L' =
+  LIST_UNROLE_GIVEN_ELEMENT_NAMES L L'``,
+
+SIMP_TAC list_ss [LIST_UNROLE_GIVEN_ELEMENT_NAMES_def]);
+
+
+val SOME_THE_EQ = store_thm ("SOME_THE_EQ",
+``(X = SOME (THE X)) = (IS_SOME X)``, Cases_on `X` THEN SIMP_TAC std_ss []);
+
+
+
+
+
+
+val LIST_EQ_REWRITE = store_thm ("LIST_EQ_REWRITE",
+``!l1 l2.
+  (l1 = l2) = 
+  ((LENGTH l1 = LENGTH l2) /\
+   ((!n. (n < LENGTH l1) ==> (EL n l1 = EL n l2))))``,
+
+Induct_on `l1` THENL [
+  Cases_on `l2` THEN SIMP_TAC list_ss [],
+
+  Cases_on `l2` THEN SIMP_TAC list_ss [] THEN
+  GEN_TAC THEN
+  Cases_on `h = h'` THENL [
+     ASM_SIMP_TAC std_ss [] THEN
+     EQ_TAC THEN REPEAT STRIP_TAC THENL [
+        ASM_REWRITE_TAC[],
+
+	Cases_on `n` THENL [
+           ASM_SIMP_TAC list_ss [],
+	   FULL_SIMP_TAC list_ss []
+        ],
+
+	ASM_REWRITE_TAC[],
+
+	Q.PAT_ASSUM `!n. X n` (MP_TAC o Q.SPEC `SUC n`) THEN
+	ASM_SIMP_TAC list_ss []
+     ],
+
+     ASM_SIMP_TAC std_ss [] THEN
+     DISJ2_TAC THEN
+     Q.EXISTS_TAC `0` THEN
+     ASM_SIMP_TAC list_ss []
+  ]
+]);
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+val BAG_DISJOINT___BAG_IN =
+store_thm ("BAG_DISJOINT___BAG_IN",
+``!b1 b2.
+  BAG_DISJOINT b1 b2 =
+  !e. ~(BAG_IN e b1) \/ ~(BAG_IN e b2)``,
+
+SIMP_TAC std_ss [bagTheory.BAG_DISJOINT,
+		 DISJOINT_DEF,
+		 EXTENSION, NOT_IN_EMPTY,
+		 IN_INTER,
+		 bagTheory.IN_SET_OF_BAG]);
+
+
+
+val BAG_ALL_DISTINCT___BAG_MERGE =
+store_thm ("BAG_ALL_DISTINCT___BAG_MERGE",
+``
+!b1 b2. BAG_ALL_DISTINCT (BAG_MERGE b1 b2) =
+        (BAG_ALL_DISTINCT b1 /\
+        BAG_ALL_DISTINCT b2)``,
+
+SIMP_TAC std_ss [BAG_ALL_DISTINCT_def,
+		 bagTheory.BAG_MERGE,
+		 GSYM FORALL_AND_THM] THEN
+REPEAT GEN_TAC THEN
+HO_MATCH_MP_TAC (prove (``(!e. (X e = Y e)) ==>
+			  ((!e. X e) = (!e. Y e))``, 
+                        PROVE_TAC[])) THEN
+GEN_TAC THEN
+DECIDE_TAC);
+
+
+
+val BAG_DISJOINT___BAG_INSERT =
+store_thm ("BAG_DISJOINT___BAG_INSERT",
+``!b1 b2 e1.
+  BAG_DISJOINT (BAG_INSERT e1 b1) b2 =
+  (~(BAG_IN e1 b2) /\ (BAG_DISJOINT b1 b2))``,
+
+
+SIMP_TAC std_ss [BAG_DISJOINT___BAG_IN,
+		 bagTheory.BAG_IN_BAG_INSERT] THEN
+METIS_TAC[]);
+
+
+
+
+val BAG_ALL_DISTINCT___BAG_UNION =
+store_thm ("BAG_ALL_DISTINCT___BAG_UNION",
+``
+!b1 b2. BAG_ALL_DISTINCT (BAG_UNION b1 b2) =
+        (BAG_ALL_DISTINCT b1 /\
+         BAG_ALL_DISTINCT b2 /\
+         BAG_DISJOINT b1 b2)``,
+
+SIMP_TAC std_ss [BAG_ALL_DISTINCT_def,
+		 bagTheory.BAG_UNION,
+		 bagTheory.BAG_DISJOINT,
+		 DISJOINT_DEF, EXTENSION,
+		 NOT_IN_EMPTY, IN_INTER,
+		 bagTheory.IN_SET_OF_BAG,
+		 bagTheory.BAG_IN,
+     		 bagTheory.BAG_INN,
+		 GSYM FORALL_AND_THM] THEN
+REPEAT GEN_TAC THEN
+HO_MATCH_MP_TAC (prove (``(!e. (X e = Y e)) ==>
+			  ((!e. X e) = (!e. Y e))``, 
+                        PROVE_TAC[])) THEN
+GEN_TAC THEN
+DECIDE_TAC);
+
+
+
+val BAG_IN_BAG_MERGE = 
+store_thm ("BAG_IN_BAG_MERGE",
+
+``!e b1 b2. (BAG_IN e (BAG_MERGE b1 b2)) =
+            (BAG_IN e b1 \/ BAG_IN e b2)``,
+
+SIMP_TAC std_ss [bagTheory.BAG_MERGE,
+	     bagTheory.BAG_INN,
+	     bagTheory.BAG_IN] THEN
+REPEAT GEN_TAC THEN
+DECIDE_TAC);
+
+val SET_OF_BAG_MERGE = store_thm ("SET_OF_BAG_MERGE",
+``!b1 b2. SET_OF_BAG (BAG_MERGE b1 b2) =
+          SET_OF_BAG b1 UNION SET_OF_BAG b2``,
+
+ONCE_REWRITE_TAC[EXTENSION] THEN
+SIMP_TAC std_ss [bagTheory.IN_SET_OF_BAG, IN_UNION,
+		 BAG_IN_BAG_MERGE]);
+
+
+val UNION_DELETE = store_thm ("UNION_DELETE",
+``(A UNION B) DELETE x =
+  ((A DELETE x) UNION (B DELETE x))``,
+
+SIMP_TAC std_ss [EXTENSION, IN_UNION, IN_DELETE] THEN
+REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN
+ASM_SIMP_TAC std_ss [])
+
+
+
+
+val FINITE_BAG_INDUCT___FINITE = store_thm ("FINITE_BAG_INDUCT___FINITE",
+``
+ !P. P {| |} /\ (!b. (P b /\ FINITE_BAG b) ==> !e. P (BAG_INSERT e b)) ==>
+ !b. FINITE_BAG b ==> P b``,
+
+REPEAT STRIP_TAC THEN
+MP_TAC (Q.SPEC `\b. P b /\ FINITE_BAG b` bagTheory.FINITE_BAG_INDUCT) THEN
+ASM_SIMP_TAC std_ss [bagTheory.FINITE_BAG_THM])
+
+
+
+
+
+
+
+
+val FMAP_MAP_def = Define 
+`FMAP_MAP f m = FUN_FMAP (\x. f (m ' x)) (FDOM m)`;
+
+
+val FMAP_MAP_THM = store_thm ("FMAP_MAP_THM",
+``(FDOM (FMAP_MAP f m) = FDOM m) /\
+  (!x. x IN FDOM m ==> ((FMAP_MAP f m) ' x = f (m ' x)))``,
+
+SIMP_TAC std_ss [FMAP_MAP_def,
+		 FUN_FMAP_DEF, FDOM_FINITE]);
+
+ 
+val FMAP_MAP_FEMPTY = store_thm ("FMAP_MAP_FEMPTY",
+``FMAP_MAP f FEMPTY = FEMPTY``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP_THM,
+		 FDOM_FEMPTY, NOT_IN_EMPTY]);
+
+
+val FMAP_MAP_FUPDATE = store_thm ("FMAP_MAP_FUPDATE",
+``FMAP_MAP f (m |+ (x, v)) = 
+  (FMAP_MAP f m) |+ (x, f v)``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP_THM,
+		 FDOM_FUPDATE, IN_INSERT,
+		 FAPPLY_FUPDATE_THM,
+		 COND_RAND, COND_RATOR,
+		 DISJ_IMP_THM]);
+
+
+
+val FEVERY_FMAP_MAP = store_thm ("FEVERY_FMAP_MAP",
+``!m P f.
+  FEVERY P (FMAP_MAP f m) = 
+  FEVERY (\x. P (FST x, (f (SND x)))) m``,
+
+SIMP_TAC std_ss [FEVERY_DEF,
+		 FDOM_FEMPTY,
+		 NOT_IN_EMPTY,
+		 FMAP_MAP_THM]);
+
+
+
+
+
+val DELETE_SUBSET_INSERT = store_thm ("DELETE_SUBSET_INSERT",
+``s DELETE e SUBSET s2 =
+  s SUBSET e INSERT s2``,
+
+SIMP_TAC std_ss [SUBSET_DEF, IN_DELETE, IN_INSERT] THEN
+METIS_TAC[]);
+
+
+
+val INTER_ABS = store_thm ("INTER_ABS",
+``$INTER = \a b x. x IN a /\ x IN b``,
+
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
+SIMP_TAC std_ss [EXTENSION, IN_INTER] THEN
+SIMP_TAC std_ss [IN_DEF]);
+
+
+val IMAGE_ABS = store_thm ("IMAGE_ABS",
+``IMAGE f X = \x. (?e. (x = f e) /\ e IN X)``,
+
+SIMP_TAC std_ss [EXTENSION, IN_IMAGE] THEN
+SIMP_TAC std_ss [IN_DEF]);
+
+
+val BIGINTER_ABS = store_thm ("BIGINTER_ABS",
+``BIGINTER P = \x. !s. s IN P ==> x IN s``,
+
+SIMP_TAC std_ss [EXTENSION, IN_BIGINTER] THEN
+SIMP_TAC std_ss [IN_DEF]);
+
+
+
+val BAG_IN___BAG_DIFF___ALL_DISTINCT = store_thm ("BAG_IN___BAG_DIFF___ALL_DISTINCT",
+``
+!b1 b2 e.
+BAG_ALL_DISTINCT b1 ==>
+(BAG_IN e (BAG_DIFF b1 b2) =
+BAG_IN e b1 /\ ~BAG_IN e b2)``,
+
+SIMP_TAC arith_ss [BAG_ALL_DISTINCT_def,
+		 bagTheory.BAG_IN,
+ 		 bagTheory.BAG_INN,
+  		 bagTheory.BAG_DIFF] THEN
+REPEAT STRIP_TAC THEN
+`b1 e <= 1` by PROVE_TAC[] THEN
+Cases_on `b1 e >= 1` THEN (
+   ASM_SIMP_TAC arith_ss []
+));
+
+
+
+val SET_OF_BAG_EMPTY = store_thm ("SET_OF_BAG_EMPTY",
+``SET_OF_BAG EMPTY_BAG = EMPTY``,
+REWRITE_TAC[bagTheory.SET_OF_BAG_EQ_EMPTY]);
+
+
+val BAG_EVERY_def = Define `
+BAG_EVERY P b = !e. BAG_IN e b ==> P e`
+
+val BAG_EVERY_THM = store_thm ("BAG_EVERY_THM",
+``(BAG_EVERY P EMPTY_BAG) /\
+  (BAG_EVERY P (BAG_INSERT e b) = P e /\ BAG_EVERY P b)``,
+
+SIMP_TAC std_ss [BAG_EVERY_def, bagTheory.BAG_IN_BAG_INSERT,
+		 DISJ_IMP_THM, FORALL_AND_THM,
+		 bagTheory.NOT_IN_EMPTY_BAG]);
+
+
+
+val BAG_ALL_DISTINCT___DIFF = store_thm ("BAG_ALL_DISTINCT___DIFF",
+
+``!b1 b2. BAG_ALL_DISTINCT b1 ==>
+  BAG_ALL_DISTINCT (BAG_DIFF b1 b2)``,
+
+SIMP_TAC std_ss [BAG_ALL_DISTINCT_def,
+		 bagTheory.BAG_DIFF] THEN
+REPEAT STRIP_TAC THEN
+`b1 e <= 1` by PROVE_TAC[] THEN
+DECIDE_TAC);
+
+
 
 
 val _ = export_theory();

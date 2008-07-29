@@ -114,9 +114,11 @@ end;
 
 fun tyi_to_ssdata tyinfo =
  let open simpLib
+  val (thy,tyop) = TypeBasePure.ty_name_of tyinfo
   val {rewrs, convs} = TypeBasePure.simpls_of tyinfo;
 in
-  SSFRAG {convs = convs, rewrs = rewrs, filter = NONE,
+  SSFRAG {name = SOME("Datatype "^thy^"$"^tyop),
+          convs = convs, rewrs = rewrs, filter = NONE,
            dprocs = [], ac = [], congs = []}
 end
 
@@ -165,7 +167,8 @@ in
 end tm
 
 val ABBREV_ss =
-    simpLib.SSFRAG { ac = [], congs = [],
+    simpLib.SSFRAG {name=SOME"ABBREV",
+                    ac = [], congs = [],
                       convs = [{conv = K (K ABBREV_CONV),
                                 key = SOME ([], ``marker$Abbrev x``),
                                 trace = 2, name = "ABBREV_CONV"}],
@@ -432,7 +435,8 @@ fun setup_exports (oldname, thyname) = let
           val {add_string, add_break, begin_block, end_block,add_newline,...} =
               with_ppstream pps
         in
-          add_string ("val "^rwts_name^" = simpLib.rewrites [");
+          add_string ("val "^rwts_name^" = simpLib.named_rewrites "
+                           ^Lib.quote rwts_name^" [");
           add_break(0,10);
           begin_block INCONSISTENT 0;
           pr_list add_string (fn () => add_string ",")
@@ -455,10 +459,10 @@ end
 
 val _ = Theory.after_new_theory setup_exports
 
-fun export_rewrites slist = let
+fun export_rewrites name slist = let
 in
   exports := !exports @ slist;
-  augment_srw_ss [simpLib.rewrites (map (DB.fetch "-") slist)]
+  augment_srw_ss [simpLib.named_rewrites name (map (DB.fetch "-") slist)]
 end
 
 end

@@ -15,6 +15,8 @@ local open combinTheory in end;
 
 val _ = new_theory "relation";
 
+val export_rewrites = export_rewrites "relation";
+
 (*---------------------------------------------------------------------------*)
 (* Basic properties of relations.                                            *)
 (*---------------------------------------------------------------------------*)
@@ -1398,7 +1400,7 @@ val equivalence_inv_identity = store_thm(
     Involutions (functions whose square is the identity)
   ---------------------------------------------------------------------- *)
 
-open BasicProvers
+
 val INVOL_DEF = new_definition(
   "INVOL_DEF",
   ``INVOL (f:'z->'z) = (f o f = I)``);

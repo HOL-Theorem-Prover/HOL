@@ -9,6 +9,7 @@ SSFRAG : { ac     : (thm * thm) list,
                      trace : int} list,
            dprocs : Traverse.reducer list,
            filter : (thm -> thm list) option,
+           name   : string option,
            rewrs  : thm list } -> ssfrag
 \ELTYPE
 
@@ -27,8 +28,8 @@ packaged up and made available to the simplifier (though {ssfrag}
 values must first be turned into simpsets, either by addition to an
 existing simpset, or with the {mk_simpset} function).
 
-The big record type passed to {SSFRAG} as an argument has six fields.
-Here we describe each in turn.
+The big record type passed to {SSFRAG} as an argument has seven
+fields.  Here we describe each in turn.
 
 The {ac} field is a list of ``AC theorem'' pairs.  Each such pair is
 the pair of theorems stating that a given binary function is
@@ -117,6 +118,10 @@ into {|- (t1 = t2) = F} and {|- (t2 = t1) = F}.
 
 The {rewrs} field of the record is a list of rewrite theorems that are
 to be applied.
+
+The {name} field of the record is an optional name for the simpset
+fragment that is used when it, and simpsets that it becomes part of
+are pretty-printed.
 
 \FAILURE
 Never fails.  Failure to provide theorems of just the right form may

@@ -35,6 +35,8 @@ open HolKernel Parse boolLib IndDefLib numLib pred_setTheory
 
 local open pred_setLib listTheory in end
 
+val export_rewrites = BasicProvers.export_rewrites "finite_map";
+
 val _ = new_theory "finite_map";
 
 (*---------------------------------------------------------------------------*)
@@ -50,6 +52,7 @@ val _ = new_theory "finite_map";
 (*---------------------------------------------------------------------------*)
 
 val _ = set_fixity "'" (Infixl 2000);    (* fmap application *)
+
 val _ = set_fixity "|+"  (Infixl 600);   (* fmap update *)
 val _ = set_fixity "|++" (Infixl 500);   (* iterated update *)
 val _ = set_fixity "\\\\" (Infixl 600)   (* domain subtraction *)
@@ -877,7 +880,7 @@ val o_f_FDOM = Q.store_thm
 REWRITE_TAC [o_f_DEF]);
 
 val FDOM_o_f = save_thm("FDOM_o_f", GSYM o_f_FDOM);
-val _ = BasicProvers.export_rewrites ["FDOM_o_f"]
+val _ = export_rewrites ["FDOM_o_f"]
 
 val o_f_FAPPLY = Q.store_thm
 ("o_f_FAPPLY",
@@ -889,7 +892,7 @@ val o_f_FEMPTY = store_thm(
   "o_f_FEMPTY",
   ``f o_f FEMPTY = FEMPTY``,
   SRW_TAC [][GSYM fmap_EQ_THM, FDOM_o_f])
-val _ = BasicProvers.export_rewrites ["o_f_FEMPTY"]
+val _ = export_rewrites ["o_f_FEMPTY"]
 
 val o_f_o_f = store_thm(
   "o_f_o_f",
@@ -1150,7 +1153,7 @@ val o_f_FUPDATE = store_thm(
     SRW_TAC [][GSYM fmap_EQ_THM, o_f_FAPPLY, NOT_EQ_FAPPLY,
                DOMSUB_FAPPLY_NEQ]
   ]);
-val _ = BasicProvers.export_rewrites ["o_f_FUPDATE"]
+val _ = export_rewrites ["o_f_FUPDATE"]
 
 val DOMSUB_NOT_IN_DOM = store_thm(
   "DOMSUB_NOT_IN_DOM",

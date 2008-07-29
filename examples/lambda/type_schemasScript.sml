@@ -36,6 +36,8 @@ open binderLib boolSimps BasicProvers
 open nomsetTheory
 open pred_setTheory
 
+val export_rewrites = export_rewrites "type_schemas";
+
 val _ = new_theory "type_schemas"
 
 val lswapstr_APPEND = basic_swapTheory.lswapstr_APPEND

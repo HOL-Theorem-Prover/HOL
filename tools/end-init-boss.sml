@@ -2,7 +2,8 @@ let
   val s = "[loading theories and proof tools "
   val l = ["optionTheory", "pairLib", "sumTheory", "numTheory",
            "arithmeticTheory", "Arith", "numLib", "mesonLib", "BasicProvers",
-           "SingleStep", "Datatype", "listTheory", "bossLib", "EmitTeX"]
+           "SingleStep", "Datatype", "listTheory", "bossLib", "EmitTeX"
+           ]
   val terminfo = case Process.getEnv "TERM" of
                    SOME s => s
                  | NONE => ""
@@ -21,6 +22,15 @@ in
   app dotload l;
   print " ]\n";
   FileSys.chDir curdir
+end;
+
+val _ = (* install prettyprinters for simpsets and ssfrags *)
+let
+  fun with_pp ppfn pps x =
+      Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
+in
+  installPP (with_pp simpLib.pp_ssfrag);
+  installPP (with_pp simpLib.pp_simpset)
 end;
 
 open bossLib;  (* Any others? *)

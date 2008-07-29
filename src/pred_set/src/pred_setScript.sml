@@ -25,6 +25,8 @@ open HolKernel Parse boolLib Prim_rec pairLib numLib
 val AP = numLib.ARITH_PROVE
 val arith_ss = bool_ss ++ numSimps.ARITH_ss
 
+val export_rewrites = export_rewrites "PRED_SET";
+
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.						*)
 (* ---------------------------------------------------------------------*)
@@ -117,10 +119,11 @@ val GSPECIFICATION = new_specification
 val SET_SPEC_CONV = PGspec.SET_SPEC_CONV GSPECIFICATION;
 
 val SET_SPEC_ss = SSFRAG
-                    {ac=[], congs=[], dprocs=[], filter=NONE, rewrs=[],
-                     convs = [{conv = K (K SET_SPEC_CONV),
-                               key = SOME([], ``x IN GSPEC f``),
-                               name = "SET_SPEC_CONV", trace = 2}]}
+  {name=SOME"SET_SPEC",
+   ac=[], congs=[], dprocs=[], filter=NONE, rewrs=[],
+   convs = [{conv = K (K SET_SPEC_CONV),
+   key = SOME([], ``x IN GSPEC f``),
+   name = "SET_SPEC_CONV", trace = 2}]}
 
 val _ = augment_srw_ss [SET_SPEC_ss]
 
@@ -2989,7 +2992,7 @@ val CROSS_EMPTY = store_thm(
   "CROSS_EMPTY",
   ``!P. (P CROSS {} = {}) /\ ({} CROSS P = {})``,
   SIMP_TAC bool_ss [EXTENSION, IN_CROSS, NOT_IN_EMPTY]);
-val _ = BasicProvers.export_rewrites ["CROSS_EMPTY"]
+val _ = export_rewrites ["CROSS_EMPTY"]
 
 val CROSS_INSERT_LEFT = store_thm(
   "CROSS_INSERT_LEFT",
@@ -3026,7 +3029,7 @@ val CROSS_SINGS = store_thm(
   ``!x y. {x} CROSS {y} = {(x,y)}``,
   SIMP_TAC bool_ss [EXTENSION, IN_INSERT, IN_CROSS, NOT_IN_EMPTY] THEN
   MESON_TAC [PAIR, FST, SND]);
-val _ = BasicProvers.export_rewrites ["CROSS_SINGS"]
+val _ = export_rewrites ["CROSS_SINGS"]
 
 val CARD_SING_CROSS = store_thm(
   "CARD_SING_CROSS",
@@ -4172,7 +4175,7 @@ val sspec_conv_str =
 \     name = \"SET_SPEC_CONV\",\n\
 \     trace = 2}\n\
 \  in\n\
-\  val SET_SPEC_ss = simpLib.SSFRAG { ac = [], congs = [],\n\
+\  val SET_SPEC_ss = simpLib.SSFRAG {name=SOME\"SET_SPEC\", ac = [], congs = [],\n\
 \                                     convs = [SET_SPEC_CONV], dprocs = [],\n\
 \                                     filter = NONE, rewrs = []}\n\
 \  val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss]\n  end\n"

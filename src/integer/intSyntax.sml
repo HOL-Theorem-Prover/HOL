@@ -28,6 +28,7 @@ val max_tm =   Const "int_max";
 val absval_tm =  Const "ABS"
 val divides_tm = Const "int_divides"
 val int_injection = Const "int_of_num"
+val Num_tm = Const "Num"
 
 val int_eq_tm = inst [alpha |-> int_ty] boolSyntax.equality
 
@@ -95,7 +96,26 @@ val is_mod = can dest_mod
 fun mk_mod (t1, t2) = list_mk_comb(mod_tm, [t1, t2])
 
 fun mk_absval tm = mk_comb(absval_tm, tm)
-fun is_absval tm = is_comb tm andalso rator tm = absval_tm
+fun dest_absval tm = let
+  val (f,x) = dest_comb tm
+      handle HOL_ERR _ => raise ERR "dest_absval" "term not an absolute value"
+in
+  if same_const f absval_tm then x
+  else raise ERR "dest_absval" "term not an absolute value"
+end
+val is_absval = can dest_absval
+
+fun mk_Num t = mk_comb(Num_tm, t)
+fun dest_Num t = let
+  val (f,x) = dest_comb t
+      handle HOL_ERR _ => raise ERR "dest_Num" "term not a Num coercion"
+in
+  if same_const f Num_tm then x
+  else raise ERR "dest_Num" "term not a Num coercion"
+end
+val is_Num = can dest_Num
+
+
 
 val dest_less = dest_binop less_tm ("dest_less", "Term not a less-than")
 val is_less = can dest_less

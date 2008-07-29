@@ -120,56 +120,6 @@ end;
 
 
 
-(*Like DEPTH_CONV for CONSEQ_CONVS. The conversion
-  may generate theorems containing assumptions. These
-  assumptions are propagated to the top level*)
-
-fun DEPTH_CONSEQ_CONV conv t = 
-  if (is_conj t) then
-     let
-	 val (b1,b2) = dest_conj t;
-         val thm1 = DEPTH_CONSEQ_CONV conv b1;
-         val thm2 = DEPTH_CONSEQ_CONV conv b2;
-          
-	 val (b1,c1) = dest_imp (concl thm1);
-	 val (b2,c2) = dest_imp (concl thm2);
-	 val thm3 = MATCH_MP MONO_AND (CONJ thm1 thm2);
-     in
-        thm3
-     end handle HOL_ERR _ => (raise UNCHANGED)
-   else if (is_disj t) then
-     let
-	 val (b1,b2) = dest_disj t;
-         val thm1 = DEPTH_CONSEQ_CONV conv b1;
-         val thm2 = DEPTH_CONSEQ_CONV conv b2;
-
-	 val (b1,c1) = dest_imp (concl thm1);
-	 val (b2,c2) = dest_imp (concl thm2);
-	 val thm3 = MATCH_MP MONO_OR (CONJ thm1 thm2);
-     in
-        thm3
-     end
-   else if (is_forall t) then
-     let
-        val (var, body) = dest_forall t;
-	val thm_body = DEPTH_CONSEQ_CONV conv body;
-        val thm = GEN_ASSUM var thm_body;
-        val thm2 = HO_MATCH_MP MONO_ALL thm;
-     in
-        thm2
-     end
-   else 
-     ((let
-	 val thm = (CONSEQ_CONV_WRAPPER conv) t;
-         val (ante,_) = dest_imp (concl thm);
-         val thm2 = DEPTH_CONSEQ_CONV conv ante;
-	 val thm3 = IMP_TRANS thm2 thm;
-     in
-         thm3
-     end handle HOL_ERR _ => REFL_IMP_CONV t)
-         handle UNCHANGED => REFL_IMP_CONV t);
-
-
 (*like CHANGED_CONV*)
 fun CHANGED_CONSEQ_CONV conv t =
     let
@@ -186,6 +136,95 @@ fun FIRST_CONSEQ_CONV [] t = raise UNCHANGED
     ((c1 t handle HOL_ERR _ => raise UNCHANGED) handle UNCHANGED =>
     FIRST_CONSEQ_CONV L t);
 
+
+
+(*Like DEPTH_CONV for CONSEQ_CONVS. The conversion
+  may generate theorems containing assumptions. These
+  assumptions are propagated to the top level*)
+
+
+fun step_opt_sub NONE n = NONE
+  | step_opt_sub (SOME m) n = SOME (m - n);
+
+
+fun DEPTH_CONSEQ_CONV_num step_opt conv t = 
+  if (step_opt = SOME 0) then
+     (0, REFL_IMP_CONV t)
+  else if (is_conj t) then
+     let
+	 val (b1,b2) = dest_conj t;
+         val (n1, thm1) = DEPTH_CONSEQ_CONV_num step_opt conv b1;
+         val (n2, thm2) = DEPTH_CONSEQ_CONV_num (step_opt_sub step_opt n1) conv b2;
+          
+	 val (b1,c1) = dest_imp (concl thm1);
+	 val (b2,c2) = dest_imp (concl thm2);
+	 val thm3 = MATCH_MP MONO_AND (CONJ thm1 thm2);
+     in
+        (n1+n2, thm3)
+     end handle HOL_ERR _ => (raise UNCHANGED)
+   else if (is_disj t) then
+     let
+	 val (b1,b2) = dest_disj t;
+         val (n1, thm1) = DEPTH_CONSEQ_CONV_num step_opt conv b1;
+         val (n2, thm2) = DEPTH_CONSEQ_CONV_num (step_opt_sub step_opt n1) conv b2;
+
+	 val (b1,c1) = dest_imp (concl thm1);
+	 val (b2,c2) = dest_imp (concl thm2);
+	 val thm3 = MATCH_MP MONO_OR (CONJ thm1 thm2);
+     in
+        (n1+n2, thm3)
+     end
+   else if (is_imp t) then
+     let
+	 val (b1,b2) = dest_imp t;
+	 val thm1 = REFL_IMP_CONV b1;
+         val (n2, thm2) = DEPTH_CONSEQ_CONV_num step_opt conv b2;
+
+	 val (b2,c2) = dest_imp (concl thm2);
+	 val thm3 = MATCH_MP MONO_IMP (CONJ thm1 thm2);
+     in
+        (n2, thm3)
+     end
+   else if (is_forall t) then
+     let
+        val (var, body) = dest_forall t;
+	val (n1, thm_body) = DEPTH_CONSEQ_CONV_num step_opt conv body;
+        val thm = GEN_ASSUM var thm_body;
+        val thm2 = HO_MATCH_MP MONO_ALL thm;
+     in
+        (n1, thm2)
+     end
+   else if (is_exists t) then
+     let
+        val (var, body) = dest_exists t;
+	val (n1, thm_body) = DEPTH_CONSEQ_CONV_num step_opt conv body;
+        val thm = GEN_ASSUM var thm_body;
+        val thm2 = HO_MATCH_MP boolTheory.MONO_EXISTS thm;
+     in
+        (n1, thm2)
+     end
+   else 
+     ((let
+	 val thm = (CONSEQ_CONV_WRAPPER conv) t;
+         val (ante,_) = dest_imp (concl thm);
+ 	 val (n2, thm2) = DEPTH_CONSEQ_CONV_num (step_opt_sub step_opt 1) conv ante;
+	 val thm3 = IMP_TRANS thm2 thm;
+     in
+         (n2 + 1, thm3)
+     end handle HOL_ERR _ => (0, REFL_IMP_CONV t))
+         handle UNCHANGED => (0, REFL_IMP_CONV t));
+
+
+
+
+fun DEPTH_CONSEQ_CONV conv t = 
+ (snd (DEPTH_CONSEQ_CONV_num NONE conv t))
+
+
+fun NUM_DEPTH_CONSEQ_CONV n conv t = 
+  (snd (DEPTH_CONSEQ_CONV_num (SOME n) conv t))
+
+val ONCE_DEPTH_CONSEQ_CONV = NUM_DEPTH_CONSEQ_CONV 1;
 
 
 
@@ -239,11 +278,16 @@ fun IMP_CONSEQ_CONV_RULE conv thm = let
 
 (*A tactic that strengthens a boolean goal*)
 fun CONSEQ_CONV_TAC conv (asm,t) = 
-    HO_MATCH_MP_TAC (conv t) (asm,t);
+    HO_MATCH_MP_TAC ((CHANGED_CONSEQ_CONV conv) t) (asm,t) handle UNCHANGED =>
+    raise mk_HOL_ERR "ConseqConv" "CONSEQ_CONV_TAC" "UNCHANGED";
 
 
 fun DEPTH_CONSEQ_CONV_TAC conv =
     CONSEQ_CONV_TAC (DEPTH_CONSEQ_CONV conv)
+
+
+fun ONCE_DEPTH_CONSEQ_CONV_TAC conv =
+    CONSEQ_CONV_TAC (ONCE_DEPTH_CONSEQ_CONV conv)
 
 
 

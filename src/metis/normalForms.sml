@@ -221,7 +221,8 @@ val MK_I = prove
 
 val SKI_SS =
   simpLib.SSFRAG
-  {convs = [], rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
+  {name=SOME"SKI",
+   convs = [], rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
 val SKI_ss = simpLib.++ (pureSimps.pure_ss, SKI_SS);
 
@@ -254,7 +255,8 @@ val MK_o = prove
 
 val SKICo_SS =
   simpLib.SSFRAG
-  {convs = [], rewrs = [combinTheory.I_o_ID], congs = [],
+  {name=SOME"SKICo",
+   convs = [], rewrs = [combinTheory.I_o_ID], congs = [],
    filter = NONE, ac = [], dprocs = []};
 
 val SKICo_ss = simpLib.++ (SKI_ss, SKICo_SS);
@@ -279,7 +281,8 @@ val FUN_EQ = prove
 
 val SIMPLIFY_SS =
   simpLib.SSFRAG
-  {convs = [{name = "extensionality simplification", trace = 2,
+  {name=SOME"SIMPLIFY",
+   convs = [{name = "extensionality simplification", trace = 2,
              key = SOME([], Term`!x. (f:'a -> 'b) x = g x`),
              conv = K (K (REWR_CONV FUN_EQ))}],
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
@@ -1028,7 +1031,8 @@ fun cond_lift_rand_CONV tm =
 
 val cond_lift_SS =
   simpLib.SSFRAG
-  {convs =
+  {name=SOME"cond_lift",
+   convs =
    [{name = "conditional lifting at rand", trace = 2,
      key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
      conv = K (K cond_lift_rand_CONV)}],
@@ -1088,7 +1092,8 @@ val COND_SIMP_CONV = CHANGED_CONV (HO_REWR_CONV COND_SIMP);
 
 val condify_SS =
   SSFRAG
-  {convs =
+  {name=SOME"condify",
+   convs =
    [{name = "COND_SIMP_CONV", trace = 2,
      key = SOME ([], (``if a then (b:'a) else c``)),
      conv = K (K COND_SIMP_CONV)}],

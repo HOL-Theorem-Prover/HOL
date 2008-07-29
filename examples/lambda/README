@@ -1,144 +1,39 @@
 MANIFEST
 ========
 
-dBScript.sml : develops a theory of (untyped) de-Bruijn terms.
+basics/
+   * defines the basic theory of nominal sets (principally, the notion
+     of a permutation acting on a type).
+   * establishes a type of lambda-calculus terms, including a notion
+     of substitution
+   * provides some ML support for working in the nominal environment
 
-ncScript.sml : builds a theory of name-carrying terms, where terms are
-               identified up to alpha-conversion.  This development
-               underlies the paper
+barendregt/
+   * mechanisation of chapter 2 from Hankin, and chapters 3 and (most
+     of) 11 from Barendregt's book.
 
-                "5 Axioms of Alpha Conversion",
-                 Andy Gordon and Tom Melham,
-                 Proceedings of TPHOLs'96, Springer LNCS 1125.
-
-          --------------------------------------------------
-
-Most of the remaining files are the basis of the development described
-in
-
-                "Mechanising Hankin and Barendregt using the
-                 Gordon-Melham axioms"
-                Michael Norrish
-                Proceedings of the Merlin 2003 Workshop
-
-and in
-
-                "Mechanising \lambda-calculus using a classical first
-                 order theory of terms with permutations"
-                Michael Norrish
-                In "Higher Order and Symbolic Computation",
-                   19:169-195, 2006.
+other-models/
+   * lots of different models of the lambda-calculus.  Most are
+     related back to the term type in basics, and the notion of beta
+     reduction that is defined in barendregt/chap3Theory.
 
 
-
-basic_swapScript.sml :
-               Very basic theory of swaps over strings (the swapstr
-               constant), and permutations (which take a list of pairs
-               of strings to swap).  Also defines the NEW constant,
-               which is used everywhere (including in the dB and nc
-               developments above).
-
-NEWLib.{sig,sml} :
-               simple tactics to use with the NEW constant.
-
-swapScript.sml :
-               The theory of permutations (over strings, sets, and
-               importantly, terms).  Proof of a recursion principle
-               for functions over terms.  (This work is described in
-               "Recursive function definition for terms with binders",
-               Michael Norrish.  TPHOLs'04, LNCS 3223.)
-
-binderLib.{sig,sml} :
-               Tools for doing proofs with terms that include binders,
-               including function definition and facilities from
-               NEWLib.
-
-q{term,lterm}Script.ml :
-               script files that establish the types of lambda
-               calculus terms, and lambda calculus terms with labelled
-               redexes.  In both cases, the types are established by
-               performing quotients.
-
-gm{term,lterm}Script.sml
-               script files that build the types of lambda calculus
-               terms, and lambda calculus terms with labelled redexes.
-               The first is built on the type from ncScript above (it
-               loses the CON constructor), augmented with the
-               recursion theorem from swapScript.  The second builds
-               the labelled redex type in rather involved fashion by
-               carving out a tricksy subset of the nc type.
-
-chap2Script.sml :
-               mechanisation of chapter 2 of Hankin's "Lambda calculi:
-               a guide for computer scientists"
-
-chap3Script.sml :
-               mechanisation of much of chapter 3 of Hankin with bits
-               of Barendregt's chapter 3 thrown in too
-
-chap11_1Script.sml :
-               mechanisation of section 11.1 from Barendregt's "The
-               lambda calculus: its syntax and semantics"
-
-term_posnsScript.sml :
-               establishes a type for labelling reductions, and
-               positions within terms more generally
-
-finite_developmentsScript.sml :
-               Barendregt's proof of the finite-ness of developments
-               (section 11.2), mechanising this notion as well as that
-               of residuals.
-
-standardisationScript.sml :
-               Barendregt's proof of the standardisation theorem, from
-               section 11.4.
+Also:
 
 
-          --------------------------------------------------
+sttScript.sml
+   Proofs suggested by Randy Pollack:
+   1.  A proof that a typing relation for the simply typed lambda
+       calculus (the details of which are sketched) satisfies a
+       weakening property: if a term has a type in a context G, then
+       it has the same type in a "wider" context G'.
+   2.  A proof that this original typing relation is equivalent to
+       another relation, where the second relation has an infinitary
+       (universally quantified) hypothesis in the rule for the
+       abstraction case.
 
-sttScript.sml :
-               Proofs suggested by Randy Pollack:
-               1.  A proof that a typing relation for the simply typed
-                   lambda calculus (the details of which are sketched)
-                   satisfies a weakening property: if a term has a
-                   type in a context G, then it has the same type in a
-                   "wider" context G'.
-               2.  A proof that this original typing relation is
-                   equivalent to another relation, where the second
-                   relation has an infinitary (universally quantified)
-                   hypothesis in the rule for the abstraction case.
-
-          --------------------------------------------------
-
-diagsScript.sml :
-               a type of rewriting style diagrams and how rewriting
-               relations do or do not satisfy them.  Also a proof that
-               "diagram-satisfaction" is preserved and reflected by
-               strong onto homomorphisms.  (This is discussed in the
-               NICTA/JAIST technical report "Structural preservation
-               and reflection of diagrams", and is joint work with
-               Rene Vestergaard.)
-
-raw_syntaxScript.sml :
-               proof that a raw syntax of lambda terms (not identified
-               up to alpha equivalence) with its own notions of
-               substitution, alpha equivalence and beta reduction can
-               indeed be collapsed into the type of terms from
-               termTheory.  Use diagrams to show confluence for
-               beta-alpha reduction at this raw level by appeal to
-               result in chap3Theory.
-
-string_numScript.sml :
-               a proof by construction that strings and numbers are in
-               bijection
-
-pure_dBScript.sml :
-               mechanisation of the type of "pure" de Bruijn terms,
-               following Tobias Nipkow's paper "More Church-Rosser
-               Proofs".  (They are "pure" in contrast with Andy
-               Gordon's de Bruijn terms, which have indices for bound
-               variables and strings for free variables.)
-
-               Demonstration that this type and its notions of beta-
-               and eta-reduction are isomorphic to the quotiented type
-               in termTheory.
+type_schemasScript.sml
+   Demonstration of how to construct a type where a binder takes a set
+   of names as an argument.  This is done in type schemas in the
+   Hindley-Milner typing system, where the universal quantifiers bind
+   over sets of type variables.

@@ -270,6 +270,20 @@ how long this took."
                    'send-string-to-hol)))
     (funcall sender tactic-string hol-echo-commands-p)))
 
+;;; For goaltrees
+(defun copy-region-as-goaltree-tactic (start end)
+  "Send selected region to HOL process as goaltree tactic."
+  (interactive "r\nP")
+  (let* ((region-string (with-hol-locpragma start 
+                          (buffer-substring-no-properties start end)))
+         (tactic-string
+           (format "proofManagerLib.expandv (%S,%s) handle e => Raise e" 
+                   region-string region-string))
+         (sender (if hol-emit-time-elapsed-p
+                     'send-timed-string-to-hol
+                   'send-string-to-hol)))
+    (funcall sender tactic-string hol-echo-commands-p)))
+
 (defun send-string-as-hol-goal (s)
   (let ((goal-string
          (format  "proofManagerLib.g `%s` handle e => Raise e" s)))
@@ -289,6 +303,27 @@ the region contains no backquotes, then send region instead."
             arg)
       (send-string-as-hol-goal txt)
     (send-string-as-hol-goal (hol-term-at-point)))))
+
+(defun send-string-as-hol-goaltree (s)
+  (let ((goal-string
+         (format  "proofManagerLib.gt `%s` handle e => Raise e" s)))
+    (send-raw-string-to-hol goal-string hol-echo-commands-p)
+    (send-raw-string-to-hol "proofManagerLib.set_backup 100;")))
+
+
+(defun hol-do-goaltree (arg)
+  "Send term around point to HOL process as goaltree.
+If prefix ARG is true, or if in transient mark mode, region is active and
+the region contains no backquotes, then send region instead."
+  (interactive "P")
+  (let ((txt (condition-case nil
+                 (with-hol-locpragma (region-beginning)
+                    (buffer-substring (region-beginning) (region-end)))
+               (error nil))))
+    (if (or (and (is-region-active) (= (count ?\` txt) 0))
+            arg)
+      (send-string-as-hol-goaltree txt)
+    (send-string-as-hol-goaltree (hol-term-at-point)))))
 
 (defun copy-region-as-hol-definition (start end arg)
   "Send selected region to HOL process as definition/expression.  With a
@@ -850,7 +885,9 @@ already loaded.)"
 (define-key hol-map "d"    'hol-drop-goal)
 (define-key hol-map "D"    'hol-drop-all-goals)
 (define-key hol-map "e"    'copy-region-as-hol-tactic)
+(define-key hol-map "E"    'copy-region-as-goaltree-tactic)
 (define-key hol-map "g"    'hol-do-goal)
+(define-key hol-map "G"    'hol-do-goaltree)
 (define-key hol-map "h"    'hol)
 (define-key hol-map "l"    'hol-load-file)
 (define-key hol-map "m"    'hol-db-match)

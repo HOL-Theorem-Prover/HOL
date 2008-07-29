@@ -8,6 +8,9 @@ fun ERR x      = STRUCT_ERR "Cond_rewr" x;
 
 val stack_limit = ref 4;
 
+val track_rewrites = ref false;
+val used_rewrites  = ref [] : thm list ref;
+
 (* -----------------------------------------------------------------------*
  * A total ordering on terms.  The behaviour of the simplifier depends    *
  * on this, so don't change it without thinking.                          *
@@ -208,6 +211,9 @@ fun ac_term_ord(tm1,tm2) =
             val _ = if null conditions then
               trace(if isperm then 2 else 1, REWRITING(tm,th))
                     else ()
+            val _ = if null stack andalso !track_rewrites
+                      then used_rewrites := th :: !used_rewrites
+                      else ()
         in trace(if isperm then 3 else 2,PRODUCE(tm,"rewrite",final_thm));
 	    final_thm
         end

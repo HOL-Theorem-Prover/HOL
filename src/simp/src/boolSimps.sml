@@ -25,7 +25,7 @@ fun comb_ETA_CONV t =
        then RAND_CONV ETA_CONV
        else NO_CONV) t
 
-val ETA_ss = SSFRAG {
+val ETA_ss = SSFRAG {name = SOME "ETA",
   convs = [{name = "ETA_CONV (eta reduction)",
             trace = 2,
             key = SOME ([],``(f:('a->'b)->'c) (\x:'a. (g:'a->'b) x)``),
@@ -47,7 +47,7 @@ fun comb_TY_ETA_CONV t =
        then RAND_CONV TY_ETA_CONV
        else NO_CONV) t
 
-val TY_ETA_ss = SSFRAG {
+val TY_ETA_ss = SSFRAG {name = SOME "TY_ETA",
   convs = [{name = "TY_ETA_CONV (type eta reduction)",
             trace = 2,
             key = SOME ([],``(f:(!'a.'b)->'c) (\:'a. (g: !'a.'b) [:'a:])``),
@@ -70,8 +70,10 @@ val literal_I_thm = prove(
   REWRITE_TAC [combinTheory.I_THM, literal_case_THM]);
 
 val literal_case_ss =
-    simpLib.SSFRAG {ac = [], congs = [literal_cong], convs = [], filter = NONE,
-                     dprocs = [], rewrs = [literal_I_thm]}
+    simpLib.SSFRAG 
+    {name = SOME"literal_case",
+     ac = [], congs = [literal_cong], convs = [], filter = NONE,
+     dprocs = [], rewrs = [literal_I_thm]}
 
 (* ----------------------------------------------------------------------
     BOOL_ss
@@ -82,7 +84,8 @@ val literal_case_ss =
 
 
 val BOOL_ss = SSFRAG
-  {convs=[{name="BETA_CONV (beta reduction)",
+  {name = SOME"BOOL",
+   convs=[{name="BETA_CONV (beta reduction)",
            trace=2,
            key=SOME ([],``(\x:'a. y:'b) z``),
 	   conv=K (K BETA_CONV)},
@@ -100,9 +103,10 @@ val BOOL_ss = SSFRAG
           TY_FORALL_SIMP, TY_EXISTS_SIMP,
           COND_BOOL_CLAUSES,
           literal_I_thm,
-          EXCLUDED_MIDDLE, bool_case_thm,
+          EXCLUDED_MIDDLE, 
           ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE,
-          NOT_AND, ONCE_REWRITE_RULE [CONJ_COMM] EXCLUDED_MIDDLE,
+          bool_case_thm,
+          NOT_AND, 
           SELECT_REFL, SELECT_REFL_2, RES_FORALL_TRUE, RES_EXISTS_FALSE],
    congs = [literal_cong], filter = NONE, ac = [], dprocs = []};
 
@@ -116,7 +120,8 @@ local val IMP_CONG = REWRITE_RULE [GSYM AND_IMP_INTRO] IMP_CONG
       val COND_CONG = REWRITE_RULE [GSYM AND_IMP_INTRO] COND_CONG
 in
 val CONG_ss = SSFRAG
-  {congs = [IMP_CONG, COND_CONG, RES_FORALL_CONG, RES_EXISTS_CONG],
+  {name=SOME"CONG",
+   congs = [IMP_CONG, COND_CONG, RES_FORALL_CONG, RES_EXISTS_CONG],
    convs = [], rewrs = [], filter=NONE, ac=[], dprocs=[]}
 end;
 
@@ -147,7 +152,8 @@ val NOT_ss = rewrites [NOT_IMP,
  *------------------------------------------------------------------------*)
 
 val UNWIND_ss = SSFRAG
-  {convs=[{name="UNWIND_EXISTS_CONV",
+  {name=SOME "UNWIND",
+   convs=[{name="UNWIND_EXISTS_CONV",
            trace=1,
            key=SOME ([],``?x:'a. P``),
            conv=K (K Unwind.UNWIND_EXISTS_CONV)},
@@ -165,14 +171,15 @@ val UNWIND_ss = SSFRAG
  val let_cong = prove(
    ``(v:'a = v') ==> (LET (f:'a -> 'b) v = LET f (I v'))``,
    DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC [LET_THM, combinTheory.I_THM])
+
 val let_I_thm = prove(
   ``LET (f : 'a -> 'b) (I x) = f x``,
   REWRITE_TAC [combinTheory.I_THM, LET_THM]);
 
 val LET_ss =
-    simpLib.SSFRAG {ac = [], congs = [let_cong], convs = [], filter = NONE,
-                     dprocs = [], rewrs = [let_I_thm]}
-
+    simpLib.SSFRAG {name = SOME"LET",
+                    ac = [], congs = [let_cong], convs = [], filter = NONE,
+                    dprocs = [], rewrs = [let_I_thm]}
 
 (* ----------------------------------------------------------------------
     bool_ss
@@ -280,8 +287,9 @@ end handle HOL_ERR _ => failwith "COND_TY_ABS_CONV";
 
 
 val COND_elim_ss =
-  simpLib.SSFRAG {ac = [], congs = [],
-                   convs = [{conv = K (K celim_rand_CONV),
+  simpLib.SSFRAG {name = SOME"COND_elim",
+                  ac = [], congs = [],
+                  convs = [{conv = K (K celim_rand_CONV),
                              name = "conditional lifting at rand",
                              key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
                              trace = 2},
@@ -295,28 +303,27 @@ val COND_elim_ss =
                              key = SOME([],
                                         Term`\:'a. COND p (q [:'a:]:'b) (r [:'a:])`),
                              trace = 2}],
-                   dprocs = [], filter = NONE,
-                   rewrs = [boolTheory.COND_RATOR, boolTheory.COND_TY_COMB, boolTheory.COND_EXPAND,
-                            NESTED_COND]}
+                  dprocs = [], filter = NONE,
+                  rewrs = [boolTheory.COND_RATOR, boolTheory.COND_TY_COMB, boolTheory.COND_EXPAND,
+                           NESTED_COND]}
 
-val LIFT_COND_ss =
-    simpLib.SSFRAG {ac = [], congs = [],
-                     convs = [{conv = K (K celim_rand_CONV),
-                               name = "conditional lifting at rand",
-                               key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
-                               trace = 2},
-                              {conv = K (K COND_ABS_CONV),
-                               name = "conditional lifting under abstractions",
-                               key = SOME([],
-                                          Term`\x:'a. COND p (q x:'b) (r x)`),
-                               trace = 2},
-                              {conv = K (K COND_TY_ABS_CONV),
-                               name = "conditional lifting under type abstractions",
-                               key = SOME([],
-                                          Term`\:'a. COND p (q [:'a:]:'b) (r [:'a:])`),
-                               trace = 2}],
-                     dprocs = [], filter = NONE,
-                     rewrs = [boolTheory.COND_RATOR, boolTheory.COND_TY_COMB, NESTED_COND]}
+val LIFT_COND_ss = simpLib.SSFRAG 
+  {name=SOME"LIFT_COND",
+   ac = [], congs = [],
+   convs = [{conv = K (K celim_rand_CONV),
+             name = "conditional lifting at rand",
+             key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
+             trace = 2},
+            {conv = K (K COND_ABS_CONV),
+             name = "conditional lifting under abstractions",
+             key = SOME([], Term`\x:'a. COND p (q x:'b) (r x)`),
+             trace = 2},
+            {conv = K (K COND_TY_ABS_CONV),
+             name = "conditional lifting under type abstractions",
+             key = SOME([], Term`\:'a. COND p (q [:'a:]:'b) (r [:'a:])`),
+             trace = 2}],
+   dprocs = [], filter = NONE,
+   rewrs = [boolTheory.COND_RATOR, boolTheory.COND_TY_COMB, NESTED_COND]}
 
 
 (* ----------------------------------------------------------------------
@@ -330,6 +337,7 @@ val LIFT_COND_ss =
  * ------------------------------------------------------------------------*)
 
 val CONJ_ss = SSFRAG {
+  name = SOME"CONJ",
   ac = [],
   congs = [REWRITE_RULE [GSYM AND_IMP_INTRO] (SPEC_ALL boolTheory.AND_CONG)],
   convs = [], dprocs = [], filter = NONE, rewrs = []}

@@ -1,7 +1,9 @@
 open HolKernel boolLib Parse BasicProvers
 open boolSimps simpLib
 
-open arithmeticTheory IndDefLib listTheory metisLib
+open arithmeticTheory IndDefLib listTheory metisLib BasicProvers
+
+val export_rewrites = BasicProvers.export_rewrites "inftree";
 
 val _ = new_theory "inftree"
 
@@ -32,7 +34,7 @@ val fromto_id = prove(
 val is_tree_from_inftree = prove(
   ``is_tree (from_inftree x)``,
   METIS_TAC [inftree_bijections])
-val _ = BasicProvers.augment_srw_ss [rewrites [is_tree_from_inftree]]
+val _ = augment_srw_ss [rewrites [is_tree_from_inftree]]
 
 val from_inftree_11 = prove(
   ``(from_inftree t1 = from_inftree t2) = (t1 = t2)``,

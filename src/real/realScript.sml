@@ -30,6 +30,7 @@ val AC = AC.AC;
 
 val num_EQ_CONV = Arithconv.NEQ_CONV;
 
+val export_rewrites = export_rewrites "real";
 (*---------------------------------------------------------------------------*)
 (* Now define the inclusion homomorphism &:num->real.                        *)
 (*---------------------------------------------------------------------------*)
@@ -72,7 +73,7 @@ in
   val REAL_INV_0 = save_thm("REAL_INV_0",reeducate REAL_INV_0)
 end;
 
-val _ = export_rewrites
+val _ = export_rewrites 
         ["REAL_ADD_LID", "REAL_ADD_LINV", "REAL_LT_REFL", "REAL_MUL_LID"]
 
 (*---------------------------------------------------------------------------*)

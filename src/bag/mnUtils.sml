@@ -113,9 +113,10 @@ fun app_letter ty =
       hd (explode operator)
   end;
 val CONJ_ss = simpLib.SSFRAG {
+  name=SOME"CONJ",
   ac = [], convs = [], dprocs = [],
   filter = NONE, rewrs = [], congs = [GEN_ALL (
-    tautLib.TAUT_PROVE (Term`(P ==> (Q = Q')) ==> (Q' ==> (P = P')) ==>
+   tautLib.TAUT_PROVE (Term`(P ==> (Q = Q')) ==> (Q' ==> (P = P')) ==>
                        ((P /\ Q) = (P' /\ Q'))`))]}
 infix ++;
 fun ss ++ sd = simpLib.++(ss,sd);

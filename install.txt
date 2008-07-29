@@ -58,9 +58,9 @@ B. Unpack HOL with the commands
    starting.
 
 
-C. Enter the "tools" directory and type
+C. In the HOL directory (<hol-dir>), type
 
-       mosml < smart-configure.sml
+       mosml < tools/smart-configure.sml
 
                     ------------------------------
 
