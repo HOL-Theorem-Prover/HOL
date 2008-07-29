@@ -76,12 +76,13 @@ in
   else "winNT"
 end;
 
+val exe_ext = if OS = "winNT" then ".exe" else "";
 determining "mosmldir";
 
 fun check_mosml candidate = let
   open FileSys
 in
-  access(Path.concat(candidate,"mosml"), [A_EXEC])
+  access(Path.concat(candidate,"mosml"^exe_ext), [A_EXEC])
 end
 
 fun mosml_from_loadpath () = let
