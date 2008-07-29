@@ -28,6 +28,8 @@ fun size_of_term tm =
      case dest_term tm
       of LAMB(Bvar,Body) => 1 + size_of_term Body
        | COMB(Rator,Rand) => size_of_term Rator + size_of_term Rand
+       | TYLAMB(Bvar,Body) => 1 + size_of_term Body
+       | TYCOMB(Rator,Rand) => size_of_term Rator + 1
        | _ => 1
 
 fun op lex_cmp (cmp1, cmp2) ((a1,b1), (a2,b2)) =
@@ -47,6 +49,8 @@ fun dest_hd env t =
     | CONST {Name, Thy, Ty} => (((Name, Thy), 1), Ty)
     | LAMB (bv, body) => ((("", ""), 2), type_of bv)
     | COMB _ => ((("", ""), 3), Type.alpha) (* should never happen *)
+    | TYLAMB (bv, body) => ((("", ""), 4), bv)
+    | TYCOMB _ => ((("", ""), 5), Type.alpha)
 
 fun hd_compare (env1, env2) (t1, t2) =
     (String.compare lex_cmp String.compare lex_cmp Int.compare
@@ -59,7 +63,31 @@ in
   case Int.compare (size_of_term tm1, size_of_term tm2) of
     EQUAL => let
     in
-      if is_abs tm1 then
+      if is_tycomb tm1 then
+        if is_tycomb tm2 then let
+            val (f, xs) = strip_tycomb tm1
+            val (g, ys) = strip_tycomb tm2
+          in
+            (hd_compare e lex_cmp Int.compare lex_cmp list_compare Type.compare)
+            (((f, length xs), xs), ((g, length ys), ys))
+          end
+        else GREATER
+      else if is_tycomb tm2 then LESS
+      else if is_tyabs tm1 then
+        if is_tyabs tm2 then let
+            val (bv1, bdy1) = dest_tyabs tm1
+            val (bv2, bdy2) = dest_tyabs tm2
+          in
+            case Type.compare(bv1, bv2) of
+              EQUAL => let
+              in
+                ac_term_ord0 (n + 1) (env1, env2) (bdy1, bdy2)
+              end
+            | x => x
+          end
+        else GREATER
+      else if is_tyabs tm2 then LESS
+      else if is_abs tm1 then
         if is_abs tm2 then let
             val (bv1, bdy1) = dest_abs tm1
             val (bv2, bdy2) = dest_abs tm2
@@ -129,6 +157,8 @@ fun ac_term_ord(tm1,tm2) =
      of (VAR v1,VAR v2)   => (snd v1 = snd v2)
       | (LAMB t1,LAMB t2) => vperm(snd t1, snd t2)
       | (COMB t1,COMB t2) => vperm(fst t1,fst t2) andalso vperm(snd t1,snd t2)
+      | (TYLAMB t1,TYLAMB t2) => vperm(snd t1, snd t2)
+      | (TYCOMB t1,TYCOMB t2) => vperm(fst t1,fst t2) andalso (snd t1 = snd t2)
       | (x,y) => (x = y)
 
    fun is_var_perm(tm1,tm2) =

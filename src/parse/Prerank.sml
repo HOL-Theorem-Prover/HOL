@@ -152,10 +152,10 @@ in
   case (rk1, rk2) of
     (UVarrank r, _) => bind_less gen_unify r rk2
   | (_, UVarrank r) => bind_greater gen_unify r rk1
-  | (Maxrank (r1,r2), _) => gen_unify r1 rk2 >> gen_unify r2 rk2 >> ok
+  | (Maxrank (r1,r2), _) => gen_unify r2 rk2 >> gen_unify r1 rk2 >> ok
   | (Zerorank, _) => ok
   | (Sucrank rk1, Sucrank rk2) => gen_unify rk1 rk2
-  | (_, Maxrank (r1,r2)) => gen_unify rk1 r1 ++ gen_unify rk1 r2
+  | (_, Maxrank (r1,r2)) => gen_unify rk1 r2 ++ gen_unify rk1 r1
   | _ => fail
 end e;
 

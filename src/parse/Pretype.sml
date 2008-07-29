@@ -189,6 +189,12 @@ fun the_var_type(ty as PT(Vartype v,loc)) = ty
   | the_var_type(ty as PT(UVar(ref(NONEU _)),loc)) = ty
   | the_var_type _ = raise TCERR "the_var_type" "not a type variable";
 
+fun the_con_type(ty as PT(Contype v,loc)) = ty
+  | the_con_type(PT(TyKindConstr{Ty,Kind},loc)) = the_con_type Ty
+  | the_con_type(PT(TyRankConstr{Ty,Rank},loc)) = the_con_type Ty
+  | the_con_type(PT(UVar(ref(SOMEU ty)),loc))   = the_con_type ty
+  | the_con_type _ = raise TCERR "the_con_type" "not a type constant";
+
 fun mk_app_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyApp(ty1,ty2), locn.between loc1 loc2)
 
@@ -215,6 +221,16 @@ fun the_abs_type(PT(UVar(ref(SOMEU ty))  ,loc)) = the_abs_type ty
   | the_abs_type(PT(TyRankConstr{Ty,Rank},loc)) = the_abs_type Ty
   | the_abs_type(ty as PT(TyAbst(ty1,ty2),loc)) = ty
   | the_abs_type _ = raise TCERR "the_abs_type" "not a type abstraction";
+
+fun dom_rng ty =
+  let val (tyf,ty2) = dest_app_type ty
+      val (ty0,ty1) = dest_app_type tyf
+      val (PT(Contype {Thy, Tyop, Kind, Rank},loc)) = the_con_type ty0
+  in if Thy = "min" andalso Tyop = "fun" andalso Kind = Prekind.typ andalso Rank = Prerank.Zerorank
+     then (ty1,ty2)
+     else raise ERR "" ""
+  end
+  handle HOL_ERR _ => raise ERR "dom_rng" "not a function type";
 
 (* returns a list of strings, names of all kind variables mentioned *)
 fun kindvars (PT (ty, loc)) =

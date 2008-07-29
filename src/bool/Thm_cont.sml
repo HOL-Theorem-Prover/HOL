@@ -249,6 +249,45 @@ val CHOOSE_THEN :thm_tactical = fn ttac => fn xth =>
    end handle HOL_ERR _ => raise ERR "CHOOSE_THEN" "";
 
 
+(*---------------------------------------------------------------------------
+ * Type existential elimination
+ *
+ *	    B
+ *    ==================   |- ?:a. A(a)
+ *            B
+ *    ==================    ttac A(b)
+ *	   ...
+ * explicit version for tactic programming
+ *---------------------------------------------------------------------------*)
+
+fun X_TY_CHOOSE_THEN y (ttac:thm_tactic) : thm_tactic = fn xth =>
+   let val (Bvar,Body) = dest_tyexists (Thm.concl xth)
+   in fn (asl,w) =>
+      let val th = foo xth (inst[Bvar |-> y] Body)
+(* itlist ADD_ASSUM (hyp xth)
+                          (ASSUME (subst[Bvar |-> y] Body)) *)
+        val (gl,prf) = ttac th (asl,w)
+    in
+        (gl, (TY_CHOOSE (y,xth)) o prf)
+    end
+   end
+   handle HOL_ERR _ => raise ERR "X_TY_CHOOSE_THEN" "";
+
+
+(*---------------------------------------------------------------------------
+ * Chooses a variant for the user.
+ *---------------------------------------------------------------------------*)
+
+val TY_CHOOSE_THEN :thm_tactical = fn ttac => fn xth =>
+   let val (hyp,conc) = dest_thm xth
+       val (Bvar,_) = dest_tyexists conc
+   in fn (asl,w) =>
+     let val y = variant_type (type_vars_in_terml ((conc::hyp)@(w::asl))) Bvar
+     in X_TY_CHOOSE_THEN y ttac xth (asl,w)
+     end
+   end handle HOL_ERR _ => raise ERR "TY_CHOOSE_THEN" "";
+
+
 (*----------  Cases tactics   -------------*)
 
 (*---------------------------------------------------------------------------
@@ -287,7 +326,7 @@ fun CASES_THENL ttacl = DISJ_CASES_THENL (map (REPEAT_TCL CHOOSE_THEN) ttacl);
  * Tactical to strip off ONE disjunction, conjunction, or existential.       *
  *---------------------------------------------------------------------------*)
 
-val STRIP_THM_THEN = FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, CHOOSE_THEN];
+val STRIP_THM_THEN = FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, CHOOSE_THEN, TY_CHOOSE_THEN];
 
 
 

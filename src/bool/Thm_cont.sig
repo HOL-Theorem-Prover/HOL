@@ -19,6 +19,8 @@ sig
   val UNDISCH_THEN     : Term.term -> thm_tactic -> tactic
   val X_CHOOSE_THEN    : Term.term -> thm_tactical
   val CHOOSE_THEN      : thm_tactical
+  val X_TY_CHOOSE_THEN : Type.hol_type -> thm_tactical
+  val TY_CHOOSE_THEN   : thm_tactical
   val X_CASES_THENL    : (('a list -> 'b list -> ('a * 'b) list) 
                           -> thm_tactic list -> (term list * thm_tactic) list)
                             -> thm_tactic list -> thm_tactic

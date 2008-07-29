@@ -576,7 +576,9 @@ fun aconv t1 t2 = EQ(t1,t2) orelse
   of (Fv(M,ty1),Fv(N,ty2)) => M=N andalso abconv_ty ty1 ty2
    | (Const(M,GRND ty1),Const(N,GRND ty2)) => M=N andalso abconv_ty ty1 ty2
    | (Const(M,POLY ty1),Const(N,POLY ty2)) => M=N andalso abconv_ty ty1 ty2
-   | (Const _,Const _) => false
+   | (Const(M,GRND ty1),Const(N,POLY ty2)) => M=N andalso abconv_ty ty1 ty2
+   | (Const(M,POLY ty1),Const(N,GRND ty2)) => M=N andalso abconv_ty ty1 ty2
+(* | (Const _,Const _) => false *) (* This line should replace the two above; POLY computation faulty. *)
    | (Comb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
    | (TComb(M,ty1),TComb(P,ty2)) => abconv_ty ty1 ty2 andalso aconv M P
    | (Abs(Fv(_,ty1),M),
@@ -769,6 +771,44 @@ fun inst [] tm = tm
     in
       inst1 tm
     end;
+
+(*---------------------------------------------------------------------------*
+ *     Substitute types for general types in a term                          *
+ *---------------------------------------------------------------------------*)
+
+val empty_tysubst:(hol_type,hol_type)Binarymap.dict = Binarymap.mkDict Type.compare
+local
+  open Binarymap
+  fun addb [] A = A
+    | addb ({redex,residue}::t) (A,b) =
+      addb t (if (kind_of redex) = (kind_of residue)
+              then (insert(A,redex,residue),
+                    is_vartype redex andalso b)
+              else raise ERR "subst_type" "redex has different kind than residue")
+in
+fun subst_type [] tm = tm
+  | subst_type theta tm =
+    let val (fmap,b) = addb theta (empty_tysubst, true)
+        fun
+       subst_type1 (bv as Bv _) = bv
+     | subst_type1 (c as Const(r, GRND Ty)) =
+         let val ty = type_map fmap Ty in
+           Const(r,(if Type.polymorphic ty then POLY else GRND)ty)
+         end
+     | subst_type1 (c as Const(r, POLY Ty)) =
+         let val ty = type_map fmap Ty in
+           Const(r,(if Type.polymorphic ty then POLY else GRND)ty)
+         end
+     | subst_type1 (v as Fv(Name,Ty)) = Fv(Name, type_map fmap Ty)
+     | subst_type1 (Comb(Rator,Rand)) = Comb(subst_type1 Rator, subst_type1 Rand)
+     | subst_type1 (TComb(Rator,Ty))  = TComb(subst_type1 Rator, type_map fmap Ty)
+     | subst_type1 (Abs(Bvar,Body))   = Abs(subst_type1 Bvar, subst_type1 Body)
+     | subst_type1 (TAbs(Bvar,Body))  = TAbs(Bvar, subst_type1 Body)
+     | subst_type1 (t as Clos _)      = subst_type1(push_clos t)
+    in
+      subst_type1 tm
+    end
+end;
 
 
 (*---------------------------------------------------------------------------

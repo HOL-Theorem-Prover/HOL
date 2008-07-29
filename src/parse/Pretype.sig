@@ -27,6 +27,7 @@ val tylocn : pretype -> locn.locn
 val eq : pretype -> pretype -> bool
 
 val --> : pretype * pretype -> pretype
+val dom_rng : pretype -> pretype * pretype
 val dest_var_type : pretype -> pretyvar
 val mk_app_type : pretype * pretype -> pretype
 val dest_app_type : pretype -> pretype * pretype

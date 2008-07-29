@@ -80,6 +80,7 @@ sig
   val ty_eta_conv   : term -> term
   val subst         : (term,term) Lib.subst -> term -> term
   val inst          : (hol_type,hol_type) subst -> term -> term
+  val subst_type    : (hol_type,hol_type) subst -> term -> term (* arbitrary types to types *)
 
   val raw_match     : hol_type list -> term set
                       -> term -> term

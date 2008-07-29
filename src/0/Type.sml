@@ -1252,6 +1252,24 @@ fun ty_sub theta ty = let val ty' = type_subst theta ty
                                            else DIFF ty'
                       end;
 
+local
+  open Binarymap
+in
+fun type_map fmap =
+    let 
+        fun subs ty =
+          case peek(fmap,ty)
+           of SOME residue => residue
+            | NONE =>
+              (case ty
+                of TyApp(opr,ty) => TyApp(subs opr, subs ty)
+                 | TyAll(Bvar,Body) => TyAll(Bvar,subs Body)
+                 | TyAbs(Bvar,Body) => TyAbs(Bvar,subs Body)
+                 | _ => ty)
+    in subs
+    end
+end;
+
 (*---------------------------------------------------------------------------*
  * Is a type polymorphic, or contain a universal type or type abstraction?   *
  *---------------------------------------------------------------------------*)

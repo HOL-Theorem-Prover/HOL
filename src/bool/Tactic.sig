@@ -18,6 +18,11 @@ sig
   val SPEC_TAC              : term * term -> tactic
   val ID_SPEC_TAC           : term -> tactic
   val EXISTS_TAC            : term -> tactic
+  val X_TY_GEN_TAC          : hol_type -> tactic
+  val TY_GEN_TAC            : tactic
+  val TY_SPEC_TAC           : hol_type * hol_type -> tactic
+  val ID_TY_SPEC_TAC        : hol_type -> tactic
+  val TY_EXISTS_TAC         : hol_type -> tactic
   val GSUBST_TAC            : ((term,term) Lib.subst -> term -> term)
                                -> thm list -> tactic
   val SUBST_TAC             : thm list -> tactic
@@ -41,6 +46,8 @@ sig
   val DISJ_CASES_TAC        : thm_tactic
   val CHOOSE_TAC            : thm_tactic
   val X_CHOOSE_TAC          : term -> thm_tactic
+  val TY_CHOOSE_TAC         : thm_tactic
+  val X_TY_CHOOSE_TAC       : hol_type -> thm_tactic
   val STRIP_TAC             : tactic
   val FILTER_DISCH_TAC      : term -> tactic
   val FILTER_STRIP_TAC      : term -> tactic

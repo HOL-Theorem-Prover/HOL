@@ -84,7 +84,7 @@ val ty15 = ``:bool ('a prod)``;
 
 val ty16 = ``:\'a :<= 1 'b. ((!'c. 'a) :<= 2) 'b`` handle e => Raise e;
 val ty17 = ``:\'a 'b. ((!'c. 'a) :<= 2) 'b`` handle e => Raise e;
-val ty18 = ``:\'a 'b. (!'c. (!'d. 'c) -> 'a) :<= 2 'b`` handle e => Raise e;
+val ty18 = ``:\'a 'b. (!'c. (!'d. 'c) -> 'a) :<= 3 'b`` handle e => Raise e;
 
 val tm2 = mk_tyabs(``:'a:<=3``, ``\x:('a:<=3) (\'b. 'b). x``);
 val tm3 = mk_tycomb(tm2, ``:'c``);
@@ -230,12 +230,6 @@ val _ = (add_type_binder("?:", std_binder_precedence); add_const "?:");
 *)
 
 
-val q = `test1 (z:'a) = ?(id: !'a. 'a -> 'a). !x:'a. id [:'a:] x = x`;
-
-(* val test1a_def = new_definition("test1a_def", Term q) handle e => Raise e; *)
-
-val test1_def = Define q handle e => Raise e;
-
 
 (*---------------------------------------------------------------------------
             Monad type operator, with unit and bind term operators
@@ -275,6 +269,40 @@ val identity_monad = store_thm
    THEN TY_BETA_TAC
    THEN BETA_TAC
    THEN REWRITE_TAC[combinTheory.I_THM]
+  );
+
+val option_monad = store_thm
+  ("option_monad",
+   ``monad ((\:'a. SOME) : !'a.'a -> 'a option)
+           (\:'a 'b. \(x:'a option) (f:'a -> 'b option). case x of NONE -> NONE || SOME (y:'a) -> f y)``,
+   REWRITE_TAC[monad_def]
+   THEN TY_BETA_TAC
+   THEN REPEAT STRIP_TAC
+   THEN SRW_TAC[][]
+   THEN CASE_TAC
+  );
+
+val FLAT_APPEND = store_thm
+  ("FLAT_APPEND",
+   ``!(s:'a list list) t. FLAT (s ++ t) = FLAT s ++ FLAT t``,
+   Induct
+   THEN SRW_TAC[][listTheory.FLAT]
+  );
+
+val list_monad = store_thm
+  ("list_monad",
+   ``monad ((\:'a. \x:'a. [x]) : !'a.'a -> 'a list)
+           (\:'a 'b. \(x:'a list) (f:'a -> 'b list). FLAT (MAP f x))``,
+   REWRITE_TAC[monad_def]
+   THEN TY_BETA_TAC
+   THEN REPEAT STRIP_TAC
+   THEN SRW_TAC[][]
+   THENL [ Induct_on `m`
+           THEN SRW_TAC[][listTheory.FLAT],
+
+           Induct_on `m`
+           THEN SRW_TAC[][listTheory.FLAT, FLAT_APPEND]
+         ]
   );
 
 

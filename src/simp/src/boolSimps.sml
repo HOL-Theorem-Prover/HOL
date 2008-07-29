@@ -12,6 +12,8 @@ val _ = Parse.temp_set_grammars combinTheory.combin_grammars
 
 fun BETA_CONVS tm = (RATOR_CONV BETA_CONVS THENQC BETA_CONV) tm
 
+fun TY_BETA_CONVS tm = (TY_COMB_CONV TY_BETA_CONVS THENQC TY_BETA_CONV) tm
+
 (* ----------------------------------------------------------------------
     ETA_ss
       Implemented in a slightly cack-handed way so as to avoid simplifying
@@ -32,6 +34,28 @@ val ETA_ss = SSFRAG {
             trace = 2,
             key = SOME ([], ``\x:'a. \y:'b. (f:'a->'b->'c) x y``),
             conv = K (K (ABS_CONV ETA_CONV))}],
+  rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []}
+
+(* ----------------------------------------------------------------------
+    TY_ETA_ss
+      Implemented in a slightly cack-handed way so as to avoid simplifying
+      things like `!:'a. P [:'a:]` to `$!: P`
+   ---------------------------------------------------------------------- *)
+
+fun comb_TY_ETA_CONV t =
+    (if not (is_tyexists t orelse is_tyforall t)
+       then RAND_CONV TY_ETA_CONV
+       else NO_CONV) t
+
+val TY_ETA_ss = SSFRAG {
+  convs = [{name = "TY_ETA_CONV (type eta reduction)",
+            trace = 2,
+            key = SOME ([],``(f:(!'a.'b)->'c) (\:'a. (g: !'a.'b) [:'a:])``),
+            conv = K (K comb_TY_ETA_CONV)},
+           {name = "TY_ETA_CONV (type eta reduction)",
+            trace = 2,
+            key = SOME ([], ``\:'a. \:'b. (f: !'a 'b. 'c) [:'a,'b:]``),
+            conv = K (K (TY_ABS_CONV TY_ETA_CONV))}],
   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []}
 
 (* ----------------------------------------------------------------------
@@ -61,7 +85,11 @@ val BOOL_ss = SSFRAG
   {convs=[{name="BETA_CONV (beta reduction)",
            trace=2,
            key=SOME ([],``(\x:'a. y:'b) z``),
-	   conv=K (K BETA_CONV)}],
+	   conv=K (K BETA_CONV)},
+          {name="TY_BETA_CONV (type beta reduction)",
+           trace=2,
+           key=SOME ([],``(\:'a. y:'b) [:'c:]``),
+	   conv=K (K TY_BETA_CONV)}],
    rewrs=[REFL_CLAUSE,  EQ_CLAUSES,
           NOT_CLAUSES,  AND_CLAUSES,
           OR_CLAUSES,   IMP_CLAUSES,
@@ -69,6 +97,7 @@ val BOOL_ss = SSFRAG
           EXISTS_SIMP,  COND_ID,
           EXISTS_REFL, GSYM EXISTS_REFL,
           EXISTS_UNIQUE_REFL, GSYM EXISTS_UNIQUE_REFL,
+          TY_FORALL_SIMP, TY_EXISTS_SIMP,
           COND_BOOL_CLAUSES,
           literal_I_thm,
           EXCLUDED_MIDDLE, bool_case_thm,
@@ -232,6 +261,23 @@ in
                             ALPHA_CONV v))) th2
 end handle HOL_ERR _ => failwith "COND_ABS_CONV";
 
+fun COND_TY_ABS_CONV tm = let
+  open Type Rsyntax
+  infix |-> THENC
+  val {Bvar=v,Body=bdy} = dest_tyabs tm
+  val {cond,larm=x,rarm=y} = Rsyntax.dest_cond bdy
+  val b = assert (not o Lib.mem v o type_vars_in_term) cond
+  val xf = mk_tyabs{Bvar=v,Body=x}
+  val yf = mk_tyabs{Bvar=v,Body=y}
+  val th1 = INST_TYPE [alpha |-> v, beta |-> type_of x] COND_TY_ABS
+  val th2 = SPECL [b,xf,yf] th1
+in
+  CONV_RULE (RATOR_CONV (RAND_CONV
+                           (TY_ABS_CONV (RATOR_CONV (RAND_CONV TY_BETA_CONV) THENC
+                                         RAND_CONV TY_BETA_CONV) THENC
+                            TY_ALPHA_CONV v))) th2
+end handle HOL_ERR _ => failwith "COND_TY_ABS_CONV";
+
 
 val COND_elim_ss =
   simpLib.SSFRAG {ac = [], congs = [],
@@ -243,9 +289,14 @@ val COND_elim_ss =
                              name = "conditional lifting under abstractions",
                              key = SOME([],
                                         Term`\x:'a. COND p (q x:'b) (r x)`),
+                             trace = 2},
+                            {conv = K (K COND_TY_ABS_CONV),
+                             name = "conditional lifting under type abstractions",
+                             key = SOME([],
+                                        Term`\:'a. COND p (q [:'a:]:'b) (r [:'a:])`),
                              trace = 2}],
                    dprocs = [], filter = NONE,
-                   rewrs = [boolTheory.COND_RATOR, boolTheory.COND_EXPAND,
+                   rewrs = [boolTheory.COND_RATOR, boolTheory.COND_TY_COMB, boolTheory.COND_EXPAND,
                             NESTED_COND]}
 
 val LIFT_COND_ss =
@@ -258,9 +309,14 @@ val LIFT_COND_ss =
                                name = "conditional lifting under abstractions",
                                key = SOME([],
                                           Term`\x:'a. COND p (q x:'b) (r x)`),
+                               trace = 2},
+                              {conv = K (K COND_TY_ABS_CONV),
+                               name = "conditional lifting under type abstractions",
+                               key = SOME([],
+                                          Term`\:'a. COND p (q [:'a:]:'b) (r [:'a:])`),
                                trace = 2}],
                      dprocs = [], filter = NONE,
-                     rewrs = [boolTheory.COND_RATOR, NESTED_COND]}
+                     rewrs = [boolTheory.COND_RATOR, boolTheory.COND_TY_COMB, NESTED_COND]}
 
 
 (* ----------------------------------------------------------------------
@@ -284,10 +340,13 @@ val CONJ_ss = SSFRAG {
    ---------------------------------------------------------------------- *)
 
 val DNF_ss = rewrites [FORALL_AND_THM, EXISTS_OR_THM,
+                       TY_FORALL_AND_THM, TY_EXISTS_OR_THM,
                        DISJ_IMP_THM, IMP_CONJ_THM,
                        RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR,
                        GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,
-                       GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM]
+                       GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
+                       GSYM LEFT_TY_FORALL_IMP_THM, GSYM RIGHT_TY_FORALL_IMP_THM,
+                       GSYM LEFT_TY_EXISTS_AND_THM, GSYM RIGHT_TY_EXISTS_AND_THM]
 
 val _ = Parse.temp_set_grammars ambient_grammars;
 
@@ -311,7 +370,13 @@ val EXISTS_NORM_ss =
         LEFT_AND_EXISTS_THM,
         RIGHT_AND_EXISTS_THM,
         LEFT_IMP_EXISTS_THM,
-        TRIV_EXISTS_IMP_THM];
+        TRIV_EXISTS_IMP_THM,
+        TY_EXISTS_OR_THM,
+        TRIV_AND_TY_EXISTS_THM,
+        LEFT_AND_TY_EXISTS_THM,
+        RIGHT_AND_TY_EXISTS_THM,
+        LEFT_IMP_TY_EXISTS_THM,
+        TRIV_TY_EXISTS_IMP_THM];
 
 val EXISTS_IN_ss =
     pure_ss
@@ -320,7 +385,13 @@ val EXISTS_IN_ss =
         RIGHT_EXISTS_AND_THM,
         LEFT_EXISTS_IMP_THM,
         TRIV_EXISTS_IMP_THM,
-        RIGHT_EXISTS_IMP_THM];
+        RIGHT_EXISTS_IMP_THM,
+        TY_EXISTS_OR_THM,
+        LEFT_TY_EXISTS_AND_THM,
+        RIGHT_TY_EXISTS_AND_THM,
+        LEFT_TY_EXISTS_IMP_THM,
+        TRIV_TY_EXISTS_IMP_THM,
+        RIGHT_TY_EXISTS_IMP_THM];
 
 val EXISTS_OUT_ss =
     pure_ss
@@ -328,5 +399,10 @@ val EXISTS_OUT_ss =
         LEFT_AND_EXISTS_THM,
         RIGHT_AND_EXISTS_THM,
         LEFT_IMP_EXISTS_THM,
-        RIGHT_IMP_EXISTS_THM];
+        RIGHT_IMP_EXISTS_THM,
+        TY_EXISTS_OR_THM,
+        LEFT_AND_TY_EXISTS_THM,
+        RIGHT_AND_TY_EXISTS_THM,
+        LEFT_IMP_TY_EXISTS_THM,
+        RIGHT_IMP_TY_EXISTS_THM];
 *)

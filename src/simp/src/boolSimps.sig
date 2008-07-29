@@ -20,6 +20,8 @@ sig
                                             ? and !, included in bool_ss *)
      val ETA_ss : simpLib.ssfrag        (* eta conversion;
                                            not included in bool_ss *)
+     val TY_ETA_ss : simpLib.ssfrag     (* type eta conversion;
+                                           not included in bool_ss *)
 
      val LET_ss : simpLib.ssfrag        (* writes out let terms, using a
                                            congruence to evaluate the
@@ -39,6 +41,12 @@ sig
                P ==> !x. Q x    -->  !x. P ==> Q x
                !x. P x /\ Q x   -->  (!x. P x) /\ (!x. Q x)
                ?x. P x \/ Q x   -->  (?x. P x) \/ (?x. Q x)
+               (?:'a. P[:'a:]) /\ Q   -->  ?:'a. P[:'a:] /\ Q
+               P /\ (?:'a. Q [:'a:])   -->  ?:'a. P /\ Q[:'a:]
+               (?:'a. P[:'a:]) ==> Q  -->  !:'a. P[:'a:] ==> Q
+               P ==> !:'a. Q[:'a:]    -->  !:'a. P ==> Q[:'a:]
+               !:'a. P[:'a:] /\ Q[:'a:]   -->  (!:'a. P[:'a:]) /\ (!:'a. Q[:'a:])
+               ?:'a. P[:'a:] \/ Q[:'a:]   -->  (?:'a. P[:'a:]) \/ (?:'a. Q[:'a:])
            Think of this simpset fragment as attempting to achieve as
            much as possible of STRIP_TAC within a single goal.
 

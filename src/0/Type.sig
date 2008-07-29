@@ -77,6 +77,7 @@ sig
   val ty_sub        : (hol_type,hol_type)Lib.subst
                         -> hol_type -> hol_type Lib.delta
   val type_subst    : (hol_type,hol_type)Lib.subst -> hol_type -> hol_type
+  val type_map      : (hol_type,hol_type)Binarymap.dict -> hol_type -> hol_type
   val type_vars     : hol_type -> hol_type list
   val type_varsl    : hol_type list -> hol_type list
   val type_vars_lr  : hol_type -> hol_type list

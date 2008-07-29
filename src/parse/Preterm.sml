@@ -7,6 +7,7 @@ val ERR = mk_HOL_ERR "Preterm"
 val ERRloc = mk_HOL_ERRloc "Preterm"
 
 type pretype = Pretype.pretype
+type kind = Kind.kind
 type hol_type = Type.hol_type
 type term = Term.term
 type overinfo = {Name:string, Ty:pretype,
@@ -114,12 +115,222 @@ fun tyVars ptm =  (* the pretype variables in a preterm *)
   | Overloaded _            => raise Fail "Preterm.tyVars: applied to Overloaded";
 
 
+(* ---------------------------------------------------------------------- *)
+(* "remove_case_magic", located here to be called within "to_term":       *)
+(* This does not traverse into the body of type abstractions, as this     *)
+(* function is called separately within "to_term" for type abstractions.  *)
+(* This is because "mk_tyabs" tests the free variables of the body, which *)
+(* may change under "remove_case_magic".                                  *)
+(* ---------------------------------------------------------------------- *)
+
+local
+
+(* ---------------------------------------------------------------------- *)
+(* function to do the equivalent of strip_conj, but where the "conj" is   *)
+(* the magic binary operator bool$<GrammarSpecials.case_split_special     *)
+(* ---------------------------------------------------------------------- *)
+
+open HolKernel
+fun dest_binop n c t = let
+  val (f,args) = strip_comb t
+  val {Name,Thy,...} = dest_thy_const f
+      handle HOL_ERR _ =>
+             raise ERR ("dest_case"^n) ("Not a "^n^" term")
+  val _ = (Name = c andalso Thy = "bool") orelse
+          raise ERR ("dest_case"^n) ("Not a "^n^" term")
+  val _ = length args = 2 orelse
+          raise ERR ("dest_case_"^n) ("case "^n^" 'op' with bad # of args")
+in
+  (hd args, hd (tl args))
+end
+
+val dest_case_split = dest_binop "split" case_split_special
+val dest_case_arrow = dest_binop "arrow" case_arrow_special
+
+fun strip_splits t0 = let
+  fun trav acc t = let
+    val (l,r) = dest_case_split t
+  in
+    trav (trav acc r) l
+  end handle HOL_ERR _ => t::acc
+in
+  trav [] t0
+end
+
+fun mk_conj(t1, t2) = let
+  val c = mk_thy_const{Name = "/\\", Thy = "bool",
+                       Ty = Type.bool --> Type.bool --> Type.bool}
+in
+  mk_comb(mk_comb(c,t1), t2)
+end
+
+fun list_mk_conj [] = raise ERR "list_mk_conj" "empty list"
+  | list_mk_conj [h] = h
+  | list_mk_conj (h::t) = mk_conj(h, list_mk_conj t)
+fun mk_eq(t1, t2) = let
+  val ty = type_of t1
+  val c = mk_thy_const{Name = "=", Thy = "min", Ty = ty --> ty --> Type.bool}
+in
+  mk_comb(mk_comb(c,t1),t2)
+end
+
+datatype rcm_action = Input of term
+                    | Ab of term * term
+                    | Cmb of int * term
+                    | TyAb of term
+                    | TyCmb of hol_type list * term
+datatype rcm_out = Ch of term | Unch of term
+fun is_unch (Unch _) = true | is_unch _ = false
+fun dest_out (Ch t) = t | dest_out (Unch t) = t
+fun Pprefix P list = let
+  fun recurse pfx rest =
+      case rest of
+        [] => (list, [])
+      | h::t => if P h then recurse (h::pfx) t
+                else (List.rev pfx, rest)
+in
+  recurse [] list
+end
+
+fun recomb (outf, outargs, orig) = let
+  fun lmk(base, args) = List.foldl (fn (out,t) => mk_comb(t,dest_out out))
+                                   base args
+in
+  case outf of
+    Ch f => Ch (lmk(f, outargs))
+  | Unch f => let
+      val (_, badargs) = Pprefix is_unch outargs
+    in
+      if null badargs then Unch orig
+      else Ch (lmk(funpow (length badargs) rator orig, badargs))
+    end
+end
+
+fun remove_case_magic0 tm0 = let
+  fun traverse acc actions =
+      case actions of
+        [] => dest_out (hd acc)
+      | act :: rest => let
+        in
+          case act of
+            Input t => let
+            in
+              if is_abs t then let
+                  val (v,body) = dest_abs t
+                in
+                  traverse acc (Input body :: Ab (v,t) :: rest)
+                end
+              else if is_comb t then let
+                  val (f,args) = strip_comb t
+                  val in_args = map Input args
+                in
+                  traverse acc (in_args @
+                                [Input f, Cmb(length args, t)] @ rest)
+                end
+              else if is_tyabs t then let
+                  val (v,body) = dest_tyabs t
+                in
+                  traverse acc (TyAb t :: rest)
+                end
+              else if is_tycomb t then let
+                  val (f,args) = strip_tycomb t
+                in
+                  traverse acc ([Input f, TyCmb(args, t)] @ rest)
+                end
+              else
+                traverse (Unch t::acc) rest
+            end
+          | Ab (v,orig) => let
+            in
+              case acc of
+                Ch bod' :: acc0 => traverse (Ch (mk_abs(v,bod'))::acc0)
+                                            rest
+              | Unch _ :: acc0 => traverse (Unch orig :: acc0) rest
+              | [] => raise Fail "Preterm.rcm: inv failed!"
+            end
+          | TyAb orig => let
+            in traverse (Unch orig :: acc) rest
+            end
+          | TyCmb(tyargs, orig) => let
+            in
+              case acc of
+                Ch f' :: acc0 => traverse (Ch (list_mk_tycomb(f',tyargs))::acc0)
+                                            rest
+              | Unch _ :: acc0 => traverse (Unch orig :: acc0) rest
+              | [] => raise Fail "Preterm.rcm: inv failed!"
+            end (* TyCmb *)
+          | Cmb(arglen, orig) => let
+              val out_f = hd acc
+              val f = dest_out out_f
+              val acc0 = tl acc
+              val acc_base = List.drop(acc0, arglen)
+              val out_args = List.rev (List.take(acc0, arglen))
+              val args = map dest_out out_args
+              val newt = let
+                val {Name,Thy,Ty} = dest_thy_const f
+                    handle HOL_ERR _ => {Name = "", Thy = "", Ty = alpha}
+              in
+                if Name = case_special andalso Thy = "bool" then let
+                    val _ = length args >= 2 orelse
+                            raise ERR "remove_case_magic"
+                                      "case constant has wrong # of args"
+                    val split_on_t = hd args
+                    val cases = strip_splits (hd (tl args))
+                    val patbody_pairs = map dest_case_arrow cases
+                        handle HOL_ERR _ =>
+                               raise ERR "remove_case_magic"
+                                         ("Case expression has invalid syntax \
+                                          \where there should be arrows")
+                    val split_on_t_ty = type_of split_on_t
+                    val result_ty =
+                        type_of (list_mk_comb(f, List.take(args,2)))
+                    val fakef = genvar (split_on_t_ty --> result_ty)
+                    val fake_eqns =
+                        list_mk_conj(map (fn (l,r) =>
+                                             mk_eq(mk_comb(fakef, l), r))
+                                         patbody_pairs)
+                    val functional =
+                        GrammarSpecials.compile_pattern_match fake_eqns
+                    val func = snd (dest_abs functional)
+                    val (v,case_t0) = dest_abs func
+                    val case_t = subst [v |-> split_on_t] case_t0
+                  in
+                    Ch (list_mk_comb(case_t, tl (tl args)))
+                  end
+                else
+                  recomb(out_f, out_args, orig)
+              end (* newt *)
+            in
+              traverse (newt::acc_base) rest
+            end (* Cmb *)
+        end (* act :: rest *) (* end traverse *)
+in
+  traverse [] [Input tm0]
+end
+
+in
+
+fun remove_case_magic tm =
+    if GrammarSpecials.case_initialised() then remove_case_magic0 tm
+    else tm
+
+end; (* local *)
+
+
 (*---------------------------------------------------------------------------
     Translate a preterm to a term. Will "guess type variables"
     (assign names to type variables created during type inference),
     if a flag is set. No "Overloaded" nodes are allowed in the preterm:
     overloading resolution should already have gotten rid of them.
  ---------------------------------------------------------------------------*)
+
+(* --------------------------------------------------------------------------------- *)
+(* "to_term" has been modified to cause the body of a type abstraction (TyAbs) to    *)
+(* remove the case magic from its body before trying to create the type abstraction. *)
+(* Because of the check that this construction requires, that there are no free      *)
+(* variables involving the type variable being bound, such case magic removal is     *)
+(* mandatory, as it changes the free variable set.                                   *)
+(* --------------------------------------------------------------------------------- *)
 
 val _ =
     register_btrace ("notify type variable guesses",
@@ -149,7 +360,7 @@ fun to_term tm =
                                 => return (Term.mk_abs(Bvar', Body'))))
           | TyAbs{Bvar, Body,...} => Pretype.replace_null_links Bvar >- (fn _
                                 => cleanup Body >- (fn Body'
-                                => return (Term.mk_tyabs(clean Bvar, Body'))))
+                                => return (Term.mk_tyabs(clean Bvar, remove_case_magic Body'))))
           | Antiq{Tm,...} => return Tm
           | Constrained{Ptm,...} => cleanup Ptm
        (* | Constrained{Ptm,Ty,...} => Pretype.replace_null_links Ty >- (fn _
@@ -191,8 +402,6 @@ fun to_term tm =
       in
         clean shr tm
       end
-
-
 
 
 (*---------------------------------------------------------------------------*
@@ -805,169 +1014,6 @@ fun typecheck_phase1 pfns ptm =
                 raise ERRloc "typecheck" l s)
            end
 
-(* ---------------------------------------------------------------------- *)
-(* function to do the equivalent of strip_conj, but where the "conj" is   *)
-(* the magic binary operator bool$<GrammarSpecials.case_split_special     *)
-(* ---------------------------------------------------------------------- *)
-
-open HolKernel
-fun dest_binop n c t = let
-  val (f,args) = strip_comb t
-  val {Name,Thy,...} = dest_thy_const f
-      handle HOL_ERR _ =>
-             raise ERR ("dest_case"^n) ("Not a "^n^" term")
-  val _ = (Name = c andalso Thy = "bool") orelse
-          raise ERR ("dest_case"^n) ("Not a "^n^" term")
-  val _ = length args = 2 orelse
-          raise ERR ("dest_case_"^n) ("case "^n^" 'op' with bad # of args")
-in
-  (hd args, hd (tl args))
-end
-
-val dest_case_split = dest_binop "split" case_split_special
-val dest_case_arrow = dest_binop "arrow" case_arrow_special
-
-fun strip_splits t0 = let
-  fun trav acc t = let
-    val (l,r) = dest_case_split t
-  in
-    trav (trav acc r) l
-  end handle HOL_ERR _ => t::acc
-in
-  trav [] t0
-end
-
-fun mk_conj(t1, t2) = let
-  val c = mk_thy_const{Name = "/\\", Thy = "bool",
-                       Ty = Type.bool --> Type.bool --> Type.bool}
-in
-  mk_comb(mk_comb(c,t1), t2)
-end
-
-fun list_mk_conj [] = raise ERR "list_mk_conj" "empty list"
-  | list_mk_conj [h] = h
-  | list_mk_conj (h::t) = mk_conj(h, list_mk_conj t)
-fun mk_eq(t1, t2) = let
-  val ty = type_of t1
-  val c = mk_thy_const{Name = "=", Thy = "min", Ty = ty --> ty --> Type.bool}
-in
-  mk_comb(mk_comb(c,t1),t2)
-end
-
-datatype rcm_action = Input of term
-                    | Ab of term * term
-                    | Cmb of int * term
-datatype rcm_out = Ch of term | Unch of term
-fun is_unch (Unch _) = true | is_unch _ = false
-fun dest_out (Ch t) = t | dest_out (Unch t) = t
-fun Pprefix P list = let
-  fun recurse pfx rest =
-      case rest of
-        [] => (list, [])
-      | h::t => if P h then recurse (h::pfx) t
-                else (List.rev pfx, rest)
-in
-  recurse [] list
-end
-
-fun recomb (outf, outargs, orig) = let
-  fun lmk(base, args) = List.foldl (fn (out,t) => mk_comb(t,dest_out out))
-                                   base args
-in
-  case outf of
-    Ch f => Ch (lmk(f, outargs))
-  | Unch f => let
-      val (_, badargs) = Pprefix is_unch outargs
-    in
-      if null badargs then Unch orig
-      else Ch (lmk(funpow (length badargs) rator orig, badargs))
-    end
-end
-
-fun remove_case_magic0 tm0 = let
-  fun traverse acc actions =
-      case actions of
-        [] => dest_out (hd acc)
-      | act :: rest => let
-        in
-          case act of
-            Input t => let
-            in
-              if is_abs t then let
-                  val (v,body) = dest_abs t
-                in
-                  traverse acc (Input body :: Ab (v,t) :: rest)
-                end
-              else if is_comb t then let
-                  val (f,args) = strip_comb t
-                  val in_args = map Input args
-                in
-                  traverse acc (in_args @
-                                [Input f, Cmb(length args, t)] @ rest)
-                end
-              else
-                traverse (Unch t::acc) rest
-            end
-          | Ab (v,orig) => let
-            in
-              case acc of
-                Ch bod' :: acc0 => traverse (Ch (mk_abs(v,bod'))::acc0)
-                                            rest
-              | Unch _ :: acc0 => traverse (Unch orig :: acc0) rest
-              | [] => raise Fail "Preterm.rcm: inv failed!"
-            end
-          | Cmb(arglen, orig) => let
-              val out_f = hd acc
-              val f = dest_out out_f
-              val acc0 = tl acc
-              val acc_base = List.drop(acc0, arglen)
-              val out_args = List.rev (List.take(acc0, arglen))
-              val args = map dest_out out_args
-              val newt = let
-                val {Name,Thy,Ty} = dest_thy_const f
-                    handle HOL_ERR _ => {Name = "", Thy = "", Ty = alpha}
-              in
-                if Name = case_special andalso Thy = "bool" then let
-                    val _ = length args >= 2 orelse
-                            raise ERR "remove_case_magic"
-                                      "case constant has wrong # of args"
-                    val split_on_t = hd args
-                    val cases = strip_splits (hd (tl args))
-                    val patbody_pairs = map dest_case_arrow cases
-                        handle HOL_ERR _ =>
-                               raise ERR "remove_case_magic"
-                                         ("Case expression has invalid syntax \
-                                          \where there should be arrows")
-                    val split_on_t_ty = type_of split_on_t
-                    val result_ty =
-                        type_of (list_mk_comb(f, List.take(args,2)))
-                    val fakef = genvar (split_on_t_ty --> result_ty)
-                    val fake_eqns =
-                        list_mk_conj(map (fn (l,r) =>
-                                             mk_eq(mk_comb(fakef, l), r))
-                                         patbody_pairs)
-                    val functional =
-                        GrammarSpecials.compile_pattern_match fake_eqns
-                    val func = snd (dest_abs functional)
-                    val (v,case_t0) = dest_abs func
-                    val case_t = subst [v |-> split_on_t] case_t0
-                  in
-                    Ch (list_mk_comb(case_t, tl (tl args)))
-                  end
-                else
-                  recomb(out_f, out_args, orig)
-              end (* newt *)
-            in
-              traverse (newt::acc_base) rest
-            end (* Cmb *)
-        end (* act :: rest *) (* end traverse *)
-in
-  traverse [] [Input tm0]
-end
-
-fun remove_case_magic tm =
-    if GrammarSpecials.case_initialised() then remove_case_magic0 tm
-    else tm
 
 val post_process_term = ref (I : term -> term);
 

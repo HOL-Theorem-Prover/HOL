@@ -262,6 +262,64 @@ val GEN_TAC:tactic = fn (asl,w) =>
    in X_GEN_TAC (prim_variant (free_varsl (w::asl)) Bvar) (asl,w)
    end;
 
+(*---------------------------------------------------------------------------*
+ * Type universal quantifier                                                 *
+ *                                                                           *
+ *	!:a.A(a)                                                             *
+ *   ==============                                                          *
+ *        A(a')                                                              *
+ *                                                                           *
+ * Explicit version for tactic programming;  proof fails if a' is free in    *
+ * hyps.                                                                     *
+ *                                                                           *
+ * fun X_GEN_TAC x' :tactic (asl,w) =			                     *
+ *   (let val x,body = dest_forall w in			                     *
+ *    [ (asl, subst[x',x]body) ], (\[th]. GEN x' th) 	                     *
+ *   ) ? failwith X_GEN_TAC;				                     *
+ *                                                                           *
+ * T. Melham. X_GEN_TAC rewritten 88.09.17				     *
+ *									     *
+ * 1)  X_GEN_TAC x'    now fails if x' is not a variable.		     *
+ *									     *
+ * 2) rewritten so that the proof yields the same quantified var as the      *
+ *    goal.								     *
+ *									     *
+ *  fun X_GEN_TAC x' :tactic =						     *
+ *   if not(is_var x') then failwith X_GEN_TAC else			     *
+ *   \(asl,w).((let val x,body = dest_forall w in			     *
+ *               [(asl,subst[x',x]body)],				     *
+ *                (\[th]. GEN x (INST [(x,x')] th)))			     *
+ *              ? failwith X_GEN_TAC);				             *
+ * Bugfix for HOL88.1.05, MJCG, 4 April 1989				     *
+ * Instantiation before GEN replaced by alpha-conversion after it to 	     *
+ * prevent spurious failures due to bound variable problems when 	     *
+ * quantified variable is free in assumptions.				     *
+ * Optimization for the x=x' case added.                                     *
+ *                                                                           *
+ *---------------------------------------------------------------------------*)
+
+fun X_TY_GEN_TAC x1 : tactic = fn (asl,w) =>
+ if is_vartype x1
+ then (let val (Bvar,Body) = dest_tyforall w
+       in if Bvar=x1 then ([(asl,Body)], fn [th] => TY_GEN x1 th)
+          else ([(asl,inst [Bvar |-> x1] Body)],
+                fn [th] =>
+                   let val th' = TY_GEN x1 th
+                   in EQ_MP (GEN_TY_ALPHA_CONV Bvar (concl th')) th'
+                   end)
+       end
+       handle HOL_ERR _ => raise ERR "X_TY_GEN_TAC" "")
+ else raise ERR "X_TY_GEN_TAC"  "need a type variable";
+
+(*---------------------------------------------------------------------------*
+ * TY_GEN_TAC - Chooses a variant for the user;  for interactive proof       *
+ *---------------------------------------------------------------------------*)
+
+val TY_GEN_TAC:tactic = fn (asl,w) =>
+   let val (Bvar,_) = with_exn dest_tyforall w (ERR "TY_GEN_TAC" "not a tyforall")
+   in X_TY_GEN_TAC (prim_variant_type (type_vars_in_terml (w::asl)) Bvar) (asl,w)
+   end;
+
 
 (*---------------------------------------------------------------------------*
  * Specialization                                                            *
@@ -281,7 +339,17 @@ fun SPEC_TAC (t,x) :tactic = fn (asl,w) =>
 fun ID_SPEC_TAC x :tactic = fn (asl,w) =>
     ([(asl, mk_forall(x, w))],
      fn [th] => SPEC x th)
-    handle HOL_ERR _ => raise ERR "SPEC_TAC" "";
+    handle HOL_ERR _ => raise ERR "ID_SPEC_TAC" "";
+
+fun TY_SPEC_TAC (ty,a) :tactic = fn (asl,w) =>
+    ([(asl, mk_tyforall(a, subst_type[ty |-> a] w))],
+     fn [th] => TY_SPEC ty th)
+    handle HOL_ERR _ => raise ERR "TY_SPEC_TAC" "";
+
+fun ID_TY_SPEC_TAC a :tactic = fn (asl,w) =>
+    ([(asl, mk_tyforall(a, w))],
+     fn [th] => TY_SPEC a th)
+    handle HOL_ERR _ => raise ERR "ID_TY_SPEC_TAC" "";
 
 
 (*---------------------------------------------------------------------------*
@@ -298,6 +366,22 @@ fun EXISTS_TAC t :tactic = fn (asl,w) =>
      fn [th] => EXISTS (w,t) th)
  end
   handle HOL_ERR _ => raise ERR "EXISTS_TAC" "";
+
+
+(*---------------------------------------------------------------------------*
+ * Type existential introduction                                             *
+ *                                                                           *
+ *	?:a.A(a)                                                             *
+ *    ==============   ty                                                    *
+ *	  A(ty)                                                              *
+ *---------------------------------------------------------------------------*)
+
+fun TY_EXISTS_TAC ty :tactic = fn (asl,w) =>
+ let val (Bvar,Body) = dest_tyexists w
+ in ([(asl, inst [Bvar |-> ty] Body)],
+     fn [th] => TY_EXISTS (w,ty) th)
+ end
+  handle HOL_ERR _ => raise ERR "TY_EXISTS_TAC" "";
 
 
 (*---------------------------------------------------------------------------*
@@ -461,10 +545,10 @@ fun BOOL_CASES_TAC p = STRUCT_CASES_TAC (SPEC p BOOL_CASES_AX);
 
 
 (*---------------------------------------------------------------------------*
- * Strip one outer !, /\, ==> from the goal.                                 *
+ * Strip one outer !, /\, !:, ==> from the goal.                             *
  *---------------------------------------------------------------------------*)
 
-fun STRIP_GOAL_THEN ttac =  FIRST [GEN_TAC, CONJ_TAC, DISCH_THEN ttac];
+fun STRIP_GOAL_THEN ttac =  FIRST [GEN_TAC, CONJ_TAC, TY_GEN_TAC, DISCH_THEN ttac];
 
 
 (*---------------------------------------------------------------------------*
@@ -504,6 +588,10 @@ val DISJ_CASES_TAC = DISJ_CASES_THEN ASSUME_TAC;
 val CHOOSE_TAC = CHOOSE_THEN ASSUME_TAC;
 
 fun X_CHOOSE_TAC x = X_CHOOSE_THEN x ASSUME_TAC;
+
+val TY_CHOOSE_TAC = TY_CHOOSE_THEN ASSUME_TAC;
+
+fun X_TY_CHOOSE_TAC x = X_TY_CHOOSE_THEN x ASSUME_TAC;
 
 fun STRIP_TAC g =
   STRIP_GOAL_THEN STRIP_ASSUME_TAC g

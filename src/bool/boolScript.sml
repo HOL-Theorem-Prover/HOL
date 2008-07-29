@@ -3305,6 +3305,42 @@ let val f = --`f: 'a -> 'b`--
 val _ = save_thm("COND_RAND", COND_RAND);
 
 (* ---------------------------------------------------------------------*)
+(* COND_TY_COMB |- !b (f: !'a.'b) g.				        *)
+(*                  (b => f | g) [:'a:] = (b => f[:'a:] | g[:'a:])      *)
+(*								        *)
+(*				       	                 PVH 2008.07.29 *)
+(* ---------------------------------------------------------------------*)
+
+val COND_TY_COMB =
+let val f = --`f: !'a. 'b`--
+    val g = --`g: !'a. 'b`--
+    val a = Type.alpha
+    val b = --`b:bool`--
+    val fa = --`^f [:'a:]`-- and ga = --`^g [:'a:]`--
+    val t1 = --`t1:'a`--
+    val t2 = --`t2:'a`--
+    val theta1 = [Type`:'a` |-> Type`: !'a. 'b`]
+    val theta2 = [Type`:'a` |-> Type`:'b`]
+    val (COND_T,COND_F) = (GENL[t1,t2]##GENL[t1,t2])
+                          (CONJ_PAIR(SPEC_ALL COND_CLAUSES))
+    val thTl = TY_COMB (SPECL [f,g] (INST_TYPE theta1 COND_T)) a
+    and thFl = TY_COMB (SPECL [f,g] (INST_TYPE theta1 COND_F)) a
+    val thTr = SPECL [fa,ga] (INST_TYPE theta2 COND_T)
+    and thFr = SPECL [fa,ga] (INST_TYPE theta2 COND_F)
+    val thT1 = TRANS thTl (SYM thTr)
+    and thF1 = TRANS thFl (SYM thFr)
+    val tm = (--`(if b then (f: !'a.'b ) else g) [:'a:] = (if b then f [:'a:] else g [:'a:])`--)
+    val thT2 = SUBST_CONV [b |-> ASSUME (--`b = T`--)] tm tm
+    and thF2 = SUBST_CONV [b |-> ASSUME (--`b = F`--)] tm tm
+    val thT3 = EQ_MP (SYM thT2) thT1
+    and thF3 = EQ_MP (SYM thF2) thF1
+ in
+    GENL [b,f,g] (DISJ_CASES (SPEC b BOOL_CASES_AX) thT3 thF3)
+ end;
+
+val _ = save_thm("COND_TY_COMB", COND_TY_COMB);
+
+(* ---------------------------------------------------------------------*)
 (* COND_ABS							        *)
 (*								        *)
 (* |- !b (f:'a->'b) g. (\x. (b => f(x) | g(x))) = (b => f | g)	        *)
@@ -3324,6 +3360,27 @@ let val b = --`b:bool`--
  end;
 
 val _ = save_thm("COND_ABS", COND_ABS);
+
+(* ---------------------------------------------------------------------*)
+(* COND_TY_ABS							        *)
+(*								        *)
+(* |- !b (f:'a->'b) g. (\:a. (b => f[:a:]) | g[:a:])) = (b => f | g)	*)
+(*								        *)
+(*				       	                 PVH 2008.07.29 *)
+(* ---------------------------------------------------------------------*)
+
+val COND_TY_ABS =
+let val b = --`b:bool`--
+    val f = --`f: !'a.'b`--
+    val g = --`g: !'a.'b`--
+    val a = ==`:'a`==
+ in
+   GENL [b,f,g]
+      (TRANS (TY_ABS a (SYM (SPECL [b,f,g] COND_TY_COMB)))
+             (TY_ETA_CONV (--`\:'a. (if ^b then ^f else ^g) [:'a:]`--)))
+ end;
+
+val _ = save_thm("COND_TY_ABS", COND_TY_ABS);
 
 (* ---------------------------------------------------------------------*)
 (* COND_EXPAND							        *)
