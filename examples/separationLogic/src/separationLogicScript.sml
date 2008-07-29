@@ -14,13 +14,18 @@ show_assums := true;
 
 open generalHelpersTheory finite_mapTheory relationTheory bagTheory pred_setTheory congLib sortingTheory
    listTheory rich_listTheory arithmeticTheory operatorTheory optionTheory latticeTheory
-   containerTheory;
+   containerTheory BoolExtractShared;
 
 (*
 quietdec := false;
 *)
 
 val _ = new_theory "separationLogic";
+
+val bool_neg_pair_ss = simpLib.conv_ss BOOL_NEG_PAIR_convdata;
+val bool_eq_imp_ss = simpLib.conv_ss BOOL_EQ_IMP_convdata;
+val bool_extract_common_terms_ss = simpLib.conv_ss BOOL_EXTRACT_SHARED_convdata;
+
 
 val _ = type_abbrev("bin_option_function", 
 	Type `:('a option -> 'a option -> 'a option)`);
@@ -127,7 +132,7 @@ val IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_THM = store_thm (
 	Tactical.REVERSE CONJ_TAC THEN1 METIS_TAC[IS_SEPARATION_COMBINATOR_def, COMM_DEF] THEN
 	REPEAT STRIP_TAC THENL [
 		`(f (SOME (uf x1)) (SOME x1) = SOME x1) /\ (f (SOME (uf x2)) (SOME x2) = SOME x2)` by ALL_TAC THEN1 (
-			Q.UNABBREV_ALL_TAC THEN METIS_TAC[]
+			bossLib.UNABBREV_ALL_TAC THEN METIS_TAC[]
 		) THEN
 		EQ_TAC THENL [
 			STRIP_TAC THEN
@@ -553,6 +558,15 @@ SIMP_TAC std_ss [IS_SEPARATION_ALGEBRA_def,
 
 
 
+val IS_SEPARATION_COMBINATOR___FINITE_MAP = store_thm ("IS_SEPARATION_COMBINATOR___FINITE_MAP",
+``IS_SEPARATION_COMBINATOR DISJOINT_FMAP_UNION``,
+	
+PROVE_TAC [IS_SEPARATION_ALGEBRA___IS_COMBINATOR,
+	IS_SEPARATION_ALGEBRA___FINITE_MAP]);
+
+
+
+
 
 val DISJOINT_ENV_FMAP_UNION_def = Define `
 DISJOINT_ENV_FMAP_UNION =
@@ -649,6 +663,54 @@ REPEAT STRIP_TAC THENL [
 
 
 
+val ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION =
+store_thm ("ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION",
+``!s1 s2.
+ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1 s2 =
+(FDOM s1 SUBSET FDOM s2 /\
+(!x. x IN FDOM s1 ==> (s1 ' x = s2 ' x)))
+``,
+
+SIMP_TAC std_ss [ASL_IS_SUBSTATE_def,
+		 DISJOINT_FMAP_UNION_def,
+		 BIN_OPTION_MAP_THM,
+		 FUNION_DEF, COND_RATOR,
+		 COND_RAND] THEN
+REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+   Q.PAT_ASSUM `X = s2` (ASSUME_TAC o GSYM) THEN
+   ASM_SIMP_TAC std_ss [FUNION_DEF, SUBSET_UNION],
+
+
+   Q.EXISTS_TAC `DRESTRICT s2 (COMPL (FDOM s1))` THEN
+   FULL_SIMP_TAC std_ss [DRESTRICT_DEF, DISJOINT_DEF,
+		    EXTENSION, NOT_IN_EMPTY, IN_INTER,
+		    IN_COMPL, GSYM fmap_EQ_THM,
+		    FUNION_DEF, IN_UNION, SUBSET_DEF,
+	            DISJ_IMP_THM] THEN
+   METIS_TAC[]
+]);
+
+
+val ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___IS_PREORDER =
+store_thm ("ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___IS_PREORDER",
+
+``PreOrder (ASL_IS_SUBSTATE DISJOINT_FMAP_UNION)``,
+
+MATCH_MP_TAC ASL_IS_SUBSTATE___IS_PREORDER THEN
+REWRITE_TAC [IS_SEPARATION_COMBINATOR___FINITE_MAP]);
+
+
+val ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___TRANS =
+    save_thm ("ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___TRANS",
+CONJUNCT2 (
+REWRITE_RULE[PreOrder, transitive_def] ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___IS_PREORDER));
+
+
+val ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___REFL =
+    save_thm ("ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___REFL",
+CONJUNCT1 (
+REWRITE_RULE[PreOrder, reflexive_def] ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___IS_PREORDER));
+
 
 val asl_star_def = Define `
 asl_star = (\(f:'a option -> 'a option -> 'a option) P Q x. ?p q. (SOME x = f (SOME p) (SOME q)) /\ (p IN P) /\ (q IN Q))`
@@ -712,6 +774,16 @@ val asl_and_intro = store_thm ("asl_and_intro",
 SIMP_TAC std_ss [asl_and_def, IN_DEF]);
 
 
+val asl_bigand_list_def = Define `
+	asl_bigand_list l =  FOLDR asl_and asl_true l`
+
+val asl_bigand_list_REWRITE = store_thm ("asl_bigand_list_REWRITE",
+``	(asl_bigand_list [] =  asl_true) /\
+	(asl_bigand_list (h::l) =  asl_and h (asl_bigand_list l))``,
+
+SIMP_TAC list_ss [asl_bigand_list_def, FOLDR_APPEND]);
+
+
 val ASL_BOOL___PRED_SET_REWRITES = store_thm ("ASL_BOOL___PRED_SET_REWRITES",
 	``(asl_neg = COMPL) /\
 	   (asl_and = $INTER) /\
@@ -750,6 +822,14 @@ REPEAT STRIP_TAC THENL [
 
 
 
+
+
+val asl_exists___GSYM_REWRITE = store_thm ("asl_exists___GSYM_REWRITE",
+``(\s. ?x. P x s) = (asl_exists x. P x)``,
+SIMP_TAC std_ss [asl_exists_def, IN_DEF]);
+
+
+
 val asl_exists___asl_star_THM = store_thm ("asl_exists___asl_star_THM",
 ``!f P Q.
 ((asl_exists x. asl_star f (P x) Q) = (asl_star f (asl_exists x. (P x)) Q)) /\
@@ -761,6 +841,8 @@ SIMP_TAC std_ss [FUN_EQ_THM] THEN
 REPEAT STRIP_TAC THEN (
 	EQ_TAC THEN STRIP_TAC THEN	METIS_TAC[]
 ));
+
+
 
 
 
@@ -1252,6 +1334,23 @@ REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [EXTENSION, IN_IMAGE, IN_UNIV,
 	asl_emp_def, IN_ABS]);
 
+
+
+
+
+val ASL_IS_SUBSTATE___PRODUCT_SEPARATION_COMBINATOR =
+store_thm("ASL_IS_SUBSTATE___PRODUCT_SEPARATION_COMBINATOR",
+``!f1 f2 s1 s2.
+ASL_IS_SUBSTATE (PRODUCT_SEPARATION_COMBINATOR f1 f2) s1 s2 =
+ASL_IS_SUBSTATE f1 (FST s1) (FST s2) /\
+ASL_IS_SUBSTATE f2 (SND s1) (SND s2)``,
+
+Cases_on `s1` THEN
+Cases_on `s2` THEN 
+SIMP_TAC std_ss [ASL_IS_SUBSTATE_def,
+		 PRODUCT_SEPARATION_COMBINATOR_REWRITE,
+		 PAIR_EXISTS_THM,
+		 LEFT_EXISTS_AND_THM, RIGHT_EXISTS_AND_THM]);
 
 
 
@@ -2337,6 +2436,274 @@ REPEAT STRIP_TAC THENL [
 
 
 
+val quant_best_local_action___QUANT_ELIM = store_thm ("best_local_action___QUANT_ELIM",
+``quant_best_local_action f (K P) (K Q) = best_local_action f P Q``,
+
+ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
+SIMP_TAC std_ss [quant_best_local_action_def,
+		 INF_fasl_action_order_def,
+		 INF_fasl_order_def, IN_IMAGE,
+		 IN_ABS, COND_RATOR, COND_RAND] THEN
+GEN_TAC THEN
+Cases_on `best_local_action f P Q x` THEN SIMP_TAC std_ss [] THEN
+REWRITE_TAC [EXTENSION] THEN
+ASM_SIMP_TAC std_ss [IN_BIGINTER, IN_IMAGE, IN_INTER, IN_ABS]);
+
+
+
+
+
+val quant_best_local_action___QUANT_ELIM_2 = store_thm ("quant_best_local_action___QUANT_ELIM_2",
+``!f x P P' Q Q' s.
+(IS_SEPARATION_COMBINATOR f /\ (!s' y. (ASL_IS_SUBSTATE f s' s  /\ s' IN P y) ==> ((y = x))) /\
+ (!s'. (ASL_IS_SUBSTATE f s' s  ==> (s' IN P' = s' IN P x))) /\ (Q' = Q x)) ==>
+(quant_best_local_action f P Q s = best_local_action f P' Q' s)``,
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC std_ss [quant_best_local_action_def,
+		 INF_fasl_action_order_def,
+		 INF_fasl_order_def, IN_IMAGE,
+		 IN_ABS, COND_RATOR, COND_RAND,
+		 GSYM RIGHT_EXISTS_AND_THM,
+		 GSYM LEFT_FORALL_IMP_THM] THEN
+`best_local_action f P' (Q x) s =
+ best_local_action f (P x) (Q x) s` by ALL_TAC THEN1 (
+   FULL_SIMP_TAC std_ss [best_local_action_def,
+			 LET_THM, ASL_IS_SUBSTATE_def,
+			 GSYM LEFT_FORALL_IMP_THM,
+			 IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
+   AP_TERM_TAC THEN
+   ONCE_REWRITE_TAC[EXTENSION] THEN
+   SIMP_TAC std_ss [IN_ABS] THEN
+   GEN_TAC THEN
+   HO_MATCH_MP_TAC (prove (``(!s0 s1. (A s0 s1 = B s0 s1)) ==>
+                             ((?s0 s1. A s0 s1) = (?s0 s1. B s0 s1))``,
+			   METIS_TAC[])) THEN
+   SIMP_TAC (std_ss++bool_eq_imp_ss) [] THEN
+   REPEAT STRIP_TAC THEN
+   Q.PAT_ASSUM `!s' s1. X s' s1` MATCH_MP_TAC THEN
+   Q.EXISTS_TAC `s0` THEN
+   METIS_TAC[COMM_DEF]
+) THEN
+ASM_SIMP_TAC std_ss [] THEN
+POP_ASSUM (K ALL_TAC) THEN
+Q.PAT_ASSUM `!s'. X s' ==> (s' IN P' = s' IN P x)` (K ALL_TAC) THEN
+
+MATCH_MP_TAC (prove (``(~A ==> B) ==> (A \/ B)``, METIS_TAC[])) THEN
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC std_ss [best_local_action_def, LET_THM,
+		      INF_fasl_order_def, IN_ABS,
+		      COND_NONE_SOME_REWRITES] THEN
+`!y. s1 IN P y ==> (y = x)` by ALL_TAC THEN1 (
+   FULL_SIMP_TAC std_ss [GSYM LEFT_EXISTS_AND_THM,
+			 fasl_star_REWRITE,
+			 ASL_IS_SUBSTATE_def,
+			 GSYM LEFT_FORALL_IMP_THM,
+			 IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
+   REPEAT STRIP_TAC THEN
+   Q.PAT_ASSUM `!s' y s1'. X s' y s1'` MATCH_MP_TAC THEN
+   METIS_TAC[COMM_DEF]
+) THEN
+
+
+CONJ_TAC THEN1 (
+   FULL_SIMP_TAC std_ss [GSYM LEFT_EXISTS_AND_THM,
+			 GSYM LEFT_FORALL_IMP_THM,
+			 fasl_star_REWRITE] THEN
+   Q.EXISTS_TAC `s0` THEN
+   Q.EXISTS_TAC `s1` THEN
+   ASM_REWRITE_TAC[] THEN
+   METIS_TAC[]
+) THEN
+
+
+ONCE_REWRITE_TAC[EXTENSION] THEN
+SIMP_TAC std_ss [GSYM LEFT_EXISTS_AND_THM,
+		 IN_BIGINTER, IN_IMAGE, IN_INTER, IN_ABS,
+		 GSYM RIGHT_EXISTS_AND_THM,
+		 GSYM LEFT_FORALL_IMP_THM,
+		 fasl_star_REWRITE] THEN
+ASM_SIMP_TAC std_ss [best_local_action_def, LET_THM,
+		     INF_fasl_order_def, IN_ABS,
+		     GSYM LEFT_FORALL_IMP_THM,
+		     COND_NONE_SOME_REWRITES,
+		     fasl_star_REWRITE,
+		     IN_BIGINTER, IN_IMAGE, IN_INTER,
+		     GSYM RIGHT_EXISTS_AND_THM] THEN
+GEN_TAC THEN
+HO_MATCH_MP_TAC (prove (``((!x y z. (A x y z) ==> ~(X x y z)) /\
+			  (C = !x y z. (A x y z) ==> (x' IN THE (B x y z)))) ==> 
+ (C = (!x y z. (A x y z) ==> x' IN THE (if (X x y z) then NONE else 
+                                           (B x y z))))``, METIS_TAC [])) THEN
+
+CONJ_TAC THEN1 (
+   SIMP_TAC std_ss [] THEN
+   METIS_TAC[]
+) THEN
+   
+SIMP_TAC std_ss [IN_BIGINTER, IN_IMAGE,
+		 GSYM RIGHT_EXISTS_AND_THM, IN_INTER,
+		 IN_ABS, GSYM LEFT_FORALL_IMP_THM] THEN
+EQ_TAC THENL [
+   FULL_SIMP_TAC std_ss [ASL_IS_SUBSTATE_def, GSYM LEFT_EXISTS_AND_THM,
+			 GSYM LEFT_FORALL_IMP_THM,
+			 IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
+   METIS_TAC[COMM_DEF],
+
+   METIS_TAC[]
+]);
+
+
+
+
+
+val SOME___best_local_action = store_thm ("SOME___best_local_action",
+``
+(best_local_action f P1 P2 s = SOME Q) =
+(?s0 s1. (SOME s = f (SOME s0) (SOME s1)) /\ s1 IN P1) /\
+(Q = (\x. (!s0 s1.
+          (SOME s = f (SOME s0) (SOME s1)) /\ s1 IN P1 ==>
+          x IN asl_star f P2 {s0})))``,
+
+SIMP_TAC std_ss [best_local_action_def, LET_THM,
+		 INF_fasl_order_def, IN_ABS,
+		 GSYM LEFT_FORALL_IMP_THM, fasl_star_REWRITE,
+		 COND_NONE_SOME_REWRITES] THEN
+ONCE_REWRITE_TAC[EXTENSION] THEN
+SIMP_TAC std_ss [IN_BIGINTER, IN_IMAGE, IN_INTER, IN_ABS,
+		 GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
+METIS_TAC[]);
+
+
+
+val IS_SOME___best_local_action = store_thm ("IS_SOME___best_local_action",
+``
+IS_SOME (best_local_action f P1 P2 s) =
+(?s0 s1. (SOME s = f (SOME s0) (SOME s1)) /\ s1 IN P1)``,
+
+SIMP_TAC std_ss [IS_SOME_EXISTS, SOME___best_local_action]);
+
+
+val NONE___best_local_action = store_thm ("NONE___best_local_action",
+``
+(best_local_action f P1 P2 s = NONE) =
+(!s0 s1. (s1 IN P1) ==> ~(SOME s = f (SOME s0) (SOME s1)))``,
+
+REWRITE_TAC[NONE_IS_NOT_SOME, IS_SOME___best_local_action] THEN
+SIMP_TAC std_ss [] THEN
+METIS_TAC[]);
+
+
+
+
+
+val quant_best_local_action___QUANT_ELIM_3 = store_thm ("quant_best_local_action___QUANT_ELIM_3",
+``!f x P P' Q Q' s.
+(IS_SEPARATION_COMBINATOR f /\ (!s' y1 y2. (ASL_IS_SUBSTATE f s' s  /\ s' IN P (y1,y2)) ==> ((y1 = x))) /\
+ (!s'. (ASL_IS_SUBSTATE f s' s  ==> (!y2. (s' IN P' y2 = s' IN P (x,y2))))) /\ 
+       (!y2. Q' y2 = Q (x,y2))) ==>
+(quant_best_local_action f P Q s = quant_best_local_action f P' Q' s)``,
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC std_ss [quant_best_local_action_def,
+		 INF_fasl_action_order_def,
+		 INF_fasl_order_def, IN_IMAGE,
+		 IN_ABS, COND_RATOR, COND_RAND,
+		 GSYM RIGHT_EXISTS_AND_THM,
+		 GSYM LEFT_FORALL_IMP_THM] THEN
+`!y2. best_local_action f (P' y2) (Q' y2) s =
+ best_local_action f (P (x,y2)) (Q (x,y2)) s` by ALL_TAC THEN1 (
+   FULL_SIMP_TAC std_ss [best_local_action_def,
+			 LET_THM, ASL_IS_SUBSTATE_def,
+			 GSYM LEFT_FORALL_IMP_THM,
+			 IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
+   GEN_TAC THEN
+   AP_TERM_TAC THEN
+   ONCE_REWRITE_TAC[EXTENSION] THEN
+   SIMP_TAC std_ss [IN_ABS] THEN
+   GEN_TAC THEN
+   HO_MATCH_MP_TAC (prove (``(!s0 s1. (A s0 s1 = B s0 s1)) ==>
+                             ((?s0 s1. A s0 s1) = (?s0 s1. B s0 s1))``,
+			   METIS_TAC[])) THEN
+   SIMP_TAC (std_ss++bool_eq_imp_ss) [] THEN
+   REPEAT STRIP_TAC THEN
+   Q.PAT_ASSUM `!s' s1. X s' s1` MATCH_MP_TAC THEN
+   Q.EXISTS_TAC `s0` THEN
+   METIS_TAC[COMM_DEF]
+) THEN
+ASM_SIMP_TAC std_ss [] THEN
+POP_ASSUM (K ALL_TAC) THEN
+
+MATCH_MP_TAC (prove (``(~A ==> B) ==> (A \/ B)``, METIS_TAC[])) THEN
+SIMP_TAC std_ss [NONE___best_local_action, PAIR_EXISTS_THM] THEN
+STRIP_TAC THEN
+`!y. s1 IN P y ==> (FST y = x)` by ALL_TAC THEN1 (
+   FULL_SIMP_TAC std_ss [GSYM LEFT_EXISTS_AND_THM,
+			 fasl_star_REWRITE,
+			 ASL_IS_SUBSTATE_def,
+			 GSYM LEFT_FORALL_IMP_THM,
+			 IS_SEPARATION_COMBINATOR_EXPAND_THM,
+			 PAIR_FORALL_THM] THEN
+   REPEAT STRIP_TAC THEN
+   Q.PAT_ASSUM `!s' y s1'. X s' y s1'` MATCH_MP_TAC THEN
+   Q.EXISTS_TAC `s1` THEN
+   Q.EXISTS_TAC `x2'` THEN
+   Q.EXISTS_TAC `s0` THEN
+   METIS_TAC[COMM_DEF]
+) THEN
+CONJ_TAC THEN1 (
+   Q.EXISTS_TAC `x2` THEN
+   Q.EXISTS_TAC `s0` THEN
+   Q.EXISTS_TAC `s1` THEN
+   ASM_REWRITE_TAC[] THEN
+   RES_TAC THEN
+   FULL_SIMP_TAC std_ss []
+) THEN
+
+
+ONCE_REWRITE_TAC[EXTENSION] THEN
+SIMP_TAC std_ss [GSYM LEFT_EXISTS_AND_THM,
+		 IN_BIGINTER, IN_IMAGE, IN_INTER, IN_ABS,
+		 GSYM RIGHT_EXISTS_AND_THM,
+		 GSYM LEFT_FORALL_IMP_THM,
+		 fasl_star_REWRITE] THEN
+SIMP_TAC std_ss [IS_SOME_EXISTS, GSYM LEFT_FORALL_IMP_THM] THEN
+SIMP_TAC std_ss [SOME___best_local_action, IN_ABS,
+		 GSYM LEFT_FORALL_IMP_THM] THEN
+
+GEN_TAC THEN EQ_TAC THENL [
+   REPEAT STRIP_TAC THEN
+   `COMM f` by FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
+   `ASL_IS_SUBSTATE f s1 s /\ ASL_IS_SUBSTATE f s1' s /\
+    ASL_IS_SUBSTATE f s1'' s` by METIS_TAC[ASL_IS_SUBSTATE_def, COMM_DEF] THEN
+   `s1' IN P (x, x'') /\ s1'' IN P (x, x'')` by METIS_TAC[] THEN
+   `x1 = x` by METIS_TAC[] THEN
+
+   Q.PAT_ASSUM `!x1 x2 s0 s1. X x1 x2 s0 s1` (MP_TAC o Q.SPECL [`x1`, `x''`, `s0'`, `s1'`]) THEN
+   FULL_SIMP_TAC std_ss [GSYM LEFT_EXISTS_IMP_THM] THEN
+   Q.EXISTS_TAC `s0''` THEN
+   Q.EXISTS_TAC `s1''` THEN
+   ASM_SIMP_TAC std_ss [],
+
+
+
+   REPEAT STRIP_TAC THEN
+   `COMM f` by FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
+   `ASL_IS_SUBSTATE f s1 s /\ ASL_IS_SUBSTATE f s1' s /\
+    ASL_IS_SUBSTATE f s1'' s` by METIS_TAC[ASL_IS_SUBSTATE_def, COMM_DEF] THEN
+   `x1' = x` by METIS_TAC[] THEN
+   `s1' IN P' x2' /\ s1'' IN P' x2'` by METIS_TAC[] THEN
+   Q.PAT_ASSUM `!x'' s0 s1. X x'' s0 s1` (MP_TAC o Q.SPECL [`x2'`, `s0'`, `s1'`]) THEN
+   FULL_SIMP_TAC std_ss [GSYM LEFT_EXISTS_IMP_THM] THEN
+   Q.EXISTS_TAC `s0''` THEN
+   Q.EXISTS_TAC `s1''` THEN
+   ASM_SIMP_TAC std_ss []
+]);
+
+
+
+
+
 val ASL_IS_INTUITIONISTIC_def = Define `
 	ASL_IS_INTUITIONISTIC f P = (asl_star f P UNIV = P)`;
 
@@ -2441,6 +2808,8 @@ Q.PAT_ASSUM `IS_SEPARATION_COMBINATOR f` ASSUME_TAC THEN
 FULL_SIMP_TAC std_ss [ASL_IS_INTUITIONISTIC___REWRITE] THEN
 SIMP_TAC std_ss [asl_or_def, IN_ABS] THEN
 METIS_TAC[]);
+
+
 
 
 
@@ -2741,6 +3110,18 @@ val IS_SOME___fasla_seq = store_thm ("IS_SOME___fasla_seq",
 SIMP_TAC std_ss [IS_SOME_EXISTS, SOME___fasla_seq]);
 
 
+val NONE___fasla_seq = store_thm ("NONE___fasla_seq",
+``(fasla_seq a1 a2 s = NONE) =
+ !s1. (a1 s = SOME s1) ==> (?e. e IN s1 /\ (a2 e = NONE))``,
+
+REWRITE_TAC[GSYM NOT_IS_SOME_EQ_NONE,
+	    IS_SOME___fasla_seq] THEN
+SIMP_TAC std_ss [] THEN
+METIS_TAC[]);
+
+
+
+
 val FASL_IS_LOCAL_ACTION___fasla_seq = store_thm ("FASL_IS_LOCAL_ACTION___fasla_seq",
 ``!f a1 a2. (FASL_IS_LOCAL_ACTION f a1 /\
 		  FASL_IS_LOCAL_ACTION f a2)  ==>
@@ -3017,6 +3398,18 @@ val asl_false___asl_star_THM = store_thm ("asl_false___asl_star_THM",
 SIMP_TAC std_ss [EXTENSION, asl_star_def, IN_ABS, asl_false_def, NOT_IN_EMPTY]);
 
 
+val asl_true___asl_star_THM = store_thm ("asl_true___asl_star_THM",
+``IS_SEPARATION_COMBINATOR f ==>
+(asl_star f asl_true asl_true = asl_true)``,
+
+SIMP_TAC std_ss [EXTENSION, asl_star_def, IN_ABS, asl_true_def, IN_UNIV,
+		 IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
+REPEAT STRIP_TAC THEN
+Q.EXISTS_TAC `x` THEN
+Q.EXISTS_TAC `uf x` THEN
+ASM_REWRITE_TAC[]);
+
+
 
 val asl_bigstar_list_def = Define `
 	asl_bigstar_list f l =  FOLDR (asl_star f) (asl_emp f) l`
@@ -3236,8 +3629,14 @@ METIS_TAC[IN_DEF]);
 
 
 val asl_bool_REWRITES = store_thm ("asl_bool_REWRITES",
-``((K T) = asl_true) /\ 
+``($! asl_true) /\
+  ($? asl_true) /\
+  ~($! asl_false) /\
+  ~($? asl_false) /\
+  ((K T) = asl_true) /\ 
+  ((\x. T) = asl_true) /\ 
   ((K F) = asl_false) /\
+  ((\x. F) = asl_false) /\
   (asl_and asl_false p = asl_false) /\
   (asl_and p asl_false = asl_false) /\
   (asl_and asl_true p = p) /\
@@ -3250,31 +3649,63 @@ val asl_bool_REWRITES = store_thm ("asl_bool_REWRITES",
 ONCE_REWRITE_TAC[EXTENSION] THEN
 SIMP_TAC std_ss [asl_true_def, IN_UNIV, asl_false_def,
    NOT_IN_EMPTY, asl_and_def, IN_ABS, asl_or_def] THEN
-SIMP_TAC std_ss [IN_DEF]);
+SIMP_TAC std_ss [IN_DEF, UNIV_DEF, EMPTY_DEF]);
+
+
+
+
+
+val asl_bool_EVAL = store_thm ("asl_bool_EVAL",
+
+``(asl_true x) /\ (x IN asl_true) /\
+  ~(asl_false x) /\ ~(x IN asl_false) /\
+  ((K c) x = c) /\ (x IN (K c) = c) /\
+  ((asl_and p1 p2) x = (x IN p1) /\ (x IN p2)) /\
+  (x IN (asl_and p1 p2) = (x IN p1) /\ (x IN p2)) /\
+  ((asl_or p1 p2) x = (x IN p1) \/ (x IN p2)) /\
+  (x IN (asl_or p1 p2) = (x IN p1) \/ (x IN p2)) /\
+  ((asl_imp p1 p2) x = ((x IN p1) ==> (x IN p2))) /\
+  (x IN (asl_imp p1 p2) = ((x IN p1) ==> (x IN p2))) /\
+  ((asl_neg p) x = (~(x IN p))) /\
+  (x IN (asl_neg p) = (~(x IN p))) /\
+  ((asl_forall y. (qp y)) x = (!y. x IN (qp y))) /\
+  (x IN (asl_forall y. (qp y)) = (!y. x IN (qp y))) /\
+  ((asl_exists y. (qp y)) x = (?y. x IN (qp y))) /\
+  (x IN (asl_exists y. (qp y)) = (?y. x IN (qp y)))``,
+
+
+
+SIMP_TAC std_ss [asl_true_def, asl_false_def, asl_and_def,
+  asl_or_def, IN_DEF, EMPTY_DEF, UNIV_DEF,
+  asl_imp_def, asl_neg_def, asl_forall_def,
+  asl_exists_def]);
+
 
 
 
 
 val asl_rec_pred_num_def = Define `
-(asl_rec_pred_num f bal 0 finPred condPredL startPred arg =
+(asl_rec_pred_num f bal 0 finPred recPred condPredL startPred arg =
 (finPred arg)) /\
 
-(asl_rec_pred_num f bal (SUC n) finPred condPredL startPred arg =
-(asl_or (asl_and (finPred arg) (K ~bal)) (asl_choose_pred_args f (startPred arg) 
-(asl_rec_pred_num f bal n finPred condPredL startPred) (MAP (\P. P arg) condPredL))))`
+(asl_rec_pred_num f bal (SUC n) finPred recPred condPredL startPred arg =
+(asl_or (asl_and (finPred arg) (K ~bal)) 
+        (asl_and (recPred arg)
+        (asl_choose_pred_args f (startPred arg) 
+           (asl_rec_pred_num f bal n finPred recPred condPredL startPred) (MAP (\P. P arg) condPredL)))))`
 
 
 
 val asl_rec_pred_num_REWRITE = store_thm ("asl_rec_pred_num_REWRITE",
-``(asl_rec_pred_num f F n finPred condPredL startPred arg =
+``(asl_rec_pred_num f F n finPred recPred condPredL startPred arg =
 if (n = 0) then (finPred arg) else
-(asl_or (finPred arg) (asl_choose_pred_args f (startPred arg) 
-(asl_rec_pred_num f F (PRE n) finPred condPredL startPred) (MAP (\P. P arg) condPredL)))) /\
+(asl_or (finPred arg) (asl_and (recPred arg) (asl_choose_pred_args f (startPred arg) 
+(asl_rec_pred_num f F (PRE n) finPred recPred condPredL startPred) (MAP (\P. P arg) condPredL))))) /\
 
-(asl_rec_pred_num f T n finPred condPredL startPred arg =
+(asl_rec_pred_num f T n finPred recPred condPredL startPred arg =
 if (n = 0) then (finPred arg) else
-(asl_choose_pred_args f (startPred arg) 
-(asl_rec_pred_num f T (PRE n) finPred condPredL startPred) (MAP (\P. P arg) condPredL)))
+(asl_and (recPred arg) (asl_choose_pred_args f (startPred arg) 
+(asl_rec_pred_num f T (PRE n) finPred recPred condPredL startPred) (MAP (\P. P arg) condPredL))))
 ``,
 
 
@@ -3287,10 +3718,10 @@ SIMP_TAC arith_ss [asl_rec_pred_num_def, asl_bool_REWRITES]);
 
 
 val asl_rec_pred_num_REWRITE_BOTH = store_thm ("asl_rec_pred_num_REWRITE_BOTH",
-``asl_rec_pred_num f bal n finPred condPredL startPred arg =
+``asl_rec_pred_num f bal n finPred recPred condPredL startPred arg =
 if (n = 0) then (finPred arg) else
-(asl_or (asl_and (finPred arg) (K ~bal)) (asl_choose_pred_args f (startPred arg) 
-(asl_rec_pred_num f bal (PRE n) finPred condPredL startPred) (MAP (\P. P arg) condPredL)))``,
+(asl_or (asl_and (finPred arg) (K ~bal)) (asl_and (recPred arg) (asl_choose_pred_args f (startPred arg) 
+(asl_rec_pred_num f bal (PRE n) finPred recPred condPredL startPred) (MAP (\P. P arg) condPredL))))``,
 
 
 Cases_on `n` THEN
@@ -3300,8 +3731,8 @@ SIMP_TAC arith_ss [asl_rec_pred_num_def]);
 
 val asl_rec_pred_num___WEAKEN_NUM_SUC = store_thm ("asl_rec_pred_num___WEAKEN_NUM_SUC",
 ``IS_SEPARATION_COMBINATOR f ==>
-(!state arg. asl_rec_pred_num f F n finPred condPredL startPred arg state ==>
-asl_rec_pred_num f F (SUC n) finPred condPredL startPred arg state)``,
+(!state arg. asl_rec_pred_num f F n finPred recPred condPredL startPred arg state ==>
+asl_rec_pred_num f F (SUC n) finPred recPred condPredL startPred arg state)``,
 
 STRIP_TAC THEN
 Induct_on `n` THENL [
@@ -3311,6 +3742,7 @@ Induct_on `n` THENL [
 	SIMP_TAC std_ss [EXTENSION, asl_or_def, asl_bool_REWRITES, DISJ_IMP_THM, FORALL_AND_THM] THEN
 	REPEAT STRIP_TAC THEN
 	DISJ2_TAC THEN
+        FULL_SIMP_TAC std_ss [asl_bool_EVAL] THEN
 	POP_ASSUM MP_TAC THEN
 	SIMP_TAC std_ss [IN_DEF] THEN
 	MATCH_MP_TAC asl_choose_pred_args___WEAKEN THEN
@@ -3322,8 +3754,8 @@ val asl_rec_pred_num___WEAKEN_NUM = store_thm ("asl_rec_pred_num___WEAKEN_NUM_SU
 ``(IS_SEPARATION_COMBINATOR f /\
 (n <= m)) ==>
 
-(!state arg. asl_rec_pred_num f F n finPred condPredL startPred arg state ==>
-asl_rec_pred_num f F m finPred condPredL startPred arg state)``,
+(!state arg. asl_rec_pred_num f F n finPred recPred condPredL startPred arg state ==>
+asl_rec_pred_num f F m finPred recPred condPredL startPred arg state)``,
 
 STRIP_TAC THEN
 `?p. m = n + p` by PROVE_TAC[LESS_EQ_EXISTS] THEN
@@ -3358,18 +3790,18 @@ METIS_TAC[IN_DEF]);
 
 
 val asl_rec_pred_def = Define `
-asl_rec_pred f bal finPred condPredL startPred arg = asl_exists n. asl_rec_pred_num f bal n finPred condPredL startPred arg`
+asl_rec_pred f bal finPred recPred condPredL startPred arg = asl_exists n. asl_rec_pred_num f bal n finPred recPred condPredL startPred arg`
 
 
 val asl_rec_pred_unbalanced___REWRITE = store_thm ("asl_rec_pred_unbalanced___REWRITE",
 ``!f. (IS_SEPARATION_COMBINATOR f) ==>
 
 !arg.
-(asl_rec_pred f F finPred condPredL startPred arg =
+(asl_rec_pred f F finPred recPred condPredL startPred arg =
 asl_or (finPred arg)
-           (asl_choose_pred_args f (startPred arg)
-              (asl_rec_pred f F finPred condPredL startPred)
-              (MAP (\P. P arg) condPredL)))``,
+           (asl_and (recPred arg) (asl_choose_pred_args f (startPred arg)
+              (asl_rec_pred f F finPred recPred condPredL startPred)
+              (MAP (\P. P arg) condPredL))))``,
 
 REPEAT STRIP_TAC THEN 
 ONCE_REWRITE_TAC[EXTENSION] THEN
@@ -3378,7 +3810,8 @@ STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
 	Cases_on `x'` THENL [
 		FULL_SIMP_TAC std_ss [asl_rec_pred_num_REWRITE, asl_or_def, IN_ABS],
 
-		FULL_SIMP_TAC arith_ss [asl_rec_pred_num_REWRITE, asl_or_def, IN_ABS] THEN
+		FULL_SIMP_TAC arith_ss [asl_rec_pred_num_REWRITE, asl_or_def, IN_ABS,
+				        asl_bool_EVAL] THEN
 		DISJ2_TAC THEN
 		POP_ASSUM MP_TAC THEN
 		SIMP_TAC std_ss [IN_DEF] THEN
@@ -3387,16 +3820,19 @@ STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
 		PROVE_TAC[]
 	],
 
-	FULL_SIMP_TAC std_ss [asl_rec_pred_def, asl_exists_def, IN_ABS, asl_or_def] THEN1 (
+
+
+	FULL_SIMP_TAC std_ss [asl_rec_pred_def, asl_exists_def, IN_ABS, asl_bool_EVAL] THEN1 (
 		Q.EXISTS_TAC `0` THEN
 		ASM_SIMP_TAC std_ss [asl_rec_pred_num_def]
 	) THEN
 	Tactical.REVERSE (`?m. x IN
           asl_choose_pred_args f (startPred arg)
-            (asl_rec_pred_num f F m finPred condPredL startPred)
+            (asl_rec_pred_num f F m finPred recPred condPredL startPred)
             (MAP (\P. P arg) condPredL)` by ALL_TAC) THEN1 (
 		Q.EXISTS_TAC `SUC m` THEN
-		ASM_SIMP_TAC std_ss [asl_rec_pred_num_def, asl_or_def, IN_ABS]
+		ASM_SIMP_TAC std_ss [asl_rec_pred_num_def, IN_ABS,
+				     asl_bool_EVAL]
 	) THEN
 	FULL_SIMP_TAC list_ss [asl_choose_pred_args_def, asl_exists_def, IN_ABS, asl_and_def,
 		asl_bigstar_list_REWRITE, asl_star_def, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
@@ -3444,17 +3880,16 @@ STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
 		
 
 val asl_rec_pred_num___BALANCED_UNBALANCED = store_thm ("asl_rec_pred_num___BALANCED_UNBALANCED",
-``!f n finPred condPredL startPred arg state.
+``!f n finPred recPred condPredL startPred arg state.
 IS_SEPARATION_COMBINATOR f ==>
-(asl_rec_pred_num f T n finPred condPredL startPred arg state ==>
-asl_rec_pred_num f F n finPred condPredL startPred arg state)``,
+(asl_rec_pred_num f T n finPred recPred condPredL startPred arg state ==>
+asl_rec_pred_num f F n finPred recPred condPredL startPred arg state)``,
 
-NTAC 4 GEN_TAC THEN
+NTAC 5 GEN_TAC THEN
 Induct_on `n` THEN1 (
    SIMP_TAC std_ss [asl_rec_pred_num_def]
 ) THEN
-SIMP_TAC std_ss [asl_rec_pred_num_def, asl_bool_REWRITES] THEN
-SIMP_TAC std_ss [asl_or_def] THEN
+SIMP_TAC std_ss [asl_rec_pred_num_def, asl_bool_EVAL] THEN
 REPEAT STRIP_TAC THEN
 DISJ2_TAC THEN
 POP_ASSUM MP_TAC THEN
@@ -3465,10 +3900,10 @@ ASM_SIMP_TAC std_ss []);
 
 
 val asl_rec_pred___BALANCED_UNBALANCED = store_thm ("asl_rec_pred___BALANCED_UNBALANCED",
-``!f finPred condPredL startPred arg state.
+``!f finPred recPred condPredL startPred arg state.
 IS_SEPARATION_COMBINATOR f ==>
-(asl_rec_pred f T finPred condPredL startPred arg state ==>
-asl_rec_pred f F finPred condPredL startPred arg state)``,
+(asl_rec_pred f T finPred recPred condPredL startPred arg state ==>
+asl_rec_pred f F finPred recPred condPredL startPred arg state)``,
 
 SIMP_TAC std_ss [asl_rec_pred_def, asl_exists_def] THEN
 METIS_TAC[asl_rec_pred_num___BALANCED_UNBALANCED, IN_DEF]);
@@ -3476,22 +3911,23 @@ METIS_TAC[asl_rec_pred_num___BALANCED_UNBALANCED, IN_DEF]);
 
 
 val asl_rec_sing_pred_num_def = Define `
-asl_rec_sing_pred_num f bal n finPred condPred startPred arg =
- asl_rec_pred_num f bal n finPred [condPred] startPred arg`
+asl_rec_sing_pred_num f bal n finPred recPred condPred startPred arg =
+ asl_rec_pred_num f bal n finPred recPred [condPred] startPred arg`
+
 
 
 val asl_rec_sing_pred_def = Define `
-asl_rec_sing_pred f bal finPred condPred startPred arg = 
-asl_exists n. asl_rec_sing_pred_num f bal n finPred condPred startPred arg`
+asl_rec_sing_pred f bal finPred recPred condPred startPred arg = 
+asl_exists n. asl_rec_sing_pred_num f bal n finPred recPred condPred startPred arg`
 
 
 
 
 val asl_rec_sing_pred___BALANCED_UNBALANCED = store_thm ("asl_rec_sing_pred___BALANCED_UNBALANCED",
-``!f finPred condPred startPred.
+``!f finPred recPred condPred startPred.
 IS_SEPARATION_COMBINATOR f ==>
-(asl_rec_sing_pred f F finPred condPred startPred =
-asl_rec_sing_pred f T finPred condPred startPred)``,
+(asl_rec_sing_pred f F finPred recPred condPred startPred =
+asl_rec_sing_pred f T finPred recPred condPred startPred)``,
 
 SIMP_TAC std_ss [FUN_EQ_THM] THEN
 REPEAT STRIP_TAC THEN
@@ -3516,12 +3952,12 @@ REPEAT STRIP_TAC THEN1 (
 ) THEN
 
 
-FULL_SIMP_TAC std_ss [asl_exists_def, asl_and_def, asl_star_def, IN_ABS, IN_DEF] THEN
+FULL_SIMP_TAC std_ss [asl_bool_EVAL, IN_ABS, asl_star_def, IN_DEF] THEN
 RES_TAC THEN
-Q.EXISTS_TAC `SUC x''` THEN
+Q.EXISTS_TAC `SUC x'` THEN
 ASM_SIMP_TAC list_ss [asl_rec_pred_num_REWRITE] THEN
-ASM_SIMP_TAC std_ss [asl_choose_pred_args___SING, asl_exists_def, asl_and_def, asl_star_def, IN_ABS] THEN
-Q.EXISTS_TAC `x'` THEN
+ASM_SIMP_TAC std_ss [asl_choose_pred_args___SING, asl_exists_def, asl_and_def, asl_star_def, IN_ABS, IN_DEF] THEN
+Q.EXISTS_TAC `arg'` THEN
 ASM_SIMP_TAC std_ss [IN_DEF] THEN
 Q.EXISTS_TAC `p` THEN
 Q.EXISTS_TAC `q` THEN
@@ -3571,8 +4007,12 @@ val fasl_prim_command_def =
 			     |      fasl_pc_select_assume of 'select_data => 'select_pred_type
 			     |      fasl_pc_fail
 			     |      fasl_pc_diverge
-			     |      fasl_pc_skip
-			     |      fasl_pc_local_action of 'action_type`
+			     |      fasl_pc_skip 
+                             |      fasl_pc_shallow_command of (('state option -> 'state option -> 'state option) -> 'state fasl_action)
+			     |      fasl_pc_local_action of 'action_type`;
+
+val fasl_prim_command_11 = fetch "-" "fasl_prim_command_11";
+val fasl_prim_command_distinct = fetch "-" "fasl_prim_command_distinct";
 
 
 val EVAL_fasl_predicate_def = Define `
@@ -3601,8 +4041,12 @@ val EVAL_fasl_prim_command_def = Define `
 		fasla_fail) /\
 	(EVAL_fasl_prim_command (f, pred_map, select_pred_map, action_map) fasl_pc_skip = 
 		fasla_skip) /\
+	(EVAL_fasl_prim_command (f, pred_map, select_pred_map, action_map) (fasl_pc_shallow_command sc) = 
+		if (FASL_IS_LOCAL_ACTION f (sc f)) then sc f else fasla_fail) /\
 	(EVAL_fasl_prim_command (f, pred_map, select_pred_map, action_map) (fasl_pc_local_action a) = 
 		action_map f a)`;
+
+
 
 
 val EVAL_fasl_prim_command_THM = store_thm ("EVAL_fasl_prim_command_THM",
@@ -3616,6 +4060,8 @@ val EVAL_fasl_prim_command_THM = store_thm ("EVAL_fasl_prim_command_THM",
 		fasla_fail) /\
 	(EVAL_fasl_prim_command env fasl_pc_skip = 
 		fasla_skip) /\
+	(EVAL_fasl_prim_command env (fasl_pc_shallow_command sc) = 
+		if (FASL_IS_LOCAL_ACTION (FST env) (sc (FST env))) then sc (FST env) else fasla_fail) /\
 	(EVAL_fasl_prim_command env (fasl_pc_local_action a) = 
 		(SND (SND (SND env))) (FST env) a)``,
 
@@ -3626,17 +4072,41 @@ SIMP_TAC std_ss [EVAL_fasl_prim_command_def]);
 
 
 
+val fasl_pred_bigand_def = Define `
+       (fasl_pred_bigand [] = fasl_pred_true)
+    /\ (fasl_pred_bigand [p] = p) /\
+       (fasl_pred_bigand (p1::p2::L) =
+	fasl_pred_and p1 (fasl_pred_bigand (p2::L)))`;
+			   
+
 val FASL_IS_LOCAL_EVAL_ENV_def = Define `
 	FASL_IS_LOCAL_EVAL_ENV ((f, pred_map, select_pred_map, action_map):('pc, 'pred, 'select_pred, 'selectdata, 'state) EVAL_pc_env) =
 (
 	IS_SEPARATION_COMBINATOR f /\
 	(!pred. ASL_IS_INTUITIONISTIC f (pred_map f pred)) /\
 	(!select_pred. ASL_IS_SELECT_ASSUME_PREDICATE f (select_pred_map f select_pred)) /\
-	(!action. FASL_IS_LOCAL_ACTION f (action_map f action)))`
+	(!action. FASL_IS_LOCAL_ACTION f (action_map f action)))`;
 
 
 
-val FASL_IS_INTUITIONISTIC___EVAL_fasl_predicate = store_thm ("FASL_IS_INTUITIONISTIC___EVAL_fasl_predicate",
+val FASL_IS_LOCAL_EVAL_ENV_THM = store_thm ("FASL_IS_LOCAL_EVAL_ENV_THM",
+``	FASL_IS_LOCAL_EVAL_ENV env =
+(
+	IS_SEPARATION_COMBINATOR (FST env) /\
+	(!pred. ASL_IS_INTUITIONISTIC (FST env) ((FST (SND env)) (FST env) pred)) /\
+	(!select_pred. ASL_IS_SELECT_ASSUME_PREDICATE (FST env) ((FST (SND (SND env))) (FST env) select_pred)) /\
+	(!action. FASL_IS_LOCAL_ACTION (FST env) 
+		  ((SND (SND (SND env))) (FST env) action)))``,
+
+Cases_on `env` THEN
+Cases_on `r` THEN
+Cases_on `r'` THEN
+SIMP_TAC std_ss [FASL_IS_LOCAL_EVAL_ENV_def]);
+
+
+
+
+val ASL_IS_INTUITIONISTIC___EVAL_fasl_predicate = store_thm ("ASL_IS_INTUITIONISTIC___EVAL_fasl_predicate",
 ``!env c.
 IS_SEPARATION_COMBINATOR f /\
 (!pred. ASL_IS_INTUITIONISTIC f (pred_map f pred)) ==>
@@ -3665,6 +4135,9 @@ Induct_on `p` THENL [
 
 
 
+
+
+
 val FASL_IS_LOCAL_ACTION___EVAL_fasl_prim_command = store_thm ("FASL_IS_LOCAL_ACTION___EVAL_fasl_prim_command",
 ``!env c.
 FASL_IS_LOCAL_EVAL_ENV env ==>
@@ -3681,7 +4154,7 @@ ASM_SIMP_TAC std_ss [FASL_IS_LOCAL_EVAL_ENV_def] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `c` THEN REWRITE_TAC [EVAL_fasl_prim_command_def] THENL [
 	MATCH_MP_TAC FASL_IS_LOCAL_ACTION___fasla_assume THEN
-	ASM_SIMP_TAC std_ss [FASL_IS_INTUITIONISTIC___EVAL_fasl_predicate],
+	ASM_SIMP_TAC std_ss [ASL_IS_INTUITIONISTIC___EVAL_fasl_predicate],
 
 	MATCH_MP_TAC FASL_IS_LOCAL_ACTION___fasla_select_assume THEN
 	ASM_REWRITE_TAC[],
@@ -3689,6 +4162,9 @@ Cases_on `c` THEN REWRITE_TAC [EVAL_fasl_prim_command_def] THENL [
 	ASM_SIMP_TAC std_ss [FASL_IS_LOCAL_ACTION___fasla_fail],
 	ASM_SIMP_TAC std_ss [FASL_IS_LOCAL_ACTION___fasla_diverge],
 	ASM_SIMP_TAC std_ss [FASL_IS_LOCAL_ACTION___fasla_skip],
+
+	SIMP_TAC std_ss [COND_RATOR, COND_RAND,
+			 FASL_IS_LOCAL_ACTION___fasla_fail],
 
 	ASM_SIMP_TAC std_ss []
 ]);
@@ -3702,8 +4178,8 @@ Cases_on `c` THEN REWRITE_TAC [EVAL_fasl_prim_command_def] THENL [
 *)
 val fasl_atomic_action_def =
  Hol_datatype
-`fasl_atomic_action = fasl_aa_pc of ('action, 'pred, 'select, 'spred) fasl_prim_command
-			     |   fasl_aa_check of ('action, 'pred, 'select, 'spred) fasl_prim_command => ('action, 'pred, 'select, 'spred) fasl_prim_command
+`fasl_atomic_action = fasl_aa_pc of ('action, 'pred, 'select, 'spred, 'state) fasl_prim_command
+			     |   fasl_aa_check of ('action, 'pred, 'select, 'spred, 'state) fasl_prim_command => ('action, 'pred, 'select, 'spred, 'state) fasl_prim_command
 			     |   fasl_aa_prolaag of 'lock
 			     |   fasl_aa_verhoog of 'lock`
 
@@ -3717,7 +4193,7 @@ val fasl_aa_diverge_def = Define `fasl_aa_diverge = fasl_aa_pc fasl_pc_diverge`;
 val fasl_aa_fail_def = Define `fasl_aa_fail = fasl_aa_pc fasl_pc_fail`;
 
 val _ = type_abbrev("fasl_trace", 
-	Type `:('action, 'lock, 'pred, 'select,'spred) fasl_atomic_action list`);
+	Type `:('action, 'lock, 'pred, 'select,'spred, 'state) fasl_atomic_action list`);
 
 val FASL_IS_LOCK_ATOMIC_ACTION_def = Define `
 	(FASL_IS_LOCK_ATOMIC_ACTION L (fasl_aa_prolaag l) = (l IN L)) /\
@@ -3730,7 +4206,7 @@ val FASL_IS_SING_LOCK_ATOMIC_ACTION_def = Define `
 
 val FASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE = save_thm ("FASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE",
 	let
-		val thm = FASL_IS_LOCK_ATOMIC_ACTION_def;
+		val thm = SPEC_ALL FASL_IS_LOCK_ATOMIC_ACTION_def;
 		val thm2 = Q.GEN `L` thm;
 		val thm3 = Q.GEN `v0` thm2;
 		val thm4 = Q.SPECL [`{l'}`, `{l'}`] thm3;
@@ -4722,7 +5198,7 @@ SIMP_TAC list_ss [FASL_TRACE_SEM_def, fasla_big_seq_APPEND,
 
 val FASL_TRACE_SEM_diverge = store_thm ("FASL_TRACE_SEM_diverge",
 
-``!xenv t. FASL_TRACE_SEM xenv (fasl_aa_pc fasl_pc_diverge::t) = \s. SOME {}``,
+``!xenv t. FASL_TRACE_SEM xenv (fasl_aa_diverge::t) = \s. SOME {}``,
 
 GEN_TAC  THEN
 `?f pred_map select_pred_map action_map lock_env. xenv = ((f,pred_map,select_pred_map,action_map), lock_env)` by ALL_TAC THEN1 (
@@ -4735,6 +5211,7 @@ GEN_TAC  THEN
 ASM_SIMP_TAC std_ss [FUN_EQ_THM, FASL_TRACE_SEM_REWRITE, fasla_seq_def,
 	FASL_ATOMIC_ACTION_SEM_def,
 	EVAL_fasl_prim_command_def,
+        fasl_aa_diverge_def,
 	fasla_diverge_def,
 	IMAGE_EMPTY,
 	SUP_fasl_order_def,
@@ -5540,7 +6017,7 @@ Tactical.REVERSE (`!u. u IN Z ==>
 	]
 ) THEN
 
-Q.UNABBREV_ALL_TAC THEN
+bossLib.UNABBREV_ALL_TAC THEN
 SIMP_TAC list_ss [IN_IMAGE, IN_UNION, DISJ_IMP_THM,
 	FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
 Q.PAT_ASSUM `t IN X` (K ALL_TAC) THEN
@@ -5652,7 +6129,7 @@ Tactical.REVERSE (`!t. t IN z ==> FASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (n1 
 	)
 ) THEN
 Q.PAT_ASSUM `t IN X` (K ALL_TAC) THEN
-Q.UNABBREV_ALL_TAC THEN
+bossLib.UNABBREV_ALL_TAC THEN
 SIMP_TAC std_ss [IN_UNION, IN_IMAGE, DISJ_IMP_THM, FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THENL [
 	Cases_on `~(FASL_IS_SING_LOCK_ATOMIC_ACTION l h')` THEN1 (
@@ -5730,7 +6207,7 @@ Tactical.REVERSE (`!t. t IN z ==> ?t'.
 	Cases_on `C'` THEN ASM_REWRITE_TAC[] THEN
 	FULL_SIMP_TAC list_ss [IN_IMAGE, GSYM LEFT_FORALL_IMP_THM]
 ) THEN
-Q.UNABBREV_ALL_TAC THEN
+bossLib.UNABBREV_ALL_TAC THEN
 SIMP_TAC std_ss [IN_UNION, IN_IMAGE, DISJ_IMP_THM, FORALL_AND_THM,
 	GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THENL [
@@ -5907,7 +6384,7 @@ Q.ABBREV_TAC `ft2 = FASL_TRACE_GET_LOCKS {l} t2` THEN
   (EVERY (FASL_IS_LOCK_ATOMIC_ACTION {l}) ft1) /\
   (EVERY (FASL_IS_LOCK_ATOMIC_ACTION {l}) ft2) /\
   EVERY (FASL_IS_LOCK_ATOMIC_ACTION {l}) ft` by ALL_TAC THEN1 (
-	Q.UNABBREV_ALL_TAC THEN
+	bossLib.UNABBREV_ALL_TAC THEN
 	SIMP_TAC list_ss [FASL_IS_LOCK_ATOMIC_ACTION_def, FASL_TRACE_GET_LOCKS_def,
 		EVERY_FILTER, FILTER_IDEM]
 ) THEN
@@ -6091,7 +6568,7 @@ Tactical.REVERSE (`?u. u IN X /\
 	)
 ) THEN
 
-Q.UNABBREV_ALL_TAC THEN
+bossLib.UNABBREV_ALL_TAC THEN
 SIMP_TAC list_ss [IN_UNION, IN_IMAGE, EXISTS_OR_THM,
 	RIGHT_AND_OVER_OR, GSYM LEFT_EXISTS_AND_THM] THEN
 DISJ1_TAC THEN
@@ -6158,7 +6635,7 @@ METIS_TAC[FASL_TRACE_IS_NUM_LOCK_SYNCHRONISED___APPEND]);
 val fasl_proto_trace_def =
  Hol_datatype
   `fasl_proto_trace = 
-			    fasl_pt_prim_command of ('action, 'pred, 'selectdata, 'select_pred) fasl_prim_command
+			    fasl_pt_prim_command of ('action, 'pred, 'selectdata, 'select_pred, 'state) fasl_prim_command
 		     |      fasl_pt_seq of fasl_proto_trace => fasl_proto_trace
 		     |      fasl_pt_procedure_call of 'name => 'arg
 		     |      fasl_pt_parallel of fasl_proto_trace => fasl_proto_trace
@@ -6171,28 +6648,34 @@ val fasl_proto_trace_distinct = fetch "-" "fasl_proto_trace_distinct";
 
 
 val fasl_pt_skip_def = Define `fasl_pt_skip = fasl_pt_prim_command (fasl_pc_skip)`;
+val fasl_pt_diverge_def = Define `fasl_pt_diverge = fasl_pt_prim_command (fasl_pc_diverge)`;
 
 
-val _ = type_abbrev ("fasl_program", Type `:('a, 'b, 'c, 'd, 'e, 'f, 'g) fasl_proto_trace set`);
+val _ = type_abbrev ("fasl_program", Type `:('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) fasl_proto_trace set`);
 
 
 val fasl_prog_prim_command_def = Define `fasl_prog_prim_command pc = {fasl_pt_prim_command pc}`;
 val fasl_prog_skip_def = Define `fasl_prog_skip = fasl_prog_prim_command fasl_pc_skip`;
 val fasl_prog_diverge_def = Define `fasl_prog_diverge = fasl_prog_prim_command fasl_pc_diverge`;
+val fasl_prog_fail_def = Define `fasl_prog_fail = fasl_prog_prim_command fasl_pc_fail`;
+val fasl_prog_best_local_action_def = Define `fasl_prog_best_local_action P Q = fasl_prog_prim_command (fasl_pc_shallow_command (\f. best_local_action f P Q))`
+val fasl_prog_quant_best_local_action_def = Define `fasl_prog_quant_best_local_action qP qQ = fasl_prog_prim_command (fasl_pc_shallow_command (\f. quant_best_local_action f qP qQ))`
+
+
 
 val fasl_prog_seq_def = Define `fasl_prog_seq p1 p2 = 
-   \pt. ?pt1 pt2. (pt = fasl_pt_seq pt1 pt2) /\ pt1 IN p1 /\ pt2 IN p2`;
+   \pt. ?pt1 pt2. (pt = fasl_pt_seq pt1 pt2) /\ pt1 IN (fasl_pt_diverge INSERT p1) /\ pt2 IN (fasl_pt_diverge INSERT p2)`;
 
 val fasl_prog_choice_def = Define `fasl_prog_choice = $UNION`;
 val fasl_prog_repeat_num_def = Define `
 (fasl_prog_repeat_num 0 p = fasl_prog_skip) /\
 (fasl_prog_repeat_num (SUC n) p = 
 \pt. ?pt1 pt2. (pt = fasl_pt_seq pt1 pt2) /\ pt1 IN p /\ 
-                                        pt2 IN fasl_prog_repeat_num n p)`
+                                        pt2 IN fasl_prog_repeat_num n p)`;
 
 
 
-val fasl_prog_ndet_def = Define `fasl_prog_ndet (pset:('a, 'b, 'c, 'd, 'e, 'f, 'g) fasl_program set) = 
+val fasl_prog_ndet_def = Define `fasl_prog_ndet (pset:('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) fasl_program set) = 
 			         BIGUNION pset`;
 
 
@@ -6253,7 +6736,7 @@ Defn.tgoal FASL_PROTO_TRACES_EVAL_PROC_defn
 val FASL_PROTO_TRACES_EVAL_PROC_def = tDefine "FASL_PROTO_TRACES_EVAL_PROC" 
 FASL_PROTO_TRACES_EVAL_PROC_def_term_frag
 
-(Q.EXISTS_TAC `(measure (\n. n))  LEX (measure (\(env, p). fasl_proto_trace_size (K 0) (K 0) (K 0) (K 0) (K 0) (K 0) (K 0) p))` THEN
+(Q.EXISTS_TAC `(measure (\n. n))  LEX (measure (\(env, p). fasl_proto_trace_size (K 0) (K 0) (K 0) (K 0) (K 0) (K 0) (K 0) (K 0) p))` THEN
 CONJ_TAC THENL [
 	MATCH_MP_TAC pairTheory.WF_LEX THEN
 	REWRITE_TAC[prim_recTheory.WF_measure],
@@ -6268,11 +6751,11 @@ val FASL_PROTO_TRACES_EVAL_def = Define `
 
 val FASL_PROGRAM_TRACES_PROC_def = Define `
 	FASL_PROGRAM_TRACES_PROC n penv prog =
-		BIGUNION (IMAGE (FASL_PROTO_TRACES_EVAL_PROC n penv) prog)`
+		BIGUNION (IMAGE (FASL_PROTO_TRACES_EVAL_PROC n penv) prog)`;
 
 val FASL_PROGRAM_TRACES_def = Define `
 	FASL_PROGRAM_TRACES penv prog =
-		BIGUNION (IMAGE (FASL_PROTO_TRACES_EVAL penv) prog)`
+		BIGUNION (IMAGE (FASL_PROTO_TRACES_EVAL penv) prog)`;
 
 
 val FASL_PROGRAM_TRACES_PROC_IN_THM2 = store_thm ("FASL_PROGRAM_TRACES_PROC_IN_THM2",
@@ -6525,7 +7008,7 @@ val FASL_PROGRAM_TRACES_PROC_IN_THM = store_thm ("FASL_PROGRAM_TRACES_PROC_IN_TH
    (~(t IN (FASL_PROGRAM_TRACES_PROC n penv {}))) /\
    ((t IN (FASL_PROGRAM_TRACES_PROC n penv (fasl_prog_prim_command pc))) = (t = [fasl_aa_pc pc])) /\
    (t IN (FASL_PROGRAM_TRACES_PROC n penv (fasl_prog_seq p1 p2)) = 
-      ?t1 t2. (t = t1 ++ t2) /\ t1 IN FASL_PROGRAM_TRACES_PROC n penv p1 /\ t2 IN FASL_PROGRAM_TRACES_PROC n penv p2) /\
+      ?t1 t2. (t = t1 ++ t2) /\ t1 IN ([fasl_aa_diverge] INSERT FASL_PROGRAM_TRACES_PROC n penv p1) /\ t2 IN ([fasl_aa_diverge] INSERT FASL_PROGRAM_TRACES_PROC n penv p2)) /\
 
    (t IN (FASL_PROGRAM_TRACES_PROC n penv (fasl_prog_choice p1 p2)) =
       (t IN ((FASL_PROGRAM_TRACES_PROC n penv p1) UNION (FASL_PROGRAM_TRACES_PROC n penv p2)))) /\
@@ -6565,7 +7048,12 @@ REPEAT STRIP_TAC THENL [
 
    SIMP_TAC std_ss [fasl_prog_seq_def, IN_ABS,
       GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
-      FASL_PROTO_TRACES_EVAL_PROC_IN_THM] THEN
+      FASL_PROTO_TRACES_EVAL_PROC_IN_THM,
+      IN_INSERT] THEN
+   SIMP_TAC list_ss [LEFT_AND_OVER_OR, RIGHT_AND_OVER_OR,
+		    EXISTS_OR_THM, FASL_PROTO_TRACES_EVAL_PROC_IN_THM,
+		    fasl_pt_diverge_def, GSYM fasl_aa_diverge_def,
+		    IN_BIGUNION, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM] THEN
    METIS_TAC[],
 
 
@@ -6680,7 +7168,7 @@ val FASL_PROGRAM_TRACES_IN_THM = store_thm ("FASL_PROGRAM_TRACES_IN_THM",
    (~(t IN (FASL_PROGRAM_TRACES penv {}))) /\
    ((t IN (FASL_PROGRAM_TRACES penv (fasl_prog_prim_command pc))) = (t = [fasl_aa_pc pc])) /\
    (t IN (FASL_PROGRAM_TRACES penv (fasl_prog_seq p1 p2)) = 
-      ?t1 t2. (t = t1 ++ t2) /\ t1 IN FASL_PROGRAM_TRACES penv p1 /\ t2 IN FASL_PROGRAM_TRACES penv p2) /\
+      ?t1 t2. (t = t1 ++ t2) /\ t1 IN [fasl_aa_diverge] INSERT FASL_PROGRAM_TRACES penv p1 /\ t2 IN [fasl_aa_diverge] INSERT FASL_PROGRAM_TRACES penv p2) /\
 
    (t IN (FASL_PROGRAM_TRACES penv (fasl_prog_choice p1 p2)) =
       (t IN ((FASL_PROGRAM_TRACES penv p1) UNION (FASL_PROGRAM_TRACES penv p2)))) /\
@@ -6713,7 +7201,11 @@ REPEAT CONJ_TAC THENL [
 
 	SIMP_TAC std_ss [FASL_PROGRAM_TRACES_IN_THM2, fasl_prog_seq_def,
 		FASL_PROTO_TRACES_EVAL_IN_THM, IN_ABS, GSYM LEFT_EXISTS_AND_THM,
-		GSYM RIGHT_EXISTS_AND_THM] THEN
+		GSYM RIGHT_EXISTS_AND_THM, IN_INSERT,
+	        LEFT_AND_OVER_OR, RIGHT_AND_OVER_OR,
+		EXISTS_OR_THM,
+		FASL_PROTO_TRACES_EVAL_IN_THM, fasl_pt_diverge_def,
+		GSYM fasl_aa_diverge_def] THEN
 	METIS_TAC[],
 	
 
@@ -6812,7 +7304,7 @@ Induct_on `pt` THEN (
 	METIS_TAC[],
 
  
-	`!l. FASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l 0 [fasl_aa_fail:('c, 'd, 'e, 'g, 'f) fasl_atomic_action]` by ALL_TAC THEN1 (
+	`!l. FASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l 0 [fasl_aa_fail:('c, 'd, 'e, 'g, 'f, 'h) fasl_atomic_action]` by ALL_TAC THEN1 (
 		SIMP_TAC std_ss [
 			FASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM,
 			FASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE,
@@ -7633,7 +8125,7 @@ Q.ABBREV_TAC `c = FASL_IS_PRIM_COMMAND_ATOMIC_ACTION h /\
 				FASL_IS_PRIM_COMMAND_ATOMIC_ACTION h'` THEN
 Cases_on `c` THENL [
 	FULL_SIMP_TAC std_ss [FASL_IS_PRIM_COMMAND_ATOMIC_ACTION_EXISTS] THEN 
-	Q.UNABBREV_ALL_TAC THEN
+	bossLib.UNABBREV_ALL_TAC THEN
 	FULL_SIMP_TAC std_ss [FASL_GET_PRIM_COMMAND_ATOMIC_ACTION_def] THEN
 	Q.EXISTS_TAC `fasl_aa_check pc pc'::fasl_aa_pc pc::tt` THEN
 	FULL_SIMP_TAC list_ss [LET_THM, IN_IMAGE, IN_UNION] THEN
@@ -7666,7 +8158,7 @@ Q.ABBREV_TAC `c = FASL_IS_PRIM_COMMAND_ATOMIC_ACTION h' /\
 				FASL_IS_PRIM_COMMAND_ATOMIC_ACTION h` THEN
 Cases_on `c` THENL [
 	FULL_SIMP_TAC std_ss [FASL_IS_PRIM_COMMAND_ATOMIC_ACTION_EXISTS] THEN 
-	Q.UNABBREV_ALL_TAC THEN
+	bossLib.UNABBREV_ALL_TAC THEN
 	FULL_SIMP_TAC std_ss [FASL_GET_PRIM_COMMAND_ATOMIC_ACTION_def] THEN
 	Q.EXISTS_TAC `fasl_aa_check pc pc'::fasl_aa_pc pc'::tt` THEN
 	FULL_SIMP_TAC list_ss [LET_THM, IN_IMAGE, IN_UNION] THEN
@@ -8410,6 +8902,24 @@ METIS_TAC[SUBSET_DEF]);
 
 
 
+val FASL_PROGRAM_SEM___prim_command = store_thm (
+"FASL_PROGRAM_SEM___prim_command",
+``FASL_PROGRAM_SEM xenv penv (fasl_prog_prim_command pc) =
+  FASL_ATOMIC_ACTION_SEM xenv (fasl_aa_pc pc)``,
+
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
+SIMP_TAC list_ss [FASL_PROGRAM_SEM_def, FASL_PROGRAM_TRACES_THM,
+		 FASL_TRACE_SET_SEM_def, SUP_fasl_action_order_def,
+		 SUP_fasl_order_def,
+		 FASL_TRACE_SEM_def, fasla_big_seq_def,
+		 fasla_seq_skip, IN_SING,
+		 IMAGE_DEF, GSPECIFICATION,
+		 BIGUNION] THEN
+GEN_TAC THEN
+Cases_on `FASL_ATOMIC_ACTION_SEM xenv (fasl_aa_pc pc) x` THEN1 REWRITE_TAC[] THEN
+SIMP_TAC std_ss [EXTENSION, GSPECIFICATION]);
+
+
 val FASL_INFERENCE_prog_prim_command = store_thm ("FASL_INFERENCE_prog_prim_command",
 
 ``!xenv penv P Q. 
@@ -8427,6 +8937,35 @@ Cases_on `xenv` THEN
 SIMP_TAC std_ss [FASL_ATOMIC_ACTION_SEM_def]);
 
 
+val FASL_PROGRAM_SEM___fail = store_thm (
+"FASL_PROGRAM_SEM___fail",
+``FASL_PROGRAM_SEM xenv penv (fasl_prog_fail) =
+  fasla_fail``,
+
+Cases_on `xenv` THEN
+SIMP_TAC std_ss [fasl_prog_fail_def, FASL_PROGRAM_SEM___prim_command,
+		 FASL_ATOMIC_ACTION_SEM_def, EVAL_fasl_prim_command_THM]);
+
+
+
+val FASL_PROGRAM_SEM___skip = store_thm (
+"FASL_PROGRAM_SEM___skip",
+``FASL_PROGRAM_SEM xenv penv (fasl_prog_skip) =
+  fasla_skip``,
+
+Cases_on `xenv` THEN
+SIMP_TAC std_ss [fasl_prog_skip_def, FASL_PROGRAM_SEM___prim_command,
+		 FASL_ATOMIC_ACTION_SEM_def, EVAL_fasl_prim_command_THM]);
+
+
+val FASL_PROGRAM_SEM___diverge = store_thm (
+"FASL_PROGRAM_SEM___diverge",
+``FASL_PROGRAM_SEM xenv penv (fasl_prog_diverge) =
+  fasla_diverge``,
+
+Cases_on `xenv` THEN
+SIMP_TAC std_ss [fasl_prog_diverge_def, FASL_PROGRAM_SEM___prim_command,
+		 FASL_ATOMIC_ACTION_SEM_def, EVAL_fasl_prim_command_THM]);
 
 
 val FASL_INFERENCE_prog_skip = store_thm	("FASL_INFERENCE_prog_skip",
@@ -8459,6 +8998,206 @@ fasla_diverge_def, EMPTY_SUBSET]);
 
 
 
+
+val FASL_INFERENCE_prog_quant_best_local_action = store_thm ("FASL_INFERENCE_prog_quant_best_local_action",
+``!xenv penv qP qQ arg. 
+(FASL_IS_LOCAL_EVAL_XENV xenv) ==>
+FASL_PROGRAM_HOARE_TRIPLE xenv penv 
+(qP arg) (fasl_prog_quant_best_local_action qP qQ) (qQ arg)``,
+
+
+REPEAT STRIP_TAC THEN
+REWRITE_TAC [fasl_prog_quant_best_local_action_def] THEN
+MATCH_MP_TAC FASL_INFERENCE_prog_prim_command THEN
+`IS_SEPARATION_COMBINATOR (FST (FST xenv))` by ALL_TAC THEN1 (
+   Cases_on `xenv` THEN
+   Cases_on `q` THEN
+   Cases_on `r'` THEN
+   Cases_on `r''` THEN
+   FULL_SIMP_TAC std_ss [FASL_IS_LOCAL_EVAL_XENV_def,
+			 FASL_IS_LOCAL_EVAL_ENV_def]
+) THEN
+Q.ABBREV_TAC `f = (FST (FST xenv))` THEN
+MP_TAC (ISPECL [``f:'a bin_option_function``, ``qP:'i -> 'a -> bool``, ``qQ:'i -> 'a -> bool``] quant_best_local_action_THM) THEN
+FULL_SIMP_TAC std_ss [HOARE_TRIPLE_def, fasl_order_THM,
+		      EVAL_fasl_prim_command_THM]);
+
+
+
+val fasl_prog_best_local_action___ALTERNATIVE_DEF = store_thm ("fasl_prog_best_local_action___ALTERNATIVE_DEF",
+``fasl_prog_best_local_action P Q = fasl_prog_quant_best_local_action (K P) (K Q)``,
+
+SIMP_TAC std_ss [fasl_prog_best_local_action_def,
+		 fasl_prog_quant_best_local_action_def,
+		 quant_best_local_action___QUANT_ELIM]);
+
+
+val prog_quant_best_local_action = store_thm ("FASL_INFERENCE_prog_quant_best_local_action",
+``!xenv penv P Q. 
+(FASL_IS_LOCAL_EVAL_XENV xenv) ==>
+FASL_PROGRAM_HOARE_TRIPLE xenv penv 
+P (fasl_prog_best_local_action P Q) Q``,
+
+
+REPEAT STRIP_TAC THEN
+MP_TAC (Q.SPECL [`xenv`, `penv`, `K P`, `K Q`, `x`] FASL_INFERENCE_prog_quant_best_local_action) THEN
+ASM_SIMP_TAC std_ss [GSYM fasl_prog_best_local_action___ALTERNATIVE_DEF]);
+
+
+
+
+
+val fasla_seq_diverge = store_thm ("fasla_seq_diverge",
+``(fasla_seq fasla_diverge x = fasla_diverge) /\
+  ((fasla_seq x fasla_diverge s = SOME X) = (IS_SOME (x s) /\ (X = EMPTY))) /\
+  ((fasla_seq x fasla_diverge s = NONE) = (x s = NONE)) /\
+  ((SOME X = fasla_seq x fasla_diverge s) = (IS_SOME (x s) /\ (X = EMPTY))) /\
+  ((NONE = fasla_seq x fasla_diverge s) = (x s = NONE))``,
+
+
+SIMP_TAC std_ss [fasla_seq_def, fasla_diverge_def,
+		 IMAGE_EMPTY, SUP_fasl_order_def,
+		 NOT_IN_EMPTY, BIGUNION_EMPTY,
+		 COND_NONE_SOME_REWRITES] THEN
+SIMP_TAC std_ss [EXTENSION] THEN
+SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM,
+		 NOT_IN_EMPTY] THEN
+Cases_on `x s` THEN
+SIMP_TAC std_ss []);
+
+
+
+
+val FASL_PROGRAM_SEM___prog_seq = store_thm ("FASL_PROGRAM_SEM___prog_seq",
+
+``!xenv penv prog1 prog2.
+(FASL_PROGRAM_SEM xenv penv (fasl_prog_seq prog1 prog2) =
+fasla_seq (FASL_PROGRAM_SEM xenv penv prog1) (FASL_PROGRAM_SEM xenv penv prog2))``,
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC std_ss [FASL_PROGRAM_SEM_def, FASL_TRACE_SET_SEM_def,
+		 SUP_fasl_action_order_def, fasla_seq_def,
+		 SUP_fasl_order_def,
+		 COND_NONE_SOME_REWRITES,
+		 GSYM IMAGE_COMPOSE, combinTheory.o_DEF] THEN
+ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
+REPEAT STRIP_TAC THEN 
+SIMP_TAC std_ss [] THEN
+Cases_on `NONE IN
+       IMAGE (\x'. FASL_TRACE_SEM xenv x' x)
+         (FASL_PROGRAM_TRACES penv (fasl_prog_seq prog1 prog2))` THENL [
+
+   ASM_SIMP_TAC std_ss [COND_NONE_SOME_REWRITES] THEN
+   MATCH_MP_TAC (prove (``(~A ==> B) ==> (A \/ B)``, PROVE_TAC[])) THEN
+   STRIP_TAC THEN
+   FULL_SIMP_TAC std_ss [IN_IMAGE, FASL_PROGRAM_TRACES_IN_THM,
+			 IN_BIGUNION, GSYM RIGHT_EXISTS_AND_THM,
+			 FASL_TRACE_SEM_APPEND] THEN
+   SIMP_TAC std_ss [COND_RATOR, COND_RAND] THEN
+   Cases_on `xenv` THEN
+   `?X. FASL_TRACE_SEM (q,r) t1 x = SOME X` by ALL_TAC THEN1 (
+      Q.PAT_ASSUM `t2 IN X` (K ALL_TAC) THEN
+      FULL_SIMP_TAC std_ss [IN_INSERT, FASL_TRACE_SEM_diverge,
+			    fasla_diverge_def] THEN
+      Cases_on `FASL_TRACE_SEM (q,r) t1 x` THENL [
+          METIS_TAC[],
+	  SIMP_TAC std_ss []
+      ]
+   ) THEN
+   FULL_SIMP_TAC std_ss [fasla_seq_def, SUP_fasl_order_def,
+                         COND_NONE_SOME_REWRITES] THEN
+   FULL_SIMP_TAC std_ss [IN_IMAGE] THEN
+   Q.EXISTS_TAC `x'` THEN
+   Q.EXISTS_TAC `t1` THEN
+   Cases_on `t1 = [fasl_aa_diverge]` THEN1 (
+      FULL_SIMP_TAC std_ss [FASL_TRACE_SEM_diverge, fasla_diverge_def] THEN
+      METIS_TAC[NOT_IN_EMPTY]
+   ) THEN
+   Cases_on `t2 = [fasl_aa_diverge]` THEN1 (
+      FULL_SIMP_TAC std_ss [FASL_TRACE_SEM_diverge, fasla_diverge_def]
+   ) THEN
+   FULL_SIMP_TAC std_ss [IN_INSERT] THEN
+   Q.EXISTS_TAC `t2` THEN
+   ASM_REWRITE_TAC[],
+
+
+
+
+   ASM_SIMP_TAC std_ss [COND_NONE_SOME_REWRITES, EXTENSION] THEN
+   FULL_SIMP_TAC std_ss [IN_IMAGE, COND_NONE_SOME_REWRITES,
+			 IN_BIGUNION, GSYM RIGHT_FORALL_OR_THM,
+			 FASL_PROGRAM_TRACES_IN_THM,
+			 IN_INSERT, GSYM RIGHT_EXISTS_AND_THM,
+			 LEFT_OR_OVER_AND,
+			 RIGHT_OR_OVER_AND,
+			 FORALL_AND_THM, 
+			 FASL_TRACE_SEM_APPEND,
+			 FASL_TRACE_SEM_diverge,
+			 fasla_seq_diverge] THEN
+   FULL_SIMP_TAC std_ss [fasla_diverge_def, fasla_seq_def,
+			 COND_NONE_SOME_REWRITES, SUP_fasl_order_def,
+			 IN_IMAGE] THEN
+   REPEAT STRIP_TAC THENL [
+      METIS_TAC[],
+      METIS_TAC[],
+
+
+      EQ_TAC THENL [ 
+         STRIP_TAC THEN
+         Cases_on `FASL_TRACE_SEM xenv x''' x` THEN1 METIS_TAC[] THEN
+	 FULL_SIMP_TAC std_ss [] THEN
+         Q.PAT_ASSUM `x' IN THE Y` MP_TAC THEN
+	 `~?x'''.
+                 (NONE = FASL_TRACE_SEM xenv x''' x'') /\
+                 x''' IN FASL_PROGRAM_TRACES penv prog2` by METIS_TAC[optionTheory.option_CLAUSES] THEN
+	 ASM_REWRITE_TAC[] THEN 
+	 FULL_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM] THEN
+	 STRIP_TAC THEN
+	 Q.EXISTS_TAC `x'''` THEN
+	 Q.EXISTS_TAC `x'''''` THEN
+	 ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR, IN_BIGUNION, IN_IMAGE,
+			      GSYM RIGHT_EXISTS_AND_THM] THEN
+	 METIS_TAC[optionTheory.option_CLAUSES],
+
+
+
+
+
+	 SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
+	 REPEAT GEN_TAC THEN
+	 Cases_on `t1 = [fasl_aa_diverge]` THEN1 (
+	    ASM_SIMP_TAC std_ss [FASL_TRACE_SEM_diverge, fasla_diverge_def,
+				 NOT_IN_EMPTY, IMAGE_EMPTY, BIGUNION_EMPTY]
+         ) THEN
+	 Cases_on `t2 = [fasl_aa_diverge]` THEN1 (
+	    ASM_SIMP_TAC std_ss [FASL_TRACE_SEM_diverge, fasla_diverge_def,
+				 GSYM IMAGE_COMPOSE, combinTheory.o_DEF,
+				 COND_RATOR, COND_RAND, IN_BIGUNION,
+				 IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM,
+				 NOT_IN_EMPTY] THEN
+	    METIS_TAC[]
+         ) THEN
+	 HO_MATCH_MP_TAC (
+	 prove (``(C /\ D ==> ~CC) /\ (((x IN THE B) /\ C /\ D) ==> E) ==>
+       	 ((x IN THE (if CC then A else B) /\ C /\ D) ==> E)``, METIS_TAC[])) THEN
+         CONJ_TAC THEN1 METIS_TAC[] THEN
+	 
+	 ASM_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM] THEN
+	 REPEAT STRIP_TAC THEN
+	 Q.EXISTS_TAC `x''` THEN
+	 Q.EXISTS_TAC `t1` THEN
+	 ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR, IN_BIGUNION, IN_IMAGE,
+			      GSYM RIGHT_EXISTS_AND_THM] THEN
+	 METIS_TAC[]
+     ]
+   ]
+]);
+ 
+
+
+
+
+
 val FASL_INFERENCE_prog_seq = store_thm ("FASL_INFERENCE_prog_seq",
 
 ``!xenv penv P Q R. 
@@ -8467,33 +9206,31 @@ FASL_PROGRAM_HOARE_TRIPLE xenv penv Q p2 R) ==>
 FASL_PROGRAM_HOARE_TRIPLE xenv penv P (fasl_prog_seq p1 p2) R``,
 
 
-SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_REWRITE,
-	FASL_PROGRAM_TRACES_IN_THM, 
-	GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
-	GSYM LEFT_FORALL_IMP_THM] THEN
+SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_def,
+		 FASL_PROGRAM_SEM___prog_seq] THEN
+SIMP_TAC std_ss [HOARE_TRIPLE_def, fasl_order_THM] THEN
 REPEAT STRIP_TAC THEN
-SIMP_TAC std_ss [FASL_TRACE_SEM_APPEND,
-	SOME___fasla_seq, GSYM LEFT_EXISTS_AND_THM] THEN
+SIMP_TAC std_ss [fasla_seq_def, COND_NONE_SOME_REWRITES2,
+		 SUP_fasl_order_def, SUBSET_DEF, IN_BIGUNION,
+		 IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM] THEN
 
-`?s'. (FASL_TRACE_SEM xenv t1 s = SOME s') /\ s' SUBSET Q` by METIS_TAC[] THEN
-ASM_SIMP_TAC std_ss [] THEN
-CONJ_TAC THEN1 (
-	REPEAT STRIP_TAC THEN
-	`e IN Q` by METIS_TAC[SUBSET_DEF] THEN
-	RES_TAC THEN
-	ASM_SIMP_TAC std_ss []
-) THEN
+`?s1. (FASL_PROGRAM_SEM xenv penv p1 s = SOME s1) /\ s1 SUBSET Q` by METIS_TAC[] THEN
+ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
+REPEAT STRIP_TAC THENL [
+   Cases_on `x IN s1` THEN ASM_REWRITE_TAC[] THEN
+   `x IN Q` by PROVE_TAC[SUBSET_DEF] THEN
+   RES_TAC THEN
+   FULL_SIMP_TAC std_ss [],
 
-SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM,
-	GSYM RIGHT_EXISTS_AND_THM] THEN
-REPEAT STRIP_TAC THEN
-`x' IN Q` by METIS_TAC[SUBSET_DEF] THEN
-`?s'. (FASL_TRACE_SEM xenv t2 x' = SOME s') /\ s' SUBSET R` by METIS_TAC[] THEN
-FULL_SIMP_TAC std_ss [] THEN
-METIS_TAC[SUBSET_DEF]);
+   
+   `x' IN Q` by PROVE_TAC[SUBSET_DEF] THEN
+   RES_TAC THEN
+   `?s2. (FASL_PROGRAM_SEM xenv penv p2 x' = SOME s2) /\ s2 SUBSET R` by METIS_TAC[] THEN
+   FULL_SIMP_TAC std_ss [] THEN
+   METIS_TAC[SUBSET_DEF]
+]);
 
-
-
+   
 
 
 
@@ -8892,10 +9629,79 @@ val fasl_prog_cond_def = Define `
 				pFalse
 			)`
 
+
+val fasl_predicate_IS_DECIDED_IN_STATE_def = Define `
+	fasl_predicate_IS_DECIDED_IN_STATE xenv s c =
+	(s IN (XEVAL_fasl_predicate xenv c) \/
+	 s IN (XEVAL_fasl_predicate xenv (fasl_pred_neg c)))`;
+
+val XEVAL_fasl_predicate___decided_def = Define `
+    XEVAL_fasl_predicate___decided xenv c = \s.
+	fasl_predicate_IS_DECIDED_IN_STATE xenv s c /\
+        XEVAL_fasl_predicate xenv c s`;
+
+
 val fasl_predicate_IS_DECIDED_def = Define `
 	fasl_predicate_IS_DECIDED xenv P c =
 	(!s. s IN P ==> (s IN (XEVAL_fasl_predicate xenv c) \/
 				 s IN (XEVAL_fasl_predicate xenv (fasl_pred_neg c))))`;
+
+
+
+
+val fasl_predicate_IS_DECIDED_IN_STATE_NEGATION = store_thm ("fasl_predicate_IS_DECIDED_IN_STATE_NEGATION",
+``!xenv c s.
+(FASL_IS_LOCAL_EVAL_XENV xenv /\ (fasl_predicate_IS_DECIDED_IN_STATE xenv s c)) ==>
+fasl_predicate_IS_DECIDED_IN_STATE xenv s (fasl_pred_neg c)``,
+
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
+	XEVAL_fasl_predicate_def, EVAL_fasl_predicate_def,
+	FASL_IS_LOCAL_EVAL_XENV_def, FASL_IS_LOCAL_EVAL_ENV_THM] THEN
+Q.ABBREV_TAC `f = (FST (FST xenv))` THEN
+Q.ABBREV_TAC `pp = (EVAL_fasl_predicate f (FST (SND (FST xenv))) c)` THEN
+
+`ASL_IS_INTUITIONISTIC f pp` by METIS_TAC[ASL_IS_INTUITIONISTIC___EVAL_fasl_predicate] THEN
+DISJ2_TAC THEN
+POP_ASSUM MP_TAC THEN
+FULL_SIMP_TAC std_ss [ASL_INTUITIONISTIC_NEGATION_REWRITE, IN_ABS,
+		      ASL_IS_INTUITIONISTIC___REWRITE] THEN 
+REPEAT STRIP_TAC THEN
+Q.EXISTS_TAC `s2` THEN
+`PreOrder (ASL_IS_SUBSTATE f)` by METIS_TAC[ASL_IS_SUBSTATE___IS_PREORDER] THEN
+FULL_SIMP_TAC std_ss [PreOrder, reflexive_def, transitive_def] THEN
+METIS_TAC[]);
+
+
+
+val fasl_predicate_IS_DECIDED_IN_STATE___REWRITE =
+store_thm ("fasl_predicate_IS_DECIDED_IN_STATE___REWRITE",
+
+``!xenv s c.
+   FASL_IS_LOCAL_EVAL_XENV xenv ==>
+(fasl_predicate_IS_DECIDED_IN_STATE xenv s c =
+ !s'. ASL_IS_SUBSTATE (FST (FST xenv)) s s' ==>
+      (s IN XEVAL_fasl_predicate xenv c =
+       s' IN XEVAL_fasl_predicate xenv c))``,
+
+SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
+		 XEVAL_fasl_predicate_def,
+		 EVAL_fasl_predicate_def] THEN
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC std_ss [FASL_IS_LOCAL_EVAL_XENV_def,
+		      FASL_IS_LOCAL_EVAL_ENV_THM,
+		      ASL_INTUITIONISTIC_NEGATION_REWRITE,
+		      IN_ABS] THEN
+Q.ABBREV_TAC `f = (FST (FST xenv))` THEN
+Q.ABBREV_TAC `P = EVAL_fasl_predicate f (FST (SND (FST xenv))) c` THEN
+`ASL_IS_INTUITIONISTIC f P` by
+ METIS_TAC[ASL_IS_INTUITIONISTIC___EVAL_fasl_predicate] THEN
+POP_ASSUM MP_TAC THEN
+ASM_SIMP_TAC std_ss [ASL_IS_INTUITIONISTIC___REWRITE] THEN
+METIS_TAC[]);
+
+
+
 
 
 val fasl_predicate_IS_DECIDED_NEGATION = store_thm ("fasl_predicate_IS_DECIDED_NEGATION",
@@ -8904,34 +9710,132 @@ val fasl_predicate_IS_DECIDED_NEGATION = store_thm ("fasl_predicate_IS_DECIDED_N
 fasl_predicate_IS_DECIDED xenv P (fasl_pred_neg c)``,
 
 REPEAT STRIP_TAC THEN
-`?lock_env f pred_map spred_map action_map.
-xenv = ((f,pred_map,spred_map,action_map),lock_env)` by ALL_TAC THEN1 (
-	Cases_on `xenv` THEN
-	Cases_on `q` THEN
-	Cases_on `r'` THEN
-   Cases_on `r''` THEN
-	SIMP_TAC std_ss []
-) THEN
 FULL_SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_def,
-	XEVAL_fasl_predicate_def, EVAL_fasl_predicate_def,
-	FASL_IS_LOCAL_EVAL_XENV_def,
-	FASL_IS_LOCAL_EVAL_ENV_def] THEN
-Q.ABBREV_TAC `pp = (EVAL_fasl_predicate f pred_map c)` THEN
+		      GSYM fasl_predicate_IS_DECIDED_IN_STATE_def] THEN
+PROVE_TAC[fasl_predicate_IS_DECIDED_IN_STATE_NEGATION]);
 
 
-`ASL_IS_INTUITIONISTIC f pp` by METIS_TAC[FASL_IS_INTUITIONISTIC___EVAL_fasl_predicate] THEN
+
+
+
+val fasl_predicate_IS_DECIDED_IN_STATE___pred_true = 
+store_thm ("fasl_predicate_IS_DECIDED_IN_STATE___pred_true",
+``!xenv s. fasl_predicate_IS_DECIDED_IN_STATE xenv s fasl_pred_true``,
+
+SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
+		 XEVAL_fasl_predicate_def,
+		 EVAL_fasl_predicate_def, asl_true_def,
+		 IN_UNIV]);
+
+
+val fasl_predicate_IS_DECIDED_IN_STATE___pred_false = 
+store_thm ("fasl_predicate_IS_DECIDED_IN_STATE___pred_false",
+``!xenv s. fasl_predicate_IS_DECIDED_IN_STATE xenv s fasl_pred_false``,
+
+SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
+		 XEVAL_fasl_predicate_def,
+		 EVAL_fasl_predicate_def, asl_false_def,
+		 NOT_IN_EMPTY, IN_ABS,
+	         ASL_INTUITIONISTIC_NEGATION_REWRITE]);
+
+
+
+
+val fasl_predicate_IS_DECIDED_IN_STATE___pred_and = 
+store_thm ("fasl_predicate_IS_DECIDED_IN_STATE___pred_and",
+``!p1 p2 xenv s. 
+(fasl_predicate_IS_DECIDED_IN_STATE xenv s p1 /\
+ fasl_predicate_IS_DECIDED_IN_STATE xenv s p2) ==>
+fasl_predicate_IS_DECIDED_IN_STATE xenv s (fasl_pred_and p1 p2)``,
+
+SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
+		 XEVAL_fasl_predicate_def,
+		 EVAL_fasl_predicate_def, IN_ABS,
+	         ASL_INTUITIONISTIC_NEGATION_REWRITE] THEN
+REPEAT GEN_TAC THEN
+Q.ABBREV_TAC `pe1 = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) p1` THEN
+Q.ABBREV_TAC `pe2 = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) p2` THEN
+SIMP_TAC std_ss [asl_and_def, IN_ABS] THEN
 REPEAT STRIP_TAC THEN
-Cases_on `s IN ASL_INTUITIONISTIC_NEGATION f pp` THEN ASM_REWRITE_TAC[] THEN
-`s IN pp` by PROVE_TAC[] THEN
-ASM_SIMP_TAC std_ss [ASL_INTUITIONISTIC_NEGATION_REWRITE, IN_ABS] THEN 
+ASM_SIMP_TAC std_ss []);
 
-`PreOrder (ASL_IS_SUBSTATE f)` by METIS_TAC[ASL_IS_SUBSTATE___IS_PREORDER] THEN
-FULL_SIMP_TAC std_ss [PreOrder, reflexive_def, transitive_def] THEN
+
+val fasl_predicate_IS_DECIDED_IN_STATE___pred_or = 
+store_thm ("fasl_predicate_IS_DECIDED_IN_STATE___pred_or",
+``!p1 p2 xenv s. 
+(fasl_predicate_IS_DECIDED_IN_STATE xenv s p1 /\
+ fasl_predicate_IS_DECIDED_IN_STATE xenv s p2) ==>
+fasl_predicate_IS_DECIDED_IN_STATE xenv s (fasl_pred_or p1 p2)``,
+
+SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
+		 XEVAL_fasl_predicate_def,
+		 EVAL_fasl_predicate_def, IN_ABS,
+	         ASL_INTUITIONISTIC_NEGATION_REWRITE] THEN
+REPEAT GEN_TAC THEN
+Q.ABBREV_TAC `pe1 = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) p1` THEN
+Q.ABBREV_TAC `pe2 = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) p2` THEN
+SIMP_TAC std_ss [asl_or_def, IN_ABS] THEN
 REPEAT STRIP_TAC THEN
-Q.EXISTS_TAC `s2` THEN
-ASM_REWRITE_TAC[] THEN
-METIS_TAC[ASL_IS_INTUITIONISTIC___REWRITE]);
+ASM_SIMP_TAC std_ss []);
 
+
+
+
+
+
+val fasl_predicate_IS_DECIDED___fasl_true =
+ store_thm ("fasl_predicate_IS_DECIDED___fasl_true",
+
+``!xenv P.
+fasl_predicate_IS_DECIDED xenv P (fasl_pred_true)``,
+
+SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_def,
+		 XEVAL_fasl_predicate_def,
+		 EVAL_fasl_predicate_def, asl_true_def,
+		 IN_UNIV]);
+
+
+
+val fasl_predicate_IS_DECIDED___fasl_pred_and =
+ store_thm ("fasl_predicate_IS_DECIDED___fasl_pred_and",
+
+``!xenv P Q1 Q2.
+(fasl_predicate_IS_DECIDED xenv P Q1 /\ fasl_predicate_IS_DECIDED xenv P Q2) ==>
+fasl_predicate_IS_DECIDED xenv P (fasl_pred_and Q1 Q2)``,
+
+SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_def,
+		 XEVAL_fasl_predicate_def,
+		 EVAL_fasl_predicate_def] THEN
+REPEAT STRIP_TAC THEN
+Q.ABBREV_TAC `q1 = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) Q1` THEN
+Q.ABBREV_TAC `q2 = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) Q2` THEN
+FULL_SIMP_TAC std_ss [asl_and_def, ASL_INTUITIONISTIC_NEGATION_REWRITE, IN_ABS] THEN
+METIS_TAC[]);
+
+
+
+
+val fasl_predicate_IS_DECIDED___fasl_pred_bigand =
+ store_thm ("fasl_predicate_IS_DECIDED___fasl_pred_bigand",
+
+``!xenv P pL.
+EVERY (\P'. fasl_predicate_IS_DECIDED xenv P P') pL ==>
+fasl_predicate_IS_DECIDED xenv P (fasl_pred_bigand pL)``,
+
+REPEAT GEN_TAC THEN
+Induct_on `pL` THEN1 (
+   SIMP_TAC list_ss [fasl_predicate_IS_DECIDED___fasl_true,
+		     fasl_pred_bigand_def]
+) THEN
+
+Cases_on `pL` THEN1 (
+   SIMP_TAC list_ss [fasl_pred_bigand_def]
+) THEN
+
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC list_ss [fasl_pred_bigand_def] THEN
+MATCH_MP_TAC fasl_predicate_IS_DECIDED___fasl_pred_and THEN
+ASM_REWRITE_TAC[]);
 
 
 
@@ -8967,6 +9871,11 @@ Cases_on `s IN EVAL_fasl_predicate f pred_map c` THENL [
 	ASM_SIMP_TAC std_ss [SUBSET_DEF, NOT_IN_EMPTY,
 		IN_SING, asl_and_def, IN_ABS]
 ]);
+
+
+
+
+
 
 
 
@@ -9016,7 +9925,7 @@ Cases_on `spred_map f sp d s` THENL [
 
 
 val FASL_INFERENCE_prog_cond = store_thm  ("FASL_INFERENCE_prog_cond",
-``!env lock_env penv c P Q pTrue pFalse. 
+``!xenv penv c P Q pTrue pFalse. 
 (fasl_predicate_IS_DECIDED xenv P c /\
  FASL_IS_LOCAL_EVAL_XENV xenv /\ 
 (FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv c)) pTrue Q) /\
@@ -9029,8 +9938,6 @@ REPEAT STRIP_TAC THEN
 MATCH_MP_TAC FASL_INFERENCE_prog_choice THEN
 METIS_TAC[FASL_INFERENCE_prog_seq, fasl_predicate_IS_DECIDED_NEGATION,
 	FASL_INFERENCE_assume]);
-
-
 
 
 
@@ -9049,7 +9956,7 @@ val FASL_INFERENCE_prog_while = store_thm  ("FASL_INFERENCE_prog_while",
 ``!xenv penv c P p. 
 (fasl_predicate_IS_DECIDED xenv P c /\
  FASL_IS_LOCAL_EVAL_XENV xenv /\ 
-(FASL_PROGRAM_HOARE_TRIPLE xenv penv P p P)) ==>
+(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv c)) p P)) ==>
 
 FASL_PROGRAM_HOARE_TRIPLE xenv penv P (fasl_prog_while c p) (asl_and P (XEVAL_fasl_predicate xenv (fasl_pred_neg c)))``,
 
@@ -9061,8 +9968,6 @@ Q.EXISTS_TAC `P` THEN
 REPEAT STRIP_TAC THENL [
 	MATCH_MP_TAC FASL_INFERENCE_prog_kleene_star THEN
 	MATCH_MP_TAC FASL_INFERENCE_prog_seq THEN
-	Q.EXISTS_TAC `P` THEN
-	ASM_REWRITE_TAC[] THEN 
 	METIS_TAC[FASL_INFERENCE_assume, FASL_INFERENCE_asl_bool],
 
 	IMP_RES_TAC fasl_predicate_IS_DECIDED_NEGATION THEN
@@ -9176,10 +10081,24 @@ Induct_on `pt` THENL [
 		fasl_prog_prim_command_def, IN_SING],
 
 	FULL_SIMP_TAC std_ss [] THEN
-	Q.EXISTS_TAC `fasl_prog_seq prog prog'` THEN
-	ASM_SIMP_TAC std_ss [FASL_PROTO_TRACES_EVAL_PROC_IN_THM,
-		FASL_PROGRAM_TRACES_PROC_IN_THM] THEN
-	METIS_TAC[],
+        Q.ABBREV_TAC `prog2 = (\pt. ?pt1 pt2. (pt = fasl_pt_seq pt1 pt2) /\ pt1 IN prog /\ pt2 IN prog')`  THEN
+	Q.EXISTS_TAC `prog2` THEN
+	REPEAT GEN_TAC THEN
+	`FASL_PROGRAM_TRACES_PROC m penv' prog2 =
+        \t. ?t1 t2.
+          (t = t1 ++ t2) /\
+          t1 IN FASL_PROGRAM_TRACES_PROC m penv' prog /\
+          t2 IN FASL_PROGRAM_TRACES_PROC m penv' prog'` by ALL_TAC THEN1 (
+           ONCE_REWRITE_TAC [EXTENSION] THEN
+	   Q.UNABBREV_TAC `prog2` THEN
+	   ASM_SIMP_TAC std_ss [FASL_PROGRAM_TRACES_PROC_def,
+			        IN_BIGUNION, IN_IMAGE, IN_ABS,
+			        GSYM RIGHT_EXISTS_AND_THM,
+			        FASL_PROTO_TRACES_EVAL_PROC_IN_THM,
+			        GSYM LEFT_EXISTS_AND_THM] THEN
+	   METIS_TAC[]
+        ) THEN
+	ASM_SIMP_TAC std_ss [IN_ABS, FASL_PROTO_TRACES_EVAL_PROC_IN_THM],
 
 	
 	REPEAT GEN_TAC THEN
@@ -9612,7 +10531,7 @@ FULL_SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_REWRITE] THEN
 CCONTR_TAC THEN
 FULL_SIMP_TAC std_ss [] THEN
 Q.PAT_ASSUM `!Q. X Q ==> slp SUBSET Q` (MP_TAC o Q.SPEC `BIGUNION (\s'. ? s t. s IN P /\ 
-	(t IN FASL_PROGRAM_TRACES (penv : 'g |-> ('h -> ('e, 'h, 'f, 'g, 'b, 'c, 'd) fasl_program)) prog) /\ (FASL_TRACE_SEM xenv t s = SOME s'))`) THEN
+	(t IN FASL_PROGRAM_TRACES (penv : 'g |-> ('h -> ('e, 'h, 'f, 'g, 'b, 'c, 'd, 'a) fasl_program)) prog) /\ (FASL_TRACE_SEM xenv t s = SOME s'))`) THEN
 FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_ABS] THEN
 METIS_TAC[]);
 
@@ -9635,25 +10554,36 @@ Tactical.REVERSE EQ_TAC THENL [
 	ASM_REWRITE_TAC[],
 
 
-	FULL_SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_REWRITE,
-		FASL_PROGRAM_TRACES_IN_THM, GSYM LEFT_EXISTS_AND_THM,
-		GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM,
-		FASL_TRACE_SEM_APPEND, SOME___fasla_seq] THEN
+
+        FULL_SIMP_TAC std_ss [GSYM fasl_slp_opt_THM] THEN
+	FULL_SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_def,
+			      FASL_PROGRAM_SEM___prog_seq] THEN
+	Q.ABBREV_TAC `a1 = FASL_PROGRAM_SEM xenv penv p1` THEN
+	Q.ABBREV_TAC `a2 = FASL_PROGRAM_SEM xenv penv p2` THEN 
+	FULL_SIMP_TAC std_ss [HOARE_TRIPLE_def, fasl_order_THM,
+			      SOME___fasla_seq, GSYM LEFT_EXISTS_AND_THM] THEN
 	REPEAT STRIP_TAC THEN
-	 `?s1 t1 s'.
-              s1 IN P /\ t1 IN FASL_PROGRAM_TRACES penv p1 /\
-              (FASL_TRACE_SEM xenv t1 s1 = SOME s') /\ s IN s'` by ALL_TAC THEN1 (
-		MATCH_MP_TAC fasl_slp_opt_TRACE_THM THEN
-		ASM_SIMP_TAC std_ss []
+	Tactical.REVERSE (`?s1 s2. s1 IN P /\ (a1 s1 = SOME s2) /\ (s IN s2)` by ALL_TAC) THEN1 (
+   	   Q.PAT_ASSUM `!s. X s` (MP_TAC o Q.SPEC `s1`) THEN
+	   ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE,
+			     GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
+           REPEAT STRIP_TAC THEN
+           `IS_SOME (a2 s)` by RES_TAC THEN
+	   FULL_SIMP_TAC std_ss [IS_SOME_EXISTS] THEN
+           REPEAT STRIP_TAC THEN
+           Q.PAT_ASSUM `!x x''. X x x''` (MP_TAC o Q.SPECL [`x`, `s`]) THEN
+	   ASM_SIMP_TAC std_ss []
 	) THEN
-	Q.PAT_ASSUM `!s t1 t2. X s t1 t2` (MP_TAC o Q.SPECL [`s1`, `t1`, `t`]) THEN
-	ASM_SIMP_TAC std_ss [] THEN
-	STRIP_TAC THEN
-	RES_TAC THEN
-	FULL_SIMP_TAC std_ss [IS_SOME_EXISTS, SUBSET_DEF, IN_BIGUNION,
-		IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM] THEN
-	METIS_TAC[optionTheory.option_CLAUSES]
+
+
+	CCONTR_TAC THEN
+	FULL_SIMP_TAC std_ss [] THEN
+	Q.PAT_ASSUM `!Q. X Q ==> slp SUBSET Q` (MP_TAC o Q.SPEC `UNIV DELETE s`) THEN
+	ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_DELETE, IN_UNIV] THEN
+	METIS_TAC[]
 ]);
+
+
 
 
 
@@ -9732,7 +10662,6 @@ SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_REWRITE,
 		 FASL_PROGRAM_TRACES___prog_ndet, IN_BIGUNION, 
 		 IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM] THEN
 METIS_TAC[]);
-
 
 
 
@@ -9893,11 +10822,12 @@ Tactical.REVERSE EQ_TAC THENL [
 		fasl_wlp_def, SUBSET_DEF, IN_BIGUNION, IN_ABS] THEN
 	SIMP_TAC std_ss [IN_IMAGE, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
 		GSYM LEFT_FORALL_IMP_THM] THEN
+	SIMP_TAC std_ss [IN_INSERT, LEFT_AND_OVER_OR, RIGHT_AND_OVER_OR,
+			 DISJ_IMP_THM, FORALL_AND_THM,
+			 FASL_TRACE_SEM_diverge, fasl_aa_diverge_def,
+			 NOT_IN_EMPTY] THEN
 	REPEAT STRIP_TAC THEN
-	`?s1. FASL_TRACE_SEM xenv t s = SOME s1` by ALL_TAC THEN1 (
-		FULL_SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY] THEN
-		METIS_TAC[]
-	) THEN
+	`?s1. FASL_TRACE_SEM xenv t s = SOME s1` by METIS_TAC[] THEN
 	ASM_SIMP_TAC std_ss [] THEN
 	REPEAT STRIP_TAC THEN
 	Q.EXISTS_TAC `{x}` THEN
@@ -9921,8 +10851,6 @@ val FASL_INFERENCE_prog_wlp___IMP = store_thm ("FASL_INFERENCE_prog_wlp___IMP",
 	(FASL_PROGRAM_HOARE_TRIPLE xenv penv P (fasl_prog_seq p1 p2) Q)``,
 
 METIS_TAC[FASL_INFERENCE_prog_wlp]);
-
-
 
 
 
@@ -9966,6 +10894,844 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
    Q.PAT_ASSUM `!s t. X s t` (MP_TAC o Q.SPECL [`s`, `t`]) THEN
    ASM_SIMP_TAC std_ss [SUBSET_DEF]
 ]);
+
+
+
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION_def = Define `
+    FASL_PROGRAM_IS_ABSTRACTION xenv penv prog1 prog2 =
+    fasl_action_order (FASL_PROGRAM_SEM xenv penv prog1)					     
+                      (FASL_PROGRAM_SEM xenv penv prog2)`;
+
+val FASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF",
+
+``FASL_PROGRAM_IS_ABSTRACTION xenv penv prog1 prog2 =
+  !P Q. FASL_PROGRAM_HOARE_TRIPLE xenv penv P prog2 Q ==>
+        FASL_PROGRAM_HOARE_TRIPLE xenv penv P prog1 Q``,
+
+SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def,
+		 FASL_PROGRAM_HOARE_TRIPLE_def,
+		 fasl_action_order_def]);
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___IS_PREORDER = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___IS_PREORDER",
+``PreOrder (FASL_PROGRAM_IS_ABSTRACTION xenv penv)``,
+
+SIMP_TAC std_ss [PreOrder, reflexive_def, transitive_def,
+		 FASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF]);
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___REFL = store_thm ("FASL_PROGRAM_IS_ABSTRACTION___REFL",
+``!xenv penv p. FASL_PROGRAM_IS_ABSTRACTION xenv penv p p``,
+SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF]);
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action",
+``!xenv penv P prog Q.
+ FASL_IS_LOCAL_EVAL_XENV xenv ==>
+
+(FASL_PROGRAM_IS_ABSTRACTION xenv penv prog (fasl_prog_quant_best_local_action P Q) =
+(!arg. FASL_PROGRAM_HOARE_TRIPLE xenv penv (P arg) prog (Q arg)))``,
+
+REPEAT GEN_TAC THEN
+Cases_on `xenv` THEN
+SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def,
+		 fasl_prog_quant_best_local_action_def,
+		 FASL_PROGRAM_HOARE_TRIPLE_def,
+		 FASL_PROGRAM_SEM___prim_command,
+		 FASL_ATOMIC_ACTION_SEM_def,
+		 EVAL_fasl_prim_command_THM] THEN
+REPEAT STRIP_TAC THEN
+`IS_SEPARATION_COMBINATOR (FST q)` by ALL_TAC THEN1 (
+   FULL_SIMP_TAC std_ss [FASL_IS_LOCAL_EVAL_XENV_def,
+			 FASL_IS_LOCAL_EVAL_ENV_THM] 
+) THEN
+Q.ABBREV_TAC `f = FST q` THEN
+MP_TAC (ISPECL [``f:'a bin_option_function``,
+	        ``P :'i -> 'a -> bool``,
+                ``Q :'i -> 'a -> bool``] quant_best_local_action_THM) THEN
+ASM_SIMP_TAC std_ss [fasl_action_order_def] THEN
+REPEAT STRIP_TAC THEN
+IMP_RES_TAC FASL_IS_LOCAL_ACTION___FASL_PROGRAM_SEM THEN
+FULL_SIMP_TAC std_ss [FASL_GET_XENV_COMBINATOR_def] THEN
+METIS_TAC[]);
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___best_local_action = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___best_local_action",
+``!xenv penv P prog Q.
+ FASL_IS_LOCAL_EVAL_XENV xenv ==> 
+(FASL_PROGRAM_IS_ABSTRACTION xenv penv prog (fasl_prog_best_local_action P Q) =
+ FASL_PROGRAM_HOARE_TRIPLE xenv penv P prog Q)``,
+
+REPEAT STRIP_TAC THEN
+MP_TAC (Q.SPECL [`xenv`, `penv`, `K P`, `prog`, `K Q`] FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action) THEN
+ASM_SIMP_TAC std_ss [GSYM fasl_prog_best_local_action___ALTERNATIVE_DEF]);
+
+
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action2 = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action2",
+``!xenv penv P prog Q.
+ FASL_IS_LOCAL_EVAL_XENV xenv ==>
+(FASL_PROGRAM_IS_ABSTRACTION xenv penv prog (fasl_prog_quant_best_local_action P Q) =
+ (!arg. FASL_PROGRAM_IS_ABSTRACTION xenv penv prog (fasl_prog_best_local_action (P arg) (Q arg))))``,
+
+
+METIS_TAC[FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action,
+	  FASL_PROGRAM_IS_ABSTRACTION___best_local_action]);
+
+
+
+
+
+val FASLA_PROGRAM_IS_ABSTRACTION___DIVERGE_THM1 =
+store_thm ("FASLA_PROGRAM_IS_ABSTRACTION___DIVERGE_THM1",
+``
+!xenv penv penv prog prog'.
+(FASL_PROGRAM_SEM xenv penv prog = fasla_diverge) ==>
+
+ (FASL_PROGRAM_IS_ABSTRACTION xenv penv prog prog')``,
+
+SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def] THEN
+REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC std_ss [fasl_action_order_POINTWISE_DEF, fasla_diverge_def,
+		      fasl_order_THM, EMPTY_SUBSET] THEN
+GEN_TAC THEN
+Cases_on `FASL_PROGRAM_SEM xenv penv prog' s` THEN
+SIMP_TAC std_ss []);
+
+
+
+
+val FASLA_PROGRAM_IS_ABSTRACTION___DIVERGE_THM2 =
+store_thm ("FASLA_PROGRAM_IS_ABSTRACTION___DIVERGE_THM2",
+``
+!xenv penv penv prog prog'.
+(FASL_PROGRAM_SEM xenv penv prog' = fasla_diverge) /\
+(FASL_PROGRAM_IS_ABSTRACTION xenv penv prog prog') ==>
+
+(FASL_PROGRAM_SEM xenv penv prog = fasla_diverge)``,
+
+
+SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def] THEN
+REPEAT STRIP_TAC THEN
+Q.PAT_ASSUM `X = fasla_diverge` ASSUME_TAC THEN 
+FULL_SIMP_TAC std_ss [fasl_action_order_POINTWISE_DEF, fasla_diverge_def,
+		      fasl_order_THM, SUBSET_EMPTY] THEN
+ASM_SIMP_TAC std_ss [FUN_EQ_THM]);
+
+
+
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___seq = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___seq",
+``!xenv penv prog1 prog1' prog2 prog2'.
+(FASL_PROGRAM_IS_ABSTRACTION xenv penv prog1 prog1' /\
+FASL_PROGRAM_IS_ABSTRACTION xenv penv prog2 prog2') ==>
+FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_seq prog1 prog2) (fasl_prog_seq prog1' prog2')``,
+
+
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def,
+		      FASL_PROGRAM_SEM___prog_seq] THEN
+METIS_TAC[fasla_seq___ACTION_ORDER]);
+
+
+
+
+
+val FASL_PROGRAM_SEM___prog_block = store_thm ("FASL_PROGRAM_SEM___prog_block",
+``(FASL_PROGRAM_SEM xenv penv (fasl_prog_block []) = fasla_skip) /\
+  (FASL_PROGRAM_SEM xenv penv (fasl_prog_block (h::L)) = 
+   fasla_seq (FASL_PROGRAM_SEM xenv penv h) (FASL_PROGRAM_SEM xenv penv (fasl_prog_block L)))``,
+
+
+Cases_on `L` THEN
+SIMP_TAC std_ss [fasl_prog_block_def, FASL_PROGRAM_SEM___skip,
+		 fasla_seq_skip,
+		 FASL_PROGRAM_SEM___prog_seq]);
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___block = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___block",
+``!xenv penv p1 pL p1' pL'.
+FASL_PROGRAM_IS_ABSTRACTION xenv penv p1 p1' ==>
+FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_block pL) (fasl_prog_block pL') ==>
+FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_block (p1::pL)) 
+                                      (fasl_prog_block (p1'::pL'))``,
+
+SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def,
+		 FASL_PROGRAM_SEM___prog_block] THEN
+METIS_TAC[fasla_seq___ACTION_ORDER]);
+
+
+
+
+
+
+
+
+val FASL_PROGRAM_SEM___prog_choice = store_thm ("FASL_PROGRAM_SEM___prog_choice", 
+``FASL_PROGRAM_SEM xenv penv (fasl_prog_choice p1 p2) =
+  fasla_bin_choice (FASL_PROGRAM_SEM xenv penv p1) (FASL_PROGRAM_SEM xenv penv p2)``,
+
+SIMP_TAC std_ss [FASL_PROGRAM_SEM_def, FASL_PROGRAM_TRACES_THM,
+		 fasla_bin_choice_def, FASL_TRACE_SET_SEM_def,
+		 fasla_choice_def, IMAGE_UNION] THEN
+SIMP_TAC std_ss [prove (``A UNION B = BIGUNION {A;B}``,
+                        SIMP_TAC std_ss [Once EXTENSION, IN_UNION, IN_BIGUNION,
+					 IN_INSERT, NOT_IN_EMPTY] THEN
+			METIS_TAC[])] THEN
+SIMP_TAC std_ss [SUP_fasl_action_order___BIGUNION, IMAGE_INSERT,
+		 IMAGE_EMPTY]);
+
+
+val fasla_bin_choice_THM = store_thm ("fasla_bin_choice_THM",
+``fasla_bin_choice a1 a2 = \s. if (a1 s = NONE) \/ (a2 s = NONE) then
+                                NONE
+                             else 
+				(SOME ((THE (a1 s)) UNION (THE (a2 s))))``,
+
+SIMP_TAC std_ss [fasla_bin_choice_def, fasla_choice_def,
+		 SUP_fasl_action_order_def,
+		 SUP_fasl_order_def, IMAGE_INSERT, IMAGE_EMPTY,
+		 IN_INSERT, NOT_IN_EMPTY, BIGUNION_INSERT,
+		 BIGUNION_EMPTY, UNION_EMPTY] THEN
+METIS_TAC[]);
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___choice = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___choice",
+``!xenv penv prog1 prog1' prog2 prog2'.
+(FASL_PROGRAM_IS_ABSTRACTION xenv penv prog1 prog1' /\
+FASL_PROGRAM_IS_ABSTRACTION xenv penv prog2 prog2') ==>
+FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_choice prog1 prog2) (fasl_prog_choice prog1' prog2')``,
+
+
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def,
+		      FASL_PROGRAM_SEM___prog_choice] THEN
+Q.ABBREV_TAC `a1 = FASL_PROGRAM_SEM xenv penv prog1` THEN
+Q.ABBREV_TAC `a1' = FASL_PROGRAM_SEM xenv penv prog1'` THEN
+Q.ABBREV_TAC `a2 = FASL_PROGRAM_SEM xenv penv prog2` THEN
+Q.ABBREV_TAC `a2' = FASL_PROGRAM_SEM xenv penv prog2'` THEN
+
+FULL_SIMP_TAC std_ss [fasl_action_order_POINTWISE_DEF,
+		      fasla_bin_choice_THM] THEN
+GEN_TAC THEN
+REPEAT (Q.PAT_ASSUM `!s. X s` (MP_TAC o Q.SPEC `s`)) THEN
+Cases_on `a1' s` THEN1 SIMP_TAC std_ss [fasl_order_THM] THEN
+Cases_on `a2' s` THEN1 SIMP_TAC std_ss [fasl_order_THM] THEN
+
+SIMP_TAC std_ss [fasl_order_THM, GSYM LEFT_FORALL_IMP_THM,
+		 SUBSET_DEF, IN_UNION] THEN
+METIS_TAC[]);
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___cond = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___cond",
+``!xenv penv c prog1 prog1' prog2 prog2'.
+FASL_PROGRAM_IS_ABSTRACTION xenv penv prog1 prog1' ==>
+FASL_PROGRAM_IS_ABSTRACTION xenv penv prog2 prog2' ==>
+FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_cond c prog1 prog2) (fasl_prog_cond c prog1' prog2')``,
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC std_ss [fasl_prog_cond_def] THEN
+MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___choice THEN
+CONJ_TAC THEN (
+   MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___seq THEN
+   ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___REFL]
+));
+
+
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___while = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___while",
+``!xenv penv P c prog.
+(fasl_predicate_IS_DECIDED xenv P c /\
+ FASL_IS_LOCAL_EVAL_XENV xenv /\
+ FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv c)) prog P) ==>
+FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_while c prog) 
+                                      (fasl_prog_best_local_action P (asl_and P (XEVAL_fasl_predicate xenv (fasl_pred_neg c))))``,
+
+
+REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___best_local_action] THEN
+MATCH_MP_TAC FASL_INFERENCE_prog_while THEN
+ASM_REWRITE_TAC[]);
+
+
+val fasl_prog_while_with_invariant_def = Define `
+    fasl_prog_while_with_invariant i c prog =
+    fasl_prog_while c prog`;
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___fasl_prog_while_with_invariant = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___fasl_prog_while_with_invariant",
+``!xenv penv P c prog.
+ FASL_IS_LOCAL_EVAL_XENV xenv ==>
+ fasl_predicate_IS_DECIDED xenv P c ==>
+ FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv c)) prog P ==>
+ FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_while_with_invariant P c prog) 
+                                       (fasl_prog_best_local_action P (asl_and P (XEVAL_fasl_predicate xenv (fasl_pred_neg c))))``,
+
+
+REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC std_ss [fasl_prog_while_with_invariant_def] THEN
+METIS_TAC[FASL_PROGRAM_IS_ABSTRACTION___while]);
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___ndet = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___ndet",
+``!xenv penv pset pset'.
+(!prog. prog IN pset ==> (?prog'. (prog' IN pset') /\
+  FASL_PROGRAM_IS_ABSTRACTION xenv penv prog prog')) ==>
+FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_ndet pset) 
+                                      (fasl_prog_ndet pset')``,
+
+
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def,
+		      fasl_prog_forall_def, GSYM fasl_prog_ndet_def,
+		      FASL_PROGRAM_SEM___prog_ndet] THEN
+FULL_SIMP_TAC std_ss [fasl_action_order_POINTWISE_DEF,
+		      SUP_fasl_action_order_def,
+		      SUP_fasl_order_def, IN_IMAGE,
+		      GSYM RIGHT_EXISTS_AND_THM] THEN
+SIMP_TAC std_ss [COND_RATOR, COND_RAND, fasl_order_THM] THEN
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC (prove (``((~A ==> B1) /\ ((~A /\ B1) ==> B2)) ==> 
+                       (A \/ (B1 /\ B2))``, PROVE_TAC[])) THEN
+REPEAT STRIP_TAC THENL [
+   Cases_on `p IN pset` THEN ASM_REWRITE_TAC[] THEN
+   RES_TAC THEN
+   CCONTR_TAC THEN (POP_ASSUM (ASSUME_TAC o GSYM)) THEN
+   Q.PAT_ASSUM `!s. X s` (MP_TAC o Q.SPECL [`s`]) THEN
+   FULL_SIMP_TAC std_ss [fasl_order_THM] THEN
+   METIS_TAC[],
+
+
+   FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE,
+			 IN_UNIV, GSYM RIGHT_EXISTS_AND_THM] THEN
+   REPEAT STRIP_TAC THEN
+   RES_TAC THEN
+   Q.EXISTS_TAC `prog'` THEN
+   Q.PAT_ASSUM `!s. X s` (MP_TAC o Q.SPECL [`s`]) THEN
+   Q.PAT_ASSUM `!p. X p` (MP_TAC o Q.SPEC `p`) THEN
+   Q.PAT_ASSUM `!p. X p` (MP_TAC o Q.SPEC `prog'`) THEN
+   FULL_SIMP_TAC std_ss [NOT_NONE_IS_SOME, IS_SOME_EXISTS,
+			 GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_EXISTS_IMP_THM] THEN
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC std_ss [fasl_order_THM, SUBSET_DEF]
+]);
+
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___forall = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___forall",
+``!xenv penv body body'.
+(!arg. FASL_PROGRAM_IS_ABSTRACTION xenv penv (body arg) (body' arg)) ==>
+FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_forall body) 
+                                      (fasl_prog_forall body')``,
+
+
+REPEAT STRIP_TAC THEN
+REWRITE_TAC [fasl_prog_forall_def, GSYM fasl_prog_ndet_def] THEN
+MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___ndet THEN
+SIMP_TAC std_ss [IN_IMAGE, IN_UNIV, GSYM LEFT_FORALL_IMP_THM,
+		 GSYM LEFT_EXISTS_AND_THM] THEN
+GEN_TAC THEN
+Q.EXISTS_TAC `x` THEN
+ASM_REWRITE_TAC[]);
+
+
+
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___select = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___select",
+``!xenv penv body body'.
+(!arg. FASL_PROGRAM_IS_ABSTRACTION xenv penv (body arg) (body' arg)) ==>
+FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_select sp body) 
+                                      (fasl_prog_select sp body')``,
+
+REPEAT STRIP_TAC THEN
+REWRITE_TAC[fasl_prog_select_def] THEN 
+MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___forall THEN
+SIMP_TAC std_ss [] THEN GEN_TAC THEN
+MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___seq THEN
+ASM_REWRITE_TAC[FASL_PROGRAM_IS_ABSTRACTION___REFL]);
+
+
+
+
+
+
+val best_local_action___false_pre = store_thm ("best_local_action___false_pre",
+``best_local_action f (asl_false) Q = fasla_fail``,
+
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
+SIMP_TAC std_ss [best_local_action_def, asl_false_def, NOT_IN_EMPTY,
+		 LET_THM, INF_fasl_order_def, IN_ABS, fasla_fail_def]);
+
+
+val best_local_action___false_post = store_thm ("best_local_action___false_post",
+``best_local_action f P (asl_false) = \s.
+   if (?s0 s1. (SOME s = f (SOME s0) (SOME s1)) /\ (s1 IN P)) then SOME {} else NONE``,
+
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
+SIMP_TAC std_ss [best_local_action_def, LET_THM,
+		 fasl_star_REWRITE, asl_star_def,
+		 asl_false_def, NOT_IN_EMPTY,
+		 INF_fasl_order_def, IN_ABS] THEN
+
+SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM, 
+   COND_NONE_SOME_REWRITES_EQ, EXTENSION,
+   NOT_IN_EMPTY, IN_BIGINTER, IN_IMAGE,
+   IN_INTER, IN_ABS, GSYM RIGHT_EXISTS_AND_THM,
+   GSYM LEFT_EXISTS_AND_THM] THEN
+REPEAT STRIP_TAC THEN
+Q.EXISTS_TAC `EMPTY` THEN
+Q.EXISTS_TAC `s0` THEN
+Q.EXISTS_TAC `s1` THEN
+ASM_SIMP_TAC std_ss [NOT_IN_EMPTY]);
+
+
+
+
+
+
+
+
+val asl_bigand_list_THM = store_thm ("asl_bigand_list_THM",
+
+``asl_bigand_list l = \s. EVERY (\P. P s) l``,
+
+ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
+Induct_on `l` THENL [
+   SIMP_TAC list_ss [asl_bigand_list_def, asl_true_def,
+		     UNIV_DEF],
+
+
+   FULL_SIMP_TAC list_ss [asl_bigand_list_def,
+                          asl_and_def, IN_DEF]
+]);
+
+
+val EVAL_fasl_predicate___fasl_pred_bigand = store_thm (
+"EVAL_fasl_predicate___fasl_pred_bigand",
+``EVAL_fasl_predicate f pred_map (fasl_pred_bigand L) =
+  asl_bigand_list (MAP (EVAL_fasl_predicate f pred_map) L)``,
+
+Induct_on `L` THENL [
+   SIMP_TAC list_ss [asl_bigand_list_def,
+		     fasl_pred_bigand_def,
+		     EVAL_fasl_predicate_def],
+
+
+   Cases_on `L` THEN1 (
+      SIMP_TAC list_ss [asl_bigand_list_THM,
+			fasl_pred_bigand_def,
+		        EVAL_fasl_predicate_def] THEN
+      SIMP_TAC std_ss [FUN_EQ_THM]
+   ) THEN
+   FULL_SIMP_TAC std_ss [asl_bigand_list_THM,
+			 fasl_pred_bigand_def,
+			 EVAL_fasl_predicate_def] THEN
+   SIMP_TAC std_ss [FUN_EQ_THM] THEN
+   SIMP_TAC list_ss [asl_and_def, IN_DEF] 
+]);
+
+
+
+
+
+
+
+val FASL_PROGRAM_HOARE_TRIPLE_ABSTRACTION___INTRO = store_thm (
+"FASL_PROGRAM_HOARE_TRIPLE_ABSTRACTION___INTRO",
+``
+!xenv penv P prog1 Q prog2.
+FASL_PROGRAM_IS_ABSTRACTION xenv penv prog1 prog2 ==>
+FASL_PROGRAM_HOARE_TRIPLE xenv penv P prog2 Q ==>
+FASL_PROGRAM_HOARE_TRIPLE xenv penv P prog1 Q``,
+
+SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF]);
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___fail = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___fail",
+
+``!xenv penv p. FASL_PROGRAM_IS_ABSTRACTION xenv penv p fasl_prog_fail``,
+
+SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def,
+		 FASL_PROGRAM_SEM___fail,
+		 fasl_action_order_POINTWISE_DEF,
+		 fasla_fail_def,
+		 fasl_order_THM]);
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___block_intro = store_thm (
+"FASL_PROGRAM_IS_ABSTRACTION___block_intro",
+``FASL_PROGRAM_IS_ABSTRACTION xenv penv p1 (fasl_prog_block [p2]) =
+  FASL_PROGRAM_IS_ABSTRACTION xenv penv p1 p2``,
+
+SIMP_TAC std_ss [fasl_prog_block_def]);
+
+
+
+
+
+
+val fasl_prog_shallow_fail_def = Define 
+`fasl_prog_shallow_fail =
+ fasl_prog_prim_command (fasl_pc_shallow_command (K fasla_fail))`;
+
+
+val FASL_PROGRAM_SEM___prog_shallow_fail = store_thm (
+"FASL_PROGRAM_SEM___prog_shallow_fail",
+
+``FASL_PROGRAM_SEM xenv penv fasl_prog_shallow_fail =
+  fasla_fail``,
+
+Cases_on `xenv` THEN
+SIMP_TAC std_ss [FASL_PROGRAM_SEM___prim_command,
+                 fasl_prog_shallow_fail_def,
+		 FASL_ATOMIC_ACTION_SEM_def,
+		 EVAL_fasl_prim_command_THM]);
+
+
+
+
+val fasl_prog_best_local_action___false_pre=
+store_thm ("fasl_prog_best_local_action___false_pre",
+``fasl_prog_best_local_action asl_false Q =
+  fasl_prog_shallow_fail``,
+
+SIMP_TAC std_ss [fasl_prog_best_local_action_def,
+		 fasl_prog_shallow_fail_def,
+	         best_local_action___false_pre,
+	         combinTheory.K_DEF]);
+
+val best_local_action___pre_and_cond = store_thm (
+"best_local_action___pre_and_cond",
+``
+best_local_action f (asl_and (K c) pre) post =
+if c then
+   best_local_action f pre post
+else
+   fasla_fail
+``,
+
+Cases_on `c` THEN (
+   SIMP_TAC std_ss [asl_bool_REWRITES, best_local_action___false_pre]
+));
+
+
+
+val quant_best_local_action___false_pre = store_thm (
+"quant_best_local_action___false_pre",
+
+``quant_best_local_action f (\x. asl_false) Qq =
+  fasla_fail``,
+
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
+SIMP_TAC std_ss [fasla_fail_def,
+		 quant_best_local_action_def,
+		 INF_fasl_action_order_def,
+		 INF_fasl_order_def,
+		 IN_IMAGE, best_local_action___false_pre,
+		 IN_ABS]);
+
+
+val fasl_prog_quant_best_local_action___false_pre=
+store_thm ("fasl_prog_quant_best_local_action___false_pre",
+``fasl_prog_quant_best_local_action (\x. asl_false) Qq =
+  fasl_prog_shallow_fail``,
+
+SIMP_TAC std_ss [fasl_prog_quant_best_local_action_def,
+		 fasl_prog_shallow_fail_def,
+	         quant_best_local_action___false_pre,
+	         combinTheory.K_DEF]);
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___shallow_fail =
+store_thm ("FASL_PROGRAM_IS_ABSTRACTION___shallow_fail",
+``FASL_PROGRAM_IS_ABSTRACTION xenv penv prog 
+  fasl_prog_shallow_fail``,
+
+SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def,
+		 FASL_PROGRAM_SEM___prog_shallow_fail,
+		 fasl_action_order_POINTWISE_DEF,
+		 fasla_fail_def,
+		 fasl_order_THM]);
+
+
+
+val fasl_prog_prim_command_11 = store_thm ("fasl_prog_prim_command_11",
+``(fasl_prog_prim_command pc1 = fasl_prog_prim_command pc2) =
+  (pc1 = pc2)``,
+
+SIMP_TAC std_ss [EXTENSION, fasl_prog_prim_command_def,
+		 IN_SING] THEN
+METIS_TAC[fasl_proto_trace_11]);
+
+
+
+val fasl_prog_quant_best_local_action___EQ_IMPL =
+store_thm ("fasl_prog_quant_best_local_action___EQ_IMPL",
+``!f qP1 qP2 qQ1 qQ2 c1 c2.
+
+((!x. ~(c1 x) ==> (qP1 x = asl_false)) /\
+ (!x. ~(c2 x) ==> (qP2 x = asl_false)) /\
+ (!y. c2 y ==> ?x. (y = f x) /\ c1 x) /\
+ ((?x. ~(c1 x)) = (?x. ~(c2 x))) /\
+ (!arg. c1 arg ==>
+        ((qP1 arg = qP2 (f arg)) /\ (qQ1 arg = qQ2 (f arg)))))
+
+ ==>
+
+(fasl_prog_quant_best_local_action qP1 qQ1 =
+fasl_prog_quant_best_local_action qP2 qQ2)
+``,
+
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC std_ss [fasl_prog_quant_best_local_action_def,
+		 fasl_prog_prim_command_11,
+		 fasl_prim_command_11] THEN
+SIMP_TAC std_ss [FUN_EQ_THM] THEN
+SIMP_TAC std_ss [quant_best_local_action_def] THEN
+REPEAT GEN_TAC THEN
+AP_THM_TAC THEN AP_TERM_TAC THEN
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN 
+SIMP_TAC std_ss [] THEN
+METIS_TAC[best_local_action___false_pre]);
+
+
+
+
+
+
+
+
+
+
+
+val FASL_PROGRAM_SEM___prog_seq___prog_cond =
+store_thm ("FASL_PROGRAM_SEM___prog_seq___prog_cond",
+``
+(FASL_PROGRAM_SEM xenv penv
+      (fasl_prog_seq (fasl_prog_cond c pT pF) prog))
+=
+(FASL_PROGRAM_SEM xenv penv
+      (fasl_prog_cond c (fasl_prog_seq pT prog) (fasl_prog_seq pF prog)))``,
+
+
+
+SIMP_TAC std_ss [FASL_PROGRAM_SEM___prog_seq,
+		 fasl_prog_cond_def,
+		 FASL_PROGRAM_SEM___prog_choice] THEN
+
+ASSUME_TAC fasla_seq___ASSOC THEN 
+FULL_SIMP_TAC std_ss [ASSOC_DEF] THEN
+
+Q.ABBREV_TAC `a1 = (fasla_seq
+            (FASL_PROGRAM_SEM xenv penv
+               (fasl_prog_prim_command (fasl_pc_assume c)))
+            (FASL_PROGRAM_SEM xenv penv pT))` THEN
+Q.ABBREV_TAC `a2 = (fasla_seq
+            (FASL_PROGRAM_SEM xenv penv
+               (fasl_prog_prim_command (fasl_pc_assume (fasl_pred_neg c))))
+            (FASL_PROGRAM_SEM xenv penv pF))` THEN
+Q.ABBREV_TAC `a3 = (FASL_PROGRAM_SEM xenv penv prog)` THEN
+
+
+SIMP_TAC std_ss [fasla_seq_def, fasla_bin_choice_def,
+		 fasla_choice_def,
+		 SUP_fasl_action_order_def,
+		 SUP_fasl_order_def,
+		 IN_IMAGE, IN_INSERT, NOT_IN_EMPTY,
+		 EXISTS_OR_THM,
+		 RIGHT_AND_OVER_OR,
+ 		 LEFT_AND_OVER_OR,
+		 COND_NONE_SOME_REWRITES] THEN
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
+GEN_TAC THEN
+Cases_on `a1 x` THEN ASM_SIMP_TAC std_ss [] THEN
+Cases_on `a2 x` THEN ASM_SIMP_TAC std_ss [] THEN
+
+SIMP_TAC std_ss [COND_NONE_SOME_REWRITES_EQ] THEN
+REPEAT STRIP_TAC THENL [
+   ASM_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE,
+		    GSYM RIGHT_EXISTS_AND_THM,
+		    IN_INSERT, NOT_IN_EMPTY,
+  		    RIGHT_AND_OVER_OR,
+ 		    LEFT_AND_OVER_OR, EXISTS_OR_THM],
+
+
+   ONCE_REWRITE_TAC[EXTENSION] THEN
+   ASM_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE,
+		    GSYM LEFT_EXISTS_AND_THM,
+		    IN_INSERT, NOT_IN_EMPTY,
+  		    RIGHT_AND_OVER_OR,
+ 		    LEFT_AND_OVER_OR, EXISTS_OR_THM,
+		    GSYM RIGHT_EXISTS_AND_THM] THEN
+   ONCE_REWRITE_TAC [ 
+      prove (``(if c then p else q) = (if ~c then q else p)``, METIS_TAC[])] THEN
+   ASM_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE,
+		        GSYM RIGHT_EXISTS_AND_THM]
+]);
+
+
+
+
+
+val FASL_INFERENCE_prog_cond_seq = store_thm  ("FASL_INFERENCE_prog_cond_seq",
+``!xenv penv c P Q pTrue pFalse p_seq. 
+(fasl_predicate_IS_DECIDED xenv P c /\
+ FASL_IS_LOCAL_EVAL_XENV xenv /\ 
+(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv c)) (fasl_prog_seq pTrue p_seq) Q) /\
+(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv (fasl_pred_neg c))) (fasl_prog_seq pFalse p_seq) Q)) ==>
+
+FASL_PROGRAM_HOARE_TRIPLE xenv penv P (fasl_prog_seq (fasl_prog_cond c pTrue pFalse) p_seq) Q``,
+
+
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_def,
+		 FASL_PROGRAM_SEM___prog_seq___prog_cond] THEN
+SIMP_TAC std_ss [GSYM FASL_PROGRAM_HOARE_TRIPLE_def] THEN
+MATCH_MP_TAC FASL_INFERENCE_prog_cond THEN
+ASM_REWRITE_TAC[]);
+
+
+
+
+val FASL_PROGRAM_SEM___prog_seq___blocks =
+store_thm ("FASL_PROGRAM_SEM___prog_seq___blocks",
+``
+FASL_PROGRAM_SEM xenv penv (fasl_prog_seq (fasl_prog_block b1) (fasl_prog_block b2)) =
+FASL_PROGRAM_SEM xenv penv (fasl_prog_block (b1++b2))
+``,
+
+Induct_on `b1` THENL [
+   SIMP_TAC list_ss [FASL_PROGRAM_SEM___prog_seq,
+		    fasl_prog_block_def,
+		    FASL_PROGRAM_SEM___skip,
+		    fasla_seq_skip],
+
+   ASSUME_TAC fasla_seq___ASSOC THEN
+   FULL_SIMP_TAC list_ss [FASL_PROGRAM_SEM___prog_block,
+	         	  FASL_PROGRAM_SEM___prog_seq,
+			  ASSOC_SYM]
+]);
+
+
+
+
+
+
+
+
+
+val FASL_IS_DIVERGE_TRACE_def = Define 
+`(FASL_IS_DIVERGE_TRACE [] = F) /\
+ (FASL_IS_DIVERGE_TRACE (aa::l) = 
+    (aa=fasl_aa_diverge))`;
+
+
+val FASL_IS_DIVERGE_TRACE_IN_THM = store_thm ("FASL_IS_DIVERGE_TRACE_IN_THM",
+``([] IN FASL_IS_DIVERGE_TRACE = F) /\
+ ((aa::l) IN FASL_IS_DIVERGE_TRACE = 
+    (aa=fasl_aa_diverge))``,
+
+SIMP_TAC std_ss [IN_DEF, FASL_IS_DIVERGE_TRACE_def]);
+
+
+
+val FASL_IS_DIVERGE_TRACE___SEM = store_thm ("FASL_IS_DIVERGE_TRACE___SEM",
+``!xenv t.
+t IN FASL_IS_DIVERGE_TRACE ==>
+(FASL_TRACE_SEM xenv t = fasla_diverge)``,
+
+Cases_on `t` THEN
+SIMP_TAC std_ss [IN_DEF,
+                 FASL_IS_DIVERGE_TRACE_def,
+		 FASL_TRACE_SEM_diverge,
+		 fasla_diverge_def])
+
+
+val FASLA_TRACE_SET_SEM___REMOVE_DIVERGE_TRACES =
+store_thm ("FASLA_TRACE_SET_SEM___REMOVE_DIVERGE_TRACES",
+``!xenv ts.
+FASL_TRACE_SET_SEM xenv (ts INTER COMPL (FASL_IS_DIVERGE_TRACE)) =
+FASL_TRACE_SET_SEM xenv ts``,
+
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
+SIMP_TAC std_ss [FASL_TRACE_SET_SEM_def,
+		 SUP_fasl_action_order_def,
+		 SUP_fasl_order_def, IN_IMAGE,
+		 GSYM RIGHT_EXISTS_AND_THM,
+		 IN_INTER, IN_COMPL] THEN
+SIMP_TAC std_ss [COND_NONE_SOME_REWRITES_EQ] THEN
+REPEAT STRIP_TAC THENL [
+   EQ_TAC THEN REPEAT STRIP_TAC THENL [
+      Q.EXISTS_TAC `x'` THEN
+      ASM_REWRITE_TAC[],
+
+      Q.EXISTS_TAC `x'` THEN
+      ASM_REWRITE_TAC[] THEN
+      CCONTR_TAC THEN
+      FULL_SIMP_TAC std_ss [] THEN
+      IMP_RES_TAC FASL_IS_DIVERGE_TRACE___SEM THEN
+      FULL_SIMP_TAC std_ss [fasla_diverge_def]
+   ],
+
+
+
+   SIMP_TAC std_ss [GSYM IMAGE_COMPOSE, combinTheory.o_DEF,
+		    SET_EQ_SUBSET, SUBSET_DEF] THEN
+   SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM,
+		    IN_INTER, IN_COMPL] THEN
+   REPEAT STRIP_TAC THENL [
+      Q.EXISTS_TAC `x''` THEN
+      ASM_REWRITE_TAC[],
+
+      Q.EXISTS_TAC `x''` THEN
+      ASM_REWRITE_TAC[] THEN
+      CCONTR_TAC THEN
+      FULL_SIMP_TAC std_ss [] THEN
+      IMP_RES_TAC FASL_IS_DIVERGE_TRACE___SEM THEN
+      FULL_SIMP_TAC std_ss [fasla_diverge_def, NOT_IN_EMPTY]
+   ]
+]);
+
+
 
 
 val _ = export_theory();
