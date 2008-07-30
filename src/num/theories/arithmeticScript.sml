@@ -1593,6 +1593,45 @@ val LT_MULT_RCANCEL = store_thm(
   ``!m n p. m * n < p * n = 0 < n /\ m < p``,
   ONCE_REWRITE_TAC [MULT_COMM] THEN REWRITE_TAC [LT_MULT_LCANCEL]);
 
+(* |- (m < m * n = 0 < m /\ 1 < n) /\ (m < n * m = 0 < m /\ 1 < n) *)
+val LT_MULT_CANCEL_LBARE = save_thm(
+  "LT_MULT_CANCEL_LBARE",
+  CONJ 
+    (REWRITE_RULE [MULT_CLAUSES] (Q.SPECL [`m`, `1`, `n`] LT_MULT_LCANCEL))
+    (REWRITE_RULE [MULT_CLAUSES] (Q.SPECL [`1`,`m`, `n`] LT_MULT_RCANCEL)))
+
+val lt1_eq0 = prove(
+  ``x < 1 = (x = 0)``,
+  Q.SPEC_THEN `x`  STRUCT_CASES_TAC num_CASES THEN 
+  REWRITE_TAC [ONE, LESS_0, NOT_LESS_0, LESS_MONO_EQ, NOT_SUC])
+
+(* |- (m * n < m = 0 < m /\ (n = 0)) /\ (m * n < n = 0 < n /\ (m = 0)) *)
+val LT_MULT_CANCEL_RBARE = save_thm(
+  "LT_MULT_CANCEL_RBARE",
+  CONJ 
+    (REWRITE_RULE [MULT_CLAUSES, lt1_eq0] 
+                  (Q.SPECL [`m`,`n`,`1`] LT_MULT_LCANCEL))
+    (REWRITE_RULE [MULT_CLAUSES, lt1_eq0] 
+                  (Q.SPECL [`m`,`n`,`1`] LT_MULT_RCANCEL)))
+
+val le1_lt0 = prove(``1 <= n = 0 < n``, REWRITE_TAC [LESS_EQ, ONE]);
+
+(* |- (m <= m * n = (m = 0) \/ 0 < n) /\ (m <= n * m = (m = 0) \/ 0 < n) *)
+val LE_MULT_CANCEL_LBARE = save_thm(
+  "LE_MULT_CANCEL_LBARE",
+  CONJ 
+    (REWRITE_RULE [MULT_CLAUSES, le1_lt0] 
+                  (Q.SPECL [`m`,`1`,`n`] LE_MULT_LCANCEL))
+    (REWRITE_RULE [MULT_CLAUSES, le1_lt0] 
+                  (Q.SPECL [`1`,`m`,`n`] LE_MULT_RCANCEL)))
+
+(* |- (m * n <= m = (m = 0) \/ n <= 1) /\ (m * n <= n = (n = 0) \/ m <= 1) *)
+val LE_MULT_CANCEL_RBARE = save_thm(
+  "LE_MULT_CANCEL_RBARE",
+  CONJ 
+    (REWRITE_RULE [MULT_CLAUSES] (Q.SPECL [`m`,`n`,`1`] LE_MULT_LCANCEL))
+    (REWRITE_RULE [MULT_CLAUSES] (Q.SPECL [`m`,`n`,`1`] LE_MULT_RCANCEL)))
+
 val SUB_LEFT_ADD = store_thm ("SUB_LEFT_ADD",
    --`!m n p. m + (n - p) = (if (n <= p) then m else (m + n) - p)`--,
    REPEAT GEN_TAC THEN
