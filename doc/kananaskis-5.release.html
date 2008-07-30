@@ -25,6 +25,24 @@ html1/DTD/xhtml1-strict.dtd">
 <h2 id="new-features">New features:</h2>
 
 <ul>
+<li> <p> There is now a <a href="http://polyml.org">Poly/ML</a>
+implementation of HOL4 available for users on platforms other than
+Windows. Users should build from the same source-tree.  The build
+process is similar.  Start with </p>
+<pre>
+         poly < tools/smart-configure.sml
+</pre>
+<p> Continue with </p>
+<pre>
+         bin/build -symlink -expk
+</pre>
+<p>Most of the features of the Moscow ML implementation should work in
+the Poly/ML version, but as it is still rather young, users may
+encounter some rough edges.  The advantage of the Poly/ML
+implementation is that it is considerably quicker than the Moscow ML
+implementation. Many thanks to Scott Owens for doing most of the work
+on this port.</p></li>
+
 <li> <p> Types can now be numerals, as long as <code>fcpTheory</code>
 (the theory of finite cartesian products) is loaded.  A numeral type
 has no interesting properties except that the cardinality of its
@@ -41,13 +59,13 @@ has been removed. </p></li>
 be written with square brackets rather than with the
 infix <code>**</code> operator.  This combines well with the numeric
 types above.  For example, <code>:bool[32]</code> is a type of 32
-booleans, and indeed is the type used for what had been previously
+booleans, and indeed is now the type used for what had been previously
 called <code>word32</code>. The pretty-printing of array types can be
 turned off with the trace flag <code>pp_array_types</code>. </p>
 
 <p> Unfortunately, because of lists, at the term level one can not
 index arrays with square brackets.  Instead, we recommend the
-infix <code>'</code> (that's an apostrophe) operator.  For
+infix <code>'</code> (that&rsquo;s an apostrophe) operator.  For
 example, <code>array ' 3</code> is the value of the fourth element
 of <code>array</code> (indexing starts at zero!)</p>
 </li>
@@ -65,6 +83,14 @@ diagnostics about problems like missing respectfulness results.</p></li>
 those same includes are put onto the <code>loadPath</code> that is
 used interactively.  This should help interactive debugging of
 multiple-directory developments.</p>
+
+<p>If <code>Holmake</code> is run in a directory
+with <code>INCLUDES</code> specified in a <code>Holmakefile</code>,
+then it will call itself recursively in those directories before
+working in the current directory.  This behaviour can be prevented by
+using the <code>--no_prereqs</code> option on the command-line, or by
+including <code>NO_PREREQS</code> as an <code>OPTION</code> in
+the <code>Holmakefile</code>.
 </li>
 
 <li> <p> The <code>tautLib</code> decision procedure for propositional
@@ -76,8 +102,8 @@ translating proofs back through the HOL kernel.</p></li>
 work-horse <code>M-h&nbsp;M-r</code> command: if you precede it by
 hitting <code>C-u</code> twice, it will
 toggle <code>quietdec</code> around what is to be pasted into the HOL
-session.  This can be useful if you're opening a whole slew of big
-theories and don't want to have to watch grammar guff scroll
+session.  This can be useful if you&rsquo;re opening a whole slew of big
+theories and don&rsquo;t want to have to watch grammar guff scroll
 by.</p></li>
 
 <li> <p> The termination prover under <code>Define</code> is now
@@ -284,10 +310,9 @@ place, even though they are now just copies of theorems proved
 in <code>listTheory</code>.</p>
 
 <p>If the presence of a constant called <code>set</code> causes pain
-because you have used the same string as a variable name and don't
-wish to change it, the constant
-can be hidden, and the interference halted, by
-using <code>hide</code>:</p>
+because you have used the same string as a variable name and
+don&rsquo;t wish to change it, the constant can be hidden, and the
+interference halted, by using <code>hide</code>:</p>
 <pre>
          hide "set";
 </pre>
