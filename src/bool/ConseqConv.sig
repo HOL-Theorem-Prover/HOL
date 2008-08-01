@@ -10,11 +10,14 @@ val GEN_ASSUM : term -> thm -> thm;
 
 
 
+
 val CONSEQ_CONV_WRAPPER : conv -> conv;
 val DEPTH_CONSEQ_CONV : conv -> conv;
 val ONCE_DEPTH_CONSEQ_CONV : conv -> conv;
 val NUM_DEPTH_CONSEQ_CONV : int -> conv -> conv;
 val CHANGED_CONSEQ_CONV : conv -> conv;
+val QCHANGED_CONSEQ_CONV : conv -> conv;
+val CHANGED_CHECK_CONSEQ_CONV : conv -> conv;
 val FIRST_CONSEQ_CONV : conv list -> conv;
 val CONJ_ASSUMPTIONS_CONSEQ_CONV : conv -> (term -> bool) -> conv;
 
