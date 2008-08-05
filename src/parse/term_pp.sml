@@ -920,7 +920,7 @@ fun pp_term (G : grammar) TyG = let
       if showtypes then
         (add_string (" "^type_intro);
          let val ty = #2 (dom_rng injty)
-         in (* if is_univ_type ty then add_break (1,0) else add_break (0,0); *)
+         in (* if is_univ_type ty then add_break (1,0) else *) add_break (0,0);
             type_pp.pp_type_with_depth TyG pps (decdepth depth) ty
          end)
       else ();
@@ -1288,7 +1288,7 @@ fun pp_term (G : grammar) TyG = let
       if comb_show_type then
         (add_string (" "^type_intro);
          let val ty = type_of tm
-         in (* if is_univ_type ty then add_break (1,0) else add_break (0,0); *)
+         in (* if is_univ_type ty then add_break (1,0) else *) add_break (0,0);
             type_pp.pp_type_with_depth TyG pps (decdepth depth) ty
          end)
       else ();
@@ -1586,7 +1586,7 @@ fun pp_term (G : grammar) TyG = let
       add_string "(ty_antiq(";
       add_break(0,0);
       add_string ("`"^type_intro);
-      (* if is_univ_type ty then add_break (1,0) else (); *)
+      (* if is_univ_type ty then add_break (1,0) else *) add_break (0,0);
       type_pp.pp_type_with_depth TyG pps (decdepth depth) ty;
       add_string "`))";
       end_block()
