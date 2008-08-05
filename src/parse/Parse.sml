@@ -360,7 +360,7 @@ fun update_type_fns () =
 fun pp_type pps ty = let in
    update_type_fns();
    Portable.add_string pps ":";
-   if is_univ_type ty then Portable.add_string pps " " else ();
+   (* if is_univ_type ty then Portable.add_string pps " " else (); *)
    !type_printer pps ty
  end
 

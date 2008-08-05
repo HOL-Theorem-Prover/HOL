@@ -920,7 +920,7 @@ fun pp_term (G : grammar) TyG = let
       if showtypes then
         (add_string (" "^type_intro);
          let val ty = #2 (dom_rng injty)
-         in if is_univ_type ty then add_break (1,0) else add_break (0,0);
+         in (* if is_univ_type ty then add_break (1,0) else add_break (0,0); *)
             type_pp.pp_type_with_depth TyG pps (decdepth depth) ty
          end)
       else ();
@@ -1288,7 +1288,7 @@ fun pp_term (G : grammar) TyG = let
       if comb_show_type then
         (add_string (" "^type_intro);
          let val ty = type_of tm
-         in if is_univ_type ty then add_break (1,0) else add_break (0,0);
+         in (* if is_univ_type ty then add_break (1,0) else add_break (0,0); *)
             type_pp.pp_type_with_depth TyG pps (decdepth depth) ty
          end)
       else ();
@@ -1585,8 +1585,8 @@ fun pp_term (G : grammar) TyG = let
       begin_block CONSISTENT 2;
       add_string "(ty_antiq(";
       add_break(0,0);
-      add_string "`:";
-      if is_univ_type ty then add_break (1,0) else ();
+      add_string ("`"^type_intro);
+      (* if is_univ_type ty then add_break (1,0) else (); *)
       type_pp.pp_type_with_depth TyG pps (decdepth depth) ty;
       add_string "`))";
       end_block()
@@ -1625,7 +1625,7 @@ fun pp_term (G : grammar) TyG = let
           fun add_type () = let
           in
             add_string (" "^type_intro);
-            if is_univ_type Ty then add_string " " else ();
+            (* if is_univ_type Ty then add_string " " else (); *)
             type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty
           end
           val new_freevar =
@@ -1653,7 +1653,7 @@ fun pp_term (G : grammar) TyG = let
             begin_block CONSISTENT 0;
             action();
             add_string (" "^type_intro);
-            if is_univ_type Ty then add_string " " else ();
+            (* if is_univ_type Ty then add_string " " else (); *)
             type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty;
             end_block ();
             pend true
@@ -1678,7 +1678,7 @@ fun pp_term (G : grammar) TyG = let
                 add_string "(";
                 begin_block CONSISTENT 0;
                 add_string type_intro;
-                if is_univ_type (hd Args) then add_string " " else ();
+                (* if is_univ_type (hd Args) then add_string " " else (); *)
                 type_pp.pp_type_with_depth TyG pps depth (hd Args);
                 end_block ();
                 add_string ")"

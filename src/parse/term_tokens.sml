@@ -82,6 +82,11 @@ in
               (replace_current (BT_Ident (String.extract(s, 2, NONE)),locn'') qb;
                (String.extract (s, 0, SOME 2),locn')) end
             else (advance qb; (s,locn))
+  (* As an exception, don't aggregate ":!" since this probably begins a universal type *)
+  else if prefix2 #":" #"!" then
+              let val (locn',locn'') = locn.split_at 1 locn in
+              (replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'') qb;
+               (String.extract (s, 0, SOME 1),locn')) end
   else (* have a symbolic identifier *)
     let
       val possible_nonaggs =
