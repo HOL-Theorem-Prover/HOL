@@ -1,0 +1,185 @@
+
+quietdec := true;
+loadPath := 
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) :: 
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot"]) :: 
+            !loadPath;
+
+map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
+   "rich_listTheory", "generalHelpersTheory", "latticeTheory", "separationLogicTheory",
+   "stringTheory",
+   "vars_as_resourceTheory", "stringLib", "listLib", "smallfootTheory"];
+
+
+open HolKernel Parse boolLib bossLib
+
+open smallfootLib smallfoot_pp_print
+     smallfootSyntax smallfootParser BoolExtractShared
+     ConseqConv;
+
+
+quietdec := false;
+
+
+
+
+
+
+
+(*use a specific pretty printer*)
+temp_add_smallfoot_pp();
+
+(*turn it on*)
+use_smallfoot_pretty_printer := true;
+
+(*or off
+use_smallfoot_pretty_printer := false;
+*)
+
+
+
+
+
+(*set an input file*)
+(*lets do mergesort for example*)
+
+val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot/EXAMPLES/"]
+val file = concat [examplesDir, "mergesort.sf"];
+
+(*just parsing the file as a start*)
+val t = parse_smallfoot_file file;
+
+(*the result is a term stating the correctness of all specifications
+  in the input file*)
+
+
+(*lets prove this specification, 
+  this may take some time, on a Intel Core 2 Quad 2.4 GHz
+  it takes about 10 seconds*)
+
+val thm = prove (t, SMALLFOOT_INPUT_FILE_TAC THEN
+          SMALLFOOT_SOLVE_TAC);
+
+(*
+SMALLFOOT_INPUT_FILE_TAC does initial preprocessing and
+SMALLFOOT_SOLVE_TAC does the main work
+
+The initial preprocessing eliminates function calls and loops
+by replacing them with their specification.
+*)
+
+
+(*for automatic proving one can use smallfoot_prove which
+  combines parsing with the call above*)
+val thm = smallfoot_prove file;
+
+
+(*interactive prove may be useful as well*)
+
+(*parse it, set the goal and do the preprocessing 
+  (about 2 s)*)
+smallfoot_set_goal file;
+
+REPEAT STRIP_TAC THENL [
+   (*perform one step, a step is either 
+     the evaluation of a program statement, a
+     simplification of the overall structure (moving quantifiers etc.),
+     or deducing a frame*)
+   SMALLFOOT_STEP_TAC THEN
+   CONJ_TAC THENL [
+      NTAC 2 SMALLFOOT_STEP_TAC THEN
+
+      (*a frame can be decuded stepwise*)
+      SMALLFOOT_MINI_STEP_TAC THEN
+      SMALLFOOT_MINI_STEP_TAC THEN (*...*)
+      (*or all in one step*)
+      SMALLFOOT_STEP_TAC THEN
+      
+      (*general simplifications are done as well by STEP_TAC*)
+      SMALLFOOT_STEP_TAC,
+
+
+
+      (*if a goal is uninteresting, it can be solved completely via
+        SOLVE_TAC*)
+      SMALLFOOT_SOLVE_TAC
+   ],
+
+
+   SMALLFOOT_SOLVE_TAC,
+
+
+   SMALLFOOT_STEP_TAC THEN
+   CONJ_TAC THEN1 SMALLFOOT_SOLVE_TAC THEN
+
+   (*Function calls got replaced during preprocessing. The
+     resulting statements are ugly to read and therefore
+     the pretty printer just states "... abstracted code ...". 
+     Turn of the pretty printer to see it in its details
+
+     use_smallfoot_pretty_printer := false
+
+     use_smallfoot_pretty_printer := true
+   *)
+   SMALLFOOT_STEP_TAC THEN
+   SMALLFOOT_STEP_TAC THEN
+   SMALLFOOT_STEP_TAC THEN
+   SMALLFOOT_SOLVE_TAC
+]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(*
+Other examples. The measured times are not very accurate. However,
+they should give a rough impression. The were measured at an
+Intel Core 2 Quad 2.4 GHz processor.
+*)
+
+
+(*  9.5 s *) val file = concat [examplesDir, "parallel_mergesort.sf"]; 
+(*  1.5 s *) val file = concat [examplesDir, "parallel_tree_deallocate.sf"]; 
+(* 27.0 s *) val file = concat [examplesDir, "list.sf"]; 
+(*  6.5 s *) val file = concat [examplesDir, "tree.sf"]; 
+(*  6.5 s *) val file = concat [examplesDir, "all/heap_race.sf"]; 
+(*  0.5 s *) val file = concat [examplesDir, "passive_stack_race.sf"]; (*semantics differs from smallfoot!*)
+
+
+val thm = smallfoot_prove file;
+
+
+
+
+(*examples that are designed to fail for various reasons*)
+val file = concat [examplesDir, "not_solvable/heap_race.sf"]; 
+val file = concat [examplesDir, "not_solvable/stack_race.sf"]; 
+
+
+(*automatic proof just fails*)
+val thm = smallfoot_prove file;
+
+(*interactive one gives insight into the problem*)
+val t = parse_smallfoot_file file;
+
+set_goal([],t);
+
+SMALLFOOT_INPUT_FILE_TAC THEN
+SMALLFOOT_STEP_TAC 
+...
+
+
+SMALLFOOT_STEP_TAC
+SMALLFOOT_MINI_STEP_TAC
+SMALLFOOT_SOLVE_TAC
