@@ -7,6 +7,7 @@ sig
   val FASL_PROGRAM_HOARE_TRIPLE_term : term
   val FASL_PROGRAM_IS_ABSTRACTION_term : term
   val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_term : term;
+  val SMALLFOOT_AP_PERMISSION_UNIMPORTANT_term : term;
   val SMALLFOOT_COND_HOARE_TRIPLE_term : term
   val smallfoot_ap_implies_ae_equal_term : term
   val SMALLFOOT_COND_PROP___EQUIV_term : term;
@@ -21,6 +22,7 @@ sig
   val smallfoot_ae_const_term : term
   val smallfoot_ae_null_term : term
   val SMALLFOOT_PROP_IMPLIES_term : term
+  val SMALLFOOT_IS_STRONG_STACK_PROPOSITION_term : term
   val smallfoot_ae_var_term : term
   val smallfoot_ae_var_update_term : term;
   val smallfoot_ap_bintree_term : term
@@ -84,6 +86,8 @@ sig
   val smallfoot_tag_term : term
   val smallfoot_var_term : term
   val smallfoot_xenv_term : term
+  val smallfoot_ap_unequal_cond_term : term
+  val smallfoot_ap_equal_cond_term : term
 
 
 
@@ -114,6 +118,8 @@ sig
 
 
   val is_smallfoot_ae_null_or_const_zero : term -> bool;
+  val dest_SMALLFOOT_IS_STRONG_STACK_PROPOSITION : term -> term;
+  val is_SMALLFOOT_IS_STRONG_STACK_PROPOSITION : term -> bool;
   val dest_BAG_IMAGE : term -> term * term;
   val dest_BAG_EVERY : term -> term * term;
   val dest_COND_PROP___ADD_COND : term -> term * term;
@@ -124,6 +130,7 @@ sig
   val is_SMALLFOOT_PROP_IMPLIES : term -> bool
   val dest_FASL_PROG_SEQ : term -> term * term
   val dest_SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS : term -> term * term;
+  val dest_SMALLFOOT_AP_PERMISSION_UNIMPORTANT : term -> term;
   val dest_SMALLFOOT_COND_HOARE_TRIPLE : term -> term * term * term * term
   val dest_SMALLFOOT_COND_PROP___EQUIV : term -> term * term;
   val dest_SMALLFOOT_COND_PROP___IMP : term -> term * term;
@@ -144,6 +151,12 @@ sig
   val dest_smallfoot_ap_compare : term -> term * term
   val dest_smallfoot_ap_empty_heap_cond : term -> term;
   val dest_smallfoot_ap_equal : term -> term * term
+  val dest_smallfoot_ap_cond : term -> term * term * term * term
+  val dest_smallfoot_ap_unequal_cond : term -> term * term * term
+  val dest_smallfoot_ap_equal_cond : term -> term * term * term
+  val is_smallfoot_ap_cond : term -> bool;
+  val is_smallfoot_ap_unequal_cond : term -> bool
+  val is_smallfoot_ap_equal_cond : term -> bool
   val dest_smallfoot_ap_exp_is_defined : term -> term;
   val dest_smallfoot_ap_list : term -> term * term
   val dest_smallfoot_ap_list_seg : term -> term * term * term;
@@ -183,6 +196,7 @@ sig
   val is_FASL_PROGRAM_IS_ABSTRACTION : term -> bool
   val is_FASL_PROG_SEQ : term -> bool
   val is_SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS : term -> bool;
+  val is_SMALLFOOT_AP_PERMISSION_UNIMPORTANT : term -> bool;
   val is_SMALLFOOT_COND_HOARE_TRIPLE : term -> bool
   val is_SMALLFOOT_COND_PROP___EQUIV : term -> bool;
   val is_SMALLFOOT_COND_PROP___IMP : term -> bool;

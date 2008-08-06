@@ -65,6 +65,8 @@ val smallfoot_ap_greater_term = ``smallfoot_ap_greater``;
 val smallfoot_ap_greatereq_term = ``smallfoot_ap_greatereq``;
 val smallfoot_ap_false_term = ``smallfoot_ap_false``;
 val smallfoot_ap_cond_term = ``smallfoot_ap_cond``;
+val smallfoot_ap_unequal_cond_term = ``smallfoot_ap_unequal_cond``;
+val smallfoot_ap_equal_cond_term = ``smallfoot_ap_equal_cond``;
 val smallfoot_ap_star_term = ``smallfoot_ap_star``;
 
 val smallfoot_prog_assign_term = ``smallfoot_prog_assign``;
@@ -728,6 +730,22 @@ list_mk_icomb (SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_term, [vs,p])
 
 
 
+val SMALLFOOT_AP_PERMISSION_UNIMPORTANT_term = ``SMALLFOOT_AP_PERMISSION_UNIMPORTANT``;
+fun dest_SMALLFOOT_AP_PERMISSION_UNIMPORTANT tt =
+  let
+     val (f, args) = strip_comb tt;
+     val _ = if (same_const f SMALLFOOT_AP_PERMISSION_UNIMPORTANT_term) andalso
+	        (length args = 1) then () else
+             raise (mk_HOL_ERR "smallfootLib" "dest_SMALLFOOT_AP_PERMISSION_UNIMPORTANT" "Wrong term")
+  in
+    (el 1 args)
+  end
+val is_SMALLFOOT_AP_PERMISSION_UNIMPORTANT = (can dest_SMALLFOOT_AP_PERMISSION_UNIMPORTANT);
+
+
+
+
+
 val smallfoot_ap_implies_ae_equal_term = ``smallfoot_ap_implies_ae_equal``;
 fun dest_smallfoot_ap_implies_ae_equal tt =
   let
@@ -960,6 +978,57 @@ fun dest_smallfoot_ap_exp_is_defined t =
     (el 1 args)
   end
 val is_smallfoot_ap_exp_is_defined = can dest_smallfoot_ap_exp_is_defined;
+
+
+
+fun dest_smallfoot_ap_cond t =
+  let
+     val (f, args) = strip_comb t;
+     val _ = if (same_const f smallfoot_ap_cond_term) andalso
+	        (length args = 4) then () else
+             raise (mk_HOL_ERR "smallfootSyntax" "smallfoot_ap_cond" "Wrong term")
+  in
+    (el 1 args,el 2 args,el 3 args,el 4 args)
+  end
+val is_smallfoot_ap_cond = can dest_smallfoot_ap_cond;
+
+
+fun dest_smallfoot_ap_unequal_cond t =
+  let
+     val (f, args) = strip_comb t;
+     val _ = if (same_const f smallfoot_ap_unequal_cond_term) andalso
+	        (length args = 3) then () else
+             raise (mk_HOL_ERR "smallfootSyntax" "smallfoot_ap_unequal_cond" "Wrong term")
+  in
+    (el 1 args,el 2 args,el 3 args)
+  end
+val is_smallfoot_ap_unequal_cond = can dest_smallfoot_ap_unequal_cond;
+
+
+
+fun dest_smallfoot_ap_equal_cond t =
+  let
+     val (f, args) = strip_comb t;
+     val _ = if (same_const f smallfoot_ap_equal_cond_term) andalso
+	        (length args = 3) then () else
+             raise (mk_HOL_ERR "smallfootSyntax" "smallfoot_ap_equal_cond" "Wrong term")
+  in
+    (el 1 args,el 2 args,el 3 args)
+  end
+val is_smallfoot_ap_equal_cond = can dest_smallfoot_ap_equal_cond;
+
+
+val SMALLFOOT_IS_STRONG_STACK_PROPOSITION_term = ``SMALLFOOT_IS_STRONG_STACK_PROPOSITION``;
+fun dest_SMALLFOOT_IS_STRONG_STACK_PROPOSITION t =
+  let
+     val (f, args) = strip_comb t;
+     val _ = if (same_const f SMALLFOOT_IS_STRONG_STACK_PROPOSITION_term) andalso
+	        (length args = 1) then () else
+             raise (mk_HOL_ERR "smallfootSyntax" "dest_SMALLFOOT_IS_STRONG_STACK_PROPOSITION" "Wrong term")
+  in
+    (el 1 args)
+  end
+val is_SMALLFOOT_IS_STRONG_STACK_PROPOSITION = can dest_SMALLFOOT_IS_STRONG_STACK_PROPOSITION;
 
 
 

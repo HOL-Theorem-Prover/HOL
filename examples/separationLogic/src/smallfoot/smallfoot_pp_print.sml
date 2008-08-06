@@ -389,10 +389,29 @@ fun smallfoot_a_prop_printer sys gravs d pps t = let
     ) else if (op_term = smallfoot_ap_cond_term)  then (
       add_string pps "if ";
       sys (Top, Top, Top) (d - 1) (el 1 args);
-      add_string pps " then ";
+      add_string pps " == ";
       sys (Top, Top, Top) (d - 1) (el 2 args);
+      add_string pps " then ";
+      sys (Top, Top, Top) (d - 1) (el 3 args);
       add_string pps " else ";
-      sys (Top, Top, Top) (d - 1) (el 3 args)
+      sys (Top, Top, Top) (d - 1) (el 4 args);
+      add_string pps " end"
+    ) else if (op_term = smallfoot_ap_unequal_cond_term)  then (
+      add_string pps "(";
+      sys (Top, Top, Top) (d - 1) (el 1 args);
+      add_string pps " != ";
+      sys (Top, Top, Top) (d - 1) (el 2 args);
+      add_string pps " : ";
+      sys (Top, Top, Top) (d - 1) (el 3 args);
+      add_string pps ")"
+    ) else if (op_term = smallfoot_ap_equal_cond_term)  then (
+      add_string pps "(";
+      sys (Top, Top, Top) (d - 1) (el 1 args);
+      add_string pps " == ";
+      sys (Top, Top, Top) (d - 1) (el 2 args);
+      add_string pps " : ";
+      sys (Top, Top, Top) (d - 1) (el 3 args);
+      add_string pps ")"
     ) else (
       raise term_pp_types.UserPP_Failed
     )
