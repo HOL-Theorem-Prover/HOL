@@ -12,7 +12,8 @@ map load ["finite_mapTheory", "smallfootTheory"];
 show_assums := true;
 *)
 
-open HolKernel Parse boolLib finite_mapTheory smallfootTheory smallfootSyntax;
+open HolKernel Parse boolLib bossLib finite_mapTheory smallfootTheory smallfootSyntax;
+
 
 
 (*
@@ -234,7 +235,34 @@ fun smallfoot_prog_printer sys gravs d pps t = let
           end_block pps
       end
     ) else if (op_term = smallfoot_cond_choose_const_best_local_action_term)  then (
-      add_string pps "... abstracted code ... "
+      let
+         val (argL1_term,_) = listSyntax.dest_list (el 6 args);
+         val (argL2_term,_) = listSyntax.dest_list (el 5 args);
+	 val argL1_string = map term_to_string argL1_term;
+	 val argL2_string = map term_to_string argL2_term;
+	 val argL1_const = map (fn n => mk_var (n, numSyntax.num)) argL1_string
+	 val argL2_const = map (fn n => mk_var (n, numSyntax.num)) argL2_string
+
+	 val argL_term = pairLib.mk_pair
+			    (listSyntax.mk_list (argL1_const, numSyntax.num),
+			     listSyntax.mk_list (argL2_const, numSyntax.num));
+
+         val pre_term = mk_comb (el 2 args, argL_term)
+         val post_term = mk_comb (el 3 args, argL_term)
+
+         val pre_term'= (#3 o dest_smallfoot_prop o rhs o concl) 
+                           (SIMP_CONV list_ss [bagTheory.BAG_UNION_INSERT, bagTheory.BAG_UNION_EMPTY] pre_term)
+         val post_term'= (#3 o dest_smallfoot_prop o rhs o concl) 
+                           (SIMP_CONV list_ss [bagTheory.BAG_UNION_INSERT, bagTheory.BAG_UNION_EMPTY] post_term)
+      in
+         begin_block pps CONSISTENT 0;
+         add_string pps "abstracted code";
+         add_break pps (1,(!smallfoot_pretty_printer_block_indent));
+         sys (Top, Top, Top) (d - 1) pre_term';
+         add_break pps (1,(!smallfoot_pretty_printer_block_indent));
+         sys (Top, Top, Top) (d - 1) post_term';
+         end_block pps
+      end
     ) else if (op_term = smallfoot_prog_block_term)  then (
        let
           val (argL_term, _) = listSyntax.dest_list (el 1 args);

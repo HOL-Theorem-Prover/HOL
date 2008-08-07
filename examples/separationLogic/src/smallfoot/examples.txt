@@ -15,7 +15,7 @@ open HolKernel Parse boolLib bossLib
 
 open smallfootLib smallfoot_pp_print
      smallfootSyntax smallfootParser BoolExtractShared
-     ConseqConv;
+     ConseqConv smallfootTheory;
 
 
 quietdec := false;
@@ -35,6 +35,8 @@ use_smallfoot_pretty_printer := true;
 (*or off
 use_smallfoot_pretty_printer := false;
 *)
+
+
 
 
 
@@ -74,11 +76,149 @@ by replacing them with their specification.
 val thm = smallfoot_prove file;
 
 
-(*interactive prove may be useful as well*)
+
+
+(*interactive prove may be useful as well, but first the meaning of terms
+  is explained.
+  
+
+The following tries to give an intuitive idea about the semantics of
+the most important terms. Since this explanation should be easily
+understandable, it ignores some details.
+
+
+
+
+SMALLFOOT_COND_HOARE_TRIPLE penv pre prog post
+----------------------------------------------
+A normal HOARE_TRIPLE, which is classically written as
+{pre} prog {post}. penv is an environment, which contains 
+function definitions. Since all function calls have been eliminated,
+it can safely be ignored. 
+Notice that this predicate describes partial correctness!.
+
+Technically, pre and post and tuples of a boolean condition and
+the actual separation location formulas. The triple holds
+trivially, if these boolean conditions are not satisfied. Moreover,
+the triple requires implicitly that the set of defined stack-variables and
+their permissions does not change. However, the value of these
+variables may of course change.
+
+
+
+
+smallfoot_prop (wpb,rpb) fb
+----------------------------------------------
+This the standard form of a separation logic formula used by the tool.
+A state (st,h) consisting of a stack st and a heap h satisfies this
+formula, iff
+  - st contains write-permissions for all variables in wpb
+  - st contains read-permissions for all variables in rpb
+  - (st,h) satisfies the combination of all elements of fb by *
+    so for fb = {|f1;f2;f3|}) it satisfies f1 * f2 * f3
+
+That's the intuitive meaning. Technically, it carries the derived information,
+that all variables in wpb and rpb are pairwise distinct and that
+the all formulas in fb possess some nice properties as well. 
+
+
+
+
+SMALLFOOT_PROP_IMPLIES strong_flag (wpb,rpb) (wpb')
+                       sfb_context sfb_split sfb_imp
+                       sfb_frameP
+-----------------------------------------------------
+
+This formula is used to deduce frames for function
+calls / while loops and also to solve entailments.
+It intuitively states that 
+sbf_split can be splitted into sfb_split_imp and sfb_frame
+such that
+
+(1) s |= smallfoot_prop (wpb,rpb) (BAG_UNION sfb_context sfb_split) ==>
+    s |= smallfoot_prop (wpb,rpb) (BAG_UNION sfb_context sfb_split_imp sfb_frame)
+(2) sfb_frame satisfies the predicate sfb_frameP
+(3) sfb_frame does not use the variables in wpb'
+
+The intention is that in the context of sfb_context, 
+sfb_split_imp entails sfb_imp and sfb_frame remains of sfb_imp.
+
+Lets say "smallfoot_prop (wpb,rpb) sfb_split" holds and a function
+with precondition "smallfoot_prop (wpb',rpb') sfb_imp" should be
+called. That's possible, if there are sufficient variable read- and
+write-permissions (wpb' SUBBAG wpb, rpb' SUBBAG (BAG_UNION wpb rpb))
+and sfb_split entails sfb_imp plus some frame sfb_frame. Since the
+function call requires write_permissions, i.e.  exclusive access, for
+the variables in wpb', the frame is not allowed to even read them.
+The definition of SMALLFOOT_PROP_IMPLIES is tailor-made to deduce
+sfb_frame for this situation. Just set sfb_context to EMPTY_BAG and
+sfb_frameP to the HOARE_TRIPLE after the function call.
+
+sfb_context is useful for actually deducing a frame. Identical terms
+can be removed from sfb_split and sbf_imp by moving them to
+sfb_context. Storing them in sfb_context avoids loosing information.
+
+
+The same mechanism of SMALLFOOT_PROP_IMPLIES can be used to entailments.
+So given the Hoare triple {pre} skip {post} one needs to show that
+pre entails post. To this end one can use SMALLFOOT_PROP_IMPLIES with
+wpb' set to empty and the requirement that the resulting frame is 
+basically empty (speaking in Smallfoot terms, 
+it may contain pure formulae, but not spatial ones).
+
+However, there is one difference between function calls and entailments. For
+function calls the deduced frame should be as strong as possible. So,
+if for example an equation could be added one would like to do so to preserve this
+information over the function call. Contrary, for entailments, the frame
+should be empty if possible, i.e. as weak  as possible. The flag
+strong_flag has no formal semantics. It's just used a hind to the specialised
+tactics whether a strong or weak frame is required.
+
+
+
+
+
+SMALLFOOT_PROP_IMPLIES___FALSE_PRECOND (wpb,rpb) (wpb')
+                       sfb_context sfb_split sfb_imp
+----------------------------------------------------- 
+
+
+A specialised version of SMALLFOOT_PROP_IMPLIES that tries to show
+that the combination of sfb_context with sfb_split is not satisfiable
+and therefore the SMALLFOOT_PROP_IMPLIES statement is trivially true.
+
+
+SMALLFOOT_PROP_IMPLIES strong_flag (wpb,rpb) (wpb')
+                       sfb_context sfb_split {| |}
+                       sfb_frameP
+
+is simplified to 
+
+sfb_frameP sfb_split /\
+SMALLFOOT_PROP_IMPLIES___FALSE_PRECOND (wpb,rpb) (wpb')
+                       sfb_context sfb_split sfb_imp
+
+
+Most of the time sfb_frameP sfb_split is the intended solution. However,
+the other possibility needs exploring as well. It is for example
+necessary to verify the function list_filter in list.sf
+
+*)
+
+
+
 
 (*parse it, set the goal and do the preprocessing 
   (about 2 s)*)
 smallfoot_set_goal file;
+
+(*or*)
+
+
+set_goal([],parse_smallfoot_file file)
+SMALLFOOT_INPUT_FILE_TAC
+
+
 
 REPEAT STRIP_TAC THENL [
    (*perform one step, a step is either 
@@ -89,7 +229,7 @@ REPEAT STRIP_TAC THENL [
    CONJ_TAC THENL [
       NTAC 2 SMALLFOOT_STEP_TAC THEN
 
-      (*a frame can be decuded stepwise*)
+      (*a frame can be deduced stepwise*)
       SMALLFOOT_MINI_STEP_TAC THEN
       SMALLFOOT_MINI_STEP_TAC THEN (*...*)
       (*or all in one step*)
@@ -114,8 +254,12 @@ REPEAT STRIP_TAC THENL [
 
    (*Function calls got replaced during preprocessing. The
      resulting statements are ugly to read and therefore
-     the pretty printer just states "... abstracted code ...". 
-     Turn of the pretty printer to see it in its details
+     the pretty printer just states "... abstracted code pre post ..."
+     In most cases that's sufficient for the user. However, there are
+     hidden conditions on the read/write permissions and 
+     for parallel function calls there is also a hidden condition related to
+     race freedom.
+     Turn off the pretty printer to see these conditions
 
      use_smallfoot_pretty_printer := false
 
@@ -136,24 +280,20 @@ REPEAT STRIP_TAC THENL [
 
 
 
-
-
-
-
-
-
 (*
 Other examples. The measured times are not very accurate. However,
 they should give a rough impression. The were measured at an
 Intel Core 2 Quad 2.4 GHz processor.
 *)
 
+val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot/EXAMPLES/"]
 
+
+(* 10.5 s *) val file = concat [examplesDir, "mergesort.sf"]; 
 (*  9.5 s *) val file = concat [examplesDir, "parallel_mergesort.sf"]; 
 (*  1.5 s *) val file = concat [examplesDir, "parallel_tree_deallocate.sf"]; 
 (* 27.0 s *) val file = concat [examplesDir, "list.sf"]; 
 (*  6.5 s *) val file = concat [examplesDir, "tree.sf"]; 
-(*  6.5 s *) val file = concat [examplesDir, "all/heap_race.sf"]; 
 (*  0.5 s *) val file = concat [examplesDir, "passive_stack_race.sf"]; (*semantics differs from smallfoot!*)
 
 
@@ -183,3 +323,5 @@ SMALLFOOT_STEP_TAC
 SMALLFOOT_STEP_TAC
 SMALLFOOT_MINI_STEP_TAC
 SMALLFOOT_SOLVE_TAC
+
+
