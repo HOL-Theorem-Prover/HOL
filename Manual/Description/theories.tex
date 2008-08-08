@@ -177,8 +177,7 @@ sometimes build on earlier ones.
 \index{iff, in HOL logic@iff, in \HOL{} logic!definitional axiom for}
 \index{negation, in HOL logic@negation, in \HOL{} logic!definitional axiom for}
 \index{ exists unique, in HOL logic@\holtxt{?"!} (exists unique, in \HOL{} logic)}
-\index{F@\holtxt{F}!axiom for}
-\index{F@\holtxt{F}!definitional axiom for}
+\index{F (falsity), the HOL constant@\holtxt{F} (falsity), the \HOL{} constant!definitional axiom for}
 \index{conjunction, in HOL logic@conjunction, in \HOL{} logic!definitional axiom for}
 \index{disjunction, in HOL logic@disjunction, in \HOL{} logic!definitional axiom for}
 \index{equality, in HOL logic@equality, in \HOL{} logic!primitive axiom for}
@@ -1037,7 +1036,10 @@ similar to those in \ML. For example, the following terms are allowed:
 \ml{let}-terms are actually abbreviations for ordinary terms which are
 specially supported by the parser and pretty printer.
 The constant \ml{LET}
-\index{LET@\ml{LET}} is defined (in the theory \ml{bool}) by:
+%
+\index{LET, the HOL constant@\ml{LET}, the \HOL{} constant} 
+% 
+is defined (in the theory \ml{bool}) by:
 
 \begin{hol}\index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!relation to let-terms@relation to \ml{let}-terms}
 \begin{verbatim}

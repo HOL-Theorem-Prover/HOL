@@ -969,7 +969,7 @@ below).  For example, the axiom \ml{BOOL\_CASES\_AX} mentioned in
 falsity, respectively):
 
 \begin{hol}
-\index{F@\holtxt{F}!axiom for}
+\index{F (falsity), the HOL constant@\holtxt{F} (falsity), the \HOL{} constant!axiom for}
 \begin{verbatim}
    |- !t. (t = T) \/ (t = F) : thm
 \end{verbatim}
@@ -1139,11 +1139,12 @@ in $t_2$ becoming bound after substitution. The substitution
  $t_1[t_2/x]$ is always defined.
 \end{itemize}
 
-
-\noindent \ml{BETA\_CONV ``(\bs$x$.$t_1$)$t_2$``} evaluates to the
-theorem \ml{|- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}.
-Failure if the argument to \ml{BETA\_CONV} is not a $\beta$-redex (\ie\ is not
-of the form \holtxt{(\bs$x$.$t_1$)$t_2$}.
+%'' below makes latex font-locking cope with the "unbalanced" double
+%back-tick quotations.
+\noindent \ml{BETA\_CONV ``(\bs$x$.$t_1$)$t_2$``} %''
+evaluates to the theorem \ml{|- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}.
+Failure if the argument to \ml{BETA\_CONV} is not a $\beta$-redex
+(\ie\ is not of the form \holtxt{(\bs$x$.$t_1$)$t_2$}.
 
 \bigskip
 
