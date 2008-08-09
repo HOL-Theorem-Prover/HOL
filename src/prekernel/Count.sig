@@ -10,7 +10,7 @@
 signature Count =
 sig
 
-  datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstType
+  datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstRank | InstType
                 | MkComb | ApTerm | ApThm | Alpha | EtaConv | TyEtaConv (* for HOL-Omega *)
                 | Sym | Trans | EqMp | EqImpRule | Inst
                 | Spec | Gen  | Exists | Choose
@@ -29,7 +29,8 @@ sig
    {ASSUME : int, REFL : int, 
     BETA_CONV : int, SUBST : int, 
     ABS : int, DISCH : int, 
-    MP : int, INST_TYPE : int, 
+    MP : int, INST_RANK : int,
+    INST_TYPE : int,
     MK_COMB : int, AP_TERM : int, 
     AP_THM : int, ALPHA : int, 
     ETA_CONV : int,

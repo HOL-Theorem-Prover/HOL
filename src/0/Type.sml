@@ -113,6 +113,9 @@ val bar  = TyCon bar_tyc;
 *)
 
 
+fun same_tyconst (id1,_,_) (id2,_,_) = id1 = id2
+
+
 (*---------------------------------------------------------------------------
        Function types
  ---------------------------------------------------------------------------*)
@@ -122,7 +125,7 @@ fun (X --> Y) = TyApp (TyApp (TyCon fun_tyc, X), Y);
 
 local
 fun dom_of (TyApp(TyCon tyc, Y)) =
-      if tyc = fun_tyc then Y
+      if same_tyconst tyc fun_tyc then Y
       else raise ERR "dom_rng" "not a function type"
   | dom_of _ = raise ERR "dom_rng" "not a function type"
 in
@@ -258,6 +261,22 @@ well_kinded ty5;
 well_kinded ty6;
 well_kinded ty7;
 *)
+
+(*---------------------------------------------------------------------------*
+ * Increasing the rank of a type.                                            *
+ *---------------------------------------------------------------------------*)
+
+fun inc_rank i ty =
+  let fun inc_rk (TyFv (s,kd,rk))        = TyFv (s,kd,rk+i)
+        | inc_rk (TyCon(s,kd,rk))        = TyCon(s,kd,rk (* +i *) ) (* maybe later *)
+        | inc_rk (ty as TyBv i)          = ty
+        | inc_rk (TyApp(opr, ty))        = TyApp(inc_rk opr, inc_rk ty)
+        | inc_rk (TyAll((s,kd,rk),Body)) = TyAll((s,kd,rk+i), inc_rk Body)
+        | inc_rk (TyAbs((s,kd,rk),Body)) = TyAbs((s,kd,rk+i), inc_rk Body)
+  in if i = 0 then ty
+     else if i < 0 then raise ERR "inc_rank" "increment is negative"
+     else inc_rk ty
+  end;
 
 
 (*---------------------------------------------------------------------------
@@ -1213,15 +1232,27 @@ fun type_subst theta = delta_apply (ty_sub theta)
  *    Replace arbitrary subtypes in a type. Non-renaming.                    *
  *---------------------------------------------------------------------------*)
 
+fun match_rank [] = 0
+  | match_rank ({redex,residue} :: s) =
+      let val rk_dex = rank_of redex
+          val rk_due = rank_of residue
+      in
+         Int.max( if rk_dex >= rk_due then 0
+                  else rk_due - rk_dex,
+                  match_rank s )
+      end
+
+fun inc_rank_subst r [] = []
+  | inc_rank_subst r ({redex,residue} :: s) =
+      ({redex=inc_rank r redex, residue=residue} :: inc_rank_subst r s)
+
 val emptysubst:(hol_type,hol_type)Binarymap.dict = Binarymap.mkDict compare
 local
   open Binarymap
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
-      addb t ( (* if rank_of redex >= rank_of residue
-              then *) (insert(A,redex,residue),
-                       is_vartype redex andalso b)
-               (* else raise ERR "type_subst" "redex has lower rank than residue" *) )
+      addb t (insert(A,redex,residue),
+              is_vartype redex andalso b)
 in
 fun type_subst [] = I
   | type_subst theta =
@@ -1245,6 +1276,15 @@ fun type_subst [] = I
     in
       (if b then vsubs else subs)
     end
+
+fun rank_type_subst s =
+   let val r = match_rank s
+   in if r = 0 then type_subst s
+      else let val s' = inc_rank_subst r s
+           in (fn ty => type_subst s' (inc_rank r ty))
+           end
+   end
+
 end;
 
 fun ty_sub theta ty = let val ty' = type_subst theta ty
@@ -1291,11 +1331,11 @@ fun abstraction (TyAbs _)         = true
   | abstraction (TyAll (_,Body))  = abstraction Body
   | abstraction _                 = false
 
-(*---------------------------------------------------------------------------
+(*--------------------------------------------------------------------------------
     Matching (first order, modulo alpha conversion) of types, including
     sets of type variables to avoid binding.
     Now replaced by higher order matching of types, modulo alpha-beta conversion.
- ---------------------------------------------------------------------------*)
+ --------------------------------------------------------------------------------*)
 
 local
   fun MERR s = raise ERR "raw_match_type error" s
@@ -1318,10 +1358,6 @@ fun RM [] theta = theta
   | RM (((v as TyFv(_,kd,rk)),ty,scoped)::rst) (S1 as (tyS,Id))
      = if bound_by_scope scoped ty
        then MERR "type variable bound by scope"
-(* Incorrect to test for rank here; types should match at any rank:
-       else if rk < rank_of ty
-       then MERR "type variable of insufficient rank"
-*)
        else if kd <> kind_of ty
        then MERR "type variable has different kind"
        else RM rst
@@ -1692,7 +1728,7 @@ local
       in
         if is_vartype vhop andalso not (HOLset.member(lconsts, vhop)) andalso
            not (in_dom vhop env)
-        then let
+        then let (* kind_of and rank_of can fail if given an open type with free bound variables, as cty might be *)
             val vkd = kind_of vty
             val vrk = rank_of vty
             val ckd = kind_of cty

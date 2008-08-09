@@ -326,11 +326,23 @@ fun GEN_TY_ABS opt vlist (th as THM(ocl,asl,c)) =
 
 (*---------------------------------------------------------------------------
  *         A |- M
+ *  --------------------  INST_RANK n
+ *  A[rank + n/rank] |- M[rank + n/rank]
+ *
+ *---------------------------------------------------------------------------*)
+
+fun INST_RANK n (THM(ocl,asl,c)) =
+    if n < 0 then raise ERR "INST_RANK" "rank instantiation cannot lower the rank"
+    else make_thm Count.InstRank(ocl, hypset_map (Term.inc_rank n) asl, Term.inc_rank n c)
+
+(*---------------------------------------------------------------------------
+ *         A |- M
  *  --------------------  INST_TYPE theta
  *  theta(A) |- theta(M)
  *
  *---------------------------------------------------------------------------*)
 
+(*
 fun check_subst_rank s =
  let open Type
      fun check {redex,residue} =
@@ -338,12 +350,21 @@ fun check_subst_rank s =
        else raise ERR "INST_TYPE" "substitution does not respect rank"
  in map check s; ()
  end
+*)
 
 fun INST_TYPE [] th = th
   | INST_TYPE theta (THM(ocl,asl,c)) =
-    ((* check_subst_rank theta; *) (* impracticable? eliminates many inferences *)
-     (* may be unsound without check *)
-     make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c))
+    let val r = Type.match_rank theta
+    in if r = 0 then
+         make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c)
+       else let
+         val theta' = Type.inc_rank_subst r theta
+         val asl'   = hypset_map (Term.inc_rank r) asl
+         val c'     = Term.inc_rank r c
+       in
+         make_thm Count.InstType(ocl, hypset_map (inst theta') asl', inst theta' c')
+       end
+    end
 
 (*---------------------------------------------------------------------------
  *          A |- M
@@ -1817,7 +1838,6 @@ fun parse_raw table =
             (case parse (stk1, eat_dot rst) (* parse the body *)
               of (h::v::t,rst1) => (Abs(v,h)::t, eat_rparen rst1)
                |   _            => ERR "glamb" "impossible")
-        | _ => ERR "glamb" "expected a variable"
      and
      gtylamb (stk,ss) =
       case lexer ss

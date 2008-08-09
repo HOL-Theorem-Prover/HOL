@@ -118,6 +118,28 @@ fun type_of tm = ty_of tm []
 end;
 
 
+(*---------------------------------------------------------------------------*
+ * Increasing the rank of all types in a term.                               *
+ *---------------------------------------------------------------------------*)
+
+fun inc_rank i tm =
+  let val inc_rank = Type.inc_rank i
+      fun inc_rk (Fv (s,ty))            = Fv (s, inc_rank ty)
+        | inc_rk (Const(s,GRND ty))     = Const(s,GRND (inc_rank ty))
+        | inc_rk (Const(s,POLY ty))     = Const(s,POLY (inc_rank ty))
+        | inc_rk (tm as Bv i)           = tm
+        | inc_rk (Comb(Rator,Rand))     = Comb(inc_rk Rator,inc_rk Rand)
+        | inc_rk (TComb(tm, ty))        = TComb(inc_rk tm, inc_rank ty)
+        | inc_rk (Abs(Fv(nm,ty),body))  = Abs(Fv(nm, inc_rank ty), inc_rk body)
+        | inc_rk (TAbs((s,kd,rk),body)) = TAbs((s,kd,rk+i), inc_rk body)
+        | inc_rk (t as Clos _)          = inc_rk (push_clos t)
+        | inc_rk _ = raise ERR "inc_rank" "term construction"
+  in if i = 0 then tm
+     else if i < 0 then raise ERR "inc_rank" "increment is negative"
+     else inc_rk tm
+  end;
+
+
 (*---------------------------------------------------------------------------
                 Discriminators
  ---------------------------------------------------------------------------*)
@@ -901,7 +923,7 @@ fun list_mk_tybinder opt =
  in fn (vlist,tm) => 
     if not (null (Lib.intersect vlist (type_varsl (map type_of (free_vars tm)))))
     then raise ERR "list_mk_tyabs"
-         "bound variable occurs free in the type of a free variable of the body"
+         "bound type variable occurs free in the type of a free variable of the body"
     else
     let open Polyhash
      val varmap = mkPolyTable(length vlist, Fail "varmap")
@@ -945,7 +967,7 @@ val list_mk_tyabs = list_mk_tybinder NONE;
 fun mk_tyabs(Bvar as TyFv Bvarty, Body) =
     if mem Bvar (type_varsl (map type_of (free_vars Body)))
     then raise ERR "mk_tyabs"
-         "bound variable occurs free in the type of a free variable of the body"
+         "bound type variable occurs free in the type of a free variable of the body"
     else
     let fun bind (Fv(Name,Ty)) i      = Fv(Name, bindty Ty i)
           | bind (Const(Name,Ty)) i   = Const(Name, bindpty Ty i)
@@ -1295,7 +1317,6 @@ local
     | free (Abs(_,Body)) n m      = free Body (n+1) m
     | free (TAbs(_,Body)) n m     = free Body n (m+1)
     | free (t as Clos _) n m      = free (push_clos t) n m
-    | free _ _ _ = true
   fun lookup x ids =
    let fun look [] = if HOLset.member(ids,x) then SOME x else NONE
          | look ({redex,residue}::t) = if x=redex then SOME residue else look t

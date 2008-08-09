@@ -8,6 +8,7 @@ sig
   val termsig       : KernelTypes.holty KernelSig.symboltable
 
   val type_of       : term -> hol_type
+  val inc_rank      : int -> term -> term
   val free_vars     : term -> term list
   val free_vars_lr  : term -> term list
   val FVL           : term list -> term set -> term set

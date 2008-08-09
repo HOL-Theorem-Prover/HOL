@@ -12,7 +12,7 @@ fun counting_thms b = (counting := b);
 val inc = Portable.inc
 
 
-datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstType
+datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstRank | InstType
               | MkComb | ApTerm | ApThm | Alpha | EtaConv | TyEtaConv
               | Sym | Trans | EqMp | EqImpRule | Inst
               | Spec | Gen | Exists | Choose
@@ -26,7 +26,8 @@ datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstType
 val count = {ASSUME     = ref 0, REFL = ref 0,
              BETA_CONV  = ref 0, SUBST = ref 0,
              ABS        = ref 0, DISCH = ref 0,
-             MP         = ref 0, INST_TYPE  = ref 0,
+             MP         = ref 0, INST_RANK = ref 0,
+             INST_TYPE  = ref 0,
              MK_COMB    = ref 0, AP_TERM = ref 0,
              AP_THM     = ref 0, ALPHA = ref 0,
              ETA_CONV   = ref 0, TY_ETA_CONV = ref 0,
@@ -60,6 +61,7 @@ fun inc_count R =
        | Abs        => inc (#ABS count)
        | Disch      => inc (#DISCH count)
        | Mp         => inc (#MP count)
+       | InstRank   => inc (#INST_RANK count)
        | InstType   => inc (#INST_TYPE count)
        | MkComb     => inc (#MK_COMB count)
        | ApTerm     => inc (#AP_TERM count)
@@ -111,6 +113,7 @@ fun reset_thm_count() =
      zero (#ABS count);
      zero (#DISCH count);
      zero (#MP count);
+     zero (#INST_RANK count);
      zero (#INST_TYPE count);
      zero (#MK_COMB count);
      zero (#AP_TERM count);
@@ -155,7 +158,7 @@ end;
 fun prims() =
    !(#ASSUME count) + !(#REFL count) + !(#BETA_CONV count) +
    !(#SUBST count) + !(#ABS count) + !(#DISCH count) +
-   !(#MP count) + !(#INST_TYPE count) + !(#MK_COMB count) +
+   !(#MP count) + !(#INST_RANK count) + !(#INST_TYPE count) + !(#MK_COMB count) +
    !(#AP_TERM count) + !(#AP_THM count) + !(#ALPHA count) +
    !(#ETA_CONV count) + !(#TY_ETA_CONV count) + (* TY_ETA_CONV for HOL-Omega *)
    !(#SYM count) + !(#TRANS count) +
@@ -184,7 +187,8 @@ fun thm_count() =
  {ASSUME     = !(#ASSUME count),    REFL        = !(#REFL count),
   BETA_CONV  = !(#BETA_CONV count), SUBST       = !(#SUBST count),
   ABS        = !(#ABS count),       DISCH       = !(#DISCH count),
-  MP         = !(#MP count),        INST_TYPE   = !(#INST_TYPE count),
+  MP         = !(#MP count),        INST_RANK   = !(#INST_RANK count),
+  INST_TYPE   = !(#INST_TYPE count),
   MK_COMB = !(#MK_COMB count),      AP_TERM     = !(#AP_TERM count),
   AP_THM = !(#AP_THM count),        ALPHA       = !(#ALPHA count),
   ETA_CONV = !(#ETA_CONV count),    TY_ETA_CONV = !(#TY_ETA_CONV count),

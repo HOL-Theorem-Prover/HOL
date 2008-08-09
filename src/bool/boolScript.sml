@@ -21,6 +21,7 @@ or
 and type Ctrl-j.
 
 quotation := true;
+loadPath := "/Users/palantir" ^ "/hol/hol-omega/sigobj" :: !loadPath;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/sigobj" :: !loadPath;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/bool" :: !loadPath;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/HolSat" :: !loadPath;
@@ -3336,7 +3337,7 @@ let val f = --`f: !'a. 'b`--
     and thF3 = EQ_MP (SYM thF2) thF1
  in
     GENL [b,f,g] (DISJ_CASES (SPEC b BOOL_CASES_AX) thT3 thF3)
- end;
+ end handle e => Raise e;
 
 val _ = save_thm("COND_TY_COMB", COND_TY_COMB);
 

@@ -282,6 +282,7 @@ val option_monad = store_thm
    THEN CASE_TAC
   );
 
+
 val FLAT_APPEND = store_thm
   ("FLAT_APPEND",
    ``!(s:'a list list) t. FLAT (s ++ t) = FLAT s ++ FLAT t``,

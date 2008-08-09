@@ -279,12 +279,12 @@ let fun update _ _ (LEAF _) = raise ERR "net_update" "cannot update a tip"
                    of Cmb  => let val (Rator,Rand) = Term.dest_comb tm
                               in update (Rator::defd) Rand child
                               end
-                    | TCm  => let val (Rator,Rand) = Term.dest_tycomb tm
+                    | TCmb => let val (Rator,Rand) = Term.dest_tycomb tm
                               in update defd Rator child
                               end
                     | Lam  => update defd (break_abs tm) child
                     | TLam => update defd (break_tyabs tm) child
-                    | _    => exec_defd defd child 
+                    | _    => exec_defd defd child
            in NODE (overwrite (label,new_child) edges)
            end
 in  update

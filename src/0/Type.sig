@@ -9,6 +9,9 @@ sig
   val rank_of       : hol_type -> int
   val check_kind_of : hol_type -> kind
   val is_well_kinded: hol_type -> bool
+  val inc_rank      : int -> hol_type -> hol_type
+  val match_rank    : (hol_type,hol_type)Lib.subst -> int
+  val inc_rank_subst: int -> (hol_type,hol_type)Lib.subst -> (hol_type,hol_type)Lib.subst
   val mk_vartype    : string -> hol_type
   val mk_vartype_opr : tyvar -> hol_type
   val mk_primed_vartype : string -> hol_type
@@ -77,6 +80,7 @@ sig
   val ty_sub        : (hol_type,hol_type)Lib.subst
                         -> hol_type -> hol_type Lib.delta
   val type_subst    : (hol_type,hol_type)Lib.subst -> hol_type -> hol_type
+  val rank_type_subst : (hol_type,hol_type)Lib.subst -> hol_type -> hol_type
   val type_map      : (hol_type,hol_type)Binarymap.dict -> hol_type -> hol_type
   val type_vars     : hol_type -> hol_type list
   val type_varsl    : hol_type list -> hol_type list

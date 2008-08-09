@@ -28,6 +28,7 @@ sig
   val DISCH         : term -> thm -> thm
   val MP            : thm -> thm -> thm
   val SUBST         : (term,thm)Lib.subst -> term -> thm -> thm
+  val INST_RANK     : int -> thm -> thm
   val INST_TYPE     : (hol_type,hol_type)Lib.subst -> thm -> thm
   val TY_ABS        : hol_type -> thm -> thm
   val TY_BETA_CONV  : term -> thm
