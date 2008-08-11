@@ -50,6 +50,8 @@ sig
   val >          : num * num -> bool
   val >=         : num * num -> bool
 
+  val compare    : num * num -> order
+
   val pp_num     : ppstream -> num -> unit
 
 end
