@@ -153,13 +153,18 @@ REPEAT STRIP_TAC
   THEN STRIP_ASSUME_TAC (Q.SPEC `c` CHR_ONTO)
   THEN RW_TAC bool_ss []);
 
+val char_size_def = 
+ Define
+   `char_size (c:char) = 0`;
+
 (*---------------------------------------------------------------------------
       Strings are represented as lists of characters. This gives us
       EXPLODE and IMPLODE as the functions mapping into, and from, the
       representation.
  ---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype`string = EMPTYSTRING | STRING of char => string`
+val _ = 
+ Hol_datatype `string = EMPTYSTRING | STRING of char => string`
 
 val GET_def = Define`
   (GET (STRING x s) 0 = x) /\
@@ -462,19 +467,15 @@ fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
 
 val _ = adjoin_to_theory_struct [
   "val _ =",
-  "let open Lib boolSyntax numSyntax",
-  "    val char_type = type_of (fst(dest_forall(concl char_nchotomy)))",
-  "    val ORD_tm = fst(strip_comb(lhs(lhs(snd(strip_forall(concl ORD_11))))))",
-  "    val ORD_abs = list_mk_abs([mk_var(\"v1\",bool-->num),",
-  "                               mk_var(\"v2\",alpha-->num),",
-  "                               mk_var(\"v3\",char_type)],",
-  "                               mk_comb(ORD_tm,mk_var(\"v3\",char_type)))",
+  "let open Lib boolSyntax",
+  "    val (v,M) = dest_forall(concl char_size_def)",
+  "    val char_size_tm = fst(strip_comb(lhs M))",
   "in",
   " TypeBase.write",
   " [TypeBasePure.mk_nondatatype_info",
-  "  (char_type, ",
+  "  (type_of v, ",
   "    {nchotomy = SOME ranged_char_nchotomy,",
-  "     size = SOME(ORD_abs,CONJUNCT1(Drule.SPEC_ALL boolTheory.AND_CLAUSES)),",
+  "     size = SOME(char_size_tm,char_size_def),",
   "     encode = NONE})]",
   "end;",
   "",
