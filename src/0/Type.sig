@@ -7,11 +7,13 @@ sig
 
   val kind_of       : hol_type -> kind
   val rank_of       : hol_type -> int
+  val rk_of         : hol_type -> int list -> int
+  val rank_of_univ_dom : hol_type -> int
   val check_kind_of : hol_type -> kind
   val is_well_kinded: hol_type -> bool
-  val inc_rank      : int -> hol_type -> hol_type
+  val inst_rank     : int -> hol_type -> hol_type
   val match_rank    : (hol_type,hol_type)Lib.subst -> int
-  val inc_rank_subst: int -> (hol_type,hol_type)Lib.subst -> (hol_type,hol_type)Lib.subst
+  val inst_rank_subst : int -> (hol_type,hol_type)Lib.subst -> (hol_type,hol_type)Lib.subst
   val mk_vartype    : string -> hol_type
   val mk_vartype_opr : tyvar -> hol_type
   val mk_primed_vartype : string -> hol_type
@@ -108,6 +110,20 @@ sig
   val match_type_in_context : hol_type -> hol_type
                               -> (hol_type,hol_type)Lib.subst
                               -> (hol_type,hol_type)Lib.subst
+  val type_pmatch : hol_type HOLset.set -> {redex : hol_type, residue : hol_type} list ->
+                    hol_type -> hol_type ->
+                    (hol_type,hol_type)Lib.subst *
+                    ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list ->
+                    (hol_type,hol_type)Lib.subst *
+                    ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list
+  val separate_insts_ty : (hol_type,hol_type)Lib.subst ->
+                          {redex : hol_type, residue : int} list *
+                          (hol_type,hol_type)Lib.subst
+  val all_abconv : hol_type list -> hol_type list -> bool
+  val type_homatch : hol_type HOLset.set ->
+                     (hol_type,hol_type)Lib.subst *
+                     ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list ->
+                     (hol_type,hol_type)Lib.subst
   val ho_match_type1 : hol_type HOLset.set -> hol_type -> hol_type
                        -> (hol_type,hol_type)Lib.subst *
                           ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list

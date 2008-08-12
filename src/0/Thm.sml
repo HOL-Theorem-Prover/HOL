@@ -333,7 +333,7 @@ fun GEN_TY_ABS opt vlist (th as THM(ocl,asl,c)) =
 
 fun INST_RANK n (THM(ocl,asl,c)) =
     if n < 0 then raise ERR "INST_RANK" "rank instantiation cannot lower the rank"
-    else make_thm Count.InstRank(ocl, hypset_map (Term.inc_rank n) asl, Term.inc_rank n c)
+    else make_thm Count.InstRank(ocl, hypset_map (Term.inst_rank n) asl, Term.inst_rank n c)
 
 (*---------------------------------------------------------------------------
  *         A |- M
@@ -358,9 +358,9 @@ fun INST_TYPE [] th = th
     in if r = 0 then
          make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c)
        else let
-         val theta' = Type.inc_rank_subst r theta
-         val asl'   = hypset_map (Term.inc_rank r) asl
-         val c'     = Term.inc_rank r c
+         val theta' = Type.inst_rank_subst r theta
+         val asl'   = hypset_map (Term.inst_rank r) asl
+         val c'     = Term.inst_rank r c
        in
          make_thm Count.InstType(ocl, hypset_map (inst theta') asl', inst theta' c')
        end
@@ -1072,8 +1072,8 @@ fun CHOOSE (v,xth) bth =
 (*---------------------------------------------------------------------------
  * Type existential elimination
  *
- *   A1 |- ?:a.t[a]   ,   A2, "t[v]" |- t'
- *   ------------------------------------     (type variable v occurs nowhere)
+ *   A1 |- ?:a.t[a]   ,   A2, "t[b]" |- t'
+ *   ------------------------------------     (type variable b occurs nowhere)
  *            A1 u A2 |- t'
  *
  * fun TY_CHOOSE (v,th1) th2 =

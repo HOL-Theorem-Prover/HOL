@@ -122,20 +122,20 @@ end;
  * Increasing the rank of all types in a term.                               *
  *---------------------------------------------------------------------------*)
 
-fun inc_rank i tm =
-  let val inc_rank = Type.inc_rank i
-      fun inc_rk (Fv (s,ty))            = Fv (s, inc_rank ty)
-        | inc_rk (Const(s,GRND ty))     = Const(s,GRND (inc_rank ty))
-        | inc_rk (Const(s,POLY ty))     = Const(s,POLY (inc_rank ty))
-        | inc_rk (tm as Bv i)           = tm
+fun inst_rank i tm =
+  let val inc_rk_ty = Type.inst_rank i
+      fun inc_rk (Fv (s,ty))            = Fv (s, inc_rk_ty ty)
+        | inc_rk (Const(s,GRND ty))     = Const(s,GRND (inc_rk_ty ty))
+        | inc_rk (Const(s,POLY ty))     = Const(s,POLY (inc_rk_ty ty))
+        | inc_rk (tm as Bv _)           = tm
         | inc_rk (Comb(Rator,Rand))     = Comb(inc_rk Rator,inc_rk Rand)
-        | inc_rk (TComb(tm, ty))        = TComb(inc_rk tm, inc_rank ty)
-        | inc_rk (Abs(Fv(nm,ty),body))  = Abs(Fv(nm, inc_rank ty), inc_rk body)
+        | inc_rk (TComb(tm, ty))        = TComb(inc_rk tm, inc_rk_ty ty)
+        | inc_rk (Abs(Fv(nm,ty),body))  = Abs(Fv(nm, inc_rk_ty ty), inc_rk body)
         | inc_rk (TAbs((s,kd,rk),body)) = TAbs((s,kd,rk+i), inc_rk body)
         | inc_rk (t as Clos _)          = inc_rk (push_clos t)
-        | inc_rk _ = raise ERR "inc_rank" "term construction"
+        | inc_rk _ = raise ERR "inst_rank" "term construction"
   in if i = 0 then tm
-     else if i < 0 then raise ERR "inc_rank" "increment is negative"
+     else if i < 0 then raise ERR "inst_rank" "increment is negative"
      else inc_rk tm
   end;
 
@@ -777,21 +777,28 @@ end
 fun inst [] tm = tm
   | inst theta tm =
     let fun
-       inst1 (bv as Bv _) = bv
-     | inst1 (c as Const(_, GRND _)) = c
-     | inst1 (c as Const(r, POLY Ty)) =
+       inst1 (bv as Bv i) R = bv
+     | inst1 (c as Const(_, GRND _)) R = c
+     | inst1 (c as Const(r, POLY Ty)) R =
        (case Type.ty_sub theta Ty
          of SAME => c
           | DIFF ty => Const(r,(if Type.polymorphic ty then POLY else GRND)ty))
-     | inst1 (v as Fv(Name,Ty)) =
+     | inst1 (v as Fv(Name,Ty)) R =
          (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
-     | inst1 (Comb(Rator,Rand)) = Comb(inst1 Rator, inst1 Rand)
-     | inst1 (TComb(Rator,Ty))  = TComb(inst1 Rator, Type.type_subst theta Ty)
-     | inst1 (Abs(Bvar,Body))   = Abs(inst1 Bvar, inst1 Body)
-     | inst1 (TAbs(Bvar,Body))  = TAbs(Bvar, inst1 Body)
-     | inst1 (t as Clos _)      = inst1(push_clos t)
+     | inst1 (Comb(Rator,Rand)) R = Comb(inst1 Rator R, inst1 Rand R)
+     | inst1 (TComb(Rator,Ty)) R  =
+         let val Rator' = inst1 Rator R
+             val rty = type_of Rator'
+             val Ty' = Type.type_subst theta Ty
+         in if Type.rk_of Ty' R > rank_of_univ_dom rty
+             then raise ERR "inst" "universal type variable has insufficient rank"
+             else TComb(Rator', Ty')
+         end
+     | inst1 (Abs(Bvar,Body)) R   = Abs(inst1 Bvar R, inst1 Body R)
+     | inst1 (TAbs(Bvar as (_,_,rk),Body)) R = TAbs(Bvar, inst1 Body (rk::R))
+     | inst1 (t as Clos _) R      = inst1(push_clos t) R
     in
-      inst1 tm
+      inst1 tm []
     end;
 
 (*---------------------------------------------------------------------------*
@@ -812,23 +819,30 @@ fun subst_type [] tm = tm
   | subst_type theta tm =
     let val (fmap,b) = addb theta (empty_tysubst, true)
         fun
-       subst_type1 (bv as Bv _) = bv
-     | subst_type1 (c as Const(r, GRND Ty)) =
+       subst_type1 (bv as Bv _) R = bv
+     | subst_type1 (c as Const(r, GRND Ty)) R =
          let val ty = type_map fmap Ty in
            Const(r,(if Type.polymorphic ty then POLY else GRND)ty)
          end
-     | subst_type1 (c as Const(r, POLY Ty)) =
+     | subst_type1 (c as Const(r, POLY Ty)) R =
          let val ty = type_map fmap Ty in
            Const(r,(if Type.polymorphic ty then POLY else GRND)ty)
          end
-     | subst_type1 (v as Fv(Name,Ty)) = Fv(Name, type_map fmap Ty)
-     | subst_type1 (Comb(Rator,Rand)) = Comb(subst_type1 Rator, subst_type1 Rand)
-     | subst_type1 (TComb(Rator,Ty))  = TComb(subst_type1 Rator, type_map fmap Ty)
-     | subst_type1 (Abs(Bvar,Body))   = Abs(subst_type1 Bvar, subst_type1 Body)
-     | subst_type1 (TAbs(Bvar,Body))  = TAbs(Bvar, subst_type1 Body)
-     | subst_type1 (t as Clos _)      = subst_type1(push_clos t)
+     | subst_type1 (v as Fv(Name,Ty)) R = Fv(Name, type_map fmap Ty)
+     | subst_type1 (Comb(Rator,Rand)) R = Comb(subst_type1 Rator R, subst_type1 Rand R)
+     | subst_type1 (TComb(Rator,Ty)) R  =
+         let val Rator' = subst_type1 Rator R
+             val rty = type_of Rator'
+             val Ty' = type_map fmap Ty
+         in if Type.rk_of Ty' R > rank_of_univ_dom rty
+             then raise ERR "subst_type" "universal type variable has insufficient rank"
+             else TComb(Rator', Ty')
+         end
+     | subst_type1 (Abs(Bvar,Body)) R   = Abs(subst_type1 Bvar R, subst_type1 Body R)
+     | subst_type1 (TAbs(Bvar as (_,_,rk),Body)) R = TAbs(Bvar, subst_type1 Body (rk::R))
+     | subst_type1 (t as Clos _) R      = subst_type1(push_clos t) R
     in
-      subst_type1 tm
+      subst_type1 tm []
     end
 end;
 
@@ -977,8 +991,8 @@ fun mk_tyabs(Bvar as TyFv Bvarty, Body) =
           | bind (TAbs(Bvar,Body)) i  = TAbs(Bvar, bind Body (i+1))
           | bind (t as Clos _) i      = bind (push_clos t) i
           | bind tm _ = tm (* constant *)
-        and bindpty (GRND ty) i         = GRND (bindty ty i)
-          | bindpty (POLY ty) i         = POLY (bindty ty i)
+        and bindpty (GRND ty) i       = GRND (bindty ty i)
+          | bindpty (POLY ty) i       = POLY (bindty ty i)
         and bindty (v as TyFv _) i    = if v=Bvar then TyBv i else v
           | bindty (TyApp(opr,arg)) i = TyApp(bindty opr i, bindty arg i)
           | bindty (TyAll(bv,Body)) i = TyAll(bv, bindty Body (i+1))

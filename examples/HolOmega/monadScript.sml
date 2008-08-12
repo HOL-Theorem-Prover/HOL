@@ -84,7 +84,7 @@ val ty15 = ``:bool ('a prod)``;
 
 val ty16 = ``:\'a :<= 1 'b. ((!'c. 'a) :<= 2) 'b`` handle e => Raise e;
 val ty17 = ``:\'a 'b. ((!'c. 'a) :<= 2) 'b`` handle e => Raise e;
-val ty18 = ``:\'a 'b. (!'c. (!'d. 'c) -> 'a) :<= 3 'b`` handle e => Raise e;
+val ty18 = ``:\'a 'b. (!'c. (!'d. 'c) -> 'a) :<= 2 'b`` handle e => Raise e;
 
 val tm2 = mk_tyabs(``:'a:<=3``, ``\x:('a:<=3) (\'b. 'b). x``);
 val tm3 = mk_tycomb(tm2, ``:'c``);

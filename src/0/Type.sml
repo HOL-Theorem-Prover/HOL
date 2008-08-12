@@ -23,7 +23,7 @@ or
 and type Ctrl-j.
 
 loadPath := "/usr/local/hol/hol-omega/sigobj" :: !loadPath;
-app load ["Feedback","Lib","KernelTypes","Kind","Sig","Lexis","Polyhash",
+app load ["Feedback","Lib","KernelTypes","Kind","KernelSig","Lexis","Polyhash",
           "Binarymap"];
 *)
 
@@ -189,13 +189,13 @@ local val max = Int.max
       fun lookup 0 (rk::_)  = rk
         | lookup n (_::rst) = lookup (n-1) rst
         | lookup _ []       = raise ERR "rank_of" "lookup"
+in
       fun rk_of (TyFv (_,_,rk)) _        = rk
         | rk_of (TyCon(_,_,rk)) _        = rk
         | rk_of (TyBv i) E               = lookup i E
         | rk_of (TyApp(opr, ty)) E       = max (rk_of opr E, rk_of ty E)
         | rk_of (TyAll((_,_,rk),Body)) E = max (rk, rk_of Body (rk::E)) + 1
         | rk_of (TyAbs((_,_,rk),Body)) E = max (rk, rk_of Body (rk::E))
-in
 fun rank_of ty = rk_of ty []
 end;
 
@@ -209,6 +209,9 @@ rank_of ty5;
 rank_of ty6;
 rank_of ty7;
 *)
+
+fun rank_of_univ_dom (TyAll((_,_,rk),_)) = rk
+  | rank_of_univ_dom _ = raise ERR "rank_of_univ_dom" "not a universal type"
 
 (*---------------------------------------------------------------------------*
  * Computing the kind of a type, not assuming it is well-kinded.             *
@@ -266,15 +269,15 @@ well_kinded ty7;
  * Increasing the rank of a type.                                            *
  *---------------------------------------------------------------------------*)
 
-fun inc_rank i ty =
+fun inst_rank i ty =
   let fun inc_rk (TyFv (s,kd,rk))        = TyFv (s,kd,rk+i)
         | inc_rk (TyCon(s,kd,rk))        = TyCon(s,kd,rk (* +i *) ) (* maybe later *)
-        | inc_rk (ty as TyBv i)          = ty
+        | inc_rk (ty as TyBv _)          = ty
         | inc_rk (TyApp(opr, ty))        = TyApp(inc_rk opr, inc_rk ty)
         | inc_rk (TyAll((s,kd,rk),Body)) = TyAll((s,kd,rk+i), inc_rk Body)
         | inc_rk (TyAbs((s,kd,rk),Body)) = TyAbs((s,kd,rk+i), inc_rk Body)
   in if i = 0 then ty
-     else if i < 0 then raise ERR "inc_rank" "increment is negative"
+     else if i < 0 then raise ERR "inst_rank" "increment is negative"
      else inc_rk ty
   end;
 
@@ -1242,9 +1245,9 @@ fun match_rank [] = 0
                   match_rank s )
       end
 
-fun inc_rank_subst r [] = []
-  | inc_rank_subst r ({redex,residue} :: s) =
-      ({redex=inc_rank r redex, residue=residue} :: inc_rank_subst r s)
+fun inst_rank_subst r [] = []
+  | inst_rank_subst r ({redex,residue} :: s) =
+      ({redex=inst_rank r redex, residue=residue} :: inst_rank_subst r s)
 
 val emptysubst:(hol_type,hol_type)Binarymap.dict = Binarymap.mkDict compare
 local
@@ -1280,8 +1283,8 @@ fun type_subst [] = I
 fun rank_type_subst s =
    let val r = match_rank s
    in if r = 0 then type_subst s
-      else let val s' = inc_rank_subst r s
-           in (fn ty => type_subst s' (inc_rank r ty))
+      else let val s' = inst_rank_subst r s
+           in (fn ty => type_subst s' (inst_rank r ty))
            end
    end
 
@@ -1851,6 +1854,11 @@ in
 end
 
 in
+
+val type_pmatch = type_pmatch
+val separate_insts_ty = separate_insts_ty
+val all_abconv = all_abconv
+val type_homatch = type_homatch
 
 fun ho_match_type1 lconsts vty cty insts_homs = let
   val pinsts_homs = type_pmatch lconsts [] vty cty insts_homs
