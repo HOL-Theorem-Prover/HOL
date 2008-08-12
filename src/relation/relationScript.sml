@@ -114,6 +114,12 @@ val RTC_RULES = store_thm(
   ``!R. (!x. RTC R (x:'a) x) /\ (!x y z. R x y /\ RTC R y z ==> RTC R x z)``,
   REWRITE_TAC [RTC_DEF] THEN MESON_TAC []);
 
+val RTC_REFL = store_thm(
+  "RTC_REFL",
+  ``RTC R x x``,
+  REWRITE_TAC [RTC_RULES]);
+val _ = export_rewrites ["RTC_REFL"]
+
 val RTC_STRONG_INDUCT = store_thm(
   "RTC_STRONG_INDUCT",
   ``!R P. (!x. P x x) /\ (!x y z. R x y /\ RTC R y z /\ P y z ==> P x z) ==>
