@@ -1,0 +1,8 @@
+assign(x;y) {
+  x = y;
+}
+
+stack_race() {
+  local x;
+  assign(x;42) || assign(x;13);
+}

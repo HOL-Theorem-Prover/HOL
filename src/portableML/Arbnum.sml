@@ -137,6 +137,8 @@ fun (xn <= yn) = xn = yn orelse xn < yn
 fun (xn >= yn) = yn <= xn
 fun (xn > yn) = yn < xn
 
+fun compare(x,y) = if x < y then LESS else if y < x then GREATER else EQUAL
+
 fun normalise [] = [0]
   | normalise x = let
       fun strip_leading_zeroes [] = []

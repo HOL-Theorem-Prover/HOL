@@ -2064,13 +2064,14 @@ $\textsf{SUC}(3)$ will succeed, and find the instantiation $n\mapsto
 3$. In contrast with unification, matching is not symmetrical: a
 pattern $\textsf{SUC}(3)$ will not match the term $\textsf{SUC}(n)$.
 
-The simplifier uses a special form of higher-order matching.  If a
-pattern includes a variable of some function type ($f$ say), and that
-variable is applied to an argument $a$ that includes no variables
-except those that are bound by an abstraction at a higher scope, then
-the combined term $f(a)$ will match any term of the appropriate type
-as long as the only occurrences of the bound variables in $a$ are in
-sub-terms matching $a$.
+\index{higher-order matching} \index{matching, higher-order} The
+simplifier uses a special form of higher-order matching.  If a pattern
+includes a variable of some function type ($f$ say), and that variable
+is applied to an argument $a$ that includes no variables except those
+that are bound by an abstraction at a higher scope, then the combined
+term $f(a)$ will match any term of the appropriate type as long as the
+only occurrences of the bound variables in $a$ are in sub-terms
+matching $a$.
 
 Assume for the following examples that the variable $x$ is bound at a
 higher scope.  Then, if $f(x)$ is to match $x + 4$, the variable $f$

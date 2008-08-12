@@ -264,19 +264,25 @@ local
      of NONE => NONE
       | SOME(f,x) =>
         if is_comb x andalso is_uncurry_tm (rator x)
-        then if is_existential f then SOME (strip_exists, list_mk_exists) else
-             if is_universal f   then SOME (strip_forall, list_mk_forall)
+        then if is_existential f then SOME (dest_exists, list_mk_exists) else
+             if is_universal f   then SOME (dest_forall, list_mk_forall)
              else NONE
         else NONE
+  fun ndest_quant dquant 0 tm = ([],tm)
+    | ndest_quant dquant n tm = 
+       let val (v,M) = dquant tm
+           val (V,body) = ndest_quant dquant (n-1) M
+       in (v::V,body)
+       end
 in
 fun ELIM_TUPLED_QUANT_CONV tm =
  case dest_tupled_quant tm
   of NONE => raise PERR "TUPLED_QUANT_CONV" ""
-   | SOME (strip_quant, list_mk_quant) =>
+   | SOME (dest_quant, list_mk_quant) =>
      let val V = strip_pair(fst(dest_pabs(rand tm)))
          val thm = CONV tm
          val rside = rhs (concl thm)
-         val (W,body) = strip_quant rside
+         val (W,body) = ndest_quant dest_quant (length V) rside
      in TRANS thm
           (ALPHA rside
               (list_mk_quant(V, subst(map2 (curry op|->) W V) body)))

@@ -1,0 +1,27 @@
+l,r;
+
+tree_copy(s;t) [tree(t)] {
+  local i, j, ii, jj;
+  if(t == NULL) s = t;
+  else { 
+    i = t->l;
+    j = t->r;
+    tree_copy(ii;i);
+    tree_copy(jj;j);
+    s = new();
+    s->l = ii;
+    s->r = jj;
+  }
+} [tree(s) * tree(t)]
+
+tree_deallocate(t) [tree(t)] {
+  local i, j;
+  if(t == NULL) {}
+  else {
+    i = t->l;
+    j = t->r;
+    tree_deallocate(i);
+    tree_deallocate(j);
+    dispose(t);
+  }
+} [emp]

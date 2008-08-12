@@ -97,6 +97,7 @@ fun GEN_ASSUM v thm =
 
 fun CONSEQ_CONV_WRAPPER conv t =
 let
+   val _ = if (type_of t = bool) then () else raise UNCHANGED;
    val thm = conv t;
    val thm_term = concl thm;
 in
@@ -119,9 +120,7 @@ in
 end;
 
 
-
-(*like CHANGED_CONV*)
-fun CHANGED_CONSEQ_CONV conv t =
+fun CHANGED_CHECK_CONSEQ_CONV conv t =
     let
        val thm = conv t;
        val (ante,conc) = dest_imp (concl thm);
@@ -129,6 +128,16 @@ fun CHANGED_CONSEQ_CONV conv t =
     in
        thm
     end;
+
+
+(*like CHANGED_CONV*)
+fun QCHANGED_CONSEQ_CONV conv t =
+    conv t handle UNCHANGED => raise mk_HOL_ERR "bool" "ConseqConv" "QCHANGED_CONSEQ_CONV"
+
+fun CHANGED_CONSEQ_CONV conv =
+    QCHANGED_CONSEQ_CONV (CHANGED_CHECK_CONSEQ_CONV conv)
+
+
 
 (*like FIRST_CONV*)
 fun FIRST_CONSEQ_CONV [] t = raise UNCHANGED
@@ -217,12 +226,18 @@ fun DEPTH_CONSEQ_CONV_num step_opt conv t =
 
 
 
-fun DEPTH_CONSEQ_CONV conv t = 
- (snd (DEPTH_CONSEQ_CONV_num NONE conv t))
+fun DEPTH_CONSEQ_CONV conv  = 
+ CHANGED_CHECK_CONSEQ_CONV (fn t => 
+   if (type_of t = bool) then 
+      (snd (DEPTH_CONSEQ_CONV_num NONE conv t))
+   else raise UNCHANGED)
 
 
-fun NUM_DEPTH_CONSEQ_CONV n conv t = 
-  (snd (DEPTH_CONSEQ_CONV_num (SOME n) conv t))
+fun NUM_DEPTH_CONSEQ_CONV n conv = 
+   CHANGED_CHECK_CONSEQ_CONV (fn t => 
+     if (type_of t = bool) then 
+       (snd (DEPTH_CONSEQ_CONV_num (SOME n) conv t))
+     else raise UNCHANGED)
 
 val ONCE_DEPTH_CONSEQ_CONV = NUM_DEPTH_CONSEQ_CONV 1;
 
@@ -264,8 +279,8 @@ fun CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV conv =
 
 
 (*---------------------------------------------------------------------------
- * if conv A = (A' ==> A) then 
- * IMP_CONSEQ_CONV_RULE (A ==> B) = (A' ==> B)
+ * if conv ``A`` = |- (A' ==> A) then 
+ * IMP_CONSEQ_CONV_RULE ``(A ==> B)`` = |- (A' ==> B)
  *---------------------------------------------------------------------------*)
 
 fun IMP_CONSEQ_CONV_RULE conv thm = let

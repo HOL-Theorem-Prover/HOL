@@ -1,0 +1,12 @@
+(**************************************************************************)
+(*                             ACKNOWLEDGEMENT                            *)
+(* The examples in this directory are copied from Smallfoot.              *)
+(* I would like to thank Cristiano Calcagno, Josh Berdine and Peter       *)
+(* W. O'Hearn - the authors of Smallfoot - which generously allowed me to *)
+(* use large parts of the Smallfoot parser and these examples. Smallfoot  *)
+(* can be found at                                                        *)
+(*                                                                        *)
+(* http://www.dcs.qmul.ac.uk/research/logic/theory/projects/smallfoot.    *)
+(**************************************************************************)
+
+Thomas Tuerk

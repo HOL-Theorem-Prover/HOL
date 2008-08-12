@@ -21,7 +21,7 @@ val keepers =
      (* boolLib *)
      "Abbrev.sig", "DB.sig", "boolSyntax.sig", "boolTheory.sig",
      "Drule.sig", "Tactical.sig", "Tactic.sig", "Thm_cont.sig",
-     "Conv.sig", "Ho_Net.sig", "Ho_Rewrite.sig",
+     "Conv.sig", "ConseqConv.sig", "Ho_Net.sig", "Ho_Rewrite.sig",
      "Rewrite.sig", "Rsyntax.sig", "Psyntax.sig",
      "TypeBase.sig", "TypeBasePure.sig", "DefnBase.sig", "Prim_rec.sig",
 

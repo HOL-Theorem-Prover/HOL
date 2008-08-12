@@ -7,7 +7,9 @@ You will also need the Moscow ML compiler (version 2.01) from
 
      http://www.dina.kvl.dk/~sestoft/mosml.html
 
-First, however, please read the rest of these instructions carefully.
+(If you want to build the HOL system on top of Poly/ML, please 
+ check the points labelled Poly/ML below. Also check the README
+ file in directory tools-poly.)
 
 Windows users can also build the system by running a self-installing
 executable (available from the above places).  To do this,
@@ -46,7 +48,10 @@ A. First, install Moscow ML. This is usually straightforward. The
      set for you by the latest self-installing executable available
      from the Moscow ML home-page.
 
+Poly/ML: obtain and install the latest Poly/ML from the website
 
+      http://www.polyml.org/
+      
 B. Unpack HOL with the commands
 
        gunzip release.tar.gz; tar xf release.tar
@@ -102,6 +107,12 @@ C. In the HOL directory (<hol-dir>), type
    the muddy library is not currently accessible. In such a case, the
    value of GNUMAKE does not matter.
 
+Poly/ML:
+  * run "<path-to-poly> < tools-poly/smart-configure.sml" from the top-level 
+    HOL directory HOLDIR. Note that <path-to-poly> has to be the full path 
+    to the poly executable residing in polydir/bin, where polydir is the 
+    poly distribution directory. 
+
 D. Now perform the following shell command:
 
        <hol-dir>/bin/build
@@ -118,6 +129,10 @@ D. Now perform the following shell command:
    you can use the -small option, but this has the disadvantage of
    forcing any subsequent builds to rebuild everything, regardless of
    where changes might have occurred.
+
+Poly/ML:
+  * run "bin/build -expk -symlink" (only the experimental kernel is supported)
+
 
 E. If bin/build completes (it takes a while!), successfully, you are
    done. From <hol-dir> you can now access

@@ -194,6 +194,18 @@ fun list_mk_comb___with_vars op_term sub_fun l =
         (term, set_union)
     end;
 
+(*
+val t = 
+Aprop_ifthenelse(Aprop_equal(Aexp_ident "y", Aexp_ident "x"),
+                 Aprop_spred(Aspred_list("tl", Aexp_ident "x")),
+                 Aprop_spred(Aspred_list("tl", Aexp_ident "x")))
+
+fun dest_ifthenelse (Aprop_ifthenelse (Aprop_equal (aexp1, aexp2), ap1,ap2)) =
+  (aexp1, aexp2, ap1, ap2)
+
+
+val (aexp1, aexp2, ap1, ap2) = dest_ifthenelse t
+*)
 
 
 fun smallfoot_a_proposition2term (Aprop_infix (opString, aexp1, aexp2)) =
@@ -212,8 +224,19 @@ fun smallfoot_a_proposition2term (Aprop_infix (opString, aexp1, aexp2)) =
 	list_mk_comb___with_vars smallfoot_ap_unequal_term smallfoot_a_expression2term [aexp1,aexp2]
 | smallfoot_a_proposition2term (Aprop_false) =
 	(smallfoot_ap_false_term, empty_tmset)
-| smallfoot_a_proposition2term (Aprop_ifthenelse (ap1, ap2,ap3)) =
-	list_mk_comb___with_vars smallfoot_ap_cond_term smallfoot_a_proposition2term [ap1,ap2,ap3]
+| smallfoot_a_proposition2term (Aprop_ifthenelse (Aprop_equal (aexp1, aexp2), ap1,ap2)) =
+        let
+           val (exp1_term, exp1_set) = smallfoot_a_expression2term aexp1;
+           val (exp2_term, exp2_set) = smallfoot_a_expression2term aexp2;
+           val (prop1_term, prop1_set) = smallfoot_a_proposition2term ap1;
+           val (prop2_term, prop2_set) = smallfoot_a_proposition2term ap2;
+	   val t = list_mk_comb (smallfoot_ap_cond_term, [exp1_term, exp2_term, prop1_term, prop2_term])
+           val set_union = foldr HOLset.union exp1_set [exp2_set, prop1_set, prop2_set];
+        in
+	   (t, set_union) 
+        end
+| smallfoot_a_proposition2term (Aprop_ifthenelse (_, ap2,ap3)) =
+  Raise (smallfoot_unsupported_feature_exn "Currently only equality checks are allowed as conditions in propositions")
 | smallfoot_a_proposition2term (Aprop_star (ap1, ap2)) =
 	list_mk_comb___with_vars smallfoot_ap_star_term smallfoot_a_proposition2term [ap1,ap2]
 | smallfoot_a_proposition2term (Aprop_spred sp) =
@@ -609,11 +632,13 @@ fun p_item___is_fun_decl (Pfundecl _) = true |
      p_item___is_fun_decl _ = false;
 
 (*
+val prog2 = parse file
 fun dest_Pprogram (Pprogram (ident_decl, program_item_decl)) = 
 	(ident_decl, program_item_decl);
 
 val (ident_decl, program_item_decl) = dest_Pprogram prog2;
 *)
+
 
 
 fun Pprogram2term (Pprogram (ident_decl, program_item_decl)) =

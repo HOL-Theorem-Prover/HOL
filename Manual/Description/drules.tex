@@ -1,19 +1,17 @@
 \chapter{Derived Inference Rules}
 \label{derived-rules}
 
-The notion of {\it proof\/} was defined in the abstract in Chapter~\ref{logic}:
-a proof of a sequent $(\Gamma,t)$
-from a set of sequents $\Delta$ (with respect to a deductive system
-${\cal D}$)
-was defined to be a chain of sequents culminating in $(\Gamma,t)$, such
-that every element of the chain either belongs to $\Delta$ or else
-follows from $\Delta$ and earlier elements of the chain by
-deduction.
-The notion of a {\it theorem\/} was also defined in Chapter~\ref{logic}:
-a theorem of a deductive system is a sequent that follows from the
-empty set of sequents by deduction; \ie, it is the last element of a proof
-from the empty set of sequents, in the deductive system.
-In this section, proofs and theorems are made concrete in \HOL.
+The notion of {\it proof\/} is defined abstractly in the manual
+\LOGIC: a proof of a sequent $(\Gamma,t)$ from a set of sequents
+$\Delta$ (with respect to a deductive system ${\cal D}$) was defined
+to be a chain of sequents culminating in $(\Gamma,t)$, such that every
+element of the chain either belongs to $\Delta$ or else follows from
+$\Delta$ and earlier elements of the chain by deduction.  The notion
+of a {\it theorem\/} was also defined in \LOGIC: a theorem of a
+deductive system is a sequent that follows from the empty set of
+sequents by deduction; \ie, it is the last element of a proof from the
+empty set of sequents, in the deductive system.  In this section,
+proofs and theorems are made concrete in \HOL.
 
 The deductive system of \HOL\
 was sketched in Section~\ref{rules}, where
@@ -31,22 +29,22 @@ the computation of theorems except by functions representing
 primitive inferences, or compositions of these.
 
 Finally, the primitive \HOL\ logic was supplemented by three primitive
-constants and four axioms, to form the basic logic\footnote{This
-  corresponds to the \HOL{} theory \texttt{LOG}; see
-  Section~\ref{LOG}}.  The primitive inferences, together
-with the primitive constants, the five axioms, and a collection of
-definitions, give a starting point for constructing proofs, and hence
-computing theorems. However, proving even the simplest theorems from
-this minimal basis costs considerable effort. The basis does not
-immediately provide the transitivity of equality, for example, or a
-means of universal quantification; both of these themselves have to be
-derived.
+constants and four axioms, to form the basic logic.  The primitive
+inferences, together with the primitive constants, the five axioms,
+and a collection of definitions, give a starting point for
+constructing proofs, and hence computing theorems. However, proving
+even the simplest theorems from this minimal basis costs considerable
+effort. The basis does not immediately provide the transitivity of
+equality, for example, or a means of universal quantification; both of
+these themselves have to be derived.
 
 \section{Simple derivations}
 
-As an illustration of a proof in \HOL{}, the following chain of theorems
-forms a proof (from the empty set, in the
-\HOL{} deductive system), for the particular terms \ml{``}$t_1$\ml{``} and \ml{``}$t_2$\ml{``}, both of \HOL\ type \ml{``:bool``}:
+As an illustration of a proof in \HOL{}, the following chain of
+theorems forms a proof (from the empty set, in the \HOL{} deductive
+system), for the particular terms \ml{``}$t_1$\ml{``}%''
+and \ml{``}$t_2$\ml{``},%''
+both of \HOL\ type \ml{``:bool``}:%''
 
 \begin{enumerate}
 \item $t_1$\ml{ ==> }$t_2$\ml{ |- }$t_1$\ml{ ==> }$t_2$
@@ -63,24 +61,27 @@ using the \ML\ functions \ml{ASSUME}\index{ASSUME@\ml{ASSUME}} and
 \ml{MP}.
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#top_print print_all_thm;;
-- : (thm -> void)
+\begin{session}
+\begin{verbatim}
+- show_assums := true;
+> val it = () : unit
 
-#let th1 = ASSUME "t1 ==> t2";;
-th1 = t1 ==> t2 |- t1 ==> t2
+- val th1 = ASSUME ``t1 ==> t2``;
+> val th1 = [t1 ==> t2] |- t1 ==> t2 : thm
 
-#let th2 = ASSUME "t1:bool";;
-th2 = t1 |- t1
+- val th2 = ASSUME ``t1:bool``
+> val th2 = [t1] |- t1 : thm
 
-#MP th1 th2;;
-t1 ==> t2, t1 |- t2
-\end{verbatim}\end{session}
+- MP th1 th2;
+> val it = [t1 ==> t2, t1] |- t2 : thm
+\end{verbatim}
+\end{session}
 
 \noindent More briefly, one could evaluate the following, and `count'\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs} the
 invocations of functions representing primitive inferences.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #set_flag(`timing`, true);;
 false : bool
 Run time: 0.0s
@@ -89,14 +90,20 @@ Run time: 0.0s
 t1 ==> t2, t1 |- t2
 Run time: 0.0s
 Intermediate theorems generated: 3
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-\noindent Each of the three
-inference steps of the abstract proof
-corresponds
-to the application\index{inferences, in HOL logic@inferences, in \HOL\ logic!as ML function applications@as \ML\ function applications}\index{proof steps, as ML function applications@proof steps, as \ML\ function applications}\index{proof!the notion of, in HOL system@the notion of, in \HOL\ system} of an \ML\ function in the performance of the proof in \HOL; and each of the \ML\
-functions corresponds to a primitive inference of the deductive
-system.
+\noindent Each of the three inference steps of the abstract proof
+corresponds to the application%
+%
+\index{inferences, in HOL logic@inferences, in \HOL{} logic!as ML function applications@as \ML\ function applications}%
+\index{proof steps, as ML function applications@proof steps, as \ML\ function applications}%
+\index{proof!the notion of, in HOL system@the notion
+  of, in \HOL\ system}% 
+%
+of an \ML\ function in the performance of the proof in \HOL; and each
+of the \ML\ functions corresponds to a primitive inference of the
+deductive system.
 
 It is worth emphasising that, in either case, every
 primitive inference in the proof chain is made, in the sense
@@ -107,17 +114,18 @@ complete proofs.  The short-cut provided by derived
 inference rules (as implemented in \ML) is around the necessity of
 \emph{specifying} every step; something that would be impossible for
 a proof of any length. It can be seen from this that the derived
-rule,
+rule,%
+%
 \index{proofs, in HOL logic@proofs, in \HOL{} logic!as ML function applications@as \ML\ function applications}
 \index{proofs, in HOL logic@proofs, in \HOL{} logic!as generated by derived rules}
 \index{derived rules, in HOL logic@derived rules, in \HOL{} logic!importance of}
-and its representation as an \ML{} function, is
-essential to the \HOL{} methodology; theorem proving would be otherwise
-impossible.
+%
+and its representation as an \ML{} function, is essential to the
+\HOL{} methodology; theorem proving would be otherwise impossible.
 
 There are, of course, an infinite number of proofs, of the `form'
-shown in the example,
-that can be conducted in \HOL: one for every pair of \ml{":bool"}-typed terms.
+shown in the example, that can be conducted in \HOL: one for every
+pair of \ml{``:bool``}-typed terms. %''
 Moreover, every time a theorem of the form
 
 $$t_1 \ \imp \ t_2, \ t_1 \ \vdash \ t_2$$
@@ -127,6 +135,7 @@ general pattern of inference, an \ML\ function can be written to
 implement an inference rule as a derivation from the primitive inferences.
 Abstractly, a \emph{derived inference rule}
 \index{derived rules, in HOL logic@derived rules, in \HOL{} logic!justification of}
+%
 is a rule that can be justified on the basis of the primitive
 inference rules (and/or the axioms).  In the present case, the rule
 required `undischarges' assumptions.  It is specified for \HOL{} by
@@ -151,21 +160,26 @@ say)\index{UNDISCH@\ml{UNDISCH}} that calls the
 appropriate sequence of primitive
 inferences. The \ML\ definition of \ml{UNDISCH} is simply
 
-\begin{session}\begin{verbatim}
-#let UNDISCH th = MP th (ASSUME(fst(dest_imp(concl th))));;
-UNDISCH = - : (thm -> thm)
-\end{verbatim}\end{session}
+\begin{session}
+\begin{verbatim}
+- val UNDISCH th = MP th (ASSUME(fst(dest_imp(concl th))));;
+> val UNDISCH = fn : thm -> thm
+\end{verbatim}
+\end{session}
 
 \noindent This provides a function that maps a theorem to a theorem;
 that is, performs proofs in \HOL.
 The following session illustrates the use of the derived rule, on
 a consequence of the axiom \ml{IMP\_ANTISYM\_AX}. (The inferences are
-counted\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs}.)
-Assume that the printing of theorems has been adjusted as above and \ml{th}
-is bound as shown below:
+counted.%
+\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs}%
+%
+) Assume that the printing of theorems has been adjusted as above and
+\ml{th} is bound as shown below:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #th;;
 |- (t1 ==> t2) ==> (t2 ==> t1) ==> (t1 = t2)
 Run time: 0.0s
@@ -183,7 +197,8 @@ Intermediate theorems generated: 2
 t1 ==> t2, t2 ==> t1 |- t1 = t2
 Run time: 0.0s
 Intermediate theorems generated: 2
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent Each successful application of {\small\verb%UNDISCH%}
 to a theorem invokes an application
@@ -198,24 +213,19 @@ selector \ml{fst} to choose the antecedent.
 
 This particular example is very simple, but a derived inference rule
 can perform proofs of arbitrary length.  It can also make use of
-previously defined rules.  In this way, the
-normal inference patterns can be developed much more quickly and easily;
-transitivity, generalization, and so on,
-support the familiar patterns of inference.
+previously defined rules.  In this way, the normal inference patterns
+can be developed much more quickly and easily; transitivity,
+generalization, and so on, support the familiar patterns of inference.
 
-A number of derived inference rules are
-pre-defined when the \HOL\ system is entered
-(of which \ml{UNDISCH} is one of the first).
-In Section~\ref{avra_standard}, the
-abstract derivations are given for the pre-defined rules
-that reflect the more usual inference patterns of
-the predicate (and lambda) calculi.
-Like those shown, some of the pre-defined
-derived rules in \HOL\ generate relatively short proofs.
-Others invoke thousands of primitive inferences,
-and clearly save a great deal of effort. Furthermore,
-rules can be defined by the user to make still larger steps, or to
-implement more specialized patterns.
+A number of derived inference rules are pre-defined when the \HOL\
+system is entered (of which \ml{UNDISCH} is one of the first).  In
+Section~\ref{avra_standard}, the abstract derivations are given for
+the pre-defined rules that reflect the more usual inference patterns
+of the predicate (and lambda) calculi.  Like those shown, some of the
+pre-defined derived rules in \HOL\ generate relatively short proofs.
+Others invoke thousands of primitive inferences, and clearly save a
+great deal of effort. Furthermore, rules can be defined by the user to
+make still larger steps, or to implement more specialized patterns.
 
 All of the pre-defined derived rules in \HOL\ are described
 in \REFERENCE.
@@ -239,14 +249,14 @@ detail in \REFERENCE.
 
 \ml{REWRITE\_RULE} uses a list of equational theorems
 \index{equational theorems, in HOL logic@equational theorems, in \HOL\ logic!use of in rewriting}
-\index{theorems, in HOL logic@theorems, in \HOL\ logic!equational}
+\index{theorems, in HOL logic@theorems, in \HOL{} logic!equational}
 (theorems whose conclusions can be regarded as having the form
 $t_1${\small\verb% = %}$t_2$) to replace
 any subterms of an object theorem that `match' $t_1$ by the
 corresponding instance of $t_2$. The rule matches recursively and to any depth,
 until no more replacements can be made,
 using internally defined search, matching and
-instantiation\index{type instantiation, in HOL logic@type instantiation, in \HOL\ logic!in rewriting rule} algorithms.  The validity
+instantiation\index{type instantiation, in HOL logic@type instantiation, in \HOL{} logic!in rewriting rule} algorithms.  The validity
  of \ml{REWRITE\_RULE} rests
 ultimately on the primitive rules \ml{SUBST} (for making the substitutions);
 \ml{INST\_TYPE}\index{INST_TYPE@\ml{INST\_TYPE}} (for instantiating types); and the derived rules for
@@ -254,8 +264,8 @@ generalization and specialization (see Sections~\ref{avra_gen}
 and \ref{avra_spec}) for instantiating terms.  The definition
 of \ml{REWRITE\_RULE} in \ML\
 also relies on a large number of general and \HOL-oriented
-\ML\ functions. The implementation is partly described in
-Chapter~\ref{avra_conv}.
+\ML\ functions. 
+%The implementation is partly described in Chapter~\ref{avra_conv}.
 
 In practice, the derived rule \ml{REWRITE\_RULE} plays a central role
 in proofs, because it takes over a very large number of inferences
@@ -288,7 +298,8 @@ of theorems is adjusted as above.
 
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #top_print print_all_thm;;
 - : (thm -> void)
 
@@ -310,7 +321,8 @@ Intermediate theorems generated: 1
    (0 < (SUC 3) = (0 < (SUC 2) = (0 < (SUC 1) = 0 < (SUC 0))))
 Run time: 0.3s
 Intermediate theorems generated: 23
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent Notice that rewriting
 equations can be extracted from
@@ -327,6 +339,7 @@ and do so whilst still generating the entire chain of inferences.
 \label{avra_standard}
 
 \index{derived rules, in HOL logic@derived rules, in \HOL{} logic!pre-defined|(}
+%
 The \HOL{} system provides all the standard introduction and
 elimination rules of the predicate calculus pre-defined as derived
 inferences.  It is these derived rules, rather than the primitive
@@ -337,61 +350,64 @@ These derivations only use the axioms and definitions in the theory
 inferences of the \HOL\ logic, and inferences defined earlier in the
 sequence.
 
-Theorems,
-\index{theorems, in HOL logic@theorems, in \HOL\ logic!as inference rules}
-in accordance with the definition given
-at the beginning of this chapter,
-are treated as rules without hypotheses; thus the derivation
+Theorems,%
+%
+\index{theorems, in HOL logic@theorems, in \HOL{} logic!as inference rules}%
+%
+in accordance with the definition given at the beginning of this
+chapter, are treated as rules without hypotheses; thus the derivation
 of a theorem resembles the derivation of a rule except in not having
-hypotheses. (The derivation of \ml{TRUTH},
-Section~\ref{avra_T}, is the only example given of this,
-but there are several others in \HOL.)
-There are also some rules that are intrinsically more general than theorems.
-For example, for any two terms $t_1$ and $t_2$, the theorem
-$\vdash(\lquant{x}t_1)t_2 = t_1[t_2/x]$ follows by the primitive
-rule \rul{BETA\_CONV}. The rule \ml{BETA\_CONV}
-returns a theorem for each pair of terms $t_1$ and $t_2$, and is
-therefore equivalent to an infinite family
-\index{families of inferences, in HOL logic@families of inferences, in \HOL\ logic}
-of theorems. No single theorem
-can be expressed in the \HOL{} logic that is equivalent to \rul{BETA\_CONV}.
-\index{theorems, in HOL logic@theorems, in \HOL\ logic!rules inexpressible as}
-\index{beta-conversion, in HOL logic@beta-conversion, in \HOL\ logic!not expressible as a theorem}
-(See Chapter~\ref{avra_conv} for further discussion of this point.)
-(\ml{UNDISCH} is not a rule of this sort, as it can, in fact,
-be expressed as a theorem.)
+hypotheses. (The derivation of \ml{TRUTH}, Section~\ref{avra_T}, is
+the only example given of this, but there are several others in \HOL.)
+There are also some rules that are intrinsically more general than
+theorems.  For example, for any two terms $t_1$ and $t_2$, the theorem
+$\vdash(\lquant{x}t_1)t_2 = t_1[t_2/x]$ follows by the primitive rule
+\rul{BETA\_CONV}. The rule \ml{BETA\_CONV} returns a theorem for each
+pair of terms $t_1$ and $t_2$, and is therefore equivalent to an
+infinite family%
+%
+\index{families of inferences, in HOL logic@families of inferences, in \HOL\ logic}%
+%
+of theorems. No single theorem can be expressed in the \HOL{} logic
+that is equivalent to \rul{BETA\_CONV}.%
+\index{theorems, in HOL logic@theorems, in \HOL{} logic!rules inexpressible as}
+\index{beta-conversion, in HOL logic@beta-conversion, in \HOL\ logic!not expressible as a theorem}%
+%
+%(See Chapter~\ref{avra_conv} for further discussion of this point.)
+(\ml{UNDISCH} is not a rule of this sort, as it can, in fact, be
+expressed as a theorem.)
 
-For each derivation given below, there is an \ML\ function definition in
-the \HOL\ system that
-implements the derived rule as a procedure in \ML. The actual
-implementation in the
-\HOL\ system differs in some cases
-from the derivations given here, since the system code has
-been optimised for improved performance.
+For each derivation given below, there is an \ML\ function definition
+in the \HOL\ system that implements the derived rule as a procedure in
+\ML. The actual implementation in the \HOL\ system differs in some
+cases from the derivations given here, since the system code has been
+optimised for improved performance.
 
 In addition, for reasons that are mostly historical, not all the
-inferences that are derived in terms of the abstract logic are actually derived
-in the current version of the \HOL\ system.
-That is, there are
-currently about forty rules that are installed in the system on an `axiomatic'
-basis, all of which should be derived by explicit inference.
-Although the current status of these rules is not satisfactory,
-and it is planned, as a high priority,
-to derive them properly in a future version, their current status
-does not actually compromise the consistency of the logic.  In effect,
-the existing \HOL\ system has a deductive system more comprehensive
-than the one presented abstractly, but the model outlined in
-Chapter~\ref{semantics} would easily extend to cover it.
+inferences that are derived in terms of the abstract logic are
+actually derived in the current version of the \HOL\ system.  That is,
+there are currently about forty rules that are installed in the system
+on an `axiomatic' basis, all of which should be derived by explicit
+inference.  Although the current status of these rules is not
+satisfactory, and it is planned, as a high priority, to derive them
+properly in a future version, their current status does not actually
+compromise the consistency of the logic.  In effect, the existing
+\HOL\ system has a deductive system more comprehensive than the one
+presented abstractly, but the model outlined in \LOGIC{} would easily
+extend to cover it.%
+%
 \index{derived rules, in HOL logic@derived rules, in \HOL{} logic!pre-defined|)}
 
 For reference, in \HOL\ Version 2.0 the following rules that should be
 derived
+%
 \index{inference rules, of HOL logic@inference rules, of \HOL{} logic!some not properly derived|(}
 \index{rules in HOL logic, some not properly derived@rules in \HOL{} logic, some not properly derived|(}
-are not derived, but (for efficiency) are implemented as primitives. The list includes some conversions and conversion-valued functions (conversions are
-discussed in Chapter~\ref{avra_conv}).
-\vfill
-\newpage
+%
+are not derived, but (for efficiency) are implemented as
+primitives. The list includes some conversions and conversion-valued
+functions. % (conversions are discussed in Chapter~\ref{avra_conv}).
+\vfill \newpage
 
 \begin{hol}
 \index{derived rules, in HOL logic@derived rules, in \HOL{} logic!list of axiomatic}
@@ -448,9 +464,11 @@ which
 or previously derived).
 \end{enumerate}
 
-\noindent Note that the abbreviation \ml{conv} is used for the \ML\
-type \ml{term -> thm}.\footnote{This stands for `conversion', as
-explained in Chapter~\ref{avra_conv}.}
+\noindent Note that the abbreviation \ml{conv} (standing for
+`conversion') is used for the \ML\ type \ml{term ->
+  thm}.%
+% \footnote{This stands for `conversion', as explained in
+% Chapter~\ref{avra_conv}.}
 
 \subsection{Adding an assumption}
 \index{derived rules, in HOL logic@derived rules, in \HOL{} logic!list and derivations of some|(}
@@ -557,7 +575,8 @@ $$\Gamma_1\turn t_1=t_2\qquad\qquad\qquad \Gamma_2\turn t_2=t_3 \over
 
 
 
-\subsection{Application of a term to a theorem}\index{function application, in HOL logic@function application, in \HOL\ logic!inference rules for}
+\subsection{Application of a term to a theorem}%
+\index{function application, in HOL logic@function application, in \HOL{} logic!inference rules for}
 
 \begin{holboxed}
 \index{AP_TERM@\ml{AP\_TERM}|pin}
@@ -660,10 +679,12 @@ $$\Gamma\turn t_1=t_2\over
 \subsection{\T-Introduction}
 \label{avra_T}
 
-\index{T@\ml{T}!rules of inference for|(}
-\begin{hol}\begin{verbatim}
+\index{T@\holtxt{T}!rules of inference for|(}
+\begin{hol}
+\begin{verbatim}
    TRUTH
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -687,7 +708,8 @@ $$\turn\T$$
 \index{EQT_ELIM@\ml{EQT\_ELIM}|pin}
 \begin{verbatim}
    EQT_ELIM : thm -> thm
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -710,7 +732,8 @@ $$\Gamma\turn t = \T\over \Gamma\turn t$$
 \index{specialization rule, in HOL logic@specialization rule, in \HOL\ logic}
 \begin{verbatim}
    SPEC : term -> thm -> thm
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \label{avra_spec}
 
@@ -753,7 +776,8 @@ become bound after substitution.
 \index{EQT_INTRO@\ml{EQT\_INTRO}|pin}
 \begin{verbatim}
    EQT_INTRO : thm -> thm
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 
 \vspace{12pt plus2pt minus1pt}
@@ -776,10 +800,11 @@ $$\Gamma\turn t\over\Gamma\turn t=\T$$
 \item $\Gamma\turn t=\T$\hfill [\rul{MP} 6,8]
 \end{proof}
 \index{equality, in HOL logic@equality, in \HOL\ logic!other rules for|)}
-\index{T@\ml{T}!rules of inference for|)}
+\index{T@\holtxt{T}!rules of inference for|)}
 
 
-\subsection{Generalization ($\forall$-introduction)}\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!inference rules for}
+\subsection{Generalization ($\forall$-introduction)}%
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!inference rules for}
 
 
 \begin{holboxed}
@@ -787,7 +812,8 @@ $$\Gamma\turn t\over\Gamma\turn t=\T$$
 \index{generalization rule, in HOL logic@generalization rule, in \HOL\ logic}
 \begin{verbatim}
    GEN : term -> thm -> thm
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \label{avra_gen}
 
@@ -822,9 +848,11 @@ $$\Gamma\turn t\over\Gamma\turn\uquant{x} t$$
 
 \subsection{Simple $\alpha$-conversion}
 
-\begin{holboxed}\begin{verbatim}
+\begin{holboxed}
+\begin{verbatim}
    SIMPLE_ALPHA
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -869,7 +897,8 @@ used in a subsequent derivation, but it is not actually in the
 \index{ETA_CONV@\ml{ETA\_CONV}|pin}
 \begin{verbatim}
    ETA_CONV : conv
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 \vspace{12pt plus2pt minus1pt}
 
 $$\turn(\lquant{x'}t\ x') = t$$
@@ -891,20 +920,21 @@ to motivate the use of \rul{SIMPLE\_ALPHA} in the derivation below).
 
 
 \subsection{Extensionality}
-\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!inference rules for}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!inference rules for}
 
 \begin{holboxed}
 \index{EXT@\ml{EXT}|pin}
-\index{extensionality rule, in HOL logic@extensionality rule, in \HOL\ logic}
+\index{extensionality rule, in HOL logic@extensionality rule, in \HOL{} logic}
 \begin{verbatim}
    EXT : thm -> thm
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
 $$\Gamma\turn\uquant{x} t_1\ x = t_2\ x\over\Gamma\turn t_1=t_2$$
 \begin{itemize}
-\item Where $x$ is not free\index{free variables, in HOL logic@free variables, in \HOL\ logic} in $t_1$ or $t_2$.
+\item Where $x$ is not free\index{free variables, in HOL logic@free variables, in \HOL{} logic} in $t_1$ or $t_2$.
 \end{itemize}
 
 \vspace{12pt plus2pt minus1pt}
@@ -927,7 +957,7 @@ $$\Gamma\turn\uquant{x} t_1\ x = t_2\ x\over\Gamma\turn t_1=t_2$$
 \subsection{$\hilbert$-introduction}
 
 \begin{holboxed}
-\index{choice operator, in HOL logic@choice operator, in \HOL\ logic!inference rules for}
+\index{choice operator, in HOL logic@choice operator, in \HOL{} logic!inference rules for}
 \index{SELECT_INTRO@\ml{SELECT\_INTRO}|pin}
 \begin{verbatim}
    SELECT_INTRO : thm -> thm
@@ -953,7 +983,7 @@ type-instantiated axiom]
 \subsection{$\hilbert$-elimination}
 
 \begin{holboxed}
-\index{choice operator, in HOL logic@choice operator, in \HOL\ logic!inference rules for}
+\index{choice operator, in HOL logic@choice operator, in \HOL{} logic!inference rules for}
 \index{SELECT_ELIM@\ml{SELECT\_ELIM}|pin}
 \begin{verbatim}
    SELECT_ELIM : thm -> (term # thm) -> thm
@@ -983,7 +1013,7 @@ hypothesis.
 
 
 \subsection{$\exists$-introduction}
-\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!inference rules for|(}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!inference rules for|(}
 
 \begin{holboxed}
 \index{EXISTS@\ml{EXISTS}|pin}
@@ -995,7 +1025,7 @@ hypothesis.
 
 $$\Gamma\turn t_1[t_2]\over \Gamma\turn \equant{x}t_1[x]$$
 \begin{itemize}
-\item Where $t_1[t_2]$ denotes a term $t_1$ with some free\index{free variables, in HOL logic@free variables, in \HOL\ logic}
+\item Where $t_1[t_2]$ denotes a term $t_1$ with some free\index{free variables, in HOL logic@free variables, in \HOL{} logic}
 occurrences of $t_2$
 singled out, and $t_1[x]$ denotes the result of replacing these
 occurrences of $t_1$ by $x$, subject to the restriction that $x$
@@ -1039,7 +1069,7 @@ doesn't become bound after substitution.
 $$\Gamma_1\turn\equant{x}t[x]\qquad\qquad\qquad \Gamma_2,\ t[v]\turn t'
 \over \Gamma_1\cup\Gamma_2\turn t'$$
 \begin{itemize}
-\item Where $t[v]$ denotes a term $t$ with some free\index{free variables, in HOL logic@free variables, in \HOL\ logic}
+\item Where $t[v]$ denotes a term $t$ with some free\index{free variables, in HOL logic@free variables, in \HOL{} logic}
 occurrences of the variable $v$
 singled out, and $t[x]$ denotes the result of replacing these
 occurrences of $v$ by $x$, subject to the restriction that $x$ doesn't become
@@ -1068,7 +1098,7 @@ bound after substitution.
 \item $\Gamma_2,\ (\lquant{x}t[x])v\turn t'$\hfill [\rul{UNDISCH} 11]
 \item $\Gamma_1\cup\Gamma_2\turn t'$\hfill [\rul{SELECT\_ELIM} 6,12]
 \end{proof}
-\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!inference rules for|)}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!inference rules for|)}
 
 \subsection{Use of a definition}
 
@@ -1141,7 +1171,7 @@ t'[t_1,\ldots,t_n]$\hfill [\rul{BETA\_CONV} (n times)]
 
 \begin{holboxed}
 \index{CONJ@\ml{CONJ}|pin}
-\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!inference rule for}
+\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!inference rule for}
 \begin{verbatim}
    CONJ : thm -> thm -> thm
 \end{verbatim}\end{holboxed}
@@ -1215,7 +1245,7 @@ $$\Gamma\turn t_1\conj t_2\over
 
 
 
-\subsection{Right $\vee$-introduction}\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!inference rule for|(}
+\subsection{Right $\vee$-introduction}\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!inference rule for|(}
 
 \begin{holboxed}
 \index{DISJ1@\ml{DISJ1}|pin}
@@ -1314,17 +1344,17 @@ $$\Gamma\turn t_1\disj t_2\qquad\qquad\qquad\Gamma_1,\ t_1\turn t
 \item $\Gamma_2\turn t_2\imp t$\hfill [\rul{DISCH} 9]
 \item $\Gamma\cup \Gamma_1\cup \Gamma_2\turn t$\hfill [\rul{MP} 8,10]
 \end{proof}
-\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!inference rule for|)}
+\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!inference rule for|)}
 
 
 
 
 \subsection{Classical contradiction rule}
-\index{F@\ml{F}!rules of inference for}
+\index{F (falsity), the HOL constant@\holtxt{F} (falsity), the HOL{} constant!rules of inference for}
 
 \begin{holboxed}
 \index{CCONTR@\ml{CCONTR}|pin}
-\index{contradiction rule, in HOL logic@contradiction rule, in \HOL\ logic}
+\index{contradiction rule, in HOL logic@contradiction rule, in \HOL{} logic}
 \begin{verbatim}
    CCONTR : term -> thm -> thm
 \end{verbatim}\end{holboxed}

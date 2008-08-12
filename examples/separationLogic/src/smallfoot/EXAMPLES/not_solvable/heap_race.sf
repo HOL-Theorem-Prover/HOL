@@ -1,0 +1,10 @@
+tl;
+
+update(x,y) [x|->] {
+  x->tl = y;
+} [x|->y]
+
+heap_race() {
+  c = new();
+  update(c,42) || update(c,13);
+} [c|->]

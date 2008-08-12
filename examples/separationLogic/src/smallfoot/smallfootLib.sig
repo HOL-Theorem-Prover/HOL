@@ -37,6 +37,7 @@ sig
 
   (*Performs one step*)
   val SMALLFOOT_STEP_TAC : tactic
+  val SMALLFOOT_MINI_STEP_TAC : tactic
 
   (*Tries as many steps as possible. This
     should solve the goal*)

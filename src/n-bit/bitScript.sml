@@ -1016,6 +1016,20 @@ val NOT_BIT_GT_BITWISE = store_thm("NOT_BIT_GT_BITWISE",
                   ZERO_LT_TWOEXP, LESS_LESS_EQ_TRANS]
     \\ ASM_SIMP_TAC std_ss [NOT_BIT_GT_TWOEXP]);
 
+val LT_TWOEXP = store_thm("LT_TWOEXP", 
+  `!x n. x < 2 ** n = (x = 0) \/ LOG2 x < n`,
+  Cases \\ SRW_TAC [] [ZERO_LT_TWOEXP, LOG2_def]
+    \\ EQ_TAC \\ SRW_TAC [] []
+    << [ONCE_REWRITE_TAC [(GSYM o SIMP_RULE bool_ss [DECIDE ``1 < 2``] o
+                           SPEC `2`) EXP_BASE_LT_MONO]
+          \\ `2 ** LOG 2 (SUC n) <= SUC n` by SRW_TAC [] [logrootTheory.LOG]
+          \\ METIS_TAC [LESS_EQ_LESS_TRANS],
+        `SUC (LOG 2 (SUC n)) <= n'` by DECIDE_TAC
+          \\ IMP_RES_TAC TWOEXP_MONO2
+          \\ `SUC n < 2 ** SUC (LOG 2 (SUC n))`
+          by SRW_TAC [] [logrootTheory.LOG]
+          \\ METIS_TAC [LESS_LESS_EQ_TRANS]]);
+
 (* ------------------------------------------------------------------------- *)
 
 val BIT_MODIFY_LT_2EXP = prove(
