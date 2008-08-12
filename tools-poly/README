@@ -1,8 +1,9 @@
 To build HOL with PolyML: 
-  1) edit configure.sml with the location of your Poly ML binary and libraries,
-     and also your gcc.
-  2) run "poly < smart-configure" from the tools-poly directory
-  3) run "$HOLDIR/bin/build -expk -symlink" (only the experimental kernel is supported)
+  1) run "<path-to-poly> < tools-poly/smart-configure.sml" from the top-level 
+     HOL directory HOLDIR. Note that <path-to-poly> has to be the full path 
+     to the poly executable residing in polydir/bin, where polydir is the 
+     poly distribution directory. 
+  2) run "bin/build -expk -symlink" (only the experimental kernel is supported)
 
 This is currently experimental, and probably fragile.  The help system doesn't
 work; also ctrl-c may not work reliably.
