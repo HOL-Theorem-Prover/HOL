@@ -140,9 +140,21 @@ abconv_ty ty1 ty2;
  * include type beta-reduction of type beta-redexes during checking. *
  * ----------------------------------------------------------------- *)
 
-
 val tm1 = ``\x. (x : 'a (\'b. 'b), x : 'a)`` handle e => Raise e;
 val tm2 = ``\x. (x : 'a I, x : 'a)`` handle e => Raise e;
+
+(* ------------------------------------ *)
+(* Checks of type substitution on terms *)
+(* ------------------------------------ *)
+
+(* The following should print an exception and set rank_check to "success": *)
+
+val _ = print "\nTest of rank check on term-type applications:";
+val tm1 = ``(\:'a. \s. (s:'a))[:'a:]``;
+val rank_check = ( inst [``:'a`` |-> ``:!'a.'a``] tm1 handle e => Raise e; "failure" )
+                 handle _ => "success";
+val _ = print (rank_check ^ "\n\n");
+
 
 
 val _ = set_trace "kinds" 2;
@@ -213,21 +225,6 @@ e TY_COMB_TAC;
 e REFL_TAC;
 *)
 
-
-(* Universal and existential type quantification is done in boolScript:
-
-val TYFORALL_DEF =
- Definition.new_definition
-   ("TYFORALL_DEF",     Term `$!: = \P. ((\:'a. P [:'a:]) = (\:'a. T))`);
-
-val _ = (add_type_binder("!:", std_binder_precedence); add_const "!:");
-
-val TYEXISTS_DEF =
- Definition.new_definition
-   ("TYEXISTS_DEF",     Term `$?: = \P. ~((\:'a. P [:'a:]) = (\:'a. F))`);
-
-val _ = (add_type_binder("?:", std_binder_precedence); add_const "?:");
-*)
 
 
 
