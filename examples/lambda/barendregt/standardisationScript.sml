@@ -1,5 +1,3 @@
-structure standardisationScript =
-struct
 open HolKernel Parse boolLib bossLib BasicProvers metisLib
 
 open boolSimps
@@ -1430,25 +1428,23 @@ val i_reduces_to_LAMl = prove(
                     (M = LAMl vs M0) /\ RTC $i_reduce1 M0 N`
       THEN1 PROVE_TAC [] THEN
     HO_MATCH_MP_TAC relationTheory.RTC_STRONG_INDUCT_RIGHT1 THEN
-    SRW_TAC [][] THENL [
-      SRW_TAC [][relationTheory.RTC_RULES],
-      `DISJOINT (LIST_TO_SET vs) (FV N1)`
-          by (Q_TAC SUFF_TAC `FV N1 SUBSET FV M` THEN1
-                    PROVE_TAC [DISJOINT_SYM, SUBSET_DISJOINT] THEN
-              Q_TAC SUFF_TAC
-                    `!M N. RTC (i_reduce1) M N ==> FV N SUBSET FV M` THEN1
-                    PROVE_TAC [] THEN
-              HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-              SRW_TAC [][] THEN
-              PROVE_TAC [cc_beta_FV_SUBSET, SUBSET_TRANS, labelled_redn_cc,
-                         i_reduce1_def]) THEN
-      `?N10. (N1 = LAMl vs N10) /\ N10 i_reduce1 N`
-          by PROVE_TAC [i1_reduce_to_LAMl] THEN
-      `?M0. (M = LAMl vs M0) /\ RTC (i_reduce1) M0 N10`
-          by METIS_TAC [] THEN
-      Q.EXISTS_TAC `M0` THEN
-      PROVE_TAC [relationTheory.RTC_CASES2]
-    ],
+    SRW_TAC [][] THEN
+    `DISJOINT (LIST_TO_SET vs) (FV N1)`
+        by (Q_TAC SUFF_TAC `FV N1 SUBSET FV M` THEN1
+                  PROVE_TAC [DISJOINT_SYM, SUBSET_DISJOINT] THEN
+            Q_TAC SUFF_TAC
+                  `!M N. RTC (i_reduce1) M N ==> FV N SUBSET FV M` THEN1
+                  PROVE_TAC [] THEN
+            HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+            SRW_TAC [][] THEN
+            PROVE_TAC [cc_beta_FV_SUBSET, SUBSET_TRANS, labelled_redn_cc,
+                       i_reduce1_def]) THEN
+    `?N10. (N1 = LAMl vs N10) /\ N10 i_reduce1 N`
+        by PROVE_TAC [i1_reduce_to_LAMl] THEN
+    `?M0. (M = LAMl vs M0) /\ RTC (i_reduce1) M0 N10`
+        by METIS_TAC [] THEN
+    Q.EXISTS_TAC `M0` THEN
+    PROVE_TAC [relationTheory.RTC_CASES2],
 
     Q_TAC SUFF_TAC `!M N. RTC $i_reduce1 M N ==>
                           !vs. RTC (i_reduce1) (LAMl vs M) (LAMl vs N)`
@@ -2392,4 +2388,3 @@ val corollary11_4_8 = store_thm(
   ]);
 
 val _ = export_theory()
-end (* struct *)
