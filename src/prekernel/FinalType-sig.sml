@@ -101,30 +101,6 @@ sig
  val raw_match_type: hol_type -> hol_type 
                       -> (hol_type,hol_type) Lib.subst * hol_type list
                       -> (hol_type,hol_type) Lib.subst * hol_type list
-(*
- val type_pmatch : hol_type HOLset.set -> {redex : hol_type, residue : hol_type} list ->
-                   hol_type -> hol_type ->
-                   (hol_type,hol_type)Lib.subst *
-                   ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list ->
-                   (hol_type,hol_type)Lib.subst *
-                   ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list
- val separate_insts_ty : (hol_type,hol_type)Lib.subst ->
-                         {redex : hol_type, residue : int} list *
-                         (hol_type,hol_type)Lib.subst
- val all_abconv : hol_type list -> hol_type list -> bool
- val type_homatch : hol_type HOLset.set ->
-                    (hol_type,hol_type)Lib.subst *
-                    ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list ->
-                    (hol_type,hol_type)Lib.subst
- val ho_match_type1 : hol_type HOLset.set -> hol_type -> hol_type
-                      -> (hol_type,hol_type)Lib.subst *
-                         ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list
-                      -> (hol_type,int)Lib.subst * (hol_type,hol_type)Lib.subst
- val ho_match_type0 : hol_type HOLset.set -> hol_type -> hol_type
-                      -> (hol_type,int)Lib.subst * (hol_type,hol_type)Lib.subst
- val ho_match_type  : hol_type HOLset.set -> hol_type -> hol_type
-                      -> (hol_type,hol_type)Lib.subst
-*)
 
  val pp_raw_type    : ppstream -> hol_type -> unit
  val type_to_string : hol_type -> string

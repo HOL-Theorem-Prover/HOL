@@ -1235,14 +1235,14 @@ fun type_subst theta = delta_apply (ty_sub theta)
  *    Replace arbitrary subtypes in a type. Non-renaming.                    *
  *---------------------------------------------------------------------------*)
 
-fun match_rank [] = 0
-  | match_rank ({redex,residue} :: s) =
+fun subst_rank [] = 0
+  | subst_rank ({redex,residue} :: s) =
       let val rk_dex = rank_of redex
           val rk_due = rank_of residue
       in
          Int.max( if rk_dex >= rk_due then 0
                   else rk_due - rk_dex,
-                  match_rank s )
+                  subst_rank s )
       end
 
 fun inst_rank_subst r [] = []
@@ -1254,11 +1254,19 @@ local
   open Binarymap
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
-      addb t (insert(A,redex,residue),
-              is_vartype redex andalso b)
+        if (kind_of redex <> kind_of residue) handle HOL_ERR _ => false
+           (* if "kind_of" fails because of open bound variables,
+              assume the kind check was done earlier and proceed. *)
+        then raise ERR "type_subst" "redex has different kind than residue"
+        else if (rank_of redex < rank_of residue) handle HOL_ERR _ => false
+           (* if "rank_of" fails because of open bound variables,
+              assume the rank check was done earlier and proceed. *)
+        then raise ERR "type_subst" "type substitution does not respect rank"
+        else addb t (insert(A,redex,residue),
+                     is_vartype redex andalso b)
 in
-fun type_subst [] = I
-  | type_subst theta =
+fun raw_type_subst [] = I
+  | raw_type_subst theta =
     let val (fmap,b) = addb theta (emptysubst, true)
         fun vsubs (v as TyFv _) =
                (case peek(fmap,v) of NONE => v
@@ -1280,11 +1288,11 @@ fun type_subst [] = I
       (if b then vsubs else subs)
     end
 
-fun rank_type_subst s =
-   let val r = match_rank s
-   in if r = 0 then type_subst s
+fun type_subst s =
+   let val r = subst_rank s
+   in if r = 0 then raw_type_subst s
       else let val s' = inst_rank_subst r s
-           in (fn ty => type_subst s' (inst_rank r ty))
+           in raw_type_subst s' o inst_rank r
            end
    end
 

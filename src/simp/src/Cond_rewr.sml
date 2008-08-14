@@ -157,15 +157,18 @@ fun ac_term_ord(tm1,tm2) =
 
    fun vperm(tm1,tm2) =
     case (dest_term tm1, dest_term tm2)
-     of (VAR v1,VAR v2)   => (snd v1 = snd v2)
+     of (VAR v1,VAR v2)   => abconv_ty (snd v1) (snd v2)
       | (LAMB t1,LAMB t2) => vperm(snd t1, snd t2)
       | (COMB t1,COMB t2) => vperm(fst t1,fst t2) andalso vperm(snd t1,snd t2)
       | (TYLAMB t1,TYLAMB t2) => vperm(snd t1, snd t2)
-      | (TYCOMB t1,TYCOMB t2) => vperm(fst t1,fst t2) andalso (snd t1 = snd t2)
+      | (TYCOMB t1,TYCOMB t2) => vperm(fst t1,fst t2) andalso abconv_ty (snd t1) (snd t2)
       | (x,y) => (x = y)
 
+   fun tm_set_eq s t = null (op_set_diff aconv s t) andalso
+                       null (op_set_diff aconv t s)
+
    fun is_var_perm(tm1,tm2) =
-       vperm(tm1,tm2) andalso set_eq (free_vars tm1) (free_vars tm2)
+       vperm(tm1,tm2) andalso tm_set_eq (free_vars tm1) (free_vars tm2)
 
    fun COND_REWR_CONV th =
       let val eqn = snd (strip_imp (concl th))
@@ -307,7 +310,8 @@ fun IMP_EQ_CANON thm =
         then if (loops undisch_thm) then
                (trace(1,IGNORE("looping rewrite",thm)); [])
              else let
-                 val base = if null (subtract (free_vars (rhs conc))
+                 val base = if null (op_set_diff aconv
+                                              (free_vars (rhs conc))
 			                      (free_varsl (hyp thm)@
                                                free_vars(lhs conc)))
 		            then undisch_thm
@@ -325,6 +329,8 @@ fun IMP_EQ_CANON thm =
         then (op @ o (IMP_EQ_CANON##IMP_EQ_CANON) o CONJ_PAIR) undisch_thm
         else if (is_forall conc)
         then IMP_EQ_CANON (snd (SPEC_VAR undisch_thm))
+        else if (is_tyforall conc)
+        then IMP_EQ_CANON (snd (SPEC_TYVAR undisch_thm))
         else if (is_neg conc)
              then if (is_eq (dest_neg conc))
                   then [EQF_INTRO undisch_thm, EQF_INTRO (GSYM undisch_thm)]
@@ -403,6 +409,16 @@ fun IMP_CANON acc thl =
                 in
                   IMP_CANON acc ((ants, newth) :: ths)
                 end
+              else if is_tyexists ant then let
+                  val (Bvar,Body) = dest_tyexists ant
+                  val bv' = variant_type (type_vars_in_term (concl th) @
+                                          type_vars_in_terml (hyp th)   ) Bvar
+                  val body' = inst [Bvar |-> bv'] Body
+                  val newth =
+                      DISCH body' (MP th (TY_EXISTS(ant, bv') (ASSUME body')))
+                in
+                  IMP_CANON acc ((ants, newth) :: ths)
+                end
               else if c = boolSyntax.F then
                 IMP_CANON ((ants, NOT_INTRO th) :: acc) ths
               (* we want [.] |- F theorems to rewrite to [.] |- x = F,
@@ -416,6 +432,8 @@ fun IMP_CANON acc thl =
             end
           else if is_forall w then
             IMP_CANON acc ((ants, SPEC_ALL th) :: ths)
+          else if is_tyforall w then
+            IMP_CANON acc ((ants, TY_SPEC_ALL th) :: ths)
           else if is_res_forall w then let
               val newth = CONV_RULE (REWR_CONV RES_FORALL_THM THENC
                                      QUANT_CONV (RAND_CONV BETA_CONV)) th

@@ -107,7 +107,7 @@ local open Subst
         | ty_of (Comb(Rator, _)) E     = snd(Type.dom_rng(ty_of Rator E))
         | ty_of (TComb(Tm, Ty)) E      =
                 let val (Bty,TBody) = Type.dest_univ_type(ty_of Tm E)
-                in Type.type_subst[Bty |-> Ty] TBody
+                in Type.raw_type_subst[Bty |-> Ty] TBody
                 end
         | ty_of (Abs(Fv(_,Ty),Body)) E = Ty --> ty_of Body (Ty::E)
         | ty_of (TAbs(Btyvar,Body)) E  = TyAll(Btyvar, ty_of Body E)
@@ -774,32 +774,73 @@ end
  *     Instantiate type variables in a term                                  *
  *---------------------------------------------------------------------------*)
 
+local
+fun check_subst [] = ()
+  | check_subst ({redex,residue} :: s) =
+        if (kind_of redex <> kind_of residue) handle HOL_ERR _ => false
+           (* if "kind_of" fails because of open bound variables,
+              assume the kind check was done earlier and proceed. *)
+        then raise ERR "inst" "redex has different kind than residue"
+        else check_subst s
+in
 fun inst [] tm = tm
   | inst theta tm =
-    let fun
-       inst1 (bv as Bv i) R = bv
-     | inst1 (c as Const(_, GRND _)) R = c
-     | inst1 (c as Const(r, POLY Ty)) R =
-       (case Type.ty_sub theta Ty
-         of SAME => c
-          | DIFF ty => Const(r,(if Type.polymorphic ty then POLY else GRND)ty))
-     | inst1 (v as Fv(Name,Ty)) R =
-         (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
-     | inst1 (Comb(Rator,Rand)) R = Comb(inst1 Rator R, inst1 Rand R)
-     | inst1 (TComb(Rator,Ty)) R  =
-         let val Rator' = inst1 Rator R
-             val rty = type_of Rator'
-             val Ty' = Type.type_subst theta Ty
-         in if Type.rk_of Ty' R > rank_of_univ_dom rty
-             then raise ERR "inst" "universal type variable has insufficient rank"
-             else TComb(Rator', Ty')
-         end
-     | inst1 (Abs(Bvar,Body)) R   = Abs(inst1 Bvar R, inst1 Body R)
-     | inst1 (TAbs(Bvar as (_,_,rk),Body)) R = TAbs(Bvar, inst1 Body (rk::R))
-     | inst1 (t as Clos _) R      = inst1(push_clos t) R
+    let fun inst1 (bv as Bv i) R = bv
+          | inst1 (c as Const(_, GRND _)) R = c
+          | inst1 (c as Const(r, POLY Ty)) R =
+            (case Type.ty_sub theta Ty
+              of SAME => c
+               | DIFF ty => Const(r,(if Type.polymorphic ty then POLY else GRND)ty))
+          | inst1 (v as Fv(Name,Ty)) R =
+              (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
+          | inst1 (Comb(Rator,Rand)) R = Comb(inst1 Rator R, inst1 Rand R)
+          | inst1 (TComb(Rator,Ty)) R  =
+              let val Rator' = inst1 Rator R
+                  val rty = type_of Rator'
+                  val Ty' = Type.type_subst theta Ty
+              in if Type.rk_of Ty' R > rank_of_univ_dom rty
+                  then raise ERR "inst" "universal type variable has insufficient rank"
+                  else TComb(Rator', Ty')
+              end
+          | inst1 (Abs(Bvar,Body)) R   = Abs(inst1 Bvar R, inst1 Body R)
+          | inst1 (TAbs(Bvar as (_,_,rk),Body)) R = TAbs(Bvar, inst1 Body (rk::R))
+          | inst1 (t as Clos _) R      = inst1(push_clos t) R
+        fun inst0 (bv as Bv i) = bv
+          | inst0 (c as Const(_, GRND _)) = c
+          | inst0 (c as Const(r, POLY Ty)) =
+            (case Type.ty_sub theta Ty
+              of SAME => c
+               | DIFF ty => Const(r,(if Type.polymorphic ty then POLY else GRND)ty))
+          | inst0 (v as Fv(Name,Ty)) =
+              (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
+          | inst0 (Comb(Rator,Rand)) = Comb(inst0 Rator, inst0 Rand)
+          | inst0 (TComb(Rator,Ty))  =
+              let val Rator' = inst0 Rator
+                  val rty = type_of Rator'
+                  val Ty' = Type.type_subst theta Ty
+              in if rank_of Ty' > rank_of_univ_dom rty
+                  then raise ERR "inst" "universal type variable has insufficient rank"
+                       (* This error should never be raised, if the substitution is proper *)
+                  else TComb(Rator', Ty')
+              end
+          | inst0 (Abs(Bvar,Body))   = Abs(inst0 Bvar, inst0 Body)
+          | inst0 (TAbs(Bvar as (_,_,rk),Body)) = TAbs(Bvar, inst1 Body [rk])
+          | inst0 (t as Clos _)      = inst0(push_clos t)
     in
-      inst1 tm []
-    end;
+      check_subst theta;
+      inst0 tm
+    end
+end;
+
+fun inst_with_rank theta =
+  let val r = subst_rank theta
+  in if r = 0 then inst theta
+     else let val theta' = inst_rank_subst r theta
+          in inst theta' o inst_rank r
+          end
+  end;
+
+val inst = inst_with_rank;
 
 (*---------------------------------------------------------------------------*
  *     Substitute types for general types in a term                          *
@@ -810,10 +851,16 @@ local
   open Binarymap
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
-      addb t (if (kind_of redex) = (kind_of residue)
-              then (insert(A,redex,residue),
-                    is_vartype redex andalso b)
-              else raise ERR "subst_type" "redex has different kind than residue")
+        if (rank_of redex < rank_of residue) handle HOL_ERR _ => false
+           (* if "rank_of" fails because of open bound variables,
+              assume the rank check was done earlier and proceed. *)
+        then raise ERR "subst_type" "redex has lower rank than residue"
+        else if (kind_of redex <> kind_of residue) handle HOL_ERR _ => false
+           (* if "kind_of" fails because of open bound variables,
+              assume the kind check was done earlier and proceed. *)
+        then raise ERR "subst_type" "redex has different kind than residue"
+        else addb t (insert(A,redex,residue),
+                     is_vartype redex andalso b)
 in
 fun subst_type [] tm = tm
   | subst_type theta tm =

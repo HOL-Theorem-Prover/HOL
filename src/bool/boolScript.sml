@@ -22,13 +22,12 @@ and type Ctrl-j.
 
 quotation := true;
 loadPath := "/Users/palantir" ^ "/hol/hol-omega/sigobj" :: !loadPath;
+
+quotation := true;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/sigobj" :: !loadPath;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/bool" :: !loadPath;
-loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/HolSat" :: !loadPath;
-loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/pair/src" :: !loadPath;
-app load ["Kind","Type","Term","Thm","Theory"];
-app load ["Globals","HolKernel","Parse"];
-app load ["Globals","HolKernel","Parse","Drule","Thm","boolTheory","Tactical","Tactic","Rerite"];
+app load ["Kind","Type","Term","Thm","Theory","Globals","HolKernel","Parse"];
+app load ["Drule","Thm","boolTheory","Tactical","Tactic","Rerite"];
 *)
 
 open HolKernel Parse;

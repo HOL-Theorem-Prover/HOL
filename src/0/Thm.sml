@@ -354,7 +354,7 @@ fun check_subst_rank s =
 
 fun INST_TYPE [] th = th
   | INST_TYPE theta (THM(ocl,asl,c)) =
-    let val r = Type.match_rank theta
+    let val r = Type.subst_rank theta
     in if r = 0 then
          make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c)
        else let

@@ -141,7 +141,7 @@ fun list_mk_lbinop _ [] = raise ERR "list_mk_lbinop" "empty list"
   | list_mk_lbinop mk_binop (h::t) = rev_itlist (C mk_binop) t h;
 
 fun mk_binder c f (p as (Bvar,_)) =
-   mk_comb(inst[alpha |-> type_of Bvar] c, mk_abs p)
+   mk_comb(Term.inst[alpha |-> type_of Bvar] c, mk_abs p)
    handle HOL_ERR {message,...} => raise ERR f message;
 
 fun mk_tybinder c f (p as (Bvar,_)) =
@@ -518,7 +518,7 @@ in
       else (* vtm not a var *) let
           val (vhop, vargs) = strip_comb vtm
           val afvs = free_varsl vargs
-          val inst_fn = Term.inst (fst tyins)
+          val inst_fn = inst (fst tyins)
         in
           (let
              val tmins =
