@@ -110,11 +110,16 @@ determining "poly";
 
 fun check_dir nm privs candidate = let
   open OS.FileSys
+  val p = OS.Path.concat(candidate,nm)
 in
-  access(OS.Path.concat(candidate,nm), privs)
+  if access(p, privs) then SOME (OS.Path.dir (fullPath p)) else NONE
 end
 val check_poly = check_dir "poly" [OS.FileSys.A_EXEC]
 val check_libpoly = check_dir "libpolymain.a" [OS.FileSys.A_READ]
+
+fun findpartial f [] = NONE
+  | findpartial f (h::t) = 
+    case f h of NONE => findpartial f t | x => x
 
 val poly = let
   val nm = CommandLine.name()
@@ -131,15 +136,17 @@ val poly = let
             val sep = case OS of "winNT" => #";" | _ => #":"
             val search_these = String.fields (fn c => c = sep) elist
           in
-            List.find check_poly search_these
+            findpartial check_poly search_these 
           end
 in
   case cand of
     NONE => ""
-  | SOME c => if check_poly c then OS.Path.concat(c,"poly")
-              else (print "Couldn't figure out location of poly executable\
-                          \ - hope you have poly-includes.ML to specify it";
-                    "")
+  | SOME c => (case check_poly c of
+                 SOME p => OS.Path.concat(p,"poly")
+               | NONE => 
+                 (print "\nCouldn't figure out location of poly executable\
+                        \ - hope you have poly-includes.ML to specify it";
+                  ""))
 end;
 
 val polymllibdir = 
@@ -149,14 +156,16 @@ val polymllibdir =
         val (dirname, _) = frontlast arcs
         val (parent, probably_bin) = frontlast dirname
         val _ = if probably_bin <> "bin" then 
-                  print "Surprised that poly is not in a \"bin\" directory\n"
+                  print "\nSurprised that poly is not in a \"bin\" directory\n"
                 else ()
         val candidate = OS.Path.toString { arcs = parent @ ["lib"], vol = vol,
                                            isAbs = isAbs }
       in
-        if check_libpoly candidate then candidate
-        else (print "Couldn't find libpolymain.a in sister lib directory"; 
-              "")
+        case check_libpoly candidate of 
+          SOME c => c
+        | NONE => 
+          (print "\nCouldn't find libpolymain.a in sister lib directory"; 
+           "")
       end
     else "";
 

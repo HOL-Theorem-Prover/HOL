@@ -3608,13 +3608,9 @@ val lcc_cosubstitutive = store_thm(
               RTC (lcompat_closure R) ([M/v] P) ([N/v] P)``,
   REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `P` THEN
   HO_MATCH_MP_TAC lterm_bvc_induction THEN
-  Q.EXISTS_TAC `v INSERT FV M UNION FV N` THEN SRW_TAC [][lSUB_VAR] THENL [
-    PROVE_TAC [relationTheory.RTC_RULES],
-    PROVE_TAC [relationTheory.RTC_RULES],
-    PROVE_TAC [relationTheory.RTC_RTC, RTC_lcc_rules],
-    PROVE_TAC [RTC_lcc_rules],
-    PROVE_TAC [RTC_lcc_rules, relationTheory.RTC_RTC]
-  ]);
+  Q.EXISTS_TAC `v INSERT FV M UNION FV N` THEN SRW_TAC [][lSUB_VAR] THEN
+  PROVE_TAC [relationTheory.RTC_RULES, relationTheory.RTC_RTC, 
+             RTC_lcc_rules]);
 
 val strong_lcc_ind =
     IndDefLib.derive_strong_induction

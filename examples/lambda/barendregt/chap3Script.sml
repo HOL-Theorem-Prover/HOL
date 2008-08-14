@@ -219,11 +219,9 @@ val reduction_compatible = store_thm(
                         !c. one_hole_context c ==>
                             RTC (compat_closure R) (c x) (c y)` THEN1
     SRW_TAC [][compatible_def, reduction_def] THEN
-  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THENL [
-    PROVE_TAC [relationTheory.RTC_RULES],
-    PROVE_TAC [compatible_def, compat_closure_compatible,
-               relationTheory.RTC_RULES]
-  ]);
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
+  PROVE_TAC [compatible_def, compat_closure_compatible,
+             relationTheory.RTC_RULES]);
 
 val reduction_rules = store_thm(
   "reduction_rules",
