@@ -1,10 +1,13 @@
 OPTIONS=NO_OVERLAY
 
-FinalTag-sig.uo: FinalTag-sig.sml
+PORTABLED = $(dprot $(SIGOBJ)/Portable.ui)
+LIBD = $(dprot $(SIGOBJ)/Lib.ui)
+
+FinalTag-sig.uo: FinalTag-sig.sml $(PORTABLED)
 	$(HOLMOSMLC) -c -toplevel $<
 
 FinalTerm-sig.uo: FinalTerm-sig.sml HOLset.ui Lib.uo
 	$(HOLMOSMLC) -c -toplevel $<
 
-FinalType-sig.uo: FinalType-sig.sml
+FinalType-sig.uo: FinalType-sig.sml $(LIBD)
 	$(HOLMOSMLC) -c -toplevel $<
