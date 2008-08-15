@@ -54,7 +54,7 @@ below are some of those that come pre-built in the system.
     |------------------------------------------------------------------|
     | stringTheory       | strings                                     |
     |------------------------------------------------------------------|
-    | wordTheory. etc.   | theory of bitstrings                        |
+    | wordsTheory        | theory of bitstrings                        |
     |------------------------------------------------------------------|
     | Temporal_LogicTheory | Linear time temporal logic                |
     | Omega_AutomataTheory | Infinite state automata                   |
@@ -111,10 +111,7 @@ HOL currently offers the following libraries.
     | pred_setLib     | sets as predicates                          |
     | listLib         | extensive development of lists              |
     | stringLib       | characters and strings                      |
-    | wordLib         | theories and proof support for bitstrings   |
-    | word16Lib       | theories of 16-bit words                    |
-    | word32Lib       | theories of 32-bit words                    |
-    | word64Lib       | theories of 64-bit words                    |
+    | wordsLib        | theories and proof support for bitstrings   |
     | unwindLib       | unwinding existential quantifiers           |
     | res_quanLib     | bounded quantification                      |
     | refuteLib       | support for refutation procedures           |
