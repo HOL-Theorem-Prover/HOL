@@ -1,3 +1,12 @@
+structure standardisationScript = 
+struct
+
+  (* explicit structure above is necessary if MoscowML is to compile the
+     script file in its standard (not "toplevel") mode, and not be put off 
+     by the structure Q = ... line below.   
+   
+     Poly/ML doesn't have this problem. *)
+
 open HolKernel Parse boolLib bossLib BasicProvers metisLib
 
 open boolSimps
@@ -2388,3 +2397,5 @@ val corollary11_4_8 = store_thm(
   ]);
 
 val _ = export_theory()
+
+end (* struct *)

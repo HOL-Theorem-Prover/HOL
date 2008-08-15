@@ -465,6 +465,13 @@ in
   val toHexString = toBaseString (fromInt 16)
 end
 
+local open StringCvt PP in
+  fun base_pp_num BIN ppstrm n = add_string ppstrm ("0b" ^ toBinString n)
+    | base_pp_num OCT ppstrm n = add_string ppstrm ("0" ^ toOctString n)
+    | base_pp_num DEC ppstrm n = add_string ppstrm (toString n)
+    | base_pp_num HEX ppstrm n = add_string ppstrm ("0x" ^ toHexString n)
+end;
+
 (*  useful test code follows
 exception ArgsBad;
 

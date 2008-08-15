@@ -9,6 +9,8 @@ FTYPE = $(protect $(SIGOBJ)/FinalType-sig.ui)
 FTERMD = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
 FTERM = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
 
+LIBD = $(dprot $(SIGOBJ)/Lib.ui)
+
 
 HOLSETD = $(dprot $(SIGOBJ)/HOLset.ui)
 
@@ -16,7 +18,7 @@ Overlay.uo: Overlay.sml Definition.ui Net.ui $(FTAGD) $(FTYPED) $(FTERMD)
 	$(HOLMOSMLC) -c -toplevel $(FTAG) $(FTYPE) $(FTERM) Definition.ui \
                                   Net.ui Overlay.sml
 
-Type.ui : Type.sig $(FTYPED) $(dprot $(SIGOBJ)/KernelSig.ui)
+Type.ui : Type.sig $(FTYPED) $(dprot $(SIGOBJ)/KernelSig.ui) $(LIBD)
 	$(HOLMOSMLC) -c $(FTYPE) Type.sig
 
 Term.ui: Term.sig $(FTERMD) Type.ui
