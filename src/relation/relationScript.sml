@@ -120,6 +120,12 @@ val RTC_REFL = store_thm(
   REWRITE_TAC [RTC_RULES]);
 val _ = export_rewrites ["RTC_REFL"]
 
+val RTC_SINGLE = store_thm(
+  "RTC_SINGLE",
+  ``!R x y. R x y ==> RTC R x y``,
+  PROVE_TAC [RTC_RULES]);
+val _ = export_rewrites ["RTC_SINGLE"]
+
 val RTC_STRONG_INDUCT = store_thm(
   "RTC_STRONG_INDUCT",
   ``!R P. (!x. P x x) /\ (!x y z. R x y /\ RTC R y z /\ P y z ==> P x z) ==>
