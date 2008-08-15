@@ -150,9 +150,10 @@ val tm2 = ``\x. (x : 'a I, x : 'a)`` handle e => Raise e;
 (* The following should print an exception and set rank_check to "success": *)
 
 val _ = print "\nTest of subst_type rank check on term-type applications: ";
-val tm1 = ``(\:'a. \s. (s:'a))[:'a:]``;
-val rank_check = ( subst_type [``:'a`` |-> ``:!'a.'a``] tm1; "failure" )
-                 handle _ => "success";
+val tm1 = ``(\:'a. \s. (s:'a))[:'a -> 'b:]``;
+val tm2 = subst_type [``:'a -> 'b`` |-> ``:!'a.'a``] tm1; (* automatically raises rank *)
+val ty2 = (fst o dest_tyabs o fst o dest_tycomb) tm2;
+val rank_check = if rank_of ty2 = 0 then "failure" else "success";
 val _ = print (rank_check ^ "\n");
 
 val _ = print "Test of inst       rank check on term-type applications: ";

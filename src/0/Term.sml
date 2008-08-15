@@ -815,6 +815,8 @@ fun inst [] tm = tm
               (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
           | inst0 (Comb(Rator,Rand)) = Comb(inst0 Rator, inst0 Rand)
           | inst0 (TComb(Rator,Ty))  =
+              (* The following check should never be violated, if the subst is proper *)
+              (* One could have said,  TComb(inst0 Rator, Type.type_subst theta Ty)   *)
               let val Rator' = inst0 Rator
                   val rty = type_of Rator'
                   val Ty' = Type.type_subst theta Ty
@@ -851,11 +853,7 @@ local
   open Binarymap
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
-        if (rank_of redex < rank_of residue) handle HOL_ERR _ => false
-           (* if "rank_of" fails because of open bound variables,
-              assume the rank check was done earlier and proceed. *)
-        then raise ERR "subst_type" "redex has lower rank than residue"
-        else if (kind_of redex <> kind_of residue) handle HOL_ERR _ => false
+        if (kind_of redex <> kind_of residue) handle HOL_ERR _ => false
            (* if "kind_of" fails because of open bound variables,
               assume the kind check was done earlier and proceed. *)
         then raise ERR "subst_type" "redex has different kind than residue"
@@ -878,6 +876,8 @@ fun subst_type [] tm = tm
      | subst_type1 (v as Fv(Name,Ty)) R = Fv(Name, type_map fmap Ty)
      | subst_type1 (Comb(Rator,Rand)) R = Comb(subst_type1 Rator R, subst_type1 Rand R)
      | subst_type1 (TComb(Rator,Ty)) R  =
+         (* The following check should never be violated, if the subst is proper *)
+         (* One could have said,    TComb(subst_type1 Rator, type_map fmap Ty)   *)
          let val Rator' = subst_type1 Rator R
              val rty = type_of Rator'
              val Ty' = type_map fmap Ty
@@ -892,6 +892,16 @@ fun subst_type [] tm = tm
       subst_type1 tm []
     end
 end;
+
+fun subst_type_with_rank theta =
+  let val r = subst_rank theta
+  in if r = 0 then subst_type theta
+     else let val theta' = inst_rank_subst r theta
+          in subst_type theta' o inst_rank r
+          end
+  end;
+
+val subst_type = subst_type_with_rank;
 
 
 (*---------------------------------------------------------------------------

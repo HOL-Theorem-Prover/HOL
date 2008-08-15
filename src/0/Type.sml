@@ -1241,7 +1241,7 @@ fun subst_rank [] = 0
           val rk_due = rank_of residue
       in
          Int.max( if rk_dex >= rk_due then 0
-                  else rk_due - rk_dex,
+                                      else rk_due - rk_dex,
                   subst_rank s )
       end
 
