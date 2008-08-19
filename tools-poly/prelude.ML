@@ -1,3 +1,4 @@
+(* this is an -*- sml -*- file *)
 val _ = PolyML.print_depth 0;
 local in
 open HolKernel Parse boolLib proofManagerLib;
@@ -66,6 +67,8 @@ fun use s =
     end
   else PolyML.use s;
 end;
+
+val _ = load "UTF8_Printing";
 
 val _ = Globals.interactive := true;
 

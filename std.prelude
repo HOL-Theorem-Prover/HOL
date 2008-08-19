@@ -6,7 +6,8 @@ val _ = quietdec := true;
    ---------------------------------------------------------------------- *)
 
 val _ = app load
-  ["Mosml", "Process", "Path", "boolLib", "proofManagerLib", "Arbrat"];
+  ["Mosml", "Process", "Path", "boolLib", "proofManagerLib", "Arbrat", 
+   "UTF8_Printing"];
 
 open HolKernel Parse boolLib proofManagerLib;
 
