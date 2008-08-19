@@ -166,7 +166,7 @@ fun mk_break (last, next) =
      Char.isAlphaNum last andalso Char.isAlphaNum next)
 
 fun avoid_symbolmerge (add_string, add_break) = let
-  val last_char = ref #"a"
+  val last_char = ref #" "
   fun new_addstring s = let
     val sz = size s
   in
