@@ -162,7 +162,8 @@ fun mk_break (last, next) =
     !avoid_symbol_merges andalso
     (is_symbolic_char last andalso is_symbolic_char next orelse
      last = #"(" andalso next = #"*" orelse
-     last = #"*" andalso next = #")")
+     last = #"*" andalso next = #")" orelse
+     Char.isAlphaNum last andalso Char.isAlphaNum next)
 
 fun avoid_symbolmerge (add_string, add_break) = let
   val last_char = ref #"a"
@@ -1283,7 +1284,6 @@ fun pp_term (G : grammar) TyG = let
         in
           pbegin addparens; begin_block INCONSISTENT 2;
           add_string fname;
-          spacep (not (symbolic fname));
           pr_vstructl bvs;
           add_string endbinding; spacep true;
           begin_block CONSISTENT 0;
