@@ -69,6 +69,60 @@ in
   type_abbrev(nats, ``:num``)
 end
 
+val lo = "<\u00e2\u0082\u008a"
+val hi = ">\u00e2\u0082\u008a"
+val ls = leq ^ "\u00e2\u0082\u008a"
+val hs = geq ^ "\u00e2\u0082\u008a"
+val or = "\u00e2\u0080\u0096"
+val xor = "\u00e2\u008a\u0095"
+val lsl = "\u00e2\u0089\u00aa"
+val asr = "\u00e2\u0089\u00ab"
+val lsr = "\u00e2\u008b\u0099"
+val rol = "\u00e2\u0087\u0086"
+val ror = "\u00e2\u0087\u0084"
+
+fun words_printing () = let 
+in
+  add_rule (standard_spacing leq (getprec "<="));
+  overload_on_by_nametype leq {Name = "word_le", Thy = "words"};
+
+  add_rule (standard_spacing geq (getprec ">="));
+  overload_on_by_nametype geq {Name = "word_ge", Thy = "words"};
+
+  add_rule (standard_spacing lo (getprec "<+"));
+  overload_on_by_nametype lo {Name = "word_lo", Thy = "words"};
+
+  add_rule (standard_spacing hi (getprec ">+"));
+  overload_on_by_nametype hi {Name = "word_hi", Thy = "words"};
+
+  add_rule (standard_spacing ls (getprec "<=+"));
+  overload_on_by_nametype ls {Name = "word_ls", Thy = "words"};
+
+  add_rule (standard_spacing hs (getprec ">=+"));
+  overload_on_by_nametype hs {Name = "word_hs", Thy = "words"};
+
+  add_rule (standard_spacing or (getprec "!!"));
+  overload_on_by_nametype or {Name = "word_or", Thy = "words"};
+
+  add_rule (standard_spacing xor (getprec "??"));
+  overload_on_by_nametype xor {Name = "word_xor", Thy = "words"};
+
+  add_rule (standard_spacing lsl (getprec "<<"));
+  overload_on_by_nametype lsl {Name = "word_lsl", Thy = "words"};
+
+  add_rule (standard_spacing asr (getprec ">>"));
+  overload_on_by_nametype asr {Name = "word_asr", Thy = "words"};
+
+  add_rule (standard_spacing lsr (getprec ">>>"));
+  overload_on_by_nametype lsr {Name = "word_lsr", Thy = "words"};
+
+  add_rule (standard_spacing rol (getprec "#<<"));
+  overload_on_by_nametype rol {Name = "word_rol", Thy = "words"};
+
+  add_rule (standard_spacing ror (getprec "#>>"));
+  overload_on_by_nametype ror {Name = "word_ror", Thy = "words"}
+end
+
 
 val emptyset = "\u00e2\u0088\u0085"
 val inter = "\u00e2\u0088\u00a9"

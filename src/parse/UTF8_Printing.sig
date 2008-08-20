@@ -24,8 +24,22 @@ sig
   val union : string
   val inter : string
 
+  (* wordsTheory *)
+  val lo : string
+  val ls : string
+  val hi : string
+  val hs : string
+  val or : string
+  val xor : string
+  val lsl : string
+  val lsr : string
+  val asr : string
+  val rol : string
+  val ror : string
+
   val bool_printing : unit -> unit
   val arith_printing : unit -> unit
+  val words_printing : unit -> unit
   val set_printing : unit -> unit
   val all_printing : unit -> unit
 
