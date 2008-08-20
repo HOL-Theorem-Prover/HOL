@@ -63,6 +63,7 @@
 %%
 %structure base_lexer
 %arg ({rcopt,nf,r,i,incommentp,stracc} : UserDeclarations.extrastate);
+%full
 %s string comment;
 
 alpha = [A-Za-z_'];
@@ -70,7 +71,7 @@ numeric = [0-9];
 digitseq = ({numeric} | _)* {numeric} ({numeric} | _)*;
 hexdigit = [A-Fa-f] | {numeric};
 hexdigitseq = ({hexdigit} | _)* {hexdigit} ({hexdigit} | _)*;
-symbol = [-`|!#%&)=+[{};:@~\\,.<>?/^] | ];
+symbol = [-`|!#%&)=+[{};:@~\\,.<>?/^\128-\255] | ];
 nonparen = {symbol} | \*;
 nonstar = {symbol} | \(;
 ident = {alpha} ({alpha} | {numeric})*;

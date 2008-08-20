@@ -12,6 +12,7 @@ sig
   val setelementof : string
   val longdoublerightarrow : string
   val turnstile : string
+  val lambda : string
             
   (* arithmeticTheory *)
   val leq : string

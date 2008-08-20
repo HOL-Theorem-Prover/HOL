@@ -21,6 +21,8 @@ val longdoublerightarrow = "\u00e2\u009f\u00b9"
 
 val setelementof = "\u00e2\u0088\u0088"
 
+val lambda = "\u00ce\u00bb"
+
 fun getprec s = 
     Parse.RF (valOf (term_grammar.get_precedence (term_grammar()) s))
 
