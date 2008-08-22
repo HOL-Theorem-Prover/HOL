@@ -141,10 +141,12 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 
 <quote,tmquote,tyquote>"^"+{ws} => (ECHO yyarg yytext; continue());
 <quote,tmquote,tyquote>"^"+{newline} =>
-   (ECHO yyarg (String.substring(yytext,0,size yytext - 1)); qnewline yyarg (yypos,yytext);
+   (ECHO yyarg (String.substring(yytext,0,size yytext - 1)); 
+    qnewline yyarg (yypos,yytext);
     continue());
 <quote,tmquote,tyquote>"^^" => (ECHO yyarg "^"; continue());
 <quote,tmquote,tyquote>"^`" => (ECHO yyarg "`"; continue());
+<quote,tmquote,tyquote>"^"{symbol} => (ECHO yyarg yytext; continue());
 <quote,tmquote,tyquote>{newline} => (qnewline yyarg (yypos,yytext); continue());
 
 <quote>"`" => (print yyarg "\"]"; YYBEGIN INITIAL; continue());
