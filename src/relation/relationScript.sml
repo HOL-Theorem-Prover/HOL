@@ -58,17 +58,37 @@ val trichotomous = new_definition(
 (* Closures                                                                  *)
 (*---------------------------------------------------------------------------*)
 
+(* The TC and RTC suffixes are tighter than function application.  This 
+   means that
+      inv R^+
+   is the inverse of the transitive closure, and you need parentheses to 
+   write the transitive closure of the inverse:
+      (inv R)^+
+*)
 val TC_DEF = Q.new_definition
   ("TC_DEF",
    `TC (R:'a->'a->bool) a b =
      !P.(!x y. R x y ==> P x y) /\
         (!x y z. P x y /\ P y z ==> P x z)  ==> P a b`);
+val _ = add_rule { fixity = Suffix 2100,
+                   block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
+                   paren_style = OnlyIfNecessary,
+                   pp_elements = [TOK "^+"],
+                   term_name = "^+" }
+val _ = overload_on ("^+", ``TC : ('a -> 'a -> bool) -> 'a -> 'a -> bool``)
+
 
 val RTC_DEF = new_definition(
   "RTC_DEF",
   ``RTC (R : 'a -> 'a -> bool) a b =
       !P.  (!x. P x x) /\
            (!x y z. R x y /\ P y z ==> P x z) ==> P a b``);
+val _ = add_rule { fixity = Suffix 2100,
+                   block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
+                   paren_style = OnlyIfNecessary,
+                   pp_elements = [TOK "^*"],
+                   term_name = "^*" }
+val _ = overload_on ("^*", ``RTC : ('a -> 'a -> bool) -> 'a -> 'a -> bool``)
 
 val RC_DEF = new_definition(
   "RC_DEF",
