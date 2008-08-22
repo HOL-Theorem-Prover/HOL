@@ -766,20 +766,23 @@ fun pp_term (G : grammar) TyG = let
           case info_for_name overload_info fromNum_str of
             NONE => false
           | SOME oi => mem inj_record (#actual_ops oi)
+      val numeral_str = Arbnum.toString (Literal.dest_numeral tm)
+      val sfx = 
+          if not is_a_real_numeral orelse !Globals.show_numeral_types then let
+              val (k, _) =
+                  valOf (List.find (fn (_, s') => s' = numinfo_search_string) 
+                                   num_info)
+            in
+              str k
+            end
+          else ""
     in
       pbegin showtypes;
-      add_string (Arbnum.toString (Literal.dest_numeral tm));
-      if not is_a_real_numeral orelse !Globals.show_numeral_types
-      then let
-        val (k, _) =
-          valOf (List.find (fn (_, s') => s' = numinfo_search_string) num_info)
-      in
-        add_string (str k)
-      end
-      else ();
+      add_string (numeral_str ^ sfx) ;
       if showtypes then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth TyG pps (decdepth depth) (#2 (dom_rng injty)))
+         type_pp.pp_type_with_depth TyG pps (decdepth depth) 
+                                    (#2 (dom_rng injty)))
       else ();
       pend showtypes
     end

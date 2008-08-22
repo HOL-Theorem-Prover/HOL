@@ -125,6 +125,7 @@ end
 
 
 val emptyset = "\u00e2\u0088\u0085"
+val subset = "\u00e2\u008a\u0086"
 val inter = "\u00e2\u0088\u00a9"
 val union = "\u00e2\u0088\u00aa"
 
@@ -136,7 +137,10 @@ in
   overload_on (inter, ``pred_set$INTER``);
 
   add_rule (standard_spacing union (getprec "UNION"));
-  overload_on (union, ``pred_set$UNION``)
+  overload_on (union, ``pred_set$UNION``);
+
+  add_rule (standard_spacing subset (getprec "SUBSET"));
+  overload_on (subset, ``pred_set$SUBSET``) 
 end
 
 val set_printing = 
