@@ -1,6 +1,34 @@
 signature UTF8_Printing =
 sig
 
+  (* Greek letters *)
+  val alpha : string
+  val beta : string
+  val gamma : string
+  val delta : string
+  val zeta : string
+  val eta : string
+  val theta : string
+  val lambda : string
+  val mu : string
+  val nu : string
+  val xi : string
+  val sigma : string
+  val tau : string
+  val phi : string
+  val psi : string
+  val omega : string
+
+  val Gamma : string
+  val Delta : string
+  val Theta : string
+  val Lambda : string
+  val Xi : string
+  val Sigma : string
+  val Phi : string
+  val Psi : string
+  val Omega : string
+
   (* boolTheory connectives *)
   val forall : string
   val exists : string
@@ -12,7 +40,6 @@ sig
   val setelementof : string
   val longdoublerightarrow : string
   val turnstile : string
-  val lambda : string
             
   (* arithmeticTheory *)
   val leq : string

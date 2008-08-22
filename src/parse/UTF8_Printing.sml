@@ -3,6 +3,35 @@ struct
 
 open Parse
 
+(* Greek letters *)
+val alpha = "\u00ce\u00b1"
+val beta = "\u00ce\u00b2"
+val gamma = "\u00ce\u00b3"
+val delta = "\u00ce\u00b4"
+val zeta = "\u00ce\u00b6"
+val eta = "\u00ce\u00b7"
+val theta = "\u00ce\u00b8"
+val lambda = "\u00ce\u00bb"
+val mu = "\u00ce\u00bc"
+val nu = "\u00ce\u00bd"
+val xi = "\u00ce\u00be"
+val sigma = "\u00cf\u0083"
+val tau = "\u00cf\u0084"
+val phi = "\u00cf\u0086"
+val psi = "\u00cf\u0088"
+val omega = "\u00cf\u0089"
+
+val Gamma = "\u00ce\u0093"
+val Delta = "\u00ce\u0094"
+val Theta = "\u00ce\u0098"
+val Lambda = "\u00ce\u009b"
+val Xi = "\u00ce\u009e"
+val Sigma = "\u00ce\u00a3"
+val Phi = "\u00ce\u00a6"
+val Psi = "\u00ce\u00a8"
+val Omega = "\u00ce\u00a9"
+
+(* Boolean gadgets *)
 val forall = "\u00e2\u0088\u0080";
 val exists = "\u00e2\u0088\u0083";
 val conj = "\u00e2\u0088\u00a7";
@@ -21,7 +50,6 @@ val longdoublerightarrow = "\u00e2\u009f\u00b9"
 
 val setelementof = "\u00e2\u0088\u0088"
 
-val lambda = "\u00ce\u00bb"
 
 fun getprec s = 
     Parse.RF (valOf (term_grammar.get_precedence (term_grammar()) s))
