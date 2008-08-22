@@ -19,7 +19,7 @@ struct
    app load ["prim_recTheory", "Q", "metisLib", "boolSimps"];
 *)
 
-open HolKernel boolLib Parse 
+open HolKernel boolLib Parse
      Prim_rec simpLib boolSimps metisLib BasicProvers;
 
 
@@ -118,9 +118,11 @@ val GREATER_DEF = new_infixr_definition
 
 val LESS_OR_EQ = new_infixr_definition
   ("LESS_OR_EQ", --`$<= m n = m < n \/ (m = n)`--,  450);
+val _ = Unicode.unicode_version (Unicode.UChar.leq, ``$<=``);
 
 val GREATER_OR_EQ = new_infixr_definition
   ("GREATER_OR_EQ", --`$>= m n = m > n \/ (m = n)`--, 450);
+val _ = Unicode.unicode_version (Unicode.UChar.geq, ``$>=``);
 
 val EVEN = new_recursive_definition
    {name = "EVEN",
@@ -146,10 +148,10 @@ val FUNPOW = new_recursive_definition
     def = --`(FUNPOW f 0 x = x) /\
              (FUNPOW f (SUC n) x = FUNPOW f n (f x))`--};
 
-val NRC = new_recursive_definition { 
+val NRC = new_recursive_definition {
   name = "NRC",
   rec_axiom = num_Axiom,
-  def = ``(NRC R 0 x y = (x = y)) /\ 
+  def = ``(NRC R 0 x y = (x = y)) /\
           (NRC R (SUC n) x y = ?z. R x z /\ NRC R n z y)``};
 
 val _ = overload_on ("RELPOW", ``NRC``)
@@ -1596,22 +1598,22 @@ val LT_MULT_RCANCEL = store_thm(
 (* |- (m < m * n = 0 < m /\ 1 < n) /\ (m < n * m = 0 < m /\ 1 < n) *)
 val LT_MULT_CANCEL_LBARE = save_thm(
   "LT_MULT_CANCEL_LBARE",
-  CONJ 
+  CONJ
     (REWRITE_RULE [MULT_CLAUSES] (Q.SPECL [`m`, `1`, `n`] LT_MULT_LCANCEL))
     (REWRITE_RULE [MULT_CLAUSES] (Q.SPECL [`1`,`m`, `n`] LT_MULT_RCANCEL)))
 
 val lt1_eq0 = prove(
   ``x < 1 = (x = 0)``,
-  Q.SPEC_THEN `x`  STRUCT_CASES_TAC num_CASES THEN 
+  Q.SPEC_THEN `x`  STRUCT_CASES_TAC num_CASES THEN
   REWRITE_TAC [ONE, LESS_0, NOT_LESS_0, LESS_MONO_EQ, NOT_SUC])
 
 (* |- (m * n < m = 0 < m /\ (n = 0)) /\ (m * n < n = 0 < n /\ (m = 0)) *)
 val LT_MULT_CANCEL_RBARE = save_thm(
   "LT_MULT_CANCEL_RBARE",
-  CONJ 
-    (REWRITE_RULE [MULT_CLAUSES, lt1_eq0] 
+  CONJ
+    (REWRITE_RULE [MULT_CLAUSES, lt1_eq0]
                   (Q.SPECL [`m`,`n`,`1`] LT_MULT_LCANCEL))
-    (REWRITE_RULE [MULT_CLAUSES, lt1_eq0] 
+    (REWRITE_RULE [MULT_CLAUSES, lt1_eq0]
                   (Q.SPECL [`m`,`n`,`1`] LT_MULT_RCANCEL)))
 
 val le1_lt0 = prove(``1 <= n = 0 < n``, REWRITE_TAC [LESS_EQ, ONE]);
@@ -1619,16 +1621,16 @@ val le1_lt0 = prove(``1 <= n = 0 < n``, REWRITE_TAC [LESS_EQ, ONE]);
 (* |- (m <= m * n = (m = 0) \/ 0 < n) /\ (m <= n * m = (m = 0) \/ 0 < n) *)
 val LE_MULT_CANCEL_LBARE = save_thm(
   "LE_MULT_CANCEL_LBARE",
-  CONJ 
-    (REWRITE_RULE [MULT_CLAUSES, le1_lt0] 
+  CONJ
+    (REWRITE_RULE [MULT_CLAUSES, le1_lt0]
                   (Q.SPECL [`m`,`1`,`n`] LE_MULT_LCANCEL))
-    (REWRITE_RULE [MULT_CLAUSES, le1_lt0] 
+    (REWRITE_RULE [MULT_CLAUSES, le1_lt0]
                   (Q.SPECL [`1`,`m`,`n`] LE_MULT_RCANCEL)))
 
 (* |- (m * n <= m = (m = 0) \/ n <= 1) /\ (m * n <= n = (n = 0) \/ m <= 1) *)
 val LE_MULT_CANCEL_RBARE = save_thm(
   "LE_MULT_CANCEL_RBARE",
-  CONJ 
+  CONJ
     (REWRITE_RULE [MULT_CLAUSES] (Q.SPECL [`m`,`n`,`1`] LE_MULT_LCANCEL))
     (REWRITE_RULE [MULT_CLAUSES] (Q.SPECL [`m`,`n`,`1`] LE_MULT_RCANCEL)))
 
@@ -3114,7 +3116,7 @@ val NRC_1 = store_thm(
   ``NRC R 1 x y = R x y``,
   SRW_TAC [][ONE, NRC]);
 val _ = export_rewrites ["NRC_1"]
-  
+
 val NRC_ADD_I = store_thm(
   "NRC_ADD_I",
   ``!m n x y z. NRC R m x y /\ NRC R n y z ==> NRC R (m + n) x z``,
@@ -3134,17 +3136,17 @@ val NRC_SUC_RECURSE_LEFT = store_thm(
   "NRC_SUC_RECURSE_LEFT",
   ``NRC R (SUC n) x y = ?z. NRC R n x z /\ R z y``,
   METIS_TAC [NRC_1, NRC_ADD_EQN, ADD1]);
-  
+
 val NRC_RTC = store_thm(
   "NRC_RTC",
   ``!n x y. NRC R n x y ==> RTC R x y``,
-  INDUCT_TAC THEN SRW_TAC [][NRC, relationTheory.RTC_RULES] THEN 
+  INDUCT_TAC THEN SRW_TAC [][NRC, relationTheory.RTC_RULES] THEN
   METIS_TAC [relationTheory.RTC_RULES]);
 
 val RTC_NRC = store_thm(
   "RTC_NRC",
   ``!x y. RTC R x y ==> ?n. NRC R n x y``,
-  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN 
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
   PROVE_TAC [NRC] (* METIS_TAC bombs *));
 
 val LESS_EQUAL_DIFF = store_thm

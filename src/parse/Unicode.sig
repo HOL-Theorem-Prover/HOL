@@ -1,6 +1,18 @@
-signature UTF8_Printing =
+signature Unicode =
 sig
 
+  type term = Term.term
+  (* functions for manipulating use of Unicode versions of constants *)
+  val unicode_version : (string * term) -> unit
+  val temp_unicode_version : (string * term) -> unit
+  (*
+  val disable_one_unicode : string -> unit
+  val disable_one_unicode_t : term -> unit
+  val enable_one_unicode : string -> unit
+  val enable_one_unicode_t : term -> unit
+  *)
+
+  structure UChar : sig
   (* Greek letters *)
   val alpha : string
   val beta : string
@@ -40,7 +52,7 @@ sig
   val setelementof : string
   val longdoublerightarrow : string
   val turnstile : string
-            
+
   (* arithmeticTheory *)
   val leq : string
   val geq : string
@@ -50,6 +62,7 @@ sig
   val emptyset : string
   val union : string
   val inter : string
+  val subset : string
 
   (* wordsTheory *)
   val lo : string
@@ -63,12 +76,7 @@ sig
   val asr : string
   val rol : string
   val ror : string
-
-  val bool_printing : unit -> unit
-  val arith_printing : unit -> unit
-  val words_printing : unit -> unit
-  val set_printing : unit -> unit
-  val all_printing : unit -> unit
+  end (* sig *)
 
 end
 

@@ -1,7 +1,102 @@
-structure UTF8_Printing :> UTF8_Printing =
+structure Unicode :> Unicode =
 struct
 
-open Parse
+open HolKernel Parse Feedback
+
+type term = Term.term
+
+val master_unicode_switch = ref false
+
+val term_table = ref (Binarymap.mkDict Term.compare)
+
+fun getprec s =
+    case term_grammar.get_precedence (term_grammar()) s of
+      NONE => if term_grammar.is_binder (term_grammar()) s then SOME Binder
+              else NONE
+    | SOME f => SOME (Parse.RF f)
+
+
+fun constid t = let
+  val {Name,Thy,Ty} = dest_thy_const t
+in
+  {Name = Name, Thy = Thy}
+end
+
+fun temp_unicode_version (uni_s, t) = let
+  val {Thy,Ty,Name} = dest_thy_const t
+  val fixity = getprec Name
+  fun alter_conc_syntax () =
+      (* possibly insert unicode string into concrete syntax *)
+      case fixity of
+        NONE => ()
+      | SOME fix => let
+        in
+          case getprec uni_s of
+            SOME _ => (* hope they're the same *) ()
+          | NONE => temp_set_fixity uni_s fix
+        end
+  fun record_info () = (term_table := Binarymap.insert(!term_table, t, uni_s))
+
+in
+  alter_conc_syntax();
+  temp_overload_on (uni_s, t);
+  if not (!master_unicode_switch) then temp_overload_on (Name, t) else ();
+  record_info()
+end
+
+val updates = ref ([] : (string * term) list)
+
+fun unicode_version p = let
+in
+  updates := p :: !updates;
+  temp_unicode_version p
+end
+
+fun enable_one (t, uni_s) = temp_overload_on (uni_s, t)
+
+fun disable_one (t, uni_s) =
+  (* disable just buries the Unicode version *)
+  temp_send_to_back_overload uni_s (constid t)
+
+fun enable_all () = Binarymap.app enable_one (!term_table)
+fun disable_all () = Binarymap.app disable_one (!term_table)
+
+fun traceset n = if n = 0 then (master_unicode_switch := false;
+                                disable_all())
+                 else (master_unicode_switch := true;
+                       enable_all())
+fun traceget () = if !master_unicode_switch then 1 else 0
+
+val _ = register_ftrace ("Unicode", (traceget, traceset), 1)
+
+fun print_update pps (uni_s, t) = let
+  val {Thy,Name,...} = dest_thy_const t
+in
+  PP.add_string
+      pps
+      ("val _ = Unicode.temp_unicode_version (\""^String.toString uni_s^"\", \
+       \Term.prim_mk_const {Thy = \""^String.toString Thy^"\",\
+       \Name = \""^String.toString Name^"\"})\n")
+end
+
+
+fun setup (oldname, thyname) = let
+in
+  if not (null (!updates)) andalso thyname <> oldname then
+    HOL_WARNING "Unicode" "setup"
+                ("\"new_theory\" is throwing away Unicode updates for theory "^
+                 oldname)
+  else ();
+  updates := [];
+  adjoin_to_theory {
+    sig_ps = NONE,
+    struct_ps = SOME (fn pps => app (print_update pps) (!updates))
+  }
+end;
+
+val _ = Theory.after_new_theory setup
+
+structure UChar = struct
 
 (* Greek letters *)
 val alpha = "\u00ce\u00b1"
@@ -44,59 +139,24 @@ val neg = "\u00c2\u00ac"
 val neq = "\u00e2\u0089\u00a0"
 val turnstile = "\u00e2\u008a\u00a2";
 
-(* probably needs a proportional font to print well - would be good for 
+(* probably needs a proportional font to print well - would be good for
    implication if available *)
 val longdoublerightarrow = "\u00e2\u009f\u00b9"
 
 val setelementof = "\u00e2\u0088\u0088"
 
-
-fun getprec s = 
-    Parse.RF (valOf (term_grammar.get_precedence (term_grammar()) s))
-
-fun bool_printing () = let 
-in
-  add_binder(forall, 0);
-  overload_on(forall, ``bool$! : ('a -> bool) -> bool``);
-
-  add_binder(exists, 0);
-  overload_on(exists, ``bool$? : ('a -> bool) -> bool``);
-
-  add_rule (standard_spacing conj (getprec "/\\"));
-  overload_on(conj, ``bool$/\``);
-
-  add_rule (standard_spacing disj (getprec "\\/"));
-  overload_on(disj, ``bool$\/``);
-
-  add_rule (standard_spacing imp (getprec "==>"));
-  overload_on(imp, ``min$==>``);
-
-  add_rule {term_name   = "~",
-            fixity      = getprec "~",
-            pp_elements = [TOK neg],
-            paren_style = OnlyIfNecessary,
-            block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
-
-  add_rule (standard_spacing setelementof (getprec "IN"));
-  overload_on (setelementof, ``bool$IN : 'a -> ('a -> bool) -> bool``)
-end
-
-
-
+(* arithmetic *)
 val leq = "\u00e2\u0089\u00a4"
 val geq = "\u00e2\u0089\u00a5"
 val nats = "\u00e2\u0084\u0095"
 
-fun arith_printing () = let 
-in
-  add_rule (standard_spacing leq (getprec "<="));
-  overload_on(leq, ``arithmetic$<=``);
+(* sets *)
+val emptyset = "\u00e2\u0088\u0085"
+val subset = "\u00e2\u008a\u0086"
+val inter = "\u00e2\u0088\u00a9"
+val union = "\u00e2\u0088\u00aa"
 
-  add_rule (standard_spacing leq (getprec ">="));
-  overload_on(geq, ``arithmetic$>=``);
-  type_abbrev(nats, ``:num``)
-end
-
+(* words *)
 val lo = "<\u00e2\u0082\u008a"
 val hi = ">\u00e2\u0082\u008a"
 val ls = leq ^ "\u00e2\u0082\u008a"
@@ -108,8 +168,12 @@ val asr = "\u00e2\u0089\u00ab"
 val lsr = "\u00e2\u008b\u0099"
 val rol = "\u00e2\u0087\u0086"
 val ror = "\u00e2\u0087\u0084"
+end (* UChar struct *)
 
-fun words_printing () = let 
+(*
+
+
+fun words_printing () = let
 in
   add_rule (standard_spacing leq (getprec "<="));
   overload_on_by_nametype leq {Name = "word_le", Thy = "words"};
@@ -152,29 +216,6 @@ in
 end
 
 
-val emptyset = "\u00e2\u0088\u0085"
-val subset = "\u00e2\u008a\u0086"
-val inter = "\u00e2\u0088\u00a9"
-val union = "\u00e2\u0088\u00aa"
 
-fun set_printing0 () = let 
-in
-  overload_on (emptyset, ``pred_set$EMPTY``);
-
-  add_rule (standard_spacing inter (getprec "INTER"));
-  overload_on (inter, ``pred_set$INTER``);
-
-  add_rule (standard_spacing union (getprec "UNION"));
-  overload_on (union, ``pred_set$UNION``);
-
-  add_rule (standard_spacing subset (getprec "SUBSET"));
-  overload_on (subset, ``pred_set$SUBSET``) 
-end
-
-val set_printing = 
-    Feedback.trace ("notify type variable guesses", 0)
-                   set_printing0 
-
-fun all_printing () = (bool_printing(); arith_printing(); set_printing())
-
+*)
 end (* struct *)
