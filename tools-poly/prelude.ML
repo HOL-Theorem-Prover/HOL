@@ -68,8 +68,6 @@ fun use s =
   else PolyML.use s;
 end;
 
-val _ = load "UTF8_Printing";
-
 val _ = Globals.interactive := true;
 
 val build_stamp =

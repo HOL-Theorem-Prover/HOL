@@ -355,6 +355,7 @@ val word_hs_def = Define`
 val _ = overload_on ("<",  Term`word_lt`);
 val _ = overload_on (">",  Term`word_gt`);
 val _ = overload_on ("<=", Term`word_le`);
+val _ = Unicode.unicode_version(Unicode.UChar.leq, ``word_le``);
 val _ = overload_on (">=", Term`word_ge`);
 val _ = overload_on ("<=+",Term`word_ls`);
 val _ = overload_on (">+", Term`word_hi`);

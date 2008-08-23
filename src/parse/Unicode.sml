@@ -7,7 +7,7 @@ type term = Term.term
 
 val master_unicode_switch = ref false
 
-val term_table = ref (Binarymap.mkDict Term.compare)
+val term_table = ref ([] : { t : term, u : string, non_u : string option} list)
 
 fun getprec s =
     case term_grammar.get_precedence (term_grammar()) s of
@@ -22,26 +22,27 @@ in
   {Name = Name, Thy = Thy}
 end
 
-fun temp_unicode_version (uni_s, t) = let
-  val {Thy,Ty,Name} = dest_thy_const t
-  val fixity = getprec Name
-  fun alter_conc_syntax () =
-      (* possibly insert unicode string into concrete syntax *)
-      case fixity of
-        NONE => ()
-      | SOME fix => let
-        in
-          case getprec uni_s of
-            SOME _ => (* hope they're the same *) ()
-          | NONE => temp_set_fixity uni_s fix
-        end
-  fun record_info () = (term_table := Binarymap.insert(!term_table, t, uni_s))
+fun enable_one {t, u, non_u} = let 
+  val fix = case non_u of NONE => NONE 
+                        | SOME s => getprec s
+in 
+  temp_overload_on (u, t); 
+  case fix of NONE => () | SOME f => temp_set_fixity u f
+end
 
+fun disable_one {t, u, non_u} = 
+    (temp_remove_ovl_mapping u (constid t) ;
+     case non_u of NONE => () | SOME s => temp_overload_on(s, t))
+    (* leave the concrete syntax alone because it's too hard to figure out 
+       what to do for the moment *)
+
+fun temp_unicode_version (uni_s, t) = let
+  val oinfo = term_grammar.overload_info (term_grammar())
+  val current_nm = Overload.overloading_of_term oinfo t
+  val data = {t = t, u = uni_s, non_u = current_nm}
 in
-  alter_conc_syntax();
-  temp_overload_on (uni_s, t);
-  if not (!master_unicode_switch) then temp_overload_on (Name, t) else ();
-  record_info()
+  if !master_unicode_switch then enable_one data else ();
+  term_table := data :: !term_table
 end
 
 val updates = ref ([] : (string * term) list)
@@ -52,14 +53,10 @@ in
   temp_unicode_version p
 end
 
-fun enable_one (t, uni_s) = temp_overload_on (uni_s, t)
 
-fun disable_one (t, uni_s) =
-  (* disable just buries the Unicode version *)
-  temp_send_to_back_overload uni_s (constid t)
 
-fun enable_all () = Binarymap.app enable_one (!term_table)
-fun disable_all () = Binarymap.app disable_one (!term_table)
+fun enable_all () = List.app enable_one (List.rev (!term_table))
+fun disable_all () = List.app disable_one (!term_table)
 
 fun traceset n = if n = 0 then (master_unicode_switch := false;
                                 disable_all())
