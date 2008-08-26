@@ -249,6 +249,10 @@ fun mk_sw2sw(w,ty) =
   mk_comb(inst[alpha |-> dim_of w,beta|->ty]sw2sw_tm,w)
   handle HOL_ERR _ => raise ERR "mk_word_sw2sw" "";
 
+fun mk_word   (v,n) = mk_n2w (numSyntax.mk_numeral v, fcpLib.index_type n);
+fun mk_wordi  (v,i) = mk_word (v, Arbnum.fromInt i);
+fun mk_wordii (v,i) = mk_wordi (Arbnum.fromInt v, i);
+
 (*---------------------------------------------------------------------------*)
 (* Destructors                                                               *)
 (*---------------------------------------------------------------------------*)

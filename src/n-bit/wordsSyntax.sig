@@ -2,12 +2,17 @@ signature wordsSyntax =
 sig
  
   include Abbrev 
+  type num = Arbnum.num
 	
   val mk_word_type      : hol_type -> hol_type
   val dest_word_type    : hol_type -> hol_type
   val is_word_type      : hol_type -> bool
   val dim_of            : term -> hol_type
  
+  val mk_word           : num * num -> term
+  val mk_wordi          : num * int -> term
+  val mk_wordii         : int * int -> term
+
   val index_tm          : term
   val word_T_tm         : term
   val word_L_tm         : term
