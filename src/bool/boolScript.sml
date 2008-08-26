@@ -75,6 +75,8 @@ Definition.new_definition
 
 val _ = (add_binder ("?!", std_binder_precedence); add_const "?!")
 
+val _ = unicode_version (UChar.exists ^ "!", ``(?!) : ('a -> bool) -> bool``)
+
 val LET_DEF =
  Definition.new_definition
    ("LET_DEF",        Term `LET = \(f:'a->'b) x. f x`);

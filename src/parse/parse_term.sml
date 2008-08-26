@@ -142,6 +142,8 @@ fun mk_prec_matrix G = let
     case rule of
       PREFIX (STD_prefix rules) => app (insert_oplist o rule_elements) rules
     | PREFIX (BINDER slist) =>
+        (* as there may be more than one lambda, the lambda = EndBinding
+           case is done again below *)
         app (fn b => insert (STD_HOL_TOK (binder_to_string G b),
                              EndBinding) EQUAL) slist
     | SUFFIX (STD_suffix rules) => app (insert_oplist o rule_elements) rules
@@ -317,7 +319,7 @@ fun mk_prec_matrix G = let
              lower_lefts)
         this_level_rights
       end
-    | PREFIX (BINDER s) => let
+    | PREFIX (BINDER _) => let
         val lower_lefts = List.concat (map left_grabbing_elements remainder)
       in
         app (fn lower_left => insert (EndBinding, lower_left) LESS) lower_lefts
@@ -369,7 +371,7 @@ fun mk_prec_matrix G = let
 in
   app insert_eqs Grules ;
   insert (BOS, EOS) EQUAL;
-  insert (STD_HOL_TOK lambda, EndBinding) EQUAL;
+  app (fn l => insert (STD_HOL_TOK l, EndBinding) EQUAL) lambda;
   app terms_between_equals (calc_eqpairs());
   (* these next equality pairs will never have terms interfering between
      them, so we can insert the equality relation between them after doing
@@ -924,7 +926,7 @@ fun parse_term (G : grammar) typeparser = let
                     "No restricted quantifier associated with lambda"
         val vsl = List.rev vsl
         val abs_t =
-          List.foldr (if binder = lambda then abs_fn else comb_abs_fn)
+          List.foldr (if mem binder lambda then abs_fn else comb_abs_fn)
                      (t,rlocn) vsl
       in
         repeatn 4 pop >> push (liftlocn NonTerminal abs_t, XXX)

@@ -104,7 +104,7 @@ sig
 
 
   type special_info = {type_intro    : string,
-                       lambda        : string,
+                       lambda        : string list,
                        endbinding    : string,
                        restr_binders : (binder * string) list,
                        res_quanop    : string}

@@ -103,7 +103,7 @@ type parser_info = (string,unit) Binarymap.dict
 type printer_info =
   ({Name:string,Thy:string},term_pp_types.userprinter) Binarymap.dict
 type special_info = {type_intro : string,
-                     lambda : string,
+                     lambda : string list,
                      endbinding : string,
                      restr_binders : (binder * string) list,
                      res_quanop : string}
@@ -230,15 +230,17 @@ fun fupdate_prulelist f rules = map f rules
 
 fun binder_to_string (G:grammar) b =
   case b of
-    LAMBDA => #lambda (specials G)
+    LAMBDA => hd (#lambda (specials G))
   | BinderString s => s
 
 fun binders (G: grammar) = let
+  fun b2str (LAMBDA, acc) = #lambda (specials G) @ acc
+    | b2str (BinderString s, acc) = s::acc
   fun binders0 [] acc = acc
     | binders0 ((_, x)::xs) acc = let
       in
         case x of
-          PREFIX (BINDER sl) => binders0 xs (map (binder_to_string G) sl @ acc)
+          PREFIX (BINDER sl) => binders0 xs (List.foldl b2str acc sl)
         | _ => binders0 xs acc
       end
 in
@@ -347,7 +349,7 @@ val stdhol : grammar =
                         rightdelim = [RE (TOK "|>")],
                         block_info = (PP.INCONSISTENT, 0),
                         cons = reccons_special, nilstr = recnil_special}])],
-   specials = {lambda = "\\", type_intro = ":", endbinding = ".",
+   specials = {lambda = ["\\"], type_intro = ":", endbinding = ".",
                restr_binders = [], res_quanop = "::"},
    numeral_info = [],
    overload_info = Overload.null_oinfo,
@@ -373,8 +375,7 @@ local
     case r of
       PREFIX(STD_prefix rules) =>
         mmap (specials_from_elm o rule_elements o #elements) rules
-    | PREFIX (BINDER b) =>
-        mmap add (map (binder_to_string G) b)
+    | PREFIX (BINDER b) => ok
     | SUFFIX(STD_suffix rules) =>
         mmap (specials_from_elm o rule_elements o #elements) rules
     | SUFFIX TYPE_annotation => add (#type_intro (specials G))
@@ -397,7 +398,8 @@ local
   end
 in
   fun grammar_tokens G = let
-    fun gs (G:grammar) = mmap (rule_specials G o #2) (rules G)
+    fun gs (G:grammar) = mmap (rule_specials G o #2) (rules G) >>
+                         mmap add (binders G)
     val (all_specials, ()) = gs G []
   in
     Lib.mk_set all_specials
@@ -432,8 +434,6 @@ fun find_prefix_lhses (G : grammar) = let
     case x of
       PREFIX (STD_prefix rules) =>
         map (rel_list_to_toklist o rule_elements o #elements) rules
-    | PREFIX (BINDER sl) =>
-        map (fn b => [STD_HOL_TOK (binder_to_string G b)]) sl
     | CLOSEFIX rules =>
         map (rel_list_to_toklist o rule_elements o #elements) rules
     | (LISTRULE rlist) =>
@@ -442,7 +442,7 @@ fun find_prefix_lhses (G : grammar) = let
   end
   val prefix_rules = List.concat (map (select o #2) (rules G))
 in
-  Id :: map hd prefix_rules
+  Id :: map STD_HOL_TOK (binders G) @ map hd prefix_rules
 end
 
 fun compatible_listrule (G:grammar) arg = let
@@ -630,6 +630,11 @@ in
       INFIX (STD_infix (List.filter rr_safe slist, assoc))
   | PREFIX (STD_prefix slist) =>
       PREFIX (STD_prefix (List.filter rr_safe slist))
+  | PREFIX (BINDER blist) => 
+    PREFIX (BINDER (List.filter (fn BinderString s => s <> tok andalso 
+                                                      s <> term_name
+                                  | _ => true)
+                                blist))
   | CLOSEFIX slist => CLOSEFIX (List.filter rr_safe slist)
   | LISTRULE rlist => let
       fun lrule_ok (r:listspec) =
@@ -826,7 +831,7 @@ end;
 fun merge_grammars (G1:grammar, G2:grammar) :grammar = let
   val g0_rules =
     Listsort.sort (fn (e1,e2) => aug_compare(#1 e1, #1 e2))
-    (rules G1 @ rules G2)
+                  (rules G1 @ rules G2)
   val newrules = resolve_same_precs g0_rules
   val newspecials = merge_specials (specials G1) (specials G2)
   val new_numinfo = Lib.union (numeral_info G1) (numeral_info G2)
@@ -890,14 +895,19 @@ fun prettyprint_grammar pstrm (G :grammar) = let
   end
 
   fun print_binder b = let
-    val bname0 =
+    open Lib
+    val bnames =
       case b of
         LAMBDA => #lambda (specials G)
-      | BinderString s => s
-    val bname = "\"" ^ bname0 ^ "\""
-    val endb = "\"" ^ #endbinding (specials G) ^ "\""
+      | BinderString s => [s]
+    val endb = quote (#endbinding (specials G))
+    fun one_binder s = 
+        add_string (quote s ^ " <..binders..> " ^ endb ^ " TM")
   in
-    add_string (bname ^ " <..binders..>  " ^ endb ^ " TM")
+    pr_list one_binder 
+            (fn () => add_string " |") 
+            (fn () => add_break (1,0))
+            bnames
   end
 
 
@@ -943,9 +953,10 @@ fun prettyprint_grammar pstrm (G :grammar) = let
     | INFIX (FNAPP rrl) => let
       in
         begin_block CONSISTENT 0;
-        add_string "TM TM  (function application) |";
-        add_break(1,0);
-        pprint_rrl add_both rrl;
+        add_string "TM TM  (function application)";
+        case rrl of [] => () 
+                  | _ => (add_string " |"; add_break(1,0); 
+                          pprint_rrl add_both rrl);
         add_break(3,0);
         add_string ("(L-associative)");
         end_block()
