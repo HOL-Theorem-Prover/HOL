@@ -141,6 +141,7 @@ fun ac_term_ord(tm1,tm2) =
        EQUAL =>
          (case (dt1,dt2) of
             (LAMB l1,LAMB l2) => ac_term_ord(snd l1, snd l2)
+          | (TYLAMB l1,TYLAMB l2) => ac_term_ord(snd l1, snd l2)
           | _ => let val (con,args) = strip_comb tm1
                      val (con2,args2) = strip_comb tm2
                  in case ac_term_ord (con,con2) of

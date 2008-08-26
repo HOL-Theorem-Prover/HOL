@@ -2,6 +2,8 @@
 fun inc r = (r := !r + 1)
 fun dec r = (r := !r - 1)
 
+fun bslash_escape s = "\\" ^ Int.toString (Char.ord(String.sub(s,0)))
+
 datatype qfs = QFS of {output_stream : TextIO.outstream,
                        comdepth : int ref,
                        pardepth : int ref,
@@ -64,7 +66,7 @@ fun eof arg = ("", 0)
 %structure filter
 %s string comment qcomment tmcomment tycomment kdcomment tmquote tyquote kdquote quote ANTIQ;
 %arg (UserDeclarations.QFS {output_stream, comdepth, pardepth, antiquote, row, rowstart});
-
+%full
 
 letter = [A-Za-z];
 digit = [0-9];
@@ -126,7 +128,8 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <string>"\\\"" => (ECHO yyarg yytext; continue());
 <string>"\"" => (ECHO yyarg yytext; YYBEGIN INITIAL; continue());
 <string>{newline} => (newline yyarg (yypos,yytext); continue());
-<string>[^\\"\n\015]+ => (ECHO yyarg yytext; continue());
+<string>[\128-\255] => (ECHO yyarg (bslash_escape yytext); continue());
+<string>[^\\"\n\015\128-\255]+ => (ECHO yyarg yytext; continue());
 <string>. => (ECHO yyarg yytext; continue());
 
 <comment,tmcomment,tycomment,kdcomment,qcomment>"(*" =>
@@ -159,10 +162,12 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 
 <quote,tmquote,tyquote,kdquote>"^"+{ws} => (ECHO yyarg yytext; continue());
 <quote,tmquote,tyquote,kdquote>"^"+{newline} =>
-   (ECHO yyarg (String.substring(yytext,0,size yytext - 1)); qnewline yyarg (yypos,yytext);
+   (ECHO yyarg (String.substring(yytext,0,size yytext - 1)); 
+    qnewline yyarg (yypos,yytext);
     continue());
 <quote,tmquote,tyquote,kdquote>"^^" => (ECHO yyarg "^"; continue());
 <quote,tmquote,tyquote,kdquote>"^`" => (ECHO yyarg "`"; continue());
+<quote,tmquote,tyquote,kdquote>"^"{symbol} => (ECHO yyarg yytext; continue());
 <quote,tmquote,tyquote,kdquote>{newline} => (qnewline yyarg (yypos,yytext); continue());
 
 <quote>"`" => (print yyarg "\"]"; YYBEGIN INITIAL; continue());
@@ -183,7 +188,10 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
                  YYBEGIN kdquote; continue());
 
 
-<quote,tmquote,tyquote,kdquote>[^`\n\015^ \t(*]+ => (ECHO yyarg (String.toString yytext); continue());
+<quote,tmquote,tyquote,kdquote>[\128-\255] => (ECHO yyarg (bslash_escape yytext);
+                                               continue());
+<quote,tmquote,tyquote,kdquote>[^`\n\015^ \t(*\128-\255]+ =>
+  (ECHO yyarg (String.toString yytext); continue());
 <quote,tmquote,tyquote,kdquote>. => (ECHO yyarg (String.toString yytext); continue());
 
 <ANTIQ>{MLid} => (ECHO yyarg yytext;

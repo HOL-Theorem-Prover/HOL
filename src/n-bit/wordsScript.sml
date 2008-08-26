@@ -126,19 +126,23 @@ val word_xor_def = Define`
   word_xor (v:'a word) (w:'a word) =
     (FCP i. ~((v ' i) = (w ' i))):'a word`;
 
-val _ = overload_on ("~", Term`$word_1comp`);
-val _ = overload_on ("~", Term`bool$~`);
-val _ = overload_on ("&&",Term`$word_and`);
-val _ = overload_on ("!!",Term`$word_or`);
-val _ = overload_on ("??",Term`$word_xor`);
-val _ = overload_on ("Tw",Term`word_T`);
-val _ = overload_on ("UINT_MAXw",Term`word_T`);
-val _ = overload_on ("INT_MAXw",Term`word_H`);
-val _ = overload_on ("INT_MINw",Term`word_L`);
+val _ = overload_on ("~", ``words$word_1comp``)
+val _ = send_to_back_overload "~" {Name = "word_1comp", Thy = "words"};
 
-val _ = add_infix("&&",400,HOLgrammars.RIGHT);
-val _ = add_infix("??",375,HOLgrammars.RIGHT);
-val _ = add_infix("!!",300,HOLgrammars.RIGHT);
+val _ = add_infix("&&",400,HOLgrammars.RIGHT)
+val _ = add_infix("??",375,HOLgrammars.RIGHT)
+val _ = add_infix("!!",300,HOLgrammars.RIGHT)
+
+val _ = overload_on ("&&",``words$word_and``)
+val _ = overload_on ("??",``words$word_xor``)
+val _ = overload_on ("!!",``words$word_or``)
+val _ = overload_on ("Tw",``words$word_T``)
+val _ = overload_on ("UINT_MAXw",``words$word_T``)
+val _ = overload_on ("INT_MAXw",``words$word_H``)
+val _ = overload_on ("INT_MINw",``words$word_L``)
+
+val _ = Unicode.unicode_version(Unicode.UChar.or, ``word_or``)
+val _ = Unicode.unicode_version(Unicode.UChar.xor, ``word_xor``)
 
 (* ------------------------------------------------------------------------- *)
 (*  Bit field operations : definitions                                       *)
@@ -284,17 +288,23 @@ val word_rrx_def = Define`
     (word_lsb w,
      (FCP i. if i = ^HB then c else (word_lsr w 1) ' i):'a word)`;
 
-val _ = overload_on ("<<", Term`$word_lsl`);
-val _ = overload_on (">>", Term`$word_asr`);
-val _ = overload_on (">>>",Term`$word_lsr`);
-val _ = overload_on ("#>>",Term`$word_ror`);
-val _ = overload_on ("#<<",Term`$word_rol`);
+val _ = add_infix("<<", 680,HOLgrammars.LEFT)
+val _ = add_infix(">>", 680,HOLgrammars.LEFT)
+val _ = add_infix(">>>",680,HOLgrammars.LEFT)
+val _ = add_infix("#>>",680,HOLgrammars.LEFT)
+val _ = add_infix("#<<",680,HOLgrammars.LEFT)
 
-val _ = add_infix("<<", 680,HOLgrammars.LEFT);
-val _ = add_infix(">>", 680,HOLgrammars.LEFT);
-val _ = add_infix(">>>",680,HOLgrammars.LEFT);
-val _ = add_infix("#>>",680,HOLgrammars.LEFT);
-val _ = add_infix("#<<",680,HOLgrammars.LEFT);
+val _ = overload_on ("<<", ``words$word_lsl``)
+val _ = overload_on (">>", ``words$word_asr``)
+val _ = overload_on (">>>",``words$word_lsr``)
+val _ = overload_on ("#>>",``words$word_ror``)
+val _ = overload_on ("#<<",``words$word_rol``)
+
+val _ = Unicode.unicode_version(Unicode.UChar.lsl, ``word_lsl``)
+val _ = Unicode.unicode_version(Unicode.UChar.asr, ``word_asr``)
+val _ = Unicode.unicode_version(Unicode.UChar.lsr, ``word_lsr``)
+val _ = Unicode.unicode_version(Unicode.UChar.ror, ``word_ror``)
+val _ = Unicode.unicode_version(Unicode.UChar.rol, ``word_rol``)
 
 (* ------------------------------------------------------------------------- *)
 (*  Concatenation : definition                                               *)
@@ -352,19 +362,24 @@ val word_lo_def = Define`
 val word_hs_def = Define`
   word_hs a b = let (n,z,c,v) = nzcv a b in c`;
 
-val _ = overload_on ("<",  Term`word_lt`);
-val _ = overload_on (">",  Term`word_gt`);
-val _ = overload_on ("<=", Term`word_le`);
-val _ = overload_on (">=", Term`word_ge`);
-val _ = overload_on ("<=+",Term`word_ls`);
-val _ = overload_on (">+", Term`word_hi`);
-val _ = overload_on ("<+", Term`word_lo`);
-val _ = overload_on (">=+",Term`word_hs`);
+val _ = add_infix("<+", 450,HOLgrammars.RIGHT)
+val _ = add_infix(">+", 450,HOLgrammars.RIGHT)
+val _ = add_infix("<=+",450,HOLgrammars.RIGHT)
+val _ = add_infix(">=+",450,HOLgrammars.RIGHT)
 
-val _ = add_infix("<+", 450,HOLgrammars.RIGHT);
-val _ = add_infix(">+", 450,HOLgrammars.RIGHT);
-val _ = add_infix("<=+",450,HOLgrammars.RIGHT);
-val _ = add_infix(">=+",450,HOLgrammars.RIGHT);
+val _ = overload_on ("<",  Term`word_lt`)
+val _ = overload_on (">",  Term`word_gt`)
+val _ = overload_on ("<=", Term`word_le`)
+val _ = overload_on (">=", Term`word_ge`)
+val _ = overload_on ("<=+",Term`word_ls`)
+val _ = overload_on (">+", Term`word_hi`)
+val _ = overload_on ("<+", Term`word_lo`)
+val _ = overload_on (">=+",Term`word_hs`)
+
+val _ = Unicode.unicode_version(Unicode.UChar.ls, ``word_ls``)
+val _ = Unicode.unicode_version(Unicode.UChar.hi, ``word_hi``)
+val _ = Unicode.unicode_version(Unicode.UChar.lo, ``word_lo``)
+val _ = Unicode.unicode_version(Unicode.UChar.hs, ``word_hs``)
 
 (* ------------------------------------------------------------------------- *)
 (*  Theorems                                                                 *)

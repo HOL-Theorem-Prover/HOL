@@ -159,6 +159,11 @@ in
   SIMP_RULE std_ss [] (Thm.SPEC t n2l_pow2_compute)
 end;
 
+val w2n_n2w_compute = prove(
+  ``!n. w2n ((n2w n) : 'a word) =
+       if n < dimword(:'a) then n else n MOD dimword(:'a)``,
+  SRW_TAC [boolSimps.LET_ss] []);
+
 val thms =
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
    iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SIGN_EXTEND_def, SBIT_def,
@@ -173,7 +178,7 @@ val thms =
       BITS_def,SUC_SUB] o NUM_RULE [BITS_ZERO2] `n`) BIT_def,
    INT_MIN_SUM, SUC_RULE MOD_2EXP_EQ,
    numeral_log2,numeral_ilog2,LOG_compute,
-   n2w_w2n, w2n_n2w, MOD_WL1 w2w_n2w, sw2sw_def, word_len_def,
+   n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def,
    word_join_def, word_concat_def,
    word_reverse_n2w, word_modify_n2w, word_log2_n2w,

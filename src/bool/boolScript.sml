@@ -30,9 +30,7 @@ app load ["Kind","Type","Term","Thm","Theory","Globals","HolKernel","Parse"];
 app load ["Drule","Thm","boolTheory","Tactical","Tactic","Rerite"];
 *)
 
-open HolKernel Parse;
-
-infixr -->
+open HolKernel Parse Unicode;
 
 val _ = new_theory "bool";
 
@@ -63,6 +61,8 @@ val _ = type_abbrev ("I", Type `: \'a. 'a`);
 val _ = type_abbrev ("K", Type `: \'a 'b. 'a`);
 val _ = type_abbrev ("S", Type `: \'a 'b 'c. 'c 'b ('c 'a)`);
 
+val _ = unicode_version (UChar.imp, ``min$==>``)
+
 val T_DEF =
  Definition.new_definition
    ("T_DEF",          Term `T = ((\x:bool. x) = \x:bool. x)`);
@@ -74,24 +74,28 @@ val FORALL_DEF =
    ("FORALL_DEF",     Term `! = \P:'a->bool. P = \x. T`);
 
 val _ = (add_binder("!", std_binder_precedence); add_const "!");
+val _ = unicode_version (UChar.forall, ``bool$!``);
 
 val EXISTS_DEF =
  Definition.new_definition
    ("EXISTS_DEF",     Term `? = \P:'a->bool. P ($@ P)`);
 
 val _ = (add_binder("?", std_binder_precedence); add_const "?");
+val _ = unicode_version (UChar.exists, ``bool$?``);
 
 val AND_DEF =
  Definition.new_definition
    ("AND_DEF",        Term `/\ = \t1 t2. !t. (t1 ==> t2 ==> t) ==> t`);
 
 val _ = (add_infix ("/\\", 400, RIGHT); add_const "/\\");
+val _ = unicode_version (UChar.conj, ``bool$/\``);
 
 val OR_DEF =
  Definition.new_definition
    ("OR_DEF",         Term `\/ = \t1 t2. !t. (t1 ==> t) ==> (t2 ==> t) ==> t`)
 
 val _ = (add_infix ("\\/", 300, RIGHT); add_const "\\/");
+val _ = unicode_version (UChar.disj, ``bool$\/``)
 
 val F_DEF =
  Definition.new_definition
@@ -111,6 +115,8 @@ Definition.new_definition
                                     $? P /\ !x y. P x /\ P y ==> (x=y)`);
 
 val _ = (add_binder ("?!", std_binder_precedence); add_const "?!")
+
+val _ = unicode_version (UChar.exists ^ "!", ``(?!) : ('a -> bool) -> bool``)
 
 (* HOL-Omega type universal and existential quantification: *)
 
@@ -196,6 +202,7 @@ val _ = add_rule {term_name   = "~",
                   pp_elements = [TOK "~"],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (CONSISTENT, 0))};
+val _ = unicode_version (UChar.neg, ``bool$~``);
 
 (* prettyprinting information here for "let" and "and" is completely ignored;
    the pretty-printer handles these specially.  These declarations are only
@@ -276,6 +283,7 @@ val IN_DEF =
    ("IN_DEF",         Term `IN = \x (f:'a->bool). f x`);
 
 val _ = (add_infix ("IN", 425, Parse.NONASSOC); add_const "IN");
+val _ = unicode_version (UChar.setelementof, ``bool$IN``);
 
 val RES_FORALL_DEF =
  Definition.new_definition
@@ -3759,7 +3767,7 @@ val AND_CONG =
 val _ = save_thm("AND_CONG", AND_CONG);
 
 (*---------------------------------------------------------------------------
-  LEFT_AND_CONG = 
+  LEFT_AND_CONG =
        |- !P P' Q Q'.
           (P = P') /\ (P' ==> (Q = Q'))
                   ==>
@@ -4525,7 +4533,7 @@ val bool_case_EQ_COND = save_thm("bool_case_EQ_COND",
      val th1 = RIGHT_BETA (AP_THM bool_case_DEF x)
      val th2 = RIGHT_BETA (AP_THM th1 y)
      val th3 = RIGHT_BETA (AP_THM th2 b)
- in 
+ in
    GEN b (GEN x (GEN y th3))
  end);
 

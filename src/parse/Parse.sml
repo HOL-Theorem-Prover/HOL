@@ -1226,7 +1226,7 @@ fun remove_numeral_form c = let in
 
 fun temp_associate_restriction (bs, s) =
  let val lambda = #lambda (specials (term_grammar()))
-     val b = if lambda = bs then LAMBDA else BinderString bs
+     val b = if mem bs lambda then LAMBDA else BinderString bs
  in
     the_term_grammar :=
     term_grammar.associate_restriction (term_grammar()) (b, s);

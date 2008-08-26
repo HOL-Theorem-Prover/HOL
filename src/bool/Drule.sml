@@ -1558,6 +1558,21 @@ fun GSPEC th =
 
 
 (*---------------------------------------------------------------------------*
+ *   |- !x y z. w   --->  |- w[g1/x][g2/y][g3/z]                             *
+ *---------------------------------------------------------------------------*)
+
+fun TY_GSPEC th =
+  let val (_,w) = dest_thm th
+  in if is_tyforall w
+     then let val v = fst (dest_tyforall w)
+              val (_,kd,rk) = dest_vartype_opr v
+          in TY_GSPEC (TY_SPEC (gen_tyopvar (kd,rk)) th)
+          end
+     else th
+  end;
+
+
+(*---------------------------------------------------------------------------*
  * Match a given part of "th" to a term, instantiating "th". The part        *
  * should be free in the theorem, except for outer bound variables.          *
  *---------------------------------------------------------------------------*)

@@ -85,6 +85,7 @@ sig
   val INST_TY_TERM     : (term,term)subst * (hol_type,hol_type)subst
                           -> thm -> thm
   val GSPEC            : thm -> thm
+  val TY_GSPEC         : thm -> thm
 
   val PART_MATCH       : (term -> term) -> thm -> term -> thm
   val MATCH_MP         : thm -> thm -> thm

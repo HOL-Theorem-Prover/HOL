@@ -350,7 +350,8 @@ val numeral_log2 = store_thm("numeral_log2",
 val MOD_2EXP_EQ = store_thm("MOD_2EXP_EQ",
  `(!a b. MOD_2EXP_EQ 0 a b = T) /\
   (!n a b. MOD_2EXP_EQ (SUC n) a b =
-     (ODD a = ODD b) /\ MOD_2EXP_EQ n (DIV2 a) (DIV2 b))`,
+     (ODD a = ODD b) /\ MOD_2EXP_EQ n (DIV2 a) (DIV2 b)) /\
+  (!n a. MOD_2EXP_EQ n a a = T)`,
   SRW_TAC [] [MOD_2EXP_EQ_def, MOD_2EXP_def, GSYM BITS_ZERO3]
     \\ Cases_on `n`
     \\ FULL_SIMP_TAC std_ss [GSYM BITS_ZERO3, SYM LSB_ODD, LSB_def,

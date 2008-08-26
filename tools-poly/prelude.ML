@@ -1,3 +1,4 @@
+(* this is an -*- sml -*- file *)
 val _ = PolyML.print_depth 0;
 local in
 open HolKernel Parse boolLib proofManagerLib;

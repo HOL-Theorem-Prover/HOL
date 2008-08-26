@@ -60,7 +60,9 @@ fun satisfy1 (consts,facts) gl =
       val gvars = map (genvar o type_of) vars  (* rename to avoid clashes *)
       val g' = subst (map2 (curry op |->) vars gvars) g
       val goals = strip_conj g'
-      val facts' = map (snd o strip_forall) facts
+      fun get_body t = snd (dest_forall t) handle HOL_ERR _ => snd (dest_tyforall t)
+      val facts' = map (repeat get_body) facts
+   (* val facts' = map (snd o strip_forall) facts *)
       fun choose choices v =
         deref_tmenv choices v handle HOL_ERR _ => mk_select(v,T)
       val choices = satisfy (union consts (free_vars gl)) goals facts'
@@ -83,9 +85,14 @@ fun SATISFY_TAC (asms,gl) =
   CONV_TAC (SATISFY_CONV (free_varsl asms,map ASSUME asms)) (asms,gl);
 
 fun GSPEC thm = SPEC(genvar(type_of(bvar(rand(concl thm))))) thm;
+fun TY_GSPEC thm = let val a = btyvar(rand(concl thm))
+                       val (_,kd,rk) = dest_vartype_opr a
+                   in TY_SPEC(gen_tyopvar(kd,rk)) thm
+                   end;
 fun FACT_CANON thm =
   if (is_conj (concl thm)) then flatten (map FACT_CANON (CONJUNCTS thm))
   else if (is_forall (concl thm)) then FACT_CANON(GSPEC thm)
+       else if (is_tyforall (concl thm)) then FACT_CANON(TY_GSPEC thm)
        else [thm];;
 
 

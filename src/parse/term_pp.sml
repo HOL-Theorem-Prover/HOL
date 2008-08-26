@@ -156,7 +156,8 @@ val _ = Feedback.register_btrace ("pp_dollar_escapes", dollar_escape);
    fast on its second argument.
 *)
 
-val is_symbolic_char = Char.contains "#?+*/\\=<>&%@!,:;_|~-"
+fun is_symbolic_char c = Char.contains "#?+*/\\=<>&%@!,:;_|~-" c orelse
+                         Char.ord c > 127
 
 val avoid_symbol_merges = ref true
 val _ = register_btrace("pp_avoids_symbol_merges", avoid_symbol_merges)
@@ -166,10 +167,11 @@ fun mk_break (last, next) =
     !avoid_symbol_merges andalso
     (is_symbolic_char last andalso is_symbolic_char next orelse
      last = #"(" andalso next = #"*" orelse
-     last = #"*" andalso next = #")")
+     last = #"*" andalso next = #")" orelse
+     Char.isAlphaNum last andalso Char.isAlphaNum next)
 
 fun avoid_symbolmerge (add_string, add_break) = let
-  val last_char = ref #"a"
+  val last_char = ref #" "
   fun new_addstring s = let
     val sz = size s
   in
@@ -246,6 +248,9 @@ in
     PREFIX (STD_prefix list) => map prefix list
   | PREFIX (BINDER list) =>
       map (fn b => (binder_to_string G b, PREFIX (BINDER [b]))) list
+      (* binder_to_string is incomplete on LAMBDA, but this doesn't matter
+         here as the information generated here is not used to print 
+         pure LAMBDAs *)
   | SUFFIX (STD_suffix list) => map suffix list
   | SUFFIX TYPE_annotation => []
   | SUFFIX TYPE_application => []
@@ -809,15 +814,15 @@ fun pp_term (G : grammar) TyG = let
     fun pr_abs tm = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
       val restr_binder =
-        find_partial (fn (b,s) => if b = LAMBDA then SOME s else NONE)
-        restr_binders
+          find_partial (fn (b,s) => if b = LAMBDA then SOME s else NONE)
+                       restr_binders
       val (bvars, body) = strip_vstructs NONE restr_binder tm
       val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
       val old_seen = !bvars_seen
     in
       pbegin addparens;
       begin_block CONSISTENT 2;
-      add_string lambda;
+      add_string (hd lambda);
       pr_vstructl bvars;
       add_string endbinding; add_break (1,0);
       bvars_seen := bvars_seen_here @ old_seen;
@@ -847,7 +852,7 @@ fun pp_term (G : grammar) TyG = let
     in
       pbegin addparens;
       begin_block INCONSISTENT 2;
-      add_string type_lambda;
+      add_string (hd type_lambda);
       begin_block INCONSISTENT 0;
       pr_typel "" bvars;
       end_block();
@@ -906,23 +911,23 @@ fun pp_term (G : grammar) TyG = let
           case info_for_name overload_info fromNum_str of
             NONE => false
           | SOME oi => mem inj_record (#actual_ops oi)
+      val numeral_str = Arbnum.toString (Literal.dest_numeral tm)
+      val sfx = 
+          if not is_a_real_numeral orelse !Globals.show_numeral_types then let
+              val (k, _) =
+                  valOf (List.find (fn (_, s') => s' = numinfo_search_string) 
+                                   num_info)
+            in
+              str k
+            end
+          else ""
     in
       pbegin showtypes;
-      add_string (Arbnum.toString (Literal.dest_numeral tm));
-      if not is_a_real_numeral orelse !Globals.show_numeral_types
-      then let
-        val (k, _) =
-          valOf (List.find (fn (_, s') => s' = numinfo_search_string) num_info)
-      in
-        add_string (str k)
-      end
-      else ();
+      add_string (numeral_str ^ sfx) ;
       if showtypes then
-        (add_string (" "^type_intro);
-         let val ty = #2 (dom_rng injty)
-         in (* if is_univ_type ty then add_break (1,0) else *) add_break (0,0);
-            type_pp.pp_type_with_depth TyG pps (decdepth depth) ty
-         end)
+        (add_string (" "^type_intro); add_break (0,0);
+         type_pp.pp_type_with_depth TyG pps (decdepth depth) 
+                                    (#2 (dom_rng injty)))
       else ();
       pend showtypes
     end
@@ -1464,7 +1469,6 @@ fun pp_term (G : grammar) TyG = let
         in
           pbegin addparens; begin_block INCONSISTENT 2;
           add_string fname;
-          spacep (not (symbolic fname));
           pr_vstructl bvs;
           add_string endbinding; spacep true;
           begin_block CONSISTENT 0;
@@ -1755,24 +1759,23 @@ fun pp_term (G : grammar) TyG = let
                          andalso has_name G cons (rator t0)
                       end
                val restr_binder =
-                  find_partial (fn (b,s) => if s=fname then SOME b else NONE)
-                          restr_binders
+                   find_partial (fn (b,s) => if s=fname then SOME b else NONE)
+                                restr_binders
                val restr_binder_rule =
-                let val condition = isSome restr_binder andalso
-                                    length args = 1 andalso my_is_abs Rand
-                in if condition
-                   then let val optrule = lookup_term
-                                  (binder_to_string G (valOf restr_binder))
-                            fun ok_rule (_, r) =
-                                case r of PREFIX(BINDER _) => true
-                                        | otherwise => false
-                        in
-                           case optrule
-                            of SOME rule_list => List.find ok_rule rule_list
-                             | otherwise => NONE
-                        end
+                   if isSome restr_binder andalso length args = 1 andalso 
+                      my_is_abs Rand 
+                   then let 
+                       val optrule = lookup_term
+                                       (binder_to_string G (valOf restr_binder))
+                       fun ok_rule (_, r) =
+                           case r of PREFIX(BINDER _) => true
+                                   | otherwise => false
+                     in
+                       case optrule of
+                         SOME rule_list => List.find ok_rule rule_list
+                       | otherwise => NONE
+                     end
                    else NONE
-                end
            in
              case candidate_rules of
                NONE =>

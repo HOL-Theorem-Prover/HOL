@@ -312,6 +312,50 @@ val list_monad = store_thm
   );
 
 
+(*---------------------------------------------------------------------------
+            Monad type operator, with unit and bind term operators
+            on a constant type, not 'a
+ ---------------------------------------------------------------------------*)
+
+
+val monadc_def = new_definition("monadc_def", Term
+   `monadc (unit: 'a -> 'a 'M)
+           (bind: !'b. 'a 'M -> ('a -> 'b 'M) -> 'b 'M) =
+      (* Left unit *)
+          (!:'b. !(a:'a) (k:'a -> 'b 'M).
+                bind[:'b:] (unit a) k = k a) /\
+      (* Right unit *)
+          (!(m:'a 'M).
+                bind[:'a:] m unit = m) /\
+      (* Associative *)
+          (!:'b. !(m:'a 'M) (k:'a -> 'a 'M) (h:'a -> 'b 'M).
+                bind[:'b:] m (\a. bind[:'b:] (k a) h)
+              = bind[:'b:] (bind[:'a:] m k) h)
+     `) handle e => Raise e;
+
+
+(*---------------------------------------------------------------------------
+            Monad type operator, with unit and bind term operators
+            from and to constant types, not 'a or 'b
+ ---------------------------------------------------------------------------*)
+
+
+val monadc2_def = new_definition("monadc2_def", Term
+   `monadc2 (unit: 'a -> 'b)
+            (bind: 'b -> ('a -> 'b) -> 'b) =
+      (* Left unit *)
+          (!(a:'a) (k:'a -> 'b).
+                bind (unit a) k = k a) /\
+      (* Right unit *)
+          (!(m:'b).
+                bind m unit = m) /\
+      (* Associative *)
+          (!(m:'b) (k:'a -> 'b) (h:'a -> 'b).
+                bind m (\a. bind (k a) h)
+              = bind (bind m k) h)
+     `) handle e => Raise e;
+
+
 val _ = export_theory();
 
 end; (* structure monadScript *)

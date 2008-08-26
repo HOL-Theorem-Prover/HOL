@@ -182,6 +182,8 @@ val SET_MINIMUM =
 
 val EMPTY_DEF = new_definition
     ("EMPTY_DEF", (--`EMPTY = (\x:'a.F)`--));
+open Unicode
+val _ = unicode_version (UChar.emptyset, ``pred_set$EMPTY``)
 
 val NOT_IN_EMPTY =
     store_thm
@@ -240,6 +242,7 @@ val EQ_UNIV =
 
 val SUBSET_DEF = new_infixr_definition
     ("SUBSET_DEF", (--`SUBSET s t =  !x:'a. x IN s ==> x IN t`--),450);
+val _ = unicode_version (UChar.subset, ``pred_set$SUBSET``);
 
 val SUBSET_TRANS = store_thm
     ("SUBSET_TRANS",
@@ -342,6 +345,7 @@ val PSUBSET_UNIV =
 
 val UNION_DEF = new_infixl_definition
      ("UNION_DEF", (--`UNION s t = {x:'a | x IN s \/ x IN t}`--),500);
+val _ = unicode_version (UChar.union, ``(UNION)``)
 
 val IN_UNION = store_thm
      ("IN_UNION",
@@ -422,6 +426,7 @@ val _ = export_rewrites ["EMPTY_UNION"]
 val INTER_DEF = new_infixl_definition
      ("INTER_DEF",
       (--`INTER s t = {x:'a | x IN s /\ x IN t}`--), 600);
+val _ = unicode_version (UChar.inter, ``(INTER)``);
 
 val IN_INTER = store_thm
      ("IN_INTER",
@@ -3224,9 +3229,9 @@ val CARD_COUNT = store_thm
     A "fold"-like operation for sets.
  ---------------------------------------------------------------------------*)
 
-val ITSET_def = 
+val ITSET_def =
  let open TotalDefn
- in 
+ in
    tDefine "ITSET"
     `ITSET (s:'a->bool) (b:'b) =
        if FINITE s then

@@ -108,8 +108,8 @@ sig
   type special_info = {type_intro    : string,
                        type_lbracket : string,
                        type_rbracket : string,
-                       lambda        : string,
-                       type_lambda   : string,
+                       lambda        : string list,
+                       type_lambda   : string list,
                        endbinding    : string,
                        restr_binders : (binder * string) list,
                        res_quanop    : string}

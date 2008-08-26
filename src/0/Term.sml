@@ -1366,6 +1366,9 @@ fun rand (Comb(_,Rand)) = Rand
 val bvar = fst o dest_abs;
 val body = snd o dest_abs;
 
+val btyvar = fst o dest_tyabs;
+val tybody = snd o dest_tyabs;
+
 
 (*---------------------------------------------------------------------------
     Matching (first order, modulo alpha conversion) of terms, including
