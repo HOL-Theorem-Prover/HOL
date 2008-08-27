@@ -271,10 +271,10 @@ how long this took."
 (defun copy-region-as-goaltree-tactic (start end)
   "Send selected region to HOL process as goaltree tactic."
   (interactive "r\nP")
-  (let* ((region-string (with-hol-locpragma start 
+  (let* ((region-string (with-hol-locpragma start
                           (buffer-substring-no-properties start end)))
          (tactic-string
-           (format "proofManagerLib.expandv (%S,%s) handle e => Raise e" 
+           (format "proofManagerLib.expandv (%S,%s) handle e => Raise e"
                    region-string region-string))
          (sender (if hol-emit-time-elapsed-p
                      'send-timed-string-to-hol
@@ -546,8 +546,8 @@ file to \"use\" first."
                               ;; else
                                     (make-temp-file-xemacs "hol")
                                  )))
-            (if (stringp hol-mode-to-delete) 
-                (progn (delete-file hol-mode-to-delete) 
+            (if (stringp hol-mode-to-delete)
+                (progn (delete-file hol-mode-to-delete)
                        (setq hol-mode-to-delete nil)))
             ; below, use visit parameter = 1 to stop message in mini-buffer
             (write-region (point-min) (point-max) fname nil 1)
@@ -744,6 +744,11 @@ argument N, sets the trace to that value in particular."
                            print \"** No such trace var: \\\"%s\\\"\\n\""
                s n s n s)))))
 
+(defun hol-toggle-unicode ()
+  "Toggles the \"Unicode\" trace."
+  (interactive)
+  (hol-toggle-trace "Unicode"))
+
 (defun hol-toggle-goalstack-fvs ()
   "Toggles the trace \"goalstack fvs\"."
   (interactive)
@@ -773,7 +778,7 @@ argument N, sets the trace to that value in particular."
   "Toggles quiet declarations in the interactive system."
   (interactive)
   (message "Toggling 'Quiet declaration'")
-  (send-raw-string-to-hol 
+  (send-raw-string-to-hol
    (concat "val _ = print (\"*** 'Quiet declaration' now \" ^"
            "Bool.toString (HOL_Interactive.toggle_quietdec()) ^ \" ***\\n\")")))
 
@@ -871,6 +876,7 @@ already loaded.)"
 (define-key hol-map "\C-q" 'hol-toggle-quietdec)
 (define-key hol-map "\C-s" 'hol-toggle-simplifier-trace)
 (define-key hol-map "\C-t" 'hol-toggle-show-types)
+(define-key hol-map "\C-u" 'hol-toggle-unicode)
 (define-key hol-map "\C-v" 'hol-scroll-up)
 (define-key hol-map "\M-f" 'forward-hol-tactic)
 (define-key hol-map "\M-b" 'backward-hol-tactic)
