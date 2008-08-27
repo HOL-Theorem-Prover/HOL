@@ -34,7 +34,7 @@ val export_rewrites = export_rewrites "PRED_SET";
 val _ = new_theory "pred_set";
 
 val _ = type_abbrev ("set", ``:'a -> bool``);
-val _ = disable_tyabbrev_printing "set"
+val _ = disable_tyabbrev_printing "set";
 
 
 (* =====================================================================*)
