@@ -1,0 +1,32 @@
+sttScript.sml
+   * define a notion of simple type ("stype"), with --> a binary
+     constructor and one base type (called "base").
+   * define a typing "context", a list of string#stype pairs, the
+     notion of permutation over contexts, and thus their support
+     (ctxtFV).
+   * define the standard simple typing relation for λ-calculus terms.
+   * prove
+      - typing contexts can be enlarged ("weakening")
+      - typing contexts can be permuted
+      - typing contexts can drop all mappings except for the variables
+        in the term being typed
+      - typing is preserved by β-reduction (from
+        barendregt/chap3Theory)
+      - and a bunch of other supporting lemmas
+
+sttVariants.sml
+   Suggested by Randy Pollack:
+   * A proof that the original typing relation from sttTheory is
+     equivalent to another relation which has an infinitary
+     (universally quantified) hypothesis in the rule for the
+     abstraction case, and where the body under the universal involves
+     a substitution.
+   * Also, derive a similar induction principle directly for the
+     original typing relation (this one in the style of "engineering
+     meta-theory" paper from POPL 2008).
+
+type_schemasScript.sml
+   Demonstration of how to construct a type where a binder takes a set
+   of names as an argument.  This is done in type schemas in the
+   Hindley-Milner typing system, where the universal quantifiers bind
+   over sets of type variables.

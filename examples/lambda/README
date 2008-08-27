@@ -17,23 +17,6 @@ other-models/
      related back to the term type in basics, and the notion of beta
      reduction that is defined in barendregt/chap3Theory.
 
-
-Also:
-
-
-sttScript.sml
-   Proofs suggested by Randy Pollack:
-   1.  A proof that a typing relation for the simply typed lambda
-       calculus (the details of which are sketched) satisfies a
-       weakening property: if a term has a type in a context G, then
-       it has the same type in a "wider" context G'.
-   2.  A proof that this original typing relation is equivalent to
-       another relation, where the second relation has an infinitary
-       (universally quantified) hypothesis in the rule for the
-       abstraction case.
-
-type_schemasScript.sml
-   Demonstration of how to construct a type where a binder takes a set
-   of names as an argument.  This is done in type schemas in the
-   Hindley-Milner typing system, where the universal quantifiers bind
-   over sets of type variables.
+typing/
+   * type systems for the  lambda calculus, focussing on simple type
+     theory.
