@@ -88,6 +88,14 @@ val keepers =
      "fcpLib.sig",
      "wordsLib.sig",
 
+     (* patricia *)
+     "patriciaTheory.sig",
+     "patriciaSyntax.sig",
+     "patriciaLib.sig",
+     "patricia_castsTheory.sig",
+     "patricia_castsSyntax.sig",
+     "patricia_castsLib.sig",
+
      (* num *)
      "numSyntax.sig",
      "numTheory.sig", "prim_recTheory.sig", "arithmeticTheory.sig",
