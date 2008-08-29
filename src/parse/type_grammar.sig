@@ -18,7 +18,7 @@ TApp   ::= Leaf | Tuple Leaf
 
   datatype grammar_rule
     = CONSTANT of string list
-    | BINDER of string list
+    | BINDER of string list list
     | APPLICATION
     | CAST
     | ARRAY_SFX 
@@ -40,9 +40,14 @@ TApp   ::= Leaf | Tuple Leaf
 
   type grammar
 
+  type special_info   = {lambda : string list,
+                         forall : string list}
   val empty_grammar    : grammar
   val rules            : grammar -> (int * grammar_rule) list
   val abbreviations    : grammar -> (string,type_structure) Binarymap.dict
+  val specials         : grammar -> special_info
+  val fupdate_rules    : ((int * grammar_rule) list -> (int * grammar_rule) list) -> grammar -> grammar
+  val fupdate_specials : (special_info -> special_info) -> grammar -> grammar
   val var_grammar      : grammar -> grammar
 
   val abb_dest_type : grammar -> Type.hol_type -> string * Type.hol_type list
@@ -59,7 +64,7 @@ TApp   ::= Leaf | Tuple Leaf
   (* removes by infix symbol, i.e. "+", not "sum" *)
 
   val new_tyop         : grammar -> string -> grammar
-  val new_tybinder     : grammar -> string -> grammar
+  val new_tybinder     : grammar -> string list -> grammar
   val new_abbreviation : grammar -> string * type_structure -> grammar
   val remove_abbreviation : grammar -> string -> grammar
   val merge_grammars   : grammar * grammar -> grammar

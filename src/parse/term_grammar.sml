@@ -188,9 +188,10 @@ fun user_printers g = #printers (user_additions g)
 
 
 fun update_restr_binders rb
-  {lambda, endbinding, type_intro, restr_binders, res_quanop} =
-  {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
-         restr_binders = rb, res_quanop = res_quanop}
+  {lambda, type_lambda, endbinding, type_intro, type_lbracket, type_rbracket, restr_binders, res_quanop} =
+  {lambda = lambda, type_lambda = type_lambda, endbinding = endbinding,
+   type_intro = type_intro, type_lbracket = type_lbracket, type_rbracket = type_rbracket,
+   restr_binders = rb, res_quanop = res_quanop}
 
 fun fupdate_restr_binders f
   {lambda, type_lambda, endbinding, type_intro, type_lbracket, type_rbracket, restr_binders, res_quanop} =

@@ -478,6 +478,16 @@ end;
  *  Print a theory as a module.
  *---------------------------------------------------------------------------*)
 
+(*---------------------------------------------------------------------------
+ * Coding scheme, expanded from HOL4 for new HOL-Omega constructs:
+ *
+ * Use  /                 for  term \: (type abstraction lambda)
+ *     (: term type)      for  term [: type :]
+ *     (@ name type)      for  free var (with unbound type)
+ *     (= name thy type)  for  POLY constant (with unbound type)
+ *     (- name thy type)  for  GRND constant (with unbound type)
+ *---------------------------------------------------------------------------*)
+
 fun pp_struct info_record ppstrm =
  let open Term
      val {theory as (name,i1,i2), parents=parents0,

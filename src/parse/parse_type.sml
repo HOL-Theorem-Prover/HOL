@@ -32,7 +32,8 @@ fun parse_type (tyfns :
      tyabs  : ('a * 'a) -> 'a,
      kindparser : 'b qbuf.qbuf -> Prekind.prekind})
                allow_unknown_suffixes G = let
-  val G = rules G and abbrevs = abbreviations G
+  val G = rules G and abbrevs = abbreviations G and specials = specials G
+  val {lambda = lambda, forall = forall} = specials
   val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop,
        kindcast, rankcast,
        tycon = pConType,
@@ -329,15 +330,16 @@ end
 
   fun parse_binder slist parser fb = let
     val (adv, (t,locn)) = typetok_of fb
+    fun mem_list s = Lib.exists (Lib.mem s)
     val _ =
     case t of
-      TypeIdent s => if Lib.mem s slist then
+      TypeIdent s => if mem_list s slist then
                        (adv(); (t,locn))
                      else raise InternalFailure locn
-    | QTypeIdent (_,s) => if Lib.mem s slist then
+    | QTypeIdent (_,s) => if mem_list s slist then
                        (adv(); (t,locn))
                      else raise InternalFailure locn
-    | TypeSymbol s => if Lib.mem s slist then
+    | TypeSymbol s => if mem_list s slist then
                        (adv(); (t,locn))
                      else raise InternalFailure locn
     | _ => raise InternalFailure locn
@@ -349,14 +351,14 @@ end
   fun apply_binder ((t,locn),alphas,body) = let
   in
     case t of
-      TypeIdent s  => if s = "\\" then apply_abst(alphas, body)
-                      else if s = "!" then apply_univ(alphas, body)
+      TypeIdent s  => if Lib.mem s lambda then apply_abst(alphas, body)
+                      else if Lib.mem s forall then apply_univ(alphas, body)
                       else raise InternalFailure locn
-    | QTypeIdent (_,s) => if s = "\\" then apply_abst(alphas, body)
-                      else if s = "!" then apply_univ(alphas, body)
+    | QTypeIdent (_,s) => if Lib.mem s lambda then apply_abst(alphas, body)
+                      else if Lib.mem s forall then apply_univ(alphas, body)
                       else raise InternalFailure locn
-    | TypeSymbol s => if s = "\\" then apply_abst(alphas, body)
-                      else if s = "!" then apply_univ(alphas, body)
+    | TypeSymbol s => if Lib.mem s lambda then apply_abst(alphas, body)
+                      else if Lib.mem s forall then apply_univ(alphas, body)
                       else raise InternalFailure locn
     | _ => raise InternalFailure locn
   end

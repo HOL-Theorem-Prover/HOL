@@ -73,8 +73,8 @@ signature Parse = sig
 
   val add_type : string -> unit
   val temp_add_type : string -> unit
-  val add_binder_type : string -> unit
-  val temp_add_binder_type : string -> unit
+  val add_binder_type : string list -> unit
+  val temp_add_binder_type : string list -> unit
   val add_infix_type : {Prec : int,
                         ParseName : string option,
                         Name : string,

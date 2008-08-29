@@ -84,6 +84,7 @@ open term_grammar
 type term = Term.term
 
 fun temp_set_term_grammar g = temp_set_grammars(type_grammar(), g)
+fun temp_set_type_grammar g = temp_set_grammars(g, term_grammar())
 
 val master_unicode_switch = ref false
 
@@ -247,11 +248,25 @@ fun fupd_lambda f {type_intro,type_lbracket,type_rbracket,lambda,type_lambda,
     {type_intro = type_intro, type_lbracket = type_lbracket, type_rbracket= type_rbracket,
      lambda = f lambda, type_lambda = type_lambda, endbinding = endbinding,
      restr_binders = restr_binders, res_quanop = res_quanop}
+fun fupd_type_lambda f {type_intro,type_lbracket,type_rbracket,lambda,type_lambda,
+                        endbinding,restr_binders,res_quanop} = 
+    {type_intro = type_intro, type_lbracket = type_lbracket, type_rbracket= type_rbracket,
+     lambda = lambda, type_lambda = f type_lambda, endbinding = endbinding,
+     restr_binders = restr_binders, res_quanop = res_quanop}
+fun fupd_lambda_ty f {lambda,forall} = 
+    {lambda = f lambda, forall = forall}
+fun fupd_forall_ty f {lambda,forall} = 
+    {lambda = lambda, forall = f forall}
+fun fupd_binder_ty f (n, type_grammar.BINDER sl) = (n, type_grammar.BINDER (map f sl))
+  | fupd_binder_ty f rule = rule
+fun fupd_binders_ty f rules = map (fupd_binder_ty f) rules
 fun fupd_restrs f {type_intro,type_lbracket,type_rbracket,lambda,type_lambda,
                    endbinding,restr_binders,res_quanop} = 
     {type_intro = type_intro, type_lbracket = type_lbracket, type_rbracket= type_rbracket,
      lambda = lambda, type_lambda = type_lambda, endbinding = endbinding,
      restr_binders = f restr_binders, res_quanop = res_quanop}
+fun fupd_restrs_ty f {lambda} = 
+    {lambda = lambda}
 
 
 fun disable_one (SD {t, u, non_u, newrule, oldtok}) = let 
@@ -323,15 +338,37 @@ in
   temp_unicode_version p
 end
 
+val fupdate_specials_ty = type_grammar.fupdate_specials
+val fupdate_rules_ty    = type_grammar.fupdate_rules
 
 fun bare_lambda() = 
-    temp_set_term_grammar (fupdate_specials (fupd_lambda (fn _ => ["\\"])) 
+    (temp_set_term_grammar (fupdate_specials (fupd_lambda (fn _ => ["\\"])) 
+                                             (term_grammar()));
+     temp_set_type_grammar (fupdate_specials_ty (fupd_lambda_ty (fn _ => ["\\"]))
+                           (fupdate_specials_ty (fupd_forall_ty (fn _ => ["!"]))
+                           (fupdate_rules_ty (fupd_binders_ty (fn sl => [Lib.last sl]))
+                                             (type_grammar())))))
+
+fun bare_type_lambda() = 
+    temp_set_term_grammar (fupdate_specials (fupd_type_lambda (fn _ => ["\\:"]))
                                             (term_grammar()))
 
+fun uchar "\\" = UChar.lambda
+  | uchar "!"  = UChar.forall
+  | uchar _    = raise Fail "Unicode.uchar: unrecognized type binder"
+
 fun unicode_lambda () = 
-    temp_set_term_grammar (fupdate_specials (fupd_lambda (cons UChar.lambda))
+    (temp_set_term_grammar (fupdate_specials (fupd_lambda (cons UChar.lambda))
+                                             (term_grammar()));
+     temp_set_type_grammar (fupdate_specials_ty (fupd_lambda_ty (cons UChar.lambda))
+                           (fupdate_specials_ty (fupd_forall_ty (cons UChar.forall))
+                           (fupdate_rules_ty (fupd_binders_ty (fn sl => cons (uchar (hd sl)) sl))
+                                             (type_grammar())))))
+
+fun unicode_type_lambda () = 
+    temp_set_term_grammar (fupdate_specials (fupd_type_lambda (cons (UChar.lambda ^ ":")))
                                             (term_grammar()))
-  
+
 
 
 fun enable_all () = List.app enable_one (List.rev (!term_table))
@@ -339,9 +376,11 @@ fun disable_all () = List.app disable_one (!term_table)
 
 fun traceset n = if n = 0 then (master_unicode_switch := false;
                                 bare_lambda();
+                                bare_type_lambda();
                                 disable_all())
                  else (master_unicode_switch := true;
                        unicode_lambda();
+                       unicode_type_lambda();
                        enable_all())
 fun traceget () = if !master_unicode_switch then 1 else 0
 

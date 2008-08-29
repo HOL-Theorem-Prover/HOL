@@ -899,7 +899,7 @@ fun temp_add_binder_type s = let open parse_type in
 
 fun add_binder_type s = let in
    temp_add_binder_type s;
-   update_grms "add_binder_type" ("temp_add_binder_type", Lib.quote s)
+   update_grms "add_binder_type" ("temp_add_binder_type", Lib.quote (hd s))
  end
 
 fun temp_add_infix_type {Name, ParseName, Assoc, Prec} =
@@ -1767,7 +1767,7 @@ val TOK = term_grammar.RE o term_grammar.TOK
 val _ = List.app temp_add_type ["bool", "ind"];
 val _ = temp_add_infix_type
             {Name="fun", ParseName=SOME"->", Prec=50, Assoc=RIGHT};
-val _ = List.app temp_add_binder_type ["\\", "!"];
+val _ = List.app temp_add_binder_type [["\\"], ["!"]];
 
 val _ = List.app reveal ["=", "==>", "@"];
 val _ = temp_add_binder ("@", std_binder_precedence);

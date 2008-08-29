@@ -74,6 +74,7 @@ val _ = Feedback.register_trace("kinds", show_kinds, 2)
 val show_kinds = Feedback.get_tracefn "kinds"
 
 fun pp_type0 (G:grammar) = let
+  val {lambda = lambda, forall = forall} = specials G
   fun lookup_tyop s = let
     fun recurse [] = NONE
       | recurse (x::xs) = let
@@ -103,7 +104,7 @@ fun pp_type0 (G:grammar) = let
         in
           case x of
             (p, BINDER slist) =>
-              if Lib.mem s slist then SOME (p, SR) else recurse xs
+              if Lib.exists (Lib.mem s) slist then SOME (p, SR) else recurse xs
           | (p, CONSTANT slist) => recurse xs
           | (p, APPLICATION) => recurse xs
           | (p, INFIX (slist, a)) => let
@@ -289,7 +290,7 @@ fun pp_type0 (G:grammar) = let
               in
                 pbegin parens;
                 begin_block INCONSISTENT 0;
-                add_string "\\";
+                add_string (hd lambda);
                 pr_list (fn arg => pr_ty pps arg grav (depth - 1))
                         (fn () => ())
                         (fn () => add_break (1, 0))
@@ -310,7 +311,7 @@ fun pp_type0 (G:grammar) = let
               in
                 pbegin parens;
                 begin_block INCONSISTENT 0;
-                add_string "!";
+                add_string (hd forall);
                 pr_list (fn arg => pr_ty pps arg grav (depth - 1))
                         (fn () => ())
                         (fn () => add_break (1, 0))
