@@ -115,7 +115,6 @@ Definition.new_definition
                                     $? P /\ !x y. P x /\ P y ==> (x=y)`);
 
 val _ = (add_binder ("?!", std_binder_precedence); add_const "?!")
-
 val _ = unicode_version (UChar.exists ^ "!", ``(?!) : ('a -> bool) -> bool``)
 
 (* HOL-Omega type universal and existential quantification: *)
@@ -125,12 +124,14 @@ val TY_FORALL_DEF =
    ("TY_FORALL_DEF",     Term `!: = \P. (P = (\:'a. T))`);
 
 val _ = (add_type_binder("!:", std_binder_precedence); add_const "!:");
+val _ = unicode_version (UChar.forall ^ ":", ``bool$!:``);
 
 val TY_EXISTS_DEF =
  Definition.new_definition
    ("TY_EXISTS_DEF",     Term `?: = \P. ~(P = (\:'a. F))`);
 
 val _ = (add_type_binder("?:", std_binder_precedence); add_const "?:");
+val _ = unicode_version (UChar.exists ^ ":", ``bool$?:``);
 
 (* Test of HOL-Omega definitions; uncomment to test:
 

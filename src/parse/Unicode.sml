@@ -177,6 +177,10 @@ fun getrule G term_name = let
               SOME ((fixopt, PREFIX (BINDER [BinderString term_name])), 
                     (fn s => (fixopt, PREFIX (BINDER [BinderString s]))), 
                     NONE)
+            else if mem (TypeBinderString term_name) blist then 
+              SOME ((fixopt, PREFIX (BINDER [TypeBinderString term_name])), 
+                    (fn s => (fixopt, PREFIX (BINDER [TypeBinderString s]))), 
+                    NONE)
             else get_rule_data rest
           | PREFIX (STD_prefix rrlist) => 
             search_rrlist (addfix fixopt o con (PREFIX o STD_prefix))
@@ -277,8 +281,9 @@ fun disable_one (SD {t, u, non_u, newrule, oldtok}) = let
     val oinfo = overload_info G
     fun foldthis ((b,s),acc) = 
         (* a fold with side effects - a bit ghastly *)
-        if b = BinderString u then (temp_clear_overloads_on s; acc)
-        else if b = BinderString nu then 
+        if b = BinderString u orelse b = TypeBinderString u then
+          (temp_clear_overloads_on s; acc)
+        else if b = BinderString nu orelse b = TypeBinderString nu then 
           case Overload.info_for_name oinfo s of 
             NONE => (b,s)::acc
           | SOME {actual_ops,...} => let 
@@ -355,6 +360,7 @@ fun bare_type_lambda() =
 
 fun uchar "\\" = UChar.lambda
   | uchar "!"  = UChar.forall
+  | uchar "?"  = UChar.exists
   | uchar _    = raise Fail "Unicode.uchar: unrecognized type binder"
 
 fun unicode_lambda () = 

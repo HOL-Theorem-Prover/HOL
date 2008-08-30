@@ -54,6 +54,9 @@ fun split_ident nonagg_specs s locn qb = let
   val s0 = String.sub(s, 0)
   val is_char = s0 = #"#" andalso size s > 1 andalso String.sub(s,1) = #"\""
   fun prefix2 c0 c1 = s0 = c0 andalso size s > 1 andalso String.sub(s,1) = c1
+  fun prefix4 c0 c1 = s0 = c0 andalso size s > 3 andalso
+                        String.sub(s,1) = #"\u00e2" andalso String.sub(s,2) = #"\u0088"
+                        andalso String.sub(s,3) = c1
 in
   if Char.isAlpha s0 orelse s0 = #"\"" orelse s0 = #"_" orelse is_char then
     (advance qb; (s,locn))
@@ -83,7 +86,7 @@ in
                (String.extract (s, 0, SOME 2),locn')) end
             else (advance qb; (s,locn))
   (* As an exception, don't aggregate ":!" since this probably begins a universal type *)
-  else if prefix2 #":" #"!" then
+  else if prefix2 #":" #"!" orelse prefix4 #":" #"\u0080" then
               let val (locn',locn'') = locn.split_at 1 locn in
               (replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'') qb;
                (String.extract (s, 0, SOME 1),locn')) end

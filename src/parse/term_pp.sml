@@ -1425,6 +1425,8 @@ fun pp_term (G : grammar) TyG = let
         end
       | PREFIX (BINDER _) =>
         if is_tyabs tm orelse is_tyabs Rand then let
+          fun find (TypeBinderString bs, s) = if bs = fname then SOME s else NONE
+            | find _ = NONE
           val (bvars, body) = strip_tyvstructs (SOME fname) tm (* strip_tyabs tm *)
 (*
           val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)

@@ -23,8 +23,7 @@ in
   string remainder
 end
 
-(* generate location pragmas inside fragments (not antiquoted ones), for the lex
-er *)
+(* generate location pragmas inside fragments (not antiquoted ones), for the lexer *)
 (*
 val row = ref 0
 val rowstart = ref 0
@@ -101,6 +100,11 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <INITIAL>"``" {ws}* ":" {lambda} => (
                  print yyarg ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2);
                  print yyarg (":\\" ^ drop_upto #"\\" (drop_upto #":" yytext));
+                 YYBEGIN tyquote;
+                 continue());
+<INITIAL>"``" {ws}* ":" [\128-\255] => (
+                 print yyarg ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2);
+                 print yyarg (":"^bslash_escape(String.extract(drop_upto #":" yytext,1,NONE)));
                  YYBEGIN tyquote;
                  continue());
 <INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [('!] | {digit}) => (
