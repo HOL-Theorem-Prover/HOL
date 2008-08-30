@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib;
 (*
 quietdec := true;
 loadPath := 
-            (concat Globals.HOLDIR "/examples/separationLogic/src") :: 
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) :: 
             !loadPath;
 
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
@@ -3415,7 +3415,7 @@ val asl_bigstar_list_def = Define `
 	asl_bigstar_list f l =  FOLDR (asl_star f) (asl_emp f) l`
 
 val asl_bigstar_list_REWRITE = store_thm ("asl_bigstar_list_REWRITE",
-``	(asl_bigstar_list f [] =  asl_emp f) /\
+``!f.	(asl_bigstar_list f [] =  asl_emp f) /\
 	(asl_bigstar_list f (h::l) =  asl_star f h (asl_bigstar_list f l))``,
 
 SIMP_TAC list_ss [asl_bigstar_list_def, FOLDR_APPEND]);
@@ -9436,13 +9436,6 @@ METIS_TAC[IS_SEPARATION_COMBINATOR_def, COMM_DEF, SUBSET_DEF]);
 
 
 
-
-
-
-
-
-
-
 val FASL_INFERENCE_prog_critical_section = store_thm  ("FASL_INFERENCE_prog_critical_section",
 
 ``!env lock_env penv P Q R Q2. 
@@ -9548,6 +9541,7 @@ FULL_SIMP_TAC std_ss []);
 
 
 
+
 (*Additional commands*)
 val FASL_INFERENCE_asl_quant = store_thm  ("FASL_INFERENCE_asl_quant",
 
@@ -9614,7 +9608,7 @@ METIS_TAC[]);
 	
 
 val XEVAL_fasl_predicate_def = Define `
-	XEVAL_fasl_predicate xenv p = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) p`;
+	XEVAL_fasl_predicate env p = EVAL_fasl_predicate (FST env) (FST (SND env)) p`;
 
 
 val fasl_prog_cond_def = Define `
@@ -9631,35 +9625,35 @@ val fasl_prog_cond_def = Define `
 
 
 val fasl_predicate_IS_DECIDED_IN_STATE_def = Define `
-	fasl_predicate_IS_DECIDED_IN_STATE xenv s c =
-	(s IN (XEVAL_fasl_predicate xenv c) \/
-	 s IN (XEVAL_fasl_predicate xenv (fasl_pred_neg c)))`;
+	fasl_predicate_IS_DECIDED_IN_STATE env s c =
+	(s IN (XEVAL_fasl_predicate env c) \/
+	 s IN (XEVAL_fasl_predicate env (fasl_pred_neg c)))`;
 
 val XEVAL_fasl_predicate___decided_def = Define `
-    XEVAL_fasl_predicate___decided xenv c = \s.
-	fasl_predicate_IS_DECIDED_IN_STATE xenv s c /\
-        XEVAL_fasl_predicate xenv c s`;
+    XEVAL_fasl_predicate___decided env c = \s.
+	fasl_predicate_IS_DECIDED_IN_STATE env s c /\
+        XEVAL_fasl_predicate env c s`;
 
 
 val fasl_predicate_IS_DECIDED_def = Define `
-	fasl_predicate_IS_DECIDED xenv P c =
-	(!s. s IN P ==> (s IN (XEVAL_fasl_predicate xenv c) \/
-				 s IN (XEVAL_fasl_predicate xenv (fasl_pred_neg c))))`;
+	fasl_predicate_IS_DECIDED env P c =
+	(!s. s IN P ==> (s IN (XEVAL_fasl_predicate env c) \/
+				 s IN (XEVAL_fasl_predicate env (fasl_pred_neg c))))`;
 
 
 
 
 val fasl_predicate_IS_DECIDED_IN_STATE_NEGATION = store_thm ("fasl_predicate_IS_DECIDED_IN_STATE_NEGATION",
-``!xenv c s.
-(FASL_IS_LOCAL_EVAL_XENV xenv /\ (fasl_predicate_IS_DECIDED_IN_STATE xenv s c)) ==>
-fasl_predicate_IS_DECIDED_IN_STATE xenv s (fasl_pred_neg c)``,
+``!env c s.
+(FASL_IS_LOCAL_EVAL_ENV env /\ (fasl_predicate_IS_DECIDED_IN_STATE env s c)) ==>
+fasl_predicate_IS_DECIDED_IN_STATE env s (fasl_pred_neg c)``,
 
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
 	XEVAL_fasl_predicate_def, EVAL_fasl_predicate_def,
-	FASL_IS_LOCAL_EVAL_XENV_def, FASL_IS_LOCAL_EVAL_ENV_THM] THEN
-Q.ABBREV_TAC `f = (FST (FST xenv))` THEN
-Q.ABBREV_TAC `pp = (EVAL_fasl_predicate f (FST (SND (FST xenv))) c)` THEN
+	FASL_IS_LOCAL_EVAL_ENV_THM] THEN
+Q.ABBREV_TAC `f = (FST env)` THEN
+Q.ABBREV_TAC `pp = (EVAL_fasl_predicate f (FST (SND env)) c)` THEN
 
 `ASL_IS_INTUITIONISTIC f pp` by METIS_TAC[ASL_IS_INTUITIONISTIC___EVAL_fasl_predicate] THEN
 DISJ2_TAC THEN
@@ -9677,23 +9671,22 @@ METIS_TAC[]);
 val fasl_predicate_IS_DECIDED_IN_STATE___REWRITE =
 store_thm ("fasl_predicate_IS_DECIDED_IN_STATE___REWRITE",
 
-``!xenv s c.
-   FASL_IS_LOCAL_EVAL_XENV xenv ==>
-(fasl_predicate_IS_DECIDED_IN_STATE xenv s c =
- !s'. ASL_IS_SUBSTATE (FST (FST xenv)) s s' ==>
-      (s IN XEVAL_fasl_predicate xenv c =
-       s' IN XEVAL_fasl_predicate xenv c))``,
+``!env s c.
+   FASL_IS_LOCAL_EVAL_ENV env ==>
+(fasl_predicate_IS_DECIDED_IN_STATE env s c =
+ !s'. ASL_IS_SUBSTATE (FST env) s s' ==>
+      (s IN XEVAL_fasl_predicate env c =
+       s' IN XEVAL_fasl_predicate env c))``,
 
 SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
 		 XEVAL_fasl_predicate_def,
 		 EVAL_fasl_predicate_def] THEN
 REPEAT STRIP_TAC THEN
-FULL_SIMP_TAC std_ss [FASL_IS_LOCAL_EVAL_XENV_def,
-		      FASL_IS_LOCAL_EVAL_ENV_THM,
+FULL_SIMP_TAC std_ss [FASL_IS_LOCAL_EVAL_ENV_THM,
 		      ASL_INTUITIONISTIC_NEGATION_REWRITE,
 		      IN_ABS] THEN
-Q.ABBREV_TAC `f = (FST (FST xenv))` THEN
-Q.ABBREV_TAC `P = EVAL_fasl_predicate f (FST (SND (FST xenv))) c` THEN
+Q.ABBREV_TAC `f = (FST env)` THEN
+Q.ABBREV_TAC `P = EVAL_fasl_predicate f (FST (SND env)) c` THEN
 `ASL_IS_INTUITIONISTIC f P` by
  METIS_TAC[ASL_IS_INTUITIONISTIC___EVAL_fasl_predicate] THEN
 POP_ASSUM MP_TAC THEN
@@ -9705,9 +9698,9 @@ METIS_TAC[]);
 
 
 val fasl_predicate_IS_DECIDED_NEGATION = store_thm ("fasl_predicate_IS_DECIDED_NEGATION",
-``!P xenv c.
-(FASL_IS_LOCAL_EVAL_XENV xenv /\ (fasl_predicate_IS_DECIDED xenv P c)) ==>
-fasl_predicate_IS_DECIDED xenv P (fasl_pred_neg c)``,
+``!P env c.
+(FASL_IS_LOCAL_EVAL_ENV env /\ (fasl_predicate_IS_DECIDED env P c)) ==>
+fasl_predicate_IS_DECIDED env P (fasl_pred_neg c)``,
 
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_def,
@@ -9720,7 +9713,7 @@ PROVE_TAC[fasl_predicate_IS_DECIDED_IN_STATE_NEGATION]);
 
 val fasl_predicate_IS_DECIDED_IN_STATE___pred_true = 
 store_thm ("fasl_predicate_IS_DECIDED_IN_STATE___pred_true",
-``!xenv s. fasl_predicate_IS_DECIDED_IN_STATE xenv s fasl_pred_true``,
+``!env s. fasl_predicate_IS_DECIDED_IN_STATE env s fasl_pred_true``,
 
 SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
 		 XEVAL_fasl_predicate_def,
@@ -9730,7 +9723,7 @@ SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
 
 val fasl_predicate_IS_DECIDED_IN_STATE___pred_false = 
 store_thm ("fasl_predicate_IS_DECIDED_IN_STATE___pred_false",
-``!xenv s. fasl_predicate_IS_DECIDED_IN_STATE xenv s fasl_pred_false``,
+``!env s. fasl_predicate_IS_DECIDED_IN_STATE env s fasl_pred_false``,
 
 SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
 		 XEVAL_fasl_predicate_def,
@@ -9743,18 +9736,18 @@ SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
 
 val fasl_predicate_IS_DECIDED_IN_STATE___pred_and = 
 store_thm ("fasl_predicate_IS_DECIDED_IN_STATE___pred_and",
-``!p1 p2 xenv s. 
-(fasl_predicate_IS_DECIDED_IN_STATE xenv s p1 /\
- fasl_predicate_IS_DECIDED_IN_STATE xenv s p2) ==>
-fasl_predicate_IS_DECIDED_IN_STATE xenv s (fasl_pred_and p1 p2)``,
+``!p1 p2 env s. 
+(fasl_predicate_IS_DECIDED_IN_STATE env s p1 /\
+ fasl_predicate_IS_DECIDED_IN_STATE env s p2) ==>
+fasl_predicate_IS_DECIDED_IN_STATE env s (fasl_pred_and p1 p2)``,
 
 SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
 		 XEVAL_fasl_predicate_def,
 		 EVAL_fasl_predicate_def, IN_ABS,
 	         ASL_INTUITIONISTIC_NEGATION_REWRITE] THEN
 REPEAT GEN_TAC THEN
-Q.ABBREV_TAC `pe1 = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) p1` THEN
-Q.ABBREV_TAC `pe2 = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) p2` THEN
+Q.ABBREV_TAC `pe1 = EVAL_fasl_predicate (FST env) (FST (SND env)) p1` THEN
+Q.ABBREV_TAC `pe2 = EVAL_fasl_predicate (FST env) (FST (SND env)) p2` THEN
 SIMP_TAC std_ss [asl_and_def, IN_ABS] THEN
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss []);
@@ -9762,18 +9755,18 @@ ASM_SIMP_TAC std_ss []);
 
 val fasl_predicate_IS_DECIDED_IN_STATE___pred_or = 
 store_thm ("fasl_predicate_IS_DECIDED_IN_STATE___pred_or",
-``!p1 p2 xenv s. 
-(fasl_predicate_IS_DECIDED_IN_STATE xenv s p1 /\
- fasl_predicate_IS_DECIDED_IN_STATE xenv s p2) ==>
-fasl_predicate_IS_DECIDED_IN_STATE xenv s (fasl_pred_or p1 p2)``,
+``!p1 p2 env s. 
+(fasl_predicate_IS_DECIDED_IN_STATE env s p1 /\
+ fasl_predicate_IS_DECIDED_IN_STATE env s p2) ==>
+fasl_predicate_IS_DECIDED_IN_STATE env s (fasl_pred_or p1 p2)``,
 
 SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_IN_STATE_def,
 		 XEVAL_fasl_predicate_def,
 		 EVAL_fasl_predicate_def, IN_ABS,
 	         ASL_INTUITIONISTIC_NEGATION_REWRITE] THEN
 REPEAT GEN_TAC THEN
-Q.ABBREV_TAC `pe1 = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) p1` THEN
-Q.ABBREV_TAC `pe2 = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) p2` THEN
+Q.ABBREV_TAC `pe1 = EVAL_fasl_predicate (FST env) (FST (SND env)) p1` THEN
+Q.ABBREV_TAC `pe2 = EVAL_fasl_predicate (FST env) (FST (SND env)) p2` THEN
 SIMP_TAC std_ss [asl_or_def, IN_ABS] THEN
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss []);
@@ -9786,8 +9779,8 @@ ASM_SIMP_TAC std_ss []);
 val fasl_predicate_IS_DECIDED___fasl_true =
  store_thm ("fasl_predicate_IS_DECIDED___fasl_true",
 
-``!xenv P.
-fasl_predicate_IS_DECIDED xenv P (fasl_pred_true)``,
+``!env P.
+fasl_predicate_IS_DECIDED env P (fasl_pred_true)``,
 
 SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_def,
 		 XEVAL_fasl_predicate_def,
@@ -9799,16 +9792,16 @@ SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_def,
 val fasl_predicate_IS_DECIDED___fasl_pred_and =
  store_thm ("fasl_predicate_IS_DECIDED___fasl_pred_and",
 
-``!xenv P Q1 Q2.
-(fasl_predicate_IS_DECIDED xenv P Q1 /\ fasl_predicate_IS_DECIDED xenv P Q2) ==>
-fasl_predicate_IS_DECIDED xenv P (fasl_pred_and Q1 Q2)``,
+``!env P Q1 Q2.
+(fasl_predicate_IS_DECIDED env P Q1 /\ fasl_predicate_IS_DECIDED env P Q2) ==>
+fasl_predicate_IS_DECIDED env P (fasl_pred_and Q1 Q2)``,
 
 SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_def,
 		 XEVAL_fasl_predicate_def,
 		 EVAL_fasl_predicate_def] THEN
 REPEAT STRIP_TAC THEN
-Q.ABBREV_TAC `q1 = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) Q1` THEN
-Q.ABBREV_TAC `q2 = EVAL_fasl_predicate (FST (FST xenv)) (FST (SND (FST xenv))) Q2` THEN
+Q.ABBREV_TAC `q1 = EVAL_fasl_predicate (FST env) (FST (SND env)) Q1` THEN
+Q.ABBREV_TAC `q2 = EVAL_fasl_predicate (FST env) (FST (SND env)) Q2` THEN
 FULL_SIMP_TAC std_ss [asl_and_def, ASL_INTUITIONISTIC_NEGATION_REWRITE, IN_ABS] THEN
 METIS_TAC[]);
 
@@ -9818,9 +9811,9 @@ METIS_TAC[]);
 val fasl_predicate_IS_DECIDED___fasl_pred_bigand =
  store_thm ("fasl_predicate_IS_DECIDED___fasl_pred_bigand",
 
-``!xenv P pL.
-EVERY (\P'. fasl_predicate_IS_DECIDED xenv P P') pL ==>
-fasl_predicate_IS_DECIDED xenv P (fasl_pred_bigand pL)``,
+``!env P pL.
+EVERY (\P'. fasl_predicate_IS_DECIDED env P P') pL ==>
+fasl_predicate_IS_DECIDED env P (fasl_pred_bigand pL)``,
 
 REPEAT GEN_TAC THEN
 Induct_on `pL` THEN1 (
@@ -9841,10 +9834,10 @@ ASM_REWRITE_TAC[]);
 
 val FASL_INFERENCE_assume = store_thm ("FASL_INFERENCE_assume",
 ``!xenv penv P c.
- fasl_predicate_IS_DECIDED xenv P c ==>
+ fasl_predicate_IS_DECIDED (FST xenv) P c ==>
 	(FASL_PROGRAM_HOARE_TRIPLE xenv penv P
       (fasl_prog_prim_command (fasl_pc_assume c)) 
-      (asl_and P (XEVAL_fasl_predicate xenv c)))``,
+      (asl_and P (XEVAL_fasl_predicate (FST xenv) c)))``,
 
 REPEAT GEN_TAC THEN
 `?lock_env f pred_map spred_map action_map.
@@ -9879,20 +9872,22 @@ Cases_on `s IN EVAL_fasl_predicate f pred_map c` THENL [
 
 
 
+
+
 val XEVAL_fasl_select_predicate_def = Define `
-   XEVAL_fasl_select_predicate xenv p = (FST (SND (SND (FST xenv)))) (FST (FST xenv)) p`;
+   XEVAL_fasl_select_predicate env p = (FST (SND (SND env))) (FST env) p`;
 
 val fasl_select_predicate_IS_SATISFIABLE_def = Define `
-   fasl_select_predicate_IS_SATISFIABLE xenv P c =
-   (!s. s IN P ==> ?d. (s IN (XEVAL_fasl_select_predicate xenv c d)))`;
+   fasl_select_predicate_IS_SATISFIABLE env P c =
+   (!s. s IN P ==> ?d. (s IN (XEVAL_fasl_select_predicate env c d)))`;
   
 
 val FASL_INFERENCE_select_assume = store_thm ("FASL_INFERENCE_select_assume",
 ``!xenv penv d sp.
-    fasl_select_predicate_IS_SATISFIABLE xenv P sp ==>
+    fasl_select_predicate_IS_SATISFIABLE (FST xenv) P sp ==>
    (FASL_PROGRAM_HOARE_TRIPLE xenv penv P
       (fasl_prog_prim_command (fasl_pc_select_assume d sp)) 
-      (asl_and P (XEVAL_fasl_select_predicate xenv sp d)))``,
+      (asl_and P (XEVAL_fasl_select_predicate (FST xenv) sp d)))``,
 
 REPEAT GEN_TAC THEN
 `?lock_env f pred_map spred_map action_map.
@@ -9926,14 +9921,14 @@ Cases_on `spred_map f sp d s` THENL [
 
 val FASL_INFERENCE_prog_cond = store_thm  ("FASL_INFERENCE_prog_cond",
 ``!xenv penv c P Q pTrue pFalse. 
-(fasl_predicate_IS_DECIDED xenv P c /\
+(fasl_predicate_IS_DECIDED (FST xenv) P c /\
  FASL_IS_LOCAL_EVAL_XENV xenv /\ 
-(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv c)) pTrue Q) /\
-(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv (fasl_pred_neg c))) pFalse Q)) ==>
+(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate (FST xenv) c)) pTrue Q) /\
+(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate (FST xenv) (fasl_pred_neg c))) pFalse Q)) ==>
 
 FASL_PROGRAM_HOARE_TRIPLE xenv penv P (fasl_prog_cond c pTrue pFalse) Q``,
 
-REWRITE_TAC [fasl_prog_cond_def] THEN
+REWRITE_TAC [fasl_prog_cond_def, FASL_IS_LOCAL_EVAL_XENV_def] THEN
 REPEAT STRIP_TAC THEN
 MATCH_MP_TAC FASL_INFERENCE_prog_choice THEN
 METIS_TAC[FASL_INFERENCE_prog_seq, fasl_predicate_IS_DECIDED_NEGATION,
@@ -9954,14 +9949,14 @@ val fasl_prog_while_def = Define `
 
 val FASL_INFERENCE_prog_while = store_thm  ("FASL_INFERENCE_prog_while",
 ``!xenv penv c P p. 
-(fasl_predicate_IS_DECIDED xenv P c /\
+(fasl_predicate_IS_DECIDED (FST xenv) P c /\
  FASL_IS_LOCAL_EVAL_XENV xenv /\ 
-(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv c)) p P)) ==>
+(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate (FST xenv) c)) p P)) ==>
 
-FASL_PROGRAM_HOARE_TRIPLE xenv penv P (fasl_prog_while c p) (asl_and P (XEVAL_fasl_predicate xenv (fasl_pred_neg c)))``,
+FASL_PROGRAM_HOARE_TRIPLE xenv penv P (fasl_prog_while c p) (asl_and P (XEVAL_fasl_predicate (FST xenv) (fasl_pred_neg c)))``,
 
 
-REWRITE_TAC [fasl_prog_while_def] THEN
+REWRITE_TAC [fasl_prog_while_def, FASL_IS_LOCAL_EVAL_XENV_def] THEN
 REPEAT STRIP_TAC THEN
 MATCH_MP_TAC FASL_INFERENCE_prog_seq THEN
 Q.EXISTS_TAC `P` THEN
@@ -10009,19 +10004,19 @@ val fasl_prog_select_def = Define `
 
 val FASL_INFERENCE_prog_select = store_thm  ("FASL_INFERENCE_prog_select",
 ``!xenv penv sp P Q body. 
-(fasl_select_predicate_IS_SATISFIABLE xenv P sp /\
+(fasl_select_predicate_IS_SATISFIABLE (FST xenv) P sp /\
  FASL_IS_LOCAL_EVAL_XENV xenv /\ 
-(!d. FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_select_predicate xenv sp d)) (body d) Q)) ==>
+(!d. FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_select_predicate (FST xenv) sp d)) (body d) Q)) ==>
 
 FASL_PROGRAM_HOARE_TRIPLE xenv penv P (fasl_prog_select sp body) Q``,
 
+REWRITE_TAC [fasl_prog_select_def, FASL_IS_LOCAL_EVAL_XENV_def] THEN
 REPEAT STRIP_TAC THEN
-REWRITE_TAC [fasl_prog_select_def] THEN
 MATCH_MP_TAC FASL_INFERENCE_prog_forall THEN
 GEN_TAC THEN
 SIMP_TAC std_ss [] THEN
 MATCH_MP_TAC FASL_INFERENCE_prog_seq THEN
-Q.EXISTS_TAC `asl_and P (XEVAL_fasl_select_predicate xenv sp d)` THEN
+Q.EXISTS_TAC `asl_and P (XEVAL_fasl_select_predicate (FST xenv) sp d)` THEN
 ASM_SIMP_TAC std_ss [FASL_INFERENCE_select_assume]);
 
 
@@ -10933,6 +10928,17 @@ SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF]);
 
 
 
+val FASL_PROGRAM_IS_ABSTRACTION___SEM_REFL = store_thm ("FASL_PROGRAM_IS_ABSTRACTION___SEM_REFL",
+``!xenv penv p1 p2. 
+(FASL_PROGRAM_SEM xenv penv p1 = FASL_PROGRAM_SEM xenv penv p2) ==>
+FASL_PROGRAM_IS_ABSTRACTION xenv penv p1 p2``,
+
+SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF,
+                 FASL_PROGRAM_HOARE_TRIPLE_def]);
+
+
+
+
 val FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action = store_thm (
 "FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action",
 ``!xenv penv P prog Q.
@@ -11167,11 +11173,11 @@ CONJ_TAC THEN (
 val FASL_PROGRAM_IS_ABSTRACTION___while = store_thm (
 "FASL_PROGRAM_IS_ABSTRACTION___while",
 ``!xenv penv P c prog.
-(fasl_predicate_IS_DECIDED xenv P c /\
+(fasl_predicate_IS_DECIDED (FST xenv) P c /\
  FASL_IS_LOCAL_EVAL_XENV xenv /\
- FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv c)) prog P) ==>
+ FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate (FST xenv) c)) prog P) ==>
 FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_while c prog) 
-                                      (fasl_prog_best_local_action P (asl_and P (XEVAL_fasl_predicate xenv (fasl_pred_neg c))))``,
+                                      (fasl_prog_best_local_action P (asl_and P (XEVAL_fasl_predicate (FST xenv) (fasl_pred_neg c))))``,
 
 
 REPEAT STRIP_TAC THEN
@@ -11190,10 +11196,10 @@ val FASL_PROGRAM_IS_ABSTRACTION___fasl_prog_while_with_invariant = store_thm (
 "FASL_PROGRAM_IS_ABSTRACTION___fasl_prog_while_with_invariant",
 ``!xenv penv P c prog.
  FASL_IS_LOCAL_EVAL_XENV xenv ==>
- fasl_predicate_IS_DECIDED xenv P c ==>
- FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv c)) prog P ==>
+ fasl_predicate_IS_DECIDED (FST xenv) P c ==>
+ FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate (FST xenv) c)) prog P ==>
  FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_while_with_invariant P c prog) 
-                                       (fasl_prog_best_local_action P (asl_and P (XEVAL_fasl_predicate xenv (fasl_pred_neg c))))``,
+                                       (fasl_prog_best_local_action P (asl_and P (XEVAL_fasl_predicate (FST xenv) (fasl_pred_neg c))))``,
 
 
 REPEAT STRIP_TAC THEN
@@ -11613,10 +11619,10 @@ REPEAT STRIP_TAC THENL [
 
 val FASL_INFERENCE_prog_cond_seq = store_thm  ("FASL_INFERENCE_prog_cond_seq",
 ``!xenv penv c P Q pTrue pFalse p_seq. 
-(fasl_predicate_IS_DECIDED xenv P c /\
+(fasl_predicate_IS_DECIDED (FST xenv) P c /\
  FASL_IS_LOCAL_EVAL_XENV xenv /\ 
-(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv c)) (fasl_prog_seq pTrue p_seq) Q) /\
-(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate xenv (fasl_pred_neg c))) (fasl_prog_seq pFalse p_seq) Q)) ==>
+(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate (FST xenv) c)) (fasl_prog_seq pTrue p_seq) Q) /\
+(FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (XEVAL_fasl_predicate (FST xenv) (fasl_pred_neg c))) (fasl_prog_seq pFalse p_seq) Q)) ==>
 
 FASL_PROGRAM_HOARE_TRIPLE xenv penv P (fasl_prog_seq (fasl_prog_cond c pTrue pFalse) p_seq) Q``,
 
@@ -11653,6 +11659,36 @@ Induct_on `b1` THENL [
 
 
 
+
+val FASL_PROGRAM_SEM___block_flatten =
+store_thm ("FASL_PROGRAM_SEM___block_flatten",
+
+``!xenv penv L1 L2 L3.
+  FASL_PROGRAM_SEM xenv penv (fasl_prog_block (L1++(fasl_prog_block L2::L3))) =
+  FASL_PROGRAM_SEM xenv penv (fasl_prog_block (L1++L2++L3))``,
+
+GEN_TAC THEN GEN_TAC THEN
+Induct_on `L1` THEN1 (
+   SIMP_TAC list_ss [FASL_PROGRAM_SEM___prog_block,
+		     FASL_PROGRAM_SEM___prog_seq___blocks,
+		     GSYM FASL_PROGRAM_SEM___prog_seq]
+) THEN
+REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC list_ss [FASL_PROGRAM_SEM___prog_block]);
+
+
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___block_flatten =
+store_thm ("FASL_PROGRAM_IS_ABSTRACTION___block_flatten",
+
+``!xenv penv L1 L2 L3.
+  FASL_PROGRAM_IS_ABSTRACTION xenv penv (fasl_prog_block (L1++(fasl_prog_block L2::L3))) 
+  (fasl_prog_block (L1++L2++L3))``,
+
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___SEM_REFL THEN
+SIMP_TAC std_ss [FASL_PROGRAM_SEM___block_flatten]);
 
 
 
@@ -11729,6 +11765,42 @@ REPEAT STRIP_TAC THENL [
       IMP_RES_TAC FASL_IS_DIVERGE_TRACE___SEM THEN
       FULL_SIMP_TAC std_ss [fasla_diverge_def, NOT_IN_EMPTY]
    ]
+]);
+
+
+val FASL_PROGRAM_SEM___prog_kleene_star = store_thm ("FASL_PROGRAM_SEM___prog_kleene_star",
+``
+FASL_PROGRAM_SEM xenv penv (fasl_prog_kleene_star prog) =
+SUP_fasl_action_order (IMAGE (\n. FASL_PROGRAM_SEM xenv penv (fasl_prog_repeat_num n prog)) UNIV)``,
+
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
+SIMP_TAC std_ss [FASL_PROGRAM_SEM_def,
+		 FASL_TRACE_SET_SEM_def, fasl_prog_kleene_star_def,
+		 SUP_fasl_action_order_def, SUP_fasl_order_def,
+		 COND_NONE_SOME_REWRITES_EQ, IN_IMAGE, IN_UNIV,
+		 GSYM RIGHT_EXISTS_AND_THM,
+		 COND_NONE_SOME_REWRITES] THEN
+REPEAT STRIP_TAC THENL [
+   SIMP_TAC std_ss [FASL_PROGRAM_TRACES_def, IN_BIGUNION,
+		    IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM,
+		    IN_ABS] THEN
+   METIS_TAC[],
+
+
+   ONCE_REWRITE_TAC[EXTENSION] THEN
+   SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_ABS,
+		    GSYM RIGHT_EXISTS_AND_THM,
+		    GSYM LEFT_EXISTS_AND_THM, IN_UNIV] THEN
+   `!n. ~?x'. (NONE = FASL_TRACE_SEM xenv x' x) /\
+               x' IN FASL_PROGRAM_TRACES penv (fasl_prog_repeat_num n prog)` by
+      METIS_TAC[] THEN
+   ASM_REWRITE_TAC[] THEN (POP_ASSUM (K ALL_TAC)) THEN
+
+   SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_ABS,
+		    GSYM RIGHT_EXISTS_AND_THM,
+		    GSYM LEFT_EXISTS_AND_THM,
+		    FASL_PROGRAM_TRACES_def] THEN
+   METIS_TAC[]
 ]);
 
 

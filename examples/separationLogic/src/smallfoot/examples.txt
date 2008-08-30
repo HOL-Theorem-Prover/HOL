@@ -59,11 +59,11 @@ val t = parse_smallfoot_file file;
   this may take some time, on a Intel Core 2 Quad 2.4 GHz
   it takes about 10 seconds*)
 
-val thm = prove (t, SMALLFOOT_INPUT_FILE_TAC THEN
+val thm = prove (t, SMALLFOOT_SPECIFICATION_TAC THEN
           SMALLFOOT_SOLVE_TAC);
 
 (*
-SMALLFOOT_INPUT_FILE_TAC does initial preprocessing and
+SMALLFOOT_SPECIFICATION_TAC does initial preprocessing and
 SMALLFOOT_SOLVE_TAC does the main work
 
 The initial preprocessing eliminates function calls and loops
@@ -216,7 +216,7 @@ smallfoot_set_goal file;
 
 
 set_goal([],parse_smallfoot_file file)
-SMALLFOOT_INPUT_FILE_TAC
+SMALLFOOT_SPECIFICATION_TAC
 
 
 
@@ -277,6 +277,9 @@ REPEAT STRIP_TAC THENL [
 
 
 
+(*  2.3 s *) val file = concat [examplesDir, "missing_features/mm_non_blocking.sf"];
+(*  2.3 s *) val file = concat [examplesDir, "missing_features/pointer_transferring_buffer_no_leak.sf"];
+
 
 
 
@@ -286,18 +289,35 @@ they should give a rough impression. The were measured at an
 Intel Core 2 Quad 2.4 GHz processor.
 *)
 
+temp_add_smallfoot_pp();
+use_smallfoot_pretty_printer := true;
+
 val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot/EXAMPLES/"]
 
 
-(* 10.5 s *) val file = concat [examplesDir, "mergesort.sf"]; 
-(*  9.5 s *) val file = concat [examplesDir, "parallel_mergesort.sf"]; 
-(*  1.5 s *) val file = concat [examplesDir, "parallel_tree_deallocate.sf"]; 
-(* 27.0 s *) val file = concat [examplesDir, "list.sf"]; 
-(*  6.5 s *) val file = concat [examplesDir, "tree.sf"]; 
-(*  0.5 s *) val file = concat [examplesDir, "passive_stack_race.sf"]; (*semantics differs from smallfoot!*)
+(* 16.0 s *) val file = concat [examplesDir, "mergesort.sf"]; 
+(* 14.5 s *) val file = concat [examplesDir, "parallel_mergesort.sf"]; 
+(*  2.0 s *) val file = concat [examplesDir, "parallel_tree_deallocate.sf"]; 
+(* 37.5 s *) val file = concat [examplesDir, "list.sf"]; 
+(*  9.5 s *) val file = concat [examplesDir, "tree.sf"]; 
+(*  0.7 s *) val file = concat [examplesDir, "passive_stack_race.sf"]; (*semantics differs from smallfoot!*)
+(*  2.3 s *) val file = concat [examplesDir, "business1.sf"];
+
+(*  2.7 s *) val file = concat [examplesDir, "pointer_transferring_buffer.sf"]; 
+(*  2.0 s *) val file = concat [examplesDir, "pointer_non_transferring_buffer.sf"];
+(*  6.2 s *) val file = concat [examplesDir, "mm_buf.sf"];
+(*  3.7 s *) val file = concat [examplesDir, "memory_manager.sf"];
+(* 27.5 s *) val file = concat [examplesDir, "split_binary_semaphore.sf"];
+
+
+XXX look for true
+(*  2.3 s *) val file = concat [examplesDir, "missing_features/mm_non_blocking.sf"];
+
+
 
 
 val thm = smallfoot_prove file;
+val thm = smallfoot_verbose_prove file;
 
 
 
@@ -305,6 +325,8 @@ val thm = smallfoot_prove file;
 (*examples that are designed to fail for various reasons*)
 val file = concat [examplesDir, "not_solvable/heap_race.sf"]; 
 val file = concat [examplesDir, "not_solvable/stack_race.sf"]; 
+val file = concat [examplesDir, "not_solvable/business2.sf"];
+
 
 
 (*automatic proof just fails*)
@@ -315,13 +337,15 @@ val t = parse_smallfoot_file file;
 
 set_goal([],t);
 
-SMALLFOOT_INPUT_FILE_TAC THEN
-SMALLFOOT_STEP_TAC 
-...
 
+
+SMALLFOOT_SPECIFICATION_TAC THEN
 
 SMALLFOOT_STEP_TAC
 SMALLFOOT_MINI_STEP_TAC
 SMALLFOOT_SOLVE_TAC
+....
 
+rotate 1
+REPEAT STRIP_TAC THEN
 

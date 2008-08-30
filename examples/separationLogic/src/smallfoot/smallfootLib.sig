@@ -4,7 +4,7 @@ sig
 
   (*Conversion to handle the original parsed term and
     do some preprocessing*)
-  val SMALLFOOT_INPUT_FILE___CONSEQ_CONV : conv;
+  val SMALLFOOT_SPECIFICATION___CONSEQ_CONV : conv;
 
   (*Reasoning for the different statements*)
   val SMALLFOOT_COND_INFERENCE_CONV___assign : conv;
@@ -33,7 +33,7 @@ sig
 
 
   (*A tactic to do the initial processing*)
-  val SMALLFOOT_INPUT_FILE_TAC : tactic
+  val SMALLFOOT_SPECIFICATION_TAC : tactic
 
   (*Performs one step*)
   val SMALLFOOT_STEP_TAC : tactic
@@ -45,14 +45,16 @@ sig
 
   (*Parses a file and sets the goal, that the
     specification is correct. It calls
-    SMALLFOOT_INPUT_FILE_TAC for the preprocessing*)
+    SMALLFOOT_SPECIFICATION_TAC for the preprocessing*)
   val smallfoot_set_goal : string -> proofManagerLib.proof
 
 
   (*Parses a file and tries to prove it correct.
     Same as smallfoot_set_goal followed by
-    SMALLFOOT_SOLVE_TAC*)
+    SMALLFOOT_SOLVE_TAC. The verbose version gives some
+    status reports on the way and measures the needed time.*)
   val smallfoot_prove : string -> thm;
+  val smallfoot_verbose_prove : string -> thm;
 
 
 
