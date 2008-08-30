@@ -1180,12 +1180,18 @@ val eta_cosubstitutive = store_thm(
   SRW_TAC [][SUB_THM, SUB_VAR] THEN
   PROVE_TAC [reduction_rules]);
 
-val strong_ccbeta_gen_ind =
+val ccredex = prove(
+  ``compat_closure beta (LAM v M @@ N) ([N/v]M)``,
+  SRW_TAC [][cc_beta_thm] THEN METIS_TAC [])
+
+val strong_ccbeta_gen_ind = save_thm(
+  "strong_ccbeta_gen_ind",
     (GEN_ALL o
-     SIMP_RULE (srw_ss()) [compat_closure_rules, FORALL_AND_THM,
-                           GSYM CONJ_ASSOC] o
+     SIMP_RULE (srw_ss() ++ SatisfySimps.SATISFY_ss) 
+               [compat_closure_rules, FORALL_AND_THM, ccredex,
+                GSYM CONJ_ASSOC] o
      Q.INST [`P` |-> `\M N x. P M N x /\ compat_closure beta M N`])
-    ccbeta_gen_ind
+    ccbeta_gen_ind)
 
 val eta_beta_commute = store_thm(
   "eta_beta_commute",
@@ -1214,7 +1220,6 @@ val eta_beta_commute = store_thm(
       METIS_TAC [relationTheory.RC_DEF, eta_cosubstitutive, beta_def,
                  compat_closure_rules]
     ],
-    METIS_TAC [beta_def, compat_closure_rules],
 
     FULL_SIMP_TAC (srw_ss()) [cc_eta_thm] THEN
     METIS_TAC [compat_closure_rules, relationTheory.RC_DEF,
