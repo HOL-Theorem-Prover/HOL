@@ -842,6 +842,192 @@ val supp_fnapp = store_thm(
   METIS_TAC [supp_smallest, FINITE_UNION, supp_supports, fnpm_is_perm,
              support_fnapp]);
 
+open finite_mapTheory 
+val _ = set_trace "Unicode" 1
+val fmpm_def = Define`
+  fmpm (dpm : 'd pm) (rpm : 'r pm) pi fmap =
+    rpm pi o_f fmap f_o dpm (REVERSE pi)
+`;
+
+val lemma0 = prove(
+  ``is_perm pm ==> (pm pi x ∈ X = x ∈ setpm pm (REVERSE pi) X)``,
+  SRW_TAC [][perm_IN])
+val lemma1 = prove(``{x | x ∈ X} = X``, SRW_TAC [][pred_setTheory.EXTENSION])
+val lemma = prove(
+  ``is_perm pm ==> FINITE { x | pm pi x ∈ FDOM f}``,
+  SIMP_TAC bool_ss [lemma0, lemma1, perm_FINITE,
+                    finite_mapTheory.FDOM_FINITE]);
+
+val fmpm_applied = store_thm(
+  "fmpm_applied",
+  ``is_perm dpm ∧ dpm (REVERSE pi) x ∈ FDOM fm ==>
+    (fmpm dpm rpm pi fm ' x = rpm pi (fm ' (dpm (REVERSE pi) x)))``,
+  SRW_TAC [][fmpm_def, FAPPLY_f_o, FDOM_f_o, lemma, o_f_FAPPLY]);
+
+val fmpm_FDOM = store_thm(
+  "fmpm_FDOM",
+  ``is_perm dpm ==>
+     (x IN FDOM (fmpm dpm rpm pi fmap) = dpm (REVERSE pi) x IN FDOM fmap)``,
+  SRW_TAC [][fmpm_def, lemma, FDOM_f_o])
+
+val fmpm_is_perm = store_thm(
+  "fmpm_is_perm",
+  ``is_perm dpm /\ is_perm rpm ==> is_perm (fmpm dpm rpm)``,
+  STRIP_TAC THEN SRW_TAC [][is_perm_def] THENL [
+    `(!d. dpm [] d = d) ∧ (!r. rpm [] r = r)` by METIS_TAC [is_perm_def] THEN
+    SRW_TAC [][fmap_EXT, fmpm_def, pred_setTheory.EXTENSION, FDOM_f_o, lemma,
+               FAPPLY_f_o, o_f_FAPPLY],
+
+    `(!d pi1 pi2. dpm (pi1 ++ pi2) d = dpm pi1 (dpm pi2 d)) ∧
+     (!r pi1 pi2. rpm (pi1 ++ pi2) r = rpm pi1 (rpm pi2 r))`
+      by METIS_TAC [is_perm_def] THEN
+    SRW_TAC [][fmap_EXT, fmpm_def, FDOM_f_o, lemma, o_f_FAPPLY,
+               listTheory.REVERSE_APPEND, FAPPLY_f_o],
+
+    `REVERSE p1 == REVERSE p2` by METIS_TAC [permof_REVERSE_monotone] THEN
+    `(rpm p1 = rpm p2) ∧ (dpm (REVERSE p1) = dpm (REVERSE p2))`
+       by METIS_TAC [is_perm_def] THEN
+    SRW_TAC [][fmpm_def, fmap_EXT, FUN_EQ_THM, FDOM_f_o, lemma]
+  ]);
+val _ = export_rewrites ["fmpm_is_perm"]
+
+val supp_setpm = store_thm(
+  "supp_setpm",
+  ``is_perm pm /\ FINITE s /\ (!x. x∈s ==> FINITE (supp pm x)) ==>
+    (supp (setpm pm) s = BIGUNION (IMAGE (supp pm) s))``,
+  STRIP_TAC THEN MATCH_MP_TAC supp_unique_apart THEN SRW_TAC [][] THENL [
+    SRW_TAC [][support_def] THEN
+    SRW_TAC [][pred_setTheory.EXTENSION] THEN
+    Cases_on `x ∈ supp pm x'` THENL [
+      `¬(x'∈s)` by METIS_TAC [] THEN
+      `y ∈ supp pm (pm [(x,y)] x')` by SRW_TAC [][perm_supp] THEN
+      METIS_TAC [],
+      ALL_TAC
+    ] THEN Cases_on `y ∈ supp pm x'` THENL [
+      `¬(x' ∈ s)` by METIS_TAC [] THEN
+      `x ∈ supp pm (pm [(x,y)] x')` by SRW_TAC [][perm_supp] THEN
+      METIS_TAC [],
+      ALL_TAC
+    ] THEN SRW_TAC [][supp_fresh],
+
+    METIS_TAC [],
+
+    SRW_TAC [][pred_setTheory.EXTENSION] THEN
+    `∀x. b ∈ supp pm x ==> ¬(x ∈ s)` by METIS_TAC [] THEN
+    `¬(b ∈ supp pm x)` by METIS_TAC [] THEN
+    `b ∈ supp pm (pm [(a,b)] x)` by SRW_TAC [][perm_supp] THEN
+    METIS_TAC []
+  ]);
+
+val supp_FINITE_strings = store_thm(
+  "supp_FINITE_strings",
+  ``FINITE s ==> (supp (setpm lswapstr) s = s)``,
+  SRW_TAC [][supp_setpm, pred_setTheory.EXTENSION] THEN EQ_TAC THEN 
+  STRIP_TAC THENL [
+    METIS_TAC [],
+    Q.EXISTS_TAC `{x}` THEN SRW_TAC [][] THEN METIS_TAC []
+  ]);
+val _ = export_rewrites ["supp_FINITE_strings"]
+
+
+
+val rwt = prove(
+  ``(!x. ~P x \/ Q x) = (!x. P x ==> Q x)``,
+  METIS_TAC []);
+
+val fmap_supp = store_thm(
+  "fmap_supp",
+  ``is_perm dpm /\ is_perm rpm /\ (!d. FINITE (supp dpm d)) /\
+    (!r. FINITE (supp rpm r)) ==>
+    (supp (fmpm dpm rpm) fmap =
+        supp (setpm dpm) (FDOM fmap) ∪
+        supp (setpm rpm) (FRANGE fmap))``,
+  STRIP_TAC THEN MATCH_MP_TAC supp_unique_apart THEN
+  SRW_TAC [][FINITE_FRANGE, fmpm_is_perm, supp_setpm, rwt,
+             GSYM RIGHT_FORALL_IMP_THM]
+  THENL [
+    SRW_TAC [][support_def, fmap_EXT, rwt, GSYM RIGHT_FORALL_IMP_THM,
+               fmpm_FDOM]
+    THENL [
+      SRW_TAC [][pred_setTheory.EXTENSION, fmpm_FDOM] THEN
+      Cases_on `x ∈ supp dpm x'` THEN1
+        (`y ∈ supp dpm (dpm [(x,y)] x')` by SRW_TAC [][perm_supp] THEN
+         METIS_TAC []) THEN
+      Cases_on `y ∈ supp dpm x'` THEN1
+        (`x ∈ supp dpm (dpm [(x,y)] x')` by SRW_TAC [][perm_supp] THEN
+         METIS_TAC []) THEN
+      METIS_TAC [supp_fresh],
+      SRW_TAC [][fmpm_def, FAPPLY_f_o, lemma, FDOM_f_o, o_f_FAPPLY] THEN
+      `¬(x ∈ supp dpm (dpm [(x,y)] x')) ∧ ¬(y ∈ supp dpm (dpm [(x,y)] x'))`
+          by METIS_TAC [] THEN
+      NTAC 2 (POP_ASSUM MP_TAC) THEN
+      SRW_TAC [][perm_supp] THEN
+      SRW_TAC [][supp_fresh] THEN
+      `x' ∈ FDOM fmap` by METIS_TAC [supp_fresh] THEN
+      `fmap ' x' ∈ FRANGE fmap`
+         by (SRW_TAC [][FRANGE_DEF] THEN METIS_TAC []) THEN
+      METIS_TAC [supp_fresh]
+    ],
+
+    SRW_TAC [][],
+    SRW_TAC [][],
+
+    `¬(b ∈ supp dpm x)` by METIS_TAC [] THEN
+    SRW_TAC [][fmap_EXT, fmpm_FDOM] THEN DISJ1_TAC THEN
+    SRW_TAC [][pred_setTheory.EXTENSION, fmpm_FDOM] THEN
+    `b ∈ supp dpm (dpm [(a,b)] x)` by SRW_TAC [][perm_supp] THEN
+    METIS_TAC [],
+
+    `¬(b ∈ supp rpm x)` by METIS_TAC [] THEN
+    `∃y. y ∈ FDOM fmap ∧ (fmap ' y = x)`
+        by (FULL_SIMP_TAC (srw_ss()) [FRANGE_DEF] THEN METIS_TAC []) THEN
+    `¬(b ∈ supp dpm y)` by METIS_TAC [] THEN
+    Cases_on `a ∈ supp dpm y` THENL [
+      `b ∈ supp dpm (dpm [(a,b)] y)` by SRW_TAC [][perm_supp] THEN
+      SRW_TAC [][fmap_EXT, fmpm_FDOM, pred_setTheory.EXTENSION] THEN
+      METIS_TAC [],
+      ALL_TAC
+    ] THEN
+    SRW_TAC [][fmap_EXT, fmpm_FDOM] THEN DISJ2_TAC THEN Q.EXISTS_TAC `y` THEN
+    SRW_TAC [][supp_fresh, fmpm_def, FAPPLY_f_o, o_f_FAPPLY, lemma,
+               FDOM_f_o] THEN
+    METIS_TAC [supp_apart]
+  ]);
+
+val FAPPLY_eqv_lswapstr = store_thm(
+  "FAPPLY_eqv_lswapstr",
+  ``is_perm rpm ∧ d ∈ FDOM fm ==> 
+    (rpm pi (fm ' d) = fmpm lswapstr rpm pi fm ' (lswapstr pi d))``,
+  SRW_TAC [][fmpm_def, FAPPLY_f_o, FDOM_f_o, lemma, o_f_FAPPLY]);
+  (* feels as if it should be possible to prove this for the case where d is 
+     not in the domain *)
+
+val fmpm_FEMPTY = store_thm(
+  "fmpm_FEMPTY",
+  ``is_perm dpm ==> (fmpm dpm rpm pi FEMPTY = FEMPTY)``, 
+  SRW_TAC [][fmap_EXT, fmpm_applied, fmpm_FDOM, pred_setTheory.EXTENSION]);
+val _ = export_rewrites ["fmpm_FEMPTY"]
+
+val fmpm_FUPDATE = store_thm(
+  "fmpm_FUPDATE",
+  ``is_perm dpm ∧ is_perm rpm ==> 
+    (fmpm dpm rpm pi (fm |+ (k,v)) = 
+       fmpm dpm rpm pi fm |+ (dpm pi k, rpm pi v))``,
+  SRW_TAC [][fmap_EXT, fmpm_applied, fmpm_FDOM, pred_setTheory.EXTENSION] 
+  THENL [
+    SRW_TAC [][is_perm_eql],
+    SRW_TAC [][is_perm_inverse],
+    Cases_on `k = dpm (REVERSE pi) x` THENL [
+      SRW_TAC [][is_perm_inverse],
+      SRW_TAC [][FAPPLY_FUPDATE_THM, fmpm_applied] THEN
+      METIS_TAC [is_perm_inverse]
+    ]
+  ]);
+val _ = export_rewrites ["fmpm_FUPDATE"]
+        
+      
+     
+
 val fcond_def = Define`
   fcond pm f = is_perm pm /\ FINITE (supp (fnpm perm_of pm) f) /\
                (?a. ~(a IN supp (fnpm perm_of pm) f) /\ ~(a IN supp pm (f a)))
