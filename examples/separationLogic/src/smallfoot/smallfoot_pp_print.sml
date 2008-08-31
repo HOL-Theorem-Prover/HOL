@@ -679,7 +679,9 @@ fun smallfoot_pretty_printer sys gravs d pps t =
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
    
-fun temp_add_smallfoot_pp () = temp_add_user_printer ({Tyop = "", Thy = ""}, smallfoot_pretty_printer);
+fun temp_add_smallfoot_pp () = 
+   (set_trace "pp_avoids_symbol_merges" 0;
+   temp_add_user_printer ({Tyop = "", Thy = ""}, smallfoot_pretty_printer));
 
 
 end

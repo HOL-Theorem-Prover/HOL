@@ -310,15 +310,10 @@ val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfo
 (* 27.5 s *) val file = concat [examplesDir, "split_binary_semaphore.sf"];
 
 
-XXX look for true
-(*  2.3 s *) val file = concat [examplesDir, "missing_features/mm_non_blocking.sf"];
-
-
 
 
 val thm = smallfoot_prove file;
 val thm = smallfoot_verbose_prove file;
-
 
 
 
@@ -346,6 +341,5 @@ SMALLFOOT_MINI_STEP_TAC
 SMALLFOOT_SOLVE_TAC
 ....
 
-rotate 1
 REPEAT STRIP_TAC THEN
 
