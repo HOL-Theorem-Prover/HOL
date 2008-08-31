@@ -1,6 +1,6 @@
 open HolKernel boolLib bossLib Parse
 
-open termTheory sttTheory NEWLib
+open termTheory sttTheory contextlistsTheory NEWLib
 
 val _ = new_theory "sttVariants"
 
@@ -103,8 +103,8 @@ val (hastype2_rules, hastype2_ind, hastype2_cases) = Hol_reln`
   (!Gamma m n A B. Gamma ||- m -: A --> B /\ Gamma ||- n -: A ==>
                    Gamma ||- m @@ n -: B) /\
   (!Gamma m x A B. (!v. ~(v IN ctxtFV Gamma) ==>
-                        (v,A) :: Gamma ||- [VAR v/x]m -: B) /\
-                   ~(x IN ctxtFV Gamma) ==>
+                        (v,A) :: Gamma ||- [VAR v/x]m -: B) ∧
+                   ~(x ∈ ctxtFV Gamma) ==>
                    Gamma ||- LAM x m -: A --> B)
 `;
 
@@ -118,11 +118,6 @@ val hastype2_swap = store_thm(
     SRW_TAC [][tpm_subst_out] THEN
     METIS_TAC [basic_swapTheory.lswapstr_inverse]
   ]);
-
-val IN_ctxtFV_pm = store_thm(
-  "IN_ctxtFV_pm",
-  ``x IN ctxtFV (ctxtswap pi G) = lswapstr (REVERSE pi) x IN ctxtFV G``,
-  Induct_on `G` THEN SRW_TAC [][]);
 
 val hastype2_bvc_ind = store_thm(
   "hastype2_bvc_ind",
@@ -168,15 +163,13 @@ val hastype2_bvc_ind = store_thm(
      by SRW_TAC [][Abbr`MM`, GSYM tpm_APPEND] THEN
   SRW_TAC [][] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
-  FULL_SIMP_TAC (srw_ss()) [IN_ctxtFV_pm,
-                            basic_swapTheory.lswapstr_APPEND]);
+  FULL_SIMP_TAC (srw_ss()) [basic_swapTheory.lswapstr_APPEND]);
 
 val hastype2_bvc_ind0 = save_thm(
   "hastype2_bvc_ind0",
   (Q.GEN `P` o Q.GEN `X` o
    SIMP_RULE bool_ss [] o
-   Q.SPECL [`\G m ty x. P G m ty`, `\x. X`] o
-   INST_TYPE [alpha |-> ``:unit``]) hastype2_bvc_ind)
+   Q.SPECL [`\G m ty x. P G m ty`, `\x. X`]) hastype2_bvc_ind)
 
 val hastype2_valid_ctxt = store_thm(
   "hastype2_valid_ctxt",
