@@ -35,4 +35,4 @@
 (define-key hol-unicode-P-map "h" "Φ")
 (define-key hol-unicode-P-map "s" "Ψ")
 
-₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇ ₈ ₉ ₊ ₋ ₌
+;; ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇ ₈ ₉ ₊ ₋ ₌
