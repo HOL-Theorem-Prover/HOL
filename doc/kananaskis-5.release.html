@@ -3,7 +3,7 @@ html1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="content-type"
-      content="text/html ; charset=US-ASCII" />
+      content="text/html ; charset=UTF-8" />
 <title>Release Notes for Kananaskis-5 version of HOL 4</title>
 </head>
 
@@ -155,6 +155,38 @@ word-sizes:</p>
 However, size theorems are then added to the compset, so subsequent
 evaluations will be quicker.
 </p></li>
+
+<li>
+<p> HOL now supports Unicode symbols as part of its parsing and
+printing.  For the moment, all such symbols are lexed as “symbolic
+characters”, even though one might argue that some should be
+alphabetic (as with Greek letters).  In addition, there are now
+appropriate Unicode symbols, such as ∀ and ∈ built in to the system.
+To enable their printing and parsing, you must set the trace
+variable <code>Unicode</code>.  If this is done, you will see, for
+example</p>
+<pre>
+         - FORALL_DEF;
+         > val it = |- $∀ = (λP. P = (λx. T)) : thm
+</pre>
+<p> If you turn Unicode on, and see gibberish when you print terms and
+theorems, your fonts and system are not Unicode and UTF-8 compatible.
+Emacs versions past 22 can be made to work, as can normal shells on
+MacOS and Linux.  Currently, we don’t know how to create a pleasant
+Unicode experience on Window.</p>
+
+<p>The <code>Unicode</code> trace controls the use of Unicode symbols
+that are set up as explicit alternatives for ASCII equivalents.  To
+set up such an aliasing, use the function</p>
+<pre>
+         Unicode.unicode_version : string * term -> unit
+</pre>
+<p> where the <code>term</code> is a constant.</p>
+<p> You are also free to use the standard grammar manipulation
+functions to define pretty Unicode syntax that has no ASCII equivalent
+if you wish, and this can be done whether or not
+the <code>Unicode</code> trace is set.</p>
+</li>
 
 </ul>
 
@@ -311,9 +343,9 @@ place, even though they are now just copies of theorems proved
 in <code>listTheory</code>.</p>
 
 <p>If the presence of a constant called <code>set</code> causes pain
-because you have used the same string as a variable name and
-don&rsquo;t wish to change it, the constant can be hidden, and the
-interference halted, by using <code>hide</code>:</p>
+because you have used the same string as a variable name and don’t
+wish to change it, the constant can be hidden, and the interference
+halted, by using <code>hide</code>:</p>
 <pre>
          hide "set";
 </pre>

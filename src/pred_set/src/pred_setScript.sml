@@ -183,7 +183,7 @@ val SET_MINIMUM =
 val EMPTY_DEF = new_definition
     ("EMPTY_DEF", (--`EMPTY = (\x:'a.F)`--));
 open Unicode
-val _ = unicode_version (UChar.emptyset, ``pred_set$EMPTY``)
+(* val _ = unicode_version (UChar.emptyset, ``pred_set$EMPTY``) *)
 
 val NOT_IN_EMPTY =
     store_thm
