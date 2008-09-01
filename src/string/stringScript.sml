@@ -460,6 +460,7 @@ val _ = ConstMapML.insert(prim_mk_const{Name="DEST_STRING",Thy="string"});
 val _ = ConstMapML.insert(prim_mk_const{Name="STRING",Thy="string"});
 val _ = ConstMapML.prim_insert(prim_mk_const{Name="EMPTYSTRING",Thy="string"},
                                (false,"","\"\"",Parse.Type`:string`));
+val _ = ConstMapML.insert(prim_mk_const{Name="string_lt",Thy="string"});
 
 fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
   struct_ps = SOME (fn ppstrm =>
@@ -481,13 +482,14 @@ val _ = adjoin_to_theory_struct [
   "",
   "val _ = app (fn n => ConstMapML.insert\
   \ (prim_mk_const{Name=n,Thy=\"string\"}))",
-  "      [\"CHR\",\"ORD\",\"DEST_STRING\",\"STRING\"]",
+  "      [\"CHR\",\"ORD\",\"DEST_STRING\",\"STRING\",\"string_lt\"]",
   "val _ = ConstMapML.prim_insert(prim_mk_const{Name=\"EMPTYSTRING\",",
   "          Thy=\"string\"},(false,\"\",\"\\\"\\\"\",mk_type(\"string\",[])));"
   ];
 
 val _ =
  let open EmitML
+     val _ = app ConstMapML.insert [``$ORD``, ``$CHR``]
  in emitML (!Globals.emitMLDir)
    ("string",
     OPEN ["num", "list", "option"]
@@ -496,6 +498,7 @@ val _ =
     :: MLSIG "type string = String.string"
     :: MLSIG "val CHR : num -> char"
     :: MLSIG "val ORD : char -> num"
+    :: MLSIG "val string_lt : string -> string -> bool"
     :: MLSTRUCT "type char = Char.char;"
     :: MLSTRUCT "type string = String.string;"
     :: MLSTRUCT "fun CHR n = Char.chr(valOf(Int.fromString(numML.toDecString n)));"
@@ -503,8 +506,15 @@ val _ =
     :: MLSTRUCT "fun STRING c s = String.^(Char.toString c,s);"
     :: MLSTRUCT "fun DEST_STRING s = if s = \"\" then NONE \n\
         \          else SOME(String.sub(s,0),String.extract(s,1,NONE));"
+    :: MLSTRUCT "fun string_lt a b = String.compare(a,b) = LESS"
     :: map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
-       [EXPLODE_DEST_STRING, IMPLODE_STRING, STRLEN_THM, STRCAT_EXPLODE, isPREFIX_DEF])
+       [EXPLODE_DEST_STRING, IMPLODE_STRING, STRLEN_THM, STRCAT_EXPLODE,
+        isPREFIX_DEF, isLower_def, isUpper_def, isDigit_def, isAlpha_def,
+        isHexDigit_def, isAlphaNum_def, isPrint_def, isSpace_def,
+        isGraph_def, isPunct_def, isAscii_def, isCntrl_def,
+        toLower_def, toUpper_def,
+        char_lt_def, char_le_def, char_gt_def, char_ge_def,
+        string_le_def, string_gt_def, string_ge_def])
  end;
 
 val _ = export_theory();

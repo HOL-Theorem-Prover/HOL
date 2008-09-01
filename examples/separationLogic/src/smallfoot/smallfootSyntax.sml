@@ -68,6 +68,9 @@ val smallfoot_ap_cond_term = ``smallfoot_ap_cond``;
 val smallfoot_ap_unequal_cond_term = ``smallfoot_ap_unequal_cond``;
 val smallfoot_ap_equal_cond_term = ``smallfoot_ap_equal_cond``;
 val smallfoot_ap_star_term = ``smallfoot_ap_star``;
+val smallfoot_ap_bigstar_term = ``smallfoot_ap_bigstar``;
+val smallfoot_ap_bigstar_list_term = ``smallfoot_ap_bigstar_list``;
+
 
 val smallfoot_prog_assign_term = ``smallfoot_prog_assign``;
 val smallfoot_prog_field_lookup_term = ``smallfoot_prog_field_lookup``;
@@ -83,6 +86,11 @@ val smallfoot_prog_parallel_procedure_call_term = ``smallfoot_prog_parallel_proc
 val smallfoot_prog_parallel_term = ``smallfoot_prog_parallel``;
 val smallfoot_prog_local_var_term = ``$smallfoot_prog_local_var``
 val smallfoot_prog_val_arg_term = ``$smallfoot_prog_val_arg``
+val smallfoot_prog_with_resource_term = ``smallfoot_prog_with_resource``;
+val smallfoot_prog_aquire_resource_internal_term = ``smallfoot_prog_aquire_resource_internal``;
+val smallfoot_prog_release_resource_internal_term = ``smallfoot_prog_release_resource_internal``;
+val smallfoot_prog_aquire_resource_term = ``smallfoot_prog_aquire_resource``;
+val smallfoot_prog_release_resource_term = ``smallfoot_prog_release_resource``;
 
 val smallfoot_prop_input_ap_term = ``smallfoot_prop_input_ap``;
 val smallfoot_prop_input_ap_distinct_term = ``smallfoot_prop_input_ap_distinct``;
@@ -214,13 +222,25 @@ fun dest_SMALLFOOT_COND_HOARE_TRIPLE tt =
   let
      val (f, args) = strip_comb tt;
      val _ = if (same_const f SMALLFOOT_COND_HOARE_TRIPLE_term) andalso
-	        (length args = 4) then () else
+	        (length args = 3) then () else
              raise (mk_HOL_ERR "smallfootLib" "dest_SMALLFOOT_COND_HOARE_TRIPLE" "Wrong Term")
   in
-    (el 1 args, el 2 args, el 3 args, el 4 args)
+    (el 1 args, el 2 args, el 3 args)
   end;
 val is_SMALLFOOT_COND_HOARE_TRIPLE = (can dest_SMALLFOOT_COND_HOARE_TRIPLE);
 
+
+val SMALLFOOT_HOARE_TRIPLE_term = ``SMALLFOOT_HOARE_TRIPLE``;
+fun dest_SMALLFOOT_HOARE_TRIPLE tt =
+  let
+     val (f, args) = strip_comb tt;
+     val _ = if (same_const f SMALLFOOT_HOARE_TRIPLE_term) andalso
+	        (length args = 5) then () else
+             raise (mk_HOL_ERR "smallfootLib" "dest_SMALLFOOT_HOARE_TRIPLE" "Wrong Term")
+  in
+    (el 1 args, el 2 args, el 3 args, el 4 args, el 5 args)
+  end;
+val is_SMALLFOOT_HOARE_TRIPLE = (can dest_SMALLFOOT_HOARE_TRIPLE);
 
 
 
@@ -281,6 +301,18 @@ fun dest_fasl_prog_block tt =
 val is_fasl_prog_block = (can dest_fasl_prog_block);
 fun mk_fasl_prog_block t = mk_icomb (fasl_prog_block_term, t);
 
+
+
+fun dest_smallfoot_prog_block tt =
+  let
+     val (f, arg) = dest_comb tt;
+     val _ = if (same_const f smallfoot_prog_block_term) then () else
+             raise (mk_HOL_ERR "smallfootLib" "dest_smallfoot_prog_block" "No block")
+  in
+    arg
+  end;
+
+val is_smallfoot_prog_block = (can dest_smallfoot_prog_block);
 
 
 fun dest_smallfoot_prog_assign tt =
@@ -378,6 +410,18 @@ fun mk_fasl_prog_cond (c,p1,p2) =
    list_mk_icomb(fasl_prog_cond_term, [c,p1,p2]);
 
 
+fun dest_smallfoot_prog_cond tt =
+  let
+     val (f, args) = strip_comb tt;
+     val _ = if (same_const f smallfoot_prog_cond_term) andalso
+	        (length args = 3) then () else
+             raise (mk_HOL_ERR "smallfootLib" "dest_smallfoot_prog_cond" "Wrong term")
+  in
+    (el 1 args, el 2 args, el 3 args)
+  end
+val is_smallfoot_prog_cond = (can dest_smallfoot_prog_cond);
+
+
 val fasl_prog_while_with_invariant_term = ``fasl_prog_while_with_invariant``;
 fun dest_fasl_prog_while_with_invariant tt =
   let
@@ -391,6 +435,32 @@ fun dest_fasl_prog_while_with_invariant tt =
 val is_fasl_prog_while_with_invariant = (can dest_fasl_prog_while_with_invariant);
 fun mk_fasl_prog_while_with_invariant (i,c,p) = 
    list_mk_icomb(fasl_prog_while_with_invariant_term, [i,c,p]);
+
+
+fun dest_smallfoot_prog_with_resource tt =
+  let
+     val (f, args) = strip_comb tt;
+     val _ = if (same_const f smallfoot_prog_with_resource_term) andalso
+	        (length args = 3) then () else
+             raise (mk_HOL_ERR "smallfootLib" "dest_smallfoot_prog_with_resource" "Wrong term")
+  in
+    (el 1 args, el 2 args, el 3 args)
+  end
+val is_smallfoot_prog_with_resource = (can dest_smallfoot_prog_with_resource)
+
+
+
+fun dest_smallfoot_prog_release_resource tt =
+  let
+     val (f, args) = strip_comb tt;
+     val _ = if (same_const f smallfoot_prog_release_resource_term) andalso
+	        (length args = 2) then () else
+             raise (mk_HOL_ERR "smallfootLib" "dest_smallfoot_prog_release_resource" "Wrong term")
+  in
+    (el 1 args, el 2 args)
+  end
+val is_smallfoot_prog_release_resource = (can dest_smallfoot_prog_release_resource)
+
 
 
 
@@ -496,17 +566,17 @@ fun mk_smallfoot_prog_while_with_invariant (i,c,p) =
 
 
 
-val smallfoot_input_file_term = ``SMALLFOOT_INPUT_FILE``;
-fun dest_SMALLFOOT_INPUT_FILE tt =
+val SMALLFOOT_SPECIFICATION_term = ``SMALLFOOT_SPECIFICATION``;
+fun dest_SMALLFOOT_SPECIFICATION tt =
   let
      val (f, args) = strip_comb tt;
-     val _ = if (same_const f smallfoot_input_file_term) andalso
-	        (length args = 1) then () else
-             raise (mk_HOL_ERR "smallfootLib" "dest_smallfoot_input_file" "Wrong term")
+     val _ = if (same_const f SMALLFOOT_SPECIFICATION_term) andalso
+	        (length args = 2) then () else
+             raise (mk_HOL_ERR "smallfootLib" "dest_SMALLFOOT_SPECIFICATION" "Wrong term")
   in
-    (el 1 args)
+    (el 1 args, el 2 args)
   end
-val is_SMALLFOOT_INPUT_FILE = (can dest_SMALLFOOT_INPUT_FILE);
+val is_SMALLFOOT_SPECIFICATION = (can dest_SMALLFOOT_SPECIFICATION);
 
 
 
@@ -543,10 +613,10 @@ fun dest_SMALLFOOT_SING_PROCEDURE_SPEC tt =
   let
      val (f, args) = strip_comb tt;
      val _ = if (same_const f SMALLFOOT_SING_PROCEDURE_SPEC_term) andalso
-	        (length args = 7) then () else
+	        (length args = 8) then () else
              raise (mk_HOL_ERR "smallfootLib" "dest_SMALLFOOT_SING_PROCEDURE_SPEC" "Wrong term")
   in
-    (el 1 args, el 2 args, el 3 args, el 4 args, el 5 args, el 6 args, el 7 args)
+    (el 1 args, el 2 args, el 3 args, el 4 args, el 5 args, el 6 args, el 7 args, el 8 args)
   end
 val is_SMALLFOOT_SING_PROCEDURE_SPEC = (can dest_SMALLFOOT_SING_PROCEDURE_SPEC);
 
@@ -1003,7 +1073,7 @@ fun dest_smallfoot_ap_unequal_cond t =
     (el 1 args,el 2 args,el 3 args)
   end
 val is_smallfoot_ap_unequal_cond = can dest_smallfoot_ap_unequal_cond;
-
+fun mk_smallfoot_ap_unequal_cond (l,r,P) = list_mk_icomb (smallfoot_ap_unequal_cond_term, [l,r,P])
 
 
 fun dest_smallfoot_ap_equal_cond t =
@@ -1016,6 +1086,7 @@ fun dest_smallfoot_ap_equal_cond t =
     (el 1 args,el 2 args,el 3 args)
   end
 val is_smallfoot_ap_equal_cond = can dest_smallfoot_ap_equal_cond;
+fun mk_smallfoot_ap_equal_cond (l,r,P) = list_mk_icomb (smallfoot_ap_equal_cond_term, [l,r,P])
 
 
 val SMALLFOOT_IS_STRONG_STACK_PROPOSITION_term = ``SMALLFOOT_IS_STRONG_STACK_PROPOSITION``;
@@ -1031,11 +1102,15 @@ fun dest_SMALLFOOT_IS_STRONG_STACK_PROPOSITION t =
 val is_SMALLFOOT_IS_STRONG_STACK_PROPOSITION = can dest_SMALLFOOT_IS_STRONG_STACK_PROPOSITION;
 
 
+val SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE_term =
+ ``SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE``;
 
 
 
 
 val smallfoot_xenv_term = ``smallfoot_xenv``;
+val smallfoot_env_term = ``smallfoot_env``;
+
 
 val FEVERY_term = ``FEVERY``;
 fun dest_FEVERY t =

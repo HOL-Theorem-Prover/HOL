@@ -634,10 +634,11 @@ val WORD_SUB_ss = simpLib.merge_ss [rewrites [word_sub_def],
     {conv = K (K (WORD_NEG_CONV)), trace = 3,
      name = "WORD_NEG_CONV", key = SOME([], ``words$word_sub ^w ^y``)}];
 
-val WORD_w2n_ss =
+val WORD_w2n_ss = simpLib.merge_ss [
+  rewrites [word_0_n2w],
   simpLib.conv_ss
     {conv = K (K (WORD_w2n_CONV)), trace = 3,
-     name = "WORD_w2n_CONV", key = SOME([], ``words$w2n (^n2w ^a)``)};
+     name = "WORD_w2n_CONV", key = SOME([], ``words$w2n (^n2w ^a)``)}];
 
 val WORD_UINT_MAX_ss = simpLib.merge_ss [
   simpLib.conv_ss

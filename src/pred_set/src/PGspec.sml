@@ -18,12 +18,18 @@ open HolKernel Parse boolLib pairSyntax PairedLambda
 
 val PAIR = pairTheory.PAIR;
 
+val ERR = mk_HOL_ERR "PGspec";
+
+val dest_in = 
+  dest_binop (prim_mk_const{Name = "IN", Thy="bool"})
+             (ERR "dest_in" "not an IN term");
+
 (* --------------------------------------------------------------------- *)
 (* Local function: MK_PAIR						 *)
 (*									 *)
 (* A call to:								 *)
 (* 									 *)
-(*     MK_PAIR (--`[x1,x2,...,xn]`--) (--`v:(ty1 # ty2 # ... # tyn)`--)	 *)
+(*     MK_PAIR (``[x1,x2,...,xn]``) (``v:(ty1 # ty2 # ... # tyn)``)	 *)
 (*									 *)
 (* returns:								 *)
 (*									 *)
@@ -34,7 +40,9 @@ fun MK_PAIR vs v =
    if null (tl vs)
    then REFL v else
    let val vty = type_of v
-       val [ty1,ty2] = snd(dest_type vty)
+       val alist = snd(dest_type vty)
+       val (ty1,ty2) = (case alist of [a,b] => (a,b) 
+                        | otherwise => raise ERR "MK_PAIR" "")
        val inst = SYM(SPEC v (INST_TYPE [alpha |-> ty1, beta |-> ty2] PAIR))
        val (fst,snd) = dest_pair(rhs(concl inst))
        val gv = genvar ty2
@@ -45,7 +53,7 @@ fun MK_PAIR vs v =
 (* Local function: EXISTS_TUPLE_CONV					*)
 (*									*)
 (* A call to:								*)
-(* 									*)
+(*                                                                      *)
 (*  EXISTS_TUPLE_CONV [`x1`,...,`xn`] `?v. tm' = (\(x1,...,xn). tm) v   *)
 (*									*)
 (* returns:								*)
@@ -78,20 +86,20 @@ end;
 (* --------------------------------------------------------------------- *)
 (* Local function: PAIR_EQ_CONV.					 *)
 (*									 *)
-(* A call to PAIR_EQ_CONV (--`?x1...xn. a,b = c,T`--) returns:		 *)
+(* A call to PAIR_EQ_CONV (``?x1...xn. a,b = c,T``) returns:		 *)
 (*									 *)
 (*    |- (?x1...xn. a,T = b,c) = (?x1...xn. (a = b) /\ c)		 *)
 (* --------------------------------------------------------------------- *)
 
 local
-  val EQT = el 1 (CONJUNCTS (SPEC (--`c:bool`--) EQ_CLAUSES))
+  val EQT = el 1 (CONJUNCTS (SPEC (``c:bool``) EQ_CLAUSES))
   val PEQ = 
      let val inst = INST_TYPE [beta |-> bool]
-                      (GENL[--`x:'a`--, --`y:'b`--,
-                            --`a:'a`--, --`b:'b`--] pairTheory.PAIR_EQ)
-         val spec = SPECL [(--`a:'a`--),(--`T`--),
-                           (--`b:'a`--),(--`c:bool`--)] inst
-     in GENL [(--`a:'a`--),(--`b:'a`--),(--`c:bool`--)] (SUBS [EQT] spec)
+                      (GENL[``x:'a``, ``y:'b``,
+                            ``a:'a``, ``b:'b``] pairTheory.PAIR_EQ)
+         val spec = SPECL [(``a:'a``),boolSyntax.T,
+                           (``b:'a``),(``c:bool``)] inst
+     in GENL [(``a:'a``),(``b:'a``),(``c:bool``)] (SUBS [EQT] spec)
      end
 in
 fun PAIR_EQ_CONV tm =
@@ -107,7 +115,7 @@ end;
 (* ---------------------------------------------------------------------*)
 (* Local function: ELIM_EXISTS_CONV.					*)
 (*									*)
-(* ELIM_EXISTS_CONV (--`?x. (x = tm) /\ P[x]`--) returns:		*)
+(* ELIM_EXISTS_CONV (``?x. (x = tm) /\ P[x]``) returns:                 *)
 (*									*)
 (*   |- (?x. x = tm /\ P[x]) = P[tm/x]					*)
 (* ---------------------------------------------------------------------*)
@@ -209,11 +217,11 @@ fun SET_SPEC_CONV th =
                  in GENL (rev vs) (SPECL vs th)
                 end
  in fn tm =>
-  let val (_,[v,set]) = (checkIN ## I) (strip_comb tm)
+  let val (v,set) = dest_in tm
       val (Rator,f) = dest_comb set
       val _ = checkGSPEC Rator
       val vty = type_of v
-      val [uty,_] = snd(dest_type(type_of f))
+      val uty = fst(dom_rng(type_of f))
       val inst = SPEC v (INST_TYPE [alpha |-> vty, beta |-> uty] GSPEC)
       val (vs,res) = mktup f
   in

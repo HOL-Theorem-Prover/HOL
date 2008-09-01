@@ -3603,7 +3603,7 @@ in
      :: map (DEFN o REWRITE_RULE [GSYM n2w_itself_def, GSYM w2w_itself_def,
            GSYM sw2sw_itself_def, GSYM word_concat_itself_def,
            GSYM word_extract_itself_def, word_T_def, word_L_def, word_H_def,
-           TIMES_2EXP1] o ALPHA_BETA_RULE)
+           TIMES_2EXP1, FUN_EQ_THM] o ALPHA_BETA_RULE)
           [dimword_def, INT_MIN_def, UINT_MAX_def, INT_MAX_def,
            w2n_n2w, word_eq_n2w, w2w_n2w, word_or_n2w, word_lsl_n2w,
            word_bits_n2w, SPEC `c` word_bit_n2w, word_join_n2w, sw2sw_n2w,

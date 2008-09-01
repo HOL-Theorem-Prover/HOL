@@ -135,7 +135,7 @@ fun mk_set [] = raise ERR "mk_set" "empty set"
 
 val strip_set =
  let fun strip tm = 
-      let val (_,[h,t]) = (assert (same_const insert_tm) ## I) (strip_comb tm)
+      let val (h,t) = dest_insert tm
       in h::strip t
       end 
       handle HOL_ERR _ 

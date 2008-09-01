@@ -38,17 +38,15 @@ fun check_const cnst = assert (same_const cnst);
 local val finI =
         let val th =
              snd(EQ_IMP_RULE
-                  (SPECL[(--`x:'a`--),(--`s:'a->bool`--)]
-                        pred_setTheory.FINITE_INSERT))
-        in GEN (--`s:'a->bool`--) (DISCH_ALL (GEN (--`x:'a`--) (UNDISCH th)))
+                  (SPECL[``x:'a``,``s:'a->bool``] FINITE_INSERT))
+        in GEN ``s:'a->bool`` (DISCH_ALL (GEN ``x:'a`` (UNDISCH th)))
         end
       fun itfn ith x th = SPEC x (MP (SPEC (rand(concl th)) ith) th)
 in
 fun FINITE_CONV tm =
-   let val (Rator,Rand) = dest_comb tm
-       val _ = check_const finite_tm Rator
-       val els = strip_set Rand
-       val (ty,_) = dom_rng(type_of Rand)
+   let val s = dest_finite tm
+       val els = strip_set s
+       val (ty,_) = dom_rng(type_of s)
        val theta = [alpha |-> ty]
        val eth = INST_TYPE theta pred_setTheory.FINITE_EMPTY
        val ith = INST_TYPE theta finI
@@ -86,15 +84,15 @@ end;
 (* =====================================================================*)
 
 local val inI = pred_setTheory.IN_INSERT
-      val inE = GEN (--`x:'a`--)
-                 (EQF_INTRO (SPEC (--`x:'a`--) pred_setTheory.NOT_IN_EMPTY))
+      val inE = GEN ``x:'a``
+                 (EQF_INTRO (SPEC ``x:'a`` pred_setTheory.NOT_IN_EMPTY))
       val inUNIV = pred_setTheory.IN_UNIV
       val gv = genvar bool
       val DISJ = AP_TERM boolSyntax.disjunction
       val F_OR = el 3 (CONJUNCTS (SPEC gv OR_CLAUSES))
       val OR_T = el 2 (CONJUNCTS (SPEC gv OR_CLAUSES))
       fun in_conv conv (eth,ith) x S =
-        let val (_,[y,S']) = (check_const insert_tm ## I) (strip_comb S)
+        let val (y,S') = dest_insert S
             val thm = SPEC S' (SPEC y ith)
             val rectm = rand(rand(concl thm))
         in if aconv x y
@@ -128,7 +126,7 @@ local val inI = pred_setTheory.IN_INSERT
         handle HOL_ERR _ => let val _ = check_const empty_tm S in eth end
 in
 fun IN_CONV conv tm =
- let val (_,[x,S]) = (check_const in_tm ## I) (strip_comb tm)
+ let val (x,S) = dest_in tm
  in if same_const pred_setSyntax.univ_tm S
     then EQT_INTRO (ISPEC x inUNIV)
     else 
@@ -157,11 +155,10 @@ end;
 (* =====================================================================*)
 
 local val bv = genvar bool
-      val Dins = GENL [(--`y:'a`--),(--`x:'a`--)]
-                   (SPECL [(--`x:'a`--),(--`y:'a`--)]
-                          pred_setTheory.DELETE_INSERT)
+      val Dins = GENL [``y:'a``,``x:'a``]
+                   (SPECL [``x:'a``,``y:'a``] DELETE_INSERT)
       fun del_conv conv (eth,ith) x S =
-        let val (_,[y,S']) = (check_const insert_tm ## I) (strip_comb S)
+        let val (y,S') = dest_insert S
             val thm = SPEC S' (SPEC y ith)
             val eql = if aconv x y
                       then EQT_INTRO (ALPHA y x) else conv (mk_eq(y,x))
@@ -175,7 +172,7 @@ local val bv = genvar bool
         => let val _ = check_const empty_tm S in eth end
 in
 fun DELETE_CONV conv tm =
-  let val (_,[S,x]) = (check_const delete_tm ## I) (strip_comb tm)
+  let val (S,x) = dest_delete tm
       val ith = ISPEC x Dins
       and eth = ISPEC x pred_setTheory.EMPTY_DELETE
   in del_conv conv (eth,ith) x S
@@ -202,7 +199,9 @@ end;
 local val Eu = CONJUNCT1 pred_setTheory.UNION_EMPTY
       val bv = genvar bool
       fun itfn conv (ith,iith) x th =
-        let val (_,[S,T]) = strip_comb(lhs(concl th))
+        let val (_,alist) = strip_comb(lhs(concl th))
+            val (S,T) = (case alist of [a,b] => (a,b) 
+                         | otherwise => raise Match)
         in let val eql = IN_CONV conv (mk_in (x,T))
                val thm = SPEC T (SPEC S (SPEC x ith))
                val (lhs,rhs) = dest_eq(concl thm)
@@ -223,7 +222,7 @@ local val Eu = CONJUNCT1 pred_setTheory.UNION_EMPTY
         end
 in
 fun UNION_CONV conv tm =
- let val (_,[S1,S2]) = (check_const union_tm ## I) (strip_comb tm)
+ let val (S1,S2) = dest_union tm
      val els = strip_set S1
      val (ty,_) = dom_rng(type_of S1)
      val ith = INST_TYPE [alpha |-> ty] pred_setTheory.INSERT_UNION
@@ -260,12 +259,12 @@ end;
 local val absth =
         let val th = pred_setTheory.ABSORPTION
             val th1 = fst(EQ_IMP_RULE
-                       (SPECL[(--`x:'a`--),(--`s:'a->bool`--)] th))
-        in GENL [(--`x:'a`--),(--`s:'a->bool`--)] th1
+                           (SPECL[``x:'a``,``s:'a->bool``] th))
+        in GENL [``x:'a``,``s:'a->bool``] th1
         end
 in
 fun INSERT_CONV conv tm =
-  let val (_,[x,s]) = (check_const insert_tm ##I) (strip_comb tm)
+  let val (x,s) = dest_insert tm
       val thm = IN_CONV conv (mk_in (x,s))
   in if rand(concl thm) = boolSyntax.T
        then MP (SPEC s (ISPEC x absth)) (EQT_ELIM thm)
@@ -295,7 +294,7 @@ end;
 local val Ith = pred_setTheory.IMAGE_INSERT
       and Eth = pred_setTheory.IMAGE_EMPTY
       fun iconv IN cnv1 cnv2 ith eth s =
-         let val (_,[x,t]) = (check_const insert_tm ## I) (strip_comb s)
+         let val (x,t) = dest_insert s
              val thm1 = SPEC t (SPEC x ith)
              val el = rand(rator(rand(concl thm1)))
              val cth = MK_COMB(AP_TERM IN (cnv1 el),
@@ -307,7 +306,7 @@ local val Ith = pred_setTheory.IMAGE_INSERT
                 else raise ERR "IMAGE_CONV.iconv" ""
 in
 fun IMAGE_CONV conv1 conv2 tm =
-  let val (_,[f,s]) = (check_const image_tm ## I) (strip_comb tm)
+  let val (f,s) = dest_image tm
       val (_,ty) = dom_rng(type_of f)
   in
      iconv (inst [alpha |-> ty] insert_tm)

@@ -169,7 +169,7 @@ fun smallfoot_a_space_pred2term (Aspred_list (tag,aexp1)) =
             (comb_term, var_set)
         end
 |     smallfoot_a_space_pred2term (Aspred_empty) =
-	(smallfoot_ap_emp_term, empty_tmset)
+	(smallfoot_ap_stack_true_term, empty_tmset)
 |     smallfoot_a_space_pred2term (Aspred_pointsto (aexp1, pl)) =
         let
 	    val (term1, var_set1) = smallfoot_a_expression2term aexp1;
@@ -373,7 +373,7 @@ fun mk_smallfoot_prop_input wp rp d_opt Pterm =
 
 
 (*returns the term, the set of read variables and a set of written variables*)
-fun smallfoot_p_statement2term (Pstm_assign (v, expr)) =
+fun smallfoot_p_statement2term resL (Pstm_assign (v, expr)) =
     let
         val var_term = string2smallfoot_var v;
         val (exp_term, read_var_set) = smallfoot_p_expression2term expr;
@@ -382,7 +382,7 @@ fun smallfoot_p_statement2term (Pstm_assign (v, expr)) =
     in
         (comb_term, read_var_set, write_var_set)
     end
-| smallfoot_p_statement2term (Pstm_fldlookup (v, expr, tag)) =
+| smallfoot_p_statement2term resL (Pstm_fldlookup (v, expr, tag)) =
     let
         val var_term = string2smallfoot_var v;
         val (exp_term, read_var_set) = smallfoot_p_expression2term expr;
@@ -391,7 +391,7 @@ fun smallfoot_p_statement2term (Pstm_assign (v, expr)) =
     in
         (comb_term, read_var_set, write_var_set)
     end
-| smallfoot_p_statement2term (Pstm_fldassign (expr1, tag, expr2)) =
+| smallfoot_p_statement2term resL (Pstm_fldassign (expr1, tag, expr2)) =
     let
         val (exp_term1, read_var_set1) = smallfoot_p_expression2term expr1;
         val (exp_term2, read_var_set2) = smallfoot_p_expression2term expr2;
@@ -401,7 +401,7 @@ fun smallfoot_p_statement2term (Pstm_assign (v, expr)) =
     in
         (comb_term, read_var_set, write_var_set)
     end
-| smallfoot_p_statement2term (Pstm_new v) =
+| smallfoot_p_statement2term resL (Pstm_new v) =
     let
         val var_term = string2smallfoot_var v;
         val comb_term = mk_comb (smallfoot_prog_new_term, var_term);
@@ -410,7 +410,7 @@ fun smallfoot_p_statement2term (Pstm_assign (v, expr)) =
     in
         (comb_term, read_var_set, write_var_set)
     end  
-| smallfoot_p_statement2term (Pstm_dispose expr) =
+| smallfoot_p_statement2term resL (Pstm_dispose expr) =
     let
         val (exp_term, read_var_set) = smallfoot_p_expression2term expr;
         val comb_term = mk_comb (smallfoot_prog_dispose_term, exp_term);
@@ -418,9 +418,9 @@ fun smallfoot_p_statement2term (Pstm_assign (v, expr)) =
     in
         (comb_term, read_var_set, write_var_set)
     end  
-| smallfoot_p_statement2term (Pstm_block stmL) =
+| smallfoot_p_statement2term resL (Pstm_block stmL) =
 	let
-		val (termL, read_var_setL, write_var_setL) = unzip3 (map smallfoot_p_statement2term stmL);		
+		val (termL, read_var_setL, write_var_setL) = unzip3 (map (smallfoot_p_statement2term resL) stmL);		
 		val list_term = listLib.mk_list (termL, Type `:smallfoot_prog`);
 		val comb_term = mk_comb (smallfoot_prog_block_term, list_term);
                 val read_var_set = foldr HOLset.union empty_tmset read_var_setL;
@@ -428,11 +428,11 @@ fun smallfoot_p_statement2term (Pstm_assign (v, expr)) =
 	in
            (comb_term, read_var_set, write_var_set)
         end
-| smallfoot_p_statement2term (Pstm_if (cond, stm1, stm2)) =
+| smallfoot_p_statement2term resL (Pstm_if (cond, stm1, stm2)) =
 	let
 		val (c_term, c_read_var_set) = smallfoot_p_expression2term cond;
-		val (stm1_term,read_var_set1,write_var_set1) = smallfoot_p_statement2term stm1;
-		val (stm2_term,read_var_set2,write_var_set2) = smallfoot_p_statement2term stm2;
+		val (stm1_term,read_var_set1,write_var_set1) = smallfoot_p_statement2term resL stm1;
+		val (stm2_term,read_var_set2,write_var_set2) = smallfoot_p_statement2term resL stm2;
 		val comb_term = list_mk_comb (smallfoot_prog_cond_term, [c_term, stm1_term, stm2_term]);
                 val read_var_set = HOLset.union (c_read_var_set, HOLset.union (read_var_set1, read_var_set2));
 		val write_var_set = HOLset.union (write_var_set1, write_var_set2);
@@ -440,7 +440,7 @@ fun smallfoot_p_statement2term (Pstm_assign (v, expr)) =
            (comb_term, read_var_set, write_var_set)
         end
 
-| smallfoot_p_statement2term (Pstm_while (i, cond, stm1)) =
+| smallfoot_p_statement2term resL (Pstm_while (i, cond, stm1)) =
 	let
 		val (i_opt,i_read_var_set) = 
 		       if isSome i then
@@ -451,7 +451,7 @@ fun smallfoot_p_statement2term (Pstm_assign (v, expr)) =
                           end
 		       else (NONE, empty_tmset);
 
-		val (stm1_term, stm_read_var_set, stm_write_var_set) = smallfoot_p_statement2term stm1;
+		val (stm1_term, stm_read_var_set, stm_write_var_set) = smallfoot_p_statement2term resL stm1;
 		val (c_term, c_read_var_set) = smallfoot_p_expression2term cond;
                 val read_var_set = HOLset.union (c_read_var_set, HOLset.union (i_read_var_set, stm_read_var_set));
 		val write_var_set = stm_write_var_set;
@@ -468,11 +468,27 @@ fun smallfoot_p_statement2term (Pstm_assign (v, expr)) =
 	in
            (comb_term, read_var_set, write_var_set)
         end
-| smallfoot_p_statement2term (Pstm_withres _) =
-       Raise (smallfoot_unsupported_feature_exn ("Pstm_withres"))
-| smallfoot_p_statement2term (Pstm_fcall(name,args)) =
+| smallfoot_p_statement2term resL (Pstm_withres (res, cond, stm1)) =
+	let
+		val (c_term, c_read_var_set) = smallfoot_p_expression2term cond;
+		val (stm1_term,read_var_set1,write_var_set1) = smallfoot_p_statement2term resL stm1;
+                val res_term = stringLib.fromMLstring res;
+                val res_decl_opt = List.find (fn (a, _) => (a = res)) resL
+                val _ = if isSome (res_decl_opt) then () else raise 
+                    Raise (smallfoot_unsupported_feature_exn (
+                        "Undefined resource '"^res^"'!"));
+                val (_, (_,res_var_set))  = valOf res_decl_opt
+
+
+		val comb_term = list_mk_comb (smallfoot_prog_with_resource_term, [res_term, c_term, stm1_term]);
+                val read_var_set = HOLset.difference (HOLset.union (c_read_var_set, read_var_set1), res_var_set);
+		val write_var_set = HOLset.difference (write_var_set1, res_var_set);
+	in
+           (comb_term, read_var_set, write_var_set)
+        end
+| smallfoot_p_statement2term resL (Pstm_fcall(name,args)) =
        smallfoot_fcall2term (name, args)
-| smallfoot_p_statement2term (Pstm_parallel_fcall(name1,args1,name2,args2)) =
+| smallfoot_p_statement2term resL (Pstm_parallel_fcall(name1,args1,name2,args2)) =
        smallfoot_parallel_fcall2term (name1, args1, name2, args2);
 
 
@@ -524,6 +540,33 @@ fun list_variant l [] = [] |
 
 
 
+(*
+   fun dest_Presource (Presource(resname, varL, invariant)) =
+        (resname, varL, invariant);
+
+
+   val (resname, varL, invariant) = dest_Presource ((el 2 (program_item_decl)));
+
+*)
+
+
+fun Presource2hol (Presource(resname, varL, invariant)) =
+let
+   val write_varL = map string2smallfoot_var varL;
+   val write_var_set = HOLset.addList (empty_tmset, write_varL);
+   val (i_term, i_read_var_set) = smallfoot_a_proposition2term invariant;
+   val _ = if HOLset.isSubset (i_read_var_set, write_var_set) then () else
+              Raise (smallfoot_unsupported_feature_exn (
+                "All variables used in an resource invariant must be bound to the resource!"));
+in
+   (resname, (i_term, write_var_set))
+end |
+ Presource2hol _ = Raise (smallfoot_unsupported_feature_exn ("-"));
+
+
+
+
+
 
 (*
    fun dest_Pfundecl (Pfundecl(funname, (ref_args, val_args), preCondOpt, localV, 
@@ -532,18 +575,16 @@ fun list_variant l [] = [] |
 
 
    val (funname, (ref_args, val_args), preCondOpt, localV, 
-	fun_body, postCondOpt) = dest_Pfundecl ((el 1 (program_item_decl)));
+	fun_body, postCondOpt) = dest_Pfundecl ((el 3 (program_item_decl)));
 
+   val resL = resource_parseL
 *)
 
 
-
-
-
-fun Pfundecl2hol (Pfundecl(funname, (ref_args, val_args), preCondOpt, localV, 
+fun Pfundecl2hol resL (Pfundecl(funname, (ref_args, val_args), preCondOpt, localV, 
 	fun_body, postCondOpt)) = 
 let
-	val (fun_body_term, read_var_set_body, write_var_set_body) = smallfoot_p_statement2term (Pstm_block fun_body)
+	val (fun_body_term, read_var_set_body, write_var_set_body) = smallfoot_p_statement2term resL (Pstm_block fun_body)
 	val fun_body_local_var_term = foldr smallfoot_mk_local_var fun_body_term localV;
 
 	val used_vars = ref (free_vars fun_body_local_var_term);
@@ -564,9 +605,27 @@ let
 	val fun_body_final_term = subst arg_ref_subst fun_body_val_args_term;
 	val fun_term = pairLib.mk_pabs (pairLib.mk_pair(arg_ref_term, arg_val_term), fun_body_final_term);
 
-	val (preCond, read_var_set_preCond) = if isSome preCondOpt then smallfoot_a_proposition2term (valOf preCondOpt) else (smallfoot_ap_emp_term,empty_tmset);
-	val (postCond, read_var_set_postCond) = if isSome postCondOpt then smallfoot_a_proposition2term (valOf postCondOpt) else (smallfoot_ap_emp_term, empty_tmset);
-
+        val (preCond, read_var_set_preCond, postCond, read_var_set_postCond) = 
+            if not (funname = "init") then
+               let
+         	  val (preCond, read_var_set_preCond) = if isSome preCondOpt then smallfoot_a_proposition2term (valOf preCondOpt) else (smallfoot_ap_stack_true_term,empty_tmset);
+        	  val (postCond, read_var_set_postCond) = if isSome postCondOpt then smallfoot_a_proposition2term (valOf postCondOpt) else (smallfoot_ap_stack_true_term, empty_tmset);
+               in
+                  (preCond, read_var_set_preCond, postCond, read_var_set_postCond)
+               end
+            else
+               let
+                  val _ = if isSome preCondOpt orelse isSome postCondOpt orelse
+			     not (ref_args = []) orelse
+			     not (val_args = []) then
+                             raise smallfoot_unsupported_feature_exn ("init function must not have parameters or pre- / postconditions") else ();                   
+         	  val (preCond, read_var_set_preCond) = (smallfoot_ap_stack_true_term,empty_tmset);
+                  val postCondL = listLib.mk_list (map (fn (a,(b,c)) => b) resL, Type `:smallfoot_a_proposition`);
+                  val postCond = mk_comb (smallfoot_ap_bigstar_list_term, postCondL);
+		  val read_var_set_postCond = foldr HOLset.union empty_tmset (map (fn (a,(b,c)) => c) resL)
+               in
+                  (preCond, read_var_set_preCond, postCond, read_var_set_postCond)                  
+               end;
 	val arg_val_varL = map (fn s => mk_comb (smallfoot_ae_var_term, string2smallfoot_var s)) val_args;
 	val arg_val_expL = map (fn c => mk_comb (smallfoot_ae_const_term, c)) arg_valL;
 	val arg_val_subst = map (fn (vt, s) => (vt |-> s)) (zip arg_val_varL arg_val_expL);
@@ -626,10 +685,14 @@ let
 in
 	(funname, fun_term, wrapped_preCond, postCond6)
 end |
- Pfundecl2hol _ = Raise (smallfoot_unsupported_feature_exn ("resource description"));
+ Pfundecl2hol _ _ = Raise (smallfoot_unsupported_feature_exn ("-"));
 
 fun p_item___is_fun_decl (Pfundecl _) = true |
      p_item___is_fun_decl _ = false;
+
+
+fun p_item___is_resource (Presource _) = true |
+     p_item___is_resource _ = false;
 
 (*
 val prog2 = parse file
@@ -641,12 +704,27 @@ val (ident_decl, program_item_decl) = dest_Pprogram prog2;
 
 
 
+
 fun Pprogram2term (Pprogram (ident_decl, program_item_decl)) =
 	let
 		(*ignore ident_decl*)
 
+		val resource_list = filter p_item___is_resource program_item_decl;
+		val resource_parseL = map Presource2hol resource_list;
+                val resource_parse_termL =
+                    map (fn (name, (prop, vars)) =>
+                            let
+				val name_term = stringLib.fromMLstring name;
+				val varL = listLib.mk_list (HOLset.listItems vars, Type `:smallfoot_var`);
+                            in
+                               pairLib.mk_pair(name_term, pairLib.mk_pair(varL, prop))
+                            end) resource_parseL
+                val resource_parseL_term = listLib.mk_list (resource_parse_termL,
+							    Type `:string # smallfoot_var list # smallfoot_a_proposition`);
+
+
 		val fun_decl_list = filter p_item___is_fun_decl program_item_decl;
-		val fun_decl_parseL = map Pfundecl2hol fun_decl_list
+		val fun_decl_parseL = map (Pfundecl2hol resource_parseL) fun_decl_list
 
 		fun mk_pair_terms (s, fun_body, pre, post) =
 			pairLib.list_mk_pair [stringLib.fromMLstring s, fun_body, pre, post];
@@ -654,12 +732,13 @@ fun Pprogram2term (Pprogram (ident_decl, program_item_decl)) =
 		val input = listLib.mk_list (fun_decl_parse_pairL, type_of (hd fun_decl_parse_pairL));
 
 	in
-		mk_icomb (smallfoot_input_file_term, input)
+		list_mk_icomb (SMALLFOOT_SPECIFICATION_term, [resource_parseL_term, input])
 	end;
 
 
 
 
 val parse_smallfoot_file = Pprogram2term o parse;
+
 
 end

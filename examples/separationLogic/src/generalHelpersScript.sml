@@ -1340,6 +1340,15 @@ SIMP_TAC std_ss []);
 
 
 
+val COND_EQ_REWRITE = store_thm ("COND_EQ_REWRITE",
+``
+   ((if C then X else Y) = (if C then X' else Y')) =
+   ((C ==> (X = X')) /\ (~C ==> (Y = Y')))``,
+
+Cases_on `C` THEN 
+SIMP_TAC std_ss []);
+
+
 val PAIR_EQ_REWRITES = store_thm ("PAIR_EQ_REWRITES",
 
 ``(((y1, y2) = x) = (y1 = FST x) /\ (y2 = SND x))``,
@@ -1805,7 +1814,10 @@ REPEAT STRIP_TAC THEN
 `b1 e <= 1` by PROVE_TAC[] THEN
 DECIDE_TAC);
 
-
+val IN_THE_COND_REWRITE = store_thm ("IN_THE_COND_REWRITE",
+``x IN THE (if c then X else Y) =
+	       (c ==> x IN THE X) /\ (~c ==> x IN THE Y)``,
+Cases_on `c` THEN SIMP_TAC std_ss []);
 
 
 val _ = export_theory();

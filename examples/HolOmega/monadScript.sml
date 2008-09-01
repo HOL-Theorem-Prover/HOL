@@ -356,6 +356,7 @@ val monadc2_def = new_definition("monadc2_def", Term
      `) handle e => Raise e;
 
 
+val _ = set_trace "Unicode" 1;
 val _ = html_theory "monad";
 
 val _ = export_theory();

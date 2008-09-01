@@ -461,6 +461,12 @@ val TIMES_2EXP1 =
   (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
    Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
 
+val MOD_2EXP_EQ_compute = prove(
+  `!n a b. MOD_2EXP_EQ n a b =
+             if n = 0 then T else
+               (ODD a = ODD b) /\ MOD_2EXP_EQ (n - 1) (DIV2 a) (DIV2 b)`,
+  Cases \\ SRW_TAC [] [MOD_2EXP_EQ]);
+
 (* ------------------------------------------------------------------------- *)
 
 val l2n_pow2_compute = store_thm("l2n_pow2_compute",
@@ -543,7 +549,7 @@ val _ =
         num_to_hex_string_def,
         BIT_MODF_compute, BIT_MODIFY_EVAL,
         BIT_REV_compute, BIT_REVERSE_EVAL,
-        LOG2_compute, DIVMOD_2EXP, SBIT_def, BITS_def,
+        LOG2_compute, DIVMOD_2EXP, SBIT_def, BITS_def, MOD_2EXP_EQ_compute,
         BITV_def, BIT_def, SLICE_def, LSB_def, SIGN_EXTEND_def])
  end;
 
