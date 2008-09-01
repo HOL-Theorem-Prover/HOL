@@ -81,6 +81,7 @@ src/n-bit
 src/llist
 src/ring/src
 src/integer
+src/patricia
 
 src/hol88
 !src/quotient/examples/lambda
