@@ -98,7 +98,7 @@ src/rational
 src/path
 !examples/lambda/barendregt
 !!examples/lambda/other-models
-!!examples/lambda
+!!examples/lambda/typing
 src/Boolify/src
 src/float
 !!examples/miller
