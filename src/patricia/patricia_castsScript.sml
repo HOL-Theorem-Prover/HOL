@@ -330,7 +330,9 @@ val IMAGE_string_to_num = store_thm("IMAGE_string_to_num",
   SRW_TAC [] [IN_IMAGE] \\ EQ_TAC \\ SRW_TAC [] []
     << [EXISTS_TAC `""` \\ EVAL_TAC,
         METIS_TAC [string_to_num_num_to_string],
-        Cases_on `x` \\ SRW_TAC [] [string_to_num_def, s2n_STRING_STRING1]
+        `(x = "") \/ ?c s. x = STRING c s`
+            by METIS_TAC [TypeBase.nchotomy_of ``:string``]
+          \\ SRW_TAC [] [string_to_num_def, s2n_STRING_STRING1]
           >> EVAL_TAC \\ DISJ2_TAC
           \\ `LENGTH (MAP ORD (REVERSE (EXPLODE s)) ++ [ORD c]) =
               LENGTH (REVERSE (EXPLODE s)) + 1`
