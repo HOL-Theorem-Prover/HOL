@@ -1,0 +1,77 @@
+structure UnicodeChars :> UnicodeChars =
+struct
+
+(* Greek letters *)
+val alpha = "\u00ce\u00b1"
+val beta = "\u00ce\u00b2"
+val gamma = "\u00ce\u00b3"
+val delta = "\u00ce\u00b4"
+val zeta = "\u00ce\u00b6"
+val eta = "\u00ce\u00b7"
+val theta = "\u00ce\u00b8"
+val lambda = "\u00ce\u00bb"
+val mu = "\u00ce\u00bc"
+val nu = "\u00ce\u00bd"
+val xi = "\u00ce\u00be"
+val sigma = "\u00cf\u0083"
+val tau = "\u00cf\u0084"
+val phi = "\u00cf\u0086"
+val psi = "\u00cf\u0088"
+val omega = "\u00cf\u0089"
+
+val Gamma = "\u00ce\u0093"
+val Delta = "\u00ce\u0094"
+val Theta = "\u00ce\u0098"
+val Lambda = "\u00ce\u009b"
+val Xi = "\u00ce\u009e"
+val Sigma = "\u00ce\u00a3"
+val Phi = "\u00ce\u00a6"
+val Psi = "\u00ce\u00a8"
+val Omega = "\u00ce\u00a9"
+
+(* Boolean gadgets *)
+val forall = "\u00e2\u0088\u0080";
+val exists = "\u00e2\u0088\u0083";
+val conj = "\u00e2\u0088\u00a7";
+val disj = "\u00e2\u0088\u00a8";
+val imp = "\u00e2\u0087\u0092";
+val neg = "\u00c2\u00ac"
+
+(* not a constant, but might be useful *)
+val neq = "\u00e2\u0089\u00a0"
+val turnstile = "\u00e2\u008a\u00a2";
+val leftarrow = "\u00e2\u0086\u0090";
+val rightarrow = "\u00e2\u0086\u0092";
+
+(* probably needs a proportional font to print well - would be good for
+   implication if available *)
+val longdoublerightarrow = "\u00e2\u009f\u00b9"
+
+val setelementof = "\u00e2\u0088\u0088"
+
+(* arithmetic *)
+val leq = "\u00e2\u0089\u00a4"
+val geq = "\u00e2\u0089\u00a5"
+val nats = "\u00e2\u0084\u0095"
+
+(* sets *)
+val emptyset = "\u00e2\u0088\u0085"
+val subset = "\u00e2\u008a\u0086"
+val inter = "\u00e2\u0088\u00a9"
+val union = "\u00e2\u0088\u00aa"
+
+(* words *)
+val lo = "<\u00e2\u0082\u008a"
+val hi = ">\u00e2\u0082\u008a"
+val ls = leq ^ "\u00e2\u0082\u008a"
+val hs = geq ^ "\u00e2\u0082\u008a"
+val or = "\u00e2\u0080\u0096"
+val xor = "\u00e2\u008a\u0095"
+val lsl = "\u00e2\u0089\u00aa"
+val asr = "\u00e2\u0089\u00ab"
+val lsr = "\u00e2\u008b\u0099"
+val rol = "\u00e2\u0087\u0086"
+val ror = "\u00e2\u0087\u0084"
+
+end (* struct *)
+
