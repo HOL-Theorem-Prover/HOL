@@ -65,5 +65,11 @@ sig
   val rol : string
   val ror : string
 
+  val isAlpha : string -> bool
+  val isDigit : string -> bool
+  val isAlphaNum : string -> bool
+  val isSymbolic : string -> bool
+
+
 end
 

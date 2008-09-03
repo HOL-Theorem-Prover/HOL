@@ -73,5 +73,36 @@ val lsr = "\u00e2\u008b\u0099"
 val rol = "\u00e2\u0087\u0086"
 val ror = "\u00e2\u0087\u0084"
 
+fun isAlpha s = let
+  val ((_, i), _) = valOf (UTF8.getChar s)
+in
+  if i < 128 then Char.isAlpha (String.sub(s,0))
+  else
+    0x370 <= i andalso i <= 0x3ff andalso i <> 0x37E (* Greek *) orelse
+    i = 0xAA (* ordinal a *) orelse
+    i = 0xB5 (* Latin-1 mu *) orelse
+    i = 0xBA (* ordinal o *) orelse
+    0xC0 <= i andalso i <= 0xFF andalso i <> 0xD7 andalso i <> 0xF7
+    (* Latin-1 *)
+end
+
+fun isDigit s = let
+  val ((_, i), _) = valOf (UTF8.getChar s)
+in
+  if i < 128 then Char.isDigit (String.sub(s,0))
+  else 0x2070 <= i andalso i <= 2079 (* superscripts *) orelse
+       0x2080 <= i andalso i <= 2089 (* subscripts *) orelse
+       i = 0xB2 orelse i = 0xB3 (* Latin-1 sup 2 and 3 resp. *)
+end
+
+fun isAlphaNum s = isAlpha s orelse isDigit s
+
+fun isSymbolic s = let
+  val ((_, i), _) = valOf (UTF8.getChar s)
+in
+  if i < 128 then Char.isPunct (String.sub(s,0))
+  else not (isAlphaNum s)
+end
+
 end (* struct *)
 

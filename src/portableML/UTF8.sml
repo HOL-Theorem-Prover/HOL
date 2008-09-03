@@ -1,0 +1,137 @@
+structure UTF8 :> UTF8 =
+struct
+
+exception BadUTF8 of string
+
+val two11 = 2048  (* 2 ^ 11 *)
+val two16 = 65536 (* 2 ^ 16 *)
+
+fun chr i =
+    if i < 0 then raise Chr
+    else if i < 128 then str (Char.chr i)
+    else if i < two11 then let
+        val w = Word.fromInt i
+        val byte2 = 128 + Word.toInt (Word.andb(w, 0wx3F))
+        val byte1 = 192 + Word.toInt (Word.>>(w,0w6))
+      in
+        String.implode [Char.chr byte1, Char.chr byte2]
+      end
+    else if i < two16 then let
+        val w = Word.fromInt i
+        val byte3 = 128 + Word.toInt (Word.andb(w, 0wx3F))  (* 3F = 6 bits *)
+        val w = Word.>>(w,0w6)
+        val byte2 = 128 + Word.toInt (Word.andb(w, 0wx3F))  (* 3F = 6 bits *)
+        val w = Word.>>(w,0w6)
+        val byte1 = 224 + Word.toInt (Word.andb(w, 0wxF))   (* F = 4 bits *)
+      in
+        String.implode (map Char.chr [byte1, byte2, byte3])
+      end
+    else raise Chr
+
+fun byte1_count c = let
+  fun recurse acc b = if b > 0w127 then recurse (acc + 1) (Word8.<<(b,0w1))
+                      else acc
+in
+  recurse 0 (Word8.fromInt (Char.ord c))
+end
+
+fun isCont_char c = let val i = Char.ord c in 128 <= i andalso i < 192 end
+
+fun pow2 i = Word.toInt (Word.<<(0w1, Word.fromInt i))
+
+fun getChar s = let
+  open Substring
+  fun ucontinue acc pos limit ss =
+      if pos = limit then let
+          val (p,s) = splitAt (ss, limit)
+        in
+          SOME((string p, acc), string s)
+        end
+      else let
+          val pos_c = sub(ss, pos)
+              handle Subscript => raise BadUTF8 (string (slice(ss,0,SOME pos)))
+        in
+          if isCont_char pos_c then
+            ucontinue (acc * 64 + Char.ord pos_c - 128) (pos + 1) limit ss
+          else raise BadUTF8 (string (slice(ss,0,SOME (pos + 1))))
+        end
+  fun recurse ss =
+      case getc ss of
+        NONE => NONE
+      | SOME (c, ss') => let
+          val i = Char.ord c
+        in
+          if i < 128 then SOME((str c, i), string ss')
+          else let
+              val cnt = byte1_count c
+            in
+              if cnt = 1 then raise BadUTF8 (str c)
+              else ucontinue (i + pow2 (8 - cnt) - 256) 1 cnt ss
+            end
+        end
+in
+  recurse (all s)
+end
+
+fun size s = let
+  open Substring
+  val ss = all s
+  val sz = size ss
+  fun recurse acc pos =
+      if pos = sz then acc
+      else let
+          val c = sub(ss,pos)
+        in
+          if Char.ord c < 128 then recurse (acc + 1) (pos + 1)
+          else let
+              val bc = byte1_count c
+            in
+              check acc (pos + 1) pos (bc - 1)
+            end
+        end
+  and check acc pos start cnt =
+      if cnt = 0 then recurse (acc + 1) pos
+      else if pos = sz then
+        raise BadUTF8 (string (slice(ss,start,SOME(pos-start))))
+      else let
+          val c = sub(ss,pos)
+        in
+          if isCont_char c then check acc (pos + 1) start (cnt - 1)
+          else raise BadUTF8 (string (slice(ss,start,SOME(pos-start))))
+        end
+in
+  recurse 0 0
+end
+
+fun lastChar s = let
+  open Substring
+  val ss = all s
+  val lastpos = size ss - 1
+  fun goback pos =
+      if pos < 0 then raise BadUTF8 (str (sub(ss,0)))
+      else let
+          val c = sub(ss,pos)
+        in
+          if Char.ord c >= 192 then let
+              val bc = byte1_count c
+            in
+              if lastpos - pos + 1 = bc then string (slice(ss,pos,NONE))
+              else raise BadUTF8 (string (slice(ss,pos+bc,NONE)))
+            end
+          else if isCont_char c then goback (pos - 1)
+          else raise BadUTF8 (string (slice(ss,pos+1,NONE)))
+        end
+in
+  if lastpos < 0 then NONE
+  else let
+      val c = sub(ss, lastpos)
+    in
+      if Char.ord c < 128 then SOME(str c, Char.ord c)
+      else Option.map #1 (getChar (goback (lastpos - 1)))
+    end
+end
+
+
+
+
+end (* struct *)
