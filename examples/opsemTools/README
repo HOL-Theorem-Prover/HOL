@@ -1,0 +1,8 @@
+This directory contains the following:
+
+ newOpsemScript.sml .......... script file to build various semantics
+                               (extends examples/ind_def/opsemScript.sml)
+
+ verify ...................... directory with Collavizza-Gordon verification tools
+
+ extract ..................... directory with Myreen extraction tools
