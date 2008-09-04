@@ -10,18 +10,16 @@
 
 \NeedsTeXFormat{LaTeX2e}
 \usepackage[a4paper, headheight=14pt]{geometry}
-\usepackage{fancyhdr, makeidx}    % Used in HOLpagestyle and HOLindex
-\usepackage{color}                % Used in HOLDfnTag and HOLThmTag
-\usepackage{underscore, fancyvrb} % Required
+\usepackage{fancyhdr}    % Used in HOLpagestyle and HOLindex
+\usepackage{color}       % Used in HOLDfnTag and HOLThmTag
+\usepackage{holtexbasic} % Required
 
 
 % Uncomment for Helvetica font.
 % Note that this will affect alignment.
 %\fvset{fontfamily=helvetica}
 
-\fvset{commandchars=\\\{\},xleftmargin=1mm,framesep=1.2mm,fontsize=\small}
-
-\newcommand{\HOLpagestyle}{
+\renewcommand{\HOLpagestyle}{
   \pagestyle{fancyplain}\fancyhf{}
   \renewcommand{\headrulewidth}{0.5pt}
   \renewcommand{\footrulewidth}{0.5pt}
@@ -37,55 +35,15 @@
     \rfoot{\thepage}
   \fi}
 
-\newcommand{\HOLindex}{\cleardoublepage\pagestyle{plain}\fancyhf{}
+\renewcommand{\HOLindex}{\cleardoublepage\pagestyle{plain}\fancyhf{}
   \cfoot{\thepage}\printindex}
 
 \definecolor{darkgreen}{rgb}{0,0.4,0}
 
-\newcommand{\HOLDfnTag}[2]{
+\renewcommand{\HOLDfnTag}[2]{
   \pagebreak[2]\noindent\textcolor{blue}{[\texttt{#2}]}\vspace{-1.2mm}
   \index{#1 Theory@\textbf{#1 Theory}!Definitions!#2}}
 
-\newcommand{\HOLThmTag}[2]{
+\renewcommand{\HOLThmTag}[2]{
   \pagebreak[2]\noindent\textcolor{darkgreen}{[\texttt{#2}]}\vspace{-1.2mm}
   \index{#1 Theory@\textbf{#1 Theory}!Theorems!#2}}
-
-\newcommand{\HOLTokenBackslash}{\texttt{\char'134}}
-\newcommand{\HOLTokenUnderscore}{\texttt{\_}}
-\newcommand{\HOLTokenLeftbrace}{\ensuremath{\left\{\right.}}
-\newcommand{\HOLTokenRightbrace}{\ensuremath{\left.\right\}}}
-\newcommand{\HOLTokenTurnstile}{\ensuremath{\:\:\vdash}}
-\newcommand{\HOLTokenLambda}{\ensuremath{\lambda\,}}
-\newcommand{\HOLTokenForall}{\ensuremath{\forall\;}}
-\newcommand{\HOLTokenExists}{\ensuremath{\exists\;}}
-\newcommand{\HOLTokenUnique}{\ensuremath{\exists}!}
-\newcommand{\HOLTokenMap}{\ensuremath{\rightarrow}}
-\newcommand{\HOLTokenImp}{\ensuremath{\Rightarrow}}
-\newcommand{\HOLTokenLongmap}{\ensuremath{\longrightarrow}}
-\newcommand{\HOLTokenLongimp}{\ensuremath{\Longrightarrow}}
-\newcommand{\HOLTokenMapto}{\ensuremath{\mapsto}}
-\newcommand{\HOLTokenConj}{\ensuremath{\wedge}}
-\newcommand{\HOLTokenDisj}{\ensuremath{\vee}}
-\newcommand{\HOLTokenQuote}{\textrm{'}}
-\newcommand{\HOLTokenNeg}{\ensuremath{\neg}}
-\newcommand{\HOLTokenProd}{\ensuremath{\times}}
-\newcommand{\HOLTokenLeq}{\ensuremath{\leq}}
-\newcommand{\HOLTokenGeq}{\ensuremath{\geq}}
-\newcommand{\HOLTokenLo}{\ensuremath{\prec}}
-\newcommand{\HOLTokenLs}{\ensuremath{\preceq}}
-\newcommand{\HOLTokenHi}{\ensuremath{\succ}}
-\newcommand{\HOLTokenHs}{\ensuremath{\succeq}}
-\newcommand{\HOLTokenLt}{\ensuremath{<}}
-\newcommand{\HOLTokenGt}{\ensuremath{>}}
-\newcommand{\HOLTokenBar}{\texttt{|}}
-\newcommand{\HOLTokenEmpty}{\ensuremath{\left\{\right\}}}
-\newcommand{\HOLTokenLeftrec}{\texttt{<|}}
-\newcommand{\HOLTokenRightrec}{\texttt{|>}}
-\newcommand{\HOLTokenRor}{\#\texttt{>>}}
-\newcommand{\HOLTokenRol}{\#\texttt{<<}}
-\newcommand{\HOLTokenAsr}{\texttt{>>}}
-\newcommand{\HOLTokenLsr}{\texttt{>>>}}
-\newcommand{\HOLTokenLsl}{\texttt{<<}}
-\newcommand{\HOLTokenSlice}{\texttt{<>}}
-\newcommand{\HOLTokenExtract}{\texttt{><}}
-\newcommand{\HOLTokenExp}{\raisebox{.7ex}{\ensuremath{\scriptscriptstyle\wedge}}}

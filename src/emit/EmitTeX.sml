@@ -238,8 +238,9 @@ let val S = PP.add_string ostrm
     fun EB() = PP.end_block ostrm
     val PT = pp_term ostrm
     val TP = type_pp.pp_type (Parse.type_grammar()) ostrm
-    val type_trace = get_tracefn "types" ();
-    val _ = set_trace "types" 0;
+
+    val type_trace = current_trace "types"
+    val _ = set_trace "types" 0
 
     fun strip_type t =
       if is_vartype t then
@@ -363,6 +364,8 @@ local
     | #"{"::l                           => h2t l (s ^ token_string "Leftbrace")
     | #"}"::l                           => h2t l (s ^ token_string "Rightbrace")
     | #"\n"::l                          => h2t l (s ^ "\n")
+    | #"!" :: #"!" :: l                 => h2t l (s ^ token_string "Or")
+    | #"?" :: #"?" :: l                 => h2t l (s ^ token_string "Eor")
     | #"!" :: c :: l  => if Char.isAlpha c orelse c = #"(" then
                            h2t l (s ^ token_string "Forall" ^ Char.toString c)
                          else
@@ -390,26 +393,29 @@ val hol_to_tex  = ref hol2tex;
 (* ------------------------------------------------------------------------- *)
 
 fun pp_term_as_tex ostrm t =
-   PP.add_string ostrm (!hol_to_tex (term_to_string t));
+let val u = current_trace "Unicode" in
+  set_trace "Unicode" 0;
+  PP.add_string ostrm (!hol_to_tex (term_to_string t));
+  set_trace "Unicode" u
+end;
 
 fun pp_type_as_tex ostrm t =
-   PP.add_string ostrm (!hol_to_tex (type_to_string t));
+let val u = current_trace "Unicode" in
+  set_trace "Unicode" 0;
+  PP.add_string ostrm (!hol_to_tex (type_to_string t));
+  set_trace "Unicode" u
+end;
 
 fun pp_theorem_as_tex ostrm thm =
-   PP.add_string ostrm (!hol_to_tex
-     (if is_datatype_thm thm then
-        datatype_thm_to_string thm
-      else
-        thm_to_string thm));
+  PP.add_string ostrm (!hol_to_tex
+    (if is_datatype_thm thm then
+       datatype_thm_to_string thm
+     else
+       thm_to_string thm));
 
-fun print_term_as_tex t =
-  print (PP.pp_to_string (!Globals.linewidth) pp_term_as_tex t);
-
-fun print_type_as_tex t =
-  print (PP.pp_to_string (!Globals.linewidth) pp_type_as_tex t);
-
-fun print_theorem_as_tex t =
-  print (PP.pp_to_string (!Globals.linewidth) pp_theorem_as_tex t);
+val print_term_as_tex = Portable.pprint pp_term_as_tex;
+val print_type_as_tex = Portable.pprint pp_type_as_tex;
+val print_theorem_as_tex = Portable.pprint pp_theorem_as_tex;
 
 fun pp_hol_as_tex_command ostrm prefix (s, thm) =
   let val S = PP.add_string ostrm
@@ -509,6 +515,7 @@ fun pp_theory_as_tex ostrm name =
       val defns = Listsort.sort thm_compare defns
       val thms = Listsort.sort thm_compare thms
       val time = Date.fromTimeLocal (stamp name handle HOL_ERR _ => Time.now())
+      val u = current_trace "Unicode"
   in
     if null typs andalso null defns andalso null thms then
       TextIO.output(TextIO.stdErr, name ^ "Theory is empty.\n")
@@ -518,9 +525,11 @@ fun pp_theory_as_tex ostrm name =
        S (Date.fmt "%d %B %Y" time); S "}"; NL();
        pp_newcommand ostrm (time_prefix());
        S (Date.fmt "%H:%M" time); S "}"; NL();
+       set_trace "Unicode" 0;
        pp_datatypes_as_tex ostrm typs;
        pp_defnitions_as_tex  ostrm defns;
        pp_theorems_as_tex ostrm thms;
+       set_trace "Unicode" u;
        PP.end_block ostrm);
     current_theory_name := ""
   end;
