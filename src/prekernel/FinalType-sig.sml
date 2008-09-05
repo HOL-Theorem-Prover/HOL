@@ -52,6 +52,9 @@ sig
 
  val kind_of       : hol_type -> kind
  val rank_of       : hol_type -> int
+ val kind_vars     : hol_type -> kind list
+ val kind_varsl    : hol_type list -> kind list
+ val inst_kind     : (kind,kind)Lib.subst -> hol_type -> hol_type
  val aconv_ty      : hol_type -> hol_type -> bool
  val beta_conv_ty  : hol_type -> hol_type
  val deep_beta_conv_ty : hol_type -> hol_type
@@ -91,6 +94,8 @@ sig
  val type_subst    : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
 
  val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
+ val match_kind_type : hol_type -> hol_type ->
+                        (kind,kind)Lib.subst * (hol_type,hol_type)Lib.subst
 
  val match_type_restr : hol_type list -> hol_type -> hol_type 
                         -> (hol_type,hol_type) Lib.subst
@@ -101,6 +106,11 @@ sig
  val raw_match_type: hol_type -> hol_type 
                       -> (hol_type,hol_type) Lib.subst * hol_type list
                       -> (hol_type,hol_type) Lib.subst * hol_type list
+ val raw_match_kind_type: hol_type -> hol_type
+                      -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
+                         ( (kind,kind) Lib.subst * kind list )
+                      -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
+                         ( (kind,kind) Lib.subst * kind list )
 
  val pp_raw_type    : ppstream -> hol_type -> unit
  val type_to_string : hol_type -> string

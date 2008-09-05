@@ -9,6 +9,7 @@ datatype grammar_rule
 
 datatype kind_structure
     = KINDOP of {Thy : string, Kindop : string, Args : kind_structure list}
+    | KDVAR  of string
 
 datatype grammar = KINDG of (int * grammar_rule) list (* *
                           (string, kind_structure) Binarymap.dict *
@@ -59,7 +60,8 @@ fun structure_to_kind st =
                              ("Unknown kind operator: " ^ Kindop)
             (* Kind.mk_thy_kind {Thy = Thy, Kindop = Kindop,
                                  Args = map structure_to_kind Args} *)
-         end
+        end
+    | KDVAR str => Kind.mk_varkind str
 
 val std_prefix_precedence = 100
 

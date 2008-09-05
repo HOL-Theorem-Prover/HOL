@@ -11,6 +11,7 @@ sig
 val eq : prekind -> prekind -> bool
 
 val typ : prekind
+val is_var_kind : prekind -> bool
 val ==> : prekind * prekind -> prekind
 val mk_arity : int -> prekind
 val prekind_compare : prekind * prekind -> order
@@ -52,6 +53,8 @@ val safe_unify :
 
 val apply_subst : (prekind option ref * prekind) list -> prekind -> prekind
 
+val rename_kv : prekind -> (string * prekind) list
+                        -> ((string * prekind) list * prekind option)
 val rename_kindvars : prekind -> prekind
 val fromKind : Kind.kind -> prekind
 val remove_made_links : prekind -> prekind

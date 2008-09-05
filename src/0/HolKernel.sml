@@ -377,6 +377,9 @@ local
   fun find_residue red [] = raise NOT_FOUND
     | find_residue red ({redex,residue}::rest) = if red = redex then residue
                                                  else find_residue red rest
+  fun find_residue_tm red [] = raise NOT_FOUND
+    | find_residue_tm red ({redex,residue}::rest) = if aconv red redex then residue
+                                                    else find_residue_tm red rest
   fun in_dom x [] = false
     | in_dom x ({redex,residue}::rest) = (x = redex) orelse in_dom x rest
   fun safe_insert (n as {redex,residue}) l = let
@@ -399,12 +402,12 @@ local
 
   fun term_pmatch lconsts env vtm ctm (sofar as (insts,homs)) =
     if is_var vtm then let
-        val ctm' = find_residue vtm env
+        val ctm' = find_residue_tm vtm env
       in
-        if ctm' = ctm then sofar else raise ERR "term_pmatch" "constant mismatch"
+        if aconv ctm' ctm then sofar else raise ERR "term_pmatch" "constant mismatch"
       end handle NOT_FOUND =>
                  if HOLset.member(lconsts, vtm) then
-                   if ctm = vtm then sofar
+                   if aconv ctm vtm then sofar
                    else raise ERR "term_pmatch" "can't instantiate local constant"
                  else (safe_inserta (vtm |-> ctm) insts, homs)
     else if is_const vtm then let
@@ -424,6 +427,24 @@ local
         val sofar' = (safe_insert(mk_dummy vty |-> mk_dummy cty) insts, homs)
       in
         term_pmatch lconsts ((vv |-> cv)::env) vbod cbod sofar'
+      end
+    else if is_tyabs vtm then let
+        val (vty,vbod) = dest_tyabs vtm
+        val (cty,cbod) = dest_tyabs ctm
+        val vv = mk_dummy vty
+        val cv = mk_dummy cty
+        val sofar' = (safe_insert(vv |-> cv) insts, homs)
+      in
+        term_pmatch lconsts ((vv |-> cv)::env) vbod cbod sofar'
+      end
+    else if is_tycomb vtm then let
+        val (vtm0,vty) = dest_tycomb vtm
+        val (ctm0,cty) = dest_tycomb ctm
+        val vv = mk_dummy vty
+        val cv = mk_dummy cty
+        val sofar' = (safe_insert(vv |-> cv) insts, homs)
+      in
+        term_pmatch lconsts env vtm0 ctm0 sofar'
       end
     else let
         val vhop = repeat rator vtm
@@ -447,12 +468,17 @@ local
           end
       end
 
-fun get_type_insts avoids L (tyS,Id) =
+fun get_kind_insts kdavoids L (kdS,Id) =
  itlist (fn {redex,residue} => fn Theta =>
-          raw_match_type (snd(dest_var redex)) (type_of residue) Theta)
-       L (tyS,union avoids Id)
+          Kind.raw_match_kind (kind_of(snd(dest_var redex))) (kind_of(type_of residue)) Theta)
+       L (kdS,union kdavoids Id)
 
-fun separate_insts tyavoids insts = let
+fun get_type_insts kdavoids tyavoids L ((tyS,tyId),(kdS,kdId)) =
+ itlist (fn {redex,residue} => fn Theta =>
+          raw_match_kind_type (snd(dest_var redex)) (type_of residue) Theta)
+       L ((tyS,union tyavoids tyId),(kdS,union kdavoids kdId))
+
+fun separate_insts kdavoids tyavoids insts = let
   val (realinsts, patterns) = partition (is_var o #redex) insts
   val betacounts =
       if patterns = [] then []
@@ -467,19 +493,23 @@ fun separate_insts tyavoids insts = let
                                   "Inconsistent patterning in h.o. match";
                                   sof))
         patterns []
-  val tyins = get_type_insts tyavoids realinsts ([],[])
+  val kdins0 = get_kind_insts kdavoids realinsts ([],[])
+  val (tyins,kdins) = get_type_insts kdavoids tyavoids realinsts (([],[]),kdins0)
 in
   (betacounts,
    mapfilter (fn {redex = x, residue = t} => let
                    val x' = let val (xn,xty) = dest_var x
                             in
-                              mk_var(xn, type_subst (#1 tyins) xty)
+                              mk_var(xn, type_subst (#1 tyins)
+                                            (Type.inst_kind (#1 kdins) xty))
                             end
                  in
-                   if t = x' then raise ERR "separate_insts" ""
-                             else {redex = x', residue = t}
+                   if aconv t x' then raise ERR "separate_insts" ""
+                                 else {redex = x', residue = t}
                  end) realinsts,
-   tyins)
+   tyins,
+   kdins
+)
 end
 
 fun tyenv_in_dom x (env, idlist) = mem x idlist orelse in_dom x env
@@ -498,9 +528,9 @@ fun all_aconv [] [] = true
   | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
 
 
-fun term_homatch tyavoids lconsts tyins (insts, homs) = let
+fun term_homatch kdavoids tyavoids lconsts tyins (insts, homs) = let
   (* local constants of both terms and types never change *)
-  val term_homatch = term_homatch tyavoids lconsts
+  val term_homatch = term_homatch kdavoids tyavoids lconsts
 in
   if homs = [] then insts
   else let
@@ -563,10 +593,14 @@ in
                          val pinsts_homs' =
                              term_pmatch lconsts env rv rc
                                          (insts, (env,lc,lv)::(tl homs))
-                         val tyins' =
-                             get_type_insts tyavoids
+                         val kdins0' =
+                             get_kind_insts kdavoids
                                             (fst pinsts_homs')
                                             ([], [])
+                         val (tyins',kdins') =
+                             get_type_insts kdavoids tyavoids
+                                            (fst pinsts_homs')
+                                            (([], []), kdins0')
                        in
                          term_homatch tyins' pinsts_homs'
                        end
@@ -576,13 +610,30 @@ end
 
 in
 
+fun ho_match_kind_term0 kdavoids tyavoids lconsts vtm ctm = let
+  val pinsts_homs = term_pmatch lconsts [] vtm ctm ([], [])
+  val kdins0 = get_kind_insts kdavoids (fst pinsts_homs) ([], [])
+  val (tyins,kdins) = get_type_insts kdavoids tyavoids (fst pinsts_homs) (([], []),kdins0)
+  val insts = term_homatch kdavoids tyavoids lconsts tyins pinsts_homs
+in
+  separate_insts kdavoids tyavoids insts
+end
+
 fun ho_match_term0 tyavoids lconsts vtm ctm = let
   val pinsts_homs = term_pmatch lconsts [] vtm ctm ([], [])
-  val tyins = get_type_insts tyavoids (fst pinsts_homs) ([], [])
-  val insts = term_homatch tyavoids lconsts tyins pinsts_homs
+  val kdins0 = get_kind_insts [] (fst pinsts_homs) ([], [])
+  val (tyins,kdins) = get_type_insts [] tyavoids (fst pinsts_homs) (([], []),kdins0)
+  val insts = term_homatch [] tyavoids lconsts tyins pinsts_homs
+  val (bcs,tmins,tyins,kdins) = separate_insts [] tyavoids insts
 in
-  separate_insts tyavoids insts
+  (bcs,tmins,tyins)
 end
+
+fun ho_match_kind_term kdavoids tyavoids lconsts vtm ctm = let
+  val (bcs, tmins, tyins, kdins) = ho_match_kind_term0 kdavoids tyavoids lconsts vtm ctm
+in
+  (tmins, #1 tyins, #1 kdins)
+end handle e => raise (wrap_exn "HolKernel" "ho_match_kind_term" e)
 
 fun ho_match_term tyavoids lconsts vtm ctm = let
   val (bcs, tmins, tyins) = ho_match_term0 tyavoids lconsts vtm ctm

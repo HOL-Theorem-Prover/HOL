@@ -1546,6 +1546,14 @@ fun INST_TY_TERM(Stm,Sty) th = INST Stm (INST_TYPE Sty th);
 
 
 (*---------------------------------------------------------------------------*
+ * Instantiate terms, types, and kinds of a theorem. This is pretty slow,    *
+ * because it makes three full traversals of the theorem.                    *
+ *---------------------------------------------------------------------------*)
+
+fun INST_KD_TY_TERM(Stm,Sty,Skd) th = INST Stm (INST_TYPE Sty (INST_KIND Skd th));
+
+
+(*---------------------------------------------------------------------------*
  *   |- !x y z. w   --->  |- w[g1/x][g2/y][g3/z]                             *
  *---------------------------------------------------------------------------*)
 
@@ -1582,11 +1590,12 @@ fun PART_MATCH partfn th = let
   val conclfvs = Term.FVL [concl th] empty_tmset
   val hypfvs = Thm.hyp_frees th
   val hyptyvars = HOLset.listItems (Thm.hyp_tyvars th)
+  val hypkdvars = HOLset.listItems (Thm.hyp_kdvars th)
   val pat = partfn(concl th)
   val matchfn =
-      match_terml hyptyvars (HOLset.intersection(conclfvs, hypfvs)) pat
+      match_kind_terml hypkdvars hyptyvars (HOLset.intersection(conclfvs, hypfvs)) pat
 in
-  (fn tm => INST_TY_TERM (matchfn tm) th)
+  (fn tm => INST_KD_TY_TERM (matchfn tm) th)
 end;
 
 
@@ -1976,25 +1985,27 @@ fun HO_PART_MATCH partfn th =
      val pbod = partfn bod
      val possbetas = mapfilter (fn v => (v,BETA_VAR v bod))
                                (filter (can dom_rng o type_of) (free_vars bod))
-     fun finish_fn tyin ivs =
+     fun finish_fn kdin tyin ivs =
        let val npossbetas =
-            if null tyin then possbetas else map (inst tyin ## I) possbetas
+            if null kdin andalso null tyin then possbetas
+               else map ((inst tyin o inst_kind kdin) ## I) possbetas
        in if null npossbetas then Lib.I
           else CONV_RULE (EVERY_CONV (mapfilter
                                         (TRY_CONV o C assoc npossbetas)
                                         ivs))
        end
      val lconsts = HOLset.intersection (FVL[pbod]empty_tmset, hyp_frees th)
+     val lkdconsts = HOLset.listItems (hyp_kdvars th)
      val ltyconsts = HOLset.listItems (hyp_tyvars th)
  in fn tm =>
-    let val (tmin,tyin) = ho_match_term ltyconsts lconsts pbod tm
+    let val (tmin,tyin,kdin) = ho_match_kind_term lkdconsts ltyconsts lconsts pbod tm
         val tmbvs = bound_vars tm
         fun foldthis ({redex,residue}, acc) =
             if is_abs residue andalso
                all (fn v => HOLset.member(tmbvs, v)) (fst (strip_abs residue))
             then Map.insert(acc, redex, residue) else acc
         val bound_to_abs = List.foldl foldthis (Map.mkDict Term.compare) tmin
-        val sth0 = INST_TYPE tyin sth
+        val sth0 = INST_TYPE tyin (INST_KIND kdin sth)
         val sth0c = concl sth0
         val (sth1, tmin') =
             case match_bvs tm (partfn sth0c) [] of
@@ -2016,7 +2027,7 @@ fun HO_PART_MATCH partfn th =
             else
               CONV_RULE (EVERY_CONV (#2 (munge_bvars bound_to_abs sth1))) sth1
         val th0 = INST tmin' sth2
-        val th1 = finish_fn tyin (map #redex tmin) th0
+        val th1 = finish_fn kdin tyin (map #redex tmin) th0
     in
       th1
     end

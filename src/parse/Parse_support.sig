@@ -26,7 +26,7 @@ sig
   val make_preterm          : preterm_in_env -> preterm
   val make_aq               : locn.locn -> term -> preterm_in_env
   val make_binding_occ      : locn.locn -> string -> binder_in_env
-  val make_tybinding_occ    : locn.locn -> string -> binder_in_env
+  val make_tybinding_occ    : locn.locn -> string -> prekind -> prerank -> binder_in_env
   val make_aq_binding_occ   : locn.locn -> term -> binder_in_env
   val make_binding_type_occ : locn.locn -> string -> tybinder_in_env
   val make_kind_binding_occ : locn.locn -> tybinder_in_env -> prekind -> tybinder_in_env

@@ -66,6 +66,7 @@ fun pp_kind0 (G:grammar) = let
   in
     if depth = 0 then add_string "..."
     else if kd = Kind.typ then add_string "ty"
+    else if Kind.is_var_kind kd then add_string (Kind.dest_var_kind kd)
     else
         let val _ = Lib.assert (Lib.equal true) (!pp_arity_kinds)
           val s = Int.toString (dest_arity_kind kd)

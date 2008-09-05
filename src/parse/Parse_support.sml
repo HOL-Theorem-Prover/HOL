@@ -259,14 +259,14 @@ fun make_binding_occ l s binder E =
                                   Rand=Abs{Bvar=Var{Name=s,Ty=ntv,Locn=l}, Body=b, Locn=locn.near (Preterm.locn b)}}), E')
  end;
 
-fun make_tybinding_occ l s binder E =
+fun make_tybinding_occ l s kd rk binder E =
  let open Pretype Preterm
      val _ =
        Lexis.allowed_user_type_var s orelse
        raise ERRORloc "make_binding_occ" l
          (s ^ " is not lexically permissible as a binding type variable")
-     val nkv = Prekind.new_uvar()
-     val nrv = Prerank.new_uvar()
+     val nkv = kd (* Prekind.new_uvar() *)
+     val nrv = rk (* Prerank.new_uvar() *)
      val pty = PT(Vartype(s, nkv, nrv), l)
      val E' = add_scope_ty((s, nkv, nrv),E)
  in ((fn b => TyAbs{Bvar=pty, Body=b, Locn=locn.near (Preterm.locn b)}), E')

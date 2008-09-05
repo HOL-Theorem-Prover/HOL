@@ -8,6 +8,7 @@ sig
   type tag      = Tag.tag
   type term     = KernelTypes.term
   type hol_type = KernelTypes.hol_type
+  type kind     = KernelTypes.kind
   type 'a set   = 'a HOLset.set
 
   val tag           : thm -> tag
@@ -17,6 +18,7 @@ sig
   val dest_thm      : thm -> term list * term
   val thm_frees     : thm -> term list
   val hyp_frees     : thm -> term set
+  val hyp_kdvars    : thm -> kind set
   val hyp_tyvars    : thm -> hol_type set
   val ASSUME        : term -> thm
   val REFL          : term -> thm
@@ -28,6 +30,7 @@ sig
   val MP            : thm -> thm -> thm
   val SUBST         : (term,thm)Lib.subst -> term -> thm -> thm
   val INST_RANK     : int -> thm -> thm
+  val INST_KIND     : (kind,kind)Lib.subst -> thm -> thm
   val INST_TYPE     : (hol_type,hol_type)Lib.subst -> thm -> thm
   val ALPHA         : term -> term -> thm
   val MK_COMB       : thm * thm -> thm
@@ -87,7 +90,7 @@ sig
  type ppstream = Portable.ppstream
  type num = Arbnum.num
 
- val pp_type : string -> string -> string -> string -> string ->
+ val pp_type : string -> string -> string -> string -> string -> string ->
                string -> string -> ppstream -> hol_type -> unit
 
  val pp_sig :

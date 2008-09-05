@@ -96,7 +96,7 @@ src/temporal/src
 src/temporal/smv.2.4.3
 src/rational
 src/path
-examples/HolOmega
+!examples/HolOmega
 !examples/lambda/barendregt
 !!examples/lambda/other-models
 !!examples/lambda/typing

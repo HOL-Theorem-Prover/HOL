@@ -29,13 +29,17 @@ fun thm_terms th = Thm.concl th :: Thm.hyp th;
 fun Thry s = s^"Theory";
 fun ThrySig s = Thry s
 
-fun pp_kind pps kd =
+fun pp_kind mvarkind pps kd =
  let open Portable
-     val pp_kind = pp_kind pps
+     val pp_kind = pp_kind mvarkind pps
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
  in
   if kd = Kind.typ then add_string "typ"
+  else if Kind.is_var_kind kd then
+         case Kind.dest_var_kind kd
+           of "'k" => add_string "kappa"
+            |   s  => add_string ("("^mvarkind^quote s^")")
   else let val (d,r) = Kind.kind_dom_rng kd
        in (add_string "(";
            begin_block INCONSISTENT 0;
@@ -49,10 +53,10 @@ fun pp_kind pps kd =
        end
  end
 
-fun pp_type mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps ty =
+fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps ty =
  let open Portable Type
-     val pp_kind = pp_kind pps
-     val pp_type = pp_type mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps
+     val pp_kind = pp_kind mvarkind pps
+     val pp_type = pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
      fun pp_type_par ty = if mem ty [alpha,beta,gamma,delta] then pp_type ty
@@ -496,7 +500,7 @@ fun pp_struct info_record ppstrm =
      val {add_string,add_break,begin_block,end_block, add_newline,
           flush_ppstream,...} = Portable.with_ppstream ppstrm
      val pp_tm = pp_raw ppstrm
-     val pp_ty = with_parens (pp_type "U" "R" "T" "O" "P" "B" "N") ppstrm
+     val pp_ty = with_parens (pp_type "K" "U" "R" "T" "O" "P" "B" "N") ppstrm
      val pp_tag = Tag.pp_to_disk ppstrm
      fun pblock(header, ob_pr, obs) =
          case obs
@@ -648,6 +652,7 @@ fun pp_struct info_record ppstrm =
       add_string"fun T s t A = mk_thy_type{Tyop=s, Thy=t,Args=A}";
       add_newline();
       add_string"fun V s q   = mk_var(s,q)";     add_newline();
+      add_string"val K       = mk_varkind";              add_newline();
       add_string"val U       = mk_vartype";              add_newline();
       add_string"fun R s k r = mk_vartype_opr(s,k,r)";   add_newline();
       add_string"fun O s t   = mk_thy_con_type{Tyop=s,Thy=t}";        add_newline();

@@ -193,7 +193,7 @@ fun update_kind_fns () =
 
 fun pp_kind pps kind = let in
    update_kind_fns();
-   Portable.add_string pps ":";
+   Portable.add_string pps "::";
    !kind_printer pps kind
  end
 
@@ -683,7 +683,7 @@ local open Parse_support Absyn
     | binder(VPAIR(l,v1,v2))  = make_vstruct l [binder v1, binder v2] NONE
     | binder(VAQ (l,x))       = make_aq_binding_occ l x
     | binder(VTYPED(l,v,pty)) = make_vstruct l [binder v] (SOME (to_ptyInEnv pty))
-  fun tybinder(Pretype.PT(Pretype.Vartype(s,_,_),l)) = (make_tybinding_occ l s)
+  fun tybinder(Pretype.PT(Pretype.Vartype(s,kd,rk),l)) = (make_tybinding_occ l s kd rk)
     | tybinder(Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) = make_kind_tybinding_occ l (tybinder Ty) Kind
     | tybinder(Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) = make_rank_tybinding_occ l (tybinder Ty) Rank
     | tybinder(Pretype.PT(_,l)) = raise ERROR "tybinder" "not a variable type"
@@ -966,7 +966,7 @@ in
   full_update_grms ("temp_type_abbrev",
                     String.concat ["(", mlquote s, ", ",
                                    PP.pp_to_string (!Globals.linewidth)
-                                                   (TheoryPP.pp_type "U" "R" "T" "O" "P" "B" "N")
+                                                   (TheoryPP.pp_type "K" "U" "R" "T" "O" "P" "B" "N")
                                                    ty,
                                    ")"],
                     if kind_of ty <> typ then NONE else

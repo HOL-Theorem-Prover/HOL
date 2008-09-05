@@ -3,8 +3,10 @@ signature CoreKernel = sig
   structure Kind : FinalKind
   structure Type : FinalType        where type kind     = Kind.kind
   structure Term : FinalTerm        where type hol_type = Type.hol_type
+                                      and type kind     = Kind.kind
 
-  structure Thm  : Thm              where type hol_type = Type.hol_type
+  structure Thm  : Thm              where type kind     = Kind.kind
+                                      and type hol_type = Type.hol_type
                                       and type term     = Term.term
                                       and type tag      = Tag.tag
 

@@ -5,7 +5,7 @@ sig
 
 Kind is the root nonterminal.
 
-Kind   ::= '*' | Kind '=>' Kind | 'ar' Numeral | '(' Kind ')'
+Kind   ::= 'ty' | KindIdent | Kind '=>' Kind | 'ar' Numeral | '(' Kind ')'
 
 *)
 
@@ -17,6 +17,7 @@ Kind   ::= '*' | Kind '=>' Kind | 'ar' Numeral | '(' Kind ')'
 
   datatype kind_structure
     = KINDOP of {Thy : string, Kindop : string, Args : kind_structure list}
+    | KDVAR  of string
 
   type grammar
 

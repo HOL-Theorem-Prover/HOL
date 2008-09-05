@@ -65,7 +65,7 @@ val mk_forall = Susp.delay (fn () =>
 val mk_tyforall = Susp.delay (fn () =>
  let val tyforallc = prim_mk_const{Name="!:", Thy="bool"}
  in fn a => fn tm =>
-      mk_comb(tyforallc, mk_tyabs(a,tm))
+      mk_comb(inst_kind[Kind.kappa |-> Type.kind_of a] tyforallc, mk_tyabs(a,tm))
  end);
 
 val mk_conj = Susp.delay (fn () =>
@@ -149,6 +149,14 @@ fun tyvar_occursl a l = isSome (HOLset.find (tyvar_occurs a) l);
 fun hypset_all P s = not (isSome (HOLset.find (not o P) s))
 fun hypset_exists P s = isSome (HOLset.find P s)
 fun hypset_map f s = HOLset.foldl(fn(i,s0) => HOLset.add(s0,f i)) empty_hyp s
+
+fun hyp_kdvars th =
+   HOLset.foldl (fn (h,kds) =>
+                        List.foldl (fn (kdv,kds) => HOLset.add(kds,kdv))
+                                   kds
+                                   (Term.kind_vars_in_term h))
+                    (HOLset.empty Kind.kind_compare)
+                    (hypset th)
 
 fun hyp_tyvars th =
    HOLset.foldl (fn (h,tys) =>
@@ -337,20 +345,21 @@ fun INST_RANK n (THM(ocl,asl,c)) =
 
 (*---------------------------------------------------------------------------
  *         A |- M
- *  --------------------  INST_TYPE theta
+ *  --------------------  INST_KIND theta
  *  theta(A) |- theta(M)
  *
  *---------------------------------------------------------------------------*)
 
-(*
-fun check_subst_rank s =
- let open Type
-     fun check {redex,residue} =
-       if rank_of redex >= rank_of residue then ()
-       else raise ERR "INST_TYPE" "substitution does not respect rank"
- in map check s; ()
- end
-*)
+fun INST_KIND [] th = th
+  | INST_KIND theta (THM(ocl,asl,c)) =
+    make_thm Count.InstKind(ocl, hypset_map (inst_kind theta) asl, inst_kind theta c)
+
+(*---------------------------------------------------------------------------
+ *         A |- M
+ *  --------------------  INST_TYPE theta
+ *  theta(A) |- theta(M)
+ *
+ *---------------------------------------------------------------------------*)
 
 fun INST_TYPE [] th = th
   | INST_TYPE theta (THM(ocl,asl,c)) =

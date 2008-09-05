@@ -25,6 +25,9 @@ and eq  (PK (value,locn))          (PK (value',locn'))         = eq0 value value
 
 val typ = PK (Typekind, locn.Loc_None)
 
+fun is_var_kind (PK (Varkind _, _)) = true
+  | is_var_kind _ = false
+
 fun ((kd1 as PK(_,loc1)) ==> (kd2 as PK(_,loc2))) =
     PK(Arrowkind(kd1,kd2),
        locn.between loc1 loc2)
@@ -249,11 +252,11 @@ fun rename_kindvars kd = valOf (#2 (rename_kv kd []))
 end
 
 fun fromKind k =
-  (*if Kind.is_varkind k then
-    PK(Varkind (dest_varkind_opr k), locn.Loc_None)
-  else*) if k = Kind.typ then
+  if Kind.is_var_kind k then
+    PK(Varkind (dest_var_kind k), locn.Loc_None)
+  else if k = Kind.typ then
     PK(Typekind, locn.Loc_None)
-  else (* if Kind.is_app_kind k then *) let
+  else (* if Kind.is_opr_kind k then *) let
       val (kd1, kd2) = Kind.kind_dom_rng k
     in
       PK(Arrowkind(fromKind kd1, fromKind kd2), locn.Loc_None)
@@ -270,7 +273,7 @@ val kindvariant = Lexis.gen_variant Lexis.tyvar_vary
 
 (* needs changing *)
 fun generate_new_name r used_so_far =
-  let val result = kindvariant used_so_far "''a"
+  let val result = kindvariant used_so_far "'a"
       val _ = r := SOME (PK(Varkind result, locn.Loc_None))
   in
     (result::used_so_far, SOME ())
@@ -289,7 +292,7 @@ fun set_null_to_default r used_so_far =
 fun replace_null_links (PK(kd,_)) env = let
 in
   case kd of
-    UVarkind (r as ref NONE) => (*generate_new_name r*) set_null_to_default r
+    UVarkind (r as ref NONE) => (* generate_new_name r *) set_null_to_default r
   | UVarkind (ref (SOME kd)) => replace_null_links kd
   | Arrowkind (kd1,kd2) => replace_null_links kd1 >> replace_null_links kd2 >> ok
   | Varkind _ => ok
@@ -298,7 +301,7 @@ end env
 
 fun clean (PK(ty, locn)) =
   case ty of
-    Varkind s => Kind.typ
+    Varkind s => Kind.mk_varkind s
   | Typekind => Kind.typ
   | Arrowkind(kd1,kd2) => Kind.==>(clean kd1, clean kd2)
   | _ => raise Fail "Don't expect to see links remaining at this stage of kind inference"

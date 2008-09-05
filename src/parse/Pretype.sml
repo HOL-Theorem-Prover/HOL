@@ -1104,19 +1104,37 @@ end
  * Bound variables are not renamed, but are recognized as masking free vars. *
  *---------------------------------------------------------------------------*)
 
-local fun replace (s,kd,rk) env =
-        case Lib.assoc1 s env
+(* in (m1 >>- f), m1 is a monad on kind environments,
+    while f is a function that takes a kind and produces
+    a monad on a pair of (kind environment, type environment).
+*)
+infix >>-
+fun (m1 >>- f) (env as (kdenv,tyenv)) = let
+  val (kdenv0, res0) = m1 kdenv
+in
+  case res0 of
+    NONE => ((kdenv0,tyenv), NONE)
+  | SOME res => f res (kdenv0,tyenv)
+end
+
+local val rename_kv = Prekind.rename_kv
+      fun replace (s,kd,rk) (env as (kdenv,tyenv)) =
+        case Lib.assoc1 s tyenv
          of SOME (_, r) => (env, SOME r)
           | NONE =>
               let val r = new_uvar(kd,rk)
-              in ((s, r)::env, SOME r)
+              in ((kdenv,(s, r)::tyenv), SOME r)
               end
-      fun add_bvar (v as PT(Vartype (s,kd,rk), _)) benv =
-              let val r = new_uvar(kd,rk)
-              in ((s, r)::benv, v (*or r, if renaming bound vars*))
-              end
+      fun add_bvar (v as PT(Vartype (s,kd,rk), l)) benv =
+              rename_kv kd >>- (fn kd' =>
+              let val r = new_uvar(kd',rk)
+                  val v' = PT(Vartype (s,kd',rk), l)
+              in return ((s, r)::benv, v')
+                                       (*or r, if renaming bound vars*)
+              end)
         | add_bvar (PT(TyKindConstr {Ty,Kind}, _)) benv =
-              add_bvar Ty benv
+              rename_kv Kind >>- (fn Kind' =>
+              add_bvar Ty benv)
         | add_bvar (PT(TyRankConstr {Ty,Rank}, _)) benv =
               add_bvar Ty benv
         | add_bvar _ _ = raise TCERR "rename_typevars" "add_bvar: arg is not variable"
@@ -1124,32 +1142,32 @@ in
 fun rename_tv (ty as PT(ty0, locn)) benv =
   case ty0 of
     Vartype (v as (s,kd,rk)) =>
-      (case Lib.assoc1 s benv
-         of SOME _ => return ty
-          | NONE   => replace v)
+      rename_kv kd >>- (fn kd' =>
+       case Lib.assoc1 s benv
+         of SOME _ => return (PT(Vartype(s,kd',rk), locn))
+          | NONE   => replace (s,kd',rk))
   | TyApp (ty1, ty2) =>
       rename_tv ty1 benv >-
       (fn ty1' => rename_tv ty2 benv >-
       (fn ty2' => return (PT(TyApp(ty1', ty2'), locn))))
   | TyUniv (ty1, ty2) =>
-      let val (benv',ty1') = add_bvar ty1 benv in
+      add_bvar ty1 benv >- (fn (benv',ty1') =>
       rename_tv ty2 benv' >-
-      (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn)))
-      end
+      (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn))))
   | TyAbst (ty1, ty2) =>
-      let val (benv',ty1') = add_bvar ty1 benv in
+      add_bvar ty1 benv >- (fn (benv',ty1') =>
       rename_tv ty2 benv' >-
-      (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn)))
-      end
+      (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn))))
   | TyKindConstr {Ty, Kind} =>
-      rename_tv Ty benv >-
-      (fn Ty' => return (PT(TyKindConstr {Ty=Ty', Kind=Kind}, locn)))
+      rename_kv Kind >>-
+      (fn Kind' => rename_tv Ty benv >-
+      (fn Ty' => return (PT(TyKindConstr {Ty=Ty', Kind=Kind'}, locn))))
   | TyRankConstr {Ty, Rank} =>
       rename_tv Ty benv >-
       (fn Ty' => return (PT(TyRankConstr {Ty=Ty', Rank=Rank}, locn)))
   | _ => return ty
 
-fun rename_typevars ty = valOf (#2 (rename_tv ty [] []))
+fun rename_typevars ty = valOf (#2 (rename_tv ty [] ([],[])))
 end
 
 fun fromType t =
@@ -1222,7 +1240,8 @@ fun kind_replace_null_links kd (kenv,tenv) =
 fun replace_null_links (PT(ty,_)) env = let
 in
   case ty of
-    UVar (r as ref (NONEU(kd,rk))) => generate_new_name r (kd,rk)
+    UVar (r as ref (NONEU(kd,rk))) => kind_replace_null_links kd >>
+                                      generate_new_name r (kd,rk)
   | UVar (ref (SOMEU ty)) => replace_null_links ty
   | TyApp (ty1,ty2) => replace_null_links ty1 >> replace_null_links ty2 >> ok
   | TyUniv (tyv, ty) => replace_null_links tyv >> replace_null_links ty >> ok
@@ -1351,7 +1370,31 @@ fun KC printers = let
             Feedback.set_trace "kinds" tmp;
             raise ERRloc"kindcheck" (Locn opr (* arbitrary *)) "failed"
           end)
-    | check (PT(TyUniv(Bvar, Body), Locn)) = (check Bvar; check Body)
+    | check (PT(TyUniv(Bvar, Body), locn)) =
+       (check Bvar; check Body; Prekind.unify (pkind_of Body) Prekind.typ
+       handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
+                                     origin_function="unify",message})
+       => let val show_kinds = Feedback.get_tracefn "kinds"
+              val tmp = show_kinds()
+              val _   = Feedback.set_trace "kinds" 2
+              val real_type = toType Body
+                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+              val real_kind = Prekind.toKind Prekind.typ
+                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+          in
+            Lib.say "\nKind inference failure: the type\n\n";
+            pty real_type;
+            Lib.say ("\n\n"^locn.toString (Locn Body)^"\n\n");
+            if (is_atom Body) then ()
+            else(Lib.say"which has kind\n\n";
+                 pkd(Type.kind_of real_type);
+                 Lib.say"\n\n");
+            Lib.say "can not be constrained to be of kind\n\n";
+            pkd real_kind;
+            Lib.say ("\n\nkind unification failure message: "^message^"\n");
+            Feedback.set_trace "kinds" tmp;
+            raise ERRloc "kindcheck" locn "failed"
+          end)
     | check (PT(TyAbst(Bvar, Body), Locn)) = (check Bvar; check Body)
     | check (PT(TyKindConstr{Ty,Kind},locn)) =
        (check Ty; Prekind.unify (pkind_of Ty) Kind

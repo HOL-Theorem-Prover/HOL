@@ -28,6 +28,7 @@ sig
  *---------------------------------------------------------------------------*)
 
 datatype kind = Type
+              | KdVar of string
               | Oper of kind * kind
 
 type id = KernelSig.kernelid

@@ -12,7 +12,7 @@ sig
  type ppstream = Portable.ppstream
  type num = Arbnum.num
 
- val pp_type : string -> string -> string -> string -> string ->
+ val pp_type : string -> string -> string -> string -> string -> string ->
                string -> string -> ppstream -> hol_type -> unit
 
  val pp_sig
