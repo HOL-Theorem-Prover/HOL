@@ -1072,6 +1072,63 @@ val DISJ_TRIPLE = store_thm
 (* End of HOL/examples/ind_def/opsemScript.sml                               *)
 (*===========================================================================*)
 
+(* ========================================================================= *)
+(*  TOTAL-CORRECTNESS HOARE TRIPLES                                          *)
+(* ========================================================================= *)
+
+val TOTAL_SPEC_def = Define `
+  TOTAL_SPEC p c q = SPEC p c q /\ !s1. p s1 ==> ?s2. EVAL c s1 s2`;
+
+val TOTAL_SKIP_RULE = store_thm("TOTAL_SKIP_RULE",
+  ``!P. TOTAL_SPEC P Skip P``,
+  SIMP_TAC std_ss [TOTAL_SPEC_def,SKIP_RULE] THEN REPEAT STRIP_TAC 
+  THEN Q.EXISTS_TAC `s1` THEN REWRITE_TAC [rules]);
+
+val TOTAL_GEN_ASSIGN_RULE = store_thm("TOTAL_GEN_ASSIGN_RULE",
+  ``!P v e. TOTAL_SPEC (P o Update v e) (GenAssign v e) P``,
+  SIMP_TAC std_ss [TOTAL_SPEC_def,GEN_ASSIGN_RULE] THEN REPEAT STRIP_TAC 
+  THEN Q.EXISTS_TAC `Update v e s1` THEN REWRITE_TAC [rules]);
+
+val TOTAL_SEQ_RULE = store_thm("TOTAL_SEQ_RULE",
+  ``!P c1 c2 Q R. TOTAL_SPEC P c1 Q /\ TOTAL_SPEC Q c2 R ==> 
+                  TOTAL_SPEC P (Seq c1 c2) R``,
+  REWRITE_TAC [TOTAL_SPEC_def] THEN REPEAT STRIP_TAC
+  THEN1 (MATCH_MP_TAC SEQ_RULE THEN Q.EXISTS_TAC `Q` THEN ASM_REWRITE_TAC [])
+  THEN FULL_SIMP_TAC bool_ss [SEQ_THM,SPEC_def]
+  THEN RES_TAC THEN RES_TAC THEN METIS_TAC []);
+
+val TOTAL_COND_RULE = store_thm("TOTAL_COND_RULE",
+  ``!P b c1 c2 Q.
+      TOTAL_SPEC (\s. P s /\ beval b s) c1 Q /\
+      TOTAL_SPEC (\s. P s /\ ~beval b s) c2 Q ==>
+      TOTAL_SPEC P (Cond b c1 c2) Q``,
+  REWRITE_TAC [TOTAL_SPEC_def] THEN REPEAT STRIP_TAC
+  THEN1 (MATCH_MP_TAC COND_RULE THEN ASM_REWRITE_TAC [])
+  THEN FULL_SIMP_TAC std_ss []
+  THEN Cases_on `beval b s1` THEN RES_TAC 
+  THEN IMP_RES_TAC IF_T_THM THEN IMP_RES_TAC IF_F_THM
+  THEN Q.EXISTS_TAC `s2` THEN ASM_REWRITE_TAC []);
+
+val TOTAL_WHILE_F_THM = store_thm("TOTAL_WHILE_F_THM",
+  ``!P b c. TOTAL_SPEC (\s. P s /\ ~beval b s) (While b c) P``,
+  SIMP_TAC std_ss [TOTAL_SPEC_def,SPEC_def,GSYM AND_IMP_INTRO]
+  THEN ONCE_REWRITE_TAC [WHILE_THM] THEN SIMP_TAC std_ss []);
+
+val TOTAL_WHILE_T_THM = store_thm("TOTAL_WHILE_T_THM",
+  ``!P b c M Q.
+      TOTAL_SPEC (\s. P s /\ beval b s) c M /\ TOTAL_SPEC M (While b c) Q ==>
+      TOTAL_SPEC (\s. P s /\ beval b s) (While b c) Q``,
+  SIMP_TAC std_ss [TOTAL_SPEC_def,SPEC_def] THEN REPEAT STRIP_TAC
+  THEN ONCE_REWRITE_TAC [WHILE_THM] THEN ASM_REWRITE_TAC []
+  THEN RES_TAC THEN RES_TAC THEN METIS_TAC [WHILE_THM]);
+
+val TOTAL_GEN_ASSIGN_THM = store_thm("TOTAL_GEN_ASSIGN_THM",
+  ``!P c v e Q. SPEC P (GenAssign v e) Q = TOTAL_SPEC P (GenAssign v e) Q``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN SIMP_TAC std_ss [TOTAL_SPEC_def] 
+  THEN REPEAT STRIP_TAC 
+  THEN Q.EXISTS_TAC `Update v e s1` THEN REWRITE_TAC [rules]);
+
+
 (*===========================================================================*)
 (* Small-step semantics based on Collavizza et al. paper                     *)
 (*===========================================================================*)
