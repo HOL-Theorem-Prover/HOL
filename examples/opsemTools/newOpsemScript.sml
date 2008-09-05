@@ -1497,6 +1497,7 @@ val RUN_EVAL_LEMMA =
     THEN RW_TAC std_ss [RUN_def,rules,RUN_BIND_def]
     THEN RW_TAC std_ss [RUN_def,rules,RUN_BIND_def]
     THEN Cases_on `RUN n p s1`
+    THEN Cases_on `RUN n p' s1` (* hack for PolyML from Magnus *)
     THEN FULL_SIMP_TAC outcome_ss []
     THEN METIS_TAC[rules]);
 
