@@ -549,8 +549,8 @@ val DIV_AUX_def = xDefine "DIV_AUX" `m / n = m DIV n`;
 
 val _ =
  Hol_datatype
-      `value = Scalar of num
-             | Array  of (num |-> num)`;
+      `value = Scalar of int
+             | Array  of (int |-> int)`;
 
 val isScalar_def =
  Define
@@ -586,7 +586,7 @@ val _ =
  Hol_datatype 
   `nexp = Var of string 
         | Arr of string => nexp
-        | Const of num
+        | Const of int
         | Plus of nexp => nexp
         | Times of nexp => nexp
         | Sub of nexp => nexp`;
@@ -604,7 +604,7 @@ val _ =
 
 val _ =
  Hol_datatype
-  `aexp = ArrConst  of (num |-> num)           (* array constant *)
+  `aexp = ArrConst  of (int |-> int)           (* array constant *)
         | ArrVar    of string                  (* array variable *)
         | ArrUpdate of aexp => nexp => nexp`;  (* array update   *)
 
@@ -613,17 +613,15 @@ val neval_def =
   `(neval (Var v) s = ScalarOf(s ' v)) /\
    (neval (Arr a e) s = (ArrayOf(s ' a) ' (neval e s))) /\
    (neval (Const c) s = c) /\
-   (neval (Plus e1 e2) s = neval e1 s + neval e2 s) /\
-   (neval (Times e1 e2) s = neval e1 s * neval e2 s) /\
-   (neval (Sub e1 e2) s = neval e1 s - neval e2 s)`;
+   (neval (Plus e1 e2) s = integer$int_add (neval e1 s) (neval e2 s)) /\
+   (neval (Times e1 e2) s = integer$int_add (neval e1 s) (neval e2 s)) /\
+   (neval (Sub e1 e2) s = integer$int_sub (neval e1 s) (neval e2 s))`;
 
 val beval_def =  
  Define
   `(beval (Equal e1 e2) s = (neval e1 s = neval e2 s)) /\
-   (beval (Less e1 e2) s = (neval e1 s < neval e2 s)) /\
-   (beval (LessEq e1 e2) s = (neval e1 s <= neval e2 s)) /\
-   (beval (Greater e1 e2) s = (neval e1 s > neval e2 s)) /\
-   (beval (GreaterEq e1 e2) s = (neval e1 s >= neval e2 s)) /\
+   (beval (Less e1 e2) s = integer$int_lt (neval e1 s) (neval e2 s)) /\
+   (beval (LessEq e1 e2) s = integer$int_le (neval e1 s) (neval e2 s)) /\
    (beval (And b1 b2) s = (beval b1 s /\ beval b2 s)) /\
    (beval (Or b1 b2) s = (beval b1 s \/ beval b2 s)) /\
    (beval (Not e) s = ~(beval e s))`;
