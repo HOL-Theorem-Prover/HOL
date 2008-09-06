@@ -7,6 +7,7 @@
 (* Modified      : September 22, 1997, Ken Larsen (functor removal)      *)
 (* Rewritten     : 1999, Bruno Barras, to use explicit substitutions     *)
 (* Modified      : July 2000, Konrad Slind, for Moscow ML 2.00           *)
+(* Rewritten     : September 2008, Peter Vincent Homeier, for HOL-Omega  *)
 (* ===================================================================== *)
 
 structure Term :> Term =
@@ -1423,6 +1424,7 @@ local
          | look ({redex,residue}::t) = if x=redex then SOME residue else look t
    in look end
   fun bound_by_scope scoped M = if scoped then not (free M 0 0) else false
+  val kdmatch = Kind.raw_match_kind
   val tymatch = Type.raw_match_kind_type
 in
 fun RM [] theta = theta
@@ -1451,7 +1453,7 @@ fun RM [] theta = theta
          else
          case (ty1,ty2)
           of (GRND _,  POLY _)   => MERR"ground const vs. polymorphic const"
-           | (GRND pat,GRND obj) => if abconv_ty pat obj then (tmS,tyS,kdS)
+           | (GRND pat,GRND obj) => if pat = obj then (tmS,tyS,kdS)
                        else MERR"const-const with different (ground) types"
            | (POLY pat,GRND obj) =>
                        let val (tyS',kdS') = tymatch pat obj (tyS,kdS)
@@ -1466,9 +1468,11 @@ fun RM [] theta = theta
       = let val (tyS',kdS') = tymatch ty1 ty2 (tyS,kdS)
         in RM ((M,N,true)::rst) (tmS, tyS', kdS')
         end
-  | RM ((TAbs((_,k1,r1),M), TAbs((_,k2,r2),N), s)::rst) S
-      = if k1=k2 andalso r1=r2 then RM ((M,N,true)::rst) S
-        else MERR "different type abstractions"
+  | RM ((TAbs((_,k1,r1),M), TAbs((_,k2,r2),N), s)::rst) (tmS,tyS,kdS)
+      = let val kdS' = kdmatch k1 k2 kdS
+        in if r1 = r2 then RM ((M,N,true)::rst) (tmS, tyS, kdS')
+           else MERR "different type abstractions"
+        end
   | RM ((Comb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
   | RM ((TComb(M,ty1),TComb(N,ty2),s)::rst) (tmS,tyS,kdS)
       = let val (tyS',kdS') = tymatch ty1 ty2 (tyS,kdS)
@@ -1496,7 +1500,9 @@ fun norm_kind_subst ((tmS,_),(tyS,_),(kdS,_)) =
      fun kdel A [] = A
        | kdel A ({redex,residue}::rst) =
          kdel (let val redex' = kdTheta(redex)
-               in if abconv_ty residue redex' then A else (redex' |-> residue)::A
+               in if residue = redex' then A else (redex' |-> residue)::A
+                  (* redex' must be a type variable; hence we use can use =
+                     to compare redex' and residue, rather than abconv_ty.  *)
                end) rst
      fun del A [] = A
        | del A ({redex,residue}::rst) =
@@ -1522,17 +1528,15 @@ fun match_kind_terml kdfixed tyfixed tmfixed pat ob =
 fun match_terml tyfixed tmfixed pat ob =
  let val (tmS,tyS,kdS) = match_kind_terml [] tyfixed tmfixed pat ob
  in if null kdS then (tmS,tyS)
-    else raise ERR "match_term" "kind instantiation needed: use match_kind_term instead"
+    else raise ERR "match_terml" "kind instantiation needed: use match_kind_terml instead"
  end
 
 val match_kind_term = match_kind_terml [] [] empty_varset
 
-(*val match_term = match_terml [] empty_varset;*)
-
 fun match_term pat ob =
- let val (tmS,tyS,kdS) = match_kind_terml [] [] empty_varset pat ob
+ let val (tmS,tyS,kdS) = match_kind_term pat ob
  in if null kdS then (tmS,tyS)
-    else raise ERR "match_terml" "kind instantiation needed: use match_kind_terml instead"
+    else raise ERR "match_term" "kind instantiation needed: use match_kind_term instead"
  end;
 
 (*---------------------------------------------------------------------------

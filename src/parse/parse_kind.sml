@@ -12,14 +12,15 @@ val ERRloc = Feedback.mk_HOL_ERRloc "Parse" "parse_kind"
 
 fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 
-fun parse_kind tyfns allow_unknown_prefixes G = let
+fun parse_kind kdfns allow_unknown_prefixes G = let
   val G = rules G (*and abbrevs = abbreviations G*)
-  val {varkind = pVarkind, kindop = pKind, antiq = pAQ, qkindop, arity} = tyfns
+  val {varkind = pVarkind, kindop = pKind, antiq = pAQ, qkindop, arity} = kdfns
   fun structure_to_value (s,locn) args st =
       case st of
         KINDOP {Args, Thy, Kindop} =>
         qkindop {Args = map (structure_to_value (s,locn) args) Args,
                  Thy = Thy, Kindop = Kindop, Locn = locn}
+      | KDVAR str => pVarkind (str,locn)
 
   (* extra fails on next two definitions will effectively make the stream
      push back the unwanted token *)

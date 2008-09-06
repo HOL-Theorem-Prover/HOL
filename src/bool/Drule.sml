@@ -953,11 +953,17 @@ local fun strip [] _ = []     (* Returns a list of (pat,ob) pairs. *)
         | strip (tm::tml) M =
             let val (Bvar,Body) = dest_forall M
             in (type_of Bvar,type_of tm)::strip tml Body   end
+      fun kd_merge [] theta = theta
+        | kd_merge ((x as {redex,residue})::rst) theta =
+          case subst_assoc (equal redex) theta
+           of NONE      => x::kd_merge rst theta
+            | SOME rdue => if residue=rdue then kd_merge rst theta
+                           else raise ERR "ISPECL" ""
       fun merge [] theta = theta
         | merge ((x as {redex,residue})::rst) theta =
           case subst_assoc (equal redex) theta
            of NONE      => x::merge rst theta
-            | SOME rdue => if residue=rdue then merge rst theta
+            | SOME rdue => if abconv_ty residue rdue then merge rst theta
                            else raise ERR "ISPECL" ""
 in
 fun ISPECL [] = I
@@ -965,13 +971,15 @@ fun ISPECL [] = I
   | ISPECL tms = fn th =>
      let val pairs = strip tms (concl th) handle HOL_ERR _
                      => raise ERR "ISPECL" "list of terms too long for theorem"
-         val inst = rev_itlist (fn (pat,ob) => fn ty_theta =>
-                      let val theta = Type.match_type pat ob
-                      in merge theta ty_theta end) pairs []
+         val (kd_theta,ty_theta) =
+             rev_itlist (fn (pat,ob) => fn (kd_theta,ty_theta) =>
+                      let val (kd_theta',ty_theta') = Type.match_kind_type pat ob
+                      in (kd_merge kd_theta' kd_theta, merge ty_theta' ty_theta)
+                      end) pairs ([],[])
                       handle HOL_ERR _ => raise ERR "ISPECL"
                               "can't type-instantiate input theorem"
-     in SPECL tms (INST_TYPE inst th) handle HOL_ERR _
-        => raise ERR "ISPECL" "type variable free in assumptions"
+     in SPECL tms (INST_TYPE ty_theta (INST_KIND kd_theta th)) handle HOL_ERR _
+        => raise ERR "ISPECL" "type variable or kind variable free in assumptions"
      end
 end;
 

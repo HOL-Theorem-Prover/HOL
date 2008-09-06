@@ -1812,7 +1812,7 @@ fun get_kind_insts avoids L (kdS,Id) =
           raw_match_kind (kind_of redex) (kind_of residue) Theta)
        L (kdS,union avoids Id)
 
-fun separate_insts_ty kdavoids
+fun separate_insts_ty kdavoids kdS
          (insts :{redex : hol_type, residue : hol_type} list) = let
   val (realinsts, patterns) = partition (is_vartype o #redex) insts
   val betacounts =
@@ -1828,7 +1828,7 @@ fun separate_insts_ty kdavoids
                                   "Inconsistent patterning in h.o. type match";
                                   sof))
         patterns []
-  val kdins = get_kind_insts kdavoids realinsts ([],[])
+  val kdins = get_kind_insts kdavoids realinsts kdS
 in
   (betacounts,
    mapfilter (fn {redex = x, residue = t} => let
@@ -1949,7 +1949,7 @@ fun ho_match_type1 kdavoids lconsts vty cty insts_homs kd_insts_ids = let
   val kdins = get_kind_insts kdavoids (fst pinsts_homs) kd_insts_ids
   val insts = type_homatch kdavoids lconsts kdins pinsts_homs
 in
-  separate_insts_ty kdavoids insts
+  separate_insts_ty kdavoids kdins insts
 end
 
 fun ho_match_type0 kdavoids lconsts vty cty =

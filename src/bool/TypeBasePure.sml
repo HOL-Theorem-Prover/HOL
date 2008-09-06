@@ -539,12 +539,13 @@ fun tysize ty =
       end
 
 fun mymatch pat ty = let
-  val (i, sames) = Type.raw_match_type pat ty ([], [])
+  val ((i, sames), (k, kdsames)) = Type.raw_match_kind_type pat ty (([], []), ([], []))
 in
-  i @ (map (fn ty => ty |-> ty) sames)
+  (i @ (map (fn ty => ty |-> ty) sames),
+   k @ (map (fn kd => kd |-> kd) kdsames))
 end
 
-fun instsize i =
+fun instsize (i,k) =
     List.foldl (fn ({redex,residue},acc) => tysize residue + acc) 0 i
 
 fun check_match ty (pat, data) =

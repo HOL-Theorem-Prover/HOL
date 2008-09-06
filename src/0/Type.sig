@@ -126,7 +126,9 @@ sig
                     ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list ->
                     (hol_type,hol_type)Lib.subst *
                     ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list
-  val separate_insts_ty : kind list -> (hol_type,hol_type)Lib.subst ->
+  val separate_insts_ty : kind list ->
+                          ((kind,kind)Lib.subst * kind list) ->
+                          (hol_type,hol_type)Lib.subst ->
                           (hol_type, int)Lib.subst *
                           (hol_type,hol_type)Lib.subst *
                           ((kind,kind)Lib.subst * kind list)
