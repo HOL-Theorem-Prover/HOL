@@ -3,8 +3,8 @@
 (* 'a finite.                                                                *)
 (*---------------------------------------------------------------------------*)
 
-app load ["metisLib", "pred_setLib", "containerTheory"];
-open pred_setTheory pred_setLib metisLib relationTheory containerTheory;
+app load ["pred_setLib"];
+open pred_setTheory pred_setLib relationTheory listTheory;
 
 val dnf_ss = bool_ss ++ boolSimps.DNF_ss ++ rewrites [AND_IMP_INTRO];
 
@@ -114,8 +114,9 @@ val FINITE_PARENTS = Q.prove
  METIS_TAC [SUBSET_UNIV, SUBSET_FINITE]);
 
 val DFS_EQ_THM = Q.prove (
-`!(G: 'a finite -> 'a finite list) f seen to_visit acc.
-    (DFS G f seen to_visit acc = DFS_finite G f seen to_visit acc)`,
+`!G : 'a finite -> 'a finite list.
+ !f seen to_visit acc.
+     DFS G f seen to_visit acc = DFS_finite G f seen to_visit acc`,
  recInduct DFS_FINITE_IND THEN 
  RW_TAC std_ss [DFS_DEF, DFS_FINITE_DEF, finite_FINITE, FINITE_PARENTS]);
 

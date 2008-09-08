@@ -63,36 +63,48 @@ datatype tyinfo = DFACTS of dtyinfo
 fun ty_of (DFACTS {ty,...}) = ty
   | ty_of (NFACTS(ty,_)) = ty;
 
+fun dollarty ty =
+  let val {Thy,Tyop,Args} = dest_thy_type ty
+  in Lib.quote (Thy ^ "$" ^ Tyop)
+  end;
+
 val ty_name_of = type_names o ty_of
 
 fun constructors_of (DFACTS {constructors,...}) = constructors
   | constructors_of (NFACTS _) = [];
 
 fun case_const_of (DFACTS {case_const,...}) = case_const
-  | case_const_of (NFACTS _) = raise ERR "case_const_of" "not a datatype";
+  | case_const_of (NFACTS (ty,_)) = 
+      raise ERR "case_const_of" (dollarty ty^" is not a datatype");
 
 fun case_cong_of (DFACTS {case_cong,...}) = case_cong
-  | case_cong_of (NFACTS _) = raise ERR "case_cong_of" "not a datatype";
+  | case_cong_of (NFACTS (ty,_)) = 
+       raise ERR "case_cong_of" (dollarty ty^" is not a datatype");
 
 fun case_def_of (DFACTS {case_def,...}) = case_def
-  | case_def_of (NFACTS _) = raise ERR "case_def_of" "not a datatype";
+  | case_def_of (NFACTS (ty,_)) = 
+       raise ERR "case_def_of" (dollarty ty^" is not a datatype");
 
 fun induction_of0 (DFACTS {induction,...}) = induction
-  | induction_of0 (NFACTS _) = raise ERR "induction_of0" "not a datatype";
+  | induction_of0 (NFACTS (ty,_)) = 
+        raise ERR "induction_of0" (dollarty ty^" is not a datatype");
 
 fun induction_of (DFACTS {induction,...}) = thm_of induction
-  | induction_of (NFACTS _) = raise ERR "induction_of" "not a datatype";
+  | induction_of (NFACTS (ty,_)) = 
+        raise ERR "induction_of" (dollarty ty^" is not a datatype");
 
 fun nchotomy_of (DFACTS {nchotomy,...}) = nchotomy
   | nchotomy_of (NFACTS(_,{nchotomy=SOME th,...})) = th
-  | nchotomy_of (NFACTS(_,{nchotomy=NONE,...})) =
-         raise ERR "nchotomy_of" "no theorem available";
+  | nchotomy_of (NFACTS(ty,{nchotomy=NONE,...})) =
+        raise ERR "nchotomy_of" (dollarty ty^" no cases theorem available");
 
 fun distinct_of (DFACTS {distinct,...}) = distinct
-  | distinct_of (NFACTS _) = raise ERR "distinct_of" "not a datatype";
+  | distinct_of (NFACTS (ty,_)) = 
+        raise ERR "distinct_of" (dollarty ty^" is not a datatype");
 
 fun one_one_of (DFACTS {one_one,...}) = one_one
-  | one_one_of (NFACTS _) = raise ERR "one_one_of" "not a datatype";
+  | one_one_of (NFACTS (ty,_)) = 
+        raise ERR "one_one_of" (dollarty ty^" is not a datatype");
 
 fun fields_of (DFACTS {fields,...}) = fields
   | fields_of (NFACTS _) = [];
@@ -107,27 +119,32 @@ fun simpls_of (DFACTS {simpls,...}) = simpls
   | simpls_of (NFACTS _) = simpfrag.empty_simpfrag;
 
 fun axiom_of0 (DFACTS {axiom,...}) = axiom
-  | axiom_of0 (NFACTS _) = raise ERR "axiom_of0" "not a datatype";
+  | axiom_of0 (NFACTS (ty,_)) = 
+      raise ERR "axiom_of0" (dollarty ty^" is not a datatype");
 
 fun axiom_of (DFACTS {axiom,...}) = thm_of axiom
-  | axiom_of (NFACTS _) = raise ERR "axiom_of" "not a datatype";
+  | axiom_of (NFACTS (ty,_)) = 
+      raise ERR "axiom_of" (dollarty ty^" is not a datatype");
 
 fun size_of0 (DFACTS {size,...}) = size
-  | size_of0 (NFACTS _) = raise ERR "size_of0" "not a datatype";
+  | size_of0 (NFACTS (ty,_)) = 
+      raise ERR "size_of0" (dollarty ty^" is not a datatype");
 
 fun size_of (DFACTS {size=NONE,...}) = NONE
   | size_of (DFACTS {size=SOME(tm,def),...}) = SOME(tm,thm_of def)
   | size_of (NFACTS(_,{size,...})) = size;
 
 fun encode_of0(DFACTS {encode,...}) = encode
-  | encode_of0(NFACTS _) = raise ERR "encode_of0" "not a datatype";
+  | encode_of0(NFACTS (ty,_)) = 
+       raise ERR "encode_of0" (dollarty ty^" is not a datatype")
 
 fun encode_of(DFACTS {encode=NONE,...}) = NONE
   | encode_of(DFACTS {encode=SOME(tm,def),...}) = SOME(tm,thm_of def)
   | encode_of(NFACTS(_,{encode,...})) = encode;
 
 fun lift_of(DFACTS {lift,...}) = lift
-  | lift_of(NFACTS _) = raise ERR "lift_of" "not a datatype";
+  | lift_of(NFACTS (ty,_)) = 
+       raise ERR "lift_of" (dollarty ty^" is not a datatype")
 ;
 
 (*---------------------------------------------------------------------------

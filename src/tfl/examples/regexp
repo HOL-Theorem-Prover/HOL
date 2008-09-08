@@ -13,7 +13,7 @@
 (*           | Then    of ''a re * ''a re                                    *)
 (*           | Repeat  of ''a re;                                            *)
 (*                                                                           *)
-(* match: ''a re list -> ''a list -> ''a re list option -> bool              *)
+(* Match: ''a re list -> ''a list -> ''a re list option -> bool              *)
 (*                                                                           *)
 (* fun Match [] [] _ = true                                                  *)
 (*   | Match [] _  _ = false                                                 *)
@@ -35,8 +35,8 @@
 (*  HOL Preliminaries                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-app load ["stringLib","metisLib"]; 
-open pairTheory arithmeticTheory listTheory optionTheory metisLib;
+app load ["stringLib"]; 
+open pairTheory arithmeticTheory listTheory optionTheory;
 
 val thm_counter = Count.mk_meter();
 
@@ -82,7 +82,7 @@ val _ = overload_on ("#", Term`$Then`);
 val _ = set_fixity "|" (Infixr 501);
 val _ = set_fixity "#" (Infixr 601);
 
-val regexp_cases = TypeBase.nchotomy_of "regexp";
+val regexp_cases = TypeBase.nchotomy_of ``:'a regexp``;
 
 (*---------------------------------------------------------------------------*)
 (* Semantics of regular expressions (from Mike Gordon).                      *)
@@ -101,7 +101,7 @@ val regexp_repeat_thm = Q.prove
 (`!r w.sem (Repeat r) w = sem (Epsilon | (r # (Repeat r))) w`,
  RW_TAC std_ss [] THEN EQ_TAC THEN RW_TAC list_ss [sem_def, FLAT] 
  THENL [Cases_on `wlist` THEN RW_TAC list_ss [FLAT], ALL_TAC, ALL_TAC]
- THEN PROVE_TAC [FLAT,EVERY_DEF]);
+ THEN METIS_TAC [FLAT,EVERY_DEF]);
 
 val repeat_to_ncat_thm = Q.prove
 (`!r w.sem (Repeat r) w ==> ?n.sem (FUNPOW ($# r) n Epsilon) w`,
@@ -109,18 +109,18 @@ val repeat_to_ncat_thm = Q.prove
    THEN Q.EXISTS_TAC `LENGTH wlist` 
    THEN Induct_on `wlist` 
    THEN RW_TAC list_ss [sem_def, FLAT, FUNPOW_SUC]
-   THEN EVAL_TAC THEN PROVE_TAC []);
+   THEN EVAL_TAC THEN METIS_TAC []);
 
 val ncat_to_repeat_thm = Q.prove
 (`!r w n. sem (FUNPOW ($# r) n Epsilon) w ==> sem (Repeat r) w`,
  Induct_on `n` THENL [ALL_TAC, POP_ASSUM MP_TAC] THEN EVAL_TAC
    THEN RW_TAC list_ss [sem_def,FUNPOW_SUC] THENL
-   [PROVE_TAC [FLAT, EVERY_DEF],
-    RES_TAC THEN Q.EXISTS_TAC `w1::wlist` THEN PROVE_TAC [EVERY_DEF,FLAT]]);
+   [METIS_TAC [FLAT, EVERY_DEF],
+    RES_TAC THEN Q.EXISTS_TAC `w1::wlist` THEN METIS_TAC [EVERY_DEF,FLAT]]);
 
 val repeat_equals_ncat_thm = Q.prove
 (`!r w. sem (Repeat r) w = ?n. sem (FUNPOW ($# r) n Epsilon) w`,
- PROVE_TAC [ncat_to_repeat_thm, repeat_to_ncat_thm]);
+ METIS_TAC [ncat_to_repeat_thm, repeat_to_ncat_thm]);
 
 
 (* ------------------------------------------------------------------------- *)
@@ -135,8 +135,8 @@ val match_defn =
 /\ (match (Epsilon::t) w s        = match t w s)
 /\ (match (Charset C::t) [] s     = F)
 /\ (match (Charset C::t) (d::w) s = C d /\ match t w NONE) 
-/\ (match (r1|r2::t) w s          = match (r1::t) w s \/ match (r2::t) w s)
-/\ (match (r1#r2::t) w s          = match (r1::r2::t) w s)
+/\ (match ((r1|r2)::t) w s        = match (r1::t) w s \/ match (r2::t) w s)
+/\ (match ((r1#r2)::t) w s        = match (r1::r2::t) w s)
 /\ (match (Repeat r::t) w s       =
        if s = SOME (Repeat r::t) then
          F
@@ -211,16 +211,16 @@ val (match_def, match_ind) = Defn.tprove
 val match_implies_sem = Q.prove
 (`!rl w s. match rl w s ==> sem (FOLDR $# Epsilon rl) w`,
  recInduct match_ind THEN RW_TAC list_ss [match_def, sem_def] THENL
- [PROVE_TAC [APPEND],
-  PROVE_TAC [],
-  PROVE_TAC [],
-  FULL_SIMP_TAC list_ss [] THEN PROVE_TAC [],
+ [METIS_TAC [APPEND],
+  METIS_TAC [],
+  METIS_TAC [],
+  FULL_SIMP_TAC list_ss [] THEN METIS_TAC [],
   MAP_EVERY Q.EXISTS_TAC [`[]`, `w`]
-    THEN RW_TAC list_ss [] THEN PROVE_TAC [FLAT,EVERY_DEF],
+    THEN RW_TAC list_ss [] THEN METIS_TAC [FLAT,EVERY_DEF],
   FULL_SIMP_TAC list_ss [] 
     THEN MAP_EVERY Q.EXISTS_TAC [`w1 ++ FLAT wlist`, `w2'`] 
     THEN RW_TAC list_ss []
-    THEN PROVE_TAC [FLAT,EVERY_DEF]]);
+    THEN METIS_TAC [FLAT,EVERY_DEF]]);
 
 (*---------------------------------------------------------------------------*)
 (* Semantics imply match                                                     *)
@@ -235,8 +235,8 @@ val m_def =
  Define
   `(m (Epsilon::t,w,s)  x     = (x = (t,w,s))) /\ 
    (m (Charset C::t,d::w,s) x = (x = (t,w,NONE)) /\ C d) /\
-   (m (r1 | r2::t, w, s) x    = (x = (r1::t,w,s)) \/ (x = (r2::t,w,s))) /\
-   (m (r1 # r2::t, w, s) x    = (x = (r1::r2::t,w,s))) /\
+   (m ((r1 | r2)::t, w, s) x  = (x = (r1::t,w,s)) \/ (x = (r2::t,w,s))) /\
+   (m ((r1 # r2)::t, w, s) x  = (x = (r1::r2::t,w,s))) /\
    (m (Repeat r::t, w,s) x    = (x = (t, w, s)) \/ 
                                 (x = (r::Repeat r::t, w, SOME(Repeat r::t))))/\
    (m _ _ = F)`;
@@ -260,13 +260,13 @@ val m_ind_thm = Q.prove
      'a regexp list # 'a list # 'a regexp list option -> bool.
   (!t w s x. P (Epsilon::t,w,s) x) /\
   (!c t d w s x. P (Charset c::t,d::w,s) x) /\
-  (!r1 r2 t w s x. P (r1 | r2::t,w,s) x) /\
-  (!r1 r2 t w s x. P (r1 # r2::t,w,s) x) /\
+  (!r1 r2 t w s x. P ((r1 | r2)::t,w,s) x) /\
+  (!r1 r2 t w s x. P ((r1 # r2)::t,w,s) x) /\
   (!r t w s x. P (Repeat r::t,w,s) x) /\
   (!c t s x. P (Charset c::t,[],s) x) /\
   (!w s. P ([],w) s) ==>
   !v v1 v2 v3 v4 v5. P (v,v1,v2) (v3,v4,v5)`,
- PROVE_TAC [ABS_PAIR_THM,m_ind]);
+ METIS_TAC [ABS_PAIR_THM,m_ind]);
 
 val m_thm = SIMP_RULE list_ss [] (Q.prove
 (`!rl w s rl' w' s' r l. 
@@ -286,19 +286,18 @@ val cases_lemma = Q.prove
      (?t w s. a = (Epsilon::t,w,s)) \/
      (?c t w s. a = (Charset c::t,[],s)) \/
      (?c d t w s. a = (Charset c::t,d::w,s)) \/
-     (?r1 r2 t w s. a = (r1|r2::t,w,s)) \/
-     (?r1 r2 t w s. a = (r1#r2::t,w,s)) \/
+     (?r1 r2 t w s. a = ((r1|r2)::t,w,s)) \/
+     (?r1 r2 t w s. a = ((r1#r2)::t,w,s)) \/
      (?r t w s. a = (Repeat r::t,w,s))`,
  METIS_TAC [list_CASES,ABS_PAIR_THM,regexp_cases]);
-
 
 val ms_ind_thm = Q.prove
 (`!P:('a regexp list # 'a list # 'a regexp list option) list -> bool.
     P [] /\ 
     (!x. P [([],[],x)]) /\
     (!r t w s. P [(Repeat r::t,w,s)]) /\
-    (!r1 r2 t w s. P [(r1 # r2::t,w,s)]) /\
-    (!r1 r2 t w s. P [(r1 | r2::t,w,s)]) /\
+    (!r1 r2 t w s. P [((r1 # r2)::t,w,s)]) /\
+    (!r1 r2 t w s. P [((r1 | r2)::t,w,s)]) /\
     (!c d t w s. P [(Charset c::t,d::w,s)]) /\
     (!c t s. P [(Charset c::t,[],s)]) /\
     (!t w s. P [(Epsilon::t,w,s)]) /\
@@ -308,9 +307,9 @@ val ms_ind_thm = Q.prove
     (!c t d w s t' w' s' rst.
         P ((t',w',s')::rst) ==> P((Charset c::t,d::w,s)::(t',w',s')::rst)) /\
     (!r1 r2 t w s t' w' s' rst.
-        P ((t',w',s')::rst) ==> P((r1 | r2::t,w,s)::(t',w',s')::rst)) /\
+        P ((t',w',s')::rst) ==> P(((r1 | r2)::t,w,s)::(t',w',s')::rst)) /\
     (!r1 r2 t w s t' w' s' rst.
-        P ((t',w',s')::rst) ==> P((r1 # r2::t,w,s)::(t',w',s')::rst)) /\
+        P ((t',w',s')::rst) ==> P(((r1 # r2)::t,w,s)::(t',w',s')::rst)) /\
     (!r t w s t' w' s' rst.
         P ((t',w',s')::rst) ==> P((Repeat r::t,w,s)::(t',w',s')::rst)) /\
     (!c t s h1 t1. P ((Charset c::t,[],s)::h1::t1)) /\
@@ -403,7 +402,7 @@ val lem = Q.prove
  recInduct ms_ind_thm
   THEN NTAC 2 (RW_TAC list_ss 
          [csp_step, change_stop_on_prefix_def, match_seq_def, m_def])
-  THEN PROVE_TAC [CONS_ACYCLIC,list_CASES, CONS_11]);
+  THEN METIS_TAC [CONS_ACYCLIC,list_CASES, CONS_11]);
 
 val compose_m_seq_thm = Q.prove
 (`!x1 x2. match_seq x1 ==> match_seq x2 ==> match_seq (compose_m_seq x1 x2)`,
@@ -490,7 +489,7 @@ val sem_implies_match_seq_exists = Q.prove
      FULL_SIMP_TAC list_ss [FUNPOW_SUC] 
        THEN RW_TAC list_ss [sem_def]
        THEN `?x1 x2. match_seq (([r],w1,NONE)::x1) /\
-                     match_seq (([Repeat r],w2,NONE)::x2)` by PROVE_TAC []
+                     match_seq (([Repeat r],w2,NONE)::x2)` by METIS_TAC []
        THEN Q.EXISTS_TAC `change_stop_on_prefix 
                               (compose_m_seq (([r],w1,NONE)::x1)
                               (([Repeat r],w2,NONE)::x2)) (SOME [Repeat r])`
@@ -577,13 +576,13 @@ val split_thm5 = Q.prove
 (`!P l acc acc2. (split P l acc = NONE) ==> (split P l acc2 = NONE)`,
  Induct_on `l` 
    THEN RW_TAC list_ss [split_def] 
-   THEN PROVE_TAC [split_def]);
+   THEN METIS_TAC [split_def]);
 
 val split_prop_thm = Q.prove
 (`!L P a b c acc. (split P L acc = SOME(a,b,c)) ==> P b`,
  Induct 
    THEN RW_TAC list_ss [split_def] 
-   THEN PROVE_TAC []);
+   THEN METIS_TAC []);
 
 val split_cong_thm = Q.prove
 (`!l P acc P' l' acc'. 
@@ -628,9 +627,9 @@ val match_seq_find_lemma = Q.prove
    THEN FULL_SIMP_TAC list_ss []
    THEN RES_TAC THEN FULL_SIMP_TAC list_ss [] THEN RW_TAC list_ss []
    THEN Cases_on `~(SND (SND (HD ms)) = SOME (Repeat r::l))`
-   THENL [PROVE_TAC [],FULL_SIMP_TAC list_ss [] THEN RW_TAC list_ss []]
+   THENL [METIS_TAC [],FULL_SIMP_TAC list_ss [] THEN RW_TAC list_ss []]
    THEN Cases_on `~(FST (SND (HD ms)) = w)`
-   THENL [PROVE_TAC [],FULL_SIMP_TAC list_ss [] THEN RW_TAC list_ss []]
+   THENL [METIS_TAC [],FULL_SIMP_TAC list_ss [] THEN RW_TAC list_ss []]
    THEN `(ms = []) \/ ?a b c mst. ms = (a,b,c)::mst` 
         by METIS_TAC [list_CASES,ABS_PAIR_THM]
    THENL [FULL_SIMP_TAC list_ss [split_def, match_seq_def, m_def],
@@ -646,9 +645,9 @@ val match_seq_find_lemma = Q.prove
 (* out the intermediate parts of the match sequence.                         *)
 (*---------------------------------------------------------------------------*)
 
-val (NS_DEF,NS_IND) = 
- Defn.tprove
- (Hol_defn "NS"
+val NS_DEF = 
+ tDefine
+  "NS"
   `NS ms =
      case split (\x. ?r l w. x = (Repeat r::l, w, SOME (Repeat r::l))) ms [] of
          NONE -> ms
@@ -659,17 +658,19 @@ val (NS_DEF,NS_IND) =
                 let (x1, (rl, w1, s1), y) = THE opt in
                 if (?ra L. (rl = Repeat ra::L) /\ (FST(HD z) = L))
                   then NS (x1 ++ [(rl,w1,s1)] ++ change_stop_on_prefix z s1)
-                  else NS (x1 ++ [(rl,w1,s1)] ++ z)`,
- WF_REL_TAC `measure LENGTH`
+                  else NS (x1 ++ [(rl,w1,s1)] ++ z)`
+(WF_REL_TAC `measure LENGTH`
   THEN RW_TAC list_ss [LENGTH_CSP]
   THEN IMP_RES_TAC split_thm THEN FULL_SIMP_TAC list_ss []
   THEN RW_TAC list_ss []
-  THEN MATCH_MP_TAC (DECIDE(Term `a<b ==> c + (a + d) < b + (c + d)`))
-  THEN Cases_on `split (\x. ?s. x = (v5,v7,s)) v1 []` THEN RW_TAC list_ss []
+  THEN Cases_on `split (\(p1,p1',p2). (p1 = bad_r) /\ (p1' = bad_w)) l1 []`
+  THEN RW_TAC list_ss [] 
   THEN FULL_SIMP_TAC list_ss []
   THEN Cases_on `x` THEN Cases_on `r`
   THEN IMP_RES_TAC split_thm THEN FULL_SIMP_TAC list_ss []
   THEN RW_TAC list_ss []);
+
+val NS_IND = fetch "-" "NS_ind";
 
 (*---------------------------------------------------------------------------*)
 (* One step of NS preserves match sequences                                  *)
@@ -696,20 +697,20 @@ val match_seq_surg_thm = Q.prove
              THEN FULL_SIMP_TAC list_ss [LAMBDA_PROD])
     THEN IMP_RES_TAC split_thm THEN FULL_SIMP_TAC list_ss []
     THEN `match_seq (x1 ++ [(rl,w1,s1)] ++ y ++ [(rl,w1,bad_s)] ++ z)` 
-         by PROVE_TAC []
+         by METIS_TAC []
     THEN `(z=[]) \/ ?a b c t1. z = (a,b,c)::t1` 
          by METIS_TAC [list_CASES,ABS_PAIR_THM] THENL
     [FULL_SIMP_TAC list_ss [match_seq_def]
        THEN `match_seq [(bad_r,bad_w,bad_s)]` 
-            by PROVE_TAC [match_seq_down_closed]
+            by METIS_TAC [match_seq_down_closed]
        THEN FULL_SIMP_TAC list_ss [match_seq_def]
        THEN RW_TAC list_ss [change_stop_on_prefix_def, match_seq_def]
        THEN `match_seq ([([],[],s1)] ++ y ++ [([],[],bad_s)])` 
-             by PROVE_TAC [match_seq_down_closed,APPEND_ASSOC]
+             by METIS_TAC [match_seq_down_closed,APPEND_ASSOC]
        THEN Cases_on `y`  THEN FULL_SIMP_TAC list_ss [match_seq_def,m_def],
      RW_TAC list_ss [] THENL
      [`match_seq (change_stop_on_prefix ((a,b,c)::t1) s1)` 
-          by PROVE_TAC [match_seq_down_closed,change_stop_on_prefix_thm]
+          by METIS_TAC [match_seq_down_closed,change_stop_on_prefix_thm]
         THEN ASSUME_TAC (Q.SPECL 
               [`(Repeat ra::a,bad_w,s1)`, `x1`, 
                `change_stop_on_prefix ((a,b,c)::t1) s1`, 
@@ -717,7 +718,7 @@ val match_seq_surg_thm = Q.prove
               match_seq_lemma)
         THEN FIRST_ASSUM MATCH_MP_TAC THEN RW_TAC list_ss []
         THEN `?t2. change_stop_on_prefix ((a,b,c)::t1) s1 = (a,b,s1)::t2` 
-             by PROVE_TAC[csp_step]
+             by METIS_TAC[csp_step]
         THEN POP_ASSUM SUBST_ALL_TAC
         THEN RW_TAC list_ss [match_seq_def]
         THEN `m (Repeat ra::a,bad_w,bad_s) (a,b,c)` 
@@ -740,7 +741,7 @@ val NS_match_thm = Q.prove
 (`!ms. match_seq ms ==> match_seq (NS ms)`,
  recInduct NS_IND THEN RW_TAC list_ss []
    THEN ONCE_REWRITE_TAC [NS_DEF] THEN CASE_TAC THENL
-   [PROVE_TAC [],
+   [METIS_TAC [],
     REPEAT CASE_TAC 
      THEN RW_TAC list_ss [match_seq_def, LET_THM]
      THEN REPEAT (POP_ASSUM MP_TAC) 
@@ -754,7 +755,7 @@ val NS_match_thm = Q.prove
      THEN RW_TAC list_ss [match_seq_def]
      THEN IMP_RES_TAC match_seq_surg_thm
      THEN FULL_SIMP_TAC list_ss [] 
-     THEN RW_TAC list_ss [] THEN PROVE_TAC []]);
+     THEN RW_TAC list_ss [] THEN METIS_TAC []]);
 
 val NS_is_normal_thm = Q.prove
 (`!ms r w t. ~MEM (Repeat r::t, w, SOME (Repeat r::t)) (NS ms)`,
@@ -766,7 +767,7 @@ val NS_is_normal_thm = Q.prove
       THEN Induct_on `ms` 
       THEN RW_TAC list_ss []
       THEN FULL_SIMP_TAC list_ss [split_def] 
-      THEN PROVE_TAC [split_thm5],
+      THEN METIS_TAC [split_thm5],
     REPEAT CASE_TAC THEN RW_TAC list_ss [LET_THM]
       THEN REPEAT (POP_ASSUM MP_TAC) 
       THEN RENAME_FREES_TAC [("q","l1"), ("r''","l2"), 
@@ -783,7 +784,7 @@ val NS_is_normal_thm = Q.prove
 
 val lem = Q.prove
 (`EXISTS (\y. y = (a,b,c)) L ==> EXISTS (\y. ?c. y = (a,b,c)) L`,
-Induct_on `L` THEN EVAL_TAC THEN RW_TAC list_ss [] THEN PROVE_TAC[]);
+Induct_on `L` THEN EVAL_TAC THEN RW_TAC list_ss [] THEN METIS_TAC[]);
 
 (*---------------------------------------------------------------------------*)
 (* Normalizing a match sequence doesn't change the first element             *)
@@ -823,7 +824,7 @@ val  NS_HD_THM = Q.prove
 val sem_implies_match = Q.prove
 (`!r w. sem r w ==> match [r] w NONE`,
  METIS_TAC [sem_implies_match_seq_exists, NS_match_thm,
-           NS_is_normal_thm, NS_HD_THM, witness_implies_match_thm]);
+            NS_is_normal_thm, NS_HD_THM, witness_implies_match_thm]);
 
 (*---------------------------------------------------------------------------*)
 (* match correctly implements the semantics.                                 *)
@@ -834,7 +835,6 @@ val match_is_correct = Q.prove
  REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
    [RW_TAC list_ss [sem_implies_match],
     IMP_RES_TAC match_implies_sem THEN FULL_SIMP_TAC list_ss [FOLDR,sem_def]]);
-
 
 val _ = Count.report (Count.read thm_counter);
 
