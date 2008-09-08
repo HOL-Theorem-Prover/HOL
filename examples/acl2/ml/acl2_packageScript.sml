@@ -2988,10 +2988,15 @@ val PLACE_def = Define `PLACE s1 s2 s3 a (A,B,C,D) =
                     then if LEQ s1 a then (a::A,B,C,D) else (A,a::B,C,D)
                     else if LEQ s3 a then (A,B,a::C,D) else (A,B,C,a::D)`;
 
-val PARTITION_def = 
- Define `(PARTITION s1 s2 s3 (A,B,C,D) [] = (A,B,C,D)) /\
-         (PARTITION s1 s2 s3 (A,B,C,D) (a::bs) =
-               PARTITION s1 s2 s3 (PLACE s1 s2 s3 a (A,B,C,D)) bs)`;  
+val (PARTITION_def,PARTIION_ind) =
+ Defn.tprove(Defn.Hol_defn "PARTITION" 
+    `(PARTITION s1 s2 s3 (A,B,C,D) [] = (A,B,C,D)) /\
+     (PARTITION s1 s2 s3 (A,B,C,D) (a::bs) =
+               PARTITION s1 s2 s3 (PLACE s1 s2 s3 a (A,B,C,D)) bs)`,
+    Q.EXISTS_TAC `measure (LENGTH o SND o SND o SND o SND)` THEN
+    REWRITE_TAC [prim_recTheory.WF_measure] THEN
+    REWRITE_TAC [prim_recTheory.measure_thm] THEN
+    RW_TAC std_ss [LENGTH]);
 
 val RFILTER_def =
  Define `(RFILTER P [] A = A) /\ (RFILTER P (a::b) A = RFILTER P b (if P a then a::A else A))`;

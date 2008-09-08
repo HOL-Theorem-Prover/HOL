@@ -658,7 +658,7 @@ val num_init_0_lemma =
 val div_pos =
  if_store_thm
   ("div_pos",
-   ``!m n:int. 0 < n /\ n <= m  ==> 0 < (m/n)``,
+   ``!m n:int. 0 < n /\ n <= m  ==> 0 < (int_div m n)``,
    RW_TAC arith_ss 
     [Cooper.COOPER_PROVE ``(0:int) < n ==> ~(n = 0)``,
      integerTheory.int_div,Cooper.COOPER_PROVE ``(0:int) = & 0``,
@@ -773,7 +773,7 @@ val abs_rat_reduce =
            ((m / n' * n') * n = m * ((n / n') * n'))`
           by PROVE_TAC
            [Q.SPECL 
-             [`m / n' * n `, `m * (n / n')`,`n'`]
+             [`int_div m n' * n `, `m * (int_div n n')`,`n'`]
              intExtensionTheory.INT_EQ_RMUL_EXP,
             integerTheory.INT_MUL_ASSOC,
             integerTheory.INT_MUL_COMM]
@@ -805,7 +805,7 @@ val abs_rat_reduce =
        THEN `0 <= m'` by Cooper.COOPER_TAC
        THEN `m' % n' = 0` 
              by METIS_TAC[eq_num,integerTheory.INT_ABS_EQ_ID]
-       THEN `m'/n' * n' = m'` 
+       THEN `int_div m' n' * n' = m'` 
              by METIS_TAC[integerTheory.INT_DIV_MUL_ID]
        THEN `~m' = (~1)*m'` 
              by PROVE_TAC[integerTheory.INT_NEG_MINUS1]
@@ -1410,7 +1410,8 @@ val integer_step_defaxiom =
 val div_eq_mult =
  if_store_thm
   ("div_eq_mult",
-   ``!m n p:int. ~(n = 0) /\ (m % n = 0) ==> ((m / n = p) = (m = p * n))``,
+   ``!m n p:int. ~(n = 0) /\ (m % n = 0) ==> 
+                  ((int_div m n = p) = (m = p * n))``,
    RW_TAC intLib.int_ss []
     THEN IMP_RES_TAC integerTheory.INT_DIV_MUL_ID
     THEN EQ_TAC
