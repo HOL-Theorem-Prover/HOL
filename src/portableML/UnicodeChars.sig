@@ -29,6 +29,9 @@ sig
   val Psi : string
   val Omega : string
 
+  (* superscripts *)
+  val sup_plus : string
+
   (* boolTheory connectives *)
   val forall : string
   val exists : string

@@ -76,6 +76,8 @@ val _ = add_rule { fixity = Suffix 2100,
                    pp_elements = [TOK "^+"],
                    term_name = "^+" }
 val _ = overload_on ("^+", ``TC : ('a -> 'a -> bool) -> 'a -> 'a -> bool``)
+val _ = Unicode.unicode_version 
+          (Unicode.UChar.sup_plus, ``TC:('a -> 'a -> bool) -> 'a -> 'a -> bool``)
 
 
 val RTC_DEF = new_definition(

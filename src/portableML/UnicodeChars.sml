@@ -49,6 +49,9 @@ val longdoublerightarrow = "\u00e2\u009f\u00b9"
 
 val setelementof = "\u00e2\u0088\u0088"
 
+(* superscripts *)
+val sup_plus = UTF8.chr 0x207A
+
 (* arithmetic *)
 val leq = "\u00e2\u0089\u00a4"
 val geq = "\u00e2\u0089\u00a5"
