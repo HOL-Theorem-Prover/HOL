@@ -22,4 +22,10 @@ sig
 	val is_acl2_true            : term -> bool
 	
 	val DISJ_CASES_UNIONL       : thm -> thm list -> thm
+
+	val RAT_CONG_TAC            : tactic
+
+	val EQUAL_EXISTS_TAC        : tactic
+	val FIX_CI_TAC              : tactic
+
 end

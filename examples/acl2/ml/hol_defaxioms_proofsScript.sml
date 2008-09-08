@@ -25,10 +25,11 @@ quietdec := true;
 map 
  load  
  ["intLib","stringLib","complex_rationalTheory","gcdTheory",
-  "sexp","sexpTheory","hol_defaxiomsTheory","translateTheory"];
+  "sexp","sexpTheory","hol_defaxiomsTheory",
+  "translateTheory","extendTranslateTheory"];
 open stringLib complex_rationalTheory gcdTheory 
      sexp sexpTheory hol_defaxiomsTheory 
-     acl2_packageTheory translateTheory;
+     acl2_packageTheory translateTheory extendTranslateTheory;
 Globals.checking_const_names := false;
 set_trace "Subgoal number" 100;
 quietdec := false;
@@ -43,7 +44,8 @@ open HolKernel Parse boolLib bossLib;
 * Open theories (including ratTheory from Jens Brandt).
 ******************************************************************************)
 open stringLib complex_rationalTheory gcdTheory sexp sexpTheory
-     acl2_packageTheory hol_defaxiomsTheory translateTheory;
+     acl2_packageTheory hol_defaxiomsTheory
+     translateTheory extendTranslateTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)

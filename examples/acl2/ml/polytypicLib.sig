@@ -4,7 +4,7 @@ sig
 
 (* The types required *)
 type ('a,'b) dict = ('a,'b) Binarymap.dict
-type goalstack = goalstackLib.goalstack
+type proof = proofManagerLib.proof;
 
 (* The types defined *)
 	type translation_scheme = 
@@ -18,6 +18,8 @@ type goalstack = goalstackLib.goalstack
 
 (* The exception constructor *)
 	val polyExn : exception_level * string list * string -> exn
+
+	val cstores : (string, hol_type list ref) dict ref;
 
 (* Exception handling functions *)
 	val exn_to_string : exn -> string
@@ -48,6 +50,12 @@ type goalstack = goalstackLib.goalstack
 	val is_disjunction_of : (term -> bool) -> term -> bool
 	val is_implication_of : (term -> bool) -> (term -> bool) -> term -> bool
 	val is_anything : term -> bool
+	val is_source_function : term -> bool
+	val is_target_function : term -> bool
+	val is_expanded_function : term -> bool
+	val is_single_constructor : translation_scheme -> term -> bool
+	val is_double_term_target : translation_scheme -> term list -> term -> term -> bool
+	val is_double_term_source : term list -> term -> term -> bool
 
 (* List manipulation tools *)
 	val pick_e : exn -> ('a -> 'b) -> 'a list -> 'b * 'a list
@@ -59,7 +67,11 @@ type goalstack = goalstackLib.goalstack
 
 (* Term manipulation tools *)
 	val list_mk_cond : (term * term) list -> term -> term
-	val mk_ring : term -> term -> term
+	val imk_comb : (term * term) -> term
+	val rimk_comb : (term * term) -> term
+	val list_imk_comb : (term * term list) -> term
+	val full_beta_conv : term -> term
+	val full_beta      : term -> term
 
 (* Theorem manipulation tools *)
 	val UNDISCH_ONLY : thm -> thm
@@ -74,15 +86,22 @@ type goalstack = goalstackLib.goalstack
 	val MATCH_CONV : thm -> term -> thm
 	val ORDER_FORALL_CONV : term list -> term -> thm
 	val ORDER_EXISTS_CONV : term list -> term -> thm
+	val FUN_EQ_CONV : term -> thm
+	val UNFUN_EQ_CONV : term -> thm
 	val UNBETA_LIST_CONV : term list -> term -> thm
 	val NTH_CONJ_CONV : int -> (term -> thm) -> term -> thm
 	val PUSH_COND_CONV : term -> thm
+	val CASE_SPLIT_CONV : term -> thm
 	val MK_CONJ : thm -> thm -> thm
 	val LIST_MK_CONJ : thm list -> thm
 	val TC_THMS : thm list -> thm list
 	val prove_rec_fn_exists : thm -> term -> thm
 	val UNDISCH_EQ : thm -> thm
 	val UNDISCH_ALL_EQ : thm -> thm
+	val UNDISCH_CONJ : thm -> thm
+	val DISCH_LIST_CONJ : term list -> thm -> thm
+	val DISCH_ALL_CONJ : thm -> thm
+	val MATCH_CONC : thm -> term -> thm
 
 (* Type manipulation tools *)
 	val constructors_of : hol_type -> term list
@@ -97,20 +116,15 @@ type goalstack = goalstackLib.goalstack
 	val SAFE_INST_TYPE : {redex : hol_type, residue : hol_type} list -> thm -> thm
 	val safe_inst : {redex : hol_type, residue : hol_type} list -> term -> term
 	val safe_type_subst : {redex : hol_type, residue : hol_type} list -> hol_type -> hol_type
-
-(* Function checking theorems *)
-	val is_source_function : term -> bool
-	val is_target_function : term -> bool
-	val is_expanded_function : term -> bool
-	val is_single_constructor : translation_scheme -> term -> bool
+	val delete_matching_types : hol_type list -> hol_type -> hol_type
+ 	val all_types : hol_type -> hol_type list
+	val relevant_types : hol_type -> hol_type list
 
 (* Function splitting *)
 	val RFUN_CONV : thm list -> term -> thm
 	val SPLIT_HFUN_CONV : thm -> term list -> term -> thm list * term list * thm
 	val SPLIT_PAIR_CONV : (term list -> term -> term -> bool) -> term list -> thm -> term -> thm list * term list * thm
 	val SPLIT_FUNCTION_CONV : (term list -> term -> term -> bool) * thm -> thm list -> term -> thm
-	val is_double_term_target : translation_scheme -> term list -> term -> term -> bool
-	val is_double_term_source : term list -> term -> term -> bool
 
 (* Split function definition *)
 	val build_call_graph : term * term -> term list -> (int * (int list * int list)) list
@@ -131,9 +145,11 @@ type goalstack = goalstackLib.goalstack
 	val get_translation : hol_type -> hol_type -> (string,function) dict ref
 	val get_theorems_precise : hol_type -> hol_type -> (string, thm) dict ref
 	val get_theorems : hol_type -> hol_type -> (string, thm) dict ref
+	val get_translation_types : hol_type -> hol_type list
 	val add_translation_scheme : hol_type -> thm -> thm -> unit
 	val clearCoding : unit -> unit
 	val clearSource : unit -> unit
+	val most_precise_type : (hol_type -> bool) -> hol_type -> hol_type
 
 (* Function retrieval *)
 	val exists_coding_function_precise : hol_type -> hol_type -> string -> bool
@@ -181,16 +197,19 @@ type goalstack = goalstackLib.goalstack
 	val inst_function_def : (hol_type -> thm) -> (hol_type -> term) -> hol_type -> thm
 	val expanded_function_def : (term -> thm) -> (term -> thm) -> (hol_type -> thm) -> hol_type -> term list -> thm
 	val mk_split_source_function : (hol_type -> term) -> (hol_type -> thm) -> (hol_type -> term) -> (term -> thm) -> (term -> thm) -> hol_type -> thm * thm
-	val mk_split_target_function : (hol_type -> term) -> (hol_type -> thm) -> (hol_type -> term) -> (term -> thm) -> (term -> thm) -> translation_scheme -> hol_type -> (thm * (term * term) list * thm) * thm
+	val mk_split_target_function : (hol_type -> term) -> (hol_type -> thm) -> (hol_type -> term) -> (term -> thm) -> (term -> thm) -> 
+					translation_scheme -> hol_type -> (thm * (term * term) list * thm) * thm
 
 (* Removal of function splits *)
 	val MATCH_IND_TERM : term -> thm -> thm
 	val strengthen_proof_term : thm list -> term -> thm
 	val prove_split_term : (term * (term * hol_type)) list -> thm -> thm -> thm * term -> term -> thm
-	val prove_all_split_terms : (hol_type -> thm * (term * (term * hol_type)) list) * (hol_type -> thm) * (term -> thm) * (term -> thm) * thm * term -> (term * hol_type) list -> thm -> thm list * thm
+	val prove_all_split_terms : (hol_type -> thm * (term * (term * hol_type)) list) * (hol_type -> thm) * (term -> thm) * (term -> thm) * thm * term -> 
+						(term * hol_type) list -> thm -> thm list * thm
 	val remove_hyp_terms : thm -> thm list -> thm list * thm -> thm
 	val match_mapping : thm -> (term * term) list -> (hol_type -> term) -> thm -> hol_type -> (term * (term * hol_type)) list
-	val unsplit_function : (hol_type -> thm * (term * (term * hol_type)) list) -> (hol_type -> thm) -> (hol_type -> term) -> (term -> thm) -> (term -> thm) -> thm * term -> hol_type -> thm * thm -> thm
+	val unsplit_function : (hol_type -> thm * (term * (term * hol_type)) list) -> (hol_type -> thm) -> (hol_type -> term) -> 
+						(term -> thm) -> (term -> thm) -> thm * term -> hol_type -> thm * thm -> thm
 
 (* Full function creation *)
 	val mk_source_functions : string -> (hol_type -> term) -> (hol_type -> term) -> (term -> thm) -> (term -> thm) -> hol_type -> unit
@@ -209,19 +228,19 @@ type goalstack = goalstackLib.goalstack
 (* Automatic generation of theorems *)
 	val generate_coding_theorem : hol_type -> string -> hol_type -> thm
 	val generate_source_theorem : string -> hol_type -> thm
+	val set_coding_theorem_conclusion : hol_type -> string -> (hol_type -> term) -> unit
+	val set_source_theorem_conclusion : string -> (hol_type -> term) -> unit
+	val get_coding_theorem_conclusion : hol_type -> string -> (hol_type -> term)
+	val get_source_theorem_conclusion : string -> (hol_type -> term)
+	val exists_coding_theorem_conclusion : hol_type -> string -> bool
+	val exists_source_theorem_conclusion : string -> bool
 	val make_predicate_map : thm -> (term * term list) list
-	val all_coding_thms : hol_type list -> string -> hol_type -> hol_type -> thm list
-	val all_source_thms : hol_type list -> string -> hol_type -> thm list
-	val prove_inductive_coding_theorem : string-> string -> (hol_type -> term) -> hol_type -> hol_type -> (term -> thm) -> 
-						(hol_type -> thm list -> tactic) -> unit
-	val inductive_coding_goal : string -> 'b -> (hol_type -> 'c) -> hol_type -> hol_type -> ('c -> thm) -> goalstack
-	val prove_inductive_source_theorem : string -> string -> (hol_type -> term) -> hol_type -> (term -> thm) -> (hol_type -> thm list -> tactic) -> unit
-	val inductive_source_goal : string -> 'b -> (hol_type -> 'c) -> hol_type -> ('c -> thm) -> goalstack
-	val add_inductive_coding_theorem_generator : string -> string -> (hol_type -> term) -> hol_type -> (term -> thm) -> (hol_type -> thm list -> term list * term -> 
-							(term list * term) list * (thm list -> thm)) -> unit
-	val add_inductive_source_theorem_generator : string -> string -> (hol_type -> term) -> (term -> thm) -> (hol_type -> thm list -> tactic) -> unit
-	val add_tactic_coding_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> term) -> (hol_type -> tactic) -> hol_type -> unit
-	val add_tactic_source_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> term) -> (hol_type -> tactic) -> unit
+	val inductive_coding_goal : string -> (hol_type -> term) -> hol_type -> hol_type -> (term -> thm) -> proof
+	val inductive_source_goal : string -> (hol_type -> term) -> hol_type -> (term -> thm) -> proof
+	val add_inductive_coding_theorem_generator : string -> string -> hol_type -> (term -> thm) -> (hol_type -> tactic) -> unit
+	val add_inductive_source_theorem_generator : string -> string -> (term -> thm) -> (hol_type -> tactic) -> unit
+	val add_tactic_coding_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> tactic) -> hol_type -> unit
+	val add_tactic_source_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> tactic) -> unit
 	val add_rule_coding_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> thm) -> hol_type -> unit 
 	val add_rule_source_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> thm) -> unit
 
