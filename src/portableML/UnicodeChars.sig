@@ -48,6 +48,9 @@ sig
   val leq : string
   val geq : string
   val nats : string
+  val ints : string
+  val rats : string
+  val reals : string
 
   (* pred_setTheory *)
   val emptyset : string

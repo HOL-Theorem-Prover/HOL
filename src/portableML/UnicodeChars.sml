@@ -55,7 +55,10 @@ val sup_plus = UTF8.chr 0x207A
 (* arithmetic *)
 val leq = "\u00e2\u0089\u00a4"
 val geq = "\u00e2\u0089\u00a5"
-val nats = "\u00e2\u0084\u0095"
+val nats = UTF8.chr 0x2115
+val ints = UTF8.chr 0x2124
+val reals = UTF8.chr 0x211D
+val rats = UTF8.chr 0x211A
 
 (* sets *)
 val emptyset = "\u00e2\u0088\u0085"
