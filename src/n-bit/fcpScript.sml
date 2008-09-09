@@ -873,7 +873,8 @@ val exists_v2l_lem = prove(
     rich_listTheory.EL_APPEND1,rich_listTheory.EL_APPEND2,EL,HD]);
 
 val exists_v2l_thm = 
-  SIMP_RULE arith_ss [] (SPEC `dimindex (:'b)` exists_v2l_lem);
+  save_thm("exists_v2l_thm",
+  SIMP_RULE arith_ss [] (SPEC `dimindex (:'b)` exists_v2l_lem));
 
 val ELIM_V2L_TAC = 
   REWRITE_TAC [V2L_def] THEN SELECT_ELIM_TAC THEN 
@@ -904,7 +905,7 @@ val every_el_thm = prove(
     POP_ASSUM (STRIP_ASSUME_TAC o SPEC `SUC i`)] THEN
   FULL_SIMP_TAC arith_ss [EL,HD,TL]);
 
-val lists_eq = prove(
+val lists_eq_lem = prove(
   `(LENGTH x = LENGTH y) /\ (!i. i < LENGTH x ==> (EL i x = EL i y)) 
    ==> (x = y)`,
   measureInduct_on `LENGTH (x ++ y)` THEN
@@ -914,6 +915,11 @@ val lists_eq = prove(
   FULL_SIMP_TAC arith_ss [EL,HD,TL] THEN
   PAT_ASSUM `!y:'a list.P` (STRIP_ASSUME_TAC o SPEC `t ++ t'`) THEN 
   FULL_SIMP_TAC arith_ss [LENGTH_APPEND,LENGTH]);
+
+val LISTS_EQ = store_thm("LISTS_EQ",
+    `(x = y) = 
+     (LENGTH x = LENGTH y) /\ (!i. i < LENGTH x ==> (EL i x = EL i y))`,
+    METIS_TAC [lists_eq_lem]);
 
 val length_tl_thm = prove(
   `LENGTH (TL (V2L (v :'a ** 'b)) :'a list) = PRE (dimindex (:'b))`,
@@ -973,7 +979,7 @@ val FCP_CONS = store_thm(
 val V2L_L2V = store_thm("V2L_L2V",
   `!x. (dimindex (:'b) = LENGTH x) ==> (V2L (L2V x:'a ** 'b) = x)`,
   RW_TAC arith_ss [L2V_def] THEN ELIM_V2L_TAC THEN
-  RW_TAC arith_ss [FCP_BETA,lists_eq]);
+  RW_TAC arith_ss [FCP_BETA,lists_eq_lem]);
 
 val NULL_V2L = store_thm("NULL_V2L",`~NULL (V2L v)`,
   ELIM_V2L_TAC THEN Cases THEN
