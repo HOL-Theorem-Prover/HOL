@@ -5,6 +5,9 @@
 (*                                                                           *)
 (*****************************************************************************)
 
+structure functionEncodeLib =
+struct
+
 (*****************************************************************************)
 (* Bugs:                                                                     *)
 (*     1) Datatypes using fcps, eg:                                          *)
@@ -3929,7 +3932,6 @@ let fun is_single thm = null (find_terms (can (match_term cond))
     val STAC = CONV_TAC (STRIP_QUANT_CONV
     	       		(EVERY_CONJ_CONV (TRY_CONV 
 					 (FIRST_CONV (map conv singles)))));
-    val _ = set_goal x;
 in
      ((REPEAT (CHANGED_TAC STAC) THEN
      TARGET_INDUCT_TAC THEN REPEAT STRIP_TAC THEN
@@ -3940,8 +3942,7 @@ in
      TRY IF_CASES_TAC THEN ASM_REWRITE_TAC [] THEN
      RW_TAC (std_ss ++ boolSimps.LET_ss) [] THEN
      PR_FINISH STAC THEN 
-     WF_TC_FINISH_TAC THEN CCONTR_TAC THEN FULL_SIMP_TAC std_ss []) x)
-     before drop()
+     WF_TC_FINISH_TAC THEN CCONTR_TAC THEN FULL_SIMP_TAC std_ss []) x)     
      handle e => wrapException "PROPAGATE_RECOGNIZERS_TAC" e
 end
 end
@@ -4231,3 +4232,5 @@ fun convert_abstracted_nonrec_definition f target name limits extras thm =
 	    REPEAT STRIP_TAC THEN
 	    RW_TAC std_ss [thm]) (a,g)
         end);
+
+end

@@ -6,6 +6,9 @@
 (* s-expressions and native HOL                                              *)
 (*****************************************************************************)
 
+structure translateLib =
+struct
+
 open Feedback Lib Type Term boolSyntax Thm Drule Tactical Thm_cont Tactic Conv;
 
 (*****************************************************************************)
@@ -217,3 +220,5 @@ val FIX_CI_TAC =
     		   (STRIP_QUANT_CONV RIGHT_IMP_FORALL_CONV) ORELSEC
 		   (STRIP_QUANT_CONV (REWR_CONV boolTheory.AND_IMP_INTRO)))));
 
+
+end

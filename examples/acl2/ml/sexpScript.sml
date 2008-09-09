@@ -38,7 +38,8 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories (including ratTheory from Jens Brandt).
 ******************************************************************************)
-open stringLib complex_rationalTheory sexp acl2_packageTheory;
+
+open stringLib complex_rationalTheory acl2_packageTheory sexp;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)

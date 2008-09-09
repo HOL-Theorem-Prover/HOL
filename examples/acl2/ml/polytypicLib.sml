@@ -1,3 +1,6 @@
+structure polytypicLib =
+struct
+
 open Binarymap List HolKernel boolLib bossLib Q Parse combinTheory computeLib
      Conv Thm Tactical BasicProvers Tactic Drule Definition 
      listTheory numLib listLib pairLib Psyntax 
@@ -3736,3 +3739,5 @@ fun add_rule_coding_theorem_generator name test rule target =
 fun add_rule_source_theorem_generator name test rule = 
 	add_source_theorem_generator name test
 	(fn t => rule t handle e => wrapException ("rule:" ^ name ^ " (" ^ type_to_string t ^ ")") e);
+
+end

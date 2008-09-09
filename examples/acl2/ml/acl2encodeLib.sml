@@ -1,3 +1,6 @@
+structure acl2encodeLib =
+struct
+
 (*****************************************************************************)
 (* Used to encode functions from HOL to ACL2                                 *)
 (*****************************************************************************)
@@ -1236,3 +1239,5 @@ fun print_all_defs_mbe filename thm =
     handle e => wrapException "print_all_defs_mbe" e;
 
 val Raise = polytypicLib.Raise;
+
+end

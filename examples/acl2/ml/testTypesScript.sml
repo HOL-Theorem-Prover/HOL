@@ -1,6 +1,6 @@
 open Theory Datatype Drule Thm Term Lib listTheory ratTheory;
 
-val types = ref [];
+val types = ref ([] : hol_type list);
 
 fun DataType t def = 
 let	val _ = (Parse.Type t ; ()) handle _ => Hol_datatype def

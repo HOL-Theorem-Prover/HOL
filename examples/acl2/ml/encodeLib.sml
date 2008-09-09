@@ -1,3 +1,6 @@
+structure encodeLib =
+struct 
+
 open Thm Term Type boolSyntax Parse Conv Rewrite Drule 
 open Tactic Tactical pairLib numLib polytypicLib
 open Binarymap List Lib
@@ -2223,3 +2226,4 @@ in
 end handle e => wrapException "predicate_equivalence" e
 
     
+end

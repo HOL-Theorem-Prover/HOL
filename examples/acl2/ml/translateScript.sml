@@ -663,7 +663,7 @@ val SEXP_TO_NAT_OF_NAT = save_thm("SEXP_TO_NAT_OF_NAT",
 (* Simple decode then encode theorems.                                       *)
 (*****************************************************************************)
 
-val list = ref [];
+val list = ref ([]:thm list);
 fun make_decenc x y = 
 let val r = 
     GEN_ALL (DISCH_ALL (TRANS (SPEC_ALL (REWRITE_RULE [FUN_EQ_THM,o_THM] x))

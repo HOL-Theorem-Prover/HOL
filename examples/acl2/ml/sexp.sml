@@ -33,6 +33,9 @@ Globals.checking_const_names := false;
 quietdec := false;
 *)
 
+structure sexp =
+struct
+
 (******************************************************************************
 * Boilerplate needed for compilation: open HOL4 systems modules
 ******************************************************************************)
@@ -2113,8 +2116,7 @@ fun match_defthm full_acl2_name mlsexp =
 (* Convert a status to s string                                              *)
 (*****************************************************************************)
 fun status_to_string s =
- if s = Process.success then "success" else
- if s = Process.failure then "failure" else "not \"success\" or \"failure\"!";
+ if Process.isSuccess s then "success" else "failure"
 
 (*****************************************************************************)
 (* Print a list of ACL2 DEFUNs to a file defun-tmp.lisp,                     *)
@@ -2127,7 +2129,7 @@ fun print_defuns_to_mlsexps ql =
           Process.system
            (a2ml ^ " defun-tmp.lisp defun-tmp.ml >& defun-tmp.log")
  in
-  if not(a2ml_res = Process.success)
+  if not(Process.isSuccess a2ml_res)
    then (print "a2ml defun-tmp.lisp defun-tmp.ml: ";
          print(status_to_string a2ml_res);
          print "\n";
@@ -2312,4 +2314,4 @@ print_lisp_file
 val defaxioms_list = map mk_acl2def (!acl2_list_ref);
 
 
-*)
+*)end
