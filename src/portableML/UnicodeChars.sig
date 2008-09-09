@@ -32,6 +32,16 @@ sig
   (* superscripts *)
   val sup_plus : string
 
+  (* arrows *)
+  val rightarrow : string
+  val leftarrow : string
+  val longleftarrow : string
+  val longrightarrow : string
+  val Rightarrow : string
+  val Leftarrow : string
+  val longdoublerightarrow : string
+  val longdoubleleftarrow : string
+
   (* boolTheory connectives *)
   val forall : string
   val exists : string
@@ -41,7 +51,6 @@ sig
   val neg : string
   val neq : string
   val setelementof : string
-  val longdoublerightarrow : string
   val turnstile : string
 
   (* arithmeticTheory *)

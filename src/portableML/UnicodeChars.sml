@@ -1,6 +1,8 @@
 structure UnicodeChars :> UnicodeChars =
 struct
 
+val U = UTF8.chr
+
 (* Greek letters *)
 val alpha = "\u00ce\u00b1"
 val beta = "\u00ce\u00b2"
@@ -40,12 +42,21 @@ val neg = "\u00c2\u00ac"
 (* not a constant, but might be useful *)
 val neq = "\u00e2\u0089\u00a0"
 val turnstile = "\u00e2\u008a\u00a2";
-val leftarrow = "\u00e2\u0086\u0090";
-val rightarrow = "\u00e2\u0086\u0092";
 
-(* probably needs a proportional font to print well - would be good for
-   implication if available *)
-val longdoublerightarrow = "\u00e2\u009f\u00b9"
+(* arrows *)
+val leftarrow            = U 0x2190
+val rightarrow           = U 0x2192
+val longleftarrow        = U 0x27F5
+val longrightarrow       = U 0x27F6
+
+val Leftarrow            = U 0x21D0
+val Rightarrow           = U 0x21D2
+val longdoubleleftarrow  = U 0x27F8
+val longdoublerightarrow = U 0x27F9 
+
+(* latter probably needs a proportional font to print well - would be
+   good for implication if available - actually seems OK also on
+   Leopard's Courier font, which is supposedly fixed-width *)
 
 val setelementof = "\u00e2\u0088\u0088"
 
@@ -55,10 +66,10 @@ val sup_plus = UTF8.chr 0x207A
 (* arithmetic *)
 val leq = "\u00e2\u0089\u00a4"
 val geq = "\u00e2\u0089\u00a5"
-val nats = UTF8.chr 0x2115
-val ints = UTF8.chr 0x2124
-val reals = UTF8.chr 0x211D
-val rats = UTF8.chr 0x211A
+val nats = U 0x2115
+val ints = U 0x2124
+val reals = U 0x211D
+val rats = U 0x211A
 
 (* sets *)
 val emptyset = "\u00e2\u0088\u0085"
