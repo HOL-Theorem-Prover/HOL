@@ -6,7 +6,12 @@ struct
 (*****************************************************************************)
 
 open Lib Parse Type Term Drule Thm Tactical bossLib 
-open Rewrite polytypicLib encodeLib functionEncodeLib;
+open Rewrite polytypicLib encodeLib functionEncodeLib
+open translateTheory extendTranslateTheory wordsLib intLib
+
+(*
+app load ["intLib","wordsLib","extendTranslateTheory","functionEncodeLib"];
+*)
 
 (*****************************************************************************)
 (* Abbreviations for types to avoid parsing later...                         *)
@@ -569,7 +574,7 @@ end handle ExistsAlready => ()
 (*****************************************************************************)
 
 fun set_destructors thms = 
-    (set_destructors thms)
+    (functionEncodeLib.set_destructors sexp thms)
     handle e => wrapException "set_destructors" e
 
 fun initialise_type t = 
@@ -759,7 +764,7 @@ let val _ = tryperform "add_num_rewrites"
     val _ = add_standard_rewrite 0 "is SUC" translateTheory.NUM_CONSTRUCT;
     val _ = add_standard_rewrite 0 "num case" translateTheory.NUM_CASE;
     val _ = add_terminal ("nat ?",is_encoded_num);
-    val _ = set_destructors ``:sexp`` [CONJUNCT2 (prim_recTheory.PRE)];
+    val _ = set_destructors [CONJUNCT2 (prim_recTheory.PRE)];
     val _ = add_standard_rewrite 0 "Num" translateTheory.NAT_NUM;
 
     val _ = add_standard_rewrite 0 "DIV" extendTranslateTheory.NAT_DIV;
@@ -815,7 +820,7 @@ let val _ = tryperform "add_list_rewrites"
     val _ = add_standard_rewrite 0 "list case" translateTheory.LIST_CASE;
     val _ = add_standard_rewrite 1 "is []" translateTheory.LIST_CONSTRUCT1;
     val _ = add_standard_rewrite 1 "is Cons" translateTheory.LIST_CONSTRUCT2;
-    val _ = set_destructors sexp [listTheory.HD,listTheory.TL];
+    val _ = set_destructors [listTheory.HD,listTheory.TL];
     val _ = add_standard_coding_rewrites sexp list;
     val _ = perform "add_list_rewrites"
 in
@@ -828,7 +833,7 @@ end handle ExistsAlready => ()
 
 fun add_pair_rewrites() =
 let val _ = perform "add_pair_rewrites"
-    val _ = set_destructors sexp [pairTheory.FST,pairTheory.SND];
+    val _ = set_destructors [pairTheory.FST,pairTheory.SND];
     val _ = add_standard_coding_rewrites sexp pair;
     val _ = add_standard_rewrite 0 "FST" translateTheory.PAIR_FST;
     val _ = add_standard_rewrite 0 "SND" translateTheory.PAIR_SND;

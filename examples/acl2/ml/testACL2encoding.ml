@@ -3,12 +3,10 @@ load "testTypesTheory";
 load "testFunctionsTheory";
 load "intLib";
 
-quietdec := true;
 open Parse
 open polytypicLib encodeLib functionEncodeLib
 open acl2encodeLib testTypesTheory testFunctionsTheory; 
 open listTheory rich_listTheory optionTheory combinTheory;
-quietdec := false;
 
 (*****************************************************************************)
 (* Testing ...                                                               *)
@@ -134,14 +132,14 @@ val tests = ref ([] : (string * (thm -> unit) * thm) list);
 fun add_test (name,func,arg) = 
     tests := !tests @ [(name,(fn y => (func y ; ())),arg)];
 fun run_test (s,func,thm) = 
-    (trace 1 ("Test: " ^ s ^ "\n") ; 
-    (func thm) before (trace 1 "passed!\n"))
+    (print ("Test: " ^ s ^ "\n") ; 
+    (func thm) before (print "passed!\n"))
     handle e => Raise e;
 val last_test = ref (NONE : (string * (thm -> unit) * thm) option);
 fun run_function_tests () = 
     case (total (first (not o can run_test)) (!tests))
-    of NONE => trace 1 "Success!!!!!!\n"
-    |  SOME last => (last_test := SOME last ; trace 1 "Failed.\n");
+    of NONE => print "Success!!!!!!\n"
+    |  SOME last => (last_test := SOME last ; print "Failed.\n");
 fun run_last_function_test () = run_test (Option.valOf (!last_test))
 
 (*****************************************************************************)
@@ -213,9 +211,7 @@ val _ = add_test ("flatten sum list B",
 (*                                                                           *)
 (*****************************************************************************)
 
-quietdec := true;
 open testFunctionsTheory;
-quietdec := false;
 
 val _ = add_test ("EXP",
             translate_simple_function [(``($**):num -> num -> num``,"exp")],
