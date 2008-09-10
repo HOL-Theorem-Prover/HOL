@@ -7,6 +7,8 @@ This directory contains the following:
 
  extract .....................  Myreen extraction tools
 
+ java2opsem  .................  Collavizza translator from Java to opsem
+
 
 -----------------------------------------------------------------
 Subversion hack from Anthony needed for setting types of new files
@@ -14,5 +16,6 @@ Subversion hack from Anthony needed for setting types of new files
 
 $ svn propset svn:mime-type text/plain README newOpsemScript.sml
 $ svn propset svn:eol-style native README newOpsemScript.sml
+$ svn svn:mime-type application/octet-stream *.class
 -----------------------------------------------------------------
 
