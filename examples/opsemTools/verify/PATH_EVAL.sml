@@ -1,20 +1,17 @@
 
 (* Stuff needed when running interactively
 quietdec := true; (* turn off printing *)
-app load ["newOpsemTheory","pairSyntax", "intLib",
+app load ["newOpsemTheory","pairSyntax", "intLib","Omega",
           "computeLib", "finite_mapTheory",
           "relationTheory", "stringLib"];
-open newOpsemTheory bossLib pairSyntax intLib
+open newOpsemTheory bossLib pairSyntax intLib Omega
      computeLib finite_mapTheory relationTheory stringLib;
-intLib.deprecate_int();
 quietdec := false; (* turn printing back on *)
 *)
 
 open HolKernel Parse boolLib
-     newOpsemTheory bossLib pairSyntax intLib
+     newOpsemTheory bossLib pairSyntax intLib Omega
      computeLib finite_mapTheory relationTheory stringLib;
-
-val _ = intLib.deprecate_int();
 
 val _ =
  add_funs
@@ -468,7 +465,7 @@ where v1,...,vn are the variables read or written in c
 
 fun MAKE_STATE_FROM_VARS vars =
  let val pairs = map 
-                  (fn tm => ``(^tm, Scalar ^(mk_var(fromHOLstring tm,``:num``)))``)
+                  (fn tm => ``(^tm, Scalar ^(mk_var(fromHOLstring tm,``:int``)))``)
                   vars
  in
   ``FEMPTY |++ ^(listSyntax.mk_list(pairs,``:string#value``))``
@@ -497,10 +494,23 @@ fun MAKE_PRE asm c =
   EQ_MP (GSYM th) (EVAL_ASSUME(rhs(concl th)))
  end;
 
-(* Basic solver that uses SIMP_CONV arith_ss [] *)
+(* Basic solver that uses SIMP_CONV (srw_ss()) [] 
 fun simpSolv tm =
  let val () = (print "\nTrying to solve:\n"; print_term tm; print "\n... ")
-     val th = time (EVAL THENC SIMP_CONV arith_ss []) tm handle _ => REFL tm
+     val th = time (EVAL THENC SIMP_CONV (srw_ss()) []) tm handle _ => REFL tm
+     val () = if rhs(concl th) = ``T`` 
+               then (print "Solved:\n"; print_thm th; print "\n")
+               else print "Failure :-(\n\n"
+ in
+  th
+ end;
+*)
+
+
+(* Basic solver that uses SIMP_CONV int_ss [] *)
+fun simpSolv conv tm =
+ let val () = (print "\nTrying to solve:\n"; print_term tm; print "\n... ")
+     val th = time (EVAL THENC SIMP_CONV (srw_ss()) [] THENC conv) tm handle _ => REFL tm
      val () = if rhs(concl th) = ``T`` 
                then (print "Solved:\n"; print_thm th; print "\n")
                else print "Failure :-(\n\n"
@@ -522,9 +532,6 @@ then satSolv sat ``p ==> ~b`` returns:
 
 In all other cases satSolv sat tm returns |- tm = tm.
 *)
-
-val NOT_CONJ_IMP_F =
- METIS_PROVE [] ``!p b. ~(p /\ b) ==> ((p ==> ~b) = T)``;
 
 fun satSolv sat tm =
  if is_imp tm andalso
@@ -553,14 +560,15 @@ fun satSolv sat tm =
 
 (* 
 Basic SAT solver inside HOL for testing: hol_sat tm returns the result
-of applying SIMP_CONV arith_ss [] to tm, or |- tm = tm if that fails
+of applying SIMP_CONV (srw_ss()) [] to tm, or |- tm = tm if that fails
 *)
 
 fun hol_sat tm =
- let val () = (print "\nApplying SIMP_CONV arith_ss [] to:\n"; 
+ let val () = (print "\nApplying SIMP_CONV (srw_ss()) [] THENC OMEGA_CONV to:\n"; 
                print_term tm; 
                print "\n... ")
-     val th = time (SIMP_CONV arith_ss []) tm handle e => REFL tm
+     val th = time (SIMP_CONV (srw_ss()) []
+                     THENC OMEGA_CONV) tm handle e => REFL tm
      val () = if rhs(concl th) = ``T``
                 then (print "Satisfiable:\n"; print_thm th; print "\n") else
               if rhs(concl th) = ``F``
@@ -721,7 +729,7 @@ fun elim_state_apps s tm =
      andalso fst(dest_const(rator(rator (rand tm)))) = "FAPPLY"
      andalso rand(rator (rand tm)) = s
      andalso is_string(rand (rand tm))
-  then mk_var(fromHOLstring(rand (rand tm)),``:num``) else
+  then mk_var(fromHOLstring(rand (rand tm)),``:int``) else
  if is_var tm orelse is_const tm
   then tm else
  if is_comb tm
@@ -744,22 +752,55 @@ fun elim_state_apps_CONV conv tm =
               else (print "Bad argument to elim_state_apps_CONV:\n";
                     print_term tm; print "\n"; fail())
      val elim_tm = elim_state_apps s tm
-     val vars = free_vars elim_tm
+     val new_vars = free_vars elim_tm
      val elim_th = conv elim_tm (*  handle UNCHANGED => REFL elim_tm *)
  in
   INST
    (map 
      (fn v => {redex = v, residue = ``ScalarOf(^s ' ^(fromMLstring(fst(dest_var v))))``})
-     (subtract vars [s]))
+     (subtract new_vars [s]))
    elim_th
  end;
 
 (* Apply elim_state_apps_CONV conv inside a forall, if necessary *)
-fun elim_state_CONV conv =
- (QUANT_CONV(elim_state_apps_CONV conv) THENC REWR_CONV FORALL_SIMP)
-  ORELSEC elim_state_apps_CONV conv;
+fun elim_state_CONV conv tm =
+ if is_forall tm
+  then (QUANT_CONV(elim_state_apps_CONV conv) THENC REWR_CONV FORALL_SIMP) tm
+  else elim_state_apps_CONV conv tm;
 
-val holSolv = elim_state_CONV simpSolv;
+fun holSolv conv = elim_state_CONV(simpSolv conv);
+
+(*
+Generalise a goal by replacing occurrences of ``ScalarOf(s ' "x")`` by
+``x``.  The validation instantiates occurrences of ``x`` by
+``ScalarOf(s ' "x")`` in the theorem solving the generalised goal.
+*)
+
+fun elim_state_apps_TAC (asl,tm) =
+ let val vars = free_vars tm
+     val s = if (length vars = 1)               andalso 
+                (type_of(hd vars) = ``:state``) andalso 
+                is_var(hd vars)
+              then hd vars
+              else fail()
+     val elim_tm = elim_state_apps s tm
+     val new_vars = free_vars elim_tm
+     val _ = if null(intersect new_vars (free_varsl asl)) then () else fail()
+ in
+  ([(asl, elim_tm)],
+   fn thl =>
+    INST
+     (map 
+       (fn v => {redex = v, residue = ``ScalarOf(^s ' ^(fromMLstring(fst(dest_var v))))``})
+       (subtract new_vars [s]))
+     (hd thl))
+ end;
+
+val elim_state_TAC = 
+ EVAL_TAC 
+  THEN SIMP_TAC (srw_ss()) [] 
+  THEN TRY GEN_TAC 
+  THEN elim_state_apps_TAC;
 
 (*
      [t1,...,tn] |- t
