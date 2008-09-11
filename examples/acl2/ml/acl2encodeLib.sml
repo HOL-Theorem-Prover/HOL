@@ -1,4 +1,4 @@
-structure acl2encodeLib =
+structure acl2encodeLib :> acl2encodeLib =
 struct
 
 (*****************************************************************************)

@@ -1,4 +1,4 @@
-structure polytypicLib =
+structure polytypicLib :> polytypicLib =
 struct
 
 open Binarymap List HolKernel boolLib bossLib Q Parse combinTheory computeLib

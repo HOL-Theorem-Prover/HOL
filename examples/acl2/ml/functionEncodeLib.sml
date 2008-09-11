@@ -5,7 +5,7 @@
 (*                                                                           *)
 (*****************************************************************************)
 
-structure functionEncodeLib =
+structure functionEncodeLib :> functionEncodeLib =
 struct
 
 (*****************************************************************************)
@@ -2338,14 +2338,19 @@ let val filtered = filter (can (match_term c) o fst o strip_comb o
     	       	     (enumerate 0 (fst (strip_fun (type_of c))));
     val rfunc = mk_var(funcname,foldr (op-->) out (map type_of vars));
  in
-    (list_mk_comb(rfunc,
-	map (fn x => mk_comb(rator (lhs (concl x)),var)) sorted),sorted)
+    (list_imk_comb(rfunc,
+	map (fn x => imk_comb(rator (lhs (concl x)),var)) sorted),sorted)
 end handle e => wrapException "mk_result" e
 fun wrap e = wrapException "mk_case_propagation_theorem" e
+fun set_type t thm = 
+let val types = map (type_of o rand o lhs o concl) (CONJUNCTS thm)
+in
+    INST_TYPE (tryfind_e Empty (C match_type t) types) thm
+end handle Empty => thm
 in
 fun mk_case_propagation_theorem target t = 
 let val _ = trace 2 "->mk_case_propagation_theorem";
-    val destructor_thm = get_coding_theorem target t "destructors" 
+    val destructor_thm = set_type t (get_coding_theorem target t "destructors")
     	handle e => wrap e
     val hs = hyp destructor_thm
     val destructors = map SPEC_ALL (CONJUNCTS destructor_thm)

@@ -6,7 +6,7 @@
 (* s-expressions and native HOL                                              *)
 (*****************************************************************************)
 
-structure translateLib =
+structure translateLib :> translateLib =
 struct
 
 open Feedback Lib Type Term boolSyntax Thm Drule Tactical Thm_cont Tactic Conv;

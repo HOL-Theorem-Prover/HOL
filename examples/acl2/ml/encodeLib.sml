@@ -1,4 +1,4 @@
-structure encodeLib =
+structure encodeLib :> encodeLib =
 struct 
 
 open Thm Term Type boolSyntax Parse Conv Rewrite Drule 

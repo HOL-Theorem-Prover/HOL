@@ -2113,25 +2113,27 @@ fun match_defthm full_acl2_name mlsexp =
                   ("bad case match: " ^ full_acl2_name);
 
 (*****************************************************************************)
-(* Convert a status to s string                                              *)
+(* Run a command returning true if it was successful.                        *)
+(*    This is a nasty hack to ensure this file works in both MoscowML        *)
+(*    and PolyML. My apologies.                                              *)
 (*****************************************************************************)
-fun status_to_string s =
- if Process.isSuccess s then "success" else "failure"
+
+fun run_with_test string =
+    (Process.system (string ^ "&& touch success") ; 
+     can FileSys.remove "success");
 
 (*****************************************************************************)
 (* Print a list of ACL2 DEFUNs to a file defun-tmp.lisp,                     *)
 (* then run a2ml to create defun-tmp.ml.                                     *)
 (*****************************************************************************)
+
 fun print_defuns_to_mlsexps ql =
  let val sl = map preterm_to_string ql
      val _ = print_lisp_file "defun-tmp" (fn pr => map pr sl)
-     val a2ml_res =
-          Process.system
-           (a2ml ^ " defun-tmp.lisp defun-tmp.ml >& defun-tmp.log")
- in
-  if not(Process.isSuccess a2ml_res)
-   then (print "a2ml defun-tmp.lisp defun-tmp.ml: ";
-         print(status_to_string a2ml_res);
+in
+  if not (run_with_test 
+         (a2ml ^ " defun-tmp.lisp defun-tmp.ml >& defun-tmp.log"))
+   then (print "a2ml defun-tmp.lisp defun-tmp.ml: Failed\n";
          print "\n";
          err "print_defuns_to_mlsexs" "a2ml failed") else
    ()

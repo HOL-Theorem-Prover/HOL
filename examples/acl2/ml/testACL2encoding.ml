@@ -536,12 +536,14 @@ val _ = if length failed > 1 then raise Empty else ();
 
 val _ = print "Testing rewrite-initialisation...";
 val (passed,failed) = 
-    mappartition (add_standard_coding_rewrites ``:sexp``) (!types);
+    mappartition (add_standard_coding_rewrites ``:sexp``) 
+    (filter (not o C mem [``:register``,``:Steve0``]) (!types));
 val _ = if length failed > 1 then raise Empty else ();
 
 val _ = print "Testing predicate equivalence...";
 val (passed,failed) = 
-    mappartition (predicate_equivalence ``:sexp``) (!types);
+    mappartition (predicate_equivalence ``:sexp``) 
+    (filter (not o C mem [``:register``,``:Steve0``]) (!types));
 val _ = if length failed > 1 then raise Empty else ();
 
 val _ = initialise_function_tests ();

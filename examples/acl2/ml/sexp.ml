@@ -1,4 +1,3 @@
-quietdec := true;
 map load ["sexp","sexpTheory"];
 open fracTheory ratTheory complex_rationalTheory sexp sexpTheory;
 
@@ -9,9 +8,7 @@ open fracTheory ratTheory complex_rationalTheory sexp sexpTheory;
 (*****************************************************************************)
 fun new_defun nam q =
  let val _  = print_defuns_to_mlsexps [q]
-     val _  = quietdec := true
      val _  = use "defun-tmp.ml"
-     val _  = quietdec := false
      val th = case mk_def(hd(tl(!acl2_list_ref)))
                of  defun(_,defth) => defth
                |   _              => err "new_defun" "not a defun"
@@ -21,5 +18,4 @@ fun new_defun nam q =
   th
  end;
 
-quietdec := false;
 
