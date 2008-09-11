@@ -1,7 +1,7 @@
 structure CooperCore :> CooperCore =
 struct
 open HolKernel Parse boolLib
-     integerTheory int_arithTheory intSimps
+     integerTheory int_arithTheory intReduce
      intSyntax CooperSyntax CooperMath CooperThms
      Profile
 
@@ -12,8 +12,11 @@ val lhand = rand o rator
 val REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV bool_rewrites
 
 (* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars listTheory.list_grammars;
+structure Parse :> Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars listTheory.list_grammars
+end
+open Parse
 
 local
   val prove = INST_TYPE [alpha |-> int_ty] o prove
@@ -166,7 +169,6 @@ fun phase4_CONV tm = let
         if use_bis then (min_tm, INT_MIN_LT, rand, I)
         else            (max_tm, INT_MAX_LT, lhand, GSYM)
       val witness = let
-        infixr -->
         fun recurse acc tms =
           case tms of
             [] => acc
@@ -1218,7 +1220,5 @@ in
 end
 
 val phase5_CONV = profile "phase5" phase5_CONV
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end

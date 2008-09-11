@@ -1,14 +1,8 @@
-(* Interactive mode
-app load
-  ["integerTheory","intSyntax","intSimps","dividesTheory",
-   "simpLib","boolSimps","BasicProvers","SingleStep","Q","gcdTheory"];
-*)
-
 structure int_arithScript = struct
 
 open HolKernel boolLib Parse
 
-open integerTheory intSyntax intSimps dividesTheory
+open integerTheory intSyntax dividesTheory
 
 open simpLib boolSimps BasicProvers SingleStep
 
@@ -16,8 +10,6 @@ val arith_ss = bool_ss ++ numSimps.old_ARITH_ss
 
 val _ = new_theory "int_arith";
 
-
-val int_ss = bool_ss ++ intSimps.INT_REDUCE_ss
 
 val not_less = store_thm(
   "not_less",
@@ -188,14 +180,13 @@ val can_get_small = store_thm(
   Q.EXISTS_TAC `if y < x then 1
                 else if y = x then 1
                 else 2 * (y - x)` THEN
-  REPEAT COND_CASES_TAC THEN CONV_TAC REDUCE_CONV THENL [
-    REWRITE_TAC [INT_MUL_LID] THEN
+  SRW_TAC [][] THENL [
+    SRW_TAC [][INT_MUL_SIGN_CASES, INT_SUB_LT] THEN PROVE_TAC [INT_LT_TOTAL],
     MATCH_MP_TAC INT_LT_TRANS THEN Q.EXISTS_TAC `y` THEN
     ASM_REWRITE_TAC [INT_LT_SUB_RADD, INT_LT_ADDR],
-    POP_ASSUM SUBST_ALL_TAC THEN
-    ASM_REWRITE_TAC [INT_LT_SUB_RADD, INT_LT_ADDR, INT_MUL_LID],
-    ASM_SIMP_TAC int_ss [INT_MUL_SIGN_CASES, INT_SUB_LDISTRIB,
-                         INT_SUB_RDISTRIB, INT_SUB_LT, INT_SUB_SUB3] THEN
+    ASM_REWRITE_TAC [INT_LT_SUB_RADD, INT_LT_ADDR],
+    ASM_SIMP_TAC (srw_ss()) [INT_MUL_SIGN_CASES, INT_SUB_LDISTRIB,
+                             INT_SUB_RDISTRIB, INT_SUB_LT, INT_SUB_SUB3] THEN
     `x < y` by PROVE_TAC [INT_LT_TOTAL] THEN
     ASM_REWRITE_TAC [GSYM move_sub, INT_LT_ADD_SUB] THEN
     `2 * y * d = y * (2 * d)` by PROVE_TAC [INT_MUL_SYM, INT_MUL_ASSOC] THEN
@@ -210,18 +201,8 @@ val can_get_small = store_thm(
     Q.SUBGOAL_THEN `0 < 2 * d - 1`
       (fn th => PROVE_TAC [th, lt_justify_multiplication, INT_MUL_SYM]) THEN
     `?n. d = &n` by PROVE_TAC [NUM_POSINT_EXISTS, INT_LE_LT] THEN
-    POP_ASSUM SUBST_ALL_TAC THEN
-    Cases_on `n` THEN
-    FULL_SIMP_TAC bool_ss [INT_LT_REFL, INT, INT_LDISTRIB] THEN
-    REWRITE_TAC [int_sub] THEN
-    CONV_TAC (REDUCE_CONV THENC RAND_CONV collect_additive_consts) THEN
-    REPEAT (POP_ASSUM (K ALL_TAC)) THEN Induct_on `n'` THENL [
-      CONV_TAC REDUCE_CONV,
-      REWRITE_TAC [INT, INT_LDISTRIB] THEN
-      CONV_TAC (REDUCE_CONV THENC RAND_CONV collect_additive_consts) THEN
-      MATCH_MP_TAC INT_LT_TRANS THEN Q.EXISTS_TAC `2 * &n' + 1` THEN
-      ASM_REWRITE_TAC [INT_LT_LADD] THEN CONV_TAC REDUCE_CONV
-    ]
+    SRW_TAC [][INT_SUB_LT, INT_LT, INT_MUL] THEN
+    FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) []
   ]);
 
 val can_get_big = store_thm(
@@ -233,7 +214,7 @@ val can_get_big = store_thm(
 val positive_product_implication = store_thm(
   "positive_product_implication",
   Term`!c d:int. 0 < c /\ 0 < d ==> 0 < c * d`,
-  SIMP_TAC int_ss [INT_MUL_SIGN_CASES]);
+  SRW_TAC [] [INT_MUL_SIGN_CASES]);
 
 val restricted_quantification_simp = store_thm(
   "restricted_quantification_simp",
@@ -242,22 +223,20 @@ val restricted_quantification_simp = store_thm(
            (low < high /\ ((x = high) \/ (low < x /\ x <= high - 1)))`,
   REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     `low < high` by PROVE_TAC [INT_LTE_TRANS] THEN
-    FULL_SIMP_TAC int_ss [INT_LE_LT] THEN
+    FULL_SIMP_TAC (srw_ss()) [INT_LE_LT] THEN
     `~(x = high)` by PROVE_TAC [INT_LT_REFL] THEN
     POP_ASSUM (fn th => REWRITE_TAC [th]) THEN
     SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
     `high - 1 < x` by PROVE_TAC [INT_LT_TOTAL] THEN
     `high < x + 1` by PROVE_TAC [INT_LT_SUB_RADD] THEN
     PROVE_TAC [INT_DISCRETE],
-    ASM_SIMP_TAC bool_ss [INT_LE_REFL],
-    FULL_SIMP_TAC int_ss [INT_LE_LT] THEN
-    DISJ1_TAC THENL [
+    SRW_TAC [][],
+    FULL_SIMP_TAC (srw_ss()) [INT_LE_LT] THEN DISJ1_TAC THENL [
       MATCH_MP_TAC INT_LT_TRANS THEN
       Q.EXISTS_TAC `high - 1`,
       ALL_TAC
     ] THEN
-    ASM_REWRITE_TAC [INT_LT_SUB_RADD, INT_LT_ADDR] THEN
-    CONV_TAC REDUCE_CONV
+    SRW_TAC [] [INT_LT_SUB_RADD, INT_LT_ADDR]
   ]);
 
 val top_and_lessers = store_thm(
@@ -336,7 +315,7 @@ val subtract_to_small = store_thm(
   Q.ABBREV_TAC `q = x / d` THEN POP_ASSUM (K ALL_TAC) THEN
   Q.ABBREV_TAC `r = x % d` THEN POP_ASSUM (K ALL_TAC) THEN
   FIRST_X_ASSUM SUBST_ALL_TAC THEN
-  FULL_SIMP_TAC int_ss [INT_LE_LT] THENL [
+  FULL_SIMP_TAC (srw_ss()) [INT_LE_LT] THENL [
     Q.EXISTS_TAC `q`,
     Q.EXISTS_TAC `q - 1`
   ] THEN
@@ -414,10 +393,9 @@ val INT_NUM_ODD = store_thm(
   REPEAT STRIP_TAC THENL [
     Cases_on `&n = 0` THENL [
       POP_ASSUM SUBST_ALL_TAC THEN POP_ASSUM MP_TAC THEN
-      RULE_ASSUM_TAC GSYM THEN FULL_SIMP_TAC int_ss [INT_ENTIRE] THEN
-      POP_ASSUM (MP_TAC o Q.SPEC `0`) THEN REWRITE_TAC [],
+      FULL_SIMP_TAC (srw_ss()) [INT_MUL],
       `0 < &n` by PROVE_TAC [INT_LE_LT, INT_POS] THEN
-      `0 < 2i` by SIMP_TAC int_ss [] THEN
+      `0 < 2i` by SRW_TAC [][] THEN
       `0 < m` by PROVE_TAC [INT_MUL_SIGN_CASES, INT_LT_ANTISYM] THEN
       `?k. m = &k` by PROVE_TAC [NUM_POSINT_EXISTS, INT_LE_LT] THEN
       POP_ASSUM SUBST_ALL_TAC THEN
@@ -1051,7 +1029,7 @@ val positive_mod_part = prove(
   ASM_SIMP_TAC bool_ss [INT_LT_GT] THEN PROVE_TAC []);
 
 infix 8 on
-val int_ss = int_ss ++ numSimps.ARITH_ss
+val int_ss = srw_ss() ++ numSimps.ARITH_ss
 val tac1 =
     Q.EXISTS_TAC `&n - r` THEN
     ASM_SIMP_TAC bool_ss [INT_LE_SUB_LADD, INT_LE_SUB_RADD, move_sub,
@@ -1062,7 +1040,7 @@ val tac1 =
     SUBST_ALL_TAC on
       (`&n + q * &n = (q + 1) * &n`,
        SIMP_TAC bool_ss [INT_ADD_COMM, INT_RDISTRIB, INT_MUL_LID]) THEN
-    ASM_SIMP_TAC bool_ss [INT_MOD_COMMON_FACTOR]
+    ASM_SIMP_TAC int_ss [INT_MOD_COMMON_FACTOR]
 val tac2 =
     STRIP_TAC THEN REPEAT VAR_EQ_TAC THEN
     FULL_SIMP_TAC bool_ss [INT_ADD_RID] THEN

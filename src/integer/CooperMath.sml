@@ -3,11 +3,11 @@ structure CooperMath :> CooperMath = struct
   local open gcdTheory in end
 
   open HolKernel Parse boolLib intSyntax integerTheory
-       int_arithTheory intSimps CooperThms CooperSyntax
+       int_arithTheory intReduce CooperThms CooperSyntax
 
   type num = Arbnum.num
 
-  val cooper_compset = intSimps.int_compset()
+  val cooper_compset = int_compset()
   val _ = computeLib.add_thms [gcdTheory.GCD_EFFICIENTLY] cooper_compset
   val REDUCE_CONV = computeLib.CBV_CONV cooper_compset
 

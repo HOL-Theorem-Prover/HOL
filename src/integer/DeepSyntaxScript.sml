@@ -198,7 +198,7 @@ val neginf_inductive_case = prove(
       FIRST_X_ASSUM (MP_TAC o Q.SPEC `1`) THEN
       ASM_SIMP_TAC std_ss [GSYM INT_ADD_ASSOC, INT_ADD_LINV, INT_ADD_RID,
                            INT_NOT_LE] THEN
-      CONV_TAC intSimps.REDUCE_CONV THEN PROVE_TAC [INT_DISCRETE, INT_ADD_LID],
+      CONV_TAC intReduce.REDUCE_CONV THEN PROVE_TAC [INT_DISCRETE, INT_ADD_LID],
       FIRST_X_ASSUM (MP_TAC o Q.SPEC `d`) THEN
       ASM_SIMP_TAC std_ss [GSYM INT_ADD_ASSOC, int_sub, INT_ADD_RID,
                            INT_LE_REFL, INT_ADD_LINV]
@@ -260,7 +260,7 @@ val posinf_inductive_case = prove(
     SRW_TAC [][Aset_def, eval_form_def, IN_SING, alldivide_def] THENL [
       FIRST_X_ASSUM (MP_TAC o Q.SPEC `1`) THEN
       ASM_SIMP_TAC std_ss [GSYM INT_ADD_ASSOC, INT_ADD_RINV, INT_ADD_RID] THEN
-      CONV_TAC intSimps.REDUCE_CONV THEN PROVE_TAC [INT_DISCRETE, INT_ADD_LID,
+      CONV_TAC intReduce.REDUCE_CONV THEN PROVE_TAC [INT_DISCRETE, INT_ADD_LID,
                                                     INT_NOT_LE],
       FIRST_X_ASSUM (MP_TAC o Q.SPEC `d`) THEN
       ASM_SIMP_TAC std_ss [GSYM INT_ADD_ASSOC, INT_LE_REFL, INT_ADD_RID,
