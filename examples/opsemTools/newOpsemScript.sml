@@ -2689,6 +2689,37 @@ val IMP_INTRO_THM =
    ``!pre prog post. RSPEC pre prog post = IMP pre post prog``,
     METIS_TAC[IMP_def]);
 
+val NOT_CONJ_IMP_F =
+ save_thm
+  ("NOT_CONJ_IMP_F",
+   METIS_PROVE [] ``!p b. ~(p /\ b) ==> ((p ==> ~b) = T)``);
+
+
+val NOT_IMP_CONJ =
+ save_thm
+  ("NOT_IMP_CONJ",
+   METIS_PROVE [] ``!A B C. ~((A ==> B) /\ C) = (A /\ ~B) \/ ~C``);
+
+val CONJ_RIGHT_ASSOC =
+ save_thm
+  ("CONJ_RIGHT_ASSOC",
+   METIS_PROVE [] ``!A B C. A /\ (B /\ C) = A /\ B /\ C``);
+
+val CONJ_LEFT_ASSOC =
+ save_thm
+  ("CONJ_LEFT_ASSOC",
+   METIS_PROVE [] ``!A B C. (A /\ B) /\ C = A /\ B /\ C``);
+
+val NOT_DISJ =
+ save_thm
+  ("NOT_DISJ",
+   METIS_PROVE [] ``!A B. ~(A \/ B) = ~A /\ ~B``);
+
+val IMP_F_IS_F = 
+ save_thm
+  ("IMP_F_IS_F",
+   METIS_PROVE [] ``!P. (!Q. P ==> Q) ==> (P = F)``);
+
 (* Identity wrapper to tag ILOG-generated assumptions *)
 val ILOG_def = Define `ILOG(tm:bool) = tm`;                                                                                                       
 
