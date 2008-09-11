@@ -11,11 +11,12 @@ This directory contains the following:
 
 
 -----------------------------------------------------------------
-Subversion hack from Anthony needed for setting types of new files
-(yuk):
+Subversion hack needed for setting types of new files (yuk):
 
 $ svn propset svn:mime-type text/plain README newOpsemScript.sml
 $ svn propset svn:eol-style native README newOpsemScript.sml
 $ svn svn:mime-type application/octet-stream *.class
+
+Better solution is to edit ~/.subversion/config
 -----------------------------------------------------------------
 
