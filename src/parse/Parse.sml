@@ -677,7 +677,7 @@ in
                                                     (s, mk_structure pset ty);
   type_grammar_changed := true;
   term_grammar_changed := true
-end;
+end handle GrammarError s => raise ERROR "type_abbrev" s
 
 fun type_abbrev (s, ty) = let
 in
