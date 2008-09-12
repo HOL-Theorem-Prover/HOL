@@ -1,7 +1,7 @@
 
 (* Stuff needed when running interactively
 quietdec := true; (* turn off printing *)
-app load ["newOpsemTheory","pairSyntax", "intLib","Omega",
+app load ["newOpsemTheory","pairSyntax", "intLib","Omega","intSimps",
           "computeLib", "finite_mapTheory",
           "relationTheory", "stringLib"];
 open newOpsemTheory bossLib pairSyntax intLib Omega
@@ -10,7 +10,7 @@ quietdec := false; (* turn printing back on *)
 *)
 
 open HolKernel Parse boolLib
-     newOpsemTheory bossLib pairSyntax intLib Omega
+     newOpsemTheory bossLib pairSyntax intLib Omega intSimps
      computeLib finite_mapTheory relationTheory stringLib;
 
 val _ =
@@ -564,11 +564,10 @@ of applying SIMP_CONV (srw_ss()) [] to tm, or |- tm = tm if that fails
 *)
 
 fun hol_sat tm =
- let val () = (print "\nApplying SIMP_CONV (srw_ss()) [] THENC OMEGA_CONV to:\n"; 
+ let val () = (print "\nApplying SIMP_CONV (srw_ss()++OMEGA_ss++ARITH_ss) [] to:\n"; 
                print_term tm; 
                print "\n... ")
-     val th = time (SIMP_CONV (srw_ss()) []
-                     THENC OMEGA_CONV) tm handle e => REFL tm
+     val th = time SIMP_CONV (srw_ss()++OMEGA_ss++ARITH_ss) [] tm handle e => REFL tm
      val () = if rhs(concl th) = ``T``
                 then (print "Satisfiable:\n"; print_thm th; print "\n") else
               if rhs(concl th) = ``F``
