@@ -43,6 +43,15 @@ fun T (s,t) = (s,t,true)
 
 val terms_to_test =
   [T ("INT_GROUP", Term`?!x:int. (!y. x + y = y) /\ (!y. ?!z. y + z = x)`),
+   T ("Mike1",
+        ``?(k:num) (j:num) (i:num).
+            (i >= 0 /\ j >= 0 /\ k >= 0 /\ ~((i = 0) \/ (j = 0) \/ (k = 0)) /\
+            ~(i = j) /\ ~(i = k) /\ (j = k)) /\ i < j + k``),
+   T ("Mike2",
+      ``?(k:num) (j:num) (i:num).
+           (((((i >= 0 /\ j >= 0 /\ k >= 0) /\
+           ~(((i = 0) \/ (j = 0)) \/ (k = 0))) /\ ~(i = j)) /\ ~(i = k)) /\
+           (j = k)) /\ i < j + k``),
    T ("BUG1",
     ``(?x. y <= x /\ x <= z /\ 2i * z + 1 <= x /\ x <= 2 * y) =
     y <= z /\ 2 * z + 1 <= 2 * y /\ y <= 2 * y /\ 2 * z + 1 <= z``),
