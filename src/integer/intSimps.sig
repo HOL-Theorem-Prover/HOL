@@ -23,7 +23,13 @@ sig
   val INT_MUL_AC_ss : simpLib.ssfrag
   val INT_ADD_AC_ss : simpLib.ssfrag
   val INT_AC_ss     : simpLib.ssfrag
-  val INT_ARITH_ss  : simpLib.ssfrag
+
+  (* decision procedure fragments *)
+  val INT_ARITH_ss  : simpLib.ssfrag  (* = OMEGA for the moment *)
+  val OMEGA_ss      : simpLib.ssfrag
+  val COOPER_ss     : simpLib.ssfrag
+  val omega_cache   : Cache.cache
+  val cooper_cache  : Cache.cache
 
 
 

@@ -2,7 +2,7 @@ structure CooperShell :> CooperShell =
 struct
 
 open HolKernel boolLib integerTheory
-     arithmeticTheory intSyntax int_arithTheory intSimps
+     arithmeticTheory intSyntax int_arithTheory intReduce
      CooperSyntax CooperThms CooperMath;
 
 val ERR = mk_HOL_ERR "CooperShell";

@@ -148,23 +148,21 @@ fun is_arith_thm thm =
 
 val is_arith_asm = is_arith_thm o ASSUME
 
-val ARITH = Omega.OMEGA_PROVE
-
 open Trace Cache Traverse
-fun CTXT_ARITH thms tm = let
+fun CTXT_ARITH DP DPname thms tm = let
   val context = map concl thms
   fun try gl = let
     val gl' = list_mk_imp(context,gl)
     val _ = trace (5, LZ_TEXT (fn () => "Trying cached arithmetic d.p. on "^
                                         term_to_string gl'))
   in
-    rev_itlist (C MP) thms (ARITH gl')
+    rev_itlist (C MP) thms (DP gl')
   end
   val thm = EQT_INTRO (try tm)
       handle (e as HOL_ERR _) =>
              if tm <> F then EQF_INTRO (try(mk_neg tm)) else raise e
 in
-  trace(1,PRODUCE(tm,"OMEGA",thm)); thm
+  trace(1,PRODUCE(tm,DPname,thm)); thm
 end
 
 fun crossprod (ll : 'a list list) : 'a list list =
@@ -208,16 +206,24 @@ fun dpvars t = let
     | SOME ("integer", "int_lt") => go2()
     | SOME ("integer", "int_le") => go2()
     | SOME ("integer", "int_ge") => go2()
+    | SOME ("integer", "int_mod") => go2()
+    | SOME ("integer", "int_div") => go2()
     | SOME ("integer", "int_neg") => go1()
     | SOME ("integer", "ABS") => go1()
     | SOME ("integer", "int_mul") => let
         val args = intSyntax.strip_mult t
         val arg_vs = map (HOLset.listItems o recurse bnds empty_tmset) args
         val cs = crossprod (filter (not o null) arg_vs)
-        val var_ts = map (intSyntax.list_mk_mult o Listsort.sort Term.compare)
-                         cs
       in
-        List.foldl (fn (t,acc)=>HOLset.add(acc,t)) acc var_ts
+        case cs of
+          [] => acc
+        | [[]] => acc
+        | _ => let
+            val var_ts = map (intSyntax.list_mk_mult o
+                              Listsort.sort Term.compare) cs
+          in
+            List.foldl (fn (t,acc)=>HOLset.add(acc,t)) acc var_ts
+          end
       end
     | SOME ("bool", "!") => let
         val (v, bod) = dest_abs (hd args)
@@ -240,37 +246,40 @@ in
 end
 
 
-val (CACHED_ARITH,arith_cache) = let
-  fun check tm =
-      type_of tm = Type.bool andalso is_arith tm andalso tm <> boolSyntax.T
-in
-  RCACHE (dpvars, check,CTXT_ARITH)
+fun mkSS DPname DP = let
+  val (CDP, cache) = let
+    fun check tm =
+        type_of tm = Type.bool andalso is_arith tm andalso tm <> boolSyntax.T
+  in
+    RCACHE (dpvars,check,CTXT_ARITH DP DPname)
   (* the check function determines whether or not a term might be handled
      by the decision procedure -- we want to handle F, because it's possible
      that we have accumulated a contradictory context. *)
-end;
-
-val ARITH_REDUCER = let
-  exception CTXT of thm list;
-  fun get_ctxt e = (raise e) handle CTXT c => c
-  fun add_ctxt(ctxt, newthms) = let
-    val addthese = filter is_arith_thm (flatten (map CONJUNCTS newthms))
+  end
+  val ARITH_REDUCER = let
+    exception CTXT of thm list
+    fun get_ctxt e = (raise e) handle CTXT c => c
+    fun add_ctxt(ctxt, newthms) = let
+      val addthese = filter is_arith_thm (flatten (map CONJUNCTS newthms))
+    in
+      CTXT (addthese @ get_ctxt ctxt)
+    end
   in
-    CTXT (addthese @ get_ctxt ctxt)
+    REDUCER {name = SOME DPname,
+             addcontext = add_ctxt,
+             apply = fn args => CDP (get_ctxt (#context args)),
+             initial = CTXT []}
   end
 in
-  REDUCER {name = SOME"INT_ARITH_REDUCER",
-           addcontext = add_ctxt,
-           apply = fn args => CACHED_ARITH (get_ctxt (#context args)),
-           initial = CTXT []}
-end;
+  (SSFRAG {name=SOME (DPname ^ "_ss"),
+           convs = [], rewrs = [], congs = [],
+           filter = NONE, ac = [], dprocs = [ARITH_REDUCER]},
+    cache)
+end
 
-val INT_ARITH_ss =
-    SSFRAG
-    {name=SOME"INT_ARITH",
-     convs = [], rewrs = [], congs = [],
-      filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
-
+val (OMEGA_ss, omega_cache) = mkSS "OMEGA" Omega.OMEGA_PROVE
+val (COOPER_ss, cooper_cache) = mkSS "COOPER" Cooper.COOPER_PROVE
+val INT_ARITH_ss = OMEGA_ss
 
 
 end
