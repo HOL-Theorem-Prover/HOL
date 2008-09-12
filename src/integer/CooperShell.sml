@@ -1,7 +1,7 @@
 structure CooperShell :> CooperShell =
 struct
 
-open HolKernel boolLib integerTheory Parse
+open HolKernel boolLib integerTheory
      arithmeticTheory intSyntax int_arithTheory intSimps
      CooperSyntax CooperThms CooperMath;
 
@@ -9,8 +9,11 @@ val ERR = mk_HOL_ERR "CooperShell";
 val lhand = rand o rator
 
 (* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars integerTheory.integer_grammars;
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars integer_grammars
+end
+open Parse
 
 val simple_disj_congruence =
   tautLib.TAUT_PROVE (Term`!p q r. (~p ==> (q = r)) ==>
@@ -32,16 +35,21 @@ in
   else if d1 = false_tm then
     K (SPEC d2 F_or_l)
   else let
-    val notd1_t = mk_neg d1
-    val notd1_thm = ASSUME notd1_t
-    val notd1 =
-      if is_neg d1 then EQT_INTRO (CONV_RULE (REWR_CONV NOT_NOT_P) notd1_thm)
-      else EQF_INTRO (notd1_thm)
-    val d2_rewritten = DISCH notd1_t (REWRITE_CONV [notd1] d2)
+      val notd1_t = mk_neg d1
+      val notd1_thm = ASSUME notd1_t
+      val notd1 =
+          if is_neg d1 then
+            EQT_INTRO (CONV_RULE (REWR_CONV NOT_NOT_P) notd1_thm)
+          else EQF_INTRO (notd1_thm)
+      val d2_rewritten = SOME (DISCH notd1_t (REWRITE_CONV [notd1] d2))
+          handle UNCHANGED => NONE
   in
-    K (MATCH_MP simple_disj_congruence d2_rewritten) THENC
-    (REWR_CONV T_or_r ORELSEC REWR_CONV F_or_r ORELSEC
-     RAND_CONV congruential_simplification)
+      case d2_rewritten of
+        NONE => RAND_CONV congruential_simplification
+      | SOME d2thm =>
+        K (MATCH_MP simple_disj_congruence d2thm) THENC
+        (REWR_CONV T_or_r ORELSEC REWR_CONV F_or_r ORELSEC
+         RAND_CONV congruential_simplification)
   end
 end tm handle HOL_ERR _ => let
   val (c1, c2) = dest_conj tm
@@ -56,11 +64,16 @@ in
   else if c1 =  false_tm then
     K (SPEC c2 F_and_l)
   else let
-    val c2_rewritten = DISCH c1 (REWRITE_CONV [EQT_INTRO (ASSUME c1)] c2)
-  in
-    K (MATCH_MP simple_conj_congruence c2_rewritten) THENC
-    (REWR_CONV T_and_r ORELSEC REWR_CONV F_and_r ORELSEC
-     RAND_CONV congruential_simplification)
+      val c2_rewritten =
+          SOME (DISCH c1 (REWRITE_CONV [EQT_INTRO (ASSUME c1)] c2))
+          handle UNCHANGED => NONE
+    in
+      case c2_rewritten of
+        NONE => RAND_CONV congruential_simplification
+      | SOME th =>
+        K (MATCH_MP simple_conj_congruence th) THENC
+        (REWR_CONV T_and_r ORELSEC REWR_CONV F_and_r ORELSEC
+         RAND_CONV congruential_simplification)
   end
 end tm handle HOL_ERR _ =>
   if is_neg tm then RAND_CONV congruential_simplification tm
@@ -768,7 +781,5 @@ end tm
      end tm
 
 *)
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end
