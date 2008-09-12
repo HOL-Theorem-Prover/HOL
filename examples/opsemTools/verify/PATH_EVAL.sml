@@ -59,53 +59,6 @@ fun EVAL_DISCH asm th =
    (DISCH asm' th)
  end;
 
-(* Ad hoc collection of theorems used in SYM_RUN
-
-val NOT_IMP_EQ_F = 
- METIS_PROVE [] ``!t. ~t ==> (t =F)``;
-
-val TC_SMALL_EVAL_IF =
- METIS_PROVE [] 
-  ``!con b s1 s2.
-     (b ==> TC SMALL_EVAL con ([],s1)) 
-     /\ 
-     (~b ==> TC SMALL_EVAL con ([],s2))
-     ==>
-     TC SMALL_EVAL con ([], if b then s1 else s2)``;
-
-val LEFT_T_ELIM = 
- METIS_PROVE [] ``!b. T /\ b = b``;
-
-val T_AND_T =
- METIS_PROVE [] ``T /\ T = T``;
-
-val NOT_EQ_F =
- METIS_PROVE [] ``!b. ~b ==> (b = F)``;
-
-val NOT_EQ_T =
- METIS_PROVE [] ``!b. (b = T) ==> (~b = F)``;
-
-val ABS_T_CONJ =
- METIS_PROVE [] 
-  ``!P Q (s:state). P s ==> (Q s = T) ==> (\s. P s /\ Q s) s``;
-
-val ABS_F_CONJ =
- METIS_PROVE [] 
-  ``!P Q (s:state). P s ==> (~(Q s) = T) ==> (\s. P s /\ ~(Q s)) s``;
-
-val STEP1_T =
- METIS_PROVE []
- ``!bx b l s x y. 
-    bx ==> (bx ==> b = T) ==> (STEP1 (l,s) = if b then x else y) 
-    ==> (STEP1 (l,s) = x)``;
-
-val STEP1_F =
- METIS_PROVE []
- ``!bx b l s x y. 
-    bx ==> (bx ==> ~b = T) ==> (STEP1 (l,s) = if b then x else y) 
-    ==> (STEP1 (l,s) = y)``;
-*)
-
 
 (********************************************************************
 
@@ -564,10 +517,10 @@ of applying SIMP_CONV (srw_ss()) [] to tm, or |- tm = tm if that fails
 *)
 
 fun hol_sat tm =
- let val () = (print "\nApplying SIMP_CONV (srw_ss()++OMEGA_ss++ARITH_ss) [] to:\n"; 
+ let val () = (print "\nApplying SIMP_CONV (srw_ss()++COOPER_ss++ARITH_ss) [] to:\n"; 
                print_term tm; 
                print "\n... ")
-     val th = time SIMP_CONV (srw_ss()++OMEGA_ss++ARITH_ss) [] tm handle e => REFL tm
+     val th = time (SIMP_CONV (srw_ss()++COOPER_ss++ARITH_ss) []) tm handle e => REFL tm
      val () = if rhs(concl th) = ``T``
                 then (print "Satisfiable:\n"; print_thm th; print "\n") else
               if rhs(concl th) = ``F``
