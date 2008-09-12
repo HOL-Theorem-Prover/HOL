@@ -2,7 +2,7 @@ structure CooperMath :> CooperMath = struct
 
   local open gcdTheory in end
 
-  open HolKernel Parse boolLib intSyntax integerTheory
+  open HolKernel boolLib intSyntax integerTheory
        int_arithTheory intReduce CooperThms CooperSyntax
 
   type num = Arbnum.num
@@ -16,8 +16,11 @@ val ERR = mk_HOL_ERR "CooperMath";
 fun lhand t = rand (rator t)
 
 (* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars integerTheory.integer_grammars;
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars integer_grammars
+end
+open Parse
 
 (*---------------------------------------------------------------------------*)
 (* Function to compute the Greatest Common Divisor of two integers.          *)
@@ -1066,7 +1069,5 @@ in
   Profile.profile "simpcst.mainwork" mainwork
 end tm
 
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* struct *)

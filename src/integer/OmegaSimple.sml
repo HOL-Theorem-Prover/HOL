@@ -22,8 +22,10 @@ val lhand = rand o rator
 val ERR = mk_HOL_ERR "OmegaSimple";
 
 (* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars integer_grammars;
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars integer_grammars
+end
 
 
 (* ----------------------------------------------------------------------
@@ -327,7 +329,5 @@ end
    test [[11,13,~27], [~11,~13,45],[7,~9,10],[~7,9,4]];  (* no conclusion *)
 
 *)
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* struct *)
