@@ -477,10 +477,10 @@ fun create_const errstr (const as (r,GRND pat)) Ty =
       else raise ERR "create_const" ("not a type match: " ^ type_to_string pat
                                      ^ " does not match " ^ type_to_string Ty)
   | create_const errstr (const as (r,POLY pat)) Ty =
-     ((case Type.raw_match_kind_type pat Ty (([],[]),([],[]))
-        of (([],_),([],_)) => Const const
-         | ((S,[]),([],_)) => Const(r, if ground S then GRND Ty else POLY Ty)
-         | ((S, _),( _,_)) => Const(r,POLY Ty))
+     ((case Type.raw_kind_match_type pat Ty (([],[]),([],[]),0)
+        of (([],_),([],_),0) => Const const
+         | ((S,[]),([],_),0) => Const(r, if ground S then GRND Ty else POLY Ty)
+         | ((S, _),( _,_),_) => Const(r,POLY Ty))
         handle HOL_ERR _ => Raise (ERR errstr
              (String.concat["Not a type instance: ", KernelSig.id_toString r,
                                " cannot have type ", type_to_string Ty])))
@@ -872,6 +872,66 @@ fun inst_kind [] tm = tm
       inst tm
     end;
 
+fun inst_rank_kind 0  []    tm = tm
+  | inst_rank_kind rk []    tm = inst_rank rk tm
+  | inst_rank_kind 0  theta tm = inst_kind theta tm
+  | inst_rank_kind rk theta tm =
+    let val kd_subst = Kind.kind_subst theta
+        val inst_kind = Type.inst_kind theta
+        val inst_rk_kd = Type.inst_rank_kind rk theta
+        fun inst (bv as Bv i) = bv
+          | inst (c as Const(_, GRND _)) = c
+          | inst (c as Const(r, POLY Ty)) = Const(r, POLY (inst_rk_kd Ty))
+          | inst (v as Fv(Name,Ty)) = Fv(Name, inst_rk_kd Ty)
+          | inst (Comb(Rator,Rand)) = Comb(inst Rator, inst Rand)
+          | inst (TComb(Rator,Ty))  = TComb(inst Rator, inst_rk_kd Ty)
+          | inst (Abs(Bvar,Body))   = Abs(inst Bvar, inst Body)
+          | inst (TAbs((s,kd,rk0),Body)) = TAbs((s,kd_subst kd,rk0+rk), inst Body)
+          | inst (t as Clos _)      = inst(push_clos t)
+    in
+      inst tm
+    end;
+
+local
+fun check_subst [] = ()
+  | check_subst ({redex,residue} :: s) =
+        if (kind_of redex <> kind_of residue) handle HOL_ERR _ => false
+           (* if "kind_of" fails because of open bound variables,
+              assume the kind check was done earlier and proceed. *)
+        then raise ERR "inst_rk_kd_ty" "redex has different kind than residue"
+        else if (rank_of redex < rank_of residue) handle HOL_ERR _ => false
+           (* if "rank_of" fails because of open bound variables,
+              assume the rank check was done earlier and proceed. *)
+        then raise ERR "inst_rk_kd_ty" "redex has lower rank than residue"
+        else check_subst s
+in
+fun inst_rk_kd_ty 0  []       []    tm = tm
+  | inst_rk_kd_ty rk []       []    tm = inst_rank rk tm
+  | inst_rk_kd_ty 0  kd_theta []    tm = inst_kind kd_theta tm
+  | inst_rk_kd_ty rk kd_theta []    tm = inst_kind kd_theta (inst_rank rk tm)
+  | inst_rk_kd_ty 0  []       theta tm = inst theta tm
+  | inst_rk_kd_ty rk kd_theta theta tm =
+    let val subst_kd = Kind.kind_subst kd_theta
+        val inst_rk_kd = Type.inst_rank_kind rk kd_theta
+        val inst_ty_rk_kd = Type.type_subst theta o inst_rk_kd
+        fun inst0 (bv as Bv i) = bv
+          | inst0 (c as Const(_, GRND _)) = c
+          | inst0 (c as Const(r, POLY Ty)) =
+              let val ty = inst_ty_rk_kd Ty
+              in Const(r,(if Type.polymorphic ty then POLY else GRND)ty)
+              end
+          | inst0 (v as Fv(Name,Ty)) = Fv(Name, inst_ty_rk_kd Ty)
+          | inst0 (Comb(Rator,Rand)) = Comb(inst0 Rator, inst0 Rand)
+          | inst0 (TComb(Rator,Ty))  = TComb(inst0 Rator, inst_ty_rk_kd Ty)
+          | inst0 (Abs(Bvar,Body))   = Abs(inst0 Bvar, inst0 Body)
+          | inst0 (TAbs(Bvar as (s,kd,rk0),Body)) = TAbs((s,subst_kd kd,rk0+rk), inst0 Body)
+          | inst0 (t as Clos _)      = inst0(push_clos t)
+    in
+      check_subst theta;
+      inst0 tm
+    end
+end;
+
 (*---------------------------------------------------------------------------*
  *     Substitute types for general types in a term                          *
  *---------------------------------------------------------------------------*)
@@ -1013,8 +1073,8 @@ local val FORMAT = ERR "list_mk_tybinder"
                   of NONE => raise FORMAT
                    | SOME ty1 => (fn abs =>
                    let val tya = type_of abs
-                       val (kdtheta,tytheta) = match_kind_type ty tya
-                   in mk_comb(inst tytheta (inst_kind kdtheta c), abs)
+                       val (rk,kdtheta,tytheta) = kind_match_type ty tya
+                   in mk_comb(inst_rk_kd_ty rk kdtheta tytheta c, abs)
                    end)
 in
 fun list_mk_tybinder opt =
@@ -1425,13 +1485,14 @@ local
    in look end
   fun bound_by_scope scoped M = if scoped then not (free M 0 0) else false
   val kdmatch = Kind.raw_match_kind
-  val tymatch = Type.raw_match_kind_type
+  val rkmatch = Type.raw_match_rank
+  val tymatch = Type.raw_kind_match_type
 in
 fun RM [] theta = theta
-  | RM (((v as Fv(_,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS,kdS)
+  | RM (((v as Fv(_,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS,kdS,rkS)
      = if bound_by_scope scoped tm
        then MERR "variable bound by scope"
-       else let val (tyS',kdS') = tymatch Ty (type_of tm) (tyS,kdS)
+       else let val (tyS',kdS',rkS') = tymatch Ty (type_of tm) (tyS,kdS,rkS)
             in
                RM rst
                ((case lookup v Id tmS
@@ -1440,9 +1501,9 @@ fun RM [] theta = theta
                                      else ((v |-> tm)::tmS,Id)
                    | SOME tm' => if aconv tm' tm then S1
                                  else MERR "double bind on variable"),
-                tyS',kdS')
+                tyS',kdS',rkS')
             end
-  | RM ((Const(c1,ty1),Const(c2,ty2),_)::rst) (tmS,tyS,kdS)
+  | RM ((Const(c1,ty1),Const(c2,ty2),_)::rst) (tmS,tyS,kdS,rkS)
       = RM rst
         (if c1 <> c2 then
           let val n1 = id_toString c1
@@ -1453,30 +1514,31 @@ fun RM [] theta = theta
          else
          case (ty1,ty2)
           of (GRND _,  POLY _)   => MERR"ground const vs. polymorphic const"
-           | (GRND pat,GRND obj) => if pat = obj then (tmS,tyS,kdS)
+           | (GRND pat,GRND obj) => if pat = obj then (tmS,tyS,kdS,rkS)
                        else MERR"const-const with different (ground) types"
            | (POLY pat,GRND obj) =>
-                       let val (tyS',kdS') = tymatch pat obj (tyS,kdS)
-                       in (tmS, tyS', kdS')
+                       let val (tyS',kdS',rkS') = tymatch pat obj (tyS,kdS,rkS)
+                       in (tmS, tyS', kdS', rkS')
                        end
            | (POLY pat,POLY obj) =>
-                       let val (tyS',kdS') = tymatch pat obj (tyS,kdS)
-                       in (tmS, tyS', kdS')
+                       let val (tyS',kdS',rkS') = tymatch pat obj (tyS,kdS,rkS)
+                       in (tmS, tyS', kdS', rkS')
                        end
         )
-  | RM ((Abs(Fv(_,ty1),M),Abs(Fv(_,ty2),N),_)::rst) (tmS,tyS,kdS)
-      = let val (tyS',kdS') = tymatch ty1 ty2 (tyS,kdS)
-        in RM ((M,N,true)::rst) (tmS, tyS', kdS')
+  | RM ((Abs(Fv(_,ty1),M),Abs(Fv(_,ty2),N),_)::rst) (tmS,tyS,kdS,rkS)
+      = let val (tyS',kdS',rkS') = tymatch ty1 ty2 (tyS,kdS,rkS)
+        in RM ((M,N,true)::rst) (tmS, tyS', kdS', rkS')
         end
-  | RM ((TAbs((_,k1,r1),M), TAbs((_,k2,r2),N), s)::rst) (tmS,tyS,kdS)
+  | RM ((TAbs((_,k1,r1),M), TAbs((_,k2,r2),N), s)::rst) (tmS,tyS,kdS,rkS)
       = let val kdS' = kdmatch k1 k2 kdS
-        in if r1 = r2 then RM ((M,N,true)::rst) (tmS, tyS, kdS')
+            val rkS' = rkmatch r1 r2 rkS
+        in if r1 = r2 then RM ((M,N,true)::rst) (tmS, tyS, kdS', rkS')
            else MERR "different type abstractions"
         end
   | RM ((Comb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
-  | RM ((TComb(M,ty1),TComb(N,ty2),s)::rst) (tmS,tyS,kdS)
-      = let val (tyS',kdS') = tymatch ty1 ty2 (tyS,kdS)
-        in RM ((M,N,s)::rst) (tmS, tyS', kdS')
+  | RM ((TComb(M,ty1),TComb(N,ty2),s)::rst) (tmS,tyS,kdS,rkS)
+      = let val (tyS',kdS',rkS') = tymatch ty1 ty2 (tyS,kdS,rkS)
+        in RM ((M,N,s)::rst) (tmS, tyS', kdS', rkS')
         end
   | RM ((Bv i,Bv j,_)::rst) S  = if i=j then RM rst S
                                  else MERR "Bound var. depth"
@@ -1485,21 +1547,21 @@ fun RM [] theta = theta
   | RM all others                    = MERR "different constructors"
 end
 
-fun raw_match_kind kdfixed tyfixed tmfixed pat ob (tmS,tyS,kdS)
-   = RM [(pat,ob,false)] ((tmS,tmfixed), (tyS,tyfixed), (kdS,kdfixed));
+fun raw_kind_match kdfixed tyfixed tmfixed pat ob (tmS,tyS,kdS,rkS)
+   = RM [(pat,ob,false)] ((tmS,tmfixed), (tyS,tyfixed), (kdS,kdfixed), rkS);
 
 fun raw_match tyfixed tmfixed pat ob (tmS,tyS)
-   = let val (tmSId,tySId,(kdS,kdIds)) = raw_match_kind [] tyfixed tmfixed pat ob (tmS,tyS,[])
-     in if null kdS andalso null kdIds then (tmSId,tySId)
-        else raise ERR "raw_match" "kind instantiation needed: use raw_match_kind instead"
+   = let val (tmSId,tySId,(kdS,kdIds),rkS) = raw_kind_match [] tyfixed tmfixed pat ob (tmS,tyS,[],0)
+     in if null kdS andalso null kdIds andalso rkS = 0 then (tmSId,tySId)
+        else raise ERR "raw_match" "kind and/or rank instantiation needed: use raw_kind_match instead"
      end;
 
-fun norm_kind_subst ((tmS,_),(tyS,_),(kdS,_)) =
- let val kdTheta = Type.inst_kind kdS
-     val Theta = inst tyS o inst_kind kdS
+fun norm_kind_subst ((tmS,_),(tyS,_),(kdS,_),rkS) =
+ let val rkkdTheta = Type.inst_rank_kind rkS kdS
+     val Theta = inst tyS o inst_kind kdS o inst_rank rkS
      fun kdel A [] = A
        | kdel A ({redex,residue}::rst) =
-         kdel (let val redex' = kdTheta(redex)
+         kdel (let val redex' = rkkdTheta(redex)
                in if residue = redex' then A else (redex' |-> residue)::A
                   (* redex' must be a type variable; hence we use can use =
                      to compare redex' and residue, rather than abconv_ty.  *)
@@ -1509,7 +1571,7 @@ fun norm_kind_subst ((tmS,_),(tyS,_),(kdS,_)) =
          del (let val redex' = Theta(redex)
               in if aconv residue redex' then A else (redex' |-> residue)::A
               end) rst
- in (del [] tmS, kdel [] tyS, kdS)
+ in (del [] tmS, kdel [] tyS, kdS, rkS)
  end
 
 fun norm_subst ((tmS,_),(tyS,_)) =
@@ -1522,21 +1584,21 @@ fun norm_subst ((tmS,_),(tyS,_)) =
  in (del [] tmS, tyS)
  end
 
-fun match_kind_terml kdfixed tyfixed tmfixed pat ob =
- norm_kind_subst (raw_match_kind kdfixed tyfixed tmfixed pat ob ([],[],[]))
+fun kind_match_terml kdfixed tyfixed tmfixed pat ob =
+ norm_kind_subst (raw_kind_match kdfixed tyfixed tmfixed pat ob ([],[],[],0))
 
 fun match_terml tyfixed tmfixed pat ob =
- let val (tmS,tyS,kdS) = match_kind_terml [] tyfixed tmfixed pat ob
- in if null kdS then (tmS,tyS)
-    else raise ERR "match_terml" "kind instantiation needed: use match_kind_terml instead"
+ let val (tmS,tyS,kdS,rkS) = kind_match_terml [] tyfixed tmfixed pat ob
+ in if null kdS andalso rkS = 0 then (tmS,tyS)
+    else raise ERR "match_terml" "kind and/or rank instantiation needed: use kind_match_terml instead"
  end
 
-val match_kind_term = match_kind_terml [] [] empty_varset
+val kind_match_term = kind_match_terml [] [] empty_varset
 
 fun match_term pat ob =
- let val (tmS,tyS,kdS) = match_kind_term pat ob
- in if null kdS then (tmS,tyS)
-    else raise ERR "match_term" "kind instantiation needed: use match_kind_term instead"
+ let val (tmS,tyS,kdS,rkS) = kind_match_term pat ob
+ in if null kdS andalso rkS = 0 then (tmS,tyS)
+    else raise ERR "match_term" "kind and/or rank instantiation needed: use kind_match_term instead"
  end;
 
 (*---------------------------------------------------------------------------

@@ -420,11 +420,12 @@ fun abb_dest_type0 (TYG(_, _, _, pmap)) ty = let
   open HolKernel
   val net_matches = TypeNet.match(pmap, ty)
   fun mymatch pat ty = let
-    val ((i, sames), (k, kdsames)) =
-       Type.raw_match_kind_type pat ty (([], []), ([], []))
+    val ((i, sames), (k, kdsames), r) =
+       Type.raw_kind_match_type pat ty (([], []), ([], []), 0)
   in
     (i @ (map (fn ty => ty |-> ty) sames),
-     k @ (map (fn kd => kd |-> kd) kdsames))
+     k @ (map (fn kd => kd |-> kd) kdsames),
+     r)
   end
   fun check_match (pat, (tstamp, nm)) =
       SOME(mymatch pat ty, nm, tstamp) handle HOL_ERR _ => NONE
@@ -434,7 +435,7 @@ in
   case checked_matches of
     [] => Type.dest_type ty
   | _ => let
-      fun instsize (i,k) =
+      fun instsize (i,k,r) =
           List.foldl (fn ({redex,residue},acc) => tysize residue + acc) 0 i
       fun match_info (i, _, tstamp) = (instsize i, tstamp)
       val matchcmp = inv_img_cmp match_info
@@ -442,7 +443,7 @@ in
                                                Lib.flip_order o Int.compare))
       val allinsts = Listsort.sort matchcmp checked_matches
       val (inst,nm,_) = hd allinsts
-      val inst' = Listsort.sort instcmp (fst inst)
+      val inst' = Listsort.sort instcmp (#1 inst)
       val args = map #residue inst'
     in
       (nm, args)

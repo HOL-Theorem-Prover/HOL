@@ -88,30 +88,32 @@ sig
   val inst          : (hol_type,hol_type) subst -> term -> term
   val inst_kind     : (kind,kind) subst -> term -> term
   val inst_rank     : int -> term -> term
+  val inst_rank_kind : int -> (kind,kind)subst -> term -> term
+  val inst_rk_kd_ty : int -> (kind,kind)subst -> (hol_type,hol_type)subst -> term -> term
   val subst_type    : (hol_type,hol_type) subst -> term -> term (* arbitrary types to types *)
 
-  val raw_match_kind : kind list -> hol_type list -> term set
+  val raw_kind_match : kind list -> hol_type list -> term set
                       -> term -> term
-                      -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst
+                      -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int
                       -> ((term,term)subst * term set) *
                          ((hol_type,hol_type)subst * hol_type list) *
-                         ((kind,kind)subst * kind list)
+                         ((kind,kind)subst * kind list) * int
   val raw_match     : hol_type list -> term set
                       -> term -> term
                       -> (term,term)subst * (hol_type,hol_type)subst
                       -> ((term,term)subst * term set) *
                          ((hol_type,hol_type)subst * hol_type list)
-  val match_kind_terml : kind list -> hol_type list -> term set -> term -> term
-                        -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst
+  val kind_match_terml : kind list -> hol_type list -> term set -> term -> term
+                        -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int
   val match_terml   : hol_type list -> term set -> term -> term
                         -> (term,term)subst * (hol_type,hol_type)subst
-  val match_kind_term : term -> term
-                        -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst
+  val kind_match_term : term -> term
+                        -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int
   val match_term    : term -> term -> (term,term)subst * (hol_type,hol_type)subst
   val norm_kind_subst : ((term,term)subst * term set) *
                       ((hol_type,hol_type)subst * hol_type list) *
-                      ((kind,kind)subst * kind list)
-                      -> ((term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst)
+                      ((kind,kind)subst * kind list) * int
+                      -> ((term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int)
   val norm_subst    : ((term,term)subst * term set) *
                       ((hol_type,hol_type)subst * hol_type list)
                       -> ((term,term)subst * (hol_type,hol_type)subst)

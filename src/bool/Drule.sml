@@ -924,10 +924,11 @@ fun ISPEC t th =
    let val (Bvar,_) = dest_forall(concl th) handle HOL_ERR _
                       => raise ERR"ISPEC"
                            "input theorem not universally quantified"
-       val (_,inst) = match_term Bvar t handle HOL_ERR _
+       val (_,inst,kd_inst,rk) = kind_match_term Bvar t handle HOL_ERR _
                       => raise ERR "ISPEC"
                            "can't type-instantiate input theorem"
-       val ith = INST_TYPE inst th handle HOL_ERR {message,...}
+       val ith = INST_TYPE inst (INST_KIND kd_inst (INST_RANK rk th))
+                    handle HOL_ERR {message,...}
                       => raise ERR "ISPEC"
                            ("failed to type-instantiate input theorem:\n" ^ message)
    in SPEC t ith handle HOL_ERR _
@@ -971,14 +972,14 @@ fun ISPECL [] = I
   | ISPECL tms = fn th =>
      let val pairs = strip tms (concl th) handle HOL_ERR _
                      => raise ERR "ISPECL" "list of terms too long for theorem"
-         val (kd_theta,ty_theta) =
-             rev_itlist (fn (pat,ob) => fn (kd_theta,ty_theta) =>
-                      let val (kd_theta',ty_theta') = Type.match_kind_type pat ob
-                      in (kd_merge kd_theta' kd_theta, merge ty_theta' ty_theta)
-                      end) pairs ([],[])
+         val (rk,kd_theta,ty_theta) =
+             rev_itlist (fn (pat,ob) => fn (rk,kd_theta,ty_theta) =>
+                      let val (rk',kd_theta',ty_theta') = Type.kind_match_type pat ob
+                      in (Int.max(rk, rk'), kd_merge kd_theta' kd_theta, merge ty_theta' ty_theta)
+                      end) pairs (0,[],[])
                       handle HOL_ERR _ => raise ERR "ISPECL"
                               "can't type-instantiate input theorem"
-     in SPECL tms (INST_TYPE ty_theta (INST_KIND kd_theta th)) handle HOL_ERR _
+     in SPECL tms (INST_TYPE ty_theta (INST_KIND kd_theta (INST_RANK rk th))) handle HOL_ERR _
         => raise ERR "ISPECL" "type variable or kind variable free in assumptions"
      end
 end;
@@ -1554,11 +1555,12 @@ fun INST_TY_TERM(Stm,Sty) th = INST Stm (INST_TYPE Sty th);
 
 
 (*---------------------------------------------------------------------------*
- * Instantiate terms, types, and kinds of a theorem. This is pretty slow,    *
- * because it makes three full traversals of the theorem.                    *
+ * Instantiate terms, types, kinds, and ranks of a theorem. This is pretty   *
+ * slow, because it makes three full traversals of the theorem.              *
  *---------------------------------------------------------------------------*)
 
-fun INST_KD_TY_TERM(Stm,Sty,Skd) th = INST Stm (INST_TYPE Sty (INST_KIND Skd th));
+fun INST_RK_KD_TY_TERM(Stm,Sty,Skd,Srk) th =
+    INST Stm (INST_TYPE Sty (INST_KIND Skd (INST_RANK Srk th)));
 
 
 (*---------------------------------------------------------------------------*
@@ -1601,9 +1603,9 @@ fun PART_MATCH partfn th = let
   val hypkdvars = HOLset.listItems (Thm.hyp_kdvars th)
   val pat = partfn(concl th)
   val matchfn =
-      match_kind_terml hypkdvars hyptyvars (HOLset.intersection(conclfvs, hypfvs)) pat
+      kind_match_terml hypkdvars hyptyvars (HOLset.intersection(conclfvs, hypfvs)) pat
 in
-  (fn tm => INST_KD_TY_TERM (matchfn tm) th)
+  (fn tm => INST_RK_KD_TY_TERM (matchfn tm) th)
 end;
 
 
@@ -1654,13 +1656,15 @@ in
 fun MATCH_MP ith =
  let val bod = fst(dest_imp(snd(strip_forall(concl ith))))
      val hyptyvars = HOLset.listItems (hyp_tyvars ith)
+     val hypkdvars = HOLset.listItems (hyp_kdvars ith)
      val lconsts = HOLset.intersection
                      (FVL [concl ith] empty_tmset, hyp_frees ith)
  in fn th =>
-   let val mfn = C (Term.match_terml hyptyvars lconsts) (concl th)
-       val tth = INST_TYPE (snd(mfn bod)) ith
+   let val mfn = C (Term.kind_match_terml hypkdvars hyptyvars lconsts) (concl th)
+       val (_,tyS,kdS,rkS) = mfn bod
+       val tth = INST_TYPE tyS (INST_KIND kdS (INST_RANK rkS ith))
        val tbod = fst(dest_imp(snd(strip_forall(concl tth))))
-       val tmin = fst(mfn tbod)
+       val tmin = #1(mfn tbod)
        val hy1 = HOLset.listItems (hyp_frees tth)
        and hy2 = HOLset.listItems (hyp_frees th)
        val (avs,(ant,conseq)) = (I ## dest_imp) (strip_forall (concl tth))
@@ -1820,8 +1824,8 @@ fun deep_alpha [] tm = tm
  *         end
  *       val pbod = partfn bod
  *   in fn tm =>
- *     let val (tmin,tyin) = match_term pbod tm
- *         val th0 = INST tmin (INST_TYPE tyin sth)
+ *     let val (tmin,tyin,kdin,rkin) = kind_match_term pbod tm
+ *         val th0 = INST_RK_KD_TY_TERM (tmin,tyin,kdin,rkin) sth
  *     in finish_fn tyin (map #redex tmin) th0
  *     end
  *   end;
@@ -1993,10 +1997,10 @@ fun HO_PART_MATCH partfn th =
      val pbod = partfn bod
      val possbetas = mapfilter (fn v => (v,BETA_VAR v bod))
                                (filter (can dom_rng o type_of) (free_vars bod))
-     fun finish_fn kdin tyin ivs =
+     fun finish_fn rkin kdin tyin ivs =
        let val npossbetas =
-            if null kdin andalso null tyin then possbetas
-               else map ((inst tyin o inst_kind kdin) ## I) possbetas
+            if rkin = 0 andalso null kdin andalso null tyin then possbetas
+               else map ((inst tyin o inst_rank_kind rkin kdin) ## I) possbetas
        in if null npossbetas then Lib.I
           else CONV_RULE (EVERY_CONV (mapfilter
                                         (TRY_CONV o C assoc npossbetas)
@@ -2006,14 +2010,14 @@ fun HO_PART_MATCH partfn th =
      val lkdconsts = HOLset.listItems (hyp_kdvars th)
      val ltyconsts = HOLset.listItems (hyp_tyvars th)
  in fn tm =>
-    let val (tmin,tyin,kdin) = ho_match_kind_term lkdconsts ltyconsts lconsts pbod tm
+    let val (tmin,tyin,kdin,rkin) = ho_kind_match_term lkdconsts ltyconsts lconsts pbod tm
         val tmbvs = bound_vars tm
         fun foldthis ({redex,residue}, acc) =
             if is_abs residue andalso
                all (fn v => HOLset.member(tmbvs, v)) (fst (strip_abs residue))
             then Map.insert(acc, redex, residue) else acc
         val bound_to_abs = List.foldl foldthis (Map.mkDict Term.compare) tmin
-        val sth0 = INST_TYPE tyin (INST_KIND kdin sth)
+        val sth0 = INST_TYPE tyin (INST_KIND kdin (INST_RANK rkin sth))
         val sth0c = concl sth0
         val (sth1, tmin') =
             case match_bvs tm (partfn sth0c) [] of
@@ -2035,7 +2039,7 @@ fun HO_PART_MATCH partfn th =
             else
               CONV_RULE (EVERY_CONV (#2 (munge_bvars bound_to_abs sth1))) sth1
         val th0 = INST tmin' sth2
-        val th1 = finish_fn kdin tyin (map #redex tmin) th0
+        val th1 = finish_fn rkin kdin tyin (map #redex tmin) th0
     in
       th1
     end
@@ -2476,8 +2480,8 @@ fun DEST_BOUNDED th =
 val Ntimes = MK_BOUNDED;
 val Once = C Ntimes 1;
 
-val is_comm = can (match_term comm_tm);
-val is_assoc = can (match_term assoc_tm);
+val is_comm = can (kind_match_term comm_tm);
+val is_assoc = can (kind_match_term assoc_tm);
 
 (*---------------------------------------------------------------------------*)
 (* Classify a pair of theorems as one assoc. thm and one comm. thm. Then     *)

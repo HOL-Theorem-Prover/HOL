@@ -438,12 +438,8 @@ local
         val {Thy = cthy, Name = cname, Ty = cty} = dest_thy_const ctm
       in
         if vname = cname andalso vthy = cthy then
-          let (* val (kd_theta,ty_theta) = match_kind_type vty cty
-              val kd_dummies = map mk_dummy_kdsub kd_theta *)
-          in
-             if abconv_ty cty vty then sofar
-             else (safe_inserta (mk_dummy vty |-> mk_dummy cty) insts, homs)
-          end
+          if abconv_ty cty vty then sofar
+          else (safe_inserta (mk_dummy vty |-> mk_dummy cty) insts, homs)
         else raise ERR "term_pmatch" "constant mismatch"
       end
     else if is_abs vtm then let
@@ -495,12 +491,12 @@ local
           end
       end
 
-fun get_type_kind_insts kdavoids tyavoids L ((tyS,tyId),(kdS,kdId)) =
+fun get_type_kind_rank_insts kdavoids tyavoids L ((tyS,tyId),(kdS,kdId),rkS) =
  itlist (fn {redex,residue} => fn Theta =>
-          raw_match_kind_type (snd(dest_var redex)) (type_of residue) Theta)
-       L ((tyS,union tyavoids tyId),(kdS,union kdavoids kdId))
+          raw_kind_match_type (snd(dest_var redex)) (type_of residue) Theta)
+       L ((tyS,union tyavoids tyId),(kdS,union kdavoids kdId),rkS)
 
-fun separate_insts kdavoids tyavoids kdS insts = let
+fun separate_insts kdavoids tyavoids rkS kdS insts = let
   val (realinsts, patterns) = partition (is_var o #redex) insts
   val betacounts =
       if patterns = [] then []
@@ -515,21 +511,22 @@ fun separate_insts kdavoids tyavoids kdS insts = let
                                   "Inconsistent patterning in h.o. match";
                                   sof))
         patterns []
-  val (tyins,kdins) = get_type_kind_insts kdavoids tyavoids realinsts (([],[]),kdS)
+  val (tyins,kdins,rkin) = get_type_kind_rank_insts kdavoids tyavoids realinsts (([],[]),kdS,rkS)
 in
   (betacounts,
    mapfilter (fn {redex = x, residue = t} => let
                    val x' = let val (xn,xty) = dest_var x
                             in
                               mk_var(xn, type_subst (#1 tyins)
-                                            (Type.inst_kind (#1 kdins) xty))
+                                            (Type.inst_rank_kind rkS (#1 kdins) xty))
                             end
                  in
                    if aconv t x' then raise ERR "separate_insts" ""
                                  else {redex = x', residue = t}
                  end) realinsts,
    tyins,
-   kdins
+   kdins,
+   rkin
   )
 end
 
@@ -549,7 +546,7 @@ fun all_aconv [] [] = true
   | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
 
 
-fun term_homatch kdavoids tyavoids lconsts kdins tyins (insts, homs) = let
+fun term_homatch kdavoids tyavoids lconsts rkin kdins tyins (insts, homs) = let
   (* local constants of both terms and types never change *)
   val term_homatch = term_homatch kdavoids tyavoids lconsts
 in
@@ -558,20 +555,20 @@ in
       val (env,ctm,vtm) = hd homs
     in
       if is_var vtm then
-        if aconv ctm vtm then term_homatch kdins tyins (insts, tl homs)
+        if aconv ctm vtm then term_homatch rkin kdins tyins (insts, tl homs)
         else let
-            val (newtyins,newkdins) =
-                raw_match_kind_type (snd (dest_var vtm)) (type_of ctm) (tyins,kdins)
+            val (newtyins,newkdins,newrkin) =
+                raw_kind_match_type (snd (dest_var vtm)) (type_of ctm) (tyins,kdins,rkin)
             (* val newtyins =
                 tyenv_safe_insert (snd (dest_var vtm) |-> type_of ctm) tyins *)
             val newinsts = (vtm |-> ctm)::insts
           in
-            term_homatch newkdins newtyins (newinsts, tl homs)
+            term_homatch newrkin newkdins newtyins (newinsts, tl homs)
           end
       else (* vtm not a var *) let
           val (vhop, vargs) = strip_comb vtm
           val afvs = free_varsl vargs
-          val inst_fn = inst (fst tyins) o inst_kind (fst kdins)
+          val inst_fn = inst (fst tyins) o inst_rank_kind rkin (fst kdins)
         in
           (let
              val tmins =
@@ -609,19 +606,19 @@ in
                  end
              end
            in
-             term_homatch kdins tyins (ni,tl homs)
+             term_homatch rkin kdins tyins (ni,tl homs)
            end) handle _ => let
                          val (lc,rc) = dest_comb ctm
                          val (lv,rv) = dest_comb vtm
                          val pinsts_homs' =
                              term_pmatch lconsts env rv rc
                                          (insts, (env,lc,lv)::(tl homs))
-                         val (tyins',kdins') =
-                             get_type_kind_insts kdavoids tyavoids
+                         val (tyins',kdins',rkin') =
+                             get_type_kind_rank_insts kdavoids tyavoids
                                                  (fst pinsts_homs')
-                                                 (([], []), ([], []))
+                                                 (([], []), ([], []), 0)
                        in
-                         term_homatch kdins' tyins' pinsts_homs'
+                         term_homatch rkin' kdins' tyins' pinsts_homs'
                        end
         end
     end
@@ -629,28 +626,28 @@ end
 
 in
 
-fun ho_match_kind_term0 kdavoids tyavoids lconsts vtm ctm = let
+fun ho_kind_match_term0 kdavoids tyavoids lconsts vtm ctm = let
   val pinsts_homs = term_pmatch lconsts [] vtm ctm ([], [])
-  val (tyins,kdins) = get_type_kind_insts kdavoids tyavoids (fst pinsts_homs) (([],[]),([],[]))
-  val insts = term_homatch kdavoids tyavoids lconsts kdins tyins pinsts_homs
+  val (tyins,kdins,rkin) = get_type_kind_rank_insts kdavoids tyavoids (fst pinsts_homs) (([],[]),([],[]),0)
+  val insts = term_homatch kdavoids tyavoids lconsts rkin kdins tyins pinsts_homs
 in
-  separate_insts kdavoids tyavoids kdins insts
+  separate_insts kdavoids tyavoids rkin kdins insts
 end
 
 fun ho_match_term0 tyavoids lconsts vtm ctm = let
   val pinsts_homs = term_pmatch lconsts [] vtm ctm ([], [])
-  val (tyins,kdins) = get_type_kind_insts [] tyavoids (fst pinsts_homs) (([],[]),([],[]))
-  val insts = term_homatch [] tyavoids lconsts kdins tyins pinsts_homs
-  val (bcs,tmins,tyins,kdins) = separate_insts [] tyavoids kdins insts
+  val (tyins,kdins,rkin) = get_type_kind_rank_insts [] tyavoids (fst pinsts_homs) (([],[]),([],[]),0)
+  val insts = term_homatch [] tyavoids lconsts rkin kdins tyins pinsts_homs
+  val (bcs,tmins,tyins,kdins,rkin) = separate_insts [] tyavoids rkin kdins insts
 in
   (bcs,tmins,tyins)
 end
 
-fun ho_match_kind_term kdavoids tyavoids lconsts vtm ctm = let
-  val (bcs, tmins, tyins, kdins) = ho_match_kind_term0 kdavoids tyavoids lconsts vtm ctm
+fun ho_kind_match_term kdavoids tyavoids lconsts vtm ctm = let
+  val (bcs, tmins, tyins, kdins, rkin) = ho_kind_match_term0 kdavoids tyavoids lconsts vtm ctm
 in
-  (tmins, #1 tyins, #1 kdins)
-end handle e => raise (wrap_exn "HolKernel" "ho_match_kind_term" e)
+  (tmins, #1 tyins, #1 kdins, rkin)
+end handle e => raise (wrap_exn "HolKernel" "ho_kind_match_term" e)
 
 fun ho_match_term tyavoids lconsts vtm ctm = let
   val (bcs, tmins, tyins) = ho_match_term0 tyavoids lconsts vtm ctm

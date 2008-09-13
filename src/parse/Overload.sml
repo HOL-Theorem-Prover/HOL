@@ -152,8 +152,8 @@ fun is_overloaded (overloads:overload_info) s =
   isSome (info_for_name overloads s)
 
 fun type_compare (ty1, ty2) = let
-  val ty1_gte_ty2 = Lib.can (Type.match_kind_type ty1) ty2
-  val ty2_gte_ty1 = Lib.can (Type.match_kind_type ty2) ty1
+  val ty1_gte_ty2 = Lib.can (Type.kind_match_type ty1) ty2
+  val ty2_gte_ty1 = Lib.can (Type.kind_match_type ty2) ty1
 in
   case (ty1_gte_ty2, ty2_gte_ty1) of
     (true, true) => SOME EQUAL

@@ -475,8 +475,8 @@ fun mk_case1 tybase (exp, plist) =
            val fns = map (fn (p,R) => list_mk_abs(snd(strip_comb p),R)) plist
            val ty' = list_mk_fun (map type_of fns@[type_of exp],
                                   type_of (snd (hd plist)))
-           val (kd_theta,ty_theta) = Type.match_kind_type (type_of c) ty'
-       in list_mk_comb(inst ty_theta (inst_kind kd_theta c),fns@[exp])
+           val (rk,kd_theta,ty_theta) = Type.kind_match_type (type_of c) ty'
+       in list_mk_comb(inst ty_theta (inst_rank_kind rk kd_theta c),fns@[exp])
        end;
 
 fun mk_case2 v (exp, plist) =
@@ -513,9 +513,9 @@ local fun build_case_clause((ty,constr),rhs) =
            in (v::V,M')
            end
      val (V,rhs') = peel args rhs
-     val (kd_theta,ty_theta) = Type.match_kind_type (type_of constr) 
+     val (rk,kd_theta,ty_theta) = Type.kind_match_type (type_of constr) 
                       (list_mk_fun (map type_of V, ty))
-     val constr' = inst ty_theta (inst_kind kd_theta constr)
+     val constr' = inst ty_theta (inst_rank_kind rk kd_theta constr)
  in
    (list_mk_comb(constr',V), rhs')
   end

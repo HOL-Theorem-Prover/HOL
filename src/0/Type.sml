@@ -305,7 +305,8 @@ fun inst_kind theta =
         | inst (TyApp(opr, ty))        = TyApp(inst opr, inst ty)
         | inst (TyAll((s,kd,rk),Body)) = TyAll((s,subst kd,rk), inst Body)
         | inst (TyAbs((s,kd,rk),Body)) = TyAbs((s,subst kd,rk), inst Body)
-  in inst
+  in if null theta then I
+     else inst
   end;
 
 (*---------------------------------------------------------------------------*
@@ -314,14 +315,34 @@ fun inst_kind theta =
 
 fun inst_rank i ty =
   let fun inc_rk (TyFv (s,kd,rk))        = TyFv (s,kd,rk+i)
-        | inc_rk (TyCon(s,kd,rk))        = TyCon(s,kd,rk (* +i *) ) (* maybe later *)
+        | inc_rk (TyCon(s,kd,rk))        = TyCon(s,kd,rk)
         | inc_rk (ty as TyBv _)          = ty
-        | inc_rk (TyApp(opr, ty))        = TyApp(inc_rk opr, inc_rk ty)
+        | inc_rk (TyApp(opr, ty))        = TyApp(inc_rk opr,  inc_rk ty)
         | inc_rk (TyAll((s,kd,rk),Body)) = TyAll((s,kd,rk+i), inc_rk Body)
         | inc_rk (TyAbs((s,kd,rk),Body)) = TyAbs((s,kd,rk+i), inc_rk Body)
   in if i = 0 then ty
-     else if i < 0 then raise ERR "inst_rank" "increment is negative"
+     else if i < 0 then raise ERR "inst_rank" "new rank is negative"
      else inc_rk ty
+  end;
+
+
+(*---------------------------------------------------------------------------*
+ * Instantiating the rank variable and the kind variables of a type.         *
+ * This is more efficient, as it makes a single traversal of the type.       *
+ *---------------------------------------------------------------------------*)
+
+fun inst_rank_kind rank theta =
+  let val subst = Kind.kind_subst theta
+      fun inst (TyFv (s,kd,rk))        = TyFv (s,subst kd,rk+rank)
+        | inst (TyCon(s,kd,rk))        = TyCon(s,subst kd,rk)
+        | inst (ty as TyBv _)          = ty
+        | inst (TyApp(opr, ty))        = TyApp(inst opr, inst ty)
+        | inst (TyAll((s,kd,rk),Body)) = TyAll((s,subst kd,rk+rank), inst Body)
+        | inst (TyAbs((s,kd,rk),Body)) = TyAbs((s,subst kd,rk+rank), inst Body)
+  in if rank < 0 then raise ERR "inst_rank_kind" "new rank is negative"
+     else if rank = 0 then inst_kind theta
+     else if null theta then inst_rank rank
+     else inst
   end;
 
 
@@ -1275,6 +1296,17 @@ fun type_subst theta = delta_apply (ty_sub theta)
 
 
 (*---------------------------------------------------------------------------*
+ *    Matching ranks, determining the necessary delta to make proper.        *
+ *---------------------------------------------------------------------------*)
+
+fun raw_match_rank pat_rk ob_rk delta =
+    if pat_rk >= ob_rk then delta
+    else Int.max(delta, ob_rk - pat_rk)
+
+fun match_rank pat_rk ob_rk = raw_match_rank pat_rk ob_rk 0
+
+
+(*---------------------------------------------------------------------------*
  *    Replace arbitrary subtypes in a type. Non-renaming.                    *
  *---------------------------------------------------------------------------*)
 
@@ -1705,12 +1737,12 @@ fun abconv_ty t1 t2 = aconv_ty (deep_beta_conv_ty t1) (deep_beta_conv_ty t2)
 local
   fun MERR s = raise ERR "raw_match_type error" s
   exception NOT_FOUND
-  val abconv_ty = aconv_ty (* do beta-reduction first before entering these functions *)
+  val eq_ty = aconv_ty (* do beta-reduction first before entering these functions *)
   fun find_residue red [] = raise NOT_FOUND
     | find_residue red ({redex,residue}::rest) = if red = redex then residue
                                                     else find_residue red rest
   fun find_residue_ty red [] = raise NOT_FOUND
-    | find_residue_ty red ({redex,residue}::rest) = if abconv_ty red redex then residue
+    | find_residue_ty red ({redex,residue}::rest) = if eq_ty red redex then residue
                                                     else find_residue_ty red rest
   fun in_dom x [] = false
     | in_dom x ({redex,residue}::rest) = (x = redex) orelse in_dom x rest
@@ -1723,7 +1755,7 @@ local
   fun safe_insert_tya (n as {redex,residue}) l = let
     val z = find_residue_ty redex l
   in
-    if abconv_ty residue z then l
+    if eq_ty residue z then l
     else raise ERR "safe_insert_tya" "match"
   end handle NOT_FOUND => n::l
   val mk_dummy_ty = let
@@ -1747,7 +1779,7 @@ local
         if aconv_ty cty' cty then sofar else MERR "type variable mismatch"
       end handle NOT_FOUND =>
                  if HOLset.member(lconsts, vty) then
-                   if abconv_ty cty vty then sofar
+                   if eq_ty cty vty then sofar
                    else MERR "can't instantiate local constant type"
                  else (safe_insert_tya (vty |-> cty) insts, homs)
                | HOL_ERR _ => MERR "free type variable mismatch"
@@ -1807,12 +1839,13 @@ local
       end
 
 
-fun get_kind_insts avoids L (kdS,Id) =
- itlist (fn {redex,residue} => fn Theta =>
-          raw_match_kind (kind_of redex) (kind_of residue) Theta)
-       L (kdS,union avoids Id)
+fun get_rank_kind_insts avoids L (rk,(kdS,Id)) =
+ itlist (fn {redex,residue} => fn (rk,Theta) =>
+          (raw_match_rank (rank_of redex) (rank_of residue) rk,
+           raw_match_kind (kind_of redex) (kind_of residue) Theta))
+       L (rk,(kdS,union avoids Id))
 
-fun separate_insts_ty kdavoids kdS
+fun separate_insts_ty rk kdavoids kdS
          (insts :{redex : hol_type, residue : hol_type} list) = let
   val (realinsts, patterns) = partition (is_vartype o #redex) insts
   val betacounts =
@@ -1828,19 +1861,20 @@ fun separate_insts_ty kdavoids kdS
                                   "Inconsistent patterning in h.o. type match";
                                   sof))
         patterns []
-  val kdins = get_kind_insts kdavoids realinsts kdS
+  val (rkin,kdins) = get_rank_kind_insts kdavoids realinsts (rk,kdS)
 in
   (betacounts,
    mapfilter (fn {redex = x, residue = t} => let
                    val x' = let val (xs,xkd,xrk) = dest_vartype_opr x
                             in with_flag (varcomplain,false)
-                              mk_vartype_opr(xs, kind_subst (#1 kdins) xkd, xrk)
+                              mk_vartype_opr(xs, kind_subst (#1 kdins) xkd, xrk + rkin)
                             end
                  in
                    if t = x' then raise ERR "separate_insts_ty" ""
                              else {redex = x', residue = t}
              end) realinsts,
-   kdins)
+   kdins,
+   rkin)
 end
 
 
@@ -1858,10 +1892,10 @@ end handle NOT_FOUND => if redex = residue then (env, redex::idlist)
 fun all_abconv [] [] = true
   | all_abconv [] _ = false
   | all_abconv _ [] = false
-  | all_abconv (h1::t1) (h2::t2) = abconv_ty h1 h2 andalso all_abconv t1 t2
+  | all_abconv (h1::t1) (h2::t2) = eq_ty h1 h2 andalso all_abconv t1 t2
 
 
-fun type_homatch kdavoids lconsts kdins (insts, homs) = let
+fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
   (* local constants of types never change *)
   val type_homatch = type_homatch kdavoids lconsts
 in
@@ -1870,18 +1904,19 @@ in
       val (env,cty,vty) = hd homs
     in
       if is_vartype vty then
-        if aconv_ty cty vty then type_homatch kdins (insts, tl homs)
+        if aconv_ty cty vty then type_homatch rkin kdins (insts, tl homs)
         else let
+            val newrkin  = raw_match_rank (rank_of vty) (rank_of cty) rkin
             val newkdins =
                 kdenv_safe_insert (kind_of vty |-> kind_of cty) kdins
             val newinsts = (vty |-> cty)::insts
           in
-            type_homatch newkdins (newinsts, tl homs)
+            type_homatch newrkin newkdins (newinsts, tl homs)
           end
       else (* vty not a type var *) let
           val (vhop, vargs) = strip_app_type vty
           val afvs = type_varsl vargs
-          val inst_fn = inst_kind (fst kdins)
+          val inst_fn = inst_rank_kind rkin (fst kdins)
         in
           (let
              val tyins =
@@ -1902,7 +1937,7 @@ in
                val (chop,cargs) = strip_app_type cty
              in
                if all_abconv cargs pats then
-                 if abconv_ty chop vhop then insts
+                 if eq_ty chop vhop then insts
                  else safe_insert_tya (vhop |-> chop) insts
                else let
                    val ginsts = map (fn p => (p |->
@@ -1919,19 +1954,19 @@ in
                  end
              end
            in
-             type_homatch kdins (ni,tl homs)
+             type_homatch rkin kdins (ni,tl homs)
            end) handle _ => let
                          val (lc,rc) = dest_app_type cty
                          val (lv,rv) = dest_app_type vty
                          val pinsts_homs' =
                              type_pmatch lconsts env rv rc
                                          (insts, (env,lc,lv)::(tl homs))
-                         val kdins' =
-                             get_kind_insts kdavoids
+                         val (rkin',kdins') =
+                             get_rank_kind_insts kdavoids
                                             (fst pinsts_homs')
-                                            ([], [])
+                                            (0, ([], []))
                        in
-                         type_homatch kdins' pinsts_homs'
+                         type_homatch rkin' kdins' pinsts_homs'
                        end
         end
     end
@@ -1944,19 +1979,19 @@ val separate_insts_ty = separate_insts_ty
 val all_abconv = all_abconv
 val type_homatch = type_homatch
 
-fun ho_match_type1 kdavoids lconsts vty cty insts_homs kd_insts_ids = let
+fun ho_match_type1 kdavoids lconsts vty cty insts_homs rk_kd_insts_ids = let
   val pinsts_homs = type_pmatch lconsts [] vty cty insts_homs
-  val kdins = get_kind_insts kdavoids (fst pinsts_homs) kd_insts_ids
-  val insts = type_homatch kdavoids lconsts kdins pinsts_homs
+  val (rkin,kdins) = get_rank_kind_insts kdavoids (fst pinsts_homs) rk_kd_insts_ids
+  val insts = type_homatch kdavoids lconsts rkin kdins pinsts_homs
 in
-  separate_insts_ty kdavoids kdins insts
+  separate_insts_ty rkin kdavoids kdins insts
 end
 
 fun ho_match_type0 kdavoids lconsts vty cty =
-    ho_match_type1 kdavoids lconsts vty cty ([], []) ([], [])
+    ho_match_type1 kdavoids lconsts vty cty ([], []) (0, ([], []))
 
 fun ho_match_type kdavoids lconsts vty cty = let
-  val (bcs, tyins, kdins) = ho_match_type0 kdavoids lconsts vty cty
+  val (bcs, tyins, kdins, rkin) = ho_match_type0 kdavoids lconsts vty cty
 in
   (tyins, #1 kdins)
 end handle e => raise (wrap_exn "HolKernel" "ho_match_type" e)
@@ -1977,40 +2012,40 @@ end (* local *)
 
 (* We redefine the main type matching functions here to use higher order matching. *)
 
-fun ho_raw_match_kind_type pat ob ((tyS,tyfixed), (kdS,kdfixed)) =
+fun ho_raw_kind_match_type pat ob ((tyS,tyfixed), (kdS,kdfixed), rkS) =
     let val pat = deep_beta_conv_ty pat
         val ob  = deep_beta_conv_ty ob
         fun beta_conv_S {redex,residue} =
             {redex=redex, residue = deep_beta_conv_ty residue}
         val tyS = map beta_conv_S tyS
         val tyfixed_set = HOLset.addList(empty_tyset, tyfixed)
-        val (_,tyS',(kdS',kdfixed')) = ho_match_type1 kdfixed tyfixed_set pat ob (tyS,[]) (kdS,kdfixed)
+        val (_,tyS',(kdS',kdfixed'),rkS') = ho_match_type1 kdfixed tyfixed_set pat ob (tyS,[]) (rkS,(kdS,kdfixed))
         val tyId = Lib.subtract (Lib.union (type_vars pat) tyfixed) (map #redex tyS')
-     in ((tyS',tyId), (kdS',kdfixed'))
+     in ((tyS',tyId), (kdS',kdfixed'), rkS')
     end;
 
-fun clean_subst ((tyS,_),(kdS,_)) =
+fun clean_subst ((tyS,_),(kdS,_),rkS) =
  let fun del A [] = A
        | del A ({redex,residue}::rst) =
          del (if abconv_ty residue redex then A else (redex |-> residue)::A) rst
- in (del [] tyS,kdS)
+ in (del [] tyS,kdS,rkS)
  end
 
-fun match_kind_type pat ob =
-  let val (tyS,kdS) =
-      clean_subst (ho_raw_match_kind_type pat ob (([],[]), ([],[])))
-  in (kdS,tyS)
+fun kind_match_type pat ob =
+  let val (tyS,kdS,rkS) =
+      clean_subst (ho_raw_kind_match_type pat ob (([],[]), ([],[]), 0))
+  in (rkS,kdS,tyS)
   end
 
-fun raw_match_kind_type pat ob ((tyS,tyfixed),(kdS,kdfixed)) =
-    ho_raw_match_kind_type pat ob ((tyS,tyfixed),(kdS,kdfixed));
+fun raw_kind_match_type pat ob ((tyS,tyfixed),(kdS,kdfixed),rkS) =
+    ho_raw_kind_match_type pat ob ((tyS,tyfixed),(kdS,kdfixed),rkS);
 
 fun raw_match_type pat ob (tyS,tyfixed) =
-    let val ((tyS',tyId),(kdS',kdId)) =
-              ho_raw_match_kind_type pat ob ((tyS,tyfixed),([],[]))
-    in if null kdS' andalso null kdId then (tyS',tyId)
+    let val ((tyS',tyId),(kdS',kdId),rkS') =
+              ho_raw_kind_match_type pat ob ((tyS,tyfixed),([],[]),0)
+    in if null kdS' andalso null kdId andalso rkS' = 0 then (tyS',tyId)
        else raise ERR "raw_match_type"
-                  "kind variable matches: use raw_match_kind_type instead"
+                  "kind and/or rank variable matches: use raw_kind_match_type instead"
     end;
 
 fun match_type_restr fixed pat ob  = fst (raw_match_type pat ob ([],fixed))

@@ -66,9 +66,9 @@ fun mymatch_and_instantiate axth pattern instance = let
   fun tmlist_type (tm,ty) = type_of tm --> ty
   val pat_type = List.foldr tmlist_type Type.bool patvars
   val inst_type = List.foldr tmlist_type Type.bool instvars
-  val (kdinst,tyinst) = Type.match_kind_type pat_type inst_type
-  val new_patbody0 = Term.inst tyinst (Term.inst_kind kdinst patbody)
-  val new_patvars = map (Term.inst tyinst o Term.inst_kind kdinst) patvars
+  val (rkinst,kdinst,tyinst) = Type.kind_match_type pat_type inst_type
+  val new_patbody0 = Term.inst tyinst (Term.inst_rank_kind rkinst kdinst patbody)
+  val new_patvars = map (Term.inst tyinst o Term.inst_rank_kind rkinst kdinst) patvars
   val initial_env = ListPair.map op|-> (new_patvars, instvars)
   val new_patbody = Term.subst initial_env new_patbody0
   fun match_eqn cnum pat inst = let
@@ -107,7 +107,7 @@ fun mymatch_and_instantiate axth pattern instance = let
                  origin_structure = "recursion",
                  message = "Number of conjuncts not even the same"}
   val tmsubst = match_eqns [] 1 (strip_conj new_patbody) (strip_conj instbody)
-  val axth1 = Thm.INST_TYPE tyinst (Thm.INST_KIND kdinst axth)
+  val axth1 = Thm.INST_TYPE tyinst (Thm.INST_KIND kdinst (Thm.INST_RANK rkinst axth))
   val axth2 = Thm.INST tmsubst axth1
 in
   CONV_RULE (STRIP_QUANT_CONV
