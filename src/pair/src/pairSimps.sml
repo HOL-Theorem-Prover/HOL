@@ -10,11 +10,7 @@ open Lib Parse simpLib pairTheory PairedLambda;
 
 val PAIR0_ss =
     SSFRAG
-      {name=SOME"PAIR",
-       convs=[{name="GEN_BETA_CONV (beta reduction)",
-               trace=2,
-               key=SOME ([],(--`(\(x,y):('a # 'b). y:'b) (z,w)`--)),
-              conv=K (K GEN_BETA_CONV)}],
+      {name=SOME"PAIR", convs=[],
       rewrs = pairTheory.pair_rws @
               [CLOSED_PAIR_EQ, CURRY_UNCURRY_THM, UNCURRY_CURRY_THM,
                CURRY_ONE_ONE_THM, UNCURRY_ONE_ONE_THM,CURRY_DEF,
