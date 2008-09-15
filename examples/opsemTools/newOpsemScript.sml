@@ -529,6 +529,7 @@ app load ["stringLib", "finite_mapTheory", "intLib"];
 open HolKernel Parse boolLib bossLib 
      stringLib IndDefLib IndDefRules finite_mapTheory relationTheory;
 intLib.deprecate_int();
+clear_overloads_on "TC"; (* Stop TC R printing as TC^+ *)
 quietdec := false; (* turn printing back on *)
 *)
 
@@ -536,6 +537,7 @@ open HolKernel Parse boolLib bossLib
      stringLib IndDefLib IndDefRules finite_mapTheory relationTheory;
 
 val _ = intLib.deprecate_int();
+val _ = clear_overloads_on "TC"; (* Stop TC R printing as TC^+ *)
 
 val _ = new_theory "newOpsem";
 
