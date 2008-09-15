@@ -15,18 +15,16 @@ open HolKernel Parse boolLib
 
 (* Path to ILOG executable *)
 exception ILOG_EXECUndefinedError;
-fun getILOG_EXEC () = 
+
+fun getILOG_EXEC() = 
  case Portable.getEnv "ILOG_EXEC" of
     SOME path_name => path_name
   | NONE           => (print "Environment variable ILOG_EXEC undefined.\n"; 
                        print "Add:\n setenv ILOG_EXEC \"<path to ILOG executable>\" \nto ~/.shrc\n";
                        raise ILOG_EXECUndefinedError);
 
-(* Path to ILOG support directory
-val ilogPath = Globals.HOLDIR ^ "/examples/opsemTools/verify/term2xml/xmlterm2csp/";
-*)
-val ilogPath = "/homes/mjcg/Helene/newOpsem/xmlterm2csp/";
-
+(* Path to ILOG support directory *)
+val ilogPath = Globals.HOLDIR ^ "/examples/opsemTools/verify/solvers/xmlterm2csp/";
 
 
 (* Magnus switched to using integers
@@ -299,68 +297,43 @@ fun printXML_to_file(name,tm) =
    )
  end;
 
-(* Old:
-fun printXML_to_file(name,tm) =
- let val fileName = "xmlterm2csp/xml/" ^ name ^ ".xml";
-    val outstr = TextIO.openOut(fileName);
-    fun out s = TextIO.output(outstr,s)
- in
- (print_opsemTerm(out,name,tm);
-  TextIO.flushOut outstr;
-  TextIO.closeOut outstr
-  )
- end;
-*)
 
-(* -----------------------------------------------------
-   to launch the Java program that searches for solutions
-   of the xml tree
-The term is supposed to be a disjunction that corresponds
-to the negation of the specification cases.
-All the terms of the disjunction are successively proved.
-*)
-fun execute name =
-  let val exec = ("java -cp .:" ^ getILOG_EXEC() ^ ":" ^ ilogPath ^ "java/classes"
-                  ^ " validation.ValidationLauncher "   ^ name ^ " 16");
- in
-   Portable.system(exec)
- end;
-
-(* Old:
-fun execute name = 
-  let val exec = "java -cp .:xmlterm2csp/java/lib/jsolver.jar:xmlterm2csp/java/classes"
-                  ^ " validation.ValidationLauncher " 
-                  ^ name ^ " 16";
-  in
-    Portable.system(exec)
-end;
-*)
 
 
 (* -----------------------------------------------------
-   to launch the Java program that searches for solutions
-   of the xml tree, and stops as soon as a first solution
-   has been found
+   To launch the Java program that searches solutions of constraint
+   system built from XML trees.
+   The variable domains are [-2^(f-1)..(2^(f-1))-1] where f is 
+   the format of integers.
+   If the xml tree is a disjunction, successively consider each case
+   of the disjunction.
+   The search stops as soon as a first solution has been found.
    Used to test if a path is feasible.
 *)
+val integerFormat = 16; 
+
 fun execPath name =
- let val exec = ("java -cp .:" ^ getILOG_EXEC() ^ ":" ^ ilogPath ^ "java/classes"
-                 ^ " validation.ValidationLauncher " ^ name
-                 ^ " -path  16");
+ let val exec = ("java -cp " ^ getILOG_EXEC() ^ ":" ^ ilogPath ^ "java/classes"
+                 ^ " validation.ValidationLauncher " ^ ilogPath 
+                 ^ " " ^ name ^ " " ^ int_to_string(integerFormat));
   in
-    Portable.system(exec)
+    (print exec;Portable.system(exec))
 end;
 
-(* Old:
-fun execPath name = 
-  let val exec = "java -cp .:xmlterm2csp/java/lib/jsolver.jar:xmlterm2csp/java/classes"
-                  ^ " validation.ValidationLauncher " ^ name 
-                  ^ " -path  16";
-   in
-     Portable.system(exec)
-end;
 
+(* same function as above but using a timeout.
+   n is an integer and corresponds to the timeout given in
+   milliseconds (e.g n=1000 is a timeout of 1s
 *)
+fun limitedExecPath name n =
+  let val exec = "java -cp " ^ getILOG_EXEC() ^ ":" ^ ilogPath ^ "java/classes"
+                  ^ " validation.ValidationLauncher "  ^ ilogPath 
+                  ^ " "  ^ name ^ " " ^ int_to_string(integerFormat)
+                  ^ " -timeout " ^ int_to_string(n);
+   in
+     (Portable.system(exec)
+     )
+end;
 
 
 
@@ -371,23 +344,12 @@ end;
    Usefull only if Java sources have been modified
 *)
 fun compile() =
- let val compil = ("javac  -cp .:" ^ getILOG_EXEC() ^ ":" ^ ilogPath ^
-                   "java/classes:" ^ ilogPath ^ "java/src " ^ ilogPath ^ "java/src/*/*.java "
-                   ^ "java/src " ^ ilogPath ^ "java/src/*/*/*.java ");
+ let val compil = ("javac  -cp " ^ getILOG_EXEC() ^ ":" ^ ilogPath ^
+                   "java/classes -d "  ^ ilogPath ^ "java/classes " ^ ilogPath ^ "java/src/*/*.java "
+                   ^ ilogPath ^ "java/src/*/*/*.java ");
   in
      Portable.system(compil)
  end;
-
-(* Old:
-fun compile() = 
-  let val compil = "javac  -cp .:xmlterm2csp/java/lib/jsolver.jar:"
-                   ^ "xmlterm2csp/java/classes:xmlterm2csp/java/src"
-                   ^ " xmlterm2csp/java/src/*/*.java"
-                   ^ " xmlterm2csp/java/src/*/*/*.java" ;
-   in
-     Portable.system(compil)
-end;
-*)
 
 
 

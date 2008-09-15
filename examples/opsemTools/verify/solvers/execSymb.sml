@@ -304,7 +304,12 @@ fun getSolutions file_name =
 val solutions = 
   if hd lines = "No solution"
   then []
-  else map (map dest_string_int_pair) (sol_extract(tl(butlast lines)))
+  else 
+     if hd lines = "Timeout"
+     then [[("Timeout","Timeout")]]
+     else map 
+            (map dest_string_int_pair) 
+            (sol_extract(tl(butlast lines)))
 val sol_time_str = String.extract(last lines, (String.size "Resolution time: "),
 				  NONE)
 val SOME sol_time = Real.fromString(implode(butlast(explode sol_time_str)))
@@ -313,6 +318,7 @@ val SOME sol_time = Real.fromString(implode(butlast(explode sol_time_str)))
 end
 
 end;
+
 
 (* End of functions written by Mike Gordon to read a solution 
    of a CSP solver *)
@@ -330,11 +336,17 @@ fun finiteMapSol l st =
   else 
     let val (n,v) = (fst(hd(l)),snd(hd(l)));
       val (nt,vt) = (stringSyntax.fromMLstring(n),
-                     numSyntax.mk_numeral(Arbnum.fromString(v)));
+                     intSyntax.term_of_int(Arbint.fromString(v)));
       val newSt = addSol st nt vt
       in 
         finiteMapSol (tl l) newSt
     end;
+
+(* to know if the value returned by getSolutions is a 
+   timeout *)
+fun isSolverTimeout l =
+   fst(hd(hd(fst(l)))) = "Timeout";
+
 
 (*----------------------------------------------------- *)
 
@@ -381,7 +393,7 @@ fun makeState spec =
      val var_tms = get_strings tm
      val pairs = map 
                   (fn tm => pairSyntax.mk_pair
-                      let val v = mk_var(fromHOLstring tm,``:num``)
+                      let val v = mk_var(fromHOLstring tm,``:int``)
                       in 
 		      (tm,``Scalar ^v``)
 			end
@@ -777,7 +789,7 @@ fun termVarState vst =
     val thm = EVAL ``ScalarOf ^v``;
     val scal = snd(dest_comb(concl(thm)));
   in
-    mk_eq(mk_var(fromHOLstring n,``:num``),scal)
+    mk_eq(mk_var(fromHOLstring n,``:int``),scal)
   end;
 
 
@@ -926,7 +938,7 @@ fun verifyPath name pre st post path =
           print "Calling the solver\n";
 	  print "======================\n";
 	  printXML_to_file(name,tm);
-	  execute(name);
+	  execPath(name);
 	  let val (sol,time) = getSolutions (ilogPath ^ "results/" ^ name ^ ".res");
 	  in
           if (null sol)
@@ -980,7 +992,7 @@ fun pretty_string tm =
    let val var_tms = get_strings tm; 
      val pairs = map 
                   (fn tm => pairSyntax.mk_pair
-                      let val v = mk_var(fromHOLstring tm,``:num``)
+                      let val v = mk_var(fromHOLstring tm,``:int``)
                       in 
 		      (tm,``Scalar ^v``)
 			end
@@ -2412,3 +2424,11 @@ Total solving time with the constraint solver: 0.074s.
 
 ============================= examples ==========================
 *)
+
+
+
+(* Omega.OMEGA_CONV and
+Cooper.COOPER_CONV.
+
+
+SIMP_CONV (srw_ss()) [] THENC OMEGA_CONV *)
