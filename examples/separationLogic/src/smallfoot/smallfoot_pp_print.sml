@@ -478,6 +478,12 @@ fun smallfoot_a_prop_printer sys gravs d pps t = let
       add_string pps ", ";
       sys (Top, Top, Top) (d - 1) (el 3 args);
       add_string pps ")"
+    ) else if (op_term = smallfoot_ap_bintree_term)  then (
+      add_string pps "tree(";
+      sys (Top, Top, Top) (d - 1) (el 1 args);
+      add_string pps "; ";
+      sys (Top, Top, Top) (d - 1) (el 2 args);
+      add_string pps ")"
     ) else if (op_term = smallfoot_ap_points_to_term) then (
       sys (Top, Top, Top) (d - 1) (el 1 args);
       add_string pps " |-> ";
