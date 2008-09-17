@@ -7,12 +7,10 @@
    the program satisfies its specification by 
    symbolic execution using a CSP solver.
 
-   The output is a list of pairs (path,result)
-   where 
-     - path is a term which corresponds to 
-       a path that has been covered into the program 
+   The output is a "if then else" term where
+     - conditions are conditions that were not reduced to constant 
        during symbolic execution
-     - result is an outcome 
+     - values are outcome 
         (i.e RESULT, ERROR or TIMEOUT followed by
         the final state value)
 
@@ -64,30 +62,33 @@ Algorithm for symbolic execution of a
 Hoare triple (pre,prog,post)
 -------------------------------------
 
-Let (pre, path, state, post) be Boolean terms that represent:
-- the precondition
+Let (pre, path, state1,state2, post) be Boolean terms that represent:
+- the precondition: a lambda expression on state1
 - the current path
-- the current state: a conjunction of equalities
-  (var_i = val_i) where var_i is a variable and 
-  val_i a numeral term which gives its current value
-- the postcondition
+- state1: the initial state (before program execution)
+- state2: the current state  (after execution of the current path)
+- the postcondition: a lambda expression on state1 and state2 which expresses
+  a relation between state before execution and state after
+
 Let l be a list of terms that represent the instructions 
 of prog in the opSem syntax.
+Let state be a conjunction of equalities built from state2
+  (var_i = val_i) where var_i is a variable and 
+  val_i a numeral term which gives the current value
+  of variable var_i in state2
+Let valPre be the precodition evaluated on state1
+and valPost be the postcondition evaluated on  state1 and state2.
 
 We assume that we have two functions:
   - testPath:bool that tests is a path is feasible 
-  i.e (pre /\ path /\ state) has a solution
+  i.e (valPre /\ path /\ state) has a solution
   - verifyPath:outcome that verifies the correctness of the
   path
-  i.e if (pre /\ path /\ state /\ ~post) has NO solution
+  i.e if (valPre /\ path /\ ~valPost) has NO solution
   then returns the outcome (RESULT state)
   else returns the outcome (ERROR errorState) where errorState
   contains the errors that have been found.
 
-The symbolic execution returns a list of couples (path,result)
-where path is a path covered during symbolic execution and 
-result is the outcome along this path (i.e RESULT, ERROR or 
-TIMEOUT followed by the final state value).
 
 The symbolic execution is a deep first search algorithm 
 that covers feasible paths only.
@@ -99,11 +100,11 @@ Variable n is the allowed number of steps and res is
 an initial empty list that will contain the result.
 
 
-symbExec(pre,path,l,st,n,post,res) =
+symbExec(pre,path,l,st1,st2,n,post,res) =
 
 - if l=[] 
   then the end of a path has been reached so
-       add the result (path,verifyPath(pre,path,st,post))
+       add the result (path,verifyPath(pre,path,st1,st2,post))
        to res
 - else
     * if n=0 
@@ -114,7 +115,7 @@ symbExec(pre,path,l,st,n,post,res) =
        - if i1 is not a control instruction
          then call "STEP1" to compute the next state st'
          according to the small step semantics. 
-         Then call execSymb(pre,path,l',st',n-1,post,res)
+         Then call execSymb(pre,path,l',st1,st',n-1,post,res)
        - else
             Let cond be the condition of i1 
             * evaluate cond on the current state
@@ -123,11 +124,11 @@ symbExec(pre,path,l,st,n,post,res) =
             * if it is a constant (T or F)
               then take the corresponding path
             * else 
-                - call testPath(pre,path/\cond,state) to know 
+                - call testPath(pre,st1,path/\cond,state) to know 
                   if cond is possible
                 - if it is possible, take the corresponding 
                   path in the program
-                - call testPath(pre,path/\~cond,state) to 
+                - call testPath(pre,st2,path/\~cond,state) to 
                   know if the NEGATION of cond is possible 
                 - if it is possible, take the corresponding 
                   path in the program
@@ -139,17 +140,17 @@ If the control instruction i1 is (Cond c i_if i_else)
 then:
   - if c is ``T`` or possible then taking the path 
     is a call to
-       execSymb(pre,path/\c,[i_if,l'],st,n,post,res)
+       execSymb(pre,path/\c,[i_if,l'],st1,st2,n,post,res)
   - else a call to
-       execSymb(pre,path/\~c,[i_else,l'],st,n,post,res)
+       execSymb(pre,path/\~c,[i_else,l'],st1,st2,n,post,res)
 
 If the control instruction i1 is (While c i)
 then:
   - if c is ``T`` or possible then taking the path 
     is a call to
-       execSymb(pre,path/\c,[i,(While c i1)],st,n,post,res)
+       execSymb(pre,path/\c,[i,(While c i1)],st1,st2,n,post,res)
   - else a call to 
-       execSymb(pre,path/\~c,l',st,n,post,res)
+       execSymb(pre,path/\~c,l',st1,st2,n,post,res)
 
 
  ======================== algorithm ===========================
@@ -196,7 +197,7 @@ Then for each term dk = (path/\pre/\state/\npk):
    end;
 
 4. If METIS fails (i.e raises a HOL_ERR) then try to simplify
-   term dk with SIMP_CONV arith_ss
+   term dk with SIMP_CONV arith_ss and OMEGA_CONV
 
 5. Rebuild the disjunction from terms dk which have been 
    simplified in step 3 or 4. 
@@ -234,14 +235,6 @@ open HolKernel Parse boolLib
      computeLib finite_mapTheory relationTheory stringLib
      term2xml;  (* added as printXML_to_file needed *)
 
-(* Magnus switched to using integers
-val _ = intLib.deprecate_int();
-*)
-
-
-(*
-open intSyntax;
-*)
 
 (* Read a file into a string *)
 fun readFileToString file_name =
@@ -459,10 +452,6 @@ fun incResolvedPath() =
    results on the different paths *)
 (* -------------------------------------------- *)
 
-val allPathResult = ref [];(*ref [(``T``,``T``)];*)
-
-fun addPath p r =
-   allPathResult := [(p,r)] @ !allPathResult;
 
 
 (* to reset the global variables at the end of an execution *)
@@ -470,8 +459,7 @@ fun resetAll() =
   (CSPtime:=0.0;
    nbPath:=0;
    nbResolvedCond:=0;
-   nbResolvedPath:=0;
-   allPathResult:=[]
+   nbResolvedPath:=0
   );
    
 
@@ -491,8 +479,8 @@ fun mkSimplConj t1 t2 =
 end;
 
 
-(* functions to put a term in DNF and simplify each sub-term *)
-(* -------------------------------------------------------- *)
+(* functions to simplify each sub-term of disjunction *)
+(* -------------------------------------------------- *)
 
 (* PRE: l is a list of terms 
    POST: the list where each term has been simplified 
@@ -521,33 +509,6 @@ fun mkDisjFromList l =
        else mk_disj(h,mkDisjFromList t)
    end;
 
-(* example of exception handling *)
-(* to add to functions that use simplifications *)
-(*fun essai tm = 
-  let  val si = snd(dest_comb(concl(SIMP_CONV arith_ss [] tm)));
- in 
-   si
- end
-handle UNCHANGED => tm;*)
-
-
-(* PRE: tm is in DNF *)
-(* POST: DNF where each term has been simplified *)
-fun simplifyDNF tm =
-  if is_disj(tm)
-  then mkDisjFromList(simplifyDisjunct(strip_disj(tm)))
-  else tm;
-  
-(* to put a term into Disjunctive Normal Form *)
-(* used to speed up the CSP solving *)
-fun dnf tm =
- let val thm = SIMP_CONV (std_ss ++ boolSimps.DNF_ss) [] tm;
-  in 
-    (print ("DNF " ^ term_to_string(tm) ^"\n");
-    simplifyDNF(snd(dest_comb(concl(thm)))))
- handle UNCHANGED => tm
-end;
-
 
 (* -------------------------------------------------- *)
 (* Functions to build the term to be verified 
@@ -572,27 +533,52 @@ end;
 
 (*---------------------------------------------------------
 Tool for applying De Morgan's laws at the top level to a 
-negated conjunction of implications:
+negated conjunction terms. For each term which is
+an implication, apply NOT_IMP_CONJ theorem:
 
-NOT_CONJ_IMP_CONV  ``~((A1 ==> B1) /\ ... /\ (An ==> Bn))`` =
- |- (A1 /\ ~B1) \/ ... \/ (An /\ ~Bn)
+NOT_CONJ_IMP_CONV  ``~((A1 ==> B1) /\ ... /\ (An ==> Bn) /\ TM)`` =
+ |- (A1 /\ ~B1) \/ ... \/ (An /\ ~Bn) \/ ~TM
+
 ---------------------------------------------------------*)
+local
+
+   val DE_MORGAN_AND_THM = METIS_PROVE [] ``!A B. ~(A/\B) = ~A \/ ~B `` 
+
+in
+
 fun NOT_CONJ_IMP_CONV tm =
  let val tm1 = dest_neg tm
  in
-  if is_imp tm1
+  if is_imp_only tm1
    then let val (tm2,tm3) = dest_imp tm1
         in
          SPECL [tm2,tm3] NOT_IMP
         end
-   else let val (tm2,tm3) = dest_conj tm1
-            val (tm4,tm5) = dest_imp tm2
+   else 
+     if is_conj tm1
+     then let val (tm2,tm3) = dest_conj tm1
         in
-         CONV_RULE
-          (RAND_CONV(RAND_CONV NOT_CONJ_IMP_CONV))
-          (SPECL [tm4,tm5,tm3] NOT_IMP_CONJ)
+            if is_imp_only tm2
+            then let val (tm4,tm5) = dest_imp tm2
+              in
+                CONV_RULE
+                (RAND_CONV(RAND_CONV NOT_CONJ_IMP_CONV))
+                (SPECL [tm4,tm5,tm3] NOT_IMP_CONJ)
+             end
+            else 
+               CONV_RULE
+                (RAND_CONV(RAND_CONV NOT_CONJ_IMP_CONV))
+                (SPECL [tm2,tm3] DE_MORGAN_AND_THM)
         end
-  end;
+      else mk_thm([],``^tm = ^tm``)
+  end
+  handle HOL_ERR t  => 
+     (print "HOL_ERR in NOT_CONJ_IMP_CONV";
+      mk_thm([],``^tm = ^tm``)
+     )
+end;
+
+
 
 local 
 
@@ -602,6 +588,7 @@ fun simplDisj t =
   in 
     snd(dest_comb(concl(orthm)))
 end;
+
 
 (* function to take the negation of the postcondition
    using NOT_CONJ_IMP_CONV *)
@@ -615,86 +602,14 @@ fun takeNegPost post =
      else
        (* case where post is not an implication *)
        n
-   end;
-
-(* function to distribute and simplify 
-   pre/\path/\state on the conjunction obtained
-   from the negation of the postcondition
-   terms are simplified using SIMP_CONV std_ss 
-   (or arith_ss) *) 
-
-fun distributeAndSimplify tm ld =
-  map 
-   (fn t => 
-      let val c = mk_conj(tm,t)
-       in
-         (print("term to be simplified with SIMP_CONV " 
-                ^ term_to_string(c) ^ "\n"); 
-         snd(dest_comb(concl(SIMP_CONV arith_ss [CONJ_RIGHT_ASSOC,CONJ_LEFT_ASSOC] c)))
-         )
-       end
-       handle UNCHANGED => mk_conj(tm,t)
-   )
-   ld;
+     handle HOL_ERR t  => 
+       (print "HOL_ERR in takeNegPost";
+        n
+        )
+   end
+;
 
 
-(* function to distribute and simplify 
-   pre/\path/\state on the conjunction obtained
-   from the negation of the postcondition
-   terms are proven using METIS 
- *)
-fun distributeAndProve tm ld =
-  map 
-   (fn t => 
-      let val c = mk_conj(tm,t)
-       in
-         (print("term to be proved False with METIS " 
-                ^ term_to_string(c) ^ "\n"); 
-         METIS_PROVE [CONJ_RIGHT_ASSOC,CONJ_LEFT_ASSOC,NOT_DISJ] ``^c = F``;
-         ``F``
-         )
-       end
-       handle HOL_ERR s => 
-          (print "METIS failed\n";
-           mk_conj(tm,t)
-          )
-   )
-   ld;
-
-(* to distribute and simplify the term using first METIS and then
-   SIMP_CONV arith_ss *)
-
-fun distributeProveSimp tm ld =
-  map 
-   (fn t => 
-      let val c = mk_conj(tm,t)
-       in
-         (print("term to be proved False with METIS " 
-                ^ term_to_string(c) ^ "\n"); 
-          METIS_PROVE [CONJ_RIGHT_ASSOC,CONJ_LEFT_ASSOC,NOT_DISJ] ``^c = F``;
-          ``F``
-         )
-         handle HOL_ERR s => 
-           (print "METIS failed\n";
-            print("Trying to simplify with SIMP_CONV " 
-                ^ term_to_string(c) ^ "\n"); 
-            snd(dest_comb(concl(SIMP_CONV arith_ss  [CONJ_RIGHT_ASSOC,CONJ_LEFT_ASSOC] c)))
-            )
-            handle UNCHANGED => 
-               mk_conj(tm,t)
-       end
-   )
-   ld;
-
-
-(* functions written by Mike Gordon to refute a term using
-   METIS (cf mail 16/07/08)
-val IMP_F_IS_F = METIS_PROVE [] ``!P. (!Q. P ==> Q) ==> (P = F)``;                  
-*)                                                             
-
-(* If more convenient, could instead use:
-val IMP_F_IS_F = METIS_PROVE [] ``!P. (!Q. P ==> Q) ==> ~P``;
-*)
 
 (* Use RW_TAC to refute a term *)
 fun refute tm =
@@ -703,37 +618,37 @@ fun refute tm =
   MP (SPEC tm IMP_F_IS_F) th
  end;
 
+
+
+(* version that works with integers *)
+(* could also try 
+(SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [CONJ_RIGHT_ASSOC,CONJ_LEFT_ASSOC] 
+THENC OMEGA_CONV ) c;
+*)
 fun distributeAndRefute tm ld =
   map 
    (fn t => 
       let val c = mk_conj(tm,t)
        in
-         (print("term to be refuted with METIS " 
+         (print("Term to be refuted with METIS " 
                 ^ term_to_string(c) ^ "\n"); 
 	  refute c;
           ``F``
          )
          handle HOL_ERR s => 
            (print "METIS failed\n";
-            print("Trying to simplify with SIMP_CONV " 
+            print("Trying to simplify with SIMP_CONV and OMEGA_CONV\n" 
                 ^ term_to_string(c) ^ "\n"); 
-            snd(dest_comb(concl(SIMP_CONV arith_ss  [CONJ_RIGHT_ASSOC,CONJ_LEFT_ASSOC] c)))
+            snd(dest_comb(concl(SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] c)))
             )
             handle UNCHANGED => 
-            mk_conj(tm,t)
+            (print "Term unchanged\n";
+            mk_conj(tm,t))
        end
    )
    ld;
 
-(* function to distribute 
-   pre/\path/\state on the conjunction obtained
-   from the negation of the postcondition *) 
-(* same as distributeAndSimplify but doesn't simplify the
-   terms *)
-fun distribute tm ld =
-  map 
-   (fn t => mk_conj(tm,t))
-   ld;
+
 
 in
 
@@ -747,12 +662,16 @@ fun makeTermToVerify tm post =
       simplDisj(disj)
       )
    end
+   
    handle HOL_ERR s => 
        (print ("HOL_ERR in makeTermToVerify\n");
+	print("tm is " ^ term_to_string(tm));
+        print("post is " ^ term_to_string(post));
         ``T``
        )
 
 end;
+
 
 
 (* =====================================================
@@ -909,15 +828,37 @@ fun printError() =
    print "======================\n"
 );
 
+
+(* function to evaluate the postcondition.
+   st1 is the state before execution of the program
+   st2 is the state after execution of the program
+*)
+fun evalPost t st1 st2 = 
+  let val p = snd(dest_comb(concl(EVAL ``^t ^st1``)));
+   in 
+     if (is_abs(p))
+     then snd(dest_comb(concl(EVAL ``^p ^st2``)))
+     else p
+   end
+   handle HOL_ERR s => 
+     (print "HOL_ERR in evalPost";
+      t
+     )
+  ;
+
 in
 
-fun verifyPath name pre st post path =
-  let val prpa = mk_conj(pre,path);
-    val stt = termFromState(st);
+(* st1 is initial state (before program execution)
+   st2 is final state (after program execution) *)
+fun verifyPath name pre st1 st2 post path =
+  let val conj = mk_conj(pre,path);
+(*    val stt = termFromState(st2);
     val conj = mk_conj(stt,prpa);
+*)
+    val po = evalPost post st1 st2
     (* make the term using specific rule to compute 
        the negation of post *) 
-    val tm = makeTermToVerify conj post
+    val tm = makeTermToVerify conj po
    (* other possibility: put the term in DNF *)
     (*val tm = dnf(mk_conj(conj,mk_neg(post)))*);
     in 
@@ -927,15 +868,16 @@ fun verifyPath name pre st post path =
      then 
        (printCorrect();
         incResolvedPath();
-        (``RESULT ^st``,0.0)
+        (``RESULT ^st2``,0.0)
        )
      else
          (* tm has not been simplified or has been simplified
             to true so need to call the CSP to find 
             the counter-examples *)
          (print "======================\n";
-	  print "METIS and SIMP_CONV haved failed to verify the path\n";
+	  print "METIS and SIMP_CONV have failed to verify the path\n";
           print "Calling the solver\n";
+          print ("term is: " ^ term_to_string(tm) ^"\n");
 	  print "======================\n";
 	  printXML_to_file(name,tm);
 	  execPath(name);
@@ -944,14 +886,14 @@ fun verifyPath name pre st post path =
           if (null sol)
           then 
 	    (printCorrect();
-             (``RESULT ^st``,time)
+             (``RESULT ^st2``,time)
 	    )
           else 
             (* add to the current state the values
                of the variables that correspond to an error
                i.e the values found by the CSP 
                when solving pre /\ state /\ path /\ ~post *) 
-            let val errorState = finiteMapSol (hd sol) st
+            let val errorState = finiteMapSol (hd sol) st2
             in
               (printError();
                (``ERROR ^errorState``,time)
@@ -1012,7 +954,8 @@ in
    (pre, prog, post) by symbolic execution
    l: list of instructions in opSem syntax 
       that correspond to prog
-   st: current variable state
+   st1: initial state
+   st2: current state
    n: number of steps that can still be performed
 
 Use functions:
@@ -1029,7 +972,10 @@ Use functions:
         (pre /\ path /\ cond) 
     has a solution
 ------------------------------------------*)
-fun execSymb name pre (l,st,n) post path= 
+
+
+
+fun execSymb name pre (l,st1,st2,n) post path= 
  if listSyntax.is_nil(l)
  then
      (*end of a path 
@@ -1040,38 +986,38 @@ fun execSymb name pre (l,st,n) post path=
       print "End of path\n";
       print( "    " ^ term_to_string(path) ^"\n");
       print "======================\n";
-      let val (r,t) = verifyPath name pre st post path
+      let val (r,t) = verifyPath name pre st1 st2 post path
         in 
           (incPath();
            incCSPTime(t);
-           addPath path r
+           r
           )
         end
      )
  else
    if n=0
    (* no more steps, so add a TIMEOUT outcome *)
-   then addPath path ``TIMEOUT ^st``
+   then ``TIMEOUT ^st2``
    else
      (* takes the first instruction *)
      let val inst = snd(dest_comb(fst(dest_comb(l))))
       in
        (* conditional *)
        if is_condition(inst)
-       then execSymbCond name pre (l,st,n) post path 
+       then execSymbCond name pre (l,st1,st2,n) post path 
        else 
          (* while *)
          if is_while(inst)
-	 then execSymbWhile name pre (l,st,n) post path
+	 then execSymbWhile name pre (l,st1,st2,n) post path
          (* instruction is not a conditional *)
          (* call STEP1 to compute the next state and continue *)
          else
-          let val step = EVAL ``STEP1 (^l, ^st)``;
+          let val step = EVAL ``STEP1 (^l, ^st2)``;
             val tm = snd(dest_comb(concl(step)));
             val newState = snd(dest_comb(snd(dest_comb(tm))));
             val newList = snd(dest_comb(fst(dest_comb(tm))))
            in
-             execSymb name pre (newList,newState,(n-1)) post path 
+             execSymb name pre (newList,st1,newState,(n-1)) post path 
            end
       end
 
@@ -1094,20 +1040,20 @@ with the current precondition, path and state.
 Function testPath calls the CSP.
   ----------------------------------------------------- *)
 
-and execSymbCond name pre (l,st,n) post path = 
+and execSymbCond name pre (l,st1,st2,n) post path = 
   let val (_,comb) = strip_comb(l)
     (* first instruction COND *)
     val instCond = (el 1 comb)
     val listInst = (el 2 comb)
    (* save current state to perform  symbolic execution 
       of else part with the state before the conditionnal *)
-    val saveState = st;
+    val saveState = st2;
     val (_,listCond) = strip_comb(instCond)
     val cond = (el 1 listCond)
     val iftm = (el 2 listCond)
     val elsetm = (el 3 listCond)
     (* evaluate the condition on the current state *)
-    val (_,evalCond) = strip_comb(concl(EVAL ``beval ^cond ^st``))
+    val (_,evalCond) = strip_comb(concl(EVAL ``beval ^cond ^st2``))
     val termCond = (el 2 evalCond);      
    in   
    (* if the condition has been evaluated to a constant
@@ -1123,7 +1069,7 @@ and execSymbCond name pre (l,st,n) post path =
          print ("Condition\n" ^ pretty_string(cond) ^"\n");
          print ("is TRUE on the current state, ");
 	 print ("taking this path\n");
-         execSymb name pre (nextList,st,n) post path 
+         execSymb name pre (nextList,st1,st2,n) post path 
         )
        end
     else 
@@ -1133,7 +1079,7 @@ and execSymbCond name pre (l,st,n) post path =
          print ("Condition\n" ^ pretty_string(cond) ^"\n");
          print ("is FALSE on the current state, ");
 	 print ("taking the other path\n");
-         execSymb name pre (nextList,st,n) post path 
+         execSymb name pre (nextList,st1,st2,n) post path 
         )
      end
      )
@@ -1143,37 +1089,36 @@ and execSymbCond name pre (l,st,n) post path =
       possible on the current path
     *)
    let val newPath = mkSimplConj path termCond;
-      val (ok,t) = testPath name pre newPath st;
-   in
-    (if (ok) 
-     (* Add the condition to the current path
-        and do symbolic execution of if part.
-        Then try the else part *)
-     then 
-      let val nextList = listSyntax.mk_cons(iftm,listInst)
-        in
-           (incCSPTime(t);
-            execSymb name pre (nextList,st,n) post newPath 
+      val (ok,tIf) = testPath name pre newPath st2;
+      val nextListIf = listSyntax.mk_cons(iftm,listInst);
+      val nextListElse = listSyntax.mk_cons(elsetm,listInst);
+      val resIf= 
+         if (ok) 
+         (* Add the condition to the current path
+         and do symbolic execution of if part*)
+         then  execSymb name pre (nextListIf,st1,st2,n) post newPath 
+         else ``F``;
+      val newPathElse = mkSimplConj path (mk_neg termCond);
+      val (elseOk,tElse) = testPath name pre newPathElse saveState;
+      val resElse = 
+          if (elseOk)
+         (* do  symbolic execution on else part *)
+         (* and add ~cond to the current path *)
+          then execSymb name pre (nextListElse,st1,saveState,n) post newPathElse 
+          else ``F`` 
+       in
+           (incCSPTime(tIf);
+            incCSPTime(tElse);
+	    if ok
+	    then
+		if elseOk
+		then ``if ^termCond then ^resIf else ^resElse``
+		else resIf
+	    else resElse
            )
         end
-     else print(""); 
-     (* do  symbolic execution on else part *)
-     (* and add ~cond to the current path *)
-     let val newPathElse = mkSimplConj path (mk_neg termCond);
-       val (elseOk,t) = testPath name pre newPathElse saveState;
-       in 
-         if (elseOk)
-         then 
-            let val nextList = listSyntax.mk_cons(elsetm,listInst)
-            in
-              (incCSPTime(t);
-               execSymb name pre (nextList,saveState,n) post newPathElse 
-              )
-            end
-         else print("")
-       end
-    )
-  end
+
+
 end
 
 
@@ -1200,7 +1145,7 @@ with the current precondition, path and state.
 Function testPath calls the CSP.
   ----------------------------------------------------- *)
 
-and execSymbWhile name pre (l,st,n) post path  =
+and execSymbWhile name pre (l,st1,st2,n) post path  =
    let val (_,comb) = strip_comb(l)
     (* first instruction: a While *)
     val instCond = (el 1 comb)
@@ -1208,14 +1153,14 @@ and execSymbWhile name pre (l,st,n) post path  =
     val tail = (el 2 comb)
    (* save current state to perform  symbolic execution 
       of exit part with the state before the while *)
-    val saveState = st;
+    val saveState = st2;
     val (_,listCond) = strip_comb(instCond)
     (* condition *)
     val cond = (el 1 listCond)
     (* instruction block of the loop *)
     val block = (el 2 listCond)
     (* evaluate the condition on the current state *)
-    val (_,evalCond) = strip_comb(concl(EVAL ``beval ^cond ^st``))
+    val (_,evalCond) = strip_comb(concl(EVAL ``beval ^cond ^st2``))
     val termCond = (el 2 evalCond);      
    in   
    (* if the condition has been evaluated to a constant
@@ -1233,7 +1178,7 @@ and execSymbWhile name pre (l,st,n) post path  =
          print ("Condition\n" ^ pretty_string(cond) ^"\n");
          print ("is TRUE on the current state, ");
 	 print ("entering the loop\n");
-         execSymb name pre (nextList,st,n) post path
+         execSymb name pre (nextList,st1,st2,n) post path
         )
        end
     else 
@@ -1243,7 +1188,7 @@ and execSymbWhile name pre (l,st,n) post path  =
          print ("Condition\n" ^ pretty_string(cond) ^"\n");
          print ("is FALSE on the current state, ");
 	 print ("exiting the loop\n");
-         execSymb name pre (tail,st,n) post path
+         execSymb name pre (tail,st1,st2,n) post path
         )
      )
    else
@@ -1252,34 +1197,34 @@ and execSymbWhile name pre (l,st,n) post path  =
       possible on the current path
     *)
    let  val newPath = mkSimplConj path termCond;
-     val (ok,t) = testPath name pre newPath st;
-   in
-    (if (ok) 
-     (* Add the condition to the current path
-        and enter the loop: do symbolic execution of [block,l]
-        Then try the exit part *)
-     then 
-      let val nextList = listSyntax.mk_cons(block,l)
-        in
-           (incCSPTime(t);
-            execSymb name pre (nextList,st,n) post newPath
-	  ) 
-        end
-     else print(""); 
+     val (ok,tLoop) = testPath name pre newPath st2;
+     val nextListLoop = listSyntax.mk_cons(block,l);
+     val resLoop = 
+       if (ok)
+       (* Add the condition to the current path
+        and enter the loop: do symbolic execution of [block,l] *)
+       then execSymb name pre (nextListLoop,st1,st2,n) post newPath
+       else ``F``
+     val newPathExit = mkSimplConj path (mk_neg termCond);
+     val (elseOk,tExit) = testPath name pre newPathExit saveState;
      (* exit the loop: do  symbolic execution on the tail of 
         the list and add ~cond to the current path *)
-     let val newPathExit = mkSimplConj path (mk_neg termCond);
-       val (elseOk,t) = testPath name pre newPathExit saveState;
-       in 
+     val resExit = 
          if (elseOk)
-         then 
-           (incCSPTime(t);
-            execSymb name pre (tail,saveState,n) post newPathExit
-	   )
-         else print("")
-       end
-    )
-  end
+         then execSymb name pre (tail,st1,saveState,n) post newPathExit
+         else ``F``
+       in
+         (incCSPTime(tLoop);
+          incCSPTime(tExit);
+	  if ok
+	  then
+	      if elseOk
+	      then ``if ^termCond then ^resLoop else ^resExit``
+	      else resLoop
+	  else resExit
+	 ) 
+   end
+   
 end
 
 end;
@@ -1293,10 +1238,11 @@ end;
 (* to evaluate pre or post condition on an initial state *)
 local
 
-fun evalSpec t st = 
+fun evalPre t st = 
    snd(dest_comb(concl(EVAL ``^t ^st``)));
 
 in
+
 
 fun execSymbWithCSP name spec n = 
   (* build the symbolic state from variables in the program *)
@@ -1305,12 +1251,13 @@ fun execSymbWithCSP name spec n =
    val (pre,prog,post) = (el 1 args, el 2 args, el 3 args)
   in
      (resetAll(); (* reset global variables *)
-      execSymb name 
-              (evalSpec pre s) 
-              (``[^prog]``,s,n)
-              (evalSpec post s)
+      let val res = 
+          execSymb name 
+              (evalPre pre s) 
+              (``[^prog]``,s,s,n)
+               post
               ``T``;
-      let val plurPath = if (!nbPath>1) then "s were "
+       val plurPath = if (!nbPath>1) then "s were "
                          else " was ";
         val plurCond = if (!nbResolvedCond>1) then "s were "
                           else " was ";
@@ -1322,1113 +1269,13 @@ fun execSymbWithCSP name spec n =
          print (int_to_string(!nbResolvedCond) ^ " condition" 
                ^ plurCond ^ "resolved" ^ " by EVAL.\n");
          print (int_to_string(!nbResolvedPath) ^ " path" 
-               ^ plurResolvedPath ^ "resolved" ^ " by SIMP_CONV and METIS.\n")
-        )
-      end;
-      print ("Total solving time with the constraint solver: " 
-              ^ Real.toString(!CSPtime) ^ "s.\n"); 
-      !allPathResult)
-   end;
+               ^ plurResolvedPath ^ "resolved" ^ " by SIMP_CONV and OMEGA_CONV.\n");
+	 print ("Total solving time with the constraint solver: " 
+		^ Real.toString(!CSPtime) ^ "s.\n"); 
+	 res)
+      end
+      )
+   end
 end;
 
 
-
-
-
-
-(* ============================= examples ==========================
-
-Examples of symbolic execution:
-------------------------------
-
-Need to load: newOpsem (file loadNewOpsem.ml), the examples
-(file loadExamples), term2xml.ml and this file execSymb.ml.
-
-Need to have a java virtual machine.
-
-In all the examples, the constraint solver handles natural 
-numbers in [0..2^16].
-
-AbsMinus
---------
-val name = "AbsMinus";
-val spec = AbsMinusSpec;
-execSymbWithCSP name spec 10;
-
-3 paths were explored.
-1 condition was resolved by EVAL.
-3 paths were resolved by SIMP_CONV and METIS.
-Total solving time with the constraint solver: 0.037s.
-> val it =
-    [(``~(i <= j)``,
-      ``RESULT
-          (FEMPTY |+ ("result",Scalar result) |+ ("Result",Scalar Result) |+
-           ("k",Scalar k) |+ ("i",Scalar i) |+ ("j",Scalar j) |+
-           ("result",Scalar 0) |+ ("k",Scalar 0) |+
-           ("result",Scalar (i - j)) |+ ("Result",Scalar (i - j)))``),
-     (``i <= j /\ (i = j)``,
-      ``RESULT
-          (FEMPTY |+ ("result",Scalar result) |+ ("Result",Scalar Result) |+
-           ("k",Scalar k) |+ ("i",Scalar i) |+ ("j",Scalar j) |+
-           ("result",Scalar 0) |+ ("k",Scalar 0) |+ ("k",Scalar 1) |+
-           ("result",Scalar (i - j)) |+ ("Result",Scalar (i - j)))``),
-     (``i <= j /\ ~(i = j)``,
-      ``RESULT
-          (FEMPTY |+ ("result",Scalar result) |+ ("Result",Scalar Result) |+
-           ("k",Scalar k) |+ ("i",Scalar i) |+ ("j",Scalar j) |+
-           ("result",Scalar 0) |+ ("k",Scalar 0) |+ ("k",Scalar 1) |+
-           ("result",Scalar (j - i)) |+ ("Result",Scalar (j - i)))``)] :
-  (term * term) list
-- - - - - 
-*** Time taken: 3.916s
-
-Tritype
--------
-val name = "Tritype";
-val spec = TritypeSpec;
-execSymbWithCSP name spec 20;
-
-10 paths were explored.
-15 conditions were resolved by EVAL.
-10 paths were resolved by SIMP_CONV and METIS.
-Total solving time with the constraint solver: 1.709s.
-> val it =
-    [(``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ ~(i = j)) /\ ~(i = k)) /\
-         ~(j = k)) /\ ~(i + j <= k \/ j + k <= i \/ i + k <= j)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 1) |+ ("Result",Scalar 1))``),
-     (``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ ~(i = j)) /\ ~(i = k)) /\
-         ~(j = k)) /\ (i + j <= k \/ j + k <= i \/ i + k <= j)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 4) |+ ("Result",Scalar 4))``),
-     (``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ ~(i = j)) /\ ~(i = k)) /\
-         (j = k)) /\ ~(i < j + k)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 3) |+ ("trityp",Scalar 4) |+
-           ("Result",Scalar 4))``),
-     (``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ ~(i = j)) /\ ~(i = k)) /\
-         (j = k)) /\ i < j + k``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 3) |+ ("trityp",Scalar 2) |+
-           ("Result",Scalar 2))``),
-     (``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ ~(i = j)) /\ (i = k)) /\
-         ~(j = k)) /\ ~(j < i + k)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 2) |+ ("trityp",Scalar 4) |+
-           ("Result",Scalar 4))``),
-     (``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ ~(i = j)) /\ (i = k)) /\
-         ~(j = k)) /\ j < i + k``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 2) |+ ("trityp",Scalar 2) |+
-           ("Result",Scalar 2))``),
-     (``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ (i = j)) /\ ~(i = k)) /\
-         ~(j = k)) /\ ~(k < i + j)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 1) |+ ("trityp",Scalar 4) |+
-           ("Result",Scalar 4))``),
-     (``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ (i = j)) /\ ~(i = k)) /\
-         ~(j = k)) /\ k < i + j``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 1) |+ ("trityp",Scalar 2) |+
-           ("Result",Scalar 2))``),
-     (``((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ (i = j)) /\ (i = k)) /\
-        (j = k)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 1) |+ ("trityp",Scalar 3) |+
-           ("trityp",Scalar 6) |+ ("trityp",Scalar 3) |+
-           ("Result",Scalar 3))``),
-     (``((i = 0) \/ (j = 0)) \/ (k = 0)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 4) |+
-           ("Result",Scalar 4))``)] : (term * term) list
-- - - - - 
-*** Time taken: 25.590s
-
-
-Tritype with a number of step that is too small
------------------------------------------------
-The outcome is RESULT for one path and TIMEOUT
-for the other path.
-
-val name = "Tritype";
-val spec = TritypeSpec;
-execSymbWithCSP name spec 5
-
-1 path was explored.
-0 condition was resolved by EVAL.
-1 path was resolved by SIMP_CONV and METIS.
-Total solving time with the constraint solver: 0.018s.
-> val it =
-    [(``~(((i = 0) \/ (j = 0)) \/ (k = 0))``,
-      ``TIMEOUT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0))``),
-     (``((i = 0) \/ (j = 0)) \/ (k = 0)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 4) |+
-           ("Result",Scalar 4))``)] : (term * term) list
-- - - - 
-*** Time taken: 4.488s
-
-
-Tritype with an error
----------------------
-The outcome is ERROR for some of the paths
-
-val name = "TritypeKO";
-val spec = TritypeKOSpec;
-execSymbWithCSP name spec 20
-
-9 paths were explored.
-14 conditions were resolved by EVAL.
-7 paths were resolved by SIMP_CONV and METIS.
-Total solving time with the constraint solver: 1.725s.
-> val it =
-    [(``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ ~(i = j)) /\ ~(i = k)) /\
-         ~(j = k)) /\ ~((i + j <= k \/ j + k <= i) \/ i + k <= j)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 1) |+ ("Result",Scalar 1))``),
-     (``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ ~(i = j)) /\ ~(i = k)) /\
-         ~(j = k)) /\ ((i + j <= k \/ j + k <= i) \/ i + k <= j)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 4) |+ ("Result",Scalar 4))``),
-     (``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ ~(i = j)) /\ ~(i = k)) /\
-         (j = k)) /\ ~(i < j + k)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 3) |+ ("trityp",Scalar 4) |+
-           ("Result",Scalar 4))``),
-     (``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ ~(i = j)) /\ ~(i = k)) /\
-         (j = k)) /\ i < j + k``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 3) |+ ("trityp",Scalar 2) |+
-           ("Result",Scalar 2))``),
-     (``((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ ~(i = j)) /\ (i = k)) /\
-        ~(j = k)``,
-      ``ERROR
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 2) |+ ("trityp",Scalar 4) |+
-           ("Result",Scalar 4) |+ ("Result",Scalar 4) |+
-           ("trityp",Scalar 4) |+ ("i",Scalar 2) |+ ("j",Scalar 1) |+
-           ("k",Scalar 2))``),
-     (``((((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ (i = j)) /\ ~(i = k)) /\
-          ~(j = k)) /\ ~(k < i + j)) /\ j < i + k``,
-      ``ERROR
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 1) |+ ("trityp",Scalar 2) |+
-           ("Result",Scalar 2) |+ ("Result",Scalar 2) |+
-           ("trityp",Scalar 2) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("k",Scalar 2))``),
-     (``(((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ (i = j)) /\ ~(i = k)) /\
-         ~(j = k)) /\ k < i + j``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 1) |+ ("trityp",Scalar 2) |+
-           ("Result",Scalar 2))``),
-     (``((~(((i = 0) \/ (j = 0)) \/ (k = 0)) /\ (i = j)) /\ (i = k)) /\
-        (j = k)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 0) |+
-           ("trityp",Scalar 1) |+ ("trityp",Scalar 3) |+
-           ("trityp",Scalar 6) |+ ("trityp",Scalar 3) |+
-           ("Result",Scalar 3))``),
-     (``((i = 0) \/ (j = 0)) \/ (k = 0)``,
-      ``RESULT
-          (FEMPTY |+ ("trityp",Scalar trityp) |+ ("Result",Scalar Result) |+
-           ("i",Scalar i) |+ ("j",Scalar j) |+ ("k",Scalar k) |+
-           ("trityp",Scalar 0) |+ ("trityp",Scalar 4) |+
-           ("Result",Scalar 4))``)] : (term * term) list
-- - - - 
-*** Time taken: 24.686s
-
-Sum of the n first integers
----------------------------
-
-20 steps
---------
-
-val name = "Sum";
-val spec = SumSpec;
-execSymbWithCSP name spec 20
-
-4 paths were explored.
-1 condition was resolved by EVAL.
-0 path was resolved by SIMP_CONV and METIS.
-Total solving time with the constraint solver: 0.067s.
-> val it =
-    [(``~(1 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("Result",Scalar 0))``),
-     (``1 <= n /\ ~(2 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("Result",Scalar 1))``),
-     (``(1 <= n /\ 2 <= n) /\ ~(3 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("Result",Scalar 3))``),
-     (``((1 <= n /\ 2 <= n) /\ 3 <= n) /\ ~(4 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("Result",Scalar 6))``),
-     (``((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("s",Scalar 10) |+ ("i",Scalar 5))``)] : (term * term) list
-- - - - 
-*** Time taken: 4.792s
-
-50 steps
---------
-
-execSymbWithCSP name spec 50
-
-14 paths were explored.
-1 condition was resolved by EVAL.
-0 path was resolved by SIMP_CONV and METIS.
-Total solving time with the constraint solver: 0.276s.
-> val it =
-    [(``~(1 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("Result",Scalar 0))``),
-     (``1 <= n /\ ~(2 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("Result",Scalar 1))``),
-     (``(1 <= n /\ 2 <= n) /\ ~(3 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("Result",Scalar 3))``),
-     (``((1 <= n /\ 2 <= n) /\ 3 <= n) /\ ~(4 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("Result",Scalar 6))``),
-     (``(((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ ~(5 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("s",Scalar 10) |+ ("i",Scalar 5) |+ ("Result",Scalar 10))``),
-     (``((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\ ~(6 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("s",Scalar 10) |+ ("i",Scalar 5) |+ ("s",Scalar 15) |+
-           ("i",Scalar 6) |+ ("Result",Scalar 15))``),
-     (``(((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\ 6 <= n) /\
-        ~(7 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("s",Scalar 10) |+ ("i",Scalar 5) |+ ("s",Scalar 15) |+
-           ("i",Scalar 6) |+ ("s",Scalar 21) |+ ("i",Scalar 7) |+
-           ("Result",Scalar 21))``),
-     (``((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\ 6 <= n) /\
-         7 <= n) /\ ~(8 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("s",Scalar 10) |+ ("i",Scalar 5) |+ ("s",Scalar 15) |+
-           ("i",Scalar 6) |+ ("s",Scalar 21) |+ ("i",Scalar 7) |+
-           ("s",Scalar 28) |+ ("i",Scalar 8) |+ ("Result",Scalar 28))``),
-     (``(((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-           6 <= n) /\ 7 <= n) /\ 8 <= n) /\ ~(9 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("s",Scalar 10) |+ ("i",Scalar 5) |+ ("s",Scalar 15) |+
-           ("i",Scalar 6) |+ ("s",Scalar 21) |+ ("i",Scalar 7) |+
-           ("s",Scalar 28) |+ ("i",Scalar 8) |+ ("s",Scalar 36) |+
-           ("i",Scalar 9) |+ ("Result",Scalar 36))``),
-     (``((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-            6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\ ~(10 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("s",Scalar 10) |+ ("i",Scalar 5) |+ ("s",Scalar 15) |+
-           ("i",Scalar 6) |+ ("s",Scalar 21) |+ ("i",Scalar 7) |+
-           ("s",Scalar 28) |+ ("i",Scalar 8) |+ ("s",Scalar 36) |+
-           ("i",Scalar 9) |+ ("s",Scalar 45) |+ ("i",Scalar 10) |+
-           ("Result",Scalar 45))``),
-     (``(((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-             6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\ 10 <= n) /\
-        ~(11 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("s",Scalar 10) |+ ("i",Scalar 5) |+ ("s",Scalar 15) |+
-           ("i",Scalar 6) |+ ("s",Scalar 21) |+ ("i",Scalar 7) |+
-           ("s",Scalar 28) |+ ("i",Scalar 8) |+ ("s",Scalar 36) |+
-           ("i",Scalar 9) |+ ("s",Scalar 45) |+ ("i",Scalar 10) |+
-           ("s",Scalar 55) |+ ("i",Scalar 11) |+ ("Result",Scalar 55))``),
-     (``((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-              6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\ 10 <= n) /\
-         11 <= n) /\ ~(12 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("s",Scalar 10) |+ ("i",Scalar 5) |+ ("s",Scalar 15) |+
-           ("i",Scalar 6) |+ ("s",Scalar 21) |+ ("i",Scalar 7) |+
-           ("s",Scalar 28) |+ ("i",Scalar 8) |+ ("s",Scalar 36) |+
-           ("i",Scalar 9) |+ ("s",Scalar 45) |+ ("i",Scalar 10) |+
-           ("s",Scalar 55) |+ ("i",Scalar 11) |+ ("s",Scalar 66) |+
-           ("i",Scalar 12) |+ ("Result",Scalar 66))``),
-     (``(((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-               6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\ 10 <= n) /\
-          11 <= n) /\ 12 <= n) /\ ~(13 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("s",Scalar 10) |+ ("i",Scalar 5) |+ ("s",Scalar 15) |+
-           ("i",Scalar 6) |+ ("s",Scalar 21) |+ ("i",Scalar 7) |+
-           ("s",Scalar 28) |+ ("i",Scalar 8) |+ ("s",Scalar 36) |+
-           ("i",Scalar 9) |+ ("s",Scalar 45) |+ ("i",Scalar 10) |+
-           ("s",Scalar 55) |+ ("i",Scalar 11) |+ ("s",Scalar 66) |+
-           ("i",Scalar 12) |+ ("s",Scalar 78) |+ ("i",Scalar 13) |+
-           ("Result",Scalar 78))``),
-     (``((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-                6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\ 10 <= n) /\
-           11 <= n) /\ 12 <= n) /\ 13 <= n) /\ ~(14 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("s",Scalar 10) |+ ("i",Scalar 5) |+ ("s",Scalar 15) |+
-           ("i",Scalar 6) |+ ("s",Scalar 21) |+ ("i",Scalar 7) |+
-           ("s",Scalar 28) |+ ("i",Scalar 8) |+ ("s",Scalar 36) |+
-           ("i",Scalar 9) |+ ("s",Scalar 45) |+ ("i",Scalar 10) |+
-           ("s",Scalar 55) |+ ("i",Scalar 11) |+ ("s",Scalar 66) |+
-           ("i",Scalar 12) |+ ("s",Scalar 78) |+ ("i",Scalar 13) |+
-           ("s",Scalar 91) |+ ("i",Scalar 14) |+ ("Result",Scalar 91))``),
-     (``((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-                6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\ 10 <= n) /\
-           11 <= n) /\ 12 <= n) /\ 13 <= n) /\ 14 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("s",Scalar 0) |+
-           ("i",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 3) |+
-           ("i",Scalar 3) |+ ("s",Scalar 6) |+ ("i",Scalar 4) |+
-           ("s",Scalar 10) |+ ("i",Scalar 5) |+ ("s",Scalar 15) |+
-           ("i",Scalar 6) |+ ("s",Scalar 21) |+ ("i",Scalar 7) |+
-           ("s",Scalar 28) |+ ("i",Scalar 8) |+ ("s",Scalar 36) |+
-           ("i",Scalar 9) |+ ("s",Scalar 45) |+ ("i",Scalar 10) |+
-           ("s",Scalar 55) |+ ("i",Scalar 11) |+ ("s",Scalar 66) |+
-           ("i",Scalar 12) |+ ("s",Scalar 78) |+ ("i",Scalar 13) |+
-           ("s",Scalar 91) |+ ("i",Scalar 14) |+ ("s",Scalar 105) |+
-           ("i",Scalar 15))``)] : (term * term) list
-- - - - 
-*** Time taken: 24.114s
-
-
-Condinationnal sum: computes the sum of the n first integers
-when n<k else compute n+k
--------------------------------------------------
-
-val name = "ConditionnalSum";
-val spec = ConditionnalSumSpec;
-execSymbWithCSP name spec 20
-
-5 paths were explored.
-1 condition was resolved by EVAL.
-1 path was resolved by SIMP_CONV and METIS.
-Total solving time with the constraint solver: 0.104s.
-> val it =
-    [(``n < k /\ ~(1 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("k",Scalar k) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("s",Scalar 0) |+
-           ("i",Scalar 1) |+ ("Result",Scalar 0))``),
-     (``(n < k /\ 1 <= n) /\ ~(2 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("k",Scalar k) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("s",Scalar 0) |+
-           ("i",Scalar 1) |+ ("s",Scalar 1) |+ ("i",Scalar 2) |+
-           ("Result",Scalar 1))``),
-     (``((n < k /\ 1 <= n) /\ 2 <= n) /\ ~(3 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("k",Scalar k) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("s",Scalar 0) |+
-           ("i",Scalar 1) |+ ("s",Scalar 1) |+ ("i",Scalar 2) |+
-           ("s",Scalar 3) |+ ("i",Scalar 3) |+ ("Result",Scalar 3))``),
-     (``(((n < k /\ 1 <= n) /\ 2 <= n) /\ 3 <= n) /\ ~(4 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("k",Scalar k) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("s",Scalar 0) |+
-           ("i",Scalar 1) |+ ("s",Scalar 1) |+ ("i",Scalar 2) |+
-           ("s",Scalar 3) |+ ("i",Scalar 3) |+ ("s",Scalar 6) |+
-           ("i",Scalar 4) |+ ("Result",Scalar 6))``),
-     (``(((n < k /\ 1 <= n) /\ 2 <= n) /\ 3 <= n) /\ 4 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("k",Scalar k) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("s",Scalar 0) |+
-           ("i",Scalar 1) |+ ("s",Scalar 1) |+ ("i",Scalar 2) |+
-           ("s",Scalar 3) |+ ("i",Scalar 3) |+ ("s",Scalar 6) |+
-           ("i",Scalar 4) |+ ("s",Scalar 10) |+ ("i",Scalar 5))``),
-     (``~(n < k)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("k",Scalar k) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("s",Scalar (n + k)) |+
-           ("Result",Scalar (n + k)))``)] : (term * term) list
-- - - - 
-*** Time taken: 6.604s
-
-
-Nested loops that compute the square of n
-------------------------------------------
-public class NestedLoop {
-	/*@ ensures \result == n*n;
-	  @*/
-	static int nestedLoop (int n) {
-		int s = 0;
-		int i=1;
-		while (i <= n) {
-			int j=1;
-			while (j <= n) {
-				s=s+1;
-				j=j+1;
-			}
-			i=i+1;
-		}
-		return s;
-	}
-}
-
-val name = "NestedLoop";
-val spec = NestedLoopSpec;
-execSymbWithCSP name spec 50
-
-4 paths were explored.
-0 condition was resolved by EVAL.
-0 path was resolved by SIMP_CONV and METIS.
-Total solving time with the constraint solver: 0.913s.
-> val it =
-    [(``~(1 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("Result",Scalar 0))``),
-     (``(1 <= n /\ ~(2 <= n)) /\ ~(2 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("i",Scalar 2) |+
-           ("Result",Scalar 1))``),
-     (``((((((1 <= n /\ 2 <= n) /\ ~(3 <= n)) /\ 2 <= n) /\ 1 <= n) /\
-          2 <= n) /\ ~(3 <= n)) /\ ~(3 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("i",Scalar 2) |+ ("j",Scalar 1) |+
-           ("s",Scalar 3) |+ ("j",Scalar 2) |+ ("s",Scalar 4) |+
-           ("j",Scalar 3) |+ ("i",Scalar 3) |+ ("Result",Scalar 4))``),
-     (``(((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ ~(4 <= n)) /\ 2 <= n) /\
-                 1 <= n) /\ 2 <= n) /\ 3 <= n) /\ ~(4 <= n)) /\ 3 <= n) /\
-            1 <= n) /\ 2 <= n) /\ 3 <= n) /\ ~(4 <= n)) /\ ~(4 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("i",Scalar 2) |+ ("j",Scalar 1) |+ ("s",Scalar 4) |+
-           ("j",Scalar 2) |+ ("s",Scalar 5) |+ ("j",Scalar 3) |+
-           ("s",Scalar 6) |+ ("j",Scalar 4) |+ ("i",Scalar 3) |+
-           ("j",Scalar 1) |+ ("s",Scalar 7) |+ ("j",Scalar 2) |+
-           ("s",Scalar 8) |+ ("j",Scalar 3) |+ ("s",Scalar 9) |+
-           ("j",Scalar 4) |+ ("i",Scalar 4) |+ ("Result",Scalar 9))``),
-     (``((((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ ~(5 <= n)) /\
-                  2 <= n) /\ 1 <= n) /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\
-             ~(5 <= n)) /\ 3 <= n) /\ 1 <= n) /\ 2 <= n) /\ 3 <= n) /\
-        4 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("s",Scalar 4) |+ ("j",Scalar 5) |+ ("i",Scalar 2) |+
-           ("j",Scalar 1) |+ ("s",Scalar 5) |+ ("j",Scalar 2) |+
-           ("s",Scalar 6) |+ ("j",Scalar 3) |+ ("s",Scalar 7) |+
-           ("j",Scalar 4) |+ ("s",Scalar 8) |+ ("j",Scalar 5) |+
-           ("i",Scalar 3) |+ ("j",Scalar 1) |+ ("s",Scalar 9) |+
-           ("j",Scalar 2) |+ ("s",Scalar 10) |+ ("j",Scalar 3) |+
-           ("s",Scalar 11) |+ ("j",Scalar 4))``),
-     (``((((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-                  ~(6 <= n)) /\ 2 <= n) /\ 1 <= n) /\ 2 <= n) /\ 3 <= n) /\
-             4 <= n) /\ 5 <= n) /\ ~(6 <= n)) /\ 3 <= n) /\ 1 <= n) /\
-        2 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("s",Scalar 4) |+ ("j",Scalar 5) |+ ("s",Scalar 5) |+
-           ("j",Scalar 6) |+ ("i",Scalar 2) |+ ("j",Scalar 1) |+
-           ("s",Scalar 6) |+ ("j",Scalar 2) |+ ("s",Scalar 7) |+
-           ("j",Scalar 3) |+ ("s",Scalar 8) |+ ("j",Scalar 4) |+
-           ("s",Scalar 9) |+ ("j",Scalar 5) |+ ("s",Scalar 10) |+
-           ("j",Scalar 6) |+ ("i",Scalar 3) |+ ("j",Scalar 1) |+
-           ("s",Scalar 11) |+ ("j",Scalar 2))``),
-     (``((((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-                  6 <= n) /\ ~(7 <= n)) /\ 2 <= n) /\ 1 <= n) /\ 2 <= n) /\
-             3 <= n) /\ 4 <= n) /\ 5 <= n) /\ 6 <= n) /\ ~(7 <= n)) /\
-        3 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("s",Scalar 4) |+ ("j",Scalar 5) |+ ("s",Scalar 5) |+
-           ("j",Scalar 6) |+ ("s",Scalar 6) |+ ("j",Scalar 7) |+
-           ("i",Scalar 2) |+ ("j",Scalar 1) |+ ("s",Scalar 7) |+
-           ("j",Scalar 2) |+ ("s",Scalar 8) |+ ("j",Scalar 3) |+
-           ("s",Scalar 9) |+ ("j",Scalar 4) |+ ("s",Scalar 10) |+
-           ("j",Scalar 5) |+ ("s",Scalar 11) |+ ("j",Scalar 6) |+
-           ("s",Scalar 12) |+ ("j",Scalar 7) |+ ("i",Scalar 3))``),
-     (``(((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-                 6 <= n) /\ 7 <= n) /\ ~(8 <= n)) /\ 2 <= n) /\ 1 <= n) /\
-            2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\ 6 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("s",Scalar 4) |+ ("j",Scalar 5) |+ ("s",Scalar 5) |+
-           ("j",Scalar 6) |+ ("s",Scalar 6) |+ ("j",Scalar 7) |+
-           ("s",Scalar 7) |+ ("j",Scalar 8) |+ ("i",Scalar 2) |+
-           ("j",Scalar 1) |+ ("s",Scalar 8) |+ ("j",Scalar 2) |+
-           ("s",Scalar 9) |+ ("j",Scalar 3) |+ ("s",Scalar 10) |+
-           ("j",Scalar 4) |+ ("s",Scalar 11) |+ ("j",Scalar 5) |+
-           ("s",Scalar 12) |+ ("j",Scalar 6) |+ ("s",Scalar 13))``),
-     (``(((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-                 6 <= n) /\ 7 <= n) /\ 8 <= n) /\ ~(9 <= n)) /\ 2 <= n) /\
-            1 <= n) /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("s",Scalar 4) |+ ("j",Scalar 5) |+ ("s",Scalar 5) |+
-           ("j",Scalar 6) |+ ("s",Scalar 6) |+ ("j",Scalar 7) |+
-           ("s",Scalar 7) |+ ("j",Scalar 8) |+ ("s",Scalar 8) |+
-           ("j",Scalar 9) |+ ("i",Scalar 2) |+ ("j",Scalar 1) |+
-           ("s",Scalar 9) |+ ("j",Scalar 2) |+ ("s",Scalar 10) |+
-           ("j",Scalar 3) |+ ("s",Scalar 11) |+ ("j",Scalar 4) |+
-           ("s",Scalar 12) |+ ("j",Scalar 5) |+ ("s",Scalar 13))``),
-     (``(((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-                 6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\ ~(10 <= n)) /\
-            2 <= n) /\ 1 <= n) /\ 2 <= n) /\ 3 <= n) /\ 4 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("s",Scalar 4) |+ ("j",Scalar 5) |+ ("s",Scalar 5) |+
-           ("j",Scalar 6) |+ ("s",Scalar 6) |+ ("j",Scalar 7) |+
-           ("s",Scalar 7) |+ ("j",Scalar 8) |+ ("s",Scalar 8) |+
-           ("j",Scalar 9) |+ ("s",Scalar 9) |+ ("j",Scalar 10) |+
-           ("i",Scalar 2) |+ ("j",Scalar 1) |+ ("s",Scalar 10) |+
-           ("j",Scalar 2) |+ ("s",Scalar 11) |+ ("j",Scalar 3) |+
-           ("s",Scalar 12) |+ ("j",Scalar 4) |+ ("s",Scalar 13))``),
-     (``(((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-                 6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\ 10 <= n) /\
-            ~(11 <= n)) /\ 2 <= n) /\ 1 <= n) /\ 2 <= n) /\ 3 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("s",Scalar 4) |+ ("j",Scalar 5) |+ ("s",Scalar 5) |+
-           ("j",Scalar 6) |+ ("s",Scalar 6) |+ ("j",Scalar 7) |+
-           ("s",Scalar 7) |+ ("j",Scalar 8) |+ ("s",Scalar 8) |+
-           ("j",Scalar 9) |+ ("s",Scalar 9) |+ ("j",Scalar 10) |+
-           ("s",Scalar 10) |+ ("j",Scalar 11) |+ ("i",Scalar 2) |+
-           ("j",Scalar 1) |+ ("s",Scalar 11) |+ ("j",Scalar 2) |+
-           ("s",Scalar 12) |+ ("j",Scalar 3) |+ ("s",Scalar 13))``),
-     (``(((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-                 6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\ 10 <= n) /\
-            11 <= n) /\ ~(12 <= n)) /\ 2 <= n) /\ 1 <= n) /\ 2 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("s",Scalar 4) |+ ("j",Scalar 5) |+ ("s",Scalar 5) |+
-           ("j",Scalar 6) |+ ("s",Scalar 6) |+ ("j",Scalar 7) |+
-           ("s",Scalar 7) |+ ("j",Scalar 8) |+ ("s",Scalar 8) |+
-           ("j",Scalar 9) |+ ("s",Scalar 9) |+ ("j",Scalar 10) |+
-           ("s",Scalar 10) |+ ("j",Scalar 11) |+ ("s",Scalar 11) |+
-           ("j",Scalar 12) |+ ("i",Scalar 2) |+ ("j",Scalar 1) |+
-           ("s",Scalar 12) |+ ("j",Scalar 2) |+ ("s",Scalar 13))``),
-     (``(((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-                 6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\ 10 <= n) /\
-            11 <= n) /\ 12 <= n) /\ ~(13 <= n)) /\ 2 <= n) /\ 1 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("s",Scalar 4) |+ ("j",Scalar 5) |+ ("s",Scalar 5) |+
-           ("j",Scalar 6) |+ ("s",Scalar 6) |+ ("j",Scalar 7) |+
-           ("s",Scalar 7) |+ ("j",Scalar 8) |+ ("s",Scalar 8) |+
-           ("j",Scalar 9) |+ ("s",Scalar 9) |+ ("j",Scalar 10) |+
-           ("s",Scalar 10) |+ ("j",Scalar 11) |+ ("s",Scalar 11) |+
-           ("j",Scalar 12) |+ ("s",Scalar 12) |+ ("j",Scalar 13) |+
-           ("i",Scalar 2) |+ ("j",Scalar 1) |+ ("s",Scalar 13))``),
-     (``(((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-                 6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\ 10 <= n) /\
-            11 <= n) /\ 12 <= n) /\ 13 <= n) /\ ~(14 <= n)) /\ 2 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("s",Scalar 4) |+ ("j",Scalar 5) |+ ("s",Scalar 5) |+
-           ("j",Scalar 6) |+ ("s",Scalar 6) |+ ("j",Scalar 7) |+
-           ("s",Scalar 7) |+ ("j",Scalar 8) |+ ("s",Scalar 8) |+
-           ("j",Scalar 9) |+ ("s",Scalar 9) |+ ("j",Scalar 10) |+
-           ("s",Scalar 10) |+ ("j",Scalar 11) |+ ("s",Scalar 11) |+
-           ("j",Scalar 12) |+ ("s",Scalar 12) |+ ("j",Scalar 13) |+
-           ("s",Scalar 13) |+ ("j",Scalar 14) |+ ("i",Scalar 2) |+
-           ("j",Scalar 1))``),
-     (``((((((((((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-                6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\ 10 <= n) /\
-           11 <= n) /\ 12 <= n) /\ 13 <= n) /\ 14 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("s",Scalar 4) |+ ("j",Scalar 5) |+ ("s",Scalar 5) |+
-           ("j",Scalar 6) |+ ("s",Scalar 6) |+ ("j",Scalar 7) |+
-           ("s",Scalar 7) |+ ("j",Scalar 8) |+ ("s",Scalar 8) |+
-           ("j",Scalar 9) |+ ("s",Scalar 9) |+ ("j",Scalar 10) |+
-           ("s",Scalar 10) |+ ("j",Scalar 11) |+ ("s",Scalar 11) |+
-           ("j",Scalar 12) |+ ("s",Scalar 12) |+ ("j",Scalar 13) |+
-           ("s",Scalar 13) |+ ("j",Scalar 14) |+ ("s",Scalar 14) |+
-           ("j",Scalar 15))``)] : (term * term) list
-- - - - 
-*** Time taken: 87.337s
-
-Nested loop with errors
-------------------------
-
-public class NestedLoopKO1 {
-	/*@ ensures \result == n*n;
-	  @*/
-	static int nestedLoop (int n) {
-		int s = 0;
-		int i=0; // 0 instead of 1
-		while (i <= n) {
-			int j=0; // 0 instead of 1
-			while (j <= n) {
-				s=s+1;
-				j=j+1;
-			}
-			i=i+1;
-		}
-		return s;
-	}
-}
-
-val name = "NestedLoopKO1";
-val spec = NestedLoopKO1Spec;
-execSymbWithCSP name spec 20
-
-1 path was explored.
-3 conditions were resolved by EVAL.
-0 path was resolved by SIMP_CONV and METIS.
-Total solving time with the constraint solver: 0.077s.
-> val it =
-    [(``~(1 <= n)``,
-      ``ERROR
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("j",Scalar 0) |+
-           ("s",Scalar 1) |+ ("j",Scalar 1) |+ ("i",Scalar 1) |+
-           ("Result",Scalar 1) |+ ("Result",Scalar 1) |+ ("i",Scalar 1) |+
-           ("j",Scalar 1) |+ ("s",Scalar 1) |+ ("n",Scalar 0))``),
-     (``(1 <= n /\ ~(2 <= n)) /\ 1 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("j",Scalar 0) |+
-           ("s",Scalar 1) |+ ("j",Scalar 1) |+ ("s",Scalar 2) |+
-           ("j",Scalar 2) |+ ("i",Scalar 1) |+ ("j",Scalar 0) |+
-           ("s",Scalar 3))``),
-     (``((1 <= n /\ 2 <= n) /\ ~(3 <= n)) /\ 1 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("j",Scalar 0) |+
-           ("s",Scalar 1) |+ ("j",Scalar 1) |+ ("s",Scalar 2) |+
-           ("j",Scalar 2) |+ ("s",Scalar 3) |+ ("j",Scalar 3) |+
-           ("i",Scalar 1) |+ ("j",Scalar 0))``),
-     (``(1 <= n /\ 2 <= n) /\ 3 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("j",Scalar 0) |+
-           ("s",Scalar 1) |+ ("j",Scalar 1) |+ ("s",Scalar 2) |+
-           ("j",Scalar 2) |+ ("s",Scalar 3) |+ ("j",Scalar 3) |+
-           ("s",Scalar 4) |+ ("j",Scalar 4))``)] : (term * term) list
-- - - - 
-*** Time taken: 6.208s
-
-30 steps
---------
-execSymbWithCSP name spec 30
-
-2 paths were explored.
-6 conditions were resolved by EVAL.
-0 path was resolved by SIMP_CONV and METIS.
-Total solving time with the constraint solver: 0.513s.
-> val it =
-    [(``~(1 <= n)``,
-      ``ERROR
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("j",Scalar 0) |+
-           ("s",Scalar 1) |+ ("j",Scalar 1) |+ ("i",Scalar 1) |+
-           ("Result",Scalar 1) |+ ("Result",Scalar 1) |+ ("i",Scalar 1) |+
-           ("j",Scalar 1) |+ ("s",Scalar 1) |+ ("n",Scalar 0))``),
-     (``((((1 <= n /\ ~(2 <= n)) /\ 1 <= n) /\ 1 <= n) /\ ~(2 <= n)) /\
-        ~(2 <= n)``,
-      ``ERROR
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("j",Scalar 0) |+
-           ("s",Scalar 1) |+ ("j",Scalar 1) |+ ("s",Scalar 2) |+
-           ("j",Scalar 2) |+ ("i",Scalar 1) |+ ("j",Scalar 0) |+
-           ("s",Scalar 3) |+ ("j",Scalar 1) |+ ("s",Scalar 4) |+
-           ("j",Scalar 2) |+ ("i",Scalar 2) |+ ("Result",Scalar 4) |+
-           ("Result",Scalar 4) |+ ("i",Scalar 2) |+ ("j",Scalar 2) |+
-           ("s",Scalar 4) |+ ("n",Scalar 1))``),
-     (``((((1 <= n /\ 2 <= n) /\ ~(3 <= n)) /\ 1 <= n) /\ 1 <= n) /\ 2 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("j",Scalar 0) |+
-           ("s",Scalar 1) |+ ("j",Scalar 1) |+ ("s",Scalar 2) |+
-           ("j",Scalar 2) |+ ("s",Scalar 3) |+ ("j",Scalar 3) |+
-           ("i",Scalar 1) |+ ("j",Scalar 0) |+ ("s",Scalar 4) |+
-           ("j",Scalar 1) |+ ("s",Scalar 5) |+ ("j",Scalar 2) |+
-           ("s",Scalar 6) |+ ("j",Scalar 3))``),
-     (``((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ ~(4 <= n)) /\ 1 <= n) /\ 1 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("j",Scalar 0) |+
-           ("s",Scalar 1) |+ ("j",Scalar 1) |+ ("s",Scalar 2) |+
-           ("j",Scalar 2) |+ ("s",Scalar 3) |+ ("j",Scalar 3) |+
-           ("s",Scalar 4) |+ ("j",Scalar 4) |+ ("i",Scalar 1) |+
-           ("j",Scalar 0) |+ ("s",Scalar 5) |+ ("j",Scalar 1) |+
-           ("s",Scalar 6) |+ ("j",Scalar 2))``),
-     (``((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ ~(5 <= n)) /\ 1 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("j",Scalar 0) |+
-           ("s",Scalar 1) |+ ("j",Scalar 1) |+ ("s",Scalar 2) |+
-           ("j",Scalar 2) |+ ("s",Scalar 3) |+ ("j",Scalar 3) |+
-           ("s",Scalar 4) |+ ("j",Scalar 4) |+ ("s",Scalar 5) |+
-           ("j",Scalar 5) |+ ("i",Scalar 1) |+ ("j",Scalar 0) |+
-           ("s",Scalar 6) |+ ("j",Scalar 1))``),
-     (``(((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\
-         ~(6 <= n)) /\ 1 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("j",Scalar 0) |+
-           ("s",Scalar 1) |+ ("j",Scalar 1) |+ ("s",Scalar 2) |+
-           ("j",Scalar 2) |+ ("s",Scalar 3) |+ ("j",Scalar 3) |+
-           ("s",Scalar 4) |+ ("j",Scalar 4) |+ ("s",Scalar 5) |+
-           ("j",Scalar 5) |+ ("s",Scalar 6) |+ ("j",Scalar 6) |+
-           ("i",Scalar 1) |+ ("j",Scalar 0))``),
-     (``(((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\ 6 <= n) /\
-        ~(7 <= n)``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("j",Scalar 0) |+
-           ("s",Scalar 1) |+ ("j",Scalar 1) |+ ("s",Scalar 2) |+
-           ("j",Scalar 2) |+ ("s",Scalar 3) |+ ("j",Scalar 3) |+
-           ("s",Scalar 4) |+ ("j",Scalar 4) |+ ("s",Scalar 5) |+
-           ("j",Scalar 5) |+ ("s",Scalar 6) |+ ("j",Scalar 6) |+
-           ("s",Scalar 7) |+ ("j",Scalar 7) |+ ("i",Scalar 1))``),
-     (``(((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\ 5 <= n) /\ 6 <= n) /\
-        7 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 0) |+ ("j",Scalar 0) |+
-           ("s",Scalar 1) |+ ("j",Scalar 1) |+ ("s",Scalar 2) |+
-           ("j",Scalar 2) |+ ("s",Scalar 3) |+ ("j",Scalar 3) |+
-           ("s",Scalar 4) |+ ("j",Scalar 4) |+ ("s",Scalar 5) |+
-           ("j",Scalar 5) |+ ("s",Scalar 6) |+ ("j",Scalar 6) |+
-           ("s",Scalar 7) |+ ("j",Scalar 7))``)] : (term * term) list
-- - - - 
-*** Time taken: 19.401s
-
-
-Another error: 
--------------
-j is not reset in the inner loop
-	/*@ ensures \result == n*n;
-	  @*/
-	static int nestedLoop (int n) {
-		int s = 0;
-		int i=1;
-		int j=1;
-		while (i <= n) {
-			while (j <= n) {
-				s=s+1;
-				j=j+1;
-			}
-			i=i+1;
-		}
-		return s;
-	}
-}
-
-
-val name = "NestedLoopKO2";
-val spec = NestedLoopKO2Spec;
-execSymbWithCSP name spec 20
-
-3 paths were explored.
-0 condition was resolved by EVAL.
-0 path was resolved by SIMP_CONV and METIS.
-Total solving time with the constraint solver: 0.129s.
-> val it =
-    [(``~(1 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("Result",Scalar 0))``),
-     (``(1 <= n /\ ~(2 <= n)) /\ ~(2 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("i",Scalar 2) |+
-           ("Result",Scalar 1))``),
-     (``((((1 <= n /\ 2 <= n) /\ ~(3 <= n)) /\ 2 <= n) /\ ~(3 <= n)) /\
-        ~(3 <= n)``,
-      ``ERROR
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("i",Scalar 2) |+ ("i",Scalar 3) |+
-           ("Result",Scalar 2) |+ ("Result",Scalar 2) |+ ("i",Scalar 3) |+
-           ("n",Scalar 2))``),
-     (``((((1 <= n /\ 2 <= n) /\ 3 <= n) /\ ~(4 <= n)) /\ 2 <= n) /\
-        ~(4 <= n)``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("i",Scalar 2) |+ ("i",Scalar 3))``),
-     (``((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("j",Scalar j) |+ ("n",Scalar n) |+ ("i",Scalar i) |+
-           ("s",Scalar 0) |+ ("i",Scalar 1) |+ ("j",Scalar 1) |+
-           ("s",Scalar 1) |+ ("j",Scalar 2) |+ ("s",Scalar 2) |+
-           ("j",Scalar 3) |+ ("s",Scalar 3) |+ ("j",Scalar 4) |+
-           ("s",Scalar 4) |+ ("j",Scalar 5))``)] : (term * term) list
-- - - - 
-*** Time taken: 6.904s
-
-
-Sum of the squares of the n first integers
-------------------------------------------
-
-val name = "SquareSum";
-val spec = SquareSumSpec;
-execSymbWithCSP name spec 20
-
-4 paths were explored.
-1 condition was resolved by EVAL.
-0 path was resolved by SIMP_CONV and METIS.
-Total solving time with the constraint solver: 0.074s.
-> val it =
-    [(``~(1 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("i",Scalar 0) |+
-           ("s",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("Result",Scalar 0))``),
-     (``1 <= n /\ ~(2 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("i",Scalar 0) |+
-           ("s",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("Result",Scalar 1))``),
-     (``(1 <= n /\ 2 <= n) /\ ~(3 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("i",Scalar 0) |+
-           ("s",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 5) |+
-           ("i",Scalar 3) |+ ("Result",Scalar 5))``),
-     (``((1 <= n /\ 2 <= n) /\ 3 <= n) /\ ~(4 <= n)``,
-      ``RESULT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("i",Scalar 0) |+
-           ("s",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 5) |+
-           ("i",Scalar 3) |+ ("s",Scalar 14) |+ ("i",Scalar 4) |+
-           ("Result",Scalar 14))``),
-     (``((1 <= n /\ 2 <= n) /\ 3 <= n) /\ 4 <= n``,
-      ``TIMEOUT
-          (FEMPTY |+ ("s",Scalar s) |+ ("Result",Scalar Result) |+
-           ("n",Scalar n) |+ ("i",Scalar i) |+ ("i",Scalar 0) |+
-           ("s",Scalar 0) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-           ("s",Scalar 1) |+ ("i",Scalar 2) |+ ("s",Scalar 5) |+
-           ("i",Scalar 3) |+ ("s",Scalar 14) |+ ("i",Scalar 4) |+
-           ("s",Scalar 30) |+ ("i",Scalar 5))``)] : (term * term) list
-- - - - 
-*** Time taken: 5.736s
-
-============================= examples ==========================
-*)
-
-
-
-(* Omega.OMEGA_CONV and
-Cooper.COOPER_CONV.
-
-
-SIMP_CONV (srw_ss()) [] THENC OMEGA_CONV *)

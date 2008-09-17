@@ -353,3 +353,6 @@ fun compile() =
 
 
 
+
+
+(* javac -cp /home/helen/Recherche/hol/lib/jsolver.jar:/home/helen/Recherche/hol/HOL/examples/opsemTools/verify/solvers/xmlterm2csp/java/classes -d /home/helen/Recherche/hol/HOL/examples/opsemTools/verify/solvers/xmlterm2csp/java/classes /home/helen/Recherche/hol/HOL/examples/opsemTools/verify/solvers/xmlterm2csp/java/src/*/*.java /home/helen/Recherche/hol/HOL/examples/opsemTools/verify/solvers/xmlterm2csp/java/src/*/*/*.java *)

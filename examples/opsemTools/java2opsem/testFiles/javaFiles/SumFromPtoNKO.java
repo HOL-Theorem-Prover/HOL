@@ -4,8 +4,8 @@
  * minus the sum of numbers from 0 to p.
  */
 public class SumFromPtoN {
-    /*@ requires (n >= 0) && (p >= 0) && (p<=n) ;
-    @ ensures \result == n*(n+1)/2 - (p-1)*p/2;
+    /*@ requires (n >= 0) && (p<=n);
+    @ ensures \result == n*(n+1)/2 - p*(p+1)/2;
     @*/
 int somme (int n,int p) {
           int i = p;
