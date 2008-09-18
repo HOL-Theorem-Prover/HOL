@@ -458,11 +458,11 @@ end
      Parse into absyn type
  ---------------------------------------------------------------------------*)
 
-fun Absyn q = let in
+fun Absyn q = let
+in
   update_term_fns();
   remove_lets (!the_absyn_parser q)
 end
-
 
 local open Parse_support Absyn
   fun binder(VIDENT (l,s))    = make_binding_occ l s
@@ -609,6 +609,16 @@ in
                   (parse_preterm_in_context0 FVs) ptm
 
   fun parse_in_context FVs q = parse_preterm_in_context FVs (Preterm q)
+
+  fun grammar_parse_in_context (tygm, tmgm) FVs q = let
+    val typarse = parse_type.parse_type typ1_rec false tygm
+    val absyn = remove_lets (do_parse tmgm typarse q)
+    val oinfo = term_grammar.overload_info tmgm
+    val ptm =
+        Parse_support.make_preterm (absyn_to_preterm_in_env oinfo absyn)
+  in
+    parse_preterm_in_context FVs ptm
+  end
 
 end
 
