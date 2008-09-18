@@ -101,7 +101,15 @@ fun parse_int(tm,i) =
   if is_var(tm) 
      then indent(i) ^ get_var(tm)
   else if is_int_literal(tm)
-       then indent(i) ^ "<ExprIntegerLiteral value=\"" ^ term_to_string(tm) ^ "\"/>\n"
+       then 
+         let val l =  term_to_string(tm);
+           in
+             if is_negated(tm)
+             then  indent(i) ^ "<ExprIntegerLiteral value=\"" ^ 
+                   "-" ^ substring(l,1,size(l)-1) ^ "\"/>\n"
+             else indent(i) ^ "<ExprIntegerLiteral value=\"" ^ 
+                  l ^ "\"/>\n"
+         end
   else 
       if is_plus(tm)
       then
