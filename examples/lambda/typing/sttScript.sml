@@ -16,8 +16,6 @@ val _ = add_infix("-->", 700, RIGHT)
 val _ = overload_on("-->", ``funspace``)
 val _ = Unicode.unicode_version(Unicode.UChar.rightarrow, ``funspace``)
 
-(* a context is a list of string-type pairs *)
-
 (* set up parsing/pretty-printing for the typing relation.
    Can't use ":" to the right of the turnstile, because it's already taken
    for HOL's typing, so use "-:" instead, which is ugly. *)
@@ -29,6 +27,16 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
                                  BeginFinalBlock(PP.INCONSISTENT, 2),
                                  TM, HardSpace 1, TOK "-:", BreakSpace(1,0)],
                   term_name = "hastype"}
+
+(* this Unicode version will be preferred *)
+val _ = add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
+                  fixity = Infix(NONASSOC, 425),
+                  paren_style = OnlyIfNecessary,
+                  pp_elements = [HardSpace 1, TOK "⊢", BreakSpace(1, 0),
+                                 BeginFinalBlock(PP.INCONSISTENT, 2),
+                                 TM, HardSpace 1, TOK "◁", BreakSpace(1,0)],
+                  term_name = "hastype"}
+
 
 (* inductive definition of typing relation *)
 val (hastype_rules, hastype_ind, hastype_cases) = Hol_reln`
