@@ -513,14 +513,15 @@ fun satSolv sat tm =
 
 (* 
 Basic SAT solver inside HOL for testing: hol_sat tm returns the result
-of applying SIMP_CONV (srw_ss()) [] to tm, or |- tm = tm if that fails
+of applying a conversion conv to tm, or |- tm = tm if that fails. The msg argument
+is printed.
 *)
 
-fun hol_sat tm =
- let val () = (print "\nApplying SIMP_CONV (srw_ss()++COOPER_ss++ARITH_ss) [] to:\n"; 
+fun hol_sat (conv,msg) tm =
+ let val () = (print "\nApplying "; print msg; print " to:\n"; 
                print_term tm; 
                print "\n... ")
-     val th = time (SIMP_CONV (srw_ss()++COOPER_ss++ARITH_ss) []) tm handle e => REFL tm
+     val th = time conv tm handle _ => REFL tm
      val () = if rhs(concl th) = ``T``
                 then (print "Satisfiable:\n"; print_thm th; print "\n") else
               if rhs(concl th) = ``F``

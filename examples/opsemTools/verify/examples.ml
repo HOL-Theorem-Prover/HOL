@@ -1,7 +1,3 @@
-(* Test file. Uses:
-    val ilogPath = "/homes/mjcg/Helene/newOpsem/xmlterm2csp/";
-*)
-
 (* Stuff needed when running interactively *)
 
 quietdec := true; (* turn off printing *)

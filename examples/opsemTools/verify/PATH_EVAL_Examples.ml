@@ -44,10 +44,17 @@ show_tags := true;
 
 
 (* Various solvers *)
+val CooperSimpSat = (SIMP_CONV (srw_ss()++COOPER_ss) [], "SIMP_CONV (srw_ss()++COOPER_ss)");
+val OmegaSimpSat  = (SIMP_CONV (srw_ss()++OMEGA_ss) [],  "SIMP_CONV (srw_ss()++OMEGA_ss)");
+val OmegaSat  = (OMEGA_CONV,  "OMEGA_CONV");
 
 val ilogSolv = elim_state_CONV(satSolv(extSolv "ILOG"));
 val solv = holSolv OMEGA_CONV;
-val holSatSolv = elim_state_CONV(satSolv hol_sat);
+
+val holSatSolv = elim_state_CONV(satSolv (hol_sat CooperSimpSat));
+val holSatSolv = elim_state_CONV(satSolv (hol_sat OmegaSimpSat));
+val holSatSolv = elim_state_CONV(satSolv (hol_sat OmegaSat));
+
 
 
 (*
@@ -88,6 +95,7 @@ val AbsMinusHOL_th =
     THEN IMP_EVAL_TAC holSatSolv
     THEN CONV_TAC(EVAL THENC elim_state_CONV COOPER_CONV));
 
+(*
 val AbsMinusILOG_th =  
  time prove
   (rhs(concl(AbsMinusTheory.MAIN_def)),
@@ -95,6 +103,7 @@ val AbsMinusILOG_th =
     THEN REPEAT CONJ_TAC
     THEN IMP_EVAL_TAC ilogSolv
     THEN CONV_TAC(EVAL THENC elim_state_CONV COOPER_CONV));
+*)
 
 val TritypeHOL_th =  
  time prove
@@ -104,6 +113,7 @@ val TritypeHOL_th =
     THEN IMP_EVAL_TAC holSatSolv
     THEN CONV_TAC(EVAL THENC elim_state_CONV COOPER_CONV));
 
+(*
 val TritypeILOG_th =  
  time prove
   (rhs(concl(TritypeTheory.MAIN_def)),
@@ -111,4 +121,5 @@ val TritypeILOG_th =
     THEN REPEAT CONJ_TAC
     THEN IMP_EVAL_TAC ilogSolv
     THEN CONV_TAC(EVAL THENC elim_state_CONV COOPER_CONV));
+*)
 
