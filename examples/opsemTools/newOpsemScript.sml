@@ -551,8 +551,14 @@ val DIV_AUX_def = xDefine "DIV_AUX" `m / n = m DIV n`;
 
 val _ =
  Hol_datatype
-      `value = Scalar of int
-             | Array  of (int |-> int)`;
+  `value = Scalar of int | Array  of (int |-> int)`;
+
+(*---------------------------------------------------------------------------*)
+(* Program variables are represented by strings, and states are modelled by  *)
+(* finite maps from program variables to values                              *)
+(*---------------------------------------------------------------------------*)
+
+val _ = type_abbrev("state", ``:string |-> value``);
 
 val isScalar_def =
  Define
@@ -572,12 +578,7 @@ val ArrayOf_def =
 
 (*---------------------------------------------------------------------------*)
 (* Syntax of the programming language.					     *)
-(*                                                                           *)
-(* Program variables are represented by strings, and states are modelled by  *)
-(* finite maps from program variables to values                              *)
 (*---------------------------------------------------------------------------*)
-
-val _ = type_abbrev("state", ``:string |-> value``);
 
 (*---------------------------------------------------------------------------*)
 (* Natural number (nexp), boolean (bexp) and array expressions (aexp)        *)
@@ -590,8 +591,10 @@ val _ =
         | Arr of string => nexp
         | Const of int
         | Plus of nexp => nexp
+        | Sub of nexp => nexp
         | Times of nexp => nexp
-        | Sub of nexp => nexp`;
+        | Div of nexp => nexp
+        | Min of nexp => nexp`;
 
 val _ = 
  Hol_datatype 
@@ -616,8 +619,10 @@ val neval_def =
    (neval (Arr a e) s = (ArrayOf(s ' a) ' (neval e s))) /\
    (neval (Const c) s = c) /\
    (neval (Plus e1 e2) s = integer$int_add (neval e1 s) (neval e2 s)) /\
+   (neval (Sub e1 e2) s = integer$int_sub (neval e1 s) (neval e2 s)) /\
    (neval (Times e1 e2) s = integer$int_add (neval e1 s) (neval e2 s)) /\
-   (neval (Sub e1 e2) s = integer$int_sub (neval e1 s) (neval e2 s))`;
+   (neval (Div e1 e2) s = integer$int_quot (neval e1 s) (neval e2 s)) /\
+   (neval (Min e1 e2) s = integer$int_min (neval e1 s) (neval e2 s))`;
 
 val beval_def =  
  Define
