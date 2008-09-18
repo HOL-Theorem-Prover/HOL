@@ -697,7 +697,7 @@ fun buildAndLoadAllSpec() =
 end;
 
 (* to compile java files of package java2opSem *)
-fun compile() = 
+fun compileJava2opsem() = 
   let val comp = "javac -d " ^ path ^ "bin -cp " ^ classPath
                   ^ " " ^ path ^"src/java2opSem/*.java";
    in
