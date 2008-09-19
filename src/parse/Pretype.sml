@@ -73,6 +73,8 @@ fun eq_env0 e1 e2 (Vartype v)                (Vartype v')              = eq_vart
   | eq_env0 e1 e2 (UVar (r  as ref (NONEU(kd, rk ))))
                   (UVar (r' as ref (NONEU(kd',rk'))))                  = r=r'
   | eq_env0 e1 e2 (UVar (ref (SOMEU ty)))    (UVar (ref (SOMEU ty')))  = eq_env e1 e2 ty ty'
+  | eq_env0 e1 e2 (UVar (ref (SOMEU ty)))    ty'                       = eq_env e1 e2 ty (PT(ty',locn.Loc_None))
+  | eq_env0 e1 e2 ty                         (UVar (ref (SOMEU ty')))  = eq_env e1 e2 (PT(ty,locn.Loc_None)) ty'
   | eq_env0 e1 e2 _                          _                         = false
 and eq_env  e1 e2 (PT (value,locn))          (PT (value',locn'))       = eq_env0 e1 e2 value value'
 
@@ -195,6 +197,12 @@ fun the_con_type(ty as PT(Contype v,loc)) = ty
   | the_con_type(PT(UVar(ref(SOMEU ty)),loc))   = the_con_type ty
   | the_con_type _ = raise TCERR "the_con_type" "not a type constant";
 
+fun dest_con_type(PT(Contype v,loc)) = v
+  | dest_con_type(PT(TyKindConstr{Ty,Kind},loc)) = dest_con_type Ty
+  | dest_con_type(PT(TyRankConstr{Ty,Rank},loc)) = dest_con_type Ty
+  | dest_con_type(PT(UVar(ref(SOMEU ty)),loc))   = dest_con_type ty
+  | dest_con_type _ = raise TCERR "dest_con_type" "not a type constant";
+
 fun mk_app_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyApp(ty1,ty2), locn.between loc1 loc2)
 
@@ -225,7 +233,7 @@ fun the_abs_type(PT(UVar(ref(SOMEU ty))  ,loc)) = the_abs_type ty
 fun dom_rng ty =
   let val (tyf,ty2) = dest_app_type ty
       val (ty0,ty1) = dest_app_type tyf
-      val (PT(Contype {Thy, Tyop, Kind, Rank},loc)) = the_con_type ty0
+      val {Thy, Tyop, Kind, Rank} = dest_con_type ty0
   in if Thy = "min" andalso Tyop = "fun" andalso Kind = Prekind.typ andalso Rank = Prerank.Zerorank
      then (ty1,ty2)
      else raise ERR "" ""
@@ -386,7 +394,7 @@ fun apply_subst subst (pt as PT (pty, locn)) =
 fun kind_rank_to_string (kd,rk) =
       let open Prekind Prerank
       in   (if prekind_compare(kd,typ) = EQUAL
-            then "" else "::" ^ prekind_to_string kd)
+            then "" else ":" ^ prekind_to_string kd)
          ^ (if prerank_compare(rk,Zerorank) = EQUAL
             then "" else ":<=" ^ prerank_to_string rk)
       end
@@ -842,13 +850,6 @@ fun r ref_equiv (PT(value, locn)) =
     | TyRankConstr {Ty, ...}  => has_free_uvar Ty
 
 
-(*
-fun kind_bind f r value (kd_env,ty_env) =
-  let val (kd_env', result) = Prekind.safe_bind f r value kd_env
-  in ((kd_env',ty_env), result)
-  end
-*)
-
 fun kind_unify k1 k2 (kd_env,rk_env,ty_env) =
   let val (kd_env', result) = Prekind.unsafe_unify k1 k2 kd_env
   in ((kd_env',rk_env,ty_env), result)
@@ -856,7 +857,12 @@ fun kind_unify k1 k2 (kd_env,rk_env,ty_env) =
 
 fun rank_unify r1 r2 (kd_env,rk_env,ty_env) =
   let val (rk_env', result) = Prerank.unsafe_unify r1 r2 rk_env
-  in ((kd_env,rk_env',ty_env), result)
+  in if not (is_debug()) then () else
+     case result of SOME _ => () | NONE =>
+         (print "\nrank_unify failed:\n";
+          print (Prerank.prerank_to_string r1 ^ " compared to\n" ^
+                 Prerank.prerank_to_string r2 ^ "\n"));
+     ((kd_env,rk_env',ty_env), result)
   end
 
 
@@ -884,6 +890,8 @@ fun unsafe_bind f r value =
 fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
               (rank_unify:prerank -> prerank -> ('a -> 'a * unit option))
               bind c1 c2 (ty1 as PT(t1,locn1)) (ty2 as PT(t2,locn2)) e = let
+  val gen_unify = gen_unify kind_unify rank_unify bind
+(*
   val ty1s = pretype_to_string ty1
   val ty2s = pretype_to_string ty2
   val ty1bs = pretype_to_string (deep_beta_conv_ty ty1)
@@ -893,11 +901,11 @@ fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
                                 ^ "\n      vs. " ^ ty2s
                                 ^ "\n   (beta) " ^ ty2bs ^ "\n")
                         else ()
-  val gen_unify = gen_unify kind_unify rank_unify bind
   val fail = fn e => (if not (is_debug()) then () else
                       print ("gen_unify fails on " ^ ty1s
                          ^ "\n               vs. " ^ ty2s ^ "\n");
                       fail e)
+*)
   (* unify_var's input should be a pretype variable (possibly constrained),
        not a constant, application, abstraction, or universal type.
      unify_var's result should be either Vartype or UVar(NONEU). *)
@@ -960,7 +968,7 @@ in
     (UVar (r as ref (NONEU(kd,rk))), _) => kind_unify kd (pkind_of ty2) >>
                                            rank_unify rk (prank_of ty2) >>
                                            bind (gen_unify c1 c2) r ty2
-  | (UVar (r as ref (SOMEU t1)), t2) => gen_unify c1 c2 t1 ty2
+  | (UVar (r as ref (SOMEU ty1)), t2) => gen_unify c1 c2 ty1 ty2
   | (_, UVar _) => gen_unify c2 c1 ty2 ty1
   | (Vartype (tv1 as (s1,k1,r1)), Vartype (tv2 as (s2,k2,r2))) =>
        kind_unify k1 k2 >> rank_unify r1 r2 >>
@@ -976,12 +984,19 @@ in
   | (_, TyRankConstr _) => gen_unify c2 c1 ty2 ty1
   | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
        gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()
+  | (TyApp(ty11, ty12 as PT(Vartype _,_)), _) =>
+       gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2))
+  | (_, TyApp(ty21, ty22 as PT(Vartype _,_))) =>
+       gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn1)) ty21
+  | (TyApp(ty11 as PT(UVar (ref (NONEU _)),_), ty12), _) =>
+       gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2))
+  | (_, TyApp(ty21 as PT(UVar (ref (NONEU _)),_), ty22)) =>
+       gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn1)) ty21
 (*
-  | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
-       beta_conv_ty_m (gen_unify c1 c2) ty1 ty2
-       (gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ())
-  | (TyApp _, _) => beta_conv_ty_m (gen_unify c1 c2) ty1 ty2 fail
-  | (_, TyApp _) => beta_conv_ty_m (gen_unify c1 c2) ty1 ty2 fail
+  | (TyApp(ty11 as PT(UVar (ref (NONEU _)),_), ty12 as PT(Vartype _,_)), _) =>
+       gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2))
+  | (_, TyApp(ty21 as PT(UVar (ref (NONEU _)),_), ty22 as PT(Vartype _,_))) =>
+       gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn1)) ty21
 *)
   | (TyUniv(ty11, ty12), TyUniv(ty21, ty22)) =>
        bvar_unify ty11 ty21 >- (fn (PT(ty11',_),PT(ty21',_)) =>
@@ -995,14 +1010,6 @@ in
           (Vartype tv1, Vartype tv2) =>
             gen_unify (tv1::c1) (tv2::c2) ty12 ty22
         | _ => gen_unify c1 c2 ty12 ty22)
-(* older version:
-  | (TyUniv(ty11, ty12), TyUniv(ty21, ty22)) =>
-       ((gen_unify ty11 ty21 >> gen_unify ty12 ty22) ++
-        (gen_unify ty12 (type_subst [ty12 |-> ty11] ty22))) >> return ()
-  | (TyAbst(ty11, ty12), TyAbst(ty21, ty22)) =>
-       ((gen_unify ty11 ty21 >> gen_unify ty12 ty22) ++
-        (gen_unify ty12 (type_subst [ty12 |-> ty11] ty22))) >> return ()
-*)
   | _ => fail
  end e
 
@@ -1013,15 +1020,14 @@ val empty_env = ([]:(prekind option ref * prekind option) list,
 fun unify t1 t2 =
   let val t1' = deep_beta_conv_ty t1
       and t2' = deep_beta_conv_ty t2
-      val ty1s = pretype_to_string t1
-      val ty2s = pretype_to_string t2
-      val ty1s' = pretype_to_string t1'
-      val ty2s' = pretype_to_string t2'
-      val _ = if is_debug() then print ("unify  " ^ ty1s
-                                    ^ "\n(beta) " ^ ty1s'
-                                    ^ "\n   vs. " ^ ty2s
-                                    ^ "\n(beta) " ^ ty2s' ^ "\n")
-                            else ()
+      val _ = if not (is_debug()) then () else let
+            val ty1s  = pretype_to_string t1
+            val ty2s  = pretype_to_string t2
+            val ty1s' = pretype_to_string t1'
+            val ty2s' = pretype_to_string t2'
+         in print (    "unify  " ^ ty1s ^ "\n(beta) " ^ ty1s'
+                   ^ "\n   vs. " ^ ty2s ^ "\n(beta) " ^ ty2s' ^ "\n")
+         end
   in
   case (gen_unify kind_unify rank_unify unsafe_bind [] [] t1' t2' empty_env)
    of (bindings, SOME ()) => ()
@@ -1041,7 +1047,7 @@ in
 end
 
 local
-  fun (r ref_equiv (PT(value, locn))) (env as (kenv,renv,tenv)) =
+     fun (r ref_equiv (PT(value, locn))) (env as (kenv,renv,tenv)) =
        case value of
          UVar (r' as ref (NONEU _)) =>
               r = r' orelse
@@ -1050,7 +1056,8 @@ local
                  of NONE => false
                   | SOME (_, v) => (r ref_equiv v) env
               end
-         | UVar (ref (SOMEU t)) => (r ref_equiv t) env
+         | UVar (r' as ref (SOMEU t)) => (* r = r' orelse *) (r ref_equiv t) env
+           (* equality test unnecessary since r must point to a UVar(NONEU _) *)
          | _ => false
 
       fun (r ref_occurs_in (PT(value, locn))) (env as (kenv,renv,tenv)) =
@@ -1062,7 +1069,8 @@ local
                  of NONE => false
                   | SOME (_, v) => (r ref_occurs_in v) env
               end
-          | UVar (ref (SOMEU t)) => (r ref_occurs_in t) env
+          | UVar (r' as ref (SOMEU t)) => (* r = r' orelse *) (r ref_occurs_in t) env
+           (* equality test unnecessary since r must point to a UVar(NONEU _) *)
           | TyApp(ty1,ty2) => (r ref_occurs_in ty1) env orelse
                               (r ref_occurs_in ty2) env
           | TyUniv(tyv, ty) => (r ref_occurs_in tyv) env orelse
@@ -1107,45 +1115,61 @@ end
 (* in (m1 >>- f), m1 is a monad on kind environments,
     while f is a function that takes a kind and produces
     a monad on a pair of (kind environment, type environment).
+    Similarly, in (m2 >>= f), m2 is a monad on rank environments, etc.
 *)
-infix >>-
-fun (m1 >>- f) (env as (kdenv,tyenv)) = let
+infix >>- >>=
+fun (m1 >>- f) (env as (rkenv,kdenv,tyenv)) = let
   val (kdenv0, res0) = m1 kdenv
 in
   case res0 of
-    NONE => ((kdenv0,tyenv), NONE)
-  | SOME res => f res (kdenv0,tyenv)
+    NONE => ((rkenv,kdenv0,tyenv), NONE)
+  | SOME res => f res (rkenv,kdenv0,tyenv)
+end
+
+fun (m1 >>= f) (env as (rkenv,kdenv,tyenv)) = let
+  val (rkenv0, res0) = m1 rkenv
+in
+  case res0 of
+    NONE => ((rkenv0,kdenv,tyenv), NONE)
+  | SOME res => f res (rkenv0,kdenv,tyenv)
 end
 
 local val rename_kv = Prekind.rename_kv
-      fun replace (s,kd,rk) (env as (kdenv,tyenv)) =
+      val rename_rv = Prerank.rename_rv
+      fun replace (s,kd,rk) (env as (rkenv,kdenv,tyenv)) =
         case Lib.assoc1 s tyenv
          of SOME (_, r) => (env, SOME r)
           | NONE =>
               let val r = new_uvar(kd,rk)
-              in ((kdenv,(s, r)::tyenv), SOME r)
+              in ((rkenv,kdenv,(s, r)::tyenv), SOME r)
               end
       fun add_bvar (v as PT(Vartype (s,kd,rk), l)) benv =
               rename_kv kd >>- (fn kd' =>
-              let val r = new_uvar(kd',rk)
-                  val v' = PT(Vartype (s,kd',rk), l)
+              rename_rv rk >>= (fn rk' =>
+              let val r = new_uvar(kd',rk')
+                  val v' = PT(Vartype (s,kd',rk'), l)
               in return ((s, r)::benv, v')
                                        (*or r, if renaming bound vars*)
-              end)
+              end))
         | add_bvar (PT(TyKindConstr {Ty,Kind}, _)) benv =
               rename_kv Kind >>- (fn Kind' =>
               add_bvar Ty benv)
         | add_bvar (PT(TyRankConstr {Ty,Rank}, _)) benv =
-              add_bvar Ty benv
+              rename_rv Rank >>= (fn Rank' =>
+              add_bvar Ty benv)
         | add_bvar _ _ = raise TCERR "rename_typevars" "add_bvar: arg is not variable"
 in
 fun rename_tv (ty as PT(ty0, locn)) benv =
   case ty0 of
     Vartype (v as (s,kd,rk)) =>
-      rename_kv kd >>- (fn kd' =>
+       rename_kv kd >>- (fn kd' =>
+       rename_rv rk >>= (fn rk' =>
        case Lib.assoc1 s benv
-         of SOME _ => return (PT(Vartype(s,kd',rk), locn))
-          | NONE   => replace (s,kd',rk))
+         of SOME _ => return (PT(Vartype(s,kd',rk'), locn))
+          | NONE   => replace (s,kd',rk')))
+  | Contype {Thy,Tyop,Kind,Rank} =>
+       rename_kv Kind >>- (fn Kind' =>
+       return (PT(Contype {Thy=Thy,Tyop=Tyop,Kind=Kind',Rank=Rank}, locn)))
   | TyApp (ty1, ty2) =>
       rename_tv ty1 benv >-
       (fn ty1' => rename_tv ty2 benv >-
@@ -1159,15 +1183,16 @@ fun rename_tv (ty as PT(ty0, locn)) benv =
       rename_tv ty2 benv' >-
       (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn))))
   | TyKindConstr {Ty, Kind} =>
-      rename_kv Kind >>-
-      (fn Kind' => rename_tv Ty benv >-
-      (fn Ty' => return (PT(TyKindConstr {Ty=Ty', Kind=Kind'}, locn))))
+      rename_kv Kind >>- (fn Kind' =>
+      rename_tv Ty benv >- (fn Ty' =>
+      return (PT(TyKindConstr {Ty=Ty', Kind=Kind'}, locn))))
   | TyRankConstr {Ty, Rank} =>
-      rename_tv Ty benv >-
-      (fn Ty' => return (PT(TyRankConstr {Ty=Ty', Rank=Rank}, locn)))
-  | _ => return ty
+      rename_rv Rank >>= (fn Rank' =>
+      rename_tv Ty benv >- (fn Ty' =>
+      return (PT(TyRankConstr {Ty=Ty', Rank=Rank'}, locn))))
+  | _ (* UVar (ref _) *) => return ty
 
-fun rename_typevars ty = valOf (#2 (rename_tv ty [] ([],[])))
+fun rename_typevars ty = valOf (#2 (rename_tv ty [] ([],[],[])))
 end
 
 fun fromType t =
@@ -1235,7 +1260,6 @@ fun kind_replace_null_links kd (kenv,tenv) =
     in ((kenv',tenv), result)
     end
 
-(* needs changing *)
 (* eta-expansion (see "env" after end below) *is* necessary *)
 fun replace_null_links (PT(ty,_)) env = let
 in
@@ -1446,45 +1470,9 @@ fun KC printers = let
             Feedback.set_trace "kinds" tmp;
             raise ERRloc "rankcheck" locn "failed"
           end)
-(*
-        let val real_type = toType Ty
-            val real_type_rk = Type.rank_of real_type
-            val real_rank = Prerank.toRank Rank
-        in
-          if real_type_rk >= real_rank then ()
-          else (
-            Lib.say "\nRank inference failure: the type\n\n";
-            pty real_type;
-            Lib.say ("\n\n"^locn.toString (Locn Ty)^"\n\n");
-            if (is_atom Ty) then ()
-            else(Lib.say"which has rank ";
-                 Lib.say (Int.toString real_type_rk);
-                 Lib.say"\n\n");
-            Lib.say "can not be constrained to be of rank ";
-            Lib.say (Int.toString real_rank);
-            Lib.say"\n\n";
-            raise ERRloc "rankcheck" locn "failed")
-        end)
-*)
     | check _ = ()
 in check
 end end;
-
-fun typecheck_phase1 pfns pty =
-    KC pfns pty
-(*
-    handle phase1_exn(l,s,kd) => let
-           in
-             case pfns of
-               NONE => (Lib.say s; raise ERRloc "kindcheck" l s)
-             | SOME (_, typ, knd) =>
-               (Lib.say s;
-                Lib.say "Wanted it to have kind:  ";
-                Lib.say (knd kd);
-                Lib.say "\n";
-                raise ERRloc "kindcheck" l s)
-           end
-*)
 
 val checkkind = KC
 
@@ -1493,16 +1481,5 @@ fun kindcheck pfns pty0 = let
 in
   toType pty0
 end
-(*
-   handle phase1_exn(l,s,kd) =>
-           case pfns of
-             NONE => (Lib.say s; raise ERRloc "kindcheck" l s)
-           | SOME (_, typ,knd) =>
-             (Lib.say s;
-              Lib.say "Wanted it to have kind:  ";
-              Lib.say (knd kd);
-              Lib.say "\n";
-              raise ERRloc "kindcheck" l s)
-*)
 
 end; (* Pretype *)

@@ -226,7 +226,7 @@ fun apply_subst subst (pk as PK (pkd, locn)) =
 
 (*---------------------------------------------------------------------------*
  * Passes over a kind, turning all of the kind variables into fresh          *
- * UVarkinds, but doing so consistently by using an env, which is an alist       *
+ * UVarkinds, but doing so consistently by using an env, which is an alist   *
  * from variable names to kind variable refs.                                *
  *---------------------------------------------------------------------------*)
 
@@ -238,7 +238,6 @@ local fun replace s env =
               end
           | SOME (_, r) => (env, SOME r)
 in
-(* needs changing *)
 fun rename_kv (kd as PK(kd0, locn)) =
   case kd0 of
     Varkind s => replace s

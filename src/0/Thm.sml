@@ -1829,7 +1829,9 @@ fun parse_raw table =
                      (case parsety (stk, rst1)
                        of (h::t,rst2) => let val ty = tyof h
                                              val ty' = if poly then POLY ty else GRND ty
-                                             val Const(id,_) = prim_mk_const{Name=n,Thy=thy}
+                                             val id = case prim_mk_const{Name=n,Thy=thy}
+                                                       of Const(id,_) => id
+                                                        | _ => ERR "gconst" "impossible const"
                                          in (Const(id,ty')::t, eat_rparen rst2)
                                          end
                         |   _         => ERR "gconst" "impossible")

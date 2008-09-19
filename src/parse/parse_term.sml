@@ -429,7 +429,7 @@ in
   (* these next equality pairs will never have terms interfering between
      them, so we can insert the equality relation between them after doing
      the above *)
-  (* insert (STD_HOL_TOK type_lambda, TypeListTok) EQUAL; *) (* included in next line *)
+  (**) app (fn b => insert (STD_HOL_TOK b, TypeListTok) EQUAL) type_lambda; (**) (* NOT included in next line *)
   app (fn b => insert (STD_HOL_TOK b, TypeListTok) EQUAL) (type_binders G);
   insert (TypeListTok, EndBinding) EQUAL;
   insert (STD_HOL_TOK type_lbracket, TypeListTok) EQUAL;
@@ -624,7 +624,7 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
     val specials = endbinding::grammar_tokens @ term_grammar.known_constants G
     val ttlex = term_tokens.lex specials
   in
-    fn (qb, ps) =>
+    fn (qb, ps) (* (qb : ''a qbuf, ps : ''a PStack) *) =>
        case ttlex qb of
          NONE => ((qb, ps), NONE)
        | SOME t => ((qb, ps), SOME t)
@@ -1323,7 +1323,7 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
               (* TODO: if lifted_typeparser returned a location, use that *)
           | _ => usual_action
       in
-        if is_type_binder binder
+        if is_type_binder binder orelse mem binder type_lambda
         then current_la >- action_on_la
         else usual_action
       end
@@ -1347,7 +1347,7 @@ in
                       else
                         (topterm >- (fn t => return (#1 (#1 t) <> Terminal BOS)))))
   basic_action
-end
+end (* parse_term *)
 
 val initial_pstack = PStack {stack = [], lookahead = [],
                              in_vstruct = [(VSRES_Normal, 0)]}

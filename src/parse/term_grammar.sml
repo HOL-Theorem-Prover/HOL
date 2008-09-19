@@ -76,7 +76,7 @@ fun update_rr_pref b
   {term_name = term_name, elements = elements, preferred = b,
    block_style = block_style, paren_style = paren_style}
 
-datatype binder = LAMBDA | BinderString of string | TypeBinderString of string
+datatype binder = LAMBDA | TYPE_LAMBDA | BinderString of string | TypeBinderString of string
 datatype prefix_rule = STD_prefix of rule_record list
                      | BINDER of binder list
 datatype suffix_rule = STD_suffix of rule_record list
@@ -240,6 +240,7 @@ fun fupdate_prulelist f rules = map f rules
 fun binder_to_string (G:grammar) b =
   case b of
     LAMBDA => hd (#lambda (specials G))
+  | TYPE_LAMBDA => hd (#type_lambda (specials G))
   | BinderString s => s
   | TypeBinderString s => s
 
@@ -253,6 +254,7 @@ in
 
 fun binders (G: grammar) = let
   fun b2str (LAMBDA, acc) = #lambda (specials G) @ acc
+    | b2str (TYPE_LAMBDA, acc) = #type_lambda (specials G) @ acc
     | b2str (BinderString s, acc) = s::acc
     | b2str (TypeBinderString s, acc) = s::acc
   fun binders0 [] acc = acc
@@ -357,7 +359,7 @@ fun nthy_compare ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
 
 val stdhol : grammar =
   GCONS
-  {rules = [(SOME 0, PREFIX (BINDER [LAMBDA,TypeBinderString "\\:"])),
+  {rules = [(SOME 0, PREFIX (BINDER [LAMBDA,TYPE_LAMBDA])),
             (SOME 4, INFIX RESQUAN_OP),
             (SOME 5, INFIX VSCONS),
             (SOME 450,
@@ -664,6 +666,7 @@ fun remove_form s rule = let
   fun rr_ok (r:rule_record) = #term_name r <> s
   fun lr_ok (ls:listspec) = #cons ls <> s andalso #nilstr ls <> s
   fun stringbinder LAMBDA = false
+    | stringbinder TYPE_LAMBDA = false
     | stringbinder (BinderString s0) = s0 = s
     | stringbinder (TypeBinderString s0) = s0 = s
 in
@@ -970,12 +973,14 @@ fun prettyprint_grammar pstrm (G :grammar) = let
     val bnames =
       case b of
         LAMBDA => #lambda (specials G)
+      | TYPE_LAMBDA => #type_lambda (specials G)
       | BinderString s => [s]
       | TypeBinderString s => [s]
     val endb = quote (#endbinding (specials G))
     val lname =
       case b of
         LAMBDA => "binders"
+      | TYPE_LAMBDA => "type binders"
       | BinderString s => "binders"
       | TypeBinderString s => "type binders"
     fun one_binder s = 

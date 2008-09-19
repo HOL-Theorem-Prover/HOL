@@ -47,6 +47,7 @@ sig
 
   datatype binder
      = LAMBDA
+     | TYPE_LAMBDA
      | BinderString of string
      | TypeBinderString of string
 

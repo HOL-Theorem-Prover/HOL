@@ -814,7 +814,7 @@ fun pp_term (G : grammar) TyG = let
     fun pr_abs tm = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
       val restr_binder =
-          find_partial (fn (b,s) => if b = LAMBDA then SOME s else NONE)
+          find_partial (fn (b,s) => if mem b [LAMBDA,TYPE_LAMBDA] then SOME s else NONE)
                        restr_binders
       val (bvars, body) = strip_vstructs NONE restr_binder tm
       val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
@@ -1788,6 +1788,9 @@ fun pp_term (G : grammar) TyG = let
                      NONE => pr_comb tm Rator Rand
                    | SOME LAMBDA =>
                        if isSome restr_binder_rule then pr_abs tm
+                       else pr_comb tm Rator Rand
+                   | SOME TYPE_LAMBDA =>
+                       if isSome restr_binder_rule then pr_tyabs tm
                        else pr_comb tm Rator Rand
                    | SOME (BinderString bs) =>
                          if isSome restr_binder_rule then

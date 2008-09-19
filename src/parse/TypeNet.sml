@@ -137,6 +137,18 @@ fun match ((net,sz), ty) = let
                 NONE => varresult
               | SOME n => trav varresult (n, rest @ tys)
             end
+          | TAB => let
+            in
+              case Binarymap.peek (d, lab) of
+                NONE => varresult
+              | SOME n => trav varresult (n, rest @ tys)
+            end
+          | TUN => let
+            in
+              case Binarymap.peek (d, lab) of
+                NONE => varresult
+              | SOME n => trav varresult (n, rest @ tys)
+            end
         end
       | _ => raise Fail "TypeNet.match: catastrophic invariant failure"
 in

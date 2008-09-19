@@ -347,16 +347,13 @@ val fupdate_specials_ty = type_grammar.fupdate_specials
 val fupdate_rules_ty    = type_grammar.fupdate_rules
 
 fun bare_lambda() = 
-    (temp_set_term_grammar (fupdate_specials (fupd_lambda (fn _ => ["\\"])) 
-                                             (term_grammar()));
+    (temp_set_term_grammar (fupdate_specials (fupd_lambda (fn _ => ["\\"]))
+                           (fupdate_specials (fupd_type_lambda (fn _ => ["\\:"])) 
+                                             (term_grammar())));
      temp_set_type_grammar (fupdate_specials_ty (fupd_lambda_ty (fn _ => ["\\"]))
                            (fupdate_specials_ty (fupd_forall_ty (fn _ => ["!"]))
                            (fupdate_rules_ty (fupd_binders_ty (fn sl => [Lib.last sl]))
                                              (type_grammar())))))
-
-fun bare_type_lambda() = 
-    temp_set_term_grammar (fupdate_specials (fupd_type_lambda (fn _ => ["\\:"]))
-                                            (term_grammar()))
 
 fun uchar "\\" = UChar.lambda
   | uchar "!"  = UChar.forall
@@ -365,16 +362,12 @@ fun uchar "\\" = UChar.lambda
 
 fun unicode_lambda () = 
     (temp_set_term_grammar (fupdate_specials (fupd_lambda (cons UChar.lambda))
-                                             (term_grammar()));
+                           (fupdate_specials (fupd_type_lambda (cons (UChar.lambda ^ ":")))
+                                             (term_grammar())));
      temp_set_type_grammar (fupdate_specials_ty (fupd_lambda_ty (cons UChar.lambda))
                            (fupdate_specials_ty (fupd_forall_ty (cons UChar.forall))
                            (fupdate_rules_ty (fupd_binders_ty (fn sl => cons (uchar (hd sl)) sl))
                                              (type_grammar())))))
-
-fun unicode_type_lambda () = 
-    temp_set_term_grammar (fupdate_specials (fupd_type_lambda (cons (UChar.lambda ^ ":")))
-                                            (term_grammar()))
-
 
 
 fun enable_all () = List.app enable_one (List.rev (!term_table))
@@ -382,11 +375,9 @@ fun disable_all () = List.app disable_one (!term_table)
 
 fun traceset n = if n = 0 then (master_unicode_switch := false;
                                 bare_lambda();
-                                bare_type_lambda();
                                 disable_all())
                  else (master_unicode_switch := true;
                        unicode_lambda();
-                       unicode_type_lambda();
                        enable_all())
 fun traceget () = if !master_unicode_switch then 1 else 0
 

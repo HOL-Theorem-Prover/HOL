@@ -83,8 +83,8 @@ val type_subst  : {redex : pretype, residue : pretype} list -> pretype -> pretyp
 
 val rename_typevars : pretype -> pretype
 val rename_tv : pretype -> (string * pretype) list ->
-           ((string * prekind) list * (string * pretype) list) ->
-           ((string * prekind) list * (string * pretype) list) * pretype option
+           (prerank list * (string * prekind) list * (string * pretype) list) ->
+           (prerank list * (string * prekind) list * (string * pretype) list) * pretype option
 val fromType : hol_type -> pretype
 val pretype_to_string : pretype -> string
 val remove_made_links : pretype -> pretype

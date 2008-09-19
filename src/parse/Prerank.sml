@@ -4,7 +4,6 @@ struct
 open HolKernel optmonad;
 infix >> >-;
 
-
 val TCERR = mk_HOL_ERR "Prerank";
 
  datatype prerank
@@ -17,13 +16,14 @@ fun eq (UVarrank (ref(SOME rk)))  rk'                         = eq rk rk'
   | eq rk                         (UVarrank (ref(SOME rk')))  = eq rk rk'
   | eq (Zerorank)                 (Zerorank)                  = true
   | eq (Sucrank rk)               (Sucrank rk')               = eq rk rk'
-  | eq (Maxrank(rk1,rk2))         rk                          = eq rk1 rk orelse eq rk2 rk
-  | eq rk                         (Maxrank(rk1,rk2))          = eq rk rk1 orelse eq rk rk2
-(*| eq (Maxrank(rk1,rk2))         (Maxrank(rk1',rk2'))        = eq rk1 rk1' andalso eq rk2 rk2'*)
+  | eq (rk' as Maxrank(rk1,rk2))  rk                          =
+           leq rk' rk andalso (eq rk1 rk orelse eq rk2 rk)
+  | eq rk                         (rk' as Maxrank(rk1,rk2))   =
+           leq rk rk' andalso (eq rk rk1 orelse eq rk rk2)
   | eq (UVarrank (r as ref NONE)) (UVarrank (r' as ref NONE)) = r=r'
   | eq _                          _                           = false
 
-fun leq (UVarrank (ref(SOME rk)))  rk'                         = leq rk rk'
+and leq (UVarrank (ref(SOME rk)))  rk'                         = leq rk rk'
   | leq rk                         (UVarrank (ref(SOME rk')))  = leq rk rk'
   | leq (Zerorank)                 _                           = true
   | leq (Sucrank rk)               (Sucrank rk')               = leq rk rk'
@@ -52,6 +52,8 @@ fun prerank_compare (UVarrank (r1 as ref NONE), UVarrank (r2 as ref NONE)) = EQU
                                              Lib.pair_compare(prerank_compare,prerank_compare)(p1,p2)
   | prerank_compare (Maxrank _,                 _)                         = GREATER
 
+fun new_uvar () = UVarrank(ref NONE)
+
 fun is_num_rank (Zerorank) = true
   | is_num_rank (Sucrank rk) = is_num_rank rk
   | is_num_rank _ = false
@@ -71,6 +73,36 @@ and prerank_to_string rk =
                       else prerank_to_string0 rk
 
 
+(*------------------------------------------------------------------------------*
+ * Passes over a rank, turning the (sole) rank variable into a fresh UVarrank.  *
+ * Since that variable is not modeled directly, all zeros are replaced instead. *
+ *------------------------------------------------------------------------------*)
+
+local fun replace env =
+        case env
+         of [] =>
+              let val r = new_uvar()
+              in ([r], SOME r)
+              end
+          | [r] => (env, SOME r)
+          | _ => raise TCERR "rename_rv" "extended rank environment"
+      (* fun replace env = (env, SOME Zerorank) *)
+in
+fun rename_rv rk =
+  case rk of
+    Zerorank => replace
+  | Sucrank (rk1) =>
+      rename_rv rk1 >- (fn rk1' =>
+      return (Sucrank(rk1')))
+  | Maxrank (rk1,rk2) =>
+      rename_rv rk1 >- (fn rk1' =>
+      rename_rv rk2 >- (fn rk2' =>
+      return (Maxrank(rk1',rk2'))))
+  | _ => return rk
+
+fun rename_rankvars rk = valOf (#2 (rename_rv rk []))
+end
+
 fun fromRank 0 = Zerorank
   | fromRank i = if i < 0 then raise TCERR "fromRank" "negative rank"
                  else Sucrank (fromRank (i-1))
@@ -79,6 +111,7 @@ fun uvars_of rk =
     case rk of
       UVarrank r => [r]
     | Sucrank rk => uvars_of rk
+    | Maxrank (rk1,rk2) => Lib.union (uvars_of rk1) (uvars_of rk2)
     | _ => []
 
 fun new_uvar () = UVarrank(ref NONE)
@@ -92,12 +125,43 @@ fun r ref_occurs_in value =
   | UVarrank (r' as ref NONE) => r = r'
   | UVarrank (r' as ref (SOME rk)) => r = r' orelse r ref_occurs_in rk
 
+(* ref_occurs_in_not_top only checks if the ref r appears below the top level,
+   that is, below the values being max-ed together. *)
+infix ref_occurs_in_not_top
+fun r ref_occurs_in_not_top value =
+  case value of
+    Zerorank  => false
+  | Sucrank rk => r ref_occurs_in rk
+  | Maxrank (rk1,rk2) => r ref_occurs_in_not_top rk1 orelse r ref_occurs_in_not_top rk2
+  | UVarrank (r' as ref NONE) => false
+  | UVarrank (r' as ref (SOME rk)) => r ref_occurs_in_not_top rk
+
 infix ref_equiv
 fun r ref_equiv value =
   case value of
     UVarrank (r' as ref NONE) => r = r'
   | UVarrank (r' as ref (SOME rk)) => r = r' orelse r ref_equiv rk
+  | Maxrank (rk1,rk2) => (r ref_equiv rk1 andalso leq rk2 rk1)
+                  orelse (r ref_equiv rk2 andalso leq rk1 rk2)
   | _ => false
+
+(* ref_remove deletes the uvar "r" from the top level of "value",
+   where the top level is the collection of values being max-ed together. *)
+infix ref_remove
+fun r ref_remove value =
+  case value of
+    UVarrank (r' as ref NONE) => if r = r' then NONE else SOME value
+  | UVarrank (r' as ref (SOME rk)) => if r = r' then NONE else r ref_remove rk
+  | Zerorank => SOME value
+  | Sucrank rk => (*SOME value*)
+                  let in case r ref_remove rk
+                           of NONE => NONE
+                            | SOME rk' => SOME (Sucrank rk') end
+  | Maxrank (rk1,rk2) => case r ref_remove rk1
+                           of NONE => r ref_remove rk2
+                            | SOME rk1' => case r ref_remove rk2
+                                             of NONE => SOME rk1'
+                                              | SOME rk2' => SOME (Maxrank(rk1',rk2'))
 
   fun has_free_uvar prk =
     case prk of
@@ -112,24 +176,33 @@ fun r ref_equiv value =
 (* but merge the two preranks using Maxrank.                 *)
 
 fun unsafe_bind_greater f r value =
-  if r ref_equiv value
+(*
+  if (* r ref_equiv value orelse *) r ref_occurs_in_top value
   then ok
-  else if r ref_occurs_in value
+  else
+*)
+  if r ref_occurs_in_not_top value
   then fail
-  else (fn acc =>
+  else case r ref_remove value
+        of NONE => ok
+         | SOME value' => (fn acc =>
          (((r, !r)::acc, SOME ())
           before r := SOME (case (!r) of
-                              SOME value0 => Maxrank(value0,value)
-                            | NONE => value)));
+                              SOME value0 => Maxrank(value0,value')
+                            | NONE => value')));
 
 fun unsafe_bind_less f r value =
-  if r ref_equiv value
+(*if r ref_equiv value
   then ok
-  else if r ref_occurs_in value
-  then fail
-  else case (!r) of
-          SOME value0 => f value0 value
-        | NONE => (fn acc => (((r, !r)::acc, SOME ()) before r := SOME value));
+  else *)
+  case r ref_remove value
+   of NONE => ok
+    | SOME value' =>
+      if r ref_occurs_in value'
+        then fail
+        else case (!r) of
+                SOME value0 => f value0 value'
+              | NONE => (fn acc => (((r, !r)::acc, SOME ()) before r := SOME value'));
                          
 
 
@@ -150,8 +223,10 @@ fun gen_unify bind_less bind_greater rk1 rk2 e = let
   val gen_unify = gen_unify bind_less bind_greater
 in
   case (rk1, rk2) of
-    (UVarrank r, _) => bind_less gen_unify r rk2
-  | (_, UVarrank r) => bind_greater gen_unify r rk1
+    (UVarrank (r as ref NONE), _) => bind_less gen_unify r rk2
+  | (UVarrank (r as ref (SOME rk1')), _) => gen_unify rk1' rk2
+  | (_, UVarrank (r as ref NONE)) => bind_greater gen_unify r rk1
+  | (_, UVarrank (r as ref (SOME rk2'))) => gen_unify rk1 rk2'
   | (Maxrank (r1,r2), _) => gen_unify r2 rk2 >> gen_unify r1 rk2 >> ok
   | (Zerorank, _) => ok
   | (Sucrank rk1, Sucrank rk2) => gen_unify rk1 rk2
@@ -183,7 +258,9 @@ local
                  of NONE => false
                   | SOME (_, v) => (r ref_equiv v) env
               end
-         | UVarrank (ref (SOME k)) => (r ref_equiv k) env
+         | UVarrank (r' as ref (SOME k)) => r=r' orelse (r ref_equiv k) env
+         | Maxrank (rk1,rk2) => ((r ref_equiv rk1) env andalso leq rk2 rk1)
+                         orelse ((r ref_equiv rk2) env andalso leq rk1 rk2)
          | _ => false
 
       fun (r ref_occurs_in value) env =
@@ -200,28 +277,78 @@ local
           | Maxrank (rk1,rk2) => (r ref_occurs_in rk1) env orelse
                                  (r ref_occurs_in rk2) env
           | _ => false
+
+(* ref_occurs_in_not_top only checks if the ref r appears below the top level,
+   that is, below the values being max-ed together. *)
+      fun (r ref_occurs_in_not_top value) env =
+        case value
+         of UVarrank (r' as ref NONE) =>
+              let in
+                case Lib.assoc1 r' env
+                 of NONE => false
+                  | SOME (_, v) => (r ref_occurs_in_not_top v) env
+              end
+          | UVarrank (r' as ref (SOME rk)) => (r ref_occurs_in_not_top rk) env
+          | Sucrank rk => (r ref_occurs_in rk) env
+          | Maxrank (rk1,rk2) => (r ref_occurs_in_not_top rk1) env orelse
+                                 (r ref_occurs_in_not_top rk2) env
+          | _ => false
+
+(* ref_remove deletes the uvar "r" from the top level of "value",
+   where the top level is the collection of values being max-ed together. *)
+      fun (r ref_remove value) env =
+        case value of
+          UVarrank (r' as ref NONE) =>
+            if r = r' then NONE
+            else
+              let in
+                case Lib.assoc1 r' env
+                 of NONE => SOME value
+                  | SOME (_, v) => (r ref_remove v) env
+              end
+        | UVarrank (r' as ref (SOME rk)) => if r = r' then NONE else (r ref_remove rk) env
+        | Zerorank => SOME value
+        | Sucrank rk => (*SOME value*)
+                  let in case (r ref_remove rk) env
+                           of NONE => NONE
+                            | SOME rk' => SOME (Sucrank rk') end
+        | Maxrank (rk1,rk2) =>
+                          case (r ref_remove rk1) env
+                           of NONE => (r ref_remove rk2) env
+                            | SOME rk1' => case (r ref_remove rk2) env
+                                             of NONE => SOME rk1'
+                                              | SOME rk2' => SOME (Maxrank(rk1',rk2'))
+
+
 in
 fun safe_bind_less unify r value env =
   case Lib.assoc1 r env
    of SOME (_, v) => unify v value env
     | NONE =>
-        if (r ref_equiv value) env then ok env else
-        if (r ref_occurs_in value) env then fail env
-        else ((r,value)::env, SOME ())
+        (* if (r ref_equiv value) env then ok env else *)
+        case (r ref_remove value) env
+         of NONE => ok env
+          | SOME value' =>
+        if (r ref_occurs_in value') env then fail env
+        else ((r,value')::env, SOME ())
 
 fun safe_bind_greater unify r value env =
   case Lib.assoc1 r env
    of SOME (_, v) => unify value v env
     | NONE =>
-        if (r ref_equiv value) env then ok env else
-        if (r ref_occurs_in value) env then fail env
-        else ((r,value)::env, SOME ())
+(*
+        if (* (r ref_equiv value) env orelse *) (r ref_occurs_in_top value) env
+        then ok env else
+*)
+        if (r ref_occurs_in_not_top value) env then fail env
+        else case (r ref_remove value) env
+              of NONE => ok env
+               | SOME value' => ((r,value)::env, SOME ())
 end
 
 
 fun safe_unify t1 t2 = gen_unify safe_bind_less safe_bind_greater t1 t2
 
-(* needs changing *)
 fun apply_subst subst prk =
   case prk of
     Zerorank => prk
@@ -249,7 +376,6 @@ fun set_null_to_default r (used_so_far:string list) =
     (used_so_far, SOME ())
   end
 
-(* needs changing *)
 (* eta-expansion (see "env" after end below) *is* necessary *)
 fun replace_null_links rk env = let
 in

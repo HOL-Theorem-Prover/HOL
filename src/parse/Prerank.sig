@@ -49,6 +49,10 @@ val safe_unify :
 
 val apply_subst : (prerank option ref * prerank) list -> prerank -> prerank
 
+(**)
+val rename_rv : prerank -> prerank list -> (prerank list * prerank option)
+val rename_rankvars : prerank -> prerank
+(**)
 val fromRank : int -> prerank
 val remove_made_links : prerank -> prerank
 val replace_null_links : prerank -> string list -> string list * unit option

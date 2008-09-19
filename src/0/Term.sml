@@ -478,9 +478,9 @@ fun create_const errstr (const as (r,GRND pat)) Ty =
                                      ^ " does not match " ^ type_to_string Ty)
   | create_const errstr (const as (r,POLY pat)) Ty =
      ((case Type.raw_kind_match_type pat Ty (([],[]),([],[]),0)
-        of (([],_),([],_),0) => Const const
-         | ((S,[]),([],_),0) => Const(r, if ground S then GRND Ty else POLY Ty)
-         | ((S, _),( _,_),_) => Const(r,POLY Ty))
+        of (([],_),([],[]),0) => Const const
+         | ((S,[]),([],[]),0) => Const(r, if ground S then GRND Ty else POLY Ty)
+         | ((S, _),( _, _),_) => Const(r, POLY Ty))
         handle HOL_ERR _ => Raise (ERR errstr
              (String.concat["Not a type instance: ", KernelSig.id_toString r,
                                " cannot have type ", type_to_string Ty])))
