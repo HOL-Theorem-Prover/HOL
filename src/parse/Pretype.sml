@@ -44,11 +44,13 @@ fun tylocn (PT(_,locn)) = locn
 val eq_kind = Prekind.eq
 val eq_rank = Prerank.eq
 
-fun eq_tyvar (s,kd,rk) (s',kd',rk') = s=s' andalso eq_kind kd kd' andalso eq_rank rk rk'
+fun eq_tyvar (s,kd,rk) (s',kd',rk') = s=s' (*andalso eq_kind kd kd' andalso eq_rank rk rk'*)
 
 fun Vartype_of0 (Vartype v) = v
-  | Vartype_of0 (TyKindConstr{Ty=ty, Kind=kd}) = Vartype_of ty
-  | Vartype_of0 (TyRankConstr{Ty=ty, Rank=rk}) = Vartype_of ty
+  | Vartype_of0 (TyKindConstr{Ty, Kind}) =
+       let val (s,kd,rk) = Vartype_of Ty in (s,Kind,rk) end
+  | Vartype_of0 (TyRankConstr{Ty, Rank}) =
+       let val (s,kd,rk) = Vartype_of Ty in (s,kd,Rank) end
   | Vartype_of0 _ = raise TCERR "Vartype_of" "not a variable or a kind or rank constraint"
 and Vartype_of (PT(ty,locn)) = Vartype_of0 ty;
 
@@ -424,18 +426,14 @@ and pretypes_to_string0 [ty] = pretype_to_string ty
  *    Replace arbitrary subpretypes in a pretype. Renaming.                  *
  *---------------------------------------------------------------------------*)
 
-val emptysubst:(pretype,pretype)Binarymap.dict = Binarymap.mkDict compare
+fun compare_eq (pty1,pty2) = if eq pty1 pty2 then EQUAL else compare(pty1,pty2)
+
+val emptysubst:(pretype,pretype)Binarymap.dict = Binarymap.mkDict compare_eq
 local
   open Binarymap
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
-      addb t (if true (* Prerank.leq (prank_of residue) (prank_of redex) *)
-                      (* ignore rank for now; should we unify these ranks? *)
-              then (insert(A,redex,residue),
-                    is_var_type redex andalso b)
-              else raise ERR "type_subst" ("redex has lower rank than residue:\n" ^
-                           "redex   : " ^ pretype_to_string redex ^ "\n" ^
-                           "residue : " ^ pretype_to_string residue))
+      addb t (insert(A,redex,residue), is_var_type redex andalso b)
   fun variant_ptype fvs v = if is_var_type v then variant_type fvs v else v
   (* fun unloc_of (PT(ty,loc)) = ty *)
 in
@@ -515,49 +513,40 @@ local
 val BERR = ERR "beta_conv_ty" "not a type beta redex"
 in
 fun beta_conv_ty (PT(TyApp(M, N), _))
-       = let val _ = if not (is_debug()) then () else
+       = let
+(*           val _ = if not (is_debug()) then () else
                      print ("beta_conv_ty: M = " ^ pretype_to_string M ^ "\n"
                           ^ "              N = " ^ pretype_to_string N ^ "\n")
+*)
              val (Bnd,Body) = dest_abs_type (the_abs_type M)
                               handle HOL_ERR _ => raise BERR
+(*
              val _ = if not (is_debug()) then () else
                      print ("beta_conv_ty: Bnd  = " ^ pretype_to_string Bnd  ^ "\n"
                           ^ "              Body = " ^ pretype_to_string Body ^ "\n")
+*)
              val  Bvar      = the_var_type Bnd
                               handle HOL_ERR _ => raise BERR
+(*
              val _ = if not (is_debug()) then () else
                      print ("beta_conv_ty: Bvar = " ^ pretype_to_string Bvar ^ "\n")
+*)
              val _ = Prekind.unify (pkind_of N) (pkind_of Bvar);
              val _ = Prerank.unify (prank_of N) (prank_of Bvar);
+(*
              val _ = if not (is_debug()) then () else
                      print ("beta_conv_ty: kind and rank unified; about to subst\n");
+*)
              val Res = type_subst [Bvar |-> N] Body
                        handle e => Raise e
+(*
              val _ = if not (is_debug()) then () else
                      print ("beta_conv_ty: Res  = " ^ pretype_to_string Res ^ "\n")
+*)
          in Res
          end
   | beta_conv_ty _ = raise BERR
 end
-
-(* old version:
-local
-  fun conv0 ty =
-    case ty of
-      TyApp(Opr,Ty) => TyApp(conv Opr, conv Ty)
-    | TyUniv(Btyvar,Body) => TyUniv(Btyvar, conv Body)
-    | TyAbst(Btyvar,Body) => TyAbst(Btyvar, conv Body)
-    | TyKindConstr{Ty,Kind} => TyKindConstr{Ty=conv Ty,Kind=Kind}
-    | TyRankConstr{Ty,Rank} => TyRankConstr{Ty=conv Ty,Rank=Rank}
-    | UVar (r as ref (SOMEU ty1)) => (* (r := SOMEU (conv ty1); ty) *)
-                                     let val PT(ty0,_) = conv ty1 in ty0 end
-    | _ => ty  (* i.e., a variable or a const *)
-  and conv (ty as PT(ty0, locn)) = conv (beta_conv_ty ty)
-                                   handle HOL_ERR _ => PT(conv0 ty0, locn)
-in
-val deep_beta_conv_ty = conv
-end
-*)
 
 exception UNCHANGEDTY;
 
@@ -988,11 +977,11 @@ in
        gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2))
   | (_, TyApp(ty21, ty22 as PT(Vartype _,_))) =>
        gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn1)) ty21
+(*
   | (TyApp(ty11 as PT(UVar (ref (NONEU _)),_), ty12), _) =>
        gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2))
   | (_, TyApp(ty21 as PT(UVar (ref (NONEU _)),_), ty22)) =>
        gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn1)) ty21
-(*
   | (TyApp(ty11 as PT(UVar (ref (NONEU _)),_), ty12 as PT(Vartype _,_)), _) =>
        gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2))
   | (_, TyApp(ty21 as PT(UVar (ref (NONEU _)),_), ty22 as PT(Vartype _,_))) =>
