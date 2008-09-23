@@ -33,16 +33,36 @@ val gen_unify :
    (prerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
   ((prerank -> prerank -> ('a -> 'a * unit option)) ->
    (prerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
+  ((prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (prerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
+  prerank -> prerank -> ('a -> 'a * unit option)
+val gen_unify_le :
+  ((prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (prerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
+  ((prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (prerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
   prerank -> prerank -> ('a -> 'a * unit option)
 val unify : prerank -> prerank -> unit
+val unify_le : prerank -> prerank -> unit
 val can_unify : prerank -> prerank -> bool
+val can_unify_le : prerank -> prerank -> bool
 
 val unsafe_unify :
   prerank -> prerank ->
   ((prerank option ref * prerank option) list ->
    (prerank option ref * prerank option) list * unit option)
 
+val unsafe_unify_le :
+  prerank -> prerank ->
+  ((prerank option ref * prerank option) list ->
+   (prerank option ref * prerank option) list * unit option)
+
 val safe_unify :
+  prerank -> prerank ->
+  ((prerank option ref * prerank) list ->
+   (prerank option ref * prerank) list * unit option)
+
+val safe_unify_le :
   prerank -> prerank ->
   ((prerank option ref * prerank) list ->
    (prerank option ref * prerank) list * unit option)

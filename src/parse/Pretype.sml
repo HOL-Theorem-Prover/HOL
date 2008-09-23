@@ -61,8 +61,8 @@ fun eq_varty   []      []    v v' = eq_tyvar v v'
 
 fun eq_env0 e1 e2 (Vartype v)                (Vartype v')              = eq_varty e1 e2 v v'
   | eq_env0 e1 e2 (Contype{Tyop=Tyop, Thy=Thy, Kind=Kind, Rank=Rank })
-                  (Contype{Tyop=Tyop',Thy=Thy',Kind=Kind',Rank=Rank'}) = Tyop=Tyop' andalso Thy=Thy' andalso
-                                                                         eq_kind Kind Kind' andalso eq_rank Rank Rank'
+                  (Contype{Tyop=Tyop',Thy=Thy',Kind=Kind',Rank=Rank'}) = Tyop=Tyop' andalso Thy=Thy'
+                                                         andalso eq_kind Kind Kind' andalso eq_rank Rank Rank'
   | eq_env0 e1 e2 (TyApp(ty1,ty2))           (TyApp(ty1',ty2'))        = eq_env e1 e2 ty1 ty1' andalso eq_env e1 e2 ty2 ty2'
   | eq_env0 e1 e2 (TyUniv(ty1,ty2))          (TyUniv(ty1',ty2'))       =
           eq_env (Vartype_of ty1::e1) (Vartype_of ty1'::e2) ty2 ty2'
@@ -208,8 +208,10 @@ fun dest_con_type(PT(Contype v,loc)) = v
 fun mk_app_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyApp(ty1,ty2), locn.between loc1 loc2)
 
-fun dest_app_type(PT(UVar(ref(SOMEU ty)),loc)) = dest_app_type ty
-  | dest_app_type(ty as PT(TyApp(ty1,ty2),loc)) = (ty1,ty2)
+fun dest_app_type(PT(UVar(ref(SOMEU ty))  ,loc)) = dest_app_type ty
+  | dest_app_type(PT(TyKindConstr{Ty,Kind},loc)) = dest_app_type Ty
+  | dest_app_type(PT(TyRankConstr{Ty,Rank},loc)) = dest_app_type Ty
+  | dest_app_type(PT(TyApp(ty1,ty2)       ,loc)) = (ty1,ty2)
   | dest_app_type _ = raise TCERR "dest_app_type" "not a type application";
 
 fun mk_univ_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
@@ -236,7 +238,7 @@ fun dom_rng ty =
   let val (tyf,ty2) = dest_app_type ty
       val (ty0,ty1) = dest_app_type tyf
       val {Thy, Tyop, Kind, Rank} = dest_con_type ty0
-  in if Thy = "min" andalso Tyop = "fun" andalso Kind = Prekind.typ andalso Rank = Prerank.Zerorank
+  in if Thy = "min" andalso Tyop = "fun" andalso Kind = Prekind.mk_arity 2 andalso Rank = Prerank.Zerorank
      then (ty1,ty2)
      else raise ERR "" ""
   end
@@ -532,7 +534,7 @@ fun beta_conv_ty (PT(TyApp(M, N), _))
                      print ("beta_conv_ty: Bvar = " ^ pretype_to_string Bvar ^ "\n")
 *)
              val _ = Prekind.unify (pkind_of N) (pkind_of Bvar);
-             val _ = Prerank.unify (prank_of N) (prank_of Bvar);
+             val _ = Prerank.unify_le (prank_of N) (* <= *) (prank_of Bvar);
 (*
              val _ = if not (is_debug()) then () else
                      print ("beta_conv_ty: kind and rank unified; about to subst\n");
@@ -1296,17 +1298,37 @@ val fun_tyc0 = Contype{Tyop = "fun", Thy = "min",
 
 (* chase returns the effective range of an effective function type *)
 
-fun beta_conv_ty (PT(TyApp(PT(TyAbst(bv, body), _), arg), locn)) =
-    (type_subst [bv |-> arg] body
-     handle e as HOL_ERR _ =>  raise wrap_exn_loc "Pretype" "beta_conv_ty" locn e)
-  | beta_conv_ty (PT(_, locn)) = raise ERRloc "beta_conv_ty" locn "not a type beta redex"
+fun chase ty =
+  let val (dom,rng) = dom_rng ty
+                      handle HOL_ERR _ => dom_rng (deep_beta_conv_ty ty)
+  in rng
+  end
+  handle HOL_ERR _ => raise Fail ("chase applied to non-function type: " ^ pretype_to_string ty)
 
-fun chase (PT(TyApp(PT(TyApp(PT(tyc, _), _), _), ty), _)) =
-    if eq0 tyc fun_tyc0 then ty else raise Fail "chase applied to non-function type"
+(**)
+local
+fun CERR ty = Fail ("chase applied to non-function type: " ^ pretype_to_string ty)
+in
+fun chase (ty as PT(TyApp(PT(TyApp(PT(tyc, _), _), _), ty1), _)) =
+    if eq0 tyc fun_tyc0 then ty1 else raise CERR ty
   | chase (ty as PT(TyApp(PT(TyAbst(_, _), _), _), _)) =
-    (chase (beta_conv_ty ty) handle _ => raise Fail "chase applied to non-function type")
+    (chase (beta_conv_ty ty) handle _ => raise CERR ty)
+  | chase (PT(TyKindConstr{Ty,Kind}, _)) = chase Ty
+  | chase (PT(TyRankConstr{Ty,Rank}, _)) = chase Ty
   | chase (PT(UVar(ref (SOMEU ty)), _)) = chase ty
-  | chase _ = raise Fail "chase applied to non-function type"
+  | chase (ty as PT(UVar(r as ref (NONEU(kd,rk))), _)) =
+    if kd <> Prekind.typ then raise CERR ty
+    else let
+        val typ = Prekind.typ
+        val ty1 = new_uvar(typ,rk);
+        val ty2 = new_uvar(typ,rk);
+        val ty' = ty1 --> ty2
+     in r := SOMEU ty';
+        ty2
+    end
+  | chase ty = raise CERR ty
+end
+(**)
 
 
 (*---------------------------------------------------------------------------

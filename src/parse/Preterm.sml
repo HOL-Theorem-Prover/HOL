@@ -635,7 +635,8 @@ fun ptype_of (Var{Ty, ...}) = Ty
   | ptype_of (TyComb{Rator, Rand, ...}) =
       let val rator_ty = ptype_of Rator
       in let val (Bvar,Body) = Pretype.dest_univ_type rator_ty
-         in Pretype.type_subst [Bvar |-> Rand] Body
+             val Bvar1 = Pretype.the_var_type Bvar
+         in Pretype.type_subst [Bvar1 |-> Rand] Body
          end (*handle Feedback.HOL_ERR {origin_structure="Pretype",
                                       origin_function="dest_univ_type",message}
              => raise ERR "ptype_of" message*)
@@ -674,22 +675,25 @@ fun TC printers = let
           end
         | NONE => (Lib.say o default_tmprinter, Lib.say o default_typrinter, Lib.say o default_kdprinter)
   fun prk rk = Lib.say (Int.toString rk)
+  (* ptype_of should only be applied to preterms which have been checked. *)
   fun ptype_of (Var{Ty, ...}) = Ty
     | ptype_of (Const{Ty, ...}) = Ty
-    | ptype_of (Comb{Rator, ...}) = Pretype.chase (ptype_of Rator)
+    | ptype_of (Tm as Comb{Rator, ...}) = Pretype.chase (ptype_of Rator)
+                                          (* chase can fail if applied to a non-function type *)
     | ptype_of (TyComb{Rator, Rand, ...}) =
         let val rator_ty = ptype_of Rator
         in let val (Bvar,Body) = Pretype.dest_univ_type rator_ty
-           in Pretype.type_subst [Bvar |-> Rand] Body
+               val Bvar1 = Pretype.the_var_type Bvar
+           in Pretype.type_subst [Bvar1 |-> Rand] Body
            end
            handle Feedback.HOL_ERR {origin_structure="Pretype",
                                     origin_function="dest_univ_type",message}
        => let val tmp = !Globals.show_types
               val _ = Globals.show_types := true
               val Rator_ty = Pretype.toType (ptype_of Rator)
-                         handle e => raise (wrap_exn "Preterm" "ptype_of.TyComb" e)
+                             handle e => raise (wrap_exn "Preterm" "ptype_of.TyComb" e)
               val Rator' = to_term (overloading_resolution0 Rator)
-                handle e => (Globals.show_types := tmp; raise e)
+                           handle e => (Globals.show_types := tmp; raise e)
               val Pretype.PT(_,rand_locn) = Rand
               val Rand' = (Pretype.toType Rand
                            handle e => raise (wrap_exn "Preterm" "ptype_of.TyComb" e))
@@ -700,8 +704,8 @@ fun TC printers = let
             ptm Rator';
             Lib.say ("\n\n"^locn.toString (locn Rator)^"\n\n");
 
-            if (is_atom Rator) then ()
-            else(Lib.say"which has type\n\n";
+            (*if (is_atom Rator) then ()
+            else*)(Lib.say"which has type\n\n";
                  pty(Term.type_of Rator');
                  Lib.say"\n\n");
 
@@ -755,27 +759,24 @@ fun TC printers = let
             raise ERRloc"typecheck" (locn Rand (* arbitrary *)) "failed"
           end)
     | check(TyComb{Rator, Rand, Locn}) =
-         (let val rator_ty = ptype_of Rator
-              val (bvar,body) = Pretype.dest_univ_type rator_ty
-                         handle HOL_ERR _ =>
-                         let open Pretype
-                             val s = "'a"
-                             val kd = Prekind.new_uvar()
-                             val rk = Prerank.new_uvar()
-                             val bvar = PT(Vartype(s,kd,rk),locn.Loc_None)
-                             val P = all_new_uvar()
-                         in (bvar, Pretype.mk_app_type(P,bvar))
-                         end
+         (check Rator;
+          checkkind Rand;
+          let open Pretype
+              val rator_ty = ptype_of Rator
+              val (bvar,body) = dest_univ_type rator_ty
+                                handle HOL_ERR _ => let
+                                     val s = "'a"
+                                     val kd = Prekind.new_uvar()
+                                     val rk = Prerank.new_uvar()
+                                     val bvar = PT(Vartype(s,kd,rk),locn.Loc_None)
+                                     val body = all_new_uvar()
+                                 in Pretype.unify rator_ty (mk_univ_type(bvar, body));
+                                    (bvar,body)
+                                 end
           in
-             check Rator;
-             checkkind Rand;
-             Pretype.unify (ptype_of Rator)
-                (Pretype.mk_univ_type(bvar, Pretype.all_new_uvar()));
-             Prekind.unify (Pretype.pkind_of Rand) (Pretype.pkind_of bvar);
-             Prerank.unify (Pretype.prank_of Rand) (* <= *) (Pretype.prank_of bvar)
+             Prekind.unify (pkind_of Rand) (pkind_of bvar);
+             Prerank.unify_le (prank_of Rand) (* <= *) (prank_of bvar)
           end
-    (*;Prekind.unify ((Pretype.pkind_of o fst o Pretype.dest_univ_type o ptype_of) Rator)
-       (Pretype.pkind_of Rand*)
        handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                      origin_function="unify",message})
        => let val tmp = !Globals.show_types
@@ -819,13 +820,13 @@ fun TC printers = let
                          handle e => raise (wrap_exn "Preterm" "check.TyComb4" e))
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
           in
-            Lib.say "\nType inference failure: unable to infer a type \
-                              \for the application of\n\n";
+            Lib.say "\nKind inference failure: unable to infer a type \
+                              \for the application of the term\n\n";
             ptm Rator';
             Lib.say ("\n\n"^locn.toString (locn Rator)^"\n\n");
 
-            if (is_atom Rator) then ()
-            else(Lib.say"which has type\n\n";
+            (*if (is_atom Rator) then ()
+            else*)(Lib.say"which has type\n\n";
                  pty(Term.type_of Rator');
                  Lib.say"\n\n");
 
@@ -857,14 +858,14 @@ fun TC printers = let
                          handle e => raise (wrap_exn "Preterm" "check.TyComb6" e))
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
           in
-            Lib.say "\nType inference failure: unable to infer a type \
+            Lib.say "\nRank inference failure: unable to infer a type \
                               \for the application of\n\n";
             ptm Rator';
             Lib.say ("\n\n"^locn.toString (locn Rator)^"\n\n");
 
             if (Type.is_univ_type Rator_ty') then
-                 if (is_atom Rator) then ()
-                 else(Lib.say"whose argument must have rank <= ";
+                 (*if (is_atom Rator) then ()
+                 else*)(Lib.say"whose argument must have rank <= ";
                       prk(Type.rank_of (#1 (Type.dest_univ_type Rator_ty')));
                       Lib.say"\n\n")
             else (Lib.say"which is not a universal type\n\n");

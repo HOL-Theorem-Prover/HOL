@@ -163,6 +163,30 @@ val ty2 = (fst o dest_tyabs o fst o dest_tycomb) tm2;
 val rank_check = if rank_of ty2 = 0 then "failure" else "success";
 val _ = print (rank_check ^ "\n\n");
 
+(* Checks of quantification over types of higher kind and higher rank *)
+
+val tm3 = ``!:'a:ar 2. T``;
+val tm4 = ``?:'b:ar 1 => ty. !x:list 'b. x = I x``;
+val tm5 = ``!:'a:<=3. T``;
+val tm6 = ``!:'a :ar 1 => ty :<=3. T``;
+val tm7 = ``!:'a:<=1. !x:!'b:<=1.'a. x [: bool :] = x [: 'a :]``;
+val tm8 = ``\:'a:<=1. !x:!'b:<=2.'a. x [: bool :] = x [: 'a # 'c:<=2 :]``;
+
+(* Checks of rank inference; commented out phrases should fail *)
+(*
+val ty9 = ``:\'a. 'a :<= 2 # 'a :<= 3``;
+val ty9 = ``:\'a. 'a :<= 3 # 'a :<= 2``;
+*)
+val tm9 = ``\:'a. \x. (x[: bool :]:'c, x[: !'b.'b->'b :])``;
+val tm10 = ``\:'a. \x:!'c.'c->'a. (x[: bool :], x[: !'b.'b->'b :])``;
+val tm11 = ``\:'a. \x:!'c.'c->'a. (x[: bool :], x[: !'b 'c.'c->'b :])``;
+val tm12 = ``\:'a. \x:!'c.'c->'a. (x[: !'b.'b->'b :], x[: bool :])``;
+val tm13 = ``\:'a. \x:!'c.'c->'a. (x[: !'b 'c.'c->'b :], x[: bool :])``;
+val tm14 = ``\:'a. \x:!'c.'c->'a. (x[: 'a :], x[: !'b 'c.'c->'b :])``;
+val tm15 = ``\:'a. \x:!'c.'c->'a. (x[: 'a :], x[: !'b 'c.'c->'b :], x[: 'd:<=5 :])``;
+val tm16 = ``\:'a. \x:!'c:<=5.'c->'a. (x[: 'a :], x[: !'b 'c.'c->'b :])``;
+val tm17 = ``\:'a. \x. (x[: 'a :]:'a->'a, x[: !'b 'c.'c->'b :], x[: 'd:<=4 :])``;
+
 
 
 val _ = set_trace "kinds" 2;

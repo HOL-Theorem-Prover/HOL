@@ -29,6 +29,7 @@ val eq : pretype -> pretype -> bool
 val --> : pretype * pretype -> pretype
 val dom_rng : pretype -> pretype * pretype
 val dest_var_type : pretype -> pretyvar
+val the_var_type : pretype -> pretype
 val mk_app_type : pretype * pretype -> pretype
 val dest_app_type : pretype -> pretype * pretype
 val mk_univ_type : pretype * pretype -> pretype
