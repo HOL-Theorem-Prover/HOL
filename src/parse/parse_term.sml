@@ -539,6 +539,9 @@ fun findpos P [] = NONE
   | findpos P (x::xs) = if P x then SOME(0,x)
                         else Option.map (fn (n,x) => (n + 1, x)) (findpos P xs)
 
+val syntax_error_trace = ref true
+val _ = Feedback.register_btrace ("syntax_error", syntax_error_trace)
+
 fun parse_term (G : grammar) typeparser = let
   val Grules = grammar_rules G
   val {type_intro, lambda, endbinding, restr_binders, res_quanop} = specials G
@@ -985,7 +988,8 @@ fun parse_term (G : grammar) typeparser = let
       else
         (WARNloc "parse_term" lrlocn "Can't do this sort of reduction"; fail)
     end
-  end handle Fail s => (print s; print "\n"; fail)
+  end handle Fail s => (if !syntax_error_trace then (print s; print "\n")
+                        else (); fail)
 
 
   val do_reduction =
@@ -1102,9 +1106,12 @@ fun parse_term (G : grammar) typeparser = let
           (case Polyhash.peek prec_matrix (top, input_term) of
              NONE => let
              in
-               print ("Don't expect to find a "^STtoString G input_term^
-                      " in this position after a "^STtoString G top^"\n"^
-                      locn.toString itlocn^" and "^ locn.toString toplocn^".\n");
+               if !syntax_error_trace then
+                 print ("Don't expect to find a "^STtoString G input_term^
+                        " in this position after a "^STtoString G top^"\n"^
+                        locn.toString itlocn^" and " ^ 
+                        locn.toString toplocn^".\n")
+               else ();
                fail
              end
            | SOME order => let
