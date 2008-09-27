@@ -51,7 +51,7 @@ val safe_unify :
   ((prekind option ref * prekind) list ->
    (prekind option ref * prekind) list * unit option)
 
-val apply_subst : (prekind option ref * prekind) list -> prekind -> prekind
+(*val apply_subst : (prekind option ref * prekind) list -> prekind -> prekind*)
 
 val rename_kv : prekind -> (string * prekind) list
                         -> ((string * prekind) list * prekind option)

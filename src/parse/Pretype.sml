@@ -424,25 +424,20 @@ and pretypes_to_string0 [ty] = pretype_to_string ty
   | pretypes_to_string0 [] = ""
 
 
-(*---------------------------------------------------------------------------*
- *    Replace arbitrary subpretypes in a pretype. Renaming.                  *
- *---------------------------------------------------------------------------*)
+(*------------------------------------------------------------------------------*
+ * Replace variable or unification variable subpretypes in a pretype. Renaming. *
+ *------------------------------------------------------------------------------*)
 
-fun compare_eq (pty1,pty2) = if eq pty1 pty2 then EQUAL else compare(pty1,pty2)
-
-val emptysubst:(pretype,pretype)Binarymap.dict = Binarymap.mkDict compare_eq
 local
-  open Binarymap
-  fun addb [] A = A
-    | addb ({redex,residue}::t) (A,b) =
-      addb t (insert(A,redex,residue), is_var_type redex andalso b)
-  fun variant_ptype fvs v = if is_var_type v then variant_type fvs v else v
-  (* fun unloc_of (PT(ty,loc)) = ty *)
+  fun variant_ptype fvs v = if is_var_type v then variant_type fvs v
+                            else (* v is a uvar, cannot be in fvs *) v
+  fun peek ([], x) = NONE
+    | peek ({redex=a, residue=b}::l, x) = if eq a x then SOME b else peek (l, x)
+  fun insert(theta,v,v') = (v |-> v')::theta
 in
 fun type_subst [] = I
   | type_subst theta =
     let val frees = type_vars_subst theta
-        val (fmap,b) = addb theta (emptysubst, true)
         fun vsubs0 fmap (v as Vartype _) =
                (case peek(fmap,PT(v, locn.Loc_None)) of
                                      NONE => v
@@ -463,26 +458,8 @@ fun type_subst [] = I
                end
           | vsubs0 fmap (TyAbst(Bvar,Body)) =
                let val Bvar1 = the_var_type Bvar
-(*
-                   val _ = if not(is_debug()) then () else
-                           print ("vsubs: Bvar1 = " ^
-                                  pretype_to_string Bvar1 ^ "\n")
-                   val _ = if not(is_debug()) then () else
-                           print ("vsubs: frees = " ^
-                                  pretypes_to_string frees ^ "\n")
-*)
                    val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
-(*
-                   val _ = if not(is_debug()) then () else
-                           print ("vsubs: fvs   = " ^
-                                  pretypes_to_string fvs ^ "\n")
-*)
                    val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
-(*
-                   val _ = if not(is_debug()) then () else
-                           print ("vsubs: Bvar' = " ^
-                                  pretype_to_string Bvar' ^ "\n")
-*)
                in if eq Bvar1 Bvar' then TyAbst(Bvar, vsubs fmap Body)
                   else let val fmap' = insert(fmap,Bvar1,Bvar')
                        in TyAbst(vsubs fmap' Bvar, vsubs fmap' Body)
@@ -495,19 +472,8 @@ fun type_subst [] = I
           | vsubs0 fmap (UVar (r as ref(SOMEU (PT(ty,_))))) = vsubs0 fmap ty
           | vsubs0 fmap t = t
         and vsubs fmap (PT(ty,locn)) = PT(vsubs0 fmap ty,locn)
-(*
-        fun subs ty =
-          case peek(fmap,ty)
-           of SOME residue => residue
-            | NONE =>
-              (case ty
-                of TyApp(opr,ty) => TyApp(subs opr, subs ty)
-                 | TyAll(Bvar,Body) => TyAll(Bvar,subs Body)
-                 | TyAbs(Bvar,Body) => TyAbs(Bvar,subs Body)
-                 | _ => ty)
-*)
     in
-      vsubs fmap (* (if b then vsubs else subs) *)
+      vsubs theta
     end
 end;
 

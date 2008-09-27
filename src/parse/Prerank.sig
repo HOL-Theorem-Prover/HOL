@@ -67,7 +67,7 @@ val safe_unify_le :
   ((prerank option ref * prerank) list ->
    (prerank option ref * prerank) list * unit option)
 
-val apply_subst : (prerank option ref * prerank) list -> prerank -> prerank
+(*val apply_subst : (prerank option ref * prerank) list -> prerank -> prerank*)
 
 (**)
 val rename_rv : prerank -> prerank list -> (prerank list * prerank option)
