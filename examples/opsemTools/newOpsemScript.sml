@@ -551,7 +551,7 @@ val DIV_AUX_def = xDefine "DIV_AUX" `m / n = m DIV n`;
 
 val _ =
  Hol_datatype
-  `value = Scalar of int | Array  of (int |-> int)`;
+  `value = Scalar of int | Array  of (num |-> int)`;
 
 (*---------------------------------------------------------------------------*)
 (* Program variables are represented by strings, and states are modelled by  *)
@@ -609,14 +609,19 @@ val _ =
 
 val _ =
  Hol_datatype
-  `aexp = ArrConst  of (int |-> int)           (* array constant *)
+  `aexp = ArrConst  of (num |-> int)           (* array constant *)
         | ArrVar    of string                  (* array variable *)
         | ArrUpdate of aexp => nexp => nexp`;  (* array update   *)
+
+(* Convert an integer to a natural number *)
+val num_of_int_def =
+ Define 
+  `num_of_int n = @m. (integer$int_of_num m) = ABS n`;
 
 val neval_def =  
  Define
   `(neval (Var v) s = ScalarOf(s ' v)) /\
-   (neval (Arr a e) s = (ArrayOf(s ' a) ' (neval e s))) /\
+   (neval (Arr a e) s = (ArrayOf(s ' a) ' (num_of_int(neval e s)))) /\
    (neval (Const c) s = c) /\
    (neval (Plus e1 e2) s = integer$int_add (neval e1 s) (neval e2 s)) /\
    (neval (Sub e1 e2) s = integer$int_sub (neval e1 s) (neval e2 s)) /\
@@ -639,7 +644,7 @@ val aeval_def =
    /\
    (aeval (ArrVar v) s = ArrayOf(s ' v))
    /\
-   (aeval (ArrUpdate a e1 e2) s = aeval a s |+ (neval e1 s, neval e2 s))`;
+   (aeval (ArrUpdate a e1 e2) s = aeval a s |+ (num_of_int(neval e1 s), neval e2 s))`;
 
 val Update_def =
  Define
