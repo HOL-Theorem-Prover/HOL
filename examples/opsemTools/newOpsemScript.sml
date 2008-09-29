@@ -613,15 +613,10 @@ val _ =
         | ArrVar    of string                  (* array variable *)
         | ArrUpdate of aexp => nexp => nexp`;  (* array update   *)
 
-(* Convert an integer to a natural number *)
-val num_of_int_def =
- Define 
-  `num_of_int n = @m. (integer$int_of_num m) = ABS n`;
-
 val neval_def =  
  Define
   `(neval (Var v) s = ScalarOf(s ' v)) /\
-   (neval (Arr a e) s = (ArrayOf(s ' a) ' (num_of_int(neval e s)))) /\
+   (neval (Arr a e) s = (ArrayOf(s ' a) ' (Num(neval e s)))) /\
    (neval (Const c) s = c) /\
    (neval (Plus e1 e2) s = integer$int_add (neval e1 s) (neval e2 s)) /\
    (neval (Sub e1 e2) s = integer$int_sub (neval e1 s) (neval e2 s)) /\
@@ -644,7 +639,7 @@ val aeval_def =
    /\
    (aeval (ArrVar v) s = ArrayOf(s ' v))
    /\
-   (aeval (ArrUpdate a e1 e2) s = aeval a s |+ (num_of_int(neval e1 s), neval e2 s))`;
+   (aeval (ArrUpdate a e1 e2) s = aeval a s |+ (Num(neval e1 s), neval e2 s))`;
 
 val Update_def =
  Define
