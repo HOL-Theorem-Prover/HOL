@@ -770,7 +770,7 @@ fun TC printers = let
                                      val rk = Prerank.new_uvar()
                                      val bvar = PT(Vartype(s,kd,rk),locn.Loc_None) (* choose either this or next line *)
                                      (*val bvar = new_uvar(kd,rk)*)
-                                     val body = all_new_uvar()
+                                     val body = mk_app_type(all_new_uvar(), bvar)
                                  in Pretype.unify rator_ty (mk_univ_type(bvar, body));
                                     (bvar,body)
                                  end

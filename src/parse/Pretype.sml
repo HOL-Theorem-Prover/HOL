@@ -182,6 +182,13 @@ fun ((ty1 as PT(_,loc1)) --> (ty2 as PT(_,loc2))) =
 fun is_var_type(PT(Vartype v,loc)) = true
   | is_var_type _ = false
 
+fun has_var_type(ty as PT(Vartype v,loc)) = true
+  | has_var_type(PT(TyKindConstr{Ty,Kind},loc)) = has_var_type Ty
+  | has_var_type(PT(TyRankConstr{Ty,Rank},loc)) = has_var_type Ty
+  | has_var_type(PT(UVar(ref(SOMEU ty)),loc))   = has_var_type ty
+  | has_var_type(ty as PT(UVar(ref(NONEU _)),loc)) = true
+  | has_var_type _ = false;
+
 fun dest_var_type(PT(Vartype v,loc)) = v
   | dest_var_type(PT(UVar(ref(SOMEU ty)),loc)) = dest_var_type ty
   | dest_var_type _ = raise TCERR "dest_var_type" "not a type variable";
@@ -431,6 +438,7 @@ and pretypes_to_string0 [ty] = pretype_to_string ty
 local
   fun variant_ptype fvs v = if is_var_type v then variant_type fvs v
                             else (* v is a uvar, cannot be in fvs *) v
+  val is_var_subst = Lib.all (fn {redex,residue} => has_var_type redex)
   fun peek ([], x) = NONE
     | peek ({redex=a, residue=b}::l, x) = if eq a x then SOME b else peek (l, x)
   fun insert(theta,v,v') = (v |-> v')::theta
@@ -472,8 +480,38 @@ fun type_subst [] = I
           | vsubs0 fmap (UVar (r as ref(SOMEU (PT(ty,_))))) = vsubs0 fmap ty
           | vsubs0 fmap t = t
         and vsubs fmap (PT(ty,locn)) = PT(vsubs0 fmap ty,locn)
+        fun subs fmap (ty as PT(ty0,locn)) =
+          case peek(fmap,ty)
+           of SOME residue => residue
+            | NONE =>
+              (case ty0
+                of TyApp(opr,ty) => PT(TyApp(subs fmap opr, subs fmap ty), locn)
+                 | TyUniv(Bvar,Body) =>
+                     let val Bvar1 = the_var_type Bvar
+                         val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
+                         val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
+                     in if eq Bvar1 Bvar' then PT(TyUniv(Bvar, subs fmap Body), locn)
+                        else let val fmap' = insert(fmap,Bvar1,Bvar')
+                             in PT(TyUniv(subs fmap' Bvar, subs fmap' Body), locn)
+                             end
+                     end
+                 | TyAbst(Bvar,Body) =>
+                     let val Bvar1 = the_var_type Bvar
+                         val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
+                         val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
+                     in if eq Bvar1 Bvar' then PT(TyAbst(Bvar, subs fmap Body), locn)
+                        else let val fmap' = insert(fmap,Bvar1,Bvar')
+                             in PT(TyAbst(subs fmap' Bvar, subs fmap' Body), locn)
+                             end
+                     end
+                 | TyKindConstr{Ty,Kind} =>
+                     PT(TyKindConstr{Ty=subs fmap Ty, Kind=Kind}, locn)
+                 | TyRankConstr{Ty,Rank} =>
+                     PT(TyRankConstr{Ty=subs fmap Ty, Rank=Rank}, locn)
+                 | UVar (r as ref(SOMEU ty)) => subs fmap ty
+                 | _ => ty)
     in
-      vsubs theta
+      (if is_var_subst theta then vsubs else subs) theta
     end
 end;
 
@@ -941,18 +979,30 @@ in
   | (_, TyRankConstr _) => gen_unify c2 c1 ty2 ty1
   | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
        gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()
+  | (TyApp(ty11, ty12), _) =>
+       ((the_var_type ty12; (* succeeds if ty12 is Var or UVar *)
+         gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2)))
+        handle HOL_ERR _ => (* ty12 is not a type variable *)
+        let val ty12v = new_uvar(pkind_of ty12,prank_of ty12)
+            val ty2' = type_subst [ty12 |-> ty12v] ty2 (* general subst *)
+        in gen_unify c1 c2 ty11 (PT(TyAbst(ty12v,ty2'),locn2))
+        end)
+  | (_, TyApp(ty21, ty22)) =>
+       ((the_var_type ty22; (* succeeds if ty22 is Var or UVar *)
+         gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn2)) ty21)
+        handle HOL_ERR _ => (* ty22 is not a type variable *)
+        let val ty22v = new_uvar(pkind_of ty22,prank_of ty22)
+            val ty1' = type_subst [ty22 |-> ty22v] ty1 (* general subst *)
+        in gen_unify c1 c2 (PT(TyAbst(ty22v,ty1'),locn2)) ty21
+        end)
+(*
   | (TyApp(ty11, ty12 as PT(Vartype _,_)), _) =>
        gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2))
   | (_, TyApp(ty21, ty22 as PT(Vartype _,_))) =>
        gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn1)) ty21
-(*
   | (TyApp(ty11 as PT(UVar (ref (NONEU _)),_), ty12), _) =>
        gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2))
   | (_, TyApp(ty21 as PT(UVar (ref (NONEU _)),_), ty22)) =>
-       gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn1)) ty21
-  | (TyApp(ty11 as PT(UVar (ref (NONEU _)),_), ty12 as PT(Vartype _,_)), _) =>
-       gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2))
-  | (_, TyApp(ty21 as PT(UVar (ref (NONEU _)),_), ty22 as PT(Vartype _,_))) =>
        gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn1)) ty21
 *)
   | (TyUniv(ty11, ty12), TyUniv(ty21, ty22)) =>
