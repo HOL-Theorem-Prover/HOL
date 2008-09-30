@@ -1659,6 +1659,7 @@ val NUM_OF_INT =
 	      GEN_TAC THEN REWRITE_TAC[Num, INT_INJ] THEN
 	      CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV SYM_CONV)) THEN
 	      REWRITE_TAC[SELECT_REFL]);
+val _ = computeLib.add_persistent_funs [("NUM_OF_INT", NUM_OF_INT)]
 
 val INT_OF_NUM =
     store_thm("INT_OF_NUM",
