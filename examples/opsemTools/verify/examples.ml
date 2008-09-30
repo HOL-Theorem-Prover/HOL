@@ -19,24 +19,6 @@ open newOpsemTheory bossLib pairSyntax intLib intSimps
 
 quietdec := false; (* turn printing back on *)
 
-(* Set up the compset for computeLib.EVAL *)
-add_funs
- [outcome_case_def,
-  outcome_case_if,
-  pair_case_if,
-  RUN,
-  STEP1,
-  FAPPLY_FUPDATE_THM,
-  FUPDATE_LIST_THM,
-  DOMSUB_FUPDATE_THM,
-  DOMSUB_FEMPTY,
-  FDOM_FUPDATE,
-  FAPPLY_FUPDATE_THM,
-  FDOM_FEMPTY,
-  pred_setTheory.IN_INSERT,
-  pred_setTheory.NOT_IN_EMPTY
- ];
-
 (* Cause assumptions and tags to be printed 
 show_assums := true;
 show_tags := true;

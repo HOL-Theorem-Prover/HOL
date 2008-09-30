@@ -32,7 +32,8 @@ val _ =
    FDOM_FEMPTY,
    pred_setTheory.IN_INSERT,
    pred_setTheory.NOT_IN_EMPTY,
-   ACC_STEP
+   ACC_STEP,
+   integerTheory.NUM_OF_INT
   ];
 
 (* 

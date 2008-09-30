@@ -541,6 +541,18 @@ val _ = clear_overloads_on "TC"; (* Stop TC R printing as TC^+ *)
 
 val _ = new_theory "newOpsem";
 
+val _ = computeLib.add_persistent_funs
+         [("finite_mapTheory.FUPDATE_LIST_THM",FUPDATE_LIST_THM),
+          ("finite_mapTheory.DOMSUB_FUPDATE_THM",DOMSUB_FUPDATE_THM),
+          ("finite_mapTheory.DOMSUB_FEMPTY",DOMSUB_FEMPTY),
+          ("finite_mapTheory.FDOM_FUPDATE",FDOM_FUPDATE),
+          ("finite_mapTheory.FAPPLY_FUPDATE_THM",FAPPLY_FUPDATE_THM),
+          ("finite_mapTheory.FDOM_FEMPTY",FDOM_FEMPTY),
+          ("pred_setTheory.IN_INSERT",pred_setTheory.IN_INSERT),
+          ("pred_setTheory.NOT_IN_EMPTY",pred_setTheory.NOT_IN_EMPTY),
+          ("integerTheory.NUM_OF_INT", integerTheory.NUM_OF_INT)
+         ];
+
 (* make infix ``$/`` equal to ``$DIV`` *)
 
 val DIV_AUX_def = xDefine "DIV_AUX" `m / n = m DIV n`;
@@ -1460,7 +1472,11 @@ val pair_case_if =
        THEN RW_TAC std_ss []]);
 
 (* Add to EVAL compset *)
-val _ = computeLib.add_funs[outcome_case_def,outcome_case_if,pair_case_if];
+val _ = computeLib.add_persistent_funs
+         [("outcome_case_def",outcome_case_def),
+          ("outcome_case_if",outcome_case_if),
+          ("pair_case_if",pair_case_if)
+         ];
 
 (* Technical theorem to make EVAL work with lists for executing STEP_LIST *)
 val CONS_if =
@@ -1521,7 +1537,7 @@ val RUN_BIND_RUN_RETURN =
    RW_TAC std_ss [RUN_BIND_RUN_RETURN_def,RUN_BIND_def,RUN_RETURN_def]);
 
 (* Add to EVAL compset *)
-val _ = computeLib.add_funs[CONS_if];
+val _ = computeLib.add_persistent_funs[("CONS_if",CONS_if)];
 
 (*===========================================================================*)
 (* Clocked big step evaluator                                                *)
@@ -1690,17 +1706,8 @@ val RUN =
     THEN RW_TAC arith_ss [RUN_def,RUN_BIND_def]);
 
 (* Tell EVAL about RUN and various properties of finite mape *)
-val _ = computeLib.add_funs
-         [RUN,
-          FAPPLY_FUPDATE_THM,
-          DOMSUB_FUPDATE_THM,
-          DOMSUB_FEMPTY,
-          FDOM_FUPDATE,
-          FAPPLY_FUPDATE_THM,
-          FDOM_FEMPTY,
-          pred_setTheory.IN_INSERT,
-          pred_setTheory.NOT_IN_EMPTY
-         ];
+
+val _ = computeLib.add_persistent_funs[("RUN",RUN)];
 
 (*===========================================================================*)
 (* Small step next-state function                                            *)
@@ -1768,7 +1775,7 @@ val STEP1 =
       THEN RW_TAC list_ss [STEP1_def]);
 
 (* Add to EVAL compset *)
-val _ = computeLib.add_funs [STEP1];
+val _ = computeLib.add_persistent_funs [("STEP1",STEP1)];
 
 (* Various lemmas follow -- I'm not sure they are all needed *)
 val SMALL_EVAL_IMP_STEP1 =
@@ -2524,7 +2531,7 @@ val ACC_STEP =
      THEN RW_TAC std_ss [ACC_STEP_def,ACC_STEP_BIND_def]);
 
 (* Add to EVAL compset *)
-val _ = computeLib.add_funs [ACC_STEP];
+val _ = computeLib.add_persistent_funs [("ACC_STEP",ACC_STEP)];
 
 val ACC_STEP_STEP =
  store_thm

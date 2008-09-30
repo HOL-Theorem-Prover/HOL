@@ -19,7 +19,7 @@ open newOpsemTheory bossLib pairSyntax intLib Omega intSimps
 
 quietdec := false; (* turn printing back on *)
 
-(* Set up the compset for computeLib.EVAL *)
+(* Set up the compset for computeLib.EVAL
 add_funs
  [outcome_case_def,
   outcome_case_if,
@@ -36,6 +36,7 @@ add_funs
   pred_setTheory.IN_INSERT,
   pred_setTheory.NOT_IN_EMPTY
  ];
+*)
 
 (* Cause assumptions and tags to be printed *)
 show_assums := true;
