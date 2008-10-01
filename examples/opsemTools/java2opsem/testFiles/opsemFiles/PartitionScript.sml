@@ -14,7 +14,7 @@ val MAIN_def =
   Define `MAIN =
     RSPEC
     (\state.
-      (ScalarOf (state ' "i")<ScalarOf (state ' "j"))/\(0<=ScalarOf (state ' "i"))/\(ScalarOf (state ' "i")<ScalarOf (state ' "aLength"))/\(0<=ScalarOf (state ' "j"))/\(ScalarOf (state ' "j")>ScalarOf (state ' "aLength")))
+      (ScalarOf (state ' "i")<ScalarOf (state ' "j"))/\(0<=ScalarOf (state ' "i"))/\(ScalarOf (state ' "i")<ScalarOf (state ' "aLength"))/\(0<=ScalarOf (state ' "j"))/\(ScalarOf (state ' "j")<ScalarOf (state ' "aLength")))
       (Seq
         (Assign "pivot"
           (Arr "a"

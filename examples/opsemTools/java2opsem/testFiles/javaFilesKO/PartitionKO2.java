@@ -16,7 +16,7 @@
 
 public class PartitionKO2 {
 
-    /*@ requires i<j && 0<=i && i<a.length && 0<=j && j>a.length;
+    /*@ requires i<j && 0<=i && i<a.length && 0<=j && j<a.length;
        ensures 
         (0<=\result && \result<a.length) &&
         (\forall int i; 0<=i && i<\result;a[i]<a[\result]) &&
