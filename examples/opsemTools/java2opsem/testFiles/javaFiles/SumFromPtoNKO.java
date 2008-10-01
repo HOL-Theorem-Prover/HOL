@@ -3,7 +3,7 @@
  * The result is the sum of the numbers from 0 to n
  * minus the sum of numbers from 0 to p.
  */
-public class SumFromPtoN {
+public class SumFromPtoNKO {
     /*@ requires (n >= 0) && (p<=n);
     @ ensures \result == n*(n+1)/2 - p*(p+1)/2;
     @*/

@@ -15,7 +15,7 @@ class ConditionnalSum {
 			s = n + k;		
 		}
 		else {
-			int i;
+			int i=0;
 			while (i <= n) {
 				s = s + i;
 				i = i + 1;			

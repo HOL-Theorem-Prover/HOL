@@ -112,7 +112,7 @@ val MAIN_def =
         )
       )
     (\state1 state2.
-      ((0<=ScalarOf (state2 ' "Result"))/\(ScalarOf (state2 ' "Result")<ScalarOf (state1 ' "aLength")))/\(!i . ((0<=i)/\(i<ScalarOf (state2 ' "Result")))==>(((ArrayOf (state2 ' "a") ' (i))<(ArrayOf (state2 ' "a") ' (ScalarOf (state2 ' "Result"))))))/\(!i . ((ScalarOf (state2 ' "Result")<i)/\(i<ScalarOf (state1 ' "aLength")))==>(((ArrayOf (state2 ' "a") ' (i))>=(ArrayOf (state2 ' "a") ' (ScalarOf (state2 ' "Result")))))))
+      ((0<=ScalarOf (state2 ' "Result"))/\(ScalarOf (state2 ' "Result")<ScalarOf (state1 ' "aLength")))/\(!i . ((0<=i)/\(i<Num(ScalarOf (state2 ' "Result"))))==>(((ArrayOf (state2 ' "a") ' (i))<(ArrayOf (state2 ' "a") ' (Num(ScalarOf (state2 ' "Result")))))))/\(!i . ((Num(ScalarOf (state2 ' "Result"))<i)/\(i<Num(ScalarOf (state1 ' "aLength"))))==>(((ArrayOf (state2 ' "a") ' (i))>=(ArrayOf (state2 ' "a") ' (Num(ScalarOf (state2 ' "Result"))))))))
     `
 
   val _ = export_theory();
