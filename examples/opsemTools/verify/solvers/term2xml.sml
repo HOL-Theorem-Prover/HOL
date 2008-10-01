@@ -110,7 +110,11 @@ fun parse_int(tm,i) =
              else indent(i) ^ "<ExprIntegerLiteral value=\"" ^ 
                   l ^ "\"/>\n"
          end
-  else 
+(*  else 
+   if newOpsemTheory.isArray(tm)
+   then (* todo *)
+      "<ArrayAccess>\n"*)
+   else
       if is_plus(tm)
       then
         let val c1 = parse_int(fst(dest_plus tm),i+1); 
@@ -291,7 +295,9 @@ fun print_opsemTerm(out,name,tm) =
     out(open_term(name));
     out(get_term(tm));
     out(close_term())
-   );
+   )
+   handle HOL_ERR s =>
+      print("Error in term2xml " ^ term_to_string(tm) ^"\n");
 
 (* to print xml into a file *)
 fun printXML_to_file(name,tm) =

@@ -72,16 +72,12 @@ Let (pre, path, state1,state2, post) be Boolean terms that represent:
 
 Let l be a list of terms that represent the instructions 
 of prog in the opSem syntax.
-Let state be a conjunction of equalities built from state2
-  (var_i = val_i) where var_i is a variable and 
-  val_i a numeral term which gives the current value
-  of variable var_i in state2
-Let valPre be the precodition evaluated on state1
-and valPost be the postcondition evaluated on  state1 and state2.
+Let valPre be the precondition evaluated on state1
+and valPost be the postcondition evaluated on state1 and state2.
 
 We assume that we have two functions:
-  - testPath:bool that tests is a path is feasible 
-  i.e (valPre /\ path /\ state) has a solution
+  - testPath:bool that tests if a path is feasible 
+  i.e (valPre /\ path) has a solution
   - verifyPath:outcome that verifies the correctness of the
   path
   i.e if (valPre /\ path /\ ~valPost) has NO solution
@@ -158,11 +154,16 @@ then:
 
 
 (* ============== Proof at the end of a path ==================
+Let valPre be the precondition evaluated on state1
+and valPost be the postcondition evaluated on state1 and 
+state2.
+Path is the accumulated path where each condition has been
+evaluated on the current state.
 
 At the end of each path we must show that:
-   (pre/\path/\state)==>post
+   (valPre/\path)==>valPost
 This is done by showing that
-   (pre/\path/\state)/\~post
+   (valPre/\path)/\~valPost
 is false.
 
 The current version performs this proof as follows:
@@ -223,6 +224,70 @@ Remarks:
 *)
 
 
+(* -------------------------------------------- *)
+(* Global variables and functions to build the solution:
+   - CSP solving time information
+   - number of conditions that have been evaluated as 
+     constants using EVAL 
+   - number of feasible paths that have been explored
+*) 
+(* -------------------------------------------- *)
+
+
+(* global variable and functions to manage
+   time of CSP calls *)
+(* -------------------------------------------- *)
+
+val CSPtime= ref 0.0;
+
+fun incCSPTime(t) = 
+   CSPtime := !CSPtime + t;
+
+(* global variable and functions to manage
+   the number of paths *)
+(* -------------------------------------------- *)
+
+val nbPath= ref 0;
+
+fun incPath() = 
+   nbPath := !nbPath + 1;
+
+(* global variable and functions to manage
+   the number of conditions that have been resolved
+   using EVAL *)
+(* -------------------------------------------- *)
+
+val nbResolvedCond = ref 0;
+
+fun incResolved() = 
+    nbResolvedCond:= !nbResolvedCond + 1;
+
+(* global variable and functions to manage
+   the number of paths that have been resolved
+   using SIMP_CONV and METIS *)
+(* -------------------------------------------- *)
+
+val nbResolvedPath = ref 0;
+
+fun incResolvedPath() = 
+  nbResolvedPath:= !nbResolvedPath + 1;
+
+
+(* global variable and functions to manage
+   results on the different paths *)
+(* -------------------------------------------- *)
+
+
+
+(* to reset the global variables at the end of an execution *)
+fun resetAll() = 
+  (CSPtime:=0.0;
+   nbPath:=0;
+   nbResolvedCond:=0;
+   nbResolvedPath:=0
+  );
+   
+
 (* -----------------------------------------------------
    Functions written by Mike Gordon to read a solution 
    computed by a CSP 
@@ -230,7 +295,7 @@ Remarks:
 *)
 
 
-open HolKernel Parse boolLib
+open HolKernel Parse boolLib arithmeticTheory (* to have BOUNDED_FORALL theorem *)
      newOpsemTheory bossLib pairSyntax intLib
      computeLib finite_mapTheory relationTheory stringLib
      term2xml;  (* added as printXML_to_file needed *)
@@ -341,131 +406,353 @@ fun isSolverTimeout l =
    fst(hd(hd(fst(l)))) = "Timeout";
 
 
-(*----------------------------------------------------- *)
-
-
-
+(*====================================== *)
 (* functions to generate symbolic states *)
-(* ------------------------------------- *)
+(* ===================================== *)
+
 
 (* take a term that corresponds to a program in opSem syntax
    and build a symbolic state that represents all 
    its variables *)
-(* From functions written by Mike Gordon in verifier.ml *)
+(* Functions  written by Mike Gordon in PATH_EVAL *)
+(* Have been modified to get also array variables *)
 
-(* Get set of string terms in a term *)
-(* Written by Mike Gordon in verifier.ml    *)
-fun get_strings tm =
- if is_string tm
-  then [tm] else
- if is_var tm orelse is_const tm
-  then [] else
- if is_comb tm
-  then union (get_strings(rator tm)) (get_strings(rand tm)) else
- if is_abs tm
-  then get_strings(body tm)
-  else (print "error in get_strings"; fail());
+(* Functions below return a pair ([var ident], [array ident]) *)
+(* ---------------------------------------------------------- *)
+
+(* Get set of variables read in a numerical expression (nexp) *)
+fun nexp_vars nex =
+ let val (opr,args) = strip_comb nex  (* syntax error if "op" instead of "opr" *)
+     val _ = if not(is_const opr)
+              then (print_term opr; 
+                    print " is not a constant\n"; 
+                    fail())
+              else ()
+     val name = fst(dest_const opr)
+     val _ = if not(mem name ["Var","Arr","Const","Plus","Times","Div","Sub","Min"])
+              then (print name; 
+                    print " is not an nexp constructor\n"; 
+                    fail())
+              else ()
+ in
+  case name of
+    "Var"      => ([el 1 args],[])
+  | "Arr"      =>  (fst (nexp_vars(el 2 args)),
+                    insert (el 1 args) (snd(nexp_vars(el 2 args))))
+  | "Const"    => ([],[])
+  | "Plus"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
+                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
+  | "Times"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
+                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
+  | "Sub"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
+                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
+  | "Div"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
+                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
+  | "Min"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
+                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
+  | _          => (print "BUG in nexp_vars! "; print name; fail())
+ end;
 
 
-(* from fun STATE_ELIM written by Mike Gordon in verifier.ml *)
-(* takes a list of term representing symbolic values
-   of variables (e.g ``("j",j)``) and returns a finite_Map*)
-fun makeStateFromPair l = 
-  if ((length l) = 1)
-  then ``(FEMPTY |+ ^(hd l)) ``
+
+(* Get set of variables read in a boolean expression (bexp) *)
+fun bexp_vars bex =
+ let val (opr,args) = strip_comb bex  (* syntax error if "op" instead of "opr" *)
+     val _ = if not(is_const opr)
+              then (print_term opr; 
+                    print " is not a constant\n"; 
+                    fail())
+              else ()
+     val name = fst(dest_const opr)
+     val _ = if not(mem name ["Equal","Less","LessEq","And","Or","Not"])
+              then (print name; 
+                    print " is not a bexp constructor\n"; 
+                    fail())
+              else ()
+ in
+  case name of
+   "Equal"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
+                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
+  | "Less"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
+                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
+  | "LessEq"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
+                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
+  | "And"     => (union (fst (bexp_vars(el 1 args))) (fst (bexp_vars(el 2 args)))
+                  , union (snd (bexp_vars(el 1 args))) (snd (bexp_vars(el 2 args))))
+  | "Or"     => (union (fst (bexp_vars(el 1 args))) (fst (bexp_vars(el 2 args)))
+                  , union (snd (bexp_vars(el 1 args))) (snd (bexp_vars(el 2 args))))
+  | "Not"      => bexp_vars(el 1 args)
+  | _          => (print "BUG in bexp_vars! "; print name; fail())
+ end;
+
+
+(* Get set of variables read or assigned to in a program *)
+fun program_vars c =
+ let val (opr,args) = strip_comb c  (* N.B. syntax error if "op" instead of "opr" *)
+     val _ = if not(is_const opr)
+              then (print_term opr; 
+                    print " is not a constant\n"; 
+                    fail())
+              else ()
+     val name = fst(dest_const opr)
+     val _ = if not(mem name ["Skip","Assign","ArrayAssign","Dispose","Seq",
+                              "Cond","While","Local","Assert"])
+              then (print name; 
+                    print " is not a program constructor\n"; 
+                    fail())
+              else ()
+ in
+  case name of
+    "Skip"     => ([],[])
+  | "Assign"   => (insert (el 1 args) (fst (nexp_vars(el 2 args))),
+                   snd (nexp_vars(el 2 args)))
+  | "ArrayAssign"   =>  ((union (fst (nexp_vars(el 2 args)))
+                              (fst (nexp_vars(el 3 args)))),
+			insert (el 1 args) 
+                               (union (snd (nexp_vars(el 2 args)))
+                                      (snd (nexp_vars(el 3 args)))))
+  | "Dispose"  => ([],[])
+  | "Seq"      => (union
+                   (fst (program_vars(el 1 args))) 
+                   (fst (program_vars(el 2 args))),
+		   union
+                   (snd (program_vars(el 1 args))) 
+                   (snd (program_vars(el 2 args))))
+  | "Cond"     => (union
+                   (fst (bexp_vars(el 1 args)))
+                   (union
+                     (fst (program_vars(el 2 args)))
+                     (fst (program_vars(el 3 args)))),
+		   union
+                   (snd (bexp_vars(el 1 args)))
+                   (union
+                     (snd (program_vars(el 2 args)))
+                     (snd (program_vars(el 3 args)))))
+
+  | "While"    => (union (fst (bexp_vars(el 1 args))) 
+                         (fst (program_vars(el 2 args))),
+		   union (snd (bexp_vars(el 1 args))) 
+                         (snd (program_vars(el 2 args))))
+  | "Local"    => ([],[])
+  | "Assert"   => ([],[])
+  | _          => (print "BUG in program_vars! "; print name; fail())
+ end;
+
+
+(* ==================================== *)
+(* functions to make the initial state *)
+val MAX_ARRAY_SIZE = 10;
+
+local
+
+(* to know if a variable is the length of an array *)
+
+
+fun isArraylength tm =
+  let val s = fromHOLstring tm
+  in  
+     if (size s) > 6
+     then 
+       String.extract (s,(size s) -6, NONE) = "Length"
+     else false
+  end;
+
+in
+
+(* 
+Construct: FEMPTY |++ [("v1",v1);...;("vn",vn)]
+where v1,...,vn are the integer variables read or written in c
+
+TODO: build the length of the array from preconditions
+*)
+
+fun varPairs vars =
+  let val maxTerm = term_of_int(Arbint.fromInt(MAX_ARRAY_SIZE))
+  in
+    map 
+      (fn tm => 
+         if isArraylength tm
+         then ``(^tm,Scalar ^maxTerm)``
+         else
+           ``(^tm, Scalar ^(mk_var(fromHOLstring tm,``:int``)))``)
+    vars
+  end
+
+end;
+
+
+(* 
+Construct a pair (name,value) where name is the name of an array variable
+and (value) is a finite_map that represents symbolic initial value of the array.
+assuming that the maximum array size is MAX_ARRAY_SIZE.
+
+FEMPTY |++ [("v1",(FEMPTY |++ (0,v1_0) |+ (1,v1_1) |+ ...
+   |+ (MAX_ARRAY_SIZE-1,v1_MAX_ARRAY_SIZE-1));...;("vn",(FEMPTY |++ (0,vn_0) |+ (1,vn_1) |+ ...
+   |+ (MAX_ARRAY_SIZE,vn_MAX_ARRAY_SIZE-1))]
+where v1,...,vn are the array variables read or written in c.
+
+*)
+
+local
+
+fun generateValues(n,l) =
+  let val symbVal = mk_var(n ^ "_"  ^ Int.toString(l),``:int``);
+  in
+  if (l=0)
+  then ``(FEMPTY |+ (0:num,^symbVal))``
   else
-      let 
-        val map = makeStateFromPair (tl l);
-      in
-         ``^map |+ ^(hd l)``
-end;
-
-fun makeState spec = 
- let val (_,args) = strip_comb spec;
-     val (_,tm,_) = (el 1 args, el 2 args, el 3 args)
-     val var_tms = get_strings tm
-     val pairs = map 
-                  (fn tm => pairSyntax.mk_pair
-                      let val v = mk_var(fromHOLstring tm,``:int``)
-                      in 
-		      (tm,``Scalar ^v``)
-			end
-		  )
-                  var_tms
- in         
-   makeStateFromPair pairs
+    let
+        val arr = generateValues(n,l-1);
+    in
+      ``^arr |+ (^(numSyntax.mk_numeral(Arbnum.fromInt(l))),^symbVal)``
+    end
 end;
 
 
-
-(* -------------------------------------------- *)
-(* Global variable and functions to build the solution:
-   - CSP solving time information
-   - number of conditions that have been evaluated as 
-     constants using EVAL 
-   - number of feasible paths that have been explored
-   - list of outcome for each path in the program
-*) 
-(* -------------------------------------------- *)
+fun generateArray(n) =
+  let val values = generateValues(n,MAX_ARRAY_SIZE-1);
+      val nt = stringSyntax.fromMLstring(n);
+  in
+    ``(^nt, Array(^values))``
+end;
 
 
-(* global variable and functions to manage
-   time of CSP calls *)
-(* -------------------------------------------- *)
+in
 
-val CSPtime= ref 0.0;
+fun arrayPairs vars =
+ map 
+   (fn tm => generateArray(fromHOLstring(tm)))
+ vars
 
-fun incCSPTime(t) = 
-   CSPtime := !CSPtime + t;
-
-(* global variable and functions to manage
-   the number of paths *)
-(* -------------------------------------------- *)
-
-val nbPath= ref 0;
-
-fun incPath() = 
-   nbPath := !nbPath + 1;
-
-(* global variable and functions to manage
-   the number of conditions that have been resolved
-   using EVAL *)
-(* -------------------------------------------- *)
-
-val nbResolvedCond = ref 0;
-
-fun incResolved() = 
-    nbResolvedCond:= !nbResolvedCond + 1;
-
-(* global variable and functions to manage
-   the number of paths that have been resolved
-   using SIMP_CONV and METIS *)
-(* -------------------------------------------- *)
-
-val nbResolvedPath = ref 0;
-
-fun incResolvedPath() = 
-  nbResolvedPath:= !nbResolvedPath + 1;
-
-
-(* global variable and functions to manage
-   results on the different paths *)
-(* -------------------------------------------- *)
+end;
 
 
 
-(* to reset the global variables at the end of an execution *)
-fun resetAll() = 
-  (CSPtime:=0.0;
-   nbPath:=0;
-   nbResolvedCond:=0;
-   nbResolvedPath:=0
-  );
-   
+(* main function to create the state *)
+(* --------------------------------- *)
+(* for each array "arr", add an int variable "arrLength"
+   that corresponds to arr.length *)
+(* if the length of the array is given in the precondition,
+   then it is fixed to this value, else it is fixed to
+   MAX_ARRAY_SIZE *)
 
-(* -------------------------------------------- *)
+local
+
+(* add a variable xxxLength for each array xxx 
+   in the list of int variables *)
+fun addArrLength varNames arrNames =
+ if arrNames = []
+ then varNames
+ else 
+   List.concat(
+    (map 
+      (fn tm => 
+        insert 
+        (stringSyntax.fromMLstring(fromHOLstring(tm)^ "Length"))
+        varNames
+      )
+      arrNames));
+
+(* TODO 
+fun  getArrayLength pre =
+    take the precondition and return a list of pairs 
+   ("arrLength", val) where val is the length of array arr
+   given in the precondition or is MAX_ARRAY_SIZE if no information is
+   given in the precondition *)
+
+
+in
+
+(* the length of the arrays are fixed to MAX_ARRAY_SIZE *)
+fun makeState c = 
+  let val names = program_vars c;
+    val varNames = fst names;
+    val arrNames = snd names;
+    val varAndLengthNames = addArrLength varNames arrNames;
+(*    val lengthValue = getArrayLength pre *)
+    val vars = varPairs varAndLengthNames;
+    val arrayVars = arrayPairs arrNames
+  in
+ ``FEMPTY |++ ^(listSyntax.mk_list(vars@arrayVars,``:string#value``))``
+  end;
+end;
+
+
+
+
+(* end of functions to generate symbolic states *)
+(* ============================================ *)
+
+
+(* functions to simplify finite_maps *)
+(* --------------------------------- *)
+
+(* Test if a term is FEMPTY or of the form FEMPTY |+ (x1,y1) .... |+ (xn,yn) *)
+fun is_finite_map fm =
+ (is_const fm andalso fst(dest_const fm) = "FEMPTY")
+ orelse (let val (opr,args) = strip_comb fm
+         in
+          is_const opr 
+          andalso fst(dest_const opr) = "FUPDATE"
+          andalso (length args = 2)
+          andalso is_finite_map(el 1 args)
+          andalso is_pair(el 2 args)
+         end);
+
+
+(* Remove overwritten entries in a finite map *)
+fun PRUNE_FINITE_MAP_CONV  fm =
+ if not(is_finite_map fm) orelse 
+    (is_const fm andalso fst(dest_const fm) = "FEMPTY")
+  then REFL fm
+  else (REWR_CONV FUPDATE_PRUNE 
+         THENC RATOR_CONV(RAND_CONV(EVAL THENC PRUNE_FINITE_MAP_CONV)))
+       fm;
+
+fun pruneState st =
+  snd(dest_comb(concl(PRUNE_FINITE_MAP_CONV  st)));
+
+
+
+
+
+(*================================================== *)
 (* functions to do symbolic simplifications on terms *)
-(* -------------------------------------------------- *)
+(*================================================== *)
+
+(* functions to transform JML bounded forall statement *)
+(* --------------------------------------------------  *)
+
+(* conversion rule to rewrite a bounded for all term
+   as a conjunction *) 
+fun boundedForALL_ONCE_CONV tm =
+ let val (vars,body) = strip_forall tm
+     val (ant,con) = dest_imp body
+     val (_,[lo,hi]) = strip_comb ant
+ in
+  if hi = Term(`0:num`)
+   then (EVAL THENC SIMP_CONV std_ss []) tm
+   else CONV_RULE
+         (RHS_CONV EVAL)
+         (BETA_RULE
+          (SPEC
+            (mk_abs(lo,con))
+            (Q.GEN `P` (CONV_RULE EVAL (SPEC hi BOUNDED_FORALL_THM)))))
+ end;                                                                                                                                    
+
+val boundedForAll_CONV =
+ TOP_DEPTH_CONV boundedForALL_ONCE_CONV THENC REWRITE_CONV [];                                                                           
+
+(* take a term t and converts it according to
+    boundedForAll_CONV *)
+fun rewrBoundedForAll tm =
+  let val convTm = boundedForAll_CONV tm
+  in 
+    snd(dest_comb(concl(convTm)))
+  end
+  handle UNCHANGED => tm;
+
+
 (* function to eliminate  ``T`` from conjunctions. 
    It is required because the current Java implementation
    that takes a XML tree to build the CSP
@@ -570,11 +857,13 @@ fun NOT_CONJ_IMP_CONV tm =
                 (RAND_CONV(RAND_CONV NOT_CONJ_IMP_CONV))
                 (SPECL [tm2,tm3] DE_MORGAN_AND_THM)
         end
-      else mk_thm([],``^tm = ^tm``)
+      else REFL tm
+        (*mk_thm([],``^tm = ^tm``)*)
   end
   handle HOL_ERR t  => 
      (print "HOL_ERR in NOT_CONJ_IMP_CONV";
-      mk_thm([],``^tm = ^tm``)
+      REFL tm
+      (* mk_thm([],``^tm = ^tm``)*)
      )
 end;
 
@@ -630,7 +919,7 @@ fun distributeAndRefute tm ld =
    (fn t => 
       let val c = mk_conj(tm,t)
        in
-         (print("Term to be refuted with METIS " 
+         (print("\nTerm to be refuted with METIS " 
                 ^ term_to_string(c) ^ "\n"); 
 	  refute c;
           ``F``
@@ -639,7 +928,10 @@ fun distributeAndRefute tm ld =
            (print "METIS failed\n";
             print("Trying to simplify with SIMP_CONV and OMEGA_CONV\n" 
                 ^ term_to_string(c) ^ "\n"); 
-            snd(dest_comb(concl(SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] c)))
+            let val res = snd(dest_comb(concl(SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] c)))
+            in 
+               res
+            end
             )
             handle UNCHANGED => 
             (print "Term unchanged\n";
@@ -680,25 +972,7 @@ end;
    and verify that the program satisfies its specification
    at the end of the path *)
    ===================================================== *)
-
-
-(* -------------------------------------------*)
-(* function to transform a finite map that represents
-   a state as a term.
-   Let fm a finite map of pairs (varName_i, value_i).
-   mk_term_from_state  builds the conjunction of terms 
-       ``varName_i=value_i``
-   for each variable i
-   NB: only the last values of variables are considered 
-  *)
-(* ------------------------------------------ *)
-local
-
-(* to test if a finite map is empty *)
-fun isEmpty fm = 
-   is_const(fm) andalso fst(dest_const(fm))="FEMPTY"
-;
-
+(*
 (* to make a term that is the equality of 
    a pair (var_i,val_i) where var_i is a variable in 
    the program and val_i is its last value 
@@ -710,7 +984,28 @@ fun termVarState vst =
   in
     mk_eq(mk_var(fromHOLstring n,``:int``),scal)
   end;
+*)
 
+(* -------------------------------------------*)
+(* function to transform a finite map that represents
+   a state as a term.
+   Let fm a finite map of pairs (varName_i, value_i).
+   mk_term_from_state  builds the conjunction of terms 
+       ``varName_i=value_i``
+   for each variable i
+   NB: only the last values of variables are considered 
+  *)
+(* ------------------------------------------ *)
+(* local
+
+(* to test if a finite map is empty *)
+fun isEmpty fm = 
+   is_const(fm) andalso fst(dest_const(fm))="FEMPTY"
+;
+
+
+(* fst(dest_comb(v))=``Array``;
+EVAL ``ScalarOf ^v``; *)
 
 (* To build the conjunction of equalities var_i=val_i
    from a finite map that contains pairs (var_i,val_i)
@@ -744,8 +1039,7 @@ in
 fun termFromState fm =
    termFromFiniteMap fm []
 end;
-
-
+*)
 
 (* ------------------------------------------ *)
 (* to test if a path is possible *)
@@ -760,8 +1054,10 @@ end;
  *)
 (* ------------------------------------------ *)
 fun testPath name pre path st =
- let val sttm = termFromState(st); 
-   val conj = mk_conj(pre,mk_conj(path,sttm))
+ let (*val sttm = termFromState(pruneState(st)); *)
+  (* TODO: use mkSimplConj or modify term2xml to handle x /\T *)
+   val conj = mk_conj(pre,path)
+   (*val conj = mk_conj(pre,mk_conj(path,sttm))*)
    in
    (printXML_to_file(name,conj);
     print "======================\n";
@@ -790,6 +1086,8 @@ fun testPath name pre path st =
    end;
 
 
+
+
 (* ------------------------------------------ *)
 (* to verify the program at the end of a branch *)
 (* ------------------------------------------ *)
@@ -800,10 +1098,12 @@ fun testPath name pre path st =
       of the variables computed by symbolic execution
       along the path 
 
+Let evalPost be the post condition evaluated on the final state.
+
 returns a RESULT outcome 
-  if pre /\ state /\ path /\ ~post
+  if pre /\ path /\ ~evalPost
   has no solution  
-  which means that (pre /\ state /\ path) => post
+  which means that (pre /\ path) => evalPost
   is true
 
 returns an ERROR outcome otherwise
@@ -835,10 +1135,11 @@ fun printError() =
 *)
 fun evalPost t st1 st2 = 
   let val p = snd(dest_comb(concl(EVAL ``^t ^st1``)));
-   in 
-     if (is_abs(p))
-     then snd(dest_comb(concl(EVAL ``^p ^st2``)))
-     else p
+   val pp =  if (is_abs(p))
+             then snd(dest_comb(concl(EVAL ``^p ^st2``)))
+             else p
+   in
+     rewrBoundedForAll pp
    end
    handle HOL_ERR s => 
      (print "HOL_ERR in evalPost";
@@ -846,16 +1147,17 @@ fun evalPost t st1 st2 =
      )
   ;
 
+
 in
 
 (* st1 is initial state (before program execution)
    st2 is final state (after program execution) *)
 fun verifyPath name pre st1 st2 post path =
   let val conj = mk_conj(pre,path);
-(*    val stt = termFromState(st2);
-    val conj = mk_conj(stt,prpa);
-*)
-    val po = evalPost post st1 st2
+    val st2' = pruneState(st2);
+    (* val stt = termFromState(pruneState(st2));
+     val conj = mk_conj(stt,prpa);*)
+    val po = evalPost post st1 st2'
     (* make the term using specific rule to compute 
        the negation of post *) 
     val tm = makeTermToVerify conj po
@@ -868,7 +1170,7 @@ fun verifyPath name pre st1 st2 post path =
      then 
        (printCorrect();
         incResolvedPath();
-        (``RESULT ^st2``,0.0)
+        (``RESULT ^st2'``,0.0)
        )
      else
          (* tm has not been simplified or has been simplified
@@ -886,7 +1188,7 @@ fun verifyPath name pre st1 st2 post path =
           if (null sol)
           then 
 	    (printCorrect();
-             (``RESULT ^st2``,time)
+             (``RESULT ^st2'``,time)
 	    )
           else 
             (* add to the current state the values
@@ -929,7 +1231,36 @@ let val (opr,_) = strip_comb(tm)
    opr=``While``
   end;
 
+
+
 (* to print a condition in the program as a HOL term *)
+local
+
+(* Get set of string terms in a term *)
+(* Written by Mike Gordon in verifier.ml    *)
+fun get_strings tm =
+ if is_string tm
+  then [tm] else
+ if is_var tm orelse is_const tm
+  then [] else
+ if is_comb tm
+  then union (get_strings(rator tm)) (get_strings(rand tm)) else
+ if is_abs tm
+  then get_strings(body tm)
+  else (print "error in get_strings"; fail());
+
+fun makeStateFromPair l = 
+  if ((length l) = 1)
+  then ``(FEMPTY |+ ^(hd l)) ``
+  else
+      let 
+        val map = makeStateFromPair (tl l);
+      in
+         ``^map |+ ^(hd l)``
+end;
+
+in
+
 fun pretty_string tm =
    let val var_tms = get_strings tm; 
      val pairs = map 
@@ -944,8 +1275,20 @@ fun pretty_string tm =
      val (_,res) = strip_comb(concl(EVAL ``beval ^tm ^st``));
      in 
        term_to_string(el 2 res)
-     end;
+     end
+end;;
 
+(*
+
+(* to make the current precondition
+   i.e the conjunction of current precondition 
+       with the next assignment in the program *)
+(* st is the current state, st' is the new state *)
+fun makePre pre st st' =
+    if st = st'
+    then pre
+    else mkSimplConj pre (termVarState (snd (dest_comb st')));
+*)
 
 in
 
@@ -986,6 +1329,7 @@ fun execSymb name pre (l,st1,st2,n) post path=
       print "End of path\n";
       print( "    " ^ term_to_string(path) ^"\n");
       print "======================\n";
+      (*print ("st2 " ^ term_to_string(st2));*)
       let val (r,t) = verifyPath name pre st1 st2 post path
         in 
           (incPath();
@@ -1015,7 +1359,7 @@ fun execSymb name pre (l,st1,st2,n) post path=
           let val step = EVAL ``STEP1 (^l, ^st2)``;
             val tm = snd(dest_comb(concl(step)));
             val newState = snd(dest_comb(snd(dest_comb(tm))));
-            val newList = snd(dest_comb(fst(dest_comb(tm))))
+            val newList = snd(dest_comb(fst(dest_comb(tm))));
            in
              execSymb name pre (newList,st1,newState,(n-1)) post path 
            end
@@ -1056,6 +1400,7 @@ and execSymbCond name pre (l,st1,st2,n) post path =
     val (_,evalCond) = strip_comb(concl(EVAL ``beval ^cond ^st2``))
     val termCond = (el 2 evalCond);      
    in   
+
    (* if the condition has been evaluated to a constant
       by EVAL, then takes the decision according to its value *)
    if (is_const(termCond))
@@ -1117,7 +1462,6 @@ and execSymbCond name pre (l,st1,st2,n) post path =
 	    else resElse
            )
         end
-
 
 end
 
@@ -1239,16 +1583,16 @@ end;
 local
 
 fun evalPre t st = 
-   snd(dest_comb(concl(EVAL ``^t ^st``)));
+   rewrBoundedForAll(snd(dest_comb(concl(EVAL ``^t ^st``))));
 
 in
 
 
 fun execSymbWithCSP name spec n = 
   (* build the symbolic state from variables in the program *)
-  let val s = makeState spec;
-   val (_,args) = strip_comb spec;
-   val (pre,prog,post) = (el 1 args, el 2 args, el 3 args)
+  let  val (_,args) = strip_comb spec;
+   val (pre,prog,post) = (el 1 args, el 2 args, el 3 args);
+   val s = snd (dest_comb(concl(EVAL (makeState prog))))
   in
      (resetAll(); (* reset global variables *)
       let val res = 
@@ -1277,5 +1621,4 @@ fun execSymbWithCSP name spec n =
       )
    end
 end;
-
 
