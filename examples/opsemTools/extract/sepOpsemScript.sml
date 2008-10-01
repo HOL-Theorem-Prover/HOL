@@ -182,7 +182,7 @@ val SEP_SPEC_ARRAY_ASSIGN = store_thm("SEP_SPEC_ARRAY_ASSIGN",
        SEP_EXP (\x. ARRAY v (FST x) * p (SND x)) y1 e1 ==>
        SEP_EXP (\x. ARRAY v (FST x) * p (SND x)) y2 e2 ==>
        SEP_SPEC (ARRAY v x * p z) (ArrayAssign v e1 e2) 
-                (ARRAY v (x |+ (y1 (x,z), y2 (x,z))) * p z)``,
+                (ARRAY v (x |+ (Num (y1 (x,z)), y2 (x,z))) * p z)``,
   SIMP_TAC std_ss [SEP_SPEC_def,SEP_EXP_def,GSYM STAR_ASSOC,ARRAY_def,GEN_VAR_STAR,SPEC_def]
   THEN REWRITE_TAC [ArrayAssign_def,GEN_ASSIGN_THM,Update_def,aeval_def]
   THEN SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,FDOM_FUPDATE,IN_INSERT,DOMSUB_FUPDATE_THM] 

@@ -61,7 +61,7 @@ fun EVAL_beval_neval_aeval exp = let
 
 fun SPEC_FILL_AND_SORT th1 th2 vs ws = let
   val vs = map mk_VAR (map (fn v => (fromMLstring v,mk_var(v,``:int``))) vs)    
-  val ws = map mk_ARRAY (map (fn v => (fromMLstring v,mk_var(v,``:int|->int``))) ws)    
+  val ws = map mk_ARRAY (map (fn v => (fromMLstring v,mk_var(v,``:num|->int``))) ws)    
   val p1 = (list_dest_star o cdr o car o car o concl) th1
   val p2 = (list_dest_star o cdr o car o car o concl) th2
   val add_to1 = filter (fn x => not (mem x p1)) (all_distinct (p2 @ vs @ ws))
@@ -101,7 +101,7 @@ fun get_VAR_and_ARRAY tm v = let
   val (scalars,vs) = get_scalar_and_array_varnames tm
   val vs = filter (fn w => not (w = v)) vs
   val scalars = filter (fn w => not (w = v)) scalars
-  val vs = map mk_ARRAY (map (fn v => (fromMLstring v,mk_var(v,``:int |-> int``))) vs)    
+  val vs = map mk_ARRAY (map (fn v => (fromMLstring v,mk_var(v,``:num |-> int``))) vs)    
   val scalars = map mk_VAR (map (fn v => (fromMLstring v,mk_var(v,``:int``))) scalars)    
   in scalars @ vs end;
 
@@ -131,20 +131,20 @@ fun MK_SEP_SPEC_ARRAY_ASSIGN tm total = let
   val v = (fromHOLstring o cdr o car o car) tm
   val vs = get_VAR_and_ARRAY tm v
   val p = list_mk_star vs   
-  val z = list_mk_pair(free_vars p) handle e => genvar(``:int |-> int``)
+  val z = list_mk_pair(free_vars p) handle e => genvar(``:num |-> int``)
   val rhs2 = EVAL_beval_neval_aeval (cdr tm)
   val rhs1 = EVAL_beval_neval_aeval (cdr (car tm))
-  val n2 = mk_pabs(mk_pair(mk_var(v,``:int |-> int``),z),rhs2) 
-  val n1 = mk_pabs(mk_pair(mk_var(v,``:int |-> int``),z),rhs1) 
+  val n2 = mk_pabs(mk_pair(mk_var(v,``:num |-> int``),z),rhs2) 
+  val n1 = mk_pabs(mk_pair(mk_var(v,``:num |-> int``),z),rhs1) 
   val th = ISPEC (mk_pabs (z, p)) SEP_SPEC_ARRAY_ASSIGN
-  val th = SPECL [fromMLstring v,mk_var(v,``:int|->int``),z,cdr (car tm), cdr tm,n1,n2] th
+  val th = SPECL [fromMLstring v,mk_var(v,``:num|->int``),z,cdr (car tm), cdr tm,n1,n2] th
   val th = PROVE_SEP_EXP th
   val th = PROVE_SEP_EXP th
   val rhs = (cdr o cdr o car o cdr o concl) th
   val rhs = (cdr o concl o SIMP_CONV std_ss []) rhs
   val th = SPEC_SORT_VAR_RULE (SIMP_RULE std_ss [] th)
   val th = if total then REWRITE_RULE [SEP_TOTAL_ARRAY_ASSIGN_THM] th else th
-  in (th,(mk_var(v,``:int|->int``),rhs)) end;
+  in (th,(mk_var(v,``:num|->int``),rhs)) end;
 
 fun FORCE_DISCH th = let
   val th = PURE_REWRITE_RULE [GSYM CONJ_ASSOC,AND_IMP_INTRO] (DISCH_ALL th)
@@ -168,11 +168,11 @@ fun VARS_UNBETA_CONV tm = let
   val vs = map (fromHOLstring o cdr o car) vs
   val ws = map (fromHOLstring o cdr o car) ws
   val vs' = map (fn v => mk_VAR(fromMLstring v,mk_var(v,``:int``))) vs
-  val ws' = map (fn v => mk_ARRAY(fromMLstring v,mk_var(v,``:int|->int``))) ws
+  val ws' = map (fn v => mk_ARRAY(fromMLstring v,mk_var(v,``:num|->int``))) ws
   val tm1 = list_mk_star (vs' @ ws' @ filter (not o is_VAR_or_ARRAY) (list_dest_star tm))
   val tm1 = (cdr o concl o SORT_VAR_CONV) tm1 
   val p = list_mk_pair (map(fn v => mk_var(v,``:int``)) vs @ 
-                        map(fn v => mk_var(v,``:int|->int``)) ws)
+                        map(fn v => mk_var(v,``:num|->int``)) ws)
   val tm2 = mk_comb(mk_pabs(p,tm1),x)
   val goal = mk_eq(tm,tm2)
   in prove(goal,SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM, emp_STAR]) end;
@@ -242,12 +242,14 @@ fun mk_lets [] p = p
 val total = true
 val name = "hoo"
 val index = 0
-val instr_tm = ``(While (Not (Equal (Var "n") (Const 0)))
-                   (Assign "n" (Sub (Var "n") (Const 2))))``
+val instr_tm = 
+``
+       (Seq (Assign "temp" (Arr "a" (Var "i")))
+          (Seq (ArrayAssign "a" (Var "i") (Var "j"))
+               (ArrayAssign "a" (Var "j") (Var "temp"))))``;
 
-val instr_tm = ``(While (Not (Equal (Var "n") (Const 0)))
-                   (Seq (Assign "a" (Plus (Var "a") (Const 1)))
-                        (Assign "n" (Sub (Var "n") (Const 2)))))``
+val tm = ((cdr o car) instr_tm)
+
 *)
 
 fun SPEC_FOR_SEQ instr_tm index name total = let
