@@ -68,6 +68,19 @@ public class Jml2opSemVisitor implements JmlVisitor {
 	// of the method
 	private boolean isOld;
 	
+	// true when parsing visitJmlSpecQuantifiedExpression
+	private boolean isQuantified;
+	
+	// true when parsing the index of an array access
+	private boolean isArrayIndex;
+
+	
+	
+	// true when parsing an expression on a quantified variable
+	private boolean isQuantifiedExpression;
+	
+
+	
 	// set of variables declared as parameters
 	// of the method
 	// when parameter variables appear in 
@@ -99,6 +112,9 @@ public class Jml2opSemVisitor implements JmlVisitor {
 		quantifiedVar = new ArrayList<String>();
 		isEnsures = false;
 		isOld = false;
+		isQuantified = false;
+		isQuantifiedExpression = false;
+		isArrayIndex = false;
 		parameterVar = param;
 	}
 	
@@ -245,7 +261,10 @@ public class Jml2opSemVisitor implements JmlVisitor {
 	// \result variable in JML specification
 	// TODO: case where result is an array 
 	public void visitJmlResultExpression(JmlResultExpression self) {
-		write("ScalarOf (" + stateName() + "' \"Result\")");
+		if (isArrayIndex )
+			write("Num(ScalarOf (" + stateName() + "' \"Result\"))");
+		else
+			write("ScalarOf (" + stateName() + "' \"Result\")");
 	}
 	
 	public void visitJmlPredicate(JmlPredicate self) {
@@ -351,9 +370,11 @@ public class Jml2opSemVisitor implements JmlVisitor {
 	}
 
 	// visit a variable name
-	// if it is an access to the array length, then it ss
+	// if it is an access to the array length, then it is
 	// evaluated on "state" when parsing the precondition
 	// else it is evaluated on state1
+	// Furthermore, we know that the length is a num
+	// so add Num transformation
 	public void visitNameExpression(JNameExpression self) {
 		// access to array length
 		if (self.getPrefix() != null && self.getName() == "length") {
@@ -364,14 +385,20 @@ public class Jml2opSemVisitor implements JmlVisitor {
 				st = "state1 ";
 			else 
 				st = "state ";
-			write("ScalarOf (" + st + "' \"" + self.getPrefix() + "Length\")" );
+			if (isArrayIndex || isQuantified)
+				write("Num(ScalarOf (" + st + "' \"" + self.getPrefix() + "Length\"))" );
+			else	
+				write("ScalarOf (" + st + "' \"" + self.getPrefix() + "Length\")" );
 		}
 		else {
 			String name = self.toString();
 			if (quantifiedVar.contains(name))
 				write(name);
 			else
-				write("ScalarOf (" + stateName(name) + "' \"" + name + "\")");
+				if (isArrayIndex)
+					write("Num(ScalarOf (" + stateName(name) + "' \"" + name + "\"))");
+				else
+					write("ScalarOf (" + stateName(name) + "' \"" + name + "\")");
 		}
 	}
 	
@@ -398,6 +425,7 @@ public class Jml2opSemVisitor implements JmlVisitor {
 	//     ? v1 v2 ... vn . predicate(v1,...,vn) /\ spec-expression
 	// where v1 v2 ... vn are the variables declared in quantified-var-decl
 	public void visitJmlSpecQuantifiedExpression(JmlSpecQuantifiedExpression self) {
+		isQuantified = true;
 
 		// quantifier
 		boolean isForAll = self.isForAll();
@@ -439,6 +467,8 @@ public class Jml2opSemVisitor implements JmlVisitor {
 		for (int i = 0; i < tab.length; i++) {
 			quantifiedVar.remove(tab[i].ident());
 		}
+		
+		isQuantified = false;
 
 	}
 	
@@ -467,7 +497,9 @@ public class Jml2opSemVisitor implements JmlVisitor {
 		write ("(ArrayOf (" + st + "' \"" + name + "\") ' ");
 		write("(");
 		// visit the array index
+		isArrayIndex = true;
 		self.accessor().accept(this);
+		isArrayIndex = false;
 		write(")");
 		write(")");
 	}
