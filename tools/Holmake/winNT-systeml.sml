@@ -55,6 +55,7 @@ val DEPDIR =
 val GNUMAKE =
 val DYNLIB =
 val version =
+val ML_SYSNAME =
 val release =
 
 val isUnix = false
