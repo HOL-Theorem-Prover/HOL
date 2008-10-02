@@ -1,7 +1,7 @@
 (* Fun and games with the "locally nameless" approach to language meta-theory
-   as done in the POPL paper "Engineering Formal Metatheory" by Brian 
+   as done in the POPL paper "Engineering Formal Metatheory" by Brian
    Aydemir, Arthur Charguéraud, Benjamin Pierce, Randy Pollack and Stephanie
-   Weirich. 
+   Weirich.
 
    Contribution below is to show that it's as easy to prove the
    cofinite introduction rule and the cofinite induction principle of
@@ -16,7 +16,6 @@ open binderLib
 
 open nomsetTheory pred_setTheory
 
-val export_rewrites = export_rewrites "lnameless";
 fun Store_thm (p as (n,t,tac)) = store_thm p before export_rewrites [n]
 val lswapstr_APPEND = basic_swapTheory.lswapstr_APPEND
 
@@ -39,7 +38,7 @@ val _ = export_rewrites ["open_def"]
 
 val lnpm_def = Define`
   (lnpm pi (var s) = var (lswapstr pi s)) /\
-  (lnpm pi (bnd i) = bnd i) /\  
+  (lnpm pi (bnd i) = bnd i) /\
   (lnpm pi (app t1 t2) = app (lnpm pi t1) (lnpm pi t2)) /\
   (lnpm pi (abs t) = abs (lnpm pi t))
 `;
@@ -57,7 +56,7 @@ val lnpm_is_perm = Store_thm(
 val lnpm_open = prove(
   ``!i. lnpm pi (open i t1 t2) = open i (lnpm pi t1) (lnpm pi t2)``,
   Induct_on `t2` THEN SRW_TAC [][]);
-  
+
 val fv_def = Define`
   (fv (var s) = {s}) /\
   (fv (bnd i) = {}) /\
@@ -83,15 +82,15 @@ val lnpm_fresh = store_thm(
 val (lclosed_rules, lclosed_ind, lclosed_cases) = Hol_reln`
   (!s. lclosed (var s)) /\
   (!t1 t2. lclosed t1 /\ lclosed t2 ==> lclosed (app t1 t2)) /\
-  (!s t. ~(s IN fv t) /\ lclosed (open 0 (var s) t) ==> 
+  (!s t. ~(s IN fv t) /\ lclosed (open 0 (var s) t) ==>
          lclosed (abs t))
 `;
 
 val lclosed_eqvt = prove(
   ``!t. lclosed t ==> !pi. lclosed (lnpm pi t)``,
-  HO_MATCH_MP_TAC lclosed_ind THEN SRW_TAC [][lclosed_rules, lnpm_open] THEN 
-  MATCH_MP_TAC (last (CONJUNCTS lclosed_rules)) THEN 
-  Q.EXISTS_TAC `lswapstr pi s` THEN 
+  HO_MATCH_MP_TAC lclosed_ind THEN SRW_TAC [][lclosed_rules, lnpm_open] THEN
+  MATCH_MP_TAC (last (CONJUNCTS lclosed_rules)) THEN
+  Q.EXISTS_TAC `lswapstr pi s` THEN
   SRW_TAC [][fv_lnpm]);
 
 val lclosed_gen_bvc_ind = store_thm(
@@ -99,21 +98,21 @@ val lclosed_gen_bvc_ind = store_thm(
   ``!P f. (!c. FINITE (f c)) /\
            (!s c. P (var s) c) /\
            (!t1 t2 c. (!d. P t1 d) /\ (!d. P t2 d) ==> P (app t1 t2) c) /\
-           (!s t c. ~(s IN f c) /\ ~(s IN fv t) /\ 
+           (!s t c. ~(s IN f c) /\ ~(s IN fv t) /\
                     (!d. P (open 0 (var s) t) d) ==>
                     P (abs t) c) ==>
            !t. lclosed t ==> !c. P t c``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN 
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!t. lclosed t ==> !pi c. P (lnpm pi t) c`
-        THEN1 METIS_TAC [lnpm_is_perm, is_perm_nil] THEN 
-  HO_MATCH_MP_TAC lclosed_ind THEN SRW_TAC [][lnpm_open] THEN 
-  FIRST_X_ASSUM MATCH_MP_TAC THEN 
-  Q_TAC (NEW_TAC "z") `fv (lnpm pi t) UNION f c` THEN 
-  FIRST_X_ASSUM (Q.SPEC_THEN `(lswapstr pi s, z) :: pi` MP_TAC) THEN 
-  ASM_SIMP_TAC (srw_ss()) [] THEN 
+        THEN1 METIS_TAC [lnpm_is_perm, is_perm_nil] THEN
+  HO_MATCH_MP_TAC lclosed_ind THEN SRW_TAC [][lnpm_open] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  Q_TAC (NEW_TAC "z") `fv (lnpm pi t) UNION f c` THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `(lswapstr pi s, z) :: pi` MP_TAC) THEN
+  ASM_SIMP_TAC (srw_ss()) [] THEN
   `lnpm [(lswapstr pi s, z)] (lnpm pi t) = lnpm pi t`
-     by SRW_TAC [][lnpm_fresh, fv_lnpm] THEN 
-  FULL_SIMP_TAC (srw_ss()) [GSYM is_perm_decompose] THEN 
+     by SRW_TAC [][lnpm_fresh, fv_lnpm] THEN
+  FULL_SIMP_TAC (srw_ss()) [GSYM is_perm_decompose] THEN
   STRIP_TAC THEN Q.EXISTS_TAC `z` THEN SRW_TAC [][]);
 
 val all_fnone = prove(
@@ -125,7 +124,7 @@ val all_fnone = prove(
 
 val lclosed_bvc_ind = save_thm(
   "lclosed_bvc_ind",
-  (Q.GEN `P` o Q.GEN `X` o 
+  (Q.GEN `P` o Q.GEN `X` o
    SIMP_RULE bool_ss [] o
    SPECL [``(\M:lnt x:one. P M:bool)``,
           ``X:string -> bool``] o
@@ -137,55 +136,55 @@ val lclosed_cofin_ind = store_thm(
   "lclosed_cofin_ind",
   ``!P. (!s. P (var s)) /\
         (!t1 t2. P t1 /\ P t2 ==> P (app t1 t2)) /\
-        (!t X. FINITE X /\ 
+        (!t X. FINITE X /\
                (!s. ~(s IN X) ==> P (open 0 (var s) t)) ==>
                P (abs t)) ==>
         !t. lclosed t ==> P t``,
-  GEN_TAC THEN STRIP_TAC THEN 
+  GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!t. lclosed t ==> !pi. P (lnpm pi t)`
-        THEN1 METIS_TAC [is_perm_nil, lnpm_is_perm] THEN 
-  HO_MATCH_MP_TAC lclosed_bvc_ind THEN SRW_TAC [][lnpm_open] THEN 
-  Q.EXISTS_TAC `{}` THEN SRW_TAC [][] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN 
-  Q.EXISTS_TAC `fv (lnpm pi t)` THEN SRW_TAC [][] THEN 
+        THEN1 METIS_TAC [is_perm_nil, lnpm_is_perm] THEN
+  HO_MATCH_MP_TAC lclosed_bvc_ind THEN SRW_TAC [][lnpm_open] THEN
+  Q.EXISTS_TAC `{}` THEN SRW_TAC [][] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+  Q.EXISTS_TAC `fv (lnpm pi t)` THEN SRW_TAC [][] THEN
   `lnpm [(s',lswapstr pi s)] (lnpm pi t) = lnpm pi t`
-      by SRW_TAC [][lnpm_fresh, fv_lnpm] THEN 
-  FIRST_X_ASSUM (Q.SPEC_THEN `[(s',lswapstr pi s)] ++ pi` MP_TAC) THEN 
+      by SRW_TAC [][lnpm_fresh, fv_lnpm] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `[(s',lswapstr pi s)] ++ pi` MP_TAC) THEN
   SRW_TAC [][is_perm_decompose]);
 
 val abs_lclosed_I = store_thm(
   "abs_lclosed_I",
-  ``FINITE X /\ (!s. ~(s IN X) ==> lclosed (open 0 (var s) t)) ==> 
+  ``FINITE X /\ (!s. ~(s IN X) ==> lclosed (open 0 (var s) t)) ==>
     lclosed (abs t)``,
-  STRIP_TAC THEN MATCH_MP_TAC (last (CONJUNCTS lclosed_rules)) THEN 
-  Q_TAC (NEW_TAC "z") `fv t UNION X` THEN Q.EXISTS_TAC `z` THEN 
+  STRIP_TAC THEN MATCH_MP_TAC (last (CONJUNCTS lclosed_rules)) THEN
+  Q_TAC (NEW_TAC "z") `fv t UNION X` THEN Q.EXISTS_TAC `z` THEN
   SRW_TAC [][]);
 
 val strong_lclosed_cofin_ind = store_thm(
   "strong_lclosed_cofin_ind",
   ``!P. (!s. P (var s)) /\
-        (!t1 t2. P t1 /\ P t2 /\ lclosed t1 /\ lclosed t2 ==> 
+        (!t1 t2. P t1 /\ P t2 /\ lclosed t1 /\ lclosed t2 ==>
                  P (app t1 t2)) /\
-        (!t X. FINITE X /\ 
+        (!t X. FINITE X /\
                (!s. ~(s IN X) ==> P (open 0 (var s) t) /\
-                                  lclosed (open 0 (var s) t)) ==> 
-               P (abs t)) 
+                                  lclosed (open 0 (var s) t)) ==>
+               P (abs t))
       ==>
         !t. lclosed t ==> P t``,
-  GEN_TAC THEN STRIP_TAC THEN 
-  Q_TAC SUFF_TAC `!t. lclosed t ==> P t /\ lclosed t` THEN1 SRW_TAC [][] THEN 
-  HO_MATCH_MP_TAC lclosed_cofin_ind THEN 
+  GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!t. lclosed t ==> P t /\ lclosed t` THEN1 SRW_TAC [][] THEN
+  HO_MATCH_MP_TAC lclosed_cofin_ind THEN
   METIS_TAC [abs_lclosed_I, lclosed_rules]);
-  
+
 val lclosed_E = store_thm(
   "lclosed_E",
-  ``!t. 
-      lclosed t ==> 
+  ``!t.
+      lclosed t ==>
         (?s. (t = var s)) \/
         (?t1 t2. (t = app t1 t2) /\ lclosed t1 /\ lclosed t2) \/
-        (?X u. (t = abs u) /\ FINITE X /\ 
+        (?X u. (t = abs u) /\ FINITE X /\
                !s. ~(s IN X) ==> lclosed (open 0 (var s) u))``,
-  HO_MATCH_MP_TAC strong_lclosed_cofin_ind THEN 
-  SIMP_TAC (srw_ss()) [] THEN REPEAT STRIP_TAC THEN 
+  HO_MATCH_MP_TAC strong_lclosed_cofin_ind THEN
+  SIMP_TAC (srw_ss()) [] THEN REPEAT STRIP_TAC THEN
   METIS_TAC [lclosed_rules, abs_lclosed_I]);
 
 val lclosed_abs_cofin = store_thm(
@@ -193,7 +192,7 @@ val lclosed_abs_cofin = store_thm(
   ``lclosed (abs t) = ?X. FINITE X /\
                           !s. ~(s IN X) ==> lclosed (open 0 (var s) t)``,
   EQ_TAC THEN STRIP_TAC THENL [
-    IMP_RES_TAC lclosed_E THEN 
+    IMP_RES_TAC lclosed_E THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [],
     METIS_TAC [abs_lclosed_I]
   ]);
@@ -293,19 +292,19 @@ val ctxtFV_MEM = store_thm(
 
 val valid_ctxt_CONS = prove(
   ``!z ty. valid_ctxt ((z,ty) :: G) = ~(z IN ctxtFV G) /\ valid_ctxt G``,
-  Induct_on `G` THEN1 SRW_TAC [][] THEN 
-  ASM_SIMP_TAC bool_ss [pairTheory.FORALL_PROD, Once valid_ctxt_def] THEN 
+  Induct_on `G` THEN1 SRW_TAC [][] THEN
+  ASM_SIMP_TAC bool_ss [pairTheory.FORALL_PROD, Once valid_ctxt_def] THEN
   SRW_TAC [][ctxtFV_MEM]);
-  
+
 
 val (typing_rules, typing_ind, typing_cases) = Hol_reln`
   (!G s ty. valid_ctxt G /\ MEM (s,ty) G ==> typing G (var s) ty) /\
-  (!G t1 t2 ty1 ty2. 
+  (!G t1 t2 ty1 ty2.
            typing G t1 (ty1 --> ty2) /\ typing G t2 ty1 ==>
            typing G (app t1 t2) ty2) /\
-  (!G t s ty1 ty2. 
-           typing ((s,ty1)::G) (open 0 (var s) t) ty2 /\ 
-           ~(s IN fv t) 
+  (!G t s ty1 ty2.
+           typing ((s,ty1)::G) (open 0 (var s) t) ty2 /\
+           ~(s IN fv t)
          ==>
            typing G (abs t) (ty1 --> ty2))
 `;
@@ -315,8 +314,8 @@ val typing_eqvt = store_thm(
   ``!G t ty. typing G t ty ==> !pi. typing (ctxtswap pi G) (lnpm pi t) ty``,
   HO_MATCH_MP_TAC typing_ind THEN SRW_TAC [][typing_rules, lnpm_open] THENL [
     METIS_TAC [typing_rules],
-    MATCH_MP_TAC (last (CONJUNCTS typing_rules)) THEN 
-    Q.EXISTS_TAC `lswapstr pi s` THEN 
+    MATCH_MP_TAC (last (CONJUNCTS typing_rules)) THEN
+    Q.EXISTS_TAC `lswapstr pi s` THEN
     SRW_TAC [][fv_lnpm]
   ]);
 
@@ -329,110 +328,110 @@ val typing_valid_ctxt = store_thm(
 val typing_lclosed = store_thm(
   "typing_lclosed",
   ``!G t ty. typing G t ty ==> lclosed t``,
-  HO_MATCH_MP_TAC typing_ind THEN SRW_TAC [][lclosed_rules] THEN 
+  HO_MATCH_MP_TAC typing_ind THEN SRW_TAC [][lclosed_rules] THEN
   METIS_TAC [lclosed_rules]);
 
 val typing_bvc_ind = store_thm(
   "typing_bvc_ind",
   ``!P X. FINITE X /\
           (!G s ty. valid_ctxt G /\ MEM (s,ty) G ==> P G (var s) ty) /\
-          (!G t1 t2 ty1 ty2. 
+          (!G t1 t2 ty1 ty2.
                P G t1 (ty1 --> ty2) /\ P G t2 ty1 /\
                typing G t1 (ty1 --> ty2) /\ typing G t2 ty1 ==>
                P G (app t1 t2) ty2) /\
-          (!G s t ty1 ty2. 
-               ~(s IN X) /\ ~(s IN fv t) /\ 
+          (!G s t ty1 ty2.
+               ~(s IN X) /\ ~(s IN fv t) /\
                P ((s,ty1)::G) (open 0 (var s) t) ty2 /\
                typing ((s,ty1)::G) (open 0 (var s) t) ty2
              ==>
-               P G (abs t) (ty1 --> ty2)) 
+               P G (abs t) (ty1 --> ty2))
         ==>
           !G t ty. typing G t ty ==> P G t ty``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN 
-  Q_TAC SUFF_TAC `!G t ty. typing G t ty ==> 
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!G t ty. typing G t ty ==>
                            !pi. typing (ctxtswap pi G) (lnpm pi t) ty /\
                                 P (ctxtswap pi G) (lnpm pi t) ty`
-        THEN1 METIS_TAC [lnpm_is_perm, is_perm_nil, ctxtswap_NIL] THEN 
+        THEN1 METIS_TAC [lnpm_is_perm, is_perm_nil, ctxtswap_NIL] THEN
   HO_MATCH_MP_TAC typing_ind THEN SRW_TAC [][lnpm_open, typing_rules] THENL [
-    METIS_TAC [typing_rules], 
-    METIS_TAC [], 
-    MATCH_MP_TAC (last (CONJUNCTS typing_rules)) THEN 
+    METIS_TAC [typing_rules],
+    METIS_TAC [],
+    MATCH_MP_TAC (last (CONJUNCTS typing_rules)) THEN
     Q.EXISTS_TAC `lswapstr pi s` THEN SRW_TAC [][fv_lnpm],
 
-    Q_TAC (NEW_TAC "z") `fv (lnpm pi t) UNION X UNION 
+    Q_TAC (NEW_TAC "z") `fv (lnpm pi t) UNION X UNION
                          ctxtFV (ctxtswap pi G) UNION
-                         {lswapstr pi s}` THEN 
-    FIRST_X_ASSUM MATCH_MP_TAC THEN Q.EXISTS_TAC `z` THEN 
-    ASM_SIMP_TAC (srw_ss()) [] THEN 
-    FIRST_X_ASSUM (Q.SPEC_THEN `(lswapstr pi s, z) :: pi` MP_TAC) THEN 
-    ASM_SIMP_TAC (srw_ss()) [] THEN 
-    STRIP_TAC THEN 
+                         {lswapstr pi s}` THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN Q.EXISTS_TAC `z` THEN
+    ASM_SIMP_TAC (srw_ss()) [] THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN `(lswapstr pi s, z) :: pi` MP_TAC) THEN
+    ASM_SIMP_TAC (srw_ss()) [] THEN
+    STRIP_TAC THEN
     `lnpm [(lswapstr pi s, z)] (lnpm pi t) = lnpm pi t`
-       by SRW_TAC [][lnpm_fresh, fv_lnpm] THEN 
+       by SRW_TAC [][lnpm_fresh, fv_lnpm] THEN
     `~(s IN ctxtFV G)`
-       by (IMP_RES_TAC typing_valid_ctxt THEN 
-           FULL_SIMP_TAC bool_ss [valid_ctxt_CONS] THEN 
-           FULL_SIMP_TAC (srw_ss()) [ctxtFV_ctxtswap, lswapstr_APPEND]) THEN 
+       by (IMP_RES_TAC typing_valid_ctxt THEN
+           FULL_SIMP_TAC bool_ss [valid_ctxt_CONS] THEN
+           FULL_SIMP_TAC (srw_ss()) [ctxtFV_ctxtswap, lswapstr_APPEND]) THEN
     `ctxtswap [(lswapstr pi s,z)] (ctxtswap pi G) = ctxtswap pi G`
-       by SRW_TAC [][ctxtswap_fresh] THEN 
-    FULL_SIMP_TAC (srw_ss()) [GSYM is_perm_decompose, 
+       by SRW_TAC [][ctxtswap_fresh] THEN
+    FULL_SIMP_TAC (srw_ss()) [GSYM is_perm_decompose,
                               GSYM ctxtswap_APPEND]
   ]);
 
-val strong_typing_ind = IndDefLib.derive_strong_induction(typing_rules, 
+val strong_typing_ind = IndDefLib.derive_strong_induction(typing_rules,
                                                           typing_ind)
 
 val typing_cofin_ind = store_thm(
   "typing_cofin_ind",
   ``!P. (!G s ty. valid_ctxt G /\ MEM (s,ty) G ==> P G (var s) ty) /\
-        (!G t1 t2 ty1 ty2. 
-            P G t1 (ty1 --> ty2) /\ P G t2 ty1  ==> 
+        (!G t1 t2 ty1 ty2.
+            P G t1 (ty1 --> ty2) /\ P G t2 ty1  ==>
             P G (app t1 t2) ty2) /\
-        (!G X t ty1 ty2. 
-            FINITE X /\ 
+        (!G X t ty1 ty2.
+            FINITE X /\
             (!s. ~(s IN X) ==> P ((s,ty1)::G) (open 0 (var s) t) ty2) ==>
-            P G (abs t) (ty1 --> ty2)) 
+            P G (abs t) (ty1 --> ty2))
       ==>
         !G t ty. typing G t ty ==> P G t ty``,
-  GEN_TAC THEN STRIP_TAC THEN 
-  Q_TAC SUFF_TAC `!G t ty. typing G t ty ==> 
+  GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!G t ty. typing G t ty ==>
                            !pi. P (ctxtswap pi G) (lnpm pi t) ty`
-        THEN1 METIS_TAC [is_perm_nil, ctxtswap_NIL, lnpm_is_perm] THEN 
-  HO_MATCH_MP_TAC strong_typing_ind THEN 
+        THEN1 METIS_TAC [is_perm_nil, ctxtswap_NIL, lnpm_is_perm] THEN
+  HO_MATCH_MP_TAC strong_typing_ind THEN
   SRW_TAC [][lnpm_open] THEN1 METIS_TAC [] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN 
-  Q.EXISTS_TAC `fv (lnpm pi t) UNION ctxtFV (ctxtswap pi G)` THEN 
-  SRW_TAC [][] THEN 
-  FIRST_X_ASSUM (Q.SPEC_THEN `[(s',lswapstr pi s)] ++ pi` MP_TAC) THEN 
-  ASM_SIMP_TAC (srw_ss()) [] THEN 
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  Q.EXISTS_TAC `fv (lnpm pi t) UNION ctxtFV (ctxtswap pi G)` THEN
+  SRW_TAC [][] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `[(s',lswapstr pi s)] ++ pi` MP_TAC) THEN
+  ASM_SIMP_TAC (srw_ss()) [] THEN
   Q_TAC SUFF_TAC `(lnpm ((s', lswapstr pi s)::pi) t = lnpm pi t) /\
                   (ctxtswap ((s',lswapstr pi s)::pi) G = ctxtswap pi G)`
-        THEN1 SRW_TAC [][] THEN 
+        THEN1 SRW_TAC [][] THEN
   `lnpm [(s',lswapstr pi s)] (lnpm pi t) = lnpm pi t`
-      by SRW_TAC [][lnpm_fresh, fv_lnpm] THEN 
-  FULL_SIMP_TAC (srw_ss()) [GSYM is_perm_decompose] THEN 
-  `~(s IN ctxtFV G)` 
-      by (IMP_RES_TAC typing_valid_ctxt THEN 
-          FULL_SIMP_TAC bool_ss [valid_ctxt_CONS]) THEN 
-  `ctxtswap ((s',lswapstr pi s)::pi) G = 
+      by SRW_TAC [][lnpm_fresh, fv_lnpm] THEN
+  FULL_SIMP_TAC (srw_ss()) [GSYM is_perm_decompose] THEN
+  `~(s IN ctxtFV G)`
+      by (IMP_RES_TAC typing_valid_ctxt THEN
+          FULL_SIMP_TAC bool_ss [valid_ctxt_CONS]) THEN
+  `ctxtswap ((s',lswapstr pi s)::pi) G =
       ctxtswap ([(s',lswapstr pi s)] ++ pi) G`
-     by SRW_TAC [][] THEN 
+     by SRW_TAC [][] THEN
   ` _ = ctxtswap [(s',lswapstr pi s)] (ctxtswap pi G)`
-     by SRW_TAC [][ctxtswap_APPEND] THEN 
-  ` _ = ctxtswap pi G` 
-     by SRW_TAC [][ctxtswap_fresh] THEN 
+     by SRW_TAC [][ctxtswap_APPEND] THEN
+  ` _ = ctxtswap pi G`
+     by SRW_TAC [][ctxtswap_fresh] THEN
   SRW_TAC [][]);
 
 (* The approach in "Engineering Formal Metatheory" is to define a separate
-   "cofinite" relation, to prove the desired properties of this relation, and 
+   "cofinite" relation, to prove the desired properties of this relation, and
    to finish up by showing that it and the original correspond.  *)
 
 val (cotyping_rules, cotyping_ind, cotyping_cases) = Hol_reln`
   (!G s ty. valid_ctxt G /\ MEM (s, ty) G ==> cotyping G (var s) ty) /\
-  (!G t1 t2 ty1 ty2. 
-      cotyping G t1 (ty1 --> ty2) /\ cotyping G t2 ty1 ==> 
+  (!G t1 t2 ty1 ty2.
+      cotyping G t1 (ty1 --> ty2) /\ cotyping G t2 ty1 ==>
       cotyping G (app t1 t2) ty2) /\
-  (!G X t ty1 ty2. 
+  (!G X t ty1 ty2.
       FINITE X /\
       (!s. ~(s IN X) ==> cotyping ((s,ty1)::G) (open 0 (var s) t) ty2) ==>
       cotyping G (abs t) (ty1 --> ty2))
@@ -441,16 +440,16 @@ val (cotyping_rules, cotyping_ind, cotyping_cases) = Hol_reln`
 val cotyping_typing = store_thm(
   "cotyping_typing",
   ``!G t ty. cotyping G t ty ==> typing G t ty``,
-  HO_MATCH_MP_TAC cotyping_ind THEN SRW_TAC [][typing_rules] 
-    THEN1 METIS_TAC [typing_rules] THEN 
-  MATCH_MP_TAC (last (CONJUNCTS typing_rules)) THEN 
+  HO_MATCH_MP_TAC cotyping_ind THEN SRW_TAC [][typing_rules]
+    THEN1 METIS_TAC [typing_rules] THEN
+  MATCH_MP_TAC (last (CONJUNCTS typing_rules)) THEN
   Q_TAC (NEW_TAC "z") `fv t UNION X` THEN METIS_TAC []);
 
 val typing_cotyping = store_thm(
   "typing_cotyping",
   ``!G t ty. typing G t ty ==> cotyping G t ty``,
-  HO_MATCH_MP_TAC typing_cofin_ind THEN SRW_TAC [][cotyping_rules] THEN 
+  HO_MATCH_MP_TAC typing_cofin_ind THEN SRW_TAC [][cotyping_rules] THEN
   METIS_TAC [cotyping_rules]);
- 
+
 val _ = export_theory();
-           
+

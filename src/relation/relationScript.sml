@@ -15,8 +15,6 @@ local open combinTheory in end;
 
 val _ = new_theory "relation";
 
-val export_rewrites = export_rewrites "relation";
-
 (*---------------------------------------------------------------------------*)
 (* Basic properties of relations.                                            *)
 (*---------------------------------------------------------------------------*)
@@ -58,10 +56,10 @@ val trichotomous = new_definition(
 (* Closures                                                                  *)
 (*---------------------------------------------------------------------------*)
 
-(* The TC and RTC suffixes are tighter than function application.  This 
+(* The TC and RTC suffixes are tighter than function application.  This
    means that
       inv R^+
-   is the inverse of the transitive closure, and you need parentheses to 
+   is the inverse of the transitive closure, and you need parentheses to
    write the transitive closure of the inverse:
       (inv R)^+
 *)
@@ -76,7 +74,7 @@ val _ = add_rule { fixity = Suffix 2100,
                    pp_elements = [TOK "^+"],
                    term_name = "^+" }
 val _ = overload_on ("^+", ``TC : ('a -> 'a -> bool) -> 'a -> 'a -> bool``)
-val _ = Unicode.unicode_version 
+val _ = Unicode.unicode_version
           (Unicode.UChar.sup_plus, ``TC:('a -> 'a -> bool) -> 'a -> 'a -> bool``)
 
 

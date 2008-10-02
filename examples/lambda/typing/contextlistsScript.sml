@@ -1,11 +1,10 @@
-open HolKernel bossLib boolLib Parse 
+open HolKernel bossLib boolLib Parse
 
 open nomsetTheory
 
 val _ = new_theory "contextlists"
 
 val _ = set_trace "Unicode" 1
-val export_rewrites = export_rewrites "contextlists"
 
 val _ = type_abbrev("ctxt", ``:(string # 'a) list``)
 
@@ -45,15 +44,15 @@ val valid_ctxt_ALL_DISTINCT = store_thm(
 val ctxtFV_APPEND = store_thm(
   "ctxtFV_APPEND",
   ``ctxtFV (G1 ++ G2) = ctxtFV G1 ∪ ctxtFV G2``,
-  Induct_on `G1` THEN 
-  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, 
+  Induct_on `G1` THEN
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD,
                            pred_setTheory.EXTENSION] THEN
   METIS_TAC []);
 
 val valid_ctxt_APPEND = store_thm(
   "valid_ctxt_APPEND",
   ``valid_ctxt (G1 ++ G2) ==> valid_ctxt G1 ∧ valid_ctxt G2``,
-  Induct_on `G1` THEN 
+  Induct_on `G1` THEN
   ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ctxtFV_APPEND]);
 
 (* permutation over contexts swaps the strings and leaves the types alone *)

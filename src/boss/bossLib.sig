@@ -56,7 +56,7 @@ sig
   val type_rws       : hol_type -> thm list
   val rewrites       : thm list -> ssfrag
   val augment_srw_ss : ssfrag list -> unit
-  val export_rewrites: string -> string list -> unit
+  val export_rewrites: string list -> unit
 
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm

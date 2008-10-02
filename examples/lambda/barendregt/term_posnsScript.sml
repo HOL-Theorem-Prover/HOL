@@ -2,8 +2,6 @@ open HolKernel Parse boolLib bossLib termTheory binderLib chap2Theory
 
 open BasicProvers pred_setTheory boolSimps
 
-val export_rewrites = export_rewrites "term_posns";
-
 val _ = new_theory "term_posns";
 
 fun Store_Thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]

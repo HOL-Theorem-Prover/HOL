@@ -25,8 +25,6 @@ val op >> = op THEN1;
 
 val _ = wordsLib.deprecate_word();
 
-val export_rewrites = BasicProvers.export_rewrites "patricia";
-
 (* ------------------------------------------------------------------------- *)
 
 val _ = set_fixity "'" (Infixl 2000);
@@ -784,7 +782,7 @@ val PTREE_OF_NUMSET_NUMSET_OF_PTREE = store_thm(
           PTREE_OF_NUMSET t s)`,
   SRW_TAC [] [PTREE_EXTENSION, pred_setTheory.FINITE_UNION, IN_PTREE_OF_NUMSET]
     \\ SRW_TAC [] [IN_PTREE_EMPTY, IN_NUMSET_OF_PTREE]);
-  
+
 val NUMSET_OF_PTREE_PTREE_OF_NUMSET = store_thm(
   "NUMSET_OF_PTREE_PTREE_OF_NUMSET",
   `!t s. IS_PTREE t /\ FINITE s ==>

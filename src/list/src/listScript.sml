@@ -37,8 +37,6 @@ open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
-val export_rewrites = export_rewrites "list";
-
 val _ = new_theory "list";
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
@@ -1332,7 +1330,7 @@ val _ = adjoin_to_theory
    S "  end;"
  end)};
 
-val _ = export_rewrites 
+val _ = export_rewrites
           ["APPEND_11", "EL", "FLAT", "HD",
            "MAP", "MAP2", "NULL_DEF",
            "SUM", "TL", "APPEND_ASSOC", "CONS", "CONS_11",

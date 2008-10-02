@@ -24,8 +24,6 @@ val m = apropos;
 
 val _ = wordsLib.deprecate_word();
 
-val export_rewrites = BasicProvers.export_rewrites "patricia_casts";
-
 (* ------------------------------------------------------------------------- *)
 
 val _ = set_fixity "IN_PTREEw" (Infix (NONASSOC, 425));

@@ -1,10 +1,10 @@
-structure standardisationScript = 
+structure standardisationScript =
 struct
 
   (* explicit structure above is necessary if MoscowML is to compile the
-     script file in its standard (not "toplevel") mode, and not be put off 
-     by the structure Q = ... line below.   
-   
+     script file in its standard (not "toplevel") mode, and not be put off
+     by the structure Q = ... line below.
+
      Poly/ML doesn't have this problem. *)
 
 open HolKernel Parse boolLib bossLib BasicProvers metisLib
@@ -22,8 +22,6 @@ open pathTheory
 open chap11_1Theory
 
 local open containerTheory in end
-
-val export_rewrites = export_rewrites "standardisation";
 
 val _ = new_theory "standardisation"
 

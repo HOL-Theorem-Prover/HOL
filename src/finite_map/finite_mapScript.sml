@@ -35,8 +35,6 @@ open HolKernel Parse boolLib IndDefLib numLib pred_setTheory
 
 local open pred_setLib listTheory in end
 
-val export_rewrites = BasicProvers.export_rewrites "finite_map";
-
 val _ = new_theory "finite_map";
 
 (*---------------------------------------------------------------------------*)

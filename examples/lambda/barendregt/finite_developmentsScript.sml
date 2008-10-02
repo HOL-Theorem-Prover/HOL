@@ -9,8 +9,6 @@ open pathTheory BasicProvers nomsetTheory pred_setTheory
 local open pred_setLib in end
 val _ = augment_srw_ss [boolSimps.LET_ss]
 
-val export_rewrites = export_rewrites "finite_developments";
-
 val _ = new_theory "finite_developments";
 
 fun Save_Thm(n, th) = save_thm(n,th) before export_rewrites [n]
@@ -3609,7 +3607,7 @@ val lcc_cosubstitutive = store_thm(
   REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `P` THEN
   HO_MATCH_MP_TAC lterm_bvc_induction THEN
   Q.EXISTS_TAC `v INSERT FV M UNION FV N` THEN SRW_TAC [][lSUB_VAR] THEN
-  PROVE_TAC [relationTheory.RTC_RULES, relationTheory.RTC_RTC, 
+  PROVE_TAC [relationTheory.RTC_RULES, relationTheory.RTC_RTC,
              RTC_lcc_rules]);
 
 val strong_lcc_ind =

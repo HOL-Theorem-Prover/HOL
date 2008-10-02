@@ -7,7 +7,6 @@ open HolKernel Parse boolLib bossLib BasicProvers listTheory quotientLib
 
 val _ = new_theory "ext_finite_set";
 
-val export_rewrites = export_rewrites "ext_finite_set"
 fun Store_Thm(n,t,tac) = store_thm(n,t,tac) before
                          export_rewrites [n]
 

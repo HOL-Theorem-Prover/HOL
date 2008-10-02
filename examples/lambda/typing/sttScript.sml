@@ -1,8 +1,6 @@
 open HolKernel boolLib Parse bossLib
 open binderLib metisLib termTheory contextlistsTheory
 
-val export_rewrites = BasicProvers.export_rewrites "stt";
-
 val _ = new_theory "stt";
 
 val _ = set_trace "Unicode" 1
@@ -42,9 +40,9 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
 val (hastype_rules, hastype_ind, hastype_cases) = Hol_reln`
   (!Gamma s A. valid_ctxt Gamma ∧ MEM (s,A) Gamma ⇒
                Gamma |- VAR s -: A) ∧
-  (!Gamma m n A B. Gamma |- m -: A → B ∧ Gamma |- n -: A ⇒ 
+  (!Gamma m n A B. Gamma |- m -: A → B ∧ Gamma |- n -: A ⇒
                    Gamma |- m @@ n -: B) ∧
-  (!Gamma x m A B. (x,A) :: Gamma |- m -: B ⇒ 
+  (!Gamma x m A B. (x,A) :: Gamma |- m -: B ⇒
                    Gamma |- LAM x m -: A → B)
 `;
 

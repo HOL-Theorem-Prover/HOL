@@ -15,8 +15,6 @@ fun DECIDE_TAC (g as (asl,_)) =
     CONV_TAC Arith.ARITH_CONV)
    ORELSE tautLib.TAUT_TAC) g;
 
-val export_rewrites = export_rewrites "gcd";
-
 val _ = new_theory "gcd";
 
 val IS_GCD = Q.new_definition
@@ -301,7 +299,7 @@ val lcm_def = Define`
   lcm m n = if (m = 0) \/ (n = 0) then 0 else (m * n) DIV gcd m n
 `;
 
-val _ = computeLib.add_persistent_funs 
+val _ = computeLib.add_persistent_funs
       [("GCD_EFFICIENTLY",GCD_EFFICIENTLY),
        ("lcm_def", lcm_def)];
 
@@ -384,8 +382,8 @@ val LCM_LEAST = store_thm(
   DECIDE_TAC);
 
 
-val _ = 
- let open EmitML dividesTheory 
+val _ =
+ let open EmitML dividesTheory
  in
   emitML (!Globals.emitMLDir)
    ("gcd",

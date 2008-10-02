@@ -6,10 +6,8 @@ structure sortingScript =
 struct
 
 open HolKernel Parse boolLib bossLib;
-open combinTheory pairTheory relationTheory listTheory 
+open combinTheory pairTheory relationTheory listTheory
      markerLib metisLib BasicProvers;
-
-val export_rewrites = BasicProvers.export_rewrites "sorting";
 
 val _ = new_theory "sorting";
 
@@ -317,9 +315,9 @@ val PERM_MEM_EQ = Q.store_thm(
  * all adjacent elements of the list.                                        *
  *---------------------------------------------------------------------------*)
 
-val SORTED_DEF = 
- Define 
-  `(SORTED R [] = T) /\ 
+val SORTED_DEF =
+ Define
+  `(SORTED R [] = T) /\
    (SORTED R [x] = T) /\
    (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))`;
 
@@ -335,7 +333,7 @@ val SORTS_DEF =
 
 val SORTED_EQ = Q.store_thm
 ("SORTED_EQ",
- `!R L x. 
+ `!R L x.
     transitive R ==> (SORTED R (x::L) = SORTED R L /\ !y. MEM y L ==> R x y)`,
 Induct_on `L`
  THEN RW_TAC list_ss [SORTED_DEF,MEM]
@@ -545,7 +543,7 @@ val QSORT_SORTS = Q.store_thm
 (* Add the computable definitions to the database used by EVAL               *)
 (*---------------------------------------------------------------------------*)
 
-val _ = 
+val _ =
  computeLib.add_persistent_funs [("QSORT_DEF",QSORT_DEF)];
 
 (*---------------------------------------------------------------------------*)

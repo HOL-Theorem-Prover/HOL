@@ -3,8 +3,6 @@ open boolSimps simpLib
 
 open arithmeticTheory IndDefLib listTheory metisLib BasicProvers
 
-val export_rewrites = BasicProvers.export_rewrites "inftree";
-
 val _ = new_theory "inftree"
 
 (* ----------------------------------------------------------------------

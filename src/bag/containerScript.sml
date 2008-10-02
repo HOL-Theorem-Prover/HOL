@@ -11,8 +11,6 @@ struct
 open HolKernel Parse boolLib pred_setTheory listTheory bagTheory
      Defn TotalDefn SingleStep BasicProvers;
 
-val export_rewrites = BasicProvers.export_rewrites "container";
-
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.						*)
 (* ---------------------------------------------------------------------*)

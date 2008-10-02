@@ -6,8 +6,6 @@ open wordsTheory integerTheory intLib arithmeticTheory
 
 val _ = new_theory "integer_word"
 
-val export_rewrites = BasicProvers.export_rewrites "integer_word";
-
 val i2w_def = Define`
   i2w (i : int) : 'a word =
     if i < 0 then $- (n2w (Num ~i)) else n2w (Num i)

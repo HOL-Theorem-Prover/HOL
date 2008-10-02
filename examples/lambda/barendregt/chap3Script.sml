@@ -7,8 +7,6 @@ local open pred_setLib in end;
 open binderLib BasicProvers
 open termTheory chap2Theory
 
-val export_rewrites = export_rewrites "chap3";
-
 val SUBSET_DEF = pred_setTheory.SUBSET_DEF
 
 val compatible_def =
@@ -1187,7 +1185,7 @@ val ccredex = prove(
 val strong_ccbeta_gen_ind = save_thm(
   "strong_ccbeta_gen_ind",
     (GEN_ALL o
-     SIMP_RULE (srw_ss() ++ SatisfySimps.SATISFY_ss) 
+     SIMP_RULE (srw_ss() ++ SatisfySimps.SATISFY_ss)
                [compat_closure_rules, FORALL_AND_THM, ccredex,
                 GSYM CONJ_ASSOC] o
      Q.INST [`P` |-> `\M N x. P M N x /\ compat_closure beta M N`])

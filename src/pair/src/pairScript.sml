@@ -762,7 +762,7 @@ S "val _ = Definition.new_definition_hook := (dest, post)"; NL();
 S "val _ = EmitML.is_comma_hook := same_const comma_tm"; NL()
   end)};
 
-val _ = BasicProvers.export_rewrites "PAIR"
+val _ = BasicProvers.export_rewrites
         ["PAIR", "FST", "SND", "CLOSED_PAIR_EQ", "CURRY_UNCURRY_THM",
          "UNCURRY_CURRY_THM", "CURRY_ONE_ONE_THM", "UNCURRY_ONE_ONE_THM",
          "UNCURRY_DEF", "CURRY_DEF", "PAIR_MAP_THM", "FST_PAIR_MAP",
