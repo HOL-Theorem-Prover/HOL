@@ -12,7 +12,7 @@ typedef struct mgr{
 #define ALLOCSIZE (2<<15)
 
 void init_storage();
-char *malloc();
+char *smv_malloc();
 void free();
 mgr_ptr new_mgr();
 rec_ptr new_rec(),dup_rec();
