@@ -630,16 +630,19 @@ fun clean_dirs f =
 fun errmsg s = TextIO.output(TextIO.stdErr, s ^ "\n");
 val help_mesg = "Usage: build\n\
                 \   or: build -symlink\n\
+                \   or: build -nosymlink\n\
                 \   or: build -small\n\
                 \   or: build -dir <fullpath>\n\
                 \   or: build -dir <fullpath> -symlink\n\
                 \   or: build -clean\n\
                 \   or: build -cleanAll\n\
                 \   or: build symlink\n\
+                \   or: build nosymlink\n\
                 \   or: build small\n\
                 \   or: build clean\n\
                 \   or: build cleanAll\n\
                 \   or: build help.\n\
+                \Symbolic linking is ON by default.\n\
                 \Add -expk to build an experimental kernel.\n\
                 \Add -selftest to do self-tests, where defined.\n\
                 \       Follow -selftest with a number to indicate level\n\
@@ -665,25 +668,30 @@ val _ = check_against "tools/smart-configure.sml"
 val _ = check_against "tools/configure.sml"
 val _ = check_against "tools/build.sml"
 val _ = check_against "tools/Holmake/Systeml.sig"
+val _ = check_against "tools/configure-mosml.sml"
 
 fun symlink_check() =
     if OS = "winNT" then
       die "Sorry; symbolic linking isn't available under Windows NT"
     else link
 
+val default_link = if OS = "winNT" then cp else link
+
 val _ =
     case cmdline of
-      []            => build_hol cp                (* no symbolic linking *)
+      []            => build_hol default_link
     | ["-symlink"]  => build_hol (symlink_check()) (* w/ symbolic linking *)
     | ["-small"]    => build_hol mv                (* by renaming *)
     | ["-dir",path] => buildDir cp (path, 0)
     | ["-dir",path,
        "-symlink"]  => buildDir (symlink_check()) (path, 0)
+    | ["-nosymlink"]=> build_hol cp
     | ["-clean"]    => clean_dirs cleandir
     | ["-cleanAll"] => clean_dirs cleanAlldir
     | ["clean"]     => clean_dirs cleandir
     | ["cleanAll"]  => clean_dirs cleanAlldir
     | ["symlink"]   => build_hol (symlink_check())
+    | ["nosymlink"] => build_hol cp
     | ["small"]     => build_hol mv
     | ["help"]      => build_help()
     | otherwise     => errmsg help_mesg
