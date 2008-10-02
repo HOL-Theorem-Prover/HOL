@@ -62,7 +62,7 @@ sig
          | AppFail of term * term
          | OvlNoType of string * hol_type
 
-  val last_tcerror : tcheck_error option ref
+  val last_tcerror : (tcheck_error * locn.locn) option ref
 
 end;
 

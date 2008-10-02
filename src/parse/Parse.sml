@@ -261,19 +261,18 @@ in
 fn q => let
      val ((qb,p), _) = pt (new_buffer q, initial_pstack)
          handle base_tokens.LEX_ERR (s,locn) =>
-                Raise (ERRORloc "Absyn" locn ("Lexical error - "^s))
+                raise (ERRORloc "Absyn" locn ("Lexical error - "^s))
    in
      if is_final_pstack p then
        case current qb of
          (BT_EOI,locn) => (top_nonterminal p handle ParseTermError (s,locn) =>
-                                                    Raise (ERRORloc "Term" locn s))
-       | (_,locn) => Raise (ERRORloc "Absyn" locn
+                                                    raise (ERRORloc "Term" locn s))
+       | (_,locn) => raise (ERRORloc "Absyn" locn
                                      (String.concat
                                           ["Can't make sense of remaining: ",
                                            Lib.quote (toString qb)]))
      else
-       Raise (ERRORloc "Absyn" (snd (current qb))
-                    "Parse failed")
+       raise (ERRORloc "Absyn" (snd (current qb)) "Parse failed")
    end
 end;
 

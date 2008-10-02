@@ -22,7 +22,7 @@ datatype tcheck_error =
        | AppFail of term * term
        | OvlNoType of string * hol_type
 
-val last_tcerror : tcheck_error option ref = ref NONE
+val last_tcerror : (tcheck_error * locn.locn) option ref = ref NONE
 
 
 
@@ -198,7 +198,7 @@ fun remove_overloading_phase1 ptm =
         [] => let
           val ty = Pretype.toType Ty
         in
-          last_tcerror := SOME (OvlNoType(Name,ty));
+          last_tcerror := SOME (OvlNoType(Name,ty), Locn);
           raise phase1_exn(Locn,
                            "No possible type for overloaded constant "^Name^
                            "\n",
@@ -430,7 +430,7 @@ fun TC printers = let
           in
             Globals.show_types := tmp;
             tcheck_say message;
-            last_tcerror := SOME (AppFail(Rator',Rand'));
+            last_tcerror := SOME (AppFail(Rator',Rand'), locn Rand);
             raise ERRloc"typecheck" (locn Rand (* arbitrary *)) message
           end)
     | check (Abs{Bvar, Body, Locn}) = (check Bvar; check Body)
@@ -458,7 +458,7 @@ fun TC printers = let
                        "\n\nunification failure message: ", message, "\n"]
           in
             Globals.show_types := tmp;
-            last_tcerror := SOME (ConstrainFail(real_term, real_type));
+            last_tcerror := SOME (ConstrainFail(real_term, real_type), Locn);
             tcheck_say message;
             raise ERRloc"typecheck" Locn message
           end)
