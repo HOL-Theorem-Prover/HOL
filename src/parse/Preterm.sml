@@ -342,28 +342,38 @@ fun to_term tm =
           open optmonad
           infix >> >-
           val clean = Pretype.clean o Pretype.remove_made_links
+          (*fun deep_beta_conv_ty Ty env =
+              return (if Pretype.do_beta_conv_types()
+                      then Pretype.deep_beta_conv_ty Ty
+                      else Ty) env*)
+          fun prepare Ty =
+              let val Ty' = if Pretype.do_beta_conv_types()
+                            then Pretype.deep_beta_conv_ty Ty
+                            else Ty
+              in Pretype.replace_null_links Ty' >- (fn _ => return Ty')
+              end
         in
           case tm of
-            Var{Name,Ty,...} => Pretype.replace_null_links Ty >- (fn _ =>
+            Var{Name,Ty,...} => prepare Ty >- (fn Ty =>
                                 return (Term.mk_var(Name, clean Ty)))
           | Const{Name,Thy,Ty,...} =>
-                Pretype.replace_null_links Ty >- (fn _ =>
+                prepare Ty >- (fn Ty =>
                 return (Term.mk_thy_const{Name=Name, Thy=Thy, Ty=clean Ty}))
           | Comb{Rator, Rand,...} => cleanup Rator >- (fn Rator'
                                   => cleanup Rand  >- (fn Rand'
                                   => return (Term.mk_comb(Rator', Rand'))))
           | TyComb{Rator, Rand,...} => cleanup Rator >- (fn Rator'
-                                  => Pretype.replace_null_links Rand >- (fn _
+                                  => prepare Rand >- (fn Rand
                                   => return (Term.mk_tycomb(Rator', clean Rand))))
           | Abs{Bvar, Body,...} => cleanup Bvar >- (fn Bvar'
                                 => cleanup Body >- (fn Body'
                                 => return (Term.mk_abs(Bvar', Body'))))
-          | TyAbs{Bvar, Body,...} => Pretype.replace_null_links Bvar >- (fn _
+          | TyAbs{Bvar, Body,...} => prepare Bvar >- (fn Bvar
                                 => cleanup Body >- (fn Body'
                                 => return (Term.mk_tyabs(clean Bvar, remove_case_magic Body'))))
           | Antiq{Tm,...} => return Tm
           | Constrained{Ptm,...} => cleanup Ptm
-       (* | Constrained{Ptm,Ty,...} => Pretype.replace_null_links Ty >- (fn _
+       (* | Constrained{Ptm,Ty,...} => prepare Ty >- (fn Ty
                                     => cleanup Ptm) *)
           | Overloaded _ => raise ERRloc "to_term" (locn tm)
                                          "applied to Overloaded"
@@ -396,7 +406,10 @@ fun to_term tm =
                            "Unconstrained type variable (and Globals.\
                            \guessing_tyvars is false)"
             else Pretype.toType ty
-                 (* let val _ = Pretype.replace_null_links ty (Pretype.kindvars ty, Pretype.tyvars ty)
+                (* let val ty = if Pretype.do_beta_conv_types()
+                                then Pretype.deep_beta_conv_ty ty
+                                else ty
+                        val _ = Pretype.replace_null_links ty (Pretype.kindvars ty, Pretype.tyvars ty)
                  in Pretype.clean (Pretype.remove_made_links ty)
                  end *)
       in
@@ -761,7 +774,9 @@ fun TC printers = let
     | check(TyComb{Rator, Rand, Locn}) =
          (check Rator;
           checkkind Rand;
-          let open Pretype
+          let val checkkind' = checkkind
+              open Pretype
+              val checkkind = checkkind'
               val rator_ty = ptype_of Rator
               val (bvar,body) = dest_univ_type rator_ty
                                 handle HOL_ERR _ => let
@@ -771,7 +786,9 @@ fun TC printers = let
                                      val bvar = PT(Vartype(s,kd,rk),locn.Loc_None) (* choose either this or next line *)
                                      (*val bvar = new_uvar(kd,rk)*)
                                      val body = mk_app_type(all_new_uvar(), bvar)
-                                 in Pretype.unify rator_ty (mk_univ_type(bvar, body));
+                                     val univ_ty = mk_univ_type(bvar, body)
+                                 in checkkind univ_ty;
+                                    Pretype.unify rator_ty univ_ty;
                                     (bvar,body)
                                  end
           in
@@ -887,7 +904,7 @@ fun TC printers = let
     | check (  Abs{Bvar, Body, Locn}) = (check Bvar; check Body)
     | check (TyAbs{Bvar, Body, Locn}) = (checkkind Bvar; check Body)
     | check (Var {Name, Ty, Locn}) =
-       (checkkind Ty; Prekind.unify (Pretype.pkind_of Ty) Prekind.typ
+       ((checkkind Ty; Prekind.unify (Pretype.pkind_of Ty) Prekind.typ)
        handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
                                      origin_function="unify",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"
@@ -915,7 +932,7 @@ fun TC printers = let
             raise ERRloc"kindcheck" (pty_locn Ty (* arbitrary *)) "failed"
           end)
     | check (Const {Name, Thy, Ty, Locn}) =
-       (checkkind Ty; Prekind.unify (Pretype.pkind_of Ty) Prekind.typ
+       ((checkkind Ty; Prekind.unify (Pretype.pkind_of Ty) Prekind.typ)
        handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
                                      origin_function="unify",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"

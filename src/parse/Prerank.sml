@@ -6,24 +6,13 @@ infix >> >-;
 
 val TCERR = mk_HOL_ERR "Prerank";
 
- datatype prerank
+datatype prerank
     = Zerorank
     | Sucrank of prerank
     | Maxrank of prerank * prerank
     | UVarrank of prerank option ref
 
-fun eq (UVarrank (ref(SOME rk)))  rk'                         = eq rk rk'
-  | eq rk                         (UVarrank (ref(SOME rk')))  = eq rk rk'
-  | eq (Zerorank)                 (Zerorank)                  = true
-  | eq (Sucrank rk)               (Sucrank rk')               = eq rk rk'
-  | eq (rk' as Maxrank(rk1,rk2))  rk                          =
-           leq rk' rk andalso (eq rk1 rk orelse eq rk2 rk)
-  | eq rk                         (rk' as Maxrank(rk1,rk2))   =
-           leq rk rk' andalso (eq rk rk1 orelse eq rk rk2)
-  | eq (UVarrank (r as ref NONE)) (UVarrank (r' as ref NONE)) = r=r'
-  | eq _                          _                           = false
-
-and leq (UVarrank (ref(SOME rk)))  rk'                         = leq rk rk'
+fun leq (UVarrank (ref(SOME rk)))  rk'                         = leq rk rk'
   | leq rk                         (UVarrank (ref(SOME rk')))  = leq rk rk'
   | leq (Zerorank)                 _                           = true
   | leq (Sucrank rk)               (Sucrank rk')               = leq rk rk'
@@ -31,6 +20,17 @@ and leq (UVarrank (ref(SOME rk)))  rk'                         = leq rk rk'
   | leq rk                         (Maxrank(rk1,rk2))          = leq rk rk1 orelse leq rk rk2
   | leq (UVarrank (r as ref NONE)) (UVarrank (r' as ref NONE)) = r=r'
   | leq _                          _                           = false
+
+fun eq (UVarrank (ref(SOME rk)))  rk'                         = eq rk rk'
+  | eq rk                         (UVarrank (ref(SOME rk')))  = eq rk rk'
+  | eq (Zerorank)                 (Zerorank)                  = true
+  | eq (Sucrank rk)               (Sucrank rk')               = eq rk rk'
+  | eq (rk as Maxrank(rk1,rk2))   rk'                         =
+           leq rk rk' andalso (eq rk1 rk' orelse eq rk2 rk')
+  | eq rk                         (rk' as Maxrank(rk1,rk2))   =
+           leq rk' rk andalso (eq rk rk1 orelse eq rk rk2)
+  | eq (UVarrank (r as ref NONE)) (UVarrank (r' as ref NONE)) = r=r'
+  | eq _                          _                           = false
 
 (* ----------------------------------------------------------------------
     A total ordering on preranks.
@@ -61,6 +61,10 @@ fun is_num_rank (Zerorank) = true
 fun num_rank (Zerorank) = 0
   | num_rank (Sucrank rk) = num_rank rk + 1
   | num_rank _ = raise TCERR "num_rank" "not a simple numeric rank";
+
+fun mk_Maxrank (rk1,rk2) =      if leq rk1 rk2 then rk2
+                           else if leq rk2 rk1 then rk1
+                           else Maxrank(rk1,rk2);
 
 fun prerank_to_string0 (UVarrank (ref NONE)) = "?"
   | prerank_to_string0 (UVarrank (ref(SOME rk))) = prerank_to_string rk
@@ -93,11 +97,11 @@ fun rename_rv rk =
     Zerorank => replace
   | Sucrank (rk1) =>
       rename_rv rk1 >- (fn rk1' =>
-      return (Sucrank(rk1')))
+      return (Sucrank (rk1')))
   | Maxrank (rk1,rk2) =>
       rename_rv rk1 >- (fn rk1' =>
       rename_rv rk2 >- (fn rk2' =>
-      return (Maxrank(rk1',rk2'))))
+      return (Maxrank (rk1',rk2'))))
   | _ => return rk
 
 fun rename_rankvars rk = valOf (#2 (rename_rv rk []))
@@ -160,7 +164,7 @@ fun r ref_remove value =
                            of NONE => r ref_remove rk2
                             | SOME rk1' => case r ref_remove rk2
                                              of NONE => SOME rk1'
-                                              | SOME rk2' => SOME (Maxrank(rk1',rk2'))
+                                              | SOME rk2' => SOME (mk_Maxrank(rk1',rk2'))
 
   fun has_free_uvar prk =
     case prk of
@@ -172,7 +176,7 @@ fun r ref_remove value =
 
 
 (* This unsafe_bind should not fail because of a SOME value, *)
-(* but merge the two preranks using Maxrank.                 *)
+(* but merge the two preranks using mk_Maxrank.              *)
 
 fun unsafe_bind_greater f r value =
   if r ref_occurs_in_not_top value
@@ -182,7 +186,7 @@ fun unsafe_bind_greater f r value =
          | SOME value' => (fn acc =>
          (((r, !r)::acc, SOME ())
           before r := SOME (case (!r) of
-                              SOME value0 => Maxrank(value0,value')
+                              SOME value0 => mk_Maxrank(value0,value')
                             | NONE => value')));
 
 fun unsafe_bind_less f r value =
@@ -345,7 +349,7 @@ local
                            of NONE => (r ref_remove rk2) env
                             | SOME rk1' => case (r ref_remove rk2) env
                                              of NONE => SOME rk1'
-                                              | SOME rk2' => SOME (Maxrank(rk1',rk2'))
+                                              | SOME rk2' => SOME (mk_Maxrank(rk1',rk2'))
 
 
 in
@@ -376,7 +380,7 @@ fun safe_bind_greater unify r value env =
         of NONE => ok env
          | SOME value' =>
              ((r,case Lib.assoc1 r env
-                 of SOME (_, v) => Maxrank(v,value')
+                 of SOME (_, v) => mk_Maxrank(v,value')
                   | NONE        => value'
               )::env, SOME ())
 end

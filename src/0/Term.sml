@@ -18,9 +18,9 @@ In *scratch*, type
 (hol-set-executable mosml-executable)
 and type Ctrl-j.
 
-loadPath := "/Users/palantir/hol/hol-omega/sigobj" :: !loadPath;
-app load ["Feedback","Lib","Subst","KernelTypes","Type","Sig","Lexis",
-          "Polyhash","Binarymap","combinTheory"];
+loadPath := "/Users/pvhomei/hol/hol-omega/sigobj" :: !loadPath;
+app load ["Feedback","Lib","Subst","KernelTypes","Type","KernelSig","Lexis",
+          "Polyhash","Binarymap"];
 *)
 
 open Feedback Lib Subst KernelTypes Type;
@@ -524,7 +524,7 @@ local val INCOMPAT_TYPES  = Lib.C ERR "incompatible types"
                     then loop(Comb(A,tm),ty2) rst
                     else raise err
                  end
-        in fn (f,L) => loop(f, type_of f) L
+        in fn (f,L) => loop(f, deep_beta_conv_ty (type_of f)) L
         end
       val mk_comb0 = lmk_comb (INCOMPAT_TYPES "mk_comb")
 in

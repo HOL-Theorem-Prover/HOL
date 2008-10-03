@@ -29,6 +29,7 @@ let
   fun with_pp ppfn pps x =
       Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
 in
+  installPP (with_pp Pretype.pp_pretype);
   installPP (with_pp simpLib.pp_ssfrag);
   installPP (with_pp simpLib.pp_simpset)
 end;

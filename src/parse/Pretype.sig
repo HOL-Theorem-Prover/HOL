@@ -39,6 +39,7 @@ val dest_abs_type : pretype -> pretype * pretype
 
 val beta_conv_ty : pretype -> pretype
 val deep_beta_conv_ty : pretype -> pretype
+val do_beta_conv_types : unit -> bool
 
 val pkind_of : pretype -> prekind
 val prank_of : pretype -> prerank
@@ -68,6 +69,7 @@ val pretyvar_compare : pretyvar * pretyvar -> order
 val gen_unify :
   (prekind -> prekind -> ('a -> 'a * unit option)) ->
   (prerank -> prerank -> ('a -> 'a * unit option)) ->
+  (prerank -> prerank -> ('a -> 'a * unit option)) ->
   ((pretype -> pretype -> ('a -> 'a * unit option)) ->
    (uvartype ref -> (pretype -> ('a -> 'a * unit option)))) ->
   pretyvar list -> pretyvar list ->
@@ -79,7 +81,6 @@ val safe_unify :
   pretype -> pretype ->
   ((prekind option ref * prekind) list * (prerank option ref * prerank) list * (uvartype ref * pretype) list ->
    ((prekind option ref * prekind) list * (prerank option ref * prerank) list * (uvartype ref * pretype) list) * unit option)
-(*val apply_subst : (uvartype ref * pretype) list -> pretype -> pretype*)
 val type_subst  : {redex : pretype, residue : pretype} list -> pretype -> pretype
 
 val rename_typevars : pretype -> pretype
@@ -88,6 +89,7 @@ val rename_tv : pretype -> (string * pretype) list ->
            (prerank list * (string * prekind) list * (string * pretype) list) * pretype option
 val fromType : hol_type -> pretype
 val pretype_to_string : pretype -> string
+val pp_pretype : ppstream -> pretype -> unit
 val remove_made_links : pretype -> pretype
 val replace_null_links : pretype -> string list * string list
                          -> (string list * string list) * unit option

@@ -15,6 +15,10 @@ val debug = ref 0
 val _ = Feedback.register_trace("debug_pretype", debug, 1)
 fun is_debug() = (!debug) > 0;
 
+val beta_conv_types = ref 0
+val _ = Feedback.register_trace("beta_conv_types", beta_conv_types, 1)
+fun do_beta_conv_types() = (!beta_conv_types) > 0;
+
 val TCERR = mk_HOL_ERR "Pretype";
 val ERRloc = mk_HOL_ERRloc "Pretype"
 
@@ -182,6 +186,9 @@ fun ((ty1 as PT(_,loc1)) --> (ty2 as PT(_,loc2))) =
 fun is_var_type(PT(Vartype v,loc)) = true
   | is_var_type _ = false
 
+fun is_uvar_type(PT(UVar r,loc)) = true
+  | is_uvar_type _ = false
+
 fun has_var_type(ty as PT(Vartype v,loc)) = true
   | has_var_type(PT(TyKindConstr{Ty,Kind},loc)) = has_var_type Ty
   | has_var_type(PT(TyRankConstr{Ty,Rank},loc)) = has_var_type Ty
@@ -192,6 +199,20 @@ fun has_var_type(ty as PT(Vartype v,loc)) = true
 fun dest_var_type(PT(Vartype v,loc)) = v
   | dest_var_type(PT(UVar(ref(SOMEU ty)),loc)) = dest_var_type ty
   | dest_var_type _ = raise TCERR "dest_var_type" "not a type variable";
+
+local
+fun rstrip_app_type(PT(TyApp(ty1,ty2), _)) = let val (opr,args) = rstrip_app_type ty1
+                                             in (opr, ty2::args)
+                                             end
+  | rstrip_app_type(PT(TyKindConstr{Ty,Kind},loc)) = rstrip_app_type Ty
+  | rstrip_app_type(PT(TyRankConstr{Ty,Rank},loc)) = rstrip_app_type Ty
+  | rstrip_app_type(PT(UVar(ref(SOMEU ty)),loc))   = rstrip_app_type ty
+  | rstrip_app_type ty = (ty,[])
+in
+fun strip_app_type ty = let val (opr,args) = rstrip_app_type ty
+                        in (opr, rev args)
+                        end
+end;
 
 fun the_var_type(ty as PT(Vartype v,loc)) = ty
   | the_var_type(PT(TyKindConstr{Ty,Kind},loc)) = the_var_type Ty
@@ -231,9 +252,18 @@ fun dest_univ_type(PT(UVar(ref(SOMEU ty)),loc)) = dest_univ_type ty
 fun mk_abs_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyAbst(ty1,ty2), locn.between loc1 loc2)
 
+fun list_mk_abs_type([],ty) = ty
+  | list_mk_abs_type(v::vs,ty) = mk_abs_type(v,list_mk_abs_type(vs,ty))
+
 fun dest_abs_type(PT(UVar(ref(SOMEU ty)),loc)) = dest_abs_type ty
   | dest_abs_type(ty as PT(TyAbst(ty1,ty2),loc)) = (ty1,ty2)
   | dest_abs_type _ = raise TCERR "dest_abs_type" "not a type abstraction";
+
+fun is_abs_type(PT(UVar(ref(SOMEU ty))  ,loc)) = is_abs_type ty
+  | is_abs_type(PT(TyKindConstr{Ty,Kind},loc)) = is_abs_type Ty
+  | is_abs_type(PT(TyRankConstr{Ty,Rank},loc)) = is_abs_type Ty
+  | is_abs_type(ty as PT(TyAbst(ty1,ty2),loc)) = true
+  | is_abs_type _ = false;
 
 fun the_abs_type(PT(UVar(ref(SOMEU ty))  ,loc)) = the_abs_type ty
   | the_abs_type(PT(TyKindConstr{Ty,Kind},loc)) = the_abs_type Ty
@@ -297,17 +327,21 @@ fun all_new_uvar () = PT (UVar(ref (NONEU(Prekind.new_uvar(),Prerank.new_uvar())
  * The free type variables in a pretype.  Tail recursive (from Ken Larsen).  *
  *---------------------------------------------------------------------------*)
 
-local fun TV (v as PT(Vartype _,_)) B A k = if mem v B then k A
-                                            else k (Lib.insert v A)
+local val insert = Lib.op_insert eq
+      val mem    = Lib.op_mem eq
+      fun TV (v as PT(Vartype _,_)) B A k = if mem v B then k A
+                                            else k (insert v A)
         | TV (PT(Contype _,_)) B A k      = k A
         | TV (PT(TyApp(opr, ty),_)) B A k = TV opr B A (fn q => TV ty B q k)
-        | TV (PT(TyUniv(v,ty),_)) B A k   = TV ty (Lib.insert v B) A k
-        | TV (PT(TyAbst(v,ty),_)) B A k   = TV ty (Lib.insert v B) A k
+        | TV (PT(TyUniv(v,ty),_)) B A k   = TV ty (insert v B) A k
+        | TV (PT(TyAbst(v,ty),_)) B A k   = TV ty (insert v B) A k
         | TV (PT(TyKindConstr{Ty,Kind},_)) B A k = TV Ty B A k
         | TV (PT(TyRankConstr{Ty,Rank},_)) B A k = TV Ty B A k
-        | TV (PT(UVar(ref(NONEU _ )),_)) B A k = k A
+        | TV (v as PT(UVar(ref(NONEU _ )),_)) B A k = if mem v B then k A
+                                                      else k (insert v A)
+     (* | TV (PT(UVar(ref(NONEU _ )),_)) B A k = k A *)
         | TV (PT(UVar(ref(SOMEU ty)),_)) B A k = TV ty B A k
-      and TVl (ty::tys) B A k             = TV ty B A (fn q => TVl tys B q k)
+      and TVl (ty::tys) B A k = TV ty B A (fn q => TVl tys B q k)
         | TVl _ B A k = k A
 in
 fun type_vars ty = rev(TV ty [] [] Lib.I)
@@ -353,15 +387,15 @@ fun pkind_of0 (Vartype(s,kd,rk)) = kd
   | pkind_of0 (TyAbst(Bvar,Body)) = pkind_of Bvar ==> pkind_of Body
   | pkind_of0 (TyKindConstr{Ty,Kind}) = Kind
   | pkind_of0 (TyRankConstr{Ty,Rank}) = pkind_of Ty
-  | pkind_of0 (UVar (r as ref (NONEU(kd,rk)))) = kd
-  | pkind_of0 (UVar (r as ref (SOMEU ty))) = pkind_of ty
+  | pkind_of0 (UVar (ref (NONEU(kd,rk)))) = kd
+  | pkind_of0 (UVar (ref (SOMEU ty))) = pkind_of ty
 and pkind_of (pty as PT(ty,locn)) = pkind_of0 ty
 
 
 local
 val zero = Prerank.Zerorank
 val inc  = Prerank.Sucrank
-val max  = Prerank.Maxrank
+val max  = Prerank.mk_Maxrank
 in
 fun prank_of0 (Vartype(s,kd,rk)) = rk
   | prank_of0 (Contype{Rank, ...}) = Rank
@@ -370,8 +404,8 @@ fun prank_of0 (Vartype(s,kd,rk)) = rk
   | prank_of0 (TyAbst(Bvar,Body))  =     max(prank_of Bvar, prank_of Body)
   | prank_of0 (TyKindConstr{Ty,Kind}) = prank_of Ty
   | prank_of0 (TyRankConstr{Ty,Rank}) = Rank
-  | prank_of0 (UVar (r as ref (NONEU(_,rk)))) = rk
-  | prank_of0 (UVar (r as ref (SOMEU ty))) = prank_of ty
+  | prank_of0 (UVar (ref (NONEU(_,rk)))) = rk
+  | prank_of0 (UVar (ref (SOMEU ty))) = prank_of ty
 and prank_of (PT(ty,locn)) = prank_of0 ty
 end;
 
@@ -430,6 +464,90 @@ and pretypes_to_string0 [ty] = pretype_to_string ty
                                      ^ pretypes_to_string0 tys
   | pretypes_to_string0 [] = ""
 
+fun pp_pretype pps ty =
+ let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     fun pppretype (ty as PT(ty0,locn)) =
+       case ty0 of
+           UVar(ref (SOMEU ty')) => pppretype ty'
+         | UVar(ref (NONEU(kd,rk))) => add_string ("<uvar>" ^ kind_rank_to_string(kd,rk))
+         | Vartype(s,kd,rk) => add_string (s ^ kind_rank_to_string(kd,rk))
+         | Contype {Thy, Tyop, Kind, Rank} => add_string Tyop (* ^ kind_rank_to_string(Kind,Rank) *)
+         | TyApp(PT(TyApp(PT(Contype{Tyop="fun",...},_), ty1),_), ty2) =>
+                              (add_string "(";
+                               begin_block INCONSISTENT 0;
+                               pppretype ty1;
+                               add_string " ->";
+                               add_break(1,0);
+                               pppretype ty2;
+                               end_block();
+                               add_string ")")
+         | TyApp(PT(TyApp(PT(Contype{Tyop="prod",...},_), ty1),_), ty2) =>
+                              (add_string "(";
+                               begin_block INCONSISTENT 0;
+                               pppretype ty1;
+                               add_string " #";
+                               add_break(1,0);
+                               pppretype ty2;
+                               end_block();
+                               add_string ")")
+         | TyApp(PT(TyApp(PT(Contype{Tyop="sum",...},_), ty1),_), ty2) =>
+                              (add_string "(";
+                               begin_block INCONSISTENT 0;
+                               pppretype ty1;
+                               add_string " +";
+                               add_break(1,0);
+                               pppretype ty2;
+                               end_block();
+                               add_string ")")
+         | TyApp(ty1, ty2) => (add_string "(";
+                               begin_block INCONSISTENT 0;
+                               pppretype ty2;
+                               add_break(1,0);
+                               pppretype ty1;
+                               end_block();
+                               add_string ")")
+         | TyUniv(tyv, ty) => (add_string "!";
+                               begin_block INCONSISTENT 0;
+                               pppretype tyv;
+                               add_string ".";
+                               add_break(1,2);
+                               pppretype ty;
+                               end_block())
+         | TyAbst(tyv, ty) => (add_string "\\";
+                               begin_block INCONSISTENT 0;
+                               pppretype tyv;
+                               add_string ".";
+                               add_break(1,2);
+                               pppretype ty;
+                               end_block())
+         | TyKindConstr {Ty, Kind} =>
+                              (begin_block INCONSISTENT 0;
+                               pppretype Ty;
+                               add_string " :";
+                               add_break(1,2);
+                               add_string (kind_to_string(Prekind.toKind Kind));
+                               end_block())
+         | TyRankConstr {Ty, Rank} =>
+                              (begin_block INCONSISTENT 0;
+                               pppretype Ty;
+                               add_string " :<=";
+                               add_break(1,2);
+                               add_string (Int.toString(Prerank.toRank Rank));
+                               end_block())
+ in
+   pppretype ty
+ end;
+
+(*
+let
+  fun with_pp ppfn pps x =
+      Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
+in
+  installPP (with_pp pp_pretype)
+end;
+*)
+
 
 (*------------------------------------------------------------------------------*
  * Replace variable or unification variable subpretypes in a pretype. Renaming. *
@@ -437,7 +555,9 @@ and pretypes_to_string0 [ty] = pretype_to_string ty
 
 local
   fun variant_ptype fvs v = if is_var_type v then variant_type fvs v
-                            else (* v is a uvar, cannot be in fvs *) v
+                            else (* v is a uvar *)
+                            if op_mem eq v fvs then new_uvar(pkind_of v,prank_of v)
+                            else v
   val is_var_subst = Lib.all (fn {redex,residue} => has_var_type redex)
   fun peek ([], x) = NONE
     | peek ({redex=a, residue=b}::l, x) = if eq a x then SOME b else peek (l, x)
@@ -445,8 +565,7 @@ local
 in
 fun type_subst [] = I
   | type_subst theta =
-    let val frees = type_vars_subst theta
-        fun vsubs0 fmap (v as Vartype _) =
+    let fun vsubs0 fmap (v as Vartype _) =
                (case peek(fmap,PT(v, locn.Loc_None)) of
                                      NONE => v
                                    | SOME (PT(y,_)) => y)
@@ -457,6 +576,7 @@ fun type_subst [] = I
           | vsubs0 fmap (TyApp(opr,ty)) = TyApp(vsubs fmap opr, vsubs fmap ty)
           | vsubs0 fmap (TyUniv(Bvar,Body)) =
                let val Bvar1 = the_var_type Bvar
+                   val frees = type_vars_subst fmap
                    val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
                    val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
                in if eq Bvar1 Bvar' then TyUniv(Bvar, vsubs fmap Body)
@@ -466,6 +586,7 @@ fun type_subst [] = I
                end
           | vsubs0 fmap (TyAbst(Bvar,Body)) =
                let val Bvar1 = the_var_type Bvar
+                   val frees = type_vars_subst fmap
                    val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
                    val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
                in if eq Bvar1 Bvar' then TyAbst(Bvar, vsubs fmap Body)
@@ -488,6 +609,7 @@ fun type_subst [] = I
                 of TyApp(opr,ty) => PT(TyApp(subs fmap opr, subs fmap ty), locn)
                  | TyUniv(Bvar,Body) =>
                      let val Bvar1 = the_var_type Bvar
+                         val frees = type_vars_subst fmap
                          val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
                          val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
                      in if eq Bvar1 Bvar' then PT(TyUniv(Bvar, subs fmap Body), locn)
@@ -497,6 +619,7 @@ fun type_subst [] = I
                      end
                  | TyAbst(Bvar,Body) =>
                      let val Bvar1 = the_var_type Bvar
+                         val frees = type_vars_subst fmap
                          val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
                          val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
                      in if eq Bvar1 Bvar' then PT(TyAbst(Bvar, subs fmap Body), locn)
@@ -860,6 +983,16 @@ fun rank_unify r1 r2 (kd_env,rk_env,ty_env) =
      ((kd_env,rk_env',ty_env), result)
   end
 
+fun rank_unify_le r1 r2 (kd_env,rk_env,ty_env) =
+  let val (rk_env', result) = Prerank.unsafe_unify_le r1 r2 rk_env
+  in if not (is_debug()) then () else
+     case result of SOME _ => () | NONE =>
+         (print "\nrank_unify_le failed:\n";
+          print (Prerank.prerank_to_string r1 ^ " compared to\n" ^
+                 Prerank.prerank_to_string r2 ^ "\n"));
+     ((kd_env,rk_env',ty_env), result)
+  end
+
 
 fun unsafe_bind f r value =
   if r ref_equiv value
@@ -882,10 +1015,11 @@ fun unsafe_bind f r value =
      a kind environment CROSS a rank environment CROSS the prior type environment.  *)
 (* this will need changing *)
 (* eta-expansion *is* necessary *)
-fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
-              (rank_unify:prerank -> prerank -> ('a -> 'a * unit option))
+fun gen_unify (kind_unify   :prekind -> prekind -> ('a -> 'a * unit option))
+              (rank_unify   :prerank -> prerank -> ('a -> 'a * unit option))
+              (rank_unify_le:prerank -> prerank -> ('a -> 'a * unit option))
               bind c1 c2 (ty1 as PT(t1,locn1)) (ty2 as PT(t2,locn2)) e = let
-  val gen_unify = gen_unify kind_unify rank_unify bind
+  val gen_unify = gen_unify kind_unify rank_unify rank_unify_le bind
 (*
   val ty1s = pretype_to_string ty1
   val ty2s = pretype_to_string ty2
@@ -940,6 +1074,12 @@ fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
         then f ty1' ty2'
         else m
      end
+  fun mk_v_s arg = if has_var_type arg then (arg,[])
+                   else let val v = all_new_uvar()
+                         in Prekind.unify (pkind_of arg) (pkind_of v);
+                            Prerank.unify_le (prank_of arg) (* <= *) (prank_of v);
+                            (v,[arg |-> v])
+                        end
 (*val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)*)
 (*fun qconv_ty c ty = c ty handle UNCHANGEDTY => ty*)
 (*
@@ -960,8 +1100,8 @@ fun gen_unify (kind_unify:prekind -> prekind -> ('a -> 'a * unit option))
 *)
 in
   case (t1, t2) of
-    (UVar (r as ref (NONEU(kd,rk))), _) => kind_unify kd (pkind_of ty2) >>
-                                           rank_unify rk (prank_of ty2) >>
+    (UVar (r as ref (NONEU(kd,rk))), _) => kind_unify (pkind_of ty2) kd >>
+                                           rank_unify_le (prank_of ty2) rk >>
                                            bind (gen_unify c1 c2) r ty2
   | (UVar (r as ref (SOMEU ty1)), t2) => gen_unify c1 c2 ty1 ty2
   | (_, UVar _) => gen_unify c2 c1 ty2 ty1
@@ -978,23 +1118,55 @@ in
        rank_unify rk1 (prank_of ty1') >> gen_unify c1 c2 ty1' ty2 >> return ()
   | (_, TyRankConstr _) => gen_unify c2 c1 ty2 ty1
   | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
-       gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()
+       let val (opr1,args1) = strip_app_type ty1
+           val (opr2,args2) = strip_app_type ty2
+       in if is_abs_type opr1 then
+            gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
+          else if has_var_type opr1 andalso is_uvar_type(the_var_type opr1) then
+            (* Higher order unification; shift args to other side by abstraction. *)
+            let val (vs,s0) = unzip (map mk_v_s args1)
+                val theta = flatten s0
+                val ty2' = type_subst theta ty2 (* general subst *)
+             in gen_unify c1 c2 opr1 (list_mk_abs_type(rev vs,ty2'))
+            end
+          else if is_abs_type opr2 then
+            gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
+          else if has_var_type opr2 andalso is_uvar_type(the_var_type opr2) then
+            (* Higher order unification; shift args to other side by abstraction. *)
+            let val (vs,s0) = unzip (map mk_v_s args2)
+                val theta = flatten s0
+                val ty1' = type_subst theta ty1 (* general subst *)
+             in gen_unify c1 c2 (list_mk_abs_type(rev vs,ty1')) opr2
+            end
+          else (* normal structural unification *)
+            gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()
+       end
   | (TyApp(ty11, ty12), _) =>
-       ((the_var_type ty12; (* succeeds if ty12 is Var or UVar *)
-         gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2)))
-        handle HOL_ERR _ => (* ty12 is not a type variable *)
-        let val ty12v = new_uvar(pkind_of ty12,prank_of ty12)
-            val ty2' = type_subst [ty12 |-> ty12v] ty2 (* general subst *)
-        in gen_unify c1 c2 ty11 (PT(TyAbst(ty12v,ty2'),locn2))
-        end)
+       let val (opr1,args1) = strip_app_type ty1
+       in if is_abs_type opr1 then
+            gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
+          else if has_var_type opr1 andalso is_uvar_type(the_var_type opr1) then
+            (* Higher order unification; shift args to other side by abstraction. *)
+            let val (vs,s0) = unzip (map mk_v_s args1)
+                val theta = flatten s0
+                val ty2' = type_subst theta ty2 (* general subst *)
+             in gen_unify c1 c2 opr1 (list_mk_abs_type(rev vs,ty2'))
+            end
+          else fail (* normal structural unification *)
+       end
   | (_, TyApp(ty21, ty22)) =>
-       ((the_var_type ty22; (* succeeds if ty22 is Var or UVar *)
-         gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn2)) ty21)
-        handle HOL_ERR _ => (* ty22 is not a type variable *)
-        let val ty22v = new_uvar(pkind_of ty22,prank_of ty22)
-            val ty1' = type_subst [ty22 |-> ty22v] ty1 (* general subst *)
-        in gen_unify c1 c2 (PT(TyAbst(ty22v,ty1'),locn2)) ty21
-        end)
+       let val (opr2,args2) = strip_app_type ty2
+       in if is_abs_type opr2 then
+            gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
+          else if has_var_type opr2 andalso is_uvar_type(the_var_type opr2) then
+            (* Higher order unification; shift args to other side by abstraction. *)
+            let val (vs,s0) = unzip (map mk_v_s args2)
+                val theta = flatten s0
+                val ty1' = type_subst theta ty1 (* general subst *)
+             in gen_unify c1 c2 (list_mk_abs_type(rev vs,ty1')) opr2
+            end
+          else fail (* normal structural unification *)
+       end
 (*
   | (TyApp(ty11, ty12 as PT(Vartype _,_)), _) =>
        gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2))
@@ -1036,7 +1208,7 @@ fun unify t1 t2 =
                    ^ "\n   vs. " ^ ty2s ^ "\n(beta) " ^ ty2s' ^ "\n")
          end
   in
-  case (gen_unify kind_unify rank_unify unsafe_bind [] [] t1' t2' empty_env)
+  case (gen_unify kind_unify rank_unify rank_unify_le unsafe_bind [] [] t1' t2' empty_env)
    of (bindings, SOME ()) => ()
     | (_, NONE) => raise TCERR "unify" "unify failed"
                                     (* ("unify failed: " ^ pretype_to_string t1
@@ -1045,7 +1217,7 @@ fun unify t1 t2 =
 
 fun can_unify t1 t2 = let
   val ((kind_bindings,rank_bindings,type_bindings), result) =
-        gen_unify kind_unify rank_unify unsafe_bind [] [] t1 t2 empty_env
+        gen_unify kind_unify rank_unify rank_unify_le unsafe_bind [] [] t1 t2 empty_env
   val _ = app (fn (r, oldvalue) => r := oldvalue) kind_bindings
   val _ = app (fn (r, oldvalue) => r := oldvalue) rank_bindings
   val _ = app (fn (r, oldvalue) => r := oldvalue) type_bindings
@@ -1098,6 +1270,11 @@ local
         in ((kenv,renv',tenv), result)
         end
 
+      fun rank_unify_le r1 r2 (env as (kenv,renv,tenv)) =
+        let val (renv', result) = Prerank.safe_unify_le r1 r2 renv
+        in ((kenv,renv',tenv), result)
+        end
+
 in
 fun safe_bind unify r value (env as (kenv,renv,tenv)) =
   case Lib.assoc1 r tenv
@@ -1107,7 +1284,7 @@ fun safe_bind unify r value (env as (kenv,renv,tenv)) =
         if (r ref_occurs_in value) env then fail env
         else ((kenv,renv,(r,value)::tenv), SOME ())
 
-fun safe_unify t1 t2 = gen_unify kind_unify rank_unify safe_bind [] [] t1 t2
+fun safe_unify t1 t2 = gen_unify kind_unify rank_unify rank_unify_le safe_bind [] [] t1 t2
 end
 
 
@@ -1301,7 +1478,9 @@ fun clean (pty as PT(ty, locn)) =
 ) handle e => raise (wrap_exn "Pretype.clean" (pretype_to_string pty) e)
 
 fun toType ty =
-  let 
+  let val ty = if do_beta_conv_types()
+                      then deep_beta_conv_ty ty
+                      else ty
       val _ = replace_null_links ty (kindvars ty, tyvars ty)
   in
     clean (remove_made_links ty)

@@ -7,6 +7,8 @@ sig
     | Maxrank of prerank * prerank
     | UVarrank of prerank option ref
 
+val mk_Maxrank : prerank * prerank -> prerank
+
 val eq : prerank -> prerank -> bool
 val leq : prerank -> prerank -> bool
 val prerank_compare : prerank * prerank -> order
