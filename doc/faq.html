@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
 
 <html><head>
-<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <link rel="stylesheet" href="index.css" type="text/css">
 <title>HOL Frequently Asked Questions</title></head>
 <body>
@@ -209,9 +209,30 @@ a <code>Holmakefile</code>.</p></dd>
      <code>ty_antiq</code>.
 </dl>
 <hr>
-<h2 id = "Parsing">Parsing</h2>
+<h2 id = "Parsing">Parsing and Printing</h2>
 
 <dl>
+<dt>
+  <strong>
+    I defined an infix “and”. This works OK, but it seems to
+    not get the precedence I gave it. Is this an interaction
+    with <code>let-and</code> declaration syntax? I don't
+    use <code>let-and</code> much, so is there a way to remove
+    the <code>let-and</code> treatment of “and” from the term
+    grammar?
+  </strong></dt>
+
+<dd>
+  <p>Yes, if the <code>let-and</code> syntax is enabled (as it is by
+    default), there will be a competing “and” infix at fixity level 9 in
+    the grammar.  (You can see this if you look at the output of a call
+    to <code>term_grammar()</code>.)  The way to get rid of it is with
+  </p>
+<pre>
+    remove_termtok {term_name = GrammarSpecials.and_special, tok = "and"};
+</pre>
+</dd>
+
 <dt><strong>Why can't I write <code>``MAP ~ x``</code>?</strong>
 <dd> When you attempt this, you will get the error message
 <pre>
