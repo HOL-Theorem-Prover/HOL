@@ -40,7 +40,7 @@
    term2xml/xml and build and solve the corresponding
    CSP.
    Let tm be the term that has been written as XML file and
-   read by Java classes to build a CSP.
+			      read by Java classes to build a CSP.
    If there is a solution s to the CSP, then ?s.tm
    is a theorem
    else !s.~tm is a theorem. 
@@ -273,11 +273,13 @@ fun incResolvedPath() =
   nbResolvedPath:= !nbResolvedPath + 1;
 
 
-(* global variable and functions to manage
-   results on the different paths *)
-(* -------------------------------------------- *)
-
-
+(* global variable that contains the variables of the program
+   and is used to make existential formula *)
+val programVars = ref [];
+(* programVars is computed by function setVars taht is defined
+   with function makeState *)
+fun resetProgramVars() =
+     programVars:=[];
 
 (* to reset the global variables at the end of an execution *)
 fun resetAll() = 
@@ -288,122 +290,12 @@ fun resetAll() =
   );
    
 
-(* -----------------------------------------------------
-   Functions written by Mike Gordon to read a solution 
-   computed by a CSP 
-   -----------------------------------------------------
-*)
-
 
 open HolKernel Parse boolLib arithmeticTheory (* to have BOUNDED_FORALL theorem *)
-     newOpsemTheory bossLib pairSyntax intLib
+     newOpsemTheory bossLib pairSyntax intLib intSimps
      computeLib finite_mapTheory relationTheory stringLib
-     term2xml;  (* added as printXML_to_file needed *)
+     term2xml extSolv;  (* added as printXML_to_file needed *)
 
-
-(* Read a file into a string *)
-fun readFileToString file_name =
- let val instream = TextIO.openIn file_name
-     val contents = TextIO.inputAll instream
-     val _ = TextIO.closeIn instream
- in
-  contents
- end;
-
-(* 
-Parse a solutions file -- very ad hoc and no error checking! 
-
- getSolutions : string -> (string * string) list list * real
- getSolutions file_name = ([[("x1","m1"),...,],...,[("y1","n1"),...]], time)
-
-If the solver returns "No solution" then the first component of the
-returned pair (a list of lists) is empty.
-
-*)
-local 
-
-(* If p(xi)=false (for 1<=i<=n) and p(x)=true, then:
-   splitUntil p [x1,...,xn,x,y1,...ym] = ([x1,...,xn],[y1,...,ym])  
-*)
-val splitUntil =
-  let fun splitUntilAux acc p [] = (rev acc,[])
-|  splitUntilAux acc p (x::l) = 
-  if p(x) then (rev acc,l) 
-  else splitUntilAux (x::acc) p l
-  in
-  splitUntilAux ([] : string list)
-end;
-
-
-(* dest_string_int_pair "(x,n)" --> ("x","n") *)
-fun dest_string_int_pair str =
-  let val [x,n] = 
-    String.tokens (fn c => mem c [#"(",#")",#","]) str
-  in
-  (x, n)
-end
-
-(* Group each solution into a list, returning a list of lists:
-   sol_extract 
-   [...,"Solution #2",...,"Solution #3",...,"Solution #4",...]
-   -->
-   [[...],[...],[...],[...]]
- *)
-fun sol_extract [] = []
-|  sol_extract l  = let val (l1,l2) = splitUntil (String.isPrefix "Solution: ") l
-in 
-  l1 :: sol_extract l2
-end
-
-in
-
-fun getSolutions file_name =
-  let val lines = String.tokens (fn c => c = #"\n") (readFileToString file_name)
-val solutions = 
-  if hd lines = "No solution"
-  then []
-  else 
-     if hd lines = "Timeout"
-     then [[("Timeout","Timeout")]]
-     else map 
-            (map dest_string_int_pair) 
-            (sol_extract(tl(butlast lines)))
-val sol_time_str = String.extract(last lines, (String.size "Resolution time: "),
-				  NONE)
-val SOME sol_time = Real.fromString(implode(butlast(explode sol_time_str)))
-  in
-  (solutions,sol_time)
-end
-
-end;
-
-
-(* End of functions written by Mike Gordon to read a solution 
-   of a CSP solver *)
-(* -----------------------------------------------------*)
-
-
-(* function to transform the list of solutions
-   as a finite map that can be used as outcome *)
-fun addSol st nt vt = 
-  ``^st |+ (^nt,Scalar ^vt)``;
-
-fun finiteMapSol l st =
-  if null l 
-  then st
-  else 
-    let val (n,v) = (fst(hd(l)),snd(hd(l)));
-      val (nt,vt) = (stringSyntax.fromMLstring(n),
-                     intSyntax.term_of_int(Arbint.fromString(v)));
-      val newSt = addSol st nt vt
-      in 
-        finiteMapSol (tl l) newSt
-    end;
-
-(* to know if the value returned by getSolutions is a 
-   timeout *)
-fun isSolverTimeout l =
-   fst(hd(hd(fst(l)))) = "Timeout";
 
 
 (*====================================== *)
@@ -543,12 +435,9 @@ fun program_vars c =
 (* functions to make the initial state *)
 val MAX_ARRAY_SIZE = 10;
 
-local
 
 (* to know if a variable is the length of an array *)
-
-
-fun isArraylength tm =
+fun isArrayLength tm =
   let val s = fromHOLstring tm
   in  
      if (size s) > 6
@@ -557,7 +446,20 @@ fun isArraylength tm =
      else false
   end;
 
-in
+(* compute the set of variable in the program as a list of type
+   variables. Used to make existential terms *)
+fun setVars vars = 
+   map
+    (fn v =>
+      let val s = fromHOLstring v
+      in
+       if isArrayLength v
+       then programVars:= [mk_var(s,``:num``)] @ !programVars
+       else programVars:= [mk_var(s,``:int``)] @ !programVars
+      end
+    )
+   vars;
+
 
 (* 
 Construct: FEMPTY |++ [("v1",v1);...;("vn",vn)]
@@ -571,14 +473,13 @@ fun varPairs vars =
   in
     map 
       (fn tm => 
-         if isArraylength tm
+         if isArrayLength tm
          then ``(^tm,Scalar ^maxTerm)``
          else
            ``(^tm, Scalar ^(mk_var(fromHOLstring tm,``:int``)))``)
     vars
-  end
+  end;
 
-end;
 
 
 (* 
@@ -660,8 +561,8 @@ fun  getArrayLength pre =
    given in the precondition or is MAX_ARRAY_SIZE if no information is
    given in the precondition *)
 
-
 in
+
 
 (* the length of the arrays are fixed to MAX_ARRAY_SIZE *)
 fun makeState c = 
@@ -673,15 +574,16 @@ fun makeState c =
     val vars = varPairs varAndLengthNames;
     val arrayVars = arrayPairs arrNames
   in
- ``FEMPTY |++ ^(listSyntax.mk_list(vars@arrayVars,``:string#value``))``
+     (setVars varAndLengthNames;
+      ``FEMPTY |++ ^(listSyntax.mk_list(vars@arrayVars,``:string#value``))``
+     )
   end;
 end;
 
 
-
-
 (* end of functions to generate symbolic states *)
 (* ============================================ *)
+
 
 
 (* functions to simplify finite_maps *)
@@ -710,7 +612,7 @@ fun PRUNE_FINITE_MAP_CONV  fm =
        fm;
 
 fun pruneState st =
-  snd(dest_comb(concl(PRUNE_FINITE_MAP_CONV  st)));
+   snd(dest_comb(concl(PRUNE_FINITE_MAP_CONV  st)));
 
 
 
@@ -719,6 +621,18 @@ fun pruneState st =
 (*================================================== *)
 (* functions to do symbolic simplifications on terms *)
 (*================================================== *)
+
+(* Function to existentially quantify a term *)
+(* ----------------------------------------- *)
+fun existQuantify tm =
+  list_mk_exists(!programVars,tm);
+
+
+(* Function to get the result of an equational theorem *)
+(* --------------------------------------------------- *)
+fun getThm thm =
+  snd(dest_comb(concl(thm)));
+
 
 (* functions to transform JML bounded forall statement *)
 (* --------------------------------------------------  *)
@@ -746,11 +660,8 @@ val boundedForAll_CONV =
 (* take a term t and converts it according to
     boundedForAll_CONV *)
 fun rewrBoundedForAll tm =
-  let val convTm = boundedForAll_CONV tm
-  in 
-    snd(dest_comb(concl(convTm)))
-  end
-  handle UNCHANGED => tm;
+   getThm (boundedForAll_CONV tm)
+   handle UNCHANGED => tm;
 
 
 (* function to eliminate  ``T`` from conjunctions. 
@@ -760,10 +671,8 @@ fun rewrBoundedForAll tm =
    So if precondition is ``T`` then the XML tag is empty
 *)
 fun mkSimplConj t1 t2 = 
-  let val andthm = EVAL ``^t1 /\ ^t2``;
-  in 
-    snd(dest_comb(concl(andthm)))
-end;
+  getThm (EVAL ``^t1 /\ ^t2``);
+
 
 
 (* functions to simplify each sub-term of disjunction *)
@@ -775,7 +684,7 @@ end;
 fun simplifyDisjunct l =
   map (fn t => 
        (print ("simplify disjunct " ^ term_to_string(t) ^"\n");
-        snd(dest_comb(concl(SIMP_CONV arith_ss  [] t))))
+        getThm (SIMP_CONV arith_ss  [] t))
        )
       l;
 
@@ -858,24 +767,11 @@ fun NOT_CONJ_IMP_CONV tm =
                 (SPECL [tm2,tm3] DE_MORGAN_AND_THM)
         end
       else REFL tm
-        (*mk_thm([],``^tm = ^tm``)*)
   end
   handle HOL_ERR t  => 
      (print "HOL_ERR in NOT_CONJ_IMP_CONV";
       REFL tm
-      (* mk_thm([],``^tm = ^tm``)*)
      )
-end;
-
-
-
-local 
-
-(* function to eliminate  ``F`` from disjunctions. *)
-fun simplDisj t = 
-  let val orthm = EVAL t;
-  in 
-    snd(dest_comb(concl(orthm)))
 end;
 
 
@@ -887,7 +783,7 @@ fun takeNegPost post =
      if is_conj(post) orelse is_imp(post)
      then 
      (* build the negation using De Morgan laws at one level *)
-        snd(dest_comb(concl(NOT_CONJ_IMP_CONV n)))
+        getThm (NOT_CONJ_IMP_CONV n)
      else
        (* case where post is not an implication *)
        n
@@ -895,8 +791,17 @@ fun takeNegPost post =
        (print "HOL_ERR in takeNegPost";
         n
         )
-   end
-;
+   end;
+
+
+local 
+
+(* function to eliminate  ``F`` from disjunctions. *)
+fun simplDisj t = 
+  let val orthm = EVAL t;
+  in 
+    getThm orthm
+end;
 
 
 
@@ -918,40 +823,42 @@ fun distributeAndRefute tm ld =
   map 
    (fn t => 
       let val c = mk_conj(tm,t)
+          val fc = existQuantify c ;
        in
          (print("\nTerm to be refuted with METIS " 
-                ^ term_to_string(c) ^ "\n"); 
-	  refute c;
+                ^ term_to_string(fc) ^ "\n"); 
+	  refute fc;
           ``F``
          )
          handle HOL_ERR s => 
            (print "METIS failed\n";
-            print("Trying to simplify with SIMP_CONV and OMEGA_CONV\n" 
-                ^ term_to_string(c) ^ "\n"); 
-            let val res = snd(dest_comb(concl(SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] c)))
-            in 
-               res
-            end
+            print("Trying to simplify with SIMP_CONV and OMEGA_CONV\n"); 
+            (*    ^ term_to_string(c) ^ "\n");*) 
+         let  
+          val res = getThm (SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] fc)
+         in 
+             res
+         end
             )
-            handle UNCHANGED => 
-            (print "Term unchanged\n";
-            mk_conj(tm,t))
+        handle UNCHANGED => 
+        (print "Term unchanged\n";
+        mk_conj(tm,t))
        end
    )
    ld;
 
 
-
 in
 
-(* build the term to be verified at the end of a path *) 
-fun makeTermToVerify tm post =
+(* Verify a term at the end of a path *) 
+fun verifyTerm tm post =
   let val np =  takeNegPost post;
     val listDisj = strip_disj(np);
     val disj = mkDisjFromList(distributeAndRefute tm listDisj)
    in 
-      (print_term disj;
-      simplDisj(disj)
+      ((* print "VerifyTerm\n";
+       print_term disj;*)
+       simplDisj(disj)
       )
    end
    
@@ -980,7 +887,7 @@ end;
 fun termVarState vst =
  let val (n,v) = pairSyntax.dest_pair vst;
     val thm = EVAL ``ScalarOf ^v``;
-    val scal = snd(dest_comb(concl(thm)));
+    val scal = getThm thm;
   in
     mk_eq(mk_var(fromHOLstring n,``:int``),scal)
   end;
@@ -1003,9 +910,6 @@ fun isEmpty fm =
    is_const(fm) andalso fst(dest_const(fm))="FEMPTY"
 ;
 
-
-(* fst(dest_comb(v))=``Array``;
-EVAL ``ScalarOf ^v``; *)
 
 (* To build the conjunction of equalities var_i=val_i
    from a finite map that contains pairs (var_i,val_i)
@@ -1041,22 +945,110 @@ fun termFromState fm =
 end;
 *)
 
-(* ------------------------------------------ *)
-(* to test if a path is possible *)
-(* with a current precondition and a current state *)
-(* ------------------------------------------ *)
+(* ------------------------------------------------- *)
+(* to test if a path is possible                     *)
+(* with a current precondition and a current state   *)
+(* ------------------------------------------------- *) 
+(*  test if (pre /\ path) is satisfied for some values of
+    the current state
+                           
+  Use function extSolvTimeout in extSolv.sml
+  to call the solver with a timeout of 100ms.
 
+  If there is a timeout or if the solver showed that the 
+  condition is not possible, try to prove 
+  the formula using 
+  SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] t *)
+
+(* --------------------------------------------------- *)
+local 
+fun pathInfo b tm time =
+  if b =``T``
+  then 
+    (print "======================\n";
+     print( "Taking path " ^ term_to_string(tm) ^ "\n");
+     print "======================\n";
+     (true,time)
+    )
+  else 
+    (print "======================\n";
+     print ("Path " ^ term_to_string(tm) ^ " is impossible\n");
+     print "======================\n";
+     (false,time)
+    );
+
+in 
+
+
+fun testPath name pre path st =
+  (* TODO: use mkSimplConj or modify term2xml to handle x /\T *)
+ let val timeout = 100
+   val intFormat = 8
+   val conj = mk_conj(pre,path)
+   in
+   (print "======================\n";
+    print "Testing feasability\n";
+    print "======================\n";
+    let val (th,time) = extSolvTimeoutFormat name conj timeout intFormat
+      val res = getThm th
+    in
+     if (res = ``F``)
+     then
+       (* try to show that the condition is impossible 
+          using SIMP_CONV*)  
+       let  val existsConj = existQuantify conj
+         val thSimp = SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] existsConj
+         val resSimp=  getThm thSimp
+       in
+         pathInfo resSimp path time
+       end
+       handle UNCHANGED  => 
+        (* It was not possible to show the theorem in HOL
+            so return the theorem computed with the
+            external solver *)
+         (print "Path was solved using external solver\n";
+          pathInfo res path time
+         )
+     else 
+       (print "======================\n";
+	print( "Taking path " ^ term_to_string(path) ^ "\n");
+	print "======================\n";
+	(true,time)
+       )
+     end
+     handle ExtSolverTimeout =>
+       let val existsConj = existQuantify conj
+         val thSimp = SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] existsConj
+         val resSimp=  getThm thSimp
+       in
+         (print "Timeout in solver, testing path with SIMP_CONV\n";
+          pathInfo resSimp path  ((Real.fromInt timeout)*0.001)  
+        )
+       end
+       handle UNCHANGED  => 
+        (print "======================\n";
+	 print "Path unsolved\n";
+         print( "Taking path " ^ term_to_string(path) ^ "\n");
+	 print "======================\n"; 
+         (true,((Real.fromInt timeout)*0.001))
+        )
+   )
+   end;
+end;
+
+(* old version that doesn't use the external solver *)
 (*  test if (pre /\ path) is satisfied for some values of
     the current state 
 
     use functions printXML_to_file and execPath in
     term2xml
  *)
-(* ------------------------------------------ *)
-fun testPath name pre path st =
- let (*val sttm = termFromState(pruneState(st)); *)
+ (*fun testPath name pre path st =
+  (*val sttm = termFromState(pruneState(st)); *)
   (* TODO: use mkSimplConj or modify term2xml to handle x /\T *)
-   val conj = mk_conj(pre,path)
+ let  val conj = mk_conj(pre,path)
+   val intFormat = 8
+   val timeout = 100
    (*val conj = mk_conj(pre,mk_conj(path,sttm))*)
    in
    (printXML_to_file(name,conj);
@@ -1065,7 +1057,7 @@ fun testPath name pre path st =
     print ("    " ^ term_to_string(path) ^"\n");
     print "is feasible.\n";
     print "======================\n";
-    execPath(name);
+    limitedExecPathFormat name timeout intFormat;
     let val (sol,time) = getSolutions (ilogPath ^ "results/" ^ name ^ ".res");
     in
      if (null sol)
@@ -1085,8 +1077,8 @@ fun testPath name pre path st =
    )
    end;
 
-
-
+end;
+*)
 
 (* ------------------------------------------ *)
 (* to verify the program at the end of a branch *)
@@ -1134,9 +1126,9 @@ fun printError() =
    st2 is the state after execution of the program
 *)
 fun evalPost t st1 st2 = 
-  let val p = snd(dest_comb(concl(EVAL ``^t ^st1``)));
+  let val p = getThm (EVAL ``^t ^st1``);
    val pp =  if (is_abs(p))
-             then snd(dest_comb(concl(EVAL ``^p ^st2``)))
+             then getThm (EVAL ``^p ^st2``)
              else p
    in
      rewrBoundedForAll pp
@@ -1147,11 +1139,101 @@ fun evalPost t st1 st2 =
      )
   ;
 
+fun makeErrorState name st = 
+   let val (sol,_) =  extSolv.getSolutions (ilogPath ^ "results/" ^ name ^ ".res")
+   in 
+     extSolv.finiteMapSol (hd sol) st
+   end;
 
 in
 
 (* st1 is initial state (before program execution)
    st2 is final state (after program execution) *)
+
+fun verifyPath name pre st1 st2 post path =
+  let val timeout = 10000; 
+     val f = 16
+     val conj = mk_conj(pre,path);
+    val st2' = pruneState(st2);
+    (* val stt = termFromState(pruneState(st2));
+     val conj = mk_conj(stt,prpa);*)
+    val po = evalPost post st1 st2'
+    (* make the term using specific rule to compute 
+       the negation of post *) 
+    val tm = verifyTerm conj po
+   (* other possibility: put the term in DNF *)
+    (*val tm = dnf(mk_conj(conj,mk_neg(post)))*);
+    in 
+     (* if tm is a constant and its value is F 
+        the program is correct *)
+     if is_const(tm)
+     then 
+       if tm=``F``
+       then
+          (printCorrect();
+           incResolvedPath();
+          (``RESULT ^st2'``,0.0)
+        )
+       else 
+         (* there is an error, searching solution with CSP *)
+         (print "======================\n";
+          print "METIS has shown that path is NOT correct\n";
+          print "Searching counter-example\n";
+          let val tmKO = mk_conj(conj,takeNegPost(po))
+             val  (th,time) = extSolvTimeoutFormat name tmKO timeout f
+             val res = getThm th
+	  in
+          if res = ``F``
+          then 
+            ( print "PROBLEM: solver has not find a counter-example\n";
+	      (``ERROR ^st2'``,time)
+	    )
+          else 
+            (* add to the current state the values
+               of the variables that correspond to an error
+               i.e the values found by the CSP 
+               when solving pre /\ state /\ path /\ ~post *) 
+            let val errorState = makeErrorState name st2'
+            in
+              (printError();
+               (``ERROR ^errorState``,time)
+	      )
+            end
+          end
+          )
+     else
+         (* tm has not been simplified to T nor F so 
+            calling the CSP *)
+         (print "======================\n";
+	  print "METIS and SIMP_CONV have failed to verify the path\n";
+          print "Testing correctness\n";
+	  print "======================\n";
+	  let val (th,time) = extSolvTimeoutFormat name tm timeout f
+             val res = getThm th
+	  in
+          if res = ``F``
+          then 
+	    (printCorrect();
+             (``RESULT ^st2'``,time)
+	    )
+          else 
+            (* add to the current state the values
+               of the variables that correspond to an error
+               i.e the values found by the CSP 
+               when solving pre /\ state /\ path /\ ~post *) 
+            let val errorState = makeErrorState name st2'
+            in
+              (printError();
+               (``ERROR ^errorState``,time)
+	      )
+            end
+          end
+         )
+      end
+end;
+
+(*
+old version that doen't use the extSolv 
 fun verifyPath name pre st1 st2 post path =
   let val conj = mk_conj(pre,path);
     val st2' = pruneState(st2);
@@ -1160,7 +1242,7 @@ fun verifyPath name pre st1 st2 post path =
     val po = evalPost post st1 st2'
     (* make the term using specific rule to compute 
        the negation of post *) 
-    val tm = makeTermToVerify conj po
+    val tm = verifyTerm conj po
    (* other possibility: put the term in DNF *)
     (*val tm = dnf(mk_conj(conj,mk_neg(post)))*);
     in 
@@ -1195,7 +1277,7 @@ fun verifyPath name pre st1 st2 post path =
                of the variables that correspond to an error
                i.e the values found by the CSP 
                when solving pre /\ state /\ path /\ ~post *) 
-            let val errorState = finiteMapSol (hd sol) st2
+            let val errorState = finiteMapSol (hd sol) st2'
             in
               (printError();
                (``ERROR ^errorState``,time)
@@ -1205,7 +1287,7 @@ fun verifyPath name pre st1 st2 post path =
          )
       end
 end;
-
+*)
 
 
 (* -------------------------------------------------- 
@@ -1341,7 +1423,10 @@ fun execSymb name pre (l,st1,st2,n) post path=
  else
    if n=0
    (* no more steps, so add a TIMEOUT outcome *)
-   then ``TIMEOUT ^st2``
+   then let val st2' = pruneState(st2)
+        in 
+          ``TIMEOUT ^st2'``
+        end
    else
      (* takes the first instruction *)
      let val inst = snd(dest_comb(fst(dest_comb(l))))
@@ -1356,15 +1441,13 @@ fun execSymb name pre (l,st1,st2,n) post path=
          (* instruction is not a conditional *)
          (* call STEP1 to compute the next state and continue *)
          else
-          let val step = EVAL ``STEP1 (^l, ^st2)``;
-            val tm = snd(dest_comb(concl(step)));
+          let val tm = getThm (EVAL ``STEP1 (^l, ^st2)``);
             val newState = snd(dest_comb(snd(dest_comb(tm))));
             val newList = snd(dest_comb(fst(dest_comb(tm))));
            in
              execSymb name pre (newList,st1,newState,(n-1)) post path 
            end
       end
-
 
 (* ----------------------------------------------------- 
    Function to symbolically execute a "Cond" instruction.
@@ -1583,7 +1666,7 @@ end;
 local
 
 fun evalPre t st = 
-   rewrBoundedForAll(snd(dest_comb(concl(EVAL ``^t ^st``))));
+   rewrBoundedForAll(getThm (EVAL ``^t ^st``));
 
 in
 
@@ -1616,9 +1699,10 @@ fun execSymbWithCSP name spec n =
                ^ plurResolvedPath ^ "resolved" ^ " by SIMP_CONV and OMEGA_CONV.\n");
 	 print ("Total solving time with the constraint solver: " 
 		^ Real.toString(!CSPtime) ^ "s.\n"); 
+         resetProgramVars(); (* reset the list of variable used to existentially quantify terms *) 
 	 res)
       end
-      )
+     )
    end
 end;
 
