@@ -326,15 +326,16 @@ fun extSolvTimeoutFormat name tm n f =
   limitedExecPathFormat name n f;
   let val (sol,time) = 
        getSolutions(ilogPath ^ "results/" ^ name ^ ".res");
+     val tag = "CSPSolver:" ^name ^ ":" ^int_to_string(f)
   in
    if isSolverTimeout(sol,time)
    then raise ExtSolverTimeout
    else
       if (null sol)
       then  
-	  (EQF_INTRO(mk_oracle_thm name ([], mk_neg tm)),time)
+	  (EQF_INTRO(mk_oracle_thm tag ([], mk_neg tm)),time)
       else 
-	  (EQT_INTRO(mk_oracle_thm name ([],tm)),time)
+	  (EQT_INTRO(mk_oracle_thm tag ([],tm)),time)
           (*(EQT_INTRO(proveSat bdy (hd sol)),time)*)
   end)
  end;

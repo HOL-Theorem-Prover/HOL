@@ -233,7 +233,20 @@ Remarks:
 *) 
 (* -------------------------------------------- *)
 
+(* global variable to know if there was an error *)
+val nbError = ref 0;
 
+fun incNbError() = 
+   nbError := !nbError + 1;
+
+(* global variable to know if there was a timeout *)
+val nbTimeout = ref 0;
+
+fun incNbTimeout() = 
+   nbTimeout := !nbTimeout + 1;
+
+
+(* -------------------------------------------- *)
 (* global variable and functions to manage
    time of CSP calls *)
 (* -------------------------------------------- *)
@@ -242,6 +255,16 @@ val CSPtime= ref 0.0;
 
 fun incCSPTime(t) = 
    CSPtime := !CSPtime + t;
+
+(* -------------------------------------------- *)
+(* global variable and functions to manage
+   to know how many paths were verified using the CSP *)
+(* -------------------------------------------- *)
+
+val CSPSolvedPath= ref 0;
+
+fun incCSPSolvedPath() = 
+   CSPSolvedPath := !CSPSolvedPath + 1;
 
 (* global variable and functions to manage
    the number of paths *)
@@ -253,24 +276,53 @@ fun incPath() =
    nbPath := !nbPath + 1;
 
 (* global variable and functions to manage
+   the number of conditions that have been tested *)
+(* -------------------------------------------- *)
+
+val nbCond= ref 0;
+
+fun incNbCond() = 
+   nbCond := !nbCond + 1;
+
+(* global variable and functions to manage
    the number of conditions that have been resolved
    using EVAL *)
 (* -------------------------------------------- *)
 
-val nbResolvedCond = ref 0;
+val nbEvalCond = ref 0;
 
-fun incResolved() = 
-    nbResolvedCond:= !nbResolvedCond + 1;
+fun incEvalCond() = 
+    nbEvalCond:= !nbEvalCond + 1;
 
 (* global variable and functions to manage
-   the number of paths that have been resolved
-   using SIMP_CONV and METIS *)
+   the number of unfeasible paths *)
 (* -------------------------------------------- *)
 
-val nbResolvedPath = ref 0;
+val nbUnfeasiblePath = ref 0;
 
-fun incResolvedPath() = 
-  nbResolvedPath:= !nbResolvedPath + 1;
+fun incUnfeasiblePath() = 
+    nbUnfeasiblePath:= !nbUnfeasiblePath + 1;
+
+
+(* global variable and functions to manage
+   the number of paths that have been proved
+   using METIS *)
+(* -------------------------------------------- *)
+
+val nbMETISPath = ref 0;
+
+fun incMETISPath() = 
+  nbMETISPath:= !nbMETISPath + 1;
+
+(* global variable and functions to manage
+   the number of paths that have been proved
+   using SIMP_CONV and COOPER *)
+(* -------------------------------------------- *)
+
+val nbSIMPPath = ref 0;
+
+fun incSIMPPath() = 
+  nbSIMPPath:= !nbSIMPPath + 1;
 
 
 (* global variable that contains the variables of the program
@@ -281,12 +333,19 @@ val programVars = ref [];
 fun resetProgramVars() =
      programVars:=[];
 
+
 (* to reset the global variables at the end of an execution *)
 fun resetAll() = 
   (CSPtime:=0.0;
+   CSPSolvedPath:=0;
+   nbError:=0;
+   nbTimeout:=0;
    nbPath:=0;
-   nbResolvedCond:=0;
-   nbResolvedPath:=0
+   nbCond:=0;
+   nbEvalCond:=0;
+   nbUnfeasiblePath:=0;
+   nbMETISPath:=0;
+   nbSIMPPath:=0
   );
    
 
@@ -564,13 +623,13 @@ fun  getArrayLength pre =
 in
 
 
+
 (* the length of the arrays are fixed to MAX_ARRAY_SIZE *)
 fun makeState c = 
   let val names = program_vars c;
     val varNames = fst names;
     val arrNames = snd names;
     val varAndLengthNames = addArrLength varNames arrNames;
-(*    val lengthValue = getArrayLength pre *)
     val vars = varPairs varAndLengthNames;
     val arrayVars = arrayPairs arrNames
   in
@@ -611,11 +670,37 @@ fun PRUNE_FINITE_MAP_CONV  fm =
          THENC RATOR_CONV(RAND_CONV(EVAL THENC PRUNE_FINITE_MAP_CONV)))
        fm;
 
+
+(* to prune arrays. Keep only the last value that have been assigned 
+   for each index *)
+fun pruneArray fm = 
+  if is_const fm
+  then fm
+  else 
+    let val (_,args1) = strip_comb fm
+       val fnext = (el 1 args1)
+       val v = (el 2 args1)
+       val (_,args2) = strip_comb v
+       val name = (el 1 args2)
+       val value = (el 2 args2)
+       val pruneNext =  pruneArray(fnext) 
+       in
+         if is_comb value andalso fst(dest_comb(value))=``Array``
+         then 
+          let val pruneArr =  snd(dest_comb(concl(PRUNE_FINITE_MAP_CONV(snd(dest_comb(value))))))
+            val newVal = ``(^name, Array ^pruneArr)``
+          in        
+            ``(^pruneNext |+ ^newVal)``
+          end
+         else ``(^pruneNext |+ ^v)``
+        end;
+
+(* to keep only final values *)
 fun pruneState st =
-   snd(dest_comb(concl(PRUNE_FINITE_MAP_CONV  st)));
-
-
-
+   let val ps = snd(dest_comb(concl(PRUNE_FINITE_MAP_CONV  st)))
+   in
+      pruneArray ps
+end;
 
 
 (*================================================== *)
@@ -824,26 +909,28 @@ fun distributeAndRefute tm ld =
    (fn t => 
       let val c = mk_conj(tm,t)
           val fc = existQuantify c ;
-       in
+      in
          (print("\nTerm to be refuted with METIS " 
                 ^ term_to_string(fc) ^ "\n"); 
 	  refute fc;
+          incMETISPath();
           ``F``
          )
          handle HOL_ERR s => 
            (print "METIS failed\n";
-            print("Trying to simplify with SIMP_CONV and OMEGA_CONV\n"); 
-            (*    ^ term_to_string(c) ^ "\n");*) 
-         let  
-          val res = getThm (SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] fc)
-         in 
-             res
-         end
+            print("Trying to simplify with SIMP_CONV and COOPER\n"); 
+           let  
+             val res = getThm (SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] fc)
+             in 
+              (incSIMPPath();
+               res
+              )
+             end
             )
-        handle UNCHANGED => 
+      end 
+      handle UNCHANGED => 
         (print "Term unchanged\n";
         mk_conj(tm,t))
-       end
    )
    ld;
 
@@ -974,6 +1061,7 @@ fun pathInfo b tm time =
     (print "======================\n";
      print ("Path " ^ term_to_string(tm) ^ " is impossible\n");
      print "======================\n";
+     incUnfeasiblePath();
      (false,time)
     );
 
@@ -1000,7 +1088,7 @@ fun testPath name pre path st =
          val thSimp = SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] existsConj
          val resSimp=  getThm thSimp
        in
-         pathInfo resSimp path time
+          pathInfo resSimp path time
        end
        handle UNCHANGED  => 
         (* It was not possible to show the theorem in HOL
@@ -1022,8 +1110,8 @@ fun testPath name pre path st =
          val resSimp=  getThm thSimp
        in
          (print "Timeout in solver, testing path with SIMP_CONV\n";
-          pathInfo resSimp path  ((Real.fromInt timeout)*0.001)  
-        )
+          pathInfo resSimp path ((Real.fromInt timeout)*0.001)
+         )
        end
        handle UNCHANGED  => 
         (print "======================\n";
@@ -1036,49 +1124,6 @@ fun testPath name pre path st =
    end;
 end;
 
-(* old version that doesn't use the external solver *)
-(*  test if (pre /\ path) is satisfied for some values of
-    the current state 
-
-    use functions printXML_to_file and execPath in
-    term2xml
- *)
- (*fun testPath name pre path st =
-  (*val sttm = termFromState(pruneState(st)); *)
-  (* TODO: use mkSimplConj or modify term2xml to handle x /\T *)
- let  val conj = mk_conj(pre,path)
-   val intFormat = 8
-   val timeout = 100
-   (*val conj = mk_conj(pre,mk_conj(path,sttm))*)
-   in
-   (printXML_to_file(name,conj);
-    print "======================\n";
-    print "Calling the solver to test if path\n";
-    print ("    " ^ term_to_string(path) ^"\n");
-    print "is feasible.\n";
-    print "======================\n";
-    limitedExecPathFormat name timeout intFormat;
-    let val (sol,time) = getSolutions (ilogPath ^ "results/" ^ name ^ ".res");
-    in
-     if (null sol)
-     then  
-       (print "======================\n";
-        print ("Path " ^ term_to_string(path) ^ " is impossible\n");
-        print "======================\n";
-        (false,time)
-       )
-     else 
-       (print "======================\n";
-        print( "Taking path " ^ term_to_string(path) ^ "\n");
-        print "======================\n";
-        (true,time)
-       )
-    end
-   )
-   end;
-
-end;
-*)
 
 (* ------------------------------------------ *)
 (* to verify the program at the end of a branch *)
@@ -1152,17 +1197,13 @@ in
 
 fun verifyPath name pre st1 st2 post path =
   let val timeout = 10000; 
-     val f = 16
-     val conj = mk_conj(pre,path);
+    val f = 16
+    val conj = mk_conj(pre,path);
     val st2' = pruneState(st2);
-    (* val stt = termFromState(pruneState(st2));
-     val conj = mk_conj(stt,prpa);*)
     val po = evalPost post st1 st2'
-    (* make the term using specific rule to compute 
+    (* verify the term using specific rule to compute 
        the negation of post *) 
     val tm = verifyTerm conj po
-   (* other possibility: put the term in DNF *)
-    (*val tm = dnf(mk_conj(conj,mk_neg(post)))*);
     in 
      (* if tm is a constant and its value is F 
         the program is correct *)
@@ -1171,7 +1212,6 @@ fun verifyPath name pre st1 st2 post path =
        if tm=``F``
        then
           (printCorrect();
-           incResolvedPath();
           (``RESULT ^st2'``,0.0)
         )
        else 
@@ -1196,6 +1236,7 @@ fun verifyPath name pre st1 st2 post path =
             let val errorState = makeErrorState name st2'
             in
               (printError();
+               incNbError();
                (``ERROR ^errorState``,time)
 	      )
             end
@@ -1213,7 +1254,8 @@ fun verifyPath name pre st1 st2 post path =
 	  in
           if res = ``F``
           then 
-	    (printCorrect();
+	    ( incCSPSolvedPath();
+              printCorrect();
              (``RESULT ^st2'``,time)
 	    )
           else 
@@ -1224,6 +1266,7 @@ fun verifyPath name pre st1 st2 post path =
             let val errorState = makeErrorState name st2'
             in
               (printError();
+               incNbError();
                (``ERROR ^errorState``,time)
 	      )
             end
@@ -1232,62 +1275,6 @@ fun verifyPath name pre st1 st2 post path =
       end
 end;
 
-(*
-old version that doen't use the extSolv 
-fun verifyPath name pre st1 st2 post path =
-  let val conj = mk_conj(pre,path);
-    val st2' = pruneState(st2);
-    (* val stt = termFromState(pruneState(st2));
-     val conj = mk_conj(stt,prpa);*)
-    val po = evalPost post st1 st2'
-    (* make the term using specific rule to compute 
-       the negation of post *) 
-    val tm = verifyTerm conj po
-   (* other possibility: put the term in DNF *)
-    (*val tm = dnf(mk_conj(conj,mk_neg(post)))*);
-    in 
-     (* if tm is a constant and its value is F 
-        the program is correct *)
-     if (is_const(tm) andalso tm=``F``)
-     then 
-       (printCorrect();
-        incResolvedPath();
-        (``RESULT ^st2'``,0.0)
-       )
-     else
-         (* tm has not been simplified or has been simplified
-            to true so need to call the CSP to find 
-            the counter-examples *)
-         (print "======================\n";
-	  print "METIS and SIMP_CONV have failed to verify the path\n";
-          print "Calling the solver\n";
-          print ("term is: " ^ term_to_string(tm) ^"\n");
-	  print "======================\n";
-	  printXML_to_file(name,tm);
-	  execPath(name);
-	  let val (sol,time) = getSolutions (ilogPath ^ "results/" ^ name ^ ".res");
-	  in
-          if (null sol)
-          then 
-	    (printCorrect();
-             (``RESULT ^st2'``,time)
-	    )
-          else 
-            (* add to the current state the values
-               of the variables that correspond to an error
-               i.e the values found by the CSP 
-               when solving pre /\ state /\ path /\ ~post *) 
-            let val errorState = finiteMapSol (hd sol) st2'
-            in
-              (printError();
-               (``ERROR ^errorState``,time)
-	      )
-            end
-          end
-         )
-      end
-end;
-*)
 
 
 (* -------------------------------------------------- 
@@ -1316,7 +1303,7 @@ let val (opr,_) = strip_comb(tm)
 
 
 (* to print a condition in the program as a HOL term *)
-local
+local 
 
 (* Get set of string terms in a term *)
 (* Written by Mike Gordon in verifier.ml    *)
@@ -1344,7 +1331,7 @@ end;
 in
 
 fun pretty_string tm =
-   let val var_tms = get_strings tm; 
+ let val var_tms = get_strings tm; 
      val pairs = map 
                   (fn tm => pairSyntax.mk_pair
                       let val v = mk_var(fromHOLstring tm,``:int``)
@@ -1358,19 +1345,9 @@ fun pretty_string tm =
      in 
        term_to_string(el 2 res)
      end
-end;;
+end;
 
-(*
 
-(* to make the current precondition
-   i.e the conjunction of current precondition 
-       with the next assignment in the program *)
-(* st is the current state, st' is the new state *)
-fun makePre pre st st' =
-    if st = st'
-    then pre
-    else mkSimplConj pre (termVarState (snd (dest_comb st')));
-*)
 
 in
 
@@ -1468,6 +1445,7 @@ Function testPath calls the CSP.
   ----------------------------------------------------- *)
 
 and execSymbCond name pre (l,st1,st2,n) post path = 
+ (incNbCond();
   let val (_,comb) = strip_comb(l)
     (* first instruction COND *)
     val instCond = (el 1 comb)
@@ -1488,7 +1466,7 @@ and execSymbCond name pre (l,st1,st2,n) post path =
       by EVAL, then takes the decision according to its value *)
    if (is_const(termCond))
    then 
-    (incResolved();
+    (incEvalCond();
      if (termCond=``T``)
      then
       let val nextList =  listSyntax.mk_cons(iftm,listInst)
@@ -1503,7 +1481,8 @@ and execSymbCond name pre (l,st1,st2,n) post path =
     else 
       let val nextList =listSyntax.mk_cons(elsetm,listInst)
        in 
-       (print "======================\n";
+       ( incUnfeasiblePath();
+         print "======================\n";
          print ("Condition\n" ^ pretty_string(cond) ^"\n");
          print ("is FALSE on the current state, ");
 	 print ("taking the other path\n");
@@ -1545,8 +1524,7 @@ and execSymbCond name pre (l,st1,st2,n) post path =
 	    else resElse
            )
         end
-
-end
+end)
 
 
 (* ----------------------------------------------------- 
@@ -1573,6 +1551,7 @@ Function testPath calls the CSP.
   ----------------------------------------------------- *)
 
 and execSymbWhile name pre (l,st1,st2,n) post path  =
+  (incNbCond();
    let val (_,comb) = strip_comb(l)
     (* first instruction: a While *)
     val instCond = (el 1 comb)
@@ -1594,7 +1573,7 @@ and execSymbWhile name pre (l,st1,st2,n) post path  =
       by EVAL, then takes the decision according to its value *)
    if (is_const(termCond))
    then 
-    (incResolved();
+    (incEvalCond();
      (* enter the loop: do symbolic execution of list 
         [block,l] *)
      if (termCond=``T``)
@@ -1611,7 +1590,8 @@ and execSymbWhile name pre (l,st1,st2,n) post path  =
     else 
       (* exit the loop: do symbolic execution of 
          the tail of instruction list *)
-       (print "======================\n";
+       ( incUnfeasiblePath();
+         print "======================\n";
          print ("Condition\n" ^ pretty_string(cond) ^"\n");
          print ("is FALSE on the current state, ");
 	 print ("exiting the loop\n");
@@ -1652,7 +1632,7 @@ and execSymbWhile name pre (l,st1,st2,n) post path  =
 	 ) 
    end
    
-end
+end)
 
 end;
 
@@ -1665,8 +1645,21 @@ end;
 (* to evaluate pre or post condition on an initial state *)
 local
 
+(* evaluate precondition on initial state *)
 fun evalPre t st = 
    rewrBoundedForAll(getThm (EVAL ``^t ^st``));
+
+(* modify the initial state to take into
+   account equalities of the form "x = l" where x is a variable
+   and l is a constant *)
+(*TODO
+fun computeStateFromPre pre s =
+  *)
+
+fun plural n =
+  if n>1 
+  then "s have been "
+  else " has been ";
 
 in
 
@@ -1676,29 +1669,44 @@ fun execSymbWithCSP name spec n =
   let  val (_,args) = strip_comb spec;
    val (pre,prog,post) = (el 1 args, el 2 args, el 3 args);
    val s = snd (dest_comb(concl(EVAL (makeState prog))))
+   val evalP = evalPre pre s
+   (* val ss = computeStateFromPre evalP s*)
   in
      (resetAll(); (* reset global variables *)
       let val res = 
-          execSymb name 
-              (evalPre pre s) 
-              (``[^prog]``,s,s,n)
-               post
-              ``T``;
-       val plurPath = if (!nbPath>1) then "s were "
-                         else " was ";
-        val plurCond = if (!nbResolvedCond>1) then "s were "
-                          else " was ";
-      val plurResolvedPath = if (!nbResolvedPath>1) then "s were "
-                         else " was ";
+        execSymb name 
+                 evalP 
+                 (``[^prog]``,s,s,n) 
+                 post 
+                 ``T``
       in
-        (print (int_to_string(!nbPath) ^ " path" ^ plurPath 
+        (print "===============================\n";
+         if not (!nbTimeout=0)
+         then print "TIMEOUT\n"
+         else
+           if !nbError = 0
+           then print "PROGRAM IS CORRECT\n"
+           else print(int_to_string(!nbError) ^ " ERROR" ^ plural(!nbError)
+           ^ "found\n");
+         print (int_to_string(!nbCond) ^ " condition" 
+               ^ plural(!nbCond) ^ "tested.\n");
+         print (int_to_string(!nbEvalCond) ^ " condition" 
+               ^ plural(!nbEvalCond) ^ "solved" ^ " by EVAL.\n");
+         print (int_to_string(!nbUnfeasiblePath) ^ " condition" 
+               ^ plural(!nbUnfeasiblePath) ^ "shown impossible.\n\n");
+         print (int_to_string(!nbPath) ^ " feasible path" ^ plural(!nbPath)
                ^ "explored.\n");
-         print (int_to_string(!nbResolvedCond) ^ " condition" 
-               ^ plurCond ^ "resolved" ^ " by EVAL.\n");
-         print (int_to_string(!nbResolvedPath) ^ " path" 
-               ^ plurResolvedPath ^ "resolved" ^ " by SIMP_CONV and OMEGA_CONV.\n");
-	 print ("Total solving time with the constraint solver: " 
+         if !CSPSolvedPath=0
+         then print "All correct paths were verified in HOL.\n"
+         else print(int_to_string(!CSPSolvedPath)  ^ " path" ^ plural(!CSPSolvedPath)
+                    ^ "shown correct with the constraint solver\n");
+         print (int_to_string(!nbMETISPath) ^ " subterm" 
+               ^ plural(!nbMETISPath) ^ "solved with refute and METIS.\n");
+         print (int_to_string(!nbSIMPPath) ^ " subterm" 
+               ^ plural(!nbSIMPPath) ^ "solved with SIMP_CONV and COOPER.\n\n");
+	 print ("Total time spent with the constraint solver: " 
 		^ Real.toString(!CSPtime) ^ "s.\n"); 
+	 print "===============================\n";
          resetProgramVars(); (* reset the list of variable used to existentially quantify terms *) 
 	 res)
       end
