@@ -35,7 +35,7 @@ Start with </p>
 </pre>
 <p> Continue with </p>
 <pre>
-         bin/build -symlink -expk
+         bin/build -expk
 </pre>
 <p>Most of the features of the Moscow ML implementation should work in
 the Poly/ML version, but as it is still rather young, users may
@@ -280,11 +280,6 @@ proofs of termination, completeness and soundness. </p> </li>
 <h2 id="incompatibilities">Incompatibilities:</h2>
 
 <ul>
-<li> <p> The induction principles returned by <code>Define</code> are now
-  more accurate when the function being defined returns values of
-  type <code>:bool</code>.  This is because congruences for
-  conjunction and disjunction are now included by default. </p> </li>
-
 <li> <p> The <code>STRING_11</code> and <code>STRING_DISTINCT</code>
   theorems in <code>stringTheory</code> have disappeared because
   strings are now a standard algebraic type, defined
@@ -350,6 +345,11 @@ halted, by using <code>hide</code>:</p>
          hide "set";
 </pre>
 </li>
+
+<li><p>The <code>parse_in_context</code> function (used heavily in
+the <code>Q</code> structure) is now pickier about its parses.  Now
+any use of a free variable in a quotation that is parsed must be
+consistent with its type in the provided context.</p></li>
 
 </ul>
 

@@ -564,13 +564,9 @@ end
 local
   open Preterm Pretype
   fun name_eq s M = ((s = fst(dest_var M)) handle HOL_ERR _ => false)
-  fun has_any_uvars pty =
-    case pty
-     of UVar (ref NONE)        => true
-      | UVar (ref (SOME pty')) => has_any_uvars pty'
-      | Tyop{Args,...}         => List.exists has_any_uvars Args
-      | Vartype _              => false
   exception UNCHANGED
+  fun strip_csts (Constrained{Ptm,...}) = strip_csts Ptm
+    | strip_csts t = t
   fun give_types_to_fvs ctxt boundvars tm = let
     val gtf = give_types_to_fvs ctxt
   in
@@ -601,15 +597,16 @@ local
                    end
       end
     | Abs{Bvar, Body, Locn} => Abs{Bvar = Bvar,
-                                   Body = gtf (Bvar::boundvars) Body,
+                                   Body = gtf (strip_csts Bvar::boundvars) Body,
                                    Locn = Locn}
     | Constrained{Ptm,Locn,Ty} => Constrained{Ptm = gtf boundvars Ptm,
                                               Locn = Locn, Ty = Ty}
-    | _ => tm
+    | _ => raise UNCHANGED
   end
 in
   fun parse_preterm_in_context0 FVs ptm0 = let
     val ptm = give_types_to_fvs FVs [] ptm0
+              handle UNCHANGED => ptm0
   in
     typecheck_phase1 (SOME(term_to_string, type_to_string)) ptm;
     remove_case_magic (to_term (overloading_resolution ptm))
