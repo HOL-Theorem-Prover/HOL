@@ -582,11 +582,17 @@ local
           | SOME ctxt_tm =>
               unify Ty (Pretype.fromType (type_of ctxt_tm))
               handle HOL_ERR _ =>
-                (Lib.say ("\nUnconstrained variable "^Name^" in quotation "^
-                          "can't have type\n\n" ^
-                          type_to_string (type_of ctxt_tm) ^
-                          "\n\nas given by context.\n\n");
-                 raise ERRORloc "parse_in_context" Locn "unify failed")
+                (let
+                   val msg = "Unconstrained variable "^Name^" in quotation "^
+                             "can't have type\n\n" ^
+                             type_to_string (type_of ctxt_tm) ^
+                             "\n\nas given by context.\n\n"
+                 in
+                   if current_trace "show_typecheck_errors" <> 0 then
+                     Lib.say ("\n" ^ msg)
+                   else ();
+                   raise ERRORloc "parse_in_context" Locn msg
+                 end)
         else
           ()
       end

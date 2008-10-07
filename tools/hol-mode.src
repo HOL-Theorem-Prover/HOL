@@ -282,8 +282,7 @@ how long this took."
     (funcall sender tactic-string hol-echo-commands-p)))
 
 (defun send-string-as-hol-goal (s)
-  (let ((goal-string
-         (format  "proofManagerLib.g `%s` handle e => Raise e" s)))
+  (let ((goal-string (format  "proofManagerLib.g `%s`" s)))
     (send-raw-string-to-hol goal-string hol-echo-commands-p)
     (send-raw-string-to-hol "proofManagerLib.set_backup 100;")))
 
