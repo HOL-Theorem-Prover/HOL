@@ -570,42 +570,48 @@ local
       | UVar (ref (SOME pty')) => has_any_uvars pty'
       | Tyop{Args,...}         => List.exists has_any_uvars Args
       | Vartype _              => false
+  exception UNCHANGED
   fun give_types_to_fvs ctxt boundvars tm = let
     val gtf = give_types_to_fvs ctxt
   in
     case tm of
       Var{Name, Ty, Locn} => let
       in
-        if has_any_uvars Ty andalso not(Lib.op_mem Preterm.eq tm boundvars) then
-          case List.find (fn ctxttm => name_eq Name ctxttm) ctxt of
-            NONE => ()
-          | SOME ctxt_tm =>
-              unify Ty (Pretype.fromType (type_of ctxt_tm))
-              handle HOL_ERR _ =>
-                (let
-                   val msg = "Unconstrained variable "^Name^" in quotation "^
-                             "can't have type\n\n" ^
-                             type_to_string (type_of ctxt_tm) ^
-                             "\n\nas given by context.\n\n"
-                 in
-                   if current_trace "show_typecheck_errors" <> 0 then
-                     Lib.say ("\n" ^ msg)
-                   else ();
-                   raise ERRORloc "parse_in_context" Locn msg
-                 end)
-        else
-          ()
+        if not(Lib.op_mem Preterm.eq tm boundvars) then
+          case List.find (name_eq Name) ctxt of
+            NONE => raise UNCHANGED
+          | SOME ctxt_tm => Var{Locn = Locn, Name = Name,
+                                Ty =  Pretype.fromType (type_of ctxt_tm)}
+        else raise UNCHANGED
       end
-    | Comb{Rator, Rand, ...} => (gtf boundvars Rator; gtf boundvars Rand)
-    | Abs{Bvar, Body, ...} => gtf (Bvar::boundvars) Body
-    | Constrained{Ptm, ...} => gtf boundvars Ptm
-    | _ => ()
+    | Comb{Rator, Rand, Locn} => let
+      in
+        let
+          val rator = gtf boundvars Rator
+        in
+          let
+            val rand =  gtf boundvars Rand
+          in
+            Comb{Rator = rator, Rand = rand, Locn = Locn}
+          end handle UNCHANGED => Comb{Rator = rator, Rand = Rand, Locn = Locn}
+        end handle UNCHANGED =>
+                   let val rand = gtf boundvars Rand
+                   in
+                     Comb{Rator = Rator, Rand = rand, Locn = Locn}
+                   end
+      end
+    | Abs{Bvar, Body, Locn} => Abs{Bvar = Bvar,
+                                   Body = gtf (Bvar::boundvars) Body,
+                                   Locn = Locn}
+    | Constrained{Ptm,Locn,Ty} => Constrained{Ptm = gtf boundvars Ptm,
+                                              Locn = Locn, Ty = Ty}
+    | _ => tm
   end
 in
-  fun parse_preterm_in_context0 FVs ptm = let
+  fun parse_preterm_in_context0 FVs ptm0 = let
+    val ptm = give_types_to_fvs FVs [] ptm0
   in
     typecheck_phase1 (SOME(term_to_string, type_to_string)) ptm;
-    give_types_to_fvs FVs [] ptm;
     remove_case_magic (to_term (overloading_resolution ptm))
   end
 
