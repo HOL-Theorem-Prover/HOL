@@ -1,0 +1,16 @@
+A development of the ordinals up to e0. Based on the paper
+
+   "Wellfounded induction on the ordinals up to e0".
+   Matt Kaufmann and Konrad Slind,
+   TPHOLs 2007,
+   LNCS 4732
+   URL: http://www.cs.utah.edu/~slind/papers/e0/
+
+There is a proof of the same results in the examples/acl2/ml
+directory, but based in a theory of s-expressions.
+
+To build the theory invoke
+
+   Holmake
+
+and wait a while.
