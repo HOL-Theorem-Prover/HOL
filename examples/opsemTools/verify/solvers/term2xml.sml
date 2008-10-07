@@ -8,6 +8,14 @@
     dest_exp --> dest_exponential (defined below)
 *)
 
+(* TODO: add a unary minus operator to parse expressions
+         such as ~(exp)
+ For the moment, only negative literal are possible
+
+Examples:
+  x > -1 is correctly parsed
+  -x > 1 raise an exception because ~x is not parsed 
+*)
 
 open HolKernel Parse boolLib
      newOpsemTheory bossLib pairSyntax intLib
@@ -68,13 +76,25 @@ open intSyntax   (* various functions on ints (e.g. is_plus) *)
 (* functions for parsing Boolean and integer terms *)
 (* ----------------------------------------------- *)
 
+(* ad hoc function to temporary handle Num in terms 
+   built from \forall JML 
+   TODO: handle domains of numeral values*)
+fun is_num t = 
+   if is_comb t
+   then
+     let val (opr,v) = dest_comb t
+     in
+       opr = ``Num``
+     end
+   else false;
+
 
 (* functions to identify the types of terms *)
 (* ---------------------------------------- *)
 
 fun is_comparator(t) = 
     is_less(t) orelse is_leq(t) orelse is_great(t)
-    orelse is_geq(t) orelse is_eq(t) orelse is_var(t);
+    orelse is_geq(t) orelse is_eq(t);
 
 fun is_bool_term(t) =
     is_neg(t) orelse is_conj(t) orelse is_disj(t)
@@ -84,11 +104,13 @@ fun is_bool_term(t) =
 fun is_int_term(t) =
     is_plus(t) orelse is_minus(t) orelse is_mult(t)
     orelse is_div(t) orelse is_exponential(t) 
-    orelse is_var(t) orelse is_int_literal(t);
+    orelse is_var(t) orelse is_int_literal(t) orelse 
+    is_num(t) orelse  numSyntax.is_numeral t; (* added for \forall in JML *)
 
 (* function to indent printing *)
 fun  indent 0  =  ""
 | indent n =  "  " ^ indent (n-1);
+
 
 
 (* function for parsing a variable *)
@@ -98,9 +120,16 @@ fun get_var(tm) =
 
 (* function for parsing an integer expression *)
 fun parse_int(tm,i) =
-  if is_var(tm) 
-     then indent(i) ^ get_var(tm)
-  else if is_int_literal(tm)
+  if is_num(tm)
+  then let val (opr,v) = dest_comb(tm)
+    in 
+     parse_int(v,i) 
+    end            
+  else
+    if is_var(tm) 
+    then indent(i) ^ get_var(tm)  
+    else 
+      if is_int_literal(tm) orelse numSyntax.is_numeral(tm)
        then 
          let val l =  term_to_string(tm);
            in
@@ -110,10 +139,6 @@ fun parse_int(tm,i) =
              else indent(i) ^ "<ExprIntegerLiteral value=\"" ^ 
                   l ^ "\"/>\n"
          end
-(*  else 
-   if newOpsemTheory.isArray(tm)
-   then (* todo *)
-      "<ArrayAccess>\n"*)
    else
       if is_plus(tm)
       then
@@ -159,9 +184,9 @@ fun parse_int(tm,i) =
 
 (* function for parsing comparators *)
 fun parse_comparator(tm,i) =
-    if is_var(tm) 
+(*    if is_var(tm) 
        then  get_var(tm)
-    else 
+    else *) 
         if is_less(tm)
         then
             let val c1 = parse_int(fst(dest_less tm),i+1); 
@@ -179,7 +204,7 @@ fun parse_comparator(tm,i) =
                 end
             else
                 if is_eq(tm)
-                then
+                then 
                     let val c1 = parse_int(fst(dest_eq tm),i+1); 
                       val c2 = parse_int(snd(dest_eq tm),i+1); 
                     in
@@ -202,8 +227,8 @@ fun parse_comparator(tm,i) =
 
 
 (* function for parsing a Boolean term (without quantifiers) *)
-fun parse_bool(tm,i) =
 (* the boolean variable b is associated with constraint b==1 *)
+fun parse_bool(tm,i) =
   if is_var(tm) 
        then let val v = get_var(tm)
               in
@@ -313,60 +338,17 @@ fun printXML_to_file(name,tm) =
 
 
 
+(* val t = ``((Num a_9 = 0) /\ (Num a_8 = 1) /\ (Num a_7 = 2) /\ (Num a_6 = 3) /\
+       (Num a_5 = 4) /\ (Num a_4 = 5) /\ (Num a_3 = 6) /\ (Num a_2 = 7) /\
+       (Num a_1 = 8) /\ (Num a_0 = 9)) /\ a_1 < a_0`` 
+val tm = ``(Num a_9 = 0)``
 
-(* -----------------------------------------------------
-   To launch the Java program that searches solutions of constraint
-   system built from XML trees.
-   The variable domains are [-2^(f-1)..(2^(f-1))-1] where f is 
-   the format of integers.
-   If the xml tree is a disjunction, successively consider each case
-   of the disjunction.
-   The search stops as soon as a first solution has been found.
-   Used to test if a path is feasible.
+
+val t = ``Num a_9``
+
+parse_int(t,2)
+
+val t= ``0 :num``
+is_int_literal t
+numSyntax.is_numeral t
 *)
-val integerFormat = 16; 
-
-fun execPath name =
- let val exec = ("java -cp " ^ getILOG_EXEC() ^ ":" ^ ilogPath ^ "java/classes"
-                 ^ " validation.ValidationLauncher " ^ ilogPath 
-                 ^ " " ^ name ^ " " ^ int_to_string(integerFormat));
-  in
-    (print exec;Portable.system(exec))
-end;
-
-
-(* same function as above but using a timeout.
-   n is an integer and corresponds to the timeout given in
-   milliseconds (e.g n=1000 is a timeout of 1s
-*)
-fun limitedExecPath name n =
-  let val exec = "java -cp " ^ getILOG_EXEC() ^ ":" ^ ilogPath ^ "java/classes"
-                  ^ " validation.ValidationLauncher "  ^ ilogPath 
-                  ^ " "  ^ name ^ " " ^ int_to_string(integerFormat)
-                  ^ " -timeout " ^ int_to_string(n);
-   in
-     (Portable.system(exec)
-     )
-end;
-
-
-
-
-(* -----------------------------------------------------
-   To compile the Java programs that symbolically executes
-   the xml tree.
-   Usefull only if Java sources have been modified
-*)
-fun compile() =
- let val compil = ("javac  -cp " ^ getILOG_EXEC() ^ ":" ^ ilogPath ^
-                   "java/classes -d "  ^ ilogPath ^ "java/classes " ^ ilogPath ^ "java/src/*/*.java "
-                   ^ ilogPath ^ "java/src/*/*/*.java ");
-  in
-     Portable.system(compil)
- end;
-
-
-
-
-
-(* javac -cp /home/helen/Recherche/hol/lib/jsolver.jar:/home/helen/Recherche/hol/HOL/examples/opsemTools/verify/solvers/xmlterm2csp/java/classes -d /home/helen/Recherche/hol/HOL/examples/opsemTools/verify/solvers/xmlterm2csp/java/classes /home/helen/Recherche/hol/HOL/examples/opsemTools/verify/solvers/xmlterm2csp/java/src/*/*.java /home/helen/Recherche/hol/HOL/examples/opsemTools/verify/solvers/xmlterm2csp/java/src/*/*/*.java *)
