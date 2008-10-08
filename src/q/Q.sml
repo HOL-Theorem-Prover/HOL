@@ -33,12 +33,22 @@ end
 fun ptm_with_ty q ty = ptm_with_ctxtty [] ty q;
 fun btm q = !Parse.post_process_term (ptm_with_ty q Type.bool);
 
-fun mk_term_rsubst ctxt =
-  map (fn {redex,residue} =>
-          let val redex' = contextTerm ctxt redex
-              val residue' = ptm_with_ctxtty ctxt (type_of redex') residue
-          in redex' |-> residue'
-          end);
+fun mk_term_rsubst ctxt = let
+  (* rely on the fact that the ctxt will be the free variables of the term/thm
+     that is going to be worked over by the subst *)
+  fun f {redex,residue} = let
+    val redex' = contextTerm ctxt redex
+  in
+    if mem redex' ctxt then let
+        val residue' = ptm_with_ctxtty ctxt (type_of redex') residue
+      in
+        SOME (redex' |-> residue')
+      end
+    else NONE
+  end
+in
+  List.mapPartial f
+end
 
 val mk_type_rsubst = map (fn {redex,residue} => (pty redex |-> pty residue));
 
