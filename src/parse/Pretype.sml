@@ -6,6 +6,7 @@ infix >> >-;
 
   type prekind = Prekind.prekind
   type prerank = Prerank.prerank
+  type oprerank = Prerank.oprerank
   type kind = Kind.kind
   type hol_type = Type.hol_type
   type pretyvar = string * prekind * prerank
@@ -1049,8 +1050,8 @@ fun gen_unify (kind_unify   :prekind -> prekind -> ('a -> 'a * unit option))
   (* bvar_unify's inputs are reduced to either Vartype or UVar(NONEU),
      and then unified, returning the reduced types *)
   fun bvar_unify (PT(UVar (r as ref (NONEU(kd,rk))),_)) ty2 =
-         kind_unify kd (pkind_of ty2) >>
-         rank_unify rk (prank_of ty2) >>
+         kind_unify (pkind_of ty2) kd >>
+         rank_unify (prank_of ty2) rk >>
          bind (gen_unify c1 c2) r ty2 >>
          unify_var ty2 >- (fn ty2' => return (ty2',ty2'))
     | bvar_unify ty1 (PT(UVar (r as ref (NONEU(kd,rk))),_)) =
@@ -1101,7 +1102,7 @@ fun gen_unify (kind_unify   :prekind -> prekind -> ('a -> 'a * unit option))
 in
   case (t1, t2) of
     (UVar (r as ref (NONEU(kd,rk))), _) => kind_unify (pkind_of ty2) kd >>
-                                           rank_unify_le (prank_of ty2) rk >>
+                                           rank_unify_le (prank_of ty2) (* <= *) rk >>
                                            bind (gen_unify c1 c2) r ty2
   | (UVar (r as ref (SOMEU ty1)), t2) => gen_unify c1 c2 ty1 ty2
   | (_, UVar _) => gen_unify c2 c1 ty2 ty1
@@ -1193,8 +1194,8 @@ in
  end e
 
 val empty_env = ([]:(prekind option ref * prekind option) list,
-                 []:(prerank option ref * prerank option) list,
-                 []:(      uvartype ref * uvartype      ) list)
+                 []:(oprerank option ref * oprerank option) list,
+                 []:(uvartype ref * uvartype) list)
 
 fun unify t1 t2 =
   let val t1' = deep_beta_conv_ty t1
@@ -1319,7 +1320,8 @@ in
 end
 
 local val rename_kv = Prekind.rename_kv
-      val rename_rv = Prerank.rename_rv
+      val rename_rv = Prerank.rename_rv false
+      val rename_rv_new = Prerank.rename_rv true
       fun replace (s,kd,rk) (env as (rkenv,kdenv,tyenv)) =
         case Lib.assoc1 s tyenv
          of SOME (_, r) => (env, SOME r)
@@ -1353,7 +1355,8 @@ fun rename_tv (ty as PT(ty0, locn)) benv =
           | NONE   => replace (s,kd',rk')))
   | Contype {Thy,Tyop,Kind,Rank} =>
        rename_kv Kind >>- (fn Kind' =>
-       return (PT(Contype {Thy=Thy,Tyop=Tyop,Kind=Kind',Rank=Rank}, locn)))
+       rename_rv_new Rank >>= (fn Rank' =>
+       return (PT(Contype {Thy=Thy,Tyop=Tyop,Kind=Kind',Rank=Rank'}, locn))))
   | TyApp (ty1, ty2) =>
       rename_tv ty1 benv >-
       (fn ty1' => rename_tv ty2 benv >-
