@@ -615,7 +615,6 @@ which bind very tightly.
                     "!" <..binders..>  "." TM | "@" <..binders..>  "." TM |
                     "\" <..binders..>  "." TM
     (2)    TM  ::=  "let" TM "in" TM  [let]
-    (3)    TM  ::=  TM "=>" TM "|" TM  [COND]   (R-associative)
     (4)    TM  ::=  TM "::" TM (restricted quantification operator)
     (5)    TM  ::=  TM TM  (binder argument concatenation)
     (7)    TM  ::=  "case" TM "of" TM  [case__magic]
@@ -732,7 +731,7 @@ Compound type &
 & {\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$\mathit{thy}$\verb+$+$\mathit{op}$
 & \parbox{7cm}
    {\small \holtxt{mk\_thy\_type\lb{}Thy="}$\mathit{thy}$\holtxt{",} \newline
-    \holtxt{\quad Tyop="}$\mathit{op}$\holtxt{", Args=[} 
+    \holtxt{\quad Tyop="}$\mathit{op}$\holtxt{", Args=[}
  $\sigma_1, \ldots, \sigma_n$ \holtxt{]\rb{}}} \\ \hline
 \end{tabular}
 \end{center}
@@ -1036,7 +1035,7 @@ in \LOGIC, \ml{SELECT\_AX}.
 \section{Primitive rules of inference of the HOL Logic}
 \label{rules}
 
-\index{inference rules, of HOL logic@inference rules, of \HOL{} logic!primitive|(} 
+\index{inference rules, of HOL logic@inference rules, of \HOL{} logic!primitive|(}
 The primitive rules of inference of the logic were described
 abstractly in \LOGIC. The descriptions relied on meta-variables $t$,
 $t_1$, $t_2$, and so on.  In the \HOL{} logic, infinite families of

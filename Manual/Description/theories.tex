@@ -316,10 +316,8 @@ expressions. The concrete syntax
 \index{terms, in HOL logic@terms, in \HOL{} logic!conditional}%
 \index{conditionals, in HOL logic@conditionals, in \HOL{} logic}%
 %
-$\holtxt{if}\,t_1\,\holtxt{then}\,t_2\,\holtxt{else}\,t_3$ abbreviates the
-application \holtxt{COND $t_1$ $t_2$ $t_3$}. The syntax
-$t_1\holtxt{=>}t_2\holtxt{|}t_3$ is also permitted. The system prints
-out conditionals in the \holtxt{if-then-else} form by default.
+$\holtxt{if}\;t_1\;\holtxt{then}\;t_2\;\holtxt{else}\;t_3$ abbreviates
+the application \holtxt{COND $t_1$ $t_2$ $t_3$}.
 
 The constant \holtxt{IN} (written as an infix) is the basis of
 the modelling of sets by their characteristic functions.  The term
@@ -1037,8 +1035,8 @@ similar to those in \ML. For example, the following terms are allowed:
 specially supported by the parser and pretty printer.
 The constant \ml{LET}
 %
-\index{LET, the HOL constant@\ml{LET}, the \HOL{} constant} 
-% 
+\index{LET, the HOL constant@\ml{LET}, the \HOL{} constant}
+%
 is defined (in the theory \ml{bool}) by:
 
 \begin{hol}\index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!relation to let-terms@relation to \ml{let}-terms}
