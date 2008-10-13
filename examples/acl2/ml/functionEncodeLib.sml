@@ -2737,7 +2737,7 @@ let val _ = prove_propagation_theorem_data
 	   (map2 (fn arg => fn ed => arg |-> ed) args encoded_args)
 	   (SPEC_ALL (ASSUME definition))
 	   handle e => wrapException this_function e
-    val _ = trace 3 ("Instantiated defintion:\n" ^ 
+    val _ = trace 3 ("Instantiated definition:\n" ^ 
     	    	     thm_to_string instantiated ^ "\n")
     val thms_as_rwrs = 
            map (fn t => REWRITE_CONV [t] (snd (strip_forall (concl t))))
@@ -3239,7 +3239,7 @@ let val list = map ((DISCH_ALL ## I) o clause_to_case o UNDISCH_ALL)
     val _ = app (fn x => trace 1 (thm_to_string x ^ "\n")) (CONJUNCTS completed)
     	    	  
     val _ = map (fn x => 
-    	    	store_definition
+    	    	save_thm
 		    ("translated_" ^ 
 		    fst (dest_const (fst (strip_comb (lhs 
 		    	(snd (strip_forall (concl x))))))),x))
@@ -3277,7 +3277,7 @@ end;
   
 fun get_definition theory constant = 
 let val name = fst (dest_const constant)
-    val definition = assoc ("translated_" ^ name) (DB.definitions theory)
+    val definition = assoc ("translated_" ^ name) (DB.theorems theory)
     val theorem = assoc ("prop_" ^ name) (DB.theorems theory)
 in
     (name,(definition,theorem))
@@ -3459,7 +3459,7 @@ let val _ = trace 2 "->flatten_recognizers\n"
     		       ([],general_detects)))
     		   rewrites
     val _ = map2 (fn t => fn d => 
-    	    	 store_definition("translated_" ^ (namef t),d))
+    	    	 save_thm("translated_" ^ (namef t),d))
             full_types finished
 in
    finished
@@ -4048,7 +4048,7 @@ let val conditional = find_conditional_thm target
     		       	     	  (F (snd (strip_forall (concl x))))))),x));
     val _ = fmap rhs (fn (a,b) => save_thm("prop_" ^ a,b)) props_thms
     val _ = fmap rhs (uncurry (add_standard_rewrite 1)) props_thms
-    val _ = fmap lhs (fn (a,b) => store_definition("translated_" ^ a,b))
+    val _ = fmap lhs (fn (a,b) => save_thm("translated_" ^ a,b))
     	    	     definitions
 in
     definitions
@@ -4219,7 +4219,7 @@ let val (function,missing) = clause_to_case thm
     val _ = add_standard_rewrite 0 name prop_thm;
 
     val _ = save_thm("prop_" ^ name,prop_thm);
-    val _ = store_definition("translated_" ^ name,definition);
+    val _ = save_thm("translated_" ^ name,definition);
   
 in
     definition
