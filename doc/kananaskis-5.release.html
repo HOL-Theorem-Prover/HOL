@@ -1,6 +1,7 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/x
-html1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="content-type"
       content="text/html ; charset=UTF-8" />
@@ -31,7 +32,7 @@ Windows. Users should build from the same source-tree, and have
 version 5.2 of Poly/ML installed.  The build process is similar.
 Start with </p>
 <pre>
-         poly < tools/smart-configure.sml
+         poly &lt; tools/smart-configure.sml
 </pre>
 <p> Continue with </p>
 <pre>
@@ -66,7 +67,7 @@ turned off with the trace flag <code>pp_array_types</code>. </p>
 
 <p> Unfortunately, because of lists, at the term level one can not
 index arrays with square brackets.  Instead, we recommend the
-infix <code>'</code> (that&rsquo;s an apostrophe) operator.  For
+infix <code>'</code> (that’s an apostrophe) operator.  For
 example, <code>array ' 3</code> is the value of the fourth element
 of <code>array</code> (indexing starts at zero!)</p>
 </li>
@@ -91,7 +92,7 @@ then it will call itself recursively in those directories before
 working in the current directory.  This behaviour can be prevented by
 using the <code>--no_prereqs</code> option on the command-line, or by
 including <code>NO_PREREQS</code> as an <code>OPTION</code> in
-the <code>Holmakefile</code>.
+the <code>Holmakefile</code>.</p>
 </li>
 
 <li> <p> The <code>tautLib</code> decision procedure for propositional
@@ -103,8 +104,8 @@ translating proofs back through the HOL kernel.</p></li>
 work-horse <code>M-h&nbsp;M-r</code> command: if you precede it by
 hitting <code>C-u</code> twice, it will
 toggle <code>quietdec</code> around what is to be pasted into the HOL
-session.  This can be useful if you&rsquo;re opening a whole slew of big
-theories and don&rsquo;t want to have to watch grammar guff scroll
+session.  This can be useful if you’re opening a whole slew of big
+theories and don’t want to have to watch grammar guff scroll
 by.</p></li>
 
 <li> <p> The termination prover under <code>Define</code> is now
@@ -186,6 +187,19 @@ set up such an aliasing, use the function</p>
 functions to define pretty Unicode syntax that has no ASCII equivalent
 if you wish, and this can be done whether or not
 the <code>Unicode</code> trace is set.</p>
+</li>
+
+<li>
+  <p> A new function <code>limit</code>:</p>
+<pre>
+         limit : int -> simpset -> simpset
+</pre>
+  <p> can be used to limit the number of rewrites a simpset applies.
+  By default a simpset will allow the simplifier to apply as many
+  rewrites as match, possibly going into an infinite loop thereby.
+  The <code>limit</code> function puts a numeric limit on this,
+  usually guaranteeing the simplifier’s termination (it will still
+  loop if a user-provided conversion or decision procedure loops).</p>
 </li>
 
 </ul>
