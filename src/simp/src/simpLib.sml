@@ -287,14 +287,14 @@ local open markerSyntax markerLib
                          convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
     end
 in
-fun SIMP_CONV ss l =
+fun SIMP_CONV ss l tm =
   let val (ss', l') = process_tags ss l
-  in TRY_CONV (SIMP_QCONV ss' l')
+  in TRY_CONV (SIMP_QCONV ss' l') tm
   end;
 
-fun SIMP_PROVE ss l =
+fun SIMP_PROVE ss l t =
   let val (ss', l') = process_tags ss l
-  in EQT_ELIM o SIMP_QCONV ss' l'
+  in EQT_ELIM (SIMP_QCONV ss' l' t)
   end;
 
 infix &&;
