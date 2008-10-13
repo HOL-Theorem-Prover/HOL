@@ -57,6 +57,7 @@ sig
   val rewrites       : thm list -> ssfrag
   val augment_srw_ss : ssfrag list -> unit
   val export_rewrites: string list -> unit
+  val limit          : int -> simpset -> simpset
 
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm
