@@ -88,7 +88,7 @@ sig
     (overload_info -> overload_info * 'a) -> grammar -> grammar * 'a
 
 
-  (* User additions *)
+  (* User code additions *)
   (* Users can add special-purpose printers and parsers to grammars *)
   (* The key for printers specifies a TYPE, not a term; the user's
      printer will be called onto print out all terms of that type *)
@@ -101,6 +101,14 @@ sig
   val user_printers :
     grammar ->
     ({Name:string, Thy:string}, term_pp_types.userprinter)Binarymap.dict
+
+  val absyn_postprocessors : grammar ->
+                             (string * (Absyn.absyn -> Absyn.absyn)) list
+  val new_absyn_postprocessor : string * (Absyn.absyn -> Absyn.absyn) ->
+                                grammar -> grammar
+  val remove_absyn_postprocessor :
+      string -> grammar ->
+      (grammar * (Absyn.absyn -> Absyn.absyn) option)
 
 
   type special_info = {type_intro    : string,

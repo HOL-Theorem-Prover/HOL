@@ -1,7 +1,7 @@
 structure term_grammar :> term_grammar =
 struct
 
-open HOLgrammars GrammarSpecials
+open HOLgrammars GrammarSpecials Lib
 
   type ppstream = Portable.ppstream
 
@@ -98,7 +98,6 @@ datatype grammar_rule =
        | LISTRULE of listspec list
 
 type overload_info = Overload.overload_info
-type parser_info = (string,unit) Binarymap.dict
 
 type printer_info =
   ({Name:string,Thy:string},term_pp_types.userprinter) Binarymap.dict
@@ -114,7 +113,9 @@ datatype grammar = GCONS of
    specials : special_info,
    numeral_info : (char * string option) list,
    overload_info : overload_info,
-   user_additions : {parsers : parser_info, printers : printer_info}}
+   user_printers : printer_info,
+   absyn_postprocessors : (string * (Absyn.absyn -> Absyn.absyn)) list
+   }
 
 fun specials (GCONS G) = #specials G
 fun numeral_info (GCONS G) = #numeral_info G
@@ -122,63 +123,83 @@ fun overload_info (GCONS G) = #overload_info G
 fun known_constants (GCONS G) = Overload.known_constants (#overload_info G)
 fun grammar_rules (GCONS G) = map #2 (#rules G)
 fun rules (GCONS G) = (#rules G)
-fun user_additions (GCONS G) = #user_additions G
+fun absyn_postprocessors (GCONS g) = #absyn_postprocessors g
 
-fun fupdate_rules f (GCONS{rules, specials, numeral_info, overload_info,
-                           user_additions}) =
-  GCONS{rules = f rules, specials = specials, numeral_info = numeral_info,
-        overload_info = overload_info, user_additions = user_additions}
-fun fupdate_specials f (GCONS{rules, specials, numeral_info, overload_info,
-                              user_additions}) =
-  GCONS {rules = rules, specials = f specials, numeral_info = numeral_info,
-         overload_info = overload_info, user_additions = user_additions}
-fun fupdate_numinfo f (GCONS {rules, specials, numeral_info, overload_info,
-                              user_additions}) =
-  GCONS {rules = rules, specials = specials, numeral_info = f numeral_info,
-         overload_info = overload_info, user_additions = user_additions}
+(* fupdates *)
+open FunctionalRecordUpdate
+infix &
+fun makeUpdateG z = makeUpdate A A A A A A $$ z (* 6 A's - 6 fields *)
+fun update_G z = let
+  fun p2r (rules & specials & numeral_info & overload_info & user_printers &
+           absyn_postprocessors) =
+        {rules = rules, specials = specials, numeral_info = numeral_info,
+         overload_info = overload_info, user_printers = user_printers,
+         absyn_postprocessors = absyn_postprocessors}
+    fun r2p  {rules, specials, numeral_info, overload_info, user_printers,
+              absyn_postprocessors} =
+        (rules & specials & numeral_info & overload_info & user_printers &
+         absyn_postprocessors)
+  in
+    makeUpdateG (p2r, p2r, r2p)
+  end z
+
+
+fun fupdate_rules f (GCONS g) =
+    GCONS (update_G g (U #rules (f (#rules g))) $$)
+fun fupdate_specials f (GCONS g) =
+  GCONS (update_G g (U #specials (f (#specials g))) $$)
+fun fupdate_numinfo f (GCONS g) =
+  GCONS (update_G g (U #numeral_info (f (#numeral_info g))) $$)
 
 fun mfupdate_overload_info f (GCONS g) = let
-  val {rules, specials, numeral_info, overload_info, user_additions} = g
-  val (new_oinfo,result) = f overload_info
+  val (new_oinfo,result) = f (#overload_info g)
 in
-  (GCONS{rules = rules, specials = specials, numeral_info = numeral_info,
-         overload_info = new_oinfo, user_additions = user_additions},
-   result)
+  (GCONS (update_G g (U #overload_info new_oinfo) $$), result)
 end
 fun fupdate_overload_info f g =
   #1 (mfupdate_overload_info (fn oi => (f oi, ())) g)
 
-fun mfupdate_user_additions f (GCONS g) = let
-  val {rules, specials, numeral_info, overload_info, user_additions} = g
-  val (new_uadds, result) = f user_additions
+fun mfupdate_user_printers f (GCONS g) = let
+  val (new_uprinters, result) = f (#user_printers g)
 in
-  (GCONS {rules = rules, specials = specials, numeral_info = numeral_info,
-          overload_info = overload_info, user_additions = new_uadds},
-   result)
+  (GCONS (update_G g (U #user_printers new_uprinters) $$), result)
 end
-fun fupdate_user_additions f g =
-  #1 (mfupdate_user_additions (fn ua => (f ua, ())) g)
+
+fun fupdate_user_printers f g =
+  #1 (mfupdate_user_printers (fn ups => (f ups, ())) g)
 
 fun add_user_printer (k,v) g =
-  fupdate_user_additions
-  (fn {parsers,printers} => {parsers = parsers,
-                             printers = Binarymap.insert(printers,k,v)})
-  g
+  fupdate_user_printers (fn printers => Binarymap.insert(printers,k,v)) g
 fun remove_user_printer k g = let
   open Lib infix ##
   fun pp_update bmap =
     (I ## SOME) (Binarymap.remove(bmap,k))
     handle Binarymap.NotFound => (bmap, NONE)
-  fun ua_update {parsers,printers} = let
-    val (newprinters, result) = pp_update printers
-  in
-    ({parsers = parsers, printers = newprinters}, result)
-  end
 in
-  mfupdate_user_additions ua_update g
+  mfupdate_user_printers pp_update g
 end
 
-fun user_printers g = #printers (user_additions g)
+fun user_printers (GCONS g) = #user_printers g
+
+fun update_alist (k,v) [] = [(k,v)]
+  | update_alist (k,v) ((kv as (k',_))::rest) =
+    if k = k' then (k,v) :: rest
+    else kv :: update_alist (k,v) rest
+
+fun new_absyn_postprocessor (k,f) (GCONS g) = let
+  val old = #absyn_postprocessors g
+in
+  GCONS (update_G g (U #absyn_postprocessors (update_alist (k,f) old)) $$)
+end
+
+fun remove_absyn_postprocessor k (GCONS g) = let
+  val old = #absyn_postprocessors g
+in
+  case total (pluck (equal k o #1)) old of
+    NONE => (GCONS g, NONE)
+  | SOME ((_,f), rest) =>
+    (GCONS (update_G g (U #absyn_postprocessors rest) $$), SOME f)
+end
 
 
 fun update_restr_binders rb
@@ -353,8 +374,8 @@ val stdhol : grammar =
                restr_binders = [], res_quanop = "::"},
    numeral_info = [],
    overload_info = Overload.null_oinfo,
-   user_additions = {parsers = Binarymap.mkDict String.compare,
-                     printers = Binarymap.mkDict nthy_compare}
+   user_printers = Binarymap.mkDict nthy_compare,
+   absyn_postprocessors = []
    }
 
 fun first_tok [] = raise Fail "Shouldn't happen parse_term 133"
@@ -630,8 +651,8 @@ in
       INFIX (STD_infix (List.filter rr_safe slist, assoc))
   | PREFIX (STD_prefix slist) =>
       PREFIX (STD_prefix (List.filter rr_safe slist))
-  | PREFIX (BINDER blist) => 
-    PREFIX (BINDER (List.filter (fn BinderString s => s <> tok andalso 
+  | PREFIX (BINDER blist) =>
+    PREFIX (BINDER (List.filter (fn BinderString s => s <> tok andalso
                                                       s <> term_name
                                   | _ => true)
                                 blist))
@@ -818,15 +839,21 @@ in
   Binarymap.foldl foldfn m2 m1
 end
 
-fun merge_user_additions u1 u2 = let
-  val {parsers = ps1, printers = pp1} = u1
-  val {parsers = ps2, printers = pp2} = u2
+fun merge_user_printers pp1 pp2 = let
   fun print_nthy {Name,Thy} = Name^"$"^Thy
 in
-  {parsers  = merge_bmaps "user parsers"  (fn x => x) ps1 ps2,
-   printers = merge_bmaps "user printers" print_nthy  pp1 pp2}
-end;
+   merge_bmaps "user printers" print_nthy  pp1 pp2
+end
 
+fun alist_merge al1 al2 = let
+  (* could try to be smart here and preserve orderings in some circumstances *)
+  fun foldthis ((k,v), acc) =
+      case Lib.assoc1 k acc of
+        NONE => (k,v) :: acc
+      | SOME _ => acc
+in
+  List.rev (List.foldl foldthis (List.rev al1) al2)
+end
 
 fun merge_grammars (G1:grammar, G2:grammar) :grammar = let
   val g0_rules =
@@ -837,10 +864,12 @@ fun merge_grammars (G1:grammar, G2:grammar) :grammar = let
   val new_numinfo = Lib.union (numeral_info G1) (numeral_info G2)
   val new_oload_info =
     Overload.merge_oinfos (overload_info G1) (overload_info G2)
-  val new_uadds = merge_user_additions (user_additions G1) (user_additions G2)
+  val new_ups = merge_user_printers (user_printers G1) (user_printers G2)
 in
   GCONS {rules = newrules, specials = newspecials, numeral_info = new_numinfo,
-         overload_info = new_oload_info, user_additions = new_uadds}
+         overload_info = new_oload_info, user_printers = new_ups,
+         absyn_postprocessors = alist_merge (absyn_postprocessors G1)
+                                            (absyn_postprocessors G2)}
 end
 
 (* ----------------------------------------------------------------------
@@ -901,11 +930,11 @@ fun prettyprint_grammar pstrm (G :grammar) = let
         LAMBDA => #lambda (specials G)
       | BinderString s => [s]
     val endb = quote (#endbinding (specials G))
-    fun one_binder s = 
+    fun one_binder s =
         add_string (quote s ^ " <..binders..> " ^ endb ^ " TM")
   in
-    pr_list one_binder 
-            (fn () => add_string " |") 
+    pr_list one_binder
+            (fn () => add_string " |")
             (fn () => add_break (1,0))
             bnames
   end
@@ -954,8 +983,8 @@ fun prettyprint_grammar pstrm (G :grammar) = let
       in
         begin_block CONSISTENT 0;
         add_string "TM TM  (function application)";
-        case rrl of [] => () 
-                  | _ => (add_string " |"; add_break(1,0); 
+        case rrl of [] => ()
+                  | _ => (add_string " |"; add_break(1,0);
                           pprint_rrl add_both rrl);
         add_break(3,0);
         add_string ("(L-associative)");
@@ -1031,7 +1060,7 @@ fun prettyprint_grammar pstrm (G :grammar) = let
       pr_list pr_ov (fn () => ()) add_newline oinfo;
       end_block ()
     end
-  fun print_user_printers {printers, parsers} = let
+  fun print_user_printers printers = let
     fun sort ({Name = n1, Thy = t1}, {Name = n2, Thy = t2}) =
         case String.compare (t1,t2) of
           EQUAL => String.compare (n1, n2)
@@ -1064,7 +1093,7 @@ in
   end_block ();
   (* overloading *)
   print_overloading (Overload.oinfo_ops (overload_info G));
-  print_user_printers (user_additions G);
+  print_user_printers (user_printers G);
   end_block ()
 end
 
