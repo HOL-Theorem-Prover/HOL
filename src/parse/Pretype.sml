@@ -365,7 +365,7 @@ fun gen_variant caller =
   let fun var_name (PT(Vartype(Name,_,_),_)) = Name
         | var_name _ = raise ERR caller "not a variable"
       fun vary vlist (PT(Vartype(Name,Kind,Rank),locn)) =
-          let val L = map var_name vlist
+          let val L = map var_name (filter is_var_type vlist)
               val next = Lexis.gen_variant Lexis.tyvar_vary L
               fun loop name =
                  let val s = if mem name L then next name else name
@@ -1075,7 +1075,14 @@ fun gen_unify (kind_unify   :prekind -> prekind -> ('a -> 'a * unit option))
         then f ty1' ty2'
         else m
      end
-  fun mk_v_s arg = if has_var_type arg then (arg,[])
+  fun mk_vartype tv = PT(Vartype tv, locn.Loc_None)
+  fun mk_v_s c1 c2 arg =
+          if has_var_type arg
+                   then let val theta = map (fn (tv1,tv2) => mk_vartype tv1 |-> mk_vartype tv2)
+                                            (zip c1 c2)
+                            val arg' = type_subst theta arg
+                        in (arg',[])
+                        end
                    else let val v = all_new_uvar()
                          in Prekind.unify (pkind_of arg) (pkind_of v);
                             Prerank.unify_le (prank_of arg) (* <= *) (prank_of v);
@@ -1121,20 +1128,25 @@ in
   | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
        let val (opr1,args1) = strip_app_type ty1
            val (opr2,args2) = strip_app_type ty2
+           val ho_1 = has_var_type opr1 andalso is_uvar_type(the_var_type opr1)
+           val ho_2 = has_var_type opr2 andalso is_uvar_type(the_var_type opr2)
+           (* If can choose, side with all variable args is to be preferred. *)
+           val easy_1 = ho_1 andalso all has_var_type args1
+           val easy_2 = ho_2 andalso all has_var_type args2
        in if is_abs_type opr1 then
             gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
-          else if has_var_type opr1 andalso is_uvar_type(the_var_type opr1) then
+          else if is_abs_type opr2 then
+            gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
+          else if easy_1 orelse (ho_1 andalso not easy_2) then
             (* Higher order unification; shift args to other side by abstraction. *)
-            let val (vs,s0) = unzip (map mk_v_s args1)
+            let val (vs,s0) = unzip (map (mk_v_s c1 c2) args1)
                 val theta = flatten s0
                 val ty2' = type_subst theta ty2 (* general subst *)
              in gen_unify c1 c2 opr1 (list_mk_abs_type(rev vs,ty2'))
             end
-          else if is_abs_type opr2 then
-            gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
-          else if has_var_type opr2 andalso is_uvar_type(the_var_type opr2) then
+          else if ho_2 then
             (* Higher order unification; shift args to other side by abstraction. *)
-            let val (vs,s0) = unzip (map mk_v_s args2)
+            let val (vs,s0) = unzip (map (mk_v_s c2 c1) args2)
                 val theta = flatten s0
                 val ty1' = type_subst theta ty1 (* general subst *)
              in gen_unify c1 c2 (list_mk_abs_type(rev vs,ty1')) opr2
@@ -1148,7 +1160,7 @@ in
             gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
           else if has_var_type opr1 andalso is_uvar_type(the_var_type opr1) then
             (* Higher order unification; shift args to other side by abstraction. *)
-            let val (vs,s0) = unzip (map mk_v_s args1)
+            let val (vs,s0) = unzip (map (mk_v_s c1 c2) args1)
                 val theta = flatten s0
                 val ty2' = type_subst theta ty2 (* general subst *)
              in gen_unify c1 c2 opr1 (list_mk_abs_type(rev vs,ty2'))
@@ -1161,7 +1173,7 @@ in
             gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
           else if has_var_type opr2 andalso is_uvar_type(the_var_type opr2) then
             (* Higher order unification; shift args to other side by abstraction. *)
-            let val (vs,s0) = unzip (map mk_v_s args2)
+            let val (vs,s0) = unzip (map (mk_v_s c2 c1) args2)
                 val theta = flatten s0
                 val ty1' = type_subst theta ty1 (* general subst *)
              in gen_unify c1 c2 (list_mk_abs_type(rev vs,ty1')) opr2
@@ -1674,6 +1686,29 @@ fun KC printers = let
                  Lib.say (Int.toString (Type.rank_of real_type));
                  Lib.say"\n\n");
             Lib.say "can not be constrained to be of rank ";
+            Lib.say (Int.toString real_rank);
+            Lib.say ("\n\nrank unification failure message: "^message^"\n");
+            Feedback.set_trace "kinds" tmp;
+            raise ERRloc "rankcheck" locn "failed"
+          end
+       | (e as Feedback.HOL_ERR{origin_structure="Prerank",
+                                     origin_function="unify_le",message})
+       => let val show_kinds = Feedback.get_tracefn "kinds"
+              val tmp = show_kinds()
+              val _   = Feedback.set_trace "kinds" 2
+              val real_type = toType Ty
+                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+              val real_rank = Prerank.toRank Rank
+                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+          in
+            Lib.say "\nRank inference failure: the type\n\n";
+            pty real_type;
+            Lib.say ("\n\n"^locn.toString (Locn Ty)^"\n\n");
+            if (is_atom Ty) then ()
+            else(Lib.say"which has rank ";
+                 Lib.say (Int.toString (Type.rank_of real_type));
+                 Lib.say"\n\n");
+            Lib.say "can not be constrained to be <= rank ";
             Lib.say (Int.toString real_rank);
             Lib.say ("\n\nrank unification failure message: "^message^"\n");
             Feedback.set_trace "kinds" tmp;

@@ -745,9 +745,9 @@ fun TC printers = let
        => let val tmp = !Globals.show_types
               val _   = Globals.show_types := true
               val Rator' = to_term (overloading_resolution0 Rator)
-                handle e => (Globals.show_types := tmp; raise e)
+                handle e => (check Rator; Globals.show_types := tmp; raise e)
               val Rand'  = to_term (overloading_resolution0 Rand)
-                handle e => (Globals.show_types := tmp; raise e)
+                handle e => (check Rand;  Globals.show_types := tmp; raise e)
           in
             Lib.say "\nType inference failure: unable to infer a type \
                               \for the application of\n\n";
@@ -783,7 +783,7 @@ fun TC printers = let
                                      val s = "'a"
                                      val kd = Prekind.new_uvar()
                                      val rk = Prerank.new_uvar()
-                                     val bvar = PT(Vartype(s,kd,rk),locn.Loc_None) (* choose either this or next line *)
+                                     val bvar = Pretype.PT(Pretype.Vartype(s,kd,rk),locn.Loc_None) (* choose either this or next line *)
                                      (*val bvar = new_uvar(kd,rk)*)
                                      val body = mk_app_type(all_new_uvar(), bvar)
                                      val univ_ty = mk_univ_type(bvar, body)
@@ -863,6 +863,46 @@ fun TC printers = let
           end
         | (e as Feedback.HOL_ERR{origin_structure="Prerank",
                                      origin_function="unify",message})
+       => let val show_kinds = Feedback.get_tracefn "kinds"
+              val tmp = show_kinds()
+              val _   = Feedback.set_trace "kinds" 2
+              val Rator_ty = Pretype.toType (ptype_of Rator)
+                         handle e => raise (wrap_exn "Preterm" "check.TyComb5" e)
+              val Rator' = to_term (overloading_resolution0 Rator)
+                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+              val Rator_ty' = Term.type_of Rator'
+              val Pretype.PT(_,rand_locn) = Rand
+              val Rand' = (Pretype.toType Rand
+                         handle e => raise (wrap_exn "Preterm" "check.TyComb6" e))
+                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+          in
+            Lib.say "\nRank inference failure: unable to infer a type \
+                              \for the application of\n\n";
+            ptm Rator';
+            Lib.say ("\n\n"^locn.toString (locn Rator)^"\n\n");
+
+            if (Type.is_univ_type Rator_ty') then
+                 (*if (is_atom Rator) then ()
+                 else*)(Lib.say"whose argument must have rank = ";
+                      prk(Type.rank_of (#1 (Type.dest_univ_type Rator_ty')));
+                      Lib.say"\n\n")
+            else (Lib.say"which is not a universal type\n\n");
+
+            Lib.say "to the type\n\n";
+            pty Rand';
+            Lib.say ("\n\n"^locn.toString rand_locn^"\n\n");
+
+            if (Pretype.is_atom Rand) then ()
+            else(Lib.say"which has rank ";
+                 prk(Type.rank_of Rand');
+                 Lib.say"\n\n");
+
+            Lib.say ("unification failure message: "^message^"\n");
+            Feedback.set_trace "kinds" tmp;
+            raise ERRloc"typecheck" (rand_locn (* arbitrary *)) "failed"
+          end
+        | (e as Feedback.HOL_ERR{origin_structure="Prerank",
+                                     origin_function="unify_le",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
@@ -997,7 +1037,7 @@ fun TC printers = let
        => let val tmp = !Globals.show_types
               val _ = Globals.show_types := true
               val real_term = to_term (overloading_resolution0 Ptm)
-                handle e => (Globals.show_types := tmp; raise e)
+                handle e => (check Ptm; Globals.show_types := tmp; raise e)
               val real_type = (Pretype.toType Ty
                          handle e => raise (wrap_exn "Preterm" "check.Constrained2" e))
                 handle e => (Globals.show_types := tmp; raise e)

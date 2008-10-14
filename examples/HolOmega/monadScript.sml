@@ -263,6 +263,82 @@ e REFL_TAC;
 
 
 (*---------------------------------------------------------------------------
+            Functor predicate
+ ---------------------------------------------------------------------------*)
+
+
+val functor_def = new_definition("functor_def", Term
+   `functor (phi: !'a 'b. ('a -> 'b) -> 'a 't -> 'b 't) =
+      (* Identity *)
+          (!:'a. phi [:'a,'a:] I = I) /\
+      (* Homomorphism *)
+          (!:'a 'b 'c. !(f:'a -> 'b) (g:'b -> 'c).
+                phi[:'a,'c:](g o f) = phi[:'b,'c:]g o phi[:'a,'b:]f)
+     `);
+
+
+val identity_functor = store_thm
+  ("identity_functor",
+   ``functor (\:'a 'b. I : ('a -> 'b) -> ('a -> 'b))``,
+   REWRITE_TAC[functor_def]
+   THEN TY_BETA_TAC
+   THEN REWRITE_TAC[combinTheory.I_THM]
+  );
+
+val MAP_I = store_thm
+  ("MAP_I",
+   ``MAP (I:'a -> 'a) = I``,
+   CONV_TAC FUN_EQ_CONV
+   THEN Induct
+   THEN ASM_REWRITE_TAC[listTheory.MAP,combinTheory.I_THM]
+  );
+
+val MAP_o = store_thm
+  ("MAP_o",
+   ``!(f:'a->'b) (g:'b->'c). MAP (g o f) = MAP g o MAP f``,
+   REPEAT GEN_TAC
+   THEN CONV_TAC FUN_EQ_CONV
+   THEN Induct
+   THEN ASM_REWRITE_TAC[listTheory.MAP,combinTheory.o_THM]
+  );
+
+val map_functor = store_thm
+  ("map_functor",
+   ``functor (\:'a 'b. MAP : ('a -> 'b) -> ('a list -> 'b list))``,
+   REWRITE_TAC[functor_def]
+   THEN TY_BETA_TAC
+   THEN REWRITE_TAC[MAP_I,MAP_o]
+  );
+
+val map_map_functor = store_thm
+  ("map_map_functor",
+   ``functor (\:'a 'b. MAP o (MAP : ('a -> 'b) -> ('a list -> 'b list)))``,
+   REWRITE_TAC[functor_def]
+   THEN TY_BETA_TAC
+   THEN REWRITE_TAC[combinTheory.o_THM,MAP_I,MAP_o]
+  );
+
+(*
+val functor_o = store_thm
+  ("functor_o",
+   ``!(phi: !'a 'b. ('a->'b) -> ('a 't1 -> 'b 't1))
+      (psi: !'a 'b. ('a->'b) -> ('a 't2 -> 'b 't2)).
+      functor phi /\ functor psi ==>
+      functor (\:'a 'b. psi[:'a 't1,'b 't1:] o phi[:'a,'b:])``,
+   REPEAT GEN_TAC
+   THEN REWRITE_TAC[functor_def]
+   THEN REPEAT STRIP_TAC
+   THEN TY_BETA_TAC
+   THEN ASM_REWRITE_TAC[]
+   THEN CONV_TAC FUN_EQ_CONV
+   THEN Induct
+   THEN ASM_REWRITE_TAC[listTheory.MAP,combinTheory.o_THM]
+  );
+*)
+
+
+
+(*---------------------------------------------------------------------------
             Monad type operator, with unit and bind term operators
  ---------------------------------------------------------------------------*)
 

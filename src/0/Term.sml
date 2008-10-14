@@ -552,7 +552,7 @@ local val err  = Lib.C ERR "operator on type does not have universal type"
           then raise ERR caller "universal type variable has insufficient rank"
           else ()
         | check_rank caller _ _ = raise ERR caller "not a type variable"
-      fun lmk_tcomb caller =
+      fun lmk_tycomb caller =
         let val err = err caller
             fun loop (A,_) [] = A
               | loop (A,typ) (ty::rst) =
@@ -563,16 +563,16 @@ local val err  = Lib.C ERR "operator on type does not have universal type"
                  end
         in fn (f,L) => loop(f, type_of f) L
         end
-      val mk_tcomb0 = lmk_tcomb "mk_tcomb"
+      val mk_tycomb0 = lmk_tycomb "mk_tycomb"
 in
 
 fun mk_tycomb(r as (TAbs(btyvar,_), Ty)) =
      (check_rank "mk_tycomb" (TyFv btyvar) Ty; TComb r)
   | mk_tycomb(r as (Clos(_,TAbs(btyvar,_)), Ty)) =
      (check_rank "mk_tycomb" (TyFv btyvar) Ty; TComb r)
-  | mk_tycomb(Rator,Ty) = mk_tcomb0 (Rator,[Ty])
+  | mk_tycomb(Rator,Ty) = mk_tycomb0 (Rator,[Ty])
 
-val list_mk_tycomb = lmk_tcomb "list_mk_tycomb"
+val list_mk_tycomb = lmk_tycomb "list_mk_tycomb"
 end;
 
 fun dest_tycomb (TComb r) = r
