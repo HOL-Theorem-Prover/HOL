@@ -1,11 +1,14 @@
 structure CooperThms :> CooperThms = struct
 
-open HolKernel boolLib Parse
+open HolKernel boolLib
 open integerTheory int_arithTheory
 
 (* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars integerTheory.integer_grammars;
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars integer_grammars
+end
+open Parse
 
 val elim_le = GSYM INT_NOT_LT
 val elim_gt = int_gt
@@ -57,7 +60,5 @@ val simple_conj_congruence = prove(
   ``!p q r. (p ==> (q = r)) ==> (p /\ q = p /\ r)``,
   REPEAT GEN_TAC THEN MAP_EVERY Q.ASM_CASES_TAC [`p`,`q`,`r`] THEN
   ASM_REWRITE_TAC []);
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end

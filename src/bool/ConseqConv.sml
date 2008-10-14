@@ -95,10 +95,8 @@ fun GEN_ASSUM v thm =
  * and t' not being equal to t
  *---------------------------------------------------------------------------*)
 
-fun CONSEQ_CONV_WRAPPER conv t =
+fun CONSEQ_CONV_WRAPPER___CONVERT_RESULT thm t =
 let
-   val _ = if (type_of t = bool) then () else raise UNCHANGED;
-   val thm = conv t;
    val thm_term = concl thm;
 in
    if (thm_term = t andalso not (t = T)) then
@@ -120,6 +118,15 @@ in
 end;
 
 
+fun CONSEQ_CONV_WRAPPER conv t =
+let
+   val _ = if (type_of t = bool) then () else raise UNCHANGED;
+   val thm = conv t;   
+in
+   CONSEQ_CONV_WRAPPER___CONVERT_RESULT thm t
+end;
+
+
 fun CHANGED_CHECK_CONSEQ_CONV conv t =
     let
        val thm = conv t;
@@ -138,12 +145,90 @@ fun CHANGED_CONSEQ_CONV conv =
     QCHANGED_CONSEQ_CONV (CHANGED_CHECK_CONSEQ_CONV conv)
 
 
+(*like ORELSEC*)
+fun ORELSE_CONSEQ_CONV (c1:conv) c2 t =     
+    ((c1 t handle HOL_ERR _ => raise UNCHANGED) handle UNCHANGED =>
+     (c2 t handle HOL_ERR _ => raise UNCHANGED));
+
 
 (*like FIRST_CONV*)
 fun FIRST_CONSEQ_CONV [] t = raise UNCHANGED
   | FIRST_CONSEQ_CONV ((c1:conv)::L) t =
-    ((c1 t handle HOL_ERR _ => raise UNCHANGED) handle UNCHANGED =>
-    FIRST_CONSEQ_CONV L t);
+    ORELSE_CONSEQ_CONV c1 (FIRST_CONSEQ_CONV L) t;
+
+
+
+
+fun CONSEQ_CONV_WRAPPER___GET_ANTECEDENT thm t =
+   let
+      val thm1 = CONSEQ_CONV_WRAPPER___CONVERT_RESULT thm t;
+      val (t', _) = dest_imp (concl thm1);
+   in
+      (t', SOME thm1)
+   end;
+
+
+
+(*like THENC*)
+fun THEN_CONSEQ_CONV (c1:conv) c2 t =     
+    let
+       val thm0_opt = (SOME (c1 t) handle HOL_ERR _ => raise UNCHANGED) handle UNCHANGED => NONE;
+       val ((t2, thm0_imp_opt), thm0_opt) = 
+            ((if (isSome thm0_opt) then CONSEQ_CONV_WRAPPER___GET_ANTECEDENT (valOf thm0_opt) t else (t, NONE)),
+	     thm0_opt) handle UNCHANGED => ((t, NONE), NONE);
+
+       val thm1_opt = (SOME (c2 t2) handle HOL_ERR _ => raise UNCHANGED) handle UNCHANGED => NONE;
+       val ((t3, thm1_imp_opt), thm1_opt) = 
+            (if (isSome thm1_opt) then CONSEQ_CONV_WRAPPER___GET_ANTECEDENT (valOf thm1_opt) t2 else (t2, NONE),
+	     thm1_opt) handle UNCHANGED => ((t2, NONE), NONE);
+    in
+       if (isSome thm0_opt) andalso (isSome thm1_opt) then
+       (
+         if (is_eq (concl (valOf thm0_opt))) andalso (is_eq (concl (valOf thm1_opt))) then
+	     TRANS (valOf thm0_opt) (valOf thm1_opt)
+         else
+	     IMP_TRANS (valOf thm1_imp_opt) (valOf thm0_imp_opt)
+       ) else 
+       if (isSome thm0_opt) then valOf thm0_opt else
+       if (isSome thm1_opt) then valOf thm1_opt else
+       raise UNCHANGED
+    end;
+
+
+
+
+(*Like QUANT_CONV for CONSEQ_CONVS. Explicit versions
+  for FORALL and EXISTS are exported, since they have
+  to be handeled separately anyhow.*)
+
+fun FORALL_CONSEQ_CONV conv t =
+   let
+      val (var, body) = dest_forall t;
+      val thm_body = conv body;
+      val thm = GEN_ASSUM var thm_body;
+      val thm2 = HO_MATCH_MP MONO_ALL thm;
+   in
+      thm2
+   end;
+
+fun EXISTS_CONSEQ_CONV conv t =
+   let
+      val (var, body) = dest_exists t;
+      val thm_body = conv body;
+      val thm = GEN_ASSUM var thm_body;
+      val thm2 = HO_MATCH_MP boolTheory.MONO_EXISTS thm;
+   in
+      thm2
+   end;
+
+fun QUANT_CONSEQ_CONV conv t =
+    if (is_forall t) then
+       FORALL_CONSEQ_CONV conv t 
+    else if (is_exists t) then
+       EXISTS_CONSEQ_CONV conv t 
+    else
+       NO_CONV t;
+
 
 
 

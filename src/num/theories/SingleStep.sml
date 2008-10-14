@@ -448,7 +448,7 @@ local
     end;
 
   val cases_p =
-    exists_p o map (case_p o TypeBasePure.case_const_of) o
+    exists_p o Lib.mapfilter (case_p o TypeBasePure.case_const_of) o
     TypeBasePure.listItems o TypeBase.theTypeBase;
 
   fun free_thing tm =
@@ -476,11 +476,12 @@ in
 end
 
 local
+  fun tot f x = f x handle HOL_ERR _ => NONE
   fun case_rws tyi =
     List.mapPartial I
-    [SOME (TypeBasePure.case_def_of tyi),
-     TypeBasePure.distinct_of tyi,
-     TypeBasePure.one_one_of tyi];
+       [Lib.total TypeBasePure.case_def_of tyi,
+        tot TypeBasePure.distinct_of tyi,
+        tot TypeBasePure.one_one_of tyi];
 
   val all_case_rws =
     flatten o map case_rws o TypeBasePure.listItems o TypeBase.theTypeBase;
@@ -488,6 +489,10 @@ in
   fun CASE_SIMP_CONV tm =
     simpLib.SIMP_CONV boolSimps.bool_ss (all_case_rws ()) tm;
 end;
+
+(*---------------------------------------------------------------------------*)
+(* Q: what should CASE_TAC do with literal case expressions?                 *)
+(*---------------------------------------------------------------------------*)
 
 val CASE_TAC =
   PURE_CASE_TAC THEN ASM_REWRITE_TAC [] THEN CONV_TAC CASE_SIMP_CONV;

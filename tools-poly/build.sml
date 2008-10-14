@@ -20,7 +20,7 @@ val _ = catch_interrupt true;
 *)
 
 
-  fun main () = let 
+  fun main () = let
 
     val phase = ref Initial
 
@@ -140,7 +140,7 @@ val SRCDIRS0 =
                 val s = Substring.string ss
               in
                 if s = "" then read_file acc fstr
-                else if s = "bin/hol" orelse s = "bin/hol.bare" then 
+                else if s = "bin/hol" orelse s = "bin/hol.bare" then
                   read_file ((s,0)::acc) fstr
                 else let
                     fun extract_testcount (s,acc) =
@@ -200,7 +200,7 @@ in
     then
       (print "Performing self-test...\n";
        if OS.Process.isSuccess (SYSTEML [dir ^ "/selftest.exe", Int.toString
-                                                               do_selftests]) 
+                                                               do_selftests])
        then
          print "Self-test was successful\n"
        else
@@ -418,8 +418,8 @@ fun upload ((src, regulardir), target, symlink) =
     (thus requiring only a single place to look for things).
  ---------------------------------------------------------------------------*)
 
-fun compile (systeml : string list -> OS.Process.status) exe obj : unit = 
-  (systeml [Systeml.CC, "-o", exe, obj, "-L" ^ POLYMLLIBDIR, 
+fun compile (systeml : string list -> OS.Process.status) exe obj : unit =
+  (systeml [Systeml.CC, "-o", exe, obj, "-L" ^ POLYMLLIBDIR,
             "-lpolymain", "-lpolyml"];
    OS.FileSys.remove obj);
 
@@ -432,11 +432,11 @@ fun make_exe (name:string) (POLY : string) (target:string) : unit =
    OS.FileSys.chDir dir
  end
 
-fun buildDir symlink s = 
+fun buildDir symlink s =
   case #1 s of
-    "bin/hol.bare" => 
+    "bin/hol.bare" =>
       (make_exe "builder0.ML" (#1 (which_hol ())) "hol.builder0"; phase := Bare)
-  | "bin/hol" => 
+  | "bin/hol" =>
       (make_exe "builder.ML" (#1 (which_hol ())) "hol.builder"; phase := Full)
   | _ => (build_dir s; upload(s,SIGOBJ,symlink));
 
@@ -653,9 +653,9 @@ in
   SYSTEML cmd before OS.FileSys.chDir dir0
 end
 
-fun cleandir dir = 
+fun cleandir dir =
   ignore ([HOLMAKE, "clean"] called_in dir) handle OS.SysErr _ => ()
-fun cleanAlldir dir = 
+fun cleanAlldir dir =
   ignore ([HOLMAKE, "cleanAll"] called_in dir) handle OS.SysErr _ => ()
 
 fun clean_dirs f =
@@ -681,6 +681,7 @@ val help_mesg = "Usage: build\n\
                 \   or: build clean\n\
                 \   or: build cleanAll\n\
                 \   or: build help.\n\
+                \Symbolic linking is ON by default.\n\
                 \Add -expk to build an experimental kernel.\n\
                 \Add -selftest to do self-tests, where defined.\n\
                 \       Follow -selftest with a number to indicate level\n\
@@ -712,10 +713,14 @@ fun symlink_check() =
       die "Sorry; symbolic linking isn't available under Windows NT"
     else link
 
+val default_link = if OS = "winNT" then cp else link
+
+
 in
     case cmdline of
-      []            => build_hol cp                (* no symbolic linking *)
+      []            => build_hol default_link
     | ["-symlink"]  => build_hol (symlink_check()) (* w/ symbolic linking *)
+    | ["-nosymlink"]=> build_hol cp
     | ["-small"]    => build_hol mv                (* by renaming *)
     | ["-dir",path] => buildDir cp (path, 0)
     | ["-dir",path,
@@ -725,6 +730,7 @@ in
     | ["clean"]     => clean_dirs cleandir
     | ["cleanAll"]  => clean_dirs cleanAlldir
     | ["symlink"]   => build_hol (symlink_check())
+    | ["nosymlink"] => build_hol cp
     | ["small"]     => build_hol mv
     | ["help"]      => build_help()
     | otherwise     => errmsg help_mesg

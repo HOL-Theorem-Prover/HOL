@@ -4,8 +4,11 @@ struct
 open HolKernel boolLib CooperThms intSyntax integerTheory int_arithTheory
 
 (* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+end
+open Parse
 
 val lhand = rand o rator
 
@@ -212,7 +215,5 @@ in
     else BINOP_CONV csimp
   else ALL_CONV
 end tm
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* struct *)

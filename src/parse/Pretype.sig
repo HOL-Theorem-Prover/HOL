@@ -103,4 +103,14 @@ val checkkind :
 val kindcheck :
       ((hol_type -> string) * (kind -> string)) option
         -> pretype -> hol_type
+
+datatype kcheck_error =
+         TyAppFail of hol_type * hol_type
+       | TyUnivFail of hol_type
+       | TyKindConstrFail of hol_type * kind
+       | TyRankConstrFail of hol_type * int
+       | TyRankLEConstrFail of hol_type * int
+
+val last_kcerror : (kcheck_error * locn.locn) option ref
+
 end

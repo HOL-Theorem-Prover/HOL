@@ -94,7 +94,14 @@ fun pp_gtree ppstrm =
      val {add_break,add_newline,add_string,begin_block,end_block,...} 
        = Portable.with_ppstream ppstrm
      val pp_goal = goalStack.pp_goal ppstrm
-     fun pp (vAtom (s,t)) = add_string s
+     val pp_slist = pr_list add_string (fn () => ())
+                            (fn () => add_break(1,0))
+     fun pp (vAtom (s,t)) = 
+        if s="" then add_string "<anonymous>" 
+        else
+        (begin_block INCONSISTENT 0;
+         pp_slist (String.tokens Char.isSpace s);
+         end_block())
        | pp (vGoal g) = pp_goal g
        | pp (vThen(vt1,vt2)) = 
           let in 

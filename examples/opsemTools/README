@@ -1,0 +1,22 @@
+This directory contains the following:
+
+ newOpsemScript.sml .......... script file to build various semantics
+                               (extends examples/ind_def/opsemScript.sml)
+
+ verify ......................  Collavizza-Gordon verification tools 
+
+ extract .....................  Myreen extraction tools
+
+ java2opsem  .................  Collavizza translator from Java to opsem
+
+
+-----------------------------------------------------------------
+Subversion hack needed for setting types of new files (yuk):
+
+$ svn propset svn:mime-type text/plain README newOpsemScript.sml
+$ svn propset svn:eol-style native README newOpsemScript.sml
+$ svn svn:mime-type application/octet-stream *.class
+
+Better solution is to edit ~/.subversion/config
+-----------------------------------------------------------------
+

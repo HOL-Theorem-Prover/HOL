@@ -43,8 +43,6 @@ val int_ss = boolSimps.bool_ss ++ numSimps.old_ARITH_ss ++ pairSimps.PAIR_ss;
 
 val _ = Rewrite.set_implicit_rewrites Rewrite.bool_rewrites;
 
-val export_rewrites = BasicProvers.export_rewrites "integer";
-
 (*--------------------------------------------------------------------------*)
 (* Required lemmas about the natural numbers - mostly to drive CANCEL_TAC   *)
 (*--------------------------------------------------------------------------*)
@@ -1659,6 +1657,7 @@ val NUM_OF_INT =
 	      GEN_TAC THEN REWRITE_TAC[Num, INT_INJ] THEN
 	      CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV SYM_CONV)) THEN
 	      REWRITE_TAC[SELECT_REFL]);
+val _ = computeLib.add_persistent_funs [("NUM_OF_INT", NUM_OF_INT)]
 
 val INT_OF_NUM =
     store_thm("INT_OF_NUM",
@@ -3244,7 +3243,7 @@ val INT_DISCRETE = store_thm(
     ASM_SIMP_TAC int_ss []
   ]);
 
-val _ = BasicProvers.export_rewrites "integer"
+val _ = BasicProvers.export_rewrites
         ["INT_ADD_LID_UNIQ", "INT_ADD_LINV",
          "INT_ADD_RID_UNIQ", "INT_ADD_RINV",
          "INT_ADD_SUB", "INT_ADD_SUB2", "INT_DIVIDES_0",

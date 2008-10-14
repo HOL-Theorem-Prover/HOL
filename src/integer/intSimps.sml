@@ -5,121 +5,12 @@ open HolKernel boolLib integerTheory intSyntax simpLib
 
 val ERR = mk_HOL_ERR "intSimps";
 
-(*---------------------------------------------------------------------------*)
-(* Integer-specific compset                                                  *)
-(*---------------------------------------------------------------------------*)
-
-val elim_thms = [INT_ADD_REDUCE, INT_SUB_REDUCE, INT_MUL_REDUCE,
-                 INT_DIV_REDUCE, INT_MOD_REDUCE, INT_EXP_REDUCE,
-                 INT_LT_REDUCE, INT_LE_REDUCE, INT_EQ_REDUCE,
-                 INT_GT_REDUCE, INT_GE_REDUCE, INT_DIVIDES_REDUCE,
-                 INT_ABS_NUM, INT_ABS_NEG, INT_QUOT_REDUCE, INT_REM_REDUCE,
-                 INT_MAX, INT_MIN]
-
-fun int_compset () =
- let open computeLib
-     val compset = reduceLib.num_compset()
-     val _ = add_thms elim_thms compset
- in
-  compset
- end;
-
-(*---------------------------------------------------------------------------*)
-(* Reducer for ground integer expressions                                    *)
-(*---------------------------------------------------------------------------*)
-
-val REDUCE_CONV = computeLib.CBV_CONV (int_compset())
-
-(*---------------------------------------------------------------------------*)
-(* Add integer reductions to the global compset                              *)
-(*---------------------------------------------------------------------------*)
-
-val _ = let open computeLib in add_funs elim_thms end;
-
-(*---------------------------------------------------------------------------*)
-(* Ground reduction conversions for integers (suitable for inclusion in      *)
-(* simplifier, or as stand-alone                                             *)
-(*---------------------------------------------------------------------------*)
-
-local
-  val num_ty = numSyntax.num
-  val int_ty = intSyntax.int_ty
-  val x = mk_var("x",int_ty)
-  val y = mk_var("y",int_ty)
-  val n = mk_var("n",num_ty)
-  val basic_op_terms =
-     [plus_tm, minus_tm, mult_tm, div_tm, mod_tm, int_eq_tm,
-      less_tm, leq_tm, great_tm, geq_tm, divides_tm, rem_tm, quot_tm,
-      min_tm, max_tm]
-  val basic_op_patterns = map (fn t => list_mk_comb(t, [x,y])) basic_op_terms
-  val exp_pattern = list_mk_comb(exp_tm, [x,n])
-  val abs_patterns = [lhs (#2 (strip_forall (concl INT_ABS_NEG))),
-                      lhs (#2 (strip_forall (concl INT_ABS_NUM)))]
-  fun reducible t = is_int_literal t orelse numSyntax.is_numeral t
-  fun reducer t =
-    let val (_, args) = strip_comb t
-    in if List.all reducible args then REDUCE_CONV t else Conv.NO_CONV t
-    end
-  fun mk_conv pat =
-     {name = "Integer calculation",
-      key = SOME([], pat), trace = 2,
-      conv = K (K reducer)}
-  val rederr = ERR "RED_CONV" "Term not reducible"
-in
-val INT_REDUCE_ss = SSFRAG
-  {name=SOME"INT_REDUCE",
-   convs = map mk_conv (exp_pattern::(abs_patterns @ basic_op_patterns)),
-   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
-
-fun RED_CONV t =
- let val (f, args) = strip_comb t
-     val _ = f = exp_tm orelse mem f basic_op_terms orelse raise rederr
-     val _ = List.all reducible args orelse raise rederr
-     val _ = not (Lib.can dom_rng (type_of t)) orelse raise rederr
- in
-   REDUCE_CONV t
- end
-
-end (* local *) ;
-
-(*---------------------------------------------------------------------------*)
-(* Add reducer to srw_ss                                                     *)
-(*---------------------------------------------------------------------------*)
-
-val _ = BasicProvers.augment_srw_ss [INT_REDUCE_ss];
+open intReduce
 
 (* ----------------------------------------------------------------------
     integer normalisations
    ---------------------------------------------------------------------- *)
 
-(* Accumulate literal additions in integer expressions
-    (doesn't do coefficient gathering - just adds up literals, and
-     reassociates along the way)
-*)
-fun collect_additive_consts tm = let
-  val summands = strip_plus tm
-in
-  case summands of
-    [] => raise Fail "strip_plus returned [] in collect_additive_consts"
-  | [_] => NO_CONV tm
-  | _ => let
-    in
-      case partition is_int_literal summands of
-        ([], _) => NO_CONV tm
-      | ([_], _) => NO_CONV tm
-      | (_, []) => REDUCE_CONV tm
-      | (numerals, non_numerals) => let
-          val reorder_t = mk_eq(tm,
-                           mk_plus(list_mk_plus non_numerals,
-                                   list_mk_plus numerals))
-          val reorder_thm =
-            EQT_ELIM(AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM) reorder_t)
-        in
-          (K reorder_thm THENC REDUCE_CONV THENC
-           TRY_CONV (REWR_CONV INT_ADD_RID)) tm
-        end
-    end
-end
 
 local
   open intSyntax integerTheory GenPolyCanon
@@ -197,5 +88,198 @@ val int_ss =
 (* Formerly the following underpowered version was used:
   val int_ss = boolSimps.bool_ss ++ INT_REDUCE_ss;
 *)
+
+(* ----------------------------------------------------------------------
+    INT_ARITH_ss
+
+    embedding Omega into a simpset fragment.
+    Derived from code to do the same for the natural numbers, which is in
+      src/num/arith/src/numSimps.sml
+    and
+      src/num/arith/src/Gen_arith.sml
+   ---------------------------------------------------------------------- *)
+
+fun contains_var tm =
+    if is_var tm then true
+    else if is_int_literal tm then false
+    else let
+        val (l, r) = dest_plus tm
+                     handle HOL_ERR _ =>
+                            dest_mult tm
+                            handle HOL_ERR _ => dest_minus tm
+      in
+          contains_var l orelse contains_var r
+      end handle HOL_ERR _ => contains_var (dest_absval tm)
+                              handle HOL_ERR _ => true
+ (* final default value is true because the term in question must be a
+    complicated non-presburger thing that will get treated as a variable
+    anyway. *)
+
+fun is_linear_mult tm = let
+  val (l,r) = dest_mult tm
+in
+  not (contains_var l andalso contains_var r)
+end
+
+fun arg1 tm = rand (rator tm)
+val arg2 = rand
+
+val non_presburger_subterms = IntDP_Munge.non_presburger_subterms
+
+fun is_arith tm =
+    List.all (fn t => type_of t = int_ty) (non_presburger_subterms tm)
+
+fun contains_forall sense tm =
+  if is_conj tm orelse is_disj tm then
+    List.exists (contains_forall sense) (#2 (strip_comb tm))
+  else if is_neg tm then
+    contains_forall (not sense) (rand tm)
+  else if is_imp tm then
+    contains_forall (not sense) (rand (rator tm)) orelse
+    contains_forall sense (rand tm)
+  else if is_forall tm then
+    sense orelse contains_forall sense (#2 (dest_forall tm))
+  else if is_exists tm then
+    not sense orelse contains_forall sense (#2 (dest_exists tm))
+  else false
+
+fun is_arith_thm thm =
+  not (null (hyp thm)) andalso is_arith (concl thm)
+
+val is_arith_asm = is_arith_thm o ASSUME
+
+open Trace Cache Traverse
+fun CTXT_ARITH DP DPname thms tm = let
+  val context = map concl thms
+  fun try gl = let
+    val gl' = list_mk_imp(context,gl)
+    val _ = trace (5, LZ_TEXT (fn () => "Trying cached arithmetic d.p. on "^
+                                        term_to_string gl'))
+  in
+    rev_itlist (C MP) thms (DP gl')
+  end
+  val thm = EQT_INTRO (try tm)
+      handle (e as HOL_ERR _) =>
+             if tm <> F then EQF_INTRO (try(mk_neg tm)) else raise e
+in
+  trace(1,PRODUCE(tm,DPname,thm)); thm
+end
+
+fun crossprod (ll : 'a list list) : 'a list list =
+    case ll of
+      [] => [[]]
+    | h::t => let
+        val c = crossprod t
+      in
+        List.concat (map (fn hel => map (cons hel) c) h)
+      end
+fun prim_dest_const t = let
+  val {Thy,Name,...} = dest_thy_const t
+in
+  (Thy,Name)
+end
+
+fun dpvars t = let
+  fun recurse bnds acc t = let
+    val (f, args) = strip_comb t
+    fun go2() = let
+      val (t1, t2) = (hd args, hd (tl args))
+    in
+      recurse bnds (recurse bnds acc t1) t2
+    end
+    fun go1 () = recurse bnds acc (hd args)
+  in
+    case Lib.total prim_dest_const f of
+      SOME ("bool", "~") => go1()
+    | SOME ("bool", "/\\") => go2()
+    | SOME ("bool", "\\/") => go2()
+    | SOME ("min", "==>") => go2()
+    | SOME ("min", "=") => go2()
+    | SOME ("bool", "COND") => let
+        val (t1,t2,t3) = (hd args, hd (tl args), hd (tl (tl args)))
+      in
+        recurse bnds (recurse bnds (recurse bnds acc t1) t2) t3
+      end
+    | SOME ("integer", "int_add") => go2()
+    | SOME ("integer", "int_sub") => go2()
+    | SOME ("integer", "int_gt") => go2()
+    | SOME ("integer", "int_lt") => go2()
+    | SOME ("integer", "int_le") => go2()
+    | SOME ("integer", "int_ge") => go2()
+    | SOME ("integer", "int_mod") => go2()
+    | SOME ("integer", "int_div") => go2()
+    | SOME ("integer", "int_neg") => go1()
+    | SOME ("integer", "ABS") => go1()
+    | SOME ("integer", "int_mul") => let
+        val args = intSyntax.strip_mult t
+        val arg_vs = map (HOLset.listItems o recurse bnds empty_tmset) args
+        val cs = crossprod (filter (not o null) arg_vs)
+      in
+        case cs of
+          [] => acc
+        | [[]] => acc
+        | _ => let
+            val var_ts = map (intSyntax.list_mk_mult o
+                              Listsort.sort Term.compare) cs
+          in
+            List.foldl (fn (t,acc)=>HOLset.add(acc,t)) acc var_ts
+          end
+      end
+    | SOME ("bool", "!") => let
+        val (v, bod) = dest_abs (hd args)
+      in
+        recurse (HOLset.add(bnds, v)) acc bod
+      end
+    | SOME ("bool", "?") => let
+        val (v, bod) = dest_abs (hd args)
+      in
+        recurse (HOLset.add(bnds, v)) acc bod
+      end
+    | SOME _ => if is_int_literal t then acc
+                else HOLset.add(acc, t)
+    | NONE => if is_var t then if HOLset.member(bnds, t) then acc
+                               else HOLset.add(acc, t)
+              else HOLset.add(acc, t)
+  end
+in
+  HOLset.listItems (recurse empty_tmset empty_tmset t)
+end
+
+
+fun mkSS DPname DP = let
+  val (CDP, cache) = let
+    fun check tm =
+        type_of tm = Type.bool andalso is_arith tm andalso tm <> boolSyntax.T
+  in
+    RCACHE (dpvars,check,CTXT_ARITH DP DPname)
+  (* the check function determines whether or not a term might be handled
+     by the decision procedure -- we want to handle F, because it's possible
+     that we have accumulated a contradictory context. *)
+  end
+  val ARITH_REDUCER = let
+    exception CTXT of thm list
+    fun get_ctxt e = (raise e) handle CTXT c => c
+    fun add_ctxt(ctxt, newthms) = let
+      val addthese = filter is_arith_thm (flatten (map CONJUNCTS newthms))
+    in
+      CTXT (addthese @ get_ctxt ctxt)
+    end
+  in
+    REDUCER {name = SOME DPname,
+             addcontext = add_ctxt,
+             apply = fn args => CDP (get_ctxt (#context args)),
+             initial = CTXT []}
+  end
+in
+  (SSFRAG {name=SOME (DPname ^ "_ss"),
+           convs = [], rewrs = [], congs = [],
+           filter = NONE, ac = [], dprocs = [ARITH_REDUCER]},
+    cache)
+end
+
+val (OMEGA_ss, omega_cache) = mkSS "OMEGA" Omega.OMEGA_PROVE
+val (COOPER_ss, cooper_cache) = mkSS "COOPER" Cooper.COOPER_PROVE
+val INT_ARITH_ss = OMEGA_ss
+
 
 end

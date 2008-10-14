@@ -18,8 +18,15 @@ val NUM_DEPTH_CONSEQ_CONV : int -> conv -> conv;
 val CHANGED_CONSEQ_CONV : conv -> conv;
 val QCHANGED_CONSEQ_CONV : conv -> conv;
 val CHANGED_CHECK_CONSEQ_CONV : conv -> conv;
+val ORELSE_CONSEQ_CONV : conv -> conv -> conv
+val THEN_CONSEQ_CONV : conv -> conv -> conv;
 val FIRST_CONSEQ_CONV : conv list -> conv;
 val CONJ_ASSUMPTIONS_CONSEQ_CONV : conv -> (term -> bool) -> conv;
+
+val FORALL_CONSEQ_CONV : conv -> conv;
+val EXISTS_CONSEQ_CONV : conv -> conv;
+val QUANT_CONSEQ_CONV : conv -> conv;
+
 
 
 val IMP_CONSEQ_CONV_RULE : conv -> rule;

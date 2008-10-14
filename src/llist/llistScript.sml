@@ -5,8 +5,6 @@ open HolKernel boolLib Parse bossLib
 
 open BasicProvers boolSimps markerLib;
 
-val export_rewrites = BasicProvers.export_rewrites "llist";
-
 val _ = new_theory "llist";
 
 

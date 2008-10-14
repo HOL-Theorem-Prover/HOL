@@ -179,7 +179,7 @@ val ABBREV_ss =
 (* LET_FORALL_ELIM theorem is applied after all the movement is possible.    *)
 (*---------------------------------------------------------------------------*)
 
-fun LET_ELIM_TAC goal = 
+fun LET_ELIM_TAC goal =
  let open simpLib pureSimps boolSimps
  in
   CONV_TAC
@@ -361,7 +361,7 @@ fun PRIM_NORM_TAC ss =
 fun STP_TAC ss finisher
   = PRIM_STP_TAC (rev_itlist add_simpls (tyinfol()) ss) finisher
 
-fun RW_TAC ss thl = markerLib.ABBRS_THEN 
+fun RW_TAC ss thl = markerLib.ABBRS_THEN
                      (fn thl => STP_TAC (ss && thl) NO_TAC) thl
 
 fun NORM_TAC ss thl =
@@ -459,10 +459,11 @@ end
 
 val _ = Theory.after_new_theory setup_exports
 
-fun export_rewrites name slist = let
+fun export_rewrites slist = let
 in
   exports := !exports @ slist;
-  augment_srw_ss [simpLib.named_rewrites name (map (DB.fetch "-") slist)]
+  augment_srw_ss [simpLib.named_rewrites (current_theory())
+                                         (map (DB.fetch "-") slist)]
 end
 
 end

@@ -24,7 +24,7 @@ thus possible to link a binary infix to an operator that is in turn an
 abbreviation.
 
 \FAILURE
-Never fails.
+Fails if the given type is just a type variable.
 
 \EXAMPLE
 This is a simple abbreviation.

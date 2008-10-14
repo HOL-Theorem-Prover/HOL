@@ -6,6 +6,9 @@
 (* s-expressions and native HOL                                              *)
 (*****************************************************************************)
 
+structure translateLib :> translateLib =
+struct
+
 open Feedback Lib Type Term boolSyntax Thm Drule Tactical Thm_cont Tactic Conv;
 
 (*****************************************************************************)
@@ -50,31 +53,50 @@ end;
 (*****************************************************************************)
 
 local
-	fun snd_to_last_imp term = case (strip_imp term) of ([],a) => a |  (xs,a) => last xs;
-	fun last_two_imps term = case (strip_imp term) of ([],a) => a | (xs,a) => mk_imp(last xs,a);
-	fun MATCH opr1 opr2 de_thms a = tryfind (DOUBLE_MATCH opr1 opr2 a o DISCH_ALL o SPEC_ALL o UNDISCH_ALL) de_thms
+fun snd_to_last_imp term = 
+    case (strip_imp term) of ([],a) => a |  (xs,a) => last xs;
+fun last_two_imps term =
+    case (strip_imp term) of ([],a) => a | (xs,a) => mk_imp(last xs,a);
+fun MATCH opr1 opr2 de_thms a =
+    tryfind (DOUBLE_MATCH opr1 opr2 a o DISCH_ALL o SPEC_ALL o UNDISCH_ALL) 
+    de_thms
 	
-	fun fix_hyps de_thms thm = 
-	let	val hs = mapfilter (fn x => (x,(fn (a,b) => (GENL a o MATCH last_two_imps I de_thms) b) (strip_forall x)))  (filter is_forall (hyp thm))
-	in	if null hs then thm else fix_hyps de_thms 
-			(foldl (uncurry PROVE_HYP o (snd ## I)) (foldl (uncurry INST_TY_TERM) thm (map (uncurry match_term o (I ## concl)) hs)) hs)
-	end;
-	val sexp_to_term = rand o lhs o concl
-	val var = rhs o concl
-	fun exist L thm = 
-	let 	val new_var = if is_var (var thm) then mk_var(prime((fst o dest_var o var) thm),(type_of o sexp_to_term) thm) else 
-				variant (free_varsl L) (mk_var("x",(type_of o sexp_to_term) thm))
-	in	EXISTS (Psyntax.mk_exists(new_var,subst [sexp_to_term thm |-> new_var] (concl thm)),sexp_to_term thm) thm
-	end	
+fun fix_hyps de_thms thm = 
+let val hs = mapfilter (fn x => (x,(fn (a,b) => 
+    	     (GENL a o MATCH last_two_imps I de_thms) b) (strip_forall x)))
+	   (filter is_forall (hyp thm))
+in  if null hs then thm else 
+       fix_hyps de_thms (foldl (uncurry PROVE_HYP o (snd ## I))
+       		(foldl (uncurry INST_TY_TERM) thm
+		       (map (uncurry match_term o (I ## concl)) hs)) hs)
+end;
+val sexp_to_term = rand o lhs o concl
+val var = rhs o concl
+fun exist L thm = 
+let val new_var =
+    	if is_var (var thm)
+	   then mk_var(prime((fst o dest_var o var) thm),
+	   	             (type_of o sexp_to_term) thm)
+           else variant (free_varsl L)
+	   		(mk_var("x",(type_of o sexp_to_term) thm))
+in EXISTS (Psyntax.mk_exists(new_var,
+   	subst [sexp_to_term thm |-> new_var] (concl thm)),sexp_to_term thm) thm
+end	
 in
 fun CHOOSEP decode_encode_thms x = 
-	DISCH_ALL (fix_hyps decode_encode_thms (MATCH_MP ((DISCH x o UNDISCH_ALL o MATCH snd_to_last_imp (rator o rand) decode_encode_thms) x) (ASSUME x)))
+	DISCH_ALL (fix_hyps decode_encode_thms 
+	 (MATCH_MP (
+          (DISCH x o UNDISCH_ALL o 
+	    MATCH snd_to_last_imp (rator o rand) decode_encode_thms) x)
+         (ASSUME x)))
 fun CHOOSEP_TAC decode_encode_thms (assums,goal) = 
 	MAP_EVERY 
-		(CHOOSE_THEN SUBST_ALL_TAC o GSYM) 
-		(mapfilter (fn x => exist (goal::assums) 
-			(fix_hyps decode_encode_thms (MATCH_MP ((DISCH x o UNDISCH_ALL o MATCH snd_to_last_imp (rator o rand) decode_encode_thms) x) (ASSUME x)))) assums)
-		(assums,goal)
+	 (CHOOSE_THEN SUBST_ALL_TAC o GSYM) 
+	 (mapfilter (fn x => exist (goal::assums) 
+	   (fix_hyps decode_encode_thms
+	    (MATCH_MP ((DISCH x o UNDISCH_ALL o MATCH snd_to_last_imp 
+	     rand decode_encode_thms) x) (ASSUME x)))) assums)
+        (assums,goal)
 end;
 
 (*****************************************************************************)
@@ -147,3 +169,56 @@ fun dest_acl2_true term =
 fun is_acl2_true term = 
 	case strip_comb term of (acl2_true,[a]) => same_const acl2_true acl2_true_tm | _ => false;
 
+(*****************************************************************************)
+(* RAT_CONG_TAC:                                                             *)
+(*                                                                           *)
+(* Abbreviates as x = rep_rat (abs_rat (abs_frac (a,b))) and adds the        *)
+(* rational equivalence:                                                     *)
+(*    |- frac_nmr x * frac_dnm (abs_frac (a,b)) =                            *)
+(*	        frac_nmr (abs_frac (a,b)) * frac_dnm x                       *)
+(*                                                                           *)
+(*****************************************************************************)
+
+val RAT_CONG_TAC = 
+	REPEAT (POP_ASSUM MP_TAC) THEN
+	REPEAT (Q.PAT_ABBREV_TAC 
+	       `x = rep_rat (abs_rat (abs_frac (a''''',b''''')))`) THEN
+	REPEAT (DISCH_TAC) THEN
+	EVERY_ASSUM (fn th => 
+		    (ASSUME_TAC o Rewrite.REWRITE_RULE [ratTheory.RAT] o 
+		    		  AP_TERM ``abs_rat``)
+		    (Rewrite.REWRITE_RULE [markerTheory.Abbrev_def] th) 
+		    handle e => ALL_TAC) THEN
+	RULE_ASSUM_TAC (Rewrite.REWRITE_RULE [ratTheory.RAT_EQ]);
+
+(*****************************************************************************)
+(* A ?- ?m. P m /\ (m = A) /\ ....                                           *)
+(* -------------------------------- EQUAL_EXISTS_TAC                         *)
+(*          A ?- P A /\ ....                                                 *)
+(*****************************************************************************)
+
+fun EQUAL_EXISTS_TAC (a,g) = 
+let val (v,body) = dest_exists g
+    val eq_thms = filter is_eq (strip_conj body)
+    val term = first (curry op= v o lhs) eq_thms
+in 
+    EXISTS_TAC (rhs term) (a,g)
+end;
+
+(*****************************************************************************)
+(* A u {!a b... P ==> !c d ... Q ==> ... ==> X} ?- G                         *)
+(* ------------------------------------------------- FIX_CI_TAC              *)
+(*   A u {!a b c d ... . P /\ Q /\ ... ==> X} ?- G                           *)
+(*                                                                           *)
+(* Allows an assumption generated by completeInduct_on to be used by         *)
+(* FIRST_ASSUM MATCH_MP_TAC.                                                 *)
+(*                                                                           *)
+(*****************************************************************************)
+
+val FIX_CI_TAC = 
+    RULE_ASSUM_TAC (CONV_RULE (REPEATC (
+    		   (STRIP_QUANT_CONV RIGHT_IMP_FORALL_CONV) ORELSEC
+		   (STRIP_QUANT_CONV (REWR_CONV boolTheory.AND_IMP_INTRO)))));
+
+
+end

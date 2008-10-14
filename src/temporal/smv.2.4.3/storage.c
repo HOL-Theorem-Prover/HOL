@@ -34,7 +34,7 @@ static getmore()
 }
 
 /* provide malloc for miscellaneuos storage allocation */
-char *malloc(n)
+char *smv_malloc(n)
 int n;
 {
   if(n % 4)n=n+4-(n%4);  /* always allocate multiple of four bytes */

@@ -202,6 +202,10 @@ end
 val abb_tstamp = ref 0
 fun new_abbreviation (TYG(G, dict0, specials, pmap)) (s, st) = let
   val _ = check_structure st
+  val _ = case st of PARAM _ =>
+                     raise GrammarError
+                               "Abbreviation can't be to a type variable"
+                   | _ => ()
   val G0 = TYG(G, Binarymap.insert(dict0,s,st), specials,
                TypeNet.insert(pmap, structure_to_type st, (!abb_tstamp, s)))
   val _ = abb_tstamp := !abb_tstamp + 1

@@ -1,7 +1,7 @@
 structure CooperCore :> CooperCore =
 struct
 open HolKernel Parse boolLib
-     integerTheory int_arithTheory intSimps
+     integerTheory int_arithTheory intReduce
      intSyntax CooperSyntax CooperMath CooperThms
      Profile
 
@@ -12,8 +12,11 @@ val lhand = rand o rator
 val REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV bool_rewrites
 
 (* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars listTheory.list_grammars;
+structure Parse :> Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars listTheory.list_grammars
+end
+open Parse
 
 local
   val prove = INST_TYPE [alpha |-> int_ty] o prove
@@ -166,7 +169,6 @@ fun phase4_CONV tm = let
         if use_bis then (min_tm, INT_MIN_LT, rand, I)
         else            (max_tm, INT_MAX_LT, lhand, GSYM)
       val witness = let
-        infixr -->
         fun recurse acc tms =
           case tms of
             [] => acc
@@ -646,6 +648,7 @@ fun phase4_CONV tm = let
   val exFx_implies_rhs = let
     val disj2_exm = SPEC disj2 EXCLUDED_MIDDLE
     val positive_disj2 = DISJ2 disj1 (ASSUME disj2)
+    exception UnexpectedTerm of term
     val fx_goes_downward = let
       (* to prove either ~disj2 |- !x. F x ==> F (x - d)   (use_bis) or
                          ~disj2 |- !x. F x ==> F (x + d)   (~use_bis) *)
@@ -692,8 +695,11 @@ fun phase4_CONV tm = let
             val leq_var = CONV_RULE (REWR_CONV INT_NOT_LT THENC
                                      REWR_CONV (GSYM INT_LE_SUB_RADD)) not_tm
             (* ~(x + d < e) --> e <= x + d --> e - d <= x *)
-            val exists_j =
+            val exists_j0 =
               CONV_RULE (REWR_CONV in_subtractive_range) (CONJ leq_var thm)
+            val exists_j =
+                EQ_MP (GEN_ALPHA_CONV (genvar int_ty) (concl exists_j0))
+                      exists_j0
             (* ?j. (x = e - j) /\ 0 < j /\ j <= d *)
             val membership = prove_membership e bis_list_tm
             val (jvar, jbody) = dest_exists (concl exists_j)
@@ -747,9 +753,12 @@ fun phase4_CONV tm = let
             val e1d_leq_x =
               CONV_RULE (REWR_CONV (GSYM INT_LE_SUB_RADD)) e1_leq_xd
               (* |- (e + 1) - d <= x *)
-            val exists_j =
+            val exists_j0 =
               CONV_RULE (REWR_CONV in_subtractive_range)
                         (CONJ e1d_leq_x x_lt_e1)
+            val exists_j =
+                EQ_MP (GEN_ALPHA_CONV (genvar int_ty) (concl exists_j0))
+                      exists_j0
               (* ?j. (x = e + 1 - j) /\ 0 < j /\ j <= d *)
             val membership = prove_membership (mk_plus(e,one_tm)) bis_list_tm
             val (jvar, jbody) = dest_exists (concl exists_j)
@@ -828,7 +837,7 @@ fun phase4_CONV tm = let
         else thm
       end handle HOL_ERR _ =>
                  if is_constraint tm then thm
-                 else raise ERR "phase4_CONV" "Unexpected term type"
+                 else raise UnexpectedTerm tm
       end (* need double end, because of double let at start of function *)
 
       fun brecurse posp thm tm = let
@@ -873,8 +882,11 @@ fun phase4_CONV tm = let
             val not_tm = ASSUME (mk_neg tm)
             val var_leq = CONV_RULE (REWR_CONV INT_NOT_LT THENC
                                      REWR_CONV INT_LE_SUB_RADD) not_tm
-            val exists_j =
+            val exists_j0 =
               CONV_RULE (REWR_CONV in_additive_range) (CONJ thm var_leq)
+            val exists_j =
+                EQ_MP (GEN_ALPHA_CONV (genvar int_ty) (concl exists_j0))
+                      exists_j0
             val membership = prove_membership e bis_list_tm
             (* choose j from exists_j *)
             val (jvar, jbody) = dest_exists (concl exists_j)
@@ -902,8 +914,11 @@ fun phase4_CONV tm = let
               (* x - d <= e + ~1 *)
             val hibound = CONV_RULE (REWR_CONV INT_LE_SUB_RADD) xd_leq_e1
               (* x <= e + ~1 + d *)
-            val exists_j =
+            val exists_j0 =
               CONV_RULE (REWR_CONV in_additive_range) (CONJ lobound hibound)
+            val exists_j =
+                EQ_MP (GEN_ALPHA_CONV (genvar int_ty) (concl exists_j0))
+                      exists_j0
             val membership =
               prove_membership (mk_plus(e,mk_negated one_tm)) bis_list_tm
             val (jvar, jbody) = dest_exists (concl exists_j)
@@ -990,7 +1005,7 @@ fun phase4_CONV tm = let
         else thm
       end handle HOL_ERR _ =>
                  if is_constraint tm then thm
-                 else raise ERR "phase4_CONV" "Unexpected term type"
+                 else raise UnexpectedTerm tm
       end (* again need a double end *)
 
 
@@ -999,6 +1014,9 @@ fun phase4_CONV tm = let
       val fxd_beta_thm = BETA_CONV (mk_comb(F, arith_op(Bvar, delta_tm)))
       val fxd_tm = rhs (concl fxd_beta_thm)
       val fxd_thm = recurse true fx_thm_expanded fxd_tm
+                    handle UnexpectedTerm tm =>
+                           raise ERR "phase4_CONV"
+                                     ("Unexpected term: "^term_to_string tm)
     in
       GEN Bvar (DISCH Fx (EQ_MP (SYM fxd_beta_thm) fxd_thm))
     end
@@ -1218,7 +1236,5 @@ in
 end
 
 val phase5_CONV = profile "phase5" phase5_CONV
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end

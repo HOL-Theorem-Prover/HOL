@@ -8,7 +8,7 @@ end
 open Parse
 
 open HolKernel boolLib intSyntax boolSyntax CooperSyntax integerTheory
-     int_arithTheory intSimps
+     int_arithTheory intReduce
 
 val ERR = mk_HOL_ERR "IntDP_Munge";
 

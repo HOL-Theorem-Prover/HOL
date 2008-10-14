@@ -6,8 +6,6 @@ open pretermTheory basic_swapTheory nomsetTheory
 open pred_setTheory
 open BasicProvers
 
-val export_rewrites = export_rewrites "term";
-
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before export_rewrites [s])
 fun Save_Thm(s, th) = (save_thm(s, th) before export_rewrites [s])
 
@@ -798,32 +796,32 @@ val _ = export_rewrites ["FINITE_strterm_fmap_supp"]
 
 val lem1 = prove(
   ``∃a. ~(a ∈ supp (fmpm lswapstr tpm) fm)``,
-  Q_TAC (NEW_TAC "z") `supp (fmpm lswapstr tpm) fm` THEN 
+  Q_TAC (NEW_TAC "z") `supp (fmpm lswapstr tpm) fm` THEN
   METIS_TAC []);
 
 val var_case = prove(
   ``∀x y. ~(x ∈ supp (fmpm lswapstr tpm) fm) ∧
-          ~(y ∈ supp (fmpm lswapstr tpm) fm) 
+          ~(y ∈ supp (fmpm lswapstr tpm) fm)
         ==>
-          ∀s. tpm [(x,y)] 
+          ∀s. tpm [(x,y)]
                  (if swapstr x y s ∈ FDOM fm then fm ' (swapstr x y s)
-                  else VAR (swapstr x y s)) = 
+                  else VAR (swapstr x y s)) =
               (if s ∈ FDOM fm then fm ' s else VAR s)``,
   SRW_TAC [][] THEN SRW_TAC [][FAPPLY_eqv_lswapstr, supp_fresh] THENL [
-    `~(s ∈ FDOM (fmpm lswapstr tpm [(x,y)] fm))` 
-        by SRW_TAC [][supp_fresh] THEN 
+    `~(s ∈ FDOM (fmpm lswapstr tpm [(x,y)] fm))`
+        by SRW_TAC [][supp_fresh] THEN
     FULL_SIMP_TAC (srw_ss()) [fmpm_FDOM],
-    `s ∈ FDOM (fmpm lswapstr tpm [(x,y)] fm)` 
-        by SRW_TAC [][supp_fresh] THEN 
+    `s ∈ FDOM (fmpm lswapstr tpm [(x,y)] fm)`
+        by SRW_TAC [][supp_fresh] THEN
     FULL_SIMP_TAC (srw_ss()) [fmpm_FDOM]
   ]);
 
 val supp_FRANGE = prove(
-  ``~(x ∈ supp (setpm tpm) (FRANGE fm)) = 
+  ``~(x ∈ supp (setpm tpm) (FRANGE fm)) =
    ∀y. y ∈ FDOM fm ==> ~(x ∈ FV (fm ' y))``,
   SRW_TAC [][supp_setpm, finite_mapTheory.FRANGE_DEF] THEN METIS_TAC []);
-      
-fun ex_conj1 thm = let 
+
+fun ex_conj1 thm = let
   val (v,c) = dest_exists (concl thm)
   val c1 = CONJUNCT1 (ASSUME c)
   val fm = mk_exists(v,concl c1)
@@ -831,11 +829,11 @@ in
   CHOOSE (v, thm) (EXISTS(fm,v) c1)
 end
 
-val ssub_exists = 
+val ssub_exists =
     (ex_conj1 o SIMP_RULE (srw_ss()) [supp_FRANGE] o
-     SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM, strterm_fmap_supp] o 
-     Q.GEN `fm` o 
-     (fn th => MP th var_case) o 
+     SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM, strterm_fmap_supp] o
+     Q.GEN `fm` o
+     (fn th => MP th var_case) o
      CONV_RULE (LAND_CONV (SIMP_CONV (srw_ss()) [FUN_EQ_THM, fnpm_def])) o
      SIMP_RULE (srw_ss()) [support_def, lem1] o
      SIMP_RULE (srw_ss()) [] o
@@ -851,8 +849,8 @@ val _ = overload_on ("'", ``ssub``)
 val tpm_ssub = store_thm(
   "tpm_ssub",
   ``∀t. tpm pi (fm ' t) = fmpm lswapstr tpm pi fm ' (tpm pi t)``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN 
-  Q.EXISTS_TAC `supp (fmpm lswapstr tpm) fm` THEN 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN
+  Q.EXISTS_TAC `supp (fmpm lswapstr tpm) fm` THEN
   SRW_TAC [][fmpm_FDOM, strterm_fmap_supp, supp_FRANGE] THENL [
     SRW_TAC [][fmpm_applied],
     SRW_TAC [][fmpm_FDOM, fmpm_applied]
@@ -861,20 +859,20 @@ val tpm_ssub = store_thm(
 val single_ssub = store_thm(
   "single_ssub",
   ``∀N. (FEMPTY |+ (s,M)) ' N = [M/s]N``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `s INSERT FV M` THEN 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `s INSERT FV M` THEN
   SRW_TAC [][SUB_VAR, SUB_THM]);
 
 val in_fmap_supp = store_thm(
   "in_fmap_supp",
-  ``x ∈ supp (fmpm lswapstr tpm) fm = 
-      x ∈ FDOM fm ∨ 
+  ``x ∈ supp (fmpm lswapstr tpm) fm =
+      x ∈ FDOM fm ∨
       ∃y. y ∈ FDOM fm ∧ x ∈ FV (fm ' y)``,
-  SRW_TAC [][strterm_fmap_supp, nomsetTheory.supp_setpm] THEN 
+  SRW_TAC [][strterm_fmap_supp, nomsetTheory.supp_setpm] THEN
   SRW_TAC [boolSimps.DNF_ss][finite_mapTheory.FRANGE_DEF] THEN METIS_TAC []);
 
 val not_in_fmap_supp = store_thm(
   "not_in_fmap_supp",
-  ``~(x ∈ supp (fmpm lswapstr tpm) fm) = 
+  ``~(x ∈ supp (fmpm lswapstr tpm) fm) =
       ~(x ∈ FDOM fm) ∧ ∀y. y ∈ FDOM fm ==> ~(x ∈ FV (fm ' y))``,
   METIS_TAC [in_fmap_supp]);
 val _ = export_rewrites ["not_in_fmap_supp"]
@@ -882,8 +880,8 @@ val _ = export_rewrites ["not_in_fmap_supp"]
 val ssub_14b = store_thm(
   "ssub_14b",
   ``∀t. (FV t ∩ FDOM phi = EMPTY) ==> ((phi : string |-> term) ' t = t)``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN 
-  Q.EXISTS_TAC `supp (fmpm lswapstr tpm) phi` THEN 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN
+  Q.EXISTS_TAC `supp (fmpm lswapstr tpm) phi` THEN
   SRW_TAC [][SUB_THM, SUB_VAR, pred_setTheory.EXTENSION] THEN METIS_TAC []);
 
 val ssub_value = store_thm(

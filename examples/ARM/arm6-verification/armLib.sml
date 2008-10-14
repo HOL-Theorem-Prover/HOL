@@ -68,10 +68,13 @@ fun tupleCases M =
    GEN_ALL (METIS_PROVE [pairTheory.ABS_PAIR_THM] tm)
  end;
 
-val PBETA_ss = simpLib.SSFRAG
- {convs = [{name="PBETA",trace = 3,conv=K (K PairRules.PBETA_CONV),
-  key = SOME([],``(\(x:'a,y:'b). s1) s2:'c``)}], rewrs = [], congs = [],
-  filter = NONE, ac = [], dprocs = [], name = SOME "PBETA"};
+fun PBETA_CONV t =
+let val _ = (pairSyntax.dest_pabs o fst o dest_comb) t in
+  PairRules.PBETA_CONV t
+end;
+
+val PBETA_ss =
+ simpLib.conv_ss {name="PBETA", trace = 3, conv=K (K PBETA_CONV), key = NONE};
 
 fun RES_MP1_TAC s t =
  let val a = (fst o dest_imp o concl o INST s o SPEC_ALL) t

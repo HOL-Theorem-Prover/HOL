@@ -25,8 +25,6 @@ open HolKernel Parse boolLib Prim_rec pairLib numLib
 val AP = numLib.ARITH_PROVE
 val arith_ss = bool_ss ++ numSimps.ARITH_ss
 
-val export_rewrites = export_rewrites "PRED_SET";
-
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.						*)
 (* ---------------------------------------------------------------------*)

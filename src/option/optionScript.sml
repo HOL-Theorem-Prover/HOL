@@ -379,7 +379,7 @@ val _ = TypeBase.write
       distinct=SOME NOT_NONE_SOME}];
 
 
-val _ = BasicProvers.export_rewrites "option_rwts"
+val _ = BasicProvers.export_rewrites
           ["OPTION_MAP_EQ_SOME", "OPTION_MAP_EQ_NONE_both_ways", "THE_DEF",
            "IS_SOME_DEF", "IS_NONE_EQ_NONE", "NOT_IS_SOME_EQ_NONE",
            "option_case_ID", "option_case_SOME_ID", "option_case_def",

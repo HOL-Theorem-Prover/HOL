@@ -38,7 +38,8 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories (including ratTheory from Jens Brandt).
 ******************************************************************************)
-open stringLib complex_rationalTheory sexp acl2_packageTheory;
+
+open stringLib complex_rationalTheory acl2_packageTheory sexp;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -669,15 +670,28 @@ val list_to_sexp_def =
 (*         (t                                                                *)
 (*          (cons (code-char 0) (make-character-list (cdr x))))))            *)
 (*****************************************************************************)
-val make_character_list_def =
- Define
+
+val sexp_size_def = 
+    (fetch "-" "sexp_size_def"
+     handle _ => 
+     Define
+    `(sexp_size (sym a0 a1) = 1n) /\
+     (sexp_size (str a) = 1) /\
+     (sexp_size (chr b) = 1) /\
+     (sexp_size (num c) = 1) /\
+     (sexp_size (cons x y) = 1 + sexp_size x + sexp_size y)`);
+
+val make_character_list_def = 
+ tDefine "make_character_list"
   `(make_character_list(cons (chr c) y) = 
      (cons (chr c) (make_character_list y)))
    /\
    (make_character_list(cons x y) = 
      (cons (code_char(int 0)) (make_character_list y))) 
    /\
-   (make_character_list _ = nil)`;
+   (make_character_list _ = nil)`
+   (WF_REL_TAC `measure sexp_size` THEN 
+   RW_TAC arith_ss [sexp_size_def]);
 
 (*****************************************************************************)
 (* "abc" |--> (cons (chr #"a") (cons (chr #"b") (cons (chr #"c") nil)))      *)
@@ -700,11 +714,13 @@ val coerce_string_to_list_def =
 (* STRING : char->string->string  is HOL's string-cons function.             *)
 (*****************************************************************************)
 val coerce_list_to_string_def =
- Define
+ tDefine "coerce_list_to_string"
   `(coerce_list_to_string(cons (chr c) y) =
      STRING c (coerce_list_to_string y))
    /\
-   (coerce_list_to_string _ = "")`;
+   (coerce_list_to_string _ = "")`
+   (WF_REL_TAC `measure sexp_size` THEN 
+   RW_TAC arith_ss [sexp_size_def]);
 
 val coerce_def =
  acl2Define "COMMON-LISP::COERCE"

@@ -1,7 +1,7 @@
 structure dividesScript =
 struct
 
-open HolKernel Parse boolLib BasicProvers arithmeticTheory 
+open HolKernel Parse boolLib BasicProvers arithmeticTheory
      simpLib SingleStep metisLib;
 
 val arith_ss = simpLib.++(bool_ss, numSimps.ARITH_ss)
@@ -13,8 +13,6 @@ local open numeralTheory in end;
      spot this problem *)
 
 val _ = new_theory "divides";
-
-val export_rewrites = export_rewrites "divides";
 
 val divides_def = Q.new_definition
   ("divides_def",
@@ -128,17 +126,17 @@ val _ = export_rewrites ["NOT_PRIME_1"]
 
 val compute_divides = Q.store_thm
 ("compute_divides",
- `!a b. divides a b = 
+ `!a b. divides a b =
         if a=0 then (b=0) else
-        if a=1 then T else 
+        if a=1 then T else
         if b=0 then T else
         (b MOD a = 0)`,
-  RW_TAC arith_ss [divides_def] 
-   THEN EQ_TAC 
+  RW_TAC arith_ss [divides_def]
+   THEN EQ_TAC
    THEN RW_TAC arith_ss [] THENL
-   [Cases_on `q` THENL 
+   [Cases_on `q` THENL
      [RW_TAC arith_ss [],
-      `0<a` by RW_TAC arith_ss [] THEN 
+      `0<a` by RW_TAC arith_ss [] THEN
       METIS_TAC [MOD_MULT, MULT_SYM, ADD_CLAUSES]],
     Q.EXISTS_TAC `b` THEN RW_TAC arith_ss [],
     Q.EXISTS_TAC `0` THEN RW_TAC arith_ss [],

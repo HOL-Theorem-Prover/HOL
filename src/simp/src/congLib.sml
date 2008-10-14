@@ -25,17 +25,17 @@ quietdec := false;
 
 fun extract_preorder_trans (Travrules.PREORDER(_,TRANS,_)) = TRANS;
 fun extract_preorder_refl (Travrules.PREORDER(_,_,REFL)) = REFL;
-fun extract_preorder_const (Travrules.PREORDER((name, thy),_,_)) =  
+fun extract_preorder_const (Travrules.PREORDER((name, thy),_,_)) =
   prim_mk_const {Name=name,Thy=thy};
-fun extract_preorder_const_string (Travrules.PREORDER((name, thy),_,_)) =  
+fun extract_preorder_const_string (Travrules.PREORDER((name, thy),_,_)) =
   (name, thy);
 
 (*---------------------------------------------------------------------------*)
 (* Composable congruence set fragments                                       *)
 (*---------------------------------------------------------------------------*)
 
-val AP_TERM_THM = prove (``!f x. (f x x) ==> 
-(!y. (x = y) ==> (f x y))``, 
+val AP_TERM_THM = prove (``!f x. (f x x) ==>
+(!y. (x = y) ==> (f x y))``,
   REPEAT STRIP_TAC THEN
   POP_ASSUM (fn x=> ASSUME_TAC (GSYM x)) THEN
   ASM_REWRITE_TAC[]
@@ -83,7 +83,7 @@ fun mk_eq_congproc preorder =
   in
     (*The only congruence occuring in an antecedent is =. Thus t == ``$=`` holds for all
       calls and we can use REFL *)
-    (CONGPROC (fn t => REFL)) thm 
+    (CONGPROC (fn t => REFL)) thm
   end;
 
 
@@ -91,7 +91,7 @@ fun mk_eq_congproc preorder =
 val equalityPreorder = PREORDER(("=","min"),TRANS,REFL);
 
 
-fun is_match_binop binop term = 
+fun is_match_binop binop term =
   let
     val operator = rator (rator (term));
   in
@@ -109,7 +109,7 @@ local
       in
         congThm
       end)
-    else 
+    else
       (let
         val thm_relation = rator(rator(concl thm));
         val _ = if (name_of_const (thm_relation) = extract_preorder_const_string preorder) then T else failwith ("not applicable");
@@ -120,11 +120,11 @@ local
         thm
       end)
     )
-in 
+in
   fun cong_rewrite net preorder term =
     (let
-      val matches = Ho_Net.lookup term net;    
-      val result = tryfind (fn (boundvars, thm) => cong_rewrite_internal preorder term boundvars thm) matches 
+      val matches = Ho_Net.lookup term net;
+      val result = tryfind (fn (boundvars, thm) => cong_rewrite_internal preorder term boundvars thm) matches
     in
       result
     end) handle _ => NO_CONV term;
@@ -136,7 +136,7 @@ end
 exception CONVNET of (term set * thm) Ho_Net.net;
 
 val cong_reducer =
-  let 
+  let
       fun insertThms net thms =
         let
           val flatThms = flatten (map BODY_CONJUNCTS thms);
@@ -151,18 +151,18 @@ val cong_reducer =
         in
           (foldr insert_one net flatThms)
         end
-      
+
       fun addcontext (context,thms) =
-        let 
+        let
           val net = (raise context) handle CONVNET net => net
-        in 
+        in
           CONVNET (insertThms net thms)
         end
       fun apply {solver,context,stack,relation} tm =
-        let 
+        let
             val net = ((raise context) handle CONVNET net => net)
             val thm = cong_rewrite net relation tm
-        in 
+        in
           thm
         end
   in REDUCER {name=SOME"cong_reducer",
@@ -181,12 +181,12 @@ fun eq_reducer_wrapper (eq_reducer as REDUCER (data))=
       val addcontext = ((#addcontext data));
 
       fun apply {solver,context,stack,relation} tm =
-        let 
+        let
             val eqthm = (#apply data) {solver=solver,context=context,stack=stack,relation=relation} tm
             val refl = extract_preorder_refl relation;
             val congThm = refl tm;
             val congThm = CONV_RULE (RAND_CONV (REWR_CONV eqthm)) congThm
-        in 
+        in
           congThm
         end
   in REDUCER {name=name,addcontext=addcontext, apply=apply,
@@ -204,6 +204,7 @@ datatype congsetfrag = CSFRAG of
 
 abstype congset = CS of
    {cong_reducer : Traverse.reducer,
+    limit : int option,
     relations : preorder list,
     dprocs : Traverse.reducer list,
     travrules  : travrules list}
@@ -212,14 +213,14 @@ with
 
 val empty_congset = CS {cong_reducer=cong_reducer,
                     relations=[equalityPreorder],
-                    dprocs=[],
+                    dprocs=[], limit = NONE,
                     travrules=[]};
 
 
  fun add_to_congset
     (CSFRAG {rewrs, relations=relationsFrag, dprocs=dprocsFrag, congs},
-     CS {cong_reducer, relations, dprocs, travrules})
-  = let 
+     CS {cong_reducer, relations, dprocs, travrules, limit})
+  = let
       val cong_reducer = reducer_addRwts cong_reducer rewrs;
 
       val refl_rewrites = map mk_refl_rewrite relationsFrag;
@@ -235,7 +236,8 @@ val empty_congset = CS {cong_reducer=cong_reducer,
       CS {cong_reducer=cong_reducer,
           relations=relations@relationsFrag,
           dprocs=dprocs@dprocsFrag,
-          travrules=travrules@[congsTravrule]}
+          travrules=travrules@[congsTravrule],
+          limit = limit}
     end;
 
  val mk_congset = foldl add_to_congset empty_congset;
@@ -275,7 +277,7 @@ fun CONGRUENCE_SIMP_QCONV relation (cs as (CS csdata)) ss =
     val data = {rewriters= (#cong_reducer csdata)::
           (map eq_reducer_wrapper (#rewriters traversedata)),
           dprocs= (#dprocs csdata)@(map eq_reducer_wrapper (#dprocs traversedata)),
-          relation= relation,
+          relation= relation, limit = #limit csdata,
           travrules= merge_travrules ([eq_congsTravrule,#travrules traversedata]@(#travrules csdata))}
   in
     TRAVERSE data
@@ -285,7 +287,7 @@ fun CONGRUENCE_SIMP_QCONV relation (cs as (CS csdata)) ss =
 fun CONGRUENCE_SIMP_CONV relation (cs as (CS csdata)) ss =
   let
     val qconv = CONGRUENCE_SIMP_QCONV relation cs ss
-    val preorder = find_relation relation (#relations csdata);  
+    val preorder = find_relation relation (#relations csdata);
     val refl = extract_preorder_refl preorder
     fun conv thms tm =
       ((qconv thms tm) handle _ => refl tm)
@@ -297,7 +299,7 @@ end (*Datatype congset*)
 
 
 val CONGRUENCE_EQ_SIMP_CONV = CONGRUENCE_SIMP_CONV ``$=``;
- 
+
 
 fun CONGRUENCE_SIMP_RULE cs ss =
   (fn thms =>
@@ -339,7 +341,7 @@ fun FULL_CONGRUENCE_SIMP_TAC cs ss l =
          MAP_EVERY STRIP_ASSUME_TAC' (foldl simp_asm [] asms)
          THEN drop (length asms)
        in
-         markerLib.ABBRS_THEN 
+         markerLib.ABBRS_THEN
           (fn l => ASSUM_LIST f THEN ASM_CONGRUENCE_SIMP_TAC cs ss l) l
        end
 

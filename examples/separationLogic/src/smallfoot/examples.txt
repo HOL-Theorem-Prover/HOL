@@ -206,7 +206,7 @@ necessary to verify the function list_filter in list.sf
 *)
 
 
-
+set_trace "Unicode" 1
 
 (*parse it, set the goal and do the preprocessing 
   (about 2 s)*)
@@ -217,8 +217,6 @@ smallfoot_set_goal file;
 
 set_goal([],parse_smallfoot_file file)
 SMALLFOOT_SPECIFICATION_TAC
-
-
 
 REPEAT STRIP_TAC THENL [
    (*perform one step, a step is either 
@@ -296,8 +294,8 @@ val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfo
 
 
 (* 16.0 s *) val file = concat [examplesDir, "mergesort.sf"]; 
-(* 14.5 s *) val file = concat [examplesDir, "parallel_mergesort.sf"]; 
 (*  2.0 s *) val file = concat [examplesDir, "parallel_tree_deallocate.sf"]; 
+(* 14.5 s *) val file = concat [examplesDir, "parallel_mergesort.sf"]; 
 (* 37.5 s *) val file = concat [examplesDir, "list.sf"]; 
 (*  9.5 s *) val file = concat [examplesDir, "tree.sf"]; 
 (*  0.7 s *) val file = concat [examplesDir, "passive_stack_race.sf"]; (*semantics differs from smallfoot!*)
@@ -308,8 +306,9 @@ val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfo
 (*  6.2 s *) val file = concat [examplesDir, "mm_buf.sf"];
 (*  3.7 s *) val file = concat [examplesDir, "memory_manager.sf"];
 (* 27.5 s *) val file = concat [examplesDir, "split_binary_semaphore.sf"];
+(* 53.5 s *) val file = concat [examplesDir, "mm_non_blocking.sf"];
 
-
+set_trace "Unicode" 1
 
 
 val thm = smallfoot_prove file;
@@ -321,7 +320,6 @@ val thm = smallfoot_verbose_prove file;
 val file = concat [examplesDir, "not_solvable/heap_race.sf"]; 
 val file = concat [examplesDir, "not_solvable/stack_race.sf"]; 
 val file = concat [examplesDir, "not_solvable/business2.sf"];
-
 
 
 (*automatic proof just fails*)
@@ -342,4 +340,7 @@ SMALLFOOT_SOLVE_TAC
 ....
 
 REPEAT STRIP_TAC THEN
+SMALLFOOT_STEP_TAC
+
+
 

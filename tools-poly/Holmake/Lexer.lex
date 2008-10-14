@@ -95,7 +95,7 @@ id=[A-Za-z][A-Za-z0-9_']* | [-!%&$#+/:<=>?@~^|*\\]+;
 
 %%
 
-<INITIAL>[\ \n\r\t] => 
+<INITIAL>[\ \n\013\t] => 
   ( lex () );
 <INITIAL>"(*" =>
   ( (comment_depth := 1; YYBEGIN Comment; lex ()) );
@@ -132,7 +132,7 @@ id=[A-Za-z][A-Za-z0-9_']* | [-!%&$#+/:<=>?@~^|*\\]+;
   ( YYBEGIN INITIAL; NULL(yypos,yypos) );
 <String>\\["nt\\] => 
   ( lex () );
-<String>\\[\ \t\n\r]+\\ => 
+<String>\\[\ \t\n\013]+\\ => 
   ( lex () );
 <String>\\\^[@-_] => 
   ( lex () );
@@ -149,7 +149,7 @@ id=[A-Za-z][A-Za-z0-9_']* | [-!%&$#+/:<=>?@~^|*\\]+;
   ( YYBEGIN INITIAL; NULL(yypos,yypos) );
 <SkipString>\\["nt\\] => 
   ( lex () );
-<SkipString>\\[\ \t\n\r]+\\ => 
+<SkipString>\\[\ \t\n\013]+\\ => 
   ( lex () );
 <SkipString>[\000-\255] => 
   ( lex () );

@@ -23,8 +23,7 @@ open HolKernel Drule Conv Psyntax Abbrev liteLib Trace Travrules Opening;
 
 infix THENQC THENCQC ORELSEC IFCQC
 
-fun WRAP x = STRUCT_WRAP "Traverse" x;
-fun ERR x  = STRUCT_ERR "Traverse" x;
+val ERR   = mk_HOL_ERR "Traverse" ;
 
 val equality = boolSyntax.equality;
 
@@ -58,7 +57,7 @@ datatype trav_state =
 fun initial_context {rewriters:reducer list,
                      dprocs:reducer list,
                      travrules=TRAVRULES tsdata,
-                     relation} =
+                     relation, limit} =
   TSTATE{contexts1=map (#initial o dest_reducer) rewriters,
          contexts2=map (#initial o dest_reducer) dprocs,
          freevars=[],
@@ -200,68 +199,87 @@ fun mapfilter2 f (h1::t1) (h2::t2) =
  * ---------------------------------------------------------------------*)
 
 
-fun TRAVERSE_IN_CONTEXT rewriters dprocs
-     (travrules as (TRAVRULES {relations,congprocs,weakenprocs,...}))
-    =
-let val add_context' = add_context rewriters dprocs
-    val change_relation' = change_relation travrules
+fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
+  val TRAVRULES {relations,congprocs,weakenprocs,...} = travrules
+  val add_context' = add_context rewriters dprocs
+  val change_relation' = change_relation travrules
+  val lim_r = ref limit
+  fun check (ref NONE) = ()
+    | check (ref (SOME n)) = if n <= 0 then
+                               (trace(2,TEXT "Limit exhausted");
+                                raise ERR "TRAVERSE_IN_CONTEXT"
+                                          "Limit exhausted")
+                             else ()
+  fun dec (ref NONE) = ()
+    | dec (r as ref (SOME n)) = r := SOME (n - 1)
 
-    fun trav stack (context as TSTATE {contexts1,contexts2,
-                  freevars,relation as (PREORDER (relname,_,_))}) =
-      let
-       fun ctxt_solver stack =
-         EQT_ELIM o trav stack (change_relation' (context,equality))
-       fun apply_reducer (REDUCER rdata) context =
-         (#apply rdata) {solver=ctxt_solver,context=context,
-                         stack=stack, relation=relation}
-       val high_priority =
-         FIRST_CONV (mapfilter2 apply_reducer rewriters contexts1)
-       val low_priority =
-         FIRST_CONV (mapfilter2 apply_reducer dprocs contexts2)
-       fun depther (thms,relation) =
-         trav stack (change_relation' (add_context' (context,thms), relation))
-       val congproc_args =
-         {relation=relname,
-          solver=(fn tm => ctxt_solver stack tm), (* do not eta-convert! *)
-          depther=depther,
-          freevars=freevars};
-       fun apply_congproc congproc = congproc congproc_args;
-       val descend = FIRSTCQC_CONV (mapfilter apply_congproc congprocs);
-       val weaken = FIRST_CONV (mapfilter apply_congproc weakenprocs);
-       val op IFCQC = GEN_IFCQC relation
-       val op THENCQC = GEN_THENCQC relation
-       val op THENQC = GEN_THENQC relation
-       val REPEATQC = GEN_REPEATQC relation
+  fun trav stack context  = let
+    val TSTATE {contexts1,contexts2, freevars,
+                relation as (PREORDER (relname,_,_))} = context
+    fun ctxt_solver stack tm = let
+      val old = !lim_r
+    in
+      EQT_ELIM (trav stack (change_relation' (context,equality)) tm)
+      handle e as HOL_ERR _ => (lim_r := old ; raise e)
+    end
+    fun apply_reducer (REDUCER rdata) context tm =
+        (#apply rdata) {solver=ctxt_solver,context=context,
+                        stack=stack, relation=relation}
+                       tm before
+        dec lim_r
+    fun high_priority tm =
+        (check lim_r;
+         FIRST_CONV (mapfilter2 apply_reducer rewriters contexts1) tm)
+    fun low_priority tm =
+        (check lim_r ;
+         FIRST_CONV (mapfilter2 apply_reducer dprocs contexts2) tm)
+    fun depther (thms,relation) =
+        trav stack (change_relation' (add_context' (context,thms), relation))
+    val congproc_args =
+        {relation=relname,
+         solver=(fn tm => ctxt_solver stack tm), (* do not eta-convert! *)
+         depther=depther,
+         freevars=freevars}
+    fun apply_congproc congproc = congproc congproc_args
+    val descend = FIRSTCQC_CONV (mapfilter apply_congproc congprocs)
+    val weaken = FIRST_CONV (mapfilter apply_congproc weakenprocs)
+    val op IFCQC = GEN_IFCQC relation
+    val op THENCQC = GEN_THENCQC relation
+    val op THENQC = GEN_THENQC relation
+    val REPEATQC = GEN_REPEATQC relation
 
-       fun loop tm =
-         let val conv =
-             REPEATQC high_priority THENQC
-             (descend IFCQC
+    fun loop tm = let
+      val conv =
+          REPEATQC high_priority THENQC
+          (descend IFCQC
               (fn change =>
                 ((if change then high_priority else NO_CONV) ORELSEC
                  low_priority ORELSEC weaken) THENCQC loop))
              (* THENCQC above causes the loop to happen only if
                 the stuff before it hasn't raised an exception *)
-        in (trace(4,REDUCE ("Reducing",tm)); conv tm)
-        end;
-      in loop
-      end;
-in trav
-
-end;
+    in
+      (trace(4,REDUCE ("Reducing",tm)); conv tm)
+    end;
+  in
+    loop
+  end
+in
+  trav stack ctxt tm
+end
 
 (* ---------------------------------------------------------------------
  * TRAVERSE
  *
  * ---------------------------------------------------------------------*)
-type traverse_data = {rewriters: reducer list,
+type traverse_data = {limit : int option,
+                      rewriters: reducer list,
                       dprocs: reducer list,
                       travrules: Travrules.travrules,
                       relation: term};
 
-fun TRAVERSE (data as {dprocs,rewriters,travrules,relation}) thms =
+fun TRAVERSE (data as {limit,dprocs,rewriters,travrules,relation}) thms =
    let val context' = add_context rewriters dprocs (initial_context data,thms)
-   in TRAVERSE_IN_CONTEXT rewriters dprocs travrules [] context'
+   in TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules [] context'
    end;
 
 end (* struct *)

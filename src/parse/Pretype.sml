@@ -23,6 +23,18 @@ fun do_beta_conv_types() = (!beta_conv_types) > 0;
 val TCERR = mk_HOL_ERR "Pretype";
 val ERRloc = mk_HOL_ERRloc "Pretype"
 
+fun kcheck_say s = if Feedback.current_trace "show_typecheck_errors" > 0 handle _ => true
+                   then Lib.say s else ()
+
+datatype kcheck_error =
+         TyAppFail of hol_type * hol_type
+       | TyUnivFail of hol_type
+       | TyKindConstrFail of hol_type * kind
+       | TyRankConstrFail of hol_type * int
+       | TyRankLEConstrFail of hol_type * int
+
+val last_kcerror : (kcheck_error * locn.locn) option ref = ref NONE
+
  datatype pretype0
     = Vartype of pretyvar
     | Contype of {Thy : string, Tyop : string, Kind : prekind, Rank : prerank}
@@ -1564,20 +1576,20 @@ local
   fun Locn (PT(_,locn)) = locn
 in
 fun KC printers = let
+  val prk = Int.toString
   val (pty, pkd) =
       case printers
        of SOME (y,z) =>
-          let val kdprint = Lib.say o z
-              val typrint = Lib.say o y 
+          let val kdprint = z
               fun typrint ty =
                   if Type.is_con_type ty
-                  then (Lib.say (y ty ^ " : " ^ z (Type.kind_of ty)
-                                      ^ " :<= " ^ Int.toString (Type.rank_of ty)))
-                  else Lib.say (y ty)
+                  then (y ty ^ " : " ^ z (Type.kind_of ty)
+                             ^ " :<= " ^ prk (Type.rank_of ty))
+                  else y ty
           in
             (typrint, kdprint)
           end
-        | NONE => (Lib.say o default_typrinter, Lib.say o default_kdprinter)
+        | NONE => (default_typrinter, default_kdprinter)
   fun check(PT(TyApp(opr,arg),locn)) =
       (check opr;
        check arg;
@@ -1592,27 +1604,30 @@ fun KC printers = let
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
               val arg' = toType arg
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
+              val message =
+                  String.concat
+                      [
+                       "\nKind inference failure: unable to infer a kind \
+                       \for the application of\n\n",
+                       pty opr',
+                       "\n\n"^locn.toString (Locn opr)^"\n\n",
+                       if (is_atom opr) then ""
+                       else ("which has kind\n\n" ^
+                             pkd(Type.kind_of opr') ^ "\n\n"),
+
+                       "to\n\n",
+                       pty arg',
+                       "\n\n"^locn.toString (Locn arg)^"\n\n",
+
+                       if (is_atom arg) then ""
+                       else ("which has kind\n\n" ^
+                             pkd(Type.kind_of arg') ^ "\n\n"),
+
+                       "kind unification failure message: ", message, "\n"]
           in
-            Lib.say "\nKind inference failure: unable to infer a kind \
-                              \for the application of\n\n";
-            pty opr';
-            Lib.say ("\n\n"^locn.toString (Locn opr)^"\n\n");
-
-            if (is_atom opr) then ()
-            else(Lib.say"which has kind\n\n";
-                 pkd(Type.kind_of opr');
-                 Lib.say"\n\n");
-
-            Lib.say "to\n\n"; pty arg';
-            Lib.say ("\n\n"^locn.toString (Locn arg)^"\n\n");
-
-            if (is_atom opr) then ()
-            else(Lib.say"which has kind\n\n";
-                 pkd(Type.kind_of arg');
-                 Lib.say"\n\n");
-
-            Lib.say ("kind unification failure message: "^message^"\n");
             Feedback.set_trace "kinds" tmp;
+            kcheck_say message;
+            last_kcerror := SOME (TyAppFail(opr',arg'), Locn arg);
             raise ERRloc"kindcheck" (Locn opr (* arbitrary *)) "failed"
           end)
     | check (PT(TyUniv(Bvar, Body), locn)) =
@@ -1626,18 +1641,24 @@ fun KC printers = let
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
               val real_kind = Prekind.toKind Prekind.typ
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
+              val message =
+                  String.concat
+                      [
+                       "\nKind inference failure: the type\n\n",
+                       pty real_type,
+                       "\n\n"^locn.toString (Locn Body)^"\n\n",
+                       if (is_atom Body) then ""
+                       else ("which has kind\n\n" ^
+                             pkd(Type.kind_of real_type) ^ "\n\n"),
+
+                       "can not be constrained to be of kind\n\n",
+                       pkd real_kind,
+
+                       "kind unification failure message: ", message, "\n"]
           in
-            Lib.say "\nKind inference failure: the type\n\n";
-            pty real_type;
-            Lib.say ("\n\n"^locn.toString (Locn Body)^"\n\n");
-            if (is_atom Body) then ()
-            else(Lib.say"which has kind\n\n";
-                 pkd(Type.kind_of real_type);
-                 Lib.say"\n\n");
-            Lib.say "can not be constrained to be of kind\n\n";
-            pkd real_kind;
-            Lib.say ("\n\nkind unification failure message: "^message^"\n");
             Feedback.set_trace "kinds" tmp;
+            kcheck_say message;
+            last_kcerror := SOME (TyUnivFail(real_type), Locn Body);
             raise ERRloc "kindcheck" locn "failed"
           end)
     | check (PT(TyAbst(Bvar, Body), Locn)) = (check Bvar; check Body)
@@ -1650,20 +1671,28 @@ fun KC printers = let
               val _   = Feedback.set_trace "kinds" 2
               val real_type = toType Ty
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
+              val Prekind.PK(_,kd_locn) = Kind
               val real_kind = Prekind.toKind Kind
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
+              val message =
+                  String.concat
+                      [
+                       "\nKind inference failure: the type\n\n",
+                       pty real_type,
+                       "\n\n"^locn.toString (Locn Ty)^"\n\n",
+                       if (is_atom Ty) then ""
+                       else ("which has kind\n\n" ^
+                             pkd(Type.kind_of real_type) ^ "\n\n"),
+
+                       "can not be constrained to be of kind\n\n",
+                       pkd real_kind,
+                       "\n\n"^locn.toString kd_locn^"\n\n",
+
+                       "kind unification failure message: ", message, "\n"]
           in
-            Lib.say "\nKind inference failure: the type\n\n";
-            pty real_type;
-            Lib.say ("\n\n"^locn.toString (Locn Ty)^"\n\n");
-            if (is_atom Ty) then ()
-            else(Lib.say"which has kind\n\n";
-                 pkd(Type.kind_of real_type);
-                 Lib.say"\n\n");
-            Lib.say "can not be constrained to be of kind\n\n";
-            pkd real_kind;
-            Lib.say ("\n\nkind unification failure message: "^message^"\n");
             Feedback.set_trace "kinds" tmp;
+            kcheck_say message;
+            last_kcerror := SOME (TyKindConstrFail(real_type, real_kind), kd_locn);
             raise ERRloc "kindcheck" locn "failed"
           end)
     | check (PT(TyRankConstr{Ty,Rank},locn)) =
@@ -1677,18 +1706,24 @@ fun KC printers = let
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
               val real_rank = Prerank.toRank Rank
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
+              val message =
+                  String.concat
+                      [
+                       "\nRank inference failure: the type\n\n",
+                       pty real_type,
+                       "\n\n"^locn.toString (Locn Ty)^"\n\n",
+                       if (is_atom Ty) then ""
+                       else ("which has rank " ^
+                             prk(Type.rank_of real_type) ^ "\n\n"),
+
+                       "can not be constrained to be of rank ",
+                       prk real_rank, "\n\n",
+
+                       "rank unification failure message: ", message, "\n"]
           in
-            Lib.say "\nRank inference failure: the type\n\n";
-            pty real_type;
-            Lib.say ("\n\n"^locn.toString (Locn Ty)^"\n\n");
-            if (is_atom Ty) then ()
-            else(Lib.say"which has rank ";
-                 Lib.say (Int.toString (Type.rank_of real_type));
-                 Lib.say"\n\n");
-            Lib.say "can not be constrained to be of rank ";
-            Lib.say (Int.toString real_rank);
-            Lib.say ("\n\nrank unification failure message: "^message^"\n");
             Feedback.set_trace "kinds" tmp;
+            kcheck_say message;
+            last_kcerror := SOME (TyRankConstrFail(real_type, real_rank), locn);
             raise ERRloc "rankcheck" locn "failed"
           end
        | (e as Feedback.HOL_ERR{origin_structure="Prerank",
@@ -1700,18 +1735,24 @@ fun KC printers = let
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
               val real_rank = Prerank.toRank Rank
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
+              val message =
+                  String.concat
+                      [
+                       "\nRank inference failure: the type\n\n",
+                       pty real_type,
+                       "\n\n"^locn.toString (Locn Ty)^"\n\n",
+                       if (is_atom Ty) then ""
+                       else ("which has rank " ^
+                             prk(Type.rank_of real_type) ^ "\n\n"),
+
+                       "can not be constrained to be <= rank ",
+                       prk real_rank, "\n\n",
+
+                       "rank unification failure message: ", message, "\n"]
           in
-            Lib.say "\nRank inference failure: the type\n\n";
-            pty real_type;
-            Lib.say ("\n\n"^locn.toString (Locn Ty)^"\n\n");
-            if (is_atom Ty) then ()
-            else(Lib.say"which has rank ";
-                 Lib.say (Int.toString (Type.rank_of real_type));
-                 Lib.say"\n\n");
-            Lib.say "can not be constrained to be <= rank ";
-            Lib.say (Int.toString real_rank);
-            Lib.say ("\n\nrank unification failure message: "^message^"\n");
             Feedback.set_trace "kinds" tmp;
+            kcheck_say message;
+            last_kcerror := SOME (TyRankLEConstrFail(real_type, real_rank), locn);
             raise ERRloc "rankcheck" locn "failed"
           end)
     | check _ = ()

@@ -68,7 +68,7 @@ sig
   val dproc_ss    : Traverse.reducer -> ssfrag
   val ac_ss       : (thm * thm) list -> ssfrag
   val conv_ss     : convdata -> ssfrag
-  val merge_ss    : ssfrag list -> ssfrag 
+  val merge_ss    : ssfrag list -> ssfrag
   val type_ssfrag : hol_type -> ssfrag
 
    (* ---------------------------------------------------------------------
@@ -90,8 +90,11 @@ sig
   val mk_simpset : ssfrag list -> simpset
   val ++         : simpset * ssfrag -> simpset  (* infix *)
   val &&         : simpset * thm list -> simpset  (* infix *)
+  val limit      : int -> simpset -> simpset
+  val unlimit    : simpset -> simpset
 
   val traversedata_for_ss: simpset -> Traverse.traverse_data
+
 
    (* ---------------------------------------------------------------------
     * SIMP_CONV : simpset -> conv

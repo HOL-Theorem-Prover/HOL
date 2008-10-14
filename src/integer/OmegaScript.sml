@@ -9,7 +9,7 @@ local open listTheory in end;
 
 val _ = new_theory "Omega";
 
-open simpLib boolSimps SingleStep BasicProvers TotalDefn intSimps
+open simpLib boolSimps SingleStep BasicProvers TotalDefn
 
 val ARITH_ss = numSimps.ARITH_ss
 
@@ -58,11 +58,14 @@ val sumc_ADD = store_thm(
     CONV_TAC (AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM))
   ]);
 
+val MULT_AC = AC INT_MUL_COMM INT_MUL_ASSOC
+val ADD_AC = AC INT_ADD_COMM INT_ADD_ASSOC
 val sumc_MULT = store_thm(
   "sumc_MULT",
   ``!cs vs f. f * sumc cs vs = sumc (MAP (\x. f * x) cs) vs``,
   Induct THEN SRW_TAC [][sumc_thm] THEN
-  Cases_on `vs` THEN SRW_TAC [INT_MUL_AC_ss][sumc_thm, INT_LDISTRIB]);
+  Cases_on `vs` THEN
+  SRW_TAC [][sumc_thm, INT_LDISTRIB, MULT_AC]);
 
 val sumc_singleton = store_thm(
   "sumc_singleton",
@@ -121,9 +124,9 @@ val equality_removal0 = prove(
                                              GSYM INT_ADD_ASSOC])) THEN
   `(\x. c * x + (c * ~((c + 1) * ((2 * x + (c + 1)) / (2 * c + 2))) + x)) =
    (\x. (c + 1) * (x + ~(c * ((2 * x + (c + 1)) / (2 * c + 2)))))` by
-     SIMP_TAC (srw_ss() ++ INT_MUL_AC_ss ++ INT_ADD_AC_ss)
+     SIMP_TAC (srw_ss())
               [INT_LDISTRIB, INT_RDISTRIB, INT_NEG_ADD, GSYM INT_NEG_RMUL,
-               GSYM INT_NEG_LMUL] THEN
+               GSYM INT_NEG_LMUL, MULT_AC, ADD_AC] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   `(\x. (c + 1) * (x + ~(c * ((2 * x + (c + 1)) / (2 * c + 2))))) =
    (\x. (c + 1) * x) o
@@ -214,12 +217,12 @@ val div_le = prove(
     SPOSE_NOT_THEN (ASSUME_TAC o REWRITE_RULE [INT_NOT_LE]) THEN
     `?i. (x = q + i) /\ 0 < i` by PROVE_TAC [less_exists] THEN
     FIRST_X_ASSUM SUBST_ALL_TAC THEN
-    FULL_SIMP_TAC (srw_ss() ++ INT_MUL_AC_ss) [INT_LDISTRIB] THEN
+    FULL_SIMP_TAC (srw_ss()) [INT_LDISTRIB, MULT_AC] THEN
     `c * i < c` by PROVE_TAC [INT_LET_TRANS] THEN
     `i < 1` by PROVE_TAC [ilt_mono, INT_MUL_RID] THEN
     PROVE_TAC [INT_DISCRETE, INT_ADD_LID],
     MATCH_MP_TAC INT_LE_TRANS THEN Q.EXISTS_TAC `c * q` THEN
-    SRW_TAC [INT_MUL_AC_ss][ile_mono]
+    SRW_TAC [][ile_mono, MULT_AC]
   ]);
 
 val smaller_satisfies_uppers = store_thm(
@@ -304,8 +307,6 @@ val onlyuppers_satisfiable = store_thm(
   Q.EXISTS_TAC `if y < L / &c then y else L / &c` THEN COND_CASES_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [INT_NOT_LT, INT_LE_LT] THEN
   PROVE_TAC [smaller_satisfies_uppers]);
-
-
 
 val rshadow_row_def = Define
   `(rshadow_row (upperc, (uppery:int)) [] = T) /\
@@ -658,7 +659,7 @@ val move_subs_out = prove(
                   REWRITE_RULE [INT_SUB_LZERO, GSYM int_sub,
                                 INT_ADD_RID])
                  INT_ADD2_SUB2,
-    SRW_TAC [INT_ADD_AC_ss][int_sub]
+    SRW_TAC [][int_sub, ADD_AC]
   ]);
 
 
@@ -671,7 +672,7 @@ val lemma0 = prove(
   REPEAT STRIP_TAC THEN
   `&c * &d * (i + 1) - &d * L >= &d` by
      (`&c * &d * (i + 1) - &d * L = &d * (&c * (i + 1) - L)` by
-         SRW_TAC [INT_MUL_AC_ss][INT_SUB_LDISTRIB] THEN
+         SRW_TAC [][INT_SUB_LDISTRIB, MULT_AC] THEN
       POP_ASSUM SUBST_ALL_TAC THEN
       REWRITE_TAC [int_ge] THEN
       Q_TAC SUFF_TAC `1 <= &c * (i + 1) - L` THEN1
@@ -679,10 +680,10 @@ val lemma0 = prove(
       SRW_TAC [][LE_LT1, INT_LT_SUB_LADD] THEN
       Q_TAC SUFF_TAC `&d * L < &d * (&c * (i + 1))` THEN1
         PROVE_TAC [lt_mono, INT_LT] THEN
-      FULL_SIMP_TAC (srw_ss() ++ INT_MUL_AC_ss)[]) THEN
+      FULL_SIMP_TAC (srw_ss())[MULT_AC]) THEN
   `&c * R - &c * &d * i >= &c` by
      (`&c * R - &c * &d * i = &c * (R - &d * i)` by
-         SRW_TAC [INT_MUL_AC_ss][INT_SUB_LDISTRIB] THEN
+         SRW_TAC [][INT_SUB_LDISTRIB, MULT_AC] THEN
       POP_ASSUM SUBST_ALL_TAC THEN REWRITE_TAC [int_ge] THEN
       Q_TAC SUFF_TAC `1 <= R - &d * i` THEN1
         PROVE_TAC [INT_MUL_RID, le_mono, INT_LT] THEN
@@ -692,12 +693,12 @@ val lemma0 = prove(
                             INT_LE_SUB_RADD] THEN
   `(&d + &d * L) + (&c + &(c * d) * i) <= &(c * d) * (i + 1) + &c * R` by
       PROVE_TAC [INT_LE_ADD2] THEN
-  FULL_SIMP_TAC (srw_ss() ++ INT_ADD_AC_ss) [INT_LDISTRIB,
-    arithmeticTheory.MULT_CLAUSES] THEN
+  FULL_SIMP_TAC (srw_ss()) [INT_LDISTRIB, ADD_AC,
+                            arithmeticTheory.MULT_CLAUSES] THEN
   Q_TAC SUFF_TAC `&(c * d) * i + (&c + &d + & d * L) <=
                   &(c * d) * i + (&c * R + &(c * d))` THEN1
-    SRW_TAC [INT_ADD_AC_ss][] THEN
-  ASM_SIMP_TAC (bool_ss ++ INT_ADD_AC_ss)[]);
+    SRW_TAC [][ADD_AC] THEN
+  ASM_SIMP_TAC bool_ss [ADD_AC]);
 
 val lemma =
     CONV_RULE (STRIP_QUANT_CONV
@@ -706,7 +707,7 @@ val lemma =
                    SIMP_CONV (srw_ss()) [move_subs_out, INT_NOT_LE,
                                          INT_LT_SUB_RADD, INT_NOT_LT,
                                          INT_LT_SUB_LADD, LE_LT1] THENC
-                   SIMP_CONV (srw_ss() ++ INT_ADD_AC_ss) [])) THENC
+                   SIMP_CONV (srw_ss()) [ADD_AC])) THENC
                SIMP_CONV bool_ss [AND_IMP_INTRO])
               lemma0
 
@@ -722,10 +723,9 @@ val dark_shadow_row_implies_row_condition = prove(
   SIMP_TAC (srw_ss()) [INT_SUB_LDISTRIB, INT_SUB_RDISTRIB,
                        arithmeticTheory.MULT_CLAUSES, int_ge, move_subs_out,
                        INT_LT_SUB_RADD, INT_LT_SUB_LADD, LE_LT1] THEN
-  SRW_TAC [INT_ADD_AC_ss][] THEN
+  SRW_TAC [][ADD_AC] THEN
   FULL_SIMP_TAC (srw_ss()) [INT_ADD_ASSOC] THEN
-  FULL_SIMP_TAC (srw_ss() ++ INT_ADD_AC_ss) [INT_NOT_LT, INT_NOT_LE,
-                                             LE_LT1] THEN
+  FULL_SIMP_TAC (srw_ss()) [INT_NOT_LT, INT_NOT_LE, ADD_AC, LE_LT1] THEN
   PROVE_TAC [lemma]);
 
 val dark_shadow_implies_dark_condition = prove(
@@ -950,18 +950,18 @@ val final_equivalence = store_thm(
     `&d * (&c * x) <= &d * L /\ &c * R <= &c * (&d * x)` by
        PROVE_TAC [le_mono] THEN
     `&d * L - &c * R < &(c * d) - &c - (&d - 1)` by
-      FULL_SIMP_TAC (srw_ss() ++ INT_MUL_AC_ss)
-                    [INT_SUB_LDISTRIB, INT_SUB_RDISTRIB,
+      FULL_SIMP_TAC (srw_ss())
+                    [INT_SUB_LDISTRIB, INT_SUB_RDISTRIB, MULT_AC,
                      arithmeticTheory.MULT_CLAUSES] THEN
     `&d * L <= &c * R + (&(c * d) - &c - &d)` by
-       FULL_SIMP_TAC (srw_ss() ++ INT_MUL_AC_ss ++ INT_ADD_AC_ss)
-                     [move_subs_out, LE_LT1, INT_LT_SUB_LADD,
+       FULL_SIMP_TAC (srw_ss())
+                     [move_subs_out, LE_LT1, INT_LT_SUB_LADD, MULT_AC, ADD_AC,
                       INT_LT_SUB_RADD] THEN
     `&d * (&c * x) <= &c * R + (&(c * d) - &c - &d)` by
        PROVE_TAC [INT_LE_TRANS] THEN
     `&c * (&d * x - R) <= &(c * d) - &c - &d` by
-       FULL_SIMP_TAC (srw_ss() ++ INT_MUL_AC_ss ++ INT_ADD_AC_ss)
-                     [move_subs_out, LE_LT1, INT_LT_SUB_LADD,
+       FULL_SIMP_TAC (srw_ss())
+                     [move_subs_out, LE_LT1, INT_LT_SUB_LADD, MULT_AC, ADD_AC,
                       INT_LT_SUB_RADD, INT_SUB_LDISTRIB] THEN
     `&d * x - R <= (&(c * d) - &c - &d) / &c` by
        PROVE_TAC [div_le, INT_LT] THEN

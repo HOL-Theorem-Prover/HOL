@@ -21,6 +21,7 @@ sig
   val DEPDIR : string
   val GNUMAKE : string
   val DYNLIB : bool
+  val ML_SYSNAME : string
 
   val isUnix : bool
 

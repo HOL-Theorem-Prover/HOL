@@ -1,7 +1,7 @@
 structure jrhCore :> jrhCore =
 struct
 
-open HolKernel boolLib integerTheory Parse
+open HolKernel boolLib integerTheory
      arithmeticTheory intSyntax int_arithTheory intSimps;
 
 open CooperSyntax CooperThms CooperMath
@@ -14,8 +14,11 @@ val collect_additive_consts = profile "additive_consts" collect_additive_consts
 val ERR = mk_HOL_ERR "Cooper";
 
 (* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars DeepSyntaxTheory.DeepSyntax_grammars;
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars DeepSyntaxTheory.DeepSyntax_grammars
+end
+open Parse
 
 val REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV bool_rewrites
 
@@ -256,7 +259,5 @@ in
 end
 
 val phase5_CONV = profile "phase5" phase5_CONV
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end;

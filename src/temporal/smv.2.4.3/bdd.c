@@ -65,7 +65,7 @@ int             primes[] = {
 
 /* Create a keytable. */
 /* Keytable is the hash table which allows us
-   to keep BDD in reduced form 
+   to keep BDD in reduced form
    kp -> n is the size of the table
    kp -> elements_in_table is the total number
             of BDD nodes in all hash bins
@@ -86,7 +86,7 @@ register int n;
    /* Initialize a keytable. */
    kp->n = n;
    kp->elements_in_table = 0;
-   kp->hash_table_buf = (bdd_ptr *)malloc(n*sizeof(bdd_ptr));
+   kp->hash_table_buf = (bdd_ptr *)smv_malloc(n*sizeof(bdd_ptr));
 
    {  /* Initialize hash bin list pointers to NULL. */
       register int i;
@@ -108,7 +108,7 @@ void init_bdd()
    /* Create key tables. */
    create_keytable(&reduce_table, KEYTABLESIZE);
    apply_cache_size = APPLY_CACHE_SIZE;
-   apply_cache = (apply_rec *)malloc(sizeof(apply_rec)*apply_cache_size);
+   apply_cache = (apply_rec *)smv_malloc(sizeof(apply_rec)*apply_cache_size);
    {
      int i;
      for(i=0;i<apply_cache_size;i++)apply_cache[i].op = 0;
@@ -131,7 +131,7 @@ bdd_ptr atomic_bdd(n)
    pointer is to d1, right pointer is to d2,
    and whose level is "level".
    if such a node already exists, a pointer
-   to this node is returned, else a 
+   to this node is returned, else a
    new node is created. This routine is
    used to keep BDD's in reduced form.
    Note also, that if d1 == d2, this node
@@ -156,7 +156,7 @@ register int level;
    p = *q;
    /* p is a pointer to the first element of the list (or NULL) */
    /* search the list. if any node matches level,d1,d2, return it */
-   while (p && 
+   while (p &&
 	  (p->left != d1 ||
 	   p->right != d2 ||
 	   GETLEVEL(p) != level))p = p->next;
@@ -221,7 +221,7 @@ register bdd_ptr d1,d2;
    d2 is the second argument
    d is the result */
 /* opcodes below USE_BIG_CACHE use only the portion
-   of the hash table below MINI_CACHE_SIZE (set by 
+   of the hash table below MINI_CACHE_SIZE (set by
    command line option) (USE_BIG_CACHE defined in bdd.h)
 */
 void insert_apply(op,d1,d2,d)
@@ -619,7 +619,7 @@ bdd_ptr d;
    * Calling sat_bdd_aux with nstbase+1 eliminates the process
    * selection variables from the resulting bdd.  As a result, the
    * error trace cannot tell which process is executing.
-   * 
+   *
    * It was restored by steed.
    */
 #if 0
@@ -650,14 +650,14 @@ bdd_ptr a,b;
 	result = forsome(a->right,b);
       else if(alevel == blevel)
 	result = or_bdd(forsome(a->right,b->left),forsome(a->right,b->right));
-      else 
+      else
 	result = find_bdd(blevel,forsome(a,b->left),forsome(a,b->right));
     }
     insert_apply(FORSOME_OP,a,b,result);
     return(result);
   }
 }
-      
+
 bdd_ptr forall(a,b)
 bdd_ptr a,b;
 {
@@ -673,14 +673,14 @@ bdd_ptr a,b;
 	result = forall(a->right,b);
       else if(alevel == blevel)
 	result = and_bdd(forall(a->right,b->left),forall(a->right,b->right));
-      else 
+      else
 	result = find_bdd(blevel,forall(a,b->left),forall(a,b->right));
     }
     insert_apply(forall,a,b,result);
     return(result);
   }
 }
-      
+
 static bdd_ptr the_support;
 static void support1(d)
 bdd_ptr d;
@@ -891,7 +891,7 @@ bdd_ptr a,b;
   else if(alevel==blevel){
     if(IS_CURRENT_VAR(alevel))temp1=
       or_bdd(r_collapse(a->left,b->left),r_collapse(a->right,b->right));
-    else 
+    else
       catastrophe("r_collapse: !IS_CURRENT_VAR(blevel)");
   }
   else {
@@ -983,7 +983,7 @@ bdd_ptr a,b;
   else if(alevel==blevel){
     if(IS_NEXT_VAR(alevel))temp1=
       or_bdd(collapse(a->left,b->left),collapse(a->right,b->right));
-    else 
+    else
       catastrophe("collapse: !IS_NEXT_VAR(blevel)");
   }
   else {
@@ -1110,7 +1110,7 @@ bdd_ptr d;
   return;
 }
 
-  
+
 
 static int aux_lowest_var_bdd(d,n)
 bdd_ptr d;

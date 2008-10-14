@@ -2,11 +2,10 @@
 (* Depth first search in directed graphs that can contain cycles.            *)
 (*---------------------------------------------------------------------------*)
  
-app load ["metisLib", "pred_setLib", "containerTheory"];
+app load ["pred_setLib"];
 
 quietdec := true;
-open pred_setTheory pred_setLib metisLib 
-     relationTheory listTheory containerTheory;
+open pred_setTheory pred_setLib relationTheory listTheory;
 quietdec := false;
 
 val set_ss = list_ss ++ PRED_SET_ss;
@@ -31,15 +30,29 @@ val Parents = Define `Parents G = {x | ~(G x = [])}`;
 (*      'b ->                (* accumulator *)                               *)
 (*      'b                   (* final result *)                              *)
 (*                                                                           *)
-(* Because of termination requirement, DFS checks that the given graph has   *)
-(* finite Parents.  If the Parents set is finite then the graph has only     *)
-(* finitely many edges (because G produces a list of childern, a node has    *)
-(* only finitely many children) and DFS must terminate.                      *)
+(* DFS checks that the given graph has finite Parents.  If the Parents set   *)
+(* is finite then the graph has only finitely many edges (because G produces *)
+(* a list of children, a node has only finitely many children) and DFS must  *)
+(* terminate.                                                                *)
+(*                                                                           *)
+(* Termination proof. In the first recursive call, the to_visit list is      *)
+(* shorter. In the second recursive call, the seen and to_visit argument can *)
+(* both increase, but in different circumstances.  In this case, visit_now   *)
+(* has not been seen.  If it is a parent in the graph, then adding it to     *)
+(* seen decreases the number of unseen parents in the graph. If it is not a  *)
+(* parent, then it has no children, and so the to_visit list shrinks.        *)
 (*---------------------------------------------------------------------------*)
 
-val DFS_defn = Hol_defn "DFS" 
- `DFS G f seen to_visit acc = 
-   if FINITE (Parents G)
+val Rel_def =   (* map arg. tuples into a pair of numbers *)
+ Define 
+   `Rel(G,f,seen,to_visit,acc) = 
+        (CARD(Parents G DIFF (LIST_TO_SET seen)), LENGTH to_visit)`;
+
+val def = (* Define function and prove termination *)
+ tDefine
+  "DFS" 
+  `DFS G f seen to_visit acc = 
+    if FINITE (Parents G)
       then case to_visit
            of [] -> acc 
            || (visit_now :: visit_later) ->
@@ -48,34 +61,24 @@ val DFS_defn = Hol_defn "DFS"
                 else DFS G f (visit_now :: seen)
                              (G visit_now ++ visit_later)
                              (f visit_now acc)
-      else ARB`;
+      else ARB`
+ (WF_REL_TAC `inv_image ($< LEX $<) Rel`
+   THEN RW_TAC set_ss [Rel_def, DECIDE ``(0 < p - q) = q < p ``]
+   THEN Cases_on `visit_now IN Parents G` THENL
+   [DISJ1_TAC, DISJ2_TAC] THEN RW_TAC set_ss [] THENL
+   [MATCH_MP_TAC (DECIDE ``y <= x /\ y < z ==> x < x - y + z``) THEN CONJ_TAC THENL
+      [METIS_TAC [CARD_INTER_LESS_EQ],
+       MATCH_MP_TAC (SIMP_RULE dnf_ss [] CARD_PSUBSET) 
+         THEN RW_TAC set_ss [INTER_DEF,PSUBSET_DEF,SUBSET_DEF,EXTENSION]
+         THEN METIS_TAC[]],
+    MATCH_MP_TAC (SIMP_RULE dnf_ss [] CARD_PSUBSET) 
+       THEN RW_TAC set_ss [INTER_DEF,PSUBSET_DEF,SUBSET_DEF,EXTENSION] 
+       THEN METIS_TAC[],
+    MATCH_MP_TAC (DECIDE ``(p=q) ==> (x-p = x-q)``) 
+      THEN MATCH_MP_TAC (METIS_PROVE [] ``(s1=s2) ==> (CARD s1 = CARD s2)``) 
+      THEN RW_TAC set_ss [INTER_DEF,EXTENSION] THEN METIS_TAC [],
+    FULL_SIMP_TAC set_ss [Parents]]);
 
-(*---------------------------------------------------------------------------*)
-(* Termination proof. In the first recursive call, the to_visit list is      *)
-(* shorter. In the second recursive call, the seen and to_visit argument can *)
-(* both increase, but in different circumstances.  In this case, visit_now   *)
-(* has not been seen.  If it is a Parent in the graph, then adding it to     *)
-(* seen decreases the number of unseen parents in the graph. If it is not a  *)
-(* parent, then it has no children, and so the to_visit list shrinks.        *)
-(*---------------------------------------------------------------------------*)
-
-val Rel = Define 
- `Rel(G,f,seen,to_visit,acc) = 
-    (CARD(Parents G DIFF (LIST_TO_SET seen)), LENGTH to_visit)`;
-
-val (def,ind) = Defn.tprove
-(DFS_defn,
- WF_REL_TAC `inv_image ($< LEX $<) Rel`
-   THEN RW_TAC set_ss [Rel]
-   THEN Cases_on `v IN Parents G` 
-   THENL [DISJ1_TAC, DISJ2_TAC] THENL 
-   [MATCH_MP_TAC (SIMP_RULE dnf_ss [] CARD_PSUBSET)
-     THEN RW_TAC set_ss [FINITE_DIFF,PSUBSET_DEF, SUBSET_DEF, 
-                         DIFF_INSERT, DIFF_DEF,IN_DELETE,EXTENSION]
-     THEN METIS_TAC [],
-    `G v = []` by FULL_SIMP_TAC set_ss [Parents]
-      THEN RW_TAC set_ss [LIST_TO_SET_THM] 
-      THEN METIS_TAC [DELETE_NON_ELEMENT,DIFF_INSERT]]);
 
 (*---------------------------------------------------------------------------*)
 (* Desired recursion equations, constrained by finiteness of graph.          *)
@@ -115,7 +118,7 @@ val DFS_IND = Q.prove
    ==>
    !v v1 v2 v3 v4. P v v1 v2 v3 v4`,
  NTAC 2 STRIP_TAC 
- THEN HO_MATCH_MP_TAC ind
+ THEN HO_MATCH_MP_TAC (fetch "-" "DFS_ind")
  THEN REPEAT GEN_TAC THEN Cases_on `to_visit`
  THEN RW_TAC list_ss []);
 

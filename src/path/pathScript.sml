@@ -6,8 +6,6 @@ local open pred_setLib fixedPointTheory in end
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
 
-val export_rewrites = export_rewrites "path";
-
 val _ = new_theory "path";
 
 val path_TY_DEF = new_type_definition (
@@ -75,7 +73,7 @@ val stopped_at_not_pcons = store_thm(
   ``!x y r p. ~(stopped_at x = pcons y r p) /\ ~(pcons y r p = stopped_at x)``,
   SRW_TAC [][stopped_at_def, pcons_def]);
 
-val _ = export_rewrites 
+val _ = export_rewrites
            ["stopped_at_11", "pcons_11", "stopped_at_not_pcons"]
 
 val path_cases = store_thm(

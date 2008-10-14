@@ -4,13 +4,16 @@ structure CooperSyntax :> CooperSyntax = struct
    conversions, all intended for very specific use within the
    implementation of Cooper's algorithm *)
 
-open HolKernel boolLib intSyntax intSimps CooperThms
-open int_arithTheory integerTheory Parse
+open HolKernel boolLib intSyntax intReduce CooperThms
+open int_arithTheory integerTheory
 
 
 (* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars integerTheory.integer_grammars;
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars integer_grammars
+end
+open Parse
 
 val ERR = mk_HOL_ERR "CooperSyntax";
 
@@ -545,7 +548,5 @@ fun ADDITIVE_TERMS_CONV c tm =
     BINOP_CONV c tm
   else ALL_CONV tm
 
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end

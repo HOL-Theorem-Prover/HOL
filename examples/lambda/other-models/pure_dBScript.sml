@@ -4,8 +4,6 @@ open arithmeticTheory boolSimps
 
 local open string_numTheory in end
 
-val export_rewrites = export_rewrites "pure_dB";
-
 val _ = new_theory "pure_dB"
 
 (* the type of pure de Bruijn terms *)

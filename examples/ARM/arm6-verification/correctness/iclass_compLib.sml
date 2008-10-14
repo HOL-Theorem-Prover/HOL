@@ -34,7 +34,7 @@ fun conv_rec nm cnv tm =
 
 val GEQF_INTRO = (GEN_ALL o EQF_INTRO o SPEC_ALL);
 
-fun barm_rws () = add_rws bool_compset 
+fun barm_rws () = add_rws bool_compset
   [iseq_distinct,GSYM iseq_distinct,iclass_EQ_iclass,iclass2num_thm,
    FST,SND,LET_THM,UNCURRY_DEF, EXEC_INST_def,EXCEPTION_def,
    SWP_def,DECODE_SWP_def, MSR_def,DECODE_MSR_def,
@@ -45,6 +45,7 @@ fun barm_rws () = add_rws bool_compset
 val BARM_CONV = CBV_CONV (barm_rws ());
 val BARM_ss = simpLib.SSFRAG
   {convs = [conv_rec "BARM_CONV" BARM_CONV ``EXEC_INST a b c``],
+   name = SOME "BARM",
    rewrs = [iseq_distinct,iclass_EQ_iclass,iclass2num_thm,
             PROJ_IF_FLAGS_def,DECODE_PSR_def,
             ABS_ARM6_def,NEXT_ARM_def,
@@ -108,7 +109,8 @@ fun conv_rec2 nm cnv cnst trm =
    conv = K (K cnv)};
 
 fun inst_simpset ((cnst,pat),cnv) = simpLib.SSFRAG
-  {convs = [conv_rec "CORE_CONV" CORE_CONV
+  {name = NONE,
+   convs = [conv_rec "CORE_CONV" CORE_CONV
               ``NEXT_ARM6 (ARM6 d c) (nr,ab,nfiq,nirq,da,cpa,cpb)``] @
            (map (conv_rec2 "INST_CONV" cnv cnst) pat),
    rewrs = [REG_WRITE_WRITE,TEST_OR_COMP_THM],

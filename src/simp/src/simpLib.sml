@@ -108,10 +108,10 @@ fun conv_ss conv =
 fun D (SSFRAG s) = s;
 
 fun merge_names list =
-  itlist (fn (SOME x) => 
+  itlist (fn (SOME x) =>
               (fn NONE => SOME x
                 | SOME y => SOME (x^", "^y))
-           | NONE => 
+           | NONE =>
               (fn NONE => NONE
                 | SOME y => SOME y))
          list NONE;
@@ -145,11 +145,12 @@ abstype simpset =
             ssfrags     : ssfrag list,
             initial_net : net,
             dprocs      : reducer list,
-            travrules   : travrules}
+            travrules   : travrules,
+            limit       : int option}
 with
 
  val empty_ss = SS {mk_rewrs=fn x => [x],
-                    ssfrags = [],
+                    ssfrags = [], limit = NONE,
                     initial_net=empty_net,
                     dprocs=[],travrules=mk_travrules []};
 
@@ -209,7 +210,8 @@ with
 
  fun add_to_ss
     (f as SSFRAG {convs,rewrs,filter,ac,dprocs,congs,...},
-     SS {mk_rewrs=mk_rewrs',ssfrags,travrules,initial_net,dprocs=dprocs'})
+     SS {mk_rewrs=mk_rewrs',ssfrags,travrules,initial_net,dprocs=dprocs',
+         limit})
   = let val mk_rewrs = case filter of SOME f => f oo mk_rewrs' | _ => mk_rewrs'
         val rewrs' = flatten (map mk_rewrs (ac_rewrites ac@rewrs))
         val newconvdata = convs @ List.mapPartial mk_rewr_convdata rewrs'
@@ -217,14 +219,23 @@ with
     in
        SS {mk_rewrs=mk_rewrs,
            ssfrags = Lib.op_insert same_frag f ssfrags,
-           initial_net=net,
+           initial_net=net, limit = limit,
            dprocs=dprocs @ dprocs',
            travrules=merge_travrules [travrules,mk_travrules congs]}
     end;
 
  val mk_simpset = foldl add_to_ss empty_ss;
 
- fun op ++ (ss,ssdata) = add_to_ss (ssdata,ss);
+ fun op ++ (ss,ssdata) = add_to_ss (ssdata,ss)
+
+ fun limit n (SS {mk_rewrs,ssfrags,travrules,initial_net,dprocs,limit}) =
+     SS {mk_rewrs = mk_rewrs, ssfrags = ssfrags, travrules = travrules,
+         initial_net = initial_net, dprocs = dprocs, limit = SOME n}
+
+ fun unlimit (SS {mk_rewrs,ssfrags,travrules,initial_net,dprocs,limit}) =
+     SS {mk_rewrs = mk_rewrs, ssfrags = ssfrags, travrules = travrules,
+         initial_net = initial_net, dprocs = dprocs, limit = NONE}
+
 
 (*---------------------------------------------------------------------------*)
 (* SIMP_QCONV : simpset -> thm list -> conv                                  *)
@@ -252,7 +263,8 @@ with
       {rewriters=[rewriter_for_ss ss],
        dprocs= #dprocs ssdata,
        relation= boolSyntax.equality,
-       travrules= merge_travrules [EQ_tr,#travrules ssdata]};
+       travrules= merge_travrules [EQ_tr,#travrules ssdata],
+       limit = #limit ssdata};
 
  fun SIMP_QCONV ss = TRAVERSE (traversedata_for_ss ss);
 
@@ -275,14 +287,14 @@ local open markerSyntax markerLib
                          convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
     end
 in
-fun SIMP_CONV ss l =
+fun SIMP_CONV ss l tm =
   let val (ss', l') = process_tags ss l
-  in TRY_CONV (SIMP_QCONV ss' l') 
+  in TRY_CONV (SIMP_QCONV ss' l') tm
   end;
 
-fun SIMP_PROVE ss l =
+fun SIMP_PROVE ss l t =
   let val (ss', l') = process_tags ss l
-  in EQT_ELIM o SIMP_QCONV ss' l'
+  in EQT_ELIM (SIMP_QCONV ss' l' t)
   end;
 
 infix &&;
@@ -311,9 +323,9 @@ fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
 
 fun SIMP_TAC ss l = markerLib.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l;
 
-fun ASM_SIMP_TAC ss = 
-   markerLib.ABBRS_THEN 
-    (fn thl => fn gl as (asl,_) => 
+fun ASM_SIMP_TAC ss =
+   markerLib.ABBRS_THEN
+    (fn thl => fn gl as (asl,_) =>
          SIMP_TAC ss (markerLib.LLABEL_RESOLVE thl asl) gl);
 
 
@@ -338,18 +350,18 @@ fun FULL_SIMP_TAC ss l =
   markerLib.ABBRS_THEN (fn l => ASSUM_LIST f THEN ASM_SIMP_TAC ss l) l
  end
 
-fun track f x = 
+fun track f x =
  let val _ = (used_rewrites := [])
      val res = Lib.with_flag(track_rewrites,true) f x
  in used_rewrites := rev (!used_rewrites)
   ; res
- end;     
+ end;
 
 (* ----------------------------------------------------------------------
     creating per-type ssdata values
    ---------------------------------------------------------------------- *)
 
-fun type_ssfrag ty = 
+fun type_ssfrag ty =
  let val {Thy,Tyop,...} = dest_thy_type ty
      val tyname = Thy^"$"^Tyop
      val {rewrs, convs} = TypeBase.simpls_of ty
@@ -371,10 +383,10 @@ fun D (SSFRAG s) = s;
 fun dest_reducer (Traverse.REDUCER x) = x;
 
 fun merge_names list =
-  itlist (fn (SOME x) => 
+  itlist (fn (SOME x) =>
               (fn NONE => SOME x
                 | SOME y => SOME (x^", "^y))
-           | NONE => 
+           | NONE =>
               (fn NONE => NONE
                 | SOME y => SOME y))
          list NONE;
@@ -393,11 +405,11 @@ fun pp_ssfrag ppstrm (SSFRAG {name,convs,rewrs,ac,dprocs,congs,...}) =
           flush_ppstream,...} = Portable.with_ppstream ppstrm
      val pp_thm = pp_thm ppstrm
      val pp_term = Parse.term_pp_with_delimiters Hol_pp.pp_term ppstrm
-     fun pp_thm_pair (th1,th2) = 
+     fun pp_thm_pair (th1,th2) =
         (begin_block CONSISTENT 0;
          pp_thm th1; add_break(2,0); pp_thm th2;
          end_block())
-     fun pp_conv_info (n,SOME tm) = 
+     fun pp_conv_info (n,SOME tm) =
           (begin_block CONSISTENT 0;
            add_string (n^", keyed on pattern"); add_break(2,0); pp_term tm;
            end_block())
@@ -406,7 +418,7 @@ fun pp_ssfrag ppstrm (SSFRAG {name,convs,rewrs,ac,dprocs,congs,...}) =
      fun vspace l = if null l then () else nl2();
      fun vblock(header, ob_pr, obs) =
        if null obs then ()
-       else 
+       else
         ( begin_block CONSISTENT 3;
           add_string (header^":");
           add_newline();
@@ -414,7 +426,7 @@ fun pp_ssfrag ppstrm (SSFRAG {name,convs,rewrs,ac,dprocs,congs,...}) =
             (fn () => ()) add_newline obs;
           end_block();
           add_break(1,0))
- in 
+ in
   begin_block CONSISTENT 0;
   add_string ("Simplification set: "^name);
   add_newline();
@@ -425,8 +437,8 @@ fun pp_ssfrag ppstrm (SSFRAG {name,convs,rewrs,ac,dprocs,congs,...}) =
   vblock("Rewrite rules",pp_thm,rewrs);
   end_block ()
  end
- 
-fun pp_simpset ppstrm ss = 
+
+fun pp_simpset ppstrm ss =
   let open Portable
       val pp_ssfrag = pp_ssfrag ppstrm
  in pr_list pp_ssfrag (fn () => ()) (fn () => add_newline ppstrm)

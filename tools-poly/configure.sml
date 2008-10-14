@@ -173,6 +173,7 @@ in
    "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"),
    "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available^"\n"),
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
+   "val ML_SYSNAME =" --> "val ML_SYSNAME = \"poly\"\n",
    "val release ="  --> ("val release = "^quote release_string^"\n")];
   use destfile
 end;

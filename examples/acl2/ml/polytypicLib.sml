@@ -1,7 +1,10 @@
+structure polytypicLib :> polytypicLib =
+struct
+
 open Binarymap List HolKernel boolLib bossLib Q Parse combinTheory computeLib
      Conv Thm Tactical BasicProvers Tactic Drule Definition 
      listTheory numLib listLib pairLib Psyntax 
-     pairTheory sumTheory Lib arithmeticTheory goalstackLib;
+     pairTheory sumTheory Lib arithmeticTheory proofManagerLib;
 
 (*****************************************************************************)
 (* Error handling functions:                                                 *)
@@ -307,13 +310,33 @@ end;
 (*                                                                           *)
 (* list_mk_cond      : (term * term) list -> term -> term                    *)
 (*     [(P0,a0),..,(Pn,an)] b --> if P0 then a0 else if P1 then ... else b   *)
+(* imk_comb          : (term * term) -> term                                 *)
+(* list_imk_comb     : (term * term list) -> term                            *)
+(*     As mk_comb and list_mk_comb, except the left-hand term is             *)
+(*     instantiated to match, if possible.                                   *)
 (*                                                                           *)
-(* mk_ring           : term -> term -> term                                  *)
-(*     Makes a term of the form f o g from the functions given.              *)
+(* rimk_comb         : (term * term) -> term                                 *)
+(*     Like imk_comb, except instantiates the right term instead.            *)
+(*                                                                           *)
+(* full_beta_conv    : term -> term                                          *)
+(*      Like Term.beta_conv, but for a list of abstractions                  *)
+(* full_beta         : term -> term                                          *)
+(*      As above, except this does not error when given shorter lists.       *)
 (*                                                                           *)
 (* UNDISCH_ONLY      : thm -> thm                                            *)
 (* UNDISCH_ALL_ONLY  : thm -> thm                                            *)
 (*     Like Drule.UNDISCH_ALL,Drule.UNDISCH but avoids |- ~A                 *)
+(*                                                                           *)
+(* UNDISCH_EQ        : thm -> thm                                            *)
+(* UNDISCH_ALL_EQ    : thm -> thm                                            *)
+(*     |- (A ==> B) = (A ==> C)  --->  [A] |- B = C                          *)
+(*                                                                           *)
+(* UNDISCH_CONJ      : thm -> thm                                            *)
+(*     |- x0 /\ ... /\ xn ==> A  --->  [x0,...,xn] |- A                      *)
+(*                                                                           *)
+(* DISCH_LIST_CONJ   : term list -> thm -> thm                               *)
+(* DISCH_ALL_CONJ    : thm -> thm                                            *)
+(*     [x0,...,xn] |- A          --->  |- x0 /\ ... /\ xn ==> A              *)
 (*                                                                           *)
 (* CONJUNCTS_HYP     : term -> thm -> thm                                    *)
 (*     Splits [``A ==> B /\ C``] |- D to [``A ==> B``,``A ...                *)
@@ -338,12 +361,27 @@ end;
 (*    Fully matches the theorem to the term, including instantiating         *)
 (*    variables in the hypothesis                                            *)
 (*                                                                           *)
+(* CASE_SPLIT_CONV   : term -> thm                                           *)
+(*     Converts a term of the form:  '!a. P a'  to perform a split case      *)
+(*     |- !a. P a =                                                          *) 
+(*              (!a0 .. an. P (C0 a0 .. an)) /\ ... /\                       *)
+(*              (!a0 .. am. P (Cn a0 .. am))                                 *)
+(*                                                                           *)
 (* PUSH_COND_CONV    : term -> thm                                           *)
 (*    Pushes all function applications over a conditional                    *)
 (*    |- f (g (if a then b else c)) = if a then f (g b) else f (g c)         *)
 (*                                                                           *)
 (* ORDER_FORALL_CONV : term list -> term -> thm                              *)
 (*    Re-orders universally quantified variables to make the list given      *)
+(*                                                                           *)
+(* ORDER_EXISTS_CONV : term list -> term -> thm                              *)
+(*    Re-orders existentially quantified variables to make the list given    *)
+(*                                                                           *)
+(* FUN_EQ_CONV       : term -> thm                                           *)
+(*    Converts the term:  |- (!a b... f = g) = (!x a b... f x = g x)         *)
+(*                                                                           *)
+(* UNFUN_EQ_CONV     : term -> thm                                           *)
+(*    Converts the term:  |- (!a b x... f x = g x) = (!a b... f = g)         *)
 (*                                                                           *)
 (* UNBETA_LIST_CONV  : term list -> term -> thm                              *)
 (*    Like UNBETA_CONV but operates on a list of terms                       *)
@@ -372,18 +410,27 @@ in
 fun list_mk_cond a b = LMC a b handle e => wrapException "list_mk_cond" e
 end
 
-fun mk_ring a b = 
-	if fst (dom_rng (type_of a)) = snd (dom_rng (type_of b)) handle _ => false then
-	list_mk_comb(
-		mk_const("o",
-			type_of a --> type_of b --> 
-			fst (dom_rng (type_of b)) --> snd (dom_rng (type_of a))),
-		[a,b]) handle e => wrapException "mk_ring" e
-	else raise (mkStandardExn "mk_ring"
-			("The types of the supplied terms: " ^ 
-			 xpair_to_string (type_to_string o type_of) 
-					 (type_to_string o type_of) (a,b) ^ 
-			 " cannot match the type :('a -> 'b) -> ('c -> 'a)"))
+fun imk_comb (a,b) = 
+    mk_comb(inst (match_type (fst (dom_rng (type_of a))) (type_of b)) a,b)
+    handle e => wrapException "imk_comb" e
+
+fun rimk_comb (a,b) = 
+    mk_comb(a,inst (match_type (type_of b) (fst (dom_rng (type_of a)))) b)
+    handle e => wrapException "rimk_comb" e
+
+fun list_imk_comb(a,[]) = a
+  | list_imk_comb(a,x::xs) = list_imk_comb(imk_comb (a,x),xs)
+  handle e => wrapException "list_imk_comb" e;
+
+fun full_beta_conv term = 
+let val (f,args) = strip_comb term
+in
+    foldl (fn (a,b) => beta_conv (mk_comb(b,a))) f args
+end handle e => wrapException "full_beta_conv" e
+
+fun full_beta x = 
+    full_beta_conv x handle _ => 
+    mk_comb(full_beta (rator x),rand x) handle _ => x;
 
 fun UNDISCH_ONLY thm = 
 	if is_imp_only (concl thm) 
@@ -394,6 +441,31 @@ fun UNDISCH_ALL_ONLY thm =
 	if is_imp_only (concl thm) 
 		then UNDISCH_ALL_ONLY (guarenteed UNDISCH thm)
 		else thm;
+
+fun UNDISCH_EQ thm = 
+let	val a = fst (dest_imp_only (lhs (concl thm)))
+	val b = REWRITE_CONV [ASSUME a] a;
+in
+	CONV_RULE (BINOP_CONV (LAND_CONV (REWR_CONV b) THENC 
+		FIRST_CONV (map REWR_CONV (CONJUNCTS (SPEC_ALL IMP_CLAUSES))))) thm
+end	handle e => raise (mkStandardExn "UNDISCH_EQ" "Thm is not of the form: \"|- (P ==> A) = (P ==> B)\"");
+
+fun UNDISCH_ALL_EQ thm = repeat UNDISCH_EQ thm
+
+fun UNDISCH_CONJ thm = 
+	(UNDISCH_CONJ (UNDISCH (CONV_RULE (REWR_CONV (GSYM AND_IMP_INTRO)) thm)) handle _ =>
+	UNDISCH_ONLY thm) handle e => raise (mkStandardExn "UNDISCH_CONJ" "Thm is not of the form: \"|- A ==> B\"");
+
+local
+fun DLC [] thm = thm
+  | DLC [x] thm = DISCH x thm
+  | DLC (x::xs) thm =
+	CONV_RULE (TRY_CONV (REWR_CONV AND_IMP_INTRO)) (DISCH x (DLC xs thm))
+in
+fun DISCH_LIST_CONJ l thm = DLC l thm handle e => wrapException "DISCH_LIST_CONJ" e
+end;
+
+fun DISCH_ALL_CONJ thm = DISCH_LIST_CONJ (hyp thm) thm handle e => wrapException "DISCH_ALL_CONJ" e
 
 fun CONJUNCTS_HYP h thm = 
 let	val (imps,c) = strip_imp_only
@@ -420,7 +492,8 @@ fun get_exists x =
 		val (l,r) = get_exists b
 	in	(v::l,x::r) end handle e => ([],[])
 in
-fun CHOOSE_L (vars,cthm) thm = 
+fun CHOOSE_L ([],cthm) thm = thm
+  | CHOOSE_L (vars,cthm) thm = 
 let	val (xvars,bodies) = guarenteed get_exists (assert "CHOOSE_L" [
 				("cthm is not existentially quantified",boolSyntax.is_exists)] (concl cthm))
 	val (xvars',bodies') = (List.take(xvars,length vars),List.take(bodies,length vars))
@@ -488,12 +561,27 @@ end;
 
 fun ORDER_EXISTS_CONV l term = 
 let	val (ra,bodya) = strip_exists term
-	val (r,body) = (List.take(ra,length l),list_mk_exists(List.drop(ra,length l),bodya))
+	val (r,body) = (List.take(ra,length l),
+	    	        list_mk_exists(List.drop(ra,length l),bodya))
+			handle e => wrapException "ORDER_EXISTS_CONV" e
 	fun mk_exists r l body = 
-		DISCH_ALL (CHOOSE_L (l,ASSUME (list_mk_exists(l,body))) (foldr (uncurry SIMPLE_EXISTS) (ASSUME body) r))
+		DISCH_ALL (CHOOSE_L (l,ASSUME (list_mk_exists(l,body)))
+		(foldr (uncurry SIMPLE_EXISTS) (ASSUME body) r))
 in
 	IMP_ANTISYM_RULE (mk_exists l r body) (mk_exists r l body)
+	handle e => wrapException "ORDER_EXISTS_CONV" e
 end;
+
+local
+fun order_conv flip term = 
+let	val (hs,body) = strip_forall term
+	val (front,back) = partition (flip o curry op= ((rand o lhs) body)) hs
+in	(ORDER_FORALL_CONV (front @ back) term)
+end
+in
+val FUN_EQ_CONV = STRIP_QUANT_CONV (REWR_CONV FUN_EQ_THM) THENC order_conv I
+val UNFUN_EQ_CONV = order_conv not THENC ONCE_DEPTH_CONV (REWR_CONV (GSYM FUN_EQ_THM))
+end
 
 local
 fun UNBETA_LIST_CONV' [] term = ALL_CONV term
@@ -522,6 +610,39 @@ in
 		handle e => wrapException "NTH_CONJ_CONV" e)
 end
 end;
+
+fun CASE_SPLIT_CONV term =
+let	val (xvar,body) = dest_forall term handle e => wrapException "CASE_SPLIT_CONV" e
+	val t = type_of xvar
+	val nchot_thm = TypeBase.nchotomy_of t
+		handle e => raise (mkStandardExn "CASE_SPLIT_CONV"
+				("An nchotomy does not exist for the type of the " ^
+				 " universally quantified variable: " ^ type_to_string t))
+	val nchot = SPEC xvar nchot_thm
+		handle e => raise (mkDebugExn "CASE_SPLIT_CONV"
+			("TypeBase returned an nchotomy for type " ^ type_to_string t ^ 
+			 " which was not universally quantified with a variable of the same type!"))
+	val all_vars = find_terms is_var term
+	fun VARIANT_CONV term = 
+	let	val vars = fst (strip_exists term)
+	in	RENAME_VARS_CONV (map (fst o dest_var o variant all_vars) vars) term
+	end;
+	val nchot' = CONV_RULE (EVERY_DISJ_CONV VARIANT_CONV) nchot handle e => wrapException "CASE_SPLIT_CONV" e
+	val nchots = strip_disj (concl nchot') 
+	
+	val full_left = DISCH_ALL (LIST_CONJ (map (fn n => GENL (snd (strip_comb (rhs (snd (strip_exists n)))))
+				(INST [xvar |-> rhs (snd (strip_exists n))] (SPEC_ALL (ASSUME term)))) nchots))
+			handle e => wrapException "CASE_SPLIT_CONV" e
+	
+	val r_tm = snd (dest_imp_only (concl full_left)) handle e => wrapException "CASE_SPLIT_CONV" e
+	val right = map2 (fn n => fn c => PURE_REWRITE_RULE [GSYM (ASSUME (snd (strip_exists n)))] (SPEC_ALL c)) nchots (CONJUNCTS (ASSUME r_tm))
+			handle e => wrapException "CASE_SPLIT_CONV" e
+	val right' = map2 (fn n => fn r => CHOOSE_L (fst (strip_exists n),ASSUME n) r handle _ => r) nchots right
+	val full_right = DISCH_ALL (GEN xvar (DISJ_CASESL nchot' right'))
+			handle e => wrapException "CASE_SPLIT_CONV" e
+in
+	IMP_ANTISYM_RULE full_left full_right handle e => wrapException "CASE_SPLIT_CONV" e
+end
 
 local
 fun PCC term = 
@@ -720,10 +841,8 @@ end
 end;
 
 local
-fun removep [] = []
-  | removep (x::xs) = 
-	if x = #"'" then removep xs else (x::xs)
-fun remove_primes x = implode (removep (String.explode x))
+val sanitise = filter (fn a => not (a = #"'") andalso not (a = #"%"))
+val remove_primes = implode o sanitise o explode
 in
 fun get_type_string t = 
 	if 	is_vartype t
@@ -846,6 +965,11 @@ end
 (*     replaces any higher order functions with their definitions including  *)
 (*     a hypothesis stating that the variable used to replace them is        *)
 (*     correct. It also rewrites pair_def whenever possible                  *)
+(*                                                                           *)
+(* RFUN_CONV : thm list -> conv                                              *)
+(*     Given a list of equalities, rewrites them in a term provided the      *)
+(*     rewrite occurs for a variable in the constructor of the function      *)
+(*     being rewritten.                                                      *)
 (*                                                                           *)
 (* SPLIT_HFUN_CONV: thm -> term list -> term -> (term list * thm)            *)
 (*     Replaces a term ...f G x... with f' G' x where f' is a variable       *)
@@ -1467,18 +1591,10 @@ in
 end;
 
 (*****************************************************************************)
-(* prove_induction_recursion_thms:                                           *)
-(*              translation_scheme -> term -> thm * (term * term) list * thm *)
+(* LEQ_REWRITES : term -> term -> thm list -> thm                            *)
 (*                                                                           *)
-(*     Given a function definition term with some clauses that are simply:   *)
-(*     fn x = A x, with no recursive calls, rewrites the other clauses with  *)
-(*     the non-recursive ones, if necessary proves the existence of the      *)
-(*     mutual recursion theorem. Once complete, it rewrites the clauses back,*)
-(*     and adds a proof of their existence to the overall proof.             *)
-(*                                                                           *)
-(*     Also returns a theorem of mutual induction, using (!x. P0 x ==> P1 x) *)
-(*     when no recursion takes place, and provides a mapping from            *)
-(*     predicates to clauses.                                                *)
+(* Rewrites the first term to match the second using the list of rewrites    *)
+(* given.                                                                    *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -1523,6 +1639,22 @@ in
 	TRANS (TRANS thm1 (itdeep (fn n => LEQSTEP n (rhs (concl thm1)) (rhs (concl thm2)) rewrites) 0)) (GSYM thm2)
 end
 end;
+
+(*****************************************************************************)
+(* prove_induction_recursion_thms:                                           *)
+(*              translation_scheme -> term -> thm * (term * term) list * thm *)
+(*                                                                           *)
+(*     Given a function definition term with some clauses that are simply:   *)
+(*     fn x = A x, with no recursive calls, rewrites the other clauses with  *)
+(*     the non-recursive ones, if necessary proves the existence of the      *)
+(*     mutual recursion theorem. Once complete, it rewrites the clauses back,*)
+(*     and adds a proof of their existence to the overall proof.             *)
+(*                                                                           *)
+(*     Also returns a theorem of mutual induction, using (!x. P0 x ==> P1 x) *)
+(*     when no recursion takes place, and provides a mapping from            *)
+(*     predicates to clauses.                                                *)
+(*                                                                           *)
+(*****************************************************************************)
 
 local
 fun debug_exn s = mkDebugExn "prove_induction_recursion_thms" s;
@@ -1800,9 +1932,10 @@ end;
 (*     Tests for the existence of a source theorem, adds a new source        *)
 (*     theorem and returns a source theorem.                                 *)
 (*                                                                           *)
-(* add_translation_scheme : hol_type -> thm -> unit                          *)
-(*     Given a theorem of the form:                                          *)
+(* add_translation_scheme : hol_type -> thm -> thm -> unit                   *)
+(*     Given a theorems of the form:                                         *)
 (*         |- P a ==> measure (L a) < measure a /\ measure (R a) < measure a *)
+(*         |- P nil = F                                                      *)
 (*     adds a translation scheme creating theorems of recursion and          *)
 (*     induction from the theorem.                                           *)
 (*                                                                           *)
@@ -1848,7 +1981,7 @@ fun add_translation_precise target t =
 	if exists_translation_precise target t then
 		raise (mkStandardExn "add_translation" 
 			("The translation " ^ type_to_string target ^ " --> " ^ type_to_string t ^
-			 "already exists."))
+			 " already exists."))
 	else 	let 	val ((fbase,tbase),_) = get_translations target
 		in	(fbase := Binarymap.insert(!fbase,cannon_type t,
 					ref (mkDict String.compare : (string,function) dict)) ;
@@ -1865,7 +1998,34 @@ fun get_theorems_precise target t =
 	of NONE => raise (translation_not_found target t)
 	|  SOME x => x
 fun get_theorems target t = get_theorems_precise target (vbase_type t)
+fun get_translation_types target = 
+    map fst (Binarymap.listItems (! (fst (fst (get_translations target)))));
 end;
+
+(*****************************************************************************)
+(* This function performs a breadth-first search, finding the most precise   *)
+(* type with an entry in the database.                                       *)
+(*****************************************************************************)
+
+fun all_lists [] = [[]]
+  | all_lists (x::xs) = 
+    foldr (fn (a,t) => map (cons a) (all_lists xs) @ t) [] x;
+ 
+fun explode_type t = 
+    if is_vartype t 
+       then [gen_tyvar()]
+       else gen_tyvar()::
+       	        map (curry mk_type (fst (dest_type t))) 
+		    (all_lists (map explode_type (snd (dest_type t))));
+
+fun ordered_list t = 
+    map cannon_type (rev (explode_type t));
+
+fun most_precise_type exists_function t = 
+    first_e (mkStandardExn "most_precise_type"
+    	       "No sub-type exists such that the function given holds")
+	    exists_function
+	    (ordered_list t);
 
 (*-- functions --*)
 
@@ -1878,24 +2038,36 @@ fun exists_coding_function_precise target t name =
 	else false;
 
 fun exists_coding_function target t name = 
-	exists_coding_function_precise target t name orelse
-	exists_coding_function_precise target (base_type t handle _ => t) name
+    can (most_precise_type 
+    	    (C (exists_coding_function_precise target) name)) t
+
+fun inst_function {const,definition,induction} t = 
+    {const = safe_inst (match_type (cannon_type t) t) const,
+     definition = SAFE_INST_TYPE (match_type (cannon_type t) t) definition,
+     induction = 
+         Option.map 
+	    (SAFE_INST_TYPE (match_type (cannon_type t) t) ## 
+	     map (safe_inst (match_type (cannon_type t) t) ## 
+                   (safe_inst (match_type (cannon_type t) t) ## 
+		    safe_type_subst (match_type (cannon_type t) t)))) induction}
 
 fun get_coding_function_precise target t name = 
-	case (Binarymap.peek(!(get_translation_precise target t),name))
-	of NONE => raise (mkStandardExn "get_coding_function_precise"
-		("The function " ^ name ^ " was not found for the translation " ^ type_to_string target ^ " --> " ^ 
-		 type_to_string t))
-	|  SOME {const,definition,induction} => 
-		{const = safe_inst (match_type (cannon_type t) t) const,
-		 definition = SAFE_INST_TYPE (match_type (cannon_type t) t) definition,
-		 induction = Option.map (SAFE_INST_TYPE (match_type (cannon_type t) t) ## 
-			map (safe_inst (match_type (cannon_type t) t) ## (safe_inst (match_type (cannon_type t) t) ## 
-				safe_type_subst (match_type (cannon_type t) t)))) induction}
+    case (Binarymap.peek(!(get_translation_precise target t),name))
+    of NONE => raise (mkStandardExn "get_coding_function_precise"
+		("The function " ^ name ^ 
+		 " was not found for the translation " ^ 
+		 type_to_string target ^ " --> " ^ type_to_string t))
+    |  SOME function => inst_function function t;
+  
 fun get_coding_function target t name = 
-	if exists_coding_function_precise target t name
-		then get_coding_function_precise target t name
-		else get_coding_function_precise target (base_type t handle _ => t) name
+    inst_function (get_coding_function_precise target
+        (most_precise_type 
+	    (C (exists_coding_function_precise target) name) t) name) t
+    handle _ => raise (mkStandardExn "get_coding_function"
+		("The function " ^ name ^ 
+		 " was not found for the translation " ^ 
+		 type_to_string target ^ " --> " ^ type_to_string t))
+
 fun get_coding_function_def target t name = 
 	#definition (get_coding_function target t name)
 fun get_coding_function_const target t name = 
@@ -1903,7 +2075,9 @@ fun get_coding_function_const target t name =
 fun get_coding_function_induction target t name = 
 	case (#induction (get_coding_function target t name))
 	of NONE => raise (mkStandardExn "get_coding_function_induction"
-		("The function " ^ name ^ " does not have an induction principle defined for it."))
+		("The function " ^ name ^ "(" ^ type_to_string t ^ 
+		 " --> " ^ type_to_string target ^ 
+		 ") does not have an induction principle defined for it."))
 	|  SOME x => x
 fun get_coding_function_precise_def target t name = 
 	#definition (get_coding_function_precise target t name)
@@ -1912,11 +2086,14 @@ fun get_coding_function_precise_const target t name =
 fun get_coding_function_precise_induction target t name = 
 	case (#induction (get_coding_function_precise target t name))
 	of NONE => raise (mkStandardExn "get_coding_function_precise_induction"
-		("The function " ^ name ^ " does not have an induction principle defined for it."))
+		("The function " ^ name ^ "(" ^ type_to_string t ^ 
+		 " --> " ^ type_to_string target ^ 
+		 ") does not have an induction principle defined for it."))
 	|  SOME x => x
 
 fun add_coding_function_precise target t name {const,definition,induction} = 
-let	val _ = type_trace 1 ("Adding coding function, " ^ name ^ ", for type: " ^ (type_to_string t) ^ "\n")
+let	val _ = type_trace 1 ("Adding coding function, " ^ name ^ ", for type: " 
+				^ (type_to_string (cannon_type t)) ^ "\n")
 	val base = get_translation_precise target t handle e => wrapException "add_coding_function_precise" e
 	val sub = match_type t (cannon_type t)
 in
@@ -1942,7 +2119,8 @@ fun exists_coding_theorem target t name =
 	exists_coding_theorem_precise target (base_type t handle _ => t) name
 
 fun add_coding_theorem_precise target t name thm = 
-let	val _ = type_trace 1 ("Adding coding theorem, " ^ name ^ ", for type: " ^ (type_to_string t) ^ "\n")
+let	val _ = type_trace 1 ("Adding coding theorem, " ^ name ^ ", for type: " ^ 
+			(type_to_string (cannon_type t)) ^ "\n")
 	val _ = if exists_translation_precise target t then () else add_translation_precise target t
 	val base = get_theorems_precise target t handle e => wrapException "add_coding_theorem_precise" e
 in
@@ -1959,9 +2137,9 @@ fun get_coding_theorem_precise target t name =
 	|  SOME x => SAFE_INST_TYPE (match_type (cannon_type t) t) x
 
 fun get_coding_theorem target t name = 
-	if exists_coding_theorem_precise target t name
-	then get_coding_theorem_precise target t name
-	else get_coding_theorem_precise target (base_type t handle _ => t) name
+    get_coding_theorem_precise target
+	(most_precise_type (C (exists_coding_theorem_precise target) name) t)
+	name
 
 (*-- source functions and theorems --*)
 
@@ -1971,8 +2149,7 @@ fun exists_source_function_precise t name =
 		case (Binarymap.peek (!x,name))
 		of NONE => false | SOME x => true;
 fun exists_source_function t name = 
-	exists_source_function_precise t name orelse
-	exists_source_function_precise (base_type t handle _ => t) name
+    can (most_precise_type (C exists_source_function_precise name)) t
 
 fun get_source_function_precise t name = 
 	case (Binarymap.peek(!(fst sourceBase),cannon_type t))
@@ -1980,18 +2157,22 @@ fun get_source_function_precise t name =
 			("No source functions found for type " ^ type_to_string t))
 	|  SOME x => 
 		case (Binarymap.peek(!x,name))
-		of NONE => raise (mkStandardExn "get_source_function"
+		of NONE => raise (mkStandardExn "get_source_function_precise"
 				("The function " ^ name ^ " has not been defined for the type " ^ type_to_string t))
-		|  SOME {const,definition,induction} => 
-		{const = safe_inst (match_type (cannon_type t) t) const,
+		|  SOME function => inst_function function t
+
+(*		{const = safe_inst (match_type (cannon_type t) t) const,
 		 definition = SAFE_INST_TYPE (match_type (cannon_type t) t) definition,
 		 induction = Option.map (SAFE_INST_TYPE (match_type (cannon_type t) t) ## 
 			map (safe_inst (match_type (cannon_type t) t) ## (safe_inst (match_type (cannon_type t) t) ## 
-				safe_type_subst (match_type (cannon_type t) t)))) induction}
+				safe_type_subst (match_type (cannon_type t) t)))) induction}*)
 fun get_source_function t name = 
-	if exists_source_function_precise t name
-	then get_source_function_precise t name
-	else get_source_function_precise (base_type t handle _ => t) name
+    inst_function (get_source_function_precise
+        (most_precise_type (C exists_source_function_precise name) t) name) t
+    handle e => raise (mkStandardExn "get_source_function"
+    ("The function " ^ name ^ " has not been defined for any sub-type of " ^ 
+      type_to_string t))
+
 fun get_source_function_def t name = 
 	#definition (get_source_function t name)
 fun get_source_function_const t name = 
@@ -1999,7 +2180,8 @@ fun get_source_function_const t name =
 fun get_source_function_induction t name = 
 	case (#induction (get_source_function t name))
 	of NONE => raise (mkStandardExn "get_source_function_induction"
-		("The function " ^ name ^ " does not have an induction principle defined for it."))
+		("The function " ^ name ^ "(" ^ type_to_string t ^ 
+		 ") does not have an induction principle defined for it."))
 	|  SOME x => x
 fun get_source_function_precise_def t name = 
 	#definition (get_source_function_precise t name)
@@ -2008,12 +2190,14 @@ fun get_source_function_precise_const t name =
 fun get_source_function_precise_induction t name = 
 	case (#induction (get_source_function_precise t name))
 	of NONE => raise (mkStandardExn "get_source_function_precise_induction"
-		("The function " ^ name ^ " does not have an induction principle defined for it."))
+		("The function " ^ name ^ "(" ^ type_to_string t ^ 
+		 ") does not have an induction principle defined for it."))
 	|  SOME x => x
 
 fun add_source_function_precise t name {const,definition,induction} = 
 let	val sub = match_type t (cannon_type t)
-	val _  = type_trace 1 ("Adding source function, " ^ name ^ ", for type: " ^ (type_to_string t) ^ "\n")
+	val _  = type_trace 1 ("Adding source function, " ^ name ^ ", for type: " ^ 
+					(type_to_string (cannon_type t)) ^ "\n")
 	val _ = case (Binarymap.peek(!(fst sourceBase),cannon_type t))
 		of NONE => ((fst sourceBase) := Binarymap.insert(!(fst sourceBase),cannon_type t,ref (mkDict String.compare)))
 		|  SOME x => ()
@@ -2050,12 +2234,12 @@ in
 end
 
 fun get_source_theorem t name = 
-	if exists_source_theorem_precise t name
-	then get_source_theorem_precise t name
-	else get_source_theorem_precise (base_type t handle _ => t) name
+    get_source_theorem_precise
+	(most_precise_type (C exists_source_theorem_precise name) t) name
 
 fun add_source_theorem_precise t name thm = 
-	(type_trace 1 ("Adding source theorem, " ^ name ^ ", for type: " ^ (type_to_string t) ^ "\n") ; 
+	(type_trace 1 ("Adding source theorem, " ^ name ^ ", for type: " ^ 
+				(type_to_string (cannon_type t)) ^ "\n") ; 
 	(case (Binarymap.peek(!(snd sourceBase),cannon_type t))
 	of NONE => ((snd sourceBase) := Binarymap.insert(!(snd sourceBase),cannon_type t,ref (mkDict String.compare)))
 	|  SOME x => ())
@@ -2192,6 +2376,310 @@ in
                  predicate = mk_abs(xvar,p_term)}))
 end
 end
+
+(*****************************************************************************)
+(* Loop checking for function generators                                     *)
+(*                                                                           *)
+(* Simply provides a function 'check_loop' that when giving an identifying   *)
+(* string for a function can detect whether the function is looping.         *)
+(*                                                                           *)
+(* Looping is defined to occur if:                                           *)
+(*     a) Exactly the same type is visited twice                             *)
+(*     b) Types which are equal up to renaming of type variables visited     *)
+(*        more than twice.                                                   *)
+(*                                                                           *)
+(*****************************************************************************)
+
+local
+val stores = ref (mkDict String.compare);
+fun get s = 
+	case (Binarymap.peek(!stores,s))
+	of NONE => (stores := Binarymap.insert(!stores,s,ref []) ; Binarymap.find(!stores,s))
+        |  SOME x => x
+fun cons s t = let val x = get s in x := t :: (!x) end
+fun head s = let val x = get s in case (!x) of [] => NONE | y::ys => (x := ys ; SOME y) end
+fun tail s = let val x = get s in case (!x) of [] => NONE | y::ys => (x := ys ; SOME ys) end
+fun mem s t = let val x = get s in Lib.mem t (!x) end
+in
+val cstores = stores
+fun check_loop s t f fail = 
+	if mem s (cannon_type t)
+	then fail (!(get s))
+	else let val result = (cons s (cannon_type t) ; f t handle e => (tail s ; raise e)) in (tail s ; result) end
+end;
+
+(*****************************************************************************)
+(* Function generators:                                                      *)
+(*                                                                           *)
+(* Allow the recursive definition of functions for a whole type              *)
+(*                                                                           *)
+(*****************************************************************************)
+
+val coding_function_generators = 
+	ref (Binarymap.mkDict type_less) :
+  (hol_type,
+   (string,
+    ((hol_type -> bool) *
+     (hol_type -> function)) list ref) dict ref) dict ref
+
+fun add_coding_function_generator target (name:string) (predicate:hol_type -> bool)  (generator:hol_type -> function) =
+let 	val _ = case (Binarymap.peek (!coding_function_generators,target))
+		of NONE => coding_function_generators := Binarymap.insert(!coding_function_generators,target,ref (mkDict String.compare))
+		|  SOME _ => ()
+	val generators = Binarymap.find (!coding_function_generators,target)
+	val _ = case(Binarymap.peek(!generators,name))
+		of NONE => generators := Binarymap.insert(!generators,name,ref [])
+		|  SOME _ => ()
+	val list = Binarymap.find(!generators,name)
+in
+	list := (predicate,generator) :: (!list)
+end;	
+
+val source_function_generators = 
+	ref (Binarymap.mkDict String.compare) : 
+  (string,
+   ((hol_type -> bool) *
+    (hol_type -> function)) list ref) dict ref
+
+fun add_source_function_generator name (predicate:hol_type -> bool) (generator : hol_type -> function) =
+let 	val _ = case(Binarymap.peek(!source_function_generators,name))
+		of NONE => source_function_generators := Binarymap.insert(!source_function_generators,name,ref [])
+		|  SOME _ => ()
+	val list = Binarymap.find(!source_function_generators,name)
+in
+	list := (predicate,generator) :: (!list)
+end;
+
+local
+fun err name target t = mkStandardExn "get_coding_function_generator"
+	("No coding function generator exists for functions named " ^ name ^ 
+	 " in the translation: " ^ type_to_string target ^ 
+	 " --> " ^ type_to_string t)
+fun get_coding_function_generator target name t = 
+	case (Binarymap.peek(!coding_function_generators,target))
+	of NONE => raise (err name target t)
+	|  SOME x => case (Binarymap.peek(!x,name))
+		of NONE => raise (err name target t)
+		|  SOME x => (snd (first_e (err name target t) (fn (x,y) => x t) (!x)))
+fun gcf target name t = 
+let	val function = if exists_coding_function_precise target t name
+		then get_coding_function_precise target t name
+		else (type_trace 1 (
+			"Generating function " ^ name ^ " for translation " ^ 
+			(type_to_string target) ^ " --> " ^ type_to_string t ^ "\n") ; 
+			(get_coding_function_generator target name t) t)
+in
+	if exists_coding_function_precise target t name
+	then ()
+	else add_coding_function_precise target t name function
+end
+in
+fun generate_coding_function target name t = 
+	check_loop ("gcf" ^ name ^ type_to_string (cannon_type target)) t (gcf target name)
+		(fn list => raise (mkDebugExn "generate_coding_function" 
+			("Experienced a loop whilst generating the coding function " ^ name ^ 
+			 " for type " ^ type_to_string target ^ 
+			 "\nTrace: " ^ xlist_to_string type_to_string list)))			
+end;
+
+local
+fun err name t = mkStandardExn "get_source_function_generator"
+	("No source function generator exists for functions named " ^ name ^ 
+	 " and the type " ^ type_to_string t)
+fun get_source_function_generator name t = 
+	case (Binarymap.peek(!source_function_generators,name))
+	of NONE => raise (err name t)
+	|  SOME x => (snd (first_e (err name t) (fn (x,y) => x t) (!x)))
+fun gsf name t = 
+let	val function = if exists_source_function_precise t name
+		then get_source_function_precise t name
+		else (type_trace 1 (
+			"Generating function " ^ name ^ " for type " ^ type_to_string t ^ "\n") ; 
+			(get_source_function_generator name t) t)
+in
+	if exists_source_function_precise t name
+	then ()
+	else add_source_function_precise t name function
+end
+in
+fun generate_source_function name t = 
+	check_loop ("gsf"^name) t (gsf name)
+		(fn list => raise (mkDebugExn "generate_source_function" 
+			("Experienced a loop whilst generating the source function " ^ name ^ 
+			 "\nTrace: " ^ xlist_to_string type_to_string list)))	
+end;
+	
+(*****************************************************************************)
+(* Theorem generators:                                                       *)
+(*                                                                           *)
+(* Allow the proof of theorems recursively                                   *)
+(*                                                                           *)
+(*****************************************************************************)
+
+val coding_theorem_generators = 
+	ref (Binarymap.mkDict type_less) :
+  (hol_type,
+   (string,((hol_type -> term) option ref * 
+    ((hol_type -> bool) *
+     (hol_type -> thm)) list ref)) dict ref) dict ref
+
+local
+fun setup target name = 
+let	val _ = case (Binarymap.peek (!coding_theorem_generators,target))
+		of NONE => coding_theorem_generators := Binarymap.insert(!coding_theorem_generators,target,ref (mkDict String.compare))
+		|  SOME _ => ()
+	val generators = Binarymap.find (!coding_theorem_generators,target)
+	val _ = case(Binarymap.peek(!generators,name))
+		of NONE => generators := Binarymap.insert(!generators,name,(ref NONE,ref []))
+		|  SOME _ => ()
+in
+	Binarymap.find(!generators,name)
+end
+in
+fun set_coding_theorem_conclusion target name mk_conc =
+let 	val (conc,list) = setup target name
+in
+	conc := SOME mk_conc
+end
+fun exists_coding_theorem_conclusion target name = isSome(!(fst(setup target name)))
+fun get_coding_theorem_conclusion target name = valOf(!(fst(setup target name)))
+fun add_coding_theorem_generator target (name:string) (predicate:hol_type -> bool)  (generator:hol_type -> thm) =
+let 	val (conc,list) = setup target name
+in
+	list := (predicate,generator) :: (!list)
+end
+end;
+
+val source_theorem_generators = 
+	ref (Binarymap.mkDict String.compare) : 
+  (string,((hol_type -> term) option ref *
+   ((hol_type -> bool) *
+    (hol_type -> thm)) list ref)) dict ref
+
+local
+fun setup name = 
+let	val _ = case(Binarymap.peek(!source_theorem_generators,name))
+		of NONE => source_theorem_generators := 
+			Binarymap.insert(!source_theorem_generators,name,(ref NONE,ref []))
+		|  SOME _ => ()
+in	Binarymap.find(!source_theorem_generators,name)
+end
+in
+fun set_source_theorem_conclusion name mk_conc = 
+let	val (conc,list) = setup name
+in	conc := SOME mk_conc
+end
+fun exists_source_theorem_conclusion name = isSome(!(fst(setup name)))
+fun get_source_theorem_conclusion name = valOf(!(fst(setup name)))
+fun add_source_theorem_generator name predicate generator =
+let 	val (conc,list) = setup name
+in
+	list := (predicate,generator) :: (!list)
+end
+end;
+
+fun MATCH_CONC thm conc = 
+let val thm' = SPEC_ALL thm
+    val (vars,body) = strip_forall conc
+in
+    GENL vars (INST_TY_TERM (match_term (concl thm') body) thm')
+end;
+
+local
+fun err name target t = mkStandardExn "get_coding_theorem_generator"
+	("No coding theorem generator exists for theorems named " ^ name ^ 
+	 " in the translation: " ^ type_to_string target ^ 
+	 " --> " ^ type_to_string t)
+fun get_coding_theorem_generator target name t = 
+    case (Binarymap.peek(!coding_theorem_generators,target))
+    of NONE => raise (err name target t)
+    |  SOME x => case (Binarymap.peek(!x,name))
+       of NONE => raise (err name target t)
+       |  SOME x => (snd (first_e (err name target t) 
+       	       	    	 	  (fn (x,y) => x t) (!(snd x))))
+fun gct target name t = 
+let val _ = type_trace 2 ("->generate_coding_theorem(" ^ name ^ "," ^ 
+    	    	       	 (type_to_string t) ^ ")\n")
+    val _ = if base_type t = t orelse 
+    	       exists_coding_theorem_precise target t name
+	       then () else (gct target name (base_type t) ; ())
+    val theorem = if exists_coding_theorem_precise target t name
+    		then get_coding_theorem_precise target t name
+		else (get_coding_theorem_generator target name t) t
+	val mtheorem = if exists_coding_theorem_conclusion target name
+		then MATCH_CONC theorem (get_coding_theorem_conclusion target name t)
+			handle e => raise (mkStandardExn "generate_coding_theorem"
+("Generator for " ^ name ^ 
+ " returned the theorem:\n " ^ thm_to_string theorem ^ 
+ "\nThis does not match the specified conclusion for type: " ^ 
+ type_to_string t ^ ":\n" ^
+ term_to_string (get_coding_theorem_conclusion target name t)))
+		else theorem
+	val _ = if exists_coding_theorem_precise target t name
+		then ()
+		else add_coding_theorem_precise target t name mtheorem
+   val _ = if null (hyp mtheorem) then ()
+              else raise (mkStandardExn "generate_coding_theroem"
+	      	   ("Generator for " ^ name ^ 
+		    " returned the theorem:\n " ^ thm_to_string theorem ^ 
+		    "\nwhich has the non-empty hypothesis set:\n" ^ 
+		    xlist_to_string term_to_string (hyp mtheorem)))
+in
+	mtheorem
+end
+in
+fun generate_coding_theorem target name t = 
+	check_loop ("gct" ^ name ^ type_to_string (cannon_type target)) t (gct target name)
+		(fn list => raise (mkDebugExn "generate_coding_theorem" 
+			("Experienced a loop whilst generating the coding theorem " ^ name ^ 
+			 " for type " ^ type_to_string target ^ 
+			 "\nTrace: " ^ xlist_to_string type_to_string list)))
+end;
+
+local
+fun err name t = mkStandardExn "get_source_theorem_generator"
+	("No source theorem generator exists for theorems named " ^ name ^ 
+	 " and the type " ^ type_to_string t)
+fun get_source_theorem_generator name t = 
+	case (Binarymap.peek(!source_theorem_generators,name))
+	of NONE => raise (err name t)
+	|  SOME x => (snd (first_e (err name t) (fn (x,y) => x t) (!(snd x))))
+fun gst name t = 
+let	val _ = type_trace 2 ("->generate_source_theorem(" ^ name ^ "," ^ (type_to_string t) ^ ")\n")
+	val _ = if base_type t = t orelse 
+	      	   (exists_source_theorem_precise t name) 
+	      	   then () else (gst name (base_type t) ; ())
+	val theorem = if exists_source_theorem_precise t name
+		then get_source_theorem_precise t name
+		else (get_source_theorem_generator name t) t
+	val mtheorem = if exists_source_theorem_conclusion name
+		then MATCH_CONC theorem (get_source_theorem_conclusion name t)
+			handle e => raise (mkStandardExn "generate_source_theorem"
+("Generator for " ^ name ^ 
+ " returned the theorem:\n " ^ thm_to_string theorem ^ 
+ "\nThis does not match the specified conclusion for type: " ^ 
+ type_to_string t ^ ":\n" ^
+ term_to_string (get_source_theorem_conclusion name t)))
+		else theorem
+        val _ = if null (hyp mtheorem) then ()
+              else raise (mkStandardExn "generate_source_theroem"
+	      	   ("Generator for " ^ name ^ 
+		    " returned the theorem:\n " ^ thm_to_string theorem ^ 
+		    "\nwhich has the non-empty hypothesis set:\n" ^ 
+		    xlist_to_string term_to_string (hyp mtheorem)))
+	val _ = if exists_source_theorem_precise t name
+		then ()
+		else add_source_theorem_precise t name mtheorem
+in
+	mtheorem
+end
+in
+fun generate_source_theorem name t = 
+	check_loop ("gst" ^ name) t (gst name)
+		(fn list => raise (mkDebugExn "generate_source_theorem" 
+			("Experienced a loop whilst generating the source theorem " ^ name ^ 
+			 "\nTrace: " ^ xlist_to_string type_to_string list)))
+end;
 
 (*****************************************************************************)
 (* Polytypic generation of functions:                                        *)
@@ -2966,96 +3454,11 @@ in
 end
 end
 
+
 (*****************************************************************************)
-(* Function generators:                                                      *)
-(*                                                                           *)
-(* Allow the recursive definition of functions for a whole type              *)
-(*                                                                           *)
+(* Function generators                                                       *)
 (*****************************************************************************)
 
-val coding_function_generators = 
-	ref (Binarymap.mkDict type_less) :
-  (hol_type,
-   (string,
-    ((hol_type -> bool) *
-     (hol_type -> function)) list ref) dict ref) dict ref
-
-fun add_coding_function_generator target (name:string) (predicate:hol_type -> bool)  (generator:hol_type -> function) =
-let 	val _ = case (Binarymap.peek (!coding_function_generators,target))
-		of NONE => coding_function_generators := Binarymap.insert(!coding_function_generators,target,ref (mkDict String.compare))
-		|  SOME _ => ()
-	val generators = Binarymap.find (!coding_function_generators,target)
-	val _ = case(Binarymap.peek(!generators,name))
-		of NONE => generators := Binarymap.insert(!generators,name,ref [])
-		|  SOME _ => ()
-	val list = Binarymap.find(!generators,name)
-in
-	list := (predicate,generator) :: (!list)
-end;	
-
-val source_function_generators = 
-	ref (Binarymap.mkDict String.compare) : 
-  (string,
-   ((hol_type -> bool) *
-    (hol_type -> function)) list ref) dict ref
-
-fun add_source_function_generator name (predicate:hol_type -> bool) (generator : hol_type -> function) =
-let 	val _ = case(Binarymap.peek(!source_function_generators,name))
-		of NONE => source_function_generators := Binarymap.insert(!source_function_generators,name,ref [])
-		|  SOME _ => ()
-	val list = Binarymap.find(!source_function_generators,name)
-in
-	list := (predicate,generator) :: (!list)
-end;
-
-local
-fun err name target t = mkStandardExn "get_coding_function_generator"
-	("No coding function generator exists for functions named " ^ name ^ 
-	 " in the translation: " ^ type_to_string target ^ 
-	 " --> " ^ type_to_string t)
-fun get_coding_function_generator target name t = 
-	case (Binarymap.peek(!coding_function_generators,target))
-	of NONE => raise (err name target t)
-	|  SOME x => case (Binarymap.peek(!x,name))
-		of NONE => raise (err name target t)
-		|  SOME x => (snd (first_e (err name target t) (fn (x,y) => x t) (!x)))
-in
-fun generate_coding_function target name t = 
-let	val function = if exists_coding_function_precise target t name
-		then get_coding_function_precise target t name
-		else (type_trace 1 (
-			"Generating function " ^ name ^ " for translation " ^ 
-			(type_to_string target) ^ " --> " ^ type_to_string t ^ "\n") ; 
-			(get_coding_function_generator target name t) t)
-in
-	if exists_coding_function_precise target t name
-	then ()
-	else add_coding_function_precise target t name function
-end
-end;
-
-local
-fun err name t = mkStandardExn "get_source_function_generator"
-	("No source function generator exists for functions named " ^ name ^ 
-	 " and the type " ^ type_to_string t)
-fun get_source_function_generator name t = 
-	case (Binarymap.peek(!source_function_generators,name))
-	of NONE => raise (err name t)
-	|  SOME x => (snd (first_e (err name t) (fn (x,y) => x t) (!x)))
-in
-fun generate_source_function name t = 
-let	val function = if exists_source_function_precise t name
-		then get_source_function_precise t name
-		else (type_trace 1 (
-			"Generating function " ^ name ^ " for type " ^ type_to_string t ^ "\n") ; 
-			(get_source_function_generator name t) t)
-in
-	if exists_source_function_precise t name
-	then ()
-	else add_source_function_precise t name function
-end
-end;
-	
 fun add_compound_coding_function_generator name mk_term get_func conv create_conv target =
 	add_coding_function_generator target name (can TypeBase.constructors_of)
 	(fn t => 
@@ -3086,96 +3489,6 @@ fun add_compound_source_function_generator name mk_term get_func conv create_con
 			mk_source_functions name mk_term get_func conv create_conv t
 		end	;
 			get_source_function_precise t name));
-
-(*****************************************************************************)
-(* Theorem generators:                                                       *)
-(*                                                                           *)
-(* Allow the proof of theorems recursively                                   *)
-(*                                                                           *)
-(*****************************************************************************)
-
-val coding_theorem_generators = 
-	ref (Binarymap.mkDict type_less) :
-  (hol_type,
-   (string,
-    ((hol_type -> bool) *
-     (hol_type -> thm)) list ref) dict ref) dict ref
-
-fun add_coding_theorem_generator target (name:string) (predicate:hol_type -> bool)  (generator:hol_type -> thm) =
-let 	val _ = case (Binarymap.peek (!coding_theorem_generators,target))
-		of NONE => coding_theorem_generators := Binarymap.insert(!coding_theorem_generators,target,ref (mkDict String.compare))
-		|  SOME _ => ()
-	val generators = Binarymap.find (!coding_theorem_generators,target)
-	val _ = case(Binarymap.peek(!generators,name))
-		of NONE => generators := Binarymap.insert(!generators,name,ref [])
-		|  SOME _ => ()
-	val list = Binarymap.find(!generators,name)
-in
-	list := (predicate,generator) :: (!list)
-end;
-
-val source_theorem_generators = 
-	ref (Binarymap.mkDict String.compare) : 
-  (string,
-   ((hol_type -> bool) *
-    (hol_type -> thm)) list ref) dict ref
-
-fun add_source_theorem_generator name (predicate:hol_type -> bool) (generator : hol_type -> thm) =
-let 	val _ = case(Binarymap.peek(!source_theorem_generators,name))
-		of NONE => source_theorem_generators := Binarymap.insert(!source_theorem_generators,name,ref [])
-		|  SOME _ => ()
-	val list = Binarymap.find(!source_theorem_generators,name)
-in
-	list := (predicate,generator) :: (!list)
-end;
-
-local
-fun err name target t = mkStandardExn "get_coding_theorem_generator"
-	("No coding theorem generator exists for theorems named " ^ name ^ 
-	 " in the translation: " ^ type_to_string target ^ 
-	 " --> " ^ type_to_string t)
-fun get_coding_theorem_generator target name t = 
-	case (Binarymap.peek(!coding_theorem_generators,target))
-	of NONE => raise (err name target t)
-	|  SOME x => case (Binarymap.peek(!x,name))
-		of NONE => raise (err name target t)
-		|  SOME x => (snd (first_e (err name target t) (fn (x,y) => x t) (!x)))
-in
-fun generate_coding_theorem target name t = 
-let	val _ = if base_type t = t then () else (generate_coding_theorem target name (base_type t) ; ())
-	val theorem = if exists_coding_theorem_precise target t name
-		then get_coding_theorem_precise target t name
-		else (get_coding_theorem_generator target name t) t
-	val _ = if exists_coding_theorem_precise target t name
-		then ()
-		else add_coding_theorem_precise target t name theorem
-in
-	get_coding_theorem_precise target t name
-end
-end;
-
-local
-fun err name t = mkStandardExn "get_source_theorem_generator"
-	("No source theorem generator exists for theorems named " ^ name ^ 
-	 " and the type " ^ type_to_string t)
-fun get_source_theorem_generator name t = 
-	case (Binarymap.peek(!source_theorem_generators,name))
-	of NONE => raise (err name t)
-	|  SOME x => (snd (first_e (err name t) (fn (x,y) => x t) (!x)))
-in
-fun generate_source_theorem name t = 
-let	val _ = if base_type t = t then () else (generate_source_theorem name (base_type t) ; ())
-	val theorem = if exists_source_theorem_precise t name
-		then get_source_theorem_precise t name
-		else (get_source_theorem_generator name t) t
-	val _ = 
-		if exists_source_theorem_precise t name
-		then ()
-		else add_source_theorem_precise t name theorem
-in
-	get_source_theorem_precise t name
-end
-end;
 
 (*****************************************************************************)
 (* Polytypic inductive proofs about functions                                *)
@@ -3222,18 +3535,31 @@ in
 end
 end
 
-fun UNDISCH_EQ thm = 
-let	val a = fst (dest_imp_only (lhs (concl thm)))
-	val b = REWRITE_CONV [ASSUME a] a;
-in
-	CONV_RULE (BINOP_CONV (LAND_CONV (REWR_CONV b) THENC 
-		FIRST_CONV (map REWR_CONV (CONJUNCTS (SPEC_ALL IMP_CLAUSES))))) thm
-end;
+fun delete_matching_types rset t = 
+	if op_mem (fn a => fn b => can (match_type a) b) t rset then gen_tyvar()
+	else if can dest_type t then (mk_type o (I ## map (delete_matching_types rset)) o dest_type) t
+	else t
 
-fun UNDISCH_ALL_EQ thm = repeat UNDISCH_EQ thm
+fun all_types t = filter (not o is_vartype) (mk_set (t :: map snd (reachable_graph uncurried_subtypes t)));
 
+fun relevant_types t = 
+let	val all_types = all_types t
+	val rset = map fst (split_nested_recursive_set t)
+in	
+	filter (not o is_vartype) (map (delete_matching_types rset) all_types)
+end
 
 local
+fun check_concs targ target [] = ()
+  | check_concs targ target ((_,(_,(t,thm)))::rest) = 
+let	val var = type_of (hd (fst (strip_forall (rhs (concl thm)))))
+in
+	if (not targ andalso (var = t)) orelse (targ andalso (var = target))
+		then check_concs targ target rest
+		else raise (mkStandardExn "inductive_proof"
+			("Conclusion returned does not match the form: \"!a" ^ 
+			 type_to_string (if targ then target else t) ^ ".P a\""))
+end
 fun mk_thm (induction,mapping) mk_conc conv = 
 let	val all_concs = map (I ## (I ## (fn t => (t,UNDISCH_ALL_EQ (conv (mk_conc t)))))) mapping
 	val _ = type_trace 3 ("Conclusions:\n" ^ xlist_to_string 
@@ -3241,6 +3567,8 @@ let	val all_concs = map (I ## (I ## (fn t => (t,UNDISCH_ALL_EQ (conv (mk_conc t)
 	val preds = map (rator o snd o strip_forall) 
 			((strip_conj o snd o dest_imp_only o 
 				snd o strip_forall o concl) induction)
+	val all_types = map (fst o dom_rng o type_of) preds;
+	val _ = check_concs (length (mk_set all_types) = 1) (hd (all_types)) all_concs
 	val ithm = LIST_MK_CONJ (map (fn p => snd (snd (assoc p all_concs))) preds)
 in	
 	(all_concs,ithm,foldl (fn (a,b) => UNDISCH_ONLY (DISCH a b)) 
@@ -3252,17 +3580,15 @@ end
 fun mkgoal (induction,mapping) mk_conc conv = 
 let	val (all_concs,ithm,thm) = mk_thm (induction,mapping) mk_conc conv 
 in
-	(goalstackLib.set_goal (hyp ithm,(lhs o concl) ithm) ; 
-	 goalstackLib.expand(
+	(proofManagerLib.set_goal (hyp ithm,(lhs o concl) ithm) ; 
+	 proofManagerLib.expand(
 		MATCH_MP_TAC (snd (EQ_IMP_RULE ithm)) THEN
 		MATCH_MP_TAC (foldl (fn (x,t) => 
 			CONV_RULE (REWR_CONV AND_IMP_INTRO) (DISCH x t)) 
 				(DISCH (hd (hyp thm)) thm) (tl (hyp thm))) THEN
 		REPEAT CONJ_TAC))
 end	
-fun proveit get_theorems (induction,mapping) mk_conc conv 
-		(tactic:hol_type -> thm list -> tactic) 
-		get_theorem = 
+fun proveit (induction,mapping) mk_conc conv (tactic:hol_type -> tactic) get_theorem = 
 let	val (all_concs,ithm,thm) = mk_thm (induction,mapping) mk_conc conv 
 	val _ = type_trace 3 
 			("Instantiated induction theorem: " ^ thm_to_string thm ^ "\n")
@@ -3280,13 +3606,12 @@ let	val (all_concs,ithm,thm) = mk_thm (induction,mapping) mk_conc conv
 				"conclusions generated from the mapping"))
 
 	val proofs = map (fn (t,(assums:term list,goal:term)) =>
-			let	val extras = get_theorems t
-				val clause_err = mkStandardExn "prove_inductive_theorem" o
+			let	val clause_err = mkStandardExn "prove_inductive_theorem" o
 					curry op^ ("Could not prove the clause:\n" ^ 
 						xpair_to_string (xlist_to_string term_to_string) term_to_string 
-						(map concl extras @ assums,goal))
+						(assums,goal))
 			in
-				(case (tactic t extras (assums @ hyp ithm,goal))
+				(case (tactic t (assums @ hyp ithm,goal))
 				of ([],func) => foldl (uncurry PROVE_HYP) (func []) (map ASSUME assums)
 				|  (x::xs,func) => raise (clause_err ""))
 				handle e => raise (clause_err ("\nOriginal exception: " ^ exn_to_string e))
@@ -3301,61 +3626,37 @@ let	val main_types = map fst (split_nested_recursive_set t)
 	val conjuncts = CONJUNCTS thm
 in
 	map (fn t => (t,first (can (match_term (mk_conc t)) o concl) conjuncts)) main_types
-end
-fun all_prefixes [] ys = []
-  | all_prefixes (x::xs) ys = (map (cons x) ys) @ all_prefixes xs ys;
-fun all_lists [] = [[]]
-  | all_lists (x::xs) = all_prefixes x (all_lists xs);
-fun split_tyops_set mr_map t =
-	if is_vartype t then [t]
-	else case (assoc1 t mr_map)
-	of SOME (a,b) => [b]
-	| NONE => 
-	let	val (a,b) = dest_type t
-	in
-		gen_tyvar() :: 
-		map (curry mk_type a)
-			(all_lists (map (split_tyops_set mr_map) b))
-	end
-fun sanitise t = 
-let	val types = type_vars t
-	val sub = map (fn (n,x) => x |-> mk_vartype(implode (#"'"::base26 n))) (enumerate 0 types)
+end	handle e => wrapException "(split_theorem)" e
 in
-	type_subst sub t
-end;
-fun required_types mr_set t = 
-let	val cst = uncurried_subtypes t
-	val mr_map = map (fn x => (x,gen_tyvar ())) mr_set
-	val all_types = flatten (map (split_tyops_set mr_map) cst)
-	val type_set = filter (not o is_vartype) (mk_set (map sanitise all_types))
-in
-	type_set
-end
-fun get_mr_set t = 
-	filter (fn t => can (match_type t) (base_type t)) 
-		(map fst (filter (curry op= t o snd) (RTC (reachable_graph sub_types t))))
-in
-fun all_coding_thms mr_set name target t =
-	map (generate_coding_theorem target name) (required_types mr_set t)
-fun all_source_thms mr_set name t =
-	map (generate_source_theorem name) (required_types mr_set t)
 fun prove_inductive_coding_theorem fname name mk_conc target t conv tactic =
 let	val _ = type_trace 1 ("Proving coding theorem: " ^ name ^ " for translation " ^
 			type_to_string target ^ " --> " ^ type_to_string t ^ "\n")
 	val (induction,mapping) = get_coding_function_induction target t fname
+	    handle e => wrapException "prove_inductive_coding_theorem" e
 	val tsub = tryfind (C match_type t o snd o snd) mapping
+	    handle e => wrapException "prove_inductive_coding_theorem" e
 	val thm = proveit 
-		(all_coding_thms (get_mr_set t) name target)
 		(INST_TYPE tsub induction,map (inst tsub ## (I ## type_subst tsub)) mapping)
 		mk_conc conv tactic
 		(CONV_RULE conv o C (get_coding_theorem target) name)
+		handle e => wrapException "prove_inductive_coding_theorem" e
 	val split_types = map (type_subst tsub o snd o snd) mapping
+	        handle e => wrapException "prove_inductive_coding_theorem" e
 	val conjuncts = map DISCH_ALL (CONJUNCTS (UNDISCH_ALL thm))
-	val thms = map (fn t => (t,first (can (match_term (mk_conc t)) o concl) conjuncts)) split_types;
+	val (thms,failed) = mappartition (fn t => 
+	    (t,first (can (match_term (mk_conc t)) o concl) conjuncts))
+	    split_types
+ 	val _ = if null failed then () else
+	    raise (mkStandardExn "prove_inductive_coding_theorem"
+	    	  ("The type: " ^ type_to_string (hd failed) ^
+		   "\nwith conclusion: " ^ term_to_string (mk_conc t) ^ 
+		   "\nhas no corresponding theorem in the proved set:\n"
+		   	  ^ xlist_to_string thm_to_string conjuncts))
 in
 	app (fn (t,thm) => add_coding_theorem_precise target t name thm) thms
-end	handle e => wrapException "prove_inductive_coding_theorem" e
-fun inductive_coding_goal fname name mk_conc target t conv = 
+	handle e => wrapException "prove_inductive_coding_theorem" e
+end	
+fun inductive_coding_goal fname mk_conc target t (conv:term -> thm) = 
 let	val (induction,mapping) = get_coding_function_induction target t fname
 	val tsub = tryfind (C match_type t o snd o snd) mapping
 in
@@ -3367,17 +3668,26 @@ let	val _ = type_trace 1 ("Proving source theorem: " ^ name ^ " for type " ^ typ
 	val (induction,mapping) = get_source_function_induction t fname
 	val tsub = tryfind (C match_type t o snd o snd) mapping
 	val thm = proveit 
-		(all_source_thms (get_mr_set t) name)
 		(INST_TYPE tsub induction,map (inst tsub ## (I ## type_subst tsub)) mapping) 
 		mk_conc conv tactic
 		(CONV_RULE conv o C get_source_theorem name)
 	val split_types = map (type_subst tsub o snd o snd) mapping
 	val conjuncts = CONJUNCTS thm
 	val thms = map (fn t => (t,first (can (match_term (mk_conc t)) o concl) (CONJUNCTS thm))) split_types;
+	val (thms,failed) = mappartition (fn t => 
+	    (t,first (can (match_term (mk_conc t)) o concl) (CONJUNCTS thm)))
+	    split_types;
+ 	val _ = if null failed then () else
+	    raise (mkStandardExn "prove_inductive_source_theorem"
+	    	  ("The type: " ^ type_to_string (hd failed) ^
+		   "\nwith conclusion: " ^ term_to_string (mk_conc t) ^ 
+		   "\nhas no corresponding theorem in the proved set:\n"
+		   	  ^ xlist_to_string thm_to_string conjuncts))
+
 in
 	app (fn (t,thm) => add_source_theorem_precise t name thm) thms
 end	handle e => wrapException "prove_inductive_source_theorem" e
-fun inductive_source_goal fname name mk_conc t conv =
+fun inductive_source_goal fname mk_conc t (conv:term -> thm) =
 let	val (induction,mapping) = get_source_function_induction t fname
 	val tsub = tryfind (C match_type t o snd o snd) mapping
 in
@@ -3387,35 +3697,47 @@ in
 end	handle e => wrapException "inductive_source_goal" e
 end
 
-fun add_inductive_coding_theorem_generator fname name mk_conc target conv tactic =
+fun add_inductive_coding_theorem_generator fname name target conv tactic =
 	add_coding_theorem_generator target name (can TypeBase.constructors_of)
 	(fn t => 
-		(prove_inductive_coding_theorem fname name mk_conc target t conv tactic ;
+		(prove_inductive_coding_theorem fname name 
+			(fn t => if exists_coding_theorem_conclusion target name 
+					then get_coding_theorem_conclusion target name t
+					else raise (mkStandardExn ("inductive_coding_proof ("^name^")")
+						("The conclusion has not yet been set!")))				
+			target t conv tactic ;
 			get_coding_theorem_precise target t name));
 
-fun add_inductive_source_theorem_generator fname name mk_conc conv tactic =
+fun add_inductive_source_theorem_generator fname name conv tactic =
 	add_source_theorem_generator name (can TypeBase.constructors_of)
-		(fn t => (prove_inductive_source_theorem fname name mk_conc t conv tactic ;
+		(fn t => (prove_inductive_source_theorem fname name 
+			(fn t => if exists_source_theorem_conclusion name
+					then get_source_theorem_conclusion name t
+					else raise (mkStandardExn ("inductive_source_proof ("^name^")")
+						("The conclusion has not yet been set!")))
+				t conv tactic ;
 				get_source_theorem_precise t name));
 
-fun add_tactic_coding_theorem_generator name test mk_conc (tactic:hol_type -> tactic) target = 
+fun add_tactic_coding_theorem_generator name test (tactic:hol_type -> tactic) target = 
 	add_coding_theorem_generator target name test
-		(fn t => case (tactic t ([],mk_conc t))
+		(fn t => case (tactic t ([],get_coding_theorem_conclusion target name t))
 				of ([],func) => func []
 				|  (x::xs,func) => 
 	(raise (mkStandardExn ("tactic_" ^ name ^ " (" ^ type_to_string t ^ ")") "Unsolved goals")))
 
-fun add_tactic_source_theorem_generator name test mk_conc (tactic:hol_type -> tactic) = 
+fun add_tactic_source_theorem_generator name test (tactic:hol_type -> tactic) = 
 	add_source_theorem_generator name test
-		(fn t => case (tactic t ([],mk_conc t))
+		(fn t => case (tactic t ([],get_source_theorem_conclusion name t))
 				of ([],func) => func []
 				|  (x::xs,func) => 
 	(raise (mkStandardExn ("tactic_" ^ name ^ " (" ^ type_to_string t ^ ")") "Unsolved goals")))
 
 fun add_rule_coding_theorem_generator name test rule target = 
 	add_coding_theorem_generator target name test
-	(fn t => rule t handle e => wrapException ("rule_" ^ name ^ " (" ^ type_to_string t ^ ")") e);
+	(fn t => rule t handle e => wrapException ("rule:" ^ name ^ " (" ^ type_to_string t ^ ")") e);
 
 fun add_rule_source_theorem_generator name test rule = 
 	add_source_theorem_generator name test
-	(fn t => rule t handle e => wrapException ("rule_" ^ name ^ " (" ^ type_to_string t ^ ")") e);
+	(fn t => rule t handle e => wrapException ("rule:" ^ name ^ " (" ^ type_to_string t ^ ")") e);
+
+end

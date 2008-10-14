@@ -8,8 +8,6 @@ fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
 
 infix >-
 
-val export_rewrites = BasicProvers.export_rewrites "bag";
-
 val _ = new_theory "bag";
 
 val _ = type_abbrev("bag", Type`:'a -> num`)

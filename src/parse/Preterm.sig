@@ -63,6 +63,19 @@ sig
   val typecheck:
     ((term -> string) * (hol_type -> string) * (kind -> string)) option -> preterm -> term
 
+  datatype tcheck_error =
+           AppFail of term * term
+         | NotUnivFail of term * hol_type
+         | TyAppFail of term * hol_type
+         | TyAppKindFail of term * hol_type
+         | TyAppRankFail of term * hol_type
+         | VarKindFail of string * hol_type
+         | ConstKindFail of string * string * hol_type
+         | ConstrainKindFail of term * hol_type
+         | ConstrainFail of term * hol_type
+         | OvlNoType of string * hol_type
+
+  val last_tcerror : (tcheck_error * locn.locn) option ref
 
 end;
 

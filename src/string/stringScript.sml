@@ -12,9 +12,7 @@
 *)
 
 open HolKernel boolLib Parse;
-open numLib numSyntax BasicProvers SingleStep listTheory bossLib metisLib;
-
-val export_rewrites = BasicProvers.export_rewrites "string";
+open numLib numSyntax BasicProvers SingleStep listTheory bossLib metisLib
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
@@ -153,7 +151,7 @@ REPEAT STRIP_TAC
   THEN STRIP_ASSUME_TAC (Q.SPEC `c` CHR_ONTO)
   THEN RW_TAC bool_ss []);
 
-val char_size_def = 
+val char_size_def =
  Define
    `char_size (c:char) = 0`;
 
@@ -163,7 +161,7 @@ val char_size_def =
       representation.
  ---------------------------------------------------------------------------*)
 
-val _ = 
+val _ =
  Hol_datatype `string = EMPTYSTRING | STRING of char => string`
 
 val GET_def = Define`
@@ -429,7 +427,7 @@ val isPREFIX_STRCAT = Q.store_thm
  recInduct (theorem "isPREFIX_ind") THEN SRW_TAC [][] THEN PROVE_TAC []);
 
 (*---------------------------------------------------------------------------
-       Orderings                           
+       Orderings
  ---------------------------------------------------------------------------*)
 
 val string_lt_def = Define`

@@ -2988,10 +2988,15 @@ val PLACE_def = Define `PLACE s1 s2 s3 a (A,B,C,D) =
                     then if LEQ s1 a then (a::A,B,C,D) else (A,a::B,C,D)
                     else if LEQ s3 a then (A,B,a::C,D) else (A,B,C,a::D)`;
 
-val PARTITION_def = 
- Define `(PARTITION s1 s2 s3 (A,B,C,D) [] = (A,B,C,D)) /\
-         (PARTITION s1 s2 s3 (A,B,C,D) (a::bs) =
-               PARTITION s1 s2 s3 (PLACE s1 s2 s3 a (A,B,C,D)) bs)`;  
+val (PARTITION_def,PARTIION_ind) =
+ Defn.tprove(Defn.Hol_defn "PARTITION" 
+    `(PARTITION s1 s2 s3 (A,B,C,D) [] = (A,B,C,D)) /\
+     (PARTITION s1 s2 s3 (A,B,C,D) (a::bs) =
+               PARTITION s1 s2 s3 (PLACE s1 s2 s3 a (A,B,C,D)) bs)`,
+    Q.EXISTS_TAC `measure (LENGTH o SND o SND o SND o SND)` THEN
+    REWRITE_TAC [prim_recTheory.WF_measure] THEN
+    REWRITE_TAC [prim_recTheory.measure_thm] THEN
+    RW_TAC std_ss [LENGTH]);
 
 val RFILTER_def =
  Define `(RFILTER P [] A = A) /\ (RFILTER P (a::b) A = RFILTER P b (if P a then a::A else A))`;
@@ -3070,8 +3075,12 @@ val LPLACE_def = Define `
 val LLEQ_THM = prove(``!s1 s2 x. LLEQ (MAP ORD (EXPLODE s1)) s2 = LEQ s1 (s2,x)``,
 	completeInduct_on `STRLEN s1 + STRLEN s2` THEN
 	Cases THEN Cases THEN RW_TAC arith_ss [LLEQ_def,LEQ_def,stringTheory.EXPLODE_EQNS,MAP,leq_def] THEN
-	POP_ASSUM (MP_TAC o SPEC ``STRLEN s + STRLEN s'``) THEN RW_TAC arith_ss [stringTheory.STRLEN_DEF] THEN
-	METIS_TAC [LEQ_def]);
+        RULE_ASSUM_TAC (CONV_RULE (REPEATC (STRIP_QUANT_CONV RIGHT_IMP_FORALL_CONV) THENC 
+			REWRITE_CONV [AND_IMP_INTRO])) THEN
+        REPEAT AP_TERM_TAC THEN
+	REWRITE_TAC [GSYM LEQ_def] THEN
+	POP_ASSUM MATCH_MP_TAC THEN
+	RW_TAC arith_ss [stringTheory.STRLEN_DEF]);
 
 val LPLACE_THM = prove(``!s1 s2 s3. PLACE s1 s2 s3 = 
 		LPLACE (MAP ORD (EXPLODE s1)) (MAP ORD (EXPLODE s2)) (MAP ORD (EXPLODE s3))``,

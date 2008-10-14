@@ -2142,7 +2142,7 @@ are little more than the rules of inference \ml{ABS}
 \]
 (where $x\not\in\Gamma$) and \ml{MK\_COMB}
 \[
-\frac{Gamma \turn f = g \qquad \qquad \Delta \turn x = y}
+\frac{\Gamma \turn f = g \qquad \qquad \Delta \turn x = y}
 {\Gamma \cup \Delta \turn f(x) = g(y)}
 \]
 When specifying the action of the simplifier, these rules should be
@@ -2460,6 +2460,8 @@ the simplifier will perform AC-normalisation of disjunctions.  The
 \ml{Cong} function provides a similar interface for the addition of
 new congruence rules.
 
+\index{Once (controlling rewrite applications)@\ml{Once} (controlling rewrite applications)}
+\index{Ntimes (controlling rewrite applications)@\ml{Ntimes} (controlling rewrite applications)}
 Two other functions provide a crude mechanism for controlling the
 number of times an individual rewrite will be applied.
 \begin{hol}
@@ -2469,17 +2471,37 @@ number of times an individual rewrite will be applied.
 \end{verbatim}
 \end{hol}
 A theorem ``wrapped'' in the \ml{Once} function will only be applied
-once when the simplifier runs.  A theorem wrapped in \ml{Ntimes} will
-be applied as many times as given in the integer parameter.  These
-restrictions apply across multiple applications of the simplifier to
-different goals.  This means that if \ml{tac} in
+once when the simplifier is applied to a given term.  A theorem
+wrapped in \ml{Ntimes} will be applied as many times as given in the
+integer parameter.
+
+\subsubsection{Limiting simplification}
+\label{sec:limit-simpl}
+
+\index{simplification!guaranteeing termination}
+In addition to the \ml{Once} and \ml{Ntimes} theorem-forms just
+discussed, which limit the number of times a particular rewrite is
+applied, the simplifier can also be limited in the total number of
+rewrites it performs. The \ml{limit} function (in \ml{simpLib} and
+\ml{bossLib})
 \begin{hol}
 \begin{verbatim}
-   tac THEN SIMP_TAC bool_ss [Once th]
+   limit : int -> simpset -> simpset
 \end{verbatim}
 \end{hol}
-results in two sub-goals, then \ml{th} will only be used as a rewrite
-in one of those goals.
+records a numeric limit in a \simpset{}.  When a limited \simpset{}
+then works over a term, it will never apply more than the given number
+of rewrites to that term.  When conditional rewrites are used, the
+rewriting done in the discharge of side-conditions counts against the
+limit, as long as the rewrite is ultimately applied.  The application
+of user-provided congruence rules, user-provided conversions and
+decision procedures also all count against the limit.
+
+When the simplifier yields control to a user-provided conversion or
+decision procedure it cannot guarantee that these functions will ever
+return (and they may also take arbitrarily long to work, often a worry
+with arithmetic decision procedures), but use of \ml{limit} is
+otherwise a good method for ensuring that simplification terminates.
 
 \index{simplification|)}
 

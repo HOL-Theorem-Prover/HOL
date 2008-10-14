@@ -3,6 +3,7 @@ sig
   include Abbrev
 
   val int_ss         : simpLib.simpset
+  val INT_ARITH_ss   : simpLib.ssfrag
 
   val prefer_int     : unit -> unit
   val deprecate_int  : unit -> unit

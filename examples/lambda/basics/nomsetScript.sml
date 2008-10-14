@@ -6,8 +6,6 @@ open pred_setTheory
 
 open basic_swapTheory NEWLib
 
-val export_rewrites = export_rewrites "nomset";
-
 val _ = new_theory "nomset";
 
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before
@@ -842,7 +840,7 @@ val supp_fnapp = store_thm(
   METIS_TAC [supp_smallest, FINITE_UNION, supp_supports, fnpm_is_perm,
              support_fnapp]);
 
-open finite_mapTheory 
+open finite_mapTheory
 val _ = set_trace "Unicode" 1
 val fmpm_def = Define`
   fmpm (dpm : 'd pm) (rpm : 'r pm) pi fmap =
@@ -922,7 +920,7 @@ val supp_setpm = store_thm(
 val supp_FINITE_strings = store_thm(
   "supp_FINITE_strings",
   ``FINITE s ==> (supp (setpm lswapstr) s = s)``,
-  SRW_TAC [][supp_setpm, pred_setTheory.EXTENSION] THEN EQ_TAC THEN 
+  SRW_TAC [][supp_setpm, pred_setTheory.EXTENSION] THEN EQ_TAC THEN
   STRIP_TAC THENL [
     METIS_TAC [],
     Q.EXISTS_TAC `{x}` THEN SRW_TAC [][] THEN METIS_TAC []
@@ -996,24 +994,24 @@ val fmap_supp = store_thm(
 
 val FAPPLY_eqv_lswapstr = store_thm(
   "FAPPLY_eqv_lswapstr",
-  ``is_perm rpm ∧ d ∈ FDOM fm ==> 
+  ``is_perm rpm ∧ d ∈ FDOM fm ==>
     (rpm pi (fm ' d) = fmpm lswapstr rpm pi fm ' (lswapstr pi d))``,
   SRW_TAC [][fmpm_def, FAPPLY_f_o, FDOM_f_o, lemma, o_f_FAPPLY]);
-  (* feels as if it should be possible to prove this for the case where d is 
+  (* feels as if it should be possible to prove this for the case where d is
      not in the domain *)
 
 val fmpm_FEMPTY = store_thm(
   "fmpm_FEMPTY",
-  ``is_perm dpm ==> (fmpm dpm rpm pi FEMPTY = FEMPTY)``, 
+  ``is_perm dpm ==> (fmpm dpm rpm pi FEMPTY = FEMPTY)``,
   SRW_TAC [][fmap_EXT, fmpm_applied, fmpm_FDOM, pred_setTheory.EXTENSION]);
 val _ = export_rewrites ["fmpm_FEMPTY"]
 
 val fmpm_FUPDATE = store_thm(
   "fmpm_FUPDATE",
-  ``is_perm dpm ∧ is_perm rpm ==> 
-    (fmpm dpm rpm pi (fm |+ (k,v)) = 
+  ``is_perm dpm ∧ is_perm rpm ==>
+    (fmpm dpm rpm pi (fm |+ (k,v)) =
        fmpm dpm rpm pi fm |+ (dpm pi k, rpm pi v))``,
-  SRW_TAC [][fmap_EXT, fmpm_applied, fmpm_FDOM, pred_setTheory.EXTENSION] 
+  SRW_TAC [][fmap_EXT, fmpm_applied, fmpm_FDOM, pred_setTheory.EXTENSION]
   THENL [
     SRW_TAC [][is_perm_eql],
     SRW_TAC [][is_perm_inverse],
@@ -1024,9 +1022,9 @@ val fmpm_FUPDATE = store_thm(
     ]
   ]);
 val _ = export_rewrites ["fmpm_FUPDATE"]
-        
-      
-     
+
+
+
 
 val fcond_def = Define`
   fcond pm f = is_perm pm /\ FINITE (supp (fnpm perm_of pm) f) /\

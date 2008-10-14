@@ -475,19 +475,18 @@ in
 fn q => let
      val ((qb,p), _) = pt (new_buffer q, initial_pstack)
          handle base_tokens.LEX_ERR (s,locn) =>
-                Raise (ERRORloc "Absyn" locn ("Lexical error - "^s))
+                raise (ERRORloc "Absyn" locn ("Lexical error - "^s))
    in
      if is_final_pstack p then
        case current qb of
          (BT_EOI,locn) => (top_nonterminal p handle ParseTermError (s,locn) =>
-                                                    Raise (ERRORloc "Term" locn s))
-       | (_,locn) => Raise (ERRORloc "Absyn" locn
+                                                    raise (ERRORloc "Term" locn s))
+       | (_,locn) => raise (ERRORloc "Absyn" locn
                                      (String.concat
                                           ["Can't make sense of remaining: ",
                                            Lib.quote (toString qb)]))
      else
-       Raise (ERRORloc "Absyn" (snd (current qb))
-                    "Parse failed")
+       raise (ERRORloc "Absyn" (snd (current qb)) "Parse failed")
    end
 end;
 
@@ -672,11 +671,11 @@ end
      Parse into absyn type
  ---------------------------------------------------------------------------*)
 
-fun Absyn q = let in
+fun Absyn q = let
+in
   update_term_fns();
   remove_lets (!the_absyn_parser q)
 end
-
 
 local open Parse_support Absyn
   fun binder(VIDENT (l,s))    = make_binding_occ l s
@@ -786,6 +785,9 @@ end
 local
   open Preterm Pretype
   fun name_eq s M = ((s = fst(dest_var M)) handle HOL_ERR _ => false)
+  exception UNCHANGED
+  fun strip_csts (Constrained{Ptm,...}) = strip_csts Ptm
+    | strip_csts t = t
   fun give_types_to_fvs ctxt boundvars tm = let
     val gtf = give_types_to_fvs ctxt
   in
@@ -793,29 +795,49 @@ local
       Var{Name, Ty, Locn} => let
       in
         if has_free_uvar Ty andalso not(Lib.op_mem Preterm.eq tm boundvars) then
-          case List.find (fn ctxttm => name_eq Name ctxttm) ctxt of
-            NONE => ()
+          case List.find (name_eq Name) ctxt of
+            NONE => raise UNCHANGED
           | SOME ctxt_tm =>
-              unify Ty (Pretype.fromType (type_of ctxt_tm))
+              (unify Ty (Pretype.fromType (type_of ctxt_tm));
+               Var{Locn = Locn, Name = Name,
+                   Ty =  Pretype.fromType (type_of ctxt_tm)})
               handle HOL_ERR _ =>
                 (Lib.say ("\nUnconstrained variable "^Name^" in quotation "^
                           "can't have type\n\n" ^
                           type_to_string (type_of ctxt_tm) ^
                           "\n\nas given by context.\n\n");
                  raise ERRORloc "parse_in_context" Locn "unify failed")
-        else
-          ()
+        else raise UNCHANGED
       end
-    | Comb{Rator, Rand, ...} => (gtf boundvars Rator; gtf boundvars Rand)
-    | Abs{Bvar, Body, ...} => gtf (Bvar::boundvars) Body
-    | Constrained{Ptm, ...} => gtf boundvars Ptm
-    | _ => ()
+    | Comb{Rator, Rand, Locn} => let
+      in
+        let
+          val rator = gtf boundvars Rator
+        in
+          let
+            val rand =  gtf boundvars Rand
+          in
+            Comb{Rator = rator, Rand = rand, Locn = Locn}
+          end handle UNCHANGED => Comb{Rator = rator, Rand = Rand, Locn = Locn}
+        end handle UNCHANGED =>
+                   let val rand = gtf boundvars Rand
+                   in
+                     Comb{Rator = Rator, Rand = rand, Locn = Locn}
+                   end
+      end
+    | Abs{Bvar, Body, Locn} => Abs{Bvar = Bvar,
+                                   Body = gtf (strip_csts Bvar::boundvars) Body,
+                                   Locn = Locn}
+    | Constrained{Ptm,Locn,Ty} => Constrained{Ptm = gtf boundvars Ptm,
+                                              Locn = Locn, Ty = Ty}
+    | _ => raise UNCHANGED
   end
 in
-  fun parse_preterm_in_context0 FVs ptm = let
+  fun parse_preterm_in_context0 FVs ptm0 = let
+    val ptm = give_types_to_fvs FVs [] ptm0
+              handle UNCHANGED => ptm0
   in
     typecheck_phase1 (SOME(term_to_string, type_to_string, kind_to_string)) ptm;
-    give_types_to_fvs FVs [] ptm;
     remove_case_magic (to_term (overloading_resolution ptm))
   end
 
@@ -824,6 +846,17 @@ in
                   (parse_preterm_in_context0 FVs) ptm
 
   fun parse_in_context FVs q = parse_preterm_in_context FVs (Preterm q)
+
+  fun grammar_parse_in_context (tygm, tmgm) FVs q = let
+    val typarse = parse_type.parse_type typ1_rec false tygm
+    val tyvarparse = parse_type.parse_type typ1_rec false (type_grammar.var_grammar tygm)
+    val absyn = remove_lets (do_parse tmgm typarse tyvarparse q)
+    val oinfo = term_grammar.overload_info tmgm
+    val ptm =
+        Parse_support.make_preterm (absyn_to_preterm_in_env oinfo absyn)
+  in
+    parse_preterm_in_context FVs ptm
+  end
 
 end
 
@@ -958,7 +991,7 @@ in
                                                     (s, mk_structure pset [] ty);
   type_grammar_changed := true;
   term_grammar_changed := true
-end;
+end handle GrammarError s => raise ERROR "type_abbrev" s
 
 fun type_abbrev (s, ty) = let
 in

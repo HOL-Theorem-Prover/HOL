@@ -18,8 +18,6 @@ open HolKernel Parse boolLib
      bossLib arithmeticTheory pred_setTheory dBTheory
      BasicProvers basic_swapTheory
 
-val export_rewrites = export_rewrites "nc";
-
 val _ = new_theory "nc";
 
 
