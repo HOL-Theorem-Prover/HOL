@@ -265,8 +265,9 @@ fn q => let
    in
      if is_final_pstack p then
        case current qb of
-         (BT_EOI,locn) => (top_nonterminal p handle ParseTermError (s,locn) =>
-                                                    raise (ERRORloc "Term" locn s))
+         (BT_EOI,locn) => (top_nonterminal p
+                           handle ParseTermError (s,locn) =>
+                                  raise (ERRORloc "Term" locn s))
        | (_,locn) => raise (ERRORloc "Absyn" locn
                                      (String.concat
                                           ["Can't make sense of remaining: ",
@@ -291,6 +292,7 @@ in
   end
   else ()
 end
+
 
 (* ----------------------------------------------------------------------
       Interlude: ppstream modifications to allow pretty-printers to
@@ -457,10 +459,17 @@ end
      Parse into absyn type
  ---------------------------------------------------------------------------*)
 
+fun absyn_postprocess G a = let
+  val pps = term_grammar.absyn_postprocessors G
+in
+  foldl (fn ((_, f), acc) => f acc) a pps
+end
+
+
 fun Absyn q = let
 in
   update_term_fns();
-  remove_lets (!the_absyn_parser q)
+  absyn_postprocess (!the_term_grammar) (remove_lets (!the_absyn_parser q))
 end
 
 local open Parse_support Absyn
@@ -552,7 +561,9 @@ fun parse_from_grammars (tyG, tmG) = let
   val ty_parser = parse_type.parse_type typ2_rec false tyG
   (* this next parser is used within the term parser *)
   val ty_parser' = parse_type.parse_type typ1_rec false tyG
-  val tm_parser = absyn_to_term tmG o remove_lets o do_parse tmG ty_parser'
+  val tm_parser = absyn_to_term tmG o
+                  absyn_postprocess tmG o
+                  remove_lets o do_parse tmG ty_parser'
 in
   (parse_Type ty_parser, tm_parser)
 end
@@ -620,7 +631,7 @@ in
 
   fun grammar_parse_in_context (tygm, tmgm) FVs q = let
     val typarse = parse_type.parse_type typ1_rec false tygm
-    val absyn = remove_lets (do_parse tmgm typarse q)
+    val absyn = absyn_postprocess tmgm (remove_lets (do_parse tmgm typarse q))
     val oinfo = term_grammar.overload_info tmgm
     val ptm =
         Parse_support.make_preterm (absyn_to_preterm_in_env oinfo absyn)
@@ -1020,6 +1031,24 @@ fun clear_prefs_for_term s = let in
     temp_clear_prefs_for_term s;
     update_grms "clear_prefs_for_term" ("temp_clear_prefs_for_term", quote s)
  end
+
+(* ----------------------------------------------------------------------
+    Post-processing : adding user transformations to the parse processs.
+   ---------------------------------------------------------------------- *)
+
+fun temp_add_absyn_postprocessor x = let
+  open term_grammar
+in
+  the_term_grammar := new_absyn_postprocessor x (!the_term_grammar)
+end
+
+fun add_absyn_postprocessor (x as (nm,_)) = let
+in
+  temp_add_absyn_postprocessor x;
+  update_grms "add_absyn_postprocessor"
+              ("temp_add_absyn_postprocessor", "(" ^ quote nm ^ ", " ^ nm ^ ")")
+end
+
 
 (*-------------------------------------------------------------------------
         Overloading
