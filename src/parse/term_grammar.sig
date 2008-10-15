@@ -92,15 +92,15 @@ sig
   (* Users can add special-purpose printers and parsers to grammars *)
   (* The key for printers specifies a TYPE, not a term; the user's
      printer will be called onto print out all terms of that type *)
+  type term = Term.term
+  type userprinter = (type_grammar.grammar * grammar) term_pp_types.userprinter
   val add_user_printer :
-    ({Name:string, Thy:string} * term_pp_types.userprinter) -> grammar ->
+    (string * term * userprinter) -> grammar ->
     grammar
   val remove_user_printer :
-    {Name:string, Thy:string} -> grammar ->
-    (grammar * term_pp_types.userprinter option)
+    string -> grammar -> (grammar * (term * userprinter) option)
   val user_printers :
-    grammar ->
-    ({Name:string, Thy:string}, term_pp_types.userprinter)Binarymap.dict
+    grammar -> (term * string * userprinter)Net.net
 
   val absyn_postprocessors : grammar ->
                              (string * (Absyn.absyn -> Absyn.absyn)) list
@@ -212,14 +212,15 @@ sig
    *-----------------------------------------------------------------------*)
 
   val clear_prefs_for : string -> grammar -> grammar
-  val prefer_form_with_tok
-    : grammar -> {term_name : string, tok : string} -> grammar
+  val prefer_form_with_tok : grammar -> {term_name : string, tok : string} ->
+                             grammar
 
 
   val set_associativity_at_level : grammar -> int * associativity -> grammar
   val get_precedence : grammar -> string -> rule_fixity option
 
 
-  val prettyprint_grammar : ppstream -> grammar -> unit
+  val prettyprint_grammar : (ppstream -> term -> unit) -> ppstream ->
+                            grammar -> unit
 
 end

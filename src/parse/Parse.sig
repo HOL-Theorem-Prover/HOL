@@ -108,9 +108,8 @@ signature Parse = sig
   (* adding and removing user parsers and printers to the grammar *)
 
   val add_user_printer :
-    ({Tyop:string, Thy:string} * term_pp_types.userprinter * string) -> unit
-  val remove_user_printer : {Tyop:string, Thy:string} ->
-                             term_pp_types.userprinter option
+    (string * term * term_grammar.userprinter) -> unit
+  val remove_user_printer : string -> (term * term_grammar.userprinter) option
 
  (* the following functions affect the grammar, but not so that the
     grammar exported to disk will be modified *)
@@ -149,10 +148,10 @@ signature Parse = sig
   val temp_add_record_field : string * term -> unit
   val temp_add_record_fupdate : string * term -> unit
 
-  val temp_add_user_printer :
-      ({Tyop:string, Thy:string} * term_pp_types.userprinter) -> unit
-  val temp_remove_user_printer :
-      {Tyop:string, Thy:string} -> term_pp_types.userprinter option
+  val temp_add_user_printer : (string * term * term_grammar.userprinter) ->
+                              unit
+  val temp_remove_user_printer : string ->
+                                 (term * term_grammar.userprinter) option
 
   val standard_spacing : string -> fixity
                          -> {term_name   : string, fixity:fixity,

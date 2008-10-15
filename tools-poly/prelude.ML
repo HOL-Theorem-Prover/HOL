@@ -15,15 +15,16 @@ local
                endBlock : unit -> unit)
               (dpth_limit : int)
               recursive_print
-              (e : 'a) = 
+              (e : 'a) =
     putString (pp_to_string (!Globals.linewidth) f e);
+  fun ppg pps g = term_grammar.prettyprint_grammar Parse.pp_term pps g
 in
   val _ = PolyML.install_pp (pp2polypp (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term)));
   val _ = PolyML.install_pp (pp2polypp (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type)));
   val _ = PolyML.install_pp (pp2polypp (with_pp Hol_pp.pp_thm));
   val _ = PolyML.install_pp (pp2polypp (with_pp Hol_pp.pp_theory));
   val _ = PolyML.install_pp (pp2polypp (with_pp type_grammar.prettyprint_grammar));
-  val _ = PolyML.install_pp (pp2polypp (with_pp term_grammar.prettyprint_grammar));
+  val _ = PolyML.install_pp (pp2polypp (with_pp ppg))
 
   val _ = PolyML.install_pp (pp2polypp (with_pp proofManagerLib.pp_proof));
   val _ = PolyML.install_pp (pp2polypp (with_pp proofManagerLib.pp_proofs));
@@ -116,20 +117,20 @@ val _ =
   (term_pp_prefix := "``";   term_pp_suffix := "``";
    type_pp_prefix  := "``";   type_pp_suffix := "``");
 end;
-structure HOL_Interactive :> sig val toggle_quietdec : unit -> bool end = 
+structure HOL_Interactive :> sig val toggle_quietdec : unit -> bool end =
 struct
-  local val qd = ref false 
-  in       
-  fun toggle_quietdec () = 
+  local val qd = ref false
+  in
+  fun toggle_quietdec () =
       if !qd then (PolyML.Compiler.prompt1 := "> ";
                    PolyML.Compiler.prompt2 := "# ";
                    PolyML.print_depth 100;
-                   qd := false; 
+                   qd := false;
                    false)
       else (PolyML.Compiler.prompt1 := "";
             PolyML.Compiler.prompt2 := "";
             PolyML.print_depth 0;
-            qd := true; 
+            qd := true;
             true)
   end
 end

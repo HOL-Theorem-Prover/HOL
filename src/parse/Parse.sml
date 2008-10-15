@@ -1276,18 +1276,17 @@ end;
   User changes to the printer and parser
   ----------------------------------------------------------------------*)
 
-fun temp_add_user_printer ({Tyop,Thy}, pfn) = let
+fun temp_add_user_printer (name, pattern, pfn) = let
 in
   the_term_grammar :=
-    term_grammar.add_user_printer ({Name = Tyop, Thy = Thy}, pfn)
+    term_grammar.add_user_printer (name, pattern, pfn)
                                   (term_grammar());
   term_grammar_changed := true
 end
 
-fun temp_remove_user_printer {Tyop,Thy} = let
+fun temp_remove_user_printer name = let
   val (newg, printfnopt) =
-      term_grammar.remove_user_printer {Name = Tyop, Thy = Thy}
-                                       (term_grammar())
+      term_grammar.remove_user_printer name (term_grammar())
 in
   the_term_grammar := newg;
   term_grammar_changed := true;
@@ -1295,22 +1294,26 @@ in
 end;
 
 
-fun add_user_printer((r as {Tyop,Thy}),pfn,s) = let
+fun add_user_printer(name,pattern,pfn) = let
+  val g0 = (type_grammar.empty_grammar, term_grammar.stdhol)
+  val minprint =
+      trace ("types", 1)
+            (PP.pp_to_string 70 (#2 (print_from_grammars g0)))
 in
   update_grms "add_user_printer"
               ("temp_add_user_printer",
-               String.concat ["({Tyop = ", mlquote Tyop, ", Thy = ",
-                              mlquote Thy, "}, ", s, ")"]);
-  temp_add_user_printer(r, pfn)
+               String.concat ["(", quote name, ", ",
+                              "#2 (parse_from_grammars min_grammars)",
+                              "[QUOTE \"", minprint pattern, "\"], ",
+                              name, ")"]);
+  temp_add_user_printer(name, pattern, pfn)
 end;
 
-fun remove_user_printer (r as {Tyop, Thy}) = let
+fun remove_user_printer name = let
 in
   update_grms "remove_user_printer"
-              ("(ignore o temp_remove_user_printer)",
-               String.concat ["{Tyop = ", mlquote Tyop, ", Thy = ",
-                              mlquote Thy, "}"]);
-  temp_remove_user_printer r
+              ("(ignore o temp_remove_user_printer)", mlquote name);
+  temp_remove_user_printer name
 end;
 
 

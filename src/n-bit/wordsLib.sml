@@ -1223,13 +1223,13 @@ val Induct_word =
 
 (* ------------------------------------------------------------------------- *)
 
-fun print_word f sys gravs d pps t = let
+fun print_word f Gs (sys,string,brk) gravs d pps t = let
    open Portable term_pp_types
    val (n,x) = dest_n2w t
    val m = fcpLib.index_to_num x handle HOL_ERR _ => Arbnum.zero
    val v = numSyntax.dest_numeral n
 in
-  add_string pps
+  string
    ((case f (Arbnum.toInt m, v) of
        StringCvt.DEC => Arbnum.toString v
      | StringCvt.BIN => "0b"^(Arbnum.toBinString v)
@@ -1245,7 +1245,7 @@ in
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 fun output_words_as f = Parse.temp_add_user_printer
-  ({Tyop = "cart", Thy = "fcp"}, print_word f);
+  ("wordsLib.print_word", ``x:('a,'b)fcp$cart``, print_word f);
 
 fun output_words_as_bin() = output_words_as (K StringCvt.BIN);
 fun output_words_as_hex() = output_words_as (K StringCvt.HEX);
@@ -1254,7 +1254,7 @@ fun output_words_as_oct() =
   (base_tokens.allow_octal_input := true; output_words_as (K StringCvt.OCT));
 
 fun output_words_as_dec() =
-  (Parse.remove_user_printer {Tyop="cart", Thy="fcp"}; ());
+  (Parse.remove_user_printer "wordsLib.print_word"; ());
 
 val _ = output_words_as
    (fn (l, v) =>
