@@ -34,5 +34,5 @@ exception {e}. In that case, {first P list} also raises {e}.
 
 
 \SEEALSO
-Lib.exists, Lib.tryfind, Lib.all, Lib.exists.
+Lib.exists, Lib.tryfind, Lib.all.
 \ENDDOC

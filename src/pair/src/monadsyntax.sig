@@ -1,0 +1,4 @@
+signature monadsyntax =
+sig
+
+end;

@@ -249,7 +249,7 @@ in
   | PREFIX (BINDER list) =>
       map (fn b => (binder_to_string G b, PREFIX (BINDER [b]))) list
       (* binder_to_string is incomplete on LAMBDA, but this doesn't matter
-         here as the information generated here is not used to print 
+         here as the information generated here is not used to print
          pure LAMBDAs *)
   | SUFFIX (STD_suffix list) => map suffix list
   | SUFFIX TYPE_annotation => []
@@ -404,7 +404,7 @@ fun pp_term (G : grammar) TyG = let
     | SOME p => p < vscons_prec
 
   val uprinters = user_printers G
-  val printers_exist = Binarymap.numItems uprinters > 0
+  val printers_exist = Net.size uprinters > 0
 
   (* This code will print paired abstractions "properly" only if
         1. the term has an UNCURRY constant in the right place, and
@@ -602,9 +602,6 @@ fun pp_term (G : grammar) TyG = let
     strip n [] tm
   end
 
-  val allterm_uprinter = Binarymap.peek(uprinters, {Name = "", Thy = ""})
-  val polyty_uprinter = Binarymap.peek(uprinters, {Name = "'a", Thy = ""})
-
 
   fun pr_term binderp showtypes showtypes_v vars_seen pps ppfns ratorp tm
               pgrav lgrav rgrav depth = let
@@ -619,19 +616,19 @@ fun pp_term (G : grammar) TyG = let
             fun sysprint (pg,lg,rg) depth tm =
                 pr_term false showtypes showtypes_v vars_seen pps ppfns false
                         tm pg lg rg depth
-            val printfn_for_ty =
-                case Lib.total dest_thy_type (type_of tm) of
-                  NONE => polyty_uprinter
-                | SOME {Tyop,Thy,Args} =>
-                  Binarymap.peek(uprinters, {Name = Tyop, Thy = Thy})
-            fun printwith f = (f sysprint (pgrav, lgrav, rgrav) depth pps tm;
-                               raise SimpleExit)
+            val candidates = Net.match tm uprinters
+            fun test (pat,_,_) = can (kind_match_term pat) tm
+            fun printwith f =
+                (f (TyG, G)
+                   (sysprint,#add_string ppfns,#add_break ppfns)
+                   (pgrav, lgrav, rgrav)
+                   depth pps tm;
+                 raise SimpleExit)
                 handle UserPP_Failed => ()
           in
-            case (printfn_for_ty, allterm_uprinter) of
-              (SOME f, _) => printwith f
-            | (NONE, SOME f) => printwith f
-            | (NONE, NONE) => ()
+            case List.find test candidates of
+              NONE => ()
+            | SOME (_,_,f) => printwith f
           end
         else ()
 
@@ -912,10 +909,10 @@ fun pp_term (G : grammar) TyG = let
             NONE => false
           | SOME oi => mem inj_record (#actual_ops oi)
       val numeral_str = Arbnum.toString (Literal.dest_numeral tm)
-      val sfx = 
+      val sfx =
           if not is_a_real_numeral orelse !Globals.show_numeral_types then let
               val (k, _) =
-                  valOf (List.find (fn (_, s') => s' = numinfo_search_string) 
+                  valOf (List.find (fn (_, s') => s' = numinfo_search_string)
                                    num_info)
             in
               str k
@@ -926,7 +923,7 @@ fun pp_term (G : grammar) TyG = let
       add_string (numeral_str ^ sfx) ;
       if showtypes then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth TyG pps (decdepth depth) 
+         type_pp.pp_type_with_depth TyG pps (decdepth depth)
                                     (#2 (dom_rng injty)))
       else ();
       pend showtypes
@@ -1257,10 +1254,18 @@ fun pp_term (G : grammar) TyG = let
            base_type will encompass the simulated polymorphism of the
            overloading system as well as any genuine polymorphism in
            the underlying constant. *)
-        val print_name = valOf (Overload.overloading_of_term overload_info f)
-        val base_ty =
+        val base_ty = let
+        in
+          case Overload.overloading_of_term overload_info f of
+            NONE => let
+              val {Thy,Name,Ty} = dest_thy_const f
+            in
+              type_of (prim_mk_const {Thy = Thy, Name = Name})
+            end
+          | SOME print_name =>
             #base_type
-              (valOf (Overload.info_for_name overload_info print_name))
+                (valOf (Overload.info_for_name overload_info print_name))
+        end
 
         val empty_tyset = HOLset.empty Type.compare
         fun arg_tyvars acc args ty =
@@ -1764,9 +1769,9 @@ fun pp_term (G : grammar) TyG = let
                    find_partial (fn (b,s) => if s=fname then SOME b else NONE)
                                 restr_binders
                val restr_binder_rule =
-                   if isSome restr_binder andalso length args = 1 andalso 
-                      my_is_abs Rand 
-                   then let 
+                   if isSome restr_binder andalso length args = 1 andalso
+                      my_is_abs Rand
+                   then let
                        val optrule = lookup_term
                                        (binder_to_string G (valOf restr_binder))
                        fun ok_rule (_, r) =

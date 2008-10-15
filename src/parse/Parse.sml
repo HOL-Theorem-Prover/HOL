@@ -479,8 +479,9 @@ fn q => let
    in
      if is_final_pstack p then
        case current qb of
-         (BT_EOI,locn) => (top_nonterminal p handle ParseTermError (s,locn) =>
-                                                    raise (ERRORloc "Term" locn s))
+         (BT_EOI,locn) => (top_nonterminal p
+                           handle ParseTermError (s,locn) =>
+                                  raise (ERRORloc "Term" locn s))
        | (_,locn) => raise (ERRORloc "Absyn" locn
                                      (String.concat
                                           ["Can't make sense of remaining: ",
@@ -505,6 +506,7 @@ in
   end
   else ()
 end
+
 
 (* ----------------------------------------------------------------------
       Interlude: ppstream modifications to allow pretty-printers to
@@ -671,10 +673,17 @@ end
      Parse into absyn type
  ---------------------------------------------------------------------------*)
 
+fun absyn_postprocess G a = let
+  val pps = term_grammar.absyn_postprocessors G
+in
+  foldl (fn ((_, f), acc) => f acc) a pps
+end
+
+
 fun Absyn q = let
 in
   update_term_fns();
-  remove_lets (!the_absyn_parser q)
+  absyn_postprocess (!the_term_grammar) (remove_lets (!the_absyn_parser q))
 end
 
 local open Parse_support Absyn
@@ -773,7 +782,9 @@ fun parse_from_grammars (tyG, tmG) = let
   (* this next parser is used within the term parser *)
   val ty_parser' = parse_type.parse_type typ1_rec false tyG
   val ty_var_parser' = parse_type.parse_type typ1_rec false (type_grammar.var_grammar tyG)
-  val tm_parser = absyn_to_term tmG o remove_lets o do_parse tmG ty_parser' ty_var_parser'
+  val tm_parser = absyn_to_term tmG o
+                  absyn_postprocess tmG o
+                  remove_lets o do_parse tmG ty_parser' ty_var_parser'
 in
   (parse_Type ty_parser, tm_parser)
 end
@@ -850,7 +861,7 @@ in
   fun grammar_parse_in_context (tygm, tmgm) FVs q = let
     val typarse = parse_type.parse_type typ1_rec false tygm
     val tyvarparse = parse_type.parse_type typ1_rec false (type_grammar.var_grammar tygm)
-    val absyn = remove_lets (do_parse tmgm typarse tyvarparse q)
+    val absyn = absyn_postprocess tmgm (remove_lets (do_parse tmgm typarse tyvarparse q))
     val oinfo = term_grammar.overload_info tmgm
     val ptm =
         Parse_support.make_preterm (absyn_to_preterm_in_env oinfo absyn)
@@ -1330,6 +1341,24 @@ fun clear_prefs_for_term s = let in
     update_grms "clear_prefs_for_term" ("temp_clear_prefs_for_term", quote s)
  end
 
+(* ----------------------------------------------------------------------
+    Post-processing : adding user transformations to the parse processs.
+   ---------------------------------------------------------------------- *)
+
+fun temp_add_absyn_postprocessor x = let
+  open term_grammar
+in
+  the_term_grammar := new_absyn_postprocessor x (!the_term_grammar)
+end
+
+fun add_absyn_postprocessor (x as (nm,_)) = let
+in
+  temp_add_absyn_postprocessor x;
+  update_grms "add_absyn_postprocessor"
+              ("temp_add_absyn_postprocessor", "(" ^ quote nm ^ ", " ^ nm ^ ")")
+end
+
+
 (*-------------------------------------------------------------------------
         Overloading
  -------------------------------------------------------------------------*)
@@ -1556,18 +1585,17 @@ end;
   User changes to the printer and parser
   ----------------------------------------------------------------------*)
 
-fun temp_add_user_printer ({Tyop,Thy}, pfn) = let
+fun temp_add_user_printer (name, pattern, pfn) = let
 in
   the_term_grammar :=
-    term_grammar.add_user_printer ({Name = Tyop, Thy = Thy}, pfn)
+    term_grammar.add_user_printer (name, pattern, pfn)
                                   (term_grammar());
   term_grammar_changed := true
 end
 
-fun temp_remove_user_printer {Tyop,Thy} = let
+fun temp_remove_user_printer name = let
   val (newg, printfnopt) =
-      term_grammar.remove_user_printer {Name = Tyop, Thy = Thy}
-                                       (term_grammar())
+      term_grammar.remove_user_printer name (term_grammar())
 in
   the_term_grammar := newg;
   term_grammar_changed := true;
@@ -1575,22 +1603,26 @@ in
 end;
 
 
-fun add_user_printer((r as {Tyop,Thy}),pfn,s) = let
+fun add_user_printer(name,pattern,pfn) = let
+  val g0 = (type_grammar.empty_grammar, term_grammar.stdhol)
+  val minprint =
+      trace ("types", 1)
+            (PP.pp_to_string 70 (#2 (print_from_grammars g0)))
 in
   update_grms "add_user_printer"
               ("temp_add_user_printer",
-               String.concat ["({Tyop = ", mlquote Tyop, ", Thy = ",
-                              mlquote Thy, "}, ", s, ")"]);
-  temp_add_user_printer(r, pfn)
+               String.concat ["(", quote name, ", ",
+                              "#2 (parse_from_grammars min_grammars)",
+                              "[QUOTE \"", minprint pattern, "\"], ",
+                              name, ")"]);
+  temp_add_user_printer(name, pattern, pfn)
 end;
 
-fun remove_user_printer (r as {Tyop, Thy}) = let
+fun remove_user_printer name = let
 in
   update_grms "remove_user_printer"
-              ("(ignore o temp_remove_user_printer)",
-               String.concat ["{Tyop = ", mlquote Tyop, ", Thy = ",
-                              mlquote Thy, "}"]);
-  temp_remove_user_printer r
+              ("(ignore o temp_remove_user_printer)", mlquote name);
+  temp_remove_user_printer name
 end;
 
 

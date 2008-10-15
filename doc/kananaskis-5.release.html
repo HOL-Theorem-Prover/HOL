@@ -365,6 +365,19 @@ the <code>Q</code> structure) is now pickier about its parses.  Now
 any use of a free variable in a quotation that is parsed must be
 consistent with its type in the provided context.</p></li>
 
+<li><p>The user-specified pretty-printing functions that can be added
+to customise printing of terms (using <code>add_user_printer</code>),
+now key off term patterns rather than types.  Previously, if a term
+was of a the type specified by the user, the user’s function would be
+called.  Now, if the term matches the provided pattern, the function
+is called.  The old behaviour can be emulated by simply giving as the
+pattern a variable of the desired type.</p>
+
+<p>Additionally, the user’s function now gets access to a richer
+context of arguments when the system printer calls it.</p>
+
+</li>
+
 </ul>
 
 

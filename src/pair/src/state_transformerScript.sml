@@ -22,6 +22,9 @@ val UNIT_DEF = new_definition ("UNIT_DEF",
 val BIND_DEF = new_definition ("BIND_DEF",
   ``BIND (g:'a -> 'b # 'a) (f:'b -> 'a -> 'c # 'a) = UNCURRY f o g``);
 
+val IGNORE_BIND_DEF = new_definition("IGNORE_BIND_DEF",
+  ``IGNORE_BIND f g = BIND f (\x. g)``);
+
 val MMAP_DEF = new_definition ("MMAP_DEF",
   ``MMAP (f:'c->'b) (m:'a->'c#'a) = BIND m (UNIT o f)``);
 
@@ -174,10 +177,10 @@ val FST_o_MMAP = store_thm
    ++ BETA_TAC
    ++ REWRITE_TAC [FST]);
 
-val _ = 
+val _ =
  let open EmitML
  in Lib.try emitML (!Globals.emitMLDir)
-           ("state_transformer", 
+           ("state_transformer",
             map DEFN [UNIT_DEF, BIND_DEF, MMAP_DEF, JOIN_DEF])
  end;
 

@@ -5,6 +5,8 @@ open HOLgrammars GrammarSpecials Lib
 
   type ppstream = Portable.ppstream
 
+type term = Term.term
+
 type nthy_rec = {Name : string, Thy : string}
 
   type block_info = PP.break_style * int
@@ -102,8 +104,8 @@ datatype grammar_rule =
 
 type overload_info = Overload.overload_info
 
-type printer_info =
-  ({Name:string,Thy:string},term_pp_types.userprinter) Binarymap.dict
+type 'a printer_info =
+  (term * string * 'a term_pp_types.userprinter) Net.net * string Binaryset.set
 type special_info = {type_intro : string,
                      type_lbracket : string,
                      type_rbracket : string,
@@ -119,9 +121,11 @@ datatype grammar = GCONS of
    specials : special_info,
    numeral_info : (char * string option) list,
    overload_info : overload_info,
-   user_printers : printer_info,
+   user_printers : (type_grammar.grammar * grammar) printer_info,
    absyn_postprocessors : (string * (Absyn.absyn -> Absyn.absyn)) list
    }
+
+type userprinter = (type_grammar.grammar * grammar) term_pp_types.userprinter
 
 fun specials (GCONS G) = #specials G
 fun numeral_info (GCONS G) = #numeral_info G
@@ -171,21 +175,35 @@ in
   (GCONS (update_G g (U #user_printers new_uprinters) $$), result)
 end
 
+(* invariant of user_printers is that there is only ever one value with a
+   given name in the mapping from terms to print functions *)
 fun fupdate_user_printers f g =
   #1 (mfupdate_user_printers (fn ups => (f ups, ())) g)
 
-fun add_user_printer (k,v) g =
-  fupdate_user_printers (fn printers => Binarymap.insert(printers,k,v)) g
-fun remove_user_printer k g = let
-  open Lib infix ##
-  fun pp_update bmap =
-    (I ## SOME) (Binarymap.remove(bmap,k))
-    handle Binarymap.NotFound => (bmap, NONE)
+fun user_printers (GCONS g) = #1 (#user_printers g)
+
+fun remove_user_printer k (GCONS g) = let
+  val (net, keyset) = #user_printers g
 in
-  mfupdate_user_printers pp_update g
+  if Binaryset.member(keyset,k) then let
+      fun foldthis (t,nm,f) (olddata,newnet) =
+          if nm = k then (SOME (t,f), newnet)
+          else (olddata, Net.insert(t,(t,nm,f)) newnet)
+      val (data, newnet) = Net.itnet foldthis net (NONE, Net.empty)
+      val newkeys = Binaryset.delete(keyset, k)
+    in
+      (GCONS (update_G g (U #user_printers (newnet,newkeys)) $$),
+       data)
+    end
+  else (GCONS g, NONE)
 end
 
-fun user_printers (GCONS g) = #user_printers g
+fun add_user_printer (k,pat,v) g = let
+  val (g', _) = remove_user_printer k g
+  fun upd (net,keys) = (Net.insert(pat, (pat,k,v)) net, Binaryset.add(keys, k))
+in
+  fupdate_user_printers upd g'
+end
 
 fun update_alist (k,v) [] = [(k,v)]
   | update_alist (k,v) ((kv as (k',_))::rest) =
@@ -432,7 +450,7 @@ val stdhol : grammar =
                restr_binders = [], res_quanop = "::"},
    numeral_info = [],
    overload_info = Overload.null_oinfo,
-   user_printers = Binarymap.mkDict nthy_compare,
+   user_printers = (Net.empty, Binaryset.empty String.compare),
    absyn_postprocessors = []
    }
 
@@ -913,10 +931,12 @@ in
   Binarymap.foldl foldfn m2 m1
 end
 
-fun merge_user_printers pp1 pp2 = let
-  fun print_nthy {Name,Thy} = Name^"$"^Thy
+fun merge_user_printers (n1,ks1) (n2,_) = let
+  fun foldthis (tm,k,f) (n,ks) =
+      if Binaryset.member(ks,k) then (n,ks)
+      else (Net.insert(tm,(tm,k,f)) n, Binaryset.add(ks, k))
 in
-   merge_bmaps "user printers" print_nthy  pp1 pp2
+   Net.itnet foldthis n2 (n1,ks1)
 end
 
 fun alist_merge al1 al2 = let
@@ -938,7 +958,11 @@ fun merge_grammars (G1:grammar, G2:grammar) :grammar = let
   val new_numinfo = Lib.union (numeral_info G1) (numeral_info G2)
   val new_oload_info =
     Overload.merge_oinfos (overload_info G1) (overload_info G2)
-  val new_ups = merge_user_printers (user_printers G1) (user_printers G2)
+  val new_ups = let
+    val GCONS g1 = G1 and GCONS g2 = G2
+  in
+    merge_user_printers (#user_printers g1) (#user_printers g2)
+  end
 in
   GCONS {rules = newrules, specials = newspecials, numeral_info = new_numinfo,
          overload_info = new_oload_info, user_printers = new_ups,
@@ -952,7 +976,7 @@ end
 
 datatype ruletype_info = add_prefix | add_suffix | add_both | add_nothing
 
-fun prettyprint_grammar pstrm (G :grammar) = let
+fun prettyprint_grammar tmprint pstrm (G :grammar) = let
   open Portable
   val {add_string, add_break, begin_block, end_block,
        add_newline,...} = with_ppstream pstrm
@@ -1149,21 +1173,18 @@ fun prettyprint_grammar pstrm (G :grammar) = let
       end_block ()
     end
   fun print_user_printers printers = let
-    fun sort ({Name = n1, Thy = t1}, {Name = n2, Thy = t2}) =
-        case String.compare (t1,t2) of
-          EQUAL => String.compare (n1, n2)
-        | x => x
-    fun print_type {Name,Thy} = add_string (Thy^"$"^Name)
+    fun pr (pat,nm,f) =
+        (tmprint pstrm pat; add_string (" "^nm))
   in
-    if Binarymap.numItems printers = 0 then ()
+    if Net.size printers = 0 then ()
     else
       (add_newline();
-       add_string "User printing functions exist for:";
+       add_string "User printing functions:";
        add_newline();
        add_string "  ";
        begin_block INCONSISTENT 0;
-       pr_list print_type (fn () => ()) (fn () => add_break(1,0))
-               (Listsort.sort sort (map #1 (Binarymap.listItems printers)));
+       pr_list pr (fn () => ()) (fn () => add_break(1,0))
+               (Net.itnet cons printers []);
        end_block())
   end
 
