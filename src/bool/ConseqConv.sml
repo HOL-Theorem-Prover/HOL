@@ -396,4 +396,107 @@ fun ONCE_DEPTH_CONSEQ_CONV_TAC conv =
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(*---------------------------------------------------------------------------
+ * A kind of REWRITE conversion for implications.
+ *
+ * CONSEQ_REWR_CONV thm takes thms of either the form
+ * "|- a ==> c", "|- c = a" or "|- c"
+ * 
+ * c is handled exactly as "c = T"
+ *
+ * If the thm is an equation, a "normal" rewrite is attempted. Otherwise,
+ * CONDSEQ_REWR_CONV tries to match c with the input t and then returns a theorem
+ * "|- (instantiated a) ==> c"
+ *---------------------------------------------------------------------------*)
+
+fun CONSEQ_REWR_CONV___with_match thm =
+  if (is_imp (concl thm)) then
+     (PART_MATCH (snd o dest_imp) thm,
+      (snd o dest_imp o concl) thm)
+  else
+     if (is_eq (concl thm)) then
+        (PART_MATCH lhs thm, 
+         (lhs o concl) thm)
+     else
+        (EQT_INTRO o PART_MATCH I thm,
+	 concl thm)
+
+
+fun CONSEQ_REWR_CONV thm =
+    fst (CONSEQ_REWR_CONV___with_match thm);
+
+
+
+(*---------------------------------------------------------------------------
+ * His one does multiple rewrites, can handle theorems that 
+ * contain alquantification and multiple conjuncted rewrite rules and
+ * goes down into subterms.
+ *---------------------------------------------------------------------------*)
+
+fun CONSEQ_TOP_REWRITE_CONV thmL =
+   let
+     val thmL' = flatten (map BODY_CONJUNCTS thmL);
+     val conv_termL = map CONSEQ_REWR_CONV___with_match thmL';
+     val net = foldr (fn ((conv,t),net) => Net.insert (t,conv) net) Net.empty conv_termL;
+   in     
+     (fn t =>    
+        let
+	  val convL = Net.match t net;	    	
+	in
+          FIRST_CONV convL t
+	end)
+   end
+
+
+fun CONSEQ_REWRITE_CONV thmL =
+   DEPTH_CONSEQ_CONV (CONSEQ_TOP_REWRITE_CONV thmL)
+
+
+(*EXAMPLE
+
+open pred_setTheory;
+open finite_mapTheory;
+
+val rewrite_thm =
+prove (``FEVERY P FEMPTY /\
+         ((FEVERY P f /\ P (x,y)) ==>
+          FEVERY P (f |+ (x,y)))``,
+
+
+SIMP_TAC std_ss [FEVERY_DEF, FDOM_FEMPTY,
+		 NOT_IN_EMPTY, FAPPLY_FUPDATE_THM,
+		 FDOM_FUPDATE, IN_INSERT] THEN
+METIS_TAC[]);
+
+
+CONSEQ_REWRITE_CONV [rewrite_thm] ``FEVERY P (g |+ (3, x) |+ (7,z))``
+
+CONSEQ_REWRITE_CONV [rewrite_thm] ``!g. ?x. Q (g, x) /\ FEVERY P (g |+ (3, x) |+ (7,z)) \/ (z = 12)``
+
+*)
+
+
+
+
+
+
 end
+
+
+

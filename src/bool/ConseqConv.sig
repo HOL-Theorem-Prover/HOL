@@ -37,5 +37,11 @@ val CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV : conv -> conv;
 
 
 
+
+val CONSEQ_REWR_CONV : thm -> conv;
+val CONSEQ_TOP_REWRITE_CONV : thm list -> conv;
+val CONSEQ_REWRITE_CONV : thm list -> conv;
+
+
 end
 
