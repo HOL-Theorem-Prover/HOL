@@ -43,3 +43,6 @@ val eval = SIMP_CONV (srw_ss()) [state_transformerTheory.BIND_DEF,
 val result_nil = eval ``^prog []``
 val result_onethree = eval ``^prog [1;3]``
 
+(* note error messages; not great *)
+val failprog1 = ``do len ; cons x od``
+val failprog2 = ``do x <- len !! hd ; cons x od``
