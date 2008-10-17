@@ -545,11 +545,12 @@ fun pp_term (G : grammar) TyG = let
                    (pgrav, lgrav, rgrav)
                    depth pps tm;
                  raise SimpleExit)
-                handle UserPP_Failed => ()
+            fun runfirst [] = ()
+              | runfirst ((_,_,f)::t) =
+                  printwith f
+                  handle UserPP_Failed => runfirst t
           in
-            case List.find test candidates of
-              NONE => ()
-            | SOME (_,_,f) => printwith f
+            runfirst candidates
           end
         else ()
 
