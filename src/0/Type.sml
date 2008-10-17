@@ -1061,6 +1061,7 @@ fun strip_univ_binder opt =
                               end handle HOL_ERR _ => NONE)
  in fn ty =>
    let val (prefixl,body) = peel f ty []
+     val prefixlen = length prefixl
      val prefix = Array.fromList prefixl
      val vmap = curry Array.sub prefix
      val (insertAVbody,insertAVprefix,lookAV,dupls) =
@@ -1103,7 +1104,8 @@ fun strip_univ_binder opt =
             ; unclash insert rst
            end
      fun unbind (v as TyBv i) j k =
-                 k (TyFv (vmap(i-j)) handle Subscript => v)
+                 k (TyFv (vmap(i-j)) handle Subscript => if i>j then TyBv(i-prefixlen) (* new! *)
+                                                         else v)
        | unbind (TyApp(opr,ty)) j k = unbind opr j (fn opr' =>
                                       unbind ty  j (fn ty' =>
                                         k (TyApp(opr',ty'))))
@@ -1123,7 +1125,9 @@ val strip_univ_type = strip_univ_binder NONE;
 local exception CLASH
 in
 fun dest_univ_type(TyAll(Bvar as (Name,_,_), Body)) =
-    let fun dest ((v as TyBv j), i) = if i=j then TyFv Bvar else v
+    let fun dest ((v as TyBv j), i) = if i=j then TyFv Bvar
+                                      else if i<j then TyBv (j-1) (* new! *)
+                                      else v
           | dest ((v as TyFv(s,_,_)), i) =
                  if Name=s then raise CLASH else v
           | dest (TyApp(opr, ty), i)    = TyApp(dest(opr,i), dest(ty,i))
@@ -1169,6 +1173,7 @@ fun strip_abs_binder opt =
                               end handle HOL_ERR _ => NONE)
  in fn ty =>
    let val (prefixl,body) = peel f ty []
+     val prefixlen = length prefixl
      val prefix = Array.fromList prefixl
      val vmap = curry Array.sub prefix
      val (insertAVbody,insertAVprefix,lookAV,dupls) =
@@ -1211,7 +1216,8 @@ fun strip_abs_binder opt =
             ; unclash insert rst
            end
      fun unbind (v as TyBv i) j k =
-                 k (TyFv (vmap(i-j)) handle Subscript => v)
+                 k (TyFv (vmap(i-j)) handle Subscript => if i>j then TyBv(i-prefixlen) (* new! *)
+                                                         else v)
        | unbind (TyApp(opr,ty)) j k = unbind opr j (fn opr' =>
                                       unbind ty  j (fn ty' =>
                                         k (TyApp(opr',ty'))))
@@ -1231,7 +1237,9 @@ val strip_abs_type = strip_abs_binder NONE;
 local exception CLASH
 in
 fun dest_abs_type(TyAbs(Bvar as (Name,_,_), Body)) =
-    let fun dest ((v as TyBv j), i) = if i=j then TyFv Bvar else v
+    let fun dest ((v as TyBv j), i) = if i=j then TyFv Bvar
+                                      else if i<j then TyBv (j-1) (* new! *)
+                                      else v
           | dest ((v as TyFv(s,_,_)), i) =
                  if Name=s then raise CLASH else v
           | dest (TyApp(opr, ty), i)    = TyApp(dest(opr,i), dest(ty,i))
@@ -1343,24 +1351,30 @@ in
 fun raw_type_subst [] = I
   | raw_type_subst theta =
     let val (fmap,b) = addb theta (emptysubst, true)
-        fun vsubs (v as TyFv _) =
+        fun lift i j (TyBv k) = if k >= j then TyBv (i+k) else TyBv k
+          | lift i j (v as TyFv _) = v
+          | lift i j (c as TyCon _) = c
+          | lift i j (TyApp(Opr,Arg)) = TyApp(lift i j Opr, lift i j Arg)
+          | lift i j (TyAll(Bvar,Body)) = TyAll(Bvar, lift i (j+1) Body)
+          | lift i j (TyAbs(Bvar,Body)) = TyAbs(Bvar, lift i (j+1) Body)
+        fun vsubs i (v as TyFv _) =
                (case peek(fmap,v) of NONE => v
-                                   | SOME y => y)
-          | vsubs (TyApp(opr,ty)) = TyApp(vsubs opr, vsubs ty)
-          | vsubs (TyAll(Bvar,Body)) = TyAll(Bvar,vsubs Body)
-          | vsubs (TyAbs(Bvar,Body)) = TyAbs(Bvar,vsubs Body)
-          | vsubs t = t
-        fun subs ty =
+                                   | SOME y => lift i 0 y)
+          | vsubs i (TyApp(opr,ty)) = TyApp(vsubs i opr, vsubs i ty)
+          | vsubs i (TyAll(Bvar,Body)) = TyAll(Bvar,vsubs (i+1) Body)
+          | vsubs i (TyAbs(Bvar,Body)) = TyAbs(Bvar,vsubs (i+1) Body)
+          | vsubs i t = t
+        fun subs i ty =
           case peek(fmap,ty)
-           of SOME residue => residue
+           of SOME residue => lift i 0 residue
             | NONE =>
               (case ty
-                of TyApp(opr,ty) => TyApp(subs opr, subs ty)
-                 | TyAll(Bvar,Body) => TyAll(Bvar,subs Body)
-                 | TyAbs(Bvar,Body) => TyAbs(Bvar,subs Body)
+                of TyApp(opr,ty) => TyApp(subs i opr, subs i ty)
+                 | TyAll(Bvar,Body) => TyAll(Bvar,subs (i+1) Body)
+                 | TyAbs(Bvar,Body) => TyAbs(Bvar,subs (i+1) Body)
                  | _ => ty)
     in
-      (if b then vsubs else subs)
+      (if b then vsubs else subs) 0
     end
 
 fun type_subst s =
@@ -1490,7 +1504,7 @@ fun match_type pat ob = fst (raw_match_type pat ob ([],[]))
 
 fun beta_conv_ty (TyApp(M as TyAbs _, N))
        = let val (btyv,body) = dest_abs_type M
-         in type_subst [btyv |-> N] body
+         in raw_type_subst [btyv |-> N] body
          end
   | beta_conv_ty _ = raise ERR "beta_conv_ty" "not a type beta redex"
 

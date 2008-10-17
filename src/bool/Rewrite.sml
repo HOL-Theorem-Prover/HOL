@@ -48,7 +48,7 @@ datatype control = UNBOUNDED | BOUNDED of int ref
 
 
 fun decompose tag th =
- let val th = SPEC_ALL th
+ let val th = SPEC_ALL (TY_SPEC_ALL th)
      val t = concl th
  in
    if is_eq t   then [(th,tag)] else

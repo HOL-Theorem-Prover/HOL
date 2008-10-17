@@ -97,7 +97,7 @@ fun push_clos (Clos(E, Comb(f,x)))     = Comb(mk_clos(E,f), mk_clos(E,x))
  * Computing the type of a term.                                            *
  *--------------------------------------------------------------------------*)
 
-local open Subst
+local (*open Subst*)
       fun lookup 0 (ty::_)  = ty
         | lookup n (_::rst) = lookup (n-1) rst
         | lookup _ []       = raise ERR "type_of" "lookup"
@@ -792,6 +792,10 @@ fun check_subst [] = ()
            (* if "kind_of" fails because of open bound variables,
               assume the kind check was done earlier and proceed. *)
         then raise ERR "inst" "redex has different kind than residue"
+        else if (rank_of redex < rank_of residue) handle HOL_ERR _ => false
+           (* if "rank_of" fails because of open bound variables,
+              assume the rank check was done earlier and proceed. *)
+        then raise ERR "inst" "redex has lower rank than residue"
         else check_subst s
 in
 fun inst [] tm = tm
@@ -805,7 +809,8 @@ fun inst [] tm = tm
           | inst1 (v as Fv(Name,Ty)) R =
               (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
           | inst1 (Comb(Rator,Rand)) R = Comb(inst1 Rator R, inst1 Rand R)
-          | inst1 (TComb(Rator,Ty)) R  =
+          | inst1 (TComb(Rator,Ty)) R  = TComb(inst1 Rator R, Type.type_subst theta Ty)
+              (*
               let val Rator' = inst1 Rator R
                   val rty = type_of Rator'
                   val Ty' = Type.type_subst theta Ty
@@ -813,6 +818,7 @@ fun inst [] tm = tm
                   then raise ERR "inst" "universal type variable has insufficient rank"
                   else TComb(Rator', Ty')
               end
+              *)
           | inst1 (Abs(Bvar,Body)) R   = Abs(inst1 Bvar R, inst1 Body R)
           | inst1 (TAbs(Bvar as (_,_,rk),Body)) R = TAbs(Bvar, inst1 Body (rk::R))
           | inst1 (t as Clos _) R      = inst1(push_clos t) R
@@ -825,9 +831,10 @@ fun inst [] tm = tm
           | inst0 (v as Fv(Name,Ty)) =
               (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
           | inst0 (Comb(Rator,Rand)) = Comb(inst0 Rator, inst0 Rand)
-          | inst0 (TComb(Rator,Ty))  =
+          | inst0 (TComb(Rator,Ty))  = TComb(inst0 Rator, Type.type_subst theta Ty)
               (* The following check should never be violated, if the subst is proper *)
               (* One could have said,  TComb(inst0 Rator, Type.type_subst theta Ty)   *)
+              (*
               let val Rator' = inst0 Rator
                   val rty = type_of Rator'
                   val Ty' = Type.type_subst theta Ty
@@ -836,6 +843,7 @@ fun inst [] tm = tm
                        (* This error should never be raised, if the substitution is proper *)
                   else TComb(Rator', Ty')
               end
+              *)
           | inst0 (Abs(Bvar,Body))   = Abs(inst0 Bvar, inst0 Body)
           | inst0 (TAbs(Bvar as (_,_,rk),Body)) = TAbs(Bvar, inst1 Body [rk])
           | inst0 (t as Clos _)      = inst0(push_clos t)
@@ -1139,6 +1147,7 @@ fun mk_tyabs(Bvar as TyFv Bvarty, Body) =
         and bindpty (GRND ty) i       = GRND (bindty ty i)
           | bindpty (POLY ty) i       = POLY (bindty ty i)
         and bindty (v as TyFv _) i    = if v=Bvar then TyBv i else v
+          | bindty (v as TyBv j) i    = if j>i then TyBv (j+1) else v (* new *)
           | bindty (TyApp(opr,arg)) i = TyApp(bindty opr i, bindty arg i)
           | bindty (TyAll(bv,Body)) i = TyAll(bv, bindty Body (i+1))
           | bindty (TyAbs(bv,Body)) i = TyAbs(bv, bindty Body (i+1))
@@ -1375,7 +1384,7 @@ fun strip_tybinder opt =
        | unbindt (TyApp(Opr,A))j k   = unbindt Opr j (fn opr =>
                                        unbindt A j (fn a => k(TyApp(opr,a))))
        | unbindt (TyAll(a,B)) j k    = unbindt B (j+1) (fn q => k(TyAll(a,q)))
-       | unbindt (TyAbs(a,B)) j k    = unbindt B (j+1) (fn q => k(TyAll(a,q)))
+       | unbindt (TyAbs(a,B)) j k    = unbindt B (j+1) (fn q => k(TyAbs(a,q)))
        | unbindt ty j k = k ty
  in
      unclash insertAVprefix (List.rev dupls)
@@ -1410,7 +1419,7 @@ fun dest_tyabs(TAbs(Bvar as (Name,Arity,Rank), Body)) =
           | destty opr _ = opr (* constant *)
     in (TyFv Bvar, dest Body 0)
        handle CLASH =>
-              dest_tyabs(TAbs(variant_tyvar (type_vars (type_of Body)) Bvar,
+              dest_tyabs(TAbs(variant_tyvar (type_vars_in_term Body) Bvar,
                               Body))
     end
   | dest_tyabs (t as Clos _) = dest_tyabs (push_clos t)

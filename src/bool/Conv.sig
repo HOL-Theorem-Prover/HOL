@@ -85,7 +85,9 @@ sig
    val SYM_CONV              : conv
    val RIGHT_CONV_RULE       : conv -> thm -> thm
    val FUN_EQ_CONV           : conv
+   val TY_FUN_EQ_CONV        : conv
    val X_FUN_EQ_CONV         : term -> conv
+   val X_TY_FUN_EQ_CONV      : hol_type -> conv
    val SELECT_CONV           : conv
    val CONTRAPOS_CONV        : conv
    val ANTE_CONJ_CONV        : conv

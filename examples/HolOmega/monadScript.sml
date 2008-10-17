@@ -266,6 +266,9 @@ e REFL_TAC;
             Functor predicate
  ---------------------------------------------------------------------------*)
 
+(*
+val _ = try type_abbrev ("functor", Type `: !'a 'b. ('a -> 'b) -> 'a 't -> 'b 't`);
+*)
 
 val functor_def = new_definition("functor_def", Term
    `functor (phi: !'a 'b. ('a -> 'b) -> 'a 't -> 'b 't) =
@@ -310,15 +313,14 @@ val map_functor = store_thm
    THEN REWRITE_TAC[MAP_I,MAP_o]
   );
 
-val map_map_functor = store_thm
-  ("map_map_functor",
+val map_map_functor0 = store_thm
+  ("map_map_functor0",
    ``functor (\:'a 'b. MAP o (MAP : ('a -> 'b) -> ('a list -> 'b list)))``,
    REWRITE_TAC[functor_def]
    THEN TY_BETA_TAC
    THEN REWRITE_TAC[combinTheory.o_THM,MAP_I,MAP_o]
   );
 
-(*
 val functor_o = store_thm
   ("functor_o",
    ``!(phi: !'a 'b. ('a->'b) -> ('a 't1 -> 'b 't1))
@@ -329,12 +331,77 @@ val functor_o = store_thm
    THEN REWRITE_TAC[functor_def]
    THEN REPEAT STRIP_TAC
    THEN TY_BETA_TAC
-   THEN ASM_REWRITE_TAC[]
-   THEN CONV_TAC FUN_EQ_CONV
-   THEN Induct
-   THEN ASM_REWRITE_TAC[listTheory.MAP,combinTheory.o_THM]
+   THEN ASM_REWRITE_TAC[combinTheory.o_THM]
   );
-*)
+
+val map_map_functor = save_thm
+  ("map_map_functor",
+   (TY_BETA_RULE o MATCH_MP functor_o) (CONJ map_functor map_functor)
+  );
+
+
+
+(*---------------------------------------------------------------------------
+            Natural transformations
+ ---------------------------------------------------------------------------*)
+
+val nattransf_def = new_definition("nattransf_def", Term
+   `nattransf (phi : !'a 'b. ('a -> 'b) -> 'a 't1 -> 'b 't1)
+              (psi : !'a 'b. ('a -> 'b) -> 'a 't2 -> 'b 't2)
+              (kappa : !'a. 'a 't1 -> 'a 't2) =
+         !:'a 'b. !(f:'a -> 'b) (x:'a 't1).
+                   psi[:'a,'b:] f (kappa[:'a:] x) = kappa[:'b:] (phi[:'a,'b:] f x)`);
+
+val nattransf_eq_o = store_thm
+  ("nattransf_eq_o",
+  ``nattransf (phi : !'a 'b. ('a -> 'b) -> 'a 't1 -> 'b 't1)
+              (psi : !'a 'b. ('a -> 'b) -> 'a 't2 -> 'b 't2)
+              (kappa : !'a. 'a 't1 -> 'a 't2) =
+         !:'a 'b. !(f:'a -> 'b).
+                   psi[:'a,'b:] f o kappa[:'a:] = kappa[:'b:] o phi[:'a,'b:] f``,
+   REWRITE_TAC[nattransf_def,FUN_EQ_THM,combinTheory.o_THM]
+  );
+
+val nattransf_functor_comp1 = store_thm
+  ("nattransf_functor_comp1",
+   ``nattransf phi1 phi2 (kappa : !'a. 'a 't1 -> 'a 't2) /\
+     functor (psi : !'a 'b. ('a->'b) -> 'a 't3 -> 'b 't3) ==>
+     nattransf (\:'a 'b. phi1[:'a 't3,'b 't3:] o psi[:'a,'b:])
+               (\:'a 'b. phi2[:'a 't3,'b 't3:] o psi[:'a,'b:])
+               (\:'a. kappa[:'a 't3:])``,
+   REWRITE_TAC[nattransf_def,functor_def]
+   THEN REPEAT STRIP_TAC
+   THEN TY_BETA_TAC
+   THEN ASM_REWRITE_TAC[combinTheory.o_THM]
+  );
+
+val nattransf_functor_comp2 = store_thm
+  ("nattransf_functor_comp2",
+   ``nattransf phi1 phi2 (kappa : !'a. 'a 't1 -> 'a 't2) /\
+     functor (psi : !'a 'b. ('a->'b) -> 'a 't3 -> 'b 't3) ==>
+     nattransf (\:'a 'b. psi[:'a 't1,'b 't1:] o phi1[:'a,'b:])
+               (\:'a 'b. psi[:'a 't2,'b 't2:] o phi2[:'a,'b:])
+               (\:'a. psi[:'a 't1,'a 't2:] (kappa[:'a:]))``,
+   REWRITE_TAC[nattransf_eq_o,functor_def]
+   THEN REPEAT STRIP_TAC
+   THEN TY_BETA_TAC
+   THEN REWRITE_TAC[combinTheory.o_THM]
+   THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM th])
+   THEN ASM_REWRITE_TAC[]
+  );
+
+val nattransf_comp1 = store_thm
+  ("nattransf_comp1",
+   ``nattransf phi1 phi2 (kappa1 : !'a. 'a 't1 -> 'a 't2) /\
+     nattransf phi2 phi3 (kappa2 : !'a. 'a 't2 -> 'a 't3) ==>
+     nattransf phi1 phi3
+               (\:'a. kappa2[:'a:] o kappa1[:'a:])``,
+   REWRITE_TAC[nattransf_eq_o]
+   THEN REPEAT STRIP_TAC
+   THEN TY_BETA_TAC
+   THEN ASM_REWRITE_TAC[nattransf_eq_o,combinTheory.o_ASSOC]
+   THEN ASM_REWRITE_TAC[GSYM combinTheory.o_ASSOC]
+  );
 
 
 
@@ -356,7 +423,7 @@ val monad_def = new_definition("monad_def", Term
           (!:'a 'b 'c. !(m:'a 'M) (k:'a -> 'b 'M) (h:'b -> 'c 'M).
                 bind[:'a,'c:] m (\a. bind[:'b,'c:] (k a) (\b. h b))
               = bind[:'b,'c:] (bind[:'a,'b:] m (\a. k a)) (\b. h b))
-     `) handle e => Raise e;
+     `);
 
 (*
 val gl = ``monad ((\:'a. I) : !'a.'a -> 'a I) (\:'a 'b. \(x:'a I) (f:'a -> 'b I). f x)``;

@@ -1539,8 +1539,15 @@ fun FUN_EQ_CONV tm =
  let val (ty1,_) = dom_rng(type_of (lhs tm))
      val vars = free_vars tm
      val varnm = if Type.is_vartype ty1 then "x"
-                  else Char.toString (Lib.trye hd
-                       (String.explode (fst(Type.dest_type ty1))))
+                  else let val opr = fst(Type.strip_app_type ty1)
+                       in if is_con_type opr then
+                              Char.toString (Lib.trye hd (String.explode (#1 (Type.dest_con_type opr))))
+                          else if Type.is_vartype opr then
+                              Char.toString (Lib.trye hd (Lib.trye tl (String.explode (#1 (Type.dest_vartype_opr opr)))))
+                          else if is_univ_type opr then "u"
+                          else if is_abs_type opr then "a"
+                          else "x"
+                       end
      val x = variant vars (mk_var{Name=varnm, Ty=ty1})
      val imp1 = DISCH_ALL (GEN x (AP_THM (ASSUME tm) x))
      val asm = ASSUME (concl (GEN x (AP_THM (ASSUME tm) x)))
@@ -1548,6 +1555,28 @@ fun FUN_EQ_CONV tm =
    IMP_ANTISYM_RULE imp1 (DISCH_ALL (EXT asm))
  end
  handle HOL_ERR _ => raise ERR "FUN_EQ_CONV" "";
+
+(* ---------------------------------------------------------------------*)
+(* TY_FUN_EQ_CONV "f = g"  returns:					*)
+(* 		   |- (f = g) = !:a. (f [:a:] = g [:a:]).		*)
+(*									*)
+(* Notes: f and g must have universal types. The conversion choses	*)
+(* an "'a" not free in f or g. This conversion just states that		*)
+(* type abstractions are equal IFF the results of applying them		*)
+(* to an arbitrary type are equal.	       	  	   		*)
+(*									*)
+(* New version: TFM 88.03.31						*)
+(* ---------------------------------------------------------------------*)
+fun TY_FUN_EQ_CONV tm =
+ let val (ty1,_) = dest_univ_type(type_of (lhs tm))
+     val tyvars = type_vars_in_term tm
+     val a = variant_type tyvars ty1
+     val imp1 = DISCH_ALL (TY_GEN a (TY_COMB (ASSUME tm) a))
+     val asm = ASSUME (concl (TY_GEN a (TY_COMB (ASSUME tm) a)))
+ in
+   IMP_ANTISYM_RULE imp1 (DISCH_ALL (TY_EXT asm))
+ end
+ handle HOL_ERR _ => raise ERR "TY_FUN_EQ_CONV" "";
 
 
 (* --------------------------------------------------------------------- *)
@@ -1562,7 +1591,7 @@ fun X_FUN_EQ_CONV x tm =
  if not(is_var x)
  then raise ERR "X_FUN_EQ_CONV" "first arg is not a variable"
  else
- if mem x (free_vars tm)
+ if op_mem aconv x (free_vars tm)
  then raise ERR"X_FUN_EQ_CONV" (#Name(dest_var x)^" is a free variable")
  else
  let val (ty,_) = with_exn dom_rng(type_of(lhs tm))
@@ -1576,6 +1605,35 @@ fun X_FUN_EQ_CONV x tm =
    else raise ERR "X_FUN_EQ_CONV" (#Name(dest_var x)^" has the wrong type")
  end
  handle e => raise (wrap_exn "Conv" "X_FUN_EQ_CONV" e);
+
+
+(* --------------------------------------------------------------------- *)
+(* X_TY_FUN_EQ_CONV "a" "f = g"                                          *)
+(*                                                                       *)
+(* yields |- (f = g) = !:a. f [:a:] = g [:a:]                            *)
+(*                                                                       *)
+(* fails if a free in f or g,                                            *)
+(* or a not a type variable of the right kind and rank.                  *)
+(* --------------------------------------------------------------------- *)
+
+fun X_TY_FUN_EQ_CONV a tm =
+ if not(is_vartype a)
+ then raise ERR "X_TY_FUN_EQ_CONV" "first arg is not a type variable"
+ else
+ if mem a (type_vars_in_term tm)
+ then raise ERR"X_TY_FUN_EQ_CONV" (dest_vartype a^" is a free type variable")
+ else
+ let val (ty,_) = with_exn dest_univ_type(type_of(lhs tm))
+                   (ERR "X_TY_FUN_EQ_CONV" "lhs and rhs do not have universal type")
+ in
+   if kind_of ty = kind_of a andalso rank_of ty = rank_of a
+   then let val imp1 = DISCH_ALL (TY_GEN a (TY_COMB (ASSUME tm) a))
+            val asm  = ASSUME (concl (TY_GEN a (TY_COMB (ASSUME tm) a)))
+        in IMP_ANTISYM_RULE imp1 (DISCH_ALL (TY_EXT asm))
+        end
+   else raise ERR "X_TY_FUN_EQ_CONV" (dest_vartype a^" has the wrong kind or rank")
+ end
+ handle e => raise (wrap_exn "Conv" "X_TY_FUN_EQ_CONV" e);
 
 (* ---------------------------------------------------------------------*)
 (* SELECT_CONV: a conversion for introducing "?" when P [@x.P[x]].	*)

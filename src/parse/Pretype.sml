@@ -258,9 +258,10 @@ fun dest_app_type(PT(UVar(ref(SOMEU ty))  ,loc)) = dest_app_type ty
 fun mk_univ_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyUniv(ty1,ty2), locn.between loc1 loc2)
 
-fun dest_univ_type(PT(UVar(ref(SOMEU ty)),loc)) = dest_univ_type ty
-  | dest_univ_type(ty as PT(TyUniv(ty1,ty2),loc)) = (ty1,ty2)
-  | dest_univ_type _ = raise TCERR "dest_univ_type" "not a universal type";
+(* dest_univ_type is defined below after the definition of beta conversion. *)
+fun dest_univ_type0(PT(UVar(ref(SOMEU ty)),loc)) = dest_univ_type0 ty
+  | dest_univ_type0(ty as PT(TyUniv(ty1,ty2),loc)) = (ty1,ty2)
+  | dest_univ_type0 _ = raise TCERR "dest_univ_type" "not a universal type";
 
 fun mk_abs_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyAbst(ty1,ty2), locn.between loc1 loc2)
@@ -934,6 +935,8 @@ fun top_sweep_conv_ty conv ty =
 val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
 
 
+val dest_univ_type = dest_univ_type0 o deep_beta_conv_ty
+
 
 infix ref_occurs_in
 
@@ -1392,7 +1395,7 @@ fun rename_tv (ty as PT(ty0, locn)) benv =
   | TyAbst (ty1, ty2) =>
       add_bvar ty1 benv >- (fn (benv',ty1') =>
       rename_tv ty2 benv' >-
-      (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn))))
+      (fn ty2' => return (PT(TyAbst(ty1', ty2'), locn))))
   | TyKindConstr {Ty, Kind} =>
       rename_kv Kind >>- (fn Kind' =>
       rename_tv Ty benv >- (fn Ty' =>

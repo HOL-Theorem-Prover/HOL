@@ -1072,8 +1072,8 @@ end;
 (* ---------------------------------------------------------------------*)
 (* TY_SPEC_ALL : thm -> thm						*)
 (*									*)
-(*     A |- !a1 ... an. t[ai]						*)
-(*    ------------------------   where the ai' are distinct 		*)
+(*     A |- !:a1 ... an. t[ai]						*)
+(*    ------------------------   where the ai' are distinct typevars    *)
 (*        A |- t[ai'/ai]	 and not free in the input theorem	*)
 (*									*)
 (* BUGFIX: added the "distinct" part and code to make the ai's not free *)
@@ -1596,7 +1596,7 @@ fun TY_GSPEC th =
  *---------------------------------------------------------------------------*)
 
 fun PART_MATCH partfn th = let
-  val th = SPEC_ALL th
+  val th = SPEC_ALL (TY_SPEC_ALL th)
   val conclfvs = Term.FVL [concl th] empty_tmset
   val hypfvs = Thm.hyp_frees th
   val hyptyvars = HOLset.listItems (Thm.hyp_tyvars th)
@@ -1654,15 +1654,19 @@ local fun variants (_,[]) = []
       fun req {redex,residue} = (redex=residue)
 in
 fun MATCH_MP ith =
- let val bod = fst(dest_imp(snd(strip_forall(concl ith))))
-     val hyptyvars = HOLset.listItems (hyp_tyvars ith)
+ let val (ial,ibod) = strip_tyforall(concl ith)
+     val ias = HOLset.addList(empty_tyset, ial)
+     val bod = fst(dest_imp(snd(strip_forall ibod)))
+     val hyptyvars = HOLset.listItems (HOLset.difference(hyp_tyvars ith, ias))
      val hypkdvars = HOLset.listItems (hyp_kdvars ith)
      val lconsts = HOLset.intersection
                      (FVL [concl ith] empty_tmset, hyp_frees ith)
  in fn th =>
    let val mfn = C (Term.kind_match_terml hypkdvars hyptyvars lconsts) (concl th)
        val (_,tyS,kdS,rkS) = mfn bod
-       val tth = INST_TYPE tyS (INST_KIND kdS (INST_RANK rkS ith))
+       val (atyS,tyS) = partition (fn {redex,residue} => mem redex ial) tyS
+       val tth0 = INST_TYPE tyS (INST_KIND kdS (INST_RANK rkS ith))
+       val tth = TY_SPECL (map (type_subst atyS) ial) tth0
        val tbod = fst(dest_imp(snd(strip_forall(concl tth))))
        val tmin = #1(mfn tbod)
        val hy1 = HOLset.listItems (hyp_frees tth)
@@ -1992,7 +1996,7 @@ end
 
 
 fun HO_PART_MATCH partfn th =
- let val sth = SPEC_ALL th
+ let val sth = SPEC_ALL (TY_SPEC_ALL th)
      val bod = concl sth
      val pbod = partfn bod
      val possbetas = mapfilter (fn v => (v,BETA_VAR v bod))
@@ -2050,13 +2054,19 @@ end;
 fun HO_MATCH_MP ith =
  let val sth =
        let val tm = concl ith
-           val (avs,bod) = strip_forall tm
+           val (atvs,tbod) = strip_tyforall tm
+           val (avs,bod) = strip_forall tbod
            val (ant,_) = dest_imp_only bod
+           val (ant_tvs,nant_tvs) = partition (C tyvar_occurs ant) atvs
        in case partition (C free_in ant) avs
-           of (_,[]) => ith
+           of (_,[]) => if null nant_tvs then ith else
+              let val th1 = SPECL avs (TY_SPECL atvs (ASSUME tm))
+                  val th2 = TY_GENL ant_tvs (GENL avs (DISCH ant (TY_GENL nant_tvs (UNDISCH th1))))
+              in MP (DISCH tm th2) ith
+              end
             | (svs,pvs) =>
-              let val th1 = SPECL avs (ASSUME tm)
-                  val th2 = GENL svs (DISCH ant (GENL pvs (UNDISCH th1)))
+              let val th1 = SPECL avs (TY_SPECL atvs (ASSUME tm))
+                  val th2 = TY_GENL ant_tvs (GENL svs (DISCH ant (TY_GENL nant_tvs (GENL pvs (UNDISCH th1)))))
               in MP (DISCH tm th2) ith
               end
        end handle HOL_ERR _ => raise ERR "MATCH_MP" "Not an implication"
