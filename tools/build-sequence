@@ -43,10 +43,10 @@ src/metis
 src/meson/src
 src/basicProof
 src/relation
+src/one
 src/pair/src
 src/sum
 src/tfl/src
-src/one
 src/option
 src/num/theories
 src/num/reduce/src
