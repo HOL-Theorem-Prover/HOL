@@ -7,7 +7,7 @@
 (* October 20, 2004                                                          *)
 (*===========================================================================*)
 
-open listTheory;
+quietdec := true; open listTheory; quietdec := false;
 
 (*---------------------------------------------------------------------------*)
 (* Syntax fiddling so that some identifiers in the HOL theory of lists,      *)
@@ -28,7 +28,7 @@ val NULL_ELIM = Q.prove
 (`!l. null l = (l=[])`, Cases THEN RW_TAC list_ss []);
 
 val FLAT_CONS_APPEND = Q.prove
-(`!L1 L2. flat (L1 :: L2) = L1 ++ FLAT L2`,
+(`!L1 L2. flat (L1 :: L2) = L1 ++ flat L2`,
  Induct THEN RW_TAC list_ss []);
 
 val FLAT_APPEND_DISTRIB = Q.prove
@@ -62,7 +62,7 @@ val unfold_facts = REWRITE_RULE [AND_IMP_INTRO]
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `tree = Node of 'a => tree list`;
+Hol_datatype `tree = Node of 'a => tree list`;
 
 (*---------------------------------------------------------------------------*)
 (* Destructors for trees                                                     *)

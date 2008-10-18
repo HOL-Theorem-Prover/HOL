@@ -1,5 +1,5 @@
 (*---------------------------------------------------------------------------*)
-(*         Substitution in the named lambda calculus                         *)
+(*       Substitution in the name-carrying lambda calculus                   *)
 (*---------------------------------------------------------------------------*)
 
 app load ["stringLib", "pred_setLib"]; 

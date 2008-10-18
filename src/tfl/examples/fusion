@@ -204,7 +204,7 @@ val treeLevels_def =
 (*---------------------------------------------------------------------------
     Breadth-first traversal is just flattening the result of treeLevels.
     But you could ask for more efficiency, and derive this by using
-    "deforestation", or fusion.
+    "deforestation", or fusion. See bfs in this directory.
  ---------------------------------------------------------------------------*)
 
 
