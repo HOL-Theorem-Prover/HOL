@@ -978,7 +978,7 @@ fun temp_type_abbrev (s, ty) = let
       if is_vartype ty then let
           val tyvar as (str, kd, rk) = dest_vartype_opr ty
         in if mem ty bvars then type_grammar.TYVAR(str,kd,rk)
-           else type_grammar.PARAM (Binarymap.find(pset, ty))
+           else type_grammar.PARAM (Binarymap.find(pset, ty), kd, rk)
         end
       else if is_con_type ty then let
           val {Thy, Tyop, Kind, Rank} = dest_thy_con_type ty

@@ -284,7 +284,7 @@ fun bare_lambda() =
 fun uchar "\\" = UChar.lambda
   | uchar "!"  = UChar.forall
   | uchar "?"  = UChar.exists
-  | uchar _    = raise Fail "Unicode.uchar: unrecognized type binder"
+  | uchar s    = raise Fail ("Unicode.uchar: unrecognized type binder: " ^ s)
 
 fun unicode_lambda () = 
     (temp_set_term_grammar (fupdate_specials (fupd_lambda (cons UChar.lambda))

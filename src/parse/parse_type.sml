@@ -41,7 +41,7 @@ fun parse_type (tyfns :
        kindparser} = tyfns
   fun structure_num_args st =
     let val max = Int.max
-        fun nargs (PARAM n) = n + 1
+        fun nargs (PARAM (n,kd,rk)) = n + 1
           | nargs (TYAPP  (opr, arg )) = max (nargs opr,  nargs arg)
           | nargs (TYUNIV (bvar,body)) = max (nargs bvar, nargs body)
           | nargs (TYABST (bvar,body)) = max (nargs bvar, nargs body)
@@ -62,7 +62,7 @@ fun parse_type (tyfns :
         qtyop {Args = map (structure_to_value (s,locn) args) Args,
                Thy = Thy, Tyop = Tyop, Locn = locn}
 *)
-      | PARAM n => List.nth(args, n)
+      | PARAM (n,kd,rk) => List.nth(args, n)
         handle Subscript =>
                Feedback.Raise
                  (ERRloc locn ("Insufficient arguments to abbreviated operator " ^

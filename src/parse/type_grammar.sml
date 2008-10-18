@@ -16,7 +16,7 @@ datatype type_structure =
        | TYUNIV of type_structure * type_structure
        | TYABST of type_structure * type_structure
        | TYVAR  of string * Kind.kind * int (* rank *)
-       | PARAM  of int
+       | PARAM  of int    * Kind.kind * int (* rank *)
 
 type special_info = {lambda : string list,
                      forall : string list}
@@ -56,9 +56,9 @@ fun structure_to_type st =
       Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
                         Args = map structure_to_type Args}
 *)
-    | PARAM n => Type.mk_vartype ("'"^str (chr (n + ord #"a")))
+    | PARAM (n,kd,rk) => Type.mk_vartype_opr ("'"^str (chr (n + ord #"a")), kd, rk)
 
-fun params0 acc (PARAM i) = HOLset.add(acc, i)
+fun params0 acc (PARAM (i,kd,rk)) = HOLset.add(acc, i)
   | params0 acc (TYCON {Thy,Tyop}) = acc
   | params0 acc (TYVAR (str,kd,rk)) = acc
   | params0 acc (TYAPP (opr,arg)) = params0 (params0 acc opr) arg
@@ -70,6 +70,17 @@ fun params0 acc (PARAM i) = HOLset.add(acc, i)
 val params = params0 (HOLset.empty Int.compare)
 
 val num_params = HOLset.numItems o params
+
+fun triple_compare(cmp1,cmp2,cmp3)((a1,a2,a3),(b1,b2,b3)) =
+    Lib.pair_compare(cmp1,Lib.pair_compare(cmp2,cmp3))((a1,(a2,a3)),(b1,(b2,b3)))
+
+fun get_params0 acc (PARAM (i,kd,rk)) = HOLset.add(acc, (i,kd,rk))
+  | get_params0 acc (TYCON {Thy,Tyop}) = acc
+  | get_params0 acc (TYVAR (str,kd,rk)) = acc
+  | get_params0 acc (TYAPP (opr,arg)) = get_params0 (get_params0 acc opr) arg
+  | get_params0 acc (TYUNIV (bvar,body)) = get_params0 (get_params0 acc bvar) body
+  | get_params0 acc (TYABST (bvar,body)) = get_params0 (get_params0 acc bvar) body
+val get_params = get_params0 (HOLset.empty (triple_compare (Int.compare,Kind.kind_compare,Int.compare)))
 
 val std_suffix_precedence = 100
 val std_binder_precedence =  20
@@ -161,7 +172,7 @@ fun new_tybinder (TYG(G,abbrevs,specials,pmap)) names =
   TYG (insert_sorted (std_binder_precedence, BINDER[names]) G, abbrevs, specials, pmap)
 
 val empty_grammar = TYG ([(std_binder_precedence, BINDER[]),
-                          (96, APPLICATION),(98, CAST),(99, ARRAY_SFX)], 
+                          (80, APPLICATION),(90, CAST),(99, ARRAY_SFX)], 
                          Binarymap.mkDict String.compare,
                          {lambda = ["\\"], forall = ["!"]},
                          TypeNet.empty)
@@ -180,7 +191,7 @@ fun is_var_rule (_,CAST) = true
 fun var_grammar (TYG(G,abbrevs,specials,pmap)) = TYG(List.filter is_var_rule G,abbrevs,specials,pmap)
 
 fun check_structure st = let
-  fun param_numbers (PARAM i, pset) = HOLset.add(pset, i)
+  fun param_numbers (PARAM (i,kd,rk), pset) = HOLset.add(pset, i)
     | param_numbers (TYCON _, pset) = pset
     | param_numbers (TYVAR _, pset) = pset
     | param_numbers (TYAPP(opr,arg), pset) = param_numbers (arg, param_numbers (opr,pset))
@@ -308,16 +319,24 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,specials,pmap)) = let
   end
 
   fun print_abbrev (s, st) = let
+    val ps = HOLset.listItems (get_params st)
     fun print_lhs () =
-      case num_params st of
+      case (*num_params st*) length ps of
         0 => add_string s
-      | 1 => (add_string "'a "; add_string s)
+      | 1 => (let val (p as (_,kd,rk)) = hd ps
+                  val simple = kd = Kind.typ andalso rk = 0
+              in if simple then () else add_string "(";
+                 pp_type G pps (structure_to_type (PARAM p));
+                 if simple then () else add_string ")";
+                 add_string " ";
+                 add_string s
+              end)
       | n => (begin_block INCONSISTENT 0;
               add_string "(";
               pr_list (pp_type G pps o structure_to_type o PARAM)
                       (fn () => add_string ",")
                       (fn () => add_break(1,0))
-                      (List.tabulate(n, I));
+                      ps;
              add_string ") ";
              add_string s)
     val ty = structure_to_type st

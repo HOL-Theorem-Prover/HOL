@@ -26,6 +26,8 @@ val _ = show_types := true;
 
 val _ = set_trace "kinds" 1;
 
+val _ = set_trace "Unicode" 1;
+
 
 val ty1 = ``:bool (\'a:<=3.'a)``;
 val kd1 = kind_of ty1;
@@ -267,7 +269,7 @@ e REFL_TAC;
  ---------------------------------------------------------------------------*)
 
 
-val _ = try type_abbrev ("functor", Type `: \'t. !'a 'b. ('a -> 'b) -> 'a 't -> 'b 't`);
+val _ = try type_abbrev ("functor", Type `: !'a 'b. ('a -> 'b) -> 'a 't -> 'b 't`);
 
 
 val functor_def = new_definition("functor_def", Term
@@ -345,7 +347,7 @@ val map_map_functor = save_thm
 
 val _ = set_trace "beta_conv_types" 1;
 
-val _ = type_abbrev ("nattransf", Type `: \'t1 't2. !'a. 'a 't1 -> 'a 't2`);
+val _ = type_abbrev ("nattransf", Type `: !'a. 'a 't1 -> 'a 't2`);
 
 val nattransf_def = new_definition("nattransf_def", Term
    `nattransf ( phi  : 't1 functor )
@@ -356,9 +358,7 @@ val nattransf_def = new_definition("nattransf_def", Term
 
 val nattransf_eq_o = store_thm
   ("nattransf_eq_o",
-  ``nattransf  phi
-               psi
-              (kappa : !'a. 'a 't1 -> 'a 't2) =
+  ``nattransf phi psi (kappa : !'a. 'a 't1 -> 'a 't2) =
          !:'a 'b. !(f:'a -> 'b).
                    psi f o kappa = kappa o phi f``,
    REWRITE_TAC[nattransf_def,FUN_EQ_THM,combinTheory.o_THM]
@@ -402,6 +402,39 @@ val nattransf_comp1 = store_thm
    THEN TY_BETA_TAC
    THEN ASM_REWRITE_TAC[nattransf_eq_o,combinTheory.o_ASSOC]
    THEN ASM_REWRITE_TAC[GSYM combinTheory.o_ASSOC]
+  );
+
+val nattransf_commute1 = store_thm
+  ("nattransf_commute1",
+   ``nattransf (phi1 : 's1 functor) (psi1 : 't1 functor) kappa1 /\
+     nattransf (phi2 : 's2 functor) (psi2 : 't2 functor) kappa2  ==>
+     (kappa2 o phi2 (kappa1[:'a:]) = psi2 kappa1 o kappa2)``,
+   REWRITE_TAC[nattransf_eq_o]
+   THEN REPEAT STRIP_TAC
+   THEN ASM_REWRITE_TAC[]
+  );
+
+(* horizontal composition of two independent natural transformations *)
+(* works on two pairs of functors, result is nattransf between functor comp *)
+(* : ('a 's1)'s2 -> ('s 't1)'t2` *)
+
+val nattransf_comp2 = store_thm
+  ("nattransf_comp2",
+   ``nattransf phi1 psi1 (kappa1 : ('r1,'s1) nattransf) /\
+     nattransf phi2 psi2 (kappa2 : ('r2,'s2) nattransf) /\
+     functor phi2 ==>
+     nattransf (\:'a 'b. phi2 o phi1)
+               (\:'a 'b. psi2 o psi1)
+               ((\:'a. kappa2 o phi2 kappa1))``,
+   REWRITE_TAC[nattransf_eq_o,functor_def]
+   THEN REPEAT STRIP_TAC
+   THEN TY_BETA_TAC
+   THEN REWRITE_TAC[combinTheory.o_THM]
+   THEN REWRITE_TAC[combinTheory.o_ASSOC]
+   THEN ASM_REWRITE_TAC[]
+   THEN REWRITE_TAC[GSYM combinTheory.o_ASSOC]
+   THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM th])
+   THEN ASM_REWRITE_TAC[]
   );
 
 
@@ -526,7 +559,7 @@ val monadc2_def = new_definition("monadc2_def", Term
      `) handle e => Raise e;
 
 
-val _ = set_trace "Unicode" 1;
+(*val _ = set_trace "Unicode" 1;*)
 val _ = html_theory "monad";
 
 val _ = export_theory();

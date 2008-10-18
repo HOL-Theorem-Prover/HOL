@@ -108,6 +108,26 @@ fun clean shr =
  in cl
  end;
 
+(*---------------------------------------------------------------------------*
+ * The free variables of a preterm. Tail recursive (from Ken Larsen).        *
+ *---------------------------------------------------------------------------*)
+
+fun from_term_var tm = let val (s,ty) = Term.dest_var tm
+                       in Var{Name=s, Ty=Pretype.fromType ty, Locn=locn.Loc_None}
+                       end
+
+local fun FV (v as Var _) A k              = k (Lib.insert v A)
+        | FV (Comb{Rator,Rand,...}) A k    = FV Rator A (fn q => FV Rand q k)
+        | FV (TyComb{Rator,Rand,...}) A k  = FV Rator A k
+        | FV (Abs{Bvar,Body,...}) A k      = FV Body A k
+        | FV (TyAbs{Bvar,Body,...}) A k    = FV Body A k
+        | FV (Constrained{Ptm,Ty,...}) A k = FV Ptm A k
+        | FV (Antiq{Tm,...}) A k = k (Lib.union (map from_term_var (Term.free_vars Tm)) A)
+        | FV _ A k = k A
+in
+fun free_vars tm = FV tm [] Lib.I
+end;
+
 val has_free_uvar = Pretype.has_free_uvar
 
 fun kindVars ptm =  (* the prekind variables in a preterm *)
@@ -784,50 +804,49 @@ fun TC printers = let
            val Rand'  = check Rand;
            val Rator_ty = ptype_of Rator'
            val Rand_ty = ptype_of Rand'
-           open Pretype
-       in if is_univ_type Rator_ty then
+       in if Pretype.is_univ_type Rator_ty then
              check (Comb{Rator=mk_not_tyabs Rator', Rand=Rand', Locn=Locn})
-          else if is_univ_type Rand_ty andalso
-                  (is_not_univ_type (fst (dom_rng Rator_ty)) handle HOL_ERR _ => false) then
+          else if Pretype.is_univ_type Rand_ty andalso
+                  (Pretype.is_not_univ_type (fst (Pretype.dom_rng Rator_ty)) handle HOL_ERR _ => false) then
              check (Comb{Rator=Rator', Rand=mk_not_tyabs Rand', Locn=Locn})
           else
-             (unify Rator_ty (Rand_ty --> all_new_uvar());
+             (Pretype.unify Rator_ty (Rand_ty --> Pretype.all_new_uvar());
               Comb{Rator=Rator', Rand=Rand', Locn=Locn})
-       end
-       handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
-                                     origin_function="unify",message})
+             handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
+                                           origin_function="unify",message})
        => let val tmp = !Globals.show_types
               val _   = Globals.show_types := true
-              val Rator' = to_term (overloading_resolution0 Rator)
-                handle e => (check Rator; Globals.show_types := tmp; raise e)
-              val Rand'  = to_term (overloading_resolution0 Rand)
-                handle e => (check Rand;  Globals.show_types := tmp; raise e)
+              val Rator_tm = to_term (overloading_resolution0 Rator')
+                handle e => (check Rator'; Globals.show_types := tmp; raise e)
+              val Rand_tm  = to_term (overloading_resolution0 Rand')
+                handle e => (check Rand';  Globals.show_types := tmp; raise e)
               val message =
                   String.concat
                       [
                        "\nType inference failure: unable to infer a type \
                        \for the application of\n\n",
-                       ptm Rator',
+                       ptm Rator_tm,
                        "\n\n"^locn.toString (locn Rator)^"\n\n",
-                       if (is_atom Rator) then ""
+                       if (is_atom Rator') then ""
                        else ("which has type\n\n" ^
-                             pty(Term.type_of Rator') ^ "\n\n"),
+                             pty(Term.type_of Rator_tm) ^ "\n\n"),
 
                        "to\n\n",
-                       ptm Rand',
+                       ptm Rand_tm,
                        "\n\n"^locn.toString (locn Rand)^"\n\n",
 
-                       if (is_atom Rand) then ""
+                       if (is_atom Rand') then ""
                        else ("which has type\n\n" ^
-                             pty(Term.type_of Rand') ^ "\n\n"),
+                             pty(Term.type_of Rand_tm) ^ "\n\n"),
 
                        "unification failure message: ", message, "\n"]
           in
             Globals.show_types := tmp;
             tcheck_say message;
-            last_tcerror := SOME (AppFail(Rator',Rand'), locn Rand);
-            raise ERRloc"typecheck" (locn Rand (* arbitrary *)) message
-          end)
+            last_tcerror := SOME (AppFail(Rator_tm,Rand_tm), locn Rand);
+            raise ERRloc"typecheck" (locn Rand' (* arbitrary *)) message
+          end
+       end)
     | check(TyComb{Rator, Rand, Locn}) =
          (let val Rator' = check Rator
               val _  = checkkind Rand
@@ -849,38 +868,34 @@ fun TC printers = let
              Prekind.unify (Pretype.pkind_of Rand) (Pretype.pkind_of bvar);
              Prerank.unify_le (Pretype.prank_of Rand) (* <= *) (Pretype.prank_of bvar);
              TyComb{Rator=Rator', Rand=Rand, Locn=Locn}
-          end
        handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                      origin_function="unify",message})
        => let val tmp = !Globals.show_types
               val _ = Globals.show_types := true
-              val Rator_ty = Pretype.toType (ptype_of Rator)
-                         handle e => raise (wrap_exn "Preterm" "check.TyComb(Rator)" e)
-              val Rator' = to_term (overloading_resolution0 Rator)
+              val Rator_tm = to_term (overloading_resolution0 Rator')
                          handle e => (Globals.show_types := tmp; raise e)
               val Pretype.PT(_,rand_locn) = Rand
-              val Rand' = Pretype.toType Rand
-                         handle e => raise (wrap_exn "Preterm" "check.TyComb(Rand)" e)
-                handle e => (Globals.show_types := tmp; raise e)
+              val Rand_ty = Pretype.toType Rand
+                         handle e => (Globals.show_types := tmp; raise e)
               val message =
                   String.concat
                       [
                        "\nType inference failure: unable to form \
                               \the application of the term\n\n",
-                       ptm Rator',
+                       ptm Rator_tm,
                        "\n\n", locn.toString (locn Rator), "\n\n",
-                       if (is_atom Rator) then ""
+                       if (is_atom Rator') then ""
                        else("which has type\n\n" ^
-                            pty(Term.type_of Rator') ^ "\n\n"),
+                            pty(Term.type_of Rator_tm) ^ "\n\n"),
                        "to the type\n\n",
-                       pty Rand',
+                       pty Rand_ty,
                        "\n\n", locn.toString rand_locn, "\n\n",
                        "since the term does not have a universal type.\n\n",
                        "unification failure message: ", message, "\n"]
           in
             Globals.show_types := tmp;
             tcheck_say message;
-            last_tcerror := SOME (TyAppFail(Rator',Rand'), rand_locn);
+            last_tcerror := SOME (TyAppFail(Rator_tm,Rand_ty), rand_locn);
             raise ERRloc"typecheck" (rand_locn (* arbitrary *)) "failed"
           end
         | (e as Feedback.HOL_ERR{origin_structure="Prekind",
@@ -888,38 +903,35 @@ fun TC printers = let
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
-              val Rator_ty = Pretype.toType (ptype_of Rator)
-                          handle e => raise (wrap_exn "Preterm" "check.TyComb3" e)
-              val Rator' = to_term (overloading_resolution0 Rator)
+              val Rator_tm = to_term (overloading_resolution0 Rator')
                        handle e => (Feedback.set_trace "kinds" tmp; raise e)
               val Pretype.PT(_,rand_locn) = Rand
-              val Rand' = (Pretype.toType Rand
-                           handle e => raise (wrap_exn "Preterm" "check.TyComb4" e))
+              val Rand_ty = Pretype.toType Rand
                        handle e => (Feedback.set_trace "kinds" tmp; raise e)
               val message =
                   String.concat
                       [
                        "\nKind inference failure: unable to infer a type \
                        \for the application of the term\n\n",
-                       ptm Rator',
+                       ptm Rator_tm,
                        "\n\n"^locn.toString (locn Rator)^"\n\n",
-                       if (is_atom Rator) then ""
+                       if (is_atom Rator') then ""
                        else ("which has type\n\n" ^
-                             pty(Term.type_of Rator') ^ "\n\n"),
+                             pty(Term.type_of Rator_tm) ^ "\n\n"),
 
                        "to the type\n\n",
-                       pty Rand',
+                       pty Rand_ty,
                        "\n\n"^locn.toString rand_locn^"\n\n",
 
                        if (Pretype.is_atom Rand) then ""
                        else ("which has kind\n\n" ^
-                             pkd(Type.kind_of Rand') ^ "\n\n"),
+                             pkd(Type.kind_of Rand_ty) ^ "\n\n"),
 
                        "kind unification failure message: ", message, "\n"]
           in
             Feedback.set_trace "kinds" tmp;
             tcheck_say message;
-            last_tcerror := SOME (TyAppKindFail(Rator',Rand'), rand_locn);
+            last_tcerror := SOME (TyAppKindFail(Rator_tm,Rand_ty), rand_locn);
             raise ERRloc"typecheck" (rand_locn (* arbitrary *)) "failed"
           end
         | (e as Feedback.HOL_ERR{origin_structure="Prerank",
@@ -927,52 +939,54 @@ fun TC printers = let
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
-              val Rator_ty = Pretype.toType (ptype_of Rator)
-              val Rator' = to_term (overloading_resolution0 Rator)
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
-              val Rator_ty' = Term.type_of Rator'
+              val Rator_tm = to_term (overloading_resolution0 Rator')
+                             handle e => (Feedback.set_trace "kinds" tmp; raise e)
+              val Rator_ty = Term.type_of Rator_tm
               val Pretype.PT(_,rand_locn) = Rand
-              val Rand' = Pretype.toType Rand
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+              val Rand_ty = Pretype.toType Rand
+                            handle e => (Feedback.set_trace "kinds" tmp; raise e)
               val message =
                   String.concat
                       [
                        "\nRank inference failure: unable to infer a type \
                        \for the application of the term\n\n",
-                       ptm Rator',
+                       ptm Rator_tm,
                        "\n\n"^locn.toString (locn Rator)^"\n\n",
 
-                       if Type.is_univ_type Rator_ty' then
+                       if Type.is_univ_type Rator_ty then
                            "whose argument must have rank <= " ^
-                           prk(Type.rank_of (#1 (Type.dest_univ_type Rator_ty'))) ^ "\n\n"
+                           prk(Type.rank_of (#1 (Type.dest_univ_type Rator_ty))) ^ "\n\n"
                        else "which is not a universal type\n\n",
-(*
-                       if (is_atom Rator) then ""
+                       if (is_atom Rator') then ""
                        else ("which has type\n\n" ^
-                             pty(Term.type_of Rator') ^ "\n\n"),
-*)
+                             pty Rator_ty ^ "\n\n"),
                        "to the type\n\n",
-                       pty Rand',
+                       pty Rand_ty,
                        "\n\n"^locn.toString rand_locn^"\n\n",
 
                        if (Pretype.is_atom Rand) then ""
                        else ("which has rank\n\n" ^
-                             prk(Type.rank_of Rand') ^ "\n\n"),
+                             prk(Type.rank_of Rand_ty) ^ "\n\n"),
 
                        "rank unification failure message: ", message, "\n"]
           in
             Feedback.set_trace "kinds" tmp;
             tcheck_say message;
-            last_tcerror := SOME (TyAppRankFail(Rator',Rand'), rand_locn);
+            last_tcerror := SOME (TyAppRankFail(Rator_tm,Rand_ty), rand_locn);
             raise ERRloc"typecheck" (rand_locn (* arbitrary *)) "failed"
+          end
           end)
     | check (  Abs{Bvar, Body, Locn}) = let val Bvar' = check Bvar
                                             val Body' = check Body
                                          in Abs{Bvar=Bvar', Body=Body', Locn=Locn}
                                         end
     | check (TyAbs{Bvar, Body, Locn}) = let val _ = checkkind Bvar
+                                            val Bvar' = Pretype.the_var_type Bvar
                                             val Body' = check Body
-                                         in TyAbs{Bvar=Bvar, Body=Body', Locn=Locn}
+                                         in if mem Bvar' (Pretype.type_varsl (map ptype_of (free_vars Body)))
+                                            then raise ERRloc "typecheck.TyAbs" Locn
+                                                   "bound type variable occurs free in the type of a free variable of the body"
+                                            else TyAbs{Bvar=Bvar, Body=Body', Locn=Locn}
                                         end
     | check (v as Var {Name, Ty, Locn}) =
        ((checkkind Ty; Prekind.unify (Pretype.pkind_of Ty) Prekind.typ;
@@ -1041,18 +1055,10 @@ fun TC printers = let
             raise ERRloc"kindcheck" (pty_locn Ty (* arbitrary *)) "failed"
           end)
     | check (Constrained{Ptm,Ty,Locn}) =
-       ((checkkind Ty;
-         Prekind.unify (Pretype.pkind_of Ty) Prekind.typ;
-         let val Ptm' = check Ptm
-             val Ptm_ty = ptype_of Ptm'
-         in if Pretype.is_univ_type Ptm_ty andalso Pretype.is_not_univ_type Ty then
-               check (Constrained{Ptm=mk_not_tyabs Ptm', Ty=Ty, Locn=Locn})
-            else
-               (Pretype.unify Ptm_ty Ty;
-                Constrained{Ptm=Ptm', Ty=Ty, Locn=Locn})
-         end)
-       handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
-                                     origin_function="unify",message})
+        (checkkind Ty;
+         Prekind.unify (Pretype.pkind_of Ty) Prekind.typ
+         handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
+                                       origin_function="unify",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
@@ -1082,12 +1088,19 @@ fun TC printers = let
             tcheck_say message;
             last_tcerror := SOME (ConstrainKindFail(real_term, real_type), ty_locn);
             raise ERRloc"kindcheck" (pty_locn Ty (* arbitrary *)) "failed"
-          end
-       | (e as Feedback.HOL_ERR{origin_structure="Pretype",
+          end;
+         let val Ptm' = check Ptm
+             val Ptm_ty = ptype_of Ptm'
+         in if Pretype.is_univ_type Ptm_ty andalso Pretype.is_not_univ_type Ty then
+               check (Constrained{Ptm=mk_not_tyabs Ptm', Ty=Ty, Locn=Locn})
+            else
+               (Pretype.unify Ptm_ty Ty;
+                Constrained{Ptm=Ptm', Ty=Ty, Locn=Locn})
+       handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                      origin_function="unify",message})
        => let val tmp = !Globals.show_types
               val _ = Globals.show_types := true
-              val real_term = to_term (overloading_resolution0 Ptm)
+              val real_term = to_term (overloading_resolution0 Ptm')
                               handle e => (check Ptm; Globals.show_types := tmp; raise e)
               val real_type = Pretype.toType Ty
                               handle e => (Globals.show_types := tmp; raise e)
@@ -1097,7 +1110,7 @@ fun TC printers = let
                        "\nType inference failure: the term\n\n",
                        ptm real_term,
                        "\n\n", locn.toString (locn Ptm), "\n\n",
-                       if (is_atom Ptm) then ""
+                       if (is_atom Ptm') then ""
                        else("which has type\n\n" ^
                             pty(Term.type_of real_term) ^ "\n\n"),
                        "can not be constrained to be of type\n\n",
@@ -1108,7 +1121,8 @@ fun TC printers = let
             last_tcerror := SOME (ConstrainFail(real_term, real_type), Locn);
             tcheck_say message;
             raise ERRloc"typecheck" Locn message
-          end)
+          end
+         end)
     | check tm = tm
 in check
 end end;

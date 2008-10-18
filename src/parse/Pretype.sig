@@ -49,6 +49,9 @@ val pkind_of : pretype -> prekind
 val prank_of : pretype -> prerank
 val is_atom  : pretype -> bool
 
+val type_vars  : pretype -> pretype list
+val type_varsl : pretype list -> pretype list
+
 val kindvars : pretype -> string list
 val tyvars : pretype -> string list
 val new_uvar : (prekind * prerank) -> pretype

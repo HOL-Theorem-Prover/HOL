@@ -31,12 +31,7 @@ TApp   ::= Leaf | Tuple Leaf
     | TYUNIV of type_structure * type_structure
     | TYABST of type_structure * type_structure
     | TYVAR  of string * Kind.kind * int (* rank *)
-    | PARAM  of int
-(*
-  datatype type_structure
-    = TYOP of {Thy : string, Tyop : string, Args : type_structure list}
-    | PARAM of int
-*)
+    | PARAM  of int    * Kind.kind * int (* rank *)
 
   type grammar
 

@@ -465,9 +465,9 @@ fun ALPHA t1 t2 =
  *
  * 	"(\x.t x)"   --->    |- (\x.t x) = t  (if x not free in t)
  *
- * fun ETA_CONV (tm as Abs(Var(vty,_), cmb as Comb(t,_))) =
+ * fun ETA_CONV (tm as Abs(Var(vnm,_), cmb as Comb(t,_))) =
  *      (let val body_ty = type_of cmb
- *           val th = SPEC t (INST_TYPE [(vty,`:'a`), (body_ty, `:'b`)] ETA_AX)
+ *           val th = SPEC t (INST_TYPE [(vnm,`:'a`), (body_ty, `:'b`)] ETA_AX)
  *           (* th = |- (\x. t x) = t *)
  *       in
  *       TRANS (SIMPLE_ALPHA(tm,lhs(concl th))) th
@@ -487,15 +487,10 @@ fun ETA_CONV tm =
  *
  * 	"(\:a.t [:a:])"   --->    |- (\:a.t [:a:]) = t  (if a not free in t)
  *
- * There is a problem with the following code, in that TY_ETA_AX only works
- * for terms t of type !'a.'b where 'a is of kind "typ".  TY_ETA_CONV should
- * not be constrained in this way, which is good, but it means this code
- * does not properly implement TY_ETA_CONV as a derived rule.  It is not
- * possible to represent this in TY_ETA_AX without kind variables in HOL-Omega.
- *
  * fun TY_ETA_CONV (tm as TAbs((_,tkd,trk), tcmb as TComb(t,_))) =
  *      (let val body_ty = type_of tcmb
- *           val th = SPEC t (INST_TYPE [beta |-> body_ty] TY_ETA_AX)
+ *           val th = SPEC t (INST_TYPE [beta |-> body_ty]
+ *                              (INST_KIND [kappa |-> tkd] TY_ETA_AX))
  *           (* th = |- (\:a. t [:a:]) = t *)
  *       in
  *       TRANS (SIMPLE_ALPHA(tm,lhs(concl th))) th
