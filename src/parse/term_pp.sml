@@ -872,8 +872,9 @@ fun pp_term (G : grammar) TyG = let
       val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
       val old_seen = !bvars_seen
 *)
-    in
-      pbegin addparens;
+    in if not (!Globals.show_types) then pr_term base pgrav lgrav rgrav depth
+       else
+     (pbegin addparens;
       begin_block CONSISTENT 2;
       pr_term base Top Top Top (decdepth depth);
       add_break (1,0);
@@ -887,7 +888,7 @@ fun pp_term (G : grammar) TyG = let
       bvars_seen := old_seen;
 *)
       end_block();
-      pend addparens
+      pend addparens)
     end
 
     fun atom_name tm =
@@ -1298,7 +1299,7 @@ fun pp_term (G : grammar) TyG = let
       if comb_show_type then
         (add_string (" "^type_intro);
          let val ty = type_of tm
-         in (* if is_univ_type ty then add_break (1,0) else *) add_break (0,0);
+         in add_break (0,0);
             type_pp.pp_type_with_depth TyG pps (decdepth depth) ty
          end)
       else ();
@@ -1597,7 +1598,7 @@ fun pp_term (G : grammar) TyG = let
       add_string "(ty_antiq(";
       add_break(0,0);
       add_string ("`"^type_intro);
-      (* if is_univ_type ty then add_break (1,0) else *) add_break (0,0);
+      add_break (0,0);
       type_pp.pp_type_with_depth TyG pps (decdepth depth) ty;
       add_string "`))";
       end_block()
@@ -1636,7 +1637,6 @@ fun pp_term (G : grammar) TyG = let
           fun add_type () = let
           in
             add_string (" "^type_intro);
-            (* if is_univ_type Ty then add_string " " else (); *)
             type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty
           end
           val new_freevar =
@@ -1664,7 +1664,6 @@ fun pp_term (G : grammar) TyG = let
             begin_block CONSISTENT 0;
             action();
             add_string (" "^type_intro);
-            (* if is_univ_type Ty then add_string " " else (); *)
             type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty;
             end_block ();
             pend true
@@ -1689,7 +1688,6 @@ fun pp_term (G : grammar) TyG = let
                 add_string "(";
                 begin_block CONSISTENT 0;
                 add_string type_intro;
-                (* if is_univ_type (hd Args) then add_string " " else (); *)
                 type_pp.pp_type_with_depth TyG pps depth (hd Args);
                 end_block ();
                 add_string ")"

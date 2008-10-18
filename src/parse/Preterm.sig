@@ -36,7 +36,7 @@ sig
      report errors. *)
 
   val typecheck_phase1 :
-    ((term -> string) * (hol_type -> string) * (kind -> string)) option -> preterm -> unit
+    ((term -> string) * (hol_type -> string) * (kind -> string)) option -> preterm -> preterm
 
   (* performs overloading resolution, possibly guessing overloads if
      this is both allowed by Globals.guessing_overloads and required by

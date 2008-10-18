@@ -196,7 +196,7 @@ val _ = set_trace "kinds" 1;
 val _ = set_trace "kinds" 0;
 
 (*---------------------------------------------------------------------------
-            Identity Monad
+            Tactics
  ---------------------------------------------------------------------------*)
 
 val tha = REWRITE_CONV[combinTheory.I_THM] ``\:'b. !x:'b. I x = x`` handle e => Raise e;
@@ -266,23 +266,22 @@ e REFL_TAC;
             Functor predicate
  ---------------------------------------------------------------------------*)
 
-(*
-val _ = try type_abbrev ("functor", Type `: !'a 'b. ('a -> 'b) -> 'a 't -> 'b 't`);
-*)
+
+val _ = try type_abbrev ("functor", Type `: \'t. !'a 'b. ('a -> 'b) -> 'a 't -> 'b 't`);
+
 
 val functor_def = new_definition("functor_def", Term
-   `functor (phi: !'a 'b. ('a -> 'b) -> 'a 't -> 'b 't) =
+   `functor (phi: 't functor) =
       (* Identity *)
-          (!:'a. phi [:'a,'a:] I = I) /\
+          (!:'a. phi (I:'a->'a) = I) /\
       (* Homomorphism *)
           (!:'a 'b 'c. !(f:'a -> 'b) (g:'b -> 'c).
-                phi[:'a,'c:](g o f) = phi[:'b,'c:]g o phi[:'a,'b:]f)
+                phi (g o f) = phi g o phi f)
      `);
-
 
 val identity_functor = store_thm
   ("identity_functor",
-   ``functor (\:'a 'b. I : ('a -> 'b) -> ('a -> 'b))``,
+   ``functor ((\:'a 'b. I) : I functor)``,
    REWRITE_TAC[functor_def]
    THEN TY_BETA_TAC
    THEN REWRITE_TAC[combinTheory.I_THM]
@@ -323,10 +322,9 @@ val map_map_functor0 = store_thm
 
 val functor_o = store_thm
   ("functor_o",
-   ``!(phi: !'a 'b. ('a->'b) -> ('a 't1 -> 'b 't1))
-      (psi: !'a 'b. ('a->'b) -> ('a 't2 -> 'b 't2)).
+   ``!(phi: 't1 functor) (psi: 't2 functor).
       functor phi /\ functor psi ==>
-      functor (\:'a 'b. psi[:'a 't1,'b 't1:] o phi[:'a,'b:])``,
+      functor (\:'a 'b. psi o phi)``,
    REPEAT GEN_TAC
    THEN REWRITE_TAC[functor_def]
    THEN REPEAT STRIP_TAC
@@ -345,29 +343,33 @@ val map_map_functor = save_thm
             Natural transformations
  ---------------------------------------------------------------------------*)
 
+val _ = set_trace "beta_conv_types" 1;
+
+val _ = type_abbrev ("nattransf", Type `: \'t1 't2. !'a. 'a 't1 -> 'a 't2`);
+
 val nattransf_def = new_definition("nattransf_def", Term
-   `nattransf (phi : !'a 'b. ('a -> 'b) -> 'a 't1 -> 'b 't1)
-              (psi : !'a 'b. ('a -> 'b) -> 'a 't2 -> 'b 't2)
-              (kappa : !'a. 'a 't1 -> 'a 't2) =
-         !:'a 'b. !(f:'a -> 'b) (x:'a 't1).
-                   psi[:'a,'b:] f (kappa[:'a:] x) = kappa[:'b:] (phi[:'a,'b:] f x)`);
+   `nattransf ( phi  : 't1 functor )
+              ( psi  : 't2 functor )
+              (kappa : ('t1,'t2)nattransf) =
+         !:'a 'b. !(f:'a -> 'b) x.
+                   psi f (kappa x) = kappa (phi f x)`);
 
 val nattransf_eq_o = store_thm
   ("nattransf_eq_o",
-  ``nattransf (phi : !'a 'b. ('a -> 'b) -> 'a 't1 -> 'b 't1)
-              (psi : !'a 'b. ('a -> 'b) -> 'a 't2 -> 'b 't2)
+  ``nattransf  phi
+               psi
               (kappa : !'a. 'a 't1 -> 'a 't2) =
          !:'a 'b. !(f:'a -> 'b).
-                   psi[:'a,'b:] f o kappa[:'a:] = kappa[:'b:] o phi[:'a,'b:] f``,
+                   psi f o kappa = kappa o phi f``,
    REWRITE_TAC[nattransf_def,FUN_EQ_THM,combinTheory.o_THM]
   );
 
 val nattransf_functor_comp1 = store_thm
   ("nattransf_functor_comp1",
-   ``nattransf phi1 phi2 (kappa : !'a. 'a 't1 -> 'a 't2) /\
-     functor (psi : !'a 'b. ('a->'b) -> 'a 't3 -> 'b 't3) ==>
-     nattransf (\:'a 'b. phi1[:'a 't3,'b 't3:] o psi[:'a,'b:])
-               (\:'a 'b. phi2[:'a 't3,'b 't3:] o psi[:'a,'b:])
+   ``nattransf phi1 phi2 (kappa : ('t1,'t2)nattransf) /\
+     functor (psi : 't3 functor) ==>
+     nattransf (\:'a 'b. phi1 o psi)
+               (\:'a 'b. phi2 o psi)
                (\:'a. kappa[:'a 't3:])``,
    REWRITE_TAC[nattransf_def,functor_def]
    THEN REPEAT STRIP_TAC
@@ -377,11 +379,11 @@ val nattransf_functor_comp1 = store_thm
 
 val nattransf_functor_comp2 = store_thm
   ("nattransf_functor_comp2",
-   ``nattransf phi1 phi2 (kappa : !'a. 'a 't1 -> 'a 't2) /\
-     functor (psi : !'a 'b. ('a->'b) -> 'a 't3 -> 'b 't3) ==>
-     nattransf (\:'a 'b. psi[:'a 't1,'b 't1:] o phi1[:'a,'b:])
-               (\:'a 'b. psi[:'a 't2,'b 't2:] o phi2[:'a,'b:])
-               (\:'a. psi[:'a 't1,'a 't2:] (kappa[:'a:]))``,
+   ``nattransf phi1 phi2 (kappa : ('t1,'t2)nattransf) /\
+     functor (psi : 't3 functor) ==>
+     nattransf (\:'a 'b. psi o phi1)
+               (\:'a 'b. psi o phi2)
+               (\:'a. psi kappa)``,
    REWRITE_TAC[nattransf_eq_o,functor_def]
    THEN REPEAT STRIP_TAC
    THEN TY_BETA_TAC
@@ -392,10 +394,9 @@ val nattransf_functor_comp2 = store_thm
 
 val nattransf_comp1 = store_thm
   ("nattransf_comp1",
-   ``nattransf phi1 phi2 (kappa1 : !'a. 'a 't1 -> 'a 't2) /\
-     nattransf phi2 phi3 (kappa2 : !'a. 'a 't2 -> 'a 't3) ==>
-     nattransf phi1 phi3
-               (\:'a. kappa2[:'a:] o kappa1[:'a:])``,
+   ``nattransf phi1 phi2 (kappa1 : ('t1,'t2)nattransf) /\
+     nattransf phi2 phi3 (kappa2 : ('t2,'t3)nattransf) ==>
+     nattransf phi1 phi3 (\:'a. kappa2 o kappa1)``,
    REWRITE_TAC[nattransf_eq_o]
    THEN REPEAT STRIP_TAC
    THEN TY_BETA_TAC

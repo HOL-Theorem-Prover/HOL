@@ -260,8 +260,32 @@ fun mk_univ_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
 
 (* dest_univ_type is defined below after the definition of beta conversion. *)
 fun dest_univ_type0(PT(UVar(ref(SOMEU ty)),loc)) = dest_univ_type0 ty
+  | dest_univ_type0(PT(TyKindConstr{Ty,Kind},loc)) = dest_univ_type0 Ty
+  | dest_univ_type0(PT(TyRankConstr{Ty,Rank},loc)) = dest_univ_type0 Ty
   | dest_univ_type0(ty as PT(TyUniv(ty1,ty2),loc)) = (ty1,ty2)
   | dest_univ_type0 _ = raise TCERR "dest_univ_type" "not a universal type";
+
+val is_univ_type = can dest_univ_type0
+
+(* is_not_abs_type is true iff the argument is decidedly NOT a type abstraction. *)
+(* Such a type would clash if unified with a absersal type. *)
+fun is_not_abs_type(PT(UVar(ref(SOMEU ty)),loc)) = is_not_abs_type ty
+  | is_not_abs_type(PT(UVar(ref(NONEU _ )),loc)) = false
+  | is_not_abs_type(PT(TyKindConstr{Ty,Kind},loc)) = is_not_abs_type Ty
+  | is_not_abs_type(PT(TyRankConstr{Ty,Rank},loc)) = is_not_abs_type Ty
+  | is_not_abs_type(PT(TyAbst(ty1,ty2),loc)) = false
+  | is_not_abs_type(PT(TyApp(ty1,ty2),loc)) = is_not_abs_type ty1
+  | is_not_abs_type _ = true;
+
+(* is_not_univ_type is true iff the argument is decidedly NOT a universal type. *)
+(* Such a type would clash if unified with a universal type. *)
+fun is_not_univ_type0(PT(UVar(ref(SOMEU ty)),loc)) = is_not_univ_type0 ty
+  | is_not_univ_type0(PT(UVar(ref(NONEU _ )),loc)) = false
+  | is_not_univ_type0(PT(TyKindConstr{Ty,Kind},loc)) = is_not_univ_type0 Ty
+  | is_not_univ_type0(PT(TyRankConstr{Ty,Rank},loc)) = is_not_univ_type0 Ty
+  | is_not_univ_type0(PT(TyUniv(ty1,ty2),loc)) = false
+  | is_not_univ_type0(PT(TyApp(ty1,ty2),loc)) = is_not_abs_type ty1
+  | is_not_univ_type0 _ = true;
 
 fun mk_abs_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyAbst(ty1,ty2), locn.between loc1 loc2)
@@ -294,6 +318,8 @@ fun dom_rng ty =
      else raise ERR "" ""
   end
   handle HOL_ERR _ => raise ERR "dom_rng" "not a function type";
+
+val is_fun_type = can dom_rng
 
 (* returns a list of strings, names of all kind variables mentioned *)
 fun kindvars (PT (ty, loc)) =
@@ -936,6 +962,18 @@ val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
 
 
 val dest_univ_type = dest_univ_type0 o deep_beta_conv_ty
+
+val is_not_univ_type = is_not_univ_type0 o deep_beta_conv_ty
+
+fun strip_univ_type ty =
+    let fun strip ty =
+       let val (bvar, body1) = dest_univ_type0 ty
+           val (bvars, body) = strip body1
+       in (bvar::bvars, body)
+       end
+       handle HOL_ERR _ => ([],ty)
+    in strip (deep_beta_conv_ty ty)
+    end
 
 
 infix ref_occurs_in

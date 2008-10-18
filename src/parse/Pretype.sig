@@ -28,12 +28,16 @@ val eq : pretype -> pretype -> bool
 
 val --> : pretype * pretype -> pretype
 val dom_rng : pretype -> pretype * pretype
+val is_fun_type : pretype -> bool
 val dest_var_type : pretype -> pretyvar
 val the_var_type : pretype -> pretype
 val mk_app_type : pretype * pretype -> pretype
 val dest_app_type : pretype -> pretype * pretype
 val mk_univ_type : pretype * pretype -> pretype
 val dest_univ_type : pretype -> pretype * pretype
+val strip_univ_type : pretype -> pretype list * pretype
+val is_univ_type : pretype -> bool
+val is_not_univ_type : pretype -> bool
 val mk_abs_type : pretype * pretype -> pretype
 val dest_abs_type : pretype -> pretype * pretype
 

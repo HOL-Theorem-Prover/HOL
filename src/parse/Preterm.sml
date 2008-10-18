@@ -663,6 +663,11 @@ fun is_atom (Var _) = true
            | _ => false)
   | is_atom t = false
 
+fun mk_tycomb(tm,ty) = TyComb{Rator=tm, Rand=ty, Locn=locn.Loc_None}
+
+fun list_mk_tycomb(tm,[]) = tm
+  | list_mk_tycomb(tm,ty::tys) = list_mk_tycomb(mk_tycomb(tm,ty),tys)
+
 
 local
   val op --> = Pretype.-->
@@ -767,11 +772,28 @@ fun TC printers = let
     | ptype_of (Antiq{Tm,...}) = Pretype.fromType (Term.type_of Tm)
     | ptype_of (Overloaded {Ty,...}) = Ty
   val checkkind = Pretype.checkkind (case printers of SOME (x,y,z) => SOME (y,z) | NONE => NONE)
+  fun mk_not_tyabs tm =
+       let open Pretype
+           val ty = ptype_of tm
+           val (bvars,body) = strip_univ_type ty
+           val args = map (fn bvar => new_uvar(pkind_of bvar,Prerank.new_uvar())) bvars
+       in list_mk_tycomb(tm, args)
+       end
   fun check(Comb{Rator, Rand, Locn}) =
-      (check Rator;
-       check Rand;
-       Pretype.unify (ptype_of Rator)
-       (ptype_of Rand --> Pretype.all_new_uvar())
+      (let val Rator' = check Rator;
+           val Rand'  = check Rand;
+           val Rator_ty = ptype_of Rator'
+           val Rand_ty = ptype_of Rand'
+           open Pretype
+       in if is_univ_type Rator_ty then
+             check (Comb{Rator=mk_not_tyabs Rator', Rand=Rand', Locn=Locn})
+          else if is_univ_type Rand_ty andalso
+                  (is_not_univ_type (fst (dom_rng Rator_ty)) handle HOL_ERR _ => false) then
+             check (Comb{Rator=Rator', Rand=mk_not_tyabs Rand', Locn=Locn})
+          else
+             (unify Rator_ty (Rand_ty --> all_new_uvar());
+              Comb{Rator=Rator', Rand=Rand', Locn=Locn})
+       end
        handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                      origin_function="unify",message})
        => let val tmp = !Globals.show_types
@@ -807,10 +829,10 @@ fun TC printers = let
             raise ERRloc"typecheck" (locn Rand (* arbitrary *)) message
           end)
     | check(TyComb{Rator, Rand, Locn}) =
-         (check Rator;
-          checkkind Rand;
-          let val rator_ty = ptype_of Rator
-              val (bvar,body) = Pretype.dest_univ_type rator_ty
+         (let val Rator' = check Rator
+              val _  = checkkind Rand
+              val Rator_ty = ptype_of Rator'
+              val (bvar,body) = Pretype.dest_univ_type Rator_ty
                                 handle HOL_ERR _ => let
                                      val s = "'a"
                                      val kd = Prekind.new_uvar()
@@ -820,12 +842,13 @@ fun TC printers = let
                                      val body = Pretype.mk_app_type(Pretype.all_new_uvar(), bvar)
                                      val univ_ty = Pretype.mk_univ_type(bvar, body)
                                  in checkkind univ_ty;
-                                    Pretype.unify rator_ty univ_ty;
+                                    Pretype.unify Rator_ty univ_ty;
                                     (bvar,body)
                                  end
           in
              Prekind.unify (Pretype.pkind_of Rand) (Pretype.pkind_of bvar);
-             Prerank.unify_le (Pretype.prank_of Rand) (* <= *) (Pretype.prank_of bvar)
+             Prerank.unify_le (Pretype.prank_of Rand) (* <= *) (Pretype.prank_of bvar);
+             TyComb{Rator=Rator', Rand=Rand, Locn=Locn}
           end
        handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                      origin_function="unify",message})
@@ -943,10 +966,17 @@ fun TC printers = let
             last_tcerror := SOME (TyAppRankFail(Rator',Rand'), rand_locn);
             raise ERRloc"typecheck" (rand_locn (* arbitrary *)) "failed"
           end)
-    | check (  Abs{Bvar, Body, Locn}) = (check Bvar; check Body)
-    | check (TyAbs{Bvar, Body, Locn}) = (checkkind Bvar; check Body)
-    | check (Var {Name, Ty, Locn}) =
-       ((checkkind Ty; Prekind.unify (Pretype.pkind_of Ty) Prekind.typ)
+    | check (  Abs{Bvar, Body, Locn}) = let val Bvar' = check Bvar
+                                            val Body' = check Body
+                                         in Abs{Bvar=Bvar', Body=Body', Locn=Locn}
+                                        end
+    | check (TyAbs{Bvar, Body, Locn}) = let val _ = checkkind Bvar
+                                            val Body' = check Body
+                                         in TyAbs{Bvar=Bvar, Body=Body', Locn=Locn}
+                                        end
+    | check (v as Var {Name, Ty, Locn}) =
+       ((checkkind Ty; Prekind.unify (Pretype.pkind_of Ty) Prekind.typ;
+         v)
        handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
                                      origin_function="unify",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"
@@ -977,8 +1007,8 @@ fun TC printers = let
             last_tcerror := SOME (VarKindFail(Name, real_type), ty_locn);
             raise ERRloc"kindcheck" (pty_locn Ty (* arbitrary *)) "failed"
           end)
-    | check (Const {Name, Thy, Ty, Locn}) =
-       ((checkkind Ty; Prekind.unify (Pretype.pkind_of Ty) Prekind.typ)
+    | check (c as Const {Name, Thy, Ty, Locn}) =
+       ((checkkind Ty; Prekind.unify (Pretype.pkind_of Ty) Prekind.typ; c)
        handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
                                      origin_function="unify",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"
@@ -1013,8 +1043,14 @@ fun TC printers = let
     | check (Constrained{Ptm,Ty,Locn}) =
        ((checkkind Ty;
          Prekind.unify (Pretype.pkind_of Ty) Prekind.typ;
-         check Ptm;
-         Pretype.unify (ptype_of Ptm) Ty)
+         let val Ptm' = check Ptm
+             val Ptm_ty = ptype_of Ptm'
+         in if Pretype.is_univ_type Ptm_ty andalso Pretype.is_not_univ_type Ty then
+               check (Constrained{Ptm=mk_not_tyabs Ptm', Ty=Ty, Locn=Locn})
+            else
+               (Pretype.unify Ptm_ty Ty;
+                Constrained{Ptm=Ptm', Ty=Ty, Locn=Locn})
+         end)
        handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
                                      origin_function="unify",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"
@@ -1073,7 +1109,7 @@ fun TC printers = let
             tcheck_say message;
             raise ERRloc"typecheck" Locn message
           end)
-    | check _ = ()
+    | check tm = tm
 in check
 end end;
 
@@ -1094,8 +1130,8 @@ fun typecheck_phase1 pfns ptm =
 val post_process_term = ref (I : term -> term);
 
 fun typecheck pfns ptm0 = let
-  val () = TC pfns ptm0
-  val ptm = overloading_resolution0 ptm0
+  val ptm0' = TC pfns ptm0
+  val ptm = overloading_resolution0 ptm0'
 in
   !post_process_term (remove_case_magic (to_term ptm))
 end handle phase1_exn(l,s,ty) =>
