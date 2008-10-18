@@ -514,7 +514,7 @@ local open Defn
      end
   fun termination_proof_failed () = 
      raise ERR "defnDefine" (String.concat
-         ["Unable to prove totality!\nUse \"Defn.Hol_defn\" to make ",
+         ["Unable to prove termination!\nUse \"Defn.Hol_defn\" to make ",
           "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
           "termination proof.\n"])
 in
@@ -565,9 +565,9 @@ in
 fun define q =
  let val absyn0 = Parse.Absyn q
      val locn = Absyn.locn_of_absyn absyn0
-     val (tm,names) = Defn.parse_defn absyn0
+     val (tm,names) = Defn.parse_absyn absyn0
      val bindstem = mk_bindstem (ERRloc "Define" locn "")
-                   "Define <alphanumeric-stem> <eqns-quotation>" names
+                         "Define <quotation>" names
  in
     #1 (primDefine (Defn.mk_defn bindstem tm))
     handle e => raise (wrap_exn_loc "TotalDefn" "Define" locn e)
@@ -605,6 +605,32 @@ fun tDefine stem q tac =
  end;
 
 (*---------------------------------------------------------------------------*)
+(* Version of Define that supports multiple definitions, failing if any do.  *) 
+(*---------------------------------------------------------------------------*)
+
+fun head tm = fst(strip_comb tm);
+
+fun multidefine q =
+ let val eqnsl = Defn.parse_quote q
+     val stems = map (fst o dest_var o head o lhs o snd o 
+                      strip_forall o hd o strip_conj) eqnsl
+ in
+    map (#1 o primDefine) (Defn.mk_defns stems eqnsl)
+ end
+ handle e => 
+   let val absyn0 = Parse.Absyn q
+       val locn = Absyn.locn_of_absyn absyn0
+   in 
+     raise wrap_exn_loc "TotalDefn" "multiDefine" locn e
+   end;
+
+fun multiDefine q = 
+ Parse.try_grammar_extension
+    (Theory.try_theory_extension multidefine) q
+ handle e => Raise e;
+
+
+(*---------------------------------------------------------------------------*)
 (* API for Define                                                            *)
 (*---------------------------------------------------------------------------*)
 
@@ -625,26 +651,6 @@ fun silent f =
   Lib.with_flag(Lib.saying,false) 
    (Lib.with_flag(Feedback.emit_WARNING,false)
      (Lib.with_flag(Feedback.emit_MESG,false) f));
-
-(*---------------------------------------------------------------------------*)
-(* Parse a quotation. Fail if parsing or type inference or overload          *)
-(* resolution (etc) fail. Also fail if a usable name for the definition      *)
-(* can't be found in the names of the function(s) under definition.          *)
-(*---------------------------------------------------------------------------*)
-
-local 
- fun mesg slist = 
-   String.concat ("No alphanumeric identifiers in :" 
-                  :: Lib.commafy (map Lib.quote slist))
-in
-fun parse_defn_quote q =
-  let val (tm,names) = Defn.parse_defn (Parse.Absyn q)
-      val stem = Lib.first Lexis.ok_identifier names 
-                  handle HOL_ERR _ => 
-                  raise ERR "parse_quote" (mesg names)
-  in (stem,tm)
-  end
-end;
 
 (*---------------------------------------------------------------------------*)
 (* Instantiate the termination conditions of a defn with a relation and      *)
@@ -677,8 +683,10 @@ fun apiDefine guessR tprover (stem,tm) =
 (* Sequence the phases of definition, starting from a quotation              *)
 (*---------------------------------------------------------------------------*)
 
+fun stem eqn = (fst (dest_const (head (lhs eqn))),eqn)
+
 fun apiDefineq guessR tprover q = 
-   PASS q ?> verdict (silent parse_defn_quote) PARSE
+   PASS q ?> verdict (silent (stem o hd o Defn.parse_quote)) PARSE
           ?> apiDefine guessR tprover;
 
 (*---------------------------------------------------------------------------*)
