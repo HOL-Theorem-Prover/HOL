@@ -324,9 +324,10 @@ fun pp_term (G : grammar) TyG = let
   val spec_table =
       HOLset.addList (HOLset.empty String.compare, grammar_tokens G)
   val num_info = numeral_info G
-  fun insert (grule, (n, acc)) = let
+  fun insert ((nopt, grule), acc) = let
     val keys_n_rules = grule_term_names G grule
-    fun myinsert n ((k, v), acc) = let
+    val n = case nopt of SOME n => n | NONE => 0 (* doesn't matter *)
+    fun myinsert ((k, v), acc) = let
       val existing = Binarymap.peek(acc, k)
       val newvalue =
         case existing of
@@ -336,11 +337,11 @@ fun pp_term (G : grammar) TyG = let
       Binarymap.insert(acc, k, newvalue)
     end
   in
-    (n + 1, List.foldl (myinsert n) acc keys_n_rules)
+    (List.foldl myinsert acc keys_n_rules)
   end
-  val (_, rule_table) = List.foldl insert
-                                   (0,Binarymap.mkDict String.compare)
-                                   (grammar_rules G)
+  val rule_table = List.foldl insert
+                              (Binarymap.mkDict String.compare)
+                              (term_grammar.rules G)
   fun lookup_term s = Binarymap.peek(rule_table, s)
   val comb_prec = #1 (hd (valOf (lookup_term fnapp_special)))
     handle Option =>
