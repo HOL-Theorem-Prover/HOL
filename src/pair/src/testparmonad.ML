@@ -46,3 +46,9 @@ val result_onethree = eval ``^prog [1;3]``
 (* note error messages; not great *)
 val failprog1 = ``do len ; cons x od``
 val failprog2 = ``do x <- len !! hd ; cons x od``
+
+val ignore_def = Define`
+  ignore M = do x <- M ; return () od
+`;
+
+val prog2_revised = ``do x <- len !! ignore hd ; cons x od``;
