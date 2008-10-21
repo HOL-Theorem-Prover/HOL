@@ -33,7 +33,7 @@ val _ = temp_add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
 val _ = temp_add_rule {block_style = (AroundSameName, (PP.INCONSISTENT, 2)),
                        fixity = Infix(RIGHT, par_prec),
                        paren_style = OnlyIfNecessary,
-                       pp_elements = [BreakSpace(1,0), TOK "!!", HardSpace 1],
+                       pp_elements = [BreakSpace(1,0), TOK "|||", HardSpace 1],
                        term_name = monad_par}
 
 fun to_vstruct a = let
@@ -215,8 +215,8 @@ fun print_monads (tyg, tmg) (sysprinter,strn,brk) (p,l,r) dpth pps t = let
                 pbegin bracketp;
                 PP.begin_block pps PP.INCONSISTENT 0;
                 pr_action (prec,l,prec) (SOME v1, a1);
-                strn " !!";
-                brk(1,2);
+                strn " |||";
+                brk(1,0);
                 pr_action (prec,prec,r) (SOME v2, a2);
                 PP.end_block pps;
                 pend bracketp
