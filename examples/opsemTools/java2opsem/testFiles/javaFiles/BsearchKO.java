@@ -1,4 +1,4 @@
-class Bsearch {
+class BsearchKO {
 
     // an error has been inserted int the program on line 
     // 16 of the program

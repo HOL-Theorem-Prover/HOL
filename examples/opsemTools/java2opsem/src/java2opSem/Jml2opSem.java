@@ -15,6 +15,9 @@ import org.multijava.mjc.JavadocLexer;
 import org.multijava.mjc.Main;
 import org.multijava.mjc.ParsingController;
 
+import antlr.RecognitionException;
+import antlr.TokenStreamException;
+
 
 /** main class to build a HOL term from a JML specification
  * 
@@ -38,7 +41,7 @@ public class Jml2opSem {
 	private JavadocLexer docLexer;
 	private JmlMLLexer jmlMLLexer;
 	private JmlSLLexer jmlSLLexer;
-	private JmlParser parser;
+	public JmlParser parser;
 
 	public Jml2opSem(File file) throws ExceptionJava2opSem {
 		super();
@@ -52,7 +55,7 @@ public class Jml2opSem {
 		}
 		parsingController = new ParsingController( r, null );
 		lexingController = new TokenStreamSelector();
-		boolean allowUniverses = false; 
+		boolean allowUniverses = true; 
 		jmlLexer = new JmlLexer( parsingController, lexingController, 
 				true, true, allowUniverses, compiler );
 		docLexer = new JavadocLexer( parsingController );
@@ -81,6 +84,7 @@ public class Jml2opSem {
 						ACCEPT_RELAXEDMULTIJAVA,
 						allowUniverses );
 			rootJml  = (JmlCompilationUnit) parser.jCompilationUnit();
+//TODO: 	parser.jAssertStatement(); //  fait avancer à la fin du fichier
 		} catch (Exception e) {
 			String message = "It was impossible to build the AST for file " + file + "\n";
 			message+="Possible errors in the program: \n";

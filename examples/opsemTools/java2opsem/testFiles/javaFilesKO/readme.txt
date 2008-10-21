@@ -43,3 +43,8 @@ must be replaced with
 
     (\state.
       (!i . ((0<=i)/\(i<Num(ScalarOf (state ' "aLength"))))==>(((ArrayOf (state ' "a") ' (i))=(ScalarOf (state ' "aLength"))-1)-i)))
+
+
+AbsMinusAssert.java
+
+  Translate JML //@ assert into opsem Assert

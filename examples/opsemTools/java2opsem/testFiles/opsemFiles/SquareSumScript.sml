@@ -57,4 +57,10 @@ val MAIN_def =
       (ScalarOf (state2 ' "Result")=(ScalarOf (state1 ' "n")*(ScalarOf (state1 ' "n")+1)*((ScalarOf (state1 ' "n")*2)+1))/6))
     `
 
+    val intVar_def =
+  	     Define `intVar =["n";"i";"s";"Result"]  `
+
+    val arrVar_def =
+  	     Define `arrVar =[]  `
+
   val _ = export_theory();

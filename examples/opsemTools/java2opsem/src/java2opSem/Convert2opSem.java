@@ -10,9 +10,15 @@ import java2opSem.Java2opSemVisitor;
 
 
 import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+
+import antlr.RecognitionException;
+import antlr.TokenStreamException;
+
+import java.util.List;
 
 /** main class to convert a Java file with a JML specification
  *  as a RSPEC (pre,prog,post)
@@ -50,6 +56,7 @@ public class Convert2opSem extends ASTVisitor {
 		parser.setSource(source);
 		parser.setResolveBindings(true);
 		root = (CompilationUnit) parser.createAST(null);
+		
 	}
 	
 	

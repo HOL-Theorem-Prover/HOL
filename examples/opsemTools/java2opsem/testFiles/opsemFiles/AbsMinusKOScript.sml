@@ -71,4 +71,10 @@ val MAIN_def =
       ((((ScalarOf (state1 ' "i")<ScalarOf (state1 ' "j")))) ==> (((ScalarOf (state2 ' "Result")=ScalarOf (state1 ' "j")-ScalarOf (state1 ' "i")))))/\((((ScalarOf (state1 ' "i")>=ScalarOf (state1 ' "j")))) ==> (((ScalarOf (state2 ' "Result")=ScalarOf (state1 ' "i")-ScalarOf (state1 ' "j"))))))
     `
 
+    val intVar_def =
+  	     Define `intVar =["i";"j";"result";"k";"Result"]  `
+
+    val arrVar_def =
+  	     Define `arrVar =[]  `
+
   val _ = export_theory();

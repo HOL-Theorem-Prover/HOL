@@ -207,11 +207,12 @@ public class Jml2opSemVisitor implements JmlVisitor {
      	if (self.hasSpecification()) {
      		self.methodSpecification().accept(this);
      	}
-     	jml.put(name, currentSpec);
+       	jml.put(name, currentSpec);
      	currentSpec = "";
     }
     	
 	public void visitJmlGenericSpecBody(JmlGenericSpecBody self) {
+ 
 		JmlSpecBodyClause[] specClauses = self.specClauses();
 		JmlGeneralSpecCase[] specCases = self.specCases();
 		
@@ -225,6 +226,7 @@ public class Jml2opSemVisitor implements JmlVisitor {
 	}
 
 	public void visitJmlGenericSpecCase(JmlGenericSpecCase self) {
+
 		JmlSpecVarDecl[] specVarDecls = self.specVarDecls();
 		JmlRequiresClause[] specHeader = self.specHeader();
 		JmlSpecBody specBody = self.specBody();
@@ -503,6 +505,22 @@ public class Jml2opSemVisitor implements JmlVisitor {
 		write(")");
 		write(")");
 	}
+	
+	public void visitJmlAssertOrAssumeStatement(JmlAssertOrAssumeStatement self) {
+		System.out.println("Visiting method for class " + self.getClass() + "is not yet implemented"); 
+		self.predicate().accept(this);
+//		error=true;
+	}
+
+	public void visitJmlAssertStatement(JmlAssertStatement self) {
+		System.out.println("Visiting method for class " + self.getClass() + "is not yet implemented"); 
+		write("(Assert ");
+		self.predicate().accept(this);
+		write(")");
+//		error=true;
+	}
+
+	
 	//====================================================
 	// here are non implemented methods 
 	// to parse all possible nodes in JML
@@ -539,11 +557,6 @@ public class Jml2opSemVisitor implements JmlVisitor {
 	}
 
 	public void visitJmlAccessibleClause(JmlAccessibleClause self) {
-		System.out.println("Visiting method for class " + self.getClass() + "is not yet implemented"); 
-		error=true;
-	}
-
-	public void visitJmlAssertStatement(JmlAssertStatement self) {
 		System.out.println("Visiting method for class " + self.getClass() + "is not yet implemented"); 
 		error=true;
 	}

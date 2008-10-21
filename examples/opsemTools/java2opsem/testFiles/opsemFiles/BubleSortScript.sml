@@ -124,4 +124,10 @@ val MAIN_def =
       (!i . (((i>=0)/\(i<Num(ScalarOf (state1 ' "aLength"))-1)))==>(((ArrayOf (state2 ' "a") ' (i))<=(ArrayOf (state2 ' "a") ' (i+1))))))
     `
 
+    val intVar_def =
+  	     Define `intVar =["i";"j";"aux";"stop"]  `
+
+    val arrVar_def =
+  	     Define `arrVar =["a"]  `
+
   val _ = export_theory();

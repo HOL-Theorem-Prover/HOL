@@ -8,6 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
+import org.eclipse.jdt.core.dom.BlockComment;
+import org.eclipse.jdt.core.dom.Comment;
+import org.eclipse.jdt.core.dom.LineComment;
+import org.eclipse.jdt.core.dom.PrimitiveType;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.ArrayAccess;
@@ -26,6 +30,7 @@ import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
+import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.WhileStatement;
@@ -86,11 +91,17 @@ public class Java2opSemVisitor extends ASTVisitor {
 	// to deal with negative numbers
 	private boolean minus; 
 	
-	// to know the set of parameters
+	// to know the set of parameters 
+	// this is forwarded to jml2opSemVisitor
 	// Java has a call by value parameter passing
-	// so parameter in the ensures statement is evaluated
-	// on its initial state
+	// so parameters in the ensures statement are evaluated
+	// on initial state value
 	private ArrayList<String> parameters;
+	
+	// integer variables that have been declared in the program
+	private ArrayList<String> intVar;
+	// array variables that have been declared in the program
+	private ArrayList<String> arrVar;
 	
 	// name of the method
 	String methodName;
@@ -103,6 +114,8 @@ public class Java2opSemVisitor extends ASTVisitor {
 		sequence = new Stack<Integer>();
 		statement = new Stack<Integer>();
 		parameters = new ArrayList<String>();
+		intVar = new ArrayList<String>();
+		arrVar = new ArrayList<String>();
 		indentation = 0;
 		int fst = fileName.indexOf("javaFiles");
 		int last = fileName.lastIndexOf('/');
@@ -235,7 +248,8 @@ public class Java2opSemVisitor extends ASTVisitor {
 	
 	/**
 	 * 	print str with the current indentation
-	 */	private void print(String str) {
+	 */	
+	private void printIndent(String str) {
 		String indent = indent();
 		try {
 			wBuffer.write(indent+str);
@@ -244,7 +258,14 @@ public class Java2opSemVisitor extends ASTVisitor {
 		}
 	}
 	 
-	
+	private void print(String str) {
+		try {
+			wBuffer.write(str);
+		} catch (IOException e) {
+			System.err.println("Cannot write in the file");
+		}
+	}
+
 	 
 	// ############ Method declaration node #################
 	 private void printHeader() {
@@ -265,6 +286,7 @@ public class Java2opSemVisitor extends ASTVisitor {
 		
 		printHeader();
 		
+		
 		// name of the program
 		println("(* Method " + node.getName() + "*)");
 		println("val MAIN_def =");
@@ -282,7 +304,13 @@ public class Java2opSemVisitor extends ASTVisitor {
 
 		for (int i=0; i<param.size(); i++) {
 			SingleVariableDeclaration tmp = (SingleVariableDeclaration) param.get(i);
-			parameters.add(tmp.getName().toString());
+			String name = tmp.getName().toString();
+			parameters.add(name);
+			if (tmp.getType().isArrayType()) {
+				arrVar.add(name);
+			}
+			else 
+				intVar.add(name);
 		}
 
 		// compute the JML specification
@@ -311,6 +339,17 @@ public class Java2opSemVisitor extends ASTVisitor {
 		return true;
 	}
 	
+	private void printVars(ArrayList<String> v){
+		int s = v.size();
+		print("[");
+		if (s!=0) {
+			for (int i=0;i<s-1;i++)
+				print("\"" + v.get(i) + "\";");
+			print("\"" + v.get(s-1) + "\"");
+		}
+	    print("]");
+	}
+	
 	public void endVisit(MethodDeclaration node) {	
 		// print the postcondition 
 		println("(\\state1 state2.");
@@ -319,14 +358,34 @@ public class Java2opSemVisitor extends ASTVisitor {
 		indentation--;
 		println("`\n");	
 		indentation--;
+		
+		// add variable Result and result if the method
+		// is not void
+		Type rt = node.getReturnType2();
+		if (rt.isPrimitiveType() && !rt.toString().equals("void")) 
+			intVar.add("Result");
+			
+		// print the list of integer variables
+		println("  val intVar_def ="); 
+		printIndent("	     Define `intVar =");
+		printVars(intVar);
+		println("`\n");
+		
+		// print the list of array variables
+		println("  val arrVar_def ="); 
+		printIndent("	     Define `arrVar =");
+		printVars(arrVar);
+		println("`\n");
+
+		// save the theory
 		println("val _ = export_theory();");
 	}
 	
 	// ###################### Javadoc #########################
 	public boolean visit(Javadoc node) {
-		print(",");
+		print("(*");
 		print(node.toString());
-		print(",");
+		print("*)");
 		return false;
 		
 	}
@@ -361,6 +420,7 @@ public class Java2opSemVisitor extends ASTVisitor {
 	// if no initial value is given, variable takes default value 0
 	public boolean visit(VariableDeclarationFragment node) {		
 		if (!isArrayDeclaration){
+			intVar.add(node.getName().toString());
 			printOpenSequence();
 			indentation++;
 			if (node.getInitializer()==null)
@@ -376,6 +436,7 @@ public class Java2opSemVisitor extends ASTVisitor {
 		else {
 			// no array declaration in opSem so just print a comment
 			println("(* Array declaration of " + node.getName() + "*)");
+			// arrVarr.add(node.getName().toString());
 		}
 		return true;
 	}
@@ -640,7 +701,27 @@ public class Java2opSemVisitor extends ASTVisitor {
 		}
 	}
 
-		
+    // #################### Comments #####################
+	// to visit JML statements given as comments inside Java
+	public boolean visit(LineComment node){
+//		System.out.println("comment");
+//		System.out.println(node.getLength() );
+//		System.out.println(node.getNodeType() );
+//		System.out.println(node.getStartPosition() );
+//		System.out.println(node.getAST() );
+//		System.out.println(node.getLocationInParent() );
+//		System.out.println(node.getParent() );
+//		System.out.println(node.toString());
+//		System.out.println(node.getFlags());
+//
+//		println("(* " + node.getAlternateRoot() + "*)\n");
+		//TODO: on peut seulement récupérer le n° du 1er caractère
+		// et la longueur.
+		// mais le root contient les classes java SANS le commentaires
+		// il faudrait donc relire le fichier source java
+		return true;
+	}
+	
 	// ####################### Arrays ##############################
 	public boolean visit(ArrayAccess node) {
 		indentation++;

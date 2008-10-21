@@ -203,4 +203,10 @@ val MAIN_def =
       (((((ScalarOf (state1 ' "i")+ScalarOf (state1 ' "j"))<=ScalarOf (state1 ' "k"))\/((ScalarOf (state1 ' "j")+ScalarOf (state1 ' "k"))<=ScalarOf (state1 ' "i"))\/((ScalarOf (state1 ' "i")+ScalarOf (state1 ' "k"))<=ScalarOf (state1 ' "j")))) ==> (((ScalarOf (state2 ' "Result")=4))))/\(((~(((ScalarOf (state1 ' "i")+ScalarOf (state1 ' "j"))<=ScalarOf (state1 ' "k"))\/((ScalarOf (state1 ' "j")+ScalarOf (state1 ' "k"))<=ScalarOf (state1 ' "i"))\/((ScalarOf (state1 ' "i")+ScalarOf (state1 ' "k"))<=ScalarOf (state1 ' "j")))/\((ScalarOf (state1 ' "i")=ScalarOf (state1 ' "j"))/\(ScalarOf (state1 ' "j")=ScalarOf (state1 ' "k"))))) ==> (((ScalarOf (state2 ' "Result")=3))))/\(((~(((ScalarOf (state1 ' "i")+ScalarOf (state1 ' "j"))<=ScalarOf (state1 ' "k"))\/((ScalarOf (state1 ' "j")+ScalarOf (state1 ' "k"))<=ScalarOf (state1 ' "i"))\/((ScalarOf (state1 ' "i")+ScalarOf (state1 ' "k"))<=ScalarOf (state1 ' "j")))/\~((ScalarOf (state1 ' "i")=ScalarOf (state1 ' "j"))/\(ScalarOf (state1 ' "j")=ScalarOf (state1 ' "k")))/\((ScalarOf (state1 ' "i")=ScalarOf (state1 ' "j"))\/(ScalarOf (state1 ' "j")=ScalarOf (state1 ' "k"))\/(ScalarOf (state1 ' "i")=ScalarOf (state1 ' "k"))))) ==> (((ScalarOf (state2 ' "Result")=2))))/\(((~(((ScalarOf (state1 ' "i")+ScalarOf (state1 ' "j"))<=ScalarOf (state1 ' "k"))\/((ScalarOf (state1 ' "j")+ScalarOf (state1 ' "k"))<=ScalarOf (state1 ' "i"))\/((ScalarOf (state1 ' "i")+ScalarOf (state1 ' "k"))<=ScalarOf (state1 ' "j")))/\~((ScalarOf (state1 ' "i")=ScalarOf (state1 ' "j"))/\(ScalarOf (state1 ' "j")=ScalarOf (state1 ' "k")))/\~((ScalarOf (state1 ' "i")=ScalarOf (state1 ' "j"))\/(ScalarOf (state1 ' "j")=ScalarOf (state1 ' "k"))\/(ScalarOf (state1 ' "i")=ScalarOf (state1 ' "k"))))) ==> (((ScalarOf (state2 ' "Result")=1)))))
     `
 
+    val intVar_def =
+  	     Define `intVar =["i";"j";"k";"trityp";"Result"]  `
+
+    val arrVar_def =
+  	     Define `arrVar =[]  `
+
   val _ = export_theory();

@@ -585,6 +585,7 @@ fun suppressExtension(s,s') =
 fun getSpec name = 
    snd(dest_comb(concl(assoc "MAIN_def" (definitions name))));
 
+
 (* function to get the spec of file "testFiles/opsemFiles/name.sml"
    when the .sml has already been built and compiled. *)
 fun loadAndGetSpec name = 
