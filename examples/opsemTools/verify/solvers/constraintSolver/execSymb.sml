@@ -224,6 +224,14 @@ Remarks:
 *)
 
 
+
+open HolKernel Parse boolLib arithmeticTheory (* to have BOUNDED_FORALL theorem *)
+     newOpsemTheory bossLib pairSyntax intLib intSimps
+     computeLib finite_mapTheory relationTheory stringLib
+     simpTools stateTools extSolv;  
+
+
+
 (* -------------------------------------------- *)
 (* Global variables and functions to build the solution:
    - CSP solving time information
@@ -333,6 +341,24 @@ val programVars = ref [];
 fun resetProgramVars() =
      programVars:=[];
 
+(* To set the variables of the program.
+    Used to make existential terms 
+    This function is called in stateTools when making the state
+*)
+fun setVars vars = 
+   map
+    (fn v =>
+      let val s = fromHOLstring v
+      in
+       if stateTools.isArrayLength v
+       then programVars:= [mk_var(s,``:num``)] @ !programVars
+       else programVars:= [mk_var(s,``:int``)] @ !programVars
+      end
+    )
+   vars;
+
+
+
 
 (* to reset the global variables at the end of an execution *)
 fun resetAll() = 
@@ -350,359 +376,6 @@ fun resetAll() =
    
 
 
-open HolKernel Parse boolLib arithmeticTheory (* to have BOUNDED_FORALL theorem *)
-     newOpsemTheory bossLib pairSyntax intLib intSimps
-     computeLib finite_mapTheory relationTheory stringLib
-     term2xml extSolv;  (* added as printXML_to_file needed *)
-
-
-
-(*====================================== *)
-(* functions to generate symbolic states *)
-(* ===================================== *)
-
-
-(* take a term that corresponds to a program in opSem syntax
-   and build a symbolic state that represents all 
-   its variables *)
-(* Functions  written by Mike Gordon in PATH_EVAL *)
-(* Have been modified to get also array variables *)
-
-(* Functions below return a pair ([var ident], [array ident]) *)
-(* ---------------------------------------------------------- *)
-
-(* Get set of variables read in a numerical expression (nexp) *)
-fun nexp_vars nex =
- let val (opr,args) = strip_comb nex  (* syntax error if "op" instead of "opr" *)
-     val _ = if not(is_const opr)
-              then (print_term opr; 
-                    print " is not a constant\n"; 
-                    fail())
-              else ()
-     val name = fst(dest_const opr)
-     val _ = if not(mem name ["Var","Arr","Const","Plus","Times","Div","Sub","Min"])
-              then (print name; 
-                    print " is not an nexp constructor\n"; 
-                    fail())
-              else ()
- in
-  case name of
-    "Var"      => ([el 1 args],[])
-  | "Arr"      =>  (fst (nexp_vars(el 2 args)),
-                    insert (el 1 args) (snd(nexp_vars(el 2 args))))
-  | "Const"    => ([],[])
-  | "Plus"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
-                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
-  | "Times"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
-                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
-  | "Sub"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
-                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
-  | "Div"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
-                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
-  | "Min"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
-                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
-  | _          => (print "BUG in nexp_vars! "; print name; fail())
- end;
-
-
-
-(* Get set of variables read in a boolean expression (bexp) *)
-fun bexp_vars bex =
- let val (opr,args) = strip_comb bex  (* syntax error if "op" instead of "opr" *)
-     val _ = if not(is_const opr)
-              then (print_term opr; 
-                    print " is not a constant\n"; 
-                    fail())
-              else ()
-     val name = fst(dest_const opr)
-     val _ = if not(mem name ["Equal","Less","LessEq","And","Or","Not"])
-              then (print name; 
-                    print " is not a bexp constructor\n"; 
-                    fail())
-              else ()
- in
-  case name of
-   "Equal"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
-                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
-  | "Less"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
-                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
-  | "LessEq"     => (union (fst (nexp_vars(el 1 args))) (fst (nexp_vars(el 2 args)))
-                  , union (snd (nexp_vars(el 1 args))) (snd (nexp_vars(el 2 args))))
-  | "And"     => (union (fst (bexp_vars(el 1 args))) (fst (bexp_vars(el 2 args)))
-                  , union (snd (bexp_vars(el 1 args))) (snd (bexp_vars(el 2 args))))
-  | "Or"     => (union (fst (bexp_vars(el 1 args))) (fst (bexp_vars(el 2 args)))
-                  , union (snd (bexp_vars(el 1 args))) (snd (bexp_vars(el 2 args))))
-  | "Not"      => bexp_vars(el 1 args)
-  | _          => (print "BUG in bexp_vars! "; print name; fail())
- end;
-
-
-(* Get set of variables read or assigned to in a program *)
-fun program_vars c =
- let val (opr,args) = strip_comb c  (* N.B. syntax error if "op" instead of "opr" *)
-     val _ = if not(is_const opr)
-              then (print_term opr; 
-                    print " is not a constant\n"; 
-                    fail())
-              else ()
-     val name = fst(dest_const opr)
-     val _ = if not(mem name ["Skip","Assign","ArrayAssign","Dispose","Seq",
-                              "Cond","While","Local","Assert"])
-              then (print name; 
-                    print " is not a program constructor\n"; 
-                    fail())
-              else ()
- in
-  case name of
-    "Skip"     => ([],[])
-  | "Assign"   => (insert (el 1 args) (fst (nexp_vars(el 2 args))),
-                   snd (nexp_vars(el 2 args)))
-  | "ArrayAssign"   =>  ((union (fst (nexp_vars(el 2 args)))
-                              (fst (nexp_vars(el 3 args)))),
-			insert (el 1 args) 
-                               (union (snd (nexp_vars(el 2 args)))
-                                      (snd (nexp_vars(el 3 args)))))
-  | "Dispose"  => ([],[])
-  | "Seq"      => (union
-                   (fst (program_vars(el 1 args))) 
-                   (fst (program_vars(el 2 args))),
-		   union
-                   (snd (program_vars(el 1 args))) 
-                   (snd (program_vars(el 2 args))))
-  | "Cond"     => (union
-                   (fst (bexp_vars(el 1 args)))
-                   (union
-                     (fst (program_vars(el 2 args)))
-                     (fst (program_vars(el 3 args)))),
-		   union
-                   (snd (bexp_vars(el 1 args)))
-                   (union
-                     (snd (program_vars(el 2 args)))
-                     (snd (program_vars(el 3 args)))))
-
-  | "While"    => (union (fst (bexp_vars(el 1 args))) 
-                         (fst (program_vars(el 2 args))),
-		   union (snd (bexp_vars(el 1 args))) 
-                         (snd (program_vars(el 2 args))))
-  | "Local"    => ([],[])
-  | "Assert"   => ([],[])
-  | _          => (print "BUG in program_vars! "; print name; fail())
- end;
-
-
-(* ==================================== *)
-(* functions to make the initial state *)
-val MAX_ARRAY_SIZE = 10;
-
-
-(* to know if a variable is the length of an array *)
-fun isArrayLength tm =
-  let val s = fromHOLstring tm
-  in  
-     if (size s) > 6
-     then 
-       String.extract (s,(size s) -6, NONE) = "Length"
-     else false
-  end;
-
-(* compute the set of variable in the program as a list of type
-   variables. Used to make existential terms *)
-fun setVars vars = 
-   map
-    (fn v =>
-      let val s = fromHOLstring v
-      in
-       if isArrayLength v
-       then programVars:= [mk_var(s,``:num``)] @ !programVars
-       else programVars:= [mk_var(s,``:int``)] @ !programVars
-      end
-    )
-   vars;
-
-
-(* 
-Construct: FEMPTY |++ [("v1",v1);...;("vn",vn)]
-where v1,...,vn are the integer variables read or written in c
-
-TODO: build the length of the array from preconditions
-*)
-
-fun varPairs vars =
-  let val maxTerm = term_of_int(Arbint.fromInt(MAX_ARRAY_SIZE))
-  in
-    map 
-      (fn tm => 
-         if isArrayLength tm
-         then ``(^tm,Scalar ^maxTerm)``
-         else
-           ``(^tm, Scalar ^(mk_var(fromHOLstring tm,``:int``)))``)
-    vars
-  end;
-
-
-
-(* 
-Construct a pair (name,value) where name is the name of an array variable
-and (value) is a finite_map that represents symbolic initial value of the array.
-assuming that the maximum array size is MAX_ARRAY_SIZE.
-
-FEMPTY |++ [("v1",(FEMPTY |++ (0,v1_0) |+ (1,v1_1) |+ ...
-   |+ (MAX_ARRAY_SIZE-1,v1_MAX_ARRAY_SIZE-1));...;("vn",(FEMPTY |++ (0,vn_0) |+ (1,vn_1) |+ ...
-   |+ (MAX_ARRAY_SIZE,vn_MAX_ARRAY_SIZE-1))]
-where v1,...,vn are the array variables read or written in c.
-
-*)
-
-local
-
-fun generateValues(n,l) =
-  let val symbVal = mk_var(n ^ "_"  ^ Int.toString(l),``:int``);
-  in
-  if (l=0)
-  then ``(FEMPTY |+ (0:num,^symbVal))``
-  else
-    let
-        val arr = generateValues(n,l-1);
-    in
-      ``^arr |+ (^(numSyntax.mk_numeral(Arbnum.fromInt(l))),^symbVal)``
-    end
-end;
-
-
-fun generateArray(n) =
-  let val values = generateValues(n,MAX_ARRAY_SIZE-1);
-      val nt = stringSyntax.fromMLstring(n);
-  in
-    ``(^nt, Array(^values))``
-end;
-
-
-in
-
-fun arrayPairs vars =
- map 
-   (fn tm => generateArray(fromHOLstring(tm)))
- vars
-
-end;
-
-
-
-(* main function to create the state *)
-(* --------------------------------- *)
-(* for each array "arr", add an int variable "arrLength"
-   that corresponds to arr.length *)
-(* if the length of the array is given in the precondition,
-   then it is fixed to this value, else it is fixed to
-   MAX_ARRAY_SIZE *)
-
-local
-
-(* add a variable xxxLength for each array xxx 
-   in the list of int variables *)
-fun addArrLength varNames arrNames =
- if arrNames = []
- then varNames
- else 
-   List.concat(
-    (map 
-      (fn tm => 
-        insert 
-        (stringSyntax.fromMLstring(fromHOLstring(tm)^ "Length"))
-        varNames
-      )
-      arrNames));
-
-(* TODO 
-fun  getArrayLength pre =
-    take the precondition and return a list of pairs 
-   ("arrLength", val) where val is the length of array arr
-   given in the precondition or is MAX_ARRAY_SIZE if no information is
-   given in the precondition *)
-
-in
-
-
-
-(* the length of the arrays are fixed to MAX_ARRAY_SIZE *)
-fun makeState c = 
-  let val names = program_vars c;
-    val varNames = fst names;
-    val arrNames = snd names;
-    val varAndLengthNames = addArrLength varNames arrNames;
-    val vars = varPairs varAndLengthNames;
-    val arrayVars = arrayPairs arrNames
-  in
-     (setVars varAndLengthNames;
-      ``FEMPTY |++ ^(listSyntax.mk_list(vars@arrayVars,``:string#value``))``
-     )
-  end;
-end;
-
-
-(* end of functions to generate symbolic states *)
-(* ============================================ *)
-
-
-
-(* functions to simplify finite_maps *)
-(* --------------------------------- *)
-
-(* Test if a term is FEMPTY or of the form FEMPTY |+ (x1,y1) .... |+ (xn,yn) *)
-fun is_finite_map fm =
- (is_const fm andalso fst(dest_const fm) = "FEMPTY")
- orelse (let val (opr,args) = strip_comb fm
-         in
-          is_const opr 
-          andalso fst(dest_const opr) = "FUPDATE"
-          andalso (length args = 2)
-          andalso is_finite_map(el 1 args)
-          andalso is_pair(el 2 args)
-         end);
-
-
-(* Remove overwritten entries in a finite map *)
-fun PRUNE_FINITE_MAP_CONV  fm =
- if not(is_finite_map fm) orelse 
-    (is_const fm andalso fst(dest_const fm) = "FEMPTY")
-  then REFL fm
-  else (REWR_CONV FUPDATE_PRUNE 
-         THENC RATOR_CONV(RAND_CONV(EVAL THENC PRUNE_FINITE_MAP_CONV)))
-       fm;
-
-
-(* to prune arrays. Keep only the last value that have been assigned 
-   for each index *)
-fun pruneArray fm = 
-  if is_const fm
-  then fm
-  else 
-    let val (_,args1) = strip_comb fm
-       val fnext = (el 1 args1)
-       val v = (el 2 args1)
-       val (_,args2) = strip_comb v
-       val name = (el 1 args2)
-       val value = (el 2 args2)
-       val pruneNext =  pruneArray(fnext) 
-       in
-         if is_comb value andalso fst(dest_comb(value))=``Array``
-         then 
-          let val pruneArr =  snd(dest_comb(concl(PRUNE_FINITE_MAP_CONV(snd(dest_comb(value))))))
-            val newVal = ``(^name, Array ^pruneArr)``
-          in        
-            ``(^pruneNext |+ ^newVal)``
-          end
-         else ``(^pruneNext |+ ^v)``
-        end;
-
-(* to keep only final values *)
-fun pruneState st =
-   let val ps = snd(dest_comb(concl(PRUNE_FINITE_MAP_CONV  st)))
-   in
-      pruneArray ps
-end;
-
-
 (*================================================== *)
 (* functions to do symbolic simplifications on terms *)
 (*================================================== *)
@@ -712,51 +385,6 @@ end;
 fun existQuantify tm =
   list_mk_exists(!programVars,tm);
 
-
-(* Function to get the result of an equational theorem *)
-(* --------------------------------------------------- *)
-fun getThm thm =
-  snd(dest_comb(concl(thm)));
-
-
-(* functions to transform JML bounded forall statement *)
-(* --------------------------------------------------  *)
-
-(* conversion rule to rewrite a bounded for all term
-   as a conjunction *) 
-fun boundedForALL_ONCE_CONV tm =
- let val (vars,body) = strip_forall tm
-     val (ant,con) = dest_imp body
-     val (_,[lo,hi]) = strip_comb ant
- in
-  if hi = Term(`0:num`)
-   then (EVAL THENC SIMP_CONV std_ss []) tm
-   else CONV_RULE
-         (RHS_CONV EVAL)
-         (BETA_RULE
-          (SPEC
-            (mk_abs(lo,con))
-            (Q.GEN `P` (CONV_RULE EVAL (SPEC hi BOUNDED_FORALL_THM)))))
- end;                                                                                                                                    
-
-val boundedForAll_CONV =
- TOP_DEPTH_CONV boundedForALL_ONCE_CONV THENC REWRITE_CONV [];                                                                           
-
-(* take a term t and converts it according to
-    boundedForAll_CONV *)
-fun rewrBoundedForAll tm =
-   getThm (boundedForAll_CONV tm)
-   handle UNCHANGED => tm;
-
-
-(* function to eliminate  ``T`` from conjunctions. 
-   It is required because the current Java implementation
-   that takes a XML tree to build the CSP
-   doesn't consider Booleans.
-   So if precondition is ``T`` then the XML tag is empty
-*)
-fun mkSimplConj t1 t2 = 
-  getThm (EVAL ``^t1 /\ ^t2``);
 
 
 
@@ -812,71 +440,6 @@ fun mkDisjFromList l =
 *)
 (* -------------------------------------------------- *)
 
-(*---------------------------------------------------------
-Tool for applying De Morgan's laws at the top level to a 
-negated conjunction terms. For each term which is
-an implication, apply NOT_IMP_CONJ theorem:
-
-NOT_CONJ_IMP_CONV  ``~((A1 ==> B1) /\ ... /\ (An ==> Bn) /\ TM)`` =
- |- (A1 /\ ~B1) \/ ... \/ (An /\ ~Bn) \/ ~TM
-
----------------------------------------------------------*)
-local
-
-   val DE_MORGAN_AND_THM = METIS_PROVE [] ``!A B. ~(A/\B) = ~A \/ ~B `` 
-
-in
-
-fun NOT_CONJ_IMP_CONV tm =
- let val tm1 = dest_neg tm
- in
-  if is_imp_only tm1
-   then let val (tm2,tm3) = dest_imp tm1
-        in
-         SPECL [tm2,tm3] NOT_IMP
-        end
-   else 
-     if is_conj tm1
-     then let val (tm2,tm3) = dest_conj tm1
-        in
-            if is_imp_only tm2
-            then let val (tm4,tm5) = dest_imp tm2
-              in
-                CONV_RULE
-                (RAND_CONV(RAND_CONV NOT_CONJ_IMP_CONV))
-                (SPECL [tm4,tm5,tm3] NOT_IMP_CONJ)
-             end
-            else 
-               CONV_RULE
-                (RAND_CONV(RAND_CONV NOT_CONJ_IMP_CONV))
-                (SPECL [tm2,tm3] DE_MORGAN_AND_THM)
-        end
-      else REFL tm
-  end
-  handle HOL_ERR t  => 
-     (print "HOL_ERR in NOT_CONJ_IMP_CONV";
-      REFL tm
-     )
-end;
-
-
-(* function to take the negation of the postcondition
-   using NOT_CONJ_IMP_CONV *)
-fun takeNegPost post =
- let val n = mk_neg(post);
-   in
-     if is_conj(post) orelse is_imp(post)
-     then 
-     (* build the negation using De Morgan laws at one level *)
-        getThm (NOT_CONJ_IMP_CONV n)
-     else
-       (* case where post is not an implication *)
-       n
-     handle HOL_ERR t  => 
-       (print "HOL_ERR in takeNegPost";
-        n
-        )
-   end;
 
 
 local 
@@ -1184,11 +747,6 @@ fun evalPost t st1 st2 =
      )
   ;
 
-fun makeErrorState name st = 
-   let val (sol,_) =  extSolv.getSolutions (ilogPath ^ "results/" ^ name ^ ".res")
-   in 
-     extSolv.finiteMapSol (hd sol) st
-   end;
 
 in
 
@@ -1299,53 +857,6 @@ let val (opr,_) = strip_comb(tm)
   in
    opr=``While``
   end;
-
-
-
-(* to print a condition in the program as a HOL term *)
-local 
-
-(* Get set of string terms in a term *)
-(* Written by Mike Gordon in verifier.ml    *)
-fun get_strings tm =
- if is_string tm
-  then [tm] else
- if is_var tm orelse is_const tm
-  then [] else
- if is_comb tm
-  then union (get_strings(rator tm)) (get_strings(rand tm)) else
- if is_abs tm
-  then get_strings(body tm)
-  else (print "error in get_strings"; fail());
-
-fun makeStateFromPair l = 
-  if ((length l) = 1)
-  then ``(FEMPTY |+ ^(hd l)) ``
-  else
-      let 
-        val map = makeStateFromPair (tl l);
-      in
-         ``^map |+ ^(hd l)``
-end;
-
-in
-
-fun pretty_string tm =
- let val var_tms = get_strings tm; 
-     val pairs = map 
-                  (fn tm => pairSyntax.mk_pair
-                      let val v = mk_var(fromHOLstring tm,``:int``)
-                      in 
-		      (tm,``Scalar ^v``)
-			end
-		  )
-                  var_tms;
-     val st = makeStateFromPair pairs;
-     val (_,res) = strip_comb(concl(EVAL ``beval ^tm ^st``));
-     in 
-       term_to_string(el 2 res)
-     end
-end;
 
 
 

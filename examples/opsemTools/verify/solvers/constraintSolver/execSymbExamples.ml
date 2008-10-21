@@ -32,7 +32,7 @@ quietdec := false; (* turn printing back on *)
 
 (* to be able to build and load the examples *)
 use "java2opsem.ml";
-
+ 
 (* ====================================================== *)
 (* Examples to test calls to the CSP solver from term2xml *)
 (* ====================================================== *)
@@ -84,7 +84,9 @@ isSolverTimeout(s3);
 
 val name = "AbsMinus";
 val spec = loadAndGetSpec name;
-execSymbWithCSP name spec 10;
+execSymbWithCSP name spec 20;
+
+
 
 
 (*
@@ -100,6 +102,7 @@ All correct paths were verified in HOL.
 2 subterms have been solved with SIMP_CONV and COOPER.
 
 Total time spent with the constraint solver: 0.018s.
+32 bits Total time spent with the constraint solver: 0.043s.
 ===============================
 > val it =
     ``(if i <= j then
@@ -321,21 +324,21 @@ Total time spent with the constraint solver: 0.185s.
 
 val name = "Sum";
 val spec = loadAndGetSpec name;
-execSymbWithCSP name spec 30;
+execSymbWithCSP name spec 41; (* 10 times into the loop *)
 
 (*
 ===============================
 PROGRAM IS CORRECT
-9 conditions have been tested.
+12 conditions have been tested.
 0 condition has been solved by EVAL.
 1 condition has been shown impossible.
 
-8 feasible paths have been explored.
-All correct paths were verified in HOL.
+11 feasible paths have been explored.
+11 paths have been shown correct with the constraint solver
 0 subterm has been solved with refute and METIS.
-8 subterms have been solved with SIMP_CONV and COOPER.
+11 subterms have been solved with SIMP_CONV and COOPER.
 
-Total time spent with the constraint solver: 0.067s.
+Total time spent with the constraint solver: 0.119s.
 ===============================
 > val it =
     ``(if 1 <= n then
@@ -346,10 +349,30 @@ Total time spent with the constraint solver: 0.067s.
                      (if 6 <= n then
                         (if 7 <= n then
                            (if 8 <= n then
-                              TIMEOUT
-                                (FEMPTY |+ ("n",Scalar n) |+
-                                 ("Result",Scalar Result) |+
-                                 ("s",Scalar 28) |+ ("i",Scalar 8))
+                              (if 9 <= n then
+                                 (if 10 <= n then
+                                    (if 11 <= n then
+                                       TIMEOUT
+                                         (FEMPTY |+ ("n",Scalar n) |+
+                                          ("Result",Scalar Result) |+
+                                          ("s",Scalar 66) |+
+                                          ("i",Scalar 12))
+                                     else
+                                       RESULT
+                                         (FEMPTY |+ ("n",Scalar n) |+
+                                          ("s",Scalar 55) |+
+                                          ("i",Scalar 11) |+
+                                          ("Result",Scalar 55)))
+                                  else
+                                    RESULT
+                                      (FEMPTY |+ ("n",Scalar n) |+
+                                       ("s",Scalar 45) |+ ("i",Scalar 10) |+
+                                       ("Result",Scalar 45)))
+                               else
+                                 RESULT
+                                   (FEMPTY |+ ("n",Scalar n) |+
+                                    ("s",Scalar 36) |+ ("i",Scalar 9) |+
+                                    ("Result",Scalar 36)))
                             else
                               RESULT
                                 (FEMPTY |+ ("n",Scalar n) |+
@@ -384,7 +407,14 @@ Total time spent with the constraint solver: 0.067s.
            (FEMPTY |+ ("n",Scalar n) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
             ("Result",Scalar 0)))`` : term
 - - - - - 
-*** Time taken: 19.909s
+*** Time taken: 17.433s
+
+Term verified at the end of the first path:
+
+(n >= 0 /\
+ ((((((((((0 <= n /\ 1 <= n) /\ 2 <= n) /\ 3 <= n) /\ 4 <= n) /\
+       5 <= n) /\ 6 <= n) /\ 7 <= n) /\ 8 <= n) /\ 9 <= n) /\
+  10 <= n) /\ ~(11 <= n)) /\ ~(55 = n * (n + 1) / 2)
 *)
 
 
@@ -394,7 +424,8 @@ Total time spent with the constraint solver: 0.067s.
  *)
 val name = "SumFromPtoN";
 val spec = loadAndGetSpec name;
-execSymbWithCSP name spec 20;
+execSymbWithCSP name spec 41;(* 10 times into the loop *)
+
 
 (* If we call the CSP solver with integers coded on 32 bits, 
 when computing n*(n+1)/2, there is an overflow so the CSP solver finds
@@ -420,65 +451,271 @@ If we use integers coded on 16 bits,  since jsolver works on
 
 ===============================
 PROGRAM IS CORRECT
-9 conditions have been tested.
+12 conditions have been tested.
 0 condition has been solved by EVAL.
 1 condition has been shown impossible.
 
-8 feasible paths have been explored.
-8 paths have been shown correct with the constraint solver
+11 feasible paths have been explored.
+11 paths have been shown correct with the constraint solver
 0 subterm has been solved with refute and METIS.
-8 subterms have been solved with SIMP_CONV and COOPER.
+11 subterms have been solved with SIMP_CONV and COOPER.
 
-Total time spent with the constraint solver: 0.061s.
+Total time spent with the constraint solver: 13.501s.
 ===============================
 > val it =
-    ``(if 1 <= n then
-         (if 2 <= n then
-            (if 3 <= n then
-               (if 4 <= n then
-                  (if 5 <= n then
-                     (if 6 <= n then
-                        (if 7 <= n then
-                           (if 8 <= n then
-                              TIMEOUT
-                                (FEMPTY |+ ("n",Scalar n) |+
-                                 ("Result",Scalar Result) |+
-                                 ("s",Scalar 28) |+ ("i",Scalar 8))
+    ``(if p + 1 <= n then
+         (if p + 1 + 1 <= n then
+            (if p + 1 + 1 + 1 <= n then
+               (if p + 1 + 1 + 1 + 1 <= n then
+                  (if p + 1 + 1 + 1 + 1 + 1 <= n then
+                     (if p + 1 + 1 + 1 + 1 + 1 + 1 <= n then
+                        (if p + 1 + 1 + 1 + 1 + 1 + 1 + 1 <= n then
+                           (if p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 <= n then
+                              (if
+                                 p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 <= n
+                               then
+                                 (if
+                                    p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 +
+                                    1 <= n
+                                  then
+                                    (if
+                                       p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 +
+                                       1 + 1 + 1 <= n
+                                     then
+                                       TIMEOUT
+                                         (FEMPTY |+ ("p",Scalar p) |+
+                                          ("n",Scalar n) |+
+                                          ("Result",Scalar Result) |+
+                                          ("s",
+                                           Scalar
+                                             (p + (p + 1) + (p + 1 + 1) +
+                                              (p + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1 + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1 + 1 + 1 + 1 + 1))) |+
+                                          ("i",
+                                           Scalar
+                                             (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                              1 + 1 + 1 + 1 + 1 + 1)))
+                                     else
+                                       RESULT
+                                         (FEMPTY |+ ("p",Scalar p) |+
+                                          ("n",Scalar n) |+
+                                          ("s",
+                                           Scalar
+                                             (p + (p + 1) + (p + 1 + 1) +
+                                              (p + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1 + 1 + 1 + 1))) |+
+                                          ("i",
+                                           Scalar
+                                             (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                              1 + 1 + 1 + 1 + 1)) |+
+                                          ("Result",
+                                           Scalar
+                                             (p + (p + 1) + (p + 1 + 1) +
+                                              (p + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1 + 1 + 1) +
+                                              (p + 1 + 1 + 1 + 1 + 1 + 1 +
+                                               1 + 1 + 1 + 1)))))
+                                  else
+                                    RESULT
+                                      (FEMPTY |+ ("p",Scalar p) |+
+                                       ("n",Scalar n) |+
+                                       ("s",
+                                        Scalar
+                                          (p + (p + 1) + (p + 1 + 1) +
+                                           (p + 1 + 1 + 1) +
+                                           (p + 1 + 1 + 1 + 1) +
+                                           (p + 1 + 1 + 1 + 1 + 1) +
+                                           (p + 1 + 1 + 1 + 1 + 1 + 1) +
+                                           (p + 1 + 1 + 1 + 1 + 1 + 1 + 1) +
+                                           (p + 1 + 1 + 1 + 1 + 1 + 1 + 1 +
+                                            1) +
+                                           (p + 1 + 1 + 1 + 1 + 1 + 1 + 1 +
+                                            1 + 1))) |+
+                                       ("i",
+                                        Scalar
+                                          (p + 1 + 1 + 1 + 1 + 1 + 1 + 1 +
+                                           1 + 1 + 1)) |+
+                                       ("Result",
+                                        Scalar
+                                          (p + (p + 1) + (p + 1 + 1) +
+                                           (p + 1 + 1 + 1) +
+                                           (p + 1 + 1 + 1 + 1) +
+                                           (p + 1 + 1 + 1 + 1 + 1) +
+                                           (p + 1 + 1 + 1 + 1 + 1 + 1) +
+                                           (p + 1 + 1 + 1 + 1 + 1 + 1 + 1) +
+                                           (p + 1 + 1 + 1 + 1 + 1 + 1 + 1 +
+                                            1) +
+                                           (p + 1 + 1 + 1 + 1 + 1 + 1 + 1 +
+                                            1 + 1)))))
+                               else
+                                 RESULT
+                                   (FEMPTY |+ ("p",Scalar p) |+
+                                    ("n",Scalar n) |+
+                                    ("s",
+                                     Scalar
+                                       (p + (p + 1) + (p + 1 + 1) +
+                                        (p + 1 + 1 + 1) +
+                                        (p + 1 + 1 + 1 + 1) +
+                                        (p + 1 + 1 + 1 + 1 + 1) +
+                                        (p + 1 + 1 + 1 + 1 + 1 + 1) +
+                                        (p + 1 + 1 + 1 + 1 + 1 + 1 + 1) +
+                                        (p + 1 + 1 + 1 + 1 + 1 + 1 + 1 +
+                                         1))) |+
+                                    ("i",
+                                     Scalar
+                                       (p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 +
+                                        1)) |+
+                                    ("Result",
+                                     Scalar
+                                       (p + (p + 1) + (p + 1 + 1) +
+                                        (p + 1 + 1 + 1) +
+                                        (p + 1 + 1 + 1 + 1) +
+                                        (p + 1 + 1 + 1 + 1 + 1) +
+                                        (p + 1 + 1 + 1 + 1 + 1 + 1) +
+                                        (p + 1 + 1 + 1 + 1 + 1 + 1 + 1) +
+                                        (p + 1 + 1 + 1 + 1 + 1 + 1 + 1 +
+                                         1)))))
                             else
                               RESULT
-                                (FEMPTY |+ ("n",Scalar n) |+
-                                 ("s",Scalar 28) |+ ("i",Scalar 8) |+
-                                 ("Result",Scalar 28)))
+                                (FEMPTY |+ ("p",Scalar p) |+
+                                 ("n",Scalar n) |+
+                                 ("s",
+                                  Scalar
+                                    (p + (p + 1) + (p + 1 + 1) +
+                                     (p + 1 + 1 + 1) + (p + 1 + 1 + 1 + 1) +
+                                     (p + 1 + 1 + 1 + 1 + 1) +
+                                     (p + 1 + 1 + 1 + 1 + 1 + 1) +
+                                     (p + 1 + 1 + 1 + 1 + 1 + 1 + 1))) |+
+                                 ("i",
+                                  Scalar
+                                    (p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1)) |+
+                                 ("Result",
+                                  Scalar
+                                    (p + (p + 1) + (p + 1 + 1) +
+                                     (p + 1 + 1 + 1) + (p + 1 + 1 + 1 + 1) +
+                                     (p + 1 + 1 + 1 + 1 + 1) +
+                                     (p + 1 + 1 + 1 + 1 + 1 + 1) +
+                                     (p + 1 + 1 + 1 + 1 + 1 + 1 + 1)))))
                          else
                            RESULT
-                             (FEMPTY |+ ("n",Scalar n) |+ ("s",Scalar 21) |+
-                              ("i",Scalar 7) |+ ("Result",Scalar 21)))
+                             (FEMPTY |+ ("p",Scalar p) |+ ("n",Scalar n) |+
+                              ("s",
+                               Scalar
+                                 (p + (p + 1) + (p + 1 + 1) +
+                                  (p + 1 + 1 + 1) + (p + 1 + 1 + 1 + 1) +
+                                  (p + 1 + 1 + 1 + 1 + 1) +
+                                  (p + 1 + 1 + 1 + 1 + 1 + 1))) |+
+                              ("i",
+                               Scalar (p + 1 + 1 + 1 + 1 + 1 + 1 + 1)) |+
+                              ("Result",
+                               Scalar
+                                 (p + (p + 1) + (p + 1 + 1) +
+                                  (p + 1 + 1 + 1) + (p + 1 + 1 + 1 + 1) +
+                                  (p + 1 + 1 + 1 + 1 + 1) +
+                                  (p + 1 + 1 + 1 + 1 + 1 + 1)))))
                       else
                         RESULT
-                          (FEMPTY |+ ("n",Scalar n) |+ ("s",Scalar 15) |+
-                           ("i",Scalar 6) |+ ("Result",Scalar 15)))
+                          (FEMPTY |+ ("p",Scalar p) |+ ("n",Scalar n) |+
+                           ("s",
+                            Scalar
+                              (p + (p + 1) + (p + 1 + 1) + (p + 1 + 1 + 1) +
+                               (p + 1 + 1 + 1 + 1) +
+                               (p + 1 + 1 + 1 + 1 + 1))) |+
+                           ("i",Scalar (p + 1 + 1 + 1 + 1 + 1 + 1)) |+
+                           ("Result",
+                            Scalar
+                              (p + (p + 1) + (p + 1 + 1) + (p + 1 + 1 + 1) +
+                               (p + 1 + 1 + 1 + 1) +
+                               (p + 1 + 1 + 1 + 1 + 1)))))
                    else
                      RESULT
-                       (FEMPTY |+ ("n",Scalar n) |+ ("s",Scalar 10) |+
-                        ("i",Scalar 5) |+ ("Result",Scalar 10)))
+                       (FEMPTY |+ ("p",Scalar p) |+ ("n",Scalar n) |+
+                        ("s",
+                         Scalar
+                           (p + (p + 1) + (p + 1 + 1) + (p + 1 + 1 + 1) +
+                            (p + 1 + 1 + 1 + 1))) |+
+                        ("i",Scalar (p + 1 + 1 + 1 + 1 + 1)) |+
+                        ("Result",
+                         Scalar
+                           (p + (p + 1) + (p + 1 + 1) + (p + 1 + 1 + 1) +
+                            (p + 1 + 1 + 1 + 1)))))
                 else
                   RESULT
-                    (FEMPTY |+ ("n",Scalar n) |+ ("s",Scalar 6) |+
-                     ("i",Scalar 4) |+ ("Result",Scalar 6)))
+                    (FEMPTY |+ ("p",Scalar p) |+ ("n",Scalar n) |+
+                     ("s",
+                      Scalar
+                        (p + (p + 1) + (p + 1 + 1) + (p + 1 + 1 + 1))) |+
+                     ("i",Scalar (p + 1 + 1 + 1 + 1)) |+
+                     ("Result",
+                      Scalar
+                        (p + (p + 1) + (p + 1 + 1) + (p + 1 + 1 + 1)))))
              else
                RESULT
-                 (FEMPTY |+ ("n",Scalar n) |+ ("s",Scalar 3) |+
-                  ("i",Scalar 3) |+ ("Result",Scalar 3)))
+                 (FEMPTY |+ ("p",Scalar p) |+ ("n",Scalar n) |+
+                  ("s",Scalar (p + (p + 1) + (p + 1 + 1))) |+
+                  ("i",Scalar (p + 1 + 1 + 1)) |+
+                  ("Result",Scalar (p + (p + 1) + (p + 1 + 1)))))
           else
             RESULT
-              (FEMPTY |+ ("n",Scalar n) |+ ("s",Scalar 1) |+
-               ("i",Scalar 2) |+ ("Result",Scalar 1)))
+              (FEMPTY |+ ("p",Scalar p) |+ ("n",Scalar n) |+
+               ("s",Scalar (p + (p + 1))) |+ ("i",Scalar (p + 1 + 1)) |+
+               ("Result",Scalar (p + (p + 1)))))
        else
          RESULT
-           (FEMPTY |+ ("n",Scalar n) |+ ("s",Scalar 0) |+ ("i",Scalar 1) |+
-            ("Result",Scalar 0)))`` : term
+           (FEMPTY |+ ("p",Scalar p) |+ ("n",Scalar n) |+ ("s",Scalar p) |+
+            ("i",Scalar (p + 1)) |+ ("Result",Scalar p)))`` : term
 - - - - - 
-*** Time taken: 19.545s
+*** Time taken: 344.878s
+
+Term verified at the end of the first path:
+
+val t = ``? n:num p:num. ((n >= 0 /\ p >= 0 /\ p <= n) /\
+ ((((((((((p <= n /\ p + 1 <= n) /\ p + 1 + 1 <= n) /\
+         p + 1 + 1 + 1 <= n) /\ p + 1 + 1 + 1 + 1 <= n) /\
+       p + 1 + 1 + 1 + 1 + 1 <= n) /\ p + 1 + 1 + 1 + 1 + 1 + 1 <= n) /\
+     p + 1 + 1 + 1 + 1 + 1 + 1 + 1 <= n) /\
+    p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 <= n) /\
+   p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 <= n) /\
+  p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 <= n) /\
+ ~(p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 <= n)) /\
+~(p + (p + 1) + (p + 1 + 1) + (p + 1 + 1 + 1) + (p + 1 + 1 + 1 + 1) +
+  (p + 1 + 1 + 1 + 1 + 1) + (p + 1 + 1 + 1 + 1 + 1 + 1) +
+  (p + 1 + 1 + 1 + 1 + 1 + 1 + 1) +
+  (p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1) +
+  (p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1) +
+  (p + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1) =
+  n * (n + 1) / 2 - (p - 1) * p / 2)``
+
 *)
 
 
@@ -547,6 +784,7 @@ Total time spent with the constraint solver: 0.041s.
             ("p",Scalar 1)))`` : term
 - - - - - 
 *** Time taken: 27.306s
+
 *)
 
 
@@ -1364,5 +1602,17 @@ in the initial state:
 
 *** Time taken: 526.989s
 
-
 *)
+val name = "SelectionSortConserveSpec";
+val spec = loadAndGetSpec name;
+execSymbWithCSP name spec 1000;
+
+
+(* impossible, the program is too big and
+   it is too long to build the initial state (more than 1 hour!!!) 
+*) 
+val name = "GeneratedFlasherManager";
+val spec = loadAndGetSpec name;
+execSymbWithCSP name spec 1000;
+
+

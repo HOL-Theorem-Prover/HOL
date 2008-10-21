@@ -42,7 +42,6 @@
 <!ELEMENT ExprLessEq (%Compare;)>
 
 
-<!-- not used for the moment -->
 <!-- **************************************************** -->
 <!--   Arrays -->
 <!--   Array access: %ExprInt is the index  -->

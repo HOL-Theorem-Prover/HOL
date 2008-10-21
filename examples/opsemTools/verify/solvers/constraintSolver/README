@@ -1,0 +1,34 @@
+This directory contains the following:
+
+execSymb.sml .......... To verify a RSPEC as defined in newOpsemTheory 
+             .......... using symbolic execution and an external constraint
+             .......... constraint solver
+
+
+extSolv.sml ........... to call the external solver as an oracle
+
+
+term2xml.sml .......... to generate an xml tree from an HOL term
+             .......... xml trees follow the grammar defined in
+             .......... xmlterm2csp/xml/term.dtd  
+                          
+
+xmlterm2csp ........... Java classes that take an xml tree that represents
+            ........... an HOL term and call a constraint solver 
+            ........... to find a solution. 
+
+
+NOTA:
+  Current version of term2xml and xmlterm2csp requires  
+  a local copy of the library jsolver4verif (jsolver.jar file). 
+  The environment variable ILOG_EXEC must points to
+  this local copy.
+
+  jsolver4verif is proprietary of ILOG (see www.ilog.com).
+  It is part of ILOG Business Rules Management Systems.
+  jsolver4verif has been loaned for research purposes as part 
+  of a collaboration between Ilog and CeP team, I3S laboratory, 
+  University of Nice Sophia Antipolis.
+
+
+

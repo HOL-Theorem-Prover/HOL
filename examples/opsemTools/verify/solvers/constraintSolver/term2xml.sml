@@ -18,26 +18,12 @@ Examples:
 *)
 
 open HolKernel Parse boolLib
-     newOpsemTheory bossLib pairSyntax intLib
-     computeLib finite_mapTheory relationTheory stringLib;
+     bossLib  intLib  stringLib;
 
-(* Path to ILOG executable *)
-exception ILOG_EXECUndefinedError;
-
-fun getILOG_EXEC() = 
- case Portable.getEnv "ILOG_EXEC" of
-    SOME path_name => path_name
-  | NONE           => (print "Environment variable ILOG_EXEC undefined.\n"; 
-                       print "Add:\n setenv ILOG_EXEC \"<path to ILOG executable>\" \nto ~/.shrc\n";
-                       raise ILOG_EXECUndefinedError);
-
-(* Path to ILOG support directory *)
-val ilogPath = Globals.HOLDIR ^ "/examples/opsemTools/verify/solvers/xmlterm2csp/";
+open intSyntax   (* various functions on ints (e.g. is_plus) *)
+     pairSyntax;  (* various functions on pairs (e.g. strip_pair)    *)
 
 
-(* Magnus switched to using integers
-val _ = intLib.deprecate_int();
-*)
 
 fun is_exponential tm =
  is_comb tm 
@@ -64,12 +50,6 @@ fun dest_exponential tm =
    output: a xml file that follows the grammar in term2xml.dtd
 *)
 (* ============================================= *)
-
-(*
-map load ["intSyntax","pairSyntax","stringTheory","stringLib","finite_mapTheory"];
-*)
-open intSyntax   (* various functions on ints (e.g. is_plus) *)
-     pairSyntax  (* various functions on pairs (e.g. strip_pair)    *)
 
 
 (* ============================================= *)
@@ -324,31 +304,3 @@ fun print_opsemTerm(out,name,tm) =
    handle HOL_ERR s =>
       print("Error in term2xml " ^ term_to_string(tm) ^"\n");
 
-(* to print xml into a file *)
-fun printXML_to_file(name,tm) =
- let val fileName = ilogPath ^ "xml/" ^ name ^ ".xml";
-     val outstr = TextIO.openOut(fileName);
-     fun out s = TextIO.output(outstr,s)
- in
-  (print_opsemTerm(out,name,tm);
-   TextIO.flushOut outstr;
-   TextIO.closeOut outstr
-   )
- end;
-
-
-
-(* val t = ``((Num a_9 = 0) /\ (Num a_8 = 1) /\ (Num a_7 = 2) /\ (Num a_6 = 3) /\
-       (Num a_5 = 4) /\ (Num a_4 = 5) /\ (Num a_3 = 6) /\ (Num a_2 = 7) /\
-       (Num a_1 = 8) /\ (Num a_0 = 9)) /\ a_1 < a_0`` 
-val tm = ``(Num a_9 = 0)``
-
-
-val t = ``Num a_9``
-
-parse_int(t,2)
-
-val t= ``0 :num``
-is_int_literal t
-numSyntax.is_numeral t
-*)
