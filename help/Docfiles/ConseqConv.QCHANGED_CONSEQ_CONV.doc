@@ -1,0 +1,10 @@
+\DOC QCHANGED_CONSEQ_CONV
+
+\TYPE {QCHANGED_CONSEQ_CONV : (conseq_conv -> conseq_conv)}
+
+\SYNOPSIS
+Makes a consequence conversion fail if applying it raises the {UNCHANGED} exception.
+
+\SEEALSO
+Conv.QCHANGED_CONV, ConseqConv.CHANGED_CONSEQ_CONV.
+\ENDDOC

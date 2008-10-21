@@ -54,5 +54,5 @@ over, since it was universally quantified over in the first argument theorem.
 
 
 \SEEALSO
-Thm.EQ_MP, Tactic.MATCH_MP_TAC, Thm.MP, Tactic.MP_TAC.
+Thm.EQ_MP, Tactic.MATCH_MP_TAC, Thm.MP, Tactic.MP_TAC, ConseqConv.CONSEQ_REWRITE_CONV.
 \ENDDOC

@@ -33,5 +33,5 @@ variables {v1}, ..., {vi} must occur in {s'} in order for the conclusion {t} of
 the supplied theorem to match {t'}.
 
 \SEEALSO
-Thm.EQ_MP, Drule.MATCH_MP, Thm.MP, Tactic.MP_TAC.
+Thm.EQ_MP, Drule.MATCH_MP, Thm.MP, Tactic.MP_TAC, ConseqConv.CONSEQ_CONV_TAC.
 \ENDDOC
