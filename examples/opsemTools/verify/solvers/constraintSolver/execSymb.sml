@@ -543,57 +543,6 @@ fun termVarState vst =
   end;
 *)
 
-(* -------------------------------------------*)
-(* function to transform a finite map that represents
-   a state as a term.
-   Let fm a finite map of pairs (varName_i, value_i).
-   mk_term_from_state  builds the conjunction of terms 
-       ``varName_i=value_i``
-   for each variable i
-   NB: only the last values of variables are considered 
-  *)
-(* ------------------------------------------ *)
-(* local
-
-(* to test if a finite map is empty *)
-fun isEmpty fm = 
-   is_const(fm) andalso fst(dest_const(fm))="FEMPTY"
-;
-
-
-(* To build the conjunction of equalities var_i=val_i
-   from a finite map that contains pairs (var_i,val_i)
-Only the last values of variables are added. 
-
-fm: the finite_map 
-var: list of variables that have already been 
-     found into the map
-*)
-fun termFromFiniteMap fm var  = 
-  if isEmpty fm 
-  then ``T``
-  else
-    let val (_,[mp,varState]) = strip_comb fm;
-        val (n,_) = pairSyntax.dest_pair varState
-    in 
-      (* if var has not already been found in the list
-         then add the pair *)
-      if (List.find (fn x=> (x=n)) var) = NONE
-      then  
-         if  isEmpty mp 
-         then termVarState varState
-         else mkSimplConj (termVarState varState)
-                          (termFromFiniteMap mp (var@[n]))
-      else ``T``
-    end;
-
-in
-
-(* to build a term from the current value of the state *)
-fun termFromState fm =
-   termFromFiniteMap fm []
-end;
-*)
 
 (* ------------------------------------------------- *)
 (* to test if a path is possible                     *)
@@ -729,23 +678,6 @@ fun printError() =
 );
 
 
-(* function to evaluate the postcondition.
-   st1 is the state before execution of the program
-   st2 is the state after execution of the program
-*)
-fun evalPost t st1 st2 = 
-  let val p = getThm (EVAL ``^t ^st1``);
-   val pp =  if (is_abs(p))
-             then getThm (EVAL ``^p ^st2``)
-             else p
-   in
-     rewrBoundedForAll pp
-   end
-   handle HOL_ERR s => 
-     (print "HOL_ERR in evalPost";
-      t
-     )
-  ;
 
 
 in
@@ -1156,34 +1088,56 @@ end;
 (* to evaluate pre or post condition on an initial state *)
 local
 
-(* evaluate precondition on initial state *)
-fun evalPre t st = 
-   rewrBoundedForAll(getThm (EVAL ``^t ^st``));
-
-(* modify the initial state to take into
-   account equalities of the form "x = l" where x is a variable
-   and l is a constant *)
-(*TODO
-fun computeStateFromPre pre s =
-  *)
 
 fun plural n =
   if n>1 
   then "s have been "
   else " has been ";
 
-in
+(* to print statistics global variables *)
+fun printStatistics() =
+   (print "===============================\n";
+    if not (!nbTimeout=0)
+    then print "TIMEOUT\n"
+    else
+        if !nbError = 0
+        then print "PROGRAM IS CORRECT\n"
+        else print(int_to_string(!nbError) ^ " ERROR" ^ plural(!nbError)
+		   ^ "found\n");
+    print (int_to_string(!nbCond) ^ " condition" 
+           ^ plural(!nbCond) ^ "tested.\n");
+    print (int_to_string(!nbEvalCond) ^ " condition" 
+           ^ plural(!nbEvalCond) ^ "solved" ^ " by EVAL.\n");
+    print (int_to_string(!nbUnfeasiblePath) ^ " condition" 
+           ^ plural(!nbUnfeasiblePath) ^ "shown impossible.\n\n");
+    print (int_to_string(!nbPath) ^ " feasible path" ^ plural(!nbPath)
+           ^ "explored.\n");
+    if !CSPSolvedPath=0
+    then print "All correct paths were verified in HOL.\n"
+    else print(int_to_string(!CSPSolvedPath)  ^ " path" ^ plural(!CSPSolvedPath)
+               ^ "shown correct with the constraint solver\n");
+    print (int_to_string(!nbMETISPath) ^ " subterm" 
+           ^ plural(!nbMETISPath) ^ "solved with refute and METIS.\n");
+    print (int_to_string(!nbSIMPPath) ^ " subterm" 
+           ^ plural(!nbSIMPPath) ^ "solved with SIMP_CONV and COOPER.\n\n");
+    print ("Total time spent with the constraint solver: " 
+	   ^ Real.toString(!CSPtime) ^ "s.\n"); 
+    print "===============================\n";
+    resetProgramVars() (* reset the list of variable used to existentially quantify terms *) 
+);
 
+in
 
 fun execSymbWithCSP name spec n = 
   (* build the symbolic state from variables in the program *)
   let  val (_,args) = strip_comb spec;
    val (pre,prog,post) = (el 1 args, el 2 args, el 3 args);
-   val s = snd (dest_comb(concl(EVAL (makeState prog))))
+   val (listVars,s) = makeState prog;
    val evalP = evalPre pre s
    (* val ss = computeStateFromPre evalP s*)
   in
      (resetAll(); (* reset global variables *)
+      setVars(listVars);
       let val res = 
         execSymb name 
                  evalP 
@@ -1191,34 +1145,30 @@ fun execSymbWithCSP name spec n =
                  post 
                  ``T``
       in
-        (print "===============================\n";
-         if not (!nbTimeout=0)
-         then print "TIMEOUT\n"
-         else
-           if !nbError = 0
-           then print "PROGRAM IS CORRECT\n"
-           else print(int_to_string(!nbError) ^ " ERROR" ^ plural(!nbError)
-           ^ "found\n");
-         print (int_to_string(!nbCond) ^ " condition" 
-               ^ plural(!nbCond) ^ "tested.\n");
-         print (int_to_string(!nbEvalCond) ^ " condition" 
-               ^ plural(!nbEvalCond) ^ "solved" ^ " by EVAL.\n");
-         print (int_to_string(!nbUnfeasiblePath) ^ " condition" 
-               ^ plural(!nbUnfeasiblePath) ^ "shown impossible.\n\n");
-         print (int_to_string(!nbPath) ^ " feasible path" ^ plural(!nbPath)
-               ^ "explored.\n");
-         if !CSPSolvedPath=0
-         then print "All correct paths were verified in HOL.\n"
-         else print(int_to_string(!CSPSolvedPath)  ^ " path" ^ plural(!CSPSolvedPath)
-                    ^ "shown correct with the constraint solver\n");
-         print (int_to_string(!nbMETISPath) ^ " subterm" 
-               ^ plural(!nbMETISPath) ^ "solved with refute and METIS.\n");
-         print (int_to_string(!nbSIMPPath) ^ " subterm" 
-               ^ plural(!nbSIMPPath) ^ "solved with SIMP_CONV and COOPER.\n\n");
-	 print ("Total time spent with the constraint solver: " 
-		^ Real.toString(!CSPtime) ^ "s.\n"); 
-	 print "===============================\n";
-         resetProgramVars(); (* reset the list of variable used to existentially quantify terms *) 
+         (printStatistics();
+	 res)
+      end
+     )
+   end
+
+fun execSymbWithCSP_vars name spec n vars = 
+  (* build the symbolic state from variables in the program *)
+  let  val (_,args) = strip_comb spec;
+   val (pre,prog,post) = (el 1 args, el 2 args, el 3 args);
+   val (listVars,s) = makeStateFromVars vars;
+   val evalP = evalPre pre s
+   (* val ss = computeStateFromPre evalP s*)
+  in
+     (resetAll(); (* reset global variables *)
+      setVars(listVars);
+      let val res = 
+        execSymb name 
+                 evalP 
+                 (``[^prog]``,s,s,n) 
+                 post 
+                 ``T``
+      in
+         (printStatistics();
 	 res)
       end
      )

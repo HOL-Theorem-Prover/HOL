@@ -9,22 +9,14 @@ val opsemPath = Globals.HOLDIR ^ "/examples/opsemTools/";
 
 loadPath := opsemPath :: opsemPath ^ "java2opsem" ::
 opsemPath ^ "verify/solvers" ::
+opsemPath ^ "verify/solvers/constraintSolver" ::
 opsemPath ^ "verify/" ::
 (!loadPath);
 
 quietdec := true; (* turn off printing *)
 
-app load ["newOpsemTheory","pairSyntax", "intLib","intSimps",
-          "computeLib", "finite_mapTheory",
-          "relationTheory", "stringLib",
-          "PATH_EVAL",
-          "IndDefLib", "IndDefRules",
-          "term2xml","execSymb","extSolv"];
-
-
-open newOpsemTheory bossLib pairSyntax intLib intSimps
-     computeLib finite_mapTheory relationTheory stringLib
-     PATH_EVAL IndDefLib IndDefRules term2xml execSymb extSolv;
+app load ["execSymb","extSolv"];
+open execSymb extSolv;
 
 quietdec := false; (* turn printing back on *)
 
@@ -243,6 +235,23 @@ Total time spent with the constraint solver: 0.481s.
 - - - - - 
 *** Time taken: 39.410s
 *)
+
+
+(* symbolic execution of Tritype by computing the initial
+   state from intVar_def and arrVar_def defined in TritypeTheory
+*)
+val name = "Tritype";
+val spec = loadAndGetSpec name;
+(* need to have loaded the example. OK because
+   loadAndGetSpec has loaded the example *)
+val vars = getVars name; 
+(* *** Time taken: 0.016s *)
+val (_,args) = strip_comb spec;
+val (pre,prog,post) = (el 1 args, el 2 args, el 3 args);
+val (listVars,s) = makeState prog;
+(* *** Time taken: 1.656s *)
+execSymbWithCSP_vars name spec 30 vars;
+
 
 
 val name = "TritypeKO";
@@ -1608,11 +1617,22 @@ val spec = loadAndGetSpec name;
 execSymbWithCSP name spec 1000;
 
 
-(* impossible, the program is too big and
-   it is too long to build the initial state (more than 1 hour!!!) 
+(* the program is too big!
+   it is impossible to build the initial state from the program. 
+   it is too long to do symbolic execution (updating state is
+   too slow because the state is large (112 variables)
 *) 
 val name = "GeneratedFlasherManager";
 val spec = loadAndGetSpec name;
-execSymbWithCSP name spec 1000;
+(* need to have loaded the example 
+   instruction loadAndGetSpec above has loaded it*)
+val vars = getVars name; 
+(* *** Time taken: 0.080s *)
+execSymbWithCSP_vars name spec 1000 vars; 
+(* too slow
+*** Time taken: 643.824s
+to execute the 35 first assignements of variables
+and there are 112 variables to initialize !!!
+ *)
 
 

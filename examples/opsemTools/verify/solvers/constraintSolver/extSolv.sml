@@ -90,7 +90,8 @@ in
 (* function to read a solution *)
 (* --------------------------- *)
 fun getSolutions file_name =
-  let val lines = String.tokens (fn c => c = #"\n") (readFileToString file_name)
+  let val lines = String.tokens (fn c => c = #"\n") 
+                   (readFileToString file_name)
 val solutions = 
   if hd lines = "No solution"
   then []
