@@ -75,6 +75,6 @@ val MAIN_def =
   	     Define `intVar =["i";"j";"result";"k";"Result"]  `
 
     val arrVar_def =
-  	     Define `arrVar =[]  `
+  	     Define `arrVar =[]: string list  `
 
   val _ = export_theory();

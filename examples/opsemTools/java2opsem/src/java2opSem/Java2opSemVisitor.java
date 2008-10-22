@@ -341,13 +341,15 @@ public class Java2opSemVisitor extends ASTVisitor {
 	
 	private void printVars(ArrayList<String> v){
 		int s = v.size();
-		print("[");
 		if (s!=0) {
+			print("[");
 			for (int i=0;i<s-1;i++)
 				print("\"" + v.get(i) + "\";");
 			print("\"" + v.get(s-1) + "\"");
+		    print("]");
 		}
-	    print("]");
+		else 
+			print("[]: string list");
 	}
 	
 	public void endVisit(MethodDeclaration node) {	

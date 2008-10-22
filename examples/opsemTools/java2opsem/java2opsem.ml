@@ -545,6 +545,7 @@ NLS missing message: fileInitializer_missingFileName in: org.eclipse.core.intern
 
 load "newOpsemTheory";
 
+
 (* The compiled examples are written in the directory 
    testFiles/opsemFiles so add it into the load path 
 *)
@@ -585,6 +586,31 @@ fun suppressExtension(s,s') =
 fun getSpec name = 
    snd(dest_comb(concl(assoc "MAIN_def" (definitions name))));
 
+(* to get integer and array variables *)
+local
+
+fun mkListFromTerm tm = 
+  if tm = Term `[]:string list`
+  then []
+  else
+     let val (_,l) = strip_comb(tm)
+        val f = hd(l)
+        val r = hd(tl(l))
+     in
+       [f] @ (mkListFromTerm r)
+     end;
+
+in
+
+fun getVars name = 
+  let val intVar = snd(dest_comb(concl(assoc "intVar_def" (definitions name))))
+    val arrVar = snd(dest_comb(concl(assoc "arrVar_def" (definitions name))))
+  in
+    (mkListFromTerm intVar,
+     mkListFromTerm arrVar
+    )
+  end
+end;
 
 (* function to get the spec of file "testFiles/opsemFiles/name.sml"
    when the .sml has already been built and compiled. *)
