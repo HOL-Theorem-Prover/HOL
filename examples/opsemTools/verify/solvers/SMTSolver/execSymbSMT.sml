@@ -1,7 +1,7 @@
 
-(* ========================= execSymb.sml =====================
+(* ========================= execSymbSMT.sml =====================
 
-   Version of execSymb.ml for compiling.
+   Version of execSymb.sml that uses the SMT solver yices
 
    Takes a Hoare triple (pre,prog,post) and verifies if
    the program satisfies its specification by 
@@ -15,43 +15,24 @@
         the final state value)
 
    Symbolic execution prints a trace of the calls to the
-   CSP solver.
+   SMT solver.
    It also displays some information (stored in global 
    variables): 
      * nbPath is the number of feasible paths that have 
        been explored during symbolic execution
      * nbResolvedCond is the number of conditions that
        have been evaluated to constants by function EVAL
-     * CSPtime is the total CSP solving time.
+     * SMTtime is the total CSP solving time.
    
-   Calls to CSP solvers are decomposed into two steps:
-     - Write XML trees that represent the current execution 
-       status in xml files (in term2xml/xml).
-       This is done by functions in term2xml.
-     - Read the XML files to build and then solve the corresponding
-       CSP. This is done by Java classes in term2xml/java.
        
-   Functions in term2xml.ml generate XML trees which represent 
+   Functions in term2yices.ml generate input syntax of yices for
    a term. 
-   XML files are written in term2xml/xml.
-   See term2xml/xml/term.dtd for the syntax of XML trees.
 
-   Java classes in term2xml/java take XML files in
-   term2xml/xml and build and solve the corresponding
-   CSP.
-   Let tm be the term that has been written as XML file and
-			      read by Java classes to build a CSP.
-   If there is a solution s to the CSP, then ?s.tm
-   is a theorem
-   else !s.~tm is a theorem. 
-   
+   Need to have yices intalled on the machine and to have defined
+   an environment variable called YICES_EXEC that points to yices
+   executable on the computer.
 
-Examples of symbolic execution can be found at the end of this file.
-Need to load: newOpsemTheory (file loadNewOpsem.ml), the examples
-(file loadExamples), term2xml.ml and this file execSymb.ml.
-Need to have a java virtual machine.
-
-  ========================= execSymb.ml ===================== *)
+  ========================= execSymbSMT.ml ===================== *)
 
 
 
@@ -208,13 +189,13 @@ Then for each term dk = (path/\pre/\state/\npk):
 6. If the final disjunction is not equal to F then call
    the constraint solver.
    The constraint solver will successively build and solve 
-   a CSP for each term of the final disjunction.    
+   a SMT for each term of the final disjunction.    
    
 
 Remarks:
   - Step 1 is useful if the postcondition is a conjunction
     of specification cases (such as in tritype). It allows *
-    to avoid disjunctions in the final CSP.
+    to avoid disjunctions in the final SMT.
   - If the program is not correct, then at least one term
     dk doesn't reduce to F. In this case, METIS and SIMP_CONV 
     will fail but the constraint solver will be efficient to 
@@ -224,17 +205,16 @@ Remarks:
 *)
 
 
-
 open HolKernel Parse boolLib 
      newOpsemTheory bossLib pairSyntax intLib intSimps
-     computeLib finite_mapTheory  stringLib
-     simpTools stateTools extSolv;  
+     computeLib finite_mapTheory stringLib
+     simpTools stateTools extSMTSolver;  
 
 
 
 (* -------------------------------------------- *)
 (* Global variables and functions to build the solution:
-   - CSP solving time information
+   - SMT solving time information
    - number of conditions that have been evaluated as 
      constants using EVAL 
    - number of feasible paths that have been explored
@@ -256,23 +236,23 @@ fun incNbTimeout() =
 
 (* -------------------------------------------- *)
 (* global variable and functions to manage
-   time of CSP calls *)
+   time of SMT calls *)
 (* -------------------------------------------- *)
 
-val CSPtime= ref 0.0;
+val SMTtime= ref 0.0;
 
-fun incCSPTime(t) = 
-   CSPtime := !CSPtime + t;
+fun incSMTTime(t) = 
+   SMTtime := !SMTtime + t;
 
 (* -------------------------------------------- *)
 (* global variable and functions to manage
-   to know how many paths were verified using the CSP *)
+   to know how many paths were verified using the SMT *)
 (* -------------------------------------------- *)
 
-val CSPSolvedPath= ref 0;
+val SMTSolvedPath= ref 0;
 
-fun incCSPSolvedPath() = 
-   CSPSolvedPath := !CSPSolvedPath + 1;
+fun incSMTSolvedPath() = 
+   SMTSolvedPath := !SMTSolvedPath + 1;
 
 (* global variable and functions to manage
    the number of paths *)
@@ -358,12 +338,10 @@ fun setVars vars =
    vars;
 
 
-
-
 (* to reset the global variables at the end of an execution *)
 fun resetAll() = 
-  (CSPtime:=0.0;
-   CSPSolvedPath:=0;
+  (SMTtime:=0.0;
+   SMTSolvedPath:=0;
    nbError:=0;
    nbTimeout:=0;
    nbPath:=0;
@@ -376,6 +354,8 @@ fun resetAll() =
    
 
 
+
+
 (*================================================== *)
 (* functions to do symbolic simplifications on terms *)
 (*================================================== *)
@@ -384,8 +364,6 @@ fun resetAll() =
 (* ----------------------------------------- *)
 fun existQuantify tm =
   list_mk_exists(!programVars,tm);
-
-
 
 
 (* functions to simplify each sub-term of disjunction *)
@@ -523,26 +501,6 @@ end;
 
 
 
-(* =====================================================
-(* Functions to perform the symbolic execution of
-   the program, using a CSP solver to select the paths
-   and verify that the program satisfies its specification
-   at the end of the path *)
-   ===================================================== *)
-(*
-(* to make a term that is the equality of 
-   a pair (var_i,val_i) where var_i is a variable in 
-   the program and val_i is its last value 
-*)
-fun termVarState vst =
- let val (n,v) = pairSyntax.dest_pair vst;
-    val thm = EVAL ``ScalarOf ^v``;
-    val scal = getThm thm;
-  in
-    mk_eq(mk_var(fromHOLstring n,``:int``),scal)
-  end;
-*)
-
 
 (* ------------------------------------------------- *)
 (* to test if a path is possible                     *)
@@ -582,14 +540,12 @@ in
 
 fun testPath name pre path st =
   (* TODO: use mkSimplConj or modify term2xml to handle x /\T *)
- let val timeout = 100
-   val intFormat = 8
-   val conj = mk_conj(pre,path)
+ let    val conj = mk_conj(pre,path)
    in
    (print "======================\n";
     print "Testing feasability\n";
     print "======================\n";
-    let val (th,time) = extSolvTimeoutFormat name conj timeout intFormat
+    let val (th,time) = extSolvSMT name conj
       val res = getThm th
     in
      if (res = ``F``)
@@ -616,7 +572,7 @@ fun testPath name pre path st =
 	(true,time)
        )
      end
-     handle ExtSolverTimeout =>
+(*     handle ExtSolverTimeout =>
        let val existsConj = existQuantify conj
          val thSimp = SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] existsConj
          val resSimp=  getThm thSimp
@@ -632,6 +588,7 @@ fun testPath name pre path st =
 	 print "======================\n"; 
          (true,((Real.fromInt timeout)*0.001))
         )
+*)
    )
    end;
 end;
@@ -679,97 +636,59 @@ fun printError() =
 
 
 
-
 in
 
+
+(* ---------------------------------------------- *)
+(* To verify the system at the end of a path.
+   This version only uses the SMT solver          *)
+
 (* st1 is initial state (before program execution)
-   st2 is final state (after program execution) *)
+   st2 is final state (after program execution)   *)
+(* ---------------------------------------------- *)
 
 fun verifyPath name pre st1 st2 post path =
-  let val timeout = 10000; 
-    val f = 16
-    val conj = mk_conj(pre,path);
+  let     val conj = mk_conj(pre,path);
     val st2' = pruneState(st2);
     val po = evalPost post st1 st2'
-    (* verify the term using specific rule to compute 
-       the negation of post *) 
-    val tm = verifyTerm conj po
+    val np =  takeNegPost po
+    val tm = mk_conj(np,conj)
     in 
-     (* if tm is a constant and its value is F 
-        the program is correct *)
-     if is_const(tm)
-     then 
-       if tm=``F``
-       then
-          (printCorrect();
-          (``RESULT ^st2'``,0.0)
-        )
-       else 
-         (* there is an error, searching solution with CSP *)
-         (print "======================\n";
-          print "METIS has shown that path is NOT correct\n";
-          print "Searching counter-example\n";
-          let val tmKO = mk_conj(conj,takeNegPost(po))
-             val  (th,time) = extSolvTimeoutFormat name tmKO timeout f
-             val res = getThm th
-	  in
-          if res = ``F``
-          then 
-            ( print "PROBLEM: solver has not find a counter-example\n";
-	      (``ERROR ^st2'``,time)
-	    )
-          else 
-            (* add to the current state the values
-               of the variables that correspond to an error
-               i.e the values found by the CSP 
-               when solving pre /\ state /\ path /\ ~post *) 
+      (print "======================\n";
+       print "Testing correctness\n";
+       print "======================\n";
+       let val (th,t) = extSolvSMT name tm 
+           val res = getThm th
+       in
+           if res = ``F``
+           then 
+	       ( incSMTSolvedPath();  
+		 printCorrect();
+		 (``RESULT ^st2'``,t)
+	       )
+           else 
+               (* add to the current state the values
+                  of the variables that correspond to an error
+                  i.e the values found by the SMT 
+                  when solving pre /\ state /\ path /\ ~post *) 
             let val errorState = makeErrorState name st2'
             in
               (printError();
                incNbError();
-               (``ERROR ^errorState``,time)
+               (``ERROR ^errorState``,t)
 	      )
             end
-          end
-          )
-     else
-         (* tm has not been simplified to T nor F so 
-            calling the CSP *)
-         (print "======================\n";
-	  print "METIS and SIMP_CONV have failed to verify the path\n";
-          print "Testing correctness\n";
-	  print "======================\n";
-	  let val (th,time) = extSolvTimeoutFormat name tm timeout f
-             val res = getThm th
-	  in
-          if res = ``F``
-          then 
-	    ( incCSPSolvedPath();
-              printCorrect();
-             (``RESULT ^st2'``,time)
-	    )
-          else 
-            (* add to the current state the values
-               of the variables that correspond to an error
-               i.e the values found by the CSP 
-               when solving pre /\ state /\ path /\ ~post *) 
-            let val errorState = makeErrorState name st2'
-            in
-              (printError();
-               incNbError();
-               (``ERROR ^errorState``,time)
-	      )
-            end
-          end
-         )
-      end
+       end
+      )
+   end
+
 end;
 
 
 
 (* -------------------------------------------------- 
    main functions to symbolically execute a program 
-   using the small step semantics and calling a CSP
+   using the small step semantics and calling a SMT
    -------------------------------------------------- *)
 
 local 
@@ -791,6 +710,12 @@ let val (opr,_) = strip_comb(tm)
   end;
 
 
+(* to get the instruction name *)
+fun instName tm = 
+let val (opr,_) = strip_comb(tm)
+  in
+   opr
+  end;
 
 in
 
@@ -818,8 +743,6 @@ Use functions:
     has a solution
 ------------------------------------------*)
 
-
-
 fun execSymb name pre (l,st1,st2,n) post path= 
  if listSyntax.is_nil(l)
  then
@@ -835,7 +758,7 @@ fun execSymb name pre (l,st1,st2,n) post path=
       let val (r,t) = verifyPath name pre st1 st2 post path
         in 
           (incPath();
-           incCSPTime(t);
+           incSMTTime(t);
            r
           )
         end
@@ -861,15 +784,14 @@ fun execSymb name pre (l,st1,st2,n) post path=
          (* instruction is not a conditional *)
          (* call STEP1 to compute the next state and continue *)
          else
+(*          (print("instruction: " ^ term_to_string(instName(inst)) ^"\n");*)
           let val tm = getThm (EVAL ``STEP1 (^l, ^st2)``);
             val newState = snd(dest_comb(snd(dest_comb(tm))));
             val newList = snd(dest_comb(fst(dest_comb(tm))));
-	  val (opr,_) = strip_comb(inst)
            in
-             (*(print("instruction: " ^ term_to_string(opr) ^"\n");*)
-              execSymb name pre (newList,st1,newState,(n-1)) post path 
-             (*) *)
-            end
+             execSymb name pre (newList,st1,newState,(n-1)) post path 
+           end
+(*) *)
       end
 
 (* ----------------------------------------------------- 
@@ -887,7 +809,7 @@ fun execSymb name pre (l,st1,st2,n) post path=
 
 Use function testPath to know if the condition is possible 
 with the current precondition, path and state.
-Function testPath calls the CSP.
+Function testPath calls the SMT.
   ----------------------------------------------------- *)
 
 and execSymbCond name pre (l,st1,st2,n) post path = 
@@ -960,8 +882,8 @@ and execSymbCond name pre (l,st1,st2,n) post path =
           then execSymb name pre (nextListElse,st1,saveState,n) post newPathElse 
           else ``F`` 
        in
-           (incCSPTime(tIf);
-            incCSPTime(tElse);
+           (incSMTTime(tIf);
+            incSMTTime(tElse);
 	    if ok
 	    then
 		if elseOk
@@ -993,7 +915,7 @@ end)
 
 Use function testPath to know if the condition is possible 
 with the current precondition, path and state.
-Function testPath calls the CSP.
+Function testPath calls the SMT.
   ----------------------------------------------------- *)
 
 and execSymbWhile name pre (l,st1,st2,n) post path  =
@@ -1067,8 +989,8 @@ and execSymbWhile name pre (l,st1,st2,n) post path  =
          then execSymb name pre (tail,st1,saveState,n) post newPathExit
          else ``F``
        in
-         (incCSPTime(tLoop);
-          incCSPTime(tExit);
+         (incSMTTime(tLoop);
+          incSMTTime(tExit);
 	  if ok
 	  then
 	      if elseOk
@@ -1078,9 +1000,9 @@ and execSymbWhile name pre (l,st1,st2,n) post path  =
 	 ) 
    end
    
-end)
+end);
 
-end;
+
 
 
 (* -------------------------------------------------- 
@@ -1088,7 +1010,7 @@ end;
    execution
    -------------------------------------------------- *)
 
-
+(* to evaluate pre or post condition on an initial state *)
 local
 
 
@@ -1097,44 +1019,48 @@ fun plural n =
   then "s have been "
   else " has been ";
 
+
 (* to print statistics global variables *)
 fun printStatistics() =
-   (print "===============================\n";
-    if not (!nbTimeout=0)
-    then print "TIMEOUT\n"
-    else
-        if !nbError = 0
-        then print "PROGRAM IS CORRECT\n"
-        else print(int_to_string(!nbError) ^ " ERROR" ^ plural(!nbError)
-		   ^ "found\n");
-    print (int_to_string(!nbCond) ^ " condition" 
-           ^ plural(!nbCond) ^ "tested.\n");
-    print (int_to_string(!nbEvalCond) ^ " condition" 
-           ^ plural(!nbEvalCond) ^ "solved" ^ " by EVAL.\n");
-    print (int_to_string(!nbUnfeasiblePath) ^ " condition" 
-           ^ plural(!nbUnfeasiblePath) ^ "shown impossible.\n\n");
-    print (int_to_string(!nbPath) ^ " feasible path" ^ plural(!nbPath)
-           ^ "explored.\n");
-    if !CSPSolvedPath=0
-    then print "All correct paths were verified in HOL.\n"
-    else print(int_to_string(!CSPSolvedPath)  ^ " path" ^ plural(!CSPSolvedPath)
-               ^ "shown correct with the constraint solver\n");
-    print (int_to_string(!nbMETISPath) ^ " subterm" 
-           ^ plural(!nbMETISPath) ^ "solved with refute and METIS.\n");
-    print (int_to_string(!nbSIMPPath) ^ " subterm" 
-           ^ plural(!nbSIMPPath) ^ "solved with SIMP_CONV and COOPER.\n\n");
-    print ("Total time spent with the constraint solver: " 
-	   ^ Real.toString(!CSPtime) ^ "s.\n"); 
-    print "===============================\n"
-);
+    (print "===============================\n";
+     if not (!nbTimeout=0)
+     then print "TIMEOUT\n"
+     else
+         if !nbError = 0
+         then print "PROGRAM IS CORRECT\n"
+         else print(int_to_string(!nbError) ^ " ERROR" ^ plural(!nbError)
+		    ^ "found\n");
+     print (int_to_string(!nbCond) ^ " condition" 
+            ^ plural(!nbCond) ^ "tested.\n");
+     print (int_to_string(!nbEvalCond) ^ " condition" 
+            ^ plural(!nbEvalCond) ^ "solved" ^ " by EVAL.\n");
+     print (int_to_string(!nbUnfeasiblePath) ^ " condition" 
+            ^ plural(!nbUnfeasiblePath) ^ "shown impossible.\n\n");
+     print (int_to_string(!nbPath) ^ " feasible path" ^ plural(!nbPath)
+            ^ "explored.\n");
+(*
+     if !SMTSolvedPath=0
+     then print "All correct paths were verified in HOL.\n"
+     else print(int_to_string(!SMTSolvedPath)  ^ " path" ^ plural(!SMTSolvedPath)
+                ^ "shown correct with the SMT solver\n");
+     print (int_to_string(!nbMETISPath) ^ " subterm" 
+            ^ plural(!nbMETISPath) ^ "solved with refute and METIS.\n");
+     print (int_to_string(!nbSIMPPath) ^ " subterm" 
+            ^ plural(!nbSIMPPath) ^ "solved with SIMP_CONV and COOPER.\n\n");
+*)
+     print ("Total time spent with the SMT solver: " 
+	    ^ Real.toString(!SMTtime) ^ "s.\n"); 
+     print "===============================\n"
+    );
+
 
 in
+
 
 (* Do symbolic execution
    The symbolic state is built from variables in the program
  *)
-fun execSymbWithCSP name spec n = 
-
+fun execSymbWithSMT name spec n = 
   let  val (_,args) = strip_comb spec;
    val (pre,prog,post) = (el 1 args, el 2 args, el 3 args);
    val (listVars,s) = makeState prog;
@@ -1142,7 +1068,6 @@ fun execSymbWithCSP name spec n =
    (* val ss = computeStateFromPre evalP s*)
   in
      (resetAll(); (* reset global variables *)
-      setVars(listVars);
       let val res = 
         execSymb name 
                  evalP 
@@ -1150,17 +1075,18 @@ fun execSymbWithCSP name spec n =
                  post 
                  ``T``
       in
-         (printStatistics();
-	  resetProgramVars(); (* reset the list of variable used to existentially quantify terms *) 
-          res)
+        (printStatistics();
+         resetProgramVars(); (* reset the list of variable used to existentially quantify terms *) 
+	 res)
       end
      )
-   end
+   end;
+
 
 (* Do symbolic execution
-   The symbolic state is built from variables given in vars
+   The symbolic state is built from variables in the program
  *)
-fun execSymbWithCSP_vars name spec n vars = 
+fun execSymbWithSMT_vars name spec n vars = 
   let  val (_,args) = strip_comb spec;
    val (pre,prog,post) = (el 1 args, el 2 args, el 3 args);
    val (listVars,s) = makeStateFromVars vars;
@@ -1176,7 +1102,7 @@ fun execSymbWithCSP_vars name spec n vars =
                  post 
                  ``T``
       in
-         (printStatistics();
+        (printStatistics();
          resetProgramVars(); (* reset the list of variable used to existentially quantify terms *) 
 	 res)
       end
@@ -1184,3 +1110,4 @@ fun execSymbWithCSP_vars name spec n vars =
    end
 end;
 
+end;
