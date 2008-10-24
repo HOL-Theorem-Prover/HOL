@@ -50,8 +50,8 @@ fun ERR x = STRUCT_ERR "Opening" x;
 fun is_congruence tm =
     is_eq tm orelse
     let val (rel,[left,right]) = strip_comb tm
-    in (can (ho_match_term [] empty_tmset left) right) andalso
-       (can (ho_match_term [] empty_tmset right) left)
+    in (can (ho_kind_match_term [] [] empty_tmset left) right) andalso
+       (can (ho_kind_match_term [] [] empty_tmset right) left)
     end
    handle HOL_ERR _ => false | Bind => false
 fun rel_of_congrule thm =
@@ -219,7 +219,7 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
       end
        handle HOL_ERR _ => AP_TERM Rator (depther ([],equality)  Rand))
    | LAMB(Bvar,Body) =>
-     if mem Bvar freevars then
+     if op_mem aconv Bvar freevars then
      let val v = variant (freevars@free_vars Body) Bvar
          val th1 = ALPHA_CONV v tm handle e as HOL_ERR _
          => (trace(0,REDUCE("SIMPLIFIER ERROR: bug when alpha converting",tm));
@@ -235,6 +235,15 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
      else let val _ = trace(4,TEXT "no alpha conversion")
               val Bth = depther ([],equality) Body
           in ABS Bvar Bth
+          end
+   | TYCOMB(Rator,Rand) =>
+          let val th = depther ([],equality) Rator
+          in  TY_COMB th Rand
+          end
+   | TYLAMB(Bvar,Body) =>
+          let val _ = trace(4,TEXT "no alpha conversion")
+              val Bth = depther ([],equality) Body
+          in TY_ABS Bvar Bth
           end
    | _ => failwith "unchanged";
 

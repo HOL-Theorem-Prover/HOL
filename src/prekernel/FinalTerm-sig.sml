@@ -84,6 +84,7 @@ sig
   val eta_conv      : term -> term
   val ty_beta_conv  : term -> term
   val ty_eta_conv   : term -> term
+  val beta_conv_ty_in_term : term -> term
   val subst         : (term,term) subst -> term -> term
   val inst          : (hol_type,hol_type) subst -> term -> term
   val inst_kind     : (kind,kind) subst -> term -> term

@@ -142,7 +142,7 @@ fun kindVars ptm =  (* the prekind variables in a preterm *)
   | Constrained{Ptm,Ty,...} => Lib.union (kindVars Ptm) (Pretype.kindvars Ty)
   | Overloaded _            => raise Fail "Preterm.kindVars: applied to Overloaded";
 
-fun tyVars ptm =  (* the pretype variables in a preterm *)
+fun tyVars ptm =  (* the pretype variable names in a preterm *)
   case ptm of
     Var{Ty,...}             => Pretype.tyvars Ty
   | Const{Ty,...}           => Pretype.tyvars Ty
@@ -154,6 +154,74 @@ fun tyVars ptm =  (* the pretype variables in a preterm *)
   | Constrained{Ptm,Ty,...} => Lib.union (tyVars Ptm) (Pretype.tyvars Ty)
   | Overloaded _            => raise Fail "Preterm.tyVars: applied to Overloaded";
 
+(*-----------------------------------------------------------------------------*
+ * The free type variables of a lambda term. Tail recursive (from Ken Larsen). *
+ *-----------------------------------------------------------------------------*)
+
+local val union = Lib.op_union Pretype.eq
+      val subtract = Lib.op_set_diff Pretype.eq
+      val type_vars = Pretype.type_vars
+      fun tyV (Var{Ty,...}) k             = k (type_vars Ty)
+        | tyV (Const{Ty,...}) k           = k (type_vars Ty)
+        | tyV (Comb{Rator,Rand,...}) k    = tyV Rand (fn q1 =>
+                                            tyV Rator(fn q2 => k (union q2 q1)))
+        | tyV (TyComb{Rator,Rand,...}) k  = tyV Rator (fn q  =>
+                                            k (union q (type_vars Rand)))
+        | tyV (Abs{Bvar,Body,...}) k      = tyV Body (fn q1 =>
+                                            tyV Bvar (fn q2 => k (union q2 q1)))
+        | tyV (TyAbs{Bvar,Body,...}) k    = tyV Body (fn q => k (subtract q [Bvar]))
+        | tyV (Antiq{Tm,...}) k           = map Pretype.fromType (Term.type_vars_in_term Tm)
+        | tyV (Constrained{Ptm,Ty,...}) k = tyV Ptm (fn q =>
+                                            k (union q (type_vars Ty)))
+        | tyV (Overloaded _) k            = k []
+      fun tyVs (t::ts) k           = tyV t (fn q1 =>
+                                     tyVs ts (fn q2 => k (union q2 q1)))
+        | tyVs [] k                = k []
+in
+fun type_vars_in_term tm = tyV tm Lib.I
+fun type_vars_in_terml tms = tyVs tms Lib.I
+end;
+
+local
+open Pretype
+fun toTypePair {redex,residue} = {redex=toType redex, residue=toType residue}
+fun toTypeSubst theta = map toTypePair theta
+fun residue_tyvs theta = flatten (map (type_vars o #residue) theta)
+fun remove v theta = filter (fn {redex,residue} => not (eq redex v)) theta
+in
+fun inst [] tm = tm
+  | inst theta tm =
+    let fun inst0 (Const{Name,Thy,Ty,Locn}) =
+              Const{Name=Name, Thy=Thy, Ty=type_subst theta Ty, Locn=Locn}
+          | inst0 (Var{Name,Ty,Locn}) =
+              Var{Name=Name, Ty=type_subst theta Ty, Locn=Locn}
+          | inst0 (Comb{Rator,Rand,Locn}) =
+              Comb{Rator=inst0 Rator, Rand=inst0 Rand, Locn=Locn}
+          | inst0 (TyComb{Rator,Rand,Locn}) =
+              TyComb{Rator=inst0 Rator, Rand=type_subst theta Rand, Locn=Locn}
+          | inst0 (Abs{Bvar,Body,Locn}) =
+              Abs{Bvar=inst0 Bvar, Body=inst0 Body, Locn=Locn}
+          | inst0 (tm as TyAbs{Bvar,Body,Locn}) =
+              let val Bvar0 = the_var_type Bvar
+                  val theta' = remove Bvar0 theta
+                  val ctvs = residue_tyvs theta'
+              in if op_mem eq Bvar0 ctvs then
+                    let val bodytvs = type_vars_in_term tm
+                        val Bvar' = variant_type (op_union eq ctvs bodytvs) Bvar0
+                        val phi = (Bvar0 |-> Bvar') :: theta'
+                    in TyAbs{Bvar=type_subst phi Bvar, Body=inst phi Body, Locn=Locn}
+                    end
+                 else TyAbs{Bvar=Bvar, Body=inst theta' Body, Locn=Locn}
+              end
+          | inst0 (Antiq{Tm,Locn}) =
+              Antiq{Tm=Term.inst (toTypeSubst theta) Tm, Locn=Locn}
+          | inst0 (Constrained{Ptm,Ty,Locn}) =
+              Constrained{Ptm=inst0 Ptm, Ty=type_subst theta Ty, Locn=Locn}
+          | inst0 tm = tm
+    in
+      inst0 tm
+    end
+end
 
 (* ---------------------------------------------------------------------- *)
 (* "remove_case_magic", located here to be called within "to_term":       *)
@@ -729,10 +797,10 @@ fun TC printers = let
                   then (y ty ^ " " ^ z (Type.kind_of ty)
                              ^ " :<= " ^ Int.toString (Type.rank_of ty))
                   else y ty
-              fun tmprint tm =
-                  if Term.is_const tm
+              fun tmprint tm = x tm
+                (*if Term.is_const tm
                   then (x tm ^ " " ^ y (Term.type_of tm))
-                  else x tm
+                  else x tm*)
           in
             (tmprint, typrint, kdprint)
           end
@@ -1070,7 +1138,7 @@ fun TC printers = let
               val message =
                   String.concat
                       [
-                       "\nKind inference failure: the term ",
+                       "\nKind inference failure: the term\n\n",
                        ptm real_term,
                        "\n\n"^locn.toString (locn Ptm)^"\n\n",
 
@@ -1127,8 +1195,11 @@ fun TC printers = let
 in check
 end end;
 
+fun evade_free_tvs tm =
+   inst (map (fn tv => (Pretype.all_new_uvar() |-> tv)) (type_vars_in_term tm)) tm
+
 fun typecheck_phase1 pfns ptm =
-    TC pfns ptm
+    TC pfns (evade_free_tvs ptm)
     handle phase1_exn(l,s,ty) => let
            in
              case pfns of
@@ -1144,7 +1215,7 @@ fun typecheck_phase1 pfns ptm =
 val post_process_term = ref (I : term -> term);
 
 fun typecheck pfns ptm0 = let
-  val ptm0' = TC pfns ptm0
+  val ptm0' = TC pfns (evade_free_tvs ptm0)
   val ptm = overloading_resolution0 ptm0'
 in
   !post_process_term (remove_case_magic (to_term ptm))

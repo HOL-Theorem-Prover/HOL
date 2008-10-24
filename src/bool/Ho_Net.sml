@@ -71,6 +71,8 @@ fun label_cmp p =
 fun stored_label (fvars,tm) =
   let val (oper,args) = strip_comb tm
       val args' = map (fn x => (fvars,x)) args
+      val subtract = Lib.op_set_diff aconv
+      val mem = Lib.op_mem aconv
   in case dest_term oper
       of CONST {Name,Thy,...} => (Cnet(Name,Thy,length args),args')
        | LAMB (Bvar,Body) => (Lnet(length args),

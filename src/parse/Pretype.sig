@@ -51,6 +51,7 @@ val is_atom  : pretype -> bool
 
 val type_vars  : pretype -> pretype list
 val type_varsl : pretype list -> pretype list
+val variant_type : pretype list -> pretype -> pretype
 
 val kindvars : pretype -> string list
 val tyvars : pretype -> string list

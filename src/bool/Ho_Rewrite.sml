@@ -36,7 +36,7 @@ val term_to_string = Parse.term_to_string;
  *---------------------------------------------------------------------------*)
 
 fun mk_rewrites th =
-  let val th = SPEC_ALL th
+  let val th = SPEC_ALL (TY_SPEC_ALL th)
       val t = concl th
   in
   if is_eq t   then [th] else
@@ -99,7 +99,8 @@ in
 val _ = add_implicit_rewrites
    [REFL_CLAUSE, EQ_CLAUSES, NOT_CLAUSES, AND_CLAUSES,
     OR_CLAUSES, IMP_CLAUSES, FORALL_SIMP, EXISTS_SIMP,
-    ABS_SIMP, SELECT_REFL, SELECT_REFL_2, COND_CLAUSES];
+    ABS_SIMP, TY_FORALL_SIMP, TY_EXISTS_SIMP, TY_ABS_SIMP,
+    SELECT_REFL, SELECT_REFL_2, COND_CLAUSES];
 end;
 
 (* =====================================================================*)
@@ -174,7 +175,7 @@ fun GEN_REWRITE_TAC rw_func thl =
  ****************************************************************************)
 
 local fun find_match u =
-       let val hom = ho_match_term [] empty_tmset u
+       let val hom = ho_kind_match_term [] [] empty_tmset u
            fun find_mt t =
                hom t handle HOL_ERR _ =>
                find_mt(rator t)  handle HOL_ERR _ =>
@@ -185,7 +186,7 @@ local fun find_match u =
        end
 in
 fun SUBST_MATCH eqth th =
- SUBS [Drule.INST_TY_TERM (find_match(lhs(concl eqth)) (concl th)) eqth] th
+ SUBS [Drule.INST_ALL (find_match(lhs(concl eqth)) (concl th)) eqth] th
 end;
 
 
@@ -194,12 +195,12 @@ end;
  * Taken directly from the GTT source code (Don Syme).
  *
  * val LOCAL_COND_ELIM_THM1 = prove
- *     ((--`!P:'a->bool. P(a => b | c) = (~a \/ P(b)) /\ (a \/ P(c))`--),
+ *     ((--`!P:'a->bool. P(if a then b else c) = (~a \/ P(b)) /\ (a \/ P(c))`--),
  *      GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[]);
  *
  * val conv = HIGHER_REWRITE_CONV[LOCAL_COND_ELIM_THM1];
- * val x = conv (--`(P:'a -> bool) (a => b | c)`--);
- * val x = conv (--`(a + (f x => 0 | n) + m) = 0`--) handle e => Raise e;
+ * val x = conv (--`(P:'a -> bool) (if a then b else c)`--);
+ * val x = conv (--`(a + (if f x then 0 else n) + m) = 0`--) handle e => Raise e;
  * ------------------------------------------------------------------------- *)
 
 
@@ -212,7 +213,7 @@ val HIGHER_REWRITE_CONV =
       in INST (map2 (curry op |->) fvs gvs) th
       end
   in fn ths =>
-      let val thl = map (GINST o SPEC_ALL) ths
+      let val thl = map (GINST o SPEC_ALL o TY_SPEC_ALL) ths
           val concs = map concl thl
           val lefts = map lhs concs
           val (preds,pats) = unzip(map dest_comb lefts)
@@ -221,7 +222,7 @@ val HIGHER_REWRITE_CONV =
           fun insert p = Ho_Net.enter ([],p,p)
           val mnet = itlist insert pats Ho_Net.empty_net
           fun look_fn t = mapfilter
-                    (fn p => if can (ho_match_term [] empty_tmset p) t then p
+                    (fn p => if can (ho_kind_match_term [] [] empty_tmset p) t then p
                              else fail())
                     (lookup t mnet)
       in fn tm =>
@@ -229,12 +230,12 @@ val HIGHER_REWRITE_CONV =
                         (fn t => not (look_fn t = []) andalso free_in t tm) tm
               val stm = Lib.trye hd (sort free_in ts)
               val pat = Lib.trye hd (look_fn stm)
-              val (tmin,tyin) = ho_match_term [] empty_tmset pat stm
+              val (tmin,tyin,kdin,rkin) = ho_kind_match_term [] [] empty_tmset pat stm
               val (pred,(th,beta_fn)) = assoc pat ass_list
               val gv = genvar(type_of stm)
               val abs = mk_abs(gv,subst[stm |-> gv] tm)
-              val (tmin0,tyin0) = ho_match_term [] empty_tmset pred abs
-          in CONV_RULE beta_fn (INST tmin (INST tmin0 (INST_TYPE tyin0 th)))
+              val inst0 = ho_kind_match_term [] [] empty_tmset pred abs
+          in CONV_RULE beta_fn (INST tmin (INST_ALL inst0 th))
           end
       end
       handle e => raise (wrap_exn "Ho_Rewrite" "HIGHER_REWRITE_CONV" e)

@@ -496,8 +496,8 @@ end
 
 fun first_decl fname Name =
   case KernelSig.listName termsig Name
-   of []             => raise ERR fname (Name^" not found")
-    | [(_, const)]  => const
+   of []              => raise ERR fname (Name^" not found")
+    | [(_, const)]    => const
     | (_, const) :: _ =>
         (WARN fname (Lib.quote Name^": more than one possibility");
          const)
@@ -710,6 +710,25 @@ fun ty_beta_conv (TComb(TAbs(Bvar as (Name,Kind,Rank),Body), Rand)) =
   | ty_beta_conv (x as Clos _) = ty_beta_conv (push_clos x)
   | ty_beta_conv _ = raise ERR "ty_beta_conv" "not a type beta-redex";
 
+(*---------------------------------------------------------------------------*
+ *       Beta-conversion of all types within a term.                         *
+ *---------------------------------------------------------------------------*)
+
+val beta_conv_ty_in_term =
+     let fun bconv(Fv(s,ty))         = Fv(s,deep_beta_conv_ty ty)
+           | bconv(Const(Name,Ty))   = Const(Name,bconv_pty Ty)
+           | bconv(Comb(Rator,Rand)) = Comb(bconv Rator,bconv Rand)
+           | bconv(TComb(Rator,Ty))  = TComb(bconv Rator,deep_beta_conv_ty Ty)
+           | bconv(Abs(v,Body))      = Abs(bconv v,bconv Body)
+           | bconv(TAbs(a,Body))     = TAbs(a,bconv Body)
+           | bconv(tm as Clos _)     = bconv(push_clos tm)
+           | bconv tm = tm (* e.g., bound variables *)
+         and bconv_pty (GRND ty)     = GRND (deep_beta_conv_ty ty)
+           | bconv_pty (POLY ty)     = POLY (deep_beta_conv_ty ty)
+     in
+       bconv
+     end;
+
 
 (*---------------------------------------------------------------------------*
  *       Type Eta-conversion                                                 *
@@ -797,32 +816,14 @@ fun check_subst [] = ()
               assume the rank check was done earlier and proceed. *)
         then raise ERR "inst" "redex has lower rank than residue"
         else check_subst s
+(*
+fun residue_tyvs theta = flatten (map (type_vars o #residue) theta)
+fun remove v theta = filter (fn {redex,residue} => not (redex = TyFv v)) theta
+*)
 in
 fun inst [] tm = tm
   | inst theta tm =
-    let fun inst1 (bv as Bv i) R = bv
-          | inst1 (c as Const(_, GRND _)) R = c
-          | inst1 (c as Const(r, POLY Ty)) R =
-            (case Type.ty_sub theta Ty
-              of SAME => c
-               | DIFF ty => Const(r,(if Type.polymorphic ty then POLY else GRND)ty))
-          | inst1 (v as Fv(Name,Ty)) R =
-              (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
-          | inst1 (Comb(Rator,Rand)) R = Comb(inst1 Rator R, inst1 Rand R)
-          | inst1 (TComb(Rator,Ty)) R  = TComb(inst1 Rator R, Type.type_subst theta Ty)
-              (*
-              let val Rator' = inst1 Rator R
-                  val rty = type_of Rator'
-                  val Ty' = Type.type_subst theta Ty
-              in if Type.rk_of Ty' R > rank_of_univ_dom rty
-                  then raise ERR "inst" "universal type variable has insufficient rank"
-                  else TComb(Rator', Ty')
-              end
-              *)
-          | inst1 (Abs(Bvar,Body)) R   = Abs(inst1 Bvar R, inst1 Body R)
-          | inst1 (TAbs(Bvar as (_,_,rk),Body)) R = TAbs(Bvar, inst1 Body (rk::R))
-          | inst1 (t as Clos _) R      = inst1(push_clos t) R
-        fun inst0 (bv as Bv i) = bv
+    let fun inst0 (bv as Bv i) = bv
           | inst0 (c as Const(_, GRND _)) = c
           | inst0 (c as Const(r, POLY Ty)) =
             (case Type.ty_sub theta Ty
@@ -832,20 +833,8 @@ fun inst [] tm = tm
               (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
           | inst0 (Comb(Rator,Rand)) = Comb(inst0 Rator, inst0 Rand)
           | inst0 (TComb(Rator,Ty))  = TComb(inst0 Rator, Type.type_subst theta Ty)
-              (* The following check should never be violated, if the subst is proper *)
-              (* One could have said,  TComb(inst0 Rator, Type.type_subst theta Ty)   *)
-              (*
-              let val Rator' = inst0 Rator
-                  val rty = type_of Rator'
-                  val Ty' = Type.type_subst theta Ty
-              in if rank_of Ty' > rank_of_univ_dom rty
-                  then raise ERR "inst" "universal type variable has insufficient rank"
-                       (* This error should never be raised, if the substitution is proper *)
-                  else TComb(Rator', Ty')
-              end
-              *)
           | inst0 (Abs(Bvar,Body))   = Abs(inst0 Bvar, inst0 Body)
-          | inst0 (TAbs(Bvar as (_,_,rk),Body)) = TAbs(Bvar, inst1 Body [rk])
+          | inst0 (TAbs(Bvar,Body))  = TAbs(Bvar, inst0 Body)
           | inst0 (t as Clos _)      = inst0(push_clos t)
     in
       check_subst theta;
@@ -940,6 +929,8 @@ fun inst_rk_kd_ty 0  []       []    tm = tm
     end
 end;
 
+fun inst_all (tmS,tyS,kdS,rkS) tm = subst tmS (inst_rk_kd_ty rkS kdS tyS tm);
+
 (*---------------------------------------------------------------------------*
  *     Substitute types for general types in a term                          *
  *---------------------------------------------------------------------------*)
@@ -1024,7 +1015,7 @@ fun list_mk_binder opt =
  => if not (all is_var vlist) then raise ERR "list_mk_binder" ""
     else
   let open Polyhash
-     val varmap = mkPolyTable(length vlist, Fail "varmap")
+     val varmap = mkTable (hash, uncurry aconv) (length vlist, Fail "varmap")
      fun enum [] _ A = A
        | enum (h::t) i A = (insert varmap (h,i); enum t (i-1) (h::A))
      val rvlist = enum vlist (length vlist - 1) []
@@ -1049,7 +1040,7 @@ end;
 val list_mk_abs = list_mk_binder NONE;
 
 fun mk_abs(Bvar as Fv _, Body) =
-    let fun bind (v as Fv _) i        = if v=Bvar then Bv i else v
+    let fun bind (v as Fv _) i        = if aconv v Bvar then Bv i else v
           | bind (Comb(Rator,Rand)) i = Comb(bind Rator i, bind Rand i)
           | bind (TComb(Rator,Ty)) i  = TComb(bind Rator i, Ty)
           | bind (Abs(Bvar,Body)) i   = Abs(Bvar, bind Body (i+1))
@@ -1344,7 +1335,7 @@ fun strip_tybinder opt =
        | CVs(Comb(M,N)) capt k   = CVs N capt (fn c => CVs M c k)
        | CVs(TComb(M,Ty)) capt k = CVs M capt (fn c => CVts Ty c k)
        | CVs(Abs(x,M)) capt k    = CVs x capt (fn c => CVs M c k)
-       | CVs(TAbs(a,M)) capt k   = CVts (TyFv a) capt (fn c => CVs M c k)
+       | CVs(TAbs(a,M)) capt k   = CVs M capt k
        | CVs(t as Clos _) capt k = CVs (push_clos t) capt k
        | CVs tm capt k = k capt
      and CVps (GRND ty) capt k = CVts ty capt k
@@ -1495,7 +1486,14 @@ local
   fun bound_by_scope scoped M = if scoped then not (free M 0 0) else false
   val kdmatch = Kind.raw_match_kind
   val rkmatch = Type.raw_match_rank
-  val tymatch = Type.raw_kind_match_type
+(*val tymatch = Type.raw_kind_match_type *)
+  fun tymatch pat ob ((lctys,env,insts_homs),kdS,rkS) =
+        let val insts_homs' = Type.type_pmatch lctys env pat ob insts_homs
+            val (rkS',kdS') = Type.get_rank_kind_insts [] (fst insts_homs') (rkS,kdS)
+        in ((lctys,env,insts_homs'),kdS',rkS')
+        end
+  fun add_env mp (lctys,env,insts_homs) = (lctys,mp::env,insts_homs)
+  fun drop_env (tmS,(lctys,env,insts_homs),kdS,rkS) = (tmS,(lctys,tl env,insts_homs),kdS,rkS)
 in
 fun RM [] theta = theta
   | RM (((v as Fv(_,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS,kdS,rkS)
@@ -1538,11 +1536,11 @@ fun RM [] theta = theta
       = let val (tyS',kdS',rkS') = tymatch ty1 ty2 (tyS,kdS,rkS)
         in RM ((M,N,true)::rst) (tmS, tyS', kdS', rkS')
         end
-  | RM ((TAbs((_,k1,r1),M), TAbs((_,k2,r2),N), s)::rst) (tmS,tyS,kdS,rkS)
+  | RM ((TAbs(v1 as (_,k1,r1),M), TAbs(v2 as (_,k2,r2),N), s)::rst) (tmS,tyS,kdS,rkS)
       = let val kdS' = kdmatch k1 k2 kdS
             val rkS' = rkmatch r1 r2 rkS
-        in if r1 = r2 then RM ((M,N,true)::rst) (tmS, tyS, kdS', rkS')
-           else MERR "different type abstractions"
+            val tyS' = add_env (TyFv v1 |-> TyFv v2) tyS
+        in drop_env (RM ((M,N,true)::rst) (tmS, tyS', kdS', rkS'))
         end
   | RM ((Comb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
   | RM ((TComb(M,ty1),TComb(N,ty2),s)::rst) (tmS,tyS,kdS,rkS)
@@ -1557,7 +1555,18 @@ fun RM [] theta = theta
 end
 
 fun raw_kind_match kdfixed tyfixed tmfixed pat ob (tmS,tyS,kdS,rkS)
-   = RM [(pat,ob,false)] ((tmS,tmfixed), (tyS,tyfixed), (kdS,kdfixed), rkS);
+   = let val pat = beta_conv_ty_in_term pat
+         val ob  = beta_conv_ty_in_term ob
+         fun beta_conv_S {redex,residue} = {redex=redex, residue = deep_beta_conv_ty residue}
+         val tyS = map beta_conv_S tyS
+         val tyfixed_set = HOLset.addList(empty_tyset, tyfixed)
+         val (tmS',(_,_,pinsts_homs),kdS1,rkS1) =
+                RM [(pat,ob,false)] ((tmS,tmfixed), (tyfixed_set,[],(tyS,[])), (kdS,kdfixed), rkS)
+         val tyinsts = Type.type_homatch kdfixed tyfixed_set rkS1 kdS1 pinsts_homs
+         val (_,tyS',kdS',rkS') = Type.separate_insts_ty true rkS1 kdfixed kdS1 tyinsts
+        val tyId' = Lib.subtract (Lib.union (type_vars_in_term pat) tyfixed) (map #redex tyS')
+     in (tmS',(tyS',tyId'),kdS',rkS')
+     end;
 
 fun raw_match tyfixed tmfixed pat ob (tmS,tyS)
    = let val (tmSId,tySId,(kdS,kdIds),rkS) = raw_kind_match [] tyfixed tmfixed pat ob (tmS,tyS,[],0)
@@ -1566,21 +1575,13 @@ fun raw_match tyfixed tmfixed pat ob (tmS,tyS)
      end;
 
 fun norm_kind_subst ((tmS,_),(tyS,_),(kdS,_),rkS) =
- let val rkkdTheta = Type.inst_rank_kind rkS kdS
-     val Theta = inst tyS o inst_kind kdS o inst_rank rkS
-     fun kdel A [] = A
-       | kdel A ({redex,residue}::rst) =
-         kdel (let val redex' = rkkdTheta(redex)
-               in if residue = redex' then A else (redex' |-> residue)::A
-                  (* redex' must be a type variable; hence we use can use =
-                     to compare redex' and residue, rather than abconv_ty.  *)
-               end) rst
+ let val Theta = inst tyS o inst_kind kdS o inst_rank rkS
      fun del A [] = A
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)
               in if aconv residue redex' then A else (redex' |-> residue)::A
               end) rst
- in (del [] tmS, kdel [] tyS, kdS, rkS)
+ in (del [] tmS, tyS, kdS, rkS)
  end
 
 fun norm_subst ((tmS,_),(tyS,_)) =

@@ -258,7 +258,11 @@ fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
              (* THENCQC above causes the loop to happen only if
                 the stuff before it hasn't raised an exception *)
     in
-      (trace(4,REDUCE ("Reducing",tm)); conv tm)
+      (* (trace(4,REDUCE ("Reducing",tm)); conv tm) *)
+      (trace(4,REDUCE ("Reducing",tm));
+        let val res = conv tm in trace(6,REDUCE ("Reduced to",concl res)); res end
+        handle e => (trace(6,REDUCE ("Failed to reduce",tm)); raise e)
+      )
     end;
   in
     loop

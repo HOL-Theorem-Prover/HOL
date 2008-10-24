@@ -391,33 +391,8 @@ end;
 fun type_vars_subst (theta : (pretype,pretype)Lib.subst) = type_varsl (map #residue theta);
 
 (*---------------------------------------------------------------------------*
- * Given a type variable and a list of type variables, if the type variable  *
- * does not exist on the list, then return the type variable. Otherwise,     *
- * rename the type variable and try again. Note well that the variant uses   *
- * only the name of the variable as a basis for testing equality. Experience *
- * has shown that basing the comparison on all of the name, the arity, the   *
- * rank, and the type arguments of the variable resulted in needlessly       *
- * confusing formulas occasionally being displayed in interactive sessions.  *
+ * Calculate the prekind or prerank of a pretype.                            *
  *---------------------------------------------------------------------------*)
-
-fun gen_variant caller =
-  let fun var_name (PT(Vartype(Name,_,_),_)) = Name
-        | var_name _ = raise ERR caller "not a variable"
-      fun vary vlist (PT(Vartype(Name,Kind,Rank),locn)) =
-          let val L = map var_name (filter is_var_type vlist)
-              val next = Lexis.gen_variant Lexis.tyvar_vary L
-              fun loop name =
-                 let val s = if mem name L then next name else name
-                 in s
-                 end
-          in PT(Vartype(loop Name, Kind, Rank),locn)
-          end
-        | vary _ _ = raise ERR caller "2nd argument should be a variable"
-  in vary
-  end;
-
-val variant_type       = gen_variant "variant_type";
-
 
 val op ==> = Prekind.==>
 fun pkind_of0 (Vartype(s,kd,rk)) = kd
@@ -448,6 +423,37 @@ fun prank_of0 (Vartype(s,kd,rk)) = rk
   | prank_of0 (UVar (ref (SOMEU ty))) = prank_of ty
 and prank_of (PT(ty,locn)) = prank_of0 ty
 end;
+
+(*---------------------------------------------------------------------------*
+ * Given a type variable and a list of type variables, if the type variable  *
+ * does not exist on the list, then return the type variable. Otherwise,     *
+ * rename the type variable and try again. Note well that the variant uses   *
+ * only the name of the variable as a basis for testing equality. Experience *
+ * has shown that basing the comparison on all of the name, the arity, the   *
+ * rank, and the type arguments of the variable resulted in needlessly       *
+ * confusing formulas occasionally being displayed in interactive sessions.  *
+ *---------------------------------------------------------------------------*)
+
+fun gen_variant caller =
+  let fun var_name (PT(Vartype(Name,_,_),_)) = Name
+        | var_name _ = raise ERR caller "not a variable"
+      fun vary vlist (PT(Vartype(Name,Kind,Rank),locn)) =
+          let val L = map var_name (filter is_var_type vlist)
+              val next = Lexis.gen_variant Lexis.tyvar_vary L
+              fun loop name =
+                 let val s = if mem name L then next name else name
+                 in s
+                 end
+          in PT(Vartype(loop Name, Kind, Rank),locn)
+          end
+        | vary _ _ = raise ERR caller "2nd argument should be a variable"
+  in vary
+  end;
+
+fun variant_type fvs v = if is_var_type v then gen_variant "variant_type" fvs v
+                            else (* v is a uvar *)
+                            if op_mem eq v fvs then new_uvar(pkind_of v,prank_of v)
+                            else v
 
 
 (*---------------------------------------------------------------------------*
@@ -594,14 +600,13 @@ end;
  *------------------------------------------------------------------------------*)
 
 local
-  fun variant_ptype fvs v = if is_var_type v then variant_type fvs v
-                            else (* v is a uvar *)
-                            if op_mem eq v fvs then new_uvar(pkind_of v,prank_of v)
-                            else v
   val is_var_subst = Lib.all (fn {redex,residue} => has_var_type redex)
   fun peek ([], x) = NONE
     | peek ({redex=a, residue=b}::l, x) = if eq a x then SOME b else peek (l, x)
   fun insert(theta,v,v') = (v |-> v')::theta
+  fun delete((r as {redex=a, residue=b})::l, v) = if eq a v then delete(l,v)
+                                                  else r :: delete(l,v)
+    | delete([],v) = []
 in
 fun type_subst [] = I
   | type_subst theta =
@@ -616,9 +621,10 @@ fun type_subst [] = I
           | vsubs0 fmap (TyApp(opr,ty)) = TyApp(vsubs fmap opr, vsubs fmap ty)
           | vsubs0 fmap (TyUniv(Bvar,Body)) =
                let val Bvar1 = the_var_type Bvar
+                   val fmap = delete(fmap,Bvar1)
                    val frees = type_vars_subst fmap
                    val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
-                   val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
+                   val Bvar' = variant_type (Lib.op_union eq frees fvs) Bvar1
                in if eq Bvar1 Bvar' then TyUniv(Bvar, vsubs fmap Body)
                   else let val fmap' = insert(fmap,Bvar1,Bvar')
                        in TyUniv(vsubs fmap' Bvar, vsubs fmap' Body)
@@ -626,9 +632,10 @@ fun type_subst [] = I
                end
           | vsubs0 fmap (TyAbst(Bvar,Body)) =
                let val Bvar1 = the_var_type Bvar
+                   val fmap = delete(fmap,Bvar1)
                    val frees = type_vars_subst fmap
                    val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
-                   val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
+                   val Bvar' = variant_type (Lib.op_union eq frees fvs) Bvar1
                in if eq Bvar1 Bvar' then TyAbst(Bvar, vsubs fmap Body)
                   else let val fmap' = insert(fmap,Bvar1,Bvar')
                        in TyAbst(vsubs fmap' Bvar, vsubs fmap' Body)
@@ -651,7 +658,7 @@ fun type_subst [] = I
                      let val Bvar1 = the_var_type Bvar
                          val frees = type_vars_subst fmap
                          val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
-                         val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
+                         val Bvar' = variant_type (Lib.op_union eq frees fvs) Bvar1
                      in if eq Bvar1 Bvar' then PT(TyUniv(Bvar, subs fmap Body), locn)
                         else let val fmap' = insert(fmap,Bvar1,Bvar')
                              in PT(TyUniv(subs fmap' Bvar, subs fmap' Body), locn)
@@ -661,7 +668,7 @@ fun type_subst [] = I
                      let val Bvar1 = the_var_type Bvar
                          val frees = type_vars_subst fmap
                          val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
-                         val Bvar' = variant_ptype (Lib.op_union eq frees fvs) Bvar1
+                         val Bvar' = variant_type (Lib.op_union eq frees fvs) Bvar1
                      in if eq Bvar1 Bvar' then PT(TyAbst(Bvar, subs fmap Body), locn)
                         else let val fmap' = insert(fmap,Bvar1,Bvar')
                              in PT(TyAbst(subs fmap' Bvar, subs fmap' Body), locn)
@@ -1129,13 +1136,13 @@ fun gen_unify (kind_unify   :prekind -> prekind -> ('a -> 'a * unit option))
         else m
      end
   fun mk_vartype tv = PT(Vartype tv, locn.Loc_None)
+  fun shift_context c1 c2 =
+        let val theta = map (fn (tv1,tv2) => mk_vartype tv1 |-> mk_vartype tv2) (zip c1 c2)
+        in type_subst theta
+        end
   fun mk_v_s c1 c2 arg =
           if has_var_type arg
-                   then let val theta = map (fn (tv1,tv2) => mk_vartype tv1 |-> mk_vartype tv2)
-                                            (zip c1 c2)
-                            val arg' = type_subst theta arg
-                        in (arg',[])
-                        end
+                   then (shift_context c1 c2 arg, [])
                    else let val v = all_new_uvar()
                          in Prekind.unify (pkind_of arg) (pkind_of v);
                             Prerank.unify_le (prank_of arg) (* <= *) (prank_of v);
@@ -1163,7 +1170,7 @@ in
   case (t1, t2) of
     (UVar (r as ref (NONEU(kd,rk))), _) => kind_unify (pkind_of ty2) kd >>
                                            rank_unify_le (prank_of ty2) (* <= *) rk >>
-                                           bind (gen_unify c1 c2) r ty2
+                                           bind (gen_unify c1 c2) r (shift_context c2 c1 ty2)
   | (UVar (r as ref (SOMEU ty1)), t2) => gen_unify c1 c2 ty1 ty2
   | (_, UVar _) => gen_unify c2 c1 ty2 ty1
   | (Vartype (tv1 as (s1,k1,r1)), Vartype (tv2 as (s2,k2,r2))) =>
@@ -1179,6 +1186,11 @@ in
        rank_unify rk1 (prank_of ty1') >> gen_unify c1 c2 ty1' ty2 >> return ()
   | (_, TyRankConstr _) => gen_unify c2 c1 ty2 ty1
   | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
+       if is_abs_type ty11 then
+           gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
+       else if is_abs_type ty21 then
+            gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
+       else
        let val (opr1,args1) = strip_app_type ty1
            val (opr2,args2) = strip_app_type ty2
            val ho_1 = has_var_type opr1 andalso is_uvar_type(the_var_type opr1)
@@ -1186,28 +1198,36 @@ in
            (* If can choose, side with all variable args is to be preferred. *)
            val easy_1 = ho_1 andalso all has_var_type args1
            val easy_2 = ho_2 andalso all has_var_type args2
+           val (tran_args1,dtheta1) = unzip(map (mk_v_s c1 c2) args1)
+           val (tran_args2,dtheta2) = unzip(map (mk_v_s c2 c1) args2)
+           val l1 = length args1 and l2 = length args2
+           val lmin = Int.min(l1,l2)
+           fun lastn n l = rev(List.take(rev l,n))
+           val same_args1 = all2 eq (lastn lmin tran_args1) (lastn lmin args2)
+           val same_args2 = all2 eq (lastn lmin tran_args2) (lastn lmin args1)
        in if is_abs_type opr1 then
             gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
           else if is_abs_type opr2 then
             gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
-          else if easy_1 orelse (ho_1 andalso not easy_2) then
+          else if (easy_1 orelse (ho_1 andalso not easy_2)) andalso not same_args1 then
             (* Higher order unification; shift args to other side by abstraction. *)
-            let val (vs,s0) = unzip (map (mk_v_s c1 c2) args1)
-                val theta = flatten s0
+            let val theta = flatten dtheta1
                 val ty2' = type_subst theta ty2 (* general subst *)
-             in gen_unify c1 c2 opr1 (list_mk_abs_type(rev vs,ty2'))
+             in gen_unify c1 c2 opr1 (list_mk_abs_type(tran_args1,ty2'))
             end
-          else if ho_2 then
+          else if ho_2 andalso not same_args2 then
             (* Higher order unification; shift args to other side by abstraction. *)
-            let val (vs,s0) = unzip (map (mk_v_s c2 c1) args2)
-                val theta = flatten s0
+            let val theta = flatten dtheta2
                 val ty1' = type_subst theta ty1 (* general subst *)
-             in gen_unify c1 c2 (list_mk_abs_type(rev vs,ty1')) opr2
+             in gen_unify c1 c2 (list_mk_abs_type(tran_args2,ty1')) opr2
             end
           else (* normal structural unification *)
             gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()
        end
   | (TyApp(ty11, ty12), _) =>
+       if is_abs_type ty11 then
+           gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
+       else
        let val (opr1,args1) = strip_app_type ty1
        in if is_abs_type opr1 then
             gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
@@ -1216,11 +1236,14 @@ in
             let val (vs,s0) = unzip (map (mk_v_s c1 c2) args1)
                 val theta = flatten s0
                 val ty2' = type_subst theta ty2 (* general subst *)
-             in gen_unify c1 c2 opr1 (list_mk_abs_type(rev vs,ty2'))
+             in gen_unify c1 c2 opr1 (list_mk_abs_type(vs,ty2'))
             end
           else fail (* normal structural unification *)
        end
   | (_, TyApp(ty21, ty22)) =>
+       if is_abs_type ty21 then
+            gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
+       else
        let val (opr2,args2) = strip_app_type ty2
        in if is_abs_type opr2 then
             gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
@@ -1229,7 +1252,7 @@ in
             let val (vs,s0) = unzip (map (mk_v_s c2 c1) args2)
                 val theta = flatten s0
                 val ty1' = type_subst theta ty1 (* general subst *)
-             in gen_unify c1 c2 (list_mk_abs_type(rev vs,ty1')) opr2
+             in gen_unify c1 c2 (list_mk_abs_type(vs,ty1')) opr2
             end
           else fail (* normal structural unification *)
        end
@@ -1244,17 +1267,53 @@ in
        gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn1)) ty21
 *)
   | (TyUniv(ty11, ty12), TyUniv(ty21, ty22)) =>
-       bvar_unify ty11 ty21 >- (fn (PT(ty11',_),PT(ty21',_)) =>
-       case (ty11',ty21') of
-          (Vartype tv1, Vartype tv2) =>
-            gen_unify (tv1::c1) (tv2::c2) ty12 ty22
-        | _ => gen_unify c1 c2 ty12 ty22)
+       (*let val fvs1 = type_vars ty1 (* free type variables of the type *)
+           val fvs2 = type_vars ty2
+           val cvs1 = map mk_vartype c1
+           val cvs2 = map mk_vartype c2
+           val gvs1 = Lib.op_set_diff eq fvs1 cvs1 (* global free type variables *)
+           val gvs2 = Lib.op_set_diff eq fvs2 cvs2
+           val ty11v = the_var_type ty11
+           val ty21v = the_var_type ty21
+           val ty11v' = variant_type (Lib.op_union eq fvs1 gvs2) ty11v
+           val ty21v' = variant_type (Lib.op_union eq fvs2 gvs1) ty21v
+           val (ty11',ty12') = if eq ty11v' ty11v then (ty11,ty12)
+                               else (type_subst [ty11v |-> ty11v'] ty11,
+                                     type_subst [ty11v |-> ty11v'] ty12)
+           val (ty21',ty22') = if eq ty21v' ty21v then (ty21,ty22)
+                               else (type_subst [ty21v |-> ty21v'] ty21,
+                                     type_subst [ty21v |-> ty21v'] ty22)
+       in*)
+         bvar_unify ty11 ty21 >- (fn (PT(ty11u,_),PT(ty21u,_)) =>
+         case (ty11u,ty21u) of
+            (Vartype tv1, Vartype tv2) =>
+              gen_unify (tv1::c1) (tv2::c2) ty12 ty22
+          | _ => gen_unify c1 c2 ty12 ty22)
+       (*end*)
   | (TyAbst(ty11, ty12), TyAbst(ty21, ty22)) =>
-       bvar_unify ty11 ty21 >- (fn (PT(ty11',_),PT(ty21',_)) =>
-       case (ty11',ty21') of
-          (Vartype tv1, Vartype tv2) =>
-            gen_unify (tv1::c1) (tv2::c2) ty12 ty22
-        | _ => gen_unify c1 c2 ty12 ty22)
+       (*let val fvs1 = type_vars ty1 (* free type variables of the type *)
+           val fvs2 = type_vars ty2
+           val cvs1 = map mk_vartype c1
+           val cvs2 = map mk_vartype c2
+           val gvs1 = Lib.op_set_diff eq fvs1 cvs1 (* global free type variables *)
+           val gvs2 = Lib.op_set_diff eq fvs2 cvs2
+           val ty11v = the_var_type ty11
+           val ty21v = the_var_type ty21
+           val ty11v' = variant_type (Lib.op_union eq fvs1 gvs2) ty11v
+           val ty21v' = variant_type (Lib.op_union eq fvs2 gvs1) ty21v
+           val (ty11',ty12') = if eq ty11v' ty11v then (ty11,ty12)
+                               else (type_subst [ty11v |-> ty11v'] ty11,
+                                     type_subst [ty11v |-> ty11v'] ty12)
+           val (ty21',ty22') = if eq ty21v' ty21v then (ty21,ty22)
+                               else (type_subst [ty21v |-> ty21v'] ty21,
+                                     type_subst [ty21v |-> ty21v'] ty22)
+       in*)
+         bvar_unify ty11 ty21 >- (fn (PT(ty11u,_),PT(ty21u,_)) =>
+         case (ty11u,ty21u) of
+            (Vartype tv1, Vartype tv2) =>
+              gen_unify (tv1::c1) (tv2::c2) ty12 ty22
+          | _ => gen_unify c1 c2 ty12 ty22)
+       (*end*)
   | _ => fail
  end e
 

@@ -3,6 +3,7 @@ sig
   type thm          = Thm.thm
   type term         = Term.term
   type hol_type     = Type.hol_type
+  type kind         = Kind.kind
   type conv         = term -> thm
   type rule         = thm -> thm
   type goal         = term list * term

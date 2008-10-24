@@ -61,7 +61,7 @@ fun prekind_to_string (kd as PK(kd0,locn)) =
   | UVarkind(ref (NONE)) => "?"
   | Varkind s => s
   | Typekind => "ty"
-  | Arrowkind(kd1, kd2) => "(" ^ prekind_to_string kd1 ^ " ==> " ^ prekind_to_string kd2 ^ ")"
+  | Arrowkind(kd1, kd2) => "(" ^ prekind_to_string kd1 ^ " => " ^ prekind_to_string kd2 ^ ")"
 
 
 (* ----------------------------------------------------------------------

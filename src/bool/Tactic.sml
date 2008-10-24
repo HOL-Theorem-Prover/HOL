@@ -786,6 +786,7 @@ fun MATCH_MP_TAC thm :tactic = let
   val lconsts      = HOLset.intersection
                         (FVL [concl thm] empty_tmset, hyp_frees thm)
   val hyptyvars    = HOLset.listItems (hyp_tyvars thm)
+  val hypkdvars    = HOLset.listItems (hyp_kdvars thm)
   val (gvs,imp)    = strip_forall (concl thm)
   val (ant,conseq) = with_exn dest_imp imp
                               (ERR "MATCH_MP_TAC" "Not an implication")
@@ -796,9 +797,9 @@ fun MATCH_MP_TAC thm :tactic = let
 in
 fn (A,g) =>
    let val (vs,gl) = strip_forall g
-       val ins     = match_terml hyptyvars lconsts con gl
+       val ins     = kind_match_terml hypkdvars hyptyvars lconsts con gl
            handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "No match"
-       val ith     = INST_TY_TERM ins th2
+       val ith     = INST_ALL ins th2
        val gth     = GENL vs (UNDISCH ith)
            handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "Generalized var(s)."
        val ant     = fst(dest_imp(concl ith))

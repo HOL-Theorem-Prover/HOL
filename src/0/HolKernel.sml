@@ -493,10 +493,10 @@ local
 
 fun get_type_kind_rank_insts kdavoids tyavoids L ((tyS,tyId),(kdS,kdId),rkS) =
  itlist (fn {redex,residue} => fn Theta =>
-          raw_kind_match_type (snd(dest_var redex)) (type_of residue) Theta)
+          Type.prim_kind_match_type (snd(dest_var redex)) (type_of residue) Theta)
        L ((tyS,union tyavoids tyId),(kdS,union kdavoids kdId),rkS)
 
-fun separate_insts kdavoids tyavoids rkS kdS insts = let
+fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
   val (realinsts, patterns) = partition (is_var o #redex) insts
   val betacounts =
       if patterns = [] then []
@@ -511,23 +511,26 @@ fun separate_insts kdavoids tyavoids rkS kdS insts = let
                                   "Inconsistent patterning in h.o. match";
                                   sof))
         patterns []
-  val (tyins,kdins,rkin) = get_type_kind_rank_insts kdavoids tyavoids realinsts (([],[]),kdS,rkS)
-in
-  (betacounts,
-   mapfilter (fn {redex = x, residue = t} => let
+  val (tyins,kdins,rkin) = get_type_kind_rank_insts kdavoids tyavoids realinsts (tyS,kdS,rkS)
+  val tyinsts = mapfilter (fn {redex = x, residue = t} => let
+                   val x' = Type.inst_rank_kind rkin (fst kdins) x
+                 in
+                   if t = x' then raise ERR "separate_insts" ""
+                                 else {redex = x', residue = t}
+                 end) (fst tyins)
+  val tyins' = (tyinsts,snd tyins)
+  val tminsts = mapfilter (fn {redex = x, residue = t} => let
                    val x' = let val (xn,xty) = dest_var x
                             in
-                              mk_var(xn, type_subst (#1 tyins)
-                                            (Type.inst_rank_kind rkS (#1 kdins) xty))
+                              mk_var(xn, type_subst tyinsts
+                                            (Type.inst_rank_kind rkin (fst kdins) xty))
                             end
                  in
                    if aconv t x' then raise ERR "separate_insts" ""
                                  else {redex = x', residue = t}
-                 end) realinsts,
-   tyins,
-   kdins,
-   rkin
-  )
+                 end) realinsts
+in
+  (betacounts, tminsts, tyins', kdins, rkin)
 end
 
 fun tyenv_in_dom x (env, idlist) = op_mem abconv_ty x idlist orelse in_dom_ty x env
@@ -557,13 +560,13 @@ in
       if is_var vtm then
         if aconv ctm vtm then term_homatch rkin kdins tyins (insts, tl homs)
         else let
-            val (newtyins,newkdins,newrkin) =
-                raw_kind_match_type (snd (dest_var vtm)) (type_of ctm) (tyins,kdins,rkin)
-            (* val newtyins =
-                tyenv_safe_insert (snd (dest_var vtm) |-> type_of ctm) tyins *)
+            (* val (newtyins,newkdins,newrkin) =
+                prim_kind_match_type (snd (dest_var vtm)) (type_of ctm) (tyins,kdins,rkin) *)
+            val newtyins =
+                tyenv_safe_insert (snd (dest_var vtm) |-> type_of ctm) tyins
             val newinsts = (vtm |-> ctm)::insts
           in
-            term_homatch newrkin newkdins newtyins (newinsts, tl homs)
+            term_homatch rkin kdins newtyins (newinsts, tl homs)
           end
       else (* vtm not a var *) let
           val (vhop, vargs) = strip_comb vtm
@@ -631,14 +634,14 @@ fun ho_kind_match_term0 kdavoids tyavoids lconsts vtm ctm = let
   val (tyins,kdins,rkin) = get_type_kind_rank_insts kdavoids tyavoids (fst pinsts_homs) (([],[]),([],[]),0)
   val insts = term_homatch kdavoids tyavoids lconsts rkin kdins tyins pinsts_homs
 in
-  separate_insts kdavoids tyavoids rkin kdins insts
+  separate_insts kdavoids tyavoids rkin kdins tyins insts
 end
 
 fun ho_match_term0 tyavoids lconsts vtm ctm = let
   val pinsts_homs = term_pmatch lconsts [] vtm ctm ([], [])
   val (tyins,kdins,rkin) = get_type_kind_rank_insts [] tyavoids (fst pinsts_homs) (([],[]),([],[]),0)
   val insts = term_homatch [] tyavoids lconsts rkin kdins tyins pinsts_homs
-  val (bcs,tmins,tyins,kdins,rkin) = separate_insts [] tyavoids rkin kdins insts
+  val (bcs,tmins,tyins,kdins,rkin) = separate_insts [] tyavoids rkin kdins tyins insts
 in
   (bcs,tmins,tyins)
 end

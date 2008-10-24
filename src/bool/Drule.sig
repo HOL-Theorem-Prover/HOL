@@ -84,6 +84,9 @@ sig
   val TY_EXISTS_IMP    : hol_type -> thm -> thm
   val INST_TY_TERM     : (term,term)subst * (hol_type,hol_type)subst
                           -> thm -> thm
+  val INST_ALL         : (term,term)subst * (hol_type,hol_type)subst
+                           * (kind,kind)subst * int
+                          -> thm -> thm
   val GSPEC            : thm -> thm
   val TY_GSPEC         : thm -> thm
 

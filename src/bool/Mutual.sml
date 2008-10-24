@@ -362,7 +362,9 @@ fun MUTUAL_INDUCT_THEN1 th =
 *)
           val lams' = map (snd o dest_comb) ts'
           val spec = SPECL lams' (itlist2 (fn v => fn lam =>
-                     INST_TYPE (Lib.snd(Term.match_term v lam))
+                     let val (tmS,tyS,kdS,rkS) = Term.kind_match_term v lam
+                     in INST_TYPE tyS o INST_KIND kdS o INST_RANK rkS
+                     end
                      handle HOL_ERR _ => Lib.I
                      ) vs lams' ind)
 (*

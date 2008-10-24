@@ -226,15 +226,15 @@ fun POP_ASSUM_LIST asltac (asl,w) = asltac (map ASSUME asl) ([],w);
 
 local
   fun match_with_constants constants pat ob = let
-    val (tm_inst, ty_inst) =
-        ho_match_term [] empty_tmset pat ob
+    val (tm_inst, ty_inst, kd_inst, rk) =
+        ho_kind_match_term [] [] empty_tmset pat ob
     val bound_vars = map #redex tm_inst
   in
     null (intersect constants bound_vars)
   end handle HOL_ERR _ => false
 in
 fun PAT_ASSUM pat thfun (asl, w) =
-  case List.filter (can (ho_match_term [] empty_tmset pat)) asl
+  case List.filter (can (ho_kind_match_term [] [] empty_tmset pat)) asl
    of []  => raise ERR "PAT_ASSUM" "No assumptions match the given pattern"
     | [x] => let val (ob, asl') = Lib.pluck (Lib.equal x) asl
              in thfun (ASSUME ob) (asl', w)

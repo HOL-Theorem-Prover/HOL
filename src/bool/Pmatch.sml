@@ -34,8 +34,8 @@ val stringize = list_to_string int_to_string ", ";
 
 fun enumerate l = map (fn (x,y) => (y,x)) (Lib.enumerate 0 l);
 
-fun match_term thry tm1 tm2 = Term.match_term tm1 tm2;
-fun match_type thry ty1 ty2 = Type.match_type ty1 ty2;
+fun match_term thry tm1 tm2 = Term.kind_match_term tm1 tm2;
+fun match_type thry ty1 ty2 = Type.kind_match_type ty1 ty2;
 
 fun match_info db s = db s
 
@@ -68,9 +68,10 @@ val givens = mapfilter not_omitted;
 fun fresh_constr ty_match (colty:hol_type) gv c =
   let val Ty = type_of c
       val (L,ty) = strip_fun Ty
-      val ty_theta = ty_match ty colty
-      val c' = inst ty_theta c
-      val gvars = map (inst ty_theta o gv) L
+      val (rk,kd_theta,ty_theta) = ty_match ty colty
+      val inst_all = inst ty_theta o inst_kind kd_theta o inst_rank rk
+      val c' = inst_all c
+      val gvars = map (inst_all o gv) L
   in (c', gvars)
   end;
 
@@ -408,7 +409,9 @@ fun FV_multiset tm =
      of VAR v => [mk_var v]
       | CONST _ => []
       | COMB(Rator,Rand) => FV_multiset Rator @ FV_multiset Rand
-      | LAMB(Bvar,Body) => Lib.subtract (FV_multiset Body) [Bvar]
+      | LAMB(Bvar,Body) => Lib.op_set_diff aconv (FV_multiset Body) [Bvar]
+      | TYCOMB(Rator,Rand) => FV_multiset Rator
+      | TYLAMB(Bvar,Body) => FV_multiset Body
                            (* raise ERR"FV_multiset" "lambda"; *)
 
 fun no_repeat_vars pat =
@@ -428,17 +431,18 @@ fun no_repeat_vars pat =
      Routines to repair the bound variable names found in cases
  ---------------------------------------------------------------------------*)
 
-fun subst_inst (term_sub,type_sub) tm =
-    Term.subst term_sub (Term.inst type_sub tm);
+fun subst_inst (term_sub,type_sub,kind_sub,rank_sub) tm =
+    Term.subst term_sub (Term.inst type_sub
+      (Term.inst_kind kind_sub (Term.inst_rank rank_sub tm)));
 
 fun pat_match1 (pat,exp) given_pat =
- let val sub = Term.match_term pat given_pat
+ let val sub = Term.kind_match_term pat given_pat
  in (subst_inst sub pat, subst_inst sub exp);
     sub
  end
 
 fun pat_match2 pat_exps given_pat = tryfind (C pat_match1 given_pat) pat_exps
-                                    handle HOL_ERR _ => ([],[])
+                                    handle HOL_ERR _ => ([],[],[],0)
 
 fun distinguish pat_tm_mats =
     snd (List.foldr (fn ({redex,residue}, (vs,done)) =>
@@ -459,8 +463,18 @@ fun purge_wildcards term_sub = filter (fn {redex,residue} =>
         handle _ => false) term_sub
 
 fun pat_match3 pat_exps given_pats =
-     ((distinguish o reduce_mats o purge_wildcards o flatten) ## flatten)
-           (unzip (map (pat_match2 pat_exps) given_pats))
+  let fun unzip4 [] = ([],[],[],[])
+        | unzip4 ((a,b,c,d)::rest) =
+            let val (ra,rb,rc,rd) = unzip4 rest
+            in (a::ra, b::rb, c::rc, d::rd)
+            end
+      val max_list = foldl Int.max 0
+  in
+     (fn (tmSs,tySs,kdSs,rkSs) =>
+        ((distinguish o reduce_mats o purge_wildcards o flatten) tmSs,
+         flatten tySs, flatten kdSs, max_list rkSs))
+           (unzip4 (map (pat_match2 pat_exps) given_pats))
+  end
 
 
 (*---------------------------------------------------------------------------*)
@@ -581,7 +595,7 @@ local fun dest tybase (pat,rhs) =
                      then flatten
                             (map (dest tybase)
                                (zip (map (fn p =>
-                                           subst (fst (Term.match_term exp p)) pat) pats)
+                                           subst (#1 (Term.kind_match_term exp p)) pat) pats)
                                     rhsides))
                      else [(pat,rhs)]
                   end
@@ -673,8 +687,9 @@ fun mk_functional thy eqs =
      (* Ensure that the case test variable is fresh for the rest of the case *)
      val avs = subtract (all_vars case_tm') [a']
      val a'' = variant avs a'
-     val case_tm'' = if a'' = a' then case_tm'
-                                 else rename_case thy ([a' |-> a''],[]) case_tm'
+     val case_tm'' = if a'' = a'
+                       then case_tm'
+                       else rename_case thy ([a' |-> a''],[],[],0) case_tm'
  in
    {functional = list_mk_abs ([f,a''], case_tm''),
     pats = patts3}

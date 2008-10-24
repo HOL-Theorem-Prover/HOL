@@ -116,7 +116,7 @@ in
 end
 
 fun findax c ((p,ax)::rst) =
-      ((match_term p c; (ax,rst))
+      ((kind_match_term p c; (ax,rst))
         handle HOL_ERR _ => let val (a,l) = findax c rst in (a,(p,ax)::l) end)
   | findax c [] = raise ERR "prove_raw_recursive_functions_exist" "findax";
 
@@ -653,7 +653,8 @@ fun INDUCT_THEN th =
                             (DISCH asm eta_th))
  in fn ttac => fn (A,t) =>
      let val lam = snd(dest_comb t)
-         val spec = SPEC lam (INST_TYPE (Lib.snd(Term.match_term v lam)) ind)
+         val (_,tyS,kdS,rkS) = Term.kind_match_term v lam
+         val spec = SPEC lam (INST_TYPE tyS (INST_KIND kdS (INST_RANK rkS ind)))
          val (ant,conseq) = dest_imp(concl spec)
          val beta = SUBST [boolvar |-> bconv ant]
                           (mk_imp(boolvar, conseq)) spec
@@ -1349,7 +1350,7 @@ fun case_cong_thm nchotomy case_def =
        let val lth = TRANS (AP_TERM(rator lconseqM') icase_thm) case_def_clause
            val rth = TRANS (AP_TERM(rator rconseq) icase_thm)
                            (INST theta case_def_clause)
-           val theta = Term.match_term disjrhs
+           val theta = Term.kind_match_term disjrhs
                      ((rhs o fst o dest_imp o #2 o strip_forall o concl) iimp)
            val th = MATCH_MP iimp icase_thm
            val th1 = TRANS lth th

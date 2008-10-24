@@ -114,8 +114,8 @@ local
         val thm_relation = rator(rator(concl thm));
         val _ = if (name_of_const (thm_relation) = extract_preorder_const_string preorder) then T else failwith ("not applicable");
         val thmLHS = rand (rator (concl thm));
-        val match = match_terml [] boundvars thmLHS term;
-        val thm = INST_TY_TERM match thm
+        val match = kind_match_terml [] [] boundvars thmLHS term;
+        val thm = INST_ALL match thm
       in
         thm
       end)

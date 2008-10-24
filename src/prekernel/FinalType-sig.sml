@@ -113,6 +113,11 @@ sig
                          ( (kind,kind) Lib.subst * kind list ) * int
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
                          ( (kind,kind) Lib.subst * kind list ) * int
+  val prim_kind_match_type : hol_type -> hol_type
+                      -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
+                         ( (kind,kind) Lib.subst * kind list ) * int
+                      -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
+                         ( (kind,kind) Lib.subst * kind list ) * int
 
  val pp_raw_type    : ppstream -> hol_type -> unit
  val type_to_string : hol_type -> string

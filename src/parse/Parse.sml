@@ -978,6 +978,9 @@ fun temp_type_abbrev (s, ty) = let
       if is_vartype ty then let
           val tyvar as (str, kd, rk) = dest_vartype_opr ty
         in if mem ty bvars then type_grammar.TYVAR(str,kd,rk)
+           else if not (null bvars) then raise ERROR "temp_type_abbrev"
+                     ("abbreviation type parameter not allowed within universal type or type abstraction;\n"
+                      ^"Use no parameters but define as a type abstraction instead to indicate parameters.")
            else type_grammar.PARAM (Binarymap.find(pset, ty), kd, rk)
         end
       else if is_con_type ty then let

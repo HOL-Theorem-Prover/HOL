@@ -1559,7 +1559,7 @@ fun INST_TY_TERM(Stm,Sty) th = INST Stm (INST_TYPE Sty th);
  * slow, because it makes three full traversals of the theorem.              *
  *---------------------------------------------------------------------------*)
 
-fun INST_RK_KD_TY_TERM(Stm,Sty,Skd,Srk) th =
+fun INST_ALL(Stm,Sty,Skd,Srk) th =
     INST Stm (INST_TYPE Sty (INST_KIND Skd (INST_RANK Srk th)));
 
 
@@ -1605,7 +1605,7 @@ fun PART_MATCH partfn th = let
   val matchfn =
       kind_match_terml hypkdvars hyptyvars (HOLset.intersection(conclfvs, hypfvs)) pat
 in
-  (fn tm => INST_RK_KD_TY_TERM (matchfn tm) th)
+  (fn tm => INST_ALL (matchfn tm) th)
 end;
 
 
@@ -1829,7 +1829,7 @@ fun deep_alpha [] tm = tm
  *       val pbod = partfn bod
  *   in fn tm =>
  *     let val (tmin,tyin,kdin,rkin) = kind_match_term pbod tm
- *         val th0 = INST_RK_KD_TY_TERM (tmin,tyin,kdin,rkin) sth
+ *         val th0 = INST_ALL (tmin,tyin,kdin,rkin) sth
  *     in finish_fn tyin (map #redex tmin) th0
  *     end
  *   end;
