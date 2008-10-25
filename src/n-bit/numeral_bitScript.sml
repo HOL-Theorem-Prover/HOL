@@ -469,6 +469,47 @@ val MOD_2EXP_EQ_compute = prove(
 
 (* ------------------------------------------------------------------------- *)
 
+val LEAST_BIT_INTRO =
+ (SIMP_RULE (srw_ss()) [] o SPEC `\i. BIT i n`)  whileTheory.LEAST_INTRO;
+
+val LOWEST_SET_BIT = store_thm("LOWEST_SET_BIT",
+  `!n. ~(n = 0) ==>
+        (LOWEST_SET_BIT n =
+           if ODD n then 0 else 1 + LOWEST_SET_BIT (DIV2 n))`,
+  SRW_TAC [ARITH_ss] [LOWEST_SET_BIT_def,DIV2_def,ADD1]
+    \\ MATCH_MP_TAC LEAST_THM
+    \\ SRW_TAC [] [GSYM LSB_def,LSB_ODD]
+    << [
+      Cases_on `(LEAST i. BIT i (n DIV 2)) = 0`
+        << [
+          FULL_SIMP_TAC (srw_ss())
+            [DECIDE ``m < 1 ==> (m = 0)``,GSYM LSB_def,LSB_ODD],
+          IMP_RES_TAC (DECIDE ``~(a = 0) /\ m < a + 1 ==> (m - 1 < a)``)
+            \\ IMP_RES_TAC whileTheory.LESS_LEAST
+            \\ FULL_SIMP_TAC (srw_ss()) [BIT_DIV2]
+            \\ Cases_on `m = 0`
+            \\ FULL_SIMP_TAC (srw_ss()) [GSYM LSB_def,LSB_ODD,
+                 DECIDE ``~(m = 0) ==> (SUC (m - 1) = m)``]],
+      SRW_TAC [] [GSYM ADD1, GSYM BIT_DIV2]
+        \\ MATCH_MP_TAC LEAST_BIT_INTRO
+        \\ `~(n DIV 2 = 0)` by (Cases_on `n = 1`
+              \\ FULL_SIMP_TAC arith_ss
+                   [(SIMP_RULE (srw_ss()) [DECIDE ``0 < n = ~(n = 0)``] o
+                     SPECL [`0`,`n`,`2`]) X_LT_DIV])
+        \\ METIS_TAC [BIT_LOG2]]);
+
+val LOWEST_SET_BIT_compute = save_thm("LOWEST_SET_BIT_compute",
+let open numeralTheory
+    val rule = (GEN_ALL o SIMP_RULE (srw_ss())
+                 [DECIDE ``1 + n = SUC n``, numeral_eq, numeral_distrib,
+                  numeral_evenodd, numeral_div2])
+in
+  CONJ ((rule o SPEC `NUMERAL (BIT2 n)`) LOWEST_SET_BIT)
+       ((rule o SPEC `NUMERAL (BIT1 n)`) LOWEST_SET_BIT)
+end);
+
+(* ------------------------------------------------------------------------- *)
+
 val l2n_pow2_compute = store_thm("l2n_pow2_compute",
   `(!p. l2n (2 ** p) [] = 0) /\
    (!p h t. l2n (2 ** p) (h::t) =

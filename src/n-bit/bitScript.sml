@@ -50,6 +50,8 @@ val LSB_def         = Define `LSB = BIT 0`;
 
 val LOG2_def        = Define `LOG2 = LOG 2`;
 
+val LOWEST_SET_BIT_def = Define `LOWEST_SET_BIT n = LEAST i. BIT i n`;
+
 val BIT_REVERSE_def = Define`
   (BIT_REVERSE 0 x = 0) /\
   (BIT_REVERSE (SUC n) x =
@@ -1126,6 +1128,26 @@ val BIT_SIGN_EXTEND = store_thm("BIT_SIGN_EXTEND",
       Cases_on `l`
         \\ FULL_SIMP_TAC arith_ss
              [MIN_DEF, GSYM BITS_ZERO3, BITS_ZERO, BIT_def, BITS_COMP_THM2]]);
+
+(* ------------------------------------------------------------------------- *)
+
+val BIT_LOG2 = store_thm("BIT_LOG2",
+  `!n. ~(n = 0) ==> BIT (LOG2 n) n`,
+  SRW_TAC [] [BIT_def, BITS_THM, SUC_SUB]
+    \\ `0 < n` by DECIDE_TAC
+    \\ IMP_RES_TAC logrootTheory.LOG_MOD
+    \\ `n DIV 2 ** LOG2 n = (2 ** LOG 2 n + n MOD 2 ** LOG 2 n) DIV 2 ** LOG2 n`
+    by METIS_TAC []
+    \\ POP_ASSUM SUBST1_TAC
+    \\ SRW_TAC [] [LOG2_def, DIV_MULT_1]);
+
+val LEAST_THM = store_thm("LEAST_THM",
+  `!n. (!m. m < n ==> ~P m) /\ P n ==> ($LEAST P = n)`,
+  REPEAT STRIP_TAC
+    \\ IMP_RES_TAC whileTheory.FULL_LEAST_INTRO
+    \\ Cases_on `$LEAST P = n` >> ASM_REWRITE_TAC []
+    \\ `$LEAST P < n` by DECIDE_TAC
+    \\ PROVE_TAC []);
 
 (* ------------------------------------------------------------------------- *)
 

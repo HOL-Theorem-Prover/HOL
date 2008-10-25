@@ -177,7 +177,7 @@ val thms =
    (SIMP_RULE std_ss [GSYM ODD_MOD2_LEM,arithmeticTheory.MOD_2EXP_def,
       BITS_def,SUC_SUB] o NUM_RULE [BITS_ZERO2] `n`) BIT_def,
    INT_MIN_SUM, SUC_RULE MOD_2EXP_EQ,
-   numeral_log2,numeral_ilog2,LOG_compute,
+   numeral_log2,numeral_ilog2,LOG_compute,LOWEST_SET_BIT_compute,
    n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def,
    word_join_def, word_concat_def,
@@ -1245,7 +1245,7 @@ in
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 fun output_words_as f = Parse.temp_add_user_printer
-  ("wordsLib.print_word", ``x:('a,'b)fcp$cart``, print_word f);
+  ("wordsLib.print_word", ``words$n2w x``, print_word f);
 
 fun output_words_as_bin() = output_words_as (K StringCvt.BIN);
 fun output_words_as_hex() = output_words_as (K StringCvt.HEX);
