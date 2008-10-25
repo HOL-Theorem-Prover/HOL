@@ -1172,30 +1172,4 @@ fun eval3 (n, m, r, s) =
 
 (* ------------------------------------------------------------------------- *)
 
-fun myprint sys (pg,lg,rg) d pps t = let
-      open Portable term_pp_types
-      val (l,typ) = listSyntax.dest_list t
-      val _ = typ = ``:word32`` andalso not (null l) orelse raise UserPP_Failed
-      fun delim act = case pg of
-                        Prec(_, "CONS") => ()
-                      | _ => act()
-    in
-      delim (fn () => (begin_block pps CONSISTENT 0;
-                       add_string pps "[";
-                       add_break pps (1,2);
-                       begin_block pps CONSISTENT 0));
-      app (fn x => (sys (Prec(0, "CONS"), Top, Top) (d - 1) x;
-                    add_string pps ";"; add_newline pps))
-          (List.take (l,length l - 1));
-      sys (Prec(0, "CONS"), Top, Top) (d - 1) (last l);
-      delim (fn () => (end_block pps;
-                       add_break pps (1,0);
-                       add_string pps "]";
-                       end_block pps))
-    end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
-
-val _ = temp_add_user_printer ({Tyop = "list", Thy = "list"}, myprint);
-
-(* ------------------------------------------------------------------------- *)
-
 end

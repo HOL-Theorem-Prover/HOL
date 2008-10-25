@@ -776,7 +776,7 @@ fun eval (n, m, r, s) =
 
 (* ------------------------------------------------------------------------- *)
 
-fun myprint sys (pg,lg,rg) d pps t = let
+fun myprint Gs (sys,strn,brk) (pg,lg,rg) d pps t = let
       open Portable term_pp_types
       val (l,typ) = listSyntax.dest_list t
       val _ = typ = ``:word32`` andalso not (null l) orelse raise UserPP_Failed
@@ -785,20 +785,21 @@ fun myprint sys (pg,lg,rg) d pps t = let
                       | _ => act()
     in
       delim (fn () => (begin_block pps CONSISTENT 0;
-                       add_string pps "[";
-                       add_break pps (1,2);
+                       strn "[";
+                       brk (1,1);
                        begin_block pps CONSISTENT 0));
       app (fn x => (sys (Prec(0, "CONS"), Top, Top) (d - 1) x;
-                    add_string pps ";"; add_newline pps))
+                    strn ";"; add_newline pps))
           (List.take (l,length l - 1));
       sys (Prec(0, "CONS"), Top, Top) (d - 1) (last l);
       delim (fn () => (end_block pps;
-                       add_break pps (1,0);
-                       add_string pps "]";
+                       brk (1,0);
+                       strn "]";
                        end_block pps))
     end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-val _ = temp_add_user_printer ({Tyop = "list", Thy = "list"}, myprint);
+val _ = temp_add_user_printer
+   ("arm_evalLib.myprint", ``x:word32 list``, myprint);
 
 (* ------------------------------------------------------------------------- *)
 
