@@ -232,7 +232,7 @@ val typing_sub0 = prove(
     SRW_TAC [][],
     FULL_SIMP_TAC (srw_ss()) [ctxtFV_MEM],
     METIS_TAC [],
-    Q.MATCH_ABBREV_TAC `(v,α) :: Γ |- [M/u]N -: β` THEN
+    Q.MATCH_ABBREV_TAC `(v,α) :: Γ ⊢ [M/u]N ◁ β` THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     markerLib.RM_ALL_ABBREVS_TAC THEN
     `Γ ⊆ (v,α) :: Γ`  by SRW_TAC [][subctxt_def] THEN
