@@ -1038,16 +1038,18 @@ val l15a = store_thm(
 
 val ltm_precursion_ex =
   (UNDISCH o
+   Q.INST [`VR` |-> `vr`, `AP` |-> `ap`, `LM` |-> `lm`, `LI` |-> `li`, 
+           `APM` |-> `apm`] o 
    SIMP_RULE (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def, pairpm_def,
                          pairTheory.FORALL_PROD,
-                         ASSUME ``is_perm (apm: 'a pm)``] o
-   Q.INST [`vr` |-> `\s. (vr s, VAR s)`,
-           `ap` |-> `\t u. (ap (FST t) (FST u) (SND t) (SND u),
+                         ASSUME ``is_perm (APM: 'a pm)``] o
+   Q.INST [`vr` |-> `\s. (VR s, VAR s)`,
+           `ap` |-> `\t u. (AP (FST t) (FST u) (SND t) (SND u),
                             SND t @@ SND u)`,
-           `lm` |-> `\v t. (lm (FST t) v (SND t), LAM v (SND t))`,
-           `li` |-> `\n v t u. (li (FST t) (FST u) n v (SND t) (SND u),
+           `lm` |-> `\v t. (LM (FST t) v (SND t), LAM v (SND t))`,
+           `li` |-> `\n v t u. (LI (FST t) (FST u) n v (SND t) (SND u),
                                 LAMi n v (SND t) (SND u))`,
-           `apm` |-> `pairpm apm ltpm`] o
+           `apm` |-> `pairpm APM ltpm`] o
    SPEC_ALL o
    INST_TYPE [alpha |-> ``:'a # lterm``]) ltm_recursion
 

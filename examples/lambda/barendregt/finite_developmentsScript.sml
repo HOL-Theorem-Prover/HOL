@@ -631,60 +631,7 @@ val n_posns_vsubst_invariant = Store_Thm(
     n_label : labels (some of) a term's redexes, producing an lterm
    ---------------------------------------------------------------------- *)
 
-val ltpm_iteration = let
-  open nomsetTheory
-  val tm_precursion_ex =
-    (UNDISCH o
-     SIMP_RULE (srw_ss()) [support_def, FUN_EQ_THM,
-                           fnpm_def, pairpm_def,
-                           pairTheory.FORALL_PROD,
-                           ASSUME ``is_perm (apm: 'a pm)``] o
-     Q.INST [`vr` |-> `\s. (vr s, VAR s)`,
-             `ap` |-> `\t u. (ap (FST t) (FST u) (SND t) (SND u),
-                              SND t @@ SND u)`,
-             `lm` |-> `\v t. (lm (FST t) v (SND t), LAM v (SND t))`,
-             `li` |-> `\n v t u. (li (FST t) (FST u) n v (SND t) (SND u),
-                                  LAMi n v (SND t) (SND u))`,
-             `apm` |-> `pairpm apm ltpm`] o
-     SPEC_ALL o
-     INST_TYPE [alpha |-> ``:'a # lterm``]) ltm_recursion
-  val bod = #2 (dest_exists (concl tm_precursion_ex))
-  val tm_snd_res = prove(
-    ``FINITE A ==> ^bod ==> !M. SND (f M) = M``,
-    NTAC 2 STRIP_TAC THEN HO_MATCH_MP_TAC lterm_bvc_induction THEN
-    Q.EXISTS_TAC `A` THEN SRW_TAC [][])
-  val tm_precursion_ex2 = prove(
-    ``FINITE A ==> ^bod ==>
-             ?f. ((!s. f (VAR s) = vr s) /\
-                  (!M N. f (M @@ N) = ap (f M) (f N) M N) /\
-                  (!v M. ~(v IN A) ==> (f (LAM v M) = lm (f M) v M)) /\
-                  (!n v M N. ~(v IN A) ==>
-                             (f (LAMi n v M N) = li (f M) (f N) n v M N))) /\
-                 (!x y t. ~(x IN A) /\ ~(y IN A) ==>
-                          (f (ltpm [(x,y)] t) = apm [(x,y)] (f t)))``,
-    REPEAT STRIP_TAC THEN Q.EXISTS_TAC `FST o f` THEN SRW_TAC [][] THEN
-    IMP_RES_TAC tm_snd_res THEN SRW_TAC [][])
-  val supp_lemma = prove(
-    ``is_perm apm ==> ((!x y t. f (ltpm [(x,y)] t) = apm [(x,y)] (f t)) =
-                       (!pi t. f (ltpm pi t) = apm pi (f t)))``,
-    SRW_TAC [][EQ_IMP_THM] THEN
-    Q.ID_SPEC_TAC `t`  THEN Induct_on `pi` THEN
-    ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, is_perm_nil] THEN
-    MAP_EVERY Q.X_GEN_TAC [`a`,`b`,`M`] THEN
-    `ltpm ((a,b)::pi) M = ltpm [(a,b)] (ltpm pi M)`
-       by SRW_TAC [][GSYM tpm_APPEND] THEN SRW_TAC [][] THEN
-    SRW_TAC [][GSYM is_perm_decompose])
-
-in
-  save_thm(
-    "ltm_recursion_nosideset",
-    (SIMP_RULE (srw_ss()) [AND_IMP_INTRO, supp_lemma] o
-     Q.INST [`A` |-> `{}`] o
-     DISCH_ALL o
-     CHOOSE(``f:lterm -> 'a # lterm``, tm_precursion_ex) o UNDISCH o
-     UNDISCH) tm_precursion_ex2)
-
-end
+val ltpm_iteration = labelledTermsTheory.ltm_recursion_nosideset
 
 val supp_LAMi = prove(
   ``supp (fnpm ltpm ltpm) (LAMi n v M) = FV M DELETE v``,
@@ -2411,7 +2358,7 @@ val old_induction = prove(
     FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
     SRW_TAC [numSimps.ARITH_ss][size_vsubst]
   ]);
-
+ 
 
 val weight_at_subst = store_thm(
   "weight_at_subst",
@@ -3773,8 +3720,8 @@ val okpath_RTC = store_thm(
         okpath R p /\ finite p ==>
         RTC (\x y. ?l. R x l y) (first p) (last p)``,
   GEN_TAC THEN HO_MATCH_MP_TAC finite_okpath_ind THEN
-  SRW_TAC [][relationTheory.RTC_RULES] THEN
-  Q.SPEC_THEN `R` (MATCH_MP_TAC o CONJUNCT2) relationTheory.RTC_RULES THEN
+  SRW_TAC [][relationTheory.RTC_RULES] THEN 
+  Q.SPEC_THEN `RR` (MATCH_MP_TAC o CONJUNCT2) relationTheory.RTC_RULES THEN
   PROVE_TAC []);
 
 val unique_nforms = store_thm(
