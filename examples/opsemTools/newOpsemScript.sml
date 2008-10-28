@@ -698,6 +698,34 @@ val ArrayAssign_def =
  Define
   `ArrayAssign v e1 e2 =  GenAssign v (INR(ArrUpdate (ArrVar v) e1 e2))`;
 
+(* Some overloadings to improve the concrete syntax *)
+val _ = overload_on ("V", ``Var``);
+val _ = overload_on ("C", ``Const``);
+
+val _ = overload_on ("+", ``Plus``);
+val _ = overload_on ("-", ``Sub``);
+val _ = overload_on ("*", ``Times``);
+val _ = overload_on ("/", ``Div``);
+
+val _ = overload_on ("=", ``Equal``);
+val _ = overload_on ("<", ``Less``);
+val _ = overload_on ("<=", ``LessEq``);
+val _ = overload_on (">", ``Greater``);
+val _ = overload_on (">=", ``GreaterEq``);
+
+val _ = overload_on ("~", ``Not``);
+val _ = overload_on ("/\\", ``And``);
+val _ = overload_on ("\\/", ``Or``);
+
+val _ = overload_on ("COND", ``Cond:bexp->program->program->program``);
+
+val _ = overload_on ("::=", ``Assign``);
+val _ = set_fixity "::=" (Infixr 280);
+
+val _ = overload_on (";;", ``Seq``);
+val _ = set_fixity ";;" (Infixr 180);
+
+
 (*---------------------------------------------------------------------------*)
 (* Big-step operational semantics specified by an inductive relation.        *)
 (*                                                                           *)
@@ -2706,33 +2734,33 @@ val IMP_INTRO_THM =
 val NOT_CONJ_IMP_F =
  save_thm
   ("NOT_CONJ_IMP_F",
-   METIS_PROVE [] ``!p b. ~(p /\ b) ==> ((p ==> ~b) = T)``);
+   METIS_PROVE [] ``!p b : bool. ~(p /\ b) ==> ((p ==> ~b) = T)``);
 
-
+(* Type annotations needed below as "~", "/\", "\/" are overloaded *)
 val NOT_IMP_CONJ =
  save_thm
   ("NOT_IMP_CONJ",
-   METIS_PROVE [] ``!A B C. ~((A ==> B) /\ C) = (A /\ ~B) \/ ~C``);
+   METIS_PROVE [] ``!A B C : bool . ~((A ==> B) /\ C) = (A /\ ~B) \/ ~C``);
 
 val CONJ_RIGHT_ASSOC =
  save_thm
   ("CONJ_RIGHT_ASSOC",
-   METIS_PROVE [] ``!A B C. A /\ (B /\ C) = A /\ B /\ C``);
+   METIS_PROVE [] ``!A B C : bool. A /\ (B /\ C) = A /\ B /\ C``);
 
 val CONJ_LEFT_ASSOC =
  save_thm
   ("CONJ_LEFT_ASSOC",
-   METIS_PROVE [] ``!A B C. (A /\ B) /\ C = A /\ B /\ C``);
+   METIS_PROVE [] ``!A B C : bool. (A /\ B) /\ C = A /\ B /\ C``);
 
 val NOT_DISJ =
  save_thm
   ("NOT_DISJ",
-   METIS_PROVE [] ``!A B. ~(A \/ B) = ~A /\ ~B``);
+   METIS_PROVE [] ``!A B : bool. ~(A \/ B) = ~A /\ ~B``);
 
 val IMP_F_IS_F = 
  save_thm
   ("IMP_F_IS_F",
-   METIS_PROVE [] ``!P. (!Q. P ==> Q) ==> (P = F)``);
+   METIS_PROVE [] ``!P : bool. (!Q. P ==> Q) ==> (P = F)``);
 
 (* Identity wrapper to tag ILOG-generated assumptions *)
 val ILOG_def = Define `ILOG(tm:bool) = tm`;                                                                                                       

@@ -9,13 +9,17 @@ app load ["newOpsemTheory","pairSyntax", "intLib","intSimps",
           "relationTheory", "stringLib",
           "PATH_EVAL",
           "IndDefLib", "IndDefRules",
-          "term2xml","execSymb","extSolv",
-          "AbsMinusTheory", "TritypeTheory"];
+          "term2xml",
+(*        "execSymb",     *)
+          "extSolv",
+          "AbsMinusTheory", "TritypeTheory", "GeneratedFlasherManagerTheory"];
 
 open newOpsemTheory bossLib pairSyntax intLib Omega intSimps
      computeLib finite_mapTheory relationTheory stringLib
-     PATH_EVAL IndDefLib IndDefRules term2xml execSymb extSolv
-     AbsMinusTheory TritypeTheory;
+     PATH_EVAL IndDefLib IndDefRules term2xml 
+(*   execSymb             *)
+     extSolv
+     AbsMinusTheory TritypeTheory GeneratedFlasherManagerTheory;
 
 quietdec := false; (* turn printing back on *)
 
