@@ -213,7 +213,7 @@ fun print_monads (tyg, tmg) (sysprinter,strn,brk) (p,l,r) dpth pps t = let
                 val prec = Prec(par_prec, monad_par)
               in
                 pbegin bracketp;
-                PP.begin_block pps PP.INCONSISTENT 0;
+                PP.begin_block pps PP.CONSISTENT 0;
                 pr_action (prec,l,prec) (SOME v1, a1);
                 strn " |||";
                 brk(1,0);
