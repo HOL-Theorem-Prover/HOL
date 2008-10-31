@@ -546,7 +546,9 @@ file to \"use\" first."
                                     (make-temp-file-xemacs "hol")
                                  )))
             (if (stringp hol-mode-to-delete)
-                (progn (delete-file hol-mode-to-delete)
+                (progn (condition-case nil 
+                           (delete-file hol-mode-to-delete) 
+                         (error nil))
                        (setq hol-mode-to-delete nil)))
             ; below, use visit parameter = 1 to stop message in mini-buffer
             (write-region (point-min) (point-max) fname nil 1)
