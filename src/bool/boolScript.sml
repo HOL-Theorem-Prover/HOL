@@ -40,6 +40,7 @@ local
   fun with_pp ppfn pps x =
       Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
   fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
+  fun ppg pps g = term_grammar.prettyprint_grammar Parse.pp_term pps g
 in
   val _ = installPP (with_pp (Kind.pp_qkind))
   val _ = installPP (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
@@ -48,7 +49,7 @@ in
   val _ = installPP (with_pp Hol_pp.pp_theory)
   val _ = installPP (with_pp kind_grammar.prettyprint_grammar)
   val _ = installPP (with_pp type_grammar.prettyprint_grammar)
-  val _ = installPP (with_pp term_grammar.prettyprint_grammar)
+  val _ = installPP (with_pp ppg)
 end;
 *)
 

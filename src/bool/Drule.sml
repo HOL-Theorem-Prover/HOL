@@ -19,6 +19,21 @@ val ERR = mk_HOL_ERR "Drule";
 
 
 (*---------------------------------------------------------------------------*
+ *  Beta-reduce all types within the goal                                    *
+ *                                                                           *
+ *      A |- t                                                               *
+ *   -----------                                                             *
+ *      A |- t'   (where t' is t but with all types beta-reduced)            *
+ *---------------------------------------------------------------------------*)
+
+fun BETA_TY_RULE th = let val t = concl th
+                          val t' = beta_conv_ty_in_term t
+                          val eq = ALPHA t t'
+                      in EQ_MP (ALPHA t t') th
+                      end;
+
+
+(*---------------------------------------------------------------------------*
  *  Add an assumption                                                        *
  *                                                                           *
  *      A |- t'                                                              *
@@ -974,7 +989,7 @@ fun ISPECL [] = I
                      => raise ERR "ISPECL" "list of terms too long for theorem"
          val (rk,kd_theta,ty_theta) =
              rev_itlist (fn (pat,ob) => fn (rk,kd_theta,ty_theta) =>
-                      let val (rk',kd_theta',ty_theta') = Type.kind_match_type pat ob
+                      let val (ty_theta',kd_theta',rk') = Type.kind_match_type pat ob
                       in (Int.max(rk, rk'), kd_merge kd_theta' kd_theta, merge ty_theta' ty_theta)
                       end) pairs (0,[],[])
                       handle HOL_ERR _ => raise ERR "ISPECL"
@@ -1556,7 +1571,7 @@ fun INST_TY_TERM(Stm,Sty) th = INST Stm (INST_TYPE Sty th);
 
 (*---------------------------------------------------------------------------*
  * Instantiate terms, types, kinds, and ranks of a theorem. This is pretty   *
- * slow, because it makes three full traversals of the theorem.              *
+ * slow, because it makes four full traversals of the theorem.               *
  *---------------------------------------------------------------------------*)
 
 fun INST_ALL(Stm,Sty,Skd,Srk) th =

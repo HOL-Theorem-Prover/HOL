@@ -18,6 +18,7 @@ sig
   val GSUBS            : ((term,term)subst -> term -> term)
                            -> thm list -> thm -> thm
   val SUBST_CONV       : (term,thm)subst -> term -> term -> thm
+  val BETA_TY_RULE     : thm -> thm
   val ADD_ASSUM        : term -> thm -> thm
   val IMP_TRANS        : thm -> thm -> thm
   val IMP_ANTISYM_RULE : thm -> thm -> thm

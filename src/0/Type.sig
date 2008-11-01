@@ -87,6 +87,8 @@ sig
 
   val ty_sub        : (hol_type,hol_type)Lib.subst
                         -> hol_type -> hol_type Lib.delta
+  val raw_ty_sub    : (hol_type,hol_type)Lib.subst
+                        -> hol_type -> hol_type Lib.delta
   val type_subst    : (hol_type,hol_type)Lib.subst -> hol_type -> hol_type
   val raw_type_subst: (hol_type,hol_type)Lib.subst -> hol_type -> hol_type
   val type_map      : (hol_type,hol_type)Binarymap.dict -> hol_type -> hol_type
@@ -97,6 +99,7 @@ sig
   val exists_tyvar  : (hol_type -> bool) -> hol_type -> bool
   val -->           : hol_type * hol_type -> hol_type  (* infixr 3 --> *)
   val dom_rng       : hol_type -> hol_type * hol_type  (* inverts -->  *)
+  val raw_dom_rng   : hol_type -> hol_type * hol_type  (* inverts -->  *)
   val ind           : hol_type
   val bool          : hol_type
   val alpha         : hol_type
@@ -108,7 +111,7 @@ sig
 
   val match_type    : hol_type -> hol_type -> (hol_type,hol_type)Lib.subst
   val kind_match_type : hol_type -> hol_type ->
-                        int * (kind,kind)Lib.subst * (hol_type,hol_type)Lib.subst
+                        (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
 
   val raw_match_type : hol_type -> hol_type
                       -> (hol_type,hol_type) Lib.subst * hol_type list

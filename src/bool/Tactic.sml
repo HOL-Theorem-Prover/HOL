@@ -638,8 +638,8 @@ fun REFL_TAC(asl,g) =
  *---------------------------------------------------------------------------*)
 
 fun UNDISCH_TAC wf (asl,w) =
-  if op_mem term_eq wf asl then
-    ([(op_set_diff term_eq asl [wf], mk_imp (wf,w))], UNDISCH o Lib.trye hd)
+  if op_mem aconv wf asl then
+    ([(op_set_diff aconv asl [wf], mk_imp (wf,w))], UNDISCH o Lib.trye hd)
   else raise ERR "UNDISCH_TAC" "Specified term not in assumption list";
 
 
@@ -663,7 +663,7 @@ fun AP_TERM_TAC(asl,gl) =
    val (g,x) = with_exn dest_comb lhs (ER"lhs not a comb")
    val (f,y) = with_exn dest_comb rhs (ER"rhs not a comb")
  in
-   if not(term_eq f g) then raise ER "functions on lhs and rhs differ"
+   if not(aconv f g) then raise ER "functions on lhs and rhs differ"
    else ([(asl, mk_eq(x, y))],
          AP_TERM f o Lib.trye hd)
  end
@@ -687,7 +687,7 @@ fun AP_THM_TAC (asl,gl) =
    val (g,x) = with_exn dest_comb lhs (ER "lhs not a comb")
    val (f,y) = with_exn dest_comb rhs (ER "rhs not a comb")
  in
-   if not(term_eq x y) then raise ER "arguments on lhs and rhs differ"
+   if not(aconv x y) then raise ER "arguments on lhs and rhs differ"
    else ([(asl, mk_eq(g, f))],
          C AP_THM x o Lib.trye hd)
  end

@@ -84,6 +84,7 @@ sig
 
  val -->           : hol_type * hol_type -> hol_type  (* infixr 3 --> *)
  val dom_rng       : hol_type -> hol_type * hol_type  (* inverts -->  *)
+ val raw_dom_rng   : hol_type -> hol_type * hol_type  (* inverts -->  *)
  val bool          : hol_type
  val ind           : hol_type
  val alpha         : hol_type
@@ -97,7 +98,7 @@ sig
 
  val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
  val kind_match_type : hol_type -> hol_type ->
-                        int * (kind,kind)Lib.subst * (hol_type,hol_type)Lib.subst
+                       (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
 
  val match_type_restr : hol_type list -> hol_type -> hol_type 
                         -> (hol_type,hol_type) Lib.subst

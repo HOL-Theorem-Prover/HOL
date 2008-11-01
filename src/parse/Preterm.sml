@@ -450,10 +450,6 @@ fun to_term tm =
           open optmonad
           infix >> >-
           val clean = Pretype.clean o Pretype.remove_made_links
-          (*fun deep_beta_conv_ty Ty env =
-              return (if Pretype.do_beta_conv_types()
-                      then Pretype.deep_beta_conv_ty Ty
-                      else Ty) env*)
           fun prepare Ty =
               let val Ty' = if Pretype.do_beta_conv_types()
                             then Pretype.deep_beta_conv_ty Ty
@@ -462,23 +458,23 @@ fun to_term tm =
               end
         in
           case tm of
-            Var{Name,Ty,...} => prepare Ty >- (fn Ty =>
-                                return (Term.mk_var(Name, clean Ty)))
+            Var{Name,Ty,...} => prepare Ty >- (fn Ty' =>
+                                return (Term.mk_var(Name, clean Ty')))
           | Const{Name,Thy,Ty,...} =>
-                prepare Ty >- (fn Ty =>
-                return (Term.mk_thy_const{Name=Name, Thy=Thy, Ty=clean Ty}))
+                prepare Ty >- (fn Ty' =>
+                return (Term.mk_thy_const{Name=Name, Thy=Thy, Ty=clean Ty'}))
           | Comb{Rator, Rand,...} => cleanup Rator >- (fn Rator'
                                   => cleanup Rand  >- (fn Rand'
                                   => return (Term.mk_comb(Rator', Rand'))))
           | TyComb{Rator, Rand,...} => cleanup Rator >- (fn Rator'
-                                  => prepare Rand >- (fn Rand
-                                  => return (Term.mk_tycomb(Rator', clean Rand))))
+                                  => prepare Rand >- (fn Rand'
+                                  => return (Term.mk_tycomb(Rator', clean Rand'))))
           | Abs{Bvar, Body,...} => cleanup Bvar >- (fn Bvar'
                                 => cleanup Body >- (fn Body'
                                 => return (Term.mk_abs(Bvar', Body'))))
-          | TyAbs{Bvar, Body,...} => prepare Bvar >- (fn Bvar
+          | TyAbs{Bvar, Body,...} => prepare Bvar >- (fn Bvar'
                                 => cleanup Body >- (fn Body'
-                                => return (Term.mk_tyabs(clean Bvar, remove_case_magic Body'))))
+                                => return (Term.mk_tyabs(clean Bvar', remove_case_magic Body'))))
           | Antiq{Tm,...} => return Tm
           | Constrained{Ptm,...} => cleanup Ptm
        (* | Constrained{Ptm,Ty,...} => prepare Ty >- (fn Ty
@@ -1196,7 +1192,40 @@ in check
 end end;
 
 fun evade_free_tvs tm =
-   inst (map (fn tv => (Pretype.all_new_uvar() |-> tv)) (type_vars_in_term tm)) tm
+(*   inst (map (fn tv => (Pretype.all_new_uvar() |-> tv)) (type_vars_in_term tm)) tm *)
+  let val dbvs = Pretype.distinguish_btyvars
+      fun evad cx (Var{Name,Ty,Locn}) =
+                   Var{Name=Name,Ty=dbvs cx Ty,Locn=Locn}
+        | evad cx (Const{Name,Thy,Ty,Locn}) =
+                   Const{Name=Name,Thy=Thy,Ty=dbvs cx Ty,Locn=Locn}
+        | evad cx (Comb{Rator,Rand,Locn}) =
+                   Comb{Rator=evad cx Rator,Rand=evad cx Rand,Locn=Locn}
+        | evad cx (TyComb{Rator,Rand,Locn}) =
+                   TyComb{Rator=evad cx Rator,Rand=dbvs cx Rand,Locn=Locn}
+        | evad cx (Abs{Bvar,Body,Locn}) =
+                   Abs{Bvar=evad cx Bvar,Body=evad cx Body,Locn=Locn}
+        | evad cx (TyAbs{Bvar,Body,Locn}) =
+               let open Pretype
+                   val Bvar0 = the_var_type Bvar
+                   val fvs = Lib.op_set_diff eq (type_vars_in_term Body) [Bvar0]
+                   val Bvar' = variant_type (Lib.op_union eq cx fvs) Bvar0
+                   val cx' = Bvar'::cx
+               in if eq Bvar0 Bvar' then TyAbs{Bvar=Bvar,Body=evad cx' Body,Locn=Locn}
+                  else let val theta = [Bvar0 |-> Bvar']
+                           val Bvar1 = type_subst theta Bvar
+                           val Body1 = inst theta Body
+                       in TyAbs{Bvar=Bvar1,Body=evad cx' Body1,Locn=Locn}
+                       end
+               end
+        | evad cx (tm as Antiq{Tm,Locn}) =
+                   Antiq{Tm=(*Term.evade_tyvs cx*) Tm,Locn=Locn}
+        | evad cx (Constrained{Ptm,Ty,Locn}) =
+                   Constrained{Ptm=evad cx Ptm,Ty=dbvs cx Ty,Locn=Locn}
+        | evad cx (Overloaded{Name,Ty,Info,Locn}) =
+                   Overloaded{Name=Name,Ty=dbvs cx Ty,Info=Info,Locn=Locn}
+  in evad (type_vars_in_term tm) tm
+  end
+        
 
 fun typecheck_phase1 pfns ptm =
     TC pfns (evade_free_tvs ptm)

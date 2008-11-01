@@ -109,7 +109,7 @@ local
    in (gl, Thm.DISCH ant o prf)
    end
 in
-val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
+val BOSS_STRIP_TAC = Tactical.FIRST [TY_GEN_TAC,GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
 end;
 
 fun tyi_to_ssdata tyinfo =
@@ -292,7 +292,7 @@ fun PRIM_STP_TAC ss finisher =
                    else NO_TAC g)
         else NO_TAC
   in
-    REPEAT (GEN_TAC ORELSE CONJ_TAC)
+    REPEAT (TY_GEN_TAC ORELSE GEN_TAC ORELSE CONJ_TAC)
      THEN REPEAT VAR_EQ_TAC
      THEN ASM_SIMP
      THEN TRY (IF_CASES_TAC THEN REPEAT IF_CASES_TAC THEN ASM_SIMP)
@@ -336,7 +336,7 @@ fun PRIM_NORM_TAC ss =
  let val has_constr_eqn = mkCSET()
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
   in
-    REPEAT (GEN_TAC ORELSE CONJ_TAC)
+    REPEAT (TY_GEN_TAC ORELSE GEN_TAC ORELSE CONJ_TAC)
      THEN REPEAT VAR_EQ_TAC
      THEN ASM_SIMP
      THEN TRY (IF_CASES_TAC THEN REPEAT IF_CASES_TAC THEN ASM_SIMP)

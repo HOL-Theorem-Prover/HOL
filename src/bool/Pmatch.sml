@@ -68,7 +68,7 @@ val givens = mapfilter not_omitted;
 fun fresh_constr ty_match (colty:hol_type) gv c =
   let val Ty = type_of c
       val (L,ty) = strip_fun Ty
-      val (rk,kd_theta,ty_theta) = ty_match ty colty
+      val (ty_theta,kd_theta,rk) = ty_match ty colty
       val inst_all = inst ty_theta o inst_kind kd_theta o inst_rank rk
       val c' = inst_all c
       val gvars = map (inst_all o gv) L
@@ -489,7 +489,7 @@ fun mk_case1 tybase (exp, plist) =
            val fns = map (fn (p,R) => list_mk_abs(snd(strip_comb p),R)) plist
            val ty' = list_mk_fun (map type_of fns@[type_of exp],
                                   type_of (snd (hd plist)))
-           val (rk,kd_theta,ty_theta) = Type.kind_match_type (type_of c) ty'
+           val (ty_theta,kd_theta,rk) = Type.kind_match_type (type_of c) ty'
        in list_mk_comb(inst ty_theta (inst_rank_kind rk kd_theta c),fns@[exp])
        end;
 
@@ -527,7 +527,7 @@ local fun build_case_clause((ty,constr),rhs) =
            in (v::V,M')
            end
      val (V,rhs') = peel args rhs
-     val (rk,kd_theta,ty_theta) = Type.kind_match_type (type_of constr) 
+     val (ty_theta,kd_theta,rk) = Type.kind_match_type (type_of constr) 
                       (list_mk_fun (map type_of V, ty))
      val constr' = inst ty_theta (inst_rank_kind rk kd_theta constr)
  in
@@ -687,7 +687,7 @@ fun mk_functional thy eqs =
      (* Ensure that the case test variable is fresh for the rest of the case *)
      val avs = subtract (all_vars case_tm') [a']
      val a'' = variant avs a'
-     val case_tm'' = if a'' = a'
+     val case_tm'' = if aconv a'' a'
                        then case_tm'
                        else rename_case thy ([a' |-> a''],[],[],0) case_tm'
  in

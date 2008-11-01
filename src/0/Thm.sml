@@ -370,8 +370,9 @@ fun INST_TYPE [] th = th
          val theta' = Type.inst_rank_subst r theta
          val asl'   = hypset_map (Term.inst_rank r) asl
          val c'     = Term.inst_rank r c
+         val instfn = inst theta'
        in
-         make_thm Count.InstType(ocl, hypset_map (inst theta') asl', inst theta' c')
+         make_thm Count.InstType(ocl, hypset_map instfn asl', instfn c')
        end
     end
 

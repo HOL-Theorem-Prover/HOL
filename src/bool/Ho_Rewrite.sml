@@ -108,7 +108,7 @@ end;
 (* =====================================================================*)
 
 fun GEN_REWRITE_CONV' rw_func rws thl =
-     rw_func (REWRITES_CONV (add_rewrites rws thl));
+     BETA_TY_RULE o (rw_func (REWRITES_CONV (add_rewrites rws thl)));
 
 (* ---------------------------------------------------------------------*)
 (* Rewriting conversions.                        			*)

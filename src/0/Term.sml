@@ -18,7 +18,10 @@ In *scratch*, type
 (hol-set-executable mosml-executable)
 and type Ctrl-j.
 
+loadPath := "/Users/palantir/hol/hol-omega/sigobj" :: !loadPath;
+
 loadPath := "/Users/pvhomei/hol/hol-omega/sigobj" :: !loadPath;
+
 app load ["Feedback","Lib","Subst","KernelTypes","Type","KernelSig","Lexis",
           "Polyhash","Binarymap"];
 *)
@@ -264,7 +267,7 @@ fun all_varsl tm_list  = itlist (union o all_vars) tm_list [];
 
 fun var_compare (Fv(s1,ty1), Fv(s2,ty2)) =
        (case String.compare (s1,s2)
-         of EQUAL => Type.compare (ty1,ty2)
+         of EQUAL => Type.compare (ty1, ty2)
           | x => x)
   | var_compare _ = raise ERR "var_compare" "variables required";
 
@@ -483,7 +486,7 @@ fun create_const errstr (const as (r,GRND pat)) Ty =
          | ((S, _),( _, _),_) => Const(r, POLY Ty))
         handle HOL_ERR _ => Raise (ERR errstr
              (String.concat["Not a type instance: ", KernelSig.id_toString r,
-                               " cannot have type ", type_to_string Ty])))
+                              " cannot have type\n", type_to_string Ty])))
 
 
 fun mk_thy_const {Thy,Name,Ty} = let
@@ -558,7 +561,7 @@ local val err  = Lib.C ERR "operator on type does not have universal type"
               | loop (A,typ) (ty::rst) =
                  let val (bty,ty2) = with_exn Type.dest_univ_type typ err
                      val _ = check_rank caller bty ty
-                     val ty2' = Type.type_subst[bty |-> ty] ty2
+                     val ty2' = Type.raw_type_subst[bty |-> ty] ty2
                  in loop(TComb(A,ty), ty2') rst
                  end
         in fn (f,L) => loop(f, type_of f) L
@@ -816,21 +819,17 @@ fun check_subst [] = ()
               assume the rank check was done earlier and proceed. *)
         then raise ERR "inst" "redex has lower rank than residue"
         else check_subst s
-(*
-fun residue_tyvs theta = flatten (map (type_vars o #residue) theta)
-fun remove v theta = filter (fn {redex,residue} => not (redex = TyFv v)) theta
-*)
-in
-fun inst [] tm = tm
-  | inst theta tm =
+fun mapsb f = map (fn {redex,residue} => {redex=f redex, residue=residue})
+fun inst1 [] tm = tm
+  | inst1 theta tm =
     let fun inst0 (bv as Bv i) = bv
           | inst0 (c as Const(_, GRND _)) = c
           | inst0 (c as Const(r, POLY Ty)) =
-            (case Type.ty_sub theta Ty
+            (case Type.raw_ty_sub theta Ty
               of SAME => c
                | DIFF ty => Const(r,(if Type.polymorphic ty then POLY else GRND)ty))
           | inst0 (v as Fv(Name,Ty)) =
-              (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
+              (case Type.raw_ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
           | inst0 (Comb(Rator,Rand)) = Comb(inst0 Rator, inst0 Rand)
           | inst0 (TComb(Rator,Ty))  = TComb(inst0 Rator, Type.type_subst theta Ty)
           | inst0 (Abs(Bvar,Body))   = Abs(inst0 Bvar, inst0 Body)
@@ -840,6 +839,8 @@ fun inst [] tm = tm
       check_subst theta;
       inst0 tm
     end
+in
+fun inst theta = inst1 (mapsb deep_beta_conv_ty theta)
 end;
 
 fun inst_with_rank theta =
@@ -1072,7 +1073,7 @@ local val FORMAT = ERR "list_mk_tybinder"
                   of NONE => raise FORMAT
                    | SOME ty1 => (fn abs =>
                    let val tya = type_of abs
-                       val (rk,kdtheta,tytheta) = kind_match_type ty tya
+                       val (tytheta,kdtheta,rk) = kind_match_type ty tya
                    in mk_comb(inst_rk_kd_ty rk kdtheta tytheta c, abs)
                    end)
 in

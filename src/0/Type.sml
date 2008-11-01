@@ -49,35 +49,6 @@ val WARN = HOL_WARNING "Type";
 
 val typesig = KernelSig.new_table()
 
-(*
-val _ = installPP pp_kind;
-*)
-
-(*
-val k0 = Type;
-val k1 = Type ==> Type;
-val k2 = mk_arity 2;
-val k3 = (Type ==> Type) ==> (Type ==> Type);
-val k4 = k2 ==> k1 ==> k2;
-val k5 = k4 ==> k4 ==> k4;
-val k6 = k5 ==> k5;
-kind_dom_rng k0; (* should fail *)
-kind_dom_rng k1;
-kind_dom_rng k2;
-kind_dom_rng k3;
-kind_dom_rng k4;
-is_arity k0;
-is_arity k1;
-is_arity k2;
-is_arity k3;
-is_arity k4;
-arity_of k0;
-arity_of k1;
-arity_of k2;
-arity_of k3; (* should fail *)
-arity_of k4; (* should fail *)
-*)
-
 
 (*---------------------------------------------------------------------------*
  * Builtin type operators (fun, bool, ind). These are in every HOL           *
@@ -94,28 +65,12 @@ val bool_tyc = (bool_tyid, mk_arity 0, 0)
 val ind_tyc  = ( ind_tyid, mk_arity 0, 0)
 end
 
-(* For testing:
-
-local open TypeSig
-in
-val foo_tyid  = insert(typesig, {Thy = "min", Name = "foo"},  (k3, 0))
-val bar_tyid  = insert(typesig, {Thy = "min", Name = "bar"},  (k4, 1))
-val foo_tyc  = ( foo_tyid, k3, 0)
-val bar_tyc  = ( bar_tyid, k4, 1)
-end;
-*)
-
 (*---------------------------------------------------------------------------
         Some basic values
  ---------------------------------------------------------------------------*)
 
 val bool = TyCon bool_tyc
 val ind  = TyCon ind_tyc;
-
-(*
-val foo  = TyCon foo_tyc
-val bar  = TyCon bar_tyc;
-*)
 
 
 fun same_tyconst (id1,_,_) (id2,_,_) = id1 = id2
@@ -138,25 +93,6 @@ fun dom_rng (TyApp(funX, Y)) = (dom_of funX, Y)
   | dom_rng _ = raise ERR "dom_rng" "not a function type"
 end;
 
-(*
-val ty0 = bool
-val ty1 = ind --> bool
-val ty2 = ind --> ind --> bool
-val ty3 = ty1 --> ty1;
-val ty4 = foo --> bar; (* not well-kinded *)
-val ty5 = TyApp(bar, TyCon fun_tyc); (* well-kinded *)
-val ty6 = TyAll(("'a",mk_arity 0,0), TyBv 0 --> bool);
-val ty7 = TyAbs(("'a",mk_arity 0,0), TyBv 0 --> bool);
-dom_rng ty0; (* should fail *)
-dom_rng ty1;
-dom_rng ty2;
-dom_rng ty3;
-dom_rng ty4;
-dom_rng ty5; (* should fail *)
-dom_rng ty6; (* should fail *)
-dom_rng ty7; (* should fail *)
-*)
-
 
 (*---------------------------------------------------------------------------*
  * Computing the kind of a type, assuming it is well-kinded.                 *
@@ -175,17 +111,6 @@ in
 fun kind_of ty = kd_of ty []
 end;
 
-(*
-kind_of ty0;
-kind_of ty1;
-kind_of ty2;
-kind_of ty3;
-kind_of ty4;
-kind_of ty5;
-kind_of ty6;
-kind_of ty7;
-*)
-
 (*---------------------------------------------------------------------------*
  * Computing the rank of a type.                                             *
  *---------------------------------------------------------------------------*)
@@ -203,17 +128,6 @@ in
         | rk_of (TyAbs((_,_,rk),Body)) E = max (rk, rk_of Body (rk::E))
 fun rank_of ty = rk_of ty []
 end;
-
-(*
-rank_of ty0;
-rank_of ty1;
-rank_of ty2;
-rank_of ty3;
-rank_of ty4;
-rank_of ty5;
-rank_of ty6;
-rank_of ty7;
-*)
 
 fun rank_of_univ_dom (TyAll((_,_,rk),_)) = rk
   | rank_of_univ_dom _ = raise ERR "rank_of_univ_dom" "not a universal type"
@@ -241,34 +155,12 @@ in
 fun check_kind_of ty = kd_of ty []
 end;
 
-(*
-check_kind_of ty0;
-check_kind_of ty1;
-check_kind_of ty2;
-check_kind_of ty3;
-check_kind_of ty4; (* should fail *)
-check_kind_of ty5;
-check_kind_of ty6;
-check_kind_of ty7;
-*)
-
 (*---------------------------------------------------------------------------*
  * Checking that a type is well-kinded.                                      *
  * This fn should never be needed, as long as the type constructors check.   *
  *---------------------------------------------------------------------------*)
 
 fun is_well_kinded ty = (check_kind_of ty; true) handle HOL_ERR _ => false
-
-(*
-well_kinded ty0;
-well_kinded ty1;
-well_kinded ty2;
-well_kinded ty3;
-well_kinded ty4; (* false *)
-well_kinded ty5;
-well_kinded ty6;
-well_kinded ty7;
-*)
 
 
 (*-----------------------------------------------------------------------------*
@@ -376,8 +268,8 @@ fun is_univ_type (TyAll _) = true
 
 local fun TV (v as TyFv _) A k    = k (Lib.insert v A)
         | TV (TyApp(opr, ty)) A k = TV opr A (fn q => TV ty q k)
-        | TV (TyAll(v,ty)) A k    = TV ty A (fn q => k (Lib.subtract q [TyFv v]))
-        | TV (TyAbs(v,ty)) A k    = TV ty A (fn q => k (Lib.subtract q [TyFv v]))
+        | TV (TyAll(v,ty)) A k    = TV ty A k
+        | TV (TyAbs(v,ty)) A k    = TV ty A k
         | TV _ A k = k A
       and TVl (ty::tys) A k       = TV ty A (fn q => TVl tys q k)
         | TVl _ A k = k A
@@ -519,22 +411,6 @@ val delta  = TyFv ("'d",mk_arity 0,0)
 val etyvar = TyFv ("'e",mk_arity 0,0)
 val ftyvar = TyFv ("'f",mk_arity 0,0)
 
-(*
-compare(alpha, alpha);
-compare(alpha, beta);
-compare(beta, alpha);
-val ty6 = alpha --> beta --> gamma;
-val ty7 = alpha --> bool --> gamma;
-val ty8 = TyAll(("'a",mk_arity 0,0),TyBv 0);
-val ty9 = TyAll(("'a",mk_arity 0,0),TyAll(("'b",mk_arity 0,0),
-                         TyBv 0 --> gamma --> TyBv 1));
-type_vars ty6;
-type_vars ty7;
-type_vars ty8;
-type_vars ty9;
-type_varsl [ty7,ty8,ty9];
-*)
-
 val varcomplain = ref true
 val _ = register_btrace ("Vartype Format Complaint", varcomplain)
 
@@ -589,15 +465,6 @@ fun is_gen_tyvar (TyFv(Name,_,_)) =
         String.isPrefix gen_tyvar_prefix Name
   | is_gen_tyvar _ = false
 end;
-
-(*
-val ty10 = gen_tyvar ();
-val ty11 = gen_tyopvar (k2,3);
-is_gen_tyvar ty9;
-is_gen_tyvar alpha;
-is_gen_tyvar ty10;
-is_gen_tyvar ty11;
-*)
 
 
 (*---------------------------------------------------------------------------*
@@ -1278,30 +1145,6 @@ fun type_var_in v =
   if is_vartype v then exists_tyvar (type_eq v)
                   else raise ERR "type_var_occurs" "not a type variable"
 
-(*
-(*---------------------------------------------------------------------------*
- * Substitute in a type, trying to preserve existing structure.              *
- * Doesn't work for universal types and type abstractions.  Obsolete.        *
- *---------------------------------------------------------------------------*)
-
-fun ty_sub [] _ = SAME
-  | ty_sub theta (TyCon tyc) = SAME
-  | ty_sub theta (TyApp (Opr,Ty))
-      = (case delta_pair (ty_sub theta) (ty_sub theta) (Opr,Ty)
-          of SAME => SAME
-           | DIFF (Opr',Ty') => DIFF (TyApp(Opr', Ty'))
-  | ty_sub theta (TyAll (a,Body))
-      = (case ty_sub theta Body
-          of SAME => SAME
-           | DIFF Body' => DIFF (TyAll(tyc, Args')))
-  | ty_sub theta v =
-      case Lib.subst_assoc (type_eq v) theta
-       of NONE    => SAME
-        | SOME ty => DIFF ty
-
-fun type_subst theta = delta_apply (ty_sub theta)
-*)
-
 
 (*---------------------------------------------------------------------------*
  *    Matching ranks, determining the necessary delta to make proper.        *
@@ -1348,6 +1191,7 @@ local
         else addb t (insert(A,redex,residue),
                      is_vartype redex andalso b)
 in
+(* NOTE: raw_type_subst must only be called with beta-reduced redexes. *)
 fun raw_type_subst [] = I
   | raw_type_subst theta =
     let val (fmap,b) = addb theta (emptysubst, true)
@@ -1357,7 +1201,7 @@ fun raw_type_subst [] = I
           | lift i j (TyApp(Opr,Arg)) = TyApp(lift i j Opr, lift i j Arg)
           | lift i j (TyAll(Bvar,Body)) = TyAll(Bvar, lift i (j+1) Body)
           | lift i j (TyAbs(Bvar,Body)) = TyAbs(Bvar, lift i (j+1) Body)
-        fun vsubs i (v as TyFv (s,_,_)) =
+        fun vsubs i (v as TyFv _) =
                (case peek(fmap,v) of NONE => v
                                    | SOME y => lift i 0 y)
           | vsubs i (TyApp(opr,ty)) = TyApp(vsubs i opr, vsubs i ty)
@@ -1502,6 +1346,11 @@ fun match_type_in_context pat ob S = fst (raw_match_type pat ob (S,[]))
 
 fun match_type pat ob = fst (raw_match_type pat ob ([],[]))
 
+
+(* ---------------------------------------------------------------------*)
+(* Beta conversion section, including conversionals for depth search    *)
+(* ---------------------------------------------------------------------*)
+
 fun beta_conv_ty (TyApp(M as TyAbs _, N))
        = let val (btyv,body) = dest_abs_type M
          in raw_type_subst [btyv |-> N] body
@@ -1516,9 +1365,7 @@ fun qconv_ty c ty = c ty handle UNCHANGEDTY => ty
 (* rand_conv_ty conv ``:t2 t1`` applies conv to t2                      *)
 (* ---------------------------------------------------------------------*)
 
-fun rand_conv_ty conv ty = let
-  val (Rator,Rand) =
-    dest_app_type ty handle HOL_ERR e => raise ERR "rand_conv_ty" "not a type app"
+fun rand_conv_ty conv (TyApp(Rator,Rand)) = let
   val Newrand = conv Rand
     handle HOL_ERR {origin_function, message, origin_structure} =>
       if Lib.mem origin_function
@@ -1529,17 +1376,15 @@ fun rand_conv_ty conv ty = let
       else
         raise ERR "rand_conv_ty" (origin_function ^ ": " ^ message)
 in
-  mk_app_type(Rator, Newrand) handle (HOL_ERR {message,...}) =>
-    raise ERR "rand_conv_ty" ("Application of mk_app_type failed: "^message)
+  TyApp(Rator, Newrand)
 end
+  | rand_conv_ty _ _ = raise ERR "rand_conv_ty" "not a type app"
 
 (* ---------------------------------------------------------------------*)
 (* rator_conv_ty conv ``:t2 t1`` applies conv to t1                     *)
 (* ---------------------------------------------------------------------*)
 
-fun rator_conv_ty conv ty = let
-  val (Rator,Rand) =
-    dest_app_type ty handle HOL_ERR e => raise ERR "rator_conv_ty" "not a type app"
+fun rator_conv_ty conv (TyApp(Rator,Rand)) = let
   val Newrator = conv Rator
     handle HOL_ERR {origin_function, message, origin_structure} =>
       if Lib.mem origin_function
@@ -1550,17 +1395,28 @@ fun rator_conv_ty conv ty = let
       else
         raise ERR "rator_conv_ty" (origin_function ^ ": " ^ message)
 in
-  mk_app_type(Newrator, Rand) handle (HOL_ERR {message,...}) =>
-    raise ERR "rator_conv_ty" ("Application of mk_app_type failed: "^message)
+  TyApp(Newrator, Rand)
 end
+  | rator_conv_ty _ _ = raise ERR "rator_conv_ty" "not a type app"
+
+(* ---------------------------------------------------------------------*)
+(* app_conv_ty conv ``:t2 t1`` applies conv to t1 and to t2             *)
+(* ---------------------------------------------------------------------*)
+
+fun app_conv_ty conv (TyApp(Rator, Rand)) = let in
+  let
+    val Rator' = conv Rator
+  in
+    TyApp(Rator', conv Rand) handle UNCHANGEDTY => TyApp(Rator', Rand)
+  end handle UNCHANGEDTY => TyApp(Rator, conv Rand)
+  end
+  | app_conv_ty _ _ = raise ERR "app_conv_ty" "Not a type app"
 
 (* ----------------------------------------------------------------------
     abs_conv_ty conv ``: \'a. t['a]`` applies conv to t['a]
    ---------------------------------------------------------------------- *)
 
-fun abs_conv_ty conv ty = let
-  val (Bvar,Body) =
-    dest_abs_type ty handle HOL_ERR e => raise ERR "abs_conv_ty" "not a type abstraction"
+fun abs_conv_ty conv (TyAbs(Bvar,Body)) = let
   val Newbody = conv Body
     handle HOL_ERR {origin_function, message, origin_structure} =>
       if Lib.mem origin_function
@@ -1571,17 +1427,15 @@ fun abs_conv_ty conv ty = let
       else
         raise ERR "abs_conv_ty" (origin_function ^ ": " ^ message)
 in
-  mk_abs_type(Bvar, Newbody) handle (HOL_ERR {message,...}) =>
-    raise ERR "abs_conv_ty" ("Application of mk_abs_type failed: "^message)
+  TyAbs(Bvar, Newbody)
 end
+  | abs_conv_ty _ _ = raise ERR "abs_conv_ty" "not a type abstraction"
 
 (* ----------------------------------------------------------------------
     univ_conv_ty conv ``: !'a. t['a]`` applies conv to t['a]
    ---------------------------------------------------------------------- *)
 
-fun univ_conv_ty conv ty = let
-  val (Bvar,Body) =
-    dest_univ_type ty handle HOL_ERR e => raise ERR "univ_conv_ty" "not a universal type"
+fun univ_conv_ty conv (TyAll(Bvar,Body)) = let
   val Newbody = conv Body
     handle HOL_ERR {origin_function, message, origin_structure} =>
       if Lib.mem origin_function
@@ -1592,9 +1446,9 @@ fun univ_conv_ty conv ty = let
       else
         raise ERR "univ_conv_ty" (origin_function ^ ": " ^ message)
 in
-  mk_univ_type(Bvar, Newbody) handle (HOL_ERR {message,...}) =>
-    raise ERR "univ_conv_ty" ("Application of mk_univ_type failed: "^message)
+  TyAll(Bvar, Newbody)
 end
+  | univ_conv_ty _ _ = raise ERR "univ_conv_ty" "not a universal type"
 
 (*---------------------------------------------------------------------------
  * Conversion that always fails;  identity element for orelse_ty.
@@ -1654,7 +1508,7 @@ fun every_conv_ty convl ty =
 fun changed_conv_ty conv ty =
    let val ty1 = conv ty
            handle UNCHANGEDTY => raise ERR "changed_conv_ty" "Input type unchanged"
-   in if aconv_ty ty ty1 then raise ERR"changed_conv_ty" "Input type unchanged"
+   in if aconv_ty ty ty1 then raise ERR "changed_conv_ty" "Input type unchanged"
       else ty1
    end;
 
@@ -1676,16 +1530,6 @@ fun repeat_ty conv ty =
     ((qchanged_conv_ty conv then_ty (repeat_ty conv)) orelse_ty all_conv_ty) ty;
 
 fun try_conv_ty conv = conv orelse_ty all_conv_ty;
-
-fun app_conv_ty conv ty = let
-  val (Rator, Rand) = dest_app_type ty
-in
-  let
-    val Rator' = conv Rator
-  in
-    mk_app_type (Rator', conv Rand) handle UNCHANGEDTY => mk_app_type (Rator', Rand)
-  end handle UNCHANGEDTY => mk_app_type (Rator, conv Rand)
-end
 
 fun sub_conv_ty conv =
     try_conv_ty (app_conv_ty conv orelse_ty abs_conv_ty conv orelse_ty univ_conv_ty conv)
@@ -1852,6 +1696,79 @@ local
           end
       end
 
+(*
+  fun type_pmatch lconsts env (TyBv i) (TyBv j) sofar
+      = if i=j then sofar
+        else MERR "bound type variable mismatch"
+    | type_pmatch lconsts env (TyBv _) _ sofar
+      = MERR "bound type variable mismatch"
+    | type_pmatch lconsts env _ (TyBv _) sofar
+      = MERR "bound type variable mismatch"
+    | type_pmatch lconsts env (vty as TyFv _) cty (sofar as (insts,homs)) =
+      (let
+         val cty' = find_residue_ty vty env
+       in
+         if aconv_ty cty' cty then sofar else MERR "type variable mismatch"
+       end handle NOT_FOUND =>
+                 if HOLset.member(lconsts, vty) then
+                   if eq_ty cty vty then sofar
+                   else MERR "can't instantiate local constant type"
+                 else (safe_insert_tya (vty |-> cty) insts, homs)
+               | HOL_ERR _ => MERR "free type variable mismatch")
+    | type_pmatch lconsts env (vty as TyCon(vid,vkd,vrk)) (cty as TyCon(cid,ckd,crk))
+                          (sofar as (insts,homs)) =
+        if vid = cid then
+          if ckd = vkd andalso crk = vrk then sofar
+          else (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
+        else MERR "type constant mismatch"
+    | type_pmatch lconsts env (vty as TyCon(vid,vkd,vrk)) cty (sofar as (insts,homs)) =
+        MERR "type constant mismatched with non-constant"
+    | type_pmatch lconsts env (vty as TyAbs(vv as (_, vkd, vrk), vbod))
+                              (cty as TyAbs(cv as (_, ckd, crk), cbod))
+                              (sofar as (insts,homs)) = let
+        val sofar' = (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
+      in
+        type_pmatch lconsts ((TyFv vv |-> TyFv cv)::env) vbod cbod sofar'
+      end
+    | type_pmatch lconsts env (vty as TyAbs(vv as (_, vkd, vrk), vbod)) cty sofar =
+          MERR "abstraction type mismatched with non-abstraction type"
+    | type_pmatch lconsts env (vty as TyAll(vv as (_, vkd, vrk), vbod))
+                              (cty as TyAll(cv as (_, ckd, crk), cbod))
+                              (sofar as (insts,homs)) = let
+        val sofar' = (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
+      in
+        type_pmatch lconsts ((TyFv vv |-> TyFv cv)::env) vbod cbod sofar'
+      end
+    | type_pmatch lconsts env (vty as TyAll(vv as (_, vkd, vrk), vbod)) cty sofar =
+          MERR "universal type mismatched with non-universal type"
+    | type_pmatch lconsts env vty cty (sofar as (insts,homs)) =
+      (* is_app_type *) let
+        val vhop = repeat rator_type vty
+      in
+        if is_vartype vhop andalso not (HOLset.member(lconsts, vhop)) andalso
+           not (in_dom vhop env)
+        then let (* kind_of and rank_of can fail if given an open type with free bound variables, as cty might be *)
+            val vkd = kind_of vty
+            val vrk = rank_of vty
+            val ckd = kind_of cty
+            val crk = rank_of cty
+            val insts' = if vkd = ckd andalso vrk = crk then insts
+                         else safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts
+          in
+            (insts', (env,cty,vty)::homs)
+          end
+        else MERR ""
+      end
+        handle HOL_ERR _ => let
+            val (lv,rv) = dest_app_type vty
+            val (lc,rc) = dest_app_type cty
+                handle HOL_ERR _ => MERR "application type mismatched with non-application type"
+            val sofar' = type_pmatch lconsts env lv lc sofar
+          in
+            type_pmatch lconsts env rv rc sofar'
+          end
+*)
+
 
 fun get_rank_kind_insts avoids L (rk,(kdS,Id)) =
  itlist (fn {redex,residue} => fn (rk,Theta) =>
@@ -2010,38 +1927,9 @@ end handle e => raise (wrap_exn "HolKernel" "ho_match_type" e)
 fun ho_match_type kdavoids lconsts vty cty =
     ho_match_type0 true kdavoids lconsts (deep_beta_conv_ty vty) (deep_beta_conv_ty cty)
 
-(*
-val s0 = HOLset.empty Type.compare;
-val s1 = HOLset.add(s0,alpha);
-ho_match_type s1 ``:'a 'b`` ``:('a -> 'a) # 'c``;
-> val it = [{redex = ``:'b``, residue = ``:\'a. ('a -> 'a) # 'c``}] :
-  {redex : hol_type, residue : hol_type} list
-ho_match_type s0 ``:'a + 'b`` ``:('a -> 'a) # 'c`` handle e => Raise e;
-ho_match_type s1 ``:'a 'b`` ``:('a -> 'b) # 'a``;
-ho_match_type s0 ``:'a # 'b`` ``:('a -> 'b) # 'a`` handle e => Raise e;
-ho_match_type s0 ``:('a -> 'b) # 'b`` ``:'a # 'b`` handle e => Raise e;
-*)
-
 end (* local *)
 
 (* We redefine the main type matching functions here to use higher order matching. *)
-
-(* can't instantiate local constant type
-ho_raw_kind_match_type bool bool (([mk_vartype_opr("'a",typ,2) |-> list_mk_univ_type([alpha,beta],bool)], [alpha]),
-                                  ([],[]):{redex : kind, residue : kind} list * kind list, 2)
-val pat = bool and ob = bool;
-val ((tyS,tyfixed), (kdS,kdfixed), rkS) = (([mk_vartype_opr("'a",typ,2) |-> list_mk_univ_type([alpha,beta],bool)], [alpha]),
-                                  ([],[]):{redex : kind, residue : kind} list * kind list, 2);
-
-val kdavoids = kdfixed and lconsts = tyfixed_set and vty = pat and cty = ob;
-val insts_homs = (tyS,[]:({redex : hol_type, residue : hol_type} list * hol_type * hol_type) list)
-and rk_kd_insts_ids = (rkS,(kdS,kdfixed));
-
-val pinsts_homs = type_pmatch lconsts [] vty cty insts_homs
-  val (rkin,kdins) = get_rank_kind_insts kdavoids (fst pinsts_homs) rk_kd_insts_ids
-  val insts = type_homatch kdavoids lconsts rkin kdins pinsts_homs
- separate_insts_ty rkin kdavoids kdins insts
-*)
 
 fun prim_kind_match_type pat ob ((tyS,tyId), (kdS,kdId), rkS) =
     let val pat = deep_beta_conv_ty pat
@@ -2072,10 +1960,7 @@ fun clean_subst ((tyS,_),(kdS,_),rkS) =
  end
 
 fun kind_match_type pat ob =
-  let val (tyS,kdS,rkS) =
       clean_subst (raw_kind_match_type pat ob (([],[]), ([],[]), 0))
-  in (rkS,kdS,tyS)
-  end
 
 fun raw_match_type pat ob (tyS,tyId) =
     let val ((tyS',tyId'),(kdS',kdId'),rkS') =
@@ -2089,6 +1974,31 @@ fun match_type_restr fixed pat ob  = fst (raw_match_type pat ob ([],fixed))
 fun match_type_in_context pat ob S = fst (raw_match_type pat ob (S,[]))
 
 fun match_type pat ob = fst (raw_match_type pat ob ([],[]))
+
+
+(*---------------------------------------------------------------------------
+   Redefine the comparison relations and substitution functions
+   to involve beta reduction for external use.
+ ---------------------------------------------------------------------------*)
+
+val raw_dom_rng = dom_rng
+val dom_rng = fn ty => raw_dom_rng ty handle HOL_ERR _ => raw_dom_rng (deep_beta_conv_ty ty)
+val is_vartype = fn ty => is_vartype (deep_beta_conv_ty ty)
+val is_type = fn ty => is_type (deep_beta_conv_ty ty)
+val dest_vartype = fn ty => dest_vartype ty handle HOL_ERR _ => dest_vartype (deep_beta_conv_ty ty)
+val dest_type = fn ty => dest_type ty handle HOL_ERR _ => dest_type (deep_beta_conv_ty ty)
+
+val compare = fn (t1,t2) => compare(deep_beta_conv_ty t1, deep_beta_conv_ty t2)
+val empty_tyset = HOLset.empty compare
+fun type_eq t1 t2 = compare(t1,t2) = EQUAL;
+fun mapsb f = map (fn {redex,residue} => {redex=f redex, residue=residue})
+val type_subst = fn s => type_subst (mapsb deep_beta_conv_ty s);
+
+val raw_ty_sub = ty_sub
+fun ty_sub theta ty = let val ty' = type_subst theta ty
+                      in if type_eq ty ty' then SAME
+                                           else DIFF ty'
+                      end;
 
 
 (*---------------------------------------------------------------------------
@@ -2158,9 +2068,9 @@ fun pp_raw_type pps ty =
       | pp (TyApp(Rator as TyApp(TyCon(id,_,_),Rand1),Rand2)) =
           if KernelSig.name_of id = "fun"
           then
-          ( add_string "("; pp Rand2;
+          ( add_string "("; pp Rand1;
             add_string " ->"; add_break(1,0);
-            pp Rand1; add_string ")" )
+            pp Rand2; add_string ")" )
           else
           ( add_string "("; pp Rand2; add_break(1,0);
                             pp Rator; add_string ")")

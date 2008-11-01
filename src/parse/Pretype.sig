@@ -90,6 +90,7 @@ val safe_unify :
   ((prekind option ref * prekind) list * ((order * prerank) option ref * (order * prerank)) list * (uvartype ref * pretype) list ->
    ((prekind option ref * prekind) list * ((order * prerank) option ref * (order * prerank)) list * (uvartype ref * pretype) list) * unit option)
 val type_subst  : {redex : pretype, residue : pretype} list -> pretype -> pretype
+val distinguish_btyvars : pretype list -> pretype -> pretype
 
 val rename_typevars : pretype -> pretype
 val rename_tv : pretype -> (string * pretype) list ->

@@ -150,16 +150,22 @@ local
   datatype ('a, 'b) sum = INL of 'a | INR of 'b;
 
   fun ren _ [tm] [] = tm
-    | ren avoid (b :: a :: dealt) (INL NONE :: rest) =
+    | ren avoid (b :: a :: dealt) (INL (INL NONE) :: rest) =
     ren avoid (mk_comb (a, b) :: dealt) rest
-    | ren avoid (b :: dealt) (INL (SOME v) :: rest) =
+    | ren avoid (a :: dealt) (INL (INL (SOME b)) :: rest) =
+    ren avoid (mk_tycomb (a, b) :: dealt) rest
+    | ren avoid (b :: dealt) (INL (INR (INL v)) :: rest) =
     ren avoid (mk_abs (v, b) :: dealt) rest
-    | ren avoid dealt (INR (sub, tm) :: rest) =
+    | ren avoid (b :: dealt) (INL (INR (INR a)) :: rest) =
+    ren avoid (mk_tyabs (a, b) :: dealt) rest
+    | ren avoid dealt (INR (sub, tysub, tm) :: rest) =
     (case dest_term tm of
        CONST _ => ren avoid (tm :: dealt) rest
-     | VAR _ => ren avoid (subst sub tm :: dealt) rest
+     | VAR _ => ren avoid (subst sub (inst tysub tm) :: dealt) rest
      | COMB (a, b) =>
-       ren avoid dealt (INR (sub, a) :: INR (sub, b) :: INL NONE :: rest)
+       ren avoid dealt (INR (sub, tysub, a) :: INR (sub, tysub, b) :: INL (INL NONE) :: rest)
+     | TYCOMB (a, b) =>
+       ren avoid dealt (INR (sub, tysub, a) :: INL (INL (SOME b)) :: rest)
      | LAMB (v, b) =>
        let
          val (v', sub') =
@@ -168,11 +174,23 @@ local
              in (v', (v |-> v') :: sub)
              end
        in
-         ren (insert v' avoid) dealt (INR (sub', b) :: INL (SOME v') :: rest)
+         ren (insert v' avoid) dealt (INR (sub', tysub, b) :: INL (INR (INL v')) :: rest)
+       end
+     | TYLAMB (a, b) =>
+       let
+         val (a', tysub') =
+           if not (is_gen_tyvar a) then (a, tysub) else
+             let val avoid = type_vars_in_terml (tm :: avoid)
+                 val a' = variant_type avoid (mk_vartype_opr ("'a", kind_of a, rank_of a))
+             in (a', (a |-> a') :: tysub)
+             end
+       in
+         ren (insert (genvar a') avoid) dealt
+             (INR (sub, tysub', b) :: INL (INR (INR a')) :: rest)
        end)
     | ren _ _ _ = raise ERR "prettify_vars" "BUG";
 in
-  fun prettify_vars tm = ren (all_vars tm) [] [INR ([], tm)];
+  fun prettify_vars tm = ren (all_vars tm) [] [INR ([], [], tm)];
 end;
 
 fun PRETTIFY_VARS_CONV tm =
@@ -195,7 +213,9 @@ fun COMBIN_CONV ths =
          CONST _ => ALL_CONV
        | VAR _ => ALL_CONV
        | COMB _ => RATOR_CONV conv THENC RAND_CONV conv
-       | LAMB _ => ABS_CONV conv THENC mk_combin THENC conv) tm
+       | LAMB _ => ABS_CONV conv THENC mk_combin THENC conv
+       | TYCOMB _ => TY_COMB_CONV conv
+       | TYLAMB _ => TY_ABS_CONV conv THENC mk_combin THENC conv) tm
   in
     conv
   end;
@@ -1264,6 +1284,18 @@ fun count_cnf vs tm =
       val (v,b) = dest_forall tm
     in
       count_cnf (v :: vs) b
+    end
+  else if is_tyexists tm then
+    let
+      val (v,b) = dest_tyexists tm
+    in
+      count_cnf vs b
+    end
+  else if is_tyforall tm then
+    let
+      val (v,b) = dest_tyforall tm
+    in
+      count_cnf vs b
     end
   else if is_conj tm then
     let

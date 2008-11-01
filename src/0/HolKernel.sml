@@ -235,7 +235,10 @@ fun find_term P =
          then let val (Rator,Rand) = dest_comb tm
               in find_tm Rator handle HOL_ERR _ => find_tm Rand
               end
-         else raise ERR "find_term" ""
+      else
+      if is_tyabs tm then find_tm (snd (dest_tyabs tm)) else
+      if is_tycomb tm then find_tm (fst (dest_tycomb tm))
+      else raise ERR "find_term" ""
  in find_tm
  end;
 
@@ -256,6 +259,8 @@ fun find_terms P =
           then let val (r1,r2) = dest_comb tm
                in accum (accum tl' r1) r2
                end
+          else if is_tycomb tm then accum tl' (fst (dest_tycomb tm))
+          else if is_tyabs tm then accum tl' (snd (dest_tyabs tm))
           else tl'
       end
  in accum []
@@ -338,6 +343,20 @@ fun splice ({redex,...}:{redex:term,residue:term}) v occs tm2 =
                              val {tm, count, occs} =
                                         graft{tm=Body,count=count,occs=occs}
                          in {tm=mk_abs(Bvar, tm),
+                             count=count, occs=occs}
+                         end
+               else if (is_tycomb tm)
+                    then let val (Rator, Rand) = dest_tycomb tm
+                             val {tm, occs, count} =
+                                        graft{tm=Rator,occs=occs,count=count}
+                         in {tm=mk_tycomb(tm, Rand),
+                             occs=occs, count=count}
+                         end
+               else if is_tyabs tm
+                    then let val (Bvar,Body) = dest_tyabs tm
+                             val {tm, count, occs} =
+                                        graft{tm=Body,count=count,occs=occs}
+                         in {tm=mk_tyabs(Bvar, tm),
                              count=count, occs=occs}
                          end
                     else {tm=tm, occs=occs, count=count}

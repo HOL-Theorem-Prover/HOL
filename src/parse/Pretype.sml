@@ -16,7 +16,7 @@ val debug = ref 0
 val _ = Feedback.register_trace("debug_pretype", debug, 1)
 fun is_debug() = (!debug) > 0;
 
-val beta_conv_types = ref 0
+val beta_conv_types = ref 1
 val _ = Feedback.register_trace("beta_conv_types", beta_conv_types, 1)
 fun do_beta_conv_types() = (!beta_conv_types) > 0;
 
@@ -99,24 +99,6 @@ and eq_env  e1 e2 (PT (value,locn))          (PT (value',locn'))       = eq_env0
 
 val eq0 = eq_env0 [] []
 and eq  = eq_env  [] [];
-
-(*
-fun eq0 (Vartype v)                (Vartype v')              = eq_tyvar v v'
-  | eq0 (Contype{Tyop=Tyop, Thy=Thy, Kind=Kind, Rank=Rank })
-        (Contype{Tyop=Tyop',Thy=Thy',Kind=Kind',Rank=Rank'}) = Tyop=Tyop' andalso Thy=Thy' andalso
-                                                                 eq_kind Kind Kind' andalso eq_rank Rank Rank'
-  | eq0 (TyApp(ty1,ty2))           (TyApp(ty1',ty2'))        = eq ty1 ty1' andalso eq ty2 ty2'
-  | eq0 (TyUniv(ty1,ty2))          (TyUniv(ty1',ty2'))       = eq ty1 ty1' andalso eq ty2 ty2'
-  | eq0 (TyAbst(ty1,ty2))          (TyAbst(ty1',ty2'))       = eq ty1 ty1' andalso eq ty2 ty2'
-  | eq0 (TyKindConstr{Ty=ty, Kind=kd})
-        (TyKindConstr{Ty=ty',Kind=kd'})                      = eq ty ty' andalso eq_kind kd kd'
-  | eq0 (TyRankConstr{Ty=ty, Rank=rk })
-        (TyRankConstr{Ty=ty',Rank=rk'})                      = eq ty ty' andalso eq_rank Rank Rank'
-  | eq0 (UVar (r as ref NONE))     (UVar (r' as ref NONE))   = r=r'
-  | eq0 (UVar (ref (SOME ty)))     (UVar (ref (SOME ty')))   = eq ty ty'
-  | eq0 _                          _                         = false
-and eq  (PT (value,locn))          (PT (value',locn'))       = eq0 value value'
-*)
 
 val prekind_rank_compare = Lib.pair_compare(Prekind.prekind_compare, Prerank.prerank_compare);
 
@@ -685,6 +667,44 @@ fun type_subst [] = I
     end
 end;
 
+
+fun distinguish_btyvars context_tyvars =
+    let fun dbvs0 cxvs (TyApp(opr,arg)) = TyApp(dbvs cxvs opr, dbvs cxvs arg)
+          | dbvs0 cxvs (TyUniv(Bvar,Body)) =
+               let val Bvar1 = the_var_type Bvar
+                   val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
+                   val Bvar' = variant_type (Lib.op_union eq cxvs fvs) Bvar1
+                   val cxvs' = Bvar'::cxvs
+               in if eq Bvar1 Bvar' then TyUniv(Bvar, dbvs cxvs' Body)
+                  else let val instfn = type_subst [Bvar1 |-> Bvar']
+                       in TyUniv(instfn Bvar, dbvs cxvs' (instfn Body))
+                       end
+               end
+          | dbvs0 cxvs (TyAbst(Bvar,Body)) =
+               let val Bvar1 = the_var_type Bvar
+                   val fvs = Lib.op_set_diff eq (type_vars Body) [Bvar1]
+                   val Bvar' = variant_type (Lib.op_union eq cxvs fvs) Bvar1
+                   val cxvs' = Bvar'::cxvs
+               in if eq Bvar1 Bvar' then TyAbst(Bvar, dbvs cxvs' Body)
+                  else let val instfn = type_subst [Bvar1 |-> Bvar']
+                       in TyAbst(instfn Bvar, dbvs cxvs' (instfn Body))
+                       end
+               end
+          | dbvs0 cxvs (TyKindConstr{Ty,Kind}) =
+                         TyKindConstr{Ty=dbvs cxvs Ty,Kind=Kind}
+          | dbvs0 cxvs (TyRankConstr{Ty,Rank}) =
+                         TyRankConstr{Ty=dbvs cxvs Ty,Rank=Rank}
+          | dbvs0 cxvs (UVar (r as ref(SOMEU ty))) =
+                        (r := SOMEU (dbvs cxvs ty);
+                         UVar r)
+          | dbvs0 cxvs t = t
+        and dbvs cxvs (PT(ty,locn)) = PT(dbvs0 cxvs ty,locn)
+    in
+      dbvs context_tyvars
+    end;
+
+
+
 local
 val BERR = ERR "beta_conv_ty" "not a type beta redex"
 in
@@ -1140,32 +1160,17 @@ fun gen_unify (kind_unify   :prekind -> prekind -> ('a -> 'a * unit option))
         let val theta = map (fn (tv1,tv2) => mk_vartype tv1 |-> mk_vartype tv2) (zip c1 c2)
         in type_subst theta
         end
-  fun mk_v_s c1 c2 arg =
-          if has_var_type arg
-                   then (shift_context c1 c2 arg, [])
-                   else let val v = all_new_uvar()
-                         in Prekind.unify (pkind_of arg) (pkind_of v);
-                            Prerank.unify_le (prank_of arg) (* <= *) (prank_of v);
-                            (v,[arg |-> v])
-                        end
-(*val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)*)
-(*fun qconv_ty c ty = c ty handle UNCHANGEDTY => ty*)
-(*
-     let val ty1' = deep_beta_conv_ty ty1
-         val ty2' = deep_beta_conv_ty ty2
-     in if eq ty1 ty1' andalso eq ty2 ty2'
-        then m (* do m if beta_conversion did not change the types *)
-        else f ty1' ty2'
-     end
-*)
-(*
-     let val (ty1',red1) = (beta_conv_ty ty1,true) handle HOL_ERR _ => (ty1,false)
-         val (ty2',red2) = (beta_conv_ty ty2,true) handle HOL_ERR _ => (ty2,false)
-     in if red1 orelse red2
-        then f ty1' ty2'
-        else m
-     end
-*)
+  fun mk_vs c1 c2 args = map (shift_context c1 c2) args
+  fun beta_conv_head (ty as PT(TyApp(ty1,ty2),locn)) =
+         if is_abs_type ty1 then beta_conv_ty ty
+         else PT(TyApp(beta_conv_head ty1,ty2),locn)
+    | beta_conv_head (PT(TyKindConstr{Ty,Kind},locn)) =
+         PT(TyKindConstr{Ty=beta_conv_head Ty,Kind=Kind},locn)
+    | beta_conv_head (PT(TyRankConstr{Ty,Rank},locn)) =
+         PT(TyRankConstr{Ty=beta_conv_head Ty,Rank=Rank},locn)
+    | beta_conv_head (PT(UVar (r as ref (SOMEU ty)),locn)) =
+         (r := SOMEU (beta_conv_head ty); PT(UVar r,locn))
+    | beta_conv_head _ = raise ERR "beta_conv_head" "no beta redex found"
 in
   case (t1, t2) of
     (UVar (r as ref (NONEU(kd,rk))), _) => kind_unify (pkind_of ty2) kd >>
@@ -1187,133 +1192,75 @@ in
   | (_, TyRankConstr _) => gen_unify c2 c1 ty2 ty1
   | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
        if is_abs_type ty11 then
-           gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
+           gen_unify c1 c2 (beta_conv_head ty1) ty2
        else if is_abs_type ty21 then
-            gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
+            gen_unify c1 c2 ty1 (beta_conv_head ty2)
        else
        let val (opr1,args1) = strip_app_type ty1
            val (opr2,args2) = strip_app_type ty2
            val ho_1 = has_var_type opr1 andalso is_uvar_type(the_var_type opr1)
+                                        andalso all has_var_type args1
            val ho_2 = has_var_type opr2 andalso is_uvar_type(the_var_type opr2)
-           (* If can choose, side with all variable args is to be preferred. *)
-           val easy_1 = ho_1 andalso all has_var_type args1
-           val easy_2 = ho_2 andalso all has_var_type args2
-           val (tran_args1,dtheta1) = unzip(map (mk_v_s c1 c2) args1)
-           val (tran_args2,dtheta2) = unzip(map (mk_v_s c2 c1) args2)
-           val l1 = length args1 and l2 = length args2
-           val lmin = Int.min(l1,l2)
-           fun lastn n l = rev(List.take(rev l,n))
-           val same_args1 = all2 eq (lastn lmin tran_args1) (lastn lmin args2)
-           val same_args2 = all2 eq (lastn lmin tran_args2) (lastn lmin args1)
+                                        andalso all has_var_type args2
        in if is_abs_type opr1 then
             gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
           else if is_abs_type opr2 then
             gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
-          else if (easy_1 orelse (ho_1 andalso not easy_2)) andalso not same_args1 then
+          else if ho_1 then
             (* Higher order unification; shift args to other side by abstraction. *)
-            let val theta = flatten dtheta1
-                val ty2' = type_subst theta ty2 (* general subst *)
-             in gen_unify c1 c2 opr1 (list_mk_abs_type(tran_args1,ty2'))
+            let val vs = mk_vs c1 c2 args1
+             in gen_unify c1 c2 opr1 (list_mk_abs_type(vs,ty2))
             end
-          else if ho_2 andalso not same_args2 then
+          else if ho_2 then
             (* Higher order unification; shift args to other side by abstraction. *)
-            let val theta = flatten dtheta2
-                val ty1' = type_subst theta ty1 (* general subst *)
-             in gen_unify c1 c2 (list_mk_abs_type(tran_args2,ty1')) opr2
+            let val vs = mk_vs c2 c1 args2
+             in gen_unify c1 c2 (list_mk_abs_type(vs,ty1)) opr2
             end
           else (* normal structural unification *)
             gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()
        end
   | (TyApp(ty11, ty12), _) =>
        if is_abs_type ty11 then
-           gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
+           gen_unify c1 c2 (beta_conv_head ty1) ty2
        else
        let val (opr1,args1) = strip_app_type ty1
        in if is_abs_type opr1 then
             gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
-          else if has_var_type opr1 andalso is_uvar_type(the_var_type opr1) then
+          else if has_var_type opr1 andalso is_uvar_type(the_var_type opr1)
+                                    andalso all has_var_type args1 then
             (* Higher order unification; shift args to other side by abstraction. *)
-            let val (vs,s0) = unzip (map (mk_v_s c1 c2) args1)
-                val theta = flatten s0
-                val ty2' = type_subst theta ty2 (* general subst *)
-             in gen_unify c1 c2 opr1 (list_mk_abs_type(vs,ty2'))
+            let val vs = mk_vs c1 c2 args1
+             in gen_unify c1 c2 opr1 (list_mk_abs_type(vs,ty2))
             end
           else fail (* normal structural unification *)
        end
   | (_, TyApp(ty21, ty22)) =>
        if is_abs_type ty21 then
-            gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
+            gen_unify c1 c2 ty1 (beta_conv_head ty2)
        else
        let val (opr2,args2) = strip_app_type ty2
        in if is_abs_type opr2 then
             gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
-          else if has_var_type opr2 andalso is_uvar_type(the_var_type opr2) then
+          else if has_var_type opr2 andalso is_uvar_type(the_var_type opr2)
+                                    andalso all has_var_type args2 then
             (* Higher order unification; shift args to other side by abstraction. *)
-            let val (vs,s0) = unzip (map (mk_v_s c2 c1) args2)
-                val theta = flatten s0
-                val ty1' = type_subst theta ty1 (* general subst *)
-             in gen_unify c1 c2 (list_mk_abs_type(vs,ty1')) opr2
+            let val vs = mk_vs c2 c1 args2
+             in gen_unify c1 c2 (list_mk_abs_type(vs,ty1)) opr2
             end
           else fail (* normal structural unification *)
        end
-(*
-  | (TyApp(ty11, ty12 as PT(Vartype _,_)), _) =>
-       gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2))
-  | (_, TyApp(ty21, ty22 as PT(Vartype _,_))) =>
-       gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn1)) ty21
-  | (TyApp(ty11 as PT(UVar (ref (NONEU _)),_), ty12), _) =>
-       gen_unify c1 c2 ty11 (PT(TyAbst(ty12,ty2),locn2))
-  | (_, TyApp(ty21 as PT(UVar (ref (NONEU _)),_), ty22)) =>
-       gen_unify c1 c2 (PT(TyAbst(ty22,ty1),locn1)) ty21
-*)
   | (TyUniv(ty11, ty12), TyUniv(ty21, ty22)) =>
-       (*let val fvs1 = type_vars ty1 (* free type variables of the type *)
-           val fvs2 = type_vars ty2
-           val cvs1 = map mk_vartype c1
-           val cvs2 = map mk_vartype c2
-           val gvs1 = Lib.op_set_diff eq fvs1 cvs1 (* global free type variables *)
-           val gvs2 = Lib.op_set_diff eq fvs2 cvs2
-           val ty11v = the_var_type ty11
-           val ty21v = the_var_type ty21
-           val ty11v' = variant_type (Lib.op_union eq fvs1 gvs2) ty11v
-           val ty21v' = variant_type (Lib.op_union eq fvs2 gvs1) ty21v
-           val (ty11',ty12') = if eq ty11v' ty11v then (ty11,ty12)
-                               else (type_subst [ty11v |-> ty11v'] ty11,
-                                     type_subst [ty11v |-> ty11v'] ty12)
-           val (ty21',ty22') = if eq ty21v' ty21v then (ty21,ty22)
-                               else (type_subst [ty21v |-> ty21v'] ty21,
-                                     type_subst [ty21v |-> ty21v'] ty22)
-       in*)
          bvar_unify ty11 ty21 >- (fn (PT(ty11u,_),PT(ty21u,_)) =>
          case (ty11u,ty21u) of
             (Vartype tv1, Vartype tv2) =>
               gen_unify (tv1::c1) (tv2::c2) ty12 ty22
           | _ => gen_unify c1 c2 ty12 ty22)
-       (*end*)
   | (TyAbst(ty11, ty12), TyAbst(ty21, ty22)) =>
-       (*let val fvs1 = type_vars ty1 (* free type variables of the type *)
-           val fvs2 = type_vars ty2
-           val cvs1 = map mk_vartype c1
-           val cvs2 = map mk_vartype c2
-           val gvs1 = Lib.op_set_diff eq fvs1 cvs1 (* global free type variables *)
-           val gvs2 = Lib.op_set_diff eq fvs2 cvs2
-           val ty11v = the_var_type ty11
-           val ty21v = the_var_type ty21
-           val ty11v' = variant_type (Lib.op_union eq fvs1 gvs2) ty11v
-           val ty21v' = variant_type (Lib.op_union eq fvs2 gvs1) ty21v
-           val (ty11',ty12') = if eq ty11v' ty11v then (ty11,ty12)
-                               else (type_subst [ty11v |-> ty11v'] ty11,
-                                     type_subst [ty11v |-> ty11v'] ty12)
-           val (ty21',ty22') = if eq ty21v' ty21v then (ty21,ty22)
-                               else (type_subst [ty21v |-> ty21v'] ty21,
-                                     type_subst [ty21v |-> ty21v'] ty22)
-       in*)
          bvar_unify ty11 ty21 >- (fn (PT(ty11u,_),PT(ty21u,_)) =>
          case (ty11u,ty21u) of
             (Vartype tv1, Vartype tv2) =>
               gen_unify (tv1::c1) (tv2::c2) ty12 ty22
           | _ => gen_unify c1 c2 ty12 ty22)
-       (*end*)
   | _ => fail
  end e
 
