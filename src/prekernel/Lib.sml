@@ -359,9 +359,9 @@ val int_sort = sort (curry (op <= :int*int->bool))
 (* Topologically sort a list wrt partial order R.                            *)
 (*---------------------------------------------------------------------------*)
 
-fun topsort R = 
+fun topsort R =
  let fun preds_of y x = R x y
-   fun deps [] front acc = acc 
+   fun deps [] front acc = acc
      | deps (h::t) front acc =
         let val hpreds = filter (preds_of h) (front @ t)
         in deps t (h::front) ((h,hpreds)::acc)
@@ -528,6 +528,10 @@ fun words2 sep string =
           else (ch::chs, tokl))
         (sep::Portable.explode string)
         ([],[]));
+
+fun unprefix pfx s =
+    if String.isPrefix pfx s then String.extract(s, size pfx, NONE)
+    else raise ERR "unprefix" "1st argument is not a prefix of 2nd argument"
 
 
 (*---------------------------------------------------------------------------*
