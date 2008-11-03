@@ -201,8 +201,6 @@ fun grav_name (Prec(n, s)) = s | grav_name _ = ""
 fun grav_prec (Prec(n,s)) = n | grav_prec _ = ~1
 
 
-fun dest_atom tm = dest_var tm handle HOL_ERR _ => dest_const tm
-
 fun pneeded_by_style (rr: term_grammar.rule_record, pgrav, fname, fprec) =
   case #paren_style rr of
     Always => true
@@ -278,7 +276,13 @@ in
     case Overload.overloading_of_term oinfo tm of
       SOME s' => s' = s
     | NONE => false
-  else if is_var tm then fst (dest_var tm) = s
+  else if is_var tm then let
+      val (vnm, _) = dest_var tm
+    in
+      case Lib.total (Lib.unprefix GrammarSpecials.fakeconst_special) vnm of
+        NONE => vnm = s
+      | SOME vnm' => vnm' = s
+    end
   else false
 end
 
@@ -750,8 +754,11 @@ fun pp_term (G : grammar) TyG = let
       pend addparens
     end
 
-    fun atom_name tm =
-      fst (dest_var tm handle HOL_ERR _ => dest_const tm)
+    fun atom_name tm = let
+      val (vnm, _) = dest_var tm
+    in
+      Lib.unprefix GrammarSpecials.fakeconst_special vnm handle HOL_ERR _ => vnm
+    end handle HOL_ERR _ => fst (dest_const tm)
     fun can_pr_numeral stropt = List.exists (fn (k,s') => s' = stropt) num_info
     fun pr_numeral injtermopt tm = let
       open Overload
@@ -1671,7 +1678,7 @@ fun pp_term (G : grammar) TyG = let
           fun maybe_pr_atomf () =
             case Overload.overloading_of_term overload_info f of
               SOME s => pr_atomf s
-            | NONE => if is_var f then pr_atomf (fst (dest_var f))
+            | NONE => if is_var f then pr_atomf (atom_name f)
                       else pr_comb tm Rator Rand
         in
           if showtypes_v then
