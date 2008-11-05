@@ -713,6 +713,15 @@ fun CONSEQ_TOP_REWRITE_CONV thmL =
 fun CONSEQ_REWRITE_CONV thmL dir = 
    DEPTH_CONSEQ_CONV (CONSEQ_TOP_REWRITE_CONV thmL) dir
 
+fun CONSEQ_REWRITE_TAC thmL =
+    CONSEQ_CONV_TAC (CONSEQ_REWRITE_CONV thmL)
+
+
+(*
+fun CONSEQ_SIMP_CONV impThmL ss eqThmL dir =
+   DEPTH_CONSEQ_CONV (fn d => ORELSE_CONSEQ_CONV (CONSEQ_TOP_REWRITE_CONV impThmL d)
+		                        (SIMP_CONV ss eqThmL)) dir
+*)
 
 
 (*---------------------------------------------------------------------------

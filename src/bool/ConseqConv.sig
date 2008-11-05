@@ -4,7 +4,7 @@ sig
 include Abbrev
 
 
-(*Types*)
+(* Types *)
 type conseq_conv = term -> thm;
 type CONSEQ_CONV_direction;
 type directed_conseq_conv = CONSEQ_CONV_direction -> conseq_conv;
@@ -15,8 +15,14 @@ val CONSEQ_CONV_UNKNOWN_direction    : CONSEQ_CONV_direction;
 
 
 
+(* General *)
+val GEN_ASSUM               : term -> thm -> thm;
+val GEN_IMP                 : term -> thm -> thm;
 
-(*Basic CONSEQ-Convs*)
+
+
+
+(* Basic consequence conversions *)
 val FALSE_CONSEQ_CONV       : conseq_conv;
 val TRUE_CONSEQ_CONV        : conseq_conv;
 val REFL_CONSEQ_CONV        : conseq_conv;
@@ -30,7 +36,7 @@ val CONSEQ_REWRITE_CONV         : thm list -> directed_conseq_conv;
 
 
 
-(*Tacticals for CONSEQ-Convs*)
+(* Combinations for consequence conversions *)
 val CHANGED_CONSEQ_CONV    : conseq_conv -> conseq_conv;
 val QCHANGED_CONSEQ_CONV   : conseq_conv -> conseq_conv;
 val ORELSE_CONSEQ_CONV     : conseq_conv -> conseq_conv -> conseq_conv
@@ -58,18 +64,19 @@ val DEPTH_STRENGTHEN_CONSEQ_CONV : conseq_conv -> conseq_conv;
 
 
 
-(*Rules*)
+(* Rules *)
 val STRENGTHEN_CONSEQ_CONV_RULE  : directed_conseq_conv -> thm -> thm;
 val WEAKEN_CONSEQ_CONV_RULE      : directed_conseq_conv -> thm -> thm;
 
 
 
 
-(*Tactics*)
+(* Tactics *)
 val CONSEQ_CONV_TAC              : directed_conseq_conv -> tactic;
 val DEPTH_CONSEQ_CONV_TAC        : directed_conseq_conv -> tactic;
 val ONCE_DEPTH_CONSEQ_CONV_TAC   : directed_conseq_conv -> tactic;
 val CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
+val CONSEQ_REWRITE_TAC           : thm list -> tactic;
 
 
 end
