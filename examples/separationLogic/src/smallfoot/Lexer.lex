@@ -65,9 +65,10 @@ let blank = [` ` `\009` `\012`]
 let letter = [`A`-`Z` `_` `a`-`z`]
 let digit = [`0`-`9`]
 let alphanum = digit | letter
-let ident = letter alphanum*
-let qident = "_" ident
+let ident = letter alphanum* 
+let qident = ("_" | "#") ident
 let num = digit+
+let hol_quote = "``" [^ `\``]* "``"
 
 
 
@@ -98,6 +99,9 @@ rule token = parse
   | "/" | "%"               { INFIXOP3(Lexing.getLexeme lexbuf) }
   | "*"     { STAR }
   | "^"     { XOR }
+  | hol_quote { let val s = Lexing.getLexeme lexbuf in
+		  HOL_TERM(substring (s, 2, (String.size s)-4))
+                end }
   | num { NAT(valOf(Int.fromString(Lexing.getLexeme lexbuf))) }
   | ident { handle_ident (Lexing.getLexeme lexbuf)}
   | qident { QIDENT(Lexing.getLexeme lexbuf) }

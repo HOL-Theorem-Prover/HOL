@@ -2,12 +2,15 @@ signature smallfootSyntax =
 sig
   include Abbrev
 
+
   val COND_PROP___ADD_COND_term : term;
   val COND_PROP___EXISTS_term : term;
+  val COND_PROP___STRONG_EXISTS_term : term;
   val FASL_PROGRAM_HOARE_TRIPLE_term : term
   val FASL_PROGRAM_IS_ABSTRACTION_term : term
   val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_term : term;
   val SMALLFOOT_AP_PERMISSION_UNIMPORTANT_term : term;
+  val SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE_term : term;
   val SMALLFOOT_COND_HOARE_TRIPLE_term : term
   val SMALLFOOT_COND_PROP___EQUIV_term : term;
   val SMALLFOOT_COND_PROP___IMP_term : term;
@@ -48,8 +51,10 @@ sig
   val smallfoot_ap_star_term : term
   val smallfoot_ap_unequal_cond_term : term
   val smallfoot_ap_unequal_term : term
+  val smallfoot_ap_unknown_term : term
   val smallfoot_ap_var_update_term : term;
   val smallfoot_choose_const_best_local_action_term : term
+  val smallfoot_cond_best_local_action_term : term
   val smallfoot_cond_choose_const_best_local_action_term : term
   val smallfoot_env_term : term
   val smallfoot_input_preserve_names_wrapper_term : term
@@ -95,6 +100,7 @@ sig
   val smallfoot_prop_internal_ap_term : term
   val smallfoot_prop_internal_term : term
   val smallfoot_prop_term : term
+  val smallfoot_slp_new_var___PROP_COND_term : term;
   val smallfoot_tag_term : term
   val smallfoot_var_term : term
   val smallfoot_xenv_term : term
@@ -129,18 +135,20 @@ sig
   val dest_BAG_IMAGE : term -> term * term;
   val dest_COND_PROP___ADD_COND : term -> term * term;
   val dest_COND_PROP___EXISTS : term -> term * term;
+  val dest_COND_PROP___STRONG_EXISTS : term -> term * term;
   val dest_FASL_PROGRAM_HOARE_TRIPLE : term -> term * term * term * term * term
   val dest_FASL_PROGRAM_IS_ABSTRACTION : term -> term * term * term * term
   val dest_FASL_PROG_SEQ : term -> term * term
   val dest_SMALLFOOT_AP_PERMISSION_UNIMPORTANT : term -> term;
   val dest_SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS : term -> term * term;
+  val dest_SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE : term -> term * term * term;
   val dest_SMALLFOOT_COND_HOARE_TRIPLE : term -> term * term * term
   val dest_SMALLFOOT_COND_PROP___EQUIV : term -> term * term;
   val dest_SMALLFOOT_COND_PROP___IMP : term -> term * term;
   val dest_SMALLFOOT_HOARE_TRIPLE : term -> term * term * term * term * term
   val dest_SMALLFOOT_IS_STRONG_STACK_PROPOSITION : term -> term;
   val dest_SMALLFOOT_PROP_IMPLIES : term -> term * term * term * term *  term * term * term * term
-  val dest_SMALLFOOT_SING_PROCEDURE_SPEC : term -> term * term * term * term * term * term * term * term
+  val dest_SMALLFOOT_SING_PROCEDURE_SPEC : term -> term * term * term * term * term * term * term * term 
   val dest_SMALLFOOT_SPECIFICATION : term -> term * term
   val dest_fasl_prog_best_local_action : term -> term * term
   val dest_fasl_prog_block : term -> term
@@ -169,11 +177,13 @@ sig
   val dest_smallfoot_ap_spatial___no_list_seg : term -> term
   val dest_smallfoot_ap_unequal : term -> term * term
   val dest_smallfoot_ap_unequal_cond : term -> term * term * term
+  val dest_smallfoot_ap_unknown : term -> string;
   val dest_smallfoot_ap_var_update : term -> term * term * term;
   val dest_smallfoot_choose_const_best_local_action : term -> term * term * term * term * term
-  val dest_smallfoot_cond_choose_const_best_local_action : term -> term * term * term * term * term * term
-  val dest_smallfoot_parallel_proc_call_abstraction : term -> term * term * term * term * term * term * term * term * term * term * term * term
-  val dest_smallfoot_proc_call_abstraction : term -> term * term * term * term * term * term
+  val dest_smallfoot_cond_best_local_action : term -> term * term 
+  val dest_smallfoot_cond_choose_const_best_local_action : term -> term * term * term * term * term
+  val dest_smallfoot_parallel_proc_call_abstraction : term -> term * term * term * term * term * term * term * term * term * term
+  val dest_smallfoot_proc_call_abstraction : term -> term * term * term * term * term
   val dest_smallfoot_prog_assign : term -> term * term
   val dest_smallfoot_prog_best_local_action : term -> term * term
   val dest_smallfoot_prog_block : term -> term;
@@ -194,18 +204,21 @@ sig
   val dest_smallfoot_prop_input : term -> term * term * term list * term
   val dest_smallfoot_prop_internal : term -> term * term * term * term * term * term * term * term
   val dest_smallfoot_prop_internal_ap : term -> term * term * term * term * term
+  val dest_smallfoot_slp_new_var___PROP_COND : term -> term * term * term * term;
   val dest_smallfoot_tag : term -> term
   val dest_smallfoot_var : term -> term
   val is_BAG_EVERY : term -> bool;
   val is_BAG_IMAGE : term -> bool;
   val is_COND_PROP___ADD_COND : term -> bool;
   val is_COND_PROP___EXISTS : term -> bool;
+  val is_COND_PROP___STRONG_EXISTS : term -> bool;
   val is_EMPTY_BAG : term -> bool;
   val is_FASL_PROGRAM_HOARE_TRIPLE : term -> bool
   val is_FASL_PROGRAM_IS_ABSTRACTION : term -> bool
   val is_FASL_PROG_SEQ : term -> bool
   val is_SMALLFOOT_AP_PERMISSION_UNIMPORTANT : term -> bool;
   val is_SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS : term -> bool;
+  val is_SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE : term -> bool;
   val is_SMALLFOOT_COND_HOARE_TRIPLE : term -> bool
   val is_SMALLFOOT_COND_PROP___EQUIV : term -> bool;
   val is_SMALLFOOT_COND_PROP___IMP : term -> bool;
@@ -241,8 +254,10 @@ sig
   val is_smallfoot_ap_spatial___no_list_seg : term -> bool
   val is_smallfoot_ap_unequal : term -> bool
   val is_smallfoot_ap_unequal_cond : term -> bool
+  val is_smallfoot_ap_unknown : term -> bool
   val is_smallfoot_ap_var_update : term -> bool;
   val is_smallfoot_choose_const_best_local_action : term -> bool
+  val is_smallfoot_cond_best_local_action : term -> bool
   val is_smallfoot_cond_choose_const_best_local_action : term -> bool
   val is_smallfoot_parallel_proc_call_abstraction : term -> bool
   val is_smallfoot_proc_call_abstraction : term -> bool
@@ -266,8 +281,8 @@ sig
   val is_smallfoot_prop_input : term -> bool
   val is_smallfoot_prop_internal : term -> bool
   val is_smallfoot_prop_internal_ap : term -> bool
+  val is_smallfoot_slp_new_var___PROP_COND : term -> bool;
   val is_smallfoot_var : term -> bool
-
 
 
   val mk_BAG_IMAGE : term -> term -> term;
@@ -278,6 +293,7 @@ sig
   val mk_fasl_prog_while_with_invariant : term * term * term -> term
   val mk_smallfoot_ap_equal_cond : term * term * term -> term;
   val mk_smallfoot_ap_unequal_cond : term * term * term -> term;
+  val mk_smallfoot_ap_unknown : string -> term;
   val mk_smallfoot_prog_while_with_invariant : term * term * term -> term
 
 
@@ -289,7 +305,7 @@ sig
 
   val string2smallfoot_var : string -> term
   val string2smallfoot_tag : string -> term
-
+  val string2smallfoot_const : string -> term
 
 
 

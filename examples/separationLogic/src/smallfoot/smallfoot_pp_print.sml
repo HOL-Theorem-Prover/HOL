@@ -311,23 +311,23 @@ fun smallfoot_prog_printer sys gravs d pps t = let
       end
     ) else if (op_term = smallfoot_cond_choose_const_best_local_action_term)  then (
       let
-         val (argL1_term,_) = listSyntax.dest_list (el 6 args);
-         val (argL2_term,_) = listSyntax.dest_list (el 5 args);
+         val (argL1_term,_) = listSyntax.dest_list (el 5 args);
+         val (argL2_term,_) = listSyntax.dest_list (el 4 args);
 	 val argL1_string = map term_to_string argL1_term;
 	 val argL2_string = map term_to_string argL2_term;
 	 val argL1_const = map (fn n => mk_var (n, numSyntax.num)) argL1_string
-	 val argL2_const = map (fn n => mk_var (n, numSyntax.num)) argL2_string
+	 val argL2_const = map (fn n => mk_var (n, Type `:smallfoot_data`)) argL2_string
 
 	 val argL_term = pairLib.mk_pair
 			    (listSyntax.mk_list (argL1_const, numSyntax.num),
-			     listSyntax.mk_list (argL2_const, numSyntax.num));
+			     listSyntax.mk_list (argL2_const, Type `:smallfoot_data`));
 
-         val pre_term = mk_comb (el 2 args, argL_term)
-         val post_term = mk_comb (el 3 args, argL_term)
+         val pre_term = mk_comb (el 2 args, argL_term);
+         val post_term = mk_comb (el 3 args, argL_term);
 
-         val pre_term'= (#3 o dest_smallfoot_prop o rhs o concl) 
+         val pre_term'= (rhs o concl) 
                            (SIMP_CONV list_ss [bagTheory.BAG_UNION_INSERT, bagTheory.BAG_UNION_EMPTY] pre_term)
-         val post_term'= (#3 o dest_smallfoot_prop o rhs o concl) 
+         val post_term'= (rhs o concl) 
                            (SIMP_CONV list_ss [bagTheory.BAG_UNION_INSERT, bagTheory.BAG_UNION_EMPTY] post_term)
       in
          begin_block pps CONSISTENT 0;
@@ -535,12 +535,39 @@ fun smallfoot_a_prop_printer sys gravs d pps t = let
       add_string pps " : ";
       sys (Top, Top, Top) (d - 1) (el 3 args);
       add_string pps ")"
+    ) else if (same_const op_term COND_PROP___STRONG_EXISTS_term) then (
+      let
+         val (v,body) = dest_abs (el 1 args);
+         val (v_name, v_type) = dest_var v;
+         val v' = mk_var ("_"^v_name, v_type);
+         val body' = subst [v |-> v'] body;
+      in
+         sys (Top, Top, Top) (d - 1) body'
+      end
     ) else (
       raise term_pp_types.UserPP_Failed
     )
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 
+
+fun smallfoot_cond_a_prop_printer sys gravs d pps t = let
+    open Portable term_pp_types
+    val (op_term,args) = strip_comb t;
+  in
+    if (same_const op_term COND_PROP___STRONG_EXISTS_term) then (
+      let
+         val (v,body) = dest_abs (el 1 args);
+         val (v_name, v_type) = dest_var v;
+         val v' = mk_var ("_"^v_name, v_type);
+         val body' = subst [v |-> v'] body;
+      in
+         sys (Top, Top, Top) (d - 1) body'
+      end
+    ) else (
+      raise term_pp_types.UserPP_Failed
+    )
+  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 
 
@@ -573,13 +600,13 @@ fun smallfoot_specification_printer sys gravs d pps t = let
 
 	 val argL1_const = map (fn n => mk_comb (smallfoot_var_term, n)) argL1_term;
 	 val argL2_const = map (fn n => mk_var (n, numSyntax.num)) argL2_string
-	 val argL3_const = map (fn n => mk_var (n, numSyntax.num)) argL3_string
+	 val argL3_const = map (fn n => mk_var (n, Type `:smallfoot_data`)) argL3_string
 			       
 	 val argL_term =  pairLib.mk_pair
 	   		       (listSyntax.mk_list (argL1_const, ``:smallfoot_var``),
 			        listSyntax.mk_list (argL2_const, numSyntax.num));
 
-	 val ext_argL_term = listSyntax.mk_list (argL3_const, numSyntax.num);
+	 val ext_argL_term = listSyntax.mk_list (argL3_const, Type `:smallfoot_data`);
 
 
          val body_term = mk_comb (abs_body, argL_term);
@@ -679,12 +706,13 @@ fun smallfoot_pretty_printer sys gravs d pps t =
        smallfoot_ae_printer sys gravs d pps t 
     else if is_SMALLFOOT_SPECIFICATION t then 
        smallfoot_specification_printer sys gravs d pps t 
+    else if t_type = pairLib.mk_prod(bool, smallfoot_a_proposition_type) then 
+       smallfoot_cond_a_prop_printer sys gravs d pps t    
     else (
       raise term_pp_types.UserPP_Failed
     )
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-   
 fun temp_add_smallfoot_pp () = 
    (set_trace "pp_avoids_symbol_merges" 0;
    temp_add_user_printer ({Tyop = "", Thy = ""}, smallfoot_pretty_printer));

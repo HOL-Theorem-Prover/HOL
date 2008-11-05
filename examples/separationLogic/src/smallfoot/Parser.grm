@@ -76,6 +76,7 @@ val (dl_Llink_tag,dl_Rlink_tag) = tree_link_tags
 %token <string> IDENT
 %token <string> QIDENT
 %token IF
+%token <string> HOL_TERM
 %token <string> INFIXOP1
 %token <string> INFIXOP2
 %token <string> INFIXOP3
@@ -223,6 +224,8 @@ invariant:
 expression:
     IDENT
 	  { mkexp(Pexp_ident($1)) }
+  | QIDENT
+	  { mkexp(Pexp_ident($1)) }
   | NAT
 	  { mkexp(Pexp_num($1)) }
   | TT
@@ -298,6 +301,8 @@ a_space_pred:
 			$3) }
   | EMPTY
           { Aspred_empty }
+  | HOL_TERM
+          { Aspred_hol $1 }
   | a_expression POINTSTO a_component_expression_seq
           { Aspred_pointsto($1,$3) }
   | a_expression POINTSTO a_expression
@@ -320,6 +325,7 @@ a_proposition:
           { Aprop_star($1,$3) }
   | IF a_proposition THEN a_proposition ELSE a_proposition
       { Aprop_ifthenelse($2,$4,$6) }
+  | 
   | a_space_pred
           { Aprop_spred $1 }
 ;

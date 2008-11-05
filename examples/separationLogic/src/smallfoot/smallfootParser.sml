@@ -21,7 +21,6 @@ open HolKernel Parse boolLib finite_mapTheory smallfootTheory smallfootSyntax
 quietdec := false;
 *)
 
-
  
 fun createLexerStream (is : BasicIO.instream) =
   Lexing.createLexer (fn buff => fn n => Nonstdio.buff_input is buff 0 n)
@@ -45,6 +44,15 @@ fun parse file =
 	expr
     end
 
+
+fun print_file file =
+    let val is     = Nonstdio.open_in_bin file
+        val _ = while (not (BasicIO.end_of_stream is)) do (print (BasicIO.inputc is 100))
+        val _ = BasicIO.close_in is;
+    in 
+         ()
+    end
+
 (*
 val file = "/home/tuerk/Downloads/smallfoot/EXAMPLES/business2.sf";
 val file = "/home/tt291/Downloads/smallfoot/EXAMPLES/business2.sf";
@@ -55,14 +63,22 @@ val prog = parse file;
 
 exception smallfoot_unsupported_feature_exn of string;
 
-
 fun smallfoot_p_expression2term (Pexp_ident x) =
-   let
-      val var_term = string2smallfoot_var x;
-      val term = mk_comb(smallfoot_p_var_term, var_term) 
-   in 
-      (term, HOLset.add (empty_tmset, var_term))
-   end
+   if (String.sub (x, 0) = #"#") then  
+      let
+         val var_term = mk_var (String.substring(x, 1, (String.size x) - 1),
+				numLib.num);
+         val term = mk_comb(smallfoot_p_const_term, var_term) 
+      in 
+         (term, empty_tmset)
+      end
+   else
+      let
+         val var_term = string2smallfoot_var x;
+         val term = mk_comb(smallfoot_p_var_term, var_term) 
+      in 
+         (term, HOLset.add (empty_tmset, var_term))
+      end
 | smallfoot_p_expression2term (Pexp_num n) =
      (mk_comb(smallfoot_p_const_term, numLib.term_of_int n), empty_tmset)
 | smallfoot_p_expression2term (Pexp_prefix _) =
@@ -86,18 +102,41 @@ fun smallfoot_p_expression2term (Pexp_ident x) =
 
 
 
-fun smallfoot_a_expression2term (Aexp_ident v) =
-    let
-	val var_term = string2smallfoot_var v;
-    in
-	(mk_comb(smallfoot_ae_var_term, string2smallfoot_var v),
-	 HOLset.add (empty_tmset, var_term))
-    end
-| smallfoot_a_expression2term (Aexp_num n) =
+fun smallfoot_a_expression2term ex_vars (Aexp_ident x) =
+   if (String.sub (x, 0) = #"#") then  
+      let
+         val var_term = mk_var (String.substring(x, 1, (String.size x) - 1),
+				numLib.num);
+         val term = mk_comb(smallfoot_ae_const_term, var_term) 
+      in 
+         (term, empty_tmset, ex_vars)
+      end
+   else if (String.sub (x, 0) = #"_") then  
+      let
+         val var_name = String.substring(x, 1, (String.size x) - 1);
+         val (var_name, needs_variant) =
+	     if (var_name = "") then ("c", true) else (var_name, false);
+	     
+         val var_term = mk_var (var_name, numLib.num);         
+         val var_term = if (needs_variant) then variant ex_vars var_term else
+			   var_term;
+
+         val term = mk_comb(smallfoot_ae_const_term, var_term) 
+      in 
+         (term, empty_tmset, if (mem var_term ex_vars) then ex_vars else var_term::ex_vars)
+      end
+   else
+      let
+         val var_term = string2smallfoot_var x;
+         val term = mk_comb(smallfoot_ae_var_term, var_term) 
+      in 
+         (term, HOLset.add (empty_tmset, var_term), ex_vars)
+      end
+| smallfoot_a_expression2term ex_vars (Aexp_num n) =
 	(if n = 0 then smallfoot_ae_null_term else
   	mk_comb(smallfoot_ae_const_term, numLib.term_of_int n),
-	 empty_tmset)
-| smallfoot_a_expression2term _ =
+	 empty_tmset, ex_vars)
+| smallfoot_a_expression2term _ _ =
 	Raise (smallfoot_unsupported_feature_exn "Aexp");
 
 
@@ -125,75 +164,106 @@ val tag_a_expression_fmap_update_term = ``FUPDATE:(smallfoot_tag |-> smallfoot_a
 (smallfoot_tag # smallfoot_a_expression)->(smallfoot_tag |-> smallfoot_a_expression)``;
 
 
-fun tag_a_expression_list2term [] = (tag_a_expression_fmap_emp_term,empty_tmset) |
-      tag_a_expression_list2term ((tag,aexp1)::l) =
+fun tag_a_expression_list2term ex_vars [] = (tag_a_expression_fmap_emp_term,empty_tmset, ex_vars) |
+      tag_a_expression_list2term ex_vars ((tag,aexp1)::l) =
 		let
 			val tag_term = string2smallfoot_tag tag;
-			val (exp_term,new_var_set) = smallfoot_a_expression2term aexp1;
+			val (exp_term,new_var_set, new_ex_var_list) = smallfoot_a_expression2term ex_vars aexp1;
 			val p = pairLib.mk_pair (tag_term,exp_term);
-			val (rest,rest_var_set) = tag_a_expression_list2term l;
+			val (rest,rest_var_set, ex_var_list) = tag_a_expression_list2term new_ex_var_list l;
 			val comb_term = list_mk_comb (tag_a_expression_fmap_update_term, [rest, p]);
 			val comb_var_set = HOLset.union (new_var_set, rest_var_set);
 		in
-                        (comb_term, comb_var_set)
+                        (comb_term, comb_var_set, ex_var_list)
 		end;
 
 
 
-fun smallfoot_a_space_pred2term (Aspred_list (tag,aexp1)) =
+fun smallfoot_a_space_pred2term contextOpt ex_vars (Aspred_list (tag,aexp1)) =
         let
-	    val (exp_term, var_set) = smallfoot_a_expression2term aexp1;
+	    val (exp_term, var_set, ex_var_list) = smallfoot_a_expression2term ex_vars aexp1;
             val list_term = list_mk_comb(smallfoot_ap_list_term, [string2smallfoot_tag tag, 
 			     exp_term]);
         in
-            (list_term, var_set)
+            (list_term, var_set, ex_var_list)
         end
-|     smallfoot_a_space_pred2term (Aspred_listseg (tag,aexp1,aexp2)) =
+|     smallfoot_a_space_pred2term contextOpt ex_vars (Aspred_listseg (tag,aexp1,aexp2)) =
         let
-	    val (exp_term1, var_set1) = smallfoot_a_expression2term aexp1;
-	    val (exp_term2, var_set2) = smallfoot_a_expression2term aexp2;
+	    val (exp_term1, var_set1, ex_vars2) = smallfoot_a_expression2term ex_vars aexp1;
+	    val (exp_term2, var_set2, ex_vars3) = smallfoot_a_expression2term ex_vars2 aexp2;
 	    val comb_term = list_mk_comb(smallfoot_ap_list_seg_term, [string2smallfoot_tag tag, 
 			     exp_term1, exp_term2]);
         in
-            (comb_term, HOLset.union (var_set1, var_set2))
+            (comb_term, HOLset.union (var_set1, var_set2), ex_vars3)
         end
-|     smallfoot_a_space_pred2term (Aspred_dlseg _) =
+|     smallfoot_a_space_pred2term contextOpt ex_vars (Aspred_dlseg _) =
   	Raise (smallfoot_unsupported_feature_exn ("Aspred_dl_seg"))
 	
-|     smallfoot_a_space_pred2term (Aspred_tree (tagL,tagR,aexp1)) =
+|     smallfoot_a_space_pred2term contextOpt ex_vars (Aspred_tree (tagL,tagR,aexp1)) =
         let
-	    val (exp_term, var_set) = smallfoot_a_expression2term aexp1;
+	    val (exp_term, var_set, ex_vars2) = smallfoot_a_expression2term ex_vars aexp1;
             val comb_term = list_mk_comb(smallfoot_ap_bintree_term, [
      			     pairLib.mk_pair(string2smallfoot_tag tagL, string2smallfoot_tag tagR), 
 			     exp_term])
         in
-            (comb_term, var_set)
+            (comb_term, var_set, ex_vars2)
         end
-|     smallfoot_a_space_pred2term (Aspred_empty) =
-	(smallfoot_ap_stack_true_term, empty_tmset)
-|     smallfoot_a_space_pred2term (Aspred_pointsto (aexp1, pl)) =
+|     smallfoot_a_space_pred2term contextOpt ex_vars (Aspred_empty) =
+	(smallfoot_ap_stack_true_term, empty_tmset, ex_vars)
+|     smallfoot_a_space_pred2term contextOpt ex_vars (Aspred_hol s) =
+        if (not (isSome contextOpt)) then
+   	    (mk_smallfoot_ap_unknown s, empty_tmset, ex_vars)
+        else
+            ((Parse.parse_in_context [valOf contextOpt] [QUOTE s], empty_tmset, ex_vars)
+            handle HOL_ERR _ =>
+          	    (print ("Could not parse "^s^"!\n");(mk_smallfoot_ap_unknown s, empty_tmset,ex_vars)))
+
+|     smallfoot_a_space_pred2term contextOpt ex_vars (Aspred_pointsto (aexp1, pl)) =
         let
-	    val (term1, var_set1) = smallfoot_a_expression2term aexp1;
-	    val (term2, var_set2) = tag_a_expression_list2term pl;
+	    val (term1, var_set1, ex_vars2) = smallfoot_a_expression2term ex_vars aexp1;
+	    val (term2, var_set2, ex_vars3) = tag_a_expression_list2term ex_vars2 pl;
 	    val comb_term = list_mk_comb(smallfoot_ap_points_to_term, [term1, term2]); 
         in
-            (comb_term, HOLset.union (var_set1,var_set2))
+            (comb_term, HOLset.union (var_set1,var_set2), ex_vars3)
         end;
 
 
 
 
 
+fun unzip3 [] = ([],[],[])
+  | unzip3 ((a,b,c)::L) =
+    let
+	val (aL,bL,cL) = unzip3 L;
+    in 
+       (a::aL, b::bL, c::cL)
+    end;
 
+
+(*
 fun list_mk_comb___with_vars op_term sub_fun l =
     let
 	val term_var_l = map sub_fun l;
-        val (termL, setL) = unzip term_var_l;
+        val (termL, setL, ex_varsL) = unzip3 term_var_l;
         val set_union = foldr HOLset.union empty_tmset setL;
         val term = list_mk_comb (op_term, termL);
+        val ex_vars = flatten ex_varsL;
     in
-        (term, set_union)
+        (term, set_union, ex_vars)
     end;
+*)
+
+fun mk_comb2___with_vars op_term sub_fun ex_vars a1 a2 =
+    let
+	val (term1,set1,ex_vars1) = sub_fun ex_vars a1;
+	val (term2,set2,ex_vars2) = sub_fun ex_vars1 a2;
+
+        val set_union = HOLset.union (set1,set2);
+        val term = list_mk_comb (op_term, [term1,term2]);
+    in
+        (term, set_union, ex_vars2)
+    end;
+
 
 (*
 val t = 
@@ -209,7 +279,7 @@ val (aexp1, aexp2, ap1, ap2) = dest_ifthenelse t
 *)
 
 
-fun smallfoot_a_proposition2term (Aprop_infix (opString, aexp1, aexp2)) =
+fun smallfoot_a_proposition2term_context contextOpt ex_vars (Aprop_infix (opString, aexp1, aexp2)) =
 	let
 		val op_term = if (opString = "<") then smallfoot_ap_less_term else
 				       if (opString = "<=") then smallfoot_ap_lesseq_term else
@@ -217,36 +287,71 @@ fun smallfoot_a_proposition2term (Aprop_infix (opString, aexp1, aexp2)) =
 				       if (opString = ">=") then smallfoot_ap_greatereq_term else
 		  		       Raise (smallfoot_unsupported_feature_exn ("Aexp_infix "^opString))
 	in
-		list_mk_comb___with_vars op_term smallfoot_a_expression2term [aexp1,aexp2]
+		mk_comb2___with_vars op_term smallfoot_a_expression2term ex_vars aexp1 aexp2
 	end
-| smallfoot_a_proposition2term (Aprop_equal (aexp1, aexp2)) =
-	list_mk_comb___with_vars smallfoot_ap_equal_term smallfoot_a_expression2term [aexp1,aexp2]
-| smallfoot_a_proposition2term (Aprop_not_equal (aexp1, aexp2)) =
-	list_mk_comb___with_vars smallfoot_ap_unequal_term smallfoot_a_expression2term [aexp1,aexp2]
-| smallfoot_a_proposition2term (Aprop_false) =
-	(smallfoot_ap_false_term, empty_tmset)
-| smallfoot_a_proposition2term (Aprop_ifthenelse (Aprop_equal (aexp1, aexp2), ap1,ap2)) =
+| smallfoot_a_proposition2term_context contextOpt ex_vars (Aprop_equal (aexp1, aexp2)) =
+	mk_comb2___with_vars smallfoot_ap_equal_term smallfoot_a_expression2term ex_vars aexp1 aexp2
+| smallfoot_a_proposition2term_context contextOpt ex_vars (Aprop_not_equal (aexp1, aexp2)) =
+	mk_comb2___with_vars smallfoot_ap_unequal_term smallfoot_a_expression2term ex_vars aexp1 aexp2
+| smallfoot_a_proposition2term_context contextOpt ex_vars (Aprop_false) =
+	(smallfoot_ap_false_term, empty_tmset, ex_vars)
+| smallfoot_a_proposition2term_context contextOpt ex_vars (Aprop_ifthenelse (Aprop_equal (aexp1, aexp2), ap1,ap2)) =
         let
-           val (exp1_term, exp1_set) = smallfoot_a_expression2term aexp1;
-           val (exp2_term, exp2_set) = smallfoot_a_expression2term aexp2;
-           val (prop1_term, prop1_set) = smallfoot_a_proposition2term ap1;
-           val (prop2_term, prop2_set) = smallfoot_a_proposition2term ap2;
+           val (exp1_term, exp1_set, ex_vars2) = smallfoot_a_expression2term ex_vars aexp1;
+           val (exp2_term, exp2_set, ex_vars3) = smallfoot_a_expression2term ex_vars2 aexp2;
+           val (prop1_term, prop1_set, ex_vars4) = smallfoot_a_proposition2term_context contextOpt ex_vars3 ap1;
+           val (prop2_term, prop2_set, ex_vars5) = smallfoot_a_proposition2term_context contextOpt ex_vars4 ap2;
 	   val t = list_mk_comb (smallfoot_ap_cond_term, [exp1_term, exp2_term, prop1_term, prop2_term])
            val set_union = foldr HOLset.union exp1_set [exp2_set, prop1_set, prop2_set];
         in
-	   (t, set_union) 
+	   (t, set_union, ex_vars5) 
         end
-| smallfoot_a_proposition2term (Aprop_ifthenelse (_, ap2,ap3)) =
+| smallfoot_a_proposition2term_context contextOpt ex_vars (Aprop_ifthenelse (_, ap2,ap3)) =
   Raise (smallfoot_unsupported_feature_exn "Currently only equality checks are allowed as conditions in propositions")
-| smallfoot_a_proposition2term (Aprop_star (ap1, ap2)) =
-	list_mk_comb___with_vars smallfoot_ap_star_term smallfoot_a_proposition2term [ap1,ap2]
-| smallfoot_a_proposition2term (Aprop_spred sp) =
-	smallfoot_a_space_pred2term sp;
+| smallfoot_a_proposition2term_context contextOpt ex_vars (Aprop_star (ap1, ap2)) =
+	mk_comb2___with_vars smallfoot_ap_star_term (smallfoot_a_proposition2term_context contextOpt) ex_vars ap1 ap2
+| smallfoot_a_proposition2term_context contextOpt ex_vars (Aprop_spred sp) =
+	smallfoot_a_space_pred2term contextOpt ex_vars sp;
 
 
 
+val asl_exists_term = fst (dest_comb ``asl_exists x. K T``)
+
+fun smallfoot_a_proposition2term x =
+let
+   val (t1,_, _) = smallfoot_a_proposition2term_context NONE [] x;
+   val (t2,ts, ex_vars) = smallfoot_a_proposition2term_context (SOME t1) [] x;
+
+   val t3 = foldr (fn (v,t) => 
+	    let
+               val t_abs = pairLib.mk_pabs (v, t);
+               val t' = mk_icomb (asl_exists_term, t_abs);
+            in
+	       t'
+	    end) t2 ex_vars
+in
+   (t3,ts)
+end;
+
+(*
+val x = 
+ Aprop_spred(Aspred_pointsto(Aexp_ident "r",
+                                                                              [("tl",
+                                                                                Aexp_ident "_b")])
+)
 
 
+val x = 
+ Aprop_star(Aprop_star(Aprop_spred(Aspred_pointsto(Aexp_ident "r",
+                                                                              [("tl",
+                                                                                Aexp_ident "_b")])),
+                                                  Aprop_spred(Aspred_pointsto(Aexp_ident "_b",
+                                                                              [("tl",
+                                                                                Aexp_ident "_tf")]))),
+                                       Aprop_spred(Aspred_listseg("tl",
+                                                                  Aexp_ident "_tf",
+                                                                  Aexp_ident "r")))
+*)
 
 
 fun unzip4 [] = ([],[],[],[])
@@ -794,6 +899,41 @@ end |
 
 
 
+(*
+
+val (funname, (ref_args, write_var_set, read_var_set, local_var_set,
+		  funcalls, done_funcalls),
+		  (fun_body_term, val_args, localV, preCond, postCond)) = 
+ hd fun_decl_parse_read_writeL3;
+*)
+
+fun type2smallfoot_data_TYPE t =
+   if (t = numLib.num) then ``smallfoot_data_num_TYPE`` else 
+   if (t = listSyntax.mk_list_type numLib.num) then ``smallfoot_data_num_list_TYPE`` else 
+   (print "Unknown Type Used!";raise (smallfoot_unsupported_feature_exn ("Unknown Type Used!")));
+
+
+fun smallfoot_data_var___add_GET (v,t) =
+   if (type_of v = numLib.num) then 
+      (v, mk_comb (``smallfoot_data_GET_num``, t)) else
+   if (type_of v = listSyntax.mk_list_type numLib.num) then 
+      (v, mk_comb (``smallfoot_data_GET_num_list``, t)) else
+   (print "Unknown Type Used!";raise (smallfoot_unsupported_feature_exn ("Unknown Type Used!")));
+
+
+
+
+fun smallfoot_free_var2smallfoot_data_TYPE_tuple v =
+let
+   val var_name = (fst o dest_var) v;
+   val var_name_term = stringLib.fromMLstring var_name;
+
+   val var_type = type_of v;
+   val var_type_term = type2smallfoot_data_TYPE var_type;
+in
+   pairLib.mk_pair(var_type_term, var_name_term)
+end;
+
 
 
 
@@ -843,15 +983,14 @@ fun Pfundecl2hol_final (funname, (ref_args, write_var_set, read_var_set, local_v
 	       in
 		  HOLset.listItems set4
                end;
-	val _ = if (List.all (fn t => (type_of t = numLib.num)) cond_free_var_list) then () else
-		raise smallfoot_unsupported_feature_exn (
-		      "All free variables in specifications have to represent smallfoot constants!");
 	
-        val free_var_names_list_term = listLib.mk_list (map (stringLib.fromMLstring o fst o dest_var) cond_free_var_list, 
-                                       stringLib.string_ty);
-	val free_vars_term = mk_new_var ("fvL", listLib.mk_list_type numLib.num);
+        val free_var_names_list_term = listLib.mk_list (map smallfoot_free_var2smallfoot_data_TYPE_tuple cond_free_var_list, 
+                                       pairLib.mk_prod (``:smallfoot_data_type``, stringLib.string_ty));
+	val free_vars_term = mk_new_var ("fvL", listLib.mk_list_type ``:smallfoot_data``);
         val free_vars_subst_terms = mk_el_list (length cond_free_var_list) free_vars_term;
-	val free_vars_subst = map (fn (vt, s) => (vt |-> s)) (zip cond_free_var_list free_vars_subst_terms);
+	val free_vars_subst = map (fn (vt, s) => (vt |-> s)) 
+                                  (map smallfoot_data_var___add_GET
+				  (zip cond_free_var_list free_vars_subst_terms));
 	val preCond4 = subst free_vars_subst preCond3;
 	val postCond4 = subst free_vars_subst postCond3;
 
@@ -866,7 +1005,6 @@ fun Pfundecl2hol_final (funname, (ref_args, write_var_set, read_var_set, local_v
 	val ref_arg_names = listLib.mk_list (map stringLib.fromMLstring ref_args, stringLib.string_ty);
         val val_args_const = map (fn s => s ^ "_const") val_args;
 	val val_arg_names = listLib.mk_list (map stringLib.fromMLstring val_args_const, stringLib.string_ty);
-
 
 	val wrapped_preCond = list_mk_icomb (smallfoot_input_preserve_names_wrapper_term,
 		[ref_arg_names, val_arg_names,
@@ -886,6 +1024,10 @@ fun p_item___is_resource (Presource _) = true |
      p_item___is_resource _ = false;
 
 (*
+val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot/EXAMPLES/"]
+
+val file = concat [examplesDir, "dummy.sf"]; 
+
 val prog2 = parse file
 val t = parse_smallfoot_file file
 fun dest_Pprogram (Pprogram (ident_decl, program_item_decl)) = 
@@ -893,7 +1035,6 @@ fun dest_Pprogram (Pprogram (ident_decl, program_item_decl)) =
 
 val (ident_decl, program_item_decl) = dest_Pprogram prog2;
 *)
-
 
 
 
@@ -924,7 +1065,7 @@ fun Pprogram2term (Pprogram (ident_decl, program_item_decl)) =
 		(*parse again*)
 		val fun_decl_parse_read_writeL3 = map (Pfundecl2hol fun_decl_parse_read_writeL2 resource_parseL) fun_decl_list
 
-
+ 
 		val fun_decl_parseL = map Pfundecl2hol_final fun_decl_parse_read_writeL3;
 
 

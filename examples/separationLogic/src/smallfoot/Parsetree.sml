@@ -15,6 +15,7 @@ datatype a_space_pred =
   | Aspred_dlseg of dlink_kind * a_component * a_expression * a_expression * a_component * a_expression * a_expression
   | Aspred_tree of a_component * a_component * a_expression
   | Aspred_empty
+  | Aspred_hol of string
   | Aspred_pointsto of a_expression * (a_component * a_expression) list
 
 datatype a_proposition =
