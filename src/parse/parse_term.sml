@@ -141,11 +141,13 @@ fun mk_prec_matrix G = let
   in
     case rule of
       PREFIX (STD_prefix rules) => app (insert_oplist o rule_elements) rules
-    | PREFIX (BINDER slist) =>
-        (* as there may be more than one lambda, the lambda = EndBinding
-           case is done again below *)
-        app (fn b => insert (STD_HOL_TOK (binder_to_string G b),
-                             EndBinding) EQUAL) slist
+    | PREFIX (BINDER slist) => let 
+        fun bindertok (BinderString {tok, ...}) = [tok]
+          | bindertok LAMBDA = lambda
+        val btoks = List.concat (map bindertok slist)
+      in 
+        app (fn s => insert (STD_HOL_TOK s, EndBinding) EQUAL) btoks
+      end
     | SUFFIX (STD_suffix rules) => app (insert_oplist o rule_elements) rules
     | SUFFIX TYPE_annotation => ()
     | INFIX (STD_infix (rules, _)) => app (insert_oplist o rule_elements) rules
@@ -371,7 +373,6 @@ fun mk_prec_matrix G = let
 in
   app insert_eqs Grules ;
   insert (BOS, EOS) EQUAL;
-  app (fn l => insert (STD_HOL_TOK l, EndBinding) EQUAL) lambda;
   app terms_between_equals (calc_eqpairs());
   (* these next equality pairs will never have terms interfering between
      them, so we can insert the equality relation between them after doing
@@ -555,6 +556,23 @@ fun parse_term (G : grammar) typeparser = let
   val prec_matrix = mk_prec_matrix G
   val rule_db = mk_ruledb G
   val is_binder = is_binder G
+  val binder_table = let 
+    fun recurse (r, acc) =
+        case r of 
+          PREFIX (BINDER blist) => let 
+            fun irec (b, acc) =
+                case b of 
+                  LAMBDA => acc
+                | BinderString {term_name, tok, ...} => 
+                    Binarymap.insert(acc,tok,term_name)
+          in
+            List.foldl irec acc blist
+          end
+        | _ => acc
+  in
+    List.foldl recurse (Binarymap.mkDict String.compare) Grules
+  end
+  fun term_name_for_binder s = Binarymap.find(binder_table,s)
   val grammar_tokens = term_grammar.grammar_tokens G
   val lex  = let
     val specials = endbinding::grammar_tokens @ term_grammar.known_constants G
@@ -870,8 +888,9 @@ fun parse_term (G : grammar) typeparser = let
         push ((NonTerminal (TYPED(nonterm0, type_annotation)), rlocn), XXX)
       end
     | (((NonTerminal t,rlocn), _)::((Terminal EndBinding,_), _)::
-       ((NonTermVS vsl,_), _)::((Terminal (STD_HOL_TOK binder),llocn), _)::rest) => let
-       exception Urk of string in let
+       ((NonTermVS vsl,_), _)::((Terminal (STD_HOL_TOK binder),llocn), _)::
+       rest) => let
+        exception Urk of string in let
         fun has_resq (v,_) =
           case v of
             VPAIR(v1, v2) => has_resq v1 orelse has_resq v2
@@ -896,22 +915,30 @@ fun parse_term (G : grammar) typeparser = let
                     "Can't have double restricted quantification"
             end
           | _ => NONE
-        fun comb_abs_fn(v,t) =
+        fun comb_abs_fn(v,t) = let 
+          val binder = term_name_for_binder binder
+        in
           if has_tupled_resq v then
             raise ERROR "parse_term"
-              "Can't have restricted quantification on nested arguments"
+                        "Can't have restricted quantification on nested \
+                        \arguments"
           else
             case extract_resq v of
-              NONE => (COMB((VAR binder,llocn), (ABS(v, t),locn.between (#2 v) (#2 t))),
+              NONE => (COMB((VAR binder,llocn), 
+                            (ABS(v, t),locn.between (#2 v) (#2 t))),
                        locn.between llocn rlocn)
-            | SOME (v',P) =>
-                (COMB((COMB((VAR (Lib.assoc (BinderString binder) restr_binders),llocn),
+            | SOME (v',P) => let 
+              in
+                (COMB((COMB((VAR (Lib.assoc (SOME binder) restr_binders),llocn),
                             P),locn.between llocn (#2 P)),
                       (ABS(v', t),locn.between (#2 v') (#2 t))),
                  locn.between llocn rlocn)
                 handle Feedback.HOL_ERR _ =>
-                  raise ERROR "parse_term"
-                    ("No restricted quantifier associated with "^binder)
+                       raise ERROR "parse_term"
+                                   ("No restricted quantifier associated with "
+                                    ^binder)
+              end
+        end
         fun abs_fn (v,t) =
           if has_tupled_resq v then
             raise ERROR "parse_term"
@@ -920,7 +947,7 @@ fun parse_term (G : grammar) typeparser = let
             case extract_resq v of
               NONE => (ABS(v,t),locn.between llocn rlocn)
             | SOME(v', P) =>
-                (COMB((COMB((VAR (Lib.assoc LAMBDA restr_binders),llocn),
+                (COMB((COMB((VAR (Lib.assoc NONE restr_binders),llocn),
                             P), locn.between llocn (#2 P)),
                       (ABS(v', t),locn.between (#2 v') (#2 t))),
                  locn.between llocn rlocn)

@@ -78,7 +78,16 @@ fun update_rr_pref b
   {term_name = term_name, elements = elements, preferred = b,
    block_style = block_style, paren_style = paren_style}
 
-datatype binder = LAMBDA | BinderString of string
+datatype binder = LAMBDA 
+                | BinderString of {tok : string, term_name : string, 
+                                   preferred : bool}
+
+fun update_bpref bool b = 
+    case b of 
+      LAMBDA => LAMBDA 
+    | BinderString {term_name, tok, preferred} =>
+      BinderString{term_name = term_name, tok = tok, preferred = bool}
+
 datatype prefix_rule = STD_prefix of rule_record list | BINDER of binder list
 datatype suffix_rule = STD_suffix of rule_record list | TYPE_annotation
 datatype infix_rule =
@@ -106,7 +115,7 @@ type 'a printer_info =
 type special_info = {type_intro : string,
                      lambda : string list,
                      endbinding : string,
-                     restr_binders : (binder * string) list,
+                     restr_binders : (string option * string) list,
                      res_quanop : string}
 
 
@@ -230,10 +239,10 @@ fun fupdate_restr_binders f
   {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
    restr_binders = f restr_binders, res_quanop = res_quanop}
 
-fun map_rrfn_rule f r =
+fun map_rrfn_rule f g r =
   case r of
     PREFIX (STD_prefix rlist) => PREFIX (STD_prefix (map f rlist))
-  | PREFIX (BINDER _) => r
+  | PREFIX (BINDER bslist) => PREFIX (BINDER (map g bslist))
 
   | INFIX (STD_infix (rlist, a)) => INFIX (STD_infix (map f rlist, a))
   | INFIX RESQUAN_OP => r
@@ -246,21 +255,27 @@ fun map_rrfn_rule f r =
   | CLOSEFIX rlist => CLOSEFIX (map f rlist)
   | LISTRULE _ => r
 
-fun fupdate_rule_by_term t f r = let
+fun fupdate_rule_by_term t f g r = let
   fun over_rr (rr:rule_record) = if #term_name rr = t then f rr else rr
+  fun over_br LAMBDA = LAMBDA
+    | over_br (b as BinderString {term_name,...}) = 
+      if term_name = t then g b else b
 in
-  map_rrfn_rule over_rr r
+  map_rrfn_rule over_rr over_br r
 end
 
-fun fupdate_rule_by_termtok {term_name, tok} f r = let
+fun fupdate_rule_by_termtok {term_name, tok} f g r = let
   fun over_rr (rr:rule_record) =
     if #term_name rr = term_name andalso
       List.exists (fn e => e = TOK tok) (rule_elements (#elements rr)) then
       f rr
     else
       rr
+  fun over_br LAMBDA = LAMBDA
+    | over_br (b as BinderString {term_name = tnm, tok = tk, ...}) = 
+      if term_name = tnm andalso tk = tok then g b else b
 in
-  map_rrfn_rule over_rr r
+  map_rrfn_rule over_rr over_br r
 end
 
 fun fupdate_rulelist f rules = map (fn (p,r) => (p, f r)) rules
@@ -270,11 +285,12 @@ fun fupdate_prulelist f rules = map f rules
 fun binder_to_string (G:grammar) b =
   case b of
     LAMBDA => hd (#lambda (specials G))
-  | BinderString s => s
+  | BinderString {term_name,...} => term_name
 
+(* the concrete tokens of the grammar corresponding to bind syntax. *)
 fun binders (G: grammar) = let
   fun b2str (LAMBDA, acc) = #lambda (specials G) @ acc
-    | b2str (BinderString s, acc) = s::acc
+    | b2str (BinderString r, acc) = (#tok r)::acc
   fun binders0 [] acc = acc
     | binders0 ((_, x)::xs) acc = let
       in
@@ -294,7 +310,7 @@ fun update_assoc (item as (k,v)) alist =
   | (first as (k1,v1))::rest => if k = k1 then item::rest
                                 else first::update_assoc item rest
 
-fun associate_restriction G (b, s) =
+fun associate_restriction G {binder = b, resbinder = s} =
   fupdate_specials (fupdate_restr_binders (update_assoc (b, s))) G
 
 fun is_binder G = let val bs = binders G in fn s => Lib.mem s bs end
@@ -642,7 +658,8 @@ end
 fun remove_form s rule = let
   fun rr_ok (r:rule_record) = #term_name r <> s
   fun lr_ok (ls:listspec) = #cons ls <> s andalso #nilstr ls <> s
-  fun stringbinder LAMBDA = false | stringbinder (BinderString s0) = s0 = s
+  fun stringbinder LAMBDA = false 
+    | stringbinder (BinderString r) = #term_name r <> s
 in
   case rule of
     SUFFIX (STD_suffix slist) => SUFFIX (STD_suffix (List.filter rr_ok slist))
@@ -661,6 +678,12 @@ fun remove_tok {term_name, tok} r = let
   fun rels_safe rels = not (List.exists (fn e => e = TOK tok) rels)
   fun rr_safe ({term_name = s, elements,...}:rule_record) =
     s <> term_name orelse rels_safe (rule_elements elements)
+  fun binder_safe b = 
+      case b of 
+        BinderString {term_name = tnm, tok = tk, ...} => 
+          tk <> tok orelse tnm <> term_name
+      | LAMBDA => true
+      
 in
   case r of
     SUFFIX (STD_suffix slist) =>
@@ -670,10 +693,7 @@ in
   | PREFIX (STD_prefix slist) =>
       PREFIX (STD_prefix (List.filter rr_safe slist))
   | PREFIX (BINDER blist) =>
-    PREFIX (BINDER (List.filter (fn BinderString s => s <> tok andalso
-                                                      s <> term_name
-                                  | _ => true)
-                                blist))
+    PREFIX (BINDER (List.filter binder_safe blist))
   | CLOSEFIX slist => CLOSEFIX (List.filter rr_safe slist)
   | LISTRULE rlist => let
       fun lrule_ok (r:listspec) =
@@ -703,7 +723,10 @@ fun rule_fixityToString f =
 
 fun clear_prefs_for s =
   fupdate_rules
-  (fupdate_rulelist (fupdate_rule_by_term s (update_rr_pref false)))
+    (fupdate_rulelist 
+       (fupdate_rule_by_term s 
+                             (update_rr_pref false)
+                             (update_bpref false)))
 
 
 fun add_rule G0 {term_name = s, fixity = f, pp_elements,
@@ -725,8 +748,12 @@ end
 
 fun add_grule G0 r = G0 Gmerge [r]
 
-fun add_binder G0 (s, prec) =
-  G0 Gmerge [(SOME prec, PREFIX (BINDER [BinderString s]))]
+fun add_binder G0 ({term_name,tok}, prec) = let 
+  val G1 = clear_prefs_for term_name G0
+  val binfo = {term_name = term_name, tok = tok, preferred = true}
+in
+  G1 Gmerge [(SOME prec, PREFIX (BINDER [BinderString binfo]))]
+end
 
 fun add_listform G lrule = let
   fun ok_el e =
@@ -757,7 +784,9 @@ fun prefer_form_with_tok (G0:grammar) (r as {term_name,tok}) = let
 in
   fupdate_rules
   (fupdate_rulelist
-   (fupdate_rule_by_termtok r (update_rr_pref true))) G1
+   (fupdate_rule_by_termtok r 
+                            (update_rr_pref true)
+                            (update_bpref true))) G1
 end
 
 fun set_associativity_at_level G (p, ass) =
@@ -951,11 +980,13 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
     open Lib
     val bnames =
       case b of
-        LAMBDA => #lambda (specials G)
-      | BinderString s => [s]
+        LAMBDA => map (fn s => (s,"")) (#lambda (specials G))
+      | BinderString {term_name,tok,...} => [(tok, 
+                                              if tok = term_name then ""
+                                              else " ["^term_name^"]")]
     val endb = quote (#endbinding (specials G))
-    fun one_binder s =
-        add_string (quote s ^ " <..binders..> " ^ endb ^ " TM")
+    fun one_binder (s, tnminfo) = 
+        add_string (quote s ^ " <..binders..> " ^ endb ^ " TM" ^ tnminfo)
   in
     pr_list one_binder
             (fn () => add_string " |")

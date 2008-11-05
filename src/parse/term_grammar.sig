@@ -47,7 +47,7 @@ sig
 
   datatype binder
      = LAMBDA
-     | BinderString of string
+     | BinderString of {tok : string, term_name : string, preferred : bool}
 
   datatype prefix_rule
      = STD_prefix of rule_record list
@@ -114,7 +114,7 @@ sig
   type special_info = {type_intro    : string,
                        lambda        : string list,
                        endbinding    : string,
-                       restr_binders : (binder * string) list,
+                       restr_binders : (string option * string) list,
                        res_quanop    : string}
   val rules          : grammar -> (int option * grammar_rule) list
   val grammar_rules  : grammar -> grammar_rule list
@@ -137,7 +137,9 @@ sig
   val binder_to_string : grammar -> binder -> string
 
   val resquan_op            : grammar -> string
-  val associate_restriction : grammar -> binder * string -> grammar
+  val associate_restriction : grammar -> 
+                              {binder : string option, 
+                               resbinder : string} -> grammar
 
   val compatible_listrule : grammar
                              -> {separator : string,
@@ -164,7 +166,7 @@ sig
   val find_suffix_rhses : grammar -> stack_terminal list
   val find_prefix_lhses : grammar -> stack_terminal list
 
-  val add_binder : grammar -> (string * int) -> grammar
+  val add_binder : grammar -> ({term_name:string,tok:string} * int) -> grammar
   val add_listform : grammar -> listspec -> grammar
   datatype rule_fixity
      = Infix of associativity * int

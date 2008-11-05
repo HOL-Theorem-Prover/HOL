@@ -52,12 +52,6 @@ datatype stored_data =
 
 val term_table = ref ([] : stored_data list)
 
-fun getprec s =
-    case get_precedence (term_grammar()) s of
-      NONE => if is_binder (term_grammar()) s then SOME Binder
-              else NONE
-    | SOME f => SOME (Parse.RF f)
-
 fun rule_is_binder (fixopt, grule) =
   case grule of
     PREFIX (BINDER _) => true
@@ -86,23 +80,43 @@ fun getrule G term_name = let
       NONE => alt()
     | SOME r => f (r, replace r, SOME (tok_of r))
   end
+
+  fun breplace {term_name,tok,preferred} s = 
+      {term_name = term_name, tok = s, preferred = false}
+  fun search_bslist f alt blist = let 
+    fun srch {term_name = nm, preferred, tok} = 
+        term_name = nm andalso preferred 
+  in
+    case List.find srch blist of 
+      NONE => alt()
+    | SOME r => f (r, breplace r, SOME (#tok r))
+  end
+
   fun con c (r,f,tok) = (c [r], (fn s => c [f s]), tok)
   fun addfix fopt (r,f,tok) = SOME ((fopt, r), (fn s => (fopt, f s)), tok)
   fun STD_infix' assoc (r,f,tok) = (INFIX (STD_infix([r],assoc)),
                                     (fn s => INFIX (STD_infix([f s], assoc))),
                                     tok)
+  fun BinderString' (r, f, tok) = 
+      (PREFIX (BINDER [BinderString r]),
+       (fn s => PREFIX (BINDER [BinderString (f s)])),
+       tok)
+  fun sing x = [x]
   fun get_rule_data rs =
       case rs of
         [] => NONE
       | (fixopt, grule) :: rest => let
         in
           case grule of
-            PREFIX (BINDER blist) =>
-            if mem (BinderString term_name) blist then
-              SOME ((fixopt, PREFIX (BINDER [BinderString term_name])),
-                    (fn s => (fixopt, PREFIX (BINDER [BinderString s]))),
-                    NONE)
-            else get_rule_data rest
+            PREFIX (BINDER blist) => let 
+              fun extract_bs (BinderString r) = SOME r
+                | extract_bs _ = NONE
+              val bslist = List.mapPartial extract_bs blist 
+            in
+              search_bslist (addfix fixopt o BinderString')
+                            (fn () => get_rule_data rest)
+                            bslist 
+            end
           | PREFIX (STD_prefix rrlist) =>
             search_rrlist (addfix fixopt o con (PREFIX o STD_prefix))
                           (fn () => get_rule_data rest)
@@ -136,24 +150,6 @@ end
 fun mktemp_resb s = "_" ^ s ^ "resb"
 
 fun enable_one (SD {t, u, non_u, newrule, oldtok}) = let
-  fun do_binder () = let
-    val G = term_grammar()
-    open Overload
-    val oinfo = overload_info G
-    val restrictions = #restr_binders (specials G)
-    val myrestrs = filter (fn (b,s) => b = BinderString (valOf non_u))
-                          restrictions
-    fun appthis (b,s) = let
-      val res_t = mk_thy_const
-                    (hd (#actual_ops (valOf (info_for_name oinfo s))))
-    in
-      temp_overload_on (mktemp_resb u, res_t);
-      temp_associate_restriction(u, mktemp_resb u)
-    end handle Option => ()
-  in
-    temp_overload_on (u,t);
-    List.app appthis myrestrs
-  end
 in
   case newrule of
     NONE => temp_overload_on (u, t)
@@ -162,8 +158,7 @@ in
       val g' = add_grule g0 r
     in
       temp_set_grammars (type_grammar(), g');
-      if rule_is_binder r then do_binder ()
-      else temp_prefer_form_with_tok {term_name = valOf non_u, tok = u}
+      temp_prefer_form_with_tok {term_name = valOf non_u, tok = u}
     end
 end
 
@@ -176,31 +171,6 @@ fun fupd_restrs f {type_intro,lambda,endbinding,restr_binders,res_quanop} =
 
 
 fun disable_one (SD {t, u, non_u, newrule, oldtok}) = let
-  fun do_binder() = let
-    val nu = valOf non_u
-    val G = term_grammar()
-    val restrs = #restr_binders (specials G)
-    val oinfo = overload_info G
-    fun foldthis ((b,s),acc) =
-        (* a fold with side effects - a bit ghastly *)
-        if b = BinderString u then (temp_clear_overloads_on s; acc)
-        else if b = BinderString nu then
-          case Overload.info_for_name oinfo s of
-            NONE => (b,s)::acc
-          | SOME {actual_ops,...} => let
-              val t = mk_thy_const (hd actual_ops)
-            in
-              (temp_overload_on (s, t); (b,s)::acc)
-            end
-        else ((b,s)::acc)
-    val new_rbs = List.rev (List.foldl foldthis [] restrs)
-  in
-    temp_remove_termtok {tok = u, term_name = u};
-    temp_remove_ovl_mapping u (constid t);
-    temp_overload_on (valOf non_u, t);
-    temp_set_term_grammar (fupdate_specials (fupd_restrs (fn _ => new_rbs))
-                                            (term_grammar()))
-  end
 in
   case newrule of
     NONE => (temp_remove_ovl_mapping u (constid t) ;
@@ -209,10 +179,9 @@ in
              | SOME nu => temp_overload_on (nu, t))
   | SOME r => let
     in
-      if rule_is_binder r then do_binder()
-      else (temp_remove_termtok {tok = u, term_name = valOf non_u};
-            temp_prefer_form_with_tok { tok = valOf oldtok,
-                                        term_name = valOf non_u})
+      temp_remove_termtok {tok = u, term_name = valOf non_u};
+      temp_prefer_form_with_tok { tok = valOf oldtok,
+                                  term_name = valOf non_u}
     end
 end
 

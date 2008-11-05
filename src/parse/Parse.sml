@@ -857,7 +857,8 @@ fun try_grammar_extension f x =
 val std_binder_precedence = 0;
 
 fun temp_add_binder(name, prec) = let in
-   the_term_grammar := add_binder (!the_term_grammar) (name, prec);
+   the_term_grammar := add_binder (!the_term_grammar) 
+                                  ({term_name = name, tok = name}, prec);
    term_grammar_changed := true
  end
 
@@ -865,15 +866,16 @@ fun add_binder (name, prec) = let in
     temp_add_binder(name, prec);
     update_grms "add_binder" ("temp_add_binder",
                               String.concat
-                                ["(", quote name, ", std_binder_precedence)"])
+                                ["(", quote name, 
+                                 ", std_binder_precedence)"])
   end
 
 fun temp_add_rule {term_name,fixity,pp_elements,paren_style,block_style} =
  (case fixity
    of Prefix => Feedback.HOL_MESG"Fixities of Prefix do not affect the grammar"
-    | Binder => let in
-        temp_add_binder(term_name, std_binder_precedence);
-        term_grammar_changed := true
+    | Binder => let 
+      in
+        temp_add_binder (term_name, std_binder_precedence)
       end
     | RF rf => let in
         the_term_grammar := term_grammar.add_rule (!the_term_grammar)
@@ -961,10 +963,11 @@ fun remove_numeral_form c = let in
 
 fun temp_associate_restriction (bs, s) =
  let val lambda = #lambda (specials (term_grammar()))
-     val b = if mem bs lambda then LAMBDA else BinderString bs
+     val b = if mem bs lambda then NONE else SOME bs
  in
     the_term_grammar :=
-    term_grammar.associate_restriction (term_grammar()) (b, s);
+    term_grammar.associate_restriction (term_grammar()) 
+                                       {binder = b, resbinder = s};
     term_grammar_changed := true
  end
 
