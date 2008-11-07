@@ -116,11 +116,6 @@ fun gen_const l s =
 
 fun make_binding_occ l s binder E =
  let open Preterm
-     val _ =
-       Lexis.ok_identifier s orelse
-       Lexis.ok_symbolic s orelse
-       raise ERRORloc "make_binding_occ" l
-         (s ^ " is not lexically permissible as a binding variable")
      val ntv = Pretype.new_uvar()
      val E' = add_scope((s,ntv),E)
  in
