@@ -53,11 +53,11 @@ val (args,ONEWAY_SKOLEM_CONV) =
     REWRITE_TAC [BETA_THM,EXISTS_DEF])
   in (args,fn gvs => fn tm =>
     let val _ = args := (gvs,tm)::(!args)
-	val (eq,atm) = dest_comb tm
+	val (equ,atm) = dest_comb tm
 	val (v,bod) = dest_abs atm
 	val fvs = free_vars bod
-    in if mem v fvs then
-	let val nfvs = intersect fvs gvs
+    in if op_mem eq v fvs then
+	let val nfvs = op_intersect eq fvs gvs
 	    val eps = mk_thy_const{Name="@",Thy="min",
                          Ty=(type_of v --> Type.bool) --> type_of v}
 	    val etm = mk_comb(eps,atm)
@@ -478,10 +478,10 @@ val SKELIM =
 	let val vars = map lhand skols
 	    val markup = map (fn skol =>
 			      (skol,lhand skol,
-			       intersect vars (free_vars(rand skol)))) skols
+			       op_intersect eq vars (free_vars(rand skol)))) skols
 	    fun take sofar l =
 		let val ((skol,v,var),rest) = Lib.pluck
-                      (fn (skol,v,vars) => null (subtract vars sofar)) l
+                      (fn (skol,v,vars) => null (op_subtract eq vars sofar)) l
 		in
                    skol::take (v::sofar) rest
 		end
@@ -508,7 +508,7 @@ fun CONV_THEN_REFUTE (conv:conv) refuter tm =
  * Wrapper for a refuter which takes a list of theorems in CNF.
  * ------------------------------------------------------------------------- *)
 
-fun thm_eq th1 th2 = (dest_thm th1 = dest_thm th2);
+fun thm_eq th1 th2 = pair_cmp (list_cmp eq) eq (dest_thm th1) (dest_thm th2);
 
 local fun split_thms [] dun = dun
         | split_thms (th::thl) dun =
@@ -564,7 +564,7 @@ val REFUTE =
 	val th2 = RATSKOL th1
 	val (l,r) = dest_eq(concl th2)
         val _ = latest := SOME (th1,th2,r)
-	val rth = if r = false_tm then ASSUME r else refute refuter r
+	val rth = if eq r false_tm then ASSUME r else refute refuter r
 	val th3 = PROVE_HYP (EQ_MP th2 (ASSUME l)) rth
 	val th4 = SKELIM (hyp th1) th3
 	val th5 = DISCH ntm th4 (* (itlist DISCH (subtract (hyp th4) [ntm])*)
@@ -653,7 +653,7 @@ val FOL_CONV =
 	end
 	fun get_heads x tm sofar =
 	    let val (v,bod) = dest_forall tm
-	    in if x = v then sofar else get_heads x bod sofar
+	    in if eq x v then sofar else get_heads x bod sofar
 	    end
 	handle HOL_ERR _ =>
 	    let val (l,r) = dest_disj tm
@@ -670,7 +670,7 @@ val FOL_CONV =
 	handle HOL_ERR _ =>
 	    let val (hop,args) = strip_comb tm
 		val sofar' =
-		    if hop = x then insert (length args) sofar else sofar
+		    if eq hop x then insert (length args) sofar else sofar
 	    in itlist (get_heads x) args sofar'
 	    end
 

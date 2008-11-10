@@ -36,7 +36,7 @@ fun dest_binop t (srcf,msg) tm = let
   val (farg1, arg2) = dest_comb tm
   val (f, arg1) = dest_comb farg1
 in
-  if f <> t then raise ERR srcf msg
+  if not (eq f t) then raise ERR srcf msg
   else (arg1, arg2)
 end
 
@@ -143,7 +143,7 @@ fun dest_injected tm = let
   val (f,x) = dest_comb tm
     handle HOL_ERR _ => raise ERR "dest_injected" "term not an injection"
 in
-  if f = int_injection then x
+  if eq f int_injection then x
   else raise ERR "dest_injected" "term not an injection"
 end
 val is_injected = can dest_injected
@@ -154,15 +154,15 @@ fun dest_negated tm = let
   val (l,r) = dest_comb tm
     handle HOL_ERR _ => raise ERR "dest_negated" "term not a negation"
 in
-  if l = negate_tm then r
+  if eq l negate_tm then r
   else raise ERR "dest_negated" "term not a negation"
 end
 val is_negated = can dest_negated
 fun mk_negated tm = mk_comb(negate_tm, tm)
 
 fun is_int_literal t =
-  (rator t = int_injection andalso numSyntax.is_numeral (rand t)) orelse
-  (rator t = negate_tm andalso is_int_literal (rand t))
+  (eq (rator t) int_injection andalso numSyntax.is_numeral (rand t)) orelse
+  (eq (rator t) negate_tm andalso is_int_literal (rand t))
   handle HOL_ERR _ => false
 
 fun int_of_term tm = let
@@ -171,7 +171,7 @@ fun int_of_term tm = let
     raise ERR "int_of_term" "applied to non-literal"
   val (l,r) = dest_comb tm
 in
-  if l = negate_tm then Arbint.~(int_of_term r)
+  if eq l negate_tm then Arbint.~(int_of_term r)
   else Arbint.fromNat (numSyntax.dest_numeral r)
 end
 

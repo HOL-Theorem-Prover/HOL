@@ -39,7 +39,7 @@ fun mk_term_rsubst ctxt = let
   fun f {redex,residue} = let
     val redex' = contextTerm ctxt redex
   in
-    if mem redex' ctxt then let
+    if op_mem eq redex' ctxt then let
         val residue' = ptm_with_ctxtty ctxt (type_of redex') residue
       in
         SOME (redex' |-> residue')
@@ -163,7 +163,7 @@ fun REFINE_EXISTS_TAC q (asl, w) = let
   val (qvar, body) = dest_exists w
   val ctxt = free_varsl (w::asl)
   val t = ptm_with_ctxtty ctxt (type_of qvar) q
-  val qvars = set_diff (free_vars t) ctxt
+  val qvars = op_set_diff eq (free_vars t) ctxt
   val newgoal = subst [qvar |-> t] body
 in
   SUBGOAL_THEN (list_mk_exists(rev qvars, newgoal))
@@ -232,7 +232,7 @@ fun X_FUN_EQ_CONV q tm =
 
 fun skolem_ty tm =
  let val (V,tm') = strip_forall tm
- in if V<>[]
+ in if not (null V)
     then list_mk_fun (map type_of V, type_of(fst(dest_exists tm')))
     else raise ERR"XSKOLEM_CONV" "no universal prefix"
   end;

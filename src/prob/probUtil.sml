@@ -119,7 +119,7 @@ type conv = Abbrev.conv
 (* --------------------------------------------------------------------- *)
 
 fun is_imp t = is_comb t
-  andalso (fn t' => is_comb t' andalso (fst (dest_comb t')) = ``$==>``)
+  andalso (fn t' => is_comb t' andalso eq (fst (dest_comb t')) ``$==>``)
     (fst (dest_comb t));
 
 (* --------------------------------------------------------------------- *)

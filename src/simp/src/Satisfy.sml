@@ -25,7 +25,7 @@ open HolKernel boolLib Sequence liteLib Unify Trace;
 fun satisfy_in_envs consts tms (tm1,envs) =
   let fun f env tm2 =
       let val new_env = simp_unify_terms_in_env consts tm1 tm2 env
-      in restrict_tmenv (not o C mem (free_vars tm2)) new_env
+      in restrict_tmenv (not o C (op_mem eq) (free_vars tm2)) new_env
       end
   in seq_flat (seq_map (fn env => seq_mapfilter (f env) tms) envs)
   end;
@@ -65,13 +65,13 @@ fun satisfy1 (consts,facts) gl =
    (* val facts' = map (snd o strip_forall) facts *)
       fun choose choices v =
         deref_tmenv choices v handle HOL_ERR _ => mk_select(v,T)
-      val choices = satisfy (union consts (free_vars gl)) goals facts'
+      val choices = satisfy (op_union eq consts (free_vars gl)) goals facts'
   in map (choose choices) gvars
   end;
 
 fun SATISFY (consts,facts) gl =
     let val choices = satisfy1 (consts,map concl facts) gl
-    in TAC_PROOF ((U (map hyp facts),gl),EVERY (map EXISTS_TAC choices) THEN
+    in TAC_PROOF ((op_U eq (map hyp facts),gl),EVERY (map EXISTS_TAC choices) THEN
                   REPEAT CONJ_TAC THEN FIRST (map MATCH_ACCEPT_TAC facts))
     end;
 
@@ -97,7 +97,7 @@ fun FACT_CANON thm =
 
 
 fun add_facts (consts,facts) thms =
-  (union consts (U (map (free_varsl o hyp) thms)),
+  (op_union eq consts (op_U eq (map (free_varsl o hyp) thms)),
    flatten (map FACT_CANON thms)@facts);
 
 end (* struct *)

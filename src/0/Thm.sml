@@ -85,7 +85,7 @@ fun dest_imp M =
  let val (Rator,conseq) = with_exn dest_comb M DEST_IMP_ERR
  in if is_comb Rator
     then let val (Rator,ant) = dest_comb Rator
-         in if Rator=Term.imp then (ant,conseq) else raise DEST_IMP_ERR
+         in if eq Rator Term.imp then (ant,conseq) else raise DEST_IMP_ERR
          end
     else case with_exn dest_thy_const Rator DEST_IMP_ERR
           of {Name="~", Thy="bool",...} => (conseq,Susp.force F)
@@ -1300,7 +1300,7 @@ fun DISJ_CASES dth ath bth =
 
 fun NOT_INTRO th =
   let val (ant,c) = dest_imp(concl th)
-  in Assert (c = Susp.force F) "" "";
+  in Assert (eq c (Susp.force F)) "" "";
      make_thm Count.NotIntro  (tag th, hypset th, Susp.force mk_neg ant)
   end
   handle HOL_ERR _ => ERR "NOT_INTRO" "";
@@ -1355,7 +1355,7 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun CCONTR w fth =
-  (Assert (concl fth = Susp.force F) "CCONTR" "";
+  (Assert (eq (concl fth) (Susp.force F)) "CCONTR" "";
    make_thm Count.Ccontr
        (tag fth, disch(Susp.force mk_neg w, hypset fth), w)
      handle HOL_ERR _ => ERR "CCONTR" "");

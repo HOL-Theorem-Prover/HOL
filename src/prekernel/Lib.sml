@@ -317,8 +317,20 @@ fun assoc item =
   in assc
   end
 
+fun op_assoc cmp item =
+  let fun assc ((key,ob)::rst) = if cmp item key then ob else assc rst
+        | assc [] = raise ERR "assoc" "not found"
+  in assc
+  end
+
 fun rev_assoc item =
   let fun assc ((ob,key)::rst) = if item=key then ob else assc rst
+        | assc [] = raise ERR "assoc" "not found"
+  in assc
+  end
+
+fun op_rev_assoc cmp item =
+  let fun assc ((ob,key)::rst) = if cmp item key then ob else assc rst
         | assc [] = raise ERR "assoc" "not found"
   in assc
   end
@@ -331,6 +343,18 @@ fun assoc1 item =
 
 fun assoc2 item =
   let fun assc((e as (_,key))::rst) = if item=key then SOME e else assc rst
+        | assc [] = NONE
+  in assc
+  end;
+
+fun op_assoc1 cmp item =
+  let fun assc ((e as (key,_))::rst) = if cmp item key then SOME e else assc rst
+        | assc [] = NONE
+  in assc
+  end;
+
+fun op_assoc2 cmp item =
+  let fun assc((e as (_,key))::rst) = if cmp item key then SOME e else assc rst
         | assc [] = NONE
   in assc
   end;
@@ -431,6 +455,15 @@ fun set_eq S1 S2 = (set_diff S1 S2 = []) andalso (set_diff S2 S1 = []);
  * Opaque type set operations                                                *
  *---------------------------------------------------------------------------*)
 
+fun pair_cmp cmp1 cmp2 (a,b) (c,d) = cmp1 a c andalso cmp2 b d
+
+fun list_cmp cmp =
+  let fun lcmp (x::xs) (y::ys) = cmp x y andalso lcmp xs ys
+        | lcmp [] [] = true
+        | lcmp _ _ = false
+  in lcmp
+  end;
+
 fun op_mem eq_func i =
    let val eqi = eq_func i
        fun mem [] = false
@@ -475,6 +508,11 @@ fun op_set_diff eq_func S1 S2 =
   let val memb = op_mem eq_func
   in filter (fn x => not (memb x S2)) S1
   end;
+
+val op_subtract = op_set_diff;
+
+fun op_set_eq eq_func S1 S2 =
+    null (op_set_diff eq_func S1 S2) andalso null (op_set_diff eq_func S2 S1);
 
 (*---------------------------------------------------------------------------*
  * Strings.                                                                  *

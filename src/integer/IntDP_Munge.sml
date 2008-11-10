@@ -23,6 +23,8 @@ fun contains_var tm =
       case dest_term tm of
         COMB(f,x) => contains_var f orelse contains_var x
       | LAMB(v,b) => contains_var b
+      | TYCOMB(f,a) => contains_var f
+      | TYLAMB(a,b) => contains_var b
       | VAR _ => true
       | CONST{Ty, ...} => Ty = numSyntax.num orelse Ty = int_ty
 fun is_linear_mult tm =
@@ -32,7 +34,7 @@ fun land tm = rand (rator tm)
 
 fun non_zero tm =
     if is_negated tm then non_zero (rand tm)
-    else tm <> zero_tm
+    else not (eq tm zero_tm)
 
 (* returns a list of pairs, where the first element of each pair is a non-
    Presburger term that occurs in tm, and where the second is a boolean
@@ -45,21 +47,23 @@ fun non_presburger_subterms0 ctxt tm =
   then let
     val abst = rand tm
   in
-    non_presburger_subterms0 (Lib.union [bvar abst] ctxt) (body abst)
+    non_presburger_subterms0 (Lib.op_union eq [bvar abst] ctxt) (body abst)
   end
   else if is_neg tm orelse is_absval tm orelse is_negated tm then
     non_presburger_subterms0 ctxt (rand tm)
   else if (is_cond tm) then let
     val (b, t1, t2) = dest_cond tm
   in
-    Lib.U [non_presburger_subterms0 ctxt b, non_presburger_subterms0 ctxt t1,
-           non_presburger_subterms0 ctxt t2]
+    Lib.op_U (pair_cmp eq equal) [non_presburger_subterms0 ctxt b,
+                                  non_presburger_subterms0 ctxt t1,
+                                  non_presburger_subterms0 ctxt t2]
   end
   else if (is_great tm orelse is_geq tm orelse is_eq tm orelse
            is_less tm orelse is_leq tm orelse is_conj tm orelse
            is_disj tm orelse is_imp tm orelse is_plus tm orelse
            is_minus tm orelse is_linear_mult tm) then
-    Lib.union (non_presburger_subterms0 ctxt (land tm))
+    Lib.op_union (pair_cmp eq equal)
+              (non_presburger_subterms0 ctxt (land tm))
               (non_presburger_subterms0 ctxt (rand tm))
   else if (is_divides tm andalso is_int_literal (land tm)) then
     non_presburger_subterms0 ctxt (rand tm)
@@ -69,7 +73,7 @@ fun non_presburger_subterms0 ctxt tm =
     non_presburger_subterms0 ctxt (land tm)
   else if is_int_literal tm then []
   else if is_var tm andalso type_of tm = int_ty then []
-  else if (tm = true_tm orelse tm = false_tm) then []
+  else if (eq tm true_tm orelse eq tm false_tm) then []
   else [(tm, not (List.exists (fn v => free_in v tm) ctxt))]
 
 val is_presburger = null o non_presburger_subterms0 []
@@ -163,7 +167,7 @@ end
 
 fun decide_fv_presburger DPname DP tm = let
   fun is_int_const tm = type_of tm = int_ty andalso is_const tm
-  val fvs = free_vars tm @ (Lib.mk_set (find_terms is_int_const tm))
+  val fvs = free_vars tm @ (Lib.op_mk_set eq (find_terms is_int_const tm))
   fun dest_atom tm = dest_const tm handle HOL_ERR _ => dest_var tm
   fun gen(bv, t) =
     if is_var bv then mk_forall(bv, t)
@@ -331,7 +335,7 @@ in
     open Rsyntax
     val {Bvar=v,Body=bdy} = dest_abs tm
     val {cond,larm=x,rarm=y} = Rsyntax.dest_cond bdy
-    val b = assert (not o Lib.mem v o free_vars) cond
+    val b = assert (not o Lib.op_mem eq v o free_vars) cond
     val _ = assert (fn t => type_of t <> bool) x
     val xf = mk_abs{Bvar=v,Body=x}
     val yf = mk_abs{Bvar=v,Body=y}
@@ -411,7 +415,7 @@ fun decide_nonpbints_presburger DPname DP subterms tm = let
   fun tactic subtm tm =
     (* return both a new term and a function that will convert a theorem
        of the form <new term> = T into tm = T *)
-    if is_comb subtm andalso rator subtm = int_injection then let
+    if is_comb subtm andalso eq (rator subtm) int_injection then let
       val n = rand subtm
       val thm0 = abs_inj subtm tm (* |- tm = P subtm *)
       val tm0 = rhs (concl thm0)

@@ -58,6 +58,15 @@ fun rev_assoc i alist =
      of NONE => raise COMPAT_ERR{function = "rev_assoc",message = ""}
       | (SOME x) => x;
 
+fun op_assoc cmp i alist =
+   case Lib.op_assoc1 cmp i alist
+     of NONE => raise COMPAT_ERR{function = "op_assoc",message = ""}
+      | (SOME x) => x;
+fun op_rev_assoc cmp i alist =
+   case Lib.op_assoc2 cmp i alist
+     of NONE => raise COMPAT_ERR{function = "op_rev_assoc",message = ""}
+      | (SOME x) => x;
+
 val inst_type = type_subst;
 
 val frees = rev o Term.free_vars;
@@ -67,8 +76,8 @@ fun tyvarsl tm_list = Lib.itlist (Lib.union o tyvars) tm_list [];
 
 fun GEN_ALL th =
    Lib.itlist Thm.GEN
-              (Lib.set_diff (frees(Thm.concl th))
-                            (freesl(Thm.hyp th)))
+              (Lib.op_set_diff Term.eq (frees(Thm.concl th))
+                                       (freesl(Thm.hyp th)))
               th;
 
 fun new_axiom(s,tm) = Theory.new_axiom(s,boolSyntax.gen_all tm);

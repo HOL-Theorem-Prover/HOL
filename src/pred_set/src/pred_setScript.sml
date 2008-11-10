@@ -2714,20 +2714,20 @@ val FINITE_ISO_NUM =
     in DISCH_THEN (REPEAT_TCL STRIP_THM_THEN ttac) end
     THENL
     [REPEAT STRIP_TAC THEN REFL_TAC,
-     let fun is_less t = (fst(strip_comb t) = (--`$<`--)) handle _ => false
+     let fun is_less t = eq (fst(strip_comb t)) (--`$<`--) handle _ => false
      in FILTER_ASM_REWRITE_TAC is_less [LESS_REFL] end THEN
      FIRST_ASSUM (fn th => fn g => MP_TAC (assert (is_eq o concl) th) g) THEN
      PURE_ONCE_REWRITE_TAC [EXTENSION] THEN
      CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
      REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC,
-     let fun is_less t = (fst(strip_comb t) = (--`$<`--)) handle _ => false
+     let fun is_less t = eq (fst(strip_comb t)) (--`$<`--) handle _ => false
      in FILTER_ASM_REWRITE_TAC is_less [LESS_REFL] end THEN
      FIRST_ASSUM (fn th => fn g => MP_TAC (assert (is_eq o concl) th) g) THEN
      PURE_ONCE_REWRITE_TAC [EXTENSION] THEN
      CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
      CONV_TAC (ONCE_DEPTH_CONV SYM_CONV) THEN
      REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC,
-     let fun is_less t = (fst(strip_comb t) = (--`$<`--)) handle _ => false
+     let fun is_less t = eq (fst(strip_comb t)) (--`$<`--) handle _ => false
      in FILTER_ASM_REWRITE_TAC is_less [LESS_REFL] end THEN
      FIRST_ASSUM MATCH_MP_TAC THEN
      CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC],
@@ -2739,7 +2739,7 @@ val FINITE_ISO_NUM =
     [EXISTS_TAC (--`CARD (s:'a set)`--) THEN
      REWRITE_TAC [LESS_REFL] THEN FIRST_ASSUM ACCEPT_TAC,
      EXISTS_TAC (--`n:num`--) THEN
-     FILTER_ASM_REWRITE_TAC (fn t => (not(lhs t = (--`s:'a set`--)))
+     FILTER_ASM_REWRITE_TAC (fn t => (not(eq (lhs t) (--`s:'a set`--)))
                                      handle _ => true) [],
      SUBST1_TAC
        (ASSUME (--`x:'a = (if n < CARD (s:'a set) then f n else e)`--)) THEN

@@ -101,12 +101,18 @@ fun store_thm_verbose (s:string, t:term, tac:tactic) =
 fun in_list l1 p1 =
 	(exists  (fn (x) => (x = p1)) l1);
 
+fun op_in_list cmp l1 p1 =
+	(exists  (fn (x) => (cmp x p1)) l1);
+
 (*--------------------------------------------------------------------------
  *  list_merge : ''a list -> ''a list -> ''a list
  *--------------------------------------------------------------------------*)
 
 fun list_merge l1 l2 =
 	l1 @ filter (fn x => not (in_list l1 x)) l2;
+
+fun op_list_merge cmp l1 l2 =
+	l1 @ filter (fn x => not (op_in_list cmp l1 x)) l2;
 
 (*--------------------------------------------------------------------------
  *  list_xmerge : ''a list list -> ''a list
@@ -115,6 +121,10 @@ fun list_merge l1 l2 =
 fun	  list_xmerge (nil) = []
 	| list_xmerge (first::nil) = first
 	| list_xmerge (first::rest) = list_merge first (list_xmerge rest);
+
+fun	  op_list_xmerge cmp (nil) = []
+	| op_list_xmerge cmp (first::nil) = first
+	| op_list_xmerge cmp (first::rest) = op_list_merge cmp first (op_list_xmerge cmp rest);
 
 (* ---------- test cases ---------- *
 	list_xmerge [[``f1:frac``]];
@@ -133,7 +143,8 @@ fun extract_terms_of_type (typ1:hol_type) (t1:term) =
 			let
 				val (top_rator, top_rand) = dest_comb t1;
 			in
-				list_merge (extract_terms_of_type typ1 top_rator) (extract_terms_of_type typ1 top_rand)
+				op_list_merge eq
+                                    (extract_terms_of_type typ1 top_rator) (extract_terms_of_type typ1 top_rand)
 			end
 		else
 			[];

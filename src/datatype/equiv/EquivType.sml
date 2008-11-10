@@ -194,9 +194,9 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
     if is_abs tm then (mk_abs o (I ## transconv) o dest_abs) tm
     else
       let val (opp,tms) = (I ## map transconv) (strip_comb tm) in
-      if (mem opp (map #func fnlist) andalso (type_of tm = repty)) then
+      if (op_mem eq opp (map #func fnlist) andalso (type_of tm = repty)) then
         (--`$@(^rep(^abs(^eqv ^(list_mk_comb(opp,tms)))))`--)
-      else if tms = [] then opp
+      else if null tms then opp
       else list_mk_comb(transconv opp,tms) end
 
   fun TRANSFORM_CONV tm =

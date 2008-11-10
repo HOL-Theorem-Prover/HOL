@@ -46,7 +46,7 @@ fun convert_to_embedded_syntax tm = let
   (* tm is of form ?x. ..., were x is always bare in the ... *)
   val (var, body) = dest_exists tm
   fun recurse tm =
-      if not (mem var (free_vars tm)) then
+      if not (op_mem eq var (free_vars tm)) then
         SPECL [tm, var] unrelated_rwt
       else let
           val (c1, c2) = dest_conj tm handle HOL_ERR _ => dest_disj tm
@@ -66,7 +66,7 @@ fun convert_to_embedded_syntax tm = let
                  in
                    TRANS eval (REWR_CONV negn_rwt (rand (concl eval)))
                  end handle HOL_ERR _ =>
-                            if rand tm = var then
+                            if eq (rand tm) var then
                               REWRITE_CONV [var_right_rwt] tm
                             else
                               REWRITE_CONV [var_nright_rwt] tm
@@ -77,7 +77,7 @@ end
 
 fun form_to_lcm var tm = let
   fun recurse acc tm =
-    if not (mem var (free_vars tm)) then acc
+    if not (op_mem eq var (free_vars tm)) then acc
     else let
         val (l,r) = dest_disj tm handle HOL_ERR _ => dest_conj tm
       in
@@ -108,7 +108,7 @@ fun phase4_CONV tm = let
   (* count a and b terms, also pair each count with the total number of free
      variables in these terms *)
   fun docount pos (acc as (ai as (a, afv), bi as (b, bfv))) tm =
-      if not (mem var (free_vars tm)) then acc
+      if not (op_mem eq var (free_vars tm)) then acc
       else let
           val (l,r) = dest_disj tm handle HOL_ERR _ => dest_conj tm
         in
@@ -120,7 +120,7 @@ fun phase4_CONV tm = let
         end handle HOL_ERR _ => let
           val (l,r) = dest_less tm
         in
-          if (pos = (l = var)) then
+          if (pos = (eq l var)) then
             ((a + 1, afv + length (free_vars r)), bi)
           else
             (ai, (b + 1, bfv + length (free_vars l)))

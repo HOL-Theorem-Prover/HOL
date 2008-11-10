@@ -209,7 +209,7 @@ val FRAC_DNMPOS = store_thm("FRAC_DNMPOS",``!f. 0 < frac_dnm f``,
  *--------------------------------------------------------------------------*)
 
 fun frac_pos_conv (asm_list:term list) (t1:term) =
-	if (in_list asm_list ``0i < ^t1``) then
+	if (op_in_list eq asm_list ``0i < ^t1``) then
 		ASSUME ``0i < ^t1``
 	else
 		if (is_comb t1) then
@@ -224,9 +224,9 @@ fun frac_pos_conv (asm_list:term list) (t1:term) =
 					in
 						LIST_MP [fac1_thm,fac2_thm] (SPECL[fac1,fac2] INT_MUL_POS_SIGN)
 					end
-				else if (rator=``frac_dnm``) then
+				else if (eq rator ``frac_dnm``) then
 					SPEC rand FRAC_DNMPOS
-				else if (rator=``ABS``) andalso (in_list asm_list ``~(^rand = 0)``) then
+				else if (eq rator ``ABS``) andalso (op_in_list eq asm_list ``~(^rand = 0)``) then
 					UNDISCH (SPEC rand INT_ABS_NOT0POS)
 				else if (is_int_literal t1) then
 					EQT_ELIM (ARITH_CONV ``0 < ^t1``)
@@ -241,7 +241,7 @@ fun frac_pos_conv (asm_list:term list) (t1:term) =
  *--------------------------------------------------------------------------*)
 
 fun frac_not0_conv (asm_list:term list) (t1:term) =
-	if (in_list asm_list ``~(^t1 = 0i)``) then
+	if (op_in_list eq asm_list ``~(^t1 = 0i)``) then
 		ASSUME ``~(^t1 = 0i)``
 	else
 		if (is_comb t1) then
@@ -256,9 +256,9 @@ fun frac_not0_conv (asm_list:term list) (t1:term) =
 					in
 						LIST_MP [fac1_thm,fac2_thm] (SPECL[fac1,fac2] INT_NOT0_MUL)
 					end
-				else if (rator=``frac_dnm``) then
+				else if (eq rator ``frac_dnm``) then
 					MP (SPEC t1 INT_GT0_IMP_NOT0) (SPEC rand FRAC_DNMPOS)
-				else if (rator=``SGN``) andalso (in_list asm_list ``~(^rand = 0)``) then
+				else if (eq rator ``SGN``) andalso (op_in_list eq asm_list ``~(^rand = 0)``) then
 					UNDISCH (SPEC rand INT_NOT0_SGNNOT0)
 				else if (is_int_literal t1) then
 					EQT_ELIM (ARITH_CONV ``~(^t1 = 0i)``)
@@ -389,9 +389,9 @@ fun FRAC_NMRDNM_TAC (asm_list, goal) =
 let
   val term_list = extract_frac_fun [``frac_nmr``,``frac_dnm``] goal
   val nmr_term_list  = map (fn (rator,nmr,dnm) => (nmr,dnm))
-                           (filter (fn (a1,_,_) => a1=``frac_nmr``) term_list)
+                           (filter (fn (a1,_,_) => eq a1 ``frac_nmr``) term_list)
   val dnm_term_list  = map (fn (rator,nmr,dnm) => (nmr,dnm))
-                           (filter (fn (a1,_,_) => a1=``frac_dnm``) term_list)
+                           (filter (fn (a1,_,_) => eq a1 ``frac_dnm``) term_list)
 in
 	(
 		MAP_EVERY (frac_nmr_tac asm_list) nmr_term_list THEN

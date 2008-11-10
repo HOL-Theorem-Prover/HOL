@@ -24,7 +24,7 @@ val CONJ_ACI =
     let fun FIND_CONJS thl tm =
 	let val (l,r) = dest_conj tm
 	in CONJ (FIND_CONJS thl l) (FIND_CONJS thl r)
-	end handle HOL_ERR _ => first (fn th => concl th = tm) thl
+	end handle HOL_ERR _ => first (fn th => eq (concl th) tm) thl
     in fn tm =>
 	let val (l,r) = dest_eq tm
 	    val thl = CONJUNCTS(ASSUME l)
@@ -84,9 +84,9 @@ val DISTRIB_CONV =
             fun DISTRIB2_QCONV tm =
               let val (xop,r) = dest_comb tm
                   val (oper,l) = dest_comb xop
-              in if oper = lop
+              in if eq oper lop
                  then COMB2_QCONV (RAND_CONV DISTRIB2_QCONV) DISTRIB2_QCONV tm
-                 else if oper = hop
+                 else if eq oper hop
                       then ((COMB2_QCONV (RAND_CONV DISTRIB2_QCONV)
                                  DISTRIB2_QCONV) THENQC DISTRIB1_QCONV) tm
                       else ERR("DISTRIB2_QCONV","")
@@ -99,7 +99,7 @@ val DISTRIB_CONV =
      case boolSyntax.strip_comb(rand(snd(strip_forall(concl lth0))))
       of (lop0,[_,htm]) =>
           (let val hop0 = rator(rator htm)
-           in if type_vars_in_term hop0 = []
+           in if null (type_vars_in_term hop0)
               then RAW_DISTRIB_CONV lth0 rth0 hop0 lop0
               else let val vty = type_of htm
                    in fn tm =>

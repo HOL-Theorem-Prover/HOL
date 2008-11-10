@@ -25,5 +25,8 @@ sig
 	val in_list : ''a list -> ''a -> bool
 	val list_merge : ''a list -> ''a list -> ''a list
 	val list_xmerge : ''a list list -> ''a list
+	val op_in_list : ('a -> 'a -> bool) -> 'a list -> 'a -> bool
+	val op_list_merge : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
+	val op_list_xmerge : ('a -> 'a -> bool) -> 'a list list -> 'a list
 	val dest_binop_triple : term -> term * term * term
 end;

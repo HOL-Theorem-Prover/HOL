@@ -37,7 +37,7 @@ fun new_list_rec_definition (name,tm) =
 
 (* Permutation of universal quantifications                             *)
 
-fun chk_var vl v = (is_var v andalso (mem v vl)) ;
+fun chk_var vl v = (is_var v andalso (op_mem eq v vl)) ;
 
 val FORALL_PERM_CONV =
   let val forall_perm_rule =
@@ -46,7 +46,7 @@ val FORALL_PERM_CONV =
    fn tms => fn tm =>
      let val (vs,body) =  strip_forall tm
      in if (all (chk_var vs) tms)
-        then let val vs' = tms @ (subtract vs tms)
+        then let val vs' = tms @ (op_subtract eq vs tms)
                  val th1 = DISCH_ALL (forall_perm_rule vs' (ASSUME tm))
                  val th2 = DISCH_ALL (forall_perm_rule vs
                                         (ASSUME(list_mk_forall(vs',body))))

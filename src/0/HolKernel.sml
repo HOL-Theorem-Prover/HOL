@@ -518,7 +518,7 @@ fun get_type_kind_rank_insts kdavoids tyavoids L ((tyS,tyId),(kdS,kdId),rkS) =
 fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
   val (realinsts, patterns) = partition (is_var o #redex) insts
   val betacounts =
-      if patterns = [] then []
+      if null patterns then []
       else
         itlist (fn {redex = p,...} =>
                    fn sof => let
@@ -572,7 +572,7 @@ fun term_homatch kdavoids tyavoids lconsts rkin kdins tyins (insts, homs) = let
   (* local constants of both terms and types never change *)
   val term_homatch = term_homatch kdavoids tyavoids lconsts
 in
-  if homs = [] then insts
+  if null homs then insts
   else let
       val (env,ctm,vtm) = hd homs
     in

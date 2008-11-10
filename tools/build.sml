@@ -582,7 +582,7 @@ in
   finish_logging true;
   make_buildstamp();
   build_help();
-  print "\nHol built successfully.\n"
+  print "\nHOL-Omega built successfully.\n"
 end
 
 

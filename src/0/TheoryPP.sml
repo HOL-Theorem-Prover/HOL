@@ -64,9 +64,9 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
                           else (add_string "("; pp_type ty; add_string ")")
  in
   if is_vartype ty
-  then let val (s,kd,rk) = dest_vartype_opr ty
+  then let val (s,kd,rk) = dest_vartype_opr ty handle e => raise (wrap_exn "pp_type" "is_vartype" e)
        in if kd = Kind.typ andalso rk = 0 then
-            case dest_vartype ty
+            case s
              of "'a" => add_string "alpha"
               | "'b" => add_string "beta"
               | "'c" => add_string "gamma"
@@ -285,7 +285,7 @@ fun hash_kind kd n =
 local open Type in
 fun debug_type ty =
     if is_vartype ty then let
-        val (s,kd,rk) = dest_vartype_opr ty
+        val (s,kd,rk) = dest_vartype_opr ty handle e => raise (wrap_exn "debug_type" "is_vartype" e)
       in print s
       end 
     else if is_bvartype ty then let
@@ -394,7 +394,7 @@ fun add tm =
       fun loop [] =
                (Array.update(share_table, i, (tm,!taken)::els);
                 taken := !taken + 1)
-        | loop ((x,index)::rst) = if x=tm then () else loop rst
+        | loop ((x,index)::rst) = if (*Term.eq*) x = tm then () else loop rst
   in
     loop els
   end;
@@ -410,7 +410,7 @@ fun index tm =
   let val i = hash_atom tm 0
       val els = Array.sub(share_table, i)
       fun loop [] = raise ERR "index" "not found in table"
-        | loop ((x,index)::rst) = if x=tm then index else loop rst
+        | loop ((x,index)::rst) = if (*Term.eq*) x = tm then index else loop rst
   in
     loop els
   end;
@@ -423,7 +423,7 @@ fun check V thml =
   let val _ = HOL_MESG "Checking consistency of sharing scheme"
       fun chk tm =
          if Type.unbound_ty(Term.type_of tm) then ()
-         else if (Vector.sub(V, index tm) = tm)
+         else if (*Term.eq*) (Vector.sub(V, index tm)) = tm
           then ()
            else (HOL_MESG "FAILURE in sharing scheme!";
                  raise ERR "check" "failure in sharing scheme")
@@ -560,7 +560,7 @@ fun pp_struct info_record ppstrm =
          in add_string "V";
             begin_block INCONSISTENT 0;
             add_string(stringify Name); add_break(1,0);
-            pp_ty Ty; end_block()
+            pp_ty Ty handle e => raise (wrap_exn "pr_var" Name e); end_block()
          end
      fun pr_const c =
          let val {Name,Thy,Ty} = dest_thy_const c
@@ -568,13 +568,14 @@ fun pp_struct info_record ppstrm =
             begin_block INCONSISTENT 0;
             add_string(stringify Name); add_break(1,0);
             add_string(stringify Thy); add_break(1,0);
-            pp_ty Ty; end_block()
+            pp_ty Ty handle e => raise (wrap_exn "pr_const" (Thy^"$"^Name) e); end_block()
          end
      fun pr_atom a =
            (begin_block INCONSISTENT 2;
             if is_var a then pr_var a else pr_const a;
             end_block())
-        handle HOL_ERR _ => raise ERR"pp_struct.pr_atom" "not atomic"
+        handle HOL_ERR e => raise (wrap_exn "pp_struct.pr_atom" "not atomic" (HOL_ERR e))
+                                  (* ERR"pp_struct.pr_atom" "not atomic" *)
      fun pr_bind (s,th) =
       let val (tg,asl,w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
       in

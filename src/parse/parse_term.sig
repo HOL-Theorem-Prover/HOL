@@ -17,10 +17,10 @@ signature parse_term = sig
 
     val parse_term :
       term_grammar.grammar ->
-      (''a qbuf -> Pretype.pretype) -> (* type parser *)
-      (''a qbuf -> Pretype.pretype) -> (* type variable parser *)
-      (''a qbuf * ''a PStack) ->
-      (''a qbuf * ''a PStack) * unit option
+      ('a qbuf -> Pretype.pretype) -> (* type parser *)
+      ('a qbuf -> Pretype.pretype) -> (* type variable parser *)
+      ('a qbuf * 'a PStack) ->
+      ('a qbuf * 'a PStack) * unit option
 
 end
 

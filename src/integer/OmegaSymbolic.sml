@@ -277,10 +277,10 @@ fun lcmify v c c_i tm = let
   (* tm either d * v <= U or L <= e * v, need c * v to be present *)
   val (l,r) = dest_leq tm
   val (accessor, cval) =
-      if rand r = v then (rand, RAND_CONV) else (lhand, LAND_CONV)
+      if eq (rand r) v then (rand, RAND_CONV) else (lhand, LAND_CONV)
   val d = lhand (accessor tm)
 in
-  if  d = c then ALL_CONV
+  if eq d c then ALL_CONV
   else let
       open CooperMath
       val d_i = int_of_term d
@@ -292,7 +292,7 @@ in
               val zero_lt_f =
                   EQT_ELIM (REDUCE_CONV (mk_less(zero_tm, f)))
               val finisher =
-                  if f = c then
+                  if eq f c then
                     REWR_CONV INT_MUL_ASSOC THENC
                     LAND_CONV (REWR_CONV INT_MUL_COMM) THENC
                     REWR_CONV (GSYM INT_MUL_ASSOC)
@@ -304,7 +304,7 @@ in
             end
           else ALL_CONV tm
       fun divide_out tm =
-          if lc <> c_i andalso rand (accessor tm) = v then let
+          if lc <> c_i andalso eq (rand (accessor tm)) v then let
               val f_i = Arbint.div(lc, c_i)
               val f = term_of_int f_i
               val fc_eq_l = CooperMath.REDUCE_CONV(mk_mult(f, c))
@@ -322,7 +322,7 @@ fun do_divisibility_analysis v ctxt tm = let
   val (x, body) = dest_exists tm
   val (eqterm, rest) = dest_conj body
 in
-  if not (null (intersect (free_vars (rand eqterm)) ctxt)) then
+  if not (null (op_intersect eq (free_vars (rand eqterm)) ctxt)) then
     (* leave it as an equality *)
     BINDER_CONV (EVERY_CONJ_CONV OmegaMath.leaf_normalise) THENC
     RAND_CONV (ALPHA_CONV v)
@@ -468,7 +468,7 @@ fun apply_fmve ctype = let
         RAND_CONV (calculate_nightmare ctxt)
       end
   end t
-  fun elim_rT tm = (if rand tm = boolSyntax.T then REWR_CONV CooperThms.T_and_r
+  fun elim_rT tm = (if eq (rand tm) boolSyntax.T then REWR_CONV CooperThms.T_and_r
                     else ALL_CONV) tm
 in
   initially THENC LAND_CONV finisher THENC elim_rT
@@ -545,7 +545,7 @@ in
           fun f (_, {maxloc, maxupc, ...}) = Arbint.max(!maxloc, !maxupc)
           val ((v, {maxupc, ...}), _) = findleast Arbint.> f items
         in
-          (v, NIGHTMARE (rand (term_of_int (!maxupc)), set_diff vs [v]))
+          (v, NIGHTMARE (rand (term_of_int (!maxupc)), op_set_diff eq vs [v]))
         end
       else let
           fun f (_, {numups, numlos,...}) = !numups * !numlos
@@ -577,7 +577,7 @@ fun push_nthvar_to_bot n tm =
 fun eliminate_an_existential0 t = let
   val (vs, body) = strip_exists t
   val (eliminate, category) = best_variable_to_eliminate vs body
-  val v_n = index (fn v => v = eliminate) vs
+  val v_n = index (eq eliminate) vs
   fun check_for_eqs tm = let
     val (lvs, body) = strip_exists tm
   in

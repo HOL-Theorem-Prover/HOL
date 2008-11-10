@@ -47,7 +47,7 @@ fun prove_membership t1 t2 = let
     case (thmtodate, preds, laters) of
       (NONE, _, []) => raise ERR "prove_membership" "term not found in list"
     | (NONE, _, x::xs) =>
-        if x = t1 then let
+        if eq x t1 then let
           val tailtm = listSyntax.mk_list(xs, elty)
           val whole_list = listSyntax.mk_cons(x, tailtm)
         in
@@ -87,6 +87,15 @@ fun phase4_CONV tm = let
   | LT_x of term
   | x_EQ of term
   | DIVIDES of (term * term option)
+  fun option_cmp cmp (SOME a) (SOME b) = cmp a b
+    | option_cmp cmp  NONE     NONE    = true
+    | option_cmp cmp   all    others   = false
+  fun relntype_eq (x_LT tm1) (x_LT tm2) = eq tm1 tm2
+    | relntype_eq (LT_x tm1) (LT_x tm2) = eq tm1 tm2
+    | relntype_eq (x_EQ tm1) (x_EQ tm2) = eq tm1 tm2
+    | relntype_eq (DIVIDES (tm1,otm1)) (DIVIDES (tm2,otm2)) =
+         eq tm1 tm2 andalso option_cmp eq otm1 otm2
+    | relntype_eq  all others = false
   fun rtype_to_term rt =
     case rt of
       x_LT t => SOME t
@@ -116,24 +125,24 @@ fun phase4_CONV tm = let
     end handle HOL_ERR _ => let
       val (l,r) = dest_less tm
     in
-      if l = Bvar then (x_LT r, posp) :: acc
-      else if r = Bvar then (LT_x l, posp) :: acc else acc
+      if eq l Bvar then (x_LT r, posp) :: acc
+      else if eq r Bvar then (LT_x l, posp) :: acc else acc
     end handle HOL_ERR _ => let
       val (l,r) = dest_eq tm
     in
-      if l = Bvar then (x_EQ r, posp) :: acc else acc
+      if eq l Bvar then (x_EQ r, posp) :: acc else acc
     end handle HOL_ERR _ => let
       val (l,r) = dest_divides tm
       val (first_rhs_arg, rest_rhs) = (I ## SOME) (dest_plus r)
         handle HOL_ERR _ => (r, NONE)
     in
-      if first_rhs_arg = Bvar then
+      if eq first_rhs_arg Bvar then
         (DIVIDES (l, rest_rhs), posp) :: acc
       else acc
     end handle HOL_ERR _ => (* must be a negation *)
       recurse (not posp) acc (dest_neg tm) handle HOL_ERR _ => acc
   in
-    Lib.mk_set (recurse true [] Body)
+    Lib.op_mk_set (pair_cmp relntype_eq equal) (recurse true [] Body)
   end
   val use_bis = let
     fun recurse (ai as (a, afv)) (bi as (b, bfv)) l =
@@ -183,7 +192,7 @@ fun phase4_CONV tm = let
           val arg = arg_accessor (concl thm)
           val (hdt, _) = strip_comb arg
         in
-          if hdt = minmax_op then
+          if eq hdt minmax_op then
             gen_rewrites acc (MATCH_MP minmax_thm thm)
           else
             EQT_INTRO thm :: EQF_INTRO (MATCH_MP INT_LT_GT thm) ::
@@ -216,7 +225,7 @@ fun phase4_CONV tm = let
     fun collect (DIVIDES(c, _), _) = SOME c
       | collect _ = NONE
   in
-    Lib.mk_set (List.mapPartial collect leaf_arguments)
+    Lib.op_mk_set eq (List.mapPartial collect leaf_arguments)
   end
   val all_deltas = map int_of_term all_delta_tms
   val delta = if null all_deltas then Arbint.one else lcml all_deltas
@@ -258,9 +267,9 @@ fun phase4_CONV tm = let
           handle (e as HOL_ERR _) => if use_bis then dest_minus arg2
                                      else raise e
       in
-        if l = Bvar then let
+        if eq l Bvar then let
           (* the original divides term is of form c | x *)
-          val ldel_divides = Lib.assoc local_delta divides_info
+          val ldel_divides = Lib.op_assoc eq local_delta divides_info
           val ldel_divides_dely =
             SPEC y (MATCH_MP INT_DIVIDES_RMUL ldel_divides)
           val ldel_simpler = MATCH_MP divides_thm ldel_divides_dely
@@ -269,10 +278,10 @@ fun phase4_CONV tm = let
         end
         else let
           val (ll, lr) = (if use_bis then dest_minus else dest_plus) l
-          val _ = ll = Bvar orelse raise ERR "" ""
+          val _ = eq ll Bvar orelse raise ERR "" ""
           (* the original divides term of form c | x + e            *)
           (* we're rewriting something like c | (x +/- y * d) + e   *)
-          val ldel_divides = Lib.assoc local_delta divides_info
+          val ldel_divides = Lib.op_assoc eq local_delta divides_info
           val ldel_divides_dely =
             SPEC y (MATCH_MP INT_DIVIDES_RMUL ldel_divides)
           val ldel_simpler = MATCH_MP divides_thm ldel_divides_dely
@@ -312,7 +321,7 @@ fun phase4_CONV tm = let
       | find_ai _ = NONE
     val (find_xi, arith_op) = if use_bis then (find_bi, mk_plus)
                               else (find_ai, mk_minus)
-    val bis = Lib.mk_set (List.mapPartial find_xi leaf_arguments)
+    val bis = Lib.op_mk_set eq (List.mapPartial find_xi leaf_arguments)
     val bis_list_tm = listSyntax.mk_list(bis, int_ty)
     val b = genvar int_ty
     val j = genvar int_ty
@@ -687,7 +696,7 @@ fun phase4_CONV tm = let
       in
         (* base cases with less as operator *)
         if posp then (* thm is positive instance *)
-          if lthm = Bvar then let
+          if eq lthm Bvar then let
             (* x < e - want to prove that x + d < e
                do it by contradiction *)
             val e = rthm
@@ -713,7 +722,7 @@ fun phase4_CONV tm = let
           in
             CCONTR tm (CHOOSE(jvar, exists_j) contradiction)
           end
-          else if rthm = Bvar then let
+          else if eq rthm Bvar then let
             val e = lthm
             (* e < x - want to prove e < x + d *)
             val thm0 = SPECL [e, Bvar, zero_tm, delta_tm] INT_LT_ADD2
@@ -725,7 +734,7 @@ fun phase4_CONV tm = let
           end
           else (* Bvar not present *) thm
         else (* not posp *)
-          if ltm = Bvar then let
+          if eq ltm Bvar then let
             (* have x + d < e, want to show x < e *)
             val negdelta_lt_0 =
               CONV_RULE (REWR_CONV (GSYM INT_NEG_LT0)) zero_lt_delta
@@ -741,7 +750,7 @@ fun phase4_CONV tm = let
           in
             CONV_RULE (BINOP_CONV (REWR_CONV INT_ADD_RID)) stage2
           end
-          else if rtm = Bvar then let
+          else if eq rtm Bvar then let
             val e = ltm
             (* have e < x + d, want to show e < x  -- by contradiction *)
             val not_tm = ASSUME (mk_neg tm)
@@ -775,7 +784,7 @@ fun phase4_CONV tm = let
         val (ltm, rtm) = dest_eq tm
       in
         if posp then
-          if lthm = Bvar then let
+          if eq lthm Bvar then let
             (* x = e *)
             val e = rthm
             val e_plus_1 = mk_plus(e, one_tm)
@@ -799,7 +808,7 @@ fun phase4_CONV tm = let
           else (* Bvar not present *)
             thm
         else (* not posp *)
-          if ltm = Bvar then let
+          if eq ltm Bvar then let
             (* have x + d = e, want x = e *)
             val e = rtm
             val xplusd_eq_e = thm
@@ -819,9 +828,9 @@ fun phase4_CONV tm = let
         val (var, rem) = (I ## SOME) (dest_plus r)
           handle HOL_ERR _ => (r, NONE)
       in
-        if var = Bvar then let
+        if eq var Bvar then let
           (* c | x [+ rem] - want to show that c | x + d [ + rem ] *)
-          val c_div_d = Lib.assoc c divides_info
+          val c_div_d = Lib.op_assoc eq c divides_info
           val c_div_rplusd0 =
             SYM (MP (SPECL [c,delta_tm,r] INT_DIVIDES_RADD) c_div_d)
           (* c | x [+ rem] = c | x [+ rem] + d *)
@@ -866,7 +875,7 @@ fun phase4_CONV tm = let
       in
         (* base cases with less as operator *)
         if posp then
-          if lthm = Bvar then let
+          if eq lthm Bvar then let
             (* x < e *)
             val e = rthm
             val thm0 = SPECL [Bvar, e, zero_tm, delta_tm] INT_LT_ADD2
@@ -876,7 +885,7 @@ fun phase4_CONV tm = let
           in
             CONV_RULE (REWR_CONV (GSYM INT_LT_SUB_RADD)) thm2
           end
-          else if rthm = Bvar then let
+          else if eq rthm Bvar then let
             (* e < x *)
             val e = lthm
             val not_tm = ASSUME (mk_neg tm)
@@ -902,7 +911,7 @@ fun phase4_CONV tm = let
           end
           else (* Bvar not present *) thm
         else (* not posp *)
-          if ltm = Bvar then let
+          if eq ltm Bvar then let
             val e = rtm
             (* have x - d < e, want x < e  - by contradiction *)
             val not_tm = ASSUME (mk_neg tm)
@@ -929,7 +938,7 @@ fun phase4_CONV tm = let
           in
             CCONTR tm (CHOOSE(jvar, exists_j) (MP not_fej fej))
           end
-          else if rtm = Bvar then let
+          else if eq rtm Bvar then let
             (* have e < x - d, want e < x *)
             val ed_lt_x = CONV_RULE (REWR_CONV INT_LT_SUB_LADD) thm
             (* have e + d < x, want to show e < x *)
@@ -952,7 +961,7 @@ fun phase4_CONV tm = let
         val (ltm, rtm) = dest_eq tm
       in
         if posp then
-          if lthm = Bvar then let
+          if eq lthm Bvar then let
             (* have x = e, want to show x - d = e *)
             val e = rtm
             val e_less1 = mk_plus(e, mk_negated one_tm)
@@ -969,7 +978,7 @@ fun phase4_CONV tm = let
           end
           else thm
         else (* not posp *)
-          if ltm = Bvar then let
+          if eq ltm Bvar then let
             (* have x - d = e, want to show x = e *)
             val e = rthm
             val xlessd_eq_e = thm
@@ -987,9 +996,9 @@ fun phase4_CONV tm = let
         val (var, rem) = (I ## SOME) (dest_plus r)
           handle HOL_ERR _ => (r, NONE)
       in
-        if var = Bvar then let
+        if eq var Bvar then let
           (* c | x [+ rem] - want to show that c | x + d [ + rem ] *)
-          val c_div_d = Lib.assoc c divides_info
+          val c_div_d = Lib.op_assoc eq c divides_info
           val c_div_rsubd0 =
             MP (SPECL [c,delta_tm,r] INT_DIVIDES_RSUB) c_div_d
           (* c | x [+ rem] = c | x [+ rem] + d *)

@@ -40,7 +40,7 @@ fun subset [] _ = true
   | subset s t = all (fn x => mem x t) s;
 
 fun distinct [] = true
-  | distinct (x :: rest) = not (mem x rest) andalso distinct rest;
+  | distinct (x :: rest) = not (op_mem eq x rest) andalso distinct rest;
 
 val beq = ``$= : bool->bool->bool``;
 
@@ -174,7 +174,7 @@ local
              in (v', (v |-> v') :: sub)
              end
        in
-         ren (insert v' avoid) dealt (INR (sub', tysub, b) :: INL (INR (INL v')) :: rest)
+         ren (op_insert eq v' avoid) dealt (INR (sub', tysub, b) :: INL (INR (INL v')) :: rest)
        end
      | TYLAMB (a, b) =>
        let
@@ -185,7 +185,7 @@ local
              in (a', (a |-> a') :: tysub)
              end
        in
-         ren (insert (genvar a') avoid) dealt
+         ren (op_insert eq (genvar a') avoid) dealt
              (INR (sub, tysub', b) :: INL (INR (INR a')) :: rest)
        end)
     | ren _ _ _ = raise ERR "prettify_vars" "BUG";
@@ -534,7 +534,7 @@ local
       in
         prove_case d ((a, (false, b) :: path) :: (b, (true, a) :: path) :: rest)
       end
-    else if tm = d then
+    else if eq tm d then
       foldl (fn ((true, a), th) => DISJ2 a th | ((false, b), th) => DISJ1 th b)
       (ASSUME d) path
     else prove_case d rest
@@ -552,7 +552,7 @@ in
     let
       val (neg, pos) = partition is_neg (disjuncts tm)
     in
-      case intersect (map dest_neg neg) pos of [] => NO_CONV tm
+      case op_intersect eq (map dest_neg neg) pos of [] => NO_CONV tm
       | d :: _ => EQT_INTRO (cases_on d tm)
     end
 end;
@@ -568,9 +568,9 @@ local
     let
       val (a, b) = dest_disj tm
       val a' = mk_neg a
-      val b_th = DISCH a' (if b = F then REFL F else contract (a :: asms) b)
+      val b_th = DISCH a' (if eq b F then REFL F else contract (a :: asms) b)
     in
-      if mem a asms then UNDISCH (MATCH_MP CONTRACT_DISJ b_th)
+      if op_mem eq a asms then UNDISCH (MATCH_MP CONTRACT_DISJ b_th)
       else CONV_RULE (TRY_CONV (RAND_CONV simplify_or_f))
            (MATCH_MP DISJ_CONGRUENCE b_th)
     end
@@ -761,7 +761,7 @@ fun sub_cnf f con defs (a, b) =
     end;
 
 fun def_step (defs, tm) =
-  case List.find (fn (_, b) => b = tm) defs of NONE
+  case List.find (fn (_, b) => eq b tm) defs of NONE
     => let val g = genvar bool in ((g, tm) :: defs, g) end
   | SOME (v, _) => (defs, v);
 
@@ -900,7 +900,7 @@ end;
 fun NEW_SKOLEM_CONST th =
   let
     val tm = concl th
-    val fvs = subtract (free_vars tm) (free_varsl (hyp th))
+    val fvs = op_subtract eq (free_vars tm) (free_varsl (hyp th))
     val (v, _) = dest_exists tm
     val c_type = foldl (fn (h, t) => type_of h --> t) (type_of v) fvs
     val c_vars = list_mk_comb (genvar c_type, rev fvs)
@@ -959,7 +959,7 @@ local
     let
       val (a,b) = dest_comb tm
       val _ = same_const select a orelse raise ERR "norm" "not a select"
-      val conv = ANTI_BETA_CONV (intersect (free_vars b) vars)
+      val conv = ANTI_BETA_CONV (op_intersect eq (free_vars b) vars)
       val conv =
         if is_abs b then conv else
           let
@@ -1013,7 +1013,7 @@ local
        | _ => NONE) of s as SOME _ => s
        | NONE =>
          if is_select (snd (strip_abs tm)) andalso
-           null (intersect (free_vars tm) vs) then SOME tm
+           null (op_intersect eq (free_vars tm) vs) then SOME tm
          else NONE;
 in
   val get_vselect = partial (ERR "get_vselect" "not found") (get []);
@@ -1172,7 +1172,7 @@ local
     end;
 
   fun check_sub vs {redex,residue} =
-    mem redex vs andalso (type_of redex <> bool orelse is_var residue);
+    op_mem eq redex vs andalso (type_of redex <> bool orelse is_var residue);
 
   fun match_convish vs tm def tm' =
     let
@@ -1185,7 +1185,7 @@ local
 in
   fun rename defs vs tm =
     let
-      val vs = filter (fn v => mem v vs) (free_vars tm)
+      val vs = filter (fn v => op_mem eq v vs) (free_vars tm)
       val (defs,vs,tm,def,def_th) = mk_def defs vs tm
       val convish = match_convish vs tm def
     in
@@ -1228,7 +1228,7 @@ local
 
   val let_conv = REWR_CONV LET_THM;
 
-  fun is_a_bool tm = type_of tm = bool andalso tm <> T andalso tm <> F;
+  fun is_a_bool tm = type_of tm = bool andalso not (eq tm T) andalso not (eq tm F);
 
   fun lift_cond tm =
     TRY_CONV

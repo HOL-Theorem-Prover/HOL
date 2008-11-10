@@ -179,9 +179,9 @@ fun mk_vthm th =
 fun list_mk_conj' [] = T
   | list_mk_conj' tms = list_mk_conj tms;
 
-fun strip_disj' tm = if tm = F then [] else strip_disj tm;
+fun strip_disj' tm = if eq tm F then [] else strip_disj tm;
 
-fun CONJUNCTS' th = if concl th = T then [] else CONJUNCTS th;
+fun CONJUNCTS' th = if eq (concl th) T then [] else CONJUNCTS th;
 
 fun GSPEC' th =
   let
@@ -329,7 +329,7 @@ local
       val n = length args
       val f = if is_const f then const_scheme_n n f else f
     in
-      (insert (f, n) res, args @ subtms)
+      (op_insert (pair_cmp eq equal) (f, n) res, args @ subtms)
     end;
 
   fun boolify (tm, len) =
@@ -402,7 +402,7 @@ in
         let
           val atoms = flatten (map (thm_atoms o snd o snd) axioms)
         in
-          if not (exists (equal eq_tm o fst) (rels_in_atoms atoms)) then []
+          if not (exists (eq eq_tm o fst) (rels_in_atoms atoms)) then []
           else if higher_order then eq_ho
           else eq_fo @ substitution_thms consts (relfuns_in_atoms atoms)
         end
@@ -496,7 +496,7 @@ fun FOL_SOLVE solv lmap lim =
     fn query =>
     let
       val q =
-        if snd query = [F] then [mlibTerm.False]
+        if list_cmp eq (snd query) [F] then [mlibTerm.False]
         else hol_literals_to_fol (#mapping_parm parm) query
       val () = save_fol_problem (thms, hyps, q)
       val lift = fol_thms_to_hol (#mapping_parm parm) (C assoc axioms) query

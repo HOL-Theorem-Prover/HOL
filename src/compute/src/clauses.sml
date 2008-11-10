@@ -34,9 +34,9 @@ fun check_arg_form trm =
       chk Rator (pat1::stk) free'
       end
     else if (is_var t)
-         then if stk=[]
+         then if null stk
               then let val newi = length free
-                   in (free, Pvar (newi - index (equal t) free - 1))
+                   in (free, Pvar (newi - index (eq t) free - 1))
                       handle HOL_ERR _ => (t::free, Pvar newi)
                    end
               else raise CL_ERR "check_arg_form"
@@ -142,7 +142,7 @@ and rewrite =
 fun add_in_db (n,cst,act,EndDb) =
       funpow n NeedArg (Try{Hcst=cst, Rws=act, Tail=EndDb})
   | add_in_db (0,cst,act as Rewrite nrws,Try{Hcst,Rws as Rewrite rws,Tail}) =
-      if cst=Hcst then Try{ Hcst=Hcst, Rws=Rewrite(nrws@rws), Tail=Tail }
+      if eq cst Hcst then Try{ Hcst=Hcst, Rws=Rewrite(nrws@rws), Tail=Tail }
       else Try { Hcst=Hcst, Rws=Rws, Tail=add_in_db(0,cst,act,Tail) }
   | add_in_db (n,cst,act,Try{Hcst,Rws,Tail}) =
       Try { Hcst=Hcst, Rws=Rws, Tail=add_in_db(n,cst,act,Tail) }
@@ -207,7 +207,7 @@ fun scrub_const (RWS htbl) c =
 fun from_term (rws,env,t) =
   let fun down (env,t,c) =
         case dest_term t of
-	  VAR _ => up((Bv (index (equal t) env) handle HOL_ERR _ => Fv), c)
+	  VAR _ => up((Bv (index (eq t) env) handle HOL_ERR _ => Fv), c)
   	| CONST{Name,Thy,...} => up(Cst (t,assoc_clause rws (Name,Thy)),c)
   	| COMB(Rator,Rand) => down(env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
   	| LAMB(Bvar,Body) => down(Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})

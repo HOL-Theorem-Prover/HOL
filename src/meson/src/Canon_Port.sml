@@ -18,13 +18,13 @@ val RIGHT_IMP_FORALL_THM = GSYM RIGHT_FORALL_IMP_THM;
 val LEFT_IMP_EXISTS_THM  = boolTheory.LEFT_EXISTS_IMP_THM;
 val RIGHT_IMP_EXISTS_THM = GSYM RIGHT_EXISTS_IMP_THM;
 
-fun freesl tml = itlist (union o free_vars) tml [];;
+fun freesl tml = itlist (op_union eq o free_vars) tml [];;
 
 fun is_eqc tm = same_const equality tm
 
 local fun get_heads lconsts tm (sofar as (cheads,vheads)) =
         let val (v,bod) = dest_forall tm
-        in get_heads (subtract lconsts [v]) bod sofar
+        in get_heads (op_subtract eq lconsts [v]) bod sofar
         end
         handle HOL_ERR _ =>
             let val (l,r) = dest_conj tm handle HOL_ERR _ => dest_disj tm
@@ -38,10 +38,10 @@ local fun get_heads lconsts tm (sofar as (cheads,vheads)) =
             let val (hop,args) = strip_comb tm
                 val len = length args
                 val newheads =
-                  if is_const hop orelse mem hop lconsts
-                  then (insert (hop,len) cheads, vheads)
+                  if is_const hop orelse op_mem eq hop lconsts
+                  then (op_insert (pair_cmp eq equal) (hop,len) cheads, vheads)
                   else if len > 0
-                       then (cheads,insert (hop,len) vheads)
+                       then (cheads,op_insert (pair_cmp eq equal) (hop,len) vheads)
                        else sofar
         in
           itlist (get_heads lconsts) args newheads
@@ -79,7 +79,7 @@ local
           val th = rev_itlist (C (curry MK_COMB))
             (map (FOL_CONV hddata) args) (REFL opn)
           val tm' = rand(concl th)
-          val n = length args - assoc opn hddata
+          val n = length args - op_assoc eq opn hddata
                   handle HOL_ERR _ => 0
         in
           if n = 0 then th
@@ -88,18 +88,18 @@ local
 in
   fun GEN_FOL_CONV (cheads,vheads) =
     let val hddata =
-          if vheads = []
-          then let val hops = mk_set (map fst cheads)
+          if null vheads
+          then let val hops = op_mk_set eq (map fst cheads)
                    fun getmin h =
                     let val ns = mapfilter
-                          (fn (k,n) => if k=h then n else fail()) cheads
+                          (fn (k,n) => if eq k h then n else fail()) cheads
                     in (if length ns < 2 then fail() else h,
                         end_itlist (curry Int.min) ns)
                     end
                in mapfilter getmin hops
                end
           else map (fn t => if is_eqc t then (t,2) else (t,0))
-                   (mk_set (map fst (vheads @ cheads)))
+                   (op_mk_set eq (map fst (vheads @ cheads)))
     in FOL_CONV hddata
     end
 end

@@ -108,7 +108,7 @@ handle HOL_ERR _ => raise ERR "FRAC_EQ_TAC" "";
  *--------------------------------------------------------------------------*)
 
 fun frac_pos_conv (asm_list:term list) (t1:term) =
-	if (in_list asm_list ``0i < ^t1``) then
+	if (op_in_list eq asm_list ``0i < ^t1``) then
 		ASSUME ``0i < ^t1``
 	else
 		if (is_comb t1) then
@@ -123,9 +123,9 @@ fun frac_pos_conv (asm_list:term list) (t1:term) =
 					in
 						LIST_MP [fac1_thm,fac2_thm] (SPECL[fac1,fac2] INT_MUL_POS_SIGN)
 					end
-				else if (rator=frac_dnm_tm) then
+				else if (eq rator frac_dnm_tm) then
 					SPEC rand FRAC_DNMPOS
-				else if (rator=``ABS``) andalso (in_list asm_list ``~(^rand = 0)``) then
+				else if (eq rator ``ABS``) andalso (op_in_list eq asm_list ``~(^rand = 0)``) then
 					UNDISCH (SPEC rand INT_ABS_NOT0POS)
 				else if (is_int_literal t1) then
 					EQT_ELIM (ARITH_CONV ``0 < ^t1``)
@@ -140,7 +140,7 @@ fun frac_pos_conv (asm_list:term list) (t1:term) =
  *--------------------------------------------------------------------------*)
 
 fun frac_not0_conv (asm_list:term list) (t1:term) =
-	if (in_list asm_list ``~(^t1 = 0i)``) then
+	if (op_in_list eq asm_list ``~(^t1 = 0i)``) then
 		ASSUME ``~(^t1 = 0i)``
 	else
 		if (is_comb t1) then
@@ -155,9 +155,9 @@ fun frac_not0_conv (asm_list:term list) (t1:term) =
 					in
 						LIST_MP [fac1_thm,fac2_thm] (SPECL[fac1,fac2] INT_NOT0_MUL)
 					end
-				else if (rator=frac_dnm_tm) then
+				else if (eq rator frac_dnm_tm) then
 					MP (SPEC t1 INT_GT0_IMP_NOT0) (SPEC rand FRAC_DNMPOS)
-				else if (rator=``SGN``) andalso (in_list asm_list ``~(^rand = 0)``) then
+				else if (eq rator ``SGN``) andalso (op_in_list eq asm_list ``~(^rand = 0)``) then
 					UNDISCH (SPEC rand INT_NOT0_SGNNOT0)
 				else if (is_int_literal t1) then
 					EQT_ELIM (ARITH_CONV ``~(^t1 = 0i)``)
@@ -272,8 +272,10 @@ fun frac_dnm_tac (asm_list:term list) (nmr,dnm) =
 fun FRAC_NMRDNM_TAC (asm_list, goal) =
 let
 	val term_list = extract_frac_fun [frac_nmr_tm,frac_dnm_tm] goal;
-	val nmr_term_list  = map (fn x => let val (rator,nmr,dnm) = x in (nmr,dnm) end) (filter (fn x => let val (a1,a2,a3) = x in a1=frac_nmr_tm end) term_list);
-	val dnm_term_list  = map (fn x => let val (rator,nmr,dnm) = x in (nmr,dnm) end) (filter (fn x => let val (a1,a2,a3) = x in a1=frac_dnm_tm end) term_list);
+	val nmr_term_list  = map (fn x => let val (rator,nmr,dnm) = x in (nmr,dnm) end)
+                                 (filter (fn x => let val (a1,a2,a3) = x in eq a1 frac_nmr_tm end) term_list);
+	val dnm_term_list  = map (fn x => let val (rator,nmr,dnm) = x in (nmr,dnm) end)
+                                 (filter (fn x => let val (a1,a2,a3) = x in eq a1 frac_dnm_tm end) term_list);
 in
 	(
 		MAP_EVERY (frac_nmr_tac asm_list) nmr_term_list THEN
@@ -292,17 +294,17 @@ handle HOL_ERR _ => raise ERR "FRAC_NMRDNM_TAC" "";
  *--------------------------------------------------------------------------*)
 
 fun subst_thm (top_rator:term) =
-	if top_rator=frac_add_tm then
+	if eq top_rator frac_add_tm then
 		FRAC_ADD_CALCULATE
-	else if top_rator=frac_sub_tm then
+	else if eq top_rator frac_sub_tm then
 		FRAC_SUB_CALCULATE
-	else if top_rator=frac_mul_tm then
+	else if eq top_rator frac_mul_tm then
 		FRAC_MULT_CALCULATE
-	else if top_rator=frac_div_tm then
+	else if eq top_rator frac_div_tm then
 		FRAC_DIV_CALCULATE
-	else if top_rator=frac_ainv_tm then
+	else if eq top_rator frac_ainv_tm then
 		FRAC_AINV_CALCULATE
-	else if top_rator=frac_minv_tm then
+	else if eq top_rator frac_minv_tm then
 		FRAC_MINV_CALCULATE
 	else
 		REFL ``x:frac``;
@@ -319,19 +321,19 @@ let
 	val (top_rator, top_rands) = dest_frac t1;
 	val thm = REFL t1;
 in
-	if top_rator=``abs_frac`` then
+	if eq top_rator ``abs_frac`` then
 		thm
 	else
-		if top_rator=t1 orelse top_rator=``rep_rat`` then
-			if is_var top_rator  orelse top_rator=``rep_rat`` then
+		if eq top_rator t1 orelse eq top_rator ``rep_rat`` then
+			if is_var top_rator  orelse eq top_rator ``rep_rat`` then
 				SUBST [``x:frac`` |-> SPEC t1 (GSYM FRAC)] ``^t1 = x:frac`` thm
 			else
-				if t1=``frac_0`` then
+				if eq t1 ``frac_0`` then
 					frac_0_def
 				else
 					frac_1_def
 		else
-			if tl top_rands = [] then
+			if null (tl top_rands) then
 				let
 					val fst_arg = FRAC_CALC_CONV (hd top_rands);
 					val (fst_nmr,fst_dnm) = dest_pair (snd(dest_comb (snd(dest_eq (snd(dest_thm fst_arg)) )) ));
@@ -406,7 +408,7 @@ fun frac_calc_tac (frac_terms:term list) (asm_list:term list,goal:term) =
 		(* extract left-hand sides and right-hand sides of calculation theorem conclusions *)
 		val calc_thms_conls_sides = map dest_eq calc_thms_concls;
 		(* merge lists of hypotheses *)
-		val calc_hyps = list_xmerge (map (fn x => fst (dest_thm x)) calc_thms);
+		val calc_hyps = op_list_xmerge eq (map (fn x => fst (dest_thm x)) calc_thms);
 		(* divide lists of hypotheses into parts ``0 < x`` and ``~(x = 0)`` *)
 		val (calc_hyps_gt0, calc_hyps_not0) = partition is_less calc_hyps;
 
@@ -416,11 +418,11 @@ fun frac_calc_tac (frac_terms:term list) (asm_list:term list,goal:term) =
 		val precond_thms = asm_gt0_thms @ asm_not0_thms;
 
 		(* partition them *)
-		fun proved (x:thm) = hyp x = [] orelse List.all (in_list asm_list) (hyp x);
+		fun proved (x:thm) = null (hyp x) orelse List.all (op_in_list eq asm_list) (hyp x);
 		val (asms_proved,asms_toprove) = partition proved (asm_gt0_thms @ asm_not0_thms);
 
 		(* hypothesis, TODO: eventuell gleich triviale entfernen *)
-		val asms_hyp = list_xmerge (map (fn x => fst (dest_thm x)) asms_toprove);
+		val asms_hyp = op_list_xmerge eq (map (fn x => fst (dest_thm x)) asms_toprove);
 
 		(* generate subgoal:  prove the proposition in which the fractions are subsituted by their calculated values *)
 		val subs_sg  = (asm_list, subst (map (fn (lhs,rhs) => (lhs |-> rhs)) calc_thms_conls_sides) goal);
@@ -445,8 +447,8 @@ fun frac_calc_tac (frac_terms:term list) (asm_list:term list,goal:term) =
 				(* extract proof from asm_thms list (TODO: other list) *)
 				fun proof_from_asm_thms (t1:term) =
 					let
-						val corres_asm_thm = List.find (fn x => concl x = t1) asm_thms;
-						val corres_pro_thm = List.find (fn x => concl x = t1) asms_proved;
+						val corres_asm_thm = List.find (fn x => eq (concl x) t1) asm_thms;
+						val corres_pro_thm = List.find (fn x => eq (concl x) t1) asms_proved;
 					in
 						if (isSome corres_pro_thm) then
 							valOf corres_pro_thm
@@ -466,8 +468,8 @@ fun frac_calc_tac (frac_terms:term list) (asm_list:term list,goal:term) =
 
 				fun proof_from_step1 (t1:term) =
 					let
-						val corres_asm_thm = List.find (fn x => concl x = t1) step1_proofs;
-						(*val corres_pro_thm = List.find (fn x => concl x = t1) asms_proved;*)
+						val corres_asm_thm = List.find (fn x => eq (concl x) t1) step1_proofs;
+						(*val corres_pro_thm = List.find (fn x => eq (concl x) t1) asms_proved;*)
 					in
 						(*if (isSome corres_pro_thm) then
 							valOf corres_pro_thm

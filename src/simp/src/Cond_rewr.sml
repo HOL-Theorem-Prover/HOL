@@ -156,6 +156,12 @@ fun ac_term_ord(tm1,tm2) =
     * COND_REWR_CONV
     * ---------------------------------------------------------------------*)
 
+   fun kd_rk_eq (v1,v2) =
+      let val (_,kd1,rk1) = dest_vartype_opr v1
+          val (_,kd2,rk2) = dest_vartype_opr v2
+      in kind_rank_compare ((kd1,rk1), (kd2,rk2)) = EQUAL
+      end
+
    fun vperm(tm1,tm2) =
     case (dest_term tm1, dest_term tm2)
      of (VAR v1,VAR v2)   => abconv_ty (snd v1) (snd v2)
@@ -163,7 +169,7 @@ fun ac_term_ord(tm1,tm2) =
       | (COMB t1,COMB t2) => vperm(fst t1,fst t2) andalso vperm(snd t1,snd t2)
       | (TYLAMB t1,TYLAMB t2) => vperm(snd t1, snd t2)
       | (TYCOMB t1,TYCOMB t2) => vperm(fst t1,fst t2) andalso abconv_ty (snd t1) (snd t2)
-      | (x,y) => (x = y)
+      | (x,y) => eq tm1 tm2
 
    fun tm_set_eq s t = null (op_set_diff aconv s t) andalso
                        null (op_set_diff aconv t s)
@@ -210,7 +216,7 @@ fun ac_term_ord(tm1,tm2) =
                  end
             val condition_thms = map solver' conditions
             val disch_eqn = rev_itlist (C MP) condition_thms conditional_eqn
-            val final_thm = if (l = tm) then disch_eqn
+            val final_thm = if (eq l tm) then disch_eqn
                             else TRANS (ALPHA tm l) disch_eqn
             val _ = if null conditions then
               trace(if isperm then 2 else 1, REWRITING(tm,th))
@@ -228,7 +234,7 @@ fun ac_term_ord(tm1,tm2) =
 
 fun loops th =
    let val (l,r) = dest_eq (concl th)
-   in can (find_term (equal l)) r
+   in can (find_term (eq l)) r
    end handle HOL_ERR _ => failwith "loops"
 
 
@@ -336,9 +342,9 @@ fun IMP_EQ_CANON thm =
              then if (is_eq (dest_neg conc))
                   then [EQF_INTRO undisch_thm, EQF_INTRO (GSYM undisch_thm)]
                   else [EQF_INTRO undisch_thm]
-        else if conc = truth_tm then
+        else if eq conc truth_tm then
           (trace(2,IGNORE ("pointless rewrite",thm)); [])
-        else if (conc = false_tm) then [MP x_eq_false undisch_thm]
+        else if (eq conc false_tm) then [MP x_eq_false undisch_thm]
         else if is_comb conc andalso same_const (rator conc) Abbrev_tm then
           if is_eq (rand conc) then
             IMP_EQ_CANON
@@ -357,7 +363,7 @@ fun QUANTIFY_CONDITIONS thm =
        val free_in_thm = (free_vars (concl thm))
        val free_in_hyp = free_varsl (hyp thm)
        val free_in_conditions =
-             subtract (subtract free_in_thm free_in_eqn) free_in_hyp
+             op_subtract eq (op_subtract eq free_in_thm free_in_eqn) free_in_hyp
        fun quantify fv = CONV_RULE (HO_REWR_CONV LEFT_FORALL_IMP_THM) o GEN fv
        val quan_thm = itlist quantify free_in_conditions thm
    in [quan_thm]
@@ -420,7 +426,7 @@ fun IMP_CANON acc thl =
                 in
                   IMP_CANON acc ((ants, newth) :: ths)
                 end
-              else if c = boolSyntax.F then
+              else if eq c boolSyntax.F then
                 IMP_CANON ((ants, NOT_INTRO th) :: acc) ths
               (* we want [.] |- F theorems to rewrite to [.] |- x = F,
                  done above in IMP_EQ_CANON, but we don't want this to

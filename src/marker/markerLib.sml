@@ -107,7 +107,7 @@ fun PAT_ABBREV_TAC fv_set eq (g as (asl, w)) =
 fun MATCH_ABBREV_TAC fv_set pattern (g as (asl, w)) = let
   val ctxt = HOLset.listItems fv_set
   val fixed_tyvars = Lib.U (map type_vars_in_term
-                                (Lib.intersect ctxt (free_vars pattern)))
+                                (Lib.op_intersect eq ctxt (free_vars pattern)))
   val (tminst,_) = match_terml fixed_tyvars fv_set pattern w
   fun ABB' {redex=l,residue=r} = ABB l r
 in
@@ -117,7 +117,7 @@ end
 fun HO_MATCH_ABBREV_TAC fv_set pattern (gl as (asl,w)) = 
  let val ctxt = HOLset.listItems fv_set
      val fixed_tyvars = Lib.U (map type_vars_in_term
-                                (Lib.intersect ctxt (free_vars pattern)))
+                                (Lib.op_intersect eq ctxt (free_vars pattern)))
      val (tminst, tyinst) = ho_match_term fixed_tyvars fv_set pattern w
      val unbeta_goal =
         Tactical.default_prover(mk_eq(w, subst tminst (inst tyinst pattern)),

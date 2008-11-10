@@ -71,7 +71,7 @@ fun fresh_constr ty_match (colty:hol_type) gv c =
 
 fun mk_groupl literal rows =
   let fun func (row as ((prefix, p::rst), rhs)) (in_group,not_in_group) =
-               if (is_var literal andalso is_var p) orelse p = literal
+               if (is_var literal andalso is_var p) orelse eq p literal
                then if is_var literal
                     then (((prefix,p::rst), rhs)::in_group, not_in_group)
                     else (((prefix,rst), rhs)::in_group, not_in_group)
@@ -338,7 +338,7 @@ fun mk_case ty_info ty_match FV range_ty =
      in
      if exists Literal.is_pure_literal col0 then  (* column has a literal *)
        let val other_var = fresh_var pty
-           val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
+           val constructors = rev (op_mk_set eq (rev (filter (not o is_var) col0)))
                               @ [other_var]
            val arb = mk_arb range_ty
            val switch_tm = mk_switch_tm fresh_var u arb constructors
@@ -398,7 +398,9 @@ fun FV_multiset tm =
      of VAR v => [mk_var v]
       | CONST _ => []
       | COMB(Rator,Rand) => FV_multiset Rator @ FV_multiset Rand
-      | LAMB(Bvar,Body) => Lib.subtract (FV_multiset Body) [Bvar]
+      | TYCOMB(Rator,Rand) => FV_multiset Rator
+      | TYLAMB(Bvar,Body) => FV_multiset Body
+      | LAMB(Bvar,Body) => Lib.op_subtract eq (FV_multiset Body) [Bvar]
                            (* raise ERR"FV_multiset" "lambda"; *)
 
 fun no_repeat_vars thy pat =
@@ -433,14 +435,14 @@ fun pat_match2 pat_exps given_pat = tryfind (C pat_match1 given_pat) pat_exps
 fun distinguish pat_tm_mats =
     snd (List.foldr (fn ({redex:term,residue:term}, (vs,done)) =>
                          let val residue' = variant vs residue
-                             val vs' = Lib.insert residue' vs
+                             val vs' = Lib.op_insert eq residue' vs
                          in (vs', {redex=redex, residue=residue'} :: done)
                          end)
                     ([],[]) pat_tm_mats)
 
 fun reduce_mats pat_tm_mats =
     snd (List.foldl (fn (mat as {redex:term,residue:term}, (vs,done)) =>
-                         if mem redex vs then (vs, done)
+                         if op_mem eq redex vs then (vs, done)
                          else (redex :: vs, mat :: done))
                     ([],[]) pat_tm_mats)
 
@@ -520,10 +522,10 @@ fun mk_functional thy eqns =
          in (subst_inst sub a, rename_case sub case_tm)
          end handle HOL_ERR _ => (a,case_tm)
      (* Ensure that the case test variable is fresh for the rest of the case *)
-     val avs = subtract (all_vars case_tm') [a']
+     val avs = op_subtract eq (all_vars case_tm') [a']
      val a'' = variant avs a'
-     val case_tm'' = if a'' = a' then case_tm'
-                                 else rename_case ([a' |-> a''],[]) case_tm'
+     val case_tm'' = if eq a'' a' then case_tm'
+                                  else rename_case ([a' |-> a''],[]) case_tm'
  in
    {functional = list_mk_abs ([f,a''], case_tm''),
     pats = patts3}

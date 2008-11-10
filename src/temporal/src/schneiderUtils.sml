@@ -80,7 +80,7 @@ fun FORALL_UNFREE_CONV t =
 fun FORALL_IN_CONV t = 
   if is_forall t then 
 	let val (x,f) = dest_forall t
-	 in if mem x (free_vars f) then 
+	 in if op_mem eq x (free_vars f) then 
 		((FORALL_AND_CONV t) handle HOL_ERR _=> REFL t)
 	    else FORALL_UNFREE_CONV t
 	end else 
@@ -459,7 +459,7 @@ val SELECT_UNIQUE_THM = TAC_PROOF(([],
 
 fun SELECT_UNIQUE_RULE y th1 th2 =
  let val Q=(hd o strip_conj o fst o dest_imp o snd o strip_forall o concl) th2
-    val x = (hd o (filter(C mem(free_vars Q))) o fst o strip_forall o concl)th2
+    val x = (hd o (filter(C (op_mem eq) (free_vars Q))) o fst o strip_forall o concl)th2
     val Q' = mk_abs(x,Q)
     val th1'=SUBST [(--`b:bool`--) |-> SYM (BETA_CONV (--`^Q' ^y`--))] 
                        (--`b:bool`--) th1

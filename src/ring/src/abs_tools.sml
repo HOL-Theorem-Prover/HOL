@@ -11,12 +11,14 @@ open HolKernel Parse boolLib
 local open Absyn in
 
 val add_ip =
-  let fun add_ip (c as IDENT(locn,s)) = foldl (fn (v,pt) => APP(locn,pt,v)) c (impl_of s)
+  let fun add_ip (c as IDENT(locn,s))     = foldl (fn (v,pt) => APP(locn,pt,v)) c (impl_of s)
         | add_ip (c as QIDENT (locn,t,n)) = 
              foldl (fn (v,pt) => APP(locn(*TODO:not quite*),pt,v)) c (impl_of n)
-  	| add_ip (APP(locn,Rator,Rand)) = APP(locn, add_ip Rator, add_ip Rand)
-  	| add_ip (LAM(locn,vs,body))    = LAM(locn, vs, add_ip body)
-  	| add_ip (TYPED(locn,pt,ty))    = TYPED(locn, add_ip pt ,ty)
+  	| add_ip (APP(locn,Rator,Rand))   = APP(locn, add_ip Rator, add_ip Rand)
+  	| add_ip (TYAPP(locn,Rator,Rand)) = TYAPP(locn, add_ip Rator, Rand)
+  	| add_ip (LAM(locn,vs,body))      = LAM(locn, vs, add_ip body)
+  	| add_ip (TYLAM(locn,ty,body))    = TYLAM(locn, ty, add_ip body)
+  	| add_ip (TYPED(locn,pt,ty))      = TYPED(locn, add_ip pt ,ty)
   	| add_ip pt = pt
   in add_ip
   end

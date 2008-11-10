@@ -27,7 +27,7 @@ fun set_assums asl =
 
 fun add_assums asl =
   (curr_assums := rev asl @ !curr_assums;
-   fv_ass := subtract (free_varsl asl) (!fv_ass) @ !fv_ass)
+   fv_ass := op_subtract eq (free_varsl asl) (!fv_ass) @ !fv_ass)
 ;
 
 
@@ -61,8 +61,8 @@ fun head tm =
 fun param_eq eqs0 =
  let val nm = head eqs0
      val eqs = map (snd o strip_forall) (strip_conj eqs0)
-     val fvrhs = subtract (free_varsl (map rhs eqs)) (free_varsl (map lhs eqs))
-     val pv = filter (C mem fvrhs) (!fv_ass)
+     val fvrhs = op_subtract eq (free_varsl (map rhs eqs)) (free_varsl (map lhs eqs))
+     val pv = filter (C (op_mem eq) fvrhs) (!fv_ass)
      val ty = type_of(fst(strip_comb(lhs(hd eqs))))
      val old_var = mk_var(nm, ty)
      val newvar = mk_var(nm, foldr (op -->) ty (map type_of pv))
@@ -79,21 +79,30 @@ fun new_param_definition (x,tm) = new_definition(x, param_eq tm);
  * Could be improved (both in efficiency and soundness!).
  *)
 
-fun is_defd sub v = exists (fn {redex,residue} => v=redex) sub;
+fun is_defd sub v = exists (fn {redex,residue} => eq v redex) sub;
 
 fun except_assoc x [] = raise ABS_ERR "except_assoc" ""
   | except_assoc x ((s as {redex,residue})::l) =
-      if x=redex then (residue,l)
+      if eq x redex then (residue,l)
       else
 	let val (v,nsub) = except_assoc x l in
 	(v,s::nsub)
 	end
 ;
 
+fun subst_cmp cmp {redex=a1,residue=b1} {redex=a2,residue=b2} = cmp a1 a2 andalso cmp b1 b2
+
+fun four_cmp cmp1 cmp2 cmp3 cmp4 (a1,b1,c1,d1) (a2,b2,c2,d2) =
+    cmp1 a1 a2 andalso cmp2 b1 b2 andalso cmp3 c1 c2 andalso cmp4 d1 d2
+
+(* val majo_eq = pair_cmp (list_cmp (subst_cmp eq)) equal *)
+
+val majo_eq = four_cmp (list_cmp (subst_cmp eq)) equal equal equal
+
 fun majo NONE o2 = o2
   | majo o1 NONE = o1
   | majo (SOME x1) (SOME x2) =
-      if x1=x2 then (SOME x1)
+      if majo_eq x1 x2 then (SOME x1)
       else raise ABS_ERR "under_conj"
 	  "vars were instantiated differently in conjuncts"
 ;
@@ -110,14 +119,14 @@ fun under_forall f th =
       val thm = SPECL qvars th
       val (ovars,rthm) = f thm in
   case ovars of
-    SOME (ivars,ti) =>
+    SOME (ivars,ti,ki,ri) =>
       let val (rsub,thm) =
 	foldr (fn (x,(sub,th)) =>
-	  let val (v,nsub) = except_assoc (inst ti x) sub in
-	  (nsub,SPEC v (GEN (inst ti x) th))
+	  let val (v,nsub) = except_assoc (inst_rk_kd_ty ri ki ti x) sub in
+	  (nsub,SPEC v (GEN (inst_rk_kd_ty ri ki ti x) th))
 	  end
-	  handle HOL_ERR _ => (sub,GEN (inst ti x) th)) (ivars,rthm) qvars
-      in (SOME (rsub,ti), thm)
+	  handle HOL_ERR _ => (sub,GEN (inst_rk_kd_ty ri ki ti x) th)) (ivars,rthm) qvars
+      in (SOME (rsub,ti,ki,ri), thm)
       end
   | NONE => (NONE,th)
   end
@@ -132,10 +141,10 @@ fun under_all f th =
 
 fun first_match env mfun [] = raise ABS_ERR "first_match" "no match"
   | first_match env mfun (x::l) =
-      (let val (vi,ti) = mfun x in
-      if exists (fn {redex,residue} => mem redex env) vi then
+      (let val (vi,ti,ki,ri) = mfun x in
+      if exists (fn {redex,residue} => op_mem eq redex env) vi then
 	raise ABS_ERR "" ""
-      else (vi,ti)
+      else (vi,ti,ki,ri)
       end
       handle HOL_ERR _ => first_match env mfun l)
 ;
@@ -144,12 +153,14 @@ fun first_match env mfun [] = raise ABS_ERR "first_match" "no match"
 fun inst_csts inst env tm =
   case dest_term tm of
     LAMB(Bvar,Body) => inst_csts inst (Bvar::env) Body
+  | TYLAMB(Bvar,Body) => inst_csts inst env Body
   | COMB(Rator,Rand) =>
-      (SOME (first_match env (match_term tm) inst)
+      (SOME (first_match env (kind_match_term tm) inst)
        handle HOL_ERR _ =>
 	 (case inst_csts inst env Rand of
 	   SOME i => SOME i
 	 | NONE => inst_csts inst env Rator))
+  | TYCOMB(Rator,Rand) => inst_csts inst env Rator
   | _ => NONE
 ;
 
@@ -157,13 +168,13 @@ fun inst_csts inst env tm =
 fun inst_thm inst thm =
   case inst_csts inst [] (concl thm) of
     NONE => (NONE,thm)
-  | SOME(vi,ti) => (SOME (vi,ti), INST_TYPE ti thm)
+  | SOME(vi,ti,ki,ri) => (SOME (vi,ti,ki,ri), INST_TYPE ti (INST_KIND ki (INST_RANK ri thm)))
 ;
 
 fun inst_all ctab thm =
   let val (osub,thm) = under_all (inst_thm ctab) thm in
   case osub of
-    SOME (sub,ti) =>
+    SOME (sub,ti,ki,ri) =>
       foldl (fn ({redex,residue},th) => SPEC residue (GEN redex th))
 	thm sub
   | NONE => thm
@@ -232,7 +243,7 @@ fun functor_header strm =
 fun compute_cst_arg_map (fv,impargs) strm =
   let val thcsts = map (#Name o dest_thy_const) (constants(current_theory()))
       fun is_param_cst (x,iargs) =
-        mem x thcsts andalso all (C mem fv) iargs
+        mem x thcsts andalso all (C (op_mem eq) fv) iargs
       val ptab = filter is_param_cst impargs
       val pr_var = S strm o fst o dest_var
       fun sep() = (S strm ","; NL strm; S strm "          ")

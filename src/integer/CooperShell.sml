@@ -30,9 +30,9 @@ in
   else if is_conj d1 then
     LAND_CONV congruential_simplification THENC
     RAND_CONV congruential_simplification
-  else if d1 = true_tm then
+  else if eq d1 true_tm then
     K (SPEC d2 T_or_l)
-  else if d1 = false_tm then
+  else if eq d1 false_tm then
     K (SPEC d2 F_or_l)
   else let
       val notd1_t = mk_neg d1
@@ -59,9 +59,9 @@ in
   else if is_disj c1 then
     LAND_CONV congruential_simplification THENC
     RAND_CONV congruential_simplification
-  else if c1 = true_tm then
+  else if eq c1 true_tm then
     K (SPEC c2 T_and_l)
-  else if c1 =  false_tm then
+  else if eq c1 false_tm then
     K (SPEC c2 F_and_l)
   else let
       val c2_rewritten =
@@ -147,7 +147,7 @@ fun elim_vars_round_r tm = let
   val lvars = filter (not o null o free_vars) (strip_plus l)
   val rvars = filter (not o null o free_vars) (strip_plus r)
 in
-  case intersect lvars rvars of
+  case op_intersect eq lvars rvars of
     [] => NO_CONV
   | (h::_) => phase2_CONV (hd (free_vars h))
 end tm
@@ -168,7 +168,7 @@ fun do_equality_simplifications tm = let
      terms in the middle of conjunctions and eliminate the equality from the
      neighbouring conjuncts. *)
   val (bvar, body) = dest_exists tm
-  fun eq_term tm = is_eq tm andalso lhs tm = bvar
+  fun eq_term tm = is_eq tm andalso eq (lhs tm) bvar
   fun neq_term t = eq_term (dest_neg t) handle HOL_ERR _ => false
 
   fun reveal_eq tm = let
@@ -567,7 +567,7 @@ in
       (* found a singleton divisibility constraint *)
       val v = hd vs
     in
-      push_nthvar_to_bot (index (equal v) vars) THENC
+      push_nthvar_to_bot (index (eq v) vars) THENC
       STRIP_QUANT_CONV (phase2_CONV v) THENC
       LAST_EXISTS_CONV simplify_constrained_disjunct THENC
       do_muls
@@ -580,7 +580,7 @@ in
         SOME vset => let
           fun my_constraint tm =
               is_divides tm andalso
-              canonicalise_varsets (free_vars (#2 (dest_divides tm))) = vset
+              list_cmp eq (canonicalise_varsets (free_vars (#2 (dest_divides tm)))) vset
           val (var_to_eliminate, var_to_keep) =
               find_triangle_eliminable
                 vset
@@ -610,7 +610,7 @@ in
                      end
           val (minv, _) = List.foldl min init (tl constraints)
         in
-          push_nthvar_to_bot (index (equal minv) vars) THENC
+          push_nthvar_to_bot (index (eq minv) vars) THENC
           LAST_EXISTS_CONV vphase6_CONV THENC
           push_in_exists
         end
@@ -688,7 +688,7 @@ in
         NONE => valOf (best_var vars body)
       | SOME v => v
   in
-      push_nthvar_to_bot (index (equal next_var) vars) THENC
+      push_nthvar_to_bot (index (eq next_var) vars) THENC
       LAST_EXISTS_CONV eliminate_existential THENC
       TRY_CONV push_in_exists THENC
       EVERY_DISJ_CONV (pull_out_and_recurse (length vars - 1) THENC
@@ -708,7 +708,7 @@ fun counter_example tm = let
   infix >- >> ++
   fun rule f th = (seq.result (f th, ())) handle HOL_ERR _ => seq.empty
   fun test th =
-    if (concl th = false_tm) then
+    if eq (concl th) false_tm then
       seq.result(EQF_INTRO (NOT_INTRO (DISCH tm th)),())
     else seq.empty
   fun spec n th = let

@@ -162,105 +162,6 @@ fun is_tyabs (TAbs _)  = true | is_tyabs (Clos(_,TAbs _)) = true
                               | is_tyabs _ = false;
 
 
-(*-----------------------------------------------------------------------------*
- * The kind variables of a lambda term. Tail recursive (from Ken Larsen).      *
- *-----------------------------------------------------------------------------*)
-
-local fun kdV (Fv(_,Ty)) k         = k (Type.kind_vars Ty)
-        | kdV (Bv _) k             = k []
-        | kdV (Const(_,GRND _)) k  = k []
-        | kdV (Const(_,POLY Ty)) k = k (Type.kind_vars Ty)
-        | kdV (Comb(Rator,Rand)) k = kdV Rand (fn q1 =>
-                                     kdV Rator(fn q2 => k (union q2 q1)))
-        | kdV (TComb(Rator,Ty)) k  = kdV Rator (fn q  =>
-                                         k (union q (Type.kind_vars Ty)))
-        | kdV (Abs(Bvar,Body)) k   = kdV Body (fn q1 =>
-                                     kdV Bvar (fn q2 => k (union q2 q1)))
-        | kdV (TAbs(_,Body)) k     = kdV Body k
-        | kdV (t as Clos _) k      = kdV (push_clos t) k
-      fun kdVs (t::ts) k           = kdV t (fn q1 =>
-                                     kdVs ts (fn q2 => k (union q2 q1)))
-        | kdVs [] k                = k []
-in
-fun kind_vars_in_term tm = kdV tm Lib.I
-fun kind_vars_in_terml tms = kdVs tms Lib.I
-end;
-
-(*-----------------------------------------------------------------------------*
- * The free type variables of a lambda term. Tail recursive (from Ken Larsen). *
- *-----------------------------------------------------------------------------*)
-
-local fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
-        | tyV (Bv _) k             = k []
-        | tyV (Const(_,GRND _)) k  = k []
-        | tyV (Const(_,POLY Ty)) k = k (Type.type_vars Ty)
-        | tyV (Comb(Rator,Rand)) k = tyV Rand (fn q1 =>
-                                     tyV Rator(fn q2 => k (union q2 q1)))
-        | tyV (TComb(Rator,Ty)) k  = tyV Rator (fn q  =>
-                                         k (union q (Type.type_vars Ty)))
-        | tyV (Abs(Bvar,Body)) k   = tyV Body (fn q1 =>
-                                     tyV Bvar (fn q2 => k (union q2 q1)))
-        | tyV (TAbs(_,Body)) k     = tyV Body k
-        | tyV (t as Clos _) k      = tyV (push_clos t) k
-      fun tyVs (t::ts) k           = tyV t (fn q1 =>
-                                     tyVs ts (fn q2 => k (union q2 q1)))
-        | tyVs [] k                = k []
-in
-fun type_vars_in_term tm = tyV tm Lib.I
-fun type_vars_in_terml tms = tyVs tms Lib.I
-end;
-
-(*---------------------------------------------------------------------------*
- * The free variables of a lambda term. Tail recursive (from Ken Larsen).    *
- *---------------------------------------------------------------------------*)
-
-local fun FV (v as Fv _) A k    = k (Lib.insert v A)
-        | FV (Comb(f,x)) A k    = FV f A (fn q => FV x q k)
-        | FV (TComb(f,ty)) A k  = FV f A k
-        | FV (Abs(_,Body)) A k  = FV Body A k
-        | FV (TAbs(_,Body)) A k = FV Body A k
-        | FV (t as Clos _) A k  = FV (push_clos t) A k
-        | FV _ A k = k A
-in
-fun free_vars tm = FV tm [] Lib.I
-end;
-
-(*---------------------------------------------------------------------------*
- * The free variables of a lambda term, in textual order.                    *
- *---------------------------------------------------------------------------*)
-
-fun free_vars_lr tm =
-  let fun FV ((v as Fv _)::t) A   = FV t (Lib.insert v A)
-        | FV (Bv _::t) A          = FV t A
-        | FV (Const _::t) A       = FV t A
-        | FV (Comb(M,N)::t) A     = FV (M::N::t) A
-        | FV (TComb(M,ty)::t) A   = FV (M::t) A
-        | FV (Abs(_,M)::t) A      = FV (M::t) A
-        | FV (TAbs(_,M)::t) A     = FV (M::t) A
-	| FV ((M as Clos _)::t) A = FV (push_clos M::t) A
-        | FV [] A = rev A
-  in
-     FV [tm] []
-  end;
-
-(*---------------------------------------------------------------------------*
- * The set of all variables in a term, represented as a list.                *
- *---------------------------------------------------------------------------*)
-
-local fun vars (v as Fv _) A        = Lib.insert v A
-        | vars (Comb(Rator,Rand)) A = vars Rand (vars Rator A)
-        | vars (TComb(Rator,Ty)) A  = vars Rator A
-        | vars (Abs(Bvar,Body)) A   = vars Body (vars Bvar A)
-        | vars (TAbs(_,Body)) A     = vars Body A
-	| vars (t as Clos _) A      = vars (push_clos t) A
-        | vars _ A = A
-in
-fun all_vars tm = vars tm []
-end;
-
-fun free_varsl tm_list = itlist (union o free_vars) tm_list []
-fun all_varsl tm_list  = itlist (union o all_vars) tm_list [];
-
 (*---------------------------------------------------------------------------
      Support for efficient sets of variables
  ---------------------------------------------------------------------------*)
@@ -323,6 +224,189 @@ fun compare p =
 
 val empty_tmset = HOLset.empty compare
 fun term_eq t1 t2 = compare(t1,t2) = EQUAL
+
+
+(*---------------------------------------------------------------------------*
+ *               Primitive equality of terms                                 *
+ *     This does NOT include alpha-equivalence, OR                           *
+ *     deep beta conversion of types.    This discriminates between terms    *
+ *     which are equal but for beta-equivalence of types.                    *
+ *---------------------------------------------------------------------------*)
+
+local val EQ = Portable.pointer_eq
+fun thety (GRND ty) = ty
+  | thety (POLY ty) = ty
+in
+fun prim_eq t1 t2 = EQ(t1,t2) orelse
+ case(t1,t2)
+  of (Fv(M,a),Fv(N,b)) => M=N andalso aconv_ty a b
+   | (Bv i,Bv j) => i=j
+   | (Const(M,a),Const(N,b)) => M=N andalso aconv_ty (thety a) (thety b)
+   | (Comb(M,N),Comb(P,Q)) => prim_eq N Q andalso prim_eq M P
+   | (TComb(M,a),TComb(N,b)) => aconv_ty a b andalso prim_eq M N
+   | (Abs(u,M),Abs(v,N)) => prim_eq u v andalso prim_eq M N
+   | (TAbs(tyv1,M),TAbs(tyv2,N)) => tyv1 = tyv2 andalso prim_eq M N
+   | (Clos(e1,b1),Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
+                                  orelse prim_eq (push_clos t1) (push_clos t2)
+   | (Clos _, _) => prim_eq (push_clos t1) t2
+   | (_, Clos _) => prim_eq t1 (push_clos t2)
+   | otherwise   => false
+end;
+
+
+(*---------------------------------------------------------------------------*
+ *                  Equality of terms                                        *
+ *     This does NOT include alpha-equivalence, but                          *
+ *     DOES include deep beta conversion of types.                           *
+ *     This discriminates between unequal but alpha-equivalent terms.        *
+ *---------------------------------------------------------------------------*)
+
+local val EQ = Portable.pointer_eq
+fun thety (GRND ty) = ty
+  | thety (POLY ty) = ty
+in
+fun eq t1 t2 = EQ(t1,t2) orelse
+ case(t1,t2)
+  of (Fv(M,a),Fv(N,b)) => M=N andalso abconv_ty a b
+   | (Bv i,Bv j) => i=j
+   | (Const(M,a),Const(N,b)) => M=N andalso abconv_ty (thety a) (thety b)
+   | (Comb(M,N),Comb(P,Q)) => eq N Q andalso eq M P
+   | (TComb(M,a),TComb(N,b)) => abconv_ty a b andalso eq M N
+   | (Abs(u,M),Abs(v,N)) => eq u v andalso eq M N
+   | (TAbs(tyv1,M),TAbs(tyv2,N)) => tyv1 = tyv2 andalso eq M N
+   | (Clos(e1,b1),Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
+                                  orelse eq (push_clos t1) (push_clos t2)
+   | (Clos _, _) => eq (push_clos t1) t2
+   | (_, Clos _) => eq t1 (push_clos t2)
+   | otherwise   => false
+end;
+
+
+(*---------------------------------------------------------------------------*
+ *                  Alpha conversion                                         *
+ *     This includes deep beta conversion of types.                          *
+ *---------------------------------------------------------------------------*)
+
+local val EQ = Portable.pointer_eq
+fun thety (GRND ty) = ty
+  | thety (POLY ty) = ty
+in
+fun aconv t1 t2 = EQ(t1,t2) orelse
+ case(t1,t2)
+  of (Fv(M,a),Fv(N,b)) => M=N andalso abconv_ty a b
+   | (Bv i,Bv j) => i=j
+   | (Const(M,a),Const(N,b)) => M=N andalso abconv_ty (thety a) (thety b)
+   | (Comb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
+   | (TComb(M,a),TComb(N,b)) => abconv_ty a b andalso aconv M N
+   | (Abs(Fv(_,a),M),Abs(Fv(_,b),N)) => abconv_ty a b andalso aconv M N
+   | (TAbs((_,k1,r1),M),TAbs((_,k2,r2),N)) => k1=k2 andalso r1=r2 andalso aconv M N
+   | (Clos(e1,b1),Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
+                                  orelse aconv (push_clos t1) (push_clos t2)
+   | (Clos _, _) => aconv (push_clos t1) t2
+   | (_, Clos _) => aconv t1 (push_clos t2)
+   | otherwise   => false
+end;
+
+
+(*-----------------------------------------------------------------------------*
+ * The kind variables of a lambda term. Tail recursive (from Ken Larsen).      *
+ *-----------------------------------------------------------------------------*)
+
+local fun kdV (Fv(_,Ty)) k         = k (Type.kind_vars Ty)
+        | kdV (Bv _) k             = k []
+        | kdV (Const(_,GRND _)) k  = k []
+        | kdV (Const(_,POLY Ty)) k = k (Type.kind_vars Ty)
+        | kdV (Comb(Rator,Rand)) k = kdV Rand (fn q1 =>
+                                     kdV Rator(fn q2 => k (union q2 q1)))
+        | kdV (TComb(Rator,Ty)) k  = kdV Rator (fn q  =>
+                                         k (union q (Type.kind_vars Ty)))
+        | kdV (Abs(Bvar,Body)) k   = kdV Body (fn q1 =>
+                                     kdV Bvar (fn q2 => k (union q2 q1)))
+        | kdV (TAbs(_,Body)) k     = kdV Body k
+        | kdV (t as Clos _) k      = kdV (push_clos t) k
+      fun kdVs (t::ts) k           = kdV t (fn q1 =>
+                                     kdVs ts (fn q2 => k (union q2 q1)))
+        | kdVs [] k                = k []
+in
+fun kind_vars_in_term tm = kdV tm Lib.I
+fun kind_vars_in_terml tms = kdVs tms Lib.I
+end;
+
+(*-----------------------------------------------------------------------------*
+ * The free type variables of a lambda term. Tail recursive (from Ken Larsen). *
+ *-----------------------------------------------------------------------------*)
+
+local fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
+        | tyV (Bv _) k             = k []
+        | tyV (Const(_,GRND _)) k  = k []
+        | tyV (Const(_,POLY Ty)) k = k (Type.type_vars Ty)
+        | tyV (Comb(Rator,Rand)) k = tyV Rand (fn q1 =>
+                                     tyV Rator(fn q2 => k (union q2 q1)))
+        | tyV (TComb(Rator,Ty)) k  = tyV Rator (fn q  =>
+                                         k (union q (Type.type_vars Ty)))
+        | tyV (Abs(Bvar,Body)) k   = tyV Body (fn q1 =>
+                                     tyV Bvar (fn q2 => k (union q2 q1)))
+        | tyV (TAbs(_,Body)) k     = tyV Body k
+        | tyV (t as Clos _) k      = tyV (push_clos t) k
+      fun tyVs (t::ts) k           = tyV t (fn q1 =>
+                                     tyVs ts (fn q2 => k (union q2 q1)))
+        | tyVs [] k                = k []
+in
+fun type_vars_in_term tm = tyV tm Lib.I
+fun type_vars_in_terml tms = tyVs tms Lib.I
+end;
+
+(*---------------------------------------------------------------------------*
+ * The free variables of a lambda term. Tail recursive (from Ken Larsen).    *
+ *---------------------------------------------------------------------------*)
+
+local fun FV (v as Fv _) A k    = k (Lib.op_insert eq v A)
+        | FV (Comb(f,x)) A k    = FV f A (fn q => FV x q k)
+        | FV (TComb(f,ty)) A k  = FV f A k
+        | FV (Abs(_,Body)) A k  = FV Body A k
+        | FV (TAbs(_,Body)) A k = FV Body A k
+        | FV (t as Clos _) A k  = FV (push_clos t) A k
+        | FV _ A k = k A
+in
+fun free_vars tm = FV tm [] Lib.I
+end;
+
+(*---------------------------------------------------------------------------*
+ * The free variables of a lambda term, in textual order.                    *
+ *---------------------------------------------------------------------------*)
+
+fun free_vars_lr tm =
+  let fun FV ((v as Fv _)::t) A   = FV t (Lib.op_insert eq v A)
+        | FV (Bv _::t) A          = FV t A
+        | FV (Const _::t) A       = FV t A
+        | FV (Comb(M,N)::t) A     = FV (M::N::t) A
+        | FV (TComb(M,ty)::t) A   = FV (M::t) A
+        | FV (Abs(_,M)::t) A      = FV (M::t) A
+        | FV (TAbs(_,M)::t) A     = FV (M::t) A
+	| FV ((M as Clos _)::t) A = FV (push_clos M::t) A
+        | FV [] A = rev A
+  in
+     FV [tm] []
+  end;
+
+(*---------------------------------------------------------------------------*
+ * The set of all variables in a term, represented as a list.                *
+ *---------------------------------------------------------------------------*)
+
+local fun vars (v as Fv _) A        = Lib.op_insert eq v A
+        | vars (Comb(Rator,Rand)) A = vars Rand (vars Rator A)
+        | vars (TComb(Rator,Ty)) A  = vars Rator A
+        | vars (Abs(Bvar,Body)) A   = vars Body (vars Bvar A)
+        | vars (TAbs(_,Body)) A     = vars Body A
+	| vars (t as Clos _) A      = vars (push_clos t) A
+        | vars _ A = A
+in
+fun all_vars tm = vars tm []
+end;
+
+fun free_varsl tm_list = itlist (op_union eq o free_vars) tm_list []
+fun all_varsl tm_list  = itlist (op_union eq o all_vars) tm_list [];
+
 
 (*---------------------------------------------------------------------------
         Free variables of a term. Tail recursive. Returns a set.
@@ -587,11 +671,6 @@ fun dest_var (Fv v) = v
   | dest_var _ = raise ERR "dest_var" "not a var"
 
 
-(*---------------------------------------------------------------------------*
- *                  Alpha conversion                                         *
- *     This includes deep beta conversion of types.                          *
- *---------------------------------------------------------------------------*)
-
 fun rename_bvar s t =
     case t of
       Abs(Fv(_, Ty), Body) => Abs(Fv(s,Ty), Body)
@@ -603,32 +682,6 @@ fun rename_btyvar s t =
       TAbs((_, Kd, Rk), Body) => TAbs((s, Kd, Rk), Body)
     | Clos(_, TAbs _) => rename_btyvar s (push_clos t)
     | _ => raise ERR "rename_btyvar" "not a type abstraction";
-
-
-local val EQ = Portable.pointer_eq
-in
-fun aconv t1 t2 = EQ(t1,t2) orelse
- case(t1,t2)
-  of (Fv(M,ty1),Fv(N,ty2)) => M=N andalso abconv_ty ty1 ty2
-   | (Const(M,GRND ty1),Const(N,GRND ty2)) => M=N andalso abconv_ty ty1 ty2
-   | (Const(M,POLY ty1),Const(N,POLY ty2)) => M=N andalso abconv_ty ty1 ty2
-   | (Const(M,GRND ty1),Const(N,POLY ty2)) => M=N andalso abconv_ty ty1 ty2
-   | (Const(M,POLY ty1),Const(N,GRND ty2)) => M=N andalso abconv_ty ty1 ty2
-(* | (Const _,Const _) => false *) (* This line should replace the two above; POLY computation faulty. *)
-   | (Comb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
-   | (TComb(M,ty1),TComb(P,ty2)) => abconv_ty ty1 ty2 andalso aconv M P
-   | (Abs(Fv(_,ty1),M),
-      Abs(Fv(_,ty2),N)) => abconv_ty ty1 ty2 andalso aconv M N
-   | (TAbs((_,k1,r1),M),
-      TAbs((_,k2,r2),N)) => k1=k2 andalso r1=r2 andalso aconv M N
-   | (Clos(e1,b1),
-      Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
-                       orelse aconv (push_clos t1) (push_clos t2)
-   | (Clos _, _) => aconv (push_clos t1) t2
-   | (_, Clos _) => aconv t1 (push_clos t2)
-   | (M,N)       => (M=N)
-end;
-
 
 (*---------------------------------------------------------------------------*
  *        Beta-reduction. Non-renaming.                                      *
@@ -1482,7 +1535,7 @@ local
     | free (t as Clos _) n m      = free (push_clos t) n m
   fun lookup x ids =
    let fun look [] = if HOLset.member(ids,x) then SOME x else NONE
-         | look ({redex,residue}::t) = if x=redex then SOME residue else look t
+         | look ({redex,residue}::t) = if eq x redex then SOME residue else look t
    in look end
   fun bound_by_scope scoped M = if scoped then not (free M 0 0) else false
   val kdmatch = Kind.raw_match_kind

@@ -20,8 +20,14 @@ val BAG_AC_ss = simpLib.SSFRAG {name=SOME"BAG_AC",
 fun remove x [] = raise ERR "remove" "no such element"
   | remove x (y::xs) = if x = y then xs else y::(remove x xs)
 
+fun op_remove cmp x [] = raise ERR "op_remove" "no such element"
+  | op_remove cmp x (y::xs) = if cmp x y then xs else y::(op_remove cmp x xs)
+
 fun remove_list [] l2 = l2
   | remove_list (x::xs) l2 = remove_list xs (remove x l2)
+
+fun op_remove_list cmp [] l2 = l2
+  | op_remove_list cmp (x::xs) l2 = op_remove_list cmp xs (op_remove cmp x l2)
 
 fun buac_prover ty = let
   fun type_inst ty = INST_TYPE [alpha |-> ty]
@@ -50,13 +56,13 @@ fun CANCEL_CONV tm = let
   val arg1_ts = strip_union arg1 and arg2_ts = strip_union arg2
   fun common [] _ = []  (* like intersect but no setifying *)
     | common _ [] = []
-    | common (x::xs) y = x::common xs (remove x y)
+    | common (x::xs) y = x::common xs (op_remove eq x y)
     handle _ => common xs y
   val common_part = common arg1_ts arg2_ts
   val _ = not (null common_part) orelse
     raise ERR "CANCEL_CONV" "No common parts to eliminate"
-  val rem1 = remove_list common_part arg1_ts
-  val rem2 = remove_list common_part arg2_ts
+  val rem1 = op_remove_list eq common_part arg1_ts
+  val rem2 = op_remove_list eq common_part arg2_ts
   val cpt = list_mk_union common_part
   val ac1 = mk_eq(arg1, if null rem1 then cpt
                         else mk_union (cpt, list_mk_union rem1))

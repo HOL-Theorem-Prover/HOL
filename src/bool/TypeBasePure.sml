@@ -817,8 +817,8 @@ fun mk_case2 v (exp, plist) =
              | mk_switch ((p,R)::rst) =
                   mk_bool_case(R, mk_switch rst, mk_eq(v,p))
            val switch = mk_switch plist
-       in if v = exp then switch
-                     else mk_literal_case(mk_abs(v,switch),exp)
+       in if eq v exp then switch
+                      else mk_literal_case(mk_abs(v,switch),exp)
        end;
 
 fun mk_case tybase (exp, plist) =
@@ -902,15 +902,15 @@ local fun dest tybase (pat,rhs) =
                      val pat0 = if is_var v then subst [v |-> e] pat
                                 else e (* fails if pat ~= v *)
                   (* val theta = #1 (kind_match_term v e) handle HOL_ERR _ => [] *)
-                  in if null (subtract fvs patvars)
+                  in if null (op_subtract eq fvs patvars)
                   (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
                      then flatten (map (dest tybase)
                                        (zip [pat0, pat] rhsides))
                      else [(pat,rhs)]
                   end
              else let val fvs = free_vars exp
-                  in if null (subtract fvs patvars) andalso
-                        null_intersection fvs (free_varsl rhsides)
+                  in if null (op_subtract eq fvs patvars) andalso
+                        null (op_intersect eq fvs (free_varsl rhsides))
                      then flatten
                             (map (dest tybase)
                                (zip (map (fn p =>

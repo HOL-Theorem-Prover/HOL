@@ -295,8 +295,8 @@ fun CONJ_CONV th term = let
     val ((lhs,rhs),substh) = th_convert th
     val thm_conjs = strip_conj lhs
     val trm_conjs = strip_conj term in
-    if (List.all (C mem trm_conjs) thm_conjs) then let
-       val newterm_conjs = filter (not o C mem thm_conjs) trm_conjs
+    if (List.all (C (op_mem eq) trm_conjs) thm_conjs) then let
+       val newterm_conjs = filter (not o C (op_mem eq) thm_conjs) trm_conjs
        fun conjwithnew trm =
             if null newterm_conjs then
                trm
@@ -318,7 +318,7 @@ local
           inst' subst (SPEC v th) (v::acc)
       end
     else
-      let val vs = set_diff acc (map #redex subst)
+      let val vs = op_set_diff eq acc (map #redex subst)
       in
           GENL (rev vs) (INST subst th)
            handle
@@ -391,7 +391,7 @@ fun lastn n list =
 fun myEXISTS t th =
   let val (var,body) = dest_exists t
       val (mtch,_) = match_term body (concl th)
-      val inst = valOf(subst_assoc (equal var) mtch)
+      val inst = valOf(subst_assoc (eq var) mtch)
   in
       EXISTS (t,inst) th
   end
@@ -466,8 +466,8 @@ fun AP_TAC (asl, g) =
       val (rf, ra) = dest_comb rhs handle _ =>
                        failwith "AP_TAC" "rhs must be an application"
   in
-      if (lf = rf) then AP_TERM_TAC (asl, g) else
-      if (la = ra) then AP_THM_TAC (asl, g) else
+      if (eq lf rf) then AP_TERM_TAC (asl, g) else
+      if (eq la ra) then AP_THM_TAC (asl, g) else
       failwith "AP_TAC" "One of function or argument must be equal"
   end
 val APn_TAC = REPEAT AP_TAC;
@@ -543,8 +543,8 @@ val ELIM1_TAC =
       fun elim_refl thm =
         let val con = concl thm
         in
-            if (is_eq con andalso (rhs con) = (lhs con)) orelse
-               (con = concl TRUTH) then
+            if (is_eq con andalso eq (rhs con) (lhs con)) orelse
+               (eq con (concl TRUTH)) then
                UNDISCH_TAC con THEN DISCH_THEN (K ALL_TAC)
             else
                NO_TAC
@@ -698,7 +698,7 @@ local
          val dest        = get_quant_dest term
          val (qvar, bdy) = dest term                and
              newf        = f o RAND_CONV o ABS_CONV in
-         if (var = qvar) then
+         if (eq var qvar) then
             if (pos = 1) then
                if (null postl) then
                   (Found (term,(f,pf)), pinfo)
@@ -774,7 +774,7 @@ in
             else
               failwith "rmqvar" "Needs to be a quantified term"
       in
-          if (mem qvar (free_vars body)) then
+          if (op_mem eq qvar (free_vars body)) then
             failwith "rmqvar" "Variable can't be free in body"
           else
             prove((--`^t = ^body`--), tac)
@@ -901,36 +901,36 @@ in
   fun move_conj_right conj term = let
       val (lhs,rhs) = imp_convert term
       val conjs = strip_conj lhs
-      val (rest,newconjs) = partition (curry op= conj) conjs in
+      val (rest,newconjs) = partition (eq conj) conjs in
       if (null rest) then
          failwith "move_conj_right" "Must specify an existing conjunct"
       else let
         val newlhs = if null newconjs then (--`T`--)
                                       else list_mk_conj newconjs
         val neg_c  = neg_version conj
-        val newrhs = if rhs = (--`F`--) then neg_c
-                                        else (--`^neg_c \/ ^rhs`--)
+        val newrhs = if eq rhs (--`F`--) then neg_c
+                                         else (--`^neg_c \/ ^rhs`--)
         val newimp =
-             if newlhs = (--`T`--) then newrhs
-                                   else (--`^newlhs ==> ^newrhs`--) in
+             if eq newlhs (--`T`--) then newrhs
+                                    else (--`^newlhs ==> ^newrhs`--) in
         prove((--`^term = ^newimp`--), tautLib.TAUT_TAC)
       end
   end;
   fun move_disj_left disj term = let
       val (lhs,rhs) = imp_convert term
       val disjs = strip_disj rhs
-      val (rest,newdisjs) = partition (curry op= disj) disjs in
+      val (rest,newdisjs) = partition (eq disj) disjs in
       if (null rest) then
          failwith "move_disj_left" "Must specify an existing disjunct"
       else let
         val neg_d = neg_version disj
-        val newlhs = if lhs = (--`T`--) then neg_d
-                                        else (--`^neg_d /\ ^lhs`--)
+        val newlhs = if eq lhs (--`T`--) then neg_d
+                                         else (--`^neg_d /\ ^lhs`--)
         val newrhs = if null newdisjs then (--`F`--)
                                       else list_mk_disj newdisjs
         val newimp =
-            if newrhs = (--`F`--) then mk_neg newlhs
-                                  else (--`^newlhs ==> ^newrhs`--) in
+            if eq newrhs (--`F`--) then mk_neg newlhs
+                                   else (--`^newlhs ==> ^newrhs`--) in
         prove((--`^term = ^newimp`--), tautLib.TAUT_TAC)
       end
   end;

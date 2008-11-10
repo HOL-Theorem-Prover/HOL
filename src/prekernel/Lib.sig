@@ -59,6 +59,10 @@ sig
   val rev_assoc     : ''a -> ('b * ''a) list -> 'b
   val assoc1        : ''a -> (''a * 'b) list -> (''a * 'b) option
   val assoc2        : ''a -> ('b * ''a) list -> ('b * ''a) option
+  val op_assoc      : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b
+  val op_rev_assoc  : ('a -> 'a -> bool) -> 'a -> ('b * 'a) list -> 'b
+  val op_assoc1     : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> ('a * 'b) option
+  val op_assoc2     : ('a -> 'a -> bool) -> 'a -> ('b * 'a) list -> ('b * 'a) option
   val appi          : (int -> 'a -> unit) -> 'a list -> unit
   val mapi          : (int -> 'a -> 'b) -> 'a list -> 'b list
 
@@ -76,13 +80,17 @@ sig
   val intersect     : ''a list -> ''a list -> ''a list
   val null_intersection : ''a list -> ''a list -> bool
   val set_eq        : ''a list -> ''a list -> bool
+  val pair_cmp      : ('a -> 'c -> bool) -> ('b -> 'd -> bool) -> 'a * 'b -> 'c * 'd -> bool
+  val list_cmp      : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
   val op_mem        : ('a -> 'a -> bool) -> 'a -> 'a list -> bool
   val op_insert     : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list
   val op_union      : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
   val op_mk_set     : ('a -> 'a -> bool) -> 'a list -> 'a list
   val op_U          : ('a -> 'a -> bool) -> 'a list list -> 'a list
   val op_intersect  : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
+  val op_subtract   : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
   val op_set_diff   : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
+  val op_set_eq     : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
   val for           : int -> int -> (int -> 'a) -> 'a list
   val for_se        : int -> int -> (int -> unit) -> unit
   val int_to_string : int -> string

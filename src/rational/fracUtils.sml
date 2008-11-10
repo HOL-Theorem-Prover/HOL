@@ -23,14 +23,15 @@ fun dest_frac (t1:term) =
 		let
 			val (top_rator, top_rand) = dest_comb t1;
 		in
-			if top_rator=``abs_frac`` then
+			if eq top_rator ``abs_frac`` then
 				let
 					val (this_nmr, this_dnm) = dest_pair (top_rand);
 				in
 					(``abs_frac``,[this_nmr,this_dnm])
 				end
 			else
-				if top_rator=``frac_ainv`` orelse top_rator=``frac_minv`` orelse top_rator=``rep_rat`` then
+				if eq top_rator ``frac_ainv`` orelse eq top_rator ``frac_minv``
+                                                              orelse eq top_rator ``rep_rat`` then
 					(top_rator, [top_rand])
 				else
 					let
@@ -73,10 +74,10 @@ fun extract_abs_frac (t1:term) =
 		let
 			val (top_rator, top_rand) = dest_comb t1;
 		in
-			if top_rator = ``abs_frac`` then
+			if eq top_rator ``abs_frac`` then
 				[t1]
 			else
-				list_merge (extract_abs_frac top_rator) (extract_abs_frac top_rand)
+				op_list_merge eq (extract_abs_frac top_rator) (extract_abs_frac top_rand)
 		end
 	else
 		[];
@@ -91,19 +92,23 @@ fun extract_abs_frac (t1:term) =
  *  extract_frac_fun : term list -> term -> (term * term * term) list
  *--------------------------------------------------------------------------*)
 
+fun triple_cmp cmp1 cmp2 cmp3 (a1,b1,c1) (a2,b2,c2) =
+    cmp1 a1 a2 andalso cmp2 b1 b2 andalso cmp3 c1 c2
+
 fun extract_frac_fun (l2:term list) (t1:term) =
   if is_comb t1 then
     let
       val (top_rator, top_rand) = dest_comb t1;
     in
-      if (in_list l2 top_rator) andalso is_comb top_rand then
+      if (op_in_list eq l2 top_rator) andalso is_comb top_rand then
         let
           val (second_rator, second_rand) = dest_comb top_rand;
         in
-          if second_rator = ``abs_frac`` then
+          if eq second_rator ``abs_frac`` then
             let
               val (this_nmr, this_dnm) = dest_pair (second_rand);
-              val sub_fracs = list_merge (extract_frac_fun l2 this_nmr) (extract_frac_fun l2 this_dnm)
+              val sub_fracs = op_list_merge (triple_cmp eq eq eq)
+                                            (extract_frac_fun l2 this_nmr) (extract_frac_fun l2 this_dnm)
             in
                 [(top_rator,this_nmr,this_dnm)] @ sub_fracs
             end
@@ -111,7 +116,8 @@ fun extract_frac_fun (l2:term list) (t1:term) =
             extract_frac_fun l2 top_rand
         end
       else (* not (top_rator = l2 andalso is_comb top_rand) *)
-        list_merge (extract_frac_fun l2 top_rator) (extract_frac_fun l2 top_rand)
+        op_list_merge (triple_cmp eq eq eq)
+                      (extract_frac_fun l2 top_rator) (extract_frac_fun l2 top_rand)
     end
   else (* not is_comb t1 *)
     [];

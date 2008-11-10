@@ -169,7 +169,7 @@ fun C_MATCH_MP2 imp th1 th2 =
 fun REWRITE_THM th = REWRITE_TAC[th];
 
 val rec UNDISCH_ALL_TAC :tactic = fn (asl,gl) =>
-        if asl = [] then ALL_TAC (asl,gl)
+        if null asl then ALL_TAC (asl,gl)
         else (UNDISCH_TAC (hd asl)
               THEN UNDISCH_ALL_TAC) (asl,gl);
 
@@ -598,6 +598,9 @@ fun check_equiv th =
 fun distinct [] = true
   | distinct (x::xs) = not (mem x xs) andalso distinct xs
 
+fun op_distinct cmp [] = true
+  | op_distinct cmp (x::xs) = not (op_mem cmp x xs) andalso op_distinct cmp xs
+
 fun dest_EQUIV_cond tm =
             let val (vrs, body) = strip_forall tm
                 val {ant, conseq} = Rsyntax.dest_imp body
@@ -623,9 +626,9 @@ fun check_tyop_equiv th =
    let val (taus, Rs, uncond_tm) = strip_EQUIV_cond (concl th)
        val _ = assert (all is_vartype) taus
        val _ = assert distinct taus
-       val _ = assert distinct Rs
+       val _ = assert (op_distinct eq) Rs
    in
-       Term.free_vars (concl th) = [] andalso
+       null (Term.free_vars (concl th)) andalso
        is_match_term equiv_tm uncond_tm  orelse raise Match
    end
    handle e => raise HOL_ERR {
@@ -642,7 +645,7 @@ fun dest_QUOTIENT_cond tm =
                 val (Q, R_abs_rep) = strip_comb ant
                 val Qname = #Name (Rsyntax.dest_const Q)
                 val _ = assert (curry op = "QUOTIENT") Qname
-                val _ = assert (curry op = vrs) R_abs_rep
+                val _ = assert (list_cmp eq vrs) R_abs_rep
                 val _ = assert (curry op = 3) (length R_abs_rep)
                 val R = el 1 R_abs_rep
                 val abs = el 2 R_abs_rep
@@ -667,9 +670,9 @@ fun check_tyop_quotient th =
                                            strip_QUOTIENT_cond (concl th)
        val _ = assert (all is_vartype) (append taus ksis)
        val _ = assert distinct (append taus ksis)
-       val _ = assert distinct (append (append Rs abss) reps)
+       val _ = assert (op_distinct eq) (append (append Rs abss) reps)
    in
-       Term.free_vars (concl th) = [] andalso
+       null (Term.free_vars (concl th)) andalso
        is_match_term quotient_tm uncond_tm  orelse raise Match
    end
    handle e => raise HOL_ERR {
@@ -1726,7 +1729,7 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
         let val get_func = fst o strip_comb o rand o rator
                             o find_base o snd o strip_forall o concl
             val rfuncs = map get_func respects
-            val missing = subtract funcs rfuncs
+            val missing = op_subtract eq funcs rfuncs
             fun check_not_rep_ty margty = if is_rep_ty margty then raise Match
                                                               else ()
 
@@ -1855,10 +1858,10 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
         fun RAISE_ONE_RSP th =
           let val (left,right) = ((rand ## I) o Psyntax.dest_comb o concl) th
               val lx = rand left and rx = rand right
-              val _ = assert not (lx = rx)
+              val _ = assert not (eq lx rx)
               (* Normal case where lx and rx are different variables *)
-              val asm = first (fn asm => rand asm = rx andalso
-                                         rand (rator asm) = lx) (hyp th)
+              val asm = first (fn asm => eq (rand asm) rx andalso
+                                         eq (rand (rator asm)) lx) (hyp th)
               val th1 = GEN lx (GEN rx (DISCH asm th))
           in
               REWRITE_RULE[FUN_REL_EQ]
@@ -1869,10 +1872,10 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
              and not of a type being lifted; improper but common user error *)
           let val (left,right) = ((rand ## I) o Psyntax.dest_comb o concl) th
               val lx = rand left and rx = rand right
-              val _ = assert (curry op = lx) rx
+              val _ = assert (eq lx) rx
               val _ = assert (not o is_rep_ty o type_of) rx
               val tm = concl th and asl = hyp th
-              val free = mk_set (free_vars tm @ flatten (map free_vars asl))
+              val free = op_mk_set eq (free_vars tm @ flatten (map free_vars asl))
               val ry = Term.variant free rx
               val asm = mk_eq{lhs=lx, rhs=ry}
               val th1 = CONV_RULE (RAND_CONV (RAND_CONV
@@ -1938,8 +1941,8 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
                     val ty1n = if String.size ty1n > 0 then ty1n else "z"
                     val xn = String.substring(ty1n,0,1)
                     val asl = hyp def
-                    val free = mk_set (free_vars df @
-                                       flatten (map free_vars asl))
+                    val free = op_mk_set eq (free_vars df @
+                                             flatten (map free_vars asl))
                     val x = Term.variant free (mk_var{Name=xn, Ty=ty1})
                     val lx = mk_comb{Rator=l, Rand=x}
                     val rb = if is_abs_ty (type_of r) then rand r else r
@@ -2048,7 +2051,7 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
               val {lhs,rhs} = dest_eq tm
               val a1 = if is_comb lhs then (hd o snd o strip_comb) lhs
                                       else lhs
-              fun is_a1 b = (b = a1 orelse (is_comb b andalso rand b = a1))
+              fun is_a1 b = (eq b a1 orelse (is_comb b andalso eq (rand b) a1))
               val tm1 = if exists is_a1 ((snd o strip_comb) rhs)
                           then rhs
                           else (#Rand o dest_comb) rhs
@@ -2279,7 +2282,7 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
                         }
                 in if is_rep_ty ty
                    then if mem (#Name(dest_const tm)) ("respects" :: RELnms @ tyop_RELnms)
-                                orelse mem tm newdeffuncs
+                                orelse op_mem eq tm newdeffuncs
                              then []
                         else      if not (exists (match_higher_th tm) ho_polywfs) then raise (err1())
                              else if not (match_higher_df tm) then raise (err2())
@@ -2561,7 +2564,7 @@ corresponding quotient theorem antecedents are resolvable.
                 val {lhs=lhs2,rhs=rhs2} = (dest_eq o snd o strip_forall) tm2
                 val a1 = if is_comb lhs2 then (hd o snd o strip_comb) lhs2
                                          else lhs2
-                fun is_a1 b = (b = a1 orelse (is_comb b andalso rand b = a1))
+                fun is_a1 b = (eq b a1 orelse (is_comb b andalso eq (rand b) a1))
                 val tm3 = if exists is_a1 ((snd o strip_comb) rhs2)
                              then rhs2
                              else (#Rand o dest_comb) rhs2
@@ -2617,7 +2620,7 @@ R2 (f[x']) (g[y']).
                 val {Rator=R, Rand=f} = dest_comb Rf
                 val _ = assert is_abs f
                 val _ = assert is_abs g
-                val free = mk_set (free_vars f @ flatten (map free_vars asl))
+                val free = op_mk_set eq (free_vars f @ flatten (map free_vars asl))
                 val x = Term.variant     free  (#Bvar (dest_abs f))
                 val y = Term.variant (x::free) (#Bvar (dest_abs g))
                 val (Rop, Rargs) = strip_comb R
@@ -3062,7 +3065,7 @@ R2 (f[x']) (g[y']).
               else if (is_var opp andalso length tms > 0
                                   andalso is_rep_ty ty) then
                    mkrep(mkabs(list_mk_comb(opp,tms)))
-              else if tms = [] then opp
+              else if null tms then opp
               else list_mk_comb(opp, tms)
             end
 
@@ -3386,7 +3389,7 @@ R2 (f[x']) (g[y']).
                let val tm = concl th
                    val tm' = regularize tm
                in
-                  if tm = tm' then th
+                  if eq tm tm' then th
                   else
                     (* REGULARIZE th *)
                     let
@@ -3525,7 +3528,7 @@ R2 (f[x']) (g[y']).
                             val tm = concl thr
                             val tys = mk_set (findalltys tm)
                             val _ = check_quotient_tys (tys_quot_ths @ tyop_ty_ths) tys
-                            val ops = mk_set (findops tm)
+                            val ops = op_mk_set eq (findops tm)
                             val abs = mk_set (findabs tm)
                             val aps = mk_set (findaps tm)
                             val DEF_OPs = ADD_HIGHER_DEFS (map MK_DEF_OP ops)
@@ -3568,23 +3571,23 @@ fun check_respects_tm tm =
                 in (strip_conj ant, conseq) end
           else ([],body)
        val ant_args = map (fn ant => (rand (rator ant), rand ant)) ants
-       val _ = assert distinct (uncurry append (unzip ant_args))
+       val _ = assert (op_distinct eq) (uncurry append (unzip ant_args))
        val ((Rc,t1),t2) = ((Psyntax.dest_comb ## I) o Psyntax.dest_comb) base
        val (c1,args1) = strip_comb t1
        val (c2,args2) = strip_comb t2
-       val _ = assert (curry op = c1) c2
-       val _ = assert distinct args1
-       val _ = assert distinct args2
+       val _ = assert (eq c1) c2
+       val _ = assert (op_distinct eq) args1
+       val _ = assert (op_distinct eq) args2
        val argpairs = zip args1 args2
        fun check_arg (a12 as (a1,a2)) =
-               ((mem a12 ant_args andalso mem a1 vrs andalso mem a2 vrs
-                 orelse (a1 = a2))
+               ((op_mem (pair_cmp eq eq) a12 ant_args andalso op_mem eq a1 vrs andalso op_mem eq a2 vrs
+                 orelse (eq a1 a2))
                  andalso type_of a1 = type_of a2)
        fun check_ant (ant12 as (ant1,ant2)) =
-                (mem ant12 argpairs
-                 andalso mem ant1 vrs andalso mem ant2 vrs
+                (op_mem (pair_cmp eq eq) ant12 argpairs
+                 andalso op_mem eq ant1 vrs andalso op_mem eq ant2 vrs
                  andalso type_of ant1 = type_of ant2)
-       fun check_var vr = mem vr args1 orelse mem vr args2
+       fun check_var vr = op_mem eq vr args1 orelse op_mem eq vr args2
    in
        all check_arg argpairs  andalso  all check_ant ant_args
        andalso  all check_var vrs
@@ -3592,7 +3595,7 @@ fun check_respects_tm tm =
    end;
 
 fun check_respects th =
-   Term.free_vars (concl th) = [] andalso
+   null (Term.free_vars (concl th)) andalso
    check_respects_tm (concl th)
    handle e => raise HOL_ERR {
                         origin_structure = "quotient",
@@ -3612,9 +3615,9 @@ fun check_poly_respects th =
                                            strip_QUOTIENT_cond (concl th)
        val _ = assert (all is_vartype) (append taus ksis)
        val _ = assert distinct (append taus ksis)
-       val _ = assert distinct (append (append Rs abss) reps)
+       val _ = assert (op_distinct eq) (append (append Rs abss) reps)
    in
-       Term.free_vars (concl th) = [] andalso
+       null (Term.free_vars (concl th)) andalso
        check_respects_tm uncond_tm
    end
    handle e => raise HOL_ERR {
@@ -3643,21 +3646,21 @@ fun check_poly_preserves th =
                                            strip_QUOTIENT_cond (concl th)
        val _ = assert (all is_vartype) (append taus ksis)
        val _ = assert distinct (append taus ksis)
-       val _ = assert distinct (append (append Rs abss) reps)
+       val _ = assert (op_distinct eq) (append (append Rs abss) reps)
        val (vrs,body) = strip_forall uncond_tm
        val (tm1,tm2) = Psyntax.dest_eq body
        val (c1,args1) = strip_comb tm1
         (* Next line is for ABSTRACT_PRS, but not for APPLY_PRS: *)
        val args1' = if is_var c1 then c1::args1 else args1
-       val _ = assert (all (C mem args1')) vrs
-       val _ = assert (all (C mem vrs)) args1'
+       val _ = assert (all (C (op_mem eq) args1')) vrs
+       val _ = assert (all (C (op_mem eq) vrs)) args1'
        val tm2' = un_abs_rep ksis tm2
        val (c2,args2) = dest_psv_rhs args1' tm2'
        val tysubst = map (op |->) (zip taus ksis)
        val _ = assert (curry op = (type_of tm1))
                       (type_subst tysubst (type_of tm2'))
        val args2' = map (un_abs_rep taus) args2
-       val _ = assert (all (op =)) (zip args1' args2')
+       val _ = assert (all2 eq args1') args2'
        val _ = assert (all (op =))
                       (zip (map type_of args1')
                            (map (type_subst tysubst o type_of) args2))

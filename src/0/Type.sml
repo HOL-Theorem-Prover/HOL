@@ -1983,7 +1983,9 @@ fun match_type pat ob = fst (raw_match_type pat ob ([],[]))
 
 val raw_dom_rng = dom_rng
 val dom_rng = fn ty => raw_dom_rng ty handle HOL_ERR _ => raw_dom_rng (deep_beta_conv_ty ty)
-val is_vartype = fn ty => is_vartype (deep_beta_conv_ty ty)
+(*
+val raw_is_vartype = is_vartype
+val is_vartype = fn ty => raw_is_vartype (deep_beta_conv_ty ty)
 val is_type = fn ty => is_type (deep_beta_conv_ty ty)
 val dest_vartype = fn ty => dest_vartype ty handle HOL_ERR _ => dest_vartype (deep_beta_conv_ty ty)
 val dest_type = fn ty => dest_type ty handle HOL_ERR _ => dest_type (deep_beta_conv_ty ty)
@@ -1991,6 +1993,7 @@ val dest_type = fn ty => dest_type ty handle HOL_ERR _ => dest_type (deep_beta_c
 val compare = fn (t1,t2) => compare(deep_beta_conv_ty t1, deep_beta_conv_ty t2)
 val empty_tyset = HOLset.empty compare
 fun type_eq t1 t2 = compare(t1,t2) = EQUAL;
+*)
 fun mapsb f = map (fn {redex,residue} => {redex=f redex, residue=residue})
 val type_subst = fn s => type_subst (mapsb deep_beta_conv_ty s);
 

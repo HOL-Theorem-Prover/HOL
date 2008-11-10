@@ -38,7 +38,7 @@ val char_EQ_CONV =
      of NONE => raise ERR "char_EQ_CONV" "not a char equality"
       | SOME(c1,c2) => 
           if is_char_lit c1 andalso is_char_lit c2
-          then if c1=c2 then SPEC c1 REFL_CLAUSE_char else conv tm
+          then if eq c1 c2 then SPEC c1 REFL_CLAUSE_char else conv tm
           else raise ERR "char_EQ_CONV" "not a char equality"
  end;
 
@@ -56,7 +56,7 @@ val string_EQ_CONV =
      of NONE => raise ERR "string_EQ_CONV" "not a string equality"
       | SOME(s1,s2) => 
           if is_string_literal s1 andalso is_string_literal s2 
-          then if s1=s2 then SPEC s1 REFL_CLAUSE_string else conv tm
+          then if eq s1 s2 then SPEC s1 REFL_CLAUSE_string else conv tm
           else raise ERR "string_EQ_CONV" "not a string equality"
  end;
 

@@ -151,13 +151,13 @@ fun RAT_CALC_CONV (t1:term) =
 let
 	val thm = REFL t1;
 	val (top_rator, top_rands) = strip_comb t1;
-	val calc_table_entry = List.find (fn x => fst(x)= top_rator) rat_calculate_table;
+	val calc_table_entry = List.find (fn x => eq (fst(x)) top_rator) rat_calculate_table;
 in
 	(* do nothing if term is already in the form abs_rat(...) *)
-	if top_rator=``abs_rat`` then
+	if eq top_rator ``abs_rat`` then
 		thm
 	(* if it is a numeral, simply rewrite it *)
-	else if (top_rator=``rat_of_num``) then
+	else if (eq top_rator ``rat_of_num``) then
 		SUBST [``x:rat`` |-> SPEC (rand t1) (RAT_OF_NUM_CALCULATE)] ``^t1 = x:rat`` thm
 	(* if there is an entry in the calculation table, calculate it *)
 	else if (isSome calc_table_entry) then
@@ -223,7 +223,7 @@ fun RAT_STRICT_CALC_TAC (asm_list,goal) =
 	let
 		val rat_terms = extract_rat goal;
 		val calc_thms = map RAT_CALC_CONV rat_terms;
-		val calc_asms = list_xmerge (map (fn x => fst (dest_thm x)) calc_thms);
+		val calc_asms = op_list_xmerge eq (map (fn x => fst (dest_thm x)) calc_thms);
 	in
 		(
 			MAP_EVERY ASSUME_TAC (map (fn x => TAC_PROOF ((asm_list,x), RW_TAC intLib.int_ss [FRAC_DNMPOS,INT_MUL_POS_SIGN,INT_NOTPOS0_NEG,INT_NOT0_MUL,INT_GT0_IMP_NOT0,INT_ABS_NOT0POS])) calc_asms) THEN
@@ -248,7 +248,7 @@ fun RAT_CALC_TAC (asm_list,goal) =
 			(* split list into assumptions and conclusions *)
 		val (calc_asmlists, calc_concl) = ListPair.unzip (map (fn x => dest_thm x) calc_thms);
 			(* merge assumptions lists *)
-		val calc_asms = list_xmerge calc_asmlists;
+		val calc_asms = op_list_xmerge eq calc_asmlists;
 			(* function to prove an assumption, TODO: fracLib benutzen *)
 		val gen_thm = (fn x => TAC_PROOF ((asm_list,x), RW_TAC intLib.int_ss [] ));
 			(* try to prove assumptions *)
@@ -298,7 +298,7 @@ val RAT_CALCEQ_TAC =
 
 fun RAT_SAVE_TAC t1 (asm_list, goal) =
 	let val subst_thm = SPEC t1 RAT_SAVE in
-		(ASSUME_TAC subst_thm THEN LEFT_EXISTS_TAC THEN LEFT_EXISTS_TAC THEN FILTER_ASM_REWRITE_TAC (fn t => not (mem t asm_list)) [] THEN POP_NO_TAC 0) (asm_list, goal)
+		(ASSUME_TAC subst_thm THEN LEFT_EXISTS_TAC THEN LEFT_EXISTS_TAC THEN FILTER_ASM_REWRITE_TAC (fn t => not (op_mem eq t asm_list)) [] THEN POP_NO_TAC 0) (asm_list, goal)
 	end;
 
 (*--------------------------------------------------------------------------
@@ -333,7 +333,7 @@ fun rat_eliminate_minv_conv (t1:term) =
 let
 	(* update the appropiate counter : each element of the list counts the number of occurences of a given term and its multiplicative inverse *)
 	fun insert_into_factor_list (term1:term) (i1:int,i2:int) (h::t) =
-		if( fst h = term1 ) then
+		if( eq (fst h) term1 ) then
 			(fst h, (fst (snd h)+i1, snd (snd h)+i2) )::t
 		else
 			h::(insert_into_factor_list term1 (i1,i2) t)

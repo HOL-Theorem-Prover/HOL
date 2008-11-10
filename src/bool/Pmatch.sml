@@ -84,7 +84,7 @@ fun fresh_constr ty_match (colty:hol_type) gv c =
 
 fun mk_groupl Literal rows =
   let fun func (row as ((prefix, p::rst), rhs)) (in_group,not_in_group) =
-               if (is_var Literal andalso is_var p) orelse p = Literal
+               if (is_var Literal andalso is_var p) orelse eq p Literal
                then if is_var Literal
                     then (((prefix,p::rst), rhs)::in_group, not_in_group)
                     else (((prefix,rst), rhs)::in_group, not_in_group)
@@ -349,7 +349,7 @@ fun mk_case ty_info ty_match FV range_ty =
      in
      if exists Literal.is_pure_literal col0 (* col0 has a literal *) then  
        let val other_var = fresh_var pty
-           val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
+           val constructors = rev (op_mk_set eq (rev (filter (not o is_var) col0)))
                               @ [other_var]
            val arb = mk_arb range_ty
            val switch_tm = mk_switch_tm fresh_var u arb constructors
@@ -447,14 +447,14 @@ fun pat_match2 pat_exps given_pat = tryfind (C pat_match1 given_pat) pat_exps
 fun distinguish pat_tm_mats =
     snd (List.foldr (fn ({redex,residue}, (vs,done)) =>
                          let val residue' = variant vs residue
-                             val vs' = Lib.insert residue' vs
+                             val vs' = Lib.op_insert eq residue' vs
                          in (vs', {redex=redex, residue=residue'} :: done)
                          end)
                     ([],[]) pat_tm_mats)
 
 fun reduce_mats pat_tm_mats =
     snd (List.foldl (fn (mat as {redex,residue}, (vs,done)) =>
-                         if mem redex vs then (vs, done)
+                         if op_mem eq redex vs then (vs, done)
                          else (redex :: vs, mat :: done))
                     ([],[]) pat_tm_mats)
 
@@ -499,8 +499,8 @@ fun mk_case2 v (exp, plist) =
              | mk_switch ((p,R)::rst) =
                   mk_bool_case(R, mk_switch rst, mk_eq(v,p))
            val switch = mk_switch plist
-       in if v = exp then switch
-                     else mk_literal_case(mk_abs(v,switch),exp)
+       in if eq v exp then switch
+                      else mk_literal_case(mk_abs(v,switch),exp)
        end;
 
 fun mk_case' tybase (exp, plist) =
@@ -582,7 +582,7 @@ local fun dest tybase (pat,rhs) =
                       val pat0 = if is_var v then subst [v |-> e] pat
                                              else e (* fails if pat ~= v *)
                       (* val theta = fst (Term.match_term v e) handle HOL_ERR _ => [] *)
-                  in if null (subtract fvs patvars)
+                  in if null (op_subtract eq fvs patvars)
                         (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
                      then flatten
                             (map (dest tybase)
@@ -590,8 +590,8 @@ local fun dest tybase (pat,rhs) =
                      else [(pat,rhs)]
                   end
              else let val fvs = free_vars exp
-                  in if null (subtract fvs patvars) andalso
-                        null_intersection fvs (free_varsl rhsides)
+                  in if null (op_subtract eq fvs patvars) andalso
+                        null (op_intersect eq fvs (free_varsl rhsides))
                      then flatten
                             (map (dest tybase)
                                (zip (map (fn p =>
@@ -685,7 +685,7 @@ fun mk_functional thy eqs =
          in (subst_inst sub a, rename_case thy sub case_tm)
          end handle HOL_ERR _ => (a,case_tm)
      (* Ensure that the case test variable is fresh for the rest of the case *)
-     val avs = subtract (all_vars case_tm') [a']
+     val avs = op_subtract eq (all_vars case_tm') [a']
      val a'' = variant avs a'
      val case_tm'' = if aconv a'' a'
                        then case_tm'

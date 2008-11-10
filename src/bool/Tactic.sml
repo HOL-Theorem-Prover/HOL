@@ -243,7 +243,7 @@ val EQ_TAC:tactic = fn (asl,t) =>
 fun X_GEN_TAC x1 : tactic = fn (asl,w) =>
  if is_var x1
  then (let val (Bvar,Body) = dest_forall w
-       in if Bvar=x1 then ([(asl,Body)], fn [th] => GEN x1 th)
+       in if eq Bvar x1 then ([(asl,Body)], fn [th] => GEN x1 th)
           else ([(asl,subst [Bvar |-> x1] Body)],
                 fn [th] =>
                    let val th' = GEN x1 th
@@ -556,7 +556,7 @@ fun STRIP_GOAL_THEN ttac =  FIRST [GEN_TAC, CONJ_TAC, TY_GEN_TAC, DISCH_THEN tta
  *---------------------------------------------------------------------------*)
 
 fun FILTER_GEN_TAC tm : tactic = fn (asl,w) =>
-    if (is_forall w andalso not (tm = fst(dest_forall w)))
+    if (is_forall w andalso not (eq tm (fst(dest_forall w))))
     then GEN_TAC (asl,w)
     else raise ERR"FILTER_GEN_TAC" "";
 
@@ -619,7 +619,7 @@ fun ASM_CASES_TAC t = DISJ_CASES_TAC (SPEC t EXCLUDED_MIDDLE);
 fun REFL_TAC(asl,g) =
    let val (lhs,rhs) = with_exn dest_eq g  (ERR"REFL_TAC" "not an equation")
        val asms = itlist ADD_ASSUM asl
-   in if lhs=rhs then ([], K (asms (REFL lhs)))
+   in if eq lhs rhs then ([], K (asms (REFL lhs)))
       else if aconv lhs rhs then ([], K (asms (ALPHA lhs rhs)))
            else raise ERR"REFL_TAC" "lhs and rhs not alpha-equivalent"
    end;
@@ -878,11 +878,11 @@ fun (tm via tac) =
 fun CONV_TAC (conv:conv) :tactic = fn (asl,w) =>
  let val th = conv w
      val (_,rhs) = dest_eq(concl th)
- in if rhs = T
+ in if eq rhs T
     then ([], fn [] => EQ_MP (SYM th) TRUTH)
     else ([(asl,rhs)], fn [th'] => EQ_MP (SYM th) th')
  end handle UNCHANGED => 
-   if w=T (* special case, can happen! *)
+   if eq w T (* special case, can happen! *)
      then ([],fn [] => TRUTH)
      else ALL_TAC (asl, w);
 

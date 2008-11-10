@@ -189,7 +189,7 @@ fun vunifyl (tmvarP, tyvarP) =
       | unify sub ((tm, tm') :: work) =
       unify' sub work (pinst sub tm) (pinst sub tm')
     and unify' sub work tm tm' =
-      if tm = tm' then unify sub work
+      if eq tm tm' then unify sub work
       else if tmvarP tm then
         if tmvarP tm' andalso varname tm = varname tm' then
           unify (unify_type sub [type_of tm, type_of tm']) work
@@ -205,7 +205,9 @@ fun vunifyl (tmvarP, tyvarP) =
                raise ERR "unify_term" "different constants"
              else unify (unify_type sub [Ty, Ty']) work
         | (COMB (a, b), COMB (a', b')) => unify' sub ((b, b') :: work) a a'
+        | (TYCOMB (a, b), TYCOMB (a', b')) => unify' (unify_type sub [b, b']) work a a'
         | (LAMB _, LAMB _) => raise ERR "unify_term" "can't deal with lambda"
+        | (TYLAMB _, TYLAMB _) => raise ERR "unify_term" "can't deal with type lambda"
         | _ => raise ERR "unify_term" "different structure"
   in
     unify

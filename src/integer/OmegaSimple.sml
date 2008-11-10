@@ -93,7 +93,7 @@ fun isolate_var v t = let
     val (l,r) = dest_plus t
     val (c,v') = dest_mult r
   in
-    if v = v' then c else findv_c l
+    if eq v v' then c else findv_c l
   end handle HOL_ERR _ => #1 (dest_mult t)
   val c = findv_c (lhand r)
   val (flip, addthis) = if is_negated c then (false, mk_mult(rand c, v))
@@ -127,7 +127,7 @@ fun verify_combination v th1 th2 = let
   val lo_f = term_of_int (Arbint.div(lh,lo))
   val hi_f = term_of_int (Arbint.div(lh,hi))
   fun multhru_by c th =
-      if c = one_tm then th
+      if eq c one_tm then th
       else let
           val zero_lt_c = EQT_ELIM (REDUCE_CONV (mk_less(zero_tm, c)))
           val res =
@@ -242,7 +242,7 @@ fun verify_satisfaction tm vars vm = let
   fun prove_exists t =
       if is_exists t then let
           val (v, bod) = dest_exists t
-          val i = index (fn u => u = v) vars
+          val i = index (eq v) vars
           val n = PIntMap.find i vm
           val n_t = term_of_int n
           val newbod = Term.subst [v |-> n_t] bod

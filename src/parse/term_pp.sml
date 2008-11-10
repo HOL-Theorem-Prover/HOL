@@ -787,7 +787,7 @@ fun pp_term (G : grammar) TyG = let
         | recurse acc ((Simple _)::_) = NONE
         | recurse acc (Restricted{Restrictor = t,...}::xs) = let
           in
-            if t = acc then recurse acc xs else NONE
+            if eq t acc then recurse acc xs else NONE
           end
     in
       case vsl of
@@ -1640,8 +1640,8 @@ fun pp_term (G : grammar) TyG = let
             type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty
           end
           val new_freevar =
-            showtypes andalso (not (mem tm (!fvars_seen))) andalso
-            not (mem tm (!bvars_seen)) andalso not binderp
+            showtypes andalso (not (op_mem eq tm (!fvars_seen))) andalso
+            not (op_mem eq tm (!bvars_seen)) andalso not binderp
           val _ = if new_freevar then fvars_seen := tm :: (!fvars_seen) else ()
           val print_type =
             showtypes_v orelse

@@ -14,20 +14,20 @@ open ringLib ratTheory ratRingTheory ratSyntax ratLib;
  *--------------------------------------------------------------------------*)
 
 fun is_computable_frac t =
-	mem t [``frac_0``,``frac_1``] orelse
+	op_mem eq t [``frac_0``,``frac_1``] orelse
 	((is_comb t) andalso (is_comb (rator t))) andalso
 		let
 			val rator_tm = rator (rator t);
 			val nmr_tm = rand (rator t);
 			val dnm_tm = rand t;
 		in
-			(rator_tm=``frac_save``) andalso (intSyntax.is_int_literal nmr_tm) andalso (numSyntax.is_numeral dnm_tm)
+			(eq rator_tm ``frac_save``) andalso (intSyntax.is_int_literal nmr_tm) andalso (numSyntax.is_numeral dnm_tm)
 		end;
 
 fun is_computable_rat t =
-	mem t [``rat_0``,``rat_1``] orelse
-	(* ((is_comb t) andalso (rator t)=``rat_of_num``) andalso (numSyntax.is_numeral (rand t)) orelse *)
-	((is_comb t) andalso (rator t)=``abs_rat``) andalso (is_computable_frac (rand t));
+	op_mem eq t [``rat_0``,``rat_1``] orelse
+	(* ((is_comb t) andalso eq (rator t) ``rat_of_num``) andalso (numSyntax.is_numeral (rand t)) orelse *)
+	((is_comb t) andalso eq (rator t) ``abs_rat``) andalso (is_computable_frac (rand t));
 
 (* test cases:
 is_computable_rat ``abs_rat f1``

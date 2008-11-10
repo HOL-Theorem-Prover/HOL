@@ -30,7 +30,7 @@ fun TAC_PROOF (g,tac) =
    case tac g
      of ([],p) => (let val thm = p []
                        val c = concl thm
-                   in if c = snd g then thm
+                   in if Term.prim_eq c (snd g) then thm
                       else EQ_MP (ALPHA c (snd g)) thm
                   end handle e => raise ERR "TAC_PROOF" "Can't alpha convert")
       |    _   => raise ERR "TAC_PROOF" "unsolved goals";
@@ -230,13 +230,13 @@ local
         ho_kind_match_term [] [] empty_tmset pat ob
     val bound_vars = map #redex tm_inst
   in
-    null (intersect constants bound_vars)
+    null (op_intersect eq constants bound_vars)
   end handle HOL_ERR _ => false
 in
 fun PAT_ASSUM pat thfun (asl, w) =
   case List.filter (can (ho_kind_match_term [] [] empty_tmset pat)) asl
    of []  => raise ERR "PAT_ASSUM" "No assumptions match the given pattern"
-    | [x] => let val (ob, asl') = Lib.pluck (Lib.equal x) asl
+    | [x] => let val (ob, asl') = Lib.pluck (Term.eq x) asl
              in thfun (ASSUME ob) (asl', w)
              end
     |  _  =>
@@ -304,7 +304,7 @@ fun FIRST_ASSUM ttac (A,g) =
  ---------------------------------------------------------------------------*)
 
 local fun UNDISCH_THEN tm ttac (asl, w) =
-       let val (_,A) = Lib.pluck (equal tm) asl in ttac (ASSUME tm) (A,w) end
+       let val (_,A) = Lib.pluck (eq tm) asl in ttac (ASSUME tm) (A,w) end
 in
 fun FIRST_X_ASSUM ttac = FIRST_ASSUM (fn th => UNDISCH_THEN (concl th) ttac)
 end;
@@ -330,7 +330,9 @@ fun SUBGOAL_THEN wa ttac (asl,w) =
 
 fun CHANGED_TAC tac g =
  let val (gl,p) = tac g
- in if set_eq gl [g] then raise ERR "CHANGED_TAC" "no change" else (gl,p)
+ in if op_set_eq (pair_cmp (list_cmp prim_eq) prim_eq) gl [g]
+    then raise ERR "CHANGED_TAC" "no change"
+    else (gl,p)
  end;
 
 (*---------------------------------------------------------------------------

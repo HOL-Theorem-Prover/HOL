@@ -41,8 +41,8 @@ fun FREEUP [] M g = (ALL_TAC,M)
   | FREEUP tofree M (g as (asl,w)) =
      let val (V,_) = strip_forall w   (* ignore renaming here : idleness! *)
          val Vmap = away (free_varsl (w::asl)) V
-         val theta = gather (fn (v,_) => mem v tofree) Vmap
-         val rebind = map snd (gather (fn (v,_) => not (mem v tofree)) Vmap)
+         val theta = gather (fn (v,_) => op_mem eq v tofree) Vmap
+         val rebind = map snd (gather (fn (v,_) => not (op_mem eq v tofree)) Vmap)
      in
        ((MAP_EVERY X_GEN_TAC (map snd Vmap)
           THEN MAP_EVERY ID_SPEC_TAC (rev rebind)),
@@ -84,7 +84,7 @@ fun prim_find_subterm FVs tm (asl,w) =
       handle HOL_ERR _
       => Bound(let val (V,body) = strip_forall w
                    val M = find_term (can (tm_free_eq body tm)) body
-               in (intersect (free_vars M) V, M)
+               in (op_intersect eq (free_vars M) V, M)
                end)
       handle HOL_ERR _
       => Alien tm;
@@ -130,7 +130,7 @@ fun primInduct st ind_tac (g as (asl,c)) =
  let fun ind_non_var V M =
        let val (tac,M') = FREEUP V M g
            val Mfrees = free_vars M'
-           fun has_vars tm = not(null_intersection (free_vars tm) Mfrees)
+           fun has_vars tm = not (null (op_intersect eq (free_vars tm) Mfrees))
            val tms = filter has_vars asl
            val newvar = variant (free_varsl (c::asl))
                                 (mk_var("v",type_of M'))

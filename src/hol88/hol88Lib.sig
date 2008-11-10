@@ -21,6 +21,8 @@ sig
   val save : string -> bool
   val assoc : ''a -> (''a * 'b) list -> ''a * 'b
   val rev_assoc : ''a -> ('b * ''a) list -> 'b * ''a
+  val op_assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'a * 'b
+  val op_rev_assoc : ('a -> 'a -> bool) -> 'a -> ('b * 'a) list -> 'b * 'a
   val inst_type : (hol_type * hol_type) list -> hol_type -> hol_type
   val frees : term -> term list
   val freesl : term list -> term list

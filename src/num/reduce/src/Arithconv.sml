@@ -43,7 +43,7 @@ fun TFN_CONV c t =
  let val result = c t
      val result_t = rhs (concl result)
  in
-   if result_t = T orelse result_t = F orelse Literal.is_numeral result_t
+   if eq result_t T orelse eq result_t F orelse Literal.is_numeral result_t
      then result
      else failwith "TFN_CONV"
 end
@@ -62,7 +62,7 @@ fun NEQ_CONV tm =
   of NONE => failwith "NEQ_CONV" 
    | SOME (n1,n2) =>
       if is_numeral n1 andalso is_numeral n2 
-      then if n1=n2 then SPEC n1 REFL_CLAUSE_num
+      then if eq n1 n2 then SPEC n1 REFL_CLAUSE_num
            else with_exn NEQ_RW tm (ERR "NEQ_CONV" "")
       else failwith "NEQ_CONV"
 end;

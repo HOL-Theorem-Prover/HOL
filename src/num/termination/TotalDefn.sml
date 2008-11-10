@@ -53,7 +53,7 @@ fun rm x [] = []
   | rm x (h::t) = if aconv x h then rm x t else h::rm x t;
 
 fun mk_term_set [] = []
-  | mk_term_set (h::t) = h::mk_set (rm h t);
+  | mk_term_set (h::t) = h::op_mk_set eq (rm h t);
 
 fun imk_var(i,ty) = mk_var("v"^Int.toString i,ty);
 
@@ -360,7 +360,7 @@ fun guessR defn =
        let val domty  = fst(dom_rng(type_of R))
            val (_,tcs0) = Lib.pluck isWFR (tcs_of defn)
            val tcs = map (rhs o concl o QCONV (SIMP_CONV bool_ss [])) tcs0
-           val tcs = filter (not o equal T) tcs
+           val tcs = filter (not o eq T) tcs
            val matrix  = map dest tcs
            val check1  = map (map (uncurry proper_subterm)) matrix
            val chf1    = projects check1
@@ -499,7 +499,7 @@ local open Defn
   fun should_try_to_prove_termination defn rhs_frees =
      let val tcs = tcs_of defn
      in not(null tcs) andalso
-        null(intersect (free_varsl tcs) rhs_frees)
+        null(op_intersect eq (free_varsl tcs) rhs_frees)
      end
   fun fvs_on_rhs V = 
      let val Vstr = String.concat (Lib.commafy
@@ -745,7 +745,7 @@ val SUC_TO_NUMERAL_DEFN_CONV = let
       val v = numSyntax.dest_suc st
     in
       if is_var v then
-        case Lib.total (index (equal v)) vs of
+        case Lib.total (index (eq v)) vs of
           NONE => ALL_CONV t
         | SOME i => (push_nth_down i THENC
                      LAST_FORALL_CONV basic_elim THENC

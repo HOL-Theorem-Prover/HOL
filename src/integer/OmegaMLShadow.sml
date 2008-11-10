@@ -192,7 +192,7 @@ fun term_to_factoid vars tm = let
         if is_mult s then let
           val (c, mv) = dest_mult s
         in
-          if mv = v then int_of_term c :: mk_coeffs vs ss
+          if eq mv v then int_of_term c :: mk_coeffs vs ss
           else Arbint.zero :: mk_coeffs vs slist
         end
         else Arbint.zero :: mk_coeffs vs slist

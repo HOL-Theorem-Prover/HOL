@@ -392,8 +392,8 @@ fun non_presburger_subterms tm =
        (is_great tm) orelse (is_geq tm) orelse
        (is_plus tm) orelse (is_minus tm) orelse
        (is_linear_mult tm handle _ => false)
-    then Lib.union (non_presburger_subterms (arg1 tm))
-                   (non_presburger_subterms (arg2 tm))
+    then Lib.op_union eq (non_presburger_subterms (arg1 tm))
+                         (non_presburger_subterms (arg2 tm))
     else if (is_real_literal tm) then []
     else [tm]);
 
@@ -456,7 +456,7 @@ fun CTXT_ARITH thms tm = let
   end
   val thm = EQT_INTRO (try tm)
       handle (e as HOL_ERR _) =>
-             if tm <> F then EQF_INTRO (try(mk_neg tm)) else raise e
+             if not (eq tm F) then EQF_INTRO (try(mk_neg tm)) else raise e
 in
   trace(1,PRODUCE(tm,"REAL_ARITH",thm)); thm
 end
@@ -538,7 +538,7 @@ val (CACHED_ARITH,arith_cache) = let
   fun check tm =
     let val ty = type_of tm
     in
-       (ty=Type.bool andalso (is_arith tm orelse tm = F))
+       (ty=Type.bool andalso (is_arith tm orelse eq tm F))
     end;
 in
   RCACHE (dpvars, check,CTXT_ARITH)

@@ -83,7 +83,7 @@ local fun drop [] ty = fst(dom_rng ty)
                     (* mk_abs (mk_var ("v", ty), bool_nil) *)
       fun OK f ty M =
          let val (Rator,Rand) = dest_comb M
-         in (Rator=f) andalso is_var Rand andalso (type_of Rand = ty)
+         in (eq Rator f) andalso is_var Rand andalso (type_of Rand = ty)
          end
 in
 fun tyencode (theta,omega,gamma) clause ty =
@@ -110,7 +110,7 @@ fun tyencode (theta,omega,gamma) clause ty =
 end;
 
 fun dupls [] (C,D) = (rev C, rev D)
-  | dupls (h::t) (C,D) = dupls t (if mem h t then (C,h::D) else (h::C,D));
+  | dupls (h::t) (C,D) = dupls t (if op_mem eq h t then (C,h::D) else (h::C,D));
 
 fun crunch [] = []
   | crunch ((x,y)::t) =
@@ -122,7 +122,7 @@ fun crunch [] = []
 fun unflatten f =
  let fun h (x, s) =
       let val k = f x
-      in case List.partition (equal k o fst) s
+      in case List.partition (eq k o fst) s
           of ([(_,l)], r) => (k, x :: l) :: r
            | otherwise    => (k, [x]) :: s
       end
@@ -192,7 +192,7 @@ fun define_encode ax db =
      fun clause (bl, cl) =
          let val (fn_i, capp) = dest_comb (lhs cl)
          in
-         mk_eq(mk_comb(assoc fn_i fn_i_map, capp),
+         mk_eq(mk_comb(op_assoc eq fn_i fn_i_map, capp),
                end_itlist (curry mk_bool_append)
                (bl :: map (mk_app cl) (snd(strip_comb capp))))
          end
@@ -210,7 +210,7 @@ fun define_encode ax db =
                  {name="encode_"^def_name^"_def",
                   rec_axiom=ax, def=pre_defn1}
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
-     val ctyl = Lib.mk_set (map cty (strip_conj (concl defn)))
+     val ctyl = Lib.op_mk_set (pair_cmp eq equal) (map cty (strip_conj (concl defn)))
      val const_tyl = gather (fn (c,ty) => mem ty dtys) ctyl
      val const_tyopl = map (fn (c,ty) => (c,tyconst_names ty)) const_tyl
  in

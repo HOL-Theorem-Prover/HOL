@@ -70,7 +70,7 @@ val dest_string_case = dest_triop string_case_tm (ERR "dest_string_case" "")
 
 val is_implode     = can dest_implode
 val is_explode     = can dest_explode;
-val is_emptystring = equal emptystring_tm
+val is_emptystring = eq emptystring_tm
 val is_string      = can dest_string
 val is_string_case = can dest_string_case
 val is_strlen      = can dest_strlen

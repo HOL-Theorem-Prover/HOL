@@ -73,7 +73,7 @@ val INT_REDUCE_ss = SSFRAG
 
 fun RED_CONV t =
  let val (f, args) = strip_comb t
-     val _ = f = exp_tm orelse mem f basic_op_terms orelse raise rederr
+     val _ = eq f exp_tm orelse op_mem eq f basic_op_terms orelse raise rederr
      val _ = List.all reducible args orelse raise rederr
      val _ = not (Lib.can dom_rng (type_of t)) orelse raise rederr
  in

@@ -63,7 +63,7 @@ fun REFL_IMP_CONV t = DISCH t (ASSUME t);
 
 fun GEN_ASSUM v thm = 
   let
-    val assums = filter (fn t => mem v (free_vars t)) (hyp thm);
+    val assums = filter (fn t => op_mem eq v (free_vars t)) (hyp thm);
     val thm2 = foldl (fn (t,thm) => DISCH t thm) thm assums; 
     val thm3 = GEN v thm2;
     val thm4 = foldl (fn (_,thm) => UNDISCH (HO_MATCH_MP MONO_ALL thm)) 
@@ -99,18 +99,18 @@ fun CONSEQ_CONV_WRAPPER___CONVERT_RESULT thm t =
 let
    val thm_term = concl thm;
 in
-   if (thm_term = t andalso not (t = T)) then
+   if (eq thm_term t andalso not (eq t T)) then
       snd (EQ_IMP_RULE (EQT_INTRO thm)) else
    if (is_imp thm_term) then
       let
 	 val (t1, t2) = dest_imp thm_term;
-	 val _ = if not (t2 = t) then raise UNCHANGED else ();
-	 val _ = if (t1 = t2) then raise UNCHANGED else ();
+	 val _ = if not (eq t2 t) then raise UNCHANGED else ();
+	 val _ = if (eq t1 t2) then raise UNCHANGED else ();
       in
          thm
       end
    else if (is_eq thm_term) then
-      if ((lhs thm_term = t) andalso not (rhs thm_term = t)) then
+      if (eq (lhs thm_term) t andalso not (eq (rhs thm_term) t)) then
 	 snd (EQ_IMP_RULE thm)
       else raise UNCHANGED
    else
@@ -131,7 +131,7 @@ fun CHANGED_CHECK_CONSEQ_CONV conv t =
     let
        val thm = conv t;
        val (ante,conc) = dest_imp (concl thm);
-       val _ = if (ante = conc) then raise UNCHANGED else ();
+       val _ = if (eq ante conc) then raise UNCHANGED else ();
     in
        thm
     end;
@@ -345,7 +345,8 @@ let
                         handle UNCHANGED => NONE) new_hyps;
 
     val hyp_thms2 = filter (fn thm_opt => (isSome thm_opt andalso
-					   let val (l,r) = dest_imp (concl (valOf thm_opt)) in (not (l = r)) end handle HOL_ERR _ => false)) hyp_thms; 
+					   let val (l,r) = dest_imp (concl (valOf thm_opt))
+                                           in (not (eq l r)) end handle HOL_ERR _ => false)) hyp_thms; 
     val hyp_thms3 = map (UNDISCH o valOf) hyp_thms2; 
 
     val thm2 = foldr (fn (thm1,thm2) => PROVE_HYP thm1 thm2) thm hyp_thms3;

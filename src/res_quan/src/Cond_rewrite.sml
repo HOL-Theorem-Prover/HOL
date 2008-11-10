@@ -33,7 +33,7 @@ fun match_ok vs (l:((term,term) subst * (hol_type,hol_type) subst) list) =
      (null ty_subst) andalso
      (let val vlist = (map #redex tm_subst)
       in
-      ((set_eq vs vlist) orelse (null vlist))
+      ((op_set_eq eq vs vlist) orelse (null vlist))
       end)
    end ;
 
@@ -46,8 +46,10 @@ fun match_aal fvars ante [] = []
        else (match_aal fvars ante asml)
       end ;
 
+fun subst_eq {redex=a1,residue=b1} {redex=a2,residue=b2} = eq a1 a2 andalso eq b1 b2
+
 fun subset s1 s2 = (* s1 is a subset of s2 *)
-    set_eq s2 (union s1 s2);
+    op_set_eq subst_eq s2 (op_union subst_eq s1 s2);
 
 fun match_asm fvars asm (ml,pl) [] = (ml,pl)
  | match_asm fvars asm (ml,pl) (ante :: antes) =
@@ -95,8 +97,8 @@ fun var_cap th fv sv newvs =
    (let val {Bvar=v, Body=b} = dest_forall (concl th)
      val (nv,th') = (I ## (GEN v)) (var_cap (SPEC v th) fv sv newvs)
      in
-     if  (mem v fv) then
-      if (mem v sv) then
+     if  (op_mem eq v fv) then
+      if (op_mem eq v sv) then
        (let val v' =  (variant (fv @ sv) v)
 	    in
 	     ((v':: nv), (CONV_RULE (GEN_ALPHA_CONV v') th'))

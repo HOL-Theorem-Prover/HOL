@@ -136,7 +136,7 @@ in
    of NONE => raise ERR "word_EQ_CONV" "not an equality"
     | SOME(w1,w2) =>
       if is_word_literal w1 andalso is_word_literal w2
-      then if w1=w2
+      then if eq w1 w2
            then Thm.SPEC w1 (INST_TYPE[alpha|->type_of w1] REFL_CLAUSE)
            else
                 if null (type_vars_in_term w1)
@@ -1148,7 +1148,7 @@ fun is_word_term tm = let open numSyntax in
 end;
 
 fun MP_ASSUM_TAC tm (asl, w) =
-  let val (ob, asl') = Lib.pluck (Lib.equal tm) asl in
+  let val (ob, asl') = Lib.pluck (Term.eq tm) asl in
     MP_TAC (Thm.ASSUME ob) (asl', w)
   end;
 

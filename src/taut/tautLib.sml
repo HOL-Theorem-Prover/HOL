@@ -39,8 +39,8 @@ open Parse
 (* Discriminator functions for T (true) and F (false)                        *)
 (*===========================================================================*)
 
-fun is_T tm = (tm = T)
-and is_F tm = (tm = F);
+fun is_T tm = (eq tm T)
+and is_F tm = (eq tm F);
 
 (*---------------------------------------------------------------------------*)
 (* TAUT_CHECK_CONV : conv                                                    *)

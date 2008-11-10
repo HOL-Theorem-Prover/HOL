@@ -193,7 +193,7 @@ fun dest_binop opr tm =
     let val (Rator,rhs) = Term.dest_comb tm
 	val (opr',lhs) = Term.dest_comb Rator
     in
-	if opr=opr' then (lhs,rhs) else fail()
+	if Term.eq opr opr' then (lhs,rhs) else fail()
     end
     handle HOL_ERR _ => failwith "dest_binop";
 
@@ -291,8 +291,8 @@ val COMB_CONV = Lib.W COMB2_CONV;;
 fun alpha v tm =
   let val (v0,bod) = Term.dest_abs tm
                handle HOL_ERR _ => failwith "alpha: Not an abstraction"
-  in if v = v0 then tm else
-      if not (Lib.mem v (Term.free_vars bod))
+  in if Term.eq v v0 then tm else
+      if not (Lib.op_mem Term.eq v (Term.free_vars bod))
 	  then Term.mk_abs(v, Term.subst [Lib.|->(v0,v)] bod)
       else failwith "alpha: Invalid new variable"
   end;
@@ -432,7 +432,7 @@ fun SINGLE_DEPTH_CONV conv tm =
 (*-----------------------------------------------------------------------*)
 
 fun MK_ABS_CONV var tm = 
-  if (Term.is_comb tm andalso (Term.rand tm = var)
+  if (Term.is_comb tm andalso Term.eq (Term.rand tm) var
       andalso not (Term.free_in var (Term.rator tm)))
   then REFL tm
   else 

@@ -24,6 +24,8 @@ datatype term_ptree =
   | Leaf of Arbnum.num * term
   | Branch of Arbnum.num * int * term_ptree * term_ptree;
 
+fun is_Empty Empty = true | is_Empty _ = false
+
 fun dest_ptree t =
   if is_empty t then
     Empty
@@ -73,7 +75,7 @@ fun every_leaf P Empty = true
 fun is_ptree Empty = true
   | is_ptree (Leaf (k,d)) = true
   | is_ptree (Branch (p,m,l,r)) =
-      lt_2exp p m andalso not (l = Empty) andalso not (r = Empty) andalso
+      lt_2exp p m andalso not (is_Empty l) andalso not (is_Empty r) andalso
       every_leaf (fn k => fn d => mod_2exp_eq m k p andalso bit m k) l
       andalso
       every_leaf (fn k => fn d => mod_2exp_eq m k p andalso not (bit m k)) r

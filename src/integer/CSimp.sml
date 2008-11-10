@@ -35,7 +35,7 @@ end t handle (e as HOL_ERR _) => if is_other t then raise e else ALL_CONV t
 
 datatype matchmode = NOMATCH | NEGATED | POSITIVE
 fun compare_pair accmode eqnp tp =
-    if rand eqnp <> rand tp then NOMATCH
+    if not (eq (rand eqnp) (rand tp)) then NOMATCH
     else let
         val e_coeff = lhand eqnp
         val t_coeff = lhand tp
@@ -49,7 +49,7 @@ fun compare_pair accmode eqnp tp =
             if e_negged <> t_negged then NEGATED else POSITIVE
       in
         if accmode = NOMATCH orelse possible_mode = accmode then
-          if e_core = t_core then possible_mode
+          if eq e_core t_core then possible_mode
           else NOMATCH
         else NOMATCH
       end

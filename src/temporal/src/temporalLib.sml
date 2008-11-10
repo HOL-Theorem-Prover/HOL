@@ -97,7 +97,7 @@ val PSUNTIL   = Term`$PSUNTIL`
 val PSBEFORE  = Term`$PSBEFORE`
 
 fun hol2temporal t =
-  if t=thetrue then truesig else if t=thefalse then falsesig
+  if eq t thetrue then truesig else if eq t thefalse then falsesig
   else
     (let val {Name=n,Ty=typ} = dest_var t
       in var(n)
@@ -133,38 +133,38 @@ fun hol2temporal t =
      end)
   handle _=> 		      (* ------ temporal operator or signal evalutation -------	*)
     (let val {Rator=f,Rand=x} = dest_comb t
-      in if f=NEXT then next(hol2temporal x)
-	 else if f=ALWAYS then always(hol2temporal x)
-	 else if f=EVENTUAL then eventual(hol2temporal x)
-	 else if f=PNEXT then pnext(hol2temporal x)
-	 else if f=PSNEXT then psnext(hol2temporal x)
-	 else if f=PALWAYS then palways(hol2temporal x)
-	 else if f=PEVENTUAL then peventual(hol2temporal x)
+      in if eq f NEXT then next(hol2temporal x)
+	 else if eq f ALWAYS then always(hol2temporal x)
+	 else if eq f EVENTUAL then eventual(hol2temporal x)
+	 else if eq f PNEXT then pnext(hol2temporal x)
+	 else if eq f PSNEXT then psnext(hol2temporal x)
+	 else if eq f PALWAYS then palways(hol2temporal x)
+	 else if eq f PEVENTUAL then peventual(hol2temporal x)
 	 else      (* -------- binary temporal operator or signal evalutation ---------	*)
 	    let val {Rator=temp_op,Rand=b} = dest_comb f
-	     in if temp_op = WHEN then
+	     in if eq temp_op WHEN then
 			when((hol2temporal b),(hol2temporal x))
-		else if temp_op = UNTIL then
+		else if eq temp_op UNTIL then
 			until((hol2temporal b),(hol2temporal x))
-		else if temp_op = BEFORE then
+		else if eq temp_op BEFORE then
 			befor((hol2temporal b),(hol2temporal x))
-		else if temp_op = SWHEN then
+		else if eq temp_op SWHEN then
 			swhen((hol2temporal b),(hol2temporal x))
-		else if temp_op = SUNTIL then
+		else if eq temp_op SUNTIL then
 			suntil((hol2temporal b),(hol2temporal x))
-		else if temp_op = SBEFORE then
+		else if eq temp_op SBEFORE then
 			sbefor((hol2temporal b),(hol2temporal x))
-		else if temp_op = PWHEN then
+		else if eq temp_op PWHEN then
 			pwhen((hol2temporal b),(hol2temporal x))
-		else if temp_op = PUNTIL then
+		else if eq temp_op PUNTIL then
 			puntil((hol2temporal b),(hol2temporal x))
-		else if temp_op = PBEFORE then
+		else if eq temp_op PBEFORE then
 			pbefor((hol2temporal b),(hol2temporal x))
-		else if temp_op = PSWHEN then
+		else if eq temp_op PSWHEN then
 			pswhen((hol2temporal b),(hol2temporal x))
-		else if temp_op = PSUNTIL then
+		else if eq temp_op PSUNTIL then
 			psuntil((hol2temporal b),(hol2temporal x))
-		else if temp_op = PSBEFORE then
+		else if eq temp_op PSBEFORE then
 			psbefor((hol2temporal b),(hol2temporal x))
 		else (hol2temporal f)
 	    end
@@ -746,7 +746,7 @@ fun TEMP_DEFS_CONV t =
 	fun eta_conv t = (* ----- transforms "\t. ell t" to "ell" ----- *)
 	    let val {Bvar=x,Body=b} = dest_abs t
 		val {Rator=ell,Rand=y} = dest_comb b
-	     in if(x=y) then ell else t
+	     in if (eq x y) then ell else t
 	    end
 	fun fun_eta_conv t = (* ----- transforms "\t. ell t = phi" to "ell = \t. phi" ----- *)
 	    let val {Bvar=x,Body=b} = dest_abs t
@@ -804,7 +804,7 @@ fun UNSAFE_TEMP_DEFS_CONV t =
 	fun eta_conv t = (* ----- transforms "\t. ell t" to "ell" ----- *)
 	    let val {Bvar=x,Body=b} = dest_abs t
 		val {Rator=ell,Rand=y} = dest_comb b
-	     in if(x=y) then ell else t
+	     in if (eq x y) then ell else t
 	    end
 	fun fun_eta_conv t = (* ----- transforms "\t. ell t = phi" to "ell = \t. phi" ----- *)
 	    let val {Bvar=x,Body=b} = dest_abs t
@@ -887,7 +887,7 @@ fun LTL2OMEGA_CONV t =
 		let val {Rator=f,Rand=x} = dest_comb t
 		 in (get_constants f) @ (get_constants x)
 		end
-	fun is_prop t = null((intersect (get_constants t) temp_ops))
+	fun is_prop t = null((op_intersect eq (get_constants t) temp_ops))
 	val def2omega_thms = CONJUNCTS Omega_AutomataTheory.TEMP_OPS_DEFS_TO_OMEGA
 	val past_nx_thms = [elem 9 def2omega_thms,elem 10 def2omega_thms]
 	val def2omega_thms = delete 9 (delete 10 def2omega_thms)
@@ -958,7 +958,7 @@ fun UNSAFE_LTL2OMEGA_CONV t =
 		let val {Rator=f,Rand=x} = dest_comb t
 		 in (get_constants f) @ (get_constants x)
 		end
-	fun is_prop t = null((intersect (get_constants t) temp_ops))
+	fun is_prop t = null((op_intersect eq (get_constants t) temp_ops))
 	val def2omega_thms = CONJUNCTS Omega_AutomataTheory.TEMP_OPS_DEFS_TO_OMEGA
 	val past_nx_thms = [elem 9 def2omega_thms,elem 10 def2omega_thms]
 	val def2omega_thms = delete 9 (delete 10 def2omega_thms)
@@ -1042,7 +1042,7 @@ exception NOT_GOOD_FORMULA;
 
 fun closure exquan x t =
 	    (let val {Name=_,Ty=_} = dest_var t
-	      in if x=t then
+	      in if eq x t then
 		    if exquan then mk_exists{Bvar=x,Body=t}
 		    else mk_forall{Bvar=x,Body=t}
 		 else t
@@ -1053,15 +1053,15 @@ fun closure exquan x t =
 	     end)
 	 handle _=>
 	    (let val {Bvar=y,Body=b} = dest_abs t
-	      in if x=y then t
+	      in if eq x y then t
 		 else mk_abs{Bvar=y,Body=(closure exquan x b)}
 	     end)
 	 handle _=>
 	    if (is_neg t) then mk_neg (closure (not exquan) x (dest_neg t))
 	    else if (is_conj t) then
 		let val {conj1=t1,conj2=t2} = dest_conj t
-		    val occ1 = mem x (free_vars t1)
-		    val occ2 = mem x (free_vars t2)
+		    val occ1 = op_mem eq x (free_vars t1)
+		    val occ2 = op_mem eq x (free_vars t2)
 		 in
 		    if (occ1 andalso occ2) then
 		        if exquan then mk_exists{Bvar=x,Body=t}
@@ -1074,8 +1074,8 @@ fun closure exquan x t =
 		end
 	    else if (is_disj t) then
 		let val {disj1=t1,disj2=t2} = dest_disj t
-		    val occ1 = mem x (free_vars t1)
-		    val occ2 = mem x (free_vars t2)
+		    val occ1 = op_mem eq x (free_vars t1)
+		    val occ2 = op_mem eq x (free_vars t2)
 		 in
 		    if (occ1 andalso occ2) then
 		        if exquan then mk_exists{Bvar=x,Body=t}
@@ -1088,8 +1088,8 @@ fun closure exquan x t =
 		end
 	    else if (is_imp t) then
 		let val {ant=t1,conseq=t2} = dest_imp t
-		    val occ1 = mem x (free_vars t1)
-		    val occ2 = mem x (free_vars t2)
+		    val occ1 = op_mem eq x (free_vars t1)
+		    val occ2 = op_mem eq x (free_vars t2)
 		 in
 		    if (occ1 andalso occ2) then
 		        if exquan then mk_exists{Bvar=x,Body=t}
@@ -1102,8 +1102,8 @@ fun closure exquan x t =
 		end
 	    else if (is_eq t) then
 		let val {lhs=t1,rhs=t2} = dest_eq t
-		    val occ1 = mem x (free_vars t1)
-		    val occ2 = mem x (free_vars t2)
+		    val occ1 = op_mem eq x (free_vars t1)
+		    val occ2 = op_mem eq x (free_vars t2)
 		 in
 		    if (occ1 andalso occ2) then
 		        if exquan then mk_exists{Bvar=x,Body=t}
@@ -1112,9 +1112,9 @@ fun closure exquan x t =
 		end
 	    else if (is_cond t) then
 		let val {cond=t1,larm=t2,rarm=t3} = dest_cond t
-		    val occ1 = mem x (free_vars t1)
-		    val occ2 = mem x (free_vars t2)
-		    val occ3 = mem x (free_vars t3)
+		    val occ1 = op_mem eq x (free_vars t1)
+		    val occ2 = op_mem eq x (free_vars t2)
+		    val occ3 = op_mem eq x (free_vars t3)
 		 in
 		    if (occ1 andalso occ2 andalso occ3) then
 		        if exquan then mk_exists{Bvar=x,Body=t}
@@ -1220,8 +1220,8 @@ fun term2smv_string t =
   handle _=> 		      (* ------ signal evalutation ------------	*)
     (let val {Rator=f,Rand=x} = dest_comb t
       in if (is_var x) then #Name(dest_var f)
-	 else if (x=(--`0`--)) then #Name(dest_var f)
-	 else if ((rator x)=(--`SUC`--)) then
+	 else if (eq x (--`0`--)) then #Name(dest_var f)
+	 else if (eq (rator x) (--`SUC`--)) then
 		"next("^(#Name(dest_var f))^")"
 	 else #Name(dest_var f)
      end)

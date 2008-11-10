@@ -77,7 +77,7 @@ fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...}) 
   | eq (Abs{Bvar=Bvar,Body=Body,...})              (Abs{Bvar=Bvar',Body=Body',...})               = eq Bvar Bvar' andalso eq Body Body'
   | eq (TyAbs{Bvar=Bvar,Body=Body,...})            (TyAbs{Bvar=Bvar',Body=Body',...})             = eq_type Bvar Bvar' andalso eq Body Body'
   | eq (Constrained{Ptm=Ptm,Ty=Ty,...})            (Constrained{Ptm=Ptm',Ty=Ty',...})             = eq Ptm Ptm' andalso Ty=Ty'
-  | eq (Antiq{Tm=Tm,...})                          (Antiq{Tm=Tm',...})                            = Tm=Tm'
+  | eq (Antiq{Tm=Tm,...})                          (Antiq{Tm=Tm',...})                            = Term.eq Tm Tm'
   | eq  _                                           _                                             = false
 
 (*---------------------------------------------------------------------------
@@ -116,13 +116,13 @@ fun from_term_var tm = let val (s,ty) = Term.dest_var tm
                        in Var{Name=s, Ty=Pretype.fromType ty, Locn=locn.Loc_None}
                        end
 
-local fun FV (v as Var _) A k              = k (Lib.insert v A)
+local fun FV (v as Var _) A k              = k (Lib.op_insert eq v A)
         | FV (Comb{Rator,Rand,...}) A k    = FV Rator A (fn q => FV Rand q k)
         | FV (TyComb{Rator,Rand,...}) A k  = FV Rator A k
         | FV (Abs{Bvar,Body,...}) A k      = FV Body A k
         | FV (TyAbs{Bvar,Body,...}) A k    = FV Body A k
         | FV (Constrained{Ptm,Ty,...}) A k = FV Ptm A k
-        | FV (Antiq{Tm,...}) A k = k (Lib.union (map from_term_var (Term.free_vars Tm)) A)
+        | FV (Antiq{Tm,...}) A k = k (Lib.op_union eq (map from_term_var (Term.free_vars Tm)) A)
         | FV _ A k = k A
 in
 fun free_vars tm = FV tm [] Lib.I

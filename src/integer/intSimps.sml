@@ -160,7 +160,7 @@ fun CTXT_ARITH DP DPname thms tm = let
   end
   val thm = EQT_INTRO (try tm)
       handle (e as HOL_ERR _) =>
-             if tm <> F then EQF_INTRO (try(mk_neg tm)) else raise e
+             if not (eq tm F) then EQF_INTRO (try(mk_neg tm)) else raise e
 in
   trace(1,PRODUCE(tm,DPname,thm)); thm
 end
@@ -249,7 +249,7 @@ end
 fun mkSS DPname DP = let
   val (CDP, cache) = let
     fun check tm =
-        type_of tm = Type.bool andalso is_arith tm andalso tm <> boolSyntax.T
+        type_of tm = Type.bool andalso is_arith tm andalso not (eq tm boolSyntax.T)
   in
     RCACHE (dpvars,check,CTXT_ARITH DP DPname)
   (* the check function determines whether or not a term might be handled

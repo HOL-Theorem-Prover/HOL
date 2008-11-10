@@ -139,7 +139,7 @@ fun has_quant t =
   else let
     val (f, args) = strip_comb t
   in
-    f = int_exists orelse f = int_forall orelse
+    eq f int_exists orelse eq f int_forall orelse
     List.exists has_quant args
   end
 
@@ -370,13 +370,13 @@ fun mk_constraint (v,tm) = list_mk_comb(constraint_tm,[tm,v])
 fun is_constraint tm = let
   val (f, args) = strip_comb tm
 in
-  f = constraint_tm andalso length args = 2
+  eq f constraint_tm andalso length args = 2
 end
 fun is_vconstraint v tm = let
   val (f, args) = strip_comb tm
 in
-  f = constraint_tm andalso length args = 2 andalso
-  free_vars (hd (tl args)) = [v]
+  eq f constraint_tm andalso length args = 2 andalso
+  list_cmp eq (free_vars (hd (tl args))) [v]
 end
 fun constraint_var tm = rand tm
 val lhand = rand o rator
@@ -510,7 +510,7 @@ fun simple_divides var tm = let
      free variable is the parameter var *)
   val (l,r) = dest_divides tm
 in
-  free_vars r = [var]
+  list_cmp eq (free_vars r) [var]
 end handle HOL_ERR _ => false
 
 

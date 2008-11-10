@@ -134,9 +134,9 @@ fun breakable tm =
     is_conj tm   orelse
     is_disj tm   orelse
     is_dneg tm   orelse
-    notT = tm    orelse
-    notF = tm    orelse
-    T=tm orelse F=tm
+    eq notT tm   orelse
+    eq notF tm   orelse
+    eq T tm orelse eq F tm
 
 (* ----------------------------------------------------------------------
     LET_ELIM_TAC

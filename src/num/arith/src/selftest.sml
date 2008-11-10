@@ -31,7 +31,7 @@ val _ = pr "Testing arith on ground ctxt ...              "
 val _ = let
   val (res, vfn) = ASM_SIMP_TAC arith_ss [] ([``2 <= 0``], ``F``)
 in
-  if null res andalso concl (vfn []) = F then print "OK\n"
+  if null res andalso eq (concl (vfn [])) F then print "OK\n"
   else die "FAILED!\n"
 end
 
@@ -56,7 +56,7 @@ val _ = let
   val result = SOME (Arith.ARITH_CONV t) handle HOL_ERR _ => NONE
 in
   case result of
-    SOME th => if rhs (concl th) = boolSyntax.T then print "OK\n"
+    SOME th => if eq (rhs (concl th)) boolSyntax.T then print "OK\n"
                else die "FAILED!\n"
   | NONE => die "FAILED!\n"
 end
@@ -68,7 +68,7 @@ val _ = let
   val result =
       SIMP_CONV (bool_ss ++ CONJ_ss ++ numSimps.ARITH_ss) [] t
 in
-  if null (hyp result) andalso rhs (concl result) = boolSyntax.F then
+  if null (hyp result) andalso eq (rhs (concl result)) boolSyntax.F then
     print "OK\n"
   else die "FAILED!\n"
 end

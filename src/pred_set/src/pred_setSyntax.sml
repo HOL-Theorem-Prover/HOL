@@ -209,7 +209,7 @@ fun prim_mk_set_spec(tm1,tm2,sharedvars) =
  handle HOL_ERR _ => raise ERR "prim_mk_set_spec" "";
 
 fun mk_set_spec (tm1,tm2) = 
- let val shared = intersect (free_vars_lr tm1) (free_vars_lr tm2)
+ let val shared = op_intersect eq (free_vars_lr tm1) (free_vars_lr tm2)
  in prim_mk_set_spec(tm1,tm2,shared)
  end
  handle e as HOL_ERR _ => raise wrap_exn "mk_set_spec" "" e;

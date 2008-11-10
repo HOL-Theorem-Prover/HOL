@@ -34,7 +34,7 @@ fun compare_abbrev a1 a2 =
      val v1 = mk_var(s1,type_of rhs1)
      val v2 = mk_var(s2,type_of rhs2)
  in
-   mem v1 (free_vars rhs2)
+   op_mem eq v1 (free_vars rhs2)
  end;
 
 (*---------------------------------------------------------------------------*)

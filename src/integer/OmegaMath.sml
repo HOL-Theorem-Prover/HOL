@@ -32,8 +32,8 @@ fun find_summand v tm = let
   fun recurse tm = let
     val (l,r) = dest_plus tm
   in
-    if rand r = v then r else recurse l
-  end handle HOL_ERR _ => if rand tm = v then tm else raise fs_NotFound
+    if eq (rand r) v then r else recurse l
+  end handle HOL_ERR _ => if eq (rand tm) v then tm else raise fs_NotFound
 in
   recurse (lhand tm) handle fs_NotFound =>
                             raise ERR "find_summand" "No such summand"
@@ -254,7 +254,7 @@ val CHECK_RZERO_CONV = let
       SOME(ll, lr) => let
         val (c,v) = dest_mult lr
       in
-        if c = zero_tm then
+        if eq c zero_tm then
           LAND_CONV (RAND_CONV (REWR_CONV INT_MUL_LZERO) THENC
                      REWR_CONV INT_ADD_RID) THENC recurse
         else LAND_CONV recurse
@@ -262,8 +262,8 @@ val CHECK_RZERO_CONV = let
     | NONE => let
         val (c,v) = dest_mult l
       in
-        if c = zero_tm then LAND_CONV (REWR_CONV INT_MUL_LZERO) THENC
-                            REWR_CONV INT_ADD_LID
+        if eq c zero_tm then LAND_CONV (REWR_CONV INT_MUL_LZERO) THENC
+                             REWR_CONV INT_ADD_LID
         else ALL_CONV
       end
   end tm
@@ -520,7 +520,7 @@ fun normalise_numbers tm = let
      REWR_CONV int_arithTheory.eq_move_all_right)
   val base_normaliser = RAND_CONV sum_normalise THENC gcd_check
 in
-  if (is_leq tm orelse is_eq tm) andalso lhand tm = zero_tm then
+  if (is_leq tm orelse is_eq tm) andalso eq (lhand tm) zero_tm then
     if is_plus (rand tm) then let
       val (rl, rr) = dest_plus (rand tm)
       fun mult_ok acc tm = let
@@ -830,9 +830,9 @@ fun rel_coeff v tm = let
   fun recurse t = let
     val (l,r) = dest_plus t
   in
-    if rand r = v then lhand r
+    if eq (rand r) v then lhand r
     else recurse l
-  end handle HOL_ERR _ => if rand t = v then lhand t else zero_tm
+  end handle HOL_ERR _ => if eq (rand t) v then lhand t else zero_tm
 in
   recurse (lhand (rand tm))
 end
@@ -1012,9 +1012,9 @@ val eliminate_equality =
 fun push_exvar_to_bot v tm = let
   val (bv, body) = dest_exists tm
 in
-  if bv = v then (SWAP_VARS_CONV THENC
-                  BINDER_CONV (push_exvar_to_bot v) ORELSEC
-                  ALL_CONV)
+  if eq bv v then (SWAP_VARS_CONV THENC
+                   BINDER_CONV (push_exvar_to_bot v) ORELSEC
+                   ALL_CONV)
   else (BINDER_CONV (push_exvar_to_bot v))
 end tm
 
@@ -1099,7 +1099,7 @@ fun eliminate_positive_divides t = let
       (LAND_CONV find_divides THENC LEFT_AND_EXISTS_CONV) ORELSEC
       (RAND_CONV find_divides THENC RIGHT_AND_EXISTS_CONV)
     else if is_divides tm andalso
-            not (null (intersect vs (free_vars (rand tm))))
+            not (null (op_intersect eq vs (free_vars (rand tm))))
     then
       REWR_CONV INT_DIVIDES THENC
       BINDER_CONV leaf_normalise
@@ -1141,7 +1141,7 @@ fun eliminate_negative_divides t = let
       (LAND_CONV find_divides THENC rdistrib) ORELSEC
       (RAND_CONV find_divides THENC ldistrib)
     else if is_neg tm andalso
-            not (null (intersect vs (free_vars (rand (rand tm)))))
+            not (null (op_intersect eq vs (free_vars (rand (rand tm)))))
     then
       elim_ndivides THENC
       BINDER_CONV (LAND_CONV (RAND_CONV (CooperMath.REDUCE_CONV))) THENC

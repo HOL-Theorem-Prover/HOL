@@ -91,7 +91,7 @@ fun strip_n_imp 0 tm = ([],tm)
 
 
 fun strip_imp_until_rel genvars tm =
-     (if (is_var (rand tm) andalso mem (rand tm) genvars)
+     (if (is_var (rand tm) andalso op_mem eq (rand tm) genvars)
      then ([],tm)
      else let val (x,y) = dest_imp tm
               val (z,w) = strip_imp_until_rel genvars y
@@ -157,7 +157,7 @@ in fn {relation,solver,depther,freevars} =>
             val (assums,bdy2) = strip_imp_until_rel genvars bdy1
             val (oper,args) = strip_comb bdy2
         in
-          if (length args = 2 andalso mem (#1 (strip_comb (el 2 args))) genvars) then
+          if (length args = 2 andalso op_mem eq (#1 (strip_comb (el 2 args))) genvars) then
             let val [orig,res] = args
                 val genv = #1 (strip_comb res)
                 val assum_thms = map ASSUME assums
@@ -193,7 +193,7 @@ in fn {relation,solver,depther,freevars} =>
       val final_thm = process_subgoals (nconds,match_thm,reprocess_flags)
 
   in
-    if (rand (rator (concl final_thm)) = rand (concl final_thm))
+    if eq (rand (rator (concl final_thm))) (rand (concl final_thm))
       then raise HOL_ERR { origin_structure = "Opening",
                            origin_function = "CONGPROC",
                            message = "Congruence gives no change" }

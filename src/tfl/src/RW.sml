@@ -60,7 +60,7 @@ fun GSPEC_ALL th =
   *   end;
   *--------------------------------------------------------------------------*)
 
- fun alike head tm1 tm2 = (#1 (strip_comb tm2) = head)
+ fun alike head tm1 tm2 = eq (#1 (strip_comb tm2)) head
                           andalso
                           can (match_term tm1) tm2;
  fun embedded1 tm =
@@ -130,7 +130,7 @@ fun strip_imp tm =
                   ::map (DISCH ant) (mk_rewrs (step th (ASSUME ant)))
                end else
           if (is_forall tm) then mk_rewrs (SPECer th) else
-          if (tm = istrue) then [] else
+          if (eq tm istrue) then [] else
           [EQT_INTRO th]
       end
       handle HOL_ERR _ => raise RW_ERR "mk_simpls" ""
@@ -427,7 +427,7 @@ fun variants away0 vlist =
 fun variant_theta away0 vlist =
  rev_itlist (fn v => fn (V,away) =>
     let val v' = variant away v
-    in if v=v' then (V,away) else ((v|->v')::V, v'::away) end)
+    in if eq v v' then (V,away) else ((v|->v')::V, v'::away) end)
  vlist ([],away0);
 
 (*---------------------------------------------------------------------------
@@ -443,7 +443,7 @@ fun vstrl_variants away0 vstrl =
      else let val theta =
                #1(rev_itlist (fn v => fn (theta, pool) =>
                      let val v' = variant pool v
-                     in if v=v' then (theta,pool)
+                     in if eq v v' then (theta,pool)
                                 else ((v|->v')::theta, v'::pool)
                      end) clashes ([], op_union aconv away0 fvl))
           in map (subst theta) vstrl
@@ -501,7 +501,7 @@ let val ant_frees = free_vars ant
     val _ = assert is_pabs f
     val (rhsv,_) = dest_combn rhs (length vlist)
     val vstrl = #1(strip_pabs f)
-    val vstrl1 = vstrl_variants (union ant_frees context_frees) vstrl
+    val vstrl1 = vstrl_variants (op_union eq ant_frees context_frees) vstrl
     val ceqn' = subst (map (op|->) (zip args vstrl1)) ceqn
     val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp ceqn')
     val outcome =
@@ -526,12 +526,12 @@ in
       let val Mnew = boolSyntax.rhs(concl th)
           val g = list_mk_pabs(vstrl1,Mnew)
           val gvstrl1 = list_mk_comb(g,vstrl1)
-          val eq = SYM(DEPTH_CONV GEN_BETA_CONV gvstrl1
+          val equ = SYM(DEPTH_CONV GEN_BETA_CONV gvstrl1
                        handle HOL_ERR _ => REFL gvstrl1)
-          val th1 = TRANS th eq (* f vstrl1 = g vstrl1 *)
+          val th1 = TRANS th equ (* f vstrl1 = g vstrl1 *)
           val pairs = zip args vstrl1
           fun generalize v thm =
-                case assoc1 v pairs
+                case op_assoc1 eq v pairs
                  of SOME (_,tup) => pairTools.PGEN v tup thm
                   | NONE => raise RW_ERR "complex" "generalize"
       in (CHANGE (itlist generalize vlist (itlist DISCH L th1)),
@@ -790,7 +790,7 @@ fun std_solver _ context tm =
                     solver_err())
        | loop (x::rst) =
            let val c = concl x
-           in if (c=untrue)
+           in if (eq c untrue)
               then CCONTR tm x
               else if (aconv tm c) then x
                    else INST_TY_TERM (match_term c tm) x
@@ -818,7 +818,7 @@ fun rw_solver simpls context tm =
                                   prover = rw_solver} tm
      val _ = if !monitoring
              then let val (lhs,rhs) = dest_eq(concl th)
-                  in if rhs = T
+                  in if eq rhs T
                      then Lib.say("Solver: proved\n"^thm_to_string th^"\n\n")
                      else Lib.say("Solver: unable to prove.\n\n")
                   end
@@ -827,7 +827,7 @@ fun rw_solver simpls context tm =
      fun loop [] = solver_err()
        | loop (x::rst) =
            let val c = concl x
-           in if c = F then CCONTR tm x
+           in if eq c F then CCONTR tm x
               else if aconv tm' c then x
                    else INST_TY_TERM (match_term c tm') x
                       handle HOL_ERR _ => loop rst

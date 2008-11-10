@@ -102,7 +102,7 @@ fun CANCEL_CONV (assoc,sym,lcancelthms) tm =
 	  map (rator o rator o lhs o snd o strip_forall o concl)
 	  [hd lcthms, sym]
       fun strip_binop tm =
-	  if (rator(rator tm) = binop handle _ => false) then
+	  if (eq (rator(rator tm)) binop handle _ => false) then
 	      (strip_binop (rand(rator tm))) @ (strip_binop(rand tm))
 	  else [tm]
       val mk_binop = ((curry mk_comb) o (curry mk_comb binop))
@@ -110,11 +110,11 @@ fun CANCEL_CONV (assoc,sym,lcancelthms) tm =
 
       fun rmel i list = op_set_diff aconv list [i]
 
-      val (_,[l1,r1]) = (assert (curry op= eqop) ## I) (strip_comb tm)
+      val (_,[l1,r1]) = (assert (eq eqop) ## I) (strip_comb tm)
       val [l, r] = map strip_binop [l1, r1]
       val i = op_intersect aconv l r
   in
-      if i = [] then raise Fail ""
+      if null i then raise Fail ""
       else
 	  let val itm = list_mk_binop i
 	      val [l', r'] =

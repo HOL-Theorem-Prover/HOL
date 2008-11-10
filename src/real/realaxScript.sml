@@ -136,13 +136,13 @@ fun CANCEL_CONV(assoc,sym,lcancelthms) tm =
       val eqop = lhs_rator2 (Lib.trye hd lcthms)
       val binop = lhs_rator2 sym
       fun strip_binop tm =
-        if (rator(rator tm) = binop handle HOL_ERR _ => false)
+        if (eq (rator(rator tm)) binop handle HOL_ERR _ => false)
         then strip_binop (rand(rator tm)) @ strip_binop(rand tm)
         else [tm]
       val mk_binop = curry mk_comb o curry mk_comb binop
       val list_mk_binop = end_itlist mk_binop
       val (c,alist) = strip_comb tm
-      val _ = assert (curry op = eqop) c
+      val _ = assert (eq eqop) c
   in
     case alist of
       [l1,r1] => let
@@ -150,7 +150,7 @@ fun CANCEL_CONV(assoc,sym,lcancelthms) tm =
         and r = strip_binop r1
         val i = op_intersect aconv l r
       in
-        if (i = []) then raise ERR "unchanged"
+        if null i then raise ERR "unchanged"
         else let
             val itm = list_mk_binop i
             val l' = end_itlist (C (curry op o)) (map rmel i) l
@@ -343,7 +343,7 @@ val TREAL_MUL_LINV = prove_thm("TREAL_MUL_LINV",
   PURE_ASM_REWRITE_TAC[COND_CLAUSES, treal_mul, treal_eq, treal_1] THEN
   REWRITE_TAC[HREAL_MUL_LID, HREAL_LDISTRIB, HREAL_RDISTRIB] THEN
   CANCEL_TAC THEN W(SUBST1_TAC o SYM o C SPEC HREAL_MUL_LINV o
-    find_term(fn tm => rator(rator tm) = (--`$hreal_sub`--) handle _ => false) o snd) THEN
+    find_term(fn tm => eq (rator(rator tm)) (--`$hreal_sub`--) handle _ => false) o snd) THEN
   REWRITE_TAC[GSYM HREAL_LDISTRIB] THEN AP_TERM_TAC THEN
   FIRST_ASSUM(SUBST1_TAC o MATCH_MP HREAL_SUB_ADD) THEN REFL_TAC);
 
@@ -521,7 +521,7 @@ val TREAL_INV_WELLDEF = prove_thm("TREAL_INV_WELLDEF",
     HREAL_LT_TOTAL) THEN ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
     RULE_ASSUM_TAC(ONCE_REWRITE_RULE[HREAL_ADD_SYM])] THEN
   FIRST_ASSUM(fn th => FIRST_ASSUM(MP_TAC o EQ_MP (MATCH_MP lemma1 th))) THEN
-  FIRST_ASSUM(UNDISCH_TAC o assert(curry op =(--`$hreal_lt`--) o rator o rator) o concl)
+  FIRST_ASSUM(UNDISCH_TAC o assert(eq (--`$hreal_lt`--) o rator o rator) o concl)
   THEN REPEAT(DISCH_THEN(SUBST1_TAC o MATCH_MP HREAL_SUB_ADD)) THEN
   FIRST_ASSUM SUBST1_TAC THEN REFL_TAC end);
 

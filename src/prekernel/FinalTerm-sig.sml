@@ -1,7 +1,7 @@
 signature FinalTerm =
 sig
 
-  eqtype term
+  type term
   type hol_type
   type kind
   type ('a,'b)subst = ('a,'b)Lib.subst
@@ -79,6 +79,8 @@ sig
   val rename_btyvar : string -> term -> term
 
   val same_const    : term -> term -> bool
+  val prim_eq       : term -> term -> bool
+  val eq            : term -> term -> bool
   val aconv         : term -> term -> bool
   val beta_conv     : term -> term
   val eta_conv      : term -> term

@@ -402,10 +402,10 @@ fun dest_imp M =
  let val (Rator,conseq) = dest_comb M
  in if is_comb Rator
     then let val (Rator,ant) = dest_comb Rator
-         in if Rator=imp then (ant,conseq)
+         in if eq Rator imp then (ant,conseq)
             else raise Fail "dest_imp"
          end
-    else if Rator=notc then (conseq,F) else raise Fail "dest_imp"
+    else if eq Rator notc then (conseq,F) else raise Fail "dest_imp"
  end
 end
 
@@ -587,11 +587,11 @@ fun SPECL tm_list th = rev_itlist SPEC tm_list th
 
 fun TY_SPECL ty_list th = rev_itlist TY_SPEC ty_list th
 
-fun GEN_ALL th = itlist GEN (set_diff (free_vars(concl th))
-                                      (free_varsl (hyp th))) th;
+fun GEN_ALL th = itlist GEN (op_set_diff eq (free_vars(concl th))
+                                            (free_varsl (hyp th))) th;
 
 fun TY_GEN_ALL th = itlist TY_GEN (set_diff (type_vars_in_term(concl th))
-                                      (HOLset.listItems (hyp_tyvars th))) th;
+                                            (HOLset.listItems (hyp_tyvars th))) th;
 
 local fun f v (vs,l) = let val v' = variant vs v in (v'::vs, v'::l) end
 in

@@ -50,7 +50,7 @@ fun REWR_CONV0 (part_matcher,fn_name) th =
   in fn tm =>
     let val eqn = instth tm
         val l   = lhs(concl eqn)
-    in if l = tm then eqn else TRANS (ALPHA tm l) eqn
+    in if prim_eq l tm then eqn else TRANS (ALPHA tm l) eqn
     end
     handle HOL_ERR _ => raise ERR fn_name "lhs of thm doesn't match term"
   end;
@@ -778,7 +778,7 @@ fun AND_FORALL_CONV tm =
        val {Bvar=x, Body=P} = dest_forall conj1
        val {Bvar=y, Body=Q} = dest_forall conj2
    in
-   if (not (x=y))
+   if (not (eq x y))
    then raise ERR "AND_FORALL_CONV" "forall'ed variables not the same"
    else let val specx = SPEC x
             val (t1,t2) = (specx##specx) (CONJ_PAIR (ASSUME tm))
@@ -852,7 +852,7 @@ fun OR_EXISTS_CONV tm =
        val {Bvar=x, Body=P} = dest_exists disj1
        val {Bvar=y, Body=Q} = dest_exists disj2
    in
-   if (not (x=y)) then raise ERR "OR_EXISTS_CONV" ""
+   if (not (eq x y)) then raise ERR "OR_EXISTS_CONV" ""
    else let val aP = ASSUME P
             and aQ = ASSUME Q
             and P_or_Q = mk_disj{disj1 = P, disj2 = Q}
@@ -997,7 +997,7 @@ fun AND_EXISTS_CONV tm =
      val {Bvar=x, Body=P} = dest_exists conj1 handle HOL_ERR _ => raise AE_ERR
      val {Bvar=y, Body=Q} = dest_exists conj2 handle HOL_ERR_ => raise AE_ERR
  in
-   if (not(x=y)) then raise AE_ERR else
+   if (not(eq x y)) then raise AE_ERR else
    if (free_in x P orelse free_in x Q)
    then raise ERR "AND_EXISTS_CONV"
             ("`"^(#Name(dest_var x))^"` free in conjunct(s)")
@@ -1138,7 +1138,7 @@ fun OR_FORALL_CONV tm =
      val {Bvar=x, Body=P} = dest_forall disj1 handle HOL_ERR _ => raise OF_ERR
      val {Bvar=y, Body=Q} = dest_forall disj2 handle HOL_ERR _ => raise OF_ERR
  in
-   if not(x=y) then raise OF_ERR else
+   if not(eq x y) then raise OF_ERR else
    if (free_in x P orelse free_in x Q)
    then raise ERR"OR_FORALL_CONV"
              ("`"^(#Name(dest_var x))^ "` free in disjuncts(s)")
@@ -1782,9 +1782,9 @@ fun bool_EQ_CONV tm =
    let val {lhs,rhs} = dest_eq tm
        val _ = if type_of rhs = Type.bool then ()
                else raise ERR"bool_EQ_CONV" "does not have boolean type"
-   in if lhs=rhs then EQT_INTRO (REFL lhs) else
-      if lhs=T then SPEC rhs Tb else
-      if rhs=T then SPEC lhs bT
+   in if eq lhs rhs then EQT_INTRO (REFL lhs) else
+      if eq lhs T then SPEC rhs Tb else
+      if eq rhs T then SPEC lhs bT
       else raise ERR"bool_EQ_CONV" "inapplicable"
    end
    handle e => raise (wrap_exn "Conv" "bool_EQ_CONV" e)
@@ -1865,9 +1865,9 @@ fun COND_CONV tm =
  let val {cond,larm,rarm} = dest_cond tm
      val INST_TYPE' = INST_TYPE [alpha |-> type_of larm]
  in
-   if (cond=T) then SPEC rarm (SPEC larm (INST_TYPE' CT)) else
-   if (cond=F) then SPEC rarm (SPEC larm (INST_TYPE' CF)) else
-   if (larm=rarm) then SPEC larm (SPEC cond (INST_TYPE' COND_ID)) else
+   if (eq cond T) then SPEC rarm (SPEC larm (INST_TYPE' CT)) else
+   if (eq cond F) then SPEC rarm (SPEC larm (INST_TYPE' CF)) else
+   if (eq larm rarm) then SPEC larm (SPEC cond (INST_TYPE' COND_ID)) else
    if (aconv larm rarm)
      then let val cnd = AP_TERM (rator tm) (ALPHA rarm larm)
               val th = SPEC larm (SPEC cond (INST_TYPE' COND_ID))

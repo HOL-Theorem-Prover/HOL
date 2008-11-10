@@ -1315,12 +1315,12 @@ fun install_consts _ [] = []
        in map (fn c => (false,c)) clist @ install_consts s rst
        end
   | install_consts s (iDATATYPE ty::rst) =
-      let val consts = U (map (Term.decls o fst) (constructors ty))
+      let val consts = op_U eq (map (Term.decls o fst) (constructors ty))
           val _ = List.app (add (true, s)) consts
       in map (fn c => (true,c)) consts @ install_consts s rst
       end
   | install_consts s (iEQDATATYPE (tyvars,ty)::rst) =
-      let val consts = U (map (Term.decls o fst) (constructors ty))
+      let val consts = op_U eq (map (Term.decls o fst) (constructors ty))
           val _ = List.app (add (true, s)) consts
       in map (fn c => (true,c)) consts @ install_consts s rst
       end

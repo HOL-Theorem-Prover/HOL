@@ -25,11 +25,12 @@ fun dest_rat (t1:term) =
 		let
 			val (top_rator, top_rand) = dest_comb t1;
 		in
-			if top_rator=``abs_rat`` then
+			if eq top_rator ``abs_rat`` then
 				(``abs_rat``,[top_rand])
 			else
 				(* Hier gibt es noch Probleme: X (v1:vec) ist auch vom Typ rat *)
-				if top_rator=``rat_ainv`` orelse top_rator=``rat_minv`` orelse top_rator=``X`` orelse top_rator=``Y``then
+				if eq top_rator ``rat_ainv`` orelse eq top_rator ``rat_minv``
+                                   orelse eq top_rator ``X`` orelse eq top_rator ``Y``then
 					(top_rator, [top_rand])
 				else
 					let
@@ -94,11 +95,11 @@ fun extract_rat_equations (t1:term) =
 
 fun extract_rat_minv (t1:term) =
 	if (is_comb t1) then
-		if (rator t1 = ``rat_minv``) then
+		if (eq (rator t1) ``rat_minv``) then
 			[t1]
 		else
 			let val (ta,tb) = dest_comb t1 in
-				list_merge (extract_rat_minv ta) (extract_rat_minv tb)
+				op_list_merge eq (extract_rat_minv ta) (extract_rat_minv tb)
 			end
 	else
 		[];

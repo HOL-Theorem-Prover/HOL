@@ -63,7 +63,13 @@ datatype term = Fv of string * hol_type
               | TComb of term * hol_type
               | Abs   of term * term
               | TAbs  of tyvar * term
-              | Clos  of term Subst.subs * term;
+              | Clos  of term Subst.subs * term
+           (* | HackHack of bool -> bool *)
+           (* Because of the hol_type fields, that need to compared using abconv_ty for
+              alpha- and beta-equivalence between types, terms should *not* be compared
+              with the built-in equality, but should use "eq" defined in Term.sml.
+              To check this has been done everywhere, uncomment this constructor. *)
+              ;
 
 (*---------------------------------------------------------------------------
       The representation of theorems. A "tag" is a pair of the oracles

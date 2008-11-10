@@ -1347,12 +1347,16 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
     topterm >-                      (fn top =>
     invstructp >-                   (fn invs =>
     doit (tt, top, invs))))
+
+  fun is_not_Terminal_BOS ((Terminal BOS,_),_) = false
+    | is_not_Terminal_BOS _ = true
+
 in
   push ((Terminal BOS,locn.Loc_None), XXX) >> get_item >>
   mwhile (current_input >-
           (fn optt => if (isSome optt) then return true
                       else
-                        (topterm >- (fn t => return (#1 (#1 t) <> Terminal BOS)))))
+                        (topterm >- (fn t => return (is_not_Terminal_BOS t)))))
   basic_action
 end (* parse_term *)
 
