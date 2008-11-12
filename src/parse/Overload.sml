@@ -11,18 +11,16 @@ infix ##
      all members of the list have non-empty actual_ops lists
 *)
 
-type const_rec = {Name : string, Ty : hol_type, Thy : string}
 type nthy_rec = {Name : string, Thy : string}
 
 fun lose_constrec_ty {Name,Ty,Thy} = {Name = Name, Thy = Thy}
 
-(* though const_rec's are stored, the Ty component is there just to
+(* though term's are stored, the Ty component is there just to
    tell us what the generic type of a term is, it will never be a
    specialisation of a polymorphic type *)
 
-type overloaded_op_info =
-  {base_type : Type.hol_type,
-   actual_ops : const_rec list}
+type overloaded_op_info = {base_type : Type.hol_type, actual_ops : term list,
+                           tyavoids : Type.hol_type list}
 
 (* the overload info is thus a pair:
    * first component is for the "parsing direction"; it's a map from
@@ -53,6 +51,9 @@ fun update_assoc k v [] = [(k,v)]
                                       else (k',v')::update_assoc k v kvs
 
 exception OVERLOAD_ERR of string
+
+fun tmlist_tyvs tlist = 
+  List.foldl (fn (t,acc) => Lib.union (type_vars_in_term t) acc) [] tlist
 
 local
   open stmonad Lib Type
@@ -134,11 +135,14 @@ fun aul tyl =
       [] => raise Fail "Overload.aul applied to empty list - shouldn't happen"
     | (h::t) => foldl (uncurry anti_unify) h t
 
-fun fupd_actual_ops f {base_type, actual_ops} =
-  {base_type = base_type, actual_ops = f actual_ops}
+fun fupd_actual_ops f {base_type, actual_ops, tyavoids} =
+  {base_type = base_type, actual_ops = f actual_ops, tyavoids = tyavoids}
 
-fun fupd_base_type f {base_type, actual_ops} =
-  {base_type = f base_type, actual_ops = actual_ops}
+fun fupd_base_type f {base_type, actual_ops, tyavoids} =
+  {base_type = f base_type, actual_ops = actual_ops, tyavoids = tyavoids}
+
+fun fupd_tyavoids f {base_type, actual_ops, tyavoids} = 
+    {base_type = base_type, actual_ops = actual_ops, tyavoids = f tyavoids}
 
 fun fupd_dict_at_key k f dict = let
   val (newdict, kitem) = Binarymap.remove(dict,k)
@@ -164,8 +168,7 @@ end
 
 fun remove_overloaded_form s (oinfo:overload_info) = let
   val (op2cnst, cnst2op) = oinfo
-  val (okopc, badopc) =
-    (I ## map lose_constrec_ty o #actual_ops) (Binarymap.remove(op2cnst, s))
+  val (okopc, badopc) = (I ## #actual_ops) (Binarymap.remove(op2cnst, s))
     handle Binarymap.NotFound => (op2cnst, [])
   (* will keep okopc, but should now remove from cnst2op all pairs of the form
        (c, s)
@@ -181,10 +184,11 @@ end
 
 fun raw_map_insert s (new_op2cs, new_c2ops) (op2c_map, c2op_map) = let
   fun install_ty (r as {Name,Thy}) =
-    {Name = Name, Thy = Thy, Ty = type_of (Term.prim_mk_const r)}
+    Term.prim_mk_const r
     handle HOL_ERR _ =>
       raise OVERLOAD_ERR ("No such constant: "^Thy^"$"^Name)
   val withtypes = map install_ty new_op2cs
+
   val new_c2op_map =
     List.foldl (fn (crec,acc) => Binarymap.insert(acc, crec, s))
                c2op_map new_c2ops
@@ -192,9 +196,13 @@ in
   case withtypes of
     [] => (op2c_map, new_c2op_map)
   | (r::rs) => let
-      val au = foldl (fn (r1, t) => anti_unify (#Ty r1) t) (#Ty r) rs
+      val au = foldl (fn (r1, t) => anti_unify (type_of r1) t) (type_of r) rs
     in
-      (Binarymap.insert(op2c_map, s, {base_type = au, actual_ops = withtypes}),
+      (Binarymap.insert
+         (op2c_map, s, 
+          {base_type = au, actual_ops = withtypes,
+           tyavoids = tmlist_tyvs (HOLset.listItems 
+                                     (FVL withtypes empty_tmset))}),
        new_c2op_map)
     end
 end
@@ -211,49 +219,58 @@ fun ntys_equal {Ty = ty1,Name = n1, Thy = thy1}
    there for a given operator, don't mind.  In either case, make sure that
    it's at the head of the list, meaning that it will be the first choice
    in ambigous resolutions. *)
-fun add_actual_overloading {opname, realname, realthy} oinfo = let
-  val nthy_rec = {Name = realname, Thy = realthy}
-  val cnst = prim_mk_const{Name = realname, Thy = realthy}
-    handle HOL_ERR _ =>
-      raise OVERLOAD_ERR ("No such constant: "^realthy^"$"^realname)
-  val newrec = dest_thy_const cnst
+fun add_overloading (opname, term) oinfo = let
   val (opc0, cop0) = oinfo
   val opc =
       case info_for_name oinfo opname of
-        SOME {base_type, actual_ops} => let
+        SOME {base_type, actual_ops, tyavoids} => let
           (* this name is already overloaded *)
-          fun eq_nthy {Name,Thy,Ty} = Name = realname andalso Thy = realthy
         in
-          case Lib.total (Lib.pluck eq_nthy) actual_ops of
+          case Lib.total (Lib.pluck (aconv term)) actual_ops of
             SOME (_, rest) => let
-              (* a constant of same nthy pair was already in the map *)
+              (* this term was already in the map *)
               (* must replace it *)
-              val newbase =
-                  foldl (fn (r, ty) => anti_unify (#Ty r) ty) (#Ty newrec) rest
             in
               Binarymap.insert(opc0, opname,
-                               {actual_ops = newrec::rest,
-                                base_type = newbase})
+                               {actual_ops = term::rest,
+                                base_type = base_type, 
+                                tyavoids = tyavoids})
             end
           | NONE => let
-              (* no constant of this name in the map, so can just cons its *)
-              (* record in *)
-              val newbase = anti_unify base_type (#Ty newrec)
+              (* Wasn't in the map, so can just cons its record in *)
+              val newbase = anti_unify base_type (type_of term)
+              val new_avoids = tmlist_tyvs (free_vars term)
             in
               fupd_dict_at_key
                 opname
-                (fupd_actual_ops (cons newrec) o
-                 fupd_base_type (fn b => newbase))
+                (fupd_actual_ops (cons term) o
+                 fupd_base_type (fn b => newbase) o 
+                 fupd_tyavoids (Lib.union new_avoids))
                 opc0
             end
         end
       | NONE =>
         (* this name not overloaded at all *)
         Binarymap.insert(opc0, opname,
-                         {actual_ops = [newrec], base_type = #Ty newrec})
-  val cop = Binarymap.insert(cop0, nthy_rec, opname)
+                         {actual_ops = [term], base_type = type_of term, 
+                          tyavoids = tmlist_tyvs (free_vars term)})
+  val cop = if is_const term then let 
+                val nthy_rec = lose_constrec_ty (dest_thy_const term)
+              in
+                Binarymap.insert(cop0, nthy_rec, opname)
+              end
+            else cop0
 in
   (opc, cop)
+end
+
+
+fun add_actual_overloading {opname, realname, realthy} oinfo = let 
+  val cnst = prim_mk_const{Name = realname, Thy = realthy}
+      handle HOL_ERR _ =>
+             raise OVERLOAD_ERR ("No such constant: "^realthy^"$"^realname)
+in
+  add_overloading (opname, cnst) oinfo
 end
 
 local
@@ -265,16 +282,15 @@ local
     val (opc0, cop0) = oinfo
     val opc =
         case info_for_name oinfo opname of
-          SOME {base_type, actual_ops} => let
+          SOME {base_type, actual_ops, tyavoids} => let
             (* this name is overloaded *)
-            fun eq_nthy {Name,Thy,Ty} = Name = realname andalso Thy = realthy
           in
-            case List.find eq_nthy actual_ops of
+            case List.find (aconv cnst) actual_ops of
               SOME x => (* the constant is in the map *)
                 Binarymap.insert(opc0, opname,
-                  {actual_ops = f (fn x => #Name x = realname andalso
-                                            #Thy x = realthy) actual_ops,
-                   base_type = base_type})
+                  {actual_ops = f (aconv cnst) actual_ops,
+                   base_type = base_type, 
+                   tyavoids = tyavoids})
             | NONE => raise OVERLOAD_ERR
                         ("Constant not overloaded: "^realthy^"$"^realname)
           end
@@ -330,7 +346,8 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) : overload_info = let
               (name,
                {base_type = newty,
                 actual_ops =
-                Lib.op_union ntys_equal (#actual_ops op1) (#actual_ops op2)})
+                Lib.op_union aconv (#actual_ops op1) (#actual_ops op2),
+                tyavoids = Lib.union (#tyavoids op1) (#tyavoids op2)})
           in
             merge (newopinfo::acc) op1s' op2s'
           end
@@ -375,7 +392,8 @@ fun known_constants (oi:overload_info) = keys (#1 oi)
 
 fun remove_omapping crec str opdict = let
   val (dictlessk, kitem) = Binarymap.remove(opdict, str)
-  fun ok_actual oprec = lose_constrec_ty oprec <> crec
+  val cnst = prim_mk_const crec
+  fun ok_actual t = not (aconv t cnst)
   val new_rec = fupd_actual_ops (List.filter ok_actual) kitem
 in
   if (null (#actual_ops new_rec)) then dictlessk

@@ -125,29 +125,32 @@ fun apply_subst subst pty =
         NONE => UVar r
       | SOME (_, value) => apply_subst subst value
 
-(*---------------------------------------------------------------------------*
- * Passes over a type, turning all of the type variables into fresh          *
- * UVars, but doing so consistently by using an env, which is an alist       *
- * from variable names to type variable refs.                                *
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Passes over a type, turning all of the type variables not in the
+    avoids list into fresh UVars, but doing so consistently by using
+    an env, which is an alist from variable names to type variable
+    refs.
+   ---------------------------------------------------------------------- *)
 
-local fun replace s env =
-        case Lib.assoc1 s env
-         of NONE =>
-              let val r = ref NONE
-              in ((s, r)::env, SOME (UVar r))
-              end
-          | SOME (_, r) => (env, SOME (UVar r))
+local 
+  fun replace s env =
+      case Lib.assoc1 s env of 
+        NONE => let
+          val r = ref NONE
+        in 
+          ((s, r)::env, SOME (UVar r))
+        end
+      | SOME (_, r) => (env, SOME (UVar r))
 in
-fun rename_tv ty =
+fun rename_tv avds ty =
   case ty of
-    Vartype s => replace s
+    Vartype s => if mem s avds then return ty else replace s
   | Tyop{Tyop = s, Thy = thy, Args = args} =>
-      mmap rename_tv args >-
+      mmap (rename_tv avds) args >-
       (fn args' => return (Tyop{Tyop = s, Thy = thy, Args = args'}))
   | x => return x
 
-fun rename_typevars ty = valOf (#2 (rename_tv ty []))
+fun rename_typevars avds ty = valOf (#2 (rename_tv avds ty []))
 end
 
 fun fromType t =

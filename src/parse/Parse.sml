@@ -205,6 +205,31 @@ in
   fn t => with_pp con (pprint t)
 end
 
+fun minprint t = let 
+  val g0 = (type_grammar.empty_grammar, term_grammar.stdhol)
+  fun default t = let 
+    val t_str =   
+        String.toString 
+          (trace ("types", 1)
+                 (PP.pp_to_string 1000000 (#2 (print_from_grammars g0)))
+                 t)
+  in
+    String.concat ["(#2 (parse_from_grammars min_grammars)",
+                   "[QUOTE \"", t_str, "\"])"]
+  end
+in
+  if is_const t then let 
+      val {Name,Thy,...} = dest_thy_const t 
+      val t' = prim_mk_const {Name = Name, Thy = Thy}
+    in
+      if aconv t t' then 
+        String.concat ["(Term.prim_mk_const { Name = ",
+                       quote Name, ", Thy = ",
+                       quote Thy, "})"]
+      else default t
+    end
+  else default t
+end
 
 (*---------------------------------------------------------------------------
               Parsing types
@@ -473,10 +498,6 @@ in
 end
 
 local open Parse_support Absyn
-  fun binder(VIDENT (l,s))    = make_binding_occ l s
-    | binder(VPAIR(l,v1,v2))  = make_vstruct l [binder v1, binder v2] NONE
-    | binder(VAQ (l,x))       = make_aq_binding_occ l x
-    | binder(VTYPED(l,v,pty)) = make_vstruct l [binder v] (SOME pty)
   fun to_vstruct t =
       case t of
         APP(l, APP(_, IDENT (_, ","), t1), t2) => VPAIR(l, to_vstruct t1,
@@ -487,13 +508,18 @@ local open Parse_support Absyn
       | _ => raise ERRORloc "Term" (locn_of_absyn t)
                             "Bad variable-structure"
 in
-  fun absyn_to_preterm_in_env ginfo t = let
+  fun absyn_to_preterm_in_env oinfo t = let
+    fun binder(VIDENT (l,s))    = make_binding_occ l s
+      | binder(VPAIR(l,v1,v2))  = make_vstruct oinfo l [binder v1, binder v2] 
+                                               NONE
+      | binder(VAQ (l,x))       = make_aq_binding_occ l x
+      | binder(VTYPED(l,v,pty)) = make_vstruct oinfo l [binder v] (SOME pty)
     open parse_term Absyn Parse_support
-    val to_ptmInEnv = absyn_to_preterm_in_env ginfo
+    val to_ptmInEnv = absyn_to_preterm_in_env oinfo
   in
     case t of
       APP(l,APP(_,IDENT (_,"gspec special"), t1), t2) =>
-        make_set_abs l (to_ptmInEnv t1, to_ptmInEnv t2)
+        make_set_abs oinfo l (to_ptmInEnv t1, to_ptmInEnv t2)
     | APP(l,APP(_,APP(_,IDENT (_, "gspec2 special"), t1), t2), t3) => let
         val l3 = locn_of_absyn t3
         val newbody = APP(l3, APP(l3, QIDENT(l3, "pair", ","), t1), t3)
@@ -505,9 +531,9 @@ in
         make_seq_abs l (to_ptmInEnv t1, to_ptmInEnv t2)
 *)
     | APP(l, t1, t2)     => list_make_comb l (map to_ptmInEnv [t1, t2])
-    | IDENT (l, s)       => make_atom ginfo l s
-    | QIDENT (l, s1, s2) => make_qconst ginfo l (s1,s2)
-    | LAM(l, vs, t)      => bind_term l "\\" [binder vs] (to_ptmInEnv t)
+    | IDENT (l, s)       => make_atom oinfo l s
+    | QIDENT (l, s1, s2) => make_qconst oinfo l (s1,s2)
+    | LAM(l, vs, t)      => bind_term l [binder vs] (to_ptmInEnv t)
     | TYPED(l, t, pty)   => make_constrained l (to_ptmInEnv t) pty
     | AQ (l, t)          => make_aq l t
   end
@@ -1118,16 +1144,18 @@ fun bring_to_front_overload s (r as {Name, Thy}) = let in
  end
 
 fun temp_overload_on (s, t) =
-  temp_overload_on_by_nametype s (lose_constrec_ty (dest_thy_const t))
-  handle Overload.OVERLOAD_ERR s => raise ERROR "temp_overload_on" s
-       | HOL_ERR _ => raise ERROR "overload_on"
-           "Can't have non-constants as targets of overloading"
+    the_term_grammar := fupdate_overload_info
+                          (Overload.add_overloading (s, t))
+                          (term_grammar());
 
-fun overload_on (s, t) =
-  overload_on_by_nametype s (lose_constrec_ty (dest_thy_const t))
-  handle Overload.OVERLOAD_ERR s => raise ERROR "temp_overload_on" s
-       | HOL_ERR _ => raise ERROR "overload_on"
-           "Can't have non-constants as targets of overloading"
+fun overload_on (s, t) = let 
+in
+  temp_overload_on (s, t);
+  full_update_grms 
+    ("temp_overload_on",
+     String.concat ["(", quote s, ", ", minprint t, ")"],
+    SOME t)
+end
 
 fun temp_clear_overloads_on s = let
   open term_grammar
@@ -1223,13 +1251,19 @@ fun add_numeral_form (c, stropt) = let in
  ---------------------------------------------------------------------------*)
 
 fun hide s = let
-  val (newg, retval) =
+  val (newg, (tms,nthyrecs)) =
     mfupdate_overload_info (Overload.remove_overloaded_form s)
-    (!the_term_grammar)
+                           (!the_term_grammar)
+  fun to_nthyrec t = let 
+    val {Name,Thy,Ty} = dest_thy_const t
+  in 
+    SOME {Name = Name, Thy = Thy}
+  end handle HOL_ERR _ => NONE
+      
 in
   the_term_grammar := newg;
   term_grammar_changed := true;
-  retval
+  (List.mapPartial to_nthyrec tms, nthyrecs)
 end;
 
 fun update_overload_maps s nthyrec_pair = let
@@ -1294,14 +1328,10 @@ in
   the_term_grammar := newg;
   term_grammar_changed := true;
   printfnopt
-end;
+end
 
 
 fun add_user_printer(name,pattern,pfn) = let
-  val g0 = (type_grammar.empty_grammar, term_grammar.stdhol)
-  val minprint =
-      trace ("types", 1)
-            (PP.pp_to_string 70 (#2 (print_from_grammars g0)))
 in
   update_grms "add_user_printer"
               ("temp_add_user_printer",
@@ -1568,10 +1598,13 @@ val min_grammars = current_grammars();
 
   fun clear_thy_consts_from_oinfo thy oinfo = let
     val all_parse_consts = Overload.oinfo_ops oinfo
-    fun bad_parse_guy (nm, {base_type, actual_ops}) = let
-      fun bad_guy {Name, Thy, Ty} = if Thy = thy then
-                                       SOME (nm, {Name = Name, Thy = Thy})
-                                     else NONE
+    fun bad_parse_guy (nm, {actual_ops, ...}) = let
+      fun bad_guy t = let 
+        val {Name,Thy,...} = dest_thy_const t 
+      in 
+        if Thy = thy then SOME (nm, {Name = Name, Thy = Thy})
+        else NONE
+      end
     in
       List.mapPartial bad_guy actual_ops
     end

@@ -3,8 +3,10 @@ sig
   type pretype = Pretype.pretype
   type hol_type = Type.hol_type
   type term = Term.term
-  type overinfo = {Name : string, Ty : pretype,
-                   Info : Overload.overloaded_op_info, Locn : locn.locn}
+  type overinfo = {Name : string, 
+                   Ty : pretype,
+                   Info : Overload.overloaded_op_info, 
+                   Locn : locn.locn}
 
   datatype preterm =
     Var of   {Name : string, Ty : pretype, Locn : locn.locn}
@@ -13,13 +15,15 @@ sig
   | Comb of  {Rator: preterm, Rand : preterm, Locn : locn.locn}
   | Abs of   {Bvar : preterm, Body : preterm, Locn : locn.locn}
   | Constrained of {Ptm:preterm, Ty:pretype, Locn:locn.locn}
-  | Antiq of {Tm:Term.term, Locn:locn.locn}
+  | Antiq of {Tm:term, Locn:locn.locn}
+  | Pattern of {Ptm:preterm, Locn:locn.locn}
   (* | HackHack of bool -> bool *)
   (* Because of the Locn fields, preterms should *not* be compared
      with the built-in equality, but should use eq defined below.
      To check this has been done everywhere, uncomment this constructor. *)
 
   val locn : preterm -> locn.locn
+  val term_to_preterm : string list -> term -> preterm
 
   val eq : preterm -> preterm -> bool
 

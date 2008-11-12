@@ -765,16 +765,16 @@ fun pp_term (G : grammar) TyG = let
       val numty = Type.mk_thy_type {Tyop="num", Thy="num", Args=[]}
       val num2numty = numty --> numty
       val numinfo_search_string = Option.map (fst o dest_const) injtermopt
-      val inj_record =
+      val inj_t =
         case injtermopt of
-          NONE => {Name = nat_elim_term, Thy = "arithmetic",
-                   Ty = numty --> numty}
-        | SOME t => dest_thy_const t
-      val injty = #Ty inj_record
+          NONE => mk_thy_const {Name = nat_elim_term, Thy = "arithmetic",
+                                Ty = numty --> numty}
+        | SOME t => t
+      val injty = type_of inj_t
       val is_a_real_numeral = (* i.e. doesn't need a suffix *)
           case info_for_name overload_info fromNum_str of
             NONE => false
-          | SOME oi => mem inj_record (#actual_ops oi)
+          | SOME oi => mem inj_t (#actual_ops oi)
       val numeral_str = Arbnum.toString (Literal.dest_numeral tm)
       val sfx =
           if not is_a_real_numeral orelse !Globals.show_numeral_types then let
@@ -1539,10 +1539,7 @@ fun pp_term (G : grammar) TyG = let
                   case Overload.info_for_name overload_info Name of
                     NONE => add_prim_name()
                   | SOME {actual_ops,...} =>
-                    if List.exists
-                         (fn r => #Thy r = Thy andalso #Name r = Name)
-                         actual_ops
-                    then
+                    if List.exists (aconv tm) actual_ops then
                       cope_with_rules Name
                     else
                       add_prim_name()

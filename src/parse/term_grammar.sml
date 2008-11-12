@@ -1073,7 +1073,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
   end
   fun uninteresting_overload (k,r:Overload.overloaded_op_info) =
     length (#actual_ops r) = 1 andalso
-    #Name (hd (#actual_ops r)) = k andalso
+    #Name (Term.dest_thy_const (hd (#actual_ops r))) = k andalso
     length (Term.decls k) = 1
   fun print_overloading oinfo0 =
     if List.all uninteresting_overload oinfo0 then ()
@@ -1090,11 +1090,14 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
       fun pr_ov (overloaded_op,
                 (r as {actual_ops,...}:Overload.overloaded_op_info)) =
        let
-        fun pr_name (r:Overload.const_rec) =
-          case Term.decls (#Name r) of
+        fun pr_name t = let 
+          val {Thy,Name,Ty} = Term.dest_thy_const t 
+        in
+          case Term.decls Name of
             [] => raise Fail "term_grammar.prettyprint: should never happen"
-          | [_] => #Name r
-          | _ => (#Thy r) ^ "$" ^ (#Name r)
+          | [_] => Name
+          | _ => Thy ^ "$" ^ Name
+        end
       in
         begin_block INCONSISTENT 0;
         add_string (overloaded_op^
