@@ -324,7 +324,7 @@ local
       end
 
   val alpha_rws =
-   [word_lsb_n2w, word_lsb_word_T, word_msb_0, word_msb_word_T, WORD_L_NEG,
+   [word_lsb_n2w, word_lsb_word_T, word_msb_word_T, WORD_0_POS, WORD_L_NEG,
     word_bit_0, word_bit_0_word_T, w2w_0, sw2sw_0, sw2sw_word_T,
     word_0_n2w, word_1_n2w,
     word_len_def, word_reverse_0, word_reverse_word_T, word_log2_1, word_div_1,
@@ -433,6 +433,9 @@ val word_mult_clauses =
   List.take((map GEN_ALL o CONJUNCTS o SPEC_ALL) WORD_MULT_CLAUSES, 4);
 
 val WORD_MULT_LEFT_1 = List.nth(word_mult_clauses,2);
+
+val NEG_EQ_0 = trace("metis",0) (METIS_PROVE [WORD_NEG_MUL, WORD_NEG_EQ_0])
+  ``(!w. ($- 1w * w = 0w) = (w = 0w)) /\ (!w. (0w = $- 1w * w) = (w = 0w))``;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -617,7 +620,7 @@ fun WORD_ADD_CANON_CONV t =
    else
      raise ERR "WORD_ADD_CANON_CONV" "Can only be applied to word terms";
 
-val WORD_MULT_ss = simpLib.merge_ss [rewrites word_mult_clauses,
+val WORD_MULT_ss = simpLib.merge_ss [rewrites (NEG_EQ_0::word_mult_clauses),
   simpLib.conv_ss
     {conv = K (K (CHANGED_CONV WORD_MULT_CANON_CONV)), trace = 3,
      name = "WORD_MULT_CANON_CONV", key = SOME([], ``words$word_mul ^w ^y``)}];
