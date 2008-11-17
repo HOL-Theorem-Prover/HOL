@@ -300,24 +300,24 @@ val _ = emitML (!Globals.emitMLDir) ("int",
   :: MLSIG "val fromString : string -> int"
   :: MLSTRUCT
         "fun fromString s =\n\
-        \  let val s = String.extract(s,0,SOME (Int.-(String.size s,1))) in\n\
-        \    if String.sub(s,0) = #\"-\" then\n\
-        \      let val s = String.extract(s,1,NONE) in\n\
-        \        neg_int_of_num (numML.PRE (numML.fromString s))\n\
-        \      end\n\
-        \    else\n\
-        \      int_of_num (numML.fromString s)\n\
-        \  end"
+      \    let val s = String.extract(s,0,SOME (Int.-(String.size s,1))) in\n\
+      \      if String.sub(s,0) = #\"-\" then\n\
+      \        let val s = String.extract(s,1,NONE) in\n\
+      \          neg_int_of_num (numML.PRE (numML.fromString s))\n\
+      \        end\n\
+      \      else\n\
+      \        int_of_num (numML.fromString s)\n\
+      \    end\n"
   :: MLSTRUCT
         "fun fromInt i =\n\
-      \     fromString (String.map (fn c => if c = #\"~\" then #\"-\" else c)\n\
-      \       (String.^(Int.toString i,\"i\")))"
+      \    fromString (String.map (fn c => if c = #\"~\" then #\"-\" else c)\n\
+      \      (String.^(Int.toString i,\"i\")))\n"
   :: MLSTRUCT
         "fun toInt (int_of_num n) = numML.toInt n\n\
-        \  | toInt (neg_int_of_num n) =\n\
-        \       case numML.toInt n of\n\
-        \         SOME v => SOME (Int.-(Int.~ v,1))\n\
-        \       | NONE => NONE"
+      \    | toInt (neg_int_of_num n) =\n\
+      \         case numML.toInt n of\n\
+      \           SOME v => SOME (Int.-(Int.~ v,1))\n\
+      \         | NONE => NONE\n"
   :: map (DEFN o wordsLib.WORDS_EMIT_RULE) [INT_NEG_EMIT, INT_Num_EMIT,
        INT_LT_EMIT, INT_LE_CALCULATE, INT_GT_CALCULATE, INT_GE_CALCULATE,
        INT_ADD_EMIT, INT_SUB_EMIT, INT_MUL_EMIT, INT_EXP_EMIT,
