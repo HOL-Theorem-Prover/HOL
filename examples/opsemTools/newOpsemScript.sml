@@ -1,5 +1,5 @@
 
-(* ====================== newOpsemScript.sml ======================
+(* ============================ newOpsemScript.sml ============================
 
 This file is an extension of the Melham-Camilleri opsem example
 distributed with HOL4 in HOL/examples/ind_def/opsemScript.sml.
@@ -7,511 +7,10 @@ distributed with HOL4 in HOL/examples/ind_def/opsemScript.sml.
  Tom Melham:        http://web.comlab.ox.ac.uk/Tom.Melham/
  Juanito Camilleri: http://www.um.edu.mt/about/uom/administration
 
-The extensions are:
-
- 1. New commands:
-     - blocks with local variables (Local v c)
-     - commands for runtime assertion checking (Assert p)
-     - arrays
-
- 2. A small-step semantics proved equivalent to the original big-step
-    semantics and a function, STEP, to run the small-step semantics
-
- 3. Executable ACL2-style "clocked" evaluators for both semantics.
-    (see: http://www.cl.cam.ac.uk/~mjcg/papers/acl207/acl2.mjcg.07.pdf)
-
- 4. A small step constraint-accumulating semantics based on the
-    Collavizza, Rueher and Van Hentenryck CPBPV paper
-
-The big-step semantics is given by an inductively defined relation
-EVAL such that EVAL c s1 s2 means that if command c is executed in a
-state s1 then it will halt in a state s2. The definition of EVAL is
-adapted from opsemScript.sml (details below).
-
-**********************************************************************
-N.B.  Do not confuse the HOL constant ``EVAL`` with the ML function
-****  having the same name!  The HOL constant defines the big-step 
-      semantics in the HOL logic, the ML function is a meta-language 
-      tool for evaluating terms using fast call-by-value rewriting.
-**********************************************************************
-
-The small-step semantics specifies transitions between configurations
-of the form (l,s), where l is a HOL list of commands and s is a
-state. The semantics is given by an inductively defined relation
-SMALL_EVAL such that SMALL_EVAL (l1,s1) (l2,s2) means that a single
-step moves configuration (l1,s1) to configuration (l2,s2).
-
-The transitive closure of the small-step semantics (TC SMALL_STEP)
-corresponds to the big-step semantics. This is proved in HOL as the
-theorem EVAL_SMALL_EVAL:
- 
-  |- !c s1 s2. EVAL c s1 s2 = TC SMALL_EVAL ([c],s1) ([],s2)
-
-ACL2-style clocked evaluators are defined for both semantics:
-RUN for the big-step semantics and STEP for the small-step semantics. 
-
- RUN :  num -> program -> state -> outcome
- STEP:  num -> (program list # state) -> (program list # outcome)
-
-here outcome is a HOL datatype defined by:
-
- Hol_datatype 
-  `outcome = RESULT of state | ERROR of state | TIMEOUT of state`;
-
-where:
-
- -  RESULT s  is a successful execution terminating in state s;
- -  ERROR s   is a runtime assertion failure when the state is s;
- -  TIMEOUT s indicates that the clock ran out in state s.
-
-To handle the propagation of errors and timeouts cleanly, a monad-like
-sequencing operator >>= is defined so that:
-
- RUN (SUC n) (Seq c1 c2) s = RUN n c1 s >>= RUN n c2
-
-where the operator >>= is defined (RUN_BIND_def) by:
-
- |- !m f. m >>= f =
-          case m of
-             RESULT s'' -> f s''
-          || ERROR s'   -> ERROR s'
-          || TIMEOUT s  -> TIMEOUT s
-
-If RUN_RETURN is defined by:
-
- |- !x. RUN_RETURN x = RESULT x 
-
-then the usual monad laws hold (RUN_MONAD_LAWS):
-
- |- (RUN_RETURN x >>= f = f x) 
-    /\ 
-    (m >>= RUN_RETURN = m)
-    /\
-    (m >>= f >>= g  =  m >>= (\x. f x >>= g)) 
-
-Monad-syle operators are also used for the small-step execution
-function (STEP_BIND, STEP_RETURN) and for small-step constraint
-propagation (ACC_STEP_BIND, ACC_STEP_RETURN). It would be nice if
-these could be instances of a single monad definition, but the HOL
-type system doesn't allow this, so they are separate definitions, with
-the separate sequencing operators overloaded onto >>=. It is hoped
-that Peter Homeier's HOL-Omega might allow a proper treatment of
-monads.
-
-The theorem EVAL_RUN, proved below, shows that the definition of RUN
-matches the big-step semantics defined by EVAL:
-
- |- !c s1 s2. EVAL c s1 s2 = ?n. RUN n c s1 = RESULT s2 
-
-The theorem NOT_EVAL_RUN proved below shows that executing a command
-with RUN in a state for which there is no final state specified by the
-big-step semantics always returns an ERROR or TIMEOUT outcome.
-
- |- !c s1.
-     ~(?s2. EVAL c s1 s2) =
-     !n. ?s2. (RUN n c s1 = ERROR s2) \/ (RUN n c s1 = TIMEOUT s2)
-
-The small-step execution function STEP repeatedly applies a
-single-step function STEP1:  
-
- STEP1 : program list # state -> program list # outcome
-
-STEP1(l1,s) = (l2,r) means that executing one step of the command at
-the head of l results in (l2,r), where l2 are the remaining commands
-to be executed and r:outcome is the result. STEP takes a ACL2-style
-`clock' and applies STEP1 for the given number of `ticks', thus:
-
- STEP : num -> program list # state -> program list # outcome
-
-Because STEP1 may return an error or timeout, the sequencing of STEP1
-to defined STEP is accomplished using a monad-style operator
-(overloaded onto >>=):
-
- |- !m f. m >>= f =
-          case m of
-             (l,RESULT s'') -> f (l,s'')
-          || (l,ERROR s')   -> (l,ERROR s')
-          || (l,TIMEOUT s)  -> (l,TIMEOUT s)
-
-STEP is defined (STEP_def) by:
-
- |- STEP n (l,s) =
-     if l = [] 
-      then ([],RESULT s)
-      else if n = 0 then (l,TIMEOUT s) 
-                    else STEP1 (l,s) >>= STEP (n - 1)
-
-The theorem TC_SMALL_EVAL_STEP, proved below, shows that the
-definition of STEP matches the transitive closure of the small-step
-semantics defined by SMALL_EVAL:
-
- |- !c s1 s2.
-     TC SMALL_EVAL ([c],s1) ([],s2) = ?n. STEP n ([c],s1) = ([],RESULT s2)
-
-The theorem NOT_SMALL_EVAL_STEP proved below shows that executing a
-command with STEP in a state for which there is no final state
-reachable under the transitive closure of the small-step semantics
-always returns an ERROR or TIMEOUT outcome.
-
-  |- !c s1.
-      ~(?s2. TC SMALL_EVAL ([c],s1) ([],s2)) =
-      !n. ?l s2.
-           (STEP n ([c],s1) = (l,ERROR s2)) 
-           \/ 
-           (STEP n ([c],s1) = (l,TIMEOUT s2))
-
-Combining EVAL_SMALL_EVAL, EVAL_RUN and TC_SMALL_EVAL_STEP shows that
-RUN and STEP compute the same results (proved as RUN_STEP below):
-
- |- !c s1 s2.
-     (?n. RUN n c s1 = RESULT s2) = 
-     (?n. STEP n ([c],s1) = ([],RESULT s2))
-
-Note that we have *not* yet proved the following results relating the
-ERROR and TIMEOUT outcomes of RUN and STEP, but it is assumed they
-could be proved, if needed.
-
- |-? !c s1 s2.
-      (?n. RUN n c s1 = ERROR s2) = 
-      (?n. STEP n ([c],s1) = ([],ERROR s2))
-
- |-? !c s1.
-      (!n. ?s2. RUN n c s1 = TIMEOUT s2) = 
-      (!n. ?s2. STEP n ([c],s1) = ([],TIMEOUT s2))
-
-Collavizza et al. describe a verification method that symbolically
-executes a program to compute a formula (similar to the strongest
-postcondition) that specifies a path through the program. The initial
-path formula is a given precondition.  When an assignment x := e is
-executed the path formula is updated to show that x = e holds. When a
-branch is reached, a solver is called to see if the truth-value of the
-test at the branch can be resolved using the path formula that has
-been accumulated so far. If the test can be resolved, symbolic
-execution continues down the selected path, with the truth or falsity
-(as approriate) added to the path formula. If the branch can't be
-resolved by the solver, then the test is assumed true and added to the
-path formula and simulation proceeds, with a backtrack point noted so
-that the false path can be considered later. When a path through the
-program is complete, the solver is invoked to see if the path formula
-entails the postcondition. Using depth first backtracking the verifier
-considers all paths through the program and checks that the
-postcondition holds on all of them.
-
-The Collavizza et al. implementation is a Java program that performs
-symbolic execution of a program to explore all the paths. The theorem
-proving to resolve branches is accomplished by the external CLP solver
-and the Java just computes the formulas to be sent to the solver.
-
-Computing paths is tricky and so in the HOL version this is performed
-by automated deduction applied diretly to the programming language
-semantics. The solver is invoked as an oracle by HOL, so this still
-needs to be trusted, but combining the theorems proved by the solver
-into a proof of a property of a program is done inside HOL. Computing
-path formulas by deduction in HOL is much slower than Java code that
-doesn't generate proofs, but the hope is that it is fast enough, since
-the performance critical theorem proving is still delegated to an
-efficient external oracle. In cases where high assurance is needed,
-the formulas proved by the external solver could be proved inside HOL
-(in fact this is used for testing).
-
-The values manipulated by programs represented in HOL are either
-scalars (currently values of type num) and arrays (currently finite
-maps of type num |-> num). Thus:
-
- Hol_datatype 
-  `value = Scalar of num | Array  of (num |-> num)`
-
-The function ScalarOf projects values to scalars:
-
- |- ScalarOf(Scalar n) = n
-
-States are finite maps of type string |-> value. Thus the value of a
-scalar variable "i" in a state s is: ScalarOf(s ' "i").
-
-To compute formulas representing paths in HOL a function ACC_STEP1 is
-defined such that ACC_STEP1 ((l1,s),p1) = ((l2,r),p2) means that
-executing the configuration (l1,s) with precondition p1 results in a
-configuration (l2,r) and an accumulated postcondition p2. Here s is a
-state and r an outcome, as described for STEP.  There is likely to be
-a close elationship between ACC_STEP1 and Floyd's strongest
-post-conditions, but this hasn't been explored yet.
-(The "ACC" is for "accumulate ", as path conditions are accumulated.)
-Thus:
-
-  ACC_STEP1 : (program list # state) # (state -> bool) 
-              ->
-              (program list # outcome) # (state -> bool)
-
-Preconditions and path formulas are represented in HOL as predicates
-on state. For example, the precondition that i < j is represented by:
-
- \s. ScalarOf(s ' "i") < ScalarOf(s ' "j")
-
-To combine single path-accumulating steps specified by ACC_STEP1 into
-into executions of complete paths through a program, another
-monad-style operator (ACC_STEP_BIND) is defined and overloaded on >>=.
-
- |- m >>= f =
-    case m of
-       ((l,RESULT s''),p) -> f ((l,s''),p)
-    || ((l,ERROR s'),p)   -> ((l,ERROR s'),p)
-    || ((l,TIMEOUT s),p)  -> ((l,TIMEOUT s),p)
-
-and then an `clocked' function for iterating ACC_STEP1 a finite number
-of times is defined by:
-
-  |- (ACC_STEP n (([],s),p)      = (([], RESULT s), p))
-     /\
-     (ACC_STEP 0 ((l,s),p)       = ((l, TIMEOUT s), p))
-     /\
-     (ACC_STEP (SUC n) ((l,s),p) = ACC_STEP1 ((l,s),p) >>=  ACC_STEP n)
-
-The correctness of ACC_STEP is verified by two theorems. 
-
- |- !n l s1 s2 P Q.
-     P s1 /\ (ACC_STEP n ((l,s1),P) = (([],RESULT s2),Q)) 
-     ==>
-     (STEP n (l,s1) = ([],RESULT s2)) /\ Q s2
-
- |- !P c R.
-     (!s1. ?n s2. ACC_STEP n (([c],s1),P) = (([],RESULT s2),R s1)) 
-     ==>
-     !s1 s2. P s1 /\ EVAL c s1 s2 ==> R s1 s2
-
-The symbolic execution tool in HOL is PATH_EVAL (defined in
-PATH_EVAL.sml). 
-
- PATH_EVAL solv P s c
-
-Repeatedly applies STEP1 symbolically starting with the configuration
-``([c],s)`` and returning a theorem |- EVAL c s s', where s' may be a
-conditional term if there are conditions not resolved by the solver
-(see below).
-
-The second argument to PATH_EVAL should be a term representing a
-predicate on states and the third argument should be a state.
-
-The precondition P is carried forward and augmented with additional
-terms representing the effects of assignments and the branches of
-conditionals entered.
-
-Whenever a conditional with test b is encountered the solver is called
-on ``P' ==> b`` and if that fails on ``P' ==> ~b`` where P' is the
-accumulated precondition.  If the solver can resolve such a condition
-then only the corresponding arm of the conditional is executed. If the
-solver fails then both arms of the conditional are symbolically
-executed and the results combined. 
-
-The solver solv should be a function that maps a term to an equational
-theorem whose left hand side is the supplied term (i.e. a conversion
-in HOL jargon). If tm is a term that can be solved then solv tm should
-return |- tm = T. If tm is a term that can't be solved then solv tm
-can return |- tm = tm' for any tm' not equal to T (e.g. tm' = tm).
-
-An example solver, simpSolv, defined inside HOL using SIMP_CONV is:
-
- fun simpSolv tm =
-  let val () = (print "\nTrying to solve:\n"; print_term tm; print "\n... ")
-      val th = time (EVAL THENC SIMP_CONV arith_ss []) tm handle _ => REFL tm
-      val () = if rhs(concl th) = ``T``
-                then (print "Solved:\n"; print_thm th; print "\n")
-                else print "Failure :-(\n\n"
-  in
-   th
-  end
-
-Notice that this prints out the term it is trying to solve.
-
-Consider the example program absMinus:
-
- result := 0;
- k := 0;
- if i <= j then k := k+1 else skip;
- if k=1 /\ ~(i=j) then result := j-i else result := i-j
-
-If we symbolically execute absMinus with no precondition, i.e. with
-the precondition-predicate ``\s:state. T``, and with an initial state
-s defined by:
-
-val s =
- ``FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+ ("k",Scalar k)
-          |+ ("Result",Scalar Result) |+ ("result",Scalar result)``
-
-then we get the output shown below. Note that simpSolv prints a
-commentary showing the terms it is invoked on, but this is just
-because print statements were put into its definition (see above). 
-The output shown has been slightly edited for readability.
-
----------------------------------------------------------------------------
-PATH_EVAL simpSolv ``\s:state. T`` s absMinus;
-
-Trying to solve:
-T ==> i < j \/ (i = j)
-... runtime: 0.004s,    gctime: 0.000s,     systime: 0.000s.
-Failure :-(
-
-
-Trying to solve:
-T ==> ~(i < j \/ (i = j))
-... runtime: 0.005s,    gctime: 0.002s,     systime: 0.000s.
-Failure :-(
-
-
-Trying to solve:
-i < j \/ (i = j) ==> ~(i = j)
-... runtime: 0.014s,    gctime: 0.001s,     systime: 0.000s.
-Failure :-(
-
-
-Trying to solve:
-i < j \/ (i = j) ==> ~ ~(i = j)
-... runtime: 0.005s,    gctime: 0.000s,     systime: 0.000s.
-Failure :-(
-
-> val it =
-     []
-    |- EVAL
-         (Seq (Assign "result" (Const 0))
-            (Seq (Assign "k" (Const 0))
-               (Seq
-                  (Cond
-                     (Or (Less (Var "i") (Var "j"))
-                        (Equal (Var "i") (Var "j")))
-                     (Assign "k" (Plus (Var "k") (Const 1))) Skip)
-                  (Seq
-                     (Cond
-                        (And (Equal (Var "k") (Const 1))
-                           (Not (Equal (Var "i") (Var "j"))))
-                        (Assign "result" (Sub (Var "j") (Var "i")))
-                        (Assign "result" (Sub (Var "i") (Var "j"))))
-                     (Assign "Result" (Var "result"))))))
-         (FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+ ("k",Scalar k) |+
-          ("Result",Scalar Result) |+ ("result",Scalar result))
-         (if i < j \/ (i = j) then
-            (if ~(i = j) then
-               FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+
-               ("k",Scalar 1) |+ ("result",Scalar (j - i)) |+
-               ("Result",Scalar (j - i))
-             else
-               FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+
-               ("k",Scalar 1) |+ ("result",Scalar (i - j)) |+
-               ("Result",Scalar (i - j)))
-          else
-            FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+ ("k",Scalar 0) |+
-            ("result",Scalar (i - j)) |+ ("Result",Scalar (i - j))) : thm
----------------------------------------------------------------------------
-
-During symbolic execution no branches could be resolved, so the final
-state is a conditional tree representing paths through absMinus.
-
-If we start with the precondition i < j, then all branches can be
-resolved:
-
----------------------------------------------------------------------------
-PATH_EVAL simpSolv ``\s. ScalarOf (s ' "i") < ScalarOf (s ' "j")`` s absMinus;
-
-Trying to solve:
-i < j ==> i < j \/ (i = j)
-... runtime: 0.006s,    gctime: 0.000s,     systime: 0.000s.
-Solved:
- [] |- i < j ==> i < j \/ (i = j) = T
-
-Trying to solve:
-i < j /\ (i < j \/ (i = j)) ==> ~(i = j)
-... runtime: 0.013s,    gctime: 0.001s,     systime: 0.000s.
-Solved:
- [] |- i < j /\ (i < j \/ (i = j)) ==> ~(i = j) = T
-> val it =
-    
-    [(\s. ScalarOf (s ' "i") < ScalarOf (s ' "j"))
-       (FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+ ("k",Scalar k) |+
-        ("Result",Scalar Result) |+ ("result",Scalar result))]
-    |- EVAL
-         (Seq (Assign "result" (Const 0))
-            (Seq (Assign "k" (Const 0))
-               (Seq
-                  (Cond
-                     (Or (Less (Var "i") (Var "j"))
-                        (Equal (Var "i") (Var "j")))
-                     (Assign "k" (Plus (Var "k") (Const 1))) Skip)
-                  (Seq
-                     (Cond
-                        (And (Equal (Var "k") (Const 1))
-                           (Not (Equal (Var "i") (Var "j"))))
-                        (Assign "result" (Sub (Var "j") (Var "i")))
-                        (Assign "result" (Sub (Var "i") (Var "j"))))
-                     (Assign "Result" (Var "result"))))))
-         (FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+ ("k",Scalar k) |+
-          ("Result",Scalar Result) |+ ("result",Scalar result'))
-         (FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+ ("k",Scalar 1) |+
-          ("result",Scalar (j - i)) |+ ("Result",Scalar (j - i))) : thm
----------------------------------------------------------------------------
-
-If we start with the precondition j <= i, then all branches can also
-be resolved:
-
----------------------------------------------------------------------------
-
-PATH_EVAL solv ``\s. ScalarOf (s ' "j") <= ScalarOf (s ' "i")`` s absMinus;
-
-Trying to solve:
-j <= i ==> i < j \/ (i = j)
-... runtime: 0.011s,    gctime: 0.000s,     systime: 0.000s.
-Failure :-(
-
-
-Trying to solve:
-j <= i ==> ~(i < j \/ (i = j))
-... runtime: 0.008s,    gctime: 0.001s,     systime: 0.000s.
-Failure :-(
-
-
-Trying to solve:
-j <= i /\ (i < j \/ (i = j)) ==> ~(i = j)
-... runtime: 0.018s,    gctime: 0.000s,     systime: 0.000s.
-Failure :-(
-
-
-Trying to solve:
-j <= i /\ (i < j \/ (i = j)) ==> ~ ~(i = j)
-... runtime: 0.003s,    gctime: 0.001s,     systime: 0.000s.
-Solved:
- [] |- j <= i /\ (i < j \/ (i = j)) ==> ~ ~(i = j) = T
-> val it =
-    
-    [(\s. ScalarOf (s ' "j") <= ScalarOf (s ' "i"))
-       (FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+ ("k",Scalar k) |+
-        ("Result",Scalar Result) |+ ("result",Scalar result))]
-    |- EVAL
-         (Seq (Assign "result" (Const 0))
-            (Seq (Assign "k" (Const 0))
-               (Seq
-                  (Cond
-                     (Or (Less (Var "i") (Var "j"))
-                        (Equal (Var "i") (Var "j")))
-                     (Assign "k" (Plus (Var "k") (Const 1))) Skip)
-                  (Seq
-                     (Cond
-                        (And (Equal (Var "k") (Const 1))
-                           (Not (Equal (Var "i") (Var "j"))))
-                        (Assign "result" (Sub (Var "j") (Var "i")))
-                        (Assign "result" (Sub (Var "i") (Var "j"))))
-                     (Assign "Result" (Var "result"))))))
-         (FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+ ("k",Scalar k) |+
-          ("Result",Scalar Result) |+ ("result",Scalar result'))
-         (if i < j \/ (i = j) then
-            FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+ ("k",Scalar 1) |+
-            ("result",Scalar (i - j)) |+ ("Result",Scalar (i - j))
-          else
-            FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+ ("k",Scalar 0) |+
-            ("result",Scalar (i - j)) |+ ("Result",Scalar (i - j))) : thm
----------------------------------------------------------------------------
-
-More details are in comments in SYM_PATH.sml and also in
-SYM_PATH_Examples.ml, which is a non-compilable file with examples to
-be run interactively (or via the ML function "use").
+See see newOpsemDoc.txt for some documentation.
 
 =============================================================================*)
+
 
 (*===========================================================================*)
 (* Start of text adapted from examples/ind_def/opsemScript.sml               *)
@@ -525,16 +24,18 @@ be run interactively (or via the ML function "use").
 
 (* Stuff needed when running interactively
 quietdec := true; (* turn off printing *)
-app load ["stringLib", "finite_mapTheory", "intLib"];
+app load ["stringLib", "finite_mapTheory", "intLib", "pred_setTheory"];
 open HolKernel Parse boolLib bossLib 
-     stringLib IndDefLib IndDefRules finite_mapTheory relationTheory;
+     stringLib IndDefLib IndDefRules finite_mapTheory relationTheory
+     pred_setTheory;
 intLib.deprecate_int();
 clear_overloads_on "TC"; (* Stop TC R printing as TC^+ *)
 quietdec := false; (* turn printing back on *)
 *)
 
 open HolKernel Parse boolLib bossLib 
-     stringLib IndDefLib IndDefRules finite_mapTheory relationTheory;
+     stringLib IndDefLib IndDefRules finite_mapTheory relationTheory
+     pred_setTheory;
 
 val _ = intLib.deprecate_int();
 val _ = clear_overloads_on "TC"; (* Stop TC R printing as TC^+ *)
@@ -549,6 +50,7 @@ val _ = computeLib.add_persistent_funs
           ("finite_mapTheory.FAPPLY_FUPDATE_THM",FAPPLY_FUPDATE_THM),
           ("finite_mapTheory.FDOM_FEMPTY",FDOM_FEMPTY),
           ("pred_setTheory.IN_INSERT",pred_setTheory.IN_INSERT),
+          ("pred_setTheory.IN_UNION",pred_setTheory.IN_UNION),
           ("pred_setTheory.NOT_IN_EMPTY",pred_setTheory.NOT_IN_EMPTY),
           ("integerTheory.NUM_OF_INT", integerTheory.NUM_OF_INT)
          ];
@@ -1521,8 +1023,129 @@ val ScalarOf_if =
       if b then ScalarOf(s1 ' x) else ScalarOf(s2 ' x)``,
    METIS_TAC[]);
 
-(* Monad binding operation *)
+(* More technical theorems for use with EVAL and the simplifier *)
 
+val ScalarOfIf =
+ store_thm
+  ("ScalarOfIf",
+   ``ScalarOf(if b then x else y) = if b then ScalarOf x else ScalarOf y``,
+   METIS_TAC[]);
+
+val ScalarIf =
+ store_thm
+  ("ScalarIf",
+   ``Scalar(if b then x else y) = if b then Scalar x else Scalar y``,
+   METIS_TAC[]);
+
+val EqLeftIf =
+ store_thm
+  ("EqLeftIf",
+   ``(c = if b then x else y) = if b then c = x else c = y``,
+   METIS_TAC[]);
+
+val EqRightIf =
+ store_thm
+  ("EqRightIf",
+   ``((if b then x else y) = c) = if b then x = c else y = c``,
+   METIS_TAC[]);
+
+val _ = computeLib.add_persistent_funs
+         [("ScalarOfIf",     ScalarOfIf),
+          ("ScalarIf",       ScalarIf),
+          ("EqLeftIf",       EqLeftIf),
+          ("EqRightIf",      EqRightIf)];
+
+(* Replaced by more general code below (will eventually be deleted)
+val int_addLeftIf =
+ store_thm
+  ("int_addLeftIf",
+   ``(n int_add (if b then x else y)) = if b then n int_add x else n int_add y``,
+   METIS_TAC[]);
+
+val int_addRightIf =
+ store_thm
+  ("int_addRightIf",
+   ``((if b then x else y) int_add n) = if b then x int_add n else y int_add n``,
+   METIS_TAC[]);
+
+val int_subLeftIf =
+ store_thm
+  ("int_subLeftIf",
+   ``(n int_sub (if b then x else y)) = if b then n int_sub x else n int_sub y``,
+   METIS_TAC[]);
+
+val int_subRightIf =
+ store_thm
+  ("int_subRightIf",
+   ``((if b then x else y) int_sub n) = if b then x int_sub n else y int_sub n``,
+   METIS_TAC[]);
+
+val int_gtLeftIf =
+ store_thm
+  ("int_gtLeftIf",
+   ``(n int_gt (if b then x else y)) = if b then n int_gt x else n int_gt y``,
+   METIS_TAC[]);
+
+val int_gtRightIf =
+ store_thm
+  ("int_gtRightIf",
+   ``((if b then x else y) int_gt n) = if b then x int_gt n else y int_gt n``,
+   METIS_TAC[]);
+
+val _ = computeLib.add_persistent_funs
+         [("int_addLeftIf",  int_addLeftIf),
+          ("int_addRightIf", int_addRightIf),
+          ("int_subLeftIf",  int_subLeftIf),
+          ("int_subRightIf", int_subRightIf)
+         ];
+*)
+
+val int_opLeftIf =
+ store_thm
+  ("int_opLeftIf",
+   ``!(f:int->int->int). f n (if b then x else y) = if b then f n x else f n y``,
+   METIS_TAC[]);
+
+val int_opRightIf =
+ store_thm
+  ("int_opRightIf",
+   ``!(f:int->int->int). f (if b then x else y) n = if b then f x n else f y n``,
+   METIS_TAC[]);
+
+val int_relLeftIf =
+ store_thm
+  ("int_relLeftIf",
+   ``!(r:int->int->bool). r n (if b then x else y) = if b then r n x else r n y``,
+   METIS_TAC[]);
+
+val int_relRightIf =
+ store_thm
+  ("int_relRightIf",
+   ``!(r:int->int->bool). r (if b then x else y) n = if b then r x n else r y n``,
+   METIS_TAC[]);
+
+val _ = 
+  (map
+    (fn con => 
+      (save_thm ((fst(dest_const con) ^ "LeftIf"),   SPEC con int_opLeftIf);
+       save_thm ((fst(dest_const con) ^ "RightIf"),  SPEC con int_opRightIf);
+       computeLib.add_persistent_funs
+        [((fst(dest_const con) ^ "LeftIf"),   SPEC con int_opLeftIf),
+         ((fst(dest_const con) ^ "RightIf"),  SPEC con int_opRightIf)]))
+    [``$int_add``,``$int_sub``]);
+
+val _ = 
+  (map
+    (fn con => 
+      (save_thm ((fst(dest_const con) ^ "LeftIf"),   SPEC con int_relLeftIf);
+       save_thm ((fst(dest_const con) ^ "RightIf"),  SPEC con int_relRightIf);
+       computeLib.add_persistent_funs
+        [((fst(dest_const con) ^ "LeftIf"),   SPEC con int_relLeftIf),
+         ((fst(dest_const con) ^ "RightIf"),  SPEC con int_relRightIf)]))
+    [``$int_lt``,``$int_le``,``$int_gt``,``$int_ge``]);
+
+
+(* Monad binding operation *)
 val RUN_BIND_def =
  Define 
   `RUN_BIND m f = case m of
@@ -2763,7 +2386,276 @@ val IMP_F_IS_F =
    METIS_PROVE [] ``!P : bool. (!Q. P ==> Q) ==> (P = F)``);
 
 (* Identity wrapper to tag ILOG-generated assumptions *)
-val ILOG_def = Define `ILOG(tm:bool) = tm`;                                                                                                       
+val ILOG_def = Define `ILOG(tm:bool) = tm`;
+
+(* ============================================================================
+Program transformation/normalisation rules
+============================================================================ *)
+
+(* Straight line (non-looping) programs *)
+val STRAIGHT_def =
+ Define
+  `(STRAIGHT Skip = T)
+   /\
+   (STRAIGHT (GenAssign v e) = T)
+   /\
+   (STRAIGHT (Dispose v) = F)
+   /\
+   (STRAIGHT (Seq c1 c2) = STRAIGHT c1 /\ STRAIGHT c2)
+   /\
+   (STRAIGHT (Cond b c1 c2) = STRAIGHT c1 /\ STRAIGHT c2)
+   /\
+   (STRAIGHT (While b c) = F)
+   /\
+   (STRAIGHT (Local v c) = F)
+   /\
+   (STRAIGHT (Assert p) = F)`;
+
+(* RUN straight line programs *)
+
+(*
+Semantics that represents states as key-value lists (key = string). If
+kvl is such a list then the corresponding finite map is FEMPTY |++ kvl.
+*)
+
+(* Update value in a key-value list *)
+val UPDATE_LIST_def =
+ Define
+  `(UPDATE_LIST [] (v,x) = [(v,x)])
+   /\
+   (UPDATE_LIST ((v2,x2) :: l) (v1,x1) =
+     if v1 = v2 then (v1,x1) :: l else (v2,x2) :: UPDATE_LIST l (v1,x1))`;
+
+(* 
+ZIP_LIST b [(v1,x1);...;(vn,xn)] [(v1,y1);...;(vn,yn)] =
+ [(v1,if b then x1 else y1);...;(vn,if b then xn else yn)]
+*)
+
+val ZIP_LIST_def =
+ Define
+  `(ZIP_LIST (b:bool) l1 [] = [])
+   /\
+   (ZIP_LIST (b:bool) [] l2 = [])
+   /\
+   (ZIP_LIST b ((v1,x1) :: l1) ((v2,x2) :: l2) =
+    (v1, (if b then x1 else x2)) :: ZIP_LIST b l1 l2)`;
+
+val STRAIGHT_RUN_def =
+ Define
+  `(STRAIGHT_RUN Skip l = l)
+   /\
+   (STRAIGHT_RUN (GenAssign v (INL e)) l = 
+     UPDATE_LIST l (v,Scalar (neval e (FEMPTY |++ l))))
+   /\
+   (STRAIGHT_RUN (GenAssign v (INR a)) l = 
+     UPDATE_LIST l (v,Array  (aeval a (FEMPTY |++ l))))
+   /\
+   (STRAIGHT_RUN (Seq c1 c2) s = STRAIGHT_RUN c2 (STRAIGHT_RUN c1 s))
+   /\
+   (STRAIGHT_RUN (Cond b c1 c2) l = 
+    ZIP_LIST (beval b (FEMPTY |++ l)) (STRAIGHT_RUN c1 l) (STRAIGHT_RUN c2 l))`;
+
+val DISTINCT_VARS_def =
+ Define
+  `DISTINCT_VARS l = ALL_DISTINCT(MAP FST l)`;
+
+val FUPDATE_LIST_FUPDATE_NOT_MEM =
+ store_thm
+  ("FUPDATE_LIST_FUPDATE_NOT_MEM",
+   ``!l. ~(MEM v (MAP FST l)) /\ DISTINCT_VARS l
+         ==> !fm x y. fm |+ (v,x) |++ l = (fm |+ (v,y) |++ l) |+ (v,x)``,
+   Induct
+    THEN RW_TAC std_ss [FUPDATE_LIST_THM,FUPDATE_EQ]
+    THEN Cases_on `h`
+    THEN FULL_SIMP_TAC list_ss 
+          [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT]
+    THEN METIS_TAC[FUPDATE_EQ,FUPDATE_COMMUTES]);
+
+val UPDATE_LIST_FUPDATE =
+ store_thm
+  ("UPDATE_LIST_FUPDATE",
+   ``!l. DISTINCT_VARS l  
+         ==> !fm v x. fm |++ UPDATE_LIST l (v,x) = (fm |++ l) |+ (v,x)``,
+   Induct
+    THEN RW_TAC std_ss [UPDATE_LIST_def,FUPDATE_LIST_THM]
+    THEN Cases_on `h`
+    THEN FULL_SIMP_TAC std_ss [UPDATE_LIST_def,FUPDATE_LIST_THM,listTheory.ALL_DISTINCT]
+    THEN Cases_on `v = q`
+    THEN FULL_SIMP_TAC list_ss 
+          [UPDATE_LIST_def,FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT]
+    THEN METIS_TAC[FUPDATE_LIST_FUPDATE_NOT_MEM,DISTINCT_VARS_def]);
+
+val MAP_FST_UPDATE_LIST =
+ prove
+  (``!l. MAP FST (UPDATE_LIST l (v,x)) = 
+          if MEM v (MAP FST l) then MAP FST l else (MAP FST l) ++ [v]``,
+   Induct 
+    THEN RW_TAC list_ss [DISTINCT_VARS_def,listTheory.ALL_DISTINCT,UPDATE_LIST_def]
+    THEN Cases_on `h`
+    THEN FULL_SIMP_TAC list_ss 
+          [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,UPDATE_LIST_def]
+    THEN Cases_on `q = v`
+    THEN FULL_SIMP_TAC list_ss 
+          [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,UPDATE_LIST_def]);
+
+val UpdateDISTINCT =
+ store_thm
+  ("UpdateDISTINCT",
+   ``!l. DISTINCT_VARS l ==> !v x. DISTINCT_VARS(UPDATE_LIST l (v,x))``,
+   Induct 
+    THEN RW_TAC list_ss [DISTINCT_VARS_def,listTheory.ALL_DISTINCT,UPDATE_LIST_def]
+    THEN Cases_on `h`
+    THEN FULL_SIMP_TAC list_ss 
+          [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,UPDATE_LIST_def]
+    THEN Cases_on `q = v`
+    THEN FULL_SIMP_TAC list_ss 
+          [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,
+           UPDATE_LIST_def,MAP_FST_UPDATE_LIST]
+    THEN Cases_on `MEM v (MAP FST l)`
+    THEN FULL_SIMP_TAC list_ss 
+          [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,
+           UPDATE_LIST_def,MAP_FST_UPDATE_LIST]);
+
+val MAP_FST_SUBSET_ZIP_LIST =
+ prove
+  (``!l1 l2 b x. MEM x (MAP FST (ZIP_LIST b l1 l2)) ==> MEM x (MAP FST l1)``,
+   Induct 
+    THENL[ALL_TAC,GEN_TAC]
+    THEN Induct
+    THEN RW_TAC list_ss [DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]
+    THEN Cases_on `h` 
+    THEN TRY(Cases_on `h'`)
+    THEN FULL_SIMP_TAC list_ss 
+          [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]
+    THEN METIS_TAC[]);
+
+val ZIP_LIST_DISTINCT =
+ store_thm
+  ("ZIP_LIST_DISTINCT",
+   ``!l1 l2. DISTINCT_VARS l1 /\ DISTINCT_VARS l2 
+             ==> !b. DISTINCT_VARS(ZIP_LIST b l1 l2)``,
+   Induct 
+    THENL[ALL_TAC,GEN_TAC]
+    THEN Induct
+    THEN RW_TAC list_ss [DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]
+    THEN Cases_on `h` 
+    THEN TRY(Cases_on `h'`)
+    THEN FULL_SIMP_TAC list_ss 
+          [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]
+    THEN METIS_TAC[MAP_FST_SUBSET_ZIP_LIST]);
+
+val STRAIGHT_RUN_DISTINCT =
+ store_thm
+  ("STRAIGHT_RUN_DISTINCT",
+   ``!c. STRAIGHT c ==> !l. DISTINCT_VARS l ==> DISTINCT_VARS(STRAIGHT_RUN c l)``,
+   Induct 
+    THEN RW_TAC std_ss [rules,STRAIGHT_RUN_def,STRAIGHT_def]
+    THEN TRY(Cases_on `s0`)
+    THEN RW_TAC std_ss 
+          [SEQ_THM,IF_THM,rules,GEN_ASSIGN_THM,Update_def,
+           STRAIGHT_RUN_def,UPDATE_LIST_FUPDATE,UpdateDISTINCT]
+    THEN METIS_TAC[ZIP_LIST_DISTINCT]);
+
+val ZIP_LIST_T =
+ prove
+  (``!l1 l2. (LENGTH l1 = LENGTH l2) ==> (ZIP_LIST T l1 l2 = l1)``,
+   Induct 
+    THENL[ALL_TAC,GEN_TAC]
+    THEN Induct
+    THEN RW_TAC list_ss [DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]
+    THEN Cases_on `h` 
+    THEN TRY(Cases_on `h'`)
+    THEN FULL_SIMP_TAC list_ss 
+          [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]);
+
+val ZIP_LIST_F =
+ prove
+  (``!l1 l2. (MAP FST l1 = MAP FST l2) ==> (ZIP_LIST F l1 l2 = l2)``,
+   Induct 
+    THENL[ALL_TAC,GEN_TAC]
+    THEN Induct
+    THEN RW_TAC list_ss [DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]
+    THEN Cases_on `h` 
+    THEN TRY(Cases_on `h'`)
+    THEN FULL_SIMP_TAC list_ss 
+          [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]);
+
+(* Vars assigned to in a program *)
+val VARS_def =
+ Define
+  `(VARS Skip = {})
+   /\
+   (VARS (GenAssign v e) = {v}) 
+   /\
+   (VARS (Seq c1 c2) = VARS c1 UNION VARS c2)
+   /\
+   (VARS (Cond b c1 c2) = VARS c1 UNION VARS c2)`;
+
+val MAP_FST_ZIP_LIST =
+ prove
+  (``!l1 l2 l b. (MAP FST l1 = l) /\ (MAP FST l2 = l) ==> (MAP FST (ZIP_LIST b l1 l2) = l)``,
+   Induct 
+    THENL[ALL_TAC,GEN_TAC]
+    THEN Induct
+    THEN RW_TAC list_ss [ZIP_LIST_def]
+    THEN Cases_on `h` 
+    THEN Cases_on `h'`
+    THEN FULL_SIMP_TAC list_ss [ZIP_LIST_def]);  
+
+val VARS_IN_def =
+ Define
+   `VARS_IN c l = !v. v IN (VARS c) ==> MEM v (MAP FST l)`;
+
+val VARS_STRAIGHT_RUN =
+ prove
+  (``!c l. STRAIGHT c /\ VARS_IN c l 
+           ==> (MAP FST (STRAIGHT_RUN c l) = MAP FST l)``,
+   Induct
+    THEN TRY(Cases_on `s0`)
+    THEN RW_TAC list_ss 
+          [STRAIGHT_def,VARS_def,NOT_IN_EMPTY,IN_SING,STRAIGHT_RUN_def,
+           MAP_FST_UPDATE_LIST,IN_UNION,VARS_IN_def]
+    THEN METIS_TAC[MAP_FST_ZIP_LIST,VARS_IN_def]);
+
+val VARS_STRAIGHT_RUN_COR =
+ prove
+  (``!c l. STRAIGHT c /\ VARS_IN c l 
+           ==> (LENGTH(STRAIGHT_RUN c l) = LENGTH l)``,
+    METIS_TAC[VARS_IN_def,rich_listTheory.LENGTH_MAP,VARS_STRAIGHT_RUN]);
+
+val STRAIGHT_RUN_EVAL =
+ store_thm
+  ("STRAIGHT_RUN_EVAL",
+   ``!c l. STRAIGHT c /\ VARS_IN c l /\ DISTINCT_VARS l 
+           ==> (EVAL c (FEMPTY |++ l) (FEMPTY |++ STRAIGHT_RUN c l))``,
+   Induct
+    THEN RW_TAC std_ss 
+          [VARS_IN_def,STRAIGHT_def, rules, STRAIGHT_RUN_def,VARS_def,IN_UNION]
+    THEN TRY(Cases_on `s0`)
+    THEN RW_TAC std_ss 
+          [SEQ_THM,IF_THM,rules,GEN_ASSIGN_THM,Update_def,
+           STRAIGHT_RUN_def,UPDATE_LIST_FUPDATE]
+    THEN METIS_TAC
+          [ZIP_LIST_DISTINCT,STRAIGHT_RUN_DISTINCT,ZIP_LIST_T,ZIP_LIST_F,
+           VARS_IN_def,VARS_STRAIGHT_RUN,VARS_STRAIGHT_RUN_COR]);
+
+val STRAIGHT_RUN_EVAL =
+ store_thm
+  ("STRAIGHT_RUN_EVAL",
+   ``!c l. STRAIGHT c 
+           ==> VARS_IN c l 
+           ==> DISTINCT_VARS l 
+           ==> (EVAL c (FEMPTY |++ l) (FEMPTY |++ STRAIGHT_RUN c l))``,
+   Induct
+    THEN RW_TAC std_ss 
+          [VARS_IN_def,STRAIGHT_def, rules, STRAIGHT_RUN_def,VARS_def,IN_UNION]
+    THEN TRY(Cases_on `s0`)
+    THEN RW_TAC std_ss 
+          [SEQ_THM,IF_THM,rules,GEN_ASSIGN_THM,Update_def,
+           STRAIGHT_RUN_def,UPDATE_LIST_FUPDATE]
+    THEN METIS_TAC
+          [ZIP_LIST_DISTINCT,STRAIGHT_RUN_DISTINCT,ZIP_LIST_T,ZIP_LIST_F,
+           VARS_IN_def,VARS_STRAIGHT_RUN,VARS_STRAIGHT_RUN_COR]);
 
 val _ = export_theory();
 

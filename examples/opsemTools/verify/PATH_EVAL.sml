@@ -417,6 +417,20 @@ Construct: FEMPTY |++ [("v1",v1);...;("vn",vn)]
 where v1,...,vn are the variables read or written in c
 *)
 
+
+fun MAKE_STATE_LIST_FROM_VARS vars =
+ let val pairs = map
+                  (fn tm => ``(^tm, Scalar ^(mk_var(fromHOLstring tm,``:int``)))``)
+                  vars
+ in
+  listSyntax.mk_list(pairs,``:string#value``)
+ end;
+
+fun MAKE_STATE_LIST c = MAKE_STATE_LIST_FROM_VARS(program_vars c);
+
+fun MAKE_STATE c = ``FEMPTY |++ ^(MAKE_STATE_LIST_FROM_VARS(program_vars c))``;
+
+(*
 fun MAKE_STATE_FROM_VARS vars =
  let val pairs = map 
                   (fn tm => ``(^tm, Scalar ^(mk_var(fromHOLstring tm,``:int``)))``)
@@ -426,6 +440,8 @@ fun MAKE_STATE_FROM_VARS vars =
  end;
 
 fun MAKE_STATE c = MAKE_STATE_FROM_VARS(program_vars c);
+*)
+
 
 (*
 Construct a theorem by assuming
@@ -649,6 +665,48 @@ fun PRUNE_FINITE_MAP_CONV fm =
   else (REWR_CONV FUPDATE_PRUNE 
          THENC RATOR_CONV(RAND_CONV(EVAL THENC PRUNE_FINITE_MAP_CONV)))
        fm;
+
+(*
+``FEMPTY |+ ... |+ (v,x1) ... |+ (v,x2)``
+-->
+|- (FEMPTY |+ ... |+ (v,x1) ... |+ (v,x2) = FEMPTY |+ ... |+ (v,x2) ...
+*)
+
+fun PERCOLATE_UPDATE fm =
+ let val (rest1,update1) = dest_comb fm
+     val (op1,fm1) = dest_comb rest1
+     val _ = if is_const op1 andalso (fst(dest_const op1) = "FUPDATE")
+              then ()
+              else (print_term op1; print " should be FUPDATE\n"; fail())
+     val (v1,x1) = dest_pair update1
+     val _ = if is_const fm1 andalso (fst(dest_const fm1) = "FEMPTY")
+              then (print_term v1; print " unbound\n"; fail())
+              else ()
+     val (rest2,update2) = dest_comb fm1
+     val (op2,fm2) = dest_comb rest2
+     val _ = if is_const op2 andalso (fst(dest_const op2) = "FUPDATE")
+              then ()
+              else (print_term op2; print " should be FUPDATE\n"; fail())
+     val _ = if aconv op1 op2 
+              then () 
+              else  (print_term op1; print " and "; print_term op2; 
+                     print " should be the same\n"; fail())
+     val (v2,x2) = dest_pair update2
+ in
+  if aconv v1 v2
+   then ISPECL[fm2,v1,x2,x1]FUPDATE_EQ
+   else let val eqth = EQF_ELIM(bossLib.EVAL (mk_eq(v2,v1)))
+            val commth = MP (ISPECL[fm2,v2,x2,v1,x1]FUPDATE_COMMUTES) eqth
+            val fm3 = rhs(concl commth)
+            val (rest3,update3) = dest_comb fm3
+            val (_,fm4) = dest_comb rest3
+            val recsubmapth = PERCOLATE_UPDATE fm4
+            val recth = AP_THM(AP_TERM op1 recsubmapth)update3
+        in
+         TRANS commth recth
+        end
+ end;
+
 
 (*
 val FUPDATE_LIST_FOLD_LEMMA =
@@ -899,6 +957,23 @@ fun IMP_EVAL_TAC solv (asl : term list,tm) =
               else (print "Error in IMP_EVAL_TAC\n"; fail()))
  end;
 
+(* Prove ``VARS_IN c l`` *)
+fun VARS_IN_CONV t =
+ let val th1 =  EVAL t
+     val th2 = EQT_INTRO(prove(rhs(concl th1), REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]));
+ in
+  TRANS th1 th2
+ end;
 
-
-   
+(* Prove |- EVAL c (FEMPTY |++ l) (FEMPTY |++ STRAIGHT_RUN c l) *)
+fun STRAIGHT_EVAL_SYM c =
+let val l = MAKE_STATE_LIST c
+    val STRAIGHT_th = EQT_ELIM(print "\nSTRAIGHT:     "; time EVAL ``STRAIGHT ^c``)
+    val VARS_IN_th =  EQT_ELIM(print "VARS_IN:      "; time VARS_IN_CONV ``VARS_IN ^c ^l``)
+    val DISTINCT_th = EQT_ELIM(print "DISTINCT:     "; time EVAL ``DISTINCT_VARS ^l``)
+    val STRAIGHT_RUN_th = (print "STRAIGHT_RUN: "; time EVAL ``STRAIGHT_RUN ^c ^l``)
+    val STRAIGHT_RUN_EVAL_th1 = SPECL [c,l] STRAIGHT_RUN_EVAL
+    val STRAIGHT_RUN_EVAL_th2 = LIST_MP [STRAIGHT_th,VARS_IN_th,DISTINCT_th] STRAIGHT_RUN_EVAL_th1 
+in
+ CONV_RULE (RAND_CONV(RAND_CONV(REWR_CONV STRAIGHT_RUN_th))) STRAIGHT_RUN_EVAL_th2
+end;
