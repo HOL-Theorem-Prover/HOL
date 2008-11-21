@@ -893,6 +893,19 @@ in
 fun norm_clos tm = vars_sigma_norm(Subst.id,tm)
 end
 
+fun size acc tlist =
+    case tlist of
+      [] => acc
+    | t :: ts => let
+      in
+        case t of
+          Comb(t1,t2) => size (1 + acc) (t1 :: t2 :: ts)
+        | Abs(_, b) => size (1 + acc) (b :: ts)
+        | Clos _ => size acc (push_clos t :: ts)
+        | _ => size (1 + acc) ts
+      end
+fun term_size t = size 0 [t]
+
 (*---------------------------------------------------------------------------*
  * Traverse a term, performing a given (side-effecting) operation at the     *
  * leaves. For our purposes, bound variables can be ignored.                 *

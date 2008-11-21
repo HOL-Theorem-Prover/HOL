@@ -971,6 +971,23 @@ fun match_terml tyfixed tmfixed pat ob =
 
 val match_term = match_terml [] empty_varset;
 
+fun size acc tlist =
+    case tlist of
+      [] => acc
+    | t :: ts => let
+      in
+        case t of
+          Var _ => size (1 + acc) ts
+        | Const _ => size (1 + acc) ts
+        | App(t1, t2) => size (1 + acc) (t1 :: t2 :: ts)
+        | Abs(_, b) => size (1 + acc) (b :: ts)
+      end
+
+fun term_size t = size 0 [t]
+
+
+
+
 val imp = let
   val k = {Name = "==>", Thy = "min"}
 in

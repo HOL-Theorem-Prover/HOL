@@ -294,5 +294,17 @@ fun is_gen_tyvar (Tyv name) = String.isPrefix gen_tyvar_prefix name
   | is_gen_tyvar _ = false;
 end;
 
+fun size acc tylist =
+    case tylist of
+      [] => acc
+    | [] :: tys => size acc tys
+    | (ty::tys1) :: tys2 => let
+      in
+        case ty of
+          Tyv _ => size (1 + acc) (tys1 :: tys2)
+        | Tyapp(_, args) => size (1 + acc) (args :: tys1 :: tys2)
+      end
+
+fun type_size ty = size 0 [[ty]]
 
 end (* Type *)
