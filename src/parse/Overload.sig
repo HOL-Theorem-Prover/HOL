@@ -4,7 +4,7 @@ sig
  type term     = HolKernel.term
 
  type nthy_rec = {Name : string, Thy : string}
- type overloaded_op_info = {base_type : hol_type, actual_ops : term list, 
+ type overloaded_op_info = {base_type : hol_type, actual_ops : term list,
                             tyavoids : hol_type list}
 
 
@@ -27,8 +27,7 @@ sig
   exception OVERLOAD_ERR of string
 
   val remove_overloaded_form :
-    string -> overload_info ->
-    overload_info * (term list * nthy_rec list)
+    string -> overload_info -> overload_info * (term list * term list)
 
   val raw_map_insert :
     string -> (nthy_rec list * nthy_rec list) ->

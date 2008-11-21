@@ -32,19 +32,31 @@ type overloaded_op_info = {base_type : Type.hol_type, actual_ops : term list,
 *)
 
 
+type printmap_data = term * string * real
+  (* the term is the lambda abstraction provided by the user, the
+     string is the name that it is to be used in the printing process, and
+     the real is the timestamp *)
+fun tstamp () : real = Time.toReal (Time.now())
 
 type overload_info = ((string,overloaded_op_info) Binarymap.dict *
-                      ({Name:string,Thy:string}, string) Binarymap.dict)
+                      printmap_data LVTermNet.lvtermnet)
+
+structure PrintMap = LVTermNet
 
 fun nthy_rec_cmp ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
     pair_compare (String.compare, String.compare) ((thy1, n1), (thy2, n2))
 
 val null_oinfo : overload_info =
-  (Binarymap.mkDict String.compare,
-   Binarymap.mkDict nthy_rec_cmp)
+  (Binarymap.mkDict String.compare, PrintMap.empty)
 
 fun oinfo_ops (oi,_) = Binarymap.listItems oi
-fun print_map (_, pm) = Binarymap.listItems pm
+fun print_map (_, pm) = let
+  fun foldthis (_,(t,nm,_),acc) =
+      (lose_constrec_ty (dest_thy_const t),nm) :: acc
+      handle HOL_ERR _ => acc
+in
+  PrintMap.fold foldthis [] pm
+end
 
 fun update_assoc k v [] = [(k,v)]
   | update_assoc k v ((k',v')::kvs) = if k = k' then (k,v)::kvs
@@ -52,7 +64,7 @@ fun update_assoc k v [] = [(k,v)]
 
 exception OVERLOAD_ERR of string
 
-fun tmlist_tyvs tlist = 
+fun tmlist_tyvs tlist =
   List.foldl (fn (t,acc) => Lib.union (type_vars_in_term t) acc) [] tlist
 
 local
@@ -141,7 +153,7 @@ fun fupd_actual_ops f {base_type, actual_ops, tyavoids} =
 fun fupd_base_type f {base_type, actual_ops, tyavoids} =
   {base_type = f base_type, actual_ops = actual_ops, tyavoids = tyavoids}
 
-fun fupd_tyavoids f {base_type, actual_ops, tyavoids} = 
+fun fupd_tyavoids f {base_type, actual_ops, tyavoids} =
     {base_type = base_type, actual_ops = actual_ops, tyavoids = f tyavoids}
 
 fun fupd_dict_at_key k f dict = let
@@ -173,11 +185,11 @@ fun remove_overloaded_form s (oinfo:overload_info) = let
   (* will keep okopc, but should now remove from cnst2op all pairs of the form
        (c, s)
      where s is the s above *)
-  fun foldthis (k,v,acc as (map,removed)) =
-      if v = s then (#1 (Binarymap.remove (map, k)), k::removed)
+  fun foldthis (k,(t,v,_),acc as (map,removed)) =
+      if v = s then (#1 (PrintMap.delete (map, k)), t ::removed)
       else acc
 
-  val (okcop, badcop) = Binarymap.foldl foldthis (cnst2op,[]) cnst2op
+  val (okcop, badcop) = PrintMap.fold foldthis (cnst2op,[]) cnst2op
 in
   ((okopc, okcop), (badopc, badcop))
 end
@@ -189,9 +201,13 @@ fun raw_map_insert s (new_op2cs, new_c2ops) (op2c_map, c2op_map) = let
       raise OVERLOAD_ERR ("No such constant: "^Thy^"$"^Name)
   val withtypes = map install_ty new_op2cs
 
-  val new_c2op_map =
-    List.foldl (fn (crec,acc) => Binarymap.insert(acc, crec, s))
-               c2op_map new_c2ops
+  val new_c2op_map = let
+    val withtypes = map install_ty new_c2ops
+  in
+    List.foldl (fn (t,acc) => PrintMap.insert(acc, ([],t), (t,s,tstamp())))
+               c2op_map
+               withtypes
+  end
 in
   case withtypes of
     [] => (op2c_map, new_c2op_map)
@@ -199,9 +215,9 @@ in
       val au = foldl (fn (r1, t) => anti_unify (type_of r1) t) (type_of r) rs
     in
       (Binarymap.insert
-         (op2c_map, s, 
+         (op2c_map, s,
           {base_type = au, actual_ops = withtypes,
-           tyavoids = tmlist_tyvs (HOLset.listItems 
+           tyavoids = tmlist_tyvs (HOLset.listItems
                                      (FVL withtypes empty_tmset))}),
        new_c2op_map)
     end
@@ -233,7 +249,7 @@ fun add_overloading (opname, term) oinfo = let
             in
               Binarymap.insert(opc0, opname,
                                {actual_ops = term::rest,
-                                base_type = base_type, 
+                                base_type = base_type,
                                 tyavoids = tyavoids})
             end
           | NONE => let
@@ -244,7 +260,7 @@ fun add_overloading (opname, term) oinfo = let
               fupd_dict_at_key
                 opname
                 (fupd_actual_ops (cons term) o
-                 fupd_base_type (fn b => newbase) o 
+                 fupd_base_type (fn b => newbase) o
                  fupd_tyavoids (Lib.union new_avoids))
                 opc0
             end
@@ -252,20 +268,20 @@ fun add_overloading (opname, term) oinfo = let
       | NONE =>
         (* this name not overloaded at all *)
         Binarymap.insert(opc0, opname,
-                         {actual_ops = [term], base_type = type_of term, 
+                         {actual_ops = [term], base_type = type_of term,
                           tyavoids = tmlist_tyvs (free_vars term)})
-  val cop = if is_const term then let 
-                val nthy_rec = lose_constrec_ty (dest_thy_const term)
-              in
-                Binarymap.insert(cop0, nthy_rec, opname)
-              end
-            else cop0
+  val cop = let
+    val fvs = free_vars term
+    val (_, pat) = strip_abs term
+  in
+    PrintMap.insert(cop0,(fvs,pat),(term,opname,tstamp()))
+  end
 in
   (opc, cop)
 end
 
 
-fun add_actual_overloading {opname, realname, realthy} oinfo = let 
+fun add_actual_overloading {opname, realname, realthy} oinfo = let
   val cnst = prim_mk_const{Name = realname, Thy = realthy}
       handle HOL_ERR _ =>
              raise OVERLOAD_ERR ("No such constant: "^realthy^"$"^realname)
@@ -289,7 +305,7 @@ local
               SOME x => (* the constant is in the map *)
                 Binarymap.insert(opc0, opname,
                   {actual_ops = f (aconv cnst) actual_ops,
-                   base_type = base_type, 
+                   base_type = base_type,
                    tyavoids = tyavoids})
             | NONE => raise OVERLOAD_ERR
                         ("Constant not overloaded: "^realthy^"$"^realname)
@@ -306,18 +322,66 @@ in
   fun send_to_back_overloading x oinfo = foverloading send_to_back x oinfo
   fun bring_to_front_overloading x oinfo = foverloading bring_to_front x oinfo
 end;
-  
+
 
 fun myfind f [] = NONE
   | myfind f (x::xs) = case f x of (v as SOME _) => v | NONE => myfind f xs
 
-fun overloading_of_term (oinfo:overload_info) t =
-  if not (Term.is_const t) then NONE
-  else
-    Binarymap.peek (#2 oinfo, lose_constrec_ty (Term.dest_thy_const t))
+fun isize0 acc f [] = acc
+  | isize0 acc f ({redex,residue} :: rest) = isize0 (acc + f residue) f rest
+fun isize f x = isize0 0 f x
+
+fun strip_comb ((_, prmap): overload_info) t = let
+  val matches = PrintMap.match(prmap, t)
+  val cmp0 = pair_compare (measure_cmp (isize type_size),
+                           pair_compare (measure_cmp (isize term_size),
+                                         flip_order o Real.compare))
+  val cmp = inv_img_cmp (fn (a,b,c,d) => (a,(b,c))) cmp0
+
+  fun test ((fvs, pat), (orig, nm, tstamp)) = let
+    val tyvs = List.foldl (fn (t, acc) => union (type_vars_in_term t) acc)
+                          []
+                          fvs
+    val tmset = HOLset.addList(empty_tmset, fvs)
+    val ((tmi0,tmeq),(tyi0,tyeq)) = raw_match tyvs tmset pat t ([],[])
+    val tmi = HOLset.foldl (fn (t,acc) => if HOLset.member(tmset,t) then acc
+                                          else (t |-> t) :: acc)
+                           tmi0
+                           tmeq
+    val tyi = List.foldl (fn (ty,acc) => if mem ty tyvs then acc
+                                         else (ty |-> ty) :: acc)
+                         tyi0
+                         tyeq
+  in
+    SOME (tyi, tmi, tstamp, (orig, nm))
+  end handle HOL_ERR _ => NONE
+
+  val inst_data = List.mapPartial test matches
+  val sorted = Listsort.sort cmp inst_data
+  fun rearrange (_, tmi, _, (orig, nm)) = let
+    val (bvs,_) = strip_abs orig
+    fun findarg v =
+        case List.find (fn {redex,residue} => residue = v) tmi of
+          NONE => mk_const("ARB", type_of v)
+        | SOME i => #residue i
+  in
+    (mk_var(GrammarSpecials.fakeconst_special ^ nm, alpha), map findarg bvs)
+  end
+in
+  case sorted of
+    [] => NONE
+  | m :: _ => SOME (rearrange m)
+end
+
+
+fun overloading_of_term (oinfo as (_, prmap) : overload_info) t =
+    case strip_comb oinfo t of
+      SOME (f, []) => SOME (unprefix GrammarSpecials.fakeconst_special
+                                     (#1 (dest_var f)))
+    | _ => NONE
 
 fun overloading_of_nametype (oinfo:overload_info) r =
-    Binarymap.peek (#2 oinfo, r)
+    overloading_of_term oinfo (prim_mk_const r)
 
 fun rev_append [] rest = rest
   | rev_append (x::xs) rest = rev_append xs (x::rest)
@@ -354,36 +418,13 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) : overload_info = let
         | GREATER => merge ((k2, op2)::acc) op1s op2s'
       end
     infix ##
-    val O1cops_sorted = Binarymap.listItems (#2 O1)
-    val O2cops_sorted = Binarymap.listItems (#2 O2)
-    fun merge_cops acc cop1s cop2s =
-      case (cop1s, cop2s) of
-        ([], x) => rev_append acc x
-      | (x, []) => rev_append acc x
-      | (r1::r1s, r2::r2s) => let
-        val (x:nthy_rec,_) = r1   (* telling type inferencer the type *)
-        in
-          case nthy_rec_cmp(#1 r1, #1 r2) of
-            LESS => merge_cops (r1::acc) r1s cop2s
-          | GREATER => merge_cops (r2::acc) cop1s r2s
-          | EQUAL => let
-            in
-              if #2 r1 <> #2 r2 andalso !show_alias_resolution andalso
-                 !Globals.interactive
-              then
-                HOL_MESG ("Constant " ^ #Thy (#1 r1) ^ "$" ^ #Name (#1 r1) ^
-                          " now prints as " ^ quote(#2 r2))
-              else ();
-              merge_cops (r1::acc) r1s r2s
-            end
-        end
+    fun foldthis (k,v,acc) = PrintMap.insert(acc,k,v)
+    val new_prmap = PrintMap.fold foldthis (#2 O2) (#2 O1)
 in
   (List.foldr (fn ((k,v),dict) => Binarymap.insert(dict,k,v))
               (Binarymap.mkDict String.compare)
               (merge [] O1ops_sorted O2ops_sorted),
-   List.foldl (fn ((k,v),dict) => Binarymap.insert(dict,k,v))
-              (Binarymap.mkDict nthy_rec_cmp)
-              (merge_cops [] O1cops_sorted O2cops_sorted))
+   new_prmap)
 end
 
 fun keys dict = Binarymap.foldr (fn (k,v,l) => k::l) [] dict
@@ -401,10 +442,14 @@ in
 end handle Binarymap.NotFound => opdict
 
 
-fun remove_mapping str crec ((opc, cop) : overload_info) =
+fun remove_mapping str crec ((opc, cop) : overload_info) = let
+  val t = prim_mk_const crec
+in
   (remove_omapping crec str opc,
-   case Binarymap.peek (cop, crec) of
+   case PrintMap.peek (cop, ([], t)) of
      NONE => cop
-   | SOME s => if s = str then #1 (Binarymap.remove(cop, crec)) else cop)
+   | SOME (_,s,_) => if s = str then #1 (PrintMap.delete(cop, ([], t)))
+                     else cop)
+end
 
 end (* Overload *)

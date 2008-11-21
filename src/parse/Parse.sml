@@ -205,11 +205,11 @@ in
   fn t => with_pp con (pprint t)
 end
 
-fun minprint t = let 
+fun minprint t = let
   val g0 = (type_grammar.empty_grammar, term_grammar.stdhol)
-  fun default t = let 
-    val t_str =   
-        String.toString 
+  fun default t = let
+    val t_str =
+        String.toString
           (trace ("types", 1)
                  (PP.pp_to_string 1000000 (#2 (print_from_grammars g0)))
                  t)
@@ -218,11 +218,11 @@ fun minprint t = let
                    "[QUOTE \"", t_str, "\"])"]
   end
 in
-  if is_const t then let 
-      val {Name,Thy,...} = dest_thy_const t 
+  if is_const t then let
+      val {Name,Thy,...} = dest_thy_const t
       val t' = prim_mk_const {Name = Name, Thy = Thy}
     in
-      if aconv t t' then 
+      if aconv t t' then
         String.concat ["(Term.prim_mk_const { Name = ",
                        quote Name, ", Thy = ",
                        quote Thy, "})"]
@@ -510,7 +510,7 @@ local open Parse_support Absyn
 in
   fun absyn_to_preterm_in_env oinfo t = let
     fun binder(VIDENT (l,s))    = make_binding_occ l s
-      | binder(VPAIR(l,v1,v2))  = make_vstruct oinfo l [binder v1, binder v2] 
+      | binder(VPAIR(l,v1,v2))  = make_vstruct oinfo l [binder v1, binder v2]
                                                NONE
       | binder(VAQ (l,x))       = make_aq_binding_occ l x
       | binder(VTYPED(l,v,pty)) = make_vstruct oinfo l [binder v] (SOME pty)
@@ -883,7 +883,7 @@ fun try_grammar_extension f x =
 val std_binder_precedence = 0;
 
 fun temp_add_binder(name, prec) = let in
-   the_term_grammar := add_binder (!the_term_grammar) 
+   the_term_grammar := add_binder (!the_term_grammar)
                                   ({term_name = name, tok = name}, prec);
    term_grammar_changed := true
  end
@@ -892,14 +892,14 @@ fun add_binder (name, prec) = let in
     temp_add_binder(name, prec);
     update_grms "add_binder" ("temp_add_binder",
                               String.concat
-                                ["(", quote name, 
+                                ["(", quote name,
                                  ", std_binder_precedence)"])
   end
 
 fun temp_add_rule {term_name,fixity,pp_elements,paren_style,block_style} =
  (case fixity
    of Prefix => Feedback.HOL_MESG"Fixities of Prefix do not affect the grammar"
-    | Binder => let 
+    | Binder => let
       in
         temp_add_binder (term_name, std_binder_precedence)
       end
@@ -992,7 +992,7 @@ fun temp_associate_restriction (bs, s) =
      val b = if mem bs lambda then NONE else SOME bs
  in
     the_term_grammar :=
-    term_grammar.associate_restriction (term_grammar()) 
+    term_grammar.associate_restriction (term_grammar())
                                        {binder = b, resbinder = s};
     term_grammar_changed := true
  end
@@ -1148,10 +1148,10 @@ fun temp_overload_on (s, t) =
                           (Overload.add_overloading (s, t))
                           (term_grammar());
 
-fun overload_on (s, t) = let 
+fun overload_on (s, t) = let
 in
   temp_overload_on (s, t);
-  full_update_grms 
+  full_update_grms
     ("temp_overload_on",
      String.concat ["(", quote s, ", ", minprint t, ")"],
     SOME t)
@@ -1251,19 +1251,19 @@ fun add_numeral_form (c, stropt) = let in
  ---------------------------------------------------------------------------*)
 
 fun hide s = let
-  val (newg, (tms,nthyrecs)) =
+  val (newg, (tms1,tms2)) =
     mfupdate_overload_info (Overload.remove_overloaded_form s)
                            (!the_term_grammar)
-  fun to_nthyrec t = let 
+  fun to_nthyrec t = let
     val {Name,Thy,Ty} = dest_thy_const t
-  in 
+  in
     SOME {Name = Name, Thy = Thy}
   end handle HOL_ERR _ => NONE
-      
+
 in
   the_term_grammar := newg;
   term_grammar_changed := true;
-  (List.mapPartial to_nthyrec tms, nthyrecs)
+  (List.mapPartial to_nthyrec tms1, List.mapPartial to_nthyrec tms2)
 end;
 
 fun update_overload_maps s nthyrec_pair = let
@@ -1599,9 +1599,9 @@ val min_grammars = current_grammars();
   fun clear_thy_consts_from_oinfo thy oinfo = let
     val all_parse_consts = Overload.oinfo_ops oinfo
     fun bad_parse_guy (nm, {actual_ops, ...}) = let
-      fun bad_guy t = let 
-        val {Name,Thy,...} = dest_thy_const t 
-      in 
+      fun bad_guy t = let
+        val {Name,Thy,...} = dest_thy_const t
+      in
         if Thy = thy then SOME (nm, {Name = Name, Thy = Thy})
         else NONE
       end
