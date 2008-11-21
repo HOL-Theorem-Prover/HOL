@@ -85,4 +85,6 @@ sig
   val break_abs      : term -> term
   val trav           : (term -> unit) -> term -> unit
   val pp_raw_term    : (term -> int) -> Portable.ppstream -> term -> unit
+
+  val term_size      : term -> int
 end;

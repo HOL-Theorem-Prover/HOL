@@ -45,6 +45,7 @@ sig
                               -> (hol_type,hol_type)Lib.subst
                               -> (hol_type,hol_type)Lib.subst
   val thy_types     : string -> (string * int) list
+  val type_size     : hol_type -> int
 end;
 
 
