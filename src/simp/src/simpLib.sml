@@ -185,7 +185,8 @@ with
  val any = mk_var("x",Type.alpha);
 
  fun net_add_conv (data as {name,key,trace,conv}:convdata) =
-     enter (option_cases #1 [] key,
+     enter (option_cases (type_vars_in_terml o #1) [] key,
+            option_cases #1 [] key,
             option_cases #2 any key,
             USER_CONV data);
 

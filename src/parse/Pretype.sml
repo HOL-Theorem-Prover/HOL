@@ -100,6 +100,10 @@ and eq_env  e1 e2 (PT (value,locn))          (PT (value',locn'))       = eq_env0
 val eq0 = eq_env0 [] []
 and eq  = eq_env  [] [];
 
+fun list_eq (e1::es1) (e2::es2) = eq e1 e2 andalso list_eq es1 es2
+  | list_eq [] [] = true
+  | list_eq _ _ = false;
+
 val prekind_rank_compare = Lib.pair_compare(Prekind.prekind_compare, Prerank.prerank_compare);
 
 fun pretyvar_compare ((s1,k1,rk1), (s2,k2,rk2)) =
@@ -706,6 +710,48 @@ fun distinguish_btyvars context_tyvars =
 
 
 local
+val EERR = ERR "eta_conv_ty" "not a type eta redex"
+in
+fun eta_conv_ty (PT(TyAbst(Bvar, M), _))
+       = let
+(*           val _ = if not (is_debug()) then () else
+                     print ("eta_conv_ty: Bvar = " ^ pretype_to_string Bvar ^ "\n"
+                          ^ "             M = " ^ pretype_to_string M ^ "\n")
+*)
+             val (Opr,Arg) = dest_app_type M
+                              handle HOL_ERR _ => raise EERR
+(*
+             val _ = if not (is_debug()) then () else
+                     print ("eta_conv_ty: Opr = " ^ pretype_to_string Opr ^ "\n"
+                          ^ "             Arg = " ^ pretype_to_string Arg ^ "\n")
+*)
+             val  Bvar0     = the_var_type Bvar
+                              handle HOL_ERR _ => raise EERR
+             val  Argv      = the_var_type Arg
+                              handle HOL_ERR _ => raise EERR
+(*
+             val _ = if not (is_debug()) then () else
+                     print ("eta_conv_ty: Bvar0 = " ^ pretype_to_string Bvar0 ^ "\n"
+                          ^ "             Argv  = " ^ pretype_to_string Argv  ^ "\n")
+*)
+             val _ = if eq Bvar0 Argv then () else raise EERR
+(*
+             val _ = if not (is_debug()) then () else
+                     print ("eta_conv_ty: bound var and arg are same; about to check bound var not in Opr\n");
+*)
+             val _ = if Lib.op_mem eq Bvar0 (type_vars Opr) then raise EERR else ()
+(*
+             val _ = if not (is_debug()) then () else
+                     print ("bound var not in Opr\n")
+*)
+         in Opr
+         end
+  | eta_conv_ty _ = raise EERR
+end
+
+
+
+local
 val BERR = ERR "beta_conv_ty" "not a type beta redex"
 in
 fun beta_conv_ty (PT(TyApp(M, N), _))
@@ -985,6 +1031,8 @@ fun once_depth_conv_ty conv ty =
 fun top_sweep_conv_ty conv ty =
     (repeat_ty conv then_ty sub_conv_ty (top_sweep_conv_ty conv)) ty
 
+val deep_eta_conv_ty = qconv_ty (top_depth_conv_ty eta_conv_ty)
+
 val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
 
 
@@ -1173,9 +1221,10 @@ fun gen_unify (kind_unify   :prekind -> prekind -> ('a -> 'a * unit option))
     | beta_conv_head _ = raise ERR "beta_conv_head" "no beta redex found"
 in
   case (t1, t2) of
-    (UVar (r as ref (NONEU(kd,rk))), _) => kind_unify (pkind_of ty2) kd >>
-                                           rank_unify_le (prank_of ty2) (* <= *) rk >>
-                                           bind (gen_unify c1 c2) r (shift_context c2 c1 ty2)
+    (UVar (r as ref (NONEU(kd,rk))), _) =>
+        kind_unify (pkind_of ty2) kd >>
+        rank_unify_le (prank_of ty2) (* <= *) rk >>
+        bind (gen_unify c1 c2) r (shift_context c2 c1 ty2)
   | (UVar (r as ref (SOMEU ty1)), t2) => gen_unify c1 c2 ty1 ty2
   | (_, UVar _) => gen_unify c2 c1 ty2 ty1
   | (Vartype (tv1 as (s1,k1,r1)), Vartype (tv2 as (s2,k2,r2))) =>
@@ -1209,12 +1258,16 @@ in
           else if ho_1 then
             (* Higher order unification; shift args to other side by abstraction. *)
             let val vs = mk_vs c1 c2 args1
-             in gen_unify c1 c2 opr1 (list_mk_abs_type(vs,ty2))
+             in if list_eq vs args2
+                then gen_unify c1 c2 opr1 opr2
+                else gen_unify c1 c2 opr1 (list_mk_abs_type(vs,ty2))
             end
           else if ho_2 then
             (* Higher order unification; shift args to other side by abstraction. *)
             let val vs = mk_vs c2 c1 args2
-             in gen_unify c1 c2 (list_mk_abs_type(vs,ty1)) opr2
+             in if list_eq vs args1
+                then gen_unify c1 c2 opr1 opr2
+                else gen_unify c1 c2 (list_mk_abs_type(vs,ty1)) opr2
             end
           else (* normal structural unification *)
             gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()

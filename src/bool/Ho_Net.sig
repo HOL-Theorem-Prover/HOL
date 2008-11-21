@@ -10,10 +10,12 @@ signature Ho_Net =
 sig
  type 'a net
  type term = Term.term
+ type hol_type = Type.hol_type
 
  val empty_net  : 'a net
- val enter      : term list * term * 'a -> 'a net -> 'a net
+ val enter      : hol_type list * term list * term * 'a -> 'a net -> 'a net
  val lookup     : term -> 'a net -> 'a list
  val merge_nets : 'a net * 'a net -> 'a net
+ val listItems  : 'a net -> 'a list
 
 end

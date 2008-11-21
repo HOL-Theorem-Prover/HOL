@@ -556,6 +556,17 @@ fun TOP_SWEEP_CONV conv tm =
 
 fun CONV_RULE conv th = EQ_MP (conv(concl th)) th handle UNCHANGED => th
 
+
+(*---------------------------------------------------------------------------*
+ *  Beta-reduce all types within the term                                    *
+ *                                                                           *
+ *       t                                                                   *
+ *   -----------                                                             *
+ *    |- t = t'   (where t' is t but with all types beta-reduced)            *
+ *---------------------------------------------------------------------------*)
+
+fun BETA_TY_CONV t = ALPHA t (beta_conv_ty_in_term t)
+
 (*---------------------------------------------------------------------------*
  * Rule for beta-reducing on all beta-redexes                                *
  *---------------------------------------------------------------------------*)

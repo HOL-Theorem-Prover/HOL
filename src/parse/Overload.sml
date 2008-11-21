@@ -102,7 +102,7 @@ local
         | SOME v => return v)
 
   fun initial_state (ty1, ty2) = let
-    val avoids = map dest_vartype (type_varsl [ty1, ty2])
+    val avoids = map (#1 o dest_vartype_opr) (type_varsl [ty1, ty2])
     val first_var = gen_variant tyvar_vary avoids "'a"
   in
     ([], (first_var, avoids))

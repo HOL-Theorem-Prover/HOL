@@ -68,19 +68,21 @@ fun label_cmp p =
     | (TLnet n1, TLnet n2) => Int.compare(n1, n2)
 
 
-fun stored_label (fvars,tm) =
+fun stored_label (ftyvars,fvars,tm) =
   let val (oper,args) = strip_comb tm
-      val args' = map (fn x => (fvars,x)) args
+      val args' = map (fn x => (ftyvars,fvars,x)) args
       val subtract = Lib.op_set_diff aconv
+      val subtract_ty = Lib.op_set_diff aconv_ty
       val mem = Lib.op_mem aconv
   in case dest_term oper
       of CONST {Name,Thy,...} => (Cnet(Name,Thy,length args),args')
        | LAMB (Bvar,Body) => (Lnet(length args),
-                              (subtract fvars [Bvar],Body)::args')
+                              (ftyvars,subtract fvars [Bvar],Body)::args')
        | VAR (Name,_) =>
           if mem oper fvars then (FVnet(Name,length args),args') else (Vnet,[])
-       | TYCOMB (Tm,Ty)      => (TCnet(length args), (fvars,Tm)::args')
-       | TYLAMB (Tyvar,Body) => (TLnet(length args), (fvars,Body)::args')
+       | TYCOMB (Tm,Ty)      => (TCnet(length args), (ftyvars,fvars,Tm)::args')
+       | TYLAMB (Tyvar,Body) => (TLnet(length args),
+                                    (subtract_ty ftyvars [Tyvar],fvars,Body)::args')
        | _ => fail()
     end;
 
@@ -122,7 +124,7 @@ fun new_edge(NODE(es, ts), label, n) = NODE(insert(es, label, n), ts)
   | new_edge(EMPTY ts, label, n) = NODE(insert(mkDict label_cmp, label, n), ts)
 
 
-fun net_update (elem, tms:(term list * term) list, net) =
+fun net_update (elem, tms:(hol_type list * term list * term) list, net) =
    case tms of
      [] => add_tip elem net
    | tm::rtms =>
@@ -151,7 +153,7 @@ fun follow (tms, net) =
            | SOME n' => follow(rtms,n'))
         end;
 
-fun enter (fvars,tm,elem) net = net_update(elem,[(fvars,tm)],net);
+fun enter (ftyvars,fvars,tm,elem) net = net_update(elem,[(ftyvars,fvars,tm)],net);
 
 fun lookup tm net = follow([tm],net);
 
@@ -163,5 +165,21 @@ fun merge_nets (n1, n2) = let
 in
   NODE (foldl add_node (edges n1) (edges n2), tips n1 @ tips n2)
 end
+
+
+fun listItems net = let
+  fun cons'(v,acc) = v::acc
+  fun trav (net, acc) =
+      case net of
+        NODE (d,l) => let
+          fun foldthis (k,v,acc) = trav(v,acc)
+        in
+          Binarymap.foldl foldthis (List.foldl cons' acc l) d
+        end
+      | EMPTY l => List.foldl cons' acc l
+in
+  trav(net, [])
+end
+
 
 end (* struct *)

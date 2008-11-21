@@ -66,7 +66,8 @@ val implicit = ref empty_rewrites;
 fun add_rewrites (RW{thms,net}) thl =
   RW{thms = thms@thl,
      net = itlist Ho_Net.enter
-     (map (fn th => (HOLset.listItems (hyp_frees th),
+     (map (fn th => (HOLset.listItems (hyp_tyvars th),
+                     HOLset.listItems (hyp_frees th),
                      lhs(concl th), Conv.HO_REWR_CONV th))
 	(itlist (append o mk_rewrites) thl [])) net}
 
@@ -219,7 +220,7 @@ val HIGHER_REWRITE_CONV =
           val (preds,pats) = unzip(map dest_comb lefts)
           val beta_fns = map2 BETA_VAR preds concs
           val ass_list = zip pats (zip preds (zip thl beta_fns))
-          fun insert p = Ho_Net.enter ([],p,p)
+          fun insert p = Ho_Net.enter ([],[],p,p)
           val mnet = itlist insert pats Ho_Net.empty_net
           fun look_fn t = mapfilter
                     (fn p => if can (ho_kind_match_term [] [] empty_tmset p) t then p

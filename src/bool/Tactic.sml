@@ -787,11 +787,12 @@ fun MATCH_MP_TAC thm :tactic = let
                         (FVL [concl thm] empty_tmset, hyp_frees thm)
   val hyptyvars    = HOLset.listItems (hyp_tyvars thm)
   val hypkdvars    = HOLset.listItems (hyp_kdvars thm)
-  val (gvs,imp)    = strip_forall (concl thm)
+  val (gtvs,tbod)  = strip_tyforall (concl thm)
+  val (gvs,imp)    = strip_forall tbod
   val (ant,conseq) = with_exn dest_imp imp
                               (ERR "MATCH_MP_TAC" "Not an implication")
   val (cvs,con)    = strip_forall conseq
-  val th1          = SPECL cvs (UNDISCH (SPECL gvs thm))
+  val th1          = SPECL cvs (UNDISCH (SPECL gvs (TY_SPECL gtvs thm)))
   val (vs,evs)     = partition (C Term.free_in con) gvs
   val th2          = uncurry DISCH (itlist efn evs (ant,th1))
 in
@@ -898,6 +899,12 @@ val BETA_TAC = CONV_TAC (DEPTH_CONV BETA_CONV);
 
 val TY_BETA_TAC = CONV_TAC (TOP_DEPTH_CONV TY_BETA_CONV);
 
+(*---------------------------------------------------------------------------
+     Tactic for reducing all type-beta redexes in the types of a goal.
+ ---------------------------------------------------------------------------*)
+
+val BETA_TY_TAC = CONV_TAC BETA_TY_CONV;
+
 
 (* ---------------------------------------------------------------------*)
 (* Accept a theorem that, properly instantiated, satisfies the goal     *)
@@ -928,9 +935,10 @@ fun HO_BACKCHAIN_TAC th =
 fun HO_MATCH_MP_TAC th =
  let val sth =
    let val tm = concl th
-       val (avs,bod) = strip_forall tm
+       val (tvs,tbod) = strip_tyforall tm
+       val (avs,bod) = strip_forall tbod
        val (ant,conseq) = dest_imp_only bod
-       val th1 = SPECL avs (ASSUME tm)
+       val th1 = SPECL avs (TY_SPECL tvs (ASSUME tm))
        val th2 = UNDISCH th1
        val evs = filter(fn v => free_in v ant andalso not(free_in v conseq)) avs
        val th3 = itlist SIMPLE_CHOOSE evs (DISCH tm th2)

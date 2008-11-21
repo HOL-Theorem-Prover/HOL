@@ -858,7 +858,7 @@ fun TC printers = let
   val checkkind = Pretype.checkkind (case printers of SOME (x,y,z) => SOME (y,z) | NONE => NONE)
   fun mk_not_tyabs tm =
        let open Pretype
-           val ty = ptype_of tm
+           val ty = Pretype.deep_beta_conv_ty (ptype_of tm)
            val (bvars,body) = strip_univ_type ty
            val args = map (fn bvar => new_uvar(pkind_of bvar,Prerank.new_uvar())) bvars
        in list_mk_tycomb(tm, args)
@@ -866,8 +866,8 @@ fun TC printers = let
   fun check(Comb{Rator, Rand, Locn}) =
       (let val Rator' = check Rator;
            val Rand'  = check Rand;
-           val Rator_ty = ptype_of Rator'
-           val Rand_ty = ptype_of Rand'
+           val Rator_ty = Pretype.deep_beta_conv_ty (ptype_of Rator')
+           val Rand_ty = Pretype.deep_beta_conv_ty (ptype_of Rand')
        in if Pretype.is_univ_type Rator_ty then
              check (Comb{Rator=mk_not_tyabs Rator', Rand=Rand', Locn=Locn})
           else if Pretype.is_univ_type Rand_ty andalso
@@ -1005,7 +1005,7 @@ fun TC printers = let
               val _   = Feedback.set_trace "kinds" 2
               val Rator_tm = to_term (overloading_resolution0 Rator')
                              handle e => (Feedback.set_trace "kinds" tmp; raise e)
-              val Rator_ty = Term.type_of Rator_tm
+              val Rator_ty = Type.deep_beta_conv_ty (Term.type_of Rator_tm)
               val Pretype.PT(_,rand_locn) = Rand
               val Rand_ty = Pretype.toType Rand
                             handle e => (Feedback.set_trace "kinds" tmp; raise e)
@@ -1154,7 +1154,7 @@ fun TC printers = let
             raise ERRloc"kindcheck" (pty_locn Ty (* arbitrary *)) "failed"
           end;
          let val Ptm' = check Ptm
-             val Ptm_ty = ptype_of Ptm'
+             val Ptm_ty = Pretype.deep_beta_conv_ty (ptype_of Ptm')
          in if Pretype.is_univ_type Ptm_ty andalso Pretype.is_not_univ_type Ty then
                check (Constrained{Ptm=mk_not_tyabs Ptm', Ty=Ty, Locn=Locn})
             else

@@ -1827,22 +1827,29 @@ fun all_abconv [] [] = true
 
 
 fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
-  (* local constants of types never change *)
-  val type_homatch = type_homatch kdavoids lconsts
-in
+  (* local constants of kinds and types never change *)
+  val (var_homs,nvar_homs) = partition (fn (env,cty,vty) => is_vartype vty) homs
+  fun args_are_fixed (env,cty,vty) = let
+       val (vhop, vargs) = strip_app_type vty
+       val afvs = type_varsl vargs
+    in all (fn a => can (find_residue_ty a) env orelse can (find_residue_ty a) insts
+                    orelse HOLset.member(lconsts, a)) afvs
+    end
+  val (real_homs,basic_homs) = partition args_are_fixed nvar_homs
+  fun homatch rkin kdins (insts, homs) = 
   if homs = [] then insts
   else let
       val (env,cty,vty) = hd homs
     in
       if is_vartype vty then
-        if aconv_ty cty vty then type_homatch rkin kdins (insts, tl homs)
+        if aconv_ty cty vty then homatch rkin kdins (insts, tl homs)
         else let
             val newrkin  = raw_match_rank (rank_of vty) (rank_of cty) rkin
             val newkdins =
                 kdenv_safe_insert (kind_of vty |-> kind_of cty) kdins
             val newinsts = (vty |-> cty)::insts
           in
-            type_homatch newrkin newkdins (newinsts, tl homs)
+            homatch newrkin newkdins (newinsts, tl homs)
           end
       else (* vty not a type var *) let
           val (vhop, vargs) = strip_app_type vty
@@ -1881,12 +1888,18 @@ in
                    val vinsts = safe_insert_tya (vhop |-> absty) insts
                    val icpair = (list_mk_app_type(vhop',gvs) |-> cty')
                  in
-                   icpair::vinsts
+                   safe_insert_tya icpair vinsts
+                   (* icpair::vinsts *)
                  end
              end
            in
-             type_homatch rkin kdins (ni,tl homs)
-           end) handle _ => let
+             homatch rkin kdins (ni,tl homs)
+           end) handle _ => (let
+                         val vhop_inst = [inst_fn vhop |-> find_residue_ty vhop insts]
+                         val vty1 = deep_beta_conv_ty (type_subst vhop_inst (inst_fn vty))
+                       in homatch rkin kdins (insts, (env,cty,vty1)::tl homs)
+                       end
+                handle _ => let
                          val (lc,rc) = dest_app_type cty
                          val (lv,rv) = dest_app_type vty
                          val pinsts_homs' =
@@ -1897,10 +1910,12 @@ in
                                             (fst pinsts_homs')
                                             (0, ([], []))
                        in
-                         type_homatch rkin' kdins' pinsts_homs'
-                       end
+                         homatch rkin' kdins' pinsts_homs'
+                       end)
         end
     end
+in
+  homatch rkin kdins (insts, var_homs @ real_homs @ basic_homs)
 end
 
 in
@@ -1983,19 +1998,15 @@ fun match_type pat ob = fst (raw_match_type pat ob ([],[]))
 
 val raw_dom_rng = dom_rng
 val dom_rng = fn ty => raw_dom_rng ty handle HOL_ERR _ => raw_dom_rng (deep_beta_conv_ty ty)
-(*
-val raw_is_vartype = is_vartype
-val is_vartype = fn ty => raw_is_vartype (deep_beta_conv_ty ty)
-val is_type = fn ty => is_type (deep_beta_conv_ty ty)
-val dest_vartype = fn ty => dest_vartype ty handle HOL_ERR _ => dest_vartype (deep_beta_conv_ty ty)
-val dest_type = fn ty => dest_type ty handle HOL_ERR _ => dest_type (deep_beta_conv_ty ty)
 
+(*
 val compare = fn (t1,t2) => compare(deep_beta_conv_ty t1, deep_beta_conv_ty t2)
 val empty_tyset = HOLset.empty compare
 fun type_eq t1 t2 = compare(t1,t2) = EQUAL;
 *)
-fun mapsb f = map (fn {redex,residue} => {redex=f redex, residue=residue})
-val type_subst = fn s => type_subst (mapsb deep_beta_conv_ty s);
+
+fun mapsub f = map (fn {redex,residue} => {redex=f redex, residue=residue})
+val type_subst = fn s => type_subst (mapsub deep_beta_conv_ty s);
 
 val raw_ty_sub = ty_sub
 fun ty_sub theta ty = let val ty' = type_subst theta ty

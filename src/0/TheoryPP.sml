@@ -64,7 +64,7 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
                           else (add_string "("; pp_type ty; add_string ")")
  in
   if is_vartype ty
-  then let val (s,kd,rk) = dest_vartype_opr ty handle e => raise (wrap_exn "pp_type" "is_vartype" e)
+  then let val (s,kd,rk) = dest_vartype_opr ty
        in if kd = Kind.typ andalso rk = 0 then
             case s
              of "'a" => add_string "alpha"
@@ -285,7 +285,7 @@ fun hash_kind kd n =
 local open Type in
 fun debug_type ty =
     if is_vartype ty then let
-        val (s,kd,rk) = dest_vartype_opr ty handle e => raise (wrap_exn "debug_type" "is_vartype" e)
+        val (s,kd,rk) = dest_vartype_opr ty
       in print s
       end 
     else if is_bvartype ty then let
@@ -394,7 +394,7 @@ fun add tm =
       fun loop [] =
                (Array.update(share_table, i, (tm,!taken)::els);
                 taken := !taken + 1)
-        | loop ((x,index)::rst) = if (*Term.eq*) x = tm then () else loop rst
+        | loop ((x,index)::rst) = if (*Term.prim_eq*) x = tm then () else loop rst
   in
     loop els
   end;
@@ -410,7 +410,7 @@ fun index tm =
   let val i = hash_atom tm 0
       val els = Array.sub(share_table, i)
       fun loop [] = raise ERR "index" "not found in table"
-        | loop ((x,index)::rst) = if (*Term.eq*) x = tm then index else loop rst
+        | loop ((x,index)::rst) = if (*Term.prim_eq*) x = tm then index else loop rst
   in
     loop els
   end;
@@ -423,7 +423,7 @@ fun check V thml =
   let val _ = HOL_MESG "Checking consistency of sharing scheme"
       fun chk tm =
          if Type.unbound_ty(Term.type_of tm) then ()
-         else if (*Term.eq*) (Vector.sub(V, index tm)) = tm
+         else if (*Term.prim_eq*) (Vector.sub(V, index tm)) = tm
           then ()
            else (HOL_MESG "FAILURE in sharing scheme!";
                  raise ERR "check" "failure in sharing scheme")
@@ -575,7 +575,6 @@ fun pp_struct info_record ppstrm =
             if is_var a then pr_var a else pr_const a;
             end_block())
         handle HOL_ERR e => raise (wrap_exn "pp_struct.pr_atom" "not atomic" (HOL_ERR e))
-                                  (* ERR"pp_struct.pr_atom" "not atomic" *)
      fun pr_bind (s,th) =
       let val (tg,asl,w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
       in

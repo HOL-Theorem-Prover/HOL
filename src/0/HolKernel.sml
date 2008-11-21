@@ -510,10 +510,14 @@ local
           end
       end
 
+val get_type_kind_rank_insts = Term.get_type_kind_rank_insts
+
+(*
 fun get_type_kind_rank_insts kdavoids tyavoids L ((tyS,tyId),(kdS,kdId),rkS) =
  itlist (fn {redex,residue} => fn Theta =>
           Type.prim_kind_match_type (snd(dest_var redex)) (type_of residue) Theta)
        L ((tyS,union tyavoids tyId),(kdS,union kdavoids kdId),rkS)
+*)
 
 fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
   val (realinsts, patterns) = partition (is_var o #redex) insts

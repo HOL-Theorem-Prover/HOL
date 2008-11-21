@@ -1616,7 +1616,11 @@ fun debug_type ty =
       end 
     else if is_bvartype ty then let
       in print "<bound type var>"
-      end 
+      end
+    else if (can dom_rng ty) then let
+        val (dty,rty) = dom_rng ty
+      in print "("; debug_type dty; print " -> "; debug_type rty; print ")"
+      end
     else if is_con_type ty then let
         val {Tyop,Thy,Kind,Rank} = dest_thy_con_type ty
       in print Tyop

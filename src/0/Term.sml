@@ -228,9 +228,9 @@ fun term_eq t1 t2 = compare(t1,t2) = EQUAL
 
 (*---------------------------------------------------------------------------*
  *               Primitive equality of terms                                 *
- *     This does NOT include alpha-equivalence, OR                           *
- *     deep beta conversion of types.    This discriminates between terms    *
- *     which are equal but for beta-equivalence of types.                    *
+ *     This does NOT include alpha- OR beta-equivalence of types.            *
+ *     This discriminates between terms which differ only in alpha and/or    *
+ *     beta-equivalence of types.  It only identifies closures.              *
  *---------------------------------------------------------------------------*)
 
 local val EQ = Portable.pointer_eq
@@ -239,15 +239,13 @@ fun thety (GRND ty) = ty
 in
 fun prim_eq t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
-  of (Fv(M,a),Fv(N,b)) => M=N andalso aconv_ty a b
+  of (Fv(M,a),Fv(N,b)) => M=N andalso a=b
    | (Bv i,Bv j) => i=j
-   | (Const(M,a),Const(N,b)) => M=N andalso aconv_ty (thety a) (thety b)
+   | (Const(M,a),Const(N,b)) => M=N andalso (thety a)=(thety b)
    | (Comb(M,N),Comb(P,Q)) => prim_eq N Q andalso prim_eq M P
-   | (TComb(M,a),TComb(N,b)) => aconv_ty a b andalso prim_eq M N
+   | (TComb(M,a),TComb(N,b)) => a=b andalso prim_eq M N
    | (Abs(u,M),Abs(v,N)) => prim_eq u v andalso prim_eq M N
-   | (TAbs(tyv1,M),TAbs(tyv2,N)) => tyv1 = tyv2 andalso prim_eq M N
-   | (Clos(e1,b1),Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
-                                  orelse prim_eq (push_clos t1) (push_clos t2)
+   | (TAbs(tyv1,M),TAbs(tyv2,N)) => tyv1=tyv2 andalso prim_eq M N
    | (Clos _, _) => prim_eq (push_clos t1) t2
    | (_, Clos _) => prim_eq t1 (push_clos t2)
    | otherwise   => false
@@ -1618,7 +1616,7 @@ fun raw_kind_match kdfixed tyfixed tmfixed pat ob (tmS,tyS,kdS,rkS)
                 RM [(pat,ob,false)] ((tmS,tmfixed), (tyfixed_set,[],(tyS,[])), (kdS,kdfixed), rkS)
          val tyinsts = Type.type_homatch kdfixed tyfixed_set rkS1 kdS1 pinsts_homs
          val (_,tyS',kdS',rkS') = Type.separate_insts_ty true rkS1 kdfixed kdS1 tyinsts
-        val tyId' = Lib.subtract (Lib.union (type_vars_in_term pat) tyfixed) (map #redex tyS')
+         val tyId' = Lib.subtract (Lib.union (type_vars_in_term pat) tyfixed) (map #redex tyS')
      in (tmS',(tyS',tyId'),kdS',rkS')
      end;
 
@@ -1664,6 +1662,34 @@ fun match_term pat ob =
  in if null kdS andalso rkS = 0 then (tmS,tyS)
     else raise ERR "match_term" "kind and/or rank instantiation needed: use kind_match_term instead"
  end;
+
+(*---------------------------------------------------------------------------
+       Assistance for higher order matching of types within
+       higher order matching of terms - most routines inside Kernel
+ ---------------------------------------------------------------------------*)
+
+local
+fun tymatch pat ob ((lctys,env,insts_homs),kdS,rkS) =
+        let val pat = deep_beta_conv_ty pat
+            val ob  = deep_beta_conv_ty ob
+            val insts_homs' = Type.type_pmatch lctys env pat ob insts_homs
+            val (rkS',kdS') = Type.get_rank_kind_insts [] (fst insts_homs') (rkS,kdS)
+        in ((lctys,env,insts_homs'),kdS',rkS')
+        end
+in
+fun get_type_kind_rank_insts kdavoids tyavoids L ((tyS,tyId),(kdS,kdId),rkS) =
+  let fun beta_conv_S {redex,residue} = {redex=redex, residue = deep_beta_conv_ty residue}
+      val tyS = map beta_conv_S tyS
+      val tyfixed = HOLset.addList(HOLset.addList(empty_tyset, tyavoids), tyId)
+      val kdfixed = union kdavoids kdId
+      val ((_,_,pinsts_homs),kdS1,rkS1) =
+          itlist (fn {redex,residue} => tymatch (snd(dest_var redex)) (type_of residue))
+                 L ((tyfixed,[],(tyS,[])),(kdS,kdfixed),rkS)
+      val tyinsts = Type.type_homatch kdfixed tyfixed rkS1 kdS1 pinsts_homs
+      val (_,tyS',kdS',rkS') = Type.separate_insts_ty false rkS1 kdfixed kdS1 tyinsts
+  in ((tyS',tyId),kdS',rkS')
+  end
+end
 
 (*---------------------------------------------------------------------------
        Must know that ty is the type of tm1 and tm2.

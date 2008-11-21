@@ -143,10 +143,11 @@ val cong_reducer =
           fun insert_one (thm, net) =
             (let
               val concl = rand (rator (concl thm));
+              val boundtyvars = type_vars_in_terml (hyp thm);
               val boundvars = free_varsl (hyp thm);
               val boundvars_set = FVL (hyp thm) empty_varset;
             in
-              Ho_Net.enter (boundvars, concl, (boundvars_set, thm)) net
+              Ho_Net.enter (boundtyvars, boundvars, concl, (boundvars_set, thm)) net
             end) handle _ => net
         in
           (foldr insert_one net flatThms)

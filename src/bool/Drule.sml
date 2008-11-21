@@ -28,9 +28,8 @@ val ERR = mk_HOL_ERR "Drule";
 
 fun BETA_TY_RULE th = let val t = concl th
                           val t' = beta_conv_ty_in_term t
-                          val eq = ALPHA t t'
                       in EQ_MP (ALPHA t t') th
-                      end;
+                      end
 
 
 (*---------------------------------------------------------------------------*

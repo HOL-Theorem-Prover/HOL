@@ -95,6 +95,12 @@ sig
   val inst_rk_kd_ty : int -> (kind,kind)subst -> (hol_type,hol_type)subst -> term -> term
   val subst_type    : (hol_type,hol_type) subst -> term -> term (* arbitrary types to types *)
 
+  val get_type_kind_rank_insts : kind list -> hol_type list ->
+                      {redex : term, residue : term} list ->
+                      ({redex : hol_type, residue : hol_type} list * hol_type list) *
+                      ({redex : kind, residue : kind} list * kind list) * int ->
+                      ({redex : hol_type, residue : hol_type} list * hol_type list) *
+                      ({redex : kind, residue : kind} list * kind list) * int
   val raw_kind_match : kind list -> hol_type list -> term set
                       -> term -> term
                       -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int
