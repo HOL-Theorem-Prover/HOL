@@ -19,6 +19,9 @@ val CONSEQ_CONV_UNKNOWN_direction    : CONSEQ_CONV_direction;
 val GEN_ASSUM               : term -> thm -> thm;
 val GEN_IMP                 : term -> thm -> thm;
 
+val IMP_QUANT_CANON             : thm -> thm;
+val IMP_FORALL_CONCLUSION_CANON : thm -> thm;
+val IMP_EXISTS_PRECOND_CANON    : thm -> thm;
 
 
 
@@ -32,6 +35,8 @@ val EXISTS_EQ___CONSEQ_CONV : conseq_conv;
 val TRUE_FALSE_REFL_CONSEQ_CONV : directed_conseq_conv
 val CONSEQ_TOP_REWRITE_CONV     : thm list -> directed_conseq_conv;
 val CONSEQ_REWRITE_CONV         : thm list -> directed_conseq_conv;
+val CONSEQ_HO_TOP_REWRITE_CONV  : thm list -> directed_conseq_conv;
+val CONSEQ_HO_REWRITE_CONV      : thm list -> directed_conseq_conv;
 
 
 
@@ -77,6 +82,7 @@ val DEPTH_CONSEQ_CONV_TAC        : directed_conseq_conv -> tactic;
 val ONCE_DEPTH_CONSEQ_CONV_TAC   : directed_conseq_conv -> tactic;
 val CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
 val CONSEQ_REWRITE_TAC           : thm list -> tactic;
+val CONSEQ_HO_REWRITE_TAC        : thm list -> tactic;
 
 
 end

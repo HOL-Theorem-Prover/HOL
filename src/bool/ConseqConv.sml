@@ -657,9 +657,9 @@ fun WEAKEN_CONSEQ_CONV_RULE conv thm = let
  * depends on the value of strengten.
  *---------------------------------------------------------------------------*)
 
-fun CONSEQ_REWR_CONV___with_match strengten thm =
+fun CONSEQ_REWR_CONV___with_match ho strengten thm =
   if (is_imp_only (concl thm)) then
-     (PART_MATCH ((if strengten then snd else fst) o dest_imp) thm,
+     ((if ho then HO_PART_MATCH else PART_MATCH) ((if strengten then snd else fst) o dest_imp) thm,
       ((if strengten then snd else fst) o dest_imp o concl) thm)
   else
      if (is_eq (concl thm)) then
@@ -671,7 +671,7 @@ fun CONSEQ_REWR_CONV___with_match strengten thm =
 
 
 fun CONSEQ_REWR_CONV strengten thm =
-    fst (CONSEQ_REWR_CONV___with_match strengten thm);
+    fst (CONSEQ_REWR_CONV___with_match false strengten thm);
 
 
 (*---------------------------------------------------------------------------
@@ -686,14 +686,88 @@ fun CONSEQ_TOP_REWRITE_CONV___EQT_EQF_INTRO thm =
    if (is_neg (concl thm)) then EQF_INTRO thm else
    EQT_INTRO thm;
 
-fun CONSEQ_TOP_REWRITE_CONV thmL =
+fun IMP_EXISTS_PRECOND_CANON thm =
+   let val th = GEN_ALL thm
+       val tm = concl th;
+       val (avs,bod) = strip_forall tm
+       val (ant,conseq) = dest_imp_only bod
+       val th1 = SPECL avs (ASSUME tm)
+       val th2 = UNDISCH th1
+       val evs = filter(fn v => free_in v ant andalso not(free_in v conseq)) avs
+       val th3 = itlist SIMPLE_CHOOSE evs (DISCH tm th2)
+       val tm3 = Lib.trye hd(hyp th3)
+   in MP (DISCH tm (DISCH tm3 (UNDISCH th3))) th end
+   handle HOL_ERR _ => thm;
+
+
+fun IMP_FORALL_CONCLUSION_CANON thm =
+   let val th = GEN_ALL thm
+       val tm = concl th;
+       val (avs,bod) = strip_forall tm
+       val (ant,conseq) = dest_imp_only bod
+       val th1 = SPECL avs (ASSUME tm)
+       val th2 = UNDISCH th1
+       val evs = filter(fn v => not(free_in v ant) andalso free_in v conseq) avs
+       val th3 = GENL evs th2
+       val th4 = DISCH ant th3;
+       val th5 = DISCH tm th4;
+       val th6 = MP th5 th
+   in th6 end
+   handle HOL_ERR _ => thm;
+
+
+fun IMP_QUANT_CANON thm =
+   let val th = GEN_ALL thm
+       val tm = concl th;
+       val (avs,bod) = strip_forall tm
+       val (ant,conseq) = dest_imp_only bod
+       val th1 = SPECL avs (ASSUME tm)
+       val th2 = UNDISCH th1
+       val evs = filter(fn v => not(free_in v ant) andalso free_in v conseq) avs
+       val evs2 = filter(fn v => free_in v ant andalso not(free_in v conseq)) avs
+       val th3 = GENL evs th2
+       val th4 = itlist SIMPLE_CHOOSE evs2 (DISCH tm th3)
+       val tm4 = Lib.trye hd(hyp th4)
+
+       val th5 = UNDISCH th4;
+       val th6 = DISCH tm4 th5;
+       val th7 = DISCH tm th6;
+       val th8 = MP th7 th
+   in th8 end
+   handle HOL_ERR _ => thm;
+
+
+
+
+fun CONSEQ_TOP_REWRITE_CONV___PREPARE_STRENGTHEN_THMS thmL =
+let
+   val thmL1 = map IMP_EXISTS_PRECOND_CANON thmL;
+in
+   thmL1
+end;
+
+
+fun CONSEQ_TOP_REWRITE_CONV___PREPARE_WEAKEN_THMS thmL =
+let
+   val thmL1 = map IMP_FORALL_CONCLUSION_CANON thmL;
+in
+   thmL1
+end;
+
+
+
+fun CONSEQ_TOP_REWRITE_CONV___ho_opt ho thmL =
    let
      val thmL' = flatten (map BODY_CONJUNCTS thmL);
      val thmL'' = map CONSEQ_TOP_REWRITE_CONV___EQT_EQF_INTRO thmL';
+     val thmL_st = CONSEQ_TOP_REWRITE_CONV___PREPARE_STRENGTHEN_THMS thmL'';
+     val thmL_we = CONSEQ_TOP_REWRITE_CONV___PREPARE_WEAKEN_THMS thmL'';
+
+
      val net_st = foldr (fn ((conv,t),net) => Net.insert (t,conv) net) Net.empty 
-         (map (CONSEQ_REWR_CONV___with_match true) thmL'');
+         (map (CONSEQ_REWR_CONV___with_match ho true) thmL_st);
      val net_we = foldr (fn ((conv,t),net) => Net.insert (t,conv) net) Net.empty 
-         (map (CONSEQ_REWR_CONV___with_match false) thmL'');
+         (map (CONSEQ_REWR_CONV___with_match ho false) thmL_we);
    in     
      (fn dir => fn t =>    
         let
@@ -709,6 +783,9 @@ fun CONSEQ_TOP_REWRITE_CONV thmL =
 	end)
    end;
 
+val CONSEQ_TOP_REWRITE_CONV = CONSEQ_TOP_REWRITE_CONV___ho_opt false;
+val CONSEQ_HO_TOP_REWRITE_CONV = CONSEQ_TOP_REWRITE_CONV___ho_opt true;
+
 
 fun CONSEQ_REWRITE_CONV thmL dir = 
    DEPTH_CONSEQ_CONV (CONSEQ_TOP_REWRITE_CONV thmL) dir
@@ -716,6 +793,12 @@ fun CONSEQ_REWRITE_CONV thmL dir =
 fun CONSEQ_REWRITE_TAC thmL =
     CONSEQ_CONV_TAC (CONSEQ_REWRITE_CONV thmL)
 
+
+fun CONSEQ_HO_REWRITE_CONV thmL dir = 
+   DEPTH_CONSEQ_CONV (CONSEQ_HO_TOP_REWRITE_CONV thmL) dir
+
+fun CONSEQ_HO_REWRITE_TAC thmL =
+    CONSEQ_CONV_TAC (CONSEQ_HO_REWRITE_CONV thmL)
 
 (*
 fun CONSEQ_SIMP_CONV impThmL ss eqThmL dir =
