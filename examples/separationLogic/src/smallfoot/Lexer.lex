@@ -1,3 +1,4 @@
+
 { (* header *)
   
 (*
@@ -28,6 +29,8 @@ val keyword_al = [
   ("dlseg",DLSEG),
   ("list" ,LIST),
   ("lseg",LISTSEG),
+  ("data_list" ,DATA_LIST),
+  ("data_lseg",DATA_LISTSEG),
   ("tree" ,TREE),
   ("xlseg",XLSEG),
   ("true" ,TT),

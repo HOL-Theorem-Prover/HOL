@@ -1699,6 +1699,7 @@ val FMAP_MAP_THM = store_thm ("FMAP_MAP_THM",
 SIMP_TAC std_ss [FMAP_MAP_def,
 		 FUN_FMAP_DEF, FDOM_FINITE]);
 
+
  
 val FMAP_MAP_FEMPTY = store_thm ("FMAP_MAP_FEMPTY",
 ``FMAP_MAP f FEMPTY = FEMPTY``,
@@ -1731,6 +1732,49 @@ SIMP_TAC std_ss [FEVERY_DEF,
 
 
 
+
+val FMAP_MAP___FMAP_MAP = store_thm ("FMAP_MAP___FMAP_MAP",
+``!f1 f2 f.
+  FMAP_MAP f1 (FMAP_MAP f2 f) = 
+  FMAP_MAP (f1 o f2) f``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM,
+		 FMAP_MAP_THM]);
+
+
+val FMAP_MAP2_def = Define 
+`FMAP_MAP2 f m = FUN_FMAP (\x. f (x,m ' x)) (FDOM m)`;
+
+
+val FMAP_MAP2_THM = store_thm ("FMAP_MAP2_THM",
+``(FDOM (FMAP_MAP2 f m) = FDOM m) /\
+  (!x. x IN FDOM m ==> ((FMAP_MAP2 f m) ' x = f (x,m ' x)))``,
+
+SIMP_TAC std_ss [FMAP_MAP2_def,
+		 FUN_FMAP_DEF, FDOM_FINITE]);
+
+
+ 
+val FMAP_MAP2_FEMPTY = store_thm ("FMAP_MAP2_FEMPTY",
+``FMAP_MAP2 f FEMPTY = FEMPTY``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP2_THM,
+		 FDOM_FEMPTY, NOT_IN_EMPTY]);
+
+
+val FMAP_MAP2_FUPDATE = store_thm ("FMAP_MAP2_FUPDATE",
+``FMAP_MAP2 f (m |+ (x, v)) = 
+  (FMAP_MAP2 f m) |+ (x, f (x,v))``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP2_THM,
+		 FDOM_FUPDATE, IN_INSERT,
+		 FAPPLY_FUPDATE_THM,
+		 COND_RAND, COND_RATOR,
+		 DISJ_IMP_THM]);
+
+
+
+
 val FEVERY_STRENGTHEN_THM =
 store_thm ("FEVERY_STRENGTHEN_THM",
 ``FEVERY P FEMPTY /\
@@ -1741,7 +1785,6 @@ SIMP_TAC std_ss [FEVERY_DEF, FDOM_FEMPTY,
 		 NOT_IN_EMPTY, FAPPLY_FUPDATE_THM,
 		 FDOM_FUPDATE, IN_INSERT] THEN
 METIS_TAC[]);
-
 
 
 
@@ -1850,6 +1893,160 @@ ONCE_REWRITE_TAC[GSYM fmap_EQ_THM] THEN
 SIMP_TAC std_ss [FDOM_FUPDATE, IN_INSERT, EXTENSION,
 		 FAPPLY_FUPDATE_THM] THEN
 METIS_TAC[]);
+
+
+
+
+
+
+val FEVERY_DRESTRICT_COMPL = store_thm(
+"FEVERY_DRESTRICT_COMPL",
+``FEVERY P (DRESTRICT (f |+ (k, v)) (COMPL s)) = 
+  (FEVERY P (DRESTRICT f (COMPL (k INSERT s))) /\
+  (~(k IN s) ==> P (k,v)))``,
+
+SIMP_TAC std_ss [FEVERY_DEF, IN_INTER,
+		 FDOM_DRESTRICT,
+                 DRESTRICT_DEF, FAPPLY_FUPDATE_THM,
+                 FDOM_FUPDATE, IN_INSERT,
+		 RIGHT_AND_OVER_OR, IN_COMPL,
+                 DISJ_IMP_THM, FORALL_AND_THM] THEN
+METIS_TAC[]);
+
+
+
+
+val BAG_OF_FMAP_def = Define `
+BAG_OF_FMAP f b =
+\x. CARD (\k. (k IN FDOM b) /\ 
+           (x = f k (b ' k)))`
+
+
+val BAG_OF_FMAP_THM = store_thm ("BAG_OF_FMAP_THM",
+``(BAG_OF_FMAP f FEMPTY = EMPTY_BAG) /\
+  (BAG_OF_FMAP f (b |+ (k, v)) =
+  BAG_INSERT (f k v) (BAG_OF_FMAP f (b \\ k)))
+``,
+
+SIMP_TAC std_ss [BAG_OF_FMAP_def,
+		 FDOM_FEMPTY, NOT_IN_EMPTY, bagTheory.EMPTY_BAG,
+		 combinTheory.K_DEF,
+		 bagTheory.BAG_INSERT, FDOM_FUPDATE, IN_INSERT,
+		 GSYM EMPTY_DEF, CARD_EMPTY] THEN
+ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
+GEN_TAC THEN SIMP_TAC std_ss [] THEN
+Cases_on `x = f k v` THENL [  
+   ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [FAPPLY_FUPDATE_THM,
+		        FDOM_DOMSUB, IN_DELETE,
+			DOMSUB_FAPPLY_THM] THEN
+   Q.ABBREV_TAC `ks =  (\k'. (k' IN FDOM b /\ ~(k' = k)) /\ (f k v = f k' (b ' k')))` THEN
+   `FINITE ks` by ALL_TAC THEN1 (
+      Tactical.REVERSE (`ks = ks INTER FDOM b` by ALL_TAC) THEN1 (
+         ONCE_ASM_REWRITE_TAC[] THEN
+         MATCH_MP_TAC FINITE_INTER THEN
+	 REWRITE_TAC[FDOM_FINITE]
+      ) THEN
+      Q.UNABBREV_TAC `ks` THEN
+      SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_ABS] THEN
+      PROVE_TAC[]
+   ) THEN
+   `(\k'.
+         ((k' = k) \/ k' IN FDOM b) /\
+         (f k v = f k' ((if k' = k then v else b ' k')))) =
+    k INSERT ks` by ALL_TAC THEN1 (
+     Q.UNABBREV_TAC `ks` THEN
+     SIMP_TAC std_ss [EXTENSION, IN_INSERT, IN_ABS] THEN
+     GEN_TAC THEN
+     Cases_on `x' = k` THEN ASM_REWRITE_TAC[]
+   ) THEN
+   ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
+
+   `~(k IN ks)` by ALL_TAC THEN1 (
+      Q.UNABBREV_TAC `ks` THEN
+      SIMP_TAC std_ss [IN_ABS]
+   ) THEN
+   ASM_SIMP_TAC arith_ss [CARD_INSERT],
+
+
+
+   FULL_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [FAPPLY_FUPDATE_THM,
+		        FDOM_DOMSUB, IN_DELETE,
+			DOMSUB_FAPPLY_THM] THEN
+   AP_TERM_TAC THEN
+   ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
+   GEN_TAC THEN SIMP_TAC std_ss [] THEN
+   Cases_on `x' = k` THEN (
+      ASM_SIMP_TAC std_ss []
+   )
+]);
+
+
+val BAG_IN___BAG_OF_FMAP = store_thm ("BAG_IN___BAG_OF_FMAP",
+``BAG_IN x (BAG_OF_FMAP f b) =
+  ?k. k IN FDOM b /\ (x = f k (b ' k))``,
+
+SIMP_TAC std_ss [BAG_OF_FMAP_def,
+		 bagTheory.BAG_IN,
+ 		 bagTheory.BAG_INN] THEN
+`!X. (X >= (1:num)) = ~(X = 0)` by DECIDE_TAC THEN
+ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
+`FINITE (\k. k IN FDOM b /\ (x = f k (b ' k)))` by ALL_TAC THEN1 (
+   `(\k. k IN FDOM b /\ (x = f k (b ' k))) =
+    (\k. k IN FDOM b /\ (x = f k (b ' k))) INTER (FDOM b)` by ALL_TAC THEN1 (
+      SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_ABS] THEN
+      METIS_TAC[]
+   ) THEN
+   ONCE_ASM_REWRITE_TAC[] THEN
+   MATCH_MP_TAC FINITE_INTER THEN
+   REWRITE_TAC[FDOM_FINITE]
+) THEN
+ASM_SIMP_TAC std_ss [CARD_EQ_0] THEN
+
+SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, IN_ABS]);
+
+
+
+
+val FINITE___BAG_OF_FMAP = store_thm ("FINITE___BAG_OF_FMAP",
+``!f b. FINITE_BAG (BAG_OF_FMAP f b)``,
+
+REWRITE_TAC[GSYM bagTheory.FINITE_SET_OF_BAG,
+	    bagTheory.SET_OF_BAG, BAG_IN___BAG_OF_FMAP] THEN
+REPEAT GEN_TAC THEN
+`(\x. ?k. k IN FDOM b /\ (x = f k (b ' k))) =
+ IMAGE (\k. f k (b ' k)) (FDOM b)` by ALL_TAC THEN1 (
+   SIMP_TAC std_ss [EXTENSION, IN_IMAGE, IN_ABS] THEN
+   PROVE_TAC[]
+) THEN
+ONCE_ASM_REWRITE_TAC[] THEN 
+MATCH_MP_TAC IMAGE_FINITE THEN
+REWRITE_TAC[FDOM_FINITE]);
+
+
+
+val IN_INSERT_EXPAND = store_thm ("IN_INSERT_EXPAND",
+``x IN y INSERT P =
+  (x = y) \/ (~(x = y) /\ x IN P)``,
+
+SIMP_TAC std_ss [IN_INSERT] THEN
+METIS_TAC[]);
+
+
+val LIST_NOT_NIL___HD_EXISTS = store_thm ("LIST_NOT_NIL___HD_EXISTS",
+``!l. ~(l = []) = ?e l'. l = e::l'``,
+GEN_TAC THEN
+Cases_on `l` THEN
+SIMP_TAC list_ss []);
+
+
+val APPEND_ASSOC_CONS = store_thm (
+"APPEND_ASSOC_CONS",
+``!l1 h l2 l3. 
+  (l1 ++ (h::l2) ++ l3 =
+   l1 ++ h::(l2++l3))``,
+
+   REWRITE_TAC[GSYM rich_listTheory.APPEND_ASSOC, 
+	       rich_listTheory.APPEND]);
 
 
 val _ = export_theory();

@@ -12,6 +12,8 @@ datatype dlink_kind = DL | XL
 datatype a_space_pred =
     Aspred_list of a_component * a_expression
   | Aspred_listseg of a_component * a_expression * a_expression
+  | Aspred_data_list of a_component * a_expression * a_component * string
+  | Aspred_data_listseg of a_component * a_expression * a_component * string * a_expression
   | Aspred_dlseg of dlink_kind * a_component * a_expression * a_expression * a_component * a_expression * a_expression
   | Aspred_tree of a_component * a_component * a_expression
   | Aspred_empty

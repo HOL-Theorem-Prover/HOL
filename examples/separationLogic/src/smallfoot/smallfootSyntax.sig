@@ -44,8 +44,8 @@ sig
   val smallfoot_ap_implies_ae_equal_term : term
   val smallfoot_ap_less_term : term
   val smallfoot_ap_lesseq_term : term
-  val smallfoot_ap_list_seg_term : term
-  val smallfoot_ap_list_term : term
+  val smallfoot_ap_data_list_seg_term : term
+  val smallfoot_ap_data_list_term : term
   val smallfoot_ap_points_to_term : term
   val smallfoot_ap_stack_true_term : term;
   val smallfoot_ap_star_term : term
@@ -168,13 +168,13 @@ sig
   val dest_smallfoot_ap_equal_cond : term -> term * term * term
   val dest_smallfoot_ap_exp_is_defined : term -> term;
   val dest_smallfoot_ap_implies_ae_equal : term -> term * term * term
-  val dest_smallfoot_ap_list : term -> term * term
-  val dest_smallfoot_ap_list_seg : term -> term * term * term;
-  val dest_smallfoot_ap_list_seg_or_list : term -> term * term * term;
-  val dest_smallfoot_ap_list_seg_or_list_or_bintree : term -> term * term;
+  val dest_smallfoot_ap_data_list : term -> term * term * term
+  val dest_smallfoot_ap_data_list_seg : term -> term * term * term * term;
+  val dest_smallfoot_ap_data_list_seg_or_list : term -> term * term * term * term;
+  val dest_smallfoot_ap_data_list_seg_or_list_or_bintree : term -> term * term;
   val dest_smallfoot_ap_points_to : term -> term * term
   val dest_smallfoot_ap_spatial : term -> term
-  val dest_smallfoot_ap_spatial___no_list_seg : term -> term
+  val dest_smallfoot_ap_spatial___no_data_list_seg : term -> term
   val dest_smallfoot_ap_unequal : term -> term * term
   val dest_smallfoot_ap_unequal_cond : term -> term * term * term
   val dest_smallfoot_ap_unknown : term -> string;
@@ -198,7 +198,7 @@ sig
   val dest_smallfoot_prog_procedure_call : term -> term * term * term
   val dest_smallfoot_prog_release_resource : term -> term * term;
   val dest_smallfoot_prog_val_arg : term -> term * term * term
-  val dest_smallfoot_prog_while_with_invariant : term -> term * term * term
+  val dest_smallfoot_prog_while_with_invariant : term -> term * term * term * term
   val dest_smallfoot_prog_with_resource : term -> term * term * term;
   val dest_smallfoot_prop : term -> term * term * term
   val dest_smallfoot_prop_input : term -> term * term * term list * term
@@ -245,13 +245,13 @@ sig
   val is_smallfoot_ap_equal_cond : term -> bool
   val is_smallfoot_ap_exp_is_defined : term -> bool;
   val is_smallfoot_ap_implies_ae_equal : term -> bool
-  val is_smallfoot_ap_list : term -> bool
-  val is_smallfoot_ap_list_seg : term -> bool
-  val is_smallfoot_ap_list_seg_or_list : term -> bool
-  val is_smallfoot_ap_list_seg_or_list_or_bintree : term -> bool
+  val is_smallfoot_ap_data_list : term -> bool
+  val is_smallfoot_ap_data_list_seg : term -> bool
+  val is_smallfoot_ap_data_list_seg_or_list : term -> bool
+  val is_smallfoot_ap_data_list_seg_or_list_or_bintree : term -> bool
   val is_smallfoot_ap_points_to : term -> bool
   val is_smallfoot_ap_spatial : term -> bool
-  val is_smallfoot_ap_spatial___no_list_seg : term -> bool
+  val is_smallfoot_ap_spatial___no_data_list_seg : term -> bool
   val is_smallfoot_ap_unequal : term -> bool
   val is_smallfoot_ap_unequal_cond : term -> bool
   val is_smallfoot_ap_unknown : term -> bool
@@ -290,11 +290,11 @@ sig
   val mk_SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS : term -> term -> term;
   val mk_fasl_prog_block : term -> term
   val mk_fasl_prog_cond : term * term * term -> term
-  val mk_fasl_prog_while_with_invariant : term * term * term -> term
+  val mk_fasl_prog_while_with_invariant : term * term * term  -> term
   val mk_smallfoot_ap_equal_cond : term * term * term -> term;
   val mk_smallfoot_ap_unequal_cond : term * term * term -> term;
   val mk_smallfoot_ap_unknown : string -> term;
-  val mk_smallfoot_prog_while_with_invariant : term * term * term -> term
+  val mk_smallfoot_prog_while_with_invariant : term * term * term * term -> term
 
 
   val save_dest_pair : term -> term * term

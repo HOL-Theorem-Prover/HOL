@@ -54,6 +54,8 @@ val smallfoot_ae_null_term = ``smallfoot_ae_null``;
 
 val smallfoot_ap_list_term = ``smallfoot_ap_list``;
 val smallfoot_ap_list_seg_term = ``smallfoot_ap_list_seg``;
+val smallfoot_ap_data_list_term = ``smallfoot_ap_data_list``;
+val smallfoot_ap_data_list_seg_term = ``smallfoot_ap_data_list_seg``;
 val smallfoot_ap_bintree_term = ``smallfoot_ap_bintree``;
 val smallfoot_ap_list_seg_term = ``smallfoot_ap_list_seg``
 val smallfoot_ap_emp_term = ``smallfoot_ap_emp``;
@@ -453,7 +455,7 @@ fun dest_fasl_prog_while_with_invariant tt =
      val (f, args) = strip_comb tt;
      val _ = if (same_const f fasl_prog_while_with_invariant_term) andalso
 	        (length args = 3) then () else
-             raise (mk_HOL_ERR "smallfootLib" "dest_fasl_prog_while_with_invariant" "Wrong term")
+             raise (mk_HOL_ERR "smallfootLib" "dest_fasl_prog_while_with_invariant" "Wrong term");
   in
     (el 1 args, el 2 args, el 3 args)
   end
@@ -598,12 +600,13 @@ fun dest_smallfoot_prog_while_with_invariant tt =
      val _ = if (same_const f smallfoot_prog_while_with_invariant_term) andalso
 	        (length args = 3) then () else
              raise (mk_HOL_ERR "smallfootLib" "dest_smallfoot_prog_while_with_invariant" "Wrong term")
+     val (x1,x2) = pairLib.dest_pair (el 1 args);
   in
-    (el 1 args, el 2 args, el 3 args)
+    (x1,x2, el 2 args, el 3 args)
   end
 val is_smallfoot_prog_while_with_invariant = (can dest_smallfoot_prog_while_with_invariant);
-fun mk_smallfoot_prog_while_with_invariant (i,c,p) = 
-   list_mk_icomb(smallfoot_prog_while_with_invariant_term, [i,c,p]);
+fun mk_smallfoot_prog_while_with_invariant (fvL,qi,c,p) = 
+   list_mk_icomb(smallfoot_prog_while_with_invariant_term, [pairLib.mk_pair(fvL,qi),c,p]);
 
 
 
@@ -1006,16 +1009,16 @@ val is_smallfoot_ap_points_to = (can dest_smallfoot_ap_points_to);
 
 
 
-fun dest_smallfoot_ap_list t =
+fun dest_smallfoot_ap_data_list t =
   let
      val (f, args) = strip_comb t;
-     val _ = if (same_const f smallfoot_ap_list_term) andalso
-	        (length args = 2) then () else
-             raise (mk_HOL_ERR "smallfoot_ap_list" "smallfootSyntax" "Wrong term")
+     val _ = if (same_const f smallfoot_ap_data_list_term) andalso
+	        (length args = 3) then () else
+             raise (mk_HOL_ERR "smallfoot_ap_data_list" "smallfootSyntax" "Wrong term")
   in
-    (el 1 args, el 2 args)
+    (el 1 args, el 2 args, el 3 args)
   end
-val is_smallfoot_ap_list = (can dest_smallfoot_ap_list);
+val is_smallfoot_ap_data_list = (can dest_smallfoot_ap_data_list);
 
 
 fun dest_smallfoot_ap_unknown t =
@@ -1034,24 +1037,24 @@ fun mk_smallfoot_ap_unknown s =
 
 
 
-fun dest_smallfoot_ap_list_seg t =
+fun dest_smallfoot_ap_data_list_seg t =
   let
      val (f, args) = strip_comb t;
-     val _ = if (same_const f smallfoot_ap_list_seg_term) andalso
-	        (length args = 3) then () else
-             raise (mk_HOL_ERR "smallfoot_ap_list_seg" "dest_FEVERY" "Wrong term")
+     val _ = if (same_const f smallfoot_ap_data_list_seg_term) andalso
+	        (length args = 4) then () else
+             raise (mk_HOL_ERR "smallfoot_ap_data_list_seg" "dest_FEVERY" "Wrong term")
   in
-    (el 1 args, el 2 args, el 3 args)
+    (el 1 args, el 2 args, el 3 args, el 4 args)
   end
-val is_smallfoot_ap_list_seg = (can dest_smallfoot_ap_list_seg);
+val is_smallfoot_ap_data_list_seg = (can dest_smallfoot_ap_data_list_seg);
 
 
-fun dest_smallfoot_ap_list_seg_or_list t =
-dest_smallfoot_ap_list_seg t handle HOL_ERR _ =>
-let val (t,e1) = dest_smallfoot_ap_list t in
-(t,e1,smallfoot_ae_null_term) end
+fun dest_smallfoot_ap_data_list_seg_or_list t =
+dest_smallfoot_ap_data_list_seg t handle HOL_ERR _ =>
+let val (t,e1,data) = dest_smallfoot_ap_data_list t in
+(t,e1,data,smallfoot_ae_null_term) end
 
-val is_smallfoot_ap_list_seg_or_list = (can dest_smallfoot_ap_list_seg_or_list);
+val is_smallfoot_ap_data_list_seg_or_list = (can dest_smallfoot_ap_data_list_seg_or_list);
 
 
 fun dest_smallfoot_ap_bintree t =
@@ -1068,28 +1071,28 @@ val is_smallfoot_ap_bintree = (can dest_smallfoot_ap_bintree);
 
 
 
-fun dest_smallfoot_ap_list_seg_or_list_or_bintree t =
-  let val (_,e1,e2) = dest_smallfoot_ap_list_seg_or_list t in (e1,e2) end handle HOL_ERR _ =>
+fun dest_smallfoot_ap_data_list_seg_or_list_or_bintree t =
+  let val (_,e1,_,e2) = dest_smallfoot_ap_data_list_seg_or_list t in (e1,e2) end handle HOL_ERR _ =>
   let val (_,_,e1) = (dest_smallfoot_ap_bintree t) in (e1,smallfoot_ae_null_term) end;
 
-val is_smallfoot_ap_list_seg_or_list_or_bintree = (can dest_smallfoot_ap_list_seg_or_list_or_bintree);
+val is_smallfoot_ap_data_list_seg_or_list_or_bintree = (can dest_smallfoot_ap_data_list_seg_or_list_or_bintree);
 
 
 fun dest_smallfoot_ap_spatial t =
   (fst (dest_smallfoot_ap_points_to t)) handle HOL_ERR _ =>
-  (#2 (dest_smallfoot_ap_list_seg_or_list t)) handle HOL_ERR _ =>
+  (#2 (dest_smallfoot_ap_data_list_seg_or_list t)) handle HOL_ERR _ =>
   (#3 (dest_smallfoot_ap_bintree t));
 
 val is_smallfoot_ap_spatial = (can dest_smallfoot_ap_spatial);
 
 
 
-fun dest_smallfoot_ap_spatial___no_list_seg t =
+fun dest_smallfoot_ap_spatial___no_data_list_seg t =
   (fst (dest_smallfoot_ap_points_to t)) handle HOL_ERR _ =>
-  (#2 (dest_smallfoot_ap_list t)) handle HOL_ERR _ =>
+  (#2 (dest_smallfoot_ap_data_list t)) handle HOL_ERR _ =>
   (#3 (dest_smallfoot_ap_bintree t));
 
-val is_smallfoot_ap_spatial___no_list_seg = (can dest_smallfoot_ap_spatial___no_list_seg);
+val is_smallfoot_ap_spatial___no_data_list_seg = (can dest_smallfoot_ap_spatial___no_data_list_seg);
 
 
 

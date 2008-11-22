@@ -50,6 +50,7 @@ fun parse_error _ = raise Parse_error;
 
 (* default component tags *)
 val list_data_tag = "hd";
+val data_list_tag = "dta";
 val list_link_tag = "tl"
 val tree_data_tag = "d"
 val tree_link_tags = ("l", "r")
@@ -84,6 +85,8 @@ val (dl_Llink_tag,dl_Rlink_tag) = tree_link_tags
 %token LBRACKET
 %token LIST
 %token LISTSEG
+%token DATA_LIST
+%token DATA_LISTSEG
 %token LOCAL
 %token LPAREN
 %token MINUSGREATER
@@ -134,6 +137,7 @@ val (dl_Llink_tag,dl_Rlink_tag) = tree_link_tags
 %type <Parsetree.a_expression> a_expression;
 %type <Parsetree.a_space_pred> a_space_pred;
 %type <(string * Parsetree.a_expression) list> a_component_expression_seq a_component_expression_notempty_seq;
+%type <string> data_list_exp;
 
 %start program
 %start ident_decl
@@ -282,10 +286,26 @@ a_space_pred:
 	  { Aspred_list($3,$5) }
   | LIST LPAREN a_expression RPAREN
 	  { Aspred_list(list_link_tag, $3) }
+  | DATA_LIST LPAREN IDENT SEMI a_expression COMMA data_list_exp RPAREN
+	  { Aspred_data_list($3,$5,data_list_tag,$7) }
+  | DATA_LIST LPAREN a_expression COMMA data_list_exp RPAREN
+	  { Aspred_data_list(list_link_tag,$3,data_list_tag,$5) }
+  | DATA_LIST LPAREN IDENT SEMI a_expression COMMA IDENT COLON data_list_exp RPAREN
+	  { Aspred_data_list($3,$5,$7,$9) }
+  | DATA_LIST LPAREN a_expression COMMA IDENT COLON data_list_exp RPAREN
+	  { Aspred_data_list(list_link_tag,$3,$5,$7) }
   | LISTSEG LPAREN IDENT SEMI a_expression COMMA a_expression RPAREN
 	  { Aspred_listseg($3,$5,$7) }
   | LISTSEG LPAREN a_expression COMMA a_expression RPAREN
 	  { Aspred_listseg(list_link_tag, $3, $5) }
+  | DATA_LISTSEG LPAREN IDENT SEMI a_expression COMMA data_list_exp COMMA a_expression RPAREN
+	  { Aspred_data_listseg($3,$5,$7,data_list_tag,$9) }
+  | DATA_LISTSEG LPAREN IDENT SEMI a_expression COMMA IDENT COLON data_list_exp COMMA a_expression RPAREN
+	  { Aspred_data_listseg($3,$5,$9,$7,$11) }
+  | DATA_LISTSEG LPAREN a_expression COMMA data_list_exp COMMA a_expression RPAREN
+	  { Aspred_data_listseg(list_link_tag,$3,$5,data_list_tag,$7) }
+  | DATA_LISTSEG LPAREN a_expression COMMA INDENT COLON data_list_exp COMMA a_expression RPAREN
+	  { Aspred_data_listseg(list_link_tag,$3,$7,$5,$9) }
   | DLSEG LPAREN IDENT SEMI IDENT SEMI a_expression COMMA a_expression COMMA a_expression COMMA a_expression RPAREN
 	  { Aspred_dlseg(DL,$3,$7,$9,$5,$11,$13) }
   | DLSEG LPAREN a_expression COMMA a_expression COMMA a_expression COMMA a_expression RPAREN
@@ -336,5 +356,10 @@ a_expression:
   | QIDENT                                { Aexp_ident($1) }
   | NAT                                   { Aexp_num($1) }
 ;
+data_list_exp:
+    IDENT                                 { $1 }
+  | HOL_TERM                              { $1 }
+;
+
 
 %% (* trailer *)

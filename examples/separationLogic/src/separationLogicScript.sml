@@ -10142,7 +10142,10 @@ PROVE_TAC[FASL_INFERENCE_prog_procedure_call]);
 
 val FASL_PROTO_TRACES_EVAL_PROC___TO___FASL_PROGRAM_TRACES = store_thm (
 	"FASL_PROTO_TRACES_EVAL_PROC___TO___FASL_PROGRAM_TRACES",
-``!n pt penv. ?prog. !m penv'. (FDOM penv = FDOM penv') ==> (FASL_PROGRAM_TRACES_PROC m penv' prog = FASL_PROTO_TRACES_EVAL_PROC n penv pt)``,
+``!n (pt:('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) fasl_proto_trace) penv. 
+   ?prog:('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) fasl_program. !m penv'. 
+   (FDOM penv = FDOM penv') ==> 
+   (FASL_PROGRAM_TRACES_PROC m penv' prog = FASL_PROTO_TRACES_EVAL_PROC n penv pt)``,
 
 ONCE_REWRITE_TAC [EXTENSION] THEN
 completeInduct_on `n` THEN
@@ -10260,9 +10263,11 @@ METIS_TAC[]);
 *)
 
 
+
 val FASL_EQUIV_PENV_PROC_def = Define `
-	FASL_EQUIV_PENV_PROC n penv =
-	FUN_FMAP (\proc. \arg. @prog. !m penv'. (FDOM penv = FDOM penv') ==>
+	FASL_EQUIV_PENV_PROC n (penv:'d |-> ('b -> ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) fasl_program)) =
+	FUN_FMAP (\proc. \arg. @prog. !m 
+(penv':'d |-> ('b -> ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) fasl_program)). (FDOM penv = FDOM penv') ==>
 		(FASL_PROGRAM_TRACES_PROC m penv' prog =
 		FASL_PROTO_TRACES_EVAL_PROC n penv (fasl_pt_procedure_call proc arg)))
 		(FDOM penv)`
