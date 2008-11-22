@@ -1,5 +1,3 @@
-tl;
-
 merge(r;p,q) [data_list(p,pdata) * data_list(q,qdata) *
 	      ``(SORTED $<= (pdata:num list)) /\
 	        (SORTED $<= (qdata:num list))``] {
@@ -7,8 +5,8 @@ merge(r;p,q) [data_list(p,pdata) * data_list(q,qdata) *
   if(q == NULL) r = p;
   else if(p == NULL) r = q;
   else {
-    p_date = p->dt;
-    q_date = q->dt;
+    p_date = p->dta;
+    q_date = q->dta;
     if(q_date < p_date) {
       t = q;
       q = q->tl;

@@ -299,13 +299,13 @@ a_space_pred:
   | LISTSEG LPAREN a_expression COMMA a_expression RPAREN
 	  { Aspred_listseg(list_link_tag, $3, $5) }
   | DATA_LISTSEG LPAREN IDENT SEMI a_expression COMMA data_list_exp COMMA a_expression RPAREN
-	  { Aspred_data_listseg($3,$5,$7,data_list_tag,$9) }
+	  { Aspred_data_listseg($3,$5,data_list_tag,$7,$9) }
   | DATA_LISTSEG LPAREN IDENT SEMI a_expression COMMA IDENT COLON data_list_exp COMMA a_expression RPAREN
-	  { Aspred_data_listseg($3,$5,$9,$7,$11) }
+	  { Aspred_data_listseg($3,$5,$7,$9,$11) }
   | DATA_LISTSEG LPAREN a_expression COMMA data_list_exp COMMA a_expression RPAREN
-	  { Aspred_data_listseg(list_link_tag,$3,$5,data_list_tag,$7) }
-  | DATA_LISTSEG LPAREN a_expression COMMA INDENT COLON data_list_exp COMMA a_expression RPAREN
-	  { Aspred_data_listseg(list_link_tag,$3,$7,$5,$9) }
+	  { Aspred_data_listseg(list_link_tag,$3,data_list_tag,$5,$7) }
+  | DATA_LISTSEG LPAREN a_expression COMMA IDENT COLON data_list_exp COMMA a_expression RPAREN
+	  { Aspred_data_listseg(list_link_tag,$3,$5,$7,$9) }
   | DLSEG LPAREN IDENT SEMI IDENT SEMI a_expression COMMA a_expression COMMA a_expression COMMA a_expression RPAREN
 	  { Aspred_dlseg(DL,$3,$7,$9,$5,$11,$13) }
   | DLSEG LPAREN a_expression COMMA a_expression COMMA a_expression COMMA a_expression RPAREN
