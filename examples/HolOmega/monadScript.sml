@@ -93,7 +93,7 @@ val JOIN_nattransf = store_thm
   ("JOIN_nattransf",
    ``!unit bind.
       monad(unit,bind) ==>
-      nattransf ((\:'a 'b. MMAP(unit,bind) o MMAP(unit,bind)) : (\'a. 'a 'M 'M) functor)
+      nattransf ((\:'a 'b. MMAP(unit,bind) o MMAP(unit,bind)) : ('M o 'M) functor)
                 ((\:'a 'b. MMAP(unit,bind))                   : 'M functor)
                 ((\:'a.    JOIN(unit,bind))                   : 'M join)``,
    SRW_TAC[][monad_def,nattransf_def,MMAP_def,JOIN_def,FUN_EQ_THM]
@@ -537,7 +537,7 @@ val state_MAP_functor = store_thm
 
 val state_JOIN_nattransf = store_thm
   ("state_JOIN_nattransf",
-   ``nattransf ((\:'a 'b. state_MAP o state_MAP) : (\'a. 'a ('s state) ('s state)) functor)
+   ``nattransf ((\:'a 'b. state_MAP o state_MAP) : ('s state o 's state) functor)
                ((\:'a 'b. state_MAP)             : 's state functor)
                ((\:'a.    state_JOIN)            : 's state join)``,
    SIMP_TAC bool_ss [state_monad,state_MAP_def,state_JOIN_def,JOIN_nattransf]

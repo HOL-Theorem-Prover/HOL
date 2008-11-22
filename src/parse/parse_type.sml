@@ -163,8 +163,31 @@ end
     list_pAppType(ty,args)
     handle e => (if is_debug() then print ("apply_tyop fails!\n") else (); Feedback.Raise e)
 
+  fun get_abbrev args (t,locn) = let
+  in
+    case t of
+      TypeIdent s =>
+        if is_numeric s then raise InternalFailure locn
+        else
+         (case Binarymap.peek(abbrevs, s) of
+             NONE => raise InternalFailure locn
+           | SOME st => let val nargs = structure_num_args st
+                            val (largs,rargs) = if nargs = 0 then ([],args) else (args,[])
+                            val _ = if length largs <= nargs then () else
+                                          raise ERRloc locn ("type abbreviation " ^ s ^
+                                                             " given too many arguments")
+                            val abr = structure_to_value (s,locn) largs st
+                            val res = apply_tyop (abr,locn) rargs
+                        in res (* (adv(); (res, locn)) *)
+                        end)
+    | _ => raise InternalFailure locn
+  end
+
   fun apply_binop (t,locn) args =
+    get_abbrev args (t,locn)
+    handle e =>
     list_pAppType(const_tyop (t,locn),args)
+    handle e => (if is_debug() then print ("apply_binop fails!\n") else (); Feedback.Raise e)
 
   fun apply_kindcast (ty, kd, locn) =
     kindcast{Ty=ty, Kind=kd, Locn=locn}
@@ -197,23 +220,8 @@ end
 
   fun parse_abbrev args fb = let
     val (adv, (t,locn)) = typetok_of fb
-  in
-    case t of
-      TypeIdent s =>
-        if is_numeric s then raise InternalFailure locn
-        else
-         (case Binarymap.peek(abbrevs, s) of
-             NONE => raise InternalFailure locn
-           | SOME st => let val nargs = structure_num_args st
-                            val (largs,rargs) = if nargs = 0 then ([],args) else (args,[])
-                            val _ = if length largs <= nargs then () else
-                                          raise ERRloc locn ("type abbreviation " ^ s ^
-                                                             " given too many arguments")
-                            val abr = structure_to_value (s,locn) largs st
-                            val res = apply_tyop (abr,locn) rargs
-                        in (adv(); (res, locn))
-                        end)
-    | _ => raise InternalFailure locn
+    val res = get_abbrev args (t,locn)
+  in (adv(); (res, locn))
   end
 
   fun parse_op slist fb = let

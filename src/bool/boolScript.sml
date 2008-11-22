@@ -59,9 +59,22 @@ end;
 
 (* Fundamental type combinators: *)
 
-val _ = type_abbrev ("I", Type `: \'a. 'a`);
-val _ = type_abbrev ("K", Type `: \'a 'b. 'a`);
-val _ = type_abbrev ("S", Type `: \'a 'b 'c. 'c 'b ('c 'a)`);
+val _ = type_abbrev ("I", Type `: \'a:'k. 'a`);
+val _ = type_abbrev ("K", Type `: \('a:'k) ('b:'l). 'a`);
+val _ = type_abbrev ("S", Type `: \'a ('b:'k => 'l) ('c:'k). ('c 'b ('c 'a)) : 'm`);
+val _ = type_abbrev ("A", Type `: \('f:'k => 'l) 'a. 'a 'f`);
+val _ = type_abbrev ("B", Type `: \('f:'l => 'm) 'g ('a:'k). ('a 'g) 'f`);
+val _ = type_abbrev ("C", Type `: \('f:'l => 'k => 'm) 'a 'b. 'a ('b 'f)`);
+val _ = type_abbrev ("W", Type `: \('f:'k => 'k => 'l) 'a. 'a ('a 'f)`);
+
+(* Type composition operator: (not the same as B above) *)
+
+val _ = type_abbrev ("comp", Type `: \('f:'k => 'l) ('g:'l => 'm) 'a. 'a 'f 'g`);
+
+val _ = add_infix_type
+         {Prec = 50,
+          ParseName = SOME "o", Name = "comp",
+          Assoc = HOLgrammars.RIGHT};
 
 val _ = unicode_version (UChar.imp, Term `min$==>`);
 

@@ -35,6 +35,18 @@ val _ = new_theory "aop";
 
 val _ = type_abbrev ("algebra", Type `: \'F 'a. 'a 'F -> 'a`);
 
+(* For example, the algebra (Nat,+) of the natural numbers and addition
+   is an algebra of the functor F A = A # A and F h = h ## h.               *)
+
+val Nat_plus_functor = store_thm
+  ("Nat_plus_functor",
+   ``functor ((\:'a 'b. \h. h ## h) : (\'a. 'a # 'a) functor)``,
+   SIMP_TAC combin_ss [functor_def,quotient_pairTheory.PAIR_MAP_I,PAIR_o]
+  );
+
+val Nat_plus_algebra = ``UNCURRY $+ : (\'a. 'a # 'a, num)algebra``;
+
+
 
 (*---------------------------------------------------------------------------
   An F-homomorphism from an algegra f :'a 'F -> 'a to an algegra g :'b 'F -> 'b
