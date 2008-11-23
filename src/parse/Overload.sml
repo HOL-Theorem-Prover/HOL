@@ -381,7 +381,9 @@ fun overloading_of_term (oinfo as (_, prmap) : overload_info) t =
     | _ => NONE
 
 fun overloading_of_nametype (oinfo:overload_info) r =
-    overloading_of_term oinfo (prim_mk_const r)
+    case Lib.total prim_mk_const r of
+      NONE => NONE
+    | SOME c => overloading_of_term oinfo c
 
 fun rev_append [] rest = rest
   | rev_append (x::xs) rest = rev_append xs (x::rest)
