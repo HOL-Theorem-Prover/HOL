@@ -44,7 +44,7 @@ val osyntax_11       = TypeBase.one_one_of ``:osyntax``;
 val osyntax_distinct = TypeBase.distinct_of ``:osyntax``;
 
 (*---------------------------------------------------------------------------*)
-(* And operations on them                                                    *)
+(* And operations over osyntax.                                              *)
 (*---------------------------------------------------------------------------*)
 
 val expt_def = 
@@ -430,10 +430,9 @@ THEN
 (* So there is a set S of such sets                                          *)
 (*---------------------------------------------------------------------------*)
 
- `?S. (?si. S(si)) /\
-    (!si. S si = 
-          (?x. si x) /\
-          (!x. si(x) ==> is_ord(x) /\ (rank x = SUC n) /\ ?y. si y /\ oless y x))` 
+`?S. (?si. S(si)) /\
+     (!si. S si = (?x. si x) /\
+        (!x. si(x) ==> is_ord(x) /\ (rank x = SUC n) /\ ?y. si y /\ oless y x))` 
   by (Q.EXISTS_TAC `\si. 
          (?a. si a) /\ 
          (!b. si b ==> is_ord b /\ (rank b = SUC n) /\ ?d. si d /\ oless d b)` 
@@ -549,7 +548,7 @@ Cases_on `?d. Tails(d) /\ rank d <= n`
 THENL
 
 (*---------------------------------------------------------------------------*)
-(* Start first case. There is an x in Tails with rank <=n.                   *)
+(* Start first case. There is a "d" in Tails with rank <=n.                  *)
 (* Use IH to get min.el. t                                                   *)
 (*---------------------------------------------------------------------------*)
 
@@ -669,14 +668,27 @@ THEN
      METIS_TAC [is_ord_downclosed,rank_positive_expt,expt_def,DECIDE``(m=n) ==> m<=n``],
      METIS_TAC [coeff_def,expt_def],
      METIS_TAC [expt_def,coeff_def,tail_def]]
+
+(*---------------------------------------------------------------------------*)
+(* Done.                                                                     *)
+(*---------------------------------------------------------------------------*)
+
 );
 
+
+(*---------------------------------------------------------------------------*)
+(* Now to use the lemma. First instantiate it to rank(x).                    *)
+(*---------------------------------------------------------------------------*)
 
 val lemma' =  
   SIMP_RULE std_ss [LESS_EQ_REFL]
      (Q.SPEC `x`
         (SIMP_RULE std_ss [GSYM LEFT_FORALL_IMP_THM] 
            (SPEC_ALL (Q.SPEC `rank x` lemma))));
+
+(*---------------------------------------------------------------------------*)
+(* So can rephrase lemma by getting rid of the rank restriction.             *)
+(*---------------------------------------------------------------------------*)
 
 val main_lemma = Q.store_thm
 ("main_lemma",
@@ -687,10 +699,17 @@ val main_lemma = Q.store_thm
         !y. is_ord y /\ rank y <= rank x /\ oless y m ==> ~P y` by METIS_TAC [lemma'] 
   THEN METIS_TAC [oless_imp_rank_leq,LESS_EQ_TRANS]);
 
+(*---------------------------------------------------------------------------*)
+(* less-than on ordinals.                                                    *)
+(*---------------------------------------------------------------------------*)
 
 val ord_less_def = 
  Define 
    `ord_less x y = is_ord x /\ is_ord y /\ oless x y`;
+
+(*---------------------------------------------------------------------------*)
+(* ord_less is well-founded.                                                 *)
+(*---------------------------------------------------------------------------*)
 
 val WF_ord_less = Q.store_thm
 ("WF_ord_less",
@@ -698,12 +717,12 @@ val WF_ord_less = Q.store_thm
  RW_TAC ord_ss [relationTheory.WF_DEF,ord_less_def] THEN 
  METIS_TAC [main_lemma,ord_less_def]);
 
-
 (*---------------------------------------------------------------------------*)
-(* Hence ACL2-style induction and recursion on the ordinals up to e_0.       *)
+(* Hence induction and recursion on the ordinals up to e_0, ala ACL2.        *)
 (*---------------------------------------------------------------------------*)
 
-val WF_ord_measure = SPEC_ALL (MATCH_MP relationTheory.WF_inv_image WF_ord_less);
+val WF_ord_measure = 
+ SPEC_ALL (MATCH_MP relationTheory.WF_inv_image WF_ord_less);
 
 val e0_induction = save_thm
 ("e0_INDUCTION",
@@ -720,6 +739,50 @@ val e0_RECURSION = Q.store_thm
    (SIMP_RULE std_ss [relationTheory.inv_image_def]
       (MATCH_MP relationTheory.WF_RECURSION_THM WF_ord_measure)));
 
+(*---------------------------------------------------------------------------*)
+(* Ordinal addition, subtraction, multiplication and exponentiation. Taken   *)
+(* from Manolios and Vroon, JAR.                                             *)
+(*---------------------------------------------------------------------------*)
+
+val ord_add_def = 
+ Define
+  `(ord_add (End m) (End n) = End (m+n)) /\
+   (ord_add (End m) (Plus p k t) = Plus p k t) /\
+   (ord_add (Plus e k t) (End m) = Plus e k (ord_add t (End m))) /\
+   (ord_add (Plus e1 k1 t1) (Plus e2 k2 t2) = 
+     if oless e1 e2 then Plus e2 k2 t2 else
+     if e1 = e2 then Plus e2 (k1+k2) t2 else
+     Plus e1 k1 (ord_add t1 (Plus e2 k2 t2)))`;
+
+val ord_sub_def = 
+ Define
+  `(ord_sub (End m) (End n) = End (m-n)) /\
+   (ord_sub (End m) (Plus p k t) = End 0) /\
+   (ord_sub (Plus e k t) (End m) = Plus e k t) /\
+   (ord_sub (Plus e1 k1 t1) (Plus e2 k2 t2) = 
+     if oless e1 e2 then End 0 else
+     if e1 = e2 
+      then (if k1<k2 then End 0 else
+            if k1>k2 then Plus e1 (k1-k2) t1
+            else ord_sub t1 t2)
+     else Plus e1 k1 t1)`;
+
+(*---------------------------------------------------------------------------*)
+(* Weird renaming in last two clauses by Define.                             *)
+(*---------------------------------------------------------------------------*)
+
+val ord_mult_def = 
+ Define
+  `ord_mult x y = 
+    if (x = End 0) \/ (y = End 0) then End 0 else
+    case (x,y) 
+    of (End m, End n) -> End (m * n)
+    || (End m, Plus e k t) -> Plus (ord_add (End 0) e) k (ord_mult (End m) t)
+    || (Plus e k t, End n) -> Plus e (k*n) t 
+    || (Plus e1 k1 t1, Plus e2 k2 t2) -> Plus (ord_add e1 e2) k2 
+                                              (ord_mult (Plus e1 k1 t1) t2)`;
+
+    
 val _ = Count.report (Count.read meter);
 
 val _ = export_theory();
@@ -745,7 +808,7 @@ val _ =
       map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
              [expt_def, coeff_def, finp_def, 
               CONJ tail_End tail_def, rank_def, oless_equations,
-              is_ord_equations,ord_less_def])
+              is_ord_equations,ord_less_def,ord_add_def, ord_sub_def, ord_mult_def])
  end;
 
 end

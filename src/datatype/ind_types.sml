@@ -30,8 +30,6 @@ val ERR = mk_HOL_ERR "ind_types";
 structure Parse = struct
 open Parse
 val (Type,Term) = parse_from_grammars ind_typeTheory.ind_type_grammars
-fun -- q x = Term q
-fun == q x = Type q
 end
 open Parse
 
@@ -48,6 +46,7 @@ val LAND_CONV = RATOR_CONV o RAND_CONV;
 val RIGHT_BETAS = rev_itlist(fn a=>CONV_RULE(RAND_CONV BETA_CONV) o C AP_THM a)
 
 fun sucivate n = funpow n numSyntax.mk_suc numSyntax.zero_tm;
+(* fun sucivate n = numSyntax.term_of_int n; *)
 
 val make_args =
   let fun margs n s avoid [] = []
@@ -170,7 +169,8 @@ val justify_inductive_type_model = let
   val aty = Type.alpha
   val T_tm = boolSyntax.T
   and n_tm = Term`n:num`
-  and beps_tm = Term`@x:bool. T`
+(*  and beps_tm = Term`@x:bool. T` *)
+  and beps_tm = mk_arb bool
   fun munion [] s2 = s2
     | munion (h1::s1') s2 =
        let val (_,s2') = Lib.pluck (fn h2 => h2 = h1) s2
@@ -181,7 +181,8 @@ in
     val (newtys,rights) = unzip def
     val tyargls = itlist (curry op@ o map snd) rights []
     val alltys = itlist (munion o C set_diff newtys) tyargls []
-    val epstms = map (fn ty => mk_select(mk_var("v",ty),T_tm)) alltys
+(*    val epstms = map (fn ty => mk_select(mk_var("v",ty),T_tm)) alltys *)
+    val arb_tms = map mk_arb alltys
     val pty =
       end_itlist (fn ty1 => fn ty2 => mk_type("prod",[ty1,ty2])) alltys
       handle HOL_ERR _ => Type.bool
@@ -194,7 +195,7 @@ in
       val ttys = map (fn ty => if mem ty newtys then recty else ty) cargs
       val args = make_args "a" [] ttys
       val (rargs,iargs) = partition (fn t => type_of t = recty) args
-      fun mk_injector epstms alltys iargs =
+      fun mk_injector arb_tms alltys iargs =
         if alltys = [] then []
         else let
           val ty = hd alltys
@@ -202,12 +203,12 @@ in
           let
             val (a,iargs') = Lib.pluck (fn t => type_of t = ty) iargs
           in
-            a::(mk_injector (tl epstms) (tl alltys) iargs')
+            a::(mk_injector (tl arb_tms) (tl alltys) iargs')
           end handle HOL_ERR _ =>
-            (hd epstms)::(mk_injector (tl epstms) (tl alltys) iargs)
+            (hd arb_tms)::(mk_injector (tl arb_tms) (tl alltys) iargs)
         end
       val iarg =
-        end_itlist (curry pairSyntax.mk_pair) (mk_injector epstms alltys iargs)
+        end_itlist (curry pairSyntax.mk_pair) (mk_injector arb_tms alltys iargs)
         handle HOL_ERR _ => beps_tm
       val rarg = itlist (mk_binop fcons) rargs bottail
       val conty = itlist (curry Type.-->) (map type_of args) recty
@@ -1528,8 +1529,8 @@ val define_type_nested = fn def =>
 end
 
 fun define_type d =
-    define_type_nested d
-    handle e => raise (wrap_exn "ind_types" "define_type" e);
+  define_type_nested d
+  handle e => raise (wrap_exn "ind_types" "define_type" e);
 
 (* test this with:
 

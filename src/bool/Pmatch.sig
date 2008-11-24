@@ -2,6 +2,7 @@ signature Pmatch =
 sig
 
   type term = Term.term
+  type thm = Thm.thm
   type thry = {Thy : string, Tyop : string} ->
               {case_const : term, constructors : term list} option
 
@@ -14,4 +15,7 @@ sig
 
    val mk_functional : thry -> term -> {functional:term, pats: pattern list}
 
-end;
+   val defunk_string : string -> string
+   val defunk        : term -> term
+   val defunk_conv   : term -> thm
+end

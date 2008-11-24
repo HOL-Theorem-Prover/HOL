@@ -185,6 +185,11 @@ fun mk_pat c =
   in map build
   end;
 
+(*---------------------------------------------------------------------------*)
+(* Use of funky internal variable names, prefixed with *v, to avoid name     *)
+(* clashes.                                                                  *)
+(*---------------------------------------------------------------------------*)
+
 local val counter = ref 0
 in
 fun vary vlist =
@@ -192,18 +197,32 @@ fun vary vlist =
       val _ = counter := 0
       fun pass str =
          if Lib.mem str (!slist)
-         then (counter := !counter + 1; pass ("v"^int_to_string(!counter)))
+         then (counter := !counter + 1; pass ("*v"^int_to_string(!counter)))
          else (slist := str :: !slist; str)
   in
-    fn ty => mk_var(pass "v", ty)
+    fn ty => mk_var(pass "*v", ty)
   end
 end;
 
+fun defunk_string s = 
+  if String.isPrefix "*v" s
+     then String.extract(s,1,NONE)
+     else s;
+
+fun defunk tm = 
+ case dest_term tm
+  of COMB(M,N) => mk_comb (defunk M, defunk N)
+   | LAMB(v,M) => mk_abs (defunk v, defunk M) 
+   | VAR (s,ty) => mk_var(defunk_string s,ty)
+   | CONST _ => tm;
+ 
+fun defunk_conv tm = Thm.ALPHA tm (defunk tm);
+
 fun v_to_prefix (prefix, v::pats) = (v::prefix,pats)
-  | v_to_prefix _ = raise ERR"mk_case" "v_to_prefix"
+  | v_to_prefix _ = raise ERR "mk_case" "v_to_prefix"
 
 fun v_to_pats (v::prefix,tag, pats) = (prefix, tag, v::pats)
-  | v_to_pats _ = raise ERR"mk_case""v_to_pats";
+  | v_to_pats _ = raise ERR "mk_case""v_to_pats";
 
 (* --------------------------------------------------------------
    Literals include numeric, string, and character literals.

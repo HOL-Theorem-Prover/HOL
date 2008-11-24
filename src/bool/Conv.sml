@@ -1866,4 +1866,25 @@ end t
 
 fun PRINT_CONV tm = (Parse.print_term tm; print "\n"; ALL_CONV tm);
 
+(*---------------------------------------------------------------------------*)
+(* Map a conversion over a theorem, preserving order of hypotheses.          *)
+(*---------------------------------------------------------------------------*)
+
+fun cnvMP eqth impth =
+ let open boolSyntax
+     val tm = snd(dest_imp(concl impth))
+     val imp_refl = REFL implication
+ in
+   UNDISCH
+    (EQ_MP (MK_COMB (MK_COMB(imp_refl,eqth),REFL tm)) impth)
+ end;
+
+fun MAP_THM cnv th = 
+ let val (hyps,c) = dest_thm th
+     val cth = cnv c
+     val hypths = map cnv hyps
+ in itlist cnvMP hypths (DISCH_ALL (EQ_MP cth th))
+ end
+ handle HOL_ERR _ => raise ERR "MAP_THM" "";
+
 end (* Conv *)

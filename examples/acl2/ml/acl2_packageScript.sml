@@ -33,11 +33,13 @@ quietdec := false;
 (******************************************************************************
 * Boilerplate needed for compilation: open HOL4 systems modules.
 ******************************************************************************)
+
 open HolKernel Parse boolLib bossLib;
 
 (******************************************************************************
 * Open theories (including ratTheory from Jens Brandt).
 ******************************************************************************)
+
 open listSyntax pairSyntax stringLib listTheory;
 
 (*****************************************************************************)
@@ -2916,10 +2918,14 @@ val LOOKUP_AUX_def =
 val ELOOKUP_def = 
  Define `ELOOKUP l1 = EVERY (LOOKUP_AUX l1) l1`;
 
-val elookup_empty = prove(``ELOOKUP [] = T``,RW_TAC std_ss [ELOOKUP_def,EVERY_DEF]);
+val elookup_empty = 
+ prove(``ELOOKUP [] = T``,RW_TAC std_ss [ELOOKUP_def,EVERY_DEF]);
 
-val lookup_fast = prove(``!l. (LOOKUP pkg_name l sym_name = pkg_name) = LOOKUP_AUX l (sym_name,q,pkg_name)``,
-	Induct THEN TRY (Cases THEN Cases_on `r`) THEN RW_TAC std_ss [LOOKUP_def,LOOKUP_AUX_def]);
+val lookup_fast = 
+ prove(``!l. (LOOKUP pkg_name l sym_name = pkg_name) = 
+              LOOKUP_AUX l (sym_name,q,pkg_name)``,
+	Induct THEN TRY (Cases THEN Cases_on `r`) THEN 
+        RW_TAC std_ss [LOOKUP_def,LOOKUP_AUX_def]);
 
 val separate_lemma = prove(``!l1 l2. VALID_PKG_TRIPLES_AUX l1 l2 = 
 	(EVERY (\ (x,y,z). ~(z = "")) l1) /\
@@ -2935,7 +2941,8 @@ val separate_proof = prove(``!l1. VALID_PKG_TRIPLES l1 =
 	(ELOOKUP l1)``,
 	RW_TAC std_ss [VALID_PKG_TRIPLES_def,ELOOKUP_def,separate_lemma]);
 
-val every_split = prove(``!l. (!x. A x = B x /\ C x) ==> (EVERY A l = EVERY B l /\ EVERY C l)``,
+val every_split = 
+ prove(``!l. (!x. A x = B x /\ C x) ==> (EVERY A l = EVERY B l /\ EVERY C l)``,
 	Induct THEN RW_TAC std_ss [EVERY_DEF] THEN METIS_TAC []);
 
 val leq_def = 
@@ -2943,7 +2950,8 @@ val leq_def =
   (leq "" "" = T) /\ 
   (leq "" (STRING a b) = T) /\ 
   (leq (STRING a b) "" = F) /\ 
-  (leq (STRING a b) (STRING c d) = if ORD a < ORD c then T else (ORD a = ORD c) /\ leq b d)`;
+  (leq (STRING a b) (STRING c d) = 
+      if ORD a < ORD c then T else (ORD a = ORD c) /\ leq b d)`;
 
 val LEQ_def = 
  Define 
@@ -2979,14 +2987,15 @@ val every_lookup_split_leq =
 	METIS_TAC [leq_t_imp,leq_f_imp]);
 
 val EVERY_FILTER = 
-     prove(``!l. EVERY P l = EVERY P (FILTER Q l) /\ EVERY P (FILTER ($~ o Q) l)``,
-	Induct THEN RW_TAC arith_ss [EVERY_DEF,FILTER] THEN
-	PROVE_TAC []);
+   prove(``!l. EVERY P l = EVERY P (FILTER Q l) /\ EVERY P (FILTER ($~ o Q) l)``,
+     Induct THEN RW_TAC arith_ss [EVERY_DEF,FILTER] THEN PROVE_TAC []);
 
-val PLACE_def = Define `PLACE s1 s2 s3 a (A,B,C,D) = 
-		if LEQ s2 a
-                    then if LEQ s1 a then (a::A,B,C,D) else (A,a::B,C,D)
-                    else if LEQ s3 a then (A,B,a::C,D) else (A,B,C,a::D)`;
+val PLACE_def = 
+ Define 
+   `PLACE s1 s2 s3 a (A,B,C,D) = 
+	if LEQ s2 a
+         then if LEQ s1 a then (a::A,B,C,D) else (A,a::B,C,D)
+         else if LEQ s3 a then (A,B,a::C,D) else (A,B,C,a::D)`;
 
 val (PARTITION_def,PARTIION_ind) =
  Defn.tprove(Defn.Hol_defn "PARTITION" 
@@ -2999,39 +3008,56 @@ val (PARTITION_def,PARTIION_ind) =
     RW_TAC std_ss [LENGTH]);
 
 val RFILTER_def =
- Define `(RFILTER P [] A = A) /\ (RFILTER P (a::b) A = RFILTER P b (if P a then a::A else A))`;
+ Define 
+  `(RFILTER P [] A = A) /\ 
+   (RFILTER P (a::b) A = RFILTER P b (if P a then a::A else A))`;
 
 val partition_lem = prove(``!l A B C D. PARTITION s1 s2 s3 (A,B,C,D) l = 
 	(RFILTER (\x. LEQ s1 x /\ LEQ s2 x) l A,
 	 RFILTER (\x. ~LEQ s1 x /\ LEQ s2 x) l B,
 	 RFILTER (\x. LEQ s3 x /\ ~LEQ s2 x) l C,
 	 RFILTER (\x. ~LEQ s3 x /\ ~LEQ s2 x) l D)``,
-	Induct THEN RW_TAC arith_ss [PLACE_def,PARTITION_def,RFILTER_def] THEN FULL_SIMP_TAC std_ss []);
+ Induct THEN RW_TAC arith_ss [PLACE_def,PARTITION_def,RFILTER_def] THEN 
+ FULL_SIMP_TAC std_ss []);
 
 val EPARTITION_def = 
- Define `EPARTITION s1 s2 s3 (A,B,C,D) L = 
-		(\ (A,B,C,D). 	VALID_PKG_TRIPLES (REVERSE A) /\ VALID_PKG_TRIPLES (REVERSE B) /\ 
-				VALID_PKG_TRIPLES (REVERSE C) /\ VALID_PKG_TRIPLES (REVERSE D))
-		(PARTITION s1 s2 s3 (A,B,C,D) L)`;
+ Define 
+  `EPARTITION s1 s2 s3 (A,B,C,D) L = 
+	(\ (A,B,C,D). VALID_PKG_TRIPLES (REVERSE A) /\ 
+                      VALID_PKG_TRIPLES (REVERSE B) /\ 
+                      VALID_PKG_TRIPLES (REVERSE C) /\ 
+                      VALID_PKG_TRIPLES (REVERSE D))
+        (PARTITION s1 s2 s3 (A,B,C,D) L)`;
 
 val RPARTITION_def = 
- Define `RPARTITION s1 s2 s3 (A,B,C,D) L = 
-		(\ (A,B,C,D). VALID_PKG_TRIPLES A /\ VALID_PKG_TRIPLES B /\ VALID_PKG_TRIPLES C /\ VALID_PKG_TRIPLES D)
-		(PARTITION s1 s2 s3 (A,B,C,D) L)`;
+ Define 
+   `RPARTITION s1 s2 s3 (A,B,C,D) L = 
+	(\ (A,B,C,D). VALID_PKG_TRIPLES A /\ 
+                      VALID_PKG_TRIPLES B /\ 
+                      VALID_PKG_TRIPLES C /\ 
+                      VALID_PKG_TRIPLES D)
+	(PARTITION s1 s2 s3 (A,B,C,D) L)`;
 
-val RFILTER_thm = prove(``!A B P. RFILTER P A B = REVERSE (FILTER P A) ++ B``,
-	Induct THEN RW_TAC arith_ss [RFILTER_def,FILTER,REVERSE_DEF,APPEND,GSYM APPEND_ASSOC]);
+val RFILTER_thm = 
+  prove(``!A B P. RFILTER P A B = REVERSE (FILTER P A) ++ B``,
+  Induct THEN RW_TAC arith_ss 
+               [RFILTER_def,FILTER,REVERSE_DEF,APPEND,GSYM APPEND_ASSOC]);
 
-val FILTER_SPLIT = prove(``!l P Q. FILTER (\x. P x /\ Q x) l = FILTER P (FILTER Q l)``,
-	Induct THEN RW_TAC arith_ss [FILTER] THEN FULL_SIMP_TAC arith_ss []);
+val FILTER_SPLIT = 
+ prove(``!l P Q. FILTER (\x. P x /\ Q x) l = FILTER P (FILTER Q l)``,
+       Induct THEN RW_TAC arith_ss [FILTER] THEN FULL_SIMP_TAC arith_ss []);
 
-val FILTER_REVERSE = prove(``!l. REVERSE (FILTER P l) = FILTER P (REVERSE l)``,
-	Induct THEN RW_TAC arith_ss [FILTER,REVERSE_DEF,FILTER_APPEND_DISTRIB,APPEND_NIL]);
+val FILTER_REVERSE = 
+  prove(``!l. REVERSE (FILTER P l) = FILTER P (REVERSE l)``,
+	Induct THEN 
+        RW_TAC arith_ss [FILTER,REVERSE_DEF,FILTER_APPEND_DISTRIB,APPEND_NIL]);
 
-val elookup_split = prove(``!s1 s2 s3 l. VALID_PKG_TRIPLES l = EPARTITION s1 s2 s3 ([],[],[],[]) l``,
-	RW_TAC arith_ss [EPARTITION_def,separate_proof,ELOOKUP_def,partition_lem,RFILTER_thm,
-		REVERSE_REVERSE,APPEND_NIL,FILTER_SPLIT] THEN
-	METIS_TAC [every_lookup_split_leq,EVERY_FILTER]);
+val elookup_split = 
+prove(``!s1 s2 s3 l. VALID_PKG_TRIPLES l = EPARTITION s1 s2 s3 ([],[],[],[]) l``,
+      RW_TAC arith_ss [EPARTITION_def,separate_proof,ELOOKUP_def,
+                       partition_lem,RFILTER_thm,REVERSE_REVERSE,
+                       APPEND_NIL,FILTER_SPLIT] THEN
+      METIS_TAC [every_lookup_split_leq,EVERY_FILTER]);
 
 val rlookup_split = prove(``!s1 s2 s3 l. VALID_PKG_TRIPLES (REVERSE l) = RPARTITION s1 s2 s3 ([],[],[],[]) l``,
 	RW_TAC arith_ss [RPARTITION_def,separate_proof,ELOOKUP_def,partition_lem,RFILTER_thm,

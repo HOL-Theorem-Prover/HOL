@@ -19,7 +19,7 @@ datatype defn
                  stem:string,union:defn}
    | NESTREC of {eqs:thm list, ind:thm, R:term, SV:term list,
                  stem:string, aux:defn}
-
+   | TAILREC of {eqs:thm list, ind:thm, R:term, SV:term list, stem:string}
 
 local open Portable
       fun kind (ABBREV _)  = "abbreviation"
@@ -28,6 +28,7 @@ local open Portable
         | kind (PRIMREC _) = "primitive recursion"
         | kind (MUTREC  _) = "mutual recursion"
         | kind (NESTREC _) = "nested recursion"
+        | kind (TAILREC _) = "nonterminating tail recursion"
       fun hyps thl = HOLset.listItems
                        (foldl (fn (th,s) => HOLset.union(hypset th, s))
                               empty_tmset thl)
@@ -83,6 +84,7 @@ fun pp_defn ppstrm =
      | pp (STDREC {eqs, ind, R, SV, stem})        = pp_rec(eqs,ind, hyps eqs)
      | pp (NESTREC{eqs, ind, R, SV, aux, stem})   = pp_rec(eqs,ind, hyps eqs)
      | pp (MUTREC {eqs, ind, R, SV, union, stem}) = pp_rec(eqs,ind, hyps eqs)
+     | pp (TAILREC{eqs, ind, R, SV, stem})        = pp_rec(eqs,ind, hyps eqs)
  in
    fn d =>
        (begin_block CONSISTENT 0;
@@ -97,8 +99,9 @@ end;
 
 (*---------------------------------------------------------------------------
     Congruence rules for termination condition extraction. Before
-    t.c. extraction is performed, the theorems in "non_datatype_context"
-    are added to the congruence rules arising from datatype definitions.
+    t.c. extraction is performed, the theorems in "non_datatype_congs"
+    are added to the congruence rules arising from datatype definitions, 
+    which are held in the TypeBase.
  ---------------------------------------------------------------------------*)
 
 
@@ -145,5 +148,4 @@ in
   adjoin_to_theory { sig_ps = NONE, struct_ps = SOME sps}
 end
 
-
-end;
+end

@@ -7,6 +7,24 @@ app load ["teaTheory", "wordsLib"];
 val key = ``(1w,11w,21w,1112w): word32#word32#word32#word32``;
 val plaintext = ``(93w, 134w) : word32#word32``;
 
+(*---------------------------------------------------------------------------*)
+(* On MoscowML (Apple PowerBook circa 2005)                                  *)
+(*                                                                           *)
+(* runtime: 113.045s,    gctime: 10.103s,     systime: 1.754s.               *)
+(* Axioms asserted: 0.                                                       *)
+(* Definitions made: 0.                                                      *)
+(* Oracle invocations: 0.                                                    *)
+(* Theorems loaded from disk: 0.                                             *)
+(* HOL primitive inference steps: 5529133.                                   *)
+(* Total: 5529133.                                                           *)
+(* > val it =                                                                *)
+(*    |- (teaDecrypt                                                         *)
+(*          ((1w,11w ,21w ,1112w),                                           *)
+(*           teaEncrypt ((1w,11w ,21w ,1112w),93w ,134w)) =                  *)
+(*        (93w,134w)) =                                                      *)
+(*       T : thm                                                             *)
+(*---------------------------------------------------------------------------*)
+
 Count.apply EVAL 
    ``teaDecrypt(^key,teaEncrypt(^key,^plaintext)) = ^plaintext``;
 
@@ -32,4 +50,4 @@ val key = (c32##c32##c32##c32) (1,(11,(21,1112)));
 val plaintext = (c32 93, c32 134);
 
 teaML.teaDecrypt
- (key, teaML.teaEncrypt (key,plaintext)) = plaintext;
+   (key, teaML.teaEncrypt (key,plaintext)) = plaintext;

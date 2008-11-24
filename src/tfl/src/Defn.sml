@@ -164,13 +164,15 @@ fun name_of (ABBREV {bind, ...})           = bind
   | name_of (STDREC {eqs, ind, stem, ...}) = stem
   | name_of (MUTREC {eqs,ind,stem,...})    = stem
   | name_of (NESTREC{eqs,ind,stem, ...})   = stem
+  | name_of (TAILREC{eqs,ind,stem, ...})   = stem
 
 fun eqns_of (ABBREV  {eqn, ...}) = [eqn]
   | eqns_of (NONREC  {eqs, ...}) = [eqs]
   | eqns_of (PRIMREC {eqs, ...}) = [eqs]
   | eqns_of (STDREC  {eqs, ...}) = eqs
   | eqns_of (NESTREC {eqs, ...}) = eqs
-  | eqns_of (MUTREC  {eqs, ...}) = eqs;
+  | eqns_of (MUTREC  {eqs, ...}) = eqs
+  | eqns_of (TAILREC {eqs, ...}) = eqs;
 
 
 fun aux_defn (NESTREC {aux, ...}) = SOME aux
@@ -184,7 +186,8 @@ fun ind_of (ABBREV _)           = NONE
   | ind_of (PRIMREC {ind, ...}) = SOME ind
   | ind_of (STDREC  {ind, ...}) = SOME ind
   | ind_of (NESTREC {ind, ...}) = SOME ind
-  | ind_of (MUTREC  {ind, ...}) = SOME ind;
+  | ind_of (MUTREC  {ind, ...}) = SOME ind
+  | ind_of (TAILREC {ind, ...}) = SOME ind;
 
 
 fun params_of (ABBREV _)  = []
@@ -192,7 +195,8 @@ fun params_of (ABBREV _)  = []
   | params_of (NONREC {SV, ...}) = SV
   | params_of (STDREC {SV, ...}) = SV
   | params_of (NESTREC{SV, ...}) = SV
-  | params_of (MUTREC {SV, ...}) = SV;
+  | params_of (MUTREC {SV, ...}) = SV
+  | params_of (NESTREC {SV, ...}) = SV
 
 fun schematic defn = not(List.null (params_of defn));
 
@@ -201,7 +205,8 @@ fun tcs_of (ABBREV _)  = []
   | tcs_of (PRIMREC _) = []
   | tcs_of (STDREC  {eqs,...}) = op_U aconv (map hyp eqs)
   | tcs_of (NESTREC {eqs,...}) = op_U aconv (map hyp eqs)
-  | tcs_of (MUTREC  {eqs,...}) = op_U aconv (map hyp eqs);
+  | tcs_of (MUTREC  {eqs,...}) = op_U aconv (map hyp eqs)
+  | tcs_of (TAILREC {eqs,...}) = raise ERR "tcs_of" "Tail recursive definition"
 
 
 fun reln_of (ABBREV _)  = NONE
@@ -209,7 +214,8 @@ fun reln_of (ABBREV _)  = NONE
   | reln_of (PRIMREC _) = NONE
   | reln_of (STDREC  {R, ...}) = SOME R
   | reln_of (NESTREC {R, ...}) = SOME R
-  | reln_of (MUTREC  {R, ...}) = SOME R;
+  | reln_of (MUTREC  {R, ...}) = SOME R
+  | reln_of (TAILREC {R, ...}) = SOME R;
 
 
 fun nUNDISCH n th = if n<1 then th else nUNDISCH (n-1) (UNDISCH th)
@@ -285,6 +291,10 @@ fun elim_tcs (STDREC {eqs, ind, R, SV,stem}) thms =
             eqs=map (MATCH_HYPL thms) eqs,
             ind=PROVE_HYPL thms ind,
             union=elim_tcs union thms}
+  | elim_tcs (TAILREC {eqs, ind, R, SV,stem}) thms =
+     TAILREC{R=R, SV=SV, stem=stem,
+            eqs=map (MATCH_HYPL thms) eqs,
+            ind=PROVE_HYPL thms ind}
   | elim_tcs x _ = x;
 
 
@@ -431,6 +441,7 @@ in
   | save_defn (PRIMREC{bind,eqs, ...})       = been_stored (bind,eqs)
   | save_defn (NONREC {eqs, ind, stem, ...}) = store(stem,eqs,ind)
   | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,LIST_CONJ_GEN eqs,ind)
+  | save_defn (TAILREC{eqs, ind, stem, ...}) = store(stem,LIST_CONJ_GEN eqs,ind)
   | save_defn (MUTREC {eqs,ind,stem,...})    = store(stem,LIST_CONJ_GEN eqs,ind)
   | save_defn (NESTREC{eqs,ind,stem, ...})   = store(stem,LIST_CONJ_GEN eqs,ind)
 end
@@ -531,24 +542,24 @@ fun gen_wfrec_eqns thy const_eq_conv eqns =
      val corollaries = map (C SPEC corollary') given_pats
      val eqns_consts = mk_set(find_terms is_const functional)
      val (case_rewrites,congs) = extraction_thms eqns_consts thy
-     val RW = REWRITES_CONV (add_rewrites empty_rewrites 
+     val RWcnv = REWRITES_CONV (add_rewrites empty_rewrites 
                              (literal_case_THM::case_rewrites))
      val rule = unprotect_thm o
                 RIGHT_CONV_RULE
-                   (LIST_BETA_CONV THENC REPEATC (RW THENC LIST_BETA_CONV))
+                   (LIST_BETA_CONV THENC REPEATC (RWcnv THENC LIST_BETA_CONV))
      val corollaries' = map rule corollaries
      val CONST_EQ_RULE = CONV_RULE (DEPTH_CONV const_eq_conv)
      fun TRIV_PAT_ELIM (x,y,z) = 
          (PURE_REWRITE_RULE [bool_case_thm] (CONST_EQ_RULE x),y,z)
      fun TPAT_ELIM x = PURE_REWRITE_RULE [bool_case_thm] (CONST_EQ_RULE x)
      val corollaries'' = map TPAT_ELIM corollaries'
-     val Xtract = extract [R1] congs f (proto_def,WFR)
  in
     {proto_def=proto_def,
      SV=Listsort.sort Term.compare SV,
      WFR=WFR,
      pats=pats,
-     extracta = map Xtract (zip given_pats corollaries'')}
+     extracta = map (extract [R1] congs f (proto_def,WFR))
+                    (zip given_pats corollaries'')}
  end;
 
 fun wfrec_eqns thy eqns = gen_wfrec_eqns thy (!const_eq_ref) eqns;
@@ -1028,6 +1039,17 @@ fun pairf (stem,eqs0) =
  end
 end;
 
+(*---------------------------------------------------------------------------*)
+(* Following two functions used to eliminate internal variables with funky   *)
+(* names from the final products of a definition.                            *)
+(*---------------------------------------------------------------------------*)
+
+val defunk = Pmatch.defunk;
+
+fun revise_bvars th = 
+  Conv.MAP_THM Pmatch.defunk_conv th 
+  handle e as HOL_ERR _ => 
+  (HOL_MESG "revise_bvars: failed to remove internal vars, continuing"; th);
 
 local fun is_constructor tm = not (is_var tm orelse is_pair tm)
 in
@@ -1052,16 +1074,26 @@ fun non_wfrec_defn (facts,bind,eqns) =
  end
 end;
 
-
 fun mutrec_defn (facts,stem,eqns) =
  let val {rules, ind, SV, R,
           union as {rules=r,ind=i,aux,...},...} = mutrec facts stem eqns
      val union' = case aux
-      of NONE => STDREC{eqs=r,ind=i,R=R,SV=SV, stem=unionStem stem}
+      of NONE => STDREC{eqs = map revise_bvars r,
+                        ind = revise_bvars i,
+                        R = defunk R,
+                        SV=SV, stem=unionStem stem}
       | SOME{rules=raux,ind=iaux} =>
-         NESTREC{eqs=r,ind=i,R=R,SV=SV, stem=unionStem stem,
-                 aux=STDREC{eqs=raux,ind=iaux,R=R,SV=SV,stem=auxStem stem}}
- in MUTREC{eqs=rules, ind=ind, R=R, SV=SV, stem=stem, union=union'}
+         NESTREC{eqs = map revise_bvars r,
+                 ind = revise_bvars i,
+                 R = defunk R,
+                 SV=SV, stem=unionStem stem,
+                 aux=STDREC{eqs = map revise_bvars raux,
+                            ind = revise_bvars iaux,
+                            R = defunk R,
+                            SV=SV,stem=auxStem stem}}
+ in MUTREC{eqs = map revise_bvars rules, 
+           ind = revise_bvars ind, 
+           R = defunk R, SV=SV, stem=stem, union=union'}
  end
 
 
@@ -1069,9 +1101,12 @@ fun nestrec_defn (thy,(stem,stem'),wfrec_res,untuple) =
   let val {rules,ind,SV,R,aux_rules,aux_ind,...}
          = nestrec thy stem' wfrec_res
       val (rules', ind') = untuple (rules, ind)
-  in NESTREC {eqs=rules', ind=ind', R=R, SV=SV, stem=stem,
-              aux=STDREC{eqs=aux_rules, ind=aux_ind,
-                         R=R, SV=SV, stem=auxStem stem'}}
+  in NESTREC {eqs = map revise_bvars rules', 
+              ind = revise_bvars ind', 
+              R = defunk R, SV=SV, stem=stem,
+              aux=STDREC{eqs = map revise_bvars aux_rules, 
+                         ind = revise_bvars aux_ind,
+                         R = defunk R, SV=SV, stem=auxStem stem'}}
   end;
 
 
@@ -1091,11 +1126,14 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
             val r2        = MATCH_MP (DISCH_ALL (LIST_CONJ r1)) Empty_thm
             val i2        = MATCH_MP (DISCH_ALL i1) Empty_thm
         in
-           NONREC {eqs=r2, ind=i2, SV=SV, stem=stem}
+           NONREC {eqs = revise_bvars r2, 
+                   ind = revise_bvars i2, SV=SV, stem=stem}
         end handle HOL_ERR _ => raise ERR "stdrec_defn" "")
   | otherwise =>
         let val (rules', ind') = untuple (rules, ind)
-        in STDREC {eqs=rules',ind=ind', R=R, SV=SV, stem=stem}
+        in STDREC {eqs = map revise_bvars rules',
+                   ind = revise_bvars ind', 
+                   R = defunk R, SV=SV, stem=stem}
         end
  end;
 
@@ -1119,36 +1157,34 @@ fun prim_mk_defn stem eqns =
   handle HOL_ERR _ => 
   case all_fns eqns
    of [] => raise ERR "prim_mk_defn" "no eqns"
-    | (fns as (_::_::_))  (* more than 1 defn being made *)
-       => mutrec_defn (facts,stem,eqns)
     | [_] => (* one defn being made *)
-    let 
-    val ((f,args),rhs) = dest_hd_eqn eqns
-    val _ = length args > 0 
-       orelse
-         (free_in f rhs andalso
-          raise ERR "prim_mk_defn" "Simple nullary definition recurses") 
-       orelse
-         (let val fvs = free_vars rhs
-          in not (null fvs) andalso
-             raise ERR "prim_mk_defn"
+    let val ((f,args),rhs) = dest_hd_eqn eqns
+        val _ = length args > 0 
+         orelse
+           (free_in f rhs andalso
+            raise ERR "prim_mk_defn" "Simple nullary definition recurses") 
+         orelse
+           (let val fvs = free_vars rhs
+            in not (null fvs) andalso
+               raise ERR "prim_mk_defn"
                     ("Free variables (" ^
                      String.concat (Lib.commafy (map (#1 o dest_var) fvs)) ^
                      ") on RHS of nullary definition")
-          end) 
-       orelse
-         raise ERR "prim_mk_defn" "Nullary definition failed - giving up"
-    val (tup_eqs,stem',untuple) = pairf(stem,eqns)
+            end) 
+         orelse raise ERR "prim_mk_defn" 
+                          "Nullary definition failed - giving up"
+        val (tup_eqs,stem',untuple) = pairf(stem,eqns)
             handle HOL_ERR _ => raise ERR "prim_mk_defn"
                "failure in internal translation to tupled format"
-    val wfrec_res = wfrec_eqns facts tup_eqs
+        val wfrec_res = wfrec_eqns facts tup_eqs
     in
       if exists I (#3 (unzip3 (#extracta wfrec_res)))   (* nested *)
       then nestrec_defn (facts,(stem,stem'),wfrec_res,untuple)
       else stdrec_defn  (facts,(stem,stem'),wfrec_res,untuple)
     end
+    | (_::_::_) => mutrec_defn (facts,stem,eqns)  (* mutrec defns being made *)
  end
- handle e => raise wrap_exn "Defn" "mk_defn" e;
+ handle e => raise wrap_exn "Defn" "prim_mk_defn" e;
 
 (*---------------------------------------------------------------------------*)
 (* Version of mk_defn that restores the term signature and grammar if it     *)
@@ -1180,8 +1216,7 @@ fun mk_Rdefn stem R eqs =
 (*---------------------------------------------------------------------------*)
 
 fun TC rels_0 =
- let val rels_1 = map (fn (x,Y) => (x,(Y,Y))) rels_0
-     fun step a = Lib.assoc a rels_0 handle HOL_ERR _ => []
+ let fun step a = Lib.assoc a rels_0 handle HOL_ERR _ => []
      fun relstep rels (x,(Y,fringe)) = 
        let val fringe' = U (map step fringe)
            val Y' = union Y fringe'
@@ -1193,7 +1228,7 @@ fun TC rels_0 =
         of (_,[]) => map (fn (x,(Y,_)) => (x,Y)) rels
          | (nullrels,nnullrels) => steps (map (relstep rels) nnullrels @ nullrels)
  in 
-   steps rels_1
+   steps (map (fn (x,Y) => (x,(Y,Y))) rels_0)
  end;
 
 (*---------------------------------------------------------------------------*)

@@ -120,3 +120,8 @@ Currently here are the following:
 
       This file contains a development of propositional logic, up 
       to the completeness theorem.
+
+  * ordinal
+
+      This directory contains a formalization of the ordinals up to e0
+      and proves corresponding induction and recursion theorems.

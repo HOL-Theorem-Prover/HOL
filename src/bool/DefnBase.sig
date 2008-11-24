@@ -12,6 +12,7 @@ sig
                  stem:string,union:defn}
    | NESTREC of {eqs:thm list, ind:thm, R:term,SV:term list,
                  stem:string,aux:defn}
+   | TAILREC of {eqs:thm list, ind:thm, R:term, SV:term list, stem:string}
 
 
   val pp_defn : ppstream -> defn -> unit
