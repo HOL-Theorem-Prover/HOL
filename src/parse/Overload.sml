@@ -52,8 +52,10 @@ val null_oinfo : overload_info =
 fun oinfo_ops (oi,_) = Binarymap.listItems oi
 fun print_map (_, pm) = let
   fun foldthis (_,(t,nm,_),acc) =
-      (lose_constrec_ty (dest_thy_const t),nm) :: acc
-      handle HOL_ERR _ => acc
+      if Theory.uptodate_term t then
+        (lose_constrec_ty (dest_thy_const t),nm) :: acc
+        handle HOL_ERR _ => acc
+      else acc
 in
   PrintMap.fold foldthis [] pm
 end
@@ -147,6 +149,13 @@ fun aul tyl =
       [] => raise Fail "Overload.aul applied to empty list - shouldn't happen"
     | (h::t) => foldl (uncurry anti_unify) h t
 
+fun au_tml tml =
+    case tml of
+      [] => raise Fail "Overload.au_tml applied to empty list: shouldn't happen"
+    | tm :: tms => foldl (fn (t,acc) => anti_unify (type_of t) acc)
+                         (type_of tm)
+                         tms
+
 fun fupd_actual_ops f {base_type, actual_ops, tyavoids} =
   {base_type = base_type, actual_ops = f actual_ops, tyavoids = tyavoids}
 
@@ -180,16 +189,18 @@ end
 
 fun remove_overloaded_form s (oinfo:overload_info) = let
   val (op2cnst, cnst2op) = oinfo
-  val (okopc, badopc) = (I ## #actual_ops) (Binarymap.remove(op2cnst, s))
+  val (okopc, badopc0) = (I ## #actual_ops) (Binarymap.remove(op2cnst, s))
     handle Binarymap.NotFound => (op2cnst, [])
+  val badopc = List.filter Theory.uptodate_term badopc0
   (* will keep okopc, but should now remove from cnst2op all pairs of the form
        (c, s)
      where s is the s above *)
-  fun foldthis (k,(t,v,_),acc as (map,removed)) =
-      if v = s then (#1 (PrintMap.delete (map, k)), t ::removed)
-      else acc
+  fun foldthis (k,fullv as (t,v,_),acc as (map,removed)) =
+      if not (Theory.uptodate_term t) then (map, removed)
+      else if v = s then (map, t ::removed)
+      else (PrintMap.insert(map, k, fullv), removed)
 
-  val (okcop, badcop) = PrintMap.fold foldthis (cnst2op,[]) cnst2op
+  val (okcop, badcop) = PrintMap.fold foldthis (PrintMap.empty,[]) cnst2op
 in
   ((okopc, okcop), (badopc, badcop))
 end
@@ -236,33 +247,44 @@ fun ntys_equal {Ty = ty1,Name = n1, Thy = thy1}
    it's at the head of the list, meaning that it will be the first choice
    in ambigous resolutions. *)
 fun add_overloading (opname, term) oinfo = let
+  val _ = Theory.uptodate_term term orelse
+          raise OVERLOAD_ERR "Term is out-of-date"
   val (opc0, cop0) = oinfo
   val opc =
       case info_for_name oinfo opname of
-        SOME {base_type, actual_ops, tyavoids} => let
+        SOME {base_type, actual_ops = a0, tyavoids} => let
           (* this name is already overloaded *)
+          val actual_ops = List.filter Theory.uptodate_term a0
+          val changed = length actual_ops <> length a0
         in
           case Lib.total (Lib.pluck (aconv term)) actual_ops of
             SOME (_, rest) => let
               (* this term was already in the map *)
               (* must replace it *)
+              val (avoids, base_type) =
+                  if changed then
+                    (tmlist_tyvs (free_varsl actual_ops), au_tml actual_ops)
+                  else (tyavoids, base_type)
             in
               Binarymap.insert(opc0, opname,
                                {actual_ops = term::rest,
                                 base_type = base_type,
-                                tyavoids = tyavoids})
+                                tyavoids = avoids})
             end
           | NONE => let
               (* Wasn't in the map, so can just cons its record in *)
-              val newbase = anti_unify base_type (type_of term)
-              val new_avoids = tmlist_tyvs (free_vars term)
+              val (newbase, new_avoids) =
+                  if changed then
+                    (au_tml (term::actual_ops),
+                     tmlist_tyvs (free_varsl (term::actual_ops)))
+                  else
+                    (anti_unify base_type (type_of term),
+                     Lib.union (tmlist_tyvs (free_vars term)) tyavoids)
             in
-              fupd_dict_at_key
-                opname
-                (fupd_actual_ops (cons term) o
-                 fupd_base_type (fn b => newbase) o
-                 fupd_tyavoids (Lib.union new_avoids))
-                opc0
+              Binarymap.insert(opc0, opname,
+                               {actual_ops = term :: actual_ops,
+                                base_type = newbase,
+                                tyavoids = new_avoids})
             end
         end
       | NONE =>
@@ -339,9 +361,7 @@ fun strip_comb ((_, prmap): overload_info) t = let
   val cmp = inv_img_cmp (fn (a,b,c,d) => (a,(b,c))) cmp0
 
   fun test ((fvs, pat), (orig, nm, tstamp)) = let
-    val tyvs = List.foldl (fn (t, acc) => union (type_vars_in_term t) acc)
-                          []
-                          fvs
+    val tyvs = tmlist_tyvs fvs
     val tmset = HOLset.addList(empty_tmset, fvs)
     val ((tmi0,tmeq),(tyi0,tyeq)) = raw_match tyvs tmset pat t ([],[])
     val tmi = HOLset.foldl (fn (t,acc) => if HOLset.member(tmset,t) then acc
@@ -420,7 +440,9 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) : overload_info = let
         | GREATER => merge ((k2, op2)::acc) op1s op2s'
       end
     infix ##
-    fun foldthis (k,v,acc) = PrintMap.insert(acc,k,v)
+    fun foldthis (k,v as (t,_,_),acc) =
+        if Theory.uptodate_term t then PrintMap.insert(acc,k,v)
+        else acc
     val new_prmap = PrintMap.fold foldthis (#2 O2) (#2 O1)
 in
   (List.foldr (fn ((k,v),dict) => Binarymap.insert(dict,k,v))
