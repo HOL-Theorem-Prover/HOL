@@ -1,15 +1,19 @@
-// FlasherManager with generated ramdom values for in8 to in13
-// and 2 calls to F1 
-public class GeneratedFlasherManager{
+// FlasherManager with 2 calls to F1 (loop has been unfolded
+// 2 times)
+// random variables are given as input variables 
+// in8_1,in9_1,...,in13_1 (random values for step 1 into the loop)
+// in8_2,in9_2,...,in13_2 (random values for step 2 into the loop)
+
+public class TwoLoopsFlasherManager{
 
 /*@ ensures \result<3; */
-int flashManager() {
-   int in8=0;
-   int in9=0;
-   int in10=0;
-   int in11=0;
-   int in12=0;
-   int in13=0;
+int flashManager(   int in8_1, int in9_1, int in10_1, int in11_1,
+   int in12_1, int in13_1, int in8_2, int in9_2,int in10_2,
+   int in11_2, int in12_2, int in13_2) {
+    // in8_1 to in13_1 are random inputs for step 1 into the loop
+    // in8_2 to in13_2 are random inputs for step 2 into the loop
+
+    // initialization
    int in18=1;
    int Model_Outputs3=0;
    int Model_Outputs4=0;
@@ -119,26 +123,19 @@ int flashManager() {
 
 
    // call to f1() for step 0
-   // generated ramdom values 
-   in8=0;
-   in9=1;
-   in10=0;
-   in11=1;
-   in12=1;
-   in13=1;
    if (in18==1) {
-     Data_Type_Conversion_a = in11;
-     if ((in10 == 1) && (1 != Unit_Delay_a_DSTATE))
+     Data_Type_Conversion_a = in11_1;
+     if ((in10_1 == 1) && (1 != Unit_Delay_a_DSTATE))
          {and_b = 1;} else  {and_b = 0;}
      Unit_Delay_g = Unit_Delay_g_DSTATE;
-     cas = ((1 + in12) + Data_Type_Conversion_a * 2);
+     cas = ((1 + in12_1) + Data_Type_Conversion_a * 2);
      if (cas==1) {Multiport_Switch = Unit_Delay_g;}
      else {if (cas==2) { Multiport_Switch = 1;}
      else {if (cas==3) {Multiport_Switch = 0;}}}
      if ((Unit_Delay_g == 0) && (0 != Unit_Delay_b_DSTATE))
          {and_c = 1;} else {and_c =0;}
-     if (in13==1) {
-     	Switch5 = in8;
+     if (in13_1==1) {
+     	Switch5 = in8_1;
      }
      else {
      	Switch5 = 0;
@@ -184,8 +181,8 @@ int flashManager() {
      else {
      	Switch3_b = 0;
      }
-     if (in13==1) {
-     	Switch4_a = in9;
+     if (in13_1==1) {
+     	Switch4_a = in9_1;
      }
      else {
      	Switch4_a = 0;
@@ -360,7 +357,7 @@ int flashManager() {
      if (Data_Type_Conversion_d==1 || Data_Type_Conversion_c==1)
          {rtb_Logical_Operator1 = 1;} else {rtb_Logical_Operator1 = 0;}
      if ((and_b==1 && ( ! (Warning_Acti_ZCE==1)))) {
-     	if (in10==1) {
+     	if (in10_1==1) {
      	    if (! (Unit_Delay3_c_DSTATE==1))
      		{Logical_Operator2 =1;} 
                    else { Logical_Operator2 =0;
@@ -372,7 +369,7 @@ int flashManager() {
      	Unit_Delay3_c_DSTATE = Switch_g;
      }
      Warning_Acti_ZCE = and_b;
-     if (in13==1) {
+     if (in13_1==1) {
      	Switch6 = Switch_g;
      }
      else {
@@ -447,7 +444,7 @@ int flashManager() {
    Model_Outputs3 = Switch2_a;
    Model_Outputs4 = Switch3_a;
    if (in18==1) {
-     Unit_Delay_a_DSTATE = in10;
+     Unit_Delay_a_DSTATE = in10_1;
      Unit_Delay_g_DSTATE = Multiport_Switch;
      Unit_Delay_b_DSTATE = Unit_Delay_g;
      Unit_Delay3_a_DSTATE = Switch5;
@@ -480,26 +477,19 @@ int flashManager() {
 
 
    // call to f1() for step 1
-   // generated ramdom values 
-   in8=1;
-   in9=0;
-   in10=1;
-   in11=0;
-   in12=0;
-   in13=0;
    if (in18==1) {
-     Data_Type_Conversion_a = in11;
-     if ((in10 == 1) && (1 != Unit_Delay_a_DSTATE))
+     Data_Type_Conversion_a = in11_2;
+     if ((in10_2 == 1) && (1 != Unit_Delay_a_DSTATE))
          {and_b = 1;} else  {and_b = 0;}
      Unit_Delay_g = Unit_Delay_g_DSTATE;
-     cas = ((1 + in12) + Data_Type_Conversion_a * 2);
+     cas = ((1 + in12_2) + Data_Type_Conversion_a * 2);
      if (cas==1) {Multiport_Switch = Unit_Delay_g;}
      else {if (cas==2) { Multiport_Switch = 1;}
      else {if (cas==3) {Multiport_Switch = 0;}}}
      if ((Unit_Delay_g == 0) && (0 != Unit_Delay_b_DSTATE))
          {and_c = 1;} else {and_c =0;}
-     if (in13==1) {
-     	Switch5 = in8;
+     if (in13_2==1) {
+     	Switch5 = in8_2;
      }
      else {
      	Switch5 = 0;
@@ -545,8 +535,8 @@ int flashManager() {
      else {
      	Switch3_b = 0;
      }
-     if (in13==1) {
-     	Switch4_a = in9;
+     if (in13_2==1) {
+     	Switch4_a = in9_2;
      }
      else {
      	Switch4_a = 0;
@@ -721,7 +711,7 @@ int flashManager() {
      if (Data_Type_Conversion_d==1 || Data_Type_Conversion_c==1)
          {rtb_Logical_Operator1 = 1;} else {rtb_Logical_Operator1 = 0;}
      if ((and_b==1 && ( ! (Warning_Acti_ZCE==1)))) {
-     	if (in10==1) {
+     	if (in10_2==1) {
      	    if (! (Unit_Delay3_c_DSTATE==1))
      		{Logical_Operator2 =1;} 
                    else { Logical_Operator2 =0;
@@ -733,7 +723,7 @@ int flashManager() {
      	Unit_Delay3_c_DSTATE = Switch_g;
      }
      Warning_Acti_ZCE = and_b;
-     if (in13==1) {
+     if (in13_2==1) {
      	Switch6 = Switch_g;
      }
      else {
@@ -808,7 +798,7 @@ int flashManager() {
    Model_Outputs3 = Switch2_a;
    Model_Outputs4 = Switch3_a;
    if (in18==1) {
-     Unit_Delay_a_DSTATE = in10;
+     Unit_Delay_a_DSTATE = in10_2;
      Unit_Delay_g_DSTATE = Multiport_Switch;
      Unit_Delay_b_DSTATE = Unit_Delay_g;
      Unit_Delay3_a_DSTATE = Switch5;
