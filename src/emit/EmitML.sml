@@ -274,25 +274,29 @@ fun term_to_ML openthys side ppstrm =
      if is_comb tm then pp_comb i tm
      else raise ERR "term_to_ML"
                     ("Unknown syntax with term: "^Parse.term_to_string tm)
-  and pp_cond i tm =
-         let val (b,a1,a2) = dest_cond tm
-         in begin_block CONSISTENT 0;
-            lparen i (if !emitOcaml then minprec else 70);
-            begin_block INCONSISTENT 2;
-            add_string"if ";
-            begin_block INCONSISTENT 0; pp 70 b; end_block();
-            add_break(1,0);
-            add_string"then";
-            add_break(1,0);
-            begin_block INCONSISTENT 0; pp 70 a1; end_block();
-            add_break(1,0);
-            add_string"else";
-            add_break(1,0);
-            begin_block INCONSISTENT 0; pp minprec a2; end_block();
-            end_block();
-            rparen i (if !emitOcaml then minprec else 70);
-            end_block()
-         end
+  and pp_cond i tm = let
+    val (b,a1,a2) = dest_cond tm
+    val parens = i >= (if !emitOcaml then minprec else 70)
+    fun conddo b f = if b then f() else ()
+  in
+    conddo parens (fn () => (add_string "("; begin_block CONSISTENT 0));
+      begin_block CONSISTENT 0;
+        add_string"if";
+        add_break(1,2);
+        begin_block INCONSISTENT 0; pp 70 b; end_block();
+        add_break(1,0);
+        add_string"then";
+      end_block();
+      add_break(1,2);
+      begin_block INCONSISTENT 0; pp 70 a1; end_block();
+      add_break(1,0);
+      begin_block CONSISTENT 0;
+        add_string"else";
+        add_break(1,2);
+        pp minprec a2;
+      end_block();
+    conddo parens (fn () => (end_block(); add_string ")"))
+  end
   and pp_num_from_string s =
         if s="0" then
           add_string (pick_name openthys "num" ("ZERO",numML ^ "ZERO"))
@@ -1262,9 +1266,13 @@ fun munge_def_type def =
 (*---------------------------------------------------------------------------*)
 
 fun add (is_type_cons, s) c =
-   let val {Name,Thy,Ty} = dest_thy_const c
-   in ConstMapML.prim_insert(c,(is_type_cons,s,Name,Ty))
-   end;
+    case ConstMapML.exact_peek c of
+      NONE => let
+        val {Name,Thy,Ty} = dest_thy_const c
+      in
+        ConstMapML.prim_insert(c,(is_type_cons,s,Name,Ty))
+      end
+    | SOME _ => ()
 
 fun install_consts _ [] = []
   | install_consts s (iDEFN_NOSIG thm::rst) = install_consts s (iDEFN thm::rst)
@@ -1307,21 +1315,43 @@ fun mk_file_ppstream file =
 (* definitions and datatype constructors exported as ML.                     *)
 (*---------------------------------------------------------------------------*)
 
-fun emit_adjoin_call thy (consts,pcs) =
- let
-   fun eqtyvars c = map dest_vartype(gather is_eqtyvar(type_vars_in_term c))
-   fun name_thy c = let val {Name,Thy,...} = dest_thy_const c in (Name,Thy) end
-   val sclist = map (fn (x,c) => (x, (eqtyvars c,name_thy c))) consts
-   fun listify slist = "["^String.concat (commafy slist)^"]"
-   fun paren2 (a,b) = "("^a^","^b^")"
-   fun paren4 (a,(b,(c,d))) = "(" ^ a ^ "," ^ "(" ^
-                              listify b ^ "," ^ c ^ "," ^ d ^ "))"
-   fun extern_pc (c,a) =
-     let val (n,thy) = name_thy c
-         val n' = mlquote n
-         val thy' = mlquote thy
-     in ("(prim_mk_const{Name="^n'^",Thy="^thy'^"},"^Int.toString a^")")
+fun emit_adjoin_call thy (consts,pcs) = let
+  fun listify slist = "["^String.concat (commafy slist)^"]"
+  fun paren2 (a,b) = "("^a^","^b^")"
+  fun paren4 (a,{Name,Thy,Ty}) =
+      "(" ^ a ^ "," ^ "{Name =" ^ Name ^ ", Thy = " ^ Thy ^ ", Ty = " ^ Ty ^
+      "})"
+  fun extern_pc (c,a) =
+      let val {Thy=thy,Name=n,...} = dest_thy_const c
+          val n' = mlquote n
+          val thy' = mlquote thy
+      in ("(prim_mk_const{Name="^n'^",Thy="^thy'^"},"^Int.toString a^")")
      end
+  val (ppty, _) = Parse.print_from_grammars Parse.min_grammars
+  fun safetyprint ty = String.toString (PP.pp_to_string 10000 ppty ty)
+
+  fun pr3 pps ({Name,Thy,Ty}, (b,s2,ty)) = let
+    open PP
+    val S = add_string pps
+    fun BB() = begin_block pps INCONSISTENT 0
+    fun EB() = end_block pps
+    fun brk n = add_break pps (1,n)
+    fun ppty ty = (BB(); S "typ"; brk 0; S "\""; S (safetyprint Ty); S "\"";
+                   EB())
+  in
+    S "("; BB();
+     S "{"; BB();
+       BB(); S "Name ="; brk 0; S (mlquote Name ^ ","); EB(); brk 0;
+       BB(); S "Thy ="; brk 0; S (mlquote Thy ^","); EB(); brk 0;
+       BB(); S "Ty ="; brk 2; ppty Ty; EB();
+     EB(); S "},"; brk 0;
+     S "("; BB();
+       S (Bool.toString b ^ ","); brk 0;
+       S (Lib.mlquote s2 ^ ","); brk 0;
+       ppty ty;
+     EB(); S ")";
+   EB(); S ")"
+  end
  in
   Theory.adjoin_to_theory
   {sig_ps = NONE,
@@ -1330,23 +1360,31 @@ fun emit_adjoin_call thy (consts,pcs) =
         val S = add_string ppstrm
         fun NL() = add_newline ppstrm
         val BR = add_break ppstrm
+        fun getdata c = let
+          val (b,pfx,s,ty) = ConstMapML.apply c
+        in
+          (b,s,ty)
+        end
     in
      S "val _ = "; NL();
-     S "   let fun dconst thy (is_type_cons,c) = "; NL();
-     S "         let val {Name,Ty,...} = Term.dest_thy_const c"; NL();
-     S "         in (c,(is_type_cons,thy,Name,Ty))"; NL();
+     S "   let open Parse"; NL();
+     S "       fun doit (r,(b,s,ty)) = "; NL();
+     S "         let val c = Term.mk_thy_const r"; NL();
+     S ("         in ConstMapML.prim_insert(c,(b,"^Lib.quote thy^",s,ty))");
+     NL();
      S "         end"; NL();
-     S "       val clist = map (fn (a,b) => (a,ConstMapML.iconst b))"; NL();
-     S"         [";
+     S "       fun typ s = Feedback.trace (\"Vartype Format Complaint\", 0)\n\
+       \                      (#1 (parse_from_grammars min_grammars))\n\
+       \                      [QUOTE (\":\"^s)]"; NL();
+     S "   in"; NL();
+     S "     List.app doit ["; NL();
+     S "       ";
      begin_block ppstrm INCONSISTENT 0;
-     Portable.pr_list S (fn () => S",")
-                        (fn () => BR(1,0))
-         (map (paren4 o
-            (Bool.toString##(map Lib.quote)##Lib.mlquote##Lib.mlquote)) sclist);
-     end_block ppstrm;
-     S"]"; NL();
-     S "   in "; NL();
-     S ("     List.app ConstMapML.prim_insert (map (dconst "^Lib.quote thy^") clist)"); NL();
+     Portable.pr_list (pr3 ppstrm) (fn () => S",") (fn () => BR(1,0))
+                      (map (fn (_, c) => (dest_thy_const c, getdata c))
+                           consts);
+     end_block ppstrm; NL();
+     S "     ]"; NL();
      S "   end"; NL(); NL();
      if null pcs then ()
      else
