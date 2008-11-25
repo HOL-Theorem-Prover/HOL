@@ -1291,7 +1291,7 @@ fun pp_term (G : grammar) TyG = let
           endblock(); pend addparens
         end
       | PREFIX (BINDER lst) => let
-          val tok = case hd lst of 
+          val tok = case hd lst of
                       LAMBDA => hd lambda (* should never happen *)
                     | BinderString r => #tok r
           fun find (bopt, s) = if bopt = SOME fname then SOME s else NONE
@@ -1503,7 +1503,7 @@ fun pp_term (G : grammar) TyG = let
                 pr_sole_name s (map #2 (valOf crules))
               else if s = "0" andalso can_pr_numeral NONE then
                 pr_numeral NONE tm
-              else if Name="EMPTYSTRING" andalso Thy="string" then
+              else if Literal.is_emptystring tm then
                 add_string "\"\""
               else add_string s
             end
@@ -1593,15 +1593,15 @@ fun pp_term (G : grammar) TyG = let
                    if isSome restr_binder andalso length args = 1 andalso
                       my_is_abs Rand
                    then let
-                       val bindex = case valOf restr_binder of 
+                       val bindex = case valOf restr_binder of
                                       NONE => binder_to_string G LAMBDA
                                     | SOME s => s
                        val optrule = lookup_term bindex
                        fun ok_rule (_, r) =
-                           case r of 
-                             PREFIX(BINDER b) => let 
-                             in 
-                               case hd b of 
+                           case r of
+                             PREFIX(BINDER b) => let
+                             in
+                               case hd b of
                                  LAMBDA => true
                                | BinderString r => #preferred r
                              end
@@ -1655,8 +1655,8 @@ fun pp_term (G : grammar) TyG = let
                   | LISTRULE list => is_list (hd list) tm
                 val crules = List.filter (suitable_rule o #2) crules0
                 fun is_preferred (LISTRULE _) = true
-                  | is_preferred (PREFIX (BINDER [BinderString r])) = 
-                     #preferred r 
+                  | is_preferred (PREFIX (BINDER [BinderString r])) =
+                     #preferred r
                   | is_preferred r = #preferred (hd (rule_to_rr r))
                 val crules = List.filter (is_preferred o #2) crules
                 fun is_lrule (LISTRULE _) = true | is_lrule _ = false
@@ -1664,14 +1664,14 @@ fun pp_term (G : grammar) TyG = let
                   | is_binder_rule _ = false
                 val (lrules, others) = splitP (is_lrule o #2) crules
               in
-                if not (null lrules) then 
+                if not (null lrules) then
                   pr_comb_with_rule (#2 (hd lrules))
-                                    {fprec = #1 (hd lrules), 
-                                     fname=fname, f=f} 
+                                    {fprec = #1 (hd lrules),
+                                     fname=fname, f=f}
                                     args Rand
-                else 
-                  case others of 
-                    (p,r) :: _ => 
+                else
+                  case others of
+                    (p,r) :: _ =>
                           pr_comb_with_rule r {fprec=p, fname=fname, f=f}
                           args Rand
                   | [] => pr_comb tm Rator Rand
@@ -1680,8 +1680,8 @@ fun pp_term (G : grammar) TyG = let
           fun maybe_pr_atomf () =
             case Overload.overloading_of_term overload_info f of
               SOME s => pr_atomf s
-            | NONE => if is_var f andalso 
-                         not (String.isPrefix GrammarSpecials.fakeconst_special 
+            | NONE => if is_var f andalso
+                         not (String.isPrefix GrammarSpecials.fakeconst_special
                                               (#1 (dest_var f)))
                       then pr_atomf (atom_name f)
                       else pr_comb tm Rator Rand

@@ -193,7 +193,7 @@ val thms =
    word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
    word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
    l2n_def,n2l_def,s2n_def,n2s_def,l2w_def,w2l_def,s2w_def,w2s_def,
-   HEX_def,UNHEX_def,stringTheory.EXPLODE_EQNS,stringTheory.IMPLODE_EQNS,
+   HEX_def,UNHEX_def,
    num_from_bin_list_def,num_from_oct_list_def,num_from_dec_list_def,
    num_from_hex_list_def,num_to_bin_list_def,num_to_oct_list_def,
    num_to_dec_list_def,num_to_hex_list_def,num_from_bin_string_def,

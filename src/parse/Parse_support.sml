@@ -93,14 +93,14 @@ end;
  * Generating fresh constant instances                                       *
  *---------------------------------------------------------------------------*)
 
-fun gen_thy_const l (thy,s) = let 
+fun gen_thy_const l (thy,s) = let
   open Term
   val c = prim_mk_const{Name=s, Thy=thy}
-in 
-  Preterm.Const {Name=s, 
-                 Thy=thy, 
+in
+  Preterm.Const {Name=s,
+                 Thy=thy,
                  Locn=l,
-                 Ty=Pretype.rename_typevars [] 
+                 Ty=Pretype.rename_typevars []
                                             (Pretype.fromType (type_of c))}
 end
 
@@ -156,33 +156,33 @@ fun gen_overloaded_const oinfo l s =
      val opinfo = valOf (info_for_name oinfo s)
          handle Option => raise Fail "gen_overloaded_const: invariant failure"
  in
-  case #actual_ops opinfo of 
-    [t] => let 
+  case #actual_ops opinfo of
+    [t] => let
     in
-      if is_const t then let 
+      if is_const t then let
           val {Name,Thy,Ty} = dest_thy_const t
         in
           Preterm.Const{Name=Name, Thy=Thy, Locn=l,
                         Ty=Pretype.rename_typevars [] (Pretype.fromType Ty)}
         end
-      else let 
-          val fvs = free_vars t 
+      else let
+          val fvs = free_vars t
           val tyfvs = List.foldl (fn (t, acc) => Lib.union (type_vars_in_term t)
                                                            acc)
                                  []
                                  fvs
         in
-          Preterm.Pattern{Ptm = Preterm.term_to_preterm 
-                                  (map dest_vartype tyfvs) t, 
+          Preterm.Pattern{Ptm = Preterm.term_to_preterm
+                                  (map dest_vartype tyfvs) t,
                           Locn = l}
         end
     end
   | otherwise => let
       val base_pretype0 = Pretype.fromType (#base_type opinfo)
-      val new_pretype = Pretype.rename_typevars 
-                          (map dest_vartype (#tyavoids opinfo)) 
+      val new_pretype = Pretype.rename_typevars
+                          (map dest_vartype (#tyavoids opinfo))
                           base_pretype0
-    in 
+    in
       Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo, Locn = l}
     end
  end
@@ -234,9 +234,13 @@ fun make_string_literal l s =
                       ("String literals not allowed - "^
                        "load \"stringTheory\" first."))
     else let
-        val stm = prim_mk_const {Name = "STRING", Thy = "string"}
+        val char_ty = mk_thy_type {Tyop = "char", Thy = "string", Args = []}
+        val str_ty = mk_thy_type {Tyop = "list", Thy = "list", Args = [char_ty]}
+        val stm = mk_thy_const {Name = "CONS", Thy = "list",
+                                Ty = char_ty --> str_ty --> str_ty}
         val ctm = prim_mk_const {Name = "CHR", Thy = "string"}
-        val etm = prim_mk_const{Name = "EMPTYSTRING", Thy = "string"}
+        val etm = mk_thy_const{Name = "NIL", Thy = "list",
+                               Ty = str_ty}
       in
         Preterm.Antiq {Locn = l,
                        Tm = Literal.mk_string_lit
@@ -275,7 +279,7 @@ fun make_atom oinfo l s E =
     (gen_overloaded_const oinfo l s, E)
   else
     case List.find (fn rfn => String.isPrefix rfn s)
-                   [recsel_special, recupd_special, recfupd_special] of 
+                   [recsel_special, recupd_special, recfupd_special] of
       NONE => if Lexis.is_string_literal s then (make_string_literal l s, E)
               else if Lexis.is_char_literal s then (make_char_literal l s, E)
               else make_free_var l (s, E)
@@ -322,15 +326,15 @@ end;
   found in tm to E.
  ----------------------------------------------------------------------------*)
 
-fun bind_term _ alist tm (E as {scope=scope0,...}:env) = let 
-  fun itthis a (e,f) = let 
-    val (g,e') = a e 
-  in 
-    (e', f o g) 
+fun bind_term _ alist tm (E as {scope=scope0,...}:env) = let
+  fun itthis a (e,f) = let
+    val (g,e') = a e
+  in
+    (e', f o g)
   end
   val (E',F) = rev_itlist itthis alist (E,I)
   val (tm',({free=free1,...}:env)) = tm E'
-in 
+in
   (F tm', {scope=scope0,free=free1})
 end
 
@@ -407,11 +411,11 @@ end
  *---------------------------------------------------------------------------*)
 fun make_let oinfo l bindings tm env = let
   open Preterm
-  fun itthis (bvs, arg) {body_bvars,args,E} = let 
+  fun itthis (bvs, arg) {body_bvars,args,E} = let
     val (b,rst) = (hd bvs,tl bvs)
     val (arg',E') =
         case rst of [] => arg E | L => bind_term l L arg E
-  in 
+  in
     {body_bvars = b::body_bvars, args=arg'::args, E=E'}
   end
   val {body_bvars, args, E} =
@@ -454,7 +458,7 @@ fun make_set_abs oinfo l (tm1,tm2) (E as {scope=scope0,...}:env) = let
                  intersect tm1_fv_names tm2_fv_names
   val init_fv = #free e3
 in
-  case gather (fn (name,_) => mem name fv_names) init_fv of 
+  case gather (fn (name,_) => mem name fv_names) init_fv of
     [] => raise ERRORloc "make_set_abs" l "no free variables in set abstraction"
   | quants => let
       val quants' = map
@@ -465,7 +469,7 @@ in
                               add_scope(bnd,E)))
                       (rev quants) (* make_vstruct expects reverse occ. order *)
       fun comma E = (gen_overloaded_const oinfo l ",", E)
-    in 
+    in
       list_make_comb l
                      [(make_set_const oinfo l "make_set_abs" "GSPEC"),
                       (bind_term l [make_vstruct oinfo l quants' NONE]

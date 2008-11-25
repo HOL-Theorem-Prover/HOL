@@ -87,8 +87,17 @@ val l2n_def = Define`
 val n2l_def = Define`
   n2l b n = if n < b \/ b < 2 then [n MOD b] else n MOD b :: n2l b (n DIV b)`;
 
-val s2n_def = Define `s2n b f s = l2n b (MAP f (REVERSE (EXPLODE s)))`;
-val n2s_def = Define `n2s b f n = IMPLODE (REVERSE (MAP f (n2l b n)))`;
+val s2n_def = Define `s2n b f (s:string) = l2n b (MAP f (REVERSE s))`;
+val n2s_def = Define `n2s b f n : string = REVERSE (MAP f (n2l b n))`;
+
+val s2n_compute = store_thm(
+  "s2n_compute",
+  `s2n b f s = l2n b (MAP f (REVERSE (EXPLODE s)))`,
+  SRW_TAC [][stringTheory.IMPLODE_EXPLODE_I, s2n_def])
+val n2s_compute = store_thm(
+  "n2s_compute",
+  `n2s b f n = IMPLODE (REVERSE (MAP f (n2l b n)))`,
+  SRW_TAC [][stringTheory.IMPLODE_EXPLODE_I, n2s_def])
 
 val HEX_def = Define`
   (HEX 0 = #"0") /\
@@ -1018,7 +1027,7 @@ val NOT_BIT_GT_BITWISE = store_thm("NOT_BIT_GT_BITWISE",
                   ZERO_LT_TWOEXP, LESS_LESS_EQ_TRANS]
     \\ ASM_SIMP_TAC std_ss [NOT_BIT_GT_TWOEXP]);
 
-val LT_TWOEXP = store_thm("LT_TWOEXP", 
+val LT_TWOEXP = store_thm("LT_TWOEXP",
   `!x n. x < 2 ** n = (x = 0) \/ LOG2 x < n`,
   Cases \\ SRW_TAC [] [ZERO_LT_TWOEXP, LOG2_def]
     \\ EQ_TAC \\ SRW_TAC [] []
@@ -1302,13 +1311,13 @@ val REVERSE_LASTN = prove(
 
 val n2s_s2n = store_thm("n2s_s2n",
   `!c2n n2c b s.
-     1 < b /\ EVERY ($> b o c2n) (EXPLODE s) ==>
+     1 < b /\ EVERY ($> b o c2n) s ==>
      (n2s b n2c (s2n b c2n s) =
        if s2n b c2n s = 0 then STRING (n2c 0) ""
-       else TRANSFORM (MAP (n2c o c2n) o LASTN (SUC (LOG b (s2n b c2n s)))) s)`,
-  SRW_TAC [] [s2n_def, n2s_def, TRANSFORM_def]
+       else MAP (n2c o c2n) (LASTN (SUC (LOG b (s2n b c2n s))) s))`,
+  SRW_TAC [] [s2n_def, n2s_def]
     >> SRW_TAC [ARITH_ss] [l2n_def, Once n2l_def]
-    \\ ABBREV_TAC `l = MAP c2n (REVERSE (EXPLODE s))`
+    \\ ABBREV_TAC `l = MAP c2n (REVERSE s)`
     \\ `~(l = [])` by (STRIP_TAC \\ FULL_SIMP_TAC std_ss [l2n_def])
     \\ `EVERY ($> b) l` by (UNABBREV_TAC `l`
           \\ SRW_TAC [] [EVERY_MAP, ALL_EL_REVERSE,
@@ -1316,7 +1325,7 @@ val n2s_s2n = store_thm("n2s_s2n",
                            ``(\x:char. b:num > c2n x) = ($> b o c2n)``])
     \\ SRW_TAC [] [n2l_l2n]
     \\ IMP_RES_TAC LENGTH_l2n
-    \\ `SUC (LOG b (l2n b l)) <= LENGTH (EXPLODE s)`
+    \\ `SUC (LOG b (l2n b l)) <= LENGTH s`
     by METIS_TAC [LENGTH_MAP, LENGTH_REVERSE]
     \\ UNABBREV_TAC `l`
     \\ SRW_TAC [] [GSYM MAP_REVERSE, REVERSE_LASTN, GSYM MAP_TAKE, MAP_MAP_o]);
@@ -1330,20 +1339,18 @@ val BIT_num_from_bin_list = store_thm("BIT_num_from_bin_list",
     [num_from_bin_list_def, l2n_DIGIT, SUC_SUB, BIT_def, BITS_THM]);
 
 val BIT_num_from_bin_string = store_thm("BIT_num_from_bin_string",
-  `!x s. EVERY ($> 2 o UNHEX) (EXPLODE s) /\ x < STRLEN s ==>
+  `!x s. EVERY ($> 2 o UNHEX) s /\ x < STRLEN s ==>
          (BIT x (num_from_bin_string s) =
           (UNHEX (s ' (PRE (STRLEN s - x))) = 1))`,
   SRW_TAC [ARITH_ss] [num_from_bin_string_def, s2n_def]
-    \\ `x < LENGTH (MAP UNHEX (REVERSE (EXPLODE s))) /\
-        x < LENGTH (REVERSE (EXPLODE s)) /\ x < LENGTH (EXPLODE s)`
-    by SRW_TAC [] [LENGTH_MAP, LENGTH_REVERSE, GSYM STRLEN_THM]
-    \\ `EVERY ($> 2) (MAP UNHEX (REVERSE (EXPLODE s)))`
+    \\ `x < LENGTH (MAP UNHEX (REVERSE s)) /\ x < LENGTH (REVERSE s)`
+    by SRW_TAC [] [LENGTH_MAP, LENGTH_REVERSE]
+    \\ `EVERY ($> 2) (MAP UNHEX (REVERSE s))`
     by SRW_TAC [] [EVERY_MAP, ALL_EL_REVERSE,
           simpLib.SIMP_PROVE std_ss [FUN_EQ_THM]
             ``(\x. 2 > UNHEX x) = ($> 2 o UNHEX)``]
     \\ SRW_TAC [ARITH_ss]
-         [l2n_DIGIT, EL_MAP, EL_REVERSE, SUC_SUB, BIT_def, BITS_THM, GET,
-          STRLEN_THM]);
+         [l2n_DIGIT, EL_MAP, EL_REVERSE, SUC_SUB, BIT_def, BITS_THM, GET]);
 
 val EL_num_to_bin_list = store_thm("EL_num_to_bin_list",
   `!x n. x < LENGTH (num_to_bin_list n) ==>
@@ -1357,7 +1364,7 @@ val GET_num_to_bin_string = store_thm("GET_num_to_bin_string",
           HEX (BITV n (PRE (STRLEN (num_to_bin_string n) - x))))`,
   SRW_TAC [ARITH_ss]
        [num_to_bin_string_def, n2s_def, GET, BITV_def, BIT_def, BITS_THM,
-        STRLEN_THM, EXPLODE_IMPLODE, LENGTH_REVERSE, LENGTH_MAP, SUC_SUB]
+        LENGTH_REVERSE, LENGTH_MAP, SUC_SUB]
     \\ `PRE (LENGTH (n2l 2 n) - x) < LENGTH (n2l 2 n)`
     by (SIMP_TAC arith_ss [PRE_SUB1] \\ SIMP_TAC arith_ss [LENGTH_n2l])
     \\ SRW_TAC [ARITH_ss] [EL_REVERSE, EL_MAP, EL_n2l, SUC_SUB]);

@@ -20,9 +20,6 @@ end;
 val ORD_CHR_CONV = lemma o dest_chr o dest_ord;
 
 val char_eq_thms   = [CHR_ORD,CHAR_EQ_THM,ORD_11];
-val string_eq_thms = TypeBase.one_one_of ``:string`` ::
-                     TypeBase.distinct_of ``:string`` ::
-                     GSYM (TypeBase.distinct_of ``:string``) :: char_eq_thms
 
 val char_EQ_CONV =
  let open computeLib reduceLib boolTheory
@@ -36,7 +33,7 @@ val char_EQ_CONV =
    fn tm =>
     case total dest_eq tm
      of NONE => raise ERR "char_EQ_CONV" "not a char equality"
-      | SOME(c1,c2) => 
+      | SOME(c1,c2) =>
           if is_char_lit c1 andalso is_char_lit c2
           then if c1=c2 then SPEC c1 REFL_CLAUSE_char else conv tm
           else raise ERR "char_EQ_CONV" "not a char equality"
@@ -45,28 +42,27 @@ val char_EQ_CONV =
 
 val string_EQ_CONV =
  let open computeLib reduceLib boolTheory
-     val compset = num_compset ()
+     val compset = listLib.list_compset ()
      val _ = add_conv (ord_tm, 1, ORD_CHR_CONV) compset
-     val _ = add_thms string_eq_thms compset
+     val _ = add_thms char_eq_thms compset
      val conv = CBV_CONV compset
      val REFL_CLAUSE_string = INST_TYPE [alpha |-> string_ty] REFL_CLAUSE
  in
    fn tm =>
     case total dest_eq tm
      of NONE => raise ERR "string_EQ_CONV" "not a string equality"
-      | SOME(s1,s2) => 
-          if is_string_literal s1 andalso is_string_literal s2 
+      | SOME(s1,s2) =>
+          if is_string_literal s1 andalso is_string_literal s2
           then if s1=s2 then SPEC s1 REFL_CLAUSE_string else conv tm
           else raise ERR "string_EQ_CONV" "not a string equality"
  end;
 
-val string_rewrites = STRLEN_DEF::TypeBase.case_def_of ``:string``::
-                      EXPLODE_EQNS::IMPLODE_EQNS::string_eq_thms;
+val string_rewrites = [EXPLODE_EQNS, IMPLODE_EQNS]
 
 val _ = computeLib.add_funs string_rewrites;
 val _ = computeLib.add_convs [(ord_tm, 1, ORD_CHR_CONV)];
 
-val _ = Defn.const_eq_ref := 
+val _ = Defn.const_eq_ref :=
           (!Defn.const_eq_ref ORELSEC char_EQ_CONV ORELSEC string_EQ_CONV);
 
 (*---------------------------------------------------------------------------
