@@ -7,12 +7,11 @@
 (* =====================================================================*)
 
 (* interactive use:
-  app load ["numLib", "listTheory", "listSyntax",
-            "BasicProvers", "Q", "SingleStep", "metisLib"];
+  app load ["rich_listTheory"];
 *)
 
-open HolKernel boolLib Parse;
-open numLib numSyntax BasicProvers SingleStep listTheory bossLib metisLib
+open HolKernel boolLib bossLib Parse;
+open numLib numSyntax listTheory rich_listTheory
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
@@ -56,10 +55,10 @@ val ORD_CHR_RWT = Q.store_thm
  PROVE_TAC [ORD_CHR]);
 val _ = export_rewrites ["ORD_CHR_RWT"]
 
-val ORD_CHR_COMPUTE = Q.store_thm
-("ORD_CHR_COMPUTE",
- `!r. ORD (CHR r) = if r < 256 then r else ORD (CHR r)`,
- PROVE_TAC [ORD_CHR_RWT]);
+val ORD_CHR_COMPUTE = Q.store_thm("ORD_CHR_COMPUTE",
+  `!n. ORD (CHR n) =
+         if n < 256 then n else FAIL ORD ^(mk_var("> 255", bool)) (CHR n)`,
+  SRW_TAC [] [combinTheory.FAIL_THM]);
 
 val ORD_BOUND = Q.store_thm
 ("ORD_BOUND",
@@ -166,14 +165,46 @@ val _ = type_abbrev ("string", ``:char list``)
 
 val _ = overload_on ("STRING", ``CONS : char -> string -> string``)
 val _ = overload_on ("EMPTYSTRING", ``[] : string``)
+val _ = overload_on ("CONCAT", ``FLAT : string list -> string``);
 
-val GET_def = Define`
-  (GET (STRING x s) 0 = x) /\
-  (GET (STRING x s) (SUC n) = GET s n)`;
+val SUB_def = Define `SUB (s:string, n) = EL n s`;
+val STR_def = Define `STR (c:char) = [c]`;
 
-val _ = set_fixity "'" (Infixl 2000);
-val _ = overload_on ("'", Term`$GET`);
-val _ = send_to_back_overload "'" {Name = "GET", Thy = "string"};
+val SUBSTRING_def = Define `SUBSTRING (s:string,i,n) = SEG n i s`;
+
+val TRANSLATE_def = Define `TRANSLATE f (s:string) = CONCAT (MAP f s)`;
+
+val SPLITP_MONO = Q.prove(
+  `!P l. LENGTH (SND (SPLITP P l)) <= LENGTH l`,
+  Induct_on `l` THEN SRW_TAC [] [SPLITP, DECIDE ``a <= b ==> a <= SUC b``]);
+
+val TAIL_MONO = Q.prove(
+  `!l. ~(l = []) ==> LENGTH (TL l) < LENGTH l`, Cases THEN SRW_TAC [] []);
+
+val TOKENS_def = tDefine "TOKENS"
+  `(TOKENS P ([]:string) = []) /\
+   (TOKENS P (h::t) =
+      let (l,r) = SPLITP P (h::t) in
+        if NULL l then
+          TOKENS P (TL r)
+        else
+          l::TOKENS P r)`
+  (WF_REL_TAC `measure (LENGTH o SND)`
+    THEN SRW_TAC [] [NULL_EQ_NIL, SPLITP]
+    THEN METIS_TAC [SPLITP_MONO, DECIDE ``a <= b ==> a < SUC b``]);
+
+val FIELDS_def = tDefine "FIELDS"
+  `(FIELDS P ([]:string) = [[]]) /\
+   (FIELDS P (h::t) =
+      let (l,r) = SPLITP P (h::t) in
+        if NULL l then
+          []::FIELDS P (TL r)
+        else
+          if NULL r then [l] else l::FIELDS P (TL r))`
+  (WF_REL_TAC `measure (LENGTH o SND)`
+    THEN SRW_TAC [] [NULL_EQ_NIL, SPLITP]
+    THEN METIS_TAC [SPLITP_MONO, TAIL_MONO, arithmeticTheory.LESS_TRANS,
+           DECIDE ``a <= b ==> a < SUC b``]);
 
 val IMPLODE_def = Define`
   (IMPLODE [] = "") /\
@@ -191,8 +222,6 @@ val IMPLODE_EXPLODE_I = store_thm(
   "IMPLODE_EXPLODE_I",
   ``(EXPLODE s = s) /\ (IMPLODE s = s)``,
   Induct_on `s` THEN SRW_TAC [][]);
-
-val TRANSFORM_def = Define `TRANSFORM f = IMPLODE o f o EXPLODE`;
 
 val IMPLODE_EXPLODE = store_thm(
   "IMPLODE_EXPLODE",
@@ -244,6 +273,10 @@ val STRING_ACYCLIC = Q.store_thm
 val _ = overload_on("STRLEN", ``LENGTH : string -> num``)
 val STRLEN_DEF = listTheory.LENGTH
 
+val EXTRACT_def = Define`
+  (EXTRACT (s,i,NONE) = SUBSTRING(s,i,STRLEN s - i)) /\
+  (EXTRACT (s,i,SOME n) = SUBSTRING(s,i,n))`;
+
 val STRLEN_EQ_0 = Q.store_thm
 ("STRLEN_EQ_0",
  `!x. (STRLEN x = 0) = (x="")`,
@@ -253,11 +286,6 @@ val STRLEN_EXPLODE_THM = store_thm(
   "STRLEN_EXPLODE_THM",
   ``STRLEN s = LENGTH (EXPLODE s)``,
   SRW_TAC [][IMPLODE_EXPLODE_I]);
-
-val GET = Q.store_thm
-("GET",
-  `!n s. n < STRLEN s ==> (GET s n = EL n s)`,
-  Induct THEN Cases THEN SRW_TAC [ARITH_ss] [GET_def]);
 
 (*---------------------------------------------------------------------------*)
 (* Destruct a string. This will be used to re-phrase the HOL development     *)
@@ -440,6 +468,9 @@ val _ = send_to_back_overload ">=" {Name = "string_ge", Thy = "string"};
 (*---------------------------------------------------------------------------
     Exportation
  ---------------------------------------------------------------------------*)
+
+val _ = computeLib.add_persistent_funs
+  [("ORD_CHR_COMPUTE", ORD_CHR_COMPUTE), ("CHAR_EQ_THM", CHAR_EQ_THM)];
 
 val _ = ConstMapML.insert(prim_mk_const{Name="DEST_STRING",Thy="string"});
 val _ = ConstMapML.insert(prim_mk_const{Name="string_lt",Thy="string"});

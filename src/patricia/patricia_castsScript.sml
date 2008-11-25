@@ -247,13 +247,6 @@ val string_to_num_11 = store_thm("string_to_num_11",
     \\ FULL_SIMP_TAC (srw_ss()) [REVERSE_11,
          (SIMP_RULE (srw_ss()) [stringTheory.ORD_11] o ISPEC `ORD`) MAP_11]);
 
-val ORD_CHR_compute = store_thm("ORD_CHR_compute",
-  `!n. ORD (CHR n) =
-      if n < 256 then n else FAIL ORD ^(mk_var("> 255", bool)) (CHR n)`,
-  SRW_TAC [] [combinTheory.FAIL_THM]);
-
-val _ = computeLib.add_thms [ORD_CHR_compute] computeLib.the_compset;
-
 val n2l_NOT_NULL = prove( `!b n. ~(n2l b n = [])`, SRW_TAC [] [Once n2l_def]);
 
 val STRING_SKIP1 = prove(
@@ -391,9 +384,7 @@ val _ = add_listform {leftdelim = [TOK "-{"], rightdelim = [TOK "}-"],
                       block_info = (PP.INCONSISTENT, 0)};
 
 val _ = computeLib.add_persistent_funs
-  [("ORD_CHR_compute", ORD_CHR_compute),
-   ("stringTheory.CHAR_EQ_THM", stringTheory.CHAR_EQ_THM),
-   ("pred_setTheory.IMAGE_EMPTY", pred_setTheory.IMAGE_EMPTY),
+  [("pred_setTheory.IMAGE_EMPTY", pred_setTheory.IMAGE_EMPTY),
    ("pred_setTheory.IMAGE_INSERT", pred_setTheory.IMAGE_INSERT),
    ("pred_setTheory.IMAGE_UNION", pred_setTheory.IMAGE_UNION),
    ("ADD_INSERT_WORD", ADD_INSERT_WORD),

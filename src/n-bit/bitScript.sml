@@ -1341,7 +1341,7 @@ val BIT_num_from_bin_list = store_thm("BIT_num_from_bin_list",
 val BIT_num_from_bin_string = store_thm("BIT_num_from_bin_string",
   `!x s. EVERY ($> 2 o UNHEX) s /\ x < STRLEN s ==>
          (BIT x (num_from_bin_string s) =
-          (UNHEX (s ' (PRE (STRLEN s - x))) = 1))`,
+          (UNHEX (SUB (s, PRE (STRLEN s - x))) = 1))`,
   SRW_TAC [ARITH_ss] [num_from_bin_string_def, s2n_def]
     \\ `x < LENGTH (MAP UNHEX (REVERSE s)) /\ x < LENGTH (REVERSE s)`
     by SRW_TAC [] [LENGTH_MAP, LENGTH_REVERSE]
@@ -1350,7 +1350,7 @@ val BIT_num_from_bin_string = store_thm("BIT_num_from_bin_string",
           simpLib.SIMP_PROVE std_ss [FUN_EQ_THM]
             ``(\x. 2 > UNHEX x) = ($> 2 o UNHEX)``]
     \\ SRW_TAC [ARITH_ss]
-         [l2n_DIGIT, EL_MAP, EL_REVERSE, SUC_SUB, BIT_def, BITS_THM, GET]);
+         [l2n_DIGIT, EL_MAP, EL_REVERSE, SUC_SUB, BIT_def, BITS_THM, SUB_def]);
 
 val EL_num_to_bin_list = store_thm("EL_num_to_bin_list",
   `!x n. x < LENGTH (num_to_bin_list n) ==>
@@ -1358,12 +1358,12 @@ val EL_num_to_bin_list = store_thm("EL_num_to_bin_list",
   SRW_TAC [ARITH_ss]
     [num_to_bin_list_def, EL_n2l, SUC_SUB, BITV_def, BIT_def, BITS_THM]);
 
-val GET_num_to_bin_string = store_thm("GET_num_to_bin_string",
+val SUB_num_to_bin_string = store_thm("SUB_num_to_bin_string",
   `!x n. x < STRLEN (num_to_bin_string n) ==>
-         (num_to_bin_string n ' x =
+         (SUB (num_to_bin_string n, x) =
           HEX (BITV n (PRE (STRLEN (num_to_bin_string n) - x))))`,
   SRW_TAC [ARITH_ss]
-       [num_to_bin_string_def, n2s_def, GET, BITV_def, BIT_def, BITS_THM,
+       [num_to_bin_string_def, n2s_def, SUB_def, BITV_def, BIT_def, BITS_THM,
         LENGTH_REVERSE, LENGTH_MAP, SUC_SUB]
     \\ `PRE (LENGTH (n2l 2 n) - x) < LENGTH (n2l 2 n)`
     by (SIMP_TAC arith_ss [PRE_SUB1] \\ SIMP_TAC arith_ss [LENGTH_n2l])
