@@ -26,7 +26,7 @@ val eq_alpha = qmk_vartype "''a";
 
 structure CMap :> sig
   type 'a dict
-  val empty : 'a dict
+  val empty : unit -> 'a dict
   val insert : ('a dict * term * 'a) -> 'a dict
   val peek : 'a dict * term -> 'a option
   val exact_peek : 'a dict * term -> 'a option
@@ -83,7 +83,7 @@ struct
   end
   fun cmp ({Name=n1,Thy=t1},{Name=n2,Thy=t2}) =
       pair_compare(String.compare,String.compare) ((n1,t1),(n2,t2))
-  val empty = RBM.mkDict cmp
+  fun empty() = RBM.mkDict cmp
 
   fun exact_peek (d : 'a dict,k) = let
     val {Name,Thy,Ty} = dest_thy_const k
@@ -106,7 +106,7 @@ type constmap = (bool*string*string*hol_type)dict
 (* otherwise could just use Term.compare.                                    *)
 (*---------------------------------------------------------------------------*)
 
-val initConstMap : constmap = empty
+val initConstMap : constmap = empty()
 
 local val equality = prim_mk_const{Name="=",Thy="min"}
       val negation = prim_mk_const{Name="~",Thy="bool"}
