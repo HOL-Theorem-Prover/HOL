@@ -1,34 +1,78 @@
-(*---------------------------------------------------------------------------
-        Defining while loops by a schematic definition. Only 
-        terminating loops may be achieved by instantiating 
-        the schema.
- ---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Derivation of HOL function corresponding to WHILE loops. First, show that *)
+(* such a function exists.                                                   *)
+(*---------------------------------------------------------------------------*)
 
-app load ["bossLib", "Q"]; open bossLib;
-
-
-val While_scheme = 
- TotalDefn.DefineSchema
-    `While s = if B s then While (C s) else s`;
+quietdec := true;
+open arithmeticTheory;
+quietdec := false;
 
 
-val Spec_def =
- Define 
-     `Spec(P,C,Q) = !s. P s ==> Q (C s)`;
+val WHILE_EXISTS = Q.prove
+(`!P g. ?f. !x. f x = if P x then f (g x) else x`,
+ REPEAT GEN_TAC THEN 
+ Q.EXISTS_TAC 
+  `\x. if ?n. ~P (FUNPOW g n x) 
+        then FUNPOW g (@n. ~P(FUNPOW g n x) /\ !m. m<n ==> P (FUNPOW g m x)) x
+        else ARB` THEN 
+ BETA_TAC THEN GEN_TAC THEN 
+ Cases_on `?n. ~P (FUNPOW g n x)` THEN ASM_REWRITE_TAC [] THENL
+ [`?k. ~P (FUNPOW g k x) /\ !j. j<k ==> P (FUNPOW g j x)` 
+     by METIS_TAC [BETA_RULE (Q.SPEC `\n. ~P(FUNPOW g n x)` WOP)] THEN
+  `(@n. ~P (FUNPOW g n x) /\ !m. m < n ==> P (FUNPOW g m x)) = k`
+     by (SELECT_ELIM_TAC THEN METIS_TAC [DECIDE ``a<b \/ b<a \/ (a=b)``]) THEN
+  POP_ASSUM SUBST_ALL_TAC THEN WEAKEN_TAC is_exists THEN 
+  Cases_on `k` THEN FULL_SIMP_TAC arith_ss [FUNPOW] THEN
+  RW_TAC arith_ss [] THENL
+  [`!i. i<n ==> P (FUNPOW g i (g x))` 
+      by METIS_TAC [DECIDE ``a<b ==> SUC a < SUC b``,FUNPOW] THEN
+   METIS_TAC [DECIDE ``a<b \/ b<a \/ (a=b)``],
+   METIS_TAC[], 
+   METIS_TAC [DECIDE ``0<SUC x``,FUNPOW]],
+  METIS_TAC [FUNPOW]]);
+
+(*---------------------------------------------------------------------------*)
+(* Now introduce the desired constant and its specification.                 *)
+(*                                                                           *)
+(*  WHILE =                                                                  *)
+(*     |- !P g x. WHILE P g x = if P x then WHILE P g (g x) else x           *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+val WHILE = 
+ new_specification("WHILE", ["WHILE"], 
+        SIMP_RULE std_ss [SKOLEM_THM] WHILE_EXISTS);
+
+(*---------------------------------------------------------------------------*)
+(* Induction theorem for WHILE                                               *)
+(*---------------------------------------------------------------------------*)
+
+val WHILE_INDUCTION = Q.prove
+(`!B C R.
+   WF R /\ (!s. B s ==> R (C s) s) 
+   ==> 
+    !P. (!s. (B s ==> P (C s)) ==> P s) ==> !v. P v`,
+ METIS_TAC [relationTheory.WF_INDUCTION_THM]);
 
 
-(*---------------------------------------------------------------------------
-       The while rule from Hoare logic, total correctness version.
- ---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* The while rule from Hoare logic, total correctness version.               *)
+(*---------------------------------------------------------------------------*)
 
-val WhileRule = Q.prove(
-   `!R B C.
-        WF R /\ (!s. B s ==> R (C s) s)
-        ==>
-         Spec ((\s. P s /\ B s), C, P) ==>
-      (*-----------------------------------*)
-         Spec (P, While B C, \s. P s /\ ~B s)`,
-REPEAT GEN_TAC THEN STRIP_TAC 
-  THEN REWRITE_TAC [Spec_def] THEN BETA_TAC THEN DISCH_TAC
-  THEN recInduct (fetch "-" "While_ind") 
-  THEN PROVE_TAC [While_scheme]);
+val HOARE_SPEC_DEF = 
+ Define
+   `HOARE_SPEC P C Q = !s. P s ==> Q (C s)`;
+
+val WHILE_RULE = Q.prove
+(`!R B C.
+     WF R /\ (!s. B s ==> R (C s) s)
+      ==>
+        HOARE_SPEC (\s. P s /\ B s) C P 
+     (*------------------------------------------*) ==>
+        HOARE_SPEC P (WHILE B C) (\s. P s /\ ~B s)`,
+ REPEAT GEN_TAC THEN STRIP_TAC 
+  THEN REWRITE_TAC [HOARE_SPEC_DEF] THEN BETA_TAC THEN DISCH_TAC
+  THEN MP_TAC (SPEC_ALL WHILE_INDUCTION) THEN ASM_REWRITE_TAC[]
+  THEN DISCH_THEN HO_MATCH_MP_TAC
+  THEN METIS_TAC [WHILE]);
+

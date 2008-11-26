@@ -178,7 +178,7 @@ fun BddExtendVarmap vm2 (TermBdd(tg,ass,vm1,tm,b)) =
 exception BddFreevarsContractVarmapError;
 
 fun BddFreevarsContractVarmap v (TermBdd(tg,ass,vm,tm,b)) =
- if mem v (free_vars tm)
+ if op_mem eq v (free_vars tm)
   then (print_term v; print " not in free_vars of\n"; print_term tm; print "\n";
         raise BddFreevarsContractVarmapError)
   else TermBdd(tg,ass,Varmap.remove (name v) vm, tm, b);
@@ -273,10 +273,10 @@ fun BddReplace tbl (TermBdd(tg,ass,vm,tm,b)) =
            if not(is_var v')
             then (print_term v' ; print " should be a variable\n";
                                   raise BddReplaceError) else
-           if mem v l
+           if op_mem eq v l
             then (print_term v  ; print" repeated\n";
                                   raise BddReplaceError) else
-           if mem v' l'
+           if op_mem eq v' l'
             then (print_term v' ; print" repeated\n";
                                   raise BddReplaceError)
             else (Tag.merge tg (Tag.merge tg1 tg2),
@@ -373,7 +373,7 @@ fun BddListCompose tbl (TermBdd(tg,ass,vm,tm,b)) =
            if not(is_var v)
             then (print_term v  ; print " should be a variable\n";
                                   raise BddListComposeError) else
-           if mem v l
+           if op_mem eq v l
             then (print_term v  ; print" repeated\n";
                                   raise BddListComposeError)
             else (Tag.merge tg (Tag.merge tg1 tg2),
@@ -449,9 +449,9 @@ exception BddRestrictError;
 local
 
 fun mlval tm =
- if tm=T
+ if eq tm T
   then true
-  else if tm=F then false else raise BddRestrictError
+  else if eq tm F then false else raise BddRestrictError
 
 in
 
@@ -468,7 +468,7 @@ fun BddRestrict tbl tb =
            if not(is_var v)
             then (print_term v  ; print " should be a variable\n";
                                   raise BddRestrictError) else
-           if mem v l
+           if op_mem eq v l
             then (print_term v  ; print" repeated\n";
                                   raise BddRestrictError)
             else (Tag.merge tg (Tag.merge tg1 tg2),

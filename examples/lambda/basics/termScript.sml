@@ -792,8 +792,6 @@ val FINITE_strterm_fmap_supp = store_thm(
   SRW_TAC [][strterm_fmap_supp, supp_setpm] THEN SRW_TAC [][]);
 val _ = export_rewrites ["FINITE_strterm_fmap_supp"]
 
-
-
 val lem1 = prove(
   ``∃a. ~(a ∈ supp (fmpm lswapstr tpm) fm)``,
   Q_TAC (NEW_TAC "z") `supp (fmpm lswapstr tpm) fm` THEN
@@ -902,15 +900,16 @@ val _ = export_rewrites ["ssub_FEMPTY"]
 
 val tm_precursion_ex =
     (UNDISCH o
+     Q.INST [`VR` |-> `vr`, `AP` |-> `ap`, `LM` |-> `lm`, `APM` |-> `apm`] o 
      SIMP_RULE (srw_ss()) [nomsetTheory.support_def, FUN_EQ_THM,
                            nomsetTheory.fnpm_def, pairpm_def,
                            pairTheory.FORALL_PROD,
-                           ASSUME ``is_perm (apm: 'a pm)``] o
-     Q.INST [`vr` |-> `\s. (vr s, VAR s)`,
-             `ap` |-> `\t u. (ap (FST t) (FST u) (SND t) (SND u),
+                           ASSUME ``is_perm (APM: 'a pm)``] o
+     Q.INST [`vr` |-> `\s. (VR s, VAR s)`,
+             `ap` |-> `\t u. (AP (FST t) (FST u) (SND t) (SND u),
                               SND t @@ SND u)`,
-             `lm` |-> `\v t. (lm (FST t) v (SND t), LAM v (SND t))`,
-             `apm` |-> `pairpm apm tpm`] o
+             `lm` |-> `\v t. (LM (FST t) v (SND t), LAM v (SND t))`,
+             `apm` |-> `pairpm APM tpm`] o
      SPEC_ALL o
      INST_TYPE [alpha |-> ``:'a # term``]) tm_recursion
 

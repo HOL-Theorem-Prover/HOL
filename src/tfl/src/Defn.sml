@@ -33,7 +33,7 @@ fun variants FV vlist =
 
 fun make_definition thry s tm = (new_definition(s,tm), thry)
 
-fun head tm = head (rator tm) handle _ => tm;
+fun head tm = head (rator tm) handle HOL_ERR _ => tm;
 
 fun all_fns eqns =
   op_mk_set eq (map (head o lhs o #2 o strip_forall) (strip_conj eqns));
@@ -1035,8 +1035,8 @@ fun non_wfrec_defn (facts,bind,eqns) =
  let val ((_,args),_) = dest_hd_eqn eqns
  in if Lib.exists is_constructor args
     then let
-      val {Thy=cthy,Tyop=cty, ...} =
-          dest_thy_type (type_of(first is_constructor args))
+      val {Thy=cthy,Tyop=cty,...} =
+            dest_thy_type (type_of(first is_constructor args))
       in
         case TypeBasePure.prim_get facts (cthy,cty)
         of NONE => raise ERR "non_wfrec_defn" "unexpected lhs in definition"
@@ -1078,11 +1078,6 @@ fun nestrec_defn (thy,(stem,stem'),wfrec_res,untuple) =
 fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
  let val {rules,R,SV,full_pats_TCs,...} = stdrec facts stem' wfrec_res
      val ((f,_),_) = dest_hd_eqnl rules
-(*     val full_pats_TCs' = 
-         let val culled = gather (is_var o fst) full_pats_TCs
-         in if null culled then full_pats_TCs else culled
-         end
-*)
      val ind = Induction.mk_induction facts
                   {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
  in
@@ -1104,7 +1099,6 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
         end
  end;
 
-
 (*---------------------------------------------------------------------------
     A general, basic, interface to function definitions. First try to
     use standard existing machinery to make a prim. rec. definition, or
@@ -1117,37 +1111,42 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
 
 fun prim_mk_defn stem eqns =
  let val _ = if Lexis.ok_identifier stem then ()
-             else raise ERR "mk_defn"
+             else raise ERR "prim_mk_defn"
                    (String.concat[Lib.quote stem," is not alphanumeric"])
      val facts = TypeBase.theTypeBase()
  in
   non_wfrec_defn (facts, defSuffix stem, eqns)
-  handle HOL_ERR _
-  => if 1 < length(all_fns eqns)
-    then mutrec_defn (facts,stem,eqns)
-   else let 
+  handle HOL_ERR _ => 
+  case all_fns eqns
+   of [] => raise ERR "prim_mk_defn" "no eqns"
+    | (fns as (_::_::_))  (* more than 1 defn being made *)
+       => mutrec_defn (facts,stem,eqns)
+    | [_] => (* one defn being made *)
+    let 
     val ((f,args),rhs) = dest_hd_eqn eqns
-    val _ =
-       length args > 0 orelse
-       (free_in f rhs andalso
-        raise ERR "mk_defn" "Simple nullary definition recurses") orelse
-       (let val fvs = free_vars rhs
-        in not (null fvs) andalso
-           raise ERR "mk_defn"
+    val _ = length args > 0 
+       orelse
+         (free_in f rhs andalso
+          raise ERR "prim_mk_defn" "Simple nullary definition recurses") 
+       orelse
+         (let val fvs = free_vars rhs
+          in not (null fvs) andalso
+             raise ERR "prim_mk_defn"
                     ("Free variables (" ^
                      String.concat (Lib.commafy (map (#1 o dest_var) fvs)) ^
                      ") on RHS of nullary definition")
-            end) orelse
-           raise ERR "mk_defn" "Nullary definition failed - giving up"
+          end) 
+       orelse
+         raise ERR "prim_mk_defn" "Nullary definition failed - giving up"
     val (tup_eqs,stem',untuple) = pairf(stem,eqns)
-            handle HOL_ERR _ => raise ERR "mk_defn"
+            handle HOL_ERR _ => raise ERR "prim_mk_defn"
                "failure in internal translation to tupled format"
     val wfrec_res = wfrec_eqns facts tup_eqs
-   in
-        if exists I (#3 (unzip3 (#extracta wfrec_res)))   (* nested *)
-        then nestrec_defn (facts,(stem,stem'),wfrec_res,untuple)
-        else stdrec_defn  (facts,(stem,stem'),wfrec_res,untuple)
-   end
+    in
+      if exists I (#3 (unzip3 (#extracta wfrec_res)))   (* nested *)
+      then nestrec_defn (facts,(stem,stem'),wfrec_res,untuple)
+      else stdrec_defn  (facts,(stem,stem'),wfrec_res,untuple)
+    end
  end
  handle e => raise wrap_exn "Defn" "mk_defn" e;
 
@@ -1166,6 +1165,211 @@ fun mk_Rdefn stem R eqs =
       of NONE => defn
        | SOME Rvar => inst_defn defn (Term.match_term Rvar R)
   end;
+
+(*===========================================================================*)
+(* Calculating dependencies among a unordered collection of definitions      *)
+(*===========================================================================*)
+
+(*---------------------------------------------------------------------------*)
+(* Transitive closure of relation rel given as list of pairs. The TC         *)
+(* function operates on a list of elements [...,(x,(Y,fringe)),...] where    *)
+(* Y is the set of "seen" fringe elements, and fringe is those elements of   *)
+(* Y that we just "arrived at" (thinking of the relation as a directed       *)
+(* graph) and which are not already in Y. Steps in the graph are made from   *)
+(* the fringe, in a breadth-first manner.                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun TC rels_0 =
+ let val rels_1 = map (fn (x,Y) => (x,(Y,Y))) rels_0
+     fun step a = Lib.op_assoc eq a rels_0 handle HOL_ERR _ => []
+     fun relstep rels (x,(Y,fringe)) = 
+       let val fringe' = op_U eq (map step fringe)
+           val Y' = op_union eq Y fringe'
+           val fringe'' = op_set_diff eq fringe' Y
+       in (x,(Y',fringe''))
+       end
+     fun steps rels = 
+       case Lib.partition (null o (snd o snd)) rels
+        of (_,[]) => map (fn (x,(Y,_)) => (x,Y)) rels
+         | (nullrels,nnullrels) => steps (map (relstep rels) nnullrels @ nullrels)
+ in 
+   steps rels_1
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Transitive closure of a list of pairs.                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun trancl rel = 
+ let val field = op_U eq (map (fn (x,y) => [x,y]) rel)
+     fun init x = 
+       let val Y = rev_itlist (fn (a,b) => fn acc => 
+                      if eq a x then Lib.op_insert eq b acc else acc) rel []
+       in (x,Y)
+       end
+ in 
+   TC (map init field)
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* partial order on the relation.                                            *)
+(*---------------------------------------------------------------------------*)
+
+fun depends_on (a,adeps) (b,bdeps) = op_mem eq b adeps andalso not (op_mem eq a bdeps);
+
+(*---------------------------------------------------------------------------*)
+(* Given a transitively closed relation, topsort it into dependency order,   *)
+(* then build the mutually dependent chunks (cliques).                       *)
+(*---------------------------------------------------------------------------*)
+
+fun cliques_of tcrel = 
+ let fun chunk [] acc = acc
+       | chunk ((a,adeps)::t) acc = 
+         let val (bideps,rst) = Lib.partition (fn (b,bdeps) => op_mem eq a bdeps) t
+         in chunk rst (((a,adeps)::bideps)::acc)
+         end
+     val sorted = Lib.topsort depends_on tcrel
+ in chunk sorted []
+ end;
+
+(*---------------------------------------------------------------------------
+ Examples.
+val ex1 = 
+ [("a","b"), ("b","c"), ("b","d"),("d","c"),
+  ("a","e"), ("e","f"), ("f","e"), ("d","a"), 
+  ("f","g"), ("g","g"), ("g","i"), ("g","h"), 
+  ("i","h"), ("i","k"), ("h","j")];
+
+val ex2 =  ("a","z")::ex1;
+val ex3 =  ("z","a")::ex1;
+val ex4 =  ("z","c")::ex3;
+val ex5 =  ("c","z")::ex3;
+val ex6 =  ("c","i")::ex3;
+
+cliques_of (trancl ex1);
+cliques_of (trancl ex2);
+cliques_of (trancl ex3);
+cliques_of (trancl ex4);
+cliques_of (trancl ex5);
+cliques_of (trancl ex6);
+  --------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*)
+(* Find the variables free in the rhs of an equation, that don't also occur  *)
+(* on the lhs. This helps locate calls to other functions also being defined,*)
+(* so that the dependencies can be calculated.                               *)
+(*---------------------------------------------------------------------------*)
+
+fun free_calls tm = 
+ let val (l,r) = dest_eq tm
+     val (f,pats) = strip_comb l
+     val lhs_vars = free_varsl pats
+     val rhs_vars = free_vars r
+ in
+    (f, op_set_diff eq rhs_vars lhs_vars)
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Find all the dependencies between a collection of equations. Mutually     *)
+(* dependent equations end up in the same clique.                            *)
+(*---------------------------------------------------------------------------*)
+
+fun dependencies eqns = 
+  let val basic = map free_calls (strip_conj eqns)
+      fun agglom ((f,l1)::(g,l2)::t) =
+             if eq f g then agglom ((f,op_union eq l1 l2)::t) 
+              else (f,l1)::agglom ((g,l2)::t)
+        | agglom other = other
+ in
+   cliques_of (TC (agglom basic))
+ end;
+
+(*---------------------------------------------------------------------------
+ Examples.
+
+val eqns = ``(f x = 0) /\ (g y = 1) /\ (h a = h (a-1) + g a)``;
+dependencies eqns;
+
+val eqns = ``(f [] = 0) /\ (f (h1::t1) = g(h1) + f t1) /\
+             (g y = 1) /\ (h a = h (a-1) + g a)``;
+dependencies eqns;
+
+load"stringTheory";
+Hol_datatype `term = Var of string | App of string => term list`;
+Hol_datatype `pterm = pVar of string | pApp of string # pterm list`;
+
+val eqns = ``(f (pVar s) = sing s) /\
+             (f (pApp (a,ptl)) = onion (sing a) (g ptl)) /\
+             (g [] = {}) /\
+             (g (t::tlist) = onion (f t) (g tlist)) /\
+             (sing a = {a}) /\ (onion s1 s2 = s1 UNION s2)``;
+dependencies eqns;
+  ---------------------------------------------------------------------------*)
+
+val eqn_head = head o lhs;
+
+(*---------------------------------------------------------------------------*)
+(* Take a collection of equations for a set of different functions, and      *)
+(* untangle the dependencies so that functions are defined before use.       *)
+(* Handles (mutually) recursive dependencies.                                *)
+(*---------------------------------------------------------------------------*)
+
+fun sort_eqns eqns =
+ let val eql = strip_conj eqns
+     val cliques = dependencies eqns
+     val cliques' = map (map fst) cliques
+     fun clique_eqns clique = 
+          filter (fn eqn => op_mem eq (eqn_head eqn) clique) eql
+ in 
+   map (list_mk_conj o clique_eqns) cliques'
+ end;
+
+(*---------------------------------------------------------------------------
+ Example (adapted from ex1 above).
+
+val eqns = 
+ ``(f1 x = f2 (x-1) + f5 (x-1)) /\ 
+   (f2 x = f3 (x-1) + f4 (x-1)) /\ 
+   (f3 x = x + 2) /\
+   (f4 x = f3 (x-1) + f1(x-2)) /\
+   (f5 x = f6 (x-1)) /\ 
+   (f6 x = f5(x-1) + f7(x-2)) /\  
+   (f7 0 = f8 3 + f9 4) /\ 
+   (f7 (SUC n) = SUC n * f7 n + f9 n) /\ 
+   (f8 x = f10 (x + x)) /\
+   (f9 x = f8 x + f11 (x-4)) /\ 
+   (f10 x = x MOD 2) /\ 
+   (f11 x = x DIV 2)``;
+
+sort_eqns eqns;
+sort_eqns (list_mk_conj (rev(strip_conj eqns)));
+ ---------------------------------------------------------------------------*)
+
+fun mk_defns stems eqnsl =
+ let fun lhs_atoms eqns = op_mk_set eq (map (head o lhs) (strip_conj eqns))
+     fun mk_defn_theta stem eqns = 
+       let val Vs = lhs_atoms eqns
+           val def = mk_defn stem eqns
+           val Cs = op_mk_set eq (map (head o lhs o snd o strip_forall o concl)
+                                      (eqns_of def))
+           val theta = map (fn (x,y) => x |-> y) (zip Vs Cs)
+       in (def, theta)
+       end
+    (*----------------------------------------------------------------------*)
+    (* Once a definition is made, substitute the introduced constant for    *)
+    (* the corresponding variables in the rest of the equations waiting to  *)
+    (* be defined.                                                          *)
+    (*----------------------------------------------------------------------*)
+    fun mapdefn [] = []
+      | mapdefn ((s,e)::t) = 
+         let val (defn,theta) = mk_defn_theta s e
+             val t' = map (fn (s,e) => (s,subst theta e)) t
+         in defn :: mapdefn t'
+         end
+ in
+   mapdefn (zip stems eqnsl)
+ end
+ handle e => raise wrap_exn "Defn" "mk_defns" e;
 
 
 (*---------------------------------------------------------------------------
@@ -1316,14 +1520,15 @@ fun elim_wildcards eqs =
    (Absyn.list_mk_conj (rev eql), rev fset)
  end;
 
-(* To parse a purported definition, we have to convince the parser that the
-   names to be defined aren't constants.  We can do this using "hide".
-   After the parsing has been done, the grammar has to be put back the
-   way it was.  If a definition is subsequently made, this will update
-   the grammar further (ultimately using add_const).
-*)
+(*---------------------------------------------------------------------------*)
+(* To parse a purported definition, we have to convince the parser that the  *)
+(* names to be defined aren't constants.  We can do this using "hide".       *)
+(* After the parsing has been done, the grammar has to be put back the way   *)
+(* it was.  If a definition is subsequently made, this will update the       *)
+(* grammar further (ultimately using add_const).                             *)
+(*---------------------------------------------------------------------------*)
 
-fun parse_defn absyn0 =
+fun parse_absyn absyn0 =
  let val (absyn,fn_names) = elim_wildcards absyn0
      val restore_these = map (fn s => (s, Parse.hide s)) fn_names
      fun restore() =
@@ -1336,14 +1541,31 @@ fun parse_defn absyn0 =
    (tm, fn_names)
  end;
 
+(*---------------------------------------------------------------------------*)
+(* Parse a quotation. Fail if parsing or type inference or overload          *)
+(* resolution (etc) fail. Returns a list of equations; each element in the   *)
+(* list is a separate mutually recursive clique.                             *)
+(*---------------------------------------------------------------------------*)
+
+fun parse_quote q =
+  sort_eqns (fst (parse_absyn (Parse.Absyn q)))
+  handle e => raise wrap_exn "Defn" "parse_quote" e;
+
 fun Hol_defn stem q =
- let val absyn0 = Parse.Absyn q
-     val eqns = fst (parse_defn absyn0)
- in
-  mk_defn stem eqns
-  handle e => raise wrap_exn_loc "Defn" "Hol_defn" 
-                       (Absyn.locn_of_absyn absyn0) e
- end;
+ (case parse_quote q
+   of [] => raise ERR "Hol_defn" "no definitions"
+    | [eqns] => mk_defn stem eqns
+    | otherwise => raise ERR "Hol_defn" "multiple definitions")
+  handle e => 
+  raise wrap_exn_loc "Defn" "Hol_defn" 
+           (Absyn.locn_of_absyn (Parse.Absyn q)) e;
+
+fun Hol_defns stems q =
+ (case parse_quote q
+   of [] => raise ERR "Hol_defns" "no definition"
+    | eqnl => mk_defns stems eqnl)
+  handle e => raise wrap_exn_loc "Defn" "Hol_defns" 
+                 (Absyn.locn_of_absyn (Parse.Absyn q)) e;
 
 fun Hol_Rdefn stem Rquote eqs_quote =
   let val defn = Hol_defn stem eqs_quote
@@ -1354,7 +1576,6 @@ fun Hol_Rdefn stem Rquote eqs_quote =
           in inst_defn defn (Term.match_term Rvar R)
           end
   end;
-
 
 (*---------------------------------------------------------------------------
         Goalstack-based interface to termination proof.

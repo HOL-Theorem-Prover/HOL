@@ -152,7 +152,7 @@ fun check_inductive_relations patterns rules_term =
 let
 
 fun member item (thing::more_things) = 
-    if item = thing then true else member item more_things
+    if eq item thing then true else member item more_things
   | member item [] = false
 
 (* if neither A_list nor B_list have any duplicates, but possibly
@@ -290,9 +290,9 @@ val _ = check_rules 0 orig_rules
 (* now sort the rules according to the relation that they are for *)
 fun rule_defines_relation rule relation =
     if is_imp rule then
-	relation = fst (strip_comb (snd (dest_imp rule)))
+	eq relation (fst (strip_comb (snd (dest_imp rule))))
     else
-	relation = fst (strip_comb rule)
+	eq relation (fst (strip_comb rule))
  
 val sorted_rules = map
     (fn rel => (filter (fn x => rule_defines_relation x rel) orig_rules)) 
@@ -403,7 +403,7 @@ fun define_inductive_relations patterns rules_term =
 let
 
 fun member item (thing::more_things) = 
-    if item = thing then true else member item more_things
+    if eq item thing then true else member item more_things
   | member item [] = false
 
 (* if neither A_list nor B_list have any duplicates, but possibly
@@ -541,9 +541,9 @@ val _ = check_rules 0 orig_rules
 (* now sort the rules according to the relation that they are for *)
 fun rule_defines_relation rule relation =
     if is_imp rule then
-	relation = fst (strip_comb (snd (dest_imp rule)))
+	eq relation (fst (strip_comb (snd (dest_imp rule))))
     else
-	relation = fst (strip_comb rule)
+	eq relation (fst (strip_comb rule))
  
 val sorted_rules = map
     (fn rel => (filter (fn x => rule_defines_relation x rel) orig_rules)) 
@@ -663,7 +663,7 @@ fun mk_tactics count (rule::rules) =
 		mk_more_tactics hyp_count 0 hyps
 	    else []
     in
-        if ((not is_an_imp) andalso (forall_vars = [])) then 
+        if ((not is_an_imp) andalso (null forall_vars)) then 
 	    (mk_tactics (count + 1) rules)
 	else
 	    (fn (asms, gl) => 
@@ -899,7 +899,7 @@ end;
 (* relations are constants *)
 fun rel_in_term rel tm =
     if is_var tm then false else
-    if is_const tm then rel = tm else
+    if is_const tm then eq rel tm else
     if is_abs tm then rel_in_term rel (body tm) else
     (* must be comb *)
 	let val (t1, t2) = dest_comb tm in
@@ -1165,9 +1165,9 @@ fun reduce vs ths res subf =
    if (null ths) 
    then (rev res, subf) 
    else let val (lhs,rhs) = dest_eq(concl(hd ths))
-            val (sth,pai) = if (mem lhs vs)
+            val (sth,pai) = if (op_mem eq lhs vs)
                             then (hd ths,{redex=lhs,residue=rhs})
-                            else if (mem rhs vs)
+                            else if (op_mem eq rhs vs)
                                  then (SYM(hd ths),{redex=rhs,residue=lhs})
                                  else bad_error ("reduce")
         in if (free_in (#redex pai) (#residue pai))
@@ -1182,7 +1182,7 @@ fun reduce vs ths res subf =
 fun subst_assoc tm =
    let fun assc [] = NONE
          | assc ({redex,residue}::rst) = 
-            if (tm = redex)
+            if (eq tm redex)
             then (SOME residue)
             else assc rst
    in assc
@@ -1226,7 +1226,7 @@ fun efn ss v (pat,th) =
 fun prove ths cs =
    (uncurry CONJ ((prove ths ## prove ths) (dest_conj cs)))
    handle _ 
-   => (Lib.first (fn t => concl t = cs) ths)
+   => (Lib.first (fn t => eq (concl t) cs) ths)
    handle _
    => (REFL (rand cs))
 in
@@ -1315,7 +1315,7 @@ val info_list = map2
 (* sfn is used to substitute vars used in rules for vars used in terms 
    in conclusion of thm4 below *)
 fun sfn eqs rel = 
-    let val (argvars, hyp) = assoc rel info_list
+    let val (argvars, hyp) = op_assoc eq rel info_list
     in
 (* following line changed by PVH Feb 3, 2000 from {var=v, thm=th} *)
 	SUBST(map2 (fn th => fn v => {redex=v, residue=th})
@@ -1333,7 +1333,7 @@ fun has_this_rel rel thm1 =
 		snd (dest_imp bdy)
 	    else bdy
     in
-	rel = fst (strip_comb applied_rel)
+	eq rel (fst (strip_comb applied_rel))
     end
 val divided_rules = map
     (fn rel => (filter (fn thm1 => has_this_rel rel thm1) rule_thms)) set
@@ -1535,7 +1535,7 @@ fun do_one_conjunct tm =
     end
 
 fun prove_conj_imp (tm::tms) =
-    if tms = [] then
+    if null tms then
 	do_one_conjunct tm
     else
 	let val thm1 = do_one_conjunct tm
@@ -1623,7 +1623,7 @@ fun delete_conjs pred conj_thm =
 *)
 
 fun member item (thing::more_things) = 
-    if item = thing then true else member item more_things
+    if eq item thing then true else member item more_things
   | member item [] = false
 
 fun props_in_tm tm =
@@ -1741,7 +1741,7 @@ local
     fun process_term tm =
 	(fst (strip_comb (fst (dest_imp (snd (strip_forall tm))))), tm)
     fun get_correct_tm ((rel, tm)::more_info) rel2 =
-	if rel = rel2 then tm
+	if eq rel rel2 then tm
 	else get_correct_tm more_info rel2
       | get_correct_tm [] rel2 = raise HOL_ERR
 	{origin_structure = "inductive_relations",

@@ -780,3 +780,38 @@ Define`
           let (r4,r10) = field_mult (r2,r3,r10) in
           let r5 = r4 in
             field_exp_aux (r5:word32,r6:word32,r7:word32,r10)`;
+
+(*---------------------------------------------------------------------------*)
+(* Exercising multiDefine                                                    *)
+(*---------------------------------------------------------------------------*)
+
+multiDefine
+  `(fact x = if zerop x then 1 else mult x (sub1 x)) /\
+   (zerop x = (x=0)) /\
+   (sub1 x = x-1) /\
+   (mult x y = x * y)`;
+
+multiDefine  (* fails because of sub1 in rec. call *)
+  `(fact x = if zerop x then 1 else mult x (fact (sub1 x))) /\
+   (zerop x = (x=0)) /\
+   (sub1 x = x-1) /\
+   (mult x y = x * y)`;
+
+multiDefine 
+  `(fact x = if x=0 then 1 else mult x (fact (x-1))) /\
+   (mult x y = x * y) /\
+   (even 0 = T) /\ 
+   (even (SUC n) = odd n) /\
+   (odd 0 = F) /\ 
+   (odd (SUC n) = even n)`;
+
+
+multiDefine 
+  `(even 0 = T) /\ 
+   (even (SUC n) = odd n) /\
+   (fact x = if x=0 then 1 else mult x (fact (x-1))) /\
+   (mult x y = x * y) /\
+   (odd 0 = F) /\ 
+   (odd (SUC n) = even n)`;
+
+

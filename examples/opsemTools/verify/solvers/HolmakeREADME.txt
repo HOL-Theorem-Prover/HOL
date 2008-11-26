@@ -1,0 +1,3 @@
+To compile:
+
+Holmake -I ../..

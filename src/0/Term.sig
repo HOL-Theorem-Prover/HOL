@@ -143,4 +143,6 @@ sig
   val trav           : (hol_type -> unit) -> (term -> unit) -> term -> unit
   val ty2tm          : hol_type -> term
   val pp_raw_term    : (term -> int) -> Portable.ppstream -> term -> unit
+
+  val term_size      : term -> int
 end;

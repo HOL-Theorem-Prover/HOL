@@ -3,11 +3,9 @@ sig
  type hol_type = HolKernel.hol_type
  type term     = HolKernel.term
 
- type const_rec = {Name : string, Ty : hol_type, Thy : string}
  type nthy_rec = {Name : string, Thy : string}
- type overloaded_op_info =
-    {base_type : hol_type,
-     actual_ops : const_rec list}
+ type overloaded_op_info = {base_type : hol_type, actual_ops : term list,
+                            tyavoids : hol_type list}
 
 
   type overload_info
@@ -23,14 +21,13 @@ sig
 
 
   val fupd_actual_ops :
-    (const_rec list -> const_rec list) -> overloaded_op_info ->
+    (term list -> term list) -> overloaded_op_info ->
     overloaded_op_info
 
   exception OVERLOAD_ERR of string
 
   val remove_overloaded_form :
-    string -> overload_info ->
-    overload_info * (nthy_rec list * nthy_rec list)
+    string -> overload_info -> overload_info * (term list * term list)
 
   val raw_map_insert :
     string -> (nthy_rec list * nthy_rec list) ->
@@ -46,6 +43,8 @@ sig
   val add_actual_overloading:
     {opname: string, realname: string, realthy : string} ->
     overload_info -> overload_info
+
+  val add_overloading : string * term -> overload_info -> overload_info
 
   val send_to_back_overloading:
     {opname: string, realname: string, realthy : string} ->

@@ -90,7 +90,7 @@ fun check_for_errors tm = let
           ERR "prove_recursive_term_function_exists"
               "All conjuncts must be equations"
   val f = rator (lhs (hd conjs))
-  val _ = List.all (fn t => rator (lhs t) = f) conjs orelse
+  val _ = List.all (fn t => eq (rator (lhs t)) f) conjs orelse
           ERR "prove_recursive_term_function_exists"
               "Must define same constant in all equations"
   val _ = List.all (fn t => length (#2 (strip_comb (lhs t))) = 1) conjs orelse

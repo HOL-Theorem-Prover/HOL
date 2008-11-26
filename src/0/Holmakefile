@@ -7,9 +7,10 @@ FTERM_UI = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
 FTAG_UID = $(dprot $(SIGOBJ)/FinalTag-sig.ui)
 FTERM_UID = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
 TAG_UID = $(dprot $(SIGOBJ)/Tag.ui)
+LIB_UID = $(dprot $(SIGOBJ)/Lib.ui)
 
 
-Raw-sig.uo: Raw-sig.sml KernelTypes.uo
+Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID)
 	HOLMOSMLC -c -toplevel Raw-sig.sml
 
 Thm.uo: Thm.sml Term.uo $(TAG_UID) Raw-sig.uo
@@ -18,16 +19,16 @@ Thm.uo: Thm.sml Term.uo $(TAG_UID) Raw-sig.uo
 TheoryPP.uo: TheoryPP.sml Thm.uo
 	HOLMOSMLC -c -toplevel Raw-sig.ui Kind.ui Type.ui Term.ui Thm.ui TheoryPP.sml
 
-Theory.uo: Theory.sml TheoryPP.uo
+Theory.uo: Theory.sml TheoryPP.uo $(dprot $(SIGOBJ)/Systeml.ui)
 	HOLMOSMLC -c -toplevel Raw-sig.ui Kind.ui Type.ui Term.ui Thm.ui TheoryPP.ui Theory.sml
 
 Definition.uo: Definition.sml Theory.uo
 	HOLMOSMLC -c -toplevel Raw-sig.ui Kind.ui Type.ui Term.ui Thm.ui Theory.ui Definition.sml
 
-Net.uo: Net.sml Term.uo
+Net.uo: Net.sml Term.uo Raw-sig.uo
 	HOLMOSMLC -c -toplevel Raw-sig.ui Kind.ui Type.ui Term.ui Net.sml
 
-Thm-sig.uo: Thm-sig.sml
+Thm-sig.uo: Thm-sig.sml $(LIB_UID)
 	HOLMOSMLC -c -toplevel Thm-sig.sml
 
 TheoryPP-sig.uo: TheoryPP-sig.sml

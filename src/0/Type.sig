@@ -163,6 +163,8 @@ sig
                        -> (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
   val thy_types     : string -> (string * int) list
   val thy_type_oprs : string -> (string * kind * int) list
+  val type_size     : hol_type -> int
+
   val unbound_ty    : hol_type -> bool
   val pp_raw_type   : ppstream -> hol_type -> unit
   val type_to_string: hol_type -> string

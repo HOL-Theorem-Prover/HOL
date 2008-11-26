@@ -2053,6 +2053,20 @@ in
 fun unbound_ty ty = unb(ty,0)
 end;
 
+fun size acc tylist =
+    case tylist of
+      [] => acc
+    | [] :: tys => size acc tys
+    | (ty::tys1) :: tys2 => let
+      in
+        case ty of
+          TyApp(opr, arg) => size acc ((opr :: arg :: tys1) :: tys2)
+        | TyAll(_, body)  => size (1 + acc) ((body :: tys1) :: tys2)
+        | TyAbs(_, body)  => size (1 + acc) ((body :: tys1) :: tys2)
+        | _               => size (1 + acc) (tys1 :: tys2)
+      end
+
+fun type_size ty = size 0 [[ty]]
 
 (*---------------------------------------------------------------------------*
  *  Raw syntax prettyprinter for types.                                      *
@@ -2128,6 +2142,5 @@ val type_to_string = sprint pp_raw_type;
 val _ = installPP Kind.pp_kind;
 val _ = installPP pp_raw_type;
 *)
-
 
 end (* Type *)

@@ -504,7 +504,6 @@ val supp_supports = store_thm(
   Q_TAC SUFF_TAC `[(a,c)] ++ [(b,c)] ++ [(a,c)] == [(a,b)]`
         THEN1 METIS_TAC [is_perm_def] THEN
   SIMP_TAC (srw_ss()) [permeq_def, FUN_EQ_THM] THEN
-  Q.X_GEN_TAC `x` THEN
   ONCE_REWRITE_TAC [GSYM swapstr_swapstr] THEN
   `(swapstr a c b = b) /\ (swapstr a c c = a)` by SRW_TAC [][swapstr_def] THEN
   ASM_REWRITE_TAC [] THEN SRW_TAC [][]);

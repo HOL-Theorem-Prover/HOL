@@ -3236,9 +3236,6 @@ val word_div_1 = save_thm("word_div_1",
 val word_bit_0 = save_thm("word_bit_0",
   EQF_ELIM (SIMP_CONV std_ss [word_bit_n2w, BIT_ZERO] ``word_bit h 0w``));
 
-val word_msb_0 = save_thm("word_msb_0",
-  EQF_ELIM (SIMP_CONV std_ss [word_msb_n2w, BIT_ZERO] ``word_msb 0w``));
-
 val word_lsb_word_T = store_thm("word_lsb_word_T",
   `word_lsb ($- 1w)`,
   SRW_TAC [fcpLib.FCP_ss, ARITH_ss]
@@ -3335,7 +3332,7 @@ val WORD_LO_word_T = store_thm("WORD_LO_word_T",
 
 val WORD_LESS_0_word_T = store_thm("WORD_LESS_0_word_T",
   `~(0w < $- 1w) /\ ~(0w <= $- 1w) /\ $- 1w < 0w /\ $- 1w <= 0w`,
-  REWRITE_TAC [WORD_LT, WORD_LE, word_msb_word_T, word_msb_0]);
+  REWRITE_TAC [WORD_LT, WORD_LE, word_msb_word_T, WORD_0_POS]);
 
 (* ------------------------------------------------------------------------- *)
 (* Support for termination proofs                                            *)

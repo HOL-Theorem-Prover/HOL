@@ -22,6 +22,7 @@ local
       Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
   fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
   fun ppg pps g = term_grammar.prettyprint_grammar Parse.pp_term pps g
+  fun timepp pps t = PP.add_string pps (Time.toString t ^ "s")
 in
   val _ = installPP (with_pp (Kind.pp_qkind))
   val _ = installPP (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
@@ -39,6 +40,7 @@ in
   val _ = installPP (with_pp Arbnum.pp_num)
   val _ = installPP (with_pp Arbint.pp_int)
   val _ = installPP (with_pp Arbrat.pp_rat)
+  val _ = installPP (with_pp timepp)
 end;
 
 

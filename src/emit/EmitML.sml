@@ -249,6 +249,7 @@ fun term_to_ML openthys side ppstrm =
      val rparen = prec_paren ")"
      val const_map = const_map openthys
      val numML = if !emitOcaml then "NumML." else "numML."
+     val intML = if !emitOcaml then "IntML." else "intML."
      val fcpML = if !emitOcaml then "FcpML." else "fcpML."
      fun fix s = fix_name("", false, s)
   fun pp i tm =
@@ -325,7 +326,8 @@ fun term_to_ML openthys side ppstrm =
          let val s = Arbint.toString(!dest_int_literal_hook tm)
          in begin_block CONSISTENT 0
           ; add_string"("; add_break(0,0)
-          ; add_string "intML.fromString"
+          ; add_string (pick_name openthys "int"
+              ("fromString", intML ^ "fromString"))
           ; add_break(0,0)
           ; add_string (mlquote s)
           ; add_break(0,0)

@@ -203,6 +203,20 @@ fun kind_compare (Type,     Type)     = EQUAL
   | kind_compare (Oper _,   _)        = GREATER;
 
 
+fun size acc kdlist =
+    case kdlist of
+      [] => acc
+    | [] :: kds => size acc kds
+    | (kd::kds1) :: kds2 => let
+      in
+        case kd of
+          Oper(opr, arg) => size acc ((opr :: arg :: kds1) :: kds2)
+        | _              => size (1 + acc) (kds1 :: kds2)
+      end
+
+fun kind_size kd = size 0 [[kd]]
+
+
 (*---------------------------------------------------------------------------*
  *  Syntax prettyprinters for kinds.                                         *
  *                                                                           *

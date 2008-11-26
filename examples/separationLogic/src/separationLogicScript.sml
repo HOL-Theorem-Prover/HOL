@@ -712,6 +712,38 @@ CONJUNCT1 (
 REWRITE_RULE[PreOrder, reflexive_def] ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___IS_PREORDER));
 
 
+
+val ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___FEMPTY =
+store_thm ("ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___FEMPTY",
+
+``!s. ASL_IS_SUBSTATE DISJOINT_FMAP_UNION FEMPTY s``,
+
+SIMP_TAC std_ss [ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION,
+		 FDOM_FEMPTY, NOT_IN_EMPTY, EMPTY_SUBSET]);
+
+
+val ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___FUNION =
+store_thm ("ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___FUNION",
+
+``!s s1 s2.
+DISJOINT (FDOM s1) (FDOM s2) ==>
+
+(ASL_IS_SUBSTATE DISJOINT_FMAP_UNION (FUNION s1 s2) s =
+
+(ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1 s /\
+ ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s2 s))``,
+
+SIMP_TAC std_ss [ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION,
+		 FDOM_FUNION, IN_UNION, DISJ_IMP_THM,
+		 FORALL_AND_THM, UNION_SUBSET,
+		 FUNION_DEF, DISJOINT_DEF, EXTENSION,
+		 NOT_IN_EMPTY, IN_INTER] THEN
+METIS_TAC[]);
+
+
+
+
+
 val asl_star_def = Define `
 asl_star = (\(f:'a option -> 'a option -> 'a option) P Q x. ?p q. (SOME x = f (SOME p) (SOME q)) /\ (p IN P) /\ (q IN Q))`
 
@@ -2436,6 +2468,7 @@ REPEAT STRIP_TAC THENL [
 
 
 
+
 val quant_best_local_action___QUANT_ELIM = store_thm ("best_local_action___QUANT_ELIM",
 ``quant_best_local_action f (K P) (K Q) = best_local_action f P Q``,
 
@@ -2590,6 +2623,63 @@ val NONE___best_local_action = store_thm ("NONE___best_local_action",
 (!s0 s1. (s1 IN P1) ==> ~(SOME s = f (SOME s0) (SOME s1)))``,
 
 REWRITE_TAC[NONE_IS_NOT_SOME, IS_SOME___best_local_action] THEN
+SIMP_TAC std_ss [] THEN
+METIS_TAC[]);
+
+
+
+
+
+val SOME___quant_best_local_action = store_thm ("SOME___quant_best_local_action",
+``
+(quant_best_local_action f P1 P2 s = SOME Q) =
+(
+(?arg s0 s1. (SOME s = f (SOME s0) (SOME s1)) /\ (s1 IN (P1 arg))) /\
+(Q = (\x. !arg s0 s1.
+               (f (SOME s0) (SOME s1) = SOME s) /\ s1 IN P1 arg ==>
+               x IN asl_star f (P2 arg) {s0})))``,
+
+
+SIMP_TAC std_ss [quant_best_local_action_def,
+		 SOME___INF_fasl_action_order,
+		 IN_ABS, GSYM RIGHT_EXISTS_AND_THM,
+		 GSYM LEFT_EXISTS_AND_THM,
+		 IMAGE_ABS, IN_INTER, IN_ABS] THEN
+
+SIMP_TAC std_ss [prove (
+   ``((x = THE y) /\ (IS_SOME y)) = (SOME x = y)``,
+   Cases_on `y` THEN SIMP_TAC std_ss [])] THEN
+
+SIMP_TAC std_ss [IS_SOME___best_local_action,
+		 SOME___best_local_action,
+		 BIGINTER_ABS, IN_ABS,
+		 GSYM LEFT_FORALL_IMP_THM] THEN
+REWRITE_TAC[EXTENSION] THEN
+SIMP_TAC std_ss [IN_ABS,
+		 LEFT_EXISTS_AND_THM,
+		 RIGHT_EXISTS_AND_THM] THEN
+METIS_TAC[]);
+
+
+
+
+val IS_SOME___quant_best_local_action = store_thm ("IS_SOME___quant_best_local_action",
+``
+(IS_SOME (quant_best_local_action f P1 P2 s)) =
+(?arg s0 s1. (SOME s = f (SOME s0) (SOME s1)) /\ (s1 IN (P1 arg)))``,
+
+SIMP_TAC std_ss [IS_SOME_EXISTS,
+		 SOME___quant_best_local_action]);
+
+
+
+
+val NONE___quant_best_local_action = store_thm ("NONE___quant_best_local_action",
+``
+(quant_best_local_action f P1 P2 s = NONE) =
+(!arg s0 s1. (s1 IN (P1 arg)) ==> ~(SOME s = f (SOME s0) (SOME s1)))``,
+
+REWRITE_TAC[NONE_IS_NOT_SOME, IS_SOME___quant_best_local_action] THEN
 SIMP_TAC std_ss [] THEN
 METIS_TAC[]);
 
@@ -9032,17 +9122,6 @@ SIMP_TAC std_ss [fasl_prog_best_local_action_def,
 		 quant_best_local_action___QUANT_ELIM]);
 
 
-val prog_quant_best_local_action = store_thm ("FASL_INFERENCE_prog_quant_best_local_action",
-``!xenv penv P Q. 
-(FASL_IS_LOCAL_EVAL_XENV xenv) ==>
-FASL_PROGRAM_HOARE_TRIPLE xenv penv 
-P (fasl_prog_best_local_action P Q) Q``,
-
-
-REPEAT STRIP_TAC THEN
-MP_TAC (Q.SPECL [`xenv`, `penv`, `K P`, `K Q`, `x`] FASL_INFERENCE_prog_quant_best_local_action) THEN
-ASM_SIMP_TAC std_ss [GSYM fasl_prog_best_local_action___ALTERNATIVE_DEF]);
-
 
 
 
@@ -10063,7 +10142,10 @@ PROVE_TAC[FASL_INFERENCE_prog_procedure_call]);
 
 val FASL_PROTO_TRACES_EVAL_PROC___TO___FASL_PROGRAM_TRACES = store_thm (
 	"FASL_PROTO_TRACES_EVAL_PROC___TO___FASL_PROGRAM_TRACES",
-``!n pt penv. ?prog. !m penv'. (FDOM penv = FDOM penv') ==> (FASL_PROGRAM_TRACES_PROC m penv' prog = FASL_PROTO_TRACES_EVAL_PROC n penv pt)``,
+``!n (pt:('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) fasl_proto_trace) penv. 
+   ?prog:('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) fasl_program. !m penv'. 
+   (FDOM penv = FDOM penv') ==> 
+   (FASL_PROGRAM_TRACES_PROC m penv' prog = FASL_PROTO_TRACES_EVAL_PROC n penv pt)``,
 
 ONCE_REWRITE_TAC [EXTENSION] THEN
 completeInduct_on `n` THEN
@@ -10181,9 +10263,11 @@ METIS_TAC[]);
 *)
 
 
+
 val FASL_EQUIV_PENV_PROC_def = Define `
-	FASL_EQUIV_PENV_PROC n penv =
-	FUN_FMAP (\proc. \arg. @prog. !m penv'. (FDOM penv = FDOM penv') ==>
+	FASL_EQUIV_PENV_PROC n (penv:'d |-> ('b -> ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) fasl_program)) =
+	FUN_FMAP (\proc. \arg. @prog. !m 
+(penv':'d |-> ('b -> ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) fasl_program)). (FDOM penv = FDOM penv') ==>
 		(FASL_PROGRAM_TRACES_PROC m penv' prog =
 		FASL_PROTO_TRACES_EVAL_PROC n penv (fasl_pt_procedure_call proc arg)))
 		(FDOM penv)`

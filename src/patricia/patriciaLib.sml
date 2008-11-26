@@ -837,7 +837,7 @@ val IS_PTREE_X_CONV =
   IS_PTREE_ADD_LIST_CONV ORELSEC IS_PTREE_PTREE_OF_NUMSET_CONV;
 
 fun PTREE_IS_PTREE_CONV t =
-let val thm = ConseqConv.DEPTH_CONSEQ_CONV IS_PTREE_X_CONV t
+let val thm = ConseqConv.DEPTH_STRENGTHEN_CONSEQ_CONV IS_PTREE_X_CONV t
     val (l,r) = dest_imp (concl thm)
     val is_ptree_thm = IS_PTREE_EVAL_CONV l
 in

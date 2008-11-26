@@ -232,4 +232,18 @@ fun match_type_in_context pat ob S = fst (raw_match_type pat ob (S,[]))
 
 fun match_type pat ob = match_type_in_context pat ob []
 
+
+fun size acc tylist =
+    case tylist of
+      [] => acc
+    | [] :: tys => size acc tys
+    | (ty::tys1) :: tys2 => let
+      in
+        case ty of
+          Tyv _ => size (1 + acc) (tys1 :: tys2)
+        | Tyapp(_, args) => size (1 + acc) (args :: tys1 :: tys2)
+      end
+
+fun type_size ty = size 0 [[ty]]
+
 end (* struct *)

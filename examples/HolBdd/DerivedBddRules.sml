@@ -147,9 +147,9 @@ fun fn3(f1,f2,f3)(x1,x2,x3) = (f1 x1, f2 x2, f3 x3)
 in
 fun GenTermToTermBdd leaffn vm tm =
  let fun recfn tm = 
-  if tm = T 
+  if eq tm T 
    then BddCon true vm else
-  if tm = F 
+  if eq tm F 
    then BddCon false vm else
   if is_var tm 
    then BddVar true vm tm else
@@ -418,8 +418,8 @@ fun BddApRestrict tb tm =
      val sub_tb = List.map 
                    (fn {redex = v, residue = c} => 
                     (BddVar true vm v, 
-                     if c=T then BddCon true  vm else 
-                     if c=F then BddCon false vm 
+                     if eq c T then BddCon true  vm else 
+                     if eq c F then BddCon false vm 
                             else (print_term c;
                                   print " not a boolean constant\n";
                                   raise BddApRestrictError)))
@@ -485,7 +485,7 @@ val split_subst =
   (fn (tb,tb')=>
     let val tm' = getTerm tb'
     in
-     (tm'=T) orelse (tm'=F)
+     (eq tm' T) orelse (eq tm' F)
     end);
 
 (*****************************************************************************)
@@ -757,7 +757,7 @@ val trl = computeTrace report vm pth (th0,thsuc);
 
 fun extendSat varlist vm tbl =
  List.map
-  (fn v => case List.find (fn (tb,tb') => getTerm tb = v) tbl of
+  (fn v => case List.find (fn (tb,tb') => eq (getTerm tb) v) tbl of
               SOME tb_tb' => tb_tb'
             | NONE        => (BddVar true vm v, BddCon true vm))
   varlist;

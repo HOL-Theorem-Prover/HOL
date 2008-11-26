@@ -212,7 +212,7 @@ val CHECK_TAC :tactic = fn (asl,gl) =>
       else failwith "CHECK_TAC";
 
 val FALSE_TAC :tactic = fn (asl,gl) =>
-      if exists (fn th => th = --`F`--) asl
+      if exists (eq (--`F`--)) asl
       then CONTR_TAC (ASSUME (--`F`--)) (asl,gl)
       else failwith "FALSE_TAC";
 
@@ -223,8 +223,8 @@ fun MP_IMP_TAC imp_th :tactic = fn (asl,gl) =>
       end;
 
 fun UNASSUME_THEN (ttac:thm_tactic) tm :tactic = fn (asl,t) =>
- if mem tm asl 
- then ttac (ASSUME tm) (subtract asl [tm], t)
+ if op_mem eq tm asl 
+ then ttac (ASSUME tm) (op_subtract eq asl [tm], t)
  else failwith "UNASSUME_TAC";
 
 val CONTRAPOS_TAC :tactic = fn (asl,gl) =>
@@ -237,7 +237,7 @@ val FORALL_EQ_TAC :tactic = fn (asl,gl) =>
      (let val (allt1,allt2) = dest_eq gl;
           val (x,t1) = dest_forall allt1
           and (y,t2) = dest_forall allt2 in
-      if not (x = y) then fail()
+      if not (eq x y) then fail()
       else 
        ([(asl,mk_eq (t1, t2))],
         fn [thm] => FORALL_EQ x thm)
@@ -248,7 +248,7 @@ val EXISTS_EQ_TAC :tactic = fn (asl,gl) =>
      (let val (ext1,ext2) = dest_eq gl;
           val (x,t1) = dest_exists ext1
           and (y,t2) = dest_exists ext2 in
-      if not (x = y) then fail()
+      if not (eq x y) then fail()
       else 
        ([(asl,mk_eq (t1, t2))],
         fn [thm] => EXISTS_EQ x thm)
@@ -268,8 +268,8 @@ val FIND_EXISTS_TAC :tactic = fn (asl,gl) =>
           | find_exists_eq (cnj::cnjs) =
             let val (lhs,rhs) = dest_eq cnj
             in
-                if lhs = v then rhs
-                else if rhs = v then lhs
+                if eq lhs v then rhs
+                else if eq rhs v then lhs
                 else failwith "find_exists_eq"
             end
             handle _ => find_exists_eq cnjs
@@ -339,7 +339,7 @@ let FORALL_IMP_TAC :tactic = fn (asl,gl) =>
      (let allt1,allt2 = dest_imp gl in
       let x,t1 = dest_forall allt1 in
       let y,t2 = dest_forall allt2 in
-      if not (x = y) then fail()
+      if not (eq x y) then fail()
       else 
        [asl,mk_imp (t1, t2)],
        fn [thm] => FORALL_IMP x thm)
@@ -347,7 +347,7 @@ let FORALL_IMP_TAC :tactic = fn (asl,gl) =>
 *)
 
 val rec UNDISCH_ALL_TAC :tactic = fn (asl,gl) =>
-        if asl = [] then ALL_TAC (asl,gl)
+        if null asl then ALL_TAC (asl,gl)
         else (UNDISCH_TAC (hd asl)
               THEN UNDISCH_ALL_TAC) (asl,gl);
 

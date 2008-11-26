@@ -38,10 +38,20 @@ sig
   (*Performs one step*)
   val SMALLFOOT_STEP_TAC : tactic
   val SMALLFOOT_MINI_STEP_TAC : tactic
+  val SMALLFOOT_EQ_CASE_SPLIT_TAC : term -> term -> tactic;
+  val SMALLFOOT_PROP_IMPLIES___EQ_CASE_SPLIT_TAC : term -> term -> tactic;
+
+  val SMALLFOOT_NO_CASE_SPLIT_STEP_TAC : tactic
+  val SMALLFOOT_NO_CASE_SPLIT_MINI_STEP_TAC : tactic
+
+  (*Cleans up the goal*)
+  val SMALLFOOT_ONCE_CLEAN_TAC : tactic;
+  val SMALLFOOT_CLEAN_TAC : tactic;
 
   (*Tries as many steps as possible. This
     should solve the goal*)
   val SMALLFOOT_SOLVE_TAC : tactic
+  val SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC : tactic
 
   (*Parses a file and sets the goal, that the
     specification is correct. It calls
@@ -53,8 +63,10 @@ sig
     Same as smallfoot_set_goal followed by
     SMALLFOOT_SOLVE_TAC. The verbose version gives some
     status reports on the way and measures the needed time.*)
-  val smallfoot_prove : string -> thm;
-  val smallfoot_verbose_prove : string -> thm;
+  val smallfoot_prove : string * tactic -> thm;
+  val smallfoot_auto_prove : string -> thm;
+  val smallfoot_verbose_prove : string * tactic -> thm;
+  val smallfoot_verbose_auto_prove : string -> thm;
 
 
 

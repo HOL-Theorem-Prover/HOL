@@ -35,8 +35,10 @@
 (*  HOL Preliminaries                                                        *)
 (* ------------------------------------------------------------------------- *)
 
+quietdec := true;
 app load ["stringLib"]; 
 open pairTheory arithmeticTheory listTheory optionTheory;
+quietdec := false;
 
 val thm_counter = Count.mk_meter();
 
@@ -60,7 +62,9 @@ val MEM_EXISTS_LEM = Q.prove
 val _ = new_theory "regexp";
 
 (*--------------------------------------------------------------------------*)
-(* Datatype of regular expressions                                          *)
+(* Datatype of regular expressions. Note that by having Charset take a      *)
+(* characteristic function means that regexp is not computably testable for *)
+(* equality. Alternative: have Charset be a list or a finite map ...        *)
 (*--------------------------------------------------------------------------*)
 
 Hol_datatype 
@@ -75,36 +79,39 @@ Hol_datatype
 (* of their pre-defined behaviour.                                           *)
 (*---------------------------------------------------------------------------*)
 
-val _ = remove_termtok{term_name = "COND",tok="=>"};  
-val _ = overload_on ("|", Term`$Or`);
+val _ = overload_on ("+", Term`$Or`);
 val _ = overload_on ("#", Term`$Then`);
 
-val _ = set_fixity "|" (Infixr 501);
+val _ = set_fixity "+" (Infixr 501);
 val _ = set_fixity "#" (Infixr 601);
 
 val regexp_cases = TypeBase.nchotomy_of ``:'a regexp``;
 
 (*---------------------------------------------------------------------------*)
-(* Semantics of regular expressions (from Mike Gordon).                      *)
-(* sem r w means regular expression r matches word w (represented as a list) *)
+(* Semantics of regular expressions. sem r w means that word w (represented  *)
+(* as a list) is in the language of regular expression r.                    *)
 (*---------------------------------------------------------------------------*)
 
 val sem_def = 
  Define
   `(sem Epsilon w     = (w = []))                                         /\
    (sem (Charset C) w = (?x. (w = [x]) /\ C x))                           /\
-   (sem (r1|r2) w     = sem r1 w \/ sem r2 w)                             /\
-   (sem (r1#r2) w     = ?w1 w2. (w = w1 ++ w2) /\ sem r1 w1 /\ sem r2 w2) /\
+   (sem (r1 + r2) w   = sem r1 w \/ sem r2 w)                             /\
+   (sem (r1 # r2) w   = ?w1 w2. (w = w1 ++ w2) /\ sem r1 w1 /\ sem r2 w2) /\
    (sem (Repeat r) w  = ?wlist. (w = FLAT wlist) /\ EVERY (sem r) wlist)`;
 
+(*---------------------------------------------------------------------------*)
+(* Some basic equivalences for regular expressions.                          *)
+(*---------------------------------------------------------------------------*)
+
 val regexp_repeat_thm = Q.prove
-(`!r w.sem (Repeat r) w = sem (Epsilon | (r # (Repeat r))) w`,
+(`!r w.sem (Repeat r) w = sem (Epsilon + (r # (Repeat r))) w`,
  RW_TAC std_ss [] THEN EQ_TAC THEN RW_TAC list_ss [sem_def, FLAT] 
  THENL [Cases_on `wlist` THEN RW_TAC list_ss [FLAT], ALL_TAC, ALL_TAC]
  THEN METIS_TAC [FLAT,EVERY_DEF]);
 
 val repeat_to_ncat_thm = Q.prove
-(`!r w.sem (Repeat r) w ==> ?n.sem (FUNPOW ($# r) n Epsilon) w`,
+(`!r w.sem (Repeat r) w ==> ?n. sem (FUNPOW ($# r) n Epsilon) w`,
  RW_TAC list_ss [sem_def, FLAT, FUNPOW_SUC] 
    THEN Q.EXISTS_TAC `LENGTH wlist` 
    THEN Induct_on `wlist` 
@@ -135,8 +142,8 @@ val match_defn =
 /\ (match (Epsilon::t) w s        = match t w s)
 /\ (match (Charset C::t) [] s     = F)
 /\ (match (Charset C::t) (d::w) s = C d /\ match t w NONE) 
-/\ (match ((r1|r2)::t) w s        = match (r1::t) w s \/ match (r2::t) w s)
-/\ (match ((r1#r2)::t) w s        = match (r1::r2::t) w s)
+/\ (match ((r1 + r2)::t) w s      = match (r1::t) w s \/ match (r2::t) w s)
+/\ (match ((r1 # r2)::t) w s      = match (r1::r2::t) w s)
 /\ (match (Repeat r::t) w s       =
        if s = SOME (Repeat r::t) then
          F
@@ -156,7 +163,7 @@ val my_regexp_size_def =
  Define
   `(my_regexp_size Epsilon     = 1) /\
    (my_regexp_size (Charset _) = 1) /\
-   (my_regexp_size (r1 | r2)   = 1 + my_regexp_size r1 + my_regexp_size r2) /\
+   (my_regexp_size (r1 + r2)   = 1 + my_regexp_size r1 + my_regexp_size r2) /\
    (my_regexp_size (r1 # r2)   = 1 + my_regexp_size r1 + my_regexp_size r2) /\
    (my_regexp_size (Repeat r)  = 1 + my_regexp_size r)`;
 
@@ -168,7 +175,7 @@ val starHeight_def =
  Define
   `(starHeight Epsilon     = 0) /\
    (starHeight (Charset _) = 0) /\
-   (starHeight (r1 | r2)   = MAX (starHeight r1) (starHeight r2)) /\
+   (starHeight (r1 + r2)   = MAX (starHeight r1) (starHeight r2)) /\
    (starHeight (r1 # r2)   = MAX (starHeight r1) (starHeight r2)) /\
    (starHeight (Repeat r)  = 1 + starHeight r)`;
 
@@ -235,7 +242,7 @@ val m_def =
  Define
   `(m (Epsilon::t,w,s)  x     = (x = (t,w,s))) /\ 
    (m (Charset C::t,d::w,s) x = (x = (t,w,NONE)) /\ C d) /\
-   (m ((r1 | r2)::t, w, s) x  = (x = (r1::t,w,s)) \/ (x = (r2::t,w,s))) /\
+   (m ((r1 + r2)::t, w, s) x  = (x = (r1::t,w,s)) \/ (x = (r2::t,w,s))) /\
    (m ((r1 # r2)::t, w, s) x  = (x = (r1::r2::t,w,s))) /\
    (m (Repeat r::t, w,s) x    = (x = (t, w, s)) \/ 
                                 (x = (r::Repeat r::t, w, SOME(Repeat r::t))))/\
@@ -260,7 +267,7 @@ val m_ind_thm = Q.prove
      'a regexp list # 'a list # 'a regexp list option -> bool.
   (!t w s x. P (Epsilon::t,w,s) x) /\
   (!c t d w s x. P (Charset c::t,d::w,s) x) /\
-  (!r1 r2 t w s x. P ((r1 | r2)::t,w,s) x) /\
+  (!r1 r2 t w s x. P ((r1 + r2)::t,w,s) x) /\
   (!r1 r2 t w s x. P ((r1 # r2)::t,w,s) x) /\
   (!r t w s x. P (Repeat r::t,w,s) x) /\
   (!c t s x. P (Charset c::t,[],s) x) /\
@@ -286,7 +293,7 @@ val cases_lemma = Q.prove
      (?t w s. a = (Epsilon::t,w,s)) \/
      (?c t w s. a = (Charset c::t,[],s)) \/
      (?c d t w s. a = (Charset c::t,d::w,s)) \/
-     (?r1 r2 t w s. a = ((r1|r2)::t,w,s)) \/
+     (?r1 r2 t w s. a = ((r1+r2)::t,w,s)) \/
      (?r1 r2 t w s. a = ((r1#r2)::t,w,s)) \/
      (?r t w s. a = (Repeat r::t,w,s))`,
  METIS_TAC [list_CASES,ABS_PAIR_THM,regexp_cases]);
@@ -297,7 +304,7 @@ val ms_ind_thm = Q.prove
     (!x. P [([],[],x)]) /\
     (!r t w s. P [(Repeat r::t,w,s)]) /\
     (!r1 r2 t w s. P [((r1 # r2)::t,w,s)]) /\
-    (!r1 r2 t w s. P [((r1 | r2)::t,w,s)]) /\
+    (!r1 r2 t w s. P [((r1 + r2)::t,w,s)]) /\
     (!c d t w s. P [(Charset c::t,d::w,s)]) /\
     (!c t s. P [(Charset c::t,[],s)]) /\
     (!t w s. P [(Epsilon::t,w,s)]) /\
@@ -307,7 +314,7 @@ val ms_ind_thm = Q.prove
     (!c t d w s t' w' s' rst.
         P ((t',w',s')::rst) ==> P((Charset c::t,d::w,s)::(t',w',s')::rst)) /\
     (!r1 r2 t w s t' w' s' rst.
-        P ((t',w',s')::rst) ==> P(((r1 | r2)::t,w,s)::(t',w',s')::rst)) /\
+        P ((t',w',s')::rst) ==> P(((r1 + r2)::t,w,s)::(t',w',s')::rst)) /\
     (!r1 r2 t w s t' w' s' rst.
         P ((t',w',s')::rst) ==> P(((r1 # r2)::t,w,s)::(t',w',s')::rst)) /\
     (!r t w s t' w' s' rst.
@@ -419,7 +426,7 @@ val compose_m_seq_thm = Q.prove
       THEN `(t2 = []) \/ ?a z. t2 = a::z` by METIS_TAC [list_CASES] 
       THEN FULL_SIMP_TAC list_ss [match_seq_def]
       THEN `(h = Epsilon) \/ (?c. h = Charset c) \/
-            (?r1 r2. h = r1|r2) \/ (?r1 r2. h = r1#r2) \/ 
+            (?r1 r2. h = r1+r2) \/ (?r1 r2. h = r1#r2) \/ 
             (?r. h = Repeat r)` by METIS_TAC [regexp_cases]
       THEN RW_TAC list_ss [] THEN EVAL_TAC THEN FULL_SIMP_TAC list_ss [m_def]
       THEN RW_TAC list_ss [m_def, match_seq_def, SIMP_RULE std_ss [] lem]
@@ -429,7 +436,7 @@ val compose_m_seq_thm = Q.prove
        THEN `((rl = []) \/ ?h t. rl = h::t) /\
              ((w = []) \/ ?b y. w = b::y)` by METIS_TAC [list_CASES] 
        THEN `(h = Epsilon) \/ (?c. h = Charset c) \/
-             (?r1 r2. h = r1|r2) \/ (?r1 r2. h = r1#r2) \/ 
+             (?r1 r2. h = r1+r2) \/ (?r1 r2. h = r1#r2) \/ 
              (?r. h = Repeat r)` by METIS_TAC [regexp_cases]
        THEN NTAC 2 (RW_TAC list_ss [] THEN
                     FULL_SIMP_TAC list_ss [LET_THM, m_def, match_seq_def,
@@ -520,7 +527,7 @@ Q.prove
  `((x=[])  \/ ?h t. x = h::t) /\
   ((rl=[]) \/ (?rst. rl = Epsilon::rst)  
            \/ (?c rst. rl = Charset c::rst) 
-           \/ (?r1 r2 rst. rl = (r1|r2)::rst) 
+           \/ (?r1 r2 rst. rl = (r1+r2)::rst) 
            \/ (?r1 r2 rst. rl = (r1#r2)::rst) 
            \/ (?r2 rst. rl = Repeat r2::rst))`
       by METIS_TAC [list_CASES,regexp_cases] 

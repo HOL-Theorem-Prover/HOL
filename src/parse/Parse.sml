@@ -395,6 +395,31 @@ in
   fn t => with_pp con (pprint t)
 end
 
+fun minprint t = let
+  val g0 = (type_grammar.empty_grammar, term_grammar.stdhol)
+  fun default t = let
+    val t_str =
+        String.toString
+          (trace ("types", 1)
+                 (PP.pp_to_string 1000000 (#2 (print_from_grammars g0)))
+                 t)
+  in
+    String.concat ["(#2 (parse_from_grammars min_grammars)",
+                   "[QUOTE \"", t_str, "\"])"]
+  end
+in
+  if is_const t then let
+      val {Name,Thy,...} = dest_thy_const t
+      val t' = prim_mk_const {Name = Name, Thy = Thy}
+    in
+      if aconv t t' then
+        String.concat ["(Term.prim_mk_const { Name = ",
+                       quote Name, ", Thy = ",
+                       quote Thy, "})"]
+      else default t
+    end
+  else default t
+end
 
 (*---------------------------------------------------------------------------
               Parsing types
@@ -404,18 +429,18 @@ end
 fun to_ptyInEnv ty = let
   open Pretype Parse_support
   val (PT(ty0,l)) = ty
-  fun binder_type(Pretype.PT(Pretype.Vartype(s,kd,rk),l)) = make_binding_type_occ l s
-    | binder_type(Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) =
-            make_kind_binding_occ l (binder_type Ty) Kind
-    | binder_type(Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) =
-            make_rank_binding_occ l (binder_type Ty) Rank
-    | binder_type _ = raise ERROR "to_ptyInEnv" "non-variable type binder"
+  fun binder_type binder (Pretype.PT(Pretype.Vartype(s,kd,rk),l)) = make_binding_type_occ l s binder
+    | binder_type binder (Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) =
+            make_kind_binding_occ l (binder_type binder Ty) Kind
+    | binder_type binder (Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) =
+            make_rank_binding_occ l (binder_type binder Ty) Rank
+    | binder_type _ _ = raise ERROR "to_ptyInEnv" "non-variable type binder"
 in case ty0 of
      Vartype(s,kd,rk)  => make_type_atom l (s,kd,rk)
    | Contype{Thy,Tyop,Kind,Rank} => make_type_constant l {Thy=Thy,Tyop=Tyop}
    | TyApp(ty1,ty2   ) => list_make_app_type l (map to_ptyInEnv [ty1,ty2])
-   | TyUniv(bvar,body) => bind_type l "!"  [binder_type bvar] (to_ptyInEnv body)
-   | TyAbst(bvar,body) => bind_type l "\\" [binder_type bvar] (to_ptyInEnv body)
+   | TyUniv(bvar,body) => bind_type l [binder_type "!"  bvar] (to_ptyInEnv body)
+   | TyAbst(bvar,body) => bind_type l [binder_type "\\" bvar] (to_ptyInEnv body)
    | TyKindConstr{Ty,Kind}     => make_kind_constr_type l (to_ptyInEnv Ty) Kind
    | TyRankConstr{Ty,Rank}     => make_rank_constr_type l (to_ptyInEnv Ty) Rank
    | UVar (r as ref (NONEU _)) => make_uvar_type l r NONE
@@ -687,14 +712,6 @@ in
 end
 
 local open Parse_support Absyn
-  fun binder(VIDENT (l,s))    = make_binding_occ l s
-    | binder(VPAIR(l,v1,v2))  = make_vstruct l [binder v1, binder v2] NONE
-    | binder(VAQ (l,x))       = make_aq_binding_occ l x
-    | binder(VTYPED(l,v,pty)) = make_vstruct l [binder v] (SOME (to_ptyInEnv pty))
-  fun tybinder(Pretype.PT(Pretype.Vartype(s,kd,rk),l)) = (make_tybinding_occ l s kd rk)
-    | tybinder(Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) = make_kind_tybinding_occ l (tybinder Ty) Kind
-    | tybinder(Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) = make_rank_tybinding_occ l (tybinder Ty) Rank
-    | tybinder(Pretype.PT(_,l)) = raise ERROR "tybinder" "not a variable type"
   fun to_vstruct t =
       case t of
         APP(l, APP(_, IDENT (_, ","), t1), t2) => VPAIR(l, to_vstruct t1,
@@ -705,13 +722,28 @@ local open Parse_support Absyn
       | _ => raise ERRORloc "Term" (locn_of_absyn t)
                             "Bad variable-structure"
 in
-  fun absyn_to_preterm_in_env ginfo t = let
+  fun absyn_to_preterm_in_env oinfo t = let
+    fun binder(VIDENT (l,s))    = make_binding_occ l s
+      | binder(VPAIR(l,v1,v2))  = make_vstruct oinfo l [binder v1, binder v2] NONE
+      | binder(VAQ (l,x))       = make_aq_binding_occ l x
+      | binder(VTYPED(l,v,pty)) = make_vstruct oinfo l [binder v] (SOME (to_ptyInEnv pty))
+    fun tybinder(Pretype.PT(Pretype.Vartype(s,kd,rk),l)) = (make_tybinding_occ l s kd rk)
+      | tybinder(Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) = make_kind_tybinding_occ l (tybinder Ty) Kind
+      | tybinder(Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) = make_rank_tybinding_occ l (tybinder Ty) Rank
+      | tybinder(Pretype.PT(_,l)) = raise ERROR "tybinder" "not a variable type"
+(*
+    fun binder(VIDENT (l,s))    = make_binding_occ l s
+      | binder(VPAIR(l,v1,v2))  = make_vstruct oinfo l [binder v1, binder v2]
+                                               NONE
+      | binder(VAQ (l,x))       = make_aq_binding_occ l x
+      | binder(VTYPED(l,v,pty)) = make_vstruct oinfo l [binder v] (SOME pty)
+*)
     open parse_term Absyn Parse_support
-    val to_ptmInEnv = absyn_to_preterm_in_env ginfo
+    val to_ptmInEnv = absyn_to_preterm_in_env oinfo
   in
     case t of
       APP(l,APP(_,IDENT (_,"gspec special"), t1), t2) =>
-        make_set_abs l (to_ptmInEnv t1, to_ptmInEnv t2)
+        make_set_abs oinfo l (to_ptmInEnv t1, to_ptmInEnv t2)
     | APP(l,APP(_,APP(_,IDENT (_, "gspec2 special"), t1), t2), t3) => let
         val l3 = locn_of_absyn t3
         val newbody = APP(l3, APP(l3, QIDENT(l3, "pair", ","), t1), t3)
@@ -724,10 +756,10 @@ in
 *)
     | APP(l, t1, t2)     => list_make_comb l (map to_ptmInEnv [t1, t2])
     | TYAPP(l, tm, ty)   => list_make_tycomb l (to_ptmInEnv tm) [to_ptyInEnv ty]
-    | IDENT (l, s)       => make_atom ginfo l s
-    | QIDENT (l, s1, s2) => make_qconst ginfo l (s1,s2)
-    | LAM(l, vs, t)      => bind_term l "\\" [binder vs] (to_ptmInEnv t)
-    | TYLAM(l, tv, t)    => bind_term l "\\:" [tybinder tv] (to_ptmInEnv t)
+    | IDENT (l, s)       => make_atom oinfo l s
+    | QIDENT (l, s1, s2) => make_qconst oinfo l (s1,s2)
+    | LAM(l, vs, t)      => bind_term l [binder vs] (to_ptmInEnv t)
+    | TYLAM(l, tv, t)    => bind_term l [tybinder tv] (to_ptmInEnv t)
     | TYPED(l, t, ty)    => make_constrained l (to_ptmInEnv t) (to_ptyInEnv ty)
     | AQ (l, t)          => make_aq l t
   end
@@ -1157,7 +1189,8 @@ fun try_grammar_extension f x =
 val std_binder_precedence = 0;
 
 fun temp_add_binder(name, prec) = let in
-   the_term_grammar := add_binder (!the_term_grammar) (name, prec);
+   the_term_grammar := add_binder (!the_term_grammar)
+                                  ({term_name = name, tok = name}, prec);
    term_grammar_changed := true
  end
 
@@ -1165,11 +1198,13 @@ fun add_binder (name, prec) = let in
     temp_add_binder(name, prec);
     update_grms "add_binder" ("temp_add_binder",
                               String.concat
-                                ["(", quote name, ", std_binder_precedence)"])
+                                ["(", quote name,
+                                 ", std_binder_precedence)"])
   end
 
 fun temp_add_type_binder(name, prec) = let in
-   the_term_grammar := add_type_binder (!the_term_grammar) (name, prec);
+   the_term_grammar := add_type_binder (!the_term_grammar)
+                                       ({term_name = name, tok = name}, prec);
    term_grammar_changed := true
  end
 
@@ -1183,9 +1218,9 @@ fun add_type_binder (name, prec) = let in
 fun temp_add_rule {term_name,fixity,pp_elements,paren_style,block_style} =
  (case fixity
    of Prefix => Feedback.HOL_MESG"Fixities of Prefix do not affect the grammar"
-    | Binder => let in
-        temp_add_binder(term_name, std_binder_precedence);
-        term_grammar_changed := true
+    | Binder => let
+      in
+        temp_add_binder (term_name, std_binder_precedence)
       end
     | RF rf => let in
         the_term_grammar := term_grammar.add_rule (!the_term_grammar)
@@ -1273,10 +1308,11 @@ fun remove_numeral_form c = let in
 
 fun temp_associate_restriction (bs, s) =
  let val lambda = #lambda (specials (term_grammar()))
-     val b = if mem bs lambda then LAMBDA else BinderString bs
+     val b = if mem bs lambda then NONE else SOME bs
  in
     the_term_grammar :=
-    term_grammar.associate_restriction (term_grammar()) (b, s);
+    term_grammar.associate_restriction (term_grammar())
+                                       {binder = b, resbinder = s};
     term_grammar_changed := true
  end
 
@@ -1427,16 +1463,18 @@ fun bring_to_front_overload s (r as {Name, Thy}) = let in
  end
 
 fun temp_overload_on (s, t) =
-  temp_overload_on_by_nametype s (lose_constrec_ty (dest_thy_const t))
-  handle Overload.OVERLOAD_ERR s => raise ERROR "temp_overload_on" s
-       | HOL_ERR _ => raise ERROR "overload_on"
-           "Can't have non-constants as targets of overloading"
+    the_term_grammar := fupdate_overload_info
+                          (Overload.add_overloading (s, t))
+                          (term_grammar());
 
-fun overload_on (s, t) =
-  overload_on_by_nametype s (lose_constrec_ty (dest_thy_const t))
-  handle Overload.OVERLOAD_ERR s => raise ERROR "temp_overload_on" s
-       | HOL_ERR _ => raise ERROR "overload_on"
-           "Can't have non-constants as targets of overloading"
+fun overload_on (s, t) = let
+in
+  temp_overload_on (s, t);
+  full_update_grms
+    ("temp_overload_on",
+     String.concat ["(", quote s, ", ", minprint t, ")"],
+    SOME t)
+end
 
 fun temp_clear_overloads_on s = let
   open term_grammar
@@ -1532,13 +1570,19 @@ fun add_numeral_form (c, stropt) = let in
  ---------------------------------------------------------------------------*)
 
 fun hide s = let
-  val (newg, retval) =
+  val (newg, (tms1,tms2)) =
     mfupdate_overload_info (Overload.remove_overloaded_form s)
-    (!the_term_grammar)
+                           (!the_term_grammar)
+  fun to_nthyrec t = let
+    val {Name,Thy,Ty} = dest_thy_const t
+  in
+    SOME {Name = Name, Thy = Thy}
+  end handle HOL_ERR _ => NONE
+
 in
   the_term_grammar := newg;
   term_grammar_changed := true;
-  retval
+  (List.mapPartial to_nthyrec tms1, List.mapPartial to_nthyrec tms2)
 end;
 
 fun update_overload_maps s nthyrec_pair = let
@@ -1603,14 +1647,10 @@ in
   the_term_grammar := newg;
   term_grammar_changed := true;
   printfnopt
-end;
+end
 
 
 fun add_user_printer(name,pattern,pfn) = let
-  val g0 = (type_grammar.empty_grammar, term_grammar.stdhol)
-  val minprint =
-      trace ("types", 1)
-            (PP.pp_to_string 70 (#2 (print_from_grammars g0)))
 in
   update_grms "add_user_printer"
               ("temp_add_user_printer",
@@ -1878,10 +1918,13 @@ val min_grammars = current_grammars();
 
   fun clear_thy_consts_from_oinfo thy oinfo = let
     val all_parse_consts = Overload.oinfo_ops oinfo
-    fun bad_parse_guy (nm, {base_type, actual_ops}) = let
-      fun bad_guy {Name, Thy, Ty} = if Thy = thy then
-                                       SOME (nm, {Name = Name, Thy = Thy})
-                                     else NONE
+    fun bad_parse_guy (nm, {actual_ops, ...}) = let
+      fun bad_guy t = let
+        val {Name,Thy,...} = dest_thy_const t
+      in
+        if Thy = thy then SOME (nm, {Name = Name, Thy = Thy})
+        else NONE
+      end
     in
       List.mapPartial bad_guy actual_ops
     end

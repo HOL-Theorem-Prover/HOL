@@ -1413,13 +1413,14 @@ fun safe_unify t1 t2 = gen_unify kind_unify rank_unify rank_unify_le safe_bind [
 end
 
 
-
 (*---------------------------------------------------------------------------*
- * Passes over a type, turning all of the free type variables into fresh     *
- * UVars, but doing so consistently by using a pair of envs (for bound and   *
- * free), which is are alists from variable names to type variable refs.     *
+ * Passes over a type, turning all of the free type variables not in the     *
+ * avoids list into fresh UVars, but doing so consistently by using a pair   *
+ * of envs (for bound and free), which are alists from variable names to     *
+ * type variable refs.                                                       *
  * Bound variables are not renamed, but are recognized as masking free vars. *
  *---------------------------------------------------------------------------*)
+
 
 (* in (m1 >>- f), m1 is a monad on kind environments,
     while f is a function that takes a kind and produces
@@ -1443,67 +1444,87 @@ in
   | SOME res => f res (rkenv0,kdenv,tyenv)
 end
 
-local val rename_kv = Prekind.rename_kv
-      val rename_rv = Prerank.rename_rv false
-      val rename_rv_new = Prerank.rename_rv true
-      fun replace (s,kd,rk) (env as (rkenv,kdenv,tyenv)) =
-        case Lib.assoc1 s tyenv
-         of SOME (_, r) => (env, SOME r)
-          | NONE =>
-              let val r = new_uvar(kd,rk)
-              in ((rkenv,kdenv,(s, r)::tyenv), SOME r)
-              end
-      fun add_bvar (v as PT(Vartype (s,kd,rk), l)) benv =
-              rename_kv kd >>- (fn kd' =>
-              rename_rv rk >>= (fn rk' =>
-              let val r = new_uvar(kd',rk')
-                  val v' = PT(Vartype (s,kd',rk'), l)
-              in return ((s, r)::benv, v')
-                                       (*or r, if renaming bound vars*)
-              end))
-        | add_bvar (PT(TyKindConstr {Ty,Kind}, _)) benv =
-              rename_kv Kind >>- (fn Kind' =>
-              add_bvar Ty benv)
-        | add_bvar (PT(TyRankConstr {Ty,Rank}, _)) benv =
-              rename_rv Rank >>= (fn Rank' =>
-              add_bvar Ty benv)
-        | add_bvar _ _ = raise TCERR "rename_typevars" "add_bvar: arg is not variable"
+local
+  val rename_kv = Prekind.rename_kv
+  val rename_rv = Prerank.rename_rv false
+  val rename_rv_new = Prerank.rename_rv true
+  fun replace (s,kd,rk) (env as (rkenv,kdenv,tyenv)) =
+      case Lib.assoc1 s tyenv of
+        NONE => let
+          val r = new_uvar(kd,rk)
+        in
+          ((rkenv,kdenv,(s, r)::tyenv), SOME r)
+        end
+      | SOME (_, r) => (env, SOME r)
+(*
+  fun add_bvar (v as PT(Vartype (s,kd,rk), l)) benv =
+          rename_kv kd >>- (fn kd' =>
+          rename_rv rk >>= (fn rk' =>
+          let val r = new_uvar(kd',rk')
+              val v' = PT(Vartype (s,kd',rk'), l)
+          in return ((s, r)::benv, v')
+                                   (*or r, if renaming bound vars*)
+          end))
+    | add_bvar (PT(TyKindConstr {Ty,Kind}, _)) benv =
+          rename_kv Kind >>- (fn Kind' =>
+          add_bvar Ty benv)
+    | add_bvar (PT(TyRankConstr {Ty,Rank}, _)) benv =
+          rename_rv Rank >>= (fn Rank' =>
+          add_bvar Ty benv)
+    | add_bvar _ _ = raise TCERR "rename_typevars" "add_bvar: arg is not variable"
+*)
+  fun add_bvar (v as PT(Vartype (s,kd,rk), l)) avds =
+          rename_kv kd >>- (fn kd' =>
+          rename_rv rk >>= (fn rk' =>
+          let val v' = PT(Vartype (s,kd',rk'), l)
+          in return (s::avds, v')
+          end))
+    | add_bvar (PT(TyKindConstr {Ty,Kind}, _)) avds =
+          rename_kv Kind >>- (fn Kind' =>
+          add_bvar Ty avds)
+    | add_bvar (PT(TyRankConstr {Ty,Rank}, _)) avds =
+          rename_rv Rank >>= (fn Rank' =>
+          add_bvar Ty avds)
+    | add_bvar _ _ = raise TCERR "rename_typevars" "add_bvar: arg is not variable"
 in
-fun rename_tv (ty as PT(ty0, locn)) benv =
+fun rename_tv avds (ty as PT(ty0, locn)) =
   case ty0 of
     Vartype (v as (s,kd,rk)) =>
        rename_kv kd >>- (fn kd' =>
        rename_rv rk >>= (fn rk' =>
+       if mem s avds then return (PT(Vartype(s,kd',rk'), locn)) else replace (s,kd',rk')))
+(*
        case Lib.assoc1 s benv
          of SOME _ => return (PT(Vartype(s,kd',rk'), locn))
           | NONE   => replace (s,kd',rk')))
+*)
   | Contype {Thy,Tyop,Kind,Rank} =>
        rename_kv Kind >>- (fn Kind' =>
        rename_rv_new Rank >>= (fn Rank' =>
        return (PT(Contype {Thy=Thy,Tyop=Tyop,Kind=Kind',Rank=Rank'}, locn))))
   | TyApp (ty1, ty2) =>
-      rename_tv ty1 benv >-
-      (fn ty1' => rename_tv ty2 benv >-
+      rename_tv avds ty1 >-
+      (fn ty1' => rename_tv avds ty2 >-
       (fn ty2' => return (PT(TyApp(ty1', ty2'), locn))))
   | TyUniv (ty1, ty2) =>
-      add_bvar ty1 benv >- (fn (benv',ty1') =>
-      rename_tv ty2 benv' >-
+      add_bvar ty1 avds >- (fn (avds',ty1') =>
+      rename_tv avds' ty2 >-
       (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn))))
   | TyAbst (ty1, ty2) =>
-      add_bvar ty1 benv >- (fn (benv',ty1') =>
-      rename_tv ty2 benv' >-
+      add_bvar ty1 avds >- (fn (avds',ty1') =>
+      rename_tv avds' ty2 >-
       (fn ty2' => return (PT(TyAbst(ty1', ty2'), locn))))
   | TyKindConstr {Ty, Kind} =>
       rename_kv Kind >>- (fn Kind' =>
-      rename_tv Ty benv >- (fn Ty' =>
+      rename_tv avds Ty >- (fn Ty' =>
       return (PT(TyKindConstr {Ty=Ty', Kind=Kind'}, locn))))
   | TyRankConstr {Ty, Rank} =>
       rename_rv Rank >>= (fn Rank' =>
-      rename_tv Ty benv >- (fn Ty' =>
+      rename_tv avds Ty >- (fn Ty' =>
       return (PT(TyRankConstr {Ty=Ty', Rank=Rank'}, locn))))
   | _ (* UVar (ref _) *) => return ty
 
-fun rename_typevars ty = valOf (#2 (rename_tv ty [] ([],[],[])))
+fun rename_typevars avds ty = valOf (#2 (rename_tv avds ty ([],[],[])))
 end
 
 fun fromType t =

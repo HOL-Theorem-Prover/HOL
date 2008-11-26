@@ -185,11 +185,15 @@ fun mk_prec_matrix G = let
   in
     case rule of
       PREFIX (STD_prefix rules) => app (insert_oplist o rule_elements) rules
-    | PREFIX (BINDER slist) =>
-        (* as there may be more than one lambda, the lambda = EndBinding
-           case is done again below *)
-        app (fn b => insert (STD_HOL_TOK (binder_to_string G b),
-                             EndBinding) EQUAL) slist
+    | PREFIX (BINDER slist) => let 
+        fun bindertok (BinderString {tok, ...}) = [tok]
+          | bindertok (TypeBinderString {tok, ...}) = [tok]
+          | bindertok LAMBDA = lambda
+          | bindertok TYPE_LAMBDA = type_lambda
+        val btoks = List.concat (map bindertok slist)
+      in 
+        app (fn s => insert (STD_HOL_TOK s, EndBinding) EQUAL) btoks
+      end
     | SUFFIX (STD_suffix rules) => app (insert_oplist o rule_elements) rules
     | SUFFIX TYPE_annotation => ()
     | SUFFIX TYPE_application => ()
@@ -423,7 +427,6 @@ fun mk_prec_matrix G = let
 in
   app insert_eqs Grules ;
   insert (BOS, EOS) EQUAL;
-  app (fn l => insert (STD_HOL_TOK l, EndBinding) EQUAL) lambda;
   app (fn l => insert (STD_HOL_TOK l, EndBinding) EQUAL) type_lambda;
   app terms_between_equals (calc_eqpairs());
   (* these next equality pairs will never have terms interfering between
@@ -622,6 +625,44 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
   val rule_db = mk_ruledb G
   val is_binder = fn s => is_binder G s
   val is_type_binder = is_type_binder G
+  val binder_table = let 
+    fun recurse (r, acc) =
+        case r of 
+          PREFIX (BINDER blist) => let 
+            fun irec (b, acc) =
+                case b of 
+                  LAMBDA => acc
+                | TYPE_LAMBDA => acc
+                | BinderString {term_name, tok, ...} => 
+                    Binarymap.insert(acc,tok,term_name)
+                | TypeBinderString {term_name, tok, ...} => acc
+          in
+            List.foldl irec acc blist
+          end
+        | _ => acc
+  in
+    List.foldl recurse (Binarymap.mkDict String.compare) Grules
+  end
+  val type_binder_table = let 
+    fun recurse (r, acc) =
+        case r of 
+          PREFIX (BINDER blist) => let 
+            fun irec (b, acc) =
+                case b of 
+                  LAMBDA => acc
+                | TYPE_LAMBDA => acc
+                | BinderString {term_name, tok, ...} => acc
+                | TypeBinderString {term_name, tok, ...} => 
+                    Binarymap.insert(acc,tok,term_name)
+          in
+            List.foldl irec acc blist
+          end
+        | _ => acc
+  in
+    List.foldl recurse (Binarymap.mkDict String.compare) Grules
+  end
+  fun term_name_for_binder s = Binarymap.find(binder_table,s)
+  fun term_name_for_type_binder s = Binarymap.find(type_binder_table,s)
   val grammar_tokens = term_grammar.grammar_tokens G
   val lex  = let
     val specials = endbinding::grammar_tokens @ term_grammar.known_constants G
@@ -976,8 +1017,9 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
         push ((NonTerminal (TYPED(nonterm0, type_annotation)), rlocn), XXX)
       end
     | (((NonTerminal t,rlocn), _)::((Terminal EndBinding,_), _)::
-       ((NonTermVS vsl,_), _)::((Terminal (STD_HOL_TOK binder),llocn), _)::rest) => let
-       exception Urk of string in let
+       ((NonTermVS vsl,_), _)::((Terminal (STD_HOL_TOK binder),llocn), _)::
+       rest) => let
+        exception Urk of string in let
         fun has_resq (v,_) =
           case v of
             VPAIR(v1, v2) => has_resq v1 orelse has_resq v2
@@ -1002,22 +1044,30 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
                     "Can't have double restricted quantification"
             end
           | _ => NONE
-        fun comb_abs_fn(v,t) =
+        fun comb_abs_fn(v,t) = let 
+          val binder = term_name_for_binder binder
+        in
           if has_tupled_resq v then
             raise ERROR "parse_term"
-              "Can't have restricted quantification on nested arguments"
+                        "Can't have restricted quantification on nested \
+                        \arguments"
           else
             case extract_resq v of
-              NONE => (COMB((VAR binder,llocn), (ABS(v, t),locn.between (#2 v) (#2 t))),
+              NONE => (COMB((VAR binder,llocn), 
+                            (ABS(v, t),locn.between (#2 v) (#2 t))),
                        locn.between llocn rlocn)
-            | SOME (v',P) =>
-                (COMB((COMB((VAR (Lib.assoc (BinderString binder) restr_binders),llocn),
+            | SOME (v',P) => let 
+              in
+                (COMB((COMB((VAR (Lib.assoc (SOME binder) restr_binders),llocn),
                             P),locn.between llocn (#2 P)),
                       (ABS(v', t),locn.between (#2 v') (#2 t))),
                  locn.between llocn rlocn)
                 handle Feedback.HOL_ERR _ =>
-                  raise ERROR "parse_term"
-                    ("No restricted quantifier associated with "^binder)
+                       raise ERROR "parse_term"
+                                   ("No restricted quantifier associated with "
+                                    ^binder)
+              end
+        end
         fun abs_fn (v,t) =
           if has_tupled_resq v then
             raise ERROR "parse_term"
@@ -1026,7 +1076,7 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
             case extract_resq v of
               NONE => (ABS(v,t),locn.between llocn rlocn)
             | SOME(v', P) =>
-                (COMB((COMB((VAR (Lib.assoc LAMBDA restr_binders),llocn),
+                (COMB((COMB((VAR (Lib.assoc NONE restr_binders),llocn),
                             P), locn.between llocn (#2 P)),
                       (ABS(v', t),locn.between (#2 v') (#2 t))),
                  locn.between llocn rlocn)
@@ -1045,18 +1095,18 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
        ((Terminal TypeListTok,tlocn), PreTypeList tys)::
        ((Terminal (STD_HOL_TOK binder),llocn), _)::rest) => let
         val lrlocn = locn.between llocn rlocn
+        fun comb_tyabs_fn(v,t) = let 
+          val binder = term_name_for_type_binder binder
+        in
+          (COMB((VAR binder,llocn), (TYABS(v, t),locn.between (#2 v) (#2 t))), lrlocn)
+        end
         fun tyabs_fn (v,t) = (TYABS(v,t),lrlocn)
-        fun comb_tyabs_fn(v,t) =
-              (COMB((VAR binder,llocn), (TYABS(v, t),locn.between (#2 v) (#2 t))),
-               locn.between llocn rlocn)
         val tysl = map (fn ty => (ty,tlocn)) tys
         val tyabs_t =
           List.foldr (if mem binder type_lambda then tyabs_fn else comb_tyabs_fn)
                      (t,rlocn) tysl
-        (* val tyabs_t = List.foldr tyabs_fn (t,rlocn) tysl *) (* works for \: alone *)
-      in (*if binder = type_lambda then*)
-           repeatn 4 pop >> push (liftlocn NonTerminal tyabs_t, XXX)
-         (*else (WARNloc "parse_term" lrlocn ("Illegal binder of type variables: "^binder); fail)*)
+      in
+        repeatn 4 pop >> push (liftlocn NonTerminal tyabs_t, XXX)
       end
     | (((Terminal(STD_HOL_TOK ")"),rlocn), _)::(vsl as ((NonTermVS _,_),_))::
        ((Terminal(STD_HOL_TOK "("),llocn), _)::rest) => let

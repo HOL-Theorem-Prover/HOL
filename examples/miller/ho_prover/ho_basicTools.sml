@@ -137,7 +137,7 @@ in
   fun fo_raw_match (var, bs) (bvs, tm) sub =
     let
       val body = check_off_bvs bvs tm bs
-      val _ = assert (null_intersection bvs (free_vars body))
+      val _ = assert (null (op_intersect eq bvs (free_vars body)))
         (ERR "fo_pat_match" "term to be matched contains bound vars")
     in
       raw_match' var body sub

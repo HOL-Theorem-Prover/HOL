@@ -4,37 +4,85 @@ sig
 include Abbrev
 
 
-val REFL_IMP_CONV : conv;
-val GEN_IMP : term -> thm -> thm;
-val GEN_ASSUM : term -> thm -> thm;
+(* Types *)
+type conseq_conv = term -> thm;
+type CONSEQ_CONV_direction;
+type directed_conseq_conv = CONSEQ_CONV_direction -> conseq_conv;
+
+val CONSEQ_CONV_STRENGTHEN_direction : CONSEQ_CONV_direction;
+val CONSEQ_CONV_WEAKEN_direction     : CONSEQ_CONV_direction;
+val CONSEQ_CONV_UNKNOWN_direction    : CONSEQ_CONV_direction;
+
+
+
+(* General *)
+val GEN_ASSUM               : term -> thm -> thm;
+val GEN_IMP                 : term -> thm -> thm;
+
+val IMP_QUANT_CANON             : thm -> thm;
+val IMP_FORALL_CONCLUSION_CANON : thm -> thm;
+val IMP_EXISTS_PRECOND_CANON    : thm -> thm;
+
+
+
+(* Basic consequence conversions *)
+val FALSE_CONSEQ_CONV       : conseq_conv;
+val TRUE_CONSEQ_CONV        : conseq_conv;
+val REFL_CONSEQ_CONV        : conseq_conv;
+val FORALL_EQ___CONSEQ_CONV : conseq_conv;
+val EXISTS_EQ___CONSEQ_CONV : conseq_conv;
+
+val TRUE_FALSE_REFL_CONSEQ_CONV : directed_conseq_conv
+val CONSEQ_TOP_REWRITE_CONV     : thm list -> directed_conseq_conv;
+val CONSEQ_REWRITE_CONV         : thm list -> directed_conseq_conv;
+val CONSEQ_HO_TOP_REWRITE_CONV  : thm list -> directed_conseq_conv;
+val CONSEQ_HO_REWRITE_CONV      : thm list -> directed_conseq_conv;
 
 
 
 
-val CONSEQ_CONV_WRAPPER : conv -> conv;
-val DEPTH_CONSEQ_CONV : conv -> conv;
-val ONCE_DEPTH_CONSEQ_CONV : conv -> conv;
-val NUM_DEPTH_CONSEQ_CONV : int -> conv -> conv;
-val CHANGED_CONSEQ_CONV : conv -> conv;
-val QCHANGED_CONSEQ_CONV : conv -> conv;
-val CHANGED_CHECK_CONSEQ_CONV : conv -> conv;
-val ORELSE_CONSEQ_CONV : conv -> conv -> conv
-val THEN_CONSEQ_CONV : conv -> conv -> conv;
-val FIRST_CONSEQ_CONV : conv list -> conv;
-val CONJ_ASSUMPTIONS_CONSEQ_CONV : conv -> (term -> bool) -> conv;
+(* Combinations for consequence conversions *)
+val CHANGED_CONSEQ_CONV    : conseq_conv -> conseq_conv;
+val QCHANGED_CONSEQ_CONV   : conseq_conv -> conseq_conv;
+val ORELSE_CONSEQ_CONV     : conseq_conv -> conseq_conv -> conseq_conv
+val THEN_CONSEQ_CONV       : conseq_conv -> conseq_conv -> conseq_conv;
+val FIRST_CONSEQ_CONV      : conseq_conv list -> conseq_conv;
+val EVERY_CONSEQ_CONV      : conseq_conv list -> conseq_conv;
 
-val FORALL_CONSEQ_CONV : conv -> conv;
-val EXISTS_CONSEQ_CONV : conv -> conv;
-val QUANT_CONSEQ_CONV : conv -> conv;
+val FORALL_CONSEQ_CONV     : conseq_conv -> conseq_conv;
+val EXISTS_CONSEQ_CONV     : conseq_conv -> conseq_conv;
+val QUANT_CONSEQ_CONV      : conseq_conv -> conseq_conv;
 
+val STRENGTHEN_CONSEQ_CONV : conseq_conv -> directed_conseq_conv;
+val WEAKEN_CONSEQ_CONV     : conseq_conv -> directed_conseq_conv;
 
 
-val IMP_CONSEQ_CONV_RULE : conv -> rule;
-val CONSEQ_CONV_TAC : conv -> tactic;
-val DEPTH_CONSEQ_CONV_TAC : conv -> tactic;
-val ONCE_DEPTH_CONSEQ_CONV_TAC : conv -> tactic;
-val CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV : conv -> conv;
+val DEPTH_CONSEQ_CONV      : directed_conseq_conv -> directed_conseq_conv;
+val ONCE_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
+val NUM_DEPTH_CONSEQ_CONV  : directed_conseq_conv -> int ->
+			     directed_conseq_conv;
 
+val CONJ_ASSUMPTIONS_CONSEQ_CONV : directed_conseq_conv -> 
+				   (term -> bool) -> directed_conseq_conv;
+val DEPTH_STRENGTHEN_CONSEQ_CONV : conseq_conv -> conseq_conv;
+
+
+
+
+(* Rules *)
+val STRENGTHEN_CONSEQ_CONV_RULE  : directed_conseq_conv -> thm -> thm;
+val WEAKEN_CONSEQ_CONV_RULE      : directed_conseq_conv -> thm -> thm;
+
+
+
+
+(* Tactics *)
+val CONSEQ_CONV_TAC              : directed_conseq_conv -> tactic;
+val DEPTH_CONSEQ_CONV_TAC        : directed_conseq_conv -> tactic;
+val ONCE_DEPTH_CONSEQ_CONV_TAC   : directed_conseq_conv -> tactic;
+val CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
+val CONSEQ_REWRITE_TAC           : thm list -> tactic;
+val CONSEQ_HO_REWRITE_TAC        : thm list -> tactic;
 
 
 end

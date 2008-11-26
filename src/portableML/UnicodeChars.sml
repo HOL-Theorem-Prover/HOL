@@ -62,6 +62,8 @@ val setelementof = "\u00e2\u0088\u0088"
 
 (* superscripts *)
 val sup_plus = UTF8.chr 0x207A
+val sup_minus = UTF8.chr 0x207B
+val sup_1 = UTF8.chr 0x2071
 
 (* arithmetic *)
 val leq = "\u00e2\u0089\u00a4"

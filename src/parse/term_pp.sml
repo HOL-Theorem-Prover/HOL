@@ -205,8 +205,6 @@ fun grav_name (Prec(n, s)) = s | grav_name _ = ""
 fun grav_prec (Prec(n,s)) = n | grav_prec _ = ~1
 
 
-fun dest_atom tm = dest_var tm handle HOL_ERR _ => dest_const tm
-
 fun pneeded_by_style (rr: term_grammar.rule_record, pgrav, fname, fprec) =
   case #paren_style rr of
     Always => true
@@ -283,7 +281,13 @@ in
     case Overload.overloading_of_term oinfo tm of
       SOME s' => s' = s
     | NONE => false
-  else if is_var tm then fst (dest_var tm) = s
+  else if is_var tm then let
+      val (vnm, _) = dest_var tm
+    in
+      case Lib.total (Lib.unprefix GrammarSpecials.fakeconst_special) vnm of
+        NONE => vnm = s
+      | SOME vnm' => vnm' = s
+    end
   else false
 end
 
@@ -330,9 +334,10 @@ fun pp_term (G : grammar) TyG = let
   val spec_table =
       HOLset.addList (HOLset.empty String.compare, grammar_tokens G)
   val num_info = numeral_info G
-  fun insert (grule, (n, acc)) = let
+  fun insert ((nopt, grule), acc) = let
     val keys_n_rules = grule_term_names G grule
-    fun myinsert n ((k, v), acc) = let
+    val n = case nopt of SOME n => n | NONE => 0 (* doesn't matter *)
+    fun myinsert ((k, v), acc) = let
       val existing = Binarymap.peek(acc, k)
       val newvalue =
         case existing of
@@ -342,11 +347,11 @@ fun pp_term (G : grammar) TyG = let
       Binarymap.insert(acc, k, newvalue)
     end
   in
-    (n + 1, List.foldl (myinsert n) acc keys_n_rules)
+    (List.foldl myinsert acc keys_n_rules)
   end
-  val (_, rule_table) = List.foldl insert
-                                   (0,Binarymap.mkDict String.compare)
-                                   (grammar_rules G)
+  val rule_table = List.foldl insert
+                              (Binarymap.mkDict String.compare)
+                              (term_grammar.rules G)
   fun lookup_term s = Binarymap.peek(rule_table, s)
   val comb_prec = #1 (hd (valOf (lookup_term fnapp_special)))
     handle Option =>
@@ -624,11 +629,12 @@ fun pp_term (G : grammar) TyG = let
                    (pgrav, lgrav, rgrav)
                    depth pps tm;
                  raise SimpleExit)
-                handle UserPP_Failed => ()
+            fun runfirst [] = ()
+              | runfirst ((_,_,f)::t) =
+                  printwith f
+                  handle UserPP_Failed => runfirst t
           in
-            case List.find test candidates of
-              NONE => ()
-            | SOME (_,_,f) => printwith f
+            runfirst candidates
           end
         else ()
 
@@ -811,7 +817,7 @@ fun pp_term (G : grammar) TyG = let
     fun pr_abs tm = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
       val restr_binder =
-          find_partial (fn (b,s) => if mem b [LAMBDA,TYPE_LAMBDA] then SOME s else NONE)
+          find_partial (fn (b,s) => if b = NONE then SOME s else NONE)
                        restr_binders
       val (bvars, body) = strip_vstructs NONE restr_binder tm
       val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
@@ -891,24 +897,28 @@ fun pp_term (G : grammar) TyG = let
       pend addparens)
     end
 
-    fun atom_name tm =
-      fst (dest_var tm handle HOL_ERR _ => dest_const tm)
+    fun atom_name tm = let
+      val (vnm, _) = dest_var tm
+    in
+      Lib.unprefix GrammarSpecials.fakeconst_special vnm handle HOL_ERR _ => vnm
+    end handle HOL_ERR _ => fst (dest_const tm)
+
     fun can_pr_numeral stropt = List.exists (fn (k,s') => s' = stropt) num_info
     fun pr_numeral injtermopt tm = let
       open Overload
       val numty = Type.mk_thy_type {Tyop="num", Thy="num", Args=[]}
       val num2numty = numty --> numty
       val numinfo_search_string = Option.map (fst o dest_const) injtermopt
-      val inj_record =
+      val inj_t =
         case injtermopt of
-          NONE => {Name = nat_elim_term, Thy = "arithmetic",
-                   Ty = numty --> numty}
-        | SOME t => dest_thy_const t
-      val injty = #Ty inj_record
+          NONE => mk_thy_const {Name = nat_elim_term, Thy = "arithmetic",
+                                Ty = numty --> numty}
+        | SOME t => t
+      val injty = type_of inj_t
       val is_a_real_numeral = (* i.e. doesn't need a suffix *)
           case info_for_name overload_info fromNum_str of
             NONE => false
-          | SOME oi => mem inj_record (#actual_ops oi)
+          | SOME oi => op_mem eq inj_t (#actual_ops oi)
       val numeral_str = Arbnum.toString (Literal.dest_numeral tm)
       val sfx =
           if not is_a_real_numeral orelse !Globals.show_numeral_types then let
@@ -1429,11 +1439,14 @@ fun pp_term (G : grammar) TyG = let
           print_ellist (Top, prec, rprec) (pp_elements, real_args);
           endblock(); pend addparens
         end
-      | PREFIX (BINDER _) =>
+      | PREFIX (BINDER lst) =>
         if is_tyabs tm orelse is_tyabs Rand then let
-          fun find (TypeBinderString bs, s) = if bs = fname then SOME s else NONE
-            | find _ = NONE
-          val (bvars, body) = strip_tyvstructs (SOME fname) tm (* strip_tyabs tm *)
+          val tok = case hd lst of 
+                      LAMBDA => hd lambda (* should never happen *)
+                    | TYPE_LAMBDA => hd type_lambda (* should never happen *)
+                    | BinderString r => #tok r
+                    | TypeBinderString r => #tok r
+          val (bvs, body) = strip_tyvstructs (SOME fname) tm (* strip_tyabs tm *)
 (*
           val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
           val old_seen = !bvars_seen
@@ -1443,12 +1456,11 @@ fun pp_term (G : grammar) TyG = let
               Prec(n, _) => n > fprec
             | _ => false
         in
-          pbegin addparens;
-          begin_block INCONSISTENT 2;
-          add_string fname;
-          spacep (not (symbolic fname));
+          pbegin addparens; begin_block INCONSISTENT 2;
+          add_string tok;
+          spacep (not (symbolic tok));
           begin_block INCONSISTENT 0;
-          pr_typel "" bvars;
+          pr_typel "" bvs;
           end_block();
           add_string endbinding; spacep true;
           begin_block CONSISTENT 0;
@@ -1464,8 +1476,12 @@ fun pp_term (G : grammar) TyG = let
           pend addparens
         end
         else let
-          fun find (BinderString bs, s) = if bs = fname then SOME s else NONE
-            | find _ = NONE
+          val tok = case hd lst of 
+                      LAMBDA => hd lambda (* should never happen *)
+                    | TYPE_LAMBDA => hd type_lambda (* should never happen *)
+                    | BinderString r => #tok r
+                    | TypeBinderString r => #tok r
+          fun find (bopt, s) = if bopt = SOME fname then SOME s else NONE
           val restr_binder = find_partial find restr_binders
           val (bvs, body) = strip_vstructs (SOME fname) restr_binder tm
           val bvars_seen_here = List.concat (map (free_vars o bv2term) bvs)
@@ -1476,7 +1492,7 @@ fun pp_term (G : grammar) TyG = let
             | _ => false
         in
           pbegin addparens; begin_block INCONSISTENT 2;
-          add_string fname;
+          add_string tok;
           pr_vstructl bvs;
           add_string endbinding; spacep true;
           begin_block CONSISTENT 0;
@@ -1713,10 +1729,7 @@ fun pp_term (G : grammar) TyG = let
                   case Overload.info_for_name overload_info Name of
                     NONE => add_prim_name()
                   | SOME {actual_ops,...} =>
-                    if List.exists
-                         (fn r => #Thy r = Thy andalso #Name r = Name)
-                         actual_ops
-                    then
+                    if List.exists (aconv tm) actual_ops then
                       cope_with_rules Name
                     else
                       add_prim_name()
@@ -1770,11 +1783,21 @@ fun pp_term (G : grammar) TyG = let
                    if isSome restr_binder andalso length args = 1 andalso
                       my_is_abs Rand
                    then let
-                       val optrule = lookup_term
-                                       (binder_to_string G (valOf restr_binder))
+                       val bindex = case valOf restr_binder of 
+                                      NONE => binder_to_string G LAMBDA
+                                    | SOME s => s
+                       val optrule = lookup_term bindex
                        fun ok_rule (_, r) =
-                           case r of PREFIX(BINDER _) => true
-                                   | otherwise => false
+                           case r of 
+                             PREFIX(BINDER b) => let 
+                             in 
+                               case hd b of 
+                                 LAMBDA => true
+                               | TYPE_LAMBDA => true
+                               | BinderString r => #preferred r
+                               | TypeBinderString r => #preferred r
+                             end
+                           | otherwise => false
                      in
                        case optrule of
                          SOME rule_list => List.find ok_rule rule_list
@@ -1789,25 +1812,14 @@ fun pp_term (G : grammar) TyG = let
                  in
                    case restr_binder of
                      NONE => pr_comb tm Rator Rand
-                   | SOME LAMBDA =>
+                   | SOME NONE =>
                        if isSome restr_binder_rule then pr_abs tm
                        else pr_comb tm Rator Rand
-                   | SOME TYPE_LAMBDA =>
-                       if isSome restr_binder_rule then pr_tyabs tm
-                       else pr_comb tm Rator Rand
-                   | SOME (BinderString bs) =>
+                   | SOME (SOME fname) =>
                          if isSome restr_binder_rule then
                            pr_comb_with_rule(#2(valOf restr_binder_rule))
                            {fprec = #1 (valOf restr_binder_rule),
-                            fname = binder_to_string G (valOf restr_binder),
-                            f = f} args Rand
-                         else
-                           pr_comb tm Rator Rand
-                   | SOME (TypeBinderString bs) =>
-                         if isSome restr_binder_rule then
-                           pr_comb_with_rule(#2(valOf restr_binder_rule))
-                           {fprec = #1 (valOf restr_binder_rule),
-                            fname = binder_to_string G (valOf restr_binder),
+                            fname = fname,
                             f = f} args Rand
                          else
                            pr_comb tm Rator Rand
@@ -1834,6 +1846,13 @@ fun pp_term (G : grammar) TyG = let
                   | INFIX VSCONS => raise Fail "Can't happen 90213"
                   | LISTRULE list => is_list (hd list) tm
                 val crules = List.filter (suitable_rule o #2) crules0
+                fun is_preferred (LISTRULE _) = true
+                  | is_preferred (PREFIX (BINDER [BinderString r])) = 
+                     #preferred r 
+                  | is_preferred (PREFIX (BINDER [TypeBinderString r])) = 
+                     #preferred r 
+                  | is_preferred r = #preferred (hd (rule_to_rr r))
+                val crules = List.filter (is_preferred o #2) crules
                 fun is_lrule (LISTRULE _) = true | is_lrule _ = false
                 fun is_binder_rule (PREFIX (BINDER s)) = true
                   | is_binder_rule _ = false
@@ -1842,30 +1861,30 @@ fun pp_term (G : grammar) TyG = let
               in
                 if not (null brules) then
                   pr_comb_with_rule (#2 (hd brules))
-                    {fprec = #1 (hd brules), fname=fname, f=f} args Rand
+                                    {fprec = #1 (hd brules),
+                                     fname=fname, f=f}
+                                    args Rand
                 else
-                  if not (null lrules) then
-                    pr_comb_with_rule (#2 (hd lrules))
-                      {fprec = #1 (hd lrules), fname=fname, f=f} args Rand
-                  else
-                    if not (null others) then let
-                      val preferred =
-                        List.find (#preferred o hd o rule_to_rr o #2) others
-                    in
-                      case preferred of
-                        SOME (p,r) =>
+                if not (null lrules) then 
+                  pr_comb_with_rule (#2 (hd lrules))
+                                    {fprec = #1 (hd lrules), 
+                                     fname=fname, f=f} 
+                                    args Rand
+                else 
+                  case others of 
+                    (p,r) :: _ => 
                           pr_comb_with_rule r {fprec=p, fname=fname, f=f}
                           args Rand
-                      | NONE => pr_comb tm Rator Rand
-                    end
-                    else
-                      pr_comb tm Rator Rand
+                  | [] => pr_comb tm Rator Rand
               end
            end (* pr_atomf *)
           fun maybe_pr_atomf () =
             case Overload.overloading_of_term overload_info f of
               SOME s => pr_atomf s
-            | NONE => if is_var f then pr_atomf (fst (dest_var f))
+            | NONE => if is_var f andalso 
+                         not (String.isPrefix GrammarSpecials.fakeconst_special 
+                                              (#1 (dest_var f)))
+                      then pr_atomf (atom_name f)
                       else pr_comb tm Rator Rand
         in
           if showtypes_v then

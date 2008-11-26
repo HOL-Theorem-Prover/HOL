@@ -18,8 +18,8 @@ fun test_term c (n,t,b) = let
       in
         case Lib.total boolSyntax.rhs (concl th) of
           SOME r =>
-          if b andalso r = boolSyntax.T orelse
-             not b andalso r = boolSyntax.F
+          if b andalso eq r boolSyntax.T orelse
+             not b andalso eq r boolSyntax.F
           then
             ("OK", true)
           else ("Bad EQN", false)

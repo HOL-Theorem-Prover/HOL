@@ -31,6 +31,8 @@ sig
 
   (* superscripts *)
   val sup_plus : string
+  val sup_minus : string
+  val sup_1 : string
 
   (* arrows *)
   val rightarrow : string

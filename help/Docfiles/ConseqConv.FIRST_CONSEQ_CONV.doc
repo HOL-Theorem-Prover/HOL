@@ -1,0 +1,10 @@
+\DOC FIRST_CONSEQ_CONV
+
+\TYPE {FIRST_CONSEQ_CONV : (conseq_conv list -> conseq_conv)}
+
+\SYNOPSIS
+Apply the first of the conversions in a given list that succeeds.
+
+\SEEALSO
+ConseqConv.ORELSE_CONSEQ_CONV, Conv.FIRST_CONV.
+\ENDDOC

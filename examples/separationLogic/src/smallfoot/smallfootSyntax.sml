@@ -38,6 +38,9 @@ val smallfoot_p_and_term = ``smallfoot_p_and``;
 val smallfoot_p_or_term = ``smallfoot_p_or``;
 
 
+fun string2smallfoot_const s =
+	mk_var(s, numLib.num);
+
 fun string2smallfoot_var s =
 	mk_comb (smallfoot_var_term, stringLib.fromMLstring s);
 
@@ -51,9 +54,12 @@ val smallfoot_ae_null_term = ``smallfoot_ae_null``;
 
 val smallfoot_ap_list_term = ``smallfoot_ap_list``;
 val smallfoot_ap_list_seg_term = ``smallfoot_ap_list_seg``;
+val smallfoot_ap_data_list_term = ``smallfoot_ap_data_list``;
+val smallfoot_ap_data_list_seg_term = ``smallfoot_ap_data_list_seg``;
 val smallfoot_ap_bintree_term = ``smallfoot_ap_bintree``;
-val smallfoot_ap_list_seg_term = ``smallfoot_ap_list_seg``;
+val smallfoot_ap_list_seg_term = ``smallfoot_ap_list_seg``
 val smallfoot_ap_emp_term = ``smallfoot_ap_emp``;
+val smallfoot_ap_unknown_term = ``smallfoot_ap_unknown``;
 val smallfoot_ap_points_to_term = ``smallfoot_ap_points_to``;
 val smallfoot_ap_stack_true_term = ``smallfoot_ap_stack_true``;
 
@@ -228,6 +234,27 @@ fun dest_SMALLFOOT_COND_HOARE_TRIPLE tt =
     (el 1 args, el 2 args, el 3 args)
   end;
 val is_SMALLFOOT_COND_HOARE_TRIPLE = (can dest_SMALLFOOT_COND_HOARE_TRIPLE);
+
+
+
+val SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE_term = 
+   ``SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE``;
+fun dest_SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE tt =
+  let
+     val (f, args) = strip_comb tt;
+     val _ = if (same_const f SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE_term) andalso
+	        (length args = 1) then () else
+             raise (mk_HOL_ERR "smallfootLib" "dest_SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE" "Wrong Term");
+
+     val (vL, b) = strip_abs (el 1 args);
+     val _ = if (length vL = 2) then () else
+             raise (mk_HOL_ERR "smallfootLib" "dest_SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE" "Wrong Term");
+
+  in
+    (el 1 vL, el 2 vL, b)
+  end;
+val is_SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE = (can dest_SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE);
+
 
 
 val SMALLFOOT_HOARE_TRIPLE_term = ``SMALLFOOT_HOARE_TRIPLE``;
@@ -428,7 +455,7 @@ fun dest_fasl_prog_while_with_invariant tt =
      val (f, args) = strip_comb tt;
      val _ = if (same_const f fasl_prog_while_with_invariant_term) andalso
 	        (length args = 3) then () else
-             raise (mk_HOL_ERR "smallfootLib" "dest_fasl_prog_while_with_invariant" "Wrong term")
+             raise (mk_HOL_ERR "smallfootLib" "dest_fasl_prog_while_with_invariant" "Wrong term");
   in
     (el 1 args, el 2 args, el 3 args)
   end
@@ -480,6 +507,25 @@ val is_smallfoot_choose_const_best_local_action = (can dest_smallfoot_choose_con
 
 
 
+
+val smallfoot_cond_best_local_action_term = 
+   ``smallfoot_cond_best_local_action``;
+
+fun dest_smallfoot_cond_best_local_action tt =
+  let
+     val (f, args) = strip_comb tt;
+     val _ = if (same_const f smallfoot_cond_best_local_action_term) andalso
+	        (length args = 2) then () else
+             raise (mk_HOL_ERR "smallfootLib" "dest_smallfoot_cond_best_local_action" "Wrong term")
+  in
+    (el 1 args, el 2 args)
+  end
+val is_smallfoot_cond_best_local_action = (can dest_smallfoot_cond_best_local_action);
+
+
+
+
+
 val fasl_prog_best_local_action_term = 
    ``fasl_prog_best_local_action``;
 
@@ -518,32 +564,29 @@ fun dest_smallfoot_parallel_proc_call_abstraction tt =
   let
      val (f, args) = strip_comb tt;
      val _ = if (same_const f smallfoot_parallel_proc_call_abstraction_term) andalso
-	        (length args = 10) then () else
+	        (length args = 8) then () else
              raise (mk_HOL_ERR "smallfootLib" "dest_smallfoot_parallel_proc_call_abstraction" "Wrong term")
-     val (ref1,val1) = save_dest_pair (el 5 args);
-     val (ref2,val2) = save_dest_pair (el 10 args);
+     val (ref1,val1) = save_dest_pair (el 3 args);
+     val (ref2,val2) = save_dest_pair (el 7 args);
   in
-    (el 1 args, el 2 args, el 3 args, el 4 args, ref1, val1,
-     el 6 args, el 7 args, el 8 args, el 9 args, ref2, val2)
+    (el 1 args, el 2 args, el 4 args, ref1, val1,
+     el 5 args, el 7 args, el 8 args, ref2, val2)
   end
 val is_smallfoot_parallel_proc_call_abstraction = (can dest_smallfoot_parallel_proc_call_abstraction);
 
 
 
-
-val smallfoot_proc_call_abstraction_term = 
-   ``smallfoot_proc_call_abstraction``;
-
+val smallfoot_proc_call_abstraction_term =  ``smallfoot_proc_call_abstraction``;
 
 fun dest_smallfoot_proc_call_abstraction tt =
   let
      val (f, args) = strip_comb tt;
      val _ = if (same_const f smallfoot_proc_call_abstraction_term) andalso
-	        (length args = 5) then () else
+	        (length args = 4) then () else
              raise (mk_HOL_ERR "smallfootLib" "dest_smallfoot_proc_call_abstraction" "Wrong term")
-     val (ref_arg,val_arg) = save_dest_pair (el 5 args);
+     val (ref_arg,val_arg) = save_dest_pair (el 3 args);
   in
-    (el 1 args, el 2 args, el 3 args, el 4 args, ref_arg, val_arg)
+    (el 1 args, el 2 args, el 4 args, ref_arg, val_arg)
   end;
 val is_smallfoot_proc_call_abstraction = (can dest_smallfoot_proc_call_abstraction);
 
@@ -557,12 +600,13 @@ fun dest_smallfoot_prog_while_with_invariant tt =
      val _ = if (same_const f smallfoot_prog_while_with_invariant_term) andalso
 	        (length args = 3) then () else
              raise (mk_HOL_ERR "smallfootLib" "dest_smallfoot_prog_while_with_invariant" "Wrong term")
+     val (x1,x2) = pairLib.dest_pair (el 1 args);
   in
-    (el 1 args, el 2 args, el 3 args)
+    (x1,x2, el 2 args, el 3 args)
   end
 val is_smallfoot_prog_while_with_invariant = (can dest_smallfoot_prog_while_with_invariant);
-fun mk_smallfoot_prog_while_with_invariant (i,c,p) = 
-   list_mk_icomb(smallfoot_prog_while_with_invariant_term, [i,c,p]);
+fun mk_smallfoot_prog_while_with_invariant (fvL,qi,c,p) = 
+   list_mk_icomb(smallfoot_prog_while_with_invariant_term, [pairLib.mk_pair(fvL,qi),c,p]);
 
 
 
@@ -633,15 +677,16 @@ fun dest_smallfoot_prog_parallel tt =
 val is_smallfoot_prog_parallel = (can dest_smallfoot_prog_parallel);
 
 
+
 val smallfoot_cond_choose_const_best_local_action_term = ``smallfoot_cond_choose_const_best_local_action``;
 fun dest_smallfoot_cond_choose_const_best_local_action tt =
   let
      val (f, args) = strip_comb tt;
      val _ = if (same_const f smallfoot_cond_choose_const_best_local_action_term) andalso
-	        (length args = 6) then () else
+	        (length args = 5) then () else
              raise (mk_HOL_ERR "smallfootLib" "dest_smallfoot_cond_choose_const_best_local_action" "Wrong term")
   in
-    (el 1 args, el 2 args,el 3 args, el 4 args,el 5 args, el 6 args)
+    (el 1 args, el 2 args,el 3 args, el 4 args,el 5 args)
   end
 val is_smallfoot_cond_choose_const_best_local_action = (can dest_smallfoot_cond_choose_const_best_local_action);
 
@@ -750,6 +795,20 @@ fun dest_SMALLFOOT_COND_PROP___EQUIV tt =
     (el 1 args, el 2 args)
   end;
 val is_SMALLFOOT_COND_PROP___EQUIV = (can dest_SMALLFOOT_COND_PROP___EQUIV);
+
+
+val COND_PROP___STRONG_EXISTS_term = ``COND_PROP___STRONG_EXISTS``;
+fun dest_COND_PROP___STRONG_EXISTS tt =
+  let
+     val (f, args) = strip_comb tt;
+     val _ = if (same_const f COND_PROP___STRONG_EXISTS_term) andalso
+	        (length args = 1) then () else
+             raise (mk_HOL_ERR "smallfootSyntax" "dest_COND_PROP___STRONG_EXISTS" "Wrong term")
+     val (v, body) = dest_abs (el 1 args)
+  in
+    (v, body)
+  end
+val is_COND_PROP___STRONG_EXISTS = can dest_COND_PROP___STRONG_EXISTS;
 
 
 
@@ -950,37 +1009,52 @@ val is_smallfoot_ap_points_to = (can dest_smallfoot_ap_points_to);
 
 
 
-fun dest_smallfoot_ap_list t =
+fun dest_smallfoot_ap_data_list t =
   let
      val (f, args) = strip_comb t;
-     val _ = if (same_const f smallfoot_ap_list_term) andalso
-	        (length args = 2) then () else
-             raise (mk_HOL_ERR "smallfoot_ap_list" "dest_FEVERY" "Wrong term")
-  in
-    (el 1 args, el 2 args)
-  end
-val is_smallfoot_ap_list = (can dest_smallfoot_ap_list);
-
-
-
-fun dest_smallfoot_ap_list_seg t =
-  let
-     val (f, args) = strip_comb t;
-     val _ = if (same_const f smallfoot_ap_list_seg_term) andalso
+     val _ = if (same_const f smallfoot_ap_data_list_term) andalso
 	        (length args = 3) then () else
-             raise (mk_HOL_ERR "smallfoot_ap_list_seg" "dest_FEVERY" "Wrong term")
+             raise (mk_HOL_ERR "smallfoot_ap_data_list" "smallfootSyntax" "Wrong term")
   in
     (el 1 args, el 2 args, el 3 args)
   end
-val is_smallfoot_ap_list_seg = (can dest_smallfoot_ap_list_seg);
+val is_smallfoot_ap_data_list = (can dest_smallfoot_ap_data_list);
 
 
-fun dest_smallfoot_ap_list_seg_or_list t =
-dest_smallfoot_ap_list_seg t handle HOL_ERR _ =>
-let val (t,e1) = dest_smallfoot_ap_list t in
-(t,e1,smallfoot_ae_null_term) end
+fun dest_smallfoot_ap_unknown t =
+  let
+     val (f, args) = strip_comb t;
+     val _ = if (same_const f smallfoot_ap_unknown_term) andalso
+	        (length args = 1) then () else
+             raise (mk_HOL_ERR "smallfoot_ap_unknown_term" "smallfootSyntax" "Wrong term")
+  in
+    (stringLib.fromHOLstring (el 1 args))
+  end
+val is_smallfoot_ap_unknown = (can dest_smallfoot_ap_unknown);
+fun mk_smallfoot_ap_unknown s = 
+   mk_icomb (smallfoot_ap_unknown_term, stringLib.fromMLstring s);
 
-val is_smallfoot_ap_list_seg_or_list = (can dest_smallfoot_ap_list_seg_or_list);
+
+
+
+fun dest_smallfoot_ap_data_list_seg t =
+  let
+     val (f, args) = strip_comb t;
+     val _ = if (same_const f smallfoot_ap_data_list_seg_term) andalso
+	        (length args = 4) then () else
+             raise (mk_HOL_ERR "smallfoot_ap_data_list_seg" "dest_FEVERY" "Wrong term")
+  in
+    (el 1 args, el 2 args, el 3 args, el 4 args)
+  end
+val is_smallfoot_ap_data_list_seg = (can dest_smallfoot_ap_data_list_seg);
+
+
+fun dest_smallfoot_ap_data_list_seg_or_list t =
+dest_smallfoot_ap_data_list_seg t handle HOL_ERR _ =>
+let val (t,e1,data) = dest_smallfoot_ap_data_list t in
+(t,e1,data,smallfoot_ae_null_term) end
+
+val is_smallfoot_ap_data_list_seg_or_list = (can dest_smallfoot_ap_data_list_seg_or_list);
 
 
 fun dest_smallfoot_ap_bintree t =
@@ -997,28 +1071,28 @@ val is_smallfoot_ap_bintree = (can dest_smallfoot_ap_bintree);
 
 
 
-fun dest_smallfoot_ap_list_seg_or_list_or_bintree t =
-  let val (_,e1,e2) = dest_smallfoot_ap_list_seg_or_list t in (e1,e2) end handle HOL_ERR _ =>
+fun dest_smallfoot_ap_data_list_seg_or_list_or_bintree t =
+  let val (_,e1,_,e2) = dest_smallfoot_ap_data_list_seg_or_list t in (e1,e2) end handle HOL_ERR _ =>
   let val (_,_,e1) = (dest_smallfoot_ap_bintree t) in (e1,smallfoot_ae_null_term) end;
 
-val is_smallfoot_ap_list_seg_or_list_or_bintree = (can dest_smallfoot_ap_list_seg_or_list_or_bintree);
+val is_smallfoot_ap_data_list_seg_or_list_or_bintree = (can dest_smallfoot_ap_data_list_seg_or_list_or_bintree);
 
 
 fun dest_smallfoot_ap_spatial t =
   (fst (dest_smallfoot_ap_points_to t)) handle HOL_ERR _ =>
-  (#2 (dest_smallfoot_ap_list_seg_or_list t)) handle HOL_ERR _ =>
+  (#2 (dest_smallfoot_ap_data_list_seg_or_list t)) handle HOL_ERR _ =>
   (#3 (dest_smallfoot_ap_bintree t));
 
 val is_smallfoot_ap_spatial = (can dest_smallfoot_ap_spatial);
 
 
 
-fun dest_smallfoot_ap_spatial___no_list_seg t =
+fun dest_smallfoot_ap_spatial___no_data_list_seg t =
   (fst (dest_smallfoot_ap_points_to t)) handle HOL_ERR _ =>
-  (#2 (dest_smallfoot_ap_list t)) handle HOL_ERR _ =>
+  (#2 (dest_smallfoot_ap_data_list t)) handle HOL_ERR _ =>
   (#3 (dest_smallfoot_ap_bintree t));
 
-val is_smallfoot_ap_spatial___no_list_seg = (can dest_smallfoot_ap_spatial___no_list_seg);
+val is_smallfoot_ap_spatial___no_data_list_seg = (can dest_smallfoot_ap_spatial___no_data_list_seg);
 
 
 
@@ -1104,6 +1178,27 @@ val is_SMALLFOOT_IS_STRONG_STACK_PROPOSITION = can dest_SMALLFOOT_IS_STRONG_STAC
 
 val SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE_term =
  ``SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE``;
+
+
+
+
+
+
+
+val smallfoot_slp_new_var___PROP_COND_term = ``smallfoot_slp_new_var___PROP_COND``;
+fun dest_smallfoot_slp_new_var___PROP_COND tt =
+  let
+     val (f, args) = strip_comb tt;
+     val _ = if (same_const f smallfoot_slp_new_var___PROP_COND_term) andalso
+	        (length args = 4) then () else
+             raise (mk_HOL_ERR "smallfootSyntax" "dest_smallfoot_slp_new_var___PROP_COND" "Wrong term")
+  in
+    (el 1 args,el 2 args,el 3 args,el 4 args)
+  end
+val is_smallfoot_slp_new_var___PROP_COND = can dest_smallfoot_slp_new_var___PROP_COND;
+
+
+
 
 
 

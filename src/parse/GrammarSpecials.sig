@@ -7,6 +7,7 @@ sig
   val resquan_special : string
   val let_special : string
   val and_special : string
+  val fakeconst_special : string
 
   (* special strings for records *)
   val recsel_special : string
@@ -23,6 +24,7 @@ sig
   val fromNum_str : string
   val num_injection : string
 
+  (* handling case expressions *)
   val case_special : string
   val case_split_special : string
   val case_arrow_special : string

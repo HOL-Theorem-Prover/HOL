@@ -1,12 +1,15 @@
 (*---------------------------------------------------------------------------*)
-(* Finiteness requirement on DFS handled in type system by use of a type     *)
+(* Finiteness requirement on DFT handled in type system by use of a type     *)
 (* 'a finite.                                                                *)
 (*---------------------------------------------------------------------------*)
 
+quietdec := true;
 app load ["pred_setLib"];
 open pred_setTheory pred_setLib relationTheory listTheory;
+quietdec := false;
 
-val dnf_ss = bool_ss ++ boolSimps.DNF_ss ++ rewrites [AND_IMP_INTRO];
+val dnf_ss = bool_ss ++ boolSimps.DNF_ss ++ 
+             rewrites [AND_IMP_INTRO, GSYM LEFT_FORALL_IMP_THM];
 
 (*---------------------------------------------------------------------------*)
 (* Create a type constructor finite that returns a type with a finite        *)
@@ -70,17 +73,17 @@ val finite_CARD = Q.prove (
  METIS_TAC [FINITE_BIJ_CARD_EQ, finite_FINITE]);
 
 (*---------------------------------------------------------------------------*)
-(* Define DFS using 'a finite. This gives exactly the recursion equations    *)
+(* Define DFT using 'a finite. This gives exactly the recursion equations    *)
 (* that one would write in ML, but 'a finite not definable there.            *)
 (*---------------------------------------------------------------------------*)
 
-val DFS_finite_defn = Hol_defn "DFS_finite" 
-`(DFS_finite (G: 'a finite -> 'a finite list) f seen [] acc = acc) /\
- (DFS_finite (G: 'a finite -> 'a finite list) f seen (visit_now :: visit_later)
+val DFT_finite_defn = Hol_defn "DFT_finite" 
+`(DFT_finite (G: 'a finite -> 'a finite list) f seen [] acc = acc) /\
+ (DFT_finite (G: 'a finite -> 'a finite list) f seen (visit_now :: visit_later)
              acc = 
    if MEM visit_now seen 
-      then DFS_finite G f seen visit_later acc 
-      else DFS_finite G f (visit_now :: seen)
+      then DFT_finite G f seen visit_later acc 
+      else DFT_finite G f (visit_now :: seen)
                           (G visit_now ++ visit_later)
                           (f visit_now acc))`;
 
@@ -93,32 +96,32 @@ val R2 = Define
     `Rel2 (G, f, seen, to_visit, acc)
        = (CARD (UNIV DIFF (LIST_TO_SET seen)), LENGTH to_visit)`;
 
-val (DFS_FINITE_DEF, DFS_FINITE_IND) = Defn.tprove
-(DFS_finite_defn,
+val (DFT_FINITE_DEF, DFT_FINITE_IND) = Defn.tprove
+(DFT_finite_defn,
  WF_REL_TAC `inv_image ($< LEX $<) Rel2` 
   THEN ASSUME_TAC finite_FINITE 
   THEN RW_TAC list_ss [R2,LIST_TO_SET_THM] THEN DISJ1_TAC 
   THEN MATCH_MP_TAC (SIMP_RULE dnf_ss [] CARD_PSUBSET)
   THEN SRW_TAC [] [FINITE_DIFF,PSUBSET_DEF, SUBSET_DEF,
                    DIFF_INSERT,DIFF_DEF,IN_DELETE,EXTENSION] 
-  THEN PROVE_TAC []);
+  THEN METIS_TAC []);
 
 (*---------------------------------------------------------------------------*)
-(* Equality of the two versions of DFS.                                      *)
+(* Equality of the two versions of DFT.                                      *)
 (*---------------------------------------------------------------------------*)
 
-use "dfs";  (* to define DFS *)
+use "dft";  (* to define DFT *)
 
 val FINITE_PARENTS = Q.prove 
 (`FINITE (UNIV: 'a -> bool) ==> FINITE (Parents (G: 'a -> 'a list))`,
  METIS_TAC [SUBSET_UNIV, SUBSET_FINITE]);
 
-val DFS_EQ_THM = Q.prove (
+val DFT_EQ_THM = Q.prove (
 `!G : 'a finite -> 'a finite list.
  !f seen to_visit acc.
-     DFS G f seen to_visit acc = DFS_finite G f seen to_visit acc`,
- recInduct DFS_FINITE_IND THEN 
- RW_TAC std_ss [DFS_DEF, DFS_FINITE_DEF, finite_FINITE, FINITE_PARENTS]);
+     DFT G f seen to_visit acc = DFT_finite G f seen to_visit acc`,
+ recInduct DFT_FINITE_IND THEN 
+ RW_TAC std_ss [DFT_DEF, DFT_FINITE_DEF, finite_FINITE, FINITE_PARENTS]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -183,6 +186,89 @@ let val type_name = "finite" ^ int_to_string n
                    FINITE_BIJ_CARD_EQ, REP_BIJ_THM]);   
 in
 (finite_REP_ABS_DEF, REP_BIJ_THM, finiteN_FINITE, finiteN_CARD)
-end
+end;
 
+(*---------------------------------------------------------------------------*)
+(* Adjacency lists. We will represent an adjacency list A as an element of   *)
+(* type                                                                      *)
+(*                                                                           *)
+(*   ('a # 'a list) list                                                     *)
+(*                                                                           *)
+(* Such a representation can be transformed to a graph suitable for input    *)
+(* to DFT by the following definition.                                       *)
+(*---------------------------------------------------------------------------*)
+
+val toGraph_def =
+ Define
+   `toGraph (A:('a # 'a list) list) x = 
+      case FILTER (\(k,l). k = x) A
+       of [] -> []
+       || (_,list)::t -> list`;
+
+(*---------------------------------------------------------------------------*)
+(* A recursive presentation of toGraph, simpler for inductive proof.         *)
+(*---------------------------------------------------------------------------*)
+
+val toGraph_thm = Q.prove
+(`(toGraph [] x = []:'a list) /\
+  (toGraph ((a:'a,l)::t) x = if x=a then l else toGraph t x)`,
+ CONJ_TAC THENL 
+  [RW_TAC list_ss [Once toGraph_def],
+   RW_TAC list_ss [Once toGraph_def] THEN
+    REPEAT CASE_TAC THENL
+     [RW_TAC list_ss [Once toGraph_def],
+      RW_TAC list_ss [Once toGraph_def]]]);
+
+(*---------------------------------------------------------------------------*)
+(* The parents of a graph derived from an adjacency list are finite.         *)
+(*---------------------------------------------------------------------------*)
+
+val toGraph_FINITE_Parents = Q.prove
+(`!A. FINITE (Parents (toGraph A))`,
+ SIMP_TAC bool_ss [Parents] THEN Induct THENL
+ [RW_TAC set_ss [toGraph_def],
+  Cases THEN RW_TAC set_ss [toGraph_thm] THEN 
+  let val lem = Q.prove
+    (`((if x then y else z) = []) = (x ==> (y=[])) /\ (~x ==> (z=[]))`,
+     METIS_TAC []) in
+  RW_TAC bool_ss [lem] end THEN 
+  `{x | (x = q) /\ ~(r = []) \/ ~(x = q) /\ ~(toGraph A x = [])} =
+   {q} INTER (\x. ~(r = [])) UNION COMPL{q} INTER {x | ~(toGraph A x = [])}`
+    by RW_TAC set_ss [EXTENSION,IN_DEF] THEN 
+  POP_ASSUM SUBST_ALL_TAC THEN 
+  METIS_TAC [FINITE_UNION, INTER_FINITE, FINITE_SING,INTER_COMM]]);
+
+(*---------------------------------------------------------------------------*)
+(* Thus obtain version of DFT for adjacency lists.                           *)
+(*                                                                           *)
+(* |- (DFT (toGraph A) f seen [] acc = acc) /\                               *)
+(*    (DFT (toGraph A) f seen (visit_now::visit_later) acc =                 *)
+(*      if MEM visit_now seen then                                           *)
+(*         DFT (toGraph A) f seen visit_later acc                            *)
+(*      else                                                                 *)
+(*         DFT (toGraph A) f (visit_now::seen)                               *)
+(*           (toGraph A visit_now ++ visit_later) (f visit_now acc)) : thm   *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+val ADJ_LIST_DFT = 
+  MATCH_MP DFT_DEF (SPEC_ALL toGraph_FINITE_Parents);
+
+(*---------------------------------------------------------------------------*)
+(* The above version is not executable in say ML, but the following is.      *)
+(* The recursion equations for ADFT are                                      *)
+(*                                                                           *)
+(*  |- (ADFT A f seen [] acc = acc) /\                                       *)
+(*     (ADFT A f seen (visit_now::visit_later) acc =                         *)
+(*       if MEM visit_now seen then                                          *)
+(*         ADFT A f seen visit_later acc                                     *)
+(*       else                                                                *)
+(*         ADFT A f (visit_now::seen) (toGraph A visit_now ++ visit_later)   *)
+(*           (f visit_now acc)) : thm                                        *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+val ADFT_def = Define `ADFT A = DFT (toGraph A)`;
+
+val ADFT_THM = REWRITE_RULE [GSYM ADFT_def] ADJ_LIST_DFT;
 

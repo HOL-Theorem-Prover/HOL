@@ -1419,12 +1419,13 @@ local
         val utyvars = type_varsl utys
         val rectys = filter (is_nested newtys) utys
     in
-      if rectys = []
-      then let val (th1,th2) = define_type_basecase def
-           in (n,th1,th2)
-           end
-      else
-      let fun compare_types (t1,t2) =
+      if rectys = [] then let
+          val (th1,th2) = define_type_basecase def
+        in
+          (n,th1,th2)
+        end
+      else let
+          fun compare_types (t1,t2) =
             if occurs_in t1 t2 then GREATER else
             if occurs_in t2 t1 then LESS else EQUAL
           val nty = hd (Listsort.sort compare_types rectys)
@@ -1511,8 +1512,10 @@ in
 val define_type_nested = fn def =>
  let val newtys = map fst def
      val truecons = itlist (curry op@) (map (map fst o snd) def) []
-     val (p,ith0,rth0) = with_flag (Globals.checking_const_names, false)
-                                   define_type_nested def
+     val (p,ith0,rth0) =
+         with_flag (Globals.checking_const_names, false)
+                   (trace ("Vartype Format Complaint", 0) define_type_nested)
+                   def
      val (avs,etm) = strip_forall(concl rth0)
      val allcls = conjuncts(snd(strip_exists etm))
      val relcls = fst(chop_list (length truecons) allcls)

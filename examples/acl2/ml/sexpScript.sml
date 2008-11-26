@@ -22,10 +22,10 @@
 ******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
-map 
+app 
  load  
  ["complex_rationalTheory", "sexp","acl2_packageTheory"];
-open complex_rationalTheory sexp acl2_packageTheory;
+open complex_rationalTheory sexp acl2_packageTheory stringLib;
 Globals.checking_const_names := false;
 quietdec := false;
 *)
@@ -48,6 +48,7 @@ open stringLib complex_rationalTheory acl2_packageTheory sexp;
 (*****************************************************************************)
 (* Start new theory "sexp"                                                   *)
 (*****************************************************************************)
+
 val _ = new_theory "sexp";
 
 (*****************************************************************************)
@@ -854,11 +855,7 @@ val LOOKUP_IDEMPOTENT_LEMMA =
     THEN Cases_on `r`
     THEN RW_TAC std_ss []
     THEN FULL_SIMP_TAC std_ss [VALID_PKG_TRIPLES_AUX_def,LOOKUP_def]
-    THENL
-     [Cases_on `(sym_name = "") /\ (pkg_name = q)`
-       THEN RW_TAC std_ss [],
-      Cases_on `(sym_name = STRING c ^(mk_var("s",``:string``))) /\ (pkg_name = q)`
-       THEN RW_TAC std_ss []]);
+    THEN BasicProvers.NORM_TAC std_ss []);
 
 val LOOKUP_IDEMPOTENT =
  store_thm

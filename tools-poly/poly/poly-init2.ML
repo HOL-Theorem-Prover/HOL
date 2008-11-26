@@ -1,3 +1,4 @@
+(* this is an -*- sml -*- file *)
 val _ = use "poly/poly-init.ML";
 
 val _ = use "Holmake/Systeml.sig";
@@ -70,6 +71,8 @@ fun myuse f =
 val loadPath : string list ref = ref [];
 
 val loadedMods = ref (Binaryset.empty String.compare);
+val _ = loadedMods := Binaryset.addList (!loadedMods, 
+                                         ["Real", "Int", "List"])
 
 fun findUo modPath [] = NONE
   | findUo modPath (search::rest) =

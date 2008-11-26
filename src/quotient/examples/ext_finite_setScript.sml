@@ -42,7 +42,7 @@ val NIL_RSP = store_thm(
 
 val CONS_RSP = store_thm(
   "CONS_RSP",
-  ``!x:'a A B. leq A B ==> leq (x::A) (x::B)``,
+  ``!(x:'a) A B. leq A B ==> leq (x::A) (x::B)``,
   SRW_TAC [] [leq_def]);
 
 (* membership is represented by MEM *)
@@ -141,7 +141,7 @@ val _ = export_rewrites ["Card1_def"]
 
 val NOT_MEM_Card1 = store_thm
    ("NOT_MEM_Card1",
-    ``!A:'a list a. ~(MEM a A) ==>
+    ``!(A:'a list) a. ~(MEM a A) ==>
              (Card1 (a :: A) = SUC (Card1 A))``,
     RW_TAC std_ss [Card1_def]
    );
@@ -193,7 +193,7 @@ val Card1_0 = store_thm(
 (* list2set *)
 val list2set_thm = prove(
   ``(LIST_TO_SET ([]:'a list) = {}) /\
-    (!h:'a t. LIST_TO_SET (h::t) = h INSERT LIST_TO_SET t)``,
+    (!(h:'a) t. LIST_TO_SET (h::t) = h INSERT LIST_TO_SET t)``,
   SRW_TAC [][pred_setTheory.EXTENSION]);
 
 val list2set_RSP = store_thm(
@@ -225,7 +225,7 @@ val MEM_lcommuting_Fold1 = store_thm(
 
 val Fold1_RSP = store_thm(
   "Fold1_RSP",
-  ``!A B:'a list f (z:'b). leq A B ==> (Fold1 f z A = Fold1 f z B)``,
+  ``!A (B:'a list) f (z:'b). leq A B ==> (Fold1 f z A = Fold1 f z B)``,
   REWRITE_TAC [leq_def] THEN Induct THEN SRW_TAC [][Fold1_def] THENL [
     PROVE_TAC [],
     `MEM h B` by PROVE_TAC [] THEN

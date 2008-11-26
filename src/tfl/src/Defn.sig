@@ -24,6 +24,8 @@ sig
   val mk_Rdefn   : string -> term -> term -> defn
   val Hol_defn   : string -> term quotation -> defn
   val Hol_Rdefn  : string -> term quotation -> term quotation -> defn
+  val mk_defns   : string list -> term list -> defn list
+  val Hol_defns  : string list -> term quotation -> defn list
 
   val name_of    : defn -> string
   val eqns_of    : defn -> thm list
@@ -49,7 +51,8 @@ sig
   val store      : string * thm * thm -> unit
   val save_defn  : defn -> unit
 
-  val parse_defn : absyn -> term * string list
+  val parse_absyn : absyn -> term * string list
+  val parse_quote : term quotation -> term list
 
   val tgoal      : defn -> proofs
   val tprove0    : defn * tactic -> thm * thm

@@ -92,8 +92,12 @@ val safe_unify :
 val type_subst  : {redex : pretype, residue : pretype} list -> pretype -> pretype
 val distinguish_btyvars : pretype list -> pretype -> pretype
 
-val rename_typevars : pretype -> pretype
-val rename_tv : pretype -> (string * pretype) list ->
+val rename_typevars : string list -> pretype -> pretype
+(*
+val rename_tv : string list -> pretype -> (string * pretype option ref) list -> 
+                (string * pretype option ref) list * pretype option
+*)
+val rename_tv : string list -> pretype ->
            (prerank list * (string * prekind) list * (string * pretype) list) ->
            (prerank list * (string * prekind) list * (string * pretype) list) * pretype option
 val fromType : hol_type -> pretype

@@ -286,7 +286,8 @@ val _ = adjoin_to_theory
     S "val _ ="; NL();
     S "   let open computeLib" ; NL();
     S "       val K_tm = Term.prim_mk_const{Name=\"K\",Thy=\"combin\"}"; NL();
-    S "   in add_funs [K_THM,S_DEF,I_THM,C_DEF,W_DEF,o_DEF,APPLY_UPDATE_THM];";
+    S "   in add_funs"; NL();
+    S "       [K_THM,S_DEF,I_THM,C_DEF,W_DEF,o_THM,K_o_THM,APPLY_UPDATE_THM];";
     NL();
     S "      set_skip the_compset K_tm (SOME 1)"; NL();
     S "   end;";

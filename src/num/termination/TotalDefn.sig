@@ -32,7 +32,7 @@ sig
    val tDefine     : string -> term quotation -> tactic -> thm
    val xDefine     : string -> term quotation -> thm
    val Define      : term quotation -> thm
-
+   val multiDefine : term quotation -> thm list
    datatype phase 
         = PARSE of term quotation
         | BUILD of term

@@ -181,11 +181,9 @@ fun print_monads (tyg, tmg) (sysprinter,strn,brk) (p,l,r) dpth pps t = let
 in
   PP.begin_block pps PP.CONSISTENT 0;
     strn "do"; brk(1,2);
-    PP.begin_block pps PP.CONSISTENT 0;
-      Portable.pr_list pr_action (fn () => strn ";") (fn () => brk(1,0))
-                       actions;
-    PP.end_block pps;
-    brk(1,~2);
+    Portable.pr_list pr_action (fn () => strn ";") (fn () => brk(1,2))
+                     actions;
+    brk(1,0);
     strn "od";
   PP.end_block pps
 end

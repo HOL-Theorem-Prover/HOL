@@ -133,4 +133,6 @@ sig
 
   val empty_tmset   : term set
   val empty_varset  : term set
+
+  val term_size     : term -> int
 end

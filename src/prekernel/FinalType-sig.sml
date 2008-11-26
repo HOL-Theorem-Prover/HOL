@@ -122,4 +122,7 @@ sig
 
  val pp_raw_type    : ppstream -> hol_type -> unit
  val type_to_string : hol_type -> string
+
+ val type_size : hol_type -> int
+
 end

@@ -1,12 +1,13 @@
 (*---------------------------------------------------------------------------*)
 (* Tricky recursive definition of list reversal. Doesn't use any other       *)
-(* functions, nor extra arguments. Suggested by Joe Hurd.                    *)
+(* functions, nor extra arguments. Suggested by Joe Hurd. See nest in this   *)
+(* directory to see a different approach.                                    *)
 (*---------------------------------------------------------------------------*)
 
-open TotalDefn listTheory;
+quietdec := true;
+open TotalDefn listTheory prim_recTheory;
+quietdec := false;
 
-val WF_measure = prim_recTheory.WF_measure;
-val measure_thm = prim_recTheory.measure_thm;
 val measure_length = Q.prove
 (`measure LENGTH t (h::t)`, RW_TAC list_ss [measure_thm])
 
