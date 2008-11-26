@@ -54,7 +54,7 @@ val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 
 (* for SUM of equivalence relations, use infix +++, defined here: *)
 
-val _ = Lib.try add_infix("+++", 450, HOLgrammars.RIGHT)
+val _ = Lib.try add_infix("+++", 480, HOLgrammars.LEFT)
 
 val SUM_REL_def = xDefine "SUM_REL"
        `(($+++ R1 R2) (INL (a1:'a)) (INL (a2:'a)) = R1 a1 a2) /\
@@ -289,6 +289,6 @@ val SUM_MAP_RSP = store_thm
 val _ = export_theory();
 
 val _ = print_theory_to_file "-" "quotient_sum.lst";
-                                                                                
+
 val _ = html_theory "quotient_sum";
 

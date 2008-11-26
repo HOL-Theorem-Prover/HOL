@@ -222,9 +222,9 @@ val treal_mul = new_infixl_definition("treal_mul",
       ((x1 hreal_mul x2) hreal_add (y1 hreal_mul y2),
        (x1 hreal_mul y2) hreal_add (y1 hreal_mul x2))`--), 600);
 
-val treal_lt = new_infixr_definition("treal_lt",
---`treal_lt (x1,y1) (x2,y2) = (x1 hreal_add y2) hreal_lt (x2 hreal_add y1)`--,
-   450);
+val treal_lt = new_definition("treal_lt",
+--`treal_lt (x1,y1) (x2,y2) = (x1 hreal_add y2) hreal_lt (x2 hreal_add y1)`--);
+val _ = temp_set_fixity "treal_lt" (Infix(NONASSOC, 450))
 
 val treal_inv = new_definition("treal_inv",
   (--`treal_inv (x,y) =
@@ -237,8 +237,9 @@ val treal_inv = new_definition("treal_inv",
 (* Define the equivalence relation and prove it *is* one                     *)
 (*---------------------------------------------------------------------------*)
 
-val treal_eq = new_infixr_definition("treal_eq",
-  (--`treal_eq (x1,y1) (x2,y2) = (x1 hreal_add y2 = x2 hreal_add y1)`--), 450);
+val treal_eq = new_definition("treal_eq",
+  (--`treal_eq (x1,y1) (x2,y2) = (x1 hreal_add y2 = x2 hreal_add y1)`--));
+val _ = temp_set_fixity "treal_eq" (Infix(NONASSOC, 450))
 
 val TREAL_EQ_REFL = prove_thm("TREAL_EQ_REFL",
   (--`!x. x treal_eq x`--),
@@ -544,7 +545,7 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
             mk_def("real_inv", Term`treal_inv`, "inv", Prefix),
             mk_def("real_add", Term`$treal_add`, "real_add", Infixl 500),
             mk_def("real_mul",  Term`$treal_mul`, "real_mul", Infixl 600),
-            mk_def("real_lt",  Term`$treal_lt`,  "real_lt",  Infixr 450),
+            mk_def("real_lt",  Term`$treal_lt`,  "real_lt",  Prefix),
             mk_def("real_of_hreal",Term`$treal_of_hreal`, "real_of_hreal",Prefix),
             mk_def("hreal_of_real", Term`$hreal_of_treal`,"hreal_of_real",Prefix)],
     welldefs = [TREAL_NEG_WELLDEF, TREAL_INV_WELLDEF, TREAL_LT_WELLDEF,
@@ -577,7 +578,7 @@ val _ = overload_on ("<", natless);
 val _ = overload_on ("~", Term`$real_neg`);
 val _ = overload_on ("+", Term`$real_add`);
 val _ = overload_on ("*", Term`$real_mul`);
-val _ = overload_on ("<", Term`$real_lt`);
+val _ = overload_on ("<", Term`real_lt`);
 
 
 (*---------------------------------------------------------------------------*)

@@ -14,48 +14,26 @@ fun temp_set_term_grammar g = temp_set_grammars(type_grammar(), g)
 val master_unicode_switch = ref false
 
 datatype stored_data =
-         SD of { t : term, u : string, non_u : string option,
-                 newrule : (int option * grammar_rule) option,
-                 oldtok : string option}
+         RuleUpdate of { u : string, term_name : string,
+                         newrule : (int option * grammar_rule),
+                         oldtok : string }
+       | OverloadUpdate of { u : string, oldname : string, ts : term list }
 
 (* This stored data record encodes a number of different options for
    the way in which a Unicode string can be an alternative for a
    syntactic form.
 
-   Fields:
-     u  - the Unicode string
-     t  - Always recorded, as a term is given as an input to the user-level
-          functions.
-
-          Used if u is directly overloaded to a term (a constant)
-            * this has to happen with binders
-            * can happen with constants that don't have concrete
-              syntax.  (For example, I might want to bind Unicode beta
-              to "beta", the relation expressing beta reduction which
-              is not an infix.)
+   If it's a RuleUpdate{u,term_name,newrule,oldtok} form, then the
+   Unicode symbol u appears is a token of newrule, which maps to term_name,
+   and oldtok is an ASCII token of the old rule.
 
 
-     non_u - the printing form of the given constant, as per the
-             overload map.  Will often just be the name of the
-             constant.  Will be NONE, if the constant is hidden
-             (combin$C for example).  Will be different if the
-             constant prints via some other string (e.g.,
-             integer$int_le prints as "<=")
-
-     newrule - the concrete syntax rule, if any, that is to be added to
-               the term_grammar.
-
-     oldtok - the token associated with the concrete syntax that in turn
-              linked to non_u.  Needed so that on turning Unicode off, we
-              can "prefer" this form.
+   If it's a OverloadUpdate{u,oldname,t} then u is to be put in as an
+   additional overload from u to the term t, and oldname is the ASCII
+   version of u.
 *)
 
 val term_table = ref ([] : stored_data list)
-
-fun rule_is_binder (fixopt, grule) =
-  case grule of
-    PREFIX (BINDER _) => true
-  | _ => false
 
 fun getrule G term_name = let
   fun replace {term_name, elements, preferred, block_style, paren_style} s =
@@ -78,18 +56,18 @@ fun getrule G term_name = let
   in
     case List.find srch rrlist of
       NONE => alt()
-    | SOME r => f (r, replace r, SOME (tok_of r))
+    | SOME r => f (r, replace r, tok_of r)
   end
 
-  fun breplace {term_name,tok,preferred} s = 
+  fun breplace {term_name,tok,preferred} s =
       {term_name = term_name, tok = s, preferred = false}
-  fun search_bslist f alt blist = let 
-    fun srch {term_name = nm, preferred, tok} = 
-        term_name = nm andalso preferred 
+  fun search_bslist f alt blist = let
+    fun srch {term_name = nm, preferred, tok} =
+        term_name = nm andalso preferred
   in
-    case List.find srch blist of 
+    case List.find srch blist of
       NONE => alt()
-    | SOME r => f (r, breplace r, SOME (#tok r))
+    | SOME r => f (r, breplace r, #tok r)
   end
 
   fun con c (r,f,tok) = (c [r], (fn s => c [f s]), tok)
@@ -97,7 +75,7 @@ fun getrule G term_name = let
   fun STD_infix' assoc (r,f,tok) = (INFIX (STD_infix([r],assoc)),
                                     (fn s => INFIX (STD_infix([f s], assoc))),
                                     tok)
-  fun BinderString' (r, f, tok) = 
+  fun BinderString' (r, f, tok) =
       (PREFIX (BINDER [BinderString r]),
        (fn s => PREFIX (BINDER [BinderString (f s)])),
        tok)
@@ -108,14 +86,14 @@ fun getrule G term_name = let
       | (fixopt, grule) :: rest => let
         in
           case grule of
-            PREFIX (BINDER blist) => let 
+            PREFIX (BINDER blist) => let
               fun extract_bs (BinderString r) = SOME r
                 | extract_bs _ = NONE
-              val bslist = List.mapPartial extract_bs blist 
+              val bslist = List.mapPartial extract_bs blist
             in
               search_bslist (addfix fixopt o BinderString')
                             (fn () => get_rule_data rest)
-                            bslist 
+                            bslist
             end
           | PREFIX (STD_prefix rrlist) =>
             search_rrlist (addfix fixopt o con (PREFIX o STD_prefix))
@@ -149,18 +127,16 @@ end
 
 fun mktemp_resb s = "_" ^ s ^ "resb"
 
-fun enable_one (SD {t, u, non_u, newrule, oldtok}) = let
-in
-  case newrule of
-    NONE => temp_overload_on (u, t)
-  | SOME r => let
-      val g0 = term_grammar()
-      val g' = add_grule g0 r
-    in
-      temp_set_grammars (type_grammar(), g');
-      temp_prefer_form_with_tok {term_name = valOf non_u, tok = u}
-    end
-end
+fun enable_one sd =
+    case sd of
+      RuleUpdate {u,term_name,newrule = r,oldtok} => let
+        val g0 = term_grammar()
+        val g' = add_grule g0 r
+      in
+        temp_set_grammars (type_grammar(), g');
+        temp_prefer_form_with_tok {term_name = term_name, tok = u}
+      end
+    | OverloadUpdate{u,oldname,ts} => app (fn t => temp_overload_on(u,t)) ts
 
 fun fupd_lambda f {type_intro,lambda,endbinding,restr_binders,res_quanop} =
     {type_intro = type_intro, lambda = f lambda, endbinding = endbinding,
@@ -170,42 +146,41 @@ fun fupd_restrs f {type_intro,lambda,endbinding,restr_binders,res_quanop} =
      restr_binders = f restr_binders, res_quanop = res_quanop}
 
 
-fun disable_one (SD {t, u, non_u, newrule, oldtok}) = let
-in
-  case newrule of
-    NONE => (temp_remove_ovl_mapping u (constid t) ;
-             case non_u of
-               NONE => ()
-             | SOME nu => temp_overload_on (nu, t))
-  | SOME r => let
-    in
-      temp_remove_termtok {tok = u, term_name = valOf non_u};
-      temp_prefer_form_with_tok { tok = valOf oldtok,
-                                  term_name = valOf non_u}
-    end
-end
+fun disable_one sd =
+    case sd of
+      RuleUpdate{u,term_name,newrule,oldtok} => let
+      in
+        temp_remove_termtok {tok = u, term_name = term_name};
+        temp_prefer_form_with_tok { tok = oldtok, term_name = term_name}
+      end
+    | OverloadUpdate{u,oldname,ts} => let
+        fun doit t = (temp_remove_ovl_mapping u (constid t) ;
+                      temp_overload_on (oldname, t))
+      in
+        app doit ts
+      end
 
-fun temp_unicode_version (uni_s, t) = let
+fun temp_unicode_version {u,tmnm} = let
   val G = term_grammar()
-  val oinfo = overload_info G
-  val current_nm = Overload.overloading_of_term oinfo t
-  val data =
-      case current_nm of
-        NONE => {t = t, u = uni_s, non_u = NONE, newrule = NONE, oldtok = NONE}
-      | SOME nm => let
+  val oi = term_grammar.overload_info G
+  val sd =
+      case getrule G tmnm of
+        NONE => let
         in
-          case getrule G nm of
-            NONE => {t = t, u = uni_s, non_u = current_nm, newrule = NONE,
-                     oldtok = NONE}
-          | SOME (r,f,s) => {t = t, u = uni_s, non_u = current_nm,
-                             newrule = SOME (f uni_s), oldtok = s}
+          case Overload.info_for_name oi tmnm of
+            NONE => raise mk_HOL_ERR "Unicode" "unicode_version"
+                                     ("No data for term with name "^tmnm)
+          | SOME ops => OverloadUpdate{u = u, oldname = tmnm,
+                                       ts = #actual_ops ops}
         end
+      | SOME(r,f,s) => RuleUpdate{u = u,term_name = tmnm, newrule = f u,
+                                  oldtok = s}
 in
-  if !master_unicode_switch then enable_one (SD data) else ();
-  term_table := SD data :: !term_table
+  if !master_unicode_switch then enable_one sd else ();
+  term_table := sd :: !term_table
 end
 
-val updates = ref ([] : (string * term) list)
+val updates = ref ([] : {u:string,tmnm:string} list)
 
 fun unicode_version p = let
 in
@@ -237,15 +212,11 @@ fun traceget () = if !master_unicode_switch then 1 else 0
 
 val _ = register_ftrace ("Unicode", (traceget, traceset), 1)
 
-fun print_update pps (uni_s, t) = let
-  val {Thy,Name,...} = dest_thy_const t
-in
-  PP.add_string
-      pps
-      ("val _ = Unicode.temp_unicode_version (\""^String.toString uni_s^"\", \
-       \Term.prim_mk_const {Thy = \""^String.toString Thy^"\",\
-       \Name = \""^String.toString Name^"\"})\n")
-end
+fun print_update pps {u,tmnm} =
+    PP.add_string
+        pps
+      ("val _ = Unicode.temp_unicode_version {u = \""^String.toString u^
+       "\", tmnm = \""^String.toString tmnm^"\"}\n")
 
 
 fun setup (oldname, thyname) = let

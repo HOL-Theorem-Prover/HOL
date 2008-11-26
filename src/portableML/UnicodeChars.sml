@@ -38,6 +38,8 @@ val conj = "\u00e2\u0088\u00a7";
 val disj = "\u00e2\u0088\u00a8";
 val imp = "\u00e2\u0087\u0092";
 val neg = "\u00c2\u00ac"
+val iff = U 0x21D4
+val not_iff = U 0x21CE
 
 (* not a constant, but might be useful *)
 val neq = "\u00e2\u0089\u00a0"
@@ -52,13 +54,12 @@ val longrightarrow       = U 0x27F6
 val Leftarrow            = U 0x21D0
 val Rightarrow           = U 0x21D2
 val longdoubleleftarrow  = U 0x27F8
-val longdoublerightarrow = U 0x27F9 
+val longdoublerightarrow = U 0x27F9
 
 (* latter probably needs a proportional font to print well - would be
    good for implication if available - actually seems OK also on
    Leopard's Courier font, which is supposedly fixed-width *)
 
-val setelementof = "\u00e2\u0088\u0088"
 
 (* superscripts *)
 val sup_plus = UTF8.chr 0x207A
@@ -78,6 +79,8 @@ val emptyset = "\u00e2\u0088\u0085"
 val subset = "\u00e2\u008a\u0086"
 val inter = "\u00e2\u0088\u00a9"
 val union = "\u00e2\u0088\u00aa"
+val setelementof = "\u00e2\u0088\u0088"
+val not_elementof = U 0x2209
 
 (* words *)
 val lo = "<\u00e2\u0082\u008a"

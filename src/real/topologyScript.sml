@@ -41,8 +41,9 @@ val re_null = new_definition("re_null",
 val re_universe = new_definition("re_universe",
   (--`re_universe = \x:'a. T`--));
 
-val re_subset = new_infixr_definition("re_subset",
-  (--`$re_subset P Q = !x:'a. P x ==> Q x`--), 450);
+val re_subset = new_definition("re_subset",
+  (--`$re_subset P Q = !x:'a. P x ==> Q x`--));
+val _ = set_fixity "re_subset" (Infix(NONASSOC, 450))
 
 val re_compl = new_definition("re_compl",
   (--`re_compl P = \x:'a. ~(P x):bool`--));
@@ -211,8 +212,8 @@ val CLOSED_LIMPT = prove_thm("CLOSED_LIMPT",
 (*---------------------------------------------------------------------------*)
 
 val ismet = new_definition("ismet",
-  (--`ismet (m:'a#'a->real) 
-        = 
+  (--`ismet (m:'a#'a->real)
+        =
       (!x y. (m(x,y) = &0) = (x = y)) /\
       (!x y z. m(y,z) <= m(x,y) + m(x,z))`--));
 
@@ -471,8 +472,8 @@ val MR1_LIMPT = prove_thm("MR1_LIMPT",
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
- struct_ps = SOME (fn ppstrm => 
-   (PP.add_string ppstrm "val _ = Parse.hide \"B\";"; 
+ struct_ps = SOME (fn ppstrm =>
+   (PP.add_string ppstrm "val _ = Parse.hide \"B\";";
     PP.add_newline ppstrm))};
 
 val _ = export_theory();

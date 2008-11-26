@@ -381,7 +381,7 @@ fun strip_comb ((_, prmap): overload_info) t = let
   fun rearrange (_, tmi, _, (orig, nm)) = let
     val (bvs,_) = strip_abs orig
     fun findarg v =
-        case List.find (fn {redex,residue} => residue = v) tmi of
+        case List.find (fn {redex,residue} => redex = v) tmi of
           NONE => mk_const("ARB", type_of v)
         | SOME i => #residue i
   in
@@ -391,6 +391,24 @@ in
   case sorted of
     [] => NONE
   | m :: _ => SOME (rearrange m)
+end
+fun oi_strip_comb oinfo t = let
+  fun recurse acc t =
+      case strip_comb oinfo t of
+        NONE => let
+        in
+          case Lib.total dest_comb t of
+            NONE => NONE
+          | SOME (f,x) => recurse (x::acc) f
+        end
+      | SOME (f,args) => SOME(f, args @ acc)
+  val realf = repeat rator t
+in
+  if is_var realf andalso
+     String.isPrefix GrammarSpecials.fakeconst_special (#1 (dest_var realf))
+  then
+    NONE
+  else recurse [] t
 end
 
 

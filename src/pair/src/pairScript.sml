@@ -359,7 +359,7 @@ val PEXISTS_THM = Q.store_thm
 
 val PAIR_MAP = Q.new_infixr_definition
  ("PAIR_MAP",
-  `$## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 50);
+  `$## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 490);
 
 val PAIR_MAP_THM = Q.store_thm
 ("PAIR_MAP_THM",
@@ -541,7 +541,7 @@ Q.new_infixr_definition
 ("LEX_DEF",
   `$LEX (R1:'a->'a->bool) (R2:'b->'b->bool)
      =
-   \(s,t) (u,v). R1 s u \/ (s=u) /\ R2 t v`, 450);
+   \(s,t) (u,v). R1 s u \/ (s=u) /\ R2 t v`, 490);
 
 val LEX_DEF_THM = Q.store_thm
 ("LEX_DEF_THM",

@@ -385,7 +385,7 @@ val SUM_MAP_def = Prim_rec.new_recursive_definition{
   def = ``(($++ f g) (INL (a:'a)) = INL ((f a):'c)) /\
           (($++ f g) (INR (b:'b)) = INR ((g b):'d))``,
   rec_axiom = sum_Axiom};
-val _ = set_fixity "++" (Infixl 440)
+val _ = set_fixity "++" (Infixl 480)
 val _ = export_rewrites ["SUM_MAP_def"]
 
 val SUM_MAP = store_thm (

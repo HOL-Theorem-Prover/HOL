@@ -82,7 +82,7 @@ val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
                       cons = "CONS", nilstr = "NIL",
                       block_info = (PP.INCONSISTENT, 0)};
 
-val _ = add_rule {term_name = "CONS", fixity = Infixr 450,
+val _ = add_rule {term_name = "CONS", fixity = Infixr 490,
                   pp_elements = [TOK "::", BreakSpace(0,2)],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundSameName, (PP.INCONSISTENT, 2))};
@@ -138,7 +138,7 @@ val APPEND = new_recursive_definition
                   (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)`--};
 val _ = export_rewrites ["APPEND"]
 
-val _ = set_fixity "++" (Infixl 440);
+val _ = set_fixity "++" (Infixl 480);
 val _ = overload_on ("++", Term`APPEND`);
 
 val FLAT = new_recursive_definition

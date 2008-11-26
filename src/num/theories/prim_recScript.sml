@@ -73,11 +73,10 @@ and INDUCTION   = numTheory.INDUCTION;
 
 fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
 
-val LESS_DEF =
-  new_infixr_definition
-  ("LESS_DEF",
-      Term `$< m n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~(P n)`,
-   450);
+val LESS_DEF = new_definition (
+  "LESS_DEF",
+  Term `$< m n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~(P n)`)
+val _ = set_fixity "<" (Infix(NONASSOC, 450))
 
 val INV_SUC_EQ = save_thm("INV_SUC_EQ",
    GENL [--`m:num`--, --`n:num`--]
@@ -617,7 +616,7 @@ REWRITE_TAC[measure_def]
 val measure_thm = Q.store_thm
 ("measure_thm",
  `!f x y. measure f x y = f x < f y`,
- REWRITE_TAC [measure_def,relationTheory.inv_image_def] 
+ REWRITE_TAC [measure_def,relationTheory.inv_image_def]
    THEN BETA_TAC
    THEN REWRITE_TAC []);
 

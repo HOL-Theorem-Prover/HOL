@@ -140,8 +140,8 @@ val _ = overload_on ("UINT_MAXw",``words$word_T``)
 val _ = overload_on ("INT_MAXw",``words$word_H``)
 val _ = overload_on ("INT_MINw",``words$word_L``)
 
-val _ = Unicode.unicode_version(Unicode.UChar.or, ``word_or``)
-val _ = Unicode.unicode_version(Unicode.UChar.xor, ``word_xor``)
+val _ = Unicode.unicode_version{u=Unicode.UChar.or, tmnm="!!"}
+val _ = Unicode.unicode_version{u=Unicode.UChar.xor, tmnm="??"}
 
 (* ------------------------------------------------------------------------- *)
 (*  Bit field operations : definitions                                       *)
@@ -299,11 +299,11 @@ val _ = overload_on (">>>",``words$word_lsr``)
 val _ = overload_on ("#>>",``words$word_ror``)
 val _ = overload_on ("#<<",``words$word_rol``)
 
-val _ = Unicode.unicode_version(Unicode.UChar.lsl, ``word_lsl``)
-val _ = Unicode.unicode_version(Unicode.UChar.asr, ``word_asr``)
-val _ = Unicode.unicode_version(Unicode.UChar.lsr, ``word_lsr``)
-val _ = Unicode.unicode_version(Unicode.UChar.ror, ``word_ror``)
-val _ = Unicode.unicode_version(Unicode.UChar.rol, ``word_rol``)
+val _ = Unicode.unicode_version{u=Unicode.UChar.lsl, tmnm="<<"}
+val _ = Unicode.unicode_version{u=Unicode.UChar.asr, tmnm=">>"}
+val _ = Unicode.unicode_version{u=Unicode.UChar.lsr, tmnm=">>>"}
+val _ = Unicode.unicode_version{u=Unicode.UChar.ror, tmnm="#>>"}
+val _ = Unicode.unicode_version{u=Unicode.UChar.rol, tmnm="#<<"}
 
 (* ------------------------------------------------------------------------- *)
 (*  Concatenation : definition                                               *)
@@ -361,10 +361,10 @@ val word_lo_def = Define`
 val word_hs_def = Define`
   word_hs a b = let (n,z,c,v) = nzcv a b in c`;
 
-val _ = add_infix("<+", 450,HOLgrammars.RIGHT)
-val _ = add_infix(">+", 450,HOLgrammars.RIGHT)
-val _ = add_infix("<=+",450,HOLgrammars.RIGHT)
-val _ = add_infix(">=+",450,HOLgrammars.RIGHT)
+val _ = add_infix("<+", 450,HOLgrammars.NONASSOC)
+val _ = add_infix(">+", 450,HOLgrammars.NONASSOC)
+val _ = add_infix("<=+",450,HOLgrammars.NONASSOC)
+val _ = add_infix(">=+",450,HOLgrammars.NONASSOC)
 
 val _ = overload_on ("<",  Term`word_lt`)
 val _ = overload_on (">",  Term`word_gt`)
@@ -375,10 +375,10 @@ val _ = overload_on (">+", Term`word_hi`)
 val _ = overload_on ("<+", Term`word_lo`)
 val _ = overload_on (">=+",Term`word_hs`)
 
-val _ = Unicode.unicode_version(Unicode.UChar.ls, ``word_ls``)
-val _ = Unicode.unicode_version(Unicode.UChar.hi, ``word_hi``)
-val _ = Unicode.unicode_version(Unicode.UChar.lo, ``word_lo``)
-val _ = Unicode.unicode_version(Unicode.UChar.hs, ``word_hs``)
+val _ = Unicode.unicode_version{u=Unicode.UChar.ls, tmnm = "<=+"}
+val _ = Unicode.unicode_version{u=Unicode.UChar.hi, tmnm = ">+"}
+val _ = Unicode.unicode_version{u=Unicode.UChar.lo, tmnm = "<+"}
+val _ = Unicode.unicode_version{u=Unicode.UChar.hs, tmnm = ">=+"}
 
 (* ------------------------------------------------------------------------- *)
 (*  Theorems                                                                 *)
@@ -1516,7 +1516,7 @@ val WORD_LITERAL_XOR = store_thm("WORD_LITERAL_XOR",
 (*  Word arithmetic: theorems                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = set_fixity "==" (Infixr 450);
+val _ = set_fixity "==" (Infix(NONASSOC, 450));
 
 val equiv = ``\x y. x MOD ^top = y MOD ^top``;
 

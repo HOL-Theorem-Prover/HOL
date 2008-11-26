@@ -61,4 +61,6 @@ sig
   val remove_mapping :
     string -> {Name:string, Thy:string} -> overload_info -> overload_info
 
+  val oi_strip_comb : overload_info -> term -> (term * term list) option
+
 end

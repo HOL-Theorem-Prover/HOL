@@ -180,7 +180,7 @@ val EQUIV_REFL_SYM_TRANS = store_thm
     THEN REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
     THENL (* 4 subgoals *)
-      [ 
+      [
         PURE_ASM_REWRITE_TAC[]
         THEN REFL_TAC,
 
@@ -239,7 +239,7 @@ val FUN_MAP =
     new_infixr_definition
     ("FUN_MAP",
      (--`$--> (f:'a->'c) (g:'b->'d) = \h x. g (h (f x))`--),
-     450);
+     490);
 
 val FUN_MAP_THM = store_thm
    ("FUN_MAP_THM",
@@ -286,7 +286,7 @@ val FUN_REL =
     ("FUN_REL",
      (--`$===> (R1:'a->'a->bool) (R2:'b->'b->bool) f g =
            !x y. R1 x y ==> R2 (f x) (g y)`--),
-     450);
+     490);
 
 
 val FUN_REL_EQ = store_thm
@@ -1827,6 +1827,6 @@ val RES_EXISTS_UNIQUE_REGULAR_SAME = store_thm
 val _ = export_theory();
 
 val _ = print_theory_to_file "-" "quotient.lst";
-                                                                                
+
 val _ = html_theory "quotient";
 

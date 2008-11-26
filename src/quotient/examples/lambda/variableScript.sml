@@ -70,7 +70,7 @@ val var_one_one = theorem "var_11";
 (* We define Base v as the string which is the base of v.          *)
 (* =============================================================== *)
 
-val Base_def = 
+val Base_def =
     Define `(Base (VAR s n) = s)`;
 
 (* =============================================================== *)
@@ -171,10 +171,11 @@ val mk_variant_compose = store_thm
 new_infix("is_variant",  ==`:var->var->bool`==, 450);
 *)
 
-val is_variant =
-    new_infixr_definition ("is_variant",
-      (--`$is_variant y x =
-            ((Base y = Base x) /\ (Index x <= Index y))`--), 450);
+val is_variant = new_definition (
+  "is_variant",
+  ``$is_variant y x =
+          ((Base y = Base x) /\ (Index x <= Index y))``)
+val _ = set_fixity "is_variant" (Infix(NONASSOC, 450))
 
 
 val is_variant_reflexive = store_thm
@@ -240,7 +241,7 @@ fun new_prim_rec_definition (name,tm) =
        name      = name,
        def       = tm};
 
-val variant_set = 
+val variant_set =
     new_prim_rec_definition
     ("variant_set",
       (--`(variant_set x 0       = EMPTY)  /\
@@ -372,7 +373,7 @@ end;
 
 
 
-(* variant = 
+(* variant =
   |- !x s.
        FINITE s ==>
        (variant x s IN variant_set x (SUC (CARD s)) /\
@@ -641,7 +642,7 @@ val variant_THM = store_thm
 
          STRIP_TAC
          THENL
-           [  
+           [
               MATCH_MP_TAC variant_minimum_DEF
               THEN ASM_REWRITE_TAC[is_variant_reflexive],
 
@@ -694,7 +695,7 @@ fun new_list_rec_def name tm =
        name      = name,
        def       = tm};
 
-val variants = 
+val variants =
     new_list_rec_def "variants"
       (--`(variants NIL s  =  NIL)  /\
           (variants (CONS x xs) s  =
@@ -703,7 +704,7 @@ val variants =
 
 (* Alternative definition of variants:
 
-val variants = 
+val variants =
     new_list_rec_def "variants"
       (--`(variants NIL s  =  NIL)  /\
           (variants (CONS x xs) s  =
@@ -1000,7 +1001,7 @@ val DISJOINT_variants_UNION_RIGHT_3 =
 val _ = export_theory();
 
 val _ = print_theory_to_file "-" "variable.lst";
-                                                                                
+
 val _ = html_theory "variable";
 
 val _ = print_theory_size();
