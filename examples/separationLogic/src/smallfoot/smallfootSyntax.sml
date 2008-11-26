@@ -1163,6 +1163,13 @@ val is_smallfoot_ap_equal_cond = can dest_smallfoot_ap_equal_cond;
 fun mk_smallfoot_ap_equal_cond (l,r,P) = list_mk_icomb (smallfoot_ap_equal_cond_term, [l,r,P])
 
 
+
+fun dest_smallfoot_ap_equal_or_unequal_cond t =
+    dest_smallfoot_ap_equal_cond t handle HOL_ERR _ =>
+    dest_smallfoot_ap_unequal_cond t;
+val is_smallfoot_ap_equal_or_unequal_cond = can dest_smallfoot_ap_equal_or_unequal_cond;
+
+
 val SMALLFOOT_IS_STRONG_STACK_PROPOSITION_term = ``SMALLFOOT_IS_STRONG_STACK_PROPOSITION``;
 fun dest_SMALLFOOT_IS_STRONG_STACK_PROPOSITION t =
   let

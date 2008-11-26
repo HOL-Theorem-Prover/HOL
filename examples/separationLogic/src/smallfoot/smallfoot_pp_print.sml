@@ -35,6 +35,16 @@ fun smallfoot_p_expression_printer (sys,strn,brk) gravs d pps t = let
     if (op_term = smallfoot_p_const_term)  then (
        if ((hd args) = ``0:num``) then strn "NULL" else
                 sys (Top, Top, Top) (d - 1) (hd args)
+    ) else if (op_term = smallfoot_p_add_term)  then (       
+       (sys (Top, Top, Top) (d - 1) (el 1 (args));
+       strn(" +");
+       brk(1,1);
+       sys (Top, Top, Top) (d - 1) (el 2 (args)))
+    ) else if (op_term = smallfoot_p_sub_term)  then (       
+       (sys (Top, Top, Top) (d - 1) (el 1 (args));
+       strn(" -");
+       brk(1,1);
+       sys (Top, Top, Top) (d - 1) (el 2 (args)))
     ) else (
       raise term_pp_types.UserPP_Failed
     )
@@ -243,6 +253,23 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           sys (Top, Top, Top) (d - 1) p_final_term;
 	  end_block pps;
           strn "] {";
+          brk (1,(!smallfoot_pretty_printer_block_indent));
+          begin_block pps INCONSISTENT 0;
+          sys (Top, Top, Top) (d - 1) prog_term;
+          end_block pps;
+          brk (1,0);
+          strn "}";
+          end_block pps
+       end
+    ) else if (op_term = smallfoot_prog_while_term)  then (
+       let
+          val prop_term = el 1 args;
+          val prog_term = el 2 args;
+       in
+          begin_block pps CONSISTENT 0;
+          strn "while ";
+          sys (Top, Top, Top) (d - 1) prop_term;
+          strn " {";
           brk (1,(!smallfoot_pretty_printer_block_indent));
           begin_block pps INCONSISTENT 0;
           sys (Top, Top, Top) (d - 1) prog_term;

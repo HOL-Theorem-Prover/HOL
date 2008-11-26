@@ -298,11 +298,33 @@ val smallfoot_ae_const_def = Define `smallfoot_ae_const c = (K (SOME c)):smallfo
 val smallfoot_ae_null_def = Define `smallfoot_ae_null = smallfoot_ae_const 0`;
 
 val smallfoot_ae_binop_def = Define `
-smallfoot_ae_binop (bop:num->num->num option) e1 e2 =
+smallfoot_ae_binop (bop:num->num->num) e1 e2 =
 	(\s:smallfoot_stack. 
 		let no1 = e1 s in
 		let no2 = e2 s in
-		if ((IS_SOME no1) /\ (IS_SOME no2)) then (bop (THE no1) (THE no2)) else NONE)`
+		if ((IS_SOME no1) /\ (IS_SOME no2)) then SOME (bop (THE no1) (THE no2)) else NONE)`
+
+
+
+val smallfoot_ae_binop___const_eval = store_thm ("smallfoot_ae_binop___const_eval",
+``smallfoot_ae_binop bop (smallfoot_ae_const c1) (smallfoot_ae_const c2) =
+  smallfoot_ae_const (bop c1 c2)``,
+
+SIMP_TAC std_ss [smallfoot_ae_binop_def, smallfoot_ae_const_def, 
+		 LET_THM, FUN_EQ_THM]);
+
+val smallfoot_ae_binop___null_eval = store_thm ("smallfoot_ae_binop___null_eval",
+``(smallfoot_ae_binop bop smallfoot_ae_null (smallfoot_ae_const c2) =
+   smallfoot_ae_const (bop 0 c2)) /\
+  (smallfoot_ae_binop bop (smallfoot_ae_const c1) smallfoot_ae_null =
+   smallfoot_ae_const (bop c1 0)) /\
+  (smallfoot_ae_binop bop smallfoot_ae_null smallfoot_ae_null =
+   smallfoot_ae_const (bop 0 0))
+``,
+
+SIMP_TAC std_ss [smallfoot_ae_null_def, 
+		 smallfoot_ae_binop___const_eval]);
+
 
 val smallfoot_ae_eq_THM = store_thm ("smallfoot_ae_eq_THM",
 	``((smallfoot_ae_var v1 = smallfoot_ae_var v2) = (v1 = v2)) /\
@@ -1169,9 +1191,9 @@ val SMALLFOOT_P_EXPRESSION_EVAL_def = Define `
 	(SMALLFOOT_P_EXPRESSION_EVAL (smallfoot_p_const c) =
 		(smallfoot_ae_const c)) /\
 	(SMALLFOOT_P_EXPRESSION_EVAL (smallfoot_p_add p1 p2) =
-		(smallfoot_ae_binop (\n1 n2. SOME (n1+n2)) (SMALLFOOT_P_EXPRESSION_EVAL p1) (SMALLFOOT_P_EXPRESSION_EVAL p2))) /\
+		(smallfoot_ae_binop (\n1 n2. n1+n2) (SMALLFOOT_P_EXPRESSION_EVAL p1) (SMALLFOOT_P_EXPRESSION_EVAL p2))) /\
 	(SMALLFOOT_P_EXPRESSION_EVAL (smallfoot_p_sub p1 p2) =
-		(smallfoot_ae_binop (\n1 n2. SOME (n1-n2)) (SMALLFOOT_P_EXPRESSION_EVAL p1) (SMALLFOOT_P_EXPRESSION_EVAL p2)))`;
+		(smallfoot_ae_binop (\n1 n2. n1-n2) (SMALLFOOT_P_EXPRESSION_EVAL p1) (SMALLFOOT_P_EXPRESSION_EVAL p2)))`;
 
 
 val smallfoot_pt_proposition = Hol_datatype `smallfoot_pt_proposition = 
@@ -4047,8 +4069,7 @@ val SMALLFOOT_AE_USED_VARS___smallfoot_ae_binop = store_thm (
 "SMALLFOOT_AE_USED_VARS___smallfoot_ae_binop",
 ``!e1 e2 vs1 vs2 bop.
   ((SMALLFOOT_AE_USED_VARS e1 = SOME vs1) /\
-  (SMALLFOOT_AE_USED_VARS e2 = SOME vs2) /\
-  (!n1 n2. IS_SOME (bop n1 n2))) ==>
+  (SMALLFOOT_AE_USED_VARS e2 = SOME vs2)) ==>
 
   (SMALLFOOT_AE_USED_VARS (smallfoot_ae_binop bop e1 e2) = SOME (vs1 UNION vs2))
 ``,
@@ -4060,11 +4081,7 @@ SIMP_TAC std_ss [SUBSET_REFL, FINITE_UNION,
 		     UNION_SUBSET, IN_UNION] THEN
 REPEAT STRIP_TAC THENL [
    ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR],
-
-   ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR] THEN
-   ASM_REWRITE_TAC[NONE_IS_NOT_SOME] THEN
-   SIMP_TAC std_ss [],   
-
+   ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR],   
    METIS_TAC[]
 ]);
 
@@ -12626,6 +12643,15 @@ REPEAT STRIP_TAC THENL [
 
 
 
+val SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___not_used =
+store_thm ("SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___not_used",
+``!P. SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE (\y z. P z)``,
+
+SIMP_TAC std_ss [SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE_def,
+		 SMALLFOOT_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE_def]);
+
+
+
 
 
 val SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___points_to =
@@ -14710,6 +14736,26 @@ store_thm ("asl_and___smallfoot_true_false",
    smallfoot_ap_false) /\
   ((asl_and smallfoot_ap_false P) =
    smallfoot_ap_false)``,
+
+SIMP_TAC std_ss [EXTENSION, asl_bool_EVAL,
+		 smallfoot_ap_stack_true_def,
+		 smallfoot_ap_empty_heap_cond_def,
+		 IN_ABS, smallfoot_ap_false___NOT_IN] THEN
+PROVE_TAC[])
+
+
+val asl_and___smallfoot_ap_empty_heap_cond =
+store_thm ("asl_and___smallfoot_ap_empty_heap_cond",
+``((asl_and (K c1) (smallfoot_ap_empty_heap_cond c2)) =
+   smallfoot_ap_empty_heap_cond (c1 /\ c2)) /\
+  ((asl_and (smallfoot_ap_empty_heap_cond c1) (K c2)) =
+   smallfoot_ap_empty_heap_cond (c1 /\ c2)) /\
+  ((asl_and (smallfoot_ap_empty_heap_cond c) smallfoot_ap_stack_true) =
+   smallfoot_ap_empty_heap_cond c) /\
+  ((asl_and smallfoot_ap_stack_true (smallfoot_ap_empty_heap_cond c)) =
+   smallfoot_ap_empty_heap_cond c) /\
+  ((asl_and (smallfoot_ap_empty_heap_cond c1) (smallfoot_ap_empty_heap_cond c2)) =
+   smallfoot_ap_empty_heap_cond (c1 /\ c2))``,
 
 SIMP_TAC std_ss [EXTENSION, asl_bool_EVAL,
 		 smallfoot_ap_stack_true_def,
@@ -19626,7 +19672,7 @@ METIS_TAC[smallfoot_ap_weak_unequal___COMM]);
 
 
 val smallfoot_ap_star___data_list_seg___append___data_list_seg =
-store_thm ("smallfoot_ap_star___list_seg___append___list_seg",
+store_thm ("smallfoot_ap_star___data_list_seg___append___data_list_seg",
 ``
 !e1 e2 e3 data1 data2 data3 tl s.
 (IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\
@@ -19832,6 +19878,22 @@ Induct_on `x` THENL [
 
 
 
+val SMALLFOOT_DATA_LIST___DATA_LENGTH_PRED_def = Define `
+SMALLFOOT_DATA_LIST___DATA_LENGTH_PRED data n =
+((FDOM data = EMPTY) \/ (?t. t IN FDOM data /\ (n = LENGTH (data ' t))))`
+
+
+
+val SMALLFOOT_DATA_LIST___DATA_LENGTH_PRED_THM = store_thm (
+"SMALLFOOT_DATA_LIST___DATA_LENGTH_PRED_THM",
+
+``(!n. SMALLFOOT_DATA_LIST___DATA_LENGTH_PRED FEMPTY n) /\
+  (!data k v. SMALLFOOT_DATA_LIST___DATA_LENGTH_PRED (data |+ (k, v)) (LENGTH v))``,
+
+SIMP_TAC std_ss [SMALLFOOT_DATA_LIST___DATA_LENGTH_PRED_def,
+		 FDOM_FEMPTY, FDOM_FUPDATE, IN_INSERT, FAPPLY_FUPDATE_THM] THEN
+METIS_TAC[]);
+
 
 
 
@@ -19850,7 +19912,7 @@ SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))
 SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))
               e3 /\
  (FDOM data2 SUBSET FDOM data1) /\
- ((FDOM data1 = EMPTY) \/ (?t. t IN FDOM data1 /\ (dl = LENGTH (data1 ' t))))
+ SMALLFOOT_DATA_LIST___DATA_LENGTH_PRED data1 dl
 )
   ==>
 
@@ -19874,9 +19936,6 @@ SIMP_TAC (std_ss++bool_eq_imp_ss) [SMALLFOOT_PROP_IMPLIES_EXPAND,
 		 smallfoot_prop___COND_UNION,
     		 smallfoot_prop___COND_INSERT,
 		 bagTheory.BAG_UNION_INSERT] THEN
-REPEAT GEN_TAC THEN
-Q.ABBREV_TAC `dl_cond = ((FDOM data1 = {}) \/
-     ?t. t IN FDOM data1 /\ (dl = LENGTH (data1 ' t)))` THEN
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [] THEN
 Q.EXISTS_TAC `sfb_rest` THEN
@@ -19985,7 +20044,7 @@ CONJ_TAC THENL [
       ASM_SIMP_TAC list_ss [BUTFIRSTN_LENGTH_APPEND]
    ) THEN
    `?t2. t2 IN FDOM data1 /\ (dl = LENGTH (data1 ' t2))` by ALL_TAC THEN1 (
-      FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def, EXTENSION, NOT_IN_EMPTY] THEN
+      FULL_SIMP_TAC std_ss [SMALLFOOT_DATA_LIST___DATA_LENGTH_PRED_def, EXTENSION, NOT_IN_EMPTY] THEN
       METIS_TAC[]       
    ) THEN
    ASM_REWRITE_TAC[] THEN
@@ -20017,7 +20076,7 @@ SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))
 SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))
               e2 /\
 (FDOM data2 SUBSET FDOM data1) /\
-((FDOM data1 = EMPTY) \/ (?t. t IN FDOM data1 /\ (dl = LENGTH (data1 ' t)))))
+ SMALLFOOT_DATA_LIST___DATA_LENGTH_PRED data1 dl)
   ==>
 
 
@@ -20038,9 +20097,6 @@ SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))
 
 
 ASM_REWRITE_TAC[smallfoot_ap_data_list_def] THEN
-REPEAT GEN_TAC THEN
-Q.ABBREV_TAC `dl_cond = ((FDOM data1 = {}) \/
-     ?t. t IN FDOM data1 /\ (dl = LENGTH (data1 ' t)))` THEN
 REPEAT STRIP_TAC THEN
 MATCH_MP_TAC (SIMP_RULE std_ss [AND_IMP_INTRO] SMALLFOOT_PROP_IMPLIES___data_list_seg___REMOVE_START) THEN
 Q.EXISTS_TAC `dl` THEN

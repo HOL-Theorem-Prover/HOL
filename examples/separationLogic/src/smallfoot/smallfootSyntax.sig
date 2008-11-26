@@ -166,6 +166,7 @@ sig
   val dest_smallfoot_ap_empty_heap_cond : term -> term;
   val dest_smallfoot_ap_equal : term -> term * term
   val dest_smallfoot_ap_equal_cond : term -> term * term * term
+  val dest_smallfoot_ap_equal_or_unequal_cond : term -> term * term * term
   val dest_smallfoot_ap_exp_is_defined : term -> term;
   val dest_smallfoot_ap_implies_ae_equal : term -> term * term * term
   val dest_smallfoot_ap_data_list : term -> term * term * term
@@ -243,6 +244,7 @@ sig
   val is_smallfoot_ap_empty_heap_cond : term -> bool;
   val is_smallfoot_ap_equal : term -> bool
   val is_smallfoot_ap_equal_cond : term -> bool
+  val is_smallfoot_ap_equal_or_unequal_cond : term -> bool
   val is_smallfoot_ap_exp_is_defined : term -> bool;
   val is_smallfoot_ap_implies_ae_equal : term -> bool
   val is_smallfoot_ap_data_list : term -> bool

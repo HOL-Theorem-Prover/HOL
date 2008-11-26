@@ -472,6 +472,7 @@ REPEAT STRIP_TAC THENL [
 
 open sortingTheory relationTheory
 
+val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot/EXAMPLES/"]
 val file = concat [examplesDir, "mergesort_data.sf"]; 
 
 print_file file    

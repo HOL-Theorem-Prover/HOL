@@ -147,6 +147,15 @@ val EL_DISJOINT_FILTER = store_thm ("EL_DISJOINT_FILTER",
 );
 
 
+val APPEND_EQ_SELF = store_thm("APPEND_EQ_SELF",
+
+``((l1 ++ l2 = l1) = (l2 = [])) /\
+  ((l1 ++ l2 = l2) = (l1 = [])) /\
+  ((l1 = l1 ++ l2) = (l2 = [])) /\
+  ((l2 = l1 ++ l2) = (l1 = []))``,
+
+METIS_TAC[APPEND_11, APPEND_NIL])
+
 
 val FORALL_LESS_SUC = store_thm ("FORALL_LESS_SUC",
    ``!P m. ((!n. n < SUC m ==> P n) =

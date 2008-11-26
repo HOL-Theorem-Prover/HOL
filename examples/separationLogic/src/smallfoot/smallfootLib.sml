@@ -284,6 +284,7 @@ val smallfoot_ap_imps = flatten (map BODY_CONJUNCTS [SMALLFOOT_AP_PERMISSION_UNI
 
 
 
+
 val precond_cs = reduceLib.num_compset ();
 val _ = computeLib.add_thms [pairTheory.FST, 
 			     pairTheory.SND, 
@@ -301,7 +302,8 @@ val _ = computeLib.add_thms [pairTheory.FST,
 	 		     smallfoot_var_11,
 	 		     smallfoot_tag_11,
 		             UNION_SUBSET, 
-                             IN_UNIV,			     
+                             IN_UNIV,
+                             SMALLFOOT_DATA_LIST___DATA_LENGTH_PRED_THM,	     
 			     EMPTY_SUBSET,
 			     INSERT_SUBSET,
 			     DE_MORGAN_THM,
@@ -2016,11 +2018,14 @@ val smallfoot___PROP_SIMPLE_EQ_REWRITES_CONV =
 		  smallfoot_ap_points_to___smallfoot_ae_null,
 		  smallfoot_ap_compare___EQ_REWRITE___const,
 		  GSYM smallfoot_ae_null_def,
+                  smallfoot_ae_binop___const_eval,
+                  smallfoot_ae_binop___null_eval,
 		  GSYM smallfoot_ap_data_list_def,
                   COND_PROP___ADD_COND___ADD_COND,
                   COND_PROP___ADD_COND___true,
                   asl_bool_REWRITES,
 		  asl_and___smallfoot_true_false,
+                  asl_and___smallfoot_ap_empty_heap_cond,
                   FMAP_MAP_FEMPTY, FMAP_MAP_FUPDATE,
                   smallfoot_ap_cond_equal___EQ_REWRITES,
 		  smallfoot_ap_data_list_seg___EQ_REWRITE,
@@ -4593,12 +4598,43 @@ end
 end;
 
 
+(*
+val choice_indep_term = body (rator choice_indep_term)
+
+fun SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE_prove___cond_equal_unequal choice_indep_term =
+let
+    val (x, y, t_body) = dest_SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE choice_indep_term;
+    val (_,_,sfb) = dest_smallfoot_prop t_body;
+    val (sfbL, _) = bagSyntax.dest_bag sfb
+
+    val found_opt = find_first_num (K (fn t => 
+                    let
+		       val (c1,c2,_) = dest_smallfoot_ap_equal_or_unequal_cond t;
+                    in
+                       if (is_smallfoot_ae_const_null c1 andalso
+			   is_smallfoot_ae_const_null c2) then SOME (c1,c2) 
+                       else NONE
+                    end)) [] 0 sfbL;
+    val _ = if isSome found_opt then () else raise UNCHANGED;
+    val (_, _, (c1_term, c2_term, _)) = valOf found_opt;
+
+    val thm_split = ISPECL [c1_term, c2_term] SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___case_split
+
+in
+end;
+
+*)
+
 
 fun SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE_prove___exists choice_indep_term =
 HO_PART_MATCH lhs SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___asl_exists choice_indep_term
 
+(*
+val tref=ref T;
 
-
+val choice_indep_term =  !tref
+val choice_indep_term = (fst o dest_imp o concl) thm0;
+*)
 fun SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE_prove choice_indep_term =
 let
    val thm0 = DEPTH_CONSEQ_CONV (K (FIRST_CONSEQ_CONV [
@@ -4611,7 +4647,7 @@ let
    val thm2 = MP thm1 TRUTH;
 in
    thm2
-end;
+end handle HOL_ERR e => (tref := choice_indep_term; raise HOL_ERR e);
 
 
 
@@ -4772,6 +4808,13 @@ in
 end;
 
 
+(*
+val tt = (snd o strip_exists o
+          snd o strip_forall o snd o dest_imp o 
+          snd o strip_forall o fst o dest_imp o concl) thm4
+*)
+
+
 fun SMALLFOOT_COND_INFERENCE_CONV___cond_best_local_action tt =
 let
    val thm0 = DEPTH_CONSEQ_CONV 
@@ -4804,6 +4847,8 @@ let
 in
   thm1
 end;
+
+
 
 
 fun SMALLFOOT_COND_INFERENCE_CONV___cond_choose_const t =
@@ -5632,8 +5677,20 @@ let
        in
            (SMALLFOOT_PROP_IMPLIES___data_list_seg___REMOVE_START, SOME ap_bag_implies_thm)
        end
+
+
+   val (_,split_term,_) = valOf split_opt
+   val (_,_,data_term,_) = dest_smallfoot_ap_data_list_seg_or_list split_term;
+   val dl_term = if is_FUPDATE data_term then
+                 let
+		    val xdata = snd (pairLib.dest_pair (snd (dest_FUPDATE data_term)));
+                 in
+		    ``LENGTH ^xdata``
+                 end
+                 else ``0:num``;
+   val thm' = SPEC dl_term thm
 in
-   (thm, ap_bag_implies_thm_opt, split_pos, imp_pos)
+   (thm', ap_bag_implies_thm_opt, split_pos, imp_pos)
 end handle SMALLFOOT_PROP_IMPLIES___LIST_REMOVE_START___SEARCH_exn ex =>
     SMALLFOOT_PROP_IMPLIES___LIST_REMOVE_START___SEARCH sfs_split sfs_imp
 							sfb_context 
@@ -5657,7 +5714,6 @@ val t =
             (smallfoot_ae_const x_const) (smallfoot_ae_const n)|}
         frame_sfb`` 
 *)
-
 
 fun SMALLFOOT_PROP_IMPLIES___LIST_REMOVE_START___CONSEQ_CONV t =
 let
@@ -6334,7 +6390,11 @@ val STEP_REWRITE_SIMP_THMS = [
    LEFT_EXISTS_IMP_THM, 
    GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
    LEFT_FORALL_OR_THM, RIGHT_FORALL_OR_THM,
-   GSYM LEFT_FORALL_IMP_THM];
+   GSYM LEFT_FORALL_IMP_THM,
+   BUTFIRSTN_APPEND1,
+   BUTFIRSTN_APPEND2,
+   BUTFIRSTN_LENGTH_APPEND,
+   BUTFIRSTN_LENGTH_NIL];
 
 val step_ss = list_ss++rewrites STEP_REWRITE_SIMP_THMS ++
 	      simpLib.conv_ss 

@@ -53,6 +53,45 @@ fun print_file file =
          ()
     end
 
+
+
+fun hol_parse contextOpt ex_vars default tyL s =
+   if (not (isSome contextOpt)) then
+      (default, empty_tmset, ex_vars)
+   else
+      (let
+         val s_ty = if (tyL = []) then s else "("^s^"):"^(hd tyL);
+         val s_term = Parse.parse_in_context [valOf contextOpt] [QUOTE s_ty];
+
+         val fvL = free_vars s_term;
+         val ex_fvL = filter (fn v => 
+                   String.sub (fst (dest_var v),0) = #"_")
+                   fvL;
+
+         val new_ex_fvL = map (fn v =>
+               let
+                  val (v_string, v_ty) = dest_var v;
+                  val v_string' = String.substring(v_string, 1, (String.size v_string) - 1);
+                  val v' = mk_var (v_string', v_ty);
+               in
+                  v'
+               end) ex_fvL;
+
+         val substL = map (fn X => (fst X |-> snd X)) (zip ex_fvL new_ex_fvL);
+
+	 val t = Term.subst substL s_term;
+         val new_ex_fvL' = filter (fn t => not (mem t ex_vars)) new_ex_fvL;
+      in
+         (t, empty_tmset, append new_ex_fvL' ex_vars)
+      end) handle HOL_ERR _ =>
+        if (length tyL <= 1) then
+           (print ("Could not parse "^s^"!\n");
+           (default, empty_tmset,ex_vars))
+        else
+           hol_parse contextOpt ex_vars default (tl tyL) s
+
+
+
 (*
 val file = "/home/tuerk/Downloads/smallfoot/EXAMPLES/business2.sf";
 val file = "/home/tt291/Downloads/smallfoot/EXAMPLES/business2.sf";
@@ -136,6 +175,16 @@ fun smallfoot_a_expression2term ex_vars (Aexp_ident x) =
 	(if n = 0 then smallfoot_ae_null_term else
   	mk_comb(smallfoot_ae_const_term, numLib.term_of_int n),
 	 empty_tmset, ex_vars)
+| smallfoot_a_expression2term ex_vars (Aexp_hol h) =
+      let
+        val (hol_term,var_set,ex_vars2) = 
+             hol_parse (SOME T) ex_vars (``ARB:num``) ["num","smallfoot_a_expression"] h
+        val hol_term2 = if (type_of hol_term = numLib.num) then
+			   mk_comb (smallfoot_ae_const_term, hol_term) else
+			hol_term;
+      in
+        (hol_term2,var_set, ex_vars2)
+      end       
 | smallfoot_a_expression2term _ _ =
 	Raise (smallfoot_unsupported_feature_exn "Aexp");
 
@@ -177,41 +226,6 @@ fun tag_a_expression_list2term ex_vars [] = (tag_a_expression_fmap_emp_term,empt
                         (comb_term, comb_var_set, ex_var_list)
 		end;
 
-
-fun hol_parse contextOpt ex_vars default tyL s =
-   if (not (isSome contextOpt)) then
-      (default, empty_tmset, ex_vars)
-   else
-      let
-         val s_ty = if (tyL = []) then s else "("^s^"):"^(hd tyL);
-         val s_term = Parse.parse_in_context [valOf contextOpt] [QUOTE s_ty];
-
-         val fvL = free_vars s_term;
-         val ex_fvL = filter (fn v => 
-                   String.sub (fst (dest_var v),0) = #"_")
-                   fvL;
-
-         val new_ex_fvL = map (fn v =>
-               let
-                  val (v_string, v_ty) = dest_var v;
-                  val v_string' = String.substring(v_string, 1, (String.size v_string) - 1);
-                  val v' = mk_var (v_string', v_ty);
-               in
-                  v'
-               end) ex_fvL;
-
-         val substL = map (fn X => (fst X |-> snd X)) (zip ex_fvL new_ex_fvL);
-
-	 val t = Term.subst substL s_term;
-         val new_ex_fvL' = filter (fn t => not (mem t ex_vars)) new_ex_fvL;
-      in
-         (t, empty_tmset, append new_ex_fvL' ex_vars)
-      end handle HOL_ERR _ =>
-        if (length tyL <= 1) then
-           (print ("Could not parse "^s^"!\n");
-           (default, empty_tmset,ex_vars))
-        else
-           hol_parse contextOpt ex_vars default (tl tyL) s
 
 
 
