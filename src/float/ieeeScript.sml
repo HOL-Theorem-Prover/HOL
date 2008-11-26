@@ -548,36 +548,33 @@ val ROUNDFLOAT = new_definition (
   "ROUNDFLOAT",
   (--`ROUNDFLOAT(a) = float (fintrnd(float_format) To_nearest (defloat a))`--));
 
-val float_lt = new_infixr_definition (
+val float_lt = new_definition (
   "float_lt",
-  Term `$float_lt a b = flt(float_format) (defloat a) (defloat b)`, 450);
+  Term `float_lt a b = flt(float_format) (defloat a) (defloat b)`);
+val _ = overload_on ("<", Term`float_lt`);
 
-val _ = overload_on ("<", Term`$float_lt`);
-
-val float_le = new_infixr_definition (
+val float_le = new_definition (
   "float_le",
-  Term `$float_le a b = fle(float_format) (defloat a) (defloat b)`, 450);
-
+  Term `float_le a b = fle(float_format) (defloat a) (defloat b)`);
 val _ = overload_on ("<=", Term`$float_le`);
 
-val float_gt = new_infixr_definition (
+val float_gt = new_definition (
   "float_gt",
-  Term `$float_gt a b = fgt(float_format) (defloat a) (defloat b)`, 450);
+  Term `float_gt a b = fgt(float_format) (defloat a) (defloat b)`);
 
 val _ = overload_on (">", Term`$float_gt`);
 
-val float_ge = new_infixr_definition (
+val float_ge = new_definition (
   "float_ge",
-  Term `$float_ge a b = fge(float_format) (defloat a) (defloat b)`, 450);
-
+  Term `float_ge a b = fge(float_format) (defloat a) (defloat b)`);
 val _ = overload_on (">=", Term`$float_ge`);
 
 
-val float_eq = new_infixr_definition (
+val float_eq = new_definition (
   "float_eq",
-  Term `$float_eq (a:float) (b:float) = feq(float_format) (defloat a) (defloat b)`, 450);
-
-val _ = overload_on ("==", Term`$float_eq`);
+  ``float_eq (a:float) (b:float) = feq(float_format) (defloat a) (defloat b)``);
+val _ = overload_on ("==", Term`$float_eq`)
+val _ = set_fixity "==" (Infix(NONASSOC,450))
 
 val float_neg = new_definition (
   "float_neg",

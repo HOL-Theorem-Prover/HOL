@@ -566,7 +566,7 @@ val ZERO_NOT_NAN = store_thm (
 
 val FLOAT_INFINITIES = store_thm (
   "FLOAT_INFINITIES",
-  (--`!(a:float). Infinity(a) = (( a float_eq Plus_infinity) \/ (a float_eq Minus_infinity))`--),
+  (--`!(a:float). Infinity(a) = (( a == Plus_infinity) \/ (a == Minus_infinity))`--),
   GEN_TAC THEN REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC (SPEC (--`a:float`--) FLOAT_CASES_FINITE) THENL [
     SUBGOAL_THEN (--`~(Infinity(a))`--) MP_TAC THENL [
       ASM_MESON_TAC[FLOAT_DISTINCT_FINITE], UNDISCH_TAC (--`Isnan(a)`--) THEN
@@ -589,7 +589,7 @@ val FLOAT_INFINITIES = store_thm (
 
 val FLOAT_INFINITES_DISTINCT = store_thm (
   "FLOAT_INFINITES_DISTINCT",
-  (--`!(a:float). ~(a float_eq Plus_infinity /\ a float_eq Minus_infinity)`--),
+  (--`!(a:float). ~(a == Plus_infinity /\ a == Minus_infinity)`--),
   let val lemma = prove ((--`((if b then x else y) = z) = if b then x = z else y = z`--),
   BOOL_CASES_TAC (--`b:bool`--) THEN REWRITE_TAC[]) in
   GEN_TAC THEN REWRITE_TAC[Plus_infinity, Minus_infinity] THEN
@@ -647,13 +647,13 @@ val FLOAT_GE = store_thm (
 
 val FLOAT_EQ = store_thm (
   "FLOAT_EQ",
-  (--`!a b. Finite(a) /\ Finite(b) ==> (a float_eq b = (Val(a) = Val(b)))`--),
+  (--`!a b. Finite(a) /\ Finite(b) ==> (a == b = (Val(a) = Val(b)))`--),
   FLOAT_LIFT_TAC THEN ASM_REWRITE_TAC[float_eq, feq, fcompare, Val] THEN
   REPEAT COND_CASES_TAC THEN RW_TAC arith_ss [] THEN ASM_MESON_TAC[REAL_LT_REFL]);
 
 val FLOAT_EQ_REFL = store_thm (
   "FLOAT_EQ_REFL",
-  (--`!a. (a float_eq a) = ~(Isnan(a))`--),
+  (--`!a. (a == a) = ~(Isnan(a))`--),
   GEN_TAC THEN REWRITE_TAC[float_eq, feq, fcompare, Isnan] THEN
   REPEAT(COND_CASES_TAC THEN RW_TAC arith_ss []) THEN
   ASM_MESON_TAC[REAL_LT_REFL]);

@@ -24,7 +24,7 @@
 <h2 id = "Build"> Build Failures and Warnings</h2>
 
 <dl>
-<dt> 
+<dt>
 <strong>I can&rsquo;t build on Ubuntu (or some other recent Linux),
   where I have Moscow&nbsp;ML executables in <code>/usr/bin/</code>, and
   the Moscow&nbsp;ML library files in <code>/usr/lib/</code>.</strong>
@@ -41,7 +41,7 @@ you will need to write a <code>config-override</code> file in the
 </pre>
 <p>and</p>
 <pre>
-    $ bin/build 
+    $ bin/build
 </pre>
 <p>as normal.</p>
 </dd>
@@ -271,11 +271,11 @@ a <code>Holmakefile</code>.</p></dd>
      theory is exported.  For example:</p>
 <pre>
    - load "listTheory";
-   - set_fixity "MEM" (Infixr 450);
+   - set_fixity "MEM" (Infix(NONASSOC,425));
    &gt; val it = () : unit
    - listTheory.MEM;
    &gt; val it =
-           |- (!x. x MEM [] = F) /\ !x h t. x MEM (h::t) = (x = h) \/ x MEM t
+           |- (!x. x MEM [] = F) /\ !x h t. x MEM h::t = (x = h) \/ x MEM t
            : thm
 </pre>
 
