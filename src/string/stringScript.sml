@@ -150,9 +150,7 @@ REPEAT STRIP_TAC
   THEN STRIP_ASSUME_TAC (Q.SPEC `c` CHR_ONTO)
   THEN RW_TAC bool_ss []);
 
-val char_size_def =
- Define
-   `char_size (c:char) = 0`;
+val char_size_def = Define `char_size (c:char) = 0`;
 
 (*---------------------------------------------------------------------------
       Strings are represented as lists of characters. This gives us
@@ -531,7 +529,7 @@ val _ =
     :: MLSTRUCT "val EXPLODE = String.explode"
     :: MLSTRUCT "fun STRLEN s = LENGTH (EXPLODE s)"
     :: map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
-       [STRCAT_EXPLODE,
+       [char_size_def, STRCAT_EXPLODE,
         isPREFIX_DEF, isLower_def, isUpper_def, isDigit_def, isAlpha_def,
         isHexDigit_def, isAlphaNum_def, isPrint_def, isSpace_def,
         isGraph_def, isPunct_def, isAscii_def, isCntrl_def,

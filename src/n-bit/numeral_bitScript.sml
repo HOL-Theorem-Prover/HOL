@@ -508,6 +508,16 @@ in
        ((rule o SPEC `NUMERAL (BIT1 n)`) LOWEST_SET_BIT)
 end);
 
+val LOWEST_SET_BIT_emit = store_thm("LOWEST_SET_BIT_emit",
+  `!n. LOWEST_SET_BIT n =
+         if n = 0 then
+           FAIL LOWEST_SET_BIT ^(mk_var("zero value",bool)) n
+         else if ODD n then
+           0 
+         else
+           1 + LOWEST_SET_BIT (DIV2 n)`,
+  SRW_TAC [] [LOWEST_SET_BIT, combinTheory.FAIL_THM]);
+
 (* ------------------------------------------------------------------------- *)
 
 val l2n_pow2_compute = store_thm("l2n_pow2_compute",
@@ -580,7 +590,7 @@ val _ =
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
      map (DEFN o PURE_REWRITE_RULE [TIMES_2EXP1,arithmeticTheory.NUMERAL_DEF])
-       [TIMES_2EXP_compute,BITWISE_compute,LOG_compute,
+       [TIMES_2EXP_compute,BITWISE_compute,LOG_compute,LOWEST_SET_BIT_emit,
         l2n_def,n2l_def,s2n_compute,n2s_compute,HEX_compute,UNHEX_compute,
         num_from_bin_list_def,num_from_oct_list_def,num_from_dec_list_def,
         num_from_hex_list_def,num_to_bin_list_def,num_to_oct_list_def,
