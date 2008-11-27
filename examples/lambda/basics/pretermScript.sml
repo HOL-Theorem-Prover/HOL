@@ -176,7 +176,8 @@ val aeq_fv = store_thm(
 val aeq_refl = Store_Thm(
   "aeq_refl",
   ``aeq t t``,
-  Induct_on `t` THEN SRW_TAC [][aeq_rules] THEN
+  Induct_on `t` THEN ASM_SIMP_TAC (srw_ss())[aeq_rules] THEN
+  Q.X_GEN_TAC `s` THEN
   MATCH_MP_TAC aeq_lam THEN SRW_TAC [][aeq_ptpm_eqn] THEN
   Q.SPEC_THEN `s INSERT allatoms t` MP_TAC NEW_def THEN SRW_TAC [][] THEN
   METIS_TAC []);
@@ -299,7 +300,8 @@ val fresh_swap = store_thm(
   ``!x y. ~(x IN fv t) /\ ~(y IN fv t) ==> aeq t (ptpm [(x, y)] t)``,
   SIMP_TAC (srw_ss()) [] THEN Induct_on `t` THEN
   ASM_SIMP_TAC (srw_ss()) [aeq_rules] THEN
-  REPEAT STRIP_TAC THEN SRW_TAC [][] THEN
+  MAP_EVERY Q.X_GEN_TAC [`s`,`x`,`y`] THEN
+  STRIP_TAC THEN SRW_TAC [][] THEN
   MATCH_MP_TAC alt_aeq_lam THEN REPEAT STRIP_TAC THEN
   `~(z IN fv t)` by METIS_TAC [SUBSET_DEF, fv_SUBSET_allatoms]
   THENL [

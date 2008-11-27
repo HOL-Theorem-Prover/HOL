@@ -134,7 +134,8 @@ val rawfinite_support = prove(
                                       (cpmpm [(x,y)] pi)) =
                       fn t pi)`
         THEN1 PROVE_TAC [] THEN
-  Induct THEN SRW_TAC [][fnpm_def] THENL [
+  Induct THENL [
+    Q.X_GEN_TAC `s` THEN SRW_TAC [][fnpm_def] THEN
     `(!s. apm [(x,y)] (vr s) = vr (perm_of [(x,y)] s))`
         by (MATCH_MP_TAC support_freshf THEN SRW_TAC [][]) THEN
     SRW_TAC [][swapstr_perm_of, is_perm_sing_inv],
@@ -147,6 +148,7 @@ val rawfinite_support = prove(
         by (MATCH_MP_TAC support_freshf THEN SRW_TAC [][]) THEN
     SRW_TAC [][],
 
+    MAP_EVERY Q.X_GEN_TAC [`s`, `pi`, `x`, `y`] THEN SRW_TAC [][fnpm_def] THEN
     Q.MATCH_ABBREV_TAC `apm [(x,y)] (fresh apm g) = fresh apm h` THEN
     `h = fnpm perm_of apm [(x,y)] g`
        by (MAP_EVERY Q.UNABBREV_TAC [`g`, `h`] THEN
@@ -195,9 +197,10 @@ val rawfinite_support = prove(
 val eqperms_ok = prove(
   ``^fndefn ==>
     !t p1 p2. (p1 == p2) ==> (fn t p1 = fn t p2)``,
-  STRIP_TAC THEN Induct THEN SRW_TAC [][] THENL [
+  STRIP_TAC THEN Induct THENL [
     FULL_SIMP_TAC (srw_ss()) [permeq_def],
     METIS_TAC [],
+    MAP_EVERY Q.X_GEN_TAC [`s`, `p1`, `p2`] THEN SRW_TAC [][] THEN
     Q_TAC SUFF_TAC `!a. fn t (p1 ++ [(a,s)]) = fn t (p2 ++ [(a,s)])` THEN1
           SRW_TAC [][] THEN
     GEN_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
@@ -222,8 +225,9 @@ val perms_move = prove(
   ``^fndefn /\ ^var_support_t /\ ^app_support_t /\ ^cond16 /\ ^ctxt00 ==>
     !t p1 p2. fn (ptpm p2 t) p1 = fn t (p1 ++ p2)``,
   STRIP_TAC THEN Induct THEN
-  SRW_TAC [][lswapstr_APPEND] THEN
-  SRW_TAC [][GSYM lswapstr_APPEND] THEN
+  TRY (SRW_TAC [][lswapstr_APPEND] THEN
+       SRW_TAC [][GSYM lswapstr_APPEND] THEN NO_TAC) THEN
+  MAP_EVERY Q.X_GEN_TAC [`s`, `p1`, `p2`] THEN SRW_TAC [][] THEN
   Q.MATCH_ABBREV_TAC `fresh apm f = fresh apm g` THEN
   `support (fnpm ptpm (fnpm cpmpm apm)) fn A`
      by (MATCH_MP_TAC rawfinite_support THEN SRW_TAC [][] THEN
@@ -900,7 +904,7 @@ val _ = export_rewrites ["ssub_FEMPTY"]
 
 val tm_precursion_ex =
     (UNDISCH o
-     Q.INST [`VR` |-> `vr`, `AP` |-> `ap`, `LM` |-> `lm`, `APM` |-> `apm`] o 
+     Q.INST [`VR` |-> `vr`, `AP` |-> `ap`, `LM` |-> `lm`, `APM` |-> `apm`] o
      SIMP_RULE (srw_ss()) [nomsetTheory.support_def, FUN_EQ_THM,
                            nomsetTheory.fnpm_def, pairpm_def,
                            pairTheory.FORALL_PROD,
