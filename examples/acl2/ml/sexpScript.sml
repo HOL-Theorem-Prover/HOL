@@ -1261,6 +1261,12 @@ val ACL2_TRUE =
    ACL2_SIMP_TAC [ACL2_TRUE_def]
     THEN PROVE_TAC[fetch "-" "sexp_11",T_NIL]);
 
+(*****************************************************************************)
+(* Same as translateTheory.bool_def                                          *)
+(*****************************************************************************)
+val bool_to_sexp_def = 
+ Define `(bool_to_sexp T = t) /\ (bool_to_sexp F = nil)`;
+
 val caar_def =
  Define
   `caar x = car(car x)`;

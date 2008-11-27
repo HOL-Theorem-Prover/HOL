@@ -479,6 +479,10 @@ val (member_equal_def,member_equal_ind) =
      [oracles: DEFUN COMMON-LISP::NULL] [axioms: ] [] |- null x = eq x nil,
 *)
 
+val null_def =
+ acl2Define "COMMON-LISP::NULL"
+  `null x = eq x nil`;
+
 (*
      [oracles: DEFUN ACL2::MEMBER-EQ, DISK_THM] [axioms: ] []
      |- member_eq x lst =
@@ -1581,6 +1585,13 @@ val (member_symbol_name_def,member_symbol_name_ind) =
         ite (endp x) y (cons (car x) (binary_append (cdr x) y)),
 *)
 
+val (binary_append_def,binary_append_ind) =
+ acl2_defn "ACL2::BINARY-APPEND"
+  (`binary_append x y =
+     ite (endp x) y (cons (car x) (binary_append (cdr x) y))`,
+   WF_REL_TAC `measure (sexp_size o FST)`
+    THEN ACL2_SIMP_TAC []);
+
 (*
      [oracles: DEFUN ACL2::STRING-APPEND, DISK_THM] [axioms: ] []
      |- string_append str1 str2 =
@@ -2174,6 +2185,10 @@ val (member_symbol_name_def,member_symbol_name_ind) =
      |- char_less x y = less (char_code x) (char_code y),
 *)
 
+val char_less_def =
+ acl2Define "COMMON-LISP::CHAR<"
+  `char_less x y = less (char_code x) (char_code y)`;
+
 (*
      [oracles: DEFUN COMMON-LISP::CHAR>] [axioms: ] []
      |- char_greater x y = less (char_code y) (char_code x),
@@ -2199,6 +2214,20 @@ val (member_symbol_name_def,member_symbol_name_ind) =
                 (ite (char_less (car l1) (car l2)) i nil)))
 *)
 
+val (string_less_l_def,string_less_l_ind) =
+ acl2_defn "ACL2::STRING<-L"
+  (`string_less_l l1 l2 i =
+     ite (endp l1) 
+         (ite (endp l2) nil i)
+         (ite (endp l2) 
+              nil
+              (ite (eql (car l1) (car l2))
+                   (string_less_l (cdr l1) (cdr l2) (add i (cpx 1 1 0 1)))
+                   (ite (char_less (car l1) (car l2)) i nil)))`,
+    WF_REL_TAC `measure (sexp_size o FST o SND)`
+    THEN ACL2_SIMP_TAC []);
+
+
 (*
      DEFUN COMMON-LISP::STRING<
      [oracles: DEFUN COMMON-LISP::STRING<] [axioms: ] []
@@ -2206,7 +2235,16 @@ val (member_symbol_name_def,member_symbol_name_ind) =
         string_less_l (coerce str1 (sym COMMON_LISP ACL2_STRING_ABBREV_521))
           (coerce str2 (sym COMMON_LISP ACL2_STRING_ABBREV_521))
           (cpx 0 1 0 1)
+|- ACL2_STRING_ABBREV_521 = "LIST"
 *)
+
+val string_less_def =
+ acl2Define "COMMON-LISP::STRING<"
+  `string_less str1 str2 =
+    string_less_l (coerce str1 (sym COMMON_LISP "LIST"))
+                  (coerce str2 (sym COMMON_LISP "LIST"))
+                  (cpx 0 1 0 1)`;
+
 
 (*
      [oracles: DEFUN COMMON-LISP::STRING>] [axioms: ] []
@@ -2218,6 +2256,11 @@ val (member_symbol_name_def,member_symbol_name_ind) =
      |- string_less_equal str1 str2 =
         ite (equal str1 str2) (length str1) (string_less str1 str2),
 *)
+
+val string_less_equal_def =
+ acl2Define "COMMON-LISP::STRING<="
+  `string_less_equal str1 str2 =
+    ite (equal str1 str2) (length str1) (string_less str1 str2)`;
 
 (*
      [oracles: DEFUN COMMON-LISP::STRING>=, DISK_THM] [axioms: ] []
@@ -2234,6 +2277,16 @@ val (member_symbol_name_def,member_symbol_name_ind) =
                 (string_less (symbol_package_name x) (symbol_package_name y))
                 nil))
 *)
+
+val symbol_less_def =
+ acl2Define "ACL2::SYMBOL::-<"
+  `symbol_less x y =
+    (let (x1,y1,y,x) = (symbol_name x,symbol_name y,y,x) in
+      ite (string_less x1 y1) (string_less x1 y1)
+          (ite (equal x1 y1)
+               (string_less (symbol_package_name x) (symbol_package_name y))
+               nil))`;
+
 
 (*
      [oracles: DEFUN ACL2::SUBSTITUTE-AC, DISK_THM] [axioms: ] []
@@ -4549,6 +4602,28 @@ val bad_atom_def =
            (symbolp y,nil)] (bad_atom_less_equal x y),
 *)
 
+val alphorder_def =
+ acl2Define "ACL2::ALPHORDER"
+  `alphorder x y =
+    itel
+      [(rationalp x,ite (rationalp y) (not (less y x)) t);
+       (rationalp y,nil);
+       (complex_rationalp x,
+        ite (complex_rationalp y)
+          (ite (less (realpart x) (realpart y))
+             (less (realpart x) (realpart y))
+             (andl
+                [common_lisp_equal (realpart x) (realpart y);
+                 not (less (imagpart y) (imagpart x))])) t);
+       (complex_rationalp y,nil);
+       (characterp x,
+        ite (characterp y) (not (less (char_code y) (char_code x))) t);
+       (characterp y,nil);
+       (stringp x,ite (stringp y) (andl [string_less_equal x y; t]) t);
+       (stringp y,nil);
+       (symbolp x,ite (symbolp y) (not (symbol_less y x)) t);
+       (symbolp y,nil)] (bad_atom_less_equal x y)`;
+
 (*
      [oracles: DEFUN ACL2::LEXORDER, DISK_THM] [axioms: ] []
      |- lexorder x y =
@@ -4557,6 +4632,17 @@ val bad_atom_def =
            (equal (car x) (car y),lexorder (cdr x) (cdr y))]
           (lexorder (car x) (car y)),
 *)
+
+val (lexorder_def,lexorder_ind) =
+ acl2_defn "ACL2::LEXORDER"
+  (`lexorder x y =
+     itel
+      [(atom x,ite (atom y) (alphorder x y) t); (atom y,nil);
+       (equal (car x) (car y),lexorder (cdr x) (cdr y))]
+      (lexorder (car x) (car y))`,
+   WF_REL_TAC `measure (sexp_size o SND)`
+    THEN ACL2_SIMP_TAC []);
+
 
 (*
      [oracles: DEFUN ACL2::IF*, DISK_THM] [axioms: ] []
