@@ -573,9 +573,10 @@ val lemma11_1_7ii = store_thm(
 val lemma11_1_8 = store_thm(
   "lemma11_1_8",
   ``!M. reduction beta (strip_label M) (phi M)``,
-  HO_MATCH_MP_TAC simple_lterm_induction THEN
-  SRW_TAC [][strip_label_thm, reduction_rules] THENL [
+  HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `{}` THEN 
+  SIMP_TAC (srw_ss()) [strip_label_thm, reduction_rules] THEN CONJ_TAC THENL [
     PROVE_TAC [reduction_rules],
+    MAP_EVERY Q.X_GEN_TAC [`s`, `M`, `M'`] THEN STRIP_TAC THEN 
     `beta (LAM s (strip_label M) @@ strip_label M')
           ([strip_label M'/s] (strip_label M))` by PROVE_TAC [beta_def] THEN
     `reduction beta ([strip_label M'/s] (strip_label M))

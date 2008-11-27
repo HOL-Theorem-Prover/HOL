@@ -1,7 +1,5 @@
 open HolKernel boolLib Parse bossLib stringTheory arithmeticTheory markerLib;
 
-val export_rewrites = export_rewrites "string_num";
-
 val _ = new_theory "string_num"
 
 val n2s_def = tDefine
@@ -68,8 +66,8 @@ val s2n_n2s = store_thm(
 val n2s_s2n = store_thm(
   "n2s_s2n",
   ``n2s (s2n s) = s``,
-  Induct_on `s` THEN SRW_TAC [][s2n_def] THEN
-  ONCE_REWRITE_TAC [n2s_def] THEN SRW_TAC [][] THEN
+  Induct_on `s` THEN ASM_SIMP_TAC (srw_ss()) [s2n_def, Once n2s_def] THEN
+  Q.X_GEN_TAC `c` THEN SRW_TAC [][] THEN 
   `r0 = (ORD c + 1) MOD 256`
      by (SRW_TAC [][Abbr`r0`] THEN
          SRW_TAC [][GSYM ADD_ASSOC, MOD_TIMES]) THEN

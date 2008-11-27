@@ -5,8 +5,6 @@
 open HolKernel Parse boolLib bossLib BasicProvers boolSimps NEWLib
 open ncTheory swapTheory binderLib
 
-val export_rewrites = export_rewrites "gmterm";
-
 val _ = new_theory "gmterm";
 
 val (constfree_def, _) = define_recursive_term_function`
@@ -457,10 +455,11 @@ val fresh_new_subst0 = prove(
 
 val lemma = (SIMP_RULE bool_ss [ABS_axiom, fresh_new_subst0,
                                 ASSUME ``FINITE (X:string set)``]o
+             Q.INST [`lam'` |-> `lam`] o
              Q.INST [`lam` |->
                         `\r t. let v = NEW (FV (gmterm$ABS t) UNION X)
                                in
-                                 lam (r v) v (t v)`] o
+                                 lam' (r v) v (t v)`] o
              INST_TYPE [beta |-> alpha] o
              SPEC_ALL) gm_recursion
 

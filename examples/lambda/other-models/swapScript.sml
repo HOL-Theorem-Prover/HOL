@@ -2,8 +2,6 @@ open HolKernel Parse boolLib
 
 open simpLib boolSimps bossLib BasicProvers metisLib
 
-val export_rewrites = export_rewrites "swap";
-
 val _ = new_theory "swap"
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
@@ -430,17 +428,17 @@ val lemma =
     (SIMP_RULE bool_ss [FUN_EQ_THM, ABS_DEF, fresh_new_subst0,
                         ASSUME ``FINITE (X:string set)``,
                         ASSUME ``!p:'b. FINITE (pFV p : string set)``] o
+     Q.INST [`lam'` |-> `lam`] o 
      Q.INST [`lam` |->
              `\r t p.
                  let v = NEW (FV (ABS t) UNION pFV p UNION X)
                  in
-                   lam (r v) v (t v) p`] o
+                   lam' (r v) v (t v) p`] o
      INST_TYPE [beta |-> (beta --> gamma)] o
      CONJUNCT1 o
      CONV_RULE EXISTS_UNIQUE_CONV o
      SPEC_ALL)
     nc_RECURSION
-
 
 val swap_RECURSION_pgeneric = store_thm(
   "swap_RECURSION_pgeneric",
@@ -630,12 +628,14 @@ val swap_RECURSION_generic = save_thm(
   "swap_RECURSION_generic",
   (SIMP_RULE (srw_ss()) [null_swapping, exists_fn_dom_one, swapfn_def,
                          forall_fn_dom_one, forall_one_one] o
+   Q.INST [`var'` |-> `var`, `con'` |-> `con`, `app'` |-> `app`, 
+           `lam'` |-> `lam`] o 
    Q.INST [`pFV` |-> `K {}`,
            `pswap` |-> `\x y u. u`,
-           `var` |-> `\s p. var s`,
-           `con` |-> `\k p. con k`,
-           `app` |-> `\rt ru t u p. app (rt()) (ru()) t u`,
-           `lam` |-> `\rt v t p. lam (rt()) v t`] o
+           `var` |-> `\s p. var' s`,
+           `con` |-> `\k p. con' k`,
+           `app` |-> `\rt ru t u p. app' (rt()) (ru()) t u`,
+           `lam` |-> `\rt v t p. lam' (rt()) v t`] o
    INST_TYPE [beta |-> ``:one``, gamma |-> beta])
   swap_RECURSION_pgeneric);
 

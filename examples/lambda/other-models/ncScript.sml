@@ -451,11 +451,12 @@ val COPY_THEOREM =
      val lp = Term`\^v1. ^P`
      val lq = Term`\^v2. ^Q`
      val th2 = BETA_RULE (ISPECL [lp,lq] pair_lemma)
-     val th3 = Q.INST [`var` |-> `var`, `con` |-> `con`,
-                 `app` |-> `\p q. app (SND p) (SND q) (FST p) (FST q)`,
-                 `lam` |-> `\f. lam (\y. SND(f y)) (\y. FST(f y))`]
+     val th3_0 = Q.INST [`var` |-> `var`, `con` |-> `con`,
+                 `app` |-> `\p q. app' (SND p) (SND q) (FST p) (FST q)`,
+                 `lam` |-> `\f. lam' (\y. SND(f y)) (\y. FST(f y))`]
                (MP th2 th1)
-    val th4 = REWRITE_RULE [] (BETA_RULE th3)
+     val th3 = Q.INST [`lam'` |-> `lam`, `app'` |-> `app`] th3_0
+     val th4 = REWRITE_RULE [] (BETA_RULE th3)
   in
     REWRITE_RULE pairTheory.pair_rws (BETA_RULE th4)
   end;
@@ -1060,8 +1061,9 @@ val FV_SUB = store_thm(
 val nc_RECURSION2 = save_thm(
   "nc_RECURSION2",
   (SIMP_RULE bool_ss [ABS_DEF] o
+   Q.INST [`lam'` |-> `lam`] o 
    Q.INST [`lam` |-> `\r t. let v = NEW (FV (ABS t) UNION X)
-                            in lam (r v) v (t v)`] o
+                            in lam' (r v) v (t v)`] o
    SPEC_ALL) nc_RECURSION)
 
 val size_def = new_specification (

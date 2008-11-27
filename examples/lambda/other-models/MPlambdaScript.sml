@@ -3,8 +3,6 @@ open nomsetTheory
 
 local open stringTheory in end
 
-val export_rewrites = export_rewrites "MPlambda";
-
 fun Store_thm (n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
 
 val _ = new_theory "MPlambda"
@@ -72,15 +70,18 @@ val params_vvsub = Store_thm(
 val shape_lemma = store_thm(
   "shape_lemma",
   ``!M p. ?v M'. (M = vsub (Parameter p) v M') /\ ~(p IN params M')``,
-  Induct THEN SRW_TAC [][] THENL [
+  Induct THEN ASM_SIMP_TAC (srw_ss()) []THENL [
+    Q.X_GEN_TAC `s` THEN SRW_TAC [][] THEN 
     Q_TAC (NEW_TAC "z") `{s}` THEN
     MAP_EVERY Q.EXISTS_TAC [`z`, `Var s`] THEN SRW_TAC [][],
 
+    Q.X_GEN_TAC `s` THEN SRW_TAC [][] THEN 
     Cases_on `s = p` THENL [
       MAP_EVERY Q.EXISTS_TAC [`x`, `Var x`] THEN SRW_TAC [][],
       MAP_EVERY Q.EXISTS_TAC [`x`, `Parameter s`] THEN SRW_TAC [][]
     ],
 
+    GEN_TAC THEN 
     `?v1 M1. (M = vsub (Parameter p) v1 M1) /\ ~(p IN params M1)`
        by METIS_TAC [] THEN
     `?v2 M2. (M' = vsub (Parameter p) v2 M2) /\ ~(p IN params M2)`
@@ -93,6 +94,7 @@ val shape_lemma = store_thm(
               [`z`, `App (vsub (Var z) v1 M1) (vsub (Var z) v2 M2)`] THEN
     SRW_TAC [][pvsub_vsub_collapse],
 
+    Q.X_GEN_TAC `s` THEN SRW_TAC [][] THEN 
     FIRST_X_ASSUM (Q.SPEC_THEN `p` STRIP_ASSUME_TAC) THEN
     REVERSE (Cases_on `s = v`) THEN1
       (MAP_EVERY Q.EXISTS_TAC [`v`, `Abs s M'`] THEN SRW_TAC [][]) THEN
@@ -491,9 +493,12 @@ val empty_vars_vclosed = store_thm(
     `!t l. (vars (FOLDL (\t (p,v). vsub (Parameter p) v t) t l) = {}) ==>
            vclosed (FOLDL (\t (p,v). vsub (Parameter p) v t) t l)`
     THEN1 METIS_TAC [listTheory.FOLDL] THEN
-  Induct THEN SRW_TAC [][FOLDL_App, FOLDL_Parameter, FOLDL_Abs] THENL [
+  Induct THEN 
+  ASM_SIMP_TAC (srw_ss()) [FOLDL_App, FOLDL_Parameter, FOLDL_Abs] THENL [
+    MAP_EVERY Q.X_GEN_TAC [`s`,`l`] THEN 
     Q.SPEC_THEN `l` STRIP_ASSUME_TAC FOLDL_Var THEN
     FULL_SIMP_TAC (srw_ss()) [],
+    SRW_TAC [][] THEN 
     MATCH_MP_TAC (List.nth(CONJUNCTS vclosed_rules, 1)) THEN
     SRW_TAC [][vsub_FOLDL] THEN Q.EXISTS_TAC `p` THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
