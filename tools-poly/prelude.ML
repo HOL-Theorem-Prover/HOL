@@ -17,7 +17,13 @@ local
               recursive_print
               (e : 'a) =
     putString (pp_to_string (!Globals.linewidth) f e);
-  fun ppg pps g = term_grammar.prettyprint_grammar Parse.pp_term pps g
+  fun gprint g pps t = let
+    val tyg = Parse.type_grammar()
+    val (_, ppt) = Parse.print_from_grammars (tyg,g)
+  in
+    ppt pps t
+  end
+  fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
 in
   val _ = PolyML.install_pp (pp2polypp (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term)));
   val _ = PolyML.install_pp (pp2polypp (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type)));
