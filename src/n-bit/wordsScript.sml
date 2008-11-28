@@ -194,9 +194,8 @@ val _ = overload_on ("<>",Term`$word_slice`);
 val _ = overload_on ("--",Term`$word_bits`);
 val _ = overload_on ("><",Term`$word_extract`);
 
-val _ = add_infix("<>",375,HOLgrammars.RIGHT);
-val _ = add_infix("--",375,HOLgrammars.RIGHT);
-val _ = add_infix("><",375,HOLgrammars.RIGHT);
+val _ = set_fixity "--" (Infixr 375)
+val _ = set_fixity "><" (Infixr 375);
 
 (* ------------------------------------------------------------------------- *)
 (*  Word arithmetic: definitions                                             *)
