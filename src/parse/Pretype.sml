@@ -132,12 +132,12 @@ fun apply_subst subst pty =
     refs.
    ---------------------------------------------------------------------- *)
 
-local 
+local
   fun replace s env =
-      case Lib.assoc1 s env of 
+      case Lib.assoc1 s env of
         NONE => let
           val r = ref NONE
-        in 
+        in
           ((s, r)::env, SOME (UVar r))
         end
       | SOME (_, r) => (env, SOME (UVar r))
@@ -198,5 +198,68 @@ fun toType ty =
 fun chase (Tyop{Tyop = "fun", Thy = "min", Args = [_, ty]}) = ty
   | chase (UVar(ref (SOME ty))) = chase ty
   | chase _ = raise Fail "chase applied to non-function type"
+
+
+datatype pp_pty_state = none | left | right | uvar
+
+fun pp_pretype pps pty = let
+  val checkref = Portable.ref_to_int
+  fun pp_pty pps state pty = let
+  in
+    case pty of
+      Vartype s => PP.add_string pps ("V("^s^")")
+    | Tyop {Thy,Tyop = tyop,Args} => let
+        fun qid pps = if Thy = "bool" orelse Thy = "min" then PP.add_string pps tyop
+                      else PP.add_string pps (Thy ^ "$" ^ tyop)
+      in
+        if Thy = "min" andalso tyop = "fun" then let
+          in
+            if state = none then PP.begin_block pps PP.INCONSISTENT 0 else ();
+            if state = left orelse state = uvar then
+              (PP.add_string pps "("; PP.begin_block pps PP.INCONSISTENT 0)
+            else ();
+            pp_pty pps left (hd Args);
+            PP.add_string pps " ->";
+            PP.add_break pps (1,0);
+            pp_pty pps right (hd (tl Args));
+            if state = left orelse state = uvar then
+              (PP.end_block pps; PP.add_string pps ")")
+            else ();
+            if state = none then PP.end_block pps else ()
+          end
+        else
+          case Args of
+            [] => PP.add_string pps (Thy ^ "$" ^ tyop)
+          | _ => let
+            in
+              PP.add_string pps "(";
+              PP.begin_block pps PP.INCONSISTENT 0;
+              Portable.pr_list (fn a => (PP.begin_block pps PP.INCONSISTENT 0;
+                                         pp_pty pps none a;
+                                         PP.end_block pps))
+                               (fn () => PP.add_string pps ",")
+                               (fn () => ())
+                               Args;
+              PP.end_block pps ;
+              PP.add_string pps ")";
+              PP.add_string pps (Thy ^ "$" ^ tyop)
+            end
+      end
+    | UVar(r as ref NONE) => let
+      in
+        PP.add_string pps (Int.toString (checkref r) ^ ":*")
+      end
+    | UVar (r as ref (SOME pty')) => let
+      in
+        if state <> uvar then PP.begin_block pps PP.INCONSISTENT 0 else ();
+        PP.add_string pps (Int.toString (checkref r) ^ ":");
+        PP.add_break pps (1,2);
+        pp_pty pps uvar pty';
+        if state <> uvar then PP.end_block pps else ()
+      end
+  end
+in
+  pp_pty pps none pty
+end
 
 end;

@@ -33,7 +33,7 @@ val safe_unify :
 val apply_subst : (pretype option ref * pretype) list -> pretype -> pretype
 
 val rename_typevars : string list -> pretype -> pretype
-val rename_tv : string list -> pretype -> (string * pretype option ref) list -> 
+val rename_tv : string list -> pretype -> (string * pretype option ref) list ->
                 (string * pretype option ref) list * pretype option
 val fromType : Type.hol_type -> pretype
 val remove_made_links : pretype -> pretype
@@ -41,4 +41,7 @@ val replace_null_links : pretype -> (string list -> string list * unit option)
 val clean : pretype -> Type.hol_type
 val toType : pretype -> Type.hol_type
 val chase : pretype -> pretype
+
+val pp_pretype : ppstream -> pretype -> unit
+
 end

@@ -30,6 +30,7 @@ local
   fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
   fun timepp pps t = PP.add_string pps (Time.toString t ^ "s")
 in
+  val _ = installPP (with_pp Pretype.pp_pretype)
   val _ = installPP (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
   val _ = installPP (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
   val _ = installPP (with_pp Hol_pp.pp_thm)

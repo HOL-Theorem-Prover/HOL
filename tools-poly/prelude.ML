@@ -27,6 +27,7 @@ local
 in
   val _ = PolyML.install_pp (pp2polypp (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term)));
   val _ = PolyML.install_pp (pp2polypp (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type)));
+  val _ = PolyML.install_pp (pp2polypp (with_pp Pretype.pp_pretype))
   val _ = PolyML.install_pp (pp2polypp (with_pp Hol_pp.pp_thm));
   val _ = PolyML.install_pp (pp2polypp (with_pp Hol_pp.pp_theory));
   val _ = PolyML.install_pp (pp2polypp (with_pp type_grammar.prettyprint_grammar));

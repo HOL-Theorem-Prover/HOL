@@ -79,6 +79,7 @@ val end_of_stream  = TextIO.endOfStream
 local val cast : 'a -> int = Obj.magic
 in
 fun pointer_eq (x:'a, y:'a) = (cast x = cast y)
+fun ref_to_int (r : 'a ref) = cast r
 end;
 
 (*---------------------------------------------------------------------------
