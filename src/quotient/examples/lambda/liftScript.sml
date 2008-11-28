@@ -101,7 +101,7 @@ val equivs = [ALPHA_EQUIV];
 val ty = ``:(var # 'a term1) list``;
 *)
 
-val SUBST_EQUIV = make_equiv [ALPHA_EQUIV, LIST_EQUIV, PAIR_EQUIV]
+val SUBST_EQUIV = make_equiv [ALPHA_EQUIV] [LIST_EQUIV, PAIR_EQUIV]
                       ``:(var # 'a term1) list``;
 
 

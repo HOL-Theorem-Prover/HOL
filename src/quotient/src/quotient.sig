@@ -136,8 +136,8 @@ val option_equiv :
 *)
 
 val make_equiv :
-        Thm.thm list ->  (* base equivalence theorems, along with
-                            polymorphic type operator equivalence theorems *)
+        Thm.thm list ->  (* base equivalence theorems *)
+        Thm.thm list ->  (* polymorphic type operator equivalence theorems *)
         Type.hol_type -> (* type, whose equivalence relation is desired *)
         Thm.thm          (* returns equivalence theorem for hol_type:
 
@@ -205,8 +205,8 @@ val fun_quotient :
 *)
 
 val make_quotient :
-        Thm.thm list -> (* quotient theorems for primary lifted types
-                           and conditional quotient ths for type operators *)
+        Thm.thm list ->  (* quotient theorems for primary lifted types *)
+        Thm.thm list ->  (* conditional quotient ths for type operators *)
         Type.hol_type -> (* type (not lifted) of desired quotient *)
         Thm.thm        (* returns quotient theorem for given type:
 

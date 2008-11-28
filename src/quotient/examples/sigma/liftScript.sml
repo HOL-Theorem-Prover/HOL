@@ -66,7 +66,7 @@ val ALPHA_EQUIV = LIST_CONJ
 
 (* ALPHA_dict/entry_EQUIV will not be used, rather SUBST_EQUIV: *)
 
-val SUBST_EQUIV = make_equiv [ALPHA_obj_EQUIV, LIST_EQUIV, PAIR_EQUIV]
+val SUBST_EQUIV = make_equiv [ALPHA_obj_EQUIV] [LIST_EQUIV, PAIR_EQUIV]
                       ``:(var # obj1) list``;
 
 
