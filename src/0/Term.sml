@@ -1607,11 +1607,7 @@ fun RM [] theta = theta
 end
 
 fun raw_kind_match kdfixed tyfixed tmfixed pat ob (tmS,tyS,kdS,rkS)
-   = let val pat = beta_conv_ty_in_term pat
-         val ob  = beta_conv_ty_in_term ob
-         fun beta_conv_S {redex,residue} = {redex=redex, residue = deep_beta_conv_ty residue}
-         val tyS = map beta_conv_S tyS
-         val tyfixed_set = HOLset.addList(empty_tyset, tyfixed)
+   = let val tyfixed_set = HOLset.addList(empty_tyset, tyfixed)
          val (tmS',(_,_,pinsts_homs),kdS1,rkS1) =
                 RM [(pat,ob,false)] ((tmS,tmfixed), (tyfixed_set,[],(tyS,[])), (kdS,kdfixed), rkS)
          val tyinsts = Type.type_homatch kdfixed tyfixed_set rkS1 kdS1 pinsts_homs
