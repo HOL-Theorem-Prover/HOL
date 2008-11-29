@@ -73,6 +73,7 @@ sig
 
   val aconv_ty      : hol_type -> hol_type -> bool
   val beta_conv_ty  : hol_type -> hol_type
+  val head_beta_ty  : hol_type -> hol_type
   val deep_beta_conv_ty : hol_type -> hol_type
   val abconv_ty     : hol_type -> hol_type -> bool
   val polymorphic   : hol_type -> bool
@@ -138,6 +139,7 @@ sig
                     (hol_type,hol_type)Lib.subst *
                     ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list
   val get_rank_kind_insts : kind list -> {redex : hol_type, residue : hol_type} list ->
+                            {redex : hol_type, residue : hol_type} list ->
                             int * ({redex : kind, residue : kind} list * kind list) ->
                             int * ({redex : kind, residue : kind} list * kind list)
   val type_homatch : kind list -> hol_type HOLset.set ->
@@ -147,6 +149,7 @@ sig
                      (hol_type,hol_type)Lib.subst
   val separate_insts_ty : bool -> int -> kind list ->
                           ((kind,kind)Lib.subst * kind list) ->
+                          (hol_type,hol_type)Lib.subst ->
                           (hol_type,hol_type)Lib.subst ->
                           (hol_type, int)Lib.subst *
                           (hol_type,hol_type)Lib.subst *

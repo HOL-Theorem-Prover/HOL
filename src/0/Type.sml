@@ -101,13 +101,13 @@ end;
 local fun lookup 0 (kd::_)  = kd
         | lookup n (_::rst) = lookup (n-1) rst
         | lookup _ []       = raise ERR "kind_of" "lookup"
+in
       fun kd_of (TyFv (_,kd,_)) _        = kd
         | kd_of (TyCon(_,kd,_)) _        = kd
         | kd_of (TyBv i) E               = lookup i E
         | kd_of (TyApp(Opr,_)) E         = snd(kind_dom_rng (kd_of Opr E))
         | kd_of (TyAll((_,Kd,_),Body)) E = kd_of Body (Kd::E)
         | kd_of (TyAbs((_,Kd,_),Body)) E = Kd ==> kd_of Body (Kd::E)
-in
 fun kind_of ty = kd_of ty []
 end;
 
@@ -1582,6 +1582,13 @@ fun top_sweep_conv_ty conv ty =
 
 val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
 
+(*  head_beta1_ty reduces the head beta redex; fails if one does not exist. *)
+fun head_beta1_ty ty = (rator_conv_ty head_beta1_ty orelse_ty beta_conv_ty) ty
+
+(*  head_beta_ty repeatedly reduces any head beta redexes; never fails *)
+(*  result has at its top level its actual shape *)
+val head_beta_ty = qconv_ty (repeat_ty head_beta1_ty)
+
 
 fun abconv_ty t1 t2 = aconv_ty (deep_beta_conv_ty t1) (deep_beta_conv_ty t2)
 
@@ -1622,21 +1629,24 @@ local
   fun rator_type ty = fst (dest_app_type ty)
 
 
-  fun type_pmatch lconsts env (TyBv i) (TyBv j) sofar
+  fun type_pmatch lconsts env pat ob sofar
+      = type_pmatch_1 lconsts env (head_beta_ty pat) (head_beta_ty ob) sofar
+
+  and type_pmatch_1 lconsts env (TyBv i) (TyBv j) sofar
       = if i=j then sofar
         else MERR "bound type variable mismatch"
-    | type_pmatch lconsts env (TyBv _) _ sofar
+    | type_pmatch_1 lconsts env (TyBv _) _ sofar
       = MERR "bound type variable mismatch"
-    | type_pmatch lconsts env _ (TyBv _) sofar
+    | type_pmatch_1 lconsts env _ (TyBv _) sofar
       = MERR "bound type variable mismatch"
-    | type_pmatch lconsts env vty cty (sofar as (insts,homs)) =
+    | type_pmatch_1 lconsts env vty cty (sofar as (insts,homs)) =
     if is_vartype vty then let
         val cty' = find_residue_ty vty env
       in
         if eq_ty cty' cty then sofar else MERR "type variable mismatch"
       end handle NOT_FOUND =>
                  if HOLset.member(lconsts, vty) then
-                   if eq_ty cty vty then sofar
+                   if cty = vty then sofar
                    else MERR "can't instantiate local constant type"
                  else (safe_insert_tya (vty |-> cty) insts, homs)
                | HOL_ERR _ => MERR "free type variable mismatch"
@@ -1678,8 +1688,8 @@ local
         then let (* kind_of and rank_of can fail if given an open type with free bound variables, as cty might be *)
             val vkd = kind_of vty
             val vrk = rank_of vty
-            val ckd = kind_of cty
-            val crk = rank_of cty
+            val ckd = kd_of cty (map (kind_of o #residue) env)
+            val crk = rk_of cty (map (rank_of o #residue) env)
             val insts' = if vkd = ckd andalso vrk = crk then insts
                          else safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts
           in
@@ -1696,13 +1706,15 @@ local
       end
 
 
-fun get_rank_kind_insts avoids L (rk,(kdS,Id)) =
+fun get_rank_kind_insts avoids env L (rk,(kdS,Id)) =
  itlist (fn {redex,residue} => fn (rk,Theta) =>
-          (raw_match_rank (rank_of redex) (rank_of residue) rk,
-           raw_match_kind (kind_of redex) (kind_of residue) Theta))
+          (raw_match_rank (rk_of redex   (map (rank_of o #redex  ) env))
+                          (rk_of residue (map (rank_of o #residue) env)) rk,
+           raw_match_kind (kd_of redex   (map (kind_of o #redex  ) env))
+                          (kd_of residue (map (kind_of o #residue) env)) Theta))
        L (rk,(kdS,union avoids Id))
 
-fun separate_insts_ty lift rk kdavoids kdS
+fun separate_insts_ty lift rk kdavoids kdS env
          (insts :{redex : hol_type, residue : hol_type} list) = let
   val (realinsts, patterns) = partition (is_vartype o #redex) insts
   val betacounts =
@@ -1718,7 +1730,7 @@ fun separate_insts_ty lift rk kdavoids kdS
                                   "Inconsistent patterning in h.o. type match";
                                   sof))
         patterns []
-  val (rkin,kdins) = get_rank_kind_insts kdavoids realinsts (rk,kdS)
+  val (rkin,kdins) = get_rank_kind_insts kdavoids env realinsts (rk,kdS)
 in
   (betacounts,
    mapfilter (fn {redex = x, residue = t} => let
@@ -1770,9 +1782,11 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
       if is_vartype vty then
         if eq_ty cty vty then homatch rkin kdins (insts, tl homs)
         else let
-            val newrkin  = raw_match_rank (rank_of vty) (rank_of cty) rkin
+            val ckd = kd_of cty (map (kind_of o #residue) env)
+            val crk = rk_of cty (map (rank_of o #residue) env)
+            val newrkin  = raw_match_rank (rank_of vty) crk rkin
             val newkdins =
-                kdenv_safe_insert (kind_of vty |-> kind_of cty) kdins
+                kdenv_safe_insert (kind_of vty |-> ckd) kdins
             val newinsts = (vty |-> cty)::insts
           in
             homatch newrkin newkdins (newinsts, tl homs)
@@ -1806,7 +1820,8 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                else let
                    val ginsts = map (fn p => (p |->
                                                 (if is_vartype p then p
-                                                 else gen_tyopvar(kind_of p,rank_of p))))
+                                                 else gen_tyopvar(kd_of p (map (kind_of o #redex) env),
+                                                                  rk_of p (map (rank_of o #redex) env)))))
                                     pats
                    val cty' = type_subst ginsts cty
                    val gvs = map #residue ginsts
@@ -1832,7 +1847,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                              type_pmatch lconsts env rv rc
                                          (insts, (env,lc,lv)::(tl homs))
                          val (rkin',kdins') =
-                             get_rank_kind_insts kdavoids
+                             get_rank_kind_insts kdavoids env
                                             (fst pinsts_homs')
                                             (0, ([], []))
                        in
@@ -1853,10 +1868,10 @@ val separate_insts_ty = separate_insts_ty
 
 fun ho_match_type1 lift kdavoids lconsts vty cty insts_homs rk_kd_insts_ids = let
   val pinsts_homs = type_pmatch lconsts [] vty cty insts_homs
-  val (rkin,kdins) = get_rank_kind_insts kdavoids (fst pinsts_homs) rk_kd_insts_ids
+  val (rkin,kdins) = get_rank_kind_insts kdavoids [] (fst pinsts_homs) rk_kd_insts_ids
   val insts = type_homatch kdavoids lconsts rkin kdins pinsts_homs
 in
-  separate_insts_ty lift rkin kdavoids kdins insts
+  separate_insts_ty lift rkin kdavoids kdins [] insts
 end
 
 fun ho_match_type0 lift kdavoids lconsts vty cty = let

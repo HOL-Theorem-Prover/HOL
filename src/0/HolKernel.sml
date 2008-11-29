@@ -440,9 +440,13 @@ local
     val name = fst(dest_var(genvar Type.alpha))
   in fn ty => mk_var(name, ty)
   end
+  val mk_dummy_ty = let
+    val name = dest_vartype(gen_tyvar())
+  in fn (kd,rk) => trace ("Vartype Format Complaint",0) mk_vartype_opr(name, kd, rk)
+  end
 
 
-  fun term_pmatch lconsts env vtm ctm (sofar as (insts,homs)) =
+  fun term_pmatch lconsts tyenv env vtm ctm (sofar as (insts,homs)) =
     if is_var vtm then let
         val ctm' = find_residue_tm vtm env
       in
@@ -468,17 +472,20 @@ local
         val (_, cty) = dest_var cv
         val sofar' = (safe_inserta(mk_dummy vty |-> mk_dummy cty) insts, homs)
       in
-        term_pmatch lconsts ((vv |-> cv)::env) vbod cbod sofar'
+        term_pmatch lconsts tyenv ((vv |-> cv)::env) vbod cbod sofar'
       end
     else if is_tyabs vtm then let
         val (vty,vbod) = dest_tyabs vtm
         val (cty,cbod) = dest_tyabs ctm
-        val vv = mk_dummy vty
-        val cv = mk_dummy cty
-        val sofar' = (safe_inserta(vv |-> cv) insts, homs)
+        val (_, vkd, vrk) = dest_vartype_opr vty
+        val (_, ckd, crk) = dest_vartype_opr cty
+        val vdty = mk_dummy_ty (vkd,vrk)
+        val cdty = mk_dummy_ty (ckd,crk)
+        val sofar' = (safe_inserta(mk_dummy vdty |-> mk_dummy cdty) insts, homs)
       in
-        term_pmatch lconsts ((vv |-> cv)::env) vbod cbod sofar'
+        term_pmatch lconsts ((vty |-> cty)::tyenv) env vbod cbod sofar'
       end
+(*
     else if is_tycomb vtm then let
         val (vtm0,vty) = dest_tycomb vtm
         val (ctm0,cty) = dest_tycomb ctm
@@ -488,7 +495,8 @@ local
       in
         term_pmatch lconsts env vtm0 ctm0 sofar'
       end
-    else let
+*)
+    else if is_comb vtm then let
         val vhop = repeat rator vtm
       in
         if is_var vhop andalso not (HOLset.member(lconsts, vhop)) andalso
@@ -499,14 +507,38 @@ local
             val insts' = if abconv_ty vty cty then insts
                          else safe_inserta (mk_dummy vty |-> mk_dummy cty) insts
           in
-            (insts', (env,ctm,vtm)::homs)
+            (insts', (tyenv,env,ctm,vtm)::homs)
           end
         else let
             val (lv,rv) = dest_comb vtm
             val (lc,rc) = dest_comb ctm
-            val sofar' = term_pmatch lconsts env lv lc sofar
+            val sofar' = term_pmatch lconsts tyenv env lv lc sofar
           in
-            term_pmatch lconsts env rv rc sofar'
+            term_pmatch lconsts tyenv env rv rc sofar'
+          end
+      end
+    else (* if is_tycomb vtm then *) let
+        fun tyrator tm = fst (dest_tycomb tm)
+        val vhop = repeat tyrator vtm
+      in
+        if is_var vhop andalso not (HOLset.member(lconsts, vhop)) andalso
+           not (in_dom_tm vhop env)
+        then let
+            val vty = type_of vtm
+            val cty = type_of ctm
+            val insts' = if abconv_ty vty cty then insts
+                         else safe_inserta (mk_dummy vty |-> mk_dummy cty) insts
+          in
+            (insts', (tyenv,env,ctm,vtm)::homs)
+          end
+        else let
+            val (lv,rvty) = dest_tycomb vtm
+            val (lc,rcty) = dest_tycomb ctm
+            val vv = mk_dummy rvty
+            val cv = mk_dummy rcty
+            val sofar' = (safe_inserta(vv |-> cv) insts, homs)
+          in
+            term_pmatch lconsts tyenv env lv lc sofar'
           end
       end
 
@@ -571,6 +603,11 @@ fun all_aconv [] [] = true
   | all_aconv _ [] = false
   | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
 
+fun all_abconv_ty [] [] = true
+  | all_abconv_ty [] _ = false
+  | all_abconv_ty _ [] = false
+  | all_abconv_ty (h1::t1) (h2::t2) = abconv_ty h1 h2 andalso all_abconv_ty t1 t2
+
 
 fun term_homatch kdavoids tyavoids lconsts rkin kdins tyins (insts, homs) = let
   (* local constants of both terms and types never change *)
@@ -578,7 +615,7 @@ fun term_homatch kdavoids tyavoids lconsts rkin kdins tyins (insts, homs) = let
 in
   if null homs then insts
   else let
-      val (env,ctm,vtm) = hd homs
+      val (tyenv,env,ctm,vtm) = hd homs
     in
       if is_var vtm then
         if aconv ctm vtm then term_homatch rkin kdins tyins (insts, tl homs)
@@ -591,7 +628,7 @@ in
           in
             term_homatch rkin kdins newtyins (newinsts, tl homs)
           end
-      else (* vtm not a var *) let
+      else if is_comb vtm then let
           val (vhop, vargs) = strip_comb vtm
           val afvs = free_varsl vargs
           val inst_fn = inst (fst tyins) o inst_rank_kind rkin (fst kdins)
@@ -637,8 +674,72 @@ in
                          val (lc,rc) = dest_comb ctm
                          val (lv,rv) = dest_comb vtm
                          val pinsts_homs' =
-                             term_pmatch lconsts env rv rc
-                                         (insts, (env,lc,lv)::(tl homs))
+                             term_pmatch lconsts tyenv env rv rc
+                                         (insts, (tyenv,env,lc,lv)::(tl homs))
+                         val (tyins',kdins',rkin') =
+                             get_type_kind_rank_insts kdavoids tyavoids
+                                                 (fst pinsts_homs')
+                                                 (([], []), ([], []), 0)
+                       in
+                         term_homatch rkin' kdins' tyins' pinsts_homs'
+                       end
+        end
+      else (* if is_tycomb vtm then *) let
+          val (vhop, vargs) = strip_tycomb vtm
+          val aftvs = type_varsl vargs
+          val inst_fn = inst (fst tyins) o inst_rank_kind rkin (fst kdins)
+          val ty_inst_fn = Type.type_subst (fst tyins) o Type.inst_rank_kind rkin (fst kdins)
+          fun determ {redex,residue} = let val ty = type_of redex
+                                       in if is_vartype ty then SOME (ty |-> type_of residue)
+                                          else NONE
+                                       end
+          val ty_insts = List.mapPartial determ insts
+        in
+          (let
+             val tyins1 =
+                 map (fn a =>
+                         (ty_inst_fn a |->
+                                  (find_residue_ty a tyenv
+                                   handle _ =>
+                                          find_residue_ty a ty_insts
+                                   handle _ =>
+                                          if mem a tyavoids
+                                          then a
+                                          else raise ERR "term_homatch" ""))) aftvs
+             val pats0 = map ty_inst_fn vargs
+             val pats = map (Type.type_subst tyins1) pats0
+             val vhop' = inst_fn vhop
+             val ictm = list_mk_tycomb(vhop', pats)
+             val ni = let
+               val (chop,cargs) = strip_tycomb ctm
+             in
+               if all_abconv_ty cargs pats then
+                 if aconv chop vhop then insts
+                 else safe_inserta (vhop |-> chop) insts
+               else let
+                   val ginsts = map (fn p => (p |->
+                                                (if is_vartype p then p
+                                                 else gen_tyopvar(kind_of p,rank_of p))))
+                                    pats
+                   val ctm' = Term.inst ginsts ctm
+                   val gvs = map #residue ginsts
+                   val tyabstm = list_mk_tyabs(gvs,ctm')
+                   val vinsts = safe_inserta (vhop |-> tyabstm) insts
+                   val icpair = (list_mk_tycomb(vhop',gvs) |-> ctm')
+                 in
+                   icpair::vinsts
+                 end
+             end
+           in
+             term_homatch rkin kdins tyins (ni,tl homs)
+           end) handle _ => let
+                         val (lc,rcty) = dest_tycomb ctm
+                         val (lv,rvty) = dest_tycomb vtm
+                         val vv = mk_dummy rvty
+                         val cv = mk_dummy rcty
+                         val insts' = safe_inserta (vv |-> cv) insts
+                         val pinsts_homs' =
+                             term_pmatch lconsts tyenv env lv lc (insts', tl homs)
                          val (tyins',kdins',rkin') =
                              get_type_kind_rank_insts kdavoids tyavoids
                                                  (fst pinsts_homs')
@@ -653,7 +754,7 @@ end
 in
 
 fun ho_kind_match_term0 kdavoids tyavoids lconsts vtm ctm = let
-  val pinsts_homs = term_pmatch lconsts [] vtm ctm ([], [])
+  val pinsts_homs = term_pmatch lconsts [] [] vtm ctm ([], [])
   val (tyins,kdins,rkin) = get_type_kind_rank_insts kdavoids tyavoids (fst pinsts_homs) (([],[]),([],[]),0)
   val insts = term_homatch kdavoids tyavoids lconsts rkin kdins tyins pinsts_homs
 in
@@ -661,7 +762,7 @@ in
 end
 
 fun ho_match_term0 tyavoids lconsts vtm ctm = let
-  val pinsts_homs = term_pmatch lconsts [] vtm ctm ([], [])
+  val pinsts_homs = term_pmatch lconsts [] [] vtm ctm ([], [])
   val (tyins,kdins,rkin) = get_type_kind_rank_insts [] tyavoids (fst pinsts_homs) (([],[]),([],[]),0)
   val insts = term_homatch [] tyavoids lconsts rkin kdins tyins pinsts_homs
   val (bcs,tmins,tyins,kdins,rkin) = separate_insts [] tyavoids rkin kdins tyins insts

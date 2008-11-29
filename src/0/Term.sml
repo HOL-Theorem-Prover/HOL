@@ -1541,7 +1541,7 @@ local
 (*val tymatch = Type.raw_kind_match_type *)
   fun tymatch pat ob ((lctys,env,insts_homs),kdS,rkS) =
         let val insts_homs' = Type.type_pmatch lctys env pat ob insts_homs
-            val (rkS',kdS') = Type.get_rank_kind_insts [] (fst insts_homs') (rkS,kdS)
+            val (rkS',kdS') = Type.get_rank_kind_insts [] env (fst insts_homs') (rkS,kdS)
         in ((lctys,env,insts_homs'),kdS',rkS')
         end
   fun add_env mp (lctys,env,insts_homs) = (lctys,mp::env,insts_homs)
@@ -1611,7 +1611,7 @@ fun raw_kind_match kdfixed tyfixed tmfixed pat ob (tmS,tyS,kdS,rkS)
          val (tmS',(_,_,pinsts_homs),kdS1,rkS1) =
                 RM [(pat,ob,false)] ((tmS,tmfixed), (tyfixed_set,[],(tyS,[])), (kdS,kdfixed), rkS)
          val tyinsts = Type.type_homatch kdfixed tyfixed_set rkS1 kdS1 pinsts_homs
-         val (_,tyS',kdS',rkS') = Type.separate_insts_ty true rkS1 kdfixed kdS1 tyinsts
+         val (_,tyS',kdS',rkS') = Type.separate_insts_ty true rkS1 kdfixed kdS1 [] tyinsts
          val tyId' = Lib.subtract (Lib.union (type_vars_in_term pat) tyfixed) (map #redex tyS')
      in (tmS',(tyS',tyId'),kdS',rkS')
      end;
@@ -1666,10 +1666,10 @@ fun match_term pat ob =
 
 local
 fun tymatch pat ob ((lctys,env,insts_homs),kdS,rkS) =
-        let val pat = deep_beta_conv_ty pat
-            val ob  = deep_beta_conv_ty ob
+        let (*val pat = deep_beta_conv_ty pat
+            val ob  = deep_beta_conv_ty ob*)
             val insts_homs' = Type.type_pmatch lctys env pat ob insts_homs
-            val (rkS',kdS') = Type.get_rank_kind_insts [] (fst insts_homs') (rkS,kdS)
+            val (rkS',kdS') = Type.get_rank_kind_insts [] env (fst insts_homs') (rkS,kdS)
         in ((lctys,env,insts_homs'),kdS',rkS')
         end
 in
@@ -1682,7 +1682,7 @@ fun get_type_kind_rank_insts kdavoids tyavoids L ((tyS,tyId),(kdS,kdId),rkS) =
           itlist (fn {redex,residue} => tymatch (snd(dest_var redex)) (type_of residue))
                  L ((tyfixed,[],(tyS,[])),(kdS,kdfixed),rkS)
       val tyinsts = Type.type_homatch kdfixed tyfixed rkS1 kdS1 pinsts_homs
-      val (_,tyS',kdS',rkS') = Type.separate_insts_ty false rkS1 kdfixed kdS1 tyinsts
+      val (_,tyS',kdS',rkS') = Type.separate_insts_ty false rkS1 kdfixed kdS1 [] tyinsts
   in ((tyS',tyId),kdS',rkS')
   end
 end

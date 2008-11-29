@@ -81,6 +81,25 @@ val JOIN_def = Define
    `JOIN (unit: 'M unit, bind: 'M bind)
                (z : 'a 'M 'M) = bind z (\m.m)`;
 
+(*---------------------------------------------------------------------------
+            Another definition of monads, arising from category theory:
+
+   "A monad consists of a category A, a functor t : A -> A,
+   and natural transformations mu : t^2 -> t and eta : 1_A -> t
+   satisfying three equations, as expressed by the commutative diagrams
+
+                 t mu                    t eta         eta t
+           t^3 -------> t^2           t -------> t^2 <------- t
+            |            |              \_        |        _/
+       mu t |            | mu              \_     |mu   _/
+            |            |                1   \_  |  _/   1
+            V            V                      V V V
+           t^2 ------->  t                        t."
+                  mu
+
+   (From "The formal theory of monads II" by Stephen Lack and Ross Street.)
+ ---------------------------------------------------------------------------*)
+
 val MMAP_functor = store_thm
   ("MMAP_functor",
    ``!unit bind.
@@ -107,6 +126,29 @@ val unit_nattransf = store_thm
                 ((\:'a 'b. MMAP(unit,bind))  : 'M functor)
                 (unit                        : 'M unit)``,
    SRW_TAC[][monad_def,nattransf_def,MMAP_def,FUN_EQ_THM]
+  );
+
+val MMAP_2_functor = store_thm
+  ("MMAP_2_functor",
+   ``!unit bind.
+      monad(unit,bind) ==>
+      functor ((\:'a 'b. MMAP(unit,bind) o MMAP(unit,bind)) : ('M o 'M) functor)``,
+   REPEAT STRIP_TAC
+   (* THEN MATCH_MP_TAC functor_o *)
+   THEN IMP_RES_TAC MMAP_functor
+   THEN IMP_RES_TAC functor_o
+   THEN FULL_SIMP_TAC bool_ss []
+  );
+
+val MMAP_3_functor = store_thm
+  ("MMAP_3_functor",
+   ``!unit bind.
+      monad(unit,bind) ==>
+      functor ((\:'a 'b. MMAP(unit,bind) o MMAP(unit,bind) o MMAP(unit,bind)) : ('M o 'M o 'M) functor)``,
+   REPEAT STRIP_TAC
+   THEN IMP_RES_TAC MMAP_functor
+   THEN IMP_RES_TAC functor_o
+   THEN FULL_SIMP_TAC bool_ss []
   );
 
 

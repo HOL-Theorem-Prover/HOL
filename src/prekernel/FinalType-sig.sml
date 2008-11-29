@@ -59,6 +59,7 @@ sig
  val inst_rank_kind : int -> (kind,kind)Lib.subst -> hol_type -> hol_type
  val aconv_ty      : hol_type -> hol_type -> bool
  val beta_conv_ty  : hol_type -> hol_type
+ val head_beta_ty  : hol_type -> hol_type
  val deep_beta_conv_ty : hol_type -> hol_type
  val abconv_ty     : hol_type -> hol_type -> bool
 
