@@ -6,6 +6,8 @@
 (* Modifications (April,June 1998) Konrad Slind.                             *)
 (*===========================================================================*)
 
+open HolKernel boolLib Parse bossLib
+
 (*---------------------------------------------------------------------------*
  * We'll track information on inferences.                                    *
  *---------------------------------------------------------------------------*)
@@ -17,10 +19,10 @@ val meter = Count.mk_meter();
  * Start the theory.                                                         *
  *---------------------------------------------------------------------------*)
 
-val _ = new_theory "Autopilot";
+val _ = new_theory "autopilot";
 
 
-Hol_datatype `events = press_att_cws
+val _ = Hol_datatype `events = press_att_cws
                      | press_cas_eng
                      | press_alt_eng
                      | press_fpa_sel
@@ -32,22 +34,20 @@ Hol_datatype `events = press_att_cws
                      | alt_gets_near`;
 
 
-Hol_datatype `off_eng
-                     = off
-                     | engaged`;
+val _ = Hol_datatype `off_eng = off | engaged`;
 
 
-Hol_datatype `mode_status
+val _ = Hol_datatype `mode_status
                      = armed
                      | Mode of off_eng`;
 
 
-Hol_datatype `disp_status
+val _ = Hol_datatype `disp_status
                      = pre_selected
                      | current`;
 
 
-Hol_datatype `altitude_vals
+val _ = Hol_datatype `altitude_vals
                      = away
                      | near_pre_selected
                      | at_pre_selected`;
@@ -57,14 +57,14 @@ Hol_datatype `altitude_vals
  * Define state-type projection and update functions.                        *
  *---------------------------------------------------------------------------*)
 
-Hol_datatype `states = <| att_cws  : off_eng;
-                          cas_eng  : off_eng;
-                          fpa_sel  : off_eng;
-                          alt_eng  : mode_status;
-                          alt_disp : disp_status;
-                          fpa_disp : disp_status;
-                          cas_disp : disp_status;
-                          altitude : altitude_vals |>`;
+val _ = Hol_datatype `states = <| att_cws  : off_eng;
+                                  cas_eng  : off_eng;
+                                  fpa_sel  : off_eng;
+                                  alt_eng  : mode_status;
+                                  alt_disp : disp_status;
+                                  fpa_disp : disp_status;
+                                  cas_disp : disp_status;
+                                  altitude : altitude_vals |>`;
 
 
 (*---------------------------------------------------------------------------*
@@ -322,25 +322,27 @@ val is_reachable_valid_state = prove
  * A couple of safety properties.                                            *
  *---------------------------------------------------------------------------*)
 
-val safety1 = prove(Term
-`!event st.
-     valid_state st
-  /\ (st.fpa_sel = engaged)
-  /\ ((nextstate st event).fpa_sel = off)
-    ==>
-     ((nextstate st event).fpa_disp = current)`,
+val safety1 = store_thm(
+  "safety1",
+  ``!event st.
+       valid_state st
+    /\ (st.fpa_sel = engaged)
+    /\ ((nextstate st event).fpa_sel = off)
+      ==>
+       ((nextstate st event).fpa_disp = current)``,
 Induct
   THEN ZAP_TAC (ap_ss && tran_defs)  (tl (type_rws ``:off_eng``)));
 
 
-val safety2 = prove
-(Term`!event st.
-           valid_state st
-        /\ (st.alt_eng = Mode engaged)
-        /\ ~(event = input_alt)
-        /\ ((nextstate st event).alt_eng = Mode off)
-          ==>
-           ((nextstate st event).alt_disp = current)`,
+val safety2 = store_thm(
+  "safety2",
+  ``!event st.
+             valid_state st
+          /\ (st.alt_eng = Mode engaged)
+          /\ ~(event = input_alt)
+          /\ ((nextstate st event).alt_eng = Mode off)
+            ==>
+             ((nextstate st event).alt_disp = current)``,
 Induct
   THEN ZAP_TAC (ap_ss && tran_defs)
              (tl(type_rws ``:off_eng``) @ tl(type_rws ``:mode_status``)));
@@ -361,3 +363,5 @@ val reachable_induct = prove
 
 
 val _ = Count.report (Count.read meter);
+
+val _ = export_theory()

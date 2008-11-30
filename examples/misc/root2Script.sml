@@ -3,7 +3,10 @@
 (* I've adapted a proof in HOL Light by John Harrison.                       *)
 (*---------------------------------------------------------------------------*)
 
-load "transcTheory";   open arithmeticTheory BasicProvers;
+open HolKernel boolLib Parse bossLib arithmeticTheory BasicProvers
+local open transcTheory in end
+
+val _ = new_theory "root2"
 
 (*---------------------------------------------------------------------------*)
 (* Need a predicate on reals that picks out the rational ones                *)
@@ -76,3 +79,7 @@ val SQRT_2_IRRATIONAL = Q.prove
               THEN ASM_REWRITE_TAC [REAL_OF_NUM_POW, REAL_MUL,REAL_INJ])
   THEN PROVE_TAC [lemma])
 end;
+
+val _ = save_thm("SQRT_2_IRRATIONAL", SQRT_2_IRRATIONAL);
+
+val _ = export_theory()
