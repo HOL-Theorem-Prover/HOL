@@ -87,6 +87,7 @@ src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
 src/real
+!examples/misc
 src/prob
 !examples/muddy/muddyC
 !examples/muddy
