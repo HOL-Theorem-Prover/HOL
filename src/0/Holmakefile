@@ -7,6 +7,7 @@ FTAG_UID = $(dprot $(SIGOBJ)/FinalTag-sig.ui)
 FTERM_UID = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
 TAG_UID = $(dprot $(SIGOBJ)/Tag.ui)
 LIB_UID = $(dprot $(SIGOBJ)/Lib.ui)
+PORTABLE_UID = $(dprot $(SIGOBJ)/Portable.ui)
 
 
 Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID)
@@ -33,7 +34,7 @@ Thm-sig.uo: Thm-sig.sml $(LIB_UID)
 TheoryPP-sig.uo: TheoryPP-sig.sml
 	HOLMOSMLC -c -toplevel TheoryPP-sig.sml
 
-Theory-sig.uo: Theory-sig.sml
+Theory-sig.uo: Theory-sig.sml $(PORTABLE_UID)
 	HOLMOSMLC -c -toplevel Theory-sig.sml
 
 Definition-sig.uo: Definition-sig.sml
