@@ -31,7 +31,7 @@ Net.uo: Net.sml Term.uo Raw-sig.uo
 Thm-sig.uo: Thm-sig.sml $(LIB_UID)
 	HOLMOSMLC -c -toplevel Thm-sig.sml
 
-TheoryPP-sig.uo: TheoryPP-sig.sml
+TheoryPP-sig.uo: TheoryPP-sig.sml $(PORTABLE_UID)
 	HOLMOSMLC -c -toplevel TheoryPP-sig.sml
 
 Theory-sig.uo: Theory-sig.sml $(PORTABLE_UID)
