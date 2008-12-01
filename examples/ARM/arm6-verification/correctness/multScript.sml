@@ -387,7 +387,7 @@ val SLICE_BITS_THM = prove(
   `!h m l n. SLICE h l (BITS m 0 n) = SLICE (MIN h m) l n`,
   RW_TAC arith_ss [SLICE_THM,BITS_COMP_THM2,MIN_DEF]
     \\ `h = m` by DECIDE_TAC \\ ASM_REWRITE_TAC []);
-      
+
 val MULT_MOD_SUC_T = prove(
   `!t (a:word32) (b:word32).
             a * n2w (w2n b MOD 2 ** (2 * (t + 1))) =
@@ -752,7 +752,7 @@ val MLA_MUL_INVARIANT = Count.apply prove(
              pred_setTheory.NOT_IN_EMPTY],
       STRIP_TAC
         \\ `n <= w` by DECIDE_TAC
-        \\ PAT_ASSUM `n ==> P` IMP_RES_TAC
+        \\ PAT_ASSUM `nn ==> P` IMP_RES_TAC
         \\ ASM_SIMP_TAC arith_ss [NOT_DONE_SUC,BORROW2,
              GSYM io_onestepTheory.ADVANCE_COMP,ADD1]
         \\ POP_ASSUM (K ALL_TAC)
