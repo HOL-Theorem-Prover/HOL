@@ -1,0 +1,8 @@
+This is work-in-progress on a project to link an LTL semantics in
+HOL with a cone-of-influence reduction method verified in ACL2.
+
+Note that Holmake takes a long time due to a brute force metis proof
+of Lemma 2 (p 10 of Ray et al. Lemma 32, p 172 of Clarke et al.) in
+LTLScript.sml:
+
+(* runtime: 4978.813s,    gctime: 743.494s,     systime: 9.298s. *)
