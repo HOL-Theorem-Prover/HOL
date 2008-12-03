@@ -128,16 +128,16 @@ val unit_nattransf = store_thm
    SRW_TAC[][monad_def,nattransf_def,MMAP_def,FUN_EQ_THM]
   );
 
+
+
 val MMAP_2_functor = store_thm
   ("MMAP_2_functor",
    ``!unit bind.
       monad(unit,bind) ==>
       functor ((\:'a 'b. MMAP(unit,bind) o MMAP(unit,bind)) : ('M o 'M) functor)``,
    REPEAT STRIP_TAC
-   (* THEN MATCH_MP_TAC functor_o *)
-   THEN IMP_RES_TAC MMAP_functor
-   THEN IMP_RES_TAC functor_o
-   THEN FULL_SIMP_TAC bool_ss []
+   THEN HO_MATCH_MP_TAC functor_o
+   THEN ASM_SIMP_TAC bool_ss [MMAP_functor]
   );
 
 val MMAP_3_functor = store_thm

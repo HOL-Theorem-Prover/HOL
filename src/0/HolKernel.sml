@@ -444,6 +444,7 @@ local
     val name = dest_vartype(gen_tyvar())
   in fn (kd,rk) => trace ("Vartype Format Complaint",0) mk_vartype_opr(name, kd, rk)
   end
+  fun tyrator tm = fst (dest_tycomb tm)
 
 
   fun term_pmatch lconsts tyenv env vtm ctm (sofar as (insts,homs)) =
@@ -497,7 +498,7 @@ local
       end
 *)
     else if is_comb vtm then let
-        val vhop = repeat rator vtm
+        val vhop = repeat tyrator (repeat rator vtm)
       in
         if is_var vhop andalso not (HOLset.member(lconsts, vhop)) andalso
            not (in_dom_tm vhop env)
@@ -517,8 +518,7 @@ local
             term_pmatch lconsts tyenv env rv rc sofar'
           end
       end
-    else (* if is_tycomb vtm then *) let
-        fun tyrator tm = fst (dest_tycomb tm)
+    else if is_tycomb vtm then let
         val vhop = repeat tyrator vtm
       in
         if is_var vhop andalso not (HOLset.member(lconsts, vhop)) andalso
@@ -541,6 +541,7 @@ local
             term_pmatch lconsts tyenv env lv lc sofar'
           end
       end
+    else raise ERR "term_pmatch" "unrecognizable term"
 
 val get_type_kind_rank_insts = Term.get_type_kind_rank_insts
 
@@ -629,11 +630,39 @@ in
             term_homatch rkin kdins newtyins (newinsts, tl homs)
           end
       else if is_comb vtm then let
-          val (vhop, vargs) = strip_comb vtm
+          val (vtm0, vargs) = strip_comb vtm
+          val (vhop, vtyargs) = strip_tycomb vtm0
+          val _ = if not(null vtyargs) then print ("<<< vtyargs length=" ^ Int.toString(length vtyargs) ^ ">>>\n") else ()
           val afvs = free_varsl vargs
+          val aftyvs = type_varsl vtyargs
+          val _ = if not(null aftyvs) then print ("<<< aftyvs length=" ^ Int.toString(length aftyvs) ^ ">>>\n") else ()
           val inst_fn = inst (fst tyins) o inst_rank_kind rkin (fst kdins)
+          val ty_inst_fn = Type.type_subst (fst tyins) o Type.inst_rank_kind rkin (fst kdins)
+          fun determ {redex,residue} =
+                if not (is_var redex) orelse not (is_var residue) then NONE
+                else let val (nm1,ty1) = dest_var redex
+                         val (nm2,ty2) = dest_var residue
+                     in if nm1 <> nm2 then NONE
+                        else if is_vartype ty1
+                             then SOME (ty1 |-> ty2)
+                             else NONE
+                     end
+          val ty_insts = List.mapPartial determ insts
         in
           (let
+             val tyins1 =
+                 map (fn a =>
+                         (ty_inst_fn a |->
+                                  (find_residue_ty a tyenv
+                                   handle _ =>
+                                          find_residue_ty a (fst tyins)
+                                   handle _ =>
+                                          find_residue_ty a ty_insts
+                                   handle _ =>
+                                          if mem a tyavoids orelse mem a (snd tyins)
+                                          then a
+                                          else raise ERR "term_homatch" ""))) aftyvs
+             val _ = if not(null tyins1) then print ("<<< tyins1 length=" ^ Int.toString(length tyins1) ^ ">>>\n") else ()
              val tmins =
                  map (fn a =>
                          (inst_fn a |->
@@ -644,26 +673,36 @@ in
                                           if HOLset.member(lconsts, a)
                                           then a
                                           else raise ERR "term_homatch" ""))) afvs
+             val typats0 = map ty_inst_fn vtyargs
+             val typats = map (Type.type_subst tyins1) typats0
+             val _ = if not(null typats) then print ("<<< typats length=" ^ Int.toString(length typats) ^ ">>>\n") else ()
              val pats0 = map inst_fn vargs
              val pats = map (Term.subst tmins) pats0
              val vhop' = inst_fn vhop
-             val ictm = list_mk_comb(vhop', pats)
+             val ictm = list_mk_comb(list_mk_tycomb(vhop', typats), pats)
              val ni = let
-               val (chop,cargs) = strip_comb ctm
+               val (ctm0,cargs) = strip_comb ctm
+               val (chop,ctyargs) = if null typats then (ctm0,[]) else strip_tycomb ctm0
              in
-               if all_aconv cargs pats then
+               if all_abconv_ty ctyargs typats andalso all_aconv cargs pats then
                  if aconv chop vhop then insts
                  else safe_inserta (vhop |-> chop) insts
                else let
-                   val ginsts = map (fn p => (p |->
-                                                (if is_var p then p
-                                                 else genvar(type_of p))))
-                                    pats
-                   val ctm' = Term.subst ginsts ctm
+                   val gtyinsts = map (fn p => (p |->
+                                                  (if is_vartype p then p
+                                                   else gen_tyopvar(kind_of p,rank_of p))))
+                                      typats
+             val _ = if not(null gtyinsts) then print ("<<< gtyinsts length=" ^ Int.toString(length gtyinsts) ^ ">>>\n") else ()
+                   val ginsts   = map (fn p => (p |->
+                                                  (if is_var p then p
+                                                   else genvar(type_of p))))
+                                      pats
+                   val ctm' = Term.inst gtyinsts (Term.subst ginsts ctm)
+                   val gtyvs = map #residue gtyinsts
                    val gvs = map #residue ginsts
-                   val abstm = list_mk_abs(gvs,ctm')
+                   val abstm = list_mk_tyabs(gtyvs,list_mk_abs(gvs,ctm'))
                    val vinsts = safe_inserta (vhop |-> abstm) insts
-                   val icpair = (list_mk_comb(vhop',gvs) |-> ctm')
+                   val icpair = (list_mk_comb(list_mk_tycomb(vhop',gtyvs),gvs) |-> ctm')
                  in
                    icpair::vinsts
                  end
@@ -685,14 +724,19 @@ in
                        end
         end
       else (* if is_tycomb vtm then *) let
-          val (vhop, vargs) = strip_tycomb vtm
-          val aftvs = type_varsl vargs
+          val (vhop, vtyargs) = strip_tycomb vtm
+          val aftyvs = type_varsl vtyargs
           val inst_fn = inst (fst tyins) o inst_rank_kind rkin (fst kdins)
           val ty_inst_fn = Type.type_subst (fst tyins) o Type.inst_rank_kind rkin (fst kdins)
-          fun determ {redex,residue} = let val ty = type_of redex
-                                       in if is_vartype ty then SOME (ty |-> type_of residue)
-                                          else NONE
-                                       end
+          fun determ {redex,residue} =
+                if not (is_var residue) then NONE
+                else let val (nm1,ty1) = dest_var redex
+                         val (nm2,ty2) = dest_var residue
+                     in if nm1 <> nm2 then NONE
+                        else if is_vartype ty1
+                             then SOME (ty1 |-> ty2)
+                             else NONE
+                     end
           val ty_insts = List.mapPartial determ insts
         in
           (let
@@ -701,31 +745,33 @@ in
                          (ty_inst_fn a |->
                                   (find_residue_ty a tyenv
                                    handle _ =>
+                                          find_residue_ty a (fst tyins)
+                                   handle _ =>
                                           find_residue_ty a ty_insts
                                    handle _ =>
-                                          if mem a tyavoids
+                                          if mem a tyavoids orelse mem a (snd tyins)
                                           then a
-                                          else raise ERR "term_homatch" ""))) aftvs
-             val pats0 = map ty_inst_fn vargs
-             val pats = map (Type.type_subst tyins1) pats0
+                                          else raise ERR "term_homatch" ""))) aftyvs
+             val typats0 = map ty_inst_fn vtyargs
+             val typats = map (Type.type_subst tyins1) typats0
              val vhop' = inst_fn vhop
-             val ictm = list_mk_tycomb(vhop', pats)
+             val ictm = list_mk_tycomb(vhop', typats)
              val ni = let
-               val (chop,cargs) = strip_tycomb ctm
+               val (chop,ctyargs) = strip_tycomb ctm
              in
-               if all_abconv_ty cargs pats then
+               if all_abconv_ty ctyargs typats then
                  if aconv chop vhop then insts
                  else safe_inserta (vhop |-> chop) insts
                else let
-                   val ginsts = map (fn p => (p |->
-                                                (if is_vartype p then p
-                                                 else gen_tyopvar(kind_of p,rank_of p))))
-                                    pats
-                   val ctm' = Term.inst ginsts ctm
-                   val gvs = map #residue ginsts
-                   val tyabstm = list_mk_tyabs(gvs,ctm')
+                   val gtyinsts = map (fn p => (p |->
+                                                  (if is_vartype p then p
+                                                   else gen_tyopvar(kind_of p,rank_of p))))
+                                      typats
+                   val ctm' = Term.inst gtyinsts ctm
+                   val gtyvs = map #residue gtyinsts
+                   val tyabstm = list_mk_tyabs(gtyvs,ctm')
                    val vinsts = safe_inserta (vhop |-> tyabstm) insts
-                   val icpair = (list_mk_tycomb(vhop',gvs) |-> ctm')
+                   val icpair = (list_mk_tycomb(vhop',gtyvs) |-> ctm')
                  in
                    icpair::vinsts
                  end

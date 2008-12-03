@@ -1686,8 +1686,8 @@ local
         if is_vartype vhop andalso not (HOLset.member(lconsts, vhop)) andalso
            not (in_dom vhop env)
         then let (* kind_of and rank_of can fail if given an open type with free bound variables, as cty might be *)
-            val vkd = kind_of vty
-            val vrk = rank_of vty
+            val vkd = kd_of vty (map (kind_of o #redex  ) env)
+            val vrk = rk_of vty (map (rank_of o #redex  ) env)
             val ckd = kd_of cty (map (kind_of o #residue) env)
             val crk = rk_of cty (map (rank_of o #residue) env)
             val insts' = if vkd = ckd andalso vrk = crk then insts
@@ -1782,11 +1782,12 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
       if is_vartype vty then
         if eq_ty cty vty then homatch rkin kdins (insts, tl homs)
         else let
+            val vkd = kind_of vty (* kd_of vty (map (kind_of o #redex  ) env) *)
+            val vrk = rank_of vty (* rk_of vty (map (rank_of o #redex  ) env) *)
             val ckd = kd_of cty (map (kind_of o #residue) env)
             val crk = rk_of cty (map (rank_of o #residue) env)
-            val newrkin  = raw_match_rank (rank_of vty) crk rkin
-            val newkdins =
-                kdenv_safe_insert (kind_of vty |-> ckd) kdins
+            val newrkin  = raw_match_rank vrk crk rkin
+            val newkdins = kdenv_safe_insert (vkd |-> ckd) kdins
             val newinsts = (vty |-> cty)::insts
           in
             homatch newrkin newkdins (newinsts, tl homs)

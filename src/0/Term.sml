@@ -16,6 +16,8 @@ struct
 (*
 In *scratch*, type
 (hol-set-executable mosml-executable)
+or
+(hol-set-executable (concat hol-home "/bin/hol.bare"))
 and type Ctrl-j.
 
 loadPath := "/Users/palantir/hol/hol-omega/sigobj" :: !loadPath;
