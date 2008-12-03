@@ -420,7 +420,7 @@ val isPREFIX_DEF = store_thm(
   ``!s1 s2.
        isPREFIX s1 s2 =
        case (DEST_STRING s1, DEST_STRING s2)
-        of (NONE, u) -> T
+        of (NONE, _) -> T
         || (SOME __, NONE) -> F
         || (SOME(c1,t1),SOME(c2,t2)) -> (c1=c2) /\ isPREFIX t1 t2``,
   HO_MATCH_MP_TAC (theorem "isPREFIX_ind") THEN SRW_TAC [][]);

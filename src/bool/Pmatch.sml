@@ -197,26 +197,12 @@ fun vary vlist =
       val _ = counter := 0
       fun pass str =
          if Lib.mem str (!slist)
-         then (counter := !counter + 1; pass ("*v"^int_to_string(!counter)))
+         then (counter := !counter + 1; pass ("v"^int_to_string(!counter)))
          else (slist := str :: !slist; str)
   in
-    fn ty => mk_var(pass "*v", ty)
+    fn ty => mk_var(pass "v", ty)
   end
 end;
-
-fun defunk_string s = 
-  if String.isPrefix "*v" s
-     then String.extract(s,1,NONE)
-     else s;
-
-fun defunk tm = 
- case dest_term tm
-  of COMB(M,N) => mk_comb (defunk M, defunk N)
-   | LAMB(v,M) => mk_abs (defunk v, defunk M) 
-   | VAR (s,ty) => mk_var(defunk_string s,ty)
-   | CONST _ => tm;
- 
-fun defunk_conv tm = Thm.ALPHA tm (defunk tm);
 
 fun v_to_prefix (prefix, v::pats) = (v::prefix,pats)
   | v_to_prefix _ = raise ERR "mk_case" "v_to_prefix"
@@ -662,7 +648,7 @@ fun mk_functional thy eqs =
      val f  = if is_var f0 then f0 else mk_var(dest_const f0)
      val _  = map no_repeat_vars pats
      val rows = zip (map (fn x => ([],[x])) pats) (map GIVEN (enumerate R))
-     val fvs = free_varsl R
+     val fvs = free_varsl (L@R)
      val a = variant fvs (mk_var("a", type_of(Lib.trye hd pats)))
      val FV = a::fvs
      val range_ty = type_of (Lib.trye hd R)

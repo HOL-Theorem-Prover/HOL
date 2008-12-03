@@ -1044,13 +1044,6 @@ end;
 (* names from the final products of a definition.                            *)
 (*---------------------------------------------------------------------------*)
 
-val defunk = Pmatch.defunk;
-
-fun revise_bvars th = 
-  Conv.MAP_THM Pmatch.defunk_conv th 
-  handle e as HOL_ERR _ => 
-  (HOL_MESG "revise_bvars: failed to remove internal vars, continuing"; th);
-
 local fun is_constructor tm = not (is_var tm orelse is_pair tm)
 in
 fun non_wfrec_defn (facts,bind,eqns) =
@@ -1064,13 +1057,13 @@ fun non_wfrec_defn (facts,bind,eqns) =
         of NONE => raise ERR "non_wfrec_defn" "unexpected lhs in definition"
          | SOME tyinfo =>
            let val def = Prim_rec.new_recursive_definition
-                          {name=bind,def = defunk eqns,
+                          {name=bind,def = eqns,
                            rec_axiom = TypeBasePure.axiom_of tyinfo}
                val ind = TypeBasePure.induction_of tyinfo
            in PRIMREC{eqs = def, ind = ind, bind=bind}
            end
       end
-    else ABBREV {eqn=new_definition (bind, defunk eqns), bind=bind}
+    else ABBREV {eqn=new_definition (bind, eqns), bind=bind}
  end
 end;
 
@@ -1078,22 +1071,22 @@ fun mutrec_defn (facts,stem,eqns) =
  let val {rules, ind, SV, R,
           union as {rules=r,ind=i,aux,...},...} = mutrec facts stem eqns
      val union' = case aux
-      of NONE => STDREC{eqs = map revise_bvars r,
-                        ind = revise_bvars i,
-                        R = defunk R,
+      of NONE => STDREC{eqs = r,
+                        ind = i,
+                        R = R,
                         SV=SV, stem=unionStem stem}
       | SOME{rules=raux,ind=iaux} =>
-         NESTREC{eqs = map revise_bvars r,
-                 ind = revise_bvars i,
-                 R = defunk R,
+         NESTREC{eqs = r,
+                 ind = i,
+                 R = R,
                  SV=SV, stem=unionStem stem,
-                 aux=STDREC{eqs = map revise_bvars raux,
-                            ind = revise_bvars iaux,
-                            R = defunk R,
+                 aux=STDREC{eqs = raux,
+                            ind = iaux,
+                            R = R,
                             SV=SV,stem=auxStem stem}}
- in MUTREC{eqs = map revise_bvars rules, 
-           ind = revise_bvars ind, 
-           R = defunk R, SV=SV, stem=stem, union=union'}
+ in MUTREC{eqs = rules, 
+           ind = ind, 
+           R = R, SV=SV, stem=stem, union=union'}
  end
 
 
@@ -1101,12 +1094,12 @@ fun nestrec_defn (thy,(stem,stem'),wfrec_res,untuple) =
   let val {rules,ind,SV,R,aux_rules,aux_ind,...}
          = nestrec thy stem' wfrec_res
       val (rules', ind') = untuple (rules, ind)
-  in NESTREC {eqs = map revise_bvars rules', 
-              ind = revise_bvars ind', 
-              R = defunk R, SV=SV, stem=stem,
-              aux=STDREC{eqs = map revise_bvars aux_rules, 
-                         ind = revise_bvars aux_ind,
-                         R = defunk R, SV=SV, stem=auxStem stem'}}
+  in NESTREC {eqs = rules', 
+              ind = ind', 
+              R = R, SV=SV, stem=stem,
+              aux=STDREC{eqs = aux_rules, 
+                         ind = aux_ind,
+                         R = R, SV=SV, stem=auxStem stem'}}
   end;
 
 
@@ -1126,14 +1119,14 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
             val r2        = MATCH_MP (DISCH_ALL (LIST_CONJ r1)) Empty_thm
             val i2        = MATCH_MP (DISCH_ALL i1) Empty_thm
         in
-           NONREC {eqs = revise_bvars r2, 
-                   ind = revise_bvars i2, SV=SV, stem=stem}
+           NONREC {eqs = r2, 
+                   ind = i2, SV=SV, stem=stem}
         end handle HOL_ERR _ => raise ERR "stdrec_defn" "")
   | otherwise =>
         let val (rules', ind') = untuple (rules, ind)
-        in STDREC {eqs = map revise_bvars rules',
-                   ind = revise_bvars ind', 
-                   R = defunk R, SV=SV, stem=stem}
+        in STDREC {eqs = rules',
+                   ind = ind', 
+                   R = R, SV=SV, stem=stem}
         end
  end;
 

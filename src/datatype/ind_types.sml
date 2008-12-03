@@ -19,10 +19,8 @@ open HolKernel Parse boolLib InductiveDefinition
      numTheory arithmeticTheory prim_recTheory
      simpLib boolSimps ind_typeTheory;
 
-
 type constructor  = string * hol_type list
 type tyspec       = hol_type * constructor list
-
 
 val ERR = mk_HOL_ERR "ind_types";
 
@@ -31,7 +29,7 @@ structure Parse = struct
 open Parse
 val (Type,Term) = parse_from_grammars ind_typeTheory.ind_type_grammars
 end
-open Parse
+open Parse;
 
 (*---------------------------------------------------------------------------
    First some JRH HOL-Light portability stuff.
@@ -168,7 +166,7 @@ fun SCRUB_EQUATION eq th =
 val justify_inductive_type_model = let
   val aty = Type.alpha
   val T_tm = boolSyntax.T
-  and n_tm = Term`n:num`
+  and n_tm = mk_var("n",numSyntax.num)
 (*  and beps_tm = Term`@x:bool. T` *)
   and beps_tm = mk_arb bool
   fun munion [] s2 = s2
@@ -315,12 +313,11 @@ fun define_inductive_type cdefs exth = let
   val bij2b = TRANS bij2a bij2
 in
   (bij1,bij2b)
-end
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Defines a type constructor corresponding to current pseudo-constructor.   *)
 (* ------------------------------------------------------------------------- *)
-
 
 fun define_inductive_type_constructor defs consindex th = let
   val (avs,bod) = strip_forall(concl th)
@@ -347,7 +344,7 @@ fun define_inductive_type_constructor defs consindex th = let
                              mk_eq(deflf,rand(concl rexpth)))
 in
   TRANS defth (SYM rexpth)
-end
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Instantiate the induction theorem on the representatives to transfer      *)
@@ -372,7 +369,7 @@ fun instantiate_induction_theorem consindex ith = let
                    consindex' (zip preds args)
 in
   SPECL lambs ith
-end
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Reduce a single clause of the postulated induction theorem (old_ver) back *)
@@ -425,12 +422,11 @@ in
       DISCH asmquant (GENL avs th3)
     end
   end
-end
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Finish off a consequence of the induction theorem.                        *)
 (* ------------------------------------------------------------------------- *)
-
 
 fun finish_induction_conclusion consindex tybijpairs = let
   val (tybij1,tybij2) = unzip tybijpairs
@@ -479,13 +475,12 @@ fun derive_induction_theorem consindex tybijpairs conthms iith rth = let
   val th7 = UNDISCH_ALL th6
 in
   itlist SCRUB_EQUATION (hyp th7) th7
-end
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Create the recursive functions and eliminate pseudo-constructors.         *)
 (* (These are kept just long enough to derive the key property.)             *)
 (* ------------------------------------------------------------------------- *)
-
 
 fun create_recursive_functions tybijpairs consindex conthms rth = let
   val domtys = map (hd o snd o dest_type o type_of o snd o snd) consindex
@@ -541,20 +536,22 @@ fun create_recursive_functions tybijpairs consindex conthms rth = let
   val fxth8 = UNDISCH_ALL fxth7
 in
   itlist SCRUB_EQUATION (subtract (hyp fxth8) eqs) fxth8
-end
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Create a function for recursion clause.                                   *)
 (* ------------------------------------------------------------------------- *)
 
-fun SUBS ths = CONV_RULE (SUBS_CONV ths)
+fun SUBS ths = CONV_RULE (SUBS_CONV ths);
+
 fun upto n = let
   fun down l n = if n < 0 then l else down (n::l) (n - 1)
 in
   down [] n
-end
+end;
+
 local
-  val zty = Type`:'Z`
+  val zty = mk_vartype"'Z"
   val numty = numSyntax.num
   val s = mk_var("s",numty --> zty)
   fun extract_arg tup v =
@@ -604,18 +601,18 @@ in
       list_mk_abs([i,r,s],list_mk_comb(funarg,allargs))
     end
   end
-end
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Derive the recursion theorem.                                             *)
 (* ------------------------------------------------------------------------- *)
 
 val EXISTS_EQUATION =
-    let val pth = prove
-     (--`!P t. (!x:'a. (x = t) ==> P x) ==> $? P`--,
+    let val pth = Q.prove
+     (`!P t. (!x:'a. (x = t) ==> P x) ==> $? P`,
       REPEAT GEN_TAC THEN DISCH_TAC THEN
-      SUBST1_TAC(SYM (ETA_CONV (--`\x. (P:'a->bool) x`--))) THEN
-      EXISTS_TAC (--`t:'a`--) THEN FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC)
+      SUBST1_TAC(SYM (ETA_CONV ``\x. (P:'a->bool) x``)) THEN
+      EXISTS_TAC ``t:'a`` THEN FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC)
     in fn tm => fn th =>
         let val (l,r) = dest_eq tm
             val P = mk_abs(l,concl th)
@@ -627,9 +624,15 @@ val EXISTS_EQUATION =
         end
     end;
 
-val bndvar = Term.bvar
+val bndvar = Term.bvar;
+
 local
   val CCONV = funpow 3 RATOR_CONV (REPEATC (GEN_REWRITE_CONV I [FCONS]))
+(*  val mycompset = reduceLib.num_compset()
+  val _ = computeLib.add_thms[FCONS_DEST] mycompset
+  val fcons_reduce = computeLib.CBV_CONV mycompset
+  val CCONV1 = funpow 3 RATOR_CONV fcons_reduce
+*)
 in
   fun  derive_recursion_theorem tybijpairs consindex conthms rath = let
     val isocons = map (create_recursion_iso_constructor consindex) conthms
@@ -705,7 +708,7 @@ fun define_type_raw def = let
   val kth = derive_recursion_theorem tybijpairs consindex conthms rath
 in
   (fth,kth)
-end
+end;
 
 (* Test the above with:
 
@@ -889,7 +892,7 @@ in
       GENL xvs hth
     end
   end
-end
+end;
 
 fun define_type_mutual def = let
   val (ith,rth) = define_type_raw def
@@ -919,8 +922,6 @@ end
      and a = mk_vartype("asdf") in
      [(q, [("G1", [`:num`]); ("G2", [a])]); (a, [("H1", []); ("H2", [q])])];;
    define_type_mutual def;;
-
-
 
 *)
 
@@ -994,7 +995,7 @@ fun lift_type_bijections iths cty =
              else raise ERR "lift_type_bijections"
                       ("Unexpected type operator \""^tycon^"\"")
           end
- end
+ end;
 
 (* ------------------------------------------------------------------------- *)
 (* Prove isomorphism of nested types where former is the smaller.            *)
@@ -1004,7 +1005,7 @@ val T_tm = boolSyntax.T
 
 val DE_EXISTENTIALIZE_RULE = let
   val pth = prove(
-    Term`$? P ==> (c:'a = $@ P) ==> P c`,
+    ``$? P ==> (c:'a = $@ P) ==> P c``,
     CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV (GSYM ETA_AX)))) THEN
     DISCH_TAC THEN DISCH_THEN SUBST1_TAC THEN
     MATCH_MP_TAC SELECT_AX THEN POP_ASSUM ACCEPT_TAC)
@@ -1022,7 +1023,7 @@ val DE_EXISTENTIALIZE_RULE = let
     end
 in
   DE_EXISTENTIALIZE_RULE
-end
+end;
 
 val grab_type = type_of o rand o lhand o snd o strip_forall;;
 
@@ -1171,7 +1172,7 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
   val cth6 = end_itlist CONJ cths5
 in
   (cth6,CONJ sth0 sth1)
-end
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Define nested type by doing a 1-level unwinding.                          *)
@@ -1213,7 +1214,6 @@ val ISO_USAGE_RULE = MATCH_MP ISO_USAGE;
 val SIMPLE_ISO_EXPAND_RULE = CONV_RULE(REWR_CONV ISO);
 
 fun REWRITE_FUN_EQ_RULE thl = SIMP_RULE bool_ss (FUN_EQ_THM::thl)
-
 
 fun get_nestedty_info tyname =
   let fun hol98_to_jrh_ind ind0 =
@@ -1477,6 +1477,7 @@ local
         (n,ith6,rth6)
       end
     end
+
   fun remove_intermediate_junk () = let
     val cs = Theory.constants (current_theory())
     fun is_substring s1 s2 = let
@@ -1526,7 +1527,7 @@ val define_type_nested = fn def =>
      recursion = canonicalise_tyvars def rth1} before
     remove_intermediate_junk()
   end
-end
+end;
 
 fun define_type d =
   define_type_nested d

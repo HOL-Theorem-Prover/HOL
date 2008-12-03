@@ -15,7 +15,4 @@ sig
 
    val mk_functional : thry -> term -> {functional:term, pats: pattern list}
 
-   val defunk_string : string -> string
-   val defunk        : term -> term
-   val defunk_conv   : term -> thm
 end

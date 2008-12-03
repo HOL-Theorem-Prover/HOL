@@ -261,6 +261,8 @@ fun to_tyspecs ASTs =
   end
 end;
 
+fun tyspecs_of q = to_tyspecs (ParseDatatype.parse q);
+
 val new_asts_datatype  = define_type o to_tyspecs;
 fun new_datatype q     = new_asts_datatype (ParseDatatype.parse q);
 
