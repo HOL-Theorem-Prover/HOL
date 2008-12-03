@@ -265,7 +265,7 @@ val BISIM_EQ_def =
 *)
         (!s0. s0 IN M.S0 ==> ?s0'. s0' IN M'.S0 /\ B(s0,s0'))
         /\ 
-(* s0  below is (c-bisimilar-initial-state-witness-n->m M s0' M' vars) *)
+(* s0  below is (c-bisimilar-initial-state-witness-n->m M s0' M' vars) 
    see theorems
    c-bisimilar-equiv-implies-init->init-n->m
    (says s0 is an initial state of M)
