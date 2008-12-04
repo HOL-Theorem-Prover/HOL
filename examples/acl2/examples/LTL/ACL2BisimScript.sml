@@ -9,8 +9,7 @@
 
 (*  Commands when run interactively:
 quietdec := true;                                    (* Switch off output    *)
-loadPath := "../../ml" :: (!loadPath);
-map load 
+map load
  ["pred_setLib","stringLib","finite_mapTheory","LTLTheory","sexpTheory"];
 open
  pred_setTheory stringLib finite_mapTheory LTLTheory sexpTheory;
@@ -21,7 +20,7 @@ quietdec := false;                                   (* Restore output       *)
 (* Boilerplate needed for compilation                                        *)
 (*****************************************************************************)
 
-open HolKernel Parse boolLib bossLib pred_setTheory LTLTheory;
+open HolKernel Parse boolLib bossLib pred_setTheory LTLTheory sexpTheory
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -35,7 +34,7 @@ open HolKernel Parse boolLib bossLib pred_setTheory LTLTheory;
 val _ = new_theory "ACL2Bisim";
 
 
-(* 
+(*
 Instantiate general Kripke structure to have states as sexp and
 propositions as strings
 *)
