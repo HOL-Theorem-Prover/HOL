@@ -16,7 +16,7 @@
 
 (*  Commands when run interactively:
 quietdec := true;                                    (* Switch off output    *)
-map load 
+map load
  ["pred_setLib","stringLib","finite_mapTheory"];
 open
  pred_setTheory stringLib finite_mapTheory;
@@ -68,7 +68,7 @@ val formula_def =
 
 (******************************************************************************
 * A Kripke structure is a 4-tuple (S,R,L,S0) represented as a record:
-* 
+*
 *  - S  : 'state set              a set of states
 *  - R  : ('state # 'state) set   a transition relation
 *  - L  : 'state -> 'prop set     maps a state to the true propositions in it
@@ -91,7 +91,7 @@ val _ = hide "S";
 ******************************************************************************)
 val model_def =
  Hol_datatype
-  `model = 
+  `model =
     <| S: 'state set; (* list of states, where: *)
                       (* each state is a record mapping symbols (props) to T or NIL *)
        R: ('state # 'state) set; (* record mapping each state to a list of states *)
@@ -136,15 +136,15 @@ val MODEL_def =
 (******************************************************************************
 * PATH M s p is true iff p is a path of model M starting from s
 ******************************************************************************)
-val PATH_def = 
- Define 
+val PATH_def =
+ Define
   `PATH M s p = (p 0 = s) /\ !i. M.R(p(i),p(i+1))`;
 
 (******************************************************************************
 * SUFFIX p in is the ith suffix of p
 ******************************************************************************)
-val SUFFIX_def = 
- Define 
+val SUFFIX_def =
+ Define
   `SUFFIX p i = \j. p(i+j)`;
 
 (******************************************************************************
@@ -173,9 +173,9 @@ val SEM_def =
    (SEM M p (UNTIL f1 f2) =
       ?i. SEM M (SUFFIX p i) f2 /\ !j. j < i ==> SEM M (SUFFIX p j) f1)
    /\
-   (SEM M p (WEAK_UNTIL f1 f2) = 
+   (SEM M p (WEAK_UNTIL f1 f2) =
      (?i. SEM M (SUFFIX p i) f2 /\ !j. j < i ==> SEM M (SUFFIX p j) f1)
-     \/ 
+     \/
      !i. SEM M (SUFFIX p i) f1)`;
 
 (* M |= f *)
@@ -194,8 +194,8 @@ val BISIM_def =
 (* The following is by c-bisimilar-states-have-labels-equal *)
            (M.L s = M'.L s')
            /\
-           (!s1. s1 IN M.S /\ M.R(s,s1) 
-                 ==> 
+           (!s1. s1 IN M.S /\ M.R(s,s1)
+                 ==>
 (* Witness s1' as (c-bisimilar-transition-witness-m->n s s1 M s' M' vars)
    and this works by theorems
    c-bisimilar-witness-member-of-states-m->n
@@ -206,8 +206,8 @@ val BISIM_def =
 *)
                  ?s1'. s1' IN M'.S /\ M'.R(s',s1') /\ B(s1,s1'))
            /\
-           (!s1'. s1' IN M'.S /\ M'.R(s',s1') 
-                 ==> 
+           (!s1'. s1' IN M'.S /\ M'.R(s',s1')
+                 ==>
 (* Witness s1 as (c-bisimilar-transition-witness-n->m s M s' s1' M' vars)
    and this works by theorems
    c-bisimilar-witness-member-of-states-n->m
@@ -248,13 +248,13 @@ Here is what we called BISIM0: A particular bisimilarity relation:
 (* corresponds to (c-bisim-equiv M M' vars) *)
 val BISIM_EQ_def =
  Define
-  `BISIM_EQ M M' = 
+  `BISIM_EQ M M' =
     ?B. BISIM M M' B
 (* This particular B will be
    \(s,s'). (circuit-bisim s M s' M' vars)
    for our particular M, M', and (somehow) vars
 *)
-        /\ 
+        /\
 (* s0' below is (c-bisimilar-initial-state-witness-m->n s0 M M' vars);
    see theorems
    c-bisimilar-equiv-implies-init->init-m->n
@@ -264,8 +264,8 @@ val BISIM_EQ_def =
    (says (s0,s0') IN B)
 *)
         (!s0. s0 IN M.S0 ==> ?s0'. s0' IN M'.S0 /\ B(s0,s0'))
-        /\ 
-(* s0  below is (c-bisimilar-initial-state-witness-n->m M s0' M' vars) 
+        /\
+(* s0  below is (c-bisimilar-initial-state-witness-n->m M s0' M' vars)
    see theorems
    c-bisimilar-equiv-implies-init->init-n->m
    (says s0 is an initial state of M)
@@ -275,23 +275,23 @@ val BISIM_EQ_def =
 *)
         (!s0'. s0' IN M'.S0 ==> ?s0. s0 IN M.S0 /\ B(s0,s0'))`;
 
-(* Preparation for Lemma 1, p 10 of Ray et al. 
-   Lemma 31, p 172 of Clarke et al. 
+(* Preparation for Lemma 1, p 10 of Ray et al.
+   Lemma 31, p 172 of Clarke et al.
 *)
 val Lemma1a =
  prove
   (``!M M' B.
       MODEL M /\ MODEL M' /\ BISIM M M' B
       ==>
-      !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s') 
+      !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
       ==> !p. PATH M s p ==> ?p'. PATH M' s' p' /\ !i. B(p i, p' i)``,
    RW_TAC std_ss [IN_DEF,PATH_def]
-    THEN Q.EXISTS_TAC `PRIM_REC s' (\t n. @t'. M'.R(t,t') /\ B(p(n+1),t'))`    
+    THEN Q.EXISTS_TAC `PRIM_REC s' (\t n. @t'. M'.R(t,t') /\ B(p(n+1),t'))`
     THEN SIMP_TAC std_ss [prim_recTheory.PRIM_REC_THM,GSYM FORALL_AND_THM]
     THEN Induct
     THEN FULL_SIMP_TAC pure_ss [DECIDE ``n + 1 = SUC n``,PATH_def]
     THEN RW_TAC pure_ss [prim_recTheory.PRIM_REC_THM]
-    THEN FULL_SIMP_TAC pure_ss 
+    THEN FULL_SIMP_TAC pure_ss
           (map (SIMP_RULE std_ss [IN_DEF]) [MODEL_def,BISIM_def,PATH_def])
     THEN METIS_TAC[]);
 
@@ -300,16 +300,16 @@ val Lemma1b =
  prove
   (``MODEL M /\ MODEL M' /\ BISIM M M' B
      ==>
-     !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s') 
+     !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
             ==> !p'. PATH M' s' p' ==> ?p. PATH M s p /\ !i. B(p i, p' i)``,
    RW_TAC std_ss [IN_DEF]
-    THEN Q.EXISTS_TAC `PRIM_REC s (\t n. @t'. M.R(t,t') /\ B(t',p'(n+1)))`    
-    THEN SIMP_TAC std_ss 
+    THEN Q.EXISTS_TAC `PRIM_REC s (\t n. @t'. M.R(t,t') /\ B(t',p'(n+1)))`
+    THEN SIMP_TAC std_ss
           [PATH_def,prim_recTheory.PRIM_REC_THM,GSYM FORALL_AND_THM]
     THEN Induct
     THEN FULL_SIMP_TAC pure_ss [DECIDE ``n + 1 = SUC n``,PATH_def]
     THEN RW_TAC pure_ss [prim_recTheory.PRIM_REC_THM]
-    THEN FULL_SIMP_TAC pure_ss 
+    THEN FULL_SIMP_TAC pure_ss
           (map (SIMP_RULE std_ss [IN_DEF]) [MODEL_def,BISIM_def,PATH_def])
     THEN METIS_TAC[]);
 *)
@@ -327,32 +327,32 @@ val Lemma1b =
   (``!M M' B.
       MODEL M /\ MODEL M' /\ BISIM M M' B
        ==>
-       !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s') 
+       !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
               ==> !p'. PATH M' s' p' ==> ?p. PATH M s p /\ !i. B(p i, p' i)``,
     METIS_TAC
      [BISIM_SYM,
        pairLib.GEN_BETA_RULE
         (ISPECL
-          [``M':('a, 'c) model``, ``M:('a, 'b) model``, 
+          [``M':('a, 'c) model``, ``M:('a, 'b) model``,
            ``\(x,y). (B:'b # 'c -> bool)(y,x)``]
           Lemma1a)]);
 
 (* Lemma 1, p 10 of Ray et al. Lemma 31, p 172 of Clarke et al. *)
-val Lemma1 = 
+val Lemma1 =
  time store_thm
   ("Lemma1",
     ``!M M' B.
        MODEL M /\ MODEL M' /\ BISIM M M' B
         ==>
         !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
-               ==> 
+               ==>
                (!p. PATH M s p ==> ?p'. PATH M' s' p' /\ !i. B(p i, p' i))
                /\
                (!p'. PATH M' s' p' ==> ?p. PATH M s p /\ !i. B(p i, p' i))``,
    METIS_TAC[Lemma1a,Lemma1b]);
 
-(* Preparation for Lemma  2, p 10 of Ray et al. 
-   Lemma 32, p 172 of Clarke et al. 
+(* Preparation for Lemma  2, p 10 of Ray et al.
+   Lemma 32, p 172 of Clarke et al.
 *)
 val BISIM_SUFFIX =
  store_thm
@@ -380,24 +380,41 @@ val PATH_SUFFIX_IN =
     THEN METIS_TAC[]);
 
 (* Lemma  2, p 10 of Ray et al. Lemma 32, p 172 of Clarke et al. *)
-(* runtime: 4978.813s,    gctime: 743.494s,     systime: 9.298s. *)
+(* runtime: 68.400s,    gctime: 4.364s,     systime: 0.128s. *)
 val Lemma2 =
   time store_thm
   ("Lemma2",
    ``!M M' B.
       MODEL M /\ MODEL M' /\ BISIM M M' B
        ==>
-       !f s s'. s IN M.S /\ s' IN M'.S /\ B(s,s') 
+       !f s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
                 ==>  !p p'. PATH M s p /\ PATH M' s' p' /\ (!i. B(p i, p' i))
                             ==> (SEM M p f = SEM M' p' f)``,
    REPEAT GEN_TAC
-    THEN SIMP_TAC std_ss [IN_DEF]
+    THEN SIMP_TAC std_ss []
     THEN STRIP_TAC
     THEN Induct
     THEN RW_TAC std_ss [SEM_def]
-    THEN METIS_TAC
-          [IN_DEF,MODEL_def,BISIM_def,PATH_def,BISIM_SUFFIX,
-           PATH_SUFFIX,PATH_SUFFIX_IN]);
+    THENL
+     [METIS_TAC [BISIM_def, PATH_def],
+      METIS_TAC [],
+      METIS_TAC [],
+      METIS_TAC [],
+      `!i. p i IN M.S /\ p' i IN M'.S`
+        by METIS_TAC [PATH_def, MODEL_def, SPECIFICATION]
+      THEN METIS_TAC [PATH_SUFFIX,BISIM_SUFFIX],
+      `!i. p i IN M.S /\ p' i IN M'.S`
+        by METIS_TAC [PATH_def, MODEL_def, SPECIFICATION]
+      THEN METIS_TAC [PATH_SUFFIX,BISIM_SUFFIX],
+      `!i. p i IN M.S /\ p' i IN M'.S`
+        by METIS_TAC [PATH_def, MODEL_def, SPECIFICATION]
+      THEN METIS_TAC [PATH_SUFFIX,BISIM_SUFFIX],
+      `!i. p i IN M.S /\ p' i IN M'.S`
+        by METIS_TAC [PATH_def, MODEL_def, SPECIFICATION]
+      THEN METIS_TAC [PATH_SUFFIX,BISIM_SUFFIX],
+      `!i. p i IN M.S /\ p' i IN M'.S`
+        by METIS_TAC [PATH_def, MODEL_def, SPECIFICATION]
+      THEN METIS_TAC [PATH_SUFFIX,BISIM_SUFFIX]]);
 
 (* Theorem 1, p 10 of Ray et al. Theorem 14, p 175 of Clarke et al. *)
 val Theorem1 =
@@ -409,14 +426,14 @@ val Theorem1 =
     THEN RW_TAC std_ss []
     THEN RES_TAC
     THENL
-     [`s0 IN M.S /\ (p 0) IN M'.S` 
+     [`s0 IN M.S /\ (p 0) IN M'.S`
        by METIS_TAC[IN_DEF,pred_setTheory.SUBSET_DEF,MODEL_def]
-       THEN `!p'. PATH M' (p 0) p' ==> ?p. PATH M s0 p /\ !i. B (p i,p' i)` 
+       THEN `!p'. PATH M' (p 0) p' ==> ?p. PATH M s0 p /\ !i. B (p i,p' i)`
         by METIS_TAC[Lemma1]
        THEN RES_TAC
        THEN `SEM M p' f` by METIS_TAC[PATH_def]
        THEN METIS_TAC[Lemma2,IN_DEF],
-      `s0' IN M'.S /\ (p 0) IN M.S` 
+      `s0' IN M'.S /\ (p 0) IN M.S`
         by METIS_TAC[IN_DEF,pred_setTheory.SUBSET_DEF,MODEL_def]
        THEN `?p'. PATH M' s0' p' /\ !i. B (p i,p' i)` by METIS_TAC[Lemma1]
        THEN RES_TAC
