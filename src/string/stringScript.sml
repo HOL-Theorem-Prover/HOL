@@ -517,6 +517,7 @@ val _ =
     :: MLSIG "val string_lt : string -> string -> bool"
     :: MLSIG "val IMPLODE : char list -> string"
     :: MLSIG "val EXPLODE : string -> char list"
+    :: MLSIG "val STRLEN : string -> num"
     :: MLSTRUCT "type char = Char.char;"
     :: MLSTRUCT "type string = String.string;"
     :: MLSTRUCT "fun CHR n = Char.chr(valOf(Int.fromString(numML.toDecString n)));"
