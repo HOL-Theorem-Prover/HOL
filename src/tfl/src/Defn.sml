@@ -1040,8 +1040,7 @@ fun pairf (stem,eqs0) =
 end;
 
 (*---------------------------------------------------------------------------*)
-(* Following two functions used to eliminate internal variables with funky   *)
-(* names from the final products of a definition.                            *)
+(* Abbreviation or prim. rec. definitions.                                   *)
 (*---------------------------------------------------------------------------*)
 
 local fun is_constructor tm = not (is_var tm orelse is_pair tm)
@@ -1087,8 +1086,7 @@ fun mutrec_defn (facts,stem,eqns) =
  in MUTREC{eqs = rules, 
            ind = ind, 
            R = R, SV=SV, stem=stem, union=union'}
- end
-
+ end;
 
 fun nestrec_defn (thy,(stem,stem'),wfrec_res,untuple) =
   let val {rules,ind,SV,R,aux_rules,aux_ind,...}
@@ -1101,7 +1099,6 @@ fun nestrec_defn (thy,(stem,stem'),wfrec_res,untuple) =
                          ind = aux_ind,
                          R = R, SV=SV, stem=auxStem stem'}}
   end;
-
 
 fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
  let val {rules,R,SV,full_pats_TCs,...} = stdrec facts stem' wfrec_res
@@ -1378,9 +1375,10 @@ fun mk_defns stems eqnsl =
      fun mk_defn_theta stem eqns = 
        let val Vs = lhs_atoms eqns
            val def = mk_defn stem eqns
-           val Cs = mk_set (map (head o lhs o snd o strip_forall o concl)
-                                (eqns_of def))
-           val theta = map (fn (x,y) => x |-> y) (zip Vs Cs)
+           val Cs = mk_set (map (head o lhs o snd o strip_forall)
+                                (flatten 
+                                   (map (strip_conj o concl) (eqns_of def))))
+           val theta = map2 (curry (op |->)) Vs Cs
        in (def, theta)
        end
     (*----------------------------------------------------------------------*)

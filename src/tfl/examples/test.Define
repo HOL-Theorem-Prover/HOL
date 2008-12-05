@@ -815,8 +815,12 @@ multiDefine
    (odd 0 = F) /\ 
    (odd (SUC n) = even n)`;
 
+multiDefine 
+  `(example 1 = F) /\
+   (example 2 = T)`;
+
 (*---------------------------------------------------------------------------*)
-(* Bug from mjcg. ZIP_DELTA gives funky result.                              *)
+(* Bug from mjcg. ZIP_DELTA gave funky result.                               *)
 (*---------------------------------------------------------------------------*)
 
 val LOOKUP_def =
