@@ -524,28 +524,22 @@ val ELL = new_recursive_definition
 (*              where P xk = F and P xi = T for i = k+1,...,n-1 *)
 (*--------------------------------------------------------------*)
 
-val IS_PREFIX =
-    let val lemma = prove(
-       (--`?fn. (!l:'a list. fn l [] = T) /\
-        (!x (l:'a list). fn [] (CONS x l) = F) /\
-        (!(x1:'a) l1 (x2:'a) l2  . fn (CONS x1 l1) (CONS x2 l2) =
-            (x1 = x2) /\ (fn l1 l2))`--),
-        let val th = prove_rec_fn_exists list_Axiom
-            (--`(fn l [] = T) /\
-             (fn (l:'a list) (CONS x t) =
-                (if (NULL l) then F else (((HD l) = x) /\ (fn (TL l) t))))`--)
-        in
-        STRIP_ASSUME_TAC th THEN EXISTS_TAC (--`fn:'a list -> 'a list -> bool`--)
-        THEN ASM_REWRITE_TAC[HD,TL,NULL_DEF]
-        end)
-   in
-    Rsyntax.new_specification
-        {consts = [{const_name = "IS_PREFIX", fixity = Prefix}],
-         name = "IS_PREFIX",
-         sat_thm = lemma
-        }
-   end;
+val _ = overload_on ("IS_PREFIX", ``\x y. isPREFIX y x``)
+val _ = remove_ovl_mapping "<<=" {Name="isPREFIX", Thy = "list"}
+val _ = overload_on ("<<=", ``\x y. isPREFIX x y``)
+(* second call makes the infix the preferred printing form *)
 
+val IS_PREFIX = save_thm("IS_PREFIX",
+  let val [c1,c2,c3] = CONJUNCTS listTheory.isPREFIX_THM
+  in
+      LIST_CONJ [GEN ``l:'a list`` c1,
+                 (CONV_RULE (RENAME_VARS_CONV ["x", "l"]) o
+                  GENL [``h:'a``, ``t:'a list``]) c2,
+                 (CONV_RULE (RENAME_VARS_CONV ["x1", "l1", "x2", "l2"]) o
+                  GENL [``h2:'a``, ``t2:'a list``, ``h1:'a``, ``t1:'a list``] o
+                  CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])))
+                 c3]
+  end)
 
 (*---------------------------------------------------------------*)
 
@@ -3228,7 +3222,6 @@ val _ = computeLib.add_persistent_funs
   ("ELL_compute", ELL_compute),
   ("FIRSTN_compute", FIRSTN_compute),
   ("GENLIST_compute", GENLIST_compute),
-  ("IS_PREFIX", IS_PREFIX),
   ("IS_SUBLIST", IS_SUBLIST),
   ("IS_SUFFIX_compute", IS_SUFFIX_compute),
   ("LASTN_compute", LASTN_compute),

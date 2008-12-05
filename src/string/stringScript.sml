@@ -408,13 +408,6 @@ val STRLEN_CAT = save_thm("STRLEN_CAT", stringinst LENGTH_APPEND)
        Is one string a prefix of another?
  ---------------------------------------------------------------------------*)
 
-val isPREFIX_def = Define`
-  (isPREFIX "" s = T) /\
-  (isPREFIX (STRING c1 s1) "" = F) /\
-  (isPREFIX (STRING c1 s1) (STRING c2 s2) = (c1 = c2) /\ isPREFIX s1 s2)
-`;
-val _ = export_rewrites ["isPREFIX_def"]
-
 val isPREFIX_DEF = store_thm(
   "isPREFIX_DEF",
   ``!s1 s2.
@@ -423,7 +416,7 @@ val isPREFIX_DEF = store_thm(
         of (NONE, _) -> T
         || (SOME __, NONE) -> F
         || (SOME(c1,t1),SOME(c2,t2)) -> (c1=c2) /\ isPREFIX t1 t2``,
-  HO_MATCH_MP_TAC (theorem "isPREFIX_ind") THEN SRW_TAC [][]);
+  Cases_on `s1` THEN Cases_on `s2` THEN SRW_TAC [][]);
 
 val isPREFIX_IND = Q.store_thm
 ("isPREFIX_IND",
@@ -437,7 +430,8 @@ val isPREFIX_IND = Q.store_thm
 val isPREFIX_STRCAT = Q.store_thm
 ("isPREFIX_STRCAT",
  `!s1 s2. isPREFIX s1 s2 = ?s3. s2 = STRCAT s1 s3`,
- recInduct (theorem "isPREFIX_ind") THEN SRW_TAC [][] THEN PROVE_TAC []);
+ Induct THEN SRW_TAC [][] THEN Cases_on `s2` THEN SRW_TAC [][] THEN
+ PROVE_TAC []);
 
 (*---------------------------------------------------------------------------
        Orderings

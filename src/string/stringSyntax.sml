@@ -49,7 +49,7 @@ val string_case_tm = inst [beta |-> alpha]
                           (stri (prim_mk_const{Name="list_case", Thy="list"}))
 val strlen_tm      = stri (prim_mk_const{Name="LENGTH",    Thy="list"})
 val strcat_tm      = stri (prim_mk_const{Name="APPEND",    Thy="list"})
-val isprefix_tm    = prim_mk_const{Name="isPREFIX",    Thy="string"};
+val isprefix_tm    = stri (prim_mk_const{Name="isPREFIX",  Thy="list"});
 
 val mk_implode = C (with_exn (curry mk_comb implode_tm)) (ERR "mk_implode" "")
 val mk_explode = C (with_exn (curry mk_comb explode_tm)) (ERR "mk_explode" "")
