@@ -7,8 +7,6 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  should run with "hol -I .."
-
   app load ["my_listTheory", "io_onestepTheory", "armTheory", "coreTheory",
             "lemmasTheory", "coprocessorTheory", "multTheory", "blockTheory",
             "wordsLib", "iclass_compLib", "armLib", "pred_setSimps"];
@@ -870,7 +868,7 @@ val NON_MEMOPS = Count.apply prove(
           SNEXT_def,ADVANCE_def,PROJ_DATA_def,TL,numeral_funpow]
     \\ REPEAT (PAT_ABBREV_TAC `s = NEXT_ARM6 a b`)
     \\ RULE_ASSUM_TAC (REWRITE_RULE [DECIDE ``~(a /\ b) = ~a \/ ~b``])
-    \\ REPEAT (PAT_ASSUM `Abbrev (q = NEXT_ARM6 (ARM6 dp ctrl) inp)` MP_TAC
+    \\ REPEAT (PAT_ASSUM `Abbrev (q = NEXT_ARM6 (ARM6 dp ctrl) input)` MP_TAC
            \\ ASM_SIMP_TAC (booli_ss++pairSimps.PAIR_ss++MRS_MSR_ss++BR_ss++
                   DATA_PROC_ss++REG_SHIFT_ss++SWI_EX_ss++UNEXEC_ss++PBETA_ss)
                 [SND_COND_RAND,FST_COND_RAND,REGVAL_lem2,WORD_NEQS]
@@ -929,7 +927,7 @@ val NON_MEMOPS_UNEXEC = Count.apply prove(
           SNEXT_def,ADVANCE_def,numeral_funpow]
     \\ REPEAT (PAT_ABBREV_TAC `s = NEXT_ARM6 a b`)
     \\ IMP_RES_TAC NOT_RESET_EXISTS
-    \\ REPEAT (PAT_ASSUM `Abbrev (q = NEXT_ARM6 (ARM6 dp ctrl) inp)` MP_TAC
+    \\ REPEAT (PAT_ASSUM `Abbrev (q = NEXT_ARM6 (ARM6 dp ctrl) input)` MP_TAC
          \\ ASM_SIMP_TAC (booli_ss++SWI_EX_ss++UNEXEC_ss++pairSimps.PAIR_ss++
               PBETA_ss) [SND_COND_RAND,FST_COND_RAND,WORD_NEQS]
          \\ TRY ALU_ABBREV_TAC \\ TRY PSR_ABBREV_TAC \\ STRIP_TAC
@@ -989,7 +987,7 @@ val BASIC_MEMOPS = Count.apply prove(
           PROJ_DATA_def,MOVE_DOUT_def,SNEXT_def,ADVANCE_def,numeral_funpow]
     \\ REPEAT (PAT_ABBREV_TAC `s = NEXT_ARM6 a b`)
     \\ FULL_SIMP_TAC bossLib.std_ss []
-    \\ REPEAT (PAT_ASSUM `Abbrev (q = NEXT_ARM6 (ARM6 dp ctrl) inp)` MP_TAC
+    \\ REPEAT (PAT_ASSUM `Abbrev (q = NEXT_ARM6 (ARM6 dp ctrl) input)` MP_TAC
          \\ ASM_SIMP_TAC (booli_ss++pairSimps.PAIR_ss++SWP_ss++LDR_ss++
                 STR_ss++ARITH_ss++UNEXEC_ss++PBETA_ss)
                [SND_COND_RAND,FST_COND_RAND]
@@ -1162,7 +1160,9 @@ fun PAT_TAC (asl, w) =
   let val g = (snd o strip_comb o snd o dest_comb o snd o hd o snd o
                TypeBase.dest_record o rhs o snd o dest_comb o fst o dest_imp) w
   in
-    (MAP_EVERY (fn x => ABBREV_TAC `x = ^(List.nth(g,x))` \\ POP_LAST_TAC)
+    (MAP_EVERY (fn x => let val t = List.nth(g,x)
+                            val g = genvar (type_of t) in
+                   (ABBREV_TAC `^g = ^t` \\ POP_LAST_TAC) end)
                [6,16,17,18,19,20,21,34,35,36,37]) (asl, w)
   end;
 
@@ -1177,7 +1177,7 @@ val state_inp_simp =
    ``<| state := x.state; inp := x.inp |> = x``;
 
 local
-  fun tac ss = PAT_ASSUM `Abbrev (q = NEXT_ARM6 (ARM6 dp ctrl) inp)` MP_TAC
+  fun tac ss = PAT_ASSUM `Abbrev (q = NEXT_ARM6 (ARM6 dp ctrl) input)` MP_TAC
    \\ ASM_SIMP_TAC (booli_ss++pairSimps.PAIR_ss++ss++PBETA_ss)
         [NOT_ABORT,SND_COND_RAND,FST_COND_RAND]
    \\ TRY ALU_ABBREV_TAC \\ STRIP_TAC
@@ -1260,7 +1260,7 @@ val LDM_MEMOPS = Count.apply prove(
         \\ `~IS_RESET inp 0 /\ ~IS_RESET inp 1` by ASM_SIMP_TAC arith_ss []
         \\ IMP_RES_TAC NOT_RESET_EXISTS2
         \\ NTAC 2 LDM_TAC
-        \\ PAT_ASSUM `Abbrev (sn = FUNPOW f n state)` MP_TAC
+        \\ PAT_ASSUM `Abbrev (sn = FUNPOW fn n state)` MP_TAC
         \\ `0 < SUC n` by DECIDE_TAC \\ IMP_RES_TAC NEXT_CORE_LDM_TN_W1
         \\ POP_ASSUM MP_TAC
         \\ ASM_SIMP_TAC (bossLib.old_arith_ss++STATE_INP_ss) [GSYM ADVANCE_COMP,
@@ -1341,8 +1341,8 @@ fun PAT_TAC n =
          "pipeaabt'","pipebabt'","borrow2'"]
    \\ MAP_EVERY (fn s => PAT_ABBREV_TAC (mk_pat "q" s n) \\ POP_LAST_TAC)
         ["oareg'","mul'"]
-   \\ PAT_ABBREV_TAC (mk_pat "q:word32" "mul2'" n) \\ POP_LAST_TAC
-   \\ PAT_ABBREV_TAC (mk_pat "q:word5" "mshift'" n) \\ POP_LAST_TAC
+   \\ PAT_ABBREV_TAC (mk_pat "qq:word32" "mul2'" n) \\ POP_LAST_TAC
+   \\ PAT_ABBREV_TAC (mk_pat "qqq:word5" "mshift'" n) \\ POP_LAST_TAC
    \\ PAT_ABBREV_TAC (mk_pat "aregn" "aregn'" n);
 
 val _ = print "*\nVerifying time-consistency and correctness: ldm\n*\n"; (*==*)
@@ -1641,7 +1641,7 @@ val FILTER_STM_MEMOPS_X =
   SIMP_RULE (bool_ss++boolSimps.LET_ss) [] FILTER_STM_MEMOPS_X;
 
 val STM_TAC =
-  PAT_ASSUM `Abbrev (q = NEXT_ARM6 (ARM6 dp ctrl) inp)` MP_TAC
+  PAT_ASSUM `Abbrev (q = NEXT_ARM6 (ARM6 dp ctrl) input)` MP_TAC
    \\ ASM_SIMP_TAC (booli_ss++pairSimps.PAIR_ss++STM_ss++PBETA_ss)
         [SND_COND_RAND,FST_COND_RAND]
    \\ TRY ALU_ABBREV_TAC \\ STRIP_TAC
