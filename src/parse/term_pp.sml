@@ -268,23 +268,25 @@ exception DoneExit
 
 fun symbolic s = HOLsym (String.sub(s,String.size(s)-1));
 
-(* term tm can be seen to have name s according to grammar G *)
-fun has_name G s tm = let
+
+fun grammar_name G tm = let
   val oinfo = term_grammar.overload_info G
 in
   if is_const tm then
-    case Overload.overloading_of_term oinfo tm of
-      SOME s' => s' = s
-    | NONE => false
+    Overload.overloading_of_term oinfo tm
   else if is_var tm then let
       val (vnm, _) = dest_var tm
     in
       case Lib.total (Lib.unprefix GrammarSpecials.fakeconst_special) vnm of
-        NONE => vnm = s
-      | SOME vnm' => vnm' = s
+        NONE => SOME vnm
+      | x => x
     end
-  else false
+  else NONE
 end
+
+(* term tm can be seen to have name s according to grammar G *)
+fun has_name G s tm = (grammar_name G tm = SOME s)
+
 
 datatype bvar
     = Simple of term
@@ -832,42 +834,39 @@ fun pp_term (G : grammar) TyG = let
             else NONE
           else NONE
     in
-      if is_const t1 then let
-          val rname_opt = Overload.overloading_of_term overload_info t1
-        in
-          case rname_opt of
-            SOME s => let
-              val fldname = getfldname s
-            in
-              case fldname of
-                SOME(fldname, t2) => let
-                  val (prec0, fldtok) = valOf recsel_info
-                  (* assumes that field selection is always left associative *)
-                  val add_l =
-                      case lgrav of
-                        Prec(n, _) => n >= prec0
-                      | _ => false
-                  val add_r =
-                      case rgrav of
-                        Prec(n, _) => n > prec0
-                      | _ => false
-                  val prec = Prec(prec0, recsel_special)
-                  val add_parens = add_l orelse add_r
-                  val lprec = if add_parens then Top else lgrav
-                in
-                  begin_block INCONSISTENT 0;
-                  pbegin add_parens;
-                  pr_term t2 prec lprec prec (decdepth depth);
-                  add_string fldtok;
-                  add_break(0,0);
-                  add_string fldname;
-                  pend add_parens;
-                  end_block (); raise SimpleExit
-                end
-              | NONE => ()
-            end
-          | NONE => ()
-        end
+      if is_const t1 orelse is_fakeconst t1 then
+        case grammar_name G t1 of
+          SOME s => let
+            val fldname = getfldname s
+          in
+            case fldname of
+              SOME(fldname, t2) => let
+                val (prec0, fldtok) = valOf recsel_info
+                (* assumes that field selection is always left associative *)
+                val add_l =
+                    case lgrav of
+                      Prec(n, _) => n >= prec0
+                    | _ => false
+                val add_r =
+                    case rgrav of
+                      Prec(n, _) => n > prec0
+                    | _ => false
+                val prec = Prec(prec0, recsel_special)
+                val add_parens = add_l orelse add_r
+                val lprec = if add_parens then Top else lgrav
+              in
+                begin_block INCONSISTENT 0;
+                pbegin add_parens;
+                pr_term t2 prec lprec prec (decdepth depth);
+                add_string fldtok;
+                add_break(0,0);
+                add_string fldname;
+                pend add_parens;
+                end_block (); raise SimpleExit
+              end
+            | NONE => ()
+          end
+        | NONE => ()
       else ()
     end
 
