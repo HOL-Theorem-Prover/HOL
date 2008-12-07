@@ -1613,6 +1613,10 @@ fun pp_term (G : grammar) TyG = let
                 | _ => ()
               else ()
 
+          (* let expressions *)
+          val () = if is_let tm then (pr_let lgrav rgrav tm; raise SimpleExit)
+                   else ()
+
           fun is_atom tm = is_const tm orelse is_var tm
           fun pr_atomf (f,args) = let
             (* the tm, Rator and Rand bindings that we began with are
