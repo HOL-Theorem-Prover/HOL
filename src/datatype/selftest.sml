@@ -79,5 +79,26 @@ val _ = Hol_datatype `comm = skip
 val _ = Hol_datatype
           `ascii = ASCII of bool=>bool=>bool=>bool=>bool=>bool=>bool=>bool`;
 
+val _ = Hol_datatype`
+          small_record = <| fld1 : num -> bool ; fld2 : num |>
+`;
+
+fun tprint s = print (StringCvt.padRight #" " 70 s)
+
+fun pptest (nm, t, expected) = let
+  val _ = tprint ("Testing pretty-printing of "^nm)
+  val s = Parse.term_to_string t
+in
+  if s = expected then print "OK\n"
+  else (print "FAILED!\n"; Process.exit Process.failure)
+end
+
+val _ = List.app pptest
+        [("field selection", ``r.fld2``, "r.fld2"),
+         ("field sel. for fn type", ``r.fld1 x``, "r.fld1 x"),
+         ("singleton field update",
+          ``r with fld1 := (\x. T)``, "r with fld1 := (\\x. T)"),
+         ("multi-field update", ``r with <| fld2 := 3; fld1 := x |>``,
+          "r with <| fld2 := 3; fld1 := x |>")]
 
 val _ = Process.exit Process.success;
