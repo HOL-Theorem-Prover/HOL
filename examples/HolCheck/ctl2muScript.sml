@@ -243,51 +243,56 @@ val fol2 = prove(``!x y x' y'. (x = y) /\ (x' = y') ==> (x/\x' = y /\ y')``,PROV
 val fol4 = prove(``!x y z. ((x==>y)/\(x==>z))==>(x==>(y/\z))``,PROVE_TAC []);
 val fol5 = prove(``!a b c. (a = c) ==> (a /\ b = c /\ b)``,PROVE_TAC []);
 
-val IMF_CTL_LEM8a1 = prove(``!f Q Q'. ~(Q IN FV f) = ~(Q IN (FV (RVNEG Q' f)))``,
-Induct_on `f` THEN SIMP_TAC std_ss ([FV_def,UNION_DEF,DELETE_DEF,DIFF_DEF,SET_SPEC,IN_SING,RVNEG_def]@(tsimps ``:'a mu``))
-THENL [ (* 8 *)
-FULL_SIMP_TAC std_ss [],
-ASSUM_LIST PROVE_TAC,
-ASSUM_LIST PROVE_TAC,
-REPEAT GEN_TAC THEN CASE_TAC THENL [ (* 2 *)
- EQ_TAC THEN SIMP_TAC std_ss [FV_def,IN_SING],
- EQ_TAC THEN SIMP_TAC std_ss [FV_def,IN_SING]
- ],
-ASSUM_LIST PROVE_TAC,
-ASSUM_LIST PROVE_TAC,
-REPEAT GEN_TAC THEN CASE_TAC THENL [ (* 2 *)
- FULL_SIMP_TAC std_ss [FV_def,DELETE_DEF,IN_SING,DIFF_DEF,SET_SPEC],
- FULL_SIMP_TAC std_ss [FV_def,DELETE_DEF,IN_SING,DIFF_DEF,SET_SPEC]
- THEN MATCH_MP_TAC fol5
- THEN ASSUM_LIST PROVE_TAC
- ],
-REPEAT GEN_TAC THEN CASE_TAC THENL [ (* 2 *)
- FULL_SIMP_TAC std_ss [FV_def,DELETE_DEF,IN_SING,DIFF_DEF,SET_SPEC],
- FULL_SIMP_TAC std_ss [FV_def,DELETE_DEF,IN_SING,DIFF_DEF,SET_SPEC]
- THEN MATCH_MP_TAC fol5
- THEN ASSUM_LIST PROVE_TAC
- ]
-]);
+val IMF_CTL_LEM8a1 = prove(
+  ``!f Q Q'. ~(Q IN FV f) = ~(Q IN (FV (RVNEG Q' f)))``,
+  Induct_on `f` THEN
+  SIMP_TAC std_ss ([FV_def,UNION_DEF,DELETE_DEF,DIFF_DEF,SET_SPEC,IN_SING,
+                    RVNEG_def]@ tsimps ``:'a mu``)
+  THENL [ (* 8 *)
+    FULL_SIMP_TAC std_ss [],
+    PROVE_TAC[],
+    PROVE_TAC[],
+    REPEAT GEN_TAC THEN CASE_TAC THENL [ (* 2 *)
+      EQ_TAC THEN SIMP_TAC std_ss [FV_def,IN_SING],
+      EQ_TAC THEN SIMP_TAC std_ss [FV_def,IN_SING]
+    ],
+    PROVE_TAC[],
+    PROVE_TAC[],
+    REPEAT GEN_TAC THEN CASE_TAC THENL [ (* 2 *)
+     FULL_SIMP_TAC std_ss [FV_def,DELETE_DEF,IN_SING,DIFF_DEF,SET_SPEC],
+     FULL_SIMP_TAC std_ss [FV_def,DELETE_DEF,IN_SING,DIFF_DEF,SET_SPEC]
+     THEN MATCH_MP_TAC fol5
+     THEN ASSUM_LIST PROVE_TAC
+     ],
+    REPEAT GEN_TAC THEN CASE_TAC THENL [ (* 2 *)
+     FULL_SIMP_TAC std_ss [FV_def,DELETE_DEF,IN_SING,DIFF_DEF,SET_SPEC],
+     FULL_SIMP_TAC std_ss [FV_def,DELETE_DEF,IN_SING,DIFF_DEF,SET_SPEC]
+     THEN MATCH_MP_TAC fol5
+     THEN ASSUM_LIST PROVE_TAC
+   ]
+  ]);
 
-val IMF_CTL_LEM8a = prove(``!f Q. ~(Q IN FV f) ==> IMF f ==> ~SUBFORMULA (~RV Q) (NNF f)``,
-recInduct NNF_IND_def
-THEN SIMP_TAC std_ss ([MU_SUB_def,IMF_def,FV_def,NNF_def,UNION_DEF,SET_SPEC,DELETE_DEF,DIFF_DEF,RVNEG_def,IN_SING]@(tsimps ``:'a mu``))
-THEN REPEAT CONJ_TAC THENL [ (* 3 *)
-NTAC 6 STRIP_TAC THENL [(* 2 *)
- FULL_SIMP_TAC std_ss [],
- FULL_SIMP_TAC std_ss []
-],
-NTAC 6 STRIP_TAC THENL [(* 2 *)
- FULL_SIMP_TAC std_ss [],
- FULL_SIMP_TAC std_ss []
-],
-NTAC 6 STRIP_TAC THENL [(* 2 *)
- FULL_SIMP_TAC std_ss [IMF_INV_RVNEG]
- THEN ASSUM_LIST (fn t => PROVE_TAC (IMF_CTL_LEM8a1::t)),
- PAT_ASSUM ``Q' = Q`` (fn t => ONCE_REWRITE_TAC [t])
- THEN ASSUM_LIST (fn t => PROVE_TAC (STATES_MONO_LEM3::RVNEG_def::t))
-]
-]);
+val IMF_CTL_LEM8a = prove(
+  ``!f Q. ~(Q IN FV f) ==> IMF f ==> ~SUBFORMULA (~RV Q) (NNF f)``,
+  recInduct NNF_IND_def THEN
+  SIMP_TAC std_ss ([MU_SUB_def,IMF_def,FV_def,NNF_def,UNION_DEF,SET_SPEC,
+                    DELETE_DEF,DIFF_DEF,RVNEG_def,IN_SING] @
+                   tsimps ``:'a mu``) THEN
+  REPEAT CONJ_TAC THENL [ (* 3 *)
+    NTAC 6 STRIP_TAC THENL [(* 2 *)
+     FULL_SIMP_TAC std_ss [],
+     FULL_SIMP_TAC std_ss []
+    ],
+    NTAC 6 STRIP_TAC THENL [(* 2 *)
+     FULL_SIMP_TAC std_ss [],
+     FULL_SIMP_TAC std_ss []
+    ],
+    NTAC 6 STRIP_TAC THENL [(* 2 *)
+     FULL_SIMP_TAC std_ss [IMF_INV_RVNEG]
+     THEN ASSUM_LIST (fn t => PROVE_TAC (IMF_CTL_LEM8a1::t)),
+     PROVE_TAC [STATES_MONO_LEM3,RVNEG_def]
+    ]
+  ]);
 
 val FV_BEXP2MU =  save_thm("FV_BEXP2MU",prove(``!b. FV (BEXP2MU b) = {}``,
 recInduct (theorem "BEXP2MU_ind")

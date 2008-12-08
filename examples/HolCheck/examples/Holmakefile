@@ -1,1 +1,2 @@
-INCLUDES = .. ../lazy ../tools
+INCLUDES = .. ../../HolBdd ../../muddy
+OPTIONS = NO_PREREQS
