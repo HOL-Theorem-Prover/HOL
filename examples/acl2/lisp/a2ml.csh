@@ -14,4 +14,5 @@ set outfile = $argv[2]
 rm -f $tmpfile
 echo "(include-book " '"'"${a2ml}"'")' > $tmpfile
 echo "(a2ml "'"'"$infile"'" "'"$outfile"'")' >> $tmpfile
+echo "(value :q) (quit)" >> $tmpfile
 ${ACL2} < $tmpfile

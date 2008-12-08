@@ -16,5 +16,6 @@ rm -f $tmpfile
 
 echo "(include-book " '"'"${ACL2_HOL_LISP}/book-essence"'")' > $tmpfile
 echo "(book-essence $infile$outfile)" >> $tmpfile
+echo "(value :q) (quit)" >> $tmpfile
 
 ${ACL2} < $tmpfile
