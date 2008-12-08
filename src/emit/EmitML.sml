@@ -839,7 +839,8 @@ fun datatype_silent_defs tyAST =
                 ("No info in the TypeBase for "^Lib.quote tyop); [])
     | SOME tyinfo =>
         let open TypeBasePure
-            val size_def = [snd (valOf(size_of tyinfo))] handle _ => []
+(*            val size_def = [snd (valOf(size_of tyinfo))] handle _ => [] *)
+            val size_def = []
             val updates_def = updates_of tyinfo handle HOL_ERR _ => []
             val access_def = accessors_of tyinfo handle HOL_ERR _ => []
         in
