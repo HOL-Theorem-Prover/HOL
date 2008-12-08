@@ -17,3 +17,5 @@
 [QUOTE " (*#loc 17 2*)s1 ^^\n\
 \s2"]
 (* ` *)
+[QUOTE " (*#loc 20 2*)", ANTIQUOTE ((fromMLnum nm)),QUOTE " (*#loc 20 17*) (* *) "];
+(* (*  *) `;*)

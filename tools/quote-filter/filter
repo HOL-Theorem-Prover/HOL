@@ -134,14 +134,16 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <tmcomment,tycomment,qcomment>"\"" => (ECHO yyarg "\\\""; continue());
 <tmcomment,tycomment,qcomment>"\t" => (ECHO yyarg "\\t"; continue());
 <tmcomment,tycomment,qcomment>"^`" => (ECHO yyarg "`"; continue());
-<tmcomment,tycomment>"``" => (print yyarg "\"])"; YYBEGIN INITIAL; continue());
-<qcomment>"`" => (print yyarg "\"]"; YYBEGIN INITIAL; continue());
+<tmcomment,tycomment>"``" => (print yyarg "\"])"; comdepth := 0;
+                              YYBEGIN INITIAL; continue());
+<qcomment>"`" => (print yyarg "\"]"; comdepth := 0;
+                  YYBEGIN INITIAL; continue());
 <comment,tmcomment,tycomment,qcomment>[^\n\015\\"\t^`*()]+ => (ECHO yyarg yytext; continue());
 <comment,tmcomment,tycomment,qcomment>. => (ECHO yyarg yytext; continue());
 
 <quote,tmquote,tyquote>"^"+{ws} => (ECHO yyarg yytext; continue());
 <quote,tmquote,tyquote>"^"+{newline} =>
-   (ECHO yyarg (String.substring(yytext,0,size yytext - 1)); 
+   (ECHO yyarg (String.substring(yytext,0,size yytext - 1));
     qnewline yyarg (yypos,yytext);
     continue());
 <quote,tmquote,tyquote>"^^" => (ECHO yyarg "^"; continue());
@@ -152,9 +154,11 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <quote>"`" => (print yyarg "\"]"; YYBEGIN INITIAL; continue());
 <tmquote,tyquote>"``" => (print yyarg "\"])"; YYBEGIN INITIAL; continue());
 
-<quote>"(*" => (ECHO yyarg yytext; YYBEGIN qcomment; continue());
-<tmquote>"(*" => (ECHO yyarg yytext; YYBEGIN tmcomment; continue());
-<tyquote>"(*" => (ECHO yyarg yytext; YYBEGIN tycomment; continue());
+<quote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN qcomment; continue());
+<tmquote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN tmcomment;
+                  continue());
+<tyquote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN tycomment;
+                  continue());
 
 <quote>"^" => (print yyarg "\", ANTIQUOTE ("; YYBEGIN ANTIQ; continue();
                YYBEGIN quote; continue());
@@ -166,7 +170,7 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 
 <quote,tmquote,tyquote>[\128-\255] => (ECHO yyarg (bslash_escape yytext);
                                        continue());
-<quote,tmquote,tyquote>[^`\n\015^ \t(*\128-\255]+ => 
+<quote,tmquote,tyquote>[^`\n\015^ \t(*\128-\255]+ =>
   (ECHO yyarg (String.toString yytext); continue());
 <quote,tmquote,tyquote>. => (ECHO yyarg (String.toString yytext); continue());
 
