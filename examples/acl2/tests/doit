@@ -55,7 +55,7 @@ for test in $tests ; do \
     (${ACL2_HOL_LISP}/a2ml.csh $results_dir/$test $results_dir/$testr.ml) > $logs_dir/$test.ml.out 2> $logs_dir/$test.ml.err ; \
 done
 
-(diff $results_dir $gold_dir 2>&1) > diffout
+(diff -x .svn $results_dir $gold_dir 2>&1) > diffout
 
 if [ -s diffout ] ; then \
     echo '***Failure*** for main tests!  See diffout for diffs, and see logs/.' ; \

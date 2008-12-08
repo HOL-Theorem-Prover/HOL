@@ -36,7 +36,7 @@ if [ -e diffout ]; then mv diffout diffout.old ; fi
 
 (${ACL2_HOL_LISP}/a2ml.csh $gold_dir/axioms.lisp $results_dir/axioms.ml) > $logs_dir/axioms.ml.out 2> $logs_dir/axioms.ml.err ; \
 
-(diff $results_dir $gold_dir 2>&1) > diffout
+(diff -x .svn $results_dir $gold_dir 2>&1) > diffout
 
 if [ -s diffout ] ; then \
     echo '***Failure*** for round-trip testing!  See diffout for diffs, and see logs/.' ; \
