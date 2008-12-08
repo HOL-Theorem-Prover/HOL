@@ -1,0 +1,78 @@
+INSTRUCTIONS:
+
+In this directory (or most likely, in any directory), run testbench
+script doit.  This will certify any uncertified books in inputs/
+(first certifying any uncertified tool books in ../lisp/), then
+generate "essential" .lisp files in directory results/, which should
+then have identical contents to directory gold/.  If so, then
+"Success!" is printed and the exit status is 0.  Otherwise the exit
+status is non-zero and the error message will direct you to file
+diffout and the logs/ directory (though if certification fails then
+you may also want to see inputs/).
+
+See the end of this README file for information on the example from
+Sandip Ray et al. on correctness of cone-of-influence reduction.
+
+==============================
+
+Contents of this directory:
+
+Supplied files and directories:
+
+README          This file
+doit		Script that runs tests: execute ./doit
+gold/           Expected results:
+		  ../lisp/book-essence.csh generates .lisp files
+		  ../lisp/a2ml.csh generates .ml files from the
+		      generated .lisp files
+inputs/         Input files for tests, and a Makefile to generate their
+                  certifications (hence this directory can contain
+		  .cert files, compiled files, and .out files from
+                  certification)
+round-trip/	Subdirectory for round-trip (ACL2->HOL->ACL2) testing
+obsolete/	Stuff I think we can safely discard, though I'll be
+		  more confident of that after we complete a
+		  round-trip test
+
+Generated files and directories:
+
+diffout         Test failure data
+diffout.old     Test failure data from previous test
+logs/           Test logs (for generating results/ data)
+old-logs/       Test logs from previous test
+results/        Results of tests (essential events in .lisp files),
+		  generated as explained above for gold/
+old-results/    Results of tests from previous test
+
+==============================
+
+Regarding the example from Sandip Ray et al. on correctness of
+cone-of-influence reduction:
+
+The files from that example in inputs/ are as follows, although the
+only generated files we need are the .ml files in gold/ listed just
+below.
+
+  apply-total-order.lisp
+  circuit-bisim.lisp
+  circuits.lisp
+  cone-of-influence.lisp
+  encap1.lisp
+  ltl.lisp
+  records.lisp
+  sets.lisp
+  summary.lisp
+  test1.lisp
+  test1a.lisp
+  test2.lisp
+  total-order.lisp
+
+  apply-total-order.ml
+  records.ml
+  summary.ml
+  total-order.ml
+
+See files inputs/*.lisp for explanatory comments, which are gone in
+the generated gold/*.lisp files.  File summary.lisp is his top-level
+book, and I could write a tool to figure out what supports it (in this
+case apply-total-order, records, and total-order).

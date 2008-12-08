@@ -1,22 +1,17 @@
 (in-package "ACL2")
 
-; To run this on axioms.lisp:
-; (include-book "filter-forms")
-; :q
-; (setf (cadr (assoc 'global-value (get 'untouchables *current-acl2-world-key*))) nil)
-; (lp!)
-; (write-forms "<dir>/axioms.lisp" "defaxioms.lisp.trans" nil state)
-; (write-forms "<dir>/axioms.lisp" "defaxioms.lisp.untrans" t state)
+; Note: To run this on ACL2 source file axioms.lisp, see pprint-axioms.lisp.
 
 (program)
 (set-state-ok t)
 
 (include-book "misc/file-io" :dir :system)
 
-; In what follows, basic-only means that we only want defaxiom, defthm, and
-; logic-mode defun (and defund) forms, though we always allow input using
-; progn, mutual-recursion, and encapsulate with nil signature.  We drop local
-; forms.
+; In what follows, logic-only means that we only want events with logical
+; content, such as defaxiom, defthm, and logic-mode defun (and defund) forms,
+; but not including program-mode definitions, table events, etc.
+
+; We drop local forms, regardless of logic-only.
 
 ; Either way, we drop all hints.  That could be changed.
 
@@ -60,7 +55,13 @@
     (cons (my-unparse-signature (car lst))
           (my-unparse-signature-lst (cdr lst)))))
 
-(defun expand-forms (forms acc untrans-flg basic-only ctx wrld state)
+(defun set-ld-redefinition-action-state (val state)
+  (mv-let (erp val state)
+          (set-ld-redefinition-action val state)
+          (declare (ignore erp val))
+          state))
+
+(defun expand-forms (forms acc untrans-flg logic-only ctx wrld state)
 
 ; Result is in reverse order.
 
@@ -75,10 +76,10 @@
                             ((progn mutual-recursion)
                              (er-let* ((defs (expand-forms (cdr form) nil
                                                            untrans-flg
-                                                           basic-only
+                                                           logic-only
                                                            ctx wrld state)))
                                       (value
-                                       (if (null defs) ; expect basic-only
+                                       (if (null defs) ; expect logic-only
                                            acc
                                          (cons (cons (car form)
                                                      (reverse defs))
@@ -87,17 +88,18 @@
                              (cond
                               ((null (cadr form))
                                (expand-forms (cddr form) acc untrans-flg
-                                             basic-only ctx wrld state))
+                                             logic-only ctx wrld state))
                               (t
                                (er-let*
                                 ((pair
                                   (state-global-let*
                                    ((ld-redefinition-action
-                                     '(:doit! . :overwrite)))
+                                     '(:doit! . :overwrite)
+                                     set-ld-redefinition-action-state))
                                    (chk-signatures (cadr form) ctx wrld
                                                    state)))
                                  (forms (expand-forms (cddr form) nil untrans-flg
-                                                      basic-only ctx wrld
+                                                      logic-only ctx wrld
                                                       state)))
                                 (value (cons (list* 'encap
                                                     (my-unparse-signature-lst
@@ -105,7 +107,7 @@
                                                     (reverse forms))
                                              acc))))))
                             ((defaxiom defthm defthmd defun defund)
-                             (if (and basic-only
+                             (if (and logic-only
                                       (member-eq (car form) '(defun defund))
                                       (eq (symbol-class (cadr form) (w state))
                                           :program))
@@ -113,30 +115,17 @@
                                (er-let*
                                 ((x (expand-form form untrans-flg state)))
                                 (value (cons x acc)))))
-                            (t (if basic-only
+                            (t (if logic-only
                                    (value acc)
                                  (value (cons form acc))))))))))
-             (expand-forms (cdr forms) new-acc untrans-flg basic-only ctx wrld
+             (expand-forms (cdr forms) new-acc untrans-flg logic-only ctx wrld
                            state))))
-
-(defun push-defuns-to-front (forms non-defuns defuns)
-
-; Note: This also pushes progn to the end, even if there are theorems in the
-; progn.  But for our intended application, we expect progn to disappear
-; anyhow.
-
-  (cond ((endp forms)
-         (revappend defuns (reverse non-defuns)))
-        ((and (consp (car forms))
-              (member-eq (caar forms) '(defun mutual-recursion progn)))
-         (push-defuns-to-front (cdr forms) non-defuns (cons (car forms) defuns)))
-        (t
-         (push-defuns-to-front (cdr forms) (cons (car forms) non-defuns) defuns))))
 
 (defun write-forms (infile outfile untrans-flg state)
   (let ((ctx 'write-forms))
     (er-let* ((forms (read-list infile ctx state))
-              (axioms (expand-forms forms nil untrans-flg t ctx (w state) state)))
-             (write-list (reverse axioms)
-                         ;; (push-defuns-to-front (reverse axioms) nil nil)
+              (rev-forms (expand-forms forms nil untrans-flg
+                                       t ; logic-only
+                                       ctx (w state) state)))
+             (write-list (reverse rev-forms)
                          outfile ctx state))))

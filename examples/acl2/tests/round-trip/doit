@@ -1,0 +1,47 @@
+#!/bin/bash
+
+source ../../.acl2holrc.bash
+
+round_trip_dir=${ACL2_HOL}/tests/round-trip
+results_dir=$round_trip_dir/results
+old_results_dir=$round_trip_dir/old-results
+logs_dir=$round_trip_dir/logs
+old_logs_dir=$round_trip_dir/old-logs
+gold_dir=$round_trip_dir/gold
+lisp_dir=${ACL2_HOL}/lisp
+
+if [ "$*" = "clean" ]; then \
+    rm -rf $results_dir $old_results_dir $logs_dir $old_logs_dir diffout diffout.old ; \
+    exit 0 ; \
+fi
+
+echo "Making books in $lisp_dir..."
+pushd $lisp_dir > /dev/null
+make
+popd > /dev/null
+
+echo "Converting .lisp files to their essences..."
+
+rm -rf $old_results_dir
+if  [ -e $results_dir ]; then mv $results_dir $old_results_dir ; fi
+mkdir $results_dir
+
+rm -rf $old_logs_dir
+if [ -e $logs_dir ]; then mv $logs_dir $old_logs_dir ; fi
+mkdir $logs_dir
+
+if [ -e diffout ]; then mv diffout diffout.old ; fi
+
+(${ACL2_HOL_LISP}/axioms-essence.csh $results_dir/axioms.lisp) > $logs_dir/axioms.out 2> $logs_dir/axioms.err ; \
+
+(${ACL2_HOL_LISP}/a2ml.csh $gold_dir/axioms.lisp $results_dir/axioms.ml) > $logs_dir/axioms.ml.out 2> $logs_dir/axioms.ml.err ; \
+
+(diff $results_dir $gold_dir 2>&1) > diffout
+
+if [ -s diffout ] ; then \
+    echo '***Failure*** for round-trip testing!  See diffout for diffs, and see logs/.' ; \
+    exit 1 ; \
+else \
+    echo 'Success for round-trip testing!' ; \
+    exit 0 ; \
+fi

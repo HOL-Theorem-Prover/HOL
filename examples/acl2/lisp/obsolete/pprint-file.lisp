@@ -18,24 +18,16 @@
 ; generate such events.
 
 ; Note:
-; To run this on forms derived from axioms.lisp:
-; (include-book "pprint-file")
-; :q
-; (setf (cadr (assoc 'global-value (get 'untouchables *current-acl2-world-key*))) nil)
-; ; Version 2.9.3 only:
-; (acl2-compile-file "patch.lisp" "patch.lisp") ; can skip if done earlier
-; (load "patch")
-; (lp)
-; (pprint-file "ppTestAll.lisp" "some-output-filename" nil)
+; To process ACL2 input file axioms.lisp, use pprint-axioms.lisp instead.
 
 (defun pprint-file-fn (infile outfile ld-p state)
   (let ((ctx 'pprint-file))
     (er-progn
      (if ld-p
-         (ld `((ld ,infile)))
+         (ld `((ld ,infile :ld-skip-proofsp t)))
        (value nil))
      (er-let* ((forms (read-list infile ctx state))
-               (axioms (expand-forms forms nil t nil state)))
+               (axioms (expand-forms forms nil t nil ctx (w state) state)))
               (write-list (reverse axioms) outfile ctx state)))))
 
 (defmacro pprint-file (infile outfile &optional (ld-p 't))

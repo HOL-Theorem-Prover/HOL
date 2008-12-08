@@ -1,0 +1,9 @@
+See ../tests/inputs/ for additional examples.  In particular, the file
+summary.lisp includes an LTL example in ACL2 supplied by Sandip Ray;
+each of the following files requires (via include-book) the one
+underneath it.
+
+summary.lisp
+records.lisp
+apply-total-order.lisp
+total-order.lisp

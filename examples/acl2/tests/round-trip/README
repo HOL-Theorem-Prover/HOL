@@ -1,0 +1,4 @@
+Our round-trip testing can be done here.
+
+For now, we just translate ACL2 source file axioms.lisp, to create
+defaxioms.lisp.trans.
