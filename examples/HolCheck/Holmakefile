@@ -1,1 +1,2 @@
 INCLUDES = ../muddy ../HolBdd
+OPTIONS = QUIT_ON_FAILURE

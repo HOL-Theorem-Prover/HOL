@@ -1,2 +1,1 @@
 INCLUDES = .. ../../HolBdd ../../muddy
-OPTIONS = NO_PREREQS

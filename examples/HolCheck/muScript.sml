@@ -1157,11 +1157,11 @@ let val (w1l,w1r) = (rand o hd o snd o strip_comb ## rand o hd o snd o strip_com
     val fp_thm = if gfp then MU_SAT_GFP else MU_SAT_LFP
     val dest_b = if gfp then dest_forall else dest_exists
     val (fa,w2) = strip_forall (concl  (INST_TYPE [alpha |-> ``:'state``,beta|->``:'prop``] fp_thm))
-    val w2l = rhs(concl(ISPECL [``s:'state``,``(ks:('prop,'state) KS)``,``e:string -> 'state -> bool``,``l:string``,w1l]
+    val w2l = rhs(concl(ISPECL [``s':'state``,``(ks:('prop,'state) KS)``,``e:string -> 'state -> bool``,``s:string``,w1l]
                            (mk_thm([],list_mk_forall (fa,snd(dest_imp w2))))))
-    val w2r = rhs(concl(ISPECL [``s:'state``,``(ks:('prop,'state) KS)``,``e:string -> 'state -> bool``,``l:string``,w1r]
+    val w2r = rhs(concl(ISPECL [``s':'state``,``(ks:('prop,'state) KS)``,``e:string -> 'state -> bool``,``s:string``,w1r]
                            (mk_thm([],list_mk_forall (fa,snd(dest_imp w2))))))
-    val gl = list_mk_forall([``n:num``,``e:string -> 'state -> bool``,``s:'state``],mk_eq(snd(dest_b(w2l)),snd(dest_b(w2r))))
+    val gl = list_mk_forall([``n:num``,``e:string -> 'state -> bool``,``s':'state``],mk_eq(snd(dest_b(w2l)),snd(dest_b(w2r))))
 in
     (FULL_SIMP_TAC std_ss [fp_thm]
     THEN SUBGOAL_THEN gl ASSUME_TAC
@@ -1174,15 +1174,17 @@ in
       SIMP_TAC std_ss [STATES_def,ENV_UPDATE]
       THEN REWRITE_TAC [EXTENSION]
       THEN REWRITE_TAC [GSYM MU_SAT_def]
-      THEN ASSUM_LIST PROVE_TAC
+      THEN PROVE_TAC []
       ],
-     ASSUM_LIST PROVE_TAC
+     PROVE_TAC []
      ]) (asl,w)
 end
 
-val AP_SUBST_LEM = prove(``!(f:'prop mu) g ap (ks:('prop,'state) KS).
-                            wfKS ks ==> (IS_PROP g) ==> (!e s. MU_SAT (AP ap) ks e s = MU_SAT g ks e s)
-                            ==> (!e s. MU_SAT f ks e s = MU_SAT (AP_SUBST g ap f) ks e s)``,
+val AP_SUBST_LEM = prove(
+  ``!(f:'prop mu) g ap (ks:('prop,'state) KS).
+          wfKS ks ==> IS_PROP g ==>
+          (!e s. MU_SAT (AP ap) ks e s = MU_SAT g ks e s) ==>
+          !e s. MU_SAT f ks e s = MU_SAT (AP_SUBST g ap f) ks e s``,
 Induct_on `g`
 THEN Induct_on `f`
 THEN RW_TAC std_ss [IS_PROP_def,AP_SUBST_def,MU_SAT_NEG,MU_SAT_CONJ,MU_SAT_DISJ,MU_SAT_DMD,MU_SAT_BOX,MU_SAT_RV]
@@ -1258,13 +1260,13 @@ val MU_BISIM_STATES = store_thm(
     REPEAT STRIP_TAC THEN
     FULL_SIMP_TAC std_ss [MU_SAT_CONJ,SUB_AP_CONJ,DISJ_IMP_THM,
                           FORALL_AND_THM] THEN RES_TAC THEN
-    metisLib.METIS_TAC [],
+    METIS_TAC [],
 
     (* \/ *)
     REPEAT STRIP_TAC THEN
     FULL_SIMP_TAC std_ss [MU_SAT_DISJ,SUB_AP_DISJ,DISJ_IMP_THM,
                           FORALL_AND_THM] THEN RES_TAC THEN
-    metisLib.METIS_TAC [],
+    METIS_TAC [],
 
     (* RV *) RW_TAC std_ss [MU_SAT_RV,IN_DEF],
 
@@ -1305,17 +1307,18 @@ val MU_BISIM_STATES = store_thm(
                                              THEN ASSUME_TAC t)
     THEN FULL_SIMP_TAC std_ss [BISIM_def]
     THEN EQ_TAC THEN REPEAT STRIP_TAC THEN RES_TAC THEN
-    metisLib.METIS_TAC [],
+    METIS_TAC [],
 
     (* mu *)
+    MAP_EVERY Q.X_GEN_TAC [`s`, `M1`, `M2`, `e1`, `e2`, `s1`, `s2`, `BS`] THEN
     REPEAT STRIP_TAC THEN POP_ASSUM MP_TAC THEN
     MAP_EVERY Q.SPEC_TAC [(`s2`,`s2`),(`s1`,`s1`)] THEN
     FULL_SIMP_TAC std_ss [MU_SAT_LFP] THEN
     Q.SUBGOAL_THEN
        `!n s1 s2.
           BS (s1,s2) ==>
-          (s1 IN FP f l M1 e1[[[l<--{}]]] n =
-           s2 IN FP f l M2 e2[[[l<--{}]]] n)`
+          (s1 IN FP f s M1 e1[[[s<--{}]]] n =
+           s2 IN FP f s M2 e2[[[s<--{}]]] n)`
        ASSUME_TAC
     THENL [
       Induct_on `n` THENL [
@@ -1327,8 +1330,8 @@ val MU_BISIM_STATES = store_thm(
           (fn t => ASSUME_TAC
                      (Q.SPECL
                           [`M1`,`M2`,
-                           `e1[[[l<--FP f l M1 e1[[[l<--{}]]] n]]]`,
-                           `e2[[[l<--FP f l M2 e2[[[l<--{}]]] n]]]`] t)) THEN
+                           `e1[[[s<--FP f s M1 e1[[[s<--{}]]] n]]]`,
+                           `e2[[[s<--FP f s M2 e2[[[s<--{}]]] n]]]`] t)) THEN
         RES_TAC THEN
         NTAC 8 (POP_ASSUM (K ALL_TAC)) THEN
         POP_ASSUM (fn t => NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
@@ -1337,25 +1340,25 @@ val MU_BISIM_STATES = store_thm(
         Q.SUBGOAL_THEN
            `!Q s1 s2.
                BS (s1,s2) ==>
-               (s1 IN e1[[[l<--FP f l M1 e1[[[l<--{}]]] n]]] Q =
-                s2 IN e2[[[l<--FP f l M2 e2[[[l<--{}]]] n]]] Q)`
+               (s1 IN e1[[[s<--FP f s M1 e1[[[s<--{}]]] n]]] Q =
+                s2 IN e2[[[s<--FP f s M2 e2[[[s<--{}]]] n]]] Q)`
            ASSUME_TAC
         THENL [
           POP_ASSUM_LIST (fn l => MAP_EVERY ASSUME_TAC (List.take(l,2)))
           THEN REPEAT STRIP_TAC
-          THEN Cases_on `Q=l` THENL [
+          THEN Cases_on `Q=s` THENL [
            FULL_SIMP_TAC std_ss [ENV_EVAL],
            FULL_SIMP_TAC std_ss [ENV_UPDATE_INV]
           ],
-          RES_TAC THEN metisLib.METIS_TAC [MU_SAT_def,IN_DEF]
+          RES_TAC THEN METIS_TAC [MU_SAT_def,IN_DEF]
          ]
        ],
-       metisLib.METIS_TAC []
+       METIS_TAC []
     ],
 
     (* nu *)
+    MAP_EVERY Q.X_GEN_TAC [`s`, `M1`, `M2`, `e1`, `e2`, `s1`, `s2`, `BS`] THEN
     REPEAT STRIP_TAC THEN
-    Q.ABBREV_TAC `s = l` THEN markerLib.RM_ALL_ABBREVS_TAC THEN
     POP_ASSUM MP_TAC
     THEN MAP_EVERY Q.SPEC_TAC [(`s2`,`s2`),(`s1`,`s1`)]
     THEN FULL_SIMP_TAC std_ss [MU_SAT_GFP]
@@ -1383,10 +1386,10 @@ val MU_BISIM_STATES = store_thm(
            FULL_SIMP_TAC std_ss [ENV_UPDATE_INV]
 
           ],
-          RES_TAC THEN metisLib.METIS_TAC [MU_SAT_def,IN_DEF]
+          RES_TAC THEN METIS_TAC [MU_SAT_def,IN_DEF]
          ]
        ],
-      metisLib.METIS_TAC []
+      METIS_TAC []
      ] (* nu *)
     ])
 
