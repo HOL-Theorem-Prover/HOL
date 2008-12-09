@@ -1,1 +1,3 @@
 PRE_INCLUDES = ../prob
+INCLUDES = ../ho_prover ../subtypes ../RSA ../formalize ../groups
+OPTIONS = QUIT_ON_FAILURE
