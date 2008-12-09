@@ -1,0 +1,77 @@
+File <holdir>/help/src/README
+
+This directory contains various programs used to generate help
+facilities of various kinds for HOL98. We have adapted (in an extremely
+ugly way) some code used to generate help files for MoscowML. The notice
+from that code is appended.  
+
+Currently, we do the following:
+
+  0. translate all files in help/Docfiles into a database usable by
+     invoking "help" interactively.
+
+  1. translate all files in help/Docfiles into html versions
+     (via Doc2Html).
+
+  2. translate all signature files found in <holdir>/sigobj into
+     html versions. Links for all value bindings are resolved to
+     the results of (1), if possible. Theory signatures are internally
+     linked to provide efficient access. A signature file contains a
+     link to its source.
+
+  3. generate an index of all HOL identifiers, with links to the 
+     documentation, and the host signature.
+
+  4. Generate a HOLPage which brings all the above together on one
+     sheet.
+
+To add documentation, one simply adds the ".doc" format files into
+the directory help/Docfiles. Each file must have the format
+
+   <structure-name>.<id>.doc  or
+   <structure-name>.doc
+
+If <id> is a symbolic identifier (not alphanumeric) then an alphanumeric
+name <alpha> has to be invented for for it. Thus the file name will be
+<structure-name>.<alpha>.doc. The structure "Symbolic" must then be
+augmented as well, in order that the system can do the proper
+translations between <id> and <alpha>. See
+
+    help/Docfiles/Parse.minus2.doc 
+
+for an example, noting well how alphanumeric variants are *not* used in
+the SEEALSO field. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+File mosml/src/doc/helpsigs/README
+
+This directory contains the program used to create the database used
+by the Moscow ML `help' function.  It will not work under MS DOS
+because of the filename name truncation in DOS.
+
+The program illustrates the use of several libraries.
+
+The main program is makebase.  It reads the signatures in directory
+mosml/lib/ and creates 
+
+    * a help database in helpsigs.val
+    * an ASCII format version of the database in index.txt
+    * a LaTeX format version of the database in ../index.tex
+    * HTML versions of the signature files, and an identifier index,
+      with hyperlinks, in directory htmlsigs
+    * a LaTeX format version of the signature files, with layout and 
+      \index{...} markup, in file ../texsigsigs.tex 
+
+To create the main program, type        
+
+        make
+
+To run the program thus compiled, type
+
+        makebase
+
+The program handles only signatures for (old) Moscow ML structure-mode
+unit interfaces, as used in the Moscow ML library.
+
+
+sestoft@dina.kvl.dk 1996-04-10, 2000-06-28

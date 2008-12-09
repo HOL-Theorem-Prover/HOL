@@ -1,0 +1,24 @@
+OPTIONS = NO_OVERLAY
+EXTRA_CLEANS = Doc2Html.exe Doc2Tex.exe Doc2Txt.exe makebase.exe \
+               Lexer.sml Parser.sml Parser.sig
+
+all: makebase.exe Doc2Html.exe Doc2Tex.exe Doc2Txt.exe
+
+makebase.exe : Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo Printbase.uo Texsigs.uo makebase.uo
+	HOLMOSMLC -o makebase.exe makebase.uo
+
+Doc2Html.exe : Doc2Html.uo ParseDoc.uo Symbolic.uo
+	HOLMOSMLC -o Doc2Html.exe Doc2Html.uo
+
+Doc2Tex.exe : Doc2Tex.uo ParseDoc.uo Symbolic.uo
+	MOSMLC -o Doc2Tex.exe Doc2Tex.uo
+
+Doc2Txt.exe: Doc2Txt.uo ParseDoc.uo Symbolic.uo
+	MOSMLC -o Doc2Txt.exe Doc2Txt.uo
+
+Lexer.sml: Lexer.lex
+	MOSMLLEX Lexer.lex
+
+Parser.sml: Parser.grm
+	MOSMLYAC Parser.grm
+
