@@ -1266,12 +1266,12 @@ local
     else let
         val {Thy,Tyop=outerop,Args} = dest_thy_type ty
       in
-        if Thy = "list" andalso outerop = "list" then let
-            val {Thy,Tyop,...} = dest_thy_type (hd Args)
-          in
+        if Thy = "list" andalso outerop = "list" then
+          case Lib.total dest_thy_type (hd Args) of
+            SOME {Thy,Tyop,...} =>
             if Thy = "string" andalso Tyop = "char" then #"s"
             else String.sub(outerop, 0)
-          end
+          | NONE => #"l"
         else String.sub(outerop,0)
       end
   fun new_name ctxt ty = let
