@@ -1263,7 +1263,17 @@ local
     ((SWAP_VARS_CONV THENC BINDER_CONV (SWAP_TILL_BOTTOM_THEN c)) ORELSEC c) t
   fun app_letter ty =
     if is_vartype ty then String.sub(dest_vartype ty, 1)
-    else String.sub(#1 (dest_type ty), 0)
+    else let
+        val {Thy,Tyop=outerop,Args} = dest_thy_type ty
+      in
+        if Thy = "list" andalso outerop = "list" then let
+            val {Thy,Tyop,...} = dest_thy_type (hd Args)
+          in
+            if Thy = "string" andalso Tyop = "char" then #"s"
+            else String.sub(outerop, 0)
+          end
+        else String.sub(outerop,0)
+      end
   fun new_name ctxt ty = let
     fun nvary ctxt nm n = let
       val fullname = nm ^ Int.toString n
