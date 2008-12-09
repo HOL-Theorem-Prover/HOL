@@ -1505,7 +1505,7 @@ fun maybe_recurse k = let
         in
           Holmake visited [] newdir []
           before
-          FileSys.chDir dir
+          OS.FileSys.chDir dir
         end
   fun do_em accg [] = if k() then SOME accg else NONE
     | do_em accg (x::xs) = let
@@ -1520,7 +1520,7 @@ in
     if k() then SOME visited else NONE
   else let
       fun foldthis (dir, m) =
-          Binarymap.insert(m, FileSys.fullPath dir, dir)
+          Binarymap.insert(m, OS.FileSys.fullPath dir, dir)
       val possible_calls = List.foldr foldthis
                                       (Binarymap.mkDict String.compare)
                                       (cline_additional_includes @
