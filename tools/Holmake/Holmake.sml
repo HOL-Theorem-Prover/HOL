@@ -558,12 +558,7 @@ end
 
 
 (* directory specific stuff here *)
-exception LoopingDir
 fun Holmake visiteddirs cline_additional_includes dir targets = let
-  val _ = not (Binaryset.member(visiteddirs,dir)) orelse
-          (warn ("Directories have looping INCLUDE dependencies through "^
-                 dir);
-           raise LoopingDir)
   val _ = OS.FileSys.chDir dir
 
 
@@ -1298,26 +1293,38 @@ in
   if keep_going_flag then keep_going tgts else stop_on_failure tgts
 end
 
-fun maybe_recurse() = let
-  fun recurse newdir = let
-    val _ = warn ("Recursively calling Holmake in "^newdir)
-  in
-    (Holmake (Binaryset.add(visiteddirs, dir))
-             []
-             newdir
-             []
-             handle LoopingDir => false)
-    before
-    FileSys.chDir dir
-  end
-  fun do_em [] = true
-    | do_em (x::xs) = recurse x andalso do_em xs
+fun maybe_recurse k = let
+  fun recurse visited (newdir,nm) =
+      if Binaryset.member(visited, newdir) then SOME visited
+      else let
+          val _ = warn ("Recursively calling Holmake in "^nm)
+        in
+          Holmake visited [] newdir []
+          before
+          FileSys.chDir dir
+        end
+  fun do_em accg [] = if k() then SOME accg else NONE
+    | do_em accg (x::xs) = let
+      in
+        case recurse accg x of
+          SOME g' => do_em g' xs
+        | NONE => NONE
+      end
+  val visited = Binaryset.add(visiteddirs, dir)
 in
-  if no_prereqs then true
-  else
-    do_em (remove_duplicates (cline_additional_includes @
-                              envlist "PRE_INCLUDES" @
-                              hmake_includes))
+  if no_prereqs then
+    if k() then SOME visited else NONE
+  else let
+      fun foldthis (dir, m) =
+          Binarymap.insert(m, FileSys.fullPath dir, dir)
+      val possible_calls = List.foldr foldthis
+                                      (Binarymap.mkDict String.compare)
+                                      (cline_additional_includes @
+                                       envlist "PRE_INCLUDES" @
+                                       hmake_includes)
+    in
+      do_em visited (Binarymap.listItems possible_calls)
+    end
 end
 
 in
@@ -1329,15 +1336,16 @@ in
         print("Generated targets are: "^print_list (map fromFile targets)^"\n")
         else ()
     in
-      maybe_recurse() andalso
-      finish_logging (strategy  (map (fromFile) targets))
+      maybe_recurse
+          (fn () => finish_logging (strategy  (map (fromFile) targets)))
     end
   | xs => let
       fun isPhony x = member x ["clean", "cleanDeps", "cleanAll"] orelse
                       x in_target ".PHONY"
     in
-      if List.all isPhony xs then finish_logging (strategy xs)
-      else maybe_recurse() andalso finish_logging (strategy xs)
+      if List.all isPhony xs then
+        if finish_logging (strategy xs) then SOME visiteddirs else NONE
+      else maybe_recurse (fn () => finish_logging (strategy xs))
     end
 end
 
@@ -1381,7 +1389,7 @@ val _ =
                   handle Fail s => (print ("Fail exception: "^s^"\n");
                                     exit failure)
     in
-      if result then exit success
+      if isSome result then exit success
       else exit failure
     end
 
