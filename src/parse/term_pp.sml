@@ -450,7 +450,7 @@ fun pp_term (G : grammar) TyG = let
   fun is_let0 n tm = let
     val (let_tm,f_tm) = dest_comb(rator tm)
   in
-    Overload.overloading_of_term overload_info let_tm = SOME "LET" andalso
+    grammar_name G let_tm = SOME "LET" andalso
     (length (#1 (my_strip_abs f_tm)) >= n orelse is_let0 (n + 1) f_tm)
   end handle HOL_ERR _ => false
   val is_let = is_let0 1

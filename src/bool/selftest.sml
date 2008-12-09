@@ -129,6 +129,12 @@ val res = term_to_string t
 val _ = if res = "let x = T in x /\\ y" then print "OK\n"
         else (print "FAILED\n"; Process.exit Process.failure)
 
+val t = Parse.Term`(let x = T in \y. x /\ y) p`
+val _ = tprint "Testing pretty-printing of let-expression with fn type"
+val res = term_to_string t
+val _ = if res = "(let x = T in \\y. x /\\ y) p" then print "OK\n"
+        else (print "FAILED\n"; Process.exit Process.failure)
+
 
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)
