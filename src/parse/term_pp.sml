@@ -1551,11 +1551,7 @@ fun pp_term (G : grammar) TyG = let
 
           (* set comprehensions *)
           val _ =
-              if
-                is_const Rator andalso fst (dest_const Rator) = "GSPEC" andalso
-                isSome
-                    (Overload.overloading_of_term overload_info Rator) andalso
-                my_is_abs Rand
+              if grammar_name G Rator = SOME "GSPEC" andalso my_is_abs Rand
               then let
                   val (vs, body) = my_dest_abs Rand
                   val vfrees = FVL [vs] empty_tmset
