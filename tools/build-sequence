@@ -102,4 +102,4 @@ src/path
 !!examples/lambda/typing
 src/Boolify/src
 src/float
-!!examples/miller
+!!examples/miller/miller
