@@ -19,7 +19,7 @@ fun donowt() = ()
 
 val initialise = let
   val termenv =
-      case Process.getEnv "TERM" of
+      case OS.Process.getEnv "TERM" of
         SOME s => s
       | NONE => ""
 in

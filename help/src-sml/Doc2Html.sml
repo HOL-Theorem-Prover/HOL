@@ -6,10 +6,9 @@
 (*              "/home/kxs/kanan/help/Docfiles/html";                        *)
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
-
+structure Doc2Html = struct
 
 (* app load ["Substring", "TextIO", "Char", "FileSys"]; *)
-
 open Substring;
 
 fun curry f x y = f (x,y)
@@ -171,9 +170,9 @@ fun html (name,sectionl) ostrm =
   end;
 
 fun trans htmldir docdir docname = let
-  val docfile = Path.joinBaseExt{base = Path.concat(docdir, docname),
+  val docfile = OS.Path.joinBaseExt{base = OS.Path.concat(docdir, docname),
                                  ext = SOME "doc"}
-  val outfile = Path.joinBaseExt{base = Path.concat(htmldir, docname),
+  val outfile = OS.Path.joinBaseExt{base = OS.Path.concat(htmldir, docname),
                                  ext = SOME "html"}
   val ostrm = TextIO.openOut outfile
 in
@@ -182,18 +181,19 @@ in
 end
 
 fun docdir_to_htmldir docdir htmldir =
- let open FileSys
+ let open OS.FileSys
      val docfiles = ParseDoc.find_docfiles docdir
      val (tick, finish) = Flash.initialise ("Directory "^docdir^": ",
                                             Binaryset.numItems docfiles)
  in
    Binaryset.app (fn d => (trans htmldir docdir d; tick())) docfiles;
    finish();
-   Process.exit Process.success
+   OS.Process.exit OS.Process.success
  end
 
-val _ =
-    case CommandLine.arguments ()
+fun main () =
+  case CommandLine.arguments ()
      of [docdir,htmldir] => docdir_to_htmldir docdir htmldir
       | otherwise => print "Usage: Doc2Html <docdir> <htmldir>\n"
 
+end;

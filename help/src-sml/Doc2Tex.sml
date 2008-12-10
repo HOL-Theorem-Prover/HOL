@@ -86,7 +86,7 @@ fun indent_munge mlist =
       if every Char.isSpace ts then
         x :: indent_munge rest
       else
-        x :: TEXT (Substring.all "\\noindent ") :: t :: indent_munge rest
+        x :: TEXT (Substring.full "\\noindent ") :: t :: indent_munge rest
     | m::ms => m :: indent_munge ms
 
 
@@ -126,7 +126,7 @@ end
 fun do_the_work dir dset outstr = let
   fun appthis dnm = let
     val cname = core_dname dnm
-    val file = parse_file (Path.concat(dir,dnm ^ ".doc"))
+    val file = parse_file (OS.Path.concat(dir,dnm ^ ".doc"))
   in
     print_docpart(file, outstr);
     app (fn s => print_section (s,outstr)) file;
@@ -137,7 +137,7 @@ in
 end
 
 
-val _ =
+fun main () = 
     case CommandLine.arguments() of
       [docdir, texfile] => let
         val texfstr = TextIO.openAppend texfile

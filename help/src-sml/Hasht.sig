@@ -3,6 +3,7 @@
 (* Hash tables and hash functions *)
 
 (* Hash tables are hashed association tables, with in-place modification. *)
+signature Hasht = sig
 
 type ('a, 'b) t;
         (* The type of hash tables from type ['a] to type ['b]. *)
@@ -67,3 +68,4 @@ prim_val hash_param : int -> int -> 'a -> int = 3 "hash_univ_param";
            to happen.  However, hashing takes longer. The parameters
            [m] and [n] govern the tradeoff between accuracy and
            speed. *)
+end

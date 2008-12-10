@@ -2,54 +2,44 @@
 
 *)
 
-open BasicIO List
+structure Parsspec = struct
 
-(* Lexer of stream *)
+open List 
 
-fun createLexerStream (is : instream) =
-  Lexing.createLexer (fn buff => fn n => Nonstdio.buff_input is buff 0 n)
-;
-
-fun parsePhraseAndClear parsingFun lexingFun lexbuf =
-  let val phr =
-    parsingFun lexingFun lexbuf
-    handle x => (Parsing.clearParser(); raise x)
-  in
-    Parsing.clearParser();
-    phr
+structure SMLLrVals =
+  SMLLrValsFun(structure Token = LrParser.Token);
+structure SMLLex = 
+  SMLLexFun(structure Tokens = SMLLrVals.Tokens);
+structure SMLParser =
+  JoinWithArg(structure ParserData = SMLLrVals.ParserData
+              structure Lex=SMLLex
+              structure LrParser=LrParser);
+  
+fun parseSpec is =
+  let val lexer = SMLParser.makeLexer (fn n => TextIO.inputN (is, n)) 0 in
+    #1 (SMLParser.parse(15, lexer, (fn _ => ()), ()))
   end;
 
-val parseSpec =
-  parsePhraseAndClear Parser.SigFile Lexer.Token;
-
-fun processSpec is str ((Location.Loc(pos1, pos2), spec), res) =
-    let fun getline line pos =
-	    if pos < pos1 then
-		case Nonstdio.input_char is of
-		    #"\^Z" => raise Fail "Parsspec.processSpec: internal error"
-		  | #"\n"  => getline (line+1) (pos+1)
-		  | _      => getline line (pos+1)
-	    else line
-	val lineno = (Nonstdio.seek_in is 0; getline 0 0)
-	open Asynt Database
+fun processSpec is str (((pos1, pos2), spec), res) =
+    let open Asynt Database
 	fun getId ({qualid = {id, ...}, ...} : IdInfo) = id
 	fun valdesc ((idInfo, ty), res) =
-	    {comp = Val (getId idInfo), file = str, line = lineno} :: res
+	    {comp = Val (getId idInfo), file = str, line = #2 pos1} :: res
 	fun pvaldesc ((idInfo, ty, arity, cfun), res) =
-	    {comp = Val (getId idInfo), file = str, line = lineno} :: res
+	    {comp = Val (getId idInfo), file = str, line = #2 pos1} :: res
 	fun typdesc ((tyvars, idInfo), res) =
-	    {comp = Typ (getId idInfo), file = str, line = lineno} :: res
+	    {comp = Typ (getId idInfo), file = str, line = #2 pos1} :: res
 	fun typbind ((tyvars, idInfo, ty), res) =
-	    {comp = Typ (getId idInfo), file = str, line = lineno} :: res
+	    {comp = Typ (getId idInfo), file = str, line = #2 pos1} :: res
 	fun conbind ((ConBind(idInfo, tyOpt)), res) =
-	    {comp = Con (getId idInfo), file = str, line = lineno} :: res
+	    {comp = Con (getId idInfo), file = str, line = #2 pos1} :: res
 	fun datbind ((tyvars, idInfo, cbs), res) =
-	    {comp = Typ (getId idInfo), file = str, line = lineno}
+	    {comp = Typ (getId idInfo), file = str, line = #2 pos1}
 	    :: foldl conbind res cbs
 	fun datrep (idInfo, res) =
-	    {comp = Typ (getId idInfo), file = str, line = lineno} :: res
+	    {comp = Typ (getId idInfo), file = str, line = #2 pos1} :: res
 	fun exdesc ((idInfo, tyOpt), res) =
-	    {comp = Exc (getId idInfo), file = str, line = lineno} :: res
+	    {comp = Exc (getId idInfo), file = str, line = #2 pos1} :: res
     in
 	case spec of
 	    VALspec vs                  => foldl valdesc res vs
@@ -70,13 +60,12 @@ fun processSpec is str ((Location.Loc(pos1, pos2), spec), res) =
     end
 
 fun parseAndProcess dir str res =
-    let val basefile = Path.joinBaseExt {base = str, ext = SOME "sig"}
-        val filename = Path.joinDirFile {dir=dir, file = basefile}
+    let val basefile = OS.Path.joinBaseExt {base = str, ext = SOME "sig"}
+        val filename = OS.Path.joinDirFile {dir=dir, file = basefile}
 	(* val _ = print("Parsing " ^ basefile ^ " ... "); *)
 	val resLength = length res
-	val is        = open_in filename
-	val lexbuf    = createLexerStream is
-	val specs     = case parseSpec lexbuf
+	val is        = TextIO.openIn filename
+	val specs     = case parseSpec is
                          of Asynt.NamedSig {specs, ...} => specs
 			  | Asynt.AnonSig specs         => specs;
 	val initialbase = {comp = Database.Str, file = str, line = 0} :: res
@@ -84,9 +73,9 @@ fun parseAndProcess dir str res =
 	(* val _ = print ("processed " ^ Int.toString (length res - resLength)
 		       ^ " entries.\n") *)
     in
-	close_in is; res
+	TextIO.closeIn is; res
     end
-    handle Interrupt => raise Interrupt
+    handle SML90.Interrupt => raise SML90.Interrupt
          | _ => (print ("Failed to parse (or find?) "^str^
                         ".sig (continuing anyway).\n");
                  res)
@@ -96,7 +85,7 @@ fun parseAndProcess dir str res =
  *)
 
 fun processfile stoplist dir (filename, res) =
-    let val {base, ext} = Path.splitBaseExt filename
+    let val {base, ext} = OS.Path.splitBaseExt filename
     in
 	case ext of
 	    SOME "sig" =>
@@ -106,3 +95,4 @@ fun processfile stoplist dir (filename, res) =
 		    parseAndProcess dir base res
 	  | _          => res
     end
+end

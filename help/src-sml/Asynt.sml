@@ -1,4 +1,4 @@
-local open Location in
+structure Asynt = struct
 datatype Lab =
     INTlab of int
   | STRINGlab of string
@@ -20,6 +20,9 @@ type 'a global =
   info: 'a,               (* Description *)
   qualid: QualifiedIdent  (* Full name *)
 };
+
+type Location = (int * int) * (int * int);
+fun xxLR ((a, b), _) ((c, d), _) = (a, d);
 
 type IdDesc =
 {

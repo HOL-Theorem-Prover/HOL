@@ -4,6 +4,8 @@
  * Hacked for HOL help system, Konrad Slind, Nov. 2001.
  *)
 
+structure makebase = struct
+
 fun curry f x y = f (x,y);
 fun single x = [x];
 
@@ -12,7 +14,7 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
   | itstrings f (h::t) = f h (itstrings f t);
 
 val normPath = (* string list -> string *)
-  Path.toString o Path.fromString o itstrings (curry Path.concat);
+  OS.Path.toString o OS.Path.fromString o itstrings (curry OS.Path.concat);
 
 fun destProperSuffix s1 s2 =
   let val sz1 = String.size s1
@@ -20,13 +22,13 @@ fun destProperSuffix s1 s2 =
       open Substring
  in
    if sz1 >= sz2 then NONE
-   else let val (prefix, suffix) = splitAt(all s2, sz2 - sz1)
+   else let val (prefix, suffix) = splitAt(full s2, sz2 - sz1)
         in if string suffix = s1 then SOME (string prefix) else NONE
        end
  end;
 
 fun isTheory {comp,file=path,line} =
-  let open Path
+  let open OS.Path
       val {dir,file} = splitDirFile path
       val {base,ext} = splitBaseExt file
   in Option.isSome (destProperSuffix "Theory" base)
@@ -40,7 +42,6 @@ fun isSigId {comp=Database.Term(_,SOME"HOL"),file,line} = false
 (*---------------------------------------------------------------------------
     Set values
  ---------------------------------------------------------------------------*)
-
 (* The version number inserted in generated files: *)
 val version =
     String.concat ["<A HREF=\"http://hol.sourceforge.net\">HOL&nbsp;4,&nbsp;",
@@ -68,11 +69,11 @@ val texIndexDef = "index.tex"
 val htmlDirDef = "htmlsigs"
 
 (* Default filename for the HTML format database for identifiers: *)
-val htmlIndexDef = normPath[HOLpath,"help","src",htmlDirDef,"idIndex.html"]
+val htmlIndexDef = normPath[HOLpath,"help","src-sml",htmlDirDef,"idIndex.html"]
 
 (* Default filename for the HTML format database for theories: *)
 val htmlTheoryIndexDef =
-   normPath[HOLpath,"help","src",htmlDirDef,"TheoryIndex.html"]
+   normPath[HOLpath,"help","src-sml",htmlDirDef,"TheoryIndex.html"]
 
 (* Default filename for the LaTeX signatures: *)
 val texSigs = "texsigsigs.tex"
@@ -160,42 +161,10 @@ local fun is_adocfile s =
 in
 fun docdir_to_entries path (endpath, entries) =
   let val L1 = List.filter is_adocfile
-                  (Mosml.listDir (normPath [path, endpath]))
+                  (Htmlsigs.listDir (normPath [path, endpath]))
   in List.foldl (fn (s,l) => mk_HOLdocfile_entry (endpath,s)::l) entries L1
   end
 end;
-
-val docdirs =
- let val instr = TextIO.openIn
-                   (Path.concat(HOLpath,"tools/documentation-directories"))
-        handle _ => (print "Couldn't open documentation directories file";
-                    raise Fail "File not found")
-     val wholefile = TextIO.inputAll instr
-     val _ = TextIO.closeIn instr
- in
-   map (normPath o single) (String.tokens Char.isSpace wholefile)
- end
-
-val SRCFILES =
- let open TextIO
-     val istrm = openIn (Path.concat(HOLpath,"sigobj/SRCFILES"))
-        handle _ => (print "Couldn't open HOLDIR/sigobj/SRCFILES";
-                     raise Fail "File not found")
-     fun readlines acc =
-         case inputLine istrm of
-           "" => List.rev acc
-         | s => readlines (String.substring(s, 0, size s - 1) :: acc)
-                (* drop final newline *)
-     val wholefile = readlines [] before closeIn istrm
-     fun munge path =
-       let val {dir,file} = Path.splitDirFile path
-       in case destProperSuffix "Theory" file
-           of SOME thy => (file, Path.concat(dir,thy^"Script.sml"))
-            | NONE     => (file,path^".sml")
-       end
- in
-   map (munge o normPath o single) wholefile
- end
 
 fun dirToBase (sigdir, docdirs, filename) =
     let val doc_entryl = List.foldl (docdir_to_entries HOLpath) [] docdirs
@@ -210,6 +179,40 @@ fun dirToBase (sigdir, docdirs, filename) =
 	Database.writebase(filename, db)
     end
     handle exn as OS.SysErr (str, _) => (print(str ^ "\n\n"); raise exn)
+
+fun main () = let
+
+val docdirs =
+ let val instr = TextIO.openIn
+                   (OS.Path.concat(HOLpath,"tools/documentation-directories"))
+        handle _ => (print "Couldn't open documentation directories file";
+                    raise Fail "File not found")
+     val wholefile = TextIO.inputAll instr
+     val _ = TextIO.closeIn instr
+ in
+   map (normPath o single) (String.tokens Char.isSpace wholefile)
+ end
+
+val SRCFILES =
+ let open TextIO
+     val istrm = openIn (OS.Path.concat(HOLpath,"sigobj/SRCFILES"))
+        handle _ => (print "Couldn't open HOLDIR/sigobj/SRCFILES";
+                     raise Fail "File not found")
+     fun readlines acc =
+         case inputLine istrm of
+           NONE => List.rev acc
+         | SOME s => readlines (String.substring(s, 0, size s - 1) :: acc)
+                (* drop final newline *)
+     val wholefile = readlines [] before closeIn istrm
+     fun munge path =
+       let val {dir,file} = OS.Path.splitDirFile path
+       in case destProperSuffix "Theory" file
+           of SOME thy => (file, OS.Path.concat(dir,thy^"Script.sml"))
+            | NONE     => (file,path^".sml")
+       end
+ in
+   map (munge o normPath o single) wholefile
+ end
 
 fun process (libdir, helpfile, txtIndex,
              texIndex, htmldir, htmlIndex, htmlTheoryIndex, HOLpage)
@@ -245,8 +248,7 @@ fun process (libdir, helpfile, txtIndex,
      Texsigs.sigsToLatex stoplist libdir helpfile texSigs
      *)
  )
-
-val _ =
+ in
     case CommandLine.arguments () of
 	[]       =>
 	    process (libdirDef, helpfileDef,
@@ -259,3 +261,5 @@ val _ =
                      htmlDirDef, htmlIndexDef,
                      htmlTheoryIndexDef, HOLpageDef)
       | _ => print "Usage: makebase\n"
+end
+end;

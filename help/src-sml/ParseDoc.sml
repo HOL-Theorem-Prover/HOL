@@ -28,7 +28,7 @@ fun occurs s ss = not (isEmpty (#2 (position s ss)));
 
 fun fetch_contents docfile =
   let val istrm = TextIO.openIn docfile
-      val contents = Substring.all (TextIO.inputAll istrm)
+      val contents = Substring.full (TextIO.inputAll istrm)
       val _ = TextIO.closeIn istrm
   in contents
   end;
@@ -83,16 +83,16 @@ fun divide ss =
            else ss1::divide (triml 2 ss2)
          end;
 
-local val BLTYPE = Substring.all "BLTYPE"
-      val ELTYPE = Substring.all "ELTYPE"
-      val TYPEss = Substring.all "TYPE"
+local val BLTYPE = Substring.full "BLTYPE"
+      val ELTYPE = Substring.full "ELTYPE"
+      val TYPEss = Substring.full "TYPE"
       val BLTYPEsize = Substring.size ELTYPE
 in
 fun longtype_elim (l as (doc::ss1::ss2::rst)) =
      let val (ssa,ssb) = position "BLTYPE" ss1
          val (ssc,ssd) = position "ELTYPE" ss2
      in if isEmpty ssa andalso isEmpty ssc
-          then doc :: all(concat[TYPEss, triml BLTYPEsize ssb]) :: rst
+          then doc :: full(concat[TYPEss, triml BLTYPEsize ssb]) :: rst
           else l
      end
   | longtype_elim l = l
@@ -174,14 +174,14 @@ fun unescape_braces ss = let
     if size ssb = 0 then
       concat (List.rev (ssa::acc))
     else if isPrefix "\\lbrace" ssb then
-      recurse (all "{"::ssa::acc) (triml 7 ssb)
+      recurse (full "{"::ssa::acc) (triml 7 ssb)
     else if isPrefix "\\rbrace" ssb then
-      recurse (all "}"::ssa::acc) (triml 7 ssb)
+      recurse (full "}"::ssa::acc) (triml 7 ssb)
     else
       recurse (slice(ss,0,SOME (size ssa + 1))::acc) (triml 1 ssb)
   end
 in
-  all (recurse [] ss)
+  full (recurse [] ss)
 end
 
 fun parse_type ss =
@@ -210,10 +210,10 @@ fun trimws mlist =
 (* if the firstpass has an empty DOC component, then give it a full one
    generated from the name of the file. *)
 fun name_from_fname fname = let
-  val ss0 = all (Path.file fname)
+  val ss0 = full (OS.Path.file fname)
   val (ss1,_) = position ".doc" ss0
 in
-  case tokens (equal #".") (all (Symbolic.tosymb (string ss1))) of
+  case tokens (equal #".") (full (Symbolic.tosymb (string ss1))) of
     [] => raise Fail "Can't happen"
   | [x] => x
   | (_::y::_) => y
@@ -242,11 +242,11 @@ fun install_structure_part fname sections = let
   fun insert3 x [] = [x]
     | insert3 x [y] = [y, x]
     | insert3 x (h1::h2::t) = h1::h2::x::t
-  val name_parts = String.tokens (equal #".") (#file (Path.splitDirFile fname))
+  val name_parts = String.tokens (equal #".") (#file (OS.Path.splitDirFile fname))
 in
   if not (has_struct_section sections) andalso length name_parts = 3
   then
-    insert3 (FIELD("STRUCTURE", [TEXT (all (hd name_parts))])) sections
+    insert3 (FIELD("STRUCTURE", [TEXT (full (hd name_parts))])) sections
   else sections
 end
 
@@ -339,7 +339,7 @@ fun structpart dnm =  hd (String.tokens (equal #".") dnm)
 (* returns a set of file-names from the given directory that are .doc
    files *)
 fun find_docfiles dirname = let
-  val dirstr = FileSys.openDir dirname
+  val dirstr = OS.FileSys.openDir dirname
   fun name_compare(s1,s2) = let
     (* names already less .doc suffix *)
     val lower = String.map Char.toLower
@@ -354,9 +354,9 @@ fun find_docfiles dirname = let
       if valid_doc_name s then Binaryset.add(t, stripdoc_suff s)
       else t
   fun loop acc =
-      case FileSys.readDir dirstr of
+      case OS.FileSys.readDir dirstr of
         SOME s => loop (insert s acc)
-      | NONE => (FileSys.closeDir dirstr; acc)
+      | NONE => (OS.FileSys.closeDir dirstr; acc)
 in
   loop (Binaryset.empty name_compare)
 end

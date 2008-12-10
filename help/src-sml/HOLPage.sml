@@ -1,3 +1,4 @@
+structure HOLPage = struct
 open Database;
 
 fun equal x y = (x=y);
@@ -8,7 +9,7 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
   | itstrings f (h::t) = f h (itstrings f t);
 
 val normPath = (* string list -> string *)
-  Path.toString o Path.fromString o itstrings (curry Path.concat);
+  OS.Path.toString o OS.Path.fromString o itstrings (curry OS.Path.concat);
 
 fun destProperSuffix s1 s2 =
   let val sz1 = String.size s1
@@ -16,7 +17,7 @@ fun destProperSuffix s1 s2 =
       open Substring
  in
    if sz1 >= sz2 then NONE
-   else let val (prefix, suffix) = splitAt(all s2, sz2 - sz1)
+   else let val (prefix, suffix) = splitAt(full s2, sz2 - sz1)
         in if string suffix = s1 then SOME (string prefix) else NONE
        end
  end;
@@ -27,7 +28,7 @@ val dropSyntax = destProperSuffix "Syntax";
 val dropSimps  = destProperSuffix "Simps";
 
 fun find_most_appealing HOLpath docfile =
-  let open Path FileSys
+  let open OS.Path OS.FileSys
       val {dir,file} = splitDirFile docfile
       val {base,ext} = splitBaseExt file
       val docfile_dir = concat(HOLpath,dir)
@@ -38,9 +39,9 @@ fun find_most_appealing HOLpath docfile =
       val adocpath = normPath[docfile_dir,adocfile]
       val docpath  = normPath[docfile_dir,file]
   in
-     if FileSys.access(htmlpath,[A_READ]) then SOME htmlpath else
-     if FileSys.access(adocpath,[A_READ]) then SOME adocpath else
-     if FileSys.access(file,[A_READ]) then SOME docpath
+     if OS.FileSys.access(htmlpath,[A_READ]) then SOME htmlpath else
+     if OS.FileSys.access(adocpath,[A_READ]) then SOME adocpath else
+     if OS.FileSys.access(file,[A_READ]) then SOME docpath
      else NONE
   end;
 
@@ -133,3 +134,4 @@ fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
 	out "</BODY></HTML>\n";
 	TextIO.closeOut os
     end
+end

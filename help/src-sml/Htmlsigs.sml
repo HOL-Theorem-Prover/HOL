@@ -1,7 +1,7 @@
 (* Htmlsigs: some hacks to turn Moscow ML annotated signature files into
    HTML-files.  Peter Sestoft 1997-05-08, 1997-07-31, 2000-01-10, 2000-06-01
 *)
-
+structure Htmlsigs = struct
 fun indexbar out srcpath = out (String.concat
    ["<HR><TABLE WIDTH=100%>",
     "<TR ALIGN = CENTER>\n",
@@ -19,13 +19,13 @@ fun destProperSuffix s1 s2 =
       open Substring
  in
    if sz1 >= sz2 then NONE
-   else let val (prefix, suffix) = splitAt(all s2, sz2 - sz1)
+   else let val (prefix, suffix) = splitAt(full s2, sz2 - sz1)
         in if string suffix = s1 then SOME (string prefix) else NONE
        end
  end;
 
 fun isTheorysig path =
-  let open Path
+  let open OS.Path
       val {dir,file} = splitDirFile path
       val {base,ext} = splitBaseExt file
   in ext=SOME "sig" andalso Option.isSome (destProperSuffix "Theory" base)
@@ -39,7 +39,7 @@ fun assoc item =
   end
 
 fun find_most_appealing HOLpath docfile =
-  let open Path FileSys
+  let open OS.Path OS.FileSys
       val {dir,file} = splitDirFile docfile
       val {base,ext} = splitBaseExt file
       val docfile_dir = concat(HOLpath,dir)
@@ -50,17 +50,17 @@ fun find_most_appealing HOLpath docfile =
       val adocpath = concat(docfile_dir,adocfile)
       val docpath  = concat(docfile_dir,file)
   in
-     if FileSys.access(htmlpath,[A_READ]) then SOME htmlpath else
-     if FileSys.access(adocpath,[A_READ]) then SOME adocpath else
-     if FileSys.access(file,[A_READ]) then SOME docpath
+     if OS.FileSys.access(htmlpath,[A_READ]) then SOME htmlpath else
+     if OS.FileSys.access(adocpath,[A_READ]) then SOME adocpath else
+     if OS.FileSys.access(file,[A_READ]) then SOME docpath
      else NONE
   end;
 
 fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
-    let val strName = Path.base (Path.file sigfile)
+    let val strName = OS.Path.base (OS.Path.file sigfile)
 	val is = TextIO.openIn sigfile
 	val lines = Substring.fields (fn c => c = #"\n")
-	                             (Substring.all (TextIO.inputAll is))
+	                             (Substring.full (TextIO.inputAll is))
 	val _ = TextIO.closeIn is
 
 	fun comp2str comp =
@@ -134,12 +134,12 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 
 	(* First pass over the file: record anchors of identifier defs *)
 
-	val anchors = Polyhash.mkPolyTable (71, Fail "Htmlsigs.processSig")
+	val anchors = ref (Binaryset.empty String.compare)
 
 	fun pass1 susline lineno =
 	    let open Substring
 		fun nameanchor _ id _ comp =
-		    Polyhash.insert anchors (id ^ "-" ^ comp2str comp, ())
+                  anchors := (Binaryset.add (!anchors, id ^ "-" ^ comp2str comp))
 	    in
 		if isPrefix "   [" susline then
 		    definition susline ignore nameanchor
@@ -169,7 +169,7 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 	    (out "<A HREF=\"file://"; out link; out "\">"; out id; out"</A>")
 
         fun locate_docfile id =
-           let open FileSys Path Database
+           let open OS.FileSys OS.Path Database
                val qualid = strName^"."^id
                fun trav [] = NONE
                  | trav({comp=Database.Term(x,SOME "HOL"),file,line}::rst)
@@ -195,7 +195,7 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 		outSubstr preid
                ;
 		if id = "" then ()
-                 else if Polyhash.peek anchors link = NONE
+                 else if not (Binaryset.member (!anchors, link))
                       then if isThryFile then out id (* shouldn't happen *)
                            else case locate_docfile id
                                  of NONE => out id
@@ -257,7 +257,7 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 		    (process ln lineno; loop lnr (lineno+1))
 	    in loop lines 1 end
 
-        val srcfile = assoc (Path.base(Path.file sigfile)) SRCFILES
+        val srcfile = assoc (OS.Path.base(OS.Path.file sigfile)) SRCFILES
     in
 	(*print "Creating "; print htmlfile; print " from ";
 	print sigfile; print "\n"
@@ -279,33 +279,43 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 
 fun processSigfile db version bgcolor stoplist
                    sigdir htmldir HOLpath SRCFILES sigfile =
- let val {base, ext} = Path.splitBaseExt sigfile
-     val htmlfile = Path.joinBaseExt{base=base, ext=SOME "html"}
+ let val {base, ext} = OS.Path.splitBaseExt sigfile
+     val htmlfile = OS.Path.joinBaseExt{base=base, ext=SOME "html"}
  in
    case ext
     of SOME "sig" =>
 	if List.exists (fn name => base = name) stoplist then ()
 	else processSig db version bgcolor HOLpath SRCFILES
-	                (Path.concat(sigdir, sigfile))
-	                (Path.concat(htmldir, htmlfile))
+	                (OS.Path.concat(sigdir, sigfile))
+	                (OS.Path.concat(htmldir, htmlfile))
      | otherwise => ()
  end
 
+fun listDir s = let
+  val ds = OS.FileSys.openDir s
+  fun recurse acc =
+      case OS.FileSys.readDir ds of
+        NONE => acc
+      | SOME f => recurse (f :: acc)
+in
+  recurse [] before OS.FileSys.closeDir ds
+end
+
 fun sigsToHtml version bgcolor stoplist
                helpfile HOLpath SRCFILES (sigdir, htmldir) =
-    let open FileSys Database
+    let open OS.FileSys Database
 	val db = readbase helpfile
 	fun mkdir htmldir =
 	    if access(htmldir, [A_WRITE, A_EXEC]) andalso isDir htmldir then
 		(print "Directory "; print htmldir; print " exists\n")
 	    else
-		(FileSys.mkDir htmldir;
+		(OS.FileSys.mkDir htmldir;
 		 print "Created directory "; print htmldir; print "\n");
     in
      mkdir htmldir;
      app (processSigfile db version bgcolor
                          stoplist sigdir htmldir HOLpath SRCFILES)
-	 (Mosml.listDir sigdir)
+	 (listDir sigdir)
     end
     handle exn as OS.SysErr (str, _) => (print(str ^ "\n\n"); raise exn)
 
@@ -391,3 +401,4 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
 	out "</BODY></HTML>\n";
 	TextIO.closeOut os
     end
+end

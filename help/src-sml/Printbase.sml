@@ -1,4 +1,5 @@
 (* Outputting the help signature database in ASCII, LaTeX and HTML format *)
+structure Printbase = struct
 
 fun printASCIIBase(sigfile, outfile) =
     let fun prtseq (pr, sep) []      = ""
@@ -83,3 +84,4 @@ fun printLatexBase(sigfile, outfile) =
 	out "\\end{description}\n";
 	TextIO.closeOut os 
     end
+end

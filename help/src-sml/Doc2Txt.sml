@@ -45,8 +45,8 @@ fun print_markups strm mlist =
 
 
 fun listify [] = raise Fail "Empty SEEALSO list -- impossible"
-  | listify [x] = [Substring.all (Substring.string x ^ ".")]
-  | listify (x::xs) = Substring.all (Substring.string x ^ ",") ::
+  | listify [x] = [Substring.full (Substring.string x ^ ".")]
+  | listify (x::xs) = Substring.full (Substring.string x ^ ",") ::
                       listify xs
 
 fun print_list strm ssl = print_filled_words strm 0 (listify ssl)
@@ -90,8 +90,8 @@ in
 end
 
 fun do_one_file docdir destdir dname = let
-  val file = parse_file (Path.concat(docdir, dname ^ ".doc"))
-  val outputstr = TextIO.openOut (Path.concat(destdir, dname ^ ".adoc"))
+  val file = parse_file (OS.Path.concat(docdir, dname ^ ".doc"))
+  val outputstr = TextIO.openOut (OS.Path.concat(destdir, dname ^ ".adoc"))
 in
   print_docpart (file, outputstr);
   app (write_section outputstr) file;
@@ -100,7 +100,7 @@ in
 end
 
 
-val _ =
+fun main () =
     case CommandLine.arguments() of
       [docdir, destdir] => let
         val docfiles = find_docfiles docdir
