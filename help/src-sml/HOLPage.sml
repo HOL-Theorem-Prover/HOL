@@ -55,7 +55,7 @@ fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
 	    href anchor (concat [file, ".html#line", Int.toString line])
 	fun strhref file anchor = href anchor (file ^ ".html")
 	fun mkref line file = idhref file line file
-        val sigspath = normPath[HOLpath,"help","src","htmlsigs"]
+        val sigspath = normPath[HOLpath,"help","src-sml","htmlsigs"]
         fun path front file = normPath[front, file^".html"]
 
         fun class_of drop {comp=Str, file, line} =

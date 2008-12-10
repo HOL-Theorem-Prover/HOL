@@ -102,7 +102,7 @@ fun html (name,sectionl) ostrm =
        | markout_section (FIELD ("STRUCTURE", [TEXT s]))
            = (out "<DT><SPAN class = \"FIELD-NAME\">STRUCTURE</SPAN></DT>\n";
               out "<DD><DIV class = \"FIELD-BODY\">";
-              out "<A HREF = \"../../src/htmlsigs/";
+              out "<A HREF = \"../../src-sml/htmlsigs/";
               out (Symbolic.unsymb(string s)); out ".html\">";
               out (Symbolic.unsymb(string s));
               out "</A></DIV></DD>\n")

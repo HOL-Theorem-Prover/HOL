@@ -516,7 +516,7 @@ fun build_adoc_files () = let
     map normPath (String.tokens Char.isSpace wholefile)
   end handle _ => (print "Couldn't read documentation directories file\n";
                    [])
-  val doc2txt = fullPath [HOLDIR, "help", "src", "Doc2Txt.exe"]
+  val doc2txt = fullPath [HOLDIR, "help", "src-sml", "Doc2Txt.exe"]
   fun make_adocs dir = let
     val fulldir = fullPath [HOLDIR, dir]
   in
@@ -530,11 +530,20 @@ in
 end
 
 fun build_help () =
- let val dir = OS.Path.concat(OS.Path.concat (HOLDIR,"help"),"src")
+ let val dir = OS.Path.concat(OS.Path.concat (HOLDIR,"help"),"src-sml")
      val _ = OS.FileSys.chDir dir
 
      (* builds the documentation tools called below *)
-     val _ = build_dir (dir, 0)
+     val _ = Systeml.system_ps (fullPath [HOLDIR, "tools", "mllex", "mllex.exe"] ^ " Lexer.lex")
+     val _ = Systeml.system_ps (fullPath [HOLDIR, "tools", "mlyacc", "src", "mlyacc.exe"] ^ " Parser.grm")
+     val _ = Systeml.system_ps (POLY ^ " < poly-makebase.ML");
+     val _ = compile systeml "makebase.exe" "makebase.o";
+     val _ = Systeml.system_ps (POLY ^ " < poly-Doc2Html.ML");
+     val _ = compile systeml "Doc2Html.exe" "Doc2Html.o";
+     val _ = Systeml.system_ps (POLY ^ " < poly-Doc2Txt.ML");
+     val _ = compile systeml "Doc2Txt.exe" "Doc2Txt.o";
+     val _ = Systeml.system_ps (POLY ^ " < poly-Doc2Tex.ML");
+     val _ = compile systeml "Doc2Tex.exe" "Doc2Tex.o";
 
      val doc2html = fullPath [dir,"Doc2Html.exe"]
      val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
@@ -617,7 +626,7 @@ in
   clean_sigobj();
   setup_logfile();
   build_src symlink
-    handle Interrupt => (finish_logging false; die "Interrupted");
+    handle SML90.Interrupt => (finish_logging false; die "Interrupted");
   finish_logging true;
   make_buildstamp();
   build_help();

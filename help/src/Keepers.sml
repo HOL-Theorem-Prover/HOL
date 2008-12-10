@@ -1,4 +1,4 @@
-
+structure Keepers = struct
 (*---------------------------------------------------------------------------*)
 (* A list of the signatures that we think users will be interested in.       *)
 (*---------------------------------------------------------------------------*)
@@ -204,3 +204,4 @@ val keepers =
      "floatTheory.sig", "ieeeTheory.sig",
      "fxpTheory.sig"
   ];
+end;

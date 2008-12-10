@@ -15,7 +15,7 @@ fun useB f =
 val _ = useB "Database";
 val _ = use "HOLPage.sml";
 val _ = useB "Htmlsigs";
-val _ = use "Keepers.sml";
+val _ = use "../src/Keepers.sml";
 val _ = use "Asynt.sml";
 
 fun u f = use ("../../tools/mlyacc/mlyacclib/" ^ f ^ ".sml");
