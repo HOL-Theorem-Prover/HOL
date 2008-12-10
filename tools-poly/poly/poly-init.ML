@@ -52,3 +52,7 @@ val _ = use "poly/Binaryset.sig";
 val _ = use "poly/Binaryset.sml";
 val _ = use "poly/Listsort.sig";
 val _ = use "poly/Listsort.sml";
+val _ = use "poly/Database.sig";
+val _ = use "poly/Database.sml";
+val _ = use "poly/Help.sig";
+val _ = use "poly/Help.sml";

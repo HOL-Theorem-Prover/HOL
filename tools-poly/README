@@ -23,8 +23,6 @@ The build script always rebuilds the executables.
 
 "quietdec" doesn't work (use "PolyML.print_depth" instead).
 
-The interactive "help" command is not implemented.
-
 Local installations of Poly/ML seem to need LD_LIBRARY_PATH set for executables
 to work (on Linux, not on Mac).
 

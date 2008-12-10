@@ -43,6 +43,32 @@ in
   val _ = PolyML.install_pp (pp2polypp (with_pp Arbrat.pp_rat));
 end;
 
+(*---------------------------------------------------------------------------*
+ * Set up the help paths.                                                    *
+ *---------------------------------------------------------------------------*)
+
+local
+  open Path
+  fun HELP s = toString(fromString(concat(HOLDIR, concat("help",s))))
+  val SIGOBJ = toString(fromString(concat(HOLDIR, "sigobj")))
+in
+  val () = Help.indexfiles := HELP "HOL.Help" :: !Help.indexfiles
+  val () = Help.helpdirs   := HOLDIR :: SIGOBJ :: !Help.helpdirs
+  val () = Help.specialfiles :=
+             {file = "help/Docfiles/README.Hol98",
+              term = "hol", title = "Hol98 Overview"}
+             :: !Help.specialfiles
+  val help = Help.help
+end
+
+
+(*---------------------------------------------------------------------------*
+ *  Set parameters for parsing and help.                                     *
+ *---------------------------------------------------------------------------*)
+
+val _ = Help.displayLines := 60;
+
+
 local
  fun try_remove f = ((OS.FileSys.remove f) handle OS.SysErr _ => ());
  fun has_dq file =
