@@ -509,7 +509,7 @@ fun clean_sigobj() =
 
 fun build_adoc_files () = let
   val docdirs = let
-    val instr = TextIO.openIn(fullPath [HOLDIR, "tools-poly",
+    val instr = TextIO.openIn(fullPath [HOLDIR, "tools",
                                         "documentation-directories"])
     val wholefile = TextIO.inputAll instr before TextIO.closeIn instr
   in
