@@ -1816,7 +1816,7 @@ val PROB_BERN_BIND_UPPER = store_thm
            ++ RW_TAC std_ss [SPECIFICATION],
            BasicProvers.NORM_TAC bool_ss [NOT_IN_EMPTY, IN_o]
            ++ RW_TAC bool_ss [SPECIFICATION]
-           ++ PROVE_TAC []]],
+           ++ PROVE_TAC [o_THM]]],
          HO_MATCH_MP_TAC SER_CMUL
          ++ Know
             `(\m. (if c m IN q then 0 else prob bern ($= (c m) o FST o f))) =
@@ -1863,7 +1863,7 @@ val PROB_BERN_BIND_UPPER = store_thm
            ++ RW_TAC bool_ss [SPECIFICATION],
            BasicProvers.NORM_TAC bool_ss [NOT_IN_EMPTY, IN_o]
            ++ RW_TAC bool_ss [SPECIFICATION]
-           ++ PROVE_TAC []]]])
+           ++ PROVE_TAC [o_THM]]]])
     ++ RW_TAC bool_ss [SUMS_EQ]
     ++ POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM)
     ++ POP_ASSUM MP_TAC
@@ -1937,7 +1937,7 @@ val PROB_BERN_BIND_UPPER = store_thm
            ++ RW_TAC bool_ss [SPECIFICATION],
            BasicProvers.NORM_TAC bool_ss [NOT_IN_EMPTY, IN_o]
            ++ RW_TAC bool_ss [SPECIFICATION]
-           ++ PROVE_TAC []]],
+           ++ PROVE_TAC [o_THM]]],
          RW_TAC bool_ss [SUM_CMUL, REAL_EQ_LMUL]
          ++ DISJ2_TAC
          ++ Know
@@ -1985,7 +1985,7 @@ val PROB_BERN_BIND_UPPER = store_thm
            ++ RW_TAC bool_ss [SPECIFICATION],
            BasicProvers.NORM_TAC bool_ss [NOT_IN_EMPTY, IN_o]
            ++ RW_TAC bool_ss [SPECIFICATION]
-           ++ PROVE_TAC []]]])
+           ++ PROVE_TAC [o_THM]]]])
     ++ RW_TAC bool_ss []
     ++ POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM)
     ++ POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM)
@@ -1995,13 +1995,13 @@ val PROB_BERN_BIND_UPPER = store_thm
      ++ RW_TAC bool_ss []
      ++ MATCH_MP_TAC PROB_POSITIVE
      ++ RW_TAC bool_ss [PROB_SPACE_BERN]
-     ++ Q.SPEC_TAC (`$= (c n)`, `r`)
+     ++ Q.SPEC_TAC (`$= (c n)`, `R`)
      ++ PROVE_TAC [INDEP_FN_FST_EVENTS],
      MATCH_MP_TAC REAL_LE_LMUL_IMP
      ++ RW_TAC bool_ss []
      ++ MATCH_MP_TAC PROB_POSITIVE
      ++ RW_TAC bool_ss [PROB_SPACE_BERN]
-     ++ Q.SPEC_TAC (`$= (c n)`, `r`)
+     ++ Q.SPEC_TAC (`$= (c n)`, `R`)
      ++ PROVE_TAC [INDEP_FN_FST_EVENTS]]]);
 
 val PROB_BERN_PROB_WHILE_CUT = store_thm
@@ -2189,8 +2189,19 @@ val PREFIX_COVER_STAR_PREFIXFREE = store_thm
    ++ Q.SPEC_TAC (`x`, `x`)
    ++ (Induct
        ++ Cases
-       ++ RW_TAC std_ss [prefix_cover_level_def, append_sets_fn_def,
-                         GSPECIFICATION, NOT_IN_EMPTY, IN_SING])
+       ++ ASM_SIMP_TAC (simpLib.++(simpLib.++(std_ss,boolSimps.COND_elim_ss),
+                                   boolSimps.CONJ_ss))
+                       [prefix_cover_level_def, append_sets_fn_def,
+                        GSPECIFICATION, NOT_IN_EMPTY, IN_SING])
+   ++ MAP_EVERY Q.X_GEN_TAC [`l`, `m`, `a`]
+   ++ STRIP_TAC
+   ++ DISCH_THEN
+        (CONJUNCTS_THEN2
+             (DISJ_CASES_THEN2 ASSUME_TAC
+                               (Q.X_CHOOSE_THEN `l'` STRIP_ASSUME_TAC))
+             STRIP_ASSUME_TAC)
+   ++ DISCH_THEN (Q.X_CHOOSE_THEN `l''` STRIP_ASSUME_TAC)
+   ++ RW_TAC std_ss []
    ++ STRIP_TAC
    ++ Know `l' = l''`
    >> PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]
@@ -2650,6 +2661,11 @@ val PREFIX_COVER_STAR_FIXES_FN = store_thm
    ++ RW_TAC std_ss [prefix_cover_level_def, NOT_IN_EMPTY, append_sets_fn_def,
                      GSPECIFICATION, PROB_WHILE_WITNESS_BIND, BIND_DEF, o_THM]
    ++ RW_TAC std_ss [UNCURRY]
+   ++ Q.PAT_ASSUM `s IN prefix_set (LL ++ y)` MP_TAC
+   ++ Q.MATCH_ABBREV_TAC `s IN prefix_set (l' ++ y) ==> Q`
+   ++ Q.UNABBREV_TAC `Q`
+   ++ markerLib.RM_ALL_ABBREVS_TAC
+   ++ STRIP_TAC
    ++ Q.PAT_ASSUM `!a l s. P a l s /\ Q a l s ==> R a l s`
       (fn th =>
        MP_TAC (Q.SPECL [`a`, `l'`, `prefix_seq (APPEND l' y)`] th)
@@ -2891,7 +2907,7 @@ val PROB_WHILE_WITNESS_MEASURABLE_SND = store_thm
    ++ Rewr
    ++ Q.PAT_ASSUM `!n. X n IN indep_fn` (MP_TAC o Q.SPEC `m`)
    ++ RW_TAC std_ss [indep_fn_def, GSPECIFICATION, IN_MEASURABLE, IN_UNIV]);
- 
+
 val PROB_WHILE_EXISTS = store_thm
   ("PROB_WHILE_EXISTS",
    ``!c : 'a -> bool. !b : 'a -> (num -> bool) -> 'a # (num -> bool).
