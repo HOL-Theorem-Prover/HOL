@@ -1,12 +1,8 @@
 To build HOL with PolyML: 
-  1) run "<path-to-poly> < tools-poly/smart-configure.sml" from the top-level 
-     HOL directory HOLDIR. Note that <path-to-poly> has to be the full path 
-     to the poly executable residing in polydir/bin, where polydir is the 
-     poly distribution directory. 
-  2) run "bin/build -expk -symlink" (only the experimental kernel is supported)
-
-This is currently experimental, and probably fragile.  The help system doesn't
-work; also ctrl-c may not work reliably.
+  1) run "poly < tools/smart-configure.sml" from the top-level 
+     HOL directory HOLDIR (assuming that the PolyML executable "poly" is in 
+     your path). 
+  2) run "bin/build -expk" (only the experimental kernel is supported)
 
 According to the build log on my machine, Moscow ML takes 1670s of proof and
 Poly takes 262s.  Total time to build the system is 50m on Moscow and 23m on
@@ -27,20 +23,45 @@ The build script always rebuilds the executables.
 
 "quietdec" doesn't work (use "PolyML.print_depth" instead).
 
-Documentation building doesn't work.  The lexer and parser need porting from
-mosmllex and mosmlyacc to mllex and mlyacc.
+The interactive "help" command is not implemented.
 
 Local installations of Poly/ML seem to need LD_LIBRARY_PATH set for executables
 to work (on Linux, not on Mac).
 
-ctrl-c requires a second input to break a loop. 
-
-Pretty printing looks a little rough around the edges in some cases.
+Pretty printing looks a little rough around the edges in some cases.  The
+problem here is due to PolyML's command line using an internal pretty-printing
+engine, whereas HOL use its own.  When Poly/ML prints, for example, a list of
+theorems, it repeatedly invokes a pretty printer for theorems.  HOL has
+installed such a printer that converts the theorem into string using HOL's
+pretty printing system, and then prints out that string.  However, the HOL
+pretty printing system is unaware of the printing context that was built up
+while in PolyML's native system.
 
 We're recording information in .uo and .ui files to minimize changes to
 Holmake, but it would be nice to have only .uo files (and use a different
 suffix).
 
-An option to Holmake to load file once "compiled" into .uo would help catch
-errors earlier.
+Code isn't compiled at the proper time with the current setup.  Each time a
+file is loaded, it is ultimately "use"d in from source.  "Compiling" the .sml
+file to .uo file simply records the dependency information so that the system
+can load all of the dependencies first.  PolyML's compiler is fast enough to
+make this workable, but the situation is not ideal.  It's worse in some ways
+for Lib files than theory files because running Holmake doesn't necessarily
+cause them to get type checked; you have to make sure that each one is loaded
+to know that they actually got "use"d in.
 
+There is a unappealing amount of duplication where I haven't been able to get
+the same source to run on both versions.  They vary in degree of hopelessness,
+but for now, changes in one probably need to be made also in its counterpart.
+1) help/src and help/src-sml
+2) tools-poly/poly/redirects (OmegaMLShadow.sml Portable.sml mlibPortable.sml
+   Portable.sig mlibOmegaint.sml)
+3) std.prelude and tools-poly/prelude.ML
+4) tools/end-init-boss.sml and tools-poly/prelude2.ML
+5) tools/build-sequence and tools-poly/build-sequence
+6) tools/Holmake and tools-poly/Holmake
+7) tools/build.sml and tools-poly/build.sml
+8) tools/mosml-configure.sml and tools-poly/smart-configure.sml
+
+PolyML doesn't have a way to suppress warnings separately from suppressing
+errors.
