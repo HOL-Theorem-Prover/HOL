@@ -359,6 +359,7 @@ val stringinst = INST_TYPE [alpha |-> ``:char``]
 
 val STRLEN_EQ_0 = save_thm("STRLEN_EQ_0", stringinst LENGTH_NIL)
 val STRLEN_THM = save_thm("STRLEN_THM", stringinst LENGTH)
+val STRLEN_DEF = save_thm("STRLEN_DEF",  STRLEN_THM)
 
 (*---------------------------------------------------------------------------
                       String concatenation
