@@ -7,13 +7,12 @@ val _ = use "../../tools-poly/poly/Binaryset.sig";
 val _ = use "../../tools-poly/poly/Binaryset.sml";
 val _ = use "../../tools-poly/poly/Listsort.sig";
 val _ = use "../../tools-poly/poly/Listsort.sml";
-val _ = use "../../tools-poly/poly/Database.sig";
-val _ = use "../../tools-poly/poly/Database.sml";
 
 fun useB f =
   (use (f ^ ".sig");
    use (f ^ ".sml"));
 
+val _ = useB "Database";
 val _ = use "HOLPage.sml";
 val _ = useB "Htmlsigs";
 val _ = use "Keepers.sml";
