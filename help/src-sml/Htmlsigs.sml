@@ -1,7 +1,7 @@
 (* Htmlsigs: some hacks to turn Moscow ML annotated signature files into
    HTML-files.  Peter Sestoft 1997-05-08, 1997-07-31, 2000-01-10, 2000-06-01
 *)
-structure Htmlsigs = struct
+structure Htmlsigs :> Htmlsigs = struct
 fun indexbar out srcpath = out (String.concat
    ["<HR><TABLE WIDTH=100%>",
     "<TR ALIGN = CENTER>\n",
