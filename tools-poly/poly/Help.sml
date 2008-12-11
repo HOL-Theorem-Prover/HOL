@@ -198,7 +198,7 @@ fun readfile file =
 	    raise Fail ("Help.readFile: help file `" ^ file ^ "' not found")
 	  | openFile (dir1 :: dirr) =
 		(TextIO.openIn (joinDirFile dir1 file))
-		handle OS.SysErr _ => openFile dirr
+		handle IO.Io _ => openFile dirr
 	val is = openFile ((*getstdlib () :: *)!helpdirs)
 	fun h () = case TextIO.inputLine is of
                        NONE => []
