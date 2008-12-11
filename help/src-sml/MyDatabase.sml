@@ -1,6 +1,9 @@
+structure Database :> Database =
+struct
+
 (* Database.sml *)
 
-datatype component = 
+datatype component =
     Str					(* structure                       *)
   | Exc of string			(* exception constructor with name *)
   | Typ of string			(* type constructor with name      *)
@@ -28,7 +31,7 @@ fun writebase(filename, db) =
 
 fun readbase filename =
     let open BasicIO
-	prim_type in_channel 
+	prim_type in_channel
 	type instream_  = { closed: bool, ic: in_channel } ref
 	prim_val input_value_ : in_channel -> 'a = 1 "intern_val"
 	prim_val fromI : instream -> instream_   = 1 "identity"
@@ -86,3 +89,5 @@ fun getname ({comp, file, ...} : entry) =
                          of [strName,vName] => vName
                           | other => id;
 
+
+end (* struct *)

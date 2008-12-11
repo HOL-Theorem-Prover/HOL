@@ -495,7 +495,7 @@ fun build_help () =
      val _ = FileSys.chDir dir
 
      (* builds the documentation tools called below *)
-     val _ = build_dir (dir, 0)
+     val _ = SYSTEML [HOLMAKE, "all"]
 
      val doc2html = fullPath [dir,"Doc2Html.exe"]
      val docpath  = fullPath [HOLDIR, "help", "Docfiles"]

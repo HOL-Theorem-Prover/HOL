@@ -1,6 +1,9 @@
+signature Database=
+sig
+
 (* Database *)
 
-datatype component = 
+datatype component =
     Str					(* structure                       *)
   | Exc of string			(* exception constructor with name *)
   | Typ of string			(* type constructor with name      *)
@@ -31,3 +34,5 @@ val lookup     : database * string -> entry list
 (* Extract the name from an entry: *)
 
 val getname : entry -> string
+
+end (* sig *)

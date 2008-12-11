@@ -243,10 +243,6 @@ fun process (libdir, helpfile, txtIndex,
  ; print ("\nWriting HOLPage\n")
  ; HOLPage.printHOLPage version bgcolor HOLpath
                         htmlIndex htmlTheoryIndex (helpfile, HOLpage)
-     (*  ;
-     print ("\nWriting LaTeX signature bodies in file " ^ texSigs ^ "\n");
-     Texsigs.sigsToLatex stoplist libdir helpfile texSigs
-     *)
  )
  in
     case CommandLine.arguments () of
