@@ -1,3 +1,3 @@
 To compile:
 
-Holmake -I ../../.. -I ..
+Holmake -I ../../.. -I ../.. -I .. -I ../constraintSolver

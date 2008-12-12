@@ -85,6 +85,307 @@ verify spec n;
 (* 
  - Verifying program Tritype 
 building term: runtime: 3.788s,    gctime: 0.516s,     systime: 0.140s.
+Term to verify is:
+?k j i.
+  (i >= 0 /\ j >= 0 /\ k >= 0) /\
+  ~((i + j <= k \/ j + k <= i \/ i + k <= j ==>
+     ((if ((i = 0) \/ (j = 0)) \/ (k = 0) then
+         4
+       else
+         (if
+            (if j = k then
+               (if i = k then
+                  (if i = j then 6 else 5)
+                else
+                  (if i = j then 4 else 3))
+             else
+               (if i = k then
+                  (if i = j then 3 else 2)
+                else
+                  (if i = j then 1 else 0))) =
+            0
+          then
+            (if i + j <= k \/ j + k <= i \/ i + k <= j then 4 else 1)
+          else
+            (if
+               (if j = k then
+                  (if i = k then T else (if i = j then T else F))
+                else
+                  F)
+             then
+               3
+             else
+               (if
+                  ((if j = k then
+                      (if i = k then
+                         (if i = j then 6 else 5)
+                       else
+                         (if i = j then 4 else 3))
+                    else
+                      (if i = k then
+                         (if i = j then 3 else 2)
+                       else
+                         (if i = j then 1 else 0))) =
+                   1) /\ k < i + j
+                then
+                  2
+                else
+                  (if
+                     ((if j = k then
+                         (if i = k then
+                            (if i = j then 6 else 5)
+                          else
+                            (if i = j then 4 else 3))
+                       else
+                         (if i = k then
+                            (if i = j then 3 else 2)
+                          else
+                            (if i = j then 1 else 0))) =
+                      2) /\ j < i + k
+                   then
+                     2
+                   else
+                     (if
+                        ((if j = k then
+                            (if i = k then
+                               (if i = j then 6 else 5)
+                             else
+                               (if i = j then 4 else 3))
+                          else
+                            (if i = k then
+                               (if i = j then 3 else 2)
+                             else
+                               (if i = j then 1 else 0))) =
+                         3) /\ i < j + k
+                      then
+                        2
+                      else
+                        4)))))) =
+      4)) /\
+    (~(i + j <= k \/ j + k <= i \/ i + k <= j) /\ (i = j) /\ (j = k) ==>
+     ((if ((i = 0) \/ (j = 0)) \/ (k = 0) then
+         4
+       else
+         (if
+            (if j = k then
+               (if i = k then
+                  (if i = j then 6 else 5)
+                else
+                  (if i = j then 4 else 3))
+             else
+               (if i = k then
+                  (if i = j then 3 else 2)
+                else
+                  (if i = j then 1 else 0))) =
+            0
+          then
+            (if i + j <= k \/ j + k <= i \/ i + k <= j then 4 else 1)
+          else
+            (if
+               (if j = k then
+                  (if i = k then T else (if i = j then T else F))
+                else
+                  F)
+             then
+               3
+             else
+               (if
+                  ((if j = k then
+                      (if i = k then
+                         (if i = j then 6 else 5)
+                       else
+                         (if i = j then 4 else 3))
+                    else
+                      (if i = k then
+                         (if i = j then 3 else 2)
+                       else
+                         (if i = j then 1 else 0))) =
+                   1) /\ k < i + j
+                then
+                  2
+                else
+                  (if
+                     ((if j = k then
+                         (if i = k then
+                            (if i = j then 6 else 5)
+                          else
+                            (if i = j then 4 else 3))
+                       else
+                         (if i = k then
+                            (if i = j then 3 else 2)
+                          else
+                            (if i = j then 1 else 0))) =
+                      2) /\ j < i + k
+                   then
+                     2
+                   else
+                     (if
+                        ((if j = k then
+                            (if i = k then
+                               (if i = j then 6 else 5)
+                             else
+                               (if i = j then 4 else 3))
+                          else
+                            (if i = k then
+                               (if i = j then 3 else 2)
+                             else
+                               (if i = j then 1 else 0))) =
+                         3) /\ i < j + k
+                      then
+                        2
+                      else
+                        4)))))) =
+      3)) /\
+    (~(i + j <= k \/ j + k <= i \/ i + k <= j) /\
+     ~((i = j) /\ (j = k)) /\ ((i = j) \/ (j = k) \/ (i = k)) ==>
+     ((if ((i = 0) \/ (j = 0)) \/ (k = 0) then
+         4
+       else
+         (if
+            (if j = k then
+               (if i = k then
+                  (if i = j then 6 else 5)
+                else
+                  (if i = j then 4 else 3))
+             else
+               (if i = k then
+                  (if i = j then 3 else 2)
+                else
+                  (if i = j then 1 else 0))) =
+            0
+          then
+            (if i + j <= k \/ j + k <= i \/ i + k <= j then 4 else 1)
+          else
+            (if
+               (if j = k then
+                  (if i = k then T else (if i = j then T else F))
+                else
+                  F)
+             then
+               3
+             else
+               (if
+                  ((if j = k then
+                      (if i = k then
+                         (if i = j then 6 else 5)
+                       else
+                         (if i = j then 4 else 3))
+                    else
+                      (if i = k then
+                         (if i = j then 3 else 2)
+                       else
+                         (if i = j then 1 else 0))) =
+                   1) /\ k < i + j
+                then
+                  2
+                else
+                  (if
+                     ((if j = k then
+                         (if i = k then
+                            (if i = j then 6 else 5)
+                          else
+                            (if i = j then 4 else 3))
+                       else
+                         (if i = k then
+                            (if i = j then 3 else 2)
+                          else
+                            (if i = j then 1 else 0))) =
+                      2) /\ j < i + k
+                   then
+                     2
+                   else
+                     (if
+                        ((if j = k then
+                            (if i = k then
+                               (if i = j then 6 else 5)
+                             else
+                               (if i = j then 4 else 3))
+                          else
+                            (if i = k then
+                               (if i = j then 3 else 2)
+                             else
+                               (if i = j then 1 else 0))) =
+                         3) /\ i < j + k
+                      then
+                        2
+                      else
+                        4)))))) =
+      2)) /\
+    (~(i + j <= k \/ j + k <= i \/ i + k <= j) /\
+     ~((i = j) /\ (j = k)) /\ ~((i = j) \/ (j = k) \/ (i = k)) ==>
+     ((if ((i = 0) \/ (j = 0)) \/ (k = 0) then
+         4
+       else
+         (if
+            (if j = k then
+               (if i = k then
+                  (if i = j then 6 else 5)
+                else
+                  (if i = j then 4 else 3))
+             else
+               (if i = k then
+                  (if i = j then 3 else 2)
+                else
+                  (if i = j then 1 else 0))) =
+            0
+          then
+            (if i + j <= k \/ j + k <= i \/ i + k <= j then 4 else 1)
+          else
+            (if
+               (if j = k then
+                  (if i = k then T else (if i = j then T else F))
+                else
+                  F)
+             then
+               3
+             else
+               (if
+                  ((if j = k then
+                      (if i = k then
+                         (if i = j then 6 else 5)
+                       else
+                         (if i = j then 4 else 3))
+                    else
+                      (if i = k then
+                         (if i = j then 3 else 2)
+                       else
+                         (if i = j then 1 else 0))) =
+                   1) /\ k < i + j
+                then
+                  2
+                else
+                  (if
+                     ((if j = k then
+                         (if i = k then
+                            (if i = j then 6 else 5)
+                          else
+                            (if i = j then 4 else 3))
+                       else
+                         (if i = k then
+                            (if i = j then 3 else 2)
+                          else
+                            (if i = j then 1 else 0))) =
+                      2) /\ j < i + k
+                   then
+                     2
+                   else
+                     (if
+                        ((if j = k then
+                            (if i = k then
+                               (if i = j then 6 else 5)
+                             else
+                               (if i = j then 4 else 3))
+                          else
+                            (if i = k then
+                               (if i = j then 3 else 2)
+                             else
+                               (if i = j then 1 else 0))) =
+                         3) /\ i < j + k
+                      then
+                        2
+                      else
+                        4)))))) =
+      1)))
 calling SMT solver: runtime: 0.116s,    gctime: 0.008s,     systime: 0.000s.
 Solving time with SMT solver: 0.004s.
 
@@ -113,6 +414,8 @@ An error has been found
 *** Time taken: 3.972s
 *)
 
+
+
 val n = "GeneratedFlasherManager";
 val spec = loadAndGetSpec n 
 verify spec n;
@@ -131,12 +434,17 @@ Program is correct
 *** Time taken: 223.862s
 *)
 
+
+
 val n = "F1";
 val spec = loadAndGetSpec n 
 buildTermToVerify spec
 - > val it = ``(T /\ T) /\ ~T`` : term
 - - - - 
 *** Time taken: 115.455s
+
+
+
 
 val n = "TwoLoopsFlasherManager";
 val spec = loadAndGetSpec n 
@@ -157,6 +465,11 @@ Program is correct
 *)
 
 
+
+(* =================== *)
+(* programs with loops *)
+(* =================== *)
+
 val n = "Sum";
 val spec = loadAndGetSpec n 
 verify spec n;
@@ -174,7 +487,8 @@ calling SMT solver: Calling external SMT solver on:
  6 <= n /\ 7 <= n /\ 8 <= n /\ 9 <= n /\ ~(10 <= n)) /\
 ~(45 = n * (n + 1) / 2)
 Error: feature not supported: non linear problem.
-Compilation error in yices file: SumStraightruntime: 0.016s,    gctime: 0.004s,     systime: 0.000s.
+Compilation error in yices file: SumStraight
+runtime: 0.016s,    gctime: 0.004s,     systime: 0.000s.
 Term contains non linear expressions, calling constraint solver
 calling constraint solver: Calling external solver with timeout on:
 (n >= 0 /\ 0 <= n /\ 1 <= n /\ 2 <= n /\ 3 <= n /\ 4 <= n /\ 5 <= n /\
@@ -256,7 +570,8 @@ calling SMT solver: Calling external SMT solver on:
   8 <= n /\ 9 <= n /\ 10 <= n /\ ~(11 <= n)) /\ ~(11 <= n)) /\
 ~(100 = n * n)
 Error: feature not supported: non linear problem.
-Compilation error in yices file: NestedLoopStraightruntime: 0.064s,    gctime: 0.008s,     systime: 0.000s.
+Compilation error in yices file: NestedLoopStraight
+runtime: 0.064s,    gctime: 0.008s,     systime: 0.000s.
 Term contains non linear expressions, calling constraint solver
 calling constraint solver: Calling external solver with timeout on:
 (1 <= n /\
@@ -509,73 +824,1719 @@ Program is correct
 (* -------------------- *)
 
 
-(* doesn't work yet *)
-
-(*
 
 (* search of an element in an array *) 
 val n = "Search";
-val spec = loadAndGetSpec n;
+val spec = loadAndGetSpec n; 
 verify spec n;
 
-(* does not scale
-impossible to unwind loop 5 times!
-interrupted after 324.716s
+building term: runtime: 9.561s,    gctime: 1.188s,     systime: 0.036s.
+Term to verify is:
+?a_9 a_8 a_7 a_6 a_5 a_4 a_3 a_2 a_1 x a_0.
+  (((if a_0 = x then 0 else ~1) = ~1) /\
+   ((if a_1 = x then 1 else ~1) = ~1) /\
+   ((if a_2 = x then 2 else ~1) = ~1) /\
+   ((if a_3 = x then 3 else ~1) = ~1) /\
+   ((if a_4 = x then 4 else ~1) = ~1) /\
+   ((if a_5 = x then 5 else ~1) = ~1) /\
+   ((if a_6 = x then 6 else ~1) = ~1) /\
+   ((if a_7 = x then 7 else ~1) = ~1) /\
+   ((if a_8 = x then 8 else ~1) = ~1) /\
+   ~(((if a_9 = x then 9 else ~1) = ~1) /\
+     (if a_9 = x then T else F))) /\
+  ~((((if a_9 = x then 9 else ~1) = ~1) ==>
+     ~(a_9 = x) /\ ~(a_8 = x) /\ ~(a_7 = x) /\ ~(a_6 = x) /\
+     ~(a_5 = x) /\ ~(a_4 = x) /\ ~(a_3 = x) /\ ~(a_2 = x) /\
+     ~(a_1 = x) /\ ~(a_0 = x)) /\
+    (~((if a_9 = x then 9 else ~1) = ~1) ==>
+     ((if Num (if a_9 = x then 9 else ~1) = 9 then
+         a_9
+       else
+         (if Num (if a_9 = x then 9 else ~1) = 8 then
+            a_8
+          else
+            (if Num (if a_9 = x then 9 else ~1) = 7 then
+               a_7
+             else
+               (if Num (if a_9 = x then 9 else ~1) = 6 then
+                  a_6
+                else
+                  (if Num (if a_9 = x then 9 else ~1) = 5 then
+                     a_5
+                   else
+                     (if Num (if a_9 = x then 9 else ~1) = 4 then
+                        a_4
+                      else
+                        (if Num (if a_9 = x then 9 else ~1) = 3 then
+                           a_3
+                         else
+                           (if Num (if a_9 = x then 9 else ~1) = 2 then
+                              a_2
+                            else
+                              (if
+                                 Num (if a_9 = x then 9 else ~1) = 1
+                               then
+                                 a_1
+                               else
+                                 (if
+                                    Num (if a_9 = x then 9 else ~1) = 0
+                                  then
+                                    a_0
+                                  else
+                                    FEMPTY '
+                                    (Num
+                                       (if a_9 = x then
+                                          9
+                                        else
+                                          ~1)))))))))))) =
+      x)))
 
-This is because test on arrays are translated as if then terms
-
-    ``[("left",
-        (if
-           (if
-              Num
-                (if
-                   (if Num (if a_0 = x then 0 else 1) = 9 then
-                      a_9
-                    else
-                      (if Num (if a_0 = x then 0 else 1) = 8 then
-                         a_8
-                       else
-                         (if Num (if a_0 = x then 0 else 1) = 7 then
-                            a_7
-                          else
-                            (if Num (if a_0 = x then 0 else 1) = 6 then
-                               a_6
-                             else
-                               (if Num (if a_0 = x then 0 else 1) = 5 then
-                                  a_5
-                                else
-                                  (if
-                                     Num (if a_0 = x then 0 else 1) = 4
-                                   then
-                                     a_4
-                                   else
-                                     (if
-                                        Num (if a_0 = x then 0 else 1) = 3
-                                      then
-                                        a_3
-                                      else
-                                        (if
-                                           Num (if a_0 = x then 0 else 1) =
-                                           2
-  ...
-
-code for 2 unwindings takes 2500 lines!
+runtime: 0.104s,    gctime: 0.008s,     systime: 0.000s.
+Solving time with SMT solver: 0.004s.
+==================
+Program is correct
+==================
+> val it = [] : (string * string) list
+- - - - - 
+*** Time taken: 9.817s
 
 
+(* 
+Remark: if we don't propagate the decisions taken into the loops inside
+the state, that doesn't scale.
+It is impossible to unwind loop 5 times! (interrupted after 324.716s)
+
+This is because tests on arrays are translated as "if then" terms
+and so variable "left" is a big conditional term (2500 lines
+for 2 unwindings!)
+
+So it is mandatory to use function "stateForDecision" that propagates
 *)
 
+
+
+(* doesn't work yet because there are conditionals inside the loop
+   so that generates a conditional term which is too big *)
 
 (* Binary search of an element in an array *)
 val n = "Bsearch";
 val spec = loadAndGetSpec n;
 verify spec n;
 
+(* value of variables  right and result after unwindings *)
+(*  
+("right",
+  (if
+     (if
+        Num
+          ((if a_4 = x then
+              (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+            else
+              (if x < a_4 then
+                 (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+               else
+                 (if a_4 = x then
+                    14
+                  else
+                    (if x < a_4 then 8 else 14)))) quot 2) =
+        9
+      then
+        a_9
+      else
+        (if
+           Num
+             ((if a_4 = x then
+                 (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+               else
+                 (if x < a_4 then
+                    (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+                  else
+                    (if a_4 = x then
+                       14
+                     else
+                       (if x < a_4 then 8 else 14)))) quot 2) =
+           8
+         then
+           a_8 ("right",
+  (if
+     (if
+        Num
+          ((if a_4 = x then
+              (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+            else
+              (if x < a_4 then
+                 (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+               else
+                 (if a_4 = x then
+                    14
+                  else
+                    (if x < a_4 then 8 else 14)))) quot 2) =
+        9
+      then
+        a_9
+      else
+        (if
+           Num
+             ((if a_4 = x then
+                 (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+               else
+                 (if x < a_4 then
+                    (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+                  else
+                    (if a_4 = x then
+                       14
+                     else
+                       (if x < a_4 then 8 else 14)))) quot 2) =
+           8
+         then
+           a_8
+         else
+           (if
+              Num
+                ((if a_4 = x then
+                    (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+                  else
+                    (if x < a_4 then
+                       (if a_4 = x then
+                          9
+                        else
+                          (if x < a_4 then 3 else 9))
+                     else
+                       (if a_4 = x then
+                          14
+                        else
+                          (if x < a_4 then 8 else 14)))) quot 2) =
+              7
+            then
+              a_7
+            else
+              (if
+                 Num
+                   ((if a_4 = x then
+                       (if a_4 = x then
+                          9
+                        else
+                          (if x < a_4 then 3 else 9))
+                     else
+                       (if x < a_4 then
+                          (if a_4 = x then
+                             9
+                           else
+                             (if x < a_4 then 3 else 9))
+                        else
+                          (if a_4 = x then
+                             14
+                           else
+                             (if x < a_4 then 8 else 14)))) quot 2) =
+                 6
+               then
+                 a_6
+               else
+                 (if
+                    Num
+                      ((if a_4 = x then
+                          (if a_4 = x then
+                             9
+                           else
+                             (if x < a_4 then 3 else 9))
+                        else
+                          (if x < a_4 then
+                             (if a_4 = x then
+                                9
+                              else
+                                (if x < a_4 then 3 else 9))
+                           else
+                             (if a_4 = x then
+                                14
+                              else
+                                (if x < a_4 then 8 else 14)))) quot 2) =
+                    5
+                  then
+                    a_5
+                  else
+                    (if
+                       Num
+                         ((if a_4 = x then
+                             (if a_4 = x then
+                                9
+                              else
+                                (if x < a_4 then 3 else 9))
+                           else
+                             (if x < a_4 then
+                                (if a_4 = x then
+                                   9
+                                 else
+                                   (if x < a_4 then 3 else 9))
+                              else
+                                (if a_4 = x then
+                                   14
+                                 else
+                                   (if x < a_4 then 8 else 14)))) quot
+                          2) =
+                       4
+                     then
+                       a_4
+                     else
+                       (if
+                          Num
+                            ((if a_4 = x then
+                                (if a_4 = x then
+                                   9
+                                 else
+                                   (if x < a_4 then 3 else 9))
+                              else
+                                (if x < a_4 then
+                                   (if a_4 = x then
+                                      9
+                                    else
+                                      (if x < a_4 then 3 else 9))
+                                 else
+                                   (if a_4 = x then
+                                      14
+                                    else
+                                      (if x < a_4 then
+                                         8
+                                       else
+                                         14)))) quot 2) =
+                          3
+                        then
+                          a_3
+                        else
+                          (if
+                             Num
+                               ((if a_4 = x then
+                                   (if a_4 = x then
+                                      9
+                                    else
+                                      (if x < a_4 then 3 else 9))
+                                 else
+                                   (if x < a_4 then
+                                      (if a_4 = x then
+                                         9
+                                       else
+                                         (if x < a_4 then 3 else 9))
+                                    else
+                                      (if a_4 = x then
+                                         14
+                                       else
+                                         (if x < a_4 then
+                                            8
+                                          else
+                                            14)))) quot 2) =
+                             2
+                           then
+                             a_2
+                           else
+                             (if
+                                Num
+                                  ((if a_4 = x then
+                                      (if a_4 = x then
+                                         9
+                                       else
+                                         (if x < a_4 then 3 else 9))
+                                    else
+                                      (if x < a_4 then
+                                         (if a_4 = x then
+                                            9
+                                          else
+                                            (if x < a_4 then 3 else 9))
+                                       else
+                                         (if a_4 = x then
+                                            14
+                                          else
+                                            (if x < a_4 then
+                                               8
+                                             else
+                                               14)))) quot 2) =
+                                1
+                              then
+                                a_1
+                              else
+                                (if
+                                   Num
+                                     ((if a_4 = x then
+                                         (if a_4 = x then
+                                            9
+                                          else
+                                            (if x < a_4 then 3 else 9))
+                                       else
+                                         (if x < a_4 then
+                                            (if a_4 = x then
+                                               9
+                                             else
+                                               (if x < a_4 then
+                                                  3
+                                                else
+                                                  9))
+                                          else
+                                            (if a_4 = x then
+                                               14
+                                             else
+                                               (if x < a_4 then
+                                                  8
+                                                else
+                                                  14)))) quot 2) =
+                                   0
+                                 then
+                                   a_0
+                                 else
+                                   FEMPTY '
+                                   (Num
+                                      ((if a_4 = x then
+                                          (if a_4 = x then
+                                             9
+                                           else
+                                             (if x < a_4 then 3 else 9))
+                                        else
+                                          (if x < a_4 then
+                                             (if a_4 = x then
+                                                9
+                                              else
+                                                (if x < a_4 then
+                                                   3
+                                                 else
+                                                   9))
+                                           else
+                                             (if a_4 = x then
+                                                14
+                                              else
+                                                (if x < a_4 then
+                                                   8
+                                                 else
+                                                   14)))) quot
+                                       2)))))))))))) =
+     x
+   then
+     (if a_4 = x then
+        Scalar 9
+      else
+        (if x < a_4 then Scalar 3 else Scalar 9))
+   else
+     (if
+        (if
+           Num
+             ((if a_4 = x then
+                 (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+               else
+                 (if x < a_4 then
+                    (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+                  else
+                    (if a_4 = x then
+                       14
+                     else
+                       (if x < a_4 then 8 else 14)))) quot 2) =
+           9
+         then
+           x < a_9
+         else
+           (if
+              Num
+                ((if a_4 = x then
+                    (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+                  else
+                    (if x < a_4 then
+                       (if a_4 = x then
+                          9
+                        else
+                          (if x < a_4 then 3 else 9))
+                     else
+                       (if a_4 = x then
+                          14
+                        else
+                          (if x < a_4 then 8 else 14)))) quot 2) =
+              8
+            then
+              x < a_8
+            else
+              (if
+                 Num
+                   ((if a_4 = x then
+                       (if a_4 = x then
+                          9
+                        else
+                          (if x < a_4 then 3 else 9))
+                     else
+                       (if x < a_4 then
+                          (if a_4 = x then
+                             9
+                           else
+                             (if x < a_4 then 3 else 9))
+                        else
+                          (if a_4 = x then
+                             14
+                           else
+                             (if x < a_4 then 8 else 14)))) quot 2) =
+                 7
+               then
+                 x < a_7
+               else
+                 (if
+                    Num
+                      ((if a_4 = x then
+                          (if a_4 = x then
+                             9
+                           else
+                             (if x < a_4 then 3 else 9))
+                        else
+                          (if x < a_4 then
+                             (if a_4 = x then
+                                9
+                              else
+                                (if x < a_4 then 3 else 9))
+                           else
+                             (if a_4 = x then
+                                14
+                              else
+                                (if x < a_4 then 8 else 14)))) quot 2) =
+                    6
+                  then
+                    x < a_6
+                  else
+                    (if
+                       Num
+                         ((if a_4 = x then
+                             (if a_4 = x then
+                                9
+                              else
+                                (if x < a_4 then 3 else 9))
+                           else
+                             (if x < a_4 then
+                                (if a_4 = x then
+                                   9
+                                 else
+                                   (if x < a_4 then 3 else 9))
+                              else
+                                (if a_4 = x then
+                                   14
+                                 else
+                                   (if x < a_4 then 8 else 14)))) quot
+                          2) =
+                       5
+                     then
+                       x < a_5
+                     else
+                       (if
+                          Num
+                            ((if a_4 = x then
+                                (if a_4 = x then
+                                   9
+                                 else
+                                   (if x < a_4 then 3 else 9))
+                              else
+                                (if x < a_4 then
+                                   (if a_4 = x then
+                                      9
+                                    else
+                                      (if x < a_4 then 3 else 9))
+                                 else
+                                   (if a_4 = x then
+                                      14
+                                    else
+                                      (if x < a_4 then
+                                         8
+                                       else
+                                         14)))) quot 2) =
+                          4
+                        then
+                          x < a_4
+                        else
+                          (if
+                             Num
+                               ((if a_4 = x then
+                                   (if a_4 = x then
+                                      9
+                                    else
+                                      (if x < a_4 then 3 else 9))
+                                 else
+                                   (if x < a_4 then
+                                      (if a_4 = x then
+                                         9
+                                       else
+                                         (if x < a_4 then 3 else 9))
+                                    else
+                                      (if a_4 = x then
+                                         14
+                                       else
+                                         (if x < a_4 then
+                                            8
+                                          else
+                                            14)))) quot 2) =
+                             3
+                           then
+                             x < a_3
+                           else
+                             (if
+                                Num
+                                  ((if a_4 = x then
+                                      (if a_4 = x then
+                                         9
+                                       else
+                                         (if x < a_4 then 3 else 9))
+                                    else
+                                      (if x < a_4 then
+                                         (if a_4 = x then
+                                            9
+                                          else
+                                            (if x < a_4 then 3 else 9))
+                                       else
+                                         (if a_4 = x then
+                                            14
+                                          else
+                                            (if x < a_4 then
+                                               8
+                                             else
+                                               14)))) quot 2) =
+                                2
+                              then
+                                x < a_2
+                              else
+                                (if
+                                   Num
+                                     ((if a_4 = x then
+                                         (if a_4 = x then
+                                            9
+                                          else
+                                            (if x < a_4 then 3 else 9))
+                                       else
+                                         (if x < a_4 then
+                                            (if a_4 = x then
+                                               9
+                                             else
+                                               (if x < a_4 then
+                                                  3
+                                                else
+                                                  9))
+                                          else
+                                            (if a_4 = x then
+                                               14
+                                             else
+                                               (if x < a_4 then
+                                                  8
+                                                else
+                                                  14)))) quot 2) =
+                                   1
+                                 then
+                                   x < a_1
+                                 else
+                                   (if
+                                      Num
+                                        ((if a_4 = x then
+                                            (if a_4 = x then
+                                               9
+                                             else
+                                               (if x < a_4 then
+                                                  3
+                                                else
+                                                  9))
+                                          else
+                                            (if x < a_4 then
+                                               (if a_4 = x then
+                                                  9
+                                                else
+                                                  (if x < a_4 then
+                                                     3
+                                                   else
+                                                     9))
+                                             else
+                                               (if a_4 = x then
+                                                  14
+                                                else
+                                                  (if x < a_4 then
+                                                     8
+                                                   else
+                                                     14)))) quot 2) =
+                                      0
+                                    then
+                                      x < a_0
+                                    else
+                                      x <
+                                      FEMPTY '
+                                      (Num
+                                         ((if a_4 = x then
+                                             (if a_4 = x then
+                                                9
+                                              else
+                                                (if x < a_4 then
+                                                   3
+                                                 else
+                                                   9))
+                                           else
+                                             (if x < a_4 then
+                                                (if a_4 = x then
+                                                   9
+                                                 else
+                                                   (if x < a_4 then
+                                                      3
+                                                    else
+                                                      9))
+                                              else
+                                                (if a_4 = x then
+                                                   14
+                                                 else
+                                                   (if x < a_4 then
+                                                      8
+                                                    else
+                                                      14)))) quot
+                                          2))))))))))))
+      then
+        Scalar
+          ((if a_4 = x then
+              (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+            else
+              (if x < a_4 then
+                 (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+               else
+                 (if a_4 = x then
+                    14
+                  else
+                    (if x < a_4 then 8 else 14)))) quot 2 - 1)
+      else
+        (if a_4 = x then
+           Scalar 9
+         else
+           (if x < a_4 then Scalar 3 else Scalar 9))))); ("x",Scalar x);
+ ("Result",Scalar Result);
+ ("result",
+  (if
+     (if
+        Num
+          ((if a_4 = x then
+              (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+            else
+              (if x < a_4 then
+                 (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+               else
+                 (if a_4 = x then
+                    14
+                  else
+                    (if x < a_4 then 8 else 14)))) quot 2) =
+        9
+      then
+        a_9
+      else
+        (if
+           Num
+             ((if a_4 = x then
+                 (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+               else
+                 (if x < a_4 then
+                    (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+                  else
+                    (if a_4 = x then
+                       14
+                     else
+                       (if x < a_4 then 8 else 14)))) quot 2) =
+           8
+         then
+           a_8
+         else
+           (if
+              Num
+                ((if a_4 = x then
+                    (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+                  else
+                    (if x < a_4 then
+                       (if a_4 = x then
+                          9
+                        else
+                          (if x < a_4 then 3 else 9))
+                     else
+                       (if a_4 = x then
+                          14
+                        else
+                          (if x < a_4 then 8 else 14)))) quot 2) =
+              7
+            then
+              a_7
+            else
+              (if
+                 Num
+                   ((if a_4 = x then
+                       (if a_4 = x then
+                          9
+                        else
+                          (if x < a_4 then 3 else 9))
+                     else
+                       (if x < a_4 then
+                          (if a_4 = x then
+                             9
+                           else
+                             (if x < a_4 then 3 else 9))
+                        else
+                          (if a_4 = x then
+                             14
+                           else
+                             (if x < a_4 then 8 else 14)))) quot 2) =
+                 6
+               then
+                 a_6
+               else
+                 (if
+                    Num
+                      ((if a_4 = x then
+                          (if a_4 = x then
+                             9
+                           else
+                             (if x < a_4 then 3 else 9))
+                        else
+                          (if x < a_4 then
+                             (if a_4 = x then
+                                9
+                              else
+                                (if x < a_4 then 3 else 9))
+                           else
+                             (if a_4 = x then
+                                14
+                              else
+                                (if x < a_4 then 8 else 14)))) quot 2) =
+                    5
+                  then
+                    a_5
+                  else
+                    (if
+                       Num
+                         ((if a_4 = x then
+                             (if a_4 = x then
+                                9
+                              else
+                                (if x < a_4 then 3 else 9))
+                           else
+                             (if x < a_4 then
+                                (if a_4 = x then
+                                   9
+                                 else
+                                   (if x < a_4 then 3 else 9))
+                              else
+                                (if a_4 = x then
+                                   14
+                                 else
+                                   (if x < a_4 then 8 else 14)))) quot
+                          2) =
+                       4
+                     then
+                       a_4
+                     else
+                       (if
+                          Num
+                            ((if a_4 = x then
+                                (if a_4 = x then
+                                   9
+                                 else
+                                   (if x < a_4 then 3 else 9))
+                              else
+                                (if x < a_4 then
+                                   (if a_4 = x then
+                                      9
+                                    else
+                                      (if x < a_4 then 3 else 9))
+                                 else
+                                   (if a_4 = x then
+                                      14
+                                    else
+                                      (if x < a_4 then
+                                         8
+                                       else
+                                         14)))) quot 2) =
+                          3
+                        then
+                          a_3
+                        else
+                          (if
+                             Num
+                               ((if a_4 = x then
+                                   (if a_4 = x then
+                                      9
+                                    else
+                                      (if x < a_4 then 3 else 9))
+                                 else
+                                   (if x < a_4 then
+                                      (if a_4 = x then
+                                         9
+                                       else
+                                         (if x < a_4 then 3 else 9))
+                                    else
+                                      (if a_4 = x then
+                                         14
+                                       else
+                                         (if x < a_4 then
+                                            8
+                                          else
+                                            14)))) quot 2) =
+                             2
+                           then
+                             a_2
+                           else
+                             (if
+                                Num
+                                  ((if a_4 = x then
+                                      (if a_4 = x then
+                                         9
+                                       else
+                                         (if x < a_4 then 3 else 9))
+                                    else
+                                      (if x < a_4 then
+                                         (if a_4 = x then
+                                            9
+                                          else
+                                            (if x < a_4 then 3 else 9))
+                                       else
+                                         (if a_4 = x then
+                                            14
+                                          else
+                                            (if x < a_4 then
+                                               8
+                                             else
+                                               14)))) quot 2) =
+                                1
+                              then
+                                a_1
+                              else
+                                (if
+                                   Num
+                                     ((if a_4 = x then
+                                         (if a_4 = x then
+                                            9
+                                          else
+                                            (if x < a_4 then 3 else 9))
+                                       else
+                                         (if x < a_4 then
+                                            (if a_4 = x then
+                                               9
+                                             else
+                                               (if x < a_4 then
+                                                  3
+                                                else
+                                                  9))
+                                          else
+                                            (if a_4 = x then
+                                               14
+                                             else
+                                               (if x < a_4 then
+                                                  8
+                                                else
+                                                  14)))) quot 2) =
+                                   0
+                                 then
+                                   a_0
+                                 else
+                                   FEMPTY '
+                                   (Num
+                                      ((if a_4 = x then
+                                          (if a_4 = x then
+                                             9
+                                           else
+                                             (if x < a_4 then 3 else 9))
+                                        else
+                                          (if x < a_4 then
+                                             (if a_4 = x then
+                                                9
+                                              else
+                                                (if x < a_4 then
+                                                   3
+                                                 else
+                                                   9))
+                                           else
+                                             (if a_4 = x then
+                                                14
+                                              else
+                                                (if x < a_4 then
+                                                   8
+                                                 else
+                                                   14)))) quot
+                                       2)))))))))))) =
+     x
+   then
+     Scalar
+       ((if a_4 = x then
+           (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+         else
+           (if x < a_4 then
+              (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+            else
+              (if a_4 = x then
+                 14
+               else
+                 (if x < a_4 then 8 else 14)))) quot 2)
+   else
+     (if a_4 = x then Scalar 4 else Scalar ~1)));
+         else
+           (if
+              Num
+                ((if a_4 = x then
+                    (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+                  else
+                    (if x < a_4 then
+                       (if a_4 = x then
+                          9
+                        else
+                          (if x < a_4 then 3 else 9))
+                     else
+                       (if a_4 = x then
+                          14
+                        else
+                          (if x < a_4 then 8 else 14)))) quot 2) =
+              7
+            then
+              a_7
+            else
+              (if
+                 Num
+                   ((if a_4 = x then
+                       (if a_4 = x then
+                          9
+                        else
+                          (if x < a_4 then 3 else 9))
+                     else
+                       (if x < a_4 then
+                          (if a_4 = x then
+                             9
+                           else
+                             (if x < a_4 then 3 else 9))
+                        else
+                          (if a_4 = x then
+                             14
+                           else
+                             (if x < a_4 then 8 else 14)))) quot 2) =
+                 6
+               then
+                 a_6
+               else
+                 (if
+                    Num
+                      ((if a_4 = x then
+                          (if a_4 = x then
+                             9
+                           else
+                             (if x < a_4 then 3 else 9))
+                        else
+                          (if x < a_4 then
+                             (if a_4 = x then
+                                9
+                              else
+                                (if x < a_4 then 3 else 9))
+                           else
+                             (if a_4 = x then
+                                14
+                              else
+                                (if x < a_4 then 8 else 14)))) quot 2) =
+                    5
+                  then
+                    a_5
+                  else
+                    (if
+                       Num
+                         ((if a_4 = x then
+                             (if a_4 = x then
+                                9
+                              else
+                                (if x < a_4 then 3 else 9))
+                           else
+                             (if x < a_4 then
+                                (if a_4 = x then
+                                   9
+                                 else
+                                   (if x < a_4 then 3 else 9))
+                              else
+                                (if a_4 = x then
+                                   14
+                                 else
+                                   (if x < a_4 then 8 else 14)))) quot
+                          2) =
+                       4
+                     then
+                       a_4
+                     else
+                       (if
+                          Num
+                            ((if a_4 = x then
+                                (if a_4 = x then
+                                   9
+                                 else
+                                   (if x < a_4 then 3 else 9))
+                              else
+                                (if x < a_4 then
+                                   (if a_4 = x then
+                                      9
+                                    else
+                                      (if x < a_4 then 3 else 9))
+                                 else
+                                   (if a_4 = x then
+                                      14
+                                    else
+                                      (if x < a_4 then
+                                         8
+                                       else
+                                         14)))) quot 2) =
+                          3
+                        then
+                          a_3
+                        else
+                          (if
+                             Num
+                               ((if a_4 = x then
+                                   (if a_4 = x then
+                                      9
+                                    else
+                                      (if x < a_4 then 3 else 9))
+                                 else
+                                   (if x < a_4 then
+                                      (if a_4 = x then
+                                         9
+                                       else
+                                         (if x < a_4 then 3 else 9))
+                                    else
+                                      (if a_4 = x then
+                                         14
+                                       else
+                                         (if x < a_4 then
+                                            8
+                                          else
+                                            14)))) quot 2) =
+                             2
+                           then
+                             a_2
+                           else
+                             (if
+                                Num
+                                  ((if a_4 = x then
+                                      (if a_4 = x then
+                                         9
+                                       else
+                                         (if x < a_4 then 3 else 9))
+                                    else
+                                      (if x < a_4 then
+                                         (if a_4 = x then
+                                            9
+                                          else
+                                            (if x < a_4 then 3 else 9))
+                                       else
+                                         (if a_4 = x then
+                                            14
+                                          else
+                                            (if x < a_4 then
+                                               8
+                                             else
+                                               14)))) quot 2) =
+                                1
+                              then
+                                a_1
+                              else
+                                (if
+                                   Num
+                                     ((if a_4 = x then
+                                         (if a_4 = x then
+                                            9
+                                          else
+                                            (if x < a_4 then 3 else 9))
+                                       else
+                                         (if x < a_4 then
+                                            (if a_4 = x then
+                                               9
+                                             else
+                                               (if x < a_4 then
+                                                  3
+                                                else
+                                                  9))
+                                          else
+                                            (if a_4 = x then
+                                               14
+                                             else
+                                               (if x < a_4 then
+                                                  8
+                                                else
+                                                  14)))) quot 2) =
+                                   0
+                                 then
+                                   a_0
+                                 else
+                                   FEMPTY '
+                                   (Num
+                                      ((if a_4 = x then
+                                          (if a_4 = x then
+                                             9
+                                           else
+                                             (if x < a_4 then 3 else 9))
+                                        else
+                                          (if x < a_4 then
+                                             (if a_4 = x then
+                                                9
+                                              else
+                                                (if x < a_4 then
+                                                   3
+                                                 else
+                                                   9))
+                                           else
+                                             (if a_4 = x then
+                                                14
+                                              else
+                                                (if x < a_4 then
+                                                   8
+                                                 else
+                                                   14)))) quot
+                                       2)))))))))))) =
+     x
+   then
+     (if a_4 = x then
+        Scalar 9
+      else
+        (if x < a_4 then Scalar 3 else Scalar 9))
+   else
+     (if
+        (if
+           Num
+             ((if a_4 = x then
+                 (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+               else
+                 (if x < a_4 then
+                    (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+                  else
+                    (if a_4 = x then
+                       14
+                     else
+                       (if x < a_4 then 8 else 14)))) quot 2) =
+           9
+         then
+           x < a_9
+         else
+           (if
+              Num
+                ((if a_4 = x then
+                    (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+                  else
+                    (if x < a_4 then
+                       (if a_4 = x then
+                          9
+                        else
+                          (if x < a_4 then 3 else 9))
+                     else
+                       (if a_4 = x then
+                          14
+                        else
+                          (if x < a_4 then 8 else 14)))) quot 2) =
+              8
+            then
+              x < a_8
+            else
+              (if
+                 Num
+                   ((if a_4 = x then
+                       (if a_4 = x then
+                          9
+                        else
+                          (if x < a_4 then 3 else 9))
+                     else
+                       (if x < a_4 then
+                          (if a_4 = x then
+                             9
+                           else
+                             (if x < a_4 then 3 else 9))
+                        else
+                          (if a_4 = x then
+                             14
+                           else
+                             (if x < a_4 then 8 else 14)))) quot 2) =
+                 7
+               then
+                 x < a_7
+               else
+                 (if
+                    Num
+                      ((if a_4 = x then
+                          (if a_4 = x then
+                             9
+                           else
+                             (if x < a_4 then 3 else 9))
+                        else
+                          (if x < a_4 then
+                             (if a_4 = x then
+                                9
+                              else
+                                (if x < a_4 then 3 else 9))
+                           else
+                             (if a_4 = x then
+                                14
+                              else
+                                (if x < a_4 then 8 else 14)))) quot 2) =
+                    6
+                  then
+                    x < a_6
+                  else
+                    (if
+                       Num
+                         ((if a_4 = x then
+                             (if a_4 = x then
+                                9
+                              else
+                                (if x < a_4 then 3 else 9))
+                           else
+                             (if x < a_4 then
+                                (if a_4 = x then
+                                   9
+                                 else
+                                   (if x < a_4 then 3 else 9))
+                              else
+                                (if a_4 = x then
+                                   14
+                                 else
+                                   (if x < a_4 then 8 else 14)))) quot
+                          2) =
+                       5
+                     then
+                       x < a_5
+                     else
+                       (if
+                          Num
+                            ((if a_4 = x then
+                                (if a_4 = x then
+                                   9
+                                 else
+                                   (if x < a_4 then 3 else 9))
+                              else
+                                (if x < a_4 then
+                                   (if a_4 = x then
+                                      9
+                                    else
+                                      (if x < a_4 then 3 else 9))
+                                 else
+                                   (if a_4 = x then
+                                      14
+                                    else
+                                      (if x < a_4 then
+                                         8
+                                       else
+                                         14)))) quot 2) =
+                          4
+                        then
+                          x < a_4
+                        else
+                          (if
+                             Num
+                               ((if a_4 = x then
+                                   (if a_4 = x then
+                                      9
+                                    else
+                                      (if x < a_4 then 3 else 9))
+                                 else
+                                   (if x < a_4 then
+                                      (if a_4 = x then
+                                         9
+                                       else
+                                         (if x < a_4 then 3 else 9))
+                                    else
+                                      (if a_4 = x then
+                                         14
+                                       else
+                                         (if x < a_4 then
+                                            8
+                                          else
+                                            14)))) quot 2) =
+                             3
+                           then
+                             x < a_3
+                           else
+                             (if
+                                Num
+                                  ((if a_4 = x then
+                                      (if a_4 = x then
+                                         9
+                                       else
+                                         (if x < a_4 then 3 else 9))
+                                    else
+                                      (if x < a_4 then
+                                         (if a_4 = x then
+                                            9
+                                          else
+                                            (if x < a_4 then 3 else 9))
+                                       else
+                                         (if a_4 = x then
+                                            14
+                                          else
+                                            (if x < a_4 then
+                                               8
+                                             else
+                                               14)))) quot 2) =
+                                2
+                              then
+                                x < a_2
+                              else
+                                (if
+                                   Num
+                                     ((if a_4 = x then
+                                         (if a_4 = x then
+                                            9
+                                          else
+                                            (if x < a_4 then 3 else 9))
+                                       else
+                                         (if x < a_4 then
+                                            (if a_4 = x then
+                                               9
+                                             else
+                                               (if x < a_4 then
+                                                  3
+                                                else
+                                                  9))
+                                          else
+                                            (if a_4 = x then
+                                               14
+                                             else
+                                               (if x < a_4 then
+                                                  8
+                                                else
+                                                  14)))) quot 2) =
+                                   1
+                                 then
+                                   x < a_1
+                                 else
+                                   (if
+                                      Num
+                                        ((if a_4 = x then
+                                            (if a_4 = x then
+                                               9
+                                             else
+                                               (if x < a_4 then
+                                                  3
+                                                else
+                                                  9))
+                                          else
+                                            (if x < a_4 then
+                                               (if a_4 = x then
+                                                  9
+                                                else
+                                                  (if x < a_4 then
+                                                     3
+                                                   else
+                                                     9))
+                                             else
+                                               (if a_4 = x then
+                                                  14
+                                                else
+                                                  (if x < a_4 then
+                                                     8
+                                                   else
+                                                     14)))) quot 2) =
+                                      0
+                                    then
+                                      x < a_0
+                                    else
+                                      x <
+                                      FEMPTY '
+                                      (Num
+                                         ((if a_4 = x then
+                                             (if a_4 = x then
+                                                9
+                                              else
+                                                (if x < a_4 then
+                                                   3
+                                                 else
+                                                   9))
+                                           else
+                                             (if x < a_4 then
+                                                (if a_4 = x then
+                                                   9
+                                                 else
+                                                   (if x < a_4 then
+                                                      3
+                                                    else
+                                                      9))
+                                              else
+                                                (if a_4 = x then
+                                                   14
+                                                 else
+                                                   (if x < a_4 then
+                                                      8
+                                                    else
+                                                      14)))) quot
+                                          2))))))))))))
+      then
+        Scalar
+          ((if a_4 = x then
+              (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+            else
+              (if x < a_4 then
+                 (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+               else
+                 (if a_4 = x then
+                    14
+                  else
+                    (if x < a_4 then 8 else 14)))) quot 2 - 1)
+      else
+        (if a_4 = x then
+           Scalar 9
+         else
+           (if x < a_4 then Scalar 3 else Scalar 9))))); ("x",Scalar x);
+ ("Result",Scalar Result);
+ ("result",
+  (if
+     (if
+        Num
+          ((if a_4 = x then
+              (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+            else
+              (if x < a_4 then
+                 (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+               else
+                 (if a_4 = x then
+                    14
+                  else
+                    (if x < a_4 then 8 else 14)))) quot 2) =
+        9
+      then
+        a_9
+      else
+        (if
+           Num
+             ((if a_4 = x then
+                 (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+               else
+                 (if x < a_4 then
+                    (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+                  else
+                    (if a_4 = x then
+                       14
+                     else
+                       (if x < a_4 then 8 else 14)))) quot 2) =
+           8
+         then
+           a_8
+         else
+           (if
+              Num
+                ((if a_4 = x then
+                    (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+                  else
+                    (if x < a_4 then
+                       (if a_4 = x then
+                          9
+                        else
+                          (if x < a_4 then 3 else 9))
+                     else
+                       (if a_4 = x then
+                          14
+                        else
+                          (if x < a_4 then 8 else 14)))) quot 2) =
+              7
+            then
+              a_7
+            else
+              (if
+                 Num
+                   ((if a_4 = x then
+                       (if a_4 = x then
+                          9
+                        else
+                          (if x < a_4 then 3 else 9))
+                     else
+                       (if x < a_4 then
+                          (if a_4 = x then
+                             9
+                           else
+                             (if x < a_4 then 3 else 9))
+                        else
+                          (if a_4 = x then
+                             14
+                           else
+                             (if x < a_4 then 8 else 14)))) quot 2) =
+                 6
+               then
+                 a_6
+               else
+                 (if
+                    Num
+                      ((if a_4 = x then
+                          (if a_4 = x then
+                             9
+                           else
+                             (if x < a_4 then 3 else 9))
+                        else
+                          (if x < a_4 then
+                             (if a_4 = x then
+                                9
+                              else
+                                (if x < a_4 then 3 else 9))
+                           else
+                             (if a_4 = x then
+                                14
+                              else
+                                (if x < a_4 then 8 else 14)))) quot 2) =
+                    5
+                  then
+                    a_5
+                  else
+                    (if
+                       Num
+                         ((if a_4 = x then
+                             (if a_4 = x then
+                                9
+                              else
+                                (if x < a_4 then 3 else 9))
+                           else
+                             (if x < a_4 then
+                                (if a_4 = x then
+                                   9
+                                 else
+                                   (if x < a_4 then 3 else 9))
+                              else
+                                (if a_4 = x then
+                                   14
+                                 else
+                                   (if x < a_4 then 8 else 14)))) quot
+                          2) =
+                       4
+                     then
+                       a_4
+                     else
+                       (if
+                          Num
+                            ((if a_4 = x then
+                                (if a_4 = x then
+                                   9
+                                 else
+                                   (if x < a_4 then 3 else 9))
+                              else
+                                (if x < a_4 then
+                                   (if a_4 = x then
+                                      9
+                                    else
+                                      (if x < a_4 then 3 else 9))
+                                 else
+                                   (if a_4 = x then
+                                      14
+                                    else
+                                      (if x < a_4 then
+                                         8
+                                       else
+                                         14)))) quot 2) =
+                          3
+                        then
+                          a_3
+                        else
+                          (if
+                             Num
+                               ((if a_4 = x then
+                                   (if a_4 = x then
+                                      9
+                                    else
+                                      (if x < a_4 then 3 else 9))
+                                 else
+                                   (if x < a_4 then
+                                      (if a_4 = x then
+                                         9
+                                       else
+                                         (if x < a_4 then 3 else 9))
+                                    else
+                                      (if a_4 = x then
+                                         14
+                                       else
+                                         (if x < a_4 then
+                                            8
+                                          else
+                                            14)))) quot 2) =
+                             2
+                           then
+                             a_2
+                           else
+                             (if
+                                Num
+                                  ((if a_4 = x then
+                                      (if a_4 = x then
+                                         9
+                                       else
+                                         (if x < a_4 then 3 else 9))
+                                    else
+                                      (if x < a_4 then
+                                         (if a_4 = x then
+                                            9
+                                          else
+                                            (if x < a_4 then 3 else 9))
+                                       else
+                                         (if a_4 = x then
+                                            14
+                                          else
+                                            (if x < a_4 then
+                                               8
+                                             else
+                                               14)))) quot 2) =
+                                1
+                              then
+                                a_1
+                              else
+                                (if
+                                   Num
+                                     ((if a_4 = x then
+                                         (if a_4 = x then
+                                            9
+                                          else
+                                            (if x < a_4 then 3 else 9))
+                                       else
+                                         (if x < a_4 then
+                                            (if a_4 = x then
+                                               9
+                                             else
+                                               (if x < a_4 then
+                                                  3
+                                                else
+                                                  9))
+                                          else
+                                            (if a_4 = x then
+                                               14
+                                             else
+                                               (if x < a_4 then
+                                                  8
+                                                else
+                                                  14)))) quot 2) =
+                                   0
+                                 then
+                                   a_0
+                                 else
+                                   FEMPTY '
+                                   (Num
+                                      ((if a_4 = x then
+                                          (if a_4 = x then
+                                             9
+                                           else
+                                             (if x < a_4 then 3 else 9))
+                                        else
+                                          (if x < a_4 then
+                                             (if a_4 = x then
+                                                9
+                                              else
+                                                (if x < a_4 then
+                                                   3
+                                                 else
+                                                   9))
+                                           else
+                                             (if a_4 = x then
+                                                14
+                                              else
+                                                (if x < a_4 then
+                                                   8
+                                                 else
+                                                   14)))) quot
+                                       2)))))))))))) =
+     x
+   then
+     Scalar
+       ((if a_4 = x then
+           (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+         else
+           (if x < a_4 then
+              (if a_4 = x then 9 else (if x < a_4 then 3 else 9))
+            else
+              (if a_4 = x then
+                 14
+               else
+                 (if x < a_4 then 8 else 14)))) quot 2)
+   else
+     (if a_4 = x then Scalar 4 else Scalar ~1)));
+*)
+
+
 val n = "BsearchKO";
 val spec = loadAndGetSpec n;
 verify spec n;
 
 
-(* partition of QuicSort program *)
+(* partition of QuickSort program *)
 val n = "Partition";
 val spec = loadAndGetSpec n;
 verify spec n;
@@ -595,5 +2556,5 @@ verify spec n;
 *)
 val n = "BubleSortMantovani";
 val spec = loadAndGetSpec n;
-
+verify spec n;
 *)

@@ -88,6 +88,19 @@ Total time spent with the SMT solver: 0.0s.
 *** Time taken: 2.832s
 *)
 
+(*val s1 = ``(FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+
+               ("k",Scalar 1) |+ ("result",Scalar result) |+
+               ("Result",Scalar Result))``
+val s2 = ``(FEMPTY |+ ("j",Scalar j) |+ ("i",Scalar i) |+
+               ("k",Scalar 0) |+ ("result",Scalar result) |+
+               ("Result",Scalar Result))``
+
+val c= ``(And (Equal (Var "k") (Const 1))
+                          (Not (Equal (Var "i") (Var "j"))))``
+
+EVAL ``beval ^c ^s2``
+EVAL ``beval ^c ^s1``*)
+
 val name = "AbsMinusKO";
 val spec = loadAndGetSpec name;
 execSymbWithSMT name spec 10;
@@ -142,6 +155,7 @@ All correct paths were verified in HOL.
 10 subterms have been solved with SIMP_CONV and COOPER.
 
 Total time spent with the SMT solver: 0.048s.
+*** Time taken: 48.019s
 *)
 
 
