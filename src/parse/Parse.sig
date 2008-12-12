@@ -221,6 +221,7 @@ signature Parse = sig
   (* Pretty printing *)
 
   val pp_term : ppstream -> term -> unit
+  val pp_terms : ppstream -> term list -> unit
   val pp_type : ppstream -> hol_type -> unit
   val pp_kind : ppstream -> kind -> unit
   val pp_thm : ppstream -> thm -> unit
@@ -242,6 +243,7 @@ signature Parse = sig
                                ppstream -> term -> unit
 
   val term_to_string : term -> string
+  val terms_to_string : term list -> string
   val type_to_string : hol_type -> string
   val kind_to_string : kind -> string
   val thm_to_string : thm -> string
@@ -250,6 +252,7 @@ signature Parse = sig
   val print_type : hol_type -> unit
   val print_kind : kind -> unit
   val print_term : term -> unit
+  val print_terms : term list -> unit
 
   val export_theorems_as_docfiles : string -> (string * thm) list -> unit
 

@@ -53,9 +53,9 @@ val safe_unify :
 
 (*val apply_subst : (prekind option ref * prekind) list -> prekind -> prekind*)
 
-val rename_kv : prekind -> (string * prekind) list
+val rename_kv : string list -> prekind -> (string * prekind) list
                         -> ((string * prekind) list * prekind option)
-val rename_kindvars : prekind -> prekind
+val rename_kindvars : string list -> prekind -> prekind
 val fromKind : Kind.kind -> prekind
 val remove_made_links : prekind -> prekind
 val replace_null_links : prekind -> string list -> string list * unit option

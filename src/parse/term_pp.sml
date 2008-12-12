@@ -438,9 +438,7 @@ fun pp_term (G : grammar) TyG = let
         end
       | _ => raise PP_ERR "my_dest_abs" "term not an abstraction"
 
-  fun my_dest_tyabs tm = dest_tyabs tm
   fun my_is_abs tm = can my_dest_abs tm
-  fun my_is_tyabs tm = can my_dest_tyabs tm
   fun my_strip_abs tm = let
     fun recurse acc t = let
       val (v, body) = my_dest_abs t
@@ -450,6 +448,7 @@ fun pp_term (G : grammar) TyG = let
   in
     recurse [] tm
   end
+
   fun my_dest_tyabs tm =
       case dest_term tm of
         TYLAMB p => p
@@ -745,9 +744,10 @@ fun pp_term (G : grammar) TyG = let
          or not the restrictor might print an endbinding token. *)
 
     infix might_print nmight_print
-    fun (r as {Name,Thy}) nmight_print str = let
+    fun tm nmight_print str = let
+      val {Name,...} = dest_thy_const tm
       val actual_name0 =
-        case Overload.overloading_of_nametype overload_info r of
+        case Overload.overloading_of_term overload_info tm of
           NONE => Name
         | SOME s => s
       fun testit s = if isPrefix s actual_name0 then SOME s else NONE
@@ -771,7 +771,7 @@ fun pp_term (G : grammar) TyG = let
       | LAMB(_,Body) => Body might_print str
       | TYLAMB(_,Body) => Body might_print str
       | VAR(Name,Ty) => Name = str
-      | CONST x => (lose_constrec_ty x) nmight_print str
+      | CONST x => tm nmight_print str
 
 
     fun pr_res_vstructl restrictor res_op vsl = let
@@ -897,12 +897,16 @@ fun pp_term (G : grammar) TyG = let
       pend addparens)
     end
 
+    fun is_fakeconst tm = let
+      val (vnm, _) = dest_var tm
+    in
+      String.isPrefix GrammarSpecials.fakeconst_special vnm
+    end handle HOL_ERR _ => false
     fun atom_name tm = let
       val (vnm, _) = dest_var tm
     in
       Lib.unprefix GrammarSpecials.fakeconst_special vnm handle HOL_ERR _ => vnm
     end handle HOL_ERR _ => fst (dest_const tm)
-
     fun can_pr_numeral stropt = List.exists (fn (k,s') => s' = stropt) num_info
     fun pr_numeral injtermopt tm = let
       open Overload
@@ -965,8 +969,7 @@ fun pp_term (G : grammar) TyG = let
         else
           ()
       val _ =
-        (if Literal.is_numeral t2
-            andalso can_pr_numeral (SOME (atom_name t1))
+        (if Literal.is_numeral t2 andalso can_pr_numeral (SOME (atom_name t1))
          then (pr_numeral (SOME t1) t2; raise SimpleExit)
          else ()) handle SimpleExit => raise SimpleExit | _ => ()
       val _ =
@@ -1307,11 +1310,8 @@ fun pp_term (G : grammar) TyG = let
       add_break (1, 0);
       pr_term t2 prec prec rprec (decdepth depth);
       if comb_show_type then
-        (add_string (" "^type_intro);
-         let val ty = type_of tm
-         in add_break (0,0);
-            type_pp.pp_type_with_depth TyG pps (decdepth depth) ty
-         end)
+        (add_string (" "^type_intro); add_break (0,0);
+         type_pp.pp_type_with_depth TyG pps (decdepth depth) (type_of tm))
       else ();
       end_block();
       pend (addparens orelse comb_show_type)
@@ -1626,42 +1626,53 @@ fun pp_term (G : grammar) TyG = let
 
     (* used to determine whether or not to print out disambiguating type
        information when showtypes_v is true *)
-    fun const_is_polymorphic (r as {Name,Thy}) = let
-      val genconst = prim_mk_const r
-    in
-      Type.polymorphic (type_of genconst)
-    end handle HOL_ERR _ => false
-    (* the exception is possible if the constant is out of date *)
+    fun const_is_polymorphic c =
+        if is_const c then let
+            val {Name,Thy,Ty} = dest_thy_const c
+            val genconst = prim_mk_const {Name=Name,Thy=Thy}
+          in
+            Type.polymorphic (type_of genconst)
+          end handle HOL_ERR _ => false
+        (* the exception is possible if the constant is out of date *)
+        else if is_fakeconst c then
+          case Overload.info_for_name overload_info (atom_name c) of
+            NONE => (* peculiar, printing but not parsing *) true
+          | SOME {base_type,...} => Type.polymorphic base_type
+        else false
 
-    fun const_has_multi_ovl (r as {Name,Thy}) =
-      case Overload.overloading_of_nametype overload_info r of
-        NONE => false
+    fun const_has_multi_ovl tm =
+      case Overload.overloading_of_term overload_info tm of
+        NONE => (* no printing form *) true
       | SOME s =>
           case Overload.info_for_name overload_info s of
-            NONE => false (* seems pretty unlikely *)
+            NONE => true (* seems pretty unlikely *)
           | SOME {actual_ops,...} => length actual_ops > 1
 
-    fun const_is_ambiguous (r as {Name,Thy}) =
-      const_is_polymorphic r orelse const_has_multi_ovl r
+    fun const_is_ambiguous t =
+      const_is_polymorphic t orelse const_has_multi_ovl t
 
   in
     if depth = 0 then add_string "..."
     else
       case dest_term tm of
         VAR(vname, Ty) => let
+          val (isfake, vname) =
+              (true, Lib.unprefix GrammarSpecials.fakeconst_special vname)
+              handle HOL_ERR _ => (false, vname)
           val vrule = lookup_term vname
           fun add_type () = let
           in
-            add_string (" "^type_intro);
+            add_string (" "^type_intro); add_break (0,0);
             type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty
           end
           val new_freevar =
-            showtypes andalso (not (op_mem eq tm (!fvars_seen))) andalso
+            showtypes andalso not isfake andalso
+            (not (op_mem eq tm (!fvars_seen))) andalso
             not (op_mem eq tm (!bvars_seen)) andalso not binderp
           val _ = if new_freevar then fvars_seen := tm :: (!fvars_seen) else ()
           val print_type =
             showtypes_v orelse
-            showtypes andalso (binderp orelse new_freevar)
+            showtypes andalso not isfake andalso (binderp orelse new_freevar)
         in
           begin_block INCONSISTENT 2; pbegin print_type;
           if isSome vrule then
@@ -1677,11 +1688,11 @@ fun pp_term (G : grammar) TyG = let
           fun with_type action = let
           in
             pbegin true;
-            begin_block CONSISTENT 0;
+            (*begin_block CONSISTENT 0;*)
             action();
             add_string (" "^type_intro);
             type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty;
-            end_block ();
+            (*end_block ();*)
             pend true
           end
           val r = {Name = Name, Thy = Thy}
@@ -1693,7 +1704,7 @@ fun pp_term (G : grammar) TyG = let
                 pr_sole_name s (map #2 (valOf crules))
               else if s = "0" andalso can_pr_numeral NONE then
                 pr_numeral NONE tm
-              else if Name="EMPTYSTRING" andalso Thy="string" then
+              else if Literal.is_emptystring tm then
                 add_string "\"\""
               else add_string s
             end
@@ -1739,12 +1750,12 @@ fun pp_term (G : grammar) TyG = let
                   cope_with_rules s
           end
         in
-          case (showtypes_v, const_is_polymorphic r, const_has_multi_ovl r) of
+          case (showtypes_v, const_is_polymorphic tm, const_has_multi_ovl tm) of
             (true, false, true) => add_prim_name()
           | (true, true, true) => with_type add_prim_name
           | (true, true, false) => with_type normal_const
           | _ => if !show_types andalso not ratorp andalso
-                    const_is_polymorphic r
+                    const_is_polymorphic tm
                  then
                    with_type normal_const
                  else normal_const()
@@ -1766,66 +1777,69 @@ fun pp_term (G : grammar) TyG = let
               else ()
 
           fun is_atom tm = is_const tm orelse is_var tm
-          fun pr_atomf fname =
-           let val candidate_rules = lookup_term fname
-               fun is_list (r as {nilstr, cons, ...}:listspec) tm =
-                    (has_name G nilstr tm)
-                    orelse
-                    is_comb tm andalso
-                      let val (t0, tail) = dest_comb tm
-                      in is_list r tail andalso is_comb t0
-                         andalso has_name G cons (rator t0)
-                      end
-               val restr_binder =
-                   find_partial (fn (b,s) => if s=fname then SOME b else NONE)
-                                restr_binders
-               val restr_binder_rule =
-                   if isSome restr_binder andalso length args = 1 andalso
-                      my_is_abs Rand
-                   then let
-                       val bindex = case valOf restr_binder of 
-                                      NONE => binder_to_string G LAMBDA
-                                    | SOME s => s
-                       val optrule = lookup_term bindex
-                       fun ok_rule (_, r) =
-                           case r of 
-                             PREFIX(BINDER b) => let 
-                             in 
-                               case hd b of 
-                                 LAMBDA => true
-                               | TYPE_LAMBDA => true
-                               | BinderString r => #preferred r
-                               | TypeBinderString r => #preferred r
-                             end
-                           | otherwise => false
-                     in
-                       case optrule of
-                         SOME rule_list => List.find ok_rule rule_list
-                       | otherwise => NONE
-                     end
-                   else NONE
-           in
-             case candidate_rules of
-               NONE =>
-                 if is_let tm then pr_let lgrav rgrav tm
-                 else let
+          fun pr_atomf (f,args) = let
+            val fname = atom_name f
+            val (args,Rand) = front_last args
+            val candidate_rules = lookup_term fname
+            fun is_list (r as {nilstr, cons, ...}:listspec) tm =
+                has_name G nilstr tm orelse
+                (is_comb tm andalso
+                 let
+                   val (t0, tail) = dest_comb tm
                  in
-                   case restr_binder of
-                     NONE => pr_comb tm Rator Rand
-                   | SOME NONE =>
-                       if isSome restr_binder_rule then pr_abs tm
-                       else pr_comb tm Rator Rand
-                   | SOME (SOME fname) =>
-                         if isSome restr_binder_rule then
-                           pr_comb_with_rule(#2(valOf restr_binder_rule))
-                           {fprec = #1 (valOf restr_binder_rule),
-                            fname = fname,
-                            f = f} args Rand
-                         else
-                           pr_comb tm Rator Rand
-                 end
-             | SOME crules0 =>
-              let fun suitable_rule rule =
+                   is_list r tail andalso is_comb t0 andalso
+                   has_name G cons (rator t0)
+                 end)
+            val restr_binder =
+                find_partial (fn (b,s) => if s=fname then SOME b else NONE)
+                             restr_binders
+            val restr_binder_rule =
+                if isSome restr_binder andalso length args = 1 andalso
+                   my_is_abs Rand
+                then let
+                    val bindex = case valOf restr_binder of
+                                   NONE => binder_to_string G LAMBDA
+                                 | SOME s => s
+                    val optrule = lookup_term bindex
+                    fun ok_rule (_, r) =
+                        case r of
+                          PREFIX(BINDER b) => let
+                          in
+                            case hd b of
+                              LAMBDA => true
+                            | TYPE_LAMBDA => true
+                            | BinderString r => #preferred r
+                            | TypeBinderString r => #preferred r
+                          end
+                        | otherwise => false
+                  in
+                    case optrule of
+                      SOME rule_list => List.find ok_rule rule_list
+                    | otherwise => NONE
+                  end
+                else NONE
+          in
+            case candidate_rules of
+              NONE =>
+                if is_let tm then pr_let lgrav rgrav tm
+                else let
+                in
+                  case restr_binder of
+                    NONE => pr_comb tm Rator Rand
+                  | SOME NONE =>
+                      if isSome restr_binder_rule then pr_abs tm
+                      else pr_comb tm Rator Rand
+                  | SOME (SOME fname) =>
+                      if isSome restr_binder_rule then
+                        pr_comb_with_rule(#2(valOf restr_binder_rule))
+                                         {fprec = #1 (valOf restr_binder_rule),
+                                          fname = fname,
+                                          f = f} args Rand
+                      else
+                        pr_comb tm Rator Rand
+                end
+            | SOME crules0 => let
+                fun suitable_rule rule =
                   case rule of
                     INFIX(STD_infix(rrlist, _)) =>
                       numTMs (rule_elements (#elements (hd rrlist))) + 1 =
@@ -1834,7 +1848,8 @@ fun pp_term (G : grammar) TyG = let
                   | PREFIX (STD_prefix list) =>
                       numTMs (rule_elements (#elements (hd list))) =
                       length args
-                  | PREFIX (BINDER _) => (my_is_abs Rand orelse my_is_tyabs Rand) andalso length args = 0
+                  | PREFIX (BINDER _) => (my_is_abs Rand orelse my_is_tyabs Rand) andalso
+                                         length args = 0
                   | SUFFIX (STD_suffix list) =>
                       numTMs (rule_elements (#elements (hd list))) =
                       length args
@@ -1877,32 +1892,30 @@ fun pp_term (G : grammar) TyG = let
                           args Rand
                   | [] => pr_comb tm Rator Rand
               end
-           end (* pr_atomf *)
+          end (* pr_atomf *)
           fun maybe_pr_atomf () =
-            case Overload.overloading_of_term overload_info f of
-              SOME s => pr_atomf s
-            | NONE => if is_var f andalso 
-                         not (String.isPrefix GrammarSpecials.fakeconst_special 
-                                              (#1 (dest_var f)))
-                      then pr_atomf (atom_name f)
-                      else pr_comb tm Rator Rand
+              case Overload.oi_strip_comb overload_info tm of
+                SOME (p as (f,args)) => let
+                in
+                  case args of
+                    [] => pr_term f pgrav lgrav rgrav depth
+                  | _ => pr_atomf p
+                end
+              | NONE => pr_comb tm Rator Rand
         in
           if showtypes_v then
-            if is_const f then let
-              val {Name,Thy,Ty} = dest_thy_const f
-            in
-              if const_is_ambiguous {Name = Name, Thy = Thy} then
-                pr_comb tm Rator Rand
-              else
-                maybe_pr_atomf()
-            end
-            else pr_comb tm Rator Rand
+            if const_is_ambiguous f then
+              pr_comb tm Rator Rand
+            else
+              maybe_pr_atomf()
           else maybe_pr_atomf()
         end
       | TYCOMB(Rator, Rand) => Feedback.trace("pp_avoids_symbol_merges",0) pr_tycomb tm
       | LAMB  (Bvar,  Body) => pr_abs tm
       | TYLAMB(Bvar,  Body) => pr_tyabs tm
   end handle SimpleExit => ()
+  (* the end of pr_term *)
+
   fun start_names() = {fvars_seen = ref [], bvars_seen = ref []}
 in
   fn pps => fn t =>

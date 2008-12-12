@@ -195,7 +195,10 @@ local
           | SOME (_, ty') => sync (new_unifyl_type tyS [(ty, ty')]) vars work)
      | COMB  (a, b) => sync tyS vars (a :: b :: work)
      | CONST _      => sync tyS vars work
-     | LAMB  _      => raise ERR "sync_vars" "lambda");
+     | TYCOMB(a, b) => sync tyS vars (a :: work)
+     | LAMB  _      => raise ERR "sync_vars" "lambda"
+     | TYLAMB  _    => raise ERR "sync_vars" "type lambda"
+);
 in
   fun sync_vars tms = sync [] [] tms;
 end;

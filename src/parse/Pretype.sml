@@ -852,6 +852,44 @@ end
   | abs_conv_ty conv _ = raise ERR "abs_conv_ty" "not a pretype abstraction"
 
 (* ----------------------------------------------------------------------
+    kind_constr_conv_ty conv ``: t : k`` applies conv to t
+   ---------------------------------------------------------------------- *)
+
+fun kind_constr_conv_ty conv (PT(TyKindConstr{Ty,Kind}, locn)) = let
+  val Newty = conv Ty
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+      if Lib.mem origin_function
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty", "uvar_conv_ty"]
+         andalso origin_structure = "Pretype"
+      then
+        raise ERR "kind_constr_conv_ty" message
+      else
+        raise ERR "kind_constr_conv_ty" (origin_function ^ ": " ^ message)
+in
+  PT(TyKindConstr{Ty=Newty,Kind=Kind}, locn)
+end
+  | kind_constr_conv_ty conv _ = raise ERR "kind_constr_conv_ty" "not a pretype kind constraint"
+
+(* ----------------------------------------------------------------------
+    rank_constr_conv_ty conv ``: t : k`` applies conv to t
+   ---------------------------------------------------------------------- *)
+
+fun rank_constr_conv_ty conv (PT(TyRankConstr{Ty,Rank}, locn)) = let
+  val Newty = conv Ty
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+      if Lib.mem origin_function
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty", "uvar_conv_ty"]
+         andalso origin_structure = "Pretype"
+      then
+        raise ERR "rank_constr_conv_ty" message
+      else
+        raise ERR "rank_constr_conv_ty" (origin_function ^ ": " ^ message)
+in
+  PT(TyRankConstr{Ty=Newty,Rank=Rank}, locn)
+end
+  | rank_constr_conv_ty conv _ = raise ERR "rank_constr_conv_ty" "not a pretype rank constraint"
+
+(* ----------------------------------------------------------------------
     univ_conv_ty conv ``: !'a. t['a]`` applies conv to t['a]
    ---------------------------------------------------------------------- *)
 
@@ -885,9 +923,10 @@ fun uvar_conv_ty conv (PT(UVar (r as ref (SOMEU ty)), locn)) = let
       else
         raise ERR "univ_conv_ty" (origin_function ^ ": " ^ message)
 in
+  (* Newty *)
   PT(UVar (ref (SOMEU Newty)), locn) (* creates a new reference to hold the converted value *)
 end
-  | uvar_conv_ty conv (ty as PT(UVar (ref (NONEU _)), locn)) = ty (* unchanged *)
+  | uvar_conv_ty conv (ty as PT(UVar (ref (NONEU _)), locn)) = raise UNCHANGEDTY (* unchanged *)
   | uvar_conv_ty conv _ = raise ERR "uvar_conv_ty" "not a pretype unification var"
 
 (*---------------------------------------------------------------------------
@@ -971,19 +1010,24 @@ fun repeat_ty conv ty =
 
 fun try_conv_ty conv = conv orelse_ty all_conv_ty;
 
-fun app_conv_ty conv ty = let
-  val (Rator, Rand) = dest_app_type ty
+fun app_conv_ty conv (PT(TyApp(Rator,Rand), locn)) = let
 in
-  let
-    val Rator' = conv Rator
+  let val Rator' = conv Rator
   in
-    mk_app_type (Rator', conv Rand) handle UNCHANGEDTY => mk_app_type (Rator', Rand)
-  end handle UNCHANGEDTY => mk_app_type (Rator, conv Rand)
+    PT(TyApp(Rator', conv Rand), locn) handle UNCHANGEDTY => PT(TyApp(Rator', Rand), locn)
+  end handle UNCHANGEDTY => PT(TyApp(Rator, conv Rand), locn)
 end
+  | app_conv_ty conv _ = raise ERR "app_conv_ty" "not a pretype application"
 
 fun sub_conv_ty conv =
-    try_conv_ty (app_conv_ty conv orelse_ty abs_conv_ty conv
-                 orelse_ty univ_conv_ty conv orelse_ty uvar_conv_ty conv)
+    try_conv_ty (app_conv_ty conv orelse_ty abs_conv_ty conv orelse_ty univ_conv_ty conv
+                 orelse_ty kind_constr_conv_ty conv orelse_ty rank_constr_conv_ty conv
+                 orelse_ty uvar_conv_ty conv)
+
+fun head_sub_conv_ty conv =
+    try_conv_ty (rator_conv_ty conv
+                 orelse_ty kind_constr_conv_ty conv orelse_ty rank_constr_conv_ty conv
+                 orelse_ty uvar_conv_ty conv)
 
 (* ----------------------------------------------------------------------
     traversal conversionals.
@@ -1034,6 +1078,17 @@ fun top_sweep_conv_ty conv ty =
 val deep_eta_conv_ty = qconv_ty (top_depth_conv_ty eta_conv_ty)
 
 val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
+
+fun head_beta_conv (ty as PT(TyApp(ty1,ty2),locn)) =
+       if is_abs_type ty1 then beta_conv_ty ty
+       else PT(TyApp(head_beta_conv ty1,ty2),locn)
+  | head_beta_conv (PT(TyKindConstr{Ty,Kind},locn)) =
+       PT(TyKindConstr{Ty=head_beta_conv Ty,Kind=Kind},locn)
+  | head_beta_conv (PT(TyRankConstr{Ty,Rank},locn)) =
+       PT(TyRankConstr{Ty=head_beta_conv Ty,Rank=Rank},locn)
+  | head_beta_conv (PT(UVar (r as ref (SOMEU ty)),locn)) =
+       (r := SOMEU (head_beta_conv ty); PT(UVar r,locn))
+  | head_beta_conv _ = raise ERR "head_beta_conv" "no beta redex found"
 
 
 val dest_univ_type = dest_univ_type0 o deep_beta_conv_ty
@@ -1445,7 +1500,7 @@ in
 end
 
 local
-  val rename_kv = Prekind.rename_kv
+  val rename_kv = Prekind.rename_kv []
   val rename_rv = Prerank.rename_rv false
   val rename_rv_new = Prerank.rename_rv true
   fun replace (s,kd,rk) (env as (rkenv,kdenv,tyenv)) =
@@ -1487,6 +1542,48 @@ local
           add_bvar Ty avds)
     | add_bvar _ _ = raise TCERR "rename_typevars" "add_bvar: arg is not variable"
 in
+fun rename_kvs avds (ty as PT(ty0, locn)) = let
+    val rename_kv = Prekind.rename_kv avds
+in
+  case ty0 of
+    Vartype (v as (s,kd,rk)) =>
+       rename_kv kd >>- (fn kd' =>
+       rename_rv rk >>= (fn rk' =>
+       if mem s avds then return (PT(Vartype(s,kd',rk'), locn)) else replace (s,kd',rk')))
+(*
+       case Lib.assoc1 s benv
+         of SOME _ => return (PT(Vartype(s,kd',rk'), locn))
+          | NONE   => replace (s,kd',rk')))
+*)
+  | Contype {Thy,Tyop,Kind,Rank} =>
+       rename_kv Kind >>- (fn Kind' =>
+       rename_rv_new Rank >>= (fn Rank' =>
+       return (PT(Contype {Thy=Thy,Tyop=Tyop,Kind=Kind',Rank=Rank'}, locn))))
+  | TyApp (ty1, ty2) =>
+      rename_kvs avds ty1 >-
+      (fn ty1' => rename_kvs avds ty2 >-
+      (fn ty2' => return (PT(TyApp(ty1', ty2'), locn))))
+  | TyUniv (ty1, ty2) =>
+      add_bvar ty1 avds >- (fn (avds',ty1') =>
+      rename_kvs avds' ty2 >-
+      (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn))))
+  | TyAbst (ty1, ty2) =>
+      add_bvar ty1 avds >- (fn (avds',ty1') =>
+      rename_kvs avds' ty2 >-
+      (fn ty2' => return (PT(TyAbst(ty1', ty2'), locn))))
+  | TyKindConstr {Ty, Kind} =>
+      rename_kv Kind >>- (fn Kind' =>
+      rename_kvs avds Ty >- (fn Ty' =>
+      return (PT(TyKindConstr {Ty=Ty', Kind=Kind'}, locn))))
+  | TyRankConstr {Ty, Rank} =>
+      rename_rv Rank >>= (fn Rank' =>
+      rename_kvs avds Ty >- (fn Ty' =>
+      return (PT(TyRankConstr {Ty=Ty', Rank=Rank'}, locn))))
+  | _ (* UVar (ref _) *) => return ty
+end
+
+fun rename_kindvars avds ty = valOf (#2 (rename_kvs avds ty ([],[],[])))
+
 fun rename_tv avds (ty as PT(ty0, locn)) =
   case ty0 of
     Vartype (v as (s,kd,rk)) =>
@@ -1648,7 +1745,7 @@ fun chase ty =
   end
   handle HOL_ERR _ => raise Fail ("chase applied to non-function type: " ^ pretype_to_string ty)
 
-(**)
+(*
 local
 fun CERR ty = Fail ("chase applied to non-function type: " ^ pretype_to_string ty)
 in
@@ -1671,7 +1768,7 @@ fun chase (ty as PT(TyApp(PT(TyApp(PT(tyc, _), _), _), ty1), _)) =
     end
   | chase ty = raise CERR ty
 end
-(**)
+*)
 
 
 (*---------------------------------------------------------------------------

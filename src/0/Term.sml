@@ -794,8 +794,8 @@ local fun pop (tm as Fv(s,ty),k)    = Fv(s,pop_ty(ty,k))
         | pop (Const(Name,Ty),k)    = Const(Name,pop_pty(Ty,k))
         | pop (Comb(Rator,Rand),k)  = Comb(pop(Rator,k), pop(Rand,k))
         | pop (TComb(Rator,Ty),k)   = TComb(pop(Rator,k), pop_ty(Ty,k))
-        | pop (Abs(v,Body), k)      = Abs(pop(v,k), pop(Body, k+1))
-        | pop (TAbs(a,Body), k)     = TAbs(a,pop(Body, k))
+        | pop (Abs(v,Body), k)      = Abs(pop(v,k), pop(Body, k))
+        | pop (TAbs(a,Body), k)     = TAbs(a,pop(Body, k+1))
         | pop (tm as Clos _, k)     = pop (push_clos tm, k)
         | pop (tm,k) = tm (* e.g., bound variables *)
       and pop_pty (GRND ty,k)       = GRND (pop_ty(ty,k))
@@ -1676,8 +1676,8 @@ fun tymatch pat ob ((lctys,env,insts_homs),kdS,rkS) =
         end
 in
 fun get_type_kind_rank_insts kdavoids tyavoids L ((tyS,tyId),(kdS,kdId),rkS) =
-  let fun beta_conv_S {redex,residue} = {redex=redex, residue = deep_beta_conv_ty residue}
-      val tyS = map beta_conv_S tyS
+  let (*fun beta_conv_S {redex,residue} = {redex=redex, residue = deep_beta_conv_ty residue}
+      val tyS = map beta_conv_S tyS*)
       val tyfixed = HOLset.addList(HOLset.addList(empty_tyset, tyavoids), tyId)
       val kdfixed = union kdavoids kdId
       val ((_,_,pinsts_homs),kdS1,rkS1) =

@@ -572,7 +572,7 @@ fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
                    val x' = Type.inst_rank_kind rkin (fst kdins) x
                  in
                    if t = x' then raise ERR "separate_insts" ""
-                                 else {redex = x', residue = t}
+                             else {redex = x', residue = t}
                  end) (fst tyins)
   val tyins' = (tyinsts,snd tyins)
   val tminsts = mapfilter (fn {redex = x, residue = t} => let
@@ -583,6 +583,8 @@ fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
                             end
                  in
                    if aconv t x' then raise ERR "separate_insts" ""
+                   else if not (abconv_ty (type_of x') (type_of t))
+                                 then raise ERR "separate_insts" "bad type subst" (* This may cover an error in normal HOL *)
                                  else {redex = x', residue = t}
                  end) realinsts
 in
@@ -609,6 +611,16 @@ fun all_abconv_ty [] [] = true
   | all_abconv_ty _ [] = false
   | all_abconv_ty (h1::t1) (h2::t2) = abconv_ty h1 h2 andalso all_abconv_ty t1 t2
 
+fun determ {redex,residue} =
+      if not (is_var redex) orelse not (is_var residue) then NONE
+      else let val (nm1,ty1) = dest_var redex
+               val (nm2,ty2) = dest_var residue
+           in if nm1 <> nm2 then NONE
+              else if is_vartype ty1
+                   then SOME (ty1 |-> ty2)
+                   else NONE
+           end
+
 
 fun term_homatch kdavoids tyavoids lconsts rkin kdins tyins (insts, homs) = let
   (* local constants of both terms and types never change *)
@@ -632,21 +644,12 @@ in
       else if is_comb vtm then let
           val (vtm0, vargs) = strip_comb vtm
           val (vhop, vtyargs) = strip_tycomb vtm0
-          val _ = if not(null vtyargs) then print ("<<< vtyargs length=" ^ Int.toString(length vtyargs) ^ ">>>\n") else ()
           val afvs = free_varsl vargs
           val aftyvs = type_varsl vtyargs
-          val _ = if not(null aftyvs) then print ("<<< aftyvs length=" ^ Int.toString(length aftyvs) ^ ">>>\n") else ()
-          val inst_fn = inst (fst tyins) o inst_rank_kind rkin (fst kdins)
-          val ty_inst_fn = Type.type_subst (fst tyins) o Type.inst_rank_kind rkin (fst kdins)
-          fun determ {redex,residue} =
-                if not (is_var redex) orelse not (is_var residue) then NONE
-                else let val (nm1,ty1) = dest_var redex
-                         val (nm2,ty2) = dest_var residue
-                     in if nm1 <> nm2 then NONE
-                        else if is_vartype ty1
-                             then SOME (ty1 |-> ty2)
-                             else NONE
-                     end
+          val tyins' = map (fn {redex,residue} => Type.inst_rank_kind rkin (fst kdins) redex |-> residue)
+                           (fst tyins)
+          val inst_fn = inst tyins' o inst_rank_kind rkin (fst kdins)
+          val ty_inst_fn = Type.type_subst tyins' o Type.inst_rank_kind rkin (fst kdins)
           val ty_insts = List.mapPartial determ insts
         in
           (let
@@ -662,7 +665,6 @@ in
                                           if mem a tyavoids orelse mem a (snd tyins)
                                           then a
                                           else raise ERR "term_homatch" ""))) aftyvs
-             val _ = if not(null tyins1) then print ("<<< tyins1 length=" ^ Int.toString(length tyins1) ^ ">>>\n") else ()
              val tmins =
                  map (fn a =>
                          (inst_fn a |->
@@ -675,7 +677,6 @@ in
                                           else raise ERR "term_homatch" ""))) afvs
              val typats0 = map ty_inst_fn vtyargs
              val typats = map (Type.type_subst tyins1) typats0
-             val _ = if not(null typats) then print ("<<< typats length=" ^ Int.toString(length typats) ^ ">>>\n") else ()
              val pats0 = map inst_fn vargs
              val pats = map (Term.subst tmins) pats0
              val vhop' = inst_fn vhop
@@ -692,7 +693,6 @@ in
                                                   (if is_vartype p then p
                                                    else gen_tyopvar(kind_of p,rank_of p))))
                                       typats
-             val _ = if not(null gtyinsts) then print ("<<< gtyinsts length=" ^ Int.toString(length gtyinsts) ^ ">>>\n") else ()
                    val ginsts   = map (fn p => (p |->
                                                   (if is_var p then p
                                                    else genvar(type_of p))))
@@ -726,17 +726,10 @@ in
       else (* if is_tycomb vtm then *) let
           val (vhop, vtyargs) = strip_tycomb vtm
           val aftyvs = type_varsl vtyargs
-          val inst_fn = inst (fst tyins) o inst_rank_kind rkin (fst kdins)
-          val ty_inst_fn = Type.type_subst (fst tyins) o Type.inst_rank_kind rkin (fst kdins)
-          fun determ {redex,residue} =
-                if not (is_var residue) then NONE
-                else let val (nm1,ty1) = dest_var redex
-                         val (nm2,ty2) = dest_var residue
-                     in if nm1 <> nm2 then NONE
-                        else if is_vartype ty1
-                             then SOME (ty1 |-> ty2)
-                             else NONE
-                     end
+          val tyins' = map (fn {redex,residue} => Type.inst_rank_kind rkin (fst kdins) redex |-> residue)
+                           (fst tyins)
+          val inst_fn = inst tyins' o inst_rank_kind rkin (fst kdins)
+          val ty_inst_fn = Type.type_subst tyins' o Type.inst_rank_kind rkin (fst kdins)
           val ty_insts = List.mapPartial determ insts
         in
           (let

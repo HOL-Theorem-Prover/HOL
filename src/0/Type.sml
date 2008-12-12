@@ -1881,8 +1881,19 @@ in
   (tyins, fst kdins, rkin)
 end handle e => raise (wrap_exn "HolKernel" "ho_match_type" e)
 
-fun ho_match_type kdavoids lconsts vty cty =
-    ho_match_type0 true kdavoids lconsts (deep_beta_conv_ty vty) (deep_beta_conv_ty cty)
+fun check_achieves_target (tyins, kdins, rkin) vty cty = 
+(**)
+  if abconv_ty (type_subst tyins (inst_rank_kind rkin kdins vty)) cty then ()
+  else raise ERR "ho_match_type" "higher-order type matching failed to achieve target type"
+(**)
+
+fun ho_match_type kdavoids lconsts vty cty = let
+  val vty' = deep_beta_conv_ty vty
+  val cty' = deep_beta_conv_ty cty
+  val (tyins, kdins, rkin) = ho_match_type0 true kdavoids lconsts vty' cty'
+  val _ = check_achieves_target (tyins, kdins, rkin) vty' cty'
+in (tyins, kdins, rkin)
+end
 
 end (* local *)
 
@@ -1897,6 +1908,7 @@ fun prim_kind_match_type pat ob ((tyS,tyId), (kdS,kdId), rkS) =
 fun raw_kind_match_type pat ob ((tyS,tyId), (kdS,kdId), rkS) =
     let val tyfixed = HOLset.addList(empty_tyset, tyId)
         val (_,tyS',(kdS',kdId'),rkS') = ho_match_type1 true kdId tyfixed pat ob (tyS,[]) (rkS,(kdS,kdId))
+        val _ = check_achieves_target (tyS', kdS', rkS') pat ob
         val tyId' = Lib.subtract (Lib.union (type_vars pat) tyId) (map #redex tyS')
      in ((tyS',tyId'), (kdS',kdId'), rkS')
     end;

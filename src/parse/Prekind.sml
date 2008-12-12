@@ -238,16 +238,16 @@ local fun replace s env =
               end
           | SOME (_, r) => (env, SOME r)
 in
-fun rename_kv (kd as PK(kd0, locn)) =
+fun rename_kv avds (kd as PK(kd0, locn)) =
   case kd0 of
-    Varkind s => replace s
+    Varkind s => if mem s avds then return (PK(Varkind s, locn)) else replace s
   | Arrowkind (kd1, kd2) =>
-      rename_kv kd1 >-
-      (fn kd1' => rename_kv kd2 >-
+      rename_kv avds kd1 >-
+      (fn kd1' => rename_kv avds kd2 >-
       (fn kd2' => return (PK(Arrowkind(kd1', kd2'), locn))))
   | _ => return kd
 
-fun rename_kindvars kd = valOf (#2 (rename_kv kd []))
+fun rename_kindvars avds kd = valOf (#2 (rename_kv avds kd []))
 end
 
 fun fromKind k =

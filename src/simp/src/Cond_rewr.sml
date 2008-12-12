@@ -320,6 +320,7 @@ fun IMP_EQ_CANON thm =
                  val base = if null (op_set_diff aconv
                                               (free_vars (rhs conc))
 			                      (free_varsl (hyp thm)@
+			                   (* (free_varsl (hyp undisch_thm)@ *)
                                                free_vars(lhs conc)))
 		            then undisch_thm
 		            else EQT_INTRO undisch_thm

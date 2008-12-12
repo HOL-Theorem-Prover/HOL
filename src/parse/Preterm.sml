@@ -12,6 +12,8 @@ type hol_type = Type.hol_type
 type term = Term.term
 type overinfo = {Name:string, Ty:pretype,
                  Info:Overload.overloaded_op_info, Locn:locn.locn}
+fun tmlist_kdvs tlist = 
+  List.foldl (fn (t,acc) => Lib.union (Term.kind_vars_in_term t) acc) [] tlist
 fun tmlist_tyvs tlist = 
   List.foldl (fn (t,acc) => Lib.union (Term.type_vars_in_term t) acc) [] tlist
 
@@ -687,9 +689,11 @@ fun remove_overloading_phase1 ptm =
       fun testfn t = let
         open Term
         val possty = type_of t
-        val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
+        val avdkds = map Kind.dest_var_kind (tmlist_kdvs (free_vars t))
+        val avds = map (#1 o Type.dest_vartype_opr) (tmlist_tyvs (free_vars t))
         val pty0 = Pretype.fromType possty
-        val pty = Pretype.rename_typevars avds pty0
+        val pty1 = Pretype.rename_kindvars avdkds pty0
+        val pty = Pretype.rename_typevars avds pty1
       in
         Pretype.can_unify Ty pty
       end

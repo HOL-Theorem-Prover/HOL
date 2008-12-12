@@ -226,6 +226,10 @@ val map_map_functor0 = store_thm
             Functor theorems
  ---------------------------------------------------------------------------*)
 
+val oo_def = Define `$oo (G: 'G functor) (F': 'F functor) = \:'a 'b. G o F' [:'a,'b:]`;
+val _ = add_infix("oo", 800, HOLgrammars.RIGHT);
+(*val _ = overload_on ("o", Term`$ff : 'G functor -> 'F functor -> ('G o 'F) functor`);*)
+
 val functor_o = store_thm
   ("functor_o",
    ``!(F': 'F functor) (G: 'G functor).
@@ -234,11 +238,24 @@ val functor_o = store_thm
    SIMP_TAC combin_ss [functor_def]
   );
 
+val functor_oo = store_thm
+  ("functor_oo",
+   ``!(F': 'F functor) (G: 'G functor).
+      functor F' /\ functor G ==>
+      functor (G oo F')``,
+   SIMP_TAC combin_ss [functor_def,oo_def]
+  );
+
 (* As a simple application, we can immediately derive that MAP o MAP is a functor. *)
 
-val map_map_functor = save_thm
-  ("map_map_functor",
+val map_o_map_functor = save_thm
+  ("map_o_map_functor",
    (TY_BETA_RULE o MATCH_MP functor_o) (CONJ map_functor map_functor)
+  );
+
+val map_oo_map_functor = save_thm
+  ("map_oo_map_functor",
+   (TY_BETA_RULE o MATCH_MP functor_oo) (CONJ map_functor map_functor)
   );
 
 
@@ -352,6 +369,8 @@ val nattransf_def = new_definition("nattransf_def", Term
             Natural transformation theorems
  ---------------------------------------------------------------------------*)
 
+(* The identity natural transformation, transforms any functor to itself *)
+
 val identity_nattransf = store_thm
   ("identity_nattransf",
    ``!:'F. !F' : 'F functor.
@@ -359,57 +378,101 @@ val identity_nattransf = store_thm
    SIMP_TAC combin_ss [nattransf_def]
   );
 
-val nattransf_functor_comp1 = store_thm
-  ("nattransf_functor_comp1",
-   ``nattransf F' G (phi : ('F,'G)nattransf) /\
-     functor (psi : 'H functor) ==>
-     nattransf (\:'a 'b. F' o psi)
-               (\:'a 'b. G  o psi)
-               (\:'a. phi[:'a 'H:])``,
-   SIMP_TAC combin_ss [nattransf_def,functor_def]
-  );
+(* Vertical composition of two natural transformations *)
 
-val nattransf_functor_comp2 = store_thm
-  ("nattransf_functor_comp2",
-   ``nattransf F' G (phi : ('F,'G)nattransf) /\
-     functor (H : 'H functor) ==>
-     nattransf (\:'a 'b. H o F')
-               (\:'a 'b. H o G)
-               (\:'a. H phi)``,
-   SIMP_TAC combin_ss [nattransf_def,functor_def]
-   THEN REPEAT STRIP_TAC
-   THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM th])
-   THEN ASM_REWRITE_TAC[]
-  );
+val ooo_def = Define `$ooo (phi2: ('G,'H)nattransf) (phi1: ('F,'G)nattransf) = \:'a. phi2 o (phi1[:'a:])`;
+val _ = add_infix("ooo", 800, HOLgrammars.RIGHT);
 
-val nattransf_comp1 = store_thm
-  ("nattransf_comp1",
+val nattransf_comp = store_thm
+  ("nattransf_comp",
    ``nattransf F' G (phi1 : ('F,'G)nattransf) /\
      nattransf G  H (phi2 : ('G,'H)nattransf) ==>
-     nattransf F' H (\:'a. phi2 o phi1)``,
-   SIMP_TAC bool_ss [nattransf_def]
+     nattransf F' H (phi2 ooo phi1)``,
+   SIMP_TAC bool_ss [nattransf_def,ooo_def]
    THEN REPEAT STRIP_TAC
    THEN ASM_REWRITE_TAC[o_ASSOC]
    THEN ASM_REWRITE_TAC[GSYM o_ASSOC]
   );
 
-val nattransf_commute1 = store_thm
-  ("nattransf_commute1",
-   ``nattransf (F1 : 'F1 functor) (G1 : 'G1 functor) phi1 /\
-     nattransf (F2 : 'F2 functor) (G2 : 'G2 functor) phi2  ==>
+(* Composition of a functor (on the left) with a natural transformation *)
+
+val foo_def = Define `$foo (H: 'H functor) (phi: ('F,'G)nattransf) = \:'a. H [:'a 'F, 'a 'G:] phi`;
+val _ = add_infix("foo", 750, HOLgrammars.LEFT);
+(*val _ = overload_on ("oo", Term`$foo : 'H functor -> ('F,'G) nattransf -> ('F o 'H,'G o 'H) nattransf`);*)
+
+val functor_nattransf_comp = store_thm
+  ("functor_nattransf_comp",
+   ``nattransf F' G (phi : ('F,'G)nattransf) /\
+     functor (H : 'H functor) ==>
+     nattransf (H oo F')
+               (H oo G)
+               (H foo phi)``,
+   SIMP_TAC combin_ss [nattransf_def,functor_def,oo_def,foo_def]
+   THEN REPEAT STRIP_TAC
+   THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM th])
+   THEN ASM_REWRITE_TAC[]
+  );
+
+(* Composition of a natural transformation with a functor (on the right) *)
+
+val oof_def = Define `$oof (phi: ('F,'G) nattransf) (H': 'H functor) = \:'a. phi [:'a 'H:]`;
+val _ = add_infix("oof", 750, HOLgrammars.LEFT);
+(*
+val _ = overload_on ("oo", Term`$oof : ('F,'G) nattransf -> 'H functor -> ('H o 'F,'H o 'G) nattransf`);
+
+val G = term_grammar();
+val oinfo = term_grammar.overload_info G;
+val tm = ``(phi : ('F,'G)nattransf) oof (H : 'H functor)``;
+val (f, args) = strip_comb tm;
+Overload.overloading_of_term oinfo f;
+*)
+
+val nattransf_functor_comp = store_thm
+  ("nattransf_functor_comp",
+   ``nattransf F' G (phi : ('F,'G)nattransf) /\
+     functor (H : 'H functor) ==>
+     nattransf ( F' oo  H)
+               ( G  oo  H)
+               (phi oof H)``,
+   SIMP_TAC combin_ss [nattransf_def,functor_def,oo_def,oof_def]
+  );
+
+val nattransf_commute = store_thm
+  ("nattransf_commute",
+   ``nattransf F1 G1 (phi1 : ('F1,'G1) nattransf) /\
+     nattransf F2 G2 (phi2 : ('F2,'G2) nattransf)  ==>
      (phi2 o F2 (phi1[:'a:]) = G2 phi1 o phi2)``,
    SIMP_TAC bool_ss [nattransf_def]
   );
+
+(* Horizontal composition of two natural transformations *)
 
 val nattransf_comp2 = store_thm
   ("nattransf_comp2",
    ``nattransf F1 G1 (phi1 : ('F1,'G1) nattransf) /\
      nattransf F2 G2 (phi2 : ('F2,'G2) nattransf) /\
      functor F2 ==>
-     nattransf (\:'a 'b. F2 o F1)
-               (\:'a 'b. G2 o G1)
-               (\:'a. phi2 o F2 phi1)``,
-   SIMP_TAC bool_ss [nattransf_def,functor_def]
+     nattransf (F2 oo F1)
+               (G2 oo G1)
+               (\:'a. phi2 o F2 (phi1[:'a:]))``,
+(*
+   REWRITE_TAC[functor_def]
+   THEN REPEAT STRIP_TAC
+set_trace "simplifier" 7;
+val gl as (asl,w) = top_goal();
+ASM_SIMP_TAC bool_ss [nattransf_commute] gl
+
+   REWRITE_TAC[functor_def]
+   THEN REPEAT STRIP_TAC
+   THEN REWRITE_TAC[nattransf_def]
+   THEN REWRITE_TAC[oo_def]
+   THEN ASM_SIMP_TAC bool_ss [nattransf_commute]
+   THEN ASSUM_LIST (fn [ftho,fthi,nth2,nth1] => Ho_Rewrite.REWRITE_TAC[MP nattransf_commute (CONJ nth1 nth2)])
+   THEN ASSUM_LIST (fn [ftho,fthi,nth2,nth1] => REWRITE_TAC[MP nattransf_commute (CONJ nth1 nth2)])
+   THEN ASSUM_LIST (fn [ftho,fthi,nth2,nth1] => SIMP_TAC bool_ss [MP nattransf_commute (CONJ nth1 nth2)])
+   THEN ASSUM_LIST (fn [ftho,fthi,nth2,nth1] => SIMP_TAC bool_ss [nattransf_commute, nth1, nth2])
+*)
+   SIMP_TAC bool_ss [nattransf_def,functor_def,oo_def]
    THEN REPEAT STRIP_TAC
    THEN ASM_SIMP_TAC bool_ss [o_THM,o_ASSOC]
    THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM o_ASSOC,GSYM th])

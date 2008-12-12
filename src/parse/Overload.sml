@@ -52,8 +52,10 @@ val null_oinfo : overload_info =
 fun oinfo_ops (oi,_) = Binarymap.listItems oi
 fun print_map (_, pm) = let
   fun foldthis (_,(t,nm,_),acc) =
-      (lose_constrec_ty (dest_thy_const t),nm) :: acc
-      handle HOL_ERR _ => acc
+      if Theory.uptodate_term t then
+        (lose_constrec_ty (dest_thy_const t),nm) :: acc
+        handle HOL_ERR _ => acc
+      else acc
 in
   PrintMap.fold foldthis [] pm
 end
@@ -63,6 +65,9 @@ fun update_assoc k v [] = [(k,v)]
                                       else (k',v')::update_assoc k v kvs
 
 exception OVERLOAD_ERR of string
+
+fun tmlist_kdvs tlist =
+  List.foldl (fn (t,acc) => Lib.union (kind_vars_in_term t) acc) [] tlist
 
 fun tmlist_tyvs tlist =
   List.foldl (fn (t,acc) => Lib.union (type_vars_in_term t) acc) [] tlist
@@ -78,29 +83,120 @@ local
   (* invariant on type generation part of state:
        not (next_var MEM sofar)
   *)
-  fun newtyvar (env, (next_var, sofar)) = let
+  fun newtyvar (kd,rk) (env, (next_var, sofar)) = let
     val new_sofar = next_var::sofar
     val new_next = gen_variant tyvar_vary sofar (tyvar_vary next_var)
     (* new_next can't be in new_sofar because gen_variant ensures that
        it won't be in sofar, and tyvar_vary ensures it won't be equal to
        next_var *)
   in
-    ((env, (new_next, new_sofar)), mk_vartype next_var)
+    ((env, (new_next, new_sofar)), mk_vartype_opr(next_var,kd,rk))
   end
 
-  fun au (ty1, ty2) =
-    if ty1 = ty2 then return ty1
+(* ---------------------------------------------------------------------- *)
+(* The au routine is the core of the anti-unification algorithm.          *)
+(* The result is the type which is the anti-unification of the arguments. *)
+(* ---------------------------------------------------------------------- *)
+
+  fun au0 cntx (ty1, ty2) =
+    if null cntx andalso abconv_ty ty1 ty2 then return ty1
     else
       lookup (ty1, ty2) >-
       (fn result =>
        case result of
          NONE =>
+           if (is_vartype ty1) andalso (is_vartype ty2) then
+             case Lib.assoc1 ty1 cntx
+              of SOME (ty1',ty2') =>
+                   if ty2' = ty2
+                   then return ty1
+                   else
+                     newtyvar (kind_of ty1,rank_of ty1) >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
+                                                            return new_ty)
+               | NONE =>
+                   let
+                     val (s1, kd1, rk1) = dest_vartype_opr ty1
+                     val (s2, kd2, rk2) = dest_vartype_opr ty2
+                   in
+                     if s1 = s2 andalso kd1 = kd2 andalso rk1 = rk2 then
+                       return ty1
+                     else
+                       newtyvar (kd1,rk1) >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
+                                              return new_ty)
+                   end
+           else
+           if (is_con_type ty1) andalso (is_con_type ty2) then let
+               val {Thy = thy1, Tyop = tyop1, Kind = kd1, Rank = rk1} = dest_thy_con_type ty1
+               val {Thy = thy2, Tyop = tyop2, Kind = kd2, Rank = rk2} = dest_thy_con_type ty2
+             in
+               if tyop1 = tyop2 andalso thy1 = thy2 then
+                 return (mk_thy_con_type{Thy = thy1, Tyop = tyop1})
+               else
+                 newtyvar (kd1,rk1) >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
+                                        return new_ty)
+             end
+           else
+           if (is_app_type ty1) andalso (is_app_type ty2) then
+(*
+             (* this next case is for backwards compatibility *)
+             if (is_type ty1) andalso (is_type ty2) then let
+               val {Thy = thy1, Tyop = tyop1, Args = args1} = dest_thy_type ty1
+               val {Thy = thy2, Tyop = tyop2, Args = args2} = dest_thy_type ty2
+             in
+               if tyop1 = tyop2 andalso thy1 = thy2 then
+                 mmap (au0 cntx) (ListPair.zip (args1, args2)) >-
+                 (fn tylist =>
+                   return (mk_thy_type{Thy = thy1, Tyop = tyop1,
+                                       Args = tylist}))
+               else
+                 newtyvar (kind_of ty1,rank_of ty1) >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
+                                                        return new_ty)
+             end
+             else
+*)
+             let
+               val (ty1f,ty1a) = dest_app_type ty1
+               val (ty2f,ty2a) = dest_app_type ty2
+             in
+               if kind_of ty1f = kind_of ty2f andalso kind_of ty1a = kind_of ty2a
+               then
+                 mmap (au0 cntx) (ListPair.zip ([ty1f,ty1a], [ty2f,ty2a])) >-
+                   (fn [tyf,tya] =>
+                     return (mk_app_type(tyf, tya)
+                             handle e => (print ("au failed at mk_app_type on " ^ type_to_string tya
+                                                 ^ " " ^ type_to_string tyf ^ "\n");
+                                          Raise e)
+                            ))
+               else
+                 newtyvar (kind_of ty1,rank_of ty1) >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
+                                                        return new_ty)
+             end
+           else
+           if (is_abs_type ty1) andalso (is_abs_type ty2) then let
+               val (bty1,body1) = dest_abs_type ty1
+               val (bty2,body2) = dest_abs_type ty2
+             in
+               au0 ((bty1,bty2)::cntx) (body1, body2) >-
+                   (fn body =>
+                     return (mk_abs_type(bty1, body)))
+             end
+           else
+           if (is_univ_type ty1) andalso (is_univ_type ty2) then let
+               val (bty1,body1) = dest_univ_type ty1
+               val (bty2,body2) = dest_univ_type ty2
+             in
+               au0 ((bty1,bty2)::cntx) (body1, body2) >-
+                   (fn body =>
+                     return (mk_univ_type(bty1, body)))
+             end
+(*
+           else
            if not (is_vartype ty1) andalso not (is_vartype ty2) then let
                val {Thy = thy1, Tyop = tyop1, Args = args1} = dest_thy_type ty1
                val {Thy = thy2, Tyop = tyop2, Args = args2} = dest_thy_type ty2
              in
                if tyop1 = tyop2 andalso thy1 = thy2 then
-                 mmap au (ListPair.zip (args1, args2)) >-
+                 mmap au0 (ListPair.zip (args1, args2)) >-
                  (fn tylist =>
                    return (mk_thy_type{Thy = thy1, Tyop = tyop1,
                                        Args = tylist}))
@@ -108,11 +204,15 @@ local
                  newtyvar >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
                               return new_ty)
              end
+*)
            else
-             newtyvar >- (fn new_ty =>
+             newtyvar (kind_of ty1, rank_of ty1) >-
+                         (fn new_ty =>
                           extend ((ty1, ty2), new_ty) >>
                           return new_ty)
         | SOME v => return v)
+
+  val au = au0 []
 
   fun initial_state (ty1, ty2) = let
     val avoids = map (#1 o dest_vartype_opr) (type_varsl [ty1, ty2])
@@ -127,7 +227,9 @@ local
   fun canonicalise ty = let
     val tyvars = type_vars ty
     val replacements =
-      map mk_vartype (generate_iterates (length tyvars) tyvar_vary "'a")
+      map2 (fn tyv => fn s => let val (_,kd,rk) = dest_vartype_opr tyv
+                              in mk_vartype_opr(s,kd,rk) end)
+           tyvars (generate_iterates (length tyvars) tyvar_vary "'a")
     val subst =
       ListPair.map (fn (ty1, ty2) => Lib.|->(ty1, ty2)) (tyvars, replacements)
   in
@@ -146,6 +248,13 @@ fun aul tyl =
     case tyl of
       [] => raise Fail "Overload.aul applied to empty list - shouldn't happen"
     | (h::t) => foldl (uncurry anti_unify) h t
+
+fun au_tml tml =
+    case tml of
+      [] => raise Fail "Overload.au_tml applied to empty list: shouldn't happen"
+    | tm :: tms => foldl (fn (t,acc) => anti_unify (type_of t) acc)
+                         (type_of tm)
+                         tms
 
 fun fupd_actual_ops f {base_type, actual_ops, tyavoids} =
   {base_type = base_type, actual_ops = f actual_ops, tyavoids = tyavoids}
@@ -180,16 +289,18 @@ end
 
 fun remove_overloaded_form s (oinfo:overload_info) = let
   val (op2cnst, cnst2op) = oinfo
-  val (okopc, badopc) = (I ## #actual_ops) (Binarymap.remove(op2cnst, s))
+  val (okopc, badopc0) = (I ## #actual_ops) (Binarymap.remove(op2cnst, s))
     handle Binarymap.NotFound => (op2cnst, [])
+  val badopc = List.filter Theory.uptodate_term badopc0
   (* will keep okopc, but should now remove from cnst2op all pairs of the form
        (c, s)
      where s is the s above *)
-  fun foldthis (k,(t,v,_),acc as (map,removed)) =
-      if v = s then (#1 (PrintMap.delete (map, k)), t ::removed)
-      else acc
+  fun foldthis (k,fullv as (t,v,_),acc as (map,removed)) =
+      if not (Theory.uptodate_term t) then (map, removed)
+      else if v = s then (map, t ::removed)
+      else (PrintMap.insert(map, k, fullv), removed)
 
-  val (okcop, badcop) = PrintMap.fold foldthis (cnst2op,[]) cnst2op
+  val (okcop, badcop) = PrintMap.fold foldthis (PrintMap.empty,[]) cnst2op
 in
   ((okopc, okcop), (badopc, badcop))
 end
@@ -236,33 +347,44 @@ fun ntys_equal {Ty = ty1,Name = n1, Thy = thy1}
    it's at the head of the list, meaning that it will be the first choice
    in ambigous resolutions. *)
 fun add_overloading (opname, term) oinfo = let
+  val _ = Theory.uptodate_term term orelse
+          raise OVERLOAD_ERR "Term is out-of-date"
   val (opc0, cop0) = oinfo
   val opc =
       case info_for_name oinfo opname of
-        SOME {base_type, actual_ops, tyavoids} => let
+        SOME {base_type, actual_ops = a0, tyavoids} => let
           (* this name is already overloaded *)
+          val actual_ops = List.filter Theory.uptodate_term a0
+          val changed = length actual_ops <> length a0
         in
           case Lib.total (Lib.pluck (aconv term)) actual_ops of
             SOME (_, rest) => let
               (* this term was already in the map *)
               (* must replace it *)
+              val (avoids, base_type) =
+                  if changed then
+                    (tmlist_tyvs (free_varsl actual_ops), au_tml actual_ops)
+                  else (tyavoids, base_type)
             in
               Binarymap.insert(opc0, opname,
                                {actual_ops = term::rest,
                                 base_type = base_type,
-                                tyavoids = tyavoids})
+                                tyavoids = avoids})
             end
           | NONE => let
               (* Wasn't in the map, so can just cons its record in *)
-              val newbase = anti_unify base_type (type_of term)
-              val new_avoids = tmlist_tyvs (free_vars term)
+              val (newbase, new_avoids) =
+                  if changed then
+                    (au_tml (term::actual_ops),
+                     tmlist_tyvs (free_varsl (term::actual_ops)))
+                  else
+                    (anti_unify base_type (type_of term),
+                     Lib.union (tmlist_tyvs (free_vars term)) tyavoids)
             in
-              fupd_dict_at_key
-                opname
-                (fupd_actual_ops (cons term) o
-                 fupd_base_type (fn b => newbase) o
-                 fupd_tyavoids (Lib.union new_avoids))
-                opc0
+              Binarymap.insert(opc0, opname,
+                               {actual_ops = term :: actual_ops,
+                                base_type = newbase,
+                                tyavoids = new_avoids})
             end
         end
       | NONE =>
@@ -341,12 +463,8 @@ fun strip_comb ((_, prmap): overload_info) t = let
   val cmp = inv_img_cmp (fn (r,k,a,b,c,d) => (r,(k,(a,(b,c))))) cmp0
 
   fun test ((fvs, pat), (orig, nm, tstamp)) = let
-    val kdvs = List.foldl (fn (t, acc) => union (kind_vars_in_term t) acc)
-                          []
-                          fvs
-    val tyvs = List.foldl (fn (t, acc) => union (type_vars_in_term t) acc)
-                          []
-                          fvs
+    val kdvs = tmlist_kdvs fvs
+    val tyvs = tmlist_tyvs fvs
     val tmset = HOLset.addList(empty_tmset, fvs)
     val ((tmi0,tmeq),(tyi0,tyeq),(kdi0,kdeq),rki) = raw_kind_match kdvs tyvs tmset pat t ([],[],[],0)
     val tmi = HOLset.foldl (fn (t,acc) => if HOLset.member(tmset,t) then acc
@@ -380,6 +498,24 @@ in
   case sorted of
     [] => NONE
   | m :: _ => SOME (rearrange m)
+end
+fun oi_strip_comb oinfo t = let
+  fun recurse acc t =
+      case strip_comb oinfo t of
+        NONE => let
+        in
+          case Lib.total dest_comb t of
+            NONE => NONE
+          | SOME (f,x) => recurse (x::acc) f
+        end
+      | SOME (f,args) => SOME(f, args @ acc)
+  val realf = repeat rator t
+in
+  if is_var realf andalso
+     String.isPrefix GrammarSpecials.fakeconst_special (#1 (dest_var realf))
+  then
+    NONE
+  else recurse [] t
 end
 
 
@@ -429,7 +565,9 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) : overload_info = let
         | GREATER => merge ((k2, op2)::acc) op1s op2s'
       end
     infix ##
-    fun foldthis (k,v,acc) = PrintMap.insert(acc,k,v)
+    fun foldthis (k,v as (t,_,_),acc) =
+        if Theory.uptodate_term t then PrintMap.insert(acc,k,v)
+        else acc
     val new_prmap = PrintMap.fold foldthis (#2 O2) (#2 O1)
 in
   (List.foldr (fn ((k,v),dict) => Binarymap.insert(dict,k,v))

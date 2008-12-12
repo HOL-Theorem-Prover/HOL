@@ -1435,8 +1435,8 @@ val _ = save_thm("EQ_EXT",EQ_EXT);
  *---------------------------------------------------------------------------*)
 
 val EQ_TY_EXT =
-   let val f = (--`f: !'a:'k. 'b`--)
-       and g = (--`g: !'a:'k. 'b`--)
+   let val f = (--`f: !'a:'k. ('a:'k) 'b`--)
+       and g = (--`g: !'a:'k. ('a:'k) 'b`--)
    in
    GEN f (GEN g (DISCH (--`!:'a:'k. ^f [:'a:] = ^g [:'a:]`--)
                        (TY_EXT(ASSUME (--`!:'a:'k. ^f [:'a:] = ^g [:'a:]`--)))))
@@ -1470,7 +1470,8 @@ val _ = save_thm("FUN_EQ_THM",FUN_EQ_THM);
 
 val TY_FUN_EQ_THM =
   let val a = mk_vartype_opr("'a", kappa, 0)
-      val ty = Type.mk_univ_type(a, Type.beta)
+      val b = mk_vartype_opr("'b", kappa ==> typ, 0)
+      val ty = Type.mk_univ_type(a, Type.mk_app_type(b,a))
       val f = mk_var("f", ty)
       val g = mk_var("g", ty)
       val f_eq_g = mk_eq(f,g)

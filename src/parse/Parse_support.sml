@@ -404,14 +404,14 @@ fun gen_overloaded_const oinfo l s =
                                  fvs
         in
           Preterm.Pattern{Ptm = Preterm.term_to_preterm 
-                                  (map dest_vartype tyfvs) t, 
+                                  (map (#1 o dest_vartype_opr) tyfvs) t, 
                           Locn = l}
         end
     end
   | otherwise => let
       val base_pretype0 = Pretype.fromType (#base_type opinfo)
       val new_pretype = Pretype.rename_typevars 
-                          (map dest_vartype (#tyavoids opinfo)) 
+                          (map (#1 o dest_vartype_opr) (#tyavoids opinfo)) 
                           base_pretype0
     in 
       Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo, Locn = l}

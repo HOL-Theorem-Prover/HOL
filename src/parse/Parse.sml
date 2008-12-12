@@ -274,14 +274,10 @@ fun do_qtyop {Thy,Tyop,Locn,Args} =
              (mk_conty{Thy=Thy,Tyop=Tyop,Locn=Locn})
              Args
 
-fun tyop_to_qtyop ((tyop,locn), args) = let
-  open Prekind Pretype
-in
+fun tyop_to_qtyop ((tyop,locn), args) =
   case Type.decls tyop of
     [] => raise ERRORloc "type parser" locn (tyop^" not a known type operator")
-  | (r as {Thy,Tyop}) :: _ =>
-      do_qtyop {Thy=Thy,Tyop=Tyop,Locn=locn,Args=args}
-end
+  | {Thy,Tyop} :: _ => do_qtyop {Thy=Thy,Tyop=Tyop,Locn=locn,Args=args}
 
 fun do_kindcast {Ty,Kind,Locn} = let
   open Pretype
@@ -295,7 +291,6 @@ in
   PT(TyRankConstr {Ty=Ty,Rank=Rank}, Locn)
 end
 
-(* needs changing *)
 fun mk_basevarty((s,kd,rk),locn) = Pretype.PT(Pretype.Vartype(s,kd,rk), locn)
 
 val typ1_rec = {vartype = mk_basevarty, qtyop = do_qtyop,
@@ -360,7 +355,6 @@ fun update_type_fns () =
 fun pp_type pps ty = let in
    update_type_fns();
    Portable.add_string pps ":";
-   (* if is_univ_type ty then Portable.add_string pps " " else (); *)
    !type_printer pps ty
  end
 
@@ -451,6 +445,8 @@ fun parse_Pretype pfns pty =
      Pretype.kindcheck pfns (Parse_support.make_pretype (to_ptyInEnv pty))
 
 
+local open parse_type
+in
 fun parse_Type parser q = let
   open base_tokens qbuf
   val qb = new_buffer q
@@ -466,13 +462,14 @@ in
         val pt = parser qb
         val pfns = SOME(type_to_string, kind_to_string)
       in
-        case qbuf.current qb of
+        case (*qbuf.*)current qb of
             (BT_EOI,_) => parse_Pretype pfns pt
           | (_,locn) => raise ERRORloc "parse_Type" locn
                                        ("Couldn't make any sense of remaining input.")
       end
   | (_,locn) => raise ERRORloc "parse_Type" locn "types must begin with a colon"
 end
+end (* local *)
 
 fun Type q = let in
    update_type_fns();
@@ -574,6 +571,26 @@ end
 fun pp_term pps t = (update_term_fns(); !term_printer pps t)
 fun term_to_string t = Portable.pp_to_string (!Globals.linewidth) pp_term t;
 fun print_term t = Portable.output(Portable.std_out, term_to_string t);
+
+fun pp_terms pps ts =
+  let fun pp_tms0 [] = ()
+        | pp_tms0 (t::ts) = (PP.add_string pps ",";
+                             PP.add_break pps (0,0);
+                             pp_term pps t;
+                             pp_tms0 ts)
+      fun pp_tms [] = ()
+        | pp_tms [t] = pp_term pps t
+        | pp_tms (t::ts) = (PP.begin_block pps PP.INCONSISTENT 0;
+                            pp_term pps t;
+                            pp_tms0 ts;
+                            PP.end_block pps)
+  in PP.add_string pps "[";
+     pp_tms ts;
+     PP.add_string pps "]"
+  end
+
+fun terms_to_string ts = Portable.pp_to_string (!Globals.linewidth) pp_terms ts;
+fun print_terms ts = Portable.output(Portable.std_out, terms_to_string ts);
 
 fun term_pp_with_delimiters ppfn pp tm =
   let open Portable Globals
@@ -731,13 +748,6 @@ in
       | tybinder(Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) = make_kind_tybinding_occ l (tybinder Ty) Kind
       | tybinder(Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) = make_rank_tybinding_occ l (tybinder Ty) Rank
       | tybinder(Pretype.PT(_,l)) = raise ERROR "tybinder" "not a variable type"
-(*
-    fun binder(VIDENT (l,s))    = make_binding_occ l s
-      | binder(VPAIR(l,v1,v2))  = make_vstruct oinfo l [binder v1, binder v2]
-                                               NONE
-      | binder(VAQ (l,x))       = make_aq_binding_occ l x
-      | binder(VTYPED(l,v,pty)) = make_vstruct oinfo l [binder v] (SOME pty)
-*)
     open parse_term Absyn Parse_support
     val to_ptmInEnv = absyn_to_preterm_in_env oinfo
   in
@@ -837,9 +847,13 @@ local
     case tm of
       Var{Name, Ty, Locn} => let
       in
-        if has_free_uvar Ty andalso not(Lib.op_mem Preterm.eq tm boundvars) then
+        if not(Lib.op_mem Preterm.eq tm boundvars) then
           case List.find (name_eq Name) ctxt of
             NONE => raise UNCHANGED
+(*
+          | SOME ctxt_tm => Var{Locn = Locn, Name = Name,
+                                Ty =  Pretype.fromType (type_of ctxt_tm)}
+*)
           | SOME ctxt_tm =>
               (unify Ty (Pretype.fromType (type_of ctxt_tm));
                Var{Locn = Locn, Name = Name,
@@ -1463,9 +1477,10 @@ fun bring_to_front_overload s (r as {Name, Thy}) = let in
  end
 
 fun temp_overload_on (s, t) =
-    the_term_grammar := fupdate_overload_info
-                          (Overload.add_overloading (s, t))
-                          (term_grammar());
+    (the_term_grammar := fupdate_overload_info
+                            (Overload.add_overloading (s, t))
+                            (term_grammar());
+     term_grammar_changed := true)
 
 fun overload_on (s, t) = let
 in
