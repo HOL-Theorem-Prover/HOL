@@ -320,7 +320,7 @@ val _ = emitML (!Globals.emitMLDir) ("int",
       \         | NONE => NONE\n"
   :: map (DEFN o wordsLib.WORDS_EMIT_RULE) [INT_NEG_EMIT, INT_Num_EMIT,
        INT_LT_EMIT, INT_LE_CALCULATE, INT_GT_CALCULATE, INT_GE_CALCULATE,
-       INT_ADD_EMIT, INT_SUB_EMIT, INT_MUL_EMIT, INT_EXP_EMIT,
+       INT_ABS, INT_ADD_EMIT, INT_SUB_EMIT, INT_MUL_EMIT, INT_EXP_EMIT,
        INT_DIV_EMIT, INT_MOD_EMIT, INT_QUOTE_EMIT, INT_REM_EMIT,
        INT_MAX_def, INT_MIN_def, UINT_MAX_def, i2w_itself, w2i_def])
 end;
