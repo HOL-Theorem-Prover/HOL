@@ -466,8 +466,8 @@ val DEPTH_CONSEQ_CONV_debug = ref 0;
 val _ = register_trace("DEPTH_CONSEQ_CONV", DEPTH_CONSEQ_CONV_debug, 3);
 
 
-fun guarded_say r n t =
-  if (!r >= n) then say t else ();
+fun guarded_say r n tf =
+  if (!r >= n) then say (tf ()) else ();
 
 
 fun prefix_string 0 = ""
@@ -475,7 +475,8 @@ fun prefix_string 0 = ""
 
 
 fun DEPTH_CONSEQ_CONV_say n l t = guarded_say DEPTH_CONSEQ_CONV_debug n
-    ((prefix_string (if (!DEPTH_CONSEQ_CONV_debug = 1) then 0 else l))^"DEPTH_CONSEQ_CONV "^(Int.toString n)^": "^t^"\n");
+    (fn () =>
+        ((prefix_string (if (!DEPTH_CONSEQ_CONV_debug = 1) then 0 else l))^"DEPTH_CONSEQ_CONV "^(Int.toString n)^": "^(t ())^"\n"));
 
 (*
 val tref = ref NONE;
@@ -489,7 +490,7 @@ val (l,step_opt,dir,top,conv,t) = valOf (!tref2)
 fun DEPTH_CONSEQ_CONV_num l step_opt dir top redepth conv t = 
   let
      val top_string = if top then "TOP " else "SUB ";
-     val _ = DEPTH_CONSEQ_CONV_say 2 l ("Trying "^top_string^" ``"^term_to_string t^"``");
+     val _ = DEPTH_CONSEQ_CONV_say 2 l (fn () => ("Trying "^top_string^" ``"^term_to_string t^"``"));
 
      fun CONVERT_THM_OPT (thm_opt,t) =
          if isSome thm_opt then valOf thm_opt else REFL_CONSEQ_CONV t
@@ -503,13 +504,13 @@ fun DEPTH_CONSEQ_CONV_num l step_opt dir top redepth conv t =
 
  	   val (n2, d2, thm2_opt) = DEPTH_CONSEQ_CONV_num l (step_opt_sub step_opt n) dir top redepth conv t2;
 
-           val _ = DEPTH_CONSEQ_CONV_say 4 l (
+           val _ = DEPTH_CONSEQ_CONV_say 4 l (fn () => (
                    if isSome thm2_opt then
                       ("Trying REC ``"^term_to_string t2^
                        "`` results in "^ (thm_to_string (valOf thm2_opt)))
                    else
                       ("Trying REC ``"^term_to_string t2^
-                       "`` - UNCHANGED"));
+                       "`` - UNCHANGED")));
             
            val (m,thm3_opt) = if (aconv t t2) then (n2,thm2_opt) else 
                               if (not (isSome thm2_opt)) then
@@ -517,15 +518,15 @@ fun DEPTH_CONSEQ_CONV_num l step_opt dir top redepth conv t =
                               else   
                           	  (n2+n, SOME (THEN_CONSEQ_CONV___combine (valOf thm_opt) (valOf thm2_opt) t));
 
-           val _ = DEPTH_CONSEQ_CONV_say 2 l (
+           val _ = DEPTH_CONSEQ_CONV_say 2 l (fn () => (
                    if isSome thm3_opt then
                        ("Result "^(thm_to_string (valOf thm3_opt)))
                    else
-                       "UNCHANGED");
+                       "UNCHANGED"));
         in
            (m, d2, thm3_opt)
-        end handle HOL_ERR _ => (DEPTH_CONSEQ_CONV_say 2 l ("UNCHANGED"); (0, dir, NONE)))
-            handle UNCHANGED => (DEPTH_CONSEQ_CONV_say 2 l ("UNCHANGED"); (0, dir, NONE)))
+        end handle HOL_ERR _ => (DEPTH_CONSEQ_CONV_say 2 l (fn () => ("UNCHANGED")); (0, dir, NONE)))
+            handle UNCHANGED => (DEPTH_CONSEQ_CONV_say 2 l (fn () => ("UNCHANGED")); (0, dir, NONE)))
   in
 
   if (step_opt = SOME 0) then
@@ -604,21 +605,21 @@ fun DEPTH_CONSEQ_CONV_num l step_opt dir top redepth conv t =
      end
    else 
      ((let
-         val _ = DEPTH_CONSEQ_CONV_say 3 l ("Trying CONV ``"^term_to_string t^"``");
+         val _ = DEPTH_CONSEQ_CONV_say 3 l (fn () => ("Trying CONV ``"^term_to_string t^"``"));
 	 val (d1, thm1) = CONSEQ_CONV_WRAPPER dir conv t;
          val (d2, thm2) = if d1 = CONSEQ_CONV_UNKNOWN_direction then
-			     (DEPTH_CONSEQ_CONV_say 3 l ("Guessed direction strengthen!");
+			     (DEPTH_CONSEQ_CONV_say 3 l (fn () => ("Guessed direction strengthen!"));
                               (CONSEQ_CONV_STRENGTHEN_direction,          
                                snd (EQ_IMP_RULE thm1)))
                           else (d1, thm1);
-         val _ = DEPTH_CONSEQ_CONV_say 1 l ("``"^term_to_string t^"`` became "^(thm_to_string thm2));
+         val _ = DEPTH_CONSEQ_CONV_say 1 l (fn () => ("``"^term_to_string t^"`` became "^(thm_to_string thm2)));
      in
         if (redepth) then
             DEPTH_CONSEQ_CONV_num___REC_CALL l step_opt d1 false true conv (SOME thm2) 1 t
         else
 	    (1, d2, SOME thm2)
-     end handle HOL_ERR _ => (DEPTH_CONSEQ_CONV_say 2 l ("No Result!");(0, dir, NONE)))
-         handle UNCHANGED => (DEPTH_CONSEQ_CONV_say 2 l ("No Result!");(0, dir, NONE)))
+     end handle HOL_ERR _ => (DEPTH_CONSEQ_CONV_say 2 l (K "No Result!");(0, dir, NONE)))
+         handle UNCHANGED => (DEPTH_CONSEQ_CONV_say 2 l (K "No Result!");(0, dir, NONE)))
 end;
 
 
@@ -641,6 +642,13 @@ fun NUM_DEPTH_CONSEQ_CONV conv n dir =
    OPT_CHANGED_CHECK_CONSEQ_CONV (fn t => 
      if (type_of t = bool) then 
        (#3 (DEPTH_CONSEQ_CONV_num 0 (SOME n) dir false false conv t))
+     else raise UNCHANGED)
+
+
+fun NUM_REDEPTH_CONSEQ_CONV conv n dir = 
+   OPT_CHANGED_CHECK_CONSEQ_CONV (fn t => 
+     if (type_of t = bool) then 
+       (#3 (DEPTH_CONSEQ_CONV_num 0 (SOME n) dir false true conv t))
      else raise UNCHANGED)
 
 fun ONCE_DEPTH_CONSEQ_CONV conv = NUM_DEPTH_CONSEQ_CONV conv 1;
@@ -681,6 +689,8 @@ end;
 fun CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV conv =
     CONJ_ASSUMPTIONS_CONSEQ_CONV (DEPTH_CONSEQ_CONV conv) (K false)
 
+fun CONJ_ASSUMPTIONS_REDEPTH_CONSEQ_CONV conv =
+    CONJ_ASSUMPTIONS_CONSEQ_CONV (REDEPTH_CONSEQ_CONV conv) (K false)
 
 
 (*A tactic that strengthens a boolean goal*)
@@ -692,6 +702,8 @@ fun CONSEQ_CONV_TAC conv (asm,t) =
 fun DEPTH_CONSEQ_CONV_TAC conv =
     CONSEQ_CONV_TAC (DEPTH_CONSEQ_CONV conv)
 
+fun REDEPTH_CONSEQ_CONV_TAC conv =
+    CONSEQ_CONV_TAC (REDEPTH_CONSEQ_CONV conv)
 
 fun ONCE_DEPTH_CONSEQ_CONV_TAC conv =
     CONSEQ_CONV_TAC (ONCE_DEPTH_CONSEQ_CONV conv)
@@ -714,7 +726,8 @@ fun DEPTH_STRENGTHEN_CONSEQ_CONV conv =
     DEPTH_CONSEQ_CONV (K conv) CONSEQ_CONV_STRENGTHEN_direction;
 
 
-
+fun REDEPTH_STRENGTHEN_CONSEQ_CONV conv =
+    REDEPTH_CONSEQ_CONV (K conv) CONSEQ_CONV_STRENGTHEN_direction;
 
 
 

@@ -4,6 +4,12 @@ sig
 include Abbrev
 
 
+(*
+  trace "DEPTH_CONSEQ_CONV" can be used to get debug information
+  on DEPTH_CONSEQ_CONV and related conversions
+*)
+
+
 (* Types *)
 type conseq_conv = term -> thm;
 type CONSEQ_CONV_direction;
@@ -68,10 +74,13 @@ val REDEPTH_CONSEQ_CONV    : directed_conseq_conv -> directed_conseq_conv;
 val ONCE_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
 val NUM_DEPTH_CONSEQ_CONV  : directed_conseq_conv -> int ->
 			     directed_conseq_conv;
+val NUM_REDEPTH_CONSEQ_CONV: directed_conseq_conv -> int ->
+			     directed_conseq_conv
 
-val CONJ_ASSUMPTIONS_CONSEQ_CONV : directed_conseq_conv -> 
-				   (term -> bool) -> directed_conseq_conv;
-val DEPTH_STRENGTHEN_CONSEQ_CONV : conseq_conv -> conseq_conv;
+val CONJ_ASSUMPTIONS_CONSEQ_CONV   : directed_conseq_conv -> 
+				     (term -> bool) -> directed_conseq_conv;
+val DEPTH_STRENGTHEN_CONSEQ_CONV   : conseq_conv -> conseq_conv;
+val REDEPTH_STRENGTHEN_CONSEQ_CONV : conseq_conv -> conseq_conv;
 
 
 
@@ -86,8 +95,10 @@ val WEAKEN_CONSEQ_CONV_RULE      : directed_conseq_conv -> thm -> thm;
 (* Tactics *)
 val CONSEQ_CONV_TAC              : directed_conseq_conv -> tactic;
 val DEPTH_CONSEQ_CONV_TAC        : directed_conseq_conv -> tactic;
+val REDEPTH_CONSEQ_CONV_TAC      : directed_conseq_conv -> tactic;
 val ONCE_DEPTH_CONSEQ_CONV_TAC   : directed_conseq_conv -> tactic;
 val CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
+val CONJ_ASSUMPTIONS_REDEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
 val CONSEQ_REWRITE_TAC           : thm list -> tactic;
 val CONSEQ_HO_REWRITE_TAC        : thm list -> tactic;
 
