@@ -42,6 +42,7 @@ src/simp/src
 src/metis
 src/meson/src
 src/basicProof
+src/quantHeuristics
 src/relation
 src/one
 src/pair/src
