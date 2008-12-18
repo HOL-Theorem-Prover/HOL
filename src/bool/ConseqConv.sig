@@ -39,7 +39,13 @@ val CONSEQ_HO_TOP_REWRITE_CONV  : thm list -> directed_conseq_conv;
 val CONSEQ_HO_REWRITE_CONV      : thm list -> directed_conseq_conv;
 
 
-
+(* Technical stuff that might help writing
+   your own CONSEQ-CONVs *)
+val CONSEQ_CONV_DIRECTION_NEGATE      : CONSEQ_CONV_direction -> CONSEQ_CONV_direction;
+val CONSEQ_CONV___GET_SIMPLIFIED_TERM : thm -> term -> term;
+val CONSEQ_CONV___GET_DIRECTION       : thm -> term -> CONSEQ_CONV_direction;
+val THEN_CONSEQ_CONV___combine        : thm -> thm -> term -> thm;
+val CONSEQ_CONV___APPLY_CONV_RULE     : thm -> term -> (term -> thm) -> thm;
 
 (* Combinations for consequence conversions *)
 val CHANGED_CONSEQ_CONV    : conseq_conv -> conseq_conv;
@@ -58,6 +64,7 @@ val WEAKEN_CONSEQ_CONV     : conseq_conv -> directed_conseq_conv;
 
 
 val DEPTH_CONSEQ_CONV      : directed_conseq_conv -> directed_conseq_conv;
+val REDEPTH_CONSEQ_CONV    : directed_conseq_conv -> directed_conseq_conv;
 val ONCE_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
 val NUM_DEPTH_CONSEQ_CONV  : directed_conseq_conv -> int ->
 			     directed_conseq_conv;
