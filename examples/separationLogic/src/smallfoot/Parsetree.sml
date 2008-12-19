@@ -1,3 +1,6 @@
+structure Parsetree =
+struct
+
 type a_component = string
 
 datatype a_expression =
@@ -72,3 +75,5 @@ type fun_item =
 
 datatype p_program =
     Pprogram of a_component list * p_item list
+
+end;

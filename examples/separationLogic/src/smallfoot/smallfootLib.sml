@@ -142,7 +142,7 @@ let
 in
    if (not (is_exists rhs_term)) then thm else
    let 
-       val new_name = stringLib.fromHOLstring (fst (listLib.dest_cons arg2));
+       val new_name = stringLib.fromHOLstring (fst (listSyntax.dest_cons arg2));
        val thm2 = (RENAME_VARS_CONV [new_name] THENC
 		  DEPTH_CONV LIST_UNROLL_GIVEN_ELEMENT_NAMES_CONV THENC
       	          DEPTH_CONV RIGHT_AND_EXISTS_CONV THENC
@@ -175,7 +175,7 @@ in
                      DEPTH_CONV (LEFT_AND_EXISTS_CONV ORELSEC RIGHT_AND_EXISTS_CONV) THENC
 		     DEPTH_CONV Unwind.UNWIND_EXISTS_CONV)) thm;
 
-       val new_name = stringLib.fromHOLstring (snd (pairLib.dest_pair (fst (listLib.dest_cons arg2))));
+       val new_name = stringLib.fromHOLstring (snd (pairLib.dest_pair (fst (listSyntax.dest_cons arg2))));
        val thm3 = CONV_RULE (RHS_CONV (
    	            (QUANT_CONV (RENAME_VARS_CONV [new_name])) THENC
       		    DEPTH_CONV LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES_CONV THENC
@@ -343,7 +343,7 @@ val smallfoot_precondition_prove_internal___USED_VARS_cache_ref = ref (Net.empty
 
 local
    val internal_conv =
-                 CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV 
+                 CONJ_ASSUMPTIONS_REDEPTH_CONSEQ_CONV 
                     (K (FIRST_CONSEQ_CONV [
                      COND_REWRITE_CONV smallfoot_ap_imps,
                      REWRITE_CONV [SMALLFOOT_AE_USED_VARS_SUBSET___EVAL],
@@ -525,10 +525,9 @@ fun smallfoot_precondition_prove_internal imps t =
       end;
 
 
-val tref = ref T;
 
 (*
-val t' = !tref
+val tref = ref T;
 val m = NONE
 val asm = []
 
@@ -547,7 +546,7 @@ fun smallfoot_precondition_prove m asm t' =
        thm1
     end)
     handle UNCHANGED => raise (mk_HOL_ERR "smallfootLib" "smallfoot_precondition_prove" "UNCHANGED"))
-    handle HOL_ERR e => (tref := t';if not (isSome m) then raise (HOL_ERR e) else
+    handle HOL_ERR e => (if not (isSome m) then raise (HOL_ERR e) else
 	                (print (valOf m);print "\n"; Raise (HOL_ERR e)));
 
 
@@ -718,7 +717,7 @@ fun FASL_PROGRAM_ABSTRACTION_CONV___block sys xenv penv asm p =
    let      
       val _ = if (is_fasl_prog_block p) then () else raise UNCHANGED;
       val bodyL = dest_fasl_prog_block p;
-      val (h,restBodyL) = listLib.dest_cons bodyL handle HOL_ERR _ => raise UNCHANGED;
+      val (h,restBodyL) = listSyntax.dest_cons bodyL handle HOL_ERR _ => raise UNCHANGED;
 
 
       val thm_h = sys xenv penv asm h;
@@ -730,7 +729,7 @@ fun FASL_PROGRAM_ABSTRACTION_CONV___block sys xenv penv asm p =
 
       val (thm_rest', pL) = if (is_fasl_prog_block p2) then (thm_rest, dest_fasl_prog_block p2) else
                             let
-                               val pL = listLib.mk_list ([p2], type_of p2);
+                               val pL = listSyntax.mk_list ([p2], type_of p2);
                                val thm_rest' = ONCE_REWRITE_RULE [GSYM FASL_PROGRAM_IS_ABSTRACTION___block_intro] thm_rest; 
 		            in
                                (thm_rest', pL)
@@ -762,7 +761,7 @@ fun FASL_PROGRAM_ABSTRACTION_CONV___block_flatten sys xenv penv asm p =
    let      
       val _ = if (is_fasl_prog_block p) then () else raise UNCHANGED;
       val bodyL = dest_fasl_prog_block p;
-      val (body_termL,body_term_type) = listLib.dest_list bodyL handle HOL_ERR _ => raise UNCHANGED;
+      val (body_termL,body_term_type) = listSyntax.dest_list bodyL handle HOL_ERR _ => raise UNCHANGED;
 
       val found_opt = find_first_num 
              (K (fn t => if (is_fasl_prog_block t) then SOME () else NONE))
@@ -772,11 +771,11 @@ fun FASL_PROGRAM_ABSTRACTION_CONV___block_flatten sys xenv penv asm p =
 
 
       val L1_termL = List.take (body_termL,pos)
-      val L1_term = listLib.mk_list (L1_termL, body_term_type);
+      val L1_term = listSyntax.mk_list (L1_termL, body_term_type);
       val L23_termL = List.drop (body_termL,pos);
       val L2_term = dest_fasl_prog_block (hd L23_termL);
       val L3_termL = tl L23_termL;
-      val L3_term = listLib.mk_list (L3_termL, body_term_type);
+      val L3_term = listSyntax.mk_list (L3_termL, body_term_type);
 
       val thm0 = ISPECL [xenv, penv, L1_term, L2_term, L3_term] FASL_PROGRAM_IS_ABSTRACTION___block_flatten;
 
@@ -829,10 +828,7 @@ val refL = ref (T,T,[TRUTH],T);
 
 val (xenv,penv,asm,p) = !refL
 
-
 val imp_cons_thm = DEPTH_FASL_PROGRAM_HOARE_TRIPLE___CONSEQ_CONV smallfoot_program_abstraction_convs imp_ante_thms imp_cons
-
-t
 
 *)
 
@@ -844,7 +840,7 @@ fun SMALLFOOT_PROGRAM_ABSTRACTION_CONV___with_resource sys xenv penv asm p =
       val (r,c,prog) = dest_smallfoot_prog_with_resource p; 
 
       val res_decls = (snd o dest_comb) res_env;
-      val resL = (fst o listLib.dest_list) res_decls;
+      val resL = (fst o listSyntax.dest_list) res_decls;
       val resL_pairs = map pairLib.strip_pair resL
 
 
@@ -890,7 +886,7 @@ fun SMALLFOOT_PROGRAM_ABSTRACTION_CONV___while sys xenv penv asm p =
       val thm3 = CONV_RULE ((RATOR_CONV o RAND_CONV o QUANT_CONV o RATOR_CONV o RAND_CONV) 
                     LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES_CONV) thm2;
       val thm4 = CONV_RULE ((RATOR_CONV o RAND_CONV) (SIMP_CONV list_ss [GSYM LEFT_FORALL_IMP_THM,
-			       smallfoot_data_GET_REWRITES])) thm3
+			       smallfoot_data_GET_REWRITES,SMALLFOOT_HOARE_TRIPLE_def])) thm3
       val thm5 = UNDISCH thm4;
    in
       thm5
@@ -1310,12 +1306,10 @@ val t = ``
 
 
 
-
-
-fun DEPTH_FASL_PROGRAM_HOARE_TRIPLE___CONSEQ_CONV L asm = 
+fun REDEPTH_FASL_PROGRAM_HOARE_TRIPLE___CONSEQ_CONV L asm = 
   let val hyps = flatten (map hyp asm) in
   CONJ_ASSUMPTIONS_CONSEQ_CONV 
-      (K (DEPTH_STRENGTHEN_CONSEQ_CONV (FASL_PROGRAM_HOARE_TRIPLE___CONSEQ_CONV L asm)))
+      (K (REDEPTH_STRENGTHEN_CONSEQ_CONV (FASL_PROGRAM_HOARE_TRIPLE___CONSEQ_CONV L asm)))
       (fn t => mem t hyps) CONSEQ_CONV_STRENGTHEN_direction end;
 
 
@@ -1366,7 +1360,6 @@ fun RHS_CONV_RULE conv thm =
 
 
 
-
 (*
 use_smallfoot_pretty_printer := false
 val thm_XXX = thm8;
@@ -1401,6 +1394,8 @@ local
 		              SMALLFOOT_P_EXPRESSION_EVAL_def];
     val conv7 = REWRITE_CONV [GSYM smallfoot_prop_def]
 in
+
+
 
 fun smallfoot_prop_internal_CONV t =
     let
@@ -2127,16 +2122,16 @@ let
    (*Ensure that all used procedure names are different*)
    val thm2 = CONV_RULE ANTE_CONJ_CONV thm1; 
    val thm3 = smallfoot_precondition_prove_RULE (SOME "SMALLFOOT_SPECIFICATION___CONSEQ_CONV") [] thm2;
-
-
    val thm4 = IMP_CONV_RULE SMALLFOOT_SPECIFICATION___PRECOND_CONV1 thm3;
+
 
    (*replace function calls and loops*)
    val (imp_term,_) = dest_imp (concl thm4);
    val (v, imp_body) = dest_forall imp_term;
    val (imp_ante, imp_cons) = dest_imp imp_body;
    val imp_ante_thms = map ASSUME (strip_conj imp_ante);
-   val imp_cons_thm = DEPTH_FASL_PROGRAM_HOARE_TRIPLE___CONSEQ_CONV smallfoot_program_abstraction_convs imp_ante_thms imp_cons
+
+   val imp_cons_thm = REDEPTH_FASL_PROGRAM_HOARE_TRIPLE___CONSEQ_CONV smallfoot_program_abstraction_convs imp_ante_thms imp_cons
 		      handle UNCHANGED => REFL_CONSEQ_CONV imp_cons;
 
    val imp_thm_term = let
@@ -2165,7 +2160,8 @@ let
    val thm7 = IMP_CONV_RULE (REWRITE_CONV [GSYM SMALLFOOT_HOARE_TRIPLE_def]) thm6;
    val thm7a = IMP_CONV_RULE (DEPTH_CONV SMALLFOOT_COND_HOARE_TRIPLE_INTRO___CONV) thm7;
    val thm7b = IMP_CONV_RULE (SIMP_CONV std_ss [smallfoot_prog_release_resource_input___REWRITE,
-			                        smallfoot_prog_aquire_resource_input___REWRITE]) thm7a;
+			                        smallfoot_prog_aquire_resource_input___REWRITE,
+			                        LIST_TO_SET_THM]) thm7a;
 
    val thm8 = IMP_CONV_RULE (DEPTH_CONV smallfoot_choose_const_best_local_action___CONV) thm7b;
    val thm8a = IMP_CONV_RULE (SIMP_CONV std_ss [smallfoot_prop_internal___EXISTS]) thm8;
@@ -2187,7 +2183,7 @@ let
               )) thm10 handle UNCHANGED => thm10;
 
    (*Eliminate local variables and call-by value parameters*)
-   val thm12 = STRENGTHEN_CONSEQ_CONV_RULE (K (DEPTH_STRENGTHEN_CONSEQ_CONV
+   val thm12 = STRENGTHEN_CONSEQ_CONV_RULE (K (REDEPTH_STRENGTHEN_CONSEQ_CONV
 					(FIRST_CONSEQ_CONV [
 					 SMALLFOOT_PROGRAM_HOARE_TRIPLE___prog_val_arg_CONSEQ_CONV,
 					 SMALLFOOT_PROGRAM_HOARE_TRIPLE___prog_local_var_CONSEQ_CONV]))) thm11 handle UNCHANGED => thm11
@@ -4338,7 +4334,7 @@ let
    val command = dest_SMALLFOOT_COND_HOARE_TRIPLE___first_command tt;
    val (_,_,_,free_params_term,_) = dest_smallfoot_cond_choose_const_best_local_action command
 
-   val (free_paramsL,_) = listLib.dest_list free_params_term;
+   val (free_paramsL,_) = listSyntax.dest_list free_params_term;
    val _ = if (free_paramsL = []) then raise UNCHANGED else [];
 
    val v_name = stringLib.fromHOLstring (snd (pairLib.dest_pair (hd (free_paramsL))))
@@ -4366,7 +4362,7 @@ let
    val (sfs, _) = bagSyntax.dest_bag sfb;
    
     
-   val expL_termL = map smallfoot_p_expression_eval___SIMULATE (fst (listLib.dest_list expL));
+   val expL_termL = map smallfoot_p_expression_eval___SIMULATE (fst (listSyntax.dest_list expL));
    val const_termL = map (fn t => if (is_smallfoot_ae_const_null t) then dest_smallfoot_ae_const_null t else
 				  let
                                      val v = dest_smallfoot_ae_var t;
@@ -4376,7 +4372,7 @@ let
 			          in
 				     c
                                   end) expL_termL;
-   val cL = listLib.mk_list(const_termL,numSyntax.num);
+   val cL = listSyntax.mk_list(const_termL,numSyntax.num);
 
    val thm0 = PART_MATCH (snd o dest_imp o snd o dest_imp) 
       (SPEC_ALL SMALLFOOT_COND_INFERENCE___cond_choose_const_ELIM) tt
@@ -4557,7 +4553,7 @@ fun SMALLFOOT_PROP_IMPLIES_CONV___sfb_restP___bag_exists_ELIM ttt =
     val (sr,wpb,rpb,wpb',sfb_context,sfb_split,sfb_imp,sfb_restP) = dest_SMALLFOOT_PROP_IMPLIES ttt;
     val (v, b) = dest_abs sfb_restP;
 
-    val thm0 = (DEPTH_CONSEQ_CONV (K SMALLFOOT_PROP_IMPLIES_CONV___sfb_restP___bag_exists_ELIM2) 
+    val thm0 = (REDEPTH_CONSEQ_CONV (K SMALLFOOT_PROP_IMPLIES_CONV___sfb_restP___bag_exists_ELIM2) 
 		   CONSEQ_CONV_STRENGTHEN_direction b) handle UNCHANGED => REFL_CONSEQ_CONV b;
     val b' = (fst o dest_imp o concl) thm0;
     val sfb_restP' = mk_abs (v, b');
@@ -4598,11 +4594,11 @@ let
 
    
    val thm4 = STRENGTHEN_CONSEQ_CONV_RULE 
-                  (DEPTH_CONSEQ_CONV (K SMALLFOOT_PROP_IMPLIES_CONV___sfb_split___bag_exists_ELIM)) thm3
+                  (REDEPTH_CONSEQ_CONV (K SMALLFOOT_PROP_IMPLIES_CONV___sfb_split___bag_exists_ELIM)) thm3
                    handle UNCHANGED => thm3
    
    val thm5 = STRENGTHEN_CONSEQ_CONV_RULE 
-                  (DEPTH_CONSEQ_CONV (K SMALLFOOT_PROP_IMPLIES_CONV___sfb_restP___bag_exists_ELIM)) thm4
+                  (REDEPTH_CONSEQ_CONV (K SMALLFOOT_PROP_IMPLIES_CONV___sfb_restP___bag_exists_ELIM)) thm4
                    handle UNCHANGED => thm4;
 
    val thm6 = CONV_RULE ((RATOR_CONV o RAND_CONV) (BAG_NORMALISE_CONV)) thm5
@@ -4629,16 +4625,16 @@ let
 	      
 
    val thm3 = STRENGTHEN_CONSEQ_CONV_RULE 
-                  (DEPTH_CONSEQ_CONV (K (SMALLFOOT_COND_INFERENCE_CONV___cond_choose_const___free_param_ELIM))) thm2
+                  (REDEPTH_CONSEQ_CONV (K (SMALLFOOT_COND_INFERENCE_CONV___cond_choose_const___free_param_ELIM))) thm2
 	      handle UNCHANGED => thm2;
 
 
    val thm4 = STRENGTHEN_CONSEQ_CONV_RULE 
-                  (DEPTH_CONSEQ_CONV (K (SMALLFOOT_COND_INFERENCE_CONV___cond_choose_const___elim_choose expL))) thm3
+                  (REDEPTH_CONSEQ_CONV (K (SMALLFOOT_COND_INFERENCE_CONV___cond_choose_const___elim_choose expL))) thm3
 	      handle UNCHANGED => thm3;
 
    val thm5 = STRENGTHEN_CONSEQ_CONV_RULE 
-                  (DEPTH_CONSEQ_CONV (K (SMALLFOOT_COND_INFERENCE_CONV___cond_best_local_action))) thm4
+                  (REDEPTH_CONSEQ_CONV (K (SMALLFOOT_COND_INFERENCE_CONV___cond_best_local_action))) thm4
 	      handle UNCHANGED => thm4;
 
 in
@@ -5383,7 +5379,7 @@ let
 
 
    val thm3 = STRENGTHEN_CONSEQ_CONV_RULE
-	         (CONSEQ_REWRITE_CONV [FEVERY_FUPDATE_IMP, FEVERY_FEMPTY]) thm2;
+	         (CONSEQ_REWRITE_CONV ([],[FEVERY_FUPDATE_IMP, FEVERY_FEMPTY],[])) thm2;
    val cond_conv = SIMP_CONV list_ss [FDOM_FEMPTY, FDOM_FUPDATE, IN_INSERT,
 				      FAPPLY_FUPDATE_THM,
 				      smallfoot_ae_null_def,
@@ -6172,12 +6168,12 @@ val step_ss = list_ss++rewrites STEP_REWRITE_SIMP_THMS ++
 
 fun SMALLFOOT_STEP_TAC___CS_OPT case_split =
   (CONV_TAC (CHANGED_CONV (SIMP_CONV step_ss [])) ORELSE ALL_TAC) THEN
-  (TRY (DEPTH_CONSEQ_CONV_TAC (K SMALLFOOT_IS_STRONG_STACK_PROPOSITION___ASSUME_FALSE___CONSEQ_CONV)) THEN
+  (TRY (REDEPTH_CONSEQ_CONV_TAC (K SMALLFOOT_IS_STRONG_STACK_PROPOSITION___ASSUME_FALSE___CONSEQ_CONV)) THEN
         REWRITE_TAC[]) THEN
   (ONCE_DEPTH_CONSEQ_CONV_TAC (K SMALLFOOT_COND_INFERENCE_CONV___prog_step) ORELSE
-   ONCE_DEPTH_CONSEQ_CONV_TAC (K (DEPTH_STRENGTHEN_CONSEQ_CONV (SMALLFOOT_PROP_IMPLIES___SIMPS case_split))) ORELSE
+   ONCE_DEPTH_CONSEQ_CONV_TAC (K (REDEPTH_STRENGTHEN_CONSEQ_CONV (SMALLFOOT_PROP_IMPLIES___SIMPS case_split))) ORELSE
   (CONV_TAC (CHANGED_CONV (SIMP_CONV list_ss [SMALLFOOT_PROP_IS_EQUIV_FALSE___PROP_IMPLIES_DEF])))) THEN
-  REWRITE_TAC[GSYM smallfoot_ae_null_def]  
+  REWRITE_TAC[GSYM smallfoot_ae_null_def]
   
 
 
@@ -6187,7 +6183,7 @@ val SMALLFOOT_NO_CASE_SPLIT_STEP_TAC = SMALLFOOT_STEP_TAC___CS_OPT false;
 
 fun SMALLFOOT_MINI_STEP_TAC___CS_OPT case_split =
   (CONV_TAC (CHANGED_CONV (SIMP_CONV step_ss [])) ORELSE ALL_TAC) THEN
-  (TRY (DEPTH_CONSEQ_CONV_TAC (K SMALLFOOT_IS_STRONG_STACK_PROPOSITION___ASSUME_FALSE___CONSEQ_CONV)) THEN
+  (TRY (REDEPTH_CONSEQ_CONV_TAC (K SMALLFOOT_IS_STRONG_STACK_PROPOSITION___ASSUME_FALSE___CONSEQ_CONV)) THEN
         REWRITE_TAC[]) THEN
   (ONCE_DEPTH_CONSEQ_CONV_TAC (K SMALLFOOT_COND_INFERENCE_CONV___prog_step) ORELSE
    ONCE_DEPTH_CONSEQ_CONV_TAC (K (SMALLFOOT_PROP_IMPLIES___SIMPS case_split)) ORELSE
@@ -6207,7 +6203,7 @@ fun SMALLFOOT_STEP___CONSEQ_CONV___CS_OPT case_split =
 
 fun SMALLFOOT_SOLVE_TAC___CS_OPT case_split =
 REPEAT 
-   ((DEPTH_CONSEQ_CONV_TAC (K (SMALLFOOT_STEP___CONSEQ_CONV___CS_OPT case_split)) THEN
+   ((REDEPTH_CONSEQ_CONV_TAC (K (SMALLFOOT_STEP___CONSEQ_CONV___CS_OPT case_split)) THEN
     SIMP_TAC step_ss []) ORELSE
    (if case_split then 
       (CONV_TAC (QCHANGED_CONV (REWRITE_CONV [SMALLFOOT_PROP_IS_EQUIV_FALSE___PROP_IMPLIES_DEF])))

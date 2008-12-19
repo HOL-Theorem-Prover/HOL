@@ -700,7 +700,7 @@ fun dest_smallfoot_prop_input tt =
 	        (length args = 3) then () else
              raise (mk_HOL_ERR "smallfootLib" "dest_smallfoot_prop_input" "Wrong term")
      val (wp, rp) = save_dest_pair (el 1 args);
-     val (d_list,_) = listLib.dest_list (el 2 args);
+     val (d_list,_) = listSyntax.dest_list (el 2 args);
   in
     (wp,rp,d_list, el 3 args)
   end
