@@ -39,10 +39,10 @@ val FORALL_EQ___CONSEQ_CONV : conseq_conv;
 val EXISTS_EQ___CONSEQ_CONV : conseq_conv;
 
 val TRUE_FALSE_REFL_CONSEQ_CONV : directed_conseq_conv
-val CONSEQ_TOP_REWRITE_CONV     : thm list -> directed_conseq_conv;
-val CONSEQ_REWRITE_CONV         : thm list -> directed_conseq_conv;
-val CONSEQ_HO_TOP_REWRITE_CONV  : thm list -> directed_conseq_conv;
-val CONSEQ_HO_REWRITE_CONV      : thm list -> directed_conseq_conv;
+val CONSEQ_TOP_REWRITE_CONV     : (thm list * thm list * thm list) -> directed_conseq_conv;
+val CONSEQ_REWRITE_CONV         : (thm list * thm list * thm list) -> directed_conseq_conv;
+val CONSEQ_HO_TOP_REWRITE_CONV  : (thm list * thm list * thm list) -> directed_conseq_conv;
+val CONSEQ_HO_REWRITE_CONV      : (thm list * thm list * thm list) -> directed_conseq_conv;
 
 
 (* Technical stuff that might help writing
@@ -99,8 +99,8 @@ val REDEPTH_CONSEQ_CONV_TAC      : directed_conseq_conv -> tactic;
 val ONCE_DEPTH_CONSEQ_CONV_TAC   : directed_conseq_conv -> tactic;
 val CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
 val CONJ_ASSUMPTIONS_REDEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
-val CONSEQ_REWRITE_TAC           : thm list -> tactic;
-val CONSEQ_HO_REWRITE_TAC        : thm list -> tactic;
+val CONSEQ_REWRITE_TAC           : (thm list * thm list * thm list) -> tactic;
+val CONSEQ_HO_REWRITE_TAC        : (thm list * thm list * thm list) -> tactic;
 
 
 end

@@ -666,8 +666,8 @@ fun CONJ_ASSUMPTIONS_CONSEQ_CONV conv preserve_hyp_pred dir t =
 let
     val thm = conv dir t;
     val new_hyps = filter (fn t => not (preserve_hyp_pred t)) (hyp thm);
-    val hyp_thms = map (fn t => 
-                       ((SOME (CONJ_ASSUMPTIONS_CONSEQ_CONV conv preserve_hyp_pred CONSEQ_CONV_STRENGTHEN_direction t))
+    val hyp_thms = map (fn h => 
+                       ((SOME (CONJ_ASSUMPTIONS_CONSEQ_CONV conv preserve_hyp_pred CONSEQ_CONV_STRENGTHEN_direction h))
 		        handle HOL_ERR _ => NONE) 
                         handle UNCHANGED => NONE) new_hyps;
 
@@ -886,12 +886,14 @@ end;
 
 
 
-fun CONSEQ_TOP_REWRITE_CONV___ho_opt ho thmL =
+fun CONSEQ_TOP_REWRITE_CONV___ho_opt ho (both_thmL,strengthen_thmL,weaken_thmL) =
    let
-     val thmL' = flatten (map BODY_CONJUNCTS thmL);
-     val thmL'' = map CONSEQ_TOP_REWRITE_CONV___EQT_EQF_INTRO thmL';
-     val thmL_st = CONSEQ_TOP_REWRITE_CONV___PREPARE_STRENGTHEN_THMS thmL'';
-     val thmL_we = CONSEQ_TOP_REWRITE_CONV___PREPARE_WEAKEN_THMS thmL'';
+     fun prepare_general_thmL thmL =
+           map CONSEQ_TOP_REWRITE_CONV___EQT_EQF_INTRO (flatten (map BODY_CONJUNCTS thmL));
+     val thmL_st = CONSEQ_TOP_REWRITE_CONV___PREPARE_STRENGTHEN_THMS 
+		       (prepare_general_thmL (append strengthen_thmL both_thmL));
+     val thmL_we = CONSEQ_TOP_REWRITE_CONV___PREPARE_WEAKEN_THMS 
+		       (prepare_general_thmL (append weaken_thmL both_thmL));
 
 
      val net_st = foldr (fn ((conv,t),net) => Net.insert (t,conv) net) Net.empty 
@@ -917,18 +919,18 @@ val CONSEQ_TOP_REWRITE_CONV = CONSEQ_TOP_REWRITE_CONV___ho_opt false;
 val CONSEQ_HO_TOP_REWRITE_CONV = CONSEQ_TOP_REWRITE_CONV___ho_opt true;
 
 
-fun CONSEQ_REWRITE_CONV thmL dir = 
-   DEPTH_CONSEQ_CONV (CONSEQ_TOP_REWRITE_CONV thmL) dir
+fun CONSEQ_REWRITE_CONV thmLs dir = 
+   REDEPTH_CONSEQ_CONV (CONSEQ_TOP_REWRITE_CONV thmLs) dir;
 
-fun CONSEQ_REWRITE_TAC thmL =
-    CONSEQ_CONV_TAC (CONSEQ_REWRITE_CONV thmL)
+fun CONSEQ_REWRITE_TAC thmLs =
+    CONSEQ_CONV_TAC (CONSEQ_REWRITE_CONV thmLs);
 
 
-fun CONSEQ_HO_REWRITE_CONV thmL dir = 
-   DEPTH_CONSEQ_CONV (CONSEQ_HO_TOP_REWRITE_CONV thmL) dir
+fun CONSEQ_HO_REWRITE_CONV thmLs dir = 
+   REDEPTH_CONSEQ_CONV (CONSEQ_HO_TOP_REWRITE_CONV thmLs) dir
 
-fun CONSEQ_HO_REWRITE_TAC thmL =
-    CONSEQ_CONV_TAC (CONSEQ_HO_REWRITE_CONV thmL)
+fun CONSEQ_HO_REWRITE_TAC thmLs =
+    CONSEQ_CONV_TAC (CONSEQ_HO_REWRITE_CONV thmLs)
 
 (*
 fun CONSEQ_SIMP_CONV impThmL ss eqThmL dir =
@@ -974,7 +976,7 @@ METIS_TAC[]);
 
 You can use the FEVERY-theorem to strengthen expressions:
 
-CONSEQ_REWRITE_CONV [rewrite_every_thm] CONSEQ_CONV_STRENGTHEN_direction 
+CONSEQ_REWRITE_CONV ([rewrite_every_thm],[],[]) CONSEQ_CONV_STRENGTHEN_direction 
    ``FEVERY P (g |+ (3, x) |+ (7,z))``
 
 This should result in:
@@ -986,7 +988,7 @@ val it =
 
 It works in substructures as well
 
-CONSEQ_REWRITE_CONV [rewrite_every_thm] CONSEQ_CONV_STRENGTHEN_direction ``!g. ?x. Q (g, x) /\ FEVERY P (g |+ (3, x) |+ (7,z)) \/ (z = 12)``
+CONSEQ_REWRITE_CONV ([rewrite_every_thm],[],[]) CONSEQ_CONV_STRENGTHEN_direction ``!g. ?x. Q (g, x) /\ FEVERY P (g |+ (3, x) |+ (7,z)) \/ (z = 12)``
 
 > val it =
     |- (!g.
@@ -996,21 +998,19 @@ CONSEQ_REWRITE_CONV [rewrite_every_thm] CONSEQ_CONV_STRENGTHEN_direction ``!g. ?
 
 You can use the FEXISTS-theorem to weaken them:
 
-CONSEQ_REWRITE_CONV [rewrite_exists_thm] CONSEQ_CONV_WEAKEN_direction ``FEXISTS P (g |+ (3, x) |+ (7,z))``
+CONSEQ_REWRITE_CONV ([rewrite_exists_thm],[],[]) CONSEQ_CONV_WEAKEN_direction ``FEXISTS P (g |+ (3, x) |+ (7,z))``
 
 > val it =
     |- FEXISTS P (g |+ (3,x) |+ (7,z)) ==>
        (FEXISTS P g \/ P (3,x)) \/ P (7,z) : thm
 
 
-CONSEQ_REWRITE_CONV [rewrite_exists_thm] CONSEQ_CONV_WEAKEN_direction ``!g. ?x. Q (g, x) /\ FEVERY P (g |+ (3, x) |+ (7,z)) \/ (z = 12)``
-
-
 
 Whether to weaken or strengthen subterms is figured out by their position
 
-CONSEQ_REWRITE_CONV [rewrite_exists_thm,rewrite_every_thm] CONSEQ_CONV_WEAKEN_direction 
+CONSEQ_REWRITE_CONV ([rewrite_exists_thm,rewrite_every_thm],[],[]) CONSEQ_CONV_WEAKEN_direction 
    ``FEVERY P (g |+ (3, x) |+ (7,z)) ==> FEXISTS P (g |+ (3, x) |+ (7,z))``
+
 
 > val it =
     |- (FEVERY P (g |+ (3,x) |+ (7,z)) ==>
@@ -1019,6 +1019,10 @@ CONSEQ_REWRITE_CONV [rewrite_exists_thm,rewrite_every_thm] CONSEQ_CONV_WEAKEN_di
        (FEXISTS P g \/ P (3,x)) \/ P (7,z) : thm
 (not a useful theorem, ... :-(()
 
+
+However, you can mark some theorem for just beeing used for strengthening / or weakening.
+The first list contains theorems used for both, then a list of ones used only
+for strengthening follows and finally one just for weakening.
 
 
 
