@@ -236,7 +236,7 @@ val SEP_SPEC_WHILE = store_thm("SEP_SPEC_WHILE",
     (!x. SEP_SPEC (p x) (While h c) (p (WHILE g f x)))``,
   REPEAT STRIP_TAC THEN Cases_on `?n. ~g (FUNPOW f n x)`
   THEN FULL_SIMP_TAC std_ss [] THENL [
-    Q.PAT_ASSUM `~g (FUNPOW n f x)` MP_TAC 
+    Q.PAT_ASSUM `~(g :'a -> bool) (FUNPOW (f :'a -> 'a) (n :num) (x :'a))` MP_TAC 
     THEN Q.SPEC_TAC (`x`,`x`)
     THEN Induct_on `n`
     THEN1 (ONCE_REWRITE_TAC [WHILE] THEN ASM_SIMP_TAC std_ss [FUNPOW] 
