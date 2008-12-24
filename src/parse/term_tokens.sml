@@ -19,6 +19,20 @@ fun nonagg_c c = CharSet.member(non_aggregating_chars, c)
 
 fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1
 
+fun mixed s = let 
+  open UnicodeChars UTF8
+  val (c,s) = case getChar s of 
+            NONE => raise Fail "Can't use emptystring as a grammar token"
+          | SOME ((c,_), s) => (c,s)
+  val test = if isAlpha c then isMLIdent else isSymbolic
+  fun allok s = 
+      case getChar s of 
+        NONE => true
+      | SOME ((s, i), rest) => test s andalso allok rest
+in
+  not (allok s)
+end
+
 (* lexer guarantees:
 
      All Idents fit into one of the following categories :
@@ -36,10 +50,6 @@ fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1
      token 'quoting' as well as being the separator for qualified identifiers.
 *)
 
-fun flip_cmpresult LESS = GREATER
-  | flip_cmpresult GREATER = LESS
-  | flip_cmpresult EQUAL = EQUAL
-
 fun str_all P s = let
   fun recurse ss =
       case Substring.getc ss of
@@ -50,15 +60,29 @@ in
 end
 
 open qbuf
-fun split_ident nonagg_specs s locn qb = let
+fun split_ident mixedset s locn qb = let
   val s0 = String.sub(s, 0)
   val is_char = s0 = #"#" andalso size s > 1 andalso String.sub(s,1) = #"\""
 in
-  if Char.isAlpha s0 orelse s0 = #"\"" orelse s0 = #"_" orelse is_char then
-    (advance qb; (s,locn))
+  if is_char orelse s0 = #"\"" then (advance qb; (s, locn))
+  else if s0 = #"'" then
+    if str_all (fn c => c = #"'") s then (advance qb; (s,locn))
+    else raise LEX_ERR ("Term idents can't begin with prime characters",locn)
+  else if s0 = #"$" then let
+      val (s',locn') = split_ident mixedset 
+                                   (String.extract(s, 1, NONE))
+                                   (locn.move_start 1 locn) qb 
+    in
+      ("$" ^ s', locn.move_start ~1 locn') 
+    end
   else if s = "#" then let
       val _ = advance qb
     in
+      (* it's possible that the lowest level of the lexer will split a 
+         # from a following "..", as happens in 
+           [#"c"]
+         for example.  The two need to be re-united, which the following
+         code sorts out. *)
       case current qb of
         (BT_Ident s2,locn2) => if String.sub(s2,0) = #"\"" then
                                  (advance qb;
@@ -66,53 +90,53 @@ in
                                else (s,locn)
       | _ => (s,locn)
     end
-  else if s0 = #"'" then
-    if str_all (fn c => c = #"'") s then (advance qb; (s,locn))
-    else raise LEX_ERR ("Term idents can't begin with prime characters",locn)
-  else if s0 = #"$" then
-      let val (s',locn') = split_ident nonagg_specs (String.extract(s, 1, NONE))
-                                       (locn.move_start 1 locn) qb in
-      ("$" ^ s', locn.move_start ~1 locn') end
-  else (* have a symbolic identifier *)
-    let
-      val possible_nonaggs =
-          List.filter (fn spec => String.isPrefix spec s) nonagg_specs
-    in
-      if null possible_nonaggs then let
-          val (ss1, ss2) = Substring.splitl (not o nonagg_c) (Substring.all s)
-          val (s1, s2) = (Substring.string ss1, Substring.string ss2)
-        in
-          if size s1 = 0 then
-            (* first character is a non-aggregating character *)
-            if size s > 1 then
-              let val (locn',locn'') = locn.split_at 1 locn in
-              (replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'') qb;
-               (String.extract (s, 0, SOME 1),locn')) end
-            else (advance qb; (s,locn))
-          else if size s2 <> 0 then
-            let val (locn',locn'') = locn.split_at (size s1) locn in
-            (* s2 is non-empty and begins with a non-aggregating character *)
-            (replace_current (BT_Ident s2,locn'') qb; (s1,locn')) end
-          else
-            (advance qb; (s,locn))
-        end
-      else let
-          fun compare(s1, s2) = flip_cmpresult (Int.compare(size s1, size s2))
-          val best = hd (Listsort.sort compare possible_nonaggs)
-          val sz = size best
-        in
-          if sz = size s then (advance qb; (s,locn))
-          else let val (locn',locn'') = locn.split_at sz locn in
-               (replace_current (BT_Ident (String.extract(s, sz, NONE)),locn'') qb;
-                (best,locn')) end
-        end
-    end
+  else if not (mixed s) andalso not (s_has_nonagg_char s) then 
+    (advance qb; (s, locn))
+  else
+    case UTF8Set.longest_pfx_member(mixedset, s) of 
+      NONE => (* identifier blob doesn't occur in list of known keywords *) let
+      in
+        case UTF8.getChar s of 
+          NONE => raise LEX_ERR ("Token is empty string??", locn)
+        | SOME ((s,i),rest) => let 
+            open UnicodeChars
+            val test = if isAlpha s then isMLIdent else isSymbolic
+            val c = String.sub(s,0)
+            fun grab acc s = 
+                case UTF8.getChar s of 
+                  NONE => (String.concat (List.rev acc), "")
+                | SOME((s,i),rest) => let
+                    val c = String.sub(s,0)
+                  in
+                    if test s andalso not (nonagg_c c) then 
+                      grab (s::acc) rest
+                    else (String.concat (List.rev acc), s^rest)
+                  end
+            val (pfx,sfx) = if nonagg_c c then (s, rest) else grab [s] rest
+            val (locn1, locn2) = locn.split_at (size pfx) locn
+          in
+            if size sfx <> 0 then 
+              (replace_current (BT_Ident sfx,locn2) qb; (pfx, locn1))
+            else
+              (advance qb; (s, locn))
+          end
+      end
+    | SOME {pfx,rest} => let 
+        val (locn1,locn2) = locn.split_at (size pfx) locn
+      in
+        if size rest = 0 then (advance qb; (s, locn))
+        else 
+          (replace_current (BT_Ident rest,locn2) qb; (pfx, locn1))
+      end
 end
 
 
+
 fun lex keywords0 = let
-  val non_agg_specials = List.filter s_has_nonagg_char keywords0
-  val split = split_ident non_agg_specials
+  fun test s = mixed s orelse s_has_nonagg_char s
+  val mixed = List.filter test keywords0
+  val mixedset = UTF8Set.addList(UTF8Set.empty, mixed)
+  val split = split_ident mixedset
 in
 fn qb => let
    val (bt,locn) = current qb

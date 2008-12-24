@@ -159,29 +159,32 @@ val avoid_symbol_merges = ref true
 val _ = register_btrace("pp_avoids_symbol_merges", avoid_symbol_merges)
 
 (* true if a space should appear between the characters last and next *)
-fun mk_break (last, next) =
-    !avoid_symbol_merges andalso
-    (is_symbolic_char last andalso is_symbolic_char next orelse
-     last = #"(" andalso next = #"*" orelse
-     last = #"*" andalso next = #")" orelse
-     Char.isAlphaNum last andalso Char.isAlphaNum next)
+fun mk_break (last, next) = let 
+  open UnicodeChars
+in
+  !avoid_symbol_merges andalso
+  (isSymbolic last andalso isSymbolic next orelse
+   last = "(" andalso next = "*" orelse
+   last = "*" andalso next = ")" orelse
+   isAlphaNum last andalso isAlphaNum next)
+end
 
 fun avoid_symbolmerge (add_string, add_break) = let
-  val last_char = ref #" "
+  val last_char = ref " "
   fun new_addstring s = let
     val sz = size s
   in
     if sz = 0 then ()
     else let
-        val nextc = String.sub(s,0)
-        val newlast = String.sub(s, sz - 1)
+        val nextc = #1 (#1 (valOf (UTF8.getChar s)))
+        val newlast = #1 (valOf (UTF8.lastChar s))
       in
         if mk_break(!last_char, nextc) then add_string " " else ();
         add_string s;
         last_char := newlast
       end
   end
-  fun new_add_break (p as (n,m)) = (if n > 0 then last_char := #" " else ();
+  fun new_add_break (p as (n,m)) = (if n > 0 then last_char := " " else ();
                                     add_break p)
 in
   (new_addstring, new_add_break)
