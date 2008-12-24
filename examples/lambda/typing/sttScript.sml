@@ -51,7 +51,7 @@ val _ = overload_on ("⁻¹",
 (* typing relation respects permutation *)
 val hastype_swap = store_thm(
   "hastype_swap",
-  ``∀ Γ m τ. Γ ⊢ m ◁ τ ⇒ ∀ π. ctxtswap π Γ ⊢ tpm π m ◁ τ``,
+  ``∀Γ m τ. Γ ⊢ m ◁ τ ⇒ ∀ π. ctxtswap π Γ ⊢ tpm π m ◁ τ``,
   HO_MATCH_MP_TAC hastype_ind THEN SRW_TAC [][] THENL [
     METIS_TAC [valid_ctxt_swap, MEM_ctxtswap, hastype_rules],
     METIS_TAC [hastype_rules],

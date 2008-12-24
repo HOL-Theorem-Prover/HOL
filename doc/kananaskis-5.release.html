@@ -220,13 +220,10 @@ evaluations will be quicker.
 
 <li>
 <p> HOL now supports Unicode symbols as part of its parsing and
-printing.  For the moment, all such symbols are lexed as “symbolic
-characters”, even though one might argue that some should be
-alphabetic (as with Greek letters).  In addition, there are now
-appropriate Unicode symbols, such as ∀ and ∈ built in to the system.
-To enable their printing and parsing, you must set the trace
-variable <code>Unicode</code>.  If this is done, you will see, for
-example</p>
+printing.  In addition, there are now appropriate Unicode symbols,
+such as ∀ and ∈ built in to the system.  To enable their printing and
+parsing, you must set the trace variable <code>Unicode</code>.  If
+this is done, you will see, for example</p>
 <pre>
          - FORALL_DEF;
          > val it = |- $∀ = (λP. P = (λx. T)) : thm
