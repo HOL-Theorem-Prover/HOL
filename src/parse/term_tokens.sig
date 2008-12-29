@@ -16,7 +16,7 @@ sig
   val is_ident     : 'a term_token -> bool
   val is_aq        : 'a term_token -> bool
 
-
+  val nonagg_c     : char -> bool
 
 end
 

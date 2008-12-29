@@ -160,7 +160,11 @@ val _ = register_btrace("pp_avoids_symbol_merges", avoid_symbol_merges)
 
 (* true if a space should appear between the characters last and next *)
 fun mk_break (last, next) = let 
-  open UnicodeChars
+  fun isSymbolic s = 
+      UnicodeChars.isSymbolic s andalso 
+      not (term_tokens.nonagg_c (String.sub(s,0))) andalso
+      s <> "'"
+  val isAlphaNum = UnicodeChars.isAlphaNum
 in
   !avoid_symbol_merges andalso
   (isSymbolic last andalso isSymbolic next orelse
