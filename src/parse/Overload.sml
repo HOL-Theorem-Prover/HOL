@@ -20,7 +20,7 @@ fun lose_constrec_ty {Name,Ty,Thy} = {Name = Name, Thy = Thy}
    specialisation of a polymorphic type *)
 
 type overloaded_op_info = {base_type : Type.hol_type, actual_ops : term list,
-                           tyavoids : Type.hol_type list}
+                           kdavoids : kind list, tyavoids : Type.hol_type list}
 
 (* the overload info is thus a pair:
    * first component is for the "parsing direction"; it's a map from
@@ -137,8 +137,9 @@ local
              end
            else
            if (is_app_type ty1) andalso (is_app_type ty2) then
-(*
+(**)
              (* this next case is for backwards compatibility *)
+             (* needed, e.g., for decode_opcode_def in examples/ARM/v4/arm_evalScript.sml *)
              if (is_type ty1) andalso (is_type ty2) then let
                val {Thy = thy1, Tyop = tyop1, Args = args1} = dest_thy_type ty1
                val {Thy = thy2, Tyop = tyop2, Args = args2} = dest_thy_type ty2
@@ -153,7 +154,7 @@ local
                                                         return new_ty)
              end
              else
-*)
+(**)
              let
                val (ty1f,ty1a) = dest_app_type ty1
                val (ty2f,ty2a) = dest_app_type ty2
@@ -256,14 +257,17 @@ fun au_tml tml =
                          (type_of tm)
                          tms
 
-fun fupd_actual_ops f {base_type, actual_ops, tyavoids} =
-  {base_type = base_type, actual_ops = f actual_ops, tyavoids = tyavoids}
+fun fupd_actual_ops f {base_type, actual_ops, kdavoids, tyavoids} =
+  {base_type = base_type, actual_ops = f actual_ops, kdavoids = kdavoids, tyavoids = tyavoids}
 
-fun fupd_base_type f {base_type, actual_ops, tyavoids} =
-  {base_type = f base_type, actual_ops = actual_ops, tyavoids = tyavoids}
+fun fupd_base_type f {base_type, actual_ops, kdavoids, tyavoids} =
+  {base_type = f base_type, actual_ops = actual_ops, kdavoids = kdavoids, tyavoids = tyavoids}
 
-fun fupd_tyavoids f {base_type, actual_ops, tyavoids} =
-    {base_type = base_type, actual_ops = actual_ops, tyavoids = f tyavoids}
+fun fupd_kdavoids f {base_type, actual_ops, kdavoids, tyavoids} =
+    {base_type = base_type, actual_ops = actual_ops, kdavoids = f kdavoids, tyavoids = tyavoids}
+
+fun fupd_tyavoids f {base_type, actual_ops, kdavoids, tyavoids} =
+    {base_type = base_type, actual_ops = actual_ops, kdavoids = kdavoids, tyavoids = f tyavoids}
 
 fun fupd_dict_at_key k f dict = let
   val (newdict, kitem) = Binarymap.remove(dict,k)
@@ -324,12 +328,12 @@ in
     [] => (op2c_map, new_c2op_map)
   | (r::rs) => let
       val au = foldl (fn (r1, t) => anti_unify (type_of r1) t) (type_of r) rs
+      val fvs = HOLset.listItems (FVL withtypes empty_tmset)
     in
       (Binarymap.insert
          (op2c_map, s,
           {base_type = au, actual_ops = withtypes,
-           tyavoids = tmlist_tyvs (HOLset.listItems
-                                     (FVL withtypes empty_tmset))}),
+           kdavoids = tmlist_kdvs fvs, tyavoids = tmlist_tyvs fvs}),
        new_c2op_map)
     end
 end
@@ -352,7 +356,7 @@ fun add_overloading (opname, term) oinfo = let
   val (opc0, cop0) = oinfo
   val opc =
       case info_for_name oinfo opname of
-        SOME {base_type, actual_ops = a0, tyavoids} => let
+        SOME {base_type, actual_ops = a0, kdavoids, tyavoids} => let
           (* this name is already overloaded *)
           val actual_ops = List.filter Theory.uptodate_term a0
           val changed = length actual_ops <> length a0
@@ -361,37 +365,53 @@ fun add_overloading (opname, term) oinfo = let
             SOME (_, rest) => let
               (* this term was already in the map *)
               (* must replace it *)
-              val (avoids, base_type) =
+              val (kavoids, avoids, base_type) =
                   if changed then
-                    (tmlist_tyvs (free_varsl actual_ops), au_tml actual_ops)
-                  else (tyavoids, base_type)
+                    let val fvs = free_varsl actual_ops
+                    in (tmlist_kdvs fvs, tmlist_tyvs fvs, au_tml actual_ops)
+                    end
+                  else (kdavoids, tyavoids, base_type)
             in
               Binarymap.insert(opc0, opname,
                                {actual_ops = term::rest,
                                 base_type = base_type,
+                                kdavoids = kavoids,
                                 tyavoids = avoids})
             end
           | NONE => let
               (* Wasn't in the map, so can just cons its record in *)
-              val (newbase, new_avoids) =
+              val (newbase, new_kdavoids, new_avoids) =
                   if changed then
-                    (au_tml (term::actual_ops),
-                     tmlist_tyvs (free_varsl (term::actual_ops)))
+                    let val fvs = free_varsl (term::actual_ops)
+                    in
+                      (au_tml (term::actual_ops),
+                       tmlist_kdvs fvs,
+                       tmlist_tyvs fvs)
+                    end
                   else
-                    (anti_unify base_type (type_of term),
-                     Lib.union (tmlist_tyvs (free_vars term)) tyavoids)
+                    let val fvs = free_vars term
+                    in
+                      (anti_unify base_type (type_of term),
+                       Lib.union (tmlist_kdvs fvs) kdavoids,
+                       Lib.union (tmlist_tyvs fvs) tyavoids)
+                    end
             in
               Binarymap.insert(opc0, opname,
                                {actual_ops = term :: actual_ops,
                                 base_type = newbase,
+                                kdavoids = new_kdavoids,
                                 tyavoids = new_avoids})
             end
         end
       | NONE =>
         (* this name not overloaded at all *)
-        Binarymap.insert(opc0, opname,
-                         {actual_ops = [term], base_type = type_of term,
-                          tyavoids = tmlist_tyvs (free_vars term)})
+        let val fvs = free_vars term
+        in
+          Binarymap.insert(opc0, opname,
+                           {actual_ops = [term], base_type = type_of term,
+                            kdavoids = tmlist_kdvs fvs,
+                            tyavoids = tmlist_tyvs fvs})
+        end
   val cop = let
     val fvs = free_vars term
     val (_, pat) = strip_abs term
@@ -420,7 +440,7 @@ local
     val (opc0, cop0) = oinfo
     val opc =
         case info_for_name oinfo opname of
-          SOME {base_type, actual_ops, tyavoids} => let
+          SOME {base_type, actual_ops, kdavoids, tyavoids} => let
             (* this name is overloaded *)
           in
             case List.find (aconv cnst) actual_ops of
@@ -428,6 +448,7 @@ local
                 Binarymap.insert(opc0, opname,
                   {actual_ops = f (aconv cnst) actual_ops,
                    base_type = base_type,
+                   kdavoids = kdavoids,
                    tyavoids = tyavoids})
             | NONE => raise OVERLOAD_ERR
                         ("Constant not overloaded: "^realthy^"$"^realname)
@@ -558,6 +579,7 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) : overload_info = let
                {base_type = newty,
                 actual_ops =
                 Lib.op_union aconv (#actual_ops op1) (#actual_ops op2),
+                kdavoids = Lib.union (#kdavoids op1) (#kdavoids op2),
                 tyavoids = Lib.union (#tyavoids op1) (#tyavoids op2)})
           in
             merge (newopinfo::acc) op1s' op2s'

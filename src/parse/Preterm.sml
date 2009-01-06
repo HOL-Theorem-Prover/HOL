@@ -18,6 +18,10 @@ fun tmlist_tyvs tlist =
   List.foldl (fn (t,acc) => Lib.union (Term.type_vars_in_term t) acc) [] tlist
 
 
+val debug_overloading = ref false
+val _ = register_btrace ("overload", debug_overloading)
+fun over_print s = if !debug_overloading then Lib.say s else ()
+
 val show_typecheck_errors = ref true
 val _ = register_btrace ("show_typecheck_errors", show_typecheck_errors)
 fun tcheck_say s = if !show_typecheck_errors then Lib.say s else ()
@@ -76,10 +80,10 @@ fun ptype_of (Var{Ty, ...}) = Ty
 end;
 
 val bogus = locn.Loc_None
-fun term_to_preterm avds t = let 
+fun term_to_preterm kdavds avds t = let 
   open optmonad
   infix >> >-
-  fun gen avds ty = Pretype.rename_tv avds (Pretype.fromType ty)
+  fun gen avds ty = Pretype.rename_tv kdavds avds (Pretype.fromType ty)
   open HolKernel 
   fun recurse avds t = 
       case dest_term t of 
@@ -132,9 +136,9 @@ fun pty_locn (Pretype.PT(_,locn)) = locn
 
 val eq_type = Pretype.eq
 
-fun eq_info {actual_ops=ops1, base_type=bty1, tyavoids=avds1}
-            {actual_ops=ops2, base_type=bty2, tyavoids=avds2}
-    = all2 Term.eq ops1 ops2 andalso Type.abconv_ty bty1 bty2 andalso all2 Type.abconv_ty avds1 avds2
+fun eq_info {actual_ops=ops1, base_type=bty1, kdavoids=kdavds1, tyavoids=avds1}
+            {actual_ops=ops2, base_type=bty2, kdavoids=kdavds2, tyavoids=avds2}
+    = all2 Term.eq ops1 ops2 andalso Type.abconv_ty bty1 bty2 andalso all2 equal kdavds1 kdavds2 andalso all2 Type.abconv_ty avds1 avds2
 
 fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...})                   = Name=Name' andalso eq_type Ty Ty'
   | eq (Const{Name=Name,Thy=Thy,Ty=Ty,...})        (Const{Name=Name',Thy=Thy',Ty=Ty',...})        = Name=Name' andalso Thy=Thy' andalso eq_type Ty Ty'
@@ -240,7 +244,7 @@ fun kindVars ptm =  (* the prekind variables in a preterm *)
   | TyComb{Rator,Rand,...}  => Lib.union (kindVars Rator) (Pretype.kindvars Rand)
   | Abs{Bvar,Body,...}      => Lib.union (kindVars Bvar) (kindVars Body)
   | TyAbs{Bvar,Body,...}    => Lib.union (Pretype.kindvars Bvar) (kindVars Body)
-  | Antiq{Tm,...}           => [] (* kindVars (fromTerm Tm) *)
+  | Antiq{Tm,...}           => map Kind.dest_var_kind (Term.kind_vars_in_term Tm)
   | Constrained{Ptm,Ty,...} => Lib.union (kindVars Ptm) (Pretype.kindvars Ty)
   | Pattern{Ptm,...}        => kindVars Ptm
   | Overloaded _            => raise Fail "Preterm.kindVars: applied to Overloaded";
@@ -253,11 +257,10 @@ fun tyVars ptm =  (* the pretype variable names in a preterm *)
   | TyComb{Rator,Rand,...}  => Lib.union (tyVars Rator) (Pretype.tyvars Rand)
   | Abs{Bvar,Body,...}      => Lib.union (tyVars Bvar) (tyVars Body)
   | TyAbs{Bvar,Body,...}    => Lib.union (Pretype.tyvars Bvar) (tyVars Body)
-  | Antiq{Tm,...}           => map Type.dest_vartype (Term.type_vars_in_term Tm)
+  | Antiq{Tm,...}           => map (#1 o Type.dest_vartype_opr) (Term.type_vars_in_term Tm)
   | Constrained{Ptm,Ty,...} => Lib.union (tyVars Ptm) (Pretype.tyvars Ty)
   | Pattern{Ptm,...}        => tyVars Ptm
-  | Overloaded _            => raise Fail "Preterm.tyVars: applied to \
-                                          \Overloaded";
+  | Overloaded _            => raise Fail "Preterm.tyVars: applied to Overloaded";
 
 (*-----------------------------------------------------------------------------*
  * The free type variables of a lambda term. Tail recursive (from Ken Larsen). *
@@ -279,7 +282,7 @@ local val union = Lib.op_union Pretype.eq
         | tyV (Constrained{Ptm,Ty,...}) k = tyV Ptm (fn q =>
                                             k (union q (type_vars Ty)))
         | tyV (Pattern{Ptm,...}) k        = tyV Ptm k
-        | tyV (Overloaded _) k            = k []
+        | tyV (Overloaded {Ty,...}) k     = k (type_vars Ty)
       fun tyVs (t::ts) k           = tyV t (fn q1 =>
                                      tyVs ts (fn q2 => k (union q2 q1)))
         | tyVs [] k                = k []
@@ -594,9 +597,9 @@ fun to_term tm =
                   mmap cleanup args >- (fn args' => 
                   return (doit f args')))
                 end
-              | _ => cleanup f >- (fn f_t => 
+              | _ => cleanup f >- (fn f' => 
                      mmap cleanup args >- (fn args' => 
-                     return (list_mk_comb(f_t, args'))))
+                     return (list_mk_comb(f', args'))))
             end
           | TyComb{Rator, Rand,...} => cleanup Rator >- (fn Rator'
                                   => prepare Rand >- (fn Rand'
@@ -685,17 +688,23 @@ fun remove_overloading_phase1 ptm =
                                  Body = remove_overloading_phase1 Body, Locn = Locn}
   | Constrained{Ptm, Ty, Locn} => Constrained{Ptm = remove_overloading_phase1 Ptm, Ty = Ty, Locn = Locn}
 (*| Pattern{Ptm, Locn} => Pattern{Ptm = remove_overloading_phase1 Ptm, Locn = Locn}*) (* should this be here? *)
-  | Overloaded{Name,Ty,Info,Locn} => let 
+  | Overloaded{Name,Ty,Info,Locn} => let
+      val _ = over_print ("\nResolving overloaded "^Name^" of type\n"^Pretype.pretype_to_string Ty^"\n")
       fun testfn t = let
-        open Term
+        open Term Pretype
         val possty = type_of t
-        val avdkds = map Kind.dest_var_kind (tmlist_kdvs (free_vars t))
-        val avds = map (#1 o Type.dest_vartype_opr) (tmlist_tyvs (free_vars t))
+        val fvs = free_vars t
+        val kdavds = map Kind.dest_var_kind (tmlist_kdvs fvs)
+        val avds = map (#1 o Type.dest_vartype_opr) (tmlist_tyvs fvs)
         val pty0 = Pretype.fromType possty
-        val pty1 = Pretype.rename_kindvars avdkds pty0
-        val pty = Pretype.rename_typevars avds pty1
+        val _ = over_print ("Testing possible type\n"^pretype_to_string pty0^"\n")
+        val pty = Pretype.rename_typevars kdavds avds pty0
+        val Ty1 = Pretype.reconcile_univ_types Ty pty
+        val res = Pretype.can_unify Ty1 pty
+        val _ = over_print ("Attempted unification with type for "^Name^" ")
+        val _ = over_print ((if res then "succeeded" else "failed")^".\n")
       in
-        Pretype.can_unify Ty pty
+        (*Pretype.can_unify Ty pty*) res
       end
       val possible_ops = List.filter testfn (#actual_ops Info)
     in
@@ -714,15 +723,18 @@ fun remove_overloading_phase1 ptm =
         in
           if is_const t then let 
               val {Ty = ty,Name,Thy} = dest_thy_const t
-              val pty = Pretype.rename_typevars [] (Pretype.fromType ty)
-              val _ = Pretype.unify pty Ty
+              val pty = Pretype.rename_typevars [] [] (Pretype.fromType ty)
+              val Ty1 = Pretype.reconcile_univ_types Ty pty
+              val _ = Pretype.unify pty Ty1
             in
               Const{Name=Name, Thy=Thy, Ty=pty, Locn=Locn}
             end
           else let 
-              val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
+              val fvs = free_vars t
+              val kdavds = map Kind.dest_var_kind (tmlist_kdvs fvs)
+              val avds = map (#1 o Type.dest_vartype_opr) (tmlist_tyvs fvs)
             in
-              Pattern{Ptm = term_to_preterm avds t, Locn = Locn}
+              Pattern{Ptm = term_to_preterm kdavds avds t, Locn = Locn}
             end
         end
       | _ =>
@@ -777,17 +789,21 @@ fun remove_overloading ptm = let
             if is_const t then let
                 val {Ty = ty, Name = n, Thy = thy} = Term.dest_thy_const t 
                 val pty0 = Pretype.fromType ty
-                val pty = Pretype.rename_typevars [] pty0
+                val pty  = Pretype.rename_typevars [] [] pty0
+                val Ty1 = Pretype.reconcile_univ_types Ty pty
               in
-                unify pty Ty >> 
+                unify pty Ty1 >> 
                 return (Const{Name=n, Ty=Ty, Thy=thy, Locn=Locn})
               end
             else let 
-                val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
-                val ptm = term_to_preterm avds t 
+                val fvs = free_vars t
+                val kdavds = map Kind.dest_var_kind (tmlist_kdvs fvs)
+                val avds = map (#1 o Type.dest_vartype_opr) (tmlist_tyvs fvs)
+                val ptm = term_to_preterm kdavds avds t 
                 val pty = ptype_of ptm
+                val Ty1 = Pretype.reconcile_univ_types Ty pty
               in
-                unify pty Ty >>
+                unify pty Ty1 >>
                 return (Pattern{Ptm = ptm, Locn = Locn})
               end
       in
@@ -803,7 +819,10 @@ fun do_overloading_removal ptm0 = let
   open seq
   val ptm = remove_overloading_phase1 ptm0
   val result = remove_overloading ptm ([],[],[])
-  fun apply_subst subst = app (fn (r, value) => r := Pretype.SOMEU value) subst
+  fun apply_tsubst tsubst = app (fn (r, value) => r := Pretype.SOMEU value) tsubst
+  fun apply_krsubst subst = app (fn (r, value) => r := SOME value) subst
+  fun apply_subst(ksubst, rsubst, tsubst) =
+      (apply_tsubst tsubst; apply_krsubst ksubst; apply_krsubst rsubst)
   fun do_csubst clist ptm =
     case clist of
       [] => (ptm, [])
@@ -856,7 +875,7 @@ in
          orelse !Globals.notify_on_tyvar_guess
       then
         case cases xs of
-          NONE => (apply_subst tenv; #1 (do_csubst clist ptm))
+          NONE => (apply_subst env; #1 (do_csubst clist ptm))
         | SOME _ => let
           in
             if not (!Globals.guessing_overloads) then
@@ -867,11 +886,11 @@ in
               Feedback.HOL_MESG
                 "more than one resolution of overloading was possible"
             else ();
-            apply_subst tenv;
+            apply_subst env;
             #1 (do_csubst clist ptm)
           end
       else
-        (apply_subst tenv; #1 (do_csubst clist ptm))
+        (apply_subst env; #1 (do_csubst clist ptm))
 end
 
 fun remove_elim_magics ptm =
@@ -1401,7 +1420,8 @@ val post_process_term = ref (I : term -> term);
 
 fun typecheck pfns ptm0 = let
   val ptm0' = TC pfns (evade_free_tvs ptm0)
-  val ptm = overloading_resolution0 ptm0'
+  val ptm1 = overloading_resolution0 ptm0'
+  val ptm = TC pfns ptm1
 in
   !post_process_term (remove_case_magic (to_term ptm))
 end handle phase1_exn(l,s,ty) =>
@@ -1412,6 +1432,5 @@ end handle phase1_exn(l,s,ty) =>
                   (String.concat [s, "Wanted it to have type:  ",
                                   typ ty, "\n"]);
               raise ERRloc "typecheck" l s)
-
 
 end; (* Preterm *)

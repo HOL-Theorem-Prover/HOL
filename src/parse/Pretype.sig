@@ -92,14 +92,19 @@ val safe_unify :
 val type_subst  : {redex : pretype, residue : pretype} list -> pretype -> pretype
 val distinguish_btyvars : pretype list -> pretype -> pretype
 
-val rename_kindvars : string list -> pretype -> pretype
-val rename_typevars : string list -> pretype -> pretype
-val rename_tv : string list -> pretype ->
+val pp_pretype : ppstream -> pretype -> unit
+val pretype_to_string : pretype -> string
+val print_pretype : pretype -> unit
+val pp_pretypes : ppstream -> pretype list -> unit
+val pretypes_to_string : pretype list -> string
+val print_pretypes : pretype list -> unit
+
+val rename_typevars : string list -> string list -> pretype -> pretype
+val rename_tv : string list -> string list -> pretype ->
            (prerank list * (string * prekind) list * (string * pretype) list) ->
            (prerank list * (string * prekind) list * (string * pretype) list) * pretype option
+val reconcile_univ_types : pretype -> pretype -> pretype
 val fromType : hol_type -> pretype
-val pretype_to_string : pretype -> string
-val pp_pretype : ppstream -> pretype -> unit
 val remove_made_links : pretype -> pretype
 val replace_null_links : pretype -> string list * string list
                          -> (string list * string list) * unit option

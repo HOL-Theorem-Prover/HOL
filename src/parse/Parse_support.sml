@@ -229,7 +229,7 @@ in
   Preterm.Const {Name=s, 
                  Thy=thy, 
                  Locn=l,
-                 Ty=Pretype.rename_typevars [] 
+                 Ty=Pretype.rename_typevars [] []
                                             (Pretype.fromType (type_of c))}
 end
 
@@ -394,16 +394,21 @@ fun gen_overloaded_const oinfo l s =
           val {Name,Thy,Ty} = dest_thy_const t
         in
           Preterm.Const{Name=Name, Thy=Thy, Locn=l,
-                        Ty=Pretype.rename_typevars [] (Pretype.fromType Ty)}
+                        Ty=Pretype.rename_typevars [] [] (Pretype.fromType Ty)}
         end
       else let 
           val fvs = free_vars t 
+          val kdfvs = List.foldl (fn (t, acc) => Lib.union (kind_vars_in_term t)
+                                                           acc)
+                                 []
+                                 fvs
           val tyfvs = List.foldl (fn (t, acc) => Lib.union (type_vars_in_term t)
                                                            acc)
                                  []
                                  fvs
         in
           Preterm.Pattern{Ptm = Preterm.term_to_preterm 
+                                  (map dest_var_kind kdfvs)
                                   (map (#1 o dest_vartype_opr) tyfvs) t, 
                           Locn = l}
         end
@@ -411,7 +416,8 @@ fun gen_overloaded_const oinfo l s =
   | otherwise => let
       val base_pretype0 = Pretype.fromType (#base_type opinfo)
       val new_pretype = Pretype.rename_typevars 
-                          (map (#1 o dest_vartype_opr) (#tyavoids opinfo)) 
+                          (map dest_var_kind (#kdavoids opinfo))
+                          (map (#1 o dest_vartype_opr) (#tyavoids opinfo))
                           base_pretype0
     in 
       Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo, Locn = l}

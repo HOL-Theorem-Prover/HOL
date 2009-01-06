@@ -30,7 +30,7 @@ val _ = new_theory "decidable_separationLogic";
 fun MP_FREE_VAR_TAC var =
    POP_ASSUM_LIST (fn thmL =>
       EVERY (rev
-      (map (fn thm => if (mem var (free_vars (concl thm))) then MP_TAC thm else ASSUME_TAC thm) thmL)));
+      (map (fn thm => if (op_mem eq var (free_vars (concl thm))) then MP_TAC thm else ASSUME_TAC thm) thmL)));
 
 local
    val thm = prove (``(!x. (P x = Q x)) ==> ((?x. P x) = (?x. Q x))``, METIS_TAC[]);

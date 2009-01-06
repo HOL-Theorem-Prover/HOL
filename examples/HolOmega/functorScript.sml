@@ -14,6 +14,7 @@ open HolKernel Parse boolLib
 open combinTheory combinSimps
 
 val _ = set_trace "Unicode" 1;
+val _ = set_trace "kinds" 0;
 
 
 val _ = new_theory "functor";
@@ -228,7 +229,10 @@ val map_map_functor0 = store_thm
 
 val oo_def = Define `$oo (G: 'G functor) (F': 'F functor) = \:'a 'b. G o F' [:'a,'b:]`;
 val _ = add_infix("oo", 800, HOLgrammars.RIGHT);
-(*val _ = overload_on ("o", Term`$ff : 'G functor -> 'F functor -> ('G o 'F) functor`);*)
+val _ = overload_on ("o", Term`$oo : 'G functor -> 'F functor -> ('F o 'G) functor`);
+(*
+val _ = set_trace "overload" 1;
+*)
 
 val functor_o = store_thm
   ("functor_o",
@@ -242,7 +246,7 @@ val functor_oo = store_thm
   ("functor_oo",
    ``!(F': 'F functor) (G: 'G functor).
       functor F' /\ functor G ==>
-      functor (G oo F')``,
+      functor (G o F')``,
    SIMP_TAC combin_ss [functor_def,oo_def]
   );
 
@@ -382,12 +386,14 @@ val identity_nattransf = store_thm
 
 val ooo_def = Define `$ooo (phi2: ('G,'H)nattransf) (phi1: ('F,'G)nattransf) = \:'a. phi2 o (phi1[:'a:])`;
 val _ = add_infix("ooo", 800, HOLgrammars.RIGHT);
+val _ = overload_on ("o", Term`$ooo : ('G,'H)nattransf -> ('F,'G)nattransf -> ('F,'H)nattransf`);
+
 
 val nattransf_comp = store_thm
   ("nattransf_comp",
    ``nattransf F' G (phi1 : ('F,'G)nattransf) /\
      nattransf G  H (phi2 : ('G,'H)nattransf) ==>
-     nattransf F' H (phi2 ooo phi1)``,
+     nattransf F' H (phi2 o phi1)``,
    SIMP_TAC bool_ss [nattransf_def,ooo_def]
    THEN REPEAT STRIP_TAC
    THEN ASM_REWRITE_TAC[o_ASSOC]
@@ -398,15 +404,16 @@ val nattransf_comp = store_thm
 
 val foo_def = Define `$foo (H: 'H functor) (phi: ('F,'G)nattransf) = \:'a. H [:'a 'F, 'a 'G:] phi`;
 val _ = add_infix("foo", 750, HOLgrammars.LEFT);
-(*val _ = overload_on ("oo", Term`$foo : 'H functor -> ('F,'G) nattransf -> ('F o 'H,'G o 'H) nattransf`);*)
+val _ = overload_on ("o", Term`$foo : 'H functor -> ('F,'G) nattransf -> ('F o 'H,'G o 'H) nattransf`);
+
 
 val functor_nattransf_comp = store_thm
   ("functor_nattransf_comp",
    ``nattransf F' G (phi : ('F,'G)nattransf) /\
      functor (H : 'H functor) ==>
-     nattransf (H oo F')
-               (H oo G)
-               (H foo phi)``,
+     nattransf (H o F')       (* H oo F'   *)
+               (H o G)        (* H oo G    *)
+               (H o phi)``,   (* H foo phi *)
    SIMP_TAC combin_ss [nattransf_def,functor_def,oo_def,foo_def]
    THEN REPEAT STRIP_TAC
    THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM th])
@@ -417,23 +424,16 @@ val functor_nattransf_comp = store_thm
 
 val oof_def = Define `$oof (phi: ('F,'G) nattransf) (H': 'H functor) = \:'a. phi [:'a 'H:]`;
 val _ = add_infix("oof", 750, HOLgrammars.LEFT);
-(*
-val _ = overload_on ("oo", Term`$oof : ('F,'G) nattransf -> 'H functor -> ('H o 'F,'H o 'G) nattransf`);
+val _ = overload_on ("o", Term`$oof : ('F,'G) nattransf -> 'H functor -> ('H o 'F,'H o 'G) nattransf`);
 
-val G = term_grammar();
-val oinfo = term_grammar.overload_info G;
-val tm = ``(phi : ('F,'G)nattransf) oof (H : 'H functor)``;
-val (f, args) = strip_comb tm;
-Overload.overloading_of_term oinfo f;
-*)
 
 val nattransf_functor_comp = store_thm
   ("nattransf_functor_comp",
    ``nattransf F' G (phi : ('F,'G)nattransf) /\
      functor (H : 'H functor) ==>
-     nattransf ( F' oo  H)
-               ( G  oo  H)
-               (phi oof H)``,
+     nattransf ( F' o H)     (*  F' oo  H *)
+               ( G  o H)     (*  G  oo  H *)
+               (phi o H)``,  (* phi oof H *)
    SIMP_TAC combin_ss [nattransf_def,functor_def,oo_def,oof_def]
   );
 
@@ -455,23 +455,6 @@ val nattransf_comp2 = store_thm
      nattransf (F2 oo F1)
                (G2 oo G1)
                (\:'a. phi2 o F2 (phi1[:'a:]))``,
-(*
-   REWRITE_TAC[functor_def]
-   THEN REPEAT STRIP_TAC
-set_trace "simplifier" 7;
-val gl as (asl,w) = top_goal();
-ASM_SIMP_TAC bool_ss [nattransf_commute] gl
-
-   REWRITE_TAC[functor_def]
-   THEN REPEAT STRIP_TAC
-   THEN REWRITE_TAC[nattransf_def]
-   THEN REWRITE_TAC[oo_def]
-   THEN ASM_SIMP_TAC bool_ss [nattransf_commute]
-   THEN ASSUM_LIST (fn [ftho,fthi,nth2,nth1] => Ho_Rewrite.REWRITE_TAC[MP nattransf_commute (CONJ nth1 nth2)])
-   THEN ASSUM_LIST (fn [ftho,fthi,nth2,nth1] => REWRITE_TAC[MP nattransf_commute (CONJ nth1 nth2)])
-   THEN ASSUM_LIST (fn [ftho,fthi,nth2,nth1] => SIMP_TAC bool_ss [MP nattransf_commute (CONJ nth1 nth2)])
-   THEN ASSUM_LIST (fn [ftho,fthi,nth2,nth1] => SIMP_TAC bool_ss [nattransf_commute, nth1, nth2])
-*)
    SIMP_TAC bool_ss [nattransf_def,functor_def,oo_def]
    THEN REPEAT STRIP_TAC
    THEN ASM_SIMP_TAC bool_ss [o_THM,o_ASSOC]

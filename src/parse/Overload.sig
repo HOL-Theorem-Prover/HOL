@@ -1,11 +1,12 @@
 signature Overload =
 sig
+ type kind     = HolKernel.kind
  type hol_type = HolKernel.hol_type
  type term     = HolKernel.term
 
  type nthy_rec = {Name : string, Thy : string}
  type overloaded_op_info = {base_type : hol_type, actual_ops : term list,
-                            tyavoids : hol_type list}
+                            kdavoids : kind list, tyavoids : hol_type list}
 
 
   type overload_info

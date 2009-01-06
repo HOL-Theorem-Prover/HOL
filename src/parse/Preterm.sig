@@ -26,7 +26,7 @@ sig
      To check this has been done everywhere, uncomment this constructor. *)
 
   val locn : preterm -> locn.locn
-  val term_to_preterm : string list -> term -> preterm
+  val term_to_preterm : string list -> string list -> term -> preterm
 
   val eq : preterm -> preterm -> bool
 

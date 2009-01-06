@@ -241,6 +241,8 @@ fun dest_app_type(PT(UVar(ref(SOMEU ty))  ,loc)) = dest_app_type ty
   | dest_app_type(PT(TyApp(ty1,ty2)       ,loc)) = (ty1,ty2)
   | dest_app_type _ = raise TCERR "dest_app_type" "not a type application";
 
+val is_app_type = can dest_app_type
+
 fun mk_univ_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyUniv(ty1,ty2), locn.between loc1 loc2)
 
@@ -254,7 +256,7 @@ fun dest_univ_type0(PT(UVar(ref(SOMEU ty)),loc)) = dest_univ_type0 ty
 val is_univ_type = can dest_univ_type0
 
 (* is_not_abs_type is true iff the argument is decidedly NOT a type abstraction. *)
-(* Such a type would clash if unified with a absersal type. *)
+(* Such a type would clash if unified with an abstraction type. *)
 fun is_not_abs_type(PT(UVar(ref(SOMEU ty)),loc)) = is_not_abs_type ty
   | is_not_abs_type(PT(UVar(ref(NONEU _ )),loc)) = false
   | is_not_abs_type(PT(TyKindConstr{Ty,Kind},loc)) = is_not_abs_type Ty
@@ -469,6 +471,7 @@ fun apply_subst subst (pt as PT (pty, locn)) =
  *---------------------------------------------------------------------------*)
 
 fun kind_rank_to_string (kd,rk) =
+    if current_trace "kinds" = 0 then "" else
       let open Prekind Prerank
       in   (if prekind_compare(kd,typ) = EQUAL
             then "" else ":" ^ prekind_to_string kd)
@@ -476,6 +479,7 @@ fun kind_rank_to_string (kd,rk) =
             then "" else ":<=" ^ prerank_to_string rk)
       end
 
+(*
 fun pretype_to_string (ty as PT(ty0,locn)) =
   case ty0 of
     UVar(ref (SOMEU ty')) => pretype_to_string ty'
@@ -495,6 +499,7 @@ and pretypes_to_string0 [ty] = pretype_to_string ty
   | pretypes_to_string0 (ty::tys) = pretype_to_string ty ^ ","
                                      ^ pretypes_to_string0 tys
   | pretypes_to_string0 [] = ""
+*)
 
 fun pp_pretype pps ty =
  let open Portable
@@ -570,6 +575,32 @@ fun pp_pretype pps ty =
  in
    pppretype ty
  end;
+
+val pretype_to_string = Portable.pp_to_string 80 pp_pretype
+fun print_pretype ty = Portable.output(Portable.std_out, pretype_to_string ty);
+
+fun pp_pretypes pps tys =
+ let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     val pp_pretype = pp_pretype pps
+     fun pppretypes0 [] = ()
+       | pppretypes0 (ty::tys) = (add_string ",";
+                                  add_break(0,0);
+                                  pp_pretype ty;
+                                  pppretypes0 tys)
+     fun pppretypes [] = ()
+       | pppretypes (ty::tys) =  (begin_block INCONSISTENT 0;
+                                  pp_pretype ty;
+                                  pppretypes0 tys;
+                                  end_block())
+ in
+   add_string "[";
+   pppretypes tys;
+   add_string "]"
+ end;
+
+val pretypes_to_string = Portable.pp_to_string 80 pp_pretypes
+fun print_pretypes tys = Portable.output(Portable.std_out, pretypes_to_string tys);
 
 (*
 let
@@ -1500,7 +1531,7 @@ in
 end
 
 local
-  val rename_kv = Prekind.rename_kv []
+  val rename_kv = Prekind.rename_kv
   val rename_rv = Prerank.rename_rv false
   val rename_rv_new = Prerank.rename_rv true
   fun replace (s,kd,rk) (env as (rkenv,kdenv,tyenv)) =
@@ -1511,37 +1542,22 @@ local
           ((rkenv,kdenv,(s, r)::tyenv), SOME r)
         end
       | SOME (_, r) => (env, SOME r)
-(*
-  fun add_bvar (v as PT(Vartype (s,kd,rk), l)) benv =
-          rename_kv kd >>- (fn kd' =>
-          rename_rv rk >>= (fn rk' =>
-          let val r = new_uvar(kd',rk')
-              val v' = PT(Vartype (s,kd',rk'), l)
-          in return ((s, r)::benv, v')
-                                   (*or r, if renaming bound vars*)
-          end))
-    | add_bvar (PT(TyKindConstr {Ty,Kind}, _)) benv =
-          rename_kv Kind >>- (fn Kind' =>
-          add_bvar Ty benv)
-    | add_bvar (PT(TyRankConstr {Ty,Rank}, _)) benv =
-          rename_rv Rank >>= (fn Rank' =>
-          add_bvar Ty benv)
-    | add_bvar _ _ = raise TCERR "rename_typevars" "add_bvar: arg is not variable"
-*)
-  fun add_bvar (v as PT(Vartype (s,kd,rk), l)) avds =
-          rename_kv kd >>- (fn kd' =>
+  fun add_bvar (v as PT(Vartype (s,kd,rk), l)) kdavds avds =
+          rename_kv kdavds kd >>- (fn kd' =>
           rename_rv rk >>= (fn rk' =>
           let val v' = PT(Vartype (s,kd',rk'), l)
           in return (s::avds, v')
           end))
-    | add_bvar (PT(TyKindConstr {Ty,Kind}, _)) avds =
-          rename_kv Kind >>- (fn Kind' =>
-          add_bvar Ty avds)
-    | add_bvar (PT(TyRankConstr {Ty,Rank}, _)) avds =
+    | add_bvar (PT(TyKindConstr {Ty,Kind}, _)) kdavds avds =
+          rename_kv kdavds Kind >>- (fn Kind' =>
+          add_bvar Ty kdavds avds)
+    | add_bvar (PT(TyRankConstr {Ty,Rank}, _)) kdavds avds =
           rename_rv Rank >>= (fn Rank' =>
-          add_bvar Ty avds)
-    | add_bvar _ _ = raise TCERR "rename_typevars" "add_bvar: arg is not variable"
+          add_bvar Ty kdavds avds)
+    | add_bvar _ _ _ = raise TCERR "rename_typevars" "add_bvar: arg is not variable"
 in
+
+(*
 fun rename_kvs avds (ty as PT(ty0, locn)) = let
     val rename_kv = Prekind.rename_kv avds
 in
@@ -1583,11 +1599,12 @@ in
 end
 
 fun rename_kindvars avds ty = valOf (#2 (rename_kvs avds ty ([],[],[])))
+*)
 
-fun rename_tv avds (ty as PT(ty0, locn)) =
+fun rename_tv kdavds avds (ty as PT(ty0, locn)) =
   case ty0 of
     Vartype (v as (s,kd,rk)) =>
-       rename_kv kd >>- (fn kd' =>
+       rename_kv kdavds kd >>- (fn kd' =>
        rename_rv rk >>= (fn rk' =>
        if mem s avds then return (PT(Vartype(s,kd',rk'), locn)) else replace (s,kd',rk')))
 (*
@@ -1596,32 +1613,32 @@ fun rename_tv avds (ty as PT(ty0, locn)) =
           | NONE   => replace (s,kd',rk')))
 *)
   | Contype {Thy,Tyop,Kind,Rank} =>
-       rename_kv Kind >>- (fn Kind' =>
+       rename_kv kdavds Kind >>- (fn Kind' =>
        rename_rv_new Rank >>= (fn Rank' =>
        return (PT(Contype {Thy=Thy,Tyop=Tyop,Kind=Kind',Rank=Rank'}, locn))))
   | TyApp (ty1, ty2) =>
-      rename_tv avds ty1 >-
-      (fn ty1' => rename_tv avds ty2 >-
+      rename_tv kdavds avds ty1 >-
+      (fn ty1' => rename_tv kdavds avds ty2 >-
       (fn ty2' => return (PT(TyApp(ty1', ty2'), locn))))
   | TyUniv (ty1, ty2) =>
-      add_bvar ty1 avds >- (fn (avds',ty1') =>
-      rename_tv avds' ty2 >-
+      add_bvar ty1 kdavds avds >- (fn (avds',ty1') =>
+      rename_tv kdavds avds' ty2 >-
       (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn))))
   | TyAbst (ty1, ty2) =>
-      add_bvar ty1 avds >- (fn (avds',ty1') =>
-      rename_tv avds' ty2 >-
+      add_bvar ty1 kdavds avds >- (fn (avds',ty1') =>
+      rename_tv kdavds avds' ty2 >-
       (fn ty2' => return (PT(TyAbst(ty1', ty2'), locn))))
   | TyKindConstr {Ty, Kind} =>
-      rename_kv Kind >>- (fn Kind' =>
-      rename_tv avds Ty >- (fn Ty' =>
+      rename_kv kdavds Kind >>- (fn Kind' =>
+      rename_tv kdavds avds Ty >- (fn Ty' =>
       return (PT(TyKindConstr {Ty=Ty', Kind=Kind'}, locn))))
   | TyRankConstr {Ty, Rank} =>
       rename_rv Rank >>= (fn Rank' =>
-      rename_tv avds Ty >- (fn Ty' =>
+      rename_tv kdavds avds Ty >- (fn Ty' =>
       return (PT(TyRankConstr {Ty=Ty', Rank=Rank'}, locn))))
   | _ (* UVar (ref _) *) => return ty
 
-fun rename_typevars avds ty = valOf (#2 (rename_tv avds ty ([],[],[])))
+fun rename_typevars kdavds avds ty = valOf (#2 (rename_tv kdavds avds ty ([],[],[])))
 end
 
 fun fromType t =
@@ -1983,6 +2000,44 @@ fun kindcheck pfns pty0 = let
   val _ = KC pfns pty0
 in
   toType pty0
+end
+
+local
+  fun mk_not_univ_type ty =
+       let val (bvars,body) = strip_univ_type ty
+           val bvars0 = map the_var_type bvars
+           val args = map (fn bvar => new_uvar(pkind_of bvar,prank_of bvar)) bvars
+           val theta = map (op |->) (zip bvars0 args)
+           val body' = type_subst theta body
+       in body'
+       end
+  fun reconcile p t =
+      (*if eq p t then p
+      else*)
+      if is_univ_type p andalso is_not_univ_type t
+      then reconcile (mk_not_univ_type p) t
+      else if is_app_type p andalso is_app_type t then let
+          val (opr1,arg1) = dest_app_type p
+          val (opr2,arg2) = dest_app_type t
+        in mk_app_type(reconcile opr1 opr2, reconcile arg1 arg2)
+        end
+      else if is_univ_type p andalso is_univ_type t then let
+          val (bvar1,body1) = dest_univ_type p
+          val (bvar2,body2) = dest_univ_type t
+        in mk_univ_type(bvar1, reconcile body1 body2)
+        end
+      else if is_abs_type p andalso is_abs_type t then let
+          val (bvar1,body1) = dest_abs_type p
+          val (bvar2,body2) = dest_abs_type t
+        in mk_abs_type(bvar1, reconcile body1 body2)
+        end
+      else p
+in
+fun reconcile_univ_types pat targ =
+    let val pty = reconcile (deep_beta_conv_ty pat) (deep_beta_conv_ty targ)
+        val _ = KC NONE pty
+    in pty
+    end
 end
 
 end; (* Pretype *)
