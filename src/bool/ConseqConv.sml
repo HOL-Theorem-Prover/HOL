@@ -75,6 +75,21 @@ fun GEN_ASSUM v thm =
 
 
 
+(*Introduces allquantification for all free variables*)
+fun (SPEC_ALL_TAC:tactic) (asm,t) =
+let
+   val asm_vars = FVL asm empty_tmset;
+   val t_vars = FVL [t] empty_tmset;
+   val free_vars = HOLset.difference (t_vars,asm_vars);
+
+   val free_varsL = HOLset.listItems free_vars;
+in
+   ([(asm,list_mk_forall (free_varsL,t))],
+    fn thmL => (SPECL free_varsL (hd thmL)))
+end;
+
+
+
 
 
 
@@ -696,7 +711,7 @@ fun CONJ_ASSUMPTIONS_REDEPTH_CONSEQ_CONV conv =
 (*A tactic that strengthens a boolean goal*)
 fun CONSEQ_CONV_TAC conv (asm,t) = 
     HO_MATCH_MP_TAC ((CHANGED_CONSEQ_CONV (conv CONSEQ_CONV_STRENGTHEN_direction)) t) (asm,t) handle UNCHANGED =>
-    raise mk_HOL_ERR "ConseqConv" "CONSEQ_CONV_TAC" "UNCHANGED";
+    ALL_TAC (asm,t)
 
 
 fun DEPTH_CONSEQ_CONV_TAC conv =
