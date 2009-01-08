@@ -14,7 +14,7 @@ open smallfoot_pp_print generalHelpersTheory
      smallfootSyntax BoolExtractShared
      ConseqConv smallfootTheory
      smallfootParser
-     smallfootLib 
+     smallfootLib quantHeuristicsLib
 
 
 
@@ -292,33 +292,51 @@ Intel Core 2 Quad 2.4 GHz processor.
 temp_add_smallfoot_pp();
 use_smallfoot_pretty_printer := true;
 
-val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot/EXAMPLES/"]
+val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot/EXAMPLES/"];
 
 
 (* 16.0 s *) val file = concat [examplesDir, "mergesort.sf"]; 
 val thm = smallfoot_verbose_auto_prove file;
+
 (*  2.0 s *) val file = concat [examplesDir, "parallel_tree_deallocate.sf"]; 
 val thm = smallfoot_verbose_auto_prove file;
+
 (* 14.5 s *) val file = concat [examplesDir, "parallel_mergesort.sf"]; 
 val thm = smallfoot_verbose_auto_prove file;
+
+
 (* 43.5 s *) val file = concat [examplesDir, "list.sf"]; 
 val thm = smallfoot_verbose_auto_prove file;
+
 (*  9.5 s *) val file = concat [examplesDir, "tree.sf"]; 
 val thm = smallfoot_verbose_auto_prove file;
+
+
 (*  0.7 s *) val file = concat [examplesDir, "passive_stack_race.sf"]; (*semantics differs from smallfoot!*)
 val thm = smallfoot_verbose_auto_prove file;
+
+
 (*  2.3 s *) val file = concat [examplesDir, "business1.sf"];
 val thm = smallfoot_verbose_auto_prove file;
+
+
 (*  2.7 s *) val file = concat [examplesDir, "pointer_transferring_buffer.sf"]; 
 val thm = smallfoot_verbose_auto_prove file;
+
 (*  2.0 s *) val file = concat [examplesDir, "pointer_non_transferring_buffer.sf"];
 val thm = smallfoot_verbose_auto_prove file;
+
 (*  6.2 s *) val file = concat [examplesDir, "mm_buf.sf"];
 val thm = smallfoot_verbose_auto_prove file;
+
 (*  3.7 s *) val file = concat [examplesDir, "memory_manager.sf"];
 val thm = smallfoot_verbose_auto_prove file;
+
+
 (* 27.5 s *) val file = concat [examplesDir, "split_binary_semaphore.sf"];
 val thm = smallfoot_verbose_auto_prove file;
+
+
 (* 53.5 s *) val file = concat [examplesDir, "mm_non_blocking.sf"];
 val thm = smallfoot_verbose_auto_prove file;
 
@@ -338,6 +356,7 @@ val file = concat [examplesDir, "dummy.sf"];
 
 (*automatic proof just fails*)
 val thm = smallfoot_auto_prove file;
+val _ = smallfoot_auto_prove file;
 
 
 use_smallfoot_pretty_printer := false
@@ -346,21 +365,29 @@ val t = parse_smallfoot_file file;
 
 set_goal([],parse_smallfoot_file file);
 
-
+use_smallfoot_pretty_printer := true
 SMALLFOOT_SPECIFICATION_TAC THEN
 
 REPEAT STRIP_TAC THEN
 
 REPEAT SMALLFOOT_STEP_TAC
+SIMP_TAC std_ss [FORALL_AND_THM]
 SMALLFOOT_MINI_STEP_TAC
-ESMALLFOOT_SOLVE_TAC
+SMALLFOOT_SOLVE_TAC
+
+SIMP_TAC std_ss [bagTheory.BAG_MERGE_EQNS]
+SIMP_TAC std_ss [asl_true_def, UNIV_DEF]
+asl_true_def
+REWRITE_TAC[]
+
 SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC
 SMALLFOOT_NO_CASE_SPLIT_STEP_TAC
 SMALLFOOT_NO_CASE_SPLIT_MINI_STEP_TAC
 SMALLFOOT_PROP_IMPLIES___EQ_CASE_SPLIT_TAC
 SMALLFOOT_STEP_TAC
-....
 
+....
+SMALLFOOT_CLEAN_TAC
 REPEAT STRIP_TAC THEN
 SMALLFOOT_STEP_TAC
 
@@ -392,8 +419,7 @@ REPEAT STRIP_TAC THENL [
 
    (*enqueue need as little help*)
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-   SMALLFOOT_CLEAN_TAC THEN
-   Q.EXISTS_TAC `r_const` THEN
+   QUANT_TAC [("b'", `r_const`,[])] THEN
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC,
 
    (*works fine*)
@@ -401,6 +427,7 @@ REPEAT STRIP_TAC THENL [
 
    (*works as well, but needs a case split*)
    SMALLFOOT_SOLVE_TAC
+
 ]);
 
 
@@ -421,13 +448,11 @@ val thm = smallfoot_verbose_prove( file,
 
 (*Handle procedures separately*)
 REPEAT STRIP_TAC THENL [
-   (*push works fine*)
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC,
 
    (*enqueue need as little help*)
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-   SMALLFOOT_CLEAN_TAC THEN
-   Q.EXISTS_TAC `r_const` THEN
+   QUANT_TAC [("b'", `r_const`, [])] THEN
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC,
 
    (*works fine*)
@@ -437,6 +462,8 @@ REPEAT STRIP_TAC THENL [
    SMALLFOOT_SOLVE_TAC
 ]);
 
+
+    
 
 
 
@@ -449,7 +476,7 @@ print_file file
 val t = parse_smallfoot_file file
 smallfoot_set_goal file;
 
-set_goal ([], t)
+set_goal ([], t);
 SMALLFOOT_SPECIFICATION_TAC
 (*or*)
 
@@ -457,23 +484,19 @@ val thm = smallfoot_verbose_prove( file,
 
 (*Handle procedures separately*)
 REPEAT STRIP_TAC THENL [
-   (*push works fine*)
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-   REPEAT STRIP_TAC THEN
-   Q.EXISTS_TAC `idata_hd::pdata` THEN
-   Q.EXISTS_TAC `idata_tl` THEN
-   ASM_SIMP_TAC list_ss [APPEND_ASSOC_CONS] THEN
+   QUANT_TAC [("pdata'", `idata_h::pdata`, []),
+	      ("idata'", `idata_t`, [])] THEN
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC,
 
 
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-   REPEAT STRIP_TAC THEN
-   Q.EXISTS_TAC `data` THEN
-   REPEAT STRIP_TAC THEN
-   Q.EXISTS_TAC `[]` THEN
-   Q.EXISTS_TAC `data` THEN
+   QUANT_TAC [("data'", `data`, []),
+	      ("pdata", `[]`, []),
+              ("idata", `data`, [])] THEN
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC
 ]);
+
 
 
 
@@ -487,6 +510,7 @@ print_file file
 parse_smallfoot_file file
 smallfoot_set_goal file;
 
+SMALLFOOT_SPECIFICATION_TAC
 
 
 
@@ -500,18 +524,16 @@ REPEAT STRIP_TAC THENL [
    CONJ_TAC THEN1 (
       (*case q = NULL*)
       SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-      REPEAT STRIP_TAC THEN
-      Q.EXISTS_TAC `pdata` THEN
-      ASM_SIMP_TAC list_ss [PERM_REFL] THEN
+      QUANT_TAC [("rdata", `pdata`, [])] THEN
+      SIMP_TAC list_ss [PERM_REFL] THEN
       SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC
    ) THEN
    SMALLFOOT_STEP_TAC THEN
    CONJ_TAC THEN1 (
       (*case p = NULL*)
       SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-      REPEAT STRIP_TAC THEN
-      Q.EXISTS_TAC `qdata` THEN
-      ASM_SIMP_TAC list_ss [PERM_REFL] THEN
+      QUANT_TAC [("rdata", `qdata`, [])] THEN
+      SIMP_TAC list_ss [PERM_REFL] THEN
       SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC
    ) THEN
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
@@ -523,10 +545,10 @@ REPEAT STRIP_TAC THENL [
 	qdata' := tl qdata 
         To prove the precondition of merge,
         one needs to infer that qdata' is sorted*)   	   
-      Q.EXISTS_TAC `pdata` THEN
-      Q.EXISTS_TAC `qdata_tl` THEN
-      `SORTED $<= (qdata_tl:num list)` by ALL_TAC THEN1 (
-         Cases_on `qdata_tl` THEN
+      QUANT_TAC [("pdata'", `pdata_h::pdata_t`, []),
+		 ("qdata'", `qdata_t`, [])] THEN
+      `SORTED $<= (qdata_t:num list)` by ALL_TAC THEN1 (
+         Cases_on `qdata_t` THEN
 	 FULL_SIMP_TAC std_ss [SORTED_DEF]
       ) THEN
       ASM_SIMP_TAC list_ss [] THEN
@@ -540,11 +562,11 @@ REPEAT STRIP_TAC THENL [
         data is the sorted content of pdata and qdata_tl.
         We then need to show that qdata_hd :: rdata is 
 	sorted and contains the same elements as pdata, qdata.*)				     
-      Q.EXISTS_TAC `qdata_hd::rdata` THEN
+      Q.EXISTS_TAC `qdata_h::rdata` THEN
       ASM_SIMP_TAC list_ss [] THEN
-      Tactical.REVERSE (`SORTED $<= (qdata_hd::rdata) /\
-           PERM (pdata_hd::(pdata_tl ++ qdata_hd::qdata_tl))
-             (qdata_hd::rdata)` by ALL_TAC) THEN1 (
+      Tactical.REVERSE (`SORTED $<= (qdata_h::rdata) /\
+           PERM (pdata_h::(pdata_t ++ qdata_h::qdata_t))
+             (qdata_h::rdata)` by ALL_TAC) THEN1 (
          ASM_SIMP_TAC std_ss [] THEN
          SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC
       ) THEN
@@ -552,25 +574,24 @@ REPEAT STRIP_TAC THENL [
          `transitive (($<=):num -> num -> bool)` by ALL_TAC THEN1 (
 	    SIMP_TAC arith_ss [transitive_def]
          ) THEN
-	 Q.PAT_ASSUM `qdata = X` ASSUME_TAC THEN
          FULL_SIMP_TAC list_ss [SORTED_EQ] THEN
 	 REPEAT STRIP_TAC THEN
-         `MEM y (pdata_hd::(pdata_tl ++ qdata_tl))` by METIS_TAC[PERM_MEM_EQ] THEN
+         `MEM y (pdata_h::(pdata_t ++ qdata_t))` by METIS_TAC[PERM_MEM_EQ] THEN
 	 POP_ASSUM MP_TAC THEN
 	 ASM_SIMP_TAC list_ss [DISJ_IMP_THM] THEN
 	 REPEAT STRIP_TAC THEN
-	 `pdata_hd <= y` by RES_TAC THEN
+	 `pdata_h <= y` by RES_TAC THEN
          DECIDE_TAC,
 
 
          Q.PAT_ASSUM `PERM X rdata` MP_TAC THEN
          REPEAT (POP_ASSUM (K ALL_TAC)) THEN
-	 Tactical.REVERSE (`PERM (pdata_hd::(pdata_tl ++ qdata_hd::qdata_tl)) 
-                                 (qdata_hd::pdata_hd::(pdata_tl ++ qdata_tl))` by ALL_TAC) THEN1 (
+	 Tactical.REVERSE (`PERM (pdata_h::(pdata_t ++ qdata_h::qdata_t)) 
+                                 (qdata_h::pdata_h::(pdata_t ++ qdata_t))` by ALL_TAC) THEN1 (
             PROVE_TAC[PERM_TRANS, PERM_MONO]
          ) THEN
-	 Tactical.REVERSE (`PERM (pdata_tl ++ qdata_hd::qdata_tl) 
-                                 (qdata_hd::(pdata_tl ++ qdata_tl))` by ALL_TAC) THEN1 (
+	 Tactical.REVERSE (`PERM (pdata_t ++ qdata_h::qdata_t) 
+                                 (qdata_h::(pdata_t ++ qdata_t))` by ALL_TAC) THEN1 (
             PROVE_TAC[PERM_TRANS, PERM_MONO, PERM_SWAP_AT_FRONT,  PERM_REFL]
          ) THEN
          PROVE_TAC[CONS_PERM, PERM_REFL, PERM_SYM]
@@ -588,10 +609,10 @@ REPEAT STRIP_TAC THENL [
 	qdata' := qdata 
         To prove the precondition of merge,
         one needs to infer that pdata' is sorted*)   	   
-      Q.EXISTS_TAC `pdata_tl` THEN
-      Q.EXISTS_TAC `qdata` THEN
-      `SORTED $<= (pdata_tl:num list)` by ALL_TAC THEN1 (
-         Cases_on `pdata_tl` THEN
+      QUANT_TAC [("pdata'", `pdata_t`, []),
+                 ("qdata'", `qdata_h::qdata_t`, [])] THEN
+      `SORTED $<= (pdata_t:num list)` by ALL_TAC THEN1 (
+         Cases_on `pdata_t` THEN
 	 FULL_SIMP_TAC std_ss [SORTED_DEF]
       ) THEN
       ASM_SIMP_TAC list_ss [] THEN
@@ -605,11 +626,11 @@ REPEAT STRIP_TAC THENL [
         data is the sorted content of pdata_tl and qdata.
         We then need to show that pdata_hd :: rdata is 
 	sorted and contains the same elements as pdata, qdata.*)				     
-      Q.EXISTS_TAC `pdata_hd::rdata` THEN
+      Q.EXISTS_TAC `pdata_h::rdata` THEN
       ASM_SIMP_TAC list_ss [] THEN
-      Tactical.REVERSE (`SORTED $<= (pdata_hd::rdata) /\
-           PERM (pdata_hd::(pdata_tl ++ qdata_hd::qdata_tl))
-             (pdata_hd::rdata)` by ALL_TAC) THEN1 (
+      Tactical.REVERSE (`SORTED $<= (pdata_h::rdata) /\
+           PERM (pdata_h::(pdata_t ++ qdata_h::qdata_t))
+             (pdata_h::rdata)` by ALL_TAC) THEN1 (
          ASM_SIMP_TAC std_ss [] THEN
          SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC
       ) THEN
@@ -617,14 +638,13 @@ REPEAT STRIP_TAC THENL [
          `transitive (($<=):num -> num -> bool)` by ALL_TAC THEN1 (
 	    SIMP_TAC arith_ss [transitive_def]
          ) THEN
-	 Q.PAT_ASSUM `qdata = X` ASSUME_TAC THEN
          FULL_SIMP_TAC list_ss [SORTED_EQ] THEN
 	 REPEAT STRIP_TAC THEN
-         `MEM y (pdata_tl ++ qdata_hd::qdata_tl)` by METIS_TAC[PERM_MEM_EQ] THEN
+         `MEM y (pdata_t ++ qdata_h::qdata_t)` by METIS_TAC[PERM_MEM_EQ] THEN
 	 POP_ASSUM MP_TAC THEN
 	 ASM_SIMP_TAC list_ss [DISJ_IMP_THM] THEN
 	 REPEAT STRIP_TAC THEN
-	 `qdata_hd <= y` by RES_TAC THEN
+	 `qdata_h <= y` by RES_TAC THEN
          DECIDE_TAC,
 
 
@@ -642,10 +662,9 @@ REPEAT STRIP_TAC THENL [
    CONJ_TAC THEN1 (
       (*case p = NULL, both lists _pdata, _rdata are empty*)
       SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-      REPEAT STRIP_TAC THEN
-      Q.EXISTS_TAC `[]` THEN
-      Q.EXISTS_TAC `[]` THEN
-      ASM_SIMP_TAC list_ss [PERM_REFL] THEN
+      QUANT_TAC [("rdata", `[]`, []),
+                 ("pdata", `[]`, [])] THEN
+      SIMP_TAC list_ss [PERM_REFL] THEN
       SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC
    ) THEN
    SMALLFOOT_STEP_TAC THEN
@@ -655,35 +674,31 @@ REPEAT STRIP_TAC THENL [
       (*case t1 = NULL, this means a single element 
         and everything goes to _pdata*)
       SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-      REPEAT STRIP_TAC THEN
-      Q.PAT_ASSUM `data = X` ASSUME_TAC THEN
-      Q.EXISTS_TAC `[]` THEN
-      Q.EXISTS_TAC `data` THEN
-      ASM_SIMP_TAC list_ss [PERM_REFL] THEN
+      QUANT_TAC [("rdata", `[]`, []),
+                 ("pdata", `[data_h]`, [])] THEN
+      SIMP_TAC list_ss [PERM_REFL] THEN
       SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC
    ) THEN
 
    (* there are at least two elements *)
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-   REPEAT STRIP_TAC THEN
    (*the data for the recursive call is the
      original data without the first two entries*)
-   Q.EXISTS_TAC `data_tl_tl` THEN
+   QUANT_TAC [("data'", `data_t_t`,[])] THEN
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
    SMALLFOOT_CLEAN_TAC THEN
-   REPEAT STRIP_TAC THEN
 
    (*the resulting values for _pdata, _rdata in
      the postcondition are the ones returned by
      the recursive call with the two first
      elements added again. It remains to be shown
      that is really a permutation of the orginal data*)
-   Q.EXISTS_TAC `data_tl_hd::rdata` THEN
-   Q.EXISTS_TAC `data_hd::pdata` THEN
+   Q.EXISTS_TAC `data_t_h::rdata` THEN
+   Q.EXISTS_TAC `data_h::pdata` THEN
 
    Tactical.REVERSE (
-      `PERM (data_hd::(pdata ++ data_tl_hd::rdata))
-            (data_hd::data_tl_hd::data_tl_tl)` by ALL_TAC) THEN1 (
+      `PERM (data_h::(pdata ++ data_t_h::rdata))
+            (data_h::data_t_h::data_t_t)` by ALL_TAC) THEN1 (
       ASM_SIMP_TAC list_ss [] THEN
      SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC
    ) THEN
@@ -701,49 +716,40 @@ REPEAT STRIP_TAC THENL [
    CONJ_TAC THEN1 (
       (*case p = NULL*)
       SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-      REPEAT STRIP_TAC THEN
       (*if the input is empty, then _rdata is empty as well*)
-      Q.EXISTS_TAC `[]` THEN
+      QUANT_TAC [("rdata", `[]`, [])] THEN
       ASM_SIMP_TAC std_ss [PERM_REFL, SORTED_DEF] THEN
       SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC
    ) THEN
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-   REPEAT STRIP_TAC THEN
+
    (*call of split, data passed is the original one*)
-   Q.EXISTS_TAC `data` THEN
+   QUANT_TAC [("data'", `data`, [])] THEN
 
 
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-   SMALLFOOT_CLEAN_TAC THEN
-   REPEAT STRIP_TAC THEN
    (*first call to mergesort, data is the one 
      returned by split and stored in q*)
-   Q.EXISTS_TAC `rdata` THEN
+   QUANT_TAC [("data'", `rdata`, [])] THEN
 
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-   SMALLFOOT_CLEAN_TAC THEN
-   REPEAT STRIP_TAC THEN
    (*second call to mergesort, data is the one 
      returned by split and stored in p*)
-   Q.EXISTS_TAC `pdata` THEN
+   QUANT_TAC [("data'", `pdata`, [])] THEN
 
 
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
-   SMALLFOOT_CLEAN_TAC THEN
-   REPEAT STRIP_TAC THEN
    (*call to mergesort, data is the sorted data from
      before. Notice that it is sorted*)
-   Q.EXISTS_TAC `rdata''` THEN
-   Q.EXISTS_TAC `rdata'` THEN
-   ASM_SIMP_TAC std_ss [] THEN
-
+   QUANT_TAC [("pdata", `rdata''`, []),
+	      ("qdata", `rdata'`, [])] THEN
 
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC THEN
    SMALLFOOT_CLEAN_TAC THEN
-   REPEAT STRIP_TAC THEN
+
    (*show that the postcondition holds.
      the data there is the one returned by merge*)
-   Q.EXISTS_TAC `rdata'''` THEN
+   QUANT_TAC [("rdata'", `rdata'''`, [])] THEN
 
    `PERM data rdata'''` by ALL_TAC THEN1 (
       REPEAT (Q.PAT_ASSUM `PERM X Y` MP_TAC) THEN
@@ -763,15 +769,4 @@ REPEAT STRIP_TAC THENL [
 
 
 
-
-SMALLFOOT_SPECIFICATION_TAC
-
-SMALLFOOT_STEP_TAC THEN
-SMALLFOOT_MINI_STEP_TAC THEN
-REPEAT STRIP_TAC THEN
-
-use_smallfoot_pretty_printer := true
-SMALLFOOT_SOLVE_TAC THEN
-CONJ_TAC
-rotate 1
 

@@ -7796,13 +7796,14 @@ val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_prog_with_resource___res_decls_renv 
 
  FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,SMALLFOOT_res_decls_renv res_decls) penv 
       (smallfoot_prog_with_resource r c prog) 
-      (smallfoot_prog_block
+      (fasl_prog_block
          [smallfoot_prog_aquire_resource_input c (LIST_TO_SET wpL) P;
           prog;
           smallfoot_prog_release_resource_input (LIST_TO_SET wpL) P])``,
 
 
 REPEAT STRIP_TAC THEN
+REWRITE_TAC [GSYM smallfoot_prog_block_def] THEN
 MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___smallfoot_prog_with_resource THEN
 MATCH_MP_TAC SMALLFOOT_res_decls_renv_MEM_REWRITES THEN
 ASM_REWRITE_TAC[]);
