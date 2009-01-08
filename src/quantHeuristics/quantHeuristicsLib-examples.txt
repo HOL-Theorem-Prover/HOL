@@ -64,16 +64,6 @@ set_trace "QUANT_INSTANTIATE_HEURISTIC" 1
 (*show theorems in guesses*)
 set_trace "QUANT_INSTANTIATE_HEURISTIC" 2
 
-(*show untrusted guesses as well. These are guesses that
-  got discarded during recursive calls. However they might
-  be interesting for debugging. The derived rewrite theorems
-  in these guesses are used to clean up the result at the end.
-  Moreover, this trace level shows really all guesses. The previous
-  trace levels ignore guesses that can automatically be decuced 
-  from the others.
-*)
-set_trace "QUANT_INSTANTIATE_HEURISTIC" 3
-
 
 val thm = PURE_QUANT_INSTANTIATE_CONV t
 
@@ -140,7 +130,9 @@ val thm = PURE_QUANT_INSTANTIATE_CONV t
 
 val t = ``!x. ~(x = 0) ==> P x``
 (*Result !x_n. P (SUC x_n) *)
+
 val thm = QUANT_INSTANTIATE_CONV t
+
 
 (*To come up with this result, the case-theorem form TypeBase has been
   used. It states that if an number is not zero, it's the successor of
@@ -208,9 +200,6 @@ val t = ``!x. x = 0``
 val t = ``?x. ~(x = SUC n)``
 val t = ``?x. ((x = SUC n) /\ Q x n) ==> P x``
 
-val thm = QUANT_INSTANTIATE_CONV t 
-
-
 
 (*However, for arbitrary numbers that is not possible yet
   (hopefully, perhaps it got added meanwhile). At least
@@ -236,11 +225,12 @@ val SIMPLE_SET_CASES = prove (
 PROVE_TAC[pred_setTheory.SET_CASES]);
 
 
-val t = ``!s. ~(s = {}) ==> (CARD s > 0)``
+val t = ``!s. ~(s = {}) ==> (CARD s > 0)``;
 
-val thm = PURE_QUANT_INSTANTIATE_CONV t 
+(*raises unchanged*)
+val thm = PURE_QUANT_INSTANTIATE_CONV t;
 
-(*The extended one is able to reduce it to true, by knowing that ~(SUC n = n) holds*)
+(*The extended one is able to reduce it*)
 val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],[SIMPLE_SET_CASES],[],[],[]) t 
 
 
@@ -251,14 +241,14 @@ val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],[SIMPLE_SET_CASES],[],[
 *)
 
 
-val t = ``!x. IS_SOME x ==> P x``
+val t = ``!x. IS_SOME x ==> P x``;
 
 (*raises unchanged*)
-val thm = PURE_QUANT_INSTANTIATE_CONV t 
+val thm = PURE_QUANT_INSTANTIATE_CONV t;
 
 	  
 val IS_SOME_EXPAND = prove (``IS_SOME x = ?x'. x = SOME x'``,
-			      Cases_on `x` THEN SIMP_TAC std_ss [])
+			      Cases_on `x` THEN SIMP_TAC std_ss []);
 
 val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],
           [], [IS_SOME_EXPAND], [],[]) t;
@@ -282,6 +272,7 @@ set_trace "QUANT_INSTANTIATE_HEURISTIC" 1;
 val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],
           [],[],[REWR_CONV IS_SOME_EXPAND], []) t;
 
+    
   
 val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],
           [],[],[REWRITE_CONV [IS_SOME_EXPAND]], []) t;
@@ -748,5 +739,21 @@ val ref_stuff_again = quant_heuristic___get_combine_argument ()
 
 
 
+
+
+
+(*A combination of quantHeuristics with consequence Conversions
+  leads to an extended version of EXISTS_TAC. This version
+  can instantiate quantifiers that occur as subterms. As a result,
+  existential quantifiers can be instantiated, if they occur under even
+  negation level and universal ones under odd. Moreover, it is possible
+  to keep free variables in the instantiations.*)
+
+set_goal ([], ``!x:num. (!z:num. P x z) ==> ?a:num b:num. Q a b z``)
+(*Result      ``!x    . (        P x 0) ==> ?      b a'. Q (SUC a') b z``*)
+  
+
+e (QUANT_TAC [("z", `0`, []),
+	   ("a", `SUC a'`, [`a'`])]);
 
 
