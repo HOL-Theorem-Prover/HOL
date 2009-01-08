@@ -7,7 +7,7 @@ open HolKernel Parse boolLib bossLib;
 (*
 quietdec := true;
 loadPath := 
-            (concat Globals.HOLDIR "/examples/decidable_separationLogic/src") :: 
+            (concat [Globals.HOLDIR, "/examples/decidable_separationLogic/src"]) :: 
             !loadPath;
 
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",

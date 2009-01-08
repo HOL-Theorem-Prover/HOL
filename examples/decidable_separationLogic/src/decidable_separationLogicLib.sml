@@ -17,7 +17,7 @@ show_assums := true;
 
 open finite_mapTheory relationTheory pred_setTheory congLib sortingTheory
    listTheory rich_listTheory decidable_separationLogicTheory listLib
-   decidable_separationLogicLibTheory;
+   decidable_separationLogicLibTheory listSyntax;
 
 
 (*
@@ -86,9 +86,9 @@ val dse_nil_term = ``dse_nil``;
 ************************************************************)
 local
    fun strip_cons_int l t =
-      if not (listLib.is_cons t) then (l, t) else
+      if not (listSyntax.is_cons t) then (l, t) else
       let
-         val (e, t') = listLib.dest_cons t
+         val (e, t') = listSyntax.dest_cons t
       in
          strip_cons_int (l@[e]) t'
       end
@@ -98,7 +98,7 @@ end;
 
 fun list_mk_cons [] b  = b |
       list_mk_cons (t::tL) b  = 
-      mk_cons (t, list_mk_cons tL b)
+      listSyntax.mk_cons (t, list_mk_cons tL b);
 
 
 fun dest_LIST_DS_ENTAILS t =
@@ -1022,6 +1022,8 @@ val frame_cs = reduceLib.num_compset ();
 val _ = listSimps.list_rws frame_cs;
 val _ = computeLib.add_thms [SWAP_REWRITES, pairTheory.FST, listTheory.ALL_DISTINCT] frame_cs;
 val _ = computeLib.add_conv (``$=``, 2, stringLib.string_EQ_CONV) frame_cs;
+val _ = computeLib.add_conv (``$=``, 2, stringLib.char_EQ_CONV) frame_cs;
+
 
 
 fun ds_inference_FRAME___SINGLE_CONV___sf_points_to (n1, sf1, n2, sf2) t =
@@ -1037,6 +1039,7 @@ fun ds_inference_FRAME___SINGLE_CONV___sf_points_to (n1, sf1, n2, sf2) t =
    in
       thm2
    end;
+
 
 fun ds_inference_FRAME___CONV___sf_points_to t =
    let
@@ -1532,6 +1535,7 @@ val unroll_cs = reduceLib.num_compset ();
 val _ = listSimps.list_rws unroll_cs;
 val _ = computeLib.add_thms [SWAP_REWRITES, pairTheory.FST, listTheory.ALL_DISTINCT] unroll_cs;
 val _ = computeLib.add_conv (``$=``, 2, stringLib.string_EQ_CONV) unroll_cs;
+val _ = computeLib.add_conv (``$=``, 2, stringLib.char_EQ_CONV) unroll_cs;
 
 
 
@@ -1689,6 +1693,7 @@ val t = ``LIST_DS_ENTAILS (c1,c2) ([pf_unequal e1 e2],[sf1;sf3;sf_ls "f" e1 e2;s
 val t = ``LIST_DS_ENTAILS (c1,c2) ([pf2;pf_unequal e2 e1],[sf1;sf3;sf_ls "f" e1 e2;sf2]) ([],[])``
 
 *)
+
 
 fun prove_infinite_univ_ante thm = 
    let

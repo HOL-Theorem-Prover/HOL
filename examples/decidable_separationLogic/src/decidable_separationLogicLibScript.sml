@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib;
 (*
 quietdec := true;
 loadPath := 
-            (concat Globals.HOLDIR "/examples/decidable_separationLogic/src") :: 
+            (concat [Globals.HOLDIR, "/examples/decidable_separationLogic/src"]) :: 
             !loadPath;
 
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
@@ -12,7 +12,7 @@ show_assums := true;
 *)
 
 open finite_mapTheory relationTheory pred_setTheory congLib sortingTheory
-   listTheory rich_listTheory decidable_separationLogicTheory listLib;
+   listTheory rich_listTheory decidable_separationLogicTheory listLib stringTheory;
 
 
 (*
@@ -20,6 +20,15 @@ quietdec := false;
 *)
 
 val _ = new_theory "decidable_separationLogicLib";
+
+
+val nchotomy_thm = prove (``!x.
+      (x = sf_emp) \/ (?d l. x = sf_points_to d l) \/
+      (?l d d0. x = sf_tree l d d0) \/ ?d d0. x = sf_star d d0``, 
+                        REWRITE_TAC [TypeBase.nchotomy_of ``:('a,'b,'c) ds_spatial_formula``]);
+
+val _ = TypeBase.write [TypeBasePure.put_nchotomy nchotomy_thm (valOf (TypeBase.fetch ``:('a,'b,'c) ds_spatial_formula``))];
+
 
 
 val INFINITE_UNIV___NUM = store_thm ("INFINITE_UNIV___NUM",
@@ -39,9 +48,9 @@ val INFINITE_UNIV___STRING = store_thm ("INFINITE_UNIV___STRING",
 
 SIMP_TAC std_ss [INFINITE_UNIV] THEN
 Q.EXISTS_TAC `STRING c` THEN
-SIMP_TAC std_ss [stringTheory.string_11] THEN
+SIMP_TAC list_ss [] THEN
 Q.EXISTS_TAC `""` THEN
-SIMP_TAC std_ss [stringTheory.string_distinct]);
+SIMP_TAC list_ss []);
 
 
 
