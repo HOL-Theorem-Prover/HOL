@@ -76,7 +76,7 @@ fun GEN_ASSUM v thm =
 
 
 (*Introduces allquantification for all free variables*)
-fun (SPEC_ALL_TAC:tactic) (asm,t) =
+val SPEC_ALL_TAC:tactic = fn (asm,t) =>
 let
    val asm_vars = FVL asm empty_tmset;
    val t_vars = FVL [t] empty_tmset;

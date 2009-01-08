@@ -2513,7 +2513,7 @@ val (asm,t) = top_goal();
 *)
 
 
-fun (DISCH_ASM_CONV_TAC:conv -> tactic) conv (asm,t) =
+val DISCH_ASM_CONV_TAC:(conv -> tactic) = fn conv => fn (asm,t) =>
 let
    val label = "QUANT_INSTANTIATE_HEURISTIC___ASM_CONV_TAC___BODY";
    val mt = markerSyntax.mk_label (label, t);
