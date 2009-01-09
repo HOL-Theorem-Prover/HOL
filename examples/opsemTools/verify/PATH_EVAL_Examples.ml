@@ -309,18 +309,18 @@ val MultProg =
 (* Procedure using MultProc *)
 val MultProc_def = 
  Define
- `MultProc clock m n res =
+ `MultProc m n res =
     Locals ["m";"n"] 
      ("m" ::= V m;; 
       "n" ::= V n;; 
-      Proc (RUN clock ^MultProg);;
+      Proc (EVAL_FUN ^MultProg);;
       res ::= V"Result")`;;
 
 (* Proc defined directly *)
 val MultFunProc_def = 
  Define
  `MultFunProc m n res =
-   Proc (\s. RESULT(s |+ (res, Scalar(ScalarOf(s ' m) * ScalarOf(s ' n)))))`;
+   Proc (\s. s |+ (res, Scalar(ScalarOf(s ' m) * ScalarOf(s ' n))))`;
 
 (* Factorial on n using primitive multiplication *)
 val FactProg1 =
@@ -338,11 +338,11 @@ val FactProg2 =
     ("result" ::= C 1;;
      "count"  ::= C 1;;
      While (V"count" <= V"n")
-      (MultProc 1000 "result" "count" "result" ;;
+      (MultProc "result" "count" "result" ;;
        "count" ::= V"count" + C 1)   ;;
      "Result" ::= V"result")``;
 
-(* Factorial using MultProc for multiplication *)
+(* Factorial using MultFunProc for multiplication *)
 val FactProg3 =
  ``Locals ["result"; "count"]
     ("result" ::= C 1;;
@@ -354,14 +354,20 @@ val FactProg3 =
 
 (* Test examples *)
 
-val RUN100_FactProg1_4 = time EVAL ``RUN 100 ^FactProg1 (FEMPTY |+ ("n",Scalar 4))``;
-val RUN100_FactProg1_6 = time EVAL ``RUN 100 ^FactProg1 (FEMPTY |+ ("n",Scalar 6))``;
+val EVAL_FactProg1_4 = time EVAL ``EVAL_FUN ^FactProg1 (FEMPTY |+ ("n",Scalar 4))``;
+val EVAL_FactProg1_6 = time EVAL ``EVAL_FUN ^FactProg1 (FEMPTY |+ ("n",Scalar 6))``;
 
-val RUN100_FactProg2_4 = time EVAL ``RUN 100 ^FactProg2 (FEMPTY |+ ("n",Scalar 4))``;
-val RUN100_FactProg2_6 = time EVAL ``RUN 100 ^FactProg2 (FEMPTY |+ ("n",Scalar 6))``;
+val EVAL_FactProg2_4 = time EVAL ``EVAL_FUN ^FactProg2 (FEMPTY |+ ("n",Scalar 4))``;
+val EVAL_FactProg2_6 = time EVAL ``EVAL_FUN ^FactProg2 (FEMPTY |+ ("n",Scalar 6))``;
 
-val RUN100_FactProg3_4 = time EVAL ``RUN 100 ^FactProg3 (FEMPTY |+ ("n",Scalar 4))``;
-val RUN100_FactProg3_6 = time EVAL ``RUN 100 ^FactProg3 (FEMPTY |+ ("n",Scalar 6))``;
+val EVAL_FactProg3_4 = time EVAL ``EVAL_FUN ^FactProg3 (FEMPTY |+ ("n",Scalar 4))``;
+val EVAL_FactProg3_6 = time EVAL ``EVAL_FUN ^FactProg3 (FEMPTY |+ ("n",Scalar 6))``;
 
 
 
+(*
+Would like to prove:
+
+ |- EVAL MultProg s1 s2 = 
+     (s2 = (s1 |+ (res, Scalar(ScalarOf(s1 ' m) * ScalarOf(s1 ' n)))))
+*)

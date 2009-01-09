@@ -12,7 +12,7 @@ The extensions are:
      - blocks with local variables (Local v c)
      - deallocation (Dispose s)
      - arrays
-     - procedures (Proc f) where f : state -> outcome
+     - procedures (Proc f) where f : state -> state
 
  2. A small-step semantics proved equivalent to the original big-step
     semantics and a function, STEP, to run the small-step semantics

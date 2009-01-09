@@ -27,7 +27,7 @@ quietdec := true; (* turn off printing *)
 app load ["stringLib", "finite_mapTheory", "intLib", "pred_setTheory"];
 open HolKernel Parse boolLib bossLib 
      stringLib IndDefLib IndDefRules finite_mapTheory relationTheory
-     pred_setTheory;
+     pred_setTheory whileTheory;
 intLib.deprecate_int();
 clear_overloads_on "TC"; (* Stop TC R printing as TC^+ *)
 quietdec := false; (* turn printing back on *)
@@ -35,7 +35,7 @@ quietdec := false; (* turn printing back on *)
 
 open HolKernel Parse boolLib bossLib 
      stringLib IndDefLib IndDefRules finite_mapTheory relationTheory
-     pred_setTheory;
+     pred_setTheory whileTheory;
 
 val _ = intLib.deprecate_int();
 val _ = clear_overloads_on "TC"; (* Stop TC R printing as TC^+ *)
@@ -52,7 +52,8 @@ val _ = computeLib.add_persistent_funs
           ("pred_setTheory.IN_INSERT",pred_setTheory.IN_INSERT),
           ("pred_setTheory.IN_UNION",pred_setTheory.IN_UNION),
           ("pred_setTheory.NOT_IN_EMPTY",pred_setTheory.NOT_IN_EMPTY),
-          ("integerTheory.NUM_OF_INT", integerTheory.NUM_OF_INT)
+          ("integerTheory.NUM_OF_INT", integerTheory.NUM_OF_INT),
+          ("whileTheory.WHILE", whileTheory.WHILE)
          ];
 
 (* make infix ``$/`` equal to ``$DIV`` *)
@@ -175,20 +176,6 @@ val Update_Exp =
    Cases_on `val`
     THEN RW_TAC std_ss [Update_def,Exp_def,aeval_def,neval_def]);
 
-(*===========================================================================*)
-(* Type of outputs of executing programs (e.g. Proc bodies)                  *)
-(*===========================================================================*)
-
-val _ =
- Hol_datatype 
-  `outcome = RESULT of state | ERROR of state | TIMEOUT of state`;
-
-(* Some automatically proves theorems relating RESULT, TIMEOUT and ERROR     *)
-
-val outcome_11       = fetch "-" "outcome_11";
-val outcome_distinct = fetch "-" "outcome_distinct";
-val outcome_nchotomy = fetch "-" "outcome_nchotomy";
-
 (*---------------------------------------------------------------------------*)
 (* Datatype of programs                                                      *)
 (*---------------------------------------------------------------------------*)
@@ -202,7 +189,7 @@ val _ =
            | Cond      of bexp => program => program (* conditional          *)
            | While     of bexp => program            (* while loop           *)
            | Local     of string => program          (* local variable block *)
-           | Proc      of (state -> outcome)`;       (* procedures           *)
+           | Proc      of (state -> state)`;         (* procedures           *)
 
 (* Simple variable assignment *)
 val Assign_def =
@@ -284,7 +271,8 @@ val (rules,induction,ecases) = Hol_reln
       ==> EVAL (Local v c) s1 (if v IN FDOM s1 
                                 then s2|+(v, (s1 ' v)) 
                                 else s2 \\ v))
- /\ (!s1 s2 f. (f s1 = RESULT s2) ==> EVAL (Proc f) s1 s2)`;
+ /\ (!s f. 
+      EVAL (Proc f) s (f s))`;
 
 val rulel = CONJUNCTS rules;
 
@@ -401,7 +389,7 @@ val LOCAL_THM = store_thm
 
 val PROC_THM = store_thm
  ("PROC_THM",
-  ``!f s1 s2 . EVAL (Proc f) s1 s2 = (f s1 = RESULT s2)``,
+  ``!f s1 s2 . EVAL (Proc f) s1 s2 = (s2 = f s1)``,
   RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
 
 (* Semantic associativity of sequencing *)
@@ -594,10 +582,9 @@ val LOCAL_RULE = store_thm
 val PROC_RULE = store_thm
 ("PROC_RULE",
  ``!P Q f. 
-    (!s1. P s1 ==> ?s2. (f s1 = RESULT s2) /\ Q s2) ==> SPEC P (Proc f) Q``,
+    (!s. P s ==> Q(f s)) ==> SPEC P (Proc f) Q``,
  RW_TAC std_ss [SPEC_def,PROC_THM] 
-  THEN METIS_TAC [outcome_11]);
-
+  THEN METIS_TAC []);
 
 (*---------------------------------------------------------------------------*)
 (* Precondition strengthening                                                *)
@@ -695,6 +682,20 @@ val TOTAL_GEN_ASSIGN_THM = store_thm("TOTAL_GEN_ASSIGN_THM",
 
 
 (*===========================================================================*)
+(* Type of outputs of executing programs (e.g. Proc bodies)                  *)
+(*===========================================================================*)
+
+val _ =
+ Hol_datatype 
+  `outcome = RESULT of state | ERROR of state | TIMEOUT of state`;
+
+(* Some automatically proves theorems relating RESULT, TIMEOUT and ERROR     *)
+
+val outcome_11       = fetch "-" "outcome_11";
+val outcome_distinct = fetch "-" "outcome_distinct";
+val outcome_nchotomy = fetch "-" "outcome_nchotomy";
+
+(*===========================================================================*)
 (* Small-step semantics based on Collavizza et al. paper                     *)
 (*===========================================================================*)
 
@@ -733,10 +734,8 @@ val (small_rules,small_induction,small_ecases) = Hol_reln
       ~(v IN FDOM s)
       ==>
       SMALL_EVAL (Local v c :: l, s) (c :: Dispose v :: l, s))
- /\ (!s1 s2 l f. 
-      (f s1 = RESULT s2)
-      ==> 
-      SMALL_EVAL (Proc f :: l, s1) (l, s2))`;
+ /\ (!s l f. 
+      SMALL_EVAL (Proc f :: l, s) (l, f s))`;
 
 val small_rulel = CONJUNCTS small_rules;
 
@@ -853,7 +852,7 @@ val SMALL_LOCAL_THM = store_thm
 val SMALL_PROC_THM = store_thm
  ("SMALL_PROC_THM",
   ``!s1 s2 l1 l2 f. 
-     SMALL_EVAL (Proc f :: l1, s1) (l2, s2) = (f s1 = RESULT s2) /\ (l2 = l1)``,
+     SMALL_EVAL (Proc f :: l1, s1) (l2, s2) = (s2 = f s1) /\ (l2 = l1)``,
   ONCE_REWRITE_TAC[small_ecases]
    THEN SIMP_TAC (srw_ss()) []
    THEN METIS_TAC[]);
@@ -1225,7 +1224,7 @@ val RUN_def =
      || Local v c     -> if v IN FDOM s
                           then RUN n c s >>= (RESULT o (\s'. s' |+ (v, (s ' v))))
                           else RUN n c s >>= (RESULT o (\s'. s' \\ v))
-     || Proc f        -> f s
+     || Proc f        -> RESULT(f s)
    )`;
 
 (* Lemma needed for EVAL_RUN *)
@@ -1363,7 +1362,7 @@ val RUN =
          || Local v c     -> if v IN FDOM s
                               then RUN (n-1) c s >>= (RESULT o (\s'. s' |+ (v, (s ' v))))
                               else RUN (n-1) c s >>=  (RESULT o (\s'. s' \\ v))
-         || Proc f        -> f s``,
+         || Proc f        -> RESULT(f s)``,
    Cases_on `n`
     THEN RW_TAC arith_ss [RUN_def,RUN_BIND_def]);
 
@@ -1402,7 +1401,7 @@ val STEP1_def =
       then (c :: GenAssign v (Exp(s ' v)) :: l, RESULT s)
       else (c :: Dispose v :: l, RESULT s))
    /\ 
-   (STEP1 (Proc f :: l, s) = (l, f s))`;
+   (STEP1 (Proc f :: l, s) = (l, RESULT(f s)))`;
 
 (* Version needed for evaluation by EVAL *)
 val STEP1 =
@@ -1427,7 +1426,7 @@ val STEP1 =
         ||  Local v c     -> if v IN FDOM s 
                               then (c :: GenAssign v (Exp(s ' v)) :: TL l, RESULT s)
                               else (c :: Dispose v :: TL l, RESULT s)
-        ||  Proc f        -> (TL l, f s)``,
+        ||  Proc f        -> (TL l, RESULT(f s))``,
      Induct
       THEN RW_TAC list_ss [STEP1_def]
       THEN Cases_on `h`
@@ -1666,7 +1665,7 @@ val STEP =
         then STEP n (c :: GenAssign v (Exp(s ' v)) :: l, s)
         else STEP n (c :: Dispose v :: l, s))
      /\
-     (STEP (SUC n) (Proc f :: l, s) = (l, f s) >>= STEP n)``,
+     (STEP (SUC n) (Proc f :: l, s) = (l, RESULT(f s)) >>= STEP n)``,
    Induct_on `n`
     THEN RW_TAC list_ss [STEP1,STEP0,STEP_SUC,STEP_BIND_def]);
 
@@ -1891,7 +1890,7 @@ val ACC_PRED_def =
       then (\s2. v IN FDOM s2 /\ p s2) 
       else (\s2. ~(v IN FDOM s2) /\ p s2))
    /\
-   (ACC_PRED p (Proc f) s1 = \s2. (RESULT s2 = f s1) /\ p s1)`;
+   (ACC_PRED p (Proc f) s1 = \s2. (s2 = f s1) /\ p s1)`;
 
 val ACC_PRED_ASSIGN_LEMMA =
  store_thm
@@ -2071,13 +2070,11 @@ val ACC_SMALL_EVAL_CLAUSES =
         ((c :: Dispose v :: l, s1), 
          \s2. ~(v IN FDOM s2) /\ p s2))
      /\
-     (!s1 l f p s. 
-       (f s1 = RESULT s)
-       ==> 
+     (!s1 l f p. 
        ACC_SMALL_EVAL 
         ((Proc f :: l, s1), p) 
-        ((l, s), 
-         \s2. (s2 = s) /\ p s1))``,
+        ((l, f s1), 
+         \s2. (s2 = f s1) /\ p s1))``,
    RW_TAC list_ss 
     ([ACC_SMALL_EVAL,ACC_PRED_def,FUN_EQ_THM,IS_SOME_EXISTS,SMALL_PROC_THM] 
      @ small_rulel)
@@ -2665,26 +2662,50 @@ val STRAIGHT_RUN_EVAL =
 
 
 (* ============================================================================
-Implementation of functions by macro-expansion
-
- Locals [x1;x2; ... ;xn] c 
- --> 
- Local x1 (local x2 ... (local xn c) ...)
-
- Disposals [x1;x2; ... ;xn]
- -->
- (Dispose x1 ;; Dispose x2 ;; ... ;; Dispose xn)
-
- Fun [x1; ... ;xn] res c 
- --> 
- \[a1;...;an].
-   Locals [x1;...;x2]
-  (x1 ::= a1 ;; ... ;; xn ::= an ;; 
-  c ;; 
-  Result ::= res ;; 
-  Disposals [x1;...;xn])
+Denotational semantics using the built-in WHILE function for While
 ============================================================================ *)
 
+val EVAL_FUN_def = 
+ Define
+  `(EVAL_FUN Skip s = s)
+   /\ 
+   (EVAL_FUN (GenAssign v e) s = Update v e s)
+   /\ 
+   (EVAL_FUN (Dispose v) s = s \\ v)
+   /\ 
+   (EVAL_FUN (Seq c1 c2) s = EVAL_FUN c2 (EVAL_FUN c1 s))
+   /\ 
+   (EVAL_FUN (Cond b c1 c2) s = 
+     if beval b s then EVAL_FUN c1 s else EVAL_FUN c2 s)
+   /\ 
+   (EVAL_FUN (While b c) s  = WHILE (beval b) (EVAL_FUN c) s)
+   /\ 
+   (EVAL_FUN (Local v c) s =
+     if v IN FDOM s 
+      then EVAL_FUN c s |+ (v, (s ' v)) 
+      else EVAL_FUN c s \\ v)
+   /\ 
+   (EVAL_FUN (Proc f) s = f s)`;
+
+val EVAL_IMP_EVAL_FUN_LEMMA =
+ prove
+  (``!c s1 s2.
+     EVAL c s1 s2 
+     ==> 
+     (\c s1 s2. EVAL_FUN c s1 = s2) c s1 s2``,
+   IndDefRules.RULE_TAC
+    (IndDefRules.derive_mono_strong_induction [] (rules,induction))
+    THEN RW_TAC std_ss [EVAL_FUN_def]
+    THEN METIS_TAC[WHILE]);
+
+val EVAL_EVAL_FUN =
+ store_thm
+  ("EVAL_EVAL_FUN",
+   ``!c s1.
+      (?s2. EVAL c s1 s2) 
+      ==>
+      !s2. EVAL c s1 s2 = (s2 = EVAL_FUN c s1)``,
+   METIS_TAC[EVAL_IMP_EVAL_FUN_LEMMA]);
 
 val _ = export_theory();
 
