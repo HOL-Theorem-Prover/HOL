@@ -1,3 +1,10 @@
+(*
+This is a collection of test examples and experiments used by Mike. It is not
+intended to be used by anyone else. It should load into an interactive
+session with the ML function "use".
+*)
+
+
 (* Stuff needed when running interactively *)
 
 quietdec := true; (* turn off printing *)
@@ -54,7 +61,7 @@ show_tags := true;
 (* Various solvers *)
 val CooperSimpSat = (SIMP_CONV (srw_ss()++COOPER_ss) [], "SIMP_CONV (srw_ss()++COOPER_ss)");
 val OmegaSimpSat  = (SIMP_CONV (srw_ss()++OMEGA_ss) [],  "SIMP_CONV (srw_ss()++OMEGA_ss)");
-val OmegaSat  = (OMEGA_CONV,  "OMEGA_CONV");
+val OmegaSat      = (OMEGA_CONV,  "OMEGA_CONV");
 
 (*
 val ilogSolv = elim_state_CONV(satSolv(extSolv "ILOG"));
@@ -136,27 +143,6 @@ val TritypeILOG_th =
     THEN CONV_TAC(EVAL THENC elim_state_CONV COOPER_CONV));
 *)
 
-(*
-fun VARS_IN_CONV t =
- let val th1 =  EVAL t
-     val th2 = EQT_INTRO(prove(rhs(concl th1), REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]));
- in
-  TRANS th1 th2
- end;
-
-fun STRAIGHT_EVAL_SYM c =
-let val l = MAKE_STATE_LIST c
-    val STRAIGHT_th = EQT_ELIM(print "\nSTRAIGHT:     "; time EVAL ``STRAIGHT ^c``)
-    val VARS_IN_th =  EQT_ELIM(print "VARS_IN:      "; time VARS_IN_CONV ``VARS_IN ^c ^l``)
-    val DISTINCT_th = EQT_ELIM(print "DISTINCT:     "; time EVAL ``DISTINCT_VARS ^l``)
-    val STRAIGHT_RUN_th = (print "STRAIGHT_RUN: "; time EVAL ``STRAIGHT_RUN ^c ^l``)
-    val STRAIGHT_RUN_EVAL_th1 = SPECL [c,l] STRAIGHT_RUN_EVAL
-    val STRAIGHT_RUN_EVAL_th2 = LIST_MP [STRAIGHT_th,VARS_IN_th,DISTINCT_th] STRAIGHT_RUN_EVAL_th1 
-in
- CONV_RULE (RAND_CONV(RAND_CONV(REWR_CONV STRAIGHT_RUN_th))) STRAIGHT_RUN_EVAL_th2
-end;
-*)
-
 val AbsMinusProg = 
  el 2 (snd(strip_comb(el 2 (snd(strip_comb(concl AbsMinusTheory.MAIN_def))))));
 
@@ -175,6 +161,7 @@ val Tritype_STRAIGHT_RUN =
 val Tritype_STRAIGHT_RUN_EVAL = 
   time STRAIGHT_EVAL_SYM TritypeProg;
 
+(*
 val GeneratedFlasherManagerProg = 
  el 2 (snd(strip_comb(el 2 (snd(strip_comb(concl GeneratedFlasherManagerTheory.MAIN_def))))));
 
@@ -192,7 +179,189 @@ val F1_STRAIGHT_RUN =
 
 val F1_STRAIGHT_RUN_EVAL = 
   time STRAIGHT_EVAL_SYM F1Prog;
+*)
 
+load "ArraySwapElementTheory";
+
+(* 
+ {i>0 /\ i<aLength /\ j>0 /\ j < aLength}
+ tmp := a[i]; a[i] := a[j]; a[j] := tmp 
+ {(a[i_] = a_[j_]) /\ (a[j_] = a_[i_]}
+*)
+val ArraySwapElementProg =
+ el 2 (snd(strip_comb(el 2 (snd(strip_comb(concl ArraySwapElementTheory.MAIN_def))))));
+
+val ArraySwapElement_STRAIGHT_RUN = 
+ time EVAL ``STRAIGHT_RUN ^ArraySwapElementProg ^(MAKE_STATE_LIST ArraySwapElementProg)``;
+
+val ArraySwapElement_STRAIGHT_RUN_EVAL = 
+  time STRAIGHT_EVAL_SYM ArraySwapElementProg;
+
+(*
+SIMP_RULE std_ss [ArraySwapElement_STRAIGHT_RUN_EVAL,RSPEC_def] ArraySwapElementTheory.MAIN_def
+*)
+
+load "PartitionTheory";
+
+val PartitionProg =
+ el 2 (snd(strip_comb(el 2 (snd(strip_comb(concl PartitionTheory.MAIN_def))))));
+
+(*
+val Partition_STRAIGHT_RUN = 
+ time EVAL ``STRAIGHT_RUN ^PartitionProg ^(MAKE_STATE_LIST PartitionProg)``;
+
+val Partition_STRAIGHT_RUN_EVAL = 
+  time STRAIGHT_EVAL_SYM PartitionProg;
+*)
+
+load "SelectionSortTheory";
+
+val SelectionSortProg =
+ el 2 (snd(strip_comb(el 2 (snd(strip_comb(concl SelectionSortTheory.MAIN_def))))));
+
+(*
+val SelectionSort_STRAIGHT_RUN = 
+ time EVAL ``STRAIGHT_RUN ^SelectionSortProg ^(MAKE_STATE_LIST SelectionSortProg)``;
+
+val SelectionSort_STRAIGHT_RUN_EVAL = 
+  time STRAIGHT_EVAL_SYM SelectionSortProg;
+*)
+
+load "BsearchTheory";
+
+val BsearchProg =
+ el 2 (snd(strip_comb(el 2 (snd(strip_comb(concl BsearchTheory.MAIN_def))))));
+
+(*
+val Bsearch_STRAIGHT_RUN = 
+ time EVAL ``STRAIGHT_RUN ^BsearchProg ^(MAKE_STATE_LIST BsearchProg)``;
+
+val Bsearch_STRAIGHT_RUN_EVAL = 
+  time STRAIGHT_EVAL_SYM BsearchProg;
+*)
+
+load "opsem_translatorLib";
+open  opsem_translatorLib;
+
+val (th,ArraySwapElement_def) = 
+ time (DERIVE_SEP_TOTAL_SPEC "ArraySwapElement") ArraySwapElementProg;
+
+val (th,Partition_def) = 
+ time (DERIVE_SEP_TOTAL_SPEC "Partition") PartitionProg;
+
+val (th,SelectionSort_def) = 
+ time (DERIVE_SEP_TOTAL_SPEC "SelectionSort") SelectionSortProg;
+
+val (th,Bsearch_def) = 
+ time (DERIVE_SEP_TOTAL_SPEC "Bsearch") BsearchProg;
+
+(*
+
+ArraySwapElement, Partition, SelectionSort, Bsearch
+
+i := 0; 
+j := 0; 
+indMin := 0; 
+aux := 0;
+WHILE i < aLength DO
+ (indMin := i; 
+  j := i+1;
+  WHILE j < aLength DO (if a[j] < a[indMin] then indMin := j else SKIP);
+  aux := a[i];
+  a[i] := a[indMin];
+  a[indMin] := aux
+  i := i+1)
+
+let i = 0 in
+let j = 0 in
+let indMin = 0 in
+let aux = 0 in
+ SelectionSort1 (aLength,aux,i,indMin,j,a)
+
+SelectionSort (aLength,aux,i,indMin,j,a) =
+ SelectionSort1 (aLength,0,0,0,0,a)
+
+SelectionSort1 (aLength,aux,i,indMin,j,a) =
+ if j < aLength
+  then let (aLength',indMin',j',a') = SelectionSort2 (aLength,i,i+1,a)
+       in (aLength',i',indMin',j',a')
+  else (aLength,aux,i,indMin,j,a)
+
+SelectionSort2 (aLength,aux,i,indMin,j,a) =
+ if 
+
+
+(SelectionSort (aLength,aux,i,indMin,j,a) = (aLength',aux',i',indMin',j',a'))
+==> !i. i >= 0 /\ i < aLength-1 ==> a' ' i <= a' ' (i+1)
+
+*)
+
+(* Code to multiply "m" and "n" and return result in "Result" *)
+val MultProg =
+ ``Locals ["result"; "count"]
+    ("result" ::= C 0;;
+     "count"  ::= C 0;;
+     While (V"count" < V"m")
+      ("result" ::= V"result" + V"n" ;;
+       "count" ::= V"count" + C 1)   ;;
+     "Result" ::= V"result")``;
+
+(* Procedure using MultProc *)
+val MultProc_def = 
+ Define
+ `MultProc clock m n res =
+    Locals ["m";"n"] 
+     ("m" ::= V m;; 
+      "n" ::= V n;; 
+      Proc (RUN clock ^MultProg);;
+      res ::= V"Result")`;;
+
+(* Proc defined directly *)
+val MultFunProc_def = 
+ Define
+ `MultFunProc m n res =
+   Proc (\s. RESULT(s |+ (res, Scalar(ScalarOf(s ' m) * ScalarOf(s ' n)))))`;
+
+(* Factorial on n using primitive multiplication *)
+val FactProg1 =
+ ``Locals ["result"; "count"]
+    ("result" ::= C 1;;
+     "count"  ::= C 1;;
+     While (V"count" <= V"n")
+      ("result" ::= V"result" * V"count" ;;
+       "count" ::= V"count" + C 1)   ;;
+     "Result" ::= V"result")``;
+
+(* Factorial using MultProc for multiplication *)
+val FactProg2 =
+ ``Locals ["result"; "count"]
+    ("result" ::= C 1;;
+     "count"  ::= C 1;;
+     While (V"count" <= V"n")
+      (MultProc 1000 "result" "count" "result" ;;
+       "count" ::= V"count" + C 1)   ;;
+     "Result" ::= V"result")``;
+
+(* Factorial using MultProc for multiplication *)
+val FactProg3 =
+ ``Locals ["result"; "count"]
+    ("result" ::= C 1;;
+     "count"  ::= C 1;;
+     While (V"count" <= V"n")
+      (MultFunProc "result" "count" "result" ;;
+       "count" ::= V"count" + C 1)   ;;
+     "Result" ::= V"result")``;
+
+(* Test examples *)
+
+val RUN100_FactProg1_4 = time EVAL ``RUN 100 ^FactProg1 (FEMPTY |+ ("n",Scalar 4))``;
+val RUN100_FactProg1_6 = time EVAL ``RUN 100 ^FactProg1 (FEMPTY |+ ("n",Scalar 6))``;
+
+val RUN100_FactProg2_4 = time EVAL ``RUN 100 ^FactProg2 (FEMPTY |+ ("n",Scalar 4))``;
+val RUN100_FactProg2_6 = time EVAL ``RUN 100 ^FactProg2 (FEMPTY |+ ("n",Scalar 6))``;
+
+val RUN100_FactProg3_4 = time EVAL ``RUN 100 ^FactProg3 (FEMPTY |+ ("n",Scalar 4))``;
+val RUN100_FactProg3_6 = time EVAL ``RUN 100 ^FactProg3 (FEMPTY |+ ("n",Scalar 6))``;
 
 
 

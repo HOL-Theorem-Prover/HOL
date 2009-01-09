@@ -337,14 +337,15 @@ fun nexp_vars nex =
                     fail())
               else ()
      val name = fst(dest_const opr)
-     val _ = if not(mem name ["Var","Const","Plus","Times","Sub"])
+     val _ = if not(mem name ["Var","Arr","Const","Plus","Times","Sub"])
               then (print name; 
                     print " is not an nexp constructor\n"; 
                     fail())
               else ()
  in
   case name of
-    "Var"      => [el 1 args]
+    "Var"      => [nex]
+  | "Arr"      => insert (rator nex) (nexp_vars(rand nex))
   | "Const"    => []
   | "Plus"     => union (nexp_vars(el 1 args)) (nexp_vars(el 2 args))
   | "Times"    => union (nexp_vars(el 1 args)) (nexp_vars(el 2 args))
@@ -387,29 +388,36 @@ fun program_vars c =
                     fail())
               else ()
      val name = fst(dest_const opr)
-     val _ = if not(mem name ["Skip","Assign","Dispose","Seq",
-                              "Cond","While","Local","Assert"])
+     val _ = if not(mem name ["Skip","Assign","ArrayAssign","Dispose",
+                              "Seq", "Cond","While","Local","Assert"])
               then (print name; 
                     print " is not a program constructor\n"; 
                     fail())
               else ()
  in
   case name of
-    "Skip"     => []
-  | "Assign"   => insert (el 1 args) (nexp_vars(el 2 args))
-  | "Dispose"  => []
-  | "Seq"      => union
-                   (program_vars(el 1 args)) 
-                   (program_vars(el 2 args))
-  | "Cond"     => union
-                   (bexp_vars(el 1 args))
-                   (union
-                     (program_vars(el 2 args))
-                     (program_vars(el 3 args)))
-  | "While"    => union (bexp_vars(el 1 args)) (program_vars(el 2 args))
-  | "Local"    => []
-  | "Assert"   => []
-  | _          => (print "BUG in program_vars! "; print name; fail())
+    "Skip"        => []
+  | "Assign"      => insert 
+                      (mk_comb(``Var``, el 1 args)) 
+                      (nexp_vars(el 2 args))
+  | "ArrayAssign" => insert 
+                      (mk_comb(``Arr``, el 1 args))
+                      (union
+                       (nexp_vars(el 2 args))
+                       (nexp_vars(el 3 args)))
+  | "Dispose"     => []
+  | "Seq"         => union
+                      (program_vars(el 1 args)) 
+                      (program_vars(el 2 args))
+  | "Cond"        => union
+                      (bexp_vars(el 1 args))
+                      (union
+                        (program_vars(el 2 args))
+                        (program_vars(el 3 args)))
+  | "While"       => union (bexp_vars(el 1 args)) (program_vars(el 2 args))
+  | "Local"       => []
+  | "Assert"      => []
+  | _             => (print "BUG in program_vars! "; print name; fail())
  end;
 
 (* 
@@ -419,9 +427,15 @@ where v1,...,vn are the variables read or written in c
 
 
 fun MAKE_STATE_LIST_FROM_VARS vars =
- let val pairs = map
-                  (fn tm => ``(^tm, Scalar ^(mk_var(fromHOLstring tm,``:int``)))``)
-                  vars
+ let val pairs = 
+      map
+       (fn tm => 
+         if aconv (rator tm) ``Var``
+          then ``(^(rand tm), Scalar ^(mk_var(fromHOLstring (rand tm),``:int``)))`` else
+         if aconv (rator tm) ``Arr``
+          then ``(^(rand tm), Array ^(mk_var(fromHOLstring (rand tm),``:(num |-> int)``)))``
+          else (print "BUG in MAKE_STATE_LIST_FROM_VARS! "; print_term tm; fail()))
+       vars
  in
   listSyntax.mk_list(pairs,``:string#value``)
  end;
