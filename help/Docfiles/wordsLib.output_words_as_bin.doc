@@ -19,6 +19,6 @@ A call to {output_words_as_bin} will make word literals output in binary format.
 
 \SEEALSO
 
-wordsLib.output_words_as, wordsLib.output_words_as_dec, wordsLib.output_words_as_oct, wordsLib.output_words_as_hex
+wordsLib.output_words_as, wordsLib.remove_word_printer, wordsLib.output_words_as_dec, wordsLib.output_words_as_oct, wordsLib.output_words_as_hex
 
 \ENDDOC

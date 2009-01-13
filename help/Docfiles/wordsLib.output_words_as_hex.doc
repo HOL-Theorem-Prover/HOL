@@ -8,7 +8,7 @@ Makes word literals pretty-print as hexadecimal.
 
 \DESCRIBE
 
-A call to {output_words_as_bin} will make word literals output in hexadecimal format.
+A call to {output_words_as_hex} will make word literals output in hexadecimal format.
 
 \EXAMPLE
 {
@@ -19,6 +19,6 @@ A call to {output_words_as_bin} will make word literals output in hexadecimal fo
 
 \SEEALSO
 
-wordsLib.output_words_as, wordsLib.output_words_as_dec, wordsLib.output_words_as_bin, wordsLib.output_words_as_oct
+wordsLib.output_words_as, wordsLib.remove_word_printer, wordsLib.output_words_as_dec, wordsLib.output_words_as_bin, wordsLib.output_words_as_oct
 
 \ENDDOC

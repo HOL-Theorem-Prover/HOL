@@ -1,30 +1,28 @@
 \DOC 
 
-\TYPE {output_words_as_dec : unit -> unit}
+\TYPE {output_words_as_gec : unit -> unit}
 
 \SYNOPSIS
 
-Turns off custom pretty-printing for word literals.
+Makes word literals pretty-print as decimal.
 
 \DESCRIBE
 
-The function {output_words_as_dec} calls {Parse.remove_user_printer} to remove pretty-printing for finite Cartesian products.  This will normally mean that words output in decimal format.
+A call to {output_words_as_dec} will make word literals output in decimal format.
 
 \EXAMPLE
 {
-- load "wordsLib";
-...
-- ``0x10000000w``;
+- ``0x100000w``;
 <<HOL message: inventing new type variable names: 'a>>
-> val it = ``0x10000000w`` : term
+> val it = ``0x100000w`` : term
 - wordsLib.output_words_as_dec();
-- ``0x10000000w``;
+- ``0x100000w``;
 <<HOL message: inventing new type variable names: 'a>>
-> val it = ``268435456w`` : term
+> val it = ``1048576w`` : term
 }
 
 \SEEALSO
 
-Parse.remove_user_printer, wordsLib.output_words_as, wordsLib.output_words_as_bin, wordsLib.output_words_as_oct, wordsLib.output_words_as_hex
+wordsLib.output_words_as, wordsLib.remove_word_printer, wordsLib.output_words_as_dec, wordsLib.output_words_as_bin, wordsLib.output_words_as_oct
 
 \ENDDOC
