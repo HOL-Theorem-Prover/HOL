@@ -31,7 +31,7 @@ val arith_ss = arith_ss ++ boolSimps.LET_ss;
 val fcp_ss   = armLib.fcp_ss;
 val SIZES_ss = wordsLib.SIZES_ss;
 
-val _ = Parse.post_process_term := wordsLib.guess_word_lengths;
+val _ = wordsLib.guess_lengths();
 
 (* ------------------------------------------------------------------------- *)
 
