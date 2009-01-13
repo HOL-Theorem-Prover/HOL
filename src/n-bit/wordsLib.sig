@@ -47,14 +47,16 @@ sig
     val prefer_word         : unit -> unit
     val deprecate_word      : unit -> unit
 
+    val word_pp_mode        : int ref
     val output_words_as     : (int * Arbnum.num -> StringCvt.radix) -> unit
     val output_words_as_bin : unit -> unit
     val output_words_as_oct : unit -> unit
     val output_words_as_hex : unit -> unit
     val output_words_as_dec : unit -> unit
+    val remove_word_printer : unit -> unit
 
-    val notify_word_length_guesses : bool ref
-    val guess_word_lengths         : term -> term
-    val guess_lengths              : unit -> unit
-    val dont_guess_lengths         : unit -> unit
+    val guessing_word_lengths       : bool ref
+    val notify_on_word_length_guess : bool ref
+    val inst_word_lengths           : term -> term
+    val guess_lengths               : unit -> unit
 end

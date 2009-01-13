@@ -116,13 +116,10 @@ local
         inst [ty |-> ty']
       end;
 in
-  fun guess_fcp_lengths tm =
+  fun inst_fcp_lengths tm =
       case total (find_term (can infer_fcp_type)) tm of
         NONE => tm
-      | SOME subtm => guess_fcp_lengths (infer_fcp_type subtm tm);
+      | SOME subtm => inst_fcp_lengths (infer_fcp_type subtm tm);
 end;
-
-fun guess_lengths () =
-    Parse.post_process_term := (guess_fcp_lengths o !Parse.post_process_term);
 
 end
