@@ -64,7 +64,7 @@ fun split_ident mixedset s locn qb = let
   val s0 = String.sub(s, 0)
   val is_char = s0 = #"#" andalso size s > 1 andalso String.sub(s,1) = #"\""
 in
-  if is_char orelse s0 = #"\"" then (advance qb; (s, locn))
+  if is_char orelse s0 = #"\"" orelse s0 = #"_" then (advance qb; (s, locn))
   else if s0 = #"'" then
     if str_all (fn c => c = #"'") s then (advance qb; (s,locn))
     else raise LEX_ERR ("Term idents can't begin with prime characters",locn)
