@@ -197,6 +197,8 @@ val _ = overload_on ("><",Term`$word_extract`);
 val _ = set_fixity "--" (Infixr 375)
 val _ = set_fixity "><" (Infixr 375);
 
+val _ = send_to_back_overload "<>" {Name = "word_slice", Thy = "words"};
+
 (* ------------------------------------------------------------------------- *)
 (*  Word arithmetic: definitions                                             *)
 (* ------------------------------------------------------------------------- *)
