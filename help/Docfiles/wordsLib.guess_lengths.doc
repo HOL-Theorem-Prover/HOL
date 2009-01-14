@@ -8,7 +8,7 @@ Turns on word length guessing.
 
 \DESCRIBE
 
-A call to {guess_lengths} adds a post-prcessing stage to the term parser: the function {guess_word_lengths} is used to instantiate type variables that are the return type of {word_concat} and {word_extract}.
+A call to {guess_lengths} adds a post-prcessing stage to the term parser: the function {inst_word_lengths} is used to instantiate type variables that are the return type of {word_concat} and {word_extract}.
 
 \EXAMPLE
 {
@@ -33,12 +33,8 @@ A call to {guess_lengths} adds a post-prcessing stage to the term parser: the fu
 > val it = ``:bool[8]`` : hol_type
 }
 
-\COMMENTS
-
-Word length guessing is turned off with {dont_guess_lengths}.
-
 \SEEALSO
 
-wordsLib.dont_guess_lengths, wordsLib.guess_word_lengths, wordsLib.notify_word_length_guesses
+wordsLib.inst_word_lengths, wordsLib.notify_word_length_guesses
 
 \ENDDOC
