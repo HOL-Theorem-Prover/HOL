@@ -1,0 +1,5 @@
+(IN-PACKAGE "ACL2")
+
+(DEFUN FOO (X) X)
+
+(DEFUN BAR (X) X)
