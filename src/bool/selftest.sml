@@ -122,7 +122,16 @@ val _ = case Lib.total (find_term (same_const ``bool_case``)) t of
           NONE => (print "FAILED\n"; Process.exit Process.failure)
         | SOME _ => print "OK\n"
 
-fun tpp s = let 
+val _ = tprint "Testing parsing of _ variables (1)"
+val t = case Lib.total Parse.Term `case b of T -> F || _ -> T` of
+          NONE => (print "FAILED\n"; Process.exit Process.failure)
+        | SOME _ => print "OK\n"
+val _ = tprint "Testing parsing of _ variables (2)"
+val t = case Lib.total Parse.Term `case b of T -> F || _1 -> T` of
+          NONE => (print "FAILED\n"; Process.exit Process.failure)
+        | SOME _ => print "OK\n"
+
+fun tpp s = let
   val t = Parse.Term [QUOTE s]
   val _ = tprint ("Testing printing of `"^s^"`")
   val res = term_to_string t
@@ -132,10 +141,11 @@ in
 end
 
 
-val _ = app tpp ["let x = T in x /\\ y", 
+val _ = app tpp ["let x = T in x /\\ y",
                  "(let x = T in \\y. x /\\ y) p",
                  "f ($/\\ p)",
                  "(((p /\\ q) /\\ r) /\\ s) /\\ t"]
+
 
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)

@@ -52,12 +52,37 @@ fun pretypeToType pty =
 
 val bads = CharSet.addString(CharSet.empty, "()\"")
 
+fun consume P (qb,s,locn) = let
+  open base_tokens
+  (* know first char of s is OK wrt P *)
+  fun grab i =
+      if i = size s then i
+      else if P (String.sub(s,i)) then grab (i + 1)
+      else i
+  val alphapfx_len = grab 1
+  val pfx = String.substring(s,0,alphapfx_len)
+  val sfx = String.extract(s,alphapfx_len,NONE)
+in
+  if sfx = "" then ((fn () => qbuf.advance qb), pfx, locn)
+  else let
+      val (locn',locn'') = locn.split_at (size pfx) locn
+    in
+      ((fn () => qbuf.replace_current (BT_Ident sfx,locn'') qb), pfx, locn')
+    end
+end
+
+fun okident c = Char.isAlphaNum c orelse c = #"'" orelse c = #"_"
+
 fun ident_munge dollared qb s locn = let
   val s0 = String.sub(s, 0)
 in
-  if Char.isAlpha s0 then
-    if s <> "of" orelse dollared then (qbuf.advance qb; s)
-    else raise ERRloc "ident" locn "Expected an identifier, got (reserved word) \"of\""
+  if Char.isAlpha s0 then let
+      val (adv, pfx, locn') = consume okident (qb,s,locn)
+    in
+      if pfx <> "of" orelse dollared then (adv(); pfx)
+      else raise ERRloc "ident" locn
+                        "Expected an identifier, got (reserved word) \"of\""
+    end
   else if s0 = #"$" then
     (* Allow leading dollar signs as quoting mechanism (for "of", but to
        also cope with potential user paranoia over names of infix
@@ -71,7 +96,8 @@ in
       val overlap = CharSet.intersect(bads, s_chars)
     in
       if CharSet.isEmpty overlap then (qbuf.advance qb; s)
-      else raise ERRloc "ident" locn (s ^ " not a valid constructor/field/type name")
+      else raise ERRloc "ident" locn
+                        (s ^ " not a valid constructor/field/type name")
     end
 end
 
@@ -81,25 +107,23 @@ fun ident qb =
     | (bt,locn) => raise ERRloc "ident" locn ("Expected an identifier, got "^
                                               base_tokens.toString bt)
 
+
 fun pdtok_of qb = let
   open base_tokens CharSet
   fun advance () = qbuf.advance qb
 in
   case qbuf.current qb of
     (t as BT_Ident s,locn) =>
-    if Char.isAlpha (String.sub(s, 0)) then (advance, t, locn)
-    else let
-        (* use of CharSet bads here is really a check for just the parentheses
-           as the other characters in bads shouldn't be occurring in
-           symbolic identifiers *)
-        val (ss1, ss2) = Substring.splitl (fn c => not (member(bads, c)))
-                                          (Substring.all s)
-        val s1 = Substring.string ss1
-        val s2 = Substring.string ss2
+    if Char.isAlpha (String.sub(s, 0)) then let
+        val (adv,idstr,locn') = consume Char.isAlphaNum (qb,s,locn)
       in
-        if s1 = "" orelse s2 = "" then (advance, t, locn)
-        else let val (locn',locn'') = locn.split_at (size s1) locn in
-             ((fn () => qbuf.replace_current (BT_Ident s2,locn'') qb), BT_Ident s1, locn') end
+        (adv,BT_Ident idstr,locn')
+      end
+    else let
+        fun oksym c = Char.isPunct c andalso c <> #"(" andalso c <> #")"
+        val (adv,idstr,locn') = consume oksym (qb,s,locn)
+      in
+        (adv,BT_Ident idstr,locn')
       end
   | (t,locn) => (advance, t, locn)
 end;
@@ -117,7 +141,8 @@ in
                                    base_tokens.toString x^"\"")
 end
 
-fun qtyop {Tyop, Thy, Locn, Args} = dTyop {Tyop = Tyop, Thy = SOME Thy, Args = Args}
+fun qtyop {Tyop, Thy, Locn, Args} =
+    dTyop {Tyop = Tyop, Thy = SOME Thy, Args = Args}
 fun tyop ((s,locn), args) = dTyop {Tyop = s, Thy = NONE, Args = args}
 
 fun parse_type strm =
@@ -156,8 +181,8 @@ end
 fun parse_phrase qb = let
   val constr_id = parse_constructor_id qb
 in
-  case qbuf.current qb of
-    (base_tokens.BT_Ident "of",_) => let
+  case pdtok_of qb of
+    (_,base_tokens.BT_Ident "of",_) => let
       val _ = qbuf.advance qb
       val optargs = sepby1 "=>" parse_type qb
     in
@@ -167,8 +192,8 @@ in
 end
 
 fun parse_form qb =
-    case qbuf.current qb of
-      (base_tokens.BT_Ident "<|",_) => Record (parse_record_defn qb)
+    case pdtok_of qb of
+      (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn qb)
     | _ => Constructors (sepby1 "|" parse_phrase qb)
 
 fun parse_G qb = let

@@ -83,6 +83,8 @@ val _ = Hol_datatype`
           small_record = <| fld1 : num -> bool ; fld2 : num |>
 `;
 
+val _ = Hol_datatype`squish_record = <|fld1:bool|>`
+
 val _ = Datatype.big_record_size := 10;
 val _ = Hol_datatype`
   big_record = <| fld3 : num ; fld4: bool ; fld5 : num -> num;
