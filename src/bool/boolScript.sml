@@ -76,7 +76,7 @@ val _ = add_infix_type
           ParseName = SOME "o", Name = "comp",
           Assoc = HOLgrammars.RIGHT};
 
-val _ = unicode_version (UChar.imp, Term `min$==>`);
+val _ = unicode_version {u = UChar.imp, tmnm = "==>"}
 
 val T_DEF =
  Definition.new_definition
@@ -89,28 +89,28 @@ val FORALL_DEF =
    ("FORALL_DEF",     Term `! = \P:'a->bool. P = \x. T`);
 
 val _ = (add_binder("!", std_binder_precedence); add_const "!");
-val _ = unicode_version (UChar.forall, Term `bool$!`);
+val _ = unicode_version {u = UChar.forall, tmnm = "!"};
 
 val EXISTS_DEF =
  Definition.new_definition
    ("EXISTS_DEF",     Term `? = \P:'a->bool. P ($@ P)`);
 
 val _ = (add_binder("?", std_binder_precedence); add_const "?");
-val _ = unicode_version (UChar.exists, Term `bool$?`);
+val _ = unicode_version {u = UChar.exists, tmnm = "?"}
 
 val AND_DEF =
  Definition.new_definition
    ("AND_DEF",        Term `/\ = \t1 t2. !t. (t1 ==> t2 ==> t) ==> t`);
 
 val _ = (add_infix ("/\\", 400, RIGHT); add_const "/\\");
-val _ = unicode_version (UChar.conj, Term `bool$/\`);
+val _ = unicode_version {u = UChar.conj, tmnm = "/\\"};
 
 val OR_DEF =
  Definition.new_definition
    ("OR_DEF",         Term `\/ = \t1 t2. !t. (t1 ==> t) ==> (t2 ==> t) ==> t`)
 
 val _ = (add_infix ("\\/", 300, RIGHT); add_const "\\/");
-val _ = unicode_version (UChar.disj, Term `bool$\/`);
+val _ = unicode_version {u = UChar.disj, tmnm = "\\/"}
 
 val F_DEF =
  Definition.new_definition
@@ -130,7 +130,8 @@ Definition.new_definition
                                     $? P /\ !x y. P x /\ P y ==> (x=y)`);
 
 val _ = (add_binder ("?!", std_binder_precedence); add_const "?!");
-val _ = unicode_version (UChar.exists ^ "!", Term `(?!) : ('a -> bool) -> bool`);
+
+val _ = unicode_version { u = UChar.exists ^ "!", tmnm = "?!"}
 
 (* HOL-Omega type universal and existential quantification: *)
 
@@ -139,14 +140,14 @@ val TY_FORALL_DEF =
    ("TY_FORALL_DEF",     Term `!: = \P. (P = (\:'a:'k. T))`);
 
 val _ = (add_type_binder("!:", std_binder_precedence); add_const "!:");
-val _ = unicode_version (UChar.forall ^ ":", Term `bool$!: :(!'a:'k. bool) -> bool`);
+val _ = unicode_version { u = UChar.forall ^ ":", tmnm = "!:" };
 
 val TY_EXISTS_DEF =
  Definition.new_definition
    ("TY_EXISTS_DEF",     Term `?: = \P. ~(P = (\:'a:'k. F))`);
 
 val _ = (add_type_binder("?:", std_binder_precedence); add_const "?:");
-val _ = unicode_version (UChar.exists ^ ":", Term `bool$?: :(!'a:'k. bool) -> bool`);
+val _ = unicode_version { u = UChar.forall ^ ":", tmnm = "?:" };
 
 (* Test of HOL-Omega definitions; uncomment to test:
 
@@ -226,7 +227,7 @@ val _ = add_rule {term_name   = "~",
                   pp_elements = [TOK "~"],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (CONSISTENT, 0))};
-val _ = unicode_version (UChar.neg, ``bool$~``);
+val _ = unicode_version { u = UChar.neg, tmnm = "~"};
 
 (* prettyprinting information here for "let" and "and" is completely ignored;
    the pretty-printer handles these specially.  These declarations are only
@@ -307,7 +308,7 @@ val IN_DEF =
    ("IN_DEF",         Term `IN = \x (f:'a->bool). f x`);
 
 val _ = (add_infix ("IN", 425, Parse.NONASSOC); add_const "IN");
-val _ = unicode_version (UChar.setelementof, ``bool$IN``);
+val _ = unicode_version {u = UChar.setelementof, tmnm = "IN"};
 
 val RES_FORALL_DEF =
  Definition.new_definition

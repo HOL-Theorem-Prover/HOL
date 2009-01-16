@@ -1,8 +1,0 @@
-This is a directory for the fixed-point theories in Kananaskis-2
-release of HOL-4. Developed by Behzad Akbarpour, Concordia University,
-Department of Electrical and Computer Engineering, February 2004.
-
-The following is a brief listing of what's available.
-
-     fxpTheory   * Formalization and verification of fixed-point arithmetic.
-

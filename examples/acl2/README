@@ -12,7 +12,23 @@ The directories here are:
 ml ............................ ML and HOL files
 lisp .......................... Lisp and ACL2 files
 examples ...................... Examples
+tests ......................... Regression tests
+
+To use these tools, edit the following file to give correct paths:
+
+  .acl2holrc.bash
+
+You don't have to do anything further with this file, as it is
+automatically "source"d in the top-level test script, tests/doit.
+However, you may wish to execute
+
+  source .acl2holrc.bash
+
+in your bash shell, in case you are using tools in any way other than
+through tests/doit.
 
 
 Mike Gordon
 16 Dec, 2005
+Updated by Matt Kaufmann
+8 Dec, 2008

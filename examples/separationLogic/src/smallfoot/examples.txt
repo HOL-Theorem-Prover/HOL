@@ -1,22 +1,23 @@
 
 quietdec := true;
+
+
+
 loadPath := 
             (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) :: 
             (concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot"]) :: 
             !loadPath;
 
-map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
-   "rich_listTheory", "generalHelpersTheory", "latticeTheory", "separationLogicTheory",
-   "stringTheory", "smallfootLib",
-   "vars_as_resourceTheory", "stringLib", "listLib", "smallfootTheory"];
-
-
 open HolKernel Parse boolLib bossLib
 
-open smallfoot_pp_print
-     smallfootLib generalHelpersTheory
-     smallfootSyntax smallfootParser BoolExtractShared
-     ConseqConv smallfootTheory;
+open smallfoot_pp_print generalHelpersTheory
+     smallfootSyntax BoolExtractShared
+     ConseqConv smallfootTheory
+     smallfootParser
+     smallfootLib 
+
+
+
 
 
 quietdec := false;
@@ -48,6 +49,8 @@ use_smallfoot_pretty_printer := false;
 
 val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot/EXAMPLES/"]
 val file = concat [examplesDir, "mergesort.sf"];
+
+
 
 (*just parsing the file as a start*)
 val t = parse_smallfoot_file file;
@@ -269,6 +272,7 @@ REPEAT STRIP_TAC THENL [
    SMALLFOOT_STEP_TAC THEN
    SMALLFOOT_STEP_TAC THEN
    SMALLFOOT_STEP_TAC THEN
+   SMALLFOOT_MINI_STEP_TAC
    SMALLFOOT_SOLVE_TAC
 ]
 
@@ -283,6 +287,7 @@ Other examples. The measured times are not very accurate. However,
 they should give a rough impression. The were measured at an
 Intel Core 2 Quad 2.4 GHz processor.
 *)
+
 
 temp_add_smallfoot_pp();
 use_smallfoot_pretty_printer := true;
@@ -304,7 +309,6 @@ val thm = smallfoot_verbose_auto_prove file;
 val thm = smallfoot_verbose_auto_prove file;
 (*  2.3 s *) val file = concat [examplesDir, "business1.sf"];
 val thm = smallfoot_verbose_auto_prove file;
-
 (*  2.7 s *) val file = concat [examplesDir, "pointer_transferring_buffer.sf"]; 
 val thm = smallfoot_verbose_auto_prove file;
 (*  2.0 s *) val file = concat [examplesDir, "pointer_non_transferring_buffer.sf"];
@@ -335,17 +339,21 @@ val file = concat [examplesDir, "dummy.sf"];
 (*automatic proof just fails*)
 val thm = smallfoot_auto_prove file;
 
-(*interactive one gives insight into the problem*)
-val t = parse_smallfoot_file file;
-set_goal([],t);
-
 
 use_smallfoot_pretty_printer := false
+(*interactive one gives insight into the problem*)
+val t = parse_smallfoot_file file;
+
+set_goal([],parse_smallfoot_file file);
+
+
 SMALLFOOT_SPECIFICATION_TAC THEN
+
+REPEAT STRIP_TAC THEN
 
 REPEAT SMALLFOOT_STEP_TAC
 SMALLFOOT_MINI_STEP_TAC
-SMALLFOOT_SOLVE_TAC
+ESMALLFOOT_SOLVE_TAC
 SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC
 SMALLFOOT_NO_CASE_SPLIT_STEP_TAC
 SMALLFOOT_NO_CASE_SPLIT_MINI_STEP_TAC
@@ -472,6 +480,7 @@ REPEAT STRIP_TAC THENL [
 
 open sortingTheory relationTheory
 
+val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot/EXAMPLES/"]
 val file = concat [examplesDir, "mergesort_data.sf"]; 
 
 print_file file    
@@ -755,7 +764,14 @@ REPEAT STRIP_TAC THENL [
 
 
 
+SMALLFOOT_SPECIFICATION_TAC
 
+SMALLFOOT_STEP_TAC THEN
+SMALLFOOT_MINI_STEP_TAC THEN
+REPEAT STRIP_TAC THEN
 
-
+use_smallfoot_pretty_printer := true
+SMALLFOOT_SOLVE_TAC THEN
+CONJ_TAC
+rotate 1
 

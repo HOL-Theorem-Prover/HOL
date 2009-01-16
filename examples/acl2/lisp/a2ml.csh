@@ -1,13 +1,6 @@
 #!/bin/csh -f
 
-# BEGIN editable variables
-
-# set acl2 = /usr/bin/acl2
-
-set acl2 = /local/scratch/mjcg/ACL2/matt/v2-9-3/saved_acl2
-set a2ml = /local/scratch/mjcg/HOL98/hol98/examples/acl2/lisp/a2ml
-
-# END editable variables
+set a2ml = ${ACL2_HOL_LISP}/a2ml
 
 if ($#argv != 2) then
 	echo "Usage: $0 infile outfile"
@@ -21,4 +14,5 @@ set outfile = $argv[2]
 rm -f $tmpfile
 echo "(include-book " '"'"${a2ml}"'")' > $tmpfile
 echo "(a2ml "'"'"$infile"'" "'"$outfile"'")' >> $tmpfile
-$acl2 < $tmpfile
+echo "(value :q) (quit)" >> $tmpfile
+${ACL2} < $tmpfile

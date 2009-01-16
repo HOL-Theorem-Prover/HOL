@@ -119,7 +119,7 @@ val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
                       cons = "LCONS", nilstr = "LNIL",
                       block_info = (PP.INCONSISTENT, 0)};
 
-val _ = add_rule {term_name = "LCONS", fixity = Infixr 450,
+val _ = add_rule {term_name = "LCONS", fixity = Infixr 490,
                   pp_elements = [TOK ":::", BreakSpace(0,2)],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundSameName, (PP.INCONSISTENT, 2))};

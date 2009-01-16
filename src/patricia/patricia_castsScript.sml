@@ -241,24 +241,17 @@ val string_to_num_11 = store_thm("string_to_num_11",
   `!s t. (string_to_num s = string_to_num t) = (s = t)`,
   REPEAT STRIP_TAC \\ EQ_TAC
     \\ SRW_TAC [] [string_to_num_def, s2n_def]
-    \\ SPECL_THEN [`256`, `MAP ORD (REVERSE (EXPLODE s))`,
-                          `MAP ORD (REVERSE (EXPLODE t))`]
+    \\ SPECL_THEN [`256`, `MAP ORD (REVERSE s)`,
+                          `MAP ORD (REVERSE t)`]
          (IMP_RES_TAC o SIMP_RULE (srw_ss()) [EVERY_MAP_ORD]) l2n_11
     \\ FULL_SIMP_TAC (srw_ss()) [REVERSE_11,
          (SIMP_RULE (srw_ss()) [stringTheory.ORD_11] o ISPEC `ORD`) MAP_11]);
-
-val ORD_CHR_compute = store_thm("ORD_CHR_compute",
-  `!n. ORD (CHR n) =
-      if n < 256 then n else FAIL ORD ^(mk_var("> 255", bool)) (CHR n)`,
-  SRW_TAC [] [combinTheory.FAIL_THM]);
-
-val _ = computeLib.add_thms [ORD_CHR_compute] computeLib.the_compset;
 
 val n2l_NOT_NULL = prove( `!b n. ~(n2l b n = [])`, SRW_TAC [] [Once n2l_def]);
 
 val STRING_SKIP1 = prove(
   `!l c. EVERY ($> 256) l ==>
-         ((STRING c (SKIP1 (IMPLODE (MAP CHR l))) = IMPLODE (MAP CHR l)) =
+         ((STRING c (SKIP1 (MAP CHR l)) = MAP CHR l) =
          ~(l = []) /\ (l = ORD c::TL l))`,
   Induct \\ SRW_TAC [] [SKIP1_def]
     \\ Cases_on `c` \\ SRW_TAC [ARITH_ss] [stringTheory.CHR_11]);
@@ -332,11 +325,11 @@ val IMAGE_string_to_num = store_thm("IMAGE_string_to_num",
             by METIS_TAC [TypeBase.nchotomy_of ``:string``]
           \\ SRW_TAC [] [string_to_num_def, s2n_STRING_STRING1]
           >> EVAL_TAC \\ DISJ2_TAC
-          \\ `LENGTH (MAP ORD (REVERSE (EXPLODE s)) ++ [ORD c]) =
-              LENGTH (REVERSE (EXPLODE s)) + 1`
+          \\ `LENGTH (MAP ORD (REVERSE s) ++ [ORD c]) =
+              LENGTH (REVERSE s) + 1`
           by SRW_TAC [] []
-          \\ `l2n 256 (MAP ORD (REVERSE (EXPLODE s)) ++ [ORD c]) <
-              256 ** (LENGTH (REVERSE (EXPLODE s)) + 1)`
+          \\ `l2n 256 (MAP ORD (REVERSE s) ++ [ORD c]) <
+              256 ** (LENGTH (REVERSE s) + 1)`
           by METIS_TAC [l2n_LENGTH, DECIDE ``1 < 256``]
           \\ SRW_TAC [ARITH_ss] [s2n_def, LOG_ADD_COMM, DIV_MULT_1,
                SPECL [`256`, `a ++ b`] l2n_APPEND]]);
@@ -391,9 +384,7 @@ val _ = add_listform {leftdelim = [TOK "-{"], rightdelim = [TOK "}-"],
                       block_info = (PP.INCONSISTENT, 0)};
 
 val _ = computeLib.add_persistent_funs
-  [("ORD_CHR_compute", ORD_CHR_compute),
-   ("stringTheory.CHAR_EQ_THM", stringTheory.CHAR_EQ_THM),
-   ("pred_setTheory.IMAGE_EMPTY", pred_setTheory.IMAGE_EMPTY),
+  [("pred_setTheory.IMAGE_EMPTY", pred_setTheory.IMAGE_EMPTY),
    ("pred_setTheory.IMAGE_INSERT", pred_setTheory.IMAGE_INSERT),
    ("pred_setTheory.IMAGE_UNION", pred_setTheory.IMAGE_UNION),
    ("ADD_INSERT_WORD", ADD_INSERT_WORD),

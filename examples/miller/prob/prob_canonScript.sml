@@ -33,7 +33,7 @@ val Know = PARSE_TAC KNOW_TAC;
 val prob_twin_def = Define
   `prob_twin x y = ?l. (x = SNOC T l) /\ (y = SNOC F l)`;
 
-val prob_order_def = Define 
+val prob_order_def = Define
   `(prob_order [] _ = T) /\
    (prob_order _ [] = F) /\
    (prob_order (h :: t) (h' :: t') =
@@ -95,7 +95,7 @@ val PROB_TWIN_SING = store_thm
    RW_TAC std_ss [prob_twin_def] <<
    [EQ_TAC <<
     [Cases_on `l` >> PROVE_TAC [NOT_NIL_SNOC]
-     ++ STRIP_TAC
+     ++ DISCH_THEN (Q.X_CHOOSE_THEN `l` STRIP_ASSUME_TAC)
      ++ NTAC 2 (POP_ASSUM MP_TAC)
      ++ REVERSE (Cases_on `l`) >> RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
      ++ RW_TAC std_ss [SNOC],
@@ -104,7 +104,7 @@ val PROB_TWIN_SING = store_thm
      ++ RW_TAC std_ss [SNOC]],
     EQ_TAC <<
     [Cases_on `l` >> PROVE_TAC [NOT_NIL_SNOC]
-     ++ STRIP_TAC
+     ++ DISCH_THEN (Q.X_CHOOSE_THEN `l` STRIP_ASSUME_TAC)
      ++ NTAC 2 (POP_ASSUM MP_TAC)
      ++ REVERSE (Cases_on `l`) >> RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
      ++ RW_TAC std_ss [SNOC],
@@ -211,7 +211,7 @@ val PROB_ORDER_PREFIX_ANTI = store_thm
    Induct >> RW_TAC list_ss [IS_PREFIX_NIL]
    ++ Cases_on `y` >> RW_TAC list_ss [IS_PREFIX_NIL, prob_order_def]
    ++ (RW_TAC list_ss [IS_PREFIX, prob_order_def]
-	 ++ PROVE_TAC []))   
+	 ++ PROVE_TAC []))
 
 val PROB_ORDER_PREFIX_MONO = store_thm
   ("PROB_ORDER_PREFIX_MONO",
@@ -693,7 +693,7 @@ val PROB_CANON_MERGE_SHORTENS = store_thm
    [Q.EXISTS_TAC `SNOC F l'`
     ++ RW_TAC std_ss [IS_PREFIX_SNOC],
     PROVE_TAC []]);
-    
+
 val PROB_CANON_MERGE_CONSTANT = store_thm
   ("PROB_CANON_MERGE_CONSTANT",
    ``!l b. prob_twinfree (l::b) ==> (prob_canon_merge l b = l::b)``,
@@ -715,7 +715,7 @@ val PROB_CANON2_PREFIXFREE_PRESERVE = store_thm
                        ==> ~IS_PREFIX h x /\ ~IS_PREFIX x h`
      >> PROVE_TAC [PROB_CANON_MERGE_PREFIXFREE_PRESERVE]
    ++ REWRITE_TAC [MEM]
-   ++ PROVE_TAC []);   
+   ++ PROVE_TAC []);
 
 val PROB_CANON2_SHORTENS = store_thm
   ("PROB_CANON2_SHORTENS",
@@ -794,7 +794,7 @@ val PROB_CANON_CONSTANT = store_thm
   ("PROB_CANON_CONSTANT",
    ``!l. prob_sorted l /\ prob_prefixfree l /\ prob_twinfree l
          ==> (prob_canon l = l)``,
-   RW_TAC std_ss [prob_canon_def, PROB_CANON1_CONSTANT, PROB_CANON2_CONSTANT]);   
+   RW_TAC std_ss [prob_canon_def, PROB_CANON1_CONSTANT, PROB_CANON2_CONSTANT]);
 
 val PROB_CANON_IDEMPOT = store_thm
   ("PROB_CANON_IDEMPOT",

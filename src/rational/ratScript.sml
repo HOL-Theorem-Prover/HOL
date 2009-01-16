@@ -228,87 +228,6 @@ val _ = overload_on (">=", ``rat_geq``);
 val _ = overload_on ("~",  ``rat_ainv``);
 val _ = overload_on ("//",  ``rat_cons``);
 
-
-val _ = add_rule{
-	term_name = "rat_add",
-	fixity = Infix (HOLgrammars.LEFT, 500),
-	pp_elements = [HardSpace 1, TOK "+", BreakSpace(1,0)],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))
-	};
-
-val _ = add_rule{
-	term_name = "rat_sub",
-	fixity = Infix (HOLgrammars.LEFT, 500),
-	pp_elements = [HardSpace 1, TOK "-", BreakSpace(1,0)],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))
-	};
-
-val _ = add_rule{
-	term_name = "rat_mul",
-	fixity = Infix (HOLgrammars.LEFT, 600),
-	pp_elements = [HardSpace 1, TOK "*", BreakSpace(1,0)],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))
-	};
-
-val _ = add_rule{
-	term_name = "rat_div",
-	fixity = Infix (HOLgrammars.LEFT, 600),
-	pp_elements = [HardSpace 1, TOK "/", BreakSpace(1,0)],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))
-	};
-
-val _ = add_rule{
-	term_name = "rat_ainv",
-	fixity = TruePrefix 900,
-	pp_elements = [TOK "~"],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))
-	};
-
-val _ = add_rule{
-	term_name = "rat_les",
-	fixity = Infix (HOLgrammars.RIGHT, 450),
-	pp_elements = [HardSpace 1, TOK "<", BreakSpace(1,0)],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))
-	};
-
-val _ = add_rule{
-	term_name = "rat_leq",
-	fixity = Infix (HOLgrammars.RIGHT, 450),
-	pp_elements = [HardSpace 1, TOK "<=", BreakSpace(1,0)],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))
-	};
-
-val _ = add_rule{
-	term_name = "rat_gre",
-	fixity = Infix (HOLgrammars.RIGHT, 450),
-	pp_elements = [HardSpace 1, TOK ">", BreakSpace(1,0)],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))
-	};
-
-val _ = add_rule{
-	term_name = "rat_geq",
-	fixity = Infix (HOLgrammars.RIGHT, 450),
-	pp_elements = [HardSpace 1, TOK ">=", BreakSpace(1,0)],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))
-	};
-
-val _ = add_rule{
-	term_name = "rat_cons",
-	fixity = Infix (HOLgrammars.NONASSOC, 995),
-	pp_elements = [HardSpace 1, TOK "//", BreakSpace(1,0)],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))
-	};
-
 (*--------------------------------------------------------------------------
  *  RAT: thm
  *  |- !r. abs_rat ( rep_rat r ) = r
@@ -348,8 +267,8 @@ val RAT_IMP_EQUIV = prove(``!r1 r2. (r1 = r2) ==> rat_equiv r1 r2``,
  *	= (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)
  *--------------------------------------------------------------------------*)
 
-val RAT_EQ = store_thm("RAT_EQ", 
-``!f1 f2. (abs_rat f1 = abs_rat f2) = 
+val RAT_EQ = store_thm("RAT_EQ",
+``!f1 f2. (abs_rat f1 = abs_rat f2) =
           (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)``,
 	REPEAT GEN_TAC THEN
 	RW_TAC bool_ss [RAT_ABS_EQUIV, rat_equiv_def] );
@@ -412,14 +331,14 @@ end;
 
 val RAT_NMRGT0_CONG =
 let
- val subst1 = UNDISCH_ALL (SPEC ``frac_dnm f1`` 
-                          (SPEC ``0i`` 
+ val subst1 = UNDISCH_ALL (SPEC ``frac_dnm f1``
+                          (SPEC ``0i``
                           (SPEC ``frac_nmr (rep_rat (abs_rat f1))`` INT_GT_RMUL_EXP)))
- val subst2 = UNDISCH_ALL (SPEC ``frac_dnm (rep_rat (abs_rat f1))`` 
-                          (SPEC ``0i`` 
+ val subst2 = UNDISCH_ALL (SPEC ``frac_dnm (rep_rat (abs_rat f1))``
+                          (SPEC ``0i``
                           (SPEC ``frac_nmr f1`` INT_GT_RMUL_EXP)))
 in
- store_thm("RAT_NMRGT0_CONG", 
+ store_thm("RAT_NMRGT0_CONG",
  ``!f1. (frac_nmr (rep_rat (abs_rat f1)) > 0) = (frac_nmr f1 > 0)``,
  GEN_TAC THEN
  FRAC_POS_TAC ``frac_dnm f1`` THEN

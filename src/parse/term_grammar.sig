@@ -147,8 +147,8 @@ sig
   val binder_to_string : grammar -> binder -> string
 
   val resquan_op            : grammar -> string
-  val associate_restriction : grammar -> 
-                              {binder : string option, 
+  val associate_restriction : grammar ->
+                              {binder : string option,
                                resbinder : string} -> grammar
 
   val compatible_listrule : grammar
@@ -234,7 +234,7 @@ sig
   val get_precedence : grammar -> string -> rule_fixity option
 
 
-  val prettyprint_grammar : (ppstream -> term -> unit) -> ppstream ->
-                            grammar -> unit
+  val prettyprint_grammar : (grammar -> ppstream -> term -> unit) ->
+                            ppstream -> grammar -> unit
 
 end

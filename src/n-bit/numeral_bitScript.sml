@@ -174,22 +174,22 @@ val NUMERAL_BIT_MODIFY = store_thm("NUMERAL_BIT_MODIFY",
 
 (* ------------------------------------------------------------------------- *)
 
-val iSUC_def = 
+val iSUC_def =
   Definition.new_definition
     ("iSUC",``iSUC = SUC``);
 
-val iDIV2_def = 
+val iDIV2_def =
   Definition.new_definition
     ("iDIV2",``iDIV2 = DIV2``);
 
-val SFUNPOW_def = 
+val SFUNPOW_def =
   Prim_rec.new_recursive_definition
   {name = "SFUNPOW_def",
    def = ``(SFUNPOW f 0 x = x)
         /\ (SFUNPOW f (SUC n) x = if x = 0n then 0n else SFUNPOW f n (f x))``,
    rec_axiom = prim_recTheory.num_Axiom};
 
-val FDUB_def = 
+val FDUB_def =
    Prim_rec.new_recursive_definition
    {name = "FDUB_def",
     def = ``(FDUB f 0 = 0n)
@@ -198,8 +198,8 @@ val FDUB_def =
 
 val FDUB_lem = prove(
   `!f. (f 0 = 0n) ==> (FDUB f = (\x.f (f x)))`,
-  REWRITE_TAC [FUN_EQ_THM] \\ GEN_TAC \\ 
-  DISCH_TAC \\ BETA_TAC \\ Cases \\ 
+  REWRITE_TAC [FUN_EQ_THM] \\ GEN_TAC \\
+  DISCH_TAC \\ BETA_TAC \\ Cases \\
   ASM_REWRITE_TAC [FDUB_def]);
 
 val SFUNPOW_strict = prove(
@@ -217,29 +217,29 @@ val SFUNPOW_BIT1_lem = prove(
    IMP_RES_TAC FDUB_lem \\ PROVE_TAC []);
 
 val SFUNPOW_BIT2_lem = prove(
-  `!n f x. (f 0 = 0) ==> 
+  `!n f x. (f 0 = 0) ==>
      (SFUNPOW f (NUMERAL (BIT2 n)) x = SFUNPOW (FDUB f) n (f (f x)))`,
-  `!n. NUMERAL (BIT2 n) = SUC (NUMERAL (BIT1 n))` by 
+  `!n. NUMERAL (BIT2 n) = SUC (NUMERAL (BIT1 n))` by
              REWRITE_TAC [NUMERAL_DEF,BIT1,BIT2,ADD_CLAUSES] \\
   REPEAT STRIP_TAC \\ IMP_RES_TAC SFUNPOW_BIT1_lem \\
   ASM_REWRITE_TAC [SFUNPOW_def] \\ RW_TAC std_ss [SFUNPOW_strict]);
 
 val NUMERAL_SFUNPOW = prove(
-  `!f. (f 0 = 0) ==> 
+  `!f. (f 0 = 0) ==>
       (!x. SFUNPOW f 0 x = x)
    /\ (!y. SFUNPOW f y 0 = 0)
    /\ (!n x. SFUNPOW f (NUMERAL (BIT1 n)) x = SFUNPOW (FDUB f) (NUMERAL n) (f x))
    /\ (!n x. SFUNPOW f (NUMERAL (BIT2 n)) x = SFUNPOW (FDUB f) (NUMERAL n) (f (f x)))`,
-  REPEAT STRIP_TAC \\ 
-  MAP_EVERY IMP_RES_TAC [SFUNPOW_BIT1_lem,SFUNPOW_BIT2_lem] \\ 
+  REPEAT STRIP_TAC \\
+  MAP_EVERY IMP_RES_TAC [SFUNPOW_BIT1_lem,SFUNPOW_BIT2_lem] \\
   ASM_REWRITE_TAC [SFUNPOW_strict,SFUNPOW_def,NUMERAL_DEF]);
 
 val NUMERAL_TIMES_2EXP = store_thm("NUMERAL_TIMES_2EXP",
-  `(!n. TIMES_2EXP n 0 = 0) /\ 
+  `(!n. TIMES_2EXP n 0 = 0) /\
    (!n x. TIMES_2EXP n (NUMERAL x) = NUMERAL (SFUNPOW numeral$iDUB n x))`,
   CONJ_TAC \\ REWRITE_TAC [TIMES_2EXP_def,MULT_CLAUSES] \\ Induct \\
   REWRITE_TAC [EXP,SFUNPOW_def,MULT_CLAUSES,MULT_ASSOC] \\
-  POP_ASSUM (ASSUME_TAC o GSYM) \\ RW_TAC std_ss [] \\ 
+  POP_ASSUM (ASSUME_TAC o GSYM) \\ RW_TAC std_ss [] \\
   ASM_REWRITE_TAC [NUMERAL_DEF,BIT1,BIT2,iDUB,ALT_ZERO,ADD_CLAUSES] \\
   RW_TAC arith_ss []);
 
@@ -265,13 +265,13 @@ val NUMERAL_DIV_2EXP = store_thm("NUMERAL_DIV_2EXP",
   `!x. NUMERAL x DIV 2 = NUMERAL (x DIV 2)` by REWRITE_TAC [NUMERAL_DEF] \\
   RW_TAC arith_ss [ZERO_LT_TWOEXP,GSYM DIV_DIV_DIV_MULT,SFUNPOW_strict,iDIV2_def,DIV2_def]);
 
-val NUMERAL_SFUNPOW_iDIV2 = 
+val NUMERAL_SFUNPOW_iDIV2 =
   save_thm("NUMERAL_SFUNPOW_iDIV2",
     MATCH_MP (SPEC_ALL NUMERAL_SFUNPOW)
     (prove(
        `iDIV2 0 = 0`,RW_TAC arith_ss [iDIV2_def,DIV2_def])));
 
-val NUMERAL_SFUNPOW_iDUB = 
+val NUMERAL_SFUNPOW_iDUB =
   save_thm("NUMERAL_SFUNPOW_iDUB",
     MATCH_MP (SPEC_ALL NUMERAL_SFUNPOW)
     (prove(
@@ -279,8 +279,8 @@ val NUMERAL_SFUNPOW_iDUB =
 
 val NUMERAL_SFUNPOW_FDUB =
   save_thm("NUMERAL_SFUNPOW_FDUB",
-    GEN_ALL (MATCH_MP 
-      (SPEC_ALL NUMERAL_SFUNPOW) 
+    GEN_ALL (MATCH_MP
+      (SPEC_ALL NUMERAL_SFUNPOW)
       (SPEC_ALL (CONJUNCT1 FDUB_def))));
 
 val FDUB_iDIV2 = store_thm("FDUB_iDIV2",
@@ -359,7 +359,7 @@ val MOD_2EXP_EQ = store_thm("MOD_2EXP_EQ",
     \\ EQ_TAC \\ RW_TAC arith_ss []
     \\ Cases_on `x` \\ RW_TAC arith_ss []);
 
-val lem = prove( 
+val lem = prove(
   `!n. BITS n 0 (2 ** SUC n - 1) = 2 ** SUC n - 1`,
   STRIP_TAC \\ MATCH_MP_TAC BITS_ZEROL
     \\ SIMP_TAC std_ss [ZERO_LT_TWOEXP]);
@@ -457,7 +457,7 @@ val TIMES_2EXP_compute = prove(
   `!n x. TIMES_2EXP n x = if x = 0 then 0 else x * FUNPOW numeral$iDUB n 1`,
   RW_TAC bool_ss [MULT, TIMES_2EXP_lem, CONJUNCT1 FUNPOW, TIMES_2EXP_def]);
 
-val TIMES_2EXP1 = 
+val TIMES_2EXP1 =
   (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
    Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
 
@@ -507,6 +507,16 @@ in
   CONJ ((rule o SPEC `NUMERAL (BIT2 n)`) LOWEST_SET_BIT)
        ((rule o SPEC `NUMERAL (BIT1 n)`) LOWEST_SET_BIT)
 end);
+
+val LOWEST_SET_BIT_emit = store_thm("LOWEST_SET_BIT_emit",
+  `!n. LOWEST_SET_BIT n =
+         if n = 0 then
+           FAIL LOWEST_SET_BIT ^(mk_var("zero value",bool)) n
+         else if ODD n then
+           0 
+         else
+           1 + LOWEST_SET_BIT (DIV2 n)`,
+  SRW_TAC [] [LOWEST_SET_BIT, combinTheory.FAIL_THM]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -580,8 +590,8 @@ val _ =
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
      map (DEFN o PURE_REWRITE_RULE [TIMES_2EXP1,arithmeticTheory.NUMERAL_DEF])
-       [TIMES_2EXP_compute,BITWISE_compute,LOG_compute,
-        l2n_def,n2l_def,s2n_def,n2s_def,HEX_compute,UNHEX_compute,
+       [TIMES_2EXP_compute,BITWISE_compute,LOG_compute,LOWEST_SET_BIT_emit,
+        l2n_def,n2l_def,s2n_compute,n2s_compute,HEX_compute,UNHEX_compute,
         num_from_bin_list_def,num_from_oct_list_def,num_from_dec_list_def,
         num_from_hex_list_def,num_to_bin_list_def,num_to_oct_list_def,
         num_to_dec_list_def,num_to_hex_list_def,num_from_bin_string_def,

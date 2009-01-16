@@ -74,8 +74,7 @@ val _ = add_rule { fixity = Suffix 2100,
                    pp_elements = [TOK "^+"],
                    term_name = "^+" }
 val _ = overload_on ("^+", ``TC : ('a -> 'a -> bool) -> 'a -> 'a -> bool``)
-val _ = Unicode.unicode_version
-          (Unicode.UChar.sup_plus, ``TC:('a -> 'a -> bool) -> 'a -> 'a -> bool``)
+val _ = Unicode.unicode_version {u = Unicode.UChar.sup_plus, tmnm = "^+"}
 
 
 val RTC_DEF = new_definition(
@@ -1518,7 +1517,7 @@ val inv_O = store_thm(
 val RSUBSET = new_definition(
   "RSUBSET",
   ``(RSUBSET) R1 R2 = !x y. R1 x y ==> R2 x y``);
-val _ = set_fixity "RSUBSET" (Infixr 450);
+val _ = set_fixity "RSUBSET" (Infix(NONASSOC, 450));
 
 (* ----------------------------------------------------------------------
     relational union

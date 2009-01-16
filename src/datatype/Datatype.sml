@@ -284,6 +284,8 @@ fun to_tyspecs ASTs =
   end
 end;
 
+fun tyspecs_of q = to_tyspecs (ParseDatatype.parse q);
+
 val new_asts_datatype  = define_type o to_tyspecs;
 fun new_datatype q     = new_asts_datatype (ParseDatatype.parse q);
 
@@ -1356,6 +1358,7 @@ fun Hol_datatype q =
  let
   val tyspecl = ParseDatatype.parse q
   val tyinfos_etc = primHol_datatype (TypeBase.theTypeBase()) q
+  val _ = Theory.scrub()
   val _     = datatype_thm (mk_datatype_presentation (current_theory()) tyspecl)
   val tynames = map (TypeBasePure.ty_name_of o #1) tyinfos_etc
   val tynames = filter (not o is_substring bigrec_subdivider_string o snd) tynames

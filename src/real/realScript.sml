@@ -79,20 +79,13 @@ val _ = export_rewrites
 (* Define subtraction, division and the other orderings                      *)
 (*---------------------------------------------------------------------------*)
 
-val real_sub = new_infixl_definition("real_sub",
-  (--`$real_sub x y = x + ~y`--), 500);
+val real_sub = new_definition("real_sub", ``real_sub x y = x + ~y``);
+val real_lte = new_definition("real_lte", ``real_lte x y = ~(y < x)``);
+val real_gt = new_definition("real_gt", ``real_gt x y = y < x``);
+val real_ge = new_definition("real_ge", ``real_ge x y = (real_lte y x)``);
 
-val real_lte = new_infixr_definition("real_lte",
-  (--`$real_lte x y = ~(y < x)`--), 450);
-
-val real_gt = new_infixr_definition("real_gt",
-  (--`$real_gt x y = y < x`--), 450);
-
-val real_ge = new_infixr_definition("real_ge",
-  (--`$real_ge x y = (y real_lte x)`--), 450);
-
-val real_div = new_infixl_definition("real_div",
-  (--`$/ x y = x * inv y`--), 600);
+val real_div = new_definition("real_div", ``$/ x y = x * inv y``);
+val _ = set_fixity "/" (Infixl 600);
 
 val natsub = Term`$-`;
 val natlte = Term`$<=`;

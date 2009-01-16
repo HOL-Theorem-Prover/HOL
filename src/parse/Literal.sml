@@ -125,24 +125,38 @@ fun gen_mk_numeral {mk_comb, ZERO, ALT_ZERO, NUMERAL, BIT1, BIT2} n =
                   STRINGS
  ---------------------------------------------------------------------------*)
 
-val dest_chr    = sdest_monop ("CHR","string")    (ERR "dest_chr" "")
-val dest_string = sdest_binop ("STRING","string") (ERR "dest_string" "")
+val dest_chr    = sdest_monop ("CHR","string") (ERR "dest_chr" "")
+val dest_string = sdest_binop ("CONS","list") (ERR "dest_string" "")
 val fromHOLchar = Char.chr o Arbnum.toInt o dest_numeral o dest_chr
 
 val dest_char_lit = fromHOLchar
 val is_char_lit = can dest_char_lit
 
+fun is_char_type ty = let
+  val {Thy,Tyop,Args} = dest_thy_type ty
+in
+  Thy = "string" andalso Tyop = "char" andalso null Args
+end handle HOL_ERR _ => false
+
+fun is_string_type ty = let
+  val {Thy,Tyop,Args} = dest_thy_type ty
+in
+  Thy = "list" andalso Tyop = "list" andalso List.all is_char_type Args
+end handle HOL_ERR _ => false
+
 fun is_emptystring tm =
-  case total dest_thy_const tm
-   of SOME {Name="EMPTYSTRING",Thy="string",...} => true
-    | otherwise => false
+  case total dest_thy_const tm of
+    SOME {Name="NIL",Thy="list",Ty} => is_string_type Ty
+  | otherwise => false
 
 fun dest_string_lit tm =
- if is_emptystring tm then ""
- else let val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
-      in if is_emptystring e
-         then String.implode (itlist (cons o fromHOLchar) front [])
-         else raise ERR "dest_string_lit" "not terminated by EMPTYSTRING"
+    if is_emptystring tm then ""
+    else let
+        val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
+      in
+        if is_emptystring e then
+          String.implode (itlist (cons o fromHOLchar) front [])
+        else raise ERR "dest_string_lit" "not terminated by EMPTYSTRING"
       end
 
 val is_string_lit = can dest_string_lit
@@ -152,16 +166,18 @@ val is_string_lit = can dest_string_lit
 (* "bare" numeral or of the form (NUMERAL ...). Used in ML generation.       *)
 (*---------------------------------------------------------------------------*)
 
-local 
+local
   val fromHOLchar = Char.chr o Arbnum.toInt o relaxed_dest_numeral o dest_chr
 in
-fun relaxed_dest_string_lit tm = 
- if is_emptystring tm then ""
- else let val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
-      in if is_emptystring e
-         then String.implode (itlist (cons o fromHOLchar) front [])
-         else raise ERR "relaxed_dest_string_lit" 
-                        "not terminated by EMPTYSTRING"
+fun relaxed_dest_string_lit tm =
+    if is_emptystring tm then ""
+    else let
+        val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
+      in
+        if is_emptystring e then
+          String.implode (itlist (cons o fromHOLchar) front [])
+        else raise ERR "relaxed_dest_string_lit"
+                       "not terminated by EMPTYSTRING"
       end
 end;
 
@@ -186,11 +202,11 @@ end
 
 val other_literals = ref (fn _:term => false);
 
-fun is_literal tm = 
+fun is_literal tm =
  is_numeral tm orelse is_string_lit tm orelse is_char_lit tm
                orelse !other_literals tm
 
-fun is_pure_literal x = 
+fun is_pure_literal x =
   is_literal x andalso not (is_zero x) andalso not (is_emptystring x);
 
 

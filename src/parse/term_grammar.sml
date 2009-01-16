@@ -1,7 +1,7 @@
 structure term_grammar :> term_grammar =
 struct
 
-open HOLgrammars GrammarSpecials Lib
+open HOLgrammars GrammarSpecials Lib Feedback
 
   type ppstream = Portable.ppstream
 
@@ -83,9 +83,9 @@ datatype binder = LAMBDA
                 | BinderString     of {tok : string, term_name : string, preferred : bool}
                 | TypeBinderString of {tok : string, term_name : string, preferred : bool}
 
-fun update_bpref bool b = 
-    case b of 
-      LAMBDA => LAMBDA 
+fun update_bpref bool b =
+    case b of
+      LAMBDA => LAMBDA
     | TYPE_LAMBDA => TYPE_LAMBDA 
     | BinderString {term_name, tok, preferred} =>
       BinderString {term_name = term_name, tok = tok, preferred = bool}
@@ -183,6 +183,8 @@ end
 fun fupdate_overload_info f g =
   #1 (mfupdate_overload_info (fn oi => (f oi, ())) g)
 
+val strip_overload_info = fupdate_overload_info (fn _ => Overload.null_oinfo)
+
 fun mfupdate_user_printers f (GCONS g) = let
   val (new_uprinters, result) = f (#user_printers g)
 in
@@ -273,9 +275,9 @@ fun fupdate_rule_by_term t f g r = let
   fun over_rr (rr:rule_record) = if #term_name rr = t then f rr else rr
   fun over_br LAMBDA = LAMBDA
     | over_br TYPE_LAMBDA = TYPE_LAMBDA
-    | over_br (b as BinderString {term_name,...}) = 
+    | over_br (b as BinderString {term_name,...}) =
       if term_name = t then g b else b
-    | over_br (b as TypeBinderString {term_name,...}) = 
+    | over_br (b as TypeBinderString {term_name,...}) =
       if term_name = t then g b else b
 in
   map_rrfn_rule over_rr over_br r
@@ -290,9 +292,9 @@ fun fupdate_rule_by_termtok {term_name, tok} f g r = let
       rr
   fun over_br LAMBDA = LAMBDA
     | over_br TYPE_LAMBDA = TYPE_LAMBDA
-    | over_br (b as BinderString {term_name = tnm, tok = tk, ...}) = 
+    | over_br (b as BinderString {term_name = tnm, tok = tk, ...}) =
       if term_name = tnm andalso tk = tok then g b else b
-    | over_br (b as TypeBinderString {term_name = tnm, tok = tk, ...}) = 
+    | over_br (b as TypeBinderString {term_name = tnm, tok = tk, ...}) =
       if term_name = tnm andalso tk = tok then g b else b
 in
   map_rrfn_rule over_rr over_br r
@@ -428,8 +430,14 @@ val stdhol : grammar =
   {rules = [(SOME 0, PREFIX (BINDER [LAMBDA,TYPE_LAMBDA])),
             (SOME 4, INFIX RESQUAN_OP),
             (SOME 5, INFIX VSCONS),
-            (SOME 450,
-             INFIX (STD_infix([{term_name = recupd_special,
+            (SOME 460,
+             INFIX (STD_infix([{term_name = recwith_special,
+                                elements = [RE (TOK "with")],
+                                preferred = false,
+                                block_style = (AroundEachPhrase,
+                                                (PP.CONSISTENT, 0)),
+                                paren_style = OnlyIfNecessary},
+                               {term_name = recupd_special,
                                 elements = [RE (TOK ":=")],
                                 preferred = false,
                                 block_style = (AroundEachPhrase,
@@ -437,12 +445,6 @@ val stdhol : grammar =
                                 paren_style = OnlyIfNecessary},
                                {term_name = recfupd_special,
                                 elements = [RE (TOK "updated_by")],
-                                preferred = false,
-                                block_style = (AroundEachPhrase,
-                                                (PP.CONSISTENT, 0)),
-                                paren_style = OnlyIfNecessary},
-                               {term_name = recwith_special,
-                                elements = [RE (TOK "with")],
                                 preferred = false,
                                 block_style = (AroundEachPhrase,
                                                 (PP.CONSISTENT, 0)),
@@ -753,15 +755,15 @@ fun remove_tok {term_name, tok} r = let
   fun rels_safe rels = not (List.exists (fn e => e = TOK tok) rels)
   fun rr_safe ({term_name = s, elements,...}:rule_record) =
     s <> term_name orelse rels_safe (rule_elements elements)
-  fun binder_safe b = 
-      case b of 
-        BinderString {term_name = tnm, tok = tk, ...} => 
+  fun binder_safe b =
+      case b of
+        BinderString {term_name = tnm, tok = tk, ...} =>
           tk <> tok orelse tnm <> term_name
       | TypeBinderString {term_name = tnm, tok = tk, ...} => 
           tk <> tok orelse tnm <> term_name
       | LAMBDA => true
       | TYPE_LAMBDA => true
-      
+
 in
   case r of
     SUFFIX (STD_suffix slist) =>
@@ -801,8 +803,8 @@ fun rule_fixityToString f =
 
 fun clear_prefs_for s =
   fupdate_rules
-    (fupdate_rulelist 
-       (fupdate_rule_by_term s 
+    (fupdate_rulelist
+       (fupdate_rule_by_term s
                              (update_rr_pref false)
                              (update_bpref false)))
 
@@ -826,7 +828,7 @@ end
 
 fun add_grule G0 r = G0 Gmerge [r]
 
-fun add_binder G0 ({term_name,tok}, prec) = let 
+fun add_binder G0 ({term_name,tok}, prec) = let
   val G1 = clear_prefs_for term_name G0
   val binfo = {term_name = term_name, tok = tok, preferred = true}
 in
@@ -869,7 +871,7 @@ fun prefer_form_with_tok (G0:grammar) (r as {term_name,tok}) = let
 in
   fupdate_rules
   (fupdate_rulelist
-   (fupdate_rule_by_termtok r 
+   (fupdate_rule_by_termtok r
                             (update_rr_pref true)
                             (update_bpref true))) G1
 end
@@ -1071,10 +1073,10 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
       case b of
         LAMBDA => map (fn s => (s,"")) (#lambda (specials G))
       | TYPE_LAMBDA => map (fn s => (s,"")) (#type_lambda (specials G))
-      | BinderString {term_name,tok,...} => [(tok, 
+      | BinderString {term_name,tok,...} => [(tok,
                                               if tok = term_name then ""
                                               else " ["^term_name^"]")]
-      | TypeBinderString {term_name,tok,...} => [(tok, 
+      | TypeBinderString {term_name,tok,...} => [(tok,
                                               if tok = term_name then ""
                                               else " ["^term_name^"]")]
     val endb = quote (#endbinding (specials G))
@@ -1084,7 +1086,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
       | TYPE_LAMBDA => "type binders"
       | BinderString s => "binders"
       | TypeBinderString s => "type binders"
-    fun one_binder (s, tnminfo) = 
+    fun one_binder (s, tnminfo) =
         add_string (quote s ^ " <.." ^ lname ^ "..> " ^ endb ^ " TM" ^ tnminfo)
   in
     pr_list one_binder
@@ -1178,7 +1180,8 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
   end
   fun uninteresting_overload (k,r:Overload.overloaded_op_info) =
     length (#actual_ops r) = 1 andalso
-    #Name (Term.dest_thy_const (hd (#actual_ops r))) = k andalso
+    #Name (Term.dest_thy_const (hd (#actual_ops r))) = k
+      handle HOL_ERR _ => false andalso
     length (Term.decls k) = 1
   fun print_overloading oinfo0 =
     if List.all uninteresting_overload oinfo0 then ()
@@ -1195,14 +1198,18 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
       fun pr_ov (overloaded_op,
                 (r as {actual_ops,...}:Overload.overloaded_op_info)) =
        let
-        fun pr_name t = let 
-          val {Thy,Name,Ty} = Term.dest_thy_const t 
+        fun pr_name t = let
+          val {Thy,Name,Ty} = Term.dest_thy_const t
         in
           case Term.decls Name of
             [] => raise Fail "term_grammar.prettyprint: should never happen"
-          | [_] => Name
-          | _ => Thy ^ "$" ^ Name
-        end
+          | [_] => add_string Name
+          | _ => add_string (Thy ^ "$" ^ Name)
+        end handle HOL_ERR _ => (add_string "(";
+                                 trace ("types", 1)
+                                       (tmprint (strip_overload_info G) pstrm)
+                                       t;
+                                 add_string ")")
       in
         begin_block INCONSISTENT 0;
         add_string (overloaded_op^
@@ -1210,8 +1217,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
                     " -> ");
         add_break(1,2);
         begin_block INCONSISTENT 0;
-        pr_list (add_string o pr_name) (fn () => ()) (fn () => add_break (1,0))
-                actual_ops;
+        pr_list pr_name (fn () => ()) (fn () => add_break (1,0)) actual_ops;
         end_block();
         end_block()
       end
@@ -1225,7 +1231,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
     end
   fun print_user_printers printers = let
     fun pr (pat,nm,f) =
-        (tmprint pstrm pat; add_string (" "^nm))
+        (tmprint G pstrm pat; add_string (" "^nm))
   in
     if Net.size printers = 0 then ()
     else

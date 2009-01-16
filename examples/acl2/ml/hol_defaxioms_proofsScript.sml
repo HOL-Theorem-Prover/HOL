@@ -767,10 +767,10 @@ val abs_rat_reduce =
               [Cooper.COOPER_PROVE ``(0:int) <= & n``,
                markerTheory.Abbrev_def]
     THEN `0 < n'` by Cooper.COOPER_TAC
-    THEN `0 < n/n'` by PROVE_TAC[div_pos]
+    THEN `0 < (int_div n n')` by PROVE_TAC[div_pos]
     THEN RW_TAC std_ss [fracTheory.NMR,fracTheory.DNM]
-    THEN `(m / n' * n = m * (n / n')) = 
-           ((m / n' * n') * n = m * ((n / n') * n'))`
+    THEN `((int_div m n') * n = m * (int_div n n')) = 
+           (((int_div m n') * n') * n = m * ((int_div n n') * n'))`
           by PROVE_TAC
            [Q.SPECL 
              [`int_div m n' * n `, `m * (int_div n n')`,`n'`]

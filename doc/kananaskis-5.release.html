@@ -45,6 +45,67 @@ implementation is that it is considerably quicker than the Moscow ML
 implementation. Many thanks to Scott Owens for doing most of the work
 on this port.</p></li>
 
+<li><p>Overloading can now target “syntactic patterns”, which are
+terms other than just constants.  Typically a pattern will be a
+lambda-abstraction.  For example, one can overload the
+symbol <code>&lt;&gt;</code> (meant to represent “not equal to”) to
+the term <code>(\x y. ~(x = y))</code>.  The call would be </p>
+<pre>
+         overload_on ("&lt;&gt;", ``\x y. ~(x = y)``)
+</pre>
+<p> It is then possible to write terms such
+as <code>``&lt;&gt;&nbsp;a&nbsp;3``</code>.  This will actually
+translate to the term <code>``~(a&nbsp;=&nbsp;3)``</code> internally.
+Pretty-printing will reverse the transformation so that what was typed
+will also be printed.  (One can check that the term really has been
+translated as desired with calls to term destructors
+like <code>dest_term</code> and <code>strip_comb</code>.)  </p>
+
+<p>Of course, in the case of <code>&lt;&gt;</code>, one would want
+this as an infix.  To do this one would use <code>set_fixity</code> as
+usual.  In this case, </p>
+<pre>
+         set_fixity "&lt;&gt;" (Infix(NONASSOC, 450))
+</pre>
+<p> would be appropriate.  (See
+the <a href="#incompatibilities">Incompatibilities section</a> below
+on the change to the associativity of grammar level 450.)</p>
+
+<p>Finally, overloading can be type-specific.  In this way, the
+default system now overloads the ASCII <code>&lt;=&gt;</code> to
+equality over the booleans, and various operators over strings (see
+next item). </p>
+
+<p>The system has syntactic patterns built-in for not-equal (as
+above), iff (the <code>&lt;=&gt;</code> symbol), not-iff
+(<code>&lt;=/=&gt;</code>), and not-an-element-of
+(<code>NOTIN</code>).  The Unicode variants (see later item) for these
+are ≠, ⇔, ⇎, and ∉. </p></li>
+
+<li><p>The <code>:string</code> type is now an alias for <code>:char
+list</code>, meaning that strings inherit all of the list operations
+“for free”.  Existing string operators that are effectively duplicates
+of operations on lists (like <code>STRLEN</code>
+and <code>STRCAT</code>) are now type-specific overloads of the list
+constants.</p>
+
+<p>Note that this means that the <code>IMPLODE</code>
+and <code>EXPLODE</code> functions are now identities, and that
+theorems that used to print as </p>
+<pre>
+         ⊢ STRLEN s = LENGTH (EXPLODE s)
+</pre>
+<p> are still true, but are now looping rewrites.
+(The <code>STRLEN</code> in the theorem is the same term as
+the <code>LENGTH</code>, and in fact the theorem (now
+called <code>STRLEN_EXPLODE_THM</code>) prints
+with <code>STRLEN</code> in both positions.)</p>
+
+<p>The <code>EXPLODE</code> and <code>IMPLODE</code> constants are
+still useful if theorems are to be exported to ML, where strings are
+not the same type as lists of characters.</p>
+</li>
+
 <li> <p> Types can now be numerals, as long as <code>fcpTheory</code>
 (the theory of finite cartesian products) is loaded.  A numeral type
 has no interesting properties except that the cardinality of its
@@ -67,9 +128,9 @@ turned off with the trace flag <code>pp_array_types</code>. </p>
 
 <p> Unfortunately, because of lists, at the term level one can not
 index arrays with square brackets.  Instead, we recommend the
-infix <code>'</code> (that’s an apostrophe) operator.  For
-example, <code>array ' 3</code> is the value of the fourth element
-of <code>array</code> (indexing starts at zero!)</p>
+infix <code>'</code> operator (that’s an apostrophe, ASCII character
+#39).  For example, <code>array ' 3</code> is the value of the fourth
+element of <code>array</code> (indexing starts at zero!)</p>
 </li>
 
 <li> <p> Errors in inductive relation definitions (made
@@ -180,9 +241,11 @@ Unicode experience on Window.</p>
 that are set up as explicit alternatives for ASCII equivalents.  To
 set up such an aliasing, use the function</p>
 <pre>
-         Unicode.unicode_version : string * term -> unit
+         Unicode.unicode_version : {u:string,tmnm:string} -> unit
 </pre>
-<p> where the <code>term</code> is a constant.</p>
+<p> where the string <code>u</code> is the Unicode, and
+where <code>tmnm</code> is the name of the term being aliased.  Note
+that you can also alias the names of syntactic patterns (see above). </p>
 <p> You are also free to use the standard grammar manipulation
 functions to define pretty Unicode syntax that has no ASCII equivalent
 if you wish, and this can be done whether or not
@@ -294,11 +357,6 @@ proofs of termination, completeness and soundness. </p> </li>
 <h2 id="incompatibilities">Incompatibilities:</h2>
 
 <ul>
-<li> <p> The <code>STRING_11</code> and <code>STRING_DISTINCT</code>
-  theorems in <code>stringTheory</code> have disappeared because
-  strings are now a standard algebraic type, defined
-  using <code>Hol_datatype</code>, and these theorems are present in
-  the <code>TypeBase</code>, as for all other algebraic types.</p></li>
 
 <li><p> The <code>emacs</code> mode is now found in the
   file <code>tools/hol-mode.el</code> (rather
@@ -377,6 +435,15 @@ pattern a variable of the desired type.</p>
 context of arguments when the system printer calls it.</p>
 
 </li>
+
+<li> <p>Precedence level 450 in the standard term grammar is now
+non-associative, and suggested as an appropriate level for binary
+relations, such as <i>=</i>, <i>&lt;</i> and <i>&#8838;</i>.  The list
+cons operators <code>::</code> has moved out of this level to level
+490, and the ++ operator used as a shorthand for list concatenation
+(<code>APPEND</code>) has moved to 480.  (This preserves their
+relative positioning.)
+</p></li>
 
 </ul>
 

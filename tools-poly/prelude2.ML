@@ -1,3 +1,33 @@
 val _ = PolyML.print_depth 0;
-open bossLib;
+
+local (* install prettyprinters for simpsets and ssfrags *)
+fun pp2polypp (f : ppstream -> 'a -> unit)
+              (putString : string -> unit,
+               beginBlock : int * bool -> unit,
+               spaceBlock : int * int -> unit,
+               endBlock : unit -> unit)
+              (dpth_limit : int)
+              recursive_print
+              (e : 'a) =
+    putString (PP.pp_to_string (!Globals.linewidth) f e);
+fun with_pp ppfn pps x =
+    Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
+in
+  val _ = PolyML.install_pp (pp2polypp (with_pp simpLib.pp_ssfrag));
+  val _ = PolyML.install_pp (pp2polypp (with_pp simpLib.pp_simpset))
+end;
+
+open bossLib;  (* Any others? *)
+
+(*
+This uses quietdec, so it doesn't work in PolyML
+val _ = use (HOLDIR^"/src/proofman/expandq");
+*)
+(* val _ = use (HOLDIR^"/src/datatype/Interactive"); *)
+
+val Hol_datatype = 
+  Lib.with_flag
+    (Feedback.emit_WARNING,false)
+    bossLib.Hol_datatype;
+
 val _ = PolyML.print_depth 100;

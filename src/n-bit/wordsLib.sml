@@ -193,7 +193,7 @@ val thms =
    word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
    word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
    l2n_def,n2l_def,s2n_def,n2s_def,l2w_def,w2l_def,s2w_def,w2s_def,
-   HEX_def,UNHEX_def,stringTheory.EXPLODE_EQNS,stringTheory.IMPLODE_EQNS,
+   HEX_def,UNHEX_def,
    num_from_bin_list_def,num_from_oct_list_def,num_from_dec_list_def,
    num_from_hex_list_def,num_to_bin_list_def,num_to_oct_list_def,
    num_to_dec_list_def,num_to_hex_list_def,num_from_bin_string_def,
@@ -1186,10 +1186,11 @@ val RHS_REWRITE_RULE =
   GEN_REWRITE_RULE (DEPTH_CONV o RAND_CONV) empty_rewrites;
 
 val WORDS_EMIT_RULE =
-  BETA_RULE o PURE_REWRITE_RULE ([BIT_UPDATE, literal_case_THM] @ (map GSYM
-    [word_index_def, n2w_itself_def, w2w_itself_def, sw2sw_itself_def,
+  BETA_RULE o PURE_REWRITE_RULE
+   ([BIT_UPDATE, fcp_n2w, word_T_def, word_L_def, word_H_def, literal_case_THM]
+   @
+   (map GSYM [word_index_def, n2w_itself_def, w2w_itself_def, sw2sw_itself_def,
      word_concat_itself_def, word_extract_itself_def,
-     word_T_def, word_L_def, word_H_def,
      fcpTheory.FCPi_def, fcpTheory.mk_fcp_def, literal_case_DEF])) o
   RHS_REWRITE_RULE [GSYM word_eq_def];
 

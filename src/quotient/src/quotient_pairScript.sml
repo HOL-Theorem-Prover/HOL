@@ -68,7 +68,7 @@ val PAIR_REL =
     new_infixr_definition
     ("PAIR_REL",
      (--`$### R1 R2 = \(a:'a,b:'b) (c:'c,d:'d). R1 a c /\ R2 b d`--),
-     450);
+     490);
 
 val PAIR_REL_THM = store_thm
    ("PAIR_REL_THM",
@@ -380,6 +380,6 @@ val PAIR_MAP_RSP = store_thm
 val _ = export_theory();
 
 val _ = print_theory_to_file "-" "quotient_pair.lst";
-                                                                                
+
 val _ = html_theory "quotient_pair";
 

@@ -1,18 +1,22 @@
 structure listLib :> listLib =
 struct
 
-  local open rich_listTheory in end;
-  open Abbrev listSyntax 
-       (* ... yet to come: rich_listSyntax *)
-   
-  (* open ListConv1 ListConv2 *)
+
+open listTheory
+fun list_compset () = let
+  open computeLib reduceLib
+  val base = num_compset()
+in
+  add_thms [APPEND,APPEND_NIL, FLAT, HD, TL,
+            LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,
+            EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,
+            FOLDL, REVERSE_DEF, EL_compute, ALL_DISTINCT,
+            computeLib.lazyfy_thm list_case_compute,
+            list_size_def,FRONT_DEF,LAST_DEF,
+            CONS_11, NOT_CONS_NIL, NOT_NIL_CONS] base;
+  base
+end
 
 
-(*    val _ = Lib.cons_path (!Globals.HOLdir^"library/list/help/defs/") 
-                           Globals.help_path;
-    val _ = Lib.cons_path (!Globals.HOLdir^"library/list/help/entries/") 
-                          Globals.help_path;
-    val _ = Lib.cons_path (!Globals.HOLdir^"library/list/help/thms/") 
-                          Globals.help_path;
-*)
+
 end;

@@ -1165,7 +1165,7 @@ val ALGEBRA_COUNTABLE_UNION = store_thm
        ++ Q.PAT_ASSUM `BIGUNION p = q` MP_TAC
        ++ Q.PAT_ASSUM `prob_canonical p` MP_TAC
        ++ Q.PAT_ASSUM `!x. prob_canonical (b'' x)` (MP_TAC o Q.SPEC `x`)
-       ++ Q.SPEC_TAC (`b'' x`, `b''`)
+       ++ Q.SPEC_TAC (`b'' x`, `B''`)
        ++ KILL_TAC
        ++ HO_MATCH_MP_TAC PROB_CANONICAL_CASES
        ++ CONJ_TAC

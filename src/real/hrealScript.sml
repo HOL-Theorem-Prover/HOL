@@ -16,7 +16,7 @@ app load ["hol88Lib",
 *)
 
 open HolKernel Parse boolLib
-     hol88Lib numLib reduceLib pairLib 
+     hol88Lib numLib reduceLib pairLib
      pairTheory arithmeticTheory numTheory
      prim_recTheory jrhUtils hratTheory;
 
@@ -28,8 +28,9 @@ val _ = new_theory "hreal";
 (* Lemmas about the half-rationals, including definition of ordering         *)
 (*---------------------------------------------------------------------------*)
 
-val hrat_lt = new_infixr_definition("hrat_lt",
-  (--`$hrat_lt x y = ?d. y = x hrat_add d`--), 450);
+val hrat_lt = new_definition("hrat_lt",
+  (--`$hrat_lt x y = ?d. y = x hrat_add d`--));
+val _ = temp_set_fixity "hrat_lt" (Infix(NONASSOC, 450))
 
 val HRAT_LT_REFL = prove_thm("HRAT_LT_REFL",
   (--`!x. ~(x hrat_lt x)`--),
@@ -269,7 +270,7 @@ val hreal_tydef = new_type_definition
          EXISTS_TAC (--`cut_of_hrat($@(K T))`--) THEN
          MATCH_ACCEPT_TAC ISACUT_HRAT));
 
-val hreal_tybij = 
+val hreal_tybij =
  define_new_type_bijections
    {name="hreal_tybij",ABS="hreal",REP="cut",tyax=hreal_tydef};
 
@@ -398,8 +399,10 @@ val hreal_inv = new_definition("hreal_inv",
 val hreal_sup = new_definition("hreal_sup",
   (--`hreal_sup P = hreal (\w. ?X. (P X) /\ (cut X) w)`--));
 
-val hreal_lt = new_infixr_definition("hreal_lt",
-  (--`hreal_lt X Y = ~(X = Y) /\ !x. (cut X) x ==> (cut Y) x`--), 450);
+val hreal_lt = new_definition("hreal_lt",
+  (--`hreal_lt X Y = ~(X = Y) /\ !x. (cut X) x ==> (cut Y) x`--));
+val _ = set_fixity "hreal_lt" (Infix(NONASSOC, 450))
+
 
 (*---------------------------------------------------------------------------*)
 (* Prove the appropriate closure properties of the basic operations          *)

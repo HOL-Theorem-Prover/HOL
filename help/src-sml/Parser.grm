@@ -1,0 +1,326 @@
+%%
+%name SML
+%eop EOF
+%term ABSTYPE | AND | ANDALSO | AS | CASE | DATATYPE | DO | ELSE | END 
+    | EQTYPE | EXCEPTION | FN | FUN | HANDLE | IF | IN | INFIX | INFIXR 
+    | LET | LOCAL | NONFIX | OF | OP | ORELSE | RAISE | REC | SIG | SIGNATURE 
+    | STRUCT | STRUCTURE | THEN | TYPE | VAL | WHILE | WITH | WITHTYPE 
+    | EQUALS | COMMA | ARROW | DARROW | BAR | STAR | HASH | LBRACE | RBRACE 
+    | HASHLBRACKET | LBRACKET | RBRACKET | LPAREN | RPAREN | COLON | SEMICOLON 
+    | UNDERBAR | DOTDOTDOT | OPEN | INCLUDE | PRIM_VAL | PRIM_TYPE 
+    | PRIM_EQTYPE | PRIM_REFTYPE | EOF
+    | ID of string 
+    | QUAL_ID of Asynt.QualifiedIdent 
+    | QUAL_STAR of Asynt.QualifiedIdent 
+    | ZDIGIT of int 
+    | NZDIGIT of int
+    | ZPOSINT2 of int 
+    | NZPOSINT2 of int 
+    | NEGINT of int 
+    | WORD of word
+    | CHAR of char 
+    | REAL of real 
+    | STRING of string 
+    | QUOTEL 
+    | QUOTER of string 
+    | QUOTEM of string
+    | TYVAR of string
+
+%right    AND
+%nonassoc DARROW
+%nonassoc BAR
+%nonassoc ELSE
+%nonassoc DO
+%nonassoc RAISE
+%right    HANDLE
+%right    ORELSE
+%right    ANDALSO
+%right    AS
+
+%nonassoc COLON
+%right    ARROW
+%nonassoc ID EQUALS
+%right    STAR
+
+%start SigFile
+%nonterm SigFile of Asynt.Sig
+       | Ident of string
+       | EqIdent of string
+       | UnitName of string 
+       | IdentWithLoc of Asynt.Location * string
+       | LocUnitName of Asynt.Location * string
+       | ModId of Asynt.Location * string
+       | SigId of Asynt.Location * string
+       | OpIdent of Asynt.IdInfo
+       | OpEqIdent of Asynt.IdInfo
+       | TypeIdent of Asynt.IdInfo
+       | LongTypeIdent of Asynt.IdInfo
+       | TyVar of Asynt.TyVar
+       | UnitName_seq1 of string list
+       | NumLabel of int 
+       | Arity of int
+       | SemiEof of unit
+       | Label of Asynt.Lab
+       | PrimValBind of Asynt.PrimValBind list
+       | AndPrimValBind_opt of Asynt.PrimValBind list
+       | TypBind of Asynt.TypBind list
+       | AndTypBind_opt of Asynt.TypBind list
+       | TypDesc of Asynt.TypDesc list
+       | AndTypDesc_opt of Asynt.TypDesc list
+       | DatBind of Asynt.DatBind list
+       | DatBind_0 of Asynt.DatBind list
+       | DatBind_n of Asynt.DatBind list
+       | AndDatBind_opt of Asynt.DatBind list
+       | ConBind of Asynt.ConBind list
+       | BarConBind_opt of Asynt.ConBind list
+       | WithType_opt of Asynt.TypBind list option
+       | ExDesc of Asynt.ExDesc list
+       | AndExDesc_opt of Asynt.ExDesc list
+       | OfTy_opt of Asynt.Ty option
+       | Ty of Asynt.Ty
+       | Ty_sans_STAR of Asynt.Ty
+       | AtomicTy of Asynt.Ty
+       | TupleTy of Asynt.Ty list
+       | TyComma_seq2 of Asynt.Ty list
+       | TyRow_opt of Asynt.Ty Asynt.Row
+       | TyRow of Asynt.Ty Asynt.Row
+       | CommaTyRow_opt of Asynt.Ty Asynt.Row
+       | TyVarSeq of Asynt.TyVar list
+       | TyVarSeq1 of Asynt.TyVar list
+       | TyVarComma_seq1 of Asynt.TyVar list
+       | Spec of Asynt.Spec
+       | KWSpec of Asynt.Spec
+       | KWSpec_seq of Asynt.Spec list
+       | ValDesc of Asynt.ValDesc list
+       | AndValDesc_opt of Asynt.ValDesc list
+       | ModDesc_seq1 of Asynt.ModDesc list
+       | AndModDesc_opt of Asynt.ModDesc list
+       | SigExp of Asynt.SigExp
+%pos (int * int)
+%%
+
+Ident :
+    ID          ( ID )
+  | STAR        ( "*" )
+
+IdentWithLoc :
+    Ident       ( ((Identleft, Identright), Ident) )
+
+OpIdent :
+    Ident       ( Asynt.mkIdInfo ((Identleft, Identright), { qual="", id=Ident }) false )
+  | OP Ident    ( Asynt.mkIdInfo ((OPleft, Identright), { qual="", id=Ident }) true )
+
+OpEqIdent :
+    EqIdent     ( Asynt.mkIdInfo ((EqIdentleft, EqIdentright), { qual="", id=EqIdent }) false )
+  | OP Ident    ( Asynt.mkIdInfo ((OPleft, Identright), { qual="", id=Ident }) true )
+
+EqIdent :
+    Ident       ( Ident )
+  | EQUALS      ( "=" )
+
+LocUnitName :
+    IdentWithLoc ( IdentWithLoc )
+
+UnitName :
+    Ident       ( Ident )
+  | EQUALS      ( "=" )
+
+TypeIdent :
+    ID          ( Asynt.mkIdInfo ((IDleft, IDright), { qual="", id=ID }) false )
+
+LongTypeIdent :
+    TypeIdent   ( TypeIdent )
+  | QUAL_ID     ( Asynt.mkIdInfo ((QUAL_IDleft, QUAL_IDright), QUAL_ID) false )
+
+TyVar :
+    TYVAR    ( Asynt.mkIdInfo ((TYVARleft, TYVARright), { qual="", id=TYVAR }) false )
+
+UnitName_seq1 :
+    UnitName UnitName_seq1      ( UnitName :: UnitName_seq1 )
+  | UnitName                    ( [UnitName] )
+
+NumLabel :
+    NZPOSINT2   ( NZPOSINT2 )
+  | NZDIGIT     ( NZDIGIT )
+
+Label :
+    Ident       ( Asynt.STRINGlab Ident )
+  | NumLabel    ( Asynt.INTlab NumLabel )
+
+Arity :
+    ZPOSINT2    ( ZPOSINT2 )
+  | NZPOSINT2   ( NZPOSINT2 )
+  | ZDIGIT      ( ZDIGIT )
+  | NZDIGIT     ( NZDIGIT )
+
+SemiEof :
+    SEMICOLON SemiEof   ( )
+  | EOF			( )
+
+PrimValBind :
+    OpIdent COLON Ty EQUALS Arity STRING AndPrimValBind_opt
+                        ( (OpIdent, Ty, Arity, STRING) :: AndPrimValBind_opt )
+
+AndPrimValBind_opt :
+    AND PrimValBind     ( PrimValBind )
+  | (* *)               ( [] )
+
+TypBind :
+    TyVarSeq TypeIdent  EQUALS Ty AndTypBind_opt
+                        ( (TyVarSeq, TypeIdent, Ty) :: AndTypBind_opt )
+
+AndTypBind_opt :
+    AND TypBind         ( TypBind )
+  | (* *)               ( [] )
+
+DatBind_0 :
+    TypeIdent EQUALS ConBind AndDatBind_opt
+                        ( ([], TypeIdent, ConBind) :: AndDatBind_opt )
+
+DatBind_n :
+    TyVarSeq1 TypeIdent EQUALS ConBind AndDatBind_opt
+                        ( (TyVarSeq1, TypeIdent, ConBind) :: AndDatBind_opt )
+
+DatBind :
+    TyVarSeq TypeIdent EQUALS ConBind AndDatBind_opt
+                        ( (TyVarSeq, TypeIdent, ConBind) :: AndDatBind_opt )
+
+AndDatBind_opt :
+    AND DatBind         ( DatBind )
+  | (* *)               ( [] )
+
+ConBind :
+    OpIdent OfTy_opt BarConBind_opt     ( Asynt.ConBind(OpIdent, OfTy_opt) :: BarConBind_opt )
+
+BarConBind_opt :
+    BAR ConBind         ( ConBind )
+  | (* *)               ( [] )
+
+WithType_opt :
+    WITHTYPE TypBind    ( SOME TypBind )
+  | (* *)               ( NONE )
+
+ExDesc :
+    OpIdent OfTy_opt AndExDesc_opt              ( (OpIdent,OfTy_opt) :: AndExDesc_opt )
+
+AndExDesc_opt :
+    AND ExDesc          ( ExDesc )
+  | (* *)               ( [] )
+
+OfTy_opt :
+    OF Ty       ( SOME Ty )
+  | (* *)       ( NONE )
+
+Ty :
+    TupleTy ARROW Ty    ( ((TupleTyleft, Tyright), Asynt.FNty( Asynt.tupleTy TupleTy, Ty)) )
+  | TupleTy             ( (Asynt.tupleTy TupleTy) )
+
+TupleTy :
+    Ty_sans_STAR                ( [Ty_sans_STAR] )
+  | Ty_sans_STAR STAR TupleTy   ( Ty_sans_STAR :: TupleTy )
+
+Ty_sans_STAR :
+    LPAREN TyComma_seq2 RPAREN LongTypeIdent    ( ((LPARENleft, LongTypeIdentright), Asynt.CONty(TyComma_seq2, LongTypeIdent)) )
+  | Ty_sans_STAR LongTypeIdent                  ( ((Ty_sans_STARleft, LongTypeIdentright), Asynt.CONty([Ty_sans_STAR], LongTypeIdent)) )
+  | AtomicTy                                    ( AtomicTy )
+
+TyComma_seq2 :
+    Ty COMMA TyComma_seq2       ( Ty :: TyComma_seq2 )
+  | Ty COMMA Ty                 ( [Ty1, Ty2] )
+
+AtomicTy :
+    LongTypeIdent               ( ((LongTypeIdentleft, LongTypeIdentleft), Asynt.CONty([], LongTypeIdent)) )
+  | TyVar                       ( ((TyVarleft, TyVarright), Asynt.TYVARty TyVar) )
+  | LBRACE TyRow_opt RBRACE     ( ((LBRACEleft, LBRACEright), Asynt.RECty TyRow_opt) )
+  | LPAREN Ty RPAREN            ( Ty )
+
+TyRow_opt :
+    TyRow       ( TyRow )
+  | (* *)       ( [] )
+
+TyRow :
+    Label COLON Ty CommaTyRow_opt       ( (Label,Ty)::CommaTyRow_opt )
+
+CommaTyRow_opt :
+    COMMA TyRow         ( TyRow )
+  | (* *)               ( [] )
+
+TyVarSeq :
+    TyVarSeq1                           ( TyVarSeq1 )
+  | (* *)                               ( [] )
+
+TyVarSeq1 :
+    TyVar                               ( [TyVar] )
+  | LPAREN TyVarComma_seq1 RPAREN       ( TyVarComma_seq1 )
+
+TyVarComma_seq1 :
+    TyVar COMMA TyVarComma_seq1         ( TyVar :: TyVarComma_seq1 )
+  | TyVar                               ( [TyVar] )
+
+SigFile :
+    SIGNATURE LocUnitName EQUALS SIG KWSpec_seq END SemiEof
+                        ( Asynt.NamedSig{locsigid = LocUnitName, specs = KWSpec_seq } )
+  | KWSpec_seq EOF	( Asynt.AnonSig KWSpec_seq )
+
+KWSpec_seq :
+    KWSpec KWSpec_seq		( KWSpec :: KWSpec_seq )
+  | SEMICOLON KWSpec_seq	( KWSpec_seq )
+  | (* *)			( [] )
+
+Spec :
+    KWSpec Spec         ( ((KWSpecleft, Specright), Asynt.SEQspec(KWSpec, Spec)) )
+  | SEMICOLON Spec      ( Spec )
+  | (* *)               ( ((defaultPos, defaultPos), Asynt.EMPTYspec) )
+
+KWSpec :
+    VAL ValDesc                 ( ((VALleft, ValDescright), Asynt.VALspec ValDesc) )
+  | PRIM_VAL PrimValBind        ( ((PRIM_VALleft, PrimValBindright), Asynt.PRIM_VALspec PrimValBind) )
+  | TYPE TypBind                ( ((TYPEleft, TypBindright), Asynt.TYPEspec TypBind) )
+  | TYPE TypDesc                ( ((TYPEleft, TypDescright), Asynt.TYPEDESCspec(Asynt.FALSEequ, TypDesc)) )
+  | EQTYPE TypDesc              ( ((EQTYPEleft, TypDescright), Asynt.TYPEDESCspec(Asynt.TRUEequ, TypDesc)) )
+  | PRIM_REFTYPE TypDesc        ( ((PRIM_REFTYPEleft, TypDescright), Asynt.TYPEDESCspec(Asynt.REFequ, TypDesc)) )
+  | DATATYPE DatBind_0 WithType_opt
+                                ( ((DATATYPEleft, WithType_optright), Asynt.DATATYPEspec(DatBind_0,WithType_opt)) ) 
+  | DATATYPE DatBind_n WithType_opt
+                                ( ((DATATYPEleft, WithType_optright), Asynt.DATATYPEspec(DatBind_n,WithType_opt)) ) 
+  | DATATYPE TypeIdent EQUALS DATATYPE LongTypeIdent
+                                ( ((DATATYPEleft, LongTypeIdentright), Asynt.DATATYPErepspec(TypeIdent,LongTypeIdent)))
+  | EXCEPTION ExDesc            ( ((EXCEPTIONleft, ExDescright), Asynt.EXCEPTIONspec ExDesc) )
+  | LOCAL Spec IN Spec END      ( ((LOCALleft, ENDright), Asynt.LOCALspec(Spec1,Spec2)) )
+  | OPEN UnitName_seq1          ( ((OPENleft, UnitName_seq1right), Asynt.OPENspec UnitName_seq1) )
+  | INCLUDE UnitName_seq1       ( ((INCLUDEleft, UnitName_seq1right), Asynt.INCLUDEspec UnitName_seq1) )
+  | STRUCTURE ModDesc_seq1      ( ((STRUCTUREleft, ModDesc_seq1right), Asynt.STRUCTUREspec ModDesc_seq1))
+
+ValDesc :
+    OpEqIdent COLON Ty AndValDesc_opt
+                        ( (OpEqIdent, Ty) :: AndValDesc_opt )
+
+AndValDesc_opt :
+    AND ValDesc         ( ValDesc )
+  | (* *)               ( [] )
+
+TypDesc :
+    TyVarSeq TypeIdent AndTypDesc_opt
+                        ( (TyVarSeq, TypeIdent) :: AndTypDesc_opt )
+
+AndTypDesc_opt :
+    AND TypDesc         ( TypDesc )
+  | (* *)               ( [] )
+
+ModDesc_seq1 :
+    ModId COLON SigExp AndModDesc_opt
+                        ( (Asynt.MODDESCmoddesc(ModId, SigExp )) :: AndModDesc_opt )
+
+AndModDesc_opt :
+    AND ModDesc_seq1     ( ModDesc_seq1 )
+  | (* *)                ( [] )
+
+SigExp : 
+     SigId          (((SigIdleft, SigIdright), Asynt.SIGIDsigexp SigId))
+
+ModId :
+    IdentWithLoc       ( IdentWithLoc )
+
+SigId :
+    IdentWithLoc       ( IdentWithLoc )
+

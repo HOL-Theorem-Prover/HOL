@@ -28,16 +28,20 @@ val _ = Hol_datatype `test5 = RecursiveList of test5 list | EndList`;
 val _ = Hol_datatype `test6 = DoubleList of test6 list => test6 list | EndD`;
 val _ = Hol_datatype `test7 = Node of test7 # test7 | Leaf of 'a`;
 val _ = Hol_datatype `test8 = Double of test8 test7 # test8 list | End8`;
-val _ = Hol_datatype `test9l = R9 of test9r | EndL ; test9r = L9 of test9l | EndR`;
+val _ = Hol_datatype `test9l = R9 of test9r | EndL ; 
+                      test9r = L9 of test9l | EndR`;
 val _ = Hol_datatype `testA = <| Reg1 : num; Reg2 : num; Waiting : bool |>`;
-val _ = Hol_datatype `	testBa = Aa of num | Ba of testBb | Ca of testBc ; 
-			testBb = Bb of int | Ab of testBa | Cb of testBc ;
-			testBc = Cc of rat | Bc of testBb | Ac of testBa`;
+val _ = Hol_datatype `testBa = Aa of num | Ba of testBb | Ca of testBc ; 
+		      testBb = Bb of int | Ab of testBa | Cb of testBc ;
+		      testBc = Cc of rat | Bc of testBb | Ac of testBa`;
 val _ = Hol_datatype `labels = l1 | l2 | l3 | l4 | l5`;
 val _ = Hol_datatype `noalpha = CurryNA of num => num => num # num`;
-val _ = Hol_datatype `threecons = ConsNone | CurryTC of 'a => 'b => 'c | CurryNTC of num => num => num # num`;
+val _ = Hol_datatype `threecons = ConsNone 
+                                | CurryTC of 'a => 'b => 'c 
+                                | CurryNTC of num => num => num # num`;
 val _ = Hol_datatype `rose_tree = Branch of ('a # rose_tree) list`; 
-val _ = Hol_datatype `mlistL = Left of 'a => mlistR | endL ; mlistR = Right of 'b => mlistL | endR`;
+val _ = Hol_datatype `mlistL = Left of 'a => mlistR | endL ; 
+                      mlistR = Right of 'b => mlistL | endR`;
 
 
 (*****************************************************************************)
@@ -222,7 +226,7 @@ Hol_datatype
 
 set_trace "EncodeLib.TypeEncoding" 1;
 
-val types = [	``:('a,'b) test1``,``:('a,'b) test2``,``:('a,'b,'c) test2b``,``:('a,'b,'c) test2c``,``:('a,'b) test3``,``:labels``,``:noalpha``,``:('a,'b,'c) threecons``,
+val types = [``:('a,'b) test1``,``:('a,'b) test2``,``:('a,'b,'c) test2b``,``:('a,'b,'c) test2c``,``:('a,'b) test3``,``:labels``,``:noalpha``,``:('a,'b,'c) threecons``,
 		``:test4``,``:test5``,``:test6``,``:test8``,``:'a test7``,``:test9l``,``:test9r``,``:'a rose_tree``,``:testBa``,``:('a,'b) mlistL``,``:tree``,
 		``:One``,``:('a,'b) Term``,``:'a List``,``:('a,'b) Btree``,``:Command``,``:tri``,``:exp``,``:Steve0``,``:('a,'b,'c) TY1``,``:atpat_e``];
 
@@ -361,7 +365,7 @@ val make_instrs_def =
 
 (*****************************************************************************)
 (* Version using a conditional rather than pattern matching on ``0`` and     *)
-(* ``SUC n`` (needed to amke computeLib.EVAL happy)                          *)
+(* ``SUC n`` (needed to make computeLib.EVAL happy)                          *)
 (*****************************************************************************)
 val make_instrs_def =
  prove

@@ -5,7 +5,7 @@ struct
 
 local
 
-open Globals HolKernel Parse goalstackLib Feedback
+open Globals HolKernel Parse Feedback
 
 open bossLib pairTheory pred_setTheory pred_setLib stringLib simpLib pairSyntax pairLib PrimitiveBddRules DerivedBddRules Binarymap PairRules pairTools boolSyntax Drule Tactical Conv Rewrite Tactic boolTheory stringTheory boolSimps pureSimps numLib sumSyntax sumTheory listTheory
 open stringBinTree lazyTools setLemmasTheory
@@ -32,7 +32,7 @@ fun fromMLnum n = numSyntax.mk_numeral(Arbnum.fromInt n);
 fun tsimps ty = let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end;
 
 fun get_ss_rewrs ss =
-let val simpLib.SSFRAG{rewrs,ac,congs,convs,dprocs,filter} = ss in rewrs end
+    let val simpLib.SSFRAG{rewrs,...} = ss in rewrs end
 
 (* make abbrev def: make definition where the lhs is just a constant name and rhs is closed term with no free_vars *)
 fun mk_adf nm rhs =
@@ -45,21 +45,24 @@ fun LIST_ACCEPT_TAC l (asl,w) =
 
 (* simpset that is just beta reduction *)
 val BETA_ss = SSFRAG
-  {convs=[{name="BETA_CONV (beta reduction)",
+  {name = SOME "BETA_ss",
+   convs=[{name="BETA_CONV (beta reduction)",
            trace=2,
            key=SOME ([],(--`(\x:'a. y:'b) z`--)),
 	   conv=K (K BETA_CONV)}],
    rewrs=[], congs = [], filter = NONE, ac = [], dprocs = []};
 
 val REDUCE_ss = SSFRAG
-  {convs=[{name="REDUCE_CONV (num reduction)",
+  {name = SOME "REDUCE_ss",
+   convs=[{name="REDUCE_CONV (num reduction)",
            trace=2,
            key=SOME ([],(--`(x:num)-1`--)),
 	   conv=K (K REDUCE_CONV)}],
    rewrs=[], congs = [], filter = NONE, ac = [], dprocs = []};
 
 val EL_ss = SSFRAG
-  {convs=[{name="num_CONV (num to suc conversion)",
+  {name = SOME "EL_ss",
+   convs=[{name="num_CONV (num to suc conversion)",
            trace=2,
            key=SOME ([],(--`EL (x:num)`--)),
 	   conv=K (K (RAND_CONV numLib.num_CONV))}],

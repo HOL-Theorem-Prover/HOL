@@ -159,14 +159,16 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <tmcomment,tycomment,kdcomment,qcomment>"\"" => (ECHO yyarg "\\\""; continue());
 <tmcomment,tycomment,kdcomment,qcomment>"\t" => (ECHO yyarg "\\t"; continue());
 <tmcomment,tycomment,kdcomment,qcomment>"^`" => (ECHO yyarg "`"; continue());
-<tmcomment,tycomment,kdcomment>"``" => (print yyarg "\"])"; YYBEGIN INITIAL; continue());
-<qcomment>"`" => (print yyarg "\"]"; YYBEGIN INITIAL; continue());
+<tmcomment,tycomment,kdcomment>"``" => (print yyarg "\"])"; comdepth := 0;
+                              YYBEGIN INITIAL; continue());
+<qcomment>"`" => (print yyarg "\"]"; comdepth := 0;
+                  YYBEGIN INITIAL; continue());
 <comment,tmcomment,tycomment,kdcomment,qcomment>[^\n\015\\"\t^`*()]+ => (ECHO yyarg yytext; continue());
 <comment,tmcomment,tycomment,kdcomment,qcomment>. => (ECHO yyarg yytext; continue());
 
 <quote,tmquote,tyquote,kdquote>"^"+{ws} => (ECHO yyarg yytext; continue());
 <quote,tmquote,tyquote,kdquote>"^"+{newline} =>
-   (ECHO yyarg (String.substring(yytext,0,size yytext - 1)); 
+   (ECHO yyarg (String.substring(yytext,0,size yytext - 1));
     qnewline yyarg (yypos,yytext);
     continue());
 <quote,tmquote,tyquote,kdquote>"^^" => (ECHO yyarg "^"; continue());
@@ -177,9 +179,11 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <quote>"`" => (print yyarg "\"]"; YYBEGIN INITIAL; continue());
 <tmquote,tyquote,kdquote>"``" => (print yyarg "\"])"; YYBEGIN INITIAL; continue());
 
-<quote>"(*" => (ECHO yyarg yytext; YYBEGIN qcomment; continue());
-<tmquote>"(*" => (ECHO yyarg yytext; YYBEGIN tmcomment; continue());
-<tyquote>"(*" => (ECHO yyarg yytext; YYBEGIN tycomment; continue());
+<quote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN qcomment; continue());
+<tmquote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN tmcomment;
+                  continue());
+<tyquote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN tycomment;
+                  continue());
 <kdquote>"(*" => (ECHO yyarg yytext; YYBEGIN kdcomment; continue());
 
 <quote>"^" => (print yyarg "\", ANTIQUOTE ("; YYBEGIN ANTIQ; continue();

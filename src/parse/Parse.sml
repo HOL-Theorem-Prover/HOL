@@ -1478,8 +1478,8 @@ fun bring_to_front_overload s (r as {Name, Thy}) = let in
 
 fun temp_overload_on (s, t) =
     (the_term_grammar := fupdate_overload_info
-                            (Overload.add_overloading (s, t))
-                            (term_grammar());
+                             (Overload.add_overloading (s, t))
+                             (term_grammar());
      term_grammar_changed := true)
 
 fun overload_on (s, t) = let

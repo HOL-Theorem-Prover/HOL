@@ -52,8 +52,9 @@ sig
   val imp : string
   val neg : string
   val neq : string
-  val setelementof : string
   val turnstile : string
+  val iff : string
+  val not_iff : string
 
   (* arithmeticTheory *)
   val leq : string
@@ -68,6 +69,8 @@ sig
   val union : string
   val inter : string
   val subset : string
+  val setelementof : string
+  val not_elementof : string
 
   (* wordsTheory *)
   val lo : string

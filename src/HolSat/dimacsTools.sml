@@ -248,9 +248,9 @@ fun termToDimacsFile fname clause_count var_count clauses =
 			  flushOut outstr;
 			  closeOut outstr;
 			  tmp_name := tmp;
-			  (cnfname,svm',sva))
+			  (tmp,cnfname,svm',sva))
 	   in res end else 
-       ("",svm,sva)
+       ("","",svm,sva)
     end
 
 (*Write out DIMACS file and build svm and sva*)
@@ -262,8 +262,8 @@ fun generateDimacs vc t clauseth nr =
 				       fn i => fst (Array.sub(valOf clauseth,i)))
 		      else Array.fromList (strip_conj t)
 	val clause_count = if isSome nr then valOf nr else Array.length clauses
-	val (tmp,svm,sva) = termToDimacsFile NONE clause_count var_count clauses
-    in (tmp,sva,svm) end
+	val (tmp,cnf,svm,sva) = termToDimacsFile NONE clause_count var_count clauses
+    in (tmp,cnf,sva,svm) end
 
 (*
 ** readDimacs filename

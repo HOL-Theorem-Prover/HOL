@@ -29,7 +29,7 @@ val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "[|"], rightdelim = [TOK "|]"],
                       cons = "LCONS", nilstr = "LNIL"};
 
-val _ = add_rule {term_name = "LCONS", fixity = Infixr 450,
+val _ = add_rule {term_name = "LCONS", fixity = Infixr 490,
                   pp_elements = [TOK ":::", BreakSpace(0,2)],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundSameName, (PP.INCONSISTENT, 2))};
@@ -62,8 +62,8 @@ val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 
 val _ = type_abbrev("block", Type`:word32 # word32 # word32 # word32`);
 val _ = type_abbrev("key", Type`:word32 # word32`);
-val _ = type_abbrev("keysched", Type`:  word32 # word32 # 
-	word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+val _ = type_abbrev("keysched", Type`:  word32 # word32 #
+	word32 # word32 # word32 # word32 # word32 # word32 # word32 #
 	word32 # word32 # word32 # word32 # word32 # word32 # word32 #
 	word32 # word32 # word32 # word32 # word32 # word32 # word32 #
 	word32 # word32 # word32 # word32 # word32 # word32 # word32 #
@@ -76,14 +76,14 @@ val _ = type_abbrev("state", Type`:keysched # block`);
 (*---------------------------------------------------------------------------*)
 
 val FORALL_BLOCK = Q.store_thm
-  ("FORALL_BLOCK", 
+  ("FORALL_BLOCK",
     `(!b:block. P b) = !v0 v1 v2 v3. P (v0,v1,v2,v3)`,
     SIMP_TAC std_ss [FORALL_PROD]);
 
 val FORALL_KEYSCHEDULE = Q.store_thm
   ("FORALL_KEYSCHEDULE",
-    `(!b:keysched. P b) = !v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 v16 v17 v18 v19 
-	v20 v21 v22 v23 v24 v25 v26 v27 v28 v29 v30 v31 v32 v33 v34 v35 v36 v37 v38 v39 v40 v41 v42 v43. 
+    `(!b:keysched. P b) = !v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 v16 v17 v18 v19
+	v20 v21 v22 v23 v24 v25 v26 v27 v28 v29 v30 v31 v32 v33 v34 v35 v36 v37 v38 v39 v40 v41 v42 v43.
 	P (v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20,v21,v22,v23,
 	   v24,v25,v26,v27,v28,v29,v30,v31,v32,v33,v34,v35,v36,v37,v38,v39,v40,v41,v42,v43)`,
     SIMP_TAC std_ss [FORALL_PROD]);
@@ -141,8 +141,8 @@ val CompUT_def = Define
    `CompUT x = (x * (x + x + word_1)) #<< 5`;
 
 val FwdRound_def = Define
-  `FwdRound ((a,b,c,d):block) ((k0,k1):key)  = 
-	(b, 
+  `FwdRound ((a,b,c,d):block) ((k0,k1):key)  =
+	(b,
 	 ((c # CompUT d) <<< CompUT b) + k1,  (*c = (c xor u <<< t) + k1*)
 	 d,
 	 ((a # CompUT b) <<< CompUT d) + k0)`;
@@ -161,16 +161,16 @@ val FORALL_KEYS = Q.prove
 val OneRound_Inversion = Q.store_thm
   ("OneRound_Inversion",
   `!b:block k:key. BwdRound (FwdRound b k) k = b`,
-   SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYS] THEN 
-   SIMP_TAC std_ss [FwdRound_def, BwdRound_def] THEN 
+   SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYS] THEN
+   SIMP_TAC std_ss [FwdRound_def, BwdRound_def] THEN
    REWRITE_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0] THEN
    REWRITE_TAC [ EX_Shift_Inversion] THEN
-   METIS_TAC [WORD_EOR_ASSOC, WORD_EOR_INV, WORD_EOR_ID]  
+   METIS_TAC [WORD_EOR_ASSOC, WORD_EOR_INV, WORD_EOR_ID]
   );
 
 
 (*-------------------------------------------------------------------------------*)
-(* Rotate keys and get a pair of keys from the head of the key schedule		 *)  
+(* Rotate keys and get a pair of keys from the head of the key schedule		 *)
 (* INVROTK rotates the key schedule in reverse version				 *)
 (*-------------------------------------------------------------------------------*)
 
@@ -189,7 +189,7 @@ val INVROTK_def =
             (k42,k43,k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,k20,
              k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41)
              : keysched`;
-                                                                                           
+
 val GETKEYS_def =
  Define
    `GETKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,k20,
@@ -207,13 +207,13 @@ val ROTKEYS_Inversion = Q.store_thm
   );
 
 (*-------------------------------------------------------------------------------*)
-(* Pre-Whitening and post-whitening in the encryption and the decryption	 *)  
+(* Pre-Whitening and post-whitening in the encryption and the decryption	 *)
 (*-------------------------------------------------------------------------------*)
 
 val PreWhitening_def = Define
  `PreWhitening (s:state) =
     let k = FST s in
-    let (a,b,c,d):block = SND s in 
+    let (a,b,c,d):block = SND s in
       (ROTKEYS k,
       (a, b + FST(GETKEYS(k)), c, d + SND(GETKEYS(k)))) : state`;
 
@@ -240,12 +240,12 @@ val InvPostWhitening_def = Define
 
 val Whitening_Inversion = Q.store_thm
   ("Whitening_Inversion",
-  `!s. (InvPostWhitening(PreWhitening(s)) = s) /\ 
+  `!s. (InvPostWhitening(PreWhitening(s)) = s) /\
        (InvPreWhitening(PostWhitening(s)) = s)`,
   SIMP_TAC std_ss [FORALL_STATE, FORALL_BLOCK] THEN
   SIMP_TAC std_ss [InvPostWhitening_def, PreWhitening_def, InvPreWhitening_def, PostWhitening_def] THEN
-  SIMP_TAC std_ss [LET_THM, ROTKEYS_Inversion] THEN 
-  METIS_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0] 
+  SIMP_TAC std_ss [LET_THM, ROTKEYS_Inversion] THEN
+  METIS_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0]
   );
 
 val Whitening_Keys = Q.store_thm
@@ -258,13 +258,13 @@ val Whitening_Keys = Q.store_thm
   );
 
 (*-------------------------------------------------------------------------------*)
-(* Round operations in the encryption and the decryption			 *)  
+(* Round operations in the encryption and the decryption			 *)
 (*-------------------------------------------------------------------------------*)
 (* RoundFun defines the function to build the lazy list		*)
 val RoundFun_def = Define `
-    RoundFun (s:state) = 
-      let newS:state = (ROTKEYS (FST s), FwdRound (SND s) (GETKEYS (FST s))) 
-      in SOME (newS, newS)`; 
+    RoundFun (s:state) =
+      let newS:state = (ROTKEYS (FST s), FwdRound (SND s) (GETKEYS (FST s)))
+      in SOME (newS, newS)`;
 
 val StreamG_def = new_specification (
     "StreamG",
@@ -273,25 +273,25 @@ val StreamG_def = new_specification (
 
 val Rounds_def = Define
    `(Rounds 0 (s:state) = s) /\
-    (Rounds (SUC n) s = 
+    (Rounds (SUC n) s =
 	 (Rounds n (ROTKEYS (FST s), FwdRound (SND s) (GETKEYS (FST s)))))`;
 
 (* Now define the stream of blocks in encryption *)
 val FwdStream_def = Define
    ` FwdStream (s:state) = THE (LNTH (r-1) (StreamG(s)))`;
-	
+
 (* The following theorem says functions Rounds represents the lazy list (stream)  *)
 val Stream_Of_Rounds = Q.store_thm
   ("Stream_Of_Rounds",
   `!s. THE (LNTH n (StreamG(s))) = Rounds (SUC n) s`,
-   Induct_on `n` THEN RW_TAC std_ss [LNTH] THEN 
-   RW_TAC list_ss [LET_THM,StreamG_def, RoundFun_def, option_CLAUSES, THE_DEF] THENL [ 
+   Induct_on `n` THEN RW_TAC std_ss [LNTH] THEN
+   RW_TAC list_ss [LET_THM,StreamG_def, RoundFun_def, option_CLAUSES, THE_DEF] THENL [
      ONCE_REWRITE_TAC [ONE] THEN ONCE_REWRITE_TAC [Rounds_def] THEN ARW_TAC [Rounds_def],
-     Q.ABBREV_TAC `i=SUC n` THEN ARW_TAC [Rounds_def]]     
+     Q.ABBREV_TAC `i=SUC n` THEN ARW_TAC [Rounds_def]]
   );
 
 (*---------------------------------------------------------------------------------*)
-(* The following stuffs are for decryption and similar to those for encryption     *) 
+(* The following stuffs are for decryption and similar to those for encryption     *)
 (*---------------------------------------------------------------------------------*)
 
 val InvRoundFun_def = Define `
@@ -327,16 +327,16 @@ val InvStream_Of_Rounds = Q.store_thm
 (*---------------------------------------------------------------------------*)
 
 (* The number of rounds is 20. It is easy to change it into any value, but in*)
-(* in this case you should redefine the type keysched 			     *) 
+(* in this case you should redefine the type keysched 			     *)
 
 val RC6Encrypt_def =
  Define
-  `RC6Encrypt keys txt = 
+  `RC6Encrypt keys txt =
     SND(PostWhitening(FwdStream(PreWhitening (keys,txt))))`;
 
 val RC6Decrypt_def =
  Define
-  `RC6Decrypt keys txt = 
+  `RC6Decrypt keys txt =
     SND(InvPostWhitening(BwdStream(InvPreWhitening (keys,txt))))`;
 
 
@@ -352,9 +352,9 @@ val [BwdRound] = decls "BwdRound";
 val Rounds_Keys = Q.store_thm
   ("Rounds_Keys",
   `!k b. k = FST(PostWhitening(FwdStream(PreWhitening(k,b))))`,
-   SIMP_TAC std_ss [FwdStream_def, Stream_Of_Rounds] THEN 
-   SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYSCHEDULE] THEN 
-   RW_TAC std_ss [Whitening_Keys] THEN 
+   SIMP_TAC std_ss [FwdStream_def, Stream_Of_Rounds] THEN
+   SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYSCHEDULE] THEN
+   RW_TAC std_ss [Whitening_Keys] THEN
    RESTR_EVAL_TAC [FwdRound]
   );
 
@@ -362,7 +362,7 @@ val Rounds_Keys = Q.store_thm
 val Rounds_Inversion = Q.store_thm
   ("Rounds_Inversion",
   `!s. InvRounds r (Rounds r s) = s`,
-   RESTR_EVAL_TAC [FwdRound, BwdRound] THEN SIMP_TAC std_ss [FORALL_STATE] THEN 
+   RESTR_EVAL_TAC [FwdRound, BwdRound] THEN SIMP_TAC std_ss [FORALL_STATE] THEN
    RW_TAC std_ss [OneRound_Inversion, ROTKEYS_Inversion]
   );
 
@@ -370,12 +370,12 @@ val RC6_LEMMA = Q.store_thm
 ("RC6_LEMMA",
  `!(plaintext:block) (keys:keysched).
      RC6Decrypt keys (RC6Encrypt keys plaintext) = plaintext`,
-   RW_TAC std_ss [RC6Encrypt_def, RC6Decrypt_def] THEN 
-   `keys = FST (PostWhitening(FwdStream (PreWhitening (keys,plaintext))))` by METIS_TAC [Rounds_Keys] 
+   RW_TAC std_ss [RC6Encrypt_def, RC6Decrypt_def] THEN
+   `keys = FST (PostWhitening(FwdStream (PreWhitening (keys,plaintext))))` by METIS_TAC [Rounds_Keys]
    THEN Q.ABBREV_TAC `x = PostWhitening(FwdStream (PreWhitening (keys,plaintext)))` THEN
-   ASM_REWRITE_TAC [] THEN Q.UNABBREV_TAC `x` THEN   
-   PAT_ASSUM ``keys = FST (PostWhitening (FwdStream (PreWhitening (keys,plaintext))))`` (K ALL_TAC) 
-   THEN SIMP_TAC std_ss [Whitening_Inversion] THEN 
+   ASM_REWRITE_TAC [] THEN Q.UNABBREV_TAC `x` THEN
+   PAT_ASSUM ``keys = FST (PostWhitening (FwdStream (PreWhitening (keys,plaintext))))`` (K ALL_TAC)
+   THEN SIMP_TAC std_ss [Whitening_Inversion] THEN
    SIMP_TAC std_ss [FwdStream_def, Stream_Of_Rounds, BwdStream_def, InvStream_Of_Rounds]
    THEN `SUC (r-1) = r` by ARW_TAC [r_def] THEN ASM_REWRITE_TAC [] THEN
    ARW_TAC [Rounds_Inversion, Whitening_Inversion]
@@ -422,7 +422,7 @@ val KeySchedFun_def = Define `
 	let a = (THE (LHD S) + a + b) #<< 3 in
 	let b = (THE (LHD L) + a + b) <<< (a+b) in
 	SOME ((LAPPEND (THE (LTL S)) [|a|], LAPPEND (THE (LTL L)) [|b|], a, b),
-		a)`;  
+		a)`;
 
 val KeySchedG_def = new_specification (
     "KeySchedG",
@@ -438,8 +438,8 @@ val mk_keysched_def = Define
 	f 24 K;f 25 K;f 26 K;f 27 K;f 28 K;f 29 K;f 30 K;f 31 K;f 32 K;f 33 K;f 34 K;f 35 K;
 	f 36 K;f 37 K;f 38 K;f 39 K;f 40 K;f 41 K;f 42 K;f 43 K|]`;
 
-(* Could be defined in a more succint way as follows, but the sanity check would be much more 
-   cumbersome because so many expressions are expended out. But it holds for any r. 
+(* Could be defined in a more succint way as follows, but the sanity check would be much more
+   cumbersome because so many expressions are expended out. But it holds for any r.
   val mk_keysched_def = Define
    `mk_keysched L =
         fromList(THE(LTAKE (2*r+4) (KeySchedG(InitSG(Pw,0), L, 0w, 0w))))`;
@@ -461,8 +461,8 @@ val keysched_length = Q.prove (
 val RC6_def = Define
  `RC6 key =
    let keys = LIST_TO_KEYS (THE(toList(mk_keysched key))) DUMMY_KEYS
-   in (RC6Encrypt keys, RC6Decrypt keys)`;                                                          
-                                                                                           
+   in (RC6Encrypt keys, RC6Decrypt keys)`;
+
 val RC6_CORRECT = Q.store_thm
   ("RC6_CORRECT",
    `!key plaintext.
@@ -470,5 +470,5 @@ val RC6_CORRECT = Q.store_thm
        ==>
        (decrypt (encrypt plaintext) = plaintext)`,
          RW_TAC std_ss [RC6_def,LET_THM,RC6_LEMMA]);
-                                                                                                                                             
+
 val _ = export_theory();

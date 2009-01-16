@@ -23,6 +23,7 @@ local
      even for files that contain single quotes because of the special
      treatment that the filter gives to things like `s1 ^ s2`
   *)
+  fun try_remove f = ((OS.FileSys.remove f) handle OS.SysErr _ => ());
   fun has_dq file =
       let
         val istrm = TextIO.openIn file
@@ -43,14 +44,14 @@ local
 fun quse s =
   if has_dq s then
     let
-      val filename = OS.FileSys.tmpName()^".hol"
+      val filename = OS.FileSys.tmpName()
     in
-      if OS.Process.isSuccess (unquote_to s filename) then
-        (PolyML.use filename; OS.FileSys.remove filename)
-        handle e => (OS.FileSys.remove filename handle _ => (); raise e)
-      else (TextIO.output(TextIO.stdOut,
-                          ("Failed to translate file: "^s^"\n"));
-            raise Fail "use")
+      (if OS.Process.isSuccess (unquote_to s filename) then
+         (PolyML.use filename; OS.FileSys.remove filename)
+       else (TextIO.output(TextIO.stdOut,
+                           ("Failed to translate file: "^s^"\n"));
+             raise Fail "use"))
+        handle e => (try_remove filename; raise e)
     end
   else PolyML.use s;
 

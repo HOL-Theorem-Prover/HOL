@@ -76,9 +76,9 @@ fun DDG_INDEP_FN_CONV tm =
      MATCH_MP_TAC INDEP_FN_COIN_FLIP ||
      MATCH_MP_TAC INDEP_FN_MMAP)
     ++ MATCH_ACCEPT_TAC INDEP_FN_UNIT));
-   
+
 val ddg_ss = simpLib.++(std_ss, simpLib.SSFRAG {
-  ac = [],
+  ac = [], name = NONE,
   convs = [{conv = K (K DDG_INDEP_FN_CONV), key = SOME ([], ``x IN indep_fn``),
             name = "DDG_INDEP_FN_CONV", trace = 10}],
   dprocs = [],
@@ -120,7 +120,7 @@ val optimal_two_dice_def = Define
    coin_flip
    (prob_repeat
     (coin_flip
-     (coin_flip 
+     (coin_flip
       (coin_flip
        (coin_flip
         (coin_flip
@@ -132,7 +132,7 @@ val optimal_two_dice_def = Define
        (UNIT (SOME 4)))
       (UNIT (SOME 6)))
      (MMAP SOME
-      (coin_flip 
+      (coin_flip
        (coin_flip
         (coin_flip
          (coin_flip
@@ -251,7 +251,7 @@ val INDEP_FN_DICE = store_thm
    ``dice IN indep_fn``,
    RW_TAC std_ss [dice_def, INDEP_FN_COIN_FLIP, INDEP_FN_DICE1,
                   INDEP_FN_DICE2]);
-   
+
 val PROB_BERN_DICE = store_thm
   ("PROB_BERN_DICE",
    ``!n.
@@ -349,7 +349,7 @@ val PROB_BERN_TWO_DICE = store_thm
         else if (n = 5) \/ (n = 9) then 4 / 36
         else if (n = 6) \/ (n = 8) then 5 / 36
         else if (n = 7) then 6 / 36
-        else 0) = 
+        else 0) =
        (if (n = 2) \/ (n = 12) then 1
         else if (n = 3) \/ (n = 11) then 2
         else if (n = 4) \/ (n = 10) then 3
@@ -410,7 +410,7 @@ val PROB_TERMINATES_OPTIMAL_TWO_DICE1 = store_thm
        IS_SOME
        (FST
         (coin_flip
-         (coin_flip 
+         (coin_flip
           (coin_flip
            (coin_flip
             (coin_flip
@@ -422,7 +422,7 @@ val PROB_TERMINATES_OPTIMAL_TWO_DICE1 = store_thm
            (UNIT (SOME 4)))
           (UNIT (SOME 6)))
          (MMAP SOME
-          (coin_flip 
+          (coin_flip
            (coin_flip
             (coin_flip
              (coin_flip
@@ -442,7 +442,7 @@ val PROB_TERMINATES_OPTIMAL_TWO_DICE1 = store_thm
 val INDEP_FN_OPTIMAL_TWO_DICE1R = store_thm
   ("INDEP_FN_OPTIMAL_TWO_DICE1R",
    ``coin_flip
-     (coin_flip 
+     (coin_flip
       (coin_flip
        (coin_flip
         (coin_flip
@@ -454,7 +454,7 @@ val INDEP_FN_OPTIMAL_TWO_DICE1R = store_thm
        (UNIT (SOME 4)))
       (UNIT (SOME 6)))
      (MMAP SOME
-      (coin_flip 
+      (coin_flip
        (coin_flip
         (coin_flip
          (coin_flip
@@ -473,7 +473,7 @@ val INDEP_FN_OPTIMAL_TWO_DICE1 = store_thm
   ("INDEP_FN_OPTIMAL_TWO_DICE1",
    ``prob_repeat
      (coin_flip
-      (coin_flip 
+      (coin_flip
        (coin_flip
         (coin_flip
          (coin_flip
@@ -485,7 +485,7 @@ val INDEP_FN_OPTIMAL_TWO_DICE1 = store_thm
         (UNIT (SOME 4)))
        (UNIT (SOME 6)))
       (MMAP SOME
-       (coin_flip 
+       (coin_flip
         (coin_flip
          (coin_flip
           (coin_flip
@@ -676,11 +676,11 @@ val INDEP_FN_OPTIMAL_TWO_DICE = store_thm
    RW_TAC std_ss [optimal_two_dice_def, INDEP_FN_COIN_FLIP,
                   INDEP_FN_OPTIMAL_TWO_DICE1,
                   INDEP_FN_OPTIMAL_TWO_DICE2]);
-   
+
 val PROB_BERN_OPTIMAL_TWO_DICE = store_thm
   ("PROB_BERN_OPTIMAL_TWO_DICE",
    ``!n.
-       prob bern {s | FST (optimal_two_dice s) = n} = 
+       prob bern {s | FST (optimal_two_dice s) = n} =
        if (n = 2) \/ (n = 12) then 1 / 36
        else if (n = 3) \/ (n = 11) then 2 / 36
        else if (n = 4) \/ (n = 10) then 3 / 36
@@ -749,7 +749,7 @@ val PROB_BERN_OPTIMAL_TWO_DICE = store_thm
         else if (n = 5) \/ (n = 9) then 4 / 36
         else if (n = 6) \/ (n = 8) then 5 / 36
         else if (n = 7) then 6 / 36
-        else 0) = 
+        else 0) =
        (if (n = 2) \/ (n = 12) then 1
         else if (n = 3) \/ (n = 11) then 2
         else if (n = 4) \/ (n = 10) then 3

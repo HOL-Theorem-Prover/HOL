@@ -7,12 +7,11 @@
 (* =====================================================================*)
 
 (* interactive use:
-  app load ["numLib", "listTheory", "listSyntax",
-            "BasicProvers", "Q", "SingleStep", "metisLib"];
+  app load ["rich_listTheory"];
 *)
 
-open HolKernel boolLib Parse;
-open numLib numSyntax BasicProvers SingleStep listTheory bossLib metisLib
+open HolKernel boolLib bossLib Parse;
+open numLib numSyntax listTheory rich_listTheory
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
@@ -56,10 +55,10 @@ val ORD_CHR_RWT = Q.store_thm
  PROVE_TAC [ORD_CHR]);
 val _ = export_rewrites ["ORD_CHR_RWT"]
 
-val ORD_CHR_COMPUTE = Q.store_thm
-("ORD_CHR_COMPUTE",
- `!r. ORD (CHR r) = if r < 256 then r else ORD (CHR r)`,
- PROVE_TAC [ORD_CHR_RWT]);
+val ORD_CHR_COMPUTE = Q.store_thm("ORD_CHR_COMPUTE",
+  `!n. ORD (CHR n) =
+         if n < 256 then n else FAIL ORD ^(mk_var("> 255", bool)) (CHR n)`,
+  SRW_TAC [] [combinTheory.FAIL_THM]);
 
 val ORD_BOUND = Q.store_thm
 ("ORD_BOUND",
@@ -151,9 +150,7 @@ REPEAT STRIP_TAC
   THEN STRIP_ASSUME_TAC (Q.SPEC `c` CHR_ONTO)
   THEN RW_TAC bool_ss []);
 
-val char_size_def =
- Define
-   `char_size (c:char) = 0`;
+val char_size_def = Define `char_size (c:char) = 0`;
 
 (*---------------------------------------------------------------------------
       Strings are represented as lists of characters. This gives us
@@ -161,16 +158,51 @@ val char_size_def =
       representation.
  ---------------------------------------------------------------------------*)
 
-val _ =
- Hol_datatype `string = EMPTYSTRING | STRING of char => string`
 
-val GET_def = Define`
-  (GET (STRING x s) 0 = x) /\
-  (GET (STRING x s) (SUC n) = GET s n)`;
+val _ = type_abbrev ("string", ``:char list``)
 
-val _ = set_fixity "'" (Infixl 2000);
-val _ = overload_on ("'", Term`$GET`);
-val _ = send_to_back_overload "'" {Name = "GET", Thy = "string"};
+val _ = overload_on ("STRING", ``CONS : char -> string -> string``)
+val _ = overload_on ("EMPTYSTRING", ``[] : string``)
+val _ = overload_on ("CONCAT", ``FLAT : string list -> string``);
+
+val SUB_def = Define `SUB (s:string, n) = EL n s`;
+val STR_def = Define `STR (c:char) = [c]`;
+
+val SUBSTRING_def = Define `SUBSTRING (s:string,i,n) = SEG n i s`;
+
+val TRANSLATE_def = Define `TRANSLATE f (s:string) = CONCAT (MAP f s)`;
+
+val SPLITP_MONO = Q.prove(
+  `!P l. LENGTH (SND (SPLITP P l)) <= LENGTH l`,
+  Induct_on `l` THEN SRW_TAC [] [SPLITP, DECIDE ``a <= b ==> a <= SUC b``]);
+
+val TAIL_MONO = Q.prove(
+  `!l. ~(l = []) ==> LENGTH (TL l) < LENGTH l`, Cases THEN SRW_TAC [] []);
+
+val TOKENS_def = tDefine "TOKENS"
+  `(TOKENS P ([]:string) = []) /\
+   (TOKENS P (h::t) =
+      let (l,r) = SPLITP P (h::t) in
+        if NULL l then
+          TOKENS P (TL r)
+        else
+          l::TOKENS P r)`
+  (WF_REL_TAC `measure (LENGTH o SND)`
+    THEN SRW_TAC [] [NULL_EQ_NIL, SPLITP]
+    THEN METIS_TAC [SPLITP_MONO, DECIDE ``a <= b ==> a < SUC b``]);
+
+val FIELDS_def = tDefine "FIELDS"
+  `(FIELDS P ([]:string) = [[]]) /\
+   (FIELDS P (h::t) =
+      let (l,r) = SPLITP P (h::t) in
+        if NULL l then
+          []::FIELDS P (TL r)
+        else
+          if NULL r then [l] else l::FIELDS P (TL r))`
+  (WF_REL_TAC `measure (LENGTH o SND)`
+    THEN SRW_TAC [] [NULL_EQ_NIL, SPLITP]
+    THEN METIS_TAC [SPLITP_MONO, TAIL_MONO, arithmeticTheory.LESS_TRANS,
+           DECIDE ``a <= b ==> a < SUC b``]);
 
 val IMPLODE_def = Define`
   (IMPLODE [] = "") /\
@@ -184,7 +216,10 @@ val EXPLODE_def = Define`
 `;
 val _ = export_rewrites ["EXPLODE_def"]
 
-val TRANSFORM_def = Define `TRANSFORM f = IMPLODE o f o EXPLODE`;
+val IMPLODE_EXPLODE_I = store_thm(
+  "IMPLODE_EXPLODE_I",
+  ``(EXPLODE s = s) /\ (IMPLODE s = s)``,
+  Induct_on `s` THEN SRW_TAC [][]);
 
 val IMPLODE_EXPLODE = store_thm(
   "IMPLODE_EXPLODE",
@@ -233,24 +268,22 @@ val STRING_ACYCLIC = Q.store_thm
       Size of a string.
  ---------------------------------------------------------------------------*)
 
-val STRLEN_def = Define`
-  (STRLEN "" = 0) /\
-  (STRLEN (STRING c s) = 1 + STRLEN s)
-`;
-val _ = export_rewrites ["STRLEN_def"]
-val STRLEN_DEF = save_thm("STRLEN_DEF", STRLEN_def);
+val _ = overload_on("STRLEN", ``LENGTH : string -> num``)
+val STRLEN_DEF = listTheory.LENGTH
+
+val EXTRACT_def = Define`
+  (EXTRACT (s,i,NONE) = SUBSTRING(s,i,STRLEN s - i)) /\
+  (EXTRACT (s,i,SOME n) = SUBSTRING(s,i,n))`;
 
 val STRLEN_EQ_0 = Q.store_thm
 ("STRLEN_EQ_0",
  `!x. (STRLEN x = 0) = (x="")`,
  Cases THEN SRW_TAC [][STRLEN_DEF]);
 
-val _ = export_rewrites ["STRLEN_EQ_0"]
-
-val GET = Q.store_thm
-("GET",
-  `!n s. n < STRLEN s ==> (GET s n = EL n (EXPLODE s))`,
-  Induct THEN Cases THEN SRW_TAC [ARITH_ss] [GET_def]);
+val STRLEN_EXPLODE_THM = store_thm(
+  "STRLEN_EXPLODE_THM",
+  ``STRLEN s = LENGTH (EXPLODE s)``,
+  SRW_TAC [][IMPLODE_EXPLODE_I]);
 
 (*---------------------------------------------------------------------------*)
 (* Destruct a string. This will be used to re-phrase the HOL development     *)
@@ -322,49 +355,36 @@ val IMPLODE_STRING = Q.store_thm
 (* Main fact about STRLEN                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val STRLEN_THM = Q.store_thm
-("STRLEN_THM",
- `!s. STRLEN s = LENGTH (EXPLODE s)`,
- Induct THEN SRW_TAC [ARITH_ss][]);
+val stringinst = INST_TYPE [alpha |-> ``:char``]
 
-val STRLEN_EQ_0 = Q.store_thm
-("STRLEN_EQ_0",
- `!x. (STRLEN x = 0) = (x="")`,
- Cases THEN SRW_TAC [][]);
+val STRLEN_EQ_0 = save_thm("STRLEN_EQ_0", stringinst LENGTH_NIL)
+val STRLEN_THM = save_thm("STRLEN_THM", stringinst LENGTH)
+val STRLEN_DEF = save_thm("STRLEN_DEF",  STRLEN_THM)
 
 (*---------------------------------------------------------------------------
                       String concatenation
  ---------------------------------------------------------------------------*)
 
-val STRCAT_def = Define`
-  (STRCAT "" s = s) /\
-  (STRCAT (STRING c s1) s2 = STRING c (STRCAT s1 s2))
-`
+val _ = overload_on ("STRCAT", ``list$APPEND : string -> string -> string``)
+
+
+val STRCAT_def = save_thm("STRCAT_def", stringinst APPEND)
 
 val STRCAT = store_thm(
   "STRCAT",
-  ``STRCAT s1 s2 = IMPLODE(APPEND (EXPLODE s1) (EXPLODE s2))``,
-  Induct_on `s1` THEN SRW_TAC [][STRCAT_def]);
+  ``STRCAT s1 s2 = STRCAT s1 s2``,
+  SRW_TAC [][]);
 
 val STRCAT_EQNS = Q.store_thm
 ("STRCAT_EQNS",
  `(STRCAT "" s = s) /\
   (STRCAT s "" = s) /\
   (STRCAT (STRING c s1) s2 = STRING c (STRCAT s1 s2))`,
- SRW_TAC [][STRCAT]);
-val _ = export_rewrites ["STRCAT_EQNS"]
+ SRW_TAC [][STRCAT_def]);
 
-val STRCAT_ASSOC = Q.store_thm
-("STRCAT_ASSOC",
- `!s1 s2 s3. STRCAT s1 (STRCAT s2 s3) = STRCAT (STRCAT s1 s2) s3`,
- SRW_TAC [] [STRCAT])
+val STRCAT_ASSOC = save_thm("STRCAT_ASSOC", stringinst APPEND_ASSOC)
 
-val STRCAT_11 = Q.store_thm
-("STRCAT_11",
- `!s1 s2 s3. ((STRCAT s1 s2 = STRCAT s1 s3) = (s2=s3)) /\
-             ((STRCAT s1 s3 = STRCAT s2 s3) = (s1=s2))`,
- SRW_TAC [][STRCAT]);
-val _ = export_rewrites ["STRCAT_11"]
+val STRCAT_11 = save_thm("STRCAT_11", stringinst APPEND_11)
 
 val STRCAT_ACYCLIC = Q.store_thm
 ("STRCAT_ACYCLIC",
@@ -377,30 +397,17 @@ val STRCAT_EXPLODE = Q.store_thm
  `!s1 s2. STRCAT s1 s2 = FOLDR STRING s2 (EXPLODE s1)`,
   Induct THEN SRW_TAC [][])
 
-val STRCAT_EQ_EMPTY = Q.store_thm
-("STRCAT_EQ_EMPTY",
- `!x y. (STRCAT x y = "") = (x="") /\ (y="")`,
- SRW_TAC [][STRCAT]);
-val _ = export_rewrites ["STRCAT_EQ_EMPTY"]
+val STRCAT_EQ_EMPTY = save_thm("STRCAT_EQ_EMPTY",
+                               CONJUNCT2 (stringinst APPEND_eq_NIL))
 (*---------------------------------------------------------------------------
      String length and concatenation
  ---------------------------------------------------------------------------*)
 
-val STRLEN_CAT = Q.store_thm
-("STRLEN_CAT",
- `!x y. STRLEN (STRCAT x y) = (STRLEN x + STRLEN y)`,
- SRW_TAC [][STRCAT,STRLEN_THM]);
+val STRLEN_CAT = save_thm("STRLEN_CAT", stringinst LENGTH_APPEND)
 
 (*---------------------------------------------------------------------------
        Is one string a prefix of another?
  ---------------------------------------------------------------------------*)
-
-val isPREFIX_def = Define`
-  (isPREFIX "" s = T) /\
-  (isPREFIX (STRING c1 s1) "" = F) /\
-  (isPREFIX (STRING c1 s1) (STRING c2 s2) = (c1 = c2) /\ isPREFIX s1 s2)
-`;
-val _ = export_rewrites ["isPREFIX_def"]
 
 val isPREFIX_DEF = store_thm(
   "isPREFIX_DEF",
@@ -410,7 +417,7 @@ val isPREFIX_DEF = store_thm(
         of (NONE, _) -> T
         || (SOME __, NONE) -> F
         || (SOME(c1,t1),SOME(c2,t2)) -> (c1=c2) /\ isPREFIX t1 t2``,
-  HO_MATCH_MP_TAC (theorem "isPREFIX_ind") THEN SRW_TAC [][]);
+  Cases_on `s1` THEN Cases_on `s2` THEN SRW_TAC [][]);
 
 val isPREFIX_IND = Q.store_thm
 ("isPREFIX_IND",
@@ -424,7 +431,8 @@ val isPREFIX_IND = Q.store_thm
 val isPREFIX_STRCAT = Q.store_thm
 ("isPREFIX_STRCAT",
  `!s1 s2. isPREFIX s1 s2 = ?s3. s2 = STRCAT s1 s3`,
- recInduct (theorem "isPREFIX_ind") THEN SRW_TAC [][] THEN PROVE_TAC []);
+ Induct THEN SRW_TAC [][] THEN Cases_on `s2` THEN SRW_TAC [][] THEN
+ PROVE_TAC []);
 
 (*---------------------------------------------------------------------------
        Orderings
@@ -454,11 +462,17 @@ val _ = send_to_back_overload ">=" {Name = "string_ge", Thy = "string"};
     Exportation
  ---------------------------------------------------------------------------*)
 
+val _ = computeLib.add_persistent_funs
+  [("ORD_CHR_COMPUTE", ORD_CHR_COMPUTE), ("CHAR_EQ_THM", CHAR_EQ_THM)];
+
 val _ = ConstMapML.insert(prim_mk_const{Name="DEST_STRING",Thy="string"});
-val _ = ConstMapML.insert(prim_mk_const{Name="STRING",Thy="string"});
-val _ = ConstMapML.prim_insert(prim_mk_const{Name="EMPTYSTRING",Thy="string"},
-                               (false,"","\"\"",Parse.Type`:string`));
 val _ = ConstMapML.insert(prim_mk_const{Name="string_lt",Thy="string"});
+val _ = ConstMapML.insert ``EXPLODE``
+val _ = ConstMapML.insert ``IMPLODE``
+fun cpi (t,nm) = ConstMapML.prim_insert(t,(false,"",nm,type_of t))
+val _ = cpi (``STRCAT``, "STRCAT")
+val _ = cpi (``STRLEN``, "STRLEN")
+val _ = cpi (``STRING``, "STRING")
 
 fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
   struct_ps = SOME (fn ppstrm =>
@@ -480,9 +494,8 @@ val _ = adjoin_to_theory_struct [
   "",
   "val _ = app (fn n => ConstMapML.insert\
   \ (prim_mk_const{Name=n,Thy=\"string\"}))",
-  "      [\"CHR\",\"ORD\",\"DEST_STRING\",\"STRING\",\"string_lt\"]",
-  "val _ = ConstMapML.prim_insert(prim_mk_const{Name=\"EMPTYSTRING\",",
-  "          Thy=\"string\"},(false,\"\",\"\\\"\\\"\",mk_type(\"string\",[])));"
+  "      [\"CHR\",\"ORD\",\"DEST_STRING\",\"string_lt\",\
+  \       \"IMPLODE\",\"EXPLODE\"]"
   ];
 
 val _ =
@@ -497,6 +510,9 @@ val _ =
     :: MLSIG "val CHR : num -> char"
     :: MLSIG "val ORD : char -> num"
     :: MLSIG "val string_lt : string -> string -> bool"
+    :: MLSIG "val IMPLODE : char list -> string"
+    :: MLSIG "val EXPLODE : string -> char list"
+    :: MLSIG "val STRLEN : string -> num"
     :: MLSTRUCT "type char = Char.char;"
     :: MLSTRUCT "type string = String.string;"
     :: MLSTRUCT "fun CHR n = Char.chr(valOf(Int.fromString(numML.toDecString n)));"
@@ -505,8 +521,11 @@ val _ =
     :: MLSTRUCT "fun DEST_STRING s = if s = \"\" then NONE \n\
         \          else SOME(String.sub(s,0),String.extract(s,1,NONE));"
     :: MLSTRUCT "fun string_lt a b = String.compare(a,b) = LESS"
+    :: MLSTRUCT "val IMPLODE = String.implode"
+    :: MLSTRUCT "val EXPLODE = String.explode"
+    :: MLSTRUCT "fun STRLEN s = LENGTH (EXPLODE s)"
     :: map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
-       [EXPLODE_DEST_STRING, IMPLODE_STRING, STRLEN_THM, STRCAT_EXPLODE,
+       [char_size_def, STRCAT_EXPLODE,
         isPREFIX_DEF, isLower_def, isUpper_def, isDigit_def, isAlpha_def,
         isHexDigit_def, isAlphaNum_def, isPrint_def, isSpace_def,
         isGraph_def, isPunct_def, isAscii_def, isCntrl_def,

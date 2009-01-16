@@ -91,7 +91,7 @@ fun decr r = (r := !r - 1);
 %header (functor SimpleSMLLexFun(structure Tokens : SimpleSML_TOKENS));
 %s Comment String SkipString Quotation DQuotation;
 %full
-id=[A-Za-z][A-Za-z0-9_']* | [-!%&$#+/:<=>?@~^|*\\]+;
+id=[A-Za-z][A-Za-z0-9_']* | [-!%&$#+/:<=>?@~^|*`\\]+;
 
 %%
 

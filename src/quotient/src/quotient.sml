@@ -1049,9 +1049,16 @@ fun equiv_type th =
                                 ^ thm_to_string th ^ "\n"
                   }
 
-fun make_equiv equivs ty =
-    let val etys = map equiv_type equivs
-        val etys_equivs = zip etys equivs
+fun make_equiv equivs tyop_equivs ty =
+    let val base_tys = map equiv_type equivs
+        val all_equivs = equivs @ tyop_equivs
+        val etys = map equiv_type all_equivs
+        val etys_equivs = zip etys all_equivs
+
+        fun contains_base ty =
+          if is_vartype ty then false
+          else if mem ty base_tys then true
+               else exists contains_base (#Args (dest_type ty))
 
         fun prim_make_equiv ty =
             tryfind (fn (ety, equiv) =>
@@ -1059,6 +1066,8 @@ fun make_equiv equivs ty =
                     etys_equivs
 
         fun main_make_equiv ty =
+               if not (contains_base ty) then identity_equiv ty
+               else
                let val {Tyop, Args} = dest_type ty
                    val ths = map main_make_equiv Args
                    val tyop = prim_make_equiv ty
@@ -1139,11 +1148,17 @@ fun quotient_type th = (hd o tl o #Args o dest_type o type_of
                                      ^ thm_to_string th ^ "\n"
                        }
 
-fun make_hyp_quotient hyp_quots quots ty =
-    let val hqtys = map quotient_type hyp_quots
+fun make_hyp_quotient hyp_quots quots tyop_quots ty =
+    let val base_tys = map quotient_type quots
+        val hqtys = map quotient_type hyp_quots
         val hqty_quots = zip hqtys hyp_quots
-        val qtys = map quotient_type quots
-        val qty_quots = zip qtys quots
+        val all_quots = quots @ tyop_quots
+        val qtys = map quotient_type all_quots
+        val qty_quots = zip qtys all_quots
+        fun contains_base ty =
+          if is_vartype ty then false
+          else if mem ty base_tys then true
+               else exists contains_base (#Args (dest_type ty))
         fun prim_make_quotient ty =
             assoc ty hqty_quots
             handle e =>
@@ -1151,6 +1166,8 @@ fun make_hyp_quotient hyp_quots quots ty =
                     qty_quots
         fun main_make_quotient ty =
               (if is_vartype ty then assoc ty hqty_quots
+               else
+               if not (contains_base ty) then identity_quotient ty
                else
                let val {Tyop, Args} = dest_type ty
                    val ths = map main_make_quotient Args
@@ -1177,7 +1194,7 @@ fun make_hyp_quotient hyp_quots quots ty =
        main_make_quotient ty
     end;
 
-fun make_quotient quot_ths ty = make_hyp_quotient [] quot_ths ty
+fun make_quotient quots tyop_quots ty = make_hyp_quotient [] quots tyop_quots ty
 
 
 (*
@@ -1295,17 +1312,17 @@ fun form_hyp_abs_rep_functions hyp_quot_ths quot_ths tyops tyop_simps =
 
 
       fun get_abs ty =
-          let val qth = make_hyp_quotient hyp_quot_ths (quot_ths @ tyops) ty
+          let val qth = make_hyp_quotient hyp_quot_ths quot_ths tyops ty
           in (rand o rator o concl o PURE_REWRITE_RULE tyop_simps) qth
           end
 
       fun get_rep ty =
-          let val qth = make_hyp_quotient hyp_quot_ths (quot_ths @ tyops) (repty ty)
+          let val qth = make_hyp_quotient hyp_quot_ths quot_ths tyops (repty ty)
           in (rand o concl o PURE_REWRITE_RULE tyop_simps) qth
           end
 
       fun tyREL ty =
-          let val qth = make_hyp_quotient hyp_quot_ths (quot_ths @ tyops) ty
+          let val qth = make_hyp_quotient hyp_quot_ths quot_ths tyops ty
               val qth' = REWRITE_RULE tyop_simps qth
           in (hd o snd o strip_comb o concl) qth'
           end
@@ -1599,7 +1616,7 @@ fun prove_quotient_equiv_rep_one_one QUOTIENT =
 (* ====================================================================== *)
 
 
-fun lift_theorem_by_quotients quot_ths equivs all_equivs
+fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
                               tyops tyop_simps newdefs
                               respects polydfs polywfs =
     let
@@ -1725,7 +1742,7 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
    is present.  If not, then if the theorem is trivial, create it.
    If it is missing and not trivial, fail with an error message.
 *)
-      fun add_trivial_respects funcs all_equivs =
+      fun add_trivial_respects funcs equivs tyop_equivs =
         let val get_func = fst o strip_comb o rand o rator
                             o find_base o snd o strip_forall o concl
             val rfuncs = map get_func respects
@@ -1762,7 +1779,7 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
                                        mk_var{Name="T"^Int.toString n, Ty=ty})
                                    (enumerate 1 margtys)
                    val mterm = list_mk_comb(mfunc,margs)
-                   val mrefl = equiv_refl (make_equiv all_equivs mresty)
+                   val mrefl = equiv_refl (make_equiv equivs tyop_equivs mresty)
                in
                    GENL margs (SPEC mterm mrefl)
                end
@@ -1779,7 +1796,7 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
            map make_missing_respects missing @ respects
         end
 
-        val all_respects = add_trivial_respects funcs all_equivs
+        val all_respects = add_trivial_respects funcs equivs tyop_equivs
 
 
         fun dest_funtype ty =
@@ -3727,7 +3744,7 @@ fun enrich_types quot_ths tyops respects =
      (* ntys holds all types from nstys which are new, not in qtys *)
         val ntys = mk_set (tsubtract nstys qtys)
 
-(*    val quot_ths' = quot_ths @ map (make_quotient (quot_ths @ tyops)) ntys *)
+(*    val quot_ths' = quot_ths @ map (make_quotient quot_ths tyops) ntys *)
     in
         ntys
     end;
@@ -3772,17 +3789,17 @@ fun define_quotient_types_rule {types, defs,
       val _ = map check_poly_respects poly_respects
 
       val ntys = enrich_types quotients tyop_quotients respects
-      val nequivs = map (make_equiv all_equivs) ntys
+      val nequivs = map (make_equiv equivs tyop_equivs) ntys
       fun is_ident_equiv th =
              (curry op = "=" o #Name o dest_const o rator o rator
                                o lhs o snd o strip_forall o concl) th
              handle _ => false
-      val equivs = equivs @ filter (not o is_ident_equiv) nequivs
+      val pequivs = equivs @ filter (not o is_ident_equiv) nequivs
       val quotients =
-          quotients @ map (make_quotient (quotients @ tyop_quotients)) ntys
+          quotients @ map (make_quotient quotients tyop_quotients) ntys
 
       val LIFT_RULE =
-             lift_theorem_by_quotients quotients equivs all_equivs
+             lift_theorem_by_quotients quotients pequivs tyop_equivs
                                        tyop_quotients tyop_simps fn_defns
                                        respects poly_preserves poly_respects
              handle e => Raise e

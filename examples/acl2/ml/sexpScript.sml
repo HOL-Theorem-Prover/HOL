@@ -1261,6 +1261,24 @@ val ACL2_TRUE =
    ACL2_SIMP_TAC [ACL2_TRUE_def]
     THEN PROVE_TAC[fetch "-" "sexp_11",T_NIL]);
 
+(*****************************************************************************)
+(* Same as translateTheory.bool_def                                          *)
+(*****************************************************************************)
+val bool_to_sexp_def = 
+ Define `(bool_to_sexp T = t) /\ (bool_to_sexp F = nil)`;
+
+(*****************************************************************************)
+(* Add quantifiers to ACL2 logic: go to HOL, quantify, then back to ACL2     *)
+(*****************************************************************************)
+
+val forall_def =
+ new_binder_definition
+  ("forall_def", ``$forall = \P. bool_to_sexp !v. |= P v``);
+
+val exists_def =
+ new_binder_definition
+  ("exists_def", ``$exists = \P. bool_to_sexp ?v. |= P v``);
+
 val caar_def =
  Define
   `caar x = car(car x)`;

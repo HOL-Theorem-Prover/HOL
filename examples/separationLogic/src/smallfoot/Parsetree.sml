@@ -1,8 +1,12 @@
+structure Parsetree =
+struct
+
 type a_component = string
 
 datatype a_expression =
     Aexp_ident of string
   | Aexp_num of int
+  | Aexp_hol of string
   | Aexp_uminus of a_expression
   | Aexp_infix of string * a_expression * a_expression
 	  (* string is one of "+", "-", "*", "/", "%" *)
@@ -71,3 +75,5 @@ type fun_item =
 
 datatype p_program =
     Pprogram of a_component list * p_item list
+
+end;

@@ -173,11 +173,10 @@ val tint_mul =
 					(x1 * y2) + (y1 * x2))`,
      600);
 
-val tint_lt =
-    new_infixr_definition
-    ("tint_lt",
-     Term `$tint_lt (x1,y1) (x2,y2) = (x1 + y2) < (x2 + y1)`,
-     450);
+val tint_lt = new_definition (
+  "tint_lt",
+  Term `$tint_lt (x1,y1) (x2,y2) = (x1 + y2) < (x2 + y1)`);
+val _ = temp_set_fixity "tint_lt" (Infix(NONASSOC, 450))
 
 (*--------------------------------------------------------------------------*)
 (* Define the equivalence relation and prove it *is* one                    *)
@@ -185,11 +184,10 @@ val tint_lt =
 
 val _ = print "Define equivalence relation over pairs of naturals\n"
 
-val tint_eq =
-    new_infixr_definition
-    ("tint_eq",
-     Term `$tint_eq (x1,y1) (x2,y2) = (x1 + y2 = x2 + y1)`,
-     450);
+val tint_eq = new_definition(
+  "tint_eq",
+  Term `$tint_eq (x1,y1) (x2,y2) = (x1 + y2 = x2 + y1)`);
+val _ = temp_set_fixity "tint_eq" (Infix(NONASSOC, 450));
 
 val TINT_EQ_REFL =
     store_thm("TINT_EQ_REFL",
@@ -478,9 +476,9 @@ in
 	 defs = [mk_def ("int_0", Term `tint_0`,     "int_0", Prefix),
 		 mk_def ("int_1", Term `tint_1`,     "int_1", Prefix),
 		 mk_def ("int_neg",Term `tint_neg`,  "int_neg",   Prefix),
-		 mk_def ("int_add",Term `$tint_add`, "int_add",   Infixl 500),
-		 mk_def ("int_mul",Term `$tint_mul`, "int_mul",   Infixl 600),
-		 mk_def ("int_lt",Term `$tint_lt`,   "int_lt",    Infixr 450),
+		 mk_def ("int_add",Term `$tint_add`, "int_add",   Prefix),
+		 mk_def ("int_mul",Term `$tint_mul`, "int_mul",   Prefix),
+		 mk_def ("int_lt",Term `$tint_lt`,   "int_lt",    Prefix),
                  mk_def ("int_of_num",Term `tint_of_num`,"int_of_num",Prefix)],
 
 	 welldefs = [TINT_NEG_WELLDEF, TINT_LT_WELLDEF,
@@ -515,9 +513,9 @@ val _ = Theory.save_thm ("INT_INJ",INT_INJ)
 val _ = Theory.save_thm ("NUM_POSINT_EX",NUM_POSINT_EX)
 ;
 
-val _ = overload_on ("+", Term`$int_add`);
-val _ = overload_on ("<", Term`$int_lt`);
-val _ = overload_on ("*", Term`$int_mul`);
+val _ = overload_on ("+", Term`int_add`);
+val _ = overload_on ("<", Term`int_lt`);
+val _ = overload_on ("*", Term`int_mul`);
 
 
 (* this is a slightly tricky case; we don't have to call overload_on
@@ -540,22 +538,13 @@ val int_sub =
 			 500);
 val _ = overload_on ("-",  Term`$int_sub`);
 
-val int_le =
-    new_infixr_definition("int_le",
-			 Term `$int_le x y = ~(y<x:int)`,
-			 450);
+val int_le = new_definition("int_le", Term `int_le x y = ~(y<x:int)`);
 val _ = overload_on ("<=", Term`$int_le`);
 
-val int_gt =
-    new_infixr_definition("int_gt",
-			 Term `$int_gt (x:int) y = y < x`,
-			 450);
+val int_gt = new_definition("int_gt", Term `int_gt (x:int) y = y < x`);
 val _ = overload_on (">",  Term`$int_gt`);
 
-val int_ge =
-    new_infixr_definition("int_ge",
-			 Term `$int_ge x y = y <= x:int`,
-			 450);
+val int_ge = new_definition("int_ge", Term `int_ge x y = y <= x:int`)
 val _ = overload_on (">=", Term`$int_ge`);
 
 (*--------------------------------------------------------------------------*)
@@ -2609,7 +2598,7 @@ val _ = print "Facts about integer divisibility\n";
 val INT_DIVIDES = new_definition (
   "INT_DIVIDES",
   Term`int_divides p q = ?m:int. m * p = q`);
-val _ = set_fixity "int_divides" (Infixr 450);
+val _ = set_fixity "int_divides" (Infix(NONASSOC, 450))
 
 val INT_DIVIDES_MOD0 = store_thm(
   "INT_DIVIDES_MOD0",

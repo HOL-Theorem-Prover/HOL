@@ -273,23 +273,25 @@ exception DoneExit
 
 fun symbolic s = HOLsym (String.sub(s,String.size(s)-1));
 
-(* term tm can be seen to have name s according to grammar G *)
-fun has_name G s tm = let
+
+fun grammar_name G tm = let
   val oinfo = term_grammar.overload_info G
 in
   if is_const tm then
-    case Overload.overloading_of_term oinfo tm of
-      SOME s' => s' = s
-    | NONE => false
+    Overload.overloading_of_term oinfo tm
   else if is_var tm then let
       val (vnm, _) = dest_var tm
     in
       case Lib.total (Lib.unprefix GrammarSpecials.fakeconst_special) vnm of
-        NONE => vnm = s
-      | SOME vnm' => vnm' = s
+        NONE => SOME vnm
+      | x => x
     end
-  else false
+  else NONE
 end
+
+(* term tm can be seen to have name s according to grammar G *)
+fun has_name G s tm = (grammar_name G tm = SOME s)
+
 
 datatype bvar
     = Simple of term
@@ -470,7 +472,7 @@ fun pp_term (G : grammar) TyG = let
   fun is_let0 n tm = let
     val (let_tm,f_tm) = dest_comb(rator tm)
   in
-    Overload.overloading_of_term overload_info let_tm = SOME "LET" andalso
+    grammar_name G let_tm = SOME "LET" andalso
     (length (#1 (my_strip_abs f_tm)) >= n orelse is_let0 (n + 1) f_tm)
   end handle HOL_ERR _ => false
   val is_let = is_let0 1
@@ -848,10 +850,6 @@ fun pp_term (G : grammar) TyG = let
     fun pr_tyabs tm = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
       val (bvars, body) = strip_tyvstructs NONE tm (* strip_tyabs tm *)
-(*
-      val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
-      val old_seen = !bvars_seen
-*)
     in
       pbegin addparens;
       begin_block INCONSISTENT 2;
@@ -860,13 +858,7 @@ fun pp_term (G : grammar) TyG = let
       pr_typel "" bvars;
       end_block();
       add_string endbinding; add_break (1,0);
-(*
-      bvars_seen := bvars_seen_here @ old_seen;
-*)
       pr_term body Top Top Top (decdepth depth);
-(*
-      bvars_seen := old_seen;
-*)
       end_block();
       pend addparens
     end
@@ -874,10 +866,6 @@ fun pp_term (G : grammar) TyG = let
     fun pr_tycomb tm = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
       val (base, tys) = strip_tycomb tm
-(*
-      val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
-      val old_seen = !bvars_seen
-*)
     in if not (!Globals.show_types) then pr_term base pgrav lgrav rgrav depth
        else
      (pbegin addparens;
@@ -889,10 +877,6 @@ fun pp_term (G : grammar) TyG = let
       pr_typel "," tys;
       end_block();
       add_string type_rbracket;
-(*
-      bvars_seen := bvars_seen_here @ old_seen;
-      bvars_seen := old_seen;
-*)
       end_block();
       pend addparens)
     end
@@ -944,198 +928,122 @@ fun pp_term (G : grammar) TyG = let
       pend showtypes
     end
 
-    fun pr_comb tm t1 t2 = let
-      val add_l =
-        case lgrav of
-           Prec (n, _) => (n >= comb_prec)
-         | _ => false
-      val add_r =
-        case rgrav of
-          Prec (n, _) => (n > comb_prec)
-        | _ => false
-      val addparens = add_l orelse add_r
-      val _ = case total Literal.dest_string_lit tm
-               of NONE => ()
-                | SOME s => (add_string (Lib.mlquote s); raise SimpleExit)
-      val _ = case total Literal.dest_char_lit tm of
-                NONE => ()
-              | SOME c => (add_string "#";
-                           add_string (Lib.mlquote (str c));
-                           raise SimpleExit)
+    exception NotReallyARecord
 
-      val _ =
-        if Literal.is_numeral tm andalso can_pr_numeral NONE then
-          (pr_numeral NONE tm; raise SimpleExit)
-        else
-          ()
-      val _ =
-        (if Literal.is_numeral t2 andalso can_pr_numeral (SOME (atom_name t1))
-         then (pr_numeral (SOME t1) t2; raise SimpleExit)
-         else ()) handle SimpleExit => raise SimpleExit | _ => ()
-      val _ =
-        if my_is_abs tm then (pr_abs tm; raise SimpleExit)
-        else ()
-
-
-
-
-      val _ = (* check for set comprehensions *)
-        if
-          is_const t1 andalso fst (dest_const t1) = "GSPEC" andalso
-          isSome (Overload.overloading_of_term overload_info t1) andalso
-          my_is_abs t2
-        then let
-            val (vs, body) = my_dest_abs t2
-            val vfrees = FVL [vs] empty_tmset
-            val (l, r) = dest_pair body
-            val lfrees = FVL [l] empty_tmset
-            val rfrees = FVL [r] empty_tmset
-            open HOLset
+    fun check_for_field_selection t1 t2 = let
+      fun getfldname s =
+          if isSome recsel_info then
+            if isPrefix recsel_special s then
+              SOME (String.extract(s, size recsel_special, NONE), t2)
+            else if is_substring bigrec_subdivider_string s andalso
+                    !prettyprint_bigrecs
+            then let
+                open Overload
+                val brss = bigrec_subdivider_string
+                val (f, x) = dest_comb t2
+                val _ = is_const f orelse raise NotReallyARecord
+                val fname = valOf (overloading_of_term overload_info f)
+                val _ = is_substring (brss ^ "sf") fname orelse
+                        raise NotReallyARecord
+                open Substring
+                val (_, brsssguff) = position brss (all s)
+                val dropguff = slice(brsssguff, String.size brss, NONE)
+                val dropdigits = dropl Char.isDigit dropguff
+                val fldname = string(slice(dropdigits, 1, NONE))
+              in
+                SOME (fldname, x)
+              end handle HOL_ERR _ => NONE
+                       | NotReallyARecord => NONE
+                       | Option => NONE
+            else NONE
+          else NONE
+    in
+      if is_const t1 orelse is_fakeconst t1 then
+        case grammar_name G t1 of
+          SOME s => let
+            val fldname = getfldname s
           in
-            if (equal(intersection(lfrees,rfrees), vfrees) orelse
-                (isEmpty lfrees andalso equal(rfrees, vfrees)) orelse
-                (isEmpty rfrees andalso equal(lfrees, vfrees)))
-               andalso not (!unamb_comp)
-            then
-              (begin_block CONSISTENT 0;
-               add_string "{"; begin_block CONSISTENT 0;
-               pr_term l Top Top Top (decdepth depth);
-               add_string " |"; spacep true;
-               pr_term r Top Top Top (decdepth depth);
-               end_block();
-               add_string "}";
-               end_block();
-               raise SimpleExit)
-            else
-              (begin_block CONSISTENT 0;
-               add_string "{"; begin_block CONSISTENT 0;
-               pr_term l Top Top Top (decdepth depth);
-               add_string " |"; spacep true;
-               pr_term vs Top Top Top (decdepth depth);
-               add_string " |"; spacep true;
-               pr_term r Top Top Top (decdepth depth);
-               end_block();
-               add_string "}";
-               end_block();
-               raise SimpleExit)
-          end handle HOL_ERR _ => ()
-        else ()
+            case fldname of
+              SOME(fldname, t2) => let
+                val (prec0, fldtok) = valOf recsel_info
+                (* assumes that field selection is always left associative *)
+                val add_l =
+                    case lgrav of
+                      Prec(n, _) => n >= prec0
+                    | _ => false
+                val add_r =
+                    case rgrav of
+                      Prec(n, _) => n > prec0
+                    | _ => false
+                val prec = Prec(prec0, recsel_special)
+                val add_parens = add_l orelse add_r
+                val lprec = if add_parens then Top else lgrav
+              in
+                begin_block INCONSISTENT 0;
+                pbegin add_parens;
+                pr_term t2 prec lprec prec (decdepth depth);
+                add_string fldtok;
+                add_break(0,0);
+                add_string fldname;
+                pend add_parens;
+                end_block (); raise SimpleExit
+              end
+            | NONE => ()
+          end
+        | NONE => ()
+      else ()
+    end
 
-      exception NotReallyARecord
-      val _ = (* check for record field selection *)
-        if is_const t1 then let
-          val rname_opt = Overload.overloading_of_term overload_info t1
-        in
-          case rname_opt of
-            SOME s => let
-              val fldname =
-                  if isSome recsel_info then
-                    if isPrefix recsel_special s then
-                      SOME (String.extract(s, size recsel_special, NONE), t2)
-                    else if is_substring bigrec_subdivider_string s andalso
-                            !prettyprint_bigrecs
-                    then let
-                        open Overload
-                        val brss = bigrec_subdivider_string
-                        val (f, x) = dest_comb t2
-                        val _ = is_const f orelse raise NotReallyARecord
-                        val fname = valOf (overloading_of_term overload_info f)
-                        val _ = is_substring (brss ^ "sf") fname orelse
-                                raise NotReallyARecord
-                        open Substring
-                        val (_, brsssguff) = position brss (all s)
-                        val dropguff = slice(brsssguff, String.size brss, NONE)
-                        val dropdigits = dropl Char.isDigit dropguff
-                        val fldname = string(slice(dropdigits, 1, NONE))
-                      in
-                        SOME (fldname, x)
-                      end handle HOL_ERR _ => NONE
-                               | NotReallyARecord => NONE
-                               | Option => NONE
-                    else NONE
-                  else NONE
-            in
-              case fldname of
-                SOME(fldname, t2) => let
-                  val (prec0, fldtok) = valOf recsel_info
-                  (* assumes that field selection is always left associative *)
-                  val add_l =
-                      case lgrav of
-                        Prec(n, _) => n >= prec0
-                      | _ => false
-                  val add_r =
-                      case rgrav of
-                        Prec(n, _) => n > prec0
-                      | _ => false
-                  val prec = Prec(prec0, recsel_special)
-                  val add_parens = add_l orelse add_r
-                  val lprec = if add_parens then Top else lgrav
-                in
-                  begin_block INCONSISTENT 0;
-                  pbegin add_parens;
-                  pr_term t2 prec lprec prec (decdepth depth);
-                  add_string fldtok;
-                  add_break(0,0);
-                  add_string fldname;
-                  pend add_parens;
-                  end_block (); raise SimpleExit
-                end
-              | NONE => ()
-            end
-          | NONE => ()
-        end
-        else ()
-
-      val _ = (* check for record update *)
+    fun check_for_record_update t1 t2 =
         if isSome recwith_info andalso isSome reclist_info andalso
            isSome recfupd_info andalso isSome recupd_info
         then let
-          open Overload
-          (* function to determine if t is a record update *)
-          fun is_record_update t =
-            if is_comb t andalso is_const (rator t) then let
-              val rname = overloading_of_term overload_info (rator t)
-            in
-              case rname of
-                SOME s =>
-                (!prettyprint_bigrecs andalso isSuffix "_fupd" s andalso
-                 is_substring (bigrec_subdivider_string ^ "sf") s) orelse
-                isPrefix recfupd_special s
-              | NONE => false
-            end else false
-          (* descend the rands of a term until one that is not a record
-             update is found.  Return this and the list of rators up to
-             this point. *)
-          fun find_first_non_update acc t =
-            if is_comb t andalso is_record_update (rator t) then
-              find_first_non_update ((rator t)::acc) (rand t)
-            else
-              (List.rev acc, t)
-          fun categorise_bigrec_updates v = let
-            fun bigrec_update t =
-                if is_comb t then
-                  case overloading_of_term overload_info (rator t) of
-                    SOME s => if is_substring bigrec_subdivider_string s then
-                                SOME (s, rand t)
-                              else NONE
-                  | NONE => NONE
-                else NONE
-            fun strip_o acc tlist =
-                case tlist of
-                  [] => acc
-                | t::ts => let
-                    val (f, args) = strip_comb t
-                    val {Name,Thy,...} = dest_thy_const f
+            open Overload
+            (* function to determine if t is a record update *)
+            fun is_record_update t =
+                if is_comb t andalso is_const (rator t) then let
+                    val rname = overloading_of_term overload_info (rator t)
                   in
-                    if Name = "o" andalso Thy = "combin" then
-                      strip_o acc (hd (tl args) :: hd args :: ts)
-                    else strip_o (t::acc) ts
-                  end handle HOL_ERR _ => strip_o (t::acc) ts
-            fun strip_bigrec_updates t = let
-              val internal_upds = strip_o [] [t]
-            in
-              List.mapPartial bigrec_update internal_upds
-            end
+                    case rname of
+                      SOME s =>
+                      (!prettyprint_bigrecs andalso isSuffix "_fupd" s andalso
+                       is_substring (bigrec_subdivider_string ^ "sf") s) orelse
+                      isPrefix recfupd_special s
+                    | NONE => false
+                  end else false
+            (* descend the rands of a term until one that is not a record
+               update is found.  Return this and the list of rators up to
+               this point. *)
+            fun find_first_non_update acc t =
+                if is_comb t andalso is_record_update (rator t) then
+                  find_first_non_update ((rator t)::acc) (rand t)
+                else
+                  (List.rev acc, t)
+            fun categorise_bigrec_updates v = let
+              fun bigrec_update t =
+                  if is_comb t then
+                    case overloading_of_term overload_info (rator t) of
+                      SOME s => if is_substring bigrec_subdivider_string s then
+                                  SOME (s, rand t)
+                                else NONE
+                    | NONE => NONE
+                  else NONE
+              fun strip_o acc tlist =
+                  case tlist of
+                    [] => acc
+                  | t::ts => let
+                      val (f, args) = strip_comb t
+                      val {Name,Thy,...} = dest_thy_const f
+                    in
+                      if Name = "o" andalso Thy = "combin" then
+                        strip_o acc (hd (tl args) :: hd args :: ts)
+                      else strip_o (t::acc) ts
+                    end handle HOL_ERR _ => strip_o (t::acc) ts
+              fun strip_bigrec_updates t = let
+                val internal_upds = strip_o [] [t]
+              in
+                List.mapPartial bigrec_update internal_upds
+              end
             fun categorise_bigrec_update (s, value) = let
               (* first strip suffix, and decide if a normal update *)
               val sz = size s
@@ -1258,6 +1166,20 @@ fun pp_term (G : grammar) TyG = let
           else ()
         end
         else ()
+
+
+
+    fun pr_comb tm t1 t2 = let
+      val add_l =
+        case lgrav of
+           Prec (n, _) => (n >= comb_prec)
+         | _ => false
+      val add_r =
+        case rgrav of
+          Prec (n, _) => (n > comb_prec)
+        | _ => false
+      val addparens = add_l orelse add_r
+
 
       val (f, args) = strip_comb tm
       val comb_show_type = let
@@ -1441,7 +1363,7 @@ fun pp_term (G : grammar) TyG = let
         end
       | PREFIX (BINDER lst) =>
         if is_tyabs tm orelse is_tyabs Rand then let
-          val tok = case hd lst of 
+          val tok = case hd lst of
                       LAMBDA => hd lambda (* should never happen *)
                     | TYPE_LAMBDA => hd type_lambda (* should never happen *)
                     | BinderString r => #tok r
@@ -1762,7 +1684,84 @@ fun pp_term (G : grammar) TyG = let
         end
       | COMB(Rator, Rand) => let
           val (f, args) = strip_comb Rator
-          val () = (* check for case expressions *)
+
+          (* check for various literal and special forms *)
+
+          (* strings *)
+          val _ = case total Literal.dest_string_lit tm of
+                    NONE => ()
+                  | SOME s => (add_string (Lib.mlquote s); raise SimpleExit)
+
+          (* characters *)
+          val _ = case total Literal.dest_char_lit tm of
+                    NONE => ()
+                  | SOME c => (add_string "#";
+                               add_string (Lib.mlquote (str c));
+                               raise SimpleExit)
+
+          (* numerals *)
+          val _ =
+              if Literal.is_numeral tm andalso can_pr_numeral NONE then
+                (pr_numeral NONE tm; raise SimpleExit)
+              else
+                ()
+          val _ =
+              (if Literal.is_numeral Rand andalso
+                  can_pr_numeral (SOME (atom_name Rator))
+               then (pr_numeral (SOME Rator) Rand; raise SimpleExit)
+               else ()) handle SimpleExit => raise SimpleExit | _ => ()
+
+          (* binders *)
+          val _ =
+              if my_is_abs tm then (pr_abs tm; raise SimpleExit)
+              else ()
+
+          (* set comprehensions *)
+          val _ =
+              if grammar_name G Rator = SOME "GSPEC" andalso my_is_abs Rand
+              then let
+                  val (vs, body) = my_dest_abs Rand
+                  val vfrees = FVL [vs] empty_tmset
+                  val (l, r) = dest_pair body
+                  val lfrees = FVL [l] empty_tmset
+                  val rfrees = FVL [r] empty_tmset
+                  open HOLset
+                in
+                  if (equal(intersection(lfrees,rfrees), vfrees) orelse
+                      (isEmpty lfrees andalso equal(rfrees, vfrees)) orelse
+                      (isEmpty rfrees andalso equal(lfrees, vfrees)))
+                     andalso not (!unamb_comp)
+                  then
+                    (begin_block CONSISTENT 0;
+                     add_string "{"; begin_block CONSISTENT 0;
+                     pr_term l Top Top Top (decdepth depth);
+                     add_string " |"; spacep true;
+                     pr_term r Top Top Top (decdepth depth);
+                     end_block();
+                     add_string "}";
+                     end_block();
+                     raise SimpleExit)
+                  else
+                    (begin_block CONSISTENT 0;
+                     add_string "{"; begin_block CONSISTENT 0;
+                     pr_term l Top Top Top (decdepth depth);
+                     add_string " |"; spacep true;
+                     pr_term vs Top Top Top (decdepth depth);
+                     add_string " |"; spacep true;
+                     pr_term r Top Top Top (decdepth depth);
+                     end_block();
+                     add_string "}";
+                     end_block();
+                     raise SimpleExit)
+                end handle HOL_ERR _ => ()
+              else ()
+
+          (* record forms *)
+          val _ = check_for_field_selection Rator Rand
+          val _ = check_for_record_update Rator Rand
+
+          (* case expressions *)
+          val () =
               if is_const f then
                 case Overload.overloading_of_term overload_info f of
                   SOME "case" =>
@@ -1776,9 +1775,18 @@ fun pp_term (G : grammar) TyG = let
                 | _ => ()
               else ()
 
+          (* let expressions *)
+          val () = if is_let tm then (pr_let lgrav rgrav tm; raise SimpleExit)
+                   else ()
+
           fun is_atom tm = is_const tm orelse is_var tm
           fun pr_atomf (f,args) = let
+            (* the tm, Rator and Rand bindings that we began with are
+               overridden by the f and args values that may be the product of
+               oi_strip_comb *)
             val fname = atom_name f
+            val tm = list_mk_comb (f, args)
+            val Rator = rator tm
             val (args,Rand) = front_last args
             val candidate_rules = lookup_term fname
             fun is_list (r as {nilstr, cons, ...}:listspec) tm =
@@ -1816,54 +1824,54 @@ fun pp_term (G : grammar) TyG = let
                     case optrule of
                       SOME rule_list => List.find ok_rule rule_list
                     | otherwise => NONE
-                  end
+                     end
                 else NONE
           in
             case candidate_rules of
               NONE =>
-                if is_let tm then pr_let lgrav rgrav tm
-                else let
+              if is_let tm then pr_let lgrav rgrav tm
+              else let
                 in
                   case restr_binder of
                     NONE => pr_comb tm Rator Rand
                   | SOME NONE =>
-                      if isSome restr_binder_rule then pr_abs tm
-                      else pr_comb tm Rator Rand
+                    if isSome restr_binder_rule then pr_abs tm
+                    else pr_comb tm Rator Rand
                   | SOME (SOME fname) =>
-                      if isSome restr_binder_rule then
-                        pr_comb_with_rule(#2(valOf restr_binder_rule))
-                                         {fprec = #1 (valOf restr_binder_rule),
-                                          fname = fname,
-                                          f = f} args Rand
-                      else
-                        pr_comb tm Rator Rand
+                    if isSome restr_binder_rule then
+                      pr_comb_with_rule(#2(valOf restr_binder_rule))
+                                       {fprec = #1 (valOf restr_binder_rule),
+                                        fname = fname,
+                                        f = f} args Rand
+                    else
+                      pr_comb tm Rator Rand
                 end
             | SOME crules0 => let
                 fun suitable_rule rule =
-                  case rule of
-                    INFIX(STD_infix(rrlist, _)) =>
+                    case rule of
+                      INFIX(STD_infix(rrlist, _)) =>
                       numTMs (rule_elements (#elements (hd rrlist))) + 1 =
                       length args
-                  | INFIX RESQUAN_OP => raise Fail "Can't happen 90212"
-                  | PREFIX (STD_prefix list) =>
+                    | INFIX RESQUAN_OP => raise Fail "Can't happen 90212"
+                    | PREFIX (STD_prefix list) =>
                       numTMs (rule_elements (#elements (hd list))) =
                       length args
-                  | PREFIX (BINDER _) => (my_is_abs Rand orelse my_is_tyabs Rand) andalso
-                                         length args = 0
-                  | SUFFIX (STD_suffix list) =>
+                    | PREFIX (BINDER _) => (my_is_abs Rand orelse my_is_tyabs Rand) andalso
+                                           length args = 0
+                    | SUFFIX (STD_suffix list) =>
                       numTMs (rule_elements (#elements (hd list))) =
                       length args
-                  | SUFFIX Type_annotation => raise Fail "Can't happen 90210"
-                  | CLOSEFIX list =>
+                    | SUFFIX Type_annotation => raise Fail "Can't happen 90210"
+                    | CLOSEFIX list =>
                       numTMs (rule_elements (#elements (hd list))) - 1 =
                       length args
-                  | INFIX (FNAPP _) => raise Fail "Can't happen 90211"
-                  | INFIX VSCONS => raise Fail "Can't happen 90213"
-                  | LISTRULE list => is_list (hd list) tm
+                    | INFIX (FNAPP _) => raise Fail "Can't happen 90211"
+                    | INFIX VSCONS => raise Fail "Can't happen 90213"
+                    | LISTRULE list => is_list (hd list) tm
                 val crules = List.filter (suitable_rule o #2) crules0
                 fun is_preferred (LISTRULE _) = true
-                  | is_preferred (PREFIX (BINDER [BinderString r])) = 
-                     #preferred r 
+                  | is_preferred (PREFIX (BINDER [BinderString r])) =
+                    #preferred r
                   | is_preferred (PREFIX (BINDER [TypeBinderString r])) = 
                      #preferred r 
                   | is_preferred r = #preferred (hd (rule_to_rr r))
@@ -1880,16 +1888,16 @@ fun pp_term (G : grammar) TyG = let
                                      fname=fname, f=f}
                                     args Rand
                 else
-                if not (null lrules) then 
+                if not (null lrules) then
                   pr_comb_with_rule (#2 (hd lrules))
-                                    {fprec = #1 (hd lrules), 
-                                     fname=fname, f=f} 
+                                    {fprec = #1 (hd lrules),
+                                     fname=fname, f=f}
                                     args Rand
-                else 
-                  case others of 
-                    (p,r) :: _ => 
-                          pr_comb_with_rule r {fprec=p, fname=fname, f=f}
-                          args Rand
+                else
+                  case others of
+                    (p,r) :: _ =>
+                    pr_comb_with_rule r {fprec=p, fname=fname, f=f}
+                                      args Rand
                   | [] => pr_comb tm Rator Rand
               end
           end (* pr_atomf *)
@@ -1901,7 +1909,8 @@ fun pp_term (G : grammar) TyG = let
                     [] => pr_term f pgrav lgrav rgrav depth
                   | _ => pr_atomf p
                 end
-              | NONE => pr_comb tm Rator Rand
+              | NONE => if is_var f then pr_atomf (f, args @ [Rand])
+                        else pr_comb tm Rator Rand
         in
           if showtypes_v then
             if const_is_ambiguous f then

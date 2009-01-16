@@ -167,10 +167,11 @@ val MU_SUB_def = save_thm("MU_SUB_def",Define `
 (SUBFORMULA g (mu Q.. f) = (SUBFORMULA g f) \/ (g = mu Q.. f)) /\
 (SUBFORMULA g (nu Q.. f) = (SUBFORMULA g f) \/ (g = nu Q.. f))`)
 
-val _ = add_rule {term_name = "SUBFORMULA", fixity = Infix (HOLgrammars.RIGHT,450),
-     pp_elements = [HardSpace 1,TOK "SUBF",HardSpace 1],
-     paren_style = OnlyIfNecessary,
-     block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))}
+val _ = add_rule
+            {term_name = "SUBFORMULA", fixity = Infix (NONASSOC,450),
+             pp_elements = [HardSpace 1,TOK "SUBF",HardSpace 1],
+             paren_style = OnlyIfNecessary,
+             block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))}
 
 val IMF_def = save_thm("IMF_def",Define `
 (IMF (T:'prop mu) = T) /\
@@ -239,38 +240,55 @@ val AP_SUBST_def = Define `
 (AP_SUBST g ap (mu Q.. f) = (mu Q.. (AP_SUBST g ap f)))  /\
 (AP_SUBST g ap (nu Q.. f) =  (nu Q.. (AP_SUBST g ap f)))`
 
-val RVNEG_SYM = save_thm("RVNEG_SYM",prove(``!Q Q' (f:'prop mu). RVNEG Q (RVNEG Q' f) = RVNEG Q' (RVNEG Q f)``,
+val RVNEG_SYM = store_thm("RVNEG_SYM",
+  ``!Q Q' (f:'prop mu). RVNEG Q (RVNEG Q' f) = RVNEG Q' (RVNEG Q f)``,
+
 REPEAT GEN_TAC
 THEN Induct_on `f` THEN SIMP_TAC std_ss (RVNEG_def::tsimps ``:'prop mu``) THEN
 FULL_SIMP_TAC std_ss [] THENL [
-ASSUM_LIST PROVE_TAC,
-ASSUM_LIST PROVE_TAC,
-REPEAT GEN_TAC
-THEN Cases_on `Q=Q'` THEN REPEAT (Cases_on `Q'=s` THEN REPEAT (Cases_on `Q=s` THEN FULL_SIMP_TAC std_ss [RVNEG_def])),(*RV*)
-GEN_TAC
-THEN Cases_on `Q=Q'` THENL [
-  Cases_on `Q'=s` THEN REPEAT (Cases_on `Q=s` THEN
-				    (FULL_SIMP_TAC std_ss [RVNEG_def] ORELSE ASSUM_LIST PROVE_TAC)),
-  Cases_on `Q'=s` THENL [
-   Cases_on `Q=s` THENL [
-    FULL_SIMP_TAC std_ss [RVNEG_def],
-    FULL_SIMP_TAC std_ss [RVNEG_def]],
-   Cases_on `Q=s` THENL [
-    FULL_SIMP_TAC std_ss [RVNEG_def],
-    FULL_SIMP_TAC std_ss [RVNEG_def]
-    THEN ASSUM_LIST PROVE_TAC]]], (* mu *)
-GEN_TAC
-THEN Cases_on `Q=Q'` THENL [
-  Cases_on `Q'=s` THEN REPEAT (Cases_on `Q=s` THEN
-				    (FULL_SIMP_TAC std_ss [RVNEG_def] ORELSE ASSUM_LIST PROVE_TAC)),
-  Cases_on `Q'=s` THENL [
-   Cases_on `Q=s` THENL [
-    FULL_SIMP_TAC std_ss [RVNEG_def],
-    FULL_SIMP_TAC std_ss [RVNEG_def]],
-   Cases_on `Q=s` THENL [
-    FULL_SIMP_TAC std_ss [RVNEG_def],
-    FULL_SIMP_TAC std_ss [RVNEG_def]
-    THEN ASSUM_LIST PROVE_TAC]]]])) (* nu *)
+  PROVE_TAC [],
+  PROVE_TAC [],
+  Q.X_GEN_TAC `s`
+  THEN Cases_on `Q=Q'` THEN
+  REPEAT (Cases_on `Q'=s` THEN
+          REPEAT (Cases_on `Q=s` THEN FULL_SIMP_TAC std_ss [RVNEG_def])),(*RV*)
+
+  Q.X_GEN_TAC `s`
+  THEN Cases_on `Q=Q'` THENL [
+    Cases_on `Q'=s` THEN REPEAT (Cases_on `Q=s` THEN
+				 (FULL_SIMP_TAC std_ss [RVNEG_def] ORELSE
+                                  PROVE_TAC [])),
+    Cases_on `Q'=s` THENL [
+      Cases_on `Q=s` THENL [
+        FULL_SIMP_TAC std_ss [RVNEG_def],
+        FULL_SIMP_TAC std_ss [RVNEG_def]
+      ],
+      Cases_on `Q=s` THENL [
+        FULL_SIMP_TAC std_ss [RVNEG_def],
+        FULL_SIMP_TAC std_ss [RVNEG_def] THEN PROVE_TAC []
+      ]
+    ]
+  ], (* mu *)
+
+  (* nu *)
+  Q.X_GEN_TAC `s`
+  THEN Cases_on `Q=Q'` THENL [
+    Cases_on `Q'=s` THEN
+    REPEAT (Cases_on `Q=s` THEN
+	    (FULL_SIMP_TAC std_ss [RVNEG_def] ORELSE ASSUM_LIST PROVE_TAC)),
+    Cases_on `Q'=s` THENL [
+      Cases_on `Q=s` THENL [
+        FULL_SIMP_TAC std_ss [RVNEG_def],
+        FULL_SIMP_TAC std_ss [RVNEG_def]
+      ],
+      Cases_on `Q=s` THENL [
+        FULL_SIMP_TAC std_ss [RVNEG_def],
+        FULL_SIMP_TAC std_ss [RVNEG_def]
+        THEN ASSUM_LIST PROVE_TAC
+      ]
+    ]
+  ]
+])
 
 val IMF_NEG_NEG_LEM1 = save_thm("IMF_NEG_NEG_LEM1",prove(``!(f:'prop mu) Q Q'. ~(Q'=Q) ==> (~SUBFORMULA (~RV Q) (NNF (RVNEG Q' f)) = ~SUBFORMULA (~RV Q) (NNF f))``,
 recInduct NNF_IND_def THEN REPEAT CONJ_TAC THEN BETA_TAC THEN SIMP_TAC std_ss ([NNF_def,RVNEG_def,IMF_def,MU_SUB_def]@tsimps_mu) THENL [
@@ -299,19 +317,24 @@ FULL_SIMP_TAC std_ss ([NNF_def,RVNEG_def,IMF_def,MU_SUB_def]@tsimps_mu),
 FULL_SIMP_TAC std_ss ([NNF_def,RVNEG_def,IMF_def,MU_SUB_def]@tsimps_mu)
 THEN FULL_SIMP_TAC std_ss [RVNEG_SYM]]])) (* nu *)
 
-val IMF_INV_RVNEG = save_thm("IMF_INV_RVNEG",prove(``!(f: 'prop mu) Q. IMF (RVNEG Q f) = IMF f``,
-Induct_on `f` THEN FULL_SIMP_TAC std_ss ([IMF_def,MU_SUB_def,RVNEG_def]@tsimps_mu) THENL [
-REPEAT GEN_TAC THEN Cases_on `Q=s` THENL [
- FULL_SIMP_TAC std_ss ([IMF_def]),
- FULL_SIMP_TAC std_ss ([IMF_def])], (* RV *)
-REPEAT STRIP_TAC THEN Cases_on `Q=s` THENL [
- FULL_SIMP_TAC std_ss ([IMF_def,MU_SUB_def]),
- FULL_SIMP_TAC std_ss ([IMF_def,MU_SUB_def])
- THEN FULL_SIMP_TAC std_ss [IMF_NEG_NEG_LEM1]], (* mu *)
-REPEAT STRIP_TAC THEN Cases_on `Q=s` THENL [
- FULL_SIMP_TAC std_ss ([IMF_def,MU_SUB_def]),
- FULL_SIMP_TAC std_ss ([IMF_def,MU_SUB_def])
- THEN FULL_SIMP_TAC std_ss [IMF_NEG_NEG_LEM1]]])) (* nu *)
+val IMF_INV_RVNEG = store_thm(
+  "IMF_INV_RVNEG",
+  ``!(f: 'prop mu) Q. IMF (RVNEG Q f) = IMF f``,
+  Induct_on `f` THEN
+  FULL_SIMP_TAC std_ss ([IMF_def,MU_SUB_def,RVNEG_def]@tsimps_mu) THENL [
+    (* RV *)
+    SRW_TAC [][IMF_def],
+
+    (* mu *)
+    MAP_EVERY Q.X_GEN_TAC [`s`, `Q`] THEN Cases_on `Q=s` THEN
+    FULL_SIMP_TAC std_ss [IMF_def,MU_SUB_def] THEN
+    FULL_SIMP_TAC std_ss [IMF_NEG_NEG_LEM1],
+
+    (* nu *)
+    MAP_EVERY Q.X_GEN_TAC [`s`, `Q`] THEN Cases_on `Q=s` THEN
+    FULL_SIMP_TAC std_ss [IMF_def,MU_SUB_def] THEN
+    FULL_SIMP_TAC std_ss [IMF_NEG_NEG_LEM1]
+  ])
 
 val IMF_INV_NEG_RVNEG = save_thm("IMF_INV_NEG_RVNEG",prove (``!f Q. IMF (f:'prop mu) = IMF (RVNEG Q ~f)``,
 SIMP_TAC std_ss [RVNEG_def,GSYM IMF_INV_RVNEG,IMF_def]))
@@ -376,9 +399,9 @@ Induct_on `f` THEN FULL_SIMP_TAC std_ss ([UNION_DEF,SET_SPEC,RVNEG_def,ALLV_def]
  ONCE_REWRITE_TAC [EXTENSION]
  THEN FULL_SIMP_TAC std_ss [SET_SPEC]
  THEN METIS_TAC [],
- REPEAT GEN_TAC THEN Cases_on `Q=s` THEN FULL_SIMP_TAC std_ss [ALLV_def],
- REPEAT GEN_TAC THEN Cases_on `Q=s` THEN FULL_SIMP_TAC std_ss [ALLV_def],
- REPEAT GEN_TAC THEN Cases_on `Q=s` THEN FULL_SIMP_TAC std_ss [ALLV_def]
+ SRW_TAC [][ALLV_def],
+ SRW_TAC [][ALLV_def],
+ SRW_TAC [][ALLV_def]
 ])
 
 val ALLV_NNF = prove(``!f. ALLV f = ALLV (NNF f)``,

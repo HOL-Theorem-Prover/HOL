@@ -570,11 +570,12 @@ val fmap_EXT = save_thm("fmap_EXT", GSYM fmap_EQ_THM)
            Submaps
  ---------------------------------------------------------------------------*)
 
-val SUBMAP_DEF = new_infixr_definition
-("SUBMAP_DEF",
- Term`!^fmap g.
-         $SUBMAP f g =
-          !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)`, 450);
+val SUBMAP_DEF = new_definition (
+  "SUBMAP_DEF",
+  ``!^fmap g.
+       $SUBMAP f g =
+       !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)``)
+val _ = set_fixity "SUBMAP" (Infix(NONASSOC, 450));
 
 
 val SUBMAP_FEMPTY = Q.store_thm

@@ -135,7 +135,7 @@ val MULT_GROUP_ID_WITNESS = store_thm
        !x :: gset (mult_group n). gop (mult_group n) 1 x = x``,
    S_TAC >> AG_TAC [MULT_GROUP_SET, ADD_GROUP_SET]
    ++ AG_TAC [MULT_GROUP_SET, ADD_GROUP_SET, MULT_GROUP_OP]);
-         
+
 val MULT_GROUP_INV = store_thm
   ("MULT_GROUP_INV",
    ``!n. !x :: gset (mult_group n).
@@ -711,7 +711,7 @@ val STRONG_MULT_GROUP_PRIME_POWER_CYCLIC = store_thm
    ++ Q.EXISTS_TAC `g + p * x`
    ++ NTAC 2 STRIP_TAC
    ++ STRONG_CONJ_TAC
-   >> (Q.PAT_ASSUM `g IN x` MP_TAC
+   >> (Q.PAT_ASSUM `g IN X` MP_TAC
        ++ R_TAC [MULT_GROUP_SET, ADD_GROUP_SET, GCD_1_PRIMEL]
        ++ STRIP_TAC
        ++ ONCE_REWRITE_TAC [GCD_SYM]

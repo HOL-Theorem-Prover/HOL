@@ -14,7 +14,7 @@ show_assums := true;
 
 open generalHelpersTheory finite_mapTheory relationTheory bagTheory pred_setTheory congLib sortingTheory
    listTheory rich_listTheory arithmeticTheory operatorTheory optionTheory latticeTheory
-   containerTheory BoolExtractShared;
+   containerTheory BoolExtractShared ConseqConv;
 
 (*
 quietdec := false;
@@ -3331,16 +3331,10 @@ FULL_SIMP_TAC std_ss [SOME___SUP_fasl_order, IN_IMAGE, GSYM LEFT_FORALL_IMP_THM]
 	
 	REWRITE_TAC [EXTENSION] THEN
 	SIMP_TAC std_ss [IN_IMAGE] THEN
-	REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
-		Q.EXISTS_TAC `s` THEN
-		`IS_SOME (y s)` by RES_TAC THEN
-		FULL_SIMP_TAC std_ss [IS_SOME_EXISTS] THEN
-		FULL_SIMP_TAC std_ss [],
-
-		Q.EXISTS_TAC `s` THEN
-		`IS_SOME (y s)` by RES_TAC THEN
-		FULL_SIMP_TAC std_ss [IS_SOME_EXISTS]
-	]
+	DEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
+        SIMP_TAC std_ss [COND_RAND, COND_RATOR] THEN
+	SIMP_TAC (std_ss++bool_eq_imp_ss) [] THEN
+        METIS_TAC[NONE_IS_NOT_SOME]
 ) THEN
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 
@@ -3359,15 +3353,10 @@ SIMP_TAC std_ss [GSYM IMAGE_COMPOSE, combinTheory.o_DEF] THEN
 
 	REWRITE_TAC [EXTENSION] THEN
 	SIMP_TAC std_ss [IN_IMAGE] THEN
-	REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
-		Q.EXISTS_TAC `s` THEN
-		FULL_SIMP_TAC std_ss [COND_RAND, COND_RATOR] THEN
-		METIS_TAC[],
-
-		Q.EXISTS_TAC `s` THEN
-		FULL_SIMP_TAC std_ss [COND_RAND, COND_RATOR] THEN
-		METIS_TAC[]
-	]
+	DEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
+        SIMP_TAC std_ss [COND_RAND, COND_RATOR] THEN
+	SIMP_TAC (std_ss++bool_eq_imp_ss) [] THEN
+        METIS_TAC[NONE_IS_NOT_SOME]
 ) THEN
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 

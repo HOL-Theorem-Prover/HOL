@@ -10,9 +10,8 @@ val _ = set_trace "Unicode" 1
 *)
 val _ = Hol_datatype `stype = base | funspace of stype => stype`;
 
-val _ = add_infix("-->", 700, RIGHT)
 val _ = overload_on("-->", ``funspace``)
-val _ = Unicode.unicode_version(Unicode.UChar.rightarrow, ``funspace``)
+val _ = Unicode.unicode_version{u = Unicode.UChar.rightarrow, tmnm = "-->"}
 
 (* set up parsing/pretty-printing for the typing relation.
    Can't use ":" to the right of the turnstile, because it's already taken
@@ -41,6 +40,13 @@ val (hastype_rules, hastype_ind, hastype_cases) = Hol_reln`
   (∀m n A B Γ. Γ ⊢ m ◁ A → B ∧ Γ ⊢ n ◁ A ⇒ Γ ⊢ m @@ n ◁ B) ∧
   (∀x m A B Γ. (x,A) :: Γ ⊢ m ◁ B         ⇒ Γ ⊢ LAM x m ◁ A → B)
 `;
+
+val _ = set_fixity "·" (Infixl 600)
+val _ = overload_on ("·", ``tpm``)
+
+val _ = set_fixity "⁻¹" (Suffix 2100)
+val _ = overload_on ("⁻¹", 
+  ``REVERSE : (string # string) list -> (string # string) list``)
 
 (* typing relation respects permutation *)
 val hastype_swap = store_thm(
@@ -76,8 +82,7 @@ val hastype_bvc_ind = store_thm(
           G ⊢ m ◁ A → B ∧ G ⊢ n ◁ A
         ⇒
           P G (m @@ n) B x) ∧
-       (∀G v m A B x. (∀y. P ((v,A)::G) m B y) ∧
-                      ¬(v ∈ fv x) ∧ ¬(v ∈ ctxtFV G) ∧
+       (∀G v m A B x. (∀y. P ((v,A)::G) m B y) ∧ v ∉ fv x ∧ v ∉ ctxtFV G ∧
                       (v,A) :: G ⊢ m ◁ B
                     ⇒
                       P G (LAM v m) (A → B) x) ⇒
@@ -99,7 +104,7 @@ val hastype_bvc_ind = store_thm(
     SRW_TAC [][GSYM tpm_APPEND] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     `valid_ctxt ((v,A)::G)` by METIS_TAC [hastype_valid_ctxt] THEN
-    `¬(v ∈ ctxtFV G)` by FULL_SIMP_TAC (srw_ss()) [ctxtFV_MEM] THEN
+    `v ∉ ctxtFV G` by FULL_SIMP_TAC (srw_ss()) [ctxtFV_MEM] THEN
     SRW_TAC [][] THENL [
       Q_TAC SUFF_TAC
          `((z,A)::ctxtswap pi G =
@@ -125,7 +130,7 @@ val hastype_indX = save_thm(
 
 val hastype_lam_inv = store_thm(
   "hastype_lam_inv",
-  ``¬(v ∈ ctxtFV Γ) ⇒
+  ``v ∉ ctxtFV Γ ⇒
         (Γ ⊢ LAM v M ◁ τ =
          ∃ τ₁ τ₂. ((v,τ₁) :: Γ) ⊢ M ◁ τ₂ ∧
                     (τ = τ₁ → τ₂))``,
@@ -134,7 +139,7 @@ val hastype_lam_inv = store_thm(
        by SRW_TAC [][hastype_swap] THEN
     POP_ASSUM MP_TAC THEN
     `valid_ctxt ((x,A):: Γ)` by METIS_TAC [hastype_valid_ctxt] THEN
-    `¬(x ∈ ctxtFV Γ)` by (FULL_SIMP_TAC (srw_ss()) [] THEN
+    `x ∉ ctxtFV Γ` by (FULL_SIMP_TAC (srw_ss()) [] THEN
                            METIS_TAC [ctxtFV_MEM]) THEN
     SRW_TAC [][ctxtswap_fresh],
     METIS_TAC []

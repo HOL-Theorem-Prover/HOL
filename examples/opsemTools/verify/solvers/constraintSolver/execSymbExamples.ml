@@ -10,13 +10,17 @@ val opsemPath = Globals.HOLDIR ^ "/examples/opsemTools/";
 loadPath := opsemPath :: opsemPath ^ "java2opsem" ::
 opsemPath ^ "verify/solvers" ::
 opsemPath ^ "verify/solvers/constraintSolver" ::
-opsemPath ^ "verify/" ::
+opsemPath ^ "loadPath/" ::
 (!loadPath);
 
 quietdec := true; (* turn off printing *)
 
 app load ["execSymb","extSolv"];
 open execSymb extSolv;
+
+(* app load ["execSymbStatistics","extSolv"];
+   open execSymbStatistics extSolv;*)
+
 
 quietdec := false; (* turn printing back on *)
 
@@ -1618,7 +1622,9 @@ execSymbWithCSP name spec 1000;
 
 
 (* the program is too big!
-   it is impossible to build the initial state from the program. 
+   it is impossible to build the initial state from the program.
+Now it works: program_vars didn't use local variables to 
+   store values of recursive calls. So program_vars was in 2^n 
    it is too long to do symbolic execution (updating state is
    too slow because the state is large (112 variables)
 *) 
@@ -1633,6 +1639,28 @@ execSymbWithCSP_vars name spec 1000 vars;
 *** Time taken: 643.824s
 to execute the 35 first assignements of variables
 and there are 112 variables to initialize !!!
+
+val (_,args) = strip_comb spec;
+   val (pre,prog,post) = (el 1 args, el 2 args, el 3 args);
+
+ program_vars prog;
+val c = prog;
+
  *)
+
+val name = "NestedLoop";
+val spec = loadAndGetSpec name;
+execSymbWithCSP name spec 200;
+(* impossible to execute the same number of steps for i and j
+execSymb with number of steps doen't work for nested loops!
+will execute n steps in the inner loop and then stop!
+*)
+
+
+(* example of function call *)
+val name = "AbsMinusFunction";
+val spec = loadAndGetSpec name;
+val vars = getVars name; 
+execSymbWithCSP_vars name spec 100 vars;
 
 

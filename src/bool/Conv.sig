@@ -102,5 +102,5 @@ sig
    val RENAME_VARS_CONV      : string list -> conv
    val SWAP_VARS_CONV        : conv
    val PRINT_CONV            : conv
-
+   val MAP_THM               : conv -> thm -> thm
 end

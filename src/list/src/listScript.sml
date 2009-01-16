@@ -75,14 +75,12 @@ val _ = Datatype.Hol_datatype `list = NIL | CONS of 'a => list`;
 (* Fiddle with concrete syntax                                               *)
 (*---------------------------------------------------------------------------*)
 
-val _ = set_MLname "CONS" "CONS_def";
-
 val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "["], rightdelim = [TOK "]"],
                       cons = "CONS", nilstr = "NIL",
                       block_info = (PP.INCONSISTENT, 0)};
 
-val _ = add_rule {term_name = "CONS", fixity = Infixr 450,
+val _ = add_rule {term_name = "CONS", fixity = Infixr 490,
                   pp_elements = [TOK "::", BreakSpace(0,2)],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundSameName, (PP.INCONSISTENT, 2))};
@@ -138,7 +136,7 @@ val APPEND = new_recursive_definition
                   (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)`--};
 val _ = export_rewrites ["APPEND"]
 
-val _ = set_fixity "++" (Infixl 440);
+val _ = set_fixity "++" (Infixl 480);
 val _ = overload_on ("++", Term`APPEND`);
 
 val FLAT = new_recursive_definition
@@ -1300,6 +1298,33 @@ val FINITE_LIST_TO_SET = Q.store_thm
 val _ = export_rewrites ["FINITE_LIST_TO_SET"];
 val _ = overload_on ("set", ``LIST_TO_SET : 'a list -> 'a set``);
 
+(* ----------------------------------------------------------------------
+    isPREFIX
+   ---------------------------------------------------------------------- *)
+
+val isPREFIX = Define`
+  (isPREFIX [] l = T) /\
+  (isPREFIX (h::t) l = case l of [] -> F
+                              || h'::t' -> (h = h') /\ isPREFIX t t')
+`;
+val _ = export_rewrites ["isPREFIX"]
+
+val _ = set_fixity "<<=" (Infix(NONASSOC, 450));
+val _ = overload_on ("<<=", ``isPREFIX``)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x227C, tmnm = "<<="}
+        (* in tex input mode in emacs, produce U+227C with \preceq *)
+        (* tempting to add a not-isprefix macro keyed to U+22E0 \npreceq, but
+           hard to know what the ASCII version should be.  *)
+
+(* type annotations are there solely to make theorem have only one
+   type variable; without them the theorem ends up with three (because the
+   three clauses are independent). *)
+val isPREFIX_THM = store_thm(
+  "isPREFIX_THM",
+  ``(([]:'a list) <<= l = T) /\
+    ((h::t:'a list) <<= [] = F) /\
+    ((h1::t1:'a list) <<= h2::t2 = (h1 = h2) /\ isPREFIX t1 t2)``,
+  SRW_TAC [][])
 
 (* --------------------------------------------------------------------- *)
 
@@ -1319,7 +1344,7 @@ val _ = adjoin_to_theory
    S "              EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,";
    S "              FOLDL, REVERSE_DEF, EL_compute, ALL_DISTINCT,";
    S "              computeLib.lazyfy_thm list_case_compute,";
-   S "              list_size_def,FRONT_DEF,LAST_DEF]";
+   S "              list_size_def,FRONT_DEF,LAST_DEF,isPREFIX]";
    S "        end;";
    NL(); NL();
    S "val _ =";

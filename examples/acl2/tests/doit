@@ -1,0 +1,81 @@
+#!/bin/bash
+
+source ../.acl2holrc.bash
+
+tests_dir=${ACL2_HOL}/tests
+inputs_dir=$tests_dir/inputs
+results_dir=$tests_dir/results
+old_results_dir=$tests_dir/old-results
+logs_dir=$tests_dir/logs
+old_logs_dir=$tests_dir/old-logs
+gold_dir=$tests_dir/gold
+lisp_dir=${ACL2_HOL}/lisp
+
+my_status=0
+
+my_args=$*
+
+if [ "$my_args" = "clean+" ]; then \
+    pushd $lisp_dir ; \
+    make clean ; \
+    my_args=clean ; \
+    popd ; \
+fi
+
+if [ "$my_args" = "clean" ]; then \
+    rm diffout diffout.old ; \
+    rm -rf $results_dir $old_results_dir $logs_dir $old_logs_dir ; \
+    cd $inputs_dir ; make clean ; cd .. ; \
+    cd round-trip ; doit clean ; cd .. ; \
+    exit 0 ; \
+fi
+
+echo "Making books in $lisp_dir..." ; cd $lisp_dir ; make ; cd ..
+
+echo "Making books in $inputs_dir..." ; cd $inputs_dir ; make ; cd ..
+
+echo "Converting .lisp files to their essences..."
+
+tests=`ls $inputs_dir/*.lisp`
+
+rm -rf $old_results_dir
+if  [ -e $results_dir ]; then mv $results_dir $old_results_dir ; fi
+mkdir $results_dir
+
+rm -rf $old_logs_dir
+if [ -e $logs_dir ]; then mv $logs_dir $old_logs_dir ; fi
+mkdir $logs_dir
+
+if [ -e diffout ]; then mv diffout diffout.old ; fi
+
+for test in $tests ; do \
+    test=${test##*/} ; \
+    (${ACL2_HOL_LISP}/book-essence.csh $inputs_dir/$test $results_dir/$test) > $logs_dir/$test.out 2> $logs_dir/$test.err ; \
+    testr=${test%.*} ; \
+    (${ACL2_HOL_LISP}/a2ml.csh $results_dir/$test $results_dir/$testr.ml) > $logs_dir/$test.ml.out 2> $logs_dir/$test.ml.err ; \
+done
+
+(diff -x .svn $results_dir $gold_dir 2>&1) > diffout
+
+if [ -s diffout ] ; then \
+    echo '***Failure*** for main tests!  See diffout for diffs, and see logs/.' ; \
+    my_status=1 ; \
+else \
+    echo 'Success for main tests!' ; \
+fi
+
+echo "Entering round-trip/ directory..."
+pushd round-trip > /dev/null
+./doit
+temp_status=$?
+# Note that round-trip/doit does its own success/failure printing
+if [ $my_status -eq 0 ]; then my_status=$temp_status ; fi
+popd > /dev/null
+
+if [ $my_status -eq 0 ] ; then \
+    echo 'SUCCESS!' ; \
+    exit 0 ; \
+else \
+    echo 'FAILURE!  See failure message(s) above.' ; \
+    exit $my_status ; \
+fi

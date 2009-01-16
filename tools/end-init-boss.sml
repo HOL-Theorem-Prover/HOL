@@ -39,4 +39,10 @@ open bossLib;  (* Any others? *)
 val _ = use (HOLDIR^"/src/proofman/expandq");
 (* val _ = use (HOLDIR^"/src/datatype/Interactive"); *)
 
+val Hol_datatype = 
+  Lib.with_flag
+    (Feedback.emit_WARNING,false)
+    bossLib.Hol_datatype;
+
+
 val _ = quietdec := false;

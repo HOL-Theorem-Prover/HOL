@@ -42,7 +42,6 @@ val Tot_def =
      (Tot (0::t) = Tot t) /\
      (Tot (SUC n::t) = 1 + Tot (n::t))`;
 
-(* FAIL *)
 val Tot_def = 
   Define
     `(Tot [] = 0) /\
@@ -64,6 +63,10 @@ val gcd_def =  (* curried *)
      (gcd (SUC x) (SUC y) = 
          if y <= x then gcd (x-y)   (SUC y) 
                    else gcd (SUC x) (y-x))`;
+
+val gcd_def = (* using MOD *)
+ Define
+   `gcd a b = if a = 0 then b else gcd (b MOD a) a`;
 
 (* Should fail with informative error message *)
 val percent2 = 
@@ -133,7 +136,6 @@ val min_def = Define
 
 Hol_datatype `colour = Red | White | Blue`;
 
-(* FAIL *)
 val Swap_def =
  Define 
    `(Swap  []                = NONE) 
@@ -150,12 +152,11 @@ val Swap_def' =
              (CONJUNCT2 Swap_def))
   end;
 
-val Flag_defn = 
- Hol_defn "Flag" 
-          `Flag list = case Swap list
-                        of NONE -> list
-                        || SOME slist -> Flag slist`;
-
+val Flag_defn = Hol_defn 
+   "Flag" 
+   `Flag list = case Swap list
+                 of NONE -> list
+                 || SOME slist -> Flag slist`;
 
 
 (*---------------------------------------------------------------------------
@@ -292,14 +293,14 @@ val baRec_def =
         then baRec (t, join v (A h:'b))
         else baRec (APPEND (dest (h:'a)) t, v))`;
 
-(* Used to fail *)
+(* Has failed in the past *)
 val baRec_def = 
  DefineSchema
     `(baRec [] v = (v:'b)) 
   /\ (baRec (h::t) v =
         if atomic h 
         then baRec t (join v (A h:'b))
-        else baRec (APPEND (dest (h:'a)) t) v)`;
+        else baRec (dest (h:'a) ++ t) v)`;
 
 
 (*---------------------------------------------------------------------------
@@ -333,8 +334,8 @@ val qsort_def =
  Hol_defn "qsort"
    `(qsort(ord,[]) = []) /\
     (qsort(ord, x::rst) = 
-      APPEND (qsort(ord,FILTER ($~ o ord x) rst))
-             (x :: qsort(ord,FILTER(ord x) rst)))`;
+      qsort(ord,FILTER ($~ o ord x) rst) ++ [x] ++
+      qsort(ord,FILTER(ord x) rst))`;
 
 val fqsort_def = 
  Hol_defn "fqsort"
@@ -342,7 +343,7 @@ val fqsort_def =
     (fqsort ord (x::rst) = 
        let (l1,l2) = part (ord x) rst [] []
        in 
-        APPEND (fqsort ord l1)  (x::fqsort ord l2))`;
+        fqsort ord l1 ++ [x] ++ fqsort ord l2)`;
 
 val variant_def = 
   Hol_defn "variant" 
@@ -814,4 +815,39 @@ multiDefine
    (odd 0 = F) /\ 
    (odd (SUC n) = even n)`;
 
+multiDefine 
+  `(example 1 = F) /\
+   (example 2 = T)`;
+
+(*---------------------------------------------------------------------------*)
+(* Bug from mjcg. ZIP_DELTA gave funky result.                               *)
+(*---------------------------------------------------------------------------*)
+
+val LOOKUP_def =
+ Define
+  `(LOOKUP [] v = NONE)
+   /\
+   (LOOKUP (p :: l) v = if (FST p = v) then SOME p else LOOKUP l v)`;
+
+val ZIP_DELTA_def =
+ Define
+  `(ZIP_DELTA b d1 [] = d1)
+   /\
+   (ZIP_DELTA b [] d2 = d2)
+   /\
+   (ZIP_DELTA b ((v1,x1)::d1) ((v2,x2)::d2)  =
+     if v1 = v2
+      then (v1,x1) :: ZIP_DELTA b d1 d2
+      else case LOOKUP d2 v1 of
+           SOME(v,x) -> (v1, if b then x1 else x) :: ZIP_DELTA b d1 d2
+        || NONE      -> (v1,x1) :: ZIP_DELTA b d1 ((v2,x2)::d2))`;
+
+val test_def =
+ Define
+  `(test d1 [] = d1)  /\
+   (test [] d2 = d2)  /\
+   (test (p1::d1) (p2::d2)  =
+      case LOOKUP d2 (FST p1) of
+        NONE      -> p1 :: test d1 (p2::d2)
+     || SOME(v,x) -> (FST p1,x) :: test d1 d2)`;
 

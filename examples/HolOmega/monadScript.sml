@@ -583,7 +583,7 @@ val state_bind_def = Define
    `state_bind (w:('s,'a)state) (f:'a -> ('s,'b)state) =
          \s. let (x,s') = w s in f x s'`;
 
-val _ = new_infix(">>=", ``:'a -> ('a -> 'b) -> 'b``, 450);
+val _ = new_infix(">>=", ``:'a -> ('a -> 'b) -> 'b``, 460);
 
 val _ = overload_on(">>=", ``state_bind : ('s,'a)state -> ('a -> ('s,'b)state) -> ('s,'b)state``);
 

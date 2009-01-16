@@ -10,9 +10,10 @@
 
  ---------------------------------------------------------------------------*)
 
+(*
 load "HolBddLib";
 
-fun bdd_oracle q =
+fun prop_prove q =
   let val tm = Parse.Term q
       val V = free_vars tm
       open DerivedBddRules
@@ -27,18 +28,20 @@ fun bdd_oracle q =
   end;
 
 show_tags := true;
+*)
 
+val prop_prove = Count.apply (tautLib.TAUT_PROVE o Term);
 
-val syn323_1 = bdd_oracle
+val syn323_1 = prop_prove
 `~((v0 \/ v1) /\ (~v0 \/ v1) /\ (~v1 \/ v0) /\ (~v0 \/ ~v1))`;
 
-val syn029_1 = bdd_oracle
+val syn029_1 = prop_prove
 `~((~v2 \/ ~v1) /\ v0 /\ (~v0 \/ ~v1 \/ v2) /\ (~v2 \/ v1) /\ (v1 \/ v2))`;
 
-val syn052_1 = bdd_oracle
+val syn052_1 = prop_prove
 `~((~v1 \/ v0) /\ (~v0 \/ v1) /\ (v1 \/ v0) /\ (~v1 \/ v1) /\ (~v0 \/ ~v1))`;
 
-val syn051_1 = bdd_oracle
+val syn051_1 = prop_prove
 `~((v1 \/ v0) /\
   (v1 \/ v2) /\
   (~v0 \/ ~v1) /\
@@ -46,7 +49,7 @@ val syn051_1 = bdd_oracle
   (~v0 \/ v1) /\
   (~v1 \/ v2))`;
 
-val syn044_1 = bdd_oracle
+val syn044_1 = prop_prove
 `~((v0 \/ v1) /\
   (~v0 \/ ~v1) /\
   (~v0 \/ v1 \/ v2) /\
@@ -54,7 +57,7 @@ val syn044_1 = bdd_oracle
   (~v2 \/ v0) /\
   (~v1 \/ v2))`;
 
-val syn011_1 = bdd_oracle
+val syn011_1 = prop_prove
 `~(v6 /\
   (~v0 \/ ~v2) /\
   (v0 \/ v1 \/ v5) /\
@@ -64,7 +67,7 @@ val syn011_1 = bdd_oracle
   (v3 \/ v4 \/ v5) /\
   (~v5 \/ ~v6))`;
 
-val syn032_1 = bdd_oracle
+val syn032_1 = prop_prove
 `~((~v5 \/ ~v1) /\
   (~v4 \/ ~v0) /\
   (~v4 \/ v0) /\
@@ -73,12 +76,12 @@ val syn032_1 = bdd_oracle
   (v4 \/ v2 \/ v3) /\
   (~v3 \/ v4 \/ v5))`;
 
-val ex2_be  = bdd_oracle
+val ex2_be  = prop_prove
  `~((a /\ b /\ ~c) \/ (~a /\ b /\ c /\ ~d))
     ==>
     (s1 = ~a \/ d) /\ (oh = b /\ s1) /\ (s2 = ~c \/ d) ==> (oh = b /\ s2)`;
 
-val syn030_1 = bdd_oracle
+val syn030_1 = prop_prove
 `~((~v4 \/ ~v0 \/ ~v1) /\
   (~v3 \/ ~v4 \/ v0) /\
   (~v1 \/ v0) /\
@@ -89,7 +92,7 @@ val syn030_1 = bdd_oracle
   (~v1 \/ v3) /\
   (~v2 \/ ~v3 \/ v4))`;
 
-val transp_be = bdd_oracle
+val transp_be = prop_prove
  `(sub1x = ~(a \/ b)) /\
   (sub1y = ~(c \/ d)) /\
   (o2 = ~(sub1x \/ sub1y)) /\
@@ -97,7 +100,7 @@ val transp_be = bdd_oracle
   ==> (o1 = ~a /\ ~b /\ ~c /\ ~d) /\ (o2 = (a \/ b) /\ (c \/ d))`;
 
 
-val syn054_1 = bdd_oracle
+val syn054_1 = prop_prove
 `~((~v1 \/ ~v7) /\
   (~v2 \/ ~v0) /\
   (~v3 \/ v7 \/ v4) /\
@@ -110,7 +113,7 @@ val syn054_1 = bdd_oracle
   (~v6 \/ ~v5) /\
   (v6 \/ v7))`;
 
-val gra001_1 = bdd_oracle
+val gra001_1 = prop_prove
 `~((~v1 \/ v0) /\
   (~v0 \/ v1) /\
   (~v4 \/ ~v2 \/ ~v0) /\
@@ -124,7 +127,7 @@ val gra001_1 = bdd_oracle
   (~v3 \/ ~v4) /\
   (v3 \/ v4))` ;
 
-val syn321_1 = bdd_oracle
+val syn321_1 = prop_prove
 `~((~v0 \/ v9) /\
   (~v0 \/ v6) /\
   (~v0 \/ v7) /\
@@ -142,7 +145,7 @@ val syn321_1 = bdd_oracle
   (v8 \/ v7) /\
   (~v8 \/ ~v9))` ;
 
-val rip02_be  = bdd_oracle
+val rip02_be  = prop_prove
  `(car1 = a1 /\ b1) /\
   (cout = (a2 \/ b2) /\ car1 \/ a2 /\ b2) /\
   (som2 = ~(a2 = ~(b2 = car1))) /\
@@ -154,7 +157,7 @@ val rip02_be  = bdd_oracle
          cout1 /\ ~(~a2 /\ ~b2 \/ a2 /\ b2))) /\
       (cout = a2 /\ cout1 \/ b2 /\ cout1 \/ a2 /\ b2)`;
 
-val puz014_1 = bdd_oracle
+val puz014_1 = prop_prove
 `~(v3 /\
   v0 /\
   v10 /\
@@ -176,7 +179,7 @@ val puz014_1 = bdd_oracle
   (~v7 \/ ~v8 \/ v9) /\
   (~v10 \/ ~v11 \/ v12))` ;
 
-val mjcg_yes = bdd_oracle
+val mjcg_yes = prop_prove
 `((adder1____carry__1__1 = ~a__0 /\ b__0) /\
   (adder1____carry__1__2 =
    b__1 /\ adder1____carry__1__1 \/
@@ -212,7 +215,7 @@ val mjcg_yes = bdd_oracle
      adder2____carry__2__1)) /\
   (out__0 = ~(~(cnt__0 = a__0) = ~(cnt__0 = b__0))))`;
 
-val mul03_be  = bdd_oracle
+val mul03_be  = prop_prove
  `(p_00_00 = x1 /\ y1) /\
   (p_00_01 = x1 /\ y2) /\
   (p_00_02 = x1 /\ y3) /\
@@ -271,7 +274,7 @@ val mul03_be  = bdd_oracle
       (z04 = s_01_01') /\
       (z05 = p_02_02')` ;
 
-val puz030_2 = bdd_oracle
+val puz030_2 = prop_prove
 `~((~v8 \/ ~v5 \/ ~v7 \/ ~v9 \/ v6 \/ v2 \/ v3 \/ v0 \/ v1 \/ v4) /\
   (v0 \/ v1 \/ v8) /\
   (v7 \/ v4 \/ v2) /\
@@ -336,7 +339,7 @@ val puz030_2 = bdd_oracle
   (~v7 \/ v8 \/ v6) /\
   (~v7 \/ v8 \/ v9))` ;
 
-val puz030_1 = bdd_oracle
+val puz030_1 = prop_prove
 `~((~v21 \/ v2) /\
   (~v14 \/ v10) /\
   (~v15 \/ v6) /\
@@ -430,7 +433,7 @@ val puz030_1 = bdd_oracle
   (~v22 \/ v23 \/ v24))` ;
 
 
-val dk27_be  = bdd_oracle
+val dk27_be  = prop_prove
  `(ge2 = ~in4 /\ ~in3 /\ ~in2 /\ ~in0) /\
   (ge7 = ge2 /\ ~in1) /\
   (ge0 = ~in6 /\ ~in5 /\ ~in1 /\ ~in0) /\
@@ -488,7 +491,7 @@ val dk27_be  = bdd_oracle
       (out1 = wres15 /\ wres10) /\
       (out0 = wres17 /\ wres15)` ;
 
-val syn071_1 = bdd_oracle
+val syn071_1 = prop_prove
 `~(v8 /\
   v3 /\
   v1 /\
@@ -579,7 +582,7 @@ val syn071_1 = bdd_oracle
   (v14 \/ v15))` ;
 
 (* Hard : takes buddy17 73 secs. on sole *)
-val aim_50_1_6_no_3 = bdd_oracle
+val aim_50_1_6_no_3 = prop_prove
 `~
 ((v15 \/ v20 \/ v41) /\
  (~v15 \/ v20 \/ v41) /\
@@ -664,7 +667,7 @@ val aim_50_1_6_no_3 = bdd_oracle
 
 (* Harder: runtime: 526.970s,    gctime: 21.640s,     systime: 0.650s. *)
 
-val aim_50_1_6_no_4 = bdd_oracle
+val aim_50_1_6_no_4 = prop_prove
 `~
 ((v1 \/ v32 \/ v34) /\
  (v4 \/ v5 \/ v32) /\
@@ -747,7 +750,7 @@ val aim_50_1_6_no_4 = bdd_oracle
  (v7 \/ v15 \/ v33) /\
  (~v8 \/ ~v11 \/ v33))` ;
 
-val hostint1_be  = bdd_oracle
+val hostint1_be  = prop_prove
  `(wnpls =
    ~eos /\ ~s1 /\ ~s2 \/
    eof /\ eos /\ s1 /\ ~s2 \/
@@ -822,7 +825,7 @@ val hostint1_be  = bdd_oracle
        ~eos /\ ~s1 /\ ~s2)` ;
 
 (* Hard : runtime: 73.140s,    gctime: 0.640s,     systime: 0.020s. *)
-val aim_50_2_0_no_4 = bdd_oracle
+val aim_50_2_0_no_4 = prop_prove
 `~
 ((v2 \/ v26 \/ v32) /\
  (v2 \/ ~v21 \/ v32) /\
@@ -926,7 +929,7 @@ val aim_50_2_0_no_4 = bdd_oracle
  (~v28 \/ ~v28 \/ ~v40))` ;
 
 (* Hard runtime: 170.440s,    gctime: 1.940s,     systime: 0.050s. *)
-val aim_50_2_0_no_1 = bdd_oracle
+val aim_50_2_0_no_1 = prop_prove
 `~
 ((v7 \/ v11 \/ v19) /\
  (v7 \/ ~v11 \/ v27) /\
@@ -1030,7 +1033,7 @@ val aim_50_2_0_no_1 = bdd_oracle
  (v13 \/ v29 \/ v48))` ;
 
 (* Hard *)
-val aim_50_2_0_no_2 = bdd_oracle
+val aim_50_2_0_no_2 = prop_prove
 `~
 ((v4 \/ v21 \/ v34) /\
  (v21 \/ ~v34 \/ v40) /\
@@ -1134,7 +1137,7 @@ val aim_50_2_0_no_2 = bdd_oracle
  (v6 \/ ~v11 \/ ~v20))` ;
 
 (* Hard *)
-val aim_50_2_0_no_3 = bdd_oracle
+val aim_50_2_0_no_3 = prop_prove
 `~
 ((v33 \/ v37 \/ v43) /\
  (v21 \/ ~v37 \/ v43) /\
@@ -1237,7 +1240,7 @@ val aim_50_2_0_no_3 = bdd_oracle
  (v16 \/ v17 \/ v38) /\
  (v11 \/ ~v17 \/ ~v38))` ;
 
-val mul_be  = bdd_oracle
+val mul_be  = prop_prove
  `(ba0 =
    ~c0 /\ ~c1 /\ c14 /\ ~c15 /\ ~c16 /\ c17 /\ ~repl \/
    ~c0 /\ ~c1 /\ c14 /\ ~c15 /\ ~c16 /\ ~c17 /\ ~repl \/
@@ -1308,7 +1311,7 @@ val mul_be  = bdd_oracle
        ~c0 /\ ~c1 /\ ~c14 /\ c15 /\ c16 /\ ~c17 /\ ~repl \/
        ~c0 /\ ~c1 /\ c14 /\ ~c15 /\ ~c16 /\ ~c17 /\ ~repl)` ;
 
-val dk17_be  = bdd_oracle
+val dk17_be  = prop_prove
  `(ge17 = ~in4 /\ ~in3 /\ ~in2 /\ ~in1) /\
   (ge0 = ge17 /\ ~in5) /\
   (ge22 = ~in9 /\ ~in7 /\ ~in6 /\ in0) /\
@@ -1384,7 +1387,7 @@ val dk17_be  = bdd_oracle
       (out0 = wres7 /\ ~in8)` ;
 
 (* Hard *)
-val risc_be  = bdd_oracle
+val risc_be  = prop_prove
  `(ge1 = ~in4 /\ ~in2 /\ ~in1 /\ in0) /\
   (ge2 = in2 /\ ~in1 /\ ~in0) /\
   (ge3 = in2 /\ ~in1 /\ in0) /\
@@ -1490,7 +1493,7 @@ val risc_be  = bdd_oracle
       (out1 = wres9 /\ in5 /\ ~in4) /\
       (out0 = wres12 \/ wres18)` ;
 
-val msc006_1 = bdd_oracle
+val msc006_1 = prop_prove
 `~((~v5 \/ ~v0 \/ v0) /\
   (~v5 \/ ~v2 \/ v2) /\
   (~v5 \/ ~v31 \/ v31) /\
@@ -1654,7 +1657,7 @@ val msc006_1 = bdd_oracle
   ~v30 /\
   ~v31)` ;
 
-val syn072_1 = bdd_oracle
+val syn072_1 = prop_prove
 `~(v11 /\
   v9 /\
   v7 /\
@@ -1846,7 +1849,7 @@ val syn072_1 = bdd_oracle
   v29)` ;
 
 (* Hard *)
-val aim_100_2_0_no_1 = bdd_oracle
+val aim_100_2_0_no_1 = prop_prove
 `~
 ((v6 \/ v55 \/ v66) /\
  (v6 \/ v62 \/ ~v66) /\
@@ -2050,7 +2053,7 @@ val aim_100_2_0_no_1 = bdd_oracle
  (~v21 \/ v35 \/ v56))` ;
 
 
-val aim_100_2_0_no_2 = bdd_oracle
+val aim_100_2_0_no_2 = prop_prove
 `~
 ((v40 \/ v54 \/ v75) /\
  (~v40 \/ v54 \/ v58) /\
@@ -2253,7 +2256,7 @@ val aim_100_2_0_no_2 = bdd_oracle
  (~v29 \/ ~v66 \/ v71) /\
  (~v2 \/ v50 \/ ~v71))` ;
 
-val prv001_1 = bdd_oracle
+val prv001_1 = prop_prove
 `~((~v0 \/ ~v111 \/ v47) /\
   (~v1 \/ ~v111 \/ v37) /\
   (~v2 \/ ~v111 \/ v28) /\
@@ -2481,7 +2484,7 @@ val prv001_1 = bdd_oracle
   (~v110 \/ ~v111 \/ ~v112 \/ ~v113) /\
   v114)` ;
 
-val ssa0432_003 = bdd_oracle
+val ssa0432_003 = prop_prove
 `~
 ((v435) /\
  (v174) /\
@@ -3512,7 +3515,7 @@ val ssa0432_003 = bdd_oracle
  (v87 \/ v88 \/ v90 \/ v156 \/ v92))`
 ;
 
-val jnh211 = bdd_oracle
+val jnh211 = prop_prove
 `~
 ((v7 \/ ~v9 \/ ~v29) /\
  (v13 \/ ~v35 \/ v44 \/ ~v45 \/ ~v48) /\
@@ -4315,7 +4318,7 @@ val jnh211 = bdd_oracle
  (~v12 \/ ~v24 \/ ~v30 \/ v53 \/ v58 \/ v74 \/ v76 \/ ~v84) /\
  (v15 \/ v55 \/ v60 \/ v75))` ;
 
-val rip04_be  = bdd_oracle
+val rip04_be  = prop_prove
  `(car1 = a1 /\ b1) /\
   (car2 = (a2 \/ b2) /\ car1 \/ a2 /\ b2) /\
   (car3 = (a3 \/ b3) /\ car2 \/ a3 /\ b3) /\
@@ -4340,7 +4343,7 @@ val rip04_be  = bdd_oracle
       (cout = a4 /\ cout3 \/ b4 /\ cout3 \/ a4 /\ b4)`
 ;
 
-val ztwaalf2_be  = bdd_oracle
+val ztwaalf2_be  = prop_prove
  `(out =
    ~(a1 /\ a2 \/ ~a3 /\ (a4 = a5) = a6 /\ b6) \/
    (b1 /\ (b2 \/ b3 /\ (b4 = b5)) = b6 /\ a1))
@@ -4370,7 +4373,7 @@ val ztwaalf2_be  = bdd_oracle
        a1 /\ b1 /\ b3 /\ b4 /\ b5 /\ b6)`
 ;
 
-val ztwaalf1_be  = bdd_oracle
+val ztwaalf1_be  = prop_prove
  `(out =
    a1 /\ a2 /\ ~a6 \/
    ~a3 /\ ~a4 /\ ~a5 /\ ~a6 \/
@@ -4399,7 +4402,7 @@ val ztwaalf1_be  = bdd_oracle
   (s2 = ~(b1 /\ (b2 \/ b3 /\ (b4 = b5)) = b6 /\ a1))
   ==> (out = s1 \/ ~s2)` ;
 
-val z4_be  = bdd_oracle
+val z4_be  = prop_prove
  `(ge2 = in3 \/ in0) /\
   (ge4 = ~in3 \/ ~in0) /\
   (ge1 = in5 \/ in2) /\
@@ -4443,7 +4446,7 @@ val z4_be  = bdd_oracle
        wres9 /\ wres7 /\ wres5) /\
       (out0 = wres6 /\ wres0 \/ wres8)` ;
 
-val rip06_be  = bdd_oracle
+val rip06_be  = prop_prove
  `(car1 = a1 /\ b1) /\
   (car2 = (a2 \/ b2) /\ car1 \/ a2 /\ b2) /\
   (car3 = (a3 \/ b3) /\ car2 \/ a3 /\ b3) /\
@@ -4479,7 +4482,7 @@ val rip06_be  = bdd_oracle
          cout5 /\ ~(~a6 /\ ~b6 \/ a6 /\ b6))) /\
       (cout = a6 /\ cout5 \/ b6 /\ cout5 \/ a6 /\ b6)` ;
 
-val add1_be  = bdd_oracle
+val add1_be  = prop_prove
  `(n3 = a_1_) /\
   (n4 = a_3_) /\
   (n5 = a_2_) /\
@@ -4536,7 +4539,7 @@ val add1_be  = bdd_oracle
       (o_4_ = ~(a_4_ = ~(b_4_ = cout3))) /\
       (cout = cout3 /\ b_4_ \/ cout3 /\ a_4_ \/ b_4_ /\ a_4_)` ;
 
-val rip08_be  = bdd_oracle
+val rip08_be  = prop_prove
  `(car1 = a1 /\ b1) /\
   (car2 = (a2 \/ b2) /\ car1 \/ a2 /\ b2) /\
   (car3 = (a3 \/ b3) /\ car2 \/ a3 /\ b3) /\
@@ -4584,7 +4587,7 @@ val rip08_be  = bdd_oracle
          cout7 /\ ~(~a8 /\ ~b8 \/ a8 /\ b8))) /\
       (cout = a8 /\ cout7 \/ b8 /\ cout7 \/ a8 /\ b8)` ;
 
-val aim_50_1_6_no_1 = bdd_oracle
+val aim_50_1_6_no_1 = prop_prove
 `~
 ((v16 \/ v23 \/ v42) /\
  (~v16 \/ v23 \/ v42) /\
@@ -4667,7 +4670,7 @@ val aim_50_1_6_no_1 = bdd_oracle
  (v14 \/ ~v16 \/ v49) /\
  (~v3 \/ ~v4 \/ ~v35))` ;
 
-val aim_50_1_6_no_2 = bdd_oracle
+val aim_50_1_6_no_2 = prop_prove
 `~
 ((v5 \/ v17 \/ v37) /\
  (v24 \/ v28 \/ v37) /\
@@ -4750,7 +4753,7 @@ val aim_50_1_6_no_2 = bdd_oracle
  (~v18 \/ ~v27 \/ ~v38) /\
  (~v18 \/ ~v27 \/ ~v39))` ;
 
-val vg2_be  = bdd_oracle
+val vg2_be  = prop_prove
  `(ge0 = ~in2 /\ in1 /\ in0 \/ ~in1 /\ ~in0) /\
   (ge1 = in1 \/ in0) /\
   (ge3 = in6 /\ ~in5 /\ ~in4 /\ ~in2 \/ ge1 /\ in3 /\ in2 \/ ge0 /\ in7) /\
@@ -4820,7 +4823,7 @@ val vg2_be  = bdd_oracle
       (out1 = wres2) /\
       (out0 = wres3)` ;
 
-val misg_be  = bdd_oracle
+val misg_be  = prop_prove
  `(ge1 = ~in45 \/ ~in40) /\
   (ge10 = ~in45 /\ ~in36 \/ ge1 /\ ~in43) /\
   (ge6 = ~in43 \/ ~in36) /\
@@ -4904,7 +4907,7 @@ val misg_be  = bdd_oracle
       (out1 = ~in48) /\
       (out0 = in7 /\ in6 \/ in5 /\ in4 \/ in3 /\ in2 \/ in1 /\ in0)` ;
 
-val x1dn_be  = bdd_oracle
+val x1dn_be  = prop_prove
  `(ge0 = ~in8 /\ ~in7 \/ in8 /\ in7 /\ ~in6) /\
   (ge1 = in8 \/ in7) /\
   (ge3 = in14 /\ ~in11 /\ ~in10 /\ ~in6 \/ ge1 /\ in15 /\ in6 \/ ge0 /\ in13) /\
@@ -4972,7 +4975,7 @@ val x1dn_be  = bdd_oracle
        wres10 /\ wres3 /\ in1 \/
        wres11 /\ wres2 /\ ~in1)` ;
 
-val counter_be  = bdd_oracle
+val counter_be  = prop_prove
  `(b6 = a1 /\ ~a2 \/ ~a1 /\ a2 \/ ~a0 /\ a1 \/ a3) /\
   (b5 = a0 /\ ~a1 /\ a2 \/ ~a0 /\ a1 \/ a1 /\ ~a2 \/ ~a0 /\ ~a2 \/ a3) /\
   (b4 = a0 \/ a2 \/ ~a1) /\
@@ -5065,7 +5068,7 @@ val counter_be  = bdd_oracle
        a1 /\ ~a2 \/
        ~a0 /\ a1)` ;
 
-val sqn_be  = bdd_oracle
+val sqn_be  = prop_prove
  `(ge0 = in6 /\ in1 \/ ~in6 /\ ~in1) /\
   (ge8 = ~in3 /\ ~in1) /\
   (ge5 = in6 \/ in5) /\
@@ -5167,7 +5170,7 @@ val sqn_be  = bdd_oracle
        wres18 /\ wres0 /\ ~in5 \/
        wres19)` ;
 
-val add2_be  = bdd_oracle
+val add2_be  = prop_prove
  `(n3 = a_0_) /\
   (n4 = a_3_) /\
   (n5 = a_1_) /\
@@ -5304,10 +5307,10 @@ val add2_be  = bdd_oracle
       (o_2_ = hulp2) /\
       (o_3_ = hulp3) /\
       (carryout = ~hulp4) /\
-      (overflow = cout3 = hulp4) /\
+      (overflow = (cout3 = hulp4)) /\
       (sign = ~hulp3)` ;
 
-val dc2_be  = bdd_oracle
+val dc2_be  = prop_prove
  `(ge0 = ~in4 /\ ~in0) /\
   (ge10 = ge0 /\ in5 /\ ~in2) /\
   (ge2 = ~in6 /\ ~in5 /\ in4 /\ ~in0) /\
@@ -5432,7 +5435,7 @@ val dc2_be  = bdd_oracle
        wres24) /\
       (out0 = wres4 /\ in1 \/ wres5 /\ in2 /\ in1 \/ wres15 /\ ~in1)`;
 
-val f51m_be  = bdd_oracle
+val f51m_be  = prop_prove
  `(ge10 = in6 \/ ~in7) /\
   (ge5 = ~in5 /\ ~in4 /\ in2) /\
   (ge11 = ~in3 /\ in2) /\
@@ -5561,7 +5564,7 @@ val f51m_be  = bdd_oracle
        wres30 /\ in3) /\
       (out0 = wres25 /\ in0 \/ wres27 /\ ~in0)` ;
 
-val aim_100_1_6_no_3 = bdd_oracle
+val aim_100_1_6_no_3 = prop_prove
 `~
 ((v5 \/ v31 \/ v91) /\
  (v31 \/ v38 \/ v40) /\
@@ -5724,7 +5727,7 @@ val aim_100_1_6_no_3 = bdd_oracle
  (~v48 \/ v54 \/ ~v55) /\
  (v19 \/ ~v34 \/ v89))` ;
 
-val dubois20 = bdd_oracle
+val dubois20 = prop_prove
 `~
 ((v39 \/ v40 \/ v1) /\
  (~v39 \/ ~v40 \/ v1) /\
@@ -5887,7 +5890,7 @@ val dubois20 = bdd_oracle
  (v39 \/ ~v40 \/ v38) /\
  (~v39 \/ v40 \/ v38))` ;
 
-val add3_be  = bdd_oracle
+val add3_be  = prop_prove
  `(aftbuf1 = ~anda) /\
   (aftbuf2 = ~andb) /\
   (aftbuf3 = ~exora) /\
@@ -5942,7 +5945,7 @@ val add3_be  = bdd_oracle
   (hulp7 = ~(n2_7_ = ~(n4_7_ = cout7))) /\
   (hulp8 = cout7 /\ n4_7_ \/ cout7 /\ n2_7_ \/ n4_7_ /\ n2_7_) /\
   (sign = ~hulp7) /\
-  (overflow = cout7 = hulp8) /\
+  (overflow = (cout7 = hulp8)) /\
   (carryout = ~hulp8) /\
   (o_7_ = hulp7) /\
   (o_6_ = hulp6) /\
@@ -6027,22 +6030,22 @@ val add3_be  = bdd_oracle
   (n43 = ~n107) /\
   (n37 = ~n82) /\
   (n35 = ~n81) /\
-  (n168 = n65 = n75) /\
-  (n169 = n63 = n76) /\
-  (n158 = n61 = n76) /\
-  (n157 = n59 = n75) /\
-  (n132 = n53 = n76) /\
-  (n131 = n51 = n75) /\
-  (n116 = n49 = n75) /\
-  (n117 = n47 = n76) /\
-  (n143 = n55 = n76) /\
-  (n142 = n57 = n75) /\
-  (n90 = n41 = n75) /\
-  (n91 = n39 = n76) /\
-  (n106 = n45 = n76) /\
-  (n105 = n43 = n75) /\
-  (n80 = n37 = n76) /\
-  (n79 = n35 = n75) /\
+  (n168 = (n65 = n75)) /\
+  (n169 = (n63 = n76)) /\
+  (n158 = (n61 = n76)) /\
+  (n157 = (n59 = n75)) /\
+  (n132 = (n53 = n76)) /\
+  (n131 = (n51 = n75)) /\
+  (n116 = (n49 = n75)) /\
+  (n117 = (n47 = n76)) /\
+  (n143 = (n55 = n76)) /\
+  (n142 = (n57 = n75)) /\
+  (n90 = (n41 = n75)) /\
+  (n91 = (n39 = n76)) /\
+  (n106 = (n45 = n76)) /\
+  (n105 = (n43 = n75)) /\
+  (n80 = (n37 = n76)) /\
+  (n79 = (n35 = n75)) /\
   (n66 = ~n168) /\
   (n64 = ~n169) /\
   (n62 = ~n158) /\
@@ -6067,14 +6070,14 @@ val add3_be  = bdd_oracle
   (n94 = ~n42) /\
   (n98 = ~n44) /\
   (n68 = ~n36) /\
-  (n171 = n64 = n66) /\
-  (n153 = n62 = n60) /\
-  (n127 = n54 = n52) /\
-  (n119 = n48 = n50) /\
-  (n145 = n56 = n58) /\
-  (n93 = n40 = n42) /\
-  (n101 = n46 = n44) /\
-  (n73 = n38 = n36) /\
+  (n171 = (n64 = n66)) /\
+  (n153 = (n62 = n60)) /\
+  (n127 = (n54 = n52)) /\
+  (n119 = (n48 = n50)) /\
+  (n145 = (n56 = n58)) /\
+  (n93 = (n40 = n42)) /\
+  (n101 = (n46 = n44)) /\
+  (n73 = (n38 = n36)) /\
   (n163 = ~n171) /\
   (n149 = ~n153) /\
   (n123 = ~n127) /\
@@ -6097,13 +6100,13 @@ val add3_be  = bdd_oracle
   (n102 = ~n92 /\ ~n84 \/ ~n94 /\ ~n85) /\
   (n28 = ~n78) /\
   (n110 = ~n97 /\ ~n44 \/ ~n109 /\ ~n102) /\
-  (n89 = n86 = n85) /\
+  (n89 = (n86 = n85)) /\
   (n103 = ~n102) /\
   (n112 = ~n110) /\
   (n128 = ~n118 /\ ~n110 \/ ~n120 /\ ~n111) /\
   (n24 = ~n89) /\
   (n104 = ~(n103 = n97)) /\
-  (n115 = n112 = n111) /\
+  (n115 = (n112 = n111)) /\
   (n129 = ~n128) /\
   (n136 = ~n123 /\ ~n52 \/ ~n135 /\ ~n128) /\
   (n26 = ~n104) /\
@@ -6114,14 +6117,14 @@ val add3_be  = bdd_oracle
   (n27 = ~n130) /\
   (n162 = ~n149 /\ ~n60 \/ ~n161 /\ ~n154) /\
   (n155 = ~n154) /\
-  (n141 = n138 = n137) /\
+  (n141 = (n138 = n137)) /\
   (n164 = ~n162) /\
   (n175 = ~n162) /\
   (n176 = ~n170 /\ ~n162 \/ ~n172 /\ ~n163) /\
   (n156 = ~(n155 = n149)) /\
   (n30 = ~n141) /\
-  (n167 = n164 = n163) /\
-  (n177 = n176 = n162) /\
+  (n167 = (n164 = n163)) /\
+  (n177 = (n176 = n162)) /\
   (n31 = ~n176) /\
   (n29 = ~n156) /\
   (n34 = ~n167) /\
@@ -6139,7 +6142,7 @@ val add3_be  = bdd_oracle
       (sign = n33) /\
       (o_7_ = n34)` ;
 
-val add4_be  = bdd_oracle
+val add4_be  = prop_prove
  `(n3 = a_0_) /\
   (n4 = a_2_) /\
   (n5 = a_4_) /\

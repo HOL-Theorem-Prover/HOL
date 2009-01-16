@@ -55,7 +55,7 @@ val _ = Hol_datatype
 
        (* method ::= sigma(x)b *)
 
-          method1 = SIGMA1 of var => obj1 ` 
+          method1 = SIGMA1 of var => obj1 `
 
 handle e => Raise e;
 
@@ -132,7 +132,7 @@ val MAX =
     new_infixr_definition
     ("MAX",
      (--`$MAX x y = (if x < y then y else x)`--),
-     450);
+     490);
 
 
 val LESS_EQ_MAX = store_thm
@@ -231,9 +231,9 @@ val FINITE_FV_object1 = store_thm
 (* Application of a substitution to a single variable.                   *)
 (* --------------------------------------------------------------------- *)
 
-val SUB1_def = 
+val SUB1_def =
     Define
-    `(SUB1 (CONS p s) y = let (x,c) = p in 
+    `(SUB1 (CONS p s) y = let (x,c) = p in
                                 (if y = x then c else SUB1 s y)) /\
      (SUB1 NIL y = OVAR1 y)`;
 
@@ -407,7 +407,7 @@ val SUB_APPEND_FREE_vsubst1 = store_thm
    );
 
 
- 
+
 (* --------------------------------------------------------------------- *)
 (* Definition of bound variables of a substitution:                      *)
 (*   This consists of the variables on the LHS of each pair              *)
@@ -587,7 +587,7 @@ val FREE_IDENT_SUBST1 = store_thm
 (* bound variable is automatically renamed in order to avoid capture.    *)
 (* --------------------------------------------------------------------- *)
 
- 
+
 (* --------------------------------------------------------------------- *)
 (* Naive substitution; not proper; only here for pedagogical reasons.    *)
 (* --------------------------------------------------------------------- *)

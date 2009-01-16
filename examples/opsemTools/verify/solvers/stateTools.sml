@@ -6,7 +6,6 @@
 *)
 (*=============================================================== *)
 
-
 open HolKernel Parse boolLib 
      newOpsemTheory bossLib pairSyntax intLib intSimps
      computeLib finite_mapTheory  stringLib intSyntax;
@@ -99,6 +98,33 @@ fun bexp_vars bex =
 
 
 (* Get set of variables read or assigned to in a program *)
+
+local
+(* to transform GenAssign into Assign or ArrayAssign *)
+(* needed when using arrays to represent states, to get variables
+   which occurs in the command to execute with MLnextState *)
+fun getConcreteAssign i =
+  if is_comb(i)
+  then
+    let val (inst,args) = strip_comb(i)
+    in
+      if inst = ``GenAssign``
+      then 
+         let val (ty,vall) = dest_comb(el 2 args)
+         in
+           if ty = ``(INL :nexp -> nexp + aexp)``
+           then ``Assign ^(el 1 args) ^vall``
+           else 
+              let val (_,arrUpdate) = strip_comb vall
+              in
+                ``ArrayAssign ^(el 1 args) ^(el 2 arrUpdate) ^(el 3 arrUpdate)``
+              end
+         end
+      else i
+     end
+  else i;
+
+in
 fun program_vars c =
  let val (opr,args) = strip_comb c  (* N.B. syntax error if "op" instead of "opr" *)
      val _ = if not(is_const opr)
@@ -107,7 +133,7 @@ fun program_vars c =
                     fail())
               else ()
      val name = fst(dest_const opr)
-     val _ = if not(mem name ["Skip","Assign","ArrayAssign","Dispose","Seq",
+     val _ = if not(mem name ["Skip","Assign","ArrayAssign","GenAssign","Dispose","Seq",
                               "Cond","While","Local","Assert"])
               then (print name; 
                     print " is not a program constructor\n"; 
@@ -121,6 +147,7 @@ fun program_vars c =
                      (insert (el 1 args) (fst exp2),
                       snd exp2)
                   end
+
   | "ArrayAssign"   => let val exp2=nexp_vars(el 2 args)
                          val exp3 = nexp_vars(el 3 args)
                        in
@@ -129,6 +156,11 @@ fun program_vars c =
 				   (union (snd exp2)
 					  (snd exp3)))
                        end
+  | "GenAssign"   => let val ass = getConcreteAssign c
+                     in 
+                        program_vars ass
+                     end
+
   | "Dispose"  => ([],[])
   | "Seq"      => let val p1= program_vars(el 1 args)
                      val p2= program_vars(el 2 args)
@@ -157,7 +189,8 @@ fun program_vars c =
   | "Local"    => ([],[])
   | "Assert"   => ([],[])
   | _          => (print "BUG in program_vars! "; print name; fail())
- end;
+ end
+end;
 
 
 (* ==================================== *)
@@ -306,6 +339,22 @@ fun makeState c =
   let val names = program_vars c;
   in
      makeStateFromVars names
+  end;
+
+fun makeStateListFromVars v =
+ let  val varNames = fst v;
+    val arrNames = snd v;
+    val varAndLengthNames = addArrLength varNames arrNames;
+    val vars = varPairs varAndLengthNames;
+    val arrayVars = arrayPairs arrNames
+  in
+      listSyntax.mk_list(vars@arrayVars,``:string#value``)
+  end;
+
+fun makeStateList c = 
+  let val names = program_vars c;
+  in
+     makeStateListFromVars names
   end;
 
 

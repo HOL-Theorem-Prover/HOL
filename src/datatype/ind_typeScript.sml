@@ -14,7 +14,6 @@ val GEN_REWRITE_TAC = fn c => fn thl =>
 
 val _ = new_theory "ind_type";
 
-
 (* ------------------------------------------------------------------------- *)
 (* Abstract left inverses for binary injections (we could construct them...) *)
 (* ------------------------------------------------------------------------- *)
@@ -352,7 +351,16 @@ val FCONS_UNDO = prove(
   GEN_TAC THEN REWRITE_TAC[FUN_EQ_THM] THEN
   numLib.INDUCT_TAC THEN REWRITE_TAC[FCONS, combinTheory.o_THM]);
 
-val FNIL = new_definition("FNIL", ``FNIL (n:num) = @x:'a. T``);
+val FNIL = new_definition("FNIL", ``FNIL (n:num) = (ARB:'a)``);
+
+(*---------------------------------------------------------------------------*)
+(* Destructor-style FCONS equation                                           *)
+(*---------------------------------------------------------------------------*)
+
+val FCONS_DEST = Q.store_thm
+("FCONS_DEST",
+ `FCONS a f n = if n = 0 then a else f (n-1)`,
+ SingleStep.Cases_on `n` THEN ASM_SIMP_TAC numLib.num_ss [FCONS]);
 
 (* ------------------------------------------------------------------------- *)
 (* Convenient definitions for type isomorphism.                              *)

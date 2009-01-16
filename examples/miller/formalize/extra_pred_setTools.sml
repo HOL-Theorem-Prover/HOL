@@ -3,7 +3,7 @@
 (* development.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-structure extra_pred_setTools :> extra_pred_setTools = 
+structure extra_pred_setTools :> extra_pred_setTools =
 struct
 
 open HolKernel Parse boolLib;
@@ -38,6 +38,7 @@ fun rewr_ss ths =
   (std_ss,
    simpLib.SSFRAG
    {ac = [],
+    name = NONE,
     convs = [],
     dprocs = [],
     filter = NONE,

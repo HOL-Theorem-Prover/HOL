@@ -192,29 +192,36 @@ fun read (assumes:string list) (srcext:string)
   val op ^ = OS.Path.concat
   val unquote = xable_string(Systeml.HOLDIR ^ "bin" ^ "unquote")
   val file0 = addExt filename srcext
+  fun try_remove f = 
+    if file0 <> f then 
+      ((OS.FileSys.remove f) handle OS.SysErr _ => ())
+    else
+      ();
   val actualfile =
       if access (unquote, [A_EXEC]) then let
           val newname = tmpName();
         in
-          if OS.Process.isSuccess (Systeml.systeml [unquote, file0, newname]) then
-            newname
-          else file0
+          (if OS.Process.isSuccess (Systeml.systeml [unquote, file0, newname]) then
+             newname
+           else file0)
+          handle e => (try_remove newname; raise e)
         end
       else file0
-  val is       = TextIO.openIn actualfile
+  in let
+  val is       = TextIO.openIn actualfile 
   val mentions = ref (Binaryset.empty String.compare)
   fun insert s = mentions := Binaryset.addList (!mentions, s)
   val names    = parseFile (filename, is) 
   val _        = TextIO.closeIn is
-  val _        = if actualfile <> file0 then
-                   OS.FileSys.remove actualfile handle _ => ()
-                 else ()
+  val _        = try_remove actualfile
   val curr_dir = OS.Path.dir filename
 in
   beginentry objext (manglefilename filename);
   insert names;
   Binaryset.app (outname assumes curr_dir o manglefilename) (!mentions);
   endentry ()
+end
+handle e => (try_remove actualfile; raise e)
 end
 (*
   handle (e as Parsing.ParseError _) => (print "Parse error!\n"; raise e)

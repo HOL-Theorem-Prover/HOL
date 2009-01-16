@@ -46,7 +46,7 @@ fun add_cast_ptree_compset compset =
 let open listTheory pred_setTheory in
   add_thms [IMAGE_EMPTY, IMAGE_INSERT, IMAGE_UNION,
             ADD_INSERT_WORD, ADD_INSERT_STRING,
-            ORD_CHR_compute, stringTheory.CHAR_EQ_THM, SKIP1_def,
+            stringTheory.ORD_CHR_COMPUTE, stringTheory.CHAR_EQ_THM, SKIP1_def,
             string_to_num_def, num_to_string_def, num_to_string_string_to_num,
             PEEKs_def, PEEKs_def, ADDs_def, ADD_LISTs_def, REMOVEs_def,
             TRAVERSEs_def, KEYSs_def, IN_PTREEs_def, INSERT_PTREEs_def,

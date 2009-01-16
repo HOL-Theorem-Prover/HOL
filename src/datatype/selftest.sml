@@ -79,5 +79,52 @@ val _ = Hol_datatype `comm = skip
 val _ = Hol_datatype
           `ascii = ASCII of bool=>bool=>bool=>bool=>bool=>bool=>bool=>bool`;
 
+val _ = Hol_datatype`
+          small_record = <| fld1 : num -> bool ; fld2 : num |>
+`;
+
+val _ = Datatype.big_record_size := 10;
+val _ = Hol_datatype`
+  big_record = <| fld3 : num ; fld4: bool ; fld5 : num -> num;
+                  fld6 : bool -> bool ; fld7 : 'a -> num ;
+                  fld8 : num -> num ; fld9: bool # num ;
+                  fld10 : num + bool ; fld11 : bool option ;
+                  fld12 : bool ; fld13 : num |>`
+
+fun tprint s = print (StringCvt.padRight #" " 70 s)
+
+fun pptest (nm, t, expected) = let
+  val _ = tprint ("Testing pretty-printing of "^nm)
+  val s = Parse.term_to_string t
+in
+  if s = expected then print "OK\n"
+  else (print "FAILED!\n"; Process.exit Process.failure)
+end
+
+fun s t = let open HolKernel boolLib
+          in
+            rhs (concl (simpLib.SIMP_CONV (BasicProvers.srw_ss()) [] t))
+          end
+
+val _ = List.app pptest
+        [("field selection", ``r.fld2``, "r.fld2"),
+         ("field sel. for fn type", ``r.fld1 x``, "r.fld1 x"),
+         ("singleton field update",
+          ``r with fld1 := (\x. T)``, "r with fld1 := (\\x. T)"),
+         ("multi-field update", ``r with <| fld2 := 3; fld1 := x |>``,
+          "r with <|fld2 := 3; fld1 := x|>"),
+         ("big field selection", ``r.fld3``, "r.fld3"),
+         ("big field selection (simped)", s ``r.fld3``, "r.fld3"),
+         ("big field selection (fn type)", ``r.fld7``, "r.fld7"),
+         ("big field selection (fn type, simped)", s ``r.fld7``, "r.fld7"),
+         ("big singleton update", ``r with fld3 := 4``, "r with fld3 := 4"),
+         ("big singleton update (simped)", s ``r with fld3 := 4``,
+          "r with fld3 := 4"),
+         ("big multi-update", ``r with <| fld3 := 6; fld9 := (T,6)|>``,
+          "r with <|fld3 := 6; fld9 := (T,6)|>"),
+         ("big multi-update (simped)",
+          s ``r with <| fld3 := 6; fld9 := (T,6)|>``,
+          "r with <|fld3 := 6; fld9 := (T,6)|>")
+         ]
 
 val _ = Process.exit Process.success;

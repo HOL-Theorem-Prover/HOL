@@ -238,9 +238,11 @@ val EQ_UNIV =
 (* Set inclusion.							 *)
 (* ===================================================================== *)
 
-val SUBSET_DEF = new_infixr_definition
-    ("SUBSET_DEF", (--`SUBSET s t =  !x:'a. x IN s ==> x IN t`--),450);
-val _ = unicode_version (UChar.subset, ``pred_set$SUBSET``);
+val SUBSET_DEF = new_definition(
+  "SUBSET_DEF",
+  ``$SUBSET s t = !x:'a. x IN s ==> x IN t``);
+val _ = set_fixity "SUBSET" (Infix(NONASSOC, 450))
+val _ = unicode_version { u = UChar.subset, tmnm = "SUBSET"};
 
 val SUBSET_TRANS = store_thm
     ("SUBSET_TRANS",
@@ -297,8 +299,10 @@ val _ = export_rewrites ["UNIV_SUBSET"]
 (* Proper subset.							 *)
 (* ===================================================================== *)
 
-val PSUBSET_DEF =  new_infixr_definition("PSUBSET_DEF",
-(--`PSUBSET (s:'a set) t = (s SUBSET t /\ ~(s = t))`--), 450);
+val PSUBSET_DEF =  new_definition(
+  "PSUBSET_DEF",
+  ``PSUBSET (s:'a set) t <=> s SUBSET t /\ ~(s = t)``);
+val _ = set_fixity "PSUBSET" (Infix(NONASSOC, 450))
 
 val PSUBSET_TRANS = store_thm ("PSUBSET_TRANS",
    (--`!s:'a set. !t u. (s PSUBSET t /\ t PSUBSET u) ==> (s PSUBSET u)`--),
@@ -343,7 +347,7 @@ val PSUBSET_UNIV =
 
 val UNION_DEF = new_infixl_definition
      ("UNION_DEF", (--`UNION s t = {x:'a | x IN s \/ x IN t}`--),500);
-val _ = unicode_version (UChar.union, ``(UNION)``)
+val _ = unicode_version{ u = UChar.union, tmnm = "UNION"}
 
 val IN_UNION = store_thm
      ("IN_UNION",
@@ -424,7 +428,7 @@ val _ = export_rewrites ["EMPTY_UNION"]
 val INTER_DEF = new_infixl_definition
      ("INTER_DEF",
       (--`INTER s t = {x:'a | x IN s /\ x IN t}`--), 600);
-val _ = unicode_version (UChar.inter, ``(INTER)``);
+val _ = unicode_version{ u = UChar.inter, tmnm = "INTER"};
 
 val IN_INTER = store_thm
      ("IN_INTER",

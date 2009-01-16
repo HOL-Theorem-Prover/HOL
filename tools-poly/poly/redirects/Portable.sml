@@ -91,6 +91,7 @@ val end_of_stream  = TextIO.endOfStream
  ---------------------------------------------------------------------------*)
 
 fun pointer_eq (x:'a, y:'a) = PolyML.pointerEq(x,y)
+fun ref_to_int (x : 'a ref) = 0 (* needs fixing *)
 
 (*---------------------------------------------------------------------------
     Time

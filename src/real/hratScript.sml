@@ -18,7 +18,7 @@ app load ["hol88Lib",
           "jrhUtils"];
 *)
 
-open Parse boolLib hol88Lib numLib reduceLib 
+open Parse boolLib hol88Lib numLib reduceLib
      pairLib PairedLambda pairTheory
      arithmeticTheory numTheory prim_recTheory jrhUtils;
 
@@ -68,9 +68,10 @@ val trat_sucint = new_prim_rec_definition("trat_sucint",
 (* Definition of the equivalence relation, and proof that it *is* one        *)
 (*---------------------------------------------------------------------------*)
 
-val trat_eq = new_infixr_definition("trat_eq",
+val trat_eq = new_definition("trat_eq",
   (--`trat_eq (x,y) (x',y') =
-    (SUC x * SUC y' = SUC x' * SUC y)`--),450);
+    (SUC x * SUC y' = SUC x' * SUC y)`--));
+val _ = temp_set_fixity "trat_eq" (Infix(NONASSOC, 450))
 
 val TRAT_EQ_REFL = prove_thm("TRAT_EQ_REFL",
   (--`!p. p trat_eq p`--),
@@ -243,19 +244,19 @@ val TRAT_ARCH = prove_thm("TRAT_ARCH",
 (--`!h. ?n. ?d. (trat_sucint n) trat_eq (h trat_add d)`--),
  GEN_PAIR_TAC THEN EXISTS_TAC (--`SUC(FST(h:num#num))`--) THEN
   EXISTS_TAC(--`(PRE((SUC(SUC(FST h))*(SUC(SND h))) - (SUC(FST h))),SND h)`--)
-  THEN MATCH_MP_TAC TRAT_EQ_TRANS THEN 
+  THEN MATCH_MP_TAC TRAT_EQ_TRANS THEN
   EXISTS_TAC (--`(SUC(FST(h:num#num)),0)`--)
   THEN PURE_REWRITE_TAC[TRAT_SUCINT_0] THEN PURE_REWRITE_TAC[trat_add, trat_eq]
   THEN REWRITE_TAC[] THEN UNSUCK_TAC THENL
    [REWRITE_TAC[SUB_EQ_0, GSYM NOT_LESS],
-    REWRITE_TAC [RIGHT_SUB_DISTRIB, 
+    REWRITE_TAC [RIGHT_SUB_DISTRIB,
         RIGHT_ADD_DISTRIB,SYM(num_CONV (--`1`--)), MULT_RIGHT_1] THEN
     ONCE_REWRITE_TAC[ADD_SYM] THEN IMP_SUBST_TAC SUB_ADD THEN
     REWRITE_TAC[MULT_ASSOC] THEN MATCH_MP_TAC LESS_MONO_MULT THEN
    MATCH_MP_TAC LESS_IMP_LESS_OR_EQ] THEN
   W(C (curry SPEC_TAC) (--`x:num`--) o rand o rator o snd) THEN GEN_TAC THEN
-  REWRITE_TAC [MULT_SUC,GSYM ADD_ASSOC,ADD1] THEN 
-  MATCH_MP_TAC LESS_ADD_NONZERO THEN 
+  REWRITE_TAC [MULT_SUC,GSYM ADD_ASSOC,ADD1] THEN
+  MATCH_MP_TAC LESS_ADD_NONZERO THEN
   REWRITE_TAC[ADD_CLAUSES, NOT_SUC, ONCE_REWRITE_RULE[ADD_SYM] (GSYM ADD1)]);
 
 (* original
@@ -290,7 +291,7 @@ val [HRAT_ADD_SYM, HRAT_ADD_ASSOC, HRAT_MUL_SYM, HRAT_MUL_ASSOC,
   quotient.define_equivalence_type
     {name = "hrat",
      equiv = TRAT_EQ_EQUIV, defs =
-     [{def_name="hrat_1",   fname="hrat_1", 
+     [{def_name="hrat_1",   fname="hrat_1",
        func=Term`trat_1`, fixity=Prefix},
       {def_name="hrat_inv", fname="hrat_inv",
        func=Term`trat_inv`, fixity=Prefix},
@@ -298,7 +299,7 @@ val [HRAT_ADD_SYM, HRAT_ADD_ASSOC, HRAT_MUL_SYM, HRAT_MUL_ASSOC,
        func=Term`$trat_add`, fixity=Infixl 500},
       {def_name="hrat_mul", fname="hrat_mul",
        func=Term`$trat_mul`, fixity=Infixl 600},
-      {def_name="hrat_sucint", fname="hrat_sucint", 
+      {def_name="hrat_sucint", fname="hrat_sucint",
        func=Term`trat_sucint`, fixity=Prefix}],
      welldefs = [TRAT_INV_WELLDEFINED, TRAT_ADD_WELLDEFINED2,
                  TRAT_MUL_WELLDEFINED2],

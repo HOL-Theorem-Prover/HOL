@@ -63,13 +63,10 @@ then print them into a file defaxioms.prove.lisp, run hol and do:
 
 To slurp in "examples/encap/example.ml" do:
 
-  load "hol_defaxiomsTheory";
-  load "sexp";
-  quietdec := true; open sexp; quietdec := false;
-  use "../examples/encap/example.ml";
-  map (install_def o mk_acl2def) (!acl2_list_ref);
+  use "load_sexp.ml";
+  load_book "../examples/encap/example";
 
 Mike Gordon
 16 Dec, 2005
 01 Dec, 2006
-
+21 Nov, 2008

@@ -477,7 +477,7 @@ fun build_adoc_files () = let
     map normPath (String.tokens Char.isSpace wholefile)
   end handle _ => (print "Couldn't read documentation directories file\n";
                    [])
-  val doc2txt = fullPath [HOLDIR, "help", "src", "Doc2Txt.exe"]
+  val doc2txt = fullPath [HOLDIR, "help", "src-sml", "Doc2Txt.exe"]
   fun make_adocs dir = let
     val fulldir = fullPath [HOLDIR, dir]
   in
@@ -491,11 +491,11 @@ in
 end
 
 fun build_help () =
- let val dir = Path.concat(Path.concat (HOLDIR,"help"),"src")
+ let val dir = Path.concat(Path.concat (HOLDIR,"help"),"src-sml")
      val _ = FileSys.chDir dir
 
      (* builds the documentation tools called below *)
-     val _ = build_dir (dir, 0)
+     val _ = SYSTEML [HOLMAKE, "all"]
 
      val doc2html = fullPath [dir,"Doc2Html.exe"]
      val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
@@ -622,7 +622,7 @@ fun clean_dirs f =
     (* clean both kernel directories, regardless of which was actually built,
        the help src directory too, and all the src directories, including
        those with ! annotations  *)
-    List.app f (fullPath [HOLDIR, "help", "src"] ::
+    List.app f (fullPath [HOLDIR, "help", "src-sml"] ::
                 fullPath [HOLDIR, "src", "0"] ::
                 fullPath [HOLDIR, "src", "experimental-kernel"] ::
                 map #1 SRCDIRS);

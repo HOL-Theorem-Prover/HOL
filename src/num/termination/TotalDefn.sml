@@ -20,8 +20,8 @@ fun max [] m = m
   | max (h::t) m = max t (if h>m then h else m);
 
 fun take 0 L = []
-  | take n [] = raise ERR "take" "not enough elements"
-  | take n (h::t) = h::take (n-1) t;
+  | take n (h::t) = h::take (n-1) t
+  | take n [] = raise ERR "take" "not enough elements";
 
 fun copies x =
   let fun repl 0 = []

@@ -18,8 +18,9 @@ fun run cmd args inp =
 		val res = inputAll is
 	    in closeIn is; res end
 	val infile  = OS.FileSys.tmpName ()
-	val _ = write infile (Byte.stringToBytes inp)
 	val outfile = OS.FileSys.tmpName ()
+    in let
+	val _ = write infile (Byte.stringToBytes inp)
 	val cmdline = 
 	    (* This should work for Bourne sh, POSIX sh, ksh, bash: *)
 	    catenate (cmd :: List.@(args, ["<", infile, "1>", outfile, 
@@ -37,6 +38,11 @@ fun run cmd args inp =
 	(OS.FileSys.remove outfile) handle OS.SysErr _ => ();
 	result
     end
+handle e =>
+((OS.FileSys.remove infile)  handle OS.SysErr _ => ();
+ (OS.FileSys.remove outfile) handle OS.SysErr _ => ();
+ raise e)
+end
 end;
 open Mosml;
 
@@ -46,3 +52,7 @@ val _ = use "poly/Binaryset.sig";
 val _ = use "poly/Binaryset.sml";
 val _ = use "poly/Listsort.sig";
 val _ = use "poly/Listsort.sml";
+val _ = use "../help/src-sml/Database.sig";
+val _ = use "../help/src-sml/Database.sml";
+val _ = use "poly/Help.sig";
+val _ = use "poly/Help.sml";

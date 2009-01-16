@@ -442,7 +442,6 @@ val compose_m_seq_thm = Q.prove
                     FULL_SIMP_TAC list_ss [LET_THM, m_def, match_seq_def,
 		                           compose_m_seq_def])]);
 
-
 (*---------------------------------------------------------------------------*)
 (* Match sequence suffixes can be swapped out.                               *)
 (*---------------------------------------------------------------------------*)

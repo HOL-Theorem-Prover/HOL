@@ -1,0 +1,2 @@
+INCLUDES = ../ho_prover
+OPTIONS = QUIT_ON_FAILURE

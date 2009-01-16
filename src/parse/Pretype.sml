@@ -479,6 +479,71 @@ fun kind_rank_to_string (kd,rk) =
             then "" else ":<=" ^ prerank_to_string rk)
       end
 
+datatype pp_pty_state = none | left | right | uvar
+
+(*
+fun pp_pretype pps pty = let
+  val checkref = Portable.ref_to_int
+  fun pp_pty pps state pty = let
+  in
+    case pty of
+      Vartype s => PP.add_string pps ("V("^s^")")
+    | Tyop {Thy,Tyop = tyop,Args} => let
+        fun qid pps = if Thy = "bool" orelse Thy = "min" then 
+                        PP.add_string pps tyop
+                      else PP.add_string pps (Thy ^ "$" ^ tyop)
+      in
+        if Thy = "min" andalso tyop = "fun" then let
+          in
+            if state = none then PP.begin_block pps PP.INCONSISTENT 0 else ();
+            if state = left orelse state = uvar then
+              (PP.add_string pps "("; PP.begin_block pps PP.INCONSISTENT 0)
+            else ();
+            pp_pty pps left (hd Args);
+            PP.add_string pps " ->";
+            PP.add_break pps (1,0);
+            pp_pty pps right (hd (tl Args));
+            if state = left orelse state = uvar then
+              (PP.end_block pps; PP.add_string pps ")")
+            else ();
+            if state = none then PP.end_block pps else ()
+          end
+        else
+          case Args of
+            [] => qid pps 
+          | _ => let
+            in
+              PP.add_string pps "(";
+              PP.begin_block pps PP.INCONSISTENT 0;
+              Portable.pr_list (fn a => (PP.begin_block pps PP.INCONSISTENT 0;
+                                         pp_pty pps none a;
+                                         PP.end_block pps))
+                               (fn () => PP.add_string pps ",")
+                               (fn () => ())
+                               Args;
+              PP.end_block pps ;
+              PP.add_string pps ")";
+              qid pps
+            end
+      end
+    | UVar(r as ref NONE) => let
+      in
+        PP.add_string pps (Int.toString (checkref r) ^ ":*")
+      end
+    | UVar (r as ref (SOME pty')) => let
+      in
+        if state <> uvar then PP.begin_block pps PP.INCONSISTENT 0 else ();
+        PP.add_string pps (Int.toString (checkref r) ^ ":");
+        PP.add_break pps (1,2);
+        pp_pty pps uvar pty';
+        if state <> uvar then PP.end_block pps else ()
+      end
+  end
+in
+  pp_pty pps none pty
+end
+*)
+
 (*
 fun pretype_to_string (ty as PT(ty0,locn)) =
   case ty0 of
@@ -504,76 +569,98 @@ and pretypes_to_string0 [ty] = pretype_to_string ty
 fun pp_pretype pps ty =
  let open Portable
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
-     fun pppretype (ty as PT(ty0,locn)) =
+     val checkref = Portable.ref_to_int
+     fun pppretype state (ty as PT(ty0,locn)) =
        case ty0 of
-           UVar(ref (SOMEU ty')) => pppretype ty'
-         | UVar(ref (NONEU(kd,rk))) => add_string ("<uvar>" ^ kind_rank_to_string(kd,rk))
-         | Vartype(s,kd,rk) => add_string (s ^ kind_rank_to_string(kd,rk))
-         | Contype {Thy, Tyop, Kind, Rank} => add_string Tyop (* ^ kind_rank_to_string(Kind,Rank) *)
+           UVar(r as ref (SOMEU pty')) => let
+           in
+             if state <> uvar then begin_block INCONSISTENT 0 else ();
+             add_string (Int.toString (checkref r) ^ ":");
+             add_break (1,2);
+             pppretype uvar pty';
+             if state <> uvar then end_block() else ()
+           end
+         | UVar(r as ref (NONEU(kd,rk))) => add_string (Int.toString (checkref r) ^ kind_rank_to_string(kd,rk))
+         | Vartype(s,kd,rk) => add_string ("V(" ^ s ^ kind_rank_to_string(kd,rk) ^ ")")
+         | Contype {Thy, Tyop, Kind, Rank} => if Thy = "bool" orelse Thy = "min" then
+                                                add_string Tyop
+                                              else add_string (Thy ^ "$" ^ Tyop) (* ^ kind_rank_to_string(Kind,Rank) *)
          | TyApp(PT(TyApp(PT(Contype{Tyop="fun",...},_), ty1),_), ty2) =>
-                              (add_string "(";
-                               begin_block INCONSISTENT 0;
-                               pppretype ty1;
+                              (if state = none then begin_block INCONSISTENT 0
+                               else if state = left orelse state = uvar then
+                                   (add_string "("; begin_block INCONSISTENT 0)
+                               else ();
+                               pppretype left ty1;
                                add_string " ->";
                                add_break(1,0);
-                               pppretype ty2;
-                               end_block();
-                               add_string ")")
+                               pppretype right ty2;
+                               if state = none then end_block()
+                               else if state = left orelse state = uvar then
+                                  (end_block(); add_string ")")
+                               else ())
          | TyApp(PT(TyApp(PT(Contype{Tyop="prod",...},_), ty1),_), ty2) =>
-                              (add_string "(";
-                               begin_block INCONSISTENT 0;
-                               pppretype ty1;
+                              (if state = none then begin_block INCONSISTENT 0
+                               else if state = left orelse state = uvar then
+                                   (add_string "("; begin_block INCONSISTENT 0)
+                               else ();
+                               pppretype left ty1;
                                add_string " #";
                                add_break(1,0);
-                               pppretype ty2;
-                               end_block();
-                               add_string ")")
+                               pppretype right ty2;
+                               if state = none then end_block()
+                               else if state = left orelse state = uvar then
+                                  (end_block(); add_string ")")
+                               else ())
          | TyApp(PT(TyApp(PT(Contype{Tyop="sum",...},_), ty1),_), ty2) =>
-                              (add_string "(";
-                               begin_block INCONSISTENT 0;
-                               pppretype ty1;
+                              (if state = none then begin_block INCONSISTENT 0
+                               else if state = left orelse state = uvar then
+                                   (add_string "("; begin_block INCONSISTENT 0)
+                               else ();
+                               pppretype left ty1;
                                add_string " +";
                                add_break(1,0);
-                               pppretype ty2;
-                               end_block();
-                               add_string ")")
+                               pppretype right ty2;
+                               if state = none then end_block()
+                               else if state = left orelse state = uvar then
+                                  (end_block(); add_string ")")
+                               else ())
          | TyApp(ty1, ty2) => (add_string "(";
                                begin_block INCONSISTENT 0;
-                               pppretype ty2;
+                               pppretype none ty2;
                                add_break(1,0);
-                               pppretype ty1;
+                               pppretype none ty1;
                                end_block();
                                add_string ")")
          | TyUniv(tyv, ty) => (add_string "!";
                                begin_block INCONSISTENT 0;
-                               pppretype tyv;
+                               pppretype none tyv;
                                add_string ".";
                                add_break(1,2);
-                               pppretype ty;
+                               pppretype none ty;
                                end_block())
          | TyAbst(tyv, ty) => (add_string "\\";
                                begin_block INCONSISTENT 0;
-                               pppretype tyv;
+                               pppretype none tyv;
                                add_string ".";
                                add_break(1,2);
-                               pppretype ty;
+                               pppretype none ty;
                                end_block())
          | TyKindConstr {Ty, Kind} =>
                               (begin_block INCONSISTENT 0;
-                               pppretype Ty;
+                               pppretype none Ty;
                                add_string " :";
                                add_break(1,2);
                                add_string (kind_to_string(Prekind.toKind Kind));
                                end_block())
          | TyRankConstr {Ty, Rank} =>
                               (begin_block INCONSISTENT 0;
-                               pppretype Ty;
+                               pppretype none Ty;
                                add_string " :<=";
                                add_break(1,2);
                                add_string (Int.toString(Prerank.toRank Rank));
                                end_block())
  in
-   pppretype ty
+   pppretype none ty
  end;
 
 val pretype_to_string = Portable.pp_to_string 80 pp_pretype

@@ -1068,6 +1068,7 @@ fun execSymbWithSMT name spec n =
    (* val ss = computeStateFromPre evalP s*)
   in
      (resetAll(); (* reset global variables *)
+      setVars(listVars);
       let val res = 
         execSymb name 
                  evalP 

@@ -7,8 +7,8 @@
 (*=============================================================== *)
 
 
-open HolKernel Parse boolLib  arithmeticTheory 
-     relationTheory newOpsemTheory 
+open HolKernel Parse boolLib newOpsemTheory
+     relationTheory   arithmeticTheory 
      computeLib bossLib;
 
 
@@ -23,14 +23,21 @@ fun getThm thm =
 (* functions to transform JML bounded forall statement *)
 (* --------------------------------------------------  *)
 
+
 (* conversion rule to rewrite a bounded for all term
    as a conjunction *) 
+
+(* A bug has been corrected. When the term has the form "p ==> q"
+   "strip_comb ant" raises a Bind exception.
+   So Bind exception has been handled and propagate a HOL_ERR 
+   exception (to works correctly when using TOP_DEPTH_CONV).
+*)
 fun boundedForALL_ONCE_CONV tm =
  let val (vars,body) = strip_forall tm
      val (ant,con) = dest_imp body
      val (_,[lo,hi]) = strip_comb ant
  in
-  if hi = Term(`0:num`)
+   if hi = Term(`0:num`)
    then (EVAL THENC SIMP_CONV std_ss []) tm
    else CONV_RULE
          (RHS_CONV EVAL)
@@ -38,7 +45,12 @@ fun boundedForALL_ONCE_CONV tm =
           (SPEC
             (mk_abs(lo,con))
             (Q.GEN `P` (CONV_RULE EVAL (SPEC hi BOUNDED_FORALL_THM)))))
- end;                                                                                                                                    
+ end
+ handle Bind => 
+	raise HOL_ERR {message="imply in boundedForALL_ONCE_CONV",
+		       origin_function ="boundedForALL_ONCE_CONV ",
+		       origin_structure ="simpTools"};
+
 
 val boundedForAll_CONV =
  TOP_DEPTH_CONV boundedForALL_ONCE_CONV THENC REWRITE_CONV [];                                                                           
@@ -48,6 +60,8 @@ val boundedForAll_CONV =
 fun rewrBoundedForAll tm =
     getThm (boundedForAll_CONV tm)
     handle UNCHANGED => tm;
+
+
 
 (* --------------------------------------------------- *)
 (* function to eliminate  ``T`` from conjunctions. 
@@ -74,7 +88,7 @@ NOT_CONJ_IMP_CONV  ``~((A1 ==> B1) /\ ... /\ (An ==> Bn) /\ TM)`` =
 (* ---------------------------------------------------------*)
 local
 
-   val DE_MORGAN_AND_THM = METIS_PROVE [] ``!A B. ~(A/\B) = ~A \/ ~B `` 
+   val DE_MORGAN_AND_THM = METIS_PROVE [] ``!A:bool B:bool. ~(A/\B) = (~A) \/ (~B) `` 
 
 in
 
@@ -115,6 +129,7 @@ end;
 (* --------------------------------------------------- *)
 
 
+
 (* --------------------------------------------------- *)
 (* function to take the negation of the postcondition
    using NOT_CONJ_IMP_CONV *)
@@ -135,8 +150,8 @@ fun takeNegPost post =
         )
    end;
 
-(* val post = `` i < j ==> (i - j = j - i)``;
-val n = mk_neg(post);*)
+
+
 (* --------------------------------------------------- *)
 (* evaluate precondition on initial state *)
 (* --------------------------------------------------- *)
@@ -156,16 +171,42 @@ fun computeStateFromPre pre s =
    st2 is the state after execution of the program
 *)
 (* --------------------------------------------------- *)
+
+
+
+(* has been modified for examples with bmcStraight *)
+local 
+
+fun simpConv tm =
+  getThm(SIMP_CONV (srw_ss()) [] tm)
+  handle UNCHANGED
+     => tm;
+
+in
+
+
 fun evalPost t st1 st2 = 
   let val p = getThm (EVAL ``^t ^st1``);
    val pp =  if (is_abs(p))
              then getThm (EVAL ``^p ^st2``)
              else p
+   (* added for examples with bmcStraight *)
+   (* val ppp = simpConv pp*)
    in
-     rewrBoundedForAll pp
+     let val r = rewrBoundedForAll pp
+     in 
+       r
+     end
+     handle Bind => 
+	    (print "\nbind error in evalPost\n";
+	     pp
+	    )
+     handle UNCHANGED => 
+	     pp
+     handle HOL_ERR s => 
+	    (print "\nHOL_ERR in evalPost";
+	     t
+	    )
    end
-   handle HOL_ERR s => 
-     (print "HOL_ERR in evalPost";
-      t
-     )
-  ;
+end;
+ 

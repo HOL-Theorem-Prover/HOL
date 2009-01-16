@@ -52,6 +52,7 @@ sig
   val exit: unit -> 'a
 
   val pointer_eq : 'a * 'a -> bool
+  val ref_to_int : 'a ref -> int
 
   val end_of_stream: instream -> bool
   val flush_out: outstream -> unit

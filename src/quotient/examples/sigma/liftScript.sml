@@ -66,7 +66,7 @@ val ALPHA_EQUIV = LIST_CONJ
 
 (* ALPHA_dict/entry_EQUIV will not be used, rather SUBST_EQUIV: *)
 
-val SUBST_EQUIV = make_equiv [ALPHA_obj_EQUIV, LIST_EQUIV, PAIR_EQUIV]
+val SUBST_EQUIV = make_equiv [ALPHA_obj_EQUIV] [LIST_EQUIV, PAIR_EQUIV]
                       ``:(var # obj1) list``;
 
 
@@ -703,7 +703,7 @@ val SUMVAL_def = xDefine "SUM_VAL"
               `(($+-+ f g) (INL (x:'a)) = ((f x):'c)) /\
                (($+-+ f g) (INR (y:'b)) = ((g y):'c))`;
 
-val _ = Lib.try add_infix("+-+", 450, HOLgrammars.RIGHT)
+val _ = Lib.try add_infix("+-+", 490, HOLgrammars.RIGHT)
 
 val PBETA_TAC = PairRules.PBETA_TAC
 val PGEN_TAC = PairRules.PGEN_TAC

@@ -42,6 +42,7 @@ src/simp/src
 src/metis
 src/meson/src
 src/basicProof
+src/quantHeuristics
 src/relation
 src/one
 src/pair/src
@@ -87,6 +88,7 @@ src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
 src/real
+!examples/misc
 src/prob
 !examples/muddy/muddyC
 !examples/muddy
@@ -102,7 +104,7 @@ src/path
 !!examples/lambda/typing
 src/Boolify/src
 src/float
-!!examples/miller
+!!examples/miller/miller
 !!examples/ARM/v4
 !!!examples/ARM/v4T
 !!examples/mc-logic

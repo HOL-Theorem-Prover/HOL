@@ -186,6 +186,11 @@ fun mk_pat c =
   in map build
   end;
 
+(*---------------------------------------------------------------------------*)
+(* Use of funky internal variable names, prefixed with *v, to avoid name     *)
+(* clashes.                                                                  *)
+(*---------------------------------------------------------------------------*)
+
 local val counter = ref 0
 in
 fun vary vlist =
@@ -201,10 +206,10 @@ fun vary vlist =
 end;
 
 fun v_to_prefix (prefix, v::pats) = (v::prefix,pats)
-  | v_to_prefix _ = raise ERR"mk_case" "v_to_prefix"
+  | v_to_prefix _ = raise ERR "mk_case" "v_to_prefix"
 
 fun v_to_pats (v::prefix,tag, pats) = (prefix, tag, v::pats)
-  | v_to_pats _ = raise ERR"mk_case""v_to_pats";
+  | v_to_pats _ = raise ERR "mk_case""v_to_pats";
 
 (* --------------------------------------------------------------
    Literals include numeric, string, and character literals.
@@ -657,7 +662,7 @@ fun mk_functional thy eqs =
      val f  = if is_var f0 then f0 else mk_var(dest_const f0)
      val _  = map no_repeat_vars pats
      val rows = zip (map (fn x => ([],[x])) pats) (map GIVEN (enumerate R))
-     val fvs = free_varsl R
+     val fvs = free_varsl (L@R)
      val a = variant fvs (mk_var("a", type_of(Lib.trye hd pats)))
      val FV = a::fvs
      val range_ty = type_of (Lib.trye hd R)

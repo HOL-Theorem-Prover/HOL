@@ -512,8 +512,12 @@ fun strip_comb ((_, prmap): overload_info) t = let
         case List.find (fn {redex,residue} => eq residue v) tmi of
           NONE => mk_const("ARB", type_of v)
         | SOME i => #residue i
+    val args = map findarg bvs
+    val fconst_ty = List.foldr (fn (arg,acc) => type_of arg --> acc)
+                               (type_of t)
+                               args
   in
-    (mk_var(GrammarSpecials.fakeconst_special ^ nm, alpha), map findarg bvs)
+    (mk_var(GrammarSpecials.fakeconst_special ^ nm, fconst_ty), args)
   end
 in
   case sorted of

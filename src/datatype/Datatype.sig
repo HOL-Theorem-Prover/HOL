@@ -11,9 +11,11 @@ sig
 
  val big_record_size : int ref
 
- val define_type      : tyspec list -> {induction:thm, recursion:thm}
- val new_datatype     : hol_type quotation -> {induction:thm, recursion:thm}
- val build_tyinfos    : typeBase
+ val tyspecs_of    : hol_type quotation -> tyspec list
+
+ val define_type   : tyspec list -> {induction:thm, recursion:thm}
+ val new_datatype  : hol_type quotation -> {induction:thm, recursion:thm}
+ val build_tyinfos : typeBase
                          -> {induction:thm, recursion:thm}
                            -> tyinfo list
  val primHol_datatype_from_astl : typeBase
@@ -30,7 +32,7 @@ sig
      whose tyinfos won't include a distinctness theorem, get an extra
      conversion stuffed into their tyinfo to do inequality resolution *)
 
- val write_tyinfos    : (tyinfo * string) list -> unit
- val Hol_datatype     : hol_type quotation -> unit
+ val write_tyinfos : (tyinfo * string) list -> unit
+ val Hol_datatype  : hol_type quotation -> unit
 
 end

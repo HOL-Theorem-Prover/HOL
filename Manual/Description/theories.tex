@@ -2879,10 +2879,35 @@ Joining the front part and the last element of a non-empty list yields
 the original list.  Both \holtxt{LAST} and \holtxt{FRONT}
 are unspecified on empty lists.
 
+
+\paragraph {Prefix checking}
+
+\index{isPREFIX, the HOL constant@\ml{isPREFIX}, the \HOL{} constant}
+The relation capturing whether a list $\ell_1$ is a prefix of $\ell_2$
+({\holtxt{isPREFIX}) can be defined by recursion. The infix
+\holtxt{<{}<=} can also be used as notation for this partial order.
+% use of {} above is just a trick to stop Emacs font-lock colouring
+% this file disgustingly
+%
+\begin{hol}
+\begin{verbatim}
+   isPREFIX_THM
+     |- ([] <<= l <=> T) /\
+        (h::t <<= [] <=> F) /\
+        (h1::t1 <<= h2::t2 <=> (h1 = h2) /\ t1 <<= t2)
+\end{verbatim}
+\end{hol}
+The above theorem states that: the empty list is a prefix of any other
+list (clause 1); that no non-empty list is a prefix of the empty list
+(clause 2); and that a non-empty list is a prefix of another non-empty
+list if the first elements of the lists are the same, and if the tail
+of the first is a prefix of the tail of the second.
+
 \vspace{1ex}
 \noindent For a complete list of available theorems in
 \theoryimp{list}, see \REFERENCE.  Further development of list
 theory can be found in \theoryimp{rich\_list}.
+
 
 \subsubsection{List permutations and sorting}
 \index{permutations (of lists), the HOL theory of@permutations (of lists), the \HOL{} theory of}
@@ -2959,6 +2984,8 @@ total relation.
      |- !R. transitive R /\ total R ==> SORTS QSORT R
 \end{verbatim}
 \end{hol}
+
+
 
 \index{lists, the HOL theory of@lists, the \HOL{} theory of|)}
 \index{ lists, the HOL theory of@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, the \HOL{} theory of)|)}
@@ -3299,8 +3326,15 @@ Thus:
 
 \paragraph {Strings}
 
-The type \holtxt{string} is inductively characterized by the
-constructors
+The type \holtxt{string} is an alias for the type \holtxt{char list}.
+All functions and predicates over lists are thus available for use
+over strings.  Some of these constants are overloaded so that they are
+printed (and can be parsed) with names that are more appropriate for
+the particular case of lists of characters.
+
+For example, \holtxt{NIL} and \holtxt{CONS} over strings have
+alternative names \holtxt{EMPTYSTRING} and \holtxt{STRING}
+respectively:
 %
 \begin{hol}
 \index{EMPTYSTRING, the HOL constant@\holtxt{EMPTYSTRING}, the \HOL{} constant}
@@ -3320,6 +3354,14 @@ term
  (\holtxt{STRING} \;c_{n-1} \; (\holtxt{STRING}\;
 c_n \; \holtxt{EMPTYSTRING})) \,\ldots\, )
 \]
+Of course, one could also write
+\begin{session}
+\begin{verbatim}
+- ``[#"a"; #"b"]``;
+> val it = ``"ab"`` : term
+\end{verbatim}
+\end{session}
+
 String literals can be constructed using the various special escape
 sequences that are used in \ML{}.  For example, \ml{\bs{}n} for the
 newline character, and a backslash followed by three decimal digits
@@ -3335,24 +3377,6 @@ caret that the pretty-printer has chosen to use in printing the given
 string, and this occurs inside a quotation, then the caret will need
 to be doubled.  (See Section~\ref{sec:quotation-antiquotation}.)
 
-As a result of the characterization, the following basic theorems
-hold:
-%
-\begin{hol}
-\begin{verbatim}
-   STRING_11
-     |- !c1 c2 s1 s2. (STRING c1 s1 = STRING c2 s2) = (c1=c2) /\ (s1=s2)
-   STRING_DISTINCT
-     |- !c s. ~("" = STRING c s)) /\ (!c s. ~(STRING c s = ""))
-   string_Axiom
-     |- !b g. ?f.  (f "" = b) /\
-                   (!c t. f (STRING c t) = g c t (f t))
-   STRING_INDUCT_THM
-     |- !P. P "" /\ (!s. P s ==> !c. P (STRING c s)) ==> !s. P s
-   STRING_CASES
-     |- !s. (s = "") \/ (?c str. s = STRING c str)
-\end{verbatim}
-\end{hol}
 There is also a destructor function {\small\verb+DEST_STRING+} for
 strings which returns an option type.
 \begin{hol}
@@ -3391,61 +3415,25 @@ Such an expression is translated to
 
 \paragraph {Length and concatenation}
 
-String length (\holtxt{STRLEN}) is defined by primitive
-recursion. The concatenation of strings (\holtxt{STRCAT}) may be expressed
-recursively (\holtxt{STRCAT\_EQNS}) or as a fold (\holtxt{STRCAT\_EXPLODE}):
+A standard function \holtxt{LENGTH} can be written \holtxt{STRLEN}
+when applied to a string, and \holtxt{APPEND} can be written as
+\holtxt{STRCAT}.  There are also theorems characterising these
+constants in \ml{stringTheory}, though they are simply instantiations
+of results from \ml{listTheory}:
 \begin{hol}
 \begin{verbatim}
-   STRLEN_DEF
+   STRLEN_THM
      |- (STRLEN "" = 0) /\
         (STRLEN (STRING c s) = 1 + STRLEN s)
 
-   STRCAT_EQNS = Q.store_thm
+   STRCAT_EQNS =
      |- (STRCAT "" s = s) /\
         (STRCAT s "" = s) /\
         (STRCAT (STRING c s1) s2 = STRING c (STRCAT s1 s2))
-   STRCAT_EXPLODE
-     |- !s1 s2. STRCAT s1 s2 = FOLDR STRING s2 (EXPLODE s1)
 \end{verbatim}
 \end{hol}
 
 
-\paragraph {Strings and lists}
-
-Strings are converted to lists of characters by \holtxt{EXPLODE}. This
-is inverted by \holtxt{IMPLODE}.
-%
-\begin{hol}
-\begin{verbatim}
-   EXPLODE_EQNS
-     |- (EXPLODE "" = []) /\
-        (!c s. EXPLODE (STRING c s) = c::EXPLODE s)
-
-   IMPLODE_EQNS
-     |- (IMPLODE [] = "") /\
-        (!c s. IMPLODE (c::t) = STRING c (IMPLODE t))
-\end{verbatim}
-\end{hol}
-
-\paragraph {Prefix checking}
-
-That string $s_1$ is a prefix of $s_2$ ({\small\verb+isPREFIX+}) can be
-defined by recursion ({\small\verb+isPREFIX_DEF+}). From this, the
-statement {\small\verb+isPREFIX_STRCAT+} can be easily derived.
-%
-\begin{hol}
-\begin{verbatim}
-   isPREFIX_DEF
-     |- isPREFIX s1 s2 =
-          case (DEST_STRING s1, DEST_STRING s2)
-           of (NONE, _) -> T
-           || (SOME __, NONE) -> F
-           || (SOME(c1,t1),SOME(c2,t2)) -> (c1=c2) /\ isPREFIX t1 t2
-
-   isPREFIX_STRCAT
-     |- !s1 s2. isPREFIX s1 s2 = ?s3. s2 = STRCAT s1 s3
-\end{verbatim}
-\end{hol}
 \index{strings, the HOL theory of@strings, the \HOL{} theory of|)}
 
 \section{Collections}

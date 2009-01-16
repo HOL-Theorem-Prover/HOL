@@ -47,8 +47,6 @@ open chap3Theory
 
    ---------------------------------------------------------------------- *)
 
-val export_rewrites = export_rewrites "raw_syntax";
-
 val _ = new_theory "raw_syntax"
 
 val _ = Hol_datatype `raw_term = var of string
@@ -178,7 +176,7 @@ val collapse_vsubst = store_thm(
                            SUB_VAR, SUB_THM]
   THENL [
     REPEAT GEN_TAC THEN COND_CASES_TAC THEN SRW_TAC [][collapse_def],
-    REPEAT GEN_TAC THEN
+    MAP_EVERY Q.X_GEN_TAC [`s`, `x`, `y`] THEN 
     Cases_on `x = s` THEN ASM_SIMP_TAC (srw_ss()) [collapse_def, SUB_THM] THEN
     Cases_on `s = y` THEN
     ASM_SIMP_TAC (srw_ss()) [collapse_def, SUB_THM, lemma14b] THENL [
@@ -340,7 +338,7 @@ val alpha_eq_safe_subst = store_thm(
   "alpha_eq_safe_subst",
   ``!t. ?t'. EQC alpha t t' /\ (capt x t' INTER fv u = {})``,
   Induct THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
-    REPEAT GEN_TAC THEN Q.EXISTS_TAC `var s` THEN SRW_TAC [][capt_def],
+    Q.X_GEN_TAC `s` THEN Q.EXISTS_TAC `var s` THEN SRW_TAC [][capt_def],
     Q.EXISTS_TAC `app t'' t'''` THEN
     SRW_TAC [][capt_def, RIGHT_INTER_OVER_UNION] THEN
     METIS_TAC [EQC_alpha_CONG2],

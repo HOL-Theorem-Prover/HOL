@@ -20,6 +20,7 @@ struct
 
 open HolKernel Parse boolLib pairLib;
 
+
 val RW_ERR = mk_HOL_ERR "RW";
 val monitoring = ref false;
 
@@ -78,7 +79,7 @@ fun GSPEC_ALL th =
   * allow me to unroll recursive functions.
   *--------------------------------------------------------------------------*)
  fun might_loop th =
-    let val (ants,(lhs,rhs)) = (I##dest_eq)(strip_imp(concl th))
+    let val (ants,(lhs,rhs)) = (I##dest_eq)(strip_imp_only(concl th))
         val embedded_in = !embedded_ref
         val islooper = (aconv lhs rhs) orelse (exists (embedded_in lhs) ants)
     in if (islooper  andalso !monitoring)
@@ -87,19 +88,6 @@ fun GSPEC_ALL th =
        else ();
        islooper
     end;
-
-(*---------------------------------------------------------------------------
- * Beware! HOL syntax routines sometimes think ~A is A ==> F.
- *---------------------------------------------------------------------------*)
-fun strip_imp tm =
-  if (is_neg tm) then ([],tm)
-  else if (is_imp tm)
-       then let val (ant,conseq) = dest_imp tm
-	        val (was,wb) = strip_imp conseq
-            in (ant::was, wb)
-            end
-       else ([],tm);
-
 
 (* ---------------------------------------------------------------------------
  * Split a theorem into a list of theorems suitable for rewriting:
@@ -122,7 +110,7 @@ fun strip_imp tm =
           if (is_conj tm)
           then (op @ o (mk_rewrs ## mk_rewrs) o Drule.CONJ_PAIR) th else
           if (is_imp tm)
-          then let val ant = list_mk_conj (fst(strip_imp tm))
+          then let val ant = list_mk_conj (fst(strip_imp_only tm))
                    fun step imp cnj =
                        step (MP imp (CONJUNCT1 cnj)) (CONJUNCT2 cnj)
                        handle HOL_ERR _ => MP imp cnj
@@ -149,7 +137,7 @@ fun strip_imp tm =
 
 
 (* Tells whether to add context to the simplication set as term is traversed *)
-datatype context_policy = ADD | DONT_ADD
+datatype context_policy = ADD | DONT_ADD;
 
 
 (* Provides a quick way of telling if a rewrite rule is conditional or not. *)
@@ -165,9 +153,9 @@ fun dest_choice (COND th)   = th
  * instantiated rule. Handles conditional rules.
  *---------------------------------------------------------------------------*)
 fun PRIM_RW_CONV th =
- let val (has_condition,eq) = ((not o null)##I)(strip_imp (concl th))
+ let val (has_condition,eq) = ((not o null)##I)(strip_imp_only (concl th))
      val pat = lhs eq
-     val matcher = match_term pat
+     val matcher = Term.match_term pat
      fun match_then_inst tm =
         let val (tm_theta, ty_theta) = matcher tm
             val th' = INST tm_theta (INST_TYPE ty_theta th)
@@ -189,10 +177,10 @@ fun PRIM_RW_CONV th =
  * certainly exist.
  *---------------------------------------------------------------------------*)
 fun CONGR th =
-   let val (ants,eq) = strip_imp (concl th)
+   let val (ants,eq) = strip_imp_only (concl th)
        (* TODO: Check that it is a congruence rule *)
        val pat = lhs eq
-       val matcher = match_term pat
+       val matcher = Term.match_term pat
        fun match_then_inst tm =
           let val (tm_theta, ty_theta) = matcher tm
           in INST tm_theta (INST_TYPE ty_theta th) end
@@ -201,11 +189,11 @@ fun CONGR th =
    end;
 
 
-abstype simpls = RW of {thms     : thm list list,
+datatype simpls = RW of {thms     : thm list list,
                         congs    : thm list list,
                         rw_net   : (term -> choice) Net.net,
-                        cong_net : (term -> thm) Net.net}
-with
+                        cong_net : (term -> thm) Net.net};
+
 val empty_simpls = RW{thms = [[]],  congs = [[]],
                       rw_net = Net.empty,
                       cong_net = Net.empty};
@@ -220,7 +208,7 @@ fun add_rws (RW{thms,rw_net,congs, cong_net}) thl =
     congs  = congs, 
   cong_net = cong_net,
     rw_net = itlist Net.insert
-             (map (fn th => let val left = lhs(#2(strip_imp(concl th)))
+             (map (fn th => let val left = lhs(#2(strip_imp_only(concl th)))
                             in  (left,  PRIM_RW_CONV th) end)
                   (flatten (map MK_RULES_APART thl)))        rw_net}
  handle HOL_ERR _
@@ -358,7 +346,7 @@ fun join_simpls s1 s2 =
    in add_congs (add_rws s2 rws) congs
    end;
 
-end;  (* abstype *)
+ (* end implementation of simpls type *)
 
 val std_simpls = add_rws empty_simpls
  ([boolTheory.REFL_CLAUSE,
@@ -372,7 +360,7 @@ val std_simpls = add_rws empty_simpls
    boolTheory.EXISTS_SIMP,
    boolTheory.ABS_SIMP]
  @
-   [prove(Term`(!x:'a. ?y. x = y) /\ !x:'a. ?y. y = x`,
+   [Q.prove(`(!x:'a. ?y. x = y) /\ !x:'a. ?y. y = x`,
      CONJ_TAC THEN GEN_TAC THEN EXISTS_TAC(Term`x:'a`) THEN REFL_TAC)]);
 
 (*----------------------------------------------------------------------------
@@ -469,7 +457,7 @@ fun add_cntxt ADD = add_rws | add_cntxt DONT_ADD = Lib.K;
 (*---------------------------------------------------------------------------*)
 
 fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
- case total ((I##dest_eq) o strip_imp) ant
+ case total ((I##dest_eq) o strip_imp_only) ant
   of SOME (L,(lhs,rhs)) =>
      let val outcome =
          if aconv lhs rhs then NO_CHANGE (L,lhs)
@@ -496,14 +484,14 @@ fun complex cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
 let val ant_frees = free_vars ant
     val context_frees = free_varsl (map concl (fst context))
     val (vlist,ceqn) = strip_forall ant
-    val (lhs,rhs) = dest_eq(snd(strip_imp ceqn))
+    val (lhs,rhs) = dest_eq(snd(strip_imp_only ceqn))
     val (f,args) = (I##rev) (dest_combn lhs (length vlist))
     val _ = assert is_pabs f
     val (rhsv,_) = dest_combn rhs (length vlist)
     val vstrl = #1(strip_pabs f)
     val vstrl1 = vstrl_variants (op_union eq ant_frees context_frees) vstrl
     val ceqn' = subst (map (op|->) (zip args vstrl1)) ceqn
-    val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp ceqn')
+    val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp_only ceqn')
     val outcome =
      if aconv lhs rhs then NO_CHANGE (L,lhs) else
      let val lhs_beta_maybe = 
@@ -561,10 +549,10 @@ fun do_cong cnv cps th =
        | mk_ant (CHANGE th) = th
      fun loop [] = []    (* loop proves each antecedent in turn. *)
        | loop (ant::rst) =
-         let val (outcome',rst') =
+         let val (outcome,rst') =
               if not(is_forall ant) then simple cnv cps (ant,rst)
                                     else complex cnv cps (ant,rst)
-         in outcome'::loop rst'
+         in outcome::loop rst'
          end
      val ants = strip_conj (fst(dest_imp (concl th)))
      val ants' = loop ants
@@ -590,7 +578,7 @@ fun SUB_QCONV cnv (cps as {context,prover,simpls}) tm =
          handle HOL_ERR _ =>
           let val v = genvar (type_of Bvar)
               val th1 = ALPHA_CONV v tm
-              val eq_thm' = ABS v(cnv cps (body(boolSyntax.rhs(Thm.concl th1))))
+              val eq_thm' = ABS v (cnv cps (body(boolSyntax.rhs(Thm.concl th1))))
               val at = snd(dest_eq(concl eq_thm'))
               val v' = variant (free_vars at) Bvar
               val th2 = ALPHA_CONV v' at

@@ -1,6 +1,6 @@
 signature ParseExtras =
 sig
 
-(* watch this space *)
+  val tight_equality : unit -> unit
 
 end
