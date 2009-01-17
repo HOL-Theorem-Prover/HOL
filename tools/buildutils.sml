@@ -70,7 +70,7 @@ fun read_buildsequence ssall readline bseq_fname = let
               val (mlsys,s) = extract_mlsys s
               val (dirname0,testcount) = extract_testcount (s,0)
               val dirname = 
-                  if Path.isAbsolute dirname0 orelse mlsys <> "" then dirname0
+                  if Path.isAbsolute dirname0 then dirname0
                   else fullPath [HOLDIR, dirname0]
               open FileSys
             in 

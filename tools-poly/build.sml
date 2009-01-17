@@ -355,15 +355,15 @@ fun make_exe (name:string) (POLY : string) (target:string) : unit =
    OS.FileSys.chDir dir
  end
 
-fun buildDir symlink s = let 
+fun buildDir symlink s = let
   val _ = print ("Building "^ #1 s^"\n")
 in
-  case #1 s of
-    "bin/hol.bare" =>
-      (make_exe "builder0.ML" (#1 (which_hol ())) "hol.builder0"; phase := Bare)
-  | "bin/hol" =>
-      (make_exe "builder.ML" (#1 (which_hol ())) "hol.builder"; phase := Full)
-  | _ => (build_dir s; upload(s,SIGOBJ,symlink))
+  if #1 s = fullPath [HOLDIR, "bin/hol.bare"] then
+    (make_exe "builder0.ML" (#1 (which_hol ())) "hol.builder0"; phase := Bare)
+  else if #1 s = fullPath [HOLDIR, "bin/hol"] then 
+    (make_exe "builder.ML" (#1 (which_hol ())) "hol.builder"; phase := Full)
+  else 
+    (build_dir s; upload(s,SIGOBJ,symlink))
 end
 
 fun do_sharing_table_transfer () = let
