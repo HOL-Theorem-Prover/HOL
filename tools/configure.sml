@@ -324,27 +324,34 @@ end
     Compile build.sml, and put it in bin/build.
  ---------------------------------------------------------------------------*)
 
-val _ =
- let open TextIO
-     val _ = echo "Making bin/build."
-     val target = fullPath [holdir, "tools/build.sml"]
-     val bin    = fullPath [holdir, "bin/build"]
-     val full_paths =
-      let fun ext s = fullPath [holdir,s]
-          fun plist [] = raise Fail "plist: empty"
-            | plist  [x] = [quote (ext x), "];\n"]
-            | plist (h::t) = quote (ext h)::",\n     "::plist  t
-      in String.concat o plist
-      end
+val _ = let 
+  open TextIO
+  val _ = echo "Making bin/build."
+  val cwd = FileSys.getDir()
+  val _ = FileSys.chDir (fullPath[holdir, "tools"])
+  (* utils first *)
+  val _ = let 
+    val utilsig = "buildutils.sig"
+    val utilsml = "buildutils.sml"
   in
-   if systeml [compiler, "-o", bin,
-               "-I", holmakedir, target] = Process.success then ()
-   else (print "*** Failed to build build executable.\n";
-         Process.exit Process.failure) ;
-   FileSys.remove (fullPath [holdir,"tools/build.ui"]);
-   FileSys.remove (fullPath [holdir,"tools/build.uo"]);
-   mk_xable bin
-  end;
+    if systeml [compiler, "-c", utilsig] = Process.success andalso
+       systeml [compiler, "-I", holmakedir, "-c", utilsml] = Process.success 
+    then ()
+    else die "Failed to build buildutils module"
+  end
+
+  val target = "build.sml"
+  val bin    = fullPath [holdir, "bin/build"]
+in
+  if systeml [compiler, "-o", bin,
+              "-I", holmakedir, target] = Process.success then ()
+  else (print "*** Failed to build build executable.\n";
+        Process.exit Process.failure) ;
+  FileSys.remove (fullPath [holdir,"tools/build.ui"]);
+  FileSys.remove (fullPath [holdir,"tools/build.uo"]);
+  mk_xable bin;
+  FileSys.chDir cwd
+end;
 
 
 (*---------------------------------------------------------------------------
