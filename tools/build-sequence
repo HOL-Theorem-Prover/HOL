@@ -27,6 +27,8 @@ tools/mlyacc/mlyacclib
 src/parse
 src/bool
 src/proofman
+[poly]bin/hol.bare
+
 src/emit
 src/compute/src
 src/HolSat/sat_solvers/minisat
@@ -66,6 +68,7 @@ src/unwind
 src/boss
 # Up to this point is needed for hol.unquote (which loads bossLib).
 # (Maybe unwind could be omitted).
+[poly]bin/hol
 
 !examples/RSA
 src/sort
@@ -83,7 +86,6 @@ src/llist
 src/ring/src
 src/integer
 src/patricia
-
 src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
