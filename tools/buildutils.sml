@@ -1,6 +1,10 @@
 structure buildutils :> buildutils =
 struct
 
+structure Path = OS.Path
+structure FileSys = OS.FileSys
+structure Process = OS.Process
+
 (* path manipulation functions *)
 fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
