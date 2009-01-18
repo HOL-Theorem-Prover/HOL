@@ -24,6 +24,7 @@ local
     ppt pps t
   end
   fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
+  fun locpp pps l = PP.add_string pps (locn.toShortString l)
 in
   val _ = PolyML.install_pp (pp2polypp (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term)));
   val _ = PolyML.install_pp (pp2polypp (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type)));
@@ -35,12 +36,13 @@ in
 
   val _ = PolyML.install_pp (pp2polypp (with_pp proofManagerLib.pp_proof));
   val _ = PolyML.install_pp (pp2polypp (with_pp proofManagerLib.pp_proofs));
-  val _ = PolyML.install_pp (pp2polypp (with_pp Rewrite.pp_rewrites));
-  val _ = PolyML.install_pp (pp2polypp (with_pp TypeBasePure.pp_tyinfo));
-  val _ = PolyML.install_pp (pp2polypp (with_pp DefnBase.pp_defn));
-  val _ = PolyML.install_pp (pp2polypp (with_pp Arbnum.pp_num));
-  val _ = PolyML.install_pp (pp2polypp (with_pp Arbint.pp_int));
-  val _ = PolyML.install_pp (pp2polypp (with_pp Arbrat.pp_rat));
+  val _ = PolyML.install_pp (pp2polypp (with_pp Rewrite.pp_rewrites))
+  val _ = PolyML.install_pp (pp2polypp (with_pp TypeBasePure.pp_tyinfo))
+  val _ = PolyML.install_pp (pp2polypp (with_pp DefnBase.pp_defn))
+  val _ = PolyML.install_pp (pp2polypp (with_pp Arbnum.pp_num))
+  val _ = PolyML.install_pp (pp2polypp (with_pp Arbint.pp_int))
+  val _ = PolyML.install_pp (pp2polypp (with_pp Arbrat.pp_rat))
+  val _ = PolyML.install_pp (pp2polypp (with_pp locpp))
 end;
 
 (*---------------------------------------------------------------------------*
