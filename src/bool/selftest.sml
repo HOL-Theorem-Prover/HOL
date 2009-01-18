@@ -1,6 +1,6 @@
 open HolKernel Parse boolTheory boolLib
 
-fun tprint s = print (StringCvt.padRight #" " 60 (s ^ " ... "))
+fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
 
 fun substtest (M, x, N, result) = let
 in
@@ -144,7 +144,8 @@ end
 val _ = app tpp ["let x = T in x /\\ y",
                  "(let x = T in \\y. x /\\ y) p",
                  "f ($/\\ p)",
-                 "(((p /\\ q) /\\ r) /\\ s) /\\ t"]
+                 "(((p /\\ q) /\\ r) /\\ s) /\\ t",
+                 "(case x of T -> (\\x. x) || F -> $~) y"]
 
 
 val _ = Process.exit (if List.all substtest tests then Process.success

@@ -159,9 +159,9 @@ val avoid_symbol_merges = ref true
 val _ = register_btrace("pp_avoids_symbol_merges", avoid_symbol_merges)
 
 (* true if a space should appear between the characters last and next *)
-fun mk_break (last, next) = let 
-  fun isSymbolic s = 
-      UnicodeChars.isSymbolic s andalso 
+fun mk_break (last, next) = let
+  fun isSymbolic s =
+      UnicodeChars.isSymbolic s andalso
       not (term_tokens.nonagg_c (String.sub(s,0))) andalso
       s <> "'"
   val isAlphaNum = UnicodeChars.isAlphaNum
@@ -1603,7 +1603,7 @@ fun pp_term (G : grammar) TyG = let
           (* case expressions *)
           val () =
               if is_const f then
-                case Overload.overloading_of_term overload_info f of
+                case grammar_name G f of
                   SOME "case" =>
                   (let
                      val newt = convert_case tm
@@ -1731,15 +1731,18 @@ fun pp_term (G : grammar) TyG = let
               end
           end (* pr_atomf *)
           fun maybe_pr_atomf () =
-              case Overload.oi_strip_comb overload_info tm of
-                SOME (p as (f,args)) => let
-                in
-                  case args of
-                    [] => pr_term f pgrav lgrav rgrav depth
-                  | _ => pr_atomf p
-                end
-              | NONE => if is_var f then pr_atomf (f, args @ [Rand])
-                        else pr_comb tm Rator Rand
+              if grammar_name G f = SOME "case" then
+                pr_atomf (strip_comb tm)
+              else
+                case Overload.oi_strip_comb overload_info tm of
+                  SOME (p as (f,args)) => let
+                  in
+                    case args of
+                      [] => pr_term f pgrav lgrav rgrav depth
+                    | _ => pr_atomf p
+                  end
+                | NONE => if is_var f then pr_atomf (f, args @ [Rand])
+                          else pr_comb tm Rator Rand
         in
           if showtypes_v then
             if const_is_ambiguous f then
