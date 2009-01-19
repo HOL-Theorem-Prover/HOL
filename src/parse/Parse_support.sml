@@ -16,14 +16,19 @@ val ERRORloc = mk_HOL_ERRloc "Parse_support";
  ---------------------------------------------------------------------------*)
 
 type env = {scope : (string * pretype) list,
-            free  : (string * pretype) list};
+            free  : (string * pretype) list,
+            uscore_cnt : int};
 
 fun lookup_fvar(s,({free,...}:env)) = assoc s free;
 fun lookup_bvar(s,({scope,...}:env)) = assoc s scope;
-fun add_free(b,{scope,free}) = {scope=scope, free=b::free}
-fun add_scope(b,{scope,free}) = {scope=b::scope, free=free};
+fun add_free(b,{scope,free,uscore_cnt}) =
+    {scope=scope, free=b::free, uscore_cnt = uscore_cnt}
+fun add_scope(b,{scope,free,uscore_cnt}) = {scope=b::scope, free=free,
+                                            uscore_cnt = uscore_cnt};
+fun new_uscore {scope,free,uscore_cnt} =
+    {scope = scope, free = free, uscore_cnt = uscore_cnt + 1}
 
-val empty_env = {scope=[], free=[]};
+val empty_env = {scope=[], free=[], uscore_cnt = 0};
 
 type preterm_in_env = env -> Preterm.preterm * env
 
@@ -53,39 +58,46 @@ fun make_preterm tm_in_e = fst(tm_in_e empty_env)
  *       Antiquotes                                                          *
  *---------------------------------------------------------------------------*)
 
-fun make_aq l tm {scope,free} = let
+fun make_aq l tm (e as {scope,free,...}:env) = let
   open Term Preterm
   fun from ltm (E as (lscope,scope,free)) =
     case ltm of
-      VAR (v as (Name,Ty)) =>
-       let val pty = Pretype.fromType Ty
-           val v' = {Name=Name, Ty=pty, Locn=l}
-       in if mem v' lscope then (Var v', E)
-          else
-          case assoc1 Name scope
-           of SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l}, Ty=pty, Locn=l}, E)
-            | NONE => let in
-               case assoc1 Name free
-                of NONE => (Var v', (lscope,scope, (Name,pty)::free))
-                 | SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l},Ty=pty,Locn=l}, E)
-               end
-       end
-    | CONST{Name,Thy,Ty} => (Const{Name=Name,Thy=Thy,Ty=Pretype.fromType Ty,Locn=l},E)
-    | COMB(Rator,Rand)   =>
-       let val (ptm1,E1) = from (dest_term Rator) E
-           val (ptm2,E2) = from (dest_term Rand) E1
-       in (Comb{Rator=ptm1, Rand=ptm2, Locn=l}, E2)
-       end
-    | LAMB(Bvar,Body) =>
-       let val (s,ty) = dest_var Bvar
-           val v' = {Name=s, Ty = Pretype.fromType ty, Locn=l}
-           val (Body',(_,_,free')) = from (dest_term Body)
-                                          (v'::lscope, scope, free)
-       in (Abs{Bvar=Var v', Body=Body', Locn=l}, (lscope,scope,free'))
-       end
+      VAR (v as (Name,Ty)) => let
+        val pty = Pretype.fromType Ty
+        val v' = {Name=Name, Ty=pty, Locn=l}
+      in
+        if mem v' lscope then (Var v', E)
+        else
+          case assoc1 Name scope of
+            SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l},
+                                        Ty=pty, Locn=l}, E)
+          | NONE => let
+            in
+              case assoc1 Name free of
+                NONE => (Var v', (lscope,scope, (Name,pty)::free))
+              | SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l},
+                                            Ty=pty,Locn=l}, E)
+            end
+      end
+    | CONST{Name,Thy,Ty} => (Const{Name=Name,Thy=Thy,Ty=Pretype.fromType Ty,
+                                   Locn=l},E)
+    | COMB(Rator,Rand)   => let
+        val (ptm1,E1) = from (dest_term Rator) E
+        val (ptm2,E2) = from (dest_term Rand) E1
+      in
+        (Comb{Rator=ptm1, Rand=ptm2, Locn=l}, E2)
+      end
+    | LAMB(Bvar,Body) => let
+        val (s,ty) = dest_var Bvar
+        val v' = {Name=s, Ty = Pretype.fromType ty, Locn=l}
+        val (Body',(_,_,free')) = from (dest_term Body)
+                                       (v'::lscope, scope, free)
+      in
+        (Abs{Bvar=Var v', Body=Body', Locn=l}, (lscope,scope,free'))
+      end
   val (ptm, (_,_,free)) = from (dest_term tm) ([],scope,free)
 in
-  (ptm, {scope=scope,free=free})
+  (ptm, {scope=scope,free=free,uscore_cnt = #uscore_cnt e})
 end;
 
 
@@ -132,14 +144,24 @@ end
  * Free occurrences of variables.
  *---------------------------------------------------------------------------*)
 
-fun make_free_var l (s,E) =
- let open Preterm
- in (Var{Name=s, Ty=lookup_fvar(s,E), Locn=l}, E)
-     handle HOL_ERR _ =>
-       let val tyv = Pretype.new_uvar()
-       in (Var{Name=s, Ty=tyv, Locn=l}, add_free((s,tyv), E))
-       end
- end
+fun all_uscores s = let
+  fun check i = i < 0 orelse (String.sub(s,i) = #"_" andalso check (i - 1))
+in
+  check (size s - 1)
+end
+
+fun make_free_var l (s,E) = let
+  open Preterm
+  fun fresh (s,E) = let
+    val tyv = Pretype.new_uvar()
+  in
+    (Var{Name = s, Ty = tyv, Locn = l}, add_free((s,tyv), E))
+  end
+in
+  if all_uscores s then fresh ("_"^Int.toString (#uscore_cnt E), new_uscore E)
+  else (Var{Name=s, Ty=lookup_fvar(s,E), Locn=l}, E)
+       handle HOL_ERR _ => fresh(s,E)
+end
 
 (*---------------------------------------------------------------------------
  * Bound occurrences of variables.
@@ -324,16 +346,16 @@ end;
   found in tm to E.
  ----------------------------------------------------------------------------*)
 
-fun bind_term _ alist tm (E as {scope=scope0,...}:env) = let
+fun bind_term _ alist tm (E as {scope=scope0,...}:env) : (preterm*env) = let
   fun itthis a (e,f) = let
     val (g,e') = a e
   in
     (e', f o g)
   end
   val (E',F) = rev_itlist itthis alist (E,I)
-  val (tm',({free=free1,...}:env)) = tm E'
+  val (tm',({free=free1,uscore_cnt=uc',...}:env)) = tm E'
 in
-  (F tm', {scope=scope0,free=free1})
+  (F tm', {scope=scope0,free=free1,uscore_cnt=uc'})
 end
 
 
@@ -407,7 +429,7 @@ end
 (*---------------------------------------------------------------------------
  * Let bindings
  *---------------------------------------------------------------------------*)
-fun make_let oinfo l bindings tm env = let
+fun make_let oinfo l bindings tm (env:env) = let
   open Preterm
   fun itthis (bvs, arg) {body_bvars,args,E} = let
     val (b,rst) = (hd bvs,tl bvs)
