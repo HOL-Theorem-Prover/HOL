@@ -130,6 +130,11 @@ val _ = tprint "Testing parsing of _ variables (2)"
 val t = case Lib.total Parse.Term `case b of T -> F || _1 -> T` of
           NONE => (print "FAILED\n"; Process.exit Process.failure)
         | SOME _ => print "OK\n"
+val _ = tprint "Testing independence of case branch vars"
+val t = case Lib.total Parse.Term `v (case b of T -> F || v -> T)` of
+          NONE => (print "FAILED\n"; Process.exit Process.failure)
+        | SOME _ => print "OK\n"
+
 
 fun tpp s = let
   val t = Parse.Term [QUOTE s]

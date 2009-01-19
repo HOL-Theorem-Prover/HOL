@@ -14,24 +14,27 @@ sig
   val make_aq               : locn.locn -> term -> preterm_in_env
   val make_binding_occ      : locn.locn -> string -> bvar_in_env
   val make_aq_binding_occ   : locn.locn -> term -> bvar_in_env
-  val make_atom             : overload_info -> locn.locn -> 
+  val make_atom             : overload_info -> locn.locn ->
                               string -> preterm_in_env
-  val make_qconst           : overload_info -> locn.locn -> string * string -> 
+  val make_qconst           : overload_info -> locn.locn -> string * string ->
                               preterm_in_env
   val list_make_comb        : locn.locn -> preterm_in_env list -> preterm_in_env
-  val bind_term             : locn.locn -> bvar_in_env list -> 
+  val bind_term             : locn.locn -> bvar_in_env list ->
                               preterm_in_env -> preterm_in_env
   val make_vstruct          : overload_info -> locn.locn -> bvar_in_env list ->
                               pretype option -> bvar_in_env
-  val make_constrained      : locn.locn -> preterm_in_env -> pretype -> 
+  val make_constrained      : locn.locn -> preterm_in_env -> pretype ->
                               preterm_in_env
-  val make_let              : overload_info -> locn.locn -> 
-                              (bvar_in_env list * preterm_in_env) list -> 
+  val make_let              : overload_info -> locn.locn ->
+                              (bvar_in_env list * preterm_in_env) list ->
                               preterm_in_env -> preterm_in_env
-  val make_set_abs          : overload_info -> locn.locn -> 
-                              preterm_in_env * preterm_in_env -> 
+  val make_set_abs          : overload_info -> locn.locn ->
+                              preterm_in_env * preterm_in_env ->
                               preterm_in_env
-(*  val make_seq_abs          : locn.locn -> preterm_in_env * preterm_in_env -> preterm_in_env *)
+
+  val make_case_arrow       : overload_info -> locn.locn ->
+                              preterm_in_env -> preterm_in_env ->
+                              preterm_in_env
 
   val binder_restrictions   : unit -> (string * string) list
   val associate_restriction : locn.locn -> string * string -> unit

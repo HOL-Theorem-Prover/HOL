@@ -475,6 +475,25 @@ in
     end
 end
 
+(* ----------------------------------------------------------------------
+    case arrow
+
+    Free variables in the first should bind in the second
+   ---------------------------------------------------------------------- *)
+
+fun make_case_arrow oinfo loc tm1 tm2 (E : env) = let
+  val (ptm1, e1 : env) = tm1 empty_env
+  val arr = gen_overloaded_const oinfo loc GrammarSpecials.case_arrow_special
+  fun mk_bvar (bv as (n,ty)) E = ((fn t => t), add_scope(bv,E))
+  val qs = map mk_bvar (#free e1)
+  val (ptm2, E') = bind_term loc qs tm2 E
+in
+  (Preterm.Comb{Rator = Preterm.Comb{Locn=loc,Rator = arr, Rand = ptm1},
+                Rand = ptm2,
+                Locn = loc}, E')
+end
+
+
 (*---------------------------------------------------------------------------
  * Sequence abstractions [| tm1 | tm2 |].
  *

@@ -95,6 +95,14 @@ val _ = Hol_datatype`
 
 fun tprint s = print (StringCvt.padRight #" " 70 s)
 
+val _ = tprint "Testing independence of case variables"
+val t = Lib.total Parse.Term `case (x:valbind) of
+                                 bind p e -> 3
+                              || bindl p' e p -> 4
+                              || p -> 5`
+val _ = case t of NONE => (print "FAILED!\n"; Process.exit Process.failure)
+                | SOME _ => print "OK\n"
+
 fun pptest (nm, t, expected) = let
   val _ = tprint ("Testing pretty-printing of "^nm)
   val s = Parse.term_to_string t
