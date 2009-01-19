@@ -84,6 +84,7 @@ val _ = Hol_datatype`
 `;
 
 val _ = Hol_datatype`squish_record = <|fld1:bool|>`
+val _ = Hol_datatype`poly_squish_record = <|fld1:'a->'b|>`
 
 val _ = Datatype.big_record_size := 10;
 val _ = Hol_datatype`

@@ -120,7 +120,8 @@ in
         (adv,BT_Ident idstr,locn')
       end
     else let
-        fun oksym c = Char.isPunct c andalso c <> #"(" andalso c <> #")"
+        fun oksym c = Char.isPunct c andalso c <> #"(" andalso c <> #")" andalso
+                      c <> #"'"
         val (adv,idstr,locn') = consume oksym (qb,s,locn)
       in
         (adv,BT_Ident idstr,locn')
