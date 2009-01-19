@@ -17,12 +17,13 @@ val non_aggregating_chars =
           (explode "()[]{}~.,;")
 fun nonagg_c c = CharSet.member(non_aggregating_chars, c)
 
-fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1
+fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1 orelse
+                          s = UnicodeChars.neg
 
 fun term_symbolp s = UnicodeChars.isSymbolic s andalso
                      not (s_has_nonagg_char s) andalso
                      s <> "\"" andalso s <> "'" andalso s <> "_"
-val term_identp = UnicodeChars.isMLIdent
+fun term_identp s = UnicodeChars.isMLIdent s andalso s <> UnicodeChars.lambda
 
 fun ishexdigit s = let
   val c = Char.toLower (String.sub(s,0))
@@ -34,7 +35,7 @@ fun numberp s = Char.isDigit (String.sub(s,0)) orelse s = "_" orelse
                 ishexdigit s
 
 fun categorise c =
-    if s_has_nonagg_char c then s_has_nonagg_char
+    if s_has_nonagg_char c orelse c = UnicodeChars.neg then s_has_nonagg_char
     else if term_identp c then term_identp
     else if Char.isDigit (String.sub(c,0)) then numberp
     else term_symbolp

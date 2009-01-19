@@ -152,19 +152,17 @@ val _ = Feedback.register_btrace ("pp_dollar_escapes", dollar_escape);
    fast on its second argument.
 *)
 
-fun is_symbolic_char c = Char.contains "#?+*/\\=<>&%@!,:;_|~-" c orelse
-                         Char.ord c > 127
-
 val avoid_symbol_merges = ref true
 val _ = register_btrace("pp_avoids_symbol_merges", avoid_symbol_merges)
 
 (* true if a space should appear between the characters last and next *)
 fun mk_break (last, next) = let
   fun isSymbolic s =
-      UnicodeChars.isSymbolic s andalso
-      not (term_tokens.nonagg_c (String.sub(s,0))) andalso
-      s <> "'"
-  val isAlphaNum = UnicodeChars.isAlphaNum
+      (UnicodeChars.isSymbolic s andalso
+       not (term_tokens.nonagg_c (String.sub(s,0))) andalso
+       s <> "'" andalso s <> UnicodeChars.neg)
+      orelse s = UnicodeChars.lambda
+  fun isAlphaNum s = UnicodeChars.isAlphaNum s andalso s <> UnicodeChars.lambda
 in
   !avoid_symbol_merges andalso
   (isSymbolic last andalso isSymbolic next orelse
