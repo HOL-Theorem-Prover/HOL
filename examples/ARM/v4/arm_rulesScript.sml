@@ -373,8 +373,8 @@ val SND_ROR = prove(
   `!a n c. SND (ROR a n c) = a #>> w2n n`,
   RW_TAC std_ss [ROR_def,LSL_def,SHIFT_ZERO,word_0_n2w]);
 
-val DP_ss =
-  rewrites [DATA_PROCESSING_def,ARITHMETIC_def,TEST_OR_COMP_def,ALU_def,
+val DP_rws =
+  [DATA_PROCESSING_def,ARITHMETIC_def,TEST_OR_COMP_def,ALU_def,
    ALU_ADD,ALU_SUB,LSL_def,LSR_def,AND_def,ORR_def,EOR_def,ALU_logic_def,
    SET_NZC_def,WORD_ADD_0,WORD_SUB_RZERO,WORD_EQ_SUB_RADD,WORD_HIGHER_EQ,
    REG_READ_INC_PC,WORD_NEG_cor,WORD_1COMP_ZERO,
@@ -384,6 +384,8 @@ val DP_ss =
    decode_enc_data_proc, decode_data_proc_enc,
    decode_enc_data_proc2,decode_data_proc_enc2,
    decode_enc_data_proc3,decode_data_proc_enc3];
+
+val DP_ss = rewrites DP_rws;
 
 val abbrev_mode1 =
   ``Abbrev (op2 = ADDR_MODE1 state.registers mode ((cpsr:word32) ' 29)
@@ -428,6 +430,22 @@ val ARM_MOV =
 val ARM_MVN =
   SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(Rm = 15w:word4)``,abbrev_mode1]
   ``enc (instruction$MVN c s Rd Op2)``);
+
+(* ......................................................................... *)
+
+val DP_ss =
+  rewrites (DP_rws @ [IS_DP_IMMEDIATE_def, ADDR_MODE1_def]);
+
+fun eval_op t =
+  SYMBOLIC_EVAL_CONV DP_ss (cntxt []
+  (subst [``f:condition -> bool -> word4 ->
+              word4 -> addr_mode1 -> arm_instruction`` |-> t]
+   ``enc ((f:condition -> bool -> word4 ->
+             word4 -> addr_mode1 -> arm_instruction) c F Rd 15w
+           (Dp_immediate rot imm))``));
+
+val ARM_ADD_TO_PC = eval_op ``instruction$ADD``;
+val ARM_SUB_TO_PC = eval_op ``instruction$SUB``;
 
 (* ......................................................................... *)
 
@@ -766,6 +784,15 @@ val _ = save_thm("ARM_MVN_PC", SPEC_TO_PC ARM_MVN);
 val _ = save_thm("ARM_ADC_PC", SPEC_TO_PC ARM_ADC);
 val _ = save_thm("ARM_SBC_PC", SPEC_TO_PC ARM_SBC);
 val _ = save_thm("ARM_RSC_PC", SPEC_TO_PC ARM_RSC);
+
+val _ = save_thm("ARM_SUB_TO_PC",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SUB_TO_PC);
+
+val _ = save_thm("ARM_ADD_TO_PC",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADD_TO_PC);
+
+val _ = save_thm("ARM_SUB_TO_PC_PC", SPEC_TO_PC ARM_SUB_TO_PC);
+val _ = save_thm("ARM_ADD_TO_PC_PC", SPEC_TO_PC ARM_ADD_TO_PC);
 
 val _ = save_thm("ARM_MUL", ARM_MUL);
 val _ = save_thm("ARM_MLA", ARM_MLA);
