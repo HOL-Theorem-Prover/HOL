@@ -13,7 +13,7 @@ sig
   val mk_wordi          : num * int -> term
   val mk_wordii         : int * int -> term
 
-  val index_tm          : term
+  val fcp_index_tm      : term
   val word_T_tm         : term
   val word_L_tm         : term
   val word_H_tm         : term

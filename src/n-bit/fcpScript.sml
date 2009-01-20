@@ -213,14 +213,14 @@ val cart_tybij = SIMP_RULE std_ss [] (define_new_type_bijections
 val _ = add_infix_type {Prec = 60, ParseName = SOME "**", Name = "cart",
                         Assoc = HOLgrammars.RIGHT};
 
-val index_def = new_infixl_definition("index",
-  `$index x i = dest_cart x (finite_index i)`,500);
+val fcp_index_def = new_infixl_definition("fcp_index",
+  `$fcp_index x i = dest_cart x (finite_index i)`,500);
 
 val _ = set_fixity "%%" (Infixl 500);
-val _ = overload_on ("%%", Term`$index`);
+val _ = overload_on ("%%", Term`$fcp_index`);
 
 val _ = set_fixity "'" (Infixl 2000);
-val _ = overload_on ("'", Term`$index`);
+val _ = overload_on ("'", Term`$fcp_index`);
 
 (* ----------------------------------------------------------------------
     Establish arrays as an algebraic datatype, with constructor
@@ -292,8 +292,8 @@ end
 val CART_EQ = store_thm("CART_EQ",
   `!(x:'a ** 'b) y.
     (x = y) = (!i. i < dimindex(:'b) ==> (x ' i = y ' i))`,
-  REPEAT GEN_TAC THEN SIMP_TAC std_ss [index_def, GSYM FORALL_FINITE_INDEX] THEN
-  REWRITE_TAC[GSYM FUN_EQ_THM, ETA_AX] THEN PROVE_TAC[cart_tybij]);
+  REPEAT GEN_TAC THEN SIMP_TAC std_ss [fcp_index_def, GSYM FORALL_FINITE_INDEX]
+    THEN REWRITE_TAC[GSYM FUN_EQ_THM, ETA_AX] THEN PROVE_TAC[cart_tybij]);
 
 val FCP = new_binder_definition("FCP",
   ``($FCP) = \g.
@@ -305,7 +305,7 @@ val FCP_BETA = store_thm("FCP_BETA",
   SIMP_TAC std_ss [FCP] THEN CONV_TAC SELECT_CONV THEN
   EXISTS_TAC `mk_cart(\k. g(@i. i < dimindex(:'b) /\
                                 (finite_index i = k))):'a ** 'b` THEN
-  SIMP_TAC std_ss [index_def, cart_tybij] THEN
+  SIMP_TAC std_ss [fcp_index_def, cart_tybij] THEN
   REPEAT STRIP_TAC THEN AP_TERM_TAC THEN MATCH_MP_TAC SELECT_UNIQUE THEN
   GEN_TAC THEN REWRITE_TAC[] THEN
   PROVE_TAC[FINITE_INDEX_INJ, DIMINDEX_FINITE_IMAGE]);

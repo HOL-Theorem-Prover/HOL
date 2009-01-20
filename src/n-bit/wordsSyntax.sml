@@ -29,7 +29,7 @@ fun dim_of tm = dest_word_type(type_of tm);
 (* Constants for word operations                                             *)
 (*---------------------------------------------------------------------------*)
 
-val index_tm        = prim_mk_const{Name = "index", Thy = "fcp"}
+val fcp_index_tm    = prim_mk_const{Name = "fcp_index", Thy = "fcp"}
 val word_T_tm       = prim_mk_const{Name = "word_T", Thy = "words"}
 val word_L_tm       = prim_mk_const{Name = "word_L", Thy = "words"}
 val word_H_tm       = prim_mk_const{Name = "word_H", Thy = "words"}
@@ -78,7 +78,7 @@ val sw2sw_tm        = prim_mk_const{Name = "sw2sw", Thy="words"};
 (*---------------------------------------------------------------------------*)
 
 fun mk_index(w,n) = 
-  list_mk_comb(inst[alpha |-> bool, beta |-> dim_of w] index_tm,[w,n])
+  list_mk_comb(inst[alpha |-> bool, beta |-> dim_of w] fcp_index_tm,[w,n])
   handle HOL_ERR _ => raise ERR "mk_index" "";
 
 fun mk_word_T ty = 
@@ -257,7 +257,7 @@ fun mk_wordii (v,i) = mk_wordi (Arbnum.fromInt v, i);
 (* Destructors                                                               *)
 (*---------------------------------------------------------------------------*)
 
-val dest_index = dest_binop index_tm (ERR "dest_index" "");
+val dest_index = dest_binop fcp_index_tm (ERR "dest_index" "");
 
 fun dest_word_T tm = 
   if same_const word_T_tm tm 
