@@ -157,7 +157,7 @@ fun ppc_prove_one_spec th c = let
          STAR_ppc2set, CODE_POOL_ppc2set, pR_def, pPC_def, IN_DELETE,
          APPLY_UPDATE_THM, ppc_reg_distinct, ppc_reg_11, ALIGNED_INTRO,
          wordsTheory.n2w_11, ppc_bit_11, ppc_bit_distinct, Q.SPECL [`s`,`x
-         INSERT t`] SET_EQ_SUBSET, INSERT_SUBSET, EMPTY_SUBSET,
+         INSERT aaa`] SET_EQ_SUBSET, INSERT_SUBSET, EMPTY_SUBSET,
          PREAD_R_def,PREAD_S_def,PREAD_M_def,PWRITE_R_def,PWRITE_S_def,PWRITE_M_def]
     \\ NTAC 3 (FLIP_TAC \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO])
     \\ FLIP_TAC \\ REWRITE_TAC [AND_IMP_INTRO, GSYM CONJ_ASSOC] 

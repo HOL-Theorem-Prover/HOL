@@ -197,7 +197,7 @@ fun ppc_test_aux inst input output = let
   val xs = find_terms (can (match_term ``PWRITE_S x NONE``)) (concl th)
   val xs = map (snd o dest_comb o fst o dest_comb) xs
   val output1 = f "(THE (PPC_NEXT s))" output  
-  val output2 = zip (map (snd o dest_comb o fst o dest_comb o fst o dest_eq) output1) output1
+  val output2 = Lib.zip (map (snd o dest_comb o fst o dest_comb o fst o dest_eq) output1) output1
   val output3 = filter (fn (x,y) => not (mem x xs)) output2
   val tm = list_mk_conj (map snd output3)
   val tm2 = (hd o hyp o UNDISCH) th

@@ -11,10 +11,15 @@ sig
 
     val basic_decompile : decompiler_tools -> string -> (term * term) option -> term quotation -> thm * thm
  
-    val basic_decompile_arm  : string -> (term * term) option -> term quotation -> thm * thm
-    val basic_decompile_ppc  : string -> (term * term) option -> term quotation -> thm * thm
-    val basic_decompile_x86  : string -> (term * term) option -> term quotation -> thm * thm
+    val basic_decompile_arm : string -> (term * term) option -> term quotation -> thm * thm
+    val basic_decompile_ppc : string -> (term * term) option -> term quotation -> thm * thm
+    val basic_decompile_x86 : string -> (term * term) option -> term quotation -> thm * thm
 
     val add_decompiled : string * thm * int * int option -> unit
+
+    (* some internals exposed *)
+ 
+    val get_output_list     : thm -> term
+    val decompiler_finalise : (thm * thm -> thm * thm) ref
 
 end

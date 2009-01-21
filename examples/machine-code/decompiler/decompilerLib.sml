@@ -10,6 +10,8 @@ open set_sepTheory progTheory helperLib addressTheory tailrecLib;
 
 
 val decompiler_memory = ref ([]:(string * (thm * int * int option)) list)
+val decompiler_finalise = ref (I:(thm * thm -> thm * thm))
+
 
 fun add_decompiled (name,th,code_len,code_exit) =
   (decompiler_memory := (name,(th,code_len,code_exit)) :: !decompiler_memory);
@@ -156,10 +158,9 @@ fun ABBREV_CALL prefix th = let
   val (x,y) = hd x
   val ys = map (fn v => mk_var(prefix^(fst (dest_var v)),type_of v)) (dest_tuple x)
   val thi = ASSUME (mk_eq(pairSyntax.list_mk_pair ys, y))
-  val th = RW [LET_DEF] th  
   val cc = UNBETA_CONV y THENC RAND_CONV (fn tm => GSYM thi)
   val th = CONV_RULE (RAND_CONV cc) th
-  val th = RW [FST,SND] (PairRules.PBETA_RULE th)
+  val th = RW [FST,SND] (PairRules.PBETA_RULE (RW [LET_DEF] th))
   in ABBREV_PRECOND prefix th end handle e => ABBREV_PRECOND prefix th;
 
 fun UNABBREV_ALL th = let
@@ -219,6 +220,7 @@ fun derive_individual_specs tools (code:string list) = let
       in (n+1,(ys @ [(n,x,y)])) end
   val _ = echo 1 "\nDeriving specifications for individual instructions.\n"
   val res = snd (foldl get_specs (1,[]) code)
+
   fun calc_addresses i [] = []
     | calc_addresses i ((n:int,(th1:thm,l1,j1),y)::xs)  = let
     val (x,y) = pair_jump_apply (fn j => i+j) ((th1,l1,j1),y)
@@ -227,13 +229,9 @@ fun derive_individual_specs tools (code:string list) = let
   val _ = echo 1 "\n"
   in res end;
 
-(* val (instruction,n,ys) = (hd code,0,[]) *)
-
 (* 
 
-  val n = 2
-  val th1 = th
-  val instruction = hd code
+val (instruction,n,ys) = (hd (tl code),0,[]) 
 
 *)
 
@@ -487,6 +485,8 @@ fun erase_conds (FUN_VAL tm) = FUN_VAL tm
   | erase_conds (FUN_IF (a,b,c)) = FUN_IF (a,erase_conds b,erase_conds c)
   | erase_conds (FUN_LET (x,y,t)) = FUN_LET (x,y,erase_conds t)
 
+
+
 fun extract_function name inst_thms tools (entry,exit) function_in_out = let
   (* generate spectree *)
   val t = generate_spectree tools inst_thms (entry,exit)
@@ -616,12 +616,14 @@ fun get_input_list def =
   (cdr o cdr o car o snd o dest_conj o concl o SPEC_ALL) def handle e => ``()``;
 
 fun get_output_list def = let
-  val t = (tm2ftree o snd o dest_eq o snd o dest_conj o concl o SPEC_ALL) def
+  val tm = (concl o last o CONJUNCTS o SPEC_ALL) def
+  val (fm,tm) = dest_eq tm
+  val t = (tm2ftree) tm 
   fun ftree2res (FUN_VAL tm) = [tm]
     | ftree2res (FUN_IF (tm,x,y)) = ftree2res x @ ftree2res y
     | ftree2res (FUN_LET (tm,tn,x)) = ftree2res x 
     | ftree2res (FUN_COND (tm,x)) = ftree2res x
-  val res = filter (fn x => pairSyntax.is_pair x orelse is_var x) (ftree2res t)
+  val res = filter (fn x => not (x = fm)) (ftree2res t)
   val result = dest_tuple (hd res)
   fun deprime x = mk_var(replace_char #"'" "" (fst (dest_var x)), type_of x) handle e => x
   in pairSyntax.list_mk_pair(map deprime result) end;
@@ -629,8 +631,8 @@ fun get_output_list def = let
 fun hide_pre_post_elements thms def tools = let
   val (_,_,_,pc) = tools
   val f = map (replace_char #"'" "") o map (fst o dest_var) 
-  val in_list = (f o dest_tuple o get_input_list) def
-  val out_list = (f o dest_tuple o get_output_list) def
+  val in_list = (f o free_vars o get_input_list) def
+  val out_list = (f o free_vars o get_output_list) def
   fun hide (f:term->thm->thm) (tm,th) = if tm = pc then th else f tm th
   val get_name = fst o dest_var o hd o free_vars o replace_abbrev_vars o cdr
   fun hide_elements (th,loop) = let
@@ -769,6 +771,7 @@ fun prove_correspondence tools def thms = let
     THEN SPEC_TAC (pre_tm,genvar(type_of pre_tm)) THEN STRIP_TAC
     THEN SPEC_TAC (post_tm,genvar(type_of post_tm)) THEN STRIP_TAC
     THEN SPEC_TAC (c,genvar(type_of c)) THEN STRIP_TAC
+    THEN SIMP_TAC std_ss [LET_DEF] 
     THEN REWRITE_TAC [AND_IMP_INTRO] THEN STRIP_TAC
     THEN SIMP_TAC bool_ss [rename_th def]
     THEN SIMP_TAC (std_ss++tailrec_top_ss()) [LET_DEF]
@@ -806,6 +809,8 @@ fun decompile_part tools name inst_thms (entry,exit) function_in_out = let
   val res = prove_correspondence tools def thms
   val res = if not ((cdr o concl o SPEC_ALL) pre = ``T``) then res else
     RW [pre,SEP_CLAUSES] res
+
+  val (res,def) = (!decompiler_finalise) (res,def)
   in (def,res) end;
 
 fun prepare_for_reuse n (th,i,j) = let

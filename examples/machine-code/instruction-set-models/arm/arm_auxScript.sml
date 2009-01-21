@@ -175,6 +175,17 @@ val ARM_WRITE_REG_PC_INTRO = store_thm("ARM_WRITE_REG_PC_INTRO",
         memory := m; undefined := u; cp_state := c |>)``,
   SRW_TAC [wordsLib.SIZES_ss] [ARM_WRITE_REG_def, INC_PC_def, REG_WRITE_def,
     ARM_READ_REG_def, REG_READ_def, mode_reg2num_def, LET_DEF,num2register_thm]);
+
+val num2register_mode_reg2num_EQ_r15 = prove(
+  ``(num2register (mode_reg2num m r) = r15) = (r = 15w)``,
+  Cases_on `r = 15w`
+  THEN1 (ASM_SIMP_TAC (std_ss++SIZES_ss) [mode_reg2num_def,LET_DEF,w2n_n2w] 
+         THEN EVAL_TAC)
+  THEN ASM_SIMP_TAC std_ss [GSYM num2register_thm]
+  THEN SIMP_TAC std_ss [mode_reg2num_lt,num2register_11]
+  THEN POP_ASSUM MP_TAC THEN Q.SPEC_TAC (`r`,`r`) THEN Cases_word
+  THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [n2w_11]
+  THEN Cases_on `m` THEN SRW_TAC [] [mode_reg2num_def,USER_def] THEN DECIDE_TAC);
  
 val ARM_REG_READ_INC_PC = store_thm("ARM_REG_READ_INC_PC",
   ``REG_READ (INC_PC s.registers) m r =
@@ -182,14 +193,41 @@ val ARM_REG_READ_INC_PC = store_thm("ARM_REG_READ_INC_PC",
   Cases_on `r = 15w`
   THEN ASM_SIMP_TAC std_ss [REG_READ_def,INC_PC_def,APPLY_UPDATE_THM,ARM_READ_REG_def,WORD_ADD_SUB]  
   THEN SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w]
-  THEN `~(r15 = num2register (mode_reg2num m r))` by ALL_TAC
-  THEN ASM_SIMP_TAC std_ss [GSYM num2register_thm]
-  THEN SIMP_TAC std_ss [mode_reg2num_lt,num2register_11]
-  THEN POP_ASSUM MP_TAC THEN Q.SPEC_TAC (`r`,`r`) THEN Cases_word
-  THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [n2w_11]
-  THEN Cases_on `m` THEN SRW_TAC [] [mode_reg2num_def,USER_def] THEN DECIDE_TAC);
+  THEN METIS_TAC [num2register_mode_reg2num_EQ_r15]);
+
+val REG_READ_REG_WRITE = store_thm("REG_READ_REG_WRITE",
+  ``REG_READ (REG_WRITE r m n d) m x = 
+      if n = x then 
+        if x = 15w then d + 8w else d 
+      else 
+        REG_READ r m x``,
+  REWRITE_TAC [REG_READ_def,REG_WRITE_def]
+  THEN Cases_on `x = 15w` THEN ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM]
+  THEN1 (REWRITE_TAC [num2register_mode_reg2num_EQ_r15] THEN METIS_TAC [])
+  THEN Cases_on `n = x` THEN ASM_SIMP_TAC std_ss [] 
+  THEN REVERSE (`~(mode_reg2num m n = mode_reg2num m x)` by ALL_TAC)
+  THEN1 METIS_TAC [mode_reg2num_lt,num2register_11]  
+  THEN Cases_on `m` 
+  THEN SRW_TAC [] [mode_reg2num_def,USER_def]
+  THEN FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def,w2n_11]
+  THEN SRW_TAC [] []
+  THEN FULL_SIMP_TAC std_ss []
+  THEN DECIDE_TAC);
 
 val WORD_SUB_ONE_MULT = store_thm("WORD_SUB_ONE_MULT",
   ``!x y. x + $- 1w * y = x - y``,SRW_TAC [] [])
+
+val REG_READ6_EQ_ARM_READ_REG = store_thm("REG_READ6_EQ_ARM_READ_REG",
+  ``!state m. REG_READ6 state.registers m 15w = ARM_READ_REG 15w state``,
+  REWRITE_TAC [REG_READ6_def,FETCH_PC_def,ARM_READ_REG_def,
+    REG_READ_def,WORD_ADD_SUB]);
+
+val Abbrev_CONDITION_PASSED2 = store_thm("Abbrev_CONDITION_PASSED2",
+  ``!b c. CONDITION_PASSED2 b c = Abbrev (CONDITION_PASSED2 b c)``,
+  REWRITE_TAC [markerTheory.Abbrev_def]);
+
+val Abbrev_F = store_thm("Abbrev_F",
+  ``(Abbrev F = F) /\ (~Abbrev T = F)``,
+  REWRITE_TAC [markerTheory.Abbrev_def]);
 
 val _ = export_theory ();

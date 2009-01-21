@@ -268,8 +268,8 @@ fun ftree2tm (FUN_VAL tm) = tm
 
 val EQ_IMP_IMP = Q.SPECL [`p`,`q`] quotientTheory.EQ_IMPLIES;
 
-val INC_ASSUM = prove(
-  ``!p q. (p ==> q) ==> ((t ==> p) ==> (t ==> q))``,
+val INC_ASSUM = (SPEC (genvar ``:bool``) o prove)(
+  ``!t p q. (p ==> q) ==> ((t ==> p) ==> (t ==> q))``,
   REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC);
 
 fun DISCH_ALL_AS_SINGLE_IMP th = let

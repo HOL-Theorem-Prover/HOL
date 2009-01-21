@@ -272,7 +272,7 @@ val ADDR30_11 = prove(
   ``!a a'. ALIGNED a /\ ALIGNED a' /\ (ADDR30 a = ADDR30 a') ==> (a = a')``,
   METIS_TAC [EXISTS_ADDR30,ALIGNED_def,ADDR30_ADDR32]);
 
-val aMEMORY_INSERT = prove(
+val aMEMORY_INSERT = store_thm("aMEMORY_INSERT",
   ``!s. ALIGNED a /\ ~(a IN s) ==>
         (aM (ADDR30 a) w * aMEMORY s f = aMEMORY (a INSERT s) ((a =+ w) f))``,
   SIMP_TAC bool_ss [FUN_EQ_THM,cond_STAR,aMEMORY_def,APPLY_UPDATE_THM,aM_def]  
