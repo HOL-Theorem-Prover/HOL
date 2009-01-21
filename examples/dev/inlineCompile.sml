@@ -68,7 +68,7 @@ fun hwDefine2 defq =
  in 
    case absyn0
     of Absyn.APP(_,Absyn.APP(_,Absyn.IDENT(loc,"measuring"),def),f) =>
-        let val (deftm,names) = Defn.parse_defn def
+        let val (deftm,names) = Defn.parse_absyn def
             val hdeqn = hd (boolSyntax.strip_conj deftm)
             val (l,r) = boolSyntax.dest_eq hdeqn
             val domty = pairSyntax.list_mk_prod 

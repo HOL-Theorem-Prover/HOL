@@ -45,7 +45,7 @@ val _ = new_theory "compile";
 val DEV_IMP_def =
  Define `DEV_IMP f g = !x. f x ==> g x`;
 
-val _ = set_fixity "===>" (Infixr 450);
+val _ = set_fixity "===>" (Infixr 451);
 val _ = overload_on("===>", ``$DEV_IMP``);
 
 val DEV_IMP_REFL =

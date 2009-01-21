@@ -384,7 +384,7 @@ fun RecConvert defth totalth =
                         (REWR_CONV(PALPHA  (fst(dest_imp(concl th3))) ptm))))
                     th3
        val th5 = REWRITE_RULE [thb,th1,th2] th4
-       val th6 = MP th5 (PGEN args defth)
+       val th6 = MP th5 (PGEN args (SPEC_ALL defth))
    in
     CONV_RULE
      (RHS_CONV 
@@ -671,9 +671,9 @@ fun RecCompileConvert defth totalth =
 (*                                                                           *)
 (* which will accept either non-recursive or recursive specifications. It    *)
 (* returns a triple (|- eqns, |- ind, |- dev) where the ind theorem should   *)
-(* be ignored for non(it will be boolTheory.TRUTH).                          *)
+(* be ignored for now (it will be boolTheory.TRUTH).                         *)
 (*                                                                           *)
-(* The results of hwDefine are stored in an reference hwDefineLib.           *)
+(* The results of hwDefine are stored in a reference hwDefineLib.            *)
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
@@ -684,7 +684,7 @@ fun hwDefine defq =
  in 
   case absyn0
   of Absyn.APP(_,Absyn.APP(_,Absyn.IDENT(loc,"measuring"),def),f) =>
-       let val (deftm,names) = Defn.parse_defn def
+       let val (deftm,names) = Defn.parse_absyn def
            val hdeqn = hd (boolSyntax.strip_conj deftm)
            val (l,r) = boolSyntax.dest_eq hdeqn
            val domty = pairSyntax.list_mk_prod 
@@ -712,7 +712,7 @@ fun hwDefine defq =
          (defth,ind,devth)
         end
    | otherwise =>
-     let val (deftm,names) = Defn.parse_defn absyn0
+     let val (deftm,names) = Defn.parse_absyn absyn0
          val defn = Defn.mk_defn (hd names) deftm
      in 
       case TotalDefn.primDefine defn

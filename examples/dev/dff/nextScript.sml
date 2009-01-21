@@ -17,7 +17,7 @@
 load "bossLib";
 *)
 
-open Globals HolKernel Parse boolLib goalstackLib;
+open Globals HolKernel Parse boolLib proofManagerLib;
 infixr 3 -->;
 infix 8 by;
 infix &&;
