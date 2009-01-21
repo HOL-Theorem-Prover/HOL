@@ -19,9 +19,9 @@
 
 \maketitle
 
-\newcommand{\etal}{\emph{et al{.}}}
-\newcommand{\eg}{\emph{e{.}g{.}}}
-\newcommand{\ie}{\emph{i{.}e{.}}}
+\newcommand{\etal}{{et al$.$}}
+\newcommand{\eg}{{e$.$g$.$}}
+\newcommand{\ie}{{i$.$e$.$}}
 
 \newenvironment{code}{\begin{quote}\begin{alltt}\small}{\end{alltt}\end{quote}}
 \newenvironment{enum}{\begin{enumerate}
@@ -282,9 +282,9 @@ HOL4 has a large collection of library theories. The most commonly used are:
 \begin{array}{lcl}
 \itemx{arithmeticTheory}{natural numbers, \eg{} {\tt\small 0, 1, 2, SUC 0, SUC 6}}
 \itemx{listTheory}{lists, \eg{} {\tt\small [1;2;3] = 1::2::3::[], HD xs}}
-\itemx{pred\_setTheory}{simple sets\ \eg{} {\tt\small \{1;2;3\}, x IN s UNION t}}
-\itemx{pairTheory}{pairs/tuples\ \eg{} {\tt\small (1,x), (2,3,4,5), HD (x,y)}}
-\itemx{wordsTheory}{n-bit words\ \eg{} {\tt\small 0w:word32, 1w:'a word, x {!!}~1w}}
+\itemx{pred\_setTheory}{simple sets,\ \eg{} {\tt\small \{1;2;3\}, x IN s UNION t}}
+\itemx{pairTheory}{pairs/tuples,\ \eg{} {\tt\small (1,x), (2,3,4,5), FST (x,y)}}
+\itemx{wordsTheory}{n-bit words,\ \eg{} {\tt\small 0w:word32, 1w:'a word, x {!!}~1w}}
 \end{array}
 \end{displaymath}
 Other standard theories include:
