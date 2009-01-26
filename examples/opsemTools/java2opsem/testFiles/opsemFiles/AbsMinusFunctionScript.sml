@@ -53,9 +53,12 @@ val _ = new_theory "AbsMinusFunction";
                 )
               )
             )
-            (Assign "func1_Result"
-              (Var "func1_result")
-            )
+            (Seq 
+              (Assign "func1_Result"
+                 (Var "func1_result")
+              )
+              (Dispose "func1_i")
+)
           )
         )
 )
@@ -92,7 +95,7 @@ val MAIN_def =
            (func1 (Var "i") (Var "j") (Var "k"))
            (* get the result *)
            (Assign "Result" (Var "func1_Result"))
-	)
+ 	)
       )
     )
     (\state1 state2.

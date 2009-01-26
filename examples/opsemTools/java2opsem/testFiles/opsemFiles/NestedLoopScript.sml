@@ -14,7 +14,8 @@ val MAIN_def =
   Define `MAIN =
     RSPEC
     (\state.
-      T)
+       ScalarOf (state ' "n") >= 0
+     )
       (Seq
         (Assign "s"
           (Const 0)

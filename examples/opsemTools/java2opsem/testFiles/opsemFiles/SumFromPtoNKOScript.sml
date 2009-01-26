@@ -14,7 +14,7 @@ val MAIN_def =
   Define `MAIN =
     RSPEC
     (\state.
-      ((ScalarOf (state ' "n")>=0))/\((ScalarOf (state ' "p")<=ScalarOf (state ' "n"))))
+      ((ScalarOf (state ' "n")>=0))/\((ScalarOf (state ' "p")>=0))/\((ScalarOf (state ' "p")<=ScalarOf (state ' "n"))))
       (Seq
         (Assign "i"
           (Var "p")

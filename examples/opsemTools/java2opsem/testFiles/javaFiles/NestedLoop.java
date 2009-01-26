@@ -4,7 +4,8 @@
  */
 public class NestedLoop {
 
-	/*@ ensures \result == n*n;
+	/*@ requires n>=0;
+          @ ensures \result == n*n;
 	  @*/
 	static int nestedLoop (int n) {
 		int s = 0;
