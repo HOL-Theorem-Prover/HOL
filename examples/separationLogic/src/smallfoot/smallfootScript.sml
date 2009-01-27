@@ -9658,6 +9658,11 @@ REPEAT STRIP_TAC THENL [
 
 
 
+
+
+
+
+
 val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_cond_choose_const_best_local_action___smallfoot_cond_star =
 store_thm ("FASL_PROGRAM_IS_ABSTRACTION___smallfoot_cond_choose_const_best_local_action___smallfoot_cond_star",
 ``
@@ -21103,5 +21108,62 @@ LIST_CONJ [smallfoot_ap_var_update___BOOL,
 	   smallfoot_ap_var_update___smallfoot_ap_points_to,
 	   smallfoot_ap_var_update___smallfoot_ap_exp_is_defined,
            smallfoot_ap_var_update___smallfoot_ap_cond_equal]);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+val SMALLFOOT_PROP_IMPLIES___JUST_COND___GUESS = store_thm (
+"SMALLFOOT_PROP_IMPLIES___JUST_COND___GUESS",
+``((c /\
+SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' sfb_context
+       sfb_split {||} sfb_restP) ==>
+
+SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' sfb_context
+       sfb_split {|smallfoot_ap_empty_heap_cond c|} sfb_restP) /\
+
+((SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' sfb_context
+       sfb_split (BAG_INSERT (smallfoot_ap_empty_heap_cond c1) 
+                  (BAG_INSERT (smallfoot_ap_empty_heap_cond c2) sfb_imp)) 
+       sfb_restP) =
+SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' sfb_context
+       sfb_split (BAG_INSERT (smallfoot_ap_empty_heap_cond (c1 /\ c2)) 
+                  sfb_imp) sfb_restP)``,
+
+SIMP_TAC std_ss[SMALLFOOT_PROP_IMPLIES___stack_true,
+	        GSYM smallfoot_ap_stack_true_REWRITE] THEN
+SIMP_TAC std_ss [SMALLFOOT_PROP_IMPLIES_def,
+		 bagTheory.BAG_UNION_INSERT,
+		 smallfoot_prop___COND_INSERT,
+  		SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_empty_heap_cond,
+		 smallfoot_prop___PROP___REWRITE,
+		 smallfoot_ap_bigstar_REWRITE] THEN
+
+Cases_on `c1` THEN Cases_on `c2` THEN (
+   SIMP_TAC std_ss [GSYM smallfoot_ap_stack_true_REWRITE,
+		    GSYM smallfoot_ap_empty_heap_cond___false,
+		    smallfoot_ap_false___smallfoot_ap_star_THM,
+		    smallfoot_ap_star___ap_stack_true___IDEM2]
+));
+
+
+
+val SMALLFOOT_PROP_IS_EQUIV_FALSE___ELIM = 
+store_thm ("SMALLFOOT_PROP_IS_EQUIV_FALSE___ELIM",
+``F ==> SMALLFOOT_PROP_IS_EQUIV_FALSE (wpb,rpb) sfb``,
+SIMP_TAC std_ss[]);
+
 
 val _ = export_theory();

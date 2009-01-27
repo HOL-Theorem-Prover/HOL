@@ -20,7 +20,8 @@ show_assums := true;
 
 open HolKernel Parse boolLib bossLib
 
-open generalHelpersTheory quantHeuristicsLib
+open generalHelpersTheory 
+open quantHeuristicsLib
 open    finite_mapTheory relationTheory pred_setTheory congLib sortingTheory
   listTheory rich_listTheory arithmeticTheory operatorTheory
 optionTheory latticeTheory separationLogicTheory separationLogicLib
@@ -1367,7 +1368,7 @@ val t = ``
                   (smallfoot_ae_var r)) /\
              VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST x) (FST s))``
 
-*)
+
 
 
 val t = ``(
@@ -1437,7 +1438,7 @@ val t = ``(
           VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST x) (FST s)))``;
 
 
-
+*)
 
 
 
@@ -1694,6 +1695,54 @@ end;
                 {|smallfoot_ap_list (smallfoot_tag "tl")
                     (smallfoot_ae_var p1)|})) []
         [smallfoot_p_var q; smallfoot_p_var p]``
+
+
+val p =
+   ``smallfoot_cond_choose_const_best_local_action T
+    (\args.
+       smallfoot_cond_star
+         (smallfoot_prop ({|q1|},{| |})
+            {|smallfoot_ap_data_list (smallfoot_tag "tl")
+                (smallfoot_ae_const (HD (TAKE 1 (FST args))))
+                (FEMPTY |+
+                 (smallfoot_tag "dta",
+                  smallfoot_data_GET_num_list
+                    (HD (TAKE 1 (SND args)))))|})
+         (smallfoot_prop ({|p1|},{| |})
+            {|smallfoot_ap_data_list (smallfoot_tag "tl")
+                (smallfoot_ae_const (HD (DROP 1 (FST args))))
+                (FEMPTY |+
+                 (smallfoot_tag "dta",
+                  smallfoot_data_GET_num_list
+                    (HD (DROP 1 (SND args)))))|}))
+    (\args.
+       smallfoot_cond_star
+         (COND_PROP___STRONG_EXISTS
+            (\rdata.
+               smallfoot_prop ({|q1|},{| |})
+                 {|smallfoot_ap_data_list (smallfoot_tag "tl")
+                     (smallfoot_ae_var q1)
+                     (FEMPTY |+ (smallfoot_tag "dta",rdata));
+                   smallfoot_ap_empty_heap_cond
+                     (SORTED $<= rdata /\
+                      PERM
+                        (smallfoot_data_GET_num_list
+                           (HD (TAKE 1 (SND args)))) rdata)|}))
+         (COND_PROP___STRONG_EXISTS
+            (\rdata.
+               smallfoot_prop ({|p1|},{| |})
+                 {|smallfoot_ap_data_list (smallfoot_tag "tl")
+                     (smallfoot_ae_var p1)
+                     (FEMPTY |+ (smallfoot_tag "dta",rdata));
+                   smallfoot_ap_empty_heap_cond
+                     (SORTED $<= rdata /\
+                      PERM
+                        (smallfoot_data_GET_num_list
+                           (HD (DROP 1 (SND args)))) rdata)|})))
+    [(smallfoot_data_num_list_TYPE,"data");
+     (smallfoot_data_num_list_TYPE,"data")]
+    [smallfoot_p_var q; smallfoot_p_var p]``;
+
 
 *)
 
@@ -6484,6 +6533,103 @@ end
 
 
 
+fun QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___COND_IMP (sys:quant_heuristic) fv v t =
+let
+   val (_,_,_,_,_,_,sfb_imp,_) = dest_SMALLFOOT_PROP_IMPLIES t
+			  handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
+
+   val (sfs,_) = bagSyntax.dest_bag sfb_imp;
+   val sfs' = filter is_smallfoot_ap_empty_heap_cond sfs;
+   val sfs'' = map rand sfs';
+
+   val gC = guess_collection_flatten (map (sys fv v) sfs'')
+   val relevant_guesses = #others_not_possible gC;
+
+
+   fun mk_only_possible g =
+     let
+        val (i,fvL,_) = guess_extract g
+     in
+        guess_only_possible (i,fvL,NONE)
+     end;
+   val guesses = map mk_only_possible relevant_guesses
+in
+  {rewrites            = #rewrites gC, 
+   general             = [],
+   true                = [],
+   false               = [],
+   only_not_possible   = [],
+   only_possible       = guesses,
+   others_satisfied    = [],
+   others_not_possible = []}:guess_collection
+end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
+
+
+
+
+
+fun QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___LIST_SAME_DATA (sys:quant_heuristic) fv v t =
+let
+   val (_,_,_,_,_,sfb_split,sfb_imp,_) = dest_SMALLFOOT_PROP_IMPLIES t
+			  handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
+
+   fun get_data_lists sfb =
+   let
+      val (sfs,_) = bagSyntax.dest_bag sfb;
+      val sfs' = filter is_smallfoot_ap_data_list_seg_or_list sfs;
+      val sfs'' = map dest_smallfoot_ap_data_list_seg_or_list sfs';      
+   in
+      sfs''
+   end;
+
+
+   val splitL = get_data_lists sfb_split;
+   val impL = get_data_lists sfb_imp;
+
+   val i_opt = find_first_num (K (fn (tag,e1,l,e2) =>
+      let
+         val (pL,_) = dest_finite_map l;
+         val dtag_opt = find_first_num (K (fn (dtag, x) =>
+             if (aconv x v) then SOME dtag else NONE))
+             [] 0 pL;
+	 val _ = if isSome dtag_opt then () else fail();
+         val (_,_,dtag) = valOf dtag_opt;
+
+         val i_opt = find_first_num (K (fn (tag', e1', l', e2') =>
+             if not ((aconv tag tag') andalso (aconv e1 e1') andalso
+                     (aconv e2 e2')) then NONE else
+             let
+                val (pL,_) = dest_finite_map l';
+                val dtag_opt = find_first_num (K (fn (dtag', x) =>
+                   if (aconv dtag dtag') then SOME x else NONE))
+                   [] 0 pL;
+	        val _ = if isSome dtag_opt then () else fail();
+                val (_,_,i) = valOf dtag_opt;
+             in
+                SOME i
+             end handle HOL_ERR _ => NONE))
+             [] 0 splitL;
+      in
+         i_opt
+      end handle HOL_ERR _ => NONE)) [] 0 impL;
+
+
+   val _ = if isSome i_opt then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
+   val (_,_,(_,_,i)) = valOf i_opt;
+in
+  {rewrites            = [], 
+   general             = [],
+   true                = [],
+   false               = [],
+   only_not_possible   = [],
+   only_possible       = [guess_only_possible (i,[],NONE)],
+   others_satisfied    = [],
+   others_not_possible = []}:guess_collection
+end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
+
+
+
+
     
 fun SMALLFOOT_COND_INFERENCE_CONV___prog_step t =  
   (if (is_SMALLFOOT_COND_HOARE_TRIPLE t) then
@@ -6542,7 +6688,9 @@ val STEP_REWRITE_SIMP_THMS = [
    BUTFIRSTN_APPEND2,
    BUTFIRSTN_LENGTH_APPEND,
    BUTFIRSTN_LENGTH_NIL,
-   APPEND_ASSOC_CONS];
+   APPEND_ASSOC_CONS,
+   smallfoot_ae_eq_null_THM,
+   smallfoot_ae_eq_THM];
 
 
 
@@ -6556,31 +6704,41 @@ val step_ss = list_ss++rewrites STEP_REWRITE_SIMP_THMS
 		  trace = 2}
 *)
 
-val simp_step_TAC =
- CHANGED_TAC ((SIMP_TAC step_ss []) THEN
-   TRY (CONV_TAC (QCHANGED_CONV smallfoot___PROP_EQ_REWRITES_CONV))) ORELSE
- (TRY ASM_QUANT_INSTANTIATE_TAC)
+
+val quant_guess_TAC = 
+CONSEQ_CONV_TAC (EXT_QUANT_INSTANTIATE_CONSEQ_CONV false ([],[],[],[],
+[QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___COND_IMP,
+ QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___LIST_SAME_DATA])
+);
 
 
+fun simp_step_TAC do_guess thmL =
+ CHANGED_TAC ((CHANGED_TAC ((SIMP_TAC step_ss thmL) THEN
+   TRY (CONV_TAC (QCHANGED_CONV smallfoot___PROP_EQ_REWRITES_CONV)))) ORELSE
+ CHANGED_TAC (SPEC_ALL_TAC) ORELSE
+ ((CHANGED_TAC (TRY ASM_QUANT_INSTANTIATE_TAC)) ORELSE
+  (if do_guess then quant_guess_TAC else ALL_TAC)))
 
 
-fun SMALLFOOT_STEP_TAC___CS_OPT case_split =
-  simp_step_TAC THEN
+fun SMALLFOOT_STEP_TAC___CS_OPT case_split do_guess thmL =
+  REPEAT (simp_step_TAC do_guess thmL) THEN
   (TRY (REDEPTH_CONSEQ_CONV_TAC (K SMALLFOOT_IS_STRONG_STACK_PROPOSITION___ASSUME_FALSE___CONSEQ_CONV)) THEN
         REWRITE_TAC[]) THEN
   (ONCE_DEPTH_CONSEQ_CONV_TAC (K SMALLFOOT_COND_INFERENCE_CONV___prog_step) ORELSE
+   ONCE_DEPTH_CONSEQ_CONV_TAC (K (REDEPTH_STRENGTHEN_CONSEQ_CONV (SMALLFOOT_PROP_IMPLIES___SIMPS false))) ORELSE
    ONCE_DEPTH_CONSEQ_CONV_TAC (K (REDEPTH_STRENGTHEN_CONSEQ_CONV (SMALLFOOT_PROP_IMPLIES___SIMPS case_split))) ORELSE
-  (CONV_TAC (CHANGED_CONV (SIMP_CONV list_ss [SMALLFOOT_PROP_IS_EQUIV_FALSE___PROP_IMPLIES_DEF])))) THEN
+   (CONV_TAC (CHANGED_CONV (SIMP_CONV list_ss [SMALLFOOT_PROP_IS_EQUIV_FALSE___PROP_IMPLIES_DEF])))) THEN
+  REPEAT (simp_step_TAC do_guess thmL) THEN
   REWRITE_TAC[GSYM smallfoot_ae_null_def]
   
 
+val SMALLFOOT_STEP_TAC = SMALLFOOT_STEP_TAC___CS_OPT true true;
+val SMALLFOOT_NO_CASE_SPLIT_STEP_TAC = SMALLFOOT_STEP_TAC___CS_OPT false true;
+val SMALLFOOT_NO_CASE_SPLIT_NO_GUESS_STEP_TAC = SMALLFOOT_STEP_TAC___CS_OPT false false;
 
-val SMALLFOOT_STEP_TAC = SMALLFOOT_STEP_TAC___CS_OPT true;
-val SMALLFOOT_NO_CASE_SPLIT_STEP_TAC = SMALLFOOT_STEP_TAC___CS_OPT false;
 
-
-fun SMALLFOOT_MINI_STEP_TAC___CS_OPT case_split =
-  simp_step_TAC THEN
+fun SMALLFOOT_MINI_STEP_TAC___CS_OPT case_split do_guess thmL =
+  REPEAT (simp_step_TAC do_guess thmL) THEN
   (TRY (REDEPTH_CONSEQ_CONV_TAC (K SMALLFOOT_IS_STRONG_STACK_PROPOSITION___ASSUME_FALSE___CONSEQ_CONV)) THEN
         REWRITE_TAC[]) THEN
   (ONCE_DEPTH_CONSEQ_CONV_TAC (K SMALLFOOT_COND_INFERENCE_CONV___prog_step) ORELSE
@@ -6589,30 +6747,43 @@ fun SMALLFOOT_MINI_STEP_TAC___CS_OPT case_split =
   REWRITE_TAC[GSYM smallfoot_ae_null_def]  
 
 
-val SMALLFOOT_MINI_STEP_TAC = SMALLFOOT_MINI_STEP_TAC___CS_OPT true;
-val SMALLFOOT_NO_CASE_SPLIT_MINI_STEP_TAC = SMALLFOOT_MINI_STEP_TAC___CS_OPT false;
+val SMALLFOOT_MINI_STEP_TAC = SMALLFOOT_MINI_STEP_TAC___CS_OPT true true;
+val SMALLFOOT_NO_CASE_SPLIT_MINI_STEP_TAC = SMALLFOOT_MINI_STEP_TAC___CS_OPT false true;
+val SMALLFOOT_NO_CASE_SPLIT_NO_GUESS_MINI_STEP_TAC = SMALLFOOT_MINI_STEP_TAC___CS_OPT false false;
 
 
 fun SMALLFOOT_STEP___CONSEQ_CONV___CS_OPT case_split =
    FIRST_CONV [
      SMALLFOOT_COND_INFERENCE_CONV___prog_step,
+     SMALLFOOT_PROP_IMPLIES___SIMPS false,
      SMALLFOOT_PROP_IMPLIES___SIMPS case_split];
 
 
 
+val SMALLFOOT_VC_STEP_TAC = 
+   CONSEQ_REWRITE_TAC ([], [SMALLFOOT_PROP_IS_EQUIV_FALSE___ELIM,
+	                    SMALLFOOT_PROP_IMPLIES___JUST_COND___GUESS], []) THEN
+   REWRITE_TAC[]
 
-fun SMALLFOOT_SOLVE_TAC___CS_OPT case_split =
+
+
+fun SMALLFOOT_SOLVE_TAC___CS_OPT case_split do_guess vc thmL =
 REPEAT (
-   (((REDEPTH_CONSEQ_CONV_TAC (K (SMALLFOOT_STEP___CONSEQ_CONV___CS_OPT case_split))) THEN 
-      simp_step_TAC) ORELSE
-   (CHANGED_TAC simp_step_TAC) ORELSE
+   (((REDEPTH_CONSEQ_CONV_TAC (K (SMALLFOOT_STEP___CONSEQ_CONV___CS_OPT false))) THEN 
+      REPEAT (simp_step_TAC do_guess thmL)) ORELSE
+   (simp_step_TAC do_guess thmL) ORELSE
+   ((REDEPTH_CONSEQ_CONV_TAC (K (SMALLFOOT_STEP___CONSEQ_CONV___CS_OPT case_split))) THEN 
+      simp_step_TAC do_guess thmL) ORELSE
    (if case_split then 
       (CONV_TAC (QCHANGED_CONV (REWRITE_CONV [SMALLFOOT_PROP_IS_EQUIV_FALSE___PROP_IMPLIES_DEF])))
-    else NO_TAC) ORELSE (ACCEPT_TAC TRUTH)))
+    else NO_TAC) ORELSE 
+   (if vc then SMALLFOOT_VC_STEP_TAC else NO_TAC) ORELSE (ACCEPT_TAC TRUTH)))
 
 
-val SMALLFOOT_SOLVE_TAC = SMALLFOOT_SOLVE_TAC___CS_OPT true;
-val SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC = SMALLFOOT_SOLVE_TAC___CS_OPT false;
+val SMALLFOOT_SOLVE_TAC = SMALLFOOT_SOLVE_TAC___CS_OPT true true false;
+val SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC = SMALLFOOT_SOLVE_TAC___CS_OPT false true false;
+val SMALLFOOT_NO_CASE_SPLIT_NO_GUESS_SOLVE_TAC = SMALLFOOT_SOLVE_TAC___CS_OPT false false false;
+val SMALLFOOT_VC_TAC = SMALLFOOT_SOLVE_TAC___CS_OPT false true true [];
 
 
 val SMALLFOOT_SPECIFICATION_TAC =
@@ -6641,7 +6812,7 @@ fun smallfoot_prove (file,tac) =
 
 
 fun smallfoot_auto_prove file =
-    smallfoot_prove (file, SMALLFOOT_SOLVE_TAC);
+    smallfoot_prove (file, SMALLFOOT_SOLVE_TAC []);
 
 
 
@@ -6668,7 +6839,7 @@ fun smallfoot_verbose_prove (file, tac) =
   end;
 
 fun smallfoot_verbose_auto_prove file =
-    smallfoot_verbose_prove (file, SMALLFOOT_SOLVE_TAC);
+    smallfoot_verbose_prove (file, SMALLFOOT_SOLVE_TAC []);
 
     
 
@@ -6705,17 +6876,18 @@ local
    
 
 in
-   fun SMALLFOOT_ONCE_CLEAN_TAC (asm, g) =
+   fun SMALLFOOT_ONCE_CLEAN_TAC strict (asm, g) =
    if (is_forall g) then GEN_TAC (asm, g) else
    if (is_imp_only g) then STRIP_TAC (asm, g) else
    if (is_disj g) then
        let val (l,r) = dest_disj g in
-       if to_assum_pred r then DISCH_DISJ2_TAC (asm, g) else
-       if to_assum_pred l then DISCH_DISJ1_TAC (asm, g) else
+       if to_assum_pred r then (if strict then DISJ1_TAC else DISCH_DISJ2_TAC) (asm, g) else
+       if to_assum_pred l then (if strict then DISJ2_TAC else DISCH_DISJ1_TAC) (asm, g) else
        NO_TAC (asm,g) end
    else  NO_TAC (asm,g)
 
-   val SMALLFOOT_CLEAN_TAC = REPEAT SMALLFOOT_ONCE_CLEAN_TAC
+   val SMALLFOOT_CLEAN_TAC = REPEAT (SMALLFOOT_ONCE_CLEAN_TAC false)
+   val SMALLFOOT_STRICT_CLEAN_TAC = REPEAT (SMALLFOOT_ONCE_CLEAN_TAC true)
 end;
 
 end;
