@@ -204,6 +204,10 @@ sig
   val EXT_QUANT_INSTANTIATE_CONV : 
       bool -> bool -> quant_heuristic_combine_argument -> conv;
 
+  val EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV : 
+      bool -> quant_heuristic_combine_argument -> ConseqConv.directed_conseq_conv;
+  val EXT_QUANT_INSTANTIATE_CONSEQ_CONV : 
+      bool -> quant_heuristic_combine_argument -> ConseqConv.directed_conseq_conv;
 
   val PURE_QUANT_INSTANTIATE_TAC      : tactic;
   val QUANT_INSTANTIATE_TAC           : tactic;

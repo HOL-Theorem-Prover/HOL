@@ -2256,7 +2256,7 @@ val t = ``?l. ~(l = [])``
 
 val only_eq = true;
 val expand_eq = false;
-val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE ([],[],[]);
+val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE ([],[],[],[],[]);
 val sys = heuristic;
 
 *)
@@ -2634,6 +2634,25 @@ fun QUANT_TAC L (asm,t) =
 
 
 
+
+
+fun HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re heuristic dir =
+THEN_CONSEQ_CONV
+((if re then REDEPTH_CONSEQ_CONV else DEPTH_CONSEQ_CONV)
+   (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) heuristic) dir)
+(REWRITE_CONV[]);
+
+
+fun EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV re arg = 
+    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg);
+
+fun EXT_QUANT_INSTANTIATE_CONSEQ_CONV re arg = 
+    EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV re 
+       (COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT arg
+       ([],[],[],[],[QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
+	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_distinct,
+	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_cases,
+               QUANT_INSTANTIATE_HEURISTIC___ref]))
 
 
 end
