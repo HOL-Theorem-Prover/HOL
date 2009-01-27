@@ -18,14 +18,13 @@ end
 fun donowt() = ()
 
 val initialise = let
-  val termenv =
-      case OS.Process.getEnv "TERM" of
-        SOME s => s
-      | NONE => ""
+  val null = (fn _ => (donowt, donowt))
 in
-  if (termenv <> "emacs" andalso termenv <> "dumb") then
-    init
-  else (fn _ => (donowt, donowt))
+  case OS.Process.getEnv "TERM" of
+    SOME "emacs" => null
+  | SOME "dumb" => null
+  | SOME s => init
+  | NONE => null
 end
 
 

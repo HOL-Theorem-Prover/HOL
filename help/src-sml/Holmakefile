@@ -12,10 +12,10 @@ makebase.exe : runmakebase.uo MyDatabase.uo Htmlsigs.uo Parser.grm.uo Parsspec.u
 Doc2Html.exe : runDoc2Html.uo Doc2Html.uo ParseDoc.uo Symbolic.uo Flash.uo
 	HOLMOSMLC -o Doc2Html.exe runDoc2Html.uo
 
-Doc2Tex.exe : runDoc2Tex.uo Doc2Tex.uo ParseDoc.uo Symbolic.uo
+Doc2Tex.exe : runDoc2Tex.uo Doc2Tex.uo ParseDoc.uo Symbolic.uo Flash.uo
 	MOSMLC -o Doc2Tex.exe runDoc2Tex.uo
 
-Doc2Txt.exe: runDoc2Txt.uo Doc2Txt.uo ParseDoc.uo Symbolic.uo
+Doc2Txt.exe: runDoc2Txt.uo Doc2Txt.uo ParseDoc.uo Symbolic.uo Flash.uo
 	MOSMLC -o Doc2Txt.exe runDoc2Txt.uo
 
 Doc2Tex.uo Doc2Tex.ui: Doc2Tex.sml MySubstring.uo ParseDoc.ui
