@@ -904,7 +904,14 @@ end;
 fun CONSEQ_TOP_REWRITE_CONV___ho_opt ho (both_thmL,strengthen_thmL,weaken_thmL) =
    let
      fun prepare_general_thmL thmL =
-           map CONSEQ_TOP_REWRITE_CONV___EQT_EQF_INTRO (flatten (map BODY_CONJUNCTS thmL));
+           let
+               val thmL1 = flatten (map BODY_CONJUNCTS thmL);
+	       val thmL2 = map (CONV_RULE (TRY_CONV (REDEPTH_CONV LEFT_IMP_EXISTS_CONV))) thmL1;
+	       val thmL3 = map (CONV_RULE (REDEPTH_CONV RIGHT_IMP_FORALL_CONV)) thmL2;
+	       val thmL4 = map SPEC_ALL thmL3
+           in
+	       map CONSEQ_TOP_REWRITE_CONV___EQT_EQF_INTRO thmL4
+           end;
      val thmL_st = CONSEQ_TOP_REWRITE_CONV___PREPARE_STRENGTHEN_THMS 
 		       (prepare_general_thmL (append strengthen_thmL both_thmL));
      val thmL_we = CONSEQ_TOP_REWRITE_CONV___PREPARE_WEAKEN_THMS 
