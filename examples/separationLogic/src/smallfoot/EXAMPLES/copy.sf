@@ -1,0 +1,32 @@
+dta,tl;
+
+/*[list(c_DATA,c)]*/
+list_copy(z;c) [list(c)] {
+  local x,y,w,d;
+  if (c==NULL) {z=NULL;} 
+  else {
+    z=new();
+    z->tl=NULL; 
+    x = c->dta;
+    z->dta = x;
+    w=z; 
+    y=c->tl; 
+
+
+    /*[exists c1_DATA, w_DATE, c2_DATA.
+       c_DATA = APPEND c1_DATA (CONS w_DATE c2_DATA) &
+
+       lseg(APPEND c1_DATA [wdata],c,y) * list(c2_DATA,y) * 
+       lseg(c1_DATA,z,w) * w |-> [tl:0,dta:w_DATE]] */
+    while (y!=NULL) [lseg(c,y) * list(y) * lseg(z,w) * w |-> 0] {
+      d=new();
+      d->tl=NULL;
+      x=y->dta;
+      d->dta=x;
+      w->tl=d; 
+      w=d; 
+      y=y->tl;
+    }
+  }
+} [list(c) * list(z)]
+/*[list(c_DATA,c) * list(c_DATA,z)]*/

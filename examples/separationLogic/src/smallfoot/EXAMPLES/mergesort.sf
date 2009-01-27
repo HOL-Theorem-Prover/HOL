@@ -1,11 +1,15 @@
-tl;
+dta, tl;
 
+/* sorted(p_DATA) & sorted(q_DATA) &
+   list(p_DATA,p) * list (q_DATA,q) */
 merge(r;p,q) [list(p) * list(q)] {
-  local t;
+  local t, q_date, p_date;
   if(q == NULL) r = p;
   else if(p == NULL) r = q;
   else {
-    if(q < p) {
+    p_date = p->dta;
+    q_date = q->dta;
+    if(q_date < p_date) {
       t = q;
       q = q->tl;
     } else {
@@ -17,7 +21,10 @@ merge(r;p,q) [list(p) * list(q)] {
     r = t;
   }
 } [list(r)]
+/* list(sort(APPEND (p_DATA,q_DATA)),r) */
 
+
+/* list(p_DATA,p) */
 split(r;p) [list(p)] {
   local t1,t2;
   if(p == NULL) r = NULL;
@@ -33,15 +40,26 @@ split(r;p) [list(p)] {
     }
   }
 } [list(p) * list(r)]
+/* exists p1_DATA, p2_DATA.
+   IS_PERMUTATION (APPEND p1_DATA p2_DATA) p_DATA &
+   (|len(p1_DATA)-len(p2_DATA)| <= 1) &
+   list (p1_DATA,p) * list(p2_DATA,r) */
 
+
+/* list(p_DATA,p) */
 mergesort(r;p) [list(p)] {
   local q,q1,p1;
   if(p == NULL) r = p;
   else {
-    split(q;p);
-    mergesort(q1;q);
-    mergesort(p1;p);
-    merge(r;p1,q1);
+    q = p->tl;
+    if (q == NULL) r = p;
+    else {
+      split(q;p);
+      mergesort(q1;q);
+      mergesort(p1;p);
+      merge(r;p1,q1);
+    }
   }
 } [list(r)]
+/* list(sort(p_DATA),r) */
 
