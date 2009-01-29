@@ -21038,6 +21038,69 @@ SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, IN_DEF]);
 
 
 
+val SMALLFOOT_PROP_IMPLIES___context_unequal_const___helper =
+prove(
+``!c1 c2 wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_rest sr.
+
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+   (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c1) (smallfoot_ae_const c2)) sfb_context) 
+   sfb_split sfb_imp sfb_restP) =
+(~(c1 = c2) ==>
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+   (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c1) (smallfoot_ae_const c2)) sfb_context)
+   sfb_split sfb_imp sfb_restP)))
+``,
+
+REPEAT STRIP_TAC THEN
+Cases_on `c1 = c2` THEN (
+   ASM_REWRITE_TAC []
+) THEN
+SIMP_TAC std_ss [smallfoot_ap_unequal___EQ_REWRITES,
+		 SMALLFOOT_PROP_IMPLIES___smallfoot_ap_false___context]);
+
+
+
+val SMALLFOOT_PROP_IMPLIES___context_unequal_const =
+store_thm("SMALLFOOT_PROP_IMPLIES___context_unequal_const",
+``(!c1 c2 wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_rest sr.
+
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+   (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c1) (smallfoot_ae_const c2)) sfb_context) 
+   sfb_split sfb_imp sfb_restP) =
+(~(c1 = c2) ==>
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+   (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c1) (smallfoot_ae_const c2)) sfb_context)
+   sfb_split sfb_imp sfb_restP)))) /\
+
+(!c wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_rest sr.
+
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+   (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c) smallfoot_ae_null) sfb_context) 
+   sfb_split sfb_imp sfb_restP) =
+(~(c = 0) ==>
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+   (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c) smallfoot_ae_null) sfb_context)
+   sfb_split sfb_imp sfb_restP)))) /\
+
+(!c wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_rest sr.
+
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+   (BAG_INSERT (smallfoot_ap_unequal smallfoot_ae_null (smallfoot_ae_const c)) sfb_context) 
+   sfb_split sfb_imp sfb_restP) =
+(~(c = 0) ==>
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+   (BAG_INSERT (smallfoot_ap_unequal smallfoot_ae_null (smallfoot_ae_const c)) sfb_context)
+   sfb_split sfb_imp sfb_restP))))
+``,
+
+REWRITE_TAC[smallfoot_ae_null_def] THEN
+ONCE_REWRITE_TAC[SMALLFOOT_PROP_IMPLIES___context_unequal_const___helper] THEN
+SIMP_TAC std_ss [] THEN
+PROVE_TAC[]);
+
+
+
+
 val SMALLFOOT_PROP_IMPLIES___bag_implies___UNEQUAL_INTRO =
 store_thm ("SMALLFOOT_PROP_IMPLIES___bag_implies___UNEQUAL_INTRO",
 

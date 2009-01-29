@@ -21,7 +21,8 @@ open smallfoot_pp_print generalHelpersTheory
      smallfootSyntax BoolExtractShared
      ConseqConv smallfootTheory
      smallfootParser
-     smallfootLib quantHeuristicsLib;
+     smallfootLib 
+open quantHeuristicsLib;
 
 
 
@@ -44,9 +45,6 @@ use_smallfoot_pretty_printer := true;
 (*or off
 use_smallfoot_pretty_printer := false;
 *)
-
-
-
 
 
 
@@ -233,34 +231,31 @@ REPEAT STRIP_TAC THENL [
      the evaluation of a program statement, a
      simplification of the overall structure (moving quantifiers etc.),
      or deducing a frame*)
-   SMALLFOOT_STEP_TAC THEN
+   SMALLFOOT_STEP_TAC [] THEN
    CONJ_TAC THENL [
-      NTAC 2 SMALLFOOT_STEP_TAC THEN
+      NTAC 2 (SMALLFOOT_STEP_TAC []) THEN
 
       (*a frame can be deduced stepwise*)
-      SMALLFOOT_MINI_STEP_TAC THEN
-      SMALLFOOT_MINI_STEP_TAC THEN (*...*)
+      SMALLFOOT_MINI_STEP_TAC [] THEN
+      SMALLFOOT_MINI_STEP_TAC [] THEN (*...*)
       (*or all in one step*)
-      SMALLFOOT_STEP_TAC THEN
-      
-      (*general simplifications are done as well by STEP_TAC*)
-      SMALLFOOT_STEP_TAC,
+      SMALLFOOT_STEP_TAC [],
 
 
 
       (*if a goal is uninteresting, it can be solved completely via
         SOLVE_TAC*)
-      SMALLFOOT_SOLVE_TAC
-   ],
+      SMALLFOOT_SOLVE_TAC []
+   ], 
 
 
    (*Sometimes you may want to avoid case splits during this automation.
      This is useful if the goal can't be solved completely.*)
-   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC,
+   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [],
 
 
-   SMALLFOOT_STEP_TAC THEN
-   CONJ_TAC THEN1 SMALLFOOT_SOLVE_TAC THEN
+   SMALLFOOT_STEP_TAC [] THEN
+   CONJ_TAC THEN1 SMALLFOOT_SOLVE_TAC [] THEN
 
    (*Function calls got replaced during preprocessing. The
      resulting statements are ugly to read and therefore
@@ -275,11 +270,12 @@ REPEAT STRIP_TAC THENL [
 
      use_smallfoot_pretty_printer := true
    *)
-   SMALLFOOT_STEP_TAC THEN
-   SMALLFOOT_STEP_TAC THEN
-   SMALLFOOT_STEP_TAC THEN
-   SMALLFOOT_MINI_STEP_TAC
-   SMALLFOOT_SOLVE_TAC
+   SMALLFOOT_STEP_TAC [] THEN
+   SMALLFOOT_STEP_TAC [] THEN
+   CONJ_TAC THEN1 SMALLFOOT_SOLVE_TAC [] THEN
+   SMALLFOOT_STEP_TAC [] THEN
+   SMALLFOOT_MINI_STEP_TAC [] THEN
+   SMALLFOOT_SOLVE_TAC []
 ]
 
 
@@ -423,19 +419,11 @@ smallfoot_set_goal file;
 val thm = smallfoot_verbose_prove( file,
 
 (*Handle procedures separately*)
-REPEAT STRIP_TAC THENL [
-   (*push works fine*)
+SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [] THEN
+REPEAT STRIP_TAC THEN SMALLFOOT_STRICT_CLEAN_TAC THENL [
+   Q.EXISTS_TAC `r_const` THEN
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [],
 
-   (*enqueue need as little help*)
-   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [] THEN
-   QUANT_TAC [("b'", `r_const`,[])] THEN
-   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [],
-
-   (*works fine*)
-   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC[],
-
-   (*works as well, but needs a case split*)
    SMALLFOOT_SOLVE_TAC []
 ]);
 

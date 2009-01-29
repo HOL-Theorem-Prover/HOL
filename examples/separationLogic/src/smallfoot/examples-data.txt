@@ -34,8 +34,10 @@ open HolKernel Parse boolLib bossLib;
 open smallfoot_pp_print generalHelpersTheory
      smallfootSyntax BoolExtractShared
      ConseqConv smallfootTheory
-     smallfootParser listTheory rich_listTheory
-     smallfootLib quantHeuristicsLib;
+     smallfootParser listTheory rich_listTheory;
+
+open smallfootLib
+open quantHeuristicsLib;
 
 
 
@@ -58,6 +60,7 @@ use_smallfoot_pretty_printer := false;
 (*please adapt the examples directory *)
 val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot/EXAMPLES/"]
 
+
 (*test the directory*)
 val file = concat [examplesDir, "append.sf"];
 val t = parse_smallfoot_file file
@@ -73,13 +76,11 @@ val file = concat [examplesDir, "copy.sf"];
 val thm = smallfoot_verbose_auto_prove file;
 
 
+
 (*the specification with data works as well, but takes much longer
   about 10 sec on my maschine against 3 without data*)
 val file = concat [examplesDir, "copy.dsf"]; 
 val thm = smallfoot_verbose_auto_prove file;
-
-
-
 
 
 
@@ -109,7 +110,7 @@ val thm = smallfoot_verbose_auto_prove file;
 
 
 
-(*the specification with data needs some clues.
+(*the specification with data needs the specifically defined function.
   Moreover, a function REMOVE is sepcifically defined for this
   verification*)
 val file = concat [examplesDir, "remove.dsf"]; 
@@ -120,34 +121,7 @@ val REMOVE_def = Define `
    (REMOVE x (v::vs) = if (x = v) then vs else v::(REMOVE x vs))` 
 
 
-
-(*
-for interactive use
-
-val t = parse_smallfoot_file file;
-set_goal ([], t);
-e (SMALLFOOT_SPECIFICATION_TAC);
-
-
-or 
-
-smallfoot_set_goal file;
-
-*)
-
-
-val thm = smallfoot_verbose_prove( file,
-
-(* do as much as possible *)
-SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [REMOVE_def] THEN
-SMALLFOOT_STRICT_CLEAN_TAC THEN
-
-Cases_on `c = data_h` THEN (
-   ASM_SIMP_TAC list_ss [] THEN
-   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC []
-));
-
-
+val thm = smallfoot_verbose_thm_auto_prove [REMOVE_def] file;
 
 
 
@@ -192,7 +166,6 @@ val thm = smallfoot_verbose_auto_prove file;
 
 
 
-
 (*for the full functional verification open some
   libraries first*)
 open sortingTheory relationTheory
@@ -218,6 +191,7 @@ val thm = smallfoot_verbose_prove( file,
 
 (*generate verification conditions*)
 SMALLFOOT_VC_TAC THEN
+
 
 (*All the program is gone, only theorems about
   permutations and sorted lists need to be still
@@ -368,6 +342,7 @@ REPEAT STRIP_TAC THENL [
 
 
 
+
 (***************************************************************************
  * FILTER
  ***************************************************************************)
@@ -381,34 +356,7 @@ val thm = smallfoot_verbose_auto_prove file;
 (* the verification of filter is tricky. Let's
    start with the much simpler recursive version *)
 val file = concat [examplesDir, "filter_rec.dsf"]; 
-
-(*
-for interactive use
-
-val t = parse_smallfoot_file file;
-set_goal ([], t);
-e (SMALLFOOT_SPECIFICATION_TAC);
-
-
-or 
-
-smallfoot_set_goal file;
-
-*)
-
-
-val thm = smallfoot_verbose_prove( file,
-
-SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [] THEN
-SMALLFOOT_STRICT_CLEAN_TAC THEN
-
-(*Use the fact data_hd != fc*)
-Cases_on `data_h = fc` THEN (
-   ASM_SIMP_TAC list_ss[] THEN
-   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC []
-));
-
-
+val thm = smallfoot_verbose_auto_prove file;
 
 
 
@@ -429,12 +377,15 @@ e (SMALLFOOT_SPECIFICATION_TAC);
 
 or 
 
+SMALLFOOT_NO_CASE_SPLIT_NO_GUESS_STEP_TAC []
+
+
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 1
+SMALLFOOT_STEP_TAC []
+
 smallfoot_set_goal file;
 
 *)
-
-
-
 
 val thm = smallfoot_verbose_prove( file,
 
@@ -449,48 +400,32 @@ REPEAT STRIP_TAC THENL [
       FULL_SIMP_TAC list_ss [APPEND_11, APPEND_ASSOC_CONS],
 
 
-      SMALLFOOT_STRICT_CLEAN_TAC THEN
-      Cases_on `data1_h = fc` THEN1 (
-         SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC[]
-      ) THEN
       SMALLFOOT_VC_TAC THEN
-      REPEAT STRIP_TAC THEN
+      REPEAT GEN_TAC THEN
       Q.EXISTS_TAC `data_fc` THEN
+      ASM_SIMP_TAC list_ss [FILTER_EQ_NIL] THEN
+      REPEAT STRIP_TAC THEN
       Q.EXISTS_TAC `[]` THEN
-      ASM_SIMP_TAC list_ss [FILTER_EQ_NIL],
+      SIMP_TAC list_ss [],
 
 
-
-      Cases_on `l_const = n` THEN (
-           ASM_SIMP_TAC std_ss [smallfoot_ap_equal_cond___UNEQ_REWRITE___const,
-                    		smallfoot_ap_unequal_cond___UNEQ_REWRITE___const] THEN
-           SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC []
-      ) THEN
+      SMALLFOOT_PROP_IMPLIES___EQ_CASE_SPLIT_TAC ``l_const:num`` ``n:num`` THEN
       SMALLFOOT_VC_TAC THEN
       REPEAT STRIP_TAC THEN
       Q.EXISTS_TAC `data1` THEN
+      REPEAT STRIP_TAC THEN
       Q.EXISTS_TAC `[]` THEN
-      Q.EXISTS_TAC `data_fc++[fc]` THEN
-
+      Q.EXISTS_TAC `data_fc ++ [fc]` THEN
       FULL_SIMP_TAC list_ss [APPEND_ASSOC_CONS,
 			     BUTFIRSTN_LENGTH_NIL],
 
 
 
-      Cases_on `l_const = n` THEN (
-           ASM_SIMP_TAC std_ss [smallfoot_ap_equal_cond___UNEQ_REWRITE___const,
-                    		smallfoot_ap_unequal_cond___UNEQ_REWRITE___const] THEN
-           SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC []
-      ) THEN
-      REPEAT GEN_TAC THEN
-      Cases_on `data2_h = fc` THEN1 (
-         ASM_REWRITE_TAC[] THEN
-         SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC []
-      ) THEN
-
+      SMALLFOOT_PROP_IMPLIES___EQ_CASE_SPLIT_TAC ``l_const:num`` ``n:num`` THEN
       SMALLFOOT_VC_TAC THEN
       REPEAT STRIP_TAC THEN
       Q.EXISTS_TAC `data1 ++ date::data_fc` THEN
+      REPEAT STRIP_TAC THEN
       ASM_SIMP_TAC list_ss [FILTER_APPEND, BUTFIRSTN_LENGTH_APPEND,
 			    FILTER_EQ_NIL] THEN
       Q.EXISTS_TAC `[]` THEN
@@ -512,6 +447,12 @@ REPEAT STRIP_TAC THENL [
 		     BUTFIRSTN_LENGTH_APPEND] THEN
    SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC []
 ]);
+
+
+
+
+
+
 
 
 

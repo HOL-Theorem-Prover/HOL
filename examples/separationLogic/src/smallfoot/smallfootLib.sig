@@ -74,10 +74,12 @@ sig
   val smallfoot_auto_prove : string -> thm;
   val smallfoot_verbose_prove : string * tactic -> thm;
   val smallfoot_verbose_auto_prove : string -> thm;
+  val smallfoot_verbose_thm_auto_prove : thm list -> string -> thm;
 
 
 
   (*General stuff*)
+  val SMALLFOOT_CLEAR_CACHE : unit -> unit;
   val smallfoot_prop___SIMPLIFY_CONV : conv;
   val smallfoot_prop___EQ_PROPAGATE_CONV : bool -> bool -> conv;
 
