@@ -25,6 +25,7 @@ sig
 
 
   val DISCH_ASM_CONV_TAC           : conv -> tactic;
+  val DISCH_ASM_CONSEQ_CONV_TAC    : ConseqConv.directed_conseq_conv -> tactic;
 
 (*Guesses*)
 
@@ -154,11 +155,13 @@ sig
     
 
   val empty_guess_collection   : guess_collection;
+  val is_empty_guess_collection   : guess_collection -> bool;
   val guess_collection_append  : guess_collection -> guess_collection -> guess_collection;
   val guess_collection_flatten : guess_collection list -> guess_collection;
   val guess_list2collection    : thm list * guess list -> guess_collection;
   val guess_collection2list    : guess_collection -> thm list * guess list;
-
+  val guess_collection___get_only_possible_weaken : guess_collection -> guess list;
+  val guess_collection___get_only_not_possible_weaken : guess_collection -> guess list;
 
   val check_guess        : term -> term -> guess -> bool
   val correct_guess      : term -> term -> guess -> guess option
@@ -177,6 +180,10 @@ sig
   type quant_heuristic = term list -> term -> term -> guess_collection;
   type quant_heuristic_combine_argument = 
      (thm list * thm list * thm list * conv list * (quant_heuristic -> quant_heuristic) list);
+  type quant_heuristic_cache;
+
+
+  val mk_quant_heuristic_cache : unit -> quant_heuristic_cache;
 
 
 
@@ -190,8 +197,12 @@ sig
 
   val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth : int ref
 
-  val QUANT_INSTANTIATE_HEURISTIC___COMBINE :
-  ((quant_heuristic -> quant_heuristic) list) -> quant_heuristic;
+  val QUANT_INSTANTIATE_HEURISTIC___COMBINE :    
+    ((quant_heuristic -> quant_heuristic) list) -> quant_heuristic_cache ref option -> quant_heuristic;
+
+
+  val COMBINE_HEURISTIC_FUNS : (unit -> guess_collection) list -> guess_collection;
+
 
 
 (*The most important functions *)
@@ -199,14 +210,14 @@ sig
   val PURE_QUANT_INSTANTIATE_CONV : conv;
   val QUANT_INSTANTIATE_CONV      : conv;
 
-  val EXT_PURE_QUANT_INSTANTIATE_CONV : 
+  val EXT_PURE_QUANT_INSTANTIATE_CONV : quant_heuristic_cache ref option ->
       bool -> bool -> quant_heuristic_combine_argument -> conv;
-  val EXT_QUANT_INSTANTIATE_CONV : 
+  val EXT_QUANT_INSTANTIATE_CONV : quant_heuristic_cache ref option ->
       bool -> bool -> quant_heuristic_combine_argument -> conv;
 
-  val EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV : 
+  val EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV :  quant_heuristic_cache ref option ->
       bool -> quant_heuristic_combine_argument -> ConseqConv.directed_conseq_conv;
-  val EXT_QUANT_INSTANTIATE_CONSEQ_CONV : 
+  val EXT_QUANT_INSTANTIATE_CONSEQ_CONV :  quant_heuristic_cache ref option ->
       bool -> quant_heuristic_combine_argument -> ConseqConv.directed_conseq_conv;
 
   val PURE_QUANT_INSTANTIATE_TAC      : tactic;
@@ -239,7 +250,7 @@ sig
   val quant_heuristic___add_rewrite_convs : conv list -> unit;
   val quant_heuristic___add_heuristic     : (quant_heuristic -> quant_heuristic) -> unit;
 
-
+  val TypeBase___quant_heuristic_argument : hol_type list -> quant_heuristic_combine_argument
 
   val empty_quant_heuristic_combine_argument : quant_heuristic_combine_argument;
 

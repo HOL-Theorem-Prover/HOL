@@ -280,6 +280,17 @@ val empty_guess_collection =
 
 
 
+fun is_empty_guess_collection (gc:guess_collection) =
+   (null (#rewrites gc)) andalso
+   (null (#general gc)) andalso
+   (null (#true gc)) andalso
+   (null (#false gc)) andalso
+   (null (#only_possible gc)) andalso      
+   (null (#only_not_possible gc)) andalso  
+   (null (#others_not_possible gc)) andalso
+   (null (#others_satisfied gc))
+
+
 fun guess_collection_append (c1:guess_collection) (c2:guess_collection) =
    {rewrites            = append (#rewrites c1) (#rewrites c2),
     general             = append (#general c1) (#general c2),
@@ -822,6 +833,18 @@ fun guess_weaken v t (guess_false (i, fvL, thm_opt)) =
 
 
 
+fun guess_collection___get_only_possible_weaken (c:guess_collection) =
+    append (#true c)
+   (append (#only_possible c)
+	   (#others_not_possible c));
+
+fun guess_collection___get_only_not_possible_weaken (c:guess_collection) =
+    append (#false c)
+   (append (#only_not_possible c)
+	   (#others_satisfied c));
+
+
+
 (*
    val t = ``!l. ~(l = []) /\ P l /\ (l_hd = 5)``
 
@@ -1155,6 +1178,14 @@ end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
 
 
+(*
+val t = ``P \/ ((x = a:'a) /\ Q)``
+val v = ``x:'a``
+val fv = [v]
+
+val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE ([],[],[],[],[]);
+val sys = heuristic;
+*)
 
 fun QUANT_INSTANTIATE_HEURISTIC___DISJ sys fv v t =
 if not (is_disj t) then raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp else
@@ -1335,7 +1366,7 @@ val thm2 = mk_thm ([], valOf (make_guess_thm_term v t2 (guess_only_possible (i,f
    val only_possibleL = if (mem v (free_vars t2)) then only_possibleL else
               append (map (fn guess =>
 		  let
-		     val (i,fvL,thm_opt) = guess_extract guess
+		     val (i,fvL,thm_opt) = guess_extract (guess_weaken v t1 guess);
                   in
                      if not (isSome thm_opt) then
                         guess_only_possible (i,fvL,NONE)
@@ -1357,14 +1388,14 @@ val thm2 = mk_thm ([], valOf (make_guess_thm_term v t2 (guess_only_possible (i,f
                      in 
                         guess_only_possible (i,fvL,thm_opt)
                      end
-                  end) (#only_possible gc1)) only_possibleL;
+                  end) (guess_collection___get_only_possible_weaken gc1)) only_possibleL;
 
    (*if i the the only possibility for t2 and v does not occur in t1 then
      i the the only possibility for (t1 \/ t2)*)
    val only_possibleL = if (mem v (free_vars t1)) then only_possibleL else
               append (map (fn guess =>
 		  let
-		     val (i,fvL,thm_opt) = guess_extract guess
+		     val (i,fvL,thm_opt) = guess_extract  (guess_weaken v t2 guess)
                   in
                      if not (isSome thm_opt) then
                         guess_only_possible (i,fvL,NONE)
@@ -1386,7 +1417,7 @@ val thm2 = mk_thm ([], valOf (make_guess_thm_term v t2 (guess_only_possible (i,f
                      in
                         guess_only_possible (i,fvL,thm_opt)
                      end
-                  end) (#only_possible gc2)) only_possibleL;
+                  end) (guess_collection___get_only_possible_weaken gc2)) only_possibleL;
 
 
 
@@ -1705,9 +1736,17 @@ val t = ``?x. (y = SOME x)``
 val v = ``y:'a option``
 val fv = [v, ``x:'a``]
 
-val sys = QUANT_INSTANTIATE_HEURISTIC___BASIC_COMBINE ([],[],[]);
+val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE ([],[],[],[],[]);
+val sys = heuristic;
 correct_guess_list v t (sys fv v t)
 
+
+val t = ``!y1 y2 y3. P (x:'a) y1 y2``
+val v = ``x:'a``
+val fv = [v]
+
+QUANT_INSTANTIATE_HEURISTIC___debug := 2
+sys fv v t
 
 *)
 
@@ -2053,6 +2092,7 @@ correct_guess_list v t (QUANT_INSTANTIATE_HEURISTIC___EXISTS sys fv v t)
 
 
 
+val t = ``?y1 y2 y3. P (x:'a) y1 y2``
 
 *)
 
@@ -2061,8 +2101,11 @@ fun QUANT_INSTANTIATE_HEURISTIC___EXISTS sys fv v t =
 if not (is_exists t) then raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp else
 let
    val rew_thm = HO_PART_MATCH lhs quantHeuristicsTheory.EXISTS_NOT_FORALL_THM t
+   val rew_thm2 = (CONV_RULE (RHS_CONV (RAND_CONV (QUANT_CONV (
+			     NOT_EXISTS_LIST_CONV
+		  )))) rew_thm handle HOL_ERR _ => rew_thm) handle UNCHANGED => rew_thm
 in
-   QUANT_INSTANTIATE_HEURISTIC___REWRITE sys fv v rew_thm
+   QUANT_INSTANTIATE_HEURISTIC___REWRITE sys fv v rew_thm2
 end;
 
 
@@ -2117,11 +2160,98 @@ fun cut_term_to_string t =
     end;
 
 
+fun COMBINE_HEURISTIC_FUNS L =
+let
+   val gcL = mapPartial (fn h => 
+	    ((SOME (h ()) 
+              handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE
+	      handle HOL_ERR _ => raise UNCHANGED)
+                                  handle UNCHANGED => 
+              (say_HOL_WARNING "QUANT_INSTANTIATE_HEURISTIC___COMBINE"
+			      ("Some heuristic produced an error!"); NONE)
+            )) L;
+   val gc = guess_collection_flatten gcL;
+in
+   gc
+end;
+
+
+
+type quant_heuristic_cache =  (Term.term, (Term.term, (term list * guess_collection) list) Redblackmap.dict) Redblackmap.dict
+fun mk_quant_heuristic_cache () = (Redblackmap.mkDict Term.compare):quant_heuristic_cache
+
+(*
+val cache = mk_quant_heuristic_cache ()
+val t = T
+val v = T
+val fv = [T]
+val gc = SOME empty_guess_collection
+*)
+
+fun quant_heuristic_cache___insert (cache:quant_heuristic_cache) (fv:term list) (v:term) (t:term) (gc:guess_collection) =
+let
+   val t_cache_opt = Redblackmap.peek (cache,t)
+   val t_cache = if isSome t_cache_opt then valOf t_cache_opt else
+		 (Redblackmap.mkDict Term.compare);
+
+   val v_cache_opt = Redblackmap.peek (t_cache,v);
+   val v_cache = if isSome v_cache_opt then valOf v_cache_opt else [];
+
+   val v_cache' = snd (pluck (fn (fv', _) => (fv' = fv)) v_cache)
+		       handle HOL_ERR _ => v_cache;
+
+   val t_cache' = Redblackmap.insert (t_cache, v, (fv, gc)::v_cache')
+   val cache' = Redblackmap.insert (cache, t, t_cache')
+in
+   cache':quant_heuristic_cache
+end;
+
+
+
+fun quant_heuristic_cache___peek (cache:quant_heuristic_cache) (fv:term list) (v:term) (t:term) =
+let
+   val t_cache = Redblackmap.find (cache,t)
+   val v_cache = Redblackmap.find (t_cache,v);
+   val gc = (snd (fst (pluck (fn (fv', _) => (fv' = fv)) v_cache)))
+		       handle HOL_ERR _ => raise Redblackmap.NotFound;
+
+in
+   SOME gc
+end handle Redblackmap.NotFound => NONE;
+
+
+(*
+
+val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE ([],[],[],[],[]);
+val sys = heuristic;
+
+val heuristicL =      [QUANT_INSTANTIATE_HEURISTIC___EQUATION,
+     	     QUANT_INSTANTIATE_HEURISTIC___NEG,
+       	     QUANT_INSTANTIATE_HEURISTIC___DISJ,
+       	     QUANT_INSTANTIATE_HEURISTIC___FORALL,
+
+       	     QUANT_INSTANTIATE_HEURISTIC___CONJ,
+       	     QUANT_INSTANTIATE_HEURISTIC___EXISTS,
+       	     QUANT_INSTANTIATE_HEURISTIC___EXISTS_UNIQUE,
+       	     QUANT_INSTANTIATE_HEURISTIC___IMP,
+       	     QUANT_INSTANTIATE_HEURISTIC___EQUIV,
+       	     QUANT_INSTANTIATE_HEURISTIC___COND,
+
+	     QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases_list [],
+       	     QUANT_INSTANTIATE_HEURISTIC___EQUATION_distinct []]
+val t = ``!x y. P x y (z:'a)``
+val v = ``z:'a``
+val fv = [v]
+
+val n = 0;
+val cache_ref_opt = SOME (ref (mk_quant_heuristic_cache ()))
+*)
+
 fun prefix_string 0 = ""
   | prefix_string n = "  "^(prefix_string (n-1));
 
 fun BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE n
-    heuristicL (fv:term list) (v:term) (t:term) =
+    heuristicL cache_ref_opt (fv:term list) (v:term) (t:term) =
 if (n >= !QUANT_INSTANTIATE_HEURISTIC___max_rec_depth) then
    ((say_HOL_WARNING "BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE" "Maximal recursion depth reached!");
    empty_guess_collection)
@@ -2130,28 +2260,34 @@ else let
 	       say ((prefix_string n)^"searching guesses for ``"^
 	           (term_to_string v)^"`` in ``"^(cut_term_to_string t)^"`` (fv: ["^
                    (term_list_to_string fv)^"])\n")
-           else ()   
-   val sys = BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE (n+1) heuristicL;
+           else ();
 
-
-   val gcL = mapPartial (fn h => 
-	    ((SOME (h sys fv v t) 
-              handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE
-	      handle HOL_ERR _ => raise UNCHANGED)
-                                  handle UNCHANGED => 
-              (say_HOL_WARNING "QUANT_INSTANTIATE_HEURISTIC___COMBINE"
-			      ("Some heuristic produced an error for ``"^
-                 	       (term_to_string v)^"`` in ``"^(term_to_string t)^"`` (fv: ["^
-                               (term_list_to_string fv)^"])"); NONE)
-            )) heuristicL;
-   val gc = guess_collection_flatten gcL;
-   val gc = correct_guess_collection v t gc;
+   val gc_opt = if not (isSome cache_ref_opt) then NONE else
+		  quant_heuristic_cache___peek (!(valOf cache_ref_opt)) fv v t
+		
+   val gc = if (isSome gc_opt) then valOf gc_opt else
+	    let
+               val sys = BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE (n+1) heuristicL cache_ref_opt;
+               val hL = (map (fn h => (fn () => (h sys fv v t))) heuristicL);
+               val gc = COMBINE_HEURISTIC_FUNS hL;
+               val gc = correct_guess_collection v t gc;
+	       val _ = if not (isSome cache_ref_opt) then () else
+                          let
+			      val r = valOf cache_ref_opt;
+                 	      val c = quant_heuristic_cache___insert (!r) fv v t gc;
+		              val _ = r := c
+			  in
+			      ()
+			  end;		       
+	    in
+	       gc
+	    end;
 
    val _ = if (!QUANT_INSTANTIATE_HEURISTIC___debug > 0) then
                let
 		  val prefix = prefix_string n;
                   val _ = say (prefix^"found guesses for ``"^
-	           (term_to_string v)^"`` in ``"^(term_to_string t)^"``\n")
+	           (term_to_string v)^"`` in ``"^(cut_term_to_string t)^"``\n")
 
 	          val show_thm = (!QUANT_INSTANTIATE_HEURISTIC___debug > 1);
                   fun say_guess guess = say (prefix^" - "^
@@ -2161,7 +2297,7 @@ else let
                   ()
                end
            else ()
-   val _ = if (length gcL = 0) then raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp else ();
+   val _ = if (is_empty_guess_collection gc) then raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp else ();
 in
    gc
 end;
@@ -2202,7 +2338,6 @@ fun QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE (distinct_thmL, cases_thmL, rewri
 
 
 		       
-
 
 
 
@@ -2439,11 +2574,11 @@ fun COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENTS L =
     foldl (fn (a1,a2) => COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT a1 a2) empty_quant_heuristic_combine_argument L;
           
 
-fun EXT_PURE_QUANT_INSTANTIATE_CONV re expand_eq arg = 
-    HEURISTIC_QUANT_INSTANTIATE_CONV re (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg) expand_eq;
+fun EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re expand_eq arg = 
+    HEURISTIC_QUANT_INSTANTIATE_CONV re (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt) expand_eq;
 
 val PURE_QUANT_INSTANTIATE_CONV = 
-    EXT_PURE_QUANT_INSTANTIATE_CONV true false empty_quant_heuristic_combine_argument;
+    EXT_PURE_QUANT_INSTANTIATE_CONV NONE true false empty_quant_heuristic_combine_argument;
 
 
 
@@ -2495,8 +2630,8 @@ in
 end;
 
 
-fun EXT_QUANT_INSTANTIATE_CONV re expand_eq arg = 
-    EXT_PURE_QUANT_INSTANTIATE_CONV re expand_eq
+fun EXT_QUANT_INSTANTIATE_CONV cache_ref_opt re expand_eq arg = 
+    EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re expand_eq
        (COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT arg
        ([],[],[],[],[QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
 	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_distinct,
@@ -2504,13 +2639,22 @@ fun EXT_QUANT_INSTANTIATE_CONV re expand_eq arg =
                QUANT_INSTANTIATE_HEURISTIC___ref]))
 
 val QUANT_INSTANTIATE_CONV = 
-    EXT_QUANT_INSTANTIATE_CONV true false empty_quant_heuristic_combine_argument;
+    EXT_QUANT_INSTANTIATE_CONV NONE true false empty_quant_heuristic_combine_argument;
 
 
 (*
+
+set_goal ([``l = [0:num]``], ``?x. l = 0::x``)
+
+
+fun conv t = snd (EQ_IMP_RULE (QUANT_INSTANTIATE_CONV t));
 val conv = QUANT_INSTANTIATE_CONV;
+
 val (asm,t) = top_goal();
+
+DISCH_ASM_CONV_TAC conv
 *)
+
 
 
 val DISCH_ASM_CONV_TAC:(conv -> tactic) = fn conv => fn (asm,t) =>
@@ -2522,7 +2666,11 @@ let
    val qasm_t = list_mk_forall (fv, asm_t);
 
    val thm0 = conv qasm_t;
-   val new_qasm_t = rhs (concl thm0);
+   val thm1 = if (is_eq (concl thm0)) then
+		  snd (EQ_IMP_RULE thm0)
+	      else thm0;
+
+   val new_qasm_t = (fst o dest_imp o concl) thm1;
    val (new_fv,new_asm_t) = strip_forall new_qasm_t
    val (new_asm, new_mt) = strip_imp_only new_asm_t;
 
@@ -2536,10 +2684,9 @@ in
         val new_thm = hd thmL;
         val new_m_thm = markerLib.MK_LABEL (label,new_thm);
 
-        val new_asm_thm = foldl (fn (a,thm) => DISCH a thm) new_m_thm new_asm;
+        val new_asm_thm = foldr (fn (a,thm) => DISCH a thm) new_m_thm new_asm;
         val new_qasm_thm = GENL new_fv new_asm_thm;
-
-        val qasm_thm = EQ_MP (GSYM thm0) new_qasm_thm;
+        val qasm_thm = MP thm1 new_qasm_thm;
 	val asm_thm = SPECL fv qasm_thm;
         val m_thm = UNDISCH_ALL asm_thm;
         val thm = markerLib.DEST_LABEL m_thm
@@ -2548,6 +2695,7 @@ in
     end) 
 end handle UNCHANGED => ALL_TAC (asm,t);
 
+fun DISCH_ASM_CONSEQ_CONV_TAC c = DISCH_ASM_CONV_TAC (c CONSEQ_CONV_STRENGTHEN_direction);
 
 
 val PURE_QUANT_INSTANTIATE_TAC =
@@ -2632,6 +2780,11 @@ fun QUANT_TAC L (asm,t) =
   end;
 
 
+fun TypeBase___quant_heuristic_argument typeL =
+       (map TypeBase.distinct_of typeL, 
+        map TypeBase.nchotomy_of typeL,
+        map TypeBase.one_one_of typeL,
+        [],[]):quant_heuristic_combine_argument;
 
 
 
@@ -2643,11 +2796,11 @@ THEN_CONSEQ_CONV
 (REWRITE_CONV[]);
 
 
-fun EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV re arg = 
-    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg);
+fun EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re arg = 
+    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt);
 
-fun EXT_QUANT_INSTANTIATE_CONSEQ_CONV re arg = 
-    EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV re 
+fun EXT_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re arg = 
+    EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re 
        (COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT arg
        ([],[],[],[],[QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
 	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_distinct,
