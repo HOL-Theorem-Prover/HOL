@@ -50,8 +50,9 @@ A. First, install Moscow ML. This is usually straightforward. The
 
 Poly/ML: obtain and install the latest Poly/ML from the website
 
-      http://www.polyml.org/
-      
+       http://www.polyml.org/
+
+
 B. Unpack HOL with the commands
 
        gunzip release.tar.gz; tar xf release.tar
@@ -66,8 +67,6 @@ B. Unpack HOL with the commands
 C. In the HOL directory (<hol-dir>), type
 
        mosml < tools/smart-configure.sml
-
-                    ------------------------------
 
    This should guess some configuration options, and then build some
    of HOL's support tools.  If this appears to work correctly, proceed
@@ -107,11 +106,9 @@ C. In the HOL directory (<hol-dir>), type
    the muddy library is not currently accessible. In such a case, the
    value of GNUMAKE does not matter.
 
-Poly/ML:
-  * run "<path-to-poly> < tools-poly/smart-configure.sml" from the top-level 
-    HOL directory HOLDIR. Note that <path-to-poly> has to be the full path 
-    to the poly executable residing in polydir/bin, where polydir is the 
-    poly distribution directory. 
+Poly/ML: run "poly < tools/smart-configure.sml" from the top-level 
+   HOL directory <hol-dir>
+
 
 D. Now perform the following shell command:
 
@@ -130,8 +127,8 @@ D. Now perform the following shell command:
    forcing any subsequent builds to rebuild everything, regardless of
    where changes might have occurred.
 
-Poly/ML:
-  * run "bin/build -expk -symlink" (only the experimental kernel is supported)
+Poly/ML: run "bin/build -expk [-symlink]" (only the experimental kernel is
+   supported)
 
 
 E. If bin/build completes (it takes a while!), successfully, you are
