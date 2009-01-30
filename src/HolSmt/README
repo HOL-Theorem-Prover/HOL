@@ -1,0 +1,14 @@
+HolSmtLib is a library for integrating Satisfiability Modulo Theories (SMT)
+solvers with the HOL theorem prover.
+
+Files:
+
+COPYRIGHT               Copyright notice, license and disclaimer.
+HolSmtLib.{sig,sml}     Entry point into HolSmtLib. Provides GENERIC_SMT and
+                        related tactics.
+README                  This file.
+SolverSpec.{sig,sml}    Specification of SMT solvers: name, command, etc.
+Yices.sml               Functions to invoke the Yices SMT solver.
+
+Further documentation can be found in the HOL Description (in
+HOL/Manual/Description).
