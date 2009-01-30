@@ -162,6 +162,7 @@ val thm = smallfoot_verbose_auto_prove file;
 
 (*the specification without data can be proofed automatically*)
 val file = concat [examplesDir, "mergesort.sf"];
+val file = concat [examplesDir, "mergesort_parallel.sf"]; 
 val thm = smallfoot_verbose_auto_prove file;
 
 
@@ -171,8 +172,12 @@ val thm = smallfoot_verbose_auto_prove file;
 open sortingTheory relationTheory
 
 
-val file = concat [examplesDir, "mergesort.dsf"]; 
+(*The tools is strong enough to abstract automatically from
+  the differences between parallel and sequential mergesort.
+  The proof-script is exactly the same!*)
 
+val file = concat [examplesDir, "mergesort.dsf"]; 
+val file = concat [examplesDir, "mergesort_parallel.dsf"]; 
 
 (*
 val t = parse_smallfoot_file file;
@@ -182,7 +187,6 @@ e (SMALLFOOT_SPECIFICATION_TAC);
 
 smallfoot_set_goal file;
 *)
-
 
 
 

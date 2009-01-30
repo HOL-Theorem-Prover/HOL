@@ -525,6 +525,22 @@ val is_smallfoot_cond_best_local_action = (can dest_smallfoot_cond_best_local_ac
 
 
 
+val smallfoot_cond_star_term = 
+   ``smallfoot_cond_star``;
+
+fun dest_smallfoot_cond_star tt =
+  let
+     val (f, args) = strip_comb tt;
+     val _ = if (same_const f smallfoot_cond_star_term) andalso
+	        (length args = 2) then () else
+             Feedback.fail ()
+  in
+    (el 1 args, el 2 args)
+  end
+val is_smallfoot_cond_star = (can dest_smallfoot_cond_star);
+
+
+
 
 val fasl_prog_best_local_action_term = 
    ``fasl_prog_best_local_action``;

@@ -1049,6 +1049,9 @@ val COND_EXPAND_IMP = store_thm ("COND_EXPAND_IMP",
 ``!b t1 t2. (if b then t1 else t2) = (b ==> t1) /\ (~b ==> t2)``,
 Cases_on `b` THEN SIMP_TAC std_ss []);
 
+val COND_EXPAND_OR = store_thm ("COND_EXPAND_OR",
+``!b t1 t2. (if b then t1 else t2) = (b /\ t1) \/ (~b /\ t2)``,
+Cases_on `b` THEN SIMP_TAC std_ss []);
 
 
 

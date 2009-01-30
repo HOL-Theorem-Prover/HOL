@@ -1747,18 +1747,118 @@ val p =
 *)
 
 
+(*val ttt = post*)
+fun COND_PROP___STRONG_EXISTS___TO_BAG___CONV ttt =
+  let
+     val (v, b) = dest_COND_PROP___STRONG_EXISTS ttt;
+     val thm0 = COND_PROP___STRONG_EXISTS___TO_BAG___CONV b
+(*   val thm0 = ISPEC b SMALLFOOT_COND_PROP___STRONG_EQUIV___REFL
+*)
+     val thm1 = GEN v thm0;
+     val thm2 = HO_MATCH_MP SMALLFOOT_PROP___STRONG_EXISTS___REWRITE_TRANS
+		thm1;
+  in
+     thm2
+  end handle HOL_ERR _ =>
+    ISPEC ttt SMALLFOOT_COND_PROP___STRONG_EQUIV___REFL;
+
+
+
+
+(*
+val ttt = post3
+val ttt = new_ttt
+*)
+ 
+fun COND_PROP___STRONG_IMP___FROM_BAG_UNION___CONV ttt =
+  let
+     val _ = if is_smallfoot_prop ttt then () else Feedback.fail();
+     val thm0 = HO_PART_MATCH (rand o rator o snd o dest_imp) (SPEC_ALL smallfoot_bag_exists___BAG_UNION_REWRITE___left) ttt handle HOL_ERR _ =>
+	        HO_PART_MATCH (rand o rator o snd o dest_imp) (SPEC_ALL smallfoot_bag_exists___BAG_UNION_REWRITE___right) ttt;
+     val thm1 = smallfoot_precondition_prove_RULE (SOME "COND_PROP___STRONG_IMP___FROM_BAG_UNION___CONV") [] thm0;
+   
+
+     val (new_v, new_ttt) = (dest_abs o rand o rand o concl) thm1;
+     val new_ttt_thm = COND_PROP___STRONG_IMP___FROM_BAG_UNION___CONV new_ttt;
+     val trans_thm = HO_MATCH_MP 
+                      COND_PROP___STRONG_EXISTS___SMALLFOOT_COND_PROP___STRONG_IMP
+		      (GEN new_v new_ttt_thm);
+
+ 
+
+     val thm2 = HO_MATCH_MP SMALLFOOT_COND_PROP___STRONG_IMP___TRANS thm1
+     val thm3 = HO_MATCH_MP thm2 trans_thm
+  in
+     thm3
+  end handle HOL_ERR _ =>
+    ISPEC ttt SMALLFOOT_COND_PROP___STRONG_IMP___REFL;
+
+
+(*
+val tref = ref [(T,T,T)];
+*)
 fun SMALLFOOT_PROGRAM_ABSTRACTION_CONV___smallfoot_cond_choose_const___smallfoot_cond_star sys xenv penv asm p =
    let      
-      val _ = if (is_smallfoot_cond_choose_const_best_local_action p) then () else raise UNCHANGED;
+      val (_,pre,post,_,_) = dest_smallfoot_cond_choose_const_best_local_action p
+      fun dest_cond_star_abs tt =
+	  let
+	      val (v,b) = dest_abs tt;
+	      val (b1,b2) = dest_smallfoot_cond_star b;
+	      val tt1 = mk_abs (v, b1);
+	      val tt2 = mk_abs (v, b2);
+	  in
+	      (v,b1,tt1,b2,tt2)
+	  end;
+      val (v_pre,pre1,pre1_abs,pre2,pre2_abs) = dest_cond_star_abs pre;
+      val (v_post,post1,post1_abs,post2,post2_abs) = dest_cond_star_abs post;
       val (env,res_env) = pairLib.dest_pair xenv;
       val _ = if (env = smallfoot_env_term) then () else raise UNCHANGED;
 
-      val thm0 = SPECL [res_env,penv] FASL_PROGRAM_IS_ABSTRACTION___smallfoot_cond_choose_const_best_local_action___smallfoot_cond_star;
-      val thm1 = (HO_PART_MATCH (rand o rator) (SPEC_ALL thm0) p)
-                 handle HOL_ERR _ => raise UNCHANGED;
+
+      (*move COND_PROP___STRONG_EXISTS inwards*)
+      val thm0 = ISPECL [res_env,penv,pre1_abs,pre2_abs,post1_abs,post2_abs] 
+                 FASL_PROGRAM_IS_ABSTRACTION___smallfoot_cond_choose_const_best_local_action___smallfoot_cond_star;
+
+      val pre1_thm  = GEN v_pre (COND_PROP___STRONG_EXISTS___TO_BAG___CONV pre1);
+      val pre2_thm  = GEN v_pre (COND_PROP___STRONG_EXISTS___TO_BAG___CONV pre2);
+      val post1_thm = GEN v_post (COND_PROP___STRONG_EXISTS___TO_BAG___CONV post1);
+      val post2_thm = GEN v_post (COND_PROP___STRONG_EXISTS___TO_BAG___CONV post2);
+
+
+      (*eliminate cond_star*)
+      val thm0_1 = CONV_RULE (ONCE_DEPTH_CONV BETA_CONV) thm0
+      val thm0_2 = (HO_PART_MATCH 
+                     (rand o rator o snd o dest_imp o snd o dest_imp o snd o dest_imp o snd o dest_imp) 
+                     (SPEC_ALL thm0_1) p);
+
+      val thm0_3 = HO_MATCH_MP thm0_2 pre1_thm
+      val thm0_4 = HO_MATCH_MP thm0_3 pre2_thm
+      val thm0_5 = HO_MATCH_MP thm0_4 post1_thm
+      val thm1 = HO_MATCH_MP thm0_5 post2_thm
+
+
+      (*elim bag_exists*)
+       val (c, pre3_abs, post3_abs, condL, expL) = (dest_smallfoot_cond_choose_const_best_local_action o rand o concl) thm1
+       val (v_pre3, pre3) = dest_abs pre3_abs;
+       val (v_post3, post3) = dest_abs post3_abs;
+
+       val pre3_thm = GEN v_pre3 (COND_PROP___STRONG_IMP___FROM_BAG_UNION___CONV pre3)
+       val post3_thm = GEN v_post3 (COND_PROP___STRONG_IMP___FROM_BAG_UNION___CONV post3)
+       val c_imp = DISCH c (ASSUME c)
+
+       val pre_thm = LIST_CONJ [c_imp, pre3_thm, post3_thm]
+
+
+       val thm1_0 = ISPECL [res_env, penv, c, c]
+           FASL_PROGRAM_IS_ABSTRACTION___smallfoot_cond_choose_const_best_local_action;
+       val thm1_1 = HO_MATCH_MP thm1_0 pre_thm
+       val thm1_2 = ISPECL [condL, expL] thm1_1
+             
+       val thm1_3 = HO_MATCH_MP FASL_PROGRAM_IS_ABSTRACTION___TRANSITIVE thm1
+       val thm2 = HO_MATCH_MP thm1_3 thm1_2
    in
-      thm1
-   end;
+      thm2
+   end handle HOL_ERR _ => raise UNCHANGED;
 
 
 
@@ -4866,20 +4966,6 @@ val tt = (snd o strip_forall) tt
 *)
 
 
-(*val ttt = post*)
-fun COND_PROP___STRONG_EXISTS___TO_BAG___CONV ttt =
-  let
-     val (v, b) = dest_COND_PROP___STRONG_EXISTS ttt;
-     val thm0 = COND_PROP___STRONG_EXISTS___TO_BAG___CONV b
-(*   val thm0 = ISPEC b SMALLFOOT_COND_PROP___STRONG_EQUIV___REFL
-*)
-     val thm1 = GEN v thm0;
-     val thm2 = HO_MATCH_MP SMALLFOOT_PROP___STRONG_EXISTS___REWRITE_TRANS
-		thm1;
-  in
-     thm2
-  end handle HOL_ERR _ =>
-    ISPEC ttt SMALLFOOT_COND_PROP___STRONG_EQUIV___REFL;
 
 (*
   val tt = (snd o strip_exists o snd o strip_forall o fst o dest_imp o concl) thm4
