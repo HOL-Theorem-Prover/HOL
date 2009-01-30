@@ -80,15 +80,22 @@ val gen_unify :
   (prerank -> prerank -> ('a -> 'a * unit option)) ->
   ((pretype -> pretype -> ('a -> 'a * unit option)) ->
    (uvartype ref -> (pretype -> ('a -> 'a * unit option)))) ->
+  ('a -> pretype -> pretype list) ->
   pretyvar list -> pretyvar list ->
   pretype -> pretype -> ('a -> 'a * unit option)
+
 val unify : pretype -> pretype -> unit
 val can_unify : pretype -> pretype -> bool
 
 val safe_unify :
   pretype -> pretype ->
-  ((prekind option ref * prekind) list * ((order * prerank) option ref * (order * prerank)) list * (uvartype ref * pretype) list ->
-   ((prekind option ref * prekind) list * ((order * prerank) option ref * (order * prerank)) list * (uvartype ref * pretype) list) * unit option)
+  (  (prekind option ref * prekind) list
+   * ((order * prerank) option ref * (order * prerank)) list
+   * (uvartype ref * uvartype) list ->
+   (  (prekind option ref * prekind) list
+    * ((order * prerank) option ref * (order * prerank)) list
+    * (uvartype ref * uvartype) list)
+   * unit option)
 val type_subst  : {redex : pretype, residue : pretype} list -> pretype -> pretype
 val distinguish_btyvars : pretype list -> pretype -> pretype
 

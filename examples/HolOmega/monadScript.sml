@@ -94,8 +94,8 @@ val cat_monad_def = new_definition(
                 map : 'M map ,
                 join: 'M join) =
      (* map  is functor    (t)   *)  functor map /\
-     (* join is nat transf (mu)  *)  nattransf (map oo map) map join /\
-     (* unit is nat transf (eta) *)  nattransf (\:'a 'b. I) map unit /\
+     (* join is nat transf (mu)  *)  nattransf join (map oo map) map /\
+     (* unit is nat transf (eta) *)  nattransf unit (\:'a 'b. I) map /\
      (*         square commutes  *) (join ooo (map foo join) = join ooo (join oof map)) /\
      (*  left triangle commutes  *) (join ooo (map foo unit) = (\:'a. I)) /\
      (* right triangle commutes  *) (join ooo (unit oof map) = (\:'a. I))
@@ -113,9 +113,9 @@ val umj_join_nattransf = store_thm
   ("umj_join_nattransf",
    ``!unit map join.
       umj_monad(unit,map,join) ==>
-      nattransf ((map oo map) : ('M o 'M) functor)
-                (map          : 'M functor)
-                (join         : 'M join)``,
+      nattransf (join         : 'M join)
+                ((map oo map) : ('M o 'M) functor)
+                (map          : 'M functor)``,
    SRW_TAC[][umj_monad_def,nattransf_def,oo_def,FUN_EQ_THM]
   );
 
@@ -123,9 +123,9 @@ val umj_unit_nattransf = store_thm
   ("umj_unit_nattransf",
    ``!unit map join.
       umj_monad(unit,map,join) ==>
-      nattransf ((\:'a 'b. I) :  I functor)
-                (map          : 'M functor)
-                (unit         : 'M unit)``,
+      nattransf (unit         : 'M unit)
+                ((\:'a 'b. I) :  I functor)
+                (map          : 'M functor)``,
    SRW_TAC[][umj_monad_def,nattransf_def,FUN_EQ_THM]
   );
 
@@ -604,7 +604,7 @@ val [state_monad_left_unit,
 
 val state_MAP_def = Define
    `(state_MAP : ('a -> 'b) -> ('s,'a)state -> ('s,'b)state) =
-      MMAP ((\:'a. state_unit),(\:'a 'b. state_bind))`;
+      MMAP ((\:'a. state_unit):'s state unit,(\:'a 'b. state_bind))`;
 
 val state_MAP_THM = store_thm
   ("state_MAP_THM",
@@ -616,7 +616,7 @@ val state_MAP_THM = store_thm
 
 val state_JOIN_def = Define
    `(state_JOIN : 'a ('s state) ('s state) -> 'a ('s state)) =
-      JOIN ((\:'a. state_unit),(\:'a 'b. state_bind))`;
+      JOIN ((\:'a. state_unit):'s state unit,(\:'a 'b. state_bind))`; (* infinite loop; unbreakable! *)
 
 val state_JOIN_THM = store_thm
   ("state_JOIN_THM",

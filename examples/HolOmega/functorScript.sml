@@ -363,9 +363,9 @@ val _ = type_abbrev ("nattransf", Type `: \'F 'G. !'a. 'a 'F -> 'a 'G`);
  ---------------------------------------------------------------------------*)
 
 val nattransf_def = new_definition("nattransf_def", Term
-   `nattransf ( F' : 'F functor )
-              ( G  : 'G functor )
-              (phi : ('F,'G) nattransf) =
+   `nattransf (phi : ('F,'G) nattransf)
+              ( F' : 'F functor )
+              ( G  : 'G functor ) =
          !:'a 'b. !(h:'a -> 'b).
                 G h o phi = phi o F' h`);
 
@@ -378,7 +378,7 @@ val nattransf_def = new_definition("nattransf_def", Term
 val identity_nattransf = store_thm
   ("identity_nattransf",
    ``!:'F. !F' : 'F functor.
-        nattransf F' F' (\:'a. I)``,
+        nattransf (\:'a. I) F' F'``,
    SIMP_TAC combin_ss [nattransf_def]
   );
 
@@ -391,9 +391,9 @@ val _ = overload_on ("o", Term`$ooo : ('G,'H)nattransf -> ('F,'G)nattransf -> ('
 
 val nattransf_comp = store_thm
   ("nattransf_comp",
-   ``nattransf F' G (phi1 : ('F,'G)nattransf) /\
-     nattransf G  H (phi2 : ('G,'H)nattransf) ==>
-     nattransf F' H (phi2 o phi1)``,
+   ``nattransf (     phi1     : ('F,'G)nattransf) F' G /\
+     nattransf (     phi2     : ('G,'H)nattransf) G  H ==>
+     nattransf ((phi2 o phi1) : ('F,'H)nattransf) F' H``,
    SIMP_TAC bool_ss [nattransf_def,ooo_def]
    THEN REPEAT STRIP_TAC
    THEN ASM_REWRITE_TAC[o_ASSOC]
@@ -409,11 +409,11 @@ val _ = overload_on ("o", Term`$foo : 'H functor -> ('F,'G) nattransf -> ('F o '
 
 val functor_nattransf_comp = store_thm
   ("functor_nattransf_comp",
-   ``nattransf F' G (phi : ('F,'G)nattransf) /\
+   ``nattransf (phi : ('F,'G)nattransf) F' G  /\
      functor (H : 'H functor) ==>
-     nattransf (H o F')       (* H oo F'   *)
-               (H o G)        (* H oo G    *)
-               (H o phi)``,   (* H foo phi *)
+     nattransf (H o phi)      (* H foo phi *)
+               (H o F')       (* H oo F'   *)
+               (H o G)``,     (* H oo G    *)
    SIMP_TAC combin_ss [nattransf_def,functor_def,oo_def,foo_def]
    THEN REPEAT STRIP_TAC
    THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM th])
@@ -429,18 +429,18 @@ val _ = overload_on ("o", Term`$oof : ('F,'G) nattransf -> 'H functor -> ('H o '
 
 val nattransf_functor_comp = store_thm
   ("nattransf_functor_comp",
-   ``nattransf F' G (phi : ('F,'G)nattransf) /\
+   ``nattransf (phi : ('F,'G)nattransf) F' G /\
      functor (H : 'H functor) ==>
-     nattransf ( F' o H)     (*  F' oo  H *)
-               ( G  o H)     (*  G  oo  H *)
-               (phi o H)``,  (* phi oof H *)
+     nattransf (phi o H)     (* phi oof H *)
+               ( F' o H)     (*  F' oo  H *)
+               ( G  o H)``,  (*  G  oo  H *)
    SIMP_TAC combin_ss [nattransf_def,functor_def,oo_def,oof_def]
   );
 
 val nattransf_commute = store_thm
   ("nattransf_commute",
-   ``nattransf F1 G1 (phi1 : ('F1,'G1) nattransf) /\
-     nattransf F2 G2 (phi2 : ('F2,'G2) nattransf)  ==>
+   ``nattransf (phi1 : ('F1,'G1) nattransf) F1 G1 /\
+     nattransf (phi2 : ('F2,'G2) nattransf) F2 G2  ==>
      (phi2 o F2 (phi1[:'a:]) = G2 phi1 o phi2)``,
    SIMP_TAC bool_ss [nattransf_def]
   );
@@ -449,12 +449,12 @@ val nattransf_commute = store_thm
 
 val nattransf_comp2 = store_thm
   ("nattransf_comp2",
-   ``nattransf F1 G1 (phi1 : ('F1,'G1) nattransf) /\
-     nattransf F2 G2 (phi2 : ('F2,'G2) nattransf) /\
+   ``nattransf (phi1 : ('F1,'G1) nattransf) F1 G1 /\
+     nattransf (phi2 : ('F2,'G2) nattransf) F2 G2 /\
      functor F2 ==>
-     nattransf (F2 oo F1)
-               (G2 oo G1)
-               (\:'a. phi2 o F2 (phi1[:'a:]))``,
+     nattransf (\:'a. phi2 o F2 (phi1[:'a:]))
+               (F2 oo F1)
+               (G2 oo G1)``,
    SIMP_TAC bool_ss [nattransf_def,functor_def,oo_def]
    THEN REPEAT STRIP_TAC
    THEN ASM_SIMP_TAC bool_ss [o_THM,o_ASSOC]
@@ -470,9 +470,9 @@ val nattransf_comp2 = store_thm
 
 val nattransf_REVERSE = store_thm
   ("nattransf_REVERSE",
-   ``nattransf (\:'a 'b. MAP)
+   ``nattransf (\:'a. REVERSE)
                (\:'a 'b. MAP)
-               (\:'a. REVERSE)``,
+               (\:'a 'b. MAP)``,
    SIMP_TAC bool_ss [nattransf_def]
    THEN REPEAT STRIP_TAC
    THEN REWRITE_TAC[FUN_EQ_THM]
@@ -505,9 +505,9 @@ val MAP_INITS = store_thm
 
 val nattransf_INITS = store_thm
   ("nattransf_INITS",
-   ``nattransf (\:'a 'b. MAP)
-               (\:'a 'b. MAP o MAP)
-               (\:'a. INITS)``,
+   ``nattransf (\:'a. INITS)
+               (\:'a 'b. MAP)
+               (\:'a 'b. MAP o MAP)``,
    SIMP_TAC bool_ss [nattransf_def]
    THEN REPEAT STRIP_TAC
    THEN REWRITE_TAC[FUN_EQ_THM]
@@ -520,9 +520,9 @@ val FORK_def = Define
 
 val nattransf_FORK = store_thm
   ("nattransf_FORK",
-   ``nattransf (\:'a 'b. I)
-               (\:'a 'b. \f (a,b). (f a,f b))
-               (\:'a. FORK)``,
+   ``nattransf ((\:'a. FORK) : (I, \'a.'a # 'a)nattransf)
+               (\:'a 'b. I)
+               (\:'a 'b. \f (a,b). (f a,f b))``,
    SIMP_TAC list_ss [nattransf_def,FORK_def,FUN_EQ_THM]
   );
 
@@ -538,9 +538,9 @@ val _ = type_abbrev ("binattransf", Type `: \'F 'G. !'a 'b. ('a,'b) 'F -> ('a,'b
  ---------------------------------------------------------------------------*)
 
 val binattransf_def = new_definition("binattransf_def",
-  ``binattransf ( F' : 'F bifunctor )
-                ( G  : 'G bifunctor )
-                (phi : ('F,'G) binattransf) =
+  ``binattransf (phi : ('F,'G) binattransf)
+                ( F' : 'F bifunctor )
+                ( G  : 'G bifunctor ) =
          !:'a 'b 'c 'd. !(h:'a -> 'b) (i:'c -> 'd).
                 G h i o phi = phi o F' h i``);
 
@@ -553,9 +553,9 @@ val SWAP_def = Define
 
 val binattransf_SWAP = store_thm
   ("binattransf_SWAP",
-   ``binattransf (\:'a 'b 'c 'd. $##)
-                 (\:'a 'b 'c 'd. \f g. g ## f)
-                 (\:'a 'b. SWAP)``,
+   ``binattransf (\:'a 'b. SWAP)
+                 (\:'a 'b 'c 'd. $##)
+                 (\:'a 'b 'c 'd. \f g. g ## f)``,
    SIMP_TAC bool_ss [binattransf_def]
    THEN REPEAT STRIP_TAC
    THEN REWRITE_TAC[FUN_EQ_THM]
@@ -570,9 +570,9 @@ val binattransf_SWAP = store_thm
 
 val binattransf_E = store_thm
   ("binattransf_E",
-   ``binattransf (\:'a 'b 'c 'd. $##)
-                 (\:'a 'b 'c 'd. \f g. g ## f)
-                 (\:'a 'b. SWAP)``,
+   ``binattransf (\:'a 'b. SWAP)
+                 (\:'a 'b 'c 'd. $##)
+                 (\:'a 'b 'c 'd. \f g. g ## f)``,
    SIMP_TAC bool_ss [binattransf_def]
    THEN REPEAT STRIP_TAC
    THEN REWRITE_TAC[FUN_EQ_THM]

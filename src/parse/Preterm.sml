@@ -822,7 +822,7 @@ fun do_overloading_removal ptm0 = let
   open seq
   val ptm = remove_overloading_phase1 ptm0
   val result = remove_overloading ptm ([],[],[])
-  fun apply_tsubst tsubst = app (fn (r, value) => r := Pretype.SOMEU value) tsubst
+  fun apply_tsubst tsubst = app (fn (r, value) => r := (*Pretype.SOMEU*) value) tsubst
   fun apply_krsubst subst = app (fn (r, value) => r := SOME value) subst
   fun apply_subst(ksubst, rsubst, tsubst) =
       (apply_tsubst tsubst; apply_krsubst ksubst; apply_krsubst rsubst)

@@ -52,6 +52,9 @@ val last_kcerror : (kcheck_error * locn.locn) option ref = ref NONE
 fun isSomeU (SOMEU _) = true
   | isSomeU (NONEU _) = false
 
+fun THEU (SOMEU v) = v
+  | THEU (NONEU _) = raise TCERR "THEU" "uvartype not a SOMEU";
+
 fun tylocn (PT(_,locn)) = locn
 
 (*---------------------------------------------------------------------------
@@ -631,20 +634,22 @@ fun pp_pretype pps ty =
                                pppretype none ty1;
                                end_block();
                                add_string ")")
-         | TyUniv(tyv, ty) => (add_string "!";
+         | TyUniv(tyv, ty) => (add_string "(!";
                                begin_block INCONSISTENT 0;
                                pppretype none tyv;
                                add_string ".";
                                add_break(1,2);
                                pppretype none ty;
-                               end_block())
-         | TyAbst(tyv, ty) => (add_string "\\";
+                               end_block();
+                               add_string ")")
+         | TyAbst(tyv, ty) => (add_string "(\\";
                                begin_block INCONSISTENT 0;
                                pppretype none tyv;
                                add_string ".";
                                add_break(1,2);
                                pppretype none ty;
-                               end_block())
+                               end_block();
+                               add_string ")")
          | TyKindConstr {Ty, Kind} =>
                               (begin_block INCONSISTENT 0;
                                pppretype none Ty;
@@ -1295,6 +1300,42 @@ fun rank_unify_le r1 r2 (kd_env,rk_env,ty_env) =
      ((kd_env,rk_env',ty_env), result)
   end
 
+fun deref (env as (kd_env,rk_env,ty_env)) (ty as PT(ty0,loc0)) =
+  case ty0
+   of UVar (r as ref (SOMEU ty')) => deref env ty'
+    | UVar r => (case Lib.assoc1 r ty_env
+                  of SOME (_, SOMEU ty') => deref env ty'
+                   | _ => ty)
+    | _ => ty
+
+(*---------------------------------------------------------------------------*
+ * The free type variables in a pretype, with dereferencing via an environment.
+ *---------------------------------------------------------------------------*)
+
+local val insert = Lib.op_insert eq
+      val mem    = Lib.op_mem eq
+      fun TV (v as PT(Vartype _,_)) E B A k = if mem v B then k A
+                                              else k (insert v A)
+        | TV (PT(Contype _,_)) E B A k      = k A
+        | TV (PT(TyApp(opr, ty),_)) E B A k = TV opr E B A (fn q => TV ty E B q k)
+        | TV (PT(TyUniv(v,ty),_)) E B A k   = TV ty E (insert v B) A k
+        | TV (PT(TyAbst(v,ty),_)) E B A k   = TV ty E (insert v B) A k
+        | TV (PT(TyKindConstr{Ty,Kind},_)) E B A k = TV Ty E B A k
+        | TV (PT(TyRankConstr{Ty,Rank},_)) E B A k = TV Ty E B A k
+        | TV (v as PT(UVar(ref(NONEU _ )),_)) E B A k =
+                 (case deref E v
+                   of (v as PT(UVar(ref(NONEU _ )),_)) => if mem v B then k A
+                                                          else k (insert v A)
+                    | w => TV w E B A k)
+     (* | TV (PT(UVar(ref(NONEU _ )),_)) E B A k = k A *)
+        | TV (PT(UVar(ref(SOMEU ty)),_)) E B A k = TV ty E B A k
+      and TVl (ty::tys) E B A k = TV ty E B A (fn q => TVl tys E B q k)
+        | TVl _ E B A k = k A
+in
+fun deref_type_vars E ty = rev(TV ty E [] [] Lib.I)
+fun deref_type_varsl E L = rev(TVl L E [] [] Lib.I)
+end;
+
 
 fun unsafe_bind f r value =
   if r ref_equiv value
@@ -1320,8 +1361,8 @@ fun unsafe_bind f r value =
 fun gen_unify (kind_unify   :prekind -> prekind -> ('a -> 'a * unit option))
               (rank_unify   :prerank -> prerank -> ('a -> 'a * unit option))
               (rank_unify_le:prerank -> prerank -> ('a -> 'a * unit option))
-              bind c1 c2 (ty1 as PT(t1,locn1)) (ty2 as PT(t2,locn2)) e = let
-  val gen_unify = gen_unify kind_unify rank_unify rank_unify_le bind
+              bind tyvars c1 c2 (ty1 as PT(t1,locn1)) (ty2 as PT(t2,locn2)) e = let
+  val gen_unify = gen_unify kind_unify rank_unify rank_unify_le bind tyvars
 (*
   val ty1s = pretype_to_string ty1
   val ty2s = pretype_to_string ty2
@@ -1381,6 +1422,7 @@ fun gen_unify (kind_unify   :prekind -> prekind -> ('a -> 'a * unit option))
         let val theta = map (fn (tv1,tv2) => mk_vartype tv1 |-> mk_vartype tv2) (zip c1 c2)
         in type_subst theta
         end
+  fun subset s1 s2 = all (fn v => op_mem eq v s2) s1
   fun mk_vs c1 c2 args = map (shift_context c1 c2) args
   fun beta_conv_head (ty as PT(TyApp(ty1,ty2),locn)) =
          if is_abs_type ty1 then beta_conv_ty ty
@@ -1420,10 +1462,14 @@ in
        else
        let val (opr1,args1) = strip_app_type ty1
            val (opr2,args2) = strip_app_type ty2
+           val uvs1 = filter is_uvar_type (tyvars e ty1)
+           val uvs2 = filter is_uvar_type (tyvars e ty2)
            val ho_1 = has_var_type opr1 andalso is_uvar_type(the_var_type opr1)
                                         andalso all has_var_type args1
+                                        andalso subset uvs2 uvs1   (* ??? *)
            val ho_2 = has_var_type opr2 andalso is_uvar_type(the_var_type opr2)
                                         andalso all has_var_type args2
+                                        andalso subset uvs1 uvs2   (* ??? *)
        in if is_abs_type opr1 then
             gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
           else if is_abs_type opr2 then
@@ -1450,10 +1496,14 @@ in
            gen_unify c1 c2 (beta_conv_head ty1) ty2
        else
        let val (opr1,args1) = strip_app_type ty1
+           val uvs1 = filter is_uvar_type (tyvars e ty1)
+           val uvs2 = filter is_uvar_type (tyvars e ty2)
        in if is_abs_type opr1 then
             gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
           else if has_var_type opr1 andalso is_uvar_type(the_var_type opr1)
-                                    andalso all has_var_type args1 then
+                                    andalso all has_var_type args1
+                                    andalso subset uvs2 uvs1
+          then
             (* Higher order unification; shift args to other side by abstraction. *)
             let val vs = mk_vs c1 c2 args1
              in gen_unify c1 c2 opr1 (list_mk_abs_type(vs,ty2))
@@ -1465,10 +1515,14 @@ in
             gen_unify c1 c2 ty1 (beta_conv_head ty2)
        else
        let val (opr2,args2) = strip_app_type ty2
+           val uvs1 = filter is_uvar_type (tyvars e ty1)
+           val uvs2 = filter is_uvar_type (tyvars e ty2)
        in if is_abs_type opr2 then
             gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
           else if has_var_type opr2 andalso is_uvar_type(the_var_type opr2)
-                                    andalso all has_var_type args2 then
+                                    andalso all has_var_type args2
+                                    andalso subset uvs1 uvs2
+          then
             (* Higher order unification; shift args to other side by abstraction. *)
             let val vs = mk_vs c2 c1 args2
              in gen_unify c1 c2 (list_mk_abs_type(vs,ty1)) opr2
@@ -1494,6 +1548,8 @@ val empty_env = ([]:(prekind option ref * prekind option) list,
                  []:(oprerank option ref * oprerank option) list,
                  []:(uvartype ref * uvartype) list)
 
+fun etype_vars e = type_vars
+
 fun unify t1 t2 =
   let val t1' = deep_beta_conv_ty t1
       and t2' = deep_beta_conv_ty t2
@@ -1506,7 +1562,7 @@ fun unify t1 t2 =
                    ^ "\n   vs. " ^ ty2s ^ "\n(beta) " ^ ty2s' ^ "\n")
          end
   in
-  case (gen_unify kind_unify rank_unify rank_unify_le unsafe_bind [] [] t1' t2' empty_env)
+  case (gen_unify kind_unify rank_unify rank_unify_le unsafe_bind etype_vars [] [] t1' t2' empty_env)
    of (bindings, SOME ()) => ()
     | (_, NONE) => raise TCERR "unify" "unify failed"
                                     (* ("unify failed: " ^ pretype_to_string t1
@@ -1515,7 +1571,7 @@ fun unify t1 t2 =
 
 fun can_unify t1 t2 = let
   val ((kind_bindings,rank_bindings,type_bindings), result) =
-        gen_unify kind_unify rank_unify rank_unify_le unsafe_bind [] [] t1 t2 empty_env
+        gen_unify kind_unify rank_unify rank_unify_le unsafe_bind etype_vars [] [] t1 t2 empty_env
   val _ = app (fn (r, oldvalue) => r := oldvalue) kind_bindings
   val _ = app (fn (r, oldvalue) => r := oldvalue) rank_bindings
   val _ = app (fn (r, oldvalue) => r := oldvalue) type_bindings
@@ -1531,7 +1587,7 @@ local
               let in
                 case Lib.assoc1 r' tenv
                  of NONE => false
-                  | SOME (_, v) => (r ref_equiv v) env
+                  | SOME (_, v) => (r ref_equiv (THEU v)) env
               end
          | UVar (r' as ref (SOMEU t)) => (* r = r' orelse *) (r ref_equiv t) env
            (* equality test unnecessary since r must point to a UVar(NONEU _) *)
@@ -1544,7 +1600,7 @@ local
               let in
                 case Lib.assoc1 r' tenv
                  of NONE => false
-                  | SOME (_, v) => (r ref_occurs_in v) env
+                  | SOME (_, v) => (r ref_occurs_in (THEU v)) env
               end
           | UVar (r' as ref (SOMEU t)) => (* r = r' orelse *) (r ref_occurs_in t) env
            (* equality test unnecessary since r must point to a UVar(NONEU _) *)
@@ -1576,13 +1632,13 @@ local
 in
 fun safe_bind unify r value (env as (kenv,renv,tenv)) =
   case Lib.assoc1 r tenv
-   of SOME (_, v) => unify v value env
+   of SOME (_, v) => unify (THEU v) value env
     | NONE =>
         if (r ref_equiv value) env then ok env else
         if (r ref_occurs_in value) env then fail env
-        else ((kenv,renv,(r,value)::tenv), SOME ())
+        else ((kenv,renv,(r, SOMEU value)::tenv), SOME ())
 
-fun safe_unify t1 t2 = gen_unify kind_unify rank_unify rank_unify_le safe_bind [] [] t1 t2
+fun safe_unify t1 t2 = gen_unify kind_unify rank_unify rank_unify_le safe_bind deref_type_vars [] [] t1 t2
 end
 
 
