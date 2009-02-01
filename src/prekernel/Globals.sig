@@ -36,4 +36,5 @@ sig
 
   val hol_clock               : Timer.cpu_timer
   val emitMLDir               : string ref
+  val emitCAMLDir               : string ref
 end

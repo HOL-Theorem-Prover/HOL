@@ -390,9 +390,6 @@ val _ = BasicProvers.export_rewrites
 (* Need to install the constructors for options into the const map.          *)
 (*---------------------------------------------------------------------------*)
 
-val _ = ConstMapML.insert_cons(Term.prim_mk_const{Name="SOME",Thy="option"});
-val _ = ConstMapML.insert_cons(Term.prim_mk_const{Name="NONE",Thy="option"});
-
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME (fn ppstrm =>
@@ -403,25 +400,5 @@ val _ = adjoin_to_theory
      S "val _ = ConstMapML.insert_cons(Term.prim_mk_const{Name=\"NONE\",Thy=\"option\"});";
      NL(); NL()
   end)};
-
-(*---------------------------------------------------------------------------*)
-(* Export ML versions of option functions                                    *)
-(*---------------------------------------------------------------------------*)
-
-val THE_NONE = Q.prove
-(`THE NONE = FAIL THE ^(mk_var("applied to NONE",bool)) NONE`,
-  REWRITE_TAC [combinTheory.FAIL_THM]);
-
-val _ =
- let open EmitML combinSyntax
- in emitML (!Globals.emitMLDir)
-      ("option",
-        MLSIG "datatype option = datatype Option.option" ::
-        MLSTRUCT "datatype option = datatype Option.option"
-        ::
-        map DEFN
-         [OPTION_MAP_DEF, IS_SOME_DEF, IS_NONE_DEF,
-          CONJ THE_NONE THE_DEF, OPTION_JOIN_DEF])
- end;
 
 val _ = export_theory();

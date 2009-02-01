@@ -107,3 +107,4 @@ src/path
 src/Boolify/src
 src/float
 !!examples/miller/miller
+src/emitScript

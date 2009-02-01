@@ -241,15 +241,6 @@ val MAP2 =
       }
   end
 
-val MAP2_FAIL = Q.prove
-(`(!f h t.
-   (MAP2 (f:'a->'b->'c) [] (h::t) =
-    FAIL MAP2 ^(mk_var("unequal length lists",bool)) f [] (h::t))) /\
-  !f h t.
-    (MAP2 (f:'a->'b->'c) (h::t) [] =
-     FAIL MAP2 ^(mk_var("unequal length lists",bool)) f (h::t) [])`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
-
 (* ---------------------------------------------------------------------*)
 (* Proofs of some theorems about lists.					*)
 (* ---------------------------------------------------------------------*)
@@ -786,14 +777,6 @@ val ZIP =
         }
     end;
 
-val ZIP_FAIL = Q.prove
-(`(!(h:'b) t. ZIP ([]:'a list,h::t) =
-         FAIL ZIP ^(mk_var("unequal length lists",bool)) ([],h::t)) /\
-  (!(h:'a) t. ZIP (h::t,[]:'b list) =
-              FAIL ZIP ^(mk_var("unequal length lists",bool)) (h::t,[]))`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
-
-
 val UNZIP = new_recursive_definition {
   name = "UNZIP",   rec_axiom = list_Axiom,
   def  = ``(UNZIP [] = ([], [])) /\
@@ -953,18 +936,10 @@ val LAST_DEF = new_recursive_definition {
   rec_axiom = list_Axiom,
   def = ``LAST (h::t) = if t = [] then h else LAST t``};
 
-val LAST_NIL = Q.prove
-(`LAST [] = FAIL LAST ^(mk_var("empty list",bool))  []`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
-
 val FRONT_DEF = new_recursive_definition {
   name = "FRONT_DEF",
   rec_axiom = list_Axiom,
   def = ``FRONT (h::t) = if t = [] then [] else h :: FRONT t``};
-
-val FRONT_NIL = Q.prove
-(`FRONT [] = FAIL FRONT ^(mk_var("empty list",bool))  []`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
 
 val LAST_CONS = store_thm(
   "LAST_CONS",
@@ -1382,16 +1357,9 @@ fun dest_list M =
                else raise ERR "dest_list" "not terminated with nil"
      | SOME(h,t) => h::dest_list t
 
-val _ = EmitML.dest_cons_hook := dest_cons;
-val _ = EmitML.dest_list_hook := dest_list;
-val _ = EmitML.is_list_hook   := can dest_list;
-
 (*---------------------------------------------------------------------------*)
 (* Need to install the constructors for lists into the const map.          *)
 (*---------------------------------------------------------------------------*)
-
-val _ = ConstMapML.insert(Term.prim_mk_const{Name="CONS",Thy="list"});
-val _ = ConstMapML.insert(Term.prim_mk_const{Name="NIL",Thy="list"});
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
@@ -1403,41 +1371,6 @@ val _ = adjoin_to_theory
      S "val _ = ConstMapML.insert (Term.prim_mk_const{Name=\"NIL\",Thy=\"list\"});";
      NL(); NL()
   end)};
-
-
-(*---------------------------------------------------------------------------*)
-(* Export ML versions of list functions                                      *)
-(*---------------------------------------------------------------------------*)
-
-val LENGTH_THM = REWRITE_RULE [arithmeticTheory.ADD1] LENGTH;
-val HD_NIL = Q.prove(`HD [] = FAIL HD ^(mk_var("Empty list",bool)) []`,
-                     REWRITE_TAC [combinTheory.FAIL_THM]);
-val TL_NIL = Q.prove(`TL [] = FAIL TL ^(mk_var("Empty list",bool)) []`,
-                     REWRITE_TAC [combinTheory.FAIL_THM]);
-val MAP2_THM = let val [a,b] = CONJUNCTS MAP2
-                   val [c,d] = CONJUNCTS MAP2_FAIL
-               in LIST_CONJ [a,c,d,b]
-               end;
-val ZIP_THM = let val [a,b] = CONJUNCTS ZIP
-                  val [c,d] = CONJUNCTS ZIP_FAIL
-               in LIST_CONJ [a,c,d,b]
-               end;
-
-val _ =
- let open EmitML
- in emitML (!Globals.emitMLDir)
-      ("list",
-         MLSIG "type num = numML.num"
-         :: OPEN ["num"]
-         ::
-         map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
-             [NULL_DEF, CONJ HD_NIL HD, CONJ TL_NIL TL, APPEND, FLAT, MAP,
-              MEM, FILTER, FOLDR, FOLDL, EVERY_DEF,
-              EXISTS_DEF, MAP2_THM, ZIP_THM, UNZIP_THM, REVERSE_DEF,
-              CONJ LAST_NIL LAST_CONS, CONJ FRONT_NIL FRONT_CONS,
-              ALL_DISTINCT, EL_compute, LENGTH_THM, LEN_DEF, REV_DEF,
-              list_size_def])
- end;
 
 val _ = export_theory();
 

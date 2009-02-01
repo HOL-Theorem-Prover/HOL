@@ -182,5 +182,6 @@ val hol_clock = Timer.startCPUTimer()
 (*---------------------------------------------------------------------------*)
 
 val emitMLDir = ref (Path.concat(HOLDIR,"src/theoryML/"));
+val emitCAMLDir = ref (Path.concat(HOLDIR,"src/theoryOCaml/"));
 
 end (* Globals *)
