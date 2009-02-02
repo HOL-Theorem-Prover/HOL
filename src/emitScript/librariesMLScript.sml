@@ -1,13 +1,13 @@
 (*
-use "librariesScript.sml";
-*)
+use "librariesMLScript.sml";
 
 val _ = List.app load ["stringTheory"];
+*)
 
 open HolKernel boolLib bossLib Parse;
 open EmitML;
 
-val _ = new_theory "libraries";
+val _ = new_theory "librariesML";
 
 fun eSML d l = emitML (!Globals.emitMLDir) (d, l);
 fun eOCaml d l = emitCAML (!Globals.emitCAMLDir) (d, l);
