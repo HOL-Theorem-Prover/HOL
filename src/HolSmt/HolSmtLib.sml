@@ -19,6 +19,10 @@ structure HolSmtLib :> HolSmtLib = struct
   (* single entry point into HolSmtLib *)
   fun GENERIC_SMT solver tm =
     let
+      val _ = if Term.type_of tm <> Type.bool then
+          Feedback.Raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT"
+            "term supplied is not of type bool")
+        else ()
       fun write_strings_to_file path strings =
         let val outstream = TextIO.openOut path
         in
