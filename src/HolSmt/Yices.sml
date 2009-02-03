@@ -2,19 +2,6 @@
 
 structure Yices = struct
 
-  (* this should really be in Lib *)
-  (* foldl_map : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list *)
-  fun foldl_map _ (acc, []) = (acc, [])
-    | foldl_map f (acc, x :: xs) =
-      let val (acc', y) = f (acc, x)
-          val (acc'', ys) = foldl_map f (acc', xs)
-      in (acc'', y :: ys) end
-
-  (* this should really be in Lib *)
-  (* separate s [x1, x2, ..., xn] ===> [x1, s, x2, s, ..., s, xn] *)
-  fun separate s (x :: (xs as _ :: _)) = x :: s :: separate s xs
-    | separate _ xs = xs
-
   (* computes the eta-long form of a term (i.e., every variable/constant is
      applied to sufficiently many arguments, as determined by its type),
      recursively descending into subterms *)
@@ -56,15 +43,15 @@ structure Yices = struct
         end
       else if boolSyntax.is_conj tm then
         let val ts = boolSyntax.strip_conj tm
-            val (acc', sss) = foldl_map translate (acc, ts)
+            val (acc', sss) = Lib.foldl_map translate (acc, ts)
         in
-          (acc', "(and " :: separate " " (List.concat sss) @ [")"])
+          (acc', "(and " :: Lib.separate " " (List.concat sss) @ [")"])
         end
       else if boolSyntax.is_disj tm then
         let val ts = boolSyntax.strip_disj tm
-            val (acc', sss) = foldl_map translate (acc, ts)
+            val (acc', sss) = Lib.foldl_map translate (acc, ts)
         in
-          (acc', "(or " :: separate " " (List.concat sss) @ [")"])
+          (acc', "(or " :: Lib.separate " " (List.concat sss) @ [")"])
         end
       else if boolSyntax.is_neg tm then
         let val t = boolSyntax.dest_neg tm
