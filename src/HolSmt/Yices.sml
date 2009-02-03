@@ -109,16 +109,16 @@ structure Yices = struct
                   end
     in
       if Type.is_type ty then
-        let val (tyop, tyargs) = Type.dest_type ty
+        let val {Thy, Tyop, Args} = Type.dest_thy_type ty
         in
-          if tyop = "bool" then
+          if Thy = "min" andalso Tyop = "bool" then
             (acc, "bool")
-          else if tyop = "fun" then
+          else if Thy = "min" andalso Tyop = "fun" then
             (* Yices considers "-> X Y Z" and "-> X (-> Y Z)" different types.
                We use the latter only. *)
             (* 'fun' is expected to have arity 2 *)
-            let val ty1 = hd tyargs
-                val ty2 = hd (tl tyargs)
+            let val ty1 = hd Args
+                val ty2 = hd (tl Args)
                 val (a1, s1) = translate_type (acc, ty1)
                 val (a2, s2) = translate_type (a1, ty2)
             in
