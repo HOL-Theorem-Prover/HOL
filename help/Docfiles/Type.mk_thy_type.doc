@@ -2,7 +2,7 @@
 
 \BLTYPE
 mk_thy_type 
-       : {Thy:string, Name:string, Args:hol_type list} -> hol_type
+       : {Thy:string, Tyop:string, Args:hol_type list} -> hol_type
 \ELTYPE
 
 \SYNOPSIS
