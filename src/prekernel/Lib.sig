@@ -45,6 +45,8 @@ sig
   val rev_itlist    : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val rev_itlist2   : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
   val end_itlist    : ('a -> 'a -> 'a) -> 'a list -> 'a
+  val foldl_map     : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
+  val separate      : 'a -> 'a list -> 'a list
   val zip           : 'a list -> 'b list -> ('a * 'b) list
   val combine       : 'a list * 'b list -> ('a * 'b) list
   val unzip         : ('a * 'b) list -> 'a list * 'b list

@@ -1,5 +1,5 @@
 (* ===================================================================== *)
-(* FILE          : lib.sml                                               *)
+(* FILE          : Lib.sml                                               *)
 (* DESCRIPTION   : library of useful SML functions.                      *)
 (*                                                                       *)
 (* AUTHOR        : (c) Konrad Slind, University of Calgary               *)
@@ -184,6 +184,16 @@ fun end_itlist f =
          | endit (h::t) = f h (endit t)
    in endit
    end;
+
+fun foldl_map _ (acc, []) = (acc, [])
+  | foldl_map f (acc, x :: xs) =
+    let val (acc', y) = f (acc, x)
+        val (acc'', ys) = foldl_map f (acc', xs)
+    in (acc'', y :: ys) end
+
+(* separate s [x1, x2, ..., xn] ===> [x1, s, x2, s, ..., s, xn] *)
+fun separate s (x :: (xs as _ :: _)) = x :: s :: separate s xs
+  | separate _ xs = xs
 
 fun gather P L = itlist (fn x => fn y => if P x then x::y else y) L []
 
