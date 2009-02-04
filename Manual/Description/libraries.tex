@@ -166,7 +166,7 @@ In the following, we explore some of the capabilities of the
 The parser turns strings into terms.  It does this in the following
 series of phases, all of which are influenced by the provided
 grammar.  Usually this grammar is the default global grammar, but
-users can arrange to use different grammars if they desire. 
+users can arrange to use different grammars if they desire.
 \begin{description}
 \item[Concrete Syntax:] Features such as infixes, binders and mix-fix
   forms are translated away, creating an intermediate, ``abstract
@@ -204,7 +204,7 @@ users can arrange to use different grammars if they desire.
 The standard grammar includes  a rule that associates the special
 mix-fix form for if-then-else expressions with the underlying ``name''
 \holtxt{COND}.  It is \holtxt{COND} that will eventually be resolved
-as the constant \holtxt{bool\$COND}. 
+as the constant \holtxt{bool\$COND}.
 
 If the ``quotation'' syntax with a bare dollar is used, then this phase
 of the parser will not treat strings as part of a special form.  For
@@ -212,7 +212,7 @@ example, \holtxt{``\$if~P``} turns into the \ml{Absyn} form
 \begin{verbatim}
    APP(IDENT "if", IDENT "P")
 \end{verbatim}
-\emph{not} a form involving \holtxt{COND}. 
+\emph{not} a form involving \holtxt{COND}.
 
 More typically, one often writes something like \holtxt{``\$+~x``},
 which generates the abstract syntax
@@ -223,7 +223,7 @@ Without the dollar-sign, the concrete syntax parser would complain
 about the fact that the infix plus did not have a left-hand argument.
 When the successful result of parsing is handed to the next phase, the
 fact that there is a constant called \holtxt{+} will give the input
-its desired meaning. 
+its desired meaning.
 \item[Name Resolution:] The bare \ml{IDENT} forms in the \ml{Absyn}
   value are resolved as free variables, bound names or constants.
   This process results in a value of the \ml{Preterm} data type, which
@@ -246,7 +246,7 @@ its desired meaning.
 \end{verbatim}
   and have the string \holtxt{SUC} be treated as a number in the
   context of the given abstraction, rather than as the successor
-  constant. 
+  constant.
 
   The ``overload map'' is a map from strings to lists of terms.  The
   terms are usually just constants, but can be arbitrary terms (giving
@@ -262,6 +262,7 @@ its desired meaning.
   that because each constant is from a different theory and thus a
   different namespace, they could all have the name \holtxt{+}.)
 
+  \index{type inference!in HOL parser@in \HOL{} parser}
   When name resolution determines that an identifier should be treated
   as a constant, it is mapped to a preterm form that lists all of the
   possibilities for that string.  Subsequently, because the terms in
@@ -277,19 +278,22 @@ its desired meaning.
   a lambda abstraction, then as many $\beta$-reductions are done as
   possible, using any arguments that the term has been applied to.  It
   is in this way that a syntactic macro can process arguments.
-\item[Type Inference:] All terms in the \HOL{} logic are well-typed.
-  The kernel enforces this through the API for the \ml{term} data
-  type.  (In particular, the \ml{mk\_comb} function %
+\item[Type Inference:] %
+  \index{type inference!in HOL parser@in \HOL{} parser}%
+  All terms in the \HOL{} logic are well-typed.  The kernel enforces
+  this through the API for the \ml{term} data type.  (In particular,
+  the \ml{mk\_comb} function %
   \index{mk_comb@\ml{mk\_comb}}%
   checks that the type of the first argument is a function whose
   domain is equal to the type of the second argument.)  The parser's
   job is to turn user-supplied strings into terms.  For convenience,
-  it is vital 
+  it is vital
 \end{description}
 
 \subsubsection{Type constraints}
 \label{sec:parseprint-type-constraints}
 
+\index{type constraint!in HOL parser@in \HOL{} parser}
 A term can be constrained to be of a certain type.  For example,
 \holtxt{X:bool} constrains the variable \holtxt{X} to have type
 \holtxt{bool}. An attempt to constrain a
@@ -338,6 +342,7 @@ special parsing behaviour from lexemes:
 
 \subsubsection{Type inference}
 
+\index{type inference!in HOL parser@in \HOL{} parser|(}
 Consider the term \holtxt{x = T}: it (and all of its subterms)
 has a type in the \HOL{} logic. Now, \holtxt{T} has type \holtxt{bool}. This
 means that the constant \holtxt{=} has type \holtxt{xty -> bool -> bool},
@@ -363,6 +368,7 @@ assign type variables for you, the global variable
 \ml{guessing\_tyvars} can be set to \ml{false}, in which case the
 existence of unassigned type variables at the end of type inference
 will raise an exception.
+\index{type inference!in HOL parser@in \HOL{} parser|)}
 
 
 \subsubsection{Overloading}
