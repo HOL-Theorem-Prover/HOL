@@ -34,7 +34,6 @@ src/compute/src
 src/HolSat/sat_solvers/minisat
 src/HolSat/sat_solvers/zc2hs
 src/HolSat
-src/HolSmt
 src/taut
 src/marker
 src/q
@@ -91,6 +90,7 @@ src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
 src/real
+src/HolSmt
 !examples/misc
 src/prob
 !examples/muddy/muddyC
