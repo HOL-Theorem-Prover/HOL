@@ -33,7 +33,7 @@ follow provide only an overview of the contents of each theory.  For a
 complete list of all the axioms, definitions and theorems in \HOL, see
 \REFERENCE.
 
-\section{The theory {\tt min}}\label{minTheory}
+\section{The Theory {\tt min}}\label{minTheory}
 
 The starting theory of \HOL{} is the theory \ml{min}.
 \index{min, the HOL theory@\ml{min}, the \HOL{} theory|(}
@@ -1503,7 +1503,7 @@ the user to quote the primitive recursion axiom. It may, however,
 require termination proofs to be performed; fortunately, these need
 not be done for primitive recursions.
 
-\subsubsection{Dependent Choice and wellfoundedness}
+\subsubsection{Dependent choice and wellfoundedness}
 \label{prim-rec-conseq}
 
 The primitive recursion theorem is useful beyond its main purpose of
@@ -2100,7 +2100,7 @@ Cartesian product approach is that term equivalence corresponds directly with
 word equivalence -- side conditions about word sizes are not needed because the
 length of words is determined by the representing type.
 
-\subsubsection{Finite Cartesian Products}
+\subsubsection{Finite Cartesian products}
 
 The \HOL{} theory \theoryimp{fcp} introduces a new infix type operator
 \holtxt{**} for constructing finite Cartesian products.\footnote{The theory of
@@ -2157,7 +2157,7 @@ then each bit can be accessed using the indexing map.
 
 Numeral type names are supported, so one can freely work with indexing sets of any size \eg{} the type \ty{32} has thirty-two elements.
 
-\subsubsection{Bit Theory}
+\subsubsection{Bit theory}
 
 The theory \theoryimp{bit} defines some bit operations over the natural numbers
 e.g. \holtxt{BITS}, \holtxt{SLICE}, \holtxt{BIT}, \holtxt{BITWISE} and
@@ -2176,7 +2176,7 @@ This theory is used in the development of the word theory and it also provides
 a mechanism for the efficient evaluation of some word operations via the theory
 \theoryimp{numeral\_bit}.
 
-\subsubsection{Words Theory}
+\subsubsection{Words theory}
 
 The theory \theoryimp{words} introduces a selection of polymorphic constants and operations -- these can be type instantiated to any word size.  For example, word addition
 has type:
@@ -2421,7 +2421,7 @@ Note that type annotation is used to designate word sizes.  Any number
 base can be used in parsing a literal, but the reference
 \ml{allow\_octal\_input} must be true in order to parse octal numbers.
 
-\subsubsection{Word Constants and Operations}
+\subsubsection{Word constants and operations}
 
 All of the operations outlined in the previous section are listed in
 Table~\ref{tab:word:operations}.  Many of the operation names are overloaded
