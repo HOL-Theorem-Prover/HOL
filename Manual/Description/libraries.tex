@@ -27,17 +27,17 @@ procedures, such as \ml{simpLib}, while others provide theories and
 proof procedures, such as \ml{intLib}. Libraries can include other
 libraries.
 
-In the \HOL{} system, libraries are represented by \ML{} structures
-named following the convention that library \emph{x} will be found in
-the \ML{} structure \ml{xLib}. Loading this structure should load all
-the relevant sub-components of the library and set whatever system
-parameters are suitable for use of the library.
+In the \HOL{} system, libraries are typically represented by \ML{}
+structures named following the convention that library \emph{x} will
+be found in the \ML{} structure \ml{xLib}. Loading this structure
+should load all the relevant sub-components of the library and set
+whatever system parameters are suitable for use of the library.
 
 When the \HOL{} system is invoked in its normal configuration, several
 useful libraries are automatically loaded. The most basic \HOL{}
-library is \ml{boolLib}, which supports the definitions of
-the \HOL{} logic, found in the theory \theoryimp{bool}, and provides a
-useful suite of definition and reasoning tools.
+library is \ml{boolLib}, which supports the definitions of the \HOL{}
+logic, found in the theory \theoryimp{bool}, and provides a useful
+suite of definition and reasoning tools.
 
 Another pervasively used library is found in the structure \ml{Parse}
 (the reader can see that we are not strictly faithful to our
@@ -84,7 +84,7 @@ current session, while permanent changes will be in force in all
 descendant theories.  Functions making temporary alterations are
 signified by a leading \ml{temp\_} in their names.
 
-\subsection{The type parser}
+\subsection{Parsing types}
 
 The language of types is a simple one.  An abstract grammar for the
 language is presented in Figure~\ref{fig:abstract-type-grammar}.  The
@@ -149,7 +149,7 @@ When types come to be printed, the expansion of abbreviations done by
 the parser is reversed.  For more information see the documentation of
 \ml{type\_abbrev} in the \REFERENCE.
 
-\subsection{The term parser}
+\subsection{Parsing terms}
 
 The term parser provides a grammar-based infrastructure for supporting
 concrete syntax for formalizations. Usually, the \HOL{} grammar gets
@@ -161,7 +161,134 @@ In the following, we explore some of the capabilities of the
 \HOL{} term parser.
 
 
+\subsubsection{Parser architecture}
+
+The parser turns strings into terms.  It does this in the following
+series of phases, all of which are influenced by the provided
+grammar.  Usually this grammar is the default global grammar, but
+users can arrange to use different grammars if they desire. 
+\begin{description}
+\item[Concrete Syntax:] Features such as infixes, binders and mix-fix
+  forms are translated away, creating an intermediate, ``abstract
+  syntax'' form (ML type \ml{Absyn}).  The possible fixities are
+  discussed in Section~\ref{sec:parseprint:fixities} below.  Concrete
+  syntax forms are added to the grammar with functions such as
+  \ml{add\_rule} and \ml{set\_fixity} (for which, see the \REFERENCE).
+  The action of this phase of parsing is embodied in the function
+  \ml{Absyn}.
+
+  The \ml{Absyn} data type is constructed using constructors \ml{AQ}
+  (an antiquote, see Section~\ref{sec:quotation-antiquotation}); %
+  \index{antiquotation, in HOL logic terms@antiquotation, in \HOL{}
+    logic terms}%
+  \ml{IDENT} (an identifier); \ml{QIDENT} (a qualified identifier,
+  given as \holtxt{thy\$ident}); \ml{APP} (an application of one form
+  to another); \ml{LAM} (an abstraction of a variable over a body),
+  and \ml{TYPED} (a form accompanied by a type constraint\footnote{The
+    types in \ml{Absyn} constraints are not full-blown types, but
+    values from another intermediate type, \ml{Pretype}.}, see
+  Section~\ref{sec:parseprint-type-constraints}).  At this stage of
+  the translation, there is no distinction made between constants and
+  variables: though \ml{QIDENT} forms must be constants, users are
+  also able to refer to constants by giving their bare names.
+
+  It is possible for names that occur in the \ml{Absyn} value to be
+  different from any of the tokens that appeared in the original
+  input.  For example, the input
+\begin{verbatim}
+   ``if P then Q else R``
+\end{verbatim} will turn into
+\begin{verbatim}
+   APP (APP (APP (IDENT "COND", IDENT "P"), IDENT "Q"), IDENT "R")
+\end{verbatim}
+The standard grammar includes  a rule that associates the special
+mix-fix form for if-then-else expressions with the underlying ``name''
+\holtxt{COND}.  It is \holtxt{COND} that will eventually be resolved
+as the constant \holtxt{bool\$COND}. 
+
+If the ``quotation'' syntax with a bare dollar is used, then this phase
+of the parser will not treat strings as part of a special form.  For
+example, \holtxt{``\$if~P``} turns into the \ml{Absyn} form
+\begin{verbatim}
+   APP(IDENT "if", IDENT "P")
+\end{verbatim}
+\emph{not} a form involving \holtxt{COND}. 
+
+More typically, one often writes something like \holtxt{``\$+~x``},
+which generates the abstract syntax
+\begin{verbatim}
+   APP(IDENT "+", IDENT "x")
+\end{verbatim}
+Without the dollar-sign, the concrete syntax parser would complain
+about the fact that the infix plus did not have a left-hand argument.
+When the successful result of parsing is handed to the next phase, the
+fact that there is a constant called \holtxt{+} will give the input
+its desired meaning. 
+\item[Name Resolution:] The bare \ml{IDENT} forms in the \ml{Absyn}
+  value are resolved as free variables, bound names or constants.
+  This process results in a value of the \ml{Preterm} data type, which
+  has similar constructors to those in \ml{Absyn} except with forms
+  for constants. %
+  \index{parsing, of HOL logic@parsing, of \HOL{} logic!preterms}%
+  A string can be converted straight to a \ml{Preterm} by way of the
+  \ml{Preterm} function.
+
+  A bound name is the first argument to a \ml{LAM} constructor, an
+  identifier occurring on the left-hand side of a case-expression's
+  arrow, or an identifier occurring within a set comprehension's
+  pattern. A constant is a string that is present in the domain of the
+  grammar's ``overload map''.  Free variables are all other identifiers.
+  Free variables of the same name in a term will all have the same
+  type.  Identifiers are tested to see if they are bound, and then to
+  see if they are constants.  Thus it is possible to write
+\begin{verbatim}
+   \SUC. SUC + 3
+\end{verbatim}
+  and have the string \holtxt{SUC} be treated as a number in the
+  context of the given abstraction, rather than as the successor
+  constant. 
+
+  The ``overload map'' is a map from strings to lists of terms.  The
+  terms are usually just constants, but can be arbitrary terms (giving
+  rise to ``syntactic macros'' or ``patterns'').\index{syntactic macros}
+  This facility is used to allow a name such as \holtxt{+} to map to
+  different addition constants in theories such as
+  \theoryimp{arithmetic}, \theoryimp{integer}, and
+  \theoryimp{words}. In this way the ``real'' names of the constants can
+  be divorced from what the user types.  In the case of addition, the
+  natural number plus actually is called \holtxt{+} (strictly,
+  \holtxt{arithmetic\$+}); but over the integers, it is
+  \holtxt{int\_add}, and over words it is \holtxt{word\_add}.  (Note
+  that because each constant is from a different theory and thus a
+  different namespace, they could all have the name \holtxt{+}.)
+
+  When name resolution determines that an identifier should be treated
+  as a constant, it is mapped to a preterm form that lists all of the
+  possibilities for that string.  Subsequently, because the terms in
+  the range of the overload map will typically have different types,
+  type inference will often eliminate possibilities from the list.  If
+  multiple possibilities remain after type inference has been
+  performed, then a warning will be printed, and one of the
+  possibilities will be chosen.  (Users can control which terms are
+  picked when this situation arises.)
+
+  When a term in the overload map is chosen as the best option, it is
+  substituted into the term at approrpriate position.  If the term is
+  a lambda abstraction, then as many $\beta$-reductions are done as
+  possible, using any arguments that the term has been applied to.  It
+  is in this way that a syntactic macro can process arguments.
+\item[Type Inference:] All terms in the \HOL{} logic are well-typed.
+  The kernel enforces this through the API for the \ml{term} data
+  type.  (In particular, the \ml{mk\_comb} function %
+  \index{mk_comb@\ml{mk\_comb}}%
+  checks that the type of the first argument is a function whose
+  domain is equal to the type of the second argument.)  The parser's
+  job is to turn user-supplied strings into terms.  For convenience,
+  it is vital 
+\end{description}
+
 \subsubsection{Type constraints}
+\label{sec:parseprint-type-constraints}
 
 A term can be constrained to be of a certain type.  For example,
 \holtxt{X:bool} constrains the variable \holtxt{X} to have type
@@ -288,11 +415,11 @@ type \holtxt{:int}.
 
 Note that the symbol \holtxt{\~{}} stands for two different constants in
 the second quotation; its first occurrence is boolean negation, while
-the other two occurrences are the additive inverse operation for integers.
-For more information on how to set up and use overloading, consult
-\REFERENCE.
+the other two occurrences are the additive inverse operation for
+integers.
 
 \subsubsection{Fixities}
+\label{sec:parseprint:fixities}
 
 In order to provide some notational flexibility, constants come in
 various flavours or {\it fixities}: besides being an ordinary constant
@@ -615,7 +742,7 @@ print depth are printed as \holtxt{...}. For example:
 \end{session}
 \index{default print depth, for HOL logic@default print depth, for \HOL{} logic|)}
 
-\subsection{Quotations and Antiquotation}
+\subsection{Quotations and antiquotation}
 \label{sec:quotation-antiquotation}
 
 \index{quotation, in HOL logic@quotation, in \HOL{} logic!parser for}
