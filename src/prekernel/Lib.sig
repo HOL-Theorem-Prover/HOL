@@ -9,8 +9,6 @@ sig
   val pair          : 'a -> 'b -> 'a * 'b
   val cons          : 'a -> 'a list -> 'a list
   val ##            : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
-  val A             : ('a -> 'b) -> 'a -> 'b
-  val B             : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
   val C             : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
   val I             : 'a -> 'a
   val K             : 'a -> 'b -> 'a

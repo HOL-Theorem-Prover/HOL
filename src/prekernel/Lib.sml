@@ -25,8 +25,6 @@ fun curry f x y = f(x,y)
 fun uncurry f (x,y) = f x y
 infix 3 ##
 fun (f ## g) (x,y) = (f x, g y)
-fun A f x = f x
-fun B f g x = f (g x)
 fun C f x y = f y x
 fun I x = x
 fun K x y = x
