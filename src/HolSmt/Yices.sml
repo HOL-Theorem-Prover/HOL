@@ -99,8 +99,14 @@ structure Yices = struct
         end
       (* Yices 1.0.18 only supports linear arithmetic; we could check for
          linearity below (but Yices will check again anyway) *)
-      (* arithmetic operators: +, -, *, /, div, mod *)
+      (* arithmetic operators: SUC, +, -, *, /, DIV, MOD, ABS, MIN, MAX *)
       (* num *)
+      else if numSyntax.is_suc tm then
+        let val t = numSyntax.dest_suc tm
+            val (acc', s) = translate (acc, t)
+        in
+          (acc', "(+ 1 " :: s @ [")"])
+        end
       else if numSyntax.is_plus tm then
         let val (t1, t2) = numSyntax.dest_plus tm
             val (a1, s1) = translate (acc, t1)
@@ -113,7 +119,10 @@ structure Yices = struct
             val (a1, s1) = translate (acc, t1)
             val (a2, s2) = translate (a1, t2)
         in
-          (a2, "(- " :: s1 @ " " :: s2 @ [")"])
+          (* in HOL, 't1 < t2' implies 't1 - t2 = 0' for naturals; Yices
+             however would consider 't1 - t2' a negative integer *)
+          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") 0 (- " :: s1 @ " " :: s2 @
+            ["))"])
         end
       else if numSyntax.is_mult tm then
         let val (t1, t2) = numSyntax.dest_mult tm
@@ -122,19 +131,27 @@ structure Yices = struct
         in
           (a2, "(* " :: s1 @ " " :: s2 @ [")"])
         end
-      else if numSyntax.is_div tm then
-        let val (t1, t2) = numSyntax.dest_div tm
+      (* The following would be unsound, because 'x div 0' and 'x mod 0' are
+         unspecified in HOL, but treated very weirdly in Yices: Yices claims
+         that, e.g., 'x = 42 div 0' is unsatisfiable. Similar for div/mod on
+         integers and reals. *)
+      (*
+      else if numSyntax.is_div tm then ... "div" ...
+      else if numSyntax.is_mod tm then ... "mod" ...
+      *)
+      else if numSyntax.is_min tm then
+        let val (t1, t2) = numSyntax.dest_min tm
             val (a1, s1) = translate (acc, t1)
             val (a2, s2) = translate (a1, t2)
         in
-          (a2, "(div " :: s1 @ " " :: s2 @ [")"])
+          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") " :: s1 @ " " :: s2 @ [")"])
         end
-      else if numSyntax.is_mod tm then
-        let val (t1, t2) = numSyntax.dest_mod tm
+      else if numSyntax.is_max tm then
+        let val (t1, t2) = numSyntax.dest_max tm
             val (a1, s1) = translate (acc, t1)
             val (a2, s2) = translate (a1, t2)
         in
-          (a2, "(mod " :: s1 @ " " :: s2 @ [")"])
+          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") " :: s2 @ " " :: s1 @ [")"])
         end
       (* int *)
       else if intSyntax.is_negated tm then
@@ -164,19 +181,25 @@ structure Yices = struct
         in
           (a2, "(* " :: s1 @ " " :: s2 @ [")"])
         end
-      else if intSyntax.is_div tm then
-        let val (t1, t2) = intSyntax.dest_div tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
+      else if intSyntax.is_absval tm then
+        let val t = intSyntax.dest_absval tm
+            val (acc', s) = translate (acc, t)
         in
-          (a2, "(div " :: s1 @ " " :: s2 @ [")"])
+          (acc', "(ite (< 0 " :: s @ ") " :: s @ " (- 0 " :: s @ ["))"])
         end
-      else if intSyntax.is_mod tm then
-        let val (t1, t2) = intSyntax.dest_mod tm
+      else if intSyntax.is_min tm then
+        let val (t1, t2) = intSyntax.dest_min tm
             val (a1, s1) = translate (acc, t1)
             val (a2, s2) = translate (a1, t2)
         in
-          (a2, "(mod " :: s1 @ " " :: s2 @ [")"])
+          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") " :: s1 @ " " :: s2 @ [")"])
+        end
+      else if intSyntax.is_max tm then
+        let val (t1, t2) = intSyntax.dest_max tm
+            val (a1, s1) = translate (acc, t1)
+            val (a2, s2) = translate (a1, t2)
+        in
+          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") " :: s2 @ " " :: s1 @ [")"])
         end
       (* real *)
       else if realSyntax.is_negated tm then
@@ -199,8 +222,8 @@ structure Yices = struct
         in
           (a2, "(- " :: s1 @ " " :: s2 @ [")"])
         end
-      else if intSyntax.is_mult tm then
-        let val (t1, t2) = intSyntax.dest_mult tm
+      else if realSyntax.is_mult tm then
+        let val (t1, t2) = realSyntax.dest_mult tm
             val (a1, s1) = translate (acc, t1)
             val (a2, s2) = translate (a1, t2)
         in
@@ -211,8 +234,29 @@ structure Yices = struct
             val (a1, s1) = translate (acc, t1)
             val (a2, s2) = translate (a1, t2)
         in
-          (* note that Yices uses '/' for division on reals, not 'div' *)
+          (* note that Yices uses '/' for division on reals, not 'div'; Yices
+             will fail if 's2' is 0 *)
           (a2, "(/ " :: s1 @ " " :: s2 @ [")"])
+        end
+      else if realSyntax.is_absval tm then
+        let val t = realSyntax.dest_absval tm
+            val (acc', s) = translate (acc, t)
+        in
+          (acc', "(ite (< 0 " :: s @ ") " :: s @ " (- 0 " :: s @ ["))"])
+        end
+      else if realSyntax.is_min tm then
+        let val (t1, t2) = realSyntax.dest_min tm
+            val (a1, s1) = translate (acc, t1)
+            val (a2, s2) = translate (a1, t2)
+        in
+          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") " :: s1 @ " " :: s2 @ [")"])
+        end
+      else if realSyntax.is_max tm then
+        let val (t1, t2) = realSyntax.dest_max tm
+            val (a1, s1) = translate (acc, t1)
+            val (a2, s2) = translate (a1, t2)
+        in
+          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") " :: s2 @ " " :: s1 @ [")"])
         end
       (* arithmetic inequalities: <, <=, >, >= *)
       (* num *)
