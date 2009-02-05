@@ -119,11 +119,7 @@ fun map2 f L1 L2 =
    in mp2 L1 L2 []
    end;
 
-fun all P =
-   let fun every [] = true
-         | every (a::rst) = P a andalso every rst
-   in every
-   end;
+val all = List.all
 
 fun all2 P =
    let fun every2 [] [] = true
@@ -149,12 +145,7 @@ fun split_after n alist =
         end
    else raise ERR "split_after" "negative index";
 
-
-fun itlist f L base_value =
-   let fun itl [] = base_value
-         | itl (a::rst) = f a (itl rst)
-   in itl L
-   end;
+fun itlist f L base_value = List.foldr (uncurry f) base_value L
 
 fun itlist2 f L1 L2 base_value =
   let fun itl ([],[]) = base_value
@@ -163,11 +154,7 @@ fun itlist2 f L1 L2 base_value =
    in  itl (L1,L2)
    end;
 
-fun rev_itlist f =
-   let fun rev_it [] base = base
-         | rev_it (a::rst) base = rev_it rst (f a base)
-   in rev_it
-   end;
+fun rev_itlist f L base_value = List.foldl (uncurry f) base_value L
 
 fun rev_itlist2 f L1 L2 =
   let fun rev_it2 ([],[]) base = base
@@ -193,9 +180,9 @@ fun foldl_map _ (acc, []) = (acc, [])
 fun separate s (x :: (xs as _ :: _)) = x :: s :: separate s xs
   | separate _ xs = xs
 
-fun gather P L = itlist (fn x => fn y => if P x then x::y else y) L []
+val gather = List.filter
 
-val filter = gather;
+val filter = List.filter
 
 fun partition P alist =
    itlist (fn x => fn (L,R) => if P x then (x::L, R) else (L, x::R))
@@ -205,7 +192,7 @@ fun zip [] [] = []
   | zip (a::b) (c::d) = (a,c)::zip b d
   | zip _ _ = raise ERR "zip" "different length lists"
 
-fun unzip L = itlist (fn (x,y) => fn (l1,l2) => (x::l1, y::l2)) L ([],[]);
+val unzip = ListPair.unzip
 
 fun combine(l1,l2) = zip l1 l2
 val split = unzip
@@ -216,9 +203,7 @@ fun mapfilter f list =
                      | otherwise => L)
      list [];
 
-fun flatten [] = []
-  | flatten ([]::t) = flatten t
-  | flatten ((h::t)::rst) = h::flatten(t::rst);
+val flatten = List.concat
 
 fun front_last l =
   let fun fl _ [] = raise ERR "front_last" "empty list"
@@ -403,10 +388,7 @@ fun (r1 |-> r2) = {redex=r1, residue=r2};
  * Sets as lists                                                             *
  *---------------------------------------------------------------------------*)
 
-fun mem i =
- let fun itr [] = false
-       | itr (a::rst) = i=a orelse itr rst
- in itr end;
+fun mem i = List.exists (equal i)
 
 fun insert i L = if mem i L then L else i::L
 
@@ -439,12 +421,7 @@ fun set_eq S1 S2 = (set_diff S1 S2 = []) andalso (set_diff S2 S1 = []);
  * Opaque type set operations                                                *
  *---------------------------------------------------------------------------*)
 
-fun op_mem eq_func i =
-   let val eqi = eq_func i
-       fun mem [] = false
-         | mem (a::b) = eqi a orelse mem b
-   in mem
-   end;
+fun op_mem eq_func i = List.exists (eq_func i)
 
 fun op_insert eq_func =
   let val mem = op_mem eq_func
@@ -524,9 +501,7 @@ fun unprime s =
     else raise ERR "unprime" "string doesn't end with a prime"
   end;
 
-fun commafy [] = []
-  | commafy [x] = [x]
-  | commafy (x::rst) = (x::", "::commafy rst);
+val commafy = separate ", "
 
 fun words2 sep string =
     snd (itlist (fn ch => fn (chs,tokl) =>
