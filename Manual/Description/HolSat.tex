@@ -47,9 +47,9 @@
 
 The purpose of {\tt{HolSatLib}} is to provide a platform for experimenting with combinations of theorem proving and SAT solvers. Only black box functionality is provided at the moment. An incremental interface is in development.
 
-{\tt{HolSatLib}} provides a function {\tt SAT\_PROVE} \index{HolSatLib!SAT\_PROVE@\ml{SAT\_PROVE}} for propositional satisfiability testing and for proving propositional tautologies. It uses an external SAT solver (currently MiniSat 1.14p) to find an unsatisfiability proof or satisfying assignment, and then reconstructs the proof or checks the assignment deductively in \HOL. 
+{\tt{HolSatLib}} provides a function {\tt SAT\_PROVE} \index{HolSatLib!SAT\_PROVE@\ml{SAT\_PROVE}} for propositional satisfiability testing and for proving propositional tautologies. It uses an external SAT solver (currently MiniSat 1.14p) to find an unsatisfiability proof or satisfying assignment, and then reconstructs the proof or checks the assignment deductively in \HOL.
 
-Alternatively, the function {\tt SAT\_ORACLE} \index{HolSatLib!SAT\_ORACLE@\ml{SAT\_ORACLE}} has the same behaviour as {\tt SAT\_PROVE} but asserts the result of the solver without proof. The theorem thus asserted is tagged with ``{\tt{HolSatLib}}'' to indicate that it is unchecked. Since proof reconstruction can be expensive, the oracle facility can be useful during prototyping, or if proof is not required. 
+Alternatively, the function {\tt SAT\_ORACLE} \index{HolSatLib!SAT\_ORACLE@\ml{SAT\_ORACLE}} has the same behaviour as {\tt SAT\_PROVE} but asserts the result of the solver without proof. The theorem thus asserted is tagged with ``{\tt{HolSatLib}}'' to indicate that it is unchecked. Since proof reconstruction can be expensive, the oracle facility can be useful during prototyping, or if proof is not required.
 
 The following example illustrates the use of {\tt{HolSatLib}} for proving propositional tautologies:
 
@@ -63,35 +63,35 @@ The following example illustrates the use of {\tt{HolSatLib}} for proving propos
 > val it = () : unit
 
 - SAT_PROVE ``(a ==> b) /\ (b ==> a) = (a=b)``;
-> val it = [oracles: DISK_THM] [axioms: ] [] 
+> val it = [oracles: DISK_THM] [axioms: ] []
            |- (a ==> b) /\ (b ==> a) = (a = b) : thm
 
-- SAT_PROVE ``(a ==> b) ==> (a=b)`` 
+- SAT_PROVE ``(a ==> b) ==> (a=b)``
    handle HolSatLib.SAT_cex th => th;
-> val it = [oracles: DISK_THM] [axioms: ] [] 
+> val it = [oracles: DISK_THM] [axioms: ] []
            |- ~a /\ b ==> ~((a ==> b) ==> (a = b)) : thm
 
 - SAT_ORACLE ``(a ==> b) /\ (b ==> a) = (a=b)``;
-> val it = [oracles: DISK_THM, HolSatLib] [axioms: ] [] 
+> val it = [oracles: DISK_THM, HolSatLib] [axioms: ] []
            |- (a ==> b) /\ (b ==> a) = (a = b) : thm
 \end{verbatim}
 \end{session}
 
-Setting \t{show\_tags} to \t{true} makes the \HOL{} top-level print theorem tags. The \t{DISK\_THM} oracle tag has nothing to do with \t{HolSatLib}. It just indicates the use of theorems from \HOL{} libraries read in from permanent storage. 
+Setting \t{show\_tags} to \t{true} makes the \HOL{} top-level print theorem tags. The \t{DISK\_THM} oracle tag has nothing to do with \t{HolSatLib}. It just indicates the use of theorems from \HOL{} libraries read in from permanent storage.
 
 Note that in the case where the putative tautology has a falsifying interpretation, a counter-model can be obtained by capturing the special exception {\tt{SAT\_cex}}, which contains a theorem asserting the counter-model.
- 
-The next example illustrates using {\tt{HolSatLib}} for satisfiability testing. The idea is to negate the target term before passing it to {\tt{HolSatLib}}. 
+
+The next example illustrates using {\tt{HolSatLib}} for satisfiability testing. The idea is to negate the target term before passing it to {\tt{HolSatLib}}.
 
 \begin{session}
 \begin{verbatim}
-- SAT_PROVE ``~((a ==> b) ==> (a=b))`` 
+- SAT_PROVE ``~((a ==> b) ==> (a=b))``
    handle HolSatLib.SAT_cex => th;
-> val it = [oracles: DISK_THM ] [axioms: ] [] 
+> val it = [oracles: DISK_THM ] [axioms: ] []
            |- a /\ ~b ==> ~~((a ==> b) ==> (a = b)) : thm
 
 - SAT_PROVE ``~(a /\ ~a)``;
-> val it = [oracles: DISK_THM ] [axioms: ] [] 
+> val it = [oracles: DISK_THM ] [axioms: ] []
            |- ~(a /\ ~a) : thm
 \end{verbatim}
 \end{session}
@@ -100,7 +100,7 @@ As expected, if the target term is unsatisfiable we get a theorem saying as much
 
 {\tt{HolSatLib}} can only handle purely propositional terms (atoms must be propositional variables or constants) involving the usual propositional connectives as well as Boolean-valued conditionals. If you wish to prove tautologies that are instantiations of propositional terms, use {\tt{tautLib}} (see \S\ref{tautlib} below).
 
-If MiniSat failed to build when \HOL{} was built, or proof replay fails for some other reason, \t{SAT\_PROVE} falls back to a DPLL-based propositional tautology prover implemented in SML, due to Micheal Norrish (see the \HOL{} Tutorial). {\tt{HolSatLib}} prints out a warning if this happens. On problems with more than a thousand or so clauses (in conjunctive normal form (CNF)), the SML prover will likely take too long to be of any use. 
+If MiniSat failed to build when \HOL{} was built, or proof replay fails for some other reason, \t{SAT\_PROVE} falls back to a DPLL-based propositional tautology prover implemented in SML, due to Micheal Norrish (see the \HOL{} Tutorial). {\tt{HolSatLib}} prints out a warning if this happens. On problems with more than a thousand or so clauses (in conjunctive normal form (CNF)), the SML prover will likely take too long to be of any use.
 
 {\tt{HolSatLib}} will delete temporary files generated by the SAT solver, such as the proof file and any statistics. This is to avoid accumulating thousands of possibly large files. Currently {\tt HolSatLib} has only been tested on Linux, and on Windows XP using MinGW.
 
@@ -113,42 +113,42 @@ If MiniSat failed to build when \HOL{} was built, or proof replay fails for some
 \item They can reason about (the propositional structure of) terms that are instances of purely propositional terms. This is done by a preprocessing step that replaces each unique instantiation with a fresh propositional variable.
 \end{enumerate}
 
-For details, see the source file \t{src/taut/tautLib.sml} which contains comprehensive comments. Note however that the extra functionality in {{\tt tautLib}} was not engineered for very large problems and can become a performance bottleneck. 
+For details, see the source file \t{src/taut/tautLib.sml} which contains comprehensive comments. Note however that the extra functionality in {{\tt tautLib}} was not engineered for very large problems and can become a performance bottleneck.
 
 \subsection{Support for other SAT solvers}\label{subsec:hs_zchaff}
 
 The ZChaff SAT solver has a proof production mode and is supported by {\tt{HolSatLib}}. However, the ZChaff end user license is not compatible with the \HOL{} license, so we are unable to distribute it with \HOL{}. If you wish to use ZChaff, download and unpack it in the directory {\tt src/HolSat/sat\_solvers/} under the main \HOL{} directory, and compile it with proof production mode enabled (which is not the default). This should create a binary {\tt zchaff} in the directory {\tt src/HolSat/sat\_solvers/zchaff/}. ZChaff can now be used as the external proof engine instead of MiniSat, by using the HolSatLib functions described above, prefixed with a ``{\tt Z}'', e.g., {\tt ZSAT\_PROVE}.
 
-A file \texttt{resolve\_trace} may be created in the current working directory, when working with ZChaff. This is the proof trace file produced by ZChaff, and is hardwired.  
- 
+A file \texttt{resolve\_trace} may be created in the current working directory, when working with ZChaff. This is the proof trace file produced by ZChaff, and is hardwired.
+
 Other SAT solvers are currently not supported. If you would like such support to be added for your favourite solver, please send a feature request via \url{http://hol.sf.net}.
 
-\subsection{The General Interface}
+\subsection{The general interface}
 
-The functions described above are wrappers for the function \texttt{GEN\_SAT}, which is the single entry point for {\tt{HolSatLib}}. \texttt{GEN\_SAT} can be used directly if more flexibility is required. \texttt{GEN\_SAT} takes a single argument, of type \texttt{sat\_config}, defined in \texttt{satConfig.sml}. This is an opaque record type, currently containing the following fields: 
+The functions described above are wrappers for the function \texttt{GEN\_SAT}, which is the single entry point for {\tt{HolSatLib}}. \texttt{GEN\_SAT} can be used directly if more flexibility is required. \texttt{GEN\_SAT} takes a single argument, of type \texttt{sat\_config}, defined in \texttt{satConfig.sml}. This is an opaque record type, currently containing the following fields:
 
 \begin{enumerate}
-\item{\texttt{term : Term.term}} 
+\item{\texttt{term : Term.term}}
 
-The input term. 
-\item{\texttt{solver : SatSolvers.sat\_solver}} 
+The input term.
+\item{\texttt{solver : SatSolvers.sat\_solver}}
 
 The external SAT solver to use. The default is \texttt{SatSolvers.minisatp}. If ZChaff is installed (see \S\ref{subsec:hs_zchaff}), then \texttt{SatSolvers.zchaff} may also be used.
-\item{\texttt{infile : string option}} 
+\item{\texttt{infile : string option}}
 
-The name of a file in DIMACS format.\footnote{\url{http://www.satlib.org/Benchmarks/SAT/satformat.ps}}. Overrides \texttt{term} if set. The input term is instead read from the file. 
-\item{\texttt{proof : string option}} 
+The name of a file in DIMACS format.\footnote{\url{http://www.satlib.org/Benchmarks/SAT/satformat.ps}}. Overrides \texttt{term} if set. The input term is instead read from the file.
+\item{\texttt{proof : string option}}
 
 The name of a proof trace file. Overrides \texttt{solver} if set. The file must be in the native format of {\tt{HolSatLib}}, and must correspond to a proof for \texttt{infile}, which must also be set. The included version of MiniSat has been modified to produce proofs in the native format, and ZChaff proofs are translated to this format using the included proof translator \texttt{src/HolSat/sat\_solvers/zc2hs} (type \texttt{zc2hs -h} for usage help). \texttt{zc2hs} is used internally by \texttt{ZSAT\_PROVE} etc.
-\item{\texttt{is\_cnf : bool}} 
+\item{\texttt{is\_cnf : bool}}
 
-If true then the input term is expected to be a negated CNF term. This is set automatically if \texttt{infile} is set. Typically a user will never need to modify this field directly. 
-\item{\texttt{is\_proved : bool}} 
+If true then the input term is expected to be a negated CNF term. This is set automatically if \texttt{infile} is set. Typically a user will never need to modify this field directly.
+\item{\texttt{is\_proved : bool}}
 
 If true then \HOL{} will prove the SAT solver's results.
 \end{enumerate}
 
-A special value \texttt{base\_config~:~sat\_config} is provided for which the term is \texttt{T}, the solver is MiniSat, the options are unset, the CNF flag is false and the proof flag is true. This value can be inspected and modified using getter and setter functions provided in \texttt{src/HolSat/satConfig.sig}. For example, to invoke ZChaff (assuming it is installed), on a file \texttt{unsat.cnf} containing an unsatisfiable problem, we do: 
+A special value \texttt{base\_config~:~sat\_config} is provided for which the term is \texttt{T}, the solver is MiniSat, the options are unset, the CNF flag is false and the proof flag is true. This value can be inspected and modified using getter and setter functions provided in \texttt{src/HolSat/satConfig.sig}. For example, to invoke ZChaff (assuming it is installed), on a file \texttt{unsat.cnf} containing an unsatisfiable problem, we do:
 
 \begin{session}
 \begin{verbatim}
@@ -159,24 +159,28 @@ A special value \texttt{base\_config~:~sat\_config} is provided for which the te
 > val c = <sat_config> : sat_config
 
 - GEN_SAT c;
-> val it = [oracles: DISK_THM ] [axioms: ] [] 
+> val it = [oracles: DISK_THM ] [axioms: ] []
            |- ~<unsat.cnf term here> : thm
 \end{verbatim}
 \end{session}
 
-If the problem were satisfiable, the model can be captured via exception, as shown earlier. 
+If the problem were satisfiable, the model can be captured via exception, as shown earlier.
 
-Normally, {\tt{HolSatLib}} will delete the files generated by the SAT solver, such as the output proof, counter-model, and result status. However, if \texttt{infile} is set, the files are not deleted, in case they are required elsewhere. 
+Normally, {\tt{HolSatLib}} will delete the files generated by the SAT solver, such as the output proof, counter-model, and result status. However, if \texttt{infile} is set, the files are not deleted, in case they are required elsewhere.
 
 \subsection{Notes}
 
-On Linux and MacOS, \texttt{g++} must be installed on the system for MiniSat and \texttt{zc2hs} to build. 
+On Linux and MacOS, \texttt{g++} must be installed on the system for MiniSat and \texttt{zc2hs} to build.
 
 Temporary files are generated using the Moscow ML function \t{FileSys.tmpName}. This usually writes to the standard temporary file space on the operating system. If that file space is full, or if it is inaccessible for some other reason, {\tt{HolSatLib}} calls may fail mysteriously.
- 
+
 The function {\tt dimacsTools.readDimacs}~{\it file}  reads a DIMACS format file and returns
 a CNF \HOL{} term corresponding to the SAT problem in the file named by {\it file}. Since DIMACS uses numbers to denote variables, and numbers are not legal identifiers in \HOL{}, each variable number is prefixed with the string ``{\tt v}''. This string is defined in the reference variable {\tt dimacsTools.prefix} and can be changed if required. This function can be used independently of {\tt{HolSatLib}} to read in DIMACS format files.
 
 \index{HolSatLib|)}
 
 %\end{document}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:

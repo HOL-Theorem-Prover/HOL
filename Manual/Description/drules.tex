@@ -38,7 +38,7 @@ effort. The basis does not immediately provide the transitivity of
 equality, for example, or a means of universal quantification; both of
 these themselves have to be derived.
 
-\section{Simple derivations}
+\section{Simple Derivations}
 
 As an illustration of a proof in \HOL{}, the following chain of
 theorems forms a proof (from the empty set, in the \HOL{} deductive
@@ -77,7 +77,7 @@ using the \ML\ functions \ml{ASSUME}\index{ASSUME@\ml{ASSUME}} and
 \end{verbatim}
 \end{session}
 
-\noindent More briefly, one could evaluate the following, and `count'\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs} the
+\noindent More briefly, one could evaluate the following, and `count'\index{counting inferences, in HOL proofs@counting inferences, in \HOL{} proofs} the
 invocations of functions representing primitive inferences.
 
 \begin{session}
@@ -99,7 +99,7 @@ corresponds to the application%
 \index{inferences, in HOL logic@inferences, in \HOL{} logic!as ML function applications@as \ML\ function applications}%
 \index{proof steps, as ML function applications@proof steps, as \ML\ function applications}%
 \index{proof!the notion of, in HOL system@the notion
-  of, in \HOL\ system}% 
+  of, in \HOL\ system}%
 %
 of an \ML\ function in the performance of the proof in \HOL; and each
 of the \ML\ functions corresponds to a primitive inference of the
@@ -172,7 +172,7 @@ that is, performs proofs in \HOL.
 The following session illustrates the use of the derived rule, on
 a consequence of the axiom \ml{IMP\_ANTISYM\_AX}. (The inferences are
 counted.%
-\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs}%
+\index{counting inferences, in HOL proofs@counting inferences, in \HOL{} proofs}%
 %
 ) Assume that the printing of theorems has been adjusted as above and
 \ml{th} is bound as shown below:
@@ -248,7 +248,7 @@ is \ml{REWRITE\_RULE}.  All of the rewriting rules are described in
 detail in \REFERENCE.
 
 \ml{REWRITE\_RULE} uses a list of equational theorems
-\index{equational theorems, in HOL logic@equational theorems, in \HOL\ logic!use of in rewriting}
+\index{equational theorems, in HOL logic@equational theorems, in \HOL{} logic!use of in rewriting}
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!equational}
 (theorems whose conclusions can be regarded as having the form
 $t_1${\small\verb% = %}$t_2$) to replace
@@ -264,7 +264,7 @@ generalization and specialization (see Sections~\ref{avra_gen}
 and \ref{avra_spec}) for instantiating terms.  The definition
 of \ml{REWRITE\_RULE} in \ML\
 also relies on a large number of general and \HOL-oriented
-\ML\ functions. 
+\ML\ functions.
 %The implementation is partly described in Chapter~\ref{avra_conv}.
 
 In practice, the derived rule \ml{REWRITE\_RULE} plays a central role
@@ -293,7 +293,7 @@ and \ml{"SUC"}, the
 usual successor function.
 Use is made of the pre-existing definition of {\small\verb%"$>"%}:
 \ml{GREATER} (see \REFERENCE).
-The timing\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs} facility is used again, for interest, and the printing
+The timing\index{counting inferences, in HOL proofs@counting inferences, in \HOL{} proofs} facility is used again, for interest, and the printing
 of theorems is adjusted as above.
 
 
@@ -335,7 +335,7 @@ and do so whilst still generating the entire chain of inferences.
 \index{REWRITE_RULE@\ml{REWRITE\_RULE}|)}
 \index{rewriting!rules for|)}
 
-\section{Derivation of the standard rules}
+\section{Derivation of the Standard Rules}
 \label{avra_standard}
 
 \index{derived rules, in HOL logic@derived rules, in \HOL{} logic!pre-defined|(}
@@ -366,12 +366,12 @@ $\vdash(\lquant{x}t_1)t_2 = t_1[t_2/x]$ follows by the primitive rule
 pair of terms $t_1$ and $t_2$, and is therefore equivalent to an
 infinite family%
 %
-\index{families of inferences, in HOL logic@families of inferences, in \HOL\ logic}%
+\index{families of inferences, in HOL logic@families of inferences, in \HOL{} logic}%
 %
 of theorems. No single theorem can be expressed in the \HOL{} logic
 that is equivalent to \rul{BETA\_CONV}.%
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!rules inexpressible as}
-\index{beta-conversion, in HOL logic@beta-conversion, in \HOL\ logic!not expressible as a theorem}%
+\index{beta-conversion, in HOL logic@beta-conversion, in \HOL{} logic!not expressible as a theorem}%
 %
 %(See Chapter~\ref{avra_conv} for further discussion of this point.)
 (\ml{UNDISCH} is not a rule of this sort, as it can, in fact, be
@@ -500,7 +500,7 @@ $$\Gamma\turn t\over \Gamma,\ t'\turn t$$
 
 
 \begin{holboxed}
-\index{implication, in HOL logic@implication, in \HOL\ logic!inference rules for}
+\index{implication, in HOL logic@implication, in \HOL{} logic!inference rules for}
 \index{UNDISCH@\ml{UNDISCH}|pin}
 \begin{verbatim}
    UNDISCH : thm -> thm
@@ -527,8 +527,8 @@ $$\Gamma\turn t_1\imp t_2 \over\Gamma,\ t_1\turn t_2$$
 
 \begin{holboxed}
 \index{SYM@\ml{SYM}|pin}
-\index{symmetry of equality rule, in HOL logic@symmetry of equality rule, in \HOL\ logic}
-\index{equality, in HOL logic@equality, in \HOL\ logic!symmetry rule for}
+\index{symmetry of equality rule, in HOL logic@symmetry of equality rule, in \HOL{} logic}
+\index{equality, in HOL logic@equality, in \HOL{} logic!symmetry rule for}
 \begin{verbatim}
    SYM : thm -> thm
 \end{verbatim}\end{holboxed}
@@ -553,8 +553,8 @@ $$\Gamma\turn t_1 = t_2\over \Gamma\turn t_2 = t_1$$
 
 
 \begin{holboxed}
-\index{transitivity of equality rule, in HOL logic@transitivity of equality rule, in \HOL\ logic}
-\index{equality, in HOL logic@equality, in \HOL\ logic!transitivity rule for}
+\index{transitivity of equality rule, in HOL logic@transitivity of equality rule, in \HOL{} logic}
+\index{equality, in HOL logic@equality, in \HOL{} logic!transitivity rule for}
 \index{TRANS@\ml{TRANS}|pin}
 \begin{verbatim}
    TRANS : thm -> thm -> thm
@@ -625,7 +625,7 @@ $$\Gamma\turn t_1=t_2\over \Gamma\turn t_1\ t = t_2\ t$$
 
 \begin{holboxed}
 \index{EQ_MP@\ml{EQ\_MP}|pin}
-\index{equality, in HOL logic@equality, in \HOL\ logic!MP rule for@\ml{MP} rule for}
+\index{equality, in HOL logic@equality, in \HOL{} logic!MP rule for@\ml{MP} rule for}
 \begin{verbatim}
    EQ_MP : thm -> thm -> thm
 \end{verbatim}\end{holboxed}
@@ -647,8 +647,8 @@ $$\Gamma_1\turn t_1=t_2\qquad\qquad\qquad \Gamma_2\turn t_1\over
 
 
 \subsection{Implication from equality}
-\index{equality, in HOL logic@equality, in \HOL\ logic!other rules for|(}
-\index{implication, in HOL logic@implication, in \HOL\ logic!inference rules for}
+\index{equality, in HOL logic@equality, in \HOL{} logic!other rules for|(}
+\index{implication, in HOL logic@implication, in \HOL{} logic!inference rules for}
 \begin{holboxed}
 \index{EQ_IMP_RULE@\ml{EQ\_IMP\_RULE}|pin}
 \begin{verbatim}
@@ -729,7 +729,7 @@ $$\Gamma\turn t = \T\over \Gamma\turn t$$
 
 \begin{holboxed}
 \index{SPEC@\ml{SPEC}|pin}
-\index{specialization rule, in HOL logic@specialization rule, in \HOL\ logic}
+\index{specialization rule, in HOL logic@specialization rule, in \HOL{} logic}
 \begin{verbatim}
    SPEC : term -> thm -> thm
 \end{verbatim}
@@ -741,7 +741,7 @@ $$\Gamma\turn t = \T\over \Gamma\turn t$$
 
 $$\Gamma\turn \uquant{x}t\over \Gamma\turn t[t'/x]$$
 \begin{itemize}
-\item $t[t'/x]$ denotes the result of substituting $t'$ for free\index{free variables, in HOL logic@free variables, in \HOL\ logic}
+\item $t[t'/x]$ denotes the result of substituting $t'$ for free\index{free variables, in HOL logic@free variables, in \HOL{} logic}
 occurrences of $x$ in $t$, with the restriction that no free variables in $t'$
 become bound after substitution.
 \end{itemize}
@@ -799,7 +799,7 @@ $$\Gamma\turn t\over\Gamma\turn t=\T$$
 \item $\Gamma\turn\T\imp t$\hfill [\rul{DISCH} 7]
 \item $\Gamma\turn t=\T$\hfill [\rul{MP} 6,8]
 \end{proof}
-\index{equality, in HOL logic@equality, in \HOL\ logic!other rules for|)}
+\index{equality, in HOL logic@equality, in \HOL{} logic!other rules for|)}
 \index{T@\holtxt{T}!rules of inference for|)}
 
 
@@ -809,7 +809,7 @@ $$\Gamma\turn t\over\Gamma\turn t=\T$$
 
 \begin{holboxed}
 \index{GEN@\ml{GEN}|pin}
-\index{generalization rule, in HOL logic@generalization rule, in \HOL\ logic}
+\index{generalization rule, in HOL logic@generalization rule, in \HOL{} logic}
 \begin{verbatim}
    GEN : term -> thm -> thm
 \end{verbatim}
@@ -903,7 +903,7 @@ used in a subsequent derivation, but it is not actually in the
 
 $$\turn(\lquant{x'}t\ x') = t$$
 \begin{itemize}
-\item Where $x'$ does not occur free\index{free variables, in HOL logic@free variables, in \HOL\ logic} in $t$ (we use $x'$ rather than just $x$
+\item Where $x'$ does not occur free\index{free variables, in HOL logic@free variables, in \HOL{} logic} in $t$ (we use $x'$ rather than just $x$
 to motivate the use of \rul{SIMPLE\_ALPHA} in the derivation below).
 \end{itemize}
 
@@ -1350,7 +1350,7 @@ $$\Gamma\turn t_1\disj t_2\qquad\qquad\qquad\Gamma_1,\ t_1\turn t
 
 
 \subsection{Classical contradiction rule}
-\index{F (falsity), the HOL constant@\holtxt{F} (falsity), the HOL{} constant!rules of inference for}
+\index{F (falsity), the HOL constant@\holtxt{F} (falsity), the \HOL{} constant!rules of inference for}
 
 \begin{holboxed}
 \index{CCONTR@\ml{CCONTR}|pin}

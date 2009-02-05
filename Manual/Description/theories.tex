@@ -221,6 +221,8 @@ the first three are the following:
 \index{implication, in HOL logic@implication, in \HOL{} logic!primitive axiom for}
 \index{ choice function, in HOL logic@\holtxt{"@} (choice function, in \HOL{} logic)}
 \index{choice axiom}
+\index{axiom of choice}
+\index{axioms!of choice}
 \index{choice operator, in HOL logic@choice operator, in \HOL{} logic!primitive axiom for}
 \begin{verbatim}
    BOOL_CASES_AX   |- !t. (t = T) \/ (t = F)
@@ -386,7 +388,6 @@ Here the predicate $P$ restricts all of $x$, $y$ and $z$.
 
 \subsubsection{Derived syntactic forms}\label{derived-terms}
 
-\index{type checking, in HOL logic@type checking, in \HOL{} logic!special forms in|(}
 \index{quotation, in HOL logic@quotation, in \HOL{} logic!of non-primitive terms|(}
 % don't refill the \index entries above, it's important to keep each
 % entry on one line
@@ -1083,11 +1084,11 @@ destructor operations.  For example:
 \end{verbatim}
 \end{session}
 
-The reader is recommended to convince himself or herself that the
-translations of \ml{let}-terms represent the intuitive meaning suggested by
-the surface syntax.
+Readers are encouraged to convince themselves that the translations of
+\ml{let}-terms represent the intuitive meaning suggested by the
+surface syntax.%
+%
 \index{terms, in HOL logic@terms, in \HOL{} logic!syntax of|)}
-\index{type checking, in HOL logic@type checking, in \HOL{} logic!special forms in|)}
 
 \subsection{Disjoint sums}
 \label{sum}
@@ -1178,16 +1179,13 @@ relating the projection functions and the discriminators.
 
 
 \subsection{The one-element type}%
-\index{one, the HOL theory@\ml{one}, the \HOL{} theory}%
-\index{one, the HOL type@\ml{one}, the \HOL{} type}%
+\index{one, the HOL theory and type@\ml{one}, the \HOL{} theory and type}%
 
 The theory \ml{one} defines  the type  \ml{one} which  contains one element.
 The constant  \ml{one}  is specified  to denote  this element.   The pre-proved
 theorems in the theory \ml{one} are:
 
 \begin{hol}
-\index{one_axiom@\ml{one\_axiom}}
-\index{one, the HOL theorem@\ml{one}, the \HOL{} theorem}
 \index{one_Axiom@\ml{one\_Axiom}}
 \begin{verbatim}
    one_axiom   |- !(f:'a->one) (g:'a -> one). f = g
@@ -1512,6 +1510,7 @@ justifying recursive definitions. For example, the theory
 
 \begin{hol}
 \index{axiom of dependent choice (DC)@axiom of dependent choice (\ml{DC})}
+\index{axioms!of choice}
 \begin{verbatim}
    DC  |- !P R a.
             P a /\ (!x. P x ==> ?y. P y /\ R x y)
@@ -1698,10 +1697,10 @@ constants.
 {\small
 \begin{tabular}{@{}ccc}
 Operator & Strength & Associativity \\ \hline
-\holtxt{>=} & 450 & right \\
-\holtxt{<=} & 450 & right \\
-\holtxt{>} & 450 & right \\
-\holtxt{<} & 450 & right \\
+\holtxt{>=} & 450 & non \\
+\holtxt{<=} & 450 & non \\
+\holtxt{>} & 450 & non \\
+\holtxt{<} & 450 & non \\
 \holtxt{+} & 500 & left \\
 \holtxt{-} & 500 & left \\
 \holtxt{*} & 600& left \\
@@ -1711,7 +1710,7 @@ Operator & Strength & Associativity \\ \hline
 \end{tabular}}
 \end{center}
 
-\subsection{Numerals}\label{numeral}
+\subsection{Numerals}\label{sec:numerals}
 
 The type \ml{num}
 \index{num, the type in \HOL{} logic@\ml{num}, the type in \HOL{} logic}
@@ -1914,10 +1913,10 @@ following table.
 {\small
 \begin{tabular}{@{}cccc}
 Constant & Overloaded symbol & Strength & Associativity \\ \hline
-{\small\verb+int_ge+} &{\small\verb+>=+} & 450 & right \\
-{\small\verb+int_le+} &{\small\verb+<=+} & 450 & right \\
-{\small\verb+int_gt+} &{\small\verb+>+}  & 450 & right \\
-{\small\verb+int_lt+} &{\small\verb+<+}  & 450 & right \\
+{\small\verb+int_ge+} &{\small\verb+>=+} & 450 & non \\
+{\small\verb+int_le+} &{\small\verb+<=+} & 450 & non \\
+{\small\verb+int_gt+} &{\small\verb+>+}  & 450 & non \\
+{\small\verb+int_lt+} &{\small\verb+<+}  & 450 & non \\
 {\small\verb+int_add+} &{\small\verb%+%} & 500 & left \\
 {\small\verb+int_sub+} &{\small\verb%-%} & 500 & left \\
 {\small\verb+int_neg+} &{\small\verb%~%} & 900 & trueprefix \\
@@ -1969,10 +1968,10 @@ suffix {\small\verb+q+}.
 {\small
 \begin{tabular}{@{}cccc}
 Constant & Overloaded symbol & Strength & Associativity \\ \hline
-{\small\verb+rat_geq+} &{\small\verb+>=+} & 450 & right \\
-{\small\verb+rat_leq+} &{\small\verb+<=+} & 450 & right \\
-{\small\verb+rat_gre+} &{\small\verb+>+}  & 450 & right \\
-{\small\verb+rat_les+} &{\small\verb+<+}  & 450 & right \\
+{\small\verb+rat_geq+} &{\small\verb+>=+} & 450 & non \\
+{\small\verb+rat_leq+} &{\small\verb+<=+} & 450 & non \\
+{\small\verb+rat_gre+} &{\small\verb+>+}  & 450 & non \\
+{\small\verb+rat_les+} &{\small\verb+<+}  & 450 & non \\
 {\small\verb+rat_add+} &{\small\verb%+%} & 500 & left \\
 {\small\verb+rat_sub+} &{\small\verb%-%} & 500 & left \\
 {\small\verb+rat_ainv+} &{\small\verb%~%} & 900 & trueprefix \\
@@ -2014,10 +2013,10 @@ listed in the following table.
 {\small
 \begin{tabular}{@{}cccc}
 Constant & Overloaded symbol & Strength & Associativity \\ \hline
-{\small\verb+real_ge+} &{\small\verb+>=+} & 450 & right \\
-{\small\verb+real_lte+} &{\small\verb+<=+} & 450 & right \\
-{\small\verb+real_gt+} &{\small\verb+>+}  & 450 & right \\
-{\small\verb+real_lt+} &{\small\verb+<+}  & 450 & right \\
+{\small\verb+real_ge+} &{\small\verb+>=+} & 450 & non \\
+{\small\verb+real_lte+} &{\small\verb+<=+} & 450 & non \\
+{\small\verb+real_gt+} &{\small\verb+>+}  & 450 & non \\
+{\small\verb+real_lt+} &{\small\verb+<+}  & 450 & non \\
 {\small\verb+real_add+} &{\small\verb%+%} & 500 & left \\
 {\small\verb+real_sub+} &{\small\verb%-%} & 500 & left \\
 {\small\verb+real_neg+} &{\small\verb%~%} & 900 & trueprefix \\
@@ -2120,9 +2119,14 @@ is like \ty{'a}\hash\ty{'a}.
 The \emph{components} of a finite Cartesian product are accessed with an
 indexing function
 \begin{hol}
-index : \fcp{'a}{'b}\rarr\num\rarr\ty{'a}
+\begin{alltt}
+   fcp_index : \fcp{'a}{'b}\rarr\num\rarr\ty{'a}
+\end{alltt}
 \end{hol}
-and \oo{x}{i} denotes the value of \holtxt{x} at position \holtxt{i}.  Note that, in practice, indices are constrained to be less than the size of \ty{'b}.
+which is typically written with the infix apostrophe, so that
+\oo{x}{i} denotes the value of \holtxt{x} at position \holtxt{i}.
+Note that, in practice, indices are constrained to be less than the
+size of \ty{'b}.
 
 The following theorem shows that two Cartesian products \holtxt{x} and
 \holtxt{y} are equal if, and only if, all of their components \oo{x}{i} and
@@ -2708,11 +2712,12 @@ The concatenation of a list of lists into a list is achieved by
 \index{list_size, the HOL constant@\ml{list\_size}, the \HOL{} constant}
 
 The length (\holtxt{LENGTH}) and size (\holtxt{list\_size}) of a list
-are suported notions. The size of a list takes account of the size of
+are related notions. The size of a list takes account of the size of
 each element of the list (given by parameter
 $f:\alpha\to\konst{num}$), while the length of the list ignores the
 size of each list element. The alternate length definition
-(\holtxt{LEN}) is tail-recursive.
+(\holtxt{LEN}) is tail-recursive.  Numbers can also be used to index
+into lists, extracting the element at the specified position.
 %
 \begin{hol}
 \begin{verbatim}
@@ -2729,8 +2734,10 @@ size of each list element. The alternate length definition
 \end{hol}
 
 \noindent
-Note that the extraction of the $n$th element (\holtxt{EL}) of a
-list starts its indexing from 0.
+Note that the extraction of the $n$th element (\holtxt{EL}) of a list
+starts its indexing from 0.  If the length of the list $\ell$ is less
+than or equal to $n$, the result of \holtxt{EL~$n$~$\ell$~} is
+unspecified.
 
 \paragraph {Mapping functions over lists}
 \index{MAP, the HOL constant@\ml{MAP}, the \HOL{} constant}
@@ -4658,7 +4665,7 @@ it into a finite map.
 \end{verbatim}
 \end{hol}
 
-\section{While loops}
+\section{While Loops}
 \label{sec:while-loops}
 
 It is a curious fact that higher order logic, although a logic of
@@ -4758,32 +4765,34 @@ theory \theoryimp{while}.
 
 %\section{Partial orders}
 
-\section{Further theories}
+\section{Further Theories}
 Other theories of interest in \HOL{} are listed and briefly described
 in Figure~\ref{fig:further-hol-theories}.
 
 \begin{figure}[hbtp]
 \renewcommand{\arraystretch}{1.5}
 \begin{tabular}{|p{0.2\textwidth}p{0.7\textwidth}|}
-\hline
-\theoryimp{poset} & Partial Orders, Knaster-Tarski theorem
-\\
-\theoryimp{divides}, \theoryimp{gcd} &
-Divisibility and the greatest common divisor.
-\\
-\theoryimp{poly} &
-A theory of polynomials over $\mathbb{R}$, providing
-a collection of operations on polynomials, and theorems about them.
-\\
-\theoryimp{Temporal\_Logic},\newline \theoryimp{Omega\_Automata}
-&
-Klaus Schneider's development of temporal logic and\newline $\omega$-automata.
-\\
-\theoryimp{ctl}, \theoryimp{mu}
-&
-Computation Tree Logic and the $\mu$-calculus. See Hasan Amjad's
-thesis. \\
-\hline
+  \hline
+  \theoryimp{poset} & Partial Orders, Knaster-Tarski theorem
+  \\
+  \theoryimp{divides}, \theoryimp{gcd} &
+  Divisibility and the greatest common divisor.
+  \\
+  \theoryimp{poly} &
+  A theory of polynomials over $\mathbb{R}$, providing
+  a collection of operations on polynomials, and theorems about them.
+  \\
+  \theoryimp{Temporal\_Logic},\newline \theoryimp{Omega\_Automata}
+  &
+  Klaus Schneider's development of temporal logic and\newline $\omega$-automata.
+  \\
+  \theoryimp{ctl}, \theoryimp{mu}
+  &
+  Computation Tree Logic and the $\mu$-calculus. See Hasan Amjad's
+  thesis. \\
+  \theoryimp{lbtree} & Possibly infinitely deep (\ie, co-algebraic) binary trees.\\
+  \theoryimp{inftree} & Possibly infinitely branching, algebraic trees\\
+  \hline
 \end{tabular}
 \caption{A selection of \HOL{} theories}
 \label{fig:further-hol-theories}

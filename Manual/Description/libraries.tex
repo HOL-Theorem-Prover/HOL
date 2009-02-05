@@ -164,9 +164,11 @@ In the following, we explore some of the capabilities of the
 \subsubsection{Parser architecture}
 
 The parser turns strings into terms.  It does this in the following
-series of phases, all of which are influenced by the provided
-grammar.  Usually this grammar is the default global grammar, but
-users can arrange to use different grammars if they desire.
+series of phases, all of which are influenced by the provided grammar.
+Usually this grammar is the default global grammar, but users can
+arrange to use different grammars if they desire.  Strictly, parsing
+occurs after lexing has split the input into a series of tokens.  For
+more on lexing, see Section~\ref{HOL-lex}.
 \begin{description}
 \item[Concrete Syntax:] Features such as infixes, binders and mix-fix
   forms are translated away, creating an intermediate, ``abstract
@@ -179,8 +181,9 @@ users can arrange to use different grammars if they desire.
 
   The \ml{Absyn} data type is constructed using constructors \ml{AQ}
   (an antiquote, see Section~\ref{sec:quotation-antiquotation}); %
-  \index{antiquotation, in HOL logic terms@antiquotation, in \HOL{}
-    logic terms}%
+%
+  \index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}%
+%
   \ml{IDENT} (an identifier); \ml{QIDENT} (a qualified identifier,
   given as \holtxt{thy\$ident}); \ml{APP} (an application of one form
   to another); \ml{LAM} (an abstraction of a variable over a body),
@@ -201,29 +204,33 @@ users can arrange to use different grammars if they desire.
 \begin{verbatim}
    APP (APP (APP (IDENT "COND", IDENT "P"), IDENT "Q"), IDENT "R")
 \end{verbatim}
-The standard grammar includes  a rule that associates the special
-mix-fix form for if-then-else expressions with the underlying ``name''
-\holtxt{COND}.  It is \holtxt{COND} that will eventually be resolved
-as the constant \holtxt{bool\$COND}.
+  (This is slightly simplified output: the various constructors for
+  \ml{Absyn}, including \ml{APP}, also take location parameters.)
 
-If the ``quotation'' syntax with a bare dollar is used, then this phase
-of the parser will not treat strings as part of a special form.  For
-example, \holtxt{``\$if~P``} turns into the \ml{Absyn} form
+  The standard grammar includes a rule that associates the special
+  mix-fix form for if-then-else expressions with the underlying
+  ``name'' \holtxt{COND}.  It is \holtxt{COND} that will eventually be
+  resolved as the constant \holtxt{bool\$COND}.
+
+  If the ``quotation'' syntax with a bare dollar is used, then this
+  phase of the parser will not treat strings as part of a special
+  form.  For example, \holtxt{\holquote{\$if~P}} turns into the
+  \ml{Absyn} form
 \begin{verbatim}
    APP(IDENT "if", IDENT "P")
 \end{verbatim}
-\emph{not} a form involving \holtxt{COND}.
+  \emph{not} a form involving \holtxt{COND}.
 
-More typically, one often writes something like \holtxt{``\$+~x``},
-which generates the abstract syntax
+  More typically, one often writes something like
+  \holtxt{\holquote{\$+~x}}, which generates the abstract syntax
 \begin{verbatim}
    APP(IDENT "+", IDENT "x")
 \end{verbatim}
-Without the dollar-sign, the concrete syntax parser would complain
-about the fact that the infix plus did not have a left-hand argument.
-When the successful result of parsing is handed to the next phase, the
-fact that there is a constant called \holtxt{+} will give the input
-its desired meaning.
+  Without the dollar-sign, the concrete syntax parser would complain
+  about the fact that the infix plus did not have a left-hand
+  argument.  When the successful result of parsing is handed to the
+  next phase, the fact that there is a constant called \holtxt{+} will
+  give the input its desired meaning.
 \item[Name Resolution:] The bare \ml{IDENT} forms in the \ml{Absyn}
   value are resolved as free variables, bound names or constants.
   This process results in a value of the \ml{Preterm} data type, which
@@ -949,22 +956,11 @@ The changes which may cause old terms to fail to parse are:
 \item The binding equality in {\tt let} expressions is treated exactly
   the same way as equalities in other contexts.  In previous versions
   of \HOL, equalities in this context have a different, weak binding
-  precedence.  This difference can be seen in the following expression
-  which parses successfully in the old version:
-  \[ {\tt let} \; x \; = \; \condexp \; {\tt
-  in} \;Q \] In Taupo releases and later, this expression will not
-  parse because the conditional expression binds to the left more
-  weakly than the equality binds to the right, and the parser ends up
-  believing that the binding between the \verb+let+ and the \verb+in+
-  is not an equality after all, as it should be.
-\item Old style conditional expressions in the right half of set
-  comprehensions have to be parenthesised to avoid confusing the
-  parser.  Thus \[
-  \{ \; x \; | \; \condexp \; \}
-   \qquad\mbox{must be written} \qquad
-  \{ \; x \; | \; (\condexp) \; \}
-  \] Better yet, {\tt if}-{\tt then}-{\tt else} syntax could be used
-  for the conditional expression.
+  precedence.
+\item The old syntax for conditional expressions has been
+  removed. Thus the string \holquote{\condexp} must now be written
+  $\holquote{\texttt{if}\;p\;\texttt{then}\;q\;\texttt{else}\;r}$
+  instead.
 \item Some lexical categories are more strictly policed.  String
   literals (strings inside double quotes) and numerals can't be used
   unless the relevant theories have been loaded.  Nor can these
@@ -2699,7 +2695,7 @@ take place.
 \end{session}
 %
 
-\subsection{Dealing with Divergence}
+\subsection{Dealing with divergence}
 
 The major difficulty with using \ml{EVAL} is termination. All too
 often, symbolic evaluation with \ml{EVAL} will diverge, or generate
@@ -2797,8 +2793,8 @@ Functions defined by pattern-matching over Peano-style numbers are not
 in the right format for \ml{EVAL}, since the calculations will be
 asymptotically inefficient. Instead, the same definition should be
 used over numerals, which is a positional notation described in
-Section \ref{numeral}. However, it is preferable for proofs to work
-over Peano numbers. In order to bridge this gap, the function
+Section~\ref{sec:numerals}. However, it is preferable for proofs to
+work over Peano numbers. In order to bridge this gap, the function
 \ml{numLib.SUC\_TO\_NUMERAL\_DEFN\_CONV} is used to convert a function
 over Peano numbers to one over numerals, which is the format that
 \ml{EVAL} prefers. \ml{Define} will automatically call
@@ -2865,7 +2861,7 @@ is also provided by \ml{realLib}, under the name \ml{REAL\_ARITH\_CONV}
 and \ml{REAL\_ARITH\_TAC}.
 
 
-\section{The \texttt{HolSat} library}\label{sec:HolSatLib}
+\section{The \texttt{HolSat} Library}\label{sec:HolSatLib}
 \input{HolSat.tex}
 
 %%% Local Variables:
