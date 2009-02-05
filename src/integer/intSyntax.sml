@@ -139,6 +139,14 @@ val dest_divides = dest_binop divides_tm ("dest_divides", "Term not a divides")
 val is_divides = can dest_divides
 fun mk_divides (tm1, tm2) = list_mk_comb(divides_tm, [tm1, tm2])
 
+val dest_min = dest_binop min_tm ("dest_min", "Term not a min")
+val is_min = can dest_min
+fun mk_min (tm1, tm2) = list_mk_comb(min_tm, [tm1, tm2])
+
+val dest_max = dest_binop max_tm ("dest_max", "Term not a max")
+val is_max = can dest_max
+fun mk_max (tm1, tm2) = list_mk_comb(max_tm, [tm1, tm2])
+
 fun dest_injected tm = let
   val (f,x) = dest_comb tm
     handle HOL_ERR _ => raise ERR "dest_injected" "term not an injection"
