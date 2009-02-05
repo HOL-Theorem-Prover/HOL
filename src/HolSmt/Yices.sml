@@ -87,13 +87,15 @@ structure Yices = struct
         end
       else if intSyntax.is_int_literal tm then
         let val i = intSyntax.int_of_term tm
+            val s = Arbint.toString i
         in
-          (acc, [Arbint.toString i])
+          (acc, [String.substring (s, 0, String.size s - 1)])
         end
       else if realSyntax.is_real_literal tm then
         let val i = realSyntax.int_of_term tm
+            val s = Arbint.toString i
         in
-          (acc, [Arbint.toString i])
+          (acc, [String.substring (s, 0, String.size s - 1)])
         end
       (* Yices 1.0.18 only supports linear arithmetic; we could check for
          linearity below (but Yices will check again anyway) *)
