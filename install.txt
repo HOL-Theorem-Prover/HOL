@@ -5,7 +5,7 @@ Get the HOL sources by WWW from SourceForge at http://hol.sourceforge.net
 
 You will also need the Moscow ML compiler (version 2.01) from
 
-     http://www.dina.kvl.dk/~sestoft/mosml.html
+     http://www.itu.dk/~sestoft/mosml.html
 
 (If you want to build the HOL system on top of Poly/ML, please 
  check the points labelled Poly/ML below. Also check the README
