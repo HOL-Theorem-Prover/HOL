@@ -24,10 +24,7 @@ fun simpl_conv thl =
   in simpl
   end;
 
-fun is_triv_rw tm = 
-  let val (l,r) = dest_eq tm 
-  in aconv l r 
-  end handle HOL_ERR _ => false
+fun is_triv_rw tm = uncurry aconv (dest_eq tm) handle HOL_ERR _ => false;
 
 fun non_triv thl = gather (not o is_triv_rw o concl) thl
 
@@ -46,14 +43,9 @@ fun simplify thl =
  in simpl
  end;
 
-
 val RIGHT_ASSOC = PURE_REWRITE_RULE [GSYM boolTheory.DISJ_ASSOC];
 
-
-fun FILTER_DISCH_ALL P th =
-   let val (asl,_) = dest_thm th
-   in itlist DISCH (filter (sthat P) asl) th
-   end;
+fun FILTER_DISCH_ALL P th = itlist DISCH (filter (sthat P) (Thm.hyp th)) th;
 
 (*----------------------------------------------------------------------------
  *
@@ -80,8 +72,6 @@ fun IT_EXISTS theta thm =
            EXISTS(mk_exists(residue, subst [b] (concl thm)), redex) thm)
         theta thm;
 
-
-
 (*----------------------------------------------------------------------------
  *
  *                   A1 |- M1, ..., An |- Mn
@@ -102,47 +92,40 @@ fun EVEN_ORS thms =
    blue [] thms (map concl thms)
    end;
 
+(*---------------------------------------------------------------------------*)
+(*                                                                           *)
+(*         v = pat[v1,...,vn]  |- M[x]                                       *)
+(*    ------------------------------------------                             *)
+(*      ?v1 ... vn. v = pat[v1,...,vn] |- M[x]                               *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
 
-(*---------------------------------------------------------------------------*
- *                                                                           *
- *         x = (v1,...,vn)  |- M[x]                                          *
- *    ---------------------------------------                                *
- *      ?v1 ... vn. x = (v1,...,vn) |- M[x]                                  *
- *                                                                           *
- *---------------------------------------------------------------------------*)
+fun CHOOSER v (tm,thm) =
+ let val ex_tm = mk_exists(v,tm)
+ in (ex_tm, CHOOSE(v, ASSUME ex_tm) thm)
+ end;
 
- fun LEFT_ABS_VSTRUCT thm =
-  let fun CHOOSER v (tm,thm) =
-        let val ex_tm = mk_exists(v,tm)
-        in (ex_tm, CHOOSE(v, ASSUME ex_tm) thm)
-        end
-      val veq = Lib.trye hd (filter (can dest_eq) (#1 (Thm.dest_thm thm)))
-      val (lhs,rhs) = dest_eq veq
-      val L = free_vars_lr rhs
-  in
-    snd(itlist CHOOSER L (veq,thm))
-  end;
+fun LEFT_ABS_VSTRUCT thm =
+ let open boolSyntax
+     val veq = Lib.trye hd (filter (can dest_eq) (Thm.hyp thm))
+     val pat = rhs veq
+ in snd(itlist CHOOSER (free_vars_lr pat) (veq,thm))
+ end;
 
 (*---------------------------------------------------------------------------*)
 (*                                                                           *)
-(*        Gamma, (x = (v1,...,vn)) /\ constraints |- M[x]                    *)
-(*    -------------------------------------------------------                *)
-(*      ?v1 ... vn. (x = (v1,...,vn)) /\ constraints |- M[x]                 *)
+(*      Gamma, (x = pat[v1,...,vn]) /\ constraints |- M[x]                   *)
+(*    ------------------------------------------------------------------     *)
+(*      Gamma, ?v1 ... vn. (x = pat[v1,...,vn]) /\ constraints |- M[x]       *)
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
 fun LEFT_EXISTS thm =
- let val possibles = filter (can (dest_eq o hd o strip_conj)) (Thm.hyp thm)
-     val veq = Lib.trye hd possibles
-     val (lhs,rhs) = dest_eq (hd (strip_conj veq))
-     val L = free_vars_lr rhs
-     fun CHOOSER v (tm,thm) =
-       let val ex_tm = mk_exists(v,tm)
-       in (ex_tm, CHOOSE(v, ASSUME ex_tm) thm)
-       end
-  in
-    snd(itlist CHOOSER L (veq,thm))
-  end;
-
+ case filter (can (dest_eq o hd o strip_conj)) (Thm.hyp thm)
+  of [] => raise ERR "LEFT_EXISTS" "expected an eqn in hyps"
+   | veq_conj :: _ =>
+     let val (_,pat) = dest_eq (hd (strip_conj veq_conj))
+     in snd (itlist CHOOSER (free_vars_lr pat) (veq_conj,thm))
+     end;
 
 end (* Rules *)

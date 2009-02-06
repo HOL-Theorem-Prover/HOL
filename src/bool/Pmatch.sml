@@ -6,7 +6,7 @@ open HolKernel boolSyntax;
 type thry   = {Tyop : string, Thy : string} ->
               {case_const : term, constructors : term list} option
 
-val ERR = mk_HOL_ERR "Functional";
+val ERR = mk_HOL_ERR "Pmatch";
 
 
 (*---------------------------------------------------------------------------

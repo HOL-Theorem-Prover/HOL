@@ -7,12 +7,11 @@
 (* according to an attribution in Mendelson's book.                          *)
 (*===========================================================================*)
 
-open HolKernel boolLib Parse bossLib
-local open stringLib in end
+open HolKernel boolLib Parse bossLib pred_setTheory;
+
+local open stringLib in end;
+
 val _ = new_theory "PropLogic"
-
-open pred_setTheory
-
 
 (*---------------------------------------------------------------------------*)
 (* Simplification set for arithmetic and sets                                *)
@@ -253,7 +252,7 @@ val False_Imp_P = Q.prove
      by METIS_TAC [is_thm_rules,WEAKENING,SUBSET_EMPTY] THEN
      FULL_SIMP_TAC prop_ss [Ax1_def] THEN
  `(False INSERT H) ||- ((p --> False) --> False)`
-     by METIS_TAC [DEDUCTION ] THEN
+     by METIS_TAC [DEDUCTION] THEN
  `(False INSERT H) ||- (((p --> False) --> False) --> p)`
      by METIS_TAC [is_thm_Ax3,Ax3_def,
                    WEAKENING,SUBSET_INSERT_RIGHT,SUBSET_REFL] THEN
@@ -293,7 +292,7 @@ val Disj_Elim = Q.prove
 (`!H p q r.
    H ||- ((p --> r) --> (q --> r) --> ((p --> False) --> q) --> r)`,
  REPEAT GEN_TAC THEN
- `((r --> False) INSERT((p --> False) --> q) INSERT
+ `((r --> False) INSERT ((p --> False) --> q) INSERT
   (q --> r) INSERT (p --> r) INSERT H) ||- (r --> False)`
     by METIS_TAC [DEDUCTION, p_Imp_p,WEAKENING,EMPTY_SUBSET,SUBSET_INSERT_MONO]
     THEN
@@ -469,9 +468,10 @@ val Andrews_Lemma = Q.store_thm(
       by METIS_TAC [is_thm_MP] THEN
    METIS_TAC[DEDUCTION],
    (*3.3*)
+   `(p INSERT (IMAGE (IValue env) H)) ||- False` by METIS_TAC [DEDUCTION] THEN
    `(p INSERT (IMAGE (IValue env) H)) ||- p'`
-       by METIS_TAC [WEAKENING,SUBSET_INSERT_RIGHT,SUBSET_REFL]
-    THEN METIS_TAC[DEDUCTION],
+       by METIS_TAC [False_Imp_P,is_thm_MP]
+   THEN METIS_TAC[DEDUCTION],
    (*3.4*)
    `(p INSERT (IMAGE (IValue env) H)) ||- False` by METIS_TAC [DEDUCTION] THEN
    `(p INSERT (IMAGE (IValue env) H)) ||- p'`

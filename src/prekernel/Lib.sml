@@ -229,6 +229,15 @@ fun pluck P =
  in pl []
  end;
 
+fun trypluck f =
+ let fun try acc [] = raise ERR "trypluck" "no successful fn. application"
+       | try acc (h::t) = 
+          case total f h
+           of NONE => try (h::acc) t 
+            | SOME v => (v,rev_itlist cons acc t)
+ in try []
+ end
+
 fun funpow n f x =
  let fun iter (0,res) = res
        | iter (n,res) = iter (n-1, f res)

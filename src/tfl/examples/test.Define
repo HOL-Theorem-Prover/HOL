@@ -806,7 +806,6 @@ multiDefine
    (odd 0 = F) /\ 
    (odd (SUC n) = even n)`;
 
-
 multiDefine 
   `(even 0 = T) /\ 
    (even (SUC n) = odd n) /\
@@ -851,3 +850,58 @@ val test_def =
         NONE      -> p1 :: test d1 (p2::d2)
      || SOME(v,x) -> (FST p1,x) :: test d1 d2)`;
 
+
+(*---------------------------------------------------------------------------*)
+(* Prim. rec. defns over nested recursive types should always succeed.       *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Hol_datatype `exp = Or of exp => exp
+                          | And of exp => exp
+                          | Lf of bool`
+
+val _ = Hol_datatype `code = Assign of bool
+                           | PosCond of code list
+                           | NegCond of code list`
+
+val exp_eval_def = 
+ Define`
+   (exp_eval (Or e1 e2) = exp_eval e1 \/ exp_eval e2) /\
+   (exp_eval (And e1 e2) = exp_eval e1 /\ exp_eval e2) /\
+   (exp_eval (Lf b) = b)
+`;
+
+val code_eval_defn = Hol_defn "code_eval" `
+  (code_eval v [] = v) /\
+  (code_eval v (cod :: rest) =
+     case cod of
+        Assign b -> code_eval (SOME b) rest
+     || PosCond c ->
+          (case v of
+             NONE -> NONE
+          || SOME T -> code_eval (code_eval v c) rest
+          || SOME F -> code_eval v rest)
+     || NegCond c ->
+          (case v of
+              NONE -> NONE
+           || SOME F -> code_eval (code_eval v c) rest
+           || SOME T -> code_eval v rest))
+`;
+
+val code1_size = prove(``code1_size = list_size code_size``,
+                       SRW_TAC [][FUN_EQ_THM] THEN
+                       Induct_on `x` THEN
+                       SRW_TAC [][definition "code_size_def",
+                                  listTheory.list_size_def]);
+
+val (code_eval_def, code_eval_ind) = Defn.tprove(
+  code_eval_defn,
+  WF_REL_TAC `inv_image (measure (list_size code_size)) SND` THEN
+  SRW_TAC [ARITH_ss][definition "code_size_def", code1_size]);
+
+(*---------------------------------------------------------------------------*)
+(* Problem (now solved) with production of ind. thm with patterns having     *)
+(* literals.                                                                 *)
+(*---------------------------------------------------------------------------*)
+
+Hol_datatype `ty = C1 of num => bool`;
+Define `foo (C1 15 b) = 1`;

@@ -11,7 +11,7 @@
 *)
 
 open HolKernel boolLib bossLib Parse;
-open numLib numSyntax listTheory rich_listTheory
+open numLib numSyntax listTheory rich_listTheory;
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
@@ -158,7 +158,6 @@ val char_size_def = Define `char_size (c:char) = 0`;
       representation.
  ---------------------------------------------------------------------------*)
 
-
 val _ = type_abbrev ("string", ``:char list``)
 
 val _ = overload_on ("STRING", ``CONS : char -> string -> string``)
@@ -255,9 +254,6 @@ REPEAT GEN_TAC
    THEN Q.EXISTS_TAC`list_rec b g o EXPLODE`
    THEN RW_TAC bool_ss [combinTheory.o_DEF,list_case_def,EXPLODE_IMPLODE]);
 
-(*---------------------------------------------------------------------------
-     Induction for strings.
- ---------------------------------------------------------------------------*)
 
 val STRING_ACYCLIC = Q.store_thm
 ("STRING_ACYCLIC",
