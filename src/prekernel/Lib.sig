@@ -44,6 +44,7 @@ sig
   val rev_itlist2   : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
   val end_itlist    : ('a -> 'a -> 'a) -> 'a list -> 'a
   val foldl_map     : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
+  val get_first     : ('a -> 'b option) -> 'a list -> 'b option
   val separate      : 'a -> 'a list -> 'a list
   val zip           : 'a list -> 'b list -> ('a * 'b) list
   val combine       : 'a list * 'b list -> ('a * 'b) list
@@ -120,10 +121,12 @@ sig
   val hash          : int -> string -> int*int -> int
 
   type 'a cmp       = 'a * 'a -> order
+  val bool_compare  : bool cmp
   val pair_compare  : ('a cmp * 'b cmp) -> ('a * 'b) cmp
   val list_compare  : 'a cmp -> 'a list cmp
   val measure_cmp   : ('a -> int) -> 'a cmp
   val inv_img_cmp   : ('b -> 'a) -> 'a cmp -> 'b cmp
+  val flip_cmp      : 'a cmp -> 'a cmp
   val flip_order    : order -> order
 
   datatype 'a delta = SAME | DIFF of 'a

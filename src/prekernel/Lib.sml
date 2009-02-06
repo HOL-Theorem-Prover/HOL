@@ -181,8 +181,12 @@ fun separate s (x :: (xs as _ :: _)) = x :: s :: separate s xs
   | separate _ xs = xs
 
 val gather = List.filter
-
 val filter = List.filter
+
+fun get_first f l =
+    case l of
+      [] => NONE
+    | h::t => (case f h of NONE => get_first f t | some => some)
 
 fun partition P alist =
    itlist (fn x => fn (L,R) => if P x then (x::L, R) else (L, x::R))
@@ -273,6 +277,12 @@ type 'a cmp = 'a * 'a -> order
 fun flip_order LESS = GREATER
   | flip_order EQUAL = EQUAL
   | flip_order GREATER = LESS
+fun flip_cmp cmp = flip_order o cmp
+
+fun bool_compare (true, true) = EQUAL
+  | bool_compare (true, false) = GREATER
+  | bool_compare (false, true) = LESS
+  | bool_compare (false, false) = EQUAL
 
 fun list_compare cfn =
  let fun comp ([],[]) = EQUAL
