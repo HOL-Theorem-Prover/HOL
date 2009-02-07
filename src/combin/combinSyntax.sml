@@ -80,8 +80,4 @@ fun dest_fail M =
 
 val is_fail = can dest_fail;
 
-val _ = EmitML.is_fail_hook := is_fail
-val _ = EmitML.dest_fail_hook := dest_fail;
-
-
 end

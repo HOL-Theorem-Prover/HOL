@@ -385,20 +385,4 @@ val _ = BasicProvers.export_rewrites
            "option_case_ID", "option_case_SOME_ID", "option_case_def",
            "OPTION_MAP_DEF", "OPTION_JOIN_DEF", "SOME_11", "NOT_SOME_NONE"];
 
-
-(*---------------------------------------------------------------------------*)
-(* Need to install the constructors for options into the const map.          *)
-(*---------------------------------------------------------------------------*)
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-      fun NL() = PP.add_newline ppstrm
-  in S "val _ = ConstMapML.insert_cons(Term.prim_mk_const{Name=\"SOME\",Thy=\"option\"});";
-     NL();
-     S "val _ = ConstMapML.insert_cons(Term.prim_mk_const{Name=\"NONE\",Thy=\"option\"});";
-     NL(); NL()
-  end)};
-
 val _ = export_theory();

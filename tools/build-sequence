@@ -29,7 +29,6 @@ src/bool
 src/proofman
 [poly]bin/hol.bare
 
-src/emit
 src/compute/src
 src/HolSat/sat_solvers/minisat
 src/HolSat/sat_solvers/zc2hs
@@ -107,4 +106,5 @@ src/path
 src/Boolify/src
 src/float
 !!examples/miller/miller
-src/emitScript
+src/emit
+src/emit/theories

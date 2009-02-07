@@ -765,6 +765,8 @@ fun pc_ptr (x : arm_state) =
       print_mem_range (#mem x) (pc, 1)
   end;
 
+fun A f x = f x
+
 fun evaluate_cp (n, f, m, r, s, p) = state (A,pc_ptr) n f (init f m r s p)
 fun eval_cp (n, f, m, r, s, p) = lstate (time,pc_ptr) n f [init f m r s p]
 

@@ -34,8 +34,6 @@ sig
     val WORD_EVAL_RULE    : rule
     val WORD_EVAL_TAC     : tactic
 
-    val WORDS_EMIT_RULE   : rule
-
     val Induct_word         : tactic
     val Cases_word          : tactic
     val Cases_word_value    : tactic

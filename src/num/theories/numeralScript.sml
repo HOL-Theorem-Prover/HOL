@@ -1027,32 +1027,4 @@ val _ = app
           ["iZ", "iiSUC", "iDUB", "iSUB", "iMOD_2EXP", "iSQR", "texp_help",
            "onecount", "exactlog"]
 
-(*---------------------------------------------------------------------------*)
-(* Map 0 and ZERO to the same thing in generated ML.                         *)
-(*---------------------------------------------------------------------------*)
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-      fun NL() = PP.add_newline ppstrm
-  in S "val _ = ConstMapML.prim_insert "; NL();
-     S "         (Term.prim_mk_const{Name=\"0\",Thy=\"num\"},"; NL();
-     S "          (true,\"num\",\"ZERO\",Type.mk_type(\"num\",[])));";
-     NL()
-  end)};
-
-val _ = adjoin_to_theory
-  {sig_ps = NONE,
-   struct_ps = SOME (fn ppstrm =>
-     let val S = PP.add_string ppstrm
-         fun NL() = PP.add_newline ppstrm
-     in S "val _ = EmitML.reshape_thm_hook := (fn thm => "; NL();
-        S "         (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o "; NL();
-        S "         pairLib.GEN_BETA_RULE o "; NL();
-        S "         Rewrite.PURE_REWRITE_RULE (!EmitML.pseudo_constructors)) thm); "; NL();
-        NL()
-     end)
-  }
-
 val _ = export_theory();

@@ -177,11 +177,4 @@ val FST_o_MMAP = store_thm
    ++ BETA_TAC
    ++ REWRITE_TAC [FST]);
 
-val _ =
- let open EmitML
- in Lib.try emitML (!Globals.emitMLDir)
-           ("state_transformer",
-            map DEFN [UNIT_DEF, BIND_DEF, MMAP_DEF, JOIN_DEF])
- end;
-
 val _ = export_theory ();

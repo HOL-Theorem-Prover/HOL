@@ -758,8 +758,7 @@ S "  in Parse.add_const cname"; NL();
 S "   ; itlist GEN vars (rev_itlist add_varstruct V th)"; NL();
 S "  end;"; NL();
 S "  "; NL();
-S "val _ = Definition.new_definition_hook := (dest, post)"; NL();
-S "val _ = EmitML.is_comma_hook := same_const comma_tm"; NL()
+S "val _ = Definition.new_definition_hook := (dest, post)"; NL()
   end)};
 
 val _ = BasicProvers.export_rewrites
@@ -771,13 +770,6 @@ val _ = BasicProvers.export_rewrites
 val comma_tm = Term.prim_mk_const{Name=",", Thy="pair"};
 fun is_pair tm = Term.same_const comma_tm (fst(strip_comb tm));
 fun dest_pair tm = let val (_,[a,b]) = strip_comb tm in (a,b) end;
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-  in S "val _ = ConstMapML.insert comma_tm;"
-  end)}
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,

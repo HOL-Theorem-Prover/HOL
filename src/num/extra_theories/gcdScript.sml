@@ -381,20 +381,6 @@ val LCM_LEAST = store_thm(
   `lcm m n <= p` by METIS_TAC [DIVIDES_LE] THEN
   DECIDE_TAC);
 
-
-val _ =
- let open EmitML dividesTheory
- in
-  emitML (!Globals.emitMLDir)
-   ("gcd",
-    MLSIG "type num = numML.num"
-    ::
-    OPEN ["num"]
-    ::
-    map DEFN
-        [compute_divides, GCD_EFFICIENTLY, lcm_def])
- end;
-
 val _ = export_theory();
 
 end;
