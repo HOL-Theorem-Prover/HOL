@@ -225,7 +225,7 @@ fun last []     = raise ERR "last" "empty list"
 
 fun pluck P =
  let fun pl _ [] = raise ERR "pluck" "predicate not satisfied"
-       | pl A (h::t) = if P h then (h, rev_itlist cons A t) else pl (h::A) t
+       | pl A (h::t) = if P h then (h, List.revAppend(A,t)) else pl (h::A) t
  in pl []
  end;
 
@@ -234,9 +234,20 @@ fun trypluck f =
        | try acc (h::t) = 
           case total f h
            of NONE => try (h::acc) t 
-            | SOME v => (v,rev_itlist cons acc t)
+            | SOME v => (v,List.revAppend(acc,t))
  in try []
  end
+
+fun trypluck' f list = let 
+  fun recurse acc l = 
+      case l of 
+        [] => (NONE, list)
+      | h::t => (case f h of 
+                   NONE => recurse (h::acc) t
+                 | SOME v => (SOME v, List.revAppend(acc,t)))
+in
+  recurse [] list
+end
 
 fun funpow n f x =
  let fun iter (0,res) = res

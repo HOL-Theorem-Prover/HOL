@@ -54,6 +54,7 @@ sig
   val flatten       : 'a list list -> 'a list
   val pluck         : ('a -> bool) -> 'a list -> 'a * 'a list
   val trypluck      : ('a -> 'b) -> 'a list -> 'b * 'a list
+  val trypluck'     : ('a -> 'b option) -> 'a list -> ('b option * 'a list) 
   val enumerate     : int -> 'a list -> (int * 'a) list
   val upto          : int -> int -> int list
   val repeat        : ('a -> 'a) -> 'a -> 'a
