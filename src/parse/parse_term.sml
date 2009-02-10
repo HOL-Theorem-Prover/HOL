@@ -97,8 +97,17 @@ fun mk_prec_matrix G = let
   val Grules = term_grammar.grammar_rules G
   val alltoks =
     ResquanOpTok :: VS_cons :: STD_HOL_TOK fnapp_special :: all_tokens specs
-  val matrix:(stack_terminal * stack_terminal, order) Binarymap.dict ref =
-      Polyhash.mkDict (pair_compare(ST_compare,ST_compare))
+  val matrix:((stack_terminal * bool) * stack_terminal, order) Binarymap.dict ref =
+      Polyhash.mkDict (pair_compare(pair_compare(ST_compare,bool_compare),
+                                    ST_compare))
+      (* the bool is true if there is a non-terminal between the two
+         terminal tokens.  E.g.,
+           x + -y
+         doesn't have such a space between the + and -, whereas
+           x + z - y
+         does (the z will be a non-terminal)
+      *)
+
   val rule_elements = term_grammar.rule_elements o #elements
   val complained_this_iteration = ref false
   fun insert k v = let
@@ -116,7 +125,7 @@ fun mk_prec_matrix G = let
                              (Feedback.HOL_WARNING
                                 "Parse" "Term"
                                 ("Grammar ambiguous on token pair "^
-                                 STtoString G (#1 k) ^ " and " ^
+                                 STtoString G (#1 (#1 k)) ^ " and " ^
                                  STtoString G (#2 k) ^ ", and "^
                                  "probably others too");
                               complained_already := true)
@@ -127,26 +136,34 @@ fun mk_prec_matrix G = let
   end
   fun insert_eqs rule = let
     fun insert_oplist list = let
-      val toks = List.mapPartial (fn TOK s => SOME s | _ => NONE) list
       fun recurse [] = raise BadTokList
         | recurse [x] = ()
-        | recurse (x::(xs as y::_)) = let
+        | recurse (TOK s1::(xs as TOK s2::_)) = let
           in
-            insert (STD_HOL_TOK x, STD_HOL_TOK y) EQUAL;
+            insert ((STD_HOL_TOK s1, false), STD_HOL_TOK s2) EQUAL;
             recurse xs
           end
+        | recurse (TOK s1::TM::(xs as TOK s2::_)) = let
+          in
+            insert ((STD_HOL_TOK s1, true), STD_HOL_TOK s2) EQUAL;
+            recurse xs
+          end
+        | recurse l = raise Fail
+                                (String.concat
+                                     ("Bogus rule featuring elements "::
+                                       separate " " (map reltoString l)))
     in
-      recurse toks
+      recurse list
     end
   in
     case rule of
       PREFIX (STD_prefix rules) => app (insert_oplist o rule_elements) rules
-    | PREFIX (BINDER slist) => let 
+    | PREFIX (BINDER slist) => let
         fun bindertok (BinderString {tok, ...}) = [tok]
           | bindertok LAMBDA = lambda
         val btoks = List.concat (map bindertok slist)
-      in 
-        app (fn s => insert (STD_HOL_TOK s, EndBinding) EQUAL) btoks
+      in
+        app (fn s => insert ((STD_HOL_TOK s, true), EndBinding) EQUAL) btoks
       end
     | SUFFIX (STD_suffix rules) => app (insert_oplist o rule_elements) rules
     | SUFFIX TYPE_annotation => ()
@@ -161,16 +178,19 @@ fun mk_prec_matrix G = let
           val right = STD_HOL_TOK (first_tok (#rightdelim r))
           val separator = STD_HOL_TOK (first_tok (#separator r))
         in
-          insert (left, right) EQUAL;
-          insert (left, separator) EQUAL;
-          insert (separator, separator) EQUAL;
-          insert (separator, right) EQUAL
+          insert ((left,false), right) EQUAL;
+          insert ((left,true), right) EQUAL;
+          insert ((left,true), separator) EQUAL;
+          insert ((separator,true), separator) EQUAL;
+          insert ((separator,true), right) EQUAL
         end
       in
         app process rlist
       end
   end
 
+  fun bi_insert (t1,t2) order = (insert ((t1,false), t2) order;
+                                 insert ((t1,true), t2) order)
   (* the right hand end of a suffix or a closefix is greater than
      everything *)
   val closed_rhses = find_suffix_rhses G
@@ -178,7 +198,7 @@ fun mk_prec_matrix G = let
     val all = alltoks
     val rhses = closed_rhses
   in
-    app (fn rhs => app (fn t => insert (rhs, t) GREATER) all) rhses
+    app (fn rhs => app (fn t => bi_insert (rhs, t) GREATER) all) rhses
   end
 
   (* everything not a suffix rhs is less than the left hand end of a
@@ -187,7 +207,7 @@ fun mk_prec_matrix G = let
   fun insert_lhs_relns () = let
     val all = alltoks -- (EOS::closed_rhses)
   in
-    app (fn lhs => app (fn t => insert (t, lhs) LESS) all) closed_lhses
+    app (fn lhs => app (fn t => bi_insert (t, lhs) LESS) all) closed_lhses
   end
   fun map_rule f [] = []
     | map_rule f (x::xs) = let
@@ -222,12 +242,13 @@ fun mk_prec_matrix G = let
      all possible left hand sides, and the thing on the right is
      greater than all possible right hand sides. *)
   fun calc_eqpairs() =
-    List.mapPartial (fn (k,v) => if v = EQUAL then SOME k else NONE)
-    (Polyhash.listItems matrix)
+    List.mapPartial
+        (fn (((t1,_),t2), v) => if v = EQUAL then SOME (t1,t2) else NONE)
+        (Polyhash.listItems matrix)
   fun terms_between_equals (k1, k2) = let
   in
-    app (fn lhs => insert (k1, lhs) LESS) all_lhs;
-    app (fn rhs => insert (rhs, k2) GREATER) all_rhs
+    app (fn lhs => bi_insert (k1, lhs) LESS) all_lhs;
+    app (fn rhs => bi_insert (rhs, k2) GREATER) all_rhs
   end
 
   (* now the tricky stuff where the precedence relation makes a difference *)
@@ -276,27 +297,27 @@ fun mk_prec_matrix G = let
        associativity *)
       in
         app (fn lefttok =>
-             app
-             (fn lower_right => insert (lower_right, lefttok) GREATER)
-             lower_rights)
-        this_level_lefts;
+                app
+                    (fn lower_right => bi_insert (lower_right, lefttok) GREATER)
+                    lower_rights)
+            this_level_lefts;
         app (fn righttok =>
-             app
-             (fn lower_left => insert (righttok, lower_left) LESS)
-             lower_lefts)
-        this_level_rights;
+                app
+                    (fn lower_left => bi_insert (righttok, lower_left) LESS)
+                    lower_lefts)
+            this_level_rights;
         case assoc of
           LEFT => let
           in
             app (fn right_tok =>
-                 app (fn left_tok => insert (right_tok, left_tok) GREATER)
+                 app (fn left_tok => bi_insert (right_tok, left_tok) GREATER)
                  this_level_lefts)
             this_level_rights
           end
         | RIGHT => let
           in
             app (fn right_tok =>
-                 app (fn left_tok => insert (right_tok, left_tok) LESS)
+                 app (fn left_tok => bi_insert (right_tok, left_tok) LESS)
                  this_level_lefts)
             this_level_rights
           end
@@ -306,9 +327,9 @@ fun mk_prec_matrix G = let
         val lower_rights = List.concat (map right_grabbing_elements remainder)
         val lower_lefts = List.concat (map left_grabbing_elements remainder)
       in
-        app (fn lower_right => insert(lower_right, ResquanOpTok) GREATER)
+        app (fn lower_right => bi_insert(lower_right, ResquanOpTok) GREATER)
         lower_rights;
-        app (fn lower_left => insert(ResquanOpTok, lower_left) LESS)
+        app (fn lower_left => bi_insert(ResquanOpTok, lower_left) LESS)
         lower_lefts
       end
     | PREFIX (STD_prefix rules) => let
@@ -317,19 +338,19 @@ fun mk_prec_matrix G = let
       in
         app (fn right_tok =>
              app
-             (fn lower_left => insert (right_tok, lower_left) LESS)
+             (fn lower_left => bi_insert (right_tok, lower_left) LESS)
              lower_lefts)
         this_level_rights
       end
     | PREFIX (BINDER _) => let
         val lower_lefts = List.concat (map left_grabbing_elements remainder)
       in
-        app (fn lower_left => insert (EndBinding, lower_left) LESS) lower_lefts
+        app (fn lower_left => bi_insert (EndBinding, lower_left) LESS) lower_lefts
       end
     | SUFFIX TYPE_annotation => let
         val lower_rights = List.concat (map right_grabbing_elements remainder)
       in
-        app (fn lower_right => insert (lower_right, TypeColon) GREATER)
+        app (fn lower_right => bi_insert (lower_right, TypeColon) GREATER)
         lower_rights
       end
     | SUFFIX (STD_suffix rules) => let
@@ -337,7 +358,7 @@ fun mk_prec_matrix G = let
         val lefts = map rule_left rules
       in
         app (fn left_tok =>
-             app (fn lower_right => insert (lower_right, left_tok) GREATER)
+             app (fn lower_right => bi_insert (lower_right, left_tok) GREATER)
              lower_rights)
         lefts
       end
@@ -348,37 +369,37 @@ fun mk_prec_matrix G = let
         val this_level_rights = map rule_right rules
         val fnapp = STD_HOL_TOK fnapp_special
       in
-        app (fn lower_left => insert (fnapp, lower_left) LESS) lower_lefts;
-        app (fn lower_right => insert (lower_right, fnapp) GREATER)
+        app (fn lower_left => bi_insert (fnapp, lower_left) LESS) lower_lefts;
+        app (fn lower_right => bi_insert (lower_right, fnapp) GREATER)
         lower_rights;
          (* function application left associative *)
-        insert (fnapp, fnapp) GREATER;
-        app (fn other => insert (other, fnapp) GREATER) this_level_rights;
-        app (fn other => insert (fnapp, other) GREATER) this_level_lefts;
+        bi_insert (fnapp, fnapp) GREATER;
+        app (fn other => bi_insert (other, fnapp) GREATER) this_level_rights;
+        app (fn other => bi_insert (fnapp, other) GREATER) this_level_lefts;
         process_rule (INFIX(STD_infix (rules, LEFT))) remainder
       end
     | INFIX VSCONS => let
         val lower_rights = List.concat (map right_grabbing_elements remainder)
         val lower_lefts = List.concat (map left_grabbing_elements remainder)
       in
-        app (fn lower_left => insert (VS_cons, lower_left) LESS) lower_lefts;
-        app (fn lower_right => insert (lower_right, VS_cons) GREATER)
+        app (fn lower_left => bi_insert (VS_cons, lower_left) LESS) lower_lefts;
+        app (fn lower_right => bi_insert (lower_right, VS_cons) GREATER)
             lower_rights;
         (* kind of non-associative *)
-        insert (VS_cons, VS_cons) EQUAL
+        bi_insert (VS_cons, VS_cons) EQUAL
       end
     | _ => ()
   fun apply_them_all f [] = ()
     | apply_them_all f (x::xs) = (f x xs ; apply_them_all f xs)
 in
   app insert_eqs Grules ;
-  insert (BOS, EOS) EQUAL;
+  insert ((BOS, true), EOS) EQUAL;
   app terms_between_equals (calc_eqpairs());
   (* these next equality pairs will never have terms interfering between
      them, so we can insert the equality relation between them after doing
      the above *)
-  insert (TypeColon, TypeTok) EQUAL;
-  app (fn b => insert (STD_HOL_TOK b, EndBinding) EQUAL) (binders G);
+  insert ((TypeColon,false), TypeTok) EQUAL;
+  app (fn b => insert ((STD_HOL_TOK b,true), EndBinding) EQUAL) (binders G);
   insert_rhs_relns () ;
   insert_lhs_relns () ;
   apply_them_all process_rule Grules;
@@ -556,14 +577,14 @@ fun parse_term (G : grammar) typeparser = let
   val prec_matrix = mk_prec_matrix G
   val rule_db = mk_ruledb G
   val is_binder = is_binder G
-  val binder_table = let 
+  val binder_table = let
     fun recurse (r, acc) =
-        case r of 
-          PREFIX (BINDER blist) => let 
+        case r of
+          PREFIX (BINDER blist) => let
             fun irec (b, acc) =
-                case b of 
+                case b of
                   LAMBDA => acc
-                | BinderString {term_name, tok, ...} => 
+                | BinderString {term_name, tok, ...} =>
                     Binarymap.insert(acc,tok,term_name)
           in
             List.foldl irec acc blist
@@ -634,7 +655,7 @@ fun parse_term (G : grammar) typeparser = let
         case rest of
           [] => FAILloc x1locn "find_reduction : impossible"
         | (((Terminal x2,x2locn), _)::_) => let
-            val res = valOf (Polyhash.peek prec_matrix (x2,x1))
+            val res = valOf (Polyhash.peek prec_matrix ((x2,false),x1))
               handle Option =>
                 FAILloc (locn.between x2locn x1locn)
                         ("No relation between "^STtoString G x2^" and "^
@@ -652,7 +673,7 @@ fun parse_term (G : grammar) typeparser = let
             case rest2 of
               [] => FAILloc t2locn "find_reduction : nonterminal at stack base!"
             | (((Terminal x2,x2locn), _)::_) => let
-                val res = valOf (Polyhash.peek prec_matrix (x2, x1))
+                val res = valOf (Polyhash.peek prec_matrix ((x2,true), x1))
                   handle Option =>
                     FAILloc (locn.between x2locn t2locn)
                             ("No relation between "^STtoString G x2^" and "^
@@ -915,7 +936,7 @@ fun parse_term (G : grammar) typeparser = let
                     "Can't have double restricted quantification"
             end
           | _ => NONE
-        fun comb_abs_fn(v,t) = let 
+        fun comb_abs_fn(v,t) = let
           val binder = term_name_for_binder binder
         in
           if has_tupled_resq v then
@@ -924,10 +945,10 @@ fun parse_term (G : grammar) typeparser = let
                         \arguments"
           else
             case extract_resq v of
-              NONE => (COMB((VAR binder,llocn), 
+              NONE => (COMB((VAR binder,llocn),
                             (ABS(v, t),locn.between (#2 v) (#2 t))),
                        locn.between llocn rlocn)
-            | SOME (v',P) => let 
+            | SOME (v',P) => let
               in
                 (COMB((COMB((VAR (Lib.assoc (SOME binder) restr_binders),llocn),
                             P),locn.between llocn (#2 P)),
@@ -1127,27 +1148,34 @@ fun parse_term (G : grammar) typeparser = let
                   end ))
       else fail
     end
-    val usual_action =
-      check_for_paren_escape ++
-      (fn x =>
-          (case Polyhash.peek prec_matrix (top, input_term) of
-             NONE => let
-             in
-               if !syntax_error_trace then
-                 print ("Don't expect to find a "^STtoString G input_term^
-                        " in this position after a "^STtoString G top^"\n"^
-                        locn.toString itlocn^" and " ^ 
-                        locn.toString toplocn^".\n")
-               else ();
-               fail
-             end
-           | SOME order => let
-             in
-               case order of
-                 LESS => getstack >- less_action
-               | EQUAL => shift
-               | GREATER => do_reduction
-             end) x)
+    val usual_action = let 
+      fun get_topntp stk = 
+          case stk of 
+            [] => return false
+          | ((Terminal _,_), _) :: _ => return false
+          | _ => return true
+      fun check_order topntp = 
+          case Polyhash.peek prec_matrix ((top,topntp), input_term) of
+            NONE => let
+            in
+              if !syntax_error_trace then
+                print ("Don't expect to find a "^STtoString G input_term^
+                       " in this position after a "^STtoString G top^"\n"^
+                       locn.toString itlocn^" and " ^
+                       locn.toString toplocn^".\n")
+              else ();
+              fail
+            end
+          | SOME order => let
+            in
+              case order of
+                LESS => getstack >- less_action
+              | EQUAL => shift
+              | GREATER => do_reduction
+            end          
+    in
+      check_for_paren_escape ++ (getstack >- get_topntp >- check_order)
+    end
   in
     case input_term of
       TypeColon => let
@@ -1189,8 +1217,9 @@ in
   mwhile (current_input >-
           (fn optt => if (isSome optt) then return true
                       else
-                        (topterm >- (fn t => return (#1 (#1 t) <> Terminal BOS)))))
-  basic_action
+                        (topterm >- (fn t => 
+                         return (#1 (#1 t) <> Terminal BOS)))))
+         basic_action
 end
 
 val initial_pstack = PStack {stack = [], lookahead = [],
