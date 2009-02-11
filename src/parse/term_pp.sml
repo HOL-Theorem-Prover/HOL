@@ -1114,7 +1114,7 @@ fun pp_term (G : grammar) TyG = let
                    prec lprec prec (decdepth depth);
       add_break (1, 0);
       full_pr_term binderp showtypes showtypes_v vars_seen pps ppfns RandCP t2
-                   prec lprec prec (decdepth depth);
+                   prec prec rprec (decdepth depth);
       if comb_show_type then
         (add_string (" "^type_intro); add_break (0,0);
          type_pp.pp_type_with_depth TyG pps (decdepth depth) (type_of tm))
