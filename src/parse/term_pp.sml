@@ -542,12 +542,14 @@ fun pp_term (G : grammar) TyG = let
     strip n [] tm
   end
 
-  fun pr_term binderp showtypes showtypes_v vars_seen pps ppfns ratorp tm
+  datatype comb_posn = RatorCP | RandCP | NoCP
+
+  fun pr_term binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
               pgrav lgrav rgrav depth = let
     val _ =
         if printers_exist then let
             fun sysprint (pg,lg,rg) depth tm =
-                pr_term false showtypes showtypes_v vars_seen pps ppfns false
+                pr_term false showtypes showtypes_v vars_seen pps ppfns NoCP
                         tm pg lg rg depth
             val candidates = Net.match tm uprinters
             fun test (pat,_,_) = can (match_term pat) tm
@@ -569,7 +571,7 @@ fun pp_term (G : grammar) TyG = let
     val {fvars_seen, bvars_seen} = vars_seen
     val full_pr_term = pr_term
     val pr_term =
-        pr_term binderp showtypes showtypes_v vars_seen pps ppfns false
+        pr_term binderp showtypes showtypes_v vars_seen pps ppfns NoCP
     val {add_string, add_break, begin_block, end_block,...} = ppfns
     fun block_by_style (addparens, rr, pgrav, fname, fprec) = let
       val needed =
@@ -624,8 +626,8 @@ fun pp_term (G : grammar) TyG = let
     fun pr_vstruct bv = let
       val pr_t =
         if showtypes then
-          full_pr_term true true showtypes_v vars_seen pps ppfns false
-        else full_pr_term true false showtypes_v vars_seen pps ppfns false
+          full_pr_term true true showtypes_v vars_seen pps ppfns NoCP
+        else full_pr_term true false showtypes_v vars_seen pps ppfns NoCP
     in
       case bv of
         Simple tm => let
@@ -1064,7 +1066,7 @@ fun pp_term (G : grammar) TyG = let
 
       val (f, args) = strip_comb tm
       val comb_show_type = let
-        val _ = (showtypes andalso not ratorp) orelse raise PP_ERR "" ""
+        val _ = (showtypes andalso combpos <> RatorCP) orelse raise PP_ERR "" ""
 
         (* find out how the printer will map this constant into a string,
            and then see how this string maps back into constants.  The
@@ -1108,10 +1110,11 @@ fun pp_term (G : grammar) TyG = let
     in
       pbegin (addparens orelse comb_show_type);
       begin_block INCONSISTENT 2;
-      full_pr_term binderp showtypes showtypes_v vars_seen pps ppfns true t1
+      full_pr_term binderp showtypes showtypes_v vars_seen pps ppfns RatorCP t1
                    prec lprec prec (decdepth depth);
       add_break (1, 0);
-      pr_term t2 prec prec rprec (decdepth depth);
+      full_pr_term binderp showtypes showtypes_v vars_seen pps ppfns RandCP t2
+                   prec lprec prec (decdepth depth);
       if comb_show_type then
         (add_string (" "^type_intro); add_break (0,0);
          type_pp.pp_type_with_depth TyG pps (decdepth depth) (type_of tm))
@@ -1227,8 +1230,10 @@ fun pp_term (G : grammar) TyG = let
             case rgrav of
               Prec(n, _) => n > fprec
             | _ => false
-          val addparens = parens_needed_outright orelse
-            pneeded_by_style(rr, pgrav, fname, fprec)
+          val addparens =
+              parens_needed_outright orelse
+              pneeded_by_style(rr, pgrav, fname, fprec) orelse
+              combpos = RandCP
           val rprec = if addparens then Top else rgrav
           val pp_elements = block_up_els [] (elements @ [LastTM])
           val real_args = args @ [Rand]
@@ -1253,6 +1258,7 @@ fun pp_term (G : grammar) TyG = let
             case rgrav of
               Prec(n, _) => n > fprec
             | _ => false
+          val addparens = addparens orelse combpos = RandCP
         in
           pbegin addparens; begin_block INCONSISTENT 2;
           add_string tok;
@@ -1514,7 +1520,7 @@ fun pp_term (G : grammar) TyG = let
             (true, false, true) => add_prim_name()
           | (true, true, true) => with_type add_prim_name
           | (true, true, false) => with_type normal_const
-          | _ => if !show_types andalso not ratorp andalso
+          | _ => if !show_types andalso combpos <> RatorCP andalso
                     const_is_polymorphic tm
                  then
                    with_type normal_const
@@ -1765,7 +1771,7 @@ in
                (!Globals.show_types orelse !Globals.show_types_verbosely)
                (!Globals.show_types_verbosely)
                (start_names())
-               pps ppfns false t RealTop RealTop RealTop
+               pps ppfns NoCP t RealTop RealTop RealTop
                (!Globals.max_print_depth);
        Portable.end_block pps
     end

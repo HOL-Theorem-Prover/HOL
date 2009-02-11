@@ -149,7 +149,7 @@ val _ = add_rule{term_name   = "COND",
                                          TOK "then"], (CONSISTENT, 0)),
                                 BreakSpace(1,2), TM, BreakSpace(1,0),
                                 TOK "else", BreakSpace(1,2)],
-                 paren_style = Always,
+                 paren_style = OnlyIfNecessary,
                  block_style = (AroundEachPhrase, (CONSISTENT, 0))};
 
 
