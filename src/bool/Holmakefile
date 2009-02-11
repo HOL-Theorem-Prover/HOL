@@ -26,5 +26,5 @@ AssembleDiskFiles.uo: AssembleDiskFiles.sml AssembleDiskFiles.ui \
                       DiskFiles.grm.uo DiskFiles.lex.uo DiskFilesHeader.ui
 	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) DiskFiles.grm.ui DiskFiles.lex.ui $<
 
-selftest.exe: selftest.uo simpfrag.uo
+selftest.exe: selftest.uo simpfrag.uo $(dprot $(SIGOBJ)/term_pp.uo)
 	$(HOLMOSMLC) -o $@ $<
