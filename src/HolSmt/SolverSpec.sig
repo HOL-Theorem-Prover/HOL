@@ -1,3 +1,5 @@
+(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+
 (* Specification of SMT solvers: name, command, etc. *)
 
 (* The main reason for having this as an opaque type is to give HolSmtLib a
@@ -8,7 +10,7 @@ signature SolverSpec = sig
   type T
 
   (* see HolSmtLib.GENERIC_SMT for how the values below are used precisely, and
-     see the SmtSolvers structure for concrete solver specifications *)
+     see Yices.sml for a concrete solver specification *)
 
   (* name          : human-readable solver name
      command       : system command to execute the solver

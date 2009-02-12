@@ -1,3 +1,4 @@
+(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
 
 signature HolSmtLib = sig
 

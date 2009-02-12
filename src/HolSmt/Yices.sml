@@ -1,3 +1,5 @@
+(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+
 (* Functions to invoke the Yices SMT solver *)
 
 structure Yices = struct
@@ -20,9 +22,10 @@ structure Yices = struct
           "term supplied is not of type bool")
       else ()
     (* returns a dictionary (possibly) expanded with new (subterm, var)
-       assignments, the next "fresh" index, and a string list that, when
-       concatenated, gives the Yices representation of 'tm' -- 'acc' is of type
-       '(term, term) Redblackmap.dict * int' *)
+       assignments, the next "fresh" index, a set of auxiliary axioms/
+       definitions in Yices syntax, and a string list that, when concatenated,
+       gives the Yices representation of 'tm' -- 'acc' is of type
+       '(term, term) Redblackmap.dict * int * string list' *)
     fun translate (acc, tm) =
       (* Boolean connectives *)
       if Term.same_const tm boolSyntax.T then
@@ -115,14 +118,16 @@ structure Yices = struct
           (a2, "(+ " :: s1 @ " " :: s2 @ [")"])
         end
       else if numSyntax.is_minus tm then
+        (* in HOL, 't1 < t2' implies 't1 - t2 = 0' for naturals; Yices however
+           would consider 't1 - t2' a negative integer *)
         let val (t1, t2) = numSyntax.dest_minus tm
             val (a1, s1) = translate (acc, t1)
             val (a2, s2) = translate (a1, t2)
+            val (dict, index, axioms) = a2
+            val axioms' = Lib.insert ("(define hol_num_minus::(-> nat nat nat)"
+              ^ " (lambda (x::nat y::nat) (ite (< x y) 0 (- x y))))\n") axioms
         in
-          (* in HOL, 't1 < t2' implies 't1 - t2 = 0' for naturals; Yices
-             however would consider 't1 - t2' a negative integer *)
-          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") 0 (- " :: s1 @ " " :: s2 @
-            ["))"])
+          ((dict, index, axioms'), "(hol_num_minus " :: s1 @ " " :: s2 @ [")"])
         end
       else if numSyntax.is_mult tm then
         let val (t1, t2) = numSyntax.dest_mult tm
@@ -131,14 +136,32 @@ structure Yices = struct
         in
           (a2, "(* " :: s1 @ " " :: s2 @ [")"])
         end
-      (* The following would be unsound, because 'x div 0' and 'x mod 0' are
-         unspecified in HOL, but treated very weirdly in Yices: Yices claims
-         that, e.g., 'x = 42 div 0' is unsatisfiable. Similar for div/mod on
-         integers and reals. *)
-      (*
-      else if numSyntax.is_div tm then ... "div" ...
-      else if numSyntax.is_mod tm then ... "mod" ...
-      *)
+      (* 'x div 0' and 'x mod 0' are unspecified in HOL, but not type-correct
+         in Yices and, therefore, treated quite weirdly: Yices claims that,
+         e.g., 'x = 42 div 0' is unsatisfiable. Similar for div/mod on
+         integers. *)
+      else if numSyntax.is_div tm then
+        let val (t1, t2) = numSyntax.dest_div tm
+            val (a1, s1) = translate (acc, t1)
+            val (a2, s2) = translate (a1, t2)
+            val (dict, index, axioms) = a2
+            val axioms' = Lib.insert ("(define hol_num_div0::(-> nat nat))\n" ^
+              "(define hol_num_div::(-> nat nat nat) (lambda (x::nat y::nat)" ^
+              " (ite (= y 0) (hol_num_div0 x) (div x y))))\n") axioms
+        in
+          ((dict, index, axioms'), "(hol_num_div " :: s1 @ " " :: s2 @ [")"])
+        end
+      else if numSyntax.is_mod tm then
+        let val (t1, t2) = numSyntax.dest_mod tm
+            val (a1, s1) = translate (acc, t1)
+            val (a2, s2) = translate (a1, t2)
+            val (dict, index, axioms) = a2
+            val axioms' = Lib.insert ("(define hol_num_mod0::(-> nat nat))\n" ^
+              "(define hol_num_mod::(-> nat nat nat) (lambda (x::nat y::nat)" ^
+              " (ite (= y 0) (hol_num_mod0 x) (mod x y))))\n") axioms
+        in
+          ((dict, index, axioms'), "(hol_num_mod " :: s1 @ " " :: s2 @ [")"])
+        end
       else if numSyntax.is_min tm then
         let val (t1, t2) = numSyntax.dest_min tm
             val (a1, s1) = translate (acc, t1)
@@ -180,6 +203,28 @@ structure Yices = struct
             val (a2, s2) = translate (a1, t2)
         in
           (a2, "(* " :: s1 @ " " :: s2 @ [")"])
+        end
+      else if intSyntax.is_div tm then
+        let val (t1, t2) = intSyntax.dest_div tm
+            val (a1, s1) = translate (acc, t1)
+            val (a2, s2) = translate (a1, t2)
+            val (dict, index, axioms) = a2
+            val axioms' = Lib.insert ("(define hol_int_div0::(-> int int))\n" ^
+              "(define hol_int_div::(-> int int int) (lambda (x::int y::int)" ^
+              " (ite (= y 0) (hol_int_div0 x) (div x y))))\n") axioms
+        in
+          ((dict, index, axioms'), "(hol_int_div " :: s1 @ " " :: s2 @ [")"])
+        end
+      else if intSyntax.is_mod tm then
+        let val (t1, t2) = intSyntax.dest_mod tm
+            val (a1, s1) = translate (acc, t1)
+            val (a2, s2) = translate (a1, t2)
+            val (dict, index, axioms) = a2
+            val axioms' = Lib.insert ("(define hol_int_mod0::(-> int int))\n" ^
+              "(define hol_int_mod::(-> int int int) (lambda (x::int y::int)" ^
+              " (ite (= y 0) (hol_int_mod0 x) (mod x y))))\n") axioms
+        in
+          ((dict, index, axioms'), "(hol_int_mod " :: s1 @ " " :: s2 @ [")"])
         end
       else if intSyntax.is_absval tm then
         let val t = intSyntax.dest_absval tm
@@ -235,7 +280,7 @@ structure Yices = struct
             val (a2, s2) = translate (a1, t2)
         in
           (* note that Yices uses '/' for division on reals, not 'div'; Yices
-             will fail if 's2' is 0 *)
+             will fail if 's2' is 0  not a numeral *)
           (a2, "(/ " :: s1 @ " " :: s2 @ [")"])
         end
       else if realSyntax.is_absval tm then
@@ -362,22 +407,24 @@ structure Yices = struct
         (* we even replace variables, to make sure there are no name clashes
            with either (i) variables generated by us, or (ii) reserved Yices
            names *)
-        let val (dict, fresh) = acc
+        let val (dict, fresh, axioms) = acc
         in
           case Redblackmap.peek (dict, tm) of
             SOME var => (acc, [Lib.fst (Term.dest_var var)])
           | NONE => let val name = "v" ^ Int.toString fresh
                         val var = Term.mk_var (name, Term.type_of tm)
                     in
-                      ((Redblackmap.insert (dict, tm, var), fresh + 1), [name])
+                      ((Redblackmap.insert (dict, tm, var), fresh + 1, axioms),
+                       [name])
                     end
         end
     val empty_dict = Redblackmap.mkDict Term.compare
-    val ((dict, _), ss_tm) = translate ((empty_dict, 0), tm)
+    val ((dict, _, axioms), ss_tm) = translate ((empty_dict, 0, []), tm)
     (* we need to declare the variables in 'dict' to Yices, and for that, we
        need to declare their types to Yices first ... so here we go: *)
     (* similar to 'translate', but for types; we map these to a string
-       directly, rather than to a type variable *)
+       directly, rather than to a type variable, and there are no axioms for
+       types yet *)
     fun translate_type (acc, ty) =
     let
       fun uninterpreted_type ((ty_dict, fresh), ty) =
@@ -432,7 +479,7 @@ structure Yices = struct
        'Redblackmap.foldr' above), and thus may seem arbitrary in the Yices
        file (except that type definitions always come before variable
        definitions). *)
-    all_defs @ "(assert " :: ss_tm @ [")\n(check)\n"]
+    axioms @ all_defs @ "(assert " :: ss_tm @ [")\n(check)\n"]
   end
 
   (* returns true if Yices reported "sat", false if Yices reported "unsat" *)

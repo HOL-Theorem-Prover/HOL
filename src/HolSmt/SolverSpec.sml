@@ -1,3 +1,5 @@
+(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+
 (* Specification of SMT solvers: name, command, etc. *)
 
 structure SolverSpec :> SolverSpec = struct

@@ -1,3 +1,5 @@
+(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+
 (* Entry point into HolSmtLib. Provides GENERIC_SMT and related tactics. *)
 
 structure HolSmtLib :> HolSmtLib = struct

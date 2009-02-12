@@ -1,2 +1,2 @@
-selftest.exe : selftest.uo
+selftest.exe : selftest.uo Yices.uo
 	HOLMOSMLC -o $@ $<
