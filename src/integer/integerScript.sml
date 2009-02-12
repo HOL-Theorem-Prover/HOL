@@ -523,9 +523,9 @@ val _ = overload_on ("*", Term`int_mul`);
    top of the list of possible resolutions. *)
 
 val bool_not = Term`$~`
-val _ = overload_on ("~", Term`$int_neg`);
+val _ = overload_on ("~", Term`int_neg`);
 val _ = overload_on ("~", bool_not);
-
+val _ = overload_on ("numeric_negate", ``int_neg``);
 
 
 (*--------------------------------------------------------------------------*)

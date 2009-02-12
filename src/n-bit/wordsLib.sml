@@ -435,7 +435,7 @@ val word_mult_clauses =
 val WORD_MULT_LEFT_1 = List.nth(word_mult_clauses,2);
 
 val NEG_EQ_0 = trace("metis",0) (METIS_PROVE [WORD_NEG_MUL, WORD_NEG_EQ_0])
-  ``(!w. ($- 1w * w = 0w) = (w = 0w)) /\ (!w. (0w = $- 1w * w) = (w = 0w))``;
+  ``(!w. (-1w * w = 0w) = (w = 0w)) /\ (!w. (0w = -1w * w) = (w = 0w))``;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1409,7 +1409,8 @@ val _ = Parse.post_process_term :=
 fun guess_lengths ()      = set_trace "guess word lengths" 1;
 fun dont_guess_lengths () = set_trace "guess word lengths" 0;
 
-val operators = [("+", "word_add"), ("-", "word_sub"), ("-", "word_2comp"),
+val operators = [("+", "word_add"), ("-", "word_sub"),
+                 ("numeric_negate", "word_2comp"),
                  ("*", "word_mul"), ("<", "word_lt"), (">", "word_gt"),
                  ("<=", "word_le"), (">=", "word_ge")];
 

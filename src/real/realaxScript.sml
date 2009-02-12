@@ -576,6 +576,7 @@ val _ = overload_on ("*", natmult);
 val _ = overload_on ("<", natless);
 
 val _ = overload_on ("~", Term`$real_neg`);
+val _ = overload_on ("numeric_negate", Term`$real_neg`);
 val _ = overload_on ("+", Term`$real_add`);
 val _ = overload_on ("*", Term`$real_mul`);
 val _ = overload_on ("<", Term`real_lt`);

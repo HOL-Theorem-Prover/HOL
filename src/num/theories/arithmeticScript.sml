@@ -93,6 +93,20 @@ val SUB = new_recursive_definition
     def = --`(0 - m = 0) /\
              (SUC m - n = if m < n then 0 else SUC(m - n))`--};
 
+(* Also add concrete syntax for unary negation so that future numeric types
+   can use it.  We can't do anything useful with it for the natural numbers
+   of course, but it seems like this is the best ancestral place for it.
+
+   Descendents wanting to use this will include at least
+     integer, real, words, rat
+*)
+val _ = add_rule { term_name = "numeric_negate",
+                   fixity = TruePrefix 900,
+                   pp_elements = [TOK "-"],
+                   paren_style = OnlyIfNecessary,
+                   block_style = (AroundEachPhrase, (PP.CONSISTENT,0))};
+
+
 val _ = set_fixity "*" (Infixl 600);
 val MULT = new_recursive_definition
    {name = "MULT",

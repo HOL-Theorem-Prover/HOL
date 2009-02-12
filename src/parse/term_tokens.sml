@@ -14,7 +14,7 @@ struct
 
 val non_aggregating_chars =
     foldl (fn (c, cs) => CharSet.add(cs,c)) CharSet.empty
-          (explode "()[]{}~.,;")
+          (explode "()[]{}~.,;-")
 fun nonagg_c c = CharSet.member(non_aggregating_chars, c)
 
 fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1 orelse

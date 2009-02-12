@@ -8,7 +8,7 @@ val _ = new_theory "integer_word"
 
 val i2w_def = Define`
   i2w (i : int) : 'a word =
-    if i < 0 then $- (n2w (Num ~i)) else n2w (Num i)
+    if i < 0 then -(n2w (Num(-i))) else n2w (Num i)
 `;
 
 val w2i_def = Define`
@@ -168,8 +168,8 @@ val WORD_LTi = store_thm("WORD_LTi",
                  w2i_def, w2n_eq_0]
     THENL [
       SRW_TAC [boolSimps.LET_ss] [word_lo_def,nzcv_def,
-               Once (DECIDE ``w2n ($- b) + a = a + w2n ($- b)``)]
-        THEN Cases_on `~BIT (dimindex (:'a)) (w2n a + w2n ($- b))`
+               Once (DECIDE ``w2n (-b) + a = a + w2n (-b)``)]
+        THEN Cases_on `~BIT (dimindex (:'a)) (w2n a + w2n (-b))`
         THEN FULL_SIMP_TAC std_ss [] ,
       DISJ1_TAC]
     THEN FULL_SIMP_TAC (std_ss++fcpLib.FCP_ss) [word_0, word_msb_def]

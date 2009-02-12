@@ -226,6 +226,7 @@ val _ = overload_on ("<=", ``rat_leq``);
 val _ = overload_on (">",  ``rat_gre``);
 val _ = overload_on (">=", ``rat_geq``);
 val _ = overload_on ("~",  ``rat_ainv``);
+val _ = overload_on ("numeric_negate",  ``rat_ainv``);
 val _ = overload_on ("//",  ``rat_cons``);
 
 (*--------------------------------------------------------------------------

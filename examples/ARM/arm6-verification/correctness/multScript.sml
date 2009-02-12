@@ -452,7 +452,7 @@ val BORROW_LEM2 = prove(
      \\ FULL_SIMP_TAC (fcp_ss++SIZES_ss) [w2w,word_bits_def]);
 
 val WORD_ADD_SUB_LCANCEL = prove(
-  `!a b. (a + b = a - c) = (b = $- c)`,
+  `!a b. (a + b = a - c) = (b = -c)`,
   METIS_TAC [WORD_EQ_ADD_LCANCEL,word_sub_def]);
 
 val word2_word32 =

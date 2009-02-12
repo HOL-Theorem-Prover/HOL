@@ -89,15 +89,61 @@ struct
    end
 end
 
+local
+  val rule_elements = term_grammar.rule_elements o #elements
+in
+fun rule_left (rr: rule_record) =
+    case hd (rule_elements rr) of
+      TOK s => STD_HOL_TOK s
+    | _ => raise Fail ("rule list is bogus for "^ #term_name rr)
+end
+
+fun left_grabbing_elements rule =
+    case rule of
+      INFIX (STD_infix(rules, _)) => map rule_left rules
+    | INFIX RESQUAN_OP => [ResquanOpTok]
+    | INFIX (FNAPP rules) => STD_HOL_TOK fnapp_special :: map rule_left rules
+    | INFIX VSCONS => [VS_cons]
+    | SUFFIX (STD_suffix rules) => map rule_left rules
+    | SUFFIX TYPE_annotation => [TypeColon]
+    | _ => []
+
+datatype mx_src = Ifx | Pfx | MS_Other | MS_Multi
+datatype mx_order = PM_LESS of mx_src
+                  | PM_GREATER of mx_src
+                  | PM_EQUAL
+                  | PM_LG of {pfx:order,ifx:order}
+datatype order_compat_verdict = OK | Multify of mx_order | Bad
+fun order_compat mx1 mx2 =
+    case (mx1, mx2) of
+      (PM_LESS src1, PM_LESS src2) => if src1 = src2 then OK
+                                      else Multify (PM_LESS MS_Multi)
+    | (PM_GREATER src1, PM_GREATER src2) => if src1 = src2 then OK
+                                            else Multify (PM_GREATER MS_Multi)
+    | (PM_EQUAL, _) => OK
+    | (_, PM_EQUAL) => OK
+    | (PM_LG i1, PM_LG i2) => if i1 = i2 then OK else Bad
+    | (_ , _) => Bad
+
+fun mx_order mxo =
+    case mxo of
+      PM_LESS _ => SOME LESS
+    | PM_GREATER _ => SOME GREATER
+    | PM_EQUAL => SOME EQUAL
+    | PM_LG _ => NONE
+
+
 fun mk_prec_matrix G = let
   exception NotFound = Binarymap.NotFound
   exception BadTokList
+  type dict = ((stack_terminal * bool) * stack_terminal,
+               mx_order) Binarymap.dict ref
   val {lambda, endbinding, type_intro, restr_binders, ...} = specials G
   val specs = grammar_tokens G
   val Grules = term_grammar.grammar_rules G
   val alltoks =
     ResquanOpTok :: VS_cons :: STD_HOL_TOK fnapp_special :: all_tokens specs
-  val matrix:((stack_terminal * bool) * stack_terminal, order) Binarymap.dict ref =
+  val matrix: dict =
       Polyhash.mkDict (pair_compare(pair_compare(ST_compare,bool_compare),
                                     ST_compare))
       (* the bool is true if there is a non-terminal between the two
@@ -110,28 +156,55 @@ fun mk_prec_matrix G = let
 
   val rule_elements = term_grammar.rule_elements o #elements
   val complained_this_iteration = ref false
+  fun insert_bail k =
+      (Polyhash.insert matrix (k, PM_LESS MS_Multi);
+       complained_this_iteration := true;
+       if not (!complained_already) andalso
+          !Globals.interactive
+       then
+         (Feedback.HOL_WARNING
+              "Parse" "Term"
+              ("Grammar ambiguous on token pair "^
+               STtoString G (#1 (#1 k)) ^ " and " ^
+               STtoString G (#2 k) ^ ", and "^
+               "probably others too");
+              complained_already := true)
+       else
+         ())
   fun insert k v = let
     val insert_result = Polyhash.peekInsert matrix (k, v)
+    val raw_insert = Polyhash.insert matrix
   in
     case (insert_result, v) of
-      (SOME EQUAL, _) => ()  (* ignore this *)
-    | (SOME _, EQUAL) => Polyhash.insert matrix (k,v)  (* EQUAL overrides *)
-    | (SOME oldv, _) => if oldv <> v then
-                          (Polyhash.insert matrix (k, LESS);
-                           complained_this_iteration := true;
-                           if not (!complained_already) andalso
-                              !Globals.interactive
-                           then
-                             (Feedback.HOL_WARNING
-                                "Parse" "Term"
-                                ("Grammar ambiguous on token pair "^
-                                 STtoString G (#1 (#1 k)) ^ " and " ^
-                                 STtoString G (#2 k) ^ ", and "^
-                                 "probably others too");
-                              complained_already := true)
-                           else
-                              ())
-                        else ()
+      (SOME PM_EQUAL, _) => ()  (* ignore this *)
+    | (SOME _, PM_EQUAL) => raw_insert (k,v)  (* EQUAL overrides *)
+    | (SOME oldv, _) => let
+      in
+        case order_compat oldv v of
+          OK => ()
+        | Multify v' => raw_insert (k, v')
+        | Bad => let
+            nonfix << >>
+            val op >> = GREATER and op << = LESS
+          in
+            case (oldv,v) of
+              (PM_LESS src1, PM_GREATER src2) => let
+              in
+                case (src1, src2) of
+                  (Ifx, Pfx) => raw_insert (k, PM_LG {ifx= <<, pfx= >>})
+                | (Pfx, Ifx) => raw_insert (k, PM_LG {ifx= >>, pfx= <<})
+                | _ => insert_bail k
+              end
+            | (PM_GREATER src1, PM_LESS src2) => let
+              in
+                case (src1, src2) of
+                  (Ifx,Pfx) => raw_insert (k, PM_LG {ifx= >>, pfx= <<})
+                | (Pfx,Ifx) => raw_insert (k, PM_LG {ifx= <<, pfx= >>})
+                | _ => insert_bail k
+              end
+            | _ => insert_bail k
+          end
+      end
     | (NONE, _) => ()
   end
   fun insert_eqs rule = let
@@ -140,12 +213,12 @@ fun mk_prec_matrix G = let
         | recurse [x] = ()
         | recurse (TOK s1::(xs as TOK s2::_)) = let
           in
-            insert ((STD_HOL_TOK s1, false), STD_HOL_TOK s2) EQUAL;
+            insert ((STD_HOL_TOK s1, false), STD_HOL_TOK s2) PM_EQUAL;
             recurse xs
           end
         | recurse (TOK s1::TM::(xs as TOK s2::_)) = let
           in
-            insert ((STD_HOL_TOK s1, true), STD_HOL_TOK s2) EQUAL;
+            insert ((STD_HOL_TOK s1, true), STD_HOL_TOK s2) PM_EQUAL;
             recurse xs
           end
         | recurse l = raise Fail
@@ -163,7 +236,7 @@ fun mk_prec_matrix G = let
           | bindertok LAMBDA = lambda
         val btoks = List.concat (map bindertok slist)
       in
-        app (fn s => insert ((STD_HOL_TOK s, true), EndBinding) EQUAL) btoks
+        app (fn s => insert ((STD_HOL_TOK s, true), EndBinding) PM_EQUAL) btoks
       end
     | SUFFIX (STD_suffix rules) => app (insert_oplist o rule_elements) rules
     | SUFFIX TYPE_annotation => ()
@@ -178,11 +251,11 @@ fun mk_prec_matrix G = let
           val right = STD_HOL_TOK (first_tok (#rightdelim r))
           val separator = STD_HOL_TOK (first_tok (#separator r))
         in
-          insert ((left,false), right) EQUAL;
-          insert ((left,true), right) EQUAL;
-          insert ((left,true), separator) EQUAL;
-          insert ((separator,true), separator) EQUAL;
-          insert ((separator,true), right) EQUAL
+          insert ((left,false), right) PM_EQUAL;
+          insert ((left,true), right) PM_EQUAL;
+          insert ((left,true), separator) PM_EQUAL;
+          insert ((separator,true), separator) PM_EQUAL;
+          insert ((separator,true), right) PM_EQUAL
         end
       in
         app process rlist
@@ -198,7 +271,8 @@ fun mk_prec_matrix G = let
     val all = alltoks
     val rhses = closed_rhses
   in
-    app (fn rhs => app (fn t => bi_insert (rhs, t) GREATER) all) rhses
+    app (fn rhs => app (fn t => bi_insert (rhs, t) (PM_GREATER MS_Other)) all)
+        rhses
   end
 
   (* everything not a suffix rhs is less than the left hand end of a
@@ -207,7 +281,9 @@ fun mk_prec_matrix G = let
   fun insert_lhs_relns () = let
     val all = alltoks -- (EOS::closed_rhses)
   in
-    app (fn lhs => app (fn t => bi_insert (t, lhs) LESS) all) closed_lhses
+    app (fn lhs => app (fn t => insert ((t,false), lhs) (PM_LESS MS_Other))
+                       all)
+        closed_lhses
   end
   fun map_rule f [] = []
     | map_rule f (x::xs) = let
@@ -243,12 +319,12 @@ fun mk_prec_matrix G = let
      greater than all possible right hand sides. *)
   fun calc_eqpairs() =
     List.mapPartial
-        (fn (((t1,_),t2), v) => if v = EQUAL then SOME (t1,t2) else NONE)
+        (fn (((t1,_),t2), v) => if v = PM_EQUAL then SOME (t1,t2) else NONE)
         (Polyhash.listItems matrix)
   fun terms_between_equals (k1, k2) = let
   in
-    app (fn lhs => bi_insert (k1, lhs) LESS) all_lhs;
-    app (fn rhs => bi_insert (rhs, k2) GREATER) all_rhs
+    app (fn lhs => bi_insert (k1, lhs) (PM_LESS MS_Other)) all_lhs;
+    app (fn rhs => bi_insert (rhs, k2) (PM_GREATER MS_Other)) all_rhs
   end
 
   (* now the tricky stuff where the precedence relation makes a difference *)
@@ -260,32 +336,24 @@ fun mk_prec_matrix G = let
      then add
         rule's right hand token < x
           for all x on left hand side of suffixes and infixes below *)
-  fun rule_left (rr: rule_record) =
-    case hd (rule_elements rr) of
-      TOK s => STD_HOL_TOK s
-    | _ => raise Fail ("rule list is bogus for "^ #term_name rr)
   fun rule_right (rr:rule_record) =
     case List.last (rule_elements rr) of
       TOK s => STD_HOL_TOK s
       | _ => raise Fail ("rule list is bogus for "^ #term_name rr)
+  fun add2 v p = (p,v)
   fun right_grabbing_elements rule =
     case rule of
-      INFIX(STD_infix(rules, _)) => map rule_right rules
-    | INFIX RESQUAN_OP => [ResquanOpTok]
-    | INFIX(FNAPP rules) => (STD_HOL_TOK fnapp_special) :: map rule_right rules
-    | INFIX VSCONS => [VS_cons]
-    | PREFIX (BINDER _) => [EndBinding]
-    | PREFIX (STD_prefix rules) => map rule_right rules
+      INFIX(STD_infix(rules, _)) => map (add2 Ifx o rule_right) rules
+    | INFIX RESQUAN_OP => [(ResquanOpTok,Ifx)]
+    | INFIX(FNAPP rules) =>
+        (STD_HOL_TOK fnapp_special,Ifx) :: map (add2 Ifx o rule_right) rules
+    | INFIX VSCONS => [(VS_cons,Ifx)]
+    | PREFIX (BINDER _) => [(EndBinding,Pfx)]
+    | PREFIX (STD_prefix rules) => map (add2 Pfx o rule_right) rules
     | _ => []
-  fun left_grabbing_elements rule =
-    case rule of
-      INFIX (STD_infix(rules, _)) => map rule_left rules
-    | INFIX RESQUAN_OP => [ResquanOpTok]
-    | INFIX (FNAPP rules) => STD_HOL_TOK fnapp_special :: map rule_left rules
-    | INFIX VSCONS => [VS_cons]
-    | SUFFIX (STD_suffix rules) => map rule_left rules
-    | SUFFIX TYPE_annotation => [TypeColon]
-    | _ => []
+  val GREATER' = PM_GREATER MS_Other
+  val LESS' = PM_LESS MS_Other
+  val EQUAL' = PM_EQUAL
   fun process_rule rule remainder =
     case rule of
       INFIX(STD_infix(rules, assoc)) => let
@@ -298,26 +366,30 @@ fun mk_prec_matrix G = let
       in
         app (fn lefttok =>
                 app
-                    (fn lower_right => bi_insert (lower_right, lefttok) GREATER)
+                    (fn (lower_right,src) =>
+                        insert ((lower_right,true), lefttok) (PM_GREATER src))
                     lower_rights)
             this_level_lefts;
         app (fn righttok =>
                 app
-                    (fn lower_left => bi_insert (righttok, lower_left) LESS)
+                    (fn lower_left => insert ((righttok,true), lower_left)
+                                             (PM_LESS Ifx))
                     lower_lefts)
             this_level_rights;
         case assoc of
           LEFT => let
           in
             app (fn right_tok =>
-                 app (fn left_tok => bi_insert (right_tok, left_tok) GREATER)
+                 app (fn left_tok => insert ((right_tok,true), left_tok)
+                                            (PM_GREATER Ifx))
                  this_level_lefts)
             this_level_rights
           end
         | RIGHT => let
           in
             app (fn right_tok =>
-                 app (fn left_tok => bi_insert (right_tok, left_tok) LESS)
+                 app (fn left_tok => insert ((right_tok,true), left_tok)
+                                            (PM_LESS Ifx))
                  this_level_lefts)
             this_level_rights
           end
@@ -327,38 +399,43 @@ fun mk_prec_matrix G = let
         val lower_rights = List.concat (map right_grabbing_elements remainder)
         val lower_lefts = List.concat (map left_grabbing_elements remainder)
       in
-        app (fn lower_right => bi_insert(lower_right, ResquanOpTok) GREATER)
-        lower_rights;
-        app (fn lower_left => bi_insert(ResquanOpTok, lower_left) LESS)
-        lower_lefts
+        app (fn lower_right => insert((#1 lower_right,true), ResquanOpTok)
+                                     GREATER')
+            lower_rights;
+        app (fn lower_left => insert((ResquanOpTok,true), lower_left) LESS')
+            lower_lefts
       end
     | PREFIX (STD_prefix rules) => let
         val this_level_rights = map rule_right rules
         val lower_lefts = List.concat (map left_grabbing_elements remainder)
       in
         app (fn right_tok =>
-             app
-             (fn lower_left => bi_insert (right_tok, lower_left) LESS)
-             lower_lefts)
+                app
+                    (fn lower_left => insert ((right_tok,true), lower_left)
+                                             (PM_LESS Pfx))
+                    lower_lefts)
         this_level_rights
       end
     | PREFIX (BINDER _) => let
         val lower_lefts = List.concat (map left_grabbing_elements remainder)
       in
-        app (fn lower_left => bi_insert (EndBinding, lower_left) LESS) lower_lefts
+        app (fn lower_left => insert ((EndBinding,true),lower_left) LESS')
+            lower_lefts
       end
     | SUFFIX TYPE_annotation => let
         val lower_rights = List.concat (map right_grabbing_elements remainder)
       in
-        app (fn lower_right => bi_insert (lower_right, TypeColon) GREATER)
-        lower_rights
+        app (fn lower_right => insert ((#1 lower_right,true), TypeColon)
+                                      GREATER')
+            lower_rights
       end
     | SUFFIX (STD_suffix rules) => let
         val lower_rights = List.concat (map right_grabbing_elements remainder)
         val lefts = map rule_left rules
       in
         app (fn left_tok =>
-             app (fn lower_right => bi_insert (lower_right, left_tok) GREATER)
+             app (fn lower_right => insert ((#1 lower_right,true), left_tok)
+                                           GREATER')
              lower_rights)
         lefts
       end
@@ -369,37 +446,41 @@ fun mk_prec_matrix G = let
         val this_level_rights = map rule_right rules
         val fnapp = STD_HOL_TOK fnapp_special
       in
-        app (fn lower_left => bi_insert (fnapp, lower_left) LESS) lower_lefts;
-        app (fn lower_right => bi_insert (lower_right, fnapp) GREATER)
-        lower_rights;
+        app (fn lower_left => insert ((fnapp,true), lower_left) LESS')
+            lower_lefts;
+        app (fn lower_right => insert ((#1 lower_right,true), fnapp) GREATER')
+            lower_rights;
          (* function application left associative *)
-        bi_insert (fnapp, fnapp) GREATER;
-        app (fn other => bi_insert (other, fnapp) GREATER) this_level_rights;
-        app (fn other => bi_insert (fnapp, other) GREATER) this_level_lefts;
+        insert ((fnapp,true), fnapp) GREATER';
+        app (fn other => insert ((other,true), fnapp) GREATER')
+            this_level_rights;
+        app (fn other => insert ((fnapp,true), other) GREATER')
+            this_level_lefts;
         process_rule (INFIX(STD_infix (rules, LEFT))) remainder
       end
     | INFIX VSCONS => let
         val lower_rights = List.concat (map right_grabbing_elements remainder)
         val lower_lefts = List.concat (map left_grabbing_elements remainder)
       in
-        app (fn lower_left => bi_insert (VS_cons, lower_left) LESS) lower_lefts;
-        app (fn lower_right => bi_insert (lower_right, VS_cons) GREATER)
+        app (fn lower_left => insert ((VS_cons,true), lower_left) LESS')
+            lower_lefts;
+        app (fn lower_right => insert ((#1 lower_right,true), VS_cons) GREATER')
             lower_rights;
         (* kind of non-associative *)
-        bi_insert (VS_cons, VS_cons) EQUAL
+        insert ((VS_cons,true), VS_cons) EQUAL'
       end
     | _ => ()
   fun apply_them_all f [] = ()
     | apply_them_all f (x::xs) = (f x xs ; apply_them_all f xs)
 in
   app insert_eqs Grules ;
-  insert ((BOS, true), EOS) EQUAL;
+  insert ((BOS, true), EOS) EQUAL';
   app terms_between_equals (calc_eqpairs());
   (* these next equality pairs will never have terms interfering between
      them, so we can insert the equality relation between them after doing
      the above *)
-  insert ((TypeColon,false), TypeTok) EQUAL;
-  app (fn b => insert ((STD_HOL_TOK b,true), EndBinding) EQUAL) (binders G);
+  insert ((TypeColon,false), TypeTok) EQUAL';
+  app (fn b => insert ((STD_HOL_TOK b,true), EndBinding) EQUAL') (binders G);
   insert_rhs_relns () ;
   insert_lhs_relns () ;
   apply_them_all process_rule Grules;
@@ -434,8 +515,8 @@ fun mk_ruledb (G:grammar) = let
   fun insert_rule f g (rr:rule_record) =
     Polyhash.insert table (g (term_grammar.rule_elements (#elements rr)),
                            f (#term_name rr))
-  fun infix_f elms = elms @ [TM]
-  fun suffix_f elms = elms
+  fun infix_f elms = TM :: (elms @ [TM])
+  fun suffix_f elms = TM :: elms
   fun closefix_f elms = elms
   fun prefix_f elms = elms @ [TM]
   fun addrule rule =
@@ -570,6 +651,8 @@ fun parse_term (G : grammar) typeparser = let
   val num_info = numeral_info G
   val overload_info = overload_info G
   val closed_lefts = find_prefix_lhses G
+  val left_grabbers = List.concat (map left_grabbing_elements Grules)
+  val fnapp_closed_lefts = Lib.subtract closed_lefts left_grabbers
   val _ =
       isSome (findpos (fn (SUFFIX TYPE_annotation) => true | _ => false)
                       Grules)
@@ -662,10 +745,12 @@ fun parse_term (G : grammar) typeparser = let
                          STtoString G x1)
           in
             case res of
-              LESS => [t1]
-            | EQUAL =>  (t1::find_reduction rest)
-            | GREATER => FAILloc (locn.between x2locn x1locn)
-                                 "find_reduction: found a greater on stack"
+              PM_LESS _ => [t1]
+            | PM_EQUAL =>  (t1::find_reduction rest)
+            | PM_LG _ => [t1]
+                         (* must be a less, because a greater is impossible *)
+            | PM_GREATER _ => FAILloc (locn.between x2locn x1locn)
+                                      "find_reduction: found a greater on stack"
           end
         | ((t2 as ((_,t2locn),_))::rest2) => let
             (* t2 is a non-terminal, whether VS or not *)
@@ -680,10 +765,11 @@ fun parse_term (G : grammar) typeparser = let
                              STtoString G x1)
               in
                 case res of
-                  LESS => [t1,t2]
-                | EQUAL => t1::t2::find_reduction rest2
-                | GREATER => FAILloc (locn.between x2locn t2locn)
-                                     "find_reduction: greater on stack!"
+                  PM_LESS _ => [t1,t2]
+                | PM_EQUAL => t1::t2::find_reduction rest2
+                | PM_LG _ => [t1,t2]
+                | PM_GREATER _ => FAILloc (locn.between x2locn t2locn)
+                                          "find_reduction: greater on stack!"
               end
             | (((_,locn),_)::_) => FAILloc (locn.between locn t2locn) "find_reduction 2 NTs!"
           end
@@ -751,26 +837,31 @@ fun parse_term (G : grammar) typeparser = let
         | stack_item_to_rule_element (_,locn) = FAILloc locn "perform_reduction: gak!"
       val ((_,rlocn),_) = List.hd rhs
       val rhs = List.rev rhs
-      val translated_rhs0 = map (stack_item_to_rule_element o #1) rhs
-      val (translated_rhs, top_was_tm) =
-        case translated_rhs0 of
-          (TM::rest) => (rest, true)
-        | _ => (translated_rhs0, false)
+      val translated_rhs = map (stack_item_to_rule_element o #1) rhs
       val ((_,llocn),_) = List.hd rhs
       val lrlocn = locn.between llocn rlocn
-      val rule = valOf (Polyhash.peek rule_db translated_rhs)
-        handle Option => let
-          val errmsg = "No rule for "^listtoString reltoString translated_rhs
-        in
-          valOf (handle_list_reduction translated_rhs)
-          handle Option => FAILloc lrlocn errmsg
-        end
+      val top_was_tm = hd translated_rhs = TM
+      val rule = let
+        val errmsg = "No rule for "^ listtoString reltoString translated_rhs
+      in
+        case Polyhash.peek rule_db translated_rhs of
+          NONE => let
+          in
+            if top_was_tm then
+              case Polyhash.peek rule_db (tl translated_rhs) of
+                NONE => (valOf (handle_list_reduction (tl translated_rhs))
+                         handle Option => FAILloc lrlocn errmsg)
+              | SOME r => r
+            else
+              valOf (handle_list_reduction translated_rhs)
+              handle Option => FAILloc lrlocn errmsg
+          end
+        | SOME r => r
+      end
       val ignore_top_item =
           case rule of
-              infix_rule   s => if top_was_tm then false else
-                                FAILloc lrlocn ("missing left argument to "^s)
-            | suffix_rule  s => if top_was_tm then false else
-                                FAILloc lrlocn ("missing first argument to "^s)
+              infix_rule   s => false
+            | suffix_rule  s => false
             | _              => top_was_tm
       (* rhs' is the actual stack segment matched by the rule, and llocn' is
          its left edge, unlike rhs and llocn which may contain a spurious TM
@@ -1083,28 +1174,29 @@ fun parse_term (G : grammar) typeparser = let
     val top = dest_terminal top_item
     val toplocn = #2 top_item
     val ttt = Terminal input_term
-    fun less_action stack =
+    fun check_for_fnapp_insert stack =
       (* if the next thing in the lookahead might begin a whole new phrase,
          i.e. is a closed lhs, and the top thing on the stack is a non-terminal
          then we should insert the magical function application operator *)
-      case stack of
-        ((NonTerminal _,locn), _)::_ => let
-          val fnt = (LA_Symbol (STD_HOL_TOK fnapp_special),locn.Loc_Near locn)
-        in
-          if mem input_term closed_lefts then
-            current_la >- (fn oldla => set_la (fnt::oldla))
-          else
-            shift
-        end
-      | ((NonTermVS _,locn), _) :: _ => let
-          val fnt = (LA_Symbol VS_cons,locn.Loc_Near locn)
-        in
-          if mem input_term closed_lefts then
-            current_la >- (fn oldla => set_la (fnt::oldla))
-          else
-            shift
-        end
-      | _ => shift
+        case stack of
+          ((NonTerminal _,locn), _)::_ => let
+            val fnt = (LA_Symbol (STD_HOL_TOK fnapp_special),locn.Loc_Near locn)
+          in
+            if mem input_term fnapp_closed_lefts then
+              current_la >- (fn oldla => set_la (fnt::oldla))
+            else
+              fail
+          end
+        | ((NonTermVS _,locn), _) :: _ => let
+            val fnt = (LA_Symbol VS_cons,locn.Loc_Near locn)
+          in
+            if mem input_term fnapp_closed_lefts then
+              current_la >- (fn oldla => set_la (fnt::oldla))
+            else
+              fail
+          end
+        | _ => fail
+
     (* a "paren escape" is a CAML style escaping of what would otherwise
        be a special token by parenthesising it.  Thus (/\) instead of $/\.
        The analysis is done at this level rather than inside the lexer to
@@ -1148,13 +1240,19 @@ fun parse_term (G : grammar) typeparser = let
                   end ))
       else fail
     end
-    val usual_action = let 
-      fun get_topntp stk = 
-          case stk of 
-            [] => return false
-          | ((Terminal _,_), _) :: _ => return false
-          | _ => return true
-      fun check_order topntp = 
+    fun top_might_be_infix stk =
+        case stk of
+          ((NonTerminal _, _), _) :: ((Terminal _, _), _) ::
+          ((NonTerminal _, _), _) :: _ => true
+        | _ => false
+
+    val usual_action = let
+      fun get_topntp stk =
+          case stk of
+            [] => return (false,stk)
+          | ((Terminal _,_), _) :: _ => return (false,stk)
+          | _ => return (true,stk)
+      fun check_order (topntp,stk) =
           case Polyhash.peek prec_matrix ((top,topntp), input_term) of
             NONE => let
             in
@@ -1167,14 +1265,22 @@ fun parse_term (G : grammar) typeparser = let
               fail
             end
           | SOME order => let
+              fun byorder GREATER = do_reduction
+                | byorder _ = shift
             in
-              case order of
-                LESS => getstack >- less_action
-              | EQUAL => shift
-              | GREATER => do_reduction
-            end          
+              case mx_order order of
+                SOME x => byorder x
+              | NONE => let
+                  val PM_LG {pfx,ifx} = order
+                in
+                  if top_might_be_infix stk then byorder ifx
+                  else byorder pfx
+                end
+            end
     in
-      check_for_paren_escape ++ (getstack >- get_topntp >- check_order)
+      check_for_paren_escape ++
+      (getstack >- check_for_fnapp_insert) ++
+      (getstack >- get_topntp >- check_order)
     end
   in
     case input_term of
@@ -1217,7 +1323,7 @@ in
   mwhile (current_input >-
           (fn optt => if (isSome optt) then return true
                       else
-                        (topterm >- (fn t => 
+                        (topterm >- (fn t =>
                          return (#1 (#1 t) <> Terminal BOS)))))
          basic_action
 end
