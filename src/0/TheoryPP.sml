@@ -60,7 +60,7 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
      fun pp_type_par ty = if mem ty [alpha,beta,gamma,delta] then pp_type ty
-                          else if can dom_rng ty then pp_type ty
+                          else if can raw_dom_rng ty then pp_type ty
                           else (add_string "("; pp_type ty; add_string ")")
  in
   if is_vartype ty

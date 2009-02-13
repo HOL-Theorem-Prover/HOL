@@ -17,14 +17,14 @@ fun process tm = let
   fun name_of_tm tm = 
     "m_" ^ (implode o filter is_normal_char o map replace_plus o explode o term_to_string) tm;
   in if type_of tm = ``:ppc_reg`` then 
-       if tm = ``PPC_PC``  then (``pPC`` ,``p:word32``) else
-       if tm = ``PPC_LR``  then (``pLR`` ,``lr:word32``) else
-       if tm = ``PPC_CTR`` then (``pCTR``,``ctr:word32``) else
+       if eq tm ``PPC_PC``  then (``pPC`` ,``p:word32``) else
+       if eq tm ``PPC_LR``  then (``pLR`` ,``lr:word32``) else
+       if eq tm ``PPC_CTR`` then (``pCTR``,``ctr:word32``) else
          let val tm = snd (dest_comb tm)
              val f = int_to_string o numSyntax.int_of_term o snd o dest_comb in
            (mk_comb(``pR``,tm),mk_var("r" ^ f tm,``:word32``)) end
      else if type_of tm = ``:ppc_bit`` then 
-       if tm = ``PPC_CARRY``  then (``pS1 PPC_CARRY`` ,``c:bool option``) else
+       if eq tm ``PPC_CARRY``  then (``pS1 PPC_CARRY`` ,``c:bool option``) else
          let val f = int_to_string o numSyntax.int_of_term o snd o dest_comb o snd o dest_comb in
            (mk_comb(``pS1``,tm),mk_var("s" ^ f tm,``:bool option``)) end        
      else if type_of tm = ``:word32`` then
@@ -69,12 +69,12 @@ fun ppc_pre_post g = let
   val select_address1 = snd o dest_comb o fst o dest_eq o snd o dest_comb
   val select_address2 = snd o dest_comb o fst o dest_eq
   val mems3 = map select_address1 mems1 @ map select_address2 mems2
-  val mems = filter (fn x => not (mem x [``p:word32``,``p+1w:word32``,``p+2w:word32``,``p+3w:word32``])) mems3
+  val mems = filter (fn x => not (op_mem eq x [``p:word32``,``p+1w:word32``,``p+2w:word32``,``p+3w:word32``])) mems3
   val assignments = find_terml (can (match_term ``x:'a =+ y:'b``)) h
   val assignments = map ((fn (x,y) => (snd (dest_comb x),y)) o dest_comb) assignments  
   fun get_assigned_value_aux x y [] = y
     | get_assigned_value_aux x y ((q,z)::zs) = 
-        if x = q then z else get_assigned_value_aux x y zs
+        if eq x q then z else get_assigned_value_aux x y zs
   fun get_assigned_value x y = get_assigned_value_aux x y assignments
   fun mk_pre_post_assertion x = let
     val (y,z) = process x
@@ -85,7 +85,7 @@ fun ppc_pre_post g = let
   val post = list_mk_star (map snd pre_post) ((type_of o fst o hd) pre_post)
   fun pass tm = not (can (match_term ``~(pm:word32->word8 option x = NONE)``) tm 
               orelse can (match_term ``pm:word32->word8 option x = SOME y``) tm
-              orelse (tm = ``p && 3w = 0w:word32``)) 
+              orelse (eq tm ``p && 3w = 0w:word32``)) 
   val pre_conds = (filter pass o list_dest dest_conj o fst o dest_imp) h
   fun is_bit_cond tm =
     let val (x,y) = dest_eq tm in   
@@ -96,7 +96,7 @@ fun ppc_pre_post g = let
   val pre = subst ss pre
   val post = subst ss post
   val pre_conds = filter (not o is_bit_cond) pre_conds
-  val pre = if pre_conds = [] then pre else mk_cond_star(pre,list_mk_conj pre_conds) 
+  val pre = if null pre_conds then pre else mk_cond_star(pre,list_mk_conj pre_conds) 
   in (pre,post) end;
 
 fun introduce_pMEMORY th = let
@@ -140,7 +140,7 @@ fun introduce_pMEMORY th = let
 
 fun calculate_length_and_jump th = 
   let val (_,_,_,q) = dest_spec(concl th) in
-    let val v = find_term (fn t => t = ``pPC (p + 4w)``) q in (th,4,SOME 4) end
+    let val v = find_term (fn t => eq t ``pPC (p + 4w)``) q in (th,4,SOME 4) end
   handle e =>
     let val v = find_term (can (match_term ``pPC (p + n2w n)``)) q
     in (th,4,SOME (0 + (numSyntax.int_of_term o cdr o cdr o cdr) v)) end 
@@ -186,7 +186,7 @@ fun ppc_prove_specs s = let
   val th = ppc_step s
   val _ = print ", deriving"
   val th = pre_process_thm th
-  fun replace_conv th tm = if (fst o dest_eq o concl) th = tm then th else ALL_CONV tm
+  fun replace_conv th tm = if eq ((fst o dest_eq o concl) th) tm then th else ALL_CONV tm
   in if can (find_term is_cond) (concl th) then let
        val (x,y,z) = dest_cond (find_term is_cond (concl th))
        fun prove_branch cth th = let

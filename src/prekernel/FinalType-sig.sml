@@ -61,7 +61,11 @@ sig
  val beta_conv_ty  : hol_type -> hol_type
  val head_beta_ty  : hol_type -> hol_type
  val deep_beta_conv_ty : hol_type -> hol_type
+ val eta_conv_ty   : hol_type -> hol_type
+ val deep_eta_conv_ty : hol_type -> hol_type
+ val deep_beta_eta_conv_ty : hol_type -> hol_type
  val abconv_ty     : hol_type -> hol_type -> bool
+ val subtype       : hol_type -> hol_type -> bool
 
  val decls         : string -> {Thy:string, Tyop:string} list
  val op_arity      : {Thy:string, Tyop:string} -> int option

@@ -13,7 +13,7 @@ sig
     val cache                  : (string -> 'a) -> string -> 'a
     val to_lower               : string -> string
 
-    val all_distinct           : ''a list -> ''a list
+    val all_distinct           : term list -> term list
     val replace_terml          : (term -> term) -> term -> term
     val collect_term_of_type   : hol_type -> term -> term list
     val find_terml             : (term -> bool) -> term -> term list

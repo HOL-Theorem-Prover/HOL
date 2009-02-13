@@ -444,7 +444,6 @@ local
     val name = dest_vartype(gen_tyvar())
   in fn (kd,rk) => trace ("Vartype Format Complaint",0) mk_vartype_opr(name, kd, rk)
   end
-  fun tyrator tm = fst (dest_tycomb tm)
 
 
   fun term_pmatch lconsts tyenv env vtm ctm (sofar as (insts,homs)) =
@@ -583,10 +582,12 @@ fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
                             end
                  in
                    if aconv t x' then raise ERR "separate_insts" ""
-                   else if not (abconv_ty (type_of x') (type_of t))
-                                 then raise ERR "separate_insts" "bad type subst" (* This may cover an error in normal HOL *)
-                                 else {redex = x', residue = t}
+                   else {redex = x', residue = t}
                  end) realinsts
+  val _ = map (fn {redex = x, residue = t} =>
+                   if abconv_ty (type_of x) (type_of t) then ()
+                   else raise ERR "separate_insts" "bad term subst: type mismatch" (* This covers an error in normal HOL *)
+              ) tminsts
 in
   (betacounts, tminsts, tyins', kdins, rkin)
 end

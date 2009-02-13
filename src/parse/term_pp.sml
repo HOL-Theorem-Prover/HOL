@@ -891,6 +891,7 @@ fun pp_term (G : grammar) TyG = let
     in
       Lib.unprefix GrammarSpecials.fakeconst_special vnm handle HOL_ERR _ => vnm
     end handle HOL_ERR _ => fst (dest_const tm)
+                            handle HOL_ERR _ => atom_name (fst (dest_tycomb tm))
     fun can_pr_numeral stropt = List.exists (fn (k,s') => s' = stropt) num_info
     fun pr_numeral injtermopt tm = let
       open Overload
@@ -1779,7 +1780,7 @@ fun pp_term (G : grammar) TyG = let
           val () = if is_let tm then (pr_let lgrav rgrav tm; raise SimpleExit)
                    else ()
 
-          fun is_atom tm = is_const tm orelse is_var tm
+          fun is_atom tm = is_const tm orelse is_var tm orelse (is_tycomb tm andalso is_atom (fst(dest_tycomb tm)))
           fun pr_atomf (f,args) = let
             (* the tm, Rator and Rand bindings that we began with are
                overridden by the f and args values that may be the product of

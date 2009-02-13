@@ -29,9 +29,9 @@ val to_lower = let
 
 (* finding and replacing terms *)
 
-fun all_distinct ([]:''a list) = []
+fun all_distinct ([]:term list) = []
   | all_distinct (x::xs) = 
-      x :: all_distinct (filter (fn y => not (x = y)) xs)
+      x :: all_distinct (filter (fn y => not (eq x y)) xs)
 
 fun replace_terml p tm = let
   fun aux tm = p tm handle e =>
@@ -154,7 +154,7 @@ fun MOVE_OUT_CONV target tm = let
     | take_drop_until p ys (x::xs) = 
         if p x then (rev ys,x,xs) else take_drop_until p (x::ys) xs
   val xs = list_dest dest_star tm
-  fun is_match x y = (x = get_sep_domain y)
+  fun is_match x y = eq x (get_sep_domain y)
   val (s1,y,s2) = take_drop_until (is_match target) [] xs
   val result = list_mk_star (s1 @ s2 @ [y]) (type_of tm)
   in prove(mk_eq(tm,result),SIMP_TAC bool_ss [AC STAR_ASSOC STAR_COMM]) end 

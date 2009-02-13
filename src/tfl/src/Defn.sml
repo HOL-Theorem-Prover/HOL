@@ -223,12 +223,12 @@ fun nUNDISCH n th = if n<1 then th else nUNDISCH (n-1) (UNDISCH th)
 fun INST_THM theta th =
   let val asl = hyp th
       val th1 = rev_itlist DISCH asl th
-      val th2 = INST_TY_TERM theta th1
+      val th2 = INST_ALL theta th1
   in
    nUNDISCH (length asl) th2
   end;
 
-fun isubst (tmtheta,tytheta) tm = subst tmtheta (inst tytheta tm);
+fun isubst (tmtheta,tytheta,kdtheta,rktheta) tm = subst tmtheta (inst_rk_kd_ty rktheta kdtheta tytheta tm);
 
 fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
       STDREC {eqs=map (INST_THM theta) eqs,
@@ -261,7 +261,7 @@ fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
 fun set_reln def R =
    case reln_of def
     of NONE => def
-     | SOME Rpat => inst_defn def (Term.match_term Rpat R)
+     | SOME Rpat => inst_defn def (Term.kind_match_term Rpat R)
                     handle e => (HOL_MESG"set_reln: unable"; raise e);
 
 fun PROVE_HYPL thl th = itlist PROVE_HYP thl th
@@ -1189,7 +1189,7 @@ fun mk_Rdefn stem R eqs =
   let val defn = mk_defn stem eqs
   in case reln_of defn
       of NONE => defn
-       | SOME Rvar => inst_defn defn (Term.match_term Rvar R)
+       | SOME Rvar => inst_defn defn (Term.kind_match_term Rvar R)
   end;
 
 (*===========================================================================*)
@@ -1599,7 +1599,7 @@ fun Hol_Rdefn stem Rquote eqs_quote =
       of NONE => defn
        | SOME Rvar =>
           let val R = Parse.typedTerm Rquote (type_of Rvar)
-          in inst_defn defn (Term.match_term Rvar R)
+          in inst_defn defn (Term.kind_match_term Rvar R)
           end
   end;
 

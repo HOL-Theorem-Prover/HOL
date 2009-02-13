@@ -67,13 +67,13 @@ fun ia32_pre_post g s = let
     (cdr o concl o SIMP_CONV std_ss [GSYM wordsTheory.WORD_ADD_ASSOC,word_arith_lemma1]) tm
     handle e => tm
   val mems3 = map select_address1 mems1 @ map select_address2 mems2
-  val mems = filter (fn x => not (``xe:word32`` = (cdr (car x) handle e => x))) mems3
+  val mems = filter (fn x => not (eq ``xe:word32`` (cdr (car x) handle e => x))) mems3
   val assignments = find_terml (can (match_term ``x:'a =+ y:'b``)) h
   val assignments = map simp assignments
   val assignments = map ((fn (x,y) => (snd (dest_comb x),y)) o dest_comb) assignments  
   fun get_assigned_value_aux x y [] = y
     | get_assigned_value_aux x y ((q,z)::zs) = 
-        if x = q then z else get_assigned_value_aux x y zs
+        if eq x q then z else get_assigned_value_aux x y zs
   fun get_assigned_value x y = get_assigned_value_aux x y assignments
   fun mk_pre_post_assertion x = let
     val (y,z) = process x
@@ -96,7 +96,7 @@ fun ia32_pre_post g s = let
   val pre = mk_star (pre,``xPC eip``)
   val post = mk_star (post,mk_comb(``xPC``,subst [``xe:word32``|->``eip:word32``] ((cdr o car o cdr o cdr) s)))
   val pre_conds = filter (not o is_bit_cond) pre_conds
-  val pre = if pre_conds = [] then pre else mk_cond_star(pre,list_mk_conj pre_conds) 
+  val pre = if null pre_conds then pre else mk_cond_star(pre,list_mk_conj pre_conds) 
   in (pre,post) end;
 
 fun introduce_xMEMORY th = let
@@ -210,7 +210,7 @@ fun ia32_prove_specs s = let
   val th = pre_process_thm th
   val (c,thms) = calc_code s
   val th = RW thms th
-  fun replace_conv th tm = if (fst o dest_eq o concl) th = tm then th else ALL_CONV tm
+  fun replace_conv th tm = if eq ((fst o dest_eq o concl) th) tm then th else ALL_CONV tm
   in if can (find_term is_cond) (concl th) then let
        val (x,y,z) = dest_cond (find_term is_cond (concl th))
        fun prove_branch cth th = let

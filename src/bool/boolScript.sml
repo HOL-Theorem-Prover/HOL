@@ -268,10 +268,9 @@ val BOOL_CASES_AX =
  new_axiom
    ("BOOL_CASES_AX", Term `!t. (t=T) \/ (t=F)`);
 
-(* For kinds other than "typ", use TY_ETA_CONV *)
 val TY_ETA_AX = (* New for HOL-Omega *)
  new_axiom
-   ("TY_ETA_AX",     Term `!t:(!'a:'k.'b). (\:'a. t [:'a:]) = t`);
+   ("TY_ETA_AX",     Term `!t:(!'a:'k.'b:<=1). (\:'a. t [:'a:]) = t`);
 
 val ETA_AX =
  new_axiom
@@ -1436,8 +1435,8 @@ val _ = save_thm("EQ_EXT",EQ_EXT);
  *---------------------------------------------------------------------------*)
 
 val EQ_TY_EXT =
-   let val f = (--`f: !'a:'k. ('a:'k) 'b`--)
-       and g = (--`g: !'a:'k. ('a:'k) 'b`--)
+   let val f = (--`f: !'a:'k. ('a:'k) ('b:<=1)`--)
+       and g = (--`g: !'a:'k. ('a:'k) ('b:<=1)`--)
    in
    GEN f (GEN g (DISCH (--`!:'a:'k. ^f [:'a:] = ^g [:'a:]`--)
                        (TY_EXT(ASSUME (--`!:'a:'k. ^f [:'a:] = ^g [:'a:]`--)))))
@@ -1471,7 +1470,7 @@ val _ = save_thm("FUN_EQ_THM",FUN_EQ_THM);
 
 val TY_FUN_EQ_THM =
   let val a = mk_vartype_opr("'a", kappa, 0)
-      val b = mk_vartype_opr("'b", kappa ==> typ, 0)
+      val b = mk_vartype_opr("'b", kappa ==> typ, 1)
       val ty = Type.mk_univ_type(a, Type.mk_app_type(b,a))
       val f = mk_var("f", ty)
       val g = mk_var("g", ty)

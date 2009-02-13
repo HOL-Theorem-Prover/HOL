@@ -611,7 +611,7 @@ fun nc_INDUCT_TAC (A,g) =
  let val (_,P) = dest_comb g
       val ith = ISPEC P nc_INDUCTION
       fun bconv tm
-        = if not(rator tm = P) then
+        = if not(eq (rator tm) P) then
           raise HOL_ERR{origin_structure = "ncScript.sml",
                         origin_function = "nc_INDUCT_TAC",
                         message = "function bconv failed"}
@@ -798,7 +798,7 @@ fun nc_INDUCT_TAC2 q (A,g) =
   let val (_,P) = dest_comb g
       val ith = ISPEC P nc_INDUCTION2
       fun bconv tm
-        = if not(rator tm = P) then
+        = if not(eq (rator tm) P) then
             raise mk_HOL_ERR "ncScript.sml" "nc_INDUCT_TAC2"
                              "function bconv failed"
           else BETA_CONV tm

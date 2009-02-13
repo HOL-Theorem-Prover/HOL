@@ -520,7 +520,7 @@ val FORK_def = Define
 
 val nattransf_FORK = store_thm
   ("nattransf_FORK",
-   ``nattransf ((\:'a. FORK) : (I, \'a.'a # 'a)nattransf)
+   ``nattransf ((\:'a. FORK) : (I, \'a. 'a # 'a)nattransf)
                (\:'a 'b. I)
                (\:'a 'b. \f (a,b). (f a,f b))``,
    SIMP_TAC list_ss [nattransf_def,FORK_def,FUN_EQ_THM]

@@ -20,10 +20,10 @@ fun process tm = let
   in if type_of tm = ``:word4`` then let
        val f = int_to_string o numSyntax.int_of_term o snd o dest_comb
        in (mk_comb(``aR``,tm),mk_var("r" ^ f tm,``:word32``)) end
-     else if tm = ``sN:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sn",``:bool``))
-     else if tm = ``sZ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sz",``:bool``))
-     else if tm = ``sC:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sc",``:bool``))
-     else if tm = ``sV:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sv",``:bool``))
+     else if eq tm ``sN:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sn",``:bool``))
+     else if eq tm ``sZ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sz",``:bool``))
+     else if eq tm ``sC:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sc",``:bool``))
+     else if eq tm ``sV:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sv",``:bool``))
      else if type_of tm = ``:word30`` then
        (mk_comb(``aM``,tm),mk_var(name_of_tm tm,``:word32``))
      else hd [] end;
@@ -54,7 +54,7 @@ fun arm_pre_post g = let
     (zip [``sN``,``sZ``,``sC``,``sV``] ((list_dest pairSyntax.dest_pair o cdr o car o hd) sts_assign)))
   fun get_assigned_value_aux x y [] = y
     | get_assigned_value_aux x y ((q,z)::zs) = 
-        if x = q then z else get_assigned_value_aux x y zs
+        if eq x q then z else get_assigned_value_aux x y zs
   fun get_assigned_value x y = get_assigned_value_aux x y assignments
   fun mk_pre_post_assertion x = let
     val (y,z) = process x
@@ -67,7 +67,7 @@ fun arm_pre_post g = let
     not (can (match_term ``~(^state).undefined``) tm) andalso
     not (can (match_term ``ARM_READ_MEM (addr30 (r:word32)) ^state = n2w n``) tm)
   val pre_conds = (filter pass o list_dest dest_conj o fst o dest_imp) h
-  val pre = if pre_conds = [] then pre else mk_cond_star(pre,list_mk_conj pre_conds) 
+  val pre = if null pre_conds then pre else mk_cond_star(pre,list_mk_conj pre_conds) 
   val ss = subst [``aR 15w``|->``aPC``,mk_var("r15",``:word32``)|->``p:word32``]
   in (ss pre,ss post) end;
 
@@ -93,7 +93,7 @@ fun introduce_aMEMORY th = let
 
 fun calculate_length_and_jump th = 
   let val (_,_,_,q) = dest_spec(concl th) in
-  let val v = find_term (fn t => t = ``aPC (p + 4w)``) q in (th,4,SOME 4) end
+  let val v = find_term (fn t => eq t ``aPC (p + 4w)``) q in (th,4,SOME 4) end
   handle e =>
   let val v = find_term (can (match_term ``aPC (p + n2w n)``)) q
   in (th,4,SOME (0 + (numSyntax.int_of_term o cdr o cdr o cdr) v)) end 

@@ -12,6 +12,7 @@ open HolKernel Parse boolLib
 open combinTheory functorTheory
 
 val _ = set_trace "Unicode" 1;
+val _ = set_trace "kinds" 0;
 
 
 val _ = new_theory "monad";
@@ -67,127 +68,6 @@ val umj_monad_def = new_definition(
      (* join_map_join *) (!:'a. join [:'a:] o map join = join o join)
    ``);
 
-(*---------------------------------------------------------------------------
-            Another definition of monads, arising from category theory:
-
-   "A monad consists of a category A, a functor t : A -> A,
-   and natural transformations mu : t^2 -> t and eta : 1_A -> t
-   satisfying three equations, as expressed by the commutative diagrams
-
-                 t mu                    t eta         eta t
-           t^3 -------> t^2           t -------> t^2 <------- t
-            |            |              \         |         /
-       mu t |            | mu             \       |mu     /
-            |            |                1 \     |     /   1
-            V            V                    \   V   /
-           t^2 ------->  t                      > t < ."
-                  mu
-
-   (From "The formal theory of monads II" by Stephen Lack and Ross Street.)
-   In the diagrams above, the nodes are functors, and the arrows are
-   natural transformations.
- ---------------------------------------------------------------------------*)
-
-val cat_monad_def = new_definition(
-   "cat_monad_def",
-   ``cat_monad (unit: 'M unit,
-                map : 'M map ,
-                join: 'M join) =
-     (* map  is functor    (t)   *)  functor map /\
-     (* join is nat transf (mu)  *)  nattransf join (map oo map) map /\
-     (* unit is nat transf (eta) *)  nattransf unit (\:'a 'b. I) map /\
-     (*         square commutes  *) (join ooo (map foo join) = join ooo (join oof map)) /\
-     (*  left triangle commutes  *) (join ooo (map foo unit) = (\:'a. I)) /\
-     (* right triangle commutes  *) (join ooo (unit oof map) = (\:'a. I))
-   ``);
-
-val umj_map_functor = store_thm
-  ("umj_map_functor",
-   ``!unit map join.
-      umj_monad(unit,map,join) ==>
-      functor (map : 'M functor)``,
-   SRW_TAC[][umj_monad_def,functor_def,FUN_EQ_THM,ETA_AX]
-  );
-
-val umj_join_nattransf = store_thm
-  ("umj_join_nattransf",
-   ``!unit map join.
-      umj_monad(unit,map,join) ==>
-      nattransf (join         : 'M join)
-                ((map oo map) : ('M o 'M) functor)
-                (map          : 'M functor)``,
-   SRW_TAC[][umj_monad_def,nattransf_def,oo_def,FUN_EQ_THM]
-  );
-
-val umj_unit_nattransf = store_thm
-  ("umj_unit_nattransf",
-   ``!unit map join.
-      umj_monad(unit,map,join) ==>
-      nattransf (unit         : 'M unit)
-                ((\:'a 'b. I) :  I functor)
-                (map          : 'M functor)``,
-   SRW_TAC[][umj_monad_def,nattransf_def,FUN_EQ_THM]
-  );
-
-val map_2_functor = store_thm
-  ("map_2_functor",
-   ``!unit (map:'M map) join.
-      umj_monad(unit,map,join) ==>
-      functor (map oo map)``,
-   REPEAT STRIP_TAC
-   THEN REWRITE_TAC[oo_def]
-   THEN HO_MATCH_MP_TAC functor_o
-   THEN IMP_RES_TAC umj_map_functor
-   THEN ASM_REWRITE_TAC[]
-  );
-
-val map_3_functor = store_thm
-  ("map_3_functor",
-   ``!unit (map:'M map) join.
-      umj_monad(unit,map,join) ==>
-      functor (map oo map oo map)``,
-   REPEAT STRIP_TAC
-   THEN IMP_RES_TAC umj_map_functor
-   THEN IMP_RES_TAC functor_o
-   THEN FULL_SIMP_TAC bool_ss [oo_def]
-  );
-
-
-val cat_monad_square = store_thm
-  ("cat_monad_square",
-   ``!(unit:'M unit) map join.
-      umj_monad(unit,map,join) ==>
-      (join ooo (map foo join) = join ooo (join oof map))``,
-   SRW_TAC [] [umj_monad_def,ooo_def,foo_def,oof_def,TY_FUN_EQ_THM]
-  );
-
-val cat_monad_left_triangle = store_thm
-  ("cat_monad_left_triangle",
-   ``!(unit:'M unit) map join.
-      umj_monad(unit,map,join) ==>
-      (join ooo (map foo unit) = (\:'a. I))``,
-   SRW_TAC [] [umj_monad_def,ooo_def,foo_def,TY_FUN_EQ_THM]
-  );
-
-val cat_monad_right_triangle = store_thm
-  ("cat_monad_right_triangle",
-   ``!(unit:'M unit) map join.
-      umj_monad(unit,map,join) ==>
-      (join ooo (unit oof map) = (\:'a. I))``,
-   SRW_TAC [] [umj_monad_def,ooo_def,oof_def,TY_FUN_EQ_THM]
-  );
-
-val cat_monad_eq_umj_monad = store_thm
-  ("cat_monad_eq_umj_monad",
-   ``!(unit:'M unit) map join.
-      cat_monad(unit,map,join) =
-      umj_monad(unit,map,join)``,
-   REPEAT STRIP_TAC
-   THEN EQ_TAC
-   THEN SRW_TAC [] [cat_monad_def,umj_monad_def,nattransf_def,functor_def,
-                    ooo_def,foo_def,oof_def,oo_def,TY_FUN_EQ_THM]
-  );
-
 
 
 (*---------------------------------------------------------------------------
@@ -197,12 +77,12 @@ val cat_monad_eq_umj_monad = store_thm
  ---------------------------------------------------------------------------*)
 
 val MMAP_def = Define
-   `MMAP (unit: 'M unit, bind: 'M bind)
-              (f:'a -> 'b) (m : 'a 'M) = bind m (\a. unit (f a))`;
+   `MMAP (unit: 'M unit, bind: 'M bind) = \:'a 'b. \(f:'a -> 'b) (m : 'a 'M).
+                      bind m (\a. unit (f a))`;
 
 val JOIN_def = Define
-   `JOIN (unit: 'M unit, bind: 'M bind)
-               (z : 'a 'M 'M) = bind z (\m.m)`;
+   `JOIN (unit: 'M unit, bind: 'M bind) = \:'a. \(z : 'a 'M 'M).
+                      bind z I`;
 
 
 (*---------------------------------------------------------------------------
@@ -211,20 +91,20 @@ val JOIN_def = Define
  ---------------------------------------------------------------------------*)
 
 val BIND_def = Define
-   `BIND (map: 'M map, join: 'M join)
-              (m : 'a 'M) (k:'a -> 'b 'M) = join (map k m)`;
+   `BIND (map: 'M map, join: 'M join) = \:'a 'b. \(m : 'a 'M) (k:'a -> 'b 'M).
+                      join (map k m)`;
 
 val MMAP_BIND = store_thm
   ("MMAP_BIND",
    ``!:'M. !(unit:'M unit) (map:'M map) (join:'M join).
-     MMAP(unit,\:'a 'b. BIND(map,join)) = \(f:'a -> 'b) (m : 'a 'M). BIND(map,join) m (\a. unit (f a))``,
+     MMAP(unit,BIND(map,join)) = \:'a 'b. \(f:'a -> 'b) (m : 'a 'M). BIND(map,join) m (\a. unit (f a))``,
    SRW_TAC[][FUN_EQ_THM,MMAP_def]
   );
 
 val JOIN_BIND = store_thm
   ("JOIN_BIND",
    ``!:'M. !(unit:'M unit) (map:'M map) (join:'M join).
-     JOIN(unit,\:'a 'b. BIND(map,join)) = \(z : 'a 'M 'M). BIND(map,join) z (\m.m)``,
+     JOIN(unit,BIND(map,join)) = \:'a. \(z : 'a 'M 'M). BIND(map,join) z I``,
    SRW_TAC[][FUN_EQ_THM,JOIN_def]
   );
 
@@ -288,6 +168,7 @@ val JOIN_MMAP_JOIN = store_thm
    SRW_TAC[][FUN_EQ_THM,monad_def,MMAP_def,JOIN_def]
   );
 
+(*
 val bind_EQ_JOIN_MMAP = store_thm
   ("bind_EQ_JOIN_MMAP",
    ``!:'M. !(unit:'M unit) (bind:'M bind). monad(unit,bind) ==>
@@ -295,6 +176,24 @@ val bind_EQ_JOIN_MMAP = store_thm
        bind m k = JOIN(unit,bind) (MMAP(unit,bind) k m)``,
    SRW_TAC[][FUN_EQ_THM,monad_def,MMAP_def,JOIN_def,ETA_AX]
   );
+
+val bind_EQ_JOIN_MMAP = store_thm
+  ("bind_EQ_JOIN_MMAP",
+   ``!:'M. !(unit:'M unit) (bind:'M bind). monad(unit,bind) ==>
+       (!:'a 'b. bind [:'a,'b:] = BIND ((\:'a 'b. MMAP(unit,bind)), (\:'a. JOIN(unit,bind))))``,
+   SRW_TAC[][FUN_EQ_THM,monad_def,BIND_def,MMAP_def,JOIN_def,ETA_AX]
+  );
+*)
+
+val bind_EQ_BIND_MMAP_JOIN = store_thm
+  ("bind_EQ_BIND_MMAP_JOIN",
+   ``!:'M. !(unit:'M unit) (bind:'M bind). monad(unit,bind) ==>
+       (bind = BIND(MMAP(unit,bind), JOIN(unit,bind)))``,
+   SRW_TAC[][FUN_EQ_THM,TY_FUN_EQ_THM,monad_def,BIND_def,MMAP_def,JOIN_def,ETA_AX]
+  );
+
+
+val BIND_LEMMA = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV[GSYM o_THM])) (SPEC_ALL BIND_def);
 
 val laws_IMP_monad = store_thm
   ("laws_IMP_monad",
@@ -313,20 +212,19 @@ val laws_IMP_monad = store_thm
      (* JOIN_MMAP_JOIN *)
                      (!:'a. (JOIN(unit,bind) :'a 'M 'M -> 'a 'M) o MMAP(unit,bind) (JOIN(unit,bind)) =
                             JOIN(unit,bind) o JOIN(unit,bind)) /\
-     (* bind_EQ_JOIN_MMAP *)
-                     (!:'a 'b. !m (k:'a -> 'b 'M).
-                        bind m k = JOIN(unit,bind) (MMAP(unit,bind) k m))
+     (* bind_EQ_BIND_JOIN_MMAP *)
+                     (bind = BIND(MMAP(unit,bind), JOIN(unit,bind)))
 
      ==> monad(unit,bind)``,
    REWRITE_TAC[monad_def]
    THEN REPEAT STRIP_TAC
+   THEN POP_ASSUM (fn th => ASSUME_TAC (SIMP_RULE bool_ss [TY_FUN_EQ_THM,FUN_EQ_THM,BIND_LEMMA] th))
    THENL
-     [ FULL_SIMP_TAC bool_ss [FUN_EQ_THM,o_THM,I_THM,ETA_AX],
+     [ FULL_SIMP_TAC bool_ss [FUN_EQ_THM,o_THM,I_THM],
 
-       FULL_SIMP_TAC bool_ss [FUN_EQ_THM,o_THM,I_THM,ETA_AX],
+       FULL_SIMP_TAC bool_ss [FUN_EQ_THM,o_THM,I_THM],
 
-       POP_ASSUM (fn th => REWRITE_TAC[CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV[GSYM o_THM]))
-                                                      (SPEC_ALL (TY_SPEC_ALL th))])
+       POP_ASSUM (fn th => REWRITE_TAC[th])
        THEN CONV_TAC (RATOR_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM o_THM])))
        THEN CONV_TAC (RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM o_THM])))))
        THEN REWRITE_TAC[ETA_AX]
@@ -358,25 +256,24 @@ val monad_IMP_laws = store_thm
      (* JOIN_MMAP_JOIN *)
                      (!:'a. (JOIN(unit,bind) :'a 'M 'M -> 'a 'M) o MMAP(unit,bind) (JOIN(unit,bind)) =
                             JOIN(unit,bind) o JOIN(unit,bind)) /\
-     (* bind_EQ_JOIN_MMAP *)
-                     (!:'a 'b. !m (k:'a -> 'b 'M).
-                        bind m k = JOIN(unit,bind) (MMAP(unit,bind) k m))
+     (* bind_EQ_BIND_JOIN_MMAP *)
+                     (bind = BIND(MMAP(unit,bind), JOIN(unit,bind)))
    ``,
-   SRW_TAC[][FUN_EQ_THM,monad_def,MMAP_def,JOIN_def,ETA_AX]
+   SRW_TAC[][TY_FUN_EQ_THM,FUN_EQ_THM,monad_def,MMAP_def,JOIN_def,BIND_def,ETA_AX]
   );
 
 val monad_EQ_umj_monad = store_thm
   ("monad_EQ_umj_monad",
    ``!:'M. !(unit:'M unit) (bind:'M bind).
      monad(unit,bind) =
-     umj_monad(unit, (\:'a 'b. MMAP(unit,bind)):'M map, \:'a. JOIN(unit,bind)) /\
-        (!:'a 'b. !(m:'a 'M) (k:'a -> 'b 'M).
-                        (bind :'M bind) m k = JOIN (unit,bind) (MMAP (unit,bind) k m))``,
+     umj_monad(unit, (MMAP(unit,bind)):'M map, JOIN(unit,bind)) /\
+       (bind = BIND(MMAP(unit,bind), JOIN(unit,bind)))``,
    REPEAT STRIP_TAC
-   THEN REWRITE_TAC[umj_monad_def]
+   THEN REWRITE_TAC[umj_monad_def,GSYM CONJ_ASSOC]
+   THEN TY_BETA_TAC
    THEN EQ_TAC
-   THENL [ SRW_TAC[][monad_IMP_laws],
-           SRW_TAC[][laws_IMP_monad]
+   THENL [ MATCH_ACCEPT_TAC monad_IMP_laws,
+           MATCH_ACCEPT_TAC laws_IMP_monad
          ]
   );
 
@@ -390,7 +287,7 @@ val umj_monad_IMP_monad = store_thm
   ("umj_monad_IMP_monad",
    ``!:'M. !(unit:'M unit) (map:'M map) (join:'M join).
      umj_monad(unit,map,join) ==>
-     monad(unit, \:'a 'b. BIND(map,join))``,
+     monad(unit, BIND(map,join))``,
    REWRITE_TAC[umj_monad_def]
    THEN REPEAT STRIP_TAC
    THEN SRW_TAC[][monad_def,BIND_def]
@@ -420,12 +317,12 @@ val umj_monad_IMP_monad = store_thm
      ]
   );
 
-val BIND_LEMMA = TAC_PROOF(([],
+val BIND_THM = TAC_PROOF(([],
    ``(!(unit:'M unit) (map:'M map) (join:'M join).
-      monad(unit, \:'a 'b. BIND(map,join)) ==>
+      monad(unit, BIND(map,join)) ==>
       !:'a 'b. !(m:'a 'M) (k:'a -> 'b 'M).
-      (\:'a 'b. BIND(map,join)) [:'a,'b:] m k =
-      JOIN (unit,\:'a 'b. BIND(map,join)) (MMAP (unit,\:'a 'b. BIND(map,join)) k m))``),
+      BIND(map,join) [:'a,'b:] m k =
+      JOIN (unit,BIND(map,join)) (MMAP (unit,BIND(map,join)) k m))``),
    SRW_TAC[][monad_def,FUN_EQ_THM,JOIN_BIND,MMAP_BIND,BIND_def,ETA_AX]
   );
 
@@ -533,33 +430,6 @@ val reader_monad = store_thm
   );
 *)
 
-(*
-val _ = Hol_datatype `state = ST of 'S -> 'a # 'S`;
-
-val STFun_def = Define `STFun (ST (f:'s -> 'a # 's)) = f`;
-
-val state_11        = theorem "state_11"
-(*val state_distinct  = theorem "state_distinct"*)
-val state_case_cong = theorem "state_case_cong"
-val state_nchotomy  = theorem "state_nchotomy"
-val state_Axiom     = theorem "state_Axiom"
-val state_induction = theorem "state_induction"
-
-val ST_STFun = store_thm
-  ("ST_STFun",
-   ``!x: ('s,'a)state. ST (STFun x) = x``,
-   Induct
-   THEN REWRITE_TAC[STFun_def]
-  );
-
-val state_unit_def = Define
-   `state_unit (x:'a) = ST (\s:'s. (x,s))`;
-
-val state_bind_def = Define
-   `state_bind (w:('s,'a)state) (f:'a -> ('s,'b)state) =
-         ST (\s. let (x,s') = STFun w s in STFun (f x) s')`;
-*)
-
 val pair_case_id = store_thm
   ("pair_case_id",
    ``!x:'a # 'b. (case x of (a,b) -> (a,b)) = x``,
@@ -577,20 +447,26 @@ val pair_let_id = store_thm
 val _ = type_abbrev ("state", Type `: \'s 'a. 's -> 'a # 's`);
 
 val state_unit_def = Define
-   `state_unit (x:'a) = \s:'s. (x,s)`;
+   `state_unit = \:'a. \(x:'a) (s:'s). (x,s)`;
 
-val state_bind_def = Define
-   `state_bind (w:('s,'a)state) (f:'a -> ('s,'b)state) =
-         \s. let (x,s') = w s in f x s'`;
+(*
+val state_bind_def = new_infixr_definition("state_bind",
+    ``$>>= = \:'a 'b. \(w:('s,'a)state) (f:'a -> ('s,'b)state) s.
+                           let (x,s') = w s in f x s'``,
+    460);
+*)
 
-val _ = new_infix(">>=", ``:'a -> ('a -> 'b) -> 'b``, 460);
+val state_bind_def = new_definition("state_bind",
+    ``state_bind = \:'a 'b. \(w:('s,'a)state) (f:'a -> ('s,'b)state) s.
+                           let (x,s') = w s in f x s'``);
 
-val _ = overload_on(">>=", ``state_bind : ('s,'a)state -> ('a -> ('s,'b)state) -> ('s,'b)state``);
+val _ = new_infix(">>=", ``:'s state bind``, 460);
+val _ = overload_on(">>=", ``state_bind : 's state bind``);
 
 val state_monad = store_thm
   ("state_monad",
-   ``monad ((\:'a. state_unit) : 's state unit,
-            \:'a 'b. state_bind)``,
+   ``monad (state_unit : 's state unit,
+            $>>=)``,
    SRW_TAC[][monad_def,state_unit_def,state_bind_def,FUN_EQ_THM]
    THEN POP_ASSUM MP_TAC
    THEN ASM_SIMP_TAC std_ss []
@@ -602,52 +478,172 @@ val [state_monad_left_unit,
 
 (* Define MAP (functor) for state monad in standard way using unit and bind: *)
 
-val state_MAP_def = Define
-   `(state_MAP : ('a -> 'b) -> ('s,'a)state -> ('s,'b)state) =
-      MMAP ((\:'a. state_unit):'s state unit,(\:'a 'b. state_bind))`;
+val state_map_def = Define
+   `(state_map : 's state map) = MMAP (state_unit,$>>=)`;
 
-val state_MAP_THM = store_thm
-  ("state_MAP_THM",
-   ``state_MAP (f:'a -> 'b) (m : ('s,'a)state) = state_bind m (\a. state_unit (f a))``,
-   SIMP_TAC bool_ss [state_MAP_def,MMAP_def]
+val state_map_THM = store_thm
+  ("state_map_THM",
+   ``state_map (f:'a -> 'b) (m : ('s,'a)state) = m >>= (\a. state_unit (f a))``,
+   SIMP_TAC bool_ss [state_map_def,MMAP_def]
   );
 
 (* Define JOIN for state monad in standard way using unit and bind: *)
 
-val state_JOIN_def = Define
-   `(state_JOIN : 'a ('s state) ('s state) -> 'a ('s state)) =
-      JOIN ((\:'a. state_unit):'s state unit,(\:'a 'b. state_bind))`; (* infinite loop; unbreakable! *)
+val state_join_def = Define
+   `(state_join : 's state join) = JOIN (state_unit,$>>=)`;
 
-val state_JOIN_THM = store_thm
-  ("state_JOIN_THM",
-   ``state_JOIN (z : 'a ('s state) ('s state)) = state_bind z I``,
-   SIMP_TAC bool_ss [state_JOIN_def,JOIN_def,I_EQ]
+val state_join_THM = store_thm
+  ("state_join_THM",
+   ``state_join (z : 'a ('s state) ('s state)) = z >>= I``,
+   SIMP_TAC bool_ss [state_join_def,JOIN_def,I_EQ]
   );
 
-val [state_MAP_I, state_MAP_o, state_MAP_unit, state_MAP_JOIN,
-     state_JOIN_unit, state_JOIN_MAP_unit, state_JOIN_MAP_JOIN,
-     state_bind_EQ_JOIN_MAP
+val [state_map_I, state_map_o, state_map_unit, state_map_join,
+     state_join_unit, state_join_map_unit, state_join_map_join,
+     state_bind_EQ_join_map
     ] = CONJUNCTS (SIMP_RULE bool_ss [monad_EQ_umj_monad,umj_monad_def,
-                                      GSYM state_MAP_def, GSYM state_JOIN_def] state_monad);
+                                      GSYM state_map_def, GSYM state_join_def] state_monad);
 
-val state_MAP_I            = save_thm("state_MAP_I",            state_MAP_I);
-val state_MAP_o            = save_thm("state_MAP_o",            state_MAP_o);
-val state_MAP_unit         = save_thm("state_MAP_unit",         state_MAP_unit);
-val state_MAP_JOIN         = save_thm("state_MAP_JOIN",         state_MAP_JOIN);
-val state_JOIN_unit        = save_thm("state_JOIN_unit",        state_JOIN_unit);
-val state_JOIN_MAP_unit    = save_thm("state_JOIN_MAP_unit",    state_JOIN_MAP_unit);
-val state_JOIN_MAP_JOIN    = save_thm("state_JOIN_MAP_JOIN",    state_JOIN_MAP_JOIN);
-val state_bind_EQ_JOIN_MAP = save_thm("state_bind_EQ_JOIN_MAP", state_bind_EQ_JOIN_MAP);
+val state_map_I            = save_thm("state_map_I",            state_map_I);
+val state_map_o            = save_thm("state_map_o",            state_map_o);
+val state_map_unit         = save_thm("state_map_unit",         state_map_unit);
+val state_map_join         = save_thm("state_map_join",         state_map_join);
+val state_join_unit        = save_thm("state_join_unit",        state_join_unit);
+val state_join_map_unit    = save_thm("state_join_map_unit",    state_join_map_unit);
+val state_join_map_join    = save_thm("state_join_map_join",    state_join_map_join);
+val state_bind_EQ_join_map = save_thm("state_bind_EQ_join_map", state_bind_EQ_join_map);
 
 val state_functor = store_thm
   ("state_functor",
-   ``functor ((\:'a 'b. state_MAP) : ('s state)functor)``,
-   SRW_TAC[][functor_def,state_MAP_I,state_MAP_o]
+   ``functor (state_map : ('s state)functor)``,
+   SRW_TAC[][functor_def,state_map_I,state_map_o]
+  );
+
+
+(*---------------------------------------------------------------------------
+            Another definition of monads, arising from category theory:
+
+   "A monad consists of a category A, a functor t : A -> A,
+   and natural transformations mu : t^2 -> t and eta : 1_A -> t
+   satisfying three equations, as expressed by the commutative diagrams
+
+                 t mu                    t eta         eta t
+           t^3 -------> t^2           t -------> t^2 <------- t
+            |            |              \         |         /
+       mu t |            | mu             \       |mu     /
+            |            |                1 \     |     /   1
+            V            V                    \   V   /
+           t^2 ------->  t                      > t < ."
+                  mu
+
+   (From "The formal theory of monads II" by Stephen Lack and Ross Street.)
+   In the diagrams above, the nodes are functors, and the arrows are
+   natural transformations.
+ ---------------------------------------------------------------------------*)
+
+val cat_monad_def = new_definition(
+   "cat_monad_def",
+   ``cat_monad (t  :           'M  functor  ,
+                mu : ('M o 'M, 'M) nattransf,
+                eta: (   I   , 'M) nattransf) =
+     (*   t is functor     (map) *)  functor t /\
+     (*  mu is nat transf (join) *)  nattransf mu (t oo t) t /\
+     (* eta is nat transf (unit) *)  nattransf eta (\:'a 'b. I) t /\
+     (*         square commutes  *) (mu ooo (t foo mu) = mu ooo (mu oof t)) /\
+     (*  left triangle commutes  *) (mu ooo (t foo eta) = (\:'a. I)) /\
+     (* right triangle commutes  *) (mu ooo (eta oof t) = (\:'a. I))
+   ``);
+
+val umj_map_functor = store_thm
+  ("umj_map_functor",
+   ``!unit map join.
+      umj_monad(unit,map,join) ==>
+      functor (map : 'M functor)``,
+   SRW_TAC[][umj_monad_def,functor_def,FUN_EQ_THM,ETA_AX]
+  );
+
+val umj_join_nattransf = store_thm
+  ("umj_join_nattransf",
+   ``!unit map join.
+      umj_monad(unit,map,join) ==>
+      nattransf (join         : 'M join)
+                ((map oo map) : ('M o 'M) functor)
+                (map          : 'M functor)``,
+   SRW_TAC[][umj_monad_def,nattransf_def,oo_def,FUN_EQ_THM]
+  );
+
+val umj_unit_nattransf = store_thm
+  ("umj_unit_nattransf",
+   ``!unit map join.
+      umj_monad(unit,map,join) ==>
+      nattransf (unit         : 'M unit)
+                ((\:'a 'b. I) :  I functor)
+                (map          : 'M functor)``,
+   SRW_TAC[][umj_monad_def,nattransf_def,FUN_EQ_THM]
+  );
+
+val map_2_functor = store_thm
+  ("map_2_functor",
+   ``!unit (map:'M map) join.
+      umj_monad(unit,map,join) ==>
+      functor (map oo map)``,
+   REPEAT STRIP_TAC
+   THEN REWRITE_TAC[oo_def]
+   THEN HO_MATCH_MP_TAC functor_o
+   THEN IMP_RES_TAC umj_map_functor
+   THEN ASM_REWRITE_TAC[]
+  );
+
+val map_3_functor = store_thm
+  ("map_3_functor",
+   ``!unit (map:'M map) join.
+      umj_monad(unit,map,join) ==>
+      functor (map oo map oo map)``,
+   REPEAT STRIP_TAC
+   THEN IMP_RES_TAC umj_map_functor
+   THEN IMP_RES_TAC functor_o
+   THEN FULL_SIMP_TAC bool_ss [oo_def]
+  );
+
+
+val cat_monad_square = store_thm
+  ("cat_monad_square",
+   ``!(unit:'M unit) map join.
+      umj_monad(unit,map,join) ==>
+      (join ooo (map foo join) = join ooo (join oof map))``,
+   SRW_TAC [] [umj_monad_def,ooo_def,foo_def,oof_def,TY_FUN_EQ_THM]
+  );
+
+val cat_monad_left_triangle = store_thm
+  ("cat_monad_left_triangle",
+   ``!(unit:'M unit) map join.
+      umj_monad(unit,map,join) ==>
+      (join ooo (map foo unit) = (\:'a. I))``,
+   SRW_TAC [] [umj_monad_def,ooo_def,foo_def,TY_FUN_EQ_THM]
+  );
+
+val cat_monad_right_triangle = store_thm
+  ("cat_monad_right_triangle",
+   ``!(unit:'M unit) map join.
+      umj_monad(unit,map,join) ==>
+      (join ooo (unit oof map) = (\:'a. I))``,
+   SRW_TAC [] [umj_monad_def,ooo_def,oof_def,TY_FUN_EQ_THM]
+  );
+
+val cat_monad_eq_umj_monad = store_thm
+  ("cat_monad_eq_umj_monad",
+   ``!(unit:'M unit) map join.
+      cat_monad(map,join,unit) =
+      umj_monad(unit,map,join)``,
+   REPEAT STRIP_TAC
+   THEN EQ_TAC
+   THEN SRW_TAC [] [cat_monad_def,umj_monad_def,nattransf_def,functor_def,
+                    ooo_def,foo_def,oof_def,oo_def,TY_FUN_EQ_THM]
   );
 
 
 
-val _ = show_types := true;
+val _ = set_trace "types" 1;
 val _ = set_trace "kinds" 0;
 val _ = html_theory "monad";
 

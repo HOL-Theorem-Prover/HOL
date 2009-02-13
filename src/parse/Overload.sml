@@ -475,7 +475,8 @@ fun isize0 acc f [] = acc
 fun isize f x = isize0 0 f x
 
 fun strip_comb ((_, prmap): overload_info) t = let
-  val matches = PrintMap.match(prmap, t)
+  val (t',tyargs) = strip_tycomb t
+  val matches = PrintMap.match(prmap, t')
   val cmp0 = pair_compare (Int.compare,
                            pair_compare (measure_cmp (isize kind_size),
                            pair_compare (measure_cmp (isize type_size),
@@ -487,7 +488,7 @@ fun strip_comb ((_, prmap): overload_info) t = let
     val kdvs = tmlist_kdvs fvs
     val tyvs = tmlist_tyvs fvs
     val tmset = HOLset.addList(empty_tmset, fvs)
-    val ((tmi0,tmeq),(tyi0,tyeq),(kdi0,kdeq),rki) = raw_kind_match kdvs tyvs tmset pat t ([],[],[],0)
+    val ((tmi0,tmeq),(tyi0,tyeq),(kdi0,kdeq),rki) = raw_kind_match kdvs tyvs tmset pat t' ([],[],[],0)
     val tmi = HOLset.foldl (fn (t,acc) => if HOLset.member(tmset,t) then acc
                                           else (t |-> t) :: acc)
                            tmi0
@@ -514,10 +515,11 @@ fun strip_comb ((_, prmap): overload_info) t = let
         | SOME i => #residue i
     val args = map findarg bvs
     val fconst_ty = List.foldr (fn (arg,acc) => type_of arg --> acc)
-                               (type_of t)
+                               (type_of t')
                                args
+    val fake_var = mk_var(GrammarSpecials.fakeconst_special ^ nm, fconst_ty)
   in
-    (mk_var(GrammarSpecials.fakeconst_special ^ nm, fconst_ty), args)
+    (list_mk_tycomb(fake_var, tyargs), args)
   end
 in
   case sorted of
@@ -534,7 +536,7 @@ fun oi_strip_comb oinfo t = let
           | SOME (f,x) => recurse (x::acc) f
         end
       | SOME (f,args) => SOME(f, args @ acc)
-  val realf = repeat rator t
+  val realf = repeat tyrator (repeat rator t)
 in
   if is_var realf andalso
      String.isPrefix GrammarSpecials.fakeconst_special (#1 (dest_var realf))

@@ -820,12 +820,18 @@ end;
  *    Replace arbitrary subterms in a term. Non-renaming.                    *
  *---------------------------------------------------------------------------*)
 
+(*---------------------------------------------------------------------------*
+ * Note: "subtype" could be used below in place of "abconv_ty".              *
+ * This allows for substitutions of types which are the same up to           *
+ * alpha-beta conversion except for having type variables of lower rank.     *
+ *---------------------------------------------------------------------------*)
+
 val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
 local
   open Binarymap
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
-      addb t (if abconv_ty (type_of redex) (type_of residue)
+      addb t (if abconv_ty (type_of residue) (type_of redex)
               then (insert(A,redex,residue),
                     is_var redex andalso b)
               else raise ERR "subst" "redex has different type than residue")
@@ -1511,6 +1517,10 @@ val body = snd o dest_abs;
 val btyvar = fst o dest_tyabs;
 val tybody = snd o dest_tyabs;
 
+fun tyrator (TComb(Rator,_)) = Rator
+  | tyrator (Clos(Env, TComb(Rator,_))) = mk_clos(Env,Rator)
+  | tyrator _ = raise ERR "tyrator" "not a type comb"
+
 
 (*---------------------------------------------------------------------------
     Matching (first order, modulo alpha conversion) of terms, including
@@ -1557,7 +1567,7 @@ fun RM [] theta = theta
             in
                RM rst
                ((case lookup v Id tmS
-                  of NONE => if aconv v tm (* can't use = because of aconv_ty *)
+                  of NONE => if aconv v tm (* can't use = because of abconv_ty *)
                                      then (tmS,HOLset.add(Id,v))
                                      else ((v |-> tm)::tmS,Id)
                    | SOME tm' => if aconv tm' tm then S1
@@ -1629,7 +1639,10 @@ fun norm_kind_subst ((tmS,_),(tyS,_),(kdS,_),rkS) =
      fun del A [] = A
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)
-              in if aconv residue redex' then A else (redex' |-> residue)::A
+              in if aconv residue redex' then A
+                 else if abconv_ty (type_of redex') (type_of residue)
+                      then (redex' |-> residue)::A
+                      else raise ERR "kind_match_term" "generated term substitution had different types"
               end) rst
  in (del [] tmS, tyS, kdS, rkS)
  end

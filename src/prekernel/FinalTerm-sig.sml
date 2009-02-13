@@ -73,6 +73,7 @@ sig
   val rand          : term -> term
   val bvar          : term -> term
   val body          : term -> term
+  val tyrator       : term -> term
   val btyvar        : term -> hol_type
   val tybody        : term -> term
   val rename_bvar   : string -> term -> term

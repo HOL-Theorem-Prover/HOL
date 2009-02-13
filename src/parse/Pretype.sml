@@ -405,9 +405,9 @@ val max  = Prerank.mk_Maxrank
 in
 fun prank_of0 (Vartype(s,kd,rk)) = rk
   | prank_of0 (Contype{Rank, ...}) = Rank
-  | prank_of0 (TyApp(opr,arg))     =     max(prank_of opr,  prank_of arg)
-  | prank_of0 (TyUniv(Bvar,Body))  = inc(max(prank_of Bvar, prank_of Body))
-  | prank_of0 (TyAbst(Bvar,Body))  =     max(prank_of Bvar, prank_of Body)
+  | prank_of0 (TyApp(opr,arg))     = max(    prank_of opr  , prank_of arg )
+  | prank_of0 (TyUniv(Bvar,Body))  = max(inc(prank_of Bvar), prank_of Body)
+  | prank_of0 (TyAbst(Bvar,Body))  = max(    prank_of Bvar , prank_of Body)
   | prank_of0 (TyKindConstr{Ty,Kind}) = prank_of Ty
   | prank_of0 (TyRankConstr{Ty,Rank}) = Rank
   | prank_of0 (UVar (ref (NONEU(_,rk)))) = rk
@@ -589,6 +589,19 @@ fun pp_pretype pps ty =
                                                 add_string Tyop
                                               else add_string (Thy ^ "$" ^ Tyop) (* ^ kind_rank_to_string(Kind,Rank) *)
          | TyApp(PT(TyApp(PT(Contype{Tyop="fun",...},_), ty1),_), ty2) =>
+                              (if state = none then begin_block INCONSISTENT 0
+                               else if state = left orelse state = uvar then
+                                   (add_string "("; begin_block INCONSISTENT 0)
+                               else ();
+                               pppretype left ty1;
+                               add_string " ->";
+                               add_break(1,0);
+                               pppretype right ty2;
+                               if state = none then end_block()
+                               else if state = left orelse state = uvar then
+                                  (end_block(); add_string ")")
+                               else ())
+         | TyApp(PT(UVar(ref(SOMEU(PT(TyApp(PT(Contype{Tyop="fun",...},_), ty1),_)))),_), ty2) =>
                               (if state = none then begin_block INCONSISTENT 0
                                else if state = left orelse state = uvar then
                                    (add_string "("; begin_block INCONSISTENT 0)
@@ -1422,6 +1435,14 @@ fun gen_unify (kind_unify   :prekind -> prekind -> ('a -> 'a * unit option))
         let val theta = map (fn (tv1,tv2) => mk_vartype tv1 |-> mk_vartype tv2) (zip c1 c2)
         in type_subst theta
         end
+  fun match_var_type ty1 ty2 =        (is_uvar_type (the_var_type ty1) handle HOL_ERR _ => false)
+                               orelse (is_uvar_type (the_var_type ty2) handle HOL_ERR _ => false)
+                               orelse eq ty1 ty2
+  fun match_var_types [] [] = true
+    | match_var_types (ty1::ty1s) (ty2::ty2s) = match_var_type ty1 ty2 andalso match_var_types ty1s ty2s
+    | match_var_types _ _ = false
+  fun uvars_of ty = filter is_uvar_type (tyvars e ty)
+  fun uvars_ofl tys = filter is_uvar_type (foldl (fn (ty,tys) => Lib.union (tyvars e ty) tys) [] tys)
   fun subset s1 s2 = all (fn v => op_mem eq v s2) s1
   fun mk_vs c1 c2 args = map (shift_context c1 c2) args
   fun beta_conv_head (ty as PT(TyApp(ty1,ty2),locn)) =
@@ -1462,14 +1483,14 @@ in
        else
        let val (opr1,args1) = strip_app_type ty1
            val (opr2,args2) = strip_app_type ty2
-           val uvs1 = filter is_uvar_type (tyvars e ty1)
-           val uvs2 = filter is_uvar_type (tyvars e ty2)
            val ho_1 = has_var_type opr1 andalso is_uvar_type(the_var_type opr1)
                                         andalso all has_var_type args1
-                                        andalso subset uvs2 uvs1   (* ??? *)
+                                        andalso (not (match_var_types args1 args2)
+                                                 orelse subset (uvars_of ty2) (uvars_of ty1))   (* ??? experimental *)
            val ho_2 = has_var_type opr2 andalso is_uvar_type(the_var_type opr2)
                                         andalso all has_var_type args2
-                                        andalso subset uvs1 uvs2   (* ??? *)
+                                        andalso (not (match_var_types args2 args1)
+                                                 orelse subset (uvars_of ty1) (uvars_of ty2))   (* ??? experimental *)
        in if is_abs_type opr1 then
             gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
           else if is_abs_type opr2 then
@@ -1496,13 +1517,13 @@ in
            gen_unify c1 c2 (beta_conv_head ty1) ty2
        else
        let val (opr1,args1) = strip_app_type ty1
-           val uvs1 = filter is_uvar_type (tyvars e ty1)
-           val uvs2 = filter is_uvar_type (tyvars e ty2)
+           val (opr2,args2) = strip_app_type ty2
        in if is_abs_type opr1 then
             gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
           else if has_var_type opr1 andalso is_uvar_type(the_var_type opr1)
                                     andalso all has_var_type args1
-                                    andalso subset uvs2 uvs1
+                                    andalso (not (match_var_types args1 args2)
+                                             orelse subset (uvars_of ty2) (uvars_of ty1))
           then
             (* Higher order unification; shift args to other side by abstraction. *)
             let val vs = mk_vs c1 c2 args1
@@ -1514,14 +1535,14 @@ in
        if is_abs_type ty21 then
             gen_unify c1 c2 ty1 (beta_conv_head ty2)
        else
-       let val (opr2,args2) = strip_app_type ty2
-           val uvs1 = filter is_uvar_type (tyvars e ty1)
-           val uvs2 = filter is_uvar_type (tyvars e ty2)
+       let val (opr1,args1) = strip_app_type ty1
+           val (opr2,args2) = strip_app_type ty2
        in if is_abs_type opr2 then
             gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
           else if has_var_type opr2 andalso is_uvar_type(the_var_type opr2)
                                     andalso all has_var_type args2
-                                    andalso subset uvs1 uvs2
+                                    andalso (not (match_var_types args2 args1)
+                                             orelse subset (uvars_of ty1) (uvars_of ty2))
           then
             (* Higher order unification; shift args to other side by abstraction. *)
             let val vs = mk_vs c2 c1 args2

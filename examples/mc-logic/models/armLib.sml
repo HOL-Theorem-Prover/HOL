@@ -77,7 +77,7 @@ fun arm_step s = let
                [ADDR_MODE4_def,LET_DEF,WB_ADDRESS_def,ARM_WRITE_REG_PC_INTRO,
                 UP_DOWN_def,FIRST_ADDRESS_def,ADDRESS_LIST_def] th
     val g = REWRITE_RULE [WORD_SUB_ONE_MULT,WORD_EQ_SUB_ZERO,GSYM word_sub_def] o SIMP_RULE arm_ss [enc_th]
-    in if concl th = T then [] else [g th] end handle e => []
+    in if eq (concl th) T then [] else [g th] end handle e => []
   val thms = foldr (uncurry append) [] (map format thms)
   in thms end;
 

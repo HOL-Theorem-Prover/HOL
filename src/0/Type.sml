@@ -124,7 +124,7 @@ in
         | rk_of (TyCon(_,_,rk)) _        = rk
         | rk_of (TyBv i) E               = lookup i E
         | rk_of (TyApp(opr, ty)) E       = max (rk_of opr E, rk_of ty E)
-        | rk_of (TyAll((_,_,rk),Body)) E = max (rk, rk_of Body (rk::E)) + 1
+        | rk_of (TyAll((_,_,rk),Body)) E = max (rk + 1, rk_of Body (rk::E))
         | rk_of (TyAbs((_,_,rk),Body)) E = max (rk, rk_of Body (rk::E))
 fun rank_of ty = rk_of ty []
 end;
@@ -321,11 +321,17 @@ fun tyvar_compare ((s1,k1,rk1), (s2,k2,rk2)) =
          of EQUAL => kind_rank_compare ((k1,rk1),(k2,rk2))
           | x => x)
 
+fun tyvar_subtype ((s1,k1,rk1), (s2,k2,rk2)) =
+       (s1 = s2) andalso (k1 = k2) andalso (rk1 <= rk2)
+
 val empty_tyvarset = HOLset.empty tyvar_compare
 fun tyvar_eq t1 t2 = tyvar_compare(t1,t2) = EQUAL;
 
 fun type_var_compare (TyFv u, TyFv v) = tyvar_compare (u,v)
   | type_var_compare _ =raise ERR "type_var_compare" "variables required";
+
+fun type_var_subtype (TyFv u, TyFv v) = tyvar_subtype (u,v)
+  | type_var_subtype _ =raise ERR "type_var_subtype" "variables required";
 
 fun type_con_compare (TyCon(c1,k1,rk1), TyCon(c2,k2,rk2)) =
        (case KernelSig.id_compare (c1,c2)
@@ -748,6 +754,20 @@ fun aconv_ty t1 t2 = EQ(t1,t2) orelse
       TyAll((_,k2,r2),t2)) => k1 = k2 andalso r1 = r2 andalso aconv_ty t1 t2
    | (TyAbs((_,k1,r1),t1),
       TyAbs((_,k2,r2),t2)) => k1 = k2 andalso r1 = r2 andalso aconv_ty t1 t2
+   | (M,N)       => (M=N)
+end;
+
+local val EQ = Portable.pointer_eq
+in
+fun asubtype t1 t2 = EQ(t1,t2) orelse
+ case(t1,t2)
+  of (u as TyFv _, v as TyFv _ ) => type_var_subtype(u,v)
+   | (u as TyCon _,v as TyCon _) => type_con_compare(u,v) = EQUAL
+   | (TyApp(p,t1),TyApp(q,t2)) => asubtype p q andalso asubtype t1 t2
+   | (TyAll((_,k1,r1),t1),
+      TyAll((_,k2,r2),t2)) => k1 = k2 andalso r1 <= r2 andalso asubtype t1 t2
+   | (TyAbs((_,k1,r1),t1),
+      TyAbs((_,k2,r2),t2)) => k1 = k2 andalso r1 <= r2 andalso asubtype t1 t2
    | (M,N)       => (M=N)
 end;
 
@@ -1357,6 +1377,15 @@ fun beta_conv_ty (TyApp(M as TyAbs _, N))
          end
   | beta_conv_ty _ = raise ERR "beta_conv_ty" "not a type beta redex"
 
+fun eta_conv_ty (ty as TyAbs (tyv, TyApp(M, TyBv 0)))
+       = let val a = TyFv tyv
+             val M' = fst (dest_app_type (beta_conv_ty (TyApp(ty, a))))
+                      handle HOL_ERR _ => raise ERR "eta_conv_ty" "not a type eta redex"
+         in if mem a (type_vars M') then raise ERR "eta_conv_ty" "not a type eta redex"
+            else M'
+         end
+  | eta_conv_ty _ = raise ERR "eta_conv_ty" "not a type eta redex"
+
 exception UNCHANGEDTY;
 
 fun qconv_ty c ty = c ty handle UNCHANGEDTY => ty
@@ -1582,6 +1611,12 @@ fun top_sweep_conv_ty conv ty =
 
 val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
 
+val deep_eta_conv_ty = qconv_ty (top_depth_conv_ty eta_conv_ty)
+
+val deep_beta_eta_conv_ty = qconv_ty (top_depth_conv_ty (beta_conv_ty orelse_ty eta_conv_ty))
+
+fun strip_app_beta_eta_type ty = strip_app_type (deep_beta_eta_conv_ty ty)
+
 (*  head_beta1_ty reduces the head beta redex; fails if one does not exist. *)
 fun head_beta1_ty ty = (rator_conv_ty head_beta1_ty orelse_ty beta_conv_ty) ty
 
@@ -1591,6 +1626,8 @@ val head_beta_ty = qconv_ty (repeat_ty head_beta1_ty)
 
 
 fun abconv_ty t1 t2 = aconv_ty (deep_beta_conv_ty t1) (deep_beta_conv_ty t2)
+
+fun subtype t1 t2 = asubtype (deep_beta_conv_ty t1) (deep_beta_conv_ty t2)
 
 
 (*---------------------------------------------------------------------------
@@ -1622,6 +1659,18 @@ local
     if eq_ty residue z then l
     else raise ERR "safe_insert_tya" "match"
   end handle NOT_FOUND => n::l
+(*
+  fun safe_insert_tya (n as {redex,residue}) l = let
+    val residue' = deep_beta_eta_conv_ty residue
+    val n' = redex |-> residue'
+  in let
+    val z = find_residue_ty redex l
+  in
+    if eq_ty residue' z then l
+    else raise ERR "safe_insert_tya" "match"
+  end handle NOT_FOUND => n'::l
+  end
+*)
   val mk_dummy_ty = let
     val name = dest_vartype(gen_tyvar())
   in fn (kd,rk) => with_flag (varcomplain,false) mk_vartype_opr(name, kd, rk)
@@ -1706,7 +1755,7 @@ local
       end
 
 
-fun get_rank_kind_insts avoids env L (rk,(kdS,Id)) =
+fun get_rank_kind_insts avoids (env:(hol_type,hol_type)subst) L (rk,(kdS,Id)) =
  itlist (fn {redex,residue} => fn (rk,Theta) =>
           (raw_match_rank (rk_of redex   (map (rank_of o #redex  ) env))
                           (rk_of residue (map (rank_of o #residue) env)) rk,
@@ -1788,12 +1837,12 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
             val crk = rk_of cty (map (rank_of o #residue) env)
             val newrkin  = raw_match_rank vrk crk rkin
             val newkdins = kdenv_safe_insert (vkd |-> ckd) kdins
-            val newinsts = (vty |-> cty)::insts
+            val newinsts = safe_insert_tya (vty |-> cty) insts (* (vty |-> cty)::insts *)
           in
             homatch newrkin newkdins (newinsts, tl homs)
           end
       else (* vty not a type var *) let
-          val (vhop, vargs) = strip_app_type vty
+          val (vhop, vargs) = strip_app_type vty (* vhop should be a type variable *)
           val afvs = type_varsl vargs
           val inst_fn = inst_rank_kind rkin (fst kdins)
         in
@@ -1807,7 +1856,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                                    handle _ =>
                                           if HOLset.member(lconsts, a)
                                           then a
-                                          else raise ERR "type_homatch" ""))) afvs
+                                          else raise ERR "type_homatch" "not bound"))) afvs
              val pats0 = map inst_fn vargs
              val pats = map (type_subst tyins) pats0
              val vhop' = inst_fn vhop
@@ -1836,12 +1885,22 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
              end
            in
              homatch rkin kdins (ni,tl homs)
-           end) handle _ => (let
-                         val vhop_inst = [inst_fn vhop |-> find_residue_ty vhop insts]
+           end) handle HOL_ERR _ => (let
+                         val vhop' = inst_fn vhop
+                         val chop = find_residue_ty vhop insts (* may raise NOT_FOUND *)
+                         val _ = if eq_ty vhop' chop then raise NOT_FOUND else () (* avoid infinite recurse *)
+                         val vhop_inst = [vhop' |-> chop]
                          val vty1 = deep_beta_conv_ty (type_subst vhop_inst (inst_fn vty))
-                       in homatch rkin kdins (insts, (env,cty,vty1)::tl homs)
+                         val pinsts_homs' =
+                             type_pmatch lconsts env vty1 cty (insts, tl homs)
+                         val (rkin',kdins') =
+                             get_rank_kind_insts kdavoids env
+                                            (fst pinsts_homs')
+                                            (0, ([], []))
+                       in
+                         homatch rkin' kdins' pinsts_homs'
                        end
-                handle _ => let
+                handle NOT_FOUND => let
                          val (lc,rc) = dest_app_type cty
                          val (lv,rv) = dest_app_type vty
                          val pinsts_homs' =
@@ -2080,7 +2139,7 @@ fun pp_raw_type pps ty =
 (* Send the results of prettyprinting to a string                            *)
 (*---------------------------------------------------------------------------*)
 
-fun sprint pp x = PP.pp_to_string 72 pp x
+fun sprint pp x = PP.pp_to_string 80 pp x
 
 val type_to_string = sprint pp_raw_type;
 

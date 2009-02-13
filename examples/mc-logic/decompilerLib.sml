@@ -38,7 +38,7 @@ fun list_dest_pair tm = let val (x,y) = pairSyntax.dest_pair tm
 
 fun list_union [] xs = xs
   | list_union (y::ys) xs = 
-      if mem y xs then list_union ys xs else list_union ys (y::xs);
+      if op_mem eq y xs then list_union ys xs else list_union ys (y::xs);
 
 fun REPLACE_CONV th tm = let
   val th = SPEC_ALL th
@@ -123,7 +123,7 @@ fun HIDE_POST_RULE tm th = let
   val th = CONV_RULE (POST_CONV (MOVE_OUT_CONV tm THENC REWRITE_CONV [STAR_ASSOC])) th  
   val (_,_,_,q) = dest_spec (concl th)
   val v = fst (dest_comb (snd (dest_star q) handle e => q))
-  val _ = if v = tm then v else hd []
+  val _ = if eq v tm then v else hd []
   in A_MATCH_MP HIDE_POST1 th handle e => A_MATCH_MP HIDE_POST2 th end;
 
 fun get_model_status_list th = 
@@ -139,8 +139,8 @@ fun HIDE_STATUS hide_th th = let
            ISPEC (mk_sep_hide tm) (A_MATCH_MP SPEC_FRAME th) end
   val th = foldl HIDE_TERM th xs
   val (_,p,_,q) = dest_spec (concl th)
-  val ps = filter (fn x => not (mem (get_sep_domain x) xs)) (list_dest dest_star p)
-  val qs = filter (fn x => not (mem (get_sep_domain x) xs)) (list_dest dest_star q)
+  val ps = filter (fn x => not (op_mem eq (get_sep_domain x) xs)) (list_dest dest_star p)
+  val qs = filter (fn x => not (op_mem eq (get_sep_domain x) xs)) (list_dest dest_star q)
   val p = list_mk_star (ps @ [(fst o dest_eq o concl) hide_th]) (type_of p)
   val q = list_mk_star (qs @ [(fst o dest_eq o concl) hide_th]) (type_of q) 
   val th = CONV_RULE (PRE_CONV (MOVE_STAR_REWRITE_CONV [hide_th] p)) th
@@ -169,7 +169,7 @@ fun abbreviate (var_name,tm) th = let
   in th end;
 
 fun ABBREV_POSTS dont_abbrev_list prefix th = let
-  fun dont_abbrev tm = mem tm dont_abbrev_list 
+  fun dont_abbrev tm = op_mem eq tm dont_abbrev_list 
   val (th,b) = let
     val (_,_,_,q) = dest_spec (concl th)
     val xs = list_dest dest_star q
@@ -271,7 +271,7 @@ fun find_composition1 th1 th2 = let
   fun get_match_term tm = let
     val v = get_sep_domain tm
     in if can (dest_var o cdr) v then car v else v end;  
-  fun mm x y = get_match_term x = get_match_term y
+  fun mm x y = eq (get_match_term x) (get_match_term y)
   fun fetch_match x [] zs = hd []
     | fetch_match x (y::ys) zs = 
         if mm x y then (y, rev zs @ ys) else fetch_match x ys (y::zs)
@@ -299,7 +299,7 @@ fun find_composition2 th1 th2 = let
   val pre_not_hidden  = map get_sep_domain (filter (not o can dest_sep_hide) p)
   fun f (d:term,(zs,to_be_hidden)) = 
     if not (can dest_sep_hide d) then (zs,to_be_hidden) else
-      (zs,filter (fn x => get_sep_domain d = x) zs @ to_be_hidden)
+      (zs,filter (fn x => eq (get_sep_domain d) x) zs @ to_be_hidden)
   val hide_from_post = snd (foldr f (post_not_hidden,[]) p) 
   val hide_from_pre  = snd (foldr f (pre_not_hidden,[]) q) 
   val th1 = foldr (uncurry HIDE_POST_RULE) th1 hide_from_post
@@ -330,14 +330,14 @@ fun basic_find_composition (th1,l1:int,j1:int option) (th2,l2,j2) = let
   fun h x = (fst o dest_eq) x handle e => (fst o dest_abs o car) x
   fun f [] ys = ys | f (x::xs) ys = f xs (h x :: ys handle e => ys) 
   val th2_hyps = f (hyp th2) []
-  fun g tm = mem (h tm) th2_hyps handle e => false
+  fun g tm = op_mem eq (h tm) th2_hyps handle e => false
   val lets = filter g (hyp th) 
   in ((th,l1+l2,option_apply (fn x => x + l1) j2),lets) end
 
 fun find_cond_composition (th1,l1:int,j1:int option) NONE = hd [] 
   | find_cond_composition (th1,l1,j1) (SOME (th2,l2,j2)) = let
   val th = RW [SPEC_MOVE_COND] th2
-  val th = if concl th = T then hd [] else th
+  val th = if eq (concl th) T then hd [] else th
   val th = if not (is_imp (concl th)) then th else
              CONV_RULE ((RATOR_CONV o RAND_CONV) (ONCE_REWRITE_CONV [GSYM CONTAINER_def])) th
   val th = RW [GSYM SPEC_MOVE_COND] th
@@ -373,10 +373,10 @@ fun tree_composition thi [] conds = LEAF thi
      else let
        val _ = print "c"
        val (cond,thi2) = find_cond_composition thi thi2
-       in if mem (negate cond) conds 
+       in if op_mem eq (negate cond) conds 
           then (* case: only second branch possible *)
                tree_composition thi2 thms conds
-          else if mem cond conds then hd [] 
+          else if op_mem eq cond conds then hd [] 
           else (* case: both branches possible *) let
             val (thi1,lets) = basic_find_composition thi thi1
             val t1 = tree_composition thi1 thms (cond::conds)
@@ -430,8 +430,9 @@ fun tm2ftree tm = let
   val (x,y) = pairSyntax.dest_anylet tm
   val z = tm2ftree y
   val v = mk_var("cond",``:bool``)
-  fun g((x,y),z) = if not (x = v) then FUN_LET (x,y,z) else 
-    if ((fst(dest_conj(y)) = v) handle e => false) then FUN_COND (cdr y,z) else FUN_COND (y,z)
+
+  fun g((x,y),z) = if not (eq x v) then FUN_LET (x,y,z) else 
+    if (eq (fst(dest_conj(y))) v handle e => false) then FUN_COND (cdr y,z) else FUN_COND (y,z)
   in foldr g z x end handle e => FUN_VAL tm;
 
 fun ftree2tm (FUN_VAL tm) = tm
@@ -450,7 +451,7 @@ fun get_resvar v = mk_var(get_resvar_name v,type_of v);
 
 fun resvar_subst xs tm = let
   fun find_subst [] v = v |-> v
-    | find_subst (x::xs) v = if v = get_resvar x then v |-> x else find_subst xs v
+    | find_subst (x::xs) v = if eq v (get_resvar x) then v |-> x else find_subst xs v
   in subst (map (find_subst xs) (free_vars tm)) tm end;
 
 fun spectree2fun (LEAF (th,l,j)) (result,call) s =
@@ -471,7 +472,7 @@ fun simplify_names ftree = let
        val tm = aux t
        val names = map (fn x => (get_resvar_name x,x)) (list_dest_pair v)
        val xs = free_vars tm
-       fun h v = if not (mem v xs) then hd [] else mk_var((fst o dest_var) v ^ "'",type_of v)
+       fun h v = if not (op_mem eq v xs) then hd [] else mk_var((fst o dest_var) v ^ "'",type_of v)
        fun new_name (n,x) = repeat h (mk_var(n,type_of x))
        val new_name_list = map (fn (n,x) => (x,new_name (n,x))) names
        val subst_list = map (fn (x,y) => x |-> y) new_name_list
@@ -495,7 +496,7 @@ fun thms2resources [] xs = xs
   val (_,p,_,_) = dest_spec (concl th) 
   val p = list_dest dest_star p
   fun f (tm,tms) = let val v = (snd o dest_comb) tm in 
-    if is_var v andalso not (mem v tms) then v::tms else tms end handle e => tms
+    if is_var v andalso not (op_mem eq v tms) then v::tms else tms end handle e => tms
   in thms2resources thms (foldr f xs p) end
 
 fun string_split c str = let
@@ -560,7 +561,7 @@ fun extract_function name thms tools hide_list = let
   val ftree = spectree2fun t (output,mk_comb(f,``()``)) []
   val vars = free_vars (ftree2tm ftree)
   val res_in = var_sorter vars
-  val res_in = filter (fn x => not (mem x [f,c])) res_in
+  val res_in = filter (fn x => not (op_mem eq x [f,c])) res_in
   val input = list_mk_pair res_in
   val res_out = var_sorter (list_union res_in res_out)
   val output = list_mk_pair res_out
@@ -618,7 +619,7 @@ fun unhide_pre_elements thms tools = let
   val sts = (fst o dest_eq o concl o SPEC_ALL) hide_th
   fun show_pre_for_thm (th,loop) = let 
     val (_,p,_) = spec_post_and_pre th th
-    val xs = filter (fn tm => can dest_sep_hide tm andalso (not (tm = sts))) p 
+    val xs = filter (fn tm => can dest_sep_hide tm andalso (not (eq tm sts))) p 
     fun show_pre (tm,th) = let
       val th = CONV_RULE (PRE_CONV (MOVE_OUT_CONV tm)) th
       val th = RW [GSYM SPEC_HIDE_PRE] th
@@ -637,7 +638,7 @@ fun sort_code c = let
   fun measure tm = (numSyntax.int_of_term o cdr o cdr o fst o dest_pair) tm handle e => 0
   val xs = sort (fn x => fn y => measure x < measure y) xs
   fun all_distinct [] = []
-    | all_distinct (x::xs) = x :: all_distinct (filter (fn y => not (x = y)) xs)
+    | all_distinct (x::xs) = x :: all_distinct (filter (fn y => not (eq x y)) xs)
   val xs = all_distinct xs
   val xs = filter (not o pred_setSyntax.is_empty) xs
   val c = foldr pred_setSyntax.mk_insert (pred_setSyntax.mk_empty(type_of (hd xs))) xs
@@ -653,8 +654,8 @@ fun fill_preconditions thms = let
   (* insert missing elements into specs *)
   fun insert_pres (th,loop) = let    
     val zs = (map get_sep_domain o fst o spec_pre) th
-    val new = filter (fn x => not (mem (get_sep_domain x) zs)) pres
-    in if new = [] then (th,loop) else let
+    val new = filter (fn x => not (op_mem eq (get_sep_domain x) zs)) pres
+    in if null new then (th,loop) else let
     val frame = list_mk_star new (snd (spec_pre th))
     val th = RW [STAR_ASSOC] (SPEC frame (MATCH_MP SPEC_FRAME th))     
     in (th,loop) end end
@@ -691,7 +692,7 @@ fun hide_pre_post_elements thms def tools = let
   val f = map (replace_char #"'" "") o map (fst o dest_var) 
   val in_list = (f o dest_tuple o get_input_list) def
   val out_list = (f o dest_tuple o get_output_list) def
-  fun hide (f:term->thm->thm) (tm,th) = if tm = pc then th else f tm th
+  fun hide (f:term->thm->thm) (tm,th) = if eq tm pc then th else f tm th
   fun hide_elements (th,loop) = let
     val (q,p,ty) = spec_post_and_pre th th
     val q = filter (not o can dest_sep_hide) q   

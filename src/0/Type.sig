@@ -75,7 +75,11 @@ sig
   val beta_conv_ty  : hol_type -> hol_type
   val head_beta_ty  : hol_type -> hol_type
   val deep_beta_conv_ty : hol_type -> hol_type
+  val eta_conv_ty   : hol_type -> hol_type
+  val deep_eta_conv_ty : hol_type -> hol_type
+  val deep_beta_eta_conv_ty : hol_type -> hol_type
   val abconv_ty     : hol_type -> hol_type -> bool
+  val subtype       : hol_type -> hol_type -> bool
   val polymorphic   : hol_type -> bool
   val universal     : hol_type -> bool
   val abstraction   : hol_type -> bool

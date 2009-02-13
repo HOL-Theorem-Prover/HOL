@@ -690,7 +690,9 @@ in
   if applyp t then f traverse t
   else case t of
     APP(locn,t1,t2)   => APP(locn,traverse t1, traverse t2)
+  | TYAPP(locn,t,pty) => TYAPP(locn,traverse t, pty)
   | LAM(locn,vs,t)    => LAM(locn,vs, traverse t)
+  | TYLAM(locn,pty,t) => TYLAM(locn,pty, traverse t)
   | TYPED(locn,t,pty) => TYPED(locn,traverse t, pty)
   | allelse           => allelse
 end

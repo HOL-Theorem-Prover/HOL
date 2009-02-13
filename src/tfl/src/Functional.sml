@@ -18,7 +18,7 @@ val stringize = list_to_string int_to_string ", ";
 fun enumerate l = map (fn (x,y) => (y,x)) (Lib.enumerate 0 l);
 
 fun match_term thry tm1 tm2 = Term.match_term tm1 tm2;
-fun match_type thry ty1 ty2 = Type.match_type ty1 ty2;
+fun match_type thry ty1 ty2 = Type.kind_match_type ty1 ty2;
 
 fun match_info db s =
 case TypeBasePure.prim_get db s
@@ -56,9 +56,9 @@ val givens = mapfilter not_omitted;
 fun fresh_constr ty_match (colty:hol_type) gv c =
   let val Ty = type_of c
       val (L,ty) = strip_fun_type Ty
-      val ty_theta = ty_match ty colty
-      val c' = inst ty_theta c
-      val gvars = map (inst ty_theta o gv) L
+      val (ty_theta,kd_theta,rk_theta) = ty_match ty colty
+      val c' = inst ty_theta (inst_rank_kind rk_theta kd_theta c)
+      val gvars = map (inst ty_theta o inst_rank_kind rk_theta kd_theta o gv) L
   in (c', gvars)
   end;
 

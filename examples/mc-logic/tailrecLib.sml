@@ -60,7 +60,7 @@ fun tailrec_define tm side_tm = let
   (* calculate instantations to TAILREC *)
   val (lhs,rhs) = dest_eq tm
   val f = tm2ftree rhs
-  fun is_rec tm = (car tm = car lhs) handle e => false
+  fun is_rec tm = eq (car tm) (car lhs) handle e => false
   val input_type = type_of (cdr lhs)  
   val output_type = type_of lhs  
   val name = (fst o dest_var o car) lhs handle e => (fst o dest_const o car) lhs  
@@ -75,7 +75,7 @@ fun tailrec_define tm side_tm = let
     val fv = mk_eq(mk_comb(fv,cdr lhs),b)    
     in Define [ANTIQUOTE fv] end   
   fun do_guard_define fun_name b = 
-    if not (b = ``F:bool``) then do_define fun_name b else let
+    if not (eq b ``F:bool``) then do_define fun_name b else let
       val fv = mk_var(fun_name,mk_type("fun",[type_of (cdr lhs),type_of b]))
       val fv = mk_eq(fv,mk_abs(mk_var("x",type_of (cdr lhs)),b))    
       in Define [ANTIQUOTE fv] end   
@@ -101,7 +101,7 @@ fun tailrec_define tm side_tm = let
   val pre_th = SPECL [select step,select guard,select side,cdr lhs] 
                  (INST_TYPE [``:'a``|->input_type] TAILREC_PRE_THM)
   val pre_th = REWRITE_RULE [GSYM pre_f_def] pre_th
-  val pre_th = if guard_tm = ``F:bool`` then SIMP_RULE bool_ss [guard,side] pre_th else pre_th
+  val pre_th = if eq guard_tm ``F:bool`` then SIMP_RULE bool_ss [guard,side] pre_th else pre_th
   val th = prove(goal,   
 (*
   set_goal([],goal)
