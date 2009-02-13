@@ -96,11 +96,12 @@ end
 open qbuf
 
 fun split_ident mixedset s locn qb = let
+  val {advance,replace_current} = qb
   val s0 = String.sub(s, 0)
   val is_char = s0 = #"#" andalso size s > 1 andalso String.sub(s,1) = #"\""
   val ID = Ident
 in
-  if is_char orelse s0 = #"\"" then (advance qb; (ID s, locn))
+  if is_char orelse s0 = #"\"" then (advance(); (ID s, locn))
   else if s0 = #"$" then let
       val (tok,locn') = split_ident mixedset
                                    (String.extract(s, 1, NONE))
@@ -111,7 +112,7 @@ in
       | _ => raise LEX_ERR ("Can't use $-quoting of this sort of token", locn')
     end
   else if not (mixed s) andalso not (s_has_nonagg_char s) then
-    (advance qb; (MkID (s, locn), locn))
+    (advance (); (MkID (s, locn), locn))
   else
     case UTF8Set.longest_pfx_member(mixedset, s) of
       NONE => (* identifier blob doesn't occur in list of known keywords *) let
@@ -148,17 +149,17 @@ in
             val (locn1, locn2) = locn.split_at (size s - size sfx) locn
           in
             if size sfx <> 0 then
-              (replace_current (BT_Ident sfx,locn2) qb; (tok, locn1))
+              (replace_current (BT_Ident sfx,locn2); (tok, locn1))
             else
-              (advance qb; (tok, locn))
+              (advance (); (tok, locn))
           end
       end
     | SOME {pfx,rest} => let
         val (locn1,locn2) = locn.split_at (size pfx) locn
       in
-        if size rest = 0 then (advance qb; (ID s, locn))
+        if size rest = 0 then (advance(); (ID s, locn))
         else
-          (replace_current (BT_Ident rest,locn2) qb; (ID pfx, locn1))
+          (replace_current (BT_Ident rest,locn2); (ID pfx, locn1))
       end
 end
 
@@ -177,11 +178,34 @@ fn qb => let
          BT_Numeral p   => (advance qb; SOME (Numeral p,locn))
        | BT_AQ x        => (advance qb; SOME (Antiquote x,locn))
        | BT_EOI         => NONE
-       | BT_Ident s     => let val (tok,locn') = split s locn qb
-                           in
-                             SOME (tok,locn')
-                           end
+       | BT_Ident s     => let
+           val qbfns = {advance = (fn () => advance qb),
+                        replace_current = (fn p => replace_current p qb)}
+           val (tok,locn') = split s locn qbfns
+         in
+           SOME (tok,locn')
+         end
    end
+end
+
+fun user_split_ident keywords = let
+  fun test s = mixed s orelse s_has_nonagg_char s
+  val mixed = List.filter test keywords
+  val mixedset = UTF8Set.addList (UTF8Set.empty, mixed)
+in
+  fn s => let
+       val pushback = ref ""
+       fun a () = ()
+       fun rc (btid, _) =
+           case btid of
+             BT_Ident s => (pushback := s)
+           | _ => () (* shouldn't happen *)
+       val _ = split_ident mixedset s locn.Loc_None
+                           {advance=a, replace_current=rc}
+     in
+       (String.substring(s,0,size s - size (!pushback)),
+        !pushback)
+     end
 end
 
 fun token_string (Ident s) = s

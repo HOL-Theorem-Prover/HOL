@@ -155,41 +155,48 @@ val _ = Feedback.register_btrace ("pp_dollar_escapes", dollar_escape);
 val avoid_symbol_merges = ref true
 val _ = register_btrace("pp_avoids_symbol_merges", avoid_symbol_merges)
 
-(* true if a space should appear between the characters last and next *)
-fun mk_break (last, next) = let
-  fun isSymbolic s =
-      (UnicodeChars.isSymbolic s andalso
-       not (term_tokens.nonagg_c (String.sub(s,0))) andalso
-       s <> "'" andalso s <> UnicodeChars.neg)
-      orelse s = UnicodeChars.lambda
-  fun isAlphaNum s = UnicodeChars.isAlphaNum s andalso s <> UnicodeChars.lambda
+fun creates_comment(s1, s2) = let
+  val last = String.sub(s1, size s1 - 1)
+  val first = String.sub(s2, 0)
 in
-  !avoid_symbol_merges andalso
-  (isSymbolic last andalso isSymbolic next orelse
-   last = "(" andalso next = "*" orelse
-   last = "*" andalso next = ")" orelse
-   isAlphaNum last andalso isAlphaNum next)
+  last = #"(" andalso first = #"*" orelse
+  last = #"*" andalso first = #")"
 end
 
-fun avoid_symbolmerge (add_string, add_break) = let
-  val last_char = ref " "
-  fun new_addstring s = let
-    val sz = size s
+
+fun avoid_symbolmerge G = let
+  open term_grammar
+  val keywords = #endbinding (specials G) :: grammar_tokens G @
+                 known_constants G
+  val split = term_tokens.user_split_ident keywords
+  fun bad_merge (s1, s2) = let
+    val combined = s1 ^ s2
+    val (x,y) = split combined
   in
-    if sz = 0 then ()
-    else let
-        val nextc = #1 (#1 (valOf (UTF8.getChar s)))
-        val newlast = #1 (valOf (UTF8.lastChar s))
-      in
-        if mk_break(!last_char, nextc) then add_string " " else ();
-        add_string s;
-        last_char := newlast
-      end
+    y <> s2
   end
-  fun new_add_break (p as (n,m)) = (if n > 0 then last_char := " " else ();
-                                    add_break p)
 in
-  (new_addstring, new_add_break)
+  fn (add_string, add_break) => let
+       val last_string = ref " "
+       fun new_addstring s = let
+         val sz = size s
+       in
+         if sz = 0 then ()
+         else (if !last_string = " " then add_string s
+               else if not (!avoid_symbol_merges) then add_string s
+               else if creates_comment (!last_string, s) orelse
+                       bad_merge (!last_string, s)
+               then
+                 (add_string " "; add_string s)
+               else
+                 add_string s;
+               last_string := s)
+       end
+       fun new_add_break (p as (n,m)) =
+           (if n > 0 then last_string := " " else (); add_break p)
+     in
+       (new_addstring, new_add_break)
+     end
 end
 
 
@@ -1758,11 +1765,12 @@ fun pp_term (G : grammar) TyG = let
       | LAMB(Bvar, Body) => pr_abs tm
   end handle SimpleExit => ()
   fun start_names() = {fvars_seen = ref [], bvars_seen = ref []}
+  val avoid_merge = avoid_symbolmerge G
 in
   fn pps => fn t =>
     let
       val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
-      val (add_string, add_break) = avoid_symbolmerge (add_string, add_break)
+      val (add_string, add_break) = avoid_merge (add_string, add_break)
       val ppfns = {add_string = add_string, add_break = add_break,
                    begin_block = begin_block, end_block = end_block}
     in
