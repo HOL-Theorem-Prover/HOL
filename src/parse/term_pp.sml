@@ -190,7 +190,7 @@ in
                  (add_string " "; add_string s)
                else
                  add_string s;
-               last_string := s)
+               last_string := (if str_all (equal #" ") s then " " else s))
        end
        fun new_add_break (p as (n,m)) =
            (if n > 0 then last_string := " " else (); add_break p)
@@ -1356,10 +1356,10 @@ fun pp_term (G : grammar) TyG = let
     in
       (* put a block around the "let ... in" phrase *)
       begin_block CONSISTENT 0;
-      add_string "let ";
+      add_string "let"; add_string " ";
       (* put a block around the variable bindings *)
       begin_block INCONSISTENT 0;
-      pr_list pr_leteq (fn () => add_string " and")
+      pr_list pr_leteq (fn () => (add_string " "; add_string "and"))
               (fn () => spacep true) name_value_pairs;
       end_block(); (* end of variable binding block *)
       spacep true; add_string "in";
