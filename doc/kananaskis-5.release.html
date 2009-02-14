@@ -299,6 +299,16 @@ dubious is being attempted.</p>
 unary negation symbol as well (following SML’s example), but the
 unary minus is now the preferred printing form.</p>
 
+<p>If you wish to add an existing binary operator as a prefix, it is
+important that you <em>not</em> use the <code>set_fixity</code>
+command to do it.  This command will clear the grammar of your binary
+operator before adding the unary one.  Better to
+use <code>add_rule</code> (for which, see the Reference Manual).  This
+will also allow you to map the unary form to a different name.  With
+subtraction, for example, the binary operator maps to the
+name <code>"-"</code>, and the unary operator maps
+to <code>"numeric_negate"</code>.</p>
+
 <p>Finally, note that in the HOL language, unary minus and binary
 minus are inherently ambiguous.  Is <code>x-y</code> the application
 of binary minus to arguments <code>x</code> and <code>y</code>, or is
