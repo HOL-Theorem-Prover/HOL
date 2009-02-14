@@ -68,8 +68,8 @@ val NOT_MAX_SUC_LT = prove(
 
 val ALU_SUB_ = prove(
   `!n n'. n < dimword(:32) ==>
-         (BIT 32 (n + w2n ($- (n2w n') + $- (1w:word32)) + 1) =
-          BIT 32 (n + w2n ($- (n2w n'):word32)) \/ (n2w n' = 0w:word32))`,
+         (BIT 32 (n + w2n (- (n2w n') + - (1w:word32)) + 1) =
+          BIT 32 (n + w2n (- (n2w n'):word32)) \/ (n2w n' = 0w:word32))`,
   REPEAT STRIP_TAC
     \\ REWRITE_TAC [WORD_NEG,GSYM WORD_ADD_ASSOC,WORD_ADD_0,
          EVAL ``1w + (~1w + 1w):word32``]
@@ -380,7 +380,7 @@ val DP_rws =
    REG_READ_INC_PC,WORD_NEG_cor,WORD_1COMP_ZERO,
    (SIMP_RULE bool_ss [] o ISPEC `\x:iclass. x = y`) COND_RAND,
    (SIMP_RULE bool_ss [] o ISPEC `\r. REG_READ r m n`) COND_RAND,
-   (SIMP_RULE (srw_ss()) [] o Q.ISPEC `\x. $- 1w * x`) COND_RAND,
+   (SIMP_RULE (srw_ss()) [] o Q.ISPEC `\x. -1w * x`) COND_RAND,
    decode_enc_data_proc, decode_data_proc_enc,
    decode_enc_data_proc2,decode_data_proc_enc2,
    decode_enc_data_proc3,decode_data_proc_enc3];
