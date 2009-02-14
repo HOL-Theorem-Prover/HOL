@@ -171,10 +171,10 @@ fun avoid_symbolmerge G = let
   val split = term_tokens.user_split_ident keywords
   fun bad_merge (s1, s2) = let
     val combined = s1 ^ s2
-    val (x,y) = split combined
+    val (x,y) = split combined 
   in
     y <> s2
-  end
+  end handle base_tokens.LEX_ERR _ => true
 in
   fn (add_string, add_break) => let
        val last_string = ref " "
