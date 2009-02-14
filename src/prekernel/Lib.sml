@@ -547,6 +547,12 @@ fun unprefix pfx s =
     else raise ERR "unprefix" "1st argument is not a prefix of 2nd argument"
 
 
+fun str_all P s = let 
+  fun recurse n = n < 0 orelse P (String.sub(s,n)) andalso recurse (n - 1)
+in
+  recurse (size s - 1)
+end
+
 (*---------------------------------------------------------------------------*
  * A hash function used for various tasks in the system. It works fairly     *
  * well for our applications, but is not industrial strength. The size       *
