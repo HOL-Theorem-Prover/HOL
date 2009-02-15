@@ -486,6 +486,29 @@ val _ = expect_fail ``(\x. x (\x. x)) = (\y. y x)``
 val _ = expect_thm ``f x = (\x. f x) x``
 val _ = expect_thm ``f x = (\y. f y) x``
 
+(* tuples, FST, SND *)
+
+val _ = expect_fail ``(x, y) = (x, z)``
+val _ = expect_fail ``(x, y) = (z, y)``
+val _ = expect_fail ``(x, y) = (y, x)``
+val _ = expect_thm ``((x, y) = (y, x)) = (x = y)``
+val _ = expect_thm ``((x, y, z) = (y, z, x)) = (x = y) /\ (y = z)``
+val _ = expect_thm ``((x, y) = (u, v)) = (x = u) /\ (y = v)``
+
+val _ = expect_fail ``y = FST (x, y)``
+val _ = expect_thm ``x = FST (x, y)``
+val _ = expect_thm ``(FST (x, y, z) = FST (u, v, w)) = (x = u)``
+val _ = expect_fail ``(FST (x, y, z) = FST (u, v, w)) = (x = u) /\ (y = w)``
+
+val _ = expect_thm ``y = SND (x, y)``
+val _ = expect_fail ``x = SND (x, y)``
+val _ = expect_fail ``(SND (x, y, z) = SND (u, v, w)) = (y = v)``
+val _ = expect_fail ``(SND (x, y, z) = SND (u, v, w)) = (z = w)``
+val _ = expect_thm ``(SND (x, y, z) = SND (u, v, w)) = (y = v) /\ (z = w)``
+
+val _ = expect_thm ``(FST (x, y) = SND (x, y)) = (x = y)``
+val _ = expect_thm ``((\p. FST p) (x, y)= (\p. SND p) (x, y)) = (x = y)``
+
 (*****************************************************************************)
 
 val _ = print "... done, all tests for HolSmtLib successful.\n"

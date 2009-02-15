@@ -16,11 +16,11 @@ structure Yices = struct
 
   (* translation of HOL terms into Yices' input syntax -- currently, all types
      and terms except the following are treated as uninterpreted:
-     - types: 'bool', 'num', 'int', 'real', 'fun'
+     - types: 'bool', 'num', 'int', 'real', 'fun', 'prod'
      - terms: Boolean connectives (T, F, ==>, /\, \/, ~, if-then-else,
               bool-case), quantifiers (!, ?), numeric literals, arithmetic
               operators (SUC, +, -, *, /, ~, DIV, MOD, ABS, MIN, MAX), function
-              application, lambda abstraction *)
+              application, lambda abstraction, tuple selectors FST and SND *)
 
   val Yices_types = [
     (("min", "bool"), "bool", ""),
@@ -29,7 +29,9 @@ structure Yices = struct
     (("realax", "real"), "real", ""),
     (* Yices considers "-> X Y Z" and "-> X (-> Y Z)" different types. We use
        the latter only. *)
-    (("min", "fun"), "->", "")
+    (("min", "fun"), "->", ""),
+    (* Likewise, we only use tuples of arity 2. *)
+    (("pair", "prod"), "tuple", "")
   ]
 
   (* many HOL operators can be translated by simply mapping them to the
@@ -118,7 +120,8 @@ structure Yices = struct
     (realSyntax.less_tm, "<", ""),
     (realSyntax.leq_tm, "<=", ""),
     (realSyntax.great_tm, ">", ""),
-    (realSyntax.geq_tm, ">=", "")
+    (realSyntax.geq_tm, ">=", ""),
+    (pairSyntax.comma_tm, "mk-tuple", "")
   ]
 
   (* binders need to be treated differently from the operators in
@@ -205,6 +208,22 @@ structure Yices = struct
           val (acc, s3) = translate_term (acc, t3)
       in
         (acc, "(ite " ^ s3 ^ " " ^ s1 ^ " " ^ s2 ^ ")")
+      end
+    (* FST *)
+    (* cannot be defined as a function in Yices because it is polymorphic *)
+    else if pairSyntax.is_fst tm then
+      let val t1 = pairSyntax.dest_fst tm
+          val (acc, s1) = translate_term (acc, t1)
+      in
+        (acc, "(select " ^ s1 ^ " 1)")
+      end
+    (* SND *)
+    (* cannot be defined as a function in Yices because it is polymorphic *)
+    else if pairSyntax.is_snd tm then
+      let val t1 = pairSyntax.dest_snd tm
+          val (acc, s1) = translate_term (acc, t1)
+      in
+        (acc, "(select " ^ s1 ^ " 2)")
       end
     (* binders *)
     else
