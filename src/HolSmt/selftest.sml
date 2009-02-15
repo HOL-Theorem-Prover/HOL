@@ -70,6 +70,7 @@ val _ = expect_thm ``p /\ q ==> q /\ p``
 val _ = expect_thm ``(p ==> q) /\ (q ==> p) ==> (p = q)``
 val _ = expect_fail ``p \/ q ==> p /\ q``
 val _ = expect_thm ``if p then (q ==> p) else (p ==> q)``
+val _ = expect_thm ``case p of T -> p || F -> ~ p``
 val _ = expect_thm ``case p of T -> (q ==> p) || F -> (p ==> q)``
 
 (* numerals *)
@@ -453,6 +454,37 @@ val _ = expect_thm ``(x = y) ==> (f x = f y)``
 val _ = expect_thm ``(x = y) ==> (f x y = f y x)``
 val _ = expect_thm ``(f (f x) = x) /\ (f (f (f (f (f x)))) = x) ==> (f x = x)``
 val _ = expect_fail ``(f x = f y) ==> (x = y)``
+
+(* predicates *)
+
+val _ = expect_thm ``P x ==> P x``
+val _ = expect_fail ``P x ==> Q x``
+val _ = expect_fail ``P x ==> P y``
+val _ = expect_fail ``P x y ==> P x x``
+val _ = expect_fail ``P x y ==> P y x``
+val _ = expect_fail ``P x y ==> P y y``
+
+(* quantifiers *)
+
+val _ = expect_thm ``!x. x = x``
+(* Yices 1.0.18 fails to decide this one
+val _ = expect_thm ``?x. x = x``
+*)
+val _ = expect_thm ``(?y. !x. P x y) ==> (!x. ?y. P x y)``
+(* Yices 1.0.18 fails to decide this one
+val _ = expect_fail ``(!x. ?y. P x y) ==> (?y. !x. P x y)``
+*)
+val _ = expect_fail ``(?x. P x) ==> !x. P x``
+val _ = expect_thm ``?x. P x ==> !x. P x``
+
+(* lambda abstractions *)
+
+val _ = expect_thm ``(\x. x) = (\y. y)``
+val _ = expect_thm ``(\x. \x. x) x x = (\y. \y. y) y x``
+val _ = expect_thm ``(\x. x (\x. x)) = (\y. y (\x. x))``
+val _ = expect_fail ``(\x. x (\x. x)) = (\y. y x)``
+val _ = expect_thm ``f x = (\x. f x) x``
+val _ = expect_thm ``f x = (\y. f y) x``
 
 (*****************************************************************************)
 

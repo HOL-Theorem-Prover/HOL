@@ -11,475 +11,309 @@ structure Yices = struct
     Feedback.Raise (Feedback.mk_HOL_ERR "Yices" "eta_long"
       "not implemented yet")
 
+  (* Yices 1.0.18 only supports linear arithmetic; we do not check for
+     linearity (Yices will check again anyway) *)
+
   (* translation of HOL terms into Yices' input syntax -- currently, all types
-     except 'bool', 'num', 'int', 'real' and 'fun' and all terms except the
-     usual Boolean connectives, certain numeric literals and arithmetic
-     operators, and function application are treated as uninterpreted *)
+     and terms except the following are treated as uninterpreted:
+     - types: 'bool', 'num', 'int', 'real', 'fun'
+     - terms: Boolean connectives (T, F, ==>, /\, \/, ~, if-then-else,
+              bool-case), quantifiers (!, ?), numeric literals, arithmetic
+              operators (SUC, +, -, *, /, ~, DIV, MOD, ABS, MIN, MAX), function
+              application, lambda abstraction *)
+
+  val Yices_types = [
+    (("min", "bool"), "bool", ""),
+    (("num", "num"), "nat", ""),
+    (("integer", "int"), "int", ""),
+    (("realax", "real"), "real", ""),
+    (* Yices considers "-> X Y Z" and "-> X (-> Y Z)" different types. We use
+       the latter only. *)
+    (("min", "fun"), "->", "")
+  ]
+
+  (* many HOL operators can be translated by simply mapping them to the
+     corresponding Yices operator, or to a function that we define in Yices
+     ourselves (the last component of each tuple is the function's
+     definition) *)
+  val Yices_operator_terms = [
+    (boolSyntax.T, "true", ""),
+    (boolSyntax.F, "false", ""),
+    (boolSyntax.equality, "=", ""),
+    (boolSyntax.implication, "=>", ""),
+    (boolSyntax.conjunction, "and", ""),
+    (boolSyntax.disjunction, "or", ""),
+    (boolSyntax.negation, "not", ""),
+    (boolSyntax.conditional, "ite", ""),
+    (numSyntax.suc_tm, "+ 1", ""),
+    (numSyntax.plus_tm, "+", ""),
+    (* in HOL, 's1 < s2' implies 's1 - s2 = 0' for naturals; Yices however
+       would consider 's1 - s2' a negative integer *)
+    (numSyntax.minus_tm, "hol_num_minus",
+       "(define hol_num_minus::(-> nat nat nat) " ^
+         "(lambda (x::nat y::nat) (ite (< x y) 0 (- x y))))"),
+    (numSyntax.mult_tm, "*", ""),
+    (* 'x div 0' and 'x mod 0' are unspecified in HOL, but not type-correct in
+       Yices and, therefore, treated quite weirdly: Yices claims that, e.g.,
+       'x = 42 div 0' is unsatisfiable. Similar for div/mod on integers. *)
+    (numSyntax.div_tm, "hol_num_div",
+       "(define hol_num_div0::(-> nat nat))\n" ^
+         "(define hol_num_div::(-> nat nat nat) (lambda (x::nat y::nat) " ^
+         "(ite (= y 0) (hol_num_div0 x) (div x y))))"),
+    (numSyntax.mod_tm, "hol_num_mod",
+       "(define hol_num_mod0::(-> nat nat))\n" ^
+         "(define hol_num_mod::(-> nat nat nat) (lambda (x::nat y::nat) " ^
+         "(ite (= y 0) (hol_num_mod0 x) (mod x y))))"),
+    (numSyntax.min_tm, "hol_num_min",
+       "(define hol_num_min::(-> nat nat nat) (lambda (x::nat y::nat) " ^
+         "(ite (< x y) x y)))"),
+    (numSyntax.max_tm, "hol_num_max",
+       "(define hol_num_max::(-> nat nat nat) (lambda (x::nat y::nat) " ^
+         "(ite (< x y) y x)))"),
+    (numSyntax.less_tm, "<", ""),
+    (numSyntax.leq_tm, "<=", ""),
+    (numSyntax.greater_tm, ">", ""),
+    (numSyntax.geq_tm, ">=", ""),
+    (intSyntax.negate_tm, "- 0", ""),
+    (intSyntax.absval_tm, "hol_int_abs",
+       "(define hol_int_abs::(-> int int) (lambda (x::int) " ^
+         "(ite (< x 0) (- 0 x) x)))"),
+    (intSyntax.plus_tm, "+", ""),
+    (intSyntax.minus_tm, "-", ""),
+    (intSyntax.mult_tm, "*", ""),
+    (intSyntax.div_tm, "hol_int_div",
+       "(define hol_int_div0::(-> int int))\n" ^
+         "(define hol_int_div::(-> int int int) (lambda (x::int y::int) " ^
+         "(ite (= y 0) (hol_int_div0 x) (div x y))))"),
+    (intSyntax.mod_tm, "hol_int_mod",
+       "(define hol_int_mod0::(-> int int))\n" ^
+         "(define hol_int_mod::(-> int int int) (lambda (x::int y::int) " ^
+         "(ite (= y 0) (hol_int_mod0 x) (mod x y))))"),
+    (intSyntax.min_tm, "hol_int_min",
+       "(define hol_int_min::(-> int int int) (lambda (x::int y::int) " ^
+         "(ite (< x y) x y)))"),
+    (intSyntax.max_tm, "hol_int_max",
+       "(define hol_int_max::(-> int int int) (lambda (x::int y::int) " ^
+         "(ite (< x y) y x)))"),
+    (intSyntax.less_tm, "<", ""),
+    (intSyntax.leq_tm, "<=", ""),
+    (intSyntax.great_tm, ">", ""),
+    (intSyntax.geq_tm, ">=", ""),
+    (realSyntax.negate_tm, "- 0", ""),
+    (realSyntax.absval_tm, "hol_real_abs",
+       "(define hol_real_abs::(-> real real) (lambda (x::real) " ^
+         "(ite (< x 0) (- 0 x) x)))"),
+    (realSyntax.plus_tm, "+", ""),
+    (realSyntax.minus_tm, "-", ""),
+    (realSyntax.mult_tm, "*", ""),
+    (* note that Yices uses '/' for division on reals, not 'div'; Yices will
+       fail if the second argument is 0 or not a numeral *)
+    (realSyntax.div_tm, "/", ""),
+    (realSyntax.min_tm, "hol_real_min",
+       "(define hol_real_min::(-> real real real) (lambda (x::real y::real) " ^
+         "(ite (< x y) x y)))"),
+    (realSyntax.max_tm, "hol_real_max",
+       "(define hol_real_max::(-> real real real) (lambda (x::real y::real) " ^
+         "(ite (< x y) y x)))"),
+    (realSyntax.less_tm, "<", ""),
+    (realSyntax.leq_tm, "<=", ""),
+    (realSyntax.great_tm, ">", ""),
+    (realSyntax.geq_tm, ">=", "")
+  ]
+
+  (* binders need to be treated differently from the operators in
+     'Yices_operator_terms' *)
+  val Yices_binder_terms = [
+    (boolSyntax.strip_forall, "forall"),
+    (boolSyntax.strip_exists, "exists"),
+    (* Yices considers "-> X Y Z" and "-> X (-> Y Z)" different types. We use
+       the latter only. *)
+    (fn t => let val (var, body) = Term.dest_abs t
+             in
+               ([var], body)
+             end handle Feedback.HOL_ERR _ => ([], t), "lambda")
+  ]
+
+  (* ty_dict: dictionary that maps types to names
+     fresh: next fresh index to generate a new type name
+     defs: list of auxiliary Yices definitions *)
+  fun translate_type (acc, ty) =
+    let
+      fun uninterpreted_type (acc as (ty_dict, fresh, defs), ty) =
+        case Redblackmap.peek (ty_dict, ty) of
+          SOME s => (acc, s)
+        | NONE => let val name = "t" ^ Int.toString fresh
+                      val ty_dict' = Redblackmap.insert (ty_dict, ty, name)
+                      val defs' = "(define-type " ^ name ^ ")" :: defs
+                  in
+                    ((ty_dict', fresh + 1, defs'), name)
+                  end
+    in
+      if Type.is_type ty then
+        (* check table of types *)
+        let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+        in
+          case List.find (fn ((thy, tyop), _, _) =>
+                 thy = Thy andalso tyop = Tyop) Yices_types of
+            SOME (_, name, def) =>
+            let val ((ty_dict, fresh, defs), yices_Args) = Lib.foldl_map
+                  translate_type (acc, Args)
+                val defs' = if def = "" orelse Lib.mem def defs then defs else
+                  def :: defs
+                val yices_Args' = String.concat (Lib.separate " " yices_Args)
+            in
+              ((ty_dict, fresh, defs'),
+               if yices_Args = [] then name
+               else "(" ^ name ^ " " ^ yices_Args' ^ ")")
+            end
+          | NONE =>
+            uninterpreted_type (acc, ty)
+        end
+      else uninterpreted_type (acc, ty)
+    end
+
+  (* dict: dictionary that maps terms to names
+     fresh: next fresh index to generate a new name
+     ty_dict: cf. translate_type
+     ty_fresh: cf. translate_type
+     defs: list of auxiliary Yices definitions *)
+  fun translate_term (acc, tm) =
+    (* numerals *)
+    if numSyntax.is_numeral tm then
+      let val n = numSyntax.dest_numeral tm
+      in
+        (acc, Arbnum.toString n)
+      end
+    else if intSyntax.is_int_literal tm then
+      let val i = intSyntax.int_of_term tm
+          val s = Arbint.toString i
+      in
+        (acc, String.substring (s, 0, String.size s - 1))
+      end
+    else if realSyntax.is_real_literal tm then
+      let val i = realSyntax.int_of_term tm
+          val s = Arbint.toString i
+      in
+        (acc, String.substring (s, 0, String.size s - 1))
+      end
+    (* bool_case *)
+    (* cannot be defined as a function in Yices because it is polymorphic *)
+    else if boolSyntax.is_bool_case tm then
+      let val (t1, t2, t3) = boolSyntax.dest_bool_case tm
+          val (acc, s1) = translate_term (acc, t1)
+          val (acc, s2) = translate_term (acc, t2)
+          val (acc, s3) = translate_term (acc, t3)
+      in
+        (acc, "(ite " ^ s3 ^ " " ^ s1 ^ " " ^ s2 ^ ")")
+      end
+    (* binders *)
+    else
+      case Lib.get_first (fn (strip_fn, name) =>
+        case strip_fn tm of
+          ([], _) => NONE (* not this binder *)
+        | (vars, body) =>
+          let val typs = List.map Term.type_of vars
+              (* We must gather Yices definitions for all types, and for all
+                 terms in the body with the exception of bound vars. Still,
+                 bound vars must not be mapped to names used elsewhere (to
+                 avoid accidental capture). Also note that not all bound vars
+                 need to occur in the body. *)
+              val (dict, fresh, ty_dict, ty_fresh, defs) = acc
+              (* translate types of bound variables separately, because we
+                 don't want to discard their definitions *)
+              val (ty_acc, yices_typs) = Lib.foldl_map translate_type
+                ((ty_dict, ty_fresh, defs), typs)
+              val (ty_dict, ty_fresh, defs) = ty_acc
+              (* translate bound variables; make sure they are mapped to fresh
+                 names; their types have just been translated already  *)
+              val empty_dict = Redblackmap.mkDict Term.compare
+              val (bound_acc, yices_vars) = Lib.foldl_map translate_term
+                ((empty_dict, fresh, ty_dict, ty_fresh, []), vars)
+              val (bound_dict, fresh, _, _, _) = bound_acc
+              (* translate the body, with bound variables mapped properly *)
+              fun union dict1 dict2 =
+                Redblackmap.foldl (fn (t, s, d) => Redblackmap.insert (d, t, s))
+                  dict1 dict2
+              val acc = (union dict bound_dict, fresh, ty_dict, ty_fresh, defs)
+              val (acc, yices_body) = translate_term (acc, body)
+              val (body_dict, fresh, ty_dict, ty_fresh, defs) = acc
+              (* discard the mapping of bound variables, but keep other term
+                 mappings that result from translation of the body *)
+              fun diff dict1 dict2 =
+                Redblackmap.foldl (fn (t, _, d) =>
+                  (Lib.fst o Redblackmap.remove) (d, t)) dict1 dict2
+              val dict = union dict (diff body_dict bound_dict)
+              val yices_bounds = String.concat (Lib.separate " " (List.map
+                (fn (v, t) => v ^ "::" ^ t) (Lib.zip yices_vars yices_typs)))
+            in
+              SOME ((dict, fresh, ty_dict, ty_fresh, defs),
+                "(" ^ name ^ " (" ^ yices_bounds ^ ") " ^ yices_body ^ ")")
+            end) Yices_binder_terms of
+        SOME result => result
+      | NONE =>
+    (* operators *)
+      let val (rator, rands) = boolSyntax.strip_comb tm
+      in
+        case List.find (fn (t, _, _) => Term.same_const t rator)
+            Yices_operator_terms of
+          SOME (_, name, def) =>
+          let val (acc', yices_rands) = Lib.foldl_map
+                translate_term (acc, rands)
+              val (dict, fresh, ty_dict, ty_fresh, defs) = acc'
+              val defs' = if def = "" orelse Lib.mem def defs then defs else
+                def :: defs
+              val yices_rands' = String.concat (Lib.separate " " yices_rands)
+          in
+            ((dict, fresh, ty_dict, ty_fresh, defs'),
+             if yices_rands = [] then name
+             else "(" ^ name ^ " " ^ yices_rands' ^ ")")
+          end
+        | NONE =>
+          (* function application *)
+          if Term.is_comb tm then
+          (* Yices considers "-> X Y Z" and "-> X (-> Y Z)" different types. We
+             use the latter only. *)
+            let val (t1, t2) = Term.dest_comb tm
+                val (acc, s1) = translate_term (acc, t1)
+                val (acc, s2) = translate_term (acc, t2)
+            in
+              (acc, "(" ^ s1 ^ " " ^ s2 ^ ")")
+            end
+          else (* replace all other terms with a variable *)
+          (* we even replace variables, to make sure there are no name clashes
+             with either (i) variables generated by us, or (ii) reserved Yices
+             names *)
+            let val (dict, fresh, ty_dict, ty_fresh, defs) = acc
+            in
+              case Redblackmap.peek (dict, tm) of
+                SOME s => (acc, s)
+              | NONE =>
+                let val name = "v" ^ Int.toString fresh
+                    val dict = Redblackmap.insert (dict, tm, name)
+                    (* also collect type definitions *)
+                    val ((ty_dict, ty_fresh, defs), ty_name) = translate_type
+                      ((ty_dict, ty_fresh, defs), Term.type_of tm)
+                    val defs = "(define " ^ name ^ "::" ^ ty_name ^ ")" :: defs
+                in
+                  ((dict, fresh + 1, ty_dict, ty_fresh, defs), name)
+                end
+            end
+      end
+
   fun term_to_Yices tm =
   let
     val _ = if Term.type_of tm <> Type.bool then
         Feedback.Raise (Feedback.mk_HOL_ERR "Yices" "term_to_Yices"
           "term supplied is not of type bool")
       else ()
-    (* returns a dictionary (possibly) expanded with new (subterm, var)
-       assignments, the next "fresh" index, a set of auxiliary axioms/
-       definitions in Yices syntax, and a string list that, when concatenated,
-       gives the Yices representation of 'tm' -- 'acc' is of type
-       '(term, term) Redblackmap.dict * int * string list' *)
-    fun translate (acc, tm) =
-      (* Boolean connectives *)
-      if Term.same_const tm boolSyntax.T then
-        (acc, ["true"])
-      else if Term.same_const tm boolSyntax.F then
-        (acc, ["false"])
-      else if boolSyntax.is_eq tm then
-        let val (t1, t2) = boolSyntax.dest_eq tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(= " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if boolSyntax.is_imp_only tm then
-        let val (t1, t2) = boolSyntax.dest_imp_only tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(=> " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if boolSyntax.is_conj tm then
-        let val ts = boolSyntax.strip_conj tm
-            val (acc', sss) = Lib.foldl_map translate (acc, ts)
-        in
-          (acc', "(and " :: Lib.separate " " (List.concat sss) @ [")"])
-        end
-      else if boolSyntax.is_disj tm then
-        let val ts = boolSyntax.strip_disj tm
-            val (acc', sss) = Lib.foldl_map translate (acc, ts)
-        in
-          (acc', "(or " :: Lib.separate " " (List.concat sss) @ [")"])
-        end
-      else if boolSyntax.is_neg tm then
-        let val t = boolSyntax.dest_neg tm
-            val (acc', s) = translate (acc, t)
-        in
-          (acc', "(not " :: s @ [")"])
-        end
-      else if boolSyntax.is_cond tm then
-        let val (t1, t2, t3) = boolSyntax.dest_cond tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-            val (a3, s3) = translate (a2, t3)
-        in
-          (a3, "(ite " :: s1 @ " " :: s2 @ " " :: s3 @ [")"])
-        end
-      else if boolSyntax.is_bool_case tm then
-        let val (t1, t2, t3) = boolSyntax.dest_bool_case tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-            val (a3, s3) = translate (a2, t3)
-        in
-          (* note that the argument order is different from the 'is_cond'
-             case above *)
-          (a3, "(ite " :: s3 @ " " :: s1 @ " " :: s2 @ [")"])
-        end
-      (* numerals *)
-      else if numSyntax.is_numeral tm then
-        let val n = numSyntax.dest_numeral tm
-        in
-          (acc, [Arbnum.toString n])
-        end
-      else if intSyntax.is_int_literal tm then
-        let val i = intSyntax.int_of_term tm
-            val s = Arbint.toString i
-        in
-          (acc, [String.substring (s, 0, String.size s - 1)])
-        end
-      else if realSyntax.is_real_literal tm then
-        let val i = realSyntax.int_of_term tm
-            val s = Arbint.toString i
-        in
-          (acc, [String.substring (s, 0, String.size s - 1)])
-        end
-      (* Yices 1.0.18 only supports linear arithmetic; we could check for
-         linearity below (but Yices will check again anyway) *)
-      (* arithmetic operators: SUC, +, -, *, /, DIV, MOD, ABS, MIN, MAX *)
-      (* num *)
-      else if numSyntax.is_suc tm then
-        let val t = numSyntax.dest_suc tm
-            val (acc', s) = translate (acc, t)
-        in
-          (acc', "(+ 1 " :: s @ [")"])
-        end
-      else if numSyntax.is_plus tm then
-        let val (t1, t2) = numSyntax.dest_plus tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(+ " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if numSyntax.is_minus tm then
-        (* in HOL, 't1 < t2' implies 't1 - t2 = 0' for naturals; Yices however
-           would consider 't1 - t2' a negative integer *)
-        let val (t1, t2) = numSyntax.dest_minus tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-            val (dict, index, axioms) = a2
-            val axioms' = Lib.insert ("(define hol_num_minus::(-> nat nat nat)"
-              ^ " (lambda (x::nat y::nat) (ite (< x y) 0 (- x y))))\n") axioms
-        in
-          ((dict, index, axioms'), "(hol_num_minus " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if numSyntax.is_mult tm then
-        let val (t1, t2) = numSyntax.dest_mult tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(* " :: s1 @ " " :: s2 @ [")"])
-        end
-      (* 'x div 0' and 'x mod 0' are unspecified in HOL, but not type-correct
-         in Yices and, therefore, treated quite weirdly: Yices claims that,
-         e.g., 'x = 42 div 0' is unsatisfiable. Similar for div/mod on
-         integers. *)
-      else if numSyntax.is_div tm then
-        let val (t1, t2) = numSyntax.dest_div tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-            val (dict, index, axioms) = a2
-            val axioms' = Lib.insert ("(define hol_num_div0::(-> nat nat))\n" ^
-              "(define hol_num_div::(-> nat nat nat) (lambda (x::nat y::nat)" ^
-              " (ite (= y 0) (hol_num_div0 x) (div x y))))\n") axioms
-        in
-          ((dict, index, axioms'), "(hol_num_div " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if numSyntax.is_mod tm then
-        let val (t1, t2) = numSyntax.dest_mod tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-            val (dict, index, axioms) = a2
-            val axioms' = Lib.insert ("(define hol_num_mod0::(-> nat nat))\n" ^
-              "(define hol_num_mod::(-> nat nat nat) (lambda (x::nat y::nat)" ^
-              " (ite (= y 0) (hol_num_mod0 x) (mod x y))))\n") axioms
-        in
-          ((dict, index, axioms'), "(hol_num_mod " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if numSyntax.is_min tm then
-        let val (t1, t2) = numSyntax.dest_min tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if numSyntax.is_max tm then
-        let val (t1, t2) = numSyntax.dest_max tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") " :: s2 @ " " :: s1 @ [")"])
-        end
-      (* int *)
-      else if intSyntax.is_negated tm then
-        let val t = intSyntax.dest_negated tm
-            val (acc', s) = translate (acc, t)
-        in
-          (acc', "(- 0 " :: s @ [")"])
-        end
-      else if intSyntax.is_plus tm then
-        let val (t1, t2) = intSyntax.dest_plus tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(+ " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if intSyntax.is_minus tm then
-        let val (t1, t2) = intSyntax.dest_minus tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(- " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if intSyntax.is_mult tm then
-        let val (t1, t2) = intSyntax.dest_mult tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(* " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if intSyntax.is_div tm then
-        let val (t1, t2) = intSyntax.dest_div tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-            val (dict, index, axioms) = a2
-            val axioms' = Lib.insert ("(define hol_int_div0::(-> int int))\n" ^
-              "(define hol_int_div::(-> int int int) (lambda (x::int y::int)" ^
-              " (ite (= y 0) (hol_int_div0 x) (div x y))))\n") axioms
-        in
-          ((dict, index, axioms'), "(hol_int_div " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if intSyntax.is_mod tm then
-        let val (t1, t2) = intSyntax.dest_mod tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-            val (dict, index, axioms) = a2
-            val axioms' = Lib.insert ("(define hol_int_mod0::(-> int int))\n" ^
-              "(define hol_int_mod::(-> int int int) (lambda (x::int y::int)" ^
-              " (ite (= y 0) (hol_int_mod0 x) (mod x y))))\n") axioms
-        in
-          ((dict, index, axioms'), "(hol_int_mod " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if intSyntax.is_absval tm then
-        let val t = intSyntax.dest_absval tm
-            val (acc', s) = translate (acc, t)
-        in
-          (acc', "(ite (< 0 " :: s @ ") " :: s @ " (- 0 " :: s @ ["))"])
-        end
-      else if intSyntax.is_min tm then
-        let val (t1, t2) = intSyntax.dest_min tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if intSyntax.is_max tm then
-        let val (t1, t2) = intSyntax.dest_max tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") " :: s2 @ " " :: s1 @ [")"])
-        end
-      (* real *)
-      else if realSyntax.is_negated tm then
-        let val t = realSyntax.dest_negated tm
-            val (acc', s) = translate (acc, t)
-        in
-          (acc', "(- 0 " :: s @ [")"])
-        end
-      else if realSyntax.is_plus tm then
-        let val (t1, t2) = realSyntax.dest_plus tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(+ " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if realSyntax.is_minus tm then
-        let val (t1, t2) = realSyntax.dest_minus tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(- " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if realSyntax.is_mult tm then
-        let val (t1, t2) = realSyntax.dest_mult tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(* " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if realSyntax.is_div tm then
-        let val (t1, t2) = realSyntax.dest_div tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (* note that Yices uses '/' for division on reals, not 'div'; Yices
-             will fail if 's2' is 0  not a numeral *)
-          (a2, "(/ " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if realSyntax.is_absval tm then
-        let val t = realSyntax.dest_absval tm
-            val (acc', s) = translate (acc, t)
-        in
-          (acc', "(ite (< 0 " :: s @ ") " :: s @ " (- 0 " :: s @ ["))"])
-        end
-      else if realSyntax.is_min tm then
-        let val (t1, t2) = realSyntax.dest_min tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if realSyntax.is_max tm then
-        let val (t1, t2) = realSyntax.dest_max tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(ite (< " :: s1 @ " " :: s2 @ ") " :: s2 @ " " :: s1 @ [")"])
-        end
-      (* arithmetic inequalities: <, <=, >, >= *)
-      (* num *)
-      else if numSyntax.is_less tm then
-        let val (t1, t2) = numSyntax.dest_less tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(< " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if numSyntax.is_leq tm then
-        let val (t1, t2) = numSyntax.dest_leq tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(<= " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if numSyntax.is_greater tm then
-        let val (t1, t2) = numSyntax.dest_greater tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(> " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if numSyntax.is_geq tm then
-        let val (t1, t2) = numSyntax.dest_geq tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(>= " :: s1 @ " " :: s2 @ [")"])
-        end
-      (* int *)
-      else if intSyntax.is_less tm then
-        let val (t1, t2) = intSyntax.dest_less tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(< " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if intSyntax.is_leq tm then
-        let val (t1, t2) = intSyntax.dest_leq tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(<= " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if intSyntax.is_great tm then
-        let val (t1, t2) = intSyntax.dest_great tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(> " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if intSyntax.is_geq tm then
-        let val (t1, t2) = intSyntax.dest_geq tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(>= " :: s1 @ " " :: s2 @ [")"])
-        end
-      (* real *)
-      else if realSyntax.is_less tm then
-        let val (t1, t2) = realSyntax.dest_less tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(< " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if realSyntax.is_leq tm then
-        let val (t1, t2) = realSyntax.dest_leq tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(<= " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if realSyntax.is_great tm then
-        let val (t1, t2) = realSyntax.dest_great tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(> " :: s1 @ " " :: s2 @ [")"])
-        end
-      else if realSyntax.is_geq tm then
-        let val (t1, t2) = realSyntax.dest_geq tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(>= " :: s1 @ " " :: s2 @ [")"])
-        end
-      (* function application *)
-      else if Term.is_comb tm then
-        (* Yices considers "-> X Y Z" and "-> X (-> Y Z)" different types. We
-           use the latter only. Moreover, Yices does not support partial
-           function application. *)
-        (* TODO: call eta_long *)
-        let val (t1, t2) = Term.dest_comb tm
-            val (a1, s1) = translate (acc, t1)
-            val (a2, s2) = translate (a1, t2)
-        in
-          (a2, "(" :: s1 @ " " :: s2 @ [")"])
-        end
-      else (* replace all other terms with a variable *)
-        (* we even replace variables, to make sure there are no name clashes
-           with either (i) variables generated by us, or (ii) reserved Yices
-           names *)
-        let val (dict, fresh, axioms) = acc
-        in
-          case Redblackmap.peek (dict, tm) of
-            SOME var => (acc, [Lib.fst (Term.dest_var var)])
-          | NONE => let val name = "v" ^ Int.toString fresh
-                        val var = Term.mk_var (name, Term.type_of tm)
-                    in
-                      ((Redblackmap.insert (dict, tm, var), fresh + 1, axioms),
-                       [name])
-                    end
-        end
-    val empty_dict = Redblackmap.mkDict Term.compare
-    val ((dict, _, axioms), ss_tm) = translate ((empty_dict, 0, []), tm)
-    (* we need to declare the variables in 'dict' to Yices, and for that, we
-       need to declare their types to Yices first ... so here we go: *)
-    (* similar to 'translate', but for types; we map these to a string
-       directly, rather than to a type variable, and there are no axioms for
-       types yet *)
-    fun translate_type (acc, ty) =
-    let
-      fun uninterpreted_type ((ty_dict, fresh), ty) =
-        case Redblackmap.peek (ty_dict, ty) of
-          SOME s => ((ty_dict, fresh), s)
-        | NONE => let val s = "t" ^ Int.toString fresh
-                  in
-                    ((Redblackmap.insert (ty_dict, ty, s), fresh + 1), s)
-                  end
-    in
-      if Type.is_type ty then
-        let val {Thy, Tyop, Args} = Type.dest_thy_type ty
-        in
-          if ty = Type.bool then
-            (acc, "bool")
-          else if ty = numSyntax.num then
-            (acc, "nat")
-          else if ty = intSyntax.int_ty then
-            (acc, "int")
-          else if ty = realSyntax.real_ty then
-            (acc, "real")
-          else if Thy = "min" andalso Tyop = "fun" then
-            (* Yices considers "-> X Y Z" and "-> X (-> Y Z)" different types.
-               We use the latter only. *)
-            (* 'fun' is expected to have arity 2 *)
-            let val ty1 = hd Args
-                val ty2 = hd (tl Args)
-                val (a1, s1) = translate_type (acc, ty1)
-                val (a2, s2) = translate_type (a1, ty2)
-            in
-              (a2, "(-> " ^ s1 ^ " " ^ s2 ^ ")")
-            end
-          else uninterpreted_type (acc, ty)
-        end
-      else uninterpreted_type (acc, ty)
-    end
-    val empty_ty_dict = Redblackmap.mkDict Type.compare
-    (* slightly tricky: we collect all variable definitions in 'defs', and
-       while doing so we build the type dictionary 'ty_dict' *)
-    val ((ty_dict, _), defs) = Redblackmap.foldr (fn (_, var, (ty_acc, defs)) =>
-      let val (name, ty) = Term.dest_var var
-          val (ty_acc', ty_name) = translate_type (ty_acc, ty)
-      in
-        (ty_acc', "(define " ^ name ^ "::" ^ ty_name ^ ")\n" :: defs)
-      end) ((empty_ty_dict, 0), []) dict
-    (* now add all type definitions to the collection of definitions *)
-    val all_defs = Redblackmap.foldr (fn (_, s, all_defs) =>
-      "(define-type " ^ s ^ ")\n" :: all_defs) defs ty_dict
+    (* TODO: val tm = eta_long tm *)
+    val empty = Redblackmap.mkDict Term.compare
+    val empty_ty = Redblackmap.mkDict Type.compare
+    val ((_, _, _, _, defs), yices_tm) = translate_term
+      ((empty, 0, empty_ty, 0, []), tm)
+    val defs' = List.map (fn s => s ^ "\n") (List.rev defs)
   in
-    (* The order of variable and type definitions depends on the order of terms
-       and types in 'dict' and 'ty_dict', respectively (because of the use of
-       'Redblackmap.foldr' above), and thus may seem arbitrary in the Yices
-       file (except that type definitions always come before variable
-       definitions). *)
-    axioms @ all_defs @ "(assert " :: ss_tm @ [")\n(check)\n"]
+    defs' @ ["(assert " ^ yices_tm ^ ")\n(check)\n"]
   end
 
   (* returns true if Yices reported "sat", false if Yices reported "unsat" *)
