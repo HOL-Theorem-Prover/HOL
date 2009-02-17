@@ -1743,7 +1743,7 @@ val int_div_exists =
 
 val int_div = new_specification ("int_div", ["int_div"], int_div_exists);
 
-val _ = add_infix("/", 600, HOLgrammars.LEFT);
+val _ = set_fixity "/" (Infixl 600)
 val _ = overload_on("/", Term`int_div`)
 
 val INT_DIV = store_thm(
@@ -1824,7 +1824,7 @@ val int_mod_exists =
 
 val int_mod = new_specification ("int_mod",["int_mod"],int_mod_exists);
 
-val _ = add_infix("%", 650, HOLgrammars.LEFT);
+val _ = set_fixity "%" (Infixl 650)
 val _ = overload_on("%", Term`int_mod`);
 
 val little_lemma = prove(
@@ -2401,7 +2401,7 @@ val int_quot_exists =
 
 val int_quot = new_specification ("int_quot",["int_quot"],int_quot_exists);
 
-val _ = add_infix("quot", 600, LEFT)
+val _ = set_fixity "quot" (Infixl 600)
 val _ = overload_on("quot", ``int_quot``);
 
 val INT_QUOT = store_thm(
@@ -2528,7 +2528,7 @@ val int_rem_exists =
 
 val int_rem = new_specification ("int_rem",["int_rem"],int_rem_exists);
 
-val _ = add_infix("rem", 650, LEFT);
+val _ = set_fixity "rem" (Infixl 650);
 val _ = overload_on("rem", ``int_rem``);
 
 val INT_REM = store_thm(
