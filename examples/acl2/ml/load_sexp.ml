@@ -78,7 +78,8 @@ fun load_book book_name =
          in
           thll @ [thl]
          end
-    else [map install_fn (accumulate_discard_events acl2_list)]
+    else [map install_fn (accumulate_discard_events acl2_list) 
+          handle e => Raise e]
   end;
 
 (* 
@@ -87,10 +88,12 @@ LTL example
 
 val ll = load_book "summary";
 
-val States_def        = Define `States = g (ksym "STATES")`;
-val InitialStates_def = Define `InitialStates = g (ksym "INITIAL-STATES")`;
-val Variables_def     = Define `Variables = g (ksym "VARIABLES")`;
-val Transition_def    = Define `Transition = g (ksym "TRANSITION")`;
+val States_def        = Define `States = (ksym "STATES")`;
+val InitialStates_def = Define `InitialStates = (ksym "INITIAL-STATES")`;
+val Variables_def     = Define `Variables = (ksym "VARIABLES")`;
+val Transition_def    = Define `Transition = (ksym "TRANSITION")`;
+val Equations_def     = Define `Equations = (ksym "EQUATIONS")`;
+val LabelFn_def       = Define `LabelFn = (ksym "LABEL-FN")`;
 
 val g_simps =
  [let_simp,andl_fold,itel_fold,itel_append]
@@ -98,14 +101,9 @@ val g_simps =
  (map
    GSYM
    [int_def,nat_def,List_def,asym_def,csym_def,ksym_def,osym_def,
-    States_def,InitialStates_def,Variables_def,Transition_def]);   
+    States_def,InitialStates_def,Variables_def,Transition_def,
+    Equations_def,LabelFn_def]);   
 
 val ll_simp = map (map (I ## SIMP_RULE list_ss g_simps)) ll;
-
-val forall_fold = GSYM(SIMP_CONV list_ss [forall_def] ``forall x. P x``);
-
-SIMP_RULE list_ss [forall_fold] yh
-
-forall P ==> bool_to_sexp !v. |= P(v)
 
 *)

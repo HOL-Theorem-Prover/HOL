@@ -265,13 +265,6 @@ end
                          ^ Int.toString (length tys) ^ " types\n") else ();
                    tys
                 end
-             (* let val ty1 = (adv(); prse fb)
-                    val (adv,(t,rlocn)) = typetok_of fb
-                in
-                  case t of
-                    RParen => (adv(); ty1 (*,locn.between locn rlocn*) )
-                  | _ => raise InternalFailure locn
-                end *)
     | TypeVar s => (adv(); [pVartype ((s,Prekind.new_uvar(),Prerank.new_uvar()), locn)])
     | AQ x => (adv(); [pAQ x])
     | QTypeIdent (s0,s) => [try_const_tyop(t,locn)]

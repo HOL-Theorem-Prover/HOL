@@ -44,7 +44,8 @@ local fun assoc1 eq item =
         | foo (SOME(_,v)) = v
 in
 fun alpha_ex_unroll xlist tm =
-  let val (qvars,body) = strip_exists tm
+  let open boolSyntax
+      val (qvars,body) = strip_exists tm
       val vlist = #2(strip_comb (rhs body))
       val plist = zip vlist xlist
       val args = map (C (assoc1 aconv) plist) qvars
@@ -195,7 +196,7 @@ fun mk_case ty_info FV thy =
 
 
 fun mk_case ty_info FV thy =
- let
+ let open boolSyntax
  val divide:divide_ty = ipartition (wfrecUtils.vary FV)  (* do not eta-expand!! *)
  fun fail s = raise ERR "mk_case" s
  fun mk{rows=[],...} = fail"no rows"
@@ -445,13 +446,62 @@ end
 *)
 
 
-(*---------------------------------------------------------------------------*
- * Input : f, R, SV, and  [(pat1,TCs1),..., (patn,TCsn)]                     *
- *                                                                           *
- * Instantiates WF_INDUCTION_THM, getting Sinduct and then tries to prove    *
- * recursion induction (Rinduct) by proving the antecedent of Sinduct from   *
- * the antecedent of Rinduct.                                                *
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* A clause of the case_thm can have one of the following forms:             *)
+(*                                                                           *)
+(*    ?vlist. (var = tm)                                                     *)
+(*    ?vlist. (var = tm) /\ constraints  (* literal pattern *)               *)
+(*                                                                           *)
+(* We want to match tm against pat, to get theta, which will be applied to   *)
+(* the clause. The reason for this is that "proved_cases" needs to align     *)
+(* with the clauses in case_thm. In case it doesn't, match_clauses is called *)
+(* to restore alignment.                                                     *)
+(*---------------------------------------------------------------------------*)
+
+fun var_pure theta = Lib.all (fn {redex,residue} => is_var residue) theta;
+
+fun match_clause pat clause =
+ let open boolSyntax
+     val (V,tm) = strip_exists clause
+ in case strip_conj tm
+     of [] => raise ERR "match_clause" "unexpected structure in case_thm"
+      | xeq::constraints =>
+        let val (x,target) = dest_eq xeq
+        in case Term.match_term target pat
+            of ([],[]) => clause
+             | (theta,[]) => 
+                 if var_pure theta 
+                 then list_mk_exists(map (subst theta) V, subst theta tm)
+                 else raise ERR "match_clause" "no match"
+            | (theta,tytheta) => raise ERR "match_clause" "inequal types"
+        end
+ end;
+
+fun match_clauses pats case_thm = 
+ let val clauses = strip_disj (concl case_thm)
+     fun match [] [] = []
+       | match (p1::rst) (clauses as (_::_)) = 
+           let open Lib
+               val (cl,clauses') = trypluck (match_clause p1) clauses
+           in cl::match rst clauses'
+           end
+       | match other wise = raise ERR "match_clauses" "different lengths"
+ in 
+  EQ_MP (EQT_ELIM
+          (AC_CONV (DISJ_ASSOC,DISJ_SYM)
+               (mk_eq(concl case_thm,
+                      list_mk_disj (match pats clauses)))))
+       case_thm 
+ end
+ handle e => raise wrap_exn "Induction" "match_clauses" e;
+ 
+(*---------------------------------------------------------------------------*)
+(* Input : f, R, SV, and  [(pat1,TCs1),..., (patn,TCsn)]                     *)
+(*                                                                           *)
+(* Instantiates WF_INDUCTION_THM, getting Sinduct and then tries to prove    *)
+(* recursion induction (Rinduct) by proving the antecedent of Sinduct from   *)
+(* the antecedent of Rinduct.                                                *)
+(*---------------------------------------------------------------------------*)
 
 fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
 let fun f() =
@@ -470,14 +520,15 @@ let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val proved_cases = map (prove_case fconst thy) tasks
     val v = variant (free_varsl (map concl proved_cases)) (mk_var("v",domn))
     val case_thm' = ISPEC v case_thm
+    val case_thm'' = match_clauses pats case_thm' (* align case_thm' with pats *)
     fun mk_subst tm = 
         if is_eq tm then SYM (ASSUME tm)
         else SYM (hd (CONJUNCTS (ASSUME (snd(strip_exists tm)))))
-    val substs = map mk_subst (strip_disj (concl case_thm'))
+    val substs = map mk_subst (strip_disj (concl case_thm''))
     (* Now elim pats in favour of variables *)
     val proved_cases1 = map (PURE_REWRITE_RULE substs) proved_cases
     val abs_cases = map LEFT_EXISTS proved_cases1
-    val dant = GEN v (DISJ_CASESL case_thm' abs_cases)
+    val dant = GEN v (DISJ_CASESL case_thm'' abs_cases)
     val dc = MP Sinduct dant
     val (vstruct,vars) = detuple (wfrecUtils.vary[P]) (hd pats)
     val dc' = itlist GEN vars (SPEC vstruct dc)
@@ -487,6 +538,6 @@ end
 handle e => raise wrap_exn "Induction" "mk_induction" e
 in
   if !monitoring > 0 then Count.apply f () else f()
-end
+end;
 
 end

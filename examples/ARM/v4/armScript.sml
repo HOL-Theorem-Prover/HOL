@@ -776,26 +776,27 @@ val DECODE_ARM_def = Define`
   DECODE_ARM (ireg : word32) =
     let b n = ireg ' n in
       case (b 27,b 26,b 25,b 24,b 23,b 22,b 21,b 20,b 7,b 6,b 5,b 4) of
-         (F,F,F, T , F ,_22,b21, F , F, F, F, F) -> if b21 then msr else mrs
-      || (F,F,F,_24,_23,_22,_21,_20,_7,_6,_5, F) -> data_proc
-      || (F,F,F,_24,_23,_22,_21,_20, F,_6,_5, T) -> data_proc
-      || (F,F,F, F , F , F ,_21,_20, T, F, F, T) -> mla_mul
-      || (F,F,F, F , T ,_22,_21,_20, T, F, F, T) -> mla_mul
-      || (F,F,F, T , F ,_22, F , F , T, F, F, T) -> swp
-      || (F,F,F,_24,_23,_22,_21, L , T, F, T, T) -> ldrh_strh
-      || (F,F,F,_24,_23,_22,_21, T , T, T,_5, T) -> ldrh_strh
-      || (F,F,T, T , F ,_22, F , F ,_7,_6,_5,_4) -> cdp_und
-      || (F,F,T, T , F ,_22, T , F ,_7,_6,_5,_4) -> msr
-      || (F,F,T,_24,_23,_22,_21,_20,_7,_6,_5,_4) -> data_proc
-      || (F,T,F,_24,_23,_22,_21, L ,_7,_6,_5,_4) -> ldr_str
-      || (F,T,T,_24,_23,_22,_21, L ,_7,_6,_5, F) -> ldr_str
-      || (T,F,F,_24,_23,_22,_21, L ,_7,_6,_5,_4) -> ldm_stm
-      || (T,F,T,_24,_23,_22,_21,_20,_7,_6,_5,_4) -> br
-      || (T,T,F,_24,_23,_22,_21, L ,_7,_6,_5,_4) -> ldc_stc
-      || (T,T,T, F ,_23,_22,_21, T ,_7,_6,_5, T) -> mrc
-      || (T,T,T, F ,_23,_22,_21, F ,_7,_6,_5, T) -> mcr
-      || (T,T,T, T ,_23,_22,_21,_20,_7,_6,_5,_4) -> swi_ex
-      || __ -> cdp_und`;
+         (F,F,F,T,F,_,F,F,F,F,F,F) -> mrs
+      || (F,F,F,T,F,_,T,F,F,F,F,F) -> msr
+      || (F,F,F,_,_,_,_,_,_,_,_,F) -> data_proc
+      || (F,F,F,_,_,_,_,_,F,_,_,T) -> data_proc
+      || (F,F,F,F,F,F,_,_,T,F,F,T) -> mla_mul
+      || (F,F,F,F,T,_,_,_,T,F,F,T) -> mla_mul
+      || (F,F,F,T,F,_,F,F,T,F,F,T) -> swp
+      || (F,F,F,_,_,_,_,_,T,F,T,T) -> ldrh_strh
+      || (F,F,F,_,_,_,_,T,T,T,_,T) -> ldrh_strh
+      || (F,F,T,T,F,_,F,F,_,_,_,_) -> cdp_und
+      || (F,F,T,T,F,_,T,F,_,_,_,_) -> msr
+      || (F,F,T,_,_,_,_,_,_,_,_,_) -> data_proc
+      || (F,T,F,_,_,_,_,_,_,_,_,_) -> ldr_str
+      || (F,T,T,_,_,_,_,_,_,_,_,F) -> ldr_str
+      || (T,F,F,_,_,_,_,_,_,_,_,_) -> ldm_stm
+      || (T,F,T,_,_,_,_,_,_,_,_,_) -> br
+      || (T,T,F,_,_,_,_,_,_,_,_,_) -> ldc_stc
+      || (T,T,T,F,_,_,_,T,_,_,_,T) -> mrc
+      || (T,T,T,F,_,_,_,F,_,_,_,T) -> mcr
+      || (T,T,T,T,_,_,_,_,_,_,_,_) -> swi_ex
+      || _ -> cdp_und`;
 
 val RUN_ARM_def = Define`
   RUN_ARM state (dabt:num option) data no_cp =

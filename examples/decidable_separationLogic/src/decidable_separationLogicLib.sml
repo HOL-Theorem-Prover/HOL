@@ -17,7 +17,7 @@ show_assums := true;
 
 open finite_mapTheory relationTheory pred_setTheory congLib sortingTheory
    listTheory rich_listTheory decidable_separationLogicTheory listLib
-   decidable_separationLogicLibTheory;
+   decidable_separationLogicLibTheory listSyntax;
 
 
 (*
@@ -86,9 +86,9 @@ val dse_nil_term = ``dse_nil``;
 ************************************************************)
 local
    fun strip_cons_int l t =
-      if not (listLib.is_cons t) then (l, t) else
+      if not (listSyntax.is_cons t) then (l, t) else
       let
-         val (e, t') = listLib.dest_cons t
+         val (e, t') = listSyntax.dest_cons t
       in
          strip_cons_int (l@[e]) t'
       end
@@ -98,7 +98,7 @@ end;
 
 fun list_mk_cons [] b  = b |
       list_mk_cons (t::tL) b  = 
-      mk_cons (t, list_mk_cons tL b)
+      listSyntax.mk_cons (t, list_mk_cons tL b);
 
 
 fun dest_LIST_DS_ENTAILS t =
@@ -169,7 +169,7 @@ fun dest_sf_bin_tree sf =
       val _ = if (length args = 2) then () else
                   (SMALLFOOT_ERR "Wrong No. of ARGS!");
       val (f1,f2) = pairLib.dest_pair (el 1 args)
-      val _ = if f1 = f2 then (SMALLFOOT_ERR "NO SF_BIN_TREE!") else ();
+      val _ = if eq f1 f2 then (SMALLFOOT_ERR "NO SF_BIN_TREE!") else ();
    in
       (f1,f2, el 2 args, el 1 args)
    end
@@ -273,24 +273,24 @@ fun is_uneq_2 e1 e2 pf =
    let
       val (e1', e2') = dest_pf_unequal pf;
    in
-      ((e1 = e1') andalso (e2 = e2')) orelse
-      ((e2 = e1') andalso (e1 = e2'))
+      ((eq e1 e1') andalso (eq e2 e2')) orelse
+      ((eq e2 e1') andalso (eq e1 e2'))
    end handle _ => false;
 
 fun is_eq_2 e1 e2 pf =
    let
       val (e1', e2') = dest_pf_equal pf;
    in
-      ((e1 = e1') andalso (e2 = e2')) orelse
-      ((e2 = e1') andalso (e1 = e2'))
+      ((eq e1 e1') andalso (eq e2 e2')) orelse
+      ((eq e2 e1') andalso (eq e1 e2'))
    end handle _ => false;
 
 fun is_uneq_nil ex pf =
    let
       val (e1, e2) = dest_pf_unequal pf;
    in
-      ((e1 = ex) andalso (is_dse_nil e2)) orelse
-      ((e2 = ex) andalso (is_dse_nil e1))
+      ((eq e1 ex) andalso (is_dse_nil e2)) orelse
+      ((eq e2 ex) andalso (is_dse_nil e1))
    end;
 
 
@@ -298,7 +298,7 @@ fun is_pf_equal_refl pf =
    (let
       val (e1, e2) = dest_pf_equal pf;
    in
-      e1 = e2
+      eq e1 e2
    end) handle _ => false
 
 
@@ -306,7 +306,7 @@ fun is_pf_unequal_refl pf =
    (let
       val (e1, e2) = dest_pf_unequal pf;
    in
-      e1 = e2
+      eq e1 e2
    end) handle _ => false
 
 
@@ -314,7 +314,7 @@ fun is_sf_ls_eq sf =
    (let
       val (f, e1, e2) = dest_sf_ls sf;
    in
-      e1 = e2
+      eq e1 e2
    end) handle _ => false
 
 
@@ -322,7 +322,7 @@ fun is_sf_trivial_list sf =
    let
       val (f, e1, e2) = dest_sf_ls sf
    in
-      (e1 = e2)
+      (eq e1 e2)
    end handle _ => false;
 
 
@@ -338,7 +338,7 @@ fun is_sf_trivial_tree sf =
    let
       val (_, e1, e2) = dest_sf_tree sf
    in
-      (e1 = e2)
+      (eq e1 e2)
    end handle _ => false;
 
 
@@ -364,13 +364,13 @@ fun is_points_to_nil t =
 
 
 fun pf_eq pf1 pf2 =
-   (if (pf1 = pf2) then (true, false) else
+   (if (eq pf1 pf2) then (true, false) else
    if (is_pf_equal pf1) then (
       let
          val (e1, e2) = dest_pf_equal pf1;
          val (e1', e2') = dest_pf_equal pf2;
       in
-         ((e1 = e2') andalso (e2 = e1'), true) (*e1 = e1' ... => pf1 = pf2*)
+         ((eq e1 e2') andalso (eq e2 e1'), true) (*e1 = e1' ... => pf1 = pf2*)
       end
    ) else
    if (is_pf_unequal pf1) then (
@@ -378,7 +378,7 @@ fun pf_eq pf1 pf2 =
          val (e1, e2) = dest_pf_unequal pf1;
          val (e1', e2') = dest_pf_unequal pf2;
       in
-         ((e1 = e2') andalso (e2 = e1'), true) (*e1 = e1' ... => pf1 = pf2*)
+         ((eq e1 e2') andalso (eq e2 e1'), true) (*e1 = e1' ... => pf1 = pf2*)
       end
    ) else (false, false))
    handle _ => (false, false)
@@ -396,7 +396,7 @@ fun is_sf_points_to_ex ex h =
    let
       val (ex', _, _, _) = dest_sf_points_to h;
    in
-      ex' = ex
+      eq ex' ex
    end;
 
 
@@ -490,7 +490,7 @@ val l2 = [false, true];
 *)
 
 fun should_turn (pf1, pf2) =
-   if pf1 = pf2 then false else
+   if eq pf1 pf2 then false else
    if (is_dse_nil pf1) then (not (is_dse_nil pf2)) else
    if (is_dse_var pf2) then (not (is_dse_var pf1)) else
    if (is_dse_const pf1) then (not (is_dse_const pf2)) else
@@ -563,7 +563,7 @@ fun bool_list2term___filter l =
       val (l1, _) = bool_list2term_list___filter l ([], []);
       val l2 = rev l1;
    in
-      (mk_list (l2, bool), l2 = [])
+      (mk_list (l2, bool), null l2)
    end;
 
 
@@ -575,7 +575,7 @@ fun is_pre_trivial t =
    let
       val (e1, e2) = pairLib.dest_pair t;
    in
-      (e1 = e2)
+      (eq e1 e2)
    end handle _ => false;
 
 
@@ -651,7 +651,7 @@ fun ds_inference_INCONSISTENT___CONV___UNEQUAL t =
 
       val thm = ISPECL [numLib.term_of_int n, e, c1, c2, pf, sf, pf', sf'] INFERENCE_INCONSISTENT_UNEQUAL___EVAL;
       val thm2 = CONV_RULE (computeLib.CBV_CONV inconsistent_cs) thm;
-      val _ = if ((concl thm2) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (concl thm2) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       EQT_INTRO thm2
    end
@@ -668,14 +668,14 @@ fun ds_inference_INCONSISTENT___CONV___NIL_POINTS_TO t =
 
       val thm = ISPECL [numLib.term_of_int n, a, c1, c2, pf, sf, pf', sf'] INFERENCE_INCONSISTENT___NIL_POINTS_TO___EVAL;
       val thm2 = CONV_RULE (computeLib.CBV_CONV inconsistent_cs) thm;
-      val _ = if ((concl thm2) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (concl thm2) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       EQT_INTRO thm2
    end
 
 
 fun find_entry n e [] = NONE |
-    find_entry n e (h::l) = if (e = h) then (SOME n) else
+    find_entry n e (h::l) = if (eq e h) then (SOME n) else
                             find_entry (n+1) e l;
 
 fun find_double_entry n [] = NONE |
@@ -713,7 +713,7 @@ fun ds_inference_INCONSISTENT___CONV___precondition_POINTS_TO_BIN_TREE t =
       val (c1, c2, pf, sf, pf', sf') = dest_LIST_DS_ENTAILS t;
       val (sfL, _) = strip_cons sf;
       val (c1L, _) = strip_cons c1;
-      val _ = if ((c1L = []) orelse (sfL = [])) then SMALLFOOT_ERR "Nothing found!" else ();
+      val _ = if ((null c1L) orelse (null sfL)) then SMALLFOOT_ERR "Nothing found!" else ();
 
       
       val resOption = find_match 0 c1L sfL;
@@ -727,7 +727,7 @@ fun ds_inference_INCONSISTENT___CONV___precondition_POINTS_TO_BIN_TREE t =
 
       val thm = ISPECL [numLib.term_of_int m, numLib.term_of_int n, e, d, c1, c2, pf, sf, pf', sf'] inf;
       val thm2 = CONV_RULE (computeLib.CBV_CONV inconsistent_cs) thm;
-      val _ = if ((concl thm2) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (concl thm2) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       EQT_INTRO thm2
    end;
@@ -746,7 +746,7 @@ fun ds_inference_INCONSISTENT___CONV___precondition_dse_nil t =
       val thm = ISPECL [numLib.term_of_int n, c1, c2, pf, sf, pf', sf'] 
          INFERENCE_INCONSISTENT___precondition_dse_nil;
       val thm2 = CONV_RULE (computeLib.CBV_CONV inconsistent_cs) thm;
-      val _ = if ((concl thm2) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (concl thm2) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       EQT_INTRO thm2
    end;
@@ -765,7 +765,7 @@ fun ds_inference_INCONSISTENT___CONV___precondition_not_all_distinct t =
       val thm = ISPECL [numLib.term_of_int n, numLib.term_of_int m, x, c1, c2, pf, sf, pf', sf'] 
          INFERENCE_INCONSISTENT___precondition_distinct;
       val thm2 = CONV_RULE (computeLib.CBV_CONV inconsistent_cs) thm;
-      val _ = if ((concl thm2) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (concl thm2) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       EQT_INTRO thm2
    end;
@@ -808,7 +808,7 @@ fun is_pf_equal_subst pf =
    (let
       val (e1, e2) = dest_pf_equal pf;
    in
-      (not (e1 = e2)) andalso ((is_dse_var e1) orelse (is_dse_var e2))
+      (not (eq e1 e2)) andalso ((is_dse_var e1) orelse (is_dse_var e2))
    end) handle _ => false
 
 fun ds_inference_SUBSTITUTION___CONV t =
@@ -824,7 +824,7 @@ fun ds_inference_SUBSTITUTION___CONV t =
 
       val thm = ISPECL [numLib.term_of_int n, e2, dest_dse_var e1, c1, c2, pf, sf, pf', sf'] inf;
       val thm2 = CONV_RULE (computeLib.CBV_CONV subst_cs) thm;
-      val _ = if (lhs (concl thm2) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (lhs (concl thm2)) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       thm2
    end;
@@ -889,7 +889,7 @@ local
    fun check_c_unequal cL h =
       let
          val (e1, e2) = dest_pf_unequal h;
-         val _ = if (e1 = e2) then SMALLFOOT_ERR "preserve for inconsistence" else ();
+         val _ = if (eq e1 e2) then SMALLFOOT_ERR "preserve for inconsistence" else ();
 
          val n1 = valOf (find_entry 0 e1 cL);
          val n2 = valOf (find_entry 0 e2 cL);
@@ -928,7 +928,7 @@ in
          val f = get_hypothesis_filter_helper c1 l1 l2 0 l2;
          val rf = remove_keep [] [] f;
          val fL = rev rf;
-         val p = (fL = []);
+         val p = (null fL);
          val ft = mk_list (fL, ``:hypothesis_rule_cases``);
       in
          (ft, p)
@@ -1013,8 +1013,8 @@ fun pred_frame___points_to sf1 sf2 =
       val (e1, _, a1, aL1) = dest_sf_points_to sf1;
       val (e2, _, a2, aL2) = dest_sf_points_to sf2;
    in
-      (e1 = e2) andalso (aL1 = aL2) andalso
-      (all (fn x => mem x a1) a2)
+      (eq e1 e2) andalso (eq aL1 aL2) andalso
+      (all (fn x => op_mem (pair_cmp eq eq) x a1) a2)
    end;
 
 
@@ -1022,6 +1022,8 @@ val frame_cs = reduceLib.num_compset ();
 val _ = listSimps.list_rws frame_cs;
 val _ = computeLib.add_thms [SWAP_REWRITES, pairTheory.FST, listTheory.ALL_DISTINCT] frame_cs;
 val _ = computeLib.add_conv (``$=``, 2, stringLib.string_EQ_CONV) frame_cs;
+val _ = computeLib.add_conv (``$=``, 2, stringLib.char_EQ_CONV) frame_cs;
+
 
 
 fun ds_inference_FRAME___SINGLE_CONV___sf_points_to (n1, sf1, n2, sf2) t =
@@ -1033,10 +1035,11 @@ fun ds_inference_FRAME___SINGLE_CONV___sf_points_to (n1, sf1, n2, sf2) t =
       val thm = ISPECL [e1, numLib.term_of_int n1, a1, numLib.term_of_int n2, a2, c1, c2, pf, sf, pf', sf'] 
          INFERENCE_STAR_INTRODUCTION___points_to___EVAL
       val thm2 = CONV_RULE (computeLib.CBV_CONV frame_cs) thm;
-      val _ = if (lhs (concl thm2) = t) then () else SMALLFOOT_ERR "No conversion";
+      val _ = if (eq (lhs (concl thm2)) t) then () else SMALLFOOT_ERR "No conversion";
    in
       thm2
    end;
+
 
 fun ds_inference_FRAME___CONV___sf_points_to t =
    let
@@ -1045,7 +1048,7 @@ fun ds_inference_FRAME___CONV___sf_points_to t =
       val (sfL', _) = strip_cons sf';
 
       val pairList = find_pairs pred_frame___points_to sfL sfL';
-      val _ = if (pairList = []) then SMALLFOOT_ERR "Nothing found" else ();
+      val _ = if (null pairList) then SMALLFOOT_ERR "Nothing found" else ();
 
       val adapt_pairList = adapt_pair_list_to_deletes (rev pairList)
    in
@@ -1054,7 +1057,7 @@ fun ds_inference_FRAME___CONV___sf_points_to t =
 
 
 fun pred_frame___list sf1 sf2 =
-   (sf1 = sf2) andalso (is_sf_ls sf1);
+   (eq sf1 sf2) andalso (is_sf_ls sf1);
 
 
 fun ds_inference_FRAME___SINGLE_CONV___sf_ls (n1, sf1, n2, sf2) t =
@@ -1065,7 +1068,7 @@ fun ds_inference_FRAME___SINGLE_CONV___sf_ls (n1, sf1, n2, sf2) t =
       val thm = ISPECL [f, e1, e2, numLib.term_of_int n1, numLib.term_of_int n2, c1, c2, pf, sf, pf', sf'] 
          INFERENCE_STAR_INTRODUCTION___list___EVAL
       val thm2 = CONV_RULE (computeLib.CBV_CONV frame_cs) thm;
-      val _ = if (lhs (concl thm2) = t) then () else SMALLFOOT_ERR "No conversion";
+      val _ = if (eq (lhs (concl thm2)) t) then () else SMALLFOOT_ERR "No conversion";
    in
       thm2
    end;
@@ -1078,7 +1081,7 @@ fun ds_inference_FRAME___CONV___sf_ls t =
       val (sfL', _) = strip_cons sf';
 
       val pairList = find_pairs pred_frame___list sfL sfL';
-      val _ = if (pairList = []) then SMALLFOOT_ERR "Nothing found" else ();
+      val _ = if (null pairList) then SMALLFOOT_ERR "Nothing found" else ();
 
       val adapt_pairList = adapt_pair_list_to_deletes (rev pairList);
    in
@@ -1092,9 +1095,9 @@ fun pred_frame___bin_tree sf1 sf2 =
       val (f11, f12, e1, _) = dest_sf_bin_tree sf1;
       val (f21, f22, e2, _) = dest_sf_bin_tree sf2;
    in
-      (e1 = e2) andalso 
-      (((f11 = f21) andalso (f12 = f22)) orelse
-       ((f12 = f21) andalso (f11 = f22)))
+      (eq e1 e2) andalso 
+      (((eq f11 f21) andalso (eq f12 f22)) orelse
+       ((eq f12 f21) andalso (eq f11 f22)))
    end;
 
 
@@ -1108,7 +1111,7 @@ fun ds_inference_FRAME___SINGLE_CONV___sf_bin_tree (n1, sf1, n2, sf2) t =
       val thm = ISPECL [e1, f11, f12, f21, f22, numLib.term_of_int n1, numLib.term_of_int n2, c1, c2, pf, sf, pf', sf'] 
          INFERENCE_STAR_INTRODUCTION___bin_tree___EVAL
       val thm2 = CONV_RULE (computeLib.CBV_CONV frame_cs) thm;
-      val _ = if (lhs (concl thm2) = t) then () else SMALLFOOT_ERR "No conversion";
+      val _ = if (eq (lhs (concl thm2)) t) then () else SMALLFOOT_ERR "No conversion";
    in
       thm2
    end;
@@ -1120,7 +1123,7 @@ fun ds_inference_FRAME___CONV___sf_bin_tree t =
       val (sfL', _) = strip_cons sf';
 
       val pairList = find_pairs pred_frame___bin_tree sfL sfL';
-      val _ = if (pairList = []) then SMALLFOOT_ERR "Nothing found" else ();
+      val _ = if (null pairList) then SMALLFOOT_ERR "Nothing found" else ();
 
       val adapt_pairList = adapt_pair_list_to_deletes (rev pairList);
    in
@@ -1142,7 +1145,7 @@ fun ds_inference_FRAME___IMPL_CONV___tail t =
       val (sfL, sfLr) = strip_cons sf;
       val (sfL', sfLr') = strip_cons sf';
 
-      val _ = if (is_nil sfLr orelse not (sfLr = sfLr')) then SMALLFOOT_ERR "Nothing found" else ();
+      val _ = if (is_nil sfLr orelse not (eq sfLr sfLr')) then SMALLFOOT_ERR "Nothing found" else ();
    
       val list_type = dest_list_type (type_of sfLr)
       val sfLt = mk_list (sfL, list_type);
@@ -1150,7 +1153,7 @@ fun ds_inference_FRAME___IMPL_CONV___tail t =
 
       val thm = ISPECL [sfLr, c1,c2, pf, sfLt, pf', sfLt'] INFERENCE_STAR_INTRODUCTION___EVAL1
       val thm2 = CONV_RULE (computeLib.CBV_CONV frame_cs) thm;
-      val _ = if (snd (dest_imp (concl thm2)) = t) then () else SMALLFOOT_ERR "No imp-conversion";
+      val _ = if (eq (snd (dest_imp (concl thm2))) t) then () else SMALLFOOT_ERR "No imp-conversion";
    in
       thm2
    end;
@@ -1177,8 +1180,8 @@ fun ds_inference_FRAME___IMPL_CONV___pair t =
       val (sfL, _) = strip_cons sf;
       val (sfL', _) = strip_cons sf';
 
-      val pairList = find_pairs (fn x => fn y => x = y) sfL sfL';
-      val _ = if (pairList = []) then SMALLFOOT_ERR "Nothing found" else ();
+      val pairList = find_pairs eq sfL sfL';
+      val _ = if (null pairList) then SMALLFOOT_ERR "Nothing found" else ();
       val adapt_pairList = adapt_pair_list_to_deletes (rev pairList);
 
       val in_thm = ISPEC t imp_thm;
@@ -1224,7 +1227,7 @@ fun get_points_to_list_cond_filter pfL sf =
       val (_, _, es, e) = dest_sf_tree_ext sf;
       val (n, uneqt) = valOf (find_in_list (is_uneq_2 es e) pfL)
       val (e', es') = dest_pf_unequal uneqt
-      val turn = not (es' = es);
+      val turn = not (eq es' es);
    in
       list_mk_comb (pointsto_tree_term, [if turn then T else F, numLib.term_of_int n])
    end handle _ => pointsto_skip_term;
@@ -1279,7 +1282,7 @@ fun ds_inference_NIL_NOT_LVAL___CONV___overeager over t =
       val f = if over then f else
               map_restrict_points_to_list_cond_filter pfL cL f sfL;
 
-      val p = exists (fn x => not (x = pointsto_skip_term)) f;
+      val p = exists (fn x => not (eq x pointsto_skip_term)) f;
       val _ = if not p then SMALLFOOT_ERR "No new facts!" else ()
 
       val ft = mk_list (f, type_of (hd f));
@@ -1335,7 +1338,7 @@ fun EVAL___DISJOINT_LIST_PRODUCT c1 pf sf f2 =
 
 fun check_unequal_is_necessary cL pfL (e1, e2) =
    not (isSome (find_in_list (is_uneq_2 e1 e2) pfL)) andalso
-   ((e1 = e2) orelse
+   ((eq e1 e2) orelse
       not (isSome (find_entry 0 e1 cL)) orelse
       not (isSome (find_entry 0 e2 cL)));
 
@@ -1346,8 +1349,8 @@ fun get_uneq_filter overeager cL pfL r l' [] = r |
     let
       val necessary = 
          overeager orelse (
-         (not (mem (e1,e2) l')) andalso
-         (not (mem (e2,e1) l')) andalso
+         (not (op_mem (pair_cmp eq eq) (e1,e2) l')) andalso
+         (not (op_mem (pair_cmp eq eq) (e2,e1) l')) andalso
          check_unequal_is_necessary cL pfL (e1,e2));
     in
       (get_uneq_filter overeager cL pfL (necessary::r) (if necessary then (e1,e2)::l' else l') l)
@@ -1403,8 +1406,8 @@ fun find_strengthen_uneq_pairs___helper accu n1 n2 pfLorg [] pfL = accu
     let val accu' = (let
       val (e1', e2') = dest_pf_unequal pf;
     in
-      if ((e1 = e1') andalso (e2 = e2')) then (n1,n2,false,e1,e2)::accu else
-      if ((e2 = e1') andalso (e1 = e2')) then (n1,n2,true,e1,e2)::accu else
+      if ((eq e1 e1') andalso (eq e2 e2')) then (n1,n2,false,e1,e2)::accu else
+      if ((eq e2 e1') andalso (eq e1 e2')) then (n1,n2,true,e1,e2)::accu else
       accu
     end handle _ => accu) in
       find_strengthen_uneq_pairs___helper accu' n1 (n2+1) pfLorg ((e1,e2)::cL) pfL
@@ -1426,7 +1429,7 @@ fun ds_inference_PRECONDITION_STRENGTHEN___SINGLE_CONV (n1,n2,turn,e1,e2) t =
 
       val thm = ISPECL [numLib.term_of_int n2, numLib.term_of_int n1, e1, e2, c1, c2, pf, sf, pf', sf'] inf;
       val thm2 = CONV_RULE (computeLib.CBV_CONV strengthen_cs) thm;
-      val _ = if (lhs (concl thm2) = t) then () else SMALLFOOT_ERR "No conversion";
+      val _ = if (eq (lhs (concl thm2)) t) then () else SMALLFOOT_ERR "No conversion";
    in
       thm2
    end;
@@ -1454,7 +1457,7 @@ fun find_strengthen_eq_pair___helper n1 n2 pfL [] cfL = NONE
     find_strengthen_eq_pair___helper (n1+1) (n1+2) pfL cL (tl cL)
   | find_strengthen_eq_pair___helper n1 n2 pfL ((e1,e2)::cL) ((e1',e2')::cL') = 
     let
-      val cond = (e1 = e1') andalso (e2 = e2') andalso 
+      val cond = (eq e1 e1') andalso (eq e2 e2') andalso 
                  not (isSome (find_in_list (is_eq_2 e1 e2) pfL)) handle _ => false;
     in
       if cond then SOME (n1, n2, e1, e2) else
@@ -1478,7 +1481,7 @@ fun ds_inference_PRECONDITION_STRENGTHEN___CONV___equal t =
       val thm = ISPECL [numLib.term_of_int n1, numLib.term_of_int n2, e1, e2, c1, c2, pf, sf, pf', sf'] 
          INFERENCE___precondition_NOT_DISTINCT_EQ___EVAL;
       val thm2 = CONV_RULE (computeLib.CBV_CONV strengthen_cs) thm;
-      val _ = if (lhs (concl thm2) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (lhs (concl thm2)) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       thm2
    end
@@ -1512,7 +1515,7 @@ fun ds_inference_PRECONDITION_STRENGTHEN___CONV___precondition t =
       val thm = ISPECL [numLib.term_of_int n1, numLib.term_of_int n2, e1, e2, c1, c2, pf, sf, pf', sf'] 
          INFERENCE___precondition_precondition_EQ___EVAL;
       val thm2 = CONV_RULE (computeLib.CBV_CONV strengthen_cs) thm;
-      val _ = if (lhs (concl thm2) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (lhs (concl thm2)) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       thm2
    end
@@ -1532,6 +1535,7 @@ val unroll_cs = reduceLib.num_compset ();
 val _ = listSimps.list_rws unroll_cs;
 val _ = computeLib.add_thms [SWAP_REWRITES, pairTheory.FST, listTheory.ALL_DISTINCT] unroll_cs;
 val _ = computeLib.add_conv (``$=``, 2, stringLib.string_EQ_CONV) unroll_cs;
+val _ = computeLib.add_conv (``$=``, 2, stringLib.char_EQ_CONV) unroll_cs;
 
 
 
@@ -1552,7 +1556,7 @@ fun ds_inference_SIMPLE_UNROLL___CONV___list_dse_nil t =
       val thm = ISPECL [numLib.term_of_int n, f, e2, c1, c2, pf, sf, pf', sf'] 
          INFERENCE___NIL_LIST_EVAL
       val thm2 = CONV_RULE (computeLib.CBV_CONV unroll_cs) thm;
-      val _ = if (lhs (concl thm2) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (lhs (concl thm2)) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       thm2
    end;
@@ -1585,7 +1589,7 @@ fun ds_inference_SIMPLE_UNROLL___CONV___precondition_list t =
       val thm = ISPECL [numLib.term_of_int m, numLib.term_of_int n, f, e1, e2, c1, c2, pf, sf, pf', sf'] 
          INFERENCE___precondition_LIST_EVAL
       val thm2 = CONV_RULE (computeLib.CBV_CONV unroll_cs) thm;
-      val _ = if (lhs (concl thm2) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (lhs (concl thm2)) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       thm2
    end
@@ -1609,10 +1613,10 @@ fun find_list_unroll_right n sfL pfL [] = NONE |
          val (f, e1, e3) = dest_sf_ls h;
          val (n3, pointer) = valOf (find_in_list (is_sf_points_to_ex e1) sfL);
          val (_, a, pointer_list, _) = dest_sf_points_to pointer;
-         val e2 = snd (first (fn (x,y) => x = f) pointer_list);
+         val e2 = snd (first (fn (x,y) => eq x f) pointer_list);
          val (n2, uneq) = valOf (find_in_list (is_uneq_2 e1 e3) pfL);
          val (e1',e2') = dest_pf_unequal uneq;
-         val turn = (e1 = e2');
+         val turn = (eq e1 e2');
       in
          SOME (n, n2, n3, turn, e1, e2,e3, f, a)
       end handle _ => find_list_unroll_right (n+1) sfL pfL l;
@@ -1623,8 +1627,8 @@ fun find_bin_tree_unroll_right n sfL [] = NONE |
          val (f1,f2, ex, _) = dest_sf_bin_tree h;
          val (n2, pointer) = valOf (find_in_list (is_sf_points_to_ex ex) sfL);
          val (_, a, pointer_list, _) = dest_sf_points_to pointer;
-         val e1 = snd (first (fn (x,y) => x = f1) pointer_list);
-         val e2 = snd (first (fn (x,y) => x = f2) pointer_list);
+         val e1 = snd (first (fn (x,y) => eq x f1) pointer_list);
+         val e2 = snd (first (fn (x,y) => eq x f2) pointer_list);
       in
          SOME (n, n2, ex, e1, e2, f1, f2, a)
       end handle _ => find_bin_tree_unroll_right (n+1) sfL l;
@@ -1646,7 +1650,7 @@ fun ds_inference_SIMPLE_UNROLL___CONV___points_to_list t =
             if turn then F else T, e1, e2, e3, f, a, c1, c2, pf, sf, pf', sf'] 
          INFERENCE___NON_EMPTY_LS___EVAL
       val thm2 = CONV_RULE (computeLib.CBV_CONV unroll_cs) thm;
-      val _ = if (lhs (concl thm2) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (lhs (concl thm2)) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       thm2
    end
@@ -1667,7 +1671,7 @@ fun ds_inference_SIMPLE_UNROLL___CONV___points_to_bin_tree t =
             ex, e1, e2, f1, f2, a, c1, c2, pf, sf, pf', sf'] 
          INFERENCE___NON_EMPTY_BIN_TREE___EVAL
       val thm2 = CONV_RULE (computeLib.CBV_CONV unroll_cs) thm;
-      val _ = if (lhs (concl thm2) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (lhs (concl thm2)) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       thm2
    end
@@ -1690,6 +1694,7 @@ val t = ``LIST_DS_ENTAILS (c1,c2) ([pf2;pf_unequal e2 e1],[sf1;sf3;sf_ls "f" e1 
 
 *)
 
+
 fun prove_infinite_univ_ante thm = 
    let
       val (inf_univ_t, _)  = dest_imp (concl thm);
@@ -1710,7 +1715,7 @@ fun find_list_uneq_unroll_left n pfL [] = NONE |
          val (f, e1, e2) = dest_sf_ls h;
          val (n2, uneq) = valOf (find_in_list (is_uneq_2 e1 e2) pfL);
          val (e1',e2') = dest_pf_unequal uneq;
-         val turn = (e1 = e2');
+         val turn = (eq e1 e2');
       in
          SOME (n, n2, turn, e1, e2, f)
       end handle _ => find_list_uneq_unroll_left (n+1) pfL l;
@@ -1732,7 +1737,7 @@ fun ds_inference_UNROLL_LIST___NON_EMPTY___CONV t =
          INFERENCE_UNROLL_COLLAPSE_LS___NON_EMPTY___EVAL
       val thm2 = CONV_RULE (computeLib.CBV_CONV unroll_cs) thm;
       val thm3 = prove_infinite_univ_ante thm2;
-      val _ = if (lhs (concl thm3) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (lhs (concl thm3)) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       thm3
    end
@@ -1758,7 +1763,7 @@ fun ds_inference_UNROLL_LIST___CONV t =
          INFERENCE_UNROLL_COLLAPSE_LS___EVAL
       val thm2 = CONV_RULE (computeLib.CBV_CONV unroll_cs) thm;
       val thm3 = prove_infinite_univ_ante thm2;
-      val _ = if (lhs (concl thm3) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (lhs (concl thm3)) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       thm3
    end
@@ -1780,7 +1785,7 @@ fun ds_inference_UNROLL_BIN_TREE___CONV t =
          INFERENCE_UNROLL_COLLAPSE_BIN_TREE___EVAL;
       val thm2 = CONV_RULE (computeLib.CBV_CONV unroll_cs) thm;
       val thm3 = prove_infinite_univ_ante thm2;
-      val _ = if (lhs (concl thm3) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (lhs (concl thm3)) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       thm3
    end
@@ -1814,7 +1819,7 @@ fun ds_inference_UNROLL_RIGHT_CASES___CONV t =
 
       val thm = ISPECL [e1, e2, c1, c2, pf, sf, pf', sf'] 
          (GSYM INFERENCE_EXCLUDED_MIDDLE);
-      val _ = if (lhs (concl thm) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (lhs (concl thm)) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       thm
    end;
@@ -1846,7 +1851,7 @@ val t = ``LIST_DS_ENTAILS ([],[]) ([pf1;pf_unequal e2 e3;pf2;pf_unequal e3 e1],[
 fun get_uneq_index_turn pfL e1 e3 = let
       val (n, pf) = valOf (find_in_list (is_uneq_2 e1 e3) pfL);
       val (e1', e3') = dest_pf_unequal pf;
-      val turn = not (e1' = e1);
+      val turn = not (eq e1' e1);
    in
       (n, turn)
    end;
@@ -1888,7 +1893,7 @@ fun find_list_append_instance_tree n1 n2 e1 e2 e3 f n3 b1 pfL sfL =
       fun pred sf =
          let
             val (_, (fL, l), es, e3') = dest_sf_tree_ext sf;
-            val _ = if (e3 = e3') then () else raise SMALLFOOT_ERR "Not suitable!";
+            val _ = if (eq e3 e3') then () else raise SMALLFOOT_ERR "Not suitable!";
             val fLt = list_mk_cons fL l;
             val (n5, b2) = get_uneq_index_turn pfL es e3';
          in
@@ -1910,7 +1915,7 @@ fun find_list_append_instance n2 c1L pfL sfL [] = NONE |
     find_list_append_instance n2 c1L pfL sfL (sf'::sfL') = 
     let
       val (f, e1, e3) = dest_sf_ls sf';
-      val (n1, sf) = valOf (find_in_list (fn sf => (let val (f', e1', e2') = dest_sf_ls sf in (f = f') andalso (e1' = e1) end)) sfL);
+      val (n1, sf) = valOf (find_in_list (fn sf => (let val (f', e1', e2') = dest_sf_ls sf in (eq f f') andalso (eq e1' e1) end)) sfL);
       val (_, _, e2) = dest_sf_ls sf;
       val thm = find_list_append_instance_nil n1 n2 e1 e2 e3 f handle _ =>
                 let
@@ -1940,7 +1945,7 @@ fun ds_inference_APPEND_LIST___CONV t =
       val thm = ISPECL [c1, c2, pf, sf, pf', sf'] (valOf inferenceOpt);
       val thm2 = CONV_RULE (computeLib.CBV_CONV unroll_cs) thm;
       val thm3 = prove_infinite_univ_ante thm2;
-      val _ = if (lhs (concl thm3) = t) then () else SMALLFOOT_ERR "No CONVERSION";
+      val _ = if (eq (lhs (concl thm3)) t) then () else SMALLFOOT_ERR "No CONVERSION";
    in
       thm3
    end

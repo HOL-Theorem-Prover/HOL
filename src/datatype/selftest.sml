@@ -83,6 +83,9 @@ val _ = Hol_datatype`
           small_record = <| fld1 : num -> bool ; fld2 : num |>
 `;
 
+val _ = Hol_datatype`squish_record = <|fld1:bool|>`
+val _ = Hol_datatype`poly_squish_record = <|fld1:'a->'b|>`
+
 val _ = Datatype.big_record_size := 10;
 val _ = Hol_datatype`
   big_record = <| fld3 : num ; fld4: bool ; fld5 : num -> num;
@@ -92,6 +95,14 @@ val _ = Hol_datatype`
                   fld12 : bool ; fld13 : num |>`
 
 fun tprint s = print (StringCvt.padRight #" " 70 s)
+
+val _ = tprint "Testing independence of case variables"
+val t = Lib.total Parse.Term `case (x:valbind) of
+                                 bind p e -> 3
+                              || bindl p' e p -> 4
+                              || p -> 5`
+val _ = case t of NONE => (print "FAILED!\n"; Process.exit Process.failure)
+                | SOME _ => print "OK\n"
 
 fun pptest (nm, t, expected) = let
   val _ = tprint ("Testing pretty-printing of "^nm)

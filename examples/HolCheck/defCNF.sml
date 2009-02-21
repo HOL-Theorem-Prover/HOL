@@ -83,7 +83,7 @@ fun sub_cnf f con defs (a, b) =
     end;
 
 fun def_step (defs as (vec, n, ds), tm) =
-  case List.find (fn (_, b) => b = tm) ds of NONE =>
+  case List.find (fn (_, b) => eq b tm) ds of NONE =>
     let
       val g = mk_comb (vec, n)
       val n = rhs (concl (REDUCE_CONV (mk_comb (suc, n))))

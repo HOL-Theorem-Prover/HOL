@@ -13,7 +13,7 @@ An invocation {pluck P [x1,...,xk,...,xn]} returns a pair
 {(xk,[x1,...,xk-1,xk+1,...xn])}, where {xk} has been lifted out of the
 list without disturbing the relative positions of the other elements. For
 this to happen, {P xk} must hold, and {P xi} must not have held for 
-{1 <= i < k}.
+{x1,...,xk-1}.
 
 \FAILURE
 If the input list is empty. Also fails if {P} holds of no member of the

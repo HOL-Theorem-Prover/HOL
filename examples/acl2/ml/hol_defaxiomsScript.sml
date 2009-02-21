@@ -2075,6 +2075,12 @@ val (binary_append_def,binary_append_ind) =
 (*
      [oracles: DEFUN COMMON-LISP::MOD] [axioms: ] []
      |- mod x y = add x (unary_minus (mult (floor x y) y)),
+
+Needs FLOOR
+
+val mod_def =
+ acl2Define "COMMON-LISP::MOD"
+  `mod x y = add x (unary_minus (mult (floor x y) y))`;
 *)
 
 (*
@@ -2139,6 +2145,19 @@ val (binary_append_def,binary_append_ind) =
           [(zip i,nat 1); (common_lisp_equal (fix r) (nat 0),nat 0);
            (less (nat 0) i,mult r (expt r (add i (int ~1))))]
           (mult (reciprocal r) (expt r (add i (nat 1)))),
+
+> Matt says: The measure for (expt r i) is (abs (ifix i)).  Intuitively, we count
+> down for positive exponents and count up for negative exponents
+
+val (expt_def,expt_ind) =
+ acl2_defn "COMMON-LISP::EXPT"
+  (`expt r i =
+     itel
+       [(zip i,nat 1); (common_lisp_equal (fix r) (nat 0),nat 0);
+        (less (nat 0) i,mult r (expt r (add i (int ~1))))]
+       (mult (reciprocal r) (expt r (add i (nat 1))))`,
+   WF_REL_TAC `measure (sexp_size o FST)`
+    THEN ACL2_SIMP_TAC []);
 *)
 
 (*

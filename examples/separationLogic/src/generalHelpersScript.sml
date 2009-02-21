@@ -26,7 +26,7 @@ val _ = new_theory "generalHelpers";
 fun MP_FREE_VAR_TAC var =
    POP_ASSUM_LIST (fn thmL =>
       EVERY (rev
-      (map (fn thm => if (mem var (free_vars (concl thm))) then MP_TAC thm else ASSUME_TAC thm) thmL)));
+      (map (fn thm => if (op_mem eq var (free_vars (concl thm))) then MP_TAC thm else ASSUME_TAC thm) thmL)));
 
 local
    val thm = prove (``(!x. (P x = Q x)) ==> ((?x. P x) = (?x. Q x))``, METIS_TAC[]);
@@ -1049,6 +1049,9 @@ val COND_EXPAND_IMP = store_thm ("COND_EXPAND_IMP",
 ``!b t1 t2. (if b then t1 else t2) = (b ==> t1) /\ (~b ==> t2)``,
 Cases_on `b` THEN SIMP_TAC std_ss []);
 
+val COND_EXPAND_OR = store_thm ("COND_EXPAND_OR",
+``!b t1 t2. (if b then t1 else t2) = (b /\ t1) \/ (~b /\ t2)``,
+Cases_on `b` THEN SIMP_TAC std_ss []);
 
 
 
@@ -1499,6 +1502,19 @@ val LIST_UNROLL_GIVEN_ELEMENT_NAMES_def = Define `
     LIST_UNROLL_GIVEN_ELEMENT_NAMES l1 (l2:string list) =
     (LENGTH l1 = LENGTH l2)
 `;
+
+
+val LIST_UNROLL_GIVEN_ELEMENT_NAMES_REWRITE = store_thm ("LIST_UNROLL_GIVEN_ELEMENT_NAMES_REWRITE",
+``(LIST_UNROLL_GIVEN_ELEMENT_NAMES [] []) /\
+  (LIST_UNROLL_GIVEN_ELEMENT_NAMES (x::xs) (y::ys) =
+   LIST_UNROLL_GIVEN_ELEMENT_NAMES xs ys) /\
+  ~(LIST_UNROLL_GIVEN_ELEMENT_NAMES [] (y::ys)) /\
+  ~(LIST_UNROLL_GIVEN_ELEMENT_NAMES (x::xs) [])``,
+
+SIMP_TAC list_ss [LIST_UNROLL_GIVEN_ELEMENT_NAMES_def]);
+
+
+
 
 val LIST_UNROLL_GIVEN_ELEMENT_NAMES___UNROLL = store_thm ("LIST_UNROLL_GIVEN_ELEMENT_NAMES___UNROLL",
 ``(LIST_UNROLL_GIVEN_ELEMENT_NAMES x [] = (x = [])) /\

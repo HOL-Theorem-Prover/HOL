@@ -48,39 +48,21 @@ val WARN = HOL_WARNING "EmitML";
 (* Forward references, to be patched up in the appropriate places.           *)
 (*---------------------------------------------------------------------------*)
 
-val is_num_literal_hook    = ref (K false)
-val is_int_literal_hook    = ref (K false)
-val is_list_hook           = ref (K false)
-val is_comma_hook          = ref (K false)
-val is_pair_hook           = ref (K false)
-val is_let_hook            = ref (K false)
-val is_pabs_hook           = ref (K false)
-val is_one_hook            = ref (K false)
-val is_fail_hook           = ref (K false)
+val is_num_literal = Lib.can Literal.relaxed_dest_numeral;
 
-val dest_num_literal_hook
-                   = ref (fn _ => raise ERR "dest_num_literal" "undefined")
-val dest_int_literal_hook
-                   = ref (fn _ => raise ERR "dest_int_literal" "undefined")
-val dest_cons_hook = ref (fn _ => raise ERR "dest_cons" "undefined")
-val dest_list_hook = ref (fn _ => raise ERR "dest_list" "undefined")
-val dest_pair_hook = ref (fn _ => raise ERR "dest_pair" "undefined")
-val dest_pabs_hook = ref (fn _ => raise ERR "dest_pabs" "undefined")
-val dest_fail_hook = ref (fn _ => raise ERR "dest_fail" "undefined")
-val strip_let_hook = ref (fn _ => raise ERR "strip_let" "undefined")
-val list_mk_prod_hook = ref (fn [x] => x
-                              | _ => raise ERR "list_mk_prod" "undefined")
-val list_mk_pair_hook = ref (fn _ => raise ERR "list_mk_pair" "undefined")
-val list_mk_pabs_hook = ref (fn _ => raise ERR "list_mk_pabs" "undefined")
+fun is_let tm =
+  case boolSyntax.strip_comb tm
+   of (c,[f,x]) => same_const c boolSyntax.let_tm
+    | other => false;
 
 fun strip_cons M =
- case total (!dest_cons_hook) M
+ case total (listSyntax.dest_cons) M
   of SOME (h,t) => h::strip_cons t
    | NONE => [M];
 
-fun is_cons tm = Lib.can (!dest_cons_hook) tm;
+fun is_cons tm = Lib.can (listSyntax.dest_cons) tm;
 
-fun is_fn_app tm = is_comb tm andalso not(!is_pair_hook tm)
+fun is_fn_app tm = is_comb tm andalso not(pairSyntax.is_pair tm)
 
 fun is_infix_app tm = is_conj tm orelse is_disj tm orelse is_eq tm ;
 
@@ -166,7 +148,7 @@ fun prec_of c =
   if same_const c boolSyntax.equality then 100 else
   if same_const c boolSyntax.disjunction then 300 else
   if same_const c boolSyntax.conjunction then 400 else
-  if !is_comma_hook c then COMMA_PREC else 0;
+  if same_const c pairSyntax.comma_tm then COMMA_PREC else 0;
 
 val minprec = ~1;
 val maxprec = 9999;
@@ -218,8 +200,9 @@ fun curried_const_equiv_tupled_var (c,a) =
  let val (argtys,target) = nstrip_fun a (type_of c)
      val args = vars_of_types argtys
      val pvar = mk_var("^" ^ fst(dest_const c),
-                       !list_mk_prod_hook argtys --> target)
-     val new = !list_mk_pabs_hook(args,mk_comb(pvar,!list_mk_pair_hook args))
+                       pairSyntax.list_mk_prod argtys --> target)
+     val new = pairSyntax.list_mk_pabs
+                 (args,mk_comb(pvar,pairSyntax.list_mk_pair args))
      val thm = mk_oracle_thm emit_tag ([],mk_eq(c,new))
  in
     pseudo_constructors := thm :: !pseudo_constructors;
@@ -256,17 +239,17 @@ fun term_to_ML openthys side ppstrm =
      if is_var tm then pp_var tm else
      if is_cond tm then pp_cond i tm else
      if is_arb tm then pp_arb i else
-     if !is_num_literal_hook tm then pp_num_literal i tm else
-     if !is_int_literal_hook tm then pp_int_literal tm else
+     if is_num_literal tm then pp_num_literal i tm else
+     if intSyntax.is_int_literal tm then pp_int_literal tm else
      if is_string_literal tm then pp_string tm else
-     if !is_list_hook tm then pp_list tm else
+     if listSyntax.is_list tm then pp_list tm else
      if is_cons tm then pp_cons i tm else
      if is_infix_app tm then pp_binop i tm else
-     if !is_pair_hook tm then pp_pair i tm else
-     if !is_let_hook tm then pp_lets i tm else
-     if !is_pabs_hook tm then pp_abs i tm else
-     if !is_fail_hook tm then pp_fail i tm else
-     if !is_one_hook tm  then pp_one tm else
+     if pairSyntax.is_pair tm then pp_pair i tm else
+     if is_let tm then pp_lets i tm else
+     if pairSyntax.is_pabs tm then pp_abs i tm else
+     if combinSyntax.is_fail tm then pp_fail i tm else
+     if oneSyntax.is_one tm  then pp_one tm else
      if TypeBase.is_record tm then pp_record i (TypeBase.dest_record tm) else
      if TypeBase.is_case tm then pp_case i (TypeBase.strip_case tm) else
      if is_the_value tm then pp_itself tm else
@@ -317,7 +300,7 @@ fun term_to_ML openthys side ppstrm =
       (*------------------------------------------------------------*)
       (* Numeric literals can be built from strings or constructors *)
       (*------------------------------------------------------------*)
-      let val s = Arbnum.toString(!dest_num_literal_hook tm)
+      let val s = Arbnum.toString(Literal.relaxed_dest_numeral tm)
       in if side = RIGHT (* use fromString *)
          then
            pp_num_from_string s
@@ -327,7 +310,7 @@ fun term_to_ML openthys side ppstrm =
            else pp_comb i tm
       end
   and pp_int_literal tm =
-         let val s = Arbint.toString(!dest_int_literal_hook tm)
+         let val s = Arbint.toString(intSyntax.int_of_term tm)
          in begin_block CONSISTENT 0
           ; add_string"("; add_break(0,0)
           ; add_string (pick_name openthys "int"
@@ -340,7 +323,7 @@ fun term_to_ML openthys side ppstrm =
          end
   and pp_string tm = add_string (mlquote (Literal.relaxed_dest_string_lit tm))
   and pp_list tm =
-       let val els = !dest_list_hook tm
+       let val els = fst (listSyntax.dest_list tm)
        in begin_block CONSISTENT 0
         ; add_string "["
         ; begin_block INCONSISTENT 0
@@ -380,7 +363,7 @@ fun term_to_ML openthys side ppstrm =
         ; end_block()
       end
   and pp_pair i tm =
-      let val (t1,t2) = !dest_pair_hook tm
+      let val (t1,t2) = pairSyntax.dest_pair tm
           val j = COMMA_PREC
       in begin_block INCONSISTENT 0
         ; lparen maxprec i
@@ -394,7 +377,7 @@ fun term_to_ML openthys side ppstrm =
         ; end_block()
       end
   and pp_lets i tm = (* a sequence of lets *)
-      let val (blists,body) = !strip_let_hook tm
+      let val (blists,body) = pairSyntax.strip_anylet tm
           fun pp_binding (k,(l,r)) =
                (begin_block INCONSISTENT 4;
                 add_string k; add_break(1,0);
@@ -480,7 +463,7 @@ fun term_to_ML openthys side ppstrm =
   and pp_record i (ty,flds) =
        pp_open_comb i (hd(TypeBase.constructors_of ty), map snd flds)
   and pp_fail i tm =
-       let val (f,s,args) = !dest_fail_hook tm
+       let val (f,s,args) = combinSyntax.dest_fail tm
            val fname = fst(dest_const f)
        in begin_block CONSISTENT 3
          ; add_string "raise ("
@@ -602,7 +585,7 @@ fun term_to_ML openthys side ppstrm =
           else pp_open_comb i (h,args)
        end
   and pp_abs i tm =
-       let val (vstruct,body) = !dest_pabs_hook tm
+       let val (vstruct,body) = pairSyntax.dest_pabs tm
        in lparen i (if !emitOcaml then minprec else 5000)
         ; add_string (if !emitOcaml then "function" else "fn")
         ; add_break (1,0)
@@ -1491,6 +1474,15 @@ val sigCamlSuffix = ref "ML.mli";
 val structCamlSuffix = ref "ML.ml";
 
 val emitML = emit_xML (false,!sigSuffix,!structSuffix);
+
 val emitCAML = emit_xML (true,!sigCamlSuffix,!structCamlSuffix);
+
+fun eSML d l = with_flag (type_pp.pp_array_types, false)
+                 (emitML (!Globals.emitMLDir)) (d, l);
+fun eCAML d l = with_flag (type_pp.pp_array_types, false)
+                 (emitCAML (!Globals.emitCAMLDir)) (d, l);
+
+fun MLSIGSTRUCT ll =
+  foldr (fn (x,l) => MLSIG x :: MLSTRUCT x :: l) [] (ll @ [""]);
 
 end (* struct *)

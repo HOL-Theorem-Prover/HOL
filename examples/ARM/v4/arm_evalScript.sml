@@ -31,7 +31,7 @@ val arith_ss = arith_ss ++ boolSimps.LET_ss;
 val fcp_ss   = armLib.fcp_ss;
 val SIZES_ss = wordsLib.SIZES_ss;
 
-val _ = Parse.post_process_term := wordsLib.guess_word_lengths;
+val _ = wordsLib.guess_lengths();
 
 (* ------------------------------------------------------------------------- *)
 
@@ -809,7 +809,7 @@ val lem = simpLib.SIMP_PROVE (std_ss++WORD_BIT_EQ_ss) []
   ``~(i = 0w:word5) ==> ~((4 >< 0) i = 0w:word8)``;
 
 val lem2 = simpLib.SIMP_PROVE (std_ss++WORD_ARITH_ss++WORD_ARITH_EQ_ss) []
-  ``$- 1w = 3w:word2``;
+  ``-1w = 3w:word2``;
 
 val shift_immediate_enc = store_thm("shift_immediate_enc",
   `!reg m c sh i. SHIFT_IMMEDIATE reg m c

@@ -40,9 +40,19 @@ local
   fun with_pp ppfn pps x =
       Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
   fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
-  fun ppg pps g = term_grammar.prettyprint_grammar Parse.pp_term pps g
+  fun gprint g pps t = let
+    val tyg = Parse.type_grammar()
+    val (_, ppt) = Parse.print_from_grammars (tyg,g)
+  in
+    ppt pps t
+  end
+  fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
+  fun timepp pps t = PP.add_string pps (Time.toString t ^ "s")
+  fun locpp pps l = PP.add_string pps (locn.toShortString l)
+
 in
   val _ = installPP (with_pp (Kind.pp_qkind))
+  val _ = installPP (with_pp Pretype.pp_pretype)
   val _ = installPP (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
   val _ = installPP (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
   val _ = installPP (with_pp Hol_pp.pp_thm)
@@ -253,7 +263,7 @@ val _ = add_rule{term_name   = "COND",
                                          TOK "then"], (CONSISTENT, 0)),
                                 BreakSpace(1,2), TM, BreakSpace(1,0),
                                 TOK "else", BreakSpace(1,2)],
-                 paren_style = Always,
+                 paren_style = OnlyIfNecessary,
                  block_style = (AroundEachPhrase, (CONSISTENT, 0))};
 
 

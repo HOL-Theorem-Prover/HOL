@@ -1,11 +1,17 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
 <head>
 <meta http-equiv="content-type"
-      content="text/html ; charset=UTF-8" />
+      content="text/html ; charset=UTF-8">
 <title>Release Notes for Kananaskis-5 version of HOL 4</title>
+<style type="text/css">
+<!--
+  body {color: #333333; background: #FFFFFF;
+        margin-left: 1em; margin-right: 1em }
+  code, pre {color: #660066; font-weight: bold; font-size: smaller}
+-->
+</style>
+
 </head>
 
 <body>
@@ -45,11 +51,11 @@ implementation is that it is considerably quicker than the Moscow ML
 implementation. Many thanks to Scott Owens for doing most of the work
 on this port.</p></li>
 
-<li><p>Overloading can now target “syntactic patterns”, which are
-terms other than just constants.  Typically a pattern will be a
-lambda-abstraction.  For example, one can overload the
-symbol <code>&lt;&gt;</code> (meant to represent “not equal to”) to
-the term <code>(\x y. ~(x = y))</code>.  The call would be </p>
+<li id="syntactic-patterns"><p>Overloading can now target “syntactic
+patterns”, which are terms other than just constants.  Typically a
+pattern will be a lambda-abstraction.  For example, one can overload
+the symbol <code>&lt;&gt;</code> (meant to represent “not equal to”)
+to the term <code>(\x y. ~(x = y))</code>.  The call would be </p>
 <pre>
          overload_on ("&lt;&gt;", ``\x y. ~(x = y)``)
 </pre>
@@ -74,20 +80,22 @@ on the change to the associativity of grammar level 450.)</p>
 <p>Finally, overloading can be type-specific.  In this way, the
 default system now overloads the ASCII <code>&lt;=&gt;</code> to
 equality over the booleans, and various operators over strings (see
-next item). </p>
+<a href="#strings-as-charlists">below</a>). </p>
 
 <p>The system has syntactic patterns built-in for not-equal (as
 above), iff (the <code>&lt;=&gt;</code> symbol), not-iff
 (<code>&lt;=/=&gt;</code>), and not-an-element-of
-(<code>NOTIN</code>).  The Unicode variants (see later item) for these
-are ≠, ⇔, ⇎, and ∉. </p></li>
+(<code>NOTIN</code>).  The Unicode variants
+(see <a href="#unicode">later item</a>) for these
+are <code>≠</code>, <code>⇔</code>, <code>⇎</code>,
+and <code>∉</code>. </p></li>
 
-<li><p>The <code>:string</code> type is now an alias for <code>:char
-list</code>, meaning that strings inherit all of the list operations
-“for free”.  Existing string operators that are effectively duplicates
-of operations on lists (like <code>STRLEN</code>
-and <code>STRCAT</code>) are now type-specific overloads of the list
-constants.</p>
+<li id="strings-as-charlists"><p>The <code>:string</code> type is now
+an alias for <code>:char list</code>, meaning that strings inherit all
+of the list operations “for free”.  Existing string operators that are
+effectively duplicates of operations on lists
+(like <code>STRLEN</code> and <code>STRCAT</code>) are now
+type-specific overloads of the list constants.</p>
 
 <p>Note that this means that the <code>IMPLODE</code>
 and <code>EXPLODE</code> functions are now identities, and that
@@ -187,9 +195,9 @@ right-shifting. </p></li>
 </pre>
 <p>
 When possible, word lengths are guessed for the extract and
-concatenate functions.  That is, <code>``(a &gt;&lt; b) w``</code> is given
-type <code>``:(a + 1 - b) word``</code> and <code>``(a: a word) @@ (b: b word)``</code> is
-given type <code>``:(a + b)&nbsp;word``</code>.</p>
+concatenate functions.  That is, <code>``(a&nbsp;&gt;&lt;&nbsp;b)&nbsp;w``</code> is given
+type <code>``:(a+1-b)&nbsp;word``</code> and <code>``(a:&nbsp;a&nbsp;word) @@ (b:&nbsp;b&nbsp;word)``</code> is
+given type <code>``:(a&nbsp;+&nbsp;b)&nbsp;word``</code>.</p>
 
 <p>For example:</p>
 <pre>
@@ -218,13 +226,11 @@ However, size theorems are then added to the compset, so subsequent
 evaluations will be quicker.
 </p></li>
 
-<li>
+<li id="unicode">
 <p> HOL now supports Unicode symbols as part of its parsing and
-printing.  For the moment, all such symbols are lexed as “symbolic
-characters”, even though one might argue that some should be
-alphabetic (as with Greek letters).  In addition, there are now
-appropriate Unicode symbols, such as ∀ and ∈ built in to the system.
-To enable their printing and parsing, you must set the trace
+printing.  In addition, there are now appropriate Unicode symbols,
+such as <code>∀</code> and <code>∈</code> built in to the system.  To
+enable their printing and parsing, you must set the trace
 variable <code>Unicode</code>.  If this is done, you will see, for
 example</p>
 <pre>
@@ -235,7 +241,8 @@ example</p>
 theorems, your fonts and system are not Unicode and UTF-8 compatible.
 Emacs versions past 22 can be made to work, as can normal shells on
 MacOS and Linux.  Currently, we don’t know how to create a pleasant
-Unicode experience on Window.</p>
+Unicode experience on Window.  (This is not to say that it is not
+possible.)</p>
 
 <p>The <code>Unicode</code> trace controls the use of Unicode symbols
 that are set up as explicit alternatives for ASCII equivalents.  To
@@ -245,7 +252,8 @@ set up such an aliasing, use the function</p>
 </pre>
 <p> where the string <code>u</code> is the Unicode, and
 where <code>tmnm</code> is the name of the term being aliased.  Note
-that you can also alias the names of syntactic patterns (see above). </p>
+that you can also alias the names of syntactic patterns
+(<a href="#syntactic-patterns">see above</a>). </p>
 <p> You are also free to use the standard grammar manipulation
 functions to define pretty Unicode syntax that has no ASCII equivalent
 if you wish, and this can be done whether or not
@@ -263,6 +271,52 @@ the <code>Unicode</code> trace is set.</p>
   The <code>limit</code> function puts a numeric limit on this,
   usually guaranteeing the simplifier’s termination (it will still
   loop if a user-provided conversion or decision procedure loops).</p>
+</li>
+
+<li>
+<p> Operators (<i>e.g.</i> <code>&amp;</code> and <code>-</code>) can
+now be both prefix and infix operators simultaneously.  In particular,
+the subtraction operator (<code>-</code>) is now also a prefix in all
+theories descended from <code>arithmetic</code>.  In order to use this
+as a negation, you must overload the
+string <code>"numeric_negate"</code>, which is the abstract syntax
+name of the unary minus.  Thus, in <code>integerTheory</code>, the
+line </p>
+<pre>
+         val _ = overload_on("numeric_negate", ``int_neg``)
+</pre>
+<p>sets up unary minus as a symbol for negation over the integers.</p>
+
+<p>This change allows one to input terms such
+as <code>``-x&nbsp;+&nbsp;y``</code> even in the theory of natural
+numbers.  In this context, the unary negation maps to a variable
+called <code>numeric_negate</code>, which is unlikely to be helpful.
+Luckily, the variable will likely be polymorphic and the warning about
+invention of type variables will serve as a clue that something
+dubious is being attempted.</p>
+
+<p>In the existing numeric theories, we have kept <code>~</code> as a
+unary negation symbol as well (following SML’s example), but the
+unary minus is now the preferred printing form.</p>
+
+<p>If you wish to add an existing binary operator as a prefix, it is
+important that you <em>not</em> use the <code>set_fixity</code>
+command to do it.  This command will clear the grammar of your binary
+operator before adding the unary one.  Better to
+use <code>add_rule</code> (for which, see the Reference Manual).  This
+will also allow you to map the unary form to a different name.  With
+subtraction, for example, the binary operator maps to the
+name <code>"-"</code>, and the unary operator maps
+to <code>"numeric_negate"</code>.</p>
+
+<p>Finally, note that in the HOL language, unary minus and binary
+minus are inherently ambiguous.  Is <code>x-y</code> the application
+of binary minus to arguments <code>x</code> and <code>y</code>, or is
+it the application of function <code>x</code> to
+argument <code>-y</code>?  In this situation, the implementation of
+this feature treats these dual-purpose operators as infixes by
+default.  In order to obtain the second reading above, one has to
+write <code>x(-y)</code>. </p>
 </li>
 
 </ul>
@@ -352,6 +406,10 @@ Simplifies <code>--</code>, <code>w2w</code>, <code>sw2sw</code>, <code>#>></cod
 simplistic HOL implementation of DPLL with unit propagation, with
 proofs of termination, completeness and soundness. </p> </li>
 
+<li><p><code>examples/misc/PropLogicScript.sml</code> contains
+soundness and completeness results for a classical propositional
+logic.</p></li>
+
 </ul>
 
 <h2 id="incompatibilities">Incompatibilities:</h2>
@@ -395,6 +453,19 @@ expects the constants to have their old names (for a call
 to <code>mk_const</code> say), or if you have variables or constants
 of your own using the names <code>TAKE</code>
 and <code>DROP</code>.</p>
+
+<p>Similarly, the <code>IS_PREFIX</code> constant
+from <code>rich_listTheory</code> is now actually an overload to a
+pattern referring to the constant <code>isPREFIX</code>
+in <code>listTheory</code> (this was the name of the corresponding
+constant in <code>stringTheory</code>
+(see <a href="#strings-as-charlists">above</a>).  The new constant
+takes its arguments in the reverse order (smaller list first), and
+prints with the infix symbol <code>&lt;&lt;=</code>.  The
+quotation <code>`IS_PREFIX&nbsp;l1&nbsp;l2`</code> will produce a term
+that prints as <code>``l2&nbsp;&lt;&lt;=&nbsp;l1``</code>, preserving the
+appropriate semantics.  (The Unicode symbol for this infix
+is <code>≼</code>.)</p>
 </li>
 
 <li> <p> The <code>SET_TO_LIST</code> constant is now defined
@@ -438,11 +509,11 @@ context of arguments when the system printer calls it.</p>
 
 <li> <p>Precedence level 450 in the standard term grammar is now
 non-associative, and suggested as an appropriate level for binary
-relations, such as <i>=</i>, <i>&lt;</i> and <i>&#8838;</i>.  The list
-cons operators <code>::</code> has moved out of this level to level
-490, and the ++ operator used as a shorthand for list concatenation
-(<code>APPEND</code>) has moved to 480.  (This preserves their
-relative positioning.)
+relations, such as <code>=</code>, <code>&lt;</code>
+and <code>⊆</code>.  The list cons operators <code>::</code> has moved
+out of this level to level 490, and the <code>++</code> operator used
+as a shorthand for list concatenation (<code>APPEND</code>) has moved
+to 480.  (This preserves their relative positioning.)
 </p></li>
 
 </ul>
@@ -450,7 +521,7 @@ relative positioning.)
 
 
 
-<hr />
+<hr>
 
 <p> <em><a href="http://hol.sourceforge.net">HOL 4, Kananaskis-5</a></em> </p>
 

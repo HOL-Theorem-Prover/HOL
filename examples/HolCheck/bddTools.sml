@@ -23,7 +23,7 @@ in
 
 fun t2tb vm t = DerivedBddRules.GenTermToTermBdd (!DerivedBddRules.termToTermBddFun) vm t
 
-fun mk_tb_res_subst red res vm = ListPair.map (fn (v,c) => (BddVar true vm v,BddCon (c=T) vm)) (red,res)
+fun mk_tb_res_subst red res vm = ListPair.map (fn (v,c) => (BddVar true vm v,BddCon (eq c T) vm)) (red,res)
 
 
 fun BddListConj vm (h::t) = if (List.null t) then h else PrimitiveBddRules.BddOp (bdd.And, h, (BddListConj vm t))

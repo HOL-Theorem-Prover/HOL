@@ -7,6 +7,8 @@ struct
 
 structure Process = OS.Process
 
+open buildutils
+
 (* utilities *)
 
 (* ----------------------------------------------------------------------
@@ -18,25 +20,6 @@ prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
 
-(* path manipulation functions *)
-fun normPath s = Path.toString(Path.fromString s)
-fun itstrings f [] = raise Fail "itstrings: empty list"
-  | itstrings f [x] = x
-  | itstrings f (h::t) = f h (itstrings f t);
-fun fullPath slist = normPath
-   (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
-
-fun quote s = String.concat["\"", s, "\""];
-
-(* message emission *)
-fun die s =
-    let open TextIO
-    in
-      output(stdErr, s ^ "\n");
-      flushOut stdErr;
-      Process.exit Process.failure
-    end
-fun warn s = let open TextIO in output(stdErr, s); flushOut stdErr end;
 
 
 (* values from the Systeml structure, which is created at HOL configuration
@@ -115,52 +98,14 @@ end
      Source directories.
  ---------------------------------------------------------------------------*)
 
+fun readline strm = 
+    case TextIO.inputLine strm of 
+      "" => NONE
+    | s => SOME s
+
 val SRCDIRS0 =
     if cmdline = ["help"] then []
-    else let
-        fun read_file acc fstr =
-            case TextIO.inputLine fstr of
-              "" => List.rev acc
-            | s => let
-                val s = String.substring(s, 0, size s - 1)
-                        (* drop final \n char *)
-                val ss = Substring.all s
-                val ss = Substring.dropl Char.isSpace ss
-                        (* drop leading w-space *)
-                val (ss, _) = Substring.position "#" ss
-                              (* drop trailing comment *)
-                val s = Substring.string ss
-              in
-                if s = "" then read_file acc fstr
-                else let
-                    fun extract_testcount (s,acc) =
-                        if String.sub(s,0) = #"!" then
-                          extract_testcount (String.extract(s,1,NONE), acc+1)
-                        else (s,acc)
-                    val (dirname0,testcount) = extract_testcount (s,0)
-                    val dirname = if Path.isAbsolute dirname0 then dirname0
-                                  else fullPath [HOLDIR, dirname0]
-                    open FileSys
-                  in if access (dirname, [A_READ, A_EXEC]) then
-                       if isDir dirname then
-                         read_file ((dirname,testcount)::acc) fstr
-                       else
-                         (warn ("** File "^dirname0^
-                                " from build sequence is not a directory \
-                                \-- skipping it\n");
-                             read_file acc fstr)
-                     else (warn ("** File "^s^" from build sequence does not "^
-                                 "exist or is inacessible -- skipping it\n");
-                           read_file acc fstr)
-                  end
-              end
-        val bseq_file =
-            TextIO.openIn bseq_fname
-            handle Io {cause, function, name} =>
-                   die ("Couldn't open build sequence file: "^bseq_fname)
-      in
-        read_file [] bseq_file before TextIO.closeIn bseq_file
-      end
+    else read_buildsequence Substring.all readline bseq_fname
 
 val SRCDIRS =
     map (fn s => (fullPath [HOLDIR, s], 0))

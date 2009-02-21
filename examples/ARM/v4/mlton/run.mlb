@@ -29,7 +29,7 @@ $(THEORY)/pairML.sml
 $(THEORY)/sumML.sig
 $(THEORY)/sumML.sml
 $(THEORY)/numML.sig
-$(THEORY)/mlton/numML.sml
+$(THEORY)/../MLton/numML.sml
 $(THEORY)/listML.sig
 $(THEORY)/listML.sml
 $(THEORY)/setML.sig
@@ -40,6 +40,8 @@ $(THEORY)/rich_listML.sig
 $(THEORY)/rich_listML.sml
 $(THEORY)/basicSizeML.sig
 $(THEORY)/basicSizeML.sml
+$(THEORY)/stringML.sig
+$(THEORY)/stringML.sml
 $(THEORY)/bitML.sig
 $(THEORY)/bitML.sml
 $(THEORY)/fcpML.sig

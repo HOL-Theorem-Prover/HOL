@@ -17,7 +17,6 @@ val _ = new_theory "Mult";
 
 (*---------------------------------------------------------------------------
     Multiply a byte (representing a polynomial) by x. 
-
  ---------------------------------------------------------------------------*)
 
 val xtime_def = Define
@@ -39,13 +38,14 @@ val xtime_distrib = Q.store_thm
 
 val _ = set_fixity "**" (Infixl 675);
 
-val ConstMult_def = tDefine "ConstMult"
+val ConstMult_def = 
+ xDefine 
+   "ConstMult"
    `b1 ** b2 =
       if b1 = 0w:word8 then 0w else 
       if word_lsb b1
          then b2 ?? ((b1 >>> 1) ** xtime b2)
-         else       ((b1 >>> 1) ** xtime b2)`
-   (WF_REL_TAC `measure (w2n o FST)`);
+         else       ((b1 >>> 1) ** xtime b2)`;
 
 val _ = computeLib.add_persistent_funs [("ConstMult_def",ConstMult_def)];
 
@@ -61,12 +61,12 @@ val ConstMultDistrib = Q.store_thm
 (* Iterative version                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val IterConstMult_def = tDefine "IterConstMult"
-  `IterConstMult (b1,b2,acc) =
-     if b1 = 0w:word8 then (b1,b2,acc)
-     else IterConstMult (b1 >>> 1, xtime b2,
-                         if word_lsb b1 then (b2 ?? acc) else acc)`
-  (WF_REL_TAC `measure (w2n o FST)`);
+val IterConstMult_def = 
+ Define 
+   `IterConstMult (b1,b2,acc) =
+       if b1 = 0w:word8 then (b1,b2,acc)
+       else IterConstMult (b1 >>> 1, xtime b2,
+                           if word_lsb b1 then (b2 ?? acc) else acc)`;
 
 val _ = computeLib.add_persistent_funs [("IterConstMult_def",IterConstMult_def)];
 
@@ -89,21 +89,21 @@ fun UNROLL_RULE 0 def = def
   | UNROLL_RULE n def = 
      SIMP_RULE arith_ss [LSR_ADD]
      (GEN_REWRITE_RULE (RHS_CONV o DEPTH_CONV) empty_rewrites [def]
-                       (UNROLL_RULE (n - 1) def))
+                       (UNROLL_RULE (n - 1) def));
 val instantiate =
  SIMP_RULE (srw_ss()) [GSYM xtime_distrib] o 
- ONCE_REWRITE_CONV [UNROLL_RULE 4 ConstMult_def]
+ ONCE_REWRITE_CONV [UNROLL_RULE 4 (SPEC_ALL ConstMult_def)];
 
-val IterMult2 = UNROLL_RULE 1 IterConstMult_def
+val IterMult2 = UNROLL_RULE 1 (SPEC_ALL IterConstMult_def);
 
 (*---------------------------------------------------------------------------*)
 (* mult_unroll                                                               *)
 (*    |- (2w ** x = xtime x) /\                                              *)
-(*       (3w ** x = x # xtime x) /\                                          *)
-(*       (9w ** x = x # xtime (xtime (xtime x)))      /\                     *)
-(*       (11w ** x = x # xtime (x # xtime (xtime x))) /\                     *)
-(*       (13w ** x = x # xtime (xtime (x # xtime x))) /\                     *)
-(*       (14w ** x = xtime (x # xtime (x # xtime x)))                        *)
+(*       (3w ** x = x ?? xtime x) /\                                         *)
+(*       (9w ** x = x ?? xtime (xtime (xtime x)))      /\                    *)
+(*       (11w ** x = x ?? xtime (x ?? xtime (xtime x))) /\                   *)
+(*       (13w ** x = x ?? xtime (xtime (x ?? xtime x))) /\                   *)
+(*       (14w ** x = xtime (x ?? xtime (x ?? xtime x)))                      *)
 (*---------------------------------------------------------------------------*)
 
 val mult_unroll = save_thm("mult_unroll",
@@ -113,7 +113,7 @@ val mult_unroll = save_thm("mult_unroll",
 
 val eval_mult = WORD_EVAL_RULE o PURE_REWRITE_CONV [mult_unroll,
   CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (SIMP_CONV (srw_ss())
-    [WORD_MUL_LSL, COND_RAND]))) xtime_def]
+    [WORD_MUL_LSL, COND_RAND]))) xtime_def];
 
 fun mk_word8 i = wordsSyntax.mk_n2w(numSyntax.term_of_int i, ``:8``);
 

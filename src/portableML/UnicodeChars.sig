@@ -89,6 +89,7 @@ sig
   val isDigit : string -> bool
   val isAlphaNum : string -> bool
   val isSymbolic : string -> bool
+  val isMLIdent : string -> bool
 
 
 end

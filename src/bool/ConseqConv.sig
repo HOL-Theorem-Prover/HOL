@@ -11,19 +11,20 @@ include Abbrev
 
 
 (* Types *)
-type conseq_conv = term -> thm;
-type CONSEQ_CONV_direction;
-type directed_conseq_conv = CONSEQ_CONV_direction -> conseq_conv;
+datatype CONSEQ_CONV_direction =  
+         CONSEQ_CONV_STRENGTHEN_direction
+       | CONSEQ_CONV_WEAKEN_direction
+       | CONSEQ_CONV_UNKNOWN_direction;
 
-val CONSEQ_CONV_STRENGTHEN_direction : CONSEQ_CONV_direction;
-val CONSEQ_CONV_WEAKEN_direction     : CONSEQ_CONV_direction;
-val CONSEQ_CONV_UNKNOWN_direction    : CONSEQ_CONV_direction;
+type conseq_conv = term -> thm;
+type directed_conseq_conv = CONSEQ_CONV_direction -> conseq_conv;
 
 
 
 (* General *)
 val GEN_ASSUM               : term -> thm -> thm;
 val GEN_IMP                 : term -> thm -> thm;
+val SPEC_ALL_TAC            : tactic;
 
 val IMP_QUANT_CANON             : thm -> thm;
 val IMP_FORALL_CONCLUSION_CANON : thm -> thm;

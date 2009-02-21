@@ -1,0 +1,463 @@
+(* This file contains HOL 4 - proof scripts to proof 
+   full functional specifications of the examples 
+   (*.dsf*)
+
+   These proof scripts use a Smallfoot-formalisation in HOL 4.
+   HOL 4 can be found at http://hol.sourceforge.net/,
+   the Smallfoot-formalisation in the examples directory.
+   Please use the most recent version from the Subversion-repository.
+
+   If you have any questions, please contanct Thomas Tuerk
+   (email: tt291@cl.cam.ac.uk)
+*)
+
+
+
+quietdec := true;
+
+
+
+loadPath := 
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) :: 
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot"]) :: 
+            !loadPath;
+
+
+
+
+
+
+
+
+open HolKernel Parse boolLib bossLib;
+
+open smallfoot_pp_print generalHelpersTheory
+     smallfootSyntax BoolExtractShared
+     ConseqConv smallfootTheory
+     smallfootParser listTheory rich_listTheory;
+
+open smallfootLib
+open quantHeuristicsLib;
+
+
+
+
+
+quietdec := false;
+
+
+
+
+(*use a specific pretty printer*)
+temp_add_smallfoot_pp();
+use_smallfoot_pretty_printer := true;
+
+(*or off for debugging
+use_smallfoot_pretty_printer := false;
+*)
+
+
+(*please adapt the examples directory *)
+val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot/EXAMPLES/"]
+
+
+(*test the directory*)
+val file = concat [examplesDir, "append.sf"];
+val t = parse_smallfoot_file file
+
+
+
+(***************************************************************************
+ * COPY 
+ ***************************************************************************)
+
+(*the specification without data can be proofed automatically*)
+val file = concat [examplesDir, "copy.sf"];
+val thm = smallfoot_verbose_auto_prove file;
+
+
+
+(*the specification with data works as well, but takes much longer
+  about 10 sec on my maschine against 3 without data*)
+val file = concat [examplesDir, "copy.dsf"]; 
+val thm = smallfoot_verbose_auto_prove file;
+
+
+
+(***************************************************************************
+ * LIST_LENGTH
+ ***************************************************************************)
+
+(*the specification without data can be proofed automatically*)
+val file = concat [examplesDir, "list_length.sf"];
+val thm = smallfoot_verbose_auto_prove file;
+
+
+(*the specification with data works as well*)
+val file = concat [examplesDir, "list_length.dsf"]; 
+val thm = smallfoot_verbose_auto_prove file;
+
+
+
+
+(***************************************************************************
+ * REMOVE
+ ***************************************************************************)
+
+(*the specification without data can be proofed automatically*)
+val file = concat [examplesDir, "remove.sf"];
+val thm = smallfoot_verbose_auto_prove file;
+
+
+
+(*the specification with data needs the specifically defined function.
+  Moreover, a function REMOVE is sepcifically defined for this
+  verification*)
+val file = concat [examplesDir, "remove.dsf"]; 
+
+
+val REMOVE_def = Define `
+   (REMOVE x [] = []) /\
+   (REMOVE x (v::vs) = if (x = v) then vs else v::(REMOVE x vs))` 
+
+
+val thm = smallfoot_verbose_thm_auto_prove [REMOVE_def] file;
+
+
+
+
+
+
+
+(***************************************************************************
+ * REVERSE
+ ***************************************************************************)
+
+(*the specification without data can be proofed automatically*)
+val file = concat [examplesDir, "reverse.sf"];
+val thm = smallfoot_verbose_auto_prove file;
+
+
+
+(*the specification with data works as well*)
+val file = concat [examplesDir, "reverse.dsf"]; 
+val thm = smallfoot_verbose_auto_prove file;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(***************************************************************************
+ * MERGESORT
+ ***************************************************************************)
+
+(*the specification without data can be proofed automatically*)
+val file = concat [examplesDir, "mergesort.sf"];
+val file = concat [examplesDir, "mergesort_parallel.sf"]; 
+val thm = smallfoot_verbose_auto_prove file;
+
+
+
+(*for the full functional verification open some
+  libraries first*)
+open sortingTheory relationTheory
+
+
+(*The tools is strong enough to abstract automatically from
+  the differences between parallel and sequential mergesort.
+  The proof-script is exactly the same!*)
+
+val file = concat [examplesDir, "mergesort.dsf"]; 
+val file = concat [examplesDir, "mergesort_parallel.dsf"]; 
+
+(*
+val t = parse_smallfoot_file file;
+set_goal ([], t);
+e (SMALLFOOT_SPECIFICATION_TAC);
+
+
+smallfoot_set_goal file;
+*)
+
+
+
+
+val thm = smallfoot_verbose_prove( file,
+
+(*generate verification conditions*)
+SMALLFOOT_VC_TAC THEN
+
+
+(*All the program is gone, only theorems about
+  permutations and sorted lists need to be still
+  proved*)
+SIMP_TAC std_ss [SORTED_DEF, PERM_REFL] THEN
+REPEAT STRIP_TAC THENL [
+   Cases_on `qdata_t` THEN
+   FULL_SIMP_TAC std_ss [SORTED_DEF],
+
+
+   `transitive (($<=):num -> num -> bool)` by ALL_TAC THEN1 (
+       SIMP_TAC arith_ss [transitive_def]
+   ) THEN
+   FULL_SIMP_TAC list_ss [SORTED_EQ] THEN
+   REPEAT STRIP_TAC THEN
+   `MEM y (pdata_h::(pdata_t ++ qdata_t))` by METIS_TAC[PERM_MEM_EQ] THEN
+   POP_ASSUM MP_TAC THEN
+   ASM_SIMP_TAC list_ss [DISJ_IMP_THM] THEN
+   REPEAT STRIP_TAC THEN
+   `pdata_h <= y` by RES_TAC THEN
+   DECIDE_TAC,
+
+
+   Tactical.REVERSE (`PERM (pdata_h::(pdata_t ++ qdata_h::qdata_t)) 
+                      (qdata_h::pdata_h::(pdata_t ++ qdata_t))` by ALL_TAC) THEN1 (
+      PROVE_TAC[PERM_TRANS, PERM_MONO]
+   ) THEN
+   Tactical.REVERSE (`PERM (pdata_t ++ qdata_h::qdata_t) 
+                      (qdata_h::(pdata_t ++ qdata_t))` by ALL_TAC) THEN1 (
+      PROVE_TAC[PERM_TRANS, PERM_MONO, PERM_SWAP_AT_FRONT,  PERM_REFL]
+   ) THEN
+   PROVE_TAC[CONS_PERM, PERM_REFL, PERM_SYM],
+
+
+
+   Cases_on `pdata_t` THEN
+   FULL_SIMP_TAC std_ss [SORTED_DEF],
+
+
+
+   `transitive (($<=):num -> num -> bool)` by ALL_TAC THEN1 (
+       SIMP_TAC arith_ss [transitive_def]
+   ) THEN
+   FULL_SIMP_TAC list_ss [SORTED_EQ] THEN
+   REPEAT STRIP_TAC THEN
+   `MEM y (pdata_t ++ qdata_h::qdata_t)` by METIS_TAC[PERM_MEM_EQ] THEN
+   POP_ASSUM MP_TAC THEN
+   ASM_SIMP_TAC list_ss [DISJ_IMP_THM] THEN
+   REPEAT STRIP_TAC THEN
+   `qdata_h <= y` by RES_TAC THEN
+   DECIDE_TAC,
+
+
+   MATCH_MP_TAC PERM_MONO THEN
+   ASM_REWRITE_TAC[],
+
+
+   MATCH_MP_TAC PERM_MONO THEN
+   ONCE_REWRITE_TAC[PERM_SYM] THEN
+   MATCH_MP_TAC CONS_PERM THEN
+   PROVE_TAC [PERM_SYM],
+
+
+   PROVE_TAC[PERM_TRANS, PERM_SYM, PERM_CONG]
+]);
+
+
+
+
+
+
+
+
+
+
+
+
+(***************************************************************************
+ * APPEND 
+ *****************************************************************************)
+
+(*the specification without data can be proofed automatically*)
+val file = concat [examplesDir, "append.sf"];
+val thm = smallfoot_verbose_auto_prove file;
+
+
+(*the specification with data is much more complicated *)
+val file = concat [examplesDir, "append.dsf"]; 
+
+(*
+for interactive use
+
+val t = parse_smallfoot_file file;
+set_goal ([], t);
+e (SMALLFOOT_SPECIFICATION_TAC);
+
+
+or 
+
+smallfoot_set_goal file;
+
+*)
+
+val thm = smallfoot_verbose_prove( file,
+
+(*Handle while-loop separately*)
+REPEAT STRIP_TAC THENL [
+   (* while loop *)
+   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [],
+
+
+   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [] THEN
+   SMALLFOOT_STRICT_CLEAN_TAC THEN
+   `(if LENGTH xdata1 = 0 then
+       xdata_h::(xdata_t ++ ydata)
+    else
+       DROP (LENGTH xdata1 - 1) (xdata_t ++ ydata)) =
+    tdate::ydata` by ALL_TAC THEN1 (
+
+      Cases_on `xdata1` THEN (
+         FULL_SIMP_TAC list_ss [BUTFIRSTN_LENGTH_APPEND,
+			        APPEND_ASSOC_CONS]
+      )
+   ) THEN
+   `xdata_h::(xdata_t ++ ydata) =
+    xdata1 ++ (tdate::ydata)` by ALL_TAC THEN1 (
+      ASM_SIMP_TAC std_ss [GSYM APPEND, APPEND_ASSOC_CONS] THEN
+      SIMP_TAC list_ss []
+   ) THEN
+   ASM_SIMP_TAC list_ss [] THEN
+   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC []
+]);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(***************************************************************************
+ * FILTER
+ ***************************************************************************)
+
+(*the specification without data can be proofed automatically*)
+val file = concat [examplesDir, "filter.sf"];
+val thm = smallfoot_verbose_auto_prove file;
+
+
+
+(* the verification of filter is tricky. Let's
+   start with the much simpler recursive version *)
+val file = concat [examplesDir, "filter_rec.dsf"]; 
+val thm = smallfoot_verbose_auto_prove file;
+
+
+
+
+
+(*The orginal version has a very complicated
+  loop invariant. Therefore the proof is quite
+  long: *)
+val file = concat [examplesDir, "filter.dsf"]; 
+
+(*
+for interactive use
+
+val t = parse_smallfoot_file file;
+set_goal ([], t);
+e (SMALLFOOT_SPECIFICATION_TAC);
+
+
+or 
+
+SMALLFOOT_NO_CASE_SPLIT_NO_GUESS_STEP_TAC []
+
+
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 1
+SMALLFOOT_STEP_TAC []
+
+smallfoot_set_goal file;
+
+*)
+
+val thm = smallfoot_verbose_prove( file,
+
+(*Handle while-loop separately*)
+REPEAT STRIP_TAC THENL [
+   (* while loop *)
+   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [] THEN
+   REPEAT STRIP_TAC THENL [
+      SMALLFOOT_VC_TAC THEN
+      GEN_TAC THEN
+      Q.EXISTS_TAC `data_fc ++ [fc]` THEN
+      FULL_SIMP_TAC list_ss [APPEND_11, APPEND_ASSOC_CONS],
+
+
+      SMALLFOOT_VC_TAC THEN
+      REPEAT GEN_TAC THEN
+      Q.EXISTS_TAC `data_fc` THEN
+      ASM_SIMP_TAC list_ss [FILTER_EQ_NIL] THEN
+      REPEAT STRIP_TAC THEN
+      Q.EXISTS_TAC `[]` THEN
+      SIMP_TAC list_ss [],
+
+
+      SMALLFOOT_PROP_IMPLIES___EQ_CASE_SPLIT_TAC ``l_const:num`` ``n:num`` THEN
+      SMALLFOOT_VC_TAC THEN
+      REPEAT STRIP_TAC THEN
+      Q.EXISTS_TAC `data1` THEN
+      REPEAT STRIP_TAC THEN
+      Q.EXISTS_TAC `[]` THEN
+      Q.EXISTS_TAC `data_fc ++ [fc]` THEN
+      FULL_SIMP_TAC list_ss [APPEND_ASSOC_CONS,
+			     BUTFIRSTN_LENGTH_NIL],
+
+
+
+      SMALLFOOT_PROP_IMPLIES___EQ_CASE_SPLIT_TAC ``l_const:num`` ``n:num`` THEN
+      SMALLFOOT_VC_TAC THEN
+      REPEAT STRIP_TAC THEN
+      Q.EXISTS_TAC `data1 ++ date::data_fc` THEN
+      REPEAT STRIP_TAC THEN
+      ASM_SIMP_TAC list_ss [FILTER_APPEND, BUTFIRSTN_LENGTH_APPEND,
+			    FILTER_EQ_NIL] THEN
+      Q.EXISTS_TAC `[]` THEN
+      SIMP_TAC list_ss [APPEND_ASSOC_CONS]
+   ],
+
+
+
+   (*main*)
+   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [] THEN
+   REPEAT STRIP_TAC THEN
+   Q.EXISTS_TAC `[]` THEN
+   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [] THEN
+   SMALLFOOT_STRICT_CLEAN_TAC THEN
+   SMALLFOOT_PROP_IMPLIES___EQ_CASE_SPLIT_TAC ``l_const:num`` ``0:num`` THEN
+   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC [] THEN
+   
+   SIMP_TAC list_ss [FILTER_EQ_NIL, FILTER_APPEND,
+		     BUTFIRSTN_LENGTH_APPEND] THEN
+   SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC []
+]);
+
+
+
+
+
+
+
+
+
+

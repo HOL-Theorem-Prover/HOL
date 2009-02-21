@@ -435,7 +435,7 @@ val word_mult_clauses =
 val WORD_MULT_LEFT_1 = List.nth(word_mult_clauses,2);
 
 val NEG_EQ_0 = trace("metis",0) (METIS_PROVE [WORD_NEG_MUL, WORD_NEG_EQ_0])
-  ``(!w. ($- 1w * w = 0w) = (w = 0w)) /\ (!w. (0w = $- 1w * w) = (w = 0w))``;
+  ``(!w. (-1w * w = 0w) = (w = 0w)) /\ (!w. (0w = -1w * w) = (w = 0w))``;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1182,20 +1182,6 @@ fun mk_word_size n =
 
 (* ------------------------------------------------------------------------- *)
 
-val RHS_REWRITE_RULE =
-  GEN_REWRITE_RULE (DEPTH_CONV o RAND_CONV) empty_rewrites;
-
-val WORDS_EMIT_RULE =
-  BETA_RULE o PURE_REWRITE_RULE
-   ([BIT_UPDATE, fcp_n2w, word_T_def, word_L_def, word_H_def, literal_case_THM]
-   @
-   (map GSYM [word_index_def, n2w_itself_def, w2w_itself_def, sw2sw_itself_def,
-     word_concat_itself_def, word_extract_itself_def,
-     fcpTheory.FCPi_def, fcpTheory.mk_fcp_def, literal_case_DEF])) o
-  RHS_REWRITE_RULE [GSYM word_eq_def];
-
-(* ------------------------------------------------------------------------- *)
-
 val Cases_word = Cases;
 val Cases_on_word = Cases_on;
 
@@ -1249,23 +1235,38 @@ in
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 fun output_words_as f = Parse.temp_add_user_printer
-  ("wordsLib.print_word", ``words$n2w x``, print_word f);
+  ("wordsLib.print_word", ``words$n2w x : 'a word``, print_word f);
 
-fun output_words_as_bin() = output_words_as (K StringCvt.BIN);
-fun output_words_as_hex() = output_words_as (K StringCvt.HEX);
+val word_pp_mode = ref 0;
 
-fun output_words_as_oct() =
-  (base_tokens.allow_octal_input := true; output_words_as (K StringCvt.OCT));
-
-fun output_words_as_dec() =
-  (Parse.remove_user_printer "wordsLib.print_word"; ());
+val _ = Feedback.register_trace("word printing", word_pp_mode, 4);
 
 val _ = output_words_as
    (fn (l, v) =>
-       if Arbnum.<=(Arbnum.fromHexString "10000", v) then
+       if (!word_pp_mode = 0) andalso
+          Arbnum.<=(Arbnum.fromHexString "10000", v)
+       then
+         StringCvt.HEX
+       else if !word_pp_mode = 0 orelse !word_pp_mode = 3 then
+         StringCvt.DEC
+       else if !word_pp_mode = 1 then
+         StringCvt.BIN
+       else if !word_pp_mode = 2 then
+         StringCvt.OCT
+       else if !word_pp_mode = 4 then
          StringCvt.HEX
        else
-         StringCvt.DEC);
+         raise ERR "output_words_as" "invalid printing mode");
+
+fun output_words_as_bin() = set_trace "word printing" 1;
+fun output_words_as_dec() = set_trace "word printing" 3;
+fun output_words_as_hex() = set_trace "word printing" 4;
+
+fun output_words_as_oct() =
+  (base_tokens.allow_octal_input := true; set_trace "word printing" 2);
+
+fun remove_word_printer () =
+  (Parse.remove_user_printer "wordsLib.print_word"; ())
 
 (* ------------------------------------------------------------------------- *)
 (* Guessing the word length for the result of extraction (><) and            *)
@@ -1358,49 +1359,58 @@ end;
 fun word_op_type_inst (ty:hol_type, n) =
   {redex = ty, residue = fcpLib.index_type n};
 
-val notify_word_length_guesses = ref true;
+val notify_on_word_length_guess = ref true;
+val guessing_word_lengths = ref false;
 
 val _ = Feedback.register_btrace("notify word length guesses",
-                                  notify_word_length_guesses);
+                                  notify_on_word_length_guess);
+
+val _ = Feedback.register_btrace("guess word lengths",
+                                  guessing_word_lengths);
 
 local
   fun comma_separate_acc [] l = l
     | comma_separate_acc (h::t) "" = comma_separate_acc t h
     | comma_separate_acc [h] l = l ^ " and " ^ h
     | comma_separate_acc (h::t) l = comma_separate_acc t (l ^ ", " ^ h)
-in
   fun comma_separate l = comma_separate_acc l ""
-end;
 
-fun type_name t = String.extract(Hol_pp.type_to_string t, 1, NONE);
+  fun type_name t = String.extract(Hol_pp.type_to_string t, 1, NONE);
 
-fun guess_to_string {redex = a, residue = b} =
-  type_name a ^ " <- " ^ type_name b;
+  fun guess_to_string {redex = a, residue = b} =
+    type_name a ^ " <- " ^ type_name b;
 
-fun print_guesses l = Feedback.HOL_MESG
-  ("assigning word length(s): " ^ comma_separate (map guess_to_string l));
-
-fun guess_word_lengths t =
-let val assigns = map word_op_type_inst (Redblackmap.listItems (mk_vmap t))
-    val _ = if !Globals.interactive andalso
-               !notify_word_length_guesses andalso
-               not (null assigns)
-            then
-              print_guesses assigns
-            else
-              ()
+  fun print_guesses l = Feedback.HOL_MESG
+    ("assigning word length(s): " ^ comma_separate (map guess_to_string l));
 in
-  inst assigns t
+  fun inst_word_lengths t =
+  let val assigns = map word_op_type_inst (Redblackmap.listItems (mk_vmap t))
+      val _ = if !Globals.interactive andalso
+                 !notify_on_word_length_guess andalso
+                 not (null assigns)
+              then
+                print_guesses assigns
+              else
+                ()
+  in
+    inst assigns t
+  end
 end
 
-val save_post_process_term = !Parse.post_process_term;
+fun word_post_process_term t =
+  if !guessing_word_lengths then
+     inst_word_lengths (fcpLib.inst_fcp_lengths t)
+  else
+     t;
 
-fun guess_lengths () = Parse.post_process_term :=
-  (guess_word_lengths o fcpLib.guess_fcp_lengths o !Parse.post_process_term);
+val _ = Parse.post_process_term :=
+  (word_post_process_term o !Parse.post_process_term);
 
-fun dont_guess_lengths () = Parse.post_process_term := save_post_process_term;
+fun guess_lengths ()      = set_trace "guess word lengths" 1;
+fun dont_guess_lengths () = set_trace "guess word lengths" 0;
 
-val operators = [("+", "word_add"), ("-", "word_sub"), ("-", "word_2comp"),
+val operators = [("+", "word_add"), ("-", "word_sub"),
+                 ("numeric_negate", "word_2comp"),
                  ("*", "word_mul"), ("<", "word_lt"), (">", "word_gt"),
                  ("<=", "word_le"), (">=", "word_ge")];
 

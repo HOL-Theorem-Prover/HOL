@@ -9,8 +9,6 @@ sig
   val pair          : 'a -> 'b -> 'a * 'b
   val cons          : 'a -> 'a list -> 'a list
   val ##            : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
-  val A             : ('a -> 'b) -> 'a -> 'b
-  val B             : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
   val C             : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
   val I             : 'a -> 'a
   val K             : 'a -> 'b -> 'a
@@ -45,6 +43,9 @@ sig
   val rev_itlist    : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val rev_itlist2   : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
   val end_itlist    : ('a -> 'a -> 'a) -> 'a list -> 'a
+  val foldl_map     : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
+  val get_first     : ('a -> 'b option) -> 'a list -> 'b option
+  val separate      : 'a -> 'a list -> 'a list
   val zip           : 'a list -> 'b list -> ('a * 'b) list
   val combine       : 'a list * 'b list -> ('a * 'b) list
   val unzip         : ('a * 'b) list -> 'a list * 'b list
@@ -52,6 +53,8 @@ sig
   val mapfilter     : ('a -> 'b) -> 'a list -> 'b list
   val flatten       : 'a list list -> 'a list
   val pluck         : ('a -> bool) -> 'a list -> 'a * 'a list
+  val trypluck      : ('a -> 'b) -> 'a list -> 'b * 'a list
+  val trypluck'     : ('a -> 'b option) -> 'a list -> ('b option * 'a list) 
   val enumerate     : int -> 'a list -> (int * 'a) list
   val upto          : int -> int -> int list
   val repeat        : ('a -> 'a) -> 'a -> 'a
@@ -120,6 +123,8 @@ sig
   val unprime       : string -> string
   val unprefix      : string -> string -> string
 
+  val str_all       : (char -> bool) -> string -> bool
+
   val front_last    : 'a list -> 'a list * 'a
   val butlast       : 'a list -> 'a list
   val last          : 'a list -> 'a
@@ -128,10 +133,12 @@ sig
   val hash          : int -> string -> int*int -> int
 
   type 'a cmp       = 'a * 'a -> order
+  val bool_compare  : bool cmp
   val pair_compare  : ('a cmp * 'b cmp) -> ('a * 'b) cmp
   val list_compare  : 'a cmp -> 'a list cmp
   val measure_cmp   : ('a -> int) -> 'a cmp
   val inv_img_cmp   : ('b -> 'a) -> 'a cmp -> 'b cmp
+  val flip_cmp      : 'a cmp -> 'a cmp
   val flip_order    : order -> order
 
   datatype 'a delta = SAME | DIFF of 'a

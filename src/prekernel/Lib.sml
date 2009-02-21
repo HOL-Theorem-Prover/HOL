@@ -1,5 +1,5 @@
 (* ===================================================================== *)
-(* FILE          : lib.sml                                               *)
+(* FILE          : Lib.sml                                               *)
 (* DESCRIPTION   : library of useful SML functions.                      *)
 (*                                                                       *)
 (* AUTHOR        : (c) Konrad Slind, University of Calgary               *)
@@ -25,8 +25,6 @@ fun curry f x y = f(x,y)
 fun uncurry f (x,y) = f x y
 infix 3 ##
 fun (f ## g) (x,y) = (f x, g y)
-fun A f x = f x
-fun B f g x = f (g x)
 fun C f x y = f y x
 fun I x = x
 fun K x y = x
@@ -121,11 +119,7 @@ fun map2 f L1 L2 =
    in mp2 L1 L2 []
    end;
 
-fun all P =
-   let fun every [] = true
-         | every (a::rst) = P a andalso every rst
-   in every
-   end;
+val all = List.all
 
 fun all2 P =
    let fun every2 [] [] = true
@@ -151,12 +145,7 @@ fun split_after n alist =
         end
    else raise ERR "split_after" "negative index";
 
-
-fun itlist f L base_value =
-   let fun itl [] = base_value
-         | itl (a::rst) = f a (itl rst)
-   in itl L
-   end;
+fun itlist f L base_value = List.foldr (uncurry f) base_value L
 
 fun itlist2 f L1 L2 base_value =
   let fun itl ([],[]) = base_value
@@ -165,11 +154,7 @@ fun itlist2 f L1 L2 base_value =
    in  itl (L1,L2)
    end;
 
-fun rev_itlist f =
-   let fun rev_it [] base = base
-         | rev_it (a::rst) base = rev_it rst (f a base)
-   in rev_it
-   end;
+fun rev_itlist f L base_value = List.foldl (uncurry f) base_value L
 
 fun rev_itlist2 f L1 L2 =
   let fun rev_it2 ([],[]) base = base
@@ -185,9 +170,23 @@ fun end_itlist f =
    in endit
    end;
 
-fun gather P L = itlist (fn x => fn y => if P x then x::y else y) L []
+fun foldl_map _ (acc, []) = (acc, [])
+  | foldl_map f (acc, x :: xs) =
+    let val (acc', y) = f (acc, x)
+        val (acc'', ys) = foldl_map f (acc', xs)
+    in (acc'', y :: ys) end
 
-val filter = gather;
+(* separate s [x1, x2, ..., xn] ===> [x1, s, x2, s, ..., s, xn] *)
+fun separate s (x :: (xs as _ :: _)) = x :: s :: separate s xs
+  | separate _ xs = xs
+
+val gather = List.filter
+val filter = List.filter
+
+fun get_first f l =
+    case l of
+      [] => NONE
+    | h::t => (case f h of NONE => get_first f t | some => some)
 
 fun partition P alist =
    itlist (fn x => fn (L,R) => if P x then (x::L, R) else (L, x::R))
@@ -197,7 +196,7 @@ fun zip [] [] = []
   | zip (a::b) (c::d) = (a,c)::zip b d
   | zip _ _ = raise ERR "zip" "different length lists"
 
-fun unzip L = itlist (fn (x,y) => fn (l1,l2) => (x::l1, y::l2)) L ([],[]);
+val unzip = ListPair.unzip
 
 fun combine(l1,l2) = zip l1 l2
 val split = unzip
@@ -208,9 +207,7 @@ fun mapfilter f list =
                      | otherwise => L)
      list [];
 
-fun flatten [] = []
-  | flatten ([]::t) = flatten t
-  | flatten ((h::t)::rst) = h::flatten(t::rst);
+val flatten = List.concat
 
 fun front_last l =
   let fun fl _ [] = raise ERR "front_last" "empty list"
@@ -228,9 +225,29 @@ fun last []     = raise ERR "last" "empty list"
 
 fun pluck P =
  let fun pl _ [] = raise ERR "pluck" "predicate not satisfied"
-       | pl A (h::t) = if P h then (h, rev_itlist cons A t) else pl (h::A) t
+       | pl A (h::t) = if P h then (h, List.revAppend(A,t)) else pl (h::A) t
  in pl []
  end;
+
+fun trypluck f =
+ let fun try acc [] = raise ERR "trypluck" "no successful fn. application"
+       | try acc (h::t) = 
+          case total f h
+           of NONE => try (h::acc) t 
+            | SOME v => (v,List.revAppend(acc,t))
+ in try []
+ end
+
+fun trypluck' f list = let 
+  fun recurse acc l = 
+      case l of 
+        [] => (NONE, list)
+      | h::t => (case f h of 
+                   NONE => recurse (h::acc) t
+                 | SOME v => (SOME v, List.revAppend(acc,t)))
+in
+  recurse [] list
+end
 
 fun funpow n f x =
  let fun iter (0,res) = res
@@ -280,6 +297,12 @@ type 'a cmp = 'a * 'a -> order
 fun flip_order LESS = GREATER
   | flip_order EQUAL = EQUAL
   | flip_order GREATER = LESS
+fun flip_cmp cmp = flip_order o cmp
+
+fun bool_compare (true, true) = EQUAL
+  | bool_compare (true, false) = GREATER
+  | bool_compare (false, true) = LESS
+  | bool_compare (false, false) = EQUAL
 
 fun list_compare cfn =
  let fun comp ([],[]) = EQUAL
@@ -419,10 +442,7 @@ fun (r1 |-> r2) = {redex=r1, residue=r2};
  * Sets as lists                                                             *
  *---------------------------------------------------------------------------*)
 
-fun mem i =
- let fun itr [] = false
-       | itr (a::rst) = i=a orelse itr rst
- in itr end;
+fun mem i = List.exists (equal i)
 
 fun insert i L = if mem i L then L else i::L
 
@@ -464,12 +484,7 @@ fun list_cmp cmp =
   in lcmp
   end;
 
-fun op_mem eq_func i =
-   let val eqi = eq_func i
-       fun mem [] = false
-         | mem (a::b) = eqi a orelse mem b
-   in mem
-   end;
+fun op_mem eq_func i = List.exists (eq_func i)
 
 fun op_insert eq_func =
   let val mem = op_mem eq_func
@@ -554,9 +569,7 @@ fun unprime s =
     else raise ERR "unprime" "string doesn't end with a prime"
   end;
 
-fun commafy [] = []
-  | commafy [x] = [x]
-  | commafy (x::rst) = (x::", "::commafy rst);
+val commafy = separate ", "
 
 fun words2 sep string =
     snd (itlist (fn ch => fn (chs,tokl) =>
@@ -571,6 +584,12 @@ fun unprefix pfx s =
     if String.isPrefix pfx s then String.extract(s, size pfx, NONE)
     else raise ERR "unprefix" "1st argument is not a prefix of 2nd argument"
 
+
+fun str_all P s = let 
+  fun recurse n = n < 0 orelse P (String.sub(s,n)) andalso recurse (n - 1)
+in
+  recurse (size s - 1)
+end
 
 (*---------------------------------------------------------------------------*
  * A hash function used for various tasks in the system. It works fairly     *

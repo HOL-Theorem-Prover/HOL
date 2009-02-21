@@ -10,9 +10,9 @@ The extensions are:
 
  1. New commands:
      - blocks with local variables (Local v c)
-     - commands for runtime assertion checking (Assert p)
+     - deallocation (Dispose s)
      - arrays
-     - procedures (Proc p el) where el is a list of parameters
+     - procedures (Proc f) where f : state -> state
 
  2. A small-step semantics proved equivalent to the original big-step
     semantics and a function, STEP, to run the small-step semantics

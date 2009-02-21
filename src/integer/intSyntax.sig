@@ -93,4 +93,12 @@ sig
   val dest_divides   : term -> (term * term)
   val mk_divides     : (term * term) -> term
 
+  val is_min         : term -> bool
+  val dest_min       : term -> (term * term)
+  val mk_min         : (term * term) -> term
+
+  val is_max         : term -> bool
+  val dest_max       : term -> (term * term)
+  val mk_max         : (term * term) -> term
+
 end

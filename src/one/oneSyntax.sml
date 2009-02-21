@@ -15,6 +15,6 @@ fun mk_one_case x =
 
 fun lift_one ty () = one_tm
 
-val _ = EmitML.is_one_hook := Term.eq one_tm;
+val is_one = Term.eq one_tm
 
 end

@@ -6,13 +6,11 @@ sig
   datatype base_token0 =
     BT0_Ident of string
   | BT0_Numeral of (Arbnum.num * char option)
-  | BT0_QIdent of (string * string)
   | BT0_EOI
 
   datatype 'a base_token =
     BT_Ident of string
   | BT_Numeral of (Arbnum.num * char option)
-  | BT_QIdent of (string * string)
   | BT_AQ of 'a
   | BT_EOI
 
@@ -21,7 +19,7 @@ sig
   val allow_octal_input : bool ref
   val preferred_output_base : StringCvt.radix ref
 
-  val parse_numeric_literal : string * locn.locn -> Arbnum.num
+  val parse_numeric_literal : string * locn.locn -> Arbnum.num * char option
 
 end
 

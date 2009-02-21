@@ -452,6 +452,24 @@ val ENCDETALL_STRING = store_thm("ENCDETALL_STRING",
 (* Encode, decode, map (ENCDECMAP) proofs                                    *)
 (*****************************************************************************)
 
+
+local
+
+(* Ugly patch by MJCG: was failing with the RAT_CONG_TAC in translateLib     *)
+val RAT_CONG_TAC = 
+	REPEAT (POP_ASSUM MP_TAC) THEN
+	REPEAT (Q.PAT_ABBREV_TAC 
+	       `x''''' = rep_rat (abs_rat (abs_frac (a''''',b''''')))`) THEN
+	REPEAT (DISCH_TAC) THEN
+	EVERY_ASSUM (fn th => 
+		    (ASSUME_TAC o Rewrite.REWRITE_RULE [ratTheory.RAT] o 
+		    		  AP_TERM ``abs_rat``)
+		    (Rewrite.REWRITE_RULE [markerTheory.Abbrev_def] th) 
+		    handle e => ALL_TAC) THEN
+	RULE_ASSUM_TAC (Rewrite.REWRITE_RULE [ratTheory.RAT_EQ])
+
+in
+
 val ENCDECMAP_INT = store_thm("ENCDECMAP_INT",
     ``(sexp_to_int o int) = I``,
     REWRITE_TAC [FUN_EQ_THM,o_THM,I_THM] THEN
@@ -460,11 +478,14 @@ val ENCDECMAP_INT = store_thm("ENCDECMAP_INT",
     RULE_ASSUM_TAC (REWRITE_RULE [GSYM int_def,GSYM cpx_def,
          GSYM sexpTheory.rat_def,REWRITE_RULE [FUN_EQ_THM,o_THM,
 	 sexp_to_bool_def] ENCDETALL_INT,K_THM]) THEN
-    REWRITE_TAC [rat_nmr_def,rat_dnm_def] THEN RAT_CONG_TAC THEN 
+    REWRITE_TAC [rat_nmr_def,rat_dnm_def] THEN 
+    RAT_CONG_TAC THEN 
     POP_ASSUM MP_TAC THEN RW_TAC int_ss [NMR,DNM] THEN 
     POP_ASSUM SUBST_ALL_TAC THEN
     MATCH_MP_TAC INT_DIV_RMUL THEN
-    PROVE_TAC [INT_POS_NZ,FRAC_DNMPOS]);
+    PROVE_TAC [INT_POS_NZ,FRAC_DNMPOS])
+
+end;
 
 val ENCDECMAP_NAT = store_thm("ENCDECMAP_NAT",
     ``(sexp_to_nat o nat) = I``,

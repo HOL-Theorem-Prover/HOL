@@ -383,7 +383,7 @@ fun is_type_binder G = let val bs = type_binders G in fn s => Lib.mem s bs end
 
 datatype stack_terminal =
   STD_HOL_TOK of string | BOS | EOS | Id  | TypeColon | TypeTok | TypeListTok |
-  EndBinding | VS_cons | ResquanOpTok
+  EndBinding | VS_cons | ResquanOpTok | TypeBracket
 
 fun STi st =
     case st of
@@ -397,6 +397,7 @@ fun STi st =
     | EndBinding => 7
     | VS_cons => 8
     | ResquanOpTok => 9
+    | TypeBracket => 10
 fun ST_compare (p as (st1,st2)) =
     case p of
       (STD_HOL_TOK s1, STD_HOL_TOK s2) => String.compare(s1,s2)
@@ -414,6 +415,7 @@ fun STtoString (G:grammar) x =
   | TypeListTok => "<type list>"
   | EndBinding => #endbinding (specials G) ^ " (end binding)"
   | ResquanOpTok => #res_quanop (specials G)^" (res quan operator)"
+  | TypeBracket => #type_lbracket (specials G)
 
 (* gives the "wrong" lexicographic order, but is more likely to
    resolve differences with one comparison because types/terms with

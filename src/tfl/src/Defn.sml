@@ -1125,7 +1125,8 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
                    ind = ind', 
                    R = R, SV=SV, stem=stem}
         end
- end;
+ end
+ handle e => raise wrap_exn "Defn" "stdrec_defn" e;
 
 (*---------------------------------------------------------------------------
     A general, basic, interface to function definitions. First try to

@@ -1,0 +1,2 @@
+INCLUDES = $(HOLDIR)/examples/machine-code/instruction-set-models/common
+OPTIONS=QUIT_ON_FAILURE

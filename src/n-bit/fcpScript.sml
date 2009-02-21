@@ -213,14 +213,14 @@ val cart_tybij = SIMP_RULE std_ss [] (define_new_type_bijections
 val _ = add_infix_type {Prec = 60, ParseName = SOME "**", Name = "cart",
                         Assoc = HOLgrammars.RIGHT};
 
-val index_def = new_infixl_definition("index",
-  `$index x i = dest_cart x (finite_index i)`,500);
+val fcp_index_def = new_infixl_definition("fcp_index",
+  `$fcp_index x i = dest_cart x (finite_index i)`,500);
 
 val _ = set_fixity "%%" (Infixl 500);
-val _ = overload_on ("%%", Term`$index`);
+val _ = overload_on ("%%", Term`$fcp_index`);
 
 val _ = set_fixity "'" (Infixl 2000);
-val _ = overload_on ("'", Term`$index`);
+val _ = overload_on ("'", Term`$fcp_index`);
 
 (* ----------------------------------------------------------------------
     Establish arrays as an algebraic datatype, with constructor
@@ -292,8 +292,8 @@ end
 val CART_EQ = store_thm("CART_EQ",
   `!(x:'a ** 'b) y.
     (x = y) = (!i. i < dimindex(:'b) ==> (x ' i = y ' i))`,
-  REPEAT GEN_TAC THEN SIMP_TAC std_ss [index_def, GSYM FORALL_FINITE_INDEX] THEN
-  REWRITE_TAC[GSYM FUN_EQ_THM, ETA_AX] THEN PROVE_TAC[cart_tybij]);
+  REPEAT GEN_TAC THEN SIMP_TAC std_ss [fcp_index_def, GSYM FORALL_FINITE_INDEX]
+    THEN REWRITE_TAC[GSYM FUN_EQ_THM, ETA_AX] THEN PROVE_TAC[cart_tybij]);
 
 val FCP = new_binder_definition("FCP",
   ``($FCP) = \g.
@@ -305,7 +305,7 @@ val FCP_BETA = store_thm("FCP_BETA",
   SIMP_TAC std_ss [FCP] THEN CONV_TAC SELECT_CONV THEN
   EXISTS_TAC `mk_cart(\k. g(@i. i < dimindex(:'b) /\
                                 (finite_index i = k))):'a ** 'b` THEN
-  SIMP_TAC std_ss [index_def, cart_tybij] THEN
+  SIMP_TAC std_ss [fcp_index_def, cart_tybij] THEN
   REPEAT STRIP_TAC THEN AP_TERM_TAC THEN MATCH_MP_TAC SELECT_UNIQUE THEN
   GEN_TAC THEN REWRITE_TAC[] THEN
   PROVE_TAC[FINITE_INDEX_INJ, DIMINDEX_FINITE_IMAGE]);
@@ -1006,13 +1006,7 @@ val READ_L2V = store_thm(
   `i < dimindex (:'b) ==> ((L2V a:'a ** 'b) ' i = EL i a)`,
   RW_TAC arith_ss [L2V_def,FCP_BETA]);
 
-(* ------------------------------------------------------------------------ *)
-
-val FCPi_def = Define `FCPi (f, (:'b)) = ($FCP f):'a ** 'b`;
-
-val mk_fcp_def = Define `mk_fcp = FCPi`;
-
-val index_comp = store_thm("index_comp",
+val index_comp = Q.store_thm("index_comp",
   `!f n. (($FCP f):'a ** 'b) ' n =
       if n < dimindex (:'b) then
         f n
@@ -1021,40 +1015,9 @@ val index_comp = store_thm("index_comp",
              (($FCP f):'a ** 'b) n`,
   SRW_TAC [FCP_ss] [combinTheory.FAIL_THM]);
 
-val fcp_subst_comp = store_thm("fcp_subst_comp",
+val fcp_subst_comp = Q.store_thm("fcp_subst_comp",
   `!a b f. (x :+ y) ($FCP f):'a ** 'b =
          ($FCP (\c. if x = c then y else f c)):'a ** 'b`,
   SRW_TAC [FCP_ss] [FCP_UPDATE_def]);
-
-val index_comp = REWRITE_RULE [GSYM FCPi_def] index_comp;
-val fcp_subst_comp = REWRITE_RULE [GSYM FCPi_def] fcp_subst_comp;
-
-val _ = new_constant("ITSELF", ``:num -> 'a itself``);
-
-val _ = new_constant("SUMi", ``:'a itself # 'b itself -> 'c itself``);
-val _ = new_constant("MULi", ``:'a itself # 'b itself -> 'c itself``);
-val _ = new_constant("EXPi", ``:'a itself # 'b itself -> 'c itself``);
-
-val SUMi  = new_axiom("SUMi", ``SUMi (ITSELF a, ITSELF b) = ITSELF (a + b)``);
-val MULi  = new_axiom("MULi", ``MULi (ITSELF a, ITSELF b) = ITSELF (a * b)``);
-val EXPi  = new_axiom("EXPi", ``EXPi (ITSELF a, ITSELF b) = ITSELF (a ** b)``);
-
-val dimindexi = new_axiom("dimindexi", ``dimindex (ITSELF a) = a``);
-
-val _ = type_pp.pp_array_types := false;
-
-val _ =
- let open EmitML
-  in try emitML (!Globals.emitMLDir)
-   ("fcp",
-    [OPEN ["num"],
-     MLSIG "type num = numML.num",
-     DATATYPE(`itself = ITSELF of num`),
-     ABSDATATYPE ([("'a",typ,0),("'b",typ,0)], `cart = FCPi of (num -> 'a) # 'b itself`),
-     EQDATATYPE ([("'a",typ,0)],`bit0 = BIT0A of 'a | BIT0B of 'a`),
-     EQDATATYPE ([("'a",typ,0)],`bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`)]
-  @ map DEFN [SUMi, MULi, EXPi, dimindexi,
-      mk_fcp_def, index_comp, fcp_subst_comp])
-end;
 
 val _ = export_theory();

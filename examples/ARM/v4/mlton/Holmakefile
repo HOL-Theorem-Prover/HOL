@@ -1,7 +1,7 @@
 EXTRA_CLEANS = run paths mosrun.exe
 OPTIONS = NO_OVERLAY
-THEORY=$(HOLDIR)/src/theoryML
-INCLUDES=$(HOLDIR)/src/theoryML
+THEORY=$(HOLDIR)/src/emit/theories/ML
+INCLUDES=$(HOLDIR)/src/emit/theories/ML
 
 all: run mosrun.exe
 

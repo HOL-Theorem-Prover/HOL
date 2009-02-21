@@ -135,8 +135,11 @@ sig
 
   (* Lists as sets *)
   val subset : ''a list -> ''a list -> bool
+  val op_subset : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
   val distinct : ''a list -> bool
+  val op_distinct : ('a -> 'a -> bool) -> 'a list -> bool
   val union2 : ''a list * ''b list -> ''a list * ''b list -> ''a list * ''b list
+  val op_union2 : ('a -> 'a -> bool) -> 'a list * ''b list -> 'a list * ''b list -> 'a list * ''b list
 
   (* Permutations and sorting (order functions should always be <=) *)
   val rotations : 'a list -> ('a * 'a list) list
@@ -195,8 +198,8 @@ sig
   val subst_map : ('a -> 'c) * ('b -> 'd) -> ('a, 'b) subst -> ('c, 'd) subst
   val redex_map : ('a -> 'c) -> ('a, 'b) subst -> ('c, 'b) subst
   val residue_map : ('b -> 'c) -> ('a, 'b) subst -> ('a, 'c) subst
-  val is_renaming_subst : ''b list -> ('a, ''b) subst -> bool
-  val invert_renaming_subst : ''b list -> ('a, ''b) subst -> (''b, 'a) subst
+  val is_renaming_subst : ('b -> 'b -> bool) -> 'b list -> ('a, 'b) subst -> bool
+  val invert_renaming_subst : ('b -> 'b -> bool) -> 'b list -> ('a, 'b) subst -> ('b, 'a) subst
 
   (* HOL *)
 

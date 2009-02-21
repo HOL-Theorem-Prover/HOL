@@ -17,6 +17,11 @@
 \newcommand{\bs}{\texttt{\symbol{92}}}
 \newcommand{\lb}{\texttt{\char'173}}
 \newcommand{\rb}{\texttt{\char'175}}
+% double back quotes ``
+\newcommand{\dq}{\texttt{\char'140\char'140}}
+%These macros were included by slind:
+
+\newcommand{\holquote}[1]{\dq#1\dq}
 
 \def\HOL{{\small HOL}}
 \def\holn{\HOL}  % i.e. hol n(inety-eight), no digits in
@@ -250,9 +255,6 @@
 % Quotations
 % ---------------------------------------------------------------------
 
-%These macros were included by slind:
-
-\newcommand{\holquote}[1]{\texttt{``}#1\texttt{``}}
 
 %These macros were included by ap; they are used in Chapters 9 and 10
 %of the HOL DESCRIPTION

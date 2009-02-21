@@ -28,6 +28,6 @@ Printing and parsing in octal is controlled by the reference {base_tokens.allow_
 
 \SEEALSO
 
-wordsLib.output_words_as, wordsLib.output_words_as_dec, wordsLib.output_words_as_bin, wordsLib.output_words_as_hex
+wordsLib.output_words_as, wordsLib.remove_word_printer, wordsLib.output_words_as_dec, wordsLib.output_words_as_bin, wordsLib.output_words_as_hex
 
 \ENDDOC

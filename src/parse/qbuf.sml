@@ -73,7 +73,6 @@ struct
 
   fun lift_tok (BT0_Ident s) = BT_Ident s
     | lift_tok (BT0_Numeral p) = BT_Numeral p
-    | lift_tok (BT0_QIdent p) = BT_QIdent p
     | lift_tok BT0_EOI = BT_EOI
 
 

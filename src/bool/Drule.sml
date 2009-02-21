@@ -1295,44 +1295,37 @@ fun IMP_ELIM th =
 fun DISJ_CASES_UNION dth ath bth =
     DISJ_CASES dth (DISJ1 ath (concl bth)) (DISJ2 (concl ath) bth);
 
-
-(*---------------------------------------------------------------------------
- *
- *       |- A1 \/ ... \/ An     [A1 |- M, ..., An |- M]
- *     ---------------------------------------------------
- *                           |- M
- *
- * The order of the theorems in the list doesn't matter: an operation akin
- * to sorting lines them up with the disjuncts in the theorem.
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(*                                                                           *)
+(*       |- A1 \/ ... \/ An     [H1,A1 |- M; ...; Hn,An |- M]                *)
+(*     ---------------------------------------------------------             *)
+(*                   H1 u ... u Hn |- M                                      *)
+(*                                                                           *)
+(* The order of the theorems in the list doesn't matter: an operation akin   *)
+(* to sorting lines them up with the disjuncts in the theorem.               *)
+(*---------------------------------------------------------------------------*)
 
 local 
- fun organize eq =    (* a bit slow - analogous to insertion sort *)
-  let fun extract a alist =
-       let fun ex(_,[]) = raise ERR "DISJ_CASESL.organize" "not a permutation.1"
-             | ex(left,h::t) = if eq h a then (h,rev left@t) else ex(h::left,t)
-       in ex ([],alist)
-       end
-       fun place [] [] = []
-         | place (a::rst) alist =
-             let val (item,next) = extract a alist
-             in item::place rst next
-             end
-         | place _ _ = raise ERR "DISJ_CASESL.organize" "not a permutation.2"
-  in place
-  end
+ fun ishyp tm th = HOLset.member(hypset th,tm)
+ fun organize (tm::rst) (alist as (_::_)) =
+      let val (th,next) = Lib.pluck (ishyp tm) alist
+      in th::organize rst next
+      end
+   | organize [] [] = []
+   | organize other wise = raise ERR "DISJ_CASESL.organize" "length difference"
 in
 fun DISJ_CASESL disjth thl =
- let val (_,c) = dest_thm disjth
-     fun eq th atm = HOLset.member(hypset th,  atm)
-     val tml = strip_disj c
-     fun DL th [] = raise ERR"DISJ_CASESL" "no cases"
+ let val cases = strip_disj(concl disjth)
+     val thl' = organize cases thl
+     fun DL th [] = raise ERR "DISJ_CASESL" "no cases"
        | DL th [th1] = PROVE_HYP th th1
        | DL th [th1,th2] = DISJ_CASES th th1 th2
        | DL th (th1::rst) = DISJ_CASES th th1
                                (DL(ASSUME(snd(dest_disj(concl th)))) rst)
- in DL disjth (organize eq tml thl)
-end end;
+ in DL disjth thl'
+ end 
+ handle e => raise wrap_exn "Drule" "DISJ_CASESL" e
+end;
 
 (*---------------------------------------------------------------------------
  * Forward chain using an inference rule on top-level sub-parts of a theorem

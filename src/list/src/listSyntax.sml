@@ -198,12 +198,4 @@ fun lift_list ty =
   in lift
   end
 
-(*---------------------------------------------------------------------------*)
-(* For support of ML execution                                               *)
-(*---------------------------------------------------------------------------*)
-
-val _ = EmitML.dest_cons_hook := dest_cons
-val _ = EmitML.dest_list_hook := (fst o dest_list)
-val _ = EmitML.is_list_hook := is_list
-
 end

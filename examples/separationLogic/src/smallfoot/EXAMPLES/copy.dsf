@@ -1,0 +1,25 @@
+list_copy(z;c) [data_list(c,data)] {
+  local x,y,w,d;
+  if (c==NULL) {z=NULL;} 
+  else {
+    z=new();
+    z->tl=NULL;
+    x = c->dta; 
+    z->dta = x;
+    w=z; 
+    y=c->tl; 
+
+    while (y!=NULL) [data_lseg(c,``_data1++[_cdate]``,y) * data_list(y,``_data2``) * 
+                     data_lseg(z,_data1,w) * w |-> tl:0,dta:_cdate * 
+	             ``data:num list = _data1 ++ _cdate::_data2``] {
+      d=new();
+      d->tl=NULL;
+      x=y->dta;
+      d->dta=x;
+      w->tl=d; 
+      w=d; 
+      y=y->tl;
+    }
+  }
+} [data_list(c,data) * data_list(z,data)]
+

@@ -156,39 +156,51 @@ val _ = Feedback.register_btrace ("pp_dollar_escapes", dollar_escape);
    fast on its second argument.
 *)
 
-fun is_symbolic_char c = Char.contains "#?+*/\\=<>&%@!,:;_|~-" c orelse
-                         Char.ord c > 127
-
 val avoid_symbol_merges = ref true
 val _ = register_btrace("pp_avoids_symbol_merges", avoid_symbol_merges)
 
-(* true if a space should appear between the characters last and next *)
-fun mk_break (last, next) =
-    !avoid_symbol_merges andalso
-    (is_symbolic_char last andalso is_symbolic_char next orelse
-     last = #"(" andalso next = #"*" orelse
-     last = #"*" andalso next = #")" orelse
-     Char.isAlphaNum last andalso Char.isAlphaNum next)
-
-fun avoid_symbolmerge (add_string, add_break) = let
-  val last_char = ref #" "
-  fun new_addstring s = let
-    val sz = size s
-  in
-    if sz = 0 then ()
-    else let
-        val nextc = String.sub(s,0)
-        val newlast = String.sub(s, sz - 1)
-      in
-        if mk_break(!last_char, nextc) then add_string " " else ();
-        add_string s;
-        last_char := newlast
-      end
-  end
-  fun new_add_break (p as (n,m)) = (if n > 0 then last_char := #" " else ();
-                                    add_break p)
+fun creates_comment(s1, s2) = let
+  val last = String.sub(s1, size s1 - 1)
+  val first = String.sub(s2, 0)
 in
-  (new_addstring, new_add_break)
+  last = #"(" andalso first = #"*" orelse
+  last = #"*" andalso first = #")"
+end
+
+
+fun avoid_symbolmerge G = let
+  open term_grammar
+  val keywords = #endbinding (specials G) :: grammar_tokens G @
+                 known_constants G
+  val split = term_tokens.user_split_ident keywords
+  fun bad_merge (s1, s2) = let
+    val combined = s1 ^ s2
+    val (x,y) = split combined 
+  in
+    y <> s2
+  end handle base_tokens.LEX_ERR _ => true
+in
+  fn (add_string, add_break) => let
+       val last_string = ref " "
+       fun new_addstring s = let
+         val sz = size s
+       in
+         if sz = 0 then ()
+         else (if !last_string = " " then add_string s
+               else if not (!avoid_symbol_merges) then add_string s
+               else if creates_comment (!last_string, s) orelse
+                       bad_merge (!last_string, s)
+               then
+                 (add_string " "; add_string s)
+               else
+                 add_string s;
+               last_string := (if str_all (equal #" ") s then " " else s))
+       end
+       fun new_add_break (p as (n,m)) =
+           (if n > 0 then last_string := " " else (); add_break p)
+     in
+       (new_addstring, new_add_break)
+     end
 end
 
 
@@ -608,19 +620,20 @@ fun pp_term (G : grammar) TyG = let
     strip n [] tm
   end
 
+  datatype comb_posn = RatorCP | RandCP | NoCP
 
-  fun pr_term binderp showtypes showtypes_v vars_seen pps ppfns ratorp tm
+  fun pr_term binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
               pgrav lgrav rgrav depth = let
-    fun pr_term1 binderp showtypes showtypes_v vars_seen pps ppfns ratorp tm
+    fun pr_term1 binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
               pgrav lgrav rgrav depth
-      = pr_term binderp showtypes showtypes_v vars_seen pps ppfns ratorp tm
+      = pr_term binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
               pgrav lgrav rgrav depth
               handle e => Raise (wrap_exn "term_pp.pr_term" "<entrance>" e) (* debugging *)
     val pr_term = pr_term1
     val _ =
         if printers_exist then let
             fun sysprint (pg,lg,rg) depth tm =
-                pr_term false showtypes showtypes_v vars_seen pps ppfns false
+                pr_term false showtypes showtypes_v vars_seen pps ppfns NoCP
                         tm pg lg rg depth
             val candidates = Net.match tm uprinters
             fun test (pat,_,_) = can (kind_match_term pat) tm
@@ -642,7 +655,7 @@ fun pp_term (G : grammar) TyG = let
     val {fvars_seen, bvars_seen} = vars_seen
     val full_pr_term = pr_term
     val pr_term =
-        pr_term binderp showtypes showtypes_v vars_seen pps ppfns false
+        pr_term binderp showtypes showtypes_v vars_seen pps ppfns NoCP
     val {add_string, add_break, begin_block, end_block,...} = ppfns
     fun block_by_style (addparens, rr, pgrav, fname, fprec) = let
       val needed =
@@ -697,8 +710,8 @@ fun pp_term (G : grammar) TyG = let
     fun pr_vstruct bv = let
       val pr_t =
         if showtypes then
-          full_pr_term true true showtypes_v vars_seen pps ppfns false
-        else full_pr_term true false showtypes_v vars_seen pps ppfns false
+          full_pr_term true true showtypes_v vars_seen pps ppfns NoCP
+        else full_pr_term true false showtypes_v vars_seen pps ppfns NoCP
     in
       case bv of
         Simple tm => let
@@ -1184,7 +1197,7 @@ fun pp_term (G : grammar) TyG = let
 
       val (f, args) = strip_comb tm
       val comb_show_type = let
-        val _ = (showtypes andalso not ratorp) orelse raise PP_ERR "" ""
+        val _ = (showtypes andalso combpos <> RatorCP) orelse raise PP_ERR "" ""
 
         (* find out how the printer will map this constant into a string,
            and then see how this string maps back into constants.  The
@@ -1228,10 +1241,11 @@ fun pp_term (G : grammar) TyG = let
     in
       pbegin (addparens orelse comb_show_type);
       begin_block INCONSISTENT 2;
-      full_pr_term binderp showtypes showtypes_v vars_seen pps ppfns true t1
+      full_pr_term binderp showtypes showtypes_v vars_seen pps ppfns RatorCP t1
                    prec lprec prec (decdepth depth);
       add_break (1, 0);
-      pr_term t2 prec prec rprec (decdepth depth);
+      full_pr_term binderp showtypes showtypes_v vars_seen pps ppfns RandCP t2
+                   prec prec rprec (decdepth depth);
       if comb_show_type then
         (add_string (" "^type_intro); add_break (0,0);
          type_pp.pp_type_with_depth TyG pps (decdepth depth) (type_of tm))
@@ -1349,8 +1363,10 @@ fun pp_term (G : grammar) TyG = let
             case rgrav of
               Prec(n, _) => n > fprec
             | _ => false
-          val addparens = parens_needed_outright orelse
-            pneeded_by_style(rr, pgrav, fname, fprec)
+          val addparens =
+              parens_needed_outright orelse
+              pneeded_by_style(rr, pgrav, fname, fprec) orelse
+              combpos = RandCP
           val rprec = if addparens then Top else rgrav
           val pp_elements = block_up_els [] (elements @ [LastTM])
           val real_args = args @ [Rand]
@@ -1413,6 +1429,7 @@ fun pp_term (G : grammar) TyG = let
             case rgrav of
               Prec(n, _) => n > fprec
             | _ => false
+          val addparens = addparens orelse combpos = RandCP
         in
           pbegin addparens; begin_block INCONSISTENT 2;
           add_string tok;
@@ -1503,10 +1520,10 @@ fun pp_term (G : grammar) TyG = let
     in
       (* put a block around the "let ... in" phrase *)
       begin_block CONSISTENT 0;
-      add_string "let ";
+      add_string "let"; add_string " ";
       (* put a block around the variable bindings *)
       begin_block INCONSISTENT 0;
-      pr_list pr_leteq (fn () => add_string " and")
+      pr_list pr_leteq (fn () => (add_string " "; add_string "and"))
               (fn () => spacep true) name_value_pairs;
       end_block(); (* end of variable binding block *)
       spacep true; add_string "in";
@@ -1677,7 +1694,7 @@ fun pp_term (G : grammar) TyG = let
             (true, false, true) => add_prim_name()
           | (true, true, true) => with_type add_prim_name
           | (true, true, false) => with_type normal_const
-          | _ => if !show_types andalso not ratorp andalso
+          | _ => if !show_types andalso combpos <> RatorCP andalso
                     const_is_polymorphic tm
                  then
                    with_type normal_const
@@ -1764,7 +1781,7 @@ fun pp_term (G : grammar) TyG = let
           (* case expressions *)
           val () =
               if is_const f then
-                case Overload.overloading_of_term overload_info f of
+                case grammar_name G f of
                   SOME "case" =>
                   (let
                      val newt = convert_case tm
@@ -1903,15 +1920,18 @@ fun pp_term (G : grammar) TyG = let
               end
           end (* pr_atomf *)
           fun maybe_pr_atomf () =
-              case Overload.oi_strip_comb overload_info tm of
-                SOME (p as (f,args)) => let
-                in
-                  case args of
-                    [] => pr_term f pgrav lgrav rgrav depth
-                  | _ => pr_atomf p
-                end
-              | NONE => if is_var f then pr_atomf (f, args @ [Rand])
-                        else pr_comb tm Rator Rand
+              if grammar_name G f = SOME "case" then
+                pr_atomf (strip_comb tm)
+              else
+                case Overload.oi_strip_comb overload_info tm of
+                  SOME (p as (f,args)) => let
+                  in
+                    case args of
+                      [] => pr_term f pgrav lgrav rgrav depth
+                    | _ => pr_atomf p
+                  end
+                | NONE => if is_var f then pr_atomf (f, args @ [Rand])
+                          else pr_comb tm Rator Rand
         in
           if showtypes_v then
             if const_is_ambiguous f then
@@ -1927,11 +1947,12 @@ fun pp_term (G : grammar) TyG = let
   (* the end of pr_term *)
 
   fun start_names() = {fvars_seen = ref [], bvars_seen = ref []}
+  val avoid_merge = avoid_symbolmerge G
 in
   fn pps => fn t =>
     let
       val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
-      val (add_string, add_break) = avoid_symbolmerge (add_string, add_break)
+      val (add_string, add_break) = avoid_merge (add_string, add_break)
       val ppfns = {add_string = add_string, add_break = add_break,
                    begin_block = begin_block, end_block = end_block}
     in
@@ -1940,7 +1961,7 @@ in
                (!Globals.show_types orelse !Globals.show_types_verbosely)
                (!Globals.show_types_verbosely)
                (start_names())
-               pps ppfns false t RealTop RealTop RealTop
+               pps ppfns NoCP t RealTop RealTop RealTop
                (!Globals.max_print_depth);
        Portable.end_block pps
     end

@@ -36,8 +36,6 @@ sig
   val mk_negated     : term -> term
   val dest_negated   : term -> term
 
-
-
   val is_plus        : term -> bool
   val mk_plus        : (term * term) -> term
   val dest_plus      : term -> (term * term)
@@ -58,7 +56,6 @@ sig
   val dest_div       : term -> (term * term)
   val mk_div         : (term * term) -> term
 
-
   val is_absval      : term -> bool
   val mk_absval      : term -> term
   val dest_absval    : term -> term
@@ -78,5 +75,13 @@ sig
   val is_geq         : term -> bool
   val dest_geq       : term -> (term * term)
   val mk_geq         : (term * term) -> term
+
+  val is_min         : term -> bool
+  val dest_min       : term -> (term * term)
+  val mk_min         : (term * term) -> term
+
+  val is_max         : term -> bool
+  val dest_max       : term -> (term * term)
+  val mk_max         : (term * term) -> term
 
 end

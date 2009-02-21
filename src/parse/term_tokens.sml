@@ -14,10 +14,47 @@ struct
 
 val non_aggregating_chars =
     foldl (fn (c, cs) => CharSet.add(cs,c)) CharSet.empty
-          (explode "()[]{}~.,;")
+          (explode "()[]{}~.,;-")
 fun nonagg_c c = CharSet.member(non_aggregating_chars, c)
 
-fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1
+fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1 orelse
+                          s = UnicodeChars.neg
+
+fun term_symbolp s = UnicodeChars.isSymbolic s andalso
+                     not (s_has_nonagg_char s) andalso
+                     s <> "\"" andalso s <> "'" andalso s <> "_"
+fun term_identp s = UnicodeChars.isMLIdent s andalso s <> UnicodeChars.lambda
+
+fun ishexdigit s = let
+  val c = Char.toLower (String.sub(s,0))
+in
+  #"a" <= c andalso c <= #"f"
+end
+fun numberp s = Char.isDigit (String.sub(s,0)) orelse s = "_" orelse
+                s = "x" orelse
+                ishexdigit s
+
+fun categorise c =
+    if s_has_nonagg_char c orelse c = UnicodeChars.neg then s_has_nonagg_char
+    else if term_identp c then term_identp
+    else if Char.isDigit (String.sub(c,0)) then numberp
+    else term_symbolp
+
+
+
+fun mixed s = let
+  open UnicodeChars UTF8
+  val (c,s) = case getChar s of
+            NONE => raise Fail "Can't use emptystring as a grammar token"
+          | SOME ((c,_), s) => (c,s)
+  val test = categorise c
+  fun allok s =
+      case getChar s of
+        NONE => true
+      | SOME ((s, i), rest) => test s andalso allok rest
+in
+  not (allok s)
+end
 
 (* lexer guarantees:
 
@@ -36,10 +73,6 @@ fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1
      token 'quoting' as well as being the separator for qualified identifiers.
 *)
 
-fun flip_cmpresult LESS = GREATER
-  | flip_cmpresult GREATER = LESS
-  | flip_cmpresult EQUAL = EQUAL
-
 fun str_all P s = let
   fun recurse ss =
       case Substring.getc ss of
@@ -49,34 +82,54 @@ in
   recurse (Substring.all s)
 end
 
+fun MkID (s, loc) = let
+  val c = String.sub(s,0)
+in
+  if Char.isDigit c then
+    Numeral (base_tokens.parse_numeric_literal (s, loc))
+  else if c = #"'" then
+    if str_all (fn c => c = #"'") s then Ident s
+    else raise LEX_ERR ("Term idents can't begin with prime characters",loc)
+  else Ident s
+end
+
 open qbuf
-fun split_ident nonagg_specs s locn qb = let
+
+fun split_ident mixedset s locn qb = let
+  val {advance,replace_current} = qb
   val s0 = String.sub(s, 0)
   val is_char = s0 = #"#" andalso size s > 1 andalso String.sub(s,1) = #"\""
   fun prefix2 c0 c1 = s0 = c0 andalso size s > 1 andalso String.sub(s,1) = c1
   fun prefix4 c0 c1 = s0 = c0 andalso size s > 3 andalso
                         String.sub(s,1) = #"\u00e2" andalso String.sub(s,2) = #"\u0088"
                         andalso String.sub(s,3) = c1
+  val ID = Ident
 in
-  if Char.isAlpha s0 orelse s0 = #"\"" orelse s0 = #"_" orelse is_char then
-    (advance qb; (s,locn))
-  else if s = "#" then let
-      val _ = advance qb
+  if is_char orelse s0 = #"\"" then (advance(); (ID s, locn))
+  else if s0 = #"$" then let
+      val (tok,locn') = split_ident mixedset
+                                   (String.extract(s, 1, NONE))
+                                   (locn.move_start 1 locn) qb
     in
-      case current qb of
-        (BT_Ident s2,locn2) => if String.sub(s2,0) = #"\"" then
-                                 (advance qb;
-                                  ("#" ^ s2, locn.between locn locn2))
-                               else (s,locn)
-      | _ => (s,locn)
+      case tok of
+        Ident s' => (ID ("$" ^ s'), locn.move_start ~1 locn')
+      | _ => raise LEX_ERR ("Can't use $-quoting of this sort of token", locn')
     end
-  else if s0 = #"'" then
-    if str_all (fn c => c = #"'") s then (advance qb; (s,locn))
-    else raise LEX_ERR ("Term idents can't begin with prime characters",locn)
-  else if s0 = #"$" then
-      let val (s',locn') = split_ident nonagg_specs (String.extract(s, 1, NONE))
-                                       (locn.move_start 1 locn) qb in
-      ("$" ^ s', locn.move_start ~1 locn') end
+  (* As exceptions to non-aggregating symbolic characters, we recognize
+     "[:", and ":]" specially for HOL-Omega. *)
+  else if prefix2 #"[" #":" orelse prefix2 #":" #"]" then
+            if size s > 2 then
+              let val (locn',locn'') = locn.split_at 2 locn in
+              (replace_current (BT_Ident (String.extract(s, 2, NONE)),locn'');
+               (ID (String.extract (s, 0, SOME 2)),locn')) end
+            else (advance(); (ID s,locn))
+  (* As an exception, don't aggregate ":!" since this probably begins a universal type *)
+  else if prefix2 #":" #"!" orelse prefix4 #":" #"\u0080" then
+              let val (locn',locn'') = locn.split_at 1 locn in
+              (replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'');
+               (ID (String.extract (s, 0, SOME 1)),locn')) end
+
+(* Old version:
   (* As exceptions to non-aggregating symbolic characters, we recognize
      "[:", and ":]" specially for HOL-Omega. *)
   else if prefix2 #"[" #":" orelse prefix2 #":" #"]" then
@@ -90,6 +143,13 @@ in
               let val (locn',locn'') = locn.split_at 1 locn in
               (replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'') qb;
                (String.extract (s, 0, SOME 1),locn')) end
+  else if s0 = #"'" then
+    if str_all (fn c => c = #"'") s then (advance qb; (s,locn))
+    else raise LEX_ERR ("Term idents can't begin with prime characters",locn)
+  else if s0 = #"$" then
+      let val (s',locn') = split_ident nonagg_specs (String.extract(s, 1, NONE))
+                                       (locn.move_start 1 locn) qb in
+      ("$" ^ s', locn.move_start ~1 locn') end
   else (* have a symbolic identifier *)
     let
       val possible_nonaggs =
@@ -124,12 +184,67 @@ in
                 (best,locn')) end
         end
     end
+End of Old version. *)
+
+  else if not (mixed s) andalso not (s_has_nonagg_char s) then
+    (advance (); (MkID (s, locn), locn))
+  else
+    case UTF8Set.longest_pfx_member(mixedset, s) of
+      NONE => (* identifier blob doesn't occur in list of known keywords *) let
+      in
+        case UTF8.getChar s of
+          NONE => raise LEX_ERR ("Token is empty string??", locn)
+        | SOME ((c,i),rest) => let
+            open UnicodeChars
+            fun grab test acc s =
+                case UTF8.getChar s of
+                  NONE => (String.concat (List.rev acc), "")
+                | SOME((s,i),rest) => let
+                  in
+                    if test s then grab test (s::acc) rest
+                    else (String.concat (List.rev acc), s^rest)
+                  end
+            val (tok,sfx) =
+                if s_has_nonagg_char c then (ID c, rest)
+                else let
+                    val (pfx0, sfx0) = grab (categorise c) [c] rest
+                  in
+                    if size sfx0 <> 0 andalso String.sub(sfx0,0) = #"$" then
+                      if size sfx0 > 1 then let
+                          val sfx0_1 = String.extract(sfx0, 1, NONE)
+                          val ((c0, _), rest) = valOf (UTF8.getChar sfx0_1)
+                          val (qid2, sfx) = grab (categorise c0) [c0] rest
+                        in
+                          (QIdent(pfx0,qid2), sfx)
+                        end
+                      else
+                        raise LEX_ERR ("Malformed qualified ident", locn)
+                    else (MkID (pfx0,locn), sfx0)
+                  end
+            val (locn1, locn2) = locn.split_at (size s - size sfx) locn
+          in
+            if size sfx <> 0 then
+              (replace_current (BT_Ident sfx,locn2); (tok, locn1))
+            else
+              (advance (); (tok, locn))
+          end
+      end
+    | SOME {pfx,rest} => let
+        val (locn1,locn2) = locn.split_at (size pfx) locn
+      in
+        if size rest = 0 then (advance(); (ID s, locn))
+        else
+          (replace_current (BT_Ident rest,locn2); (ID pfx, locn1))
+      end
 end
 
 
+
 fun lex keywords0 = let
-  val non_agg_specials = List.filter s_has_nonagg_char keywords0
-  val split = split_ident non_agg_specials
+  fun test s = mixed s orelse s_has_nonagg_char s
+  val mixed = List.filter test keywords0
+  val mixedset = UTF8Set.addList(UTF8Set.empty, mixed)
+  val split = split_ident mixedset
 in
 fn qb => let
    val (bt,locn) = current qb
@@ -137,11 +252,35 @@ fn qb => let
      case bt of
          BT_Numeral p   => (advance qb; SOME (Numeral p,locn))
        | BT_AQ x        => (advance qb; SOME (Antiquote x,locn))
-       | BT_QIdent p    => (advance qb; SOME (QIdent p,locn))
        | BT_EOI         => NONE
-       | BT_Ident s     => let val (s',locn') = split s locn qb in
-                           SOME (Ident s',locn') end
+       | BT_Ident s     => let
+           val qbfns = {advance = (fn () => advance qb),
+                        replace_current = (fn p => replace_current p qb)}
+           val (tok,locn') = split s locn qbfns
+         in
+           SOME (tok,locn')
+         end
    end
+end
+
+fun user_split_ident keywords = let
+  fun test s = mixed s orelse s_has_nonagg_char s
+  val mixed = List.filter test keywords
+  val mixedset = UTF8Set.addList (UTF8Set.empty, mixed)
+in
+  fn s => let
+       val pushback = ref ""
+       fun a () = ()
+       fun rc (btid, _) =
+           case btid of
+             BT_Ident s => (pushback := s)
+           | _ => () (* shouldn't happen *)
+       val _ = split_ident mixedset s locn.Loc_None
+                           {advance=a, replace_current=rc}
+     in
+       (String.substring(s,0,size s - size (!pushback)),
+        !pushback)
+     end
 end
 
 fun token_string (Ident s) = s

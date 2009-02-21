@@ -56,53 +56,12 @@ fun parse_kind kdfns allow_unknown_prefixes G = let
     recurse [i1]
   end
 
-(*
-  fun is_numeric s = let
-    val lim = size s
-    fun recurse n =
-        n >= lim orelse (Char.isDigit (String.sub(s,n)) andalso
-                         recurse (n + 1))
-  in
-    recurse 0
-  end
-
-  fun generate_fcpbit ((s,locn), args) = let
-    val _ = null args orelse raise ERRloc locn "Number kinds take no arguments"
-    val n = Arbnum.fromString s
-    val _ = n <> Arbnum.zero orelse
-            raise ERRloc locn "Zero is not a valid number kind"
-    fun recurse acc m =
-        if m = Arbnum.one then acc
-        else let
-            val (q,r) = Arbnum.divmod(m,Arbnum.two)
-          in
-            recurse ((r = Arbnum.one) :: acc) q
-          end
-    fun bit b arg = qkindop {Thy = "fcp", Kindop = if b then "bit1" else "bit0",
-                           Locn = locn, Args = [arg]}
-    fun build acc bits =
-        case bits of
-          [] => acc
-        | b :: rest => build (bit b acc) rest
-    val one = qkindop {Thy = "one", Kindop = "one", Locn = locn, Args = []}
-  in
-    build one (recurse [] n)
-  end
-*)
-
   fun apply_kindop (t,locn) args =
     case t of
       KindIdent s => let
       in
-        (* if is_numeric s then generate_fcpbit((s,locn), args)
-        else
-          case Binarymap.peek(abbrevs, s) of
-            NONE => pKind((s,locn),args)
-          | SOME st => structure_to_value (s,locn) args st
-        *)
         pKind((s,locn),args)
       end
-    | QKindIdent(thy,ty) => qkindop{Thy=thy,Kindop=ty,Locn=locn,Args=args}
     | _ => raise Fail "parse_kind.apply_kindop: can't happen"
 
   fun n_appls (ops, t) =
@@ -129,7 +88,6 @@ fun parse_kind kdfns allow_unknown_prefixes G = let
     | KindSymbol s => if allow_unknown_prefixes orelse Lib.mem s slist then
                        (adv(); (t,locn))
                      else raise InternalFailure locn
-    | QKindIdent _ => (adv(); (t,locn))
     | _ => raise InternalFailure locn
   end
 
@@ -176,7 +134,7 @@ fun parse_kind kdfns allow_unknown_prefixes G = let
   fun parse_term current strm =
       case current of
         [] => parse_atom strm 
-      | (x::xs) => parse_rule x xs strm
+      | (r::rs) => parse_rule r rs strm
   and parse_rule (r as (level, rule)) rs strm = let
     val next_level = parse_term rs
     val same_level = parse_rule r rs

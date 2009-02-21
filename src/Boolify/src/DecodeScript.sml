@@ -488,9 +488,9 @@ val decode_sum = store_thm
     >> (RW_TAC std_ss [lift_sum_def]
         ++ PROVE_TAC [wf_decoder_def, wf_decode_sum])
     ++ RW_TAC std_ss [lift_sum_def]
-    ++ MP_TAC (Q.SPECL [`p2`, `d2`] wf_decoder_def)
+    ++ Q.ISPECL_THEN [`p2`,`d2`] MP_TAC wf_decoder_def
     ++ ASM_SIMP_TAC std_ss []
-    ++ DISCH_THEN (MP_TAC o Q.SPEC `q`)
+    ++ DISCH_THEN (Q.SPEC_THEN `q` MP_TAC)
     ++ RW_TAC std_ss []
     ++ RES_TAC
     ++ RW_TAC std_ss [GSYM APPEND_ASSOC]

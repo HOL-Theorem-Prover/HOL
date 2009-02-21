@@ -422,7 +422,7 @@ val LENGTH_TL_GENLIST = prove(
     DECIDE ``!n. 0 < n + 1 /\ (n + 1 - 1 = n)``]);
 
 val SPEC_FOLDL_SNOC = (GEN_ALL o GSYM o SIMP_RULE std_ss [] o
-  ISPECL [`(\reg':reg (rp:word4,rd:word32). REG_WRITE reg' mode rp rd)`,
+  ISPECL [`(\(reg':reg) (rp:word4,rd:word32). REG_WRITE reg' mode rp rd)`,
           `reg:reg`,`(r:word4,a:word32)`])
   FOLDL_SNOC;
 

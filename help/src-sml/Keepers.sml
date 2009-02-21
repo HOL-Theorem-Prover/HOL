@@ -200,8 +200,7 @@ val keepers =
      "CoderTheory.sig", "DecodeTheory.sig",
      "EncodeTheory.sig", "EncodeVarTheory.sig",
 
-     (* Fixed point and floating point arithmetic *)
-     "floatTheory.sig", "ieeeTheory.sig",
-     "fxpTheory.sig"
+     (* Floating point arithmetic *)
+     "floatTheory.sig", "ieeeTheory.sig"
   ];
 end;

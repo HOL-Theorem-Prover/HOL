@@ -451,7 +451,7 @@ fun parse_Type parser q = let
   open base_tokens qbuf
   val qb = new_buffer q
 in
-  case qbuf.current qb of
+  case current qb of
     (BT_Ident s,locn) =>
     if String.sub(s, 0) <> #":" then
       raise ERRORloc "parse_Type" locn "types must begin with a colon"
@@ -462,7 +462,7 @@ in
         val pt = parser qb
         val pfns = SOME(type_to_string, kind_to_string)
       in
-        case (*qbuf.*)current qb of
+        case current qb of
             (BT_EOI,_) => parse_Pretype pfns pt
           | (_,locn) => raise ERRORloc "parse_Type" locn
                                        ("Couldn't make any sense of remaining input.")
@@ -513,6 +513,12 @@ fn q => let
    end
 end;
 
+(*
+val G = !the_term_grammar
+val ty = !type_parser1
+val tyv = !type_var_parser1
+
+*)
 
 val the_absyn_parser: (term frag list -> Absyn.absyn) ref =
     ref (do_parse (!the_term_grammar) (!type_parser1) (!type_var_parser1))
@@ -763,9 +769,40 @@ in
         to_ptmInEnv (APP(l, QIDENT(l, "pred_set", "GSPEC"),
                          LAM(l, to_vstruct t2, newbody)))
       end
-(*    |  APP(l,APP(_,IDENT (_,"seq_spec special"), t1), t2) =>
-        make_seq_abs l (to_ptmInEnv t1, to_ptmInEnv t2)
-*)
+    | APP(l, APP(_, t0 as IDENT (_, caseform), t1), t2) => let
+      in
+        if caseform = GrammarSpecials.case_special then let
+            (* handle possible arrows in t2 *)
+            fun every_case base ab =
+                case ab of
+                  APP(l, APP(_, t0 as IDENT (_, casesplit), t1), t2) => let
+                  in
+                    if casesplit = GrammarSpecials.case_split_special then let
+                        val t1' = every_case base t1
+                        val t2' = every_case base t2
+                      in
+                        list_make_comb l [to_ptmInEnv t0, t1', t2']
+                      end
+                    else base ab
+                  end
+                | _ => base ab
+            fun do_arrow ab =
+                case ab of
+                  APP(l, APP(_, t0 as IDENT (_, casearrow), t1), t2) => let
+                  in
+                    if casearrow = GrammarSpecials.case_arrow_special then
+                      make_case_arrow oinfo l (to_ptmInEnv t1) (to_ptmInEnv t2)
+                    else raise ERRORloc "Term" l
+                                        "Mal-formed case expression (no arrow)"
+                  end
+                | _ => raise ERRORloc "Term" (locn_of_absyn ab)
+                                      "Mal-formed case expression (no arrow)"
+          in
+            list_make_comb l [to_ptmInEnv t0, to_ptmInEnv t1,
+                              every_case do_arrow t2]
+          end
+        else list_make_comb l (map to_ptmInEnv [t0, t1, t2])
+      end
     | APP(l, t1, t2)     => list_make_comb l (map to_ptmInEnv [t1, t2])
     | TYAPP(l, tm, ty)   => list_make_tycomb l (to_ptmInEnv tm) [to_ptyInEnv ty]
     | IDENT (l, s)       => make_atom oinfo l s

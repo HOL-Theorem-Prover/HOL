@@ -21,7 +21,7 @@ load "stableTheory";
 load "tempabsTheory";
 *)
 
-open Globals HolKernel Parse boolLib goalstackLib;
+open Globals HolKernel Parse boolLib proofManagerLib;
 open Psyntax;
 open bossLib;
 open arithmeticTheory;

@@ -36,22 +36,29 @@ sig
   val SMALLFOOT_SPECIFICATION_TAC : tactic
 
   (*Performs one step*)
-  val SMALLFOOT_STEP_TAC : tactic
-  val SMALLFOOT_MINI_STEP_TAC : tactic
+  val SMALLFOOT_STEP_TAC : thm list -> tactic
+  val SMALLFOOT_MINI_STEP_TAC : thm list -> tactic
   val SMALLFOOT_EQ_CASE_SPLIT_TAC : term -> term -> tactic;
   val SMALLFOOT_PROP_IMPLIES___EQ_CASE_SPLIT_TAC : term -> term -> tactic;
 
-  val SMALLFOOT_NO_CASE_SPLIT_STEP_TAC : tactic
-  val SMALLFOOT_NO_CASE_SPLIT_MINI_STEP_TAC : tactic
+  val SMALLFOOT_VC_STEP_TAC : tactic 
+  val SMALLFOOT_VC_TAC : tactic 
+  val SMALLFOOT_NO_CASE_SPLIT_STEP_TAC : thm list -> tactic
+  val SMALLFOOT_NO_CASE_SPLIT_MINI_STEP_TAC : thm list -> tactic
+
+  val SMALLFOOT_NO_CASE_SPLIT_NO_GUESS_STEP_TAC : thm list -> tactic
+  val SMALLFOOT_NO_CASE_SPLIT_NO_GUESS_MINI_STEP_TAC : thm list -> tactic
 
   (*Cleans up the goal*)
-  val SMALLFOOT_ONCE_CLEAN_TAC : tactic;
+  val SMALLFOOT_ONCE_CLEAN_TAC : bool -> tactic;
   val SMALLFOOT_CLEAN_TAC : tactic;
+  val SMALLFOOT_STRICT_CLEAN_TAC : tactic;
 
   (*Tries as many steps as possible. This
     should solve the goal*)
-  val SMALLFOOT_SOLVE_TAC : tactic
-  val SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC : tactic
+  val SMALLFOOT_SOLVE_TAC : thm list -> tactic
+  val SMALLFOOT_NO_CASE_SPLIT_SOLVE_TAC :  thm list -> tactic
+  val SMALLFOOT_NO_CASE_SPLIT_NO_GUESS_SOLVE_TAC :  thm list -> tactic
 
   (*Parses a file and sets the goal, that the
     specification is correct. It calls
@@ -67,10 +74,12 @@ sig
   val smallfoot_auto_prove : string -> thm;
   val smallfoot_verbose_prove : string * tactic -> thm;
   val smallfoot_verbose_auto_prove : string -> thm;
+  val smallfoot_verbose_thm_auto_prove : thm list -> string -> thm;
 
 
 
   (*General stuff*)
+  val SMALLFOOT_CLEAR_CACHE : unit -> unit;
   val smallfoot_prop___SIMPLIFY_CONV : conv;
   val smallfoot_prop___EQ_PROPAGATE_CONV : bool -> bool -> conv;
 
@@ -79,11 +88,6 @@ sig
   val SMALLFOOT_COND_PROP___IMP___TRANS_RULE : thm -> thm -> thm
   val SMALLFOOT_COND_PROP___EQUIV___TRANS_RULE : thm -> thm -> thm
   val SMALLFOOT_COND_PROP___EQ_OR_IMP_OR_EQUIV___TRANS_RULE : thm -> thm -> thm
-
-
-
-
-
 
 
 

@@ -120,7 +120,7 @@ given, the \ml{'a} of \ml{('a,'b)sum} will be the \ml{Left} argument
 because \ml{left} comes before \ml{right} in the standard (ASCII)
 dictionary ordering.
 
-\subsection{Further Examples}
+\subsection{Further examples}
 
  In the following, we shall give an overview of the kinds of types that
  may be defined by \ml{Hol\_datatype}.
@@ -264,7 +264,7 @@ declaration could be used to formalize a simple file system.
 \end{verbatim}
 \end{hol}
 
-\subsection{Type Definitions that Fail}
+\subsection{Type definitions that fail}
 
  Now we address some types that cannot be declared with \ml{Hol\_datatype}.
 In some cases they cannot exist in HOL at all; in others, the type
@@ -1094,7 +1094,7 @@ The \ml{xDefine} function is identical to
 \ml{Define} except that it takes an explicit name to use when
 storing the definition in the current theory.
 
-\subsection{Function Definition Examples}
+\subsection{Function definition examples}
  We will give a number of examples that display the range of functions
 that may be defined with \ml{Define}. First, we have a recursive function
 that uses ``destructors'' in the recursive call.
@@ -1254,7 +1254,7 @@ large number of equations. For example:
 yields a definition with thirty-one clauses.
 
 
-\subsection{When Termination is not Automatically Proved}
+\subsection{When termination is not automatically proved}
 
 If the termination proof for a prospective definition
 fails, the invocation of \ml{Define} (or \ml{xDefine}) fails. In such
@@ -1418,7 +1418,7 @@ first argument denotes a theory; the current theory may be specified by \texttt{
 \noindent The induction theorem produced by \holtxt{Define} and \holtxt{tDefine} can 
 be applied by \ml{recInduct}. See Section \ref{sec:bossLib} for details.
 
-\subsubsection{Techniques for Proving Termination}
+\subsubsection{Techniques for proving termination}
 
 There are two problems to deal with when trying to prove termination.
 First, one has to understand, intuitively and then mathematically,
@@ -1648,7 +1648,7 @@ compared lexicographically with respect to less-than ($<$).
 The first subgoal needs a case-split on \holtxt{s} before it is proved by
 rewriting, and the second is also easy to prove by rewriting.
 
-\subsubsection{How Termination Conditions are Synthesized}
+\subsubsection{How termination conditions are synthesized}
 
 It is occasionally important to understand, at least in part, how
 \ml{Hol\_defn} constructs termination constraints. In some cases, it is
@@ -1841,7 +1841,7 @@ proper subterm of \holtxt{Node v tl}.
 \end{verbatim}
 \end{session}
 
-\subsection{Recursion Schemas}
+\subsection{Recursion schemas}
 
 In higher order logic, very general patterns of recursion, known as
 \emph{recursion schemas} or sometimes \emph{program schemas}, can be

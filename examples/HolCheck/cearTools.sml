@@ -519,7 +519,7 @@ else if is_eq t then mk_eq(elim_quant(fst(dest_eq t)),elim_quant(snd(dest_eq t))
 else if is_imp t then mk_imp(elim_quant(fst(dest_imp t)),elim_quant(snd(dest_imp t)))
 else t
 
-fun mlval tm = if tm=T then true else if tm=F then false else raise Match
+fun mlval tm = if eq tm T then true else if eq tm F then false else raise Match
 
 fun mk_ass vm red res = bdd.assignment (ListPair.map (fn (v,c) => (Binarymap.find(vm,term_to_string2 v),mlval c)) (red,res))
 

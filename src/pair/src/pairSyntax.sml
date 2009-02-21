@@ -366,24 +366,4 @@ fun lift_prod ty =
   end
 
 
-(*---------------------------------------------------------------------------*)
-(* Resolving forward references from bool/EmitML                             *)
-(*---------------------------------------------------------------------------*)
-
-fun is_let tm = 
-  case strip_comb tm
-   of (c,[f,x]) => same_const c boolSyntax.let_tm
-    | other => false;
-
-val _ = EmitML.list_mk_prod_hook := list_mk_prod
-val _ = EmitML.list_mk_pair_hook := list_mk_pair
-val _ = EmitML.list_mk_pabs_hook := list_mk_pabs
-val _ = EmitML.dest_pair_hook := dest_pair
-val _ = EmitML.strip_let_hook := strip_anylet
-val _ = EmitML.dest_pabs_hook := dest_pabs
-val _ = EmitML.is_pair_hook   := is_pair
-val _ = EmitML.is_let_hook    := is_let
-val _ = EmitML.is_pabs_hook   := is_pabs
-
-
 end

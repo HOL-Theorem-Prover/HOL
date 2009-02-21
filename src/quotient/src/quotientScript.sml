@@ -235,11 +235,12 @@ val QUOTIENT_TRANS = store_thm
 (* for ABS / REP of functions,
    use (rep --> abs) for ABS, and (abs --> rep) for REP. *)
 
+val _ = set_fixity "-->" (Infixr 490);
+
 val FUN_MAP =
-    new_infixr_definition
+    new_definition
     ("FUN_MAP",
-     (--`$--> (f:'a->'c) (g:'b->'d) = \h x. g (h (f x))`--),
-     490);
+     (--`$--> (f:'a->'c) (g:'b->'d) = \h x. g (h (f x))`--));
 
 val FUN_MAP_THM = store_thm
    ("FUN_MAP_THM",

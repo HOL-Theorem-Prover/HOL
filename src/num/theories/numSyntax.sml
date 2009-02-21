@@ -235,7 +235,4 @@ struct
 
 fun lift_num ty arbnum = mk_numeral arbnum
 
-val _ = EmitML.is_num_literal_hook := Lib.can Literal.relaxed_dest_numeral
-val _ = EmitML.dest_num_literal_hook := Literal.relaxed_dest_numeral;
-
 end

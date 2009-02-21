@@ -294,16 +294,6 @@ val _ = adjoin_to_theory
     NL()
   end)};
 
-
-val _ =
- let open EmitML
- in
-   emitML (!Globals.emitMLDir)
-    ("combin",
-      map DEFN [S_THM, K_THM, I_THM, W_THM, C_THM, o_THM,
-                APPLY_UPDATE_THM, FAIL_THM])
- end;
-
 val _ = export_theory();
 
 end;

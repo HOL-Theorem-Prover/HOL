@@ -1,0 +1,22 @@
+tl;
+
+/* list(x_DATA,x) * list(y_DATA,y) */
+list_append(x;y) [list(x) * list(y)] {
+  local n,t;
+  if (x == NULL) {
+    x = y;
+  } else {
+    t = x;
+    n = t->tl;
+
+    /* exists x1_DATA, t_DATA, x2_DATA.
+	x_DATA = APPEND (x1_DATA, CONS (t_DATE, x2_DATA)) &
+	lseg(x1_DATA,x,t) * t |-> [tl:n,dta:t_DATE] * list(x2_DATA,n) */
+    while (n != NULL) [lseg(x,t) * t |-> n * list(n)] {
+      t = n;
+      n = t->tl;
+    }
+    t->tl = y;
+  } 
+} [list(x)]
+/* list(APPEND x_DATA y_DATA, x)*/

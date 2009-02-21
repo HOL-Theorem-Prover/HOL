@@ -56,6 +56,7 @@ sig
   val smallfoot_choose_const_best_local_action_term : term
   val smallfoot_cond_best_local_action_term : term
   val smallfoot_cond_choose_const_best_local_action_term : term
+  val smallfoot_cond_star_term : term
   val smallfoot_env_term : term
   val smallfoot_input_preserve_names_wrapper_term : term
   val smallfoot_p_add_term : term
@@ -183,6 +184,7 @@ sig
   val dest_smallfoot_choose_const_best_local_action : term -> term * term * term * term * term
   val dest_smallfoot_cond_best_local_action : term -> term * term 
   val dest_smallfoot_cond_choose_const_best_local_action : term -> term * term * term * term * term
+  val dest_smallfoot_cond_star : term -> term * term;
   val dest_smallfoot_parallel_proc_call_abstraction : term -> term * term * term * term * term * term * term * term * term * term
   val dest_smallfoot_proc_call_abstraction : term -> term * term * term * term * term
   val dest_smallfoot_prog_assign : term -> term * term
@@ -261,6 +263,7 @@ sig
   val is_smallfoot_choose_const_best_local_action : term -> bool
   val is_smallfoot_cond_best_local_action : term -> bool
   val is_smallfoot_cond_choose_const_best_local_action : term -> bool
+  val is_smallfoot_cond_star : term -> bool;
   val is_smallfoot_parallel_proc_call_abstraction : term -> bool
   val is_smallfoot_proc_call_abstraction : term -> bool
   val is_smallfoot_prog_assign : term -> bool

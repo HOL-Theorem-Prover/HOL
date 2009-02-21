@@ -1,6 +1,6 @@
 open HolKernel Parse boolTheory boolLib
 
-fun tprint s = print (StringCvt.padRight #" " 60 (s ^ " ... "))
+fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
 
 fun substtest (M, x, N, result) = let
 in
@@ -122,18 +122,35 @@ val _ = case Lib.total (find_term (same_const ``bool_case``)) t of
           NONE => (print "FAILED\n"; Process.exit Process.failure)
         | SOME _ => print "OK\n"
 
+val _ = tprint "Testing parsing of _ variables (1)"
+val t = case Lib.total Parse.Term `case b of T -> F || _ -> T` of
+          NONE => (print "FAILED\n"; Process.exit Process.failure)
+        | SOME _ => print "OK\n"
+val _ = tprint "Testing parsing of _ variables (2)"
+val t = case Lib.total Parse.Term `case b of T -> F || _1 -> T` of
+          NONE => (print "FAILED\n"; Process.exit Process.failure)
+        | SOME _ => print "OK\n"
+val _ = tprint "Testing independence of case branch vars"
+val t = case Lib.total Parse.Term `v (case b of T -> F || v -> T)` of
+          NONE => (print "FAILED\n"; Process.exit Process.failure)
+        | SOME _ => print "OK\n"
 
-val t = Parse.Term `let x = T in x /\ y`
-val _ = tprint "Testing pretty-printing of let-expression"
-val res = term_to_string t
-val _ = if res = "let x = T in x /\\ y" then print "OK\n"
-        else (print "FAILED\n"; Process.exit Process.failure)
 
-val t = Parse.Term`(let x = T in \y. x /\ y) p`
-val _ = tprint "Testing pretty-printing of let-expression with fn type"
-val res = term_to_string t
-val _ = if res = "(let x = T in \\y. x /\\ y) p" then print "OK\n"
-        else (print "FAILED\n"; Process.exit Process.failure)
+fun tpp s = let
+  val t = Parse.Term [QUOTE s]
+  val _ = tprint ("Testing printing of `"^s^"`")
+  val res = term_to_string t
+in
+  if res = s then print "OK\n"
+  else (print "FAILED!\n"; Process.exit Process.failure)
+end
+
+
+val _ = app tpp ["let x = T in x /\\ y",
+                 "(let x = T in \\y. x /\\ y) p",
+                 "f ($/\\ p)",
+                 "(((p /\\ q) /\\ r) /\\ s) /\\ t",
+                 "(case x of T -> (\\x. x) || F -> $~) y"]
 
 
 val _ = Process.exit (if List.all substtest tests then Process.success

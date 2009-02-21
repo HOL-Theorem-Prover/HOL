@@ -75,6 +75,21 @@ fun GEN_ASSUM v thm =
 
 
 
+(*Introduces allquantification for all free variables*)
+val SPEC_ALL_TAC:tactic = fn (asm,t) =>
+let
+   val asm_vars = FVL asm empty_tmset;
+   val t_vars = FVL [t] empty_tmset;
+   val free_vars = HOLset.difference (t_vars,asm_vars);
+
+   val free_varsL = HOLset.listItems free_vars;
+in
+   ([(asm,list_mk_forall (free_varsL,t))],
+    fn thmL => (SPECL free_varsL (hd thmL)))
+end;
+
+
+
 
 
 
@@ -697,7 +712,7 @@ fun CONJ_ASSUMPTIONS_REDEPTH_CONSEQ_CONV conv =
 (*A tactic that strengthens a boolean goal*)
 fun CONSEQ_CONV_TAC conv (asm,t) = 
     HO_MATCH_MP_TAC ((CHANGED_CONSEQ_CONV (conv CONSEQ_CONV_STRENGTHEN_direction)) t) (asm,t) handle UNCHANGED =>
-    raise mk_HOL_ERR "ConseqConv" "CONSEQ_CONV_TAC" "UNCHANGED";
+    ALL_TAC (asm,t)
 
 
 fun DEPTH_CONSEQ_CONV_TAC conv =
@@ -890,7 +905,14 @@ end;
 fun CONSEQ_TOP_REWRITE_CONV___ho_opt ho (both_thmL,strengthen_thmL,weaken_thmL) =
    let
      fun prepare_general_thmL thmL =
-           map CONSEQ_TOP_REWRITE_CONV___EQT_EQF_INTRO (flatten (map BODY_CONJUNCTS thmL));
+           let
+               val thmL1 = flatten (map BODY_CONJUNCTS thmL);
+	       val thmL2 = map (CONV_RULE (TRY_CONV (REDEPTH_CONV LEFT_IMP_EXISTS_CONV))) thmL1;
+	       val thmL3 = map (CONV_RULE (REDEPTH_CONV RIGHT_IMP_FORALL_CONV)) thmL2;
+	       val thmL4 = map SPEC_ALL thmL3
+           in
+	       map CONSEQ_TOP_REWRITE_CONV___EQT_EQF_INTRO thmL4
+           end;
      val thmL_st = CONSEQ_TOP_REWRITE_CONV___PREPARE_STRENGTHEN_THMS 
 		       (prepare_general_thmL (append strengthen_thmL both_thmL));
      val thmL_we = CONSEQ_TOP_REWRITE_CONV___PREPARE_WEAKEN_THMS 

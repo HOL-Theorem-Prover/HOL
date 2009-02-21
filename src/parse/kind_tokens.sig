@@ -2,13 +2,11 @@ signature kind_tokens = sig
 
   datatype 'a kind_token
       = KindIdent of string (* alphanum name of constant kind, defined *)
-      | QKindIdent of string * string (* thy name * kind name *)
+      | QKindIdent of string * string (* thy name * type name *)
       | KindSymbol of string (* symbolic identifier, not :: or <= or incl  (),:  *)
       | KindVar of string
       | KindArity
       | KindNumeral of int
-      | KindCst
-      | RankCst
       | Comma
       | LParen
       | RParen

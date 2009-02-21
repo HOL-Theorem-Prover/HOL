@@ -47,6 +47,7 @@ val posreal_SS = simpLib.SSFRAG
    convs = [],
    dprocs = [],
    filter = NONE,
+   name = NONE,
    rewrs = [(* addition *)
             add_lzero, add_rzero, add_linfty, add_rinfty,
             (* subtraction *)
@@ -136,6 +137,7 @@ val posreal_reduce_SS = simpLib.SSFRAG
              trace = 2, key = SOME ([],rat_reduce_pat)}],
    dprocs = [],
    filter = NONE,
+   name = NONE,
    rewrs = [(* equality *)
             posreal_of_num_not_infty, posreal_of_num_inj, eq_rat, eq_ratl,
             rat_eq_infty,
@@ -182,7 +184,7 @@ local
      else REWR_CONV (GSYM rid)) tm;
 
   fun dest_inv inv tm =
-    if is_comb tm andalso rator tm = inv then (false, rand tm) else (true, tm);
+    if is_comb tm andalso eq (rator tm) inv then (false, rand tm) else (true, tm);
 
   fun bubble is_op swap inv tm =
     (if not (is_op tm) orelse not (is_op (rand tm)) then ALL_CONV else

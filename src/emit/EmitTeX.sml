@@ -336,6 +336,9 @@ local
     | #"|" :: #"-" :: l                 => h2t l (s ^ token_string "Turnstile")
     | #"/" :: #"\\" :: l                => h2t l (s ^ token_string "Conj")
     | #"\\" :: #"/" :: l                => h2t l (s ^ token_string "Disj")
+    | #"<" :: #"=" :: #"/" :: #"=" :: #">" :: l
+                                        => h2t l (s ^ token_string "NotEquiv")
+    | #"<" :: #"=" :: #">" :: l         => h2t l (s ^ token_string "Equiv")
     | #"<" :: #"|" :: l                 => h2t l (s ^ token_string "Leftrec")
     | #"|" :: #">" :: l                 => h2t l (s ^ token_string "Rightrec")
     | #"<" :: #"+" :: l                 => h2t l (s ^ token_string "Lo")

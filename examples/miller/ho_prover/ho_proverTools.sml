@@ -31,6 +31,9 @@ val !! = REPEAT;
 fun trace _ _ = ();
 fun printVal _ = ();
 
+(* equality for pairs of a boolean and a term *)
+val bool_tm_eq = pair_cmp equal eq
+
 (* ------------------------------------------------------------------------- *)
 (* vterm operations                                                          *)
 (* ------------------------------------------------------------------------- *)
@@ -130,7 +133,7 @@ local
             val (tytogo', tyvars') =
               canon_ty initial_vars tytogo tyvars (type_of tm)
           in
-            if is_tmvar initial_vars tm andalso not (mem tm tmvars) then
+            if is_tmvar initial_vars tm andalso not (op_mem eq tm tmvars) then
               canon (tmtogo - 1, tytogo') (tm :: tmvars, tyvars') rest
             else canon (tmtogo, tytogo') (tmvars, tyvars') rest
           end
@@ -329,7 +332,7 @@ fun clause_pretty_term (CLAUSE ((vs, _), lits)) =
         val name =
           (int_to_string o fst o dest_genvar) g
           handle HOL_ERR _ => (fst o dest_var) g
-        val stem = if mem g vs then "v" else "c"
+        val stem = if op_mem eq g vs then "v" else "c"
       in
         mk_var (stem ^ "_" ^ name, type_of g)
       end
@@ -549,7 +552,7 @@ in
   val true_lrule : literal_rule =
     fn (vars, lit as (pos, tm)) =>
     let
-      val _ = assert (tm = T) (ERR "true_lrule" "term not T")
+      val _ = assert (eq tm T) (ERR "true_lrule" "term not T")
     in
       if pos then []
       else [(empty_subst, vars, [], march_literal lit THENR MATCH_MP thm1)]
@@ -561,7 +564,7 @@ end;
 val false_lrule : literal_rule =
   fn (vars, lit as (pos, tm)) =>
   let
-    val _ = assert (tm = F) (ERR "false_lrule" "term not F")
+    val _ = assert (eq tm F) (ERR "false_lrule" "term not F")
   in
       if pos then [(empty_subst, vars, [], march_literal lit)] else []
   end;
@@ -629,7 +632,7 @@ local
   fun const_literal vars atom =
     let
       val ctype = (fst o dom_rng o type_of) atom
-      val tm_vars = intersect (fst vars) (free_vars atom)
+      val tm_vars = op_intersect eq (fst vars) (free_vars atom)
       val cvar = mk_c ctype tm_vars
       val atom' = mk_comb (atom, cvar)
     in
@@ -715,7 +718,7 @@ local
       val (a, b) = dest_comb tm
       val (dom, rng) = dom_rng (type_of a)
       val _ = assert (dom = bool) (ERR "bool_lrule" "not a bool")
-      val _ = assert (not (b = T) andalso not (b = F))
+      val _ = assert (not (eq b T) andalso not (eq b F))
         (ERR "bool_rule" "already T or F")
       val ty_sub = if rng = alpha then [alpha |-> rng] else []
       val (tm_sub, ty_sub) =
@@ -773,8 +776,8 @@ end;
 local
   fun merge _ [] = raise ERR "factor_rule" "nothing to do"
     | merge dealt ((lit as (pos, atom)) :: rest) =
-    if mem (not pos, atom) dealt then NONE
-    else if mem lit dealt then SOME (rev dealt @ rest)
+    if op_mem bool_tm_eq (not pos, atom) dealt then NONE
+    else if op_mem bool_tm_eq lit dealt then SOME (rev dealt @ rest)
     else merge (lit :: dealt) rest
 
   fun process _ NONE = []
@@ -860,9 +863,9 @@ local
   fun process vars lit (sub, f as FACT (CLAUSE (vars', lits'), thk')) =
     let
       val res_vars =
-        union2 (vars_after_subst vars sub) (vars_after_subst vars' sub)
+        op_union2 eq (vars_after_subst vars sub) (vars_after_subst vars' sub)
       val lit' = (not ## pinst sub) lit
-      val res_lits = (filter (not o equal lit') o map (I ## pinst sub)) lits'
+      val res_lits = (filter (not o bool_tm_eq lit') o map (I ## pinst sub)) lits'
     in
       (sub, res_vars, res_lits,
        fn th => resolution_rule sub lit th (force thk'))
@@ -920,7 +923,7 @@ fun collect_funvars vars tm =
       if is_comb tm then
         let
           val (a, b) = dest_comb tm
-          val res' = if is_tmvar vars a then insert a res else res
+          val res' = if is_tmvar vars a then op_insert eq a res else res
         in
           fvars res' (a :: b :: rest)
         end
@@ -1059,10 +1062,10 @@ local
   fun process vars eq (sub, FACT (CLAUSE (vars', lits), th)) =
     let
       val res_vars =
-        union2 (vars_after_subst vars sub) (vars_after_subst vars' sub)
+        op_union2 Term.eq (vars_after_subst vars sub) (vars_after_subst vars' sub)
       val res_eq = pinst sub eq
       val res_lits =
-        filter (not o equal (true, res_eq)) (map (I ## pinst sub) lits)
+        filter (not o bool_tm_eq (true, res_eq)) (map (I ## pinst sub) lits)
       val _ = assert (length res_lits < length lits)
         (BUG "paramodulation" "literal length check failed")
     in
@@ -1206,7 +1209,7 @@ in
           val _ = trace "meson: sub" (fn () => printVal sub)
           val _ = trace "meson: goal" (fn () => printVal goal)
           val _ = assert (depth > 0) (CUT "hit bottom")
-          val _ = assert (not (mem lit ancs)) (CUT "duplicate goal")
+          val _ = assert (not (op_mem bool_tm_eq lit ancs)) (CUT "duplicate goal")
           val goal1 = FACT (CLAUSE (vars, [lit]), thk)
           val subgoals =
             map

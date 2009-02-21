@@ -3,7 +3,7 @@
 In this chapter, the concrete representation of the \HOL{} logic is
 described.  This involves describing the \ML\ functions that comprise
 the interface to the logic (up to and including
-Section~\ref{avra_terms}); the quotation, parsing, and printing of
+Section~\ref{sec:system-terms}); the quotation, parsing, and printing of
 logical types and terms (Section~\ref{quotation}); the representation of
 theorems (Section~\ref{sec:theorems-in-ml}); the representation of theories
 (Section~\ref{theoryfns}); the fundamental \HOL{} theory \texttt{bool}
@@ -35,11 +35,12 @@ it by implementing their own application specific tools and building
 their own application specific theories.
 
 
-\section{Lexical matters}\label{HOL-lex}
+\section{Lexical Matters}\label{HOL-lex}
 
 \index{identifiers, in HOL logic@identifiers, in \HOL{} logic|(} The name
 of a \HOL{} variable
 %
+\index{tokens|(}
 \index{variables, in HOL logic@variables, in \HOL{} logic!names of|(}
 %
 can be any \ML{} string, but the quotation mechanism will parse only
@@ -61,52 +62,67 @@ avoided.
 
 \subsection{Identifiers}\label{ident}
 
-A \HOL{} identifier can be of two forms:
+In addition to special forms already present in the relevant grammar,
+a \HOL{} identifier can be of two forms:
 \begin{myenumerate}
-\item A finite sequence of alphanumerics starting with a letter.
-\item A \emph{symbolic} identifier, \ie, a finite sequence formed by any
-combination of the following characters:
-\begin{verbatim}
-  #  ?  +  *  /  \  =  <  >  &  %  @  !  ,  :  ;  _  |  ~  -
-  [  ]  (  )  {  }  ^  `
-\end{verbatim}
-Use of the characters in the second row above (the braces, brackets,
-parentheses, caret and back-tick) will typically cause lexical
-complexities; users of these characters should consult the
-\REFERENCE{} for the \ml{add\_rule} function, and
-Section~\ref{sec:quotation-antiquotation} below on using the caret and
-back-tick characters.
-\end{myenumerate}
-%
-A letter is a member of the list:
-%
-\begin{hol}
-\begin{verbatim}
-   a b c d e f g h i j k l m n o p q r s t u v w x y z
-   A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
-\end{verbatim}
-\end{hol}
-%
-\HOL{} is case-sensitive: upper and lower case letters are
-considered to be different.
+\item A finite sequence of \emph{alphanumerics} starting with a letter.  The
+  underscore character is considered a digit character, and so can
+  occur after an identifier's first letter.  Greek characters (roughly
+  Unicode range \ml{U+0370} to \ml{U+03FF}) are also letters, except for
+  $\lambda$~(\ml{U+03BB}), which is treated as a symbol. \HOL{} is
+  case-sensitive: upper and lower case letters are considered to be
+  different.
 
-Alphanumerics are letters or digits or underscores (\ml{\_}) or primes
-(\ml{'}).  A digit is one of
-{\small\verb+0+}, {\small\verb+1+}, {\small\verb+2+}, {\small\verb+3+},
-{\small\verb+4+}, {\small\verb+5+}, {\small\verb+6+}, {\small\verb+7+},
-{\small\verb+8+}, or {\small\verb+9+}.
-A \emph{number} is a string of one or more digits. In order to
-distinguish different kinds of numbers a single character suffix may
-be used: for example \verb+3n+ is a natural number while \verb+3i+ is
-an integer.  Numbers are treated specially by both the term and type
-parsers, and are not simple identifiers.  Rather, they encode
-composite objects.
+  Digits are the ASCII characters 0--9, the underscore character, and
+  the Unicode subscripts and superscripts.  The apostrophe character
+  is special.%
+  \index{apostrophe, lexical handling of}
+  %
+  It is not a letter, but can appear as part of an alphanumeric term
+  identifier after the first letter.  It must appear at the start of a
+  type variable's name, and can also appear in the term context as a
+  sequence of apostrophes on their own.
+
+\item A \emph{symbolic} identifier, \ie, a finite sequence formed by
+  any combination of the ASCII symbols and the Unicode symbols.  The
+  basic ASCII symbols are
+\begin{verbatim}
+  #  ?  +  *  /  \  =  <  >  &  %  @  !  :  |  -  ^  `
+\end{verbatim}
+  Use of the caret and back-tick characters is complicated by the fact
+  that these characters have special meaning in the quotation
+  mechanism; see Section~\ref{sec:quotation-antiquotation}.  The ASCII
+  grouping symbols (braces, brackets, and parentheses), and the
+  tilde~(\holtxt{\symbol{126}}), full-stop~(\holtxt{.}),
+  comma~(\holtxt{,}) and semi-colon~(\holtxt{;}) characters are called
+  \emph{non-aggregating} characters. %
+%
+  \index{identifiers, in HOL logic@identifiers, in \HOL{} logic!non-aggregating characters}%
+%
+  Unless the desired token is already present in the grammar, these
+  characters do not combine with themselves or other symbolic
+  characters.  Thus, the string \holtxt{"(("} is viewed as \emph{two}
+  tokens, as is \holtxt{";;"}.
+
+  Unicode code characters that are not letters or digits are regarded
+  as symbolic.  None of these are non-aggregating.
+
+\item A \emph{number} is a string of one or more digits. If not the
+  initial digit, an underscore can be used within the sequence to
+  provide spacing. In order to distinguish different kinds of numbers
+  a single character suffix may be used: for example \holtxt{3n} is a
+  natural number while \holtxt{3i} is an integer.  The \holtxt{0x} and
+  \holtxt{0b} prefixes may also be used to change the base of the
+  number. If the \holtxt{0x} prefix is used, hexadecimal `digits'
+  \holtxt{a}--\holtxt{f} and \holtxt{A}--\holtxt{F} can also be
+  used. See also Section~\ref{sec:numerals}.%
+\end{myenumerate}
 \index{variables, in HOL logic@variables, in \HOL{} logic!names of|)}
 
 
 \paragraph{Separators}
 
-The separators used by the \HOL{} lexical analyser are (with ascii codes in
+The separators used by the \HOL{} lexical analyser are (with ASCII codes in
 brackets):
 
 \bigskip
@@ -117,11 +133,13 @@ form feed ({\verb+^+}L, 12)
 
 \paragraph{Special identifiers}
 
-The following valid identifiers should not be used as the name of
-a variable or a constant.
+The following valid identifiers are used by the grammar in the theory
+of booleans, and thus in all descendent theories as well.  They should
+not be used as the name of a variable or a constant unless the user is
+very confident of their ability to mess with grammars.
 %
 \begin{verbatim}
-   let  in  and  \  ;  =>  |  :  :=  with  updated_by
+   let  in  and  \  .  ;  =>  |  ||   :  :=  with  updated_by   case   of
 \end{verbatim}
 
 \paragraph {Type variable names}\label{tyvars}
@@ -136,14 +154,11 @@ variable names except for the last:
    'a   'b   'cat   'A11   'g_a_p   'f'oo
 \end{verbatim}
 \end{hol}
-
+\index{tokens|)}
 
 \section{Types}\index{types, in HOL logic@types, in \HOL{} logic}
 
-The allowed types
-%
-%
-depend on which type constants
+The allowed types depend on which type constants
 %
 \index{type constants, in HOL logic@type constants, in \HOL{} logic}
 %
@@ -253,7 +268,7 @@ argument types; \ml{dest\_vartype} and \ml{dest\_thy\_type} are thus
 the inverses of \ml{mk\_vartype} and \ml{mk\_thy\_type}, respectively.
 The destructors fail on arguments of the wrong form.
 
-\section{Terms}\label{avra_terms}
+\section{Terms}\label{sec:system-terms}
 
 The four primitive kinds of terms of the logic are described in
 \LOGIC.  The \ML\ functions for manipulating these are described in
@@ -281,7 +296,7 @@ functions for values of type \ml{term}:
 with name $x$ and type $\sigma$; it always succeeds.
 
 \begin{holboxed}
-\index{mk_thy_const@\ml{mk\_const}|pin}
+\index{mk_thy_const@\ml{mk\_thy\_const}|pin}
 \begin{verbatim}
    mk_thy_const : {Name:string, Thy:string, Ty:hol_type} -> term
 \end{verbatim}
@@ -405,8 +420,8 @@ other common term operations.  See \REFERENCE{} for more details.
 \label{quotation}\label{gen-abs}\label{let}
 \index{type checking, in HOL logic@type checking, in \HOL{} logic!of quotation syntax|(}
 \index{quotation, in HOL logic@quotation, in \HOL{} logic|(}
-\index{ type quotes, in ML@\ml{``:$\cdots$``} (type quotes, in \ML)|(}
-\index{ term quotes, in ML@\ml{``$\cdots$``} (term quotes, in \ML)|(}
+\index{ type quotes, in ML@\ml{\dq:$\cdots$\dq} (type quotes, in \ML)|(}
+\index{ term quotes, in ML@\ml{\dq$\cdots$\dq} (term quotes, in \ML)|(}
 
 It would be tedious to always have to input types and terms
 using the constructor functions. The \HOL{} system, adapting the
@@ -428,7 +443,7 @@ value (of \ML\ type \ml{hol\_type}) as
 \end{verbatim}
 \end{hol}
 
-\noindent and the expression \texttt{``}{\verb|\x. x + 1|}\texttt{``}
+\noindent and the expression \holtxt{\holquote{\bs{}x.~x~+~1}}
 %
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic}
 %
@@ -535,7 +550,7 @@ functions:
    (mk_var("x",bool),
     mk_eq(mk_var("x",numty),
           mk_numeral (Arbnum.fromString "1")));
-> val it = ``x = x = 1`` : term
+> val it = ``x <=> (x = 1)`` : term
 \end{verbatim}
 \end{session}
 
@@ -543,18 +558,18 @@ The original quotation type checker was designed and implemented by
 Robin Milner\index{Milner, R.}.  It employs heuristics like the one
 above to infer a sensible type for all variables occurring in a term.
 
-\index{type constraint!in HOL logic@in \HOL{} logic}
-At times, the user may want to control the exact type of a subterm. To
-support such functionality, types can be explicitly indicated by
-following any subterm with a colon and then a type.  For example,
-\holtxt{``f(x:num):bool``} will type check with \holtxt{f} and \holtxt{x}
-getting types \holtxt{num->bool} and \holtxt{num} respectively.
-This treatment of types within quotations is inherited from
-\LCF.
+\index{type constraint!in HOL logic@in \HOL{} logic} At times, the
+user may want to control the exact type of a subterm. To support such
+functionality, types can be explicitly indicated by following any
+subterm with a colon and then a type.  For example,
+\holtxt{\dq{}f(x:num):bool\dq} will type check with \holtxt{f} and
+\holtxt{x} getting types \holtxt{num->bool} and \holtxt{num}
+respectively.  This treatment of types within quotations is inherited
+from \LCF.
 %
 \index{LCF@\LCF}
-\index{ type quotes, in ML@\ml{``:$\cdots$``} (type quotes, in \ML)|)}
-\index{ term quotes, in ML@\ml{``$\cdots$``} (term quotes, in \ML)|)}
+\index{ type quotes, in ML@\ml{\dq:$\cdots$\dq} (type quotes, in \ML)|)}
+\index{ term quotes, in ML@\ml{\dq$\cdots$\dq} (term quotes, in \ML)|)}
 \index{type inference!in HOL parser@in \HOL{} parser|)}
 
 \subsection{Viewing the grammar}
@@ -686,7 +701,7 @@ concrete syntax.
 %
 \index{constants, in HOL logic@constants, in \HOL{} logic!fully-qualified names of}
 
-\section{Ways to construct types and terms}
+\section{Ways to Construct Types and Terms}
 
 \index{type variables, in HOL logic@type variables, in \HOL{} logic!constructor for}
 \index{type constructors!in HOL logic@in \HOL{} logic}
@@ -1032,19 +1047,23 @@ in \LOGIC, \ml{SELECT\_AX}.
 \end{session}
 \index{theorem notation, in HOL logic@theorem notation, in \HOL{} logic|)}
 
-\section{Primitive rules of inference of the HOL Logic}
+\section{Primitive Rules of Inference of the HOL Logic}
 \label{rules}
 
 \index{inference rules, of HOL logic@inference rules, of \HOL{} logic!primitive|(}
+%
 The primitive rules of inference of the logic were described
 abstractly in \LOGIC. The descriptions relied on meta-variables $t$,
 $t_1$, $t_2$, and so on.  In the \HOL{} logic, infinite families of
 primitive inferences are grouped together and thought of as single
-primitive inference schemes.\index{families of inferences, in HOL
-  logic@families of inferences, in \HOL{} logic} Each family contains
-all the concrete instances of one particular inference
-`pattern'. These can be produced, in abstract form, by instantiating
-the meta-variables in \LOGIC{}'s rules to concrete terms.
+primitive inference schemes. %
+%
+\index{families of inferences, in HOL logic@families of inferences, in \HOL{} logic}
+%
+Each family contains all the concrete instances of one particular
+inference `pattern'. These can be produced, in abstract form, by
+instantiating the meta-variables in \LOGIC{}'s rules to concrete
+terms.
 
 In \HOL, primitive inference schemes are represented by \ML{} functions
 that return theorems as values.  That is, for particular \HOL{} terms,
@@ -1064,7 +1083,6 @@ operations which return theorems as values: \ml{ASSUME}, \ml{REFL},
 The \ML{} functions that implement the primitive inference schemes in the
 \HOL{} system are described below.  The same notation
 %
-\index{notation!for specification of rules}
 \index{inferences, in HOL logic@inferences, in \HOL{} logic!notation for}
 %
 is used here as in \LOGIC: hypotheses above a horizontal line and
@@ -1116,7 +1134,8 @@ Failure if $t$ is not of type \ml{bool}.
 
 \bigskip
 
-\subsection{Beta-conversion}\index{beta-conversion, in HOL logic@beta-conversion, in \HOL{} logic!ML function for@\ML\ function for}
+\subsection{Beta-conversion}
+\index{beta-conversion, in HOL logic@beta-conversion, in \HOL{} logic!ML function for@\ML\ function for}
 
 \begin{holboxed}\index{BETA_CONV@\ml{BETA\_CONV}|pin}
 \begin{verbatim}

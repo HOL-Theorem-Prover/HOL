@@ -3,7 +3,7 @@
 
   type extrastate = {nf : int, r : int ref, i: int ref,
                      rcopt : (int * int) option ref,
-                     stracc : (char list * locn_point) ref,
+                     stracc : (string * char list * locn_point) ref,
                      incommentp : int ref}
   (* mutable state argument to each rule is st=(nf,r,i,rcopt), where:
        - nf  is the number of the fragment being parsed
@@ -26,7 +26,7 @@
 
   fun newstate nf =
       {nf = nf, r = ref 0, i = ref 0, rcopt = ref NONE,
-       stracc = ref ([], LocP(0,0,0) (* meaningless locn *)),
+       stracc = ref ("", [], LocP(0,0,0) (* meaningless locn *)),
        incommentp = ref 0}
 
   (* processes location pragmas of the form (*#loc row col*), using
@@ -48,7 +48,7 @@
    in
      if !(#incommentp st) <> 0 then
        raise LEX_ERR ("eof/antiquote inside comment", lend)
-     else if not (null (#1 (! (#stracc st)))) then
+     else if not (null (#2 (! (#stracc st)))) then
          raise LEX_ERR ("eof/antiquote inside quote-delimited string", lend)
      else
        (BT0_EOI, lend)
@@ -71,8 +71,8 @@ numeric = [0-9];
 digitseq = ({numeric} | _)* {numeric} ({numeric} | _)*;
 hexdigit = [A-Fa-f] | {numeric};
 hexdigitseq = ({hexdigit} | _)* {hexdigit} ({hexdigit} | _)*;
-symbol = [-`|!#%&)=+[{};:@~\\,.<>?/^\128-\255] | ];
-nonparen = {symbol} | \*;
+symbol = [-`|!#%&)=+[{};:@~\\,.<>?/^$\128-\255] | ];
+nonparen = {symbol} | \* | {alpha} | {numeric};
 nonstar = {symbol} | \(;
 ident = {alpha} ({alpha} | {numeric})*;
 anysymb = {ident} | {nonparen} * \( | ({nonparen} | \( {nonstar}) +;
@@ -83,38 +83,24 @@ newline = {linefeed} | {creturn} | {creturn}{linefeed};
 locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
 
 %%
-<INITIAL>{ident} \$ ({anysymb}|{numeric}+) => (
-     let val l = String.tokens (fn c => c = #"$") yytext
-     in (BT0_QIdent (hd l, hd (tl l)),getLoc yyarg yypos yytext) end);
 <INITIAL>{locpragma} => (dolocpragma yyarg yypos yytext; continue());
 <INITIAL>"(*" => (YYBEGIN comment; incommentp := 1; continue());
 <INITIAL>("0b" {digitseq} | "0x" {hexdigitseq} | {numeric} ({numeric} | _)* )
          {alpha}? =>
-    (let val s = yytext
-         val c = String.sub (s, size s - 1)
-         val clower = Char.toLower c
-         val chexp = #"a" <= clower andalso clower <= #"f"
-         val loc = getLoc yyarg yypos s
+    (let val loc = getLoc yyarg yypos yytext
      in
-       if Char.isAlpha c andalso not (String.isPrefix "0x" s andalso chexp)
-       then let
-           val s = substring(s,0,size s - 1)
-         in
-           (BT0_Numeral(parse_numeric_literal(s, loc), SOME c), loc)
-         end
-       else
-         (BT0_Numeral(parse_numeric_literal(s, loc), NONE), loc)
+       (BT0_Numeral(parse_numeric_literal(yytext,loc)), loc)
      end);
 <INITIAL>\" => (let
                   val s = LocP(nf,!r,yypos - !(#i yyarg))
                 in
-                  stracc := ([#"\""], s);
+                  stracc := ("", [#"\""], s);
                   YYBEGIN string;
                   continue()
                 end);
 <INITIAL>#\" => (let val s = LocP(nf,!r,yypos - !(#i yyarg))
                  in
-                     stracc := ([#"\""], s);
+                     stracc := ("", [#"\""], s);
                      YYBEGIN string;
                      check_char (continue())
                  end);
@@ -125,13 +111,20 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
                        i := yypos + size yytext;
                        continue()
                      end);
+<INITIAL>\$ ? {anysymb} \" => (let
+  val s = LocP(nf,!r,yypos - !(#i yyarg))
+in
+  stracc := (String.substring(yytext,0,size yytext - 1), [#"\""], s);
+  YYBEGIN string;
+  continue()
+end);
 <INITIAL>\$ ? {anysymb} => ((BT0_Ident yytext, getLoc yyarg yypos yytext));
 <INITIAL>. => (raise LEX_ERR("Character \""^yytext^"\" is a lexical error",
                              getLoc yyarg yypos yytext));
 
 
 <string>\" => (let val e = LocP(nf,!r,yypos - !(#i yyarg))
-                   val (clist, start) = !stracc
+                   val (pfx, clist, start) = !stracc
                    val str0 = String.implode (List.rev(#"\"" :: clist))
                    val str1 =
                        MLstring.scanMLstring
@@ -142,31 +135,31 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
                                                Loc(start,e))
                    val str = String.concat ["\"", str1, "\""]
                in
-                 stracc := ([], LocP(0,0,0));
+                 stracc := ("", [], LocP(0,0,0));
                  YYBEGIN INITIAL;
-                 (BT0_Ident str, Loc(start,e))
+                 (BT0_Ident (pfx^str), Loc(start,e))
                end );
-<string>"\\\"" => (let val (clist, start) = !stracc
+<string>"\\\"" => (let val (pfx, clist, start) = !stracc
                    in
-                     stracc := (#"\"" :: #"\\" :: clist, start);
+                     stracc := (pfx, #"\"" :: #"\\" :: clist, start);
                      continue()
                    end);
-<string>"\\\\" => (let val (clist, start) = !stracc
+<string>"\\\\" => (let val (pfx, clist, start) = !stracc
                    in
-                     stracc := (#"\\" :: #"\\" :: clist, start);
+                     stracc := (pfx, #"\\" :: #"\\" :: clist, start);
                      continue()
                    end);
-<string>. =>  (let val (clist, start) = !stracc
+<string>. =>  (let val (pfx, clist, start) = !stracc
                in
-                 stracc := (String.sub(yytext,0) :: clist, start);
+                 stracc := (pfx, String.sub(yytext,0) :: clist, start);
                  continue()
                end);
 <string>{newline} => (let val i = #i yyarg
-                          val (clist,start) = !stracc
+                          val (pfx, clist,start) = !stracc
                       in
                         r := !r + 1;
                         i := yypos + size yytext;
-                        stracc := (#"\n" :: clist, start);
+                        stracc := (pfx, #"\n" :: clist, start);
                         continue()
                       end);
 

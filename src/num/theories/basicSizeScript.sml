@@ -27,19 +27,5 @@ val option_size_def =
     name="option_size_def", 
     rec_axiom = optionTheory.option_Axiom};
 
-val _ =
- let open EmitML
- in emitML (!Globals.emitMLDir)
-      ("basicSize",
-         MLSIG "type num = numML.num" ::
-         MLSIG "type 'a  option = 'a optionML.option" ::
-         MLSIG "type ('a,'b) sum = ('a,'b) sumML.sum"
-         :: OPEN ["num","sum","option"]
-         ::
-         map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
-             [bool_size_def,pair_size_def,
-              one_size_def,sum_size_def,option_size_def])
- end;
-
 val _ = export_theory();
 

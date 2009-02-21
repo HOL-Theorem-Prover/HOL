@@ -1,6 +1,6 @@
 \DOC 
 
-\TYPE {guess_word_lengths : term -> term}
+\TYPE {inst_word_lengths : term -> term}
 
 \SYNOPSIS
 
@@ -8,13 +8,13 @@ Guess and instantiate word index type variables in a term.
 
 \DESCRIBE
 
-The function {guess_word_lengths} tries to instantiate type variables that correspond with the return type of {word_concat} and {word_extract}.
+The function {inst_word_lengths} tries to instantiate type variables that correspond with the return type of {word_concat} and {word_extract}.
 
 \EXAMPLE
 {
 - load "wordsLib";
 ...
-- wordsLib.guess_word_lengths ``(7 >< 5) a @@ (4 >< 0) a``;
+- wordsLib.inst_word_lengths ``(7 >< 5) a @@ (4 >< 0) a``;
 <<HOL message: inventing new type variable names: 'a, 'b, 'c, 'd>>
 <<HOL message: assigning word length(s): 'a <- 3, 'b <- 5 and 'c <- 8>>
 > val it =
@@ -26,10 +26,10 @@ The function {guess_word_lengths} tries to instantiate type variables that corre
 
 \COMMENTS
 
-The function {guess_lengths} adds {guess_word_lengths} as a post-processing stage to the term parser.
+The function {guess_lengths} adds {inst_word_lengths} as a post-processing stage to the term parser.
 
 \SEEALSO
 
-wordsLib.dont_guess_lengths, wordsLib.guess_lengths, wordsLib.notify_word_length_guesses
+wordsLib.guess_lengths, wordsLib.notify_word_length_guesses
 
 \ENDDOC

@@ -190,6 +190,6 @@ val ARM_REG_READ_INC_PC = store_thm("ARM_REG_READ_INC_PC",
   THEN Cases_on `m` THEN SRW_TAC [] [mode_reg2num_def,USER_def] THEN DECIDE_TAC);
 
 val WORD_SUB_ONE_MULT = store_thm("WORD_SUB_ONE_MULT",
-  ``!x y. x + $- 1w * y = x - y``,SRW_TAC [] [])
+  ``!x y. x + -1w * y = x - y``,SRW_TAC [] [])
 
 val _ = export_theory ();

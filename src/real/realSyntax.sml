@@ -154,6 +154,14 @@ in
   val is_geq = can dest_geq
   fun mk_geq(t1, t2) = list_mk_comb(geq_tm, [t1, t2])
 
+  val dest_min = dest2 min_tm "dest_min" "min term"
+  val is_min = can dest_min
+  fun mk_min(t1, t2) = list_mk_comb(min_tm, [t1, t2])
+
+  val dest_max = dest2 max_tm "dest_max" "max term"
+  val is_max = can dest_max
+  fun mk_max(t1, t2) = list_mk_comb(max_tm, [t1, t2])
+
 
   fun int_of_term t = let
     val (is_pos, n) =

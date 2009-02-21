@@ -124,7 +124,7 @@ val ADDR32_ADD = store_thm ("ADDR32_ADD",
   \\ REWRITE_TAC [ADDR32_n2w,word_add_n2w,LEFT_ADD_DISTRIB]);
 
 val ADDR32_NEG = store_thm("ADDR32_NEG",
-  ``!w. ADDR32 ($- w) = $- (ADDR32 w)``,
+  ``!w. ADDR32 (- w) = - (ADDR32 w)``,
   wordsLib.Cases_word \\ REWRITE_TAC [ADDR32_n2w] 
   \\ wordsLib.WORD_EVAL_TAC \\ REWRITE_TAC [ADDR32_n2w]
   \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss)
@@ -241,14 +241,14 @@ val ALIGNED_THM = store_thm("ALIGNED_THM",
   \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss) []);
 
 val ALIGNED_NEG_lemma = prove(
-  ``!x. ALIGNED x ==> ALIGNED ($- x)``,
+  ``!x. ALIGNED x ==> ALIGNED (- x)``,
   ASM_SIMP_TAC std_ss  [ALIGNED_THM,w2n_n2w,LESS_MOD]
   \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `n2w (2**30) - k` 
   \\ ASM_SIMP_TAC (std_ss++WORD_ARITH_EQ_ss) [WORD_RIGHT_SUB_DISTRIB]            
   \\ ASM_SIMP_TAC (std_ss++WORD_ss) []);
 
 val ALIGNED_NEG = store_thm("ALIGNED_NEG",
-  ``!x. ALIGNED ($- x) = ALIGNED x``,
+  ``!x. ALIGNED (- x) = ALIGNED x``,
   METIS_TAC [ALIGNED_NEG_lemma,WORD_NEG_NEG]);
 
 val ALIGNED_and_1 = store_thm("ALIGNED_and_1",
@@ -296,7 +296,7 @@ val word_arith_lemma1 = store_thm("word_arith_lemma1",
 
 val word_arith_lemma2 = store_thm("word_arith_lemma2",
   ``!n m. n2w n - (n2w m) :'a word =
-      if n < m then $- (n2w (m-n)) else n2w (n-m)``,
+      if n < m then - (n2w (m-n)) else n2w (n-m)``,
   REPEAT STRIP_TAC \\ Cases_on `n < m` \\ ASM_REWRITE_TAC []
   \\ FULL_SIMP_TAC bool_ss [NOT_LESS,LESS_EQ]
   \\ FULL_SIMP_TAC bool_ss [LESS_EQ_EXISTS,ADD1,DECIDE ``n+1+p-n = 1+p:num``]

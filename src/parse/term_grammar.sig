@@ -168,6 +168,7 @@ sig
      | EndBinding
      | VS_cons
      | ResquanOpTok
+     | TypeBracket
   val ST_compare : stack_terminal * stack_terminal -> order
 
   val STtoString : grammar -> stack_terminal -> string
