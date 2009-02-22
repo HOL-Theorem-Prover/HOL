@@ -526,9 +526,6 @@ in
   (fn n => finddex n 0 dexlist)
 end
 
-
-
-
 fun really_handle_big_record (tyname, fields) = let
   (* return a fresh list of datatype declarations that splits the list
      fields over multiple record types, that are then in turn included

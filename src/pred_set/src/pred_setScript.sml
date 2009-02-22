@@ -2358,7 +2358,7 @@ val gdef = map Term
 
 val g_finite =
     TAC_PROOF
-    ((gdef, (--`!n:num. FINITE (g n:'a set)`--)),
+    ((gdef, ``!n:num. FINITE (g n:'a set)``),
      INDUCT_TAC THEN ASM_REWRITE_TAC[FINITE_EMPTY,FINITE_INSERT]);
 
 (* ---------------------------------------------------------------------*)
@@ -2367,7 +2367,7 @@ val g_finite =
 
 val g_subset =
     TAC_PROOF
-    ((gdef, (--`!n. !x:'a. x IN (g n) ==> !i. x IN (g (n+i))`--)),
+    ((gdef, ``!n. !x:'a. x IN (g n) ==> !i. x IN (g (n+i))``),
      REPEAT GEN_TAC THEN DISCH_TAC THEN INDUCT_TAC THEN
      ASM_REWRITE_TAC [ADD_CLAUSES,IN_INSERT]);
 
