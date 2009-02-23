@@ -635,6 +635,7 @@ val SUB_THM = save_thm(
   "SUB_THM",
   REWRITE_RULE [GSYM CONJ_ASSOC]
                (LIST_CONJ (SUB_THMv :: tl (CONJUNCTS SUB_DEF))))
+val _ = export_rewrites ["SUB_THM"]
 val SUB_VAR = save_thm("SUB_VAR", hd (CONJUNCTS SUB_DEF))
 
 (* ----------------------------------------------------------------------
