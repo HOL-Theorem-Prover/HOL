@@ -923,7 +923,8 @@ val overloading_resolution0 = remove_elim_magics o do_overloading_removal
 fun overloading_resolution ptm =
     overloading_resolution0 ptm
     handle phase1_exn(l,s,ty) =>
-           (tcheck_say s ; raise ERRloc "overloading_resolution" l s)
+           (tcheck_say (locn.toString l ^ ": " ^ s);
+            raise ERRloc "overloading_resolution" l s)
 
 (*---------------------------------------------------------------------------
  * Type inference for HOL terms. Looks ugly because of error messages, but is
@@ -1429,10 +1430,12 @@ in
   !post_process_term (remove_case_magic (to_term ptm))
 end handle phase1_exn(l,s,ty) =>
            case pfns of
-             NONE => (tcheck_say s; raise ERRloc "typecheck" l s)
+             NONE => (tcheck_say (locn.toString l ^ ": " ^ s);
+                      raise ERRloc "typecheck" l s)
            | SOME (_, typ, _) =>
              (tcheck_say
-                  (String.concat [s, "Wanted it to have type:  ",
+                  (String.concat [locn.toString l, ": ", s,
+                                  "Wanted it to have type:  ",
                                   typ ty, "\n"]);
               raise ERRloc "typecheck" l s)
 

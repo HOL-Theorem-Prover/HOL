@@ -49,11 +49,9 @@ val defs = map DEFN
    numeral_div2,REWRITE_RULE [iMOD_2EXP] numeral_imod_2exp,DIV_2EXP,
    prim_recTheory.measure_thm]
 
-val _ = reshape_thm_hook :=
- (fn thm =>
-   (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o
-    pairLib.GEN_BETA_RULE o
-    Rewrite.PURE_REWRITE_RULE (!EmitML.pseudo_constructors)) thm);
+val _ = EmitML.reshape_thm_hook :=
+    (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o 
+     !EmitML.reshape_thm_hook);
 
 val _ = eSML "num"
     (EQDATATYPE ([], `num = ZERO | BIT1 of num | BIT2 of num`)
@@ -274,7 +272,6 @@ val _ = eSML "num"
 \      SOME (num2int n) handle Overflow => NONE\n\
 \    end;\n\n"]));
 
-
 val _ = eCAML "num"
   (DATATYPE (`num = ZERO | BIT1 of num | BIT2 of num`)
   :: map MLSTRUCT 
@@ -334,15 +331,17 @@ val _ = adjoin_to_theory
      S "          (true,\"num\",\"ZERO\",Type.mk_type(\"num\",[])));";
      NL()  end)};
 
+(*---------------------------------------------------------------------------*)
+(* Automatic rewrite for definitions                                         *)
+(*---------------------------------------------------------------------------*)
+
 val _ = adjoin_to_theory {sig_ps = NONE,
    struct_ps = SOME (fn ppstrm =>
      let val S = PP.add_string ppstrm
          fun NL() = PP.add_newline ppstrm
-     in S "val _ = EmitML.reshape_thm_hook := (fn thm => "; NL();
-        S "    (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o ";
-        NL();
-        S "     pairLib.GEN_BETA_RULE o "; NL();
-        S "     Rewrite.PURE_REWRITE_RULE (!EmitML.pseudo_constructors)) thm);";
+     in S "val _ = EmitML.reshape_thm_hook :=  "; NL();
+        S "    (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o "; NL();
+        S "     !EmitML.reshape_thm_hook);";
         NL(); NL()
      end)}
 

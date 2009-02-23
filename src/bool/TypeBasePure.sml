@@ -951,7 +951,7 @@ fun strip_case tybase M =
 
 
 (*---------------------------------------------------------------------------*)
-(* Support for syntactic operations for record types.                        *)
+(* Syntax operations for record types.                                       *)
 (*---------------------------------------------------------------------------*)
 
 fun is_record_type tybase ty =

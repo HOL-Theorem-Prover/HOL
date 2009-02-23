@@ -2,7 +2,7 @@
      This file needs to be processed with hol.unquote.
  ---------------------------------------------------------------------------*)
 
-load "bossLib"; open bossLib;
+open HolKernel Parse boolLib bossLib;
 
 
 val PARITY_def = 

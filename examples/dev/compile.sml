@@ -112,7 +112,7 @@ fun Convert_CONV f =
               print "is not an abstraction\n";
               raise ERR "Convert_CONV" "not an abstraction")
   in
-  if not(free_vars f = []) 
+  if not(null(free_vars f)) 
   then (print_term f; print "\n";
         print "has free variables: "; 
         map (fn t => (print_term t; print " "))(rev(free_vars f)); print "\n";
@@ -273,10 +273,10 @@ fun Convert defth =
                  then (print_term func; print " is not a constant\n";
                        raise ERR "Convert" "rator of lhs not a constant")
                  else ()
-        val _ = if not(subtract (free_vars rt) (free_vars lt) = [])
+        val _ = if not(null(op_subtract eq (free_vars rt) (free_vars lt)))
                  then (print "definition rhs has unbound variables: "; 
                        map (fn t => (print_term t; print " "))
-                           (rev(subtract (free_vars rt) (free_vars lt))); 
+                           (rev(op_subtract eq (free_vars rt) (free_vars lt))); 
                        print "\n";
                        raise ERR "Convert" "definition rhs has unbound variables")
                  else ()
@@ -345,10 +345,10 @@ fun RecConvert defth totalth =
          handle HOL_ERR _ 
          => (print "rhs not a conditional\n"; 
              raise ERR "RecConvert" "rhs not a conditional")
-     val _ = if not(subtract (free_vars rt) (free_vars lt) = [])
+     val _ = if not(null(op_subtract eq (free_vars rt) (free_vars lt)))
               then (print "definition rhs has unbound variables: "; 
                     map (fn t => (print_term t; print " "))
-                        (rev(subtract (free_vars rt) (free_vars lt))); 
+                        (rev(op_subtract eq (free_vars rt) (free_vars lt))); 
                     print "\n";
                     raise ERR "RecConvert" "definition rhs has unbound variables")
               else()
@@ -1223,16 +1223,16 @@ fun EXISTS_OUT t =
 (* has no effect if there is no equation ``v=u`` of ``u=v`` in the list      *)
 (*****************************************************************************)
 fun PRUNE1_FUN(v,tml) =
- let val l = filter (fn t => is_eq t andalso ((lhs t = v) orelse (rhs t = v))) tml
+ let val l = filter (fn t => is_eq t andalso (eq (lhs t) v orelse eq (rhs t) v)) tml
  in
   if null l
    then tml 
    else
     let val (t1,t2) = dest_eq(hd l)
-        val u = if t1=v then t2 else t1
+        val u = if eq t1 v then t2 else t1
     in 
      filter
-      (fn t => not(is_eq t andalso (lhs t = rhs t))) 
+      (fn t => not(is_eq t andalso eq(lhs t)(rhs t))) 
       (map (hol88Lib.subst[(u,v)]) tml)
     end
  end;     
@@ -1242,7 +1242,7 @@ fun EXISTS_OUT_CONV t =
      val (vl,tml)  = (*time*) EXISTS_OUT (rhs(concl th))
      val tml1      = (*time*) (foldl PRUNE1_FUN tml) vl 
      val t1        = (*time*) list_mk_conj tml1
-     val vl1       = (*time*) rev (intersect vl (free_vars t1))
+     val vl1       = (*time*) rev (op_intersect eq vl (free_vars t1))
      val count_ref = ref 0
      fun mkv ty     = let val newv = mk_var(("v"^Int.toString(!count_ref)),ty)
                       in
@@ -1323,7 +1323,7 @@ fun is_pure_abs tm =
   andalso 
    all
     is_combinational_const
-    (subtract 
+    (op_subtract eq
      (strip_pair(snd(dest_pabs tm)))
      (strip_pair(fst(dest_pabs tm))));
 
@@ -1458,8 +1458,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
                   (map
                    (fn (t1,t2) => 
                      if is_combinational_const t1
-                      then ``CONSTANT ^t1 ^(assoc t1 bdy_match)``
-                      else mk_eq(t2,assoc t1 (rev args_match)))
+                      then ``CONSTANT ^t1 ^(op_assoc eq t1 bdy_match)``
+                      else mk_eq(t2,op_assoc eq t1 (rev args_match)))
                    bdy_match))
               val _ = (if_print "\n COMB_SYNTH_CONV case 3:\n "; 
                        if_print_term goal; if_print "\n")
@@ -1478,8 +1478,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
-     else if is_var bdy andalso can (assoc bdy) args_match
-     then let val goal = ``^tm = (^out_bus = ^(assoc bdy (rev args_match)))``
+     else if is_var bdy andalso can (op_assoc eq bdy) args_match
+     then let val goal = ``^tm = (^out_bus = ^(op_assoc eq bdy (rev args_match)))``
               val _ = (if_print "\n COMB_SYNTH_CONV case 2:\n "; 
                        if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal

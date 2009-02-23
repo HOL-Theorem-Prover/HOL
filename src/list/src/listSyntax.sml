@@ -139,7 +139,7 @@ val dest_front   = dest_monop front_tm  (ERR "dest_front" "not FRONT")
 val dest_all_distinct = dest_monop reverse_tm 
                           (ERR "dest_all_distinct" "not ALL_DISTINCT")
 
-val dest_list_case = dest_triop list_case_tm (ERR "dest_sum" "not list_case");
+val dest_list_case = dest_triop list_case_tm (ERR "dest_list_case" "not list_case");
 
 (*---------------------------------------------------------------------------
          Queries

@@ -3121,6 +3121,26 @@ val FUNPOW_SUC = store_thm
           ONCE_REWRITE_TAC [FUNPOW]
           THEN ASM_REWRITE_TAC []]);
 
+val FUNPOW_0 = store_thm(
+  "FUNPOW_0",
+  ``FUNPOW f 0 x = x``,
+  REWRITE_TAC [FUNPOW]);
+val _ = export_rewrites ["FUNPOW_0"]
+
+val FUNPOW_ADD = store_thm(
+  "FUNPOW_ADD",
+  ``!m n. FUNPOW f (m + n) x = FUNPOW f m (FUNPOW f n x)``,
+  INDUCT_TAC THENL [
+    REWRITE_TAC [ADD_CLAUSES, FUNPOW], 
+    ASM_REWRITE_TAC [ADD_CLAUSES,FUNPOW_SUC]
+  ]);
+
+val FUNPOW_1 = store_thm(
+  "FUNPOW_1", 
+  ``FUNPOW f 1 x = f x``,
+  REWRITE_TAC [FUNPOW, ONE]);
+val _ = export_rewrites ["FUNPOW_1"]
+
 val NRC_0 = save_thm("NRC_0", CONJUNCT1 NRC);
 val _ = export_rewrites ["NRC_0"]
 

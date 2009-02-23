@@ -287,12 +287,18 @@ val EVERY_ASSUM = ASSUM_LIST o MAP_EVERY;
  * Call a thm-tactic for the first assumption at which it succeeds.
  *---------------------------------------------------------------------------*)
 
-fun FIRST_ASSUM ttac (A,g) =
-   let fun find ttac []     = raise ERR "FIRST_ASSUM"  ""
-         | find ttac (a::L) =
-             ttac (ASSUME a) (A,g) handle HOL_ERR _ => find ttac L
-   in find ttac A
-   end;
+val shut_parser_up =
+    trace ("notify type variable guesses", 0) o
+    trace ("syntax_error", 0) o
+    trace ("show_typecheck_errors",0)
+
+fun FIRST_ASSUM ttac (A,g) = let
+  fun find ttac []     = raise ERR "FIRST_ASSUM"  ""
+    | find ttac (a::L) =
+      ttac (ASSUME a) (A,g) handle HOL_ERR _ => find ttac L
+in
+  shut_parser_up (find ttac) A
+end
 
 (*----------------------------------------------------------------------
  * Call a thm-tactic for the first assumption at which it succeeds and

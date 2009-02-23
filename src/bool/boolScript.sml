@@ -1828,8 +1828,8 @@ end
 (* -------------------------------------------------------------------------*)
 
 val NOT_FORALL_THM =
-    let val f = (--`P:'a->bool`--)
-	val x = (--`x:'a:ty`--)
+    let val f = ``P:'a->bool``
+	val x = ``x:'a``
 	val t = mk_comb(f,x)
 	val all = mk_forall(x,t)
 	and exists = mk_exists(x,mk_neg t)

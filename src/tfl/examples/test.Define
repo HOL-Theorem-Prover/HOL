@@ -905,3 +905,4 @@ val (code_eval_def, code_eval_ind) = Defn.tprove(
 
 Hol_datatype `ty = C1 of num => bool`;
 Define `foo (C1 15 b) = 1`;
+

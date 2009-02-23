@@ -45,45 +45,68 @@ val ERR = mk_HOL_ERR "EmitML";
 val WARN = HOL_WARNING "EmitML";
 
 (*---------------------------------------------------------------------------*)
-(* Forward references, to be patched up in the appropriate places.           *)
+(* All ref cells.                                                            *)
 (*---------------------------------------------------------------------------*)
 
+val emitOcaml = ref false;
+val sigSuffix = ref "ML.sig";
+val structSuffix = ref "ML.sml";
+val sigCamlSuffix = ref "ML.mli";
+val structCamlSuffix = ref "ML.ml";
+
+(*---------------------------------------------------------------------------*)
+(* Misc. syntax operations                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val is_pair_type = Lib.can pairSyntax.dest_prod;
 val is_num_literal = Lib.can Literal.relaxed_dest_numeral;
 
-fun is_let tm =
-  case boolSyntax.strip_comb tm
-   of (c,[f,x]) => same_const c boolSyntax.let_tm
-    | other => false;
+(*---------------------------------------------------------------------------*)
+(* Version of dest_string that doesn't care if characters look like          *)
+(*                                                                           *)
+(*   CHAR (NUMERAL n)    or    CHAR n                                        *)
+(*---------------------------------------------------------------------------*)
+
+val is_string_literal = Lib.can Literal.relaxed_dest_string_lit;
 
 fun strip_cons M =
  case total (listSyntax.dest_cons) M
   of SOME (h,t) => h::strip_cons t
    | NONE => [M];
 
-fun is_cons tm = Lib.can (listSyntax.dest_cons) tm;
-
 fun is_fn_app tm = is_comb tm andalso not(pairSyntax.is_pair tm)
-
 fun is_infix_app tm = is_conj tm orelse is_disj tm orelse is_eq tm ;
 
-fun is_pair_type ty =
- case total dest_thy_type ty
-  of SOME{Tyop="prod",Thy="pair",...} => true
-   | otherwise => false;
-
-local val a = mk_var("a",bool)
-      val b = mk_var("b",bool)
+local 
+  val a = mk_var("a",bool)
+  val b = mk_var("b",bool)
 in
 val andalso_tm = list_mk_abs([a,b],mk_conj(a,b))
 val orelse_tm = list_mk_abs([a,b],mk_disj(a,b))
 end
 
-fun partitions P [] = []
-  | partitions P (h::t) =
-     case partition (P h) t
-      of (L1,L2) => (h::L1) :: partitions P L2;
+(*---------------------------------------------------------------------------*)
+(* Peculiar fake names for record constructors. These help generate code for *)
+(* projection and access functions automatically defined for records. The    *)
+(* need for this comes from the fact that large records declarations are     *)
+(* modelled differently than small records; the difference in representation *)
+(* is vexatious when defining the projection and access functions, since we  *)
+(* want the resulting ML to look the same, i.e., be readable, no matter how  *)
+(* big the record is.                                                        *)
+(*---------------------------------------------------------------------------*)
 
-val emitOcaml = ref false;
+fun mk_record_vconstr (name,ty) = mk_var(name^"--Record Constr Var",ty)
+
+fun dest_record_vconstr v = 
+ let open Substring
+     val (name,ty) = dest_var v
+     val (ss1,ss2) = position "--Record Constr Var" (all name)
+ in if string ss2 = "--Record Constr Var"
+     then (string ss1,ty)
+     else raise ERR "dest_record_vconstr" ""
+ end handle _ => raise ERR "dest_record_vconstr" "";
+
+val is_fake_constructor = Lib.can dest_record_vconstr;
 
 fun fix_symbol c =
   case c of
@@ -153,51 +176,41 @@ fun prec_of c =
 val minprec = ~1;
 val maxprec = 9999;
 
-(*---------------------------------------------------------------------------*)
-(* Version of dest_string that doesn't care if characters look like          *)
-(*                                                                           *)
-(*   CHAR (NUMERAL n)    or    CHAR n                                        *)
-(*---------------------------------------------------------------------------*)
-
-val is_string_literal = Lib.can Literal.relaxed_dest_string_lit;
-
 datatype side = LEFT | RIGHT;
 
 fun pick_name slist n (s1,s2) = if mem n slist then s1 else s2;
 
-(*---------------------------------------------------------------------------
- * variants makes variables that are guaranteed not to be in avoid and
- * furthermore, are guaranteed not to be equal to each other. The names of
- * the variables will start with "v" and end in a number.
- *---------------------------------------------------------------------------*)
-
-fun vars_of_types alist =
-   map (fn (i,ty) => mk_var("v"^Int.toString i,ty))
-       (Lib.enumerate 0 alist);
+fun vars_of_types alist = 
+  map (fn (i,ty) => mk_var("v"^Int.toString i,ty)) (Lib.enumerate 0 alist);
 
 (*---------------------------------------------------------------------------*)
 (* Convert a constructor application (C t1 ... tn) to C'(t1,...,tn) where    *)
-(* C' is a variable with the same name as C. Uses mk_thm!                    *)
+(* C' is a variable with the same name as C. This code only deals with       *)
+(* pseudo-constructors, like INSERT for sets and BAG_INSERT for bags. These  *)
+(* are *not* constructors, but we will generate programs in which they are   *)
+(* constructors for abstract datatypes.                                      *)
+(*                                                                           *)
+(* Real constructors are detected in the term prettyprinter by testing       *)
+(* TypeBase.is_constructor. In contrast, pseudo-constructors are dealt with  *)
+(* in a pre-processing pass over the theorems that code is being generated   *)
+(* from.                                                                     *)
 (*---------------------------------------------------------------------------*)
-
-val pseudo_constructors = ref [] : thm list ref;
-
-(*---------------------------------------------------------------------------*)
-(*  The following reference cell gets set in pred_setTheory                  *)
-(*---------------------------------------------------------------------------*)
-
-val reshape_thm_hook = ref Lib.I : (thm -> thm) ref;
 
 local val emit_tag = "EmitML"
-   fun nstrip_fun 0 ty = ([],ty)
-     | nstrip_fun n ty =
+  val pseudo_constr_defs = ref [] : thm list ref;
+in
+fun pseudo_constr_rws() = map concl (!pseudo_constr_defs)
+val reshape_thm_hook = ref (fn th => 
+     pairLib.GEN_BETA_RULE (Rewrite.PURE_REWRITE_RULE (!pseudo_constr_defs) th))
+
+fun new_pseudo_constr (c,a) =
+ let fun nstrip_fun 0 ty = ([],ty)
+       | nstrip_fun n ty =
          let val (d,r) = dom_rng ty
              val (f,b) = nstrip_fun (n-1) r
          in (d::f,b)
          end
-in
-fun curried_const_equiv_tupled_var (c,a) =
- let val (argtys,target) = nstrip_fun a (type_of c)
+     val (argtys,target) = nstrip_fun a (type_of c)
      val args = vars_of_types argtys
      val pvar = mk_var("^" ^ fst(dest_const c),
                        pairSyntax.list_mk_prod argtys --> target)
@@ -205,8 +218,7 @@ fun curried_const_equiv_tupled_var (c,a) =
                  (args,mk_comb(pvar,pairSyntax.list_mk_pair args))
      val thm = mk_oracle_thm emit_tag ([],mk_eq(c,new))
  in
-    pseudo_constructors := thm :: !pseudo_constructors;
-    thm
+    pseudo_constr_defs := thm :: !pseudo_constr_defs
  end
 end;
 
@@ -243,10 +255,10 @@ fun term_to_ML openthys side ppstrm =
      if intSyntax.is_int_literal tm then pp_int_literal tm else
      if is_string_literal tm then pp_string tm else
      if listSyntax.is_list tm then pp_list tm else
-     if is_cons tm then pp_cons i tm else
+     if listSyntax.is_cons tm then pp_cons i tm else
      if is_infix_app tm then pp_binop i tm else
      if pairSyntax.is_pair tm then pp_pair i tm else
-     if is_let tm then pp_lets i tm else
+     if boolSyntax.is_let tm then pp_lets i tm else
      if pairSyntax.is_pabs tm then pp_abs i tm else
      if combinSyntax.is_fail tm then pp_fail i tm else
      if oneSyntax.is_one tm  then pp_one tm else
@@ -554,13 +566,20 @@ fun term_to_ML openthys side ppstrm =
        let
        in begin_block CONSISTENT 0
         ; lparen i maxprec
-        ; if TypeBase.is_constructor f
-            then
-              (pp maxprec f; add_string "(";
+        ; if TypeBase.is_constructor f orelse is_fake_constructor f
+            then                                 
+              (let val fname = fst(dest_const f) handle HOL_ERR _ => 
+                               fst(dest_record_vconstr f)
+               in add_string fname
+               end;   (* pp maxprec f; *)
+               add_string "(";
+               begin_block INCONSISTENT 0;
                pr_list (pp minprec)
                        (fn () => add_string ",")
                        (fn () => add_break(0,0)) args;
-               add_string ")")
+               end_block();
+               add_string ")"
+              )
             else (begin_block INCONSISTENT 2;
                   pr_list (pp maxprec) (fn () => ())
                           (fn () => add_break(1,0)) (f::args);
@@ -610,6 +629,11 @@ fun same_fn eq1 eq2 =
 (*---------------------------------------------------------------------------*)
 (* Print a function definition as ML, i.e., fun f ... = ...                  *)
 (*---------------------------------------------------------------------------*)
+
+fun partitions P [] = []
+  | partitions P (h::t) =
+     case partition (P h) t
+      of (L1,L2) => (h::L1) :: partitions P L2;
 
 fun pp_defn_as_ML openthys ppstrm =
  let open Portable
@@ -812,6 +836,74 @@ datatype elem_internal
     | iMLSTRUCT of string;
 
 
+(*---------------------------------------------------------------------------*)
+(* A datatype declaration results in some extra HOL function definitions     *)
+(* being automatically made. These are, usually, invisible to the user, but  *)
+(* are important and usually need to have ML generated for them.  Currently, *)
+(* only the access and update functions for records are generated. We used   *)
+(* to also write out the size functions for datatypes as well, but they were *)
+(* not used, so they are going for the time being.                           *)
+(*                                                                           *)
+(* In many cases suitable update and access functions are defined by the     *)
+(* datatype package and stuck into the TypeBase. However, large records are  *)
+(* modelled differently, for efficiency. The threshold number of fields is   *)
+(* controlled by Datatype.big_record_size. A big record has a different      *)
+(* shape, i.e., recursion theorem. To handle such records, we generate       *)
+(* fake "theorems" of the right form. This should be OK, as they are only    *)
+(* created for exporting the ML functions, and they are tagged. In fact, all *)
+(* record declarations are handled by the following code.                    *)
+(*---------------------------------------------------------------------------*)
+
+fun diag vlist flist = tl 
+  (itlist2 (fn v => fn f => fn A => 
+           case A of [] => [[v],[f v]]
+                   | h::t => (v::h) :: (f v::h) :: map (cons v) t)
+         vlist flist []);
+
+fun gen_updates ty fields = 
+ let open pairSyntax
+     val {Tyop,Thy,Args} = dest_thy_type ty
+     fun mk_upd_const (fname,fty) = 
+        mk_thy_const{Name=Tyop^"_"^fname^"_fupd",Thy=Thy,
+                     Ty = (fty --> fty) --> ty --> ty}
+     val upds = map mk_upd_const fields
+     val fns = map (fn (_,ty) => mk_var ("f", ty--> ty)) fields
+     val fake_tyc = mk_record_vconstr(Tyop,list_mk_fun(map snd fields, ty))
+     val vars = itlist 
+          (fn (n,(_,ty)) => fn acc => 
+              mk_var("v"^int_to_string n,ty) :: acc) 
+          (enumerate 1 fields) []
+     val pat = list_mk_comb(fake_tyc,vars)
+     val lefts = map2 (fn upd => fn f => list_mk_comb(upd,[f,pat])) upds fns
+     val diags = diag vars (map (curry mk_comb) fns)
+     val rights = map (curry list_mk_comb fake_tyc) diags
+     val eqns = rev(map2 (curry mk_eq) lefts rights)
+     val mk_thm = mk_oracle_thm "EmitML fake thm"
+ in 
+   map (curry mk_thm []) eqns
+ end
+ handle e => raise wrap_exn "EmitML" "gen_updates" e;
+
+fun gen_accesses ty fields = 
+ let open pairSyntax
+     val {Tyop,Thy,Args} = dest_thy_type ty
+     fun mk_proj_const (fname,fty) = 
+         mk_thy_const{Name=Tyop^"_"^fname,Thy=Thy, Ty = ty --> fty}
+     val projs = map mk_proj_const fields
+     val fake_tyc = mk_record_vconstr(Tyop,list_mk_fun(map snd fields, ty))
+     val vars = itlist 
+          (fn (n,(_,ty)) => fn acc => 
+             mk_var("v"^int_to_string n,ty) :: acc) 
+          (enumerate 1 fields) []
+     val pat = list_mk_comb(fake_tyc,vars)
+     val lefts = map (fn proj => mk_comb(proj,pat)) projs
+     val eqns = rev(map2 (curry mk_eq) lefts vars)
+     val mk_thm = mk_oracle_thm "EmitML fake thm"
+ in
+   map (curry mk_thm []) eqns
+ end
+ handle e => raise wrap_exn "EmitML" "gen_accesses" e;
+
 fun datatype_silent_defs tyAST =
  let val tyop = hd (map fst tyAST)
      val tyrecd = hd (Type.decls tyop)
@@ -820,16 +912,19 @@ fun datatype_silent_defs tyAST =
   case TypeBase.read tyrecd
    of NONE => (WARN "datatype_silent_defs"
                 ("No info in the TypeBase for "^Lib.quote tyop); [])
-    | SOME tyinfo =>
-        let open TypeBasePure
-(*            val size_def = [snd (valOf(size_of tyinfo))] handle _ => [] *)
-            val size_def = []
-            val updates_def = updates_of tyinfo handle HOL_ERR _ => []
-            val access_def = accessors_of tyinfo handle HOL_ERR _ => []
-        in
-          map (iDEFN o !reshape_thm_hook)
-              (size_def @ updates_def @ access_def)
-        end
+   | SOME tyinfo => 
+     let open TypeBasePure
+          val size_def = [] (* [snd (valOf(size_of tyinfo))] handle _ => [] *)
+          val (updates_defs, access_defs) =
+            case fields_of tyinfo  (* test for record type *)
+             of [] => ([],[])
+              | fields => let val ty = ty_of tyinfo
+                          in (gen_updates ty fields, gen_accesses ty fields)
+                          end
+     in
+       map (iDEFN o !reshape_thm_hook)
+           (size_def @ updates_defs @ access_defs)
+     end
  end;
 
 (*---------------------------------------------------------------------------*)
@@ -884,7 +979,7 @@ fun elemi (DEFN th) (cs,il) = (cs,iDEFN (!reshape_thm_hook th) :: il)
          val constrs' = zip constrs constr_arities
          fun is_multi (_,n) = n >= 2
          val mconstrs = filter is_multi constrs'
-         val _ = List.map curried_const_equiv_tupled_var mconstrs
+         val _ = List.app new_pseudo_constr mconstrs
          (* val _ = schedule this call for exported theory *)
       in
         (mconstrs@cs, iABSDATATYPE(sl,tyAST) :: il)
@@ -897,11 +992,6 @@ fun internalize elems =
   let val (cs, ielems) = rev_itlist elemi elems ([],[])
   in (rev cs, rev ielems)
   end;
-
-(*---------------------------------------------------------------------------*)
-(* Perhaps naive in light of the recent stuff of MN200 to eliminate flab     *)
-(* from big record types?                                                    *)
-(*---------------------------------------------------------------------------*)
 
 local open ParseDatatype
 fun strip_TyApp (dTyApp(opr,arg)) = let val (head,args) = strip_TyApp opr
@@ -1217,7 +1307,6 @@ fun pp_struct strm (s,elems,cnames) =
  handle e => raise wrap_exn "EmitML" "pp_struct" e;
 
 
-
 (*---------------------------------------------------------------------------*)
 (* Dealing with eqtypes. When a HOL function uses equality on the rhs, the   *)
 (* type of the function does not reflect this. However, in ML, eqtypes       *)
@@ -1292,12 +1381,12 @@ fun munge_def_type def =
 (* been defined in an ancestor theory.                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun add (is_type_cons, s) c =
+fun add (is_constr, s) c =
     case ConstMapML.exact_peek c of
       NONE => let
         val {Name,Thy,Ty} = dest_thy_const c
       in
-        ConstMapML.prim_insert(c,(is_type_cons,s,Name,Ty))
+        ConstMapML.prim_insert(c,(is_constr,s,Name,Ty))
       end
     | SOME _ => ()
 
@@ -1306,21 +1395,21 @@ fun install_consts _ [] = []
   | install_consts s (iDEFN thm::rst) =
        let val clist = munge_def_type thm
            val _ = List.app (add (false, s)) clist
-       in map (fn c => (false,c)) clist @ install_consts s rst
+       in map (pair false) clist @ install_consts s rst
        end
   | install_consts s (iDATATYPE ty::rst) =
       let val consts = op_U eq (map (Term.decls o fst) (constructors ty))
           val _ = List.app (add (true, s)) consts
-      in map (fn c => (true,c)) consts @ install_consts s rst
+      in map (pair true) consts @ install_consts s rst
       end
   | install_consts s (iEQDATATYPE (tyvars,ty)::rst) =
       let val consts = op_U eq (map (Term.decls o fst) (constructors ty))
           val _ = List.app (add (true, s)) consts
-      in map (fn c => (true,c)) consts @ install_consts s rst
+      in map (pair true) consts @ install_consts s rst
       end
   | install_consts s (iABSDATATYPE (tyvars,ty)::rst) =
      install_consts s (iEQDATATYPE (tyvars,ty)::rst)
-  | install_consts s (other::rst) = install_consts s rst
+  | install_consts s (other::rst) = install_consts s rst;
 
 
 (*---------------------------------------------------------------------------*)
@@ -1415,7 +1504,7 @@ fun emit_adjoin_call thy (consts,pcs) = let
      S "   end"; NL(); NL();
      if null pcs then ()
      else
-     (S "val _ = List.map EmitML.curried_const_equiv_tupled_var"; NL();
+     (S "val _ = List.app EmitML.new_pseudo_constr"; NL();
       S "                 [";
       begin_block ppstrm INCONSISTENT 0;
       Portable.pr_list S (fn () => S",")
@@ -1467,11 +1556,6 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
                         ^" prevents writing ML files to "
                         ^Lib.quote path)
  end
-
-val sigSuffix = ref "ML.sig";
-val structSuffix = ref "ML.sml";
-val sigCamlSuffix = ref "ML.mli";
-val structCamlSuffix = ref "ML.ml";
 
 val emitML = emit_xML (false,!sigSuffix,!structSuffix);
 

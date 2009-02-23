@@ -3,10 +3,9 @@ sig
   include Abbrev
   type tyvar = Type.tyvar
 
-  val pseudo_constructors      : thm list ref
-  val reshape_thm_hook         : (thm -> thm) ref
-  val curried_const_equiv_tupled_var 
-    : term * int -> thm (* side effects pseudo_constructors *)
+  val reshape_thm_hook : (thm -> thm) ref
+  val pseudo_constr_rws : unit -> term list
+  val new_pseudo_constr : term * int -> unit 
 
   datatype side = LEFT | RIGHT
 

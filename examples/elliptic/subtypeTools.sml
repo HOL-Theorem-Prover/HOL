@@ -53,8 +53,8 @@ fun flexible_solver solver cond =
       val cond_th = solver cond
       val cond_tm = concl cond_th
     in
-      if cond_tm = cond then cond_th
-      else if cond_tm = mk_eq (cond,T) then EQT_ELIM cond_th
+      if eq cond_tm cond then cond_th
+      else if eq cond_tm (mk_eq (cond,T)) then EQT_ELIM cond_th
       else raise Bug "flexible_solver: solver didn't prove condition"
     end;
 
@@ -93,7 +93,7 @@ local
       case Binarymap.peek (cache,g) of
         NONE => NONE
       | SOME th =>
-        if List.all (fn h => mem h asl) (hyp th) then SOME th else NONE;
+        if List.all (fn h => op_mem eq h asl) (hyp th) then SOME th else NONE;
 in
   fun cache_new () = ref (Binarymap.mkDict compare);
 
@@ -423,7 +423,8 @@ local
         end;
 
   fun algebra_dproc reductions judgements dproc_cache =
-      Traverse.REDUCER {initial = initial_state reductions judgements,
+      Traverse.REDUCER {name = NONE,
+                        initial = initial_state reductions judgements,
                         addcontext = state_add,
                         apply = state_apply_dproc dproc_cache};
 in
@@ -436,7 +437,7 @@ in
       in
         simpLib.SSFRAG
           {ac = [], congs = [], convs = convs, rewrs = rewrites,
-           dprocs = [dproc], filter = NONE}
+           dprocs = [dproc], filter = NONE, name = NONE}
       end;
 
   fun simpset context = simpLib.++ (std_ss, simpset_frag context);

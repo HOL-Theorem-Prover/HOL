@@ -253,7 +253,7 @@ fun convertTotal defths totalth =
 (* Performs an inline expansion before compiling                             *)
 (*---------------------------------------------------------------------------*)
 fun inlineCompile maintm defths totalths =
-       let fun findMain th = ((fst o dest_eq o concl) th) = maintm
+       let fun findMain th = eq ((fst o dest_eq o concl) th) maintm
            val maindef = hd(filter findMain defths)
            val auxdefths = filter (fn th => not(findMain th)) defths
            val mainth = REFINE (DEPTHR ATM_REFINE)
