@@ -5,6 +5,8 @@ sig
   val reshape_thm_hook : (thm -> thm) ref
   val pseudo_constr_rws : unit -> term list
   val new_pseudo_constr : term * int -> unit 
+  val is_int_literal_hook : (term -> bool) ref
+  val int_of_term_hook : (term -> Arbint.int) ref
 
   datatype side = LEFT | RIGHT
 
