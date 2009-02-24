@@ -14,7 +14,7 @@
 structure bossLib :> bossLib =
 struct
 
-open HolKernel Parse boolLib pairLib simpLib metisLib;
+open HolKernel Parse boolLib pairLib simpLib metisLib pred_setLib;
 
 (* This makes the dependency on listTheory and optionTheory explicit.
    Without it, the theories can change, and bossLib won't get recompiled.
@@ -94,10 +94,9 @@ val std_ss =
 
 val arith_ss = std_ss ++ numSimps.ARITH_DP_ss
 val old_arith_ss = std_ss ++ numSimps.old_ARITH_ss
-val list_ss  = arith_ss ++ listSimps.LIST_ss
 val ARITH_ss = numSimps.ARITH_ss
 val old_ARITH_ss = numSimps.old_ARITH_ss
-
+val list_ss  = arith_ss ++ listSimps.LIST_ss
 end
 
 fun DECIDE tm =

@@ -3,12 +3,14 @@ struct
 
 (* Interactive:
 quietdec := true;
-open numTheory prim_recTheory arithmeticTheory IndDefLib ;
+load "emitLib";
+open numTheory prim_recTheory arithmeticTheory IndDefLib 
+     emitLib;
 quietdec := false;
 *)
 
 open HolKernel boolLib bossLib IndDefLib
-     numTheory prim_recTheory arithmeticTheory;
+     numTheory prim_recTheory arithmeticTheory emitLib;
 
 (*---------------------------------------------------------------------------*)
 (* Functionality discussed with Matt Kaufmann                                *)
@@ -781,7 +783,6 @@ val ord_mult_def =
     || (Plus e k t, End n) -> Plus e (k*n) t 
     || (Plus e1 k1 t1, Plus e2 k2 t2) -> Plus (ord_add e1 e2) k2 
                                               (ord_mult (Plus e1 k1 t1) t2)`;
-
     
 val _ = Count.report (Count.read meter);
 
@@ -796,19 +797,21 @@ val tail_End = Q.prove
   REWRITE_TAC [combinTheory.FAIL_THM]);
 
 val _ = 
- let open EmitML
- in emitML (!Globals.emitMLDir)
-     ("ordinal",
-      MLSIG "type num = numML.num"
-       ::
-      OPEN ["num"]
-       ::
-      DATATYPE `osyntax = End of num | Plus of osyntax => num => osyntax`
-       ::
-      map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
-             [expt_def, coeff_def, finp_def, 
-              CONJ tail_End tail_def, rank_def, oless_equations,
-              is_ord_equations,ord_less_def,ord_add_def, ord_sub_def, ord_mult_def])
- end;
-
+ emitML ""           (* !Globals.emitMLDir *)
+    ("ordinal",
+     [MLSIG "type num = numML.num",
+      OPEN ["num"],
+      DATATYPE `osyntax = End of num | Plus of osyntax => num => osyntax`,
+      DEFN expt_def, 
+      DEFN coeff_def, 
+      DEFN finp_def, 
+      DEFN (CONJ tail_End tail_def), 
+      DEFN rank_def, 
+      DEFN oless_equations,
+      DEFN is_ord_equations,
+      DEFN ord_less_def,
+      DEFN ord_add_def, 
+      DEFN ord_sub_def, 
+      DEFN ord_mult_def]);
+ 
 end

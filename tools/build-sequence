@@ -107,4 +107,4 @@ src/Boolify/src
 src/float
 !!examples/miller/miller
 src/emit
-src/emit/theories
+# src/emit/theories
