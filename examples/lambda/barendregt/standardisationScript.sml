@@ -20,6 +20,7 @@ open termTheory chap2Theory chap3Theory
 open term_posnsTheory
 open pathTheory
 open chap11_1Theory
+open head_reductionTheory
 
 local open containerTheory in end
 

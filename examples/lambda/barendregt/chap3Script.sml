@@ -1355,11 +1355,5 @@ val rator_isub_commutes = store_thm(
 
 val SUB_MERGE = save_thm("SUB_MERGE", lemma15a)
 
-val (hnf_thm, _) =
-    define_recursive_term_function
-    `(hnf (VAR s) = T) /\
-     (hnf (x @@ y) = hnf x /\ ~is_abs x) /\
-     (hnf (LAM v t) = hnf t)`;
-
 val _ = export_theory();
 
