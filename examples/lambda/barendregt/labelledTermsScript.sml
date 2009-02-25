@@ -1109,7 +1109,7 @@ val term_info_string =
     "local\n\
     \fun k |-> v = {redex = k, residue = v}\n\
     \val term_info = \n\
-    \   {nullfv = ``LAM \"\" (VAR \"\")``,\n\
+    \   {nullfv = ``labelledTerms$LAM \"\" (VAR \"\")``,\n\
     \    rewrites = [],\n\
     \    inst = [\"rFV\" |-> \
     \              (fn () => ``labelledTerms$FV : lterm -> string set``),\n\
