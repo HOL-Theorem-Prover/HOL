@@ -98,6 +98,32 @@ val hnf_tpm = store_thm(
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
 val _ = export_rewrites ["hnf_tpm"]
 
+val hreduce1_unique = store_thm(
+  "hreduce1_unique",
+  ``∀M N1 N2. M -h-> N1 ∧ M -h-> N2 ⇒ (N1 = N2)``,
+  Q_TAC SUFF_TAC `∀M N. M -h-> N ⇒ ∀P. M -h-> P ⇒ (N = P)`
+        THEN1 METIS_TAC [] THEN 
+  HO_MATCH_MP_TAC hreduce1_ind THEN 
+  SIMP_TAC (srw_ss() ++ DNF_ss) [hreduce1_rwts]);
+
+val strong_cc_ind = IndDefLib.derive_strong_induction (compat_closure_rules,
+                                                       compat_closure_ind)
+
+val hnf_ccbeta_preserved = store_thm(
+  "hnf_ccbeta_preserved",
+  ``∀M N. compat_closure beta M N ∧ hnf M ⇒ hnf N``,  
+  Q_TAC SUFF_TAC 
+        `∀M N. compat_closure beta M N ⇒ hnf M ⇒ hnf N`
+        THEN1 METIS_TAC [] THEN 
+  HO_MATCH_MP_TAC strong_cc_ind THEN SRW_TAC [][] THENL [
+    FULL_SIMP_TAC (srw_ss()) [beta_def] THEN 
+    SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [],
+
+    Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN 
+    FULL_SIMP_TAC (srw_ss()) [cc_beta_thm] THEN 
+    SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
+  ]);
+
 
 val _ = set_trace "Unicode" 0
 
