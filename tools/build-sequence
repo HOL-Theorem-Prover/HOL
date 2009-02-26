@@ -114,6 +114,5 @@ src/Boolify/src
 src/float
 !!examples/miller/miller
 src/emit
-src/theoryML
 !examples/ordinal
 # src/emit/theories
