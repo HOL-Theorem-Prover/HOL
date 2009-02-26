@@ -1551,8 +1551,7 @@ fun pp_term (G : grammar) TyG = let
           (* characters *)
           val _ = case total Literal.dest_char_lit tm of
                     NONE => ()
-                  | SOME c => (add_string "#";
-                               add_string (Lib.mlquote (str c));
+                  | SOME c => (add_string ("#" ^ Lib.mlquote (str c));
                                raise SimpleExit)
 
           (* numerals *)

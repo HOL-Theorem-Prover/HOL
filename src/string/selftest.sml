@@ -92,7 +92,8 @@ in
 end
 
 val _ = app tpp ["P \"a\" /\\ Q",
-                 "P (STRCAT a \"b\") /\\ Q"]
+                 "P (STRCAT a \"b\") /\\ Q",
+                 "#\"a\""]
 
 
 val _ = OS.Process.exit OS.Process.success
