@@ -171,7 +171,7 @@ fun avoid_symbolmerge G = let
   val split = term_tokens.user_split_ident keywords
   fun bad_merge (s1, s2) = let
     val combined = s1 ^ s2
-    val (x,y) = split combined 
+    val (x,y) = split combined
   in
     y <> s2
   end handle base_tokens.LEX_ERR _ => true
@@ -180,17 +180,22 @@ in
        val last_string = ref " "
        fun new_addstring s = let
          val sz = size s
+         val ls = !last_string
+         val allspaces = str_all (equal #" ") s
        in
          if sz = 0 then ()
-         else (if !last_string = " " then add_string s
+         else (if ls = " " orelse allspaces then add_string s
                else if not (!avoid_symbol_merges) then add_string s
-               else if creates_comment (!last_string, s) orelse
-                       bad_merge (!last_string, s)
+               else if String.sub(ls, size ls - 1) = #"\"" then add_string s
+               (* special case the quotation because term_tokens relies on
+                  the base token technology (see base_lexer) to separate the
+                  end of a string from the next character *)
+               else if creates_comment (ls, s) orelse bad_merge (ls, s)
                then
                  (add_string " "; add_string s)
                else
                  add_string s;
-               last_string := (if str_all (equal #" ") s then " " else s))
+               last_string := (if allspaces then " " else s))
        end
        fun new_add_break (p as (n,m)) =
            (if n > 0 then last_string := " " else (); add_break p)

@@ -73,12 +73,26 @@ fun sectest (t1, rest) = let
     (term_to_string res, aconv res rest)
   end handle _ => ("EXN", false)
 in
-  print (StringCvt.padRight #" " 10 actual);
+  print (StringCvt.padRight #" " 25 actual);
   if ok then print "OK\n" else (print "FAILED!\n";
                                 OS.Process.exit OS.Process.failure)
 end
 
 val _ = app sectest sec_data
+
+fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
+
+fun tpp s = let
+  val t = Parse.Term [QUOTE s]
+  val _ = tprint ("Printing of `"^s^"`")
+  val res = term_to_string t
+in
+  if res = s then print "OK\n"
+  else (print "FAILED!\n"; Process.exit Process.failure)
+end
+
+val _ = app tpp ["P \"a\" /\\ Q",
+                 "P (STRCAT a \"b\") /\\ Q"]
 
 
 val _ = OS.Process.exit OS.Process.success
