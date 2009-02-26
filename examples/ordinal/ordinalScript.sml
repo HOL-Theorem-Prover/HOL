@@ -238,7 +238,7 @@ val rank_less_imp_oless = Q.store_thm
    THEN FULL_SIMP_TAC ord_ss [] THENL
    [METIS_TAC [oless_rules],
     RW_TAC ord_ss [] THEN
-    METIS_TAC [DECIDE ``x < x + 1n``,decompose_plus,oless_rules]]);
+    METIS_TAC [DECIDE``x < x + 1n``,decompose_plus,oless_rules]]);
 
 (*---------------------------------------------------------------------------*)
 (* oless implies rank leq.                                                   *)
@@ -796,7 +796,7 @@ val tail_End = Q.prove
   REWRITE_TAC [combinTheory.FAIL_THM]);
 
 val _ =
- emitML ""           (* !Globals.emitMLDir *)
+ emitML ""    (* Write to current directory, not !Globals.emitMLDir *)
     ("ordinal",
      [MLSIG "type num = numML.num",
       OPEN ["num"],
