@@ -1,0 +1,3 @@
+INCLUDES = $(protect $(HOLDIR)/src/theoryML)
+
+EXTRA_CLEANS = ordinalML.sig ordinalML.sml

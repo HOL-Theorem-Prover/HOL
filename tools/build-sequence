@@ -22,6 +22,13 @@
 # write -selftest 2, that's level 2, which means directories with 2 !s
 # will get tested.)
 
+# if a directory name is preceded by a string inside []-brackets, then
+# that directory/target will only be considered if the string is the
+# name of the current ML implementation.  Thus the line [poly]foo
+# will cause foo to be built only if the current implementation is
+# Poly/ML.  (The other supported implementation at the time of writing
+# is [mosml].)
+
 tools/mlyacc/mlyacclib
 # these three directories are required to even run hol.bare.unquote
 src/parse
@@ -107,4 +114,6 @@ src/Boolify/src
 src/float
 !!examples/miller/miller
 src/emit
+src/theoryML
+!examples/ordinal
 # src/emit/theories
