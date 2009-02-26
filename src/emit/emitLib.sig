@@ -4,6 +4,8 @@ sig
 
   datatype side = LEFT | RIGHT
 
+  val datatype_thm_to_string : thm -> string
+
   val pp_type_as_ML     : ppstream -> hol_type -> unit
   val pp_term_as_ML     : string list -> side -> ppstream -> term -> unit
   val pp_defn_as_ML     : string list -> ppstream -> term -> unit
