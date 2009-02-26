@@ -9,10 +9,13 @@
 *)
 
 open HolKernel boolLib bossLib Parse;
-open Q wordsTheory rich_listTheory updateTheory armTheory systemTheory;
-open set_emitTheory words_emitTheory sum_emitTheory rich_list_emitTheory;
+open Q updateTheory armTheory systemTheory;
+open emitLib words_emitTheory rich_list_emitTheory;
 
 val _ = new_theory "arm_emit";
+
+val _ = numLib.prefer_num();
+val _ = wordsLib.prefer_word();
 
 (*---------------------------------------------------------------------------*)
 
@@ -111,11 +114,11 @@ fun mk_word n =
   let val s = Int.toString n
       val w = "type word" ^ s ^ " = wordsML.word" ^ s
   in
-    EmitML.MLSIG w
+    MLSIG w
   end;
 
-val _ = let open EmitML in eSML "update"
-  (OPEN ["num", "fcp", "words"]
+val _ = eSML "update"
+  (OPEN ["num", "sum", "fcp", "words"]
     :: MLSIG "type 'a word = 'a wordsML.word"
     :: MLSIG "type num = numML.num"
     :: MLSIG "type word2 = wordsML.word2"
@@ -132,16 +135,16 @@ val _ = let open EmitML in eSML "update"
                           | UnsignedWord`)
     :: DATATYPE (`data = Byte of word8 | Half of word16 | Word of word32`)
     :: map DEFN [LUPDATE_def, mem_read_def, mem_write_def, mem_write_block_def]
-     @ map (DEFN o words_emitLib.WORDS_EMIT_RULE o mem_rule)
-              [empty_memory_def, mem_items_def, addr30_def, GET_HALF_def,
-               SIMP_RULE std_ss [literal_case_DEF] GET_BYTE_def,
-               FORMAT_def, SET_BYTE_def, SET_HALF_def,
-               MEM_WRITE_BYTE_def, MEM_WRITE_HALF_def,
-               MEM_WRITE_WORD_def, MEM_WRITE_def])
-end;
+     @ map (DEFN o mem_rule)
+        [empty_memory_def, mem_items_def, addr30_def, GET_HALF_def,
+         SIMP_RULE std_ss [literal_case_DEF] GET_BYTE_def,
+         FORMAT_def, SET_BYTE_def, SET_HALF_def,
+         MEM_WRITE_BYTE_def, MEM_WRITE_HALF_def,
+         MEM_WRITE_WORD_def, MEM_WRITE_def]);
 
-val _ = let open EmitML in eSML "arm"
-  (OPEN ["num", "option", "set", "fcp", "list", "rich_list", "bit", "words"]
+val _ = eSML "arm"
+  (OPEN ["num", "sum", "option", "set", "fcp", "list", "rich_list",
+         "bit", "words", "update"]
     :: MLSIG "type 'a itself = 'a fcpML.itself"
     :: MLSIG "type 'a word = 'a wordsML.word"
     :: MLSIG "type ('a,'b) cart = ('a,'b) fcpML.cart"
@@ -189,7 +192,7 @@ val _ = let open EmitML in eSML "arm"
               n_ldc  : 'a -> bool -> word32 -> num |>`)
     :: MLSTRUCT "val mem_updates = ref ([]: word30 list)"
     :: MLSIG "val mem_updates : word30 list ref"
-    :: map (DEFN o words_emitLib.WORDS_EMIT_RULE) (map spec_word_rule32
+    :: map DEFN (map spec_word_rule32
          [DECODE_PSR_THM, DECODE_BRANCH_THM, DECODE_DATAP_THM,
           DECODE_MRS_THM, DECODE_MSR_THM, DECODE_LDR_STR_THM,
            DECODE_MLA_MUL_THM, DECODE_LDM_STM_THM, DECODE_SWP_THM,
@@ -221,8 +224,7 @@ val _ = let open EmitML in eSML "arm"
           interrupt2exception_def, PROJ_IF_FLAGS_def, NEXT_ARM_def,
           OUT_ARM_def, mem_rule TRANSFER_def, TRANSFERS_def,
           OUT_CP_def, RUN_CP_def, mem_rule NEXT_ARM_MMU,
-          mem_rule NEXT_ARM_MEM, empty_registers_def]))
- end;
+          mem_rule NEXT_ARM_MEM, empty_registers_def]));
 
 (* -------------------------------------------------------------------------- *)
 
