@@ -180,7 +180,7 @@ val thms =
    numeral_log2,numeral_ilog2,LOG_compute,LOWEST_SET_BIT_compute,
    n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def,
-   word_join_def, word_concat_def,
+   word_join_def, Q.SPECL [`^n2w ^n`,`n2w ^m:'b word`] word_concat_def,
    word_reverse_n2w, word_modify_n2w, word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
    word_2comp_n2w, word_sub_def, word_div_def, word_sdiv_def,

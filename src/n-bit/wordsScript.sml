@@ -310,9 +310,7 @@ val _ = Unicode.unicode_version{u=Unicode.UChar.rol, tmnm="#<<"}
 (*  Concatenation : definition                                               *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = ai := true;
-
-val word_join_def = Define`
+val word_join_def = with_flag (computeLib.auto_import_definitions, true) Define`
   (word_join (v:'a word) (w:'b word)):('a + 'b) word =
     let cv = (w2w v):('a + 'b) word
     and cw = (w2w w):('a + 'b) word
@@ -329,14 +327,12 @@ val _ = add_infix("@@",700,HOLgrammars.RIGHT);
 (*  Orderings : definitions                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val nzcv_def = Define `
+val nzcv_def = with_flag (computeLib.auto_import_definitions, true) Define `
   nzcv (a:'a word) (b:'a word) =
     let q = w2n a + w2n (- b) in
     let r = (n2w q):'a word in
       (word_msb r,r = 0w,BIT ^WL q \/ (b = 0w),
      ~(word_msb a = word_msb b) /\ ~(word_msb r = word_msb a))`;
-
-val _ = ai := false;
 
 val word_lt_def = Define`
   word_lt a b = let (n,z,c,v) = nzcv a b in ~(n = v)`;
