@@ -825,6 +825,17 @@ val last_take = store_thm(
   ]);
 val _ = export_rewrites ["last_take"]
 
+val nth_label_take = store_thm(
+  "nth_label_take",
+  ``!n p i. i < n /\ n IN PL p ==> (nth_label i (take n p) = nth_label i p)``,
+  Induct THENL [
+    SRW_TAC [][],
+    GEN_TAC THEN
+    Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN SRW_TAC [][] THEN
+    Cases_on `i` THEN SRW_TAC [][] THEN
+    FULL_SIMP_TAC (srw_ss()) []
+  ]);
+
 (* ----------------------------------------------------------------------
     seg i j p
       is a path consisting of elements i to j from p
@@ -1086,15 +1097,26 @@ val okpath_monotone = store_thm(
 
 val okpath_def = Define`okpath R = gfp (okpath_f R)`;
 
+infix |>
+fun x |> f = f x
+
 val okpath_co_ind = save_thm(
   "okpath_co_ind",
-  (GEN_ALL o
-   CONV_RULE (RENAME_VARS_CONV ["P"]) o
-   SIMP_RULE (srw_ss()) [pred_setTheory.SPECIFICATION] o
-   SIMP_RULE (srw_ss()) [pred_setTheory.SUBSET_DEF, GSYM okpath_def,
-                         okpath_f_def])
-    (MATCH_MP fixedPointTheory.gfp_coinduction
-              (SPEC_ALL okpath_monotone)));
+  okpath_monotone |> SPEC_ALL
+                  |> MATCH_MP fixedPointTheory.gfp_coinduction
+                  |> SIMP_RULE (srw_ss()) [pred_setTheory.SUBSET_DEF,
+                                           GSYM okpath_def,
+                                           okpath_f_def]
+                  |> SIMP_RULE bool_ss [IN_DEF]
+                  |> CONV_RULE (RENAME_VARS_CONV ["P"])
+                  |> CONV_RULE
+                      (STRIP_QUANT_CONV
+                           (LAND_CONV (HO_REWR_CONV FORALL_path)))
+                  |> SIMP_RULE (srw_ss()) []
+                  |> CONV_RULE
+                       (STRIP_QUANT_CONV
+                          (LAND_CONV (RENAME_VARS_CONV ["x", "r", "p"]) THENC
+                           RAND_CONV (RENAME_VARS_CONV ["p"]))))
 
 val okpath_cases = save_thm(
   "okpath_cases",
@@ -1287,9 +1309,9 @@ val finite_paths_SN = store_thm(
          DISCH_THEN (Q.SPEC_THEN `0` MP_TAC) THEN
          SIMP_TAC (srw_ss() ++ boolSimps.ETA_ss)
                   [combinTheory.o_DEF]) THEN
-  HO_MATCH_MP_TAC okpath_co_ind THEN GEN_TAC THEN
+  HO_MATCH_MP_TAC okpath_co_ind THEN REPEAT GEN_TAC THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [pgenerate_def])) THEN
-  SRW_TAC [][] THEN SRW_TAC [][] THENL [
+  SRW_TAC [][] THENL [
     ONCE_REWRITE_TAC [pgenerate_def] THEN
     ASM_SIMP_TAC (srw_ss()) [GSYM arithmeticTheory.ADD1],
     Q.EXISTS_TAC `SUC n` THEN

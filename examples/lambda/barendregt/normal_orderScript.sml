@@ -1,7 +1,8 @@
 open HolKernel Parse boolLib bossLib
 
-open boolSimps pred_setTheory
+open boolSimps pred_setTheory pathTheory binderLib
 open chap3Theory standardisationTheory term_posnsTheory termTheory
+     finite_developmentsTheory
 
 val _ = new_theory "normal_order"
 
@@ -99,5 +100,88 @@ val normorder_det = store_thm(
   HO_MATCH_MP_TAC strong_normorder_ind THEN
   SRW_TAC [][normorder_rwts] THEN
   METIS_TAC [normorder_bnf]);
+
+val noposn_def = define_recursive_term_function`
+  (noposn (VAR s) = NONE) ∧
+  (noposn (M @@ N) = if is_abs M then SOME []
+                     else case noposn M of
+                             NONE -> OPTION_MAP (CONS Rt) (noposn N)
+                          || SOME p -> SOME (Lt::p)) ∧
+  (noposn (LAM v M) = OPTION_MAP (CONS In) (noposn M))
+`;
+val _ = export_rewrites ["noposn_def"]
+
+val bnf_noposn = store_thm(
+  "bnf_noposn",
+  ``∀M. bnf M ⇔ (noposn M = NONE)``,
+  HO_MATCH_MP_TAC simple_induction THEN
+  SRW_TAC [][] THEN Cases_on `noposn M` THEN SRW_TAC [][])
+
+val normorder_noposn = store_thm(
+  "normorder_noposn",
+  ``M -n-> N ⇔ ∃p. (noposn M = SOME p) ∧ labelled_redn beta M p N``,
+  EQ_TAC THENL [
+    Q_TAC SUFF_TAC
+     `∀M N. M -n-> N ⇒ ∃p. (noposn M = SOME p) ∧ labelled_redn beta M p N`
+     THEN1 METIS_TAC [] THEN
+    HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][bnf_noposn] THEN
+    SRW_TAC [][labelled_redn_rules] THEN
+    METIS_TAC [labelled_redn_rules, beta_def],
+
+    Q_TAC SUFF_TAC
+      `∀M p N. labelled_redn beta M p N ⇒
+                (noposn M = SOME p) ⇒ M -n-> N` THEN1 METIS_TAC [] THEN
+    HO_MATCH_MP_TAC labelled_redn_ind THEN
+    SIMP_TAC (srw_ss() ++ DNF_ss) [beta_def, normorder_rules] THEN
+    SRW_TAC [][] THENL [
+      Cases_on `noposn M` THEN FULL_SIMP_TAC (srw_ss()) [normorder_rules],
+      Cases_on `noposn z` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+      METIS_TAC [bnf_noposn, normorder_rules]
+    ]
+  ]);
+
+val noposn_least = store_thm(
+  "noposn_least",
+  ``∀M p.
+      (noposn M = SOME p) ⇒ p ∈ redex_posns M ∧
+                            ∀p'. p' ∈ redex_posns M ⇒
+                                 (p' = p) ∨ p < p'``,
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][redex_posns_def] THENL [
+    Cases_on `noposn M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    SRW_TAC [][],
+    Cases_on `noposn M` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
+      `∃N. labelled_redn beta M x N`
+         by METIS_TAC [is_redex_occurrence_def, IN_term_IN_redex_posns] THEN
+      `bnf M` by METIS_TAC [bnf_noposn] THEN
+      METIS_TAC [labelled_redn_cc, beta_normal_form_bnf, corollary3_2_1],
+      SRW_TAC [][]
+    ],
+
+    Cases_on `noposn M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    SRW_TAC [][]
+  ]);
+
+val normorder_reduction_def = Define`
+  normorder_reduction p =
+    okpath (λM r N. (noposn M = SOME r) ∧ labelled_redn beta M r N) p
+`
+val normorder_is_standard = store_thm(
+  "normorder_is_standard",
+  ``∀p. normorder_reduction p ⇒ standard_reduction p``,
+  HO_MATCH_MP_TAC standard_coind THEN
+  SRW_TAC [][normorder_reduction_def] THEN
+  METIS_TAC [posn_lt_antisym, posn_lt_irrefl, noposn_least]);
+
+val ihr_noposn = store_thm(
+  "ihr_noposn",
+  ``∀r M. r is_head_redex M ⇒ (noposn M = SOME r)``,
+  HO_MATCH_MP_TAC is_head_redex_ind THEN SRW_TAC [][]);
+
+val head_is_normorder = store_thm(
+  "head_is_normorder",
+  ``∀p. is_head_reduction p ⇒ normorder_reduction p``,
+  SIMP_TAC (srw_ss()) [normorder_reduction_def] THEN
+  HO_MATCH_MP_TAC okpath_co_ind THEN
+  SRW_TAC [][is_head_reduction_thm, ihr_noposn]);
 
 val _ = export_theory()

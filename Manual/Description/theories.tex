@@ -3287,6 +3287,17 @@ finite $R$-paths:
        !p. okpath R p /\ finite p ==> P p
 \end{verbatim}
 \end{hol}
+
+One can show that a set \holtxt{P} of paths are all $R$-paths with the
+co-induction principle:
+\begin{hol}
+\begin{verbatim}
+   okpath_co_ind |-
+      !P.
+         (!x r p. P (pcons x r p) ==> R x r (first p) /\ P p) ==>
+         !p. P p ==> okpath R p
+\end{verbatim}
+\end{hol}
 \index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|)}
 \index{reduction sequences, the HOL theory of@reduction sequences, the \HOL{} theory of|)}
 \index{paths (reduction sequences), the HOL theory of@paths (reduction sequences), the \HOL{} theory of|)}
