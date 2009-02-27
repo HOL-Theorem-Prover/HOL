@@ -226,6 +226,35 @@ fun parse_type strm =
                          kindparser = kindparser} true
   (Parse.type_grammar()) strm
 
+(*
+fun to_ptyInEnv ty = let
+  open Pretype Parse_support
+  fun binder_type binder (Pretype.PT(Pretype.Vartype(s,kd,rk),l)) = make_binding_type_occ l s binder
+    | binder_type binder (Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) =
+            make_kind_binding_occ l (binder_type binder Ty) Kind
+    | binder_type binder (Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) =
+            make_rank_binding_occ l (binder_type binder Ty) Rank
+    | binder_type _ _ = raise ERROR "to_ptyInEnv" "non-variable type binder"
+in case ty of
+     dVartype(s,kd,rk)  => make_type_atom l (s,kd,rk)
+   | dContype{Thy,Tyop,Kind,Rank} => make_type_constant l {Thy=Thy,Tyop=Tyop}
+   | dTyApp(ty1,ty2   ) => list_make_app_type l (map to_ptyInEnv [ty1,ty2])
+   | dTyUniv(bvar,body) => bind_type l [binder_type "!"  bvar] (to_ptyInEnv body)
+   | dTyAbst(bvar,body) => bind_type l [binder_type "\\" bvar] (to_ptyInEnv body)
+   | dTyKindConstr{Ty,Kind}     => make_kind_constr_type l (to_ptyInEnv Ty) Kind
+   | dTyRankConstr{Ty,Rank}     => make_rank_constr_type l (to_ptyInEnv Ty) Rank
+   | dAQ(Ty)                    => 
+end
+
+fun parse_type strm =
+   let val pty = parse_type0 strm
+       val pfns = SOME(Parse.type_to_string, Parse.kind_to_string)
+   in
+     (* Pretype.kindcheck pfns (Parse_support.make_pretype (Parse.to_ptyInEnv pty)) *)
+     Pretype.kindcheck pfns (Parse_support.make_pretype (Parse.to_ptyInEnv pty))
+   end
+*)
+
 val parse_constructor_id = ident
 
 fun parse_record_fld qb = let

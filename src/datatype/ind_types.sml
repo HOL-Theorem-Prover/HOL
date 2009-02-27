@@ -104,18 +104,20 @@ fun striplist dest =
   end;
 
 (*---------------------------------------------------------------------------
-   This is not the same as Type.type_subst, which only substitutes
+   This is (*not*) the same as Type.type_subst, which (*only substitutes*) does substitute
    for variables!
  ---------------------------------------------------------------------------*)
 
-fun tysubst theta ty =
-  case subst_assoc (equal ty) theta
+fun tysubst theta ty = Type.type_subst theta ty;
+(*
+  case subst_assoc (abconv_ty ty) theta
    of SOME x => x
     | NONE =>
        if is_vartype ty then ty
        else let val {Tyop,Thy,Args} = dest_thy_type ty
             in mk_thy_type{Tyop=Tyop,Thy=Thy, Args=map (tysubst theta) Args}
             end;
+*)
 
 fun SUBS_CONV [] tm = REFL tm
   | SUBS_CONV ths tm =
@@ -490,7 +492,7 @@ end;
 fun create_recursive_functions tybijpairs consindex conthms rth = let
   val domtys = map (hd o snd o dest_type o type_of o snd o snd) consindex
   val recty = (hd o snd o dest_type o type_of o fst o snd o hd) consindex
-  val ranty = mk_vartype "'Z"
+  val ranty = mk_vartype_opr("'Z", typ, rank_of recty)
   val fnn = mk_var("fn", recty --> ranty)
   and fns = make_args "fn" [] (map (C (curry op -->) ranty) domtys)
   val args = make_args "a" [] domtys
@@ -556,9 +558,7 @@ in
 end;
 
 local
-  val zty = mk_vartype"'Z"
   val numty = numSyntax.num
-  val s = mk_var("s",numty --> zty)
   fun extract_arg tup v =
     if eq v tup then REFL tup
     else let
@@ -578,6 +578,8 @@ in
   fun create_recursion_iso_constructor consindex = let
     val recty = hd(snd(dest_type(type_of(fst(hd consindex)))))
     val domty = hd(snd(dest_type recty))
+    val zty = mk_vartype_opr("'Z", typ, rank_of domty)
+    val s = mk_var("s",numty --> zty)
     val i = mk_var("i",domty)
     and r = mk_var("r", numty --> recty)
     val mks = map (fst o snd) consindex
@@ -1046,7 +1048,7 @@ fun clause_corresponds cl0 =
      end
  end
 
-fun INSTANTIATE (tmsubst, tysubst) thm = INST tmsubst (INST_TYPE tysubst thm)
+fun INSTANTIATE (tmsubst, tysubst, kdsubst, rksubst) thm = INST_ALL (tmsubst, tysubst, kdsubst, rksubst) thm
 
 fun find P l =
   case List.find P l
@@ -1148,10 +1150,10 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
     val icjs = conjuncts(rand(concl itha))
     val cinsts =
       map (fn tm =>
-              tryfind (fn vtm => ho_match_term [] empty_tmset vtm tm) icjs)
+              tryfind (fn vtm => ho_kind_match_term [] [] empty_tmset vtm tm) icjs)
           (conjuncts (rand ctm2))
     val tvs = op_subtract eq (fst(strip_forall(concl ith0)))
-                (itlist (fn (x,_) => op_union eq (map #redex x)) cinsts [])
+                (itlist (fn (x,_,_,_) => op_union eq (map #redex x)) cinsts [])
     val ctvs =
       map (fn p => let val x = mk_var("x",hd(snd(dest_type(type_of p))))
       in (p |-> mk_abs(x,T_tm)) end) tvs
@@ -1162,10 +1164,10 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
     val itha = SPEC_ALL ith1
     val icjs = conjuncts(rand(concl itha))
     val cinsts = map (fn tm => tryfind
-                      (fn vtm => ho_match_term [] empty_tmset vtm tm) icjs)
+                      (fn vtm => ho_kind_match_term [] [] empty_tmset vtm tm) icjs)
                      (conjuncts (lhand ctm2))
     val tvs = op_subtract eq (fst(strip_forall(concl ith1)))
-      (itlist (fn (x,_) => op_union eq (map #redex x)) cinsts [])
+      (itlist (fn (x,_,_,_) => op_union eq (map #redex x)) cinsts [])
     val ctvs =
       map (fn p => let val x = mk_var("x",hd(snd(dest_type(type_of p)))) in
            (p |-> mk_abs(x,T_tm)) end) tvs
@@ -1279,6 +1281,23 @@ local
           | NONE => #"l"
         else String.sub(outerop,0)
       end
+    handle HOL_ERR _ =>
+    if is_app_type ty then let
+        val (opr,arg) = dest_app_type ty
+      in
+        app_letter opr
+      end
+    else if is_abs_type ty then let
+        val (bvar,body) = dest_abs_type ty
+      in
+        app_letter body
+      end
+    else if is_univ_type ty then let
+        val (bvar,body) = dest_univ_type ty
+      in
+        app_letter body
+      end
+    else raise ERR "app_letter" "impossible type"
   fun new_name ctxt ty = let
     fun nvary ctxt nm n = let
       val fullname = nm ^ Int.toString n
@@ -1347,7 +1366,7 @@ fun canonicalise_tyvars def thm = let
     | (tyv::tyvs) => let
         val newtyname = Lexis.gen_variant Lexis.tyvar_vary avoids "'a"
       in
-        (tyv |-> mk_vartype newtyname) ::
+        (tyv |-> mk_vartype_opr(newtyname, kind_of tyv, rank_of tyv)) ::
         gen_canonicals tyvs (newtyname :: avoids)
       end
   val names_to_avoid = map dest_vartype def_tyvars
@@ -1361,12 +1380,31 @@ local
   fun is_nested vs ty =
     not (is_vartype ty) andalso not (intersect (type_vars ty) vs = [])
   fun modify_type theta ty =
-    case subst_assoc (equal ty) theta
+    case subst_assoc (abconv_ty ty) theta
      of SOME x => x
       | NONE => (let val {Tyop,Thy,Args} = dest_thy_type ty
                  in mk_thy_type{Tyop=Tyop,Thy=Thy,
                                 Args=map (modify_type theta) Args}
-                 end handle HOL_ERR _ => ty)
+                 end handle HOL_ERR _ =>
+                 if is_vartype ty then ty
+                 else if is_app_type ty then let
+                     val (opr,arg) = dest_app_type ty
+                   in
+                     mk_app_type(modify_type theta opr, modify_type theta arg)
+                   end
+                 else if is_abs_type ty then let
+                     val (bvar,body) = dest_abs_type ty
+                     val theta' = (bvar |-> bvar) :: theta
+                   in
+                     mk_abs_type(bvar, modify_type theta' body)
+                   end
+                 else if is_univ_type ty then let
+                     val (bvar,body) = dest_univ_type ty
+                     val theta' = (bvar |-> bvar) :: theta
+                   in
+                     mk_univ_type(bvar, modify_type theta' body)
+                   end
+                 else raise ERR "modify_type" "impossible type")
 
   fun modify_item alist (s,l) = (s,map (modify_type alist) l)
   fun modify_clause alist (l,lis) = (l,map (modify_item alist) lis)
@@ -1382,15 +1420,20 @@ local
   -------------------------------------------------------------------------- *)
 
   fun mk_thm_avoid check_these avoids0 = let
+    fun name_of ty = #1(dest_vartype_opr ty)
+    val check_these_names = map name_of check_these
     fun recurse [] avoids = []
-      | recurse (tyv1::tyvs) avoids =
-         if Lib.mem tyv1 avoids
-         then let val newtyv =
-                Lexis.gen_variant Lexis.tyvar_vary (check_these@avoids) "'a"
-              in (mk_vartype tyv1 |-> mk_vartype newtyv)
-                 :: recurse tyvs (newtyv::avoids)
-              end
-         else recurse tyvs avoids
+      | recurse (tyv1::tyvs) avoids = let
+           val avoids_names = map name_of avoids
+         in
+           if Lib.mem (name_of tyv1) avoids_names
+           then let val newtyv = Lexis.gen_variant Lexis.tyvar_vary
+                                       (check_these_names@avoids_names) "'a"
+                    val newty = mk_vartype_opr(newtyv, kind_of tyv1, rank_of tyv1)
+                in (tyv1 |-> newty) :: recurse tyvs (newty::avoids)
+                end
+           else recurse tyvs avoids
+         end
   in
     recurse check_these avoids0
   end
@@ -1403,7 +1446,7 @@ local
       handle Option.Option =>
         raise ERR "define_type_nested"
                ("Can't find definition for nested type: "^ tycon)
-    val rth0_tvs = map dest_vartype (Term.type_vars_in_term (concl rth0))
+    val rth0_tvs = (*map dest_vartype*) (Term.type_vars_in_term (concl rth0))
     val avoid_tyal = mk_thm_avoid rth0_tvs avoids
     val rth = Thm.INST_TYPE avoid_tyal rth0
     val ith = Thm.INST_TYPE avoid_tyal ith0
@@ -1416,7 +1459,7 @@ local
     val mtys = itlist (insert o type_of) cjs' []
     val pcons = map (fn ty => filter (fn t => type_of t = ty) cjs') mtys
     val cls' = zip mtys (map (map (recover_clause id)) pcons)
-    val tyal = map (fn ty => ty |-> mk_vartype("'"^fst(dest_type ty)^id)) mtys
+    val tyal = map (fn ty => ty |-> mk_vartype_opr("'"^fst(dest_type ty)^id, kind_of ty, rank_of ty)) mtys
     val cls'' = map (modify_type tyal ## map (modify_item tyal)) cls'
   in
     (k,tyal,cls'',Thm.INST_TYPE tyins ith, Thm.INST_TYPE tyins rth)
@@ -1441,7 +1484,7 @@ local
             if occurs_in t2 t1 then LESS else EQUAL
           val nty = hd (Listsort.sort compare_types rectys)
           val (k,tyal,ncls,ith,rth) =
-              create_auxiliary_clauses nty (map dest_vartype utyvars)
+              create_auxiliary_clauses nty ((*map dest_vartype*) utyvars)
           val cls = map (modify_clause tyal) def @ ncls
           val (_,ith1,rth1) = define_type_nested cls
           val xnewtys = map (hd o snd o dest_type o type_of)

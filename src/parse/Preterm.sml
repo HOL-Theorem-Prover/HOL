@@ -224,7 +224,7 @@ fun from_term_var tm = let val (s,ty) = Term.dest_var tm
 local fun FV (v as Var _) A k              = k (Lib.op_insert eq v A)
         | FV (Comb{Rator,Rand,...}) A k    = FV Rator A (fn q => FV Rand q k)
         | FV (TyComb{Rator,Rand,...}) A k  = FV Rator A k
-        | FV (Abs{Bvar,Body,...}) A k      = FV Body A k
+        | FV (Abs{Bvar,Body,...}) A k      = FV Body A (fn q => k (Lib.op_subtract eq q [Bvar]))
         | FV (TyAbs{Bvar,Body,...}) A k    = FV Body A k
         | FV (Constrained{Ptm,Ty,...}) A k = FV Ptm A k
         | FV (Pattern{Ptm,...}) A k        = FV Ptm A k

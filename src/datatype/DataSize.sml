@@ -73,12 +73,36 @@ fun tysize (theta,omega,gamma) clause ty =
            in case gamma (Thy,Tyop)
                of SOME f =>
                    let val vty = drop Args (type_of f)
-                       val sigma = Type.match_type vty ty
-                    in list_mk_comb(inst sigma f,
+                       val (tyS,kdS,rkS) = Type.kind_match_type vty ty
+                    in list_mk_comb(inst tyS (inst_rank_kind rkS kdS f),
                                 map (tysize (theta,omega,gamma) clause) Args)
                     end
                 | NONE => Kzero ty
            end
+           handle HOL_ERR _ =>
+           if is_app_type ty then
+                    let val (opr,arg) = dest_app_type ty
+                        val opr_tm = tysize (theta,omega,gamma) clause opr
+                        val arg_tm = tysize (theta,omega,gamma) clause arg
+                    in mk_comb(opr_tm, arg_tm)
+                    end
+           else if is_abs_type ty then
+                    let val (bvar,body) = dest_abs_type ty
+                        val bvar_tm = genvar (bvar --> numSyntax.num)
+                        val theta' = (fn ty => if abconv_ty ty bvar then SOME bvar_tm else theta ty)
+                        val body_tm = tysize (theta',omega,gamma) clause body
+                    in mk_abs(bvar_tm, body_tm)
+                    end
+           else if is_univ_type ty then
+                    let val (bvar,body) = dest_univ_type ty
+                        val abs_tm = tysize (theta,omega,gamma) clause (mk_abs_type(bvar,body))
+                        val bv' = ty_antiq bvar
+                        val v = genvar ty
+                        fun bound n = ``!:^bv'. ^abs_tm ^(Kzero bvar) (^v [:^bv':]) < ^(mk_var(n,numSyntax.num))``
+                        val max_tm = ``\^v. @n. ^(bound "n") /\ !m. ^(bound "m") ==> n <= m``
+                    in max_tm
+                    end handle e => Raise e
+           else raise ERR "tysize" "impossible type"
 end;
 
 fun dupls [] (C,D) = (rev C, rev D)
