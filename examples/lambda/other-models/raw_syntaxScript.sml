@@ -673,7 +673,6 @@ val raw_diamond = store_thm(
   ``diamond (RTC (beta RUNION alpha))``,
   SRW_TAC [][GSYM diamond_eval, collapse_preserves_diagrams] THEN
   SRW_TAC [][diamond_eval] THEN
-  METIS_TAC [chap3Theory.beta_CR, chap3Theory.CR_def,
-             chap3Theory.reduction_def]);
+  METIS_TAC [chap3Theory.beta_CR, chap3Theory.CR_def]);
 
 val _ = export_theory();

@@ -499,7 +499,7 @@ val lemma11_1_6i = store_thm(
   ``!M' N. reduction beta (strip_label M') N ==>
            ?N'. RTC (lcompat_closure (beta0 RUNION beta1)) M' N' /\
                 (N = strip_label N')``,
-  SIMP_TAC (srw_ss()) [reduction_def] THEN
+  SIMP_TAC (srw_ss()) [] THEN
   Q_TAC SUFF_TAC
         `!M N. RTC (compat_closure beta) M N ==>
                !M'. (M = strip_label M') ==>
@@ -629,7 +629,7 @@ val beta_CR_2 = store_thm(
         `!M M1. RTC (compat_closure beta) M M1 ==>
                 !M2. reduction beta M M2 ==>
                      ?M3. reduction beta M1 M3 /\ reduction beta M2 M3`
-        THEN1 PROVE_TAC [reduction_def] THEN
+        THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
   PROVE_TAC [reduction_rules, strip_lemma]);
 

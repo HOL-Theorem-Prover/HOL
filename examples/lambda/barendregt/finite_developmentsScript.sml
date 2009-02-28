@@ -3972,7 +3972,7 @@ val lemma11_2_28i = store_thm(
          by PROVE_TAC [RUNION_RTC_MONOTONE] THEN
       FULL_SIMP_TAC (srw_ss()) [lcompat_closure_RUNION_distrib] THEN
       `RTC (compat_closure beta) (strip_label M') (strip_label (Cpl M'))` by
-        PROVE_TAC [lemma11_1_6ii, reduction_def] THEN
+        PROVE_TAC [lemma11_1_6ii] THEN
       Q.UNABBREV_TAC `M'` THEN FULL_SIMP_TAC (srw_ss()) [strip_label_nlabel],
       PROVE_TAC [relationTheory.RTC_RTC]
     ]
@@ -4096,7 +4096,7 @@ val lemma11_2_28ii = store_thm(
 val corollary11_2_29 = store_thm(
   "corollary11_2_29",
   ``CR beta``,
-  SRW_TAC [][CR_def, reduction_def, lemma11_2_28i, lemma11_2_28ii,
+  SRW_TAC [][CR_def, lemma11_2_28i, lemma11_2_28ii,
              relationTheory.diamond_TC_diamond]);
 
 val _ = export_theory();

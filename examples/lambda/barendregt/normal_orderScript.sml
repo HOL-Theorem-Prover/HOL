@@ -244,11 +244,10 @@ val finite_normorder_RTC = store_thm(
   
 val normal_finds_bnf = store_thm(
   "normal_find_bnf",
-  ``RTC (compat_closure beta) M N /\ bnf N ⇒ M -n->* N``,
+  ``M -β->* N /\ bnf N ⇒ M -n->* N``,
   SRW_TAC [][] THEN 
-  `∃p. (first p = M) ∧ finite p ∧ (last p = N) ∧ 
-       standard_reduction p`
-    by METIS_TAC [standardisation_theorem, reduction_def] THEN 
+  `∃p. (first p = M) ∧ finite p ∧ (last p = N) ∧ standard_reduction p`
+    by METIS_TAC [standardisation_theorem] THEN 
   METIS_TAC [standard_to_bnf_is_normal, finite_normorder_RTC]);
            
   

@@ -683,7 +683,7 @@ val head_reduces_RTC_hreduce1 = store_thm(
 val head_reduces_reduction_beta = store_thm(
   "head_reduces_reduction_beta",
   ``!M N. M head_reduces N ==> reduction beta M N``,
-  SIMP_TAC (srw_ss()) [head_reduces_RTC_hreduce1, reduction_def] THEN
+  SIMP_TAC (srw_ss()) [head_reduces_RTC_hreduce1] THEN
   MATCH_MP_TAC relationTheory.RTC_MONOTONE THEN
   METIS_TAC [head_reduce1_def, labelled_redn_cc]);
 
@@ -1181,7 +1181,7 @@ val lemma11_4_6 = store_thm(
   "lemma11_4_6",
   ``!M N. reduction beta M N ==>
           ?M'. M head_reduces M' /\ M' i_reduces N``,
-  SIMP_TAC (srw_ss()) [reduction_def] THEN
+  SIMP_TAC (srw_ss()) [] THEN
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN CONJ_TAC THENL [
     PROVE_TAC [head_reduces_RTC_hreduce1, i_reduces_RTC_i_reduce1,
                relationTheory.RTC_RULES],
@@ -2380,7 +2380,7 @@ val head_reduction_path_unique = store_thm(
 val hnf_preserved = store_thm(
   "hnf_preserved",
   ``!M N. reduction beta M N ==> hnf M ==> hnf N``,
-  SIMP_TAC (srw_ss())[reduction_def] THEN
+  SIMP_TAC (srw_ss())[] THEN
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
   SRW_TAC [][hnf_no_head_redex] THEN
   Q_TAC SUFF_TAC `!p. ~(p is_head_redex N)` THEN1 PROVE_TAC [] THEN
