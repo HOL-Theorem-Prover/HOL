@@ -689,29 +689,4 @@ val lswap_NIL = store_thm(
   SRW_TAC [][lswap_def]);
 val _ = export_rewrites ["lswap_NIL"]
 
-val nc_info_string =
-    "local\n\
-    \fun k |-> v = {redex = k, residue = v}\n\
-    \val nc_info = \n\
-    \   {nullfv = ``CON ARB : 'a nc``,\n\
-    \    rewrites = [ncTheory.FV_THM, swap_thm, nc_swapping],\n\
-    \    inst = [\"rFV\" |-> (fn () => ``nc$FV : 'a nc -> string set``),\n\
-    \            \"rswap\" |-> (fn () =>\n\
-    \                            ``swap$swap : string -> string -> \n\
-    \                                          'a nc$nc -> 'a nc$nc``),\n\
-    \            \"apm\" |-> (fn () =>\n\
-    \                           ``swap$lswap : (string # string) list -> \n\
-    \                                          'a nc$nc -> 'a nc$nc``)]}\n\
-    \val _ = binderLib.range_database :=\n\
-    \          Binarymap.insert(!binderLib.range_database, \"nc\", nc_info)\n\
-    \val _ = binderLib.type_db :=\n\
-    \          Binarymap.insert(!binderLib.type_db, \"nc\",\n\
-    \                           swap_RECURSION_nosideset)\n\
-    \in end;\n"
-
-val _ = adjoin_to_theory
-        { sig_ps = NONE,
-          struct_ps =
-          SOME (fn pps => PP.add_string pps nc_info_string)}
-
 val _ = export_theory();

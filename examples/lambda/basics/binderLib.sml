@@ -17,6 +17,26 @@ fun ERR f msg = raise (HOL_ERR {origin_function = f,
                                 origin_structure = "binderLib",
                                 message = msg})
 
+datatype nominaltype_info = 
+         NTI of { recursion_thm : thm option,
+                  (* recursion theorems are stored in SPEC_ALL form, with 
+                     preconditions as one big set of conjuncts (rather than 
+                     iterated implications) *)
+                  nullfv : term,
+                  pm_constant : term,
+                  pm_rewrites : thm list,
+                  fv_constant : term,
+                  fv_rewrites : thm list,
+                  binders : (term * thm) list }
+
+fun nti_null_fv (NTI{nullfv, ...}) = nullfv 
+fun nti_perm_t (NTI{pm_constant,...}) = pm_constant
+fun nti_fv_t (NTI{fv_constant,...}) = fv_constant
+fun nti_recursion (NTI{recursion_thm,...}) = recursion_thm
+
+               
+                            
+
 (* ----------------------------------------------------------------------
     prove_recursive_term_function_exists tm
 
@@ -39,10 +59,9 @@ fun ERR f msg = raise (HOL_ERR {origin_function = f,
 
    ---------------------------------------------------------------------- *)
 
-(* recursion theorems are stored in SPEC_ALL form, with preconditions as one
-   big set of conjuncts (rather than iterated implications) *)
 val type_db =
-    ref (Binarymap.mkDict String.compare : (string,thm) Binarymap.dict)
+    ref (Binarymap.mkDict KernelSig.name_compare : 
+         (KernelSig.kernelname,nominaltype_info) Binarymap.dict)
 
 (*  testing code
 
@@ -58,14 +77,12 @@ type_db :=
 *)
 
 fun recthm_for_type ty = let
-  val {Tyop,...} = dest_thy_type ty
+  val {Tyop,Thy,...} = dest_thy_type ty
+  val NTI {recursion_thm,...} = Binarymap.find(!type_db, {Name=Tyop,Thy=Thy})
 in
-  SOME (Binarymap.find(!type_db, Tyop))
-end handle Binarymap.NotFound => NONE
-         | HOL_ERR _ => NONE
-
-fun myfind f [] = NONE
-  | myfind f (h::t) = case f h of NONE => myfind f t | x => x
+  recursion_thm
+end handle HOL_ERR _ => NONE
+         | Binarymap.NotFound => NONE
 
 fun find_constructors recthm = let
   val (_, c) = dest_imp (concl recthm)
@@ -114,7 +131,7 @@ fun check_for_errors tm = let
                       ("Unknown constructor "^
                        term_to_string (#1 (strip_comb (rand (lhs t)))))
   val () =
-      case myfind
+      case get_first
            (fn t => let val (c, args) = strip_comb (rand (lhs t))
                     in
                       case List.find (not o is_var) args of
@@ -133,15 +150,14 @@ end
 val null_fv = ``combin$K pred_set$EMPTY : 'a -> string -> bool``
 val null_swap = ``\x:string y:string z:'a. z``
 val null_apm = ``combin$K combin$I : (string # string)list -> 'a -> 'a``
-val null_info = {nullfv = mk_arb alpha,
-                 inst = ["rFV" |-> (fn () => null_fv),
-                         "rswap" |-> (fn () => null_swap),
-                         "apm" |-> (fn () => null_apm)],
-                 rewrites = []}
-
-type range_type_info = {nullfv : term,
-                        inst : {redex : string, residue : unit -> term} list,
-                        rewrites : thm list}
+val nameless_nti = NTI { nullfv = mk_arb alpha,
+                         pm_constant = null_apm,
+                         pm_rewrites = [combinTheory.K_THM, combinTheory.I_THM],
+                         fv_constant = null_fv,
+                         fv_rewrites = [combinTheory.K_THM],
+                         recursion_thm = NONE,
+                         binders = []}
+                         
 
 val range_database = ref (Binarymap.mkDict String.compare)
 
@@ -151,9 +167,16 @@ in
   Term.inst inst to_munge
 end
 
+val cpm_ty = let val sty = stringSyntax.string_ty 
+             in 
+               listSyntax.mk_list_type (pairSyntax.mk_prod (sty, sty))
+             end
+
+fun mk_perm_ty ty = cpm_ty --> ty --> ty
+
 exception InfoProofFailed of term
 fun with_info_prove_recn_exists f finisher dom_ty rng_ty lookup info = let
-  val {nullfv, inst, rewrites} = info
+  val NTI {nullfv, pm_rewrites, fv_rewrites, pm_constant, ...} = info
   fun mk_simple_abstraction (c, (cargs, r)) = list_mk_abs(cargs, r)
   val recthm = valOf (recthm_for_type dom_ty)
   val hom_t = #1 (dest_exists (#2 (dest_imp (concl recthm))))
@@ -189,17 +212,11 @@ fun with_info_prove_recn_exists f finisher dom_ty rng_ty lookup info = let
         end
   val recursion_exists0 =
       INST (map do_a_constructor constructors) (INST_TYPE base_inst recthm)
-  val other_var_inst = let
-    val recvars = free_vars (concl recursion_exists0)
-    fun findvar {redex,residue} =
-        case List.find (fn t => #1 (dest_var t) = redex) recvars of
-          SOME v => let val residue' = residue()
-                    in
-                      SOME (v |-> force_inst {src = v, to_munge = residue'})
-                    end
-        | NONE => NONE
+  val other_var_inst = let 
+    val apm = mk_var("apm", mk_perm_ty rng_ty)
+    val pm' = force_inst {src = apm, to_munge = pm_constant}
   in
-    List.mapPartial findvar inst
+    [apm |-> pm']
   end
   val recursion_exists1 = INST other_var_inst recursion_exists0
   val recursion_exists =
@@ -209,6 +226,7 @@ fun with_info_prove_recn_exists f finisher dom_ty rng_ty lookup info = let
                          (STRIP_QUANT_CONV (RAND_CONV LIST_BETA_CONV))) THENC
                       RAND_CONV (ALPHA_CONV f)))
                    recursion_exists1
+  val rewrites = pm_rewrites @ fv_rewrites
   val precondition_discharged =
       CONV_RULE
         (LAND_CONV (SIMP_CONV (srw_ss()) rewrites THENC
@@ -251,11 +269,11 @@ fun prove_recursive_term_function_exists0 fin tm = let
   fun find_eqn c = lookup c alist
   val callthis = with_info_prove_recn_exists f fin dom_ty rng_ty find_eqn
 in
-  case Lib.total dest_type rng_ty of
-    SOME (tyop, args) => let
+  case Lib.total dest_thy_type rng_ty of
+    SOME {Tyop, Thy, ...} => let
     in
-      case Binarymap.peek(!range_database, tyop) of
-        NONE => callthis null_info
+      case Binarymap.peek(!type_db, {Name=Tyop,Thy=Thy}) of
+        NONE => callthis nameless_nti
       | SOME i => callthis i
         handle InfoProofFailed tm =>
                (HOL_WARNING
@@ -264,9 +282,9 @@ in
                   ("Couldn't prove function with swap over range - \n\
                    \goal was "^term_to_string tm^"\n\
                    \trying null range assumption");
-                callthis null_info)
+                callthis nameless_nti)
     end
-  | NONE => callthis null_info
+  | NONE => callthis nameless_nti
 end handle InfoProofFailed tm =>
            raise ERR "prove_recursive_term_function_exists"
                      ("Couldn't prove function with swap over range - \n\

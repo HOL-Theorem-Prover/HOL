@@ -957,22 +957,19 @@ val tm_recursion_nosideset = save_thm(
 val term_info_string =
     "local\n\
     \fun k |-> v = {redex = k, residue = v}\n\
+    \open binderLib\n\
     \val term_info = \n\
-    \   {nullfv = ``LAM \"\" (VAR \"\")``,\n\
-    \    rewrites = [],\n\
-    \    inst = [\"rFV\" |-> (fn () => ``term$FV : term -> string set``),\n\
-    \            \"rswap\" |-> (fn () =>\n\
-    \                            ``\\(x:string) (y:string) (t:term).\n\
-    \                                   tpm [(x,y)] t``),\n\
-    \            \"apm\" |-> (fn () =>\n\
-    \                           ``term$tpm : (string # string) list -> \n\
-    \                                          term$term -> term$term``)]}\n\
-    \val _ = binderLib.range_database :=\n\
-    \          Binarymap.insert(!binderLib.range_database, \"term\", \n\
-    \                           term_info)\n\
+    \   NTI {nullfv = ``LAM \"\" (VAR \"\")``,\n\
+    \        pm_rewrites = [],\n\
+    \        pm_constant = ``term$tpm``,\n\
+    \        fv_constant = ``term$FV``,\n\
+    \        fv_rewrites = [],\n\
+    \        recursion_thm = SOME tm_recursion_nosideset,\n\
+    \        binders = [(``term$LAM``, tpm_ALPHA)]}\n\
     \val _ = binderLib.type_db :=\n\
-    \          Binarymap.insert(!binderLib.type_db, \"term\",\n\
-    \                           tm_recursion_nosideset)\n\
+    \          Binarymap.insert(!binderLib.type_db,\n\
+    \                           {Name = \"term\",Thy=\"term\"},\n\
+    \                           term_info)\n\
     \in end;\n"
 
 val _ = adjoin_to_theory

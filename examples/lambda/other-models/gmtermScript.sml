@@ -7,13 +7,30 @@ open ncTheory swapTheory binderLib
 
 val _ = new_theory "gmterm";
 
-val (constfree_def, _) = define_recursive_term_function`
-  (constfree (nc$VAR s) = T) /\
-  (constfree (nc$CON k) = F) /\
-  (constfree (nc$@@ M N) = constfree M /\ constfree N) /\
-  (constfree (LAM v t) = constfree t)
+val (constfree_rules, constfree_ind, constfree_cases) = Hol_reln`
+  (!s. constfree (nc$VAR s)) /\
+  (!M N. constfree M /\ constfree N ==> constfree (M @@ N)) /\
+  (!v M. constfree M ==> constfree (LAM v M))
 `;
-val _ = export_rewrites ["constfree_def"]
+
+val constfree_swap_I = prove(
+  ``!M. constfree M ==> !x y. constfree (swap x y M)``,
+  HO_MATCH_MP_TAC constfree_ind THEN SRW_TAC [][constfree_rules]);
+
+val constfree_thm = store_thm(
+  "constfree_thm",
+  ``(constfree (nc$VAR s) = T) /\
+    (constfree (M @@ N) = constfree M /\ constfree N) /\
+    (constfree (LAM v M) = constfree M) /\
+    (constfree (CON k) = F)``,
+  REPEAT CONJ_TAC THEN 
+  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [constfree_cases])) THEN 
+  SRW_TAC [][] THEN EQ_TAC THENL [
+    SRW_TAC [][LAM_INJ_swap] THEN 
+    METIS_TAC [lswap_def, constfree_swap_I],
+    METIS_TAC []
+  ]);
+val _ = export_rewrites ["constfree_thm"]
 
 val lswap_constfree = prove(
   ``!t. constfree (lswap pi t) = constfree t``,
@@ -628,35 +645,6 @@ val swap_RECURSION_improved = save_thm(
 val swap_RECURSION_nosideset = save_thm(
   "swap_RECURSION_nosideset",
   SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`] swap_RECURSION_improved))
-
-
-
-
-val term_info_string =
-    "local\n\
-    \fun k |-> v = {redex = k, residue = v}\n\
-    \val term_info = \n\
-    \   {nullfv = ``LAM \"\" (VAR \"\")``,\n\
-    \    rewrites = [],\n\
-    \    inst = [\"rFV\" |-> (fn () => ``gmterm$FV : gmterm -> string set``),\n\
-    \            \"rswap\" |-> (fn () =>\n\
-    \                            ``\\(x:string) (y:string) (t:term).\n\
-    \                                   tpm [(x,y)] t``),\n\
-    \            \"apm\" |-> (fn () =>\n\
-    \                           ``gmterm$tpm : (string # string) list -> \n\
-    \                                          gmterm$term -> gmterm$term``)]}\n\
-    \val _ = binderLib.range_database :=\n\
-    \          Binarymap.insert(!binderLib.range_database, \"term\", \n\
-    \                           term_info)\n\
-    \val _ = binderLib.type_db :=\n\
-    \          Binarymap.insert(!binderLib.type_db, \"gmterm\",\n\
-    \                           swap_RECURSION_nosideset)\n\
-    \in end;\n"
-
-val _ = adjoin_to_theory
-        { sig_ps = NONE,
-          struct_ps =
-          SOME (fn pps => PP.add_string pps term_info_string)}
 
 
 val _ = export_theory();
