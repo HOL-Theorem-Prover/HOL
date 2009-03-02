@@ -10,6 +10,8 @@ val C_tm = prim_mk_const{Name="C", Thy="combin"}
 val W_tm = prim_mk_const{Name="W", Thy="combin"}
 val o_tm = prim_mk_const{Name="o", Thy="combin"};
 
+val update_tm = prim_mk_const{Name="UPDATE", Thy="combin"};
+
 fun mk_K(x,y) = 
    list_mk_comb(inst[alpha |-> type_of x, 
                      beta |-> type_of y]K_tm, [x,y]);
@@ -47,6 +49,11 @@ fun mk_o(f,g) =
       (inst [alpha |-> gdom, beta |-> frng, gamma |-> fdom] o_tm, [f,g])
  end;
 
+fun mk_update(f,g) = 
+ list_mk_comb
+    (inst [alpha |-> type_of f, beta |-> type_of g] update_tm, [f,g])
+ handle HOL_ERR _ => raise ERR "mk_update" "";
+
 val dest_K   = dest_binop K_tm (ERR "dest_K"   "not K")
 val dest_K_1 = dest_monop K_tm (ERR "dest_K_1" "not K")
 val dest_S   = dest_triop S_tm (ERR "dest_S"   "not S")
@@ -55,6 +62,8 @@ val dest_C   = dest_triop C_tm (ERR "dest_C"   "not C")
 val dest_W   = dest_binop W_tm (ERR "dest_W"   "not W")
 val dest_o   = dest_binop o_tm (ERR "dest_o"   "not o")
 
+val dest_update = dest_binop update_tm (ERR "dest_update"   "not =+")
+
 val is_K   = can dest_K
 val is_K_1 = can dest_K_1
 val is_S   = can dest_S
@@ -62,6 +71,8 @@ val is_I   = can dest_I
 val is_C   = can dest_C
 val is_W   = can dest_W
 val is_o   = can dest_o
+
+val is_update = can dest_update
 
 val fail_tm = prim_mk_const{Name="FAIL", Thy="combin"};
 
