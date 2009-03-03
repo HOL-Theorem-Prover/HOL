@@ -216,13 +216,17 @@ Remarks:
  ================= end of the path =======================
 *)
 
+(* simpTools contains some simplification tools to rewrite 
+             pre and post conditions.
+             It also contains primitive functions "nextState" 
+             "nextInst" and "evalCond" that executes the semantics
+   stateTools contains tools to manipulate states built as finite maps
+*)
 
 open HolKernel Parse boolLib 
      newOpsemTheory bossLib pairSyntax intLib intSimps
      computeLib finite_mapTheory stringLib 
      simpTools stateTools extSMTSolver;  
-
-
 
 
 (* -------------------------------------------- *)
@@ -902,9 +906,7 @@ fun execSymb name pre (l,st1,st2,n) post path=
          (* call STEP1 to compute the next state and continue *)
          else
 (*          (print("instruction: " ^ term_to_string(instName(inst)) ^"\n");*)
-          let val tm = getThm (EVAL ``STEP1 (^l, ^st2)``);
-            val newState = snd(dest_comb(snd(dest_comb(tm))));
-            val newList = snd(dest_comb(fst(dest_comb(tm))));
+          let val (newList,newState) = simpTools.nextStep l st2;
            in
              execSymb name pre (newList,st1,newState,(n-1)) post path
            end
@@ -955,8 +957,7 @@ and execSymbCond name pre (l,st1,st2,n) post path =
     val iftm = (el 2 listCond)
     val elsetm = (el 3 listCond)
     (* evaluate the condition on the current state *)
-    val (_,evalCond) = strip_comb(concl(EVAL ``beval ^cond ^st2``))
-    val termCond = (el 2 evalCond);      
+    val termCond = simpTools.evalCond cond st2;
    in   
 
    (* if the condition has been evaluated to a constant
@@ -1067,8 +1068,7 @@ and execSymbWhile name pre (l,st1,st2,n) post path  =
     (* instruction block of the loop *)
     val block = (el 2 listCond)
     (* evaluate the condition on the current state *)
-    val (_,evalCond) = strip_comb(concl(EVAL ``beval ^cond ^st2``))
-    val termCond = (el 2 evalCond);      
+    val termCond = simpTools.evalCond cond st2;
    in   
    (* if the condition has been evaluated to a constant
       by EVAL, then takes the decision according to its value *)
