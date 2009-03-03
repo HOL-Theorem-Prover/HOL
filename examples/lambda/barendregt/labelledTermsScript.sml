@@ -1115,8 +1115,8 @@ val term_info_string =
     \    fv_rewrites = [],\n\
     \    fv_constant = ``labelledTerms$FV``,\n\
     \    recursion_thm = SOME ltm_recursion_nosideset,\n\
-    \    binders = [(``labelledTerms$LAM``, ltpm_ALPHA),\n\
-    \               (``labelledTerms$LAMi``, ltpm_ALPHAi)]}\n\
+    \    binders = [(``labelledTerms$LAM``, 0, ltpm_ALPHA),\n\
+    \               (``labelledTerms$LAMi``, 1, ltpm_ALPHAi)]}\n\
     \val _ = binderLib.type_db :=\n\
     \          Binarymap.insert(!binderLib.type_db, \n\
     \                           {Thy = \"labelledTerms\", Name=\"lterm\"},\n\

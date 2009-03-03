@@ -27,7 +27,7 @@ datatype nominaltype_info =
                   pm_rewrites : thm list,
                   fv_constant : term,
                   fv_rewrites : thm list,
-                  binders : (term * thm) list }
+                  binders : (term * int * thm) list }
 
 fun nti_null_fv (NTI{nullfv, ...}) = nullfv 
 fun nti_perm_t (NTI{pm_constant,...}) = pm_constant
@@ -63,18 +63,189 @@ val type_db =
     ref (Binarymap.mkDict KernelSig.name_compare : 
          (KernelSig.kernelname,nominaltype_info) Binarymap.dict)
 
-(*  testing code
+val string_ty = stringSyntax.string_ty
+val stringset_ty = pred_setSyntax.mk_set_type string_ty
 
-type_db :=
-     Binarymap.insert(!type_db, "nc",
-                      SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`]
-                                               swap_RECURSION_generic))
+fun mk_icomb(f,x) = let 
+  val (dom,rng) = dom_rng (type_of f)
+  val i = match_type dom (type_of x)
+in
+  mk_comb(Term.inst i f, x)
+end
 
-type_db :=
-   Binarymap.insert(!type_db, "term",
-                    SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`]
-                                             termTheory.swap_RECURSION))
-*)
+fun findmap_terms f t = let 
+  fun recurse acc tlist = 
+      case tlist of 
+        [] => acc
+      | t::ts => let 
+          val acc' = case f t of 
+                       NONE => acc
+                     | SOME result => result::acc
+        in
+          case dest_term t of 
+            COMB(f,x) => recurse acc' (f::x::ts)
+          | LAMB(_,b) => recurse acc' (b::ts)
+          | _ => recurse acc' ts
+        end
+in
+  recurse [] [t]
+end
+
+fun isdbty ty = let 
+  val {Thy,Tyop,...} = dest_thy_type ty
+in
+  isSome (Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop}))
+end handle HOL_ERR _ => false
+
+fun tylookup ty = let 
+  val {Thy,Tyop,...} = dest_thy_type ty
+in
+  Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop})
+end handle HOL_ERR _ => NONE
+
+fun get_pm_rewrites ty = 
+    case tylookup ty of 
+      NONE => []
+    | SOME (NTI i) => #pm_rewrites i
+
+fun findfirst f t = let 
+  fun recurse tlist = 
+      case tlist of 
+        [] => NONE
+      | t::ts => let 
+        in
+          case f t of 
+            NONE => let
+            in
+              case dest_term t of 
+                COMB(f,x) => recurse (f::x::ts)
+              | LAMB(_,b) => recurse (b::ts)
+              | _ => recurse ts
+            end
+          | x => x
+        end
+in
+  recurse [t]
+end
+
+fun find_top_terms P t = let 
+  fun recurse acc tlist = 
+      case tlist of 
+        [] => acc
+      | t::ts => let 
+        in
+          if P t then recurse (t::acc) ts
+          else
+            case dest_term t of 
+              COMB(f,x) => recurse acc (f::x::ts) 
+            | LAMB(_,b) => recurse acc (b::ts)
+            | _ => recurse acc ts
+        end
+in
+  recurse [] [t]
+end
+
+fun find_avoids (t, (strs, sets)) = let 
+  open stringSyntax
+  fun isdbty t = let 
+    val ty = type_of t 
+    val {Thy,Tyop,...} = dest_thy_type ty 
+  in
+    if is_var t then 
+      case Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop}) of 
+        NONE => NONE
+      | SOME (NTI data) => SOME (mk_icomb(#fv_constant data, t))
+    else NONE
+  end handle HOL_ERR _ => NONE
+  fun eqty ty t = type_of t = ty
+  val strings = List.filter (fn t => is_var t orelse is_string_literal t)
+                            (find_top_terms (eqty string_ty) t)
+  val stringsets = List.filter is_var (find_terms (eqty stringset_ty) t)
+  val fv_terms = findmap_terms isdbty t
+  open HOLset
+in
+  (addList(strs,strings), addList(addList(sets, fv_terms), stringsets))
+end
+
+fun goalnames (asl, w) = let 
+  val fvs = FVL (w::asl) empty_tmset
+  fun foldthis(t,acc) = HOLset.add(acc, #1 (dest_var t))
+in
+  HOLset.listItems (HOLset.foldl foldthis (HOLset.empty String.compare) fvs)
+end
+
+fun FRESH_TAC (g as (asl, w)) = let 
+  val (strs, sets) = List.foldl find_avoids (empty_tmset, empty_tmset) (w::asl)
+  val finite_sets = List.mapPartial (total pred_setSyntax.dest_finite) asl
+  fun filterthis t = not (is_var t) orelse mem t finite_sets 
+  val sets' = List.filter filterthis (HOLset.listItems sets)
+  fun get_binder already_done t = 
+      case tylookup (type_of t) of 
+        NONE => NONE
+      | SOME (NTI info) => let 
+          val bs = #binders info
+          fun checkthis (_,i,th) = let 
+            val l = lhs (#2 (strip_forall 
+                               (#2 (dest_imp (#2 (strip_forall (concl th)))))))
+            val argi = List.nth(#2 (strip_comb t), i)
+          in
+            if can (match_term l) t andalso 
+               not (HOLset.member(already_done, argi))
+            then SOME (t, i, th)
+            else NONE
+          end handle Subscript => NONE
+        in
+          get_first checkthis bs 
+        end
+  fun do_one used strs sets' (g as (asl, w)) = 
+      case get_first (findfirst (get_binder used)) (w::asl) of 
+        NONE => raise ERR "FRESH_TAC" "No binders present in goal"
+      | SOME (t, i, th) => let 
+          val old = List.nth (#2 (strip_comb t), i)
+          val (pre,l,r) = let 
+            val (_, b) = strip_forall (concl th)
+            val (pre, eq) = dest_imp b
+            val (l,r) = dest_eq (#2 (strip_forall eq))
+          in
+            (pre,l,r)
+          end
+          val base = case total Literal.dest_string_lit old of 
+                       NONE => #1 (dest_var old)
+                     | SOME s => s
+          val newname = Lexis.gen_variant Lexis.tmvar_vary (goalnames g) base
+          val new_in_thm = List.nth (#2 (strip_comb r), i)
+          val new_t = mk_var(newname, type_of new_in_thm)
+          val th' = PART_MATCH (lhs o #2 o strip_forall o #2 o dest_imp) 
+                               th
+                               t
+          val th' = INST [new_in_thm |-> new_t] th'
+          val avoid_t = let 
+            open pred_setSyntax
+          in 
+            List.foldl mk_union (mk_set (HOLset.listItems strs)) sets'
+          end
+          fun freshcont freshthm = let 
+            val th = MP th' freshthm
+          in
+            SUBST_ALL_TAC th THEN 
+            ASM_SIMP_TAC (srw_ss()) (basic_swapTheory.swapstr_def :: 
+                                     get_pm_rewrites (type_of t)) 
+          end
+
+          val tac = 
+              NEW_TAC newname avoid_t THEN 
+              SUBGOAL_THEN (#1 (dest_imp (concl th'))) freshcont THENL [
+                ASM_SIMP_TAC (srw_ss()) [],
+                TRY (do_one (HOLset.add(used,new_t)) 
+                            (HOLset.add(strs,new_t)) 
+                            sets')
+              ]
+        in
+          tac g
+        end
+in
+  do_one empty_tmset strs sets' g
+end
 
 fun recthm_for_type ty = let
   val {Tyop,Thy,...} = dest_thy_type ty

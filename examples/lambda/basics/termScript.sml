@@ -711,7 +711,7 @@ val SIMPLE_ALPHA = store_thm(
 
 val tpm_ALPHA = store_thm(
   "tpm_ALPHA",
-  ``~(v IN FV u) ==> !x. LAM x u = LAM v (tpm [(v,x)] u)``,
+  ``v NOTIN FV u ==> (LAM x u = LAM v (tpm [(v,x)] u))``,
   SRW_TAC [][fresh_tpm_subst, SIMPLE_ALPHA]);
 
 (* ----------------------------------------------------------------------
@@ -965,7 +965,7 @@ val term_info_string =
     \        fv_constant = ``term$FV``,\n\
     \        fv_rewrites = [],\n\
     \        recursion_thm = SOME tm_recursion_nosideset,\n\
-    \        binders = [(``term$LAM``, tpm_ALPHA)]}\n\
+    \        binders = [(``term$LAM``, 0, tpm_ALPHA)]}\n\
     \val _ = binderLib.type_db :=\n\
     \          Binarymap.insert(!binderLib.type_db,\n\
     \                           {Name = \"term\",Thy=\"term\"},\n\

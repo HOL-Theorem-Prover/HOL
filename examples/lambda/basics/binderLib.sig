@@ -6,7 +6,7 @@ sig
 
   val NEW_TAC : string -> term -> tactic
   val NEW_ELIM_TAC : tactic
-  (* val FRESH_TAC : tactic *)
+  val FRESH_TAC : tactic 
 
   datatype nominaltype_info = 
          NTI of { recursion_thm : thm option,
@@ -18,7 +18,7 @@ sig
                   pm_rewrites : thm list,
                   fv_constant : term,
                   fv_rewrites : thm list,
-                  binders : (term * thm) list }
+                  binders : (term * int * thm) list }
   val nameless_nti : nominaltype_info
 
   (* stores information per type *)
