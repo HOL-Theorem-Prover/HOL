@@ -412,7 +412,7 @@ val _ = export_rewrites ["church_to_bnf"]
 
 val bnf_FUNPOW = store_thm(
   "bnf_FUNPOW",
-  ``∀x. bnf x ⇒ bnf (FUNPOW ((@@) (VAR v)) n x)``,
+  ``∀x. bnf (FUNPOW ((@@) (VAR v)) n x) ⇔ bnf x``,
   Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]);
 val _ = export_rewrites ["bnf_FUNPOW"]
 
