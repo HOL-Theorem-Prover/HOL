@@ -196,7 +196,7 @@ fun params_of (ABBREV _)  = []
   | params_of (STDREC {SV, ...}) = SV
   | params_of (NESTREC{SV, ...}) = SV
   | params_of (MUTREC {SV, ...}) = SV
-  | params_of (NESTREC {SV, ...}) = SV
+  | params_of (TAILREC {SV, ...}) = SV
 
 fun schematic defn = not(List.null (params_of defn));
 
@@ -254,8 +254,12 @@ fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
       NONREC {eqs=INST_THM theta eqs,
               ind=INST_THM theta ind,
               SV=map (isubst theta) SV,stem=stem}
-  | inst_defn (ABBREV {eqn,bind}) theta =
-      ABBREV {eqn=INST_THM theta eqn,bind=bind}
+  | inst_defn (ABBREV {eqn,bind}) theta = ABBREV {eqn=INST_THM theta eqn,bind=bind}
+  | inst_defn (TAILREC{eqs,ind,R,SV,stem}) theta =
+      TAILREC {eqs=map (INST_THM theta) eqs,
+              ind=INST_THM theta ind,
+              R=isubst theta R,
+              SV=map (isubst theta) SV, stem=stem};
 
 
 fun set_reln def R =
@@ -550,8 +554,8 @@ fun gen_wfrec_eqns thy const_eq_conv eqns =
      val corollaries' = map rule corollaries
      val CONST_EQ_RULE = CONV_RULE (DEPTH_CONV const_eq_conv)
      fun TRIV_PAT_ELIM (x,y,z) = 
-         (PURE_REWRITE_RULE [bool_case_thm] (CONST_EQ_RULE x),y,z)
-     fun TPAT_ELIM x = PURE_REWRITE_RULE [bool_case_thm] (CONST_EQ_RULE x)
+         (PURE_REWRITE_RULE [bool_case_thm,literal_case_id] (CONST_EQ_RULE x),y,z)
+     fun TPAT_ELIM x = PURE_REWRITE_RULE [bool_case_thm,literal_case_id] (CONST_EQ_RULE x)
      val corollaries'' = map TPAT_ELIM corollaries'
  in
     {proto_def=proto_def,
