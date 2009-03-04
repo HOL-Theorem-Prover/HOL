@@ -87,6 +87,7 @@ val _ = new_definition(
 val _ = add_numeral_form (#"n", NONE);
 
 val _ = set_fixity "-" (Infixl 500);
+val _ = Unicode.unicode_version {u = UTF8.chr 0x2212, tmnm = "-"};
 val SUB = new_recursive_definition
    {name = "SUB",
     rec_axiom = num_Axiom,
@@ -105,6 +106,17 @@ val _ = add_rule { term_name = "numeric_negate",
                    pp_elements = [TOK "-"],
                    paren_style = OnlyIfNecessary,
                    block_style = (AroundEachPhrase, (PP.CONSISTENT,0))};
+
+(* Similarly, add syntax for the injection from nats symbol (&).  This isn't
+   required in this theory, but will be used by descendents. *)
+val _ = add_rule {term_name = GrammarSpecials.num_injection,
+                  fixity = TruePrefix 900,
+                  pp_elements = [TOK GrammarSpecials.num_injection],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundEachPhrase, (PP.CONSISTENT,0))};
+(* overload it to the nat_elim term *)
+val _ = overload_on (GrammarSpecials.num_injection,
+                     mk_const(GrammarSpecials.nat_elim_term, ``:num -> num``))
 
 
 val _ = set_fixity "*" (Infixl 600);
@@ -3131,12 +3143,12 @@ val FUNPOW_ADD = store_thm(
   "FUNPOW_ADD",
   ``!m n. FUNPOW f (m + n) x = FUNPOW f m (FUNPOW f n x)``,
   INDUCT_TAC THENL [
-    REWRITE_TAC [ADD_CLAUSES, FUNPOW], 
+    REWRITE_TAC [ADD_CLAUSES, FUNPOW],
     ASM_REWRITE_TAC [ADD_CLAUSES,FUNPOW_SUC]
   ]);
 
 val FUNPOW_1 = store_thm(
-  "FUNPOW_1", 
+  "FUNPOW_1",
   ``FUNPOW f 1 x = f x``,
   REWRITE_TAC [FUNPOW, ONE]);
 val _ = export_rewrites ["FUNPOW_1"]

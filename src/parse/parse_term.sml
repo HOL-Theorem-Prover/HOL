@@ -425,8 +425,8 @@ fun mk_prec_matrix G = let
     | SUFFIX TYPE_annotation => let
         val lower_rights = List.concat (map right_grabbing_elements remainder)
       in
-        app (fn lower_right => insert ((#1 lower_right,true), TypeColon)
-                                      GREATER')
+        app (fn (lower_right,src) =>
+                insert ((lower_right,true), TypeColon) (PM_GREATER src))
             lower_rights
       end
     | SUFFIX (STD_suffix rules) => let
@@ -434,10 +434,10 @@ fun mk_prec_matrix G = let
         val lefts = map rule_left rules
       in
         app (fn left_tok =>
-             app (fn lower_right => insert ((#1 lower_right,true), left_tok)
-                                           GREATER')
-             lower_rights)
-        lefts
+             app (fn (lower_right,src) =>
+                     insert ((lower_right,true), left_tok) (PM_GREATER src))
+                 lower_rights)
+            lefts
       end
     | INFIX (FNAPP rules) => let
         val lower_rights = List.concat (map right_grabbing_elements remainder)

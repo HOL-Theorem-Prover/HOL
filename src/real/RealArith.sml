@@ -154,7 +154,7 @@ val NUM_ADD_CONV = ADD_CONV;
 val mk_numeral = mk_numeral o toNat
 val dest_numeral = fromNat o dest_numeral
 
-val amp = Term`&`;
+val amp = Term`(&)`;
 
 val is_numconst =
  fn tm =>
@@ -463,7 +463,7 @@ val REAL_PROD_NORM_CONV =
 val REAL_INT_ADD_CONV =
   let
     val neg_tm = ``$~ :real->real``
-    val amp_tm = ``&``
+    val amp_tm = ``(&)``
     val add_tm = ``$+ : real -> real -> real``
     val dest = liteLib.dest_binop add_tm
     val m_tm = ``m:num`` and n_tm = ``n:num``
