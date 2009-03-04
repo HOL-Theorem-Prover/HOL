@@ -13,13 +13,28 @@ val _ = set_trace "Unicode" 1
 val _ = remove_ovl_mapping "LAM" {Name="LAM", Thy="labelledTerms"}
 val _ = remove_ovl_mapping "FV"  {Name="FV",  Thy="labelledTerms"}
 val _ = remove_ovl_mapping "VAR" {Name="VAR", Thy="labelledTerms"}
-val _ = remove_ovl_mapping "@@"  {Name="APP",  Thy="labelledTerms"}
+val _ = remove_ovl_mapping "@@"  {Name="APP", Thy="labelledTerms"}
 
 val church_def = Define`
   church n = LAM "z" (LAM "s" (FUNPOW ((@@) (VAR "s")) n (VAR "z")))
 `
 
 val FUNPOW_SUC = arithmeticTheory.FUNPOW_SUC
+
+val size_funpow = store_thm(
+  "size_funpow",
+  ``size (FUNPOW ((@@) f) n x) = (size f + 1) * n + size x``,
+  Induct_on `n` THEN
+  SRW_TAC [ARITH_ss][FUNPOW_SUC, arithmeticTheory.LEFT_ADD_DISTRIB,
+                     arithmeticTheory.MULT_CLAUSES]);
+
+val church_11 = store_thm(
+  "church_11",
+  ``(church m = church n) ⇔ (m = n)``,
+  SRW_TAC [][church_def, EQ_IMP_THM] THEN
+  POP_ASSUM (MP_TAC o Q.AP_TERM `size`) THEN
+  SRW_TAC [ARITH_ss][size_funpow, arithmeticTheory.LEFT_ADD_DISTRIB]);
+val _ = export_rewrites ["church_11"]
 
 val bnf_church = store_thm(
   "bnf_church",
@@ -29,6 +44,15 @@ val bnf_church = store_thm(
   SRW_TAC [][FUNPOW_SUC]);
 val _ = export_rewrites ["bnf_church"]
 
+val church_lameq_11 = store_thm(
+  "church_lameq_11",
+  ``(church m == church n) ⇔ (m = n)``,
+  SRW_TAC [][EQ_IMP_THM, chap2Theory.lam_eq_rules] THEN
+  `∃Z. church m -β->* Z ∧ church n -β->* Z`
+     by METIS_TAC [beta_CR, theorem3_13, prop3_18] THEN
+  `church m = church n`
+     by METIS_TAC [corollary3_2_1, beta_normal_form_bnf, bnf_church] THEN
+  FULL_SIMP_TAC (srw_ss()) []);
 
 val FV_church = store_thm(
   "FV_church",
