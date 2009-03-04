@@ -189,67 +189,117 @@ val head_is_normorder = store_thm(
 val ADD1 = arithmeticTheory.ADD1
 
 val last_el = store_thm(
-  "last_el", 
-  ``∀p. finite p ⇒ 
+  "last_el",
+  ``∀p. finite p ⇒
         (last p = el (THE (length p) - 1) p)``,
-  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][length_thm] THEN 
+  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][length_thm] THEN
   Q_TAC SUFF_TAC `∃n. length p = SOME (SUC n)`
-        THEN1 SIMP_TAC (srw_ss() ++ DNF_ss ++ ARITH_ss) [] THEN 
+        THEN1 SIMP_TAC (srw_ss() ++ DNF_ss ++ ARITH_ss) [] THEN
   METIS_TAC [finite_length, length_never_zero, arithmeticTheory.num_CASES]);
 
 val standard_to_bnf_is_normal = store_thm(
   "standard_to_bnf_is_normal",
   ``∀p. standard_reduction p ∧ finite p ∧ bnf (last p) ⇒
         normorder_reduction p``,
-  SIMP_TAC (srw_ss()) [normorder_reduction_def] THEN 
-  HO_MATCH_MP_TAC okpath_co_ind THEN 
-  SRW_TAC [][standard_reduction_thm] THEN 
+  SIMP_TAC (srw_ss()) [normorder_reduction_def] THEN
+  HO_MATCH_MP_TAC okpath_co_ind THEN
+  SRW_TAC [][standard_reduction_thm] THEN
   `∃r₀. noposn M = SOME r₀`
      by (Cases_on `noposn M` THEN SRW_TAC [][] THEN
-         `bnf M` by METIS_TAC [bnf_noposn] THEN 
-         METIS_TAC [labelled_redn_cc, beta_normal_form_bnf, 
-                    corollary3_2_1]) THEN 
+         `bnf M` by METIS_TAC [bnf_noposn] THEN
+         METIS_TAC [labelled_redn_cc, beta_normal_form_bnf,
+                    corollary3_2_1]) THEN
   `r₀ ∈ redex_posns M ∧ ∀r'. r' ∈ redex_posns M ⇒ (r' = r₀) ∨ r₀ < r'`
-     by METIS_TAC [noposn_least] THEN 
-  `r ∈ redex_posns M` by METIS_TAC [labelled_redn_beta_redex_posn] THEN 
-  `(r = r₀) ∨ r₀ < r` by METIS_TAC [] THEN1 SRW_TAC [][] THEN 
-  `okpath (labelled_redn beta) p` by METIS_TAC [standard_reductions_ok] THEN 
+     by METIS_TAC [noposn_least] THEN
+  `r ∈ redex_posns M` by METIS_TAC [labelled_redn_beta_redex_posn] THEN
+  `(r = r₀) ∨ r₀ < r` by METIS_TAC [] THEN1 SRW_TAC [][] THEN
+  `okpath (labelled_redn beta) p` by METIS_TAC [standard_reductions_ok] THEN
   `∀n. n ∈ PL p ⇒ r₀ ∈ redex_posns (el n p)`
      by (Induct THEN SRW_TAC [][] THENL [
            METIS_TAC [lr_beta_preserves_lefter_redexes],
            `labelled_redn beta (el n p) (nth_label n p) (el (SUC n) p)`
-               by METIS_TAC [okpath_every_el_relates] THEN 
-           `n ∈ PL p` 
+               by METIS_TAC [okpath_every_el_relates] THEN
+           `n ∈ PL p`
                by METIS_TAC [PL_downward_closed, DECIDE ``x < SUC x``] THEN
            METIS_TAC [lr_beta_preserves_lefter_redexes, ADD1, el_def]
-         ]) THEN 
+         ]) THEN
   `∃m. 0 < m ∧ (length p = SOME m)`
-     by METIS_TAC [finite_length, length_never_zero, 
-                   DECIDE ``0 < x ⇔ x ≠ 0``] THEN 
-  `last p = el (m - 1) p` 
-     by METIS_TAC [last_el, optionTheory.option_CLAUSES] THEN 
-  `m - 1 ∈ PL p` by SRW_TAC [][PL_def] THEN 
-  `r₀ ∈ redex_posns (last p)` by METIS_TAC [] THEN 
+     by METIS_TAC [finite_length, length_never_zero,
+                   DECIDE ``0 < x ⇔ x ≠ 0``] THEN
+  `last p = el (m - 1) p`
+     by METIS_TAC [last_el, optionTheory.option_CLAUSES] THEN
+  `m - 1 ∈ PL p` by SRW_TAC [][PL_def] THEN
+  `r₀ ∈ redex_posns (last p)` by METIS_TAC [] THEN
   `∃N. labelled_redn beta (last p) r₀ N`
-     by METIS_TAC [is_redex_occurrence_def, IN_term_IN_redex_posns] THEN 
+     by METIS_TAC [is_redex_occurrence_def, IN_term_IN_redex_posns] THEN
   METIS_TAC [labelled_redn_cc, beta_normal_form_bnf, corollary3_2_1]);
-    
+
 val finite_normorder_RTC = store_thm(
   "finite_normorder_RTC",
   ``∀p. normorder_reduction p ∧ finite p ⇒ first p -n->* last p``,
-  REWRITE_TAC [normorder_reduction_def] THEN 
-  HO_MATCH_MP_TAC finite_okpath_ind THEN SRW_TAC [][] THEN 
+  REWRITE_TAC [normorder_reduction_def] THEN
+  HO_MATCH_MP_TAC finite_okpath_ind THEN SRW_TAC [][] THEN
   METIS_TAC [normorder_noposn, relationTheory.RTC_RULES]);
-  
-  
+
+
 val normal_finds_bnf = store_thm(
-  "normal_find_bnf",
+  "normal_finds_bnf",
   ``M -β->* N /\ bnf N ⇒ M -n->* N``,
-  SRW_TAC [][] THEN 
+  SRW_TAC [][] THEN
   `∃p. (first p = M) ∧ finite p ∧ (last p = N) ∧ standard_reduction p`
-    by METIS_TAC [standardisation_theorem] THEN 
+    by METIS_TAC [standardisation_theorem] THEN
   METIS_TAC [standard_to_bnf_is_normal, finite_normorder_RTC]);
-           
-  
+
+val nstar_betastar = store_thm(
+  "nstar_betastar",
+  ``∀M N. M -n->* N ⇒ M -β->* N``,
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+  METIS_TAC [relationTheory.RTC_RULES, normorder_ccbeta]);
+
+val nstar_betastar_bnf = store_thm(
+  "nstar_betastar_bnf",
+  ``bnf N ⇒ (M -n->* N ⇔ M -β->* N)``,
+  METIS_TAC [normal_finds_bnf, nstar_betastar]);
+
+val normstar_LAM = store_thm(
+  "normstar_LAM",
+  ``∀M N. LAM x M -n->* LAM x N ⇔ M -n->* N``,
+  SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
+    Q_TAC SUFF_TAC `∀M N. M -n->* N ⇒
+                          ∀v M0 N0. (M = LAM v M0) ∧ (N = LAM v N0) ⇒
+                                    M0 -n->* N0` THEN1 METIS_TAC [] THEN
+    HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+    SIMP_TAC (srw_ss() ++ DNF_ss) [normorder_rwts] THEN
+    METIS_TAC [relationTheory.RTC_RULES],
+
+    HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+    SRW_TAC [][] THEN
+    METIS_TAC [normorder_rules, relationTheory.RTC_RULES]
+  ]);
+val _ = export_rewrites ["normstar_LAM"]
+
+val normstar_APPr = store_thm(
+  "normstar_APPr",
+  ``bnf M ∧ ¬is_abs M ⇒
+        (M @@ N -n->* P ⇔ ∃N'. (P = M @@ N') ∧ N -n->* N')``,
+  SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM] THEN CONJ_TAC THENL [
+    Q_TAC SUFF_TAC `∀M₀ P. M₀ -n->* P ⇒
+                            ∀M N. (M₀ = M @@ N) ∧ bnf M ∧ ¬is_abs M ⇒
+                                   ∃N'. (P = M @@ N') ∧ N -n->* N'`
+          THEN1 METIS_TAC [] THEN
+    HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+    SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [normorder_rwts] THEN
+    SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
+      METIS_TAC [relationTheory.RTC_RULES],
+      METIS_TAC [normorder_bnf]
+    ],
+
+    Q_TAC SUFF_TAC `∀N N'. N -n->* N' ⇒
+                           ∀M. bnf M ∧ ¬is_abs M ⇒ M @@ N -n->* M @@ N'`
+          THEN1 METIS_TAC [] THEN
+    HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+    METIS_TAC [normorder_rules, relationTheory.RTC_RULES]
+  ]);
+val _ = export_rewrites ["normstar_APPr"]
 
 val _ = export_theory()
