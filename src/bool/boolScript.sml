@@ -3502,7 +3502,7 @@ val UNWIND_FORALL_THM2 = save_thm("UNWIND_FORALL_THM2",
 
 
 (* ------------------------------------------------------------------------- *)
-(* Skolemization.                                                            *)
+(* Skolemization:    |- !P. (!x. ?y. P x y) <=> ?f. !x. P x (f x)            *)
 (* ------------------------------------------------------------------------- *)
 
 val SKOLEM_THM = save_thm("SKOLEM_THM",
@@ -4031,8 +4031,8 @@ val BOOL_FUN_INDUCT = save_thm("BOOL_FUN_INDUCT",BOOL_FUN_INDUCT);
  ---------------------------------------------------------------------------*)
 
 val literal_case_THM =
- let val f = Term `f:'a->'b`
-     val x = Term `x:'a`
+ let val f = ``f:'a->'b``
+     val x = ``x:'a``
  in
   GEN f (GEN x
     (RIGHT_BETA(AP_THM (RIGHT_BETA(AP_THM literal_case_DEF f)) x)))
@@ -4041,9 +4041,10 @@ val literal_case_THM =
 val _ = save_thm("literal_case_THM", literal_case_THM);
 
 
-(*---------------------------------------------------------------------------
-    literal_case_RAND =  P (literal_case (\x. N x) M) = (literal_case (\x. P (N x)) M)
- ---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(*    literal_case_RAND =                                                    *)
+(*        |- P (literal_case (\x. N x) M) = (literal_case (\x. P (N x)) M)   *)
+(*---------------------------------------------------------------------------*)
 
 val literal_case_RAND = save_thm("literal_case_RAND",
  let val tm1 = Term`\x:'a. P (N x:'b):bool`
@@ -4057,9 +4058,10 @@ val literal_case_RAND = save_thm("literal_case_RAND",
  end);
 
 
-(*---------------------------------------------------------------------------
-    literal_case_RATOR =  (literal_case (\x. N x) M) b = (literal_case (\x. N x b) M)
- ---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(*    literal_case_RATOR =                                                   *)
+(*         |- (literal_case (\x. N x) M) b = (literal_case (\x. N x b) M)    *)
+(*---------------------------------------------------------------------------*)
 
 val literal_case_RATOR = save_thm("literal_case_RATOR",
  let val M = Term`M:'a`
@@ -4106,6 +4108,30 @@ val literal_case_CONG =
 
 val _ = save_thm("literal_case_CONG", literal_case_CONG);
 
+(*---------------------------------------------------------------------------*)
+(* Sometime useful rewrite.                                                  *)
+(*  |- literal_case (\x. bool_case t u (x=a)) a = t                          *)
+(*---------------------------------------------------------------------------*)
+
+val literal_case_id = save_thm
+("literal_case_id",
+ let val a = mk_var("a", alpha)
+    val x = mk_var("x", alpha)
+    val t = mk_var("t",beta)
+    val u = mk_var("u",beta)
+    val eq = mk_eq(x,a)
+    val bcase = inst [alpha |-> beta] 
+                     (prim_mk_const{Name = "bool_case",Thy="bool"})
+    val g = mk_abs(x,list_mk_comb(bcase,[t, u, eq]))
+    val lit_thm = RIGHT_BETA(SPEC a (SPEC g literal_case_THM))
+    val bool_case_th = SPECL [mk_eq(a,a),t,u]  
+                         (INST_TYPE [alpha |-> beta] bool_case_EQ_COND)
+    val Teq = SYM (EQT_INTRO(REFL a))
+    val ifT = CONJUNCT1(SPECL[t,u] (INST_TYPE[alpha |-> beta] COND_CLAUSES))
+    val ifeq = SUBS [Teq] ifT
+ in
+    TRANS lit_thm (TRANS bool_case_th ifeq)
+ end);
 
 (*---------------------------------------------------------------------------
          Support for parsing "case" expressions
@@ -4275,6 +4301,28 @@ in
                             witness)
                            (GEN_ALL witness_applied2))
 end
+
+
+(*---------------------------------------------------------------------------*)
+(* PEIRCE  =  |- ((P ==> Q) ==> P) ==> P                                     *)
+(*---------------------------------------------------------------------------*)
+
+val PEIRCE = save_thm
+("PEIRCE",
+ let val th1 = ASSUME ``(P ==> Q) ==> P``
+     val th2 = ASSUME ``P:bool``
+     val th3 = ASSUME ``~P``
+     val th4 = MP th3 th2
+     val th5 = MP (SPEC ``Q:bool`` FALSITY) th4
+     val th6 = DISCH ``P:bool`` th5
+     val th7 = MP th1 th6
+     val th8 = MP th3 th7
+     val th9 = DISCH ``~P`` th8
+     val th10 = MP (SPEC ``~P`` IMP_F) th9
+     val th11 = SUBS [SPEC ``P:bool`` (CONJUNCT1 NOT_CLAUSES)] th10
+ in 
+   DISCH ``(P ==> Q) ==> P`` th11
+ end);
 
 val _ = export_theory();
 
