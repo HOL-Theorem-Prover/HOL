@@ -341,6 +341,12 @@ fun first_tok [] = raise Fail "Shouldn't happen term_pp 133"
 
 fun decdepth n = if n < 0 then n else n - 1
 
+fun atom_name tm = let
+  val (vnm, _) = dest_var tm
+in
+  Lib.unprefix GrammarSpecials.fakeconst_special vnm handle HOL_ERR _ => vnm
+end handle HOL_ERR _ => fst (dest_const tm)
+
 fun pp_term (G : grammar) TyG = let
   val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
   val overload_info = overload_info G
@@ -425,24 +431,34 @@ fun pp_term (G : grammar) TyG = let
   val printers_exist = Net.size uprinters > 0
 
   (* This code will print paired abstractions "properly" only if
-        1. the term has an UNCURRY constant in the right place, and
-        2. the term has a preferred printing form in the overloading map.
-     Both conditions above might be varied.  In 1., we could check for just
-     the constant pair$UNCURRY, and not any constant called UNCURRY.  In 2.,
-     we could check to see if the string "UNCURRY" mapped to a term instead.
+        1. the term has a constant in the right place, and
+        2. that constant maps to the name "UNCURRY" in the overloading map.
+     These conditions are checked in the call to grammar_name.
 
-     Another option again might be to look to see if the term is a constant
-     and prints as "UNCURRY"...  The possibilities are endless.  The
-     particular choice made above means that the printer does the right
-     thing if given a paired abstraction to print wrt an "earlier" grammar,
-     such as that used in boolTheory. *)
+     We might vary this.  In particular, in 2., we could check to see
+     name "UNCURRY" maps to a term (looking at the overload map in the
+     reverse direction).
+
+     Another option again might be to look to see if the term is a
+     constant whose real name is UNCURRY, and if this term also maps
+     to the name UNCURRY.  This last used to be the actual
+     implementation, but it's hard to do this in the changed world
+     (since r6355) of "syntactic patterns" because of the way
+     overloading resolution can create fake constants (concealing true
+     names) before this code gets a chance to run.
+
+     The particular choice made above means that the printer does the
+     'right thing'
+       (prints `(\(x,y). x /\ y)` as `pair$UNCURRY (\x y. x /\ y)`)
+     if given a paired abstraction to print wrt an "earlier" grammar,
+     such boolTheory.bool_grammars. *)
+
   fun my_dest_abs tm =
       case dest_term tm of
         LAMB p => p
       | COMB(Rator,Rand) => let
           val _ =
-              fst (dest_const Rator)= "UNCURRY" andalso
-              isSome (Overload.overloading_of_term overload_info Rator) orelse
+              grammar_name G Rator = SOME "UNCURRY" orelse
               raise PP_ERR "my_dest_abs" "term not an abstraction"
           val (v1, body0) = my_dest_abs Rand
           val (v2, body) = my_dest_abs body0
@@ -781,11 +797,6 @@ fun pp_term (G : grammar) TyG = let
     in
       String.isPrefix GrammarSpecials.fakeconst_special vnm
     end handle HOL_ERR _ => false
-    fun atom_name tm = let
-      val (vnm, _) = dest_var tm
-    in
-      Lib.unprefix GrammarSpecials.fakeconst_special vnm handle HOL_ERR _ => vnm
-    end handle HOL_ERR _ => fst (dest_const tm)
     fun can_pr_numeral stropt = List.exists (fn (k,s') => s' = stropt) num_info
     fun pr_numeral injtermopt tm = let
       open Overload
