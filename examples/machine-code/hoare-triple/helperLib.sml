@@ -286,10 +286,22 @@ val HIDE_PRE2 = (MATCH_MP EQ_IMP_IMP
 
 fun HIDE_PRE_RULE tm th = let
   val th = CONV_RULE (PRE_CONV (MOVE_OUT_CONV tm THENC REWRITE_CONV [STAR_ASSOC])) th  
+  val _ = find_term (fn x => x = tm) (concl th)
   val (_,p,_,_) = dest_spec (concl th)
   val v = snd (dest_comb (snd (dest_star p) handle e => p))
   val th = GEN v th 
   in A_MATCH_MP HIDE_PRE1 th handle e => A_MATCH_MP HIDE_PRE2 th end;
+
+val UNHIDE_PRE1 = (MATCH_MP EQ_IMP_IMP (SPEC_ALL (GSYM SPEC_HIDE_PRE)));
+val UNHIDE_PRE2 = (MATCH_MP EQ_IMP_IMP 
+  (SPEC_ALL (RW [SEP_CLAUSES] (Q.SPECL [`x`,`emp`] (GSYM SPEC_HIDE_PRE)))));
+
+fun UNHIDE_PRE_RULE tm th = let
+  val th = CONV_RULE (PRE_CONV (MOVE_OUT_CONV (car tm) THENC REWRITE_CONV [STAR_ASSOC])) th  
+  val _ = find_term (fn x => x = car tm) (car (concl th))
+  val th = (A_MATCH_MP UNHIDE_PRE1 th handle e => A_MATCH_MP UNHIDE_PRE2 th)
+  val th = SPEC (cdr tm) th
+  in th end;
 
 val HIDE_POST1 = (SPEC_ALL SPEC_HIDE_POST);
 val HIDE_POST2 = (SPEC_ALL 
@@ -309,6 +321,8 @@ val lemma = prove (``(b = T) ==> b``,SIMP_TAC std_ss [])
 
 fun HIDE_STATUS_RULE in_post hide_th th = let 
   val xs = get_model_status_list hide_th
+  val ys = filter I (map (fn y => can (find_term (fn x => x = y)) (concl th)) xs)
+  val _ = if ys = [] then hd [] else ()
   val th = RW [hide_th,STAR_ASSOC] th
   fun find_match tm tm2 = find_term (can (match_term tm)) tm2
   fun HIDE_TERM (tm,th) = let

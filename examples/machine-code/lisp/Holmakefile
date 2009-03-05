@@ -1,1 +1,2 @@
 INCLUDES = $(HOLDIR)/examples/machine-code/garbage-collectors $(HOLDIR)/examples/machine-code/compiler $(HOLDIR)/examples/machine-code/decompiler $(HOLDIR)/examples/machine-code/hoare-triple $(HOLDIR)/tools/mlyacc/mlyacclib $(HOLDIR)/examples/machine-code/instruction-set-models/common $(HOLDIR)/examples/machine-code/instruction-set-models/arm $(HOLDIR)/examples/machine-code/instruction-set-models/x86 $(HOLDIR)/examples/machine-code/instruction-set-models/ppc $(HOLDIR)/examples/ARM/v4
+OPTIONS=QUIT_ON_FAILURE

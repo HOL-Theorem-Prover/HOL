@@ -67,4 +67,10 @@ val TAILREC_PRE_IMP = store_thm("TAILREC_PRE_IMP",
   \\ FULL_SIMP_TAC std_ss [FUNPOW_SUC]
   \\ Q.EXISTS_TAC `n` \\ METIS_TAC []);  
   
+val TAILREC_EQ_THM = store_thm("TAILREC_EQ_THM",
+  ``(f1 = f1') /\ (f2 = (f2':'a->'b)) /\ (g = g') /\ (s = s') ==> 
+    (TAILREC f1 f2 g = TAILREC f1' f2' g') /\
+    (TAILREC_PRE f1 g s = TAILREC_PRE f1' g' s')``, 
+  SIMP_TAC std_ss []);
+
 val _ = export_theory();

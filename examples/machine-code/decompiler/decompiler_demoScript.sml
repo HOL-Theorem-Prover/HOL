@@ -1,6 +1,7 @@
 
 open HolKernel boolLib bossLib Parse;
-open tailrecTheory tailrecLib decompilerLib;
+open decompilerLib;
+open tailrecTheory tailrecLib 
 open listTheory pred_setTheory arithmeticTheory wordsTheory;
 
 val _ = new_theory "decompiler_demo";

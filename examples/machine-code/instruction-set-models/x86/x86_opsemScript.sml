@@ -198,16 +198,14 @@ val read_cond_def = Define `
   (read_cond ii X_ALWAYS = constT T) /\
   (read_cond ii X_E      = read_eflag ii X_ZF) /\
   (read_cond ii X_S      = read_eflag ii X_SF) /\
+  (read_cond ii X_B      = read_eflag ii X_CF) /\
   (read_cond ii X_NE     = seqT (read_eflag ii X_ZF) (\b. constT (~b))) /\
   (read_cond ii X_NS     = seqT (read_eflag ii X_SF) (\b. constT (~b))) /\
+  (read_cond ii X_BS     = seqT (read_eflag ii X_CF) (\b. constT (~b))) /\
   (read_cond ii X_A     = seqT 
      (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT (~c /\ ~z))) /\
   (read_cond ii X_NA    = seqT 
-     (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT (c \/ z))) /\
-  (read_cond ii X_B     = seqT 
-     (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT c)) /\
-  (read_cond ii X_NB     = seqT 
-     (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT ~c))`;
+     (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT (c \/ z)))`;
 
 
 (* execute stack operations for non-EIP registers*)

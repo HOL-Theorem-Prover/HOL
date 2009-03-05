@@ -98,7 +98,9 @@ fun x86_remove_annotations c =
   else c handle _ => c
 
 fun x86_cond_code tm = 
-  (* zero     *) if tm = ``xS1 X_ZF`` then ("e","ne") else hd []
+  (* zero     *) if tm = ``xS1 X_ZF`` then ("e","ne") else 
+  (* sign     *) if tm = ``xS1 X_SF`` then ("s","ns") else 
+  (* below    *) if tm = ``xS1 X_CF`` then ("b","nb") else hd []
 
 
 fun x86_encode_instruction s = 

@@ -65,6 +65,7 @@ sig
     val tm2ftree               : term -> ftree_type
     val ftree2tm               : ftree_type -> term
 
+    val UNHIDE_PRE_RULE        : term -> thm -> thm
     val HIDE_PRE_RULE          : term -> thm -> thm
     val HIDE_POST_RULE         : term -> thm -> thm
     val HIDE_STATUS_RULE       : bool -> thm -> thm -> thm

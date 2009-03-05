@@ -83,6 +83,16 @@ val SPEC_ADD_CODE = store_thm("SPEC_ADD_CODE",
         METIS_TAC [CODE_POOL_LEMMA] \\ FULL_SIMP_TAC bool_ss [GSYM STAR_ASSOC]
   \\ METIS_TAC []);
 
+val SPEC_COMBINE = store_thm("SPEC_COMBINE",
+  ``!x i j p c1 c2 q b. 
+       (b /\ i ==> SPEC x p c1 q) ==> (~b /\ j ==> SPEC x p c2 q) ==>
+       ((if b then i else j) ==> SPEC x p (c1 UNION c2) q)``,
+  Cases_on `b` THEN REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN RES_TAC
+  THEN IMP_RES_TAC SPEC_ADD_CODE
+  THEN ASM_REWRITE_TAC []
+  THEN ONCE_REWRITE_TAC [UNION_COMM]
+  THEN ASM_REWRITE_TAC []);
+
 val SPEC_SUBSET_CODE = store_thm("SPEC_SUBSET_CODE",
   ``!x p c q. SPEC x p c q ==> !c'. c SUBSET c' ==> SPEC x p c' q``,
   REPEAT STRIP_TAC \\ FULL_SIMP_TAC bool_ss [SUBSET_DEF]
@@ -185,12 +195,9 @@ val SPEC_REFL = store_thm("SPEC_REFL",
 
 val SPEC_TAILREC = store_thm("SPEC_TAILREC",
   ``!f1 (f2:'a->'b) g p res res' c m.
-      (!x. TAILREC_PRE f1 g p x /\ p x /\ g x ==> 
-           SPEC m (res x) c (res (f1 x))) /\
-      (!x. TAILREC_PRE f1 g p x /\ p x /\ ~g x ==> 
-           SPEC m (res x) c (res' (f2 x))) ==>
-      (!x. TAILREC_PRE f1 g p x ==> 
-           SPEC m (res x) c (res' (TAILREC f1 f2 g x)))``,
+      (!x y. g x /\ p x /\ (y = f1 x) ==> SPEC m (res x) c (res y)) /\
+      (!x y. ~g x /\ p x /\ (y = f2 x) ==> SPEC m (res x) c (res' y)) ==>
+      (!x. TAILREC_PRE f1 g p x ==> SPEC m (res x) c (res' (TAILREC f1 f2 g x)))``,
   NTAC 9 STRIP_TAC THEN HO_MATCH_MP_TAC TAILREC_PRE_INDUCT
   THEN METIS_TAC [TAILREC_THM,UNION_IDEMPOT,SPEC_COMPOSE]);
 
