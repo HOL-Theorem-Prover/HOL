@@ -361,13 +361,15 @@ fun PRIM_NORM_TAC ss =
 fun STP_TAC ss finisher
   = PRIM_STP_TAC (rev_itlist add_simpls (tyinfol()) ss) finisher
 
-fun RW_TAC ss thl = markerLib.ABBRS_THEN
-                     (fn thl => STP_TAC (ss && thl) NO_TAC) thl
+fun RW_TAC ss thl g = markerLib.ABBRS_THEN
+                          (fn thl => STP_TAC (ss && thl) NO_TAC) thl
+                          g
 
-fun NORM_TAC ss thl =
+fun NORM_TAC ss thl g =
     markerLib.ABBRS_THEN
       (fn thl => PRIM_NORM_TAC (rev_itlist add_simpls (tyinfol()) (ss && thl)))
       thl
+      g
 
 val bool_ss = boolSimps.bool_ss;
 
@@ -409,11 +411,11 @@ val () =
 
 fun srw_ss () = initialise_srw_ss();
 
-fun SRW_TAC ssdl thl = let
+fun SRW_TAC ssdl thl g = let
   val ss = foldl (fn (ssd, ss) => ss ++ ssd) (srw_ss()) ssdl
 in
   markerLib.ABBRS_THEN (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC) thl
-end;
+end g;
 
 val Abbr = markerSyntax.Abbr
 
