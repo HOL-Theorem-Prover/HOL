@@ -4,7 +4,7 @@ open words_emitTheory string_emitTheory sorting_emitTheory;
 
 val _ = new_theory "patricia_emit";
 
-fun Datatype x = DATATYPE [QUOTE (datatype_thm_to_string x)]
+fun Datatype x = DATATYPE [QUOTE (EmitTeX.datatype_thm_to_string x)]
 
 val fun_rule = REWRITE_RULE [FUN_EQ_THM]
 
