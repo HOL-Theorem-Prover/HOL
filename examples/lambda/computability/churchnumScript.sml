@@ -5,15 +5,13 @@ open pred_setTheory
 open termTheory
 open boolSimps
 open normal_orderTheory
+open churchboolTheory
+
+fun Store_thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
 
 val _ = new_theory "churchnum"
 
 val _ = set_trace "Unicode" 1
-
-val _ = remove_ovl_mapping "LAM" {Name="LAM", Thy="labelledTerms"}
-val _ = remove_ovl_mapping "FV"  {Name="FV",  Thy="labelledTerms"}
-val _ = remove_ovl_mapping "VAR" {Name="VAR", Thy="labelledTerms"}
-val _ = remove_ovl_mapping "@@"  {Name="APP", Thy="labelledTerms"}
 
 val church_def = Define`
   church n = LAM "z" (LAM "s" (FUNPOW ((@@) (VAR "s")) n (VAR "z")))
@@ -43,6 +41,11 @@ val bnf_church = store_thm(
   Induct_on `n` THEN SRW_TAC [][] THEN
   SRW_TAC [][FUNPOW_SUC]);
 val _ = export_rewrites ["bnf_church"]
+
+val is_abs_church = Store_thm(
+  "is_abs_church",
+  ``is_abs (church n)``,
+  SRW_TAC [][church_def]);
 
 val church_lameq_11 = store_thm(
   "church_lameq_11",
@@ -275,6 +278,11 @@ val cpred_bnf = store_thm(
   SRW_TAC [][cpred_def, normorder_rwts]);
 val _ = export_rewrites ["cpred_bnf"]
 
+val bnf_cpred = Store_thm(
+  "bnf_cpred",
+  ``bnf cpred``,
+  SRW_TAC [][cpred_def]);
+
 val FV_cpred = store_thm(
   "FV_cpred",
   ``FV cpred = {}``,
@@ -434,6 +442,120 @@ val cmult_behaviour = store_thm(
   Q.EXISTS_TAC `cplus @@ church n @@ church (m * n)` THEN
   SRW_TAC [][betastar_APPr, nstar_betastar, arithmeticTheory.MULT_CLAUSES] THEN
   METIS_TAC [nstar_betastar, cplus_behaviour, arithmeticTheory.ADD_COMM])
+
+(* predicates/relations *)
+val cis_zero_def = Define`
+  cis_zero = LAM "n" (VAR "n" @@ cB T @@ (LAM "x" (cB F)))
+`;
+val FV_cis_zero = Store_thm(
+  "FV_cis_zero",
+  ``FV cis_zero = {}``,
+  SRW_TAC [][cis_zero_def, EXTENSION]);
+val bnf_cis_zero = Store_thm(
+  "bnf_cis_zero",
+  ``bnf cis_zero``,
+  SRW_TAC [][cis_zero_def]);
+
+val cis_zero_behaviour = store_thm(
+  "cis_zero_behaviour",
+  ``cis_zero @@ church n -n->* cB (n = 0)``,
+  Cases_on `n = 0` THEN SRW_TAC [][cis_zero_def] THEN
+  SRW_TAC [][Once relationTheory.RTC_CASES1, normorder_rwts, lemma14b] THEN
+  `∃m. n = SUC m` by (Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+  SRW_TAC [][FUNPOW_SUC] THEN
+  SRW_TAC [][Once relationTheory.RTC_CASES1, normorder_rwts, lemma14b])
+
+val ceqnat_def = Define`
+  ceqnat = LAM "n"
+             (VAR "n" @@ cis_zero @@
+                (LAM "r" (LAM "m" (cand @@ (cnot @@ (cis_zero @@ (VAR "m"))) @@
+                                           (VAR "r" @@ (cpred @@ (VAR "m")))))))
+`;
+val FV_ceqnat = Store_thm(
+  "FV_ceqnat",
+  ``FV ceqnat = {}``,
+  SRW_TAC [][ceqnat_def, EXTENSION] THEN METIS_TAC []);
+
+val ceqnat_behaviour = store_thm(
+  "ceqnat_behaviour",
+  ``ceqnat @@ church n @@ church m -n->* cB (n = m)``,
+  SRW_TAC [][ceqnat_def, Once relationTheory.RTC_CASES1, normorder_rwts,
+             lemma14b] THEN DISJ2_TAC THEN
+  Q.MATCH_ABBREV_TAC
+      `church n @@ cis_zero @@ ff @@ church m -n->* cB(n = m)` THEN
+  SRW_TAC [][nstar_betastar_bnf] THEN
+  ONCE_REWRITE_TAC [relationTheory.RTC_CASES_RTC_TWICE] THEN
+  Q.EXISTS_TAC `FUNPOW ((@@) ff) n cis_zero @@ church m` THEN CONJ_TAC
+    THEN1 SRW_TAC [][betastar_APPl, nstar_betastar, church_behaviour] THEN
+  Q.ID_SPEC_TAC `m` THEN Induct_on `n` THENL [
+    ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
+    SRW_TAC [][nstar_betastar, cis_zero_behaviour],
+
+    ALL_TAC
+  ] THEN SRW_TAC [][FUNPOW_SUC] THEN
+  SRW_TAC [][Abbr`ff`, Once relationTheory.RTC_CASES1, GSYM nstar_betastar_bnf,
+             normorder_rwts, lemma14b] THEN DISJ2_TAC THEN
+  SRW_TAC [][Once relationTheory.RTC_CASES1, normorder_rwts, lemma14b] THEN
+  DISJ2_TAC THEN
+  `(m = 0) ∨ ∃m0. m = SUC m0` by (Cases_on `m` THEN SRW_TAC [][]) THEN
+  SRW_TAC [][] THENL [
+    SRW_TAC [][nstar_betastar_bnf] THEN
+    Q.MATCH_ABBREV_TAC
+        `cand @@ (cnot @@ (cis_zero @@ church 0)) @@ X -β->* cB F` THEN
+    ONCE_REWRITE_TAC [relationTheory.RTC_CASES_RTC_TWICE] THEN
+    Q.EXISTS_TAC `cand @@ cB F @@ X` THEN CONJ_TAC THENL [
+      ONCE_REWRITE_TAC [relationTheory.RTC_CASES_RTC_TWICE] THEN
+      Q.EXISTS_TAC `cand @@ (cnot @@ cB T) @@ X` THEN CONJ_TAC THENL [
+        MATCH_MP_TAC betastar_APPl THEN
+        MATCH_MP_TAC betastar_APPr THEN
+        MATCH_MP_TAC betastar_APPr THEN
+        MATCH_MP_TAC nstar_betastar THEN
+        ONCE_REWRITE_TAC [DECIDE ``T = (0 = 0)``] THEN
+        SRW_TAC [][cis_zero_behaviour],
+
+        MATCH_MP_TAC betastar_APPl THEN
+        MATCH_MP_TAC betastar_APPr THEN
+        MATCH_MP_TAC nstar_betastar THEN
+        ONCE_REWRITE_TAC [DECIDE ``F = ¬T``] THEN
+        SRW_TAC [][cnot_behaviour]
+      ],
+
+      SRW_TAC [][nstar_betastar, cand_F1]
+    ],
+
+    SRW_TAC [][nstar_betastar_bnf] THEN
+    Q.MATCH_ABBREV_TAC `cand @@ Cond1 @@ Cond2 -β->* cB bool` THEN
+    ONCE_REWRITE_TAC [relationTheory.RTC_CASES_RTC_TWICE] THEN
+    Q.EXISTS_TAC `cand @@ cB T @@ Cond2` THEN CONJ_TAC THENL [
+      MATCH_MP_TAC betastar_APPl THEN
+      MATCH_MP_TAC betastar_APPr THEN
+      SRW_TAC [][Abbr`Cond1`] THEN
+      Q.MATCH_ABBREV_TAC `cnot @@ Cond -β->* cB T` THEN
+      ONCE_REWRITE_TAC [relationTheory.RTC_CASES_RTC_TWICE] THEN
+      Q.EXISTS_TAC `cnot @@ cB F` THEN CONJ_TAC THENL [
+        SRW_TAC [][Abbr`Cond`] THEN
+        MATCH_MP_TAC betastar_APPr THEN
+        MATCH_MP_TAC nstar_betastar THEN
+        MATCH_ACCEPT_TAC
+            (SIMP_RULE (srw_ss()) [] (Q.INST [`n` |-> `SUC N`]
+                                             cis_zero_behaviour)),
+
+        MP_TAC (REWRITE_RULE [] (Q.INST [`p` |-> `F`] cnot_behaviour)) THEN
+        SRW_TAC [][nstar_betastar]
+      ],
+
+      ONCE_REWRITE_TAC [relationTheory.RTC_CASES_RTC_TWICE] THEN
+      Q.EXISTS_TAC `Cond2` THEN
+      SRW_TAC [][cand_T1, nstar_betastar] THEN
+      UNABBREV_ALL_TAC THEN
+      Q.MATCH_ABBREV_TAC `FF @@ Arg -β->* bool` THEN
+      ONCE_REWRITE_TAC [relationTheory.RTC_CASES_RTC_TWICE] THEN
+      Q.EXISTS_TAC `FF @@ church m0` THEN CONJ_TAC THEN1
+        SRW_TAC [][betastar_APPr, cpred_beta_SUC, Abbr`Arg`] THEN
+      SRW_TAC [][Abbr`bool`]
+    ]
+  ]);
+
 
 val _ = export_theory()
 
