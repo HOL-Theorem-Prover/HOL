@@ -69,8 +69,8 @@ src/datatype/equiv
 src/datatype/record
 src/datatype
 src/list/src
-src/datatype/inftree
 src/unwind
+src/TeX
 src/boss
 # Up to this point is needed for hol.unquote (which loads bossLib).
 # (Maybe unwind could be omitted).
@@ -88,10 +88,11 @@ src/bag
 src/n-bit
 !examples/ARM/arm6-verification
 !!examples/ARM/arm6-verification/correctness
-src/llist
 src/ring/src
 src/integer
 src/patricia
+src/emit
+# src/emit/theories
 src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
@@ -106,6 +107,8 @@ src/prob
 src/temporal/src
 src/temporal/smv.2.4.3
 src/rational
+src/llist
+src/datatype/inftree
 src/path
 !examples/lambda/barendregt
 !!examples/lambda/other-models
@@ -113,7 +116,4 @@ src/path
 src/Boolify/src
 src/float
 !!examples/miller/miller
-src/emit
-src/emit/TeX
 !examples/ordinal
-# src/emit/theories
