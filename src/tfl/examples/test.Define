@@ -227,7 +227,7 @@ val V_def =
              Schematic definitions
  ---------------------------------------------------------------------------*)
 
-val While = DefineSchema `While s = if B s then While (C s) else s`;
+val While = TotalDefn.DefineSchema `While s = if B s then While (C s) else s`;
 
 
 Hol_datatype `btree = LEAF 
@@ -240,7 +240,7 @@ val btreeRec_def =
 
 
 val unfold_def = 
- DefineSchema
+ TotalDefn.DefineSchema
     `unfold (x:'a) = 
         if more x 
         then let (y1,b,y2) = dest x 
@@ -249,7 +249,7 @@ val unfold_def =
         else LEAF`;
 
 val fusion_def = 
- DefineSchema
+ TotalDefn.DefineSchema
      `fusion (x:'a) = 
           if more x 
           then let (y,i,z) = dest x
@@ -258,13 +258,13 @@ val fusion_def =
           else (c:'c)`;
 
 val linRec_def = 
- DefineSchema
+ TotalDefn.DefineSchema
     `linRec (x:'a) = 
        if atomic x then A x 
        else  join (linRec (dest x)) (D x:'b)`;
 
 val accRec_def0 = 
- DefineSchema
+ TotalDefn.DefineSchema
     `accRec (x:'a, u:'b) = 
          if atomic x 
          then join (A x) u
@@ -275,7 +275,7 @@ val accRec_def0 =
  ---------------------------------------------------------------------------*)
 
 val binRec_def = 
- DefineSchema
+ TotalDefn.DefineSchema
     `binRec (x:'a) = 
       if atomic x then (A x:'b) 
       else join (binRec (left x)) 
@@ -286,16 +286,16 @@ val binRec_def =
  ---------------------------------------------------------------------------*)
 
 val baRec_def = 
- DefineSchema
+ TotalDefn.DefineSchema
     `(baRec ([],v) = (v:'b)) 
   /\ (baRec (h::t, v) =
         if atomic h 
         then baRec (t, join v (A h:'b))
-        else baRec (APPEND (dest (h:'a)) t, v))`;
+        else baRec (dest (h:'a) ++ t, v))`;
 
 (* Has failed in the past *)
 val baRec_def = 
- DefineSchema
+ TotalDefn.DefineSchema
     `(baRec [] v = (v:'b)) 
   /\ (baRec (h::t) v =
         if atomic h 
@@ -419,7 +419,8 @@ Define
      Not sure if this actually does anything useful. It might be nicer 
      to define this schematically on R, and still have termination proved.
  ---------------------------------------------------------------------------*)
-DefineSchema
+
+TotalDefn.DefineSchema
    `(merge_heap R (Leaf x) b = b)                         
  /\ (merge_heap R (Brh v b1 b2) (Leaf x) = Brh v b1 b2) 
  /\ (merge_heap R (Brh v b1 b2) (Brh w c1 c2) 
@@ -427,7 +428,7 @@ DefineSchema
          then Brh v (merge_heap R b1 b2) (Brh w c1 c2)
          else Brh w (Brh v b1 b2) (merge_heap R c1 c2))`;
 
-DefineSchema
+TotalDefn.DefineSchema
    `(merge_heap (Leaf x) b = b)                         
  /\ (merge_heap (Brh v b1 b2) (Leaf x) = Brh v b1 b2) 
  /\ (merge_heap (Brh v b1 b2) (Brh w c1 c2) 
@@ -482,13 +483,13 @@ Define
         if h=leader then Maj t (leader, m+2)
                     else Maj t (leader, m))`;
 
-(* Alternative formulation *)
+(* Alternative formulation ... fails at the moment *)
 Define 
    `(Maj [] (winner,lead)  = (winner,lead))
  /\ (Maj (h::t) (leader,0) = Maj t (if h=leader then (leader,1) else (h,1)))
  /\ (Maj (h::t) (leader,SUC m) = Maj t (leader, if h=leader then m+2 else m))`;
 
-Define 
+Define   (* fails at the moment *)
    `(Maj [] (winner,lead)      = (winner,lead))
  /\ (Maj (h::t) (leader,0)     = Maj t ((if h=leader then leader else h),1))
  /\ (Maj (h::t) (leader,SUC m) = Maj t (leader, if h=leader then m+2 else m))`;
@@ -786,19 +787,19 @@ Define`
 (* Exercising multiDefine                                                    *)
 (*---------------------------------------------------------------------------*)
 
-multiDefine
+TotalDefn.multiDefine
   `(fact x = if zerop x then 1 else mult x (sub1 x)) /\
    (zerop x = (x=0)) /\
    (sub1 x = x-1) /\
    (mult x y = x * y)`;
 
-multiDefine  (* fails because of sub1 in rec. call *)
+TotalDefn.multiDefine  (* fails because of sub1 in rec. call *)
   `(fact x = if zerop x then 1 else mult x (fact (sub1 x))) /\
    (zerop x = (x=0)) /\
    (sub1 x = x-1) /\
    (mult x y = x * y)`;
 
-multiDefine 
+TotalDefn.multiDefine 
   `(fact x = if x=0 then 1 else mult x (fact (x-1))) /\
    (mult x y = x * y) /\
    (even 0 = T) /\ 
@@ -806,7 +807,7 @@ multiDefine
    (odd 0 = F) /\ 
    (odd (SUC n) = even n)`;
 
-multiDefine 
+TotalDefn.multiDefine 
   `(even 0 = T) /\ 
    (even (SUC n) = odd n) /\
    (fact x = if x=0 then 1 else mult x (fact (x-1))) /\
@@ -814,7 +815,7 @@ multiDefine
    (odd 0 = F) /\ 
    (odd (SUC n) = even n)`;
 
-multiDefine 
+TotalDefn.multiDefine 
   `(example 1 = F) /\
    (example 2 = T)`;
 
@@ -906,3 +907,61 @@ val (code_eval_def, code_eval_ind) = Defn.tprove(
 Hol_datatype `ty = C1 of num => bool`;
 Define `foo (C1 15 b) = 1`;
 
+(*---------------------------------------------------------------------------*)
+(* More test involving literal patterns.                                     *)
+(*---------------------------------------------------------------------------*)
+
+Define 
+ `(bar (2,3) = 3) /\
+  (bar (2,4) = 6) /\
+  (bar (2,5) = 9) /\
+  (bar (3,x) = 25)`;
+
+load "wordsLib";
+
+val _ = Hol_datatype `RName =
+    RName_0usr  | RName_1usr  | RName_2usr  | RName_3usr
+  | RName_4usr  | RName_5usr  | RName_6usr  | RName_7usr
+  | RName_8usr  | RName_8fiq  | RName_9usr  | RName_9fiq
+  | RName_10usr | RName_10fiq | RName_11usr | RName_11fiq
+  | RName_12usr | RName_12fiq
+  | RName_SPusr | RName_SPfiq | RName_SPirq | RName_SPsvc
+  | RName_SPabt | RName_SPund | RName_SPmon
+  | RName_LRusr | RName_LRfiq | RName_LRirq | RName_LRsvc
+  | RName_LRabt | RName_LRund | RName_LRmon
+  | RName_PC`;
+
+val RevLookUpRName_def = Define`
+  (RevLookUpRName (0w:word4,0b10000w:word5) = RName_0usr) /\
+  (RevLookUpRName (1w, 0b10000w) = RName_1usr) /\
+  (RevLookUpRName (2w, 0b10000w) = RName_2usr) /\
+  (RevLookUpRName (3w, 0b10000w) = RName_3usr) /\
+  (RevLookUpRName (4w, 0b10000w) = RName_4usr) /\
+  (RevLookUpRName (5w, 0b10000w) = RName_5usr) /\
+  (RevLookUpRName (6w, 0b10000w) = RName_6usr) /\
+  (RevLookUpRName (7w, 0b10000w) = RName_7usr) /\
+  (RevLookUpRName (8w, 0b10000w) = RName_8usr) /\
+  (RevLookUpRName (8w, 0b10001w) = RName_8fiq) /\
+  (RevLookUpRName (9w, 0b10000w) = RName_9usr) /\
+  (RevLookUpRName (9w, 0b10001w) = RName_9fiq) /\
+  (RevLookUpRName (10w,0b10000w) = RName_10usr) /\
+  (RevLookUpRName (10w,0b10001w) = RName_10fiq) /\
+  (RevLookUpRName (11w,0b10000w) = RName_11usr) /\
+  (RevLookUpRName (11w,0b10001w) = RName_11fiq) /\
+  (RevLookUpRName (12w,0b10000w) = RName_12usr) /\
+  (RevLookUpRName (12w,0b10001w) = RName_12fiq) /\
+  (RevLookUpRName (13w,0b10000w) = RName_SPusr) /\
+  (RevLookUpRName (13w,0b10001w) = RName_SPfiq) /\
+  (RevLookUpRName (13w,0b10010w) = RName_SPirq) /\
+  (RevLookUpRName (13w,0b10011w) = RName_SPsvc) /\
+  (RevLookUpRName (13w,0b10111w) = RName_SPabt) /\
+  (RevLookUpRName (13w,0b11011w) = RName_SPund) /\
+  (RevLookUpRName (13w,0b10110w) = RName_SPmon) /\
+  (RevLookUpRName (14w,0b10000w) = RName_LRusr) /\
+  (RevLookUpRName (14w,0b10001w) = RName_LRfiq) /\
+  (RevLookUpRName (14w,0b10010w) = RName_LRirq) /\
+  (RevLookUpRName (14w,0b10011w) = RName_LRsvc) /\
+  (RevLookUpRName (14w,0b10111w) = RName_LRabt) /\
+  (RevLookUpRName (14w,0b11011w) = RName_LRund) /\
+  (RevLookUpRName (14w,0b10110w) = RName_LRmon) /\
+  (RevLookUpRName (15w,0b10000w) = RName_PC)`;
