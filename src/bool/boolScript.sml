@@ -4109,7 +4109,7 @@ val literal_case_CONG =
 val _ = save_thm("literal_case_CONG", literal_case_CONG);
 
 (*---------------------------------------------------------------------------*)
-(* Sometime useful rewrite.                                                  *)
+(* Sometime useful rewrite, but you will want a higher-order version.        *)
 (*  |- literal_case (\x. bool_case t u (x=a)) a = t                          *)
 (*---------------------------------------------------------------------------*)
 
