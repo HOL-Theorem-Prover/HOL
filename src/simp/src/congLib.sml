@@ -25,10 +25,7 @@ quietdec := false;
 
 fun extract_preorder_trans (Travrules.PREORDER(_,TRANS,_)) = TRANS;
 fun extract_preorder_refl (Travrules.PREORDER(_,_,REFL)) = REFL;
-fun extract_preorder_const (Travrules.PREORDER((name, thy),_,_)) =
-  prim_mk_const {Name=name,Thy=thy};
-fun extract_preorder_const_string (Travrules.PREORDER((name, thy),_,_)) =
-  (name, thy);
+fun extract_preorder_const (Travrules.PREORDER(t,_,_)) = t
 
 (*---------------------------------------------------------------------------*)
 (* Composable congruence set fragments                                       *)
@@ -88,7 +85,7 @@ fun mk_eq_congproc preorder =
 
 
 
-val equalityPreorder = PREORDER(("=","min"),TRANS,REFL);
+val equalityPreorder = PREORDER(boolSyntax.equality,TRANS,REFL);
 
 
 fun is_match_binop binop term =
@@ -112,7 +109,8 @@ local
     else
       (let
         val thm_relation = rator(rator(concl thm));
-        val _ = if (name_of_const (thm_relation) = extract_preorder_const_string preorder) then T else failwith ("not applicable");
+        val _ = if (thm_relation = extract_preorder_const preorder) then T 
+                else failwith ("not applicable");
         val thmLHS = rand (rator (concl thm));
         val match = match_terml [] boundvars thmLHS term;
         val thm = INST_TY_TERM match thm
@@ -267,7 +265,9 @@ fun CONGRUENCE_SIMP_QCONV relation (cs as (CS csdata)) ss =
   let
     (*build a connection between the preorders and =*)
     val preorders = (#relations csdata);
-    val preorders = filter (fn p => not (extract_preorder_const_string p = ("=", "min"))) preorders;
+    val preorders = filter (fn p => not (same_const (extract_preorder_const p) 
+                                                    boolSyntax.equality)) 
+                           preorders;
     val preorder_eq_congs = map mk_eq_congproc preorders
     val eq_congsTravrule = TRAVRULES
       {relations=(#relations csdata),

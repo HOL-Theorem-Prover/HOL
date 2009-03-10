@@ -18,14 +18,13 @@ sig
     * in the future.
     *
     * Once things are set up, the user of this module generally
-    * specifies a preorder as a term, e.g. (--`$=`--).  Since
-    * preorders are just constants, underneath we just use strings to
-    * key preorders.
+    * specifies a preorder as a term, e.g. (--`$=`--).  
     * ---------------------------------------------------------------------*)
 
-  datatype preorder = PREORDER of (string*string)
+  datatype preorder = PREORDER of term
                                    * (thm -> thm -> thm) 
                                    * (term -> thm)
+  val samerel : term -> term -> bool
 
   val mk_preorder : (thm * thm) -> preorder;
   val find_relation : term -> preorder list -> preorder;

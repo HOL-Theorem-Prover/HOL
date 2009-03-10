@@ -17,7 +17,6 @@ struct
 
 open HolKernel Drule Psyntax liteLib Trace Opening;
 
-infix 8 |>
 fun WRAP x = STRUCT_WRAP "Travrules" x;
 fun ERR x = STRUCT_ERR "Travrules" x;
 
@@ -28,22 +27,22 @@ fun ERR x = STRUCT_ERR "Travrules" x;
 
   val equality = boolSyntax.equality;
 
-  datatype preorder = PREORDER of (string * string)
+  datatype preorder = PREORDER of term
                                   * (thm -> thm -> thm) 
                                   * (term -> thm);
 
-   fun find_relation rel  =
-       let val relcid = name_of_const rel
-	   fun f ((h as PREORDER (cid,_,_))::t) =
-	            if relcid = cid then h else f t
-	     | f [] = ERR("find_relation","relation not found")
-       in f
-       end;
+   fun find_relation rel  = let 
+     fun f ((h as PREORDER (cid,_,_))::t) = if Opening.samerel rel cid then h 
+                                            else f t
+       | f [] = ERR("find_relation","relation not found")
+   in 
+     f
+   end;
 
    fun ARB_TRANS thm c1 c2 = MATCH_MP thm (CONJ c1 c2);
 
    fun mk_preorder (TRANS_THM,REFL_THM) =
-       PREORDER (name_of_const(rator(rator(snd(dest_forall(concl REFL_THM))))),
+       PREORDER (rator(rator(snd(dest_forall(concl REFL_THM)))),
 		 ARB_TRANS TRANS_THM,
 		 fn x => ISPEC x REFL_THM);
 
@@ -77,7 +76,7 @@ fun ERR x = STRUCT_ERR "Travrules" x;
  * equality_travrules
  * ---------------------------------------------------------------------*)
 
-val equality = [PREORDER(("=","min"),TRANS,REFL)];
+val equality = [PREORDER(boolSyntax.equality,TRANS,REFL)];
 val EQ_tr = gen_mk_travrules
   {relations=equality,
    congprocs=[Opening.EQ_CONGPROC],

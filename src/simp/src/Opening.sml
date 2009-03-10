@@ -3,9 +3,10 @@ struct
 
 open HolKernel boolLib liteLib Trace;
 
-type tmcid = string * string;
 
-type congproc  = {relation:tmcid,
+fun samerel t1 t2 = same_const t1 t2 orelse aconv t1 t2
+
+type congproc  = {relation:term,
 		  solver : term -> thm,
 		  freevars: term list,
 		  depther : thm list * term -> conv} -> conv
@@ -116,7 +117,7 @@ let
 
    val congrule' = GSPEC (GEN_ALL congrule)
    val nconds = nconds_of_congrule congrule'
-   val rel = name_of_const(rel_of_congrule congrule')
+   val rel = rel_of_congrule congrule'
 
    val (conditions,conc) = strip_n_imp nconds (concl congrule')
    val matcher =
@@ -133,7 +134,7 @@ let
            conditions
 
 in fn {relation,solver,depther,freevars} =>
-  if (relation <> rel) then failwith "not applicable" else fn tm =>
+  if not (samerel relation rel) then failwith "not applicable" else fn tm =>
   let val match_thm = matcher tm
       val _ = trace(3,OPENING(tm,congrule'))
       val (_,conc) = strip_n_imp nconds (concl match_thm)
@@ -209,7 +210,7 @@ end;
  * ---------------------------------------------------------------------*)
 
 fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
- if relation <> ("=","min") then failwith "not applicable"
+ if not (same_const relation boolSyntax.equality) then failwith "not applicable"
  else
  case dest_term tm
   of COMB(Rator,Rand) =>
