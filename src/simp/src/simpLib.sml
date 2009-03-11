@@ -236,6 +236,30 @@ with
      SS {mk_rewrs = mk_rewrs, ssfrags = ssfrags, travrules = travrules,
          initial_net = initial_net, dprocs = dprocs, limit = NONE}
 
+ fun wk_mk_travrules (rels, congs) = let
+   fun cong2proc th = let
+     open Opening Travrules
+     val r = rel_of_congrule th
+     val PREORDER(_,_,refl) = find_relation r rels
+   in
+     CONGPROC (fn _ => fn t => refl t) th
+   end
+ in
+   TRAVRULES {relations = rels,
+              congprocs = [],
+              weakenprocs = map cong2proc congs}
+ end
+
+ fun add_weakener (rels,congs,dp) simpset = let
+   val SS {mk_rewrs,ssfrags,travrules,initial_net,dprocs,limit} = simpset
+ in
+   SS {mk_rewrs = mk_rewrs, ssfrags = ssfrags,
+       travrules = merge_travrules [travrules, wk_mk_travrules(rels,congs)],
+       initial_net = initial_net, dprocs = dprocs, limit = limit} ++
+   SSFRAG{convs = [], rewrs = [], filter = NONE, ac = [], dprocs = [dp],
+          congs = [], name = NONE}
+end
+
 
 (*---------------------------------------------------------------------------*)
 (* SIMP_QCONV : simpset -> thm list -> conv                                  *)

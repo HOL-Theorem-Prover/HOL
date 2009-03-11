@@ -85,13 +85,15 @@ sig
 
   type simpset
 
-  val empty_ss   : simpset
-  val ssfrags_of : simpset -> ssfrag list
-  val mk_simpset : ssfrag list -> simpset
-  val ++         : simpset * ssfrag -> simpset  (* infix *)
-  val &&         : simpset * thm list -> simpset  (* infix *)
-  val limit      : int -> simpset -> simpset
-  val unlimit    : simpset -> simpset
+  val empty_ss     : simpset
+  val ssfrags_of   : simpset -> ssfrag list
+  val mk_simpset   : ssfrag list -> simpset
+  val ++           : simpset * ssfrag -> simpset  (* infix *)
+  val &&           : simpset * thm list -> simpset  (* infix *)
+  val limit        : int -> simpset -> simpset
+  val unlimit      : simpset -> simpset
+  val add_weakener : (Travrules.preorder list * thm list * Traverse.reducer) ->
+                     simpset -> simpset
 
   val traversedata_for_ss: simpset -> Traverse.traverse_data
 
