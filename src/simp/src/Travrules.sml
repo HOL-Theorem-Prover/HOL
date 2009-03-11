@@ -28,14 +28,14 @@ fun ERR x = STRUCT_ERR "Travrules" x;
   val equality = boolSyntax.equality;
 
   datatype preorder = PREORDER of term
-                                  * (thm -> thm -> thm) 
+                                  * (thm -> thm -> thm)
                                   * (term -> thm);
 
-   fun find_relation rel  = let 
-     fun f ((h as PREORDER (cid,_,_))::t) = if Opening.samerel rel cid then h 
+   fun find_relation rel  = let
+     fun f ((h as PREORDER (cid,_,_))::t) = if Opening.samerel rel cid then h
                                             else f t
        | f [] = ERR("find_relation","relation not found")
-   in 
+   in
      f
    end;
 
@@ -62,13 +62,28 @@ fun ERR x = STRUCT_ERR "Travrules" x;
     };
 
    fun dest(TRAVRULES x)  = x;
-   val gen_mk_travrules = TRAVRULES;
+   val gen_mk_travrules = TRAVRULES
 
-   fun merge_travrules tl =
-     let val ts = map dest tl
-     in TRAVRULES {relations=flatten (map #relations ts),
-                   congprocs=foldl (op @) [] (map #congprocs ts),
-                   weakenprocs=flatten (map #weakenprocs ts)}
+   fun rel_of_preorder (PREORDER(r,_,_)) = r
+
+   fun merge_travrules tl = let
+     val ts = map dest tl
+     fun uniquify l = let
+       val sorted = Listsort.sort (inv_img_cmp rel_of_preorder Term.compare) l
+       fun recurse acc [] = acc
+         | recurse acc [h] = h::acc
+         | recurse acc (h1::(rest as h2::t)) =
+           if samerel (rel_of_preorder h1) (rel_of_preorder h2) then
+             recurse acc rest
+           else
+             recurse (h1::acc) rest
+     in
+       recurse [] sorted
+     end
+   in
+     TRAVRULES {relations=uniquify (flatten (map #relations ts)),
+                congprocs=foldl (op @) [] (map #congprocs ts),
+                weakenprocs=flatten (map #weakenprocs ts)}
      end;
 
 
