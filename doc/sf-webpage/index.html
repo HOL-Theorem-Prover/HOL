@@ -1,0 +1,205 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<link rel="stylesheet" href="index.css" type="text/css">
+<title> HOL 4 Kananaskis 4 </title>
+
+</head>
+
+
+<!-- add class="dulled" within tags below for dull colours -->
+<!-- remove it to restore things to their former glory -->
+
+<body>
+
+<table border=0 cellpadding=2 cellspacing=1 width="100%" >
+<tr class="shaded">
+ <td align=center><b class="hol4">HOL&nbsp;4 </b> </td>
+ <td align=right colspan=3><b class="kanan">Kananaskis 4</b>&nbsp;&nbsp; </td>
+</tr>
+
+<tr>
+ <td align=center>
+ <a onMouseOver="window.status='Snow Watching Lantern (the logo of HOL systems)';return true;"
+     onMouseOut="window.status='';return true;"
+    href="http://www.cl.cam.ac.uk/users/mjcg/lantern.html"
+    title="An explanation of why the Lantern is HOL's logo">
+  <img  width = 96 height = 120 ALT="[HOL logo]"  src="small-logo.gif"
+        title="Snow Watching Lantern">  </a>
+</td>
+
+ <td align=center>
+<table >
+<tr align="left">
+<td class="red"> Easier to use: </td>
+    <td>easy installation, bugs fixed!</td>
+</tr>
+
+<tr align="left">
+<td class="red"> Cool examples: </td>
+<td> ARM6, &lambda;-calculus, PSL, ACL2</td>
+</tr>
+
+<tr align="left">
+<td class="red">New libraries:</td>
+<td>BDDs, SAT, model-checking</td>
+</tr>
+
+<tr align="left">
+<td class="red">New documentation:</td>
+<td>Extended Description, DPLL example, ...</td>
+</tr>
+</table>
+
+</td>
+ <td align=right>
+  <a onMouseOver="window.status='Picture of Lake Kananaskis taken by Alan Kane (http://www.cadvision.com/akane/rocky_mountain_scrambles_photos.htm)';return true;"
+     onMouseOut="window.status='';return true;">
+     <img
+     alt="[Picture of Lake Kananaskis taken by Alan Kane (akane@cadvision.com)]"
+title="Picture of Lake Kananaskis taken by Alan Kane (akane@cadvision.com)"
+          width = 224 height = 111
+          src="SmallAlanKaneKananaskisPhoto.jpg">
+  </a>
+ </td>
+</tr>
+
+<tr>
+  <td align=center colspan=4 class="shaded">
+    &nbsp;|&nbsp;
+    <a class=tabs
+       href="kananaskis-4.release.html">
+      Release notes</a>&nbsp;|&nbsp;
+    <a class=tabs href="documentation.html">Documentation</a>&nbsp;|&nbsp;
+    <a class=tabs href="http://hol.svn.sourceforge.net/viewvc/*checkout*/hol/HOL/doc/faq.html">
+      FAQ</a>&nbsp;|&nbsp;
+    <a class=tabs href="http://hol.sourceforge.net/kananaskis-4-helpdocs/help/HOLindex.html">
+      Online reference</a>&nbsp;|&nbsp;
+    <a class=tabs href="hol-mode.html">
+      Emacs mode</a>&nbsp;|&nbsp;
+    <a class=tabs href="InstallKananaskis.html">
+      Installing from Sources </a>&nbsp;|&nbsp;
+    <a class="tabs" href="win-install.html">
+      Windows installer</a>&nbsp;|&nbsp;
+    <a class=tabs href="http://sourceforge.net/projects/hol/">
+      HOL@S/F</a>&nbsp;|&nbsp;
+<a class=tabs href="http://sourceforge.net/docman/display_doc.php?docid=6289&amp;group_id=31790">Anon&nbsp;SVN</a>&nbsp;|&nbsp;
+
+  </td>
+</tr>
+</table>
+
+<p>
+&nbsp;
+<p>
+
+<dl>
+<dt><b>What is HOL&nbsp;4?</b></dt>
+<dd> HOL4 is the latest version of
+the HOL interactive proof assistant for higher order logic: a
+programming environment in which theorems can be proved and proof
+tools implemented.  Built-in decision procedures and theorem provers
+can automatically establish many simple theorems (users may have to
+prove the hard theorems themselves!) An oracle mechanism gives access
+to external programs such as <a
+href="http://www.cl.cam.ac.uk/~mjcg/HolSatLib">SAT</a> and <a
+href="http://www.cl.cam.ac.uk/~mjcg/HolBddLib">BDD</a>
+engines. HOL&nbsp;4 is particularly suitable as a platform for
+implementing combinations of deduction, execution and property
+checking.
+
+<dt><b>Downloads</b></dt>
+<dd>
+  <ul>
+<li> <a href="http://hol.sourceforge.net/InstallKananaskis.html">Sources</a> (and also, <a href="http://sourceforge.net/docman/display_doc.php?docid=6289&amp;group_id=31790"><i>via</i> Subversion</a>)
+<li> <a href="http://hol.sourceforge.net/win-install.html">Windows installer</a>
+</ul>
+</dd>
+
+
+<dt> <b>History</b> </dt>
+<dd>
+During the last 20 years there have been several
+widely used versions of the HOL system:
+<ol>
+<li>HOL88 from Cambridge;
+<li>HOL90 from Calgary and Bell Labs;
+<li>HOL98 from Cambridge, Glasgow and Utah.
+</ol>
+HOL&nbsp;4 is the successor to these. Its development was partly supported by the <a href="http://www.dcs.gla.ac.uk/prosper/">PROSPER</a> project.
+HOL&nbsp;4 is based on HOL98 and incorporates ideas and tools from
+<a href="http://www.cl.cam.ac.uk/users/jrh/hol-light/">HOL Light</a>.
+
+The <a href="http://www.lemma-one.com/ProofPower/index/">ProofPower</a> system
+is another implementation of HOL. It was originally developed by ICL,
+but is now freely available from <a href="http://www.lemma-one.com">Lemma 1</a>.
+
+
+All the HOL systems use <a href="http://www.cl.cam.ac.uk/~mjcg/papers/HolHistory.html">Robin Milner's LCF approach</a>.
+</dd>
+
+<dt> <b>How easy is it to learn?</b></dt>
+<dd>
+Starting from scratch, it takes on average about a month to become comfortable using HOL. Many people
+learn the system from the free
+<a href="http://prdownloads.sourceforge.net/hol/kananaskis-4-tutorial.pdf?download">tutorial</a>, others take
+courses that are offered from time to time.
+</dd>
+
+<dt> <b>Support and licencing</b></dt>
+<dd>
+
+<a href="http://sourceforge.net/projects/hol"><img class="left"
+src="http://sflogo.sourceforge.net/sflogo.php?group_id=31790&amp;type=16" width="150"
+height="40" alt="[SourceForge Logo]"> </a>
+HOL&nbsp;4 is an open source project with a BSD-style licence that
+allows its free use in commercial products.
+<a href="http://www.cl.cam.ac.uk/~mjcg/SourceForge.html">New developers</a> are welcome.
+
+
+<p class="clearleft"> Support and information is available online:</p>
+<ul><li>
+the <b>hol-info</b> mailing list is for
+discussion, questions and announcements related to the HOL System (HOL4 and HOL&nbsp;Light discussions are both welcome)<ul><li>
+[<a href="mailto:hol-info@lists.sourceforge.net">hol-info@lists.sourceforge.net</a> |
+ <a href="http://lists.sourceforge.net/lists/listinfo/hol-info">subscribe</a> |
+ <a href="http://sourceforge.net/mailarchive/forum.php?forum_name=hol-info">archives</a>]
+</ul>
+
+<li>
+<b>Bug reports:</b>
+<a href="httpp://sourceforge.net/tracker/?func=add&amp;group_id=31790&amp;atid=403397">
+click here</a>.
+</ul>
+
+</dd>
+
+</dl>
+
+<hr>
+<p>HOL is developed by researchers at (among other places):</p>
+<div class="logos">
+<div class="floatleft"><a href="http://www.cam.ac.uk">
+<img src="ucam.gif" alt="[University of Cambridge]"></a></div>
+<div class="floatcentre"><a href="http://nicta.com.au">
+<img src="NICTA-logo.png" alt="[NICTA]"></a></div>
+<div class="floatright"><a href="http://www.utah.edu">
+<img src="UtahLogo.png" alt="[University of Utah]"></a></div>
+</div>
+
+<div class="timestamp" style="clear:both; padding-top: 3mm;">
+<hr>
+<p>
+Time-stamp: "Wednesday, 11 March 2009; 02:48 UTC (Michael Norrish)"
+</p></div>
+
+
+</body>
+
+</html>
+
+<!-- Local variables: -->
+<!-- time-stamp-line-limit: 0 -->
+<!-- time-stamp-time-zone: "UTC+0" -->
+<!-- time-stamp-format: "%:a, %:d %:b %:y; %02H:%02M UTC (%U)" -->
+<!-- End: -->
