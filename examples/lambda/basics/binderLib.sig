@@ -3,15 +3,17 @@ sig
 
   include Abbrev
 
+  val find_avoids : (term * (term HOLset.set * term HOLset.set)) ->
+                    term HOLset.set * term HOLset.set
 
   val NEW_TAC : string -> term -> tactic
   val NEW_ELIM_TAC : tactic
-  val FRESH_TAC : tactic 
+  val FRESH_TAC : tactic
 
-  datatype nominaltype_info = 
+  datatype nominaltype_info =
          NTI of { recursion_thm : thm option,
-                  (* recursion theorems are stored in SPEC_ALL form, with 
-                     preconditions as one big set of conjuncts (rather than 
+                  (* recursion theorems are stored in SPEC_ALL form, with
+                     preconditions as one big set of conjuncts (rather than
                      iterated implications) *)
                   nullfv : term,
                   pm_constant : term,

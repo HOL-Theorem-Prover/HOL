@@ -8,6 +8,21 @@ val _ = new_theory "normal_order"
 
 val _ = set_trace "Unicode" 1
 
+(* ----------------------------------------------------------------------
+    Normal order reduction
+
+    This relation is a bit monstrous really.  In particular, nice
+    properties of β-reduction don't necessarily translate across.  For
+    example, substitutivity doesn't hold.  This would have that
+
+     M -n-> N ⇒ [P/v]M -n-> [P/v]N
+
+    but this isn't true because the variable v might be at the head
+    position in M, and P might contain a redex.  Then the reduction
+    that was OK on the left has to be deferred for the reduction in P
+    on the right.
+   ---------------------------------------------------------------------- *)
+
 val (normorder_rules, normorder_ind, normorder_cases) = Hol_reln`
   (∀v M N. normorder (LAM v M @@ N) ([N/v]M)) ∧
   (∀v M1 M2. normorder M1 M2 ⇒ normorder (LAM v M1) (LAM v M2)) ∧
@@ -31,6 +46,53 @@ val tpm_normorder_eqn = store_thm(
   ``tpm pi M -n-> tpm pi N ⇔ M -n-> N``,
   METIS_TAC [tpm_inverse, tpm_normorder_I]);
 val _ = export_rewrites ["tpm_normorder_eqn"]
+
+val normorder_bvc_gen_ind = store_thm(
+  "normorder_bvc_gen_ind",
+  ``∀P f.
+      (∀x. FINITE (f x)) ∧
+      (∀v M N x. v ∉ FV N ∧ v ∉ f x ⇒ P (LAM v M @@ N) ([N/v]M) x) ∧
+      (∀v M N x. v ∉ f x ∧ (∀y. P M N y) ⇒ P (LAM v M) (LAM v N) x) ∧
+      (∀M1 M2 N x. (∀y. P M1 M2 y) ∧ ¬is_abs M1 ⇒ P (M1 @@ N) (M2 @@ N) x) ∧
+      (∀M N1 N2 x.
+         (∀y. P N1 N2 y) ∧ bnf M ∧ ¬is_abs M ⇒ P (M @@ N1) (M @@ N2) x)
+     ⇒
+      ∀M N. M -n-> N ⇒ ∀x. P M N x``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC
+        `∀M N. M -n-> N ⇒ ∀π x. P (tpm π M) (tpm π N) x`
+        THEN1 METIS_TAC [tpm_NIL] THEN
+  HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][] THENL [
+    SRW_TAC [][tpm_subst] THEN
+    Q_TAC (NEW_TAC "z")
+          `{lswapstr π v} ∪ FV (tpm π N) ∪ f x ∪ FV (tpm π M)` THEN
+    `LAM (lswapstr π v) (tpm π M) = LAM z ([VAR z/lswapstr π v] (tpm π M))`
+       by SRW_TAC [][SIMPLE_ALPHA] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    `[tpm π N/lswapstr π v](tpm π M) =
+     [tpm π N/z] ([VAR z/lswapstr π v](tpm π M))`
+        by SRW_TAC [][lemma15a] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][],
+
+    Q_TAC (NEW_TAC "z")
+          `{lswapstr π v} ∪ FV (tpm π M) ∪ FV (tpm π N) ∪ f x` THEN
+    `(LAM (lswapstr π v) (tpm π M) = LAM z (tpm [(z, lswapstr π v)] (tpm π M)))
+         ∧
+     (LAM (lswapstr π v) (tpm π N) = LAM z (tpm [(z, lswapstr π v)] (tpm π N)))`
+        by SRW_TAC [][tpm_ALPHA] THEN
+    NTAC 2 (POP_ASSUM SUBST_ALL_TAC) THEN
+    SRW_TAC [][GSYM tpm_APPEND]
+  ]);
+
+infix |> fun x |> f = f x
+val normorder_bvc_ind = save_thm(
+  "normorder_bvc_ind",
+  normorder_bvc_gen_ind |> SPEC_ALL
+                        |> Q.INST [`P` |-> `λM N x. P1 M N`, `f` |-> `λx. X`]
+                        |> SIMP_RULE (srw_ss()) []
+                        |> Q.INST [`P1` |-> `P`]
+                        |> Q.GEN `X` |> Q.GEN `P`);
 
 val normorder_ccbeta = store_thm(
   "normorder_ccbeta",
@@ -300,6 +362,19 @@ val normstar_APPr = store_thm(
     HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
     METIS_TAC [normorder_rules, relationTheory.RTC_RULES]
   ]);
-val _ = export_rewrites ["normstar_APPr"]
+
+(* ----------------------------------------------------------------------
+    -n->* congruences
+   ---------------------------------------------------------------------- *)
+
+val nstar_LAM_I = store_thm(
+  "nstar_LAM_I",
+  ``M -n->* N ⇒ LAM v M -n->* LAM v N``,
+  SRW_TAC [][]);
+
+val normstar_APPr_I = store_thm(
+  "normstar_APPr_I",
+  ``bnf M ⇒ ¬is_abs M ⇒ N -n->* N' ⇒ M @@ N -n->* M @@ N'``,
+  SRW_TAC [][normstar_APPr]);
 
 val _ = export_theory()

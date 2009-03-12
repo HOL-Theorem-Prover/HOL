@@ -61,10 +61,10 @@ val cc_gen_ind = store_thm(
 
 val cc_ind = save_thm(
   "cc_ind",
-  (Q.GEN `P` o Q.GEN `X` o Q.GEN `R` o 
-   Q.INST [`P'` |-> `P`] o 
+  (Q.GEN `P` o Q.GEN `X` o Q.GEN `R` o
+   Q.INST [`P'` |-> `P`] o
    SIMP_RULE (srw_ss()) [] o
-   Q.INST [`P` |-> `\M N x. P' M N`, `fv` |-> `\x. X`] o 
+   Q.INST [`P` |-> `\M N x. P' M N`, `fv` |-> `\x. X`] o
    SPEC_ALL) cc_gen_ind);
 
 val compat_closure_permutative = store_thm(
@@ -357,8 +357,8 @@ val ccbeta_ind = save_thm(
   "ccbeta_ind",
   (Q.GEN `P` o Q.GEN `X` o
    SIMP_RULE (srw_ss()) [] o
-   Q.INST [`P'` |-> `P`] o 
-   Q.INST [`fv` |-> `\x. X`, `P` |-> `\M N X. P' M N`] o 
+   Q.INST [`P'` |-> `P`] o
+   Q.INST [`fv` |-> `\x. X`, `P` |-> `\M N X. P' M N`] o
    SPEC_ALL) ccbeta_gen_ind);
 
 val beta_substitutive = store_thm(
@@ -879,7 +879,7 @@ val newmans_lemma = store_thm( (* lemma3_22, p39 *)
   "newmans_lemma",
   ``!R. SN R /\ WCR R ==> CR R``,
   SIMP_TAC (srw_ss()) [SN_def, WCR_def, relationTheory.Newmans_lemma,
-                       CR_def, 
+                       CR_def,
                        GSYM relationTheory.diamond_def,
                        GSYM relationTheory.CR_def]);
 
@@ -1342,6 +1342,90 @@ val rator_isub_commutes = store_thm(
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [ISUB_def, pairTheory.FORALL_PROD,
                            rator_subst_commutes, is_comb_subst]);
+
+(* ----------------------------------------------------------------------
+    Congruence and rewrite rules for -b-> and -b->*
+   ---------------------------------------------------------------------- *)
+
+open boolSimps
+val RTC1_step = CONJUNCT2 (SPEC_ALL relationTheory.RTC_RULES)
+
+val ccbeta_rwt = store_thm(
+  "ccbeta_rwt",
+  ``(VAR s -b-> N <=> F) /\
+    (LAM x M -b-> N <=> ?N0. (N = LAM x N0) /\ M -b-> N0) /\
+    (LAM x M @@ N -b-> P <=>
+       (?M'. (P = LAM x M' @@ N) /\ M -b-> M') \/
+       (?N'. (P = LAM x M @@ N') /\ N -b-> N') \/
+       (P = [N/x]M)) /\
+    (~is_abs M ==>
+      (M @@ N -b-> P <=>
+        (?M'. (P = M' @@ N) /\ M -b-> M') \/
+        (?N'. (P = M @@ N') /\ N -b-> N')))``,
+  SRW_TAC [][cc_beta_thm] THENL [
+    SRW_TAC [][EQ_IMP_THM, LAM_eq_thm] THEN SRW_TAC [][] THENL [
+      METIS_TAC [fresh_tpm_subst, lemma15a],
+      SRW_TAC [DNF_ss][tpm_eqr]
+    ],
+    Q_TAC SUFF_TAC `!v M'. M <> LAM v M'` THEN1 METIS_TAC[] THEN
+    Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN
+    FULL_SIMP_TAC (srw_ss()) []
+  ]);
+
+
+val betastar_LAM = store_thm(
+  "betastar_LAM",
+  ``!M N. LAM x M -b->* LAM x N  <=>  M -b->* N``,
+  SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
+    Q_TAC SUFF_TAC `!M N. M -b->* N ==>
+                          !v M0 N0. (M = LAM v M0) /\ (N = LAM v N0) ==>
+                                    M0 -b->* N0` THEN1 METIS_TAC [] THEN
+    HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+    SIMP_TAC (srw_ss() ++ DNF_ss) [ccbeta_rwt] THEN
+    METIS_TAC [relationTheory.RTC_RULES],
+
+    HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+    SRW_TAC [][] THEN
+    METIS_TAC [compat_closure_rules, relationTheory.RTC_RULES]
+  ]);
+val _ = export_rewrites ["betastar_LAM"]
+
+val betastar_LAM_I = store_thm(
+  "betastar_LAM_I",
+  ``!v M N. M -b->* N ==> LAM v M -b->* LAM v N``,
+  METIS_TAC [betastar_LAM]);
+
+val betastar_APPr = store_thm(
+  "betastar_APPr",
+  ``!M N. M -b->* N ==> P @@ M -b->* P @@ N``,
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
+  METIS_TAC [RTC1_step, compat_closure_rules]);
+
+val betastar_APPl = store_thm(
+  "betastar_APPl",
+  ``!M N. M -b->* N ==> M @@ P -b->* N @@ P``,
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
+  METIS_TAC [RTC1_step, compat_closure_rules]);
+
+val betastar_APPlr = store_thm(
+  "betastar_APPlr",
+  ``M -b->* M' ==> N -b->* N' ==> M @@ N -b->* M' @@ N'``,
+  METIS_TAC [relationTheory.RTC_CASES_RTC_TWICE, betastar_APPl, betastar_APPr]);
+
+val beta_betastar = store_thm(
+  "beta_betastar",
+  ``LAM v M @@ N -b->* [N/v]M``,
+  SRW_TAC [][ccbeta_rwt, relationTheory.RTC_SINGLE]);
+
+val betastar_eq_cong = store_thm(
+  "betastar_eq_cong",
+  ``bnf N ==> M -b->* M' ==> (M -b->* N  = M' -b->* N)``,
+  SRW_TAC [][EQ_IMP_THM] THENL [
+    `?Z. N -b->* Z /\ M' -b->* Z` by METIS_TAC [beta_CR, CR_def,
+                                                diamond_property_def] THEN
+    METIS_TAC [corollary3_2_1, beta_normal_form_bnf],
+    METIS_TAC [relationTheory.RTC_CASES_RTC_TWICE]
+  ]);
 
 
 val _ = export_theory();
