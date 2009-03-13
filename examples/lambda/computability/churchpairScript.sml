@@ -6,13 +6,13 @@ open termTheory
 open boolSimps
 open normal_orderTheory
 open churchboolTheory
+open reductionEval
 
 val _ = new_theory "churchpair"
 
 val _ = set_trace "Unicode" 1
 
 fun Store_thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
-val FUNPOW_SUC = arithmeticTheory.FUNPOW_SUC
 
 val cpair_def = Define`
   cpair = LAM "x" (LAM "y" (LAM "f" (VAR "f" @@ VAR "x" @@ VAR "y")))
@@ -51,24 +51,17 @@ val bnf_csnd = Store_thm(
   ``bnf csnd``,
   SRW_TAC [][csnd_def]);
 
-val nstep_tac =
-    SRW_TAC [][Once relationTheory.RTC_CASES1, normorder_rwts, lemma14b]
-
 val cfst_pair = store_thm(
   "cfst_pair",
   ``cfst @@ (cpair @@ M @@ N) -n->* M``,
-  SRW_TAC [][cfst_def, cpair_def] THEN FRESH_TAC THEN SRW_TAC [][tpm_fresh] THEN
-  NTAC 3 (nstep_tac THEN DISJ2_TAC) THEN
-  SRW_TAC [][Once relationTheory.RTC_CASES1, normorder_rwts, lemma14b,
-             churchboolTheory.cB_behaviour]);
+  SRW_TAC [][cfst_def, cpair_def] THEN FRESH_TAC THEN 
+  SRW_TAC [NORMSTAR_ss][tpm_fresh, cB_behaviour]);
 
 val csnd_pair = store_thm(
   "csnd_pair",
   ``csnd @@ (cpair @@ M @@ N) -n->* N``,
-  SRW_TAC [][csnd_def, cpair_def] THEN FRESH_TAC THEN SRW_TAC [][tpm_fresh] THEN
-  NTAC 3 (nstep_tac THEN DISJ2_TAC) THEN
-  SRW_TAC [][Once relationTheory.RTC_CASES1, normorder_rwts, lemma14b,
-             churchboolTheory.cB_behaviour]);
+  SRW_TAC [][csnd_def, cpair_def] THEN FRESH_TAC THEN 
+  SRW_TAC [NORMSTAR_ss][tpm_fresh, cB_behaviour])
 
 val _ = export_theory()
 
