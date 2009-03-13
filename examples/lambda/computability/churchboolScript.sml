@@ -5,6 +5,7 @@ open pred_setTheory
 open termTheory
 open boolSimps
 open normal_orderTheory
+open reductionEval
 
 val _ = new_theory "churchbool"
 
@@ -16,6 +17,8 @@ val _ = remove_ovl_mapping "VAR" {Name="VAR", Thy="labelledTerms"}
 val _ = remove_ovl_mapping "@@"  {Name="APP", Thy="labelledTerms"}
 
 fun Store_thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
+
+fun bsrw_ss() = betafy (srw_ss())
 
 val cB_def = Define`cB p = LAM "x" (LAM "y" (VAR (if p then "x" else "y")))`;
 val FV_cB = Store_thm(
@@ -35,8 +38,7 @@ val cB_behaviour = store_thm(
   "cB_behaviour",
   ``cB T @@ x @@ y -n->* x ∧ cB F @@ x @@ y -n->* y``,
   SRW_TAC [][cB_def] THEN FRESH_TAC THEN
-  SRW_TAC [][Once relationTheory.RTC_CASES1, normorder_rwts] THEN
-  SRW_TAC [][Once relationTheory.RTC_CASES1, normorder_rwts, lemma14b]);
+  SRW_TAC [NORMSTAR_ss][]);
 
 val cnot_def = Define`
   cnot = LAM "b" (VAR "b" @@ cB F @@ cB T)
@@ -53,10 +55,7 @@ val cnot_behaviour = store_thm(
   "cnot_behaviour",
   ``cnot @@ cB p -n->* cB (¬p)``,
   Cases_on `p` THEN
-  SRW_TAC [][cnot_def] THEN
-  SRW_TAC [][Once relationTheory.RTC_CASES1, normorder_rwts, lemma14b,
-             cB_behaviour]);
-
+  SIMP_TAC (bsrw_ss()) [cnot_def, cB_behaviour]);
 
 val cand_def = Define`
   cand = LAM "p" (LAM "q" (VAR "p" @@ VAR "q" @@ cB F))
@@ -72,27 +71,18 @@ val bnf_cand = Store_thm(
 val cand_behaviour = store_thm(
   "cand_behaviour",
   ``cand @@ cB p @@ cB q -n->* cB (p /\ q)``,
-  SRW_TAC [][cand_def, Once relationTheory.RTC_CASES1, normorder_rwts,
-             lemma14b] THEN
-  SRW_TAC [][Once relationTheory.RTC_CASES1, normorder_rwts, lemma14b] THEN
-  Cases_on `p` THEN SRW_TAC [][cB_behaviour]);
+  SIMP_TAC (bsrw_ss()) [cand_def] THEN
+  Cases_on `p` THEN SIMP_TAC (bsrw_ss()) [cB_behaviour]);
 
 val cand_F1 = store_thm(
   "cand_F1",
   ``cand @@ cB F @@ X -n->* cB F``,
-  SRW_TAC [][cand_def, Once relationTheory.RTC_CASES1, normorder_rwts,
-             lemma14b] THEN
-  SRW_TAC [][Once relationTheory.RTC_CASES1, normorder_rwts, lemma14b] THEN
-  SRW_TAC [][cB_behaviour]);
+  SIMP_TAC (bsrw_ss()) [cand_def, cB_behaviour]);
 
 val cand_T1 = store_thm(
   "cand_T1",
   ``cand @@ cB T @@ X -n->* X``,
-  SRW_TAC [][cand_def, Once relationTheory.RTC_CASES1, normorder_rwts,
-             lemma14b] THEN
-  SRW_TAC [][Once relationTheory.RTC_CASES1, normorder_rwts, lemma14b] THEN
-  SRW_TAC [][cB_behaviour]);
-
+  SRW_TAC [NORMSTAR_ss][cB_behaviour, cand_def]);
 
 val _ = export_theory()
 

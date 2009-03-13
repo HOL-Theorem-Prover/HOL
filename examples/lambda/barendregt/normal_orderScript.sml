@@ -8,6 +8,8 @@ val _ = new_theory "normal_order"
 
 val _ = set_trace "Unicode" 1
 
+fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
+
 (* ----------------------------------------------------------------------
     Normal order reduction
 
@@ -376,5 +378,141 @@ val normstar_APPr_I = store_thm(
   "normstar_APPr_I",
   ``bnf M ⇒ ¬is_abs M ⇒ N -n->* N' ⇒ M @@ N -n->* M @@ N'``,
   SRW_TAC [][normstar_APPr]);
+
+(* ----------------------------------------------------------------------
+    Calculating normal order reducts
+   ---------------------------------------------------------------------- *)
+
+val noreduct_def = Define`
+  noreduct t = if bnf t then NONE else SOME (@t'. t -n-> t')
+`;
+
+val noreduct_thm = store_thm(
+  "noreduct_thm",
+  ``(noreduct (LAM v M) = OPTION_MAP (LAM v) (noreduct M)) ∧
+    (noreduct (LAM v M @@ N) = SOME ([N/v]M)) ∧
+    (¬is_abs M ⇒ (noreduct (M @@ N) =
+                  if bnf M then OPTION_MAP ((@@) M) (noreduct N)
+                  else OPTION_MAP (λM'. M' @@ N) (noreduct M))) ∧
+    (noreduct (VAR s) = NONE)``,
+  SRW_TAC [][noreduct_def] THENL [
+    SRW_TAC [][normorder_rwts] THEN
+    `∃N. M -n-> N` by METIS_TAC [normorder_bnf] THEN
+    `∀N'. M -n-> N' = (N' = N)` by METIS_TAC [normorder_det] THEN
+    SRW_TAC [][],
+
+    SRW_TAC [][normorder_rwts],
+    FULL_SIMP_TAC (srw_ss()) [],
+
+    SRW_TAC [][normorder_rwts] THEN
+    `(∀N. M -n-> N ⇔ F) ∧ ∃N'. N -n-> N'` by METIS_TAC [normorder_bnf] THEN
+    SRW_TAC [][] THEN
+    `∀N₂. N -n-> N₂ ⇔ (N₂ = N')` by METIS_TAC [normorder_det] THEN
+    SRW_TAC [][],
+
+    SRW_TAC [][normorder_rwts] THEN
+    `∃M'. M -n-> M'` by METIS_TAC [normorder_bnf] THEN
+    `∀M₂. M -n-> M₂ ⇔ (M₂ = M')` by METIS_TAC [normorder_det] THEN
+    SRW_TAC [][]
+  ]);
+
+val noreduct_characterisation = store_thm(
+  "noreduct_characterisation",
+  ``M -n-> N ⇔ (noreduct M = SOME N)``,
+  SRW_TAC [][noreduct_def] THENL [
+    METIS_TAC [normorder_bnf],
+    `∃N₁. M -n-> N₁` by METIS_TAC [normorder_bnf] THEN
+    `∀N₂. M -n-> N₂ ⇔ (N₂ = N₁)` by METIS_TAC [normorder_det] THEN
+    SRW_TAC [][] THEN METIS_TAC []
+  ]);
+
+val noreduct_bnf = store_thm(
+  "noreduct_bnf",
+  ``(noreduct M = NONE) = bnf M``,
+  SRW_TAC [][noreduct_def]);
+
+val noredAPP' = store_thm(
+  "noredAPP'",
+  ``~is_abs M ==> (noreduct (M @@ N) =
+                     case noreduct M of
+                       NONE -> OPTION_MAP ((@@) M) (noreduct N)
+                     || SOME M' -> SOME (M' @@ N))``,
+  SRW_TAC [][noreduct_thm, GSYM noreduct_bnf] THEN
+  Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) []);
+
+val _ = overload_on ("upcons", ``λx y. pcons x () y``)
+
+
+
+val pair_case_unit = prove(
+  ``pair_case (f : unit -> 'a -> 'b) v = f () (SND v)``,
+  Cases_on `v` THEN SRW_TAC [][oneTheory.one]);
+
+val option_case_unit = prove(
+  ``option_case n (f : unit # 'a -> 'b) (OPTION_MAP ($, ()) x) =
+    option_case n (λx. f ((), x)) x``,
+  Cases_on `x` THEN SRW_TAC [][]);
+
+val nopath_def = new_specification(
+  "nopath_def",
+  ["nopath"],
+  pathTheory.path_Axiom |> ISPEC ``λM. (M, OPTION_MAP ((,) ()) (noreduct M))``
+                        |> SIMP_RULE (srw_ss()) [oneTheory.one,
+                                                 pair_case_unit,
+                                                 option_case_unit]);
+
+val first_nopath = Store_thm(
+  "first_nopath",
+  ``first (nopath M) = M``,
+  ONCE_REWRITE_TAC [nopath_def] THEN Cases_on `noreduct M` THEN
+  SRW_TAC [][]);
+
+val mem_nopath = Store_thm(
+  "mem_nopath",
+  ``mem M (nopath M)``,
+  ONCE_REWRITE_TAC [nopath_def] THEN Cases_on `noreduct M` THEN
+  SRW_TAC [][]);
+
+val mem_nopath_expanded = Store_thm(
+  "mem_nopath_expanded",
+  ``mem M (option_case (stopped_at M) (λy. pcons M l (f y)) v)``,
+  Cases_on `v` THEN SRW_TAC [][]);
+
+val nopath_okpath = store_thm(
+  "nopath_okpath",
+  ``okpath (λM u N. M -n-> N) (nopath M)``,
+  Q_TAC SUFF_TAC `∀p. (∃M. p = nopath M) ⇒ okpath (λM u N. M -n-> N) p`
+        THEN1 METIS_TAC [] THEN
+  HO_MATCH_MP_TAC okpath_co_ind THEN REPEAT GEN_TAC THEN
+  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [nopath_def])) THEN
+  CONV_TAC LEFT_IMP_EXISTS_CONV THEN GEN_TAC THEN
+  Cases_on `noreduct M'` THEN SRW_TAC [][] THEN
+  METIS_TAC [noreduct_characterisation]);
+
+val option_case_CONG = store_thm(
+  "option_case_CONG",
+  ``(x = x') ⇒ (option_case n f x = option_case n f x')``,
+  SRW_TAC [][]);
+
+val normstar_nopath = store_thm(
+  "normstar_nopath",
+  ``M -n->* N ⇔ mem N (nopath M)``,
+  EQ_TAC THENL [
+    Q_TAC SUFF_TAC `∀M N. M -n->* N ⇒ mem N (nopath M)` THEN1 METIS_TAC []THEN
+    HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
+    FULL_SIMP_TAC (srw_ss()) [noreduct_characterisation,
+                              nopath_def, Cong option_case_CONG],
+
+    SIMP_TAC (srw_ss())[mem_def, GSYM LEFT_FORALL_IMP_THM] THEN
+    Q.ID_SPEC_TAC `N` THEN Q.ID_SPEC_TAC `M` THEN
+    SIMP_TAC (srw_ss()) [] THEN Induct_on`i` THEN SRW_TAC [][] THEN
+    Q.SPEC_THEN `M` ASSUME_TAC nopath_def THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    Cases_on `noreduct M` THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    METIS_TAC [relationTheory.RTC_RULES, noreduct_characterisation]
+  ]);
+
+
 
 val _ = export_theory()
