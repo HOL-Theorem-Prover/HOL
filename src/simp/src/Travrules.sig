@@ -1,13 +1,13 @@
-(* ===================================================================== 
+(* =====================================================================
  * FILE          : travrules.sig
  * DESCRIPTION   : Sets of rules for traversing terms.  Used for
  *	           simpification and term traversal.
- *                                                                       
+ *
  * AUTHOR        : Donald Syme
  *                 Based loosely on ideas from window inference.
  * ===================================================================== *)
 
-signature Travrules = 
+signature Travrules =
 sig
    include Abbrev
 
@@ -18,11 +18,11 @@ sig
     * in the future.
     *
     * Once things are set up, the user of this module generally
-    * specifies a preorder as a term, e.g. (--`$=`--).  
+    * specifies a preorder as a term, e.g. (--`$=`--).
     * ---------------------------------------------------------------------*)
 
   datatype preorder = PREORDER of term
-                                   * (thm -> thm -> thm) 
+                                   * (thm -> thm -> thm)
                                    * (term -> thm)
   val samerel : term -> term -> bool
 
@@ -38,7 +38,7 @@ sig
     * The collection of rules may contain rules for multiple relations.
     * The traversal engine is trying to reduce the "current term"
     * via various "reducers" under the "current relation".
-    * In normal equality reasoning (see SIMP_TAC) the relation is (--`$=`--).  
+    * In normal equality reasoning (see SIMP_TAC) the relation is (--`$=`--).
     *
     * Traversal is achieved by means of congruence procedures.
     * A congruence procedure has ML type
@@ -58,7 +58,7 @@ sig
     *
     * Congruence procedures are typically created by using
     * the function CONGRULE.
-    *   
+    *
     * Congruence rules may have side conditions which should be solved
     * by the solver provided to the congruence procedure.  If they
     * are not solved they can be added as assumptions to the theorem
@@ -77,16 +77,19 @@ sig
     * Basic operations on travruless
     *  merge should only be used on non-overlapping travrule fragments.
     * ---------------------------------------------------------------------*)
-    
+
   val merge_travrules: travrules list -> travrules
 
-  val gen_mk_travrules :   
+  val gen_mk_travrules :
     {relations : preorder list,
      congprocs : Opening.congproc list,
      weakenprocs : Opening.congproc list} -> travrules
-    
+
+
+  val mk_travrules : preorder list -> thm list -> travrules
+  val cong2proc : preorder list -> thm -> Opening.congproc
+
   (* the equality case - all theorems are interpeted as equality congruences *)
-  val mk_travrules : thm list -> travrules
   val EQ_tr : travrules
 
 end (* sig *)

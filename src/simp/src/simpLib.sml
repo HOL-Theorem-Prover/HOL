@@ -152,7 +152,7 @@ with
  val empty_ss = SS {mk_rewrs=fn x => [x],
                     ssfrags = [], limit = NONE,
                     initial_net=empty_net,
-                    dprocs=[],travrules=mk_travrules []};
+                    dprocs=[],travrules=EQ_tr};
 
  fun ssfrags_of (SS x) = #ssfrags x;
 
@@ -216,12 +216,13 @@ with
         val rewrs' = flatten (map mk_rewrs (ac_rewrites ac@rewrs))
         val newconvdata = convs @ List.mapPartial mk_rewr_convdata rewrs'
         val net = net_add_convs initial_net newconvdata
+        val TRAVRULES{relations,...} = travrules
     in
        SS {mk_rewrs=mk_rewrs,
            ssfrags = Lib.op_insert same_frag f ssfrags,
            initial_net=net, limit = limit,
            dprocs=dprocs @ dprocs',
-           travrules=merge_travrules [travrules,mk_travrules congs]}
+           travrules=merge_travrules [travrules,mk_travrules relations congs]}
     end;
 
  val mk_simpset = foldl add_to_ss empty_ss;
@@ -287,7 +288,7 @@ end
       {rewriters=[rewriter_for_ss ss],
        dprocs= #dprocs ssdata,
        relation= boolSyntax.equality,
-       travrules= merge_travrules [EQ_tr,#travrules ssdata],
+       travrules= #travrules ssdata,
        limit = #limit ssdata};
 
  fun SIMP_QCONV ss = TRAVERSE (traversedata_for_ss ss);

@@ -95,12 +95,20 @@ val equality = [PREORDER(boolSyntax.equality,TRANS,REFL)];
 val EQ_tr = gen_mk_travrules
   {relations=equality,
    congprocs=[Opening.EQ_CONGPROC],
-   weakenprocs=[]};
+   weakenprocs=[]}
 
-fun mk_travrules congs = TRAVRULES
-  {relations=equality,
-   congprocs=map (CONGPROC (fn t => REFL)) congs,
-   weakenprocs=[]};
+fun cong2proc rels th = let
+  open Opening
+  val r = rel_of_congrule th
+  val PREORDER(_,_,refl) = find_relation r rels
+in
+  CONGPROC (fn _ => fn t => refl t) th
+end
+
+fun mk_travrules relns congs =
+    TRAVRULES {relations=relns,
+               congprocs=map (cong2proc relns) congs,
+               weakenprocs=[]}
 
 
 end (* struct *)
