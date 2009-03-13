@@ -2,9 +2,7 @@
  * CONDITIONAL EXPRESSIONS AND THEIR NORMALIZATION (Boyer and Moore).        *
  *---------------------------------------------------------------------------*)
 
-app load ["bossLib"];
-open bossLib arithmeticTheory;
-
+open arithmeticTheory;
 
 (*---------------------------------------------------------------------------*
  * Define the datatype of conditional expressions.                           *
@@ -12,7 +10,6 @@ open bossLib arithmeticTheory;
 
 Hol_datatype `cond = A of ind
                    | IF of cond => cond => cond`;
-
 
 (*---------------------------------------------------------------------------*
  * The definition of the normalization function                              *
@@ -34,20 +31,17 @@ val Meas_def =
      `(Meas (A i) = 1)
   /\  (Meas (IF x y z) = Meas x + (Meas x * Meas y + Meas x * Meas z))`;
 
-
 val Meas_POSITIVE = Q.prove
-(`!c. 0 < Meas c`, Induct THEN RW_TAC arith_ss [Meas_def]);
-
+(`!c. 0 < Meas c`, 
+ Induct THEN RW_TAC arith_ss [Meas_def]);
 
 val (Norm_eqns,Norm_ind) = 
  Defn.tprove
   (Norm_def,
-   WF_REL_TAC `measure Meas`
-     THEN RW_TAC arith_ss 
-           [Meas_def,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,
-            GSYM ADD_ASSOC, GSYM MULT_ASSOC]
-     THEN PROVE_TAC [LESS_MULT2, Meas_POSITIVE, 
-                     DECIDE (Term `!y m. 0<y ==> m < n+(y+m)`)]);
+   WF_REL_TAC `measure Meas` THEN 
+   RW_TAC arith_ss [Meas_def,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB] THEN 
+   RW_TAC std_ss [AC ADD_ASSOC ADD_SYM, AC MULT_ASSOC MULT_SYM]  THEN 
+   METIS_TAC [LESS_MULT2, Meas_POSITIVE, DECIDE``!y m. 0<y ==> m < n+(y+m)``]);
 
 
 (*---------------------------------------------------------------------------*
@@ -67,16 +61,14 @@ val Weight_def =
 
 val Weight_positive = Q.prove
 (`!c. 0 < Weight c`,
- Induct 
-    THEN ZAP_TAC (arith_ss && [Weight_def,GSYM ADD_ASSOC, GSYM MULT_ASSOC,
-                    LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB])
-       [LESS_MULT2, DECIDE (Term`!x y z. x < y ==> x < y + z`)]);
+ Induct THEN 
+ RW_TAC arith_ss [Weight_def,GSYM ADD_ASSOC, GSYM MULT_ASSOC,
+                  LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB] THEN
+ METIS_TAC [LESS_MULT2, DECIDE ``!x y z. x < y ==> x < y + z``]);
 
 val (Norm_eqns,Norm_ind) = 
 Defn.tprove
  (Norm_def,
-  WF_REL_TAC `inv_image ($< LEX $<) (\x. (Weight x, Tdepth x))`
-     THEN ZAP_TAC (arith_ss && [Weight_def,Tdepth_def,
-            LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB, 
-            GSYM ADD_ASSOC, GSYM MULT_ASSOC, ADD_CLAUSES, MULT_CLAUSES])
-           [Weight_positive, DECIDE (Term`!y z. 0 < y ==> z < y+z`), ADD_SYM]);
+  WF_REL_TAC `inv_image ($< LEX $<) (\x. (Weight x, Tdepth x))` THEN 
+  RW_TAC arith_ss [Weight_def,Tdepth_def, LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB] THEN
+  METIS_TAC [Weight_positive]);

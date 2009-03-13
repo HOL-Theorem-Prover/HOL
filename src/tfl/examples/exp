@@ -1,84 +1,64 @@
-app load ["bossLib", "numLib"];
+(*---------------------------------------------------------------------------*)
+(*     An efficient divide-and-conquer-style exponentiation function.        *)
+(*---------------------------------------------------------------------------*)
 
-open bossLib arithmeticTheory numLib;
-infix 8 by;
+load "numLib";
+open arithmeticTheory numLib;
 
+val exp_def = 
+ Define 
+   `(exp x 0 = 1) /\
+    (exp x n = if EVEN n then 
+                let k = exp x (n DIV 2) in k * k
+              else x * exp x (n-1))`;
 
-(*---------------------------------------------------------------------------
-     An efficient divide-and-conquer-style exponentiation function.
-     The definition is schematic in "x".
- ---------------------------------------------------------------------------*)
+val exp_ind = fetch "-" "exp_ind";
 
-val exp_defn = 
- Hol_defn "exp"
-     `(exp 0       = 1) 
-  /\  (exp (SUC 0) = x)
-  /\  (exp n = if n MOD 2 = 0 
-                 then let v = exp (n DIV 2) in v * v
-                 else x * exp (n-1))`;
-
-
-(*---------------------------------------------------------------------------
-        Remove termination constraints.
- ---------------------------------------------------------------------------*)
-
-val (exp_eqns, exp_ind) = 
- Defn.tprove 
- (exp_defn,
-  WF_REL_TAC `$<` THEN RW_TAC arith_ss [arithmeticTheory.DIV_LESS]);
-
-
-
-(*---------------------------------------------------------------------------*
- * A form of correctness: exp is equal to the prim. rec defn. of EXP         *
- * given by:                                                                 *
- *                                                                           *
- *     m EXP 0       = 1                                                     *
- *     m EXP (SUC n) = m * m EXP n                                           *
- *                                                                           *
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* A form of correctness: exp is equal to the prim. rec defn. of EXP         *)
+(* given by:                                                                 *)
+(*                                                                           *)
+(*     m EXP 0       = 1                                                     *)
+(*     m EXP (SUC n) = m * m EXP n                                           *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
 
 val EXP_eq_exp = Q.prove
 (`!x m. x EXP m = exp x m`,
- GEN_TAC 
-   THEN recInduct exp_ind 
-   THEN RW_TAC arith_ss [EXP, exp_eqns]
+ recInduct exp_ind 
+   THEN RW_TAC arith_ss [EXP, exp_def, LET_THM, EVEN_MOD2]
    THEN POP_ASSUM (SUBST1_TAC o SYM)
-   THEN RW_TAC arith_ss [GSYM EXP_ADD] 
-   THEN `2 * (SUC(SUC v2) DIV 2) = SUC(SUC v2)` 
-          by PROVE_TAC [DIVISION,DECIDE (Term`0<2`),ADD_0,MULT_SYM]
-   THEN PROVE_TAC [EXP]);
+   THEN RW_TAC arith_ss [GSYM EXP_ADD,GSYM EXP_EXP_MULT] 
+   THEN METIS_TAC [DIVISION, DECIDE ``0<2``, ADD_0, MULT_SYM, EXP]);
 
 
-(*---------------------------------------------------------------------------
-      Some computations with exp. We first have to come up with
-      a version of "exp" where "SUC" constructors are not on the 
-      lhs of the recursion equation.
- ---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Some computations with exp. We first have to come up with a version of    *)
+(* exp where SUC constructors are not on the lhs of the recursion equation.  *)
+(*---------------------------------------------------------------------------*)
 
 val alt_exp_eqns = Q.prove
 (`exp x n = 
       if n=0 then 1 else 
       if n=1 then x else
-      if n MOD 2 = 0 
+      if EVEN n 
          then let v = exp x (n DIV 2) in v * v
          else  x * exp x (n-1)`,
-Cases_on `n` 
-  THENL [ALL_TAC,  Cases_on `n'`]
-  THEN RW_TAC arith_ss [exp_eqns]);
-
+ Cases_on `n` THENL [ALL_TAC,  Cases_on `n'`] THEN 
+ RW_TAC arith_ss [exp_def]);
 
 val _ = computeLib.add_funs [alt_exp_eqns];
 
-EVAL (Term `exp 2 1`);
-EVAL (Term `exp 2 4 * exp 4 2`);
-EVAL (Term `exp 2 10`);
-EVAL (Term `exp 2 16`);
-EVAL (Term `exp 2 100`);
+EVAL ``exp 2 1``;
+EVAL ``exp 2 4 * exp 4 2``;
+EVAL ``exp 2 10``;
+EVAL ``exp 2 16``;
+EVAL ``exp 2 100``;
 
 (*---------------------------------------------------------------------------
-   REDUCE_CONV is faster than Eval for exp because of how numerals
+   REDUCE_CONV is faster than EVAL for exp because of how numerals
    are represented.
  ---------------------------------------------------------------------------*)
 
-Count.apply REDUCE_CONV (Term `2 EXP 100`);
+Count.apply EVAL ``exp 2 500``;
+Count.apply REDUCE_CONV ``2 EXP 500``;
