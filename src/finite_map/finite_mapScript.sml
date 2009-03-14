@@ -1390,6 +1390,27 @@ val FMEQ_SINGLE_SIMPLE_DISJ_ELIM = store_thm(
   SIMP_TAC (srw_ss()) [EXTENSION] THEN
   PROVE_TAC [FAPPLY_FUPDATE]);
 
+
+val FUPDATE_PURGE = Q.store_thm
+("FUPDATE_PURGE",
+ `!f x y. FUPDATE f (x,y) = FUPDATE (f \\ x) (x,y)`,
+ SRW_TAC [] [fmap_EXT,EXTENSION,FAPPLY_FUPDATE_THM,DOMSUB_FAPPLY_THM] THEN
+ METIS_TAC[]);
+
+(*---------------------------------------------------------------------------*)
+(* For EVAL on terms with finite map expressions.                            *)
+(*---------------------------------------------------------------------------*)
+
+val _ = 
+ computeLib.add_persistent_funs
+  [("FUPDATE_LIST_THM",FUPDATE_LIST_THM),
+   ("DOMSUB_FUPDATE_THM",DOMSUB_FUPDATE_THM),
+   ("DOMSUB_FEMPTY",DOMSUB_FEMPTY),
+   ("FDOM_FUPDATE",FDOM_FUPDATE),
+   ("FAPPLY_FUPDATE_THM",FAPPLY_FUPDATE_THM),
+   ("FDOM_FEMPTY",FDOM_FEMPTY)];
+
+
 (* ----------------------------------------------------------------------
     to close...
    ---------------------------------------------------------------------- *)

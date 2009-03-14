@@ -72,6 +72,20 @@ struct
   val dest_fupdate = dest_binop fupdate_t "fupdate"
   val is_fupdate = can dest_fupdate
 
+ fun list_mk_fupdate (f,updl) =
+   rev_itlist (fn p => fn map => mk_fupdate(map,p)) updl f;
+
+fun strip_fupdate tm = 
+ let fun strip acc t =
+      case total dest_fupdate t
+       of SOME (fmap,p) => strip (p::acc) fmap
+        | NONE => (t,acc)
+ in if is_fupdate tm
+     then strip [] tm
+      else raise ERR "strip_fupdate" "not an FUPDATE term"
+ end;
+
+
   val mk_fapply = mk_binop fapply_t "mk_fapply"
   val dest_fapply = dest_binop fapply_t "fapply"
   val is_fapply = can dest_fapply

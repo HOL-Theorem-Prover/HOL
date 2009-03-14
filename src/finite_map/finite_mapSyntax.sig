@@ -19,6 +19,8 @@ sig
   val mk_fupdate : term * term -> term
   val dest_fupdate : term -> term * term
   val is_fupdate : term -> bool
+  val strip_fupdate : term -> term * term list
+  val list_mk_fupdate : term * term list -> term
 
   val mk_fapply : term * term -> term
   val dest_fapply : term -> term * term
