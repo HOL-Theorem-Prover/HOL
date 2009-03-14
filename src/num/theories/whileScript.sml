@@ -207,6 +207,11 @@ val LEAST_EXISTS_IMP = store_thm
    ``!p. (?n. p n) ==> (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)``,
    REWRITE_TAC [LEAST_EXISTS]);
 
+val _ = 
+ computeLib.add_persistent_funs
+   [("WHILE",WHILE),
+    ("LEAST_DEF",LEAST_DEF)];
+
 val _ = export_theory();
 
 end
