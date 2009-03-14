@@ -18,8 +18,6 @@ val _ = remove_ovl_mapping "@@"  {Name="APP", Thy="labelledTerms"}
 
 fun Store_thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
 
-fun bsrw_ss() = betafy (srw_ss())
-
 val cB_def = Define`cB p = LAM "x" (LAM "y" (VAR (if p then "x" else "y")))`;
 val FV_cB = Store_thm(
   "FV_cB",

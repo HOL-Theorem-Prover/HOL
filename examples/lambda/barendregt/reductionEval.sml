@@ -59,12 +59,12 @@ in
   (f,x,y)
 end
 
-fun munge base subsets (thlistlist, n) = let
-  val munge = munge base subsets
+fun munge base subsets asms (thlistlist, n) = let
+  val munge = munge base subsets 
 in
   case thlistlist of
     [] => n
-  | [] :: rest => munge (rest, n)
+  | [] :: rest => munge asms (rest, n)
   | (th :: ths) :: rest => let
     in
       case CONJUNCTS (SPEC_ALL th) of
@@ -72,20 +72,27 @@ in
       | [th] => let
           open Net
         in
-          case total dest_binop (concl th) of
-            SOME (R,from,to) => let
-            in
-              if aconv R base then
-                munge (ths :: rest, insert (from,th) n)
-              else
-                case List.find (fn (t,_) => aconv R t) subsets of
-                  NONE => munge (ths :: rest, n)
-                | SOME (_, sub_th) =>
-                    munge (ths :: rest, insert (from,MATCH_MP sub_th th) n)
-            end
-          | NONE => munge (ths :: rest, n)
+          if is_imp (concl th) then 
+            munge (#1 (dest_imp (concl th)) :: asms) 
+                  ((UNDISCH th::ths)::rest, n)
+          else
+            case total dest_binop (concl th) of
+              SOME (R,from,to) => let
+                fun foldthis (t,th) = DISCH t th
+                fun insert (t,th) n = 
+                    Net.insert (t, List.foldl foldthis th asms) n
+              in
+                if aconv R base then
+                  munge asms (ths :: rest, insert (from,th) n)
+                else
+                  case List.find (fn (t,_) => aconv R t) subsets of
+                    NONE => munge asms (ths :: rest, n)
+                  | SOME (_, sub_th) =>
+                    munge asms (ths :: rest, insert (from,MATCH_MP sub_th th) n)
+              end
+            | NONE => munge asms (ths :: rest, n)
         end
-      | thlist => munge (thlist :: ths :: rest, n)
+      | thlist => munge asms (thlist :: ths :: rest, n)
     end
 end
 
@@ -96,17 +103,26 @@ in
   redExn (munge betastar_t
                 [(beta_t, relationTheory.RTC_SINGLE),
                  (normorderstar_t, nstar_betastar)]
+                []
                 ([thms], n))
 end
 
-fun applythm t th = PART_MATCH lhand th t
+fun applythm solver t th = let 
+  val matched = PART_MATCH (lhand o #2 o strip_imp) th t
+  fun do_sideconds th = 
+      if is_imp (concl th) then 
+        do_sideconds (MP th (solver (#1 (dest_imp (concl th)))))
+      else th
+in
+  do_sideconds matched
+end
 
 fun apply {solver,context,stack,relation} t = let
   val n = case context of redExn n => n
                         | _ => raise ERR "apply" "Wrong sort of ctxt"
   val matches = Net.match t n
 in
-  tryfind (applythm t) matches
+  tryfind (applythm (solver stack) t) matches
 end
 
 val reducer = Traverse.REDUCER {name = SOME "beta-reduction reducer",
@@ -177,6 +193,8 @@ fun betafy ss =
     rewrites [termTheory.lemma14b, normal_orderTheory.nstar_betastar_bnf] ++
     SSFRAG {dprocs = [], ac = [], rewrs = [], congs = congs, filter = NONE,
             name = NONE, convs = []}
+
+fun bsrw_ss() = betafy(srw_ss())
 
 val [noredLAM, noredbeta, noredAPP, noredVAR] = CONJUNCTS noreduct_thm
 val noreduct_t = mk_thy_const{Name = "noreduct", Thy = "normal_order",
@@ -291,19 +309,36 @@ fun unvarify_tac (w as (asl,g)) = let
   val finite_sets = List.mapPartial (total pred_setSyntax.dest_finite) asl
   fun filterthis t = not (is_var t) orelse mem t finite_sets
   val sets = List.filter filterthis (HOLset.listItems sets)
-  val sets = List.filter (fn t => not (mem (rand t) y_fvs)) sets
   fun do_them (strs,sets) ys (w as (asl,g)) =
       case ys of
         [] => ALL_TAC w
       | y::rest => let
-          val avoid_t = let
-            open pred_setSyntax
-          in
-            List.foldl mk_union (mk_set (HOLset.listItems strs)) sets
-          end
           val newname = Lexis.gen_variant Lexis.tmvar_vary
                                           (goalnames w)
                                           (#1 (dest_var y) ^ "s")
+          val sets = List.filter (fn t => rand t <> y) sets
+          val new_tac = let
+            open pred_setSyntax 
+          in
+            if null sets then 
+              if HOLset.isEmpty strs then ALL_TAC
+              else let 
+                  val avoid_t = mk_set (HOLset.listItems strs)
+                in
+                  binderLib.NEW_TAC newname avoid_t
+                end
+            else if HOLset.isEmpty strs then let 
+                val avoid_t = List.foldl mk_union (hd sets) (tl sets)
+              in
+                binderLib.NEW_TAC newname avoid_t
+              end
+            else let 
+                val base = mk_set (HOLset.listItems strs)
+                val avoid_t = List.foldl mk_union base sets
+              in
+                binderLib.NEW_TAC newname avoid_t 
+              end
+          end
           val newname_t = mk_var(newname, stringSyntax.string_ty)
           val inst1 = [y |-> mk_comb(VAR_t, newname_t)]
           val (_, M, N) = dest_binop g
@@ -313,8 +348,7 @@ fun unvarify_tac (w as (asl,g)) = let
           val y' = list_mk_comb(SUB_t, [y,newname_t,y'_base])
           val g' = list_mk_comb(f, [x',y'])
         in
-          binderLib.NEW_TAC newname avoid_t THEN
-          SUBGOAL_THEN (mk_eq(g,g')) SUBST1_TAC THENL [
+          new_tac THEN SUBGOAL_THEN (mk_eq(g,g')) SUBST1_TAC THENL [
             ASM_SIMP_TAC (srw_ss()) [termTheory.lemma14b],
             MATCH_MP_TAC chap3Theory.reduction_beta_subst THEN
             do_them (HOLset.add(strs,newname_t), sets) rest
