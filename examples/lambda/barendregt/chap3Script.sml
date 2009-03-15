@@ -860,6 +860,16 @@ val lameq_consistent = store_thm(
   `S = K` by PROVE_TAC [corollary3_2_1] THEN
   FULL_SIMP_TAC (srw_ss()) [S_def, K_def]);
 
+val has_bnf_thm = store_thm(
+  "has_bnf_thm",
+  ``has_bnf M <=> ?N. M -b->* N /\ bnf N``,
+  EQ_TAC THENL [
+    METIS_TAC [lameq_betaconversion, chap2Theory.has_bnf_def, theorem3_13, 
+               beta_CR, beta_normal_form_bnf, corollary3_2_1],
+    SRW_TAC [][chap2Theory.has_bnf_def, lameq_betaconversion] THEN 
+    METIS_TAC [relationTheory.RTC_EQC]
+  ]);
+
 val weak_diamond_def =
     save_thm("weak_diamond_def", relationTheory.WCR_def)
 val _ = overload_on("weak_diamond", ``relation$WCR``)

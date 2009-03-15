@@ -229,9 +229,10 @@ val S_def =
 val K_def = Define`K = LAM "x" (LAM "y" (VAR "x"))`;
 val I_def = Define`I = LAM "x" (VAR "x")`;
 
-val omega_def =
-    Define`omega = (LAM "x" (VAR "x" @@ VAR "x")) @@
+val Omega_def =
+    Define`Omega = (LAM "x" (VAR "x" @@ VAR "x")) @@
                      (LAM "x" (VAR "x" @@ VAR "x"))`
+val _ = Unicode.unicode_version {tmnm = "Omega", u = UnicodeChars.Omega}
 
 val SUB_LAM_RWT = store_thm(
   "SUB_LAM_RWT",

@@ -513,6 +513,74 @@ val normstar_nopath = store_thm(
     METIS_TAC [relationTheory.RTC_RULES, noreduct_characterisation]
   ]);
 
+val bnf_posn_is_length = store_thm(
+  "bnf_posn_is_length",  
+  ``∀i M. i ∈ PL (nopath M) ∧ bnf (el i (nopath M)) ⇒ 
+          (length (nopath M) = SOME (i + 1))``,
+  Induct THEN SRW_TAC [][] THENL [
+    ONCE_REWRITE_TAC [nopath_def] THEN 
+    `noreduct M = NONE` by METIS_TAC [noreduct_bnf] THEN 
+    SRW_TAC [][length_thm],
+
+    Q.SPEC_THEN `M` SUBST_ALL_TAC nopath_def THEN 
+    Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN 
+    `length (nopath x) = SOME (i + 1)` by METIS_TAC [] THEN 
+    `finite (nopath x)` by METIS_TAC [finite_length] THEN 
+    SRW_TAC [][length_thm, arithmeticTheory.ADD1]
+  ]);
+
+val has_bnf_finite_nopath = store_thm(
+  "has_bnf_finite_nopath",
+  ``has_bnf M ⇔ finite (nopath M)``,
+  SRW_TAC [][has_bnf_thm, EQ_IMP_THM] THENL [
+    `M -n->* N` by METIS_TAC [nstar_betastar_bnf] THEN 
+    `mem N (nopath M)` by METIS_TAC [normstar_nopath] THEN 
+    `∃i. i ∈ PL (nopath M) ∧ (el i (nopath M) = N)`
+       by METIS_TAC [pathTheory.mem_def] THEN 
+    `length (nopath M) = SOME (i + 1)`
+       by METIS_TAC [bnf_posn_is_length] THEN 
+    METIS_TAC [pathTheory.finite_length],
+
+    POP_ASSUM MP_TAC THEN 
+    Q_TAC SUFF_TAC 
+       `∀p. finite p ⇒ ∀M. (p = nopath M) ⇒ ∃N. M -β->* N ∧ bnf N`
+       THEN1 METIS_TAC [] THEN 
+    HO_MATCH_MP_TAC pathTheory.finite_path_ind THEN SRW_TAC [][] THENL [
+      Q.SPEC_THEN `M` SUBST_ALL_TAC nopath_def THEN 
+      Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN 
+      METIS_TAC [noreduct_bnf, relationTheory.RTC_RULES],
+
+      Q.SPEC_THEN `M` SUBST_ALL_TAC nopath_def THEN 
+      Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN 
+      SRW_TAC [][] THEN 
+      METIS_TAC [normorder_ccbeta, noreduct_characterisation,
+                 relationTheory.RTC_RULES]
+    ]
+  ]);
+
+val Omega_def = chap2Theory.Omega_def
+val noreduct_omega = Store_thm(
+  "noreduct_omega",
+  ``noreduct Ω = SOME Ω``,
+  SRW_TAC [][noreduct_thm, Omega_def]);
+
+val Omega_loops = store_thm(
+  "Omega_loops",
+  ``Ω -n-> Ω``,
+  SRW_TAC [][noreduct_characterisation] THEN 
+  SRW_TAC [][noreduct_thm, Omega_def]);
+
+val Omega_path_infinite = store_thm(
+  "Omega_path_infinite",
+  ``¬finite (nopath Ω)``,
+  Q_TAC SUFF_TAC `∀p. finite p ⇒ p ≠ nopath Ω` THEN1 METIS_TAC [] THEN 
+  HO_MATCH_MP_TAC pathTheory.finite_path_ind THEN SRW_TAC [][] THEN 
+  ONCE_REWRITE_TAC [nopath_def] THEN SRW_TAC [][]);
 
 
+val Omega_has_no_bnf = Store_thm(
+  "Omega_has_no_bnf",
+  ``¬has_bnf Ω``,
+  SRW_TAC [][has_bnf_finite_nopath, Omega_path_infinite]);
+      
 val _ = export_theory()
