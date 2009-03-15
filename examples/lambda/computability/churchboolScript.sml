@@ -82,5 +82,23 @@ val cand_T1 = store_thm(
   ``cand @@ cB T @@ X -n->* X``,
   SRW_TAC [NORMSTAR_ss][cB_behaviour, cand_def]);
 
+val cor_def = Define`
+  cor = LAM "p" (LAM "q" (VAR "p" @@ cB T @@ VAR "q"))
+`;
+val FV_cor = Store_thm(
+  "FV_cor",
+  ``FV cor = {}``,
+  SRW_TAC [][cor_def, EXTENSION] THEN METIS_TAC []);
+val bnf_cor = Store_thm(
+  "bnf_cor",
+  ``bnf cor``,
+  SRW_TAC [][cor_def]);
+
+val cor_behaviour = store_thm(
+  "cor_behaviour",
+  ``cor @@ cB p @@ cB q -n->* cB (p ∨ q)``,
+  SIMP_TAC (bsrw_ss()) [cor_def] THEN 
+  Cases_on `p` THEN SIMP_TAC (bsrw_ss()) [cB_behaviour]);
+
 val _ = export_theory()
 

@@ -81,6 +81,14 @@ val csuc_def = Define`
   csuc = LAM "n" (LAM "z" (LAM "s"
             (VAR "s" @@ (VAR "n" @@ VAR "z" @@ VAR "s"))))
 `;
+val FV_csuc = Store_thm(
+  "FV_csuc",
+  ``FV csuc = {}``,
+  SRW_TAC [][csuc_def, EXTENSION] THEN METIS_TAC []); 
+val bnf_csuc = Store_thm(
+  "bnf_csuc",
+  ``bnf csuc``,
+  SRW_TAC [][csuc_def]);   
 
 val tpm_funpow_app = store_thm(
   "tpm_funpow_app",
@@ -358,6 +366,35 @@ val ceqnat_behaviour = store_thm(
                             cnot_behaviour, cand_behaviour, 
                             cpred_behaviour, Cong betastar_funpow_cong] THEN 
   Cases_on `m` THEN SRW_TAC [][])
+
+(* $< 0 = λn. not (is_zero n)
+   $< (SUC m) = λn. not (is_zero n) ∧ $< m (PRE n)
+*)
+val cless_def = Define`
+  cless = LAM "m"
+            (VAR "m" @@ (LAM "n" (cnot @@ (cis_zero @@ VAR "n"))) 
+                     @@ (LAM "r" 
+                         (LAM "n" (cand 
+                                     @@ (cnot @@ (cis_zero @@ VAR "n"))
+                                     @@ (VAR "r" @@ (cpred @@ VAR "n"))))))
+`;
+val FV_cless = Store_thm(
+  "FV_cless",
+  ``FV cless = {}``,
+  SRW_TAC [][cless_def, EXTENSION] THEN METIS_TAC []);
+
+val cless_behaviour = store_thm(
+  "cless_behaviour",
+  ``cless @@ church m @@ church n -n->* cB (m < n)``,
+  SIMP_TAC (bsrw_ss()) [cless_def, church_behaviour] THEN 
+  Q.ID_SPEC_TAC `n` THEN Induct_on `m` THENL [
+    SIMP_TAC (bsrw_ss()) [cnot_behaviour, cis_zero_behaviour, 
+                          arithmeticTheory.NOT_ZERO_LT_ZERO],
+    ASM_SIMP_TAC (bsrw_ss()) [FUNPOW_SUC, cis_zero_behaviour, cnot_behaviour, 
+                              cpred_behaviour, cand_behaviour] THEN 
+    Cases_on `n` THEN SRW_TAC [][]
+  ]);
+    
 
 val _ = export_theory()
 
