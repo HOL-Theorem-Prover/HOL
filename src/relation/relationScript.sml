@@ -100,6 +100,12 @@ val SC_DEF = new_definition(
 val EQC_DEF = new_definition(
   "EQC_DEF",
   ``EQC (R:'a->'a->bool) = RC (TC (SC R))``);
+val _ = add_rule { fixity = Suffix 2100,
+                   block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
+                   paren_style = OnlyIfNecessary,
+                   pp_elements = [TOK "^="],
+                   term_name = "EQC" }
+
 
 val SC_SYMMETRIC = store_thm(
   "SC_SYMMETRIC",
@@ -670,6 +676,11 @@ val EQC_MONOTONE = store_thm(
   ``(!x y. R x y ==> R' x y) ==> !x y. EQC R x y ==> EQC R' x y``,
   STRIP_TAC THEN HO_MATCH_MP_TAC STRONG_EQC_INDUCTION THEN
   METIS_TAC [EQC_R, EQC_TRANS, EQC_SYM, EQC_REFL]);
+
+val RTC_EQC = store_thm(
+  "RTC_EQC",
+  ``!x y. RTC R x y ==> EQC R x y``,
+  HO_MATCH_MP_TAC RTC_INDUCT THEN METIS_TAC [EQC_R, EQC_REFL, EQC_TRANS]);
 
 
 (*---------------------------------------------------------------------------*
