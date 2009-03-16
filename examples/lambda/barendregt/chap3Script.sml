@@ -7,6 +7,8 @@ local open pred_setLib in end;
 open binderLib BasicProvers
 open termTheory chap2Theory
 
+fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
+
 val SUBSET_DEF = pred_setTheory.SUBSET_DEF
 
 val compatible_def =
@@ -430,6 +432,28 @@ val cc_beta_thm = store_thm(
     PROVE_TAC []
   ]);
 
+val ccbeta_rwt = store_thm(
+  "ccbeta_rwt",
+  ``(VAR s -b-> N <=> F) /\
+    (LAM x M -b-> N <=> ?N0. (N = LAM x N0) /\ M -b-> N0) /\
+    (LAM x M @@ N -b-> P <=>
+       (?M'. (P = LAM x M' @@ N) /\ M -b-> M') \/
+       (?N'. (P = LAM x M @@ N') /\ N -b-> N') \/
+       (P = [N/x]M)) /\
+    (~is_abs M ==>
+      (M @@ N -b-> P <=>
+        (?M'. (P = M' @@ N) /\ M -b-> M') \/
+        (?N'. (P = M @@ N') /\ N -b-> N')))``,
+  SRW_TAC [][cc_beta_thm] THENL [
+    SRW_TAC [][EQ_IMP_THM, LAM_eq_thm] THEN SRW_TAC [][] THENL [
+      METIS_TAC [fresh_tpm_subst, lemma15a],
+      SRW_TAC [boolSimps.DNF_ss][tpm_eqr]
+    ],
+    Q_TAC SUFF_TAC `!v M'. M <> LAM v M'` THEN1 METIS_TAC[] THEN
+    Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN
+    FULL_SIMP_TAC (srw_ss()) []
+  ]);
+
 val beta_normal_form_bnf = store_thm(
   "beta_normal_form_bnf",
   ``normal_form beta = bnf``,
@@ -490,6 +514,11 @@ val corollary3_2_1 = store_thm(
   ] THEN ASM_SIMP_TAC (srw_ss()) [] THEN
   PROVE_TAC [relationTheory.RTC_CASES1]);
 
+val bnf_reduction_to_self = store_thm(
+  "bnf_reduction_to_self",
+  ``bnf M ==> (M -b->* N <=> (N = M))``,
+  METIS_TAC [corollary3_2_1, beta_normal_form_bnf, relationTheory.RTC_RULES]);
+
 local open relationTheory
 in
 val diamond_property_def = save_thm("diamond_property_def", diamond_def)
@@ -531,6 +560,7 @@ val corollary3_3_1 = store_thm(
        PROVE_TAC [theorem3_13] THEN
     PROVE_TAC [corollary3_2_1]
   ]);
+
 
 val diamond_TC = relationTheory.diamond_TC_diamond
 
@@ -821,6 +851,22 @@ val beta_CR = store_thm(
   "beta_CR",
   ``CR beta``,
   PROVE_TAC [CR_def, lemma3_16, theorem3_17, diamond_TC]);
+ 
+val bnf_triangle = store_thm(
+  "bnf_triangle",
+  ``M -b->* N /\ M -b->* N' /\ bnf N ==> N' -b->* N``,
+  STRIP_TAC THEN 
+  `?Z. N -b->* Z /\ N' -b->* Z`
+     by METIS_TAC [beta_CR, diamond_property_def, CR_def] THEN 
+  METIS_TAC [bnf_reduction_to_self]);
+
+val Omega_starloops = Store_thm(
+  "Omega_starloops",  
+  ``Omega -b->* N <=> (N = Omega)``,
+  Q_TAC SUFF_TAC `!M N. M -b->* N ==> (M = Omega) ==> (N = Omega)` 
+     THEN1 METIS_TAC [relationTheory.RTC_RULES] THEN
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN 
+  FULL_SIMP_TAC (srw_ss()) [ccbeta_rwt, Omega_def]);
 
 val lameq_betaconversion = store_thm(
   "lameq_betaconversion",
@@ -869,6 +915,15 @@ val has_bnf_thm = store_thm(
     SRW_TAC [][chap2Theory.has_bnf_def, lameq_betaconversion] THEN 
     METIS_TAC [relationTheory.RTC_EQC]
   ]);
+
+val Omega_reachable_no_bnf = store_thm(
+  "Omega_reachable_no_bnf",
+  ``M -b->* Omega ==> ~has_bnf M``,
+  REPEAT STRIP_TAC THEN 
+  FULL_SIMP_TAC (srw_ss()) [has_bnf_thm] THEN 
+  `Omega -b->* N` by METIS_TAC [bnf_triangle] THEN 
+  `N = Omega` by FULL_SIMP_TAC (srw_ss()) [] THEN 
+  FULL_SIMP_TAC (srw_ss()) []);
 
 val weak_diamond_def =
     save_thm("weak_diamond_def", relationTheory.WCR_def)
@@ -1360,27 +1415,7 @@ val rator_isub_commutes = store_thm(
 open boolSimps
 val RTC1_step = CONJUNCT2 (SPEC_ALL relationTheory.RTC_RULES)
 
-val ccbeta_rwt = store_thm(
-  "ccbeta_rwt",
-  ``(VAR s -b-> N <=> F) /\
-    (LAM x M -b-> N <=> ?N0. (N = LAM x N0) /\ M -b-> N0) /\
-    (LAM x M @@ N -b-> P <=>
-       (?M'. (P = LAM x M' @@ N) /\ M -b-> M') \/
-       (?N'. (P = LAM x M @@ N') /\ N -b-> N') \/
-       (P = [N/x]M)) /\
-    (~is_abs M ==>
-      (M @@ N -b-> P <=>
-        (?M'. (P = M' @@ N) /\ M -b-> M') \/
-        (?N'. (P = M @@ N') /\ N -b-> N')))``,
-  SRW_TAC [][cc_beta_thm] THENL [
-    SRW_TAC [][EQ_IMP_THM, LAM_eq_thm] THEN SRW_TAC [][] THENL [
-      METIS_TAC [fresh_tpm_subst, lemma15a],
-      SRW_TAC [DNF_ss][tpm_eqr]
-    ],
-    Q_TAC SUFF_TAC `!v M'. M <> LAM v M'` THEN1 METIS_TAC[] THEN
-    Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN
-    FULL_SIMP_TAC (srw_ss()) []
-  ]);
+
 
 
 val betastar_LAM = store_thm(

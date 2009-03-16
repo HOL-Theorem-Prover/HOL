@@ -11,7 +11,7 @@ open termTheory BasicProvers
 val _ = augment_srw_ss [rewrites [LET_THM]]
 val std_ss = std_ss ++ rewrites [LET_THM]
 
-fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before
+fun Store_thm(s, t, tac) = (store_thm(s,t,tac) before
                             export_rewrites [s])
 
 structure Q = struct open Q open OldAbbrevTactics end;
@@ -234,6 +234,11 @@ val Omega_def =
                      (LAM "x" (VAR "x" @@ VAR "x"))`
 val _ = Unicode.unicode_version {tmnm = "Omega", u = UnicodeChars.Omega}
 
+val FV_Omega = Store_thm(
+  "FV_Omega",
+  ``FV Omega = {}``,
+  SRW_TAC [][Omega_def, EXTENSION]);
+
 val SUB_LAM_RWT = store_thm(
   "SUB_LAM_RWT",
   ``!x y v body. [x/y] (LAM v body) =
@@ -391,7 +396,7 @@ val (is_abs_thm, _) = define_recursive_term_function
    (is_abs (LAM v t) = T)`;
 val _ = export_rewrites ["is_abs_thm"]
 
-val is_abs_vsubst_invariant = Store_Thm(
+val is_abs_vsubst_invariant = Store_thm(
   "is_abs_vsubst_invariant",
   ``!t. is_abs ([VAR v/u] t) = is_abs t``,
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
@@ -403,7 +408,7 @@ val (is_comb_thm, _) = define_recursive_term_function
    (is_comb (LAM v t) = F)`;
 val _ = export_rewrites ["is_comb_thm"]
 
-val is_comb_vsubst_invariant = Store_Thm(
+val is_comb_vsubst_invariant = Store_thm(
   "is_comb_vsubst_invariant",
   ``!t. is_comb ([VAR v/u] t) = is_comb t``,
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
@@ -415,7 +420,7 @@ val (is_var_thm, _) = define_recursive_term_function
    (is_var (LAM v t) = F)`;
 val _ = export_rewrites ["is_var_thm"]
 
-val is_var_vsubst_invariant = Store_Thm(
+val is_var_vsubst_invariant = Store_thm(
   "is_var_vsubst_invariant",
   ``!t. is_var ([VAR v/u] t) = is_var t``,
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
@@ -427,7 +432,12 @@ val (bnf_thm, _) = define_recursive_term_function
    (bnf (LAM v t) = bnf t)`;
 val _ = export_rewrites ["bnf_thm"]
 
-val bnf_vsubst_invariant = Store_Thm(
+val bnf_Omega = Store_thm(
+  "bnf_Omega",
+  ``~bnf Omega``,
+  SRW_TAC [][Omega_def]);
+
+val bnf_vsubst_invariant = Store_thm(
   "bnf_vsubst_invariant",
   ``!t. bnf ([VAR v/u] t) = bnf t``,
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
