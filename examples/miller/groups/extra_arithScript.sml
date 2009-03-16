@@ -177,6 +177,7 @@ val arith1_c = precontext_compile arith1_pc;
 val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS arith1_c;
 
 (* back to proving *)
+val NOT_LT_DIV = dividesTheory.NOT_LT_DIVIDES
 
 val PRIME_2 = store_thm
   ("PRIME_2",
