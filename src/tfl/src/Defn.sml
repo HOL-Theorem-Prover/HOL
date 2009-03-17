@@ -796,7 +796,7 @@ fun tuple_args alist =
    fun tupelo tm =
       case dest_term tm
       of LAMB(Bvar,Body) => mk_abs(Bvar, tupelo Body)
-       | _ =>
+       | otherwise =>
          let val (g,args) = strip_comb tm
              val args' = map tupelo args
          in case find g
@@ -1110,7 +1110,8 @@ fun mutrec_defn (facts,stem,eqns) =
  in MUTREC{eqs = rules, 
            ind = ind, 
            R = R, SV=SV, stem=stem, union=union'}
- end;
+ end
+ handle e => raise wrap_exn "Defn" "mutrec_defn" e;
 
 fun nestrec_defn (thy,(stem,stem'),wfrec_res,untuple) =
   let val {rules,ind,SV,R,aux_rules,aux_ind,...}

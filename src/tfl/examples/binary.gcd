@@ -81,12 +81,10 @@ Count.apply EVAL ``bgcd (Fib 10) (Fib 11)``;
 Count.apply EVAL ``gcd (Fib 5) (Fib 6)``;
 Count.apply EVAL ``gcd (Fib 10) (Fib 11)``;
 
-
 Count.apply EVAL ``bgcd 24 18``;
 Count.apply EVAL ``gcd 1024 18000041``;
 Count.apply EVAL ``bgcd 1024 18000041``;
 Count.apply EVAL ``gcd 24 18``;
-
 
 Count.apply EVAL ``gcd (Fib 50) (Fib 51)``;
 Count.apply EVAL ``bgcd (Fib 50) (Fib 51)``;

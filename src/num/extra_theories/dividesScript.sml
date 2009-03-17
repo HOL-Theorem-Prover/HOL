@@ -236,6 +236,18 @@ val PRIMES_def = new_specification
  ["PRIMES"],
   SIMP_RULE bool_ss [SKOLEM_THM] EUCLID);
 
+(*---------------------------------------------------------------------------*)
+(* More basic theorems about primes                                          *)
+(*---------------------------------------------------------------------------*)
+
+val prime_divides_only_self = Q.store_thm
+("prime_divides_only_self",
+ `!m n. prime m /\ prime n /\ divides m n ==> (m=n)`,
+ RW_TAC arith_ss [divides_def] THEN 
+ `m<>1` by METIS_TAC [NOT_PRIME_0,NOT_PRIME_1] THEN 
+ Q.PAT_ASSUM `prime (m*q)` MP_TAC THEN RW_TAC arith_ss [prime_def] THEN 
+ METIS_TAC [divides_def,MULT_SYM]);
+
 
 (*---------------------------------------------------------------------------*)
 (* Directly computable version of divides                                    *)

@@ -1369,6 +1369,14 @@ val MULT_EQ_1 = store_thm("MULT_EQ_1",
               ADD_EQ_0,MULT_EQ_0] THEN EQ_TAC THEN STRIP_TAC THEN
   ASM_REWRITE_TAC[]);
 
+val MULT_EQ_ID = store_thm
+("MULT_EQ_ID",
+ ``!m n. (m * n = n) = (m=1) \/ (n=0)``,
+ REPEAT GEN_TAC THEN 
+ STRUCT_CASES_TAC (SPEC ``m:num`` num_CASES) THEN 
+ REWRITE_TAC [MULT_CLAUSES,ONE,GSYM NOT_SUC,INV_SUC_EQ] THENL
+ [METIS_TAC[], METIS_TAC [ADD_INV_0_EQ,MULT_EQ_0,ADD_SYM]]);
+
 val LESS_MULT2 = store_thm("LESS_MULT2",
   --`!m n. 0 < m /\ 0 < n ==> 0 < (m * n)`--,
   REPEAT GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN
@@ -3345,7 +3353,6 @@ val EXP2_LT = store_thm
           REWRITE_TAC [DOUBLE_LT]
           THEN REWRITE_TAC [TWO, ADD_0, LESS_MULT_MONO]]);
 
-
 val SUB_LESS = Q.store_thm
 ("SUB_LESS",
  `!m n. 0 < n /\ n <= m ==> m-n < m`,
@@ -3358,6 +3365,7 @@ val SUB_MOD = Q.store_thm
 ("SUB_MOD",
  `!m n. 0<n /\ n <= m ==> ((m-n) MOD n = m MOD n)`,
  METIS_TAC [ADD_MODULUS,ADD_SUB,LESS_EQ_EXISTS,ADD_SYM]);
+
 
 (*---------------------------------------------------------------------------*)
 (* Calculating DIV and MOD by repeated subtraction. We define a              *)
