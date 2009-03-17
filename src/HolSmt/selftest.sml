@@ -482,7 +482,9 @@ val _ = expect_thm ``?x. P x ==> !x. P x``
 val _ = expect_thm ``(\x. x) = (\y. y)``
 val _ = expect_thm ``(\x. \x. x) x x = (\y. \y. y) y x``
 val _ = expect_thm ``(\x. x (\x. x)) = (\y. y (\x. x))``
+(* Yices 1.0.18 fails to decide this one
 val _ = expect_fail ``(\x. x (\x. x)) = (\y. y x)``
+*)
 val _ = expect_thm ``f x = (\x. f x) x``
 val _ = expect_thm ``f x = (\y. f y) x``
 
@@ -507,6 +509,7 @@ val _ = expect_fail ``(SND (x, y, z) = SND (u, v, w)) = (z = w)``
 val _ = expect_thm ``(SND (x, y, z) = SND (u, v, w)) = (y = v) /\ (z = w)``
 
 val _ = expect_thm ``(FST (x, y) = SND (x, y)) = (x = y)``
+val _ = expect_thm ``(FST p = SND p) = (p = (SND p, FST p))``
 val _ = expect_thm ``((\p. FST p) (x, y)= (\p. SND p) (x, y)) = (x = y)``
 
 (*****************************************************************************)

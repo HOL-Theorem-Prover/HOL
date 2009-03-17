@@ -319,13 +319,50 @@ structure Yices = struct
             end
       end
 
+  (* performs full beta normalization *)
+  fun full_beta_conv tm =
+    boolSyntax.rhs (Thm.concl ((Conv.REDEPTH_CONV Thm.BETA_CONV) tm))
+    handle Conv.UNCHANGED => tm
+
+  (* returns the eta-long form of a term, i.e., every variable/constant is
+     applied to the correct number of arguments, as determined by its type *)
+  fun full_eta_long_conv tm =
+    if Term.is_abs tm then
+      let val (v, body) = Term.dest_abs tm
+      in
+        Term.mk_abs (v, full_eta_long_conv body)
+      end
+    else
+      let val (rand, args) = boolSyntax.strip_comb tm
+      in
+        if Term.is_abs rand then
+          Term.list_mk_comb
+            (full_eta_long_conv rand, map full_eta_long_conv args)
+        else (* 'rand' is a variable/constant *)
+          let val T = Term.type_of tm
+          in
+            if (Lib.can Type.dom_rng) T then
+              (* eta expansion (by one argument) *)
+              let val v = Term.mk_var ("x", Lib.fst (Type.dom_rng T))
+                  val fresh = Term.variant (Term.free_vars tm) v
+              in
+                full_eta_long_conv (Term.mk_abs
+                  (fresh, Term.list_mk_comb (rand, args @ [fresh])))
+              end
+            else
+              Term.list_mk_comb (rand, map full_eta_long_conv args)
+          end
+      end
+
   fun term_to_Yices tm =
   let
     val _ = if Term.type_of tm <> Type.bool then
         Feedback.Raise (Feedback.mk_HOL_ERR "Yices" "term_to_Yices"
           "term supplied is not of type bool")
       else ()
-    (* TODO: val tm = eta_long tm *)
+    (* beta-normal, eta-long form (because Yices cannot handle partial
+       applications) *)
+    val tm = full_eta_long_conv (full_beta_conv tm)
     val empty = Redblackmap.mkDict Term.compare
     val empty_ty = Redblackmap.mkDict Type.compare
     val ((_, _, _, _, defs), yices_tm) = translate_term
