@@ -59,13 +59,15 @@ in
   (f,x,y)
 end
 
+datatype munge_action = TH of thm | POP
+
 fun munge base subsets asms (thlistlist, n) = let
   val munge = munge base subsets 
 in
   case thlistlist of
     [] => n
   | [] :: rest => munge asms (rest, n)
-  | (th :: ths) :: rest => let
+  | (TH th :: ths) :: rest => let
     in
       case CONJUNCTS (SPEC_ALL th) of
         [] => raise Fail "munge: Can't happen"
@@ -74,7 +76,7 @@ in
         in
           if is_imp (concl th) then 
             munge (#1 (dest_imp (concl th)) :: asms) 
-                  ((UNDISCH th::ths)::rest, n)
+                  ((TH (UNDISCH th)::POP::ths)::rest, n)
           else
             case total dest_binop (concl th) of
               SOME (R,from,to) => let
@@ -92,8 +94,9 @@ in
               end
             | NONE => munge asms (ths :: rest, n)
         end
-      | thlist => munge asms (thlist :: ths :: rest, n)
+      | thlist => munge asms (map TH thlist :: ths :: rest, n)
     end
+  | (POP :: ths) :: rest => munge (tl asms) (ths::rest, n)
 end
 
 fun addcontext (ctxt, thms) = let
@@ -104,15 +107,22 @@ in
                 [(beta_t, relationTheory.RTC_SINGLE),
                  (normorderstar_t, nstar_betastar)]
                 []
-                ([thms], n))
+                ([map TH thms], n))
 end
 
 fun applythm solver t th = let 
   val matched = PART_MATCH (lhand o #2 o strip_imp) th t
+  open Trace
   fun do_sideconds th = 
-      if is_imp (concl th) then 
-        do_sideconds (MP th (solver (#1 (dest_imp (concl th)))))
-      else th
+      if is_imp (concl th) then let 
+          val (h,c) = dest_imp (concl th)
+          val _ = trace(3,SIDECOND_ATTEMPT h)
+          val scond = solver h
+          val _ = trace(2,SIDECOND_SOLVED scond)
+        in
+          do_sideconds (MP th scond)
+        end
+      else (trace(2,REWRITING(t,th)); th)
 in
   do_sideconds matched
 end
