@@ -3,9 +3,6 @@ struct
 
 open HolKernel Parse boolLib simpLib boolSimps bagTheory;
 
-infixr -->
-infix |-> THENC
-
 val ERR = mk_HOL_ERR "bagLib";
 
 val num_ty = numSyntax.num
@@ -41,7 +38,6 @@ in
   list_mk_comb(bd_tm, [tm1, tm2])
 end
 
-
 fun dest_binop name callername tm = let
   val (f, args) = strip_comb tm
   val _ = length args = 2 orelse raise ERR callername "not a binary term"
@@ -60,9 +56,11 @@ fun list_mk_union0 bu_t acc tmlist =
   case tmlist of
     [] => acc
   | (t::ts) => list_mk_union0 bu_t (list_mk_comb(bu_t, [acc,t])) ts
+
 fun list_mk_union [] = raise ERR "list_mk_union" "term list empty"
   | list_mk_union (t::ts) =
       list_mk_union0 (Term.inst [alpha |-> base_type t] BAG_UNION_tm) t ts
+
 fun strip_union0 acc t =
   if is_union t then let
     val (l,r) = dest_union t
@@ -70,6 +68,7 @@ fun strip_union0 acc t =
     strip_union0 (strip_union0 acc r) l
   end
   else t::acc
+
 val strip_union = strip_union0 []
 
 fun mk_insert (tm1, tm2) = let
@@ -78,8 +77,11 @@ fun mk_insert (tm1, tm2) = let
 in
   list_mk_comb(bi, [tm1, tm2])
 end
+
 val dest_insert = dest_binop "BAG_INSERT" "dest_insert"
+
 val is_insert = can dest_insert
+
 fun list_mk_insert (tms, t) =
   case tms of
     (h::_) => let
@@ -88,6 +90,7 @@ fun list_mk_insert (tms, t) =
       List.foldr (fn (i,b) => list_mk_comb(cnst, [i,b])) t tms
     end
   | [] => t
+
 fun strip_insert0 acc tm =
   if is_insert tm then let
     val (i,b) = dest_insert tm
@@ -108,6 +111,7 @@ val is_sub_bag = can dest_sub_bag
 
 fun mk_bag (tms, ty) =
   list_mk_insert(tms, Term.inst [alpha |-> ty] EMPTY_BAG_tm)
+
 fun dest_bag tm = let
   val (els, b) = strip_insert tm
   val _ = is_const b andalso fst (Term.dest_const b) = "EMPTY_BAG" orelse
