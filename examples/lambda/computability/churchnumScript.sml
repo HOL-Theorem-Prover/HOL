@@ -6,6 +6,7 @@ open termTheory
 open boolSimps
 open normal_orderTheory
 open churchboolTheory
+open churchpairTheory
 open reductionEval
 
 fun Store_thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
@@ -304,6 +305,14 @@ val cpred_behaviour = store_thm(
 val cminus_def = Define`
   cminus = LAM "m" (LAM "n" (VAR "n" @@ VAR "m" @@ cpred))
 `;
+val FV_cminus = Store_thm(
+  "FV_cminus",
+  ``FV cminus = {}``,
+  SRW_TAC [][cminus_def, EXTENSION] THEN METIS_TAC []);
+val bnf_cminus = Store_thm(
+  "bnf_cminus",
+  ``bnf cminus``,
+  SRW_TAC [][cminus_def]);
 
 val cminus_behaviour = store_thm(
   "cminus_behaviour",
@@ -394,7 +403,179 @@ val cless_behaviour = store_thm(
                               cpred_behaviour, cand_behaviour] THEN 
     Cases_on `n` THEN SRW_TAC [][]
   ]);
-    
 
+(* ---------------------------------------------------------------------- 
+    divmod 
+
+    Functional presentation would be
+
+     divmod (a,p,q) = if q = 0 then (0,0) else 
+                      if p < q then (a,p)
+                      else divmod (a+1,p-q,q)
+
+    But this is not primitive recursive.  We make it so by passing in 
+    an extra argument which is the "target" value for the next recursive
+    step.  The primitive recursion does nothing until it hits a target
+    value, which it then can set up appropriately for the next bit.
+
+    In this setting the "target" is parameter p, which is where the 
+    recursion is happening.
+
+     divmod 0 (a,p,q) = if p < q then (a,p) else (0,0)
+     divmod (SUC n) (a,p,q) = 
+       if SUC n = p then 
+         if p < q then (a,p)
+         else divmod n (a+1,p-q,q)
+       else divmod n (a,p,q)
+
+     This is not quite going to work either because we refer to SUC n,
+     but the recursion scheme doesn't give us access to n by default.
+     To get this to happen, the result of a recursive call is going to
+     have to be a pair of n and the normal result.   We can also optimise
+     a little by having q be lifted past the recursion 
+
+      divmodt q 0 = (0, (λa p. (a,p)))
+      divmodt q (SUC n) = 
+        λr. (SUC (fst r), 
+             λa p.  if (SUC (fst r)) = p then 
+                      if p < q then (a,p)
+                      else snd r (a+1) (p-q) 
+                    else snd r a p)
+
+     If q is zero, the recursion "works", and the answer will be the
+     one coupled with the initial value of p.
+   ---------------------------------------------------------------------- *)
+
+val cdivmodt_def = Define`
+  cdivmodt = LAM "q" 
+   (LAM "n" 
+    (VAR "n" 
+      @@ (cpair @@ church 0 @@ cpair)
+      @@ (LAM "r" 
+           (cpair 
+              @@ (csuc @@ (cfst @@ VAR "r"))
+              @@ (LAM "a" (LAM "p" 
+                   (ceqnat @@ (csuc @@ (cfst @@ VAR "r")) @@ VAR "p" 
+                     @@ (cless @@ VAR "p" @@ VAR "q" 
+                           @@ (cpair @@ VAR "a" @@ VAR "p")
+                           @@ (csnd @@ VAR "r" @@ 
+                                 (csuc @@ VAR "a") @@ 
+                                 (cminus @@ VAR "p" @@ VAR "q")))
+                     @@ (csnd @@ VAR "r" @@ VAR "a" @@ VAR "p"))))))))
+`;
+
+val FV_cdivmodt = Store_thm(
+  "FV_cdivmodt", 
+  ``FV cdivmodt = {}``,                    
+  SRW_TAC [][cdivmodt_def, EXTENSION] THEN METIS_TAC []);
+
+val cfst_cdivmodt = store_thm(
+  "cfst_cdivmodt",
+  ``cfst @@ (cdivmodt @@ church q @@ church n) -n->* church n``,
+  SIMP_TAC (bsrw_ss()) [cdivmodt_def, church_behaviour] THEN 
+  Induct_on `n` THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [cfst_pair, FUNPOW_SUC, csuc_behaviour]);
+  
+val FRESH_LAM = prove(
+  ``x ∉ FV (LAM v bod) ⇔ (x ≠ v ⇒ x ∉ FV bod)``,
+  SRW_TAC [][] THEN METIS_TAC []);
+
+val FRESH_APP = prove(
+  ``x ∉ FV (M @@ N) ⇔ x ∉ FV M ∧ x ∉ FV N``,
+  SRW_TAC [][]);
+
+val cdivmodt_behaviour = store_thm(
+  "cdivmodt_behaviour",
+  ``∀p a. 
+       0 < q ∧ p ≤ n ⇒ 
+       csnd @@ (cdivmodt @@ church q @@ church n) @@ church a @@ church p -n->* 
+       cvpr (church (a + p DIV q)) (church (p MOD q))``,
+  SIMP_TAC (bsrw_ss()) [cdivmodt_def, church_behaviour] THEN 
+  Induct_on `n` THENL [
+    SIMP_TAC (bsrw_ss()) [arithmeticTheory.ZERO_DIV, 
+                          cpair_behaviour, 
+                          csnd_cvpr],
+
+    Q.MATCH_ABBREV_TAC 
+      `∀p a. 0 < q ∧ p ≤ SUC n ⇒
+             csnd @@ FUNPOW ((@@) R) (SUC n) (cpair @@ church 0 @@ cpair) @@ 
+             church a @@ church p 
+          -β->*
+             cvpr (church (a + p DIV q)) (church (p MOD q))` THEN 
+    `∀m. cfst @@ (FUNPOW ((@@) R) m (cpair @@ church 0 @@ cpair)) -n->* 
+         church m`
+       by (Induct_on `m` THEN
+           ASM_SIMP_TAC (bsrw_ss()) [cpair_behaviour, cfst_cvpr, 
+                                     FUNPOW_SUC] THEN 
+           ASM_SIMP_TAC (bsrw_ss()) [Abbr`R`, cfst_cvpr, 
+                                     csuc_behaviour, cpair_behaviour]) THEN 
+    ASM_SIMP_TAC (bsrw_ss()) [FUNPOW_SUC, cpair_behaviour, 
+                              csnd_cvpr, csuc_behaviour] THEN 
+    Q.ABBREV_TAC `FR = FUNPOW ((@@) R)` THEN 
+    `FV (FR n (cpair @@ church 0 @@ cpair)) = {}`
+       by SRW_TAC [][Abbr`FR`, Abbr`R`, EXTENSION, FRESH_LAM, 
+                     fresh_funpow_app_I, FRESH_APP] THEN 
+    ASM_SIMP_TAC (bsrw_ss()) [Abbr`R`, cpair_behaviour, csnd_cvpr, 
+                              csuc_behaviour, ceqnat_behaviour, 
+                              cless_behaviour] THEN 
+    REPEAT STRIP_TAC THEN 
+    Cases_on `p = SUC n` THEN ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THENL [
+      Cases_on `SUC n < q` THEN ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THENL [
+        ASM_SIMP_TAC (srw_ss()) [arithmeticTheory.LESS_DIV_EQ_ZERO],
+        SIMP_TAC (bsrw_ss()) [cminus_behaviour] THEN 
+        ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss) [] THEN 
+        `(SUC n - q) DIV q = SUC n DIV q - 1`
+           by (MP_TAC (Q.INST [`n` |-> `q`, `q` |-> `1`, 
+                                    `m` |-> `SUC n`] 
+                                   arithmeticTheory.DIV_SUB) THEN 
+               SRW_TAC [ARITH_ss][]) THEN 
+        `(SUC n - q) MOD q = SUC n MOD q`
+           by (MP_TAC (Q.INST [`n` |-> `q`, `q` |-> `1`, `m` |-> `SUC n`]
+                              arithmeticTheory.MOD_SUB) THEN 
+               SRW_TAC [ARITH_ss][]) THEN 
+        SRW_TAC [ARITH_ss][] THEN 
+        `∀x y. (x = y) ⇒ x -β->* y` by SRW_TAC [][] THEN 
+        POP_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN 
+        Q_TAC SUFF_TAC `0 < SUC n DIV q` THEN1 DECIDE_TAC THEN 
+        SRW_TAC [ARITH_ss][arithmeticTheory.X_LT_DIV]
+      ],
+      SRW_TAC [ARITH_ss][]
+    ]
+  ]);
+
+val cdiv_def = Define`
+  cdiv = LAM "p" (LAM "q" (cfst @@ 
+                                (csnd @@ (cdivmodt @@ VAR "q" @@ VAR "p") @@ 
+                                      church 0 @@ VAR "p")))
+`
+val FV_cdiv = Store_thm(
+  "FV_cdiv",
+  ``FV cdiv = {}``,
+  SIMP_TAC bool_ss [cdiv_def, EXTENSION, NOT_IN_EMPTY] THEN 
+  SRW_TAC [][FRESH_APP, FRESH_LAM]);
+
+val cdiv_behaviour = store_thm(
+  "cdiv_behaviour",
+  ``0 < q ⇒ 
+      cdiv @@ church p @@ church q -n->* church (p DIV q)``,
+  SIMP_TAC (bsrw_ss()) [cdivmodt_behaviour, cdiv_def, cfst_cvpr]);
+
+val cmod_def = Define`
+  cmod = LAM "p" (LAM "q" (csnd @@ 
+                           (csnd @@ (cdivmodt @@ VAR "q" @@ VAR "p") @@ 
+                                 church 0 @@ VAR "p")))
+`;
+val FV_cmod = Store_thm(
+  "FV_cmod",
+  ``FV cmod = {}``,
+  SIMP_TAC bool_ss [cmod_def, EXTENSION, NOT_IN_EMPTY] THEN 
+  SRW_TAC [][FRESH_APP, FRESH_LAM]);
+
+val cmod_behaviour = store_thm(
+  "cmod_behaviour",
+  ``0 < q ⇒ 
+     cmod @@ church p @@ church q -n->* church (p MOD q)``,
+  SIMP_TAC (bsrw_ss()) [cdivmodt_behaviour, cmod_def, csnd_cvpr]);
+                        
 val _ = export_theory()
 
