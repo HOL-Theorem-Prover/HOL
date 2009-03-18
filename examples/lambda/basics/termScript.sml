@@ -499,7 +499,7 @@ val _ = Save_Thm("tpm_thm", tpm_thm);
 
 val tpm_fresh = save_thm("tpm_fresh", GSYM FRESH_swap0)
 
-val FRESH_APP = Store_Thm( 
+val FRESH_APP = Store_Thm(
   "FRESH_APP",
   ``v NOTIN FV (M @@ N) <=> v NOTIN FV M /\ v NOTIN FV N``,
   SRW_TAC [][]);
@@ -605,8 +605,7 @@ val tpm_apart = store_thm(
     METIS_TAC [],
     METIS_TAC [],
     SRW_TAC [][LAM_eq_thm] THEN
-    Cases_on `x = v` THEN SRW_TAC [][],
-    SRW_TAC [][LAM_eq_thm]
+    Cases_on `x = v` THEN SRW_TAC [][]
   ]);
 
 val supp_tpm = Store_Thm(
