@@ -127,9 +127,9 @@ val substitution_lemma = save_thm("substitution_lemma", lemma2_11);
 
 val NOT_IN_FV_SUB = store_thm(
   "NOT_IN_FV_SUB",
-  ``!x t u v. ~(x IN FV u) /\ ~(x IN FV t) ==> ~(x IN FV ([t/v]u))``,
-  SRW_TAC [][FV_SUB]);
-
+  ``!x t u v. x NOTIN FV u /\ (x <> v ==> x NOTIN FV t) ==> 
+              x NOTIN FV ([t/v]u)``,
+  SRW_TAC [][FV_SUB] THEN METIS_TAC []);
 
 val lemma2_12 = store_thm( (* p. 19 *)
   "lemma2_12",
@@ -246,17 +246,9 @@ val SUB_LAM_RWT = store_thm(
                  in
                    LAM n ([x/y]([VAR n/v] body))``,
   SIMP_TAC std_ss [] THEN REPEAT GEN_TAC THEN
-  NEW_ELIM_TAC THEN Q.X_GEN_TAC `z` THEN
-  Q_TAC (NEW_TAC "n") `{z;y} UNION FV x UNION FV body` THEN
-  REPEAT STRIP_TAC THEN
+  NEW_ELIM_TAC THEN Q.X_GEN_TAC `z` THEN STRIP_TAC THEN 
   `LAM v body = LAM z ([VAR z/v] body)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-  SRW_TAC [][SUB_THM]);
-
-val alpha_lemma = prove(
-  ``!x y u body.
-       ~(y IN FV (LAM x u)) /\ (body = [VAR y/x]u) ==>
-       (LAM x u = LAM y body)``,
-  SRW_TAC [][] THEN SRW_TAC [][SIMPLE_ALPHA]);
+  SRW_TAC [][]);
 
 val lameq_asmlam = store_thm(
   "lameq_asmlam",
@@ -276,7 +268,7 @@ val lameq_S = store_thm(
          Q.EXISTS_TAC `"x"` THEN SRW_TAC [][S_def] THEN
         `LAM "y" (LAM "z" ((VAR "x" @@ VAR "z") @@ (VAR "y" @@ VAR "z"))) =
          LAM y (LAM z ((VAR "x" @@ VAR z) @@ (VAR y @@ VAR z)))` by
-           ASM_SIMP_TAC (srw_ss()) [SUB_THM, alpha_lemma] THEN
+           ASM_SIMP_TAC (srw_ss()) [SUB_THM, LAM_eq_thm] THEN
         POP_ASSUM SUBST_ALL_TAC THEN
         ASM_SIMP_TAC (srw_ss()) [SUB_THM]) THEN
   `S @@ A @@ B @@ C == S1 @@ B @@ C` by PROVE_TAC [lam_eq_rules] THEN
@@ -287,13 +279,13 @@ val lameq_S = store_thm(
      (Q_TAC SUFF_TAC `?M. (S1 = LAM y M) /\ (S2 = [B/y]M)` THEN1
         PROVE_TAC [lam_eq_rules] THEN
       NTAC 2 (FIRST_X_ASSUM (SUBST_ALL_TAC o SYM)) THEN
-      ASM_SIMP_TAC (srw_ss()) [SUB_THM, alpha_lemma, lemma14b]) THEN
+      ASM_SIMP_TAC (srw_ss()) [lemma14b]) THEN 
   Q_TAC SUFF_TAC `S2 @@ C == A @@ C @@ (B @@ C)` THEN1
       PROVE_TAC [lam_eq_rules] THEN
   Q_TAC SUFF_TAC `?M. (S2 = LAM z M) /\ (A @@ C @@ (B @@ C) = [C/z]M)` THEN1
       PROVE_TAC [lam_eq_rules] THEN
   NTAC 2 (FIRST_X_ASSUM (SUBST_ALL_TAC o SYM)) THEN
-  ASM_SIMP_TAC (srw_ss()) [SUB_THM, alpha_lemma, lemma14b]);
+  ASM_SIMP_TAC (srw_ss()) [lemma14b]);
 
 val lameq_K = store_thm(
   "lameq_K",
@@ -532,15 +524,15 @@ val _ = export_rewrites ["enf_vsubst_invariant"]
 
 val benf_def = Define`benf t = bnf t /\ enf t`;
 
-val I_beta_normal = store_thm(
+val I_beta_normal = Store_thm(
   "I_beta_normal",
   ``bnf I``,
   SRW_TAC [][I_def, bnf_thm]);
-val K_beta_normal = store_thm(
+val K_beta_normal = Store_thm(
   "K_beta_normal",
   ``bnf K``,
   SRW_TAC [][K_def, bnf_thm]);
-val S_beta_normal = store_thm(
+val S_beta_normal = Store_thm(
   "S_beta_normal",
   ``bnf S``,
   SRW_TAC [][S_def, bnf_thm, is_abs_thm]);

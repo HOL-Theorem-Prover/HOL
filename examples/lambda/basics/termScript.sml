@@ -499,6 +499,19 @@ val _ = Save_Thm("tpm_thm", tpm_thm);
 
 val tpm_fresh = save_thm("tpm_fresh", GSYM FRESH_swap0)
 
+val FRESH_APP = Store_Thm( 
+  "FRESH_APP",
+  ``v NOTIN FV (M @@ N) <=> v NOTIN FV M /\ v NOTIN FV N``,
+  SRW_TAC [][]);
+val FRESH_LAM = Store_Thm(
+  "FRESH_LAM",
+  ``u NOTIN FV (LAM v M) <=> (u <> v ==> u NOTIN FV M)``,
+  SRW_TAC [][] THEN METIS_TAC []);
+val FV_EMPTY = store_thm(
+  "FV_EMPTY",
+  ``(FV t = {}) <=> !v. v NOTIN FV t``,
+  SIMP_TAC (srw_ss()) [EXTENSION]);
+
 (* quote the term in order to get the variable names specified *)
 val simple_induction = store_thm(
   "simple_induction",

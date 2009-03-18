@@ -1253,10 +1253,9 @@ val eta_beta_commute = store_thm(
   SIMP_TAC (srw_ss()) [] THEN
   MATCH_MP_TAC wonky_diamond_commutes THEN
   Q_TAC SUFF_TAC
-        `!M P. compat_closure beta M P ==>
+        `!M P. M -b-> P ==>
                !N. compat_closure eta M N ==>
-                   ?Q. reduction eta P Q /\
-                       RC (compat_closure beta) N Q`
+                   ?Q. reduction eta P Q /\ RC (-b->) N Q`
         THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC strong_ccbeta_gen_ind THEN
   Q.EXISTS_TAC `FV` THEN SRW_TAC [][] THENL [
@@ -1286,13 +1285,14 @@ val eta_beta_commute = store_thm(
       METIS_TAC [compat_closure_rules, relationTheory.RC_DEF,
                  reduction_rules],
       FULL_SIMP_TAC (srw_ss()) [cc_beta_thm] THENL [
-        SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
+        SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+        Cases_on `v = v'` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
+          METIS_TAC [reduction_rules, relationTheory.RC_DEF],
           `LAM v ([VAR v/v'] M0) = LAM v' M0`
              by METIS_TAC [SIMPLE_ALPHA] THEN
-          METIS_TAC [reduction_rules, relationTheory.RC_DEF],
           METIS_TAC [reduction_rules, relationTheory.RC_DEF]
         ],
-        `~(v IN FV M')` by METIS_TAC [cc_beta_FV_SUBSET, SUBSET_DEF] THEN
+        `v NOTIN FV M'` by METIS_TAC [cc_beta_FV_SUBSET, SUBSET_DEF] THEN
         `compat_closure eta (LAM v (M' @@ VAR v)) M'`
            by SRW_TAC [][cc_eta_LAM, eta_LAM] THEN
         METIS_TAC [relationTheory.RC_DEF, reduction_rules]
