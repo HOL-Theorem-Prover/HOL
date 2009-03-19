@@ -2623,6 +2623,96 @@ let val b    = --`b:bool`--
 
 val _ = save_thm("COND_EXPAND", COND_EXPAND);
 
+(* ---------------------------------------------------------------------*)
+(* COND_EXPAND_IMP						        *)
+(*								        *)
+(* |- !b t1 t2. (b => t1 | t2) = ((b ==> t1) /\ (~b ==> t2))	        *)
+(*								        *)
+(*				       	                    TT 09.03.18 *)
+(* ---------------------------------------------------------------------*)
+
+val COND_EXPAND_IMP =
+let val b    = --`b:bool`--
+    val t1   = --`t1:bool`--
+    val t2   = --`t2:bool`--
+    val nb   = mk_neg b;
+    val nnb  = mk_neg nb;
+
+
+    val imp_th1  = SPECL [b, t1] IMP_DISJ_THM;
+    val imp_th2a = SPECL [nb, t2] IMP_DISJ_THM
+    val imp_th2b = SUBST_CONV [nnb |-> (SPEC b (CONJUNCT1 NOT_CLAUSES))]
+		   (mk_disj (nnb, t2)) (mk_disj (nnb, t2))
+    val imp_th2  = TRANS imp_th2a imp_th2b
+
+
+    val new_rhs = ``(b ==> t1) /\ (~b ==> t2)``;
+    val subst = [mk_imp(b,t1) |-> imp_th1,
+                 mk_imp(nb,t2) |-> imp_th2]
+
+    val th1 = SUBST_CONV subst new_rhs new_rhs
+    val th2 = TRANS (SPECL [b,t1,t2] COND_EXPAND) (SYM th1)
+in
+    GENL [b,t1,t2] th2
+end;
+
+val _ = save_thm("COND_EXPAND_IMP", COND_EXPAND_IMP);
+
+
+
+(* ---------------------------------------------------------------------*)
+(* COND_EXPAND_OR 						        *)
+(*								        *)
+(* |- !b t1 t2. (b => t1 | t2) = ((b /\ t1) \/ (~b /\ t2))	        *)
+(*								        *)
+(*				       	                    TT 09.03.18 *)
+(* ---------------------------------------------------------------------*)
+
+
+val COND_EXPAND_OR =
+let val b    = --`b:bool`--
+    val t1   = --`t1:bool`--
+    val t2   = --`t2:bool`--
+    val conj = --`$/\`--
+    val disj = --`$\/`--
+    val theta = [Type`:'a` |-> Type.bool]
+    val (COND_T,COND_F) =
+      let val t1 = --`t1:'a`--  and  t2 = --`t2:'a`--
+      in (GENL[t1,t2]##GENL[t1,t2]) (CONJ_PAIR(SPEC_ALL COND_CLAUSES))
+      end
+    and [NOT1,NOT2] = tl (CONJUNCTS NOT_CLAUSES)
+    and [OR1,OR2,OR3,OR4,_] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
+    and [AND1,AND2,AND3,AND4,_] = map GEN_ALL (CONJUNCTS(SPEC_ALL AND_CLAUSES))
+    val thTl = SPECL [t1,t2] (INST_TYPE theta COND_T)
+    and thFl = SPECL [t1,t2] (INST_TYPE theta COND_F)
+    val thTr =
+      let val th2 = TRANS (AP_THM (AP_TERM conj NOT1) t2) (SPEC t2 AND3)
+          and th1 = SPEC t1 AND1
+      in
+         TRANS (MK_COMB (AP_TERM disj th1,th2)) (SPEC t1 OR4)
+      end
+    and thFr =
+      let val th2 = TRANS (AP_THM (AP_TERM conj NOT2) t2) (SPEC t2 AND1)
+          and th1 = SPEC t1 AND3
+      in
+        TRANS (MK_COMB (AP_TERM disj th1,th2)) (SPEC t2 OR3)
+      end
+    val thT1 = TRANS thTl (SYM thTr)
+    and thF1 = TRANS thFl (SYM thFr)
+    val tm = (--`(if b then t1 else t2) = ((b /\ t1) \/ (~b /\ t2))`--)
+    val thT2 = SUBST_CONV [b |-> ASSUME (--`b = T`--)] tm tm
+    and thF2 = SUBST_CONV [b |-> ASSUME (--`b = F`--)] tm tm
+    val thT3 = EQ_MP (SYM thT2) thT1
+    and thF3 = EQ_MP (SYM thF2) thF1
+ in
+   GENL [b, t1, t2] (DISJ_CASES (SPEC b BOOL_CASES_AX) thT3 thF3)
+ end;
+
+val _ = save_thm("COND_EXPAND_OR", COND_EXPAND_OR);
+
+
+
+
 
 val TYPE_DEFINITION_THM =
   let val P   = Term `P:'a-> bool`
@@ -3251,6 +3341,7 @@ val MONO_IMP = save_thm("MONO_IMP",
     EQ_MP th8 th7
  end);
 
+
 (* ------------------------------------------------------------------------- *)
 (* MONO_NOT |- (y ==> x) ==> (~x ==> ~y)                                     *)
 (* ------------------------------------------------------------------------- *)
@@ -3268,6 +3359,27 @@ val MONO_NOT = save_thm("MONO_NOT",
  in
     DISCH tm1 (DISCH tm2 th6)
  end);
+
+
+(* ------------------------------------------------------------------------- *)
+(* MONO_NOT_EQ |- (y ==> x) = (~x ==> ~y)                                     *)
+(* ------------------------------------------------------------------------- *)
+
+
+val MONO_NOT_EQ = save_thm("MONO_NOT_EQ",
+ let val tm1 = Term `x:bool`
+     val tm2 = Term `y:bool`
+     val th1 = INST [tm1 |-> mk_neg tm2, tm2 |-> mk_neg tm1] MONO_NOT
+
+     val th2 = SUBST [Term `x1:bool` |-> SPEC tm1 (CONJUNCT1 NOT_CLAUSES),
+                      Term `x2:bool` |-> SPEC tm2 (CONJUNCT1 NOT_CLAUSES)]
+                     (Term `(~x ==> ~y) ==> (x2 ==> x1)`) th1
+
+     val th3 = IMP_ANTISYM_RULE MONO_NOT th2
+ in
+     th3
+ end);
+
 
 (* ------------------------------------------------------------------------- *)
 (* MONO_ALL |- (!x. P x ==> Q x) ==> (!x. P x) ==> !x. Q x                   *)
