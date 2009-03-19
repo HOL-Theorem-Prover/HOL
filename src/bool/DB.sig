@@ -27,6 +27,12 @@ sig
   val apropos     : term -> data list
   val listDB      : unit -> data list
 
+  val data_list_to_string : data list -> string
+  val print_apropos       : term -> unit
+  val print_find          : string -> unit
+  val print_match         : string list -> term -> unit
+
+
   val dest_theory  : string -> theory
   val print_theory : string -> unit
 
@@ -39,5 +45,7 @@ sig
   val html_theory               : string -> unit
 
   val bindl : string -> (string * thm * class) list -> unit
+
+
 
 end
