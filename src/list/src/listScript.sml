@@ -25,7 +25,7 @@ struct
  * are "arithmetic" and "pair".                                              *
  *---------------------------------------------------------------------------*)
 
-local open arithmeticTheory pairTheory pred_setTheory in end;
+local open arithmeticTheory pairTheory pred_setTheory operatorTheory in end;
 
 
 (*---------------------------------------------------------------------------
@@ -470,6 +470,14 @@ val MEM_FILTER = Q.store_thm
    THEN RW_TAC bool_ss [MEM,FILTER]
    THEN PROVE_TAC [MEM]);
 
+val MEM_FLAT = Q.store_thm 
+("MEM_FLAT",
+ `!x L. MEM x (FLAT L) = (?l. MEM l L /\ MEM x l)`,
+ GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THENL [
+   REWRITE_TAC [FLAT,MEM],
+   REWRITE_TAC [FLAT,MEM,MEM_APPEND] THEN PROVE_TAC[]
+ ]);
+
 val EVERY_APPEND = store_thm(
   "EVERY_APPEND",
   ``!P (l1:'a list) l2.
@@ -509,6 +517,14 @@ val LENGTH_NIL = store_thm("LENGTH_NIL",
  --`!l:'a list. (LENGTH l = 0) = (l = [])`--,
       LIST_INDUCT_TAC THEN
       REWRITE_TAC [LENGTH, NOT_SUC, NOT_CONS_NIL]);
+
+val NULL_EQ = store_thm("NULL_EQ",
+ --`!l. NULL l = (l = [])`--,
+   Cases_on `l` THEN REWRITE_TAC[NULL, NOT_CONS_NIL]);
+
+val NULL_LENGTH = Q.store_thm("NULL_LENGTH",
+  `!l. NULL l = (LENGTH l = 0)`,
+  REWRITE_TAC[NULL_EQ,LENGTH_NIL])
 
 val LENGTH_CONS = store_thm("LENGTH_CONS",
  --`!l n. (LENGTH l = SUC n) =
@@ -581,6 +597,225 @@ val APPEND_11 = store_thm(
     ]
   ]);
 
+val APPEND_eq_ID = store_thm(
+"APPEND_EQ_SELF",
+``(!l1 l2:'a list. ((l1 ++ l2 = l1) = (l2 = []))) /\
+  (!l1 l2:'a list. ((l1 ++ l2 = l2) = (l1 = []))) /\
+  (!l1 l2:'a list. ((l1 = l1 ++ l2) = (l2 = []))) /\
+  (!l1 l2:'a list. ((l2 = l1 ++ l2) = (l1 = [])))``,
+PROVE_TAC[APPEND_11, APPEND_NIL, APPEND]);
+
+
+val MEM_SPLIT = Q.store_thm 
+("MEM_SPLIT",
+ `!x l. (MEM x l) = ?l1 l2. (l = l1 ++ x::l2)`,
+
+ GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THENL [
+   REWRITE_TAC [MEM, APPEND_eq_NIL, NOT_CONS_NIL],
+   GEN_TAC THEN Cases_on `x = h` THEN ASM_REWRITE_TAC [MEM] THENL [
+     Q.EXISTS_TAC `[]` THEN Q.EXISTS_TAC `l` THEN REWRITE_TAC[APPEND],
+     EQ_TAC THEN STRIP_TAC THENL [
+        Q.EXISTS_TAC `h::l1` THEN Q.EXISTS_TAC `l2` THEN ASM_REWRITE_TAC[APPEND],
+        POP_ASSUM MP_TAC THEN Cases_on `l1` THENL [
+          ASM_REWRITE_TAC[APPEND, CONS_11] THEN PROVE_TAC[],
+          ASM_REWRITE_TAC[APPEND, CONS_11] THEN DISCH_TAC THEN
+            Q.EXISTS_TAC `l'` THEN Q.EXISTS_TAC `l2` THEN ASM_REWRITE_TAC[]
+        ]
+     ]
+   ]
+ ]);
+
+val LIST_EQ_REWRITE = Q.store_thm 
+("LIST_EQ_REWRITE",
+ `!l1 l2. (l1 = l2) = 
+      ((LENGTH l1 = LENGTH l2) /\
+       ((!x. (x < LENGTH l1) ==> (EL x l1 = EL x l2))))`,
+
+ LIST_INDUCT_TAC THEN Cases_on `l2` THEN (
+   ASM_SIMP_TAC arith_ss [LENGTH, NOT_CONS_NIL, CONS_11, EL] 
+ ) THEN
+ GEN_TAC THEN EQ_TAC THEN SIMP_TAC arith_ss [] THENL [
+   REPEAT STRIP_TAC THEN Cases_on `x` THEN (
+     ASM_SIMP_TAC arith_ss [EL,HD, TL]
+   ),
+   REPEAT STRIP_TAC THENL [
+     POP_ASSUM (MP_TAC o SPEC ``0:num``) THEN
+     ASM_SIMP_TAC arith_ss [EL,HD, TL],
+     Q.PAT_ASSUM `!x. x < Y ==> P x` (MP_TAC o SPEC ``SUC x``) THEN
+     ASM_SIMP_TAC arith_ss [EL,HD, TL]
+   ]
+ ]);
+
+val LIST_EQ = save_thm("LIST_EQ", 
+    GENL[``l1:'a list``, ``l2:'a list``] 
+    (snd(EQ_IMP_RULE (SPEC_ALL LIST_EQ_REWRITE))));
+
+val FOLDL_EQ_FOLDR = Q.store_thm 
+("FOLDL_EQ_FOLDR",
+ `!f l e. (ASSOC f /\ COMM f) ==>
+          ((FOLDL f e l) = (FOLDR f e l))`,
+GEN_TAC THEN
+FULL_SIMP_TAC bool_ss [RIGHT_FORALL_IMP_THM, operatorTheory.COMM_DEF,
+  operatorTheory.ASSOC_DEF] THEN
+STRIP_TAC THEN LIST_INDUCT_TAC THENL [
+  SIMP_TAC bool_ss [FOLDR, FOLDL],
+
+  ASM_SIMP_TAC bool_ss [FOLDR, FOLDL] THEN
+  POP_ASSUM (K ALL_TAC) THEN 
+  Q.SPEC_TAC (`l`, `l`) THEN
+  LIST_INDUCT_TAC THEN ASM_SIMP_TAC bool_ss [FOLDR]
+]);
+
+val LENGTH_TL = Q.store_thm
+("LENGTH_TL",
+  `!l. 0 < LENGTH l ==> (LENGTH (TL l) = LENGTH l - 1)`,
+  Cases_on `l` THEN SIMP_TAC arith_ss [LENGTH, TL]);
+
+val FILTER_EQ_NIL = Q.store_thm 
+("FILTER_EQ_NIL",
+ `!P l. (FILTER P l = []) = (EVERY (\x. ~(P x)) l)`,
+ GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THEN (
+    ASM_SIMP_TAC bool_ss [FILTER,EVERY_DEF, COND_RATOR, COND_RAND,
+			  NOT_CONS_NIL]
+ ));
+
+val FILTER_NEQ_NIL = Q.store_thm 
+("FILTER_NEQ_NIL",
+ `!P l. ~(FILTER P l = []) = ?x. MEM x l /\ P x`,
+ SIMP_TAC bool_ss [FILTER_EQ_NIL, EVERY_NOT_EXISTS, EXISTS_MEM]);
+
+val FILTER_EQ_ID = Q.store_thm 
+("FILTER_EQ_ID",
+ `!P l. (FILTER P l = l) = (EVERY P l)`,
+ GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THEN (
+    ASM_SIMP_TAC bool_ss [FILTER,EVERY_DEF, COND_RATOR, COND_RAND,
+			  CONS_11]
+ ) THEN
+ REPEAT STRIP_TAC THEN CCONTR_TAC THEN
+ FULL_SIMP_TAC bool_ss [] THEN
+ `MEM h (FILTER P l)` by ASM_REWRITE_TAC[MEM] THEN
+ POP_ASSUM MP_TAC THEN
+ ASM_REWRITE_TAC[MEM_FILTER]);
+
+val FILTER_NEQ_ID = Q.store_thm 
+("FILTER_NEQ_ID",
+ `!P l. ~(FILTER P l = l) = ?x. MEM x l /\ ~(P x)`,
+ SIMP_TAC bool_ss [FILTER_EQ_ID, EVERY_NOT_EXISTS, EXISTS_MEM]);
+
+val FILTER_EQ_CONS = Q.store_thm 
+("FILTER_EQ_CONS",
+ `!P l h lr.
+  (FILTER P l = h::lr) =
+  (?l1 l2. (l = l1++[h]++l2) /\ (FILTER P l1 = []) /\ (FILTER P l2 = lr) /\ (P h))`,
+
+GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THEN (
+  ASM_SIMP_TAC bool_ss [FILTER, NOT_CONS_NIL, APPEND_eq_NIL]
+) THEN
+REPEAT STRIP_TAC THEN Cases_on `P h` THEN ASM_REWRITE_TAC[] THEN
+EQ_TAC THEN REPEAT STRIP_TAC THENL [
+  Q.EXISTS_TAC `[]` THEN Q.EXISTS_TAC `l` THEN
+  FULL_SIMP_TAC bool_ss [CONS_11, APPEND, FILTER],
+
+  Cases_on `l1` THEN (
+    FULL_SIMP_TAC bool_ss [APPEND, CONS_11, FILTER, COND_RAND, COND_RATOR, NOT_CONS_NIL]
+  ),
+  
+  Q.EXISTS_TAC `h::l1` THEN Q.EXISTS_TAC `l2` THEN
+  ASM_SIMP_TAC bool_ss [CONS_11, APPEND, FILTER],
+  
+  Cases_on `l1` THENL [
+    FULL_SIMP_TAC bool_ss [APPEND, CONS_11],   
+    Q.EXISTS_TAC `l'` THEN Q.EXISTS_TAC `l2` THEN
+    FULL_SIMP_TAC bool_ss [CONS_11, APPEND, FILTER, COND_RATOR,
+			   COND_RAND, NOT_CONS_NIL]
+  ]
+]);
+
+
+val FILTER_EQ_APPEND = Q.store_thm 
+("FILTER_EQ_APPEND",
+ `!P l l1 l2.
+  (FILTER P l = l1 ++ l2) =
+  (?l3 l4. (l = l3++l4) /\ (FILTER P l3 = l1) /\ (FILTER P l4 = l2))`,
+
+GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THEN1 (
+  ASM_SIMP_TAC bool_ss [FILTER, APPEND_eq_NIL] THEN PROVE_TAC[]
+) THEN
+REPEAT STRIP_TAC THEN Cases_on `P h` THEN 
+ASM_SIMP_TAC bool_ss [FILTER] THENL [
+  Cases_on `l1` THENL [
+    Cases_on `l2` THENL [
+      SIMP_TAC bool_ss [APPEND, NOT_CONS_NIL, FILTER_EQ_NIL, EVERY_MEM] THEN
+      PROVE_TAC[MEM_APPEND, MEM],
+
+      ASM_SIMP_TAC bool_ss [APPEND, CONS_11] THEN
+      EQ_TAC THEN STRIP_TAC THENL [
+        Q.EXISTS_TAC `[]` THEN Q.EXISTS_TAC `h::l` THEN
+        FULL_SIMP_TAC bool_ss [APPEND, FILTER],
+
+        Tactical.REVERSE (Cases_on `l3`) THEN1 (
+           FULL_SIMP_TAC bool_ss [CONS_11, FILTER, APPEND,
+	                          COND_RAND, COND_RATOR, NOT_CONS_NIL]
+        ) THEN
+        Cases_on `l4` THEN (
+          FULL_SIMP_TAC bool_ss [FILTER, NOT_CONS_NIL, APPEND,
+	                         COND_RATOR, COND_RAND, CONS_11] THEN
+          PROVE_TAC[]
+        )
+      ]
+    ],
+
+    ASM_SIMP_TAC bool_ss [APPEND, CONS_11] THEN
+    EQ_TAC THEN STRIP_TAC THENL [
+       Q.EXISTS_TAC `h::l3` THEN Q.EXISTS_TAC `l4` THEN
+       FULL_SIMP_TAC bool_ss [APPEND, FILTER],
+
+       Cases_on `l3` THEN (
+         FULL_SIMP_TAC bool_ss [APPEND, FILTER, NOT_CONS_NIL, FILTER, CONS_11,
+			        COND_RAND, COND_RATOR] THEN
+         PROVE_TAC[]
+       )
+    ]
+  ],
+
+  EQ_TAC THEN STRIP_TAC THENL [
+    Q.EXISTS_TAC `h::l3` THEN Q.EXISTS_TAC `l4` THEN
+    ASM_SIMP_TAC bool_ss [APPEND, FILTER],
+
+    Cases_on `l3` THENL [
+       Cases_on `l4` THEN 
+       FULL_SIMP_TAC bool_ss [APPEND, NOT_CONS_NIL, CONS_11] THEN
+       Q.EXISTS_TAC `[]` THEN Q.EXISTS_TAC `l` THEN
+       FULL_SIMP_TAC bool_ss [FILTER, APPEND] THEN
+       PROVE_TAC[],
+
+       Q.EXISTS_TAC `l'` THEN Q.EXISTS_TAC `l4` THEN
+       FULL_SIMP_TAC bool_ss [FILTER, APPEND, CONS_11] THEN
+       PROVE_TAC[]		 
+    ]
+  ]
+]);
+
+val EVERY_FILTER = Q.store_thm 
+("EVERY_FILTER",
+ `!P1 P2 l. EVERY P1 (FILTER P2 l) =
+            EVERY (\x. P2 x ==> P1 x) l`,
+
+GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC THEN (
+  ASM_SIMP_TAC bool_ss [FILTER, EVERY_DEF, COND_RATOR, COND_RAND]
+));
+
+val FILTER_COND_REWRITE = Q.store_thm 
+("FILTER_COND_REWRITE",
+ `(FILTER P [] = []) /\
+  (!h. (P h) ==> ((FILTER P (h::l) = h::FILTER P l))) /\
+  (!h. ~(P h) ==> (FILTER P (h::l) = FILTER P l))`,
+SIMP_TAC bool_ss [FILTER]);
+
+val MEMBER_NOT_NIL = Q.store_thm 
+("MEMBER_NOT_NIL",
+ `!l. (?e. MEM e l) = ~(l = [])`,
+  Cases_on `l` THEN SIMP_TAC bool_ss [EXISTS_OR_THM, MEM, NOT_CONS_NIL]);
 
 (* Computing EL when n is in numeral representation *)
 val EL_compute = store_thm("EL_compute",
@@ -967,7 +1202,6 @@ val FILTER_APPEND_DISTRIB = Q.store_thm
    GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC
     THEN RW_TAC bool_ss [FILTER,APPEND]);
 
-
 (* ----------------------------------------------------------------------
     TAKE and DROP
    ---------------------------------------------------------------------- *)
@@ -1059,6 +1293,77 @@ val ALL_DISTINCT_FILTER = store_thm(
                 FORALL_AND_THM, CONS_11, EQ_IMP_THM, lemma] THEN
   metisLib.METIS_TAC []);
 
+
+
+val FILTER_ALL_DISTINCT = store_thm (
+  "FILTER_ALL_DISTINCT",
+  ``!P l. ALL_DISTINCT l ==> ALL_DISTINCT (FILTER P l)``,
+
+   GEN_TAC THEN LIST_INDUCT_TAC THEN (
+      ASM_SIMP_TAC bool_ss [ALL_DISTINCT, FILTER,
+			    COND_RAND, COND_RATOR,
+			    MEM_FILTER]
+   ));
+
+
+val ALL_DISTINCT_EL_EQ = store_thm (
+   "EL_ALL_DISTINCT_EL_EQ",
+   ``!l. ALL_DISTINCT l =
+         (!n1 n2. n1 < LENGTH l /\ n2 < LENGTH l ==>
+         ((EL n1 l = EL n2 l) = (n1 = n2)))``,
+
+   LIST_INDUCT_TAC THENL [
+      SIMP_TAC arith_ss [ALL_DISTINCT, LENGTH],
+      
+      ASM_SIMP_TAC arith_ss [ALL_DISTINCT, LENGTH] THEN
+      GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+         Cases_on `n1` THEN Cases_on `n2` THENL [
+            REWRITE_TAC[],
+            SIMP_TAC arith_ss [EL,HD,TL] THEN PROVE_TAC[MEM_EL],
+            SIMP_TAC arith_ss [EL,HD,TL] THEN PROVE_TAC[MEM_EL],
+            ASM_SIMP_TAC arith_ss [EL,HD,TL]
+         ],
+
+         STRIP_TAC THENL [
+            SIMP_TAC bool_ss [MEM_EL] THEN GEN_TAC THEN 
+            POP_ASSUM (fn thm => ASSUME_TAC (Q.SPECL [`0`, `SUC n`] thm)) THEN
+            FULL_SIMP_TAC arith_ss [EL, HD, TL] THEN
+            PROVE_TAC[],
+
+            REPEAT GEN_TAC THEN
+            POP_ASSUM (fn thm => ASSUME_TAC (Q.SPECL [`SUC n1`, `SUC n2`] thm)) THEN
+            FULL_SIMP_TAC arith_ss [EL,HD,TL]
+         ]
+      ]
+   ]);
+   
+
+val ALL_DISTINCT_EL_IMP = store_thm (
+   "ALL_DISTINCT_EL_IMP",
+   ``!l n1 n2. ALL_DISTINCT l /\ n1 < LENGTH l /\ n2 < LENGTH l ==>
+         ((EL n1 l = EL n2 l) = (n1 = n2))``,
+   PROVE_TAC[ALL_DISTINCT_EL_EQ]);
+
+
+val ALL_DISTINCT_APPEND = store_thm (
+   "ALL_DISTINCT_APPEND",
+   ``!l1 l2. ALL_DISTINCT (l1++l2) =
+             (ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\
+             (!e. MEM e l1 ==> ~(MEM e l2)))``,
+
+   LIST_INDUCT_TAC THEN (
+      ASM_SIMP_TAC bool_ss [ALL_DISTINCT, APPEND, MEM, MEM_APPEND,
+			    DISJ_IMP_THM, FORALL_AND_THM] THEN
+      PROVE_TAC[]
+   ));
+
+val ALL_DISTINCT_SING = store_thm(
+   "ALL_DISTINCT_SING",
+   ``!x. ALL_DISTINCT [x]``,
+   SIMP_TAC bool_ss [ALL_DISTINCT, MEM]);
+
+
+
 (* ----------------------------------------------------------------------
     LIST_TO_SET
    ---------------------------------------------------------------------- *)
@@ -1070,6 +1375,7 @@ val IN_LIST_TO_SET = store_thm(
   "IN_LIST_TO_SET",
   ``x IN LIST_TO_SET l = MEM x l``,
   SRW_TAC [][LIST_TO_SET, boolTheory.IN_DEF]);
+
 val _ = export_rewrites ["IN_LIST_TO_SET"]
 
 (* ----------------------------------------------------------------------
@@ -1205,6 +1511,17 @@ val LIST_TO_SET_THM = Q.store_thm
   (LIST_TO_SET (h::t) = h INSERT (LIST_TO_SET t))`,
  SRW_TAC [][EXTENSION]);
 
+val LIST_TO_SET_APPEND = Q.store_thm 
+("LIST_TO_SET_APPEND",
+ `!l1 l2. LIST_TO_SET (APPEND l1 l2) =
+          LIST_TO_SET l1 UNION LIST_TO_SET l2`,
+
+LIST_INDUCT_TAC THENL [
+   SIMP_TAC arith_ss [LIST_TO_SET_THM, UNION_EMPTY, APPEND],
+   ASM_SIMP_TAC arith_ss [LIST_TO_SET_THM, EXTENSION, IN_UNION, IN_INSERT,
+			  APPEND, DISJ_ASSOC]
+])
+
 val _ = export_rewrites ["LIST_TO_SET_THM"];
 
 
@@ -1269,6 +1586,17 @@ val FINITE_LIST_TO_SET = Q.store_thm
 ("FINITE_LIST_TO_SET",
  `!l. FINITE (LIST_TO_SET l)`,
  Induct THEN SRW_TAC [][]);
+
+val ALL_DISTINCT_SET_TO_LIST = store_thm("ALL_DISTINCT_SET_TO_LIST",
+  ``!s. FINITE s ==> ALL_DISTINCT (SET_TO_LIST s)``,
+  recInduct SET_TO_LIST_IND THEN
+  REPEAT STRIP_TAC THEN
+  IMP_RES_TAC SET_TO_LIST_THM THEN
+  `FINITE (REST s)` by PROVE_TAC[pred_setTheory.FINITE_DELETE,
+				 pred_setTheory.REST_DEF] THEN
+  Cases_on `s = EMPTY` THEN
+  FULL_SIMP_TAC bool_ss [ALL_DISTINCT, MEM_SET_TO_LIST,
+			 pred_setTheory.CHOICE_NOT_IN_REST]);
 
 val _ = export_rewrites ["FINITE_LIST_TO_SET"];
 val _ = overload_on ("set", ``LIST_TO_SET : 'a list -> 'a set``);

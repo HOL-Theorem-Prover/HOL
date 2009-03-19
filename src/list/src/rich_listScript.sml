@@ -21,7 +21,7 @@ struct
 
 local open operatorTheory listTheory in end;
 
-open HolKernel Parse boolLib numLib Prim_rec ;
+open HolKernel Parse boolLib numLib Prim_rec SingleStep simpLib boolSimps;
 
 infix THEN THENL ORELSE;
 
@@ -29,6 +29,8 @@ val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 val list_Axiom = listTheory.list_Axiom;
 val list_Axiom_old = listTheory.list_Axiom_old;
 val let_CONV = PairedLambda.let_CONV;
+val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
+val list_ss  = arith_ss ++ listSimps.LIST_ss
 
 val _ = new_theory "rich_list";
 
@@ -622,10 +624,12 @@ val SNOC_Axiom = store_thm(
   Q.EXISTS_TAC `fn1` THEN ASM_REWRITE_TAC []);
 
 
+val NOT_NULL_SNOC = store_thm(
+  "NOT_NULL_SNOC",
+  (--`!(x:'a) l. ~NULL(SNOC x l)`--),
+  GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[SNOC,NULL_DEF])
+
 val IS_SUFFIX = let
-  val NOT_NULL_SNOC = prove(
-    (--`!(x:'a) l. ~NULL(SNOC x l)`--),
-    GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[SNOC,NULL_DEF])
   val lemma = prove(
     (--`?fn.
            (!l. fn l [] = T) /\
@@ -3058,6 +3062,10 @@ val MAP2_ZIP = save_thm("MAP2_ZIP", listTheory.MAP2_ZIP);
 val ZIP = save_thm("ZIP", listTheory.ZIP);
 val UNZIP = save_thm("UNZIP", listTheory.UNZIP);
 
+
+
+
+
 (*---------------------------------------------------------------------------
    A bunch of properties relating to the use of IS_PREFIX as a partial order
  ---------------------------------------------------------------------------*)
@@ -3186,6 +3194,240 @@ val IS_PREFIX_APPENDS = store_thm
    ``!a b c. IS_PREFIX (APPEND a c) (APPEND a b) = IS_PREFIX c b``,
    INDUCT_THEN list_INDUCT ASSUME_TAC
    THEN ASM_SIMP_TAC boolSimps.bool_ss [APPEND, IS_PREFIX]);
+
+
+(*---------------------------------------------------------------------------
+   Theorems about genlist. From Antony Fox's theories. Added by Thomas Tuerk
+ ---------------------------------------------------------------------------*)
+
+val MAP_GENLIST = store_thm("MAP_GENLIST",
+  ``!f g n. MAP f (GENLIST g n) = GENLIST (f o g) n``,
+  Induct_on `n` THEN ASM_SIMP_TAC list_ss [GENLIST,MAP_SNOC, combinTheory.o_THM]);
+
+val EL_GENLIST = store_thm("EL_GENLIST",
+  ``!f n x. x < n ==> (EL x (GENLIST f n) = f x)``,
+  Induct_on `n` THEN1 SIMP_TAC arith_ss [] THEN
+  REPEAT STRIP_TAC THEN REWRITE_TAC [GENLIST] THEN
+  Cases_on `x < n` THEN
+  POP_ASSUM (fn th => ASSUME_TAC
+           (SUBS [(GSYM o Q.SPECL [`f`,`n`]) LENGTH_GENLIST] th) THEN
+            ASSUME_TAC th) THEN1 (
+    ASM_SIMP_TAC bool_ss [EL_SNOC]
+  ) THEN
+  `x = LENGTH (GENLIST f n)` by FULL_SIMP_TAC arith_ss [LENGTH_GENLIST] THEN
+  ASM_SIMP_TAC bool_ss [EL_LENGTH_SNOC] THEN
+  REWRITE_TAC [LENGTH_GENLIST]);
+
+val HD_GENLIST = save_thm("HD_GENLIST",
+  (SIMP_RULE arith_ss [EL] o Q.SPECL [`f`,`SUC n`,`0`]) EL_GENLIST);
+
+val GENLIST_FUN_EQ = store_thm("GENLIST_FUN_EQ",
+  ``!n f g. (!x. x < n ==> (f x = g x)) ==> (GENLIST f n = GENLIST g n)``,
+  SIMP_TAC bool_ss [listTheory.LIST_EQ_REWRITE, LENGTH_GENLIST, EL_GENLIST]);
+
+val GENLIST_APPEND = store_thm("GENLIST_APPEND",
+  ``!f a b. GENLIST f (a + b) = (GENLIST f b) ++ (GENLIST (\t. f (t + b)) a)``,
+  Induct_on `a` THEN
+  ASM_SIMP_TAC list_ss [GENLIST,APPEND_SNOC,arithmeticTheory.ADD_CLAUSES]
+);
+
+val EVERY_GENLIST = store_thm("EVERY_GENLIST",
+  ``!n. (!i. i < n ==> P (f i)) ==> EVERY P (GENLIST f n)``,
+  Induct_on `n` THEN ASM_SIMP_TAC list_ss [GENLIST,ALL_EL_SNOC] )
+
+val ZIP_GENLIST = store_thm("ZIP_GENLIST",
+  ``!l f n. (LENGTH l = n) ==>
+      (ZIP (l,GENLIST f n) = GENLIST (\x. (EL x l,f x)) n)``,
+  REPEAT STRIP_TAC THEN
+  `LENGTH (ZIP (l,GENLIST f n)) = LENGTH (GENLIST (\x. (EL x l,f x)) n)`
+    by ASM_SIMP_TAC arith_ss [LENGTH_GENLIST,LENGTH_ZIP] THEN
+  ASM_SIMP_TAC arith_ss [listTheory.LIST_EQ_REWRITE, LENGTH_GENLIST, LENGTH_ZIP, 
+                         listTheory.EL_ZIP, EL_GENLIST]);
+
+
+
+(*---------------------------------------------------------------------------
+   General theorems about lists. From Antony Fox's and Thomas Tuerk's theories. 
+   Added by Thomas Tuerk
+ ---------------------------------------------------------------------------*)
+
+val EL_BUTFIRSTN = store_thm("EL_BUTFIRSTN",
+  ``!m n l. m + n < LENGTH l ==>
+      (EL m (BUTFIRSTN n l) = EL (m + n) l)``,
+  Induct_on `l` THEN SIMP_TAC list_ss [] THEN 
+  Cases_on `n` THEN FULL_SIMP_TAC list_ss [BUTFIRSTN,ADD_CLAUSES]);
+
+val SNOC_EL_FIRSTN = store_thm("SNOC_EL_FIRSTN",
+  ``!n l. n < LENGTH l ==> (SNOC (EL n l) (FIRSTN n l) = FIRSTN (SUC n) l)``,
+  Induct_on `n` THEN Cases_on `l` THEN ASM_SIMP_TAC list_ss [SNOC,FIRSTN]);
+
+val ZIP_FIRSTN_LEQ = store_thm("ZIP_FIRSTN_LEQ",
+  ``!n a b. n <= LENGTH a /\ LENGTH a <= LENGTH b ==>
+     (ZIP (FIRSTN n a,FIRSTN n b) = FIRSTN n (ZIP (a,FIRSTN (LENGTH a) b)))``,
+  Induct_on `n` THEN ASM_SIMP_TAC list_ss [FIRSTN] THEN
+  Cases_on `a` THEN Cases_on `b` THEN ASM_SIMP_TAC list_ss [FIRSTN,ZIP]);
+
+val ZIP_FIRSTN = store_thm("ZIP_FIRSTN",
+  ``!n a b. n <= LENGTH a /\ (LENGTH a = LENGTH b) ==>
+     (ZIP (FIRSTN n a,FIRSTN n b) = FIRSTN n (ZIP (a,b)))``,
+  SIMP_TAC arith_ss [ZIP_FIRSTN_LEQ,FIRSTN_LENGTH_ID]);
+
+val EL_FIRSTN = store_thm("EL_FIRSTN",
+  ``!n x l. x < n /\ n <= LENGTH l ==> (EL x (FIRSTN n l) = EL x l)``,
+  Induct_on `n` THEN ASM_SIMP_TAC list_ss [FIRSTN] THEN
+  Cases_on `x` THEN Cases_on `l` THEN ASM_SIMP_TAC list_ss [FIRSTN]);
+
+val ZIP_APPEND = store_thm("ZIP_APPEND",
+  ``!a b c d. (LENGTH a = LENGTH b) /\
+              (LENGTH c = LENGTH d) ==>
+              (ZIP (a,b) ++ ZIP (c,d) = ZIP (a ++ c,b ++ d))``,
+  Induct_on `b` THEN1 SIMP_TAC list_ss [LENGTH_NIL] THEN
+  Induct_on `d` THEN1 SIMP_TAC list_ss [LENGTH_NIL] THEN
+  Induct_on `a` THEN1 SIMP_TAC list_ss [LENGTH_NIL] THEN
+  Induct_on `c` THEN1 SIMP_TAC list_ss [LENGTH_NIL] THEN
+  MAP_EVERY Q.X_GEN_TAC [`h1`,`h2`,`h3`,`h4`] THEN
+  RW_TAC list_ss [] THEN
+  `LENGTH (h1::c) = LENGTH (h3::d)` by ASM_SIMP_TAC list_ss [] THEN
+  `ZIP (a,b) ++ ZIP (h1::c,h3::d) = ZIP (a ++ h1::c,b ++ h3::d)`
+      by ASM_SIMP_TAC list_ss [] THEN
+  FULL_SIMP_TAC list_ss []);
+
+
+val APPEND_ASSOC_CONS = store_thm (
+"APPEND_ASSOC_CONS",
+``!l1 h l2 l3. 
+  (l1 ++ (h::l2) ++ l3 =
+   l1 ++ h::(l2++l3))``,
+   REWRITE_TAC[GSYM APPEND_ASSOC, APPEND]);
+
+val APPEND_SNOC1 = store_thm("APPEND_SNOC1",
+  ``!l1 x l2. SNOC x l1 ++ l2 = l1 ++ x::l2``,
+  PROVE_TAC [SNOC_APPEND,CONS_APPEND, APPEND_ASSOC]);
+
+val SNOC_INDUCT_TAC = INDUCT_THEN SNOC_INDUCT ASSUME_TAC;
+
+val FOLDL_MAP2 = store_thm("FOLDL_MAP2",
+  ``!f e g l. FOLDL f e (MAP g l) = FOLDL (\x y. f x (g y)) e l``,
+   GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN SNOC_INDUCT_TAC
+   THEN ASM_REWRITE_TAC[MAP,FOLDL,FOLDL_SNOC,MAP_SNOC,FOLDR]
+   THEN BETA_TAC THEN REWRITE_TAC[]);
+
+val SPLITP_EVERY = store_thm("SPLITP_EVERY",
+  ``!P l. EVERY (\x. ~P x) l ==> (SPLITP P l = (l, []))``,
+  Induct_on `l` THEN SRW_TAC [] [SPLITP]);
+
+
+val MEM_FRONT = store_thm ("MEM_FRONT",
+  ``!l e y. MEM y (FRONT (e::l)) ==> MEM y (e::l)``,
+Induct_on `l` THEN FULL_SIMP_TAC list_ss [DISJ_IMP_THM]);
+
+val FRONT_APPEND = store_thm ("FRONT_APPEND",
+  ``FRONT (l1 ++ e::l2) = l1++FRONT(e::l2)``,
+Induct_on `l1` THEN ASM_SIMP_TAC list_ss [listTheory.FRONT_DEF])
+
+val FRONT_LENGTH = store_thm ("FRONT___LENGTH",
+  ``!l. ~(l = []) ==> (LENGTH (FRONT l) = PRE (LENGTH l))``,
+  Induct_on `l` THEN FULL_SIMP_TAC list_ss [listTheory.FRONT_DEF, COND_RATOR, COND_RAND] THEN
+  Cases_on `l` THEN SIMP_TAC arith_ss [LENGTH]);
+
+val EL_FRONT = store_thm ("EL_FRONT",
+  ``!l n. ((n < LENGTH (FRONT l)) /\ ~(NULL l)) ==>
+           (EL n (FRONT l) = EL n l)``,
+  Induct_on `l` THEN REWRITE_TAC[NULL] THEN
+  Cases_on `l` THEN FULL_SIMP_TAC list_ss [NULL, FRONT_LENGTH] THEN
+  Cases_on `n` THEN ASM_SIMP_TAC list_ss []);
+
+val LAST_APPEND = store_thm ("LAST_APPEND",
+  ``!e l1 l2. LAST (l1 ++ (e::l2)) = LAST (e::l2)``,
+  Induct_on `l1` THEN ASM_SIMP_TAC list_ss [listTheory.LAST_DEF]);
+
+val MAP_EQ_f = store_thm ("MAP_EQ_f",
+  ``!f1 f2 l. (MAP f1 l = MAP f2 l) = (!e. MEM e l ==> (f1 e = f2 e))``,
+  Induct_on `l` THEN ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM])
+
+val MEM_LAST = store_thm ("MEM_LAST",
+  ``!e l. MEM (LAST (e::l)) (e::l)``,
+  Induct_on `l` THEN ASM_SIMP_TAC arith_ss [LAST_CONS, Once listTheory.MEM]);
+
+
+val BUTFIRSTN_CONS_EL = store_thm ("BUTFIRSTN_CONS_EL",
+  ``!n. (n < LENGTH l) ==> ((BUTFIRSTN n l) = (EL n l) :: (BUTFIRSTN (SUC n) l))``,
+
+  Induct_on `l` THEN1 SIMP_TAC list_ss [] THEN
+  Cases_on `n` THEN ASM_SIMP_TAC list_ss []);
+
+
+val ALL_DISTINCT_SNOC = store_thm (
+   "ALL_DISTINCT_SNOC",
+   ``!x l. ALL_DISTINCT (SNOC x l) =
+             ~(MEM x l) /\ (ALL_DISTINCT l)``,
+SIMP_TAC list_ss [SNOC_APPEND, listTheory.ALL_DISTINCT_APPEND] THEN PROVE_TAC[]);
+
+
+val MEM_LAST_FRONT = store_thm (
+   "MEM_LAST_FRONT",
+``!e l h. MEM e l /\ ~(e = LAST (h::l)) ==>
+          MEM e (FRONT (h::l))``,
+
+Induct_on `l` THEN 
+FULL_SIMP_TAC list_ss [COND_RATOR, COND_RAND, listTheory.FRONT_DEF, listTheory.LAST_DEF] THEN
+PROVE_TAC[]);
+
+
+(*---------------------------------------------------------------------------
+   LIST_ELEM_COUNT and REPLACE_ELEMENT
+   Added by Thomas Tuerk
+ ---------------------------------------------------------------------------*)
+
+val LIST_ELEM_COUNT_DEF = new_definition("LIST_ELEM_COUNT_DEF", 
+    ``LIST_ELEM_COUNT e l = LENGTH (FILTER (\x. x = e) l)``);
+
+val LIST_ELEM_COUNT_THM = store_thm ("LIST_ELEM_COUNT_THM",
+  ``(!e. LIST_ELEM_COUNT e [] = 0) /\
+    (!e l1 l2. LIST_ELEM_COUNT e (l1++l2) = LIST_ELEM_COUNT e l1 + LIST_ELEM_COUNT e l2) /\
+    (!e h l. (h = e) ==> (LIST_ELEM_COUNT e (h::l) = SUC (LIST_ELEM_COUNT e l))) /\
+    (!e h l. ~(h = e) ==> (LIST_ELEM_COUNT e (h::l) = LIST_ELEM_COUNT e l))``,
+SIMP_TAC list_ss [LIST_ELEM_COUNT_DEF, FILTER_APPEND]);
+
+val LIST_ELEM_COUNT_MEM = store_thm ("LIST_ELEM_COUNT_MEM",
+  ``!e l. (LIST_ELEM_COUNT e l > 0) = (MEM e l)``,
+  Induct_on `l` THEN 
+  FULL_SIMP_TAC list_ss [LIST_ELEM_COUNT_DEF,
+                         COND_RAND, COND_RATOR] THEN
+  PROVE_TAC[]);
+
+
+
+local 
+   val REPLACE_ELEMENT_exists = prove (``?fn.
+                (!e:'a n:num. fn e n ([]:'a list) = []:'a list) /\
+                (!e x l. fn e 0 (x::l) = e::l) /\
+                (!e n x l. fn e (SUC n) (x::l) = CONS x (fn e n l))``,
+                REPEAT STRIP_TAC THEN
+                STRIP_ASSUME_TAC (ISPECL [``(\x1 x2. []):'a -> num -> 'a list``,
+                ``\(x:'a) (l:'a list) (r:'a->num->'a list) (e:'a) (n:num). if n = 0 then e::l else
+				     (CONS x (r e (PRE n)):'a list)``] list_Axiom) THEN
+                Q.EXISTS_TAC `\x1 x2 x3. fn x3 x1 x2` THEN
+                ASM_SIMP_TAC arith_ss []);
+in
+
+   val REPLACE_ELEMENT_DEF = Rsyntax.new_specification{name = "REPLACE_ELEMENT_DEF",
+                      sat_thm = REPLACE_ELEMENT_exists,
+                      consts =  [{const_name = "REPLACE_ELEMENT", fixity = Prefix}]
+                     };
+end;
+
+val REPLACE_ELEMENT_SEM = store_thm (
+  "REPLACE_ELEMENT_SEM",
+  ``(!e:'a n l. (LENGTH (REPLACE_ELEMENT e n l) = LENGTH l)) /\
+    (!e:'a n l p. p < LENGTH l ==>
+            (EL p (REPLACE_ELEMENT e n l) =
+             if (p = n) then e else EL p l))``,
+
+CONJ_TAC THEN Induct_on `n` THEN Cases_on `l` THEN
+ASM_SIMP_TAC arith_ss [REPLACE_ELEMENT_DEF, LENGTH] THEN
+Cases_on `p` THEN ASM_SIMP_TAC arith_ss [EL, HD, TL]);
+
 
 (*---------------------------------------------------------------------------*)
 (* Add evaluation theorems to computeLib.the_compset                         *)
