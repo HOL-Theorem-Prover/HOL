@@ -157,30 +157,46 @@ fun extract_thm (GSTK{prop=PROVED(th,_), ...}) = th
 local
 val print_fvs = ref false
 val _ = register_btrace ("goalstack fvs", print_fvs)
+
+val print_goal_at_top = ref true;
+val _ = register_btrace ("goalstack print goal at top", print_goal_at_top)
+
+val print_number_assums = ref 1000000;
+val _ = register_trace ("goalstack number of assums", print_number_assums, 1000000)
+
+
 fun ppgoal ppstrm (asl,w) =
    let open Portable
        val {add_string, add_break,
             begin_block, end_block, add_newline, ...} = with_ppstream ppstrm
        val pr = Parse.pp_term ppstrm
-       fun pr_index (i,tm) =
+       val length_asl = length asl;
+       fun pr_index (i,tm) = if ((!print_number_assums) >= length_asl - i) then
             (begin_block CONSISTENT 0;
              add_string (Int.toString i^".  ");
-             pr tm; end_block())
+             pr tm; (if (i = length_asl - 1) then () else add_newline()); end_block()) else ()
        fun pr_indexes [] = raise ERR "pr_indexes" ""
          | pr_indexes [x] = pr x
-         | pr_indexes L = pr_list pr_index (fn () => ()) add_newline
+         | pr_indexes L = pr_list pr_index (fn () => ()) (fn () => ()) 
                                   (Lib.enumerate 0 (rev asl));
+
+       fun pr_hidden_indexes L = ((if (((!print_number_assums) < length_asl)) then             
+                                    (begin_block CONSISTENT 0;
+                                       add_string ("..."); 
+	                               if (!print_number_assums > 0) then add_newline() else ();
+                                     end_block()) else ());pr_indexes L);
    in
      begin_block CONSISTENT 0;
-     pr w;
-     add_newline ();
-     (case asl
-        of [] => ()
-         | _  => ( begin_block CONSISTENT 2;
-                   add_string (!Globals.goal_line);
-                   add_newline ();
-                   pr_indexes asl; end_block ()));
-     add_newline ();
+     if (not (!print_goal_at_top)) then () else ( 
+        pr w;
+        add_newline ();
+        (case asl
+           of [] => ()
+           | _  => ( begin_block CONSISTENT 2;
+                     add_string (!Globals.goal_line);
+                     add_newline ();
+                     pr_hidden_indexes asl; end_block ()));
+        add_newline ());
      if !print_fvs then let
          val fvs = Listsort.sort Term.compare (free_varsl (w::asl))
          fun pr_v v = let
@@ -203,6 +219,18 @@ fun ppgoal ppstrm (asl,w) =
          else ()
        end
      else ();
+     if (!print_goal_at_top) then () else ( 
+        (case asl
+           of [] => ()
+           | _  => ( begin_block CONSISTENT 2;
+                     add_string "  ";
+                     pr_hidden_indexes asl; 
+                     end_block ();
+                     add_newline ();
+                     add_string (!Globals.goal_line)));    
+        add_newline ();
+        pr w;
+        add_newline ());
      end_block ()
    end
    handle e => (Lib.say "\nError in attempting to print a goal!\n";  raise e);
