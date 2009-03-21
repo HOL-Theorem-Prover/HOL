@@ -240,10 +240,13 @@ with
  fun wk_mk_travrules (rels, congs) = let
    fun cong2proc th = let
      open Opening Travrules
-     val r = rel_of_congrule th
-     val PREORDER(_,_,refl) = find_relation r rels
+     fun mk_refl rel t = let 
+       val PREORDER(_,_,refl) = find_relation rel rels	 
+     in
+       refl t
+     end
    in
-     CONGPROC (fn _ => fn t => refl t) th
+     CONGPROC mk_refl th
    end
  in
    TRAVRULES {relations = rels,
