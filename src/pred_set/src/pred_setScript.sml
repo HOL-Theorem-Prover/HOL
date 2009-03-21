@@ -4268,7 +4268,7 @@ Q.EXISTS_TAC `f o f'` THEN
 RWTAC [] THEN
 METIS_TAC []);
 
-val finite_countable = Q.prove (
+val finite_countable = Q.store_thm ("finite_countable",
 `!s. FINITE s ==> countable s`,
 HO_MATCH_MP_TAC FINITE_INDUCT THEN
 RWTAC [countable_def] THEN
