@@ -28,7 +28,7 @@ val perm_of_swapstr = store_thm(
 val permeq_def = Define`
   permeq l1 l2 = (perm_of l1 = perm_of l2)
 `;
-val _ = set_fixity "==" (Infix(NONASSOC, 100));
+val _ = set_fixity "==" (Infix(NONASSOC, 450));
 val _ = overload_on ("==", ``permeq``)
 
 val permeq_permeq_cong = store_thm(
