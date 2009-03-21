@@ -135,7 +135,7 @@ val fnsum_def = new_definition(
   "fnsum_def",
   ``fnsum f1 f2 X = f1 X UNION f2 X``);
 
-val _ = set_fixity "++" (Infixl 440)
+val _ = set_fixity "++" (Infixl 480)
 val _ = overload_on ("++", ``fnsum``);
 
 val fnsum_monotone = store_thm(
