@@ -80,7 +80,7 @@ val one_hole_is_normal = store_thm(
                                   MP_TAC (MATCH_MP imp (CONJ cth th))))) THEN
   SIMP_TAC std_ss []);
 
-val _ = set_fixity "==" (Infix(NONASSOC, 510));
+val _ = set_fixity "==" (Infix(NONASSOC, 450));
 val (lam_eq_rules, lam_eq_indn, lam_eq_cases) = (* p. 13 *)
   Hol_reln`(!x M N. (LAM x M) @@ N == [N/x]M) /\
            (!M. M == M) /\
@@ -89,6 +89,16 @@ val (lam_eq_rules, lam_eq_indn, lam_eq_cases) = (* p. 13 *)
            (!M N Z. M == N ==> M @@ Z == N @@ Z) /\
            (!M N Z. M == N ==> Z @@ M == Z @@ N) /\
            (!M N x. M == N ==> LAM x M == LAM x N)`;
+
+val lameq_app_cong = store_thm(
+  "lameq_app_cong",
+  ``M1 == M2 ==> N1 == N2 ==> M1 @@ N1 == M2 @@ N2``,
+  METIS_TAC [lam_eq_rules]);
+
+val lameq_weaken_cong = store_thm(
+  "lameq_weaken_cong",
+  ``(M1:term) == M2 ==> N1 == N2 ==> (M1 == N1 <=> M2 == N2)``,
+  METIS_TAC [lam_eq_rules]);
 
 val _ = app (uncurry set_MLname) [("==_rules", "lam_eq_rules"),
                                   ("==_ind", "lam_eq_indn"),
@@ -314,7 +324,7 @@ val lameq_I = store_thm(
   ``I @@ A == A``,
   PROVE_TAC [lam_eq_rules, I_def, SUB_THM]);
 
-val FV_I = store_thm("FV_I", ``FV I = {}``, SRW_TAC [][I_def]);
+val FV_I = Store_thm("FV_I", ``FV I = {}``, SRW_TAC [][I_def]);
 
 val SK_incompatible = store_thm( (* example 2.18, p23 *)
   "SK_incompatible",

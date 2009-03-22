@@ -893,6 +893,21 @@ val lameq_betaconversion = store_thm(
 
 val prop3_18 = save_thm("prop3_18", lameq_betaconversion);
 
+val ccbeta_lameq = store_thm(
+  "ccbeta_lameq",
+  ``!M N. M -b-> N ==> M == N``,
+  SRW_TAC [][lameq_betaconversion, relationTheory.EQC_R]);
+val betastar_lameq = store_thm(
+  "betastar_lameq",
+  ``!M N. M -b->* N ==> M == N``,
+  SRW_TAC [][lameq_betaconversion, relationTheory.RTC_EQC]);
+
+val betastar_lameq_bnf = store_thm(
+  "betastar_lameq_bnf",
+  ``bnf N ==> (M -b->* N <=> M == N)``,
+  METIS_TAC [theorem3_13, beta_CR, betastar_lameq, bnf_reduction_to_self,
+             lameq_betaconversion]);
+
 val lameq_consistent = store_thm(
   "lameq_consistent",
   ``consistent $==``,

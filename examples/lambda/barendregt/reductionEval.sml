@@ -13,6 +13,7 @@ val betastar_t = ``(-b->*)``
 val normorderstar_t = ``(-n->*)``
 val beta_t = ``(-b->)``
 val normorder_t = ``(-n->)``
+val lameq_t = ``(==) : term -> term -> bool``
 
 fun rtc_po t = let
   open relationTheory Travrules
@@ -22,6 +23,18 @@ fun rtc_po t = let
 in
   mk_preorder (rwt transitive_RTC, rwt reflexive_RTC)
 end
+
+val [lameq_beta,lameq_refl,lameq_sym,lameq_trans,
+     lameq_APPl, lameq_APPr, lameq_LAM] = CONJUNCTS chap2Theory.lam_eq_rules
+
+val lameq_APPcong = chap2Theory.lameq_app_cong
+
+val lameq_po = let
+  open relationTheory Travrules
+in
+  mk_preorder (lameq_trans, lameq_refl)
+end
+       
 
 
 val betastar_po = rtc_po beta_t
@@ -41,12 +54,14 @@ end
 
 exception redExn of thm Net.net
 
-val congs = [betastar_APPlr, SPEC_ALL betastar_LAM_I]
+val congs = [lameq_APPcong, SPEC_ALL lameq_LAM(* , 
+             REWRITE_RULE [GSYM AND_IMP_INTRO]
+                          (last (CONJUNCTS chap2Theory.lemma2_12))*)]
 
 val initial_net = let
   open Net
 in
-  insert(lhand (concl beta_betastar), beta_betastar) empty
+  insert(lhand (concl (SPEC_ALL lameq_beta)), lameq_beta) empty
 end
 
 val initial_ctxt = redExn initial_net
@@ -100,12 +115,15 @@ in
 end
 
 fun addcontext (ctxt, thms) = let
+  open chap3Theory
   val n = case ctxt of redExn n => n
                      | _ => raise ERR "addcontext" "Wrong sort of ctxt"
 in
-  redExn (munge betastar_t
-                [(beta_t, relationTheory.RTC_SINGLE),
-                 (normorderstar_t, nstar_betastar)]
+  redExn (munge lameq_t
+                [(beta_t, ccbeta_lameq),
+                 (betastar_t, betastar_lameq),
+                 (normorder_t, normorder_lameq),
+                 (normorderstar_t, nstar_lameq)]
                 []
                 ([map TH thms], n))
 end
@@ -127,7 +145,10 @@ in
   do_sideconds matched
 end
 
+fun po_rel (Travrules.PREORDER(r,_,_)) = r
 fun apply {solver,context,stack,relation} t = let
+  val _ = aconv (po_rel relation) lameq_t orelse
+          raise ERR "apply" "Wrong relation"
   val n = case context of redExn n => n
                         | _ => raise ERR "apply" "Wrong sort of ctxt"
   val matches = Net.match t n
@@ -195,12 +216,12 @@ in
     end
 end
 
-fun po_rel (Travrules.PREORDER(r,_,_)) = r
 
 fun betafy ss =
-    simpLib.add_weakener ([betastar_po, equality_po],
-                          [betastar_eq_cong], reducer) ss ++
-    rewrites [termTheory.lemma14b, normal_orderTheory.nstar_betastar_bnf] ++
+    simpLib.add_weakener ([lameq_po, equality_po],
+                          [chap2Theory.lameq_weaken_cong], reducer) ss ++
+    rewrites [termTheory.lemma14b, normal_orderTheory.nstar_betastar_bnf,
+              betastar_lameq_bnf, lameq_refl] ++
     SSFRAG {dprocs = [], ac = [], rewrs = [], congs = congs, filter = NONE,
             name = NONE, convs = []}
 
@@ -310,7 +331,7 @@ in
   HOLset.listItems (HOLset.foldl foldthis (HOLset.empty String.compare) fvs)
 end
 
-fun unvarify_tac (w as (asl,g)) = let
+fun unvarify_tac th (w as (asl,g)) = let
   val (f,x,y) = dest_binop g
   val y_fvs = free_vars y
   val y_fvs = filter (fn t => type_of t = term_ty) y_fvs
@@ -360,7 +381,7 @@ fun unvarify_tac (w as (asl,g)) = let
         in
           new_tac THEN SUBGOAL_THEN (mk_eq(g,g')) SUBST1_TAC THENL [
             ASM_SIMP_TAC (srw_ss()) [termTheory.lemma14b],
-            MATCH_MP_TAC chap3Theory.reduction_beta_subst THEN
+            MATCH_MP_TAC th THEN
             do_them (HOLset.add(strs,newname_t), sets) rest
           ]
         end w

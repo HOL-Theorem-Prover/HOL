@@ -98,9 +98,14 @@ val normorder_bvc_ind = save_thm(
 
 val normorder_ccbeta = store_thm(
   "normorder_ccbeta",
-  ``∀M N. M -n-> N ⇒ compat_closure beta M N``,
+  ``∀M N. M -n-> N ⇒ M -β-> N``,
   HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][compat_closure_rules] THEN
   METIS_TAC [compat_closure_rules, beta_def]);
+
+val normorder_lameq = store_thm(
+  "normorder_lameq",
+  ``∀M N. M -n-> N ⇒ M == N``,
+  SRW_TAC [][normorder_ccbeta, ccbeta_lameq]);
 
 val normorder_FV = store_thm(
   "normorder_FV",
@@ -319,6 +324,11 @@ val nstar_betastar = store_thm(
   ``∀M N. M -n->* N ⇒ M -β->* N``,
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
   METIS_TAC [relationTheory.RTC_RULES, normorder_ccbeta]);
+
+val nstar_lameq = store_thm(
+  "nstar_lameq",
+  ``∀M N. M -n->* N ⇒ M == N``,
+  SRW_TAC [][nstar_betastar, betastar_lameq]);
 
 val nstar_betastar_bnf = store_thm(
   "nstar_betastar_bnf",

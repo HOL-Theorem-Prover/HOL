@@ -66,6 +66,65 @@ val bnf_cDB = Store_thm(
   ``bnf (cDB t)``,
   SRW_TAC [][cDB_def]);
 
+val NOT_IN_SUB = prove(
+  ``x ∉ FV M ∧ (x ≠ v ⇒ x ∉ FV N) ⇒ x ∉ FV ([M/v]N)``,
+  SRW_TAC [][termTheory.FV_SUB] THEN METIS_TAC []);
+
+val cDB_thm = store_thm(
+  "cDB_thm",
+  ``cDB (dV i) @@ v @@ c @@ a == v @@ church i ∧
+    cDB (dAPP M N) @@ v @@ c @@ a == c @@ (cDB M @@ v @@ c @@ a) 
+                                       @@ (cDB N @@ v @@ c @@ a) ∧
+    cDB (dABS M) @@ v @@ c @@ a == a @@ (cDB M @@ v @@ c @@ a)``,
+  REPEAT CONJ_TAC THENL [
+    SIMP_TAC (bsrw_ss()) [cDB_def] THEN FRESH_TAC THEN 
+    SRW_TAC [][NOT_IN_FV_ciDB] THEN 
+    ASM_SIMP_TAC (bsrw_ss()) [ciDB_def, tpm_fresh],
+
+    SIMP_TAC (srw_ss()) [cDB_def, ciDB_def] THEN 
+    Q_TAC (NEW_TAC "aa") `{"v"; "c"; "a"} ∪ FV v ∪ FV c ∪ FV a` THEN 
+    `(LAM "a" (VAR "c" @@ ciDB M @@ ciDB N) = 
+        LAM aa (VAR "c" @@ [VAR aa/"a"](ciDB M) @@ [VAR aa/"a"](ciDB N))) ∧
+     (LAM "a" (ciDB M) = LAM aa ([VAR aa/"a"](ciDB M))) ∧
+     (LAM "a" (ciDB N) = LAM aa ([VAR aa/"a"](ciDB N)))`
+       by SRW_TAC [][LAM_eq_thm, NOT_IN_SUB, fresh_tpm_subst, 
+                     lemma15b, NOT_IN_FV_ciDB] THEN 
+    NTAC 3 (POP_ASSUM SUBST1_TAC) THEN 
+
+    Q_TAC (NEW_TAC "cc") `{"v"; "c"; "a"; aa} ∪ FV v ∪ FV c ∪ FV a` THEN 
+    `(LAM "c" (LAM aa (VAR "c" @@ [VAR aa/"a"](ciDB M) 
+                               @@ [VAR aa/"a"](ciDB N))) = 
+        LAM cc (LAM aa (VAR cc @@ [VAR cc/"c"]([VAR aa/"a"](ciDB M)) 
+                               @@ [VAR cc/"c"]([VAR aa/"a"](ciDB N))))) ∧
+     (LAM "c" (LAM aa ([VAR aa/"a"] (ciDB M))) = 
+        LAM cc (LAM aa ([VAR cc/"c"]([VAR aa/"a"] (ciDB M))))) ∧
+     (LAM "c" (LAM aa ([VAR aa/"a"] (ciDB N))) = 
+        LAM cc (LAM aa ([VAR cc/"c"]([VAR aa/"a"] (ciDB N)))))`
+       by SRW_TAC [][LAM_eq_thm, NOT_IN_SUB, fresh_tpm_subst, 
+                     lemma15b, NOT_IN_FV_ciDB] THEN 
+    NTAC 3 (POP_ASSUM SUBST1_TAC) THEN 
+    ASM_SIMP_TAC (bsrw_ss()) [],
+
+    SIMP_TAC (srw_ss()) [cDB_def, ciDB_def] THEN 
+    Q_TAC (NEW_TAC "aa") `{"v"; "c"; "a"} ∪ FV v ∪ FV c ∪ FV a` THEN 
+    `(LAM "a" (VAR "a" @@ ciDB M) = LAM aa (VAR aa @@ [VAR aa/"a"](ciDB M))) ∧
+     (LAM "a" (ciDB M) = LAM aa ([VAR aa/"a"](ciDB M)))`
+       by SRW_TAC [][LAM_eq_thm, NOT_IN_SUB, fresh_tpm_subst, 
+                     lemma15b, NOT_IN_FV_ciDB] THEN 
+    NTAC 2 (POP_ASSUM SUBST1_TAC) THEN 
+
+    Q_TAC (NEW_TAC "cc") `{"v"; "c"; "a"; aa} ∪ FV v ∪ FV c ∪ FV a` THEN 
+    `(LAM "c" (LAM aa (VAR aa @@ [VAR aa/"a"](ciDB M))) = 
+        LAM cc (LAM aa (VAR aa @@ [VAR cc/"c"]([VAR aa/"a"](ciDB M))))) ∧
+     (LAM "c" (LAM aa ([VAR aa/"a"](ciDB M))) = 
+        LAM cc (LAM aa ([VAR cc/"c"]([VAR aa/"a"] (ciDB M)))))`
+       by SRW_TAC [][LAM_eq_thm, NOT_IN_SUB, fresh_tpm_subst, 
+                     lemma15b, NOT_IN_FV_ciDB] THEN 
+    NTAC 2 (POP_ASSUM SUBST1_TAC) THEN 
+    ASM_SIMP_TAC (bsrw_ss()) []
+  ]);
+
+
 (*
 dfv (VAR j) = λi. i = j
 dfv (dAPP t1 t2) = λi. dfv t1 i ∨ dfv t2 i
@@ -82,10 +141,6 @@ val cdFV_def = Define`
               (VAR "v")))
 `;
 
-val NOT_IN_SUB = prove(
-  ``x ∉ FV M ∧ (x ≠ v ⇒ x ∉ FV N) ⇒ x ∉ FV ([M/v]N)``,
-  SRW_TAC [][termTheory.FV_SUB] THEN METIS_TAC []);
-
 val FV_cdFV = Store_thm(
   "FV_cdFV",
   ``FV cdFV = {}``,
@@ -93,33 +148,12 @@ val FV_cdFV = Store_thm(
 val cdFV_behaviour = store_thm(
   "cdFV_behaviour",
   ``∀i. cdFV @@ church i @@ cDB t -n->* cB (i ∈ dFV t)``,
-  SIMP_TAC (bsrw_ss()) [cdFV_def, cDB_def] THEN 
-  Q.MATCH_ABBREV_TAC 
-    `∀i. [Abs/"a"] ([App/"c"] ([Var/"v"] (ciDB t))) @@ church i -β->* 
-         cB (i ∈ dFV t)` THEN 
-  `(FV Var = {}) ∧ (FV App = {}) ∧ (FV Abs = {})` 
-      by SRW_TAC [][Abbr`Var`, Abbr`App`, Abbr`Abs`, FV_EMPTY] THEN
-  Induct_on `t` THENL [
-    ASM_SIMP_TAC (bsrw_ss()) [ciDB_def] THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [ceqnat_behaviour, Abbr`Var`, EQ_SYM_EQ],
-
-    ASM_SIMP_TAC (bsrw_ss()) [ciDB_def] THEN GEN_TAC THEN 
-    Q.MATCH_ABBREV_TAC 
-      `App @@ arg_t @@ arg_t' @@ church i -β->* 
-         cB (i ∈ dFV t ∨ i ∈ dFV t')` THEN
-    `(FV arg_t = {}) ∧ (FV arg_t' = {})`
-       by SRW_TAC [][Abbr`arg_t`, Abbr`arg_t'`, FV_EMPTY, NOT_IN_SUB, 
-                     NOT_IN_FV_ciDB] THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [Abbr`App`, cor_behaviour],
-
-    ASM_SIMP_TAC (bsrw_ss()) [ciDB_def] THEN GEN_TAC THEN 
-    Q.MATCH_ABBREV_TAC 
-      `Abs @@ arg_t @@ church i -β->* cB (i + 1 ∈ dFV t)` THEN 
-    `FV arg_t = {}`
-      by SRW_TAC [][Abbr`arg_t`, EXTENSION, NOT_IN_FV_ciDB, NOT_IN_SUB] THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [Abbr`Abs`, csuc_behaviour, 
-                              arithmeticTheory.ADD1]
-  ]);
+  SIMP_TAC (bsrw_ss()) [cdFV_def] THEN 
+  Induct_on `t` THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [cDB_thm, ceqnat_behaviour, 
+                            cor_behaviour, csuc_behaviour, 
+                            arithmeticTheory.ADD1] THEN
+  SRW_TAC [][EQ_SYM_EQ]);
 
 (* ---------------------------------------------------------------------- 
     The constructors of the type in the λ-calculus
@@ -199,41 +233,13 @@ val clift_behaviour = store_thm(
   "clift_behaviour",  
   ``clift @@ cDB M @@ church k -n->* cDB (lift M k)``,
   SIMP_TAC (bsrw_ss()) [clift_def] THEN 
-  Q.MATCH_ABBREV_TAC 
-    `cDB M @@ Var @@ App @@ Abs @@ church k -β->* cDB (lift M k)` THEN 
-  `(FV Var = {}) ∧ (FV App = {}) ∧ (FV Abs = {})` 
-     by (SRW_TAC [][Abbr`Var`, Abbr`App`, Abbr`Abs`, EXTENSION] THEN 
-         METIS_TAC []) THEN 
-  ASM_SIMP_TAC (bsrw_ss()) [cDB_def] THEN 
-  Q.ID_SPEC_TAC `k` THEN Induct_on `M` THENL [
-    ASM_SIMP_TAC (bsrw_ss()) [ciDB_def] THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [Abbr`Var`, cless_behaviour, cdV_behaviour, 
-                              csuc_behaviour, arithmeticTheory.ADD1] THEN 
-    SRW_TAC [][] THEN 
-    SIMP_TAC (bsrw_ss()) [cB_behaviour, cDB_def],
-
-    ASM_SIMP_TAC (bsrw_ss()) [ciDB_def] THEN GEN_TAC THEN 
-    Q.MATCH_ABBREV_TAC 
-      `App @@ arg1 @@ arg2 @@ church k -β->* result` THEN 
-    `(FV arg1 = {}) ∧ (FV arg2 = {})`
-       by SRW_TAC [][NOT_IN_FV_ciDB, NOT_IN_SUB, EXTENSION, Abbr`arg1`,
-                     Abbr`arg2`] THEN 
-    Q.UNABBREV_TAC `result` THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [Abbr`App`] THEN 
-    SIMP_TAC (srw_ss()) [GSYM cDB_def] THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [cdAPP_behaviour] THEN 
-    ASM_SIMP_TAC (srw_ss()) [cDB_def, ciDB_def],
-
-    ASM_SIMP_TAC (bsrw_ss()) [ciDB_def] THEN GEN_TAC THEN 
-    Q.MATCH_ABBREV_TAC `Abs @@ arg @@ church k -β->* result` THEN 
-    Q.UNABBREV_TAC `result` THEN 
-    `FV arg = {}` 
-      by SRW_TAC [][Abbr`arg`, EXTENSION, NOT_IN_SUB, NOT_IN_FV_ciDB] THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [Abbr`Abs`, csuc_behaviour, 
-                              arithmeticTheory.ADD1] THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [GSYM cDB_def, cdABS_behaviour] THEN 
-    SIMP_TAC (srw_ss()) [cDB_def, ciDB_def]
-  ]);
+  Q.ID_SPEC_TAC `k` THEN Induct_on `M` THEN
+  ASM_SIMP_TAC (bsrw_ss()) 
+               [cDB_thm, cless_behaviour, cdV_behaviour, 
+                csuc_behaviour, cdAPP_behaviour, cdABS_behaviour, 
+                arithmeticTheory.ADD1] THEN 
+  SRW_TAC [][] THEN 
+  SIMP_TAC (bsrw_ss()) [cB_behaviour]);
 
 (* ----------------------------------------------------------------------
     substitution 
@@ -266,47 +272,12 @@ val csub_behaviour = store_thm(
   "csub_behaviour",
   ``csub @@ cDB s @@ church k @@ cDB t -n->* cDB (sub s k t)``,
   SIMP_TAC (bsrw_ss()) [csub_def] THEN 
-  Q.SPEC_THEN `t` SUBST_ALL_TAC cDB_def THEN 
-  SIMP_TAC (bsrw_ss()) [] THEN 
-  Q.MATCH_ABBREV_TAC 
-    `[Abs/"a"] ([App/"c"] ([Var/"v"] (ciDB t))) @@ cDB s @@ church k 
-       -β->* 
-     cDB (sub s k t)` THEN 
-  `∀v. v ∉ FV Var ∧ v ∉ FV App ∧ v ∉ FV Abs`
-     by SRW_TAC [][Abbr`Var`, Abbr`Abs`, Abbr`App`] THEN
-  Q.ABBREV_TAC `Inst = λx. [Abs/"a"] ([App/"c"] ([Var/"v"] x))` THEN 
-  FIRST_ASSUM (ASSUME_TAC o GSYM o 
-               SIMP_RULE bool_ss [FUN_EQ_THM, markerTheory.Abbrev_def]) THEN 
-  ASM_SIMP_TAC bool_ss [] THEN 
-  `∀M N. Inst (M @@ N) = Inst M @@ Inst N`
-     by SRW_TAC [][Abbr`Inst`] THEN 
-  `(Inst (VAR "a") = Abs) ∧ (Inst (VAR "c") = App) ∧ (Inst (VAR "v") = Var) ∧
-   (∀n. Inst (church n) = church n)`
-     by SRW_TAC [][Abbr`Inst`, lemma14b] THEN 
-  MAP_EVERY Q.ID_SPEC_TAC [`s`,`k`] THEN Induct_on `t` THENL [
-    ASM_SIMP_TAC (bsrw_ss()) [ciDB_def] THEN 
-    SIMP_TAC (bsrw_ss()) [Abbr`Var`, ceqnat_behaviour, cdV_behaviour] THEN 
-    REPEAT GEN_TAC THEN Cases_on `n = k` THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour],
-
-    ASM_SIMP_TAC (bsrw_ss()) [ciDB_def] THEN 
-    `∀M N P Q. App @@ M @@ N @@ P @@ Q -n->* 
-               cdAPP @@ (M @@ P @@ Q) @@ (N @@ P @@ Q)`
-      by (Q.UNABBREV_TAC `App` THEN REPEAT GEN_TAC THEN 
-          REPEAT (POP_ASSUM (K ALL_TAC)) THEN 
-          FRESH_TAC THEN SRW_TAC [NORMSTAR_ss][tpm_fresh]) THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [cdAPP_behaviour],
-
-    ASM_SIMP_TAC (bsrw_ss()) [ciDB_def] THEN 
-    `∀M N P. Abs @@ M @@ N @@ P -n->* 
-             cdABS @@ (M @@ (clift @@ N @@ church 0) @@ (csuc @@ P))`
-      by (Q.UNABBREV_TAC `Abs` THEN REPEAT GEN_TAC THEN 
-          REPEAT (POP_ASSUM (K ALL_TAC)) THEN FRESH_TAC THEN 
-          SRW_TAC [NORMSTAR_ss][tpm_fresh]) THEN 
-    ASM_SIMP_TAC (bsrw_ss()) 
-                 [clift_behaviour, csuc_behaviour, cdABS_behaviour, 
-                  arithmeticTheory.ADD1]
-  ]);
+  MAP_EVERY Q.ID_SPEC_TAC [`s`, `k`] THEN Induct_on `t` THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [cDB_thm, ceqnat_behaviour, cdV_behaviour, 
+                            cdAPP_behaviour, cdABS_behaviour, 
+                            csuc_behaviour, arithmeticTheory.ADD1, 
+                            clift_behaviour] THEN
+  SRW_TAC [][] THEN SIMP_TAC (bsrw_ss()) [cB_behaviour])
 
 val cdLAM_def = Define`
   cdLAM = LAM "v" (LAM "body"
@@ -348,15 +319,15 @@ val FV_cichurch = Store_thm(
   SRW_TAC [][FV_EMPTY, cichurch_def]);
 
 val FUNPOW_SUC = arithmeticTheory.FUNPOW_SUC
+
 val cichurch_behaviour = store_thm(
   "cichurch_behaviour",
   ``cichurch @@ church n -n->* cDB (fromTerm (FUNPOW ((@@) (VAR (n2s 0))) n
                                                      (VAR (n2s 1))))``,
-  SIMP_TAC (bsrw_ss()) [cichurch_def, church_behaviour] THEN 
-  Induct_on `n` THENL [
-    SIMP_TAC (bsrw_ss()) [cdV_behaviour],
-    ASM_SIMP_TAC (bsrw_ss()) [FUNPOW_SUC, cdAPP_behaviour, cdV_behaviour]
-  ]);
+  SIMP_TAC (bsrw_ss()) [cichurch_def, cdV_behaviour] THEN 
+  Induct_on `n` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [church_thm, cdV_behaviour, cdAPP_behaviour,
+                            FUNPOW_SUC]);
 
 (* ----------------------------------------------------------------------
     cchurch
@@ -425,28 +396,11 @@ val FV_cciDB = Store_thm(
 val cciDB_behaviour = store_thm(
   "cciDB_behaviour",
   ``cciDB @@ cDB dBt -n->* cDB (fromTerm (ciDB dBt))``,
-  SIMP_TAC (bsrw_ss()) [cciDB_def, cDB_def] THEN 
-  Q.MATCH_ABBREV_TAC 
-    `[Abs/"a"] ([App/"c"] ([Var/"v"] (ciDB dBt))) -β->* result` THEN 
-  Q.UNABBREV_TAC `result` THEN
-  `∀v. v ∉ FV Abs ∧ v ∉ FV App ∧ v ∉ FV Var` 
-     by SRW_TAC [][Abbr`App`, Abbr`Abs`, Abbr`Var`] THEN 
-  Induct_on `dBt` THENL [
-    ASM_SIMP_TAC (bsrw_ss()) [cDB_def, ciDB_def] THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [Abbr`Var`, cdV_behaviour, cchurch_behaviour, 
-                              cdAPP_behaviour] THEN 
-    SRW_TAC [][GSYM cDB_def, GSYM ciDB_def],
-
-    ASM_SIMP_TAC (bsrw_ss()) [cDB_def, ciDB_def] THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [Abbr`App`, NOT_IN_FV_ciDB] THEN 
-    SIMP_TAC (bsrw_ss()) [cdAPP_behaviour, cdV_behaviour, GSYM cDB_def, 
-                          GSYM ciDB_def],
-
-    ASM_SIMP_TAC (bsrw_ss()) [cDB_def, ciDB_def] THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [Abbr`Abs`] THEN 
-    SIMP_TAC (bsrw_ss()) [GSYM ciDB_def, cdV_behaviour, GSYM cDB_def, 
-                          cdAPP_behaviour]
-  ]);
+  SIMP_TAC (bsrw_ss()) [cciDB_def, cdV_behaviour] THEN 
+  Induct_on `dBt` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cDB_thm, cdV_behaviour, cchurch_behaviour, 
+                            cdAPP_behaviour] THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [ciDB_def]);
 
 (* ----------------------------------------------------------------------
     ccDB : the encoded version of cDB 
