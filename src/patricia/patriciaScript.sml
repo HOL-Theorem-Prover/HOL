@@ -97,12 +97,19 @@ val REMOVE_def = Define`
 
 val _ = overload_on ("\\\\", Term`$REMOVE`);
 
+val TRAVERSE_AUX_def =
+  with_flag (computeLib.auto_import_definitions, true) Define`
+    (TRAVERSE_AUX Empty a = a) /\
+    (TRAVERSE_AUX (Leaf k d) a = k::a) /\
+    (TRAVERSE_AUX (Branch p m l r) a = TRAVERSE_AUX l (TRAVERSE_AUX r a))`;
+
 val TRAVERSE_def = Define`
   (TRAVERSE Empty = []) /\
   (TRAVERSE (Leaf j d) = [j]) /\
   (TRAVERSE (Branch p m l r) = TRAVERSE l ++ TRAVERSE r)`;
 
-val KEYS_def = Define `KEYS t = QSORT $< (TRAVERSE t)`;
+val KEYS_def = with_flag (computeLib.auto_import_definitions, true) Define`
+  KEYS t = QSORT $< (TRAVERSE t)`;
 
 val TRANSFORM_def = Define`
   (TRANSFORM f Empty = Empty) /\
@@ -616,26 +623,6 @@ val PTREE_OF_NUMSET_IS_PTREE_EMPTY = save_thm("PTREE_OF_NUMSET_IS_PTREE_EMPTY",
 val _ = export_rewrites ["ADD_LIST_IS_PTREE", "PTREE_OF_NUMSET_IS_PTREE",
                          "PTREE_OF_NUMSET_IS_PTREE_EMPTY"];
 
-val FILTER_ALL_MEM = prove(
-  `!P l. MEM x l /\ P x ==> ~(FILTER P l = [])`,
-  SRW_TAC [] [GSYM FILTER_ALL, MEM_EL] \\ METIS_TAC []);
-
-val FILTER_ALL_NOT_MEM = prove(
-  `!P l x. ~MEM x l ==> (FILTER ($= x) l = [])`,
-  SRW_TAC [] [GSYM FILTER_ALL, MEM_EL] \\ METIS_TAC []);
-
-val FILTER_ALL_APPEND = prove(
-  `!a b x. ~(a = []) /\ ~(b = []) ==> ~(a ++ b = [x])`,
-  Cases \\ Cases \\ SRW_TAC [] []);
-
-val ALL_DISTINCT_APPEND = store_thm("ALL_DISTINCT_APPEND",
-  `!a b. ALL_DISTINCT a /\ ALL_DISTINCT b /\ (!x. ~MEM x a \/ ~MEM x b) =
-         ALL_DISTINCT (a ++ b)`,
-  SRW_TAC [] [ALL_DISTINCT_FILTER, FILTER_APPEND]
-    \\ EQ_TAC \\ SRW_TAC [] []
-    \\ METIS_TAC [FILTER_ALL_NOT_MEM, APPEND_NIL, ISPEC `$= x` FILTER_ALL_MEM,
-                  FILTER_ALL_APPEND]);
-
 val EVERY_LEAF_PEEK_LEFT = (SIMP_RULE (srw_ss()) [] o
   SPEC `\k d. MOD_2EXP_EQ m k p /\ BIT m k`) EVERY_LEAF_PEEK;
 
@@ -651,7 +638,7 @@ val NOT_KEY_LEFT_AND_RIGHT = store_thm("NOT_KEY_LEFT_AND_RIGHT",
 
 val ALL_DISTINCT_TRAVERSE = store_thm("ALL_DISTINCT_TRAVERSE",
   `!t. IS_PTREE t ==> ALL_DISTINCT (TRAVERSE t)`,
-  Induct \\ SRW_TAC [] [ALL_DISTINCT, TRAVERSE_def, GSYM ALL_DISTINCT_APPEND]
+  Induct \\ SRW_TAC [] [ALL_DISTINCT, TRAVERSE_def, ALL_DISTINCT_APPEND]
     \\ `IS_PTREE t /\ IS_PTREE t'` by FULL_SIMP_TAC (srw_ss()) [IS_PTREE_def]
     \\ METIS_TAC [MEM_TRAVERSE_PEEK, NOT_KEY_LEFT_AND_RIGHT]);
 
@@ -665,25 +652,6 @@ val MEM_ALL_DISTINCT_IMP_PERM = store_thm("MEM_ALL_DISTINCT_IMP_PERM",
     \\ Cases_on `MEM x l1` >> METIS_TAC []
     \\ SPEC_THEN `$= x` ASSUME_TAC FILTER_ALL
     \\ METIS_TAC [MEM_EL]);
-
-val ALL_DISTINCT_SING = store_thm("ALL_DISTINCT_SING",
-  `!x. ALL_DISTINCT [x]`,
-  SRW_TAC [] [ALL_DISTINCT]);
-
-val _ = export_rewrites ["ALL_DISTINCT_SING"];
-
-val ALL_DISTINCT_LIST_OF_SET = store_thm("ALL_DISTINCT_LIST_OF_SET",
-  `!s. FINITE s ==> ALL_DISTINCT (SET_TO_LIST s)`,
-  Induct_on `SET_TO_LIST s` \\ SRW_TAC [] []
-    >> PAT_ASSUM `[] = x` (fn th => SRW_TAC [] [SYM th, ALL_DISTINCT])
-    \\ `(h = CHOICE s) /\ (v = SET_TO_LIST (s DELETE CHOICE s))`
-    by (Cases_on `s = {}`
-          \\ METIS_TAC [NOT_CONS_NIL, CONS_11, pred_setTheory.REST_DEF,
-                        SET_TO_LIST_THM])
-    \\ METIS_TAC [MEM_SET_TO_LIST, pred_setTheory.IN_DELETE,
-                  ALL_DISTINCT, pred_setTheory.FINITE_DELETE]);
-
-val _ = export_rewrites ["ALL_DISTINCT_LIST_OF_SET"];
 
 val MEM_TRAVERSE = store_thm("MEM_TRAVERSE",
   `!t k. IS_PTREE t ==> (MEM k (TRAVERSE t) = k IN (NUMSET_OF_PTREE t))`,
@@ -878,6 +846,19 @@ val PTREE_OF_NUMSET_DELETE = save_thm("PTREE_OF_NUMSET_DELETE",
 
 (* ------------------------------------------------------------------------- *)
 
+val TRAVERSE_AUX_lem = prove(
+  `!t l. TRAVERSE_AUX t l = TRAVERSE_AUX t [] ++ l`,
+  Induct
+    >> SRW_TAC [] [TRAVERSE_AUX_def]
+    >> SRW_TAC [] [TRAVERSE_AUX_def]
+    \\ ONCE_REWRITE_TAC [TRAVERSE_AUX_def]
+    \\ METIS_TAC [listTheory.APPEND_ASSOC]);
+
+val TRAVERSE_AUX = store_thm("TRAVERSE_AUX",
+  `!t. TRAVERSE t = TRAVERSE_AUX t []`,
+  Induct \\ SRW_TAC [] [TRAVERSE_def, TRAVERSE_AUX_def]
+    \\ METIS_TAC [TRAVERSE_AUX_lem]);
+
 val PTREE_TRAVERSE_EQ = store_thm("PTREE_TRAVERSE_EQ",
   `!t1 t2. IS_PTREE t1 /\ IS_PTREE t2 ==>
            ((!k. MEM k (TRAVERSE t1) = MEM k (TRAVERSE t2)) =
@@ -1040,7 +1021,7 @@ val LENGTH_FOLDL_ADD = prove(
         (SIZE (FOLDL (combin$C $INSERT_PTREE) t l) = SIZE t + LENGTH l)`,
   Induct \\ SRW_TAC [] [SIZE]
     \\ `ALL_DISTINCT (TRAVERSE (h INSERT_PTREE t) ++ l) /\ ~MEM h (TRAVERSE t)`
-    by (FULL_SIMP_TAC (srw_ss()) [GSYM ALL_DISTINCT_APPEND,
+    by (FULL_SIMP_TAC (srw_ss()) [ALL_DISTINCT_APPEND,
               MEM_TRAVERSE_INSERT_PTREE] \\ METIS_TAC [])
     \\ `SIZE (h INSERT_PTREE t) = SIZE t + 1`
     by RW_TAC std_ss [SIZE_ADD, INSERT_PTREE_def]
@@ -1077,6 +1058,7 @@ val _ = computeLib.add_persistent_funs
    ("pred_setTheory.FINITE_INSERT", pred_setTheory.FINITE_INSERT),
    ("pred_setTheory.FINITE_UNION", pred_setTheory.FINITE_UNION),
    ("pred_setTheory.FINITE_DELETE", pred_setTheory.FINITE_DELETE),
+   ("TRAVERSE_AUX", TRAVERSE_AUX),
    ("ADD_INSERT", ADD_INSERT),
    ("PTREE_OF_NUMSET_EMPTY", PTREE_OF_NUMSET_EMPTY)];
 

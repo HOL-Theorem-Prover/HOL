@@ -45,8 +45,6 @@ sig
   val PTREE_SIZE_CONV         : conv
   val PTREE_DEPTH_CONV        : conv
   val PTREE_TRANSFORM_CONV    : conv
-  val PTREE_TRAVERSE_CONV     : conv
-  val PTREE_KEYS_CONV         : conv
   val PTREE_EVERY_LEAF_CONV   : conv
   val PTREE_EXISTS_LEAF_CONV  : conv
   val PTREE_IN_PTREE_CONV     : conv

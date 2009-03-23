@@ -1598,7 +1598,7 @@ val ALL_DISTINCT_SET_TO_LIST = store_thm("ALL_DISTINCT_SET_TO_LIST",
   FULL_SIMP_TAC bool_ss [ALL_DISTINCT, MEM_SET_TO_LIST,
 			 pred_setTheory.CHOICE_NOT_IN_REST]);
 
-val _ = export_rewrites ["FINITE_LIST_TO_SET"];
+val _ = export_rewrites ["ALL_DISTINCT_SET_TO_LIST", "FINITE_LIST_TO_SET"];
 val _ = overload_on ("set", ``LIST_TO_SET : 'a list -> 'a set``);
 
 (* ----------------------------------------------------------------------
