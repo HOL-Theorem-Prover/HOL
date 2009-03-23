@@ -126,6 +126,21 @@ val invtri_linverse_r = store_thm(
   STRIP_TAC THEN MATCH_MP_TAC invtri_unique THEN 
   SRW_TAC [ARITH_ss][GSYM ADD1, tri_def]);
 
+val tri_le = store_thm(
+  "tri_le", 
+  ``n ≤ tri n``,
+  Induct_on `n` THEN SRW_TAC [][tri_def]);
+
+val invtri_le = store_thm(
+  "invtri_le",
+  ``tri⁻¹ n ≤ n``,
+  Q_TAC SUFF_TAC `tri (tri⁻¹ n) ≤ tri n` THEN1 SRW_TAC [][] THEN 
+  METIS_TAC [tri_le, invtri_lower, arithmeticTheory.LESS_EQ_TRANS]);
+
+
+
+
+
 (* ----------------------------------------------------------------------
     Numeric pair, fst and snd
    ---------------------------------------------------------------------- *)
@@ -183,6 +198,14 @@ val npair_11 = Store_thm(
     POP_ASSUM (MP_TAC o Q.AP_TERM `nfst`) THEN SRW_TAC [][],
     POP_ASSUM (MP_TAC o Q.AP_TERM `nsnd`) THEN SRW_TAC [][]
   ]);
+
+val nfst_le = store_thm(
+  "nfst_le",
+  ``nfst n ≤ n``,
+  SRW_TAC [][nfst_def] THEN 
+  MAP_EVERY ASSUME_TAC [invtri_lower, invtri_le] THEN
+  DECIDE_TAC);
+val nsnd_le = store_thm("nsnd_le", ``nsnd n ≤ n``, SRW_TAC [][nsnd_def]);
 
 val _ = export_theory()
 
