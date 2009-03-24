@@ -49,7 +49,7 @@ val is_abs_church = Store_thm(
   ``is_abs (church n)``,
   SRW_TAC [][church_def]);
 
-val church_lameq_11 = store_thm(
+val church_lameq_11 = Store_thm(
   "church_lameq_11",
   ``(church m == church n) ⇔ (m = n)``,
   SRW_TAC [][EQ_IMP_THM, chap2Theory.lam_eq_rules] THEN
@@ -198,9 +198,7 @@ val natrec_behaviour = store_thm(
   ]);
 
 val cplus_def = Define`
-  cplus = LAM "m" (LAM "n" (natrec @@ VAR "n" 
-                                   @@ (LAM "m0" (LAM "r" (csuc @@ VAR "r")))
-                                   @@ VAR "m"))
+  cplus = LAM "m" (LAM "n" (VAR "m" @@ VAR "n" @@ csuc))
 `;
 
 val FV_cplus = Store_thm(
@@ -212,7 +210,7 @@ val cplus_behaviour = store_thm(
   "cplus_behaviour",
   ``cplus @@ church m @@ church n -n->* church (m + n)``,
   SIMP_TAC (bsrw_ss()) [cplus_def] THEN Induct_on `m` THEN 
-  ASM_SIMP_TAC (bsrw_ss()) [natrec_behaviour, csuc_behaviour, 
+  ASM_SIMP_TAC (bsrw_ss()) [church_thm, csuc_behaviour, 
                             arithmeticTheory.ADD_CLAUSES]);
 
 val cpred_def = Define`
@@ -305,11 +303,6 @@ val FV_ceqnat = Store_thm(
   "FV_ceqnat",
   ``FV ceqnat = {}``,
   SRW_TAC [][ceqnat_def, EXTENSION] THEN METIS_TAC []);
-
-val lameq_refl = Store_thm(
-  "lameq_refl",  
-  ``M:term == M``,
-  SRW_TAC [][chap2Theory.lam_eq_rules]);
 
 val ceqnat_behaviour = store_thm(
   "ceqnat_behaviour",
@@ -471,6 +464,195 @@ val cmod_behaviour = store_thm(
   ``0 < q ⇒ 
      cmod @@ church p @@ church q -n->* church (p MOD q)``,
   SIMP_TAC (bsrw_ss()) [cdivmodt_behaviour, cmod_def, csnd_cvpr]);
-                        
+
+(* ---------------------------------------------------------------------- 
+    Pairs of numbers 
+   ---------------------------------------------------------------------- *)
+
+val cnvpr_def = Define`
+  cnvpr (n,m) = cvpr (church n) (church m)
+`;
+
+val bnf_cnvpr = Store_thm(
+  "bnf_cnvpr",
+  ``bnf (cnvpr p)``,
+  Cases_on `p` THEN SRW_TAC [][cnvpr_def]);
+
+val FV_cnvpr = Store_thm(
+  "FV_cnvpr",
+  ``FV (cnvpr p) = {}``,
+  Cases_on `p` THEN SRW_TAC [][cnvpr_def]);
+
+val cfst_cnvpr = store_thm(
+  "cfst_cnvpr",
+  ``cfst @@ cnvpr p -n->* church (FST p)``,
+  Cases_on `p` THEN SIMP_TAC (bsrw_ss())[cnvpr_def, cfst_cvpr]);
+val csnd_cnvpr = store_thm(
+  "csnd_cnvpr",
+  ``csnd @@ cnvpr p -n->* church (SND p)``,
+  Cases_on `p` THEN SIMP_TAC (bsrw_ss())[cnvpr_def, csnd_cvpr]);
+  
+
+(* ---------------------------------------------------------------------- 
+    Numeric pairing 
+   ---------------------------------------------------------------------- *)
+
+open numpairTheory
+
+(* triangular numbers and the tri⁻¹ function *)
+val ctri_def = Define`
+  ctri = LAM "n" (natrec @@ church 0 
+                         @@ (LAM "n0" (cplus @@ (csuc @@ VAR "n0")))
+                         @@ VAR "n")
+`;
+
+val FV_ctri = Store_thm(
+  "FV_ctri",
+  ``FV ctri = {}``,
+  SRW_TAC [][ctri_def, EXTENSION] THEN METIS_TAC []);
+
+val ctri_behaviour = store_thm(
+  "ctri_behaviour",
+  ``ctri @@ church n -n->* church (tri n)``,
+  SIMP_TAC (bsrw_ss()) [ctri_def] THEN 
+  Induct_on `n` THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [natrec_behaviour, tri_def, 
+                            csuc_behaviour, cplus_behaviour]);
+
+(* invtri0 
+    |- ∀n a.
+         invtri0 n a =
+         if n < a + 1 then (n,a) else invtri0 (n − (a + 1)) (a + 1) : thm
+   make it prim. rec. by using a target parameter, as with divmod 
+*)
+
+val cinvtri0_def = Define`
+  cinvtri0 = 
+  natrec 
+    @@ (LAM "n" (LAM "a" (cvpr (VAR "n") (VAR "a"))))
+    @@ (LAM "t0" (LAM "r" (LAM "n" (LAM "a"
+          (ceqnat @@ (csuc @@ (VAR "t0")) @@ VAR "n" 
+                  @@ (cless @@ VAR "n" @@ (csuc @@ VAR "a")
+                            @@ cvpr (VAR "n") (VAR "a")
+                            @@ (VAR "r" 
+                                    @@ (cminus @@ VAR "n" 
+                                               @@ (csuc @@ VAR "a"))
+                                    @@ (csuc @@ VAR "a")))
+                  @@ (VAR "r" @@ VAR "n" @@ VAR "a"))))))
+`;
+(* have messed my naming up here in order to keep the "n" and "a" of the 
+   original definition.  "t" is the parameter that is being recursed on, 
+   and "n" is the target parameter that causes things to happen when t reaches
+   it. *)
+
+val FV_cinvtri0 = Store_thm(
+  "FV_cinvtri0",
+  ``FV cinvtri0 = {}``,
+  SRW_TAC [][cinvtri0_def, EXTENSION] THEN METIS_TAC []);
+
+val cinvtri0_behaviour = store_thm(
+  "cinvtri0_behaviour",
+  ``n ≤ t ⇒ 
+    cinvtri0 @@ church t @@ church n @@ church a -n->* 
+    cnvpr (invtri0 n a)``,
+  SIMP_TAC (bsrw_ss()) [cinvtri0_def] THEN 
+  Q.ID_SPEC_TAC `n` THEN Q.ID_SPEC_TAC `a` THEN 
+  Induct_on `t` THENL [
+    SIMP_TAC (bsrw_ss()) [natrec_behaviour] THEN 
+    ONCE_REWRITE_TAC [invtri0_def] THEN 
+    SIMP_TAC (srw_ss() ++ ARITH_ss) [cnvpr_def],
+
+    SIMP_TAC (bsrw_ss()) [natrec_behaviour, csuc_behaviour, 
+                          ceqnat_behaviour, cless_behaviour] THEN 
+    REPEAT STRIP_TAC THEN Cases_on `n = SUC t` THEN
+    ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour, cminus_behaviour] THENL [
+      Cases_on `t < a` THENL [ 
+        ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN 
+        ONCE_REWRITE_TAC [invtri0_def] THEN 
+        SRW_TAC [ARITH_ss][cnvpr_def],
+
+        ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN 
+        CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [invtri0_def])) THEN 
+        SRW_TAC [ARITH_ss][] THEN 
+        `SUC t - (a + 1) = t - a` by DECIDE_TAC THEN 
+        SRW_TAC [][arithmeticTheory.ADD1]
+      ],
+
+      `n ≤ t` by DECIDE_TAC THEN 
+      ASM_SIMP_TAC (bsrw_ss()) []
+    ]
+  ]);
+
+val cinvtri_def = Define`
+  cinvtri = 
+  LAM "n" (csnd @@ (cinvtri0 @@ VAR "n" @@ VAR "n" @@ church 0))
+`;
+
+val FV_cinvtri = Store_thm(
+  "FV_cinvtri",
+  ``FV cinvtri = {}``,
+  SRW_TAC [][cinvtri_def, EXTENSION] THEN METIS_TAC []);
+
+val cinvtri_behaviour = store_thm(
+  "cinvtri_behaviour",
+  ``cinvtri @@ church n -n->* church (tri⁻¹ n)``,  
+  SIMP_TAC (bsrw_ss()) [cinvtri_def, cinvtri0_behaviour, 
+                        invtri_def, csnd_cnvpr]);
+
+(* -- The pairing function and fst and snd *)
+
+val cnpair_def = Define`
+  cnpair = 
+  LAM "n" (LAM "m" 
+    (cplus @@ (ctri @@ (cplus @@ VAR "n" @@ VAR "m")) @@ VAR "m"))
+`;
+
+val FV_cnpair = Store_thm(
+  "FV_cnpair",
+  ``FV cnpair = {}``,
+  SRW_TAC [][cnpair_def, EXTENSION] THEN METIS_TAC []);
+
+val cnpair_behaviour = store_thm(
+  "cnpair_behaviour",
+  ``cnpair @@ church n @@ church m -n->* church (n ⊗ m)``,
+  SIMP_TAC (bsrw_ss()) [cnpair_def, cplus_behaviour, ctri_behaviour, 
+                        npair_def]);
+
+(* cnfst *)
+val cnfst_def = Define`
+  cnfst = LAM "n" (cminus 
+                     @@ (cplus @@ (ctri @@ (cinvtri @@ VAR "n")) 
+                               @@ (cinvtri @@ VAR "n"))
+                     @@ VAR "n")
+`;
+
+val FV_cnfst = Store_thm(
+  "FV_cnfst",
+  ``FV cnfst = {}``,
+  SRW_TAC [][cnfst_def, EXTENSION] THEN METIS_TAC []);
+
+val cnfst_behaviour = store_thm(
+  "cnfst_behaviour",
+  ``cnfst @@ church p -n->* church (nfst p)``,
+  SIMP_TAC (bsrw_ss()) [cnfst_def, cminus_behaviour, cplus_behaviour, 
+                        cinvtri_behaviour, ctri_behaviour, nfst_def]);
+
+(* cnsnd *)
+val cnsnd_def = Define`
+  cnsnd = LAM "n" (cminus @@ VAR "n"
+                          @@ (ctri @@ (cinvtri @@ VAR "n")))
+`;
+
+val FV_cnsnd = Store_thm(
+  "FV_cnsnd",
+  ``FV cnsnd = {}``,
+  SRW_TAC [][cnsnd_def, EXTENSION] THEN METIS_TAC []);
+
+val cnsnd_behaviour = store_thm(
+  "cnsnd_behaviour",
+  ``cnsnd @@ church p -n->* church (nsnd p)``,
+  SIMP_TAC (bsrw_ss()) [cnsnd_def, nsnd_def, cminus_behaviour, 
+                        cinvtri_behaviour, ctri_behaviour]);
+
 val _ = export_theory()
 

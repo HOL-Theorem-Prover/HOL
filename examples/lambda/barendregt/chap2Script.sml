@@ -90,6 +90,11 @@ val (lam_eq_rules, lam_eq_indn, lam_eq_cases) = (* p. 13 *)
            (!M N Z. M == N ==> Z @@ M == Z @@ N) /\
            (!M N x. M == N ==> LAM x M == LAM x N)`;
 
+val lameq_refl = Store_thm(
+  "lameq_refl",  
+  ``M:term == M``,
+  SRW_TAC [][lam_eq_rules]);
+
 val lameq_app_cong = store_thm(
   "lameq_app_cong",
   ``M1 == M2 ==> N1 == N2 ==> M1 @@ N1 == M2 @@ N2``,
