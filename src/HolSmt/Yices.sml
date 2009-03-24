@@ -4,13 +4,6 @@
 
 structure Yices = struct
 
-  (* computes the eta-long form of a term (i.e., every variable/constant is
-     applied to sufficiently many arguments, as determined by its type),
-     recursively descending into subterms *)
-  fun eta_long tm =
-    Feedback.Raise (Feedback.mk_HOL_ERR "Yices" "eta_long"
-      "not implemented yet")
-
   (* Yices 1.0.18 only supports linear arithmetic; we do not check for
      linearity (Yices will check again anyway) *)
 
@@ -357,7 +350,7 @@ structure Yices = struct
   fun term_to_Yices tm =
   let
     val _ = if Term.type_of tm <> Type.bool then
-        Feedback.Raise (Feedback.mk_HOL_ERR "Yices" "term_to_Yices"
+        raise (Feedback.mk_HOL_ERR "Yices" "term_to_Yices"
           "term supplied is not of type bool")
       else ()
     (* beta-normal, eta-long form (because Yices cannot handle partial
@@ -383,18 +376,33 @@ structure Yices = struct
       else if line = "unsat\n" then
         false
       else
-        Feedback.Raise (Feedback.mk_HOL_ERR "Yices" "is_sat"
+        raise (Feedback.mk_HOL_ERR "Yices" "is_sat"
           "satisfiability unknown (solver not installed/problem too hard?)")
     end
 
-  (* Yices 1.0.18 *)
+  (* Yices 1.0.18, native file format *)
   local val infile = "input.yices"
         val outfile = "output.yices"
   in
     val YicesOracle = SolverSpec.make_solver
-      ("Yices 1.0.18",
-       "yices " ^ infile ^ " > " ^ outfile,
+      ("Yices 1.0.18 (native)",
+       "yices -tc " ^ infile ^ " > " ^ outfile,
        term_to_Yices,
+       infile,
+       [outfile],
+       (fn () => is_sat outfile),
+       NONE,  (* no models *)
+       NONE)  (* no proofs *)
+  end
+
+  (* Yices 1.0.18, SMT-LIB file format *)
+  local val infile = "input.yices.smt"
+        val outfile = "output.yices"
+  in
+    val YicesSMTOracle = SolverSpec.make_solver
+      ("Yices 1.0.18 (SMT-LIB)",
+       "yices -tc -smt " ^ infile ^ " > " ^ outfile,
+       SmtLib.term_to_SmtLib,
        infile,
        [outfile],
        (fn () => is_sat outfile),

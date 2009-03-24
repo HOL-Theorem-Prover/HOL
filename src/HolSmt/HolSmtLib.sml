@@ -22,7 +22,7 @@ structure HolSmtLib :> HolSmtLib = struct
   fun GENERIC_SMT solver tm =
     let
       val _ = if Term.type_of tm <> Type.bool then
-          Feedback.Raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT"
+          raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT"
             "term supplied is not of type bool")
         else ()
       fun write_strings_to_file path strings =
@@ -41,7 +41,7 @@ structure HolSmtLib :> HolSmtLib = struct
     in
       (* precaution: make sure infile and outfiles don't exist *)
       ignore (map (fn path => if OS.FileSys.access (path, []) then
-          Feedback.Raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT"
+          raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT"
             ("file '" ^ path ^ "' exists, please remove it"))
         else ()) files);
       if !trace > 1 then
@@ -65,14 +65,14 @@ structure HolSmtLib :> HolSmtLib = struct
           NONE =>
           (
             remove_files ();
-            Feedback.Raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT"
+            raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT"
               "solver reports negated term to be 'satisfiable'")
           )
         | SOME model_fn =>
           let val model = model_fn ()
           in
             remove_files ();
-            Feedback.Raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT"
+            raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT"
               "counterexamples not implemented yet")
           end
       ) else (
@@ -90,7 +90,7 @@ structure HolSmtLib :> HolSmtLib = struct
           let val proof = proof_fn ()
           in
             remove_files ();
-            Feedback.Raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT"
+            raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT"
               "proof checking not implemented yet")
           end
       )
