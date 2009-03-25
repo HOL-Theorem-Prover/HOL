@@ -41,6 +41,10 @@ struct
   val fdom_t = mk_thy_const { Name = "FDOM", Thy = "finite_map",
                               Ty = sample_fmap_ty --> alpha --> bool}
 
+  val fevery_t = mk_thy_const { Name = "FEVERY", Thy = "finite_map",
+                              Ty = (pairSyntax.mk_prod(alpha,beta) --> bool) -->
+                                   sample_fmap_ty --> bool}
+
   fun mk_fempty(a,b) = Term.inst [alpha |-> a, beta |-> b] fempty_t
   val is_fempty = same_const fempty_t
   fun dest_fempty t =
@@ -102,6 +106,12 @@ fun strip_fupdate tm =
     else raise ERR "dest_fdom" "Operator of term not FDOM"
   end
   val is_fdom = can dest_fdom
+
+
+
+  val is_fevery = same_const fevery_t;
+  val dest_fevery = dest_binop fevery_t "fevery";
+  val is_fevery = can dest_fevery
 
 end;
 

@@ -774,6 +774,178 @@ val DRESTRICT_FUNION = Q.store_thm
 
 
 (*---------------------------------------------------------------------------
+     Merging of finite maps (added 17 March 2009 by Thomas Tuerk)
+ ---------------------------------------------------------------------------*)
+
+
+val fmerge_exists = prove
+(``!m f g. 
+     ?merge.
+       (FDOM merge = FDOM f UNION FDOM g) /\
+       (!x. FAPPLY merge x = if ~(x IN FDOM f) then FAPPLY g x else 
+					 if ~(x IN FDOM g) then FAPPLY f x else 
+					(m (FAPPLY f x) (FAPPLY g x)))``,
+GEN_TAC THEN GEN_TAC THEN
+INDUCT_THEN fmap_INDUCT ASSUME_TAC THENL [
+	Q.EXISTS_TAC `f` THEN
+	SIMP_TAC std_ss [FDOM_FEMPTY, UNION_EMPTY, NOT_IN_EMPTY] THEN
+	PROVE_TAC[NOT_FDOM_FAPPLY_FEMPTY],
+
+
+	FULL_SIMP_TAC std_ss [] THEN
+	REPEAT STRIP_TAC THEN
+	Cases_on `x IN FDOM f` THENL [
+		Q.EXISTS_TAC `merge |+ (x, m (f ' x) y)`,
+		Q.EXISTS_TAC `merge |+ (x, y)`
+	] THEN (
+		ASM_SIMP_TAC std_ss [FDOM_FUPDATE] THEN
+		REPEAT STRIP_TAC THEN1 (
+			SIMP_TAC std_ss [EXTENSION, IN_INSERT, IN_UNION] THEN
+			PROVE_TAC[]
+		) THEN
+		Cases_on `x' = x` THEN (
+			ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM, IN_INSERT]
+		)
+	)
+]);
+
+
+
+
+val FMERGE_DEF = new_specification
+  ("FMERGE_DEF", ["FMERGE"],
+   CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) fmerge_exists);
+
+
+val FMERGE_FEMPTY = store_thm ("FMERGE_FEMPTY",
+	``(FMERGE m f FEMPTY = f) /\
+	   (FMERGE m FEMPTY f = f)``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM] THEN
+SIMP_TAC std_ss [FMERGE_DEF, FDOM_FEMPTY, NOT_IN_EMPTY,
+	UNION_EMPTY]);
+
+
+val FMERGE_FUNION = store_thm ("FMERGE_FUNION",
+``FUNION = FMERGE (\x y. x)``,
+
+SIMP_TAC std_ss [FUN_EQ_THM, FMERGE_DEF,
+		 GSYM fmap_EQ_THM, FUNION_DEF,
+                 IN_UNION, DISJ_IMP_THM] THEN
+METIS_TAC[]);
+
+
+val FUNION_FMERGE = store_thm ("FUNION_FMERGE",
+``!f1 f2 m. DISJOINT (FDOM f1) (FDOM f2) ==>
+(FMERGE m f1 f2 = FUNION f1 f2)``,
+
+SIMP_TAC std_ss [FUN_EQ_THM, FMERGE_DEF,
+		 GSYM fmap_EQ_THM, FUNION_DEF,
+                 IN_UNION, DISJ_IMP_THM] THEN
+SIMP_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY,
+		 IN_INTER] THEN
+METIS_TAC[]);
+
+
+val FMERGE_NO_CHANGE = store_thm ("FMERGE_NO_CHANGE",
+``	   ((FMERGE m f1 f2 = f1) = 
+		(!x. (x IN FDOM f2) ==> (x IN FDOM f1 /\ (m (f1 ' x) (f2 ' x) = (f1 ' x))))) /\
+	   ((FMERGE m f1 f2 = f2) = 
+		(!x. (x IN FDOM f1) ==> (x IN FDOM f2 /\ (m (f1 ' x) (f2 ' x) = (f2 ' x)))))``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM] THEN
+SIMP_TAC std_ss [EXTENSION, FMERGE_DEF, IN_UNION, GSYM FORALL_AND_THM] THEN
+STRIP_TAC THENL [
+	HO_MATCH_MP_TAC (prove (``(!x. (P x = Q x)) ==> ((!x. P x) = (!x. Q x))``, METIS_TAC[])) THEN
+	GEN_TAC THEN
+	Cases_on `x IN FDOM f2` THEN (
+		ASM_SIMP_TAC std_ss [] THEN
+		METIS_TAC[]
+	),
+
+	HO_MATCH_MP_TAC (prove (``(!x. (P x = Q x)) ==> ((!x. P x) = (!x. Q x))``, METIS_TAC[])) THEN
+	GEN_TAC THEN
+	Cases_on `x IN FDOM f1` THEN (
+		ASM_SIMP_TAC std_ss [] THEN
+		METIS_TAC[]
+	)
+]);
+
+
+val FMERGE_COMM = store_thm ("FMERGE_COMM",
+	``COMM (FMERGE m) = COMM m``,
+
+SIMP_TAC std_ss [operatorTheory.COMM_DEF, GSYM fmap_EQ_THM] THEN
+SIMP_TAC std_ss [FMERGE_DEF] THEN
+EQ_TAC THEN REPEAT STRIP_TAC THENL [
+	POP_ASSUM MP_TAC THEN
+	SIMP_TAC std_ss [GSYM LEFT_EXISTS_IMP_THM] THEN
+	Q.EXISTS_TAC `FEMPTY |+ (z, x)` THEN
+	Q.EXISTS_TAC `FEMPTY |+ (z, y)` THEN
+	
+	SIMP_TAC std_ss [FDOM_FUPDATE, FDOM_FEMPTY, IN_UNION] THEN
+	SIMP_TAC std_ss [IN_SING, FAPPLY_FUPDATE_THM],
+
+
+	PROVE_TAC [UNION_COMM],
+
+
+	FULL_SIMP_TAC std_ss [IN_UNION]
+]);
+
+
+
+val FMERGE_ASSOC = store_thm ("FMERGE_ASSOC",
+	``ASSOC (FMERGE m) = ASSOC m``,
+
+SIMP_TAC std_ss [operatorTheory.ASSOC_DEF, GSYM fmap_EQ_THM] THEN
+SIMP_TAC std_ss [FMERGE_DEF, UNION_ASSOC, IN_UNION] THEN
+EQ_TAC THEN REPEAT STRIP_TAC THENL [
+	POP_ASSUM MP_TAC THEN
+	SIMP_TAC std_ss [GSYM LEFT_EXISTS_IMP_THM] THEN
+	Q.EXISTS_TAC `FEMPTY |+ (e, x)` THEN
+	Q.EXISTS_TAC `FEMPTY |+ (e, y)` THEN
+	Q.EXISTS_TAC `FEMPTY |+ (e, z)` THEN
+	Q.EXISTS_TAC `e` THEN	
+	SIMP_TAC std_ss [FDOM_FUPDATE, FDOM_FEMPTY, IN_UNION] THEN
+	SIMP_TAC std_ss [IN_SING, FAPPLY_FUPDATE_THM],
+
+
+	ASM_SIMP_TAC std_ss [] THEN
+	METIS_TAC[],
+
+	ASM_SIMP_TAC std_ss [] THEN
+	METIS_TAC[],
+
+	ASM_SIMP_TAC std_ss [] THEN
+	METIS_TAC[]
+]);
+
+
+
+
+val FMERGE_DRESTRICT = store_thm ("FMERGE_DRESTRICT",
+
+``DRESTRICT (FMERGE f st1 st2) vs =
+  FMERGE f (DRESTRICT st1 vs) (DRESTRICT st2 vs)``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM, 
+		 DRESTRICT_DEF, FMERGE_DEF, EXTENSION,
+		 IN_INTER, IN_UNION] THEN
+METIS_TAC[]);
+
+
+
+val FMERGE_EQ_FEMPTY = store_thm ("FMERGE_EQ_FEMPTY",
+	``(FMERGE m f g = FEMPTY) =
+          (f = FEMPTY) /\ (g = FEMPTY)``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM] THEN
+SIMP_TAC (std_ss++boolSimps.CONJ_ss) [FMERGE_DEF, FDOM_FEMPTY, NOT_IN_EMPTY,
+	EMPTY_UNION, IN_UNION]);
+
+
+(*---------------------------------------------------------------------------
     "assoc" for finite maps
  ---------------------------------------------------------------------------*)
 
@@ -1409,6 +1581,277 @@ val _ =
    ("FDOM_FUPDATE",FDOM_FUPDATE),
    ("FAPPLY_FUPDATE_THM",FAPPLY_FUPDATE_THM),
    ("FDOM_FEMPTY",FDOM_FEMPTY)];
+
+
+
+
+(*---------------------------------------------------------------------------*)
+(* Mapping for finite maps                                                   *)
+(* added 17 March 2009 by Thomas Tuerk                                       *)
+(*---------------------------------------------------------------------------*)
+ 
+val FMAP_MAP_def = Define 
+`FMAP_MAP f m = FUN_FMAP (\x. f (m ' x)) (FDOM m)`;
+
+
+val FMAP_MAP_THM = store_thm ("FMAP_MAP_THM",
+``(FDOM (FMAP_MAP f m) = FDOM m) /\
+  (!x. x IN FDOM m ==> ((FMAP_MAP f m) ' x = f (m ' x)))``,
+
+SIMP_TAC std_ss [FMAP_MAP_def,
+		 FUN_FMAP_DEF, FDOM_FINITE]);
+
+
+ 
+val FMAP_MAP_FEMPTY = store_thm ("FMAP_MAP_FEMPTY",
+``FMAP_MAP f FEMPTY = FEMPTY``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP_THM,
+		 FDOM_FEMPTY, NOT_IN_EMPTY]);
+
+
+val FMAP_MAP_FUPDATE = store_thm ("FMAP_MAP_FUPDATE",
+``FMAP_MAP f (m |+ (x, v)) = 
+  (FMAP_MAP f m) |+ (x, f v)``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP_THM,
+		 FDOM_FUPDATE, IN_INSERT,
+		 FAPPLY_FUPDATE_THM,
+		 COND_RAND, COND_RATOR,
+		 DISJ_IMP_THM]);
+
+
+
+val FEVERY_FMAP_MAP = store_thm ("FEVERY_FMAP_MAP",
+``!m P f.
+  FEVERY P (FMAP_MAP f m) = 
+  FEVERY (\x. P (FST x, (f (SND x)))) m``,
+
+SIMP_TAC std_ss [FEVERY_DEF,
+		 FDOM_FEMPTY,
+		 NOT_IN_EMPTY,
+		 FMAP_MAP_THM]);
+
+
+
+
+val FMAP_MAP___FMAP_MAP = store_thm ("FMAP_MAP___FMAP_MAP",
+``!f1 f2 f.
+  FMAP_MAP f1 (FMAP_MAP f2 f) = 
+  FMAP_MAP (f1 o f2) f``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM,
+		 FMAP_MAP_THM]);
+
+
+val FMAP_MAP2_def = Define 
+`FMAP_MAP2 f m = FUN_FMAP (\x. f (x,m ' x)) (FDOM m)`;
+
+
+val FMAP_MAP2_THM = store_thm ("FMAP_MAP2_THM",
+``(FDOM (FMAP_MAP2 f m) = FDOM m) /\
+  (!x. x IN FDOM m ==> ((FMAP_MAP2 f m) ' x = f (x,m ' x)))``,
+
+SIMP_TAC std_ss [FMAP_MAP2_def,
+		 FUN_FMAP_DEF, FDOM_FINITE]);
+
+
+ 
+val FMAP_MAP2_FEMPTY = store_thm ("FMAP_MAP2_FEMPTY",
+``FMAP_MAP2 f FEMPTY = FEMPTY``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP2_THM,
+		 FDOM_FEMPTY, NOT_IN_EMPTY]);
+
+
+val FMAP_MAP2_FUPDATE = store_thm ("FMAP_MAP2_FUPDATE",
+``FMAP_MAP2 f (m |+ (x, v)) = 
+  (FMAP_MAP2 f m) |+ (x, f (x,v))``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP2_THM,
+		 FDOM_FUPDATE, IN_INSERT,
+		 FAPPLY_FUPDATE_THM,
+		 COND_RAND, COND_RATOR,
+		 DISJ_IMP_THM]);
+
+
+
+
+
+(*---------------------------------------------------------------------------*)
+(* Some general stuff                                                        *)
+(* added 17 March 2009 by Thomas Tuerk                                       *)
+(*---------------------------------------------------------------------------*)
+
+
+val FEVERY_STRENGTHEN_THM =
+store_thm ("FEVERY_STRENGTHEN_THM",
+``FEVERY P FEMPTY /\
+         ((FEVERY P f /\ P (x,y)) ==>
+          FEVERY P (f |+ (x,y)))``,
+
+SIMP_TAC std_ss [FEVERY_DEF, FDOM_FEMPTY,
+		 NOT_IN_EMPTY, FAPPLY_FUPDATE_THM,
+		 FDOM_FUPDATE, IN_INSERT] THEN
+METIS_TAC[]);
+
+
+
+val FUPDATE_ELIM = store_thm ("FUPDATE_ELIM",
+``!k v f.
+  ((k IN FDOM f) /\ (f ' k = v)) ==>
+  (f |+ (k,v) = f)``,
+
+REPEAT STRIP_TAC THEN
+ONCE_REWRITE_TAC[GSYM fmap_EQ_THM] THEN
+SIMP_TAC std_ss [FDOM_FUPDATE, IN_INSERT, EXTENSION,
+		 FAPPLY_FUPDATE_THM] THEN
+PROVE_TAC[]);
+
+
+
+val FEVERY_DRESTRICT_COMPL = store_thm(
+"FEVERY_DRESTRICT_COMPL",
+``FEVERY P (DRESTRICT (f |+ (k, v)) (COMPL s)) = 
+  ((~(k IN s) ==> P (k,v)) /\
+  (FEVERY P (DRESTRICT f (COMPL (k INSERT s)))))``,
+
+SIMP_TAC std_ss [FEVERY_DEF, IN_INTER,
+		 FDOM_DRESTRICT,
+                 DRESTRICT_DEF, FAPPLY_FUPDATE_THM,
+                 FDOM_FUPDATE, IN_INSERT,
+		 RIGHT_AND_OVER_OR, IN_COMPL,
+                 DISJ_IMP_THM, FORALL_AND_THM] THEN
+PROVE_TAC[]);
+
+
+
+
+
+
+
+(*---------------------------------------------------------------------------
+     Merging of finite maps (added 17 March 2009 by Thomas Tuerk)
+ ---------------------------------------------------------------------------*)
+
+val FUNION_EQ_FEMPTY = store_thm ("FUNION_EQ_FEMPTY",
+``!h1 h2. (FUNION h1 h2 = FEMPTY) = ((h1 = FEMPTY) /\ (h2 = FEMPTY))``,
+
+   SIMP_TAC std_ss [GSYM fmap_EQ_THM, EXTENSION, FDOM_FEMPTY, FUNION_DEF,
+      NOT_IN_EMPTY, IN_UNION, DISJ_IMP_THM, FORALL_AND_THM] THEN
+   METIS_TAC[]);
+
+
+val SUBMAP_FUNION_EQ = store_thm ("SUBMAP_FUNION_EQ",
+``(!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f2) ==> (((f1 SUBMAP (FUNION f2 f3)) = (f1 SUBMAP f3)))) /\
+  (!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f3 DIFF (FDOM f2)) ==> (((f1 SUBMAP (FUNION f2 f3)) = (f1 SUBMAP f2))))``,
+
+  SIMP_TAC std_ss [SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION, 
+   NOT_IN_EMPTY, IN_INTER, IN_DIFF] THEN
+  METIS_TAC[])
+
+
+val SUBMAP_FUNION = store_thm ("SUBMAP_FUNION",
+``!f1 f2 f3. (f1 SUBMAP f2) \/ ((DISJOINT (FDOM f1) (FDOM f2) /\ (f1 SUBMAP f3))) ==> (f1 SUBMAP (FUNION f2 f3))``,
+
+SIMP_TAC std_ss [SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION, 
+   NOT_IN_EMPTY, IN_INTER] THEN
+METIS_TAC[]);
+
+val SUBMAP_FUNION_ID = store_thm ("SUBMAP_FUNION_ID",
+``(!f1 f2. (f1 SUBMAP (FUNION f1 f2))) /\
+(!f1 f2. (DISJOINT (FDOM f1) (FDOM f2)) ==> (f2 SUBMAP (FUNION f1 f2)))``,
+   
+METIS_TAC[SUBMAP_REFL, SUBMAP_FUNION, DISJOINT_SYM]);
+
+val FEMPTY_SUBMAP = store_thm ("FEMPTY_SUBMAP",
+   ``!h. h SUBMAP FEMPTY = (h = FEMPTY)``,
+
+   SIMP_TAC std_ss [SUBMAP_DEF, FDOM_FEMPTY, NOT_IN_EMPTY, GSYM fmap_EQ_THM,
+      EXTENSION] THEN
+   METIS_TAC[]);
+
+
+val FUNION_EQ = store_thm ("FUNION_EQ",
+``!f1 f2 f3. (DISJOINT (FDOM f1) (FDOM f2) /\
+              DISJOINT (FDOM f1) (FDOM f3)) ==> 
+             (((FUNION f1 f2) = (FUNION f1 f3)) = (f2 = f3))``,
+
+  SIMP_TAC std_ss [GSYM SUBMAP_ANTISYM, SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION, 
+   NOT_IN_EMPTY, IN_INTER, IN_DIFF] THEN
+  METIS_TAC[])
+
+val FUNION_EQ_IMPL = store_thm ("FUNION_EQ_IMPL",
+``!f1 f2 f3. (DISJOINT (FDOM f1) (FDOM f2) /\
+              DISJOINT (FDOM f1) (FDOM f3) /\ (f2 = f3)) ==> 
+             ((FUNION f1 f2) = (FUNION f1 f3))``,
+  SIMP_TAC std_ss []);
+
+
+val DOMSUB_FUNION = store_thm ("DOMSUB_FUNION",
+``(FUNION f g) \\ k = FUNION (f \\ k) (g \\ k)``,
+SIMP_TAC std_ss [GSYM fmap_EQ_THM, FDOM_DOMSUB, FUNION_DEF, EXTENSION,
+   IN_UNION, IN_DELETE] THEN
+REPEAT STRIP_TAC THENL [
+   METIS_TAC[],
+   ASM_SIMP_TAC std_ss [DOMSUB_FAPPLY_NEQ, FUNION_DEF],
+   ASM_SIMP_TAC std_ss [DOMSUB_FAPPLY_NEQ, FUNION_DEF]
+]);
+
+
+val FUNION_COMM = store_thm ("FUNION_COMM",
+``!f g. (DISJOINT (FDOM f) (FDOM g)) ==> ((FUNION f g) = (FUNION g f))``,
+   SIMP_TAC std_ss [GSYM fmap_EQ_THM, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER] THEN
+   METIS_TAC[]);
+
+
+val FUNION_ASSOC = store_thm ("FUNION_ASSOC",
+``!f g h. ((FUNION f (FUNION g h)) = (FUNION (FUNION f g) h))``,
+   SIMP_TAC std_ss [GSYM fmap_EQ_THM, FUNION_DEF, IN_UNION, EXTENSION] THEN
+   METIS_TAC[]);
+
+
+val DRESTRICT_FUNION = store_thm ("DRESTRICT_FUNION",
+   ``!h s1 s2. FUNION (DRESTRICT h s1) (DRESTRICT h s2) =
+               DRESTRICT h (s1 UNION s2)``,
+    SIMP_TAC std_ss [DRESTRICT_DEF, GSYM fmap_EQ_THM, EXTENSION,
+      FUNION_DEF, IN_INTER, IN_UNION, DISJ_IMP_THM,
+      LEFT_AND_OVER_OR]);
+
+
+val DRESTRICT_EQ_FUNION = store_thm ("DRESTRICT_EQ_FUNION",
+   ``!h h1 h2. (DISJOINT (FDOM h1) (FDOM h2)) /\ (FUNION h1 h2 = h) ==> (h2 = DRESTRICT h (COMPL (FDOM h1)))``,
+    SIMP_TAC std_ss [DRESTRICT_DEF, GSYM fmap_EQ_THM, EXTENSION,
+      FUNION_DEF, IN_INTER, IN_UNION, IN_COMPL, DISJOINT_DEF,
+      NOT_IN_EMPTY] THEN
+    METIS_TAC[]);
+
+
+val IN_FDOM_FOLDR_UNION = store_thm ("IN_FDOM_FOLDR_UNION",
+``!x hL. x IN FDOM (FOLDR FUNION FEMPTY hL) =
+        ?h. MEM h hL /\ x IN FDOM h``,
+
+Induct_on `hL` THENL [
+   SIMP_TAC list_ss [FDOM_FEMPTY, NOT_IN_EMPTY],
+
+   FULL_SIMP_TAC list_ss [FDOM_FUNION, IN_UNION, DISJ_IMP_THM] THEN
+   METIS_TAC[]
+]);
+
+
+val DRESTRICT_FUNION_DRESTRICT_COMPL = store_thm (
+"DRESTRICT_FUNION_DRESTRICT_COMPL",
+``FUNION (DRESTRICT f s) (DRESTRICT f (COMPL s)) = f ``,
+
+SIMP_TAC std_ss [GSYM fmap_EQ_THM, FUNION_DEF, DRESTRICT_DEF,
+   EXTENSION, IN_INTER, IN_UNION, IN_COMPL] THEN
+METIS_TAC[]);
+
+
+
+val DRESTRICT_IDEMPOT = store_thm ("DRESTRICT_IDEMPOT",
+``!s vs. DRESTRICT (DRESTRICT s vs) vs = (DRESTRICT s vs)``,
+SIMP_TAC std_ss [DRESTRICT_DRESTRICT, INTER_IDEMPOT]);
 
 
 (* ----------------------------------------------------------------------
