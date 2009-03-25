@@ -812,10 +812,10 @@ val FILTER_COND_REWRITE = Q.store_thm
   (!h. ~(P h) ==> (FILTER P (h::l) = FILTER P l))`,
 SIMP_TAC bool_ss [FILTER]);
 
-val MEMBER_NOT_NIL = Q.store_thm 
-("MEMBER_NOT_NIL",
- `!l. (?e. MEM e l) = ~(l = [])`,
-  Cases_on `l` THEN SIMP_TAC bool_ss [EXISTS_OR_THM, MEM, NOT_CONS_NIL]);
+val NOT_NULL_MEM = Q.store_thm 
+("NOT_NULL_MEM",
+ `!l. ~(NULL l) = (?e. MEM e l)`,
+  Cases_on `l` THEN SIMP_TAC bool_ss [EXISTS_OR_THM, MEM, NOT_CONS_NIL, NULL]);
 
 (* Computing EL when n is in numeral representation *)
 val EL_compute = store_thm("EL_compute",
