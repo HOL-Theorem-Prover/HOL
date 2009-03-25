@@ -107,6 +107,19 @@ val BAG_INN_BAG_INSERT = store_thm(
   EQ_TAC THEN COND_CASES_TAC THEN STRIP_TAC THEN
   ELIM_TAC THEN ASM_SIMP_TAC hol_ss []);
 
+
+val BAG_INN_BAG_INSERT_STRONG = store_thm (
+  "BAG_INN_BAG_INSERT_STRONG",
+   ``!b n e1 e2.
+        BAG_INN e1 n (BAG_INSERT e2 b) =
+          BAG_INN e1 (n - 1) b /\ (e1 = e2) \/ 
+          BAG_INN e1 n b /\ ~(e1 = e2)``,
+  REWRITE_TAC [BAG_INN_BAG_INSERT] THEN 
+  Cases_on `n` THEN SIMP_TAC hol_ss [BAG_INN_0] THEN
+  `n' < SUC n'` by bossLib.DECIDE_TAC THEN
+  PROVE_TAC[BAG_INN_LESS]);
+
+
 val BAG_IN_BAG_UNION = Q.store_thm(
   "BAG_IN_BAG_UNION",
   `!b1 b2 e. BAG_IN e (BAG_UNION b1 b2) = BAG_IN e b1 \/ BAG_IN e b2`,
@@ -132,6 +145,19 @@ val BAG_INN_BAG_UNION = Q.store_thm(
       ASM_SIMP_TAC hol_ss []
     ]
   ]);
+
+val BAG_INN_BAG_MERGE = Q.store_thm (
+  "BAG_INN_BAG_MERGE",
+  `!n e b1 b2. (BAG_INN e n (BAG_MERGE b1 b2)) =
+               (BAG_INN e n b1 \/ BAG_INN e n b2)`,
+  SIMP_TAC hol_ss [BAG_INN, BAG_MERGE]);
+
+
+val BAG_IN_BAG_MERGE = Q.store_thm (
+  "BAG_IN_BAG_MERGE",
+  `!e b1 b2. (BAG_IN e (BAG_MERGE b1 b2)) =
+             (BAG_IN e b1 \/ BAG_IN e b2)`,
+  SIMP_TAC hol_ss [BAG_IN, BAG_INN_BAG_MERGE]);
 
 val geq_refl = ARITH_PROVE ``m >= m``
 
@@ -983,6 +1009,14 @@ val SET_OF_BAG_UNION = store_thm(
   CONV_TAC (rhs_CONV (ONCE_REWRITE_CONV [GSYM SPECIFICATION])) THEN
   SIMP_TAC hol_ss [GSPECIFICATION]);
 
+val SET_OF_BAG_MERGE = store_thm (
+  "SET_OF_BAG_MERGE",
+  ``!b1 b2. SET_OF_BAG (BAG_MERGE b1 b2) =
+            SET_OF_BAG b1 UNION SET_OF_BAG b2``,
+  ONCE_REWRITE_TAC[EXTENSION] THEN
+  SIMP_TAC hol_ss [SET_OF_BAG, IN_UNION, IN_ABS,
+		   BAG_IN_BAG_MERGE]);
+
 val SET_OF_BAG_INSERT = Q.store_thm(
   "SET_OF_BAG_INSERT",
   `!e b. SET_OF_BAG (BAG_INSERT e b) = e INSERT (SET_OF_BAG b)`,
@@ -1048,6 +1082,25 @@ val BAG_DISJOINT_DIFF = store_thm(
                     GSPECIFICATION, NOT_IN_EMPTY] THEN
   SIMP_TAC hol_ss [SPECIFICATION]);
 
+val BAG_DISJOINT_BAG_IN = store_thm (
+  "BAG_DISJOINT_BAG_IN",
+  ``!b1 b2. BAG_DISJOINT b1 b2 =
+            !e. ~(BAG_IN e b1) \/ ~(BAG_IN e b2)``,
+  SIMP_TAC hol_ss [BAG_DISJOINT, DISJOINT_DEF,
+ 		   EXTENSION, NOT_IN_EMPTY,
+		   IN_INTER, IN_SET_OF_BAG]);
+
+val BAG_DISJOINT_BAG_INSERT = store_thm (
+  "BAG_DISJOINT_BAG_INSERT",
+  ``(!b1 b2 e1.
+      BAG_DISJOINT (BAG_INSERT e1 b1) b2 =
+      (~(BAG_IN e1 b2) /\ (BAG_DISJOINT b1 b2))) /\
+    (!b1 b2 e2.
+      BAG_DISJOINT b1 (BAG_INSERT e2 b2) =
+      (~(BAG_IN e2 b1) /\ (BAG_DISJOINT b1 b2)))``,
+  SIMP_TAC hol_ss [BAG_DISJOINT_BAG_IN,
+		   BAG_IN_BAG_INSERT] THEN
+  METIS_TAC[]);
 
 val _ = print "Developing theory of finite bags\n"
 
@@ -1816,5 +1869,92 @@ val BAG_GEN_PROD_POSITIVE = Q.store_thm
   `0 < e` by METIS_TAC [BAG_IN_BAG_INSERT] THEN
   `0 < BAG_GEN_PROD b 1` by METIS_TAC [BAG_IN_BAG_INSERT] THEN
  METIS_TAC [arithmeticTheory.LESS_MULT2]]);
+
+
+
+
+
+val BAG_EVERY = new_definition ("BAG_EVERY",
+                  ``BAG_EVERY P b = !e. BAG_IN e b ==> P e``);
+
+val BAG_EVERY_THM = store_thm ("BAG_EVERY_THM",
+``(!P. (BAG_EVERY P EMPTY_BAG)) /\
+  (!P e b. (BAG_EVERY P (BAG_INSERT e b) = P e /\ BAG_EVERY P b))``,
+SIMP_TAC hol_ss [BAG_EVERY, BAG_IN_BAG_INSERT,
+		 DISJ_IMP_THM, FORALL_AND_THM,
+		 NOT_IN_EMPTY_BAG]);
+
+
+
+
+
+val BAG_ALL_DISTINCT = new_definition ("BAG_ALL_DISTINCT",
+  ``BAG_ALL_DISTINCT b = (!e. b e <= 1:num)``);
+
+val BAG_ALL_DISTINCT_THM = store_thm ("BAG_ALL_DISTINCT_THM",
+``BAG_ALL_DISTINCT EMPTY_BAG /\
+  (!e b. (BAG_ALL_DISTINCT (BAG_INSERT e b) =
+         ~(BAG_IN e b) /\ BAG_ALL_DISTINCT b))``,
+SIMP_TAC hol_ss [BAG_ALL_DISTINCT, EMPTY_BAG,
+		 BAG_IN, BAG_INN, BAG_INSERT,
+		 COND_RAND, COND_RATOR,
+		 COND_EXPAND_IMP, FORALL_AND_THM] THEN
+REPEAT GEN_TAC THEN
+`(b e + 1 <= 1) = (b e = 0)` by bossLib.DECIDE_TAC THEN
+`~(b e >= 1) = (b e = 0)` by bossLib.DECIDE_TAC THEN
+`0:num <= 1` by bossLib.DECIDE_TAC THEN
+METIS_TAC[]);
+
+
+val BAG_ALL_DISTINCT_BAG_MERGE = store_thm (
+  "BAG_ALL_DISTINCT_BAG_MERGE",
+  ``!b1 b2. BAG_ALL_DISTINCT (BAG_MERGE b1 b2) =
+        (BAG_ALL_DISTINCT b1 /\  BAG_ALL_DISTINCT b2)``,
+  SIMP_TAC hol_ss [BAG_ALL_DISTINCT, BAG_MERGE, 
+                   GSYM FORALL_AND_THM, COND_RAND, COND_RATOR,
+		   COND_EXPAND_IMP] THEN
+  REPEAT STRIP_TAC THEN
+  ConseqConv.CONSEQ_CONV_TAC (K ConseqConv.FORALL_EQ___CONSEQ_CONV) THEN
+  GEN_TAC THEN bossLib.DECIDE_TAC);
+
+
+val BAG_ALL_DISTINCT_BAG_UNION = store_thm (
+  "BAG_ALL_DISTINCT_BAG_UNION",
+  ``!b1 b2. 
+        BAG_ALL_DISTINCT (BAG_UNION b1 b2) =
+        (BAG_ALL_DISTINCT b1 /\ BAG_ALL_DISTINCT b2 /\
+         BAG_DISJOINT b1 b2)``,
+  SIMP_TAC hol_ss [BAG_ALL_DISTINCT, BAG_UNION,
+		   BAG_DISJOINT, DISJOINT_DEF, EXTENSION,
+		   NOT_IN_EMPTY, IN_INTER,
+		   IN_SET_OF_BAG, BAG_IN,
+     		   BAG_INN, GSYM FORALL_AND_THM] THEN
+  REPEAT STRIP_TAC THEN
+  ConseqConv.CONSEQ_CONV_TAC (K ConseqConv.FORALL_EQ___CONSEQ_CONV) THEN
+  GEN_TAC THEN bossLib.DECIDE_TAC);
+
+
+val BAG_ALL_DISTINCT_DIFF = store_thm (
+  "BAG_ALL_DISTINCT_DIFF",
+  ``!b1 b2. 
+       BAG_ALL_DISTINCT b1 ==>
+       BAG_ALL_DISTINCT (BAG_DIFF b1 b2)``,
+  SIMP_TAC hol_ss [BAG_ALL_DISTINCT, BAG_DIFF] THEN
+  REPEAT STRIP_TAC THEN
+  `b1 e <= 1` by PROVE_TAC[] THEN
+  bossLib.DECIDE_TAC);
+
+
+val BAG_IN_BAG_DIFF_ALL_DISTINCT = store_thm (
+  "BAG_IN_BAG_DIFF_ALL_DISTINCT",
+  ``!b1 b2 e. BAG_ALL_DISTINCT b1 ==>
+       (BAG_IN e (BAG_DIFF b1 b2) =
+        BAG_IN e b1 /\ ~BAG_IN e b2)``,
+  SIMP_TAC hol_ss [BAG_ALL_DISTINCT,
+		   BAG_IN, BAG_INN, BAG_DIFF] THEN
+  REPEAT STRIP_TAC THEN
+  `b1 e <= 1` by PROVE_TAC[] THEN
+  Cases_on `b1 e >= 1` THEN ASM_SIMP_TAC hol_ss []
+);
 
 val _ = export_theory();
