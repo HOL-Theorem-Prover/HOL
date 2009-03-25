@@ -4423,6 +4423,99 @@ end;
 (* END countability theorems *)
 
 
+(* Misc theorems added by Thomas Tuerk on 2009-03-24 *)
+
+val IMAGE_BIGUNION = store_thm ("IMAGE_BIGUNION",
+  ``!f M. IMAGE f (BIGUNION M) = 
+	  BIGUNION (IMAGE (IMAGE f) M)``,
+
+ONCE_REWRITE_TAC [EXTENSION] THEN
+SIMP_TAC bool_ss [IN_BIGUNION, IN_IMAGE,
+	GSYM LEFT_EXISTS_AND_THM,
+	GSYM RIGHT_EXISTS_AND_THM] THEN
+METIS_TAC[]);
+
+
+val IN_ABS = store_thm ("IN_ABS",
+``!x P. (x IN \x. P x) = P x``,
+SIMP_TAC bool_ss [IN_DEF]);
+
+
+val SUBSET_DIFF = store_thm("SUBSET_DIFF",
+``!s1 s2 s3.
+(s1 SUBSET (s2 DIFF s3)) =
+((s1 SUBSET s2) /\ (DISJOINT s1 s3))``,
+
+SIMP_TAC bool_ss [SUBSET_DEF, IN_DIFF, DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY] THEN
+METIS_TAC[])
+
+val INTER_SUBSET_EQN = store_thm ("INTER_SUBSET_EQN",
+
+``((A INTER B = A) = (A SUBSET B)) /\
+  ((A INTER B = B) = (B SUBSET A))``,
+
+SIMP_TAC bool_ss [EXTENSION, IN_INTER, SUBSET_DEF] THEN
+METIS_TAC[]);
+
+
+val PSUBSET_SING = store_thm ("PSUBSET_SING",
+``!s x. x PSUBSET {s} = (x = EMPTY)``,
+
+SIMP_TAC bool_ss [PSUBSET_DEF, SUBSET_DEF, EXTENSION,
+		 IN_SING, NOT_IN_EMPTY] THEN
+METIS_TAC[]);
+
+
+val INTER_UNION = store_thm ("INTER_UNION",
+``((A UNION B) INTER A = A) /\
+  ((B UNION A) INTER A = A) /\
+  (A INTER (A UNION B) = A) /\
+  (A INTER (B UNION A) = A)``,
+SIMP_TAC bool_ss [INTER_SUBSET_EQN, SUBSET_UNION]);
+
+
+val UNION_DELETE = store_thm ("UNION_DELETE",
+``!A B x. (A UNION B) DELETE x =
+  ((A DELETE x) UNION (B DELETE x))``,
+
+SIMP_TAC bool_ss [EXTENSION, IN_UNION, IN_DELETE] THEN
+REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN
+ASM_SIMP_TAC bool_ss [])
+
+
+
+val DELETE_SUBSET_INSERT = store_thm ("DELETE_SUBSET_INSERT",
+``!s e s2.
+  s DELETE e SUBSET s2 =
+  s SUBSET e INSERT s2``,
+
+SIMP_TAC bool_ss [SUBSET_DEF, IN_DELETE, IN_INSERT] THEN
+METIS_TAC[]);
+
+
+
+val IN_INSERT_EXPAND = store_thm ("IN_INSERT_EXPAND",
+``!x y P. x IN y INSERT P =
+  (x = y) \/ (~(x = y) /\ x IN P)``,
+
+SIMP_TAC bool_ss [IN_INSERT] THEN
+METIS_TAC[]);
+
+
+
+val FINITE_INTER = store_thm ("FINITE_INTER",
+``!s1 s2. ((FINITE s1) \/ (FINITE s2)) ==>
+  FINITE (s1 INTER s2)``,
+
+REPEAT GEN_TAC THEN
+`((s1 INTER s2) SUBSET s1) /\ ((s1 INTER s2) SUBSET s2)` by ALL_TAC THEN1 (
+   SIMP_TAC bool_ss [SUBSET_DEF, IN_INTER]
+) THEN
+METIS_TAC[SUBSET_FINITE]);
+
+
+(* END misc thms *)
+
 
 val _ = export_rewrites
     [
