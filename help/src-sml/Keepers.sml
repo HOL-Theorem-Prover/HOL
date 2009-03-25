@@ -188,7 +188,7 @@ val keepers =
      "optionSimps.sig", "intSimps",
 
      (* sorting theory *)
-     "sortingTheory.sig",
+     "sortingTheory.sig", "permLib.sig",
 
      (* fixed point operators on sets *)
      "fixedPointTheory.sig",
@@ -201,6 +201,10 @@ val keepers =
      "EncodeTheory.sig", "EncodeVarTheory.sig",
 
      (* Floating point arithmetic *)
-     "floatTheory.sig", "ieeeTheory.sig"
+     "floatTheory.sig", "ieeeTheory.sig",
+
+     (* quantifier elimination *)
+     "quantHeuristicsLib.sig"
+
   ];
 end;
