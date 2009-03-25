@@ -428,6 +428,22 @@ val LESS_EQ_ADD = store_thm ("LESS_EQ_ADD",
       THEN ASM_REWRITE_TAC[],
      REWRITE_TAC[SYM(ASSUME (--`m = m + n`--)),LESS_SUC_REFL]]);
 
+val LESS_EQ_ADD_EXISTS = store_thm ("LESS_EQ_ADD_EXISTS",
+     --`!m n. n<=m ==> ?p. p+n = m`--,
+     SIMP_TAC bool_ss [LESS_OR_EQ, DISJ_IMP_THM, FORALL_AND_THM,
+		       LESS_ADD] 
+      THEN GEN_TAC 
+      THEN EXISTS_TAC (--`0`--) 
+      THEN REWRITE_TAC[ADD]);
+
+val LESS_STRONG_ADD = store_thm ("LESS_STRONG_ADD",
+     --`!m n. n < m ==> ?p. (SUC p)+n = m`--,
+     REPEAT STRIP_TAC 
+      THEN IMP_RES_TAC LESS_OR 
+      THEN IMP_RES_TAC LESS_EQ_ADD_EXISTS
+      THEN EXISTS_TAC (--`p:num`--) 
+      THEN FULL_SIMP_TAC bool_ss [ADD_CLAUSES]);
+
 val LESS_EQ_SUC_REFL = store_thm ("LESS_EQ_SUC_REFL",
    --`!m. m <= SUC m`--,
    GEN_TAC
@@ -3202,6 +3218,19 @@ val RTC_NRC = store_thm(
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
   PROVE_TAC [NRC] (* METIS_TAC bombs *));
 
+val RTC_eq_NRC = store_thm (
+  "RTC_eq_NRC",
+  ``!R x y. RTC R x y = ?n. NRC R n x y``,
+  PROVE_TAC[RTC_NRC, NRC_RTC]);
+
+
+val TC_eq_NRC = store_thm (
+  "TC_eq_NRC",
+  ``!R x y. TC R x y = ?n. NRC R (SUC n) x y``,
+  REWRITE_TAC [relationTheory.EXTEND_RTC_TC_EQN, RTC_eq_NRC, NRC] THEN
+  PROVE_TAC[]);
+
+
 val LESS_EQUAL_DIFF = store_thm
   ("LESS_EQUAL_DIFF",
    ``!m n : num. m <= n ==> ?k. m = n - k``,
@@ -3301,6 +3330,15 @@ val SUC_MOD = store_thm
           THEN Q.EXISTS_TAC `b + n`
           THEN ASM_REWRITE_TAC [LESS_MONO_ADD_EQ, ADD_MONO_LESS_EQ, ONE]
           THEN PROVE_TAC [LESS_OR]]);
+
+
+val ADD_MOD = Q.store_thm 
+("ADD_MOD",
+ `!n a b p.  (0 < n:num) ==> (
+	     ((a + p) MOD n = (b + p) MOD n) =
+	      (a MOD n = b MOD n))`,
+GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN HO_MATCH_MP_TAC INDUCTION
+  THEN SIMP_TAC bool_ss [ADD_CLAUSES, SUC_MOD]);
 
 (*---------------------------------------------------------------------------*)
 (* We should be able to use "by" construct at this phase of development,     *)
