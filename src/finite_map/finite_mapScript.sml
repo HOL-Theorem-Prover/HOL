@@ -1065,6 +1065,11 @@ val o_f_FEMPTY = store_thm(
   SRW_TAC [][GSYM fmap_EQ_THM, FDOM_o_f])
 val _ = export_rewrites ["o_f_FEMPTY"]
 
+val FEVERY_o_f = store_thm (
+  "FEVERY_o_f",
+  ``!m P f. FEVERY P (f o_f m) = FEVERY (\x. P (FST x, (f (SND x)))) m``,
+  SIMP_TAC std_ss [FEVERY_DEF, FDOM_FEMPTY, NOT_IN_EMPTY, o_f_DEF]);
+
 val o_f_o_f = store_thm(
   "o_f_o_f",
   ``(f o_f (g o_f h)) = (f o g) o_f h``,
@@ -1586,64 +1591,10 @@ val _ =
 
 
 (*---------------------------------------------------------------------------*)
-(* Mapping for finite maps                                                   *)
-(* added 17 March 2009 by Thomas Tuerk                                       *)
+(* Mapping for finite maps with two arguments, compare to o_f                *)
+(* added 17 March 2009 by Thomas Tuerk, updated 26 March                     *)
 (*---------------------------------------------------------------------------*)
  
-val FMAP_MAP_def = Define 
-`FMAP_MAP f m = FUN_FMAP (\x. f (m ' x)) (FDOM m)`;
-
-
-val FMAP_MAP_THM = store_thm ("FMAP_MAP_THM",
-``(FDOM (FMAP_MAP f m) = FDOM m) /\
-  (!x. x IN FDOM m ==> ((FMAP_MAP f m) ' x = f (m ' x)))``,
-
-SIMP_TAC std_ss [FMAP_MAP_def,
-		 FUN_FMAP_DEF, FDOM_FINITE]);
-
-
- 
-val FMAP_MAP_FEMPTY = store_thm ("FMAP_MAP_FEMPTY",
-``FMAP_MAP f FEMPTY = FEMPTY``,
-
-SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP_THM,
-		 FDOM_FEMPTY, NOT_IN_EMPTY]);
-
-
-val FMAP_MAP_FUPDATE = store_thm ("FMAP_MAP_FUPDATE",
-``FMAP_MAP f (m |+ (x, v)) = 
-  (FMAP_MAP f m) |+ (x, f v)``,
-
-SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP_THM,
-		 FDOM_FUPDATE, IN_INSERT,
-		 FAPPLY_FUPDATE_THM,
-		 COND_RAND, COND_RATOR,
-		 DISJ_IMP_THM]);
-
-
-
-val FEVERY_FMAP_MAP = store_thm ("FEVERY_FMAP_MAP",
-``!m P f.
-  FEVERY P (FMAP_MAP f m) = 
-  FEVERY (\x. P (FST x, (f (SND x)))) m``,
-
-SIMP_TAC std_ss [FEVERY_DEF,
-		 FDOM_FEMPTY,
-		 NOT_IN_EMPTY,
-		 FMAP_MAP_THM]);
-
-
-
-
-val FMAP_MAP___FMAP_MAP = store_thm ("FMAP_MAP___FMAP_MAP",
-``!f1 f2 f.
-  FMAP_MAP f1 (FMAP_MAP f2 f) = 
-  FMAP_MAP (f1 o f2) f``,
-
-SIMP_TAC std_ss [GSYM fmap_EQ_THM,
-		 FMAP_MAP_THM]);
-
-
 val FMAP_MAP2_def = Define 
 `FMAP_MAP2 f m = FUN_FMAP (\x. f (x,m ' x)) (FDOM m)`;
 
