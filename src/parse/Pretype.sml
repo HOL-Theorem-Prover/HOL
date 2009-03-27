@@ -1721,50 +1721,6 @@ local
     | add_bvar _ _ _ = raise TCERR "rename_typevars" "add_bvar: arg is not variable"
 in
 
-(*
-fun rename_kvs avds (ty as PT(ty0, locn)) = let
-    val rename_kv = Prekind.rename_kv avds
-in
-  case ty0 of
-    Vartype (v as (s,kd,rk)) =>
-       rename_kv kd >>- (fn kd' =>
-       rename_rv rk >>= (fn rk' =>
-       if mem s avds then return (PT(Vartype(s,kd',rk'), locn)) else replace (s,kd',rk')))
-(*
-       case Lib.assoc1 s benv
-         of SOME _ => return (PT(Vartype(s,kd',rk'), locn))
-          | NONE   => replace (s,kd',rk')))
-*)
-  | Contype {Thy,Tyop,Kind,Rank} =>
-       rename_kv Kind >>- (fn Kind' =>
-       rename_rv_new Rank >>= (fn Rank' =>
-       return (PT(Contype {Thy=Thy,Tyop=Tyop,Kind=Kind',Rank=Rank'}, locn))))
-  | TyApp (ty1, ty2) =>
-      rename_kvs avds ty1 >-
-      (fn ty1' => rename_kvs avds ty2 >-
-      (fn ty2' => return (PT(TyApp(ty1', ty2'), locn))))
-  | TyUniv (ty1, ty2) =>
-      add_bvar ty1 avds >- (fn (avds',ty1') =>
-      rename_kvs avds' ty2 >-
-      (fn ty2' => return (PT(TyUniv(ty1', ty2'), locn))))
-  | TyAbst (ty1, ty2) =>
-      add_bvar ty1 avds >- (fn (avds',ty1') =>
-      rename_kvs avds' ty2 >-
-      (fn ty2' => return (PT(TyAbst(ty1', ty2'), locn))))
-  | TyKindConstr {Ty, Kind} =>
-      rename_kv Kind >>- (fn Kind' =>
-      rename_kvs avds Ty >- (fn Ty' =>
-      return (PT(TyKindConstr {Ty=Ty', Kind=Kind'}, locn))))
-  | TyRankConstr {Ty, Rank} =>
-      rename_rv Rank >>= (fn Rank' =>
-      rename_kvs avds Ty >- (fn Ty' =>
-      return (PT(TyRankConstr {Ty=Ty', Rank=Rank'}, locn))))
-  | _ (* UVar (ref _) *) => return ty
-end
-
-fun rename_kindvars avds ty = valOf (#2 (rename_kvs avds ty ([],[],[])))
-*)
-
 fun rename_tv kdavds avds (ty as PT(ty0, locn)) =
   case ty0 of
     Vartype (v as (s,kd,rk)) =>
@@ -1890,7 +1846,8 @@ fun clean (pty as PT(ty, locn)) =
 (
   case ty of
     Vartype (s,kd,rk) => Type.mk_vartype_opr (s, Prekind.toKind kd, Prerank.toRank rk)
-  | Contype {Thy,Tyop,...} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop}
+  | Contype {Thy,Tyop,Kind,Rank} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop,
+                                         Kind=Prekind.toKind Kind, Rank=Prerank.toRank Rank}
   | TyApp(ty1,ty2)  => (Type.mk_app_type  (clean ty1, clean ty2)
                           handle Feedback.HOL_ERR e =>
                             (print ("Applying " ^ type_to_string (clean ty1)
@@ -1971,7 +1928,6 @@ and is_atom (PT(pty,locn)) = is_atom0 pty
 local
   fun default_kdprinter x = "<kind>"
   fun default_typrinter x = "<hol_type>"
-  fun default_tmprinter x = "<term>"
   fun Locn (PT(_,locn)) = locn
 in
 fun KC printers = let

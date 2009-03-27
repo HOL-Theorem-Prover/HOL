@@ -208,7 +208,7 @@ val prove_recursive_functions_exist =
               val gvs' = map (C (op_assoc eq) (zip args gvs)) args'
               val lty = itlist (curry (op -->) o type_of) gvs'
                          (funpow (length gvs)
-                                 (hd o tl o snd o dest_type) (type_of fnn))
+                                 (hd o tl o snd o strip_app_type) (type_of fnn))
               val fn' = genvar lty
               val def = mk_eq(fnn,list_mk_abs(gvs,list_mk_comb(fn',gvs')))
           in
@@ -352,7 +352,7 @@ fun type_constructors_with_args ax name =
              val (lhs,_) = dest_eq eqn
              val arg = rand lhs
          in
-            if fst (dest_type (type_of arg)) = name then SOME arg
+            if #1 (dest_con_type (fst (strip_app_type (type_of arg)))) = name then SOME arg
             else NONE
          end
   in
@@ -369,7 +369,7 @@ fun doms_of_tyaxiom ax =
  let val (evs, _) = strip_exists (#2 (strip_forall (concl ax)))
      val candidate_types = map (#1 o dom_rng o type_of) evs
      fun isop_applied_to_other ty = List.exists
-           (fn ty' => Lib.mem ty' candidate_types) (snd (dest_type ty))
+           (fn ty' => Lib.mem ty' candidate_types) (snd (strip_app_type ty))
  in
     List.filter (not o isop_applied_to_other) candidate_types
  end
@@ -387,7 +387,7 @@ fun doms_of_ind_thm ind =
  let val conclusions = strip_conj(#2(strip_imp(#2(strip_forall(concl ind)))))
      val candidate_types = map (type_of o fst o dest_forall) conclusions
      fun isop_applied_to_other ty = List.exists
-            (fn ty' => Lib.mem ty' candidate_types) (snd (dest_type ty))
+            (fn ty' => Lib.mem ty' candidate_types) (snd (strip_app_type ty))
  in
    List.filter (not o isop_applied_to_other) candidate_types
  end
@@ -413,7 +413,8 @@ fun num_variant vlist v =
 
 fun generate_case_constant_eqns ty clist =
  let val (dty,rty) = Type.dom_rng ty
-     val (Tyop,Args) = dest_type dty
+     val (Opr,Args) = strip_app_type dty
+     val (Tyop,Kind,Rank) = dest_con_type Opr
      fun mk_cfun ctm (nv,away) =
        let val (c,args) = strip_comb ctm
            val fty = itlist (curry (op -->)) (map type_of args) rty
@@ -440,7 +441,7 @@ fun define_case_constant ax =
            (List.filter (fn ty => Lib.op_mem abconv_ty (#1 (dom_rng ty)) oktypes) newtypes)
      fun mk_defn ty =
       let val (dty,rty) = dom_rng ty
-          val name = fst (dest_type dty)
+          val name = (#1 o dest_con_type o fst o strip_app_type) dty
           val cs = type_constructors_with_args ax name
           val eqns = generate_case_constant_eqns ty cs
       in new_recursive_definition
@@ -965,7 +966,7 @@ local val B = Type.bool
 in
 fun prove_induction_thm th =
    let val (Bvar,Body) = dest_abs(rand(snd(strip_forall(concl th))))
-       val (_,[ty, rty]) = dest_type (type_of Bvar)
+       val (_,[ty, rty]) = strip_app_type (type_of Bvar)
        val inst = INST_TYPE [rty |-> B] th
        val P = mk_primed_var("P", ty --> B)
        and v = genvar ty

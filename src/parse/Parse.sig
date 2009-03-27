@@ -52,7 +52,7 @@ signature Parse = sig
        Pretype.pretype,
      rankcast : {Locn : locn.locn, Rank : Prerank.prerank, Ty : Pretype.pretype} -> Pretype.pretype,
      tyabs : Pretype.pretype * Pretype.pretype -> Pretype.pretype, tyapp : Pretype.pretype * Pretype.pretype -> Pretype.pretype,
-     tycon : {Locn : locn.locn, Thy : string, Tyop : string} -> Pretype.pretype,
+     tycon : {Locn : locn.locn, Thy : string, Tyop : string, Kind : Prekind.prekind, Rank : Prerank.prerank} -> Pretype.pretype,
      tyop : (string * locn.locn) * Pretype.pretype list -> Pretype.pretype,
      tyuniv : Pretype.pretype * Pretype.pretype -> Pretype.pretype,
      vartype : (string * Prekind.prekind * Prerank.prerank) * locn.locn -> Pretype.pretype}
@@ -66,7 +66,7 @@ signature Parse = sig
        Pretype.pretype,
      rankcast : {Locn : locn.locn, Rank : Prerank.prerank, Ty : Pretype.pretype} -> Pretype.pretype,
      tyabs : Pretype.pretype * Pretype.pretype -> Pretype.pretype, tyapp : Pretype.pretype * Pretype.pretype -> Pretype.pretype,
-     tycon : {Locn : locn.locn, Thy : string, Tyop : string} -> Pretype.pretype,
+     tycon : {Locn : locn.locn, Thy : string, Tyop : string, Kind : Prekind.prekind, Rank : Prerank.prerank} -> Pretype.pretype,
      tyop : (string * locn.locn) * Pretype.pretype list -> Pretype.pretype,
      tyuniv : Pretype.pretype * Pretype.pretype -> Pretype.pretype,
      vartype : (string * Prekind.prekind * Prerank.prerank) * locn.locn -> Pretype.pretype}

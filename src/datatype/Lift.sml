@@ -47,7 +47,7 @@ fun lift_def_syntax (Gamma,typ) =
  let val Clist = TypeBasePure.constructors_of
                   (Option.valOf(TypeBase.fetch typ))
      val ty = snd(strip_fun(type_of (hd Clist)))
-     val args = snd(dest_type ty)
+     val args = snd(strip_app_type ty)
      val Clistnames = enum_list "C" (length Clist)
      val flistnames = enum_list "f" (length args)
      val flist_types = map (fn ty => (ty --> termty)) args

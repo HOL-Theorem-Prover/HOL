@@ -5,7 +5,7 @@ open HolKernel Parse;
 
 datatype theory
     = THEORY of string *
-                {types       : (string * int) list,
+                {types       : (string * kind * int) list,
                  consts      : (string * hol_type) list,
                  parents     : string list,
                  axioms      : (string * thm) list,
@@ -48,8 +48,8 @@ in
     add_string ("Theory: "^name); nl2();
     vblock ("Parents", add_string, parents); nl2();
     vblock ("Type constants",
-     (fn (name,arity) =>
-         (add_string name; add_string (" "^Lib.int_to_string arity))),
+     (fn (name,kind,rank) =>
+         (add_string name; add_string (" : "^Kind.kind_to_string kind); add_string (" :<= "^Lib.int_to_string rank))),
      types)
       ;
     vspace types;

@@ -25,8 +25,10 @@ sig
  val mk_thy_type   : {Thy:string, Tyop:string, Args:hol_type list} -> hol_type
  val dest_thy_type : hol_type -> {Thy:string, Tyop:string, Args:hol_type list}
 
- val mk_con_type   : string -> hol_type
- val mk_thy_con_type : {Thy:string, Tyop:string} -> hol_type
+ val prim_mk_con_type : string -> hol_type
+ val prim_mk_thy_con_type : {Thy:string, Tyop:string} -> hol_type
+ val mk_con_type   : {Tyop:string, Kind:kind, Rank:int} -> hol_type
+ val mk_thy_con_type : {Thy:string, Tyop:string, Kind:kind, Rank:int} -> hol_type
  val dest_con_type : hol_type -> string * kind * int
  val dest_thy_con_type : hol_type -> {Thy:string, Tyop:string, Kind:kind,
                                        Rank:int}

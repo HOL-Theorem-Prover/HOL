@@ -260,18 +260,23 @@ fun remove_ty_aq t =
 
 (* "qtyop" refers to "qualified" type operator, i.e., qualified by theory name. *)
 
-fun mk_conty{Thy,Tyop,Locn} = let
+fun mk_conty{Thy,Tyop,Kind,Rank,Locn} = let
   open Prekind Prerank Pretype
-  val con = Type.mk_thy_con_type {Thy=Thy,Tyop=Tyop}
+(*
+  val kind = toKind Kind
+  val rank = toRank Rank
+  val con = Type.mk_thy_con_type {Thy=Thy,Tyop=Tyop,Kind=kind,Rank=rank}
   val kind = fromKind (Type.kind_of con)
   val rank = fromRank (Type.rank_of con)
+*)
 in
-  PT(Contype {Thy=Thy, Tyop=Tyop, Kind=kind, Rank=rank}, Locn)
+  PT(Contype {Thy=Thy, Tyop=Tyop, Kind=Kind, Rank=Rank}, Locn)
+  (* PT(Contype {Thy=Thy, Tyop=Tyop, Kind=kind, Rank=rank}, Locn) *)
 end
 
 fun do_qtyop {Thy,Tyop,Locn,Args} =
   List.foldl (fn (arg,acc) => Pretype.PT(Pretype.TyApp(acc,arg),Locn))
-             (mk_conty{Thy=Thy,Tyop=Tyop,Locn=Locn})
+             (mk_conty{Thy=Thy,Tyop=Tyop,Kind=Prekind.mk_arity(length Args),Rank=Prerank.Zerorank,Locn=Locn})
              Args
 
 fun tyop_to_qtyop ((tyop,locn), args) =
@@ -1070,7 +1075,7 @@ fun temp_type_abbrev (s, ty) = let
         end
       else if is_con_type ty then let
           val {Thy, Tyop, Kind, Rank} = dest_thy_con_type ty
-        in type_grammar.TYCON {Thy = Thy, Tyop = Tyop}
+        in type_grammar.TYCON {Thy = Thy, Tyop = Tyop, Kind = Kind, Rank = Rank}
         end
       else if is_app_type ty then let
           val (ty1, ty2) = Type.dest_app_type ty

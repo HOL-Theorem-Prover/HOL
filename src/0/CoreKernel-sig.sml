@@ -10,11 +10,13 @@ signature CoreKernel = sig
                                       and type term     = Term.term
                                       and type tag      = Tag.tag
 
-  structure Theory : Theory         where type hol_type = Type.hol_type
+  structure Theory : Theory         where type kind     = Kind.kind
+                                      and type hol_type = Type.hol_type
                                       and type term     = Term.term
                                       and type thm      = Thm.thm
 
-  structure TheoryPP : TheoryPP     where type hol_type = Type.hol_type
+  structure TheoryPP : TheoryPP     where type kind     = Kind.kind
+                                      and type hol_type = Type.hol_type
                                       and type thm      = Thm.thm
 
   structure Net : Net               where type term = Term.term

@@ -46,8 +46,10 @@ sig
   val mk_thy_type   : {Thy:string, Tyop:string, Args:hol_type list} -> hol_type
   val dest_thy_type : hol_type -> {Thy:string, Tyop:string, Args:hol_type list}
 
-  val mk_con_type   : string -> hol_type
-  val mk_thy_con_type : {Thy:string, Tyop:string} -> hol_type
+  val prim_mk_con_type : string -> hol_type
+  val prim_mk_thy_con_type : {Thy:string, Tyop:string} -> hol_type
+  val mk_con_type   : {Tyop:string, Kind:kind, Rank:int} -> hol_type
+  val mk_thy_con_type : {Thy:string, Tyop:string, Kind:kind, Rank:int} -> hol_type
   val dest_con_type : hol_type -> string * kind * int
   val dest_thy_con_type : hol_type -> {Thy:string, Tyop:string, Kind:kind,
                                        Rank:int}
@@ -102,6 +104,7 @@ sig
   val type_vars_lr  : hol_type -> hol_type list
   val type_var_in   : hol_type -> hol_type -> bool
   val exists_tyvar  : (hol_type -> bool) -> hol_type -> bool
+  val mk_fun_type   : hol_type * hol_type -> hol_type
   val -->           : hol_type * hol_type -> hol_type  (* infixr 3 --> *)
   val dom_rng       : hol_type -> hol_type * hol_type  (* inverts -->  *)
   val raw_dom_rng   : hol_type -> hol_type * hol_type  (* inverts -->  *)

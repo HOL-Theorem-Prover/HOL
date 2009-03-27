@@ -76,24 +76,6 @@ val ind  = TyCon ind_tyc;
 fun same_tyconst (id1,_,_) (id2,_,_) = id1 = id2
 
 
-(*---------------------------------------------------------------------------
-       Function types
- ---------------------------------------------------------------------------*)
-
-infixr 3 -->;
-fun (X --> Y) = TyApp (TyApp (TyCon fun_tyc, X), Y);
-
-local
-fun dom_of (TyApp(TyCon tyc, Y)) =
-      if same_tyconst tyc fun_tyc then Y
-      else raise ERR "dom_rng" "not a function type"
-  | dom_of _ = raise ERR "dom_rng" "not a function type"
-in
-fun dom_rng (TyApp(funX, Y)) = (dom_of funX, Y)
-  | dom_rng _ = raise ERR "dom_rng" "not a function type"
-end;
-
-
 (*---------------------------------------------------------------------------*
  * Computing the kind of a type, assuming it is well-kinded.                 *
  *---------------------------------------------------------------------------*)
@@ -161,6 +143,33 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun is_well_kinded ty = (check_kind_of ty; true) handle HOL_ERR _ => false
+
+
+(*---------------------------------------------------------------------------
+       Function types
+ ---------------------------------------------------------------------------*)
+
+(* mk_fun_type is for internal use only, with open types *)
+fun mk_fun_type(X,Y) = TyApp (TyApp (TyCon fun_tyc, X), Y);
+
+infixr 3 -->;
+fun (X --> Y) = if kind_of X <> typ
+                  then raise ERR "-->" ("domain of --> needs kind ty, but was given kind "
+                                        ^ kind_to_string (kind_of X))
+                else if kind_of Y <> typ
+                  then raise ERR "-->" ("range of --> needs kind ty, but was given kind "
+                                        ^ kind_to_string (kind_of Y))
+                else mk_fun_type(X,Y);
+
+local
+fun dom_of (TyApp(TyCon tyc, Y)) =
+      if same_tyconst tyc fun_tyc then Y
+      else raise ERR "dom_rng" "not a function type"
+  | dom_of _ = raise ERR "dom_rng" "not a function type"
+in
+fun dom_rng (TyApp(funX, Y)) = (dom_of funX, Y)
+  | dom_rng _ = raise ERR "dom_rng" "not a function type"
+end;
 
 
 (*-----------------------------------------------------------------------------*
@@ -574,12 +583,29 @@ in
                        " has not been declared in theory "^quote Thy^".")
 end
 
-fun mk_thy_con_type {Thy,Tyop} = let
+fun prim_mk_thy_con_type {Thy,Tyop} = let
   open KernelSig
-  val knm = {Thy=Thy, Name = Tyop}
 in
   case peek(typesig,{Thy=Thy,Name=Tyop}) of
     SOME const => TyCon (mk_tyconst const)
+  | NONE => raise ERR "mk_thy_con_type"
+                ("the type operator "^quote Tyop^
+                 " has not been declared in theory "^quote Thy^".")
+end
+
+fun mk_thy_con_type {Thy,Tyop,Kind,Rank} = let
+  open KernelSig
+in
+  case peek(typesig,{Thy=Thy,Name=Tyop}) of
+    SOME (const as (id,(kind0,rank0))) =>
+            if can (Kind.match_kind kind0) Kind
+               then if Rank >= rank0 then TyCon (id,Kind,Rank)
+                    else raise ERR "mk_thy_con_type"
+                            ("Not a rank instance: the type operator "^id_toString id^
+                             " cannot have rank "^Int.toString Rank^".")
+               else raise ERR "mk_thy_con_type"
+                            ("Not a kind instance: the type operator "^id_toString id^
+                             " cannot have kind "^Kind.kind_to_string Kind^".")
   | NONE => raise ERR "mk_thy_con_type"
                 ("the type operator "^quote Tyop^
                  " has not been declared in theory "^quote Thy^".")
@@ -606,7 +632,22 @@ local
   end
 in
 
-fun mk_con_type Tyop = TyCon (first_decl Tyop);
+fun prim_mk_con_type Tyop = TyCon (first_decl Tyop);
+
+fun mk_con_type {Tyop,Kind,Rank} = let
+  open KernelSig
+  val c = prim_mk_con_type Tyop
+  val TyCon (id,Kind0,Rank0) = c
+in
+  if can (Kind.match_kind Kind0) Kind
+     then if Rank >= Rank0 then TyCon (id,Kind,Rank)
+          else raise ERR "mk_con_type"
+                  ("Not a rank instance: the type operator "^id_toString id^
+                   " cannot have rank "^Int.toString Rank^".")
+     else raise ERR "mk_con_type"
+                  ("Not a kind instance: the type operator "^id_toString id^
+                   " cannot have kind "^Kind.kind_to_string Kind^".")
+end;
 
 fun mk_app_type (Opr,Arg) = make_app_type Opr Arg ("mk_app_type","");
 
@@ -641,6 +682,11 @@ fun break_ty0 f acc (TyCon c) = (c,acc)
   | break_ty0 f _ _ = raise ERR f "not a sequence of type applications of a \
                                   \type constant"
 fun break_ty f ty = break_ty0 f [] ty
+fun check_kd_rk f kd rk =
+   let val s = "; use " ^ quote (f ^ "_opr") ^ " instead."
+   in if is_arity kd then () else raise ERR f ("kind of type operator is not an arity" ^ s);
+      if   rk = 0    then () else raise ERR f ("rank of type operator is not zero" ^ s)
+   end
 in
 fun break_type ty = break_ty "break_type" ty;
 
@@ -652,6 +698,7 @@ fun dest_thy_type_opr ty =
 
 fun dest_thy_type ty =
        let val ((tyc,kd,rk),A) = break_ty "dest_thy_type" ty
+           (* val _ = check_kd_rk "dest_thy_type" kd rk *)
        in
         {Thy=seg_of tyc,Tyop=name_of tyc,Args=A}
        end;
@@ -663,6 +710,7 @@ fun dest_type_opr ty =
 
 fun dest_type ty =
        let val ((tyc,kd,rk),A) = break_ty "dest_type" ty
+           (* val _ = check_kd_rk "dest_type" kd rk *)
        in (name_of tyc, A)
        end;
 end;

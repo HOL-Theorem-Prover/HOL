@@ -26,7 +26,7 @@ fun parse_type (tyfns :
      antiq : 'b -> 'a,
      kindcast : {Ty: 'a, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
      rankcast : {Ty: 'a, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
-     tycon  : {Thy:string, Tyop:string, Locn:locn.locn} -> 'a,
+     tycon  : {Thy:string, Tyop:string, Kind:Prekind.prekind, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
      tyapp  : ('a * 'a) -> 'a,
      tyuniv : ('a * 'a) -> 'a,
      tyabs  : ('a * 'a) -> 'a,
@@ -52,7 +52,8 @@ fun parse_type (tyfns :
     let val stv = structure_to_value (s,locn) args
     in
       case st of
-        TYCON  {Thy, Tyop} => pConType {Thy = Thy, Tyop = Tyop, Locn = locn}
+        TYCON  {Thy, Tyop, Kind, Rank} => pConType {Thy=Thy, Tyop=Tyop, Kind=Prekind.fromKind Kind,
+                                                    Rank=Prerank.fromRank Rank, Locn=locn}
       | TYAPP  (opr,arg)   => pAppType (stv opr,  stv arg)
       | TYUNIV (bvar,body) => pUnivType(stv bvar, stv body)
       | TYABST (bvar,body) => pAbstType(stv bvar, stv body)

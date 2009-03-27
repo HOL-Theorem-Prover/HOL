@@ -430,12 +430,15 @@ in
 
    if null parents then () 
    else pblock ((fn n => link(n^"Theory.html",n)), parents) ;
-   sig_block((fn (Name,Arity) =>
+   sig_block((fn (Name,Kind,Rank) =>
                  (begin_block CONSISTENT 0;
                   add_string"<td>"; add_break(1,0); strong Name;
                   add_break(1,0);
                   add_string"<td>"; add_break(1,0);
-                  add_string (Lib.int_to_string Arity); end_block())),
+                  add_string (Kind.kind_to_string Kind);
+                  add_break(1,0);
+                  add_string"<td>"; add_break(1,0);
+                  add_string (Lib.int_to_string Rank); end_block())),
              types,
              (fn (Name,Ty) =>
                  (begin_block CONSISTENT 0;

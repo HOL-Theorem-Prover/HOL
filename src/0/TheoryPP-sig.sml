@@ -8,6 +8,7 @@
 signature TheoryPP =
 sig
  type thm
+ type kind
  type hol_type
  type ppstream = Portable.ppstream
  type num = Arbnum.num
@@ -29,7 +30,7 @@ sig
  val pp_struct
    : {theory      : string*num*num,
       parents     : (string*num*num) list,
-      types       : (string*int) list,
+      types       : (string*kind*int) list,
       constants   : (string*hol_type) list,
       axioms      : (string * thm) list,
       definitions : (string * thm) list,

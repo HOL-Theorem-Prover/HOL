@@ -272,7 +272,7 @@ fun make_binding_type_occ l s binder E =
   case binder
    of "\\" => ((fn b => PT(TyAbst(pty,b), locn.near (tylocn b))), E')
     | "!"  => ((fn b => PT(TyUniv(pty,b), locn.near (tylocn b))), E')
-    |  _   => raise ERROR "make_tybinding_occ" ("invalid binder: " ^ binder)
+    |  _   => raise ERROR "make_binding_type_occ" ("invalid binder: " ^ binder)
  end;
 
 local open Pretype
@@ -532,11 +532,11 @@ fun make_atom oinfo l s E =
 
 fun make_type_constant l {Thy=Thy0,Tyop=Tyop0} E =
  let open Pretype
-     val c = Type.mk_thy_con_type {Thy=Thy0,Tyop=Tyop0}
+     val c = Type.prim_mk_thy_con_type {Thy=Thy0,Tyop=Tyop0}
      val {Thy,Tyop,Kind,Rank} = Type.dest_thy_con_type c
-     val Kind' = Prekind.fromKind Kind
+     val Kind' = Prekind.rename_kindvars [] (Prekind.fromKind Kind)
      val Rank' = Prerank.fromRank Rank
- in (PT(Contype {Thy=Thy,Tyop=Tyop,Kind=Kind',Rank=Rank'}, l), E)
+ in (PT(Contype {Thy=Thy0,Tyop=Tyop0,Kind=Kind',Rank=Rank'}, l), E)
  end
 
 fun make_type_atom l (s,kd,rk) E =

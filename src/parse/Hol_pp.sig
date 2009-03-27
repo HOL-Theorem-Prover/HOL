@@ -1,13 +1,14 @@
 signature Hol_pp =
 sig
   type ppstream = Portable.ppstream
+  type kind     = Kind.kind
   type hol_type = Type.hol_type
   type term     = Term.term
   type thm      = Thm.thm
 
   datatype theory
     = THEORY of string *
-                {types       : (string * int) list,
+                {types       : (string * kind * int) list,
                  consts      : (string * hol_type) list,
                  parents     : string list,
                  axioms      : (string * thm) list,

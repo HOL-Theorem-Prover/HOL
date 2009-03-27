@@ -62,4 +62,5 @@ val replace_null_links : prekind -> string list -> string list * unit option
 val clean : prekind -> Kind.kind
 val toKind : prekind -> Kind.kind
 val chase : prekind -> prekind
+val pp_prekind : ppstream -> prekind -> unit
 end

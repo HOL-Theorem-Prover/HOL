@@ -102,8 +102,7 @@ fun push_clos (Clos(E, Comb(f,x)))     = Comb(mk_clos(E,f), mk_clos(E,x))
  * Computing the type of a term.                                            *
  *--------------------------------------------------------------------------*)
 
-local (*open Subst*)
-      fun lookup 0 (ty::_)  = ty
+local fun lookup 0 (ty::_)  = ty
         | lookup n (_::rst) = lookup (n-1) rst
         | lookup _ []       = raise ERR "type_of" "lookup"
       fun ty_of (Fv(_,Ty)) _           = Ty
@@ -115,7 +114,7 @@ local (*open Subst*)
                 let val (Bty,TBody) = Type.dest_univ_type(ty_of Tm E)
                 in Type.raw_type_subst[Bty |-> Ty] TBody
                 end
-        | ty_of (Abs(Fv(_,Ty),Body)) E = Ty --> ty_of Body (Ty::E)
+        | ty_of (Abs(Fv(_,Ty),Body)) E = Type.mk_fun_type (Ty, ty_of Body (Ty::E))
         | ty_of (TAbs(Btyvar,Body)) E  = TyAll(Btyvar, ty_of Body E)
 	| ty_of (t as Clos _) E        = ty_of (push_clos t) E
         | ty_of _ _ = raise ERR "type_of" "term construction"

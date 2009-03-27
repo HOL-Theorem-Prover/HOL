@@ -29,7 +29,7 @@ open Type
   fun toType tyv =
       case tyv of
         TyV_Var tyv => mk_vartype_opr tyv
-      | TyV_Const r => mk_thy_con_type { Thy = #Thy r, Tyop = #Tyop r}
+      | TyV_Const r => mk_thy_con_type { Thy = #Thy r, Tyop = #Tyop r, Kind = #Kind r, Rank = #Rank r }
       | TyV_App (ty1, ty2) => mk_app_type (ty1, ty2)
       | TyV_Abs (tyv, ty) => mk_abs_type (mk_vartype_opr tyv, ty)
       | TyV_All (tyv, ty) => mk_univ_type (mk_vartype_opr tyv, ty)

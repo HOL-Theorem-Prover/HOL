@@ -87,6 +87,7 @@ signature RawTheoryPP =
 sig
  type thm      = KernelTypes.thm
  type hol_type = KernelTypes.hol_type
+ type kind     = KernelTypes.kind
  type ppstream = Portable.ppstream
  type num = Arbnum.num
 
@@ -107,7 +108,7 @@ sig
  val pp_struct :
    {theory      : string*num*num,
     parents     : (string*num*num) list,
-    types       : (string*int) list,
+    types       : (string*kind*int) list,
     constants   : (string*hol_type) list,
     axioms      : (string * thm) list,
     definitions : (string * thm) list,
@@ -120,6 +121,7 @@ end
 
 signature RawTheory =
 sig
+  type kind     = KernelTypes.kind
   type hol_type = KernelTypes.hol_type
   type term     = KernelTypes.term
   type thm      = KernelTypes.thm
@@ -130,6 +132,7 @@ sig
   type num = Arbnum.num
 
   val new_type       : string * int -> unit
+  val new_type_opr   : string * kind * int -> unit
   val new_constant   : string * hol_type -> unit
   val new_axiom      : string * term -> thm
   val save_thm       : string * thm -> thm
@@ -140,7 +143,7 @@ sig
   val stamp          : string -> Time.time
   val parents        : string -> string list
   val ancestry       : string -> string list
-  val types          : string -> (string * int) list
+  val types          : string -> (string * kind * int) list
   val constants      : string -> term list
   val current_axioms : unit -> (string * thm) list
   val current_definitions : unit -> (string * thm) list
@@ -151,7 +154,7 @@ sig
   val export_theory    : unit -> unit
   val pp_thm           : (ppstream -> thm -> unit) ref
   val link_parents     : string*num*num -> (string*num*num)list -> unit
-  val incorporate_types  : string -> (string*int) list -> unit
+  val incorporate_types  : string -> (string*kind*int)list -> unit
   val incorporate_consts : string -> (string*hol_type)list -> unit
   val uptodate_type      : hol_type -> bool
   val uptodate_term      : term -> bool

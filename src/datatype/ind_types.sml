@@ -68,9 +68,9 @@ fun mk_const (thy, n, theta) =
 
 fun mk_icomb(tm1,tm2) =
    let val (ty, _) = Type.dom_rng (type_of tm1)
-       val tyins = Type.match_type ty (type_of tm2)
+       val (tyins,kdins,rkin) = Type.kind_match_type ty (type_of tm2)
    in
-      mk_comb(Term.inst tyins tm1, tm2)
+      mk_comb(Term.inst tyins (Term.inst_rank_kind rkin kdins tm1), tm2)
    end;
 
 fun list_mk_icomb (thy,cname) =
@@ -118,6 +118,8 @@ fun tysubst theta ty = Type.type_subst theta ty;
             in mk_thy_type{Tyop=Tyop,Thy=Thy, Args=map (tysubst theta) Args}
             end;
 *)
+
+fun name_vartype_opr ty = #1 (dest_vartype_opr ty)
 
 fun SUBS_CONV [] tm = REFL tm
   | SUBS_CONV ths tm =
@@ -228,7 +230,7 @@ in
     val condefs = mk_constructors 0 (itlist (curry op@) rights [])
     val conths = map ASSUME condefs
     val predty = Type.-->(recty, Type.bool)
-    val rels = map (fn s => mk_var(dest_vartype s,predty)) newtys
+    val rels = map (fn s => mk_var(name_vartype_opr s,predty)) newtys
     val edefs =
       itlist (fn (x,l) => fn acc => map (fn t => (x,t)) l @ acc) def []
     val idefs =
@@ -240,9 +242,9 @@ in
       val  conds = itlist2
         (fn arg => fn argty => fn sofar =>
          if mem argty newtys then
-           mk_comb(mk_var(dest_vartype argty,predty),arg)::sofar
+           mk_comb(mk_var(name_vartype_opr argty,predty),arg)::sofar
          else sofar) args a []
-      val conc = mk_comb(mk_var(dest_vartype r,predty),lapp)
+      val conc = mk_comb(mk_var(name_vartype_opr r,predty),lapp)
       val rule = if null conds then conc
                  else mk_imp(list_mk_conj conds,conc)
     in
@@ -335,7 +337,7 @@ fun define_inductive_type_constructor defs consindex th = let
   val (oldcon,oldargs) = strip_comb cterm
   fun modify_arg v = let
     val dest = snd(op_assoc eq (op_rev_assoc eq v asmlist) consindex)
-    val ty' = hd(snd(dest_type(type_of dest)))
+    val ty' = hd(snd(strip_app_type(type_of dest)))
     val v' = mk_var(fst(dest_var v),ty')
   in
     (mk_comb(dest,v'),v')
@@ -366,8 +368,8 @@ fun instantiate_induction_theorem consindex ith = let
   val consindex' =
     map (fn v => let val w = op_rev_assoc eq v corlist in (w,op_assoc eq w consindex) end)
     avs
-  val recty = (hd o snd o dest_type o type_of o fst o snd o hd) consindex
-  val newtys = map (hd o snd o dest_type o type_of o snd o snd) consindex'
+  val recty = (hd o snd o strip_app_type o type_of o fst o snd o hd) consindex
+  val newtys = map (hd o snd o strip_app_type o type_of o snd o snd) consindex'
   val ptypes = map (C (curry op -->) Type.bool) newtys
   val preds = make_args "P" [] ptypes
   val args = make_args "x" [] (map (K recty) preds)
@@ -447,7 +449,7 @@ in
     val pv = lhand(body(rator(rand bimp)))
     val (p,v) = dest_comb pv
     val (mk,dest) = op_assoc eq p consindex
-    val ty = hd(snd(dest_type(type_of dest)))
+    val ty = hd(snd(strip_app_type(type_of dest)))
     val v' = mk_var(fst(dest_var v),ty)
     val dv = mk_comb(dest,v')
     val th1 = PRERULE (SPEC dv th)
@@ -490,8 +492,8 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 fun create_recursive_functions tybijpairs consindex conthms rth = let
-  val domtys = map (hd o snd o dest_type o type_of o snd o snd) consindex
-  val recty = (hd o snd o dest_type o type_of o fst o snd o hd) consindex
+  val domtys = map (hd o snd o strip_app_type o type_of o snd o snd) consindex
+  val recty = (hd o snd o strip_app_type o type_of o fst o snd o hd) consindex
   val ranty = mk_vartype_opr("'Z", typ, rank_of recty)
   val fnn = mk_var("fn", recty --> ranty)
   and fns = make_args "fn" [] (map (C (curry op -->) ranty) domtys)
@@ -576,14 +578,14 @@ local
     end
 in
   fun create_recursion_iso_constructor consindex = let
-    val recty = hd(snd(dest_type(type_of(fst(hd consindex)))))
-    val domty = hd(snd(dest_type recty))
+    val recty = hd(snd(strip_app_type(type_of(fst(hd consindex)))))
+    val domty = hd(snd(strip_app_type recty))
     val zty = mk_vartype_opr("'Z", typ, rank_of domty)
     val s = mk_var("s",numty --> zty)
     val i = mk_var("i",domty)
     and r = mk_var("r", numty --> recty)
     val mks = map (fst o snd) consindex
-    val mkindex = map (fn t => (hd(tl(snd(dest_type(type_of t)))),t)) mks
+    val mkindex = map (fn t => (hd(tl(snd(strip_app_type(type_of t)))),t)) mks
   in
     fn cth => let
       val artms = snd(strip_comb(rand(rand(concl cth))))
@@ -674,10 +676,10 @@ in
     val rthm = end_itlist CONJ (map hackdown_rath (CONJUNCTS rath))
     val seqs = let
       val unseqs = filter is_eq (hyp rthm)
-      val tys = map (hd o snd o dest_type o type_of o snd o snd) consindex
+      val tys = map (hd o snd o strip_app_type o type_of o snd o snd) consindex
     in
       map (fn ty => valOf (List.find
-        (fn t => hd(snd(dest_type(type_of(lhand t)))) = ty) unseqs)) tys
+        (fn t => hd(snd(strip_app_type(type_of(lhand t)))) = ty) unseqs)) tys
     end
     val rethm = itlist EXISTS_EQUATION seqs rthm
     val fethm = CHOOSE(fnn,eth) rethm
@@ -779,7 +781,7 @@ val generalize_recursion_theorem = let
     fun mk_inls ty =
       if is_vartype ty then [mk_var("x",ty)]
       else let
-        val (_,[ty1,ty2]) = dest_type ty
+        val (_,[ty1,ty2]) = strip_app_type ty
         val inls1 = mk_inls ty1
         and inls2 = mk_inls ty2
         val inl =
@@ -800,7 +802,7 @@ val generalize_recursion_theorem = let
     fun mk_inls sof ty =
       if is_vartype ty then [sof]
       else let
-        val (_,[ty1,ty2]) = dest_type ty
+        val (_,[ty1,ty2]) = strip_app_type ty
         val outl =
           mk_const("sum", "OUTL",[(Type.alpha |-> ty1), (Type.beta |-> ty2)])
         and outr =
@@ -817,7 +819,7 @@ val generalize_recursion_theorem = let
   end
   fun mk_newfun fnn outl = let
     val (s,ty) = dest_var fnn
-    val dty = hd(snd(dest_type ty))
+    val dty = hd(snd(strip_app_type ty))
     val x = mk_var("x",dty)
     val (y,bod) = dest_abs outl
     val r = mk_abs(x,subst[y |-> mk_comb(fnn,x)] bod)
@@ -831,11 +833,12 @@ in
     val (avs,ebod) = strip_forall(concl th)
     val (evs,bod) = strip_exists ebod
     val n = length evs
+    val maxrank = foldl Int.max 0 (map (rank_of o type_of) avs)
   in
     if n = 1 then th
     else let
       val tys =
-        map (fn i => mk_vartype ("'Z"^Int.toString i)) (upto (n - 1))
+        map (fn i => mk_vartype_opr ("'Z"^Int.toString i, typ, maxrank)) (upto (n - 1))
       val sty = mk_sum tys
       val inls = mk_inls sty
       and outls = mk_outls sty
@@ -864,7 +867,7 @@ in
           end) args
         val (args',args'') = unzip pargs
         val inl = op_assoc eq (rator l) inlalist
-        val rty = hd(snd(dest_type(type_of inl)))
+        val rty = hd(snd(strip_app_type(type_of inl)))
         val nty = itlist (curry op --> o type_of) args' rty
         val fn' = mk_var(fst(dest_var fnn),nty)
         val r' = list_mk_abs(args'',mk_comb(inl,list_mk_comb(fn',args')))
@@ -946,8 +949,28 @@ val dest_fun_ty  = Type.dom_rng
 
 fun occurs_in ty bigty =
   bigty = ty orelse
+  if is_vartype bigty orelse is_con_type bigty then false
+  else if is_app_type bigty then let
+      val (opr,arg) = dest_app_type bigty
+    in occurs_in ty arg orelse occurs_in ty opr
+    end
+  else if is_univ_type bigty then let
+      val (bvar,body) = dest_univ_type bigty
+      val (_,kd,rk) = dest_vartype_opr bvar
+      val gvar = Type.gen_tyopvar(kd,rk)
+    in occurs_in ty (type_subst [bvar |-> gvar] body)
+    end
+  else if is_abs_type bigty then let
+      val (bvar,body) = dest_abs_type bigty
+      val (_,kd,rk) = dest_vartype_opr bvar
+      val gvar = Type.gen_tyopvar(kd,rk)
+    in occurs_in ty (type_subst [bvar |-> gvar] body)
+    end
+  else false
+(*
   (not (is_vartype bigty) andalso
-   exists (occurs_in ty) (snd(dest_type bigty)))
+   exists (occurs_in ty) (snd(strip_app_type bigty)))
+*)
 
 (* ------------------------------------------------------------------------- *)
 (* Dispose of trivial antecedent.                                            *)
@@ -990,12 +1013,13 @@ val CONJ_ACI_CONV = EQT_ELIM o AC_CONV (CONJ_ASSOC, CONJ_COMM);
 val ISO_EXPAND_CONV = PURE_ONCE_REWRITE_CONV[ISO];
 
 fun lift_type_bijections iths cty =
- let val itys = map (hd o snd o dest_type o type_of o lhand o concl) iths
+ let val itys = map (hd o snd o strip_app_type o type_of o lhand o concl) iths
  in assoc cty (zip itys iths)
     handle HOL_ERR _ =>
      if not (List.exists (C occurs_in cty) itys)
      then Thm.INST_TYPE [Type.alpha |-> cty] ISO_REFL
-     else let val (tycon,isotys) = dest_type cty
+     else let val (tyc,isotys) = strip_app_type cty
+              val (tycon,_,_) = dest_con_type tyc
           in if tycon = "fun"
              then MATCH_MP ISO_FUN
                     (end_itlist CONJ (map (lift_type_bijections iths) isotys))
@@ -1127,8 +1151,8 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
   and (efvs1,sth1) = DE_EXISTENTIALIZE_RULE uth1
   val efvs2 =
     map (fn t1 => find (fn t2 =>
-                        hd(tl(snd(dest_type(type_of t1)))) =
-                        hd(snd(dest_type(type_of t2))))
+                        hd(tl(snd(strip_app_type(type_of t1)))) =
+                        hd(snd(strip_app_type(type_of t2))))
          efvs1)
     efvs0
   val isotms = map2 (fn ff => fn gg =>
@@ -1155,7 +1179,7 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
     val tvs = op_subtract eq (fst(strip_forall(concl ith0)))
                 (itlist (fn (x,_,_,_) => op_union eq (map #redex x)) cinsts [])
     val ctvs =
-      map (fn p => let val x = mk_var("x",hd(snd(dest_type(type_of p))))
+      map (fn p => let val x = mk_var("x",hd(snd(strip_app_type(type_of p))))
       in (p |-> mk_abs(x,T_tm)) end) tvs
   in
     DETRIV_RULE (BETA_RULE (Thm.INST ctvs (itlist INSTANTIATE cinsts itha)))
@@ -1169,7 +1193,7 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
     val tvs = op_subtract eq (fst(strip_forall(concl ith1)))
       (itlist (fn (x,_,_,_) => op_union eq (map #redex x)) cinsts [])
     val ctvs =
-      map (fn p => let val x = mk_var("x",hd(snd(dest_type(type_of p)))) in
+      map (fn p => let val x = mk_var("x",hd(snd(strip_app_type(type_of p)))) in
            (p |-> mk_abs(x,T_tm)) end) tvs
   in
     DETRIV_RULE (BETA_RULE (Thm.INST ctvs (itlist INSTANTIATE cinsts itha)))
@@ -1269,7 +1293,7 @@ local
   fun SWAP_TILL_BOTTOM_THEN c t =
     ((SWAP_VARS_CONV THENC BINDER_CONV (SWAP_TILL_BOTTOM_THEN c)) ORELSEC c) t
   fun app_letter ty =
-    if is_vartype ty then String.sub(dest_vartype ty, 1)
+    if is_vartype ty then String.sub(name_vartype_opr ty, 1)
     else let
         val {Thy,Tyop=outerop,Args} = dest_thy_type ty
       in
@@ -1282,7 +1306,13 @@ local
         else String.sub(outerop,0)
       end
     handle HOL_ERR _ =>
-    if is_app_type ty then let
+    if is_con_type ty then let
+        val {Thy,Tyop=outerop,Kind,Rank} = dest_thy_con_type ty
+      in
+        if Thy = "list" andalso outerop = "list" then #"l"
+        else String.sub(outerop,0)
+      end
+    else if is_app_type ty then let
         val (opr,arg) = dest_app_type ty
       in
         app_letter opr
@@ -1369,7 +1399,7 @@ fun canonicalise_tyvars def thm = let
         (tyv |-> mk_vartype_opr(newtyname, kind_of tyv, rank_of tyv)) ::
         gen_canonicals tyvs (newtyname :: avoids)
       end
-  val names_to_avoid = map dest_vartype def_tyvars
+  val names_to_avoid = map name_vartype_opr def_tyvars
 in
   Thm.INST_TYPE
   (gen_canonicals (Lib.set_diff thm_tyvars def_tyvars) names_to_avoid)
@@ -1420,7 +1450,7 @@ local
   -------------------------------------------------------------------------- *)
 
   fun mk_thm_avoid check_these avoids0 = let
-    fun name_of ty = #1(dest_vartype_opr ty)
+    fun name_of ty = name_vartype_opr ty
     val check_these_names = map name_of check_these
     fun recurse [] avoids = []
       | recurse (tyv1::tyvs) avoids = let
@@ -1453,9 +1483,9 @@ local
 
     val (evs,bod) = strip_exists(snd(strip_forall(concl rth)))
     val cjs = map (lhand o snd o strip_forall) (conjuncts bod)
-    val rtys = map (hd o snd o dest_type o type_of) evs
-    val tyins = tryfind (fn vty => Type.match_type vty nty) rtys
-    val cjs' = map (Term.inst tyins o rand) (fst(chop_list k cjs))
+    val rtys = map (hd o snd o strip_app_type o type_of) evs
+    val (tyins,kdins,rkin) = tryfind (fn vty => Type.kind_match_type vty nty) rtys
+    val cjs' = map (Term.inst tyins o Term.inst_rank_kind rkin kdins o rand) (fst(chop_list k cjs))
     val mtys = itlist (insert o type_of) cjs' []
     val pcons = map (fn ty => filter (fn t => type_of t = ty) cjs') mtys
     val cls' = zip mtys (map (map (recover_clause id)) pcons)
@@ -1465,7 +1495,7 @@ local
     (k,tyal,cls'',Thm.INST_TYPE tyins ith, Thm.INST_TYPE tyins rth)
   end
 
-  fun define_type_nested def =
+  fun define_type_nested' def =
     let val n = length(itlist (curry op@) (map (map fst o snd) def) [])
         val newtys = map fst def
         val utys = Lib.U (itlist (union o map snd o snd) def [])
@@ -1486,11 +1516,11 @@ local
           val (k,tyal,ncls,ith,rth) =
               create_auxiliary_clauses nty ((*map dest_vartype*) utyvars)
           val cls = map (modify_clause tyal) def @ ncls
-          val (_,ith1,rth1) = define_type_nested cls
-          val xnewtys = map (hd o snd o dest_type o type_of)
+          val (_,ith1,rth1) = define_type_nested' cls
+          val xnewtys = map (hd o snd o strip_app_type o type_of)
                             (fst(strip_exists(snd(strip_forall(concl rth1)))))
           val xtyal = map (fn ty =>
-                     let val s = dest_vartype ty
+                     let val s = name_vartype_opr ty
                      in (ty |-> find(fn t => "'"^fst(dest_type t) = s) xnewtys)
                      end) (map fst cls)
           val ith0 = Thm.INST_TYPE xtyal ith
@@ -1501,7 +1531,7 @@ local
           val vtylist = itlist (insert o type_of) (variables(concl irth3)) []
           val isoths = CONJUNCTS isoth
           val isotys =
-              map (hd o snd o dest_type o type_of o lhand o concl) isoths
+              map (hd o snd o strip_app_type o type_of o lhand o concl) isoths
           val ctylist = filter
                 (fn ty => List.exists (fn t => occurs_in t ty) isotys) vtylist
           val atylist = itlist (union o striplist dest_fun_ty) ctylist []
@@ -1556,7 +1586,7 @@ local
     end
 
     val tys = Theory.types (current_theory())
-    fun ty_appthis (tyn,arity) =
+    fun ty_appthis (tyn,kind,rank) =
         if is_substring safepfx tyn then Theory.delete_type tyn
         else ()
   in
@@ -1569,7 +1599,7 @@ val define_type_nested = fn def =>
      val truecons = itlist (curry op@) (map (map fst o snd) def) []
      val (p,ith0,rth0) =
          with_flag (Globals.checking_const_names, false)
-                   (trace ("Vartype Format Complaint", 0) define_type_nested)
+                   (trace ("Vartype Format Complaint", 0) define_type_nested')
                    def
      val (avs,etm) = strip_forall(concl rth0)
      val allcls = conjuncts(snd(strip_exists etm))

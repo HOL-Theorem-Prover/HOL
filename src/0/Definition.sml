@@ -19,9 +19,9 @@
 structure Definition : RawDefinition =
 struct
 
-open Feedback Lib KernelTypes Type Term
+open Feedback Lib KernelTypes Kind Type Term
 
-infixr --> |->;
+infixr --> |-> ==>;
 
 val ERR       = mk_HOL_ERR "Definition";
 val TYDEF_ERR = ERR "new_type_definition"
@@ -126,7 +126,9 @@ fun new_type_definition (name,thm) =
                        (TYDEF_ERR "subset predicate must be a closed term")
      val checked   = assert_exn (op=) (rng,bool)
                       (TYDEF_ERR "subset predicate has the wrong type")
-     val   _       = Theory.new_type(name, List.length tyvars)
+     val newkd     = List.foldr (op ==>) typ (map kind_of tyvars)
+     val newrk     = List.foldr Int.max   0  (map rank_of tyvars)
+     val   _       = Theory.new_type_opr(name, newkd, newrk)
      val newty     = mk_thy_type{Tyop=name,Thy=current_theory(),Args=tyvars}
      val repty     = newty --> dom
      val rep       = mk_primed_var("rep", repty)

@@ -16,9 +16,11 @@ sig
 
  val dTyop : {Tyop : string, Thy : string option, Args : pretype list} -> pretype
  val dest_dTyop : pretype -> {Tyop : string, Thy : string option, Args : pretype list}
+ val list_dTyApp : pretype * pretype list -> pretype
+ val strip_dTyApp : pretype -> pretype * pretype list
 
-
- val pretypeToType : pretype -> Type.hol_type
+ val fromType : Type.hol_type -> pretype
+ val toType   : pretype -> Type.hol_type
 
  type field       = string * pretype
  type constructor = string * pretype list

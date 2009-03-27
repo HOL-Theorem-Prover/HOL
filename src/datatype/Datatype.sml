@@ -77,52 +77,149 @@ val define_type = ind_types.define_type;
 (*---------------------------------------------------------------------------*)
 (* Generate a string that, when evaluated as ML, will create the given type. *)
 (* Copied from TheoryPP.sml. Parameterized by strings representing code that *)
-(* builds type variables or compound types.                                  *)
+(* builds kind variables or different varieties of types.                    *)
 (*---------------------------------------------------------------------------*)
 
-fun extern_type mk_vartype_str mk_thy_type_str ppstrm ty =
- let open Portable
-     val {add_break,add_newline,
-          add_string,begin_block,end_block,...} = with_ppstream ppstrm
-     val extern = extern_type mk_vartype_str mk_thy_type_str ppstrm
+(*---------------------------------------------------------------------------*)
+(* Print a kind                                                              *)
+(*---------------------------------------------------------------------------*)
 
+fun pp_kind mvarkind pps kd =
+ let open Portable
+     val pp_kind = pp_kind mvarkind pps
+     val {add_string,add_break,begin_block,end_block,
+          add_newline,flush_ppstream,...} = with_ppstream pps
+ in
+  if kd = Kind.typ then add_string "typ"
+  else if Kind.is_var_kind kd then
+         case Kind.dest_var_kind kd
+           of "'k" => add_string "kappa"
+            |   s  => add_string ("("^mvarkind^quote s^")")
+  else let val (d,r) = Kind.kind_dom_rng kd
+       in (add_string "(";
+           begin_block INCONSISTENT 0;
+             pp_kind d;
+             add_break (1,0);
+             add_string "==>";
+             add_break (1,0);
+             pp_kind r;
+           end_block ();
+           add_string ")")
+       end
+ end
+
+(*---------------------------------------------------------------------------*)
+(* Print a type                                                              *)
+(*---------------------------------------------------------------------------*)
+
+fun extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps ty =
+ let open Portable Type
+     val pp_kind = pp_kind mvarkind pps
+     val extern_type = extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps
+     val {add_string,add_break,begin_block,end_block,
+          add_newline,flush_ppstream,...} = with_ppstream pps
+     fun extern_type_par ty = if mem ty [alpha,beta,gamma,delta] then extern_type ty
+                          else if can raw_dom_rng ty then extern_type ty
+                          else (add_string "("; extern_type ty; add_string ")")
  in
   if is_vartype ty
-  then case dest_vartype ty
-        of "'a" => add_string "alpha"
-         | "'b" => add_string "beta"
-         | "'c" => add_string "gamma"
-         | "'d" => add_string "delta"
-         |   s  => add_string (mk_vartype_str^quote s)
+  then let val (s,kd,rk) = dest_vartype_opr ty
+       in if kd = Kind.typ andalso rk = 0 then
+            case s
+             of "'a" => add_string "alpha"
+              | "'b" => add_string "beta"
+              | "'c" => add_string "gamma"
+              | "'d" => add_string "delta"
+              |  s   => add_string ("("^mvartype^quote s^")")
+          else
+              (add_string mvartypeopr;
+               begin_block INCONSISTENT 0;
+                 add_string (quote s);
+                 add_break (1,0);
+                 pp_kind kd;
+                 add_break (1,0);
+                 add_string (Int.toString rk);
+               end_block ())
+       end
   else
-  case dest_thy_type ty
-   of {Tyop="bool",Thy="min", Args=[]} => add_string "bool"
-    | {Tyop="ind", Thy="min", Args=[]} => add_string "ind"
-    | {Tyop="fun", Thy="min", Args=[d,r]}
+  (case dest_thy_type ty
+   of {Tyop="bool", Thy="min", Args=[]} => add_string "bool"
+    | {Tyop="ind",  Thy="min", Args=[]} => add_string "ind"
+    | {Tyop="fun",  Thy="min", Args=[d,r]}
        => (add_string "(";
            begin_block INCONSISTENT 0;
-             extern d;
+             extern_type d;
              add_break (1,0);
              add_string "-->";
              add_break (1,0);
-             extern r;
+             extern_type r;
            end_block ();
            add_string ")")
    | {Tyop,Thy,Args}
       => let in
-           add_string mk_thy_type_str;
+           add_string mtype;
            begin_block INCONSISTENT 0;
-           add_string (quote Thy);
-           add_break (1,0);
            add_string (quote Tyop);
+           add_break (1,0);
+           add_string (quote Thy);
            add_break (1,0);
            add_string "[";
            begin_block INCONSISTENT 0;
-           pr_list extern (fn () => add_string ",")
-                          (fn () => add_break (1,0)) Args;
-           end_block (); add_string "]";
+           pr_list extern_type (fn () => add_string ",")
+                               (fn () => add_break (1,0)) Args;
+           end_block ();
+           add_string "]";
            end_block ()
-         end
+         end)
+  handle HOL_ERR _ =>
+  if is_con_type ty then
+       let val {Tyop,Thy,Kind,Rank} = dest_thy_con_type ty
+       in
+           add_string mcontype;
+           begin_block INCONSISTENT 0;
+           add_string (quote Tyop);
+           add_break (1,0);
+           add_string (quote Thy);
+           add_break (1,0);
+           pp_kind Kind;
+           add_break (1,0);
+           add_string (Int.toString Rank);
+           end_block ()
+       end
+  else if is_app_type ty then
+       let val (Rator,Rand) = dest_app_type ty
+       in
+           add_string mapptype;
+           begin_block INCONSISTENT 0;
+           add_break (1,0);
+           extern_type_par Rator;
+           add_break (1,0);
+           extern_type_par Rand;
+           end_block ()
+       end
+  else if is_abs_type ty then
+       let val (Bvar,Body) = dest_abs_type ty
+       in
+           add_string mabstype;
+           begin_block INCONSISTENT 0;
+           add_break (1,0);
+           extern_type_par Bvar;
+           add_break (1,0);
+           extern_type_par Body;
+           end_block ()
+       end
+  else if is_univ_type ty then
+       let val (Bvar,Body) = dest_univ_type ty
+       in
+           add_string munivtype;
+           begin_block INCONSISTENT 0;
+           add_break (1,0);
+           extern_type_par Bvar;
+           add_break (1,0);
+           extern_type_par Body;
+           end_block ()
+       end
+  else raise ERR "extern_type" "unrecognized type"
  end
 
 fun with_parens pfn ppstrm x =
@@ -134,17 +231,26 @@ fun pp_fields ppstrm fields =
  let open Portable
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
+     val extern_type = with_parens (extern_type "K" "U" "R" "T" "O" "P" "B" "N") ppstrm
      fun pp_field (s,ty) =
         (begin_block CONSISTENT 0;
          add_string ("("^Lib.quote s);
          add_string ",";
-         extern_type "U" "T" ppstrm ty;
+         extern_type ty;
          add_string ")";
          end_block())
  in
   begin_block CONSISTENT 0;
-  add_string "let fun T t s A = mk_thy_type{Thy=t,Tyop=s,Args=A}"; add_newline();
-  add_string "    val U = mk_vartype"; add_newline();
+  add_string "let open Kind Type"; add_newline();
+  add_string "    infixr ==> -->"; add_newline();
+  add_string "    fun T t s A   = mk_thy_type{Thy=t,Tyop=s,Args=A}";             add_newline();
+  add_string "    val K         = mk_varkind";              add_newline();
+  add_string "    val U         = mk_vartype";              add_newline();
+  add_string "    fun R s k r   = mk_vartype_opr(s,k,r)";   add_newline();
+  add_string "    fun O s t k r = mk_thy_con_type{Tyop=s,Thy=t,Kind=k,Rank=r}";  add_newline();
+  add_string "    fun P a b     = mk_app_type(a,b)";        add_newline();
+  add_string "    fun B a b     = mk_abs_type(a,b)";        add_newline();
+  add_string "    fun N a b     = mk_univ_type(a,b)";       add_newline();
   add_string "in"; add_newline();
   begin_block CONSISTENT 0;
    add_string "[";
@@ -168,10 +274,12 @@ val duplicate_names = find_dup o Listsort.sort String.compare
 end;
 
 fun prim_mk_type (Thy, Tyop) = let
-  val arity = valOf (Type.op_arity {Thy = Thy, Tyop = Tyop})
+  val con = Type.prim_mk_thy_con_type {Thy = Thy, Tyop = Tyop}
+  val kind = Type.kind_of con
+  val (arg_kinds,res_kind) = Kind.strip_arrow_kind kind
+  val Args = map (fn kd => Type.mk_vartype_opr("'a", kd, 0)) arg_kinds
 in
-  Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
-                    Args = List.tabulate (arity, fn n => Type.alpha)}
+  Type.mk_thy_type {Thy = Thy, Tyop = Tyop, Args = Args}
 end
 
 fun check_constrs_unique_in_theory asts = let
@@ -179,7 +287,7 @@ fun check_constrs_unique_in_theory asts = let
     | cnames (s, Constructors l) = map (fn s' => (s, #1 s')) l
   val newtypes = map #1 asts
   val constrs = List.concat (map cnames asts)
-  val current_types = set_diff (map fst (types "-")) newtypes
+  val current_types = set_diff (map #1 (types "-")) newtypes
   fun current_constructors (tyname, fm) = let
     val tys_cons =
         TypeBase.constructors_of (prim_mk_type (current_theory(), tyname))
@@ -211,7 +319,7 @@ in
 end
 
 
-local fun tyname_as_tyvar n = mk_vartype ("'" ^ n)
+local fun tyname_as_tyvar (n,kd,rk) = mk_vartype_opr ("'" ^ n, kd, rk)
       fun stage1 (s,Constructors l) = (s,l)
         | stage1 (s,Record fields)  = (s,[(s,map snd fields)])
       fun check_fields (s,Record fields) =
@@ -250,12 +358,16 @@ fun to_tyspecs ASTs =
        | mk_hol_type (dTyApp(opr,arg)) =
             mk_app_type(mk_hol_type opr, mk_hol_type arg)
        | mk_hol_type (dContype{Thy,Tyop = s,Kind,Rank}) =
-            if Lib.mem s new_type_names
-            then tyname_as_tyvar s
-            else
-            (case Thy of
-                SOME Thy' => mk_thy_con_type{Thy=Thy', Tyop=s}
-              | NONE     => mk_con_type s)
+            let val Kind' = Prekind.toKind Kind
+                val Rank' = Prerank.toRank Rank
+            in
+              if Lib.mem s new_type_names
+              then tyname_as_tyvar (s,Kind',Rank')
+              else
+              (case Thy of
+                  SOME Thy' => mk_thy_con_type{Thy=Thy', Tyop=s, Kind=Kind', Rank=Rank'}
+                | NONE      => mk_con_type{Tyop=s, Kind=Kind', Rank=Rank'})
+            end
 (*
        | mk_hol_type (dTyop{Tyop = s, Args, Thy}) =
             if Lib.mem s new_type_names
@@ -273,14 +385,16 @@ fun to_tyspecs ASTs =
        val ty = mk_hol_type0 pty
      in
        if Theory.uptodate_type ty then ty
-       else let val tyname = #1 (dest_type ty)
+       else let val Opr = fst (strip_app_type ty)
+                val tyname = #Tyop (dest_thy_con_type Opr)
             in raise ERR "to_tyspecs" (tyname^" not up-to-date")
             end
      end
 
+     fun default_tyname_as_tyvar n = tyname_as_tyvar(n,Kind.typ,0)
      fun constructor (cname, ptys) = (cname, map mk_hol_type ptys)
   in
-     map (tyname_as_tyvar##map constructor) asts
+     map (default_tyname_as_tyvar##map constructor) asts
   end
 end;
 
@@ -719,7 +833,7 @@ fun prove_bigrec_theorems tyinfos ss (tyname, fldlist) = let
   open TypeBasePure
   val tyinfos = map #1 (tyinfos : (tyinfo * string) list)
   fun tyinfo_for ty = let
-    val {Thy,Tyop,...} = dest_thy_type ty
+    val {Thy,Tyop,...} = (dest_thy_con_type o fst o strip_app_type) ty
   in
     List.find (fn tyi => ty_name_of tyi = (Thy,Tyop)) tyinfos
   end
@@ -943,13 +1057,12 @@ local
     | Record flds => Record (map (fn (s, pty) => (s, f pty)) flds)
   end
   fun reform_tyops prevtypes pty = let
-    open ParseDatatype
+    open ParseDatatype Prekind
+    infix ==>
   in
     case pty of
-      dTyUniv(bvar,body) => dTyUniv(reform_tyops prevtypes bvar,
-                                    reform_tyops prevtypes body)
-    | dTyAbst(bvar,body) => dTyAbst(reform_tyops prevtypes bvar,
-                                    reform_tyops prevtypes body)
+      dTyUniv(bvar,body) => dTyUniv(bvar, reform_tyops prevtypes body)
+    | dTyAbst(bvar,body) => dTyAbst(bvar, reform_tyops prevtypes body)
     | dTyApp(opr as dContype{Thy, Tyop, Kind, Rank}, arg) =>
          dTyApp(opr, reform_tyops prevtypes arg)
     | dTyApp(opr,arg)    => dTyApp (reform_tyops prevtypes opr,
@@ -962,12 +1075,13 @@ local
                 case Thy of
                   NONE => hd (Type.decls Tyop)
                 | SOME s => {Thy = s, Tyop = Tyop}
-            val arity = valOf (Type.op_arity thytyop)
-            val _ = arity = HOLset.numItems strset orelse
-                    raise ERR "reform_tyops" (Tyop ^ " has unexpected arity")
+            val kind = valOf (Type.op_kind thytyop)
+            val Kind' = HOLset.foldr (fn ((s,kd,rk),kd') => kd ==> kd') Kind strset
+            val _ = Kind.match_kind kind (toKind Kind')
+                    handle HOL_ERR _ => raise ERR "reform_tyops" (Tyop ^ " has unexpected kind " ^ kind_to_string (toKind Kind'))
+            val pty' = dContype{Thy=Thy, Tyop=Tyop, Kind=Kind', Rank=Rank}
           in
-            List.foldl (fn (arg,acc) => dTyApp(acc,arg)) pty
-                       (map dVartype (HOLset.listItems strset))
+             list_dTyApp (pty', map dVartype (HOLset.listItems strset))
           end
         | _ => pty
       end
@@ -998,7 +1112,7 @@ local
       map (fn (s, dt) => (s, astpty_map (reform_tyops prevtypes) dt)) astl
 
   fun getfldinfo bigrecinfo = let
-      fun mapthis (s, l) = (s, map (I ## ParseDatatype.pretypeToType) l)
+      fun mapthis (s, l) = (s, map (I ## ParseDatatype.toType) l)
   in
       map mapthis bigrecinfo
   end
@@ -1336,7 +1450,7 @@ fun mk_datatype_presentation thy tyspecl =
             list_mk_comb(tyn_var,constrs)
           end
         | type_dec (tyname,Record fields) =
-          let val fvars = map (mk_var o (I##pretypeToType)) fields
+          let val fvars = map (mk_var o (I##toType)) fields
               val tyn_var = mk_var(tyname,ind)
               val record_var = mk_var("record",
                                       list_mk_fun(ind::map type_of fvars,bool))

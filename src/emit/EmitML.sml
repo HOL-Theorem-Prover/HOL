@@ -1123,7 +1123,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
                    add_string (fix_cons con);
                    add_string " of ";
                  end_block();
-               pp_tyl (map ParseDatatype.pretypeToType args);
+               pp_tyl (map ParseDatatype.toType args);
                end_block()))
      fun pp_decl (tyvars,r) (name,Constructors clauselist) =
          (begin_block CONSISTENT 5;
@@ -1142,7 +1142,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
           end_block(); end_block())
        | pp_decl (tyvars,_) (name,Record flist) =
            let open ParseDatatype
-               val fields = map (I##pretypeToType) flist
+               val fields = map (I##toType) flist
            in begin_block CONSISTENT 0;
               add_string (if !emitOcaml then "type" else "datatype");
               add_break(1,0);

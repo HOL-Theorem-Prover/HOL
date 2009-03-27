@@ -11,7 +11,7 @@ datatype grammar_rule =
            HOLgrammars.associativity
 
 datatype type_structure =
-         TYCON  of {Thy : string, Tyop : string}
+         TYCON  of {Thy : string, Tyop : string, Kind : Kind.kind, Rank : int}
        | TYAPP  of type_structure * type_structure
        | TYUNIV of type_structure * type_structure
        | TYABST of type_structure * type_structure
@@ -46,7 +46,7 @@ fun pp_type g pps ty = (!type_printer) g pps ty
 
 fun structure_to_type st =
     case st of
-      TYCON {Thy,Tyop} => Type.mk_thy_con_type {Thy = Thy, Tyop = Tyop}
+      TYCON {Thy,Tyop,Kind,Rank} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop, Kind=Kind, Rank=Rank}
     | TYAPP (opr,arg) => Type.mk_app_type(structure_to_type opr, structure_to_type arg)
     | TYUNIV (bvar,body) => Type.mk_univ_type(structure_to_type bvar, structure_to_type body)
     | TYABST (bvar,body) => Type.mk_abs_type(structure_to_type bvar, structure_to_type body)
@@ -59,7 +59,7 @@ fun structure_to_type st =
     | PARAM (n,kd,rk) => Type.mk_vartype_opr ("'"^str (chr (n + ord #"a")), kd, rk)
 
 fun params0 acc (PARAM (i,kd,rk)) = HOLset.add(acc, i)
-  | params0 acc (TYCON {Thy,Tyop}) = acc
+  | params0 acc (TYCON {Thy,Tyop,Kind,Rank}) = acc
   | params0 acc (TYVAR (str,kd,rk)) = acc
   | params0 acc (TYAPP (opr,arg)) = params0 (params0 acc opr) arg
   | params0 acc (TYUNIV (bvar,body)) = params0 (params0 acc bvar) body
@@ -75,7 +75,7 @@ fun triple_compare(cmp1,cmp2,cmp3)((a1,a2,a3),(b1,b2,b3)) =
     Lib.pair_compare(cmp1,Lib.pair_compare(cmp2,cmp3))((a1,(a2,a3)),(b1,(b2,b3)))
 
 fun get_params0 acc (PARAM (i,kd,rk)) = HOLset.add(acc, (i,kd,rk))
-  | get_params0 acc (TYCON {Thy,Tyop}) = acc
+  | get_params0 acc (TYCON {Thy,Tyop,Kind,Rank}) = acc
   | get_params0 acc (TYVAR (str,kd,rk)) = acc
   | get_params0 acc (TYAPP (opr,arg)) = get_params0 (get_params0 acc opr) arg
   | get_params0 acc (TYUNIV (bvar,body)) = get_params0 (get_params0 acc bvar) body
@@ -298,7 +298,7 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,specials,pmap)) = let
   fun print_suffix s = let
     val oarity =
         case Binarymap.peek(abbrevs, s) of
-          NONE => valOf (Type.op_arity (hd (Type.decls s)))
+          NONE => length (fst (Kind.strip_arrow_kind (valOf (Type.op_kind (hd (Type.decls s))))))
         | SOME st => num_params st
     fun print_ty_n_tuple n =
         case n of

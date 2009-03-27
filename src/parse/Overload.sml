@@ -129,8 +129,8 @@ local
                val {Thy = thy1, Tyop = tyop1, Kind = kd1, Rank = rk1} = dest_thy_con_type ty1
                val {Thy = thy2, Tyop = tyop2, Kind = kd2, Rank = rk2} = dest_thy_con_type ty2
              in
-               if tyop1 = tyop2 andalso thy1 = thy2 then
-                 return (mk_thy_con_type{Thy = thy1, Tyop = tyop1})
+               if tyop1 = tyop2 andalso thy1 = thy2 andalso kd1 = kd2 andalso rk1 = rk2 then
+                 return (mk_thy_con_type{Thy = thy1, Tyop = tyop1, Kind = kd1, Rank = rk1})
                else
                  newtyvar (kd1,rk1) >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
                                         return new_ty)
@@ -510,7 +510,7 @@ fun strip_comb ((_, prmap): overload_info) t = let
   fun rearrange (_, _, _, tmi, _, (orig, nm)) = let
     val (bvs,_) = strip_abs orig
     fun findarg v =
-        case List.find (fn {redex,residue} => eq residue v) tmi of
+        case List.find (fn {redex,residue} => eq redex v) tmi of
           NONE => mk_const("ARB", type_of v)
         | SOME i => #residue i
     val args = map findarg bvs

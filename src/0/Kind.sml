@@ -33,7 +33,7 @@ val WARN = HOL_WARNING "Kind";
 val typ = Type
 
 (*---------------------------------------------------------------------------
-       Operator kinds
+       Operator (arrow) kinds
  ---------------------------------------------------------------------------*)
 
 infixr 3 ==>;   val op ==> = Oper;
@@ -51,6 +51,13 @@ fun is_arity (Type) = true
 fun arity_of (Type) = 0
   | arity_of (Oper(Type,Y)) = arity_of Y + 1
   | arity_of _ = raise ERR "arity_of" "not an arity kind";
+
+val dest_arrow_kind = kind_dom_rng;
+
+fun strip_arrow_kind (Oper(X,Y)) = let val (args,res) = strip_arrow_kind Y
+                                   in (X::args, res)
+                                   end
+  | strip_arrow_kind Z = ([],Z);
 
 
 (*---------------------------------------------------------------------------
@@ -95,7 +102,7 @@ end;
 
 (* for is_type_kind, use k = typ *)
 fun is_var_kind (KdVar  _) = true | is_var_kind _ = false;
-fun is_opr_kind (Oper _)   = true | is_opr_kind _ = false;
+fun is_arrow_kind (Oper _)   = true | is_arrow_kind _ = false;
 
 
 (*----------------------------------------------------------------------*

@@ -968,29 +968,17 @@ local fun strip [] _ = []     (* Returns a list of (pat,ob) pairs. *)
         | strip (tm::tml) M =
             let val (Bvar,Body) = dest_forall M
             in (type_of Bvar,type_of tm)::strip tml Body   end
-      fun kd_merge [] theta = theta
-        | kd_merge ((x as {redex,residue})::rst) theta =
-          case subst_assoc (equal redex) theta
-           of NONE      => x::kd_merge rst theta
-            | SOME rdue => if residue=rdue then kd_merge rst theta
-                           else raise ERR "ISPECL" ""
-      fun merge [] theta = theta
-        | merge ((x as {redex,residue})::rst) theta =
-          case subst_assoc (equal redex) theta
-           of NONE      => x::merge rst theta
-            | SOME rdue => if abconv_ty residue rdue then merge rst theta
-                           else raise ERR "ISPECL" ""
+      fun funty [] = bool
+        | funty (ty::tys) = ty --> funty tys
 in
 fun ISPECL [] = I
   | ISPECL [tm] = ISPEC tm
   | ISPECL tms = fn th =>
      let val pairs = strip tms (concl th) handle HOL_ERR _
                      => raise ERR "ISPECL" "list of terms too long for theorem"
-         val (rk,kd_theta,ty_theta) =
-             rev_itlist (fn (pat,ob) => fn (rk,kd_theta,ty_theta) =>
-                      let val (ty_theta',kd_theta',rk') = Type.kind_match_type pat ob
-                      in (Int.max(rk, rk'), kd_merge kd_theta' kd_theta, merge ty_theta' ty_theta)
-                      end) pairs (0,[],[])
+         val (pats,obs) = split pairs
+         val (ty_theta,kd_theta,rk) =
+             Type.kind_match_type (funty pats) (funty obs)
                       handle HOL_ERR _ => raise ERR "ISPECL"
                               "can't type-instantiate input theorem"
      in SPECL tms (INST_TYPE ty_theta (INST_KIND kd_theta (INST_RANK rk th))) handle HOL_ERR _

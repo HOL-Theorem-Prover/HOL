@@ -126,6 +126,12 @@ fun pp_type0 (G:grammar) = let
       with_ppstream pps
     fun pbegin b = if b then add_string "(" else ()
     fun pend b = if b then add_string ")" else ()
+    fun check_dest_type ty =
+      let val (opr,args) = strip_app_type ty
+          val {Thy,Tyop,Kind,Rank} = dest_thy_con_type opr
+      in if Kind.is_arity Kind andalso Rank = 0 then (Tyop,args)
+         else raise ERR "check_dest_type: not a traditional type"
+      end
 
     fun print_args grav0 args = let
       val parens_needed = case args of [_] => false | _ => true
@@ -186,7 +192,7 @@ fun pp_type0 (G:grammar) = let
           pr_ty pps cty Top (depth - 1);
           add_string "]"
         end handle HOL_ERR _ =>
-        if Lib.can dest_type ty then let
+        if Lib.can check_dest_type ty then let
             val (Tyop, Args) = type_grammar.abb_dest_type G ty
             fun print_ghastly () = let
               val {Thy,Tyop,...} = dest_thy_type ty
@@ -271,7 +277,14 @@ fun pp_type0 (G:grammar) = let
             open TypeView
           in
             case fromType ty of
-              TyV_App _ => let
+              TyV_Const _ => let
+                val {Thy,Tyop,Kind,Rank} = dest_thy_con_type ty
+              in
+                case lookup_tyop Tyop of
+                  NONE =>  print_var grav (Thy ^ "$" ^ Tyop, Kind, Rank)
+                | _ => add_string Tyop
+              end
+            | TyV_App _ => let
                 val (base, args) = strip_app_type ty
               in
                 begin_block INCONSISTENT 0;

@@ -43,12 +43,20 @@ fun is_arity (PK(kd0,_)) =
   | Arrowkind(PK(Typekind,_),kd2) => is_arity kd2
   | _ => false
 
+and is_typekind (PK(kd0,_)) =
+  case kd0 of
+    UVarkind(ref (SOME kd')) => is_typekind kd'
+  | Typekind => true
+  | _ => false
+
 and arity_of (PK(kd0,_)) =
   case kd0 of
     UVarkind(ref (SOME kd')) => arity_of kd'
   | Typekind => 0
   | Arrowkind(PK(Typekind,_),kd2) => 1 + arity_of kd2
-  | _ => ~1
+  | Arrowkind(kd0,kd2) => if is_typekind kd0 then 1 + arity_of kd2
+                          else raise TCERR "arity_of" "not an arity kind"
+  | _ => raise TCERR "arity_of" "not an arity kind"
 
 fun prekind_to_string (kd as PK(kd0,locn)) =
   if is_arity kd then let val a = arity_of kd
@@ -314,5 +322,30 @@ fun toKind kd =
 fun chase (PK(Arrowkind(_, kd), _)) = kd
   | chase (PK(UVarkind(ref (SOME kd)), _)) = chase kd
   | chase _ = raise Fail "chase applied to non-function kind"
+
+fun pp_prekind pps kd =
+ let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     fun pp2 paren (Typekind) = add_string "ty"
+       | pp2 paren (Varkind s) = add_string s
+       | pp2 paren (UVarkind (ref (SOME k))) = pp1 paren k
+       | pp2 paren (UVarkind (ref (NONE  ))) = add_string "?"
+       | pp2 paren (Arrowkind(Rator,Rand)) =
+          ( if paren then (add_string "("; begin_block INCONSISTENT 0) else ();
+            pp true Rator; add_string " =>"; add_break(1,0); pp false Rand;
+            if paren then (end_block(); add_string ")") else () )
+     and pp1 paren (PK(kd,_)) = pp2 paren kd
+     and pp0 paren Typekind = add_string "ty"
+       | pp0 paren (Varkind s) = add_string s
+       | pp0 paren (UVarkind (ref (SOME k))) = pp paren k
+       | pp0 paren (UVarkind (ref (NONE  ))) = add_string "?"
+       | pp0 paren kd = add_string ("ar " ^ Lib.int_to_string (arity_of (PK(kd,locn.Loc_None))))
+                        handle HOL_ERR _ => pp2 paren kd
+    and pp paren (PK(kd,_)) = pp0 paren kd
+ in
+   begin_block INCONSISTENT 0;
+   pp false kd;
+   end_block()
+ end;
 
 end;

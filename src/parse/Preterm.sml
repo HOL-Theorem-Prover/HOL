@@ -1090,7 +1090,8 @@ fun TC printers = let
          (let val Rator' = check Rator
               val _  = checkkind Rand
               val Rator_ty = ptype_of Rator'
-              val (bvar,body) = Pretype.dest_univ_type Rator_ty
+          in
+          let val (bvar,body) = Pretype.dest_univ_type Rator_ty
                                 handle HOL_ERR _ => let
                                      val s = "'a"
                                      val kd = Prekind.new_uvar()
@@ -1107,6 +1108,7 @@ fun TC printers = let
              Prekind.unify (Pretype.pkind_of Rand) (Pretype.pkind_of bvar);
              Prerank.unify_le (Pretype.prank_of Rand) (* <= *) (Pretype.prank_of bvar);
              TyComb{Rator=Rator', Rand=Rand, Locn=Locn}
+          end
        handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                      origin_function="unify",message})
        => let val tmp = !Globals.show_types
@@ -1140,13 +1142,15 @@ fun TC printers = let
         | (e as Feedback.HOL_ERR{origin_structure="Prekind",
                                      origin_function="unify",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"
-              val tmp = show_kinds()
+              val tmp0 = !Globals.show_types
+              val _ = Globals.show_types := true
+              val tmp1 = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
               val Rator_tm = to_term (overloading_resolution0 Rator')
-                       handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                       handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1; raise e)
               val Pretype.PT(_,rand_locn) = Rand
               val Rand_ty = Pretype.toType Rand
-                       handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                       handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1; raise e)
               val message =
                   String.concat
                       [
@@ -1168,22 +1172,25 @@ fun TC printers = let
 
                        "kind unification failure message: ", message, "\n"]
           in
-            Feedback.set_trace "kinds" tmp;
+            Globals.show_types := tmp0;
+            Feedback.set_trace "kinds" tmp1;
             tcheck_say message;
             last_tcerror := SOME (TyAppKindFail(Rator_tm,Rand_ty), rand_locn);
             raise ERRloc"typecheck" (rand_locn (* arbitrary *)) "failed"
           end
         | (e as Feedback.HOL_ERR{origin_structure="Prerank",
                                      origin_function="unify_le",message})
-       => let val show_kinds = Feedback.get_tracefn "kinds"
-              val tmp = show_kinds()
+       => let val tmp0 = !Globals.show_types
+              val _ = Globals.show_types := true
+              val show_kinds = Feedback.get_tracefn "kinds"
+              val tmp1 = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
               val Rator_tm = to_term (overloading_resolution0 Rator')
-                             handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                             handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1; raise e)
               val Rator_ty = Type.deep_beta_conv_ty (Term.type_of Rator_tm)
               val Pretype.PT(_,rand_locn) = Rand
               val Rand_ty = Pretype.toType Rand
-                            handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                            handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1; raise e)
               val message =
                   String.concat
                       [
@@ -1209,7 +1216,8 @@ fun TC printers = let
 
                        "rank unification failure message: ", message, "\n"]
           in
-            Feedback.set_trace "kinds" tmp;
+            Globals.show_types := tmp0;
+            Feedback.set_trace "kinds" tmp1;
             tcheck_say message;
             last_tcerror := SOME (TyAppRankFail(Rator_tm,Rand_ty), rand_locn);
             raise ERRloc"typecheck" (rand_locn (* arbitrary *)) "failed"

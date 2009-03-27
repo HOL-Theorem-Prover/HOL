@@ -26,7 +26,7 @@ TApp   ::= Leaf | Tuple Leaf
                 HOLgrammars.associativity
 
   datatype type_structure =
-      TYCON  of {Thy : string, Tyop : string}
+      TYCON  of {Thy : string, Tyop : string, Kind : Kind.kind, Rank : int}
     | TYAPP  of type_structure * type_structure
     | TYUNIV of type_structure * type_structure
     | TYABST of type_structure * type_structure

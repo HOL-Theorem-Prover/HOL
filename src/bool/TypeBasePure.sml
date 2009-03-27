@@ -11,7 +11,8 @@ type ppstream = Portable.ppstream
 val ERR = mk_HOL_ERR "TypeBasePure";
 
 fun type_names ty =
-  let val {Thy,Tyop,Args} = Type.dest_thy_type ty
+  let val (Opr,Args) = Type.strip_app_type ty
+      val {Thy,Tyop,Kind,Rank} = Type.dest_thy_con_type Opr
   in (Thy,Tyop)
   end;
 
@@ -64,7 +65,8 @@ fun ty_of (DFACTS {ty,...}) = ty
   | ty_of (NFACTS(ty,_)) = ty;
 
 fun dollarty ty =
-  let val {Thy,Tyop,Args} = dest_thy_type ty
+  let val (Opr,Args) = strip_app_type ty
+      val {Thy,Tyop,...} = dest_thy_con_type Opr
   in Lib.quote (Thy ^ "$" ^ Tyop)
   end;
 
@@ -504,13 +506,17 @@ fun normalise_ty ty = let
                                 rest
               | SOME _ => recurse acc rest
           else let
-              val {Args,...} = dest_thy_type ty
+              val (_, Args) = strip_app_type ty
             in
               recurse acc (Args @ rest)
             end
         end
   val (inst0, _) = recurse (Binarymap.mkDict Type.compare, Type.alpha) [ty]
-  val inst = Binarymap.foldl (fn (tyk,tyv,acc) => (tyk |-> tyv)::acc)
+  fun set_kd_rk src trg =
+    let val (s,kd,rk) = dest_vartype_opr trg
+    in mk_vartype_opr(s, kind_of src, rank_of src)
+    end
+  val inst = Binarymap.foldl (fn (tyk,tyv,acc) => (tyk |-> set_kd_rk tyk tyv)::acc)
                              []
                              inst0
 in
@@ -518,14 +524,17 @@ in
 end
 
 fun prim_get (db:typeBase) (thy,tyop) =
-    case Type.op_arity {Thy = thy, Tyop = tyop} of
+    case Type.op_kind {Thy = thy, Tyop = tyop} of
       NONE => NONE
-    | SOME i => let
-        fun genargs (acc,nextty) n = if n = 0 then List.rev acc
-                                 else genargs (nextty :: acc, next_ty nextty)
-                                              (n - 1)
+    | SOME kd => let
+        val (kd_args,kd_res) = Kind.strip_arrow_kind kd
+        fun set_kind ty kind = let val (s,kd,rk) = dest_vartype_opr ty
+                               in mk_vartype_opr(s,kind,rk)
+                               end
+        fun genargs nextty (kd::kds) = set_kind nextty kd :: genargs (next_ty nextty) kds
+          | genargs nextty    []     = []
         val ty = mk_thy_type {Thy = thy, Tyop = tyop,
-                              Args = genargs ([], alpha) i}
+                              Args = genargs alpha kd_args}
       in
         TypeNet.peek (db, ty)
       end
@@ -550,7 +559,7 @@ end
 fun tysize ty =
     if Type.is_vartype ty then 1
     else let
-        val {Args,...} = Type.dest_thy_type ty
+        val (_,Args) = Type.strip_app_type ty
       in
         1 + List.foldl (fn (ty,acc) => tysize ty + acc) 0 Args
       end
@@ -601,7 +610,8 @@ fun typeValue (theta,gamma,undef) =
       case theta ty
        of SOME fvar => fvar
         | NONE =>
-          let val {Thy,Tyop,Args} = dest_thy_type ty
+          let val (Opr,Args) = strip_app_type ty
+              val {Thy,Tyop,...} = dest_thy_con_type Opr
           in case gamma (Thy,Tyop)
               of SOME f =>
                   let val vty = drop Args (type_of f)
@@ -629,7 +639,7 @@ fun typeValue (theta,gamma,undef) =
                       val (sigma,ksigma,rk) = kind_match_type vty ty
                                                 handle HOL_ERR _ => ([],[],0)
                       val inst_it = inst sigma o inst_kind ksigma o inst_rank rk
-                      val args = snd(dest_type ty)
+                      val args = snd(strip_app_type ty)
                   in list_mk_comb(inst_it f, map tyValue args)
                   end
                | NONE => undef ty
@@ -698,7 +708,8 @@ fun enc_type ty =
   else
   if ty = Type.bool then bool_var
   else
-  let val (tyop,args) = dest_type ty
+  let val (opr,args) = strip_app_type ty
+      val (tyop,kd,rk) = dest_con_type ty
       val enc_args = to_list(map enc_type args)
       val enc_tyop = tyop_var tyop
       val pair = Pair enc_tyop enc_args
@@ -725,7 +736,8 @@ fun tyValue (theta,gamma,undef) =
       case theta ty  (* map type variable *)
        of SOME x => x
         | NONE =>    (* map compound type *)
-          let val {Thy,Tyop,Args} = dest_thy_type ty
+          let val (Opr,Args) = strip_app_type ty
+              val {Thy,Tyop,...} = dest_thy_con_type Opr
           in case gamma ty
               of SOME f =>
                   let val vty = drop (alpha::Args) (type_of f)
@@ -999,7 +1011,8 @@ fun get_field_name s1 s2 =
 
 fun dest_field tm =
   let val (ty,_) = dom_rng (type_of tm)
-      val tyname = fst(dest_type ty)
+      val opr = fst(strip_app_type ty)
+      val tyname = #1(dest_con_type opr)
       val (updf,arg) = dest_comb tm
       val (name0,ty) = dest_const updf
       val name = get_field_name tyname name0

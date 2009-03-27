@@ -27,9 +27,33 @@ local open Portable
                else str
         in mk_var(pass Name,  Ty)
         end
+      fun next_nm avoids s = Lexis.gen_variant Lexis.tyvar_vary avoids s
+      fun gen_tyvs avoids nextty (kd::kds) =
+            let val (name,_,rk) = dest_vartype_opr nextty
+                val new_name = next_nm avoids name
+                val newtyv = mk_vartype_opr(new_name, kd, rk)
+            in newtyv :: gen_tyvs (new_name::avoids) newtyv kds
+            end
+        | gen_tyvs avoids nextty [] = []
+      fun size_ty avoids ty =
+        let val (s,kd,rk) = dest_vartype_opr ty
+                            handle HOL_ERR e => ("", kind_of ty, rank_of ty)
+        in if kd = typ then ty --> num
+           else if is_arrow_kind kd then
+             let val (args,res) = strip_arrow_kind kd
+                 val arg_tyvs = gen_tyvs (s::avoids) alpha args
+                 val arg_sz_tys = map (size_ty (s::avoids)) arg_tyvs
+                 val resty = list_mk_app_type(ty, arg_tyvs)
+                 val _ = assert (equal res) (kind_of resty)
+                 val res_sz_ty = (* resty --> num *) size_ty (s::avoids) resty
+             in list_mk_univ_type (arg_tyvs, foldr (op -->) res_sz_ty arg_sz_tys)
+             end
+           else (* kd is a kind variable *)
+             raise ERR "mk_tyvar_size" "kind of type variable contains a kind variable"
+        end
 in
 fun mk_tyvar_size vty (V,away) =
-  let val fty = vty --> num
+  let val fty = size_ty [] vty (* vty --> num *)
       val v = num_variant away (mk_var("f", fty))
   in (v::V, v::away)
   end
@@ -52,11 +76,26 @@ fun tysize_env db =
 
 local fun drop [] ty = fst(dom_rng ty)
         | drop (_::t) ty = drop t (snd(dom_rng ty));
+      fun lose 0 ty = ty
+        | lose n ty = lose (n-1) (fst (dest_app_type ty))
       fun Kzero ty = mk_abs(mk_var("v",ty), numSyntax.zero_tm)
       fun OK f ty M =
          let val (Rator,Rand) = dest_comb M
          in (eq Rator f) andalso is_var Rand andalso (type_of Rand = ty)
          end
+      fun match_mk_comb (opr,arg) =
+         let val (dom,rng) = dom_rng (type_of opr)
+             val (uvs,dom') = strip_univ_type dom
+             val aty = type_of arg
+         in if abconv_ty dom aty then mk_comb(opr,arg)
+            else let val (tyS,kdS,rkS) = Type.kind_match_type aty dom'
+                     val arg' = inst tyS (inst_rank_kind rkS kdS arg)
+                     val arg'' = list_mk_tyabs(uvs, arg')
+                 in mk_comb(opr,arg'')
+                 end
+         end
+      fun list_match_mk_comb (opr,[]) = opr
+        | list_match_mk_comb (opr, arg::args) = list_match_mk_comb(match_mk_comb(opr,arg),args)
 in
 fun tysize (theta,omega,gamma) clause ty =
  case theta ty
@@ -70,21 +109,33 @@ fun tysize (theta,omega,gamma) clause ty =
                   alist)
         | NONE =>
            let val {Tyop,Thy,Args} = dest_thy_type ty
+               val Kind = valOf (op_kind {Tyop=Tyop, Thy=Thy})
+               val kind_args = fst(strip_arrow_kind Kind)
            in case gamma (Thy,Tyop)
                of SOME f =>
-                   let val vty = drop Args (type_of f)
+                   let val vty0 = drop kind_args (*Args*) (type_of f)
+                       val vty = lose (length kind_args - length Args) vty0
                        val (tyS,kdS,rkS) = Type.kind_match_type vty ty
                     in list_mk_comb(inst tyS (inst_rank_kind rkS kdS f),
-                                map (tysize (theta,omega,gamma) clause) Args)
+                                    map (tysize (theta,omega,gamma) clause) Args)
                     end
                 | NONE => Kzero ty
            end
            handle HOL_ERR _ =>
            if is_app_type ty then
-                    let val (opr,arg) = dest_app_type ty
+                    let val (opr,args) = strip_app_type ty
+                        val Kind = kind_of opr
+                        val kind_args = fst(strip_arrow_kind Kind)
                         val opr_tm = tysize (theta,omega,gamma) clause opr
-                        val arg_tm = tysize (theta,omega,gamma) clause arg
-                    in mk_comb(opr_tm, arg_tm)
+                        val (ubtys,oprty1) = strip_univ_type (type_of opr_tm)
+                        val oprty0 = drop kind_args oprty1
+                        val oprty = lose (length kind_args - length args) oprty0
+                        val (tyS,kdS,rkS) = Type.kind_match_type oprty ty
+                        val ubtys' = map (type_subst tyS o Type.inst_rank_kind rkS kdS) ubtys
+                        val opr_tm' = inst tyS (inst_rank_kind rkS kdS opr_tm)
+                        val opr_tm'' = list_mk_tycomb (opr_tm', ubtys')
+                        val arg_tms = map (tysize (theta,omega,gamma) clause) args
+                    in list_match_mk_comb(opr_tm'', arg_tms)
                     end
            else if is_abs_type ty then
                     let val (bvar,body) = dest_abs_type ty
@@ -93,15 +144,7 @@ fun tysize (theta,omega,gamma) clause ty =
                         val body_tm = tysize (theta',omega,gamma) clause body
                     in mk_abs(bvar_tm, body_tm)
                     end
-           else if is_univ_type ty then
-                    let val (bvar,body) = dest_univ_type ty
-                        val abs_tm = tysize (theta,omega,gamma) clause (mk_abs_type(bvar,body))
-                        val bv' = ty_antiq bvar
-                        val v = genvar ty
-                        fun bound n = ``!:^bv'. ^abs_tm ^(Kzero bvar) (^v [:^bv':]) < ^(mk_var(n,numSyntax.num))``
-                        val max_tm = ``\^v. @n. ^(bound "n") /\ !m. ^(bound "m") ==> n <= m``
-                    in max_tm
-                    end handle e => Raise e
+           else if is_univ_type ty then Kzero ty
            else raise ERR "tysize" "impossible type"
 end;
 

@@ -8,7 +8,7 @@ sig
      antiq : 'b -> 'a,
      kindcast : {Ty: 'a, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
      rankcast : {Ty: 'a, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
-     tycon  : {Thy:string, Tyop:string, Locn:locn.locn} -> 'a,
+     tycon  : {Thy:string, Tyop:string, Kind:Prekind.prekind, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
      tyapp  : ('a * 'a) -> 'a,
      tyuniv : ('a * 'a) -> 'a,
      tyabs  : ('a * 'a) -> 'a,

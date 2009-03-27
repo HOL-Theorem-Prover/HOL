@@ -10,6 +10,7 @@ struct
 type thm      = KernelTypes.thm;
 type term     = KernelTypes.term
 type hol_type = KernelTypes.hol_type
+type kind     = KernelTypes.kind
 type num = Arbnum.num
 
 open Feedback Lib Portable;
@@ -22,12 +23,12 @@ val psort = Lib.sort (fn (s1:string,_:Thm.thm) => fn (s2,_:Thm.thm) => s1<=s2);
 fun thid_sort x = Lib.sort (fn (s1:string,_,_) => fn (s2,_,_) => s1<=s2) x;
 fun thm_terms th = Thm.concl th :: Thm.hyp th;
 
-(*---------------------------------------------------------------------------*)
-(* Print a type                                                              *)
-(*---------------------------------------------------------------------------*)
-
 fun Thry s = s^"Theory";
 fun ThrySig s = Thry s
+
+(*---------------------------------------------------------------------------*)
+(* Print a kind                                                              *)
+(*---------------------------------------------------------------------------*)
 
 fun pp_kind mvarkind pps kd =
  let open Portable
@@ -52,6 +53,10 @@ fun pp_kind mvarkind pps kd =
            add_string ")")
        end
  end
+
+(*---------------------------------------------------------------------------*)
+(* Print a type                                                              *)
+(*---------------------------------------------------------------------------*)
 
 fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps ty =
  let open Portable Type
@@ -122,6 +127,10 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
            add_string (quote Tyop);
            add_break (1,0);
            add_string (quote Thy);
+           add_break (1,0);
+           pp_kind Kind;
+           add_break (1,0);
+           add_string (Int.toString Rank);
            end_block ()
        end
   else if is_app_type ty then
@@ -501,6 +510,7 @@ fun pp_struct info_record ppstrm =
           flush_ppstream,...} = Portable.with_ppstream ppstrm
      val pp_tm = pp_raw ppstrm
      val pp_ty = with_parens (pp_type "K" "U" "R" "T" "O" "P" "B" "N") ppstrm
+     val pp_kd = pp_kind "K" ppstrm
      val pp_tag = Tag.pp_to_disk ppstrm
      fun pblock(header, ob_pr, obs) =
          case obs
@@ -528,10 +538,11 @@ fun pp_struct info_record ppstrm =
             add_string","; add_break(0,0);
             add_string("Arbnum.fromString \""^Arbnum.toString j^"\"");
             add_string")"; end_block())
-     fun pp_ty_dec(s,i) =
+     fun pp_ty_dec(s,kd,rk) =
           (begin_block CONSISTENT 0; add_string"(";
             add_string (stringify s); add_string",";
-            add_break(0,0); add_string(Lib.int_to_string i);
+            add_break(0,0); pp_kd kd; add_string",";
+            add_break(0,0); add_string(Lib.int_to_string rk);
             add_string")"; end_block())
      fun pp_const_dec(s,ty) =
           (begin_block INCONSISTENT 1; add_string"(";
@@ -647,18 +658,16 @@ fun pp_struct info_record ppstrm =
                   Thry name^" ... \" else ()"); add_newline();
       add_string "open Kind Type Term Thm"; add_newline();
       add_string "infixr ==> -->"; add_newline();
-      add_string"fun C s t ty = mk_thy_const{Name=s,Thy=t,Ty=ty}";
-      add_newline();
-      add_string"fun T s t A = mk_thy_type{Tyop=s, Thy=t,Args=A}";
-      add_newline();
-      add_string"fun V s q   = mk_var(s,q)";     add_newline();
-      add_string"val K       = mk_varkind";              add_newline();
-      add_string"val U       = mk_vartype";              add_newline();
-      add_string"fun R s k r = mk_vartype_opr(s,k,r)";   add_newline();
-      add_string"fun O s t   = mk_thy_con_type{Tyop=s,Thy=t}";        add_newline();
-      add_string"fun P a b   = mk_app_type(a,b)";        add_newline();
-      add_string"fun B a b   = mk_abs_type(a,b)";        add_newline();
-      add_string"fun N a b   = mk_univ_type(a,b)";       add_newline();
+      add_string"fun C s t ty  = mk_thy_const{Name=s,Thy=t,Ty=ty}";             add_newline();
+      add_string"fun T s t A   = mk_thy_type{Tyop=s, Thy=t,Args=A}";            add_newline();
+      add_string"fun V s q     = mk_var(s,q)";             add_newline();
+      add_string"val K         = mk_varkind";              add_newline();
+      add_string"val U         = mk_vartype";              add_newline();
+      add_string"fun R s k r   = mk_vartype_opr(s,k,r)";   add_newline();
+      add_string"fun O s t k r = mk_thy_con_type{Tyop=s,Thy=t,Kind=k,Rank=r}";  add_newline();
+      add_string"fun P a b     = mk_app_type(a,b)";        add_newline();
+      add_string"fun B a b     = mk_abs_type(a,b)";        add_newline();
+      add_string"fun N a b     = mk_univ_type(a,b)";       add_newline();
    (*   add_string("val _ = print \"Loading theory: "^Thry name^"\\n\""); *)
       add_newline();
       pblock ("Parents", add_string o pparent,
