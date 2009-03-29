@@ -216,15 +216,16 @@ more on lexing, see Section~\ref{HOL-lex}.
   The standard grammar includes a rule that associates the special
   mix-fix form for if-then-else expressions with the underlying
   ``name'' \holtxt{COND}.  It is \holtxt{COND} that will eventually be
-  resolved as the constant \holtxt{bool\$COND}.
+  resolved as the constant \holtxt{bool\dol{}COND}.
 
   If the ``quotation'' syntax with a bare dollar is used,%
 %
 \index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
+\index{tokens!suppressing parsing behaviour of|(}
 %
 then this phase of the parser will not treat strings as part of a
-special form.  For example, \holtxt{\holquote{\$if~P}} turns into the
-\ml{Absyn} form
+special form.  For example, \holtxt{\holquote{\dol{}if~P}} turns into
+the \ml{Absyn} form
 \begin{verbatim}
    APP(IDENT "if", IDENT "P")
 \end{verbatim}
@@ -244,15 +245,19 @@ special form.  For example, \holtxt{\holquote{\$if~P}} turns into the
   Symbols can also be ``escaped'' by enclosing them in parentheses.
   Thus, the above could be written \holtxt{\holquote{(+)~x}} for the
   same effect.
+\index{tokens!suppressing parsing behaviour of|)}
 
   The user can insert intermediate transformation functions of their
   own design into the parsing processing at this point.  This is done
-  with the function \ml{add\_absyn\_postprocessor}.  The user's function
-  will be of type \ml{Absyn~->~Absyn} and can perform whatever changes
-  are appropriate.  Like all other aspects of parsing, these functions
-  are part of a grammar: if the user doesn't want to see a particular
-  function used, they can arrange for parsing to be done with respect
-  to a different grammar.
+  with the function 
+\begin{verbatim}
+   add_absyn_postprocessor
+\end{verbatim}
+  The user's function will be of type \ml{Absyn~->~Absyn} and can
+  perform whatever changes are appropriate.  Like all other aspects of
+  parsing, these functions are part of a grammar: if the user doesn't
+  want to see a particular function used, they can arrange for parsing
+  to be done with respect to a different grammar.
 
 \item[Name Resolution:] The bare \ml{IDENT} forms in the \ml{Absyn}
   value are resolved as free variables, bound names or constants.
@@ -333,6 +338,90 @@ special form.  For example, \holtxt{\holquote{\$if~P}} turns into the
   user-supplied function modifies the result before the parser
   returns.
 \end{description}
+
+\subsubsection{Unicode characters}
+\label{sec:parser:unicode-characters}
+
+\index{Unicode}\index{UTF-8}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|(}
+It is possible to have the \HOL{} parsing and printing infrastructure
+use Unicode characters (written in the UTF-8 encoding).  This makes it
+possible to write and read terms such as
+\begin{alltt}
+   \(\forall\)x. P x \(\land\) Q x
+\end{alltt}
+rather than 
+\begin{alltt}
+   !x. P x /\bs{} Q x
+\end{alltt}
+If they wish, users may simply define constants that have Unicode
+characters in their names, and leave it at that.  The problem with
+this approach is that standard tools will likely then create theory
+files that include (illegal) \ML{} bindings like \ml{val $\rightarrow$\_def =
+  \dots}.  The result will be \ml{...Theory.sig} and
+\ml{...Theory.sml} files that fail to compile, even though the call to
+\ml{export\_theory} may succeed. This problem can be finessed through
+the use of functions like \ml{set\_MLname}, but it's probably best
+practice to only use alphanumerics in the names of constants, and to
+then use functions like \ml{overload\_on} and \ml{add\_rule} to create
+Unicode syntax for the underlying constant.
+
+If users have fonts with the appropriate repertoire of characters to
+display their syntax, and are confident that any other users of their
+theories will too, then this is perfectly reasonable.  However, if
+users wish to retain some backwards compatibility with pure ASCII
+syntax, they can do so by defining a pure ASCII syntax first.  Having
+done this, they can create a Unicode version of the syntax with the
+function \ml{Unicode.unicode\_version}.  Then, while the trace
+variable \ml{"Unicode"} is $0$, the ASCII syntax will be used for
+parsing and printing.  If the trace is set to $1$, then the Unicode
+syntax will also work in the parser, and the pretty-printer will
+prefer it when terms are printed. 
+
+For example, in \ml{boolScript.sml}, the Unicode character for logical
+and (\texttt{$\land$}), is set up as a Unicode alternative for
+\texttt{/\bs} with the call
+\begin{verbatim}
+   val _ = unicode_version {u = UChar.conj, tmnm = "/\\"};
+\end{verbatim}
+(In this context, the \ml{Unicode} structure has been \ml{open}-ed,
+giving access also to the structure \ml{UChar} which contains bindings
+for the Greek alphabet, and some common mathematical symbols. ) 
+
+The argument to \ml{unicode\_version} is a record with fields \ml{u}
+and \ml{tmnm}.  Both are strings.  The \ml{tmnm} field can either be
+the name of a constant, or a token appearing in a concrete syntax rule
+(possibly mapping to some other name).  If the \ml{tmnm} is only the
+name of a constant, then, with the trace variable enabled, the string
+\ml{u} will be overloaded to the same name.  If the \ml{tmnm} is the
+same as a concrete syntax rule's token, then the behaviour is to
+create a new rule mapping to the same name, but with the string \ml{u}
+used as the token. 
+
+\paragraph{Lexing rules with Unicode characters}
+%
+\index{tokens!Unicode characters} 
+\index{identifiers, in HOL logic@identifiers, in \HOL{} logic!non-aggregating characters}
+%
+Roughly speaking, \HOL{} considers characters to be divided into three
+classes: alphanumerics, non-aggregating symbols and symbols.  This
+affects the behaviour of the lexer when it encounters strings of
+characters.  Unless there is a specific ``mixed'' token already in the
+grammar, tokens split when the character class changes.  Thus, in the
+string
+\begin{verbatim}
+   ++a
+\end{verbatim}
+the lexer will see two tokens, \holtxt{++} and \holtxt{a}, because
+\holtxt{+} is a symbol and \holtxt{a} is an alphanumeric.  The
+classification of the additional Unicode characters is very
+simplistic: all Greek letters except \holtxt{$\lambda$} are alphanumeric;
+the logical negation symbol \holtxt{$\neg$} is non-aggregating; and
+everything else is symbolic.  (The exception for \holtxt{$\lambda$} is to
+allow strings like \holtxt{$\lambda$x.x} to lex into \emph{four} tokens.)
+
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|)}
+
 
 \subsubsection{Type constraints}
 \label{sec:parseprint-type-constraints}
