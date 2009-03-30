@@ -75,6 +75,8 @@ val (numdB_def, numdB_ind) = Defn.tprove(
     Q_TAC SUFF_TAC `n ≠ 0` THEN1 DECIDE_TAC THEN STRIP_TAC THEN 
     FULL_SIMP_TAC (srw_ss())[]
   ]);
+val _ = save_thm("numdB_def", numdB_def)
+val _ = save_thm("numdB_ind", numdB_ind)
 
 val numdBnum = Store_thm(
   "numdBnum",

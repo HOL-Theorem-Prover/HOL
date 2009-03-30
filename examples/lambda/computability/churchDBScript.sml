@@ -297,6 +297,248 @@ val cdLAM_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cdLAM_def, cdV_behaviour, cplus_behaviour, 
                         clift_behaviour, csub_behaviour, cdABS_behaviour, 
                         dLAM_def]);
+
+(* ----------------------------------------------------------------------
+    term recursion operator, termrec
+   ---------------------------------------------------------------------- *)
+
+val B_I = store_thm(
+  "B_I",
+  ``v ∉ FV M ∧ v ∈ FV N ∧ N ≠ VAR v ⇒ 
+      (LAM v (M @@ N) == B @@ M @@ (LAM v N))``,
+  STRIP_TAC THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [chap2Theory.B_def] THEN 
+  REWRITE_TAC [chap2Theory.S_def] THEN 
+  Q_TAC (NEW_TAC "z") `{"x"; "y"; "z"} ∪ FV M ∪ FV N` THEN 
+  `LAM "z" (VAR "x" @@ VAR "z" @@ (VAR "y" @@ VAR "z")) = 
+   LAM z (VAR "x" @@ VAR z @@ (VAR "y" @@ VAR z))`
+     by SRW_TAC [][LAM_eq_thm] THEN 
+  POP_ASSUM SUBST1_TAC THEN 
+  Q_TAC (NEW_TAC "y") `{"x"; "y"; z} ∪ FV M ∪ FV N` THEN 
+  `LAM "y" (LAM z (VAR "x" @@ VAR z @@ (VAR "y" @@ VAR z))) =
+   LAM y (LAM z (VAR "x" @@ VAR z @@ (VAR y @@ VAR z)))`
+     by SRW_TAC [][LAM_eq_thm] THEN 
+  POP_ASSUM SUBST1_TAC THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [] THEN 
+  `∀x y. (x = y) ⇒ (x == y)` by SRW_TAC [][] THEN POP_ASSUM MATCH_MP_TAC THEN 
+  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, tpm_fresh, NOT_IN_SUB] THEN 
+  SRW_TAC [][GSYM fresh_tpm_subst, tpm_flip_args]);
+
+val C_I = store_thm(
+  "C_I",
+  ``v ∈ FV M ∧ v ∉ FV N ⇒ LAM v (M @@ N) == C @@ (LAM v M) @@ N``,
+  STRIP_TAC THEN ASM_SIMP_TAC (bsrw_ss()) [chap2Theory.C_def] THEN 
+  REWRITE_TAC [chap2Theory.S_def] THEN 
+  Q_TAC (NEW_TAC "z") `{"x"; "y"; "z"} ∪ FV M ∪ FV N` THEN 
+  `LAM "z" (VAR "x" @@ VAR "z" @@ (VAR "y" @@ VAR "z")) = 
+   LAM z (VAR "x" @@ VAR z @@ (VAR "y" @@ VAR z))`
+     by SRW_TAC [][LAM_eq_thm] THEN 
+  POP_ASSUM SUBST1_TAC THEN 
+  Q_TAC (NEW_TAC "y") `{"x"; "y"; z} ∪ FV M ∪ FV N` THEN 
+  `LAM "y" (LAM z (VAR "x" @@ VAR z @@ (VAR "y" @@ VAR z))) =
+   LAM y (LAM z (VAR "x" @@ VAR z @@ (VAR y @@ VAR z)))`
+     by SRW_TAC [][LAM_eq_thm] THEN 
+  POP_ASSUM SUBST1_TAC THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [NOT_IN_SUB] THEN 
+  `∀x y. (x = y) ⇒ (x == y)` by SRW_TAC [][] THEN POP_ASSUM MATCH_MP_TAC THEN 
+  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, tpm_fresh, NOT_IN_SUB] THEN 
+  SRW_TAC [][GSYM fresh_tpm_subst, tpm_flip_args]);
+
+val I_I = store_thm(
+  "I_I",
+  ``LAM x (VAR x) = I``,
+  SIMP_TAC (srw_ss()) [LAM_eq_thm, chap2Theory.I_def]);
+
+val K_I = store_thm(
+  "K_I", 
+  ``v ∉ FV M ⇒ (LAM v M == K @@ M)``,
+  STRIP_TAC THEN REWRITE_TAC [chap2Theory.K_def] THEN 
+  Q_TAC (NEW_TAC "y") `{"x"; "y"} ∪ FV M` THEN 
+  `LAM "y" (VAR "x") = LAM y (VAR "x")` by SRW_TAC [][LAM_eq_thm] THEN 
+  POP_ASSUM SUBST1_TAC THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [] THEN 
+  `∀x y. (x = y) ⇒ (x == y)` by SRW_TAC [][] THEN POP_ASSUM MATCH_MP_TAC THEN 
+  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, tpm_fresh, NOT_IN_SUB]);
+
+val S_I = store_thm(
+  "S_I",
+  ``v ∈ FV M ∧ v ∈ FV N ∧ N ≠ VAR v ⇒ 
+    LAM v (M @@ N) == S @@ (LAM v M) @@ (LAM v N)``,
+  STRIP_TAC THEN REWRITE_TAC [chap2Theory.S_def] THEN 
+  Q_TAC (NEW_TAC "z") `{"x"; "y"; "z"} ∪ FV M ∪ FV N` THEN 
+  `LAM "z" (VAR "x" @@ VAR "z" @@ (VAR "y" @@ VAR "z")) = 
+   LAM z (VAR "x" @@ VAR z @@ (VAR "y" @@ VAR z))`
+     by SRW_TAC [][LAM_eq_thm] THEN 
+  POP_ASSUM SUBST1_TAC THEN 
+  Q_TAC (NEW_TAC "y") `{"x"; "y"; z} ∪ FV M ∪ FV N` THEN 
+  `LAM "y" (LAM z (VAR "x" @@ VAR z @@ (VAR "y" @@ VAR z))) =
+   LAM y (LAM z (VAR "x" @@ VAR z @@ (VAR y @@ VAR z)))`
+     by SRW_TAC [][LAM_eq_thm] THEN 
+  POP_ASSUM SUBST1_TAC THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [NOT_IN_SUB] THEN 
+  `LAM v (M @@ N) = LAM z ([VAR z/v] (M @@ N))`
+     by SRW_TAC [][SIMPLE_ALPHA] THEN 
+  SRW_TAC [][]);
+
+val fake_eta = store_thm(
+  "fake_eta",
+  ``v ∉ FV M ∧ is_abs M ⇒ (LAM v (M @@ VAR v) == M)``,
+  STRIP_TAC THEN 
+  `∃u M0. M = LAM u M0`
+     by (Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN 
+         FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []) THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [] THEN 
+  FULL_SIMP_TAC (srw_ss()) [] THEN 
+  Cases_on `v = u` THEN SRW_TAC [][] THEN RES_TAC THEN 
+  `LAM u M0 = LAM v ([VAR v/u] M0)` by SRW_TAC [][SIMPLE_ALPHA] THEN 
+  SRW_TAC [][]);
+
+val is_abs_cfstsnd = Store_thm(
+  "is_abs_cfstsnd",
+  ``is_abs csnd ∧ is_abs cfst``,
+  SRW_TAC [][churchpairTheory.cfst_def, churchpairTheory.csnd_def]);
+
+val B_eta = store_thm(
+  "B_eta",
+  ``LAM v (B @@ VAR v) == B``,
+  SIMP_TAC (bsrw_ss()) [chap2Theory.B_def] THEN 
+  `S @@ (K @@ S) @@ K =
+   LAM "x" (LAM "y" (LAM "z" (VAR "x" @@ VAR "z" @@ (VAR "y" @@ VAR "z")))) @@ 
+       (K @@ S) @@ K`
+     by SRW_TAC [][chap2Theory.S_def] THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [] THEN 
+  `∀x y. (x = y) ⇒ x == y` by SRW_TAC [][] THEN 
+  POP_ASSUM MATCH_MP_TAC THEN 
+  SRW_TAC [][LAM_eq_thm, tpm_fresh]);
+
+val eqn_elim = prove(
+  ``(∀Y. X:term == Y ⇔ Z == Y) ⇒ X == Z``,
+  METIS_TAC [chap2Theory.lam_eq_rules]);
+fun brackabs_equiv ths def = let 
+  val (l,r) = dest_eq (concl def)
+  val gv = genvar ``:term``
+  val t = ``^l == ^gv``
+  val th = SIMP_CONV (bsrw_ss()) 
+                     ([S_I, K_I, B_I, C_I, fake_eta, B_eta, I_I, def] @ ths)
+                     t
+in
+  MATCH_MP eqn_elim (GEN gv th) 
+end
+  
+val is_abs_cdV = Store_thm(
+  "is_abs_cdV",
+  ``is_abs cdV``,
+  SRW_TAC [][cdV_def]);
+val is_abs_cdAPP = Store_thm(
+  "is_abs_cdAPP",
+  ``is_abs cdAPP``,
+  SRW_TAC [][cdAPP_def]);
+
+val termrec_var_def = Define`
+  termrec_var = B @@ (S @@ (B @@ cpair @@ cdV)) @@ I
+`;
+val termrec_var_eta = store_thm(
+  "termrec_var_eta",
+  ``LAM x (termrec_var @@ VAR x) == termrec_var``,
+  SIMP_TAC (bsrw_ss()) [termrec_var_def] THEN 
+  CONV_TAC (RAND_CONV (SIMP_CONV bool_ss [Once chap2Theory.B_def])) THEN 
+  SIMP_TAC (bsrw_ss()) [] THEN 
+  CONV_TAC (RAND_CONV (SIMP_CONV bool_ss [Once chap2Theory.S_def])) THEN 
+  SIMP_TAC (bsrw_ss()) [] THEN 
+  `∀x y. (x = y) ⇒ x == y` by SRW_TAC [][] THEN 
+  POP_ASSUM MATCH_MP_TAC THEN 
+  SRW_TAC [][LAM_eq_thm, tpm_fresh]);  
+  
+
+val termrec_comb_def = Define`
+  termrec_comb = 
+  LAM "c" (LAM "r1" (LAM "r2" 
+    (cpair @@ (cdAPP @@ (cfst @@ VAR "r1") @@ (cfst @@ VAR "r2"))
+           @@ (VAR "c" 
+                   @@ (cfst @@ VAR "r1") @@ (cfst @@ VAR "r2")
+                   @@ (csnd @@ VAR "r1") @@ (csnd @@ VAR "r2")))))
+`;
+val termrec_comb_eqn = brackabs_equiv [] termrec_comb_def
+
+
+val termrec_abs_def = Define`
+  termrec_abs = 
+  LAM "a" (LAM "r" 
+    (cpair @@ (cdABS @@ (cfst @@ VAR "r"))
+           @@ (VAR "a" @@ (cfst @@ VAR "r") @@ (csnd @@ VAR "r"))))
+`;
+val termrec_abs_eqn = brackabs_equiv [] termrec_abs_def
+
+val FV_termrec_subs = Store_thm(
+  "FV_termrec_subs",
+  ``(FV termrec_var = {}) ∧ (FV termrec_comb = {}) ∧ (FV termrec_abs = {})``,
+  SRW_TAC [][termrec_var_def, termrec_comb_def, termrec_abs_def, EXTENSION]);
+
+val is_abs_termrecsubs = Store_thm(
+  "is_abs_termrecsubs",
+  ``is_abs termrec_comb ∧ is_abs termrec_abs``,
+  SRW_TAC [][termrec_var_def, termrec_comb_def, termrec_abs_def]);
+
+val fst_termrec_subs = store_thm(
+  "fst_termrec_subs",
+  ``∀t. cfst @@ (cDB t 
+                     @@ (termrec_var @@ v) 
+                     @@ (termrec_comb @@ c)
+                     @@ (termrec_abs @@ a)) == 
+        cDB t``,
+  SIMP_TAC (bsrw_ss()) [termrec_var_def, termrec_comb_eqn, termrec_abs_eqn] THEN
+  Induct THEN ASM_SIMP_TAC (bsrw_ss()) [cDB_thm, 
+                                        churchpairTheory.cfst_pair, 
+                                        cdV_behaviour, cdAPP_behaviour, 
+                                        cdABS_behaviour]);
+
+val termrec_def = Define`
+  termrec = 
+  LAM "v" (LAM "c" (LAM "a" (LAM "t"
+    (csnd @@ (VAR "t" 
+                  @@ (termrec_var @@ VAR "v")
+                  @@ (termrec_comb @@ VAR "c")
+                  @@ (termrec_abs @@ VAR "a"))))))
+`;
+
+val termrec_eqn = brackabs_equiv [termrec_var_eta] termrec_def
+
+val FV_termrec = Store_thm(
+  "FV_termrec",
+  ``FV termrec = {}``,
+  SRW_TAC [][termrec_def, EXTENSION]);
+
+infix |> fun x |> f = f x
+
+val termrec_behaviour = store_thm(
+  "termrec_behaviour",
+  ``termrec @@ v @@ c @@ a @@ cDB (dV i) == v @@ church i ∧
+    termrec @@ v @@ c @@ a @@ cDB (dAPP t u) ==
+      c @@ cDB t @@ cDB u 
+        @@ (termrec @@ v @@ c @@ a @@ cDB t)
+        @@ (termrec @@ v @@ c @@ a @@ cDB u) ∧
+    termrec @@ v @@ c @@ a @@ cDB (dABS t) ==
+      a @@ cDB t @@ (termrec @@ v @@ c @@ a @@ cDB t)``,
+  REPEAT CONJ_TAC THENL [
+    SIMP_TAC (bsrw_ss()) [termrec_eqn, cDB_thm, termrec_var_def, 
+                          churchpairTheory.csnd_pair],
+
+    SIMP_TAC (bsrw_ss()) [termrec_eqn, cDB_thm] THEN 
+    ASSUME_TAC (``termrec_comb @@ c @@ x @@ y == X`` 
+                  |> SIMP_CONV (bsrw_ss()) [termrec_comb_eqn]
+                  |> Q.GEN `X`
+                  |> MATCH_MP eqn_elim 
+                  |> Q.GEN `y` |> Q.GEN `x`) THEN 
+    ASM_SIMP_TAC (bsrw_ss()) [churchpairTheory.csnd_pair, fst_termrec_subs],
+    
+    SIMP_TAC (bsrw_ss()) [termrec_eqn, cDB_thm] THEN 
+    ASSUME_TAC (``termrec_abs @@ a @@ x == X`` 
+                  |> SIMP_CONV (bsrw_ss()) [termrec_abs_eqn]
+                  |> Q.GEN `X`
+                  |> MATCH_MP eqn_elim 
+                  |> Q.GEN `x`) THEN 
+    ASM_SIMP_TAC (bsrw_ss()) [churchpairTheory.csnd_pair, fst_termrec_subs]
+  ]);
   
 (* ---------------------------------------------------------------------- 
     cichurch 
@@ -423,96 +665,161 @@ val ccDB_behaviour = store_thm(
   Q.SPEC_THEN `dbt` ASSUME_TAC cDB_def THEN 
   SRW_TAC [][]);
 
-open normal_orderTheory
-
 (* ---------------------------------------------------------------------- 
-    Halting Problems.
-
-    HP_selfapp is where a diagonalisation is done.  This is usually
-    done by saying something like there is no computable function for
-    determining if φ_n(n) terminates.  One reads this with "n" as the
-    starting point, and this then leading to the use of φ_n to apply
-    to it.
-  
-    But equally, we know that every f has an index, and this says that
-    if you apply an f to its index, then the thing is undecidable.  In
-    the λ-calculus setting, the cDB function is the function that
-    takes a term to its "index", where here, the "index" is the data
-    encoding the function.
-
-    So, this proof is easiest to read as saying, given a term f, it's
-    impossible to determine if it applied to its index halts.
-  
-    Will perhaps add a more traditional looking version with natural
-    numbers too.
+    enumerations are computable 
    ---------------------------------------------------------------------- *)
 
-val HP_selfapp = store_thm(
-  "HP_selfapp",
-  ``¬∃M. 
-         ∀t. M @@ cDB (fromTerm t) -n->* 
-             cB (has_bnf (t @@ cDB (fromTerm t)))``,
-  STRIP_TAC THEN 
-  FULL_SIMP_TAC (srw_ss()) [] THEN 
-  Q_TAC (NEW_TAC "z") `FV M` THEN 
-  Q.ABBREV_TAC `G = LAM z (M @@ VAR z @@ Ω @@ cB T)` THEN 
-  `G @@ cDB (fromTerm G) -β-> M @@ cDB (fromTerm G) @@ Ω @@ cB T`
-      by SRW_TAC [][chap3Theory.ccbeta_rwt, lemma14b, Abbr`G`] THEN 
-  `M @@ cDB (fromTerm G) @@ Ω @@ cB T 
-      -β->* 
-   cB (has_bnf (G @@ cDB (fromTerm G))) @@ Ω @@ cB T`
-      by SRW_TAC [][chap3Theory.betastar_APPl, nstar_betastar] THEN 
-  Cases_on `has_bnf (G @@ cDB (fromTerm G))` THEN 
-  FULL_SIMP_TAC (srw_ss()) [] THENL [
-    `cB T @@ Ω @@ cB T -β->* Ω`
-       by SRW_TAC [][nstar_betastar, cB_behaviour] THEN 
-    `G @@ cDB (fromTerm G) -β->* Ω`
-       by METIS_TAC [relationTheory.RTC_RULES, 
-                     relationTheory.RTC_CASES_RTC_TWICE] THEN 
-    METIS_TAC [Omega_reachable_no_bnf],
+open enumerationsTheory
 
-    `cB F @@ Ω @@ cB T -β->* cB T`
-       by SRW_TAC [][nstar_betastar, cB_behaviour] THEN 
-    `G @@ cDB (fromTerm G) -β->* cB T`
-       by METIS_TAC [relationTheory.RTC_CASES_RTC_TWICE, 
-                     relationTheory.RTC_RULES] THEN 
-    `has_bnf (G @@ cDB (fromTerm G))`
-       by METIS_TAC [chap3Theory.has_bnf_thm, bnf_cB]
+
+
+
+val cdBnum_def = Define`
+  cdBnum = 
+  LAM "t" 
+    (VAR "t" 
+         @@ (cmult @@ church 3)
+         @@ (LAM "r1" 
+               (B @@ csuc 
+                  @@ (B @@ (cmult @@ church 3) 
+                        @@ (cnpair @@ VAR "r1"))))
+         @@ (B @@ (cplus @@ church 2) @@ (cmult @@ church 3)))
+`;
+
+val FV_cdBnum = Store_thm(
+  "FV_cdBnum",
+  ``FV cdBnum = {}``,
+  SRW_TAC [][cdBnum_def]);
+
+val cdBnum_behaviour = store_thm(
+  "cdBnum_behaviour",
+  ``cdBnum @@ cDB t -n->* church (dBnum t)``,
+  SIMP_TAC (bsrw_ss()) [cdBnum_def] THEN Induct_on `t` THEN 
+  ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss) 
+               [cDB_thm, dBnum_def, cmult_behaviour, 
+                cnpair_behaviour, csuc_behaviour, 
+                arithmeticTheory.ADD1, cplus_behaviour]);
+
+val cndbsuc_def = Define`
+  cndbsuc = 
+  LAM "r" (LAM "n" (LAM "m3" (LAM "d3"
+             (cis_zero @@ VAR "m3"
+              @@ (cdV @@ VAR "d3")
+              @@ (ceqnat @@ VAR "m3" @@ (church 1)
+                         @@ (cdAPP @@ (VAR "r" @@ (cnfst @@ VAR "d3"))
+                                   @@ (VAR "r" @@ (cnsnd @@ VAR "d3")))
+                         @@ (cdABS @@ (VAR "r" @@ VAR "d3")))))
+            @@ (cmod @@ VAR "n" @@ church 3)
+            @@ (cdiv @@ VAR "n" @@ church 3)))
+`;
+val FV_cndbsuc = Store_thm(
+  "FV_cndbsuc",
+  ``FV cndbsuc = {}``,
+  SRW_TAC [][cndbsuc_def, EXTENSION]);
+
+val cndbsuc_dV_behaviour = store_thm(
+  "cndbsuc_dV_behaviour",
+  ``(n MOD 3 = 0) ⇒ 
+    cndbsuc @@ r @@ church n -n->* cDB (dV (n DIV 3))``,
+  SIMP_TAC (bsrw_ss()) [cndbsuc_def] THEN FRESH_TAC THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [tpm_fresh, cmod_behaviour, cis_zero_behaviour, 
+                            cB_behaviour, cdiv_behaviour, cdV_behaviour]);
+
+
+val is_abs_cmoddiv = Store_thm(
+  "is_abs_cmoddiv",
+  ``is_abs cmod ∧ is_abs cdiv``,
+  SRW_TAC [][cmod_def, cdiv_def]);
+
+val cndbsuc_eqn = brackabs_equiv [] cndbsuc_def
+
+val cndbsuc_dAPP_behaviour = store_thm(
+  "cndbsuc_dAPP_behaviour",
+  ``(n MOD 3 ≠ 0) ∧ (n MOD 3 = 1) ⇒ 
+    cndbsuc @@ r @@ church n == 
+    cdAPP @@ (r @@ (cnfst @@ church (n DIV 3))) 
+          @@ (r @@ (cnsnd @@ church (n DIV 3)))``,
+  STRIP_TAC THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [cndbsuc_eqn, cmod_behaviour, cis_zero_behaviour, 
+                            ceqnat_behaviour, cB_behaviour, cdiv_behaviour]);
+
+val cndbsuc_dABS_behaviour = store_thm(
+  "cndbsuc_dABS_behaviour",
+  ``(n MOD 3 ≠ 0) ∧ (n MOD 3 ≠ 1) ⇒
+    cndbsuc @@ r @@ church n == cdABS @@ (r @@ church (n DIV 3))``,
+  STRIP_TAC THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [cndbsuc_eqn, cmod_behaviour, cis_zero_behaviour, 
+                            ceqnat_behaviour, cB_behaviour, cdiv_behaviour]);
+ 
+val cnumdB0_def = Define`
+  cnumdB0 = 
+  natrec 
+   @@ (LAM "n" (cDB (dV 0)))
+   @@ (LAM "c0" (LAM "r" (LAM "n"
+       (ceqnat @@ (csuc @@ VAR "c0") @@ (VAR "n")
+        @@ (cndbsuc @@ VAR "r" @@ VAR "n")
+        @@ (VAR "r" @@ VAR "n")))))
+`;
+        
+val FV_cnumdB0 = Store_thm(
+  "FV_cnumdB0",
+  ``FV cnumdB0 = {}``,
+  SRW_TAC [][cnumdB0_def, EXTENSION])
+
+val cnumdB0_behaviour = store_thm(
+  "cnumdB0_behaviour",
+  ``n ≤ c ⇒ cnumdB0 @@ church c @@ church n -n->* cDB (numdB n)``,
+  Q.ID_SPEC_TAC `n` THEN SIMP_TAC (bsrw_ss()) [cnumdB0_def] THEN 
+  Induct_on `c` THEN
+  SIMP_TAC (bsrw_ss()) [natrec_behaviour, cdV_behaviour, 
+                        csuc_behaviour, cmod_behaviour, cdiv_behaviour, 
+                        ceqnat_behaviour] 
+  THEN1 SRW_TAC [][Once numdB_def] THEN 
+  REPEAT STRIP_TAC THEN Q.ABBREV_TAC `N = SUC c` THEN 
+  Cases_on `n = N` THENL [
+    SRW_TAC [][] THEN 
+    ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN 
+    Cases_on `N MOD 3 = 0` THENL [
+      ASM_SIMP_TAC (bsrw_ss()) [cndbsuc_dV_behaviour] THEN 
+      ASM_SIMP_TAC (srw_ss()) [Once numdB_def],
+
+      `0 < N` by SRW_TAC [][Abbr`N`] THEN 
+      `N DIV 3 < N` 
+        by SRW_TAC [ARITH_ss][arithmeticTheory.DIV_LESS] THEN 
+      `N DIV 3 ≤ c` by SRW_TAC [ARITH_ss][Abbr`N`] THEN 
+      Cases_on `N MOD 3 = 1` THENL [
+        ASM_SIMP_TAC (bsrw_ss()) [cndbsuc_dAPP_behaviour, Once numdB_def] THEN 
+        `nsnd (N DIV 3) ≤ c ∧ nfst (N DIV 3) ≤ c`
+           by (ASSUME_TAC (Q.INST [`n` |-> `N DIV 3`] 
+                                  numpairTheory.nsnd_le) THEN
+               ASSUME_TAC (Q.INST [`n` |-> `N DIV 3`] 
+                                  numpairTheory.nfst_le) THEN
+               DECIDE_TAC) THEN 
+        ASM_SIMP_TAC (bsrw_ss()) [cnfst_behaviour, cnsnd_behaviour, 
+                                  cdAPP_behaviour],
+
+        ASM_SIMP_TAC (bsrw_ss()) [cndbsuc_dABS_behaviour, Once numdB_def, 
+                                  cdABS_behaviour]
+      ]
+    ],
+
+    ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN 
+    `n ≤ c` by SRW_TAC [ARITH_ss][Abbr`N`] THEN 
+    ASM_SIMP_TAC (bsrw_ss()) []
   ]);
 
-(* Impossibility of determining whether or not arbitrary function applied
-   to arbitrary argument will terminate. *)    
-val HP_fx = store_thm(
-  "HP_fx",
-  ``¬∃M. ∀f x. M @@ cDB (fromTerm f) @@ x -n->* cB (has_bnf (f @@ x))``,
-  STRIP_TAC THEN Q_TAC (NEW_TAC "z") `FV M` THEN 
-  Q.ABBREV_TAC `G = LAM z (M @@ VAR z @@ VAR z)` THEN 
-  `∀t. G @@ cDB (fromTerm t) -n-> M @@ cDB (fromTerm t) @@ cDB (fromTerm t)`
-      by SRW_TAC [][noreduct_characterisation, noreduct_thm, Abbr`G`, 
-                    lemma14b] THEN 
-  `∀t. M @@ cDB (fromTerm t) @@ cDB (fromTerm t) -n->* 
-       cB (has_bnf (t @@ cDB (fromTerm t)))` 
-      by SRW_TAC [][] THEN 
-  `∀t. G @@ cDB (fromTerm t) -n->* cB (has_bnf (t @@ cDB (fromTerm t)))`
-     by METIS_TAC [relationTheory.RTC_RULES] THEN 
-  METIS_TAC [HP_selfapp]);
+val cnumdB_def = Define`
+  cnumdB = LAM "n" (cnumdB0 @@ VAR "n" @@ VAR "n")
+`; 
 
-(* Impossibility of deciding whether or not an arbitrary term has a β-nf.
-   Needs the computability of the encoding function cDB. *)
-val HP_bnf = store_thm(
-  "HP_bnf",
-   ``¬∃M. ∀t. M @@ cDB (fromTerm t) -n->* cB (has_bnf t)``,
-  STRIP_TAC THEN Q_TAC (NEW_TAC "z") `FV M` THEN 
-  Q.ABBREV_TAC `G = LAM z (M @@ (cdAPP @@ VAR z @@ (ccDB @@ VAR z)))` THEN 
-  `∀t. G @@ cDB (fromTerm t) -n->* cB (has_bnf (t @@ cDB (fromTerm t)))`
-    by (ASM_SIMP_TAC (bsrw_ss()) [Abbr`G`, cdAPP_behaviour, 
-                                  ccDB_behaviour] THEN 
-        REPEAT GEN_TAC THEN 
-        `∀f x. dAPP (fromTerm f) (fromTerm x) = fromTerm (f @@ x)`
-           by SRW_TAC [][] THEN 
-        ASM_SIMP_TAC (betafy bool_ss) [] THEN 
-        MATCH_MP_TAC nstar_betastar THEN ASM_SIMP_TAC (srw_ss()) []) THEN 
-  METIS_TAC [HP_selfapp]);
+val FV_cnumdB = Store_thm(
+  "FV_cnumdB",
+  ``FV cnumdB = {}``,
+  SRW_TAC [][cnumdB_def]);
+
+val cnumdB_behaviour = store_thm(
+  "cnumdB_behaviour",
+  ``cnumdB @@ church n -n->* cDB (numdB n)``,
+  SIMP_TAC (bsrw_ss()) [cnumdB_def, cnumdB0_behaviour]);
   
-
 val _ = export_theory()
