@@ -119,7 +119,12 @@ structure Yices = struct
     (wordsSyntax.word_and_tm, "bv-and", ""),
     (wordsSyntax.word_or_tm, "bv-or", ""),
     (wordsSyntax.word_xor_tm, "bv-xor", ""),
-    (wordsSyntax.word_1comp_tm, "bv-not", "")
+    (wordsSyntax.word_1comp_tm, "bv-not", ""),
+    (wordsSyntax.word_lsl_tm, "bv-shift-left0", ""),
+    (wordsSyntax.word_lsr_tm, "bv-shift-right0", ""),
+    (* word_concat in HOL has a more general type than bv-concat in Yices *)
+    (wordsSyntax.word_concat_tm, "bv-concat", ""),
+    (wordsSyntax.word_extract_tm, "bv-extract", "")
   ]
 
   (* binders need to be treated differently from the operators in
@@ -231,6 +236,31 @@ structure Yices = struct
           val (acc, s1) = translate_term (acc, t1)
       in
         (acc, "(select " ^ s1 ^ " 2)")
+      end
+    (* word literals *)
+    else if wordsSyntax.is_word_literal tm then
+      let val (num, dim_ty) = wordsSyntax.dest_n2w tm
+          val dim = fcpLib.index_to_num dim_ty
+                      handle Feedback.HOL_ERR _ =>
+                        raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                                 "bit-vector type of unknown size")
+          val n = numSyntax.dest_numeral num
+      in
+        (acc, "(mk-bv " ^ Arbnum.toString dim ^ " " ^ Arbnum.toString n ^ ")")
+      end
+    (* fcp_index *)
+    (* Hopefully used as index into a bit vector, but we don't check -- Yices
+       should. *)
+    else if wordsSyntax.is_index tm then
+      let val (t1, num) = wordsSyntax.dest_index tm
+          val (acc, s1) = translate_term (acc, t1)
+          val n = numSyntax.dest_numeral num
+                    handle Feedback.HOL_ERR _ =>
+                      raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                               "index into bit-vector is not a numeral")
+          val sn = Arbnum.toString n
+      in
+        (acc, "(= (bv-extract " ^ sn ^ " " ^ sn ^ " " ^ s1 ^ ") 0b1)")
       end
     (* binders *)
     else
