@@ -9,11 +9,12 @@ structure Yices = struct
 
   (* translation of HOL terms into Yices' input syntax -- currently, all types
      and terms except the following are treated as uninterpreted:
-     - types: 'bool', 'num', 'int', 'real', 'fun', 'prod'
+     - types: 'bool', 'num', 'int', 'real', 'fun', 'prod', word types
      - terms: Boolean connectives (T, F, ==>, /\, \/, ~, if-then-else,
               bool-case), quantifiers (!, ?), numeric literals, arithmetic
               operators (SUC, +, -, *, /, ~, DIV, MOD, ABS, MIN, MAX), function
-              application, lambda abstraction, tuple selectors FST and SND *)
+              application, lambda abstraction, tuple selectors FST and SND,
+              various word operations *)
 
   val Yices_types = [
     (("min", "bool"), "bool", ""),
@@ -114,7 +115,11 @@ structure Yices = struct
     (realSyntax.leq_tm, "<=", ""),
     (realSyntax.great_tm, ">", ""),
     (realSyntax.geq_tm, ">=", ""),
-    (pairSyntax.comma_tm, "mk-tuple", "")
+    (pairSyntax.comma_tm, "mk-tuple", ""),
+    (wordsSyntax.word_and_tm, "bv-and", ""),
+    (wordsSyntax.word_or_tm, "bv-or", ""),
+    (wordsSyntax.word_xor_tm, "bv-xor", ""),
+    (wordsSyntax.word_1comp_tm, "bv-not", "")
   ]
 
   (* binders need to be treated differently from the operators in
@@ -145,7 +150,16 @@ structure Yices = struct
                     ((ty_dict', fresh + 1, defs'), name)
                   end
     in
-      if Type.is_type ty then
+      if wordsSyntax.is_word_type ty then
+        (* bit-vector types *)
+        let val dim_ty = wordsSyntax.dest_word_type ty
+            val dim = fcpLib.index_to_num dim_ty
+        in
+          (acc, "(bitvector " ^ Arbnum.toString dim ^ ")")
+        end handle Feedback.HOL_ERR _ => (* index_to_num can fail *)
+          raise (Feedback.mk_HOL_ERR "Yices" "translate_type"
+            "bit-vector type of unknown size")
+      else if Type.is_type ty then
         (* check table of types *)
         let val {Thy, Tyop, Args} = Type.dest_thy_type ty
         in

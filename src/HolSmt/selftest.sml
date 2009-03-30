@@ -555,8 +555,15 @@ in
 
     (``(FST (x, y) = SND (x, y)) = (x = y)``, [thm_YO]),
     (``(FST p = SND p) = (p = (SND p, FST p))``, [thm_YO]),
-    (``((\p. FST p) (x, y)= (\p. SND p) (x, y)) = (x = y)``, [thm_YO])
+    (``((\p. FST p) (x, y)= (\p. SND p) (x, y)) = (x = y)``, [thm_YO]),
 
+    (* words (i.e., bit vectors) *)
+
+    (``!x. x:word32 = x``, [thm_YO]),
+    (``x:word32 && x = x``, [thm_YO]),
+    (``x:word32 !! x = x``, [thm_YO]),
+    (``x:word32 ?? x ?? x = x``, [thm_YO]),
+    (``~ ~ x:word32 = x``, [thm_YO])
   ]  (* tests *)
 end
 
