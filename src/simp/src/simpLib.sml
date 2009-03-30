@@ -264,6 +264,131 @@ with
           congs = [], name = NONE}
 end
 
+(* ----------------------------------------------------------------------
+    add_relsimp : {trans,refl,weakenings,subsets} -> simpset -> simpset
+
+    trans and refl are the transitivity and reflexivity theorems for the 
+    relation.  weakenings are theorems for turning (at least) equality goals 
+    into goals over the new relation.  subsets are theorems that help the 
+    munger: they say that certain forms imply rules for the relation.  For 
+    example, if using RTC R as the relation, then RTC_R, which states 
+      !x y. R x y ==> RTC R x y
+    is a good subset theorem 
+   ---------------------------------------------------------------------- *)
+
+fun dest_binop t = let
+  val (fx,y) = dest_comb t
+  val (f,x) = dest_comb fx
+in
+  (f,x,y)
+end
+datatype munge_action = TH of thm | POP
+fun munge base subsets asms (thlistlist, n) = let
+  val munge = munge base subsets 
+in
+  case thlistlist of
+    [] => n
+  | [] :: rest => munge asms (rest, n)
+  | (TH th :: ths) :: rest => let
+    in
+      case CONJUNCTS (SPEC_ALL th) of
+        [] => raise Fail "munge: Can't happen"
+      | [th] => let
+          open Net
+        in
+          if is_imp (concl th) then 
+            munge (#1 (dest_imp (concl th)) :: asms) 
+                  ((TH (UNDISCH th)::POP::ths)::rest, n)
+          else
+            case total dest_binop (concl th) of
+              SOME (R,from,to) => let
+                fun foldthis (t,th) = DISCH t th
+                fun insert (t,th) n = 
+                    Net.insert (t, List.foldl foldthis th asms) n
+              in
+                if aconv R base then
+                  munge asms (ths :: rest, insert (from,th) n)
+                else
+                  case List.find (fn (t,_) => aconv R t) subsets of
+                    NONE => munge asms (ths :: rest, n)
+                  | SOME (_, sub_th) =>
+                    munge asms (ths :: rest, insert (from,MATCH_MP sub_th th) n)
+              end
+            | NONE => munge asms (ths :: rest, n)
+        end
+      | thlist => munge asms (map TH thlist :: ths :: rest, n)
+    end
+  | (POP :: ths) :: rest => munge (tl asms) (ths::rest, n)
+end
+
+fun po_rel (Travrules.PREORDER(r,_,_)) = r
+
+fun mk_reducer rel_t subsets initial_rewrites = let 
+  exception redExn of thm Net.net
+  fun munge_subset_th th = let 
+    val (_, impn) = strip_forall (concl th)
+    val (a, _) = dest_imp impn
+    val (f, _, _) = dest_binop a
+  in
+    (f, th)
+  end
+  val subsets = map munge_subset_th subsets
+  fun addcontext (ctxt, thms) = let
+    val n = case ctxt of redExn n => n
+                       | _ => raise ERR ("mk_reducer.addcontext", 
+                                         "Wrong sort of ctxt")
+    val n' = munge rel_t subsets [] ([map TH thms], n)
+  in
+    redExn n'
+  end
+  val initial_ctxt = addcontext (redExn Net.empty, initial_rewrites)
+  fun applythm solver t th = let 
+    val matched = PART_MATCH (lhand o #2 o strip_imp) th t
+    open Trace
+    fun do_sideconds th = 
+        if is_imp (concl th) then let 
+          val (h,c) = dest_imp (concl th)
+          val _ = trace(3,SIDECOND_ATTEMPT h)
+          val scond = solver h
+          val _ = trace(2,SIDECOND_SOLVED scond)
+        in
+          do_sideconds (MP th scond)
+        end
+      else (trace(2,REWRITING(t,th)); th)
+  in
+    do_sideconds matched
+  end
+
+  fun apply {solver,context,stack,relation} t = let
+    val _ = aconv (po_rel relation) rel_t orelse
+            raise ERR ("mk_reducer.apply", "Wrong relation")
+    val n = case context of redExn n => n
+                          | _ => raise ERR ("apply", "Wrong sort of ctxt")
+    val matches = Net.match t n
+  in
+    tryfind (applythm (solver stack) t) matches
+  end
+in
+  Traverse.REDUCER {name = SOME ("reducer for "^term_to_string rel_t),
+                    addcontext = addcontext,
+                    apply = apply,
+                    initial = initial_ctxt}
+end
+
+val equality_po = let
+  open Travrules
+  val TRAVRULES {relations,...} = EQ_tr
+in
+  hd relations
+end
+
+fun add_relsimp {refl,trans,weakenings,subsets,rewrs} ss = let 
+  val rel_t = #1 (dest_binop (#2 (strip_forall (concl refl))))
+  val rel_po = Travrules.mk_preorder (trans,refl)
+  val reducer = mk_reducer rel_t subsets rewrs
+in
+  add_weakener ([rel_po, equality_po], weakenings, reducer) ss
+end
 
 (*---------------------------------------------------------------------------*)
 (* SIMP_QCONV : simpset -> thm list -> conv                                  *)
