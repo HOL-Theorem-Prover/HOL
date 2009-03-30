@@ -789,7 +789,7 @@ val sw2i_i2sw = store_thm("sw2i_i2sw",
 	   DIMINDEX_GT_0,extend_def,n2w_11,MOD_MOD,MOD_LESS,w2n_n2w,I2N_LT]);
 
 (*****************************************************************************)
-(* sw2i_twocomp : |- !a. sw2i ($- a) = extend (~ (sw2i a)) (dimindex (:'a))  *)
+(* sw2i_twocomp : |- !a. sw2i (- a) = extend (~ (sw2i a)) (dimindex (:'a))   *)
 (* sw2i_add     : |- !a. sw2i (a + b) =                                      *)
 (*                       extend (sw2i a + sw2i b) (dimindex (:'a))           *)
 (* sw2i_sub     : |- !a. sw2i (a - b) =                                      *)
@@ -812,7 +812,7 @@ val extend_mod = prove(``!b a. extend (& (a MOD 2 ** SUC b)) (SUC b) =
     Q.EXISTS_TAC `0` THEN ARITH_TAC);
 
 val sw2i_twocomp = store_thm("sw2i_twocomp",
-    ``!a. sw2i ($- a:'a word) = extend (~ (sw2i a)) (dimindex (:'a))``,
+    ``!a. sw2i (- a:'a word) = extend (~ (sw2i a)) (dimindex (:'a))``,
     REWRITE_TAC [sw2i_thm] THEN
     CONV_TAC (DEPTH_CONV EXTEND_CONV) THEN	
     RW_TAC int_ss [mod_lem,eindex EXTEND_11,
@@ -1109,7 +1109,7 @@ val plem1 = prove(``!b. ~(b = 0w : 'a word) ==>
     TRY (MATCH_MP_TAC DIV_LESS_EQ) THEN
     RW_TAC int_ss [w2n_lt_full,w2n_eq_0,DECIDE ``0 < b = ~(b = 0n)``]);
 	
-val plem2 = REWRITE_RULE [WORD_NEG_EQ_0] (Q.SPEC `$- b` plem1);
+val plem2 = REWRITE_RULE [WORD_NEG_EQ_0] (Q.SPEC `- b` plem1);
 
 val plem3 = prove(``!n. 0 < n ==> (2 ** (n - 1) <= (2 ** n - x) MOD 2 ** n =
     	    		  0 < x /\ x <= 2 ** (n - 1))``,
@@ -1134,7 +1134,7 @@ val slem = prove(``!a b D. 0 < b /\ a:num < D ==> a * D + D < b + D ** 2``,
 val msb_div = prove(``~(b = 0w) /\ ~(b = UINT_MAXw) ==> 
     	    (word_msb (a / b) = ~(word_msb a = word_msb b) /\ ~(a / b = 0w))``,
     REPEAT STRIP_TAC THEN 
-    `0 < w2n b /\ 0 < w2n ($- b)` by METIS_TAC 
+    `0 < w2n b /\ 0 < w2n (- b)` by METIS_TAC 
        [DECIDE ``0 < a = ~(a = 0n)``,w2n_eq_0,WORD_NEG_EQ_0] THEN
     Cases_on `a / b = 0w` THEN POP_ASSUM MP_TAC THEN
     RW_TAC int_ss [WORD_NEG_EQ_0,num_msb,word_sdiv_def,BIT_RWR,SUC_SUB_INDEX,
@@ -1144,7 +1144,7 @@ val msb_div = prove(``~(b = 0w) /\ ~(b = UINT_MAXw) ==>
     	   plem5,X_LT_DIV] THEN
     RW_TAC int_ss [DIMINDEX_DOUBLE,
            DECIDE ``a <= 2 * a - b = (a = 0n) \/ b <= a``] THENL [
-        ALL_TAC,NLE_TRANS_TAC `w2n ($- a)`,
+        ALL_TAC,NLE_TRANS_TAC `w2n (- a)`,
 	NLE_TRANS_TAC `w2n a`,NLELT_TRANS_TAC `w2n a`] THEN
     RW_TAC int_ss [DIV_LESS_EQ,word_2comp_def,w2n_n2w,
     	   dimword_def,DIMINDEX_DOUBLE] THEN
