@@ -35,6 +35,12 @@ in
   mk_preorder (lameq_trans, lameq_refl)
 end
        
+fun dest_binop t = let
+  val (fx,y) = dest_comb t
+  val (f,x) = dest_comb fx
+in
+  (f,x,y)
+end
 
 
 val betastar_po = rtc_po beta_t
@@ -52,114 +58,27 @@ end
     A reducer for beta-reduction.
    ---------------------------------------------------------------------- *)
 
-exception redExn of thm Net.net
 
-val congs = [lameq_APPcong, SPEC_ALL lameq_LAM(* , 
+val congs = [lameq_APPcong, SPEC_ALL lameq_LAM, 
              REWRITE_RULE [GSYM AND_IMP_INTRO]
-                          (last (CONJUNCTS chap2Theory.lemma2_12))*)]
+                          (last (CONJUNCTS chap2Theory.lemma2_12))]
 
-val initial_net = let
-  open Net
+fun betafy ss = let 
+  open chap2Theory
 in
-  insert(lhand (concl (SPEC_ALL lameq_beta)), lameq_beta) empty
+  simpLib.add_relsimp {refl = GEN_ALL lameq_refl, trans = lameq_trans, 
+                       weakenings = [lameq_weaken_cong],
+                       subsets = [ccbeta_lameq, betastar_lameq, 
+                                  normorder_lameq, nstar_lameq],
+                       rewrs = [lameq_S, lameq_K, lameq_I, lameq_C, 
+                                lameq_B, lameq_beta]} ss ++
+  rewrites [termTheory.lemma14b, normal_orderTheory.nstar_betastar_bnf,
+            betastar_lameq_bnf, lameq_refl] ++
+  SSFRAG {dprocs = [], ac = [], rewrs = [], congs = congs, filter = NONE,
+          name = NONE, convs = []}
 end
 
-val initial_ctxt = redExn initial_net
-
-
-fun dest_binop t = let
-  val (fx,y) = dest_comb t
-  val (f,x) = dest_comb fx
-in
-  (f,x,y)
-end
-
-datatype munge_action = TH of thm | POP
-
-fun munge base subsets asms (thlistlist, n) = let
-  val munge = munge base subsets 
-in
-  case thlistlist of
-    [] => n
-  | [] :: rest => munge asms (rest, n)
-  | (TH th :: ths) :: rest => let
-    in
-      case CONJUNCTS (SPEC_ALL th) of
-        [] => raise Fail "munge: Can't happen"
-      | [th] => let
-          open Net
-        in
-          if is_imp (concl th) then 
-            munge (#1 (dest_imp (concl th)) :: asms) 
-                  ((TH (UNDISCH th)::POP::ths)::rest, n)
-          else
-            case total dest_binop (concl th) of
-              SOME (R,from,to) => let
-                fun foldthis (t,th) = DISCH t th
-                fun insert (t,th) n = 
-                    Net.insert (t, List.foldl foldthis th asms) n
-              in
-                if aconv R base then
-                  munge asms (ths :: rest, insert (from,th) n)
-                else
-                  case List.find (fn (t,_) => aconv R t) subsets of
-                    NONE => munge asms (ths :: rest, n)
-                  | SOME (_, sub_th) =>
-                    munge asms (ths :: rest, insert (from,MATCH_MP sub_th th) n)
-              end
-            | NONE => munge asms (ths :: rest, n)
-        end
-      | thlist => munge asms (map TH thlist :: ths :: rest, n)
-    end
-  | (POP :: ths) :: rest => munge (tl asms) (ths::rest, n)
-end
-
-fun addcontext (ctxt, thms) = let
-  open chap3Theory
-  val n = case ctxt of redExn n => n
-                     | _ => raise ERR "addcontext" "Wrong sort of ctxt"
-in
-  redExn (munge lameq_t
-                [(beta_t, ccbeta_lameq),
-                 (betastar_t, betastar_lameq),
-                 (normorder_t, normorder_lameq),
-                 (normorderstar_t, nstar_lameq)]
-                []
-                ([map TH thms], n))
-end
-
-fun applythm solver t th = let 
-  val matched = PART_MATCH (lhand o #2 o strip_imp) th t
-  open Trace
-  fun do_sideconds th = 
-      if is_imp (concl th) then let 
-          val (h,c) = dest_imp (concl th)
-          val _ = trace(3,SIDECOND_ATTEMPT h)
-          val scond = solver h
-          val _ = trace(2,SIDECOND_SOLVED scond)
-        in
-          do_sideconds (MP th scond)
-        end
-      else (trace(2,REWRITING(t,th)); th)
-in
-  do_sideconds matched
-end
-
-fun po_rel (Travrules.PREORDER(r,_,_)) = r
-fun apply {solver,context,stack,relation} t = let
-  val _ = aconv (po_rel relation) lameq_t orelse
-          raise ERR "apply" "Wrong relation"
-  val n = case context of redExn n => n
-                        | _ => raise ERR "apply" "Wrong sort of ctxt"
-  val matches = Net.match t n
-in
-  tryfind (applythm (solver stack) t) matches
-end
-
-val reducer = Traverse.REDUCER {name = SOME "beta-reduction reducer",
-                                addcontext = addcontext,
-                                apply = apply,
-                                initial = initial_ctxt}
+fun bsrw_ss() = betafy(srw_ss())
 
 (* ----------------------------------------------------------------------
     normorder_step
@@ -217,15 +136,6 @@ in
 end
 
 
-fun betafy ss =
-    simpLib.add_weakener ([lameq_po, equality_po],
-                          [chap2Theory.lameq_weaken_cong], reducer) ss ++
-    rewrites [termTheory.lemma14b, normal_orderTheory.nstar_betastar_bnf,
-              betastar_lameq_bnf, lameq_refl] ++
-    SSFRAG {dprocs = [], ac = [], rewrs = [], congs = congs, filter = NONE,
-            name = NONE, convs = []}
-
-fun bsrw_ss() = betafy(srw_ss())
 
 val [noredLAM, noredbeta, noredAPP, noredVAR] = CONJUNCTS noreduct_thm
 val noreduct_t = mk_thy_const{Name = "noreduct", Thy = "normal_order",

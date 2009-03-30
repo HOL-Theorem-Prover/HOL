@@ -169,6 +169,10 @@ val lemma2_12 = store_thm( (* p. 19 *)
     PROVE_TAC [lam_eq_rules]
   ]);
 
+val lameq_sub_cong = save_thm(
+  "lameq_sub_cong", 
+  REWRITE_RULE [GSYM AND_IMP_INTRO] (last (CONJUNCTS lemma2_12)));
+
 val lemma2_13 = store_thm( (* p.20 *)
   "lemma2_13",
   ``!c n n'. ctxt c ==> (n == n') ==> (c n == c n')``,
@@ -241,14 +245,24 @@ val S_def =
     Define`S = LAM "x" (LAM "y" (LAM "z"
                                      ((VAR "x" @@ VAR "z") @@
                                       (VAR "y" @@ VAR "z"))))`;
+val FV_S = Store_thm(
+  "FV_S", 
+  ``FV S = {}``,
+  SRW_TAC [][S_def, EXTENSION] THEN METIS_TAC []);
+
 val K_def = Define`K = LAM "x" (LAM "y" (VAR "x"))`;
+val FV_K = Store_thm(
+  "FV_K", 
+  ``FV K = {}``, 
+  SRW_TAC [][K_def, EXTENSION])
+
 val I_def = Define`I = LAM "x" (VAR "x")`;
+val FV_I = Store_thm("FV_I", ``FV I = {}``, SRW_TAC [][I_def]);
 
 val Omega_def =
     Define`Omega = (LAM "x" (VAR "x" @@ VAR "x")) @@
                      (LAM "x" (VAR "x" @@ VAR "x"))`
 val _ = Unicode.unicode_version {tmnm = "Omega", u = UnicodeChars.Omega}
-
 val FV_Omega = Store_thm(
   "FV_Omega",
   ``FV Omega = {}``,
@@ -270,66 +284,78 @@ val lameq_asmlam = store_thm(
   ``!M N. M == N ==> asmlam eqns M N``,
   HO_MATCH_MP_TAC lam_eq_indn THEN METIS_TAC [asmlam_rules]);
 
+fun betafy ss = 
+    simpLib.add_relsimp {refl = GEN_ALL lameq_refl, 
+                         trans = List.nth(CONJUNCTS lam_eq_rules, 3), 
+                         weakenings = [lameq_weaken_cong], 
+                         subsets = [], 
+                         rewrs = [hd (CONJUNCTS lam_eq_rules)]} ss ++ 
+    simpLib.SSFRAG {rewrs = [], 
+                    ac = [],  convs = [],
+                    congs = [lameq_app_cong, 
+                             SPEC_ALL (last (CONJUNCTS lam_eq_rules)),
+                             lameq_sub_cong],
+                    dprocs = [], filter = NONE, name = NONE}
+
 val lameq_S = store_thm(
   "lameq_S",
   ``S @@ A @@ B @@ C == (A @@ C) @@ (B @@ C)``,
-  Q_TAC (NEW_TAC "y") `{"x"; "y"; "z"} UNION FV A UNION FV B UNION FV C` THEN
-  Q_TAC (NEW_TAC "z")
-        `{y; "x"; "y"; "z"} UNION FV A UNION FV B UNION FV C` THEN
-  Q.ABBREV_TAC `S1 = LAM y (LAM z ((A @@ VAR z) @@ (VAR y @@ VAR z)))` THEN
-  `S @@ A == S1`
-     by (Q_TAC SUFF_TAC `?x M. (S = LAM x M) /\ (S1 = [A/x]M)` THEN1
-           PROVE_TAC [lam_eq_rules] THEN
-         Q.EXISTS_TAC `"x"` THEN SRW_TAC [][S_def] THEN
-        `LAM "y" (LAM "z" ((VAR "x" @@ VAR "z") @@ (VAR "y" @@ VAR "z"))) =
-         LAM y (LAM z ((VAR "x" @@ VAR z) @@ (VAR y @@ VAR z)))` by
-           ASM_SIMP_TAC (srw_ss()) [SUB_THM, LAM_eq_thm] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        ASM_SIMP_TAC (srw_ss()) [SUB_THM]) THEN
-  `S @@ A @@ B @@ C == S1 @@ B @@ C` by PROVE_TAC [lam_eq_rules] THEN
-  Q_TAC SUFF_TAC `S1 @@ B @@ C == A @@ C @@ (B @@ C)` THEN1
-    PROVE_TAC [lam_eq_rules] THEN
-  Q.ABBREV_TAC `S2 = LAM z (A @@ VAR z @@ (B @@ VAR z))` THEN
-  `S1 @@ B == S2` by
-     (Q_TAC SUFF_TAC `?M. (S1 = LAM y M) /\ (S2 = [B/y]M)` THEN1
-        PROVE_TAC [lam_eq_rules] THEN
-      NTAC 2 (FIRST_X_ASSUM (SUBST_ALL_TAC o SYM)) THEN
-      ASM_SIMP_TAC (srw_ss()) [lemma14b]) THEN 
-  Q_TAC SUFF_TAC `S2 @@ C == A @@ C @@ (B @@ C)` THEN1
-      PROVE_TAC [lam_eq_rules] THEN
-  Q_TAC SUFF_TAC `?M. (S2 = LAM z M) /\ (A @@ C @@ (B @@ C) = [C/z]M)` THEN1
-      PROVE_TAC [lam_eq_rules] THEN
-  NTAC 2 (FIRST_X_ASSUM (SUBST_ALL_TAC o SYM)) THEN
-  ASM_SIMP_TAC (srw_ss()) [lemma14b]);
+  SIMP_TAC (srw_ss()) [S_def] THEN FRESH_TAC THEN 
+  ASM_SIMP_TAC (betafy (srw_ss())) [lemma14b]);
 
 val lameq_K = store_thm(
   "lameq_K",
   ``K @@ A @@ B == A``,
-  Q_TAC (NEW_TAC "x") `{"x"; "y"} UNION FV A UNION FV B` THEN
-  Q_TAC (NEW_TAC "y") `{x; "x"; "y"} UNION FV A UNION FV B` THEN
-  `K = LAM x (LAM y (VAR x))`
-     by SRW_TAC [][K_def, LAM_eq_thm, basic_swapTheory.swapstr_def,
-                   stringTheory.CHR_11] THEN
-  POP_ASSUM SUBST_ALL_TAC THEN
-  Q_TAC SUFF_TAC
-    `LAM x (LAM y (VAR x)) @@ A @@ B == (LAM y A) @@ B
-        /\
-     LAM y A @@ B == A`
-    THEN1 PROVE_TAC [lam_eq_rules] THEN
-  CONJ_TAC THENL [
-    Q_TAC SUFF_TAC `[A/x](LAM y (VAR x)) = LAM y A` THEN1
-      PROVE_TAC [lam_eq_rules] THEN
-    ASM_SIMP_TAC std_ss [SUB_THM],
-    Q_TAC SUFF_TAC `[B/y]A = A` THEN1 PROVE_TAC [lam_eq_rules] THEN
-    ASM_SIMP_TAC std_ss [lemma14b]
-  ]);
+  REWRITE_TAC [K_def] THEN FRESH_TAC THEN 
+  ASM_SIMP_TAC (betafy (srw_ss())) [lemma14b]);
 
 val lameq_I = store_thm(
   "lameq_I",
   ``I @@ A == A``,
   PROVE_TAC [lam_eq_rules, I_def, SUB_THM]);
 
-val FV_I = Store_thm("FV_I", ``FV I = {}``, SRW_TAC [][I_def]);
+val B_def = Define`B = S @@ (K @@ S) @@ K`;
+val FV_B = Store_thm(
+  "FV_B",
+  ``FV B = {}``,
+  SRW_TAC [][B_def]);
+
+val lameq_B = store_thm(
+  "lameq_B",
+  ``B @@ f @@ g @@ x == f @@ (g @@ x)``,
+  SIMP_TAC (betafy (srw_ss())) [lameq_S, lameq_K, B_def]);
+
+val C_def = Define`
+  C = S @@ (B @@ B @@ S) @@ (K @@ K)
+`;
+val FV_C = Store_thm(
+  "FV_C",
+  ``FV C = {}``,
+  SRW_TAC [][C_def]); 
+
+val lameq_C = store_thm(
+  "lameq_C",
+  ``C @@ f @@ x @@ y == f @@ y @@ x``,
+  SIMP_TAC (betafy (srw_ss())) [C_def, lameq_S, lameq_K, lameq_B]);
+
+val Y_def = Define`
+  Y = S @@ (C @@ B @@ (S @@ I @@ I)) @@ (C @@ B @@ (S @@ I @@ I))
+`;
+val FV_Y = Store_thm("FV_Y", ``FV Y = {}``, SRW_TAC [][Y_def]);
+
+val Yf1 = prove(
+  ``B @@ f @@ (S @@ I @@ I) @@ (B @@ f @@ (S @@ I @@ I)) == Y @@ f``,
+  SIMP_TAC (betafy(srw_ss())) [lameq_S, Y_def, lameq_C]);
+
+val lameq_Y = store_thm(
+  "lameq_Y",
+  ``Y @@ f == f @@ (Y @@ f)``,
+  ASSUME_TAC (Q.GEN `X` 
+                ((SIMP_CONV (betafy(srw_ss())) [lameq_S, Y_def, lameq_C] THENC 
+                  SIMP_CONV (betafy(srw_ss())) [lameq_B] THENC 
+                  SIMP_CONV (betafy(srw_ss())) [lameq_S, lameq_I, Yf1])
+                 ``Y @@ f == X``)) THEN 
+  ASM_SIMP_TAC (srw_ss()) []);
 
 val SK_incompatible = store_thm( (* example 2.18, p23 *)
   "SK_incompatible",
@@ -443,6 +469,14 @@ val bnf_Omega = Store_thm(
   "bnf_Omega",
   ``~bnf Omega``,
   SRW_TAC [][Omega_def]);
+val I_beta_normal = Store_thm(
+  "I_beta_normal",
+  ``bnf I``,
+  SRW_TAC [][I_def]);
+val K_beta_normal = Store_thm("K_beta_normal", ``bnf K``, SRW_TAC [][K_def]);
+val S_beta_normal = Store_thm("S_beta_normal", ``bnf S``, SRW_TAC [][S_def]);
+(* because I have defined them in terms of applications of S and K, C and B 
+   are not in bnf *)
 
 val bnf_vsubst_invariant = Store_thm(
   "bnf_vsubst_invariant",
@@ -518,7 +552,7 @@ val subst_eq_var = store_thm(
   Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
   SRW_TAC [][SUB_VAR, SUB_THM] THEN PROVE_TAC []);
 
-val enf_vsubst_invariant = store_thm(
+val enf_vsubst_invariant = Store_thm(
   "enf_vsubst_invariant",
   ``!t. enf ([VAR v/u] t) = enf t``,
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN
@@ -526,36 +560,15 @@ val enf_vsubst_invariant = store_thm(
   SRW_TAC [][SUB_THM, SUB_VAR, enf_thm] THEN
   SRW_TAC [boolSimps.CONJ_ss][GSYM rand_subst_commutes, subst_eq_var] THEN
   SRW_TAC [][GSYM rator_subst_commutes, FV_SUB]);
-val _ = export_rewrites ["enf_vsubst_invariant"]
-
-(*val FV_RENAMING = store_thm(
-  "FV_RENAMING",
-  ``!R. RENAMING R ==>
-        !t. FV (t ISUB R) = IMAGE (RENAME R) (FV t)``,
-  HO_MATCH_MP_TAC RENAMING_ind THEN
-  SRW_TAC [][RENAME_def, VNAME_DEF, EXTENSION, ISUB_def] THEN EQ_TAC THEN
-  SRW_TAC [][FV_SUB] THEN PROVE_TAC []);
-*)
 
 val benf_def = Define`benf t = bnf t /\ enf t`;
 
-val I_beta_normal = Store_thm(
-  "I_beta_normal",
-  ``bnf I``,
-  SRW_TAC [][I_def, bnf_thm]);
-val K_beta_normal = Store_thm(
-  "K_beta_normal",
-  ``bnf K``,
-  SRW_TAC [][K_def, bnf_thm]);
-val S_beta_normal = Store_thm(
-  "S_beta_normal",
-  ``bnf S``,
-  SRW_TAC [][S_def, bnf_thm, is_abs_thm]);
 
 val has_bnf_def = Define`has_bnf t = ?t'. t == t' /\ bnf t'`;
 
 val has_benf_def = Define`has_benf t = ?t'. t == t' /\ benf t'`;
 
+val _ = remove_ovl_mapping "Y" {Thy = "chap2", Name = "Y"}
 
 val _ = export_theory()
 end; (* struct *)
