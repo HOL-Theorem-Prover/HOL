@@ -273,7 +273,7 @@ the <code>Unicode</code> trace is set.</p>
   loop if a user-provided conversion or decision procedure loops).</p>
 </li>
 
-<li>
+<li id="unary-minus">
 <p> Operators (<i>e.g.</i> <code>&amp;</code> and <code>-</code>) can
 now be both prefix and infix operators simultaneously.  In particular,
 the subtraction operator (<code>-</code>) is now also a prefix in all
@@ -317,6 +317,36 @@ argument <code>-y</code>?  In this situation, the implementation of
 this feature treats these dual-purpose operators as infixes by
 default.  In order to obtain the second reading above, one has to
 write <code>x(-y)</code>. </p>
+
+<p>(<a href="#unary-minus-incompat">See below</a> for discussion of
+the backwards incompatibility this causes to users of
+the <code>words</code> theory.)</p>
+</li>
+
+<li>
+<p>It is now possible to use the simplifier to rewrite terms with
+respect to arbitrary pre-orders.  The entry-point is the function</p>
+<pre>
+         simpLib.add_relsimp : 
+            {trans: thm, refl: thm, subsets: thm list, 
+             rewrs: thm list, weakenings: thm list} ->
+            simpset -> simpset
+</pre>
+<p>where the <code>trans</code> and <code>refl</code> fields are the
+theorems stating that some relation is a pre-order.
+The <code>weakenings</code> field is a list of congruences justifying
+the switch from equality reasoning to reasoning over the pre-order.
+For example, all equivalences (<code>≡</code>, say) will have the
+following be true
+</p>
+<pre>
+         |- (M1 ≡ M2) ==> (N1 ≡ N2) ==> ((M1 ≡ N1) <=> (M2 ≡ N2))
+</pre>
+<p>With the above installed, when the simplifier sees a term of the
+form <code>M1&nbsp;≡&nbsp;N1</code> it will rewrite both sides using under the
+relation <code>≡</code>.</p>
+<p>See the Description manual’s section on the simplifier for more.</p>
+
 </li>
 
 </ul>
@@ -515,6 +545,20 @@ out of this level to level 490, and the <code>++</code> operator used
 as a shorthand for list concatenation (<code>APPEND</code>) has moved
 to 480.  (This preserves their relative positioning.)
 </p></li>
+
+<li id="unary-minus-incompat">
+<p> The <a href="#unary-minus">new feature allowing unary minus</a>
+causes the way unary minus was handled in <code>wordsTheory</code> to
+fail.  There the unary minus (“twos complement” in fact) could be
+accessed by writing things like <code>``$-&nbsp;3w&nbsp;+&nbsp;x``</code>.  One
+should now write <code>``-3w&nbsp;+&nbsp;x``</code>.  If converting
+one’s script files is going to be too arduous, the old behaviour can
+be achieved by including the line</p>
+<pre>
+         val _ = temp_overload_on ("-", ``word_2comp``)
+</pre>
+<p>at the top of the given script file. </p>
+</li>
 
 </ul>
 
