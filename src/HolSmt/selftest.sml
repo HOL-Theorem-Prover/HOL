@@ -38,7 +38,7 @@ fun expect_fail solver t =
   let val _ = HolSmtLib.GENERIC_SMT solver t
   in
     die ("Test of solver '" ^ SolverSpec.get_name solver ^
-      "'failed on term '" ^ Hol_pp.term_to_string t ^
+      "' failed on term '" ^ Hol_pp.term_to_string t ^
       "': exception expected")
   end handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
     if origin_structure = "HolSmtLib" andalso
@@ -618,7 +618,12 @@ in
     (``(31 >< 0) x:word32 = x``, [thm_YO]),
     (``(1 >< 0) (0w:word32) = 0w:word2``, [thm_YO]),
 
-    (``(x:word2 = y) = (x ' 0 = y ' 0) /\ (x ' 1 = y ' 1)``, [thm_YO])
+    (``(x:word2 = y) = (x ' 0 = y ' 0) /\ (x ' 1 = y ' 1)``, [thm_YO]),
+
+    (``0w:word32 = w2w (0w:word16)``, [thm_YO]),
+    (``0w:word32 = w2w (0w:word32)``, [thm_YO]),
+    (``0w:word32 = w2w (0w:word64)``, [thm_YO]),
+    (``x:word32 = w2w x``, [thm_YO])
 
   ]  (* tests *)
 end

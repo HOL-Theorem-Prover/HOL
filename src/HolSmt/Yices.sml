@@ -243,7 +243,7 @@ structure Yices = struct
           val dim = fcpLib.index_to_num dim_ty
                       handle Feedback.HOL_ERR _ =>
                         raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
-                                 "bit-vector type of unknown size")
+                               "word literal: bit-vector type of unknown size")
           val n = numSyntax.dest_numeral num
       in
         (acc, "(mk-bv " ^ Arbnum.toString dim ^ " " ^ Arbnum.toString n ^ ")")
@@ -261,6 +261,27 @@ structure Yices = struct
           val sn = Arbnum.toString n
       in
         (acc, "(= (bv-extract " ^ sn ^ " " ^ sn ^ " " ^ s1 ^ ") 0b1)")
+      end
+    (* w2w *)
+    else if wordsSyntax.is_w2w tm then
+      let val (t1, dim_ty) = wordsSyntax.dest_w2w tm
+          val dim = fcpLib.index_to_num dim_ty
+                      handle Feedback.HOL_ERR _ =>
+                        raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                               "w2w: result bit-vector type of unknown size")
+          val old_dim_ty = wordsSyntax.dim_of t1
+          val old_dim = fcpLib.index_to_num old_dim_ty
+                      handle Feedback.HOL_ERR _ =>
+                        raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                               "w2w: argument bit-vector type of unknown size")
+          val (acc, s1) = translate_term (acc, t1)
+      in
+        if Arbnum.<= (dim, old_dim) then
+          (acc, "(bv-extract " ^ Arbnum.toString (Arbnum.- (dim, Arbnum.one)) ^
+             " 0 " ^ s1 ^ ")")
+        else
+          (acc, "(bv-concat (mk-bv " ^ Arbnum.toString
+             (Arbnum.- (dim, old_dim)) ^ " 0) " ^ s1 ^ ")")
       end
     (* binders *)
     else
