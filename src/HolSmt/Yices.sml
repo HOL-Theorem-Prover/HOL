@@ -124,7 +124,19 @@ structure Yices = struct
     (wordsSyntax.word_lsr_tm, "bv-shift-right0", ""),
     (* word_concat in HOL has a more general type than bv-concat in Yices *)
     (wordsSyntax.word_concat_tm, "bv-concat", ""),
-    (wordsSyntax.word_extract_tm, "bv-extract", "")
+    (wordsSyntax.word_extract_tm, "bv-extract", ""),
+    (wordsSyntax.word_add_tm, "bv-add", ""),
+    (wordsSyntax.word_sub_tm, "bv-sub", ""),
+    (wordsSyntax.word_mul_tm, "bv-mul", ""),
+    (wordsSyntax.word_2comp_tm, "bv-neg", ""),
+    (wordsSyntax.word_lt_tm, "bv-lt", ""),
+    (wordsSyntax.word_le_tm, "bv-le", ""),
+    (wordsSyntax.word_gt_tm, "bv-gt", ""),
+    (wordsSyntax.word_ge_tm, "bv-ge", ""),
+    (wordsSyntax.word_lo_tm, "bv-slt", ""),
+    (wordsSyntax.word_ls_tm, "bv-sle", ""),
+    (wordsSyntax.word_hi_tm, "bv-sgt", ""),
+    (wordsSyntax.word_hs_tm, "bv-sge", "")
   ]
 
   (* binders need to be treated differently from the operators in
@@ -282,6 +294,19 @@ structure Yices = struct
         else
           (acc, "(bv-concat (mk-bv " ^ Arbnum.toString
              (Arbnum.- (dim, old_dim)) ^ " 0) " ^ s1 ^ ")")
+      end
+    (* word_msb *)
+    else if wordsSyntax.is_word_msb tm then
+      let val t1 = wordsSyntax.dest_word_msb tm
+          val dim_ty = wordsSyntax.dim_of t1
+          val n = fcpLib.index_to_num dim_ty
+                    handle Feedback.HOL_ERR _ =>
+                      raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                        "word_msb: argument bit-vector type of unknown size")
+          val sn = Arbnum.toString (Arbnum.- (n, Arbnum.one))
+          val (acc, s1) = translate_term (acc, t1)
+      in
+        (acc, "(= (bv-extract " ^ sn ^ " " ^ sn ^ " " ^ s1 ^ ") 0b1)")
       end
     (* binders *)
     else

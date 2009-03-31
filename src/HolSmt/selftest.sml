@@ -594,6 +594,7 @@ in
     (``x:word32 ?? 0w = x``, [thm_YO]),
 
     (``~ ~ x:word32 = x``, [thm_YO]),
+    (``~ 0w = 0w:word32``, [fail_YO, fail_YSO, fail_CVC]),
 
     (``x:word32 << 0 = x``, [thm_YO]),
     (``x:word32 << 31 = 0w``, [fail_YO, fail_YSO, fail_CVC]),
@@ -623,8 +624,51 @@ in
     (``0w:word32 = w2w (0w:word16)``, [thm_YO]),
     (``0w:word32 = w2w (0w:word32)``, [thm_YO]),
     (``0w:word32 = w2w (0w:word64)``, [thm_YO]),
-    (``x:word32 = w2w x``, [thm_YO])
+    (``x:word32 = w2w x``, [thm_YO]),
 
+    (``(x:word32) + x = x``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) + y = y + x``, [thm_YO]),
+    (``((x:word32) + y) + z = x + (y + z)``, [thm_YO]),
+    (``(x:word32) + 0w = 0w``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) + 0w = x``, [thm_YO]),
+
+    (``(x:word32) - x = x``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) - x = 0w``, [thm_YO]),
+    (``(x:word32) - y = y - x``, [fail_YO, fail_YSO, fail_CVC]),
+    (``((x:word32) - y) - z = x - (y - z)``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) - 0w = 0w``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) - 0w = x``, [thm_YO]),
+
+    (``(x:word32) * x = x``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) * y = y * x``, [thm_YO]),
+    (``((x:word32) * y) * z = x * (y * z)``, [thm_YO]),
+    (``(x:word32) * 0w = 0w``, [thm_YO]),
+    (``(x:word32) * 0w = x``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) * 1w = x``, [thm_YO]),
+
+    (``- (x:word32) = x``, [fail_YO, fail_YSO, fail_CVC]),
+    (``- 0w = 0w:word32``, [thm_YO]),
+    (``- - (x:word32) = x``, [thm_YO]),
+
+    (``0w < 1w:word32``, [thm_YO]),
+
+    (``0w <= 1w:word32``, [thm_YO]),
+    (``x <= y:word32 = x < y \/ (x = y)``, [thm_YO]),
+
+    (``1w > 0w:word32``, [thm_YO]),
+
+    (``1w >= 0w:word32``, [thm_YO]),
+    (``x >= y:word32 = x > y \/ (x = y)``, [thm_YO]),
+
+    (``0w <+ 1w:word32``, [thm_YO]),
+
+    (``0w <=+ 1w:word32``, [thm_YO]),
+    (``x <=+ y:word32 = x <+ y \/ (x = y)``, [thm_YO]),
+
+    (``1w >+ 0w:word32``, [thm_YO]),
+
+    (``1w >=+ 0w:word32``, [thm_YO]),
+    (``x >=+ y:word32 = x >+ y \/ (x = y)``, [thm_YO])
   ]  (* tests *)
 end
 
