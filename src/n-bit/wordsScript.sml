@@ -240,6 +240,10 @@ val word_sdiv_def = Define`
       else
         word_div a b`;
 
+val word_mod_def = Define`
+  word_mod (v:'a word) (w:'a word) =
+    n2w (w2n v MOD w2n w):'a word`;
+
 val word_L2_def = Define `word_L2 = word_mul word_L word_L`;
 
 val _ = ai := false;
@@ -3204,7 +3208,22 @@ val word_hs_n2w = store_thm("word_hs_n2w",
   ORDER_WORD_TAC);
 
 (* ------------------------------------------------------------------------- *)
-(* Theorems about 0w and - 1w                                               *)
+
+val WORD_DIVISION = store_thm("WORD_DIVISION",
+  `!w. w <> 0w ==>
+       !v. (v = (v // w) * w + word_mod v w) /\ word_mod v w <+ w`,
+  Cases \\ ASM_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword]
+  \\ STRIP_TAC \\ Cases
+  \\ ASM_SIMP_TAC std_ss [word_mod_def,word_div_def,w2n_n2w]
+  \\ ASM_SIMP_TAC std_ss [word_add_n2w,word_mul_n2w,WORD_LO,w2n_n2w]
+  \\ FULL_SIMP_TAC bool_ss [NOT_ZERO_LT_ZERO]
+  \\ IMP_RES_TAC (GSYM DIVISION)
+  \\ REPEAT (Q.PAT_ASSUM `!k. bbb` (ASSUME_TAC o Q.SPEC `n'`))
+  \\ IMP_RES_TAC LESS_TRANS
+  \\ ASM_SIMP_TAC std_ss []);
+
+(* ------------------------------------------------------------------------- *)
+(* Theorems about 0w and -1w                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 val word_reverse_0 = store_thm("word_reverse_0",
@@ -3383,18 +3402,21 @@ val word_sub_w2n = store_thm("word_sub_w2n",
 val ZERO_LE_TOP_FALSE = prove(
   `!n. 0w <= ((n2w n):'a word) = (BIT (dimindex (:'a) - 1) n = F)`,
   SRW_TAC [] [word_le_n2w,LET_DEF]
-  \\ FULL_SIMP_TAC std_ss [BIT_def,BITS_def,MOD_2EXP_def,DIV_2EXP_def,ZERO_DIV,ZERO_MOD,
-                           ZERO_LT_EXP,EVAL ``0 < 2``]);
+  \\ FULL_SIMP_TAC std_ss
+       [BIT_def,BITS_def,MOD_2EXP_def,DIV_2EXP_def,ZERO_DIV,ZERO_MOD,
+        ZERO_LT_EXP,EVAL ``0 < 2``]);
 
 val WORD_LE_EQ_LS = store_thm("WORD_LE_EQ_LS",
   `!x y. 0w <= x /\ 0w <= y ==> (x <= y = x <=+ y)`,
   Cases \\ Cases
-  \\ FULL_SIMP_TAC std_ss [WORD_LS,w2n_n2w,word_le_n2w,LET_DEF,ZERO_LE_TOP_FALSE]);
+  \\ FULL_SIMP_TAC std_ss
+       [WORD_LS,w2n_n2w,word_le_n2w,LET_DEF,ZERO_LE_TOP_FALSE]);
 
 val WORD_LT_EQ_LO = store_thm("WORD_LT_EQ_LO",
   `!x y. 0w <= x /\ 0w <= y ==> (x < y = x <+ y)`,
   Cases \\ Cases
-  \\ FULL_SIMP_TAC std_ss [WORD_LO,w2n_n2w,word_lt_n2w,LET_DEF,ZERO_LE_TOP_FALSE]);
+  \\ FULL_SIMP_TAC std_ss
+       [WORD_LO,w2n_n2w,word_lt_n2w,LET_DEF,ZERO_LE_TOP_FALSE]);
 
 val WORD_ZERO_LE = store_thm("WORD_ZERO_LE",
   `!w:'a word. 0w <= w = w2n w < INT_MIN (:'a)`,
@@ -3404,7 +3426,8 @@ val WORD_ZERO_LE = store_thm("WORD_ZERO_LE",
 val WORD_ZERO_LE_SUB_LEMMA = prove(
   `!x:'a word y. 0w <= x /\ y <=+ x ==> 0w <= x - y`,
   `!m n k. m < n ==> m - k < n:num` by DECIDE_TAC
-  \\ ASM_SIMP_TAC bool_ss [WORD_ZERO_LE,WORD_LS,REWRITE_RULE [WORD_LS] word_sub_w2n]);
+  \\ ASM_SIMP_TAC bool_ss [WORD_ZERO_LE,WORD_LS,
+       REWRITE_RULE [WORD_LS] word_sub_w2n]);
 
 val WORD_ZERO_LE_SUB = prove(
   `!x:'a word y. 0w <= y /\ y <= x ==> 0w <= x - y`,

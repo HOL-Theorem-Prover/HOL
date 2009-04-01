@@ -164,6 +164,12 @@ val w2n_n2w_compute = prove(
        if n < dimword(:'a) then n else n MOD dimword(:'a)``,
   SRW_TAC [boolSimps.LET_ss] []);
 
+val word_2comp_compute = prove(
+  ``!n. word_2comp (n2w n) : 'a word =
+        let x = n MOD dimword (:'a) in
+          if x = 0 then 0w else n2w (dimword (:'a) - x)``,
+  SRW_TAC [boolSimps.LET_ss] [word_2comp_n2w]);
+
 val thms =
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
    iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SIGN_EXTEND_def, SBIT_def,
@@ -178,12 +184,12 @@ val thms =
       BITS_def,SUC_SUB] o NUM_RULE [BITS_ZERO2] `n`) BIT_def,
    INT_MIN_SUM, SUC_RULE MOD_2EXP_EQ,
    numeral_log2,numeral_ilog2,LOG_compute,LOWEST_SET_BIT_compute,
-   n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, sw2sw_def, word_len_def,
-   word_L_def, word_H_def, word_T_def,
+   n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w ^n` sw2sw_def,
+   word_len_def, word_L_def, word_H_def, word_T_def,
    word_join_def, Q.SPECL [`^n2w ^n`,`n2w ^m:'b word`] word_concat_def,
    word_reverse_n2w, word_modify_n2w, word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
-   word_2comp_n2w, word_sub_def, word_div_def, word_sdiv_def,
+   word_2comp_compute, word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
    MOD_WL word_add_n2w, MOD_WL word_mul_n2w,
    word_asr_n2w, word_lsr_n2w, word_lsl_n2w,
    (List.last o CONJUNCTS) SHIFT_ZERO, SPEC `^a` word_ror_n2w,
@@ -1124,7 +1130,7 @@ in
               ((WORD_CONV THENC DEPTH_CONV (WORD_BIT_EQ_CONV THENC EQ_CONV)
                  THENC DEPTH_CONV (conv THENC EQ_CONV)
                  THENC REWRITE_CONV []) tm)
-          end
+          end handle UNCHANGED => raise ERR "WORD_DP" "Failed to prove goal"
    val WORD_DECIDE = WORD_DP DECIDE
 end;
 
@@ -1324,13 +1330,19 @@ fun get_word_ops t =
 fun word_op_compare(a, b) =
   case (a, b) of
     (word_concat(a,b,c),word_concat(d,e,f)) =>
-       if a = f orelse b = f then
-         if d = c orelse e = c then Type.compare(c, f) else GREATER
-       else
-         if d = c orelse e = c then LESS else Type.compare(c, f)
-  | (word_concat(a,b,c),word_extract(n,f))  => GREATER
-  | (word_extract(m,c),word_concat(d,e,f))  => LESS
-  | (word_extract(m,c),word_extract(n,f))   => Type.compare(c, f);
+      (case (is_vartype a, is_vartype b, is_vartype d, is_vartype e)
+       of (false,false,true,_) => LESS
+        | (false,false,_,true) => LESS
+        | (true,_,false,false) => GREATER
+        | (_,true,false,false) => GREATER
+        | _ =>
+           (if a = f orelse b = f then
+              if d = c orelse e = c then Type.compare(c, f) else GREATER
+            else
+              if d = c orelse e = c then LESS else Type.compare(c, f)))
+  | (word_concat(a,b,c),word_extract(n,f)) => GREATER
+  | (word_extract(m,c),word_concat(d,e,f)) => LESS
+  | (word_extract(m,c),word_extract(n,f))  => Type.compare(c, f);
 
 local
   open Redblackmap
