@@ -1,7 +1,10 @@
 open HolKernel boolLib Parse bossLib
 open binderLib metisLib termTheory contextlistsTheory
+open chap3Theory
 
 val _ = new_theory "stt";
+
+val _ = remove_ovl_mapping "B" {Name="B", Thy="chap2"}
 
 val _ = set_trace "Unicode" 1
 
@@ -45,7 +48,7 @@ val _ = set_fixity "·" (Infixl 600)
 val _ = overload_on ("·", ``tpm``)
 
 val _ = set_fixity "⁻¹" (Suffix 2100)
-val _ = overload_on ("⁻¹", 
+val _ = overload_on ("⁻¹",
   ``REVERSE : (string # string) list -> (string # string) list``)
 
 (* typing relation respects permutation *)
@@ -234,7 +237,6 @@ val typing_sub0 = prove(
 
 val typing_sub = save_thm("typing_sub", SIMP_RULE (srw_ss()) [] typing_sub0);
 
-open chap3Theory
 val preservation = store_thm(
   "preservation",
   ``∀t t'. t -β-> t' ⇒ ∀Γ A. Γ ⊢ t ◁ A ⇒ Γ ⊢ t' ◁ A``,
