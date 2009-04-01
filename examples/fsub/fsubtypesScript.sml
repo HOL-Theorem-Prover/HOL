@@ -21,7 +21,7 @@
 
 open HolKernel boolLib Parse
 
-open ncLib bossLib metisLib BasicProvers boolSimps
+open binderLib bossLib metisLib BasicProvers boolSimps
 
 val SUBSET_DEF = pred_setTheory.SUBSET_DEF
 
@@ -37,8 +37,7 @@ val (fsubrep_rules, fsubrep_ind, fsubrep_cases) = Hol_reln`
 
 val strong_fsubrep_ind = save_thm(
   "strong_fsubrep_ind",
-  IndDefRules.derive_strong_induction (CONJUNCTS fsubrep_rules,
-                                       fsubrep_ind));
+  IndDefLib.derive_strong_induction (fsubrep_rules, fsubrep_ind));
 
 (* because this is not obviously non-overlapping, we need to prove that
    certain patterns aren't in fsubrep by induction *)
