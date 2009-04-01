@@ -3,7 +3,7 @@
 \TYPE {Parse.overload_on : string * term -> unit}
 
 \SYNOPSIS
-Establishes a constant as one of the overloading possibilities for a string.
+Establishes a term as one of the overloading possibilities for a string.
 
 \KEYWORDS
 Parsing, pretty-printing, overloading.
@@ -13,20 +13,21 @@ Parse
 
 \DESCRIBE
 Calling {overload_on(name,tm)} establishes {tm} as a possible
-resolution of the overloaded {name}.  The term {tm} must be a
-constant.  The call to {overload_on} also ensures that {tm} is the
-first in the list of possible resolutions chosen when a string might
-be parsed into a term in more than one way, and this is the only
-effect if this combination is already recorded as a possible
-overloading.
+resolution of the overloaded {name}.  The call to {overload_on} also
+ensures that {tm} is the first in the list of possible resolutions
+chosen when a string might be parsed into a term in more than one way,
+and this is the only effect if this combination is already recorded as
+a possible overloading.
 
-Finally, when printing, this call causes {tm} to be seen as the
-operator {name}.  The string {name} may prompt further pretty-printing
-if it is involved in any of the relevant grammar's rules for concrete
-syntax.
+When printing, this call causes {tm} to be seen as the operator
+{name}.  The string {name} may prompt further pretty-printing if it is
+involved in any of the relevant grammar's rules for concrete syntax.
+
+If {tm} is an abstraction, then the parser will perform
+beta-reductions if the term is the function part of a redex position.
 
 \FAILURE
-Fails if the term argument is not a constant.
+Never fails.
 
 \EXAMPLE
 We define the equivalent of intersection over predicates:
@@ -72,12 +73,30 @@ the original constant would be the only possibility.  Thus:
    - overload_on ("/\\", Term`/\ :bool->bool->bool`);
    > val it = () : unit
 }
+The ability to overload to abstractions allows the use of simple
+symbols for ``complicated'' effects, without needing to actually
+define new constants.
+{
+   - overload_on ("|<", Term`\x y. ~(x < y)`);
+   > val it = () : unit
 
+   - set_fixity "|<" (Infix(NONASSOC, 450));
+   > val it = () : unit
+
+   - val t = Term`p |< q`;
+   > val t = `p |< q` : term
+
+   - dest_neg t;
+   > Val it = `p < q` : term
+}
+This facility is used to provide symbols for ``is-not-equal'' ({<>}),
+and ``is-not-a-member'' ({NOTIN}).
 
 \COMMENTS
 Overloading with abandon can lead to input that is very hard to make
-sense of, and so should be used with caution.
+sense of, and so should be used with caution.  There is a temporary
+version of this function: {temp_overload_on}.
 
 \SEEALSO
-Parse.clear_overloads_on.
+Parse.clear_overloads_on, Parse.set_fixity.
 \ENDDOC
