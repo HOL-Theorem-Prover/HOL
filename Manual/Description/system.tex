@@ -94,16 +94,18 @@ a \HOL{} identifier can be of two forms:
   mechanism; see Section~\ref{sec:quotation-antiquotation}.  The ASCII
   grouping symbols (braces, brackets, and parentheses), and the
   tilde~(\holtxt{\symbol{126}}), full-stop~(\holtxt{.}),
-  comma~(\holtxt{,}) and semi-colon~(\holtxt{;}) characters are called
-  \emph{non-aggregating} characters. %
+  comma~(\holtxt{,}), semi-colon~(\holtxt{;}) and hyphen~(\holtxt{-})
+  characters are called \emph{non-aggregating} characters. %
 %
   \index{identifiers, in HOL logic@identifiers, in \HOL{} logic!non-aggregating characters}%
 %
   Unless the desired token is already present in the grammar, these
   characters do not combine with themselves or other symbolic
   characters.  Thus, the string \holtxt{"(("} is viewed as \emph{two}
-  tokens, as is \holtxt{";;"}.
+  tokens, as are \holtxt{"+;"} and \holtxt{"-+"}.
 
+  \index{tokens!Unicode characters}
+  \index{Unicode}
   Unicode code characters that are not letters or digits are regarded
   as symbolic.  None of these are non-aggregating.
 

@@ -78,14 +78,17 @@ new parsers can be quickly constructed to support user applications.
 
 The parser is parameterized by grammars for types and terms. The
 behaviour of the parser and prettyprinter is therefore usually altered
-by grammar manipulations. These can be of two kinds: \emph{temporary}
-or \emph{permanent}.  Temporary changes should be used in library
-implementations or in script files for those changes that the user
-does not wish to have persist in theories descended from the current
-one.  Permanent changes are appropriate for use in script-files, and
-will be in force in all descendant theories.  Functions making
-temporary changes are signified by a leading \ml{temp\_} in their
-names.
+by grammar manipulations.
+%
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!grammars for}
+%
+These can be of two kinds: \emph{temporary} or \emph{permanent}.
+Temporary changes should be used in library implementations, or in
+script files for those changes that the user does not wish to have
+persist in theories descended from the current one.  Permanent changes
+are appropriate for use in script-files, and will be in force in all
+descendant theories.  Functions making temporary changes are signified
+by a leading \ml{temp\_} in their names.
 
 \subsection{Parsing types}
 \index{types, in HOL logic@types, in \HOL{} logic!parsing of|(}
@@ -172,9 +175,11 @@ In the following, we explore some of the capabilities of the
 The parser turns strings into terms.  It does this in the following
 series of phases, all of which are influenced by the provided grammar.
 Usually this grammar is the default global grammar, but users can
-arrange to use different grammars if they desire.  Strictly, parsing
-occurs after lexing has split the input into a series of tokens.  For
-more on lexing, see Section~\ref{HOL-lex}.
+arrange to use different grammars if they desire.  %
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!grammars for}
+%
+Strictly, parsing occurs after lexing has split the input into a
+series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
 \begin{description}
 \item[Concrete Syntax:] Features such as infixes, binders and mix-fix
   forms are translated away, creating an intermediate, ``abstract
@@ -310,10 +315,12 @@ the \ml{Absyn} form
   picked when this situation arises.)
 
   When a term in the overload map is chosen as the best option, it is
-  substituted into the term at appropriate position.  If the term is
-  a lambda abstraction, then as many $\beta$-reductions are done as
+  substituted into the term at appropriate position.  If the term is a
+  lambda abstraction, then as many $\beta$-reductions are done as
   possible, using any arguments that the term has been applied to.  It
-  is in this way that a syntactic macro can process arguments.
+  is in this way that a syntactic pattern can process arguments.  (See
+  also Section~\ref{sec:parser:syntactic-patterns} for more on
+  syntactic patterns.)
 \item[Type Inference:] %
   \index{type inference!in HOL parser@in \HOL{} parser}%
   All terms in the \HOL{} logic are well-typed.  The kernel enforces
@@ -421,6 +428,120 @@ everything else is symbolic.  (The exception for \holtxt{$\lambda$} is to
 allow strings like \holtxt{$\lambda$x.x} to lex into \emph{four} tokens.)
 
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|)}
+
+\subsubsection{Syntactic patterns (``macros'')}
+\label{sec:parser:syntactic-patterns}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!syntactic patterns|(}
+
+The ``overload map'' mentioned previously is actually a combination of
+maps, one for parsing, and one for printing.  The parsing map is from
+names to lists of terms, and determines how the names that appear in a
+\ml{Preterm} will translate into terms.  In essence, bound names turn
+into bound variables, unbound names not in the domain of the map turn
+into free variables, and unbound names in the domain of the map turn
+into one of the elements of the set associated with the given name.
+Each term in the set of possibilities may have a different type, so
+type inference will choose from those that have types consistent with
+the rest of the given term.  If the resulting list contains more than
+one element, then the term appearing earlier in the list will be
+chosen. 
+
+The most common use-case for the overload map is have names map to
+constants.  In this way, for example, the various numeric theories can
+map the string \ml{"+"} to the relevant notions of addition, each of
+which is a different constant.  However, the system has extra
+flexibility because names can map to arbitrary terms.  For example, it
+is possible to map to specific type-instances of constants.  Thus, the
+string \ml{"<=>"} maps to equality, but where the arguments are forced
+to be of type \holquote{:bool}.
+
+Moreover, if the term mapped to is a lambda-abstraction (\ie, of the
+form $\lambda x.\;M$), then the parser will perform all possible
+$\beta$-reductions for that term and the arguments accompanying it.  For
+example, in \theoryimp{boolTheory} and its descendants, the string
+\ml{"<>"} is overloaded to the term \holquote{\bs{}x~y.~\td{}(x~=~y)}.
+Additionally, \ml{"<>"} is set up at the concrete syntax level as an
+infix.  When the user inputs \holquote{x~\lt\gt~y}, the resulting
+\ml{Absyn} value is
+\begin{verbatim}
+   APP(APP(IDENT "<>", IDENT "x"), IDENT "x")
+\end{verbatim}
+The \ml{"x"}  and \ml{"y"} identifiers will map to free variables, but
+the \ml{"<>"} identifier maps to a list containing
+\holquote{\bs{}x~y.~\td(x~=~y)}. This term has type 
+\begin{verbatim}
+   :'a -> 'a -> bool
+\end{verbatim}
+and the polymorphic variables are generalisable, allowing type
+inference to give appropriate (identical) types to \ml{x} and \ml{y}.
+Assuming that this option is the only overloading for \ml{"<>"} left
+after type inference, then the resulting term will be
+\holtxt{\td(x~=~y)}.  Better, though this will be the underlying
+structure of the term in memory, it will actually print as
+\holquote{x~\lt\gt~y}.  
+
+If the term mapped to in the overload map contains any free variables,
+these variables will not be instantiated in any way.  In particular,
+if these variables have polymorphic types, then the type variables in
+those types will be constant: not subject to instantiation by type
+inference.
+
+\paragraph{Pretty-printing and syntactic patterns} The second part of
+the ``overload map'' is a map from terms to strings, specifying how
+terms should be turned back into identifiers.  (Though it does not
+actually construct an \ml{Absyn} value, this process reverses the name
+resolution phase of parsing, producing something that is then printed
+according to the concrete syntax part of the given grammar.)
+
+Because parsing can map single names to complicated term structures,
+printing must be able to take a complicated term structure back to a
+single name.  It does this by performing
+term matching.%
+\index{matching!in pretty-printing terms}
+%
+\footnote{The matching done is first-order; contrast the higher-order
+  matching done in the simplifier.}
+If multiple patterns match the same term, then the printer picks the
+most specific match (the one that requires least instantiation of the
+pattern's variables).  If this still results in multiple, equally
+specific, possibilities, the most recently added pattern takes
+precedence.  (Users can thus manipulate the printer's preferences by
+making otherwise redundant calls to the \ml{overload\_on} function.)  
+
+In the example of the not-equal-to operator above, the pattern will be
+\holtxt{\~(?x = ?y)}, where the question-marks indicate instantiable
+pattern variables.  If a pattern includes free variables (recall that
+the \ml{x} and \ml{y} in this example were bound by an abstraction),
+then these will not be instantiable.
+
+There is one further nicety in the use of this facility: ``bigger''
+matches, covering more of a term, take precedence.   The difficulty
+this can cause is illustrated in the \holtxt{IS\_PREFIX} pattern from
+\theoryimp{rich\_listTheory}.  For the sake of backwards compatibility
+this identifier maps to 
+\begin{verbatim}
+   \x y. isPREFIX y x
+\end{verbatim}
+where \holtxt{isPREFIX} is a constant from \theoryimp{listTheory}.
+(The issue is that \holtxt{IS\_PREFIX} expects its arguments in
+reverse order to that expected by \holtxt{isPREFIX}.) Now, when this
+macro is set up the overload map already contains a mapping from the
+string \holtxt{"isPREFIX"} to the constant \holtxt{isPREFIX} (this
+happens with every constant definition).  But after the call
+establishing the new pattern for \holtxt{IS\_PREFIX}, the
+\holtxt{isPREFIX} form will no longer be printed.  Nor is it enough,
+to repeat the call
+\begin{verbatim}
+   overload_on("isPREFIX", ``isPREFIX``)
+\end{verbatim}
+Instead (assuming that \holtxt{isPREFIX} is indeed the preferred
+printing form), the call must be
+\begin{verbatim}
+   overload_on("isPREFIX", ``\x y. isPREFIX x y``)
+\end{verbatim}
+so that \ml{isPREFIX}'s pattern is as long as \ml{IS\_PREFIX}'s.
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!syntactic patterns|)}
 
 
 \subsubsection{Type constraints}
@@ -823,10 +944,12 @@ This is useful if one wants to use variables
 with the same names as previously declared (or built-in) constants
 (\eg\ \ml{o}, \ml{I}, \ml{S} \etc).  The name $x$ is still a constant
 for the constructors, theories, etc; \ml{hide} affects parsing and
-printing by removing the given name from the ``overload map''
-described above in Section~\ref{sec:parser:architecture}.  See the
-\REFERENCE{} entry for \ml{hide} for more details, including an
-explanation of the return type.
+printing by removing the given name from the ``overload map'' described
+above in Section~\ref{sec:parser:architecture}.  Note that the effect
+of \ml{hide} is \emph{temporary}; its effects do not persist in
+theories descended from the current one. See the \REFERENCE{} entry
+for \ml{hide} for more details, including an explanation of the return
+type.
 
 The function
 
@@ -2237,6 +2360,7 @@ tools such as \ml{PROVE\_TAC} instead.)
 
 \subsubsection{Generating rewrite rules from theorems}
 \label{sec:generating-rewrite-rules}
+\index{equational theorems, in HOL logic@equational theorems, in \HOL{} logic!use of in the simplifier}
 
 There are two routes by which a theorem for rewriting can be passed to
 the simplifier: either as an explicit argument to one of the \ML{}
@@ -2326,7 +2450,7 @@ $\textsf{SUC}(3)$ will succeed, and find the instantiation $n\mapsto
 3$. In contrast with unification, matching is not symmetrical: a
 pattern $\textsf{SUC}(3)$ will not match the term $\textsf{SUC}(n)$.
 
-\index{higher-order matching} \index{matching, higher-order} The
+\index{higher-order matching} \index{matching!higher-order} The
 simplifier uses a special form of higher-order matching.  If a pattern
 includes a variable of some function type ($f$ say), and that variable
 is applied to an argument $a$ that includes no variables except those
