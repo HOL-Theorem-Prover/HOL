@@ -72,7 +72,7 @@ src/list/src
 src/unwind
 src/TeX
 src/boss
-# Up to this point is needed for hol.unquote (which loads bossLib).
+# Up to this point is needed for hol (which loads bossLib).
 # (Maybe unwind could be omitted).
 [poly]bin/hol
 
@@ -113,6 +113,7 @@ src/path
 !examples/lambda/barendregt
 !!examples/lambda/other-models
 !!examples/lambda/typing
+!!examples/computability/lambda
 src/Boolify/src
 src/float
 !!examples/miller/miller
