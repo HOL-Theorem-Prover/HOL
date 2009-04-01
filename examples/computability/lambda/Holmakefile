@@ -1,1 +1,1 @@
-INCLUDES = ../barendregt ../basics ../other-models
+INCLUDES = ../../lambda/barendregt ../../lambda/basics ../../lambda/other-models
