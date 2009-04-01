@@ -136,10 +136,11 @@ val hastype_lam_inv = store_thm(
          ∃τ₁ τ₂. ((v,τ₁) :: Γ) ⊢ M ◁ τ₂ ∧
                  (τ = τ₁ → τ₂))``,
   SRW_TAC [][LAM_eq_thm, Once hastype_cases] THEN SRW_TAC [][EQ_IMP_THM] THENL [
-    `ctxtswap [(v,x)] ((x,A) :: Γ) ⊢ tpm [(v,x)] m ◁ B`
+    Q.MATCH_ABBREV_TAC `(v,τ₁)::Γ ⊢ [(v,x)] · m ◁ τ₂` THEN markerLib.RM_ALL_ABBREVS_TAC THEN
+    `ctxtswap [(v,x)] ((x,τ₁) :: Γ) ⊢ tpm [(v,x)] m ◁ τ₂`
        by SRW_TAC [][hastype_swap] THEN
     POP_ASSUM MP_TAC THEN
-    `valid_ctxt ((x,A):: Γ)` by METIS_TAC [hastype_valid_ctxt] THEN
+    `valid_ctxt ((x,τ₁):: Γ)` by METIS_TAC [hastype_valid_ctxt] THEN
     `x ∉ ctxtFV Γ` by (FULL_SIMP_TAC (srw_ss()) [] THEN
                            METIS_TAC [ctxtFV_MEM]) THEN
     SRW_TAC [][ctxtswap_fresh],
