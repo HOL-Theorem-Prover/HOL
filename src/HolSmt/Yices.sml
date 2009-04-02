@@ -129,14 +129,14 @@ structure Yices = struct
     (wordsSyntax.word_sub_tm, "bv-sub", ""),
     (wordsSyntax.word_mul_tm, "bv-mul", ""),
     (wordsSyntax.word_2comp_tm, "bv-neg", ""),
-    (wordsSyntax.word_lt_tm, "bv-lt", ""),
-    (wordsSyntax.word_le_tm, "bv-le", ""),
-    (wordsSyntax.word_gt_tm, "bv-gt", ""),
-    (wordsSyntax.word_ge_tm, "bv-ge", ""),
-    (wordsSyntax.word_lo_tm, "bv-slt", ""),
-    (wordsSyntax.word_ls_tm, "bv-sle", ""),
-    (wordsSyntax.word_hi_tm, "bv-sgt", ""),
-    (wordsSyntax.word_hs_tm, "bv-sge", "")
+    (wordsSyntax.word_lt_tm, "bv-slt", ""),
+    (wordsSyntax.word_le_tm, "bv-sle", ""),
+    (wordsSyntax.word_gt_tm, "bv-sgt", ""),
+    (wordsSyntax.word_ge_tm, "bv-sge", ""),
+    (wordsSyntax.word_lo_tm, "bv-lt", ""),
+    (wordsSyntax.word_ls_tm, "bv-le", ""),
+    (wordsSyntax.word_hi_tm, "bv-gt", ""),
+    (wordsSyntax.word_hs_tm, "bv-ge", "")
   ]
 
   (* binders need to be treated differently from the operators in

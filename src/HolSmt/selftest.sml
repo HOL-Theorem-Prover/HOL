@@ -651,24 +651,92 @@ in
     (``- - (x:word32) = x``, [thm_YO]),
 
     (``0w < 1w:word32``, [thm_YO]),
+    (``~ 0w < 0w:word32``, [thm_YO]),
 
     (``0w <= 1w:word32``, [thm_YO]),
     (``x <= y:word32 = x < y \/ (x = y)``, [thm_YO]),
+    (``~ 0w <= 0w:word32``, [thm_YO]),
 
     (``1w > 0w:word32``, [thm_YO]),
+    (``0w > ~ 0w:word32``, [thm_YO]),
 
     (``1w >= 0w:word32``, [thm_YO]),
     (``x >= y:word32 = x > y \/ (x = y)``, [thm_YO]),
+    (``0w >= ~ 0w:word32``, [thm_YO]),
 
     (``0w <+ 1w:word32``, [thm_YO]),
+    (``0w <+ ~ 0w:word32``, [thm_YO]),
 
     (``0w <=+ 1w:word32``, [thm_YO]),
     (``x <=+ y:word32 = x <+ y \/ (x = y)``, [thm_YO]),
+    (``0w <=+ ~ 0w:word32``, [thm_YO]),
 
     (``1w >+ 0w:word32``, [thm_YO]),
+    (``~ 0w >+ 0w:word32``, [thm_YO]),
 
     (``1w >=+ 0w:word32``, [thm_YO]),
-    (``x >=+ y:word32 = x >+ y \/ (x = y)``, [thm_YO])
+    (``x >=+ y:word32 = x >+ y \/ (x = y)``, [thm_YO]),
+    (``~ 0w >=+ 0w:word32``, [thm_YO]),
+
+    (* from Magnus Myreen *)
+    (``!(a:word32) b.
+     (((word_msb (a - b) <=>
+        (word_msb a <=/=> word_msb b) /\
+        (word_msb a <=/=> word_msb (a - b))) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb b <=/=> word_msb a) /\
+        (word_msb a <=/=> word_msb (a - b))) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb a <=/=> word_msb b) /\
+        (word_msb (a - b) <=/=> word_msb a)) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb b <=/=> word_msb a) /\
+        (word_msb (a - b) <=/=> word_msb a)) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb a <=/=> word_msb (a - b)) /\
+        (word_msb a <=/=> word_msb b)) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb a <=/=> word_msb (a - b)) /\
+        (word_msb b <=/=> word_msb a)) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb (a - b) <=/=> word_msb a) /\
+        (word_msb a <=/=> word_msb b)) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb (a - b) <=/=> word_msb a) /\
+        (word_msb b <=/=> word_msb a)) <=> b <= a) /\
+      (((word_msb a <=/=> word_msb b) /\
+        (word_msb a <=/=> word_msb (a - b)) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb b <=/=> word_msb a) /\
+        (word_msb a <=/=> word_msb (a - b)) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb a <=/=> word_msb b) /\
+        (word_msb (a - b) <=/=> word_msb a) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb b <=/=> word_msb a) /\
+        (word_msb (a - b) <=/=> word_msb a) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb a <=/=> word_msb (a - b)) /\
+        (word_msb a <=/=> word_msb b) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb a <=/=> word_msb (a - b)) /\
+        (word_msb b <=/=> word_msb a) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb (a - b) <=/=> word_msb a) /\
+        (word_msb a <=/=> word_msb b) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb (a - b) <=/=> word_msb a) /\
+        (word_msb b <=/=> word_msb a) <=> word_msb (a - b)) <=>
+       b <= a)) /\ (a >= b <=> b <= a) /\ (a > b <=> b < a) /\
+     (~(a <=+ b) <=> b <+ a) /\ (~(a <+ b) <=> b <=+ a) /\
+     (a <+ b \/ (a = b) <=> a <=+ b) /\ (~(a < b) <=> b <= a) /\
+     (~(a <= b) <=> b < a) /\ (a < b \/ (a = b) <=> a <= b) /\
+     ((a = b) \/ a < b <=> a <= b) /\ (a <+ b \/ (a = b) <=> a <=+ b) /\
+     ((a = b) \/ a <+ b <=> a <=+ b) /\
+     (b <=+ a /\ a <> b <=> b <+ a) /\ (a <> b /\ b <=+ a <=> b <+ a) /\
+     (b <= a /\ a <> b <=> b < a) /\ (a <> b /\ b <= a <=> b < a) /\
+     (((v:word32) - w = 0w) <=> (v = w)) /\ (w - 0w = w)``, [thm_YO])
+
   ]  (* tests *)
 end
 
