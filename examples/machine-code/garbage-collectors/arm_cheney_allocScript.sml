@@ -23,7 +23,7 @@ val arm_alloc_gc_lemma = prove(
     arm_coll_inv (a,x,xs') (i,e',rs',l',u',m') /\ (a = a') /\ (l = l') /\
     (r3' = ref_addr a i') /\ (r4' = ref_addr a e') /\ (x = x') /\
     arm_alloc_gc_pre (ref_addr a i,ref_addr a e,r5,r6,r7,r8,a,x,xs)``,
-  REWRITE_TAC [arm_alloc_gc,arm_alloc_gc_pre,cheney_alloc_gc_def] 
+  REWRITE_TAC [arm_alloc_gc_def,arm_alloc_gc_pre_def,cheney_alloc_gc_def] 
   \\ STRIP_TAC \\ STRIP_TAC
   \\ `valid_address a i /\ valid_address a e /\ i <= e` by (Cases_on `u` \\ 
     FULL_SIMP_TAC bool_ss [ok_state_def,LET_DEF,arm_coll_inv_def,valid_address_def] \\ DECIDE_TAC)
@@ -72,7 +72,7 @@ val arm_alloc_aux_lemma = prove(
     (arm_alloc_aux (ref_addr a i,ref_addr a e,a,x,xs) = (r3',r4',r6',r8',r9',r10',x',xs')) ==>
     arm_coll_inv (a,x,xs') (i',e',rs',l',u',m') /\ (l = l') /\ (x = x') /\ (a = r10') /\
     arm_alloc_aux_pre (ref_addr a i,ref_addr a e,a,x,xs)``,
-  STRIP_TAC \\ REWRITE_TAC [arm_alloc_aux,arm_alloc_aux_pre,cheney_alloc_aux_def] 
+  STRIP_TAC \\ REWRITE_TAC [arm_alloc_aux_def,arm_alloc_aux_pre_def,cheney_alloc_aux_def] 
   \\ STRIP_TAC \\ Cases_on `i = e` \\ ASM_SIMP_TAC std_ss [] THEN1
    (ONCE_REWRITE_TAC [EQ_SYM_EQ] 
     \\ SIMP_TAC std_ss [LET_DEF,WORD_ADD_0,GSYM AND_IMP_INTRO]  
@@ -173,7 +173,7 @@ val arm_alloc_lemma = prove(
     (arm_alloc_mem (r5,r6,r7,r8,a,x,xs) = (r3',r4',r5',r6',r7',r8',a',x',xs')) ==>
     arm_coll_inv (a',x,xs') (i',e',rs',l',u',m') /\ (a' = a) /\ (l' = l) /\ (x = x') /\
     arm_alloc_mem_pre (r5,r6,r7,r8,a,x,xs)``,
-  REWRITE_TAC [cheney_alloc_def,arm_alloc_mem,arm_alloc_mem_pre] \\ STRIP_TAC \\ STRIP_TAC
+  REWRITE_TAC [cheney_alloc_def,arm_alloc_mem_def,arm_alloc_mem_pre_def] \\ STRIP_TAC \\ STRIP_TAC
   \\ `~(i = 0) /\ ~(e = 0)` by 
          (Cases_on `u` \\ FULL_SIMP_TAC bool_ss [ok_state_def,LET_DEF] \\ DECIDE_TAC)
   \\ `(xs a = ref_addr a i) /\ (xs (a+4w) = ref_addr a e)` by 
@@ -311,7 +311,7 @@ val ch_word_alloc = prove(
     (arm_alloc (v1,v2,v3,v4,v5,v6,a,x,xs) = (w1,w2,w3,w4,w5,w6,a',x',xs')) ==>
     ch_word (i',e',rs',l',u',m') (w1,w2,w3,w4,w5,w6,a',x',xs') /\ (a = a') /\ (l = l') /\ (x = x') /\
     arm_alloc_pre (v1,v2,v3,v4,v5,v6,a,x,xs)``,
-  SIMP_TAC std_ss [arm_alloc,arm_alloc_pre,LET_DEF]
+  SIMP_TAC std_ss [arm_alloc_def,arm_alloc_pre_def,LET_DEF]
   \\ Q.ABBREV_TAC `xs1 = (a - 4w =+ v6)
       ((a - 8w =+ v5) ((a - 12w =+ v4) ((a - 16w =+ v3)
       ((a - 20w =+ v2) ((a - 24w =+ v1) (xs))))))`

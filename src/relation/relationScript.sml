@@ -100,6 +100,12 @@ val SC_DEF = new_definition(
 val EQC_DEF = new_definition(
   "EQC_DEF",
   ``EQC (R:'a->'a->bool) = RC (TC (SC R))``);
+val _ = add_rule { fixity = Suffix 2100,
+                   block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
+                   paren_style = OnlyIfNecessary,
+                   pp_elements = [TOK "^="],
+                   term_name = "EQC" }
+
 
 val SC_SYMMETRIC = store_thm(
   "SC_SYMMETRIC",
@@ -361,6 +367,7 @@ val TC_STRONG_INDUCT_LEFT1_0 = prove(
           (!u v. TC R u v ==> P u v /\ TC R u v)``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT_LEFT1 THEN
   ASM_MESON_TAC [TC_RULES]);
+
 val TC_STRONG_INDUCT_RIGHT1_0 = prove(
   ``!R P. (!x y. R x y ==> P x y) /\
           (!x y z. P x y /\ TC R x y /\ R y z ==> P x z) ==>
@@ -483,6 +490,17 @@ val EXTEND_RTC_TC = store_thm(
         MESON_TAC [] THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN
   MESON_TAC [TC_RULES]);
+
+
+val EXTEND_RTC_TC_EQN = store_thm(
+  "EXTEND_RTC_TC_EQN",
+  ``!R x z. TC R x z = ?y. (R x y /\ RTC R y z)``,
+  GEN_TAC THEN
+  Q_TAC SUFF_TAC `!x z. TC R x z ==> ?y. R x y /\ RTC R y z` THEN1
+        MESON_TAC [EXTEND_RTC_TC] THEN
+  HO_MATCH_MP_TAC TC_INDUCT THEN
+  PROVE_TAC[RTC_RULES, RTC_TRANSITIVE, transitive_def,
+	      RTC_RULES_RIGHT1]);
 
 val reflexive_RC_identity = store_thm(
   "reflexive_RC_identity",
@@ -670,6 +688,11 @@ val EQC_MONOTONE = store_thm(
   ``(!x y. R x y ==> R' x y) ==> !x y. EQC R x y ==> EQC R' x y``,
   STRIP_TAC THEN HO_MATCH_MP_TAC STRONG_EQC_INDUCTION THEN
   METIS_TAC [EQC_R, EQC_TRANS, EQC_SYM, EQC_REFL]);
+
+val RTC_EQC = store_thm(
+  "RTC_EQC",
+  ``!x y. RTC R x y ==> EQC R x y``,
+  HO_MATCH_MP_TAC RTC_INDUCT THEN METIS_TAC [EQC_R, EQC_REFL, EQC_TRANS]);
 
 
 (*---------------------------------------------------------------------------*

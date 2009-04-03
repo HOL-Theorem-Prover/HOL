@@ -1,6 +1,6 @@
 
 open HolKernel boolLib bossLib Parse;
-open wordsTheory wordsLib bitTheory arithmeticTheory fcpTheory;
+open wordsTheory wordsLib bitTheory arithmeticTheory fcpTheory pred_setTheory;
 
 val _ = new_theory "address";
 
@@ -19,6 +19,10 @@ val ADDR32_def = Define `ADDR32 (x:word30) = (w2w x << 2):word32`;
 val ADDR30_def = Define `ADDR30 (x:word32) = ((31 >< 2) x):word30`;
 
 val CONTAINER_def = Define `CONTAINER x = x:bool`;
+val GUARD_def = Define `GUARD (n:num) x = x:bool`;
+
+val SING_SET_def = Define `SING_SET x = {x}`;
+
 
 (* theorems *)
 
@@ -245,14 +249,14 @@ val ALIGNED_THM = store_thm("ALIGNED_THM",
   \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss) []);
 
 val ALIGNED_NEG_lemma = prove(
-  ``!x:word32. ALIGNED x ==> ALIGNED (- x)``,
+  ``!x. ALIGNED x ==> ALIGNED (- x)``,
   ASM_SIMP_TAC std_ss  [ALIGNED_THM,w2n_n2w,LESS_MOD]
   \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `n2w (2**30) - k` 
   \\ ASM_SIMP_TAC (std_ss++WORD_ARITH_EQ_ss) [WORD_RIGHT_SUB_DISTRIB]            
   \\ ASM_SIMP_TAC (std_ss++WORD_ss) []);
 
 val ALIGNED_NEG = store_thm("ALIGNED_NEG",
-  ``!x:word32. ALIGNED (- x) = ALIGNED x``,
+  ``!x. ALIGNED (- x) = ALIGNED x``,
   METIS_TAC [ALIGNED_NEG_lemma,WORD_NEG_NEG]);
 
 val ALIGNED_and_1 = store_thm("ALIGNED_and_1",
@@ -300,7 +304,7 @@ val word_arith_lemma1 = store_thm("word_arith_lemma1",
 
 val word_arith_lemma2 = store_thm("word_arith_lemma2",
   ``!n m. n2w n - (n2w m) :'a word =
-      if n < m then - (n2w (m-n)) else n2w (n-m)``,
+      if n < m then (- (n2w (m-n))) else n2w (n-m)``,
   REPEAT STRIP_TAC \\ Cases_on `n < m` \\ ASM_REWRITE_TAC []
   \\ FULL_SIMP_TAC bool_ss [NOT_LESS,LESS_EQ]
   \\ FULL_SIMP_TAC bool_ss [LESS_EQ_EXISTS,ADD1,DECIDE ``n+1+p-n = 1+p:num``]
@@ -543,5 +547,33 @@ val WORD_EQ_ADD_CANCEL = store_thm("WORD_EQ_ADD_CANCEL",
             ((w = w + x) = (x = 0w)) /\ ((w + v = w) = (v = 0w: 'a word))``,
   METIS_TAC [WORD_ADD_0,WORD_ADD_COMM,WORD_EQ_ADD_LCANCEL]); 
 
+val NOT_IF = store_thm("NOT_IF",
+  ``!b x y:'a. (if ~b then x else y) = if b then y else x``,
+  Cases THEN REWRITE_TAC []);
+
+val IF_IF = store_thm("IF_IF",
+  ``!b c x y:'a. 
+      ((if b then (if c then x else y) else y) = if b /\  c then x else y) /\ 
+      ((if b then (if c then y else x) else y) = if b /\ ~c then x else y) /\ 
+      ((if b then x else (if c then x else y)) = if b \/  c then x else y) /\ 
+      ((if b then x else (if c then y else x)) = if b \/ ~c then x else y)``,
+  Cases THEN Cases THEN REWRITE_TAC []);
+
+val SING_SET_INTRO = store_thm("SING_SET_INTRO",
+  ``!x:'a s. x INSERT s = SING_SET x UNION s``,
+  REWRITE_TAC [INSERT_UNION_EQ,UNION_EMPTY,SING_SET_def]);  
+
+val UNION_CANCEL = store_thm("UNION_CANCEL",
+  ``!x s:'a set. x UNION (x UNION s) = x UNION s``,
+  REWRITE_TAC [UNION_ASSOC,UNION_IDEMPOT]);
+
+val PUSH_IF_LEMMA = store_thm("PUSH_IF_LEMMA",
+  ``!b g x y. (b /\ (if g then x else y) = if g then b /\ x else b /\ y) /\
+              ((if g then x else y) /\ b = if g then b /\ x else b /\ y)``,
+  REPEAT Cases THEN REWRITE_TAC []);
+
+val GUARD_EQ_ZERO = store_thm("GUARD_EQ_ZERO",
+  ``!n b. GUARD n b = GUARD 0 b``,
+  REWRITE_TAC [GUARD_def]);
 
 val _ = export_theory();

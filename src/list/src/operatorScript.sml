@@ -86,6 +86,9 @@ val ASSOC_CONJ = store_thm ("ASSOC_CONJ",
 REWRITE_TAC[ASSOC_DEF,CONJ_ASSOC]
 );
 
+val ASSOC_SYM = save_thm ("ASSOC_SYM",
+Conv.CONV_RULE (Conv.STRIP_QUANT_CONV (Conv.RHS_CONV (Conv.STRIP_QUANT_CONV Conv.SYM_CONV))) ASSOC_DEF);
+
 
 val ASSOC_DISJ = store_thm ("ASSOC_DISJ",
 (--`ASSOC $\/`--),

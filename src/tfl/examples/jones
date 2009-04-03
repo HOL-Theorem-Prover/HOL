@@ -6,14 +6,14 @@
            Lee, Jones, Ben-Amram, Proceedings of POPL 2001
  ---------------------------------------------------------------------------*)
 
-load "bossLib"; open bossLib;
-
 (*---------------------------------------------------------------------------
   1.   Reverse function, with accumulating parameter. Automatic.
  ---------------------------------------------------------------------------*)
 
-val REV = Define `(REV [] A = A)
-           /\     (REV (h::t) A = REV t (h::A))`;
+val REV = 
+ Define 
+   `(REV [] A = A) /\
+    (REV (h::t) A = REV t (h::A))`;
 
 (*---------------------------------------------------------------------------
   2.   Program with indirect recursion. We treat this as mutual recursion.
@@ -23,56 +23,49 @@ val REV = Define `(REV [] A = A)
 
 Hol_datatype `sexp = Nil | Cons of sexp => sexp`;
 
-val indirect_defn =
- Hol_defn "indirect"
+val indirect_def =
+ tDefine
+   "indirect"
       `(f Nil x = x)
    /\  (f (Cons h t) x = g t x (Cons h t))
-   /\  (g a b c = f a (Cons b c))`;
-
-val (indirect_eqns,indirect_ind) = Defn.tprove
-(indirect_defn,
- WF_REL_TAC `inv_image ($< LEX $<)
+   /\  (g a b c = f a (Cons b c))`
+(WF_REL_TAC `inv_image ($< LEX $<)
      (\s. (sum_case (\(x,y). sexp_size x) (\(a,b,c). sexp_size a) s,
            sum_case (\v.0) (\v.1) s))`);
 
 
 (*---------------------------------------------------------------------------
-  3.   Function with lexically ordered parameters. Easy but not automatic.
+  3.   Function with lexically ordered parameters. Automatic.
  ---------------------------------------------------------------------------*)
 
-val ack_defn = 
-   Hol_defn "ack"
+val ack_def = 
+ Define
       `(ack (0,n) = n+1)
    /\  (ack (SUC m,0) = ack(m,1))
    /\  (ack (SUC m, SUC n) = ack(m,ack(SUC m,n)))`;
-
-val (ack_eqns,ack_ind) = Defn.tprove(ack_defn, WF_REL_TAC `$< LEX $<`);
 
 (*---------------------------------------------------------------------------
   4.   Program with permuted parameters. Automatic.
  ---------------------------------------------------------------------------*)
 
-val pparam = Define 
-              `pparam m n r = 
-                  if r > 0 then pparam m (r-1) n else
-                  if n > 0 then pparam r (n-1) m 
-                           else m`;
+val pparam = 
+ Define 
+   `pparam m n r = 
+      if r > 0 then pparam m (r-1) n else
+      if n > 0 then pparam r (n-1) m 
+               else m`;
 
 (*---------------------------------------------------------------------------
   5.   Program with permuted and possibly discarded parameters.
        Not easy for TFL currently. (measure function courtesy of Joe Hurd.)
  ---------------------------------------------------------------------------*)
 
-val perm_defn =
-    Defn.Hol_defn "perm"
-        `  (perm x []       = x)
-        /\ (perm [] (y::ys) = perm (y::ys) ys)
-        /\ (perm (h::xs) z  = perm z xs)`;
-
-
-val (perm_eqns,perm_ind) = Defn.tprove
-(perm_defn,
- WF_REL_TAC 
+val perm_def = tDefine
+   "perm"
+  `(perm x []       = x) /\ 
+   (perm [] (y::ys) = perm (y::ys) ys) /\ 
+   (perm (h::xs) z  = perm z xs)`
+ (WF_REL_TAC 
     `measure \(l1,l2). 
         if NULL l1 then 2 * LENGTH l2 else LENGTH l1 + LENGTH l2`
   THEN RW_TAC list_ss []);
@@ -83,7 +76,7 @@ val (perm_eqns,perm_ind) = Defn.tprove
       values. Automatic.
 
       Note: late_g and late_g are defined in the reverse order in 
-            the paper.
+            the paper. We do it that way with multiDefine as well.
  ---------------------------------------------------------------------------*)
 
 val late_g = 
@@ -95,3 +88,10 @@ val late_f =
     Define
         `  (late_f a []      = late_g a [])
         /\ (late_f a (x::xs) = late_f (x::a) xs)`;
+
+TotalDefn.multiDefine
+  `(late_f a []      = late_g a []) /\
+   (late_f a (x::xs) = late_f (x::a) xs) /\
+   (late_g [] d      = d) /\ 
+   (late_g (c::cs) d = late_g cs (c :: d))`;
+

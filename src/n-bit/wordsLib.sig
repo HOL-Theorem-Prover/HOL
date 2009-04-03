@@ -41,6 +41,7 @@ sig
     val Cases_on_word_value : term frag list -> tactic
 
     val mk_word_size        : int -> unit
+    val dest_word_literal   : term -> Arbnum.num
 
     val prefer_word         : unit -> unit
     val deprecate_word      : unit -> unit

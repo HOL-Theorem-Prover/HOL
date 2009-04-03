@@ -17,7 +17,6 @@ struct
 
 open HolKernel Drule Psyntax liteLib Trace Opening;
 
-infix 8 |>
 fun WRAP x = STRUCT_WRAP "Travrules" x;
 fun ERR x = STRUCT_ERR "Travrules" x;
 
@@ -28,22 +27,22 @@ fun ERR x = STRUCT_ERR "Travrules" x;
 
   val equality = boolSyntax.equality;
 
-  datatype preorder = PREORDER of (string * string)
-                                  * (thm -> thm -> thm) 
+  datatype preorder = PREORDER of term
+                                  * (thm -> thm -> thm)
                                   * (term -> thm);
 
-   fun find_relation rel  =
-       let val relcid = name_of_const rel
-	   fun f ((h as PREORDER (cid,_,_))::t) =
-	            if relcid = cid then h else f t
-	     | f [] = ERR("find_relation","relation not found")
-       in f
-       end;
+   fun find_relation rel  = let
+     fun f ((h as PREORDER (cid,_,_))::t) = if Opening.samerel rel cid then h
+                                            else f t
+       | f [] = ERR("find_relation","relation not found")
+   in
+     f
+   end;
 
    fun ARB_TRANS thm c1 c2 = MATCH_MP thm (CONJ c1 c2);
 
    fun mk_preorder (TRANS_THM,REFL_THM) =
-       PREORDER (name_of_const(rator(rator(snd(dest_forall(concl REFL_THM))))),
+       PREORDER (rator(rator(snd(dest_forall(concl REFL_THM)))),
 		 ARB_TRANS TRANS_THM,
 		 fn x => ISPEC x REFL_THM);
 
@@ -63,13 +62,28 @@ fun ERR x = STRUCT_ERR "Travrules" x;
     };
 
    fun dest(TRAVRULES x)  = x;
-   val gen_mk_travrules = TRAVRULES;
+   val gen_mk_travrules = TRAVRULES
 
-   fun merge_travrules tl =
-     let val ts = map dest tl
-     in TRAVRULES {relations=flatten (map #relations ts),
-                   congprocs=foldl (op @) [] (map #congprocs ts),
-                   weakenprocs=flatten (map #weakenprocs ts)}
+   fun rel_of_preorder (PREORDER(r,_,_)) = r
+
+   fun merge_travrules tl = let
+     val ts = map dest tl
+     fun uniquify l = let
+       val sorted = Listsort.sort (inv_img_cmp rel_of_preorder Term.compare) l
+       fun recurse acc [] = acc
+         | recurse acc [h] = h::acc
+         | recurse acc (h1::(rest as h2::t)) =
+           if samerel (rel_of_preorder h1) (rel_of_preorder h2) then
+             recurse acc rest
+           else
+             recurse (h1::acc) rest
+     in
+       recurse [] sorted
+     end
+   in
+     TRAVRULES {relations=uniquify (flatten (map #relations ts)),
+                congprocs=foldl (op @) [] (map #congprocs ts),
+                weakenprocs=flatten (map #weakenprocs ts)}
      end;
 
 
@@ -77,16 +91,24 @@ fun ERR x = STRUCT_ERR "Travrules" x;
  * equality_travrules
  * ---------------------------------------------------------------------*)
 
-val equality = [PREORDER(("=","min"),TRANS,REFL)];
+val equality = [PREORDER(boolSyntax.equality,TRANS,REFL)];
 val EQ_tr = gen_mk_travrules
   {relations=equality,
    congprocs=[Opening.EQ_CONGPROC],
-   weakenprocs=[]};
+   weakenprocs=[]}
 
-fun mk_travrules congs = TRAVRULES
-  {relations=equality,
-   congprocs=map (CONGPROC (fn t => REFL)) congs,
-   weakenprocs=[]};
+fun cong2proc rels th = let
+  open Opening
+  val r = rel_of_congrule th
+  val PREORDER(_,_,refl) = find_relation r rels
+in
+  CONGPROC (fn _ => fn t => refl t) th
+end
+
+fun mk_travrules relns congs =
+    TRAVRULES {relations=relns,
+               congprocs=map (cong2proc relns) congs,
+               weakenprocs=[]}
 
 
 end (* struct *)

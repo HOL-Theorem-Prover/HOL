@@ -483,4 +483,31 @@ fun export_theory_as_docfiles dirname =
                                       (axioms "-" @ definitions "-" @
                                        theorems "-");
 
+
+
+
+
+fun data_to_string (((th,name),(thm,cl)):data) =
+let
+   val cl_s = if cl = Thm then "THEOREM" else
+	   if cl = Axm then "AXIOM" else
+	   "DEFINITION";
+   val s = th^"Theory."^name^" ("^cl_s^")\n";
+   val size = String.size s
+   fun line 0 l = l
+     | line n l = line (n-1) ("-"^l)
+   val s = s^(line (size-1) "\n")
+
+   val s = s^Parse.thm_to_string thm^"\n";
+in
+   s
+end;
+
+
+val data_list_to_string = (foldl (fn (d, s) => s^(data_to_string d)^"\n\n") "\n\n\n");
+
+val print_apropos = print o data_list_to_string o apropos;
+val print_find = print o data_list_to_string o find;
+fun print_match x1 x2 = print (data_list_to_string (match x1 x2));
+
 end

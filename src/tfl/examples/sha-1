@@ -5,42 +5,46 @@
 (*                                                                           *)
 (*     http://www.itl.nist.gov/fipspubs/fip180-1.htm                         *)
 (*                                                                           *)
-(*                                                                           *)
 (*===========================================================================*)
 
-app load ["pairTools", "word32Lib", "word8Lib", "stringLib"];
+(*****************************************************************************)
+(* NOTE: this file has been only partly translated to wordsLib. It won't     *)
+(* work until further repairs are made.                                      *)
+(*****************************************************************************)
+
+app load ["pairTools", "wordsLib", "stringLib"];
 
 open stringTheory arithmeticTheory;
 
 numLib.prefer_num();
 
-word8Lib.pp_word_unsigned_hex();
+(*
+wordLib.pp_word_unsigned_hex();
 word32Lib.pp_word_unsigned_hex();
-
-(*---------------------------------------------------------------------------*)
-(* Some support stuff on lists, in particular a definition of TAKE.          *)
-(*---------------------------------------------------------------------------*)
-
-val _ = set_fixity "<>" (Infixl 500);
-val _ = overload_on ("<>", Term`APPEND`);
+*)
 
 val lemma = Q.prove
 (`!n L. n <= LENGTH L ==> n-1 <= LENGTH (TL L)`,
  Induct_on `L` THEN RW_TAC list_ss []);
 
-val (TAKE_def,TAKE_ind) = 
- Defn.tprove
-  (Hol_defn "TAKE"
-    `TAKE n L = if n = 0 then ([],L) else
-                   let (front,back) = TAKE (n-1) (TL L)
-                   in (HD L::front,back)`,
- WF_REL_TAC `measure FST`);
 
+(*---------------------------------------------------------------------------*)
+(* Some support stuff on lists, in particular a definition of TAKE.          *)
+(*---------------------------------------------------------------------------*)
+
+val TAKE_def = 
+ Define 
+   `TAKE n L = 
+      if n = 0 then ([],L) 
+       else let (front,back) = TAKE (n-1) (TL L)
+            in (HD L::front,back)`;
+
+val TAKE_ind = fetch "-" "TAKE_ind";
 
 val TAKE_THM = Q.prove
 (`!n L taken left. 
       n <= LENGTH L /\ ((taken,left) = TAKE n L) 
-       ==> (taken <> left = L) /\ (LENGTH taken = n)`,
+       ==> (taken ++ left = L) /\ (LENGTH taken = n)`,
  recInduct TAKE_ind THEN REPEAT GEN_TAC THEN STRIP_TAC
    THEN ONCE_REWRITE_TAC [TAKE_def]
    THEN REPEAT GEN_TAC THEN COND_CASES_TAC THENL
@@ -52,7 +56,6 @@ val TAKE_THM = Q.prove
          THEN Cases_on `L` 
          THEN FULL_SIMP_TAC list_ss [],
        RES_TAC THEN RW_TAC list_ss []]]);
-
 
 (*---------------------------------------------------------------------------*)
 (* Misc. support for 8 bit bytes and 32 bit words.                           *)
@@ -71,26 +74,24 @@ val _ = temp_overload_on ("<<#", Term `$rotl_w32`);
 (*---------------------------------------------------------------------------*)
 (* Trivial abbreviations.                                                    *)
 (*---------------------------------------------------------------------------*)
-
+(*
 val W8  = Define `W8 = word8$n2w`;
 val W32 = Define `W32 = word32$n2w`;
-
+*)
 (*---------------------------------------------------------------------------*)
 (* 64 copies of ZERO (W32)                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val ZERO_def = Define `ZERO = W32 0n`;
-
 val ZEROx64_def = 
  Define 
-   `ZEROx64 = [ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
-               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
-               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
-               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
-               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
-               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
-               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO;
-               ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO; ZERO]`;
+   `ZEROx64 = [0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w;
+               0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w] : word32 list`;
 
 (*---------------------------------------------------------------------------*)
 (* Convert from 8 bits to 32 bits                                            *)
@@ -238,11 +239,12 @@ val f4_def = Define `f4(a,b,c) = (a # b # c) + W32 3395469782`;
 val Helper_def = 
  Define
  `Helper f n (a,b,c,d,e) w = 
-    if n = 0 then (a,(b <<# 30n),c,d,e+(a <<# 5n)+f(b,c,d)+w) else
-    if n = 1 then ((a <<# 30n),b,c,d+(e <<# 5n)+f(a,b,c)+w,e) else 
-    if n = 2 then (a,b,c+(d <<# 5n)+f(e,a,b)+w,d,e <<# 30n)   else 
-    if n = 3 then (a,b+(c <<# 5n)+f(d,e,a)+w,c,d <<# 30n,e)   
-             else (a+(b <<# 5n)+f(c,d,e)+w,b,c <<# 30n,d,e)`;
+    case n of
+      0 -> (a,(b <<# 30n),c,d,e+(a <<# 5n)+f(b,c,d)+w) 
+      1 -> ((a <<# 30n),b,c,d+(e <<# 5n)+f(a,b,c)+w,e) 
+      2 -> (a,b,c+(d <<# 5n)+f(e,a,b)+w,d,e <<# 30n)   
+      3 -> (a,b+(c <<# 5n)+f(d,e,a)+w,c,d <<# 30n,e)   
+      _ -> (a+(b <<# 5n)+f(c,d,e)+w,b,c <<# 30n,d,e)`;
 
 val Round_def =
  Define 
@@ -268,7 +270,7 @@ val expand_def =
 val digestBlock_def =
  Define 
    `digestBlock (block:word8 list) (h0,h1,h2,h3,h4) =
-      let wlist = expand (w32List block <> ZEROx64) in
+      let wlist = expand (w32List block ++ ZEROx64) in
       let (hbar1,wlist1) = Round (Helper f1) 0 (h0,h1,h2,h3,h4) wlist in
       let (hbar2,wlist2) = Round (Helper f2) 0 hbar1 wlist1 in
       let (hbar3,wlist3) = Round (Helper f3) 0 hbar2 wlist2 in

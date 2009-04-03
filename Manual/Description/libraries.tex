@@ -79,12 +79,16 @@ new parsers can be quickly constructed to support user applications.
 The parser is parameterized by grammars for types and terms. The
 behaviour of the parser and prettyprinter is therefore usually altered
 by grammar manipulations. These can be of two kinds: \emph{temporary}
-or \emph{permanent}.  Temporary changes do not persist after the
-current session, while permanent changes will be in force in all
-descendant theories.  Functions making temporary alterations are
-signified by a leading \ml{temp\_} in their names.
+or \emph{permanent}.  Temporary changes should be used in library
+implementations or in script files for those changes that the user
+does not wish to have persist in theories descended from the current
+one.  Permanent changes are appropriate for use in script-files, and
+will be in force in all descendant theories.  Functions making
+temporary changes are signified by a leading \ml{temp\_} in their
+names.
 
 \subsection{Parsing types}
+\index{types, in HOL logic@types, in \HOL{} logic!parsing of|(}
 
 The language of types is a simple one.  An abstract grammar for the
 language is presented in Figure~\ref{fig:abstract-type-grammar}.  The
@@ -148,6 +152,7 @@ one argument, is such that \holtxt{:'a set} expands into the type
 When types come to be printed, the expansion of abbreviations done by
 the parser is reversed.  For more information see the documentation of
 \ml{type\_abbrev} in the \REFERENCE.
+\index{types, in HOL logic@types, in \HOL{} logic!parsing of|)}
 
 \subsection{Parsing terms}
 
@@ -162,6 +167,7 @@ In the following, we explore some of the capabilities of the
 
 
 \subsubsection{Parser architecture}
+\label{sec:parser:architecture}
 
 The parser turns strings into terms.  It does this in the following
 series of phases, all of which are influenced by the provided grammar.
@@ -188,8 +194,8 @@ more on lexing, see Section~\ref{HOL-lex}.
   given as \holtxt{thy\$ident}); \ml{APP} (an application of one form
   to another); \ml{LAM} (an abstraction of a variable over a body),
   and \ml{TYPED} (a form accompanied by a type constraint\footnote{The
-    types in \ml{Absyn} constraints are not full-blown types, but
-    values from another intermediate type, \ml{Pretype}.}, see
+    types in \ml{Absyn} constraints are not full HOL types, but values
+    from another intermediate type, \ml{Pretype}.}, see
   Section~\ref{sec:parseprint-type-constraints}).  At this stage of
   the translation, there is no distinction made between constants and
   variables: though \ml{QIDENT} forms must be constants, users are
@@ -210,12 +216,16 @@ more on lexing, see Section~\ref{HOL-lex}.
   The standard grammar includes a rule that associates the special
   mix-fix form for if-then-else expressions with the underlying
   ``name'' \holtxt{COND}.  It is \holtxt{COND} that will eventually be
-  resolved as the constant \holtxt{bool\$COND}.
+  resolved as the constant \holtxt{bool\dol{}COND}.
 
-  If the ``quotation'' syntax with a bare dollar is used, then this
-  phase of the parser will not treat strings as part of a special
-  form.  For example, \holtxt{\holquote{\$if~P}} turns into the
-  \ml{Absyn} form
+  If the ``quotation'' syntax with a bare dollar is used,%
+%
+\index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
+\index{tokens!suppressing parsing behaviour of|(}
+%
+then this phase of the parser will not treat strings as part of a
+special form.  For example, \holtxt{\holquote{\dol{}if~P}} turns into
+the \ml{Absyn} form
 \begin{verbatim}
    APP(IDENT "if", IDENT "P")
 \end{verbatim}
@@ -231,6 +241,24 @@ more on lexing, see Section~\ref{HOL-lex}.
   argument.  When the successful result of parsing is handed to the
   next phase, the fact that there is a constant called \holtxt{+} will
   give the input its desired meaning.
+
+  Symbols can also be ``escaped'' by enclosing them in parentheses.
+  Thus, the above could be written \holtxt{\holquote{(+)~x}} for the
+  same effect.
+\index{tokens!suppressing parsing behaviour of|)}
+
+  The user can insert intermediate transformation functions of their
+  own design into the parsing processing at this point.  This is done
+  with the function 
+\begin{verbatim}
+   add_absyn_postprocessor
+\end{verbatim}
+  The user's function will be of type \ml{Absyn~->~Absyn} and can
+  perform whatever changes are appropriate.  Like all other aspects of
+  parsing, these functions are part of a grammar: if the user doesn't
+  want to see a particular function used, they can arrange for parsing
+  to be done with respect to a different grammar.
+
 \item[Name Resolution:] The bare \ml{IDENT} forms in the \ml{Absyn}
   value are resolved as free variables, bound names or constants.
   This process results in a value of the \ml{Preterm} data type, which
@@ -255,6 +283,7 @@ more on lexing, see Section~\ref{HOL-lex}.
   context of the given abstraction, rather than as the successor
   constant.
 
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
   The ``overload map'' is a map from strings to lists of terms.  The
   terms are usually just constants, but can be arbitrary terms (giving
   rise to ``syntactic macros'' or ``patterns'').\index{syntactic macros}
@@ -281,7 +310,7 @@ more on lexing, see Section~\ref{HOL-lex}.
   picked when this situation arises.)
 
   When a term in the overload map is chosen as the best option, it is
-  substituted into the term at approrpriate position.  If the term is
+  substituted into the term at appropriate position.  If the term is
   a lambda abstraction, then as many $\beta$-reductions are done as
   possible, using any arguments that the term has been applied to.  It
   is in this way that a syntactic macro can process arguments.
@@ -294,8 +323,105 @@ more on lexing, see Section~\ref{HOL-lex}.
   checks that the type of the first argument is a function whose
   domain is equal to the type of the second argument.)  The parser's
   job is to turn user-supplied strings into terms.  For convenience,
-  it is vital
+  it is vital that the user not have to provide types for all of the
+  identifiers they type. (See Section~\ref{sec:parser:type-inference}
+  below.)
+
+  In the presence of overloaded identifiers, type inference may not be
+  able to assign a unique type to all constants.  If multiple
+  possibilities exist, one will be picked when the \ml{Preterm} is finally
+  converted into a genuine term.
+\item[Conversion to Term:]%
+  When a \ml{Preterm} has been type-checked, the final conversion from
+  that type to the \ml{term} type is mostly straightforward.  The user
+  can insert further processing at this point as well, so that a
+  user-supplied function modifies the result before the parser
+  returns.
 \end{description}
+
+\subsubsection{Unicode characters}
+\label{sec:parser:unicode-characters}
+
+\index{Unicode}\index{UTF-8}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|(}
+It is possible to have the \HOL{} parsing and printing infrastructure
+use Unicode characters (written in the UTF-8 encoding).  This makes it
+possible to write and read terms such as
+\begin{alltt}
+   \(\forall\)x. P x \(\land\) Q x
+\end{alltt}
+rather than 
+\begin{alltt}
+   !x. P x /\bs{} Q x
+\end{alltt}
+If they wish, users may simply define constants that have Unicode
+characters in their names, and leave it at that.  The problem with
+this approach is that standard tools will likely then create theory
+files that include (illegal) \ML{} bindings like \ml{val $\rightarrow$\_def =
+  \dots}.  The result will be \ml{...Theory.sig} and
+\ml{...Theory.sml} files that fail to compile, even though the call to
+\ml{export\_theory} may succeed. This problem can be finessed through
+the use of functions like \ml{set\_MLname}, but it's probably best
+practice to only use alphanumerics in the names of constants, and to
+then use functions like \ml{overload\_on} and \ml{add\_rule} to create
+Unicode syntax for the underlying constant.
+
+If users have fonts with the appropriate repertoire of characters to
+display their syntax, and are confident that any other users of their
+theories will too, then this is perfectly reasonable.  However, if
+users wish to retain some backwards compatibility with pure ASCII
+syntax, they can do so by defining a pure ASCII syntax first.  Having
+done this, they can create a Unicode version of the syntax with the
+function \ml{Unicode.unicode\_version}.  Then, while the trace
+variable \ml{"Unicode"} is $0$, the ASCII syntax will be used for
+parsing and printing.  If the trace is set to $1$, then the Unicode
+syntax will also work in the parser, and the pretty-printer will
+prefer it when terms are printed. 
+
+For example, in \ml{boolScript.sml}, the Unicode character for logical
+and (\texttt{$\land$}), is set up as a Unicode alternative for
+\texttt{/\bs} with the call
+\begin{verbatim}
+   val _ = unicode_version {u = UChar.conj, tmnm = "/\\"};
+\end{verbatim}
+(In this context, the \ml{Unicode} structure has been \ml{open}-ed,
+giving access also to the structure \ml{UChar} which contains bindings
+for the Greek alphabet, and some common mathematical symbols. ) 
+
+The argument to \ml{unicode\_version} is a record with fields \ml{u}
+and \ml{tmnm}.  Both are strings.  The \ml{tmnm} field can either be
+the name of a constant, or a token appearing in a concrete syntax rule
+(possibly mapping to some other name).  If the \ml{tmnm} is only the
+name of a constant, then, with the trace variable enabled, the string
+\ml{u} will be overloaded to the same name.  If the \ml{tmnm} is the
+same as a concrete syntax rule's token, then the behaviour is to
+create a new rule mapping to the same name, but with the string \ml{u}
+used as the token. 
+
+\paragraph{Lexing rules with Unicode characters}
+%
+\index{tokens!Unicode characters} 
+\index{identifiers, in HOL logic@identifiers, in \HOL{} logic!non-aggregating characters}
+%
+Roughly speaking, \HOL{} considers characters to be divided into three
+classes: alphanumerics, non-aggregating symbols and symbols.  This
+affects the behaviour of the lexer when it encounters strings of
+characters.  Unless there is a specific ``mixed'' token already in the
+grammar, tokens split when the character class changes.  Thus, in the
+string
+\begin{verbatim}
+   ++a
+\end{verbatim}
+the lexer will see two tokens, \holtxt{++} and \holtxt{a}, because
+\holtxt{+} is a symbol and \holtxt{a} is an alphanumeric.  The
+classification of the additional Unicode characters is very
+simplistic: all Greek letters except \holtxt{$\lambda$} are alphanumeric;
+the logical negation symbol \holtxt{$\neg$} is non-aggregating; and
+everything else is symbolic.  (The exception for \holtxt{$\lambda$} is to
+allow strings like \holtxt{$\lambda$x.x} to lex into \emph{four} tokens.)
+
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|)}
+
 
 \subsubsection{Type constraints}
 \label{sec:parseprint-type-constraints}
@@ -348,6 +474,7 @@ special parsing behaviour from lexemes:
 \end{hol}
 
 \subsubsection{Type inference}
+\label{sec:parser:type-inference}
 
 \index{type inference!in HOL parser@in \HOL{} parser|(}
 Consider the term \holtxt{x = T}: it (and all of its subterms)
@@ -379,7 +506,9 @@ will raise an exception.
 
 
 \subsubsection{Overloading}
+\label{sec:parsing:overloading}
 
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading|(}
 A limited amount of overloading resolution is performed by the term
 parser. For example, the `tilde' symbol (\holtxt{\~{}})
 denotes boolean negation in the initial theory of \HOL, and it also denotes
@@ -430,6 +559,7 @@ Note that the symbol \holtxt{\~{}} stands for two different constants in
 the second quotation; its first occurrence is boolean negation, while
 the other two occurrences are the additive inverse operation for
 integers.
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading|)}
 
 \subsubsection{Fixities}
 \label{sec:parseprint:fixities}
@@ -669,6 +799,7 @@ The rule for this is thus:
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!hiding constant status in|(}
 \index{HOL system@\HOL{} system!hiding constants in|(}
 \index{constants, in HOL logic@constants, in \HOL{} logic!hiding status of}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
 %
 The following function can be used to hide the constant status of a
 name from the quotation parser.
@@ -691,9 +822,11 @@ This is useful if one wants to use variables
 %
 with the same names as previously declared (or built-in) constants
 (\eg\ \ml{o}, \ml{I}, \ml{S} \etc).  The name $x$ is still a constant
-for the constructors, theories, etc; \ml{hide} affects only parsing.
-See the \REFERENCE{} entry for \ml{hide} for more details, including
-an explanation of the return type.
+for the constructors, theories, etc; \ml{hide} affects parsing and
+printing by removing the given name from the ``overload map''
+described above in Section~\ref{sec:parser:architecture}.  See the
+\REFERENCE{} entry for \ml{hide} for more details, including an
+explanation of the return type.
 
 The function
 

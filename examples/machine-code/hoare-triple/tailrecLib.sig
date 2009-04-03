@@ -12,4 +12,6 @@ sig
 
     val TAILREC_EQ_TAC       : unit -> tactic
 
+    val tailrec_add_to_simpsets : thm * thm * thm * thm * thm * thm -> unit
+
 end

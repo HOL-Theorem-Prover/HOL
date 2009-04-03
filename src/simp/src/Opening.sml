@@ -3,9 +3,10 @@ struct
 
 open HolKernel boolLib liteLib Trace;
 
-type tmcid = string * string;
 
-type congproc  = {relation:tmcid,
+fun samerel t1 t2 = same_const t1 t2 orelse aconv t1 t2
+
+type congproc  = {relation:term,
 		  solver : term -> thm,
 		  freevars: term list,
 		  depther : thm list * term -> conv} -> conv
@@ -47,25 +48,34 @@ fun ERR x = STRUCT_ERR "Opening" x;
  *   nconds_of_congrule imp_forall_rule;  (* 1 *)
  * ---------------------------------------------------------------------*)
 
+fun dest_binop t = let
+  val (fx,y) = dest_comb t
+  val (f,x) = dest_comb fx
+in
+  (f,x,y)
+end
+
 fun is_congruence tm =
-    is_eq tm orelse
-    let val (rel,[left,right]) = strip_comb tm
-    in (can (ho_kind_match_term [] [] empty_tmset left) right) andalso
-       (can (ho_kind_match_term [] [] empty_tmset right) left)
+    is_eq tm orelse let
+      val (rel,left,right) = dest_binop tm
+    in
+      (can (ho_kind_match_term [] [] empty_tmset left) right) andalso
+      (can (ho_kind_match_term [] [] empty_tmset right) left)
     end
-   handle HOL_ERR _ => false | Bind => false
-fun rel_of_congrule thm =
-   let fun aux tm = if (is_congruence tm)
-                    then fst (strip_comb tm)
-                    else aux (snd (dest_imp tm))
-   in aux (snd(strip_forall (concl thm)))
-   end
-   handle e => WRAP_ERR("rel_of_congrule",e);
-fun nconds_of_congrule thm =
-   let fun aux tm = if is_congruence tm then 0 else aux (snd(dest_imp tm)) + 1
-   in aux (snd(strip_forall(concl thm)))
-   end
-   handle e => WRAP_ERR("nconds_of_congrule",e);
+   handle HOL_ERR _ => false
+
+fun rel_of_congrule thm = let
+  fun aux tm = if is_congruence tm then #1 (dest_binop tm)
+               else aux (snd (dest_imp tm))
+in
+  aux (snd(strip_forall (concl thm)))
+end handle e => WRAP_ERR("rel_of_congrule",e)
+
+fun nconds_of_congrule thm = let
+  fun aux tm = if is_congruence tm then 0 else aux (snd(dest_imp tm)) + 1
+in
+  aux (snd(strip_forall(concl thm)))
+end handle e => WRAP_ERR("nconds_of_congrule",e)
 
 (* ---------------------------------------------------------------------
  * CONGPROC : REFL -> congrule -> congproc
@@ -116,7 +126,7 @@ let
 
    val congrule' = GSPEC (GEN_ALL congrule)
    val nconds = nconds_of_congrule congrule'
-   val rel = name_of_const(rel_of_congrule congrule')
+   val rel = rel_of_congrule congrule'
 
    val (conditions,conc) = strip_n_imp nconds (concl congrule')
    val matcher =
@@ -133,7 +143,7 @@ let
            conditions
 
 in fn {relation,solver,depther,freevars} =>
-  if (relation <> rel) then failwith "not applicable" else fn tm =>
+  if not (samerel relation rel) then failwith "not applicable" else fn tm =>
   let val match_thm = matcher tm
       val _ = trace(3,OPENING(tm,congrule'))
       val (_,conc) = strip_n_imp nconds (concl match_thm)
@@ -155,7 +165,11 @@ in fn {relation,solver,depther,freevars} =>
   	      is a congruence condition *)
             val (ho_vars,bdy1) = strip_forall condition
             val (assums,bdy2) = strip_imp_until_rel genvars bdy1
-            val (oper,args) = strip_comb bdy2
+            val (oper,args) = let
+              val (f,x,y) = dest_binop bdy2
+            in
+              (f,[x,y])
+            end handle HOL_ERR _ => strip_comb bdy2
         in
           if (length args = 2 andalso op_mem eq (#1 (strip_comb (el 2 args))) genvars) then
             let val [orig,res] = args
@@ -209,7 +223,7 @@ end;
  * ---------------------------------------------------------------------*)
 
 fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
- if relation <> ("=","min") then failwith "not applicable"
+ if not (same_const relation boolSyntax.equality) then failwith "not applicable"
  else
  case dest_term tm
   of COMB(Rator,Rand) =>

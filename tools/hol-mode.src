@@ -549,8 +549,8 @@ file to \"use\" first."
                                     (make-temp-file-xemacs "hol")
                                  )))
             (if (stringp hol-mode-to-delete)
-                (progn (condition-case nil 
-                           (delete-file hol-mode-to-delete) 
+                (progn (condition-case nil
+                           (delete-file hol-mode-to-delete)
                          (error nil))
                        (setq hol-mode-to-delete nil)))
             ; below, use visit parameter = 1 to stop message in mini-buffer
@@ -758,6 +758,16 @@ argument N, sets the trace to that value in particular."
   (interactive)
   (hol-toggle-trace "goalstack fvs"))
 
+(defun hol-toggle-goalstack-print-goal-at-top ()
+  "Toggles the trace \"goalstack print goal at top\"."
+  (interactive)
+  (hol-toggle-trace "goalstack print goal at top"))
+
+(defun hol-toggle-goalstack-num-assums (arg)
+  "Toggles the number of assumptions shown in a goal."
+  (interactive "nMax. number of visible assumptions: ")
+  (hol-toggle-trace "goalstack number of assums" arg))
+
 (defun hol-toggle-simplifier-trace (arg)
   "Toggles the trace \"simplifier\".  With ARG sets trace to this value."
   (interactive "P")
@@ -783,8 +793,10 @@ argument N, sets the trace to that value in particular."
   (interactive)
   (message "Toggling 'Quiet declaration'")
   (send-raw-string-to-hol
-   (concat "val _ = print (\"*** 'Quiet declaration' now \" ^"
-           "Bool.toString (HOL_Interactive.toggle_quietdec()) ^ \" ***\\n\")")))
+   (concat
+    "val _ = print (\"*** 'Quiet declaration' now \" ^"
+    "Bool.toString (HOL_Interactive.toggle_quietdec()) ^ \" ***\\n\")"))
+  (hol-toggle-var "Globals.interactive"))
 
 (defun hol-toggle-show-times()
   "Toggles the elisp variable 'hol-emit-time-elapsed-p."
@@ -826,7 +838,7 @@ printed out.  (That's assuming that quietdec is false to start with.)"
 (defun hol-db-match (tm)
   "Does a DB.match [] on the given TERM (given as a string, without quotes)."
   (interactive "sTerm to match on: ")
-  (send-raw-string-to-hol (format "DB.match [] (Term`%s`)" tm)
+  (send-raw-string-to-hol (format "DB.print_match [] (Term`%s`)" tm)
                           hol-echo-commands-p))
 
 (defun hol-drop-all-goals ()
@@ -875,6 +887,8 @@ already loaded.)"
 (define-key hol-map "\C-a" 'hol-toggle-show-assums)
 (define-key hol-map "\C-c" 'hol-interrupt)
 (define-key hol-map "\C-f" 'hol-toggle-goalstack-fvs)
+(define-key hol-map "\C-o" 'hol-toggle-goalstack-print-goal-at-top)
+(define-key hol-map "\M-a" 'hol-toggle-goalstack-num-assums)
 (define-key hol-map "\C-l" 'hol-recentre)
 (define-key hol-map "\C-n" 'hol-toggle-show-numeral-types)
 (define-key hol-map "\C-q" 'hol-toggle-quietdec)

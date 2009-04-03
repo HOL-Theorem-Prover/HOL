@@ -1,239 +1,355 @@
 open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_eval";
 
-open lisp_opsTheory compilerLib;
-
+open compilerLib codegenLib decompilerLib;
+open lisp_opsTheory;
 
 val _ = let
   val thms = DB.match [] ``SPEC ARM_MODEL``
   val thms = filter (can (find_term (can (match_term ``aLISP``))) o concl) (map (fst o snd) thms)
-  val renamer = Q.INST [`x1`|->`exp`,`x2`|->`x`,`x3`|->`y`,`x4`|->`z`,`x5`|->`stack`,`x6`|->`alist`]
+  val renamer = Q.INST [`x1`|->`exp`,`x2`|->`x`,`x3`|->`y`,`x4`|->`z`,`x5`|->`stack`,`x6`|->`alist`] o INST [``limit:num``|->``l:num``]
   val thms = map renamer thms
-  val thms = map (RW [arm_alloc_code,arm_equal_code]) thms
+  val _ = add_code_abbrev [arm_alloc_code,arm_equal_code]
   val _ = add_compiled thms
   in () end;
 
 val _ = let
   val thms = DB.match [] ``SPEC PPC_MODEL``
   val thms = filter (can (find_term (can (match_term ``pLISP``))) o concl) (map (fst o snd) thms)
-  val renamer = Q.INST [`x1`|->`exp`,`x2`|->`x`,`x3`|->`y`,`x4`|->`z`,`x5`|->`stack`,`x6`|->`alist`]
+  val renamer = Q.INST [`x1`|->`exp`,`x2`|->`x`,`x3`|->`y`,`x4`|->`z`,`x5`|->`stack`,`x6`|->`alist`] o INST [``limit:num``|->``l:num``]
   val thms = map renamer thms
-  val thms = map (RW [ppc_alloc_code,ppc_equal_code]) thms
+  val _ = add_code_abbrev [ppc_alloc_code,ppc_equal_code]
   val _ = add_compiled thms
   in () end;
 
 val _ = let
   val thms = DB.match [] ``SPEC X86_MODEL``
   val thms = filter (can (find_term (can (match_term ``xLISP``))) o concl) (map (fst o snd) thms)
-  val renamer = Q.INST [`x1`|->`exp`,`x2`|->`x`,`x3`|->`y`,`x4`|->`z`,`x5`|->`stack`,`x6`|->`alist`]
+  val renamer = Q.INST [`x1`|->`exp`,`x2`|->`x`,`x3`|->`y`,`x4`|->`z`,`x5`|->`stack`,`x6`|->`alist`] o INST [``limit:num``|->``l:num``,mk_var("eip",``:word32``) |-> mk_var("p",``:word32``)]
   val thms = map renamer thms
-  val thms = map (RW [x86_alloc_code,x86_equal_code]) thms
+  val _ = add_code_abbrev [x86_alloc_code,x86_equal_code]
   val _ = add_compiled thms
   in () end;
 
+(*
+  val _ = print_compiler_grammar()
+*)
 
-fun compile_lisp_eval target = let
+val STATE = ``(exp:SExp,x:SExp,y:SExp,z:SExp,stack:SExp,alist:SExp,l:num)``
 
-val (x,def1,z) = compile target ``
-  lookup_loop (exp,x,z) = 
-    let x = CAR z in
+val (thms,_,_) = compile_all ``
+ (lookup_aux ^STATE = 
+    let x = CAR y in
     let x = CAR x in
       if exp = x then 
-        let x = CAR z in
-        let x = CDR x in (exp,x,z)
+        let x = CAR y in
+        let exp = CDR x in
+          ^STATE
       else 
-        let z = CDR z in
-          lookup_loop (exp,x,z)``;
-
-val (x,def2,z) = compile target ``
-  lookup (exp,x,alist) = 
-    let z = alist in
-    let (exp,x,z) = lookup_loop (exp,x,z) in
-      (exp,x,z,alist)``;
-
-val (x,def3,z) = compile target ``
-  lisp_eval_pair(exp,x:SExp,y:SExp,z:SExp,stack:SExp,alist:SExp,limit:num) =
-    if x = Sym "quote" then 
-      let exp = CAR exp in
-      let x = Sym "t" in  (* i.e. mark that the evaluation is complete *)
-        (exp,x,y,z,stack,alist,limit)
-    else (* all others require the first argument to be evaluated *) 
-      let y = CAR exp in
-      let exp = CDR exp in
-      let exp = Dot exp x in (* make pair of the other args and the func name *)
-      let x = stack in
-      let stack = Sym "nil" in
-      let exp = Dot exp x in
-      let stack = exp in (* push the pair onto the stack *)
-      let exp = y in
-      let x = Sym "nil" in (* i.e. mark that next iteration is to evaluate exp *)
-        (exp,x,y,z,stack,alist,limit)``;
-
-val (x,def4,z) = compile target ``
-  (* x = function name, y = first arg, exp = second arg *)
-  eval_two_arg_func(exp,x:SExp,y:SExp,z:SExp,stack:SExp,alist:SExp,limit:num) =
-    if x = Sym "-" then 
-      let x = y in
-      let exp = LISP_SUB exp x in
-      let x = Sym "t" in
-        (exp,x,y,z,stack,alist,limit)
-    else if x = Sym "+" then 
-      let x = y in
-      let exp = LISP_ADD exp x in
-      let x = Sym "t" in
-        (exp,x,y,z,stack,alist,limit)
-    else if x = Sym "equal" then 
-      let x = y in
-      let exp = LISP_EQUAL exp x in
-      let x = Sym "t" in
-        (exp,x,y,z,stack,alist,limit)
-    else if x = Sym "cons" then 
-      let x = y in
-      let exp = Dot exp x in
-      let x = Sym "t" in
-        (exp,x,y,z,stack,alist,limit)
-    else 
-      (exp,x,y,z,stack,alist,limit)`` 
-
-val (x,def4,z) = compile target ``
-  (* x = function name, exp = first (and only) arg *)
-  eval_consp(exp:SExp) =
-    if isDot exp then 
-      let exp = Sym "t" in exp
-    else 
-      let exp = Sym "nil" in exp``
-
-val (x,def4,z) = compile target ``
-  (* x = function name, exp = first (and only) arg *)
-  eval_symbolp(exp:SExp) =
-    if isSym exp then 
-      let exp = Sym "t" in exp
-    else 
-      let exp = Sym "nil" in exp``
-
-val (x,def4,z) = compile target ``
-  (* x = function name, exp = first (and only) arg *)
-  eval_numberp(exp:SExp) =
-    if isSym exp then 
-      let exp = Sym "nil" in exp
-    else 
-      if isDot exp then 
-        let exp = Sym "nil" in exp
-      else 
-        let exp = Sym "t" in exp``
-
-val (x,def4,z) = compile target ``
-  (* x = function name, exp = first (and only) arg *)
-  eval_one_arg_func(exp:SExp,x:SExp,y:SExp) =
-    if x = Sym "car" then 
-      let exp = CAR exp in
-      let x = Sym "t" in
-        (exp,x,y)
-    else if x = Sym "cdr" then 
-      let exp = CDR exp in
-      let x = Sym "t" in
-        (exp,x,y)
-    else if x = Sym "consp" then 
-      let exp = eval_consp exp in
-      let x = Sym "t" in
-        (exp,x,y)
-    else if x = Sym "symbolp" then 
-      let exp = eval_symbolp exp in
-      let x = Sym "t" in
-        (exp,x,y)
-    else if x = Sym "numberp" then 
-      let exp = eval_numberp exp in
-      let x = Sym "t" in
-        (exp,x,y)
-    else (exp,x,y)``
-
-val (x,def5,z) = compile target ``
-  lisp_eval_normal(exp:SExp,x:SExp,y:SExp,z:SExp,stack:SExp,alist:SExp,limit:num) =
-    if isDot y then (* if there are unevaluated arguments *)
-      let exp = Dot exp x in 
-      let x = CDR y in
-      let exp = Dot exp x in 
-      let x = stack in
-      let exp = Dot exp x in 
-      let stack = exp in     
-      (* make the stack: Dot (Dot (Dot evalaued_arg function_name) (Sym "nil")) old_stack *)
+        let y = CDR y in
+          lookup_aux ^STATE)
+  /\
+ (lisp_lookup ^STATE = 
+    let y = alist in
+    let (exp,x,y,z,stack,alist,l) = lookup_aux ^STATE in
+      ^STATE)
+ /\
+ (zip_yz ^STATE = 
+    if isDot y then 
+      let alist = exp in
       let exp = CAR y in
-      let x = Sym "nil" in 
-        (exp,x,y,z,stack,alist,limit)      
+      let x = CAR z in
+      let exp = Dot exp x in
+      let x = alist in
+      let exp = Dot exp x in
+      let y = CDR y in
+      let z = CDR z in
+        zip_yz ^STATE
     else
-      if isDot x then (* if, there are more than one evaluated arg *)
-        let y = CDR x in
-        let x = CAR x in  
-        (* x = function name, y = first arg, exp = second arg *)
-        let (exp,x,y,z,stack,alist,limit) = eval_two_arg_func(exp,x,y,z,stack,alist,limit) in
-          (exp,x,y,z,stack,alist,limit)
-      else (* only one arg *)
-        (* x = function name, exp = first (and only) arg *)
-        let (exp,x,y) = eval_one_arg_func(exp,x,y) in
-          (exp,x,y,z,stack,alist,limit)`` 
-
-val (x,def6,z) = compile target ``
-  lisp_eval_if(exp:SExp,x:SExp,y:SExp,z:SExp,stack:SExp,alist:SExp,limit:num) =
+      ^STATE)
+  /\
+ (lisp_length ^STATE = 
+    if isDot x then 
+      let exp = LISP_ADD exp (Val 1) in
+      let x = CDR x in
+        lisp_length ^STATE
+    else
+      ^STATE) 
+  /\
+ (lisp_less ^STATE = 
+    if getVal exp < getVal x 
+    then let exp = Sym "t" in ^STATE
+    else let exp = Sym "nil" in ^STATE)
+  /\
+ (lisp_symbolp ^STATE = 
+    if isSym exp 
+    then let exp = Sym "t" in ^STATE
+    else let exp = Sym "nil" in ^STATE)
+  /\
+ (lisp_consp ^STATE = 
+    if isDot exp 
+    then let exp = Sym "t" in ^STATE
+    else let exp = Sym "nil" in ^STATE)
+  /\
+ (lisp_less ^STATE = 
+    if getVal exp < getVal x 
+    then let exp = Sym "t" in ^STATE
+    else let exp = Sym "nil" in ^STATE)
+  /\
+ (lisp_atomp ^STATE = 
+    if isDot exp 
+    then let exp = Sym "nil" in ^STATE
+    else let exp = Sym "t" in ^STATE)
+  /\
+ (lisp_numberp ^STATE = 
+    if isDot exp 
+    then let exp = Sym "nil" in ^STATE
+    else if isSym exp 
+    then let exp = Sym "nil" in ^STATE
+    else let exp = Sym "t" in ^STATE)
+  /\
+ (lisp_func ^STATE = 
+    if isDot x then
+      let y = CDR x in
+      let x = CAR x in
+        if x = Sym "lambda" then 
+          let z = exp in      (* z := evaluated args   *)
+          let x = exp in
+          let exp = Val 0 in
+          let (exp,x,y,z,stack,alist,l) = lisp_length ^STATE in
+          let x = stack in
+          let exp = Dot exp x in
+          let x = exp in
+          let exp = CDR y in  (* exp := body of lambda *)
+          let exp = Dot exp x in
+          let stack = exp in
+          let y = CAR y in    (* y := parameter names  *)
+          let exp = alist in
+          let x = y in
+          let (exp,x,y,z,stack,alist,l) = zip_yz ^STATE in
+          let alist = exp in
+          let exp = CAR stack in
+          let stack = CDR stack in
+          let exp = CAR exp in
+          let z = TASK_EVAL in
+            ^STATE
+        else (* if x = Sym "label" *)
+          let z = exp in
+          let exp = Val 1 in
+          let x = stack in
+          let exp = Dot exp x in
+          let stack = exp in
+          let x = CDR y in
+          let exp = CAR y in
+          let x = CAR x in
+          let exp = Dot exp x in
+          let x = alist in
+          let exp = Dot exp x in
+          let x = CDR y in
+          let alist = exp in
+          let exp = z in
+          let x = CAR x in
+          let z = TASK_FUNC in          
+            lisp_func ^STATE
+    else (* x must be a symbol *)
+      let z = TASK_CONT in
+        if x = Sym "car" then 
+          let exp = CAR exp in   
+          let exp = CAR exp in   
+            ^STATE
+        else if x = Sym "cdr" then 
+          let exp = CAR exp in   
+          let exp = CDR exp in   
+            ^STATE
+        else if x = Sym "cons" then 
+          let x = CDR exp in   
+          let exp = CAR exp in   
+          let x = CAR x in   
+          let exp = Dot exp x in
+            ^STATE
+        else if x = Sym "+" then 
+          let x = CDR exp in   
+          let exp = CAR exp in   
+          let x = CAR x in   
+          let exp = LISP_ADD exp x in
+            ^STATE
+        else if (x = Sym "-") then 
+          let x = CDR exp in   
+          let exp = CAR exp in   
+          let x = CAR x in   
+          let exp = LISP_SUB exp x in
+            ^STATE
+        else if (x = Sym "<") then 
+          let x = CDR exp in   
+          let exp = CAR exp in   
+          let x = CAR x in   
+          let (exp,x,y,z,stack,alist,l) = lisp_less ^STATE in
+            ^STATE
+        else if (x = Sym "atomp") then 
+          let exp = CAR exp in   
+          let (exp,x,y,z,stack,alist,l) = lisp_atomp ^STATE in
+            ^STATE
+        else if (x = Sym "consp") then 
+          let exp = CAR exp in   
+          let (exp,x,y,z,stack,alist,l) = lisp_consp ^STATE in
+            ^STATE
+        else if (x = Sym "numberp") then 
+          let exp = CAR exp in   
+          let (exp,x,y,z,stack,alist,l) = lisp_numberp ^STATE in
+            ^STATE
+        else if (x = Sym "symbolp") then 
+          let exp = CAR exp in   
+          let (exp,x,y,z,stack,alist,l) = lisp_symbolp ^STATE in
+            ^STATE
+        else if (x = Sym "equal") then 
+          let x = CDR exp in   
+          let exp = CAR exp in   
+          let x = CAR x in   
+          let exp = LISP_EQUAL exp x in
+            ^STATE
+        else (* if none of the above, then lookup in alist and repeat *)
+          let z = exp in
+          let exp = x in
+          let (exp,x,y,z,stack,alist,l) = lisp_lookup ^STATE in
+          let x = exp in
+          let exp = z in
+          let z = TASK_FUNC in
+            lisp_func ^STATE)
+  /\
+ (rev_exp ^STATE = 
+    if isDot z then 
       let x = exp in
-        if x = Sym "nil" then 
-          let y = CDR y in
-          let exp = CAR y in  
-          let x = Sym "nil" in
-            (exp,x,y,z,stack,alist,limit)
-        else 
-          let exp = CAR y in  
-          let x = Sym "nil" in
-            (exp,x,y,z,stack,alist,limit)``;
+      let exp = CAR z in
+      let exp = Dot exp x in
+      let z = CDR z in
+        rev_exp ^STATE
+    else
+      let x = y in
+        ^STATE)
+  /\
+ (reverse_exp (exp,x,y,z:SExp,stack,alist,l) = 
+    let z = exp in
+    let exp = Sym "nil" in
+    let (exp,x,y,z,stack,alist,l) = rev_exp ^STATE in
+    let z = TASK_FUNC in
+      ^STATE)
+  /\
+ (repeat_cdr ^STATE = 
+    if x = Val 0 then ^STATE else
+      let alist = CDR alist in
+      let x = LISP_SUB x (Val 1) in
+        repeat_cdr ^STATE)
+  /\
+ (lisp_cont ^STATE = 
+    let x = CAR stack in
+    let stack = CDR stack in
+      if ~isDot x then (* drop elements from alist *)
+        let (exp,x,y,z,stack,alist,l) = repeat_cdr ^STATE in
+          ^STATE
+      else 
+        let z = x in
+        let x = CAR stack in
+          if x = Sym "cond" then (* deal with conditional *)
+            let stack = CDR stack in
+              if exp = Sym "nil" then (* guard is false *)
+                let exp = x in
+                let x = CDR z in
+                let exp = Dot exp x in
+                let z = TASK_EVAL in
+                  ^STATE
+              else (* guard is true *)
+                let exp = CAR z in
+                let exp = CDR exp in
+                let exp = CAR exp in
+                let z = TASK_EVAL in
+                  ^STATE
+          else
+            let y = CAR z in (* list of unevaluated args *)
+            let x = CDR z in (* list of evaluated args *)
+              if isDot y then (* still args to evaluate *)
+                let z = CAR y in 
+                let exp = Dot exp x in
+                let x = exp in
+                let exp = CDR y in
+                let exp = Dot exp x in
+                let x = stack in
+                let exp = Dot exp x in
+                let stack = exp in
+                let exp = z in
+                let z = TASK_EVAL in
+                  ^STATE
+              else
+                let y = CAR stack in
+                let stack = CDR stack in
+                let exp = Dot exp x in
+                let (exp,x,y,z,stack,alist,l) = reverse_exp ^STATE in
+                  ^STATE)
+  /\
+ (lisp_app ^STATE = 
+    if x = Sym "quote" then
+      let exp = CAR exp in
+        ^STATE
+    else if x = Sym "cond" then
+      if isDot exp then
+        let z = exp in
+        let exp = x in
+        let x = stack in
+        let exp = Dot exp x in
+        let x = exp in
+        let exp = z in
+        let exp = Dot exp x in
+        let stack = exp in
+        let exp = CAR z in
+        let exp = CAR exp in
+        let z = TASK_EVAL in
+          ^STATE
+      else 
+        ^STATE
+    else (* normal function: push function onto stack, push args onto stack *)
+      if isDot exp then (* there is at least one arg *)
+        let y = CAR exp in
+        let z = CDR exp in
+        let exp = x in
+        let x = stack in
+        let exp = Dot exp x in
+        let stack = exp in
+        let exp = z in
+        let x = Sym "nil" in
+        let exp = Dot exp x in
+        let x = stack in
+        let exp = Dot exp x in
+        let stack = exp in
+        let exp = y in
+        let z = TASK_EVAL in
+          ^STATE
+      else (* there are no args *)
+        let z = TASK_FUNC in
+          ^STATE)
+  /\
+ (lisp_eval ^STATE = 
+    if z = TASK_EVAL then 
+      let z = TASK_CONT in 
+      if isSym exp then (* exp is Sym *) 
+        let (exp,x,y,z,stack,alist,l) = lisp_lookup ^STATE in 
+          lisp_eval ^STATE 
+      else if isDot exp then (* exp is Dot *) 
+        let x = CAR exp in  
+        let exp = CDR exp in 
+        let (exp,x,y,z,stack,alist,l) = lisp_app ^STATE in 
+            lisp_eval ^STATE 
+      else (* exp is Num *) 
+        lisp_eval ^STATE 
+    else if z = TASK_FUNC then (* function=x, args stored as list in exp *)
+      let (exp,x,y,z,stack,alist,l) = lisp_func ^STATE in 
+        lisp_eval ^STATE
+    else (* if z = TASK_CONT then *) 
+      if isDot stack then (* something is still on the to-do list *) 
+        let (exp,x,y,z,stack,alist,l) = lisp_cont ^STATE in 
+          lisp_eval ^STATE
+      else (* something is still on the to-do list *) 
+        ^STATE)``;
 
-val (x,def6,z) = compile target ``
-  lisp_continue(exp:SExp,x:SExp,y:SExp,z:SExp,stack:SExp,alist:SExp,limit:num) =
-    if x = Sym "if" then
-      let (exp,x,y,z,stack,alist,limit) = lisp_eval_if(exp,x,y,z,stack,alist,limit) in
-        (exp,x,y,z,stack,alist,limit)
-    else (* if it's not an if-statement *)  
-      let (exp,x,y,z,stack,alist,limit) = lisp_eval_normal(exp,x,y,z,stack,alist,limit) in
-        (exp,x,y,z,stack,alist,limit)``
+val _ = map (fn (name,th) => 
+  save_thm("SPEC_lisp_eval_" ^ name ^ "_thm",th)) thms
 
-val (x,def8,z) = compile target ``
-  lisp_eval_atom(exp:SExp,x:SExp,y:SExp,z:SExp,stack:SExp,alist:SExp,limit:num) =
-    let x = Sym "t" in
-      if isSym exp then 
-        let (exp,x,z,alist) = lookup(exp,x,alist) in
-          (exp,x,y,z,stack,alist,limit)
-      else (* exp is a Num *)
-          (exp,x,y,z,stack,alist,limit)``;        
-
-val (x,def7,z) = compile target ``
-  lisp_evaluate(exp:SExp,x:SExp,y:SExp,z:SExp,stack:SExp,alist:SExp,limit:num) =
-    if isDot exp then 
-      let x = CAR exp in
-      let exp = CDR exp in
-      let (exp,x,y,z,stack,alist,limit) = lisp_eval_pair(exp,x,y,z,stack,alist,limit) in
-        (exp,x,y,z,stack,alist,limit)
-    else 
-      let (exp,x,y,z,stack,alist,limit) = lisp_eval_atom(exp,x,y,z,stack,alist,limit) in
-        (exp,x,y,z,stack,alist,limit)``;
-
-val (x,def6,z) = compile target ``
-  lisp_eval (exp,x,y,z,stack,alist,limit) = 
-    if x = Sym "nil" then (* the task is to evaluate, if x = Sym "nil" *) 
-      let (exp,x,y,z,stack,alist,limit) = lisp_evaluate(exp,x,y,z,stack,alist,limit) in
-        lisp_eval (exp,x,y,z,stack,alist,limit)
-    else (* otherwise, the task is to continue *)   
-      if isDot stack then (* if there are items on the to-do list *)
-        let y = CAR stack in
-        let stack = CDR stack in (* pop an element of the stack *)
-        let x = CDR y in
-        let y = CAR y in
-        let (exp,x,y,z,stack,alist,limit) = lisp_continue(exp,x,y,z,stack,alist,limit) in
-          lisp_eval (exp,x,y,z,stack,alist,limit)
-      else (* there is nothing left to do, return *)          
-        (exp,x,y,z,stack,alist,limit)`` 
-
-in save_thm("lisp_eval_" ^ target, x) end;
-
-val _ = compile_lisp_eval "ARM"
-val _ = compile_lisp_eval "PowerPC"
-val _ = compile_lisp_eval "x86"
-    
 val _ = export_theory();
 

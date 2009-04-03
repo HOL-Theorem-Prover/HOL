@@ -4,6 +4,8 @@ open arithmeticTheory boolSimps
 
 local open string_numTheory in end
 
+fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
+
 val _ = new_theory "pure_dB"
 
 (* the type of pure de Bruijn terms *)
@@ -223,16 +225,16 @@ val _ = export_rewrites ["dpm_supp"]
 (* this is enough to establish de Bruijn terms as a nominal type for the
    purposes of function definition.  I.e., now we can define functions
    that have dB terms as their range *)
-val _ = binderLib.range_database :=
-        Binarymap.insert(!binderLib.range_database, "pdb",
-                         {nullfv = ``dABS (dV 0)``,
-                          rewrites = [],
-                          inst = ["rFV" |-> (fn () => ``pure_dB$dFVs``),
-                                  "rswap" |-> (fn () =>
-                                                  ``\x y t. dpm [(x,y)] t``),
-                                  "apm" |-> (fn () => ``pure_dB$dpm``)]})
-
-
+val _ = binderLib.type_db :=
+        Binarymap.insert(!binderLib.type_db, {Thy="pure_dB", Name = "pdb"},
+                         binderLib.NTI {
+                         nullfv = ``dABS (dV 0)``,
+                         pm_rewrites = [],
+                         pm_constant = ``dpm``,
+                         fv_rewrites = [],
+                         fv_constant = ``dFV``,
+                         recursion_thm = NONE,
+                         binders = []})
 
 (* substitution of a fresh variable is actually a permutation *)
 val fresh_dpm_sub = store_thm(
@@ -914,6 +916,45 @@ val fromTerm_onto = store_thm(
     SRW_TAC [ARITH_ss][] THEN
     Q.EXISTS_TAC `LAM (n2s i) t` THEN SRW_TAC [][]
   ]);
+
+(* ----------------------------------------------------------------------
+    toTerm (inverse of fromTerm)
+   ---------------------------------------------------------------------- *)
+val toTerm_def = new_specification(
+  "toTerm_def", ["toTerm"],
+  CONV_RULE SKOLEM_CONV fromTerm_onto);
+
+val fromtoTerm = save_thm("fromtoTerm", GSYM toTerm_def)
+val _ = export_rewrites ["fromtoTerm"]
+
+val toTerm_11 = Store_thm(
+  "toTerm_11",
+  ``(toTerm d1 = toTerm d2) <=> (d1 = d2)``,
+  SRW_TAC [][EQ_IMP_THM] THEN 
+  POP_ASSUM (MP_TAC o Q.AP_TERM `fromTerm`) THEN 
+  SRW_TAC [][]);
+
+val toTerm_onto = store_thm(
+  "toTerm_onto",
+  ``!t. ?d. toTerm d = t``,
+  METIS_TAC [fromTerm_11, fromtoTerm]);
+
+val tofromTerm = Store_thm(
+  "tofromTerm",
+  ``toTerm (fromTerm t) = t``,
+  METIS_TAC [toTerm_onto, toTerm_11, fromtoTerm])
+
+val toTerm_eqn = store_thm(
+  "toTerm_eqn", 
+  ``(toTerm x = y) <=> (fromTerm y = x)``,
+  SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][])
+
+val toTerm_thm = Store_thm(
+  "toTerm_thm",
+  ``(toTerm (dV i) = VAR (n2s i)) /\
+    (toTerm (dAPP M N) = toTerm M @@ toTerm N) /\
+    (toTerm (dLAM i M) = LAM (n2s i) (toTerm M))``,
+  SRW_TAC [][toTerm_eqn]);
 
 (* ----------------------------------------------------------------------
     Eta reduction

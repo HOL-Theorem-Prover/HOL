@@ -64,7 +64,7 @@ fun basic_term2guard tm = (* expects input to use "~", "<+", "<" and "=" only *)
       if not ((hd o explode o fst o dest_var) tm = c) then hd [] else
         (string_to_int o implode o tl o explode o fst o dest_var) tm
     val dest_reg = dest_var_char #"r"
-    fun dest_n2w tm = if car tm = ``n2w:num->word32`` then numSyntax.dest_numeral (cdr tm) else hd []
+    fun dest_n2w tm = if eq (car tm) ``n2w:num->word32`` then numSyntax.dest_numeral (cdr tm) else hd []
     fun dest_x tm = ASSIGN_X_REG (dest_reg tm) handle e => ASSIGN_X_CONST (dest_n2w tm)
     val cmps = [("word_lo", (GUARD_COMPARE_LESS false, GUARD_COMPARE_LESS_EQUAL false)), 
                 ("word_lt", (GUARD_COMPARE_LESS true, GUARD_COMPARE_LESS_EQUAL true)), 
@@ -93,7 +93,7 @@ fun basic_term2assign t1 t2 = let
       (string_to_int o implode o tl o explode o fst o dest_var) tm
   val dest_reg = dest_var_char #"r"
   val dest_stack = dest_var_char #"s"
-  fun dest_n2w tm = if car tm = ``n2w:num->word32`` then numSyntax.dest_numeral (cdr tm) else hd []
+  fun dest_n2w tm = if eq (car tm) ``n2w:num->word32`` then numSyntax.dest_numeral (cdr tm) else hd []
   fun dest_x tm = ASSIGN_X_REG (dest_reg tm) handle e => ASSIGN_X_CONST (dest_n2w tm)
   fun dest_address tm = ASSIGN_ADDRESS_REG (dest_reg tm) handle e =>
     (if not ((fst o dest_const o car o car) tm = "word_add") then hd [] else

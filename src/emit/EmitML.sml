@@ -30,9 +30,7 @@
 (* syntactically acceptable ML expressions. The latter operation is "just"   *)
 (* prettyprinting, where the prettyprinter uses a table mapping HOL types    *)
 (* and constants to their ML counterparts. This table needs to be extensible *)
-(* as theories load. The former operation requires an invocation of the ML   *)
-(* compiler. In MoscowML, there is not a way to do this in the batch system  *)
-(* which means that some deviousness is, unfortunately, required.            *)
+(* as theories load.                                                         *)
 (*                                                                           *)
 (*===========================================================================*)
 
@@ -53,6 +51,10 @@ val sigSuffix = ref "ML.sig";
 val structSuffix = ref "ML.sml";
 val sigCamlSuffix = ref "ML.mli";
 val structCamlSuffix = ref "ML.ml";
+
+val is_int_literal_hook = ref (fn _:term => false);
+val int_of_term_hook = ref 
+    (fn _:term => raise ERR "EmitML" "integers not loaded")
 
 (*---------------------------------------------------------------------------*)
 (* Misc. syntax operations                                                   *)
@@ -86,13 +88,13 @@ val orelse_tm = list_mk_abs([a,b],mk_disj(a,b))
 end
 
 (*---------------------------------------------------------------------------*)
-(* Peculiar fake names for record constructors. These help generate code for *)
+(* Peculiar names for fake record constructors. These help generate code for *)
 (* projection and access functions automatically defined for records. The    *)
 (* need for this comes from the fact that large records declarations are     *)
 (* modelled differently than small records; the difference in representation *)
-(* is vexatious when defining the projection and access functions, since we  *)
-(* want the resulting ML to look the same, i.e., be readable, no matter how  *)
-(* big the record is.                                                        *)
+(* is vexatious when defining the ML projection and access functions, since  *)
+(* we want the resulting ML to look the same, i.e., be readable, no matter   *)
+(* how big the record is.                                                    *)
 (*---------------------------------------------------------------------------*)
 
 fun mk_record_vconstr (name,ty) = mk_var(name^"--Record Constr Var",ty)
@@ -252,7 +254,7 @@ fun term_to_ML openthys side ppstrm =
      if is_cond tm then pp_cond i tm else
      if is_arb tm then pp_arb i else
      if is_num_literal tm then pp_num_literal i tm else
-     if intSyntax.is_int_literal tm then pp_int_literal tm else
+     if !is_int_literal_hook tm then pp_int_literal tm else
      if is_string_literal tm then pp_string tm else
      if listSyntax.is_list tm then pp_list tm else
      if listSyntax.is_cons tm then pp_cons i tm else
@@ -322,7 +324,7 @@ fun term_to_ML openthys side ppstrm =
            else pp_comb i tm
       end
   and pp_int_literal tm =
-         let val s = Arbint.toString(intSyntax.int_of_term tm)
+         let val s = Arbint.toString(!int_of_term_hook tm)
          in begin_block CONSISTENT 0
           ; add_string"("; add_break(0,0)
           ; add_string (pick_name openthys "int"

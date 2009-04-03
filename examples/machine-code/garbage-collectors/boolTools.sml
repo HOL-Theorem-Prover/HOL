@@ -43,8 +43,8 @@ fun rewrite_eq t1 t2 =
 
   fun findMatches ([], l2) = []
     | findMatches (a::l1, l2) =
-	 let val l1' = filter (fn e => not (e = a)) l1;
-             val l2' = filter (fn e => not (e = a)) l2;
+	 let val l1' = filter (fn e => not (eq e a)) l1;
+             val l2' = filter (fn e => not (eq e a)) l2;
 	     val l = (findMatches (l1',l2')); in
          if logical_mem a l2 then a::l else l end;
 
@@ -100,7 +100,7 @@ fun rewrite_eq t1 t2 =
           (let
 	      val (v, b) = dest_quant t;
 	      val (l1,l2) = get_impl_terms b;
-	      fun filter_pred t = not (mem v (free_vars t));
+	      fun filter_pred t = not (op_mem eq v (free_vars t));
 	  in
               (t::(filter filter_pred l1), t::(filter filter_pred l2))
           end)
@@ -166,10 +166,10 @@ fun bool_eq_imp_real_imp_CONV matches t =
       val matches_thms1 = map ASSUME matches
       val matches_thms2 = map GSYM (filter (fn thm => is_neg_eq (concl thm)) matches_thms1);
       val conc_term = rhs (concl (REWRITE_CONV (matches_thms1 @ matches_thms2) t));
-      val _ = if (conc_term = F) then raise UNCHANGED else ();
+      val _ = if (eq conc_term F) then raise UNCHANGED else ();
 
-      val goal_term = if (conc_term = T) then T else mk_imp (list_mk_conj matches, conc_term); 
-      val _ = if (t = goal_term) then raise UNCHANGED else ();
+      val goal_term = if (eq conc_term T) then T else mk_imp (list_mk_conj matches, conc_term); 
+      val _ = if (eq t goal_term) then raise UNCHANGED else ();
       (* set_goal ([], mk_eq(t, goal_term)) *)
       val thm = prove (mk_eq(t, goal_term), bool_eq_imp_real_imp_TAC matches);
    in
@@ -182,7 +182,7 @@ fun clean_disj_matches [] acc = acc
   | clean_disj_matches (t::ts) acc =
     let
        val (disj_imp,_) = get_impl_terms t;
-       val acc' = if (null_intersection disj_imp (ts@acc)) then
+       val acc' = if (null (op_intersect eq disj_imp (ts@acc))) then
 		     t::acc
                   else
 		     acc;
@@ -195,7 +195,7 @@ fun clean_conj_matches [] acc = acc
   | clean_conj_matches (t::ts) acc =
     let
        val (_, conj_imp) = get_impl_terms t;
-       val acc' = if (null_intersection conj_imp (ts@acc)) then
+       val acc' = if (null (op_intersect eq conj_imp (ts@acc))) then
 		     t::acc
                   else
 		     acc;
@@ -220,7 +220,7 @@ fun bool_eq_imp_CONV t =
       val conj_matches = clean_conj_matches (findMatches (conj_l, conj_r)) [];
 
       val matches = (map logical_mk_neg disj_matches) @ conj_matches; 
-      val _ = if matches = [] then raise UNCHANGED else ();
+      val _ = if null matches then raise UNCHANGED else ();
       val solving_case_split = find_negation_pair matches;
    in
       if isSome solving_case_split then bool_eq_imp_solve_CONV (valOf solving_case_split) t else
@@ -257,7 +257,7 @@ fun bool_imp_extract_CONV t =
       val disj_matches = clean_disj_matches disj_t [];
 
       val matches = (map logical_mk_neg disj_t);
-      val _ = if matches = [] then raise UNCHANGED else ();
+      val _ = if null matches then raise UNCHANGED else ();
    in
       bool_eq_imp_real_imp_CONV matches t
    end;
@@ -312,7 +312,7 @@ fun REFL_IMP_CONV t = DISCH t (ASSUME t);
 
 fun GEN_ASSUM v thm = 
   let
-    val assums = filter (fn t => mem v (free_vars t)) (hyp thm);
+    val assums = filter (fn t => op_mem eq v (free_vars t)) (hyp thm);
     val thm2 = foldl (fn (t,thm) => DISCH t thm) thm assums; 
     val thm3 = GEN v thm2;
     val thm4 = foldl (fn (_,thm) => UNDISCH (HO_MATCH_MP MONO_ALL thm)) 
@@ -330,16 +330,16 @@ in
    if (is_imp thm_term) then
       let
 	 val (t1, t2) = dest_imp thm_term;
-	 val _ = if not (t2 = t) then raise UNCHANGED else ();
-	 val _ = if (t1 = t2) then raise UNCHANGED else ();
+	 val _ = if not (eq t2 t) then raise UNCHANGED else ();
+	 val _ = if (eq t1 t2) then raise UNCHANGED else ();
       in
          thm
       end
    else if (is_eq thm_term) then
-      if ((lhs thm_term = t) andalso not (rhs thm_term = t)) then
+      if ((eq (lhs thm_term) t) andalso not (eq (rhs thm_term) t)) then
 	 snd (EQ_IMP_RULE thm)
       else raise UNCHANGED
-   else if (thm_term = t andalso not (t = T)) then
+   else if (eq thm_term t andalso not (eq t T)) then
       snd (EQ_IMP_RULE (EQT_INTRO thm))
    else
       raise UNCHANGED
@@ -399,7 +399,7 @@ fun UNCHANGED_STRENGTHEN_CONV conv t =
     let
        val thm = conv t;
        val (ante,conc) = dest_imp (concl thm);
-       val _ = if (ante = conc) then raise UNCHANGED else ();
+       val _ = if (eq ante conc) then raise UNCHANGED else ();
     in
        thm
     end;
@@ -417,20 +417,20 @@ fun ORELSE_STRENGTHEN_CONV [] t = raise UNCHANGED
 fun CONJ_ASSUMPTIONS_STRENGTHEN_CONV conv preserve_hyps t =
 let
     val thm = conv t;
-    val new_hyps = filter (fn t => not (mem t preserve_hyps)) (hyp thm);
+    val new_hyps = filter (fn t => not (op_mem eq t preserve_hyps)) (hyp thm);
     val hyp_thms = map (fn t => 
                        ((SOME (CONJ_ASSUMPTIONS_STRENGTHEN_CONV conv preserve_hyps t))
 		        handle HOL_ERR _ => NONE) 
                         handle UNCHANGED => NONE) new_hyps;
 
     val hyp_thms2 = filter (fn thm_opt => (isSome thm_opt andalso
-					   let val (l,r) = dest_imp (concl (valOf thm_opt)) in (not (l = r)) end handle HOL_ERR _ => false)) hyp_thms; 
+					   let val (l,r) = dest_imp (concl (valOf thm_opt)) in (not (eq l r)) end handle HOL_ERR _ => false)) hyp_thms; 
     val hyp_thms3 = map (UNDISCH o valOf) hyp_thms2; 
 
     val thm2 = foldr (fn (thm1,thm2) => PROVE_HYP thm1 thm2) thm hyp_thms3;
 
 
-    val new_hyps2 = filter (fn t => not (mem t preserve_hyps)) (hyp thm2);
+    val new_hyps2 = filter (fn t => not (op_mem eq t preserve_hyps)) (hyp thm2);
     val thm3 = foldr (fn (t,thm) => SUBST_MATCH (SPEC_ALL AND_IMP_INTRO) (DISCH t thm)) thm2 (new_hyps2);
     val thm4 = CONV_RULE (RATOR_CONV (REWRITE_CONV [])) thm3
 in

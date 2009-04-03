@@ -15,11 +15,16 @@ sig
     val basic_decompile_ppc : string -> (term * term) option -> term quotation -> thm * thm
     val basic_decompile_x86 : string -> (term * term) option -> term quotation -> thm * thm
 
-    val add_decompiled : string * thm * int * int option -> unit
-
     (* some internals exposed *)
  
     val get_output_list     : thm -> term
     val decompiler_finalise : (thm * thm -> thm * thm) ref
+
+    val add_decompiled      : string * thm * int * int option -> unit
+
+    val add_code_abbrev     : thm list -> unit
+    val set_abbreviate_code : bool -> unit
+    val get_abbreviate_code : unit -> bool
+    val UNABBREV_CODE_RULE  : thm -> thm
 
 end

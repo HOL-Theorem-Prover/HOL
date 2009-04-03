@@ -16,6 +16,17 @@ fun tailrec_top_ss()     = !tailrec_top_simpset;
 fun tailrec_part_ss()    = !tailrec_part_simpset; 
 fun tailrec_reverse_ss() = !tailrec_reverse_simpset; 
 
+fun tailrec_add_to_simpsets(f_def,pre_f_def,step,base,guard,side) = let
+  val top = rewrites [f_def,pre_f_def]
+  val part = rewrites [step,base,guard,side]
+  val reverse = rewrites [GSYM f_def,GSYM pre_f_def]
+  val _ = tailrec_simpset := simpLib.merge_ss[!tailrec_simpset,top,part];  
+  val _ = tailrec_top_simpset := simpLib.merge_ss[!tailrec_top_simpset,top];  
+  val _ = tailrec_part_simpset := simpLib.merge_ss[!tailrec_part_simpset,part];  
+  val _ = tailrec_reverse_simpset := simpLib.merge_ss[!tailrec_reverse_simpset,reverse];  
+  in () end;
+
+
 datatype ftree_type = 
     FUN_IF of term * ftree_type * ftree_type 
   | FUN_LET of term * term * ftree_type
@@ -83,6 +94,13 @@ val implies_expand = prove(``(x:bool ==> y) = ~x \/ y``,
   Cases_on `x` THEN ASM_SIMP_TAC std_ss []);
 
 fun tailrec_define tm side_option = let
+  (* remove ``():unit`` constant from lhs *)
+  fun apply g NONE = NONE
+    | apply g (SOME x) = SOME (g x)
+  fun remove_unit tm = let
+    val (x,y) = dest_eq tm
+    in (mk_eq(subst [``():unit``|->mk_var("()",``:unit``)] x,y)) end
+  val (tm,side_option) = (remove_unit tm, apply remove_unit side_option)
   (* calculate instantations to TAILREC *)
   val side_option = (case side_option of NONE => NONE | SOME tm => if is_eq tm then SOME tm else NONE)
   val (lhs,rhs) = dest_eq tm
@@ -159,13 +177,7 @@ fun tailrec_define tm side_option = let
     THEN FULL_SIMP_TAC (std_ss++helperLib.pbeta_ss) [base,step,guard,f_def,LET_DEF,if_expand,implies_expand]
     THEN SRW_TAC [] [] THEN METIS_TAC [])
   (* update simpsets *)
-  val top = rewrites [f_def,pre_f_def]
-  val part = rewrites [step,base,guard,side]
-  val reverse = rewrites [GSYM f_def,GSYM pre_f_def]
-  val _ = tailrec_simpset := simpLib.merge_ss[!tailrec_simpset,top,part];  
-  val _ = tailrec_top_simpset := simpLib.merge_ss[!tailrec_top_simpset,top];  
-  val _ = tailrec_part_simpset := simpLib.merge_ss[!tailrec_part_simpset,part];  
-  val _ = tailrec_reverse_simpset := simpLib.merge_ss[!tailrec_reverse_simpset,reverse];  
+  val _ = tailrec_add_to_simpsets(f_def,pre_f_def,step,base,guard,side)
   in (main_th,side_th) end;
 
 val lemma = simpLib.SIMP_PROVE bool_ss [] ``!x y f g. (x = y) /\ (f = g) ==> ((f:'a->'b) x = g y)``

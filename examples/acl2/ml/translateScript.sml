@@ -1197,7 +1197,9 @@ val coerce_rewrite = CONJ (GSYM STRING_EXPLODE) (GSYM STRING_IMPLODE);
 
 val STRING_LENGTH = store_thm("STRING_LENGTH",``nat (STRLEN s) = length (str s)``,
 	RW_TAC std_ss [stringp_def,ite_def,TRUTH_REWRITES,length_def,coerce_def,coerce_string_to_list_def,
-			stringTheory.STRLEN_THM,LIST_LENGTH,list_rewrite,csym_def,COMMON_LISP_def]);
+			stringTheory.STRLEN_THM,GSYM LIST_LENGTH,list_rewrite,csym_def,COMMON_LISP_def,
+                        GSYM stringTheory.STRLEN_EXPLODE_THM]);
+
 
 (*****************************************************************************)
 (* Case theorems                                                             *)

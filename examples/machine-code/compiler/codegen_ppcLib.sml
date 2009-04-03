@@ -86,13 +86,13 @@ val ppc_assign2assembly = let
     | f _ = hd []
   in f end  
 
-fun (ppc_conditionalise : string -> string -> string)  x = hd []
-fun (ppc_remove_annotations  : string -> string) x = x
+fun ppc_conditionalise (x : string) = (hd []) : string -> string
+fun ppc_remove_annotations (x : string) = x
 
 fun ppc_cond_code tm = 
-  if tm = ``pS1 (PPC_CR0 0w)`` then ("lt","ge") else 
-  if tm = ``pS1 (PPC_CR0 1w)`` then ("le","gt") else 
-  if tm = ``pS1 (PPC_CR0 2w)`` then ("eq","ne") else hd []
+  if eq tm ``pS1 (PPC_CR0 0w)`` then ("lt","ge") else 
+  if eq tm ``pS1 (PPC_CR0 1w)`` then ("le","gt") else 
+  if eq tm ``pS1 (PPC_CR0 2w)`` then ("eq","ne") else hd []
 
 
 fun ppc_encode_instruction s = (ppc_encode s, 4);

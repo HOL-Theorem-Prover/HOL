@@ -14,6 +14,8 @@ sig
     | FUN_COND of term * ftree_type
     | FUN_VAL of term;
 
+    val ftree_type_eq          : ftree_type -> ftree_type -> bool
+
     val RW                     : thm list -> thm -> thm
     val RW1                    : thm list -> thm -> thm
 
@@ -65,6 +67,7 @@ sig
     val tm2ftree               : term -> ftree_type
     val ftree2tm               : ftree_type -> term
 
+    val UNHIDE_PRE_RULE        : term -> thm -> thm
     val HIDE_PRE_RULE          : term -> thm -> thm
     val HIDE_POST_RULE         : term -> thm -> thm
     val HIDE_STATUS_RULE       : bool -> thm -> thm -> thm

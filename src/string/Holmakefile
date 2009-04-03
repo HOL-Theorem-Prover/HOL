@@ -1,2 +1,2 @@
-selftest.exe: selftest.uo stringSyntax.uo stringLib.uo stringTheory.uo
+selftest.exe: selftest.uo stringSyntax.uo stringLib.uo stringTheory.uo $(dprot $SIGOBJ/term_pp.uo)
 	$(HOLMOSMLC) -o $@ $<

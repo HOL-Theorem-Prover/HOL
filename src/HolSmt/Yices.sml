@@ -4,23 +4,17 @@
 
 structure Yices = struct
 
-  (* computes the eta-long form of a term (i.e., every variable/constant is
-     applied to sufficiently many arguments, as determined by its type),
-     recursively descending into subterms *)
-  fun eta_long tm =
-    Feedback.Raise (Feedback.mk_HOL_ERR "Yices" "eta_long"
-      "not implemented yet")
-
   (* Yices 1.0.18 only supports linear arithmetic; we do not check for
      linearity (Yices will check again anyway) *)
 
   (* translation of HOL terms into Yices' input syntax -- currently, all types
      and terms except the following are treated as uninterpreted:
-     - types: 'bool', 'num', 'int', 'real', 'fun', 'prod'
+     - types: 'bool', 'num', 'int', 'real', 'fun', 'prod', word types
      - terms: Boolean connectives (T, F, ==>, /\, \/, ~, if-then-else,
               bool-case), quantifiers (!, ?), numeric literals, arithmetic
               operators (SUC, +, -, *, /, ~, DIV, MOD, ABS, MIN, MAX), function
-              application, lambda abstraction, tuple selectors FST and SND *)
+              application, lambda abstraction, tuple selectors FST and SND,
+              various word operations *)
 
   val Yices_types = [
     (("min", "bool"), "bool", ""),
@@ -121,7 +115,11 @@ structure Yices = struct
     (realSyntax.leq_tm, "<=", ""),
     (realSyntax.great_tm, ">", ""),
     (realSyntax.geq_tm, ">=", ""),
-    (pairSyntax.comma_tm, "mk-tuple", "")
+    (pairSyntax.comma_tm, "mk-tuple", ""),
+    (wordsSyntax.word_and_tm, "bv-and", ""),
+    (wordsSyntax.word_or_tm, "bv-or", ""),
+    (wordsSyntax.word_xor_tm, "bv-xor", ""),
+    (wordsSyntax.word_1comp_tm, "bv-not", "")
   ]
 
   (* binders need to be treated differently from the operators in
@@ -152,7 +150,16 @@ structure Yices = struct
                     ((ty_dict', fresh + 1, defs'), name)
                   end
     in
-      if Type.is_type ty then
+      if wordsSyntax.is_word_type ty then
+        (* bit-vector types *)
+        let val dim_ty = wordsSyntax.dest_word_type ty
+            val dim = fcpLib.index_to_num dim_ty
+        in
+          (acc, "(bitvector " ^ Arbnum.toString dim ^ ")")
+        end handle Feedback.HOL_ERR _ => (* index_to_num can fail *)
+          raise (Feedback.mk_HOL_ERR "Yices" "translate_type"
+            "bit-vector type of unknown size")
+      else if Type.is_type ty then
         (* check table of types *)
         let val {Thy, Tyop, Args} = Type.dest_thy_type ty
         in
@@ -319,13 +326,50 @@ structure Yices = struct
             end
       end
 
+  (* performs full beta normalization *)
+  fun full_beta_conv tm =
+    boolSyntax.rhs (Thm.concl ((Conv.REDEPTH_CONV Thm.BETA_CONV) tm))
+    handle Conv.UNCHANGED => tm
+
+  (* returns the eta-long form of a term, i.e., every variable/constant is
+     applied to the correct number of arguments, as determined by its type *)
+  fun full_eta_long_conv tm =
+    if Term.is_abs tm then
+      let val (v, body) = Term.dest_abs tm
+      in
+        Term.mk_abs (v, full_eta_long_conv body)
+      end
+    else
+      let val (rand, args) = boolSyntax.strip_comb tm
+      in
+        if Term.is_abs rand then
+          Term.list_mk_comb
+            (full_eta_long_conv rand, map full_eta_long_conv args)
+        else (* 'rand' is a variable/constant *)
+          let val T = Term.type_of tm
+          in
+            if (Lib.can Type.dom_rng) T then
+              (* eta expansion (by one argument) *)
+              let val v = Term.mk_var ("x", Lib.fst (Type.dom_rng T))
+                  val fresh = Term.variant (Term.free_vars tm) v
+              in
+                full_eta_long_conv (Term.mk_abs
+                  (fresh, Term.list_mk_comb (rand, args @ [fresh])))
+              end
+            else
+              Term.list_mk_comb (rand, map full_eta_long_conv args)
+          end
+      end
+
   fun term_to_Yices tm =
   let
     val _ = if Term.type_of tm <> Type.bool then
-        Feedback.Raise (Feedback.mk_HOL_ERR "Yices" "term_to_Yices"
+        raise (Feedback.mk_HOL_ERR "Yices" "term_to_Yices"
           "term supplied is not of type bool")
       else ()
-    (* TODO: val tm = eta_long tm *)
+    (* beta-normal, eta-long form (because Yices cannot handle partial
+       applications) *)
+    val tm = full_eta_long_conv (full_beta_conv tm)
     val empty = Redblackmap.mkDict Term.compare
     val empty_ty = Redblackmap.mkDict Type.compare
     val ((_, _, _, _, defs), yices_tm) = translate_term
@@ -346,18 +390,33 @@ structure Yices = struct
       else if line = "unsat\n" then
         false
       else
-        Feedback.Raise (Feedback.mk_HOL_ERR "Yices" "is_sat"
+        raise (Feedback.mk_HOL_ERR "Yices" "is_sat"
           "satisfiability unknown (solver not installed/problem too hard?)")
     end
 
-  (* Yices 1.0.18 *)
+  (* Yices 1.0.18, native file format *)
   local val infile = "input.yices"
         val outfile = "output.yices"
   in
     val YicesOracle = SolverSpec.make_solver
-      ("Yices 1.0.18",
-       "yices " ^ infile ^ " > " ^ outfile,
+      ("Yices 1.0.18 (native)",
+       "yices -tc " ^ infile ^ " > " ^ outfile,
        term_to_Yices,
+       infile,
+       [outfile],
+       (fn () => is_sat outfile),
+       NONE,  (* no models *)
+       NONE)  (* no proofs *)
+  end
+
+  (* Yices 1.0.18, SMT-LIB file format *)
+  local val infile = "input.yices.smt"
+        val outfile = "output.yices"
+  in
+    val YicesSMTOracle = SolverSpec.make_solver
+      ("Yices 1.0.18 (SMT-LIB)",
+       "yices -tc -smt " ^ infile ^ " > " ^ outfile,
+       SmtLib.term_to_SmtLib,
        infile,
        [outfile],
        (fn () => is_sat outfile),

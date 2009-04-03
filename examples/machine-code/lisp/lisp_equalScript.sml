@@ -3,7 +3,8 @@ open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_equal";
 open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory; 
 open combinTheory finite_mapTheory addressTheory;
 
-open decompilerLib tailrecLib tailrecTheory cheney_gcTheory cheney_allocTheory compilerLib;
+open decompilerLib compilerLib;
+open tailrecLib tailrecTheory cheney_gcTheory cheney_allocTheory;
 open lisp_gcTheory lisp_typeTheory lisp_invTheory;
 
 
@@ -68,14 +69,14 @@ val (arm_eq_thm,arm_eq_def) = basic_decompile_arm "arm_eq" NONE `
 
 val _ = save_thm("arm_eq_thm",arm_eq_thm);
 
-val _ = Hol_datatype `XExp = XDot of XExp => XExp | XNum of word30 | XSym of word30`;
+val _ = Hol_datatype `XExp = XDot of XExp => XExp | XVal of word30 | XSym of word30`;
 val XExp_11 = fetch "-" "XExp_11";
 val XExp_distinct = fetch "-" "XExp_distinct";
 
 val lisp_tree_def = Define `
   (lisp_tree (XDot x y) (a,m) d = a IN d /\ a + 4w:word32 IN d /\ ALIGNED a /\
      lisp_tree x (m a,m) d /\ lisp_tree y (m (a + 4w),m) d) /\ 
-  (lisp_tree (XNum w) (a,m) d = (a = ADDR32 w + 2w)) /\ 
+  (lisp_tree (XVal w) (a,m) d = (a = ADDR32 w + 2w)) /\ 
   (lisp_tree (XSym w) (a,m) d = (a = ADDR32 w + 3w))`;
 
 val lisp_stack_def = Define `
@@ -98,12 +99,12 @@ val lisp_tree_ALIGNED_LEMMA = prove(
 val XDEPTH_def = Define `
   (XDEPTH (XDot x y) = SUC (MAX (XDEPTH x) (XDEPTH y))) /\
   (XDEPTH (XSym w) = 0) /\
-  (XDEPTH (XNum w) = 0)`;
+  (XDEPTH (XVal w) = 0)`;
 
 val XSIZE_def = Define `
   (XSIZE (XDot x y) = SUC ((XSIZE x) + (XSIZE y))) /\
   (XSIZE (XSym w) = 0) /\
-  (XSIZE (XNum w) = 0)`;
+  (XSIZE (XVal w) = 0)`;
 
 val SUM_XSIZE_def = Define `
   (SUM_XSIZE [] = 0) /\
@@ -366,7 +367,7 @@ val heap_half_DISJOINT = prove(
 
 val SExp2XExp_def = Define `
   (SExp2XExp (Dot x y) sym = XDot (SExp2XExp x sym) (SExp2XExp y sym)) /\
-  (SExp2XExp (Num n) sym = XNum (n2w n)) /\
+  (SExp2XExp (Val n) sym = XVal (n2w n)) /\
   (SExp2XExp (Sym s) sym = XSym (@w. (ADDR32 w,s) IN sym))`;
 
 val set_add_LEMMA = prove(
@@ -635,7 +636,7 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
     \\ SIMP_TAC std_ss []
     \\ STRIP_TAC \\ IMP_RES_TAC lisp_tree_THM
     \\ IMP_RES_TAC lisp_tree_11
-    \\ FULL_SIMP_TAC std_ss [LISP_EQUAL_def]
+    \\ FULL_SIMP_TAC std_ss [LISP_EQUAL_def,LISP_TEST_def]
     \\ METIS_TAC [lisp_inv_t])
   \\ ASM_SIMP_TAC std_ss [LET_DEF]
   \\ Q.ABBREV_TAC `f1 = (a - 20w =+ r4) f`    
@@ -684,7 +685,7 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
   \\ Q.PAT_ASSUM `lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,rest)` (K ALL_TAC) 
   \\ `lisp_inv (LISP_EQUAL x1 x2,x2,x3,x4,x5,x6,limit) (r3u,r4,r5,r6,r7,r8,a,df,f5,s,rest)` by
       (Cases_on `x1 = x2`      
-       \\ FULL_SIMP_TAC std_ss [LISP_EQUAL_def,arm_eq_assign_def,LET_DEF]
+       \\ FULL_SIMP_TAC std_ss [LISP_EQUAL_def,LISP_TEST_def,arm_eq_assign_def,LET_DEF]
        \\ METIS_TAC [lisp_inv_t,lisp_inv_nil])
   \\ Q.PAT_ASSUM `lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f5,s,rest)` (K ALL_TAC)
   \\ `w2n a + 16 * limit + 20 < 4294967296` by 
@@ -764,8 +765,7 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
 
 (* PowerPC implementation *)
 
-val (th,ppc_eq_loop_def) = basic_decompile_ppc "ppc_eq_loop" 
-  (SOME (``(r3:word32,r4:word32,r5:word32,r6:word32,r7:word32,r8:word32,df:word32 set,f:word32->word32)``,
+val (th,ppc_eq_loop_def) = basic_decompile_ppc "ppc_eq_loop" (SOME (``(r3:word32,r4:word32,r5:word32,r6:word32,r7:word32,r8:word32,df:word32 set,f:word32->word32)``,
          ``(r3:word32,r4:word32,r5:word32,r6:word32,r7:word32,r8:word32,df:word32 set,f:word32->word32)``)) `
   7C032000 (* LOOP:cmpw 3,4 *)
   40820034 (* bc 4,2,NEXT *)
@@ -791,8 +791,8 @@ val (th,ppc_eq_loop_def) = basic_decompile_ppc "ppc_eq_loop"
 
 val ppc_eq_loop_EQ = prove( 
   ``(ppc_eq_loop = arm_eq_loop) /\ (ppc_eq_loop_pre = arm_eq_loop_pre)``,
-  STRIP_TAC \\ REWRITE_TAC [fetch "-" "arm_eq_loop_def",fetch "-" "ppc_eq_loop_def"]
-  \\ REWRITE_TAC [fetch "-" "arm_eq_loop_pre_def",fetch "-" "ppc_eq_loop_pre_def"]
+  STRIP_TAC \\ REWRITE_TAC [fetch "-" "arm_eq_loop",fetch "-" "ppc_eq_loop"]
+  \\ REWRITE_TAC [fetch "-" "arm_eq_loop_pre",fetch "-" "ppc_eq_loop_pre"]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = x') /\ (y = y') /\ (z = z') ==> (f x y z = f x' y' z')``)
   \\ SIMP_TAC (std_ss++tailrecLib.tailrec_part_ss()) [FUN_EQ_THM,FORALL_PROD]
   \\ SIMP_TAC std_ss [LET_DEF,word_arith_lemma1]
@@ -874,8 +874,8 @@ val (th,def,pre) = compile "x86" ``
 
 val x86_eq_loop_EQ = prove( 
   ``(x86_eq_loop = arm_eq_loop) /\ (x86_eq_loop_pre = arm_eq_loop_pre)``,
-  STRIP_TAC \\ REWRITE_TAC [fetch "-" "arm_eq_loop_def",fetch "-" "x86_eq_loop_def"]
-  \\ REWRITE_TAC [fetch "-" "arm_eq_loop_pre_def",fetch "-" "x86_eq_loop_pre_def"]
+  STRIP_TAC \\ REWRITE_TAC [fetch "-" "arm_eq_loop",fetch "-" "x86_eq_loop"]
+  \\ REWRITE_TAC [fetch "-" "arm_eq_loop_pre",fetch "-" "x86_eq_loop_pre"]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = x') /\ (y = y') /\ (z = z') ==> (f x y z = f x' y' z')``)
   \\ SIMP_TAC (std_ss++tailrecLib.tailrec_part_ss()) [FUN_EQ_THM,FORALL_PROD]
   \\ SIMP_TAC std_ss [LET_DEF,word_arith_lemma1]
@@ -925,10 +925,10 @@ val x86_eq_EQ = store_thm("x86_eq_EQ",
   ``(x86_eq = arm_eq) /\ (x86_eq_pre = arm_eq_pre)``,
   SIMP_TAC (std_ss) [FUN_EQ_THM,FORALL_PROD]
   \\ `!r5 r6 r10. x86_eq_init (r5,r6,r10) = arm_eq_init (r5,r6,r10)` by 
-    SIMP_TAC std_ss [LET_DEF,fetch "-" "x86_eq_init",arm_eq_init_def]
+    SIMP_TAC std_ss [LET_DEF,fetch "-" "x86_eq_init_def",arm_eq_init_def]
   \\ `!r5 r6 r10. x86_eq_assign (r5,r6) = arm_eq_assign (r5,r6)` by 
-   SIMP_TAC std_ss [fetch "-" "x86_eq_assign",arm_eq_assign_def,LET_DEF,word_add_n2w]
-  \\ ASM_SIMP_TAC std_ss [arm_eq_def,fetch "-" "x86_eq",fetch "-" "x86_eq_pre",LET_DEF,x86_eq_loop_EQ]);
+   SIMP_TAC std_ss [fetch "-" "x86_eq_assign_def",arm_eq_assign_def,LET_DEF,word_add_n2w]
+  \\ ASM_SIMP_TAC std_ss [arm_eq_def,fetch "-" "x86_eq_def",fetch "-" "x86_eq_pre_def",LET_DEF,x86_eq_loop_EQ]);
 
 
 

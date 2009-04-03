@@ -215,7 +215,7 @@ val rat_1 = store_thm("rat_1", ``1q = abs_rat( frac_1 )``,
  *  parser rules
  *--------------------------------------------------------------------------*)
 
-val _ = set_fixity "//" (Infix (Parse.NONASSOC,995));
+val _ = set_fixity "//" (Infixl 600)
 
 val _ = overload_on ("+",  ``rat_add``);
 val _ = overload_on ("-",  ``rat_sub``);

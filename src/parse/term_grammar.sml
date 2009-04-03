@@ -451,7 +451,7 @@ val stdhol : grammar =
                                 block_style = (AroundEachPhrase,
                                                 (PP.CONSISTENT, 0)),
                                 paren_style = OnlyIfNecessary}], RIGHT))),
-            (SOME 1000, SUFFIX TYPE_annotation),
+            (SOME 899, SUFFIX TYPE_annotation),
             (SOME 1200, SUFFIX TYPE_application),
             (SOME 2000, INFIX (FNAPP [])),
             (SOME 2500,

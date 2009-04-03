@@ -94,10 +94,10 @@ fun arm_remove_annotations c =
   String.translate (fn x => if x = #"?" then "" else implode [x]) c
 
 fun arm_cond_code tm = 
-  (* carry    *) if tm = ``aS1 sC`` then ("cs","cc") else
-  (* zero     *) if tm = ``aS1 sZ`` then ("eq","ne") else
-  (* negative *) if tm = ``aS1 sN`` then ("mi","pl") else
-  (* overflow *) if tm = ``aS1 sV`` then ("vs","vc") else hd []
+  (* carry    *) if eq tm ``aS1 sC`` then ("cs","cc") else
+  (* zero     *) if eq tm ``aS1 sZ`` then ("eq","ne") else
+  (* negative *) if eq tm ``aS1 sN`` then ("mi","pl") else
+  (* overflow *) if eq tm ``aS1 sV`` then ("vs","vc") else hd []
 
 fun arm_encode_instruction s = let
   val tm = mk_comb(``enc``,instructionSyntax.mk_instruction s)

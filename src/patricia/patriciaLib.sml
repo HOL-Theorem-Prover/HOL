@@ -127,9 +127,13 @@ fun remove Empty k = Empty
          else
            t;
 
-fun traverse Empty = []
-  | traverse (Leaf (j,d)) = [j]
-  | traverse (Branch (p,m,l,r)) = traverse l @ traverse r;
+local
+  fun traverse_aux Empty f = f
+    | traverse_aux (Leaf (j,d)) f = j :: f
+    | traverse_aux (Branch (p,m,l,r)) f = traverse_aux l (traverse_aux r f)
+in
+  fun traverse t = traverse_aux t []
+end;
 
 fun keys t = Listsort.sort Arbnum.compare (traverse t);
 
@@ -139,9 +143,14 @@ fun transform f Empty = Empty
 
 fun ptree_of_list l = add_list Empty l;
 
-fun list_of_ptree Empty = []
-  | list_of_ptree (Leaf (j,d)) = [(j,d)]
-  | list_of_ptree (Branch (p,m,l,r)) = list_of_ptree l @ list_of_ptree r;
+local
+  fun list_of_ptree_aux Empty f = f
+    | list_of_ptree_aux (Leaf (j,d)) f = (j,d) :: f
+    | list_of_ptree_aux (Branch (p,m,l,r)) f =
+        list_of_ptree_aux l (list_of_ptree_aux r f)
+in
+  fun list_of_ptree t = list_of_ptree_aux t []
+end;
 
 fun size Empty = 0
   | size (Leaf (j,d)) = 1
@@ -158,6 +167,9 @@ fun tabulate (n, f) =
        else
          Empty
     in if n<0 then raise Size else h 0 end;
+
+val t = tabulate(1000,
+ fn i => let val n = Arbnum.fromInt i in (n,numLib.mk_numeral n) end)
 
 infix in_ptree insert_ptree;
 
@@ -621,78 +633,6 @@ fun ptree_depth t =
 
 fun PTREE_DEPTH_CONV tm =
   (ptree_depth THENC numLib.REDUCE_CONV) (dest_depth tm);
-
-(* ------------------------------------------------------------------------- *)
-
-val APPEND3 = prove(
-  `!h1 h2 h3 l1 l2. h1::h2::h3::l1 ++ l2 = h1::h2::h3::(l1 ++ l2)`,
-  SRW_TAC [] []);
-
-val APPEND4 = prove(
-  `!h1 h2 h3 h4 l1 l2. h1::h2::h3::h4::l1 ++ l2 = h1::h2::h3::h4::(l1 ++ l2)`,
-  SRW_TAC [] []);
-
-val APPEND7 = prove(
-  `!h1 h2 h3 h4 l1 l2.
-       h1::h2::h3::h4::h5::h6::h7::l1 ++ l2 =
-       h1::h2::h3::h4::h5::h6::h7::(l1 ++ l2)`,
-  SRW_TAC [] []);
-
-local
-  val compset = new_compset [listTheory.APPEND,APPEND3,APPEND4,APPEND7]
-in
-  val APPEND_CONV = WEAK_CBV_CONV compset
-end;
-
-val TRAVERSE_RWT = prove(
-  `(!p m k d.
-     (TRAVERSE r = x) ==>
-     (TRAVERSE (Branch p m (Leaf k d) r) = k :: x)) /\
-   (!p m k d j e.
-     (TRAVERSE (Branch p m (Leaf k d) (Leaf j e)) = [k; j])) /\
-   (!p m.
-     (TRAVERSE l = x) /\ (TRAVERSE r = y) ==>
-     (TRAVERSE (Branch p m l r) = x ++ y))`,
-  SRW_TAC [] [TRAVERSE_def]);
-
-val (traverse_empty,traverse_leaf,
-     traverse_branch_leaf_l,traverse_branch_leaf_lr,traverse_branch) =
-  case CONJUNCTS TRAVERSE_RWT of
-    [a,b,c] =>
-       (CONJUNCT1 TRAVERSE_def, CONJUNCT1 (CONJUNCT2 TRAVERSE_def),a,b,c)
-  | _ => raise ERR "" "";
-
-fun ptree_traverse t =
-  case dest_strip t of
-    ("Empty", []) => REWR_CONV traverse_empty (mk_traverse t)
-  | ("Leaf", [j, d]) => REWR_CONV traverse_leaf (mk_traverse t)
-  | ("Branch", [p, m, l, r]) =>
-        if is_leaf l then
-          if is_leaf r then
-            REWR_CONV traverse_branch_leaf_lr (mk_traverse t)
-          else
-            let val (k,d) = dest_leaf l in
-              MATCH_MP (Drule.ISPECL [p,m,k,d] traverse_branch_leaf_l)
-                       (ptree_traverse r)
-            end
-        else
-          MATCH_MP (Drule.ISPECL [p,m] traverse_branch)
-                   (CONJ (ptree_traverse l) (ptree_traverse r))
-  | _ => raise ERR "ptree_traverse" "Not Empty, Leaf or Branch";
-
-fun PTREE_TRAVERSE_CONV tm =
-  (ptree_traverse THENC APPEND_CONV) (dest_traverse tm);
-
-val KEYS = prove(
-  `(TRAVERSE t = l) ==> (KEYS t = QSORT $< l)`,
-  SRW_TAC [] [KEYS_def]);
-
-fun PTREE_KEYS_CONV tm =
-let val t = dest_keys tm
-    val traverse_thm = (ptree_traverse THENC APPEND_CONV) t
-in
-  (REWR_CONV (MATCH_MP KEYS traverse_thm) THENC QSORT_CONV) tm
-end;  
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1174,17 +1114,11 @@ let val t = dest tm in
     conv tm
 end;
 
-val PTREE_TRAVERSE_ARI_CONV = mk_ptree_conv
-  dest_traverse mk_traverse PTREE_TRAVERSE_CONV (ISPEC `TRAVERSE` thm);
-
 val PTREE_SIZE_ARI_CONV = mk_ptree_conv
   dest_size mk_size PTREE_SIZE_CONV (ISPEC `SIZE` thm);
 
 val PTREE_DEPTH_ARI_CONV = mk_ptree_conv
   dest_depth mk_depth PTREE_DEPTH_CONV (ISPEC `DEPTH` thm);
-
-val PTREE_KEYS_ARI_CONV = mk_ptree_conv
-  dest_keys mk_keys PTREE_KEYS_CONV (ISPEC `KEYS` thm);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1193,8 +1127,6 @@ fun add_ptree_convs compset =
   add_conv (add_tm,          2, PTREE_ARI_CONV)             compset;
   add_conv (remove_tm,       2, PTREE_ARI_CONV)             compset;
   add_conv (insert_ptree_tm, 2, PTREE_ARI_CONV)             compset;
-  add_conv (traverse_tm,     1, PTREE_TRAVERSE_ARI_CONV)    compset;
-  add_conv (keys_tm,         1, PTREE_KEYS_ARI_CONV)        compset;
   add_conv (size_tm,         1, PTREE_SIZE_ARI_CONV)        compset;
   add_conv (depth_tm,        1, PTREE_DEPTH_ARI_CONV)       compset;
   add_conv (every_leaf_tm,   2, PTREE_EVERY_LEAF_ARI_CONV)  compset;

@@ -175,7 +175,7 @@ fun avoid_symbolmerge G = let
   val split = term_tokens.user_split_ident keywords
   fun bad_merge (s1, s2) = let
     val combined = s1 ^ s2
-    val (x,y) = split combined 
+    val (x,y) = split combined
   in
     y <> s2
   end handle base_tokens.LEX_ERR _ => true
@@ -184,17 +184,22 @@ in
        val last_string = ref " "
        fun new_addstring s = let
          val sz = size s
+         val ls = !last_string
+         val allspaces = str_all (equal #" ") s
        in
          if sz = 0 then ()
-         else (if !last_string = " " then add_string s
+         else (if ls = " " orelse allspaces then add_string s
                else if not (!avoid_symbol_merges) then add_string s
-               else if creates_comment (!last_string, s) orelse
-                       bad_merge (!last_string, s)
+               else if String.sub(ls, size ls - 1) = #"\"" then add_string s
+               (* special case the quotation because term_tokens relies on
+                  the base token technology (see base_lexer) to separate the
+                  end of a string from the next character *)
+               else if creates_comment (ls, s) orelse bad_merge (ls, s)
                then
                  (add_string " "; add_string s)
                else
                  add_string s;
-               last_string := (if str_all (equal #" ") s then " " else s))
+               last_string := (if allspaces then " " else s))
        end
        fun new_add_break (p as (n,m)) =
            (if n > 0 then last_string := " " else (); add_break p)
@@ -341,6 +346,13 @@ fun first_tok [] = raise Fail "Shouldn't happen term_pp 133"
 
 fun decdepth n = if n < 0 then n else n - 1
 
+fun atom_name tm = let
+  val (vnm, _) = dest_var tm
+in
+  Lib.unprefix GrammarSpecials.fakeconst_special vnm handle HOL_ERR _ => vnm
+end handle HOL_ERR _ => fst (dest_const tm)
+                            handle HOL_ERR _ => atom_name (fst (dest_tycomb tm))
+
 fun pp_term (G : grammar) TyG = let
   val {restr_binders,lambda,type_lambda,endbinding,
        type_intro,type_lbracket,type_rbracket,res_quanop} = specials G
@@ -426,24 +438,34 @@ fun pp_term (G : grammar) TyG = let
   val printers_exist = Net.size uprinters > 0
 
   (* This code will print paired abstractions "properly" only if
-        1. the term has an UNCURRY constant in the right place, and
-        2. the term has a preferred printing form in the overloading map.
-     Both conditions above might be varied.  In 1., we could check for just
-     the constant pair$UNCURRY, and not any constant called UNCURRY.  In 2.,
-     we could check to see if the string "UNCURRY" mapped to a term instead.
+        1. the term has a constant in the right place, and
+        2. that constant maps to the name "UNCURRY" in the overloading map.
+     These conditions are checked in the call to grammar_name.
 
-     Another option again might be to look to see if the term is a constant
-     and prints as "UNCURRY"...  The possibilities are endless.  The
-     particular choice made above means that the printer does the right
-     thing if given a paired abstraction to print wrt an "earlier" grammar,
-     such as that used in boolTheory. *)
+     We might vary this.  In particular, in 2., we could check to see
+     name "UNCURRY" maps to a term (looking at the overload map in the
+     reverse direction).
+
+     Another option again might be to look to see if the term is a
+     constant whose real name is UNCURRY, and if this term also maps
+     to the name UNCURRY.  This last used to be the actual
+     implementation, but it's hard to do this in the changed world
+     (since r6355) of "syntactic patterns" because of the way
+     overloading resolution can create fake constants (concealing true
+     names) before this code gets a chance to run.
+
+     The particular choice made above means that the printer does the
+     'right thing'
+       (prints `(\(x,y). x /\ y)` as `pair$UNCURRY (\x y. x /\ y)`)
+     if given a paired abstraction to print wrt an "earlier" grammar,
+     such boolTheory.bool_grammars. *)
+
   fun my_dest_abs tm =
       case dest_term tm of
         LAMB p => p
       | COMB(Rator,Rand) => let
           val _ =
-              fst (dest_const Rator)= "UNCURRY" andalso
-              isSome (Overload.overloading_of_term overload_info Rator) orelse
+              grammar_name G Rator = SOME "UNCURRY" orelse
               raise PP_ERR "my_dest_abs" "term not an abstraction"
           val (v1, body0) = my_dest_abs Rand
           val (v2, body) = my_dest_abs body0
@@ -899,12 +921,6 @@ fun pp_term (G : grammar) TyG = let
     in
       String.isPrefix GrammarSpecials.fakeconst_special vnm
     end handle HOL_ERR _ => false
-    fun atom_name tm = let
-      val (vnm, _) = dest_var tm
-    in
-      Lib.unprefix GrammarSpecials.fakeconst_special vnm handle HOL_ERR _ => vnm
-    end handle HOL_ERR _ => fst (dest_const tm)
-                            handle HOL_ERR _ => atom_name (fst (dest_tycomb tm))
     fun can_pr_numeral stropt = List.exists (fn (k,s') => s' = stropt) num_info
     fun pr_numeral injtermopt tm = let
       open Overload
@@ -1713,8 +1729,7 @@ fun pp_term (G : grammar) TyG = let
           (* characters *)
           val _ = case total Literal.dest_char_lit tm of
                     NONE => ()
-                  | SOME c => (add_string "#";
-                               add_string (Lib.mlquote (str c));
+                  | SOME c => (add_string ("#" ^ Lib.mlquote (str c));
                                raise SimpleExit)
 
           (* numerals *)

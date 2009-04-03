@@ -94,6 +94,9 @@ val INT_REM_EMIT = Q.prove(
         ^((rhs o snd o dest_imp o snd o strip_forall o concl) int_rem)`,
   SRW_TAC [] [combinTheory.FAIL_THM, int_rem]);
 
+val _ = EmitML.is_int_literal_hook := intSyntax.is_int_literal;
+val _ = EmitML.int_of_term_hook := intSyntax.int_of_term;
+
 val _ = temp_clear_overloads_on "&";
 val _ = temp_overload_on("int_of_num", ``integer$int_of_num``);
 
@@ -127,10 +130,26 @@ val _ = eSML "int"
       \         case numML.toInt n of\n\
       \           SOME v => SOME (Int.-(Int.~ v,1))\n\
       \         | NONE => NONE\n"
-  :: map (DEFN o words_emitLib.WORDS_EMIT_RULE) [INT_NEG_EMIT, INT_Num_EMIT,
+  :: map DEFN
+      [INT_NEG_EMIT, INT_Num_EMIT,
        INT_LT_EMIT, INT_LE_CALCULATE, INT_GT_CALCULATE, INT_GE_CALCULATE,
        INT_ABS, INT_ADD_EMIT, INT_SUB_EMIT, INT_MUL_EMIT, INT_EXP_EMIT,
        INT_DIV_EMIT, INT_MOD_EMIT, INT_QUOTE_EMIT, INT_REM_EMIT,
        INT_MAX_def, INT_MIN_def, UINT_MAX_def, i2w_itself, w2i_def])
+
+
+(*---------------------------------------------------------------------------*)
+(* Remind ML code generator about integer literals and how to take them apart*)
+(*---------------------------------------------------------------------------*)
+
+val _ = adjoin_to_theory {sig_ps = NONE,
+   struct_ps = SOME (fn ppstrm =>
+     let val S = PP.add_string ppstrm
+         fun NL() = PP.add_newline ppstrm
+     in S "val _ = EmitML.is_int_literal_hook := intSyntax.is_int_literal;"; NL();
+        S "val _ = EmitML.int_of_term_hook := intSyntax.int_of_term;";
+        NL(); NL()
+     end)}
+
 
 val _ = export_theory ();

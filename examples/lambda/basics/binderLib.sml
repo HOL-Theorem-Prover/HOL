@@ -17,6 +17,26 @@ fun ERR f msg = raise (HOL_ERR {origin_function = f,
                                 origin_structure = "binderLib",
                                 message = msg})
 
+datatype nominaltype_info = 
+         NTI of { recursion_thm : thm option,
+                  (* recursion theorems are stored in SPEC_ALL form, with 
+                     preconditions as one big set of conjuncts (rather than 
+                     iterated implications) *)
+                  nullfv : term,
+                  pm_constant : term,
+                  pm_rewrites : thm list,
+                  fv_constant : term,
+                  fv_rewrites : thm list,
+                  binders : (term * int * thm) list }
+
+fun nti_null_fv (NTI{nullfv, ...}) = nullfv 
+fun nti_perm_t (NTI{pm_constant,...}) = pm_constant
+fun nti_fv_t (NTI{fv_constant,...}) = fv_constant
+fun nti_recursion (NTI{recursion_thm,...}) = recursion_thm
+
+               
+                            
+
 (* ----------------------------------------------------------------------
     prove_recursive_term_function_exists tm
 
@@ -39,33 +59,201 @@ fun ERR f msg = raise (HOL_ERR {origin_function = f,
 
    ---------------------------------------------------------------------- *)
 
-(* recursion theorems are stored in SPEC_ALL form, with preconditions as one
-   big set of conjuncts (rather than iterated implications) *)
 val type_db =
-    ref (Binarymap.mkDict String.compare : (string,thm) Binarymap.dict)
+    ref (Binarymap.mkDict KernelSig.name_compare : 
+         (KernelSig.kernelname,nominaltype_info) Binarymap.dict)
 
-(*  testing code
+val string_ty = stringSyntax.string_ty
+val stringset_ty = pred_setSyntax.mk_set_type string_ty
 
-type_db :=
-     Binarymap.insert(!type_db, "nc",
-                      SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`]
-                                               swap_RECURSION_generic))
+fun mk_icomb(f,x) = let 
+  val (dom,rng) = dom_rng (type_of f)
+  val i = match_type dom (type_of x)
+in
+  mk_comb(Term.inst i f, x)
+end
 
-type_db :=
-   Binarymap.insert(!type_db, "term",
-                    SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`]
-                                             termTheory.swap_RECURSION))
-*)
+fun findmap_terms f t = let 
+  fun recurse acc tlist = 
+      case tlist of 
+        [] => acc
+      | t::ts => let 
+          val acc' = case f t of 
+                       NONE => acc
+                     | SOME result => result::acc
+        in
+          case dest_term t of 
+            COMB(f,x) => recurse acc' (f::x::ts)
+          | LAMB(_,b) => recurse acc' (b::ts)
+          | _ => recurse acc' ts
+        end
+in
+  recurse [] [t]
+end
+
+fun isdbty ty = let 
+  val {Thy,Tyop,...} = dest_thy_type ty
+in
+  isSome (Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop}))
+end handle HOL_ERR _ => false
+
+fun tylookup ty = let 
+  val {Thy,Tyop,...} = dest_thy_type ty
+in
+  Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop})
+end handle HOL_ERR _ => NONE
+
+fun get_pm_rewrites ty = 
+    case tylookup ty of 
+      NONE => []
+    | SOME (NTI i) => #pm_rewrites i
+
+fun findfirst f t = let 
+  fun recurse tlist = 
+      case tlist of 
+        [] => NONE
+      | t::ts => let 
+        in
+          case f t of 
+            NONE => let
+            in
+              case dest_term t of 
+                COMB(f,x) => recurse (f::x::ts)
+              | LAMB(_,b) => recurse (b::ts)
+              | _ => recurse ts
+            end
+          | x => x
+        end
+in
+  recurse [t]
+end
+
+fun find_top_terms P t = let 
+  fun recurse acc tlist = 
+      case tlist of 
+        [] => acc
+      | t::ts => let 
+        in
+          if P t then recurse (t::acc) ts
+          else
+            case dest_term t of 
+              COMB(f,x) => recurse acc (f::x::ts) 
+            | LAMB(_,b) => recurse acc (b::ts)
+            | _ => recurse acc ts
+        end
+in
+  recurse [] [t]
+end
+
+fun find_avoids (t, (strs, sets)) = let 
+  open stringSyntax
+  fun isdbty t = let 
+    val ty = type_of t 
+    val {Thy,Tyop,...} = dest_thy_type ty 
+  in
+    if is_var t then 
+      case Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop}) of 
+        NONE => NONE
+      | SOME (NTI data) => SOME (mk_icomb(#fv_constant data, t))
+    else NONE
+  end handle HOL_ERR _ => NONE
+  fun eqty ty t = type_of t = ty
+  val strings = List.filter (fn t => is_var t orelse is_string_literal t)
+                            (find_top_terms (eqty string_ty) t)
+  val stringsets = List.filter is_var (find_terms (eqty stringset_ty) t)
+  val fv_terms = findmap_terms isdbty t
+  open HOLset
+in
+  (addList(strs,strings), addList(addList(sets, fv_terms), stringsets))
+end
+
+fun goalnames (asl, w) = let 
+  val fvs = FVL (w::asl) empty_tmset
+  fun foldthis(t,acc) = HOLset.add(acc, #1 (dest_var t))
+in
+  HOLset.listItems (HOLset.foldl foldthis (HOLset.empty String.compare) fvs)
+end
+
+fun FRESH_TAC (g as (asl, w)) = let 
+  val (strs, sets) = List.foldl find_avoids (empty_tmset, empty_tmset) (w::asl)
+  val finite_sets = List.mapPartial (total pred_setSyntax.dest_finite) asl
+  fun filterthis t = not (is_var t) orelse op_mem eq t finite_sets 
+  val sets' = List.filter filterthis (HOLset.listItems sets)
+  fun get_binder already_done t = 
+      case tylookup (type_of t) of 
+        NONE => NONE
+      | SOME (NTI info) => let 
+          val bs = #binders info
+          fun checkthis (_,i,th) = let 
+            val l = lhs (#2 (strip_forall 
+                               (#2 (dest_imp (#2 (strip_forall (concl th)))))))
+            val argi = List.nth(#2 (strip_comb t), i)
+          in
+            if can (match_term l) t andalso 
+               not (HOLset.member(already_done, argi))
+            then SOME (t, i, th)
+            else NONE
+          end handle Subscript => NONE
+        in
+          get_first checkthis bs 
+        end
+  fun do_one used strs sets' (g as (asl, w)) = 
+      case get_first (findfirst (get_binder used)) (w::asl) of 
+        NONE => raise ERR "FRESH_TAC" "No binders present in goal"
+      | SOME (t, i, th) => let 
+          val old = List.nth (#2 (strip_comb t), i)
+          val (pre,l,r) = let 
+            val (_, b) = strip_forall (concl th)
+            val (pre, eq) = dest_imp b
+            val (l,r) = dest_eq (#2 (strip_forall eq))
+          in
+            (pre,l,r)
+          end
+          val base = case total Literal.dest_string_lit old of 
+                       NONE => #1 (dest_var old)
+                     | SOME s => s
+          val newname = Lexis.gen_variant Lexis.tmvar_vary (goalnames g) base
+          val new_in_thm = List.nth (#2 (strip_comb r), i)
+          val new_t = mk_var(newname, type_of new_in_thm)
+          val th' = PART_MATCH (lhs o #2 o strip_forall o #2 o dest_imp) 
+                               th
+                               t
+          val th' = INST [new_in_thm |-> new_t] th'
+          val avoid_t = let 
+            open pred_setSyntax
+          in 
+            List.foldl mk_union (mk_set (HOLset.listItems strs)) sets'
+          end
+          fun freshcont freshthm = let 
+            val th = MP th' freshthm
+          in
+            SUBST_ALL_TAC th THEN 
+            ASM_SIMP_TAC (srw_ss()) (basic_swapTheory.swapstr_def :: 
+                                     get_pm_rewrites (type_of t)) 
+          end
+
+          val tac = 
+              NEW_TAC newname avoid_t THEN 
+              SUBGOAL_THEN (#1 (dest_imp (concl th'))) freshcont THENL [
+                ASM_SIMP_TAC (srw_ss()) [],
+                TRY (do_one (HOLset.add(used,new_t)) 
+                            (HOLset.add(strs,new_t)) 
+                            sets')
+              ]
+        in
+          tac g
+        end
+in
+  do_one empty_tmset strs sets' g
+end
 
 fun recthm_for_type ty = let
-  val {Tyop,...} = dest_thy_type ty
+  val {Tyop,Thy,...} = dest_thy_type ty
+  val NTI {recursion_thm,...} = Binarymap.find(!type_db, {Name=Tyop,Thy=Thy})
 in
-  SOME (Binarymap.find(!type_db, Tyop))
-end handle Binarymap.NotFound => NONE
-         | HOL_ERR _ => NONE
-
-fun myfind f [] = NONE
-  | myfind f (h::t) = case f h of NONE => myfind f t | x => x
+  recursion_thm
+end handle HOL_ERR _ => NONE
+         | Binarymap.NotFound => NONE
 
 fun find_constructors recthm = let
   val (_, c) = dest_imp (concl recthm)
@@ -114,7 +302,7 @@ fun check_for_errors tm = let
                       ("Unknown constructor "^
                        term_to_string (#1 (strip_comb (rand (lhs t)))))
   val () =
-      case myfind
+      case get_first
            (fn t => let val (c, args) = strip_comb (rand (lhs t))
                     in
                       case List.find (not o is_var) args of
@@ -133,15 +321,14 @@ end
 val null_fv = ``combin$K pred_set$EMPTY : 'a -> string -> bool``
 val null_swap = ``\x:string y:string z:'a. z``
 val null_apm = ``combin$K combin$I : (string # string)list -> 'a -> 'a``
-val null_info = {nullfv = mk_arb alpha,
-                 inst = ["rFV" |-> (fn () => null_fv),
-                         "rswap" |-> (fn () => null_swap),
-                         "apm" |-> (fn () => null_apm)],
-                 rewrites = []}
-
-type range_type_info = {nullfv : term,
-                        inst : {redex : string, residue : unit -> term} list,
-                        rewrites : thm list}
+val nameless_nti = NTI { nullfv = mk_arb alpha,
+                         pm_constant = null_apm,
+                         pm_rewrites = [combinTheory.K_THM, combinTheory.I_THM],
+                         fv_constant = null_fv,
+                         fv_rewrites = [combinTheory.K_THM],
+                         recursion_thm = NONE,
+                         binders = []}
+                         
 
 val range_database = ref (Binarymap.mkDict String.compare)
 
@@ -151,9 +338,16 @@ in
   Term.inst inst to_munge
 end
 
+val cpm_ty = let val sty = stringSyntax.string_ty 
+             in 
+               listSyntax.mk_list_type (pairSyntax.mk_prod (sty, sty))
+             end
+
+fun mk_perm_ty ty = cpm_ty --> ty --> ty
+
 exception InfoProofFailed of term
 fun with_info_prove_recn_exists f finisher dom_ty rng_ty lookup info = let
-  val {nullfv, inst, rewrites} = info
+  val NTI {nullfv, pm_rewrites, fv_rewrites, pm_constant, ...} = info
   fun mk_simple_abstraction (c, (cargs, r)) = list_mk_abs(cargs, r)
   val recthm = valOf (recthm_for_type dom_ty)
   val hom_t = #1 (dest_exists (#2 (dest_imp (concl recthm))))
@@ -189,17 +383,11 @@ fun with_info_prove_recn_exists f finisher dom_ty rng_ty lookup info = let
         end
   val recursion_exists0 =
       INST (map do_a_constructor constructors) (INST_TYPE base_inst recthm)
-  val other_var_inst = let
-    val recvars = free_vars (concl recursion_exists0)
-    fun findvar {redex,residue} =
-        case List.find (fn t => #1 (dest_var t) = redex) recvars of
-          SOME v => let val residue' = residue()
-                    in
-                      SOME (v |-> force_inst {src = v, to_munge = residue'})
-                    end
-        | NONE => NONE
+  val other_var_inst = let 
+    val apm = mk_var("apm", mk_perm_ty rng_ty)
+    val pm' = force_inst {src = apm, to_munge = pm_constant}
   in
-    List.mapPartial findvar inst
+    [apm |-> pm']
   end
   val recursion_exists1 = INST other_var_inst recursion_exists0
   val recursion_exists =
@@ -209,6 +397,7 @@ fun with_info_prove_recn_exists f finisher dom_ty rng_ty lookup info = let
                          (STRIP_QUANT_CONV (RAND_CONV LIST_BETA_CONV))) THENC
                       RAND_CONV (ALPHA_CONV f)))
                    recursion_exists1
+  val rewrites = pm_rewrites @ fv_rewrites
   val precondition_discharged =
       CONV_RULE
         (LAND_CONV (SIMP_CONV (srw_ss()) rewrites THENC
@@ -251,11 +440,11 @@ fun prove_recursive_term_function_exists0 fin tm = let
   fun find_eqn c = lookup c alist
   val callthis = with_info_prove_recn_exists f fin dom_ty rng_ty find_eqn
 in
-  case Lib.total dest_type rng_ty of
-    SOME (tyop, args) => let
+  case Lib.total dest_thy_type rng_ty of
+    SOME {Tyop, Thy, ...} => let
     in
-      case Binarymap.peek(!range_database, tyop) of
-        NONE => callthis null_info
+      case Binarymap.peek(!type_db, {Name=Tyop,Thy=Thy}) of
+        NONE => callthis nameless_nti
       | SOME i => callthis i
         handle InfoProofFailed tm =>
                (HOL_WARNING
@@ -264,9 +453,9 @@ in
                   ("Couldn't prove function with swap over range - \n\
                    \goal was "^term_to_string tm^"\n\
                    \trying null range assumption");
-                callthis null_info)
+                callthis nameless_nti)
     end
-  | NONE => callthis null_info
+  | NONE => callthis nameless_nti
 end handle InfoProofFailed tm =>
            raise ERR "prove_recursive_term_function_exists"
                      ("Couldn't prove function with swap over range - \n\

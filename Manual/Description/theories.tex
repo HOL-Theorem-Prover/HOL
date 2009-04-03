@@ -418,7 +418,7 @@ parser getting confused.  In general, \ml{\$} can be used to suppress
 any special syntactic behaviour a token (such as \texttt{if},
 \texttt{+} or \texttt{let})
 %
-\index{tokens!supressing parsing behaviour of}
+\index{tokens!suppressing parsing behaviour of}
 %
 might have. This is illustrated in the table below, in which the terms
 in the column headed \textit{`\ML{} quotation'} are translated by the
@@ -713,7 +713,7 @@ The Cartesian  product  type  operator
 %
 \holtxt{prod}
 %
-\index{prod@\holtxt{prod}}
+\index{prod, the HOL type operator@\holtxt{prod}, the \HOL{} type operator}
 %
 is defined in the theory \theoryimp{pair}. Values of type
 \holtxt{($\sigma_1$,$\sigma_2$)prod} are ordered pairs whose first
@@ -1088,7 +1088,6 @@ Readers are encouraged to convince themselves that the translations of
 \ml{let}-terms represent the intuitive meaning suggested by the
 surface syntax.%
 %
-\index{terms, in HOL logic@terms, in \HOL{} logic!syntax of|)}
 
 \subsection{Disjoint sums}
 \label{sum}
@@ -3285,6 +3284,17 @@ finite $R$-paths:
        (!x r p. okpath R p /\ finite p /\ R x r (first p) /\ P p ==>
                 P (pcons x r p)) ==>
        !p. okpath R p /\ finite p ==> P p
+\end{verbatim}
+\end{hol}
+
+One can show that a set \holtxt{P} of paths are all $R$-paths with the
+co-induction principle:
+\begin{hol}
+\begin{verbatim}
+   okpath_co_ind |-
+      !P.
+         (!x r p. P (pcons x r p) ==> R x r (first p) /\ P p) ==>
+         !p. P p ==> okpath R p
 \end{verbatim}
 \end{hol}
 \index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|)}

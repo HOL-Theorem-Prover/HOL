@@ -287,6 +287,7 @@ val strip_path_label_thm = store_thm(
          strip_path_label (pcons x r p) =
             pcons (strip_label x) r (strip_path_label p))``,
   SRW_TAC [][strip_path_label_def, pmap_thm, combinTheory.I_THM]);
+val _ = export_rewrites ["strip_path_label_thm"]
 
 val first_strip_path_label = store_thm(
   "first_strip_path_label",
@@ -294,7 +295,7 @@ val first_strip_path_label = store_thm(
   GEN_TAC THEN
   Q.ISPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
   SRW_TAC [][first_thm, strip_path_label_thm]);
-
+val _ = export_rewrites ["first_strip_path_label"]
 
 (* ----------------------------------------------------------------------
     proofs begin
@@ -312,12 +313,8 @@ val lemma11_2_1 = store_thm(
             okpath (labelled_redn beta) sigma` THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC okpath_co_ind THEN
   SIMP_TAC (srw_ss()) [GSYM LEFT_FORALL_IMP_THM] THEN
-  CONV_TAC (BINDER_CONV (LAND_CONV (REWR_CONV okpath_cases))) THEN
-  SIMP_TAC (srw_ss()) [GSYM LEFT_FORALL_IMP_THM, DISJ_IMP_THM,
-                       FORALL_AND_THM, strip_path_label_thm,
-                       first_strip_path_label] THEN
-  PROVE_TAC [lrcc_labelled_redn]);
-
+  CONV_TAC (LAST_FORALL_CONV (HO_REWR_CONV FORALL_path)) THEN
+  SRW_TAC [][] THEN PROVE_TAC [lrcc_labelled_redn]);
 
 val beta0_lsubstitutive = store_thm(
   "beta0_lsubstitutive",
@@ -1679,7 +1676,8 @@ val developments_ok = store_thm(
   Q_TAC SUFF_TAC
       `!sigma. (?M ps. sigma IN development M ps)  ==>
                  okpath (labelled_redn beta) sigma` THEN1 PROVE_TAC [] THEN
-  HO_MATCH_MP_TAC okpath_co_ind THEN PROVE_TAC [development_cases]);
+  HO_MATCH_MP_TAC okpath_co_ind THEN
+  METIS_TAC [development_cases, pcons_11, stopped_at_not_pcons]);
 
 val complete_development_def = Define`
   complete_development M ps sigma =
@@ -1806,32 +1804,34 @@ val lemma11_2_12 = store_thm(
      PROVE_TAC [developments_ok, term_posset_development_def,
                 SPECIFICATION] THEN
   CONJ_TAC THENL [
-    HO_MATCH_MP_TAC okpath_co_ind THEN GEN_TAC THEN
+    HO_MATCH_MP_TAC okpath_co_ind THEN
+    MAP_EVERY Q.X_GEN_TAC [`x`, `r`, `sigma'`] THEN
+    CONV_TAC (LAND_CONV (RENAME_VARS_CONV ["M", "sigma", "ps"])) THEN
     CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [development_cases])) THEN
-    SRW_TAC [][] THEN SRW_TAC [][lift_path_def] THENL [
+    SIMP_TAC (srw_ss() ++ DNF_ss) [lift_path_def] THEN SRW_TAC [][] THENL [
       SRW_TAC [][first_lift_path] THEN
-      Q.ABBREV_TAC `x' = nlabel 0 x ps` THEN
+      Q.ABBREV_TAC `M' = nlabel 0 M ps` THEN
       Q.ABBREV_TAC `y = first p` THEN
-      Q.ABBREV_TAC `y' = lift_redn x' r y` THEN
-      `strip_label x' = x` by PROVE_TAC [strip_label_nlabel] THEN
-      `lrcc (beta0 RUNION beta1) x' r y'` by PROVE_TAC [lift_redn_def] THEN
-      `r IN redex_posns x`
+      Q.ABBREV_TAC `y' = lift_redn M' r y` THEN
+      `strip_label M' = M` by PROVE_TAC [strip_label_nlabel] THEN
+      `lrcc (beta0 RUNION beta1) M' r y'` by PROVE_TAC [lift_redn_def] THEN
+      `r IN redex_posns M`
          by (ASM_SIMP_TAC (srw_ss())[redex_posns_redex_occurrence,
                                      is_redex_occurrence_def] THEN
              PROVE_TAC []) THEN
-      `r IN n_posns 0 x'`
+      `r IN n_posns 0 M'`
         by PROVE_TAC [n_posns_nlabel, IN_INTER] THEN
       PROVE_TAC [pick_a_beta],
-      Q.ABBREV_TAC `x' = nlabel 0 x ps` THEN
+      Q.ABBREV_TAC `M' = nlabel 0 M ps` THEN
       Q.ABBREV_TAC `y = first p` THEN
-      Q.ABBREV_TAC `y' = lift_redn x' r y` THEN
+      Q.ABBREV_TAC `y' = lift_redn M' r y` THEN
       Q.EXISTS_TAC `y` THEN Q.EXISTS_TAC `p` THEN
-      Q.EXISTS_TAC `residual1 x r y ps` THEN
+      Q.EXISTS_TAC `residual1 M r y ps` THEN
       ASM_SIMP_TAC (srw_ss()) [residual1_def] THEN
-      `strip_label x' = x` by PROVE_TAC [strip_label_nlabel] THEN
-      `(y = strip_label y') /\ lrcc (beta0 RUNION beta1) x' r y'`
+      `strip_label M' = M` by PROVE_TAC [strip_label_nlabel] THEN
+      `(y = strip_label y') /\ lrcc (beta0 RUNION beta1) M' r y'`
          by PROVE_TAC [lift_redn_def] THEN
-      `!n. ~(n = 0) ==> (n_posns n x' = {})` by PROVE_TAC [n_posns_nlabel] THEN
+      `!n. ~(n = 0) ==> (n_posns n M' = {})` by PROVE_TAC [n_posns_nlabel] THEN
       `!n. ~(n = 0) ==> (n_posns n y' = {})`
          by PROVE_TAC [lrcc_new_labels] THEN
       ASM_SIMP_TAC (srw_ss()) [nlabel_n_posns]
@@ -2358,7 +2358,7 @@ val old_induction = prove(
     FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
     SRW_TAC [numSimps.ARITH_ss][size_vsubst]
   ]);
- 
+
 
 val weight_at_subst = store_thm(
   "weight_at_subst",
@@ -3320,11 +3320,9 @@ val beta0_weighted_reduction_lift_weighing = store_thm(
   Q_TAC SUFF_TAC
       `!p2. (?w p. (p2 = lift_weighing w p) /\ okpath (lrcc beta0) p) ==>
             okpath weighted_reduction p2` THEN1 PROVE_TAC [] THEN
-  HO_MATCH_MP_TAC pathTheory.okpath_co_ind THEN
-  GEN_TAC THEN
-  Q.ISPEC_THEN `p2` STRUCT_CASES_TAC pathTheory.path_cases THEN
-  SIMP_TAC (srw_ss()) [] THEN STRIP_TAC THEN
-  Q.ISPEC_THEN `p` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
+  HO_MATCH_MP_TAC pathTheory.okpath_co_ind THEN REPEAT GEN_TAC THEN
+  STRIP_TAC THEN
+  Q.ISPEC_THEN `p` FULL_STRUCT_CASES_TAC path_cases THEN
   FULL_SIMP_TAC (srw_ss()) [lift_weighing_def, first_lift_weighing] THEN
   CONJ_TAC THENL [
     SRW_TAC [][weighted_reduction_def],
@@ -3435,10 +3433,8 @@ val finite_strip_path_label = store_thm (
 val okpath_RUNION = store_thm(
   "okpath_RUNION",
   ``!R1 R2 p. okpath (lrcc R1) p ==> okpath (lrcc (R1 RUNION R2)) p``,
-  GEN_TAC THEN GEN_TAC THEN HO_MATCH_MP_TAC okpath_co_ind THEN GEN_TAC THEN
-  Q.ISPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
+  GEN_TAC THEN GEN_TAC THEN HO_MATCH_MP_TAC okpath_co_ind THEN
   SRW_TAC [][lrcc_RUNION]);
-
 
 val lift_path_plink = store_thm(
   "lift_path_plink",
@@ -3720,7 +3716,7 @@ val okpath_RTC = store_thm(
         okpath R p /\ finite p ==>
         RTC (\x y. ?l. R x l y) (first p) (last p)``,
   GEN_TAC THEN HO_MATCH_MP_TAC finite_okpath_ind THEN
-  SRW_TAC [][relationTheory.RTC_RULES] THEN 
+  SRW_TAC [][relationTheory.RTC_RULES] THEN
   Q.SPEC_THEN `RR` (MATCH_MP_TAC o CONJUNCT2) relationTheory.RTC_RULES THEN
   PROVE_TAC []);
 
@@ -3976,7 +3972,7 @@ val lemma11_2_28i = store_thm(
          by PROVE_TAC [RUNION_RTC_MONOTONE] THEN
       FULL_SIMP_TAC (srw_ss()) [lcompat_closure_RUNION_distrib] THEN
       `RTC (compat_closure beta) (strip_label M') (strip_label (Cpl M'))` by
-        PROVE_TAC [lemma11_1_6ii, reduction_def] THEN
+        PROVE_TAC [lemma11_1_6ii] THEN
       Q.UNABBREV_TAC `M'` THEN FULL_SIMP_TAC (srw_ss()) [strip_label_nlabel],
       PROVE_TAC [relationTheory.RTC_RTC]
     ]
@@ -4100,7 +4096,7 @@ val lemma11_2_28ii = store_thm(
 val corollary11_2_29 = store_thm(
   "corollary11_2_29",
   ``CR beta``,
-  SRW_TAC [][CR_def, reduction_def, lemma11_2_28i, lemma11_2_28ii,
+  SRW_TAC [][CR_def, lemma11_2_28i, lemma11_2_28ii,
              relationTheory.diamond_TC_diamond]);
 
 val _ = export_theory();

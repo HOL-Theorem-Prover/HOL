@@ -1,6 +1,18 @@
 (* Database.sml *)
 structure Database :> Database = struct
 
+
+(* For unknown reasons, BinIO.inputN is raising Subscript exceptions *)
+local
+fun myInputN' (is, 0) = []
+  | myInputN' (is, n) = 
+  case BinIO.input1 is of
+    NONE => []
+  | SOME v => v :: myInputN' (is, n-1);
+in
+fun myInputN (is, n) = Word8Vector.fromList (myInputN' (is, n)) 
+end;
+
 fun writeInt32 os i =
   let
     val w = Word32.fromInt i
@@ -14,7 +26,7 @@ fun writeInt32 os i =
 
 fun readInt32 is =
   let
-    val v = BinIO.inputN (is, 4)
+    val v = myInputN (is, 4)
     fun w8tow32 i s =
       Word32.<< (Word32.fromInt (Word8.toInt (Word8Vector.sub (v, i))), s)
   in
@@ -30,7 +42,7 @@ fun writeString os s =
 
 fun readString is =
   let val len = readInt32 is in
-    Byte.bytesToString (BinIO.inputN (is, len))
+    Byte.bytesToString (myInputN (is, len))
   end;
 
 fun writeList write os l =

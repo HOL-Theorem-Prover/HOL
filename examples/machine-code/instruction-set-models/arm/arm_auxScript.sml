@@ -215,7 +215,7 @@ val REG_READ_REG_WRITE = store_thm("REG_READ_REG_WRITE",
   THEN DECIDE_TAC);
 
 val WORD_SUB_ONE_MULT = store_thm("WORD_SUB_ONE_MULT",
-  ``!x y. x + - 1w * y = x - y``,SRW_TAC [] [])
+  ``!x y. x + (- 1w) * y = x - y``,SRW_TAC [] [])
 
 val REG_READ6_EQ_ARM_READ_REG = store_thm("REG_READ6_EQ_ARM_READ_REG",
   ``!state m. REG_READ6 state.registers m 15w = ARM_READ_REG 15w state``,

@@ -8,6 +8,7 @@ open ppc_coretypesTheory ppc_seq_monadTheory;
 
 infix \\ 
 val op \\ = op THEN;
+val eq = Term.eq;
 
 
 val ppc_status = pS_HIDE

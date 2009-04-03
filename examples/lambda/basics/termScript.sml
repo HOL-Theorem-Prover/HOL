@@ -499,6 +499,19 @@ val _ = Save_Thm("tpm_thm", tpm_thm);
 
 val tpm_fresh = save_thm("tpm_fresh", GSYM FRESH_swap0)
 
+val FRESH_APP = Store_Thm(
+  "FRESH_APP",
+  ``v NOTIN FV (M @@ N) <=> v NOTIN FV M /\ v NOTIN FV N``,
+  SRW_TAC [][]);
+val FRESH_LAM = Store_Thm(
+  "FRESH_LAM",
+  ``u NOTIN FV (LAM v M) <=> (u <> v ==> u NOTIN FV M)``,
+  SRW_TAC [][] THEN METIS_TAC []);
+val FV_EMPTY = store_thm(
+  "FV_EMPTY",
+  ``(FV t = {}) <=> !v. v NOTIN FV t``,
+  SIMP_TAC (srw_ss()) [EXTENSION]);
+
 (* quote the term in order to get the variable names specified *)
 val simple_induction = store_thm(
   "simple_induction",
@@ -592,8 +605,7 @@ val tpm_apart = store_thm(
     METIS_TAC [],
     METIS_TAC [],
     SRW_TAC [][LAM_eq_thm] THEN
-    Cases_on `x = v` THEN SRW_TAC [][],
-    SRW_TAC [][LAM_eq_thm]
+    Cases_on `x = v` THEN SRW_TAC [][]
   ]);
 
 val supp_tpm = Store_Thm(
@@ -635,6 +647,7 @@ val SUB_THM = save_thm(
   "SUB_THM",
   REWRITE_RULE [GSYM CONJ_ASSOC]
                (LIST_CONJ (SUB_THMv :: tl (CONJUNCTS SUB_DEF))))
+val _ = export_rewrites ["SUB_THM"]
 val SUB_VAR = save_thm("SUB_VAR", hd (CONJUNCTS SUB_DEF))
 
 (* ----------------------------------------------------------------------
@@ -710,7 +723,7 @@ val SIMPLE_ALPHA = store_thm(
 
 val tpm_ALPHA = store_thm(
   "tpm_ALPHA",
-  ``~(v IN FV u) ==> !x. LAM x u = LAM v (tpm [(v,x)] u)``,
+  ``v NOTIN FV u ==> (LAM x u = LAM v (tpm [(v,x)] u))``,
   SRW_TAC [][fresh_tpm_subst, SIMPLE_ALPHA]);
 
 (* ----------------------------------------------------------------------
@@ -956,22 +969,19 @@ val tm_recursion_nosideset = save_thm(
 val term_info_string =
     "local\n\
     \fun k |-> v = {redex = k, residue = v}\n\
+    \open binderLib\n\
     \val term_info = \n\
-    \   {nullfv = ``LAM \"\" (VAR \"\")``,\n\
-    \    rewrites = [],\n\
-    \    inst = [\"rFV\" |-> (fn () => ``term$FV : term -> string set``),\n\
-    \            \"rswap\" |-> (fn () =>\n\
-    \                            ``\\(x:string) (y:string) (t:term).\n\
-    \                                   tpm [(x,y)] t``),\n\
-    \            \"apm\" |-> (fn () =>\n\
-    \                           ``term$tpm : (string # string) list -> \n\
-    \                                          term$term -> term$term``)]}\n\
-    \val _ = binderLib.range_database :=\n\
-    \          Binarymap.insert(!binderLib.range_database, \"term\", \n\
-    \                           term_info)\n\
+    \   NTI {nullfv = ``LAM \"\" (VAR \"\")``,\n\
+    \        pm_rewrites = [],\n\
+    \        pm_constant = ``term$tpm``,\n\
+    \        fv_constant = ``term$FV``,\n\
+    \        fv_rewrites = [],\n\
+    \        recursion_thm = SOME tm_recursion_nosideset,\n\
+    \        binders = [(``term$LAM``, 0, tpm_ALPHA)]}\n\
     \val _ = binderLib.type_db :=\n\
-    \          Binarymap.insert(!binderLib.type_db, \"term\",\n\
-    \                           tm_recursion_nosideset)\n\
+    \          Binarymap.insert(!binderLib.type_db,\n\
+    \                           {Name = \"term\",Thy=\"term\"},\n\
+    \                           term_info)\n\
     \in end;\n"
 
 val _ = adjoin_to_theory

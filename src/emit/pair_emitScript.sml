@@ -12,6 +12,7 @@ val _ = eCAML "pair" defs;
 val _ = adjoin_to_theory
   {sig_ps = NONE,
    struct_ps = SOME (fn ppstrm =>
-     PP.add_string ppstrm  "val _ = ConstMapML.insert pairSyntax.comma_tm;")}
+     (PP.add_string ppstrm  "val _ = ConstMapML.insert pairSyntax.comma_tm;";
+      PP.add_newline ppstrm))}
 
 val _ = export_theory ();

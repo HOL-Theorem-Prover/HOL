@@ -516,7 +516,7 @@ fun LAST_TY_FORALL_CONV c tm =
       succeeds, repeat from start.
 
     TOP_DEPTH_CONV c
-      top-down. Repeatdly apply c at top-level, then descend.  If descending
+      top-down. Repeatedly apply c at top-level, then descend.  If descending
       doesn't change anything then stop.  If there was a change then
       come back to top and try c once more at top-level.  If this succeeds
       repeat.

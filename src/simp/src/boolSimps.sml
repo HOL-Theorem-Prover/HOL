@@ -356,6 +356,9 @@ val DNF_ss = rewrites [FORALL_AND_THM, EXISTS_OR_THM,
                        GSYM LEFT_TY_FORALL_IMP_THM, GSYM RIGHT_TY_FORALL_IMP_THM,
                        GSYM LEFT_TY_EXISTS_AND_THM, GSYM RIGHT_TY_EXISTS_AND_THM]
 
+
+val EQUIV_EXTRACT_ss = simpLib.conv_ss BoolExtractShared.BOOL_EQ_IMP_convdata;
+
 val _ = Parse.temp_set_grammars ambient_grammars;
 
 end (* struct *)

@@ -20,7 +20,7 @@ val RW1 = ONCE_REWRITE_RULE;
 val lisp_ref_def = Define `
   (lisp_ref (Dot x y) (v,vi) h sym = ~(v = 0) /\ v IN FDOM h /\ 
     let (m,n,mi,ni) = h ' v in lisp_ref x (m,mi) h sym /\ lisp_ref y (n,ni) h sym) /\
-  (lisp_ref (Num k) (v,vi) h sym = (v = 0) /\ (vi = (n2w k,F)) /\ k < 2**30) /\ 
+  (lisp_ref (Val k) (v,vi) h sym = (v = 0) /\ (vi = (n2w k,F)) /\ k < 2**30) /\ 
   (lisp_ref (Sym s) (v,vi) h sym = (v = 0) /\ ?w. (vi = (w,T)) /\ (ADDR32 w,s) IN sym)`;
 
 
@@ -53,7 +53,7 @@ val symbol_table_dom_def = Define `
 val builtin_symbols_def = Define `
   builtin_symbols = 
     ["nil"; "t"; "quote"; "*"; "+"; "-"; "<"; "car"; "cdr"; "cons";
-     "equal"; "if"; "consp"; "numberp"; "symbolp"; "lambda"]`;
+     "equal"; "cond"; "atomp"; "consp"; "numberp"; "symbolp"; "lambda"]`;
 
 val set_add_def = Define `set_add a x (b,s) = (b - a, s) IN x`;
 
@@ -77,7 +77,7 @@ val lisp_inv_def = Define `
 (* old version
 
 val lisp_x_def = Define `
-  (lisp_x (Num k) (a,dm,m) sym = (a = n2w (k * 4 + 2)) /\ k < 2**30) /\ 
+  (lisp_x (Val k) (a,dm,m) sym = (a = n2w (k * 4 + 2)) /\ k < 2**30) /\ 
   (lisp_x (Sym s) (a,dm,m) sym = ((a - 3w) && 3w = 0w) /\ (a - 3w,s) IN sym) /\
   (lisp_x (Dot x y) (a,dm,m) sym = a IN dm /\ (a + 4w) IN dm /\ 
     lisp_x x (m a,dm,m) sym /\ lisp_x y (m (a+4w),dm,m) sym)`;
@@ -264,10 +264,10 @@ val lisp_inv_move = save_thm("lisp_inv_move",let
 
 (* assignments *)
 
-val lisp_inv_Num = store_thm("lisp_inv_Num",
+val lisp_inv_Val = store_thm("lisp_inv_Val",
   ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> 
     !n. n < 2**30 ==>
-        lisp_inv (Num n,x2,x3,x4,x5,x6,limit) 
+        lisp_inv (Val n,x2,x3,x4,x5,x6,limit) 
                  (n2w (n*4+2),w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
   REWRITE_TAC [lisp_inv_def] \\ REPEAT STRIP_TAC 
   \\ Q.EXISTS_TAC `(0,n2w n, F)`
@@ -303,6 +303,23 @@ val lisp_inv_t = store_thm("lisp_inv_t",
     \\ FULL_SIMP_TAC std_ss [lisp_symbol_table_def]
     \\ FULL_SIMP_TAC std_ss [symbol_table_def,APPEND]
     \\ FULL_SIMP_TAC std_ss [LET_DEF,IN_DELETE,EVAL ``LENGTH "nil"``]
+    \\ FULL_SIMP_TAC std_ss [IN_DEF,set_add_def,ADDR32_n2w,WORD_ADD_SUB2])
+  \\ ASM_SIMP_TAC std_ss [lisp_ref_def]
+  \\ METIS_TAC [lisp_ref_def,ch_arm_nil]);
+
+val lisp_inv_quote = store_thm("lisp_inv_quote",
+  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> 
+    lisp_inv (Sym "quote",x2,x3,x4,x5,x6,limit) (27w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
+  REWRITE_TAC [lisp_inv_def] \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `(0,6w, T)`
+  \\ IMP_RES_TAC (Q.INST [`b`|->`T`,`w`|->`6w`] ch_arm_nil)
+  \\ FULL_SIMP_TAC std_ss [EVAL ``ADDR32 6w + 3w``]
+  \\ `(ADDR32 6w,"quote") IN s` by 
+   (`?dg dm g m. rest = (dm,m,dg,g)` by METIS_TAC [PAIR]
+    \\ `?xs. builtin_symbols = "nil" :: "t" :: "quote" :: xs` by METIS_TAC [builtin_symbols_def]
+    \\ FULL_SIMP_TAC std_ss [lisp_symbol_table_def]
+    \\ FULL_SIMP_TAC std_ss [symbol_table_def,APPEND]
+    \\ FULL_SIMP_TAC std_ss [LET_DEF,IN_DELETE,EVAL ``LENGTH "nil"``,EVAL ``LENGTH "t"``]
+    \\ FULL_SIMP_TAC std_ss [word_arith_lemma1]
     \\ FULL_SIMP_TAC std_ss [IN_DEF,set_add_def,ADDR32_n2w,WORD_ADD_SUB2])
   \\ ASM_SIMP_TAC std_ss [lisp_ref_def]
   \\ METIS_TAC [lisp_ref_def,ch_arm_nil]);
@@ -417,7 +434,7 @@ val lisp_inv_test_lemma = prove(
     \\ Cases_on `v1` \\ Cases_on `x1`
     \\ FULL_SIMP_TAC std_ss [lisp_ref_def,isDot_def])
   \\ IMP_RES_TAC ch_arm_const \\ ASM_REWRITE_TAC []
-  \\ Cases_on `x1` \\ FULL_SIMP_TAC std_ss [isDot_def,isNum_def,isSym_def]
+  \\ Cases_on `x1` \\ FULL_SIMP_TAC std_ss [isDot_def,isVal_def,isSym_def]
   \\ Cases_on `v1` \\ FULL_SIMP_TAC std_ss [lisp_ref_def] THENL [
     SIMP_TAC (std_ss++SIZES_ss) [ADDR32_n2w,word_add_n2w,n2w_and_1,n2w_11]  
     \\ REWRITE_TAC [DECIDE ``4*n+2 = (2*n + 1)* 2``]
@@ -442,18 +459,18 @@ val lisp_inv_test = save_thm("lisp_inv_test",let
 (* basic arithmetic *)
 
 val lisp_inv_ADD = store_thm("lisp_inv_ADD",
-  ``isNum x1 /\ isNum x2 /\ getNum x1 + getNum x2 < 2**30 ==> 
+  ``isVal x1 /\ isVal x2 /\ getVal x1 + getVal x2 < 2**30 ==> 
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> 
     lisp_inv (LISP_ADD x1 x2,x2,x3,x4,x5,x6,limit) (w1+w2-2w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
   STRIP_TAC
-  \\ `?a1 a2. (x1 = Num a1) /\ (x2 = Num a2)` by 
-    (Cases_on `x1` \\ Cases_on `x2` \\ FULL_SIMP_TAC std_ss [isNum_def,SExp_11])
+  \\ `?a1 a2. (x1 = Val a1) /\ (x2 = Val a2)` by 
+    (Cases_on `x1` \\ Cases_on `x2` \\ FULL_SIMP_TAC std_ss [isVal_def,SExp_11])
   \\ ASM_SIMP_TAC std_ss [LISP_ADD_def,lisp_inv_def]
   \\ REPEAT STRIP_TAC
   \\ Cases_on `v1` \\ FULL_SIMP_TAC std_ss [lisp_ref_def]
   \\ IMP_RES_TAC (RW[](GEN_ALL(Q.INST [`b`|->`F`] ch_arm_nil)))
   \\ Q.EXISTS_TAC `(0,n2w (a1+a2),F)`  
-  \\ FULL_SIMP_TAC std_ss [lisp_ref_def,getNum_def]
+  \\ FULL_SIMP_TAC std_ss [lisp_ref_def,getVal_def]
   \\ REVERSE (`w1 + w2 - 2w = ADDR32 (n2w (a1 + a2)) + 2w` by ALL_TAC)
   THEN1 (ASM_REWRITE_TAC [] \\ METIS_TAC [ch_arm_nil])      
   \\ Q.PAT_ASSUM `!w. bbb` (K ALL_TAC)    
@@ -464,20 +481,45 @@ val lisp_inv_ADD = store_thm("lisp_inv_ADD",
   \\ ASM_SIMP_TAC std_ss [ref_field_def,WORD_ADD_ASSOC,WORD_ADD_SUB,ADDR32_ADD]
   \\ REWRITE_TAC [ADDR32_n2w,word_add_n2w,LEFT_ADD_DISTRIB]
   \\ SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC]);
+
+val lisp_inv_ADD1 = store_thm("lisp_inv_ADD1",
+  ``isVal x1 /\ getVal x1 + 1 < 2**30 ==> 
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> 
+    lisp_inv (LISP_ADD x1 (Val 1),x2,x3,x4,x5,x6,limit) (w1 + 4w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
+  STRIP_TAC
+  \\ `?a1. (x1 = Val a1)` by 
+    (Cases_on `x1` \\ FULL_SIMP_TAC std_ss [isVal_def,SExp_11])
+  \\ ASM_SIMP_TAC std_ss [LISP_ADD_def,lisp_inv_def]
+  \\ REPEAT STRIP_TAC
+  \\ Cases_on `v1` \\ FULL_SIMP_TAC std_ss [lisp_ref_def]
+  \\ IMP_RES_TAC (RW[](GEN_ALL(Q.INST [`b`|->`F`] ch_arm_nil)))
+  \\ Q.EXISTS_TAC `(0,n2w (a1 + 1),F)`  
+  \\ FULL_SIMP_TAC std_ss [lisp_ref_def,getVal_def]
+  \\ REVERSE (`w1 + 4w = ADDR32 (n2w (a1 + 1)) + 2w` by ALL_TAC)
+  THEN1 (ASM_REWRITE_TAC [] \\ METIS_TAC [ch_arm_nil])      
+  \\ Q.PAT_ASSUM `!w. bbb` (K ALL_TAC)    
+  \\ FULL_SIMP_TAC std_ss [lisp_ref_def,ch_arm_def,ch_word_def,ch_inv_def,MAP,CONS_11]  
+  \\ FULL_SIMP_TAC std_ss [lisp_ref_def,ch_arm_def,ch_word_def,ch_inv_def,MAP,CONS_11]  
+  \\ `(x1' = 0)` by METIS_TAC [bijection_def,ONE_ONE_DEF]
+  \\ FULL_SIMP_TAC std_ss [ref_field_def,WORD_ADD_ASSOC,WORD_ADD_SUB,ADDR32_ADD]
+  \\ REPEAT (POP_ASSUM (K ALL_TAC))
+  \\ REWRITE_TAC [ADDR32_n2w,LEFT_ADD_DISTRIB,EVAL ``4*1``]
+  \\ REWRITE_TAC [GSYM word_add_n2w, GSYM word_mul_n2w]
+  \\ SIMP_TAC std_ss [AC WORD_ADD_COMM WORD_ADD_ASSOC]);
  
 val lisp_inv_SUB = store_thm("lisp_inv_SUB",
-  ``isNum x1 /\ isNum x2 /\ getNum x2 <= getNum x1 ==> 
+  ``isVal x1 /\ isVal x2 /\ getVal x2 <= getVal x1 ==> 
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> 
     lisp_inv (LISP_SUB x1 x2,x2,x3,x4,x5,x6,limit) (w1 - w2 + 2w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
   STRIP_TAC
-  \\ `?a1 a2. (x1 = Num a1) /\ (x2 = Num a2)` by 
-    (Cases_on `x1` \\ Cases_on `x2` \\ FULL_SIMP_TAC std_ss [isNum_def,SExp_11])
+  \\ `?a1 a2. (x1 = Val a1) /\ (x2 = Val a2)` by 
+    (Cases_on `x1` \\ Cases_on `x2` \\ FULL_SIMP_TAC std_ss [isVal_def,SExp_11])
   \\ ASM_SIMP_TAC std_ss [LISP_SUB_def,lisp_inv_def]
   \\ REPEAT STRIP_TAC
   \\ Cases_on `v1` \\ FULL_SIMP_TAC std_ss [lisp_ref_def]
   \\ IMP_RES_TAC (RW[](GEN_ALL(Q.INST [`b`|->`F`] ch_arm_nil)))
   \\ Q.EXISTS_TAC `(0,n2w (a1-a2),F)`  
-  \\ FULL_SIMP_TAC std_ss [lisp_ref_def,getNum_def]
+  \\ FULL_SIMP_TAC std_ss [lisp_ref_def,getVal_def]
   \\ `a1 < a2 + 1073741824` by DECIDE_TAC
   \\ REVERSE (`w1 - w2 + 2w = ADDR32 (n2w (a1 - a2)) + 2w` by ALL_TAC)
   THEN1 (ASM_REWRITE_TAC [] \\ METIS_TAC [ch_arm_nil])      
@@ -493,14 +535,45 @@ val lisp_inv_SUB = store_thm("lisp_inv_SUB",
   \\ REWRITE_TAC [WORD_EQ_ADD_LCANCEL,WORD_ADD_SUB_ASSOC,GSYM ADDR32_SUB]
   \\ SIMP_TAC std_ss [GSYM NOT_LESS,word_arith_lemma2]);  
 
-val lisp_inv_LESS = store_thm("lisp_inv_LESS",
-  ``isNum x1 /\ isNum x2 ==> 
+val lisp_inv_SUB1 = store_thm("lisp_inv_SUB1",
+  ``isVal x1 /\ 0 < getVal x1 ==> 
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> 
-    (LISP_LESS x1 x2 = w1 <+ w2)``,
+    lisp_inv (LISP_SUB x1 (Val 1),x2,x3,x4,x5,x6,limit) (w1 - 4w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
   STRIP_TAC
-  \\ `?a1 a2. (x1 = Num a1) /\ (x2 = Num a2)` by 
-    (Cases_on `x1` \\ Cases_on `x2` \\ FULL_SIMP_TAC std_ss [isNum_def,SExp_11])
-  \\ ASM_SIMP_TAC std_ss [LISP_LESS_def,lisp_inv_def]
+  \\ `?a1. (x1 = Val a1)` by 
+    (Cases_on `x1` \\ FULL_SIMP_TAC std_ss [isVal_def,SExp_11])
+  \\ ASM_SIMP_TAC std_ss [LISP_SUB_def,lisp_inv_def]
+  \\ REPEAT STRIP_TAC
+  \\ Cases_on `v1` \\ FULL_SIMP_TAC std_ss [lisp_ref_def]
+  \\ IMP_RES_TAC (RW[](GEN_ALL(Q.INST [`b`|->`F`] ch_arm_nil)))
+  \\ Q.EXISTS_TAC `(0,n2w (a1 - 1),F)`  
+  \\ FULL_SIMP_TAC std_ss [lisp_ref_def,getVal_def]
+  \\ `a1 < 1073741825` by DECIDE_TAC
+  \\ REVERSE (`w1 - 4w = ADDR32 (n2w (a1 - 1)) + 2w` by ALL_TAC)
+  THEN1 (ASM_REWRITE_TAC [] \\ METIS_TAC [ch_arm_nil])      
+  \\ Q.PAT_ASSUM `!w. bbb` (K ALL_TAC)    
+  \\ FULL_SIMP_TAC std_ss [lisp_ref_def,ch_arm_def,ch_word_def,ch_inv_def,MAP,CONS_11]  
+  \\ FULL_SIMP_TAC std_ss [lisp_ref_def,ch_arm_def,ch_word_def,ch_inv_def,MAP,CONS_11]  
+  \\ `(x1' = 0)` by METIS_TAC [bijection_def,ONE_ONE_DEF]
+  \\ FULL_SIMP_TAC std_ss [ref_field_def,WORD_ADD_ASSOC,WORD_ADD_SUB,ADDR32_ADD]
+  \\ REWRITE_TAC [ADDR32_n2w,LEFT_SUB_DISTRIB,EVAL ``4*1``]
+  \\ REWRITE_TAC [word_add_n2w]
+  \\ `4 * a1 - 4 + 2 = 4 * a1 - 2` by DECIDE_TAC
+  \\ `~(4 * a1 + 2 < 4)` by DECIDE_TAC
+  \\ ASM_SIMP_TAC std_ss [word_arith_lemma2]
+  \\ Cases_on `a1` THEN1 (`F` by DECIDE_TAC)
+  \\ MATCH_MP_TAC (METIS_PROVE [] ``(m = n) ==> ((n2w m):('a word) = n2w n)``)
+  \\ REPEAT (POP_ASSUM (K ALL_TAC))
+  \\ DECIDE_TAC);
+
+val lisp_inv_LESS = store_thm("lisp_inv_LESS",
+  ``isVal x1 /\ isVal x2 ==> 
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> 
+    (getVal x1 < getVal x2 = w1 <+ w2)``,
+  STRIP_TAC
+  \\ `?a1 a2. (x1 = Val a1) /\ (x2 = Val a2)` by 
+    (Cases_on `x1` \\ Cases_on `x2` \\ FULL_SIMP_TAC std_ss [isVal_def,SExp_11])
+  \\ ASM_SIMP_TAC std_ss [lisp_inv_def,getVal_def]
   \\ REPEAT STRIP_TAC \\ Cases_on `v1` \\ Cases_on `v2` 
   \\ FULL_SIMP_TAC std_ss [lisp_ref_def,ch_arm_def,ch_word_def,ch_inv_def,MAP,CONS_11]  
   \\ FULL_SIMP_TAC std_ss [lisp_ref_def,ch_arm_def,ch_word_def,ch_inv_def,MAP,CONS_11]  
@@ -515,6 +588,7 @@ val lisp_inv_LESS = store_thm("lisp_inv_LESS",
   \\ REPEAT STRIP_TAC
   \\ `(4 * a1 + 2) < 4294967296 /\ (4 * a2 + 2) < 4294967296` by DECIDE_TAC
   \\ ASM_SIMP_TAC std_ss []);
+
 
 (* basic equality *)
 
@@ -581,12 +655,12 @@ val symbol_table_eq = store_thm("symbol_table_eq",
     \\ ASM_SIMP_TAC std_ss []]);
 
 val lisp_inv_eq_lemma = prove(
-  ``(isNum x1 /\ isNum x2) \/ (isSym x1 /\ isSym x2) ==> 
+  ``(isVal x1 /\ isVal x2) \/ (isSym x1 /\ isSym x2) ==> 
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> 
     ((x1 = x2) = (w1 = w2))``,
   STRIP_TAC THEN1
-   (`?a1 a2. (x1 = Num a1) /\ (x2 = Num a2)` by 
-    (Cases_on `x1` \\ Cases_on `x2` \\ FULL_SIMP_TAC std_ss [isNum_def,SExp_11])
+   (`?a1 a2. (x1 = Val a1) /\ (x2 = Val a2)` by 
+    (Cases_on `x1` \\ Cases_on `x2` \\ FULL_SIMP_TAC std_ss [isVal_def,SExp_11])
     \\ ASM_SIMP_TAC std_ss [LISP_LESS_def,lisp_inv_def]
     \\ REPEAT STRIP_TAC
     \\ Cases_on `v1` \\ FULL_SIMP_TAC std_ss [lisp_ref_def]
@@ -625,13 +699,27 @@ val lisp_inv_eq = store_thm("lisp_inv_eq",
     Cases_on `x1` \\ FULL_SIMP_TAC std_ss [isDot_def]
     \\ Cases_on `x2` \\ STRIP_TAC \\ SIMP_TAC std_ss [SExp_distinct]
     \\ IMP_RES_TAC lisp_inv_test
-    \\ FULL_SIMP_TAC std_ss [isNum_def,isSym_def,isDot_def]
-    \\ METIS_TAC [lisp_inv_eq_lemma,isNum_def,isSym_def],
+    \\ FULL_SIMP_TAC std_ss [isVal_def,isSym_def,isDot_def]
+    \\ METIS_TAC [lisp_inv_eq_lemma,isVal_def,isSym_def],
     Cases_on `x2` \\ FULL_SIMP_TAC std_ss [isDot_def]
     \\ Cases_on `x1` \\ STRIP_TAC \\ SIMP_TAC std_ss [SExp_distinct]
     \\ IMP_RES_TAC lisp_inv_test
-    \\ FULL_SIMP_TAC std_ss [isNum_def,isSym_def,isDot_def]
-    \\ METIS_TAC [lisp_inv_eq_lemma,isNum_def,isSym_def]]);
+    \\ FULL_SIMP_TAC std_ss [isVal_def,isSym_def,isDot_def]
+    \\ METIS_TAC [lisp_inv_eq_lemma,isVal_def,isSym_def]]);
+
+val lisp_inv_eq_0 = store_thm("lisp_inv_eq_0",
+  ``!n. n < 2 ** 30 ==>
+        lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> 
+        ((x1 = Val n) = (w1 = n2w (n * 4 + 2)))``,
+  REPEAT STRIP_TAC
+  \\ `lisp_inv (x1,x1,x3,x4,x5,x6,limit) (w1,w1,w3,w4,w5,w6,a,x,xs,s,rest)` by 
+      METIS_TAC [lisp_inv_move]
+  \\ (IMP_RES_TAC o DISCH ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest)`` o 
+      UNDISCH o Q.SPEC `n` o UNDISCH) lisp_inv_Val
+  \\ MATCH_MP_TAC (RW [AND_IMP_INTRO] lisp_inv_eq)
+  \\ REWRITE_TAC [isDot_def]
+  \\ (IMP_RES_TAC o DISCH ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest)`` o 
+      MATCH_MP lisp_inv_swap2 o UNDISCH o Q.SPEC `n` o UNDISCH) lisp_inv_Val);
 
 
 (* symbol test *)
@@ -643,9 +731,10 @@ val builti_symbols_thm = prove(
     (ADDR32 13w,"+") IN s /\ (ADDR32 16w,"-") IN s /\ 
     (ADDR32 19w,"<") IN s /\ (ADDR32 22w,"car") IN s /\ 
     (ADDR32 25w,"cdr") IN s /\ (ADDR32 28w,"cons") IN s /\ 
-    (ADDR32 31w,"equal") IN s /\ (ADDR32 35w,"if") IN s /\ 
-    (ADDR32 38w,"consp") IN s /\ (ADDR32 42w,"numberp") IN s /\ 
-    (ADDR32 46w,"symbolp") IN s /\ (ADDR32 50w,"lambda") IN s``,
+    (ADDR32 31w,"equal") IN s /\ (ADDR32 35w,"cond") IN s /\ 
+    (ADDR32 38w,"atomp") IN s /\ (ADDR32 42w,"consp") IN s /\
+    (ADDR32 46w,"numberp") IN s /\ (ADDR32 50w,"symbolp") IN s /\
+    (ADDR32 54w,"lambda") IN s``,
   `?dg g dm m. rest = (dm,m,dg,g)` by METIS_TAC [PAIR]
   \\ ASM_REWRITE_TAC [lisp_symbol_table_def]  
   \\ POP_ASSUM (K ALL_TAC)
@@ -657,11 +746,11 @@ val builti_symbols_thm = prove(
   \\ ONCE_REWRITE_TAC [symbol_table_def]
   \\ SIMP_TAC std_ss [LENGTH,LET_DEF,IN_DELETE]
   \\ SIMP_TAC std_ss [IN_DEF,set_add_def,WORD_ADD_SUB2,ADDR32_n2w]
-  \\ NTAC 20 (SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w]
+  \\ NTAC 22 (SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w]
   \\ ONCE_REWRITE_TAC [symbol_table_def]
   \\ SIMP_TAC std_ss [LENGTH,LET_DEF,IN_DELETE]
   \\ SIMP_TAC std_ss [IN_DEF,set_add_def,WORD_ADD_SUB2,ADDR32_n2w]));
-  
+
 val lisp_symbol_table_11 = prove(
   ``lisp_symbol_table s (sa,rest) /\
     (ADDR32 x1,s1) IN s /\ (ADDR32 x2,s2) IN s ==>
@@ -675,7 +764,7 @@ val lisp_symbol_table_11 = prove(
        FULL_SIMP_TAC std_ss [IN_DEF,set_add_def,WORD_ADD_SUB]
   \\ IMP_RES_TAC symbol_table_eq
   \\ METIS_TAC [WORD_EQ_ADD_RCANCEL,ADDR32_11]);
-  
+
 val lisp_inv_test_builtin_lemma = prove( 
   ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> 
     ((w1 = ADDR32 0w + 3w) = (x1 = Sym "nil")) /\ 
@@ -689,15 +778,16 @@ val lisp_inv_test_builtin_lemma = prove(
     ((w1 = ADDR32 25w + 3w) = (x1 = Sym "cdr")) /\ 
     ((w1 = ADDR32 28w + 3w) = (x1 = Sym "cons")) /\ 
     ((w1 = ADDR32 31w + 3w) = (x1 = Sym "equal")) /\ 
-    ((w1 = ADDR32 35w + 3w) = (x1 = Sym "if")) /\ 
-    ((w1 = ADDR32 38w + 3w) = (x1 = Sym "consp")) /\ 
-    ((w1 = ADDR32 42w + 3w) = (x1 = Sym "numberp")) /\ 
-    ((w1 = ADDR32 46w + 3w) = (x1 = Sym "symbolp")) /\ 
-    ((w1 = ADDR32 50w + 3w) = (x1 = Sym "lambda"))``,
+    ((w1 = ADDR32 35w + 3w) = (x1 = Sym "cond")) /\ 
+    ((w1 = ADDR32 38w + 3w) = (x1 = Sym "atomp")) /\
+    ((w1 = ADDR32 42w + 3w) = (x1 = Sym "consp")) /\ 
+    ((w1 = ADDR32 46w + 3w) = (x1 = Sym "numberp")) /\ 
+    ((w1 = ADDR32 50w + 3w) = (x1 = Sym "symbolp")) /\ 
+    ((w1 = ADDR32 54w + 3w) = (x1 = Sym "lambda"))``,
   STRIP_TAC \\ REVERSE (Cases_on `isSym x1 `) THEN1
    (`w1 && 1w = 0w` by METIS_TAC [lisp_inv_test]
     \\ Cases_on `x1` \\ FULL_SIMP_TAC std_ss 
-         [isDot_def,isNum_def,isSym_def,SExp_distinct]
+         [isDot_def,isVal_def,isSym_def,SExp_distinct]
     \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC std_ss [ADDR32_n2w,word_add_n2w,n2w_and_1]
     \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [n2w_11])

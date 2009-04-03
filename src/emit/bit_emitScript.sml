@@ -152,7 +152,7 @@ val LOWEST_SET_BIT_emit = Q.prove(
   SRW_TAC [] [LOWEST_SET_BIT, combinTheory.FAIL_THM]);
 
 val defs =
-  map (DEFN o PURE_REWRITE_RULE [TIMES_2EXP1,arithmeticTheory.NUMERAL_DEF])
+  map (DEFN o PURE_REWRITE_RULE [TIMES_2EXP1])
        [TIMES_2EXP_compute,BITWISE_compute,LOG_compute,LOWEST_SET_BIT_emit,
         l2n_def,n2l_def,s2n_compute,n2s_compute,HEX_compute,UNHEX_compute,
         num_from_bin_list_def,num_from_oct_list_def,num_from_dec_list_def,

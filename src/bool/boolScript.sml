@@ -3476,6 +3476,96 @@ let val b    = --`b:bool`--
 
 val _ = save_thm("COND_EXPAND", COND_EXPAND);
 
+(* ---------------------------------------------------------------------*)
+(* COND_EXPAND_IMP						        *)
+(*								        *)
+(* |- !b t1 t2. (b => t1 | t2) = ((b ==> t1) /\ (~b ==> t2))	        *)
+(*								        *)
+(*				       	                    TT 09.03.18 *)
+(* ---------------------------------------------------------------------*)
+
+val COND_EXPAND_IMP =
+let val b    = --`b:bool`--
+    val t1   = --`t1:bool`--
+    val t2   = --`t2:bool`--
+    val nb   = mk_neg b;
+    val nnb  = mk_neg nb;
+
+
+    val imp_th1  = SPECL [b, t1] IMP_DISJ_THM;
+    val imp_th2a = SPECL [nb, t2] IMP_DISJ_THM
+    val imp_th2b = SUBST_CONV [nnb |-> (SPEC b (CONJUNCT1 NOT_CLAUSES))]
+		   (mk_disj (nnb, t2)) (mk_disj (nnb, t2))
+    val imp_th2  = TRANS imp_th2a imp_th2b
+
+
+    val new_rhs = ``(b ==> t1) /\ (~b ==> t2)``;
+    val subst = [mk_imp(b,t1) |-> imp_th1,
+                 mk_imp(nb,t2) |-> imp_th2]
+
+    val th1 = SUBST_CONV subst new_rhs new_rhs
+    val th2 = TRANS (SPECL [b,t1,t2] COND_EXPAND) (SYM th1)
+in
+    GENL [b,t1,t2] th2
+end;
+
+val _ = save_thm("COND_EXPAND_IMP", COND_EXPAND_IMP);
+
+
+
+(* ---------------------------------------------------------------------*)
+(* COND_EXPAND_OR 						        *)
+(*								        *)
+(* |- !b t1 t2. (b => t1 | t2) = ((b /\ t1) \/ (~b /\ t2))	        *)
+(*								        *)
+(*				       	                    TT 09.03.18 *)
+(* ---------------------------------------------------------------------*)
+
+
+val COND_EXPAND_OR =
+let val b    = --`b:bool`--
+    val t1   = --`t1:bool`--
+    val t2   = --`t2:bool`--
+    val conj = --`$/\`--
+    val disj = --`$\/`--
+    val theta = [Type`:'a` |-> Type.bool]
+    val (COND_T,COND_F) =
+      let val t1 = --`t1:'a`--  and  t2 = --`t2:'a`--
+      in (GENL[t1,t2]##GENL[t1,t2]) (CONJ_PAIR(SPEC_ALL COND_CLAUSES))
+      end
+    and [NOT1,NOT2] = tl (CONJUNCTS NOT_CLAUSES)
+    and [OR1,OR2,OR3,OR4,_] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
+    and [AND1,AND2,AND3,AND4,_] = map GEN_ALL (CONJUNCTS(SPEC_ALL AND_CLAUSES))
+    val thTl = SPECL [t1,t2] (INST_TYPE theta COND_T)
+    and thFl = SPECL [t1,t2] (INST_TYPE theta COND_F)
+    val thTr =
+      let val th2 = TRANS (AP_THM (AP_TERM conj NOT1) t2) (SPEC t2 AND3)
+          and th1 = SPEC t1 AND1
+      in
+         TRANS (MK_COMB (AP_TERM disj th1,th2)) (SPEC t1 OR4)
+      end
+    and thFr =
+      let val th2 = TRANS (AP_THM (AP_TERM conj NOT2) t2) (SPEC t2 AND1)
+          and th1 = SPEC t1 AND3
+      in
+        TRANS (MK_COMB (AP_TERM disj th1,th2)) (SPEC t2 OR3)
+      end
+    val thT1 = TRANS thTl (SYM thTr)
+    and thF1 = TRANS thFl (SYM thFr)
+    val tm = (--`(if b then t1 else t2) = ((b /\ t1) \/ (~b /\ t2))`--)
+    val thT2 = SUBST_CONV [b |-> ASSUME (--`b = T`--)] tm tm
+    and thF2 = SUBST_CONV [b |-> ASSUME (--`b = F`--)] tm tm
+    val thT3 = EQ_MP (SYM thT2) thT1
+    and thF3 = EQ_MP (SYM thF2) thF1
+ in
+   GENL [b, t1, t2] (DISJ_CASES (SPEC b BOOL_CASES_AX) thT3 thF3)
+ end;
+
+val _ = save_thm("COND_EXPAND_OR", COND_EXPAND_OR);
+
+
+
+
 
 val TYPE_DEFINITION_THM =
   let val P   = Term `P:'a-> bool`
@@ -4154,6 +4244,7 @@ val MONO_IMP = save_thm("MONO_IMP",
     EQ_MP th8 th7
  end);
 
+
 (* ------------------------------------------------------------------------- *)
 (* MONO_NOT |- (y ==> x) ==> (~x ==> ~y)                                     *)
 (* ------------------------------------------------------------------------- *)
@@ -4171,6 +4262,27 @@ val MONO_NOT = save_thm("MONO_NOT",
  in
     DISCH tm1 (DISCH tm2 th6)
  end);
+
+
+(* ------------------------------------------------------------------------- *)
+(* MONO_NOT_EQ |- (y ==> x) = (~x ==> ~y)                                     *)
+(* ------------------------------------------------------------------------- *)
+
+
+val MONO_NOT_EQ = save_thm("MONO_NOT_EQ",
+ let val tm1 = Term `x:bool`
+     val tm2 = Term `y:bool`
+     val th1 = INST [tm1 |-> mk_neg tm2, tm2 |-> mk_neg tm1] MONO_NOT
+
+     val th2 = SUBST [Term `x1:bool` |-> SPEC tm1 (CONJUNCT1 NOT_CLAUSES),
+                      Term `x2:bool` |-> SPEC tm2 (CONJUNCT1 NOT_CLAUSES)]
+                     (Term `(~x ==> ~y) ==> (x2 ==> x1)`) th1
+
+     val th3 = IMP_ANTISYM_RULE MONO_NOT th2
+ in
+     th3
+ end);
+
 
 (* ------------------------------------------------------------------------- *)
 (* MONO_ALL |- (!x. P x ==> Q x) ==> (!x. P x) ==> !x. Q x                   *)
@@ -4447,7 +4559,7 @@ val UNWIND_FORALL_THM2 = save_thm("UNWIND_FORALL_THM2",
 
 
 (* ------------------------------------------------------------------------- *)
-(* Skolemization.                                                            *)
+(* Skolemization:    |- !P. (!x. ?y. P x y) <=> ?f. !x. P x (f x)            *)
 (* ------------------------------------------------------------------------- *)
 
 val SKOLEM_THM = save_thm("SKOLEM_THM",
@@ -4976,8 +5088,8 @@ val BOOL_FUN_INDUCT = save_thm("BOOL_FUN_INDUCT",BOOL_FUN_INDUCT);
  ---------------------------------------------------------------------------*)
 
 val literal_case_THM =
- let val f = Term `f:'a->'b`
-     val x = Term `x:'a`
+ let val f = ``f:'a->'b``
+     val x = ``x:'a``
  in
   GEN f (GEN x
     (RIGHT_BETA(AP_THM (RIGHT_BETA(AP_THM literal_case_DEF f)) x)))
@@ -4986,9 +5098,10 @@ val literal_case_THM =
 val _ = save_thm("literal_case_THM", literal_case_THM);
 
 
-(*---------------------------------------------------------------------------
-    literal_case_RAND =  P (literal_case (\x. N x) M) = (literal_case (\x. P (N x)) M)
- ---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(*    literal_case_RAND =                                                    *)
+(*        |- P (literal_case (\x. N x) M) = (literal_case (\x. P (N x)) M)   *)
+(*---------------------------------------------------------------------------*)
 
 val literal_case_RAND = save_thm("literal_case_RAND",
  let val tm1 = Term`\x:'a. P (N x:'b):bool`
@@ -5002,9 +5115,10 @@ val literal_case_RAND = save_thm("literal_case_RAND",
  end);
 
 
-(*---------------------------------------------------------------------------
-    literal_case_RATOR =  (literal_case (\x. N x) M) b = (literal_case (\x. N x b) M)
- ---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(*    literal_case_RATOR =                                                   *)
+(*         |- (literal_case (\x. N x) M) b = (literal_case (\x. N x b) M)    *)
+(*---------------------------------------------------------------------------*)
 
 val literal_case_RATOR = save_thm("literal_case_RATOR",
  let val M = Term`M:'a`
@@ -5051,6 +5165,30 @@ val literal_case_CONG =
 
 val _ = save_thm("literal_case_CONG", literal_case_CONG);
 
+(*---------------------------------------------------------------------------*)
+(* Sometime useful rewrite, but you will want a higher-order version.        *)
+(*  |- literal_case (\x. bool_case t u (x=a)) a = t                          *)
+(*---------------------------------------------------------------------------*)
+
+val literal_case_id = save_thm
+("literal_case_id",
+ let val a = mk_var("a", alpha)
+    val x = mk_var("x", alpha)
+    val t = mk_var("t",beta)
+    val u = mk_var("u",beta)
+    val eq = mk_eq(x,a)
+    val bcase = inst [alpha |-> beta] 
+                     (prim_mk_const{Name = "bool_case",Thy="bool"})
+    val g = mk_abs(x,list_mk_comb(bcase,[t, u, eq]))
+    val lit_thm = RIGHT_BETA(SPEC a (SPEC g literal_case_THM))
+    val bool_case_th = SPECL [mk_eq(a,a),t,u]  
+                         (INST_TYPE [alpha |-> beta] bool_case_EQ_COND)
+    val Teq = SYM (EQT_INTRO(REFL a))
+    val ifT = CONJUNCT1(SPECL[t,u] (INST_TYPE[alpha |-> beta] COND_CLAUSES))
+    val ifeq = SUBS [Teq] ifT
+ in
+    TRANS lit_thm (TRANS bool_case_th ifeq)
+ end);
 
 (*---------------------------------------------------------------------------
          Support for parsing "case" expressions
@@ -5220,6 +5358,28 @@ in
                             witness)
                            (GEN_ALL witness_applied2))
 end
+
+
+(*---------------------------------------------------------------------------*)
+(* PEIRCE  =  |- ((P ==> Q) ==> P) ==> P                                     *)
+(*---------------------------------------------------------------------------*)
+
+val PEIRCE = save_thm
+("PEIRCE",
+ let val th1 = ASSUME ``(P ==> Q) ==> P``
+     val th2 = ASSUME ``P:bool``
+     val th3 = ASSUME ``~P``
+     val th4 = MP th3 th2
+     val th5 = MP (SPEC ``Q:bool`` FALSITY) th4
+     val th6 = DISCH ``P:bool`` th5
+     val th7 = MP th1 th6
+     val th8 = MP th3 th7
+     val th9 = DISCH ``~P`` th8
+     val th10 = MP (SPEC ``~P`` IMP_F) th9
+     val th11 = SUBS [SPEC ``P:bool`` (CONJUNCT1 NOT_CLAUSES)] th10
+ in 
+   DISCH ``(P ==> Q) ==> P`` th11
+ end);
 
 val _ = export_theory();
 

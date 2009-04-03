@@ -12,6 +12,13 @@ open HolKernel Parse boolLib newOpsemTheory
      computeLib bossLib;
 
 
+(*==================================================== *)
+
+
+(* --------------------------------------------------- *)
+(* Functions to execute the small-step semantics       *)
+(* --------------------------------------------------- *)
+
 (* --------------------------------------------------- *)
 (* Function to get the result of an equational theorem *)
 (* --------------------------------------------------- *)
@@ -20,9 +27,44 @@ fun getThm thm =
 
 
 (* --------------------------------------------------- *)
+(* Function to get the next state and the next instruction
+   list when executing an instruction on a given state *)
+(* --------------------------------------------------- *)
+fun nextStep instList state =
+    let val tm = getThm (EVAL ``STEP1 (^instList, ^state)``);
+      val (i,s) = dest_comb(tm);
+      val newList = snd(dest_comb(i));
+      val newState = snd(dest_comb(s));
+      val outCome = fst(dest_comb(s));
+    in
+       if outCome = ``ERROR``
+       then raise HOL_ERR {message="ERROR outcome in next state function",
+		origin_function ="next ",
+		origin_structure ="simpTools"}
+       else (newList,newState)
+     end;
+ 
+(* --------------------------------------------------- *)
+(* Function to evaluate a condition on the current state
+   using the semantics of Boolean operators            *)
+(* --------------------------------------------------- *)
+
+fun evalCond cond st = 
+  let val (_,evalCond) = strip_comb(concl(EVAL ``beval ^cond ^st``))
+  in 
+    el 2 evalCond
+  end;      
+
+(*==================================================== *)
+
+(* --------------------------------------------------- *)
+(* Functions to handle post and pre conditions         *)
+(* --------------------------------------------------- *)
+
+
+(* --------------------------------------------------- *)
 (* functions to transform JML bounded forall statement *)
 (* --------------------------------------------------  *)
-
 
 (* conversion rule to rewrite a bounded for all term
    as a conjunction *) 
@@ -123,11 +165,6 @@ fun NOT_CONJ_IMP_CONV tm =
       REFL tm
      )
 end;
-
-(* --------------------------------------------------- *)
-(* Functions to handle post and pre conditions         *)
-(* --------------------------------------------------- *)
-
 
 
 (* --------------------------------------------------- *)

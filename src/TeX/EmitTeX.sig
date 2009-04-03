@@ -8,10 +8,8 @@ sig
     val non_type_definitions      : string -> (string * thm) list
     val non_type_theorems         : string -> (string * thm) list
     val datatype_theorems         : string -> (string * thm) list
-
-    val pp_datatype_theorem       : ppstream -> thm -> unit
-    val datatype_thm_to_string    : thm -> string
     val print_datatypes           : string -> unit
+    val datatype_thm_to_string    : thm -> string
 
     val hol_to_tex                : (string -> string) ref
 

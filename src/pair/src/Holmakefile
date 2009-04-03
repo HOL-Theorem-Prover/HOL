@@ -1,0 +1,2 @@
+selftest.exe: selftest.uo $(dprot $(SIGOBJ)/term_pp.uo)
+	$(HOLMOSMLC) -o $@ $<

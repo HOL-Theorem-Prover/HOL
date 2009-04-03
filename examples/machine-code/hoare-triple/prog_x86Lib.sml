@@ -8,6 +8,7 @@ open x86_seq_monadTheory x86_coretypesTheory x86_astTheory;
 
 infix \\ 
 val op \\ = op THEN;
+val eq = Term.eq;
 
 
 val x86_status = xS_HIDE;

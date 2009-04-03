@@ -180,7 +180,7 @@ val thms =
    numeral_log2,numeral_ilog2,LOG_compute,LOWEST_SET_BIT_compute,
    n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def,
-   word_join_def, word_concat_def,
+   word_join_def, Q.SPECL [`^n2w ^n`,`n2w ^m:'b word`] word_concat_def,
    word_reverse_n2w, word_modify_n2w, word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
    word_2comp_n2w, word_sub_def, word_div_def, word_sdiv_def,
@@ -1180,6 +1180,12 @@ fun mk_word_size n =
     type_abbrev("word" ^ SN, TYPE)
   end;
 
+fun dest_word_literal t =
+let val n = (rhs o concl o EVAL o mk_w2n) t in
+  numLib.dest_numeral n
+end handle HOL_ERR _ =>
+  raise ERR "dest_word_literal" "term is not a word literal with known length";
+
 (* ------------------------------------------------------------------------- *)
 
 val Cases_word = Cases;
@@ -1412,7 +1418,7 @@ fun dont_guess_lengths () = set_trace "guess word lengths" 0;
 val operators = [("+", "word_add"), ("-", "word_sub"),
                  ("numeric_negate", "word_2comp"),
                  ("*", "word_mul"), ("<", "word_lt"), (">", "word_gt"),
-                 ("<=", "word_le"), (">=", "word_ge")];
+                 ("<=", "word_le"), (">=", "word_ge"), ("/", "word_sdiv")];
 
 fun deprecate_word () =
   app (fn (opname, name) =>
@@ -1424,8 +1430,7 @@ fun prefer_word () =
          temp_bring_to_front_overload opname {Name = name, Thy = "words"}
          handle HOL_ERR _ => ()) operators;
 
-val _ =
-  Defn.const_eq_ref := (!Defn.const_eq_ref ORELSEC word_EQ_CONV);
+val _ = Defn.const_eq_ref := (!Defn.const_eq_ref ORELSEC word_EQ_CONV);
 
 val _ = Feedback.emit_MESG := emit_mesg
 

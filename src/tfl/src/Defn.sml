@@ -13,6 +13,9 @@ val ERRloc = mk_HOL_ERRloc "Defn";
 
 val monitoring = ref false;
 
+(* Interactively: 
+  val const_eq_ref = ref (!Defn.const_eq_ref)
+*)
 val const_eq_ref = ref Conv.NO_CONV;
 
 (*---------------------------------------------------------------------------
@@ -196,7 +199,7 @@ fun params_of (ABBREV _)  = []
   | params_of (STDREC {SV, ...}) = SV
   | params_of (NESTREC{SV, ...}) = SV
   | params_of (MUTREC {SV, ...}) = SV
-  | params_of (NESTREC {SV, ...}) = SV
+  | params_of (TAILREC {SV, ...}) = SV
 
 fun schematic defn = not(List.null (params_of defn));
 
@@ -254,8 +257,12 @@ fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
       NONREC {eqs=INST_THM theta eqs,
               ind=INST_THM theta ind,
               SV=map (isubst theta) SV,stem=stem}
-  | inst_defn (ABBREV {eqn,bind}) theta =
-      ABBREV {eqn=INST_THM theta eqn,bind=bind}
+  | inst_defn (ABBREV {eqn,bind}) theta = ABBREV {eqn=INST_THM theta eqn,bind=bind}
+  | inst_defn (TAILREC{eqs,ind,R,SV,stem}) theta =
+      TAILREC {eqs=map (INST_THM theta) eqs,
+              ind=INST_THM theta ind,
+              R=isubst theta R,
+              SV=map (isubst theta) SV, stem=stem};
 
 
 fun set_reln def R =
@@ -521,9 +528,33 @@ fun protect_rhs eqn = mk_eq(lhs eqn,combinSyntax.mk_I(rhs eqn))
 fun protect eqns = list_mk_conj (map protect_rhs (strip_conj eqns));
 
 val unprotect_term = rhs o concl o PURE_REWRITE_CONV [combinTheory.I_THM];
-val unprotect_thm  = PURE_REWRITE_RULE [combinTheory.I_THM]
+val unprotect_thm  = PURE_REWRITE_RULE [combinTheory.I_THM];
 
-fun gen_wfrec_eqns thy const_eq_conv eqns =
+(*---------------------------------------------------------------------------*)
+(* Once patterns are instantiated and the clauses are simplified, there can  *)
+(* still remain right-hand sides with occurrences of fully concrete tests on *)
+(* literals. Here we simplify those away.                                    *)
+(*                                                                           *)
+(* const_eq_ref is a reference cell that decides equality of literals such   *)
+(* as 23, "foo", #"G", 6w, 0b1000w. It gets updated in reduceLib, stringLib  *)
+(* and wordsLib.                                                             *)
+(*---------------------------------------------------------------------------*)
+
+fun elim_triv_literal_case th =
+ let val const_eq_conv = !const_eq_ref
+     val cnv = TRY_CONV (REWR_CONV literal_case_THM THENC BETA_CONV) THENC
+               RAND_CONV const_eq_conv THENC 
+               PURE_ONCE_REWRITE_CONV [bool_case_thm]
+     val rule = CONV_RULE (RAND_CONV (REPEATC cnv))
+ in rule th
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Instantiate the recursion theorem and extract termination conditions,     *)
+(* but do not define the constant yet.                                       *)
+(*---------------------------------------------------------------------------*)
+
+fun wfrec_eqns thy eqns =
  let val {functional,pats} = mk_functional thy (protect eqns)
      val SV = free_vars functional    (* schematic variables *)
      val (f, Body) = dest_abs functional
@@ -543,16 +574,12 @@ fun gen_wfrec_eqns thy const_eq_conv eqns =
      val eqns_consts = op_mk_set eq (find_terms is_const functional)
      val (case_rewrites,congs) = extraction_thms eqns_consts thy
      val RWcnv = REWRITES_CONV (add_rewrites empty_rewrites 
-                             (literal_case_THM::case_rewrites))
+                                (literal_case_THM::case_rewrites))
      val rule = unprotect_thm o
                 RIGHT_CONV_RULE
                    (LIST_BETA_CONV THENC REPEATC (RWcnv THENC LIST_BETA_CONV))
      val corollaries' = map rule corollaries
-     val CONST_EQ_RULE = CONV_RULE (DEPTH_CONV const_eq_conv)
-     fun TRIV_PAT_ELIM (x,y,z) = 
-         (PURE_REWRITE_RULE [bool_case_thm] (CONST_EQ_RULE x),y,z)
-     fun TPAT_ELIM x = PURE_REWRITE_RULE [bool_case_thm] (CONST_EQ_RULE x)
-     val corollaries'' = map TPAT_ELIM corollaries'
+     val corollaries'' = map elim_triv_literal_case corollaries'
  in
     {proto_def=proto_def,
      SV=Listsort.sort Term.compare SV,
@@ -561,9 +588,6 @@ fun gen_wfrec_eqns thy const_eq_conv eqns =
      extracta = map (extract [R1] congs f (proto_def,WFR))
                     (zip given_pats corollaries'')}
  end;
-
-fun wfrec_eqns thy eqns = gen_wfrec_eqns thy (!const_eq_ref) eqns;
-
 
 (*---------------------------------------------------------------------------
  * Pair patterns with termination conditions. The full list of patterns for
@@ -772,7 +796,7 @@ fun tuple_args alist =
    fun tupelo tm =
       case dest_term tm
       of LAMB(Bvar,Body) => mk_abs(Bvar, tupelo Body)
-       | _ =>
+       | otherwise =>
          let val (g,args) = strip_comb tm
              val args' = map tupelo args
          in case find g
@@ -1086,7 +1110,8 @@ fun mutrec_defn (facts,stem,eqns) =
  in MUTREC{eqs = rules, 
            ind = ind, 
            R = R, SV=SV, stem=stem, union=union'}
- end;
+ end
+ handle e => raise wrap_exn "Defn" "mutrec_defn" e;
 
 fun nestrec_defn (thy,(stem,stem'),wfrec_res,untuple) =
   let val {rules,ind,SV,R,aux_rules,aux_ind,...}

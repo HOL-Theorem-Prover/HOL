@@ -3,10 +3,12 @@ solvers with the HOL theorem prover.
 
 Files:
 
+CVC3.sml                Functions to invoke the CVC3 SMT solver.
 COPYRIGHT               Copyright notice, license and disclaimer.
 HolSmtLib.{sig,sml}     Entry point into HolSmtLib. Provides GENERIC_SMT and
                         related tactics.
 README                  This file.
+SmtLib.sml              Translation of HOL terms into SMT-LIB format.
 SolverSpec.{sig,sml}    Specification of SMT solvers: name, command, etc.
 Yices.sml               Functions to invoke the Yices SMT solver.
 

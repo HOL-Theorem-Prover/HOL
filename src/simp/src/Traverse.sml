@@ -105,7 +105,7 @@ fun change_relation
    TSTATE {contexts1,contexts2,freevars,
                relation as PREORDER(oldrelname,_,_)},
    rel) =
-  if (name_of_const rel = oldrelname) then context
+  if samerel rel oldrelname then context
   else TSTATE{contexts1=contexts1,
               contexts2=contexts2,
               freevars=freevars,

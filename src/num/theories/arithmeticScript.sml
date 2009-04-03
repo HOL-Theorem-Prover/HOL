@@ -87,6 +87,7 @@ val _ = new_definition(
 val _ = add_numeral_form (#"n", NONE);
 
 val _ = set_fixity "-" (Infixl 500);
+val _ = Unicode.unicode_version {u = UTF8.chr 0x2212, tmnm = "-"};
 val SUB = new_recursive_definition
    {name = "SUB",
     rec_axiom = num_Axiom,
@@ -105,6 +106,17 @@ val _ = add_rule { term_name = "numeric_negate",
                    pp_elements = [TOK "-"],
                    paren_style = OnlyIfNecessary,
                    block_style = (AroundEachPhrase, (PP.CONSISTENT,0))};
+
+(* Similarly, add syntax for the injection from nats symbol (&).  This isn't
+   required in this theory, but will be used by descendents. *)
+val _ = add_rule {term_name = GrammarSpecials.num_injection,
+                  fixity = TruePrefix 900,
+                  pp_elements = [TOK GrammarSpecials.num_injection],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundEachPhrase, (PP.CONSISTENT,0))};
+(* overload it to the nat_elim term *)
+val _ = overload_on (GrammarSpecials.num_injection,
+                     mk_const(GrammarSpecials.nat_elim_term, ``:num -> num``))
 
 
 val _ = set_fixity "*" (Infixl 600);
@@ -415,6 +427,22 @@ val LESS_EQ_ADD = store_thm ("LESS_EQ_ADD",
     [IMP_RES_TAC LESS_SUC
       THEN ASM_REWRITE_TAC[],
      REWRITE_TAC[SYM(ASSUME (--`m = m + n`--)),LESS_SUC_REFL]]);
+
+val LESS_EQ_ADD_EXISTS = store_thm ("LESS_EQ_ADD_EXISTS",
+     --`!m n. n<=m ==> ?p. p+n = m`--,
+     SIMP_TAC bool_ss [LESS_OR_EQ, DISJ_IMP_THM, FORALL_AND_THM,
+		       LESS_ADD] 
+      THEN GEN_TAC 
+      THEN EXISTS_TAC (--`0`--) 
+      THEN REWRITE_TAC[ADD]);
+
+val LESS_STRONG_ADD = store_thm ("LESS_STRONG_ADD",
+     --`!m n. n < m ==> ?p. (SUC p)+n = m`--,
+     REPEAT STRIP_TAC 
+      THEN IMP_RES_TAC LESS_OR 
+      THEN IMP_RES_TAC LESS_EQ_ADD_EXISTS
+      THEN EXISTS_TAC (--`p:num`--) 
+      THEN FULL_SIMP_TAC bool_ss [ADD_CLAUSES]);
 
 val LESS_EQ_SUC_REFL = store_thm ("LESS_EQ_SUC_REFL",
    --`!m. m <= SUC m`--,
@@ -1356,6 +1384,14 @@ val MULT_EQ_1 = store_thm("MULT_EQ_1",
   REWRITE_TAC[MULT_CLAUSES, ADD_CLAUSES, ONE, GSYM SUC_ID, INV_SUC_EQ,
               ADD_EQ_0,MULT_EQ_0] THEN EQ_TAC THEN STRIP_TAC THEN
   ASM_REWRITE_TAC[]);
+
+val MULT_EQ_ID = store_thm
+("MULT_EQ_ID",
+ ``!m n. (m * n = n) = (m=1) \/ (n=0)``,
+ REPEAT GEN_TAC THEN 
+ STRUCT_CASES_TAC (SPEC ``m:num`` num_CASES) THEN 
+ REWRITE_TAC [MULT_CLAUSES,ONE,GSYM NOT_SUC,INV_SUC_EQ] THENL
+ [METIS_TAC[], METIS_TAC [ADD_INV_0_EQ,MULT_EQ_0,ADD_SYM]]);
 
 val LESS_MULT2 = store_thm("LESS_MULT2",
   --`!m n. 0 < m /\ 0 < n ==> 0 < (m * n)`--,
@@ -3131,12 +3167,12 @@ val FUNPOW_ADD = store_thm(
   "FUNPOW_ADD",
   ``!m n. FUNPOW f (m + n) x = FUNPOW f m (FUNPOW f n x)``,
   INDUCT_TAC THENL [
-    REWRITE_TAC [ADD_CLAUSES, FUNPOW], 
+    REWRITE_TAC [ADD_CLAUSES, FUNPOW],
     ASM_REWRITE_TAC [ADD_CLAUSES,FUNPOW_SUC]
   ]);
 
 val FUNPOW_1 = store_thm(
-  "FUNPOW_1", 
+  "FUNPOW_1",
   ``FUNPOW f 1 x = f x``,
   REWRITE_TAC [FUNPOW, ONE]);
 val _ = export_rewrites ["FUNPOW_1"]
@@ -3181,6 +3217,19 @@ val RTC_NRC = store_thm(
   ``!x y. RTC R x y ==> ?n. NRC R n x y``,
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
   PROVE_TAC [NRC] (* METIS_TAC bombs *));
+
+val RTC_eq_NRC = store_thm (
+  "RTC_eq_NRC",
+  ``!R x y. RTC R x y = ?n. NRC R n x y``,
+  PROVE_TAC[RTC_NRC, NRC_RTC]);
+
+
+val TC_eq_NRC = store_thm (
+  "TC_eq_NRC",
+  ``!R x y. TC R x y = ?n. NRC R (SUC n) x y``,
+  REWRITE_TAC [relationTheory.EXTEND_RTC_TC_EQN, RTC_eq_NRC, NRC] THEN
+  PROVE_TAC[]);
+
 
 val LESS_EQUAL_DIFF = store_thm
   ("LESS_EQUAL_DIFF",
@@ -3282,6 +3331,15 @@ val SUC_MOD = store_thm
           THEN ASM_REWRITE_TAC [LESS_MONO_ADD_EQ, ADD_MONO_LESS_EQ, ONE]
           THEN PROVE_TAC [LESS_OR]]);
 
+
+val ADD_MOD = Q.store_thm 
+("ADD_MOD",
+ `!n a b p.  (0 < n:num) ==> (
+	     ((a + p) MOD n = (b + p) MOD n) =
+	      (a MOD n = b MOD n))`,
+GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN HO_MATCH_MP_TAC INDUCTION
+  THEN SIMP_TAC bool_ss [ADD_CLAUSES, SUC_MOD]);
+
 (*---------------------------------------------------------------------------*)
 (* We should be able to use "by" construct at this phase of development,     *)
 (* surely?                                                                   *)
@@ -3333,7 +3391,6 @@ val EXP2_LT = store_thm
           REWRITE_TAC [DOUBLE_LT]
           THEN REWRITE_TAC [TWO, ADD_0, LESS_MULT_MONO]]);
 
-
 val SUB_LESS = Q.store_thm
 ("SUB_LESS",
  `!m n. 0 < n /\ n <= m ==> m-n < m`,
@@ -3346,6 +3403,7 @@ val SUB_MOD = Q.store_thm
 ("SUB_MOD",
  `!m n. 0<n /\ n <= m ==> ((m-n) MOD n = m MOD n)`,
  METIS_TAC [ADD_MODULUS,ADD_SUB,LESS_EQ_EXISTS,ADD_SYM]);
+
 
 (*---------------------------------------------------------------------------*)
 (* Calculating DIV and MOD by repeated subtraction. We define a              *)

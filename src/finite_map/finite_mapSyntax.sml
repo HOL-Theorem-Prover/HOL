@@ -41,6 +41,10 @@ struct
   val fdom_t = mk_thy_const { Name = "FDOM", Thy = "finite_map",
                               Ty = sample_fmap_ty --> alpha --> bool}
 
+  val fevery_t = mk_thy_const { Name = "FEVERY", Thy = "finite_map",
+                              Ty = (pairSyntax.mk_prod(alpha,beta) --> bool) -->
+                                   sample_fmap_ty --> bool}
+
   fun mk_fempty(a,b) = Term.inst [alpha |-> a, beta |-> b] fempty_t
   val is_fempty = same_const fempty_t
   fun dest_fempty t =
@@ -72,6 +76,20 @@ struct
   val dest_fupdate = dest_binop fupdate_t "fupdate"
   val is_fupdate = can dest_fupdate
 
+ fun list_mk_fupdate (f,updl) =
+   rev_itlist (fn p => fn map => mk_fupdate(map,p)) updl f;
+
+fun strip_fupdate tm = 
+ let fun strip acc t =
+      case total dest_fupdate t
+       of SOME (fmap,p) => strip (p::acc) fmap
+        | NONE => (t,acc)
+ in if is_fupdate tm
+     then strip [] tm
+      else raise ERR "strip_fupdate" "not an FUPDATE term"
+ end;
+
+
   val mk_fapply = mk_binop fapply_t "mk_fapply"
   val dest_fapply = dest_binop fapply_t "fapply"
   val is_fapply = can dest_fapply
@@ -88,6 +106,12 @@ struct
     else raise ERR "dest_fdom" "Operator of term not FDOM"
   end
   val is_fdom = can dest_fdom
+
+
+
+  val is_fevery = same_const fevery_t;
+  val dest_fevery = dest_binop fevery_t "fevery";
+  val is_fevery = can dest_fevery
 
 end;
 

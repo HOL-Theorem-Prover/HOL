@@ -227,7 +227,7 @@ end;
 
 (* ------------------------------------------------------------------------- *)
 (* pp_datatype_theorem : ppstream -> thm -> unit                             *)
-(*   Pretty-printer for datatype theorems                                    *)
+(* Pretty-printer for datatype theorems                                      *)
 (* ------------------------------------------------------------------------- *)
 
 fun pp_datatype_theorem ostrm thm =

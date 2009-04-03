@@ -128,4 +128,28 @@ val _ = adjoin_to_theory_struct
  ["val _ = ConstMapML.insert_cons(\
   \Term.prim_mk_const{Name=\"n2w_itself\",Thy=\"words\"});"];
 
+val _ = adjoin_to_theory
+ {sig_ps = SOME (fn ppstrm => 
+             (PP.add_string ppstrm "val WORDS_EMIT_RULE : thm -> thm";
+              PP.add_newline ppstrm)),
+  struct_ps = SOME (fn ppstrm =>
+   let val S = PP.add_string ppstrm
+       fun NL() = PP.add_newline ppstrm
+   in
+     S "open HolKernel boolLib wordsTheory fcp_emitTheory;"; NL();
+     S "val RHS_REWRITE_RULE = GEN_REWRITE_RULE (DEPTH_CONV o RAND_CONV) empty_rewrites";
+     NL();
+     S "val WORDS_EMIT_RULE = "; NL();
+     S " BETA_RULE o PURE_REWRITE_RULE "; NL();
+     S " ([BIT_UPDATE, fcp_n2w, word_T_def, word_L_def, word_H_def, literal_case_THM]"; NL();
+     S "  @"; NL(); 
+     S "  map GSYM [word_index_def, n2w_itself_def, w2w_itself_def, sw2sw_itself_def,"; NL();
+     S "            word_concat_itself_def, word_extract_itself_def,"; NL();
+     S "            FCPi_def, mk_fcp_def, literal_case_DEF]) "; NL();
+     S " o RHS_REWRITE_RULE [GSYM word_eq_def];"; NL();
+     NL();
+     S "val _ = EmitML.reshape_thm_hook := (WORDS_EMIT_RULE o !EmitML.reshape_thm_hook);";
+     NL(); NL()
+   end)}
+
 val _ = export_theory ();

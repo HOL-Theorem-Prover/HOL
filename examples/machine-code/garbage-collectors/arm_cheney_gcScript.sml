@@ -1,12 +1,13 @@
 
 open HolKernel boolLib bossLib Parse; val _ = new_theory "arm_cheney_gc";
 
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory; 
-open combinTheory finite_mapTheory;
+open decompilerLib;
 
-open decompilerLib addressTheory;
+open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory; 
+open combinTheory finite_mapTheory addressTheory;
 open tailrecLib tailrecTheory;
 open cheney_gcTheory; (* an abstract implementation is imported *)
+
 
 
 infix \\ << >>

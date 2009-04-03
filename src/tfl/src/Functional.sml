@@ -33,21 +33,32 @@ case TypeBasePure.prim_get db s
  *---------------------------------------------------------------------------*)
 
 datatype pattern = GIVEN   of term * int
-                 | OMITTED of term * int
+                 | OMITTED of term * int;   (* int arg is superfluous *)
+
+fun pattern_cmp (GIVEN(_,i)) (GIVEN(_,j)) = i <= j
+  | pattern_cmp all others = raise ERR "pattern_cmp" "";
 
 fun psubst theta (GIVEN (tm,i)) = GIVEN(subst theta tm, i)
-  | psubst theta (OMITTED (tm,i)) = OMITTED(subst theta tm, i);
+  | psubst theta (OMITTED (tm,i)) = OMITTED(subst theta tm,i);
 
-fun dest_pattern (GIVEN (tm,i)) = ((GIVEN,i),tm)
+fun dest_pattern (GIVEN (tm,i))   = ((GIVEN,i),tm)
   | dest_pattern (OMITTED (tm,i)) = ((OMITTED,i),tm);
 
-val pat_of = #2 o dest_pattern;
-val row_of_pat = #2 o #1 o dest_pattern;
+fun pat_of (GIVEN (tm,_)) = tm
+  | pat_of (OMITTED (tm,_)) = tm;
 
-fun not_omitted (GIVEN(tm,_)) = tm
-  | not_omitted (OMITTED _) = raise ERR"not_omitted" ""
-val givens = mapfilter not_omitted;
+fun row_of_pat (GIVEN(_,i)) = i
+  | row_of_pat (OMITTED _) = ~1;
 
+fun dest_given (GIVEN(tm,_)) = tm
+  | dest_given (OMITTED _) = raise ERR "OMITTED" "";
+
+fun mk_omitted tm = OMITTED(tm,~1);
+
+fun is_omitted (OMITTED _) = true
+  | is_omitted otherwise   = false;
+
+val givens = mapfilter dest_given;
 
 (*---------------------------------------------------------------------------
  * Produce an instance of a constructor, plus genvars for its arguments.
@@ -111,7 +122,7 @@ let  fun part {constrs = [],      rows, A} = rev A
          let val (in_group, not_in_group) = mk_groupl c rows
              val in_group' =
                  if (null in_group)  (* Constructor not given *)
-                 then [((prefix, []), OMITTED (mk_arb res_ty, ~1))]
+                 then [((prefix, []), mk_omitted (mk_arb res_ty))]
                  else in_group
              val gvars = if is_var c then [c] else []
          in
@@ -140,7 +151,7 @@ fun partition _ _ (_,_,_,[]) = raise ERR"partition" "no rows"
                 val (in_group, not_in_group) = mk_group c' rows
                 val in_group' =
                  if (null in_group)  (* Constructor not given *)
-                 then [((prefix, #2(fresh c)), OMITTED (mk_arb res_ty, ~1))]
+                 then [((prefix, #2(fresh c)), mk_omitted (mk_arb res_ty))]
                  else in_group
             in
              part{constrs = crst,
@@ -467,7 +478,6 @@ fun rename_case sub cs =
    in cs'
    end
 
-
 fun mk_functional thy eqns =
  let fun err s = raise ERR "mk_functional" s
      fun msg s = HOL_MESG ("mk_functional: "^s)
@@ -489,7 +499,10 @@ fun mk_functional thy eqns =
      fun func (_,(tag,i),[pat]) = tag (pat,i)
        | func _ = err "error in pattern-match translation"
      val patts1 = map func patts
-     val patts2 = sort(fn p1=>fn p2=> row_of_pat p1 < row_of_pat p2) patts1
+     val (omits,givens) = Lib.partition is_omitted patts1
+     val givens' = sort pattern_cmp givens
+     val patts2 = givens' @ omits
+(*     val patts2 = sort (fn p1=>fn p2=> row_of_pat p1 < row_of_pat p2) patts1 *)
      val finals = map row_of_pat patts2
      val originals = map (row_of_pat o #2) rows
      val new_rows = length finals - length originals

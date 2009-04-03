@@ -1602,8 +1602,8 @@ val (th,def,pre) = compile "x86" ``
 val x86_alloc_thm = save_thm("x86_alloc_thm",th)
 
 fun prove_eq n1 n2 rw goal = prove(goal,
-  STRIP_TAC \\ REWRITE_TAC [fetch "-" (n1 ^ "_def"),fetch "-" (n2 ^ "_def")]
-  \\ REWRITE_TAC [fetch "-" (n1 ^ "_pre_def"),fetch "-" (n2 ^ "_pre_def")]
+  STRIP_TAC \\ REWRITE_TAC [fetch "-" (n1),fetch "-" (n2)]
+  \\ REWRITE_TAC [fetch "-" (n1 ^ "_pre"),fetch "-" (n2 ^ "_pre")]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = x') /\ (y = y') /\ (z = z') ==> ((f:'a->'b->'c->'d) x y z = f x' y' z')``)
   \\ SIMP_TAC (std_ss++tailrecLib.tailrec_part_ss()) [FUN_EQ_THM,FORALL_PROD,WORD_OR_CLAUSES]
   \\ SIMP_TAC std_ss ([LET_DEF,word_arith_lemma1] @ rw)

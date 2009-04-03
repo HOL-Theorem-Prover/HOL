@@ -157,7 +157,7 @@ recInduct gcd_ind THEN SRW_TAC [][GCD]
 val L_EUCLIDES = store_thm("L_EUCLIDES",
   Term `!a b c. (gcd a b = 1) /\ divides b (a*c) ==> divides b c`,
   ARW[]
-  THEN `c=c* gcd a b` by ARW[MULT_CLAUSES]
+  THEN `c = c * gcd a b` by ARW[MULT_CLAUSES]
   THEN ONCE_ASM_REWRITE_TAC[]
   THEN PROVE_TAC[EUCLIDES_AUX,DIVIDES_MULT,MULT_SYM,DIVIDES_REFL]);
 

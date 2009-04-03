@@ -1,5 +1,5 @@
 open HolKernel boolLib bossLib Parse;
-open EmitML patriciaTheory patricia_castsTheory;
+open emitLib patriciaTheory patricia_castsTheory;
 open words_emitTheory string_emitTheory sorting_emitTheory;
 
 val _ = new_theory "patricia_emit";
@@ -43,7 +43,7 @@ val _ = eSML "patricia_casts"
     :: MLSTRUCT "fun string_to_num s = s2n (numML.fromInt 256) stringML.ORD\n\
         \                            (String.^(String.str (Char.chr 1), s))"
     :: Datatype datatype_word_ptree
-    :: map (DEFN o words_emitLib.WORDS_EMIT_RULE)
+    :: map DEFN
          [THE_PTREE_def, SOME_PTREE_def,
           PEEKw_def, ADDw_def, REMOVEw_def, TRANSFORMw_def, SIZEw_def,
           DEPTHw_def, IN_PTREEw_def, INSERT_PTREEw_def, FINDw_def,

@@ -4126,6 +4126,397 @@ val count_EQN = Q.store_thm
   THEN RW_TAC arith_ss [GSPEC_F]
   THEN RW_TAC set_ss [EXTENSION,IN_SING,IN_INSERT]);
 
+(* Theorems about countability added by Scott Owens on 2009-03-20, plus a few
+* misc. theorems *)
+local
+
+fun FSTAC thms = FULL_SIMP_TAC (srw_ss()) thms;
+fun RWTAC thms = SRW_TAC [] thms;
+
+in
+
+val UNIQUE_MEMBER_SING = Q.store_thm ("UNIQUE_MEMBER_SING",
+`!x s. x IN s /\ (!y. y IN s ==> (x = y)) = (s = {x})`,
+SRW_TAC [] [EXTENSION] THEN
+METIS_TAC []);
+
+val inj_surj = Q.store_thm ("inj_surj",
+`!f s t. INJ f s t ==> (s = {}) \/ ?f'. SURJ f' t s`,
+RWTAC [INJ_DEF, SURJ_DEF, METIS_PROVE [] ``!a b. a \/ b = ~a ==> b``] THEN
+`!x. ?y. y IN s /\ (x IN IMAGE f s ==> (f y = x))`
+          by (RWTAC [] THEN
+              Cases_on `x IN IMAGE f s` THEN
+              FSTAC [IMAGE_DEF] THEN1
+              METIS_TAC [] THEN
+              Q.EXISTS_TAC `CHOICE s` THEN
+              RWTAC [CHOICE_DEF] THEN
+              METIS_TAC []) THEN
+     FSTAC [SKOLEM_THM, IN_IMAGE] THEN
+     METIS_TAC []);
+
+val infinite_rest = Q.store_thm ("infinite_rest",
+`!s. INFINITE s ==> INFINITE (REST s)`,
+RWTAC [] THEN
+CCONTR_TAC THEN
+FSTAC [INFINITE_DEF, REST_DEF]);
+
+val chooser_def = TotalDefn.Define `
+  (chooser s 0 = CHOICE s) /\
+  (chooser s (SUC n) = chooser (REST s) n)`;
+
+val chooser_lem1 = Q.prove (
+`!n s t. INFINITE s /\ s SUBSET t ==> chooser s n IN t`,
+Induct THEN 
+RWTAC [chooser_def, SUBSET_DEF] THENL
+[`s <> {}`
+          by (RWTAC [EXTENSION] THEN
+              METIS_TAC [INFINITE_INHAB]) THEN
+     METIS_TAC [CHOICE_DEF],
+ `REST s SUBSET s` by RWTAC [REST_SUBSET] THEN
+     METIS_TAC [infinite_rest]]);
+
+val chooser_lem2 = Q.prove (
+`!n s. INFINITE s ==> chooser (REST s) n <> CHOICE s`,
+RWTAC [] THEN
+IMP_RES_TAC infinite_rest THEN
+`chooser (REST s) n IN (REST s)` 
+        by METIS_TAC [chooser_lem1, SUBSET_REFL] THEN
+FSTAC [REST_DEF, IN_DELETE]);
+
+val chooser_lem3 = Q.prove (
+`!x y s. INFINITE s /\ (chooser s x = chooser s y) ==> (x = y)`,
+Induct_on `x` THEN
+RWTAC [chooser_def] THEN
+Cases_on `y` THEN 
+FSTAC [chooser_def] THEN
+RWTAC [] THEN
+METIS_TAC [chooser_lem2, infinite_rest]);
+
+val infinite_num_inj_lem = Q.prove (
+`!s. FINITE s ==> ~?f. INJ f (UNIV:num set) s`,
+HO_MATCH_MP_TAC FINITE_INDUCT THEN
+RWTAC [] THEN
+FSTAC [INJ_DEF] THEN
+CCONTR_TAC THEN
+FSTAC [IN_UNIV] THEN
+Q.PAT_ASSUM `!f. (?x. f x NOTIN s) \/ P f` MP_TAC THEN
+RWTAC [] THEN
+Cases_on `?y. f y = e` THEN
+FSTAC [] THEN
+RWTAC [] THENL
+[Q.EXISTS_TAC `\x. if x < y then f x else f (SUC x)` THEN
+     RWTAC [] THEN
+     FSTAC [METIS_PROVE [] ``! a b. a \/ b = ~a==>b``] THEN
+     RWTAC [] THENL
+     [`x <> y` by FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [] THEN
+          METIS_TAC [],
+      `SUC x <> y`by FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [] THEN
+          METIS_TAC [],
+      `x = SUC y'` by METIS_TAC [] THEN
+          FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [],
+      `SUC x = y'` by METIS_TAC [] THEN
+          FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [],
+      `SUC x = SUC y'` by METIS_TAC [] THEN
+          FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) []],
+ METIS_TAC []]);
+
+val infinite_num_inj = Q.store_thm ("infinite_num_inj",
+`!s. INFINITE s = ?f. INJ f (UNIV:num set) s`,
+RWTAC [] THEN
+EQ_TAC THEN
+RWTAC [] THENL
+[Q.EXISTS_TAC `chooser s` THEN
+     RWTAC [INJ_DEF] THEN
+     METIS_TAC [chooser_lem1, chooser_lem3, SUBSET_REFL],
+ METIS_TAC [infinite_num_inj_lem, INFINITE_DEF]]); 
+
+val countable_def = TotalDefn.Define `
+  countable s = ?f. INJ f s (UNIV:num set)`;
+
+val countable_surj = Q.store_thm ("countable_surj",
+`!s. countable s = (s = {}) \/ ?f. SURJ f (UNIV:num set) s`,
+RWTAC [countable_def] THEN
+EQ_TAC THEN
+RWTAC [] THENL
+[METIS_TAC [inj_surj],
+ RWTAC [INJ_DEF],
+ Cases_on `s = {}` THEN
+     FSTAC [INJ_DEF, SURJ_DEF] THEN
+     METIS_TAC []]);
+
+val num_countable = Q.store_thm ("num_countable",
+`countable (UNIV:num set)`,
+RWTAC [countable_def, INJ_DEF] THEN
+Q.EXISTS_TAC `\x.x` THEN
+RWTAC []);
+
+val INJ_SUBSET = Q.prove (
+`!f s t s'. INJ f s t /\ s' SUBSET s ==> INJ f s' t`,
+RWTAC [INJ_DEF, SUBSET_DEF]);
+
+val subset_countable = Q.store_thm ("subset_countable",
+`!s t. countable s /\ t SUBSET s ==> countable t`,
+RWTAC [countable_def] THEN
+METIS_TAC [INJ_SUBSET]);
+
+val image_countable = Q.store_thm ("image_countable",
+`!f s. countable s ==> countable (IMAGE f s)`,
+RWTAC [countable_surj, SURJ_DEF] THEN
+Cases_on `s = {}` THEN
+FSTAC [IN_IMAGE, IN_UNIV] THEN
+Q.EXISTS_TAC `f o f'` THEN
+RWTAC [] THEN
+METIS_TAC []);
+
+val finite_countable = Q.store_thm ("finite_countable",
+`!s. FINITE s ==> countable s`,
+HO_MATCH_MP_TAC FINITE_INDUCT THEN
+RWTAC [countable_def] THEN
+FSTAC [INJ_DEF, IN_UNIV] THEN
+Q.EXISTS_TAC `\x. if x IN s then f x else SUC (MAX_SET (IMAGE f s))` THEN
+RWTAC [] THEN
+`IMAGE f s <> {}`  
+           by (CCONTR_TAC THEN
+               FSTAC [IMAGE_DEF]) THENL
+[`MAX_SET (IMAGE f s) IN IMAGE f s /\ 
+  (f x <= MAX_SET (IMAGE f s))`
+          by METIS_TAC [MAX_SET_DEF, IMAGE_FINITE, IN_IMAGE] THEN
+     METIS_TAC [Q.prove (`!x. ~(SUC x <= x)`, 
+                         FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [])],
+ `MAX_SET (IMAGE f s) IN IMAGE f s /\ 
+  (f y <= MAX_SET (IMAGE f s))`
+          by METIS_TAC [MAX_SET_DEF, IMAGE_FINITE, IN_IMAGE] THEN
+     METIS_TAC [Q.prove (`!x. ~(SUC x <= x)`, 
+                         FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [])]]);
+
+val num_to_pair_def = TotalDefn.Define `
+  (num_to_pair 0 = (0, 0)) /\
+  (num_to_pair (SUC n) =
+    case num_to_pair n of
+       (0, y) -> (SUC y, 0)
+    || (SUC x, y) -> (x, SUC y))`;
+
+val pair_to_num_def = TotalDefn.tDefine "pair_to_num" `
+  (pair_to_num (0, 0) = 0) /\
+  (pair_to_num (SUC x, 0) = SUC (pair_to_num (0, x))) /\
+  (pair_to_num (x, SUC y) = SUC (pair_to_num (SUC x, y)))`
+(TotalDefn.WF_REL_TAC `inv_image ($< LEX $<) (\(x, y). (x + y, y))`);
+
+val pair_to_num_ind = fetch "-" "pair_to_num_ind";
+
+val pair_to_num_formula = Q.store_thm ("pair_to_num_formula",
+`!x y. pair_to_num (x, y) = (x + y + 1) * (x + y) DIV 2 + y`,
+recInduct pair_to_num_ind THEN
+RWTAC [pair_to_num_def] THEN
+RWTAC [LEFT_ADD_DISTRIB, GSYM ADD_DIV_ADD_DIV, ADD1, RIGHT_ADD_DISTRIB,
+       METIS_PROVE [ADD_DIV_ADD_DIV, ADD_COMM]
+                   ``!n. 0 < n ==>
+                         !x r. r DIV n + x = (x * n + r) DIV n``] THEN
+SRW_TAC [numSimps.ARITH_ss] []);
+
+val pair_to_num_inv = Q.store_thm ("pair_to_num_inv",
+`(!x. pair_to_num (num_to_pair x) = x) /\
+ (!x y. num_to_pair (pair_to_num (x, y)) = (x, y))`,
+STRIP_TAC THENL
+[Induct THEN
+     RWTAC [pair_to_num_def, num_to_pair_def] THEN
+     Cases_on `num_to_pair x` THEN
+     STRIP_ASSUME_TAC (Q.SPEC `q` num_CASES) THEN
+     RWTAC [pair_to_num_def] THEN
+     STRIP_ASSUME_TAC (Q.SPEC `n` num_CASES) THEN
+     STRIP_ASSUME_TAC (Q.SPEC `r` num_CASES) THEN
+     RWTAC [pair_to_num_def],
+ recInduct pair_to_num_ind THEN
+     RWTAC [pair_to_num_def, num_to_pair_def] THEN
+     SIMP_TAC bool_ss [ONE] THEN
+     RWTAC []]);
+
+val num_cross_countable = Q.prove (
+`countable (UNIV:num set CROSS UNIV:num set)`,
+RWTAC [countable_surj, SURJ_DEF, CROSS_DEF, IN_UNIV, UNIV_NOT_EMPTY] THEN
+Q.EXISTS_TAC `num_to_pair` THEN
+RWTAC [UNIV_NOT_EMPTY] THEN
+Q.EXISTS_TAC `pair_to_num x` THEN
+Cases_on `x` THEN
+METIS_TAC [pair_to_num_inv]);
+
+val cross_countable = Q.store_thm ("cross_countable",
+`!s t. countable s /\ countable t ==> countable (s CROSS t)`,
+RWTAC [] THEN
+POP_ASSUM (MP_TAC o SIMP_RULE bool_ss [countable_surj]) THEN
+POP_ASSUM (MP_TAC o SIMP_RULE bool_ss [countable_surj]) THEN
+RWTAC [SURJ_DEF] THEN
+RWTAC [CROSS_EMPTY, FINITE_EMPTY, finite_countable] THEN
+`s CROSS t = IMAGE (\(x, y). (f x, f' y)) (UNIV:num set CROSS UNIV:num set)` 
+        by  (RWTAC [CROSS_DEF, IMAGE_DEF, EXTENSION] THEN
+             EQ_TAC THEN
+             RWTAC [] THENL
+             [Cases_on `x` THEN
+                  FSTAC [] THEN
+                  RES_TAC THEN
+                  Q.EXISTS_TAC `(y', y)` THEN
+                  RWTAC [],
+              Cases_on `x'` THEN
+                  FSTAC [],
+              Cases_on `x'` THEN
+                  FSTAC []]) THEN
+METIS_TAC [num_cross_countable, image_countable]);
+
+val inter_countable = Q.store_thm ("inter_countable",
+`!s t. countable s \/ countable t ==> countable (s INTER t)`,
+METIS_TAC [INTER_SUBSET, subset_countable]);
+
+val inj_countable = Q.store_thm ("inj_countable",
+`!f s t. countable t /\ INJ f s t ==> countable s`,
+RWTAC [countable_def, INJ_DEF] THEN
+Q.EXISTS_TAC `f' o f` THEN
+RWTAC []);
+
+val bigunion_countable = Q.store_thm ("bigunion_countable",
+`!s. countable s /\ (!x. x IN s ==> countable x) ==> countable (BIGUNION s)`,
+RWTAC [] THEN
+`!x. ?f. x IN s ==> INJ f x (UNIV:num set)`
+           by (RWTAC [RIGHT_EXISTS_IMP_THM] THEN
+               FSTAC [countable_def]) THEN
+`!a. ?x. a IN BIGUNION s ==> a IN x /\ x IN s`
+           by (RWTAC [IN_BIGUNION] THEN
+               METIS_TAC []) THEN
+FSTAC [SKOLEM_THM] THEN
+`?g. INJ g s (UNIV:num set)`
+           by (FSTAC [countable_def] THEN
+               METIS_TAC []) THEN
+`INJ (\a. (g (f' a),  f (f' a) a)) (BIGUNION s) 
+     (UNIV:num set CROSS UNIV:num set)`
+         by (FSTAC [INJ_DEF] THEN
+             RWTAC [] THEN
+             `f' a = f' a'` by METIS_TAC [] THEN
+             FSTAC [] THEN
+             METIS_TAC []) THEN
+METIS_TAC [inj_countable, num_cross_countable]);
+
+val union_countable = Q.store_thm ("union_countable",
+`!s t. countable s /\ countable t ==> countable (s UNION t)`,
+RWTAC [] THEN
+`!x. x IN {s; t} ==> countable x` by RWTAC [] THEN
+`FINITE {s; t}` by RWTAC [] THEN
+`s UNION t = BIGUNION {s; t}` 
+          by (RWTAC [EXTENSION, IN_UNION, IN_BIGUNION] THEN
+              METIS_TAC []) THEN
+METIS_TAC [bigunion_countable, finite_countable]);
+
+val pow_no_surj = Q.store_thm ("pow_no_surj",
+`!s. ~?f. SURJ f s (POW s)`,
+RWTAC [SURJ_DEF, POW_DEF, METIS_PROVE [] ``a \/ b = ~a ==> b``] THEN
+Q.EXISTS_TAC `{a | a IN s /\ a NOTIN f a}` THEN
+RWTAC [EXTENSION, SUBSET_DEF] THEN
+METIS_TAC []);
+
+val infinite_pow_uncountable = Q.store_thm ("infinite_pow_uncountable",
+`!s. INFINITE s ==> ~countable (POW s)`,
+RWTAC [countable_surj, infinite_num_inj] THENL
+[RWTAC [POW_DEF, EXTENSION, SUBSET_DEF] THEN
+     METIS_TAC [],
+ IMP_RES_TAC inj_surj THEN
+     FSTAC [UNIV_NOT_EMPTY] THEN
+     METIS_TAC [pow_no_surj, SURJ_COMPOSE]]);
+end;
+(* END countability theorems *)
+
+
+(* Misc theorems added by Thomas Tuerk on 2009-03-24 *)
+
+val IMAGE_BIGUNION = store_thm ("IMAGE_BIGUNION",
+  ``!f M. IMAGE f (BIGUNION M) = 
+	  BIGUNION (IMAGE (IMAGE f) M)``,
+
+ONCE_REWRITE_TAC [EXTENSION] THEN
+SIMP_TAC bool_ss [IN_BIGUNION, IN_IMAGE,
+	GSYM LEFT_EXISTS_AND_THM,
+	GSYM RIGHT_EXISTS_AND_THM] THEN
+METIS_TAC[]);
+
+
+val IN_ABS = store_thm ("IN_ABS",
+``!x P. (x IN \x. P x) = P x``,
+SIMP_TAC bool_ss [IN_DEF]);
+
+
+val SUBSET_DIFF = store_thm("SUBSET_DIFF",
+``!s1 s2 s3.
+(s1 SUBSET (s2 DIFF s3)) =
+((s1 SUBSET s2) /\ (DISJOINT s1 s3))``,
+
+SIMP_TAC bool_ss [SUBSET_DEF, IN_DIFF, DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY] THEN
+METIS_TAC[])
+
+val INTER_SUBSET_EQN = store_thm ("INTER_SUBSET_EQN",
+
+``((A INTER B = A) = (A SUBSET B)) /\
+  ((A INTER B = B) = (B SUBSET A))``,
+
+SIMP_TAC bool_ss [EXTENSION, IN_INTER, SUBSET_DEF] THEN
+METIS_TAC[]);
+
+
+val PSUBSET_SING = store_thm ("PSUBSET_SING",
+``!s x. x PSUBSET {s} = (x = EMPTY)``,
+
+SIMP_TAC bool_ss [PSUBSET_DEF, SUBSET_DEF, EXTENSION,
+		 IN_SING, NOT_IN_EMPTY] THEN
+METIS_TAC[]);
+
+
+val INTER_UNION = store_thm ("INTER_UNION",
+``((A UNION B) INTER A = A) /\
+  ((B UNION A) INTER A = A) /\
+  (A INTER (A UNION B) = A) /\
+  (A INTER (B UNION A) = A)``,
+SIMP_TAC bool_ss [INTER_SUBSET_EQN, SUBSET_UNION]);
+
+
+val UNION_DELETE = store_thm ("UNION_DELETE",
+``!A B x. (A UNION B) DELETE x =
+  ((A DELETE x) UNION (B DELETE x))``,
+
+SIMP_TAC bool_ss [EXTENSION, IN_UNION, IN_DELETE] THEN
+REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN
+ASM_SIMP_TAC bool_ss [])
+
+
+
+val DELETE_SUBSET_INSERT = store_thm ("DELETE_SUBSET_INSERT",
+``!s e s2.
+  s DELETE e SUBSET s2 =
+  s SUBSET e INSERT s2``,
+
+SIMP_TAC bool_ss [SUBSET_DEF, IN_DELETE, IN_INSERT] THEN
+METIS_TAC[]);
+
+
+
+val IN_INSERT_EXPAND = store_thm ("IN_INSERT_EXPAND",
+``!x y P. x IN y INSERT P =
+  (x = y) \/ (~(x = y) /\ x IN P)``,
+
+SIMP_TAC bool_ss [IN_INSERT] THEN
+METIS_TAC[]);
+
+
+
+val FINITE_INTER = store_thm ("FINITE_INTER",
+``!s1 s2. ((FINITE s1) \/ (FINITE s2)) ==>
+  FINITE (s1 INTER s2)``,
+
+REPEAT GEN_TAC THEN
+`((s1 INTER s2) SUBSET s1) /\ ((s1 INTER s2) SUBSET s2)` by ALL_TAC THEN1 (
+   SIMP_TAC bool_ss [SUBSET_DEF, IN_INTER]
+) THEN
+METIS_TAC[SUBSET_FINITE]);
+
+
+(* END misc thms *)
+
+
 val _ = export_rewrites
     [
      (* BIGUNION/BIGINTER theorems *)

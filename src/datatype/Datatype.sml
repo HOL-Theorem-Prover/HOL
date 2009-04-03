@@ -243,7 +243,7 @@ fun pp_fields ppstrm fields =
   begin_block CONSISTENT 0;
   add_string "let open Kind Type"; add_newline();
   add_string "    infixr ==> -->"; add_newline();
-  add_string "    fun T t s A   = mk_thy_type{Thy=t,Tyop=s,Args=A}";             add_newline();
+  add_string "    fun T s t A   = mk_thy_type{Thy=t,Tyop=s,Args=A}";             add_newline();
   add_string "    val K         = mk_varkind";              add_newline();
   add_string "    val U         = mk_vartype";              add_newline();
   add_string "    fun R s k r   = mk_vartype_opr(s,k,r)";   add_newline();

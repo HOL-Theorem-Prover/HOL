@@ -22,6 +22,13 @@
 # write -selftest 2, that's level 2, which means directories with 2 !s
 # will get tested.)
 
+# if a directory name is preceded by a string inside []-brackets, then
+# that directory/target will only be considered if the string is the
+# name of the current ML implementation.  Thus the line [poly]foo
+# will cause foo to be built only if the current implementation is
+# Poly/ML.  (The other supported implementation at the time of writing
+# is [mosml].)
+
 tools/mlyacc/mlyacclib
 # these three directories are required to even run hol.bare.unquote
 src/parse
@@ -62,8 +69,8 @@ src/datatype/equiv
 src/datatype/record
 src/datatype
 src/list/src
-src/datatype/inftree
 src/unwind
+src/TeX
 src/boss
 # Up to this point is needed for hol.unquote (which loads bossLib).
 # (Maybe unwind could be omitted).
@@ -81,10 +88,11 @@ src/bag
 src/n-bit
 !examples/ARM/arm6-verification
 !!examples/ARM/arm6-verification/correctness
-src/llist
 src/ring/src
 src/integer
 src/patricia
+src/emit
+# src/emit/theories
 src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
@@ -99,6 +107,8 @@ src/prob
 src/temporal/src
 src/temporal/smv.2.4.3
 src/rational
+src/llist
+src/datatype/inftree
 src/path
 !examples/HolOmega
 !examples/lambda/barendregt
@@ -107,8 +117,4 @@ src/path
 src/Boolify/src
 src/float
 !!examples/miller/miller
-src/emit
-src/emit/theories
-!!examples/ARM/v4
-!!!examples/ARM/v4T
-!!examples/mc-logic
+!examples/ordinal

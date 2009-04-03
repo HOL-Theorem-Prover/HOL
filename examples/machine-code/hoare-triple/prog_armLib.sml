@@ -8,6 +8,7 @@ open arm_Lib;
 
 infix \\ 
 val op \\ = op THEN;
+val eq = Term.eq;
 
 
 val arm_status = aS_HIDE;
