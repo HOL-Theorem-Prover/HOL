@@ -15,8 +15,11 @@ struct
 
 open HolKernel Parse boolLib
 
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars boolTheory.bool_grammars;
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+end
+open Parse
 
 val K_tm = combinSyntax.K_tm
 
@@ -89,15 +92,15 @@ fun crosslessdiag l1 l2 =
       nfilter (fn (n,_) => not (n mod diaglength = 1)) cross
     end
 
-fun update_tyinfo opt new_simpls tyinfo = 
+fun update_tyinfo opt new_simpls tyinfo =
  let open TypeBasePure
      val existing_simpls = simpls_of tyinfo
      fun add_rwts {convs,rewrs} newrwts = {convs=convs, rewrs=rewrs @ newrwts}
      val base = put_simpls (add_rwts existing_simpls new_simpls) tyinfo
  in
-  case opt of 
+  case opt of
     NONE => base
-  | SOME (flds,accs,upds) => 
+  | SOME (flds,accs,upds) =>
       put_accessors accs
        (put_updates upds
          (put_fields flds base))
@@ -423,12 +426,13 @@ fun prove_recordtype_thms (tyinfo, fields) = let
                     REWRITE_TAC [fupdfn_thm, combinTheory.K_THM]))
 
     val literal_nchotomy =
-        prove(mk_forall(var, list_mk_exists(value_vars, mk_eq(var, rhs))),
-              GEN_TAC THEN
-              MAP_EVERY (STRUCT_CASES_TAC o C SPEC cases_thm) [arb, var] THEN
-              REWRITE_TAC [fupdfn_thm, accessor_thm, oneone_thm,
-                           combinTheory.K_THM] THEN
-              REPEAT Unwind.UNWIND_EXISTS_TAC)
+        GEN var
+            (prove(list_mk_exists(value_vars, mk_eq(var, rhs)),
+                   MAP_EVERY (STRUCT_CASES_TAC o C SPEC cases_thm)
+                             [arb, var] THEN
+                             REWRITE_TAC [fupdfn_thm, accessor_thm, oneone_thm,
+                                          combinTheory.K_THM] THEN
+                             REPEAT Unwind.UNWIND_EXISTS_TAC))
 
     val pred_r = mk_var_avds("P", typ --> bool, var::value_vars)
     val P_r = mk_comb(pred_r, var)
@@ -441,7 +445,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
         GEN_ALL
           (prove(forall_goal,
                  EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
-                 GEN_TAC THEN
+                 X_GEN_TAC var THEN
                  STRUCT_CASES_TAC (SPEC var literal_nchotomy) THEN
                  ASM_REWRITE_TAC []))
     val exists_thm =
@@ -482,8 +486,8 @@ fun prove_recordtype_thms (tyinfo, fields) = let
       fupdcanon_thm :: fupdcanon_comp_thm :: new_simpls0
     else new_simpls0
   end
-  val new_tyinfo = 
-       update_tyinfo (SOME (zip fields types,access_defns,fupdfn_thms)) 
+  val new_tyinfo =
+       update_tyinfo (SOME (zip fields types,access_defns,fupdfn_thms))
                      new_simpls tyinfo
 
   (* set up parsing for the record type *)
@@ -516,8 +520,8 @@ fun prove_recordtype_thms (tyinfo, fields) = let
 
   val thm_str_list =
      map (strcat typename)
-     (["_accessors", "_updates_eq_literal", "_accfupds", 
-       "_fupdfupds", "_literal_11", "_fupdfupds_comp"] 
+     (["_accessors", "_updates_eq_literal", "_accfupds",
+       "_fupdfupds", "_literal_11", "_fupdfupds_comp"]
       @
       (if not(null fupdcanon_thms) then ["_fupdcanon","_fupdcanon_comp"] else []))
   in
@@ -525,7 +529,5 @@ fun prove_recordtype_thms (tyinfo, fields) = let
      "RecordType.update_tyinfo NONE ["^String.concat (Lib.commafy thm_str_list)^
      "] ")
   end
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* struct *)

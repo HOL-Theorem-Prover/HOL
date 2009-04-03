@@ -1,4 +1,4 @@
 EXTRA_CLEANS = selftest.exe
 
-selftest.exe: selftest.uo Datatype.uo $(SIGOBJ)/ParseDatatype.uo
+selftest.exe: selftest.uo Datatype.uo $(SIGOBJ)/ParseDatatype.uo $(SIGOBJ)/RecordType.uo
 	$(HOLMOSMLC) -o $@ $<
