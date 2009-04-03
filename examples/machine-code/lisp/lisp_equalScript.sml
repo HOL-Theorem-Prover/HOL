@@ -69,42 +69,30 @@ val (arm_eq_thm,arm_eq_def) = basic_decompile_arm "arm_eq" NONE `
 
 val _ = save_thm("arm_eq_thm",arm_eq_thm);
 
-val _ = Hol_datatype `XExp = XDot of XExp => XExp | XVal of word30 | XSym of word30`;
-val XExp_11 = fetch "-" "XExp_11";
-val XExp_distinct = fetch "-" "XExp_distinct";
-
-val lisp_tree_def = Define `
-  (lisp_tree (XDot x y) (a,m) d = a IN d /\ a + 4w:word32 IN d /\ ALIGNED a /\
-     lisp_tree x (m a,m) d /\ lisp_tree y (m (a + 4w),m) d) /\ 
-  (lisp_tree (XVal w) (a,m) d = (a = ADDR32 w + 2w)) /\ 
-  (lisp_tree (XSym w) (a,m) d = (a = ADDR32 w + 3w))`;
+val word_tree2_def = Define `
+  (word_tree2 (XVal w) (a,m) d = (a = ADDR32 w + 0x2w)) /\
+  (word_tree2 (XSym w) (a,m) d = (a = ADDR32 w + 0x3w)) /\
+  (word_tree2 (XDot x y) (a,m) d = ALIGNED a /\ 
+     a IN d /\ (a + 4w) IN d /\ 
+     word_tree2 x (m a,m) d /\ word_tree2 y (m (a + 0x4w),m) d)`;
 
 val lisp_stack_def = Define `
   (lisp_stack [] (a,m,d,e) = ALIGNED a) /\
   (lisp_stack ((x,y)::xs) (a,m,d,e) = (a - 4w) IN e /\ (a - 8w) IN e /\
-     lisp_tree y (m (a - 4w),m) d /\ lisp_tree x (m (a - 8w),m) d /\ lisp_stack xs (a-8w,m,d,e))`;
+     word_tree2 y (m (a - 4w),m) d /\ word_tree2 x (m (a - 8w),m) d /\ 
+     lisp_stack xs (a-8w,m,d,e))`;
 
-val lisp_tree_11 = prove(
-  ``!x y a m d. lisp_tree x (a,m) d /\ lisp_tree y (a,m) d ==> (x = y)``,
-  Induct \\ Cases_on `y` \\ REWRITE_TAC [lisp_tree_def,SExp_11]
+val word_tree2_11 = prove(
+  ``!x y a m d. word_tree2 x (a,m) d /\ word_tree2 y (a,m) d ==> (x = y)``,
+  Induct \\ Cases_on `y` \\ REWRITE_TAC [word_tree2_def,XExp_11]
   \\ METIS_TAC [NOT_ALIGNED,ALIGNED_ADDR32,ALIGNED_add_2_and_3,ALIGNED_add_3_and_3,
        EVAL ``2w = 3w:word32``,WORD_EQ_ADD_RCANCEL,ADDR32_11]);        
 
-val lisp_tree_ALIGNED_LEMMA = prove(
-  ``~ALIGNED r3 /\ lisp_tree x (r3,m) d /\ ~(r3 = r4) /\ lisp_tree y (r4,m) d ==>
+val word_tree2_ALIGNED_LEMMA = prove(
+  ``~ALIGNED r3 /\ word_tree2 x (r3,m) d /\ ~(r3 = r4) /\ word_tree2 y (r4,m) d ==>
     ~(x = y)``,
   REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [] \\ Cases_on `y`
-  \\ FULL_SIMP_TAC std_ss [lisp_tree_def]);
-
-val XDEPTH_def = Define `
-  (XDEPTH (XDot x y) = SUC (MAX (XDEPTH x) (XDEPTH y))) /\
-  (XDEPTH (XSym w) = 0) /\
-  (XDEPTH (XVal w) = 0)`;
-
-val XSIZE_def = Define `
-  (XSIZE (XDot x y) = SUC ((XSIZE x) + (XSIZE y))) /\
-  (XSIZE (XSym w) = 0) /\
-  (XSIZE (XVal w) = 0)`;
+  \\ FULL_SIMP_TAC std_ss [word_tree2_def]);
 
 val SUM_XSIZE_def = Define `
   (SUM_XSIZE [] = 0) /\
@@ -133,10 +121,12 @@ val WORD_ADD_EQ = prove(
   ``!x y. ((x + y = x) = (y = 0w)) /\ ((y + x = x) = (y = 0w))``,      
   METIS_TAC [WORD_EQ_ADD_RCANCEL,WORD_EQ_ADD_LCANCEL,WORD_ADD_0])
 
-val lisp_tree_IGNORE_WRITE = prove(
-  ``!a d. ~(a IN d) ==> !x w v m. lisp_tree x (w,(a =+ v) m) d = lisp_tree x (w,m) d``,
+val word_tree2_IGNORE_WRITE = prove(
+  ``!a d. ~(a IN d) ==> 
+          !x w v m. word_tree2 x (w,(a =+ v) m) d = word_tree2 x (w,m) d``,
   NTAC 3 STRIP_TAC \\ Induct 
-  \\ ASM_SIMP_TAC std_ss [lisp_tree_def,APPLY_UPDATE_THM] \\ METIS_TAC []);
+  \\ ASM_SIMP_TAC std_ss [word_tree2_def,APPLY_UPDATE_THM]
+  \\ METIS_TAC []);
     
 val lisp_stack_LEMMA = prove(
   ``!ys a m d e. lisp_stack ys (a,m,d,e) ==> ALIGNED a``,
@@ -166,7 +156,7 @@ val lisp_stack_IGNORE_WRITE = prove(
                      lisp_stack ys (a,m,d,e) ==> lisp_stack ys (a,(b =+ w) m,d,e)``,
   Induct \\ SIMP_TAC std_ss [lisp_stack_def]
   \\ Cases \\ SIMP_TAC std_ss [lisp_stack_def] \\ NTAC 7 STRIP_TAC
-  \\ ASM_SIMP_TAC std_ss [lisp_tree_IGNORE_WRITE,APPLY_UPDATE_THM]
+  \\ ASM_SIMP_TAC std_ss [word_tree2_IGNORE_WRITE,APPLY_UPDATE_THM]
   \\ `~(a = 0w) /\ ~(a - 4w = 0w) /\ ~(a - 8w = 0w)` by METIS_TAC []
   \\ `~(b = a - 4w) /\ ~(b = a - 8w) /\ a - 8w <=+ b` by METIS_TAC [LEMMA]
   \\ FULL_SIMP_TAC std_ss []
@@ -179,14 +169,14 @@ val arm_eq_loop_spec_lemma = prove(  (* VERY SLOW PROOF *)
       (arm_eq_loop (r3,r4,r5,r6,r7,r8,df,m) = (u3,u4,u5,u6,u7,u8,udf,uf)) /\
       (r8 = n2w (LENGTH ys)) /\ (MAX_XDEPTH (x::MAP FST ys) < 2**32) /\
       (MAX_ADDRESSES r7 (x::MAP FST ys)) SUBSET e /\ ~(0w IN e) /\ e SUBSET df /\ d SUBSET df /\
-      lisp_stack ys (r7,m,d,e) /\ lisp_tree x (r3,m) d /\ lisp_tree y (r4,m) d ==>
+      lisp_stack ys (r7,m,d,e) /\ word_tree2 x (r3,m) d /\ word_tree2 y (r4,m) d ==>
       arm_eq_loop_pre (r3,r4,r5,r6,r7,r8,df,m) /\
       ((u3 = u4) = (MAP FST ys = MAP SND ys) /\ (x = y)) /\
       (!x. ~(x IN e) ==> (m x = uf x)) /\ (df = udf)``,
   STRIP_TAC \\ STRIP_TAC \\ completeInduct_on `2 * (SUM_XSIZE (MAP FST ys) + XSIZE x) + LENGTH ys`
   \\ ONCE_REWRITE_TAC [arm_eq_loop_def] \\ NTAC 14 STRIP_TAC \\ Cases_on `r3 = r4` 
   THENL [  
-    FULL_SIMP_TAC std_ss [] \\ IMP_RES_TAC lisp_tree_11
+    FULL_SIMP_TAC std_ss [] \\ IMP_RES_TAC word_tree2_11
     \\ FULL_SIMP_TAC std_ss [] 
     \\ `ALIGNED r7` by METIS_TAC [lisp_stack_LEMMA]
     \\ Cases_on `ys` THEN1 
@@ -231,16 +221,16 @@ val arm_eq_loop_spec_lemma = prove(  (* VERY SLOW PROOF *)
     \\ SIMP_TAC std_ss [GSYM ALIGNED_def,RW1 [WORD_AND_COMM] (GSYM ALIGNED_def)]
     \\ SIMP_TAC std_ss [ALIGNED_CLAUSES,ALIGNED_SUB_4]
     \\ REVERSE (Cases_on `ALIGNED (r3 !! r4)`) \\ FULL_SIMP_TAC std_ss []
-    THEN1 METIS_TAC [ALIGNED_OR,lisp_tree_ALIGNED_LEMMA]        
+    THEN1 METIS_TAC [ALIGNED_OR,word_tree2_ALIGNED_LEMMA]        
     \\ `ALIGNED r7` by METIS_TAC [lisp_stack_LEMMA]
     \\ FULL_SIMP_TAC std_ss [ALIGNED_OR,GSYM WORD_ADD_ASSOC,word_add_n2w]    
     \\ `?x1 x2. x = XDot x1 x2` by  
-       (Cases_on `x` \\ FULL_SIMP_TAC std_ss [XExp_11,XExp_distinct,lisp_tree_def]
+       (Cases_on `x` \\ FULL_SIMP_TAC std_ss [XExp_11,XExp_distinct,word_tree2_def]
         \\ METIS_TAC [ALIGNED_ADDR32,NOT_ALIGNED])
     \\ `?y1 y2. y = XDot y1 y2` by 
-       (Cases_on `y` \\ FULL_SIMP_TAC std_ss [XExp_11,XExp_distinct,lisp_tree_def]
+       (Cases_on `y` \\ FULL_SIMP_TAC std_ss [XExp_11,XExp_distinct,word_tree2_def]
         \\ METIS_TAC [ALIGNED_ADDR32,NOT_ALIGNED])
-    \\ FULL_SIMP_TAC std_ss [XExp_11,lisp_tree_def]
+    \\ FULL_SIMP_TAC std_ss [XExp_11,word_tree2_def]
     \\ `2 * (SUM_XSIZE (MAP FST ((x2,y2)::ys)) + XSIZE x1) +
         LENGTH ((x2,y2)::ys) <
         2 * (SUM_XSIZE (MAP FST ys) + XSIZE (XDot x1 x2)) + LENGTH ys` by     
@@ -286,14 +276,14 @@ val arm_eq_loop_spec_lemma = prove(  (* VERY SLOW PROOF *)
         \\ SIMP_TAC std_ss [MAX_XDEPTH_def,XDEPTH_def,ADD1,LENGTH] 
         \\ DISJ1_TAC \\ DECIDE_TAC)
       \\ `~(r7 IN d) /\ ~(r7 + 4w IN d)` by METIS_TAC [SUBSET_DEF,EXTENSION,IN_INTER,NOT_IN_EMPTY]            
-      \\ ASM_SIMP_TAC std_ss [lisp_tree_IGNORE_WRITE]
+      \\ ASM_SIMP_TAC std_ss [word_tree2_IGNORE_WRITE]
       \\ REVERSE (`lisp_stack ((x2,y2)::ys)
          (r7 + 8w,(r7 + 4w =+ m (r4 + 4w)) ((r7 =+ m (r3 + 4w)) m),d,e)` by ALL_TAC)
       THEN1 (ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM] \\ METIS_TAC [SUBSET_DEF])
       \\ ASM_SIMP_TAC std_ss [lisp_stack_def,word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4,word_arith_lemma5,WORD_ADD_0]
       \\ STRIP_TAC THEN1 METIS_TAC [SUBSET_DEF]
       \\ STRIP_TAC THEN1 METIS_TAC [SUBSET_DEF]
-      \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [APPLY_UPDATE_THM,lisp_tree_IGNORE_WRITE,WORD_ADD_EQ,n2w_11]
+      \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [APPLY_UPDATE_THM,word_tree2_IGNORE_WRITE,WORD_ADD_EQ,n2w_11]
       \\ `r7 IN e /\ r7 + 4w IN e` by METIS_TAC [SUBSET_DEF]
       \\ IMP_RES_TAC lisp_stack_LEMMA
       \\ `ALIGNED (r7+4w)` by FULL_SIMP_TAC std_ss [ALIGNED_CLAUSES]
@@ -312,47 +302,30 @@ val heap_half_def = Define `
   heap_half (a:word32,u,l:num) = 
     { a + n2w (if u then 8 * l + 8 + 4 * k else 8 + 4 * k) |k| k < 2 * l }`;
 
-val IN_heap_half_LEMMA = prove(
-  ``ch_arm (r,h,l) (r1,r2,r3,r4,r5,r6,a,df,f) /\ ALIGNED r1 ==>
-    r1 IN heap_half (a, f (a-28w) = 0w, l) /\ 
-    r1 + 4w IN heap_half (a, f (a-28w) = 0w, l)``,
-  REWRITE_TAC [ch_arm_def,ch_word_def,ch_inv_def,ok_state_def]
-  \\ SIMP_TAC std_ss [LET_DEF] \\ STRIP_TAC
-  \\ Cases_on `x1` \\ FULL_SIMP_TAC std_ss [ref_field_def]
-  THEN1 METIS_TAC [NOT_ALIGNED,ALIGNED_ADDR32]
-  \\ `~(SUC n = 0)` by DECIDE_TAC
-  \\ FULL_SIMP_TAC std_ss []
-  \\ REPEAT (Q.PAT_ASSUM `rx = if bsdf then bb else bbb` (K ALL_TAC))
-  \\ `SUC n IN RANGE ((if u then 1 + l else 1),i)` by METIS_TAC [MEM] 
-  \\ Q.PAT_ASSUM `SUC n IN RANGE ((if u then 1 + l else 1),i)` MP_TAC
-  \\ Q.PAT_ASSUM `i <= (if u then 1 + l else 1) + l` MP_TAC
-  \\ REPEAT (POP_ASSUM (K ALL_TAC))
-  \\ SIMP_TAC std_ss [heap_half_def,ref_addr_def,GSPECIFICATION]
-  \\ SIMP_TAC std_ss [IN_DEF,RANGE_def,RW1[MULT_COMM]MULT]
-  \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [EVAL ``1w = 0w:word32``] THENL [
-    REPEAT STRIP_TAC THENL [
-      Q.EXISTS_TAC `2 * (n - l)`
-      \\ SIMP_TAC std_ss [MULT_ASSOC,AC ADD_ASSOC ADD_COMM]
-      \\ `l + (n - l) = n` by DECIDE_TAC
-      \\ ASM_REWRITE_TAC [GSYM LEFT_ADD_DISTRIB]
-      \\ DECIDE_TAC,
-      Q.EXISTS_TAC `2 * (n - l) + 1`
-      \\ ASM_SIMP_TAC std_ss [LEFT_ADD_DISTRIB,MULT_ASSOC]
-      \\ `8 * l + 8 + (8 * (n - l) + 4) = 8 * n + 8 + 4` by DECIDE_TAC
-      \\ ASM_SIMP_TAC std_ss [word_add_n2w,GSYM WORD_ADD_ASSOC] \\ DECIDE_TAC],      
-    REPEAT STRIP_TAC THENL [
-      Q.EXISTS_TAC `2 * n`
-      \\ SIMP_TAC std_ss [MULT_ASSOC,AC ADD_ASSOC ADD_COMM] \\ DECIDE_TAC,
-      Q.EXISTS_TAC `2 * n + 1`
-      \\ ASM_SIMP_TAC std_ss [LEFT_ADD_DISTRIB,MULT_ASSOC]
-      \\ SIMP_TAC std_ss [GSYM word_add_n2w,AC WORD_ADD_ASSOC WORD_ADD_COMM] \\ DECIDE_TAC]]);
-
 val IN_heap_half = prove(
   ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r1,r2,r3,r4,r5,r6,a,df,f,s,rest) /\ isDot x1 ==>
     ALIGNED r1 /\ r1 IN heap_half (a, f (a-28w) = 0w, limit) /\ 
     r1 + 4w IN heap_half (a, f (a-28w) = 0w, limit)``,
-  STRIP_TAC \\ `ALIGNED r1` by METIS_TAC [ALIGNED_def,lisp_inv_address]
-  \\ FULL_SIMP_TAC std_ss [lisp_inv_def] \\ METIS_TAC [IN_heap_half_LEMMA]);
+  STRIP_TAC \\ FULL_SIMP_TAC std_ss [isDot_thm,lisp_inv_def,LET_DEF]
+  \\ FULL_SIMP_TAC std_ss [lisp_x_def]  
+  \\ Q.PAT_ASSUM `r1 IN ch_active_set (a,if u then 1 + limit else 1,i)` MP_TAC
+  \\ `((if u then 0x0w else 0x1w) = 0x0w:word32) = u` by (Cases_on `u` \\ EVAL_TAC)
+  \\ ASM_REWRITE_TAC [] \\ Q.PAT_ASSUM `!x. bbb` (K ALL_TAC)
+  \\ SIMP_TAC std_ss [heap_half_def,ch_active_set_def,GSPECIFICATION]
+  \\ STRIP_TAC \\ ASM_SIMP_TAC std_ss [word_mul_n2w] \\ STRIP_TAC THENL [
+    Q.EXISTS_TAC `2 * (j - 1 - if u then limit else 0)`    
+    \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss []
+    \\ MATCH_MP_TAC (METIS_PROVE [] 
+          ``(m = n) /\ b ==> ((a:word32) + n2w m = a + n2w n) /\ b``)
+    \\ SIMP_TAC std_ss [LEFT_SUB_DISTRIB,MULT_ASSOC]
+    \\ DECIDE_TAC,
+    Q.EXISTS_TAC `2 * (j - 1 - if u then limit else 0) + 1`    
+    \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss []  
+    \\ REWRITE_TAC [GSYM WORD_ADD_ASSOC,word_add_n2w]
+    \\ MATCH_MP_TAC (METIS_PROVE [] 
+          ``(m = n) /\ b ==> ((a:word32) + n2w m = a + n2w n) /\ b``)
+    \\ SIMP_TAC std_ss [LEFT_SUB_DISTRIB,LEFT_ADD_DISTRIB,MULT_ASSOC]
+    \\ DECIDE_TAC]);
 
 val heap_half_DISJOINT = prove(
   ``!a l. 16 * l < 2**32 ==> (heap_half(a,T,l) INTER heap_half(a,F,l) = {})``,
@@ -390,31 +363,24 @@ val lisp_symbol_table_11_Sym = prove(
   \\ IMP_RES_TAC symbol_table_eq
   \\ METIS_TAC [WORD_EQ_ADD_RCANCEL]);
 
-val lisp_tree_INTRO = prove(
+val word_tree2_INTRO = prove(
   ``!r1. lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r1,r2,r3,r4,r5,r6,a,df,f,s,rest) ==>
-         lisp_tree (SExp2XExp x1 s) (r1,f) (heap_half(a,f(a-28w)=0w,limit)) /\
+         word_tree2 (SExp2XExp x1 s) (r1,f) (heap_half(a,f(a-28w)=0w,limit)) /\
          (LDEPTH x1 = XDEPTH (SExp2XExp x1 s))``,
   REVERSE (Induct_on `x1`) THENL [
-    FULL_SIMP_TAC std_ss [lisp_inv_def,ch_arm_def,ch_inv_def,ch_word_def]
-    \\ REPEAT STRIP_TAC \\ REWRITE_TAC [SExp2XExp_def,LDEPTH_def,XDEPTH_def]
-    \\ REWRITE_TAC [lisp_tree_def]
-    \\ FULL_SIMP_TAC std_ss [MAP,CONS_11]
-    \\ Cases_on `v1`
-    \\ FULL_SIMP_TAC std_ss [lisp_ref_def]
-    \\ `x1 = 0` by METIS_TAC [bijection_def,ONE_ONE_DEF]
-    \\ FULL_SIMP_TAC std_ss [ref_field_def]
-    \\ Q.PAT_ASSUM `(w,T) = y1` (fn th => REWRITE_TAC [GSYM th])
+    FULL_SIMP_TAC std_ss [lisp_inv_def,LET_DEF,SExp2XExp_def,LDEPTH_def,
+      XDEPTH_def,word_tree2_def,lisp_x_def,ALIGNED_INTRO] 
+    \\ REPEAT STRIP_TAC    
+    \\ STRIP_ASSUME_TAC (Q.SPEC `r1` EXISTS_ADDR32)    
+    \\ FULL_SIMP_TAC std_ss [ALIGNED_ADDR32,ALIGNED_ADD_EQ,
+          word_arith_lemma4,ALIGNED_n2w,WORD_ADD_0]
     \\ METIS_TAC [lisp_symbol_table_11_Sym],
-    FULL_SIMP_TAC std_ss [lisp_inv_def,ch_arm_def,ch_inv_def,ch_word_def]
-    \\ REPEAT STRIP_TAC \\ REWRITE_TAC [SExp2XExp_def,LDEPTH_def,XDEPTH_def]
-    \\ REWRITE_TAC [lisp_tree_def]
-    \\ FULL_SIMP_TAC std_ss [MAP,CONS_11]
-    \\ Cases_on `v1`
-    \\ FULL_SIMP_TAC std_ss [lisp_ref_def]
-    \\ `x1 = 0` by METIS_TAC [bijection_def,ONE_ONE_DEF]
-    \\ FULL_SIMP_TAC std_ss [ref_field_def]
-    \\ Q.PAT_ASSUM `(w,F) = y1` (fn th => REWRITE_TAC [GSYM th]),
-    REWRITE_TAC [SExp2XExp_def,lisp_tree_def]
+    FULL_SIMP_TAC std_ss [lisp_inv_def,LET_DEF,SExp2XExp_def,LDEPTH_def,
+      XDEPTH_def,word_tree2_def,lisp_x_def,ALIGNED_INTRO] 
+    \\ REPEAT STRIP_TAC    
+    \\ ASM_SIMP_TAC std_ss [ADDR32_n2w,word_add_n2w]
+    \\ SIMP_TAC std_ss [AC MULT_COMM MULT_ASSOC],
+    REWRITE_TAC [SExp2XExp_def,word_tree2_def]
     \\ REWRITE_TAC [SExp2XExp_def,LDEPTH_def,XDEPTH_def]
     \\ `isDot (Dot x1 x1')` by REWRITE_TAC [isDot_def]
     \\ STRIP_TAC \\ STRIP_TAC \\ REWRITE_TAC [GSYM CONJ_ASSOC]
@@ -441,43 +407,48 @@ val SExp2XExp_11 = prove(
     \\ METIS_TAC [],
     Cases_on `x2`
     \\ SIMP_TAC std_ss [SExp2XExp_def,XExp_11,SExp_11,XExp_distinct,SExp_distinct]
-    \\ SIMP_TAC std_ss [lisp_inv_def] \\ REPEAT STRIP_TAC
-    \\ Cases_on `v1` \\ Cases_on `v2`
-    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [lisp_ref_def,n2w_11],
+    \\ SIMP_TAC std_ss [lisp_inv_def,LET_DEF,lisp_x_def] 
+    \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [n2w_11],
     Cases_on `x2`
     \\ SIMP_TAC std_ss [SExp2XExp_def,XExp_11,SExp_11,XExp_distinct,SExp_distinct]
-    \\ SIMP_TAC std_ss [lisp_inv_def] \\ REPEAT STRIP_TAC
-    \\ Cases_on `v1` \\ Cases_on `v2`
-    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [lisp_ref_def,n2w_11]
+    \\ SIMP_TAC std_ss [lisp_inv_def,LET_DEF,lisp_x_def] 
+    \\ REPEAT STRIP_TAC
     \\ `?dm m dg g. rest = (dm,m,dg,g)` by METIS_TAC [PAIR]
-    \\ FULL_SIMP_TAC std_ss [lisp_symbol_table_def]
-    \\ `(ADDR32 w + sa,s'') IN (set_add sa s)` by 
+    \\ Q.ABBREV_TAC `sa = a + 0x10w * n2w limit + 0x18w`
+    \\ FULL_SIMP_TAC std_ss [lisp_symbol_table_def,ALIGNED_INTRO]
+    \\ STRIP_ASSUME_TAC (Q.SPEC `r1` EXISTS_ADDR32)    
+    \\ FULL_SIMP_TAC std_ss [ALIGNED_ADDR32,ALIGNED_ADD_EQ,
+          word_arith_lemma4,ALIGNED_n2w,WORD_ADD_0]
+    \\ STRIP_ASSUME_TAC (Q.SPEC `r2` EXISTS_ADDR32)    
+    \\ FULL_SIMP_TAC std_ss [ALIGNED_ADDR32,ALIGNED_ADD_EQ,
+          word_arith_lemma4,ALIGNED_n2w,WORD_ADD_0]
+    \\ `(ADDR32 a' + sa,s'') IN (set_add sa s)` by 
        FULL_SIMP_TAC std_ss [IN_DEF,set_add_def,WORD_ADD_SUB]
-    \\ `(ADDR32 w' + sa,s') IN (set_add sa s)` by 
+    \\ `(ADDR32 a'' + sa,s') IN (set_add sa s)` by 
        FULL_SIMP_TAC std_ss [IN_DEF,set_add_def,WORD_ADD_SUB]
     \\ `!w s2. (ADDR32 w + sa,s2) IN (set_add sa s) = (ADDR32 w, s2) IN s` by 
        FULL_SIMP_TAC std_ss [IN_DEF,set_add_def,WORD_ADD_SUB]
-    \\ `(s'' = s') = (w = w')` by METIS_TAC [symbol_table_eq,WORD_EQ_ADD_RCANCEL,ADDR32_11]
-    \\ ASM_SIMP_TAC std_ss []
-    \\ `!w1 w2 s1 s2. (ADDR32 w1 + sa,s1) IN (set_add sa s) /\ 
+    \\ `(s'' = s') = (a'' = a')` by METIS_TAC [symbol_table_eq,WORD_EQ_ADD_RCANCEL,ADDR32_11]
+    \\ FULL_SIMP_TAC std_ss []
+   \\ `!w1 w2 s1 s2. (ADDR32 w1 + sa,s1) IN (set_add sa s) /\ 
         (ADDR32 w2 + sa,s2) IN (set_add sa s) ==> 
         ((ADDR32 w1 + sa = ADDR32 w2 + sa) = (s1 = s2))` by METIS_TAC [symbol_table_eq]
     \\ POP_ASSUM MP_TAC
     \\ ASM_SIMP_TAC std_ss [WORD_EQ_ADD_RCANCEL,ADDR32_11]
     \\ METIS_TAC []]);
 
-val lisp_tree_THM = prove(
+val word_tree2_THM = prove(
   ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r1,r2,r3,r4,r5,r6,a,df,f,s,rest) ==>
-    ?y1 y2. lisp_tree y1 (r1,f) (heap_half(a,f(a-28w)=0w,limit)) /\
-            lisp_tree y2 (r2,f) (heap_half(a,f(a-28w)=0w,limit)) /\
+    ?y1 y2. word_tree2 y1 (r1,f) (heap_half(a,f(a-28w)=0w,limit)) /\
+            word_tree2 y2 (r2,f) (heap_half(a,f(a-28w)=0w,limit)) /\
             ((x1 = x2) = (y1 = y2)) /\ (XDEPTH y1 = LDEPTH x1) /\
             (XDEPTH y2 = LDEPTH x2)``,
   STRIP_TAC
   \\ Q.EXISTS_TAC `SExp2XExp x1 s` \\ Q.EXISTS_TAC `SExp2XExp x2 s`
-  \\ IMP_RES_TAC lisp_tree_INTRO
+  \\ IMP_RES_TAC word_tree2_INTRO
   \\ IMP_RES_TAC SExp2XExp_11
   \\ ASM_SIMP_TAC std_ss []
-  \\ METIS_TAC [lisp_inv_swap2,lisp_tree_INTRO]);
+  \\ METIS_TAC [lisp_inv_swap2,word_tree2_INTRO]);
 
 val lisp_inv_arm_eq_loop = prove(
   ``let w = a + if f (a - 28w) = 0w then 8w else 8w + n2w (8 * limit) in
@@ -488,14 +459,14 @@ val lisp_inv_arm_eq_loop = prove(
     (!x. ~(x IN heap_half (a, ~((f:word32->word32) (a - 28w) = 0w),limit)) ==> (f x = uf x)) /\ (df = udf)``,
   Q.ABBREV_TAC `w = a + if f (a - (28w:word32)) = (0w:word32) then 8w else 8w + n2w (8 * limit)`
   \\ SIMP_TAC std_ss [LET_DEF] \\ STRIP_TAC
-  \\ IMP_RES_TAC lisp_tree_THM \\ ASM_SIMP_TAC std_ss []
+  \\ IMP_RES_TAC word_tree2_THM \\ ASM_SIMP_TAC std_ss []
   \\ MATCH_MP_TAC arm_eq_loop_spec
   \\ Q.EXISTS_TAC `heap_half (a, (f (a - 28w) = 0w),limit)`
   \\ ASM_SIMP_TAC std_ss []
   \\ `LDEPTH x1 <= limit` by METIS_TAC [lisp_inv_LDEPTH]
   \\ ASM_SIMP_TAC std_ss []  
   \\ `16 * limit < 2**32` by
-       (FULL_SIMP_TAC std_ss [lisp_inv_def,ch_arm_def,ch_word_def,ch_inv_def] \\ DECIDE_TAC)
+       (FULL_SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ DECIDE_TAC)
   \\ IMP_RES_TAC heap_half_DISJOINT
   \\ STRIP_TAC THEN1
    (Cases_on `f (a - 0x1Cw) = 0x0w` \\ ASM_SIMP_TAC std_ss []
@@ -505,7 +476,7 @@ val lisp_inv_arm_eq_loop = prove(
     \\ SIMP_TAC std_ss [GSYM (EVAL ``4w + 4w:word32``),WORD_ADD_ASSOC,ALIGNED_CLAUSES]
     \\ SIMP_TAC bool_ss [GSYM (EVAL ``4*2``),GSYM word_mul_n2w,WORD_MULT_ASSOC]
     \\ REWRITE_TAC [ALIGNED_CLAUSES,GSYM WORD_MULT_ASSOC]
-    \\ FULL_SIMP_TAC std_ss [lisp_inv_def,ch_arm_def,ch_word_def,ref_cheney_def,ALIGNED_def])
+    \\ FULL_SIMP_TAC std_ss [lisp_inv_def,LET_DEF,ALIGNED_def])
   \\ ASM_SIMP_TAC std_ss []
   \\ STRIP_TAC THEN1
    (REWRITE_TAC [SUBSET_DEF,GSPECIFICATION,heap_half_def]
@@ -538,8 +509,7 @@ val lisp_inv_arm_eq_loop = prove(
     \\ `n + (8 + 4 * k) < 4294967296` by DECIDE_TAC
     \\ Cases_on `(f:word32->word32) (n2w n - 28w) = 0w` \\ ASM_SIMP_TAC std_ss [])
   \\ `df = ref_set a (limit + limit + 1)` by 
-    (FULL_SIMP_TAC std_ss [lisp_inv_def,ch_arm_def,ch_word_def,ref_cheney_def,ch_inv_def] 
-     \\ METIS_TAC [])
+    (FULL_SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ METIS_TAC [])
   \\ ASM_SIMP_TAC std_ss [heap_half_def,SUBSET_DEF,GSPECIFICATION,ref_set_def,IN_UNION]
   \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss [WORD_EQ_ADD_LCANCEL] \\ DISJ1_TAC
   \\ Cases_on `(f:word32->word32) (a - 28w) = 0w` \\ ASM_SIMP_TAC std_ss []     
@@ -550,9 +520,6 @@ val lisp_inv_arm_eq_loop = prove(
          \\ SIMP_TAC std_ss [LEFT_ADD_DISTRIB,MULT_ASSOC] \\ DECIDE_TAC)
   THEN1 (Q.EXISTS_TAC `2 + k` \\ SIMP_TAC std_ss [LEFT_ADD_DISTRIB] \\ DECIDE_TAC));
 
-
-
-
 val arm_eq_init_thm = prove(
   ``arm_eq_init(r5,r6,r10) = (r5,r6,r10 + if r5 = 0w then 8w else 8w + r6,r10)``,
   SIMP_TAC std_ss [arm_eq_init_def,LET_DEF] \\ Cases_on `r5 = 0w` \\ ASM_SIMP_TAC std_ss [WORD_ADD_ASSOC]);
@@ -562,29 +529,44 @@ val WORD_EQ_ADD_CANCEL = prove(
           ((x = x + y) = (y = 0w)) /\ ((x = y + x) = (y = 0w))``,
   METIS_TAC [WORD_EQ_ADD_LCANCEL,WORD_EQ_ADD_RCANCEL,WORD_ADD_0]);
 
-val tac =
-  FULL_SIMP_TAC std_ss [lisp_inv_def,ch_arm_def,ch_word_def]
-  \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `v1` \\ Q.EXISTS_TAC `v2` \\ Q.EXISTS_TAC `v3`
-  \\ Q.EXISTS_TAC `v4` \\ Q.EXISTS_TAC `v5` \\ Q.EXISTS_TAC `v6` \\ Q.EXISTS_TAC `h`
-  \\ Q.EXISTS_TAC `sa`
-  \\ ASM_SIMP_TAC std_ss [] \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `e` \\ Q.EXISTS_TAC `rs`
-  \\ Q.EXISTS_TAC `l'` \\ Q.EXISTS_TAC `u` \\ Q.EXISTS_TAC `m`
-  \\ ASM_SIMP_TAC std_ss [CONS_11] \\ SIMP_TAC std_ss [APPLY_UPDATE_THM]  
-  \\ SIMP_TAC std_ss [word_sub_def,WORD_EQ_ADD_LCANCEL,WORD_EQ_ADD_CANCEL]
-  \\ REWRITE_TAC [GSYM word_sub_def]  
-  \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [word_2comp_n2w,n2w_11]
-  \\ FULL_SIMP_TAC std_ss [ref_cheney_def] \\ REPEAT STRIP_TAC 
-  \\ RES_TAC \\ Cases_on `m i'` \\ FULL_SIMP_TAC std_ss [ref_mem_def]
-  THENL [ALL_TAC,Cases_on `p` \\ Cases_on `r` \\ Cases_on `r'`]
-  \\ FULL_SIMP_TAC std_ss [ref_mem_def] \\ REPEAT STRIP_TAC  
-  \\ FULL_SIMP_TAC std_ss [APPLY_UPDATE_THM,ref_addr_def,word_sub_def]
-  \\ SIMP_TAC std_ss [WORD_EQ_ADD_LCANCEL,WORD_EQ_ADD_CANCEL,GSYM WORD_ADD_ASSOC,word_add_n2w]
-  \\ `8 * i' < 4294967296` by DECIDE_TAC
-  \\ `8 * i' + 4 < 4294967296` by DECIDE_TAC
-  \\ `8 * i' + 8 < 4294967296` by DECIDE_TAC
-  \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [n2w_11,word_2comp_n2w]
-  \\ MATCH_MP_TAC (METIS_PROVE [] ``~b ==> ((if b then x else y) = y)``)
-  \\ DECIDE_TAC
+val lisp_x_APPLY = prove(
+  ``!x1 a. ~(xx IN b) /\ ~(xx - 4w IN b) ==>
+           (lisp_x x1 (a,b,(xx =+ x) f) s = lisp_x x1 (a,b,f) s)``,
+  Induct \\ SIMP_TAC std_ss [lisp_x_def] \\ REPEAT STRIP_TAC
+  \\ Cases_on `a IN b` \\ ASM_SIMP_TAC std_ss []
+  \\ `~(xx = a)` by METIS_TAC []     
+  \\ ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM]
+  \\ `~(a = xx - 4w)` by METIS_TAC [] 
+  \\ FULL_SIMP_TAC std_ss [WORD_EQ_SUB_LADD]);
+  
+val tac = 
+  FULL_SIMP_TAC std_ss [lisp_inv_def,LET_DEF]
+  \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u`
+  \\ ASM_SIMP_TAC std_ss []
+  \\ Q.ABBREV_TAC `bb = ch_active_set (a,if u then 1 + limit else 1,i)`
+  \\ Q.PAT_ABBREV_TAC `xx = a - n2w n`  
+  \\ `~(xx IN bb) /\ ~(xx - 4w IN bb)` by 
+   (Q.UNABBREV_TAC `bb` \\ Q.UNABBREV_TAC `xx`  
+    \\ SIMP_TAC std_ss [ch_active_set_def,GSPECIFICATION]
+    \\ SIMP_TAC std_ss [APPLY_UPDATE_THM,WORD_EQ_SUB_RADD]
+    \\ SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w,word_mul_n2w]
+    \\ SIMP_TAC std_ss [WORD_EQ_ADD_CANCEL]
+    \\ REPEAT STRIP_TAC
+    \\ Cases_on `j < i` \\ ASM_SIMP_TAC std_ss []
+    \\ Cases_on `(if u then 1 + limit else 1) <= j` \\ ASM_SIMP_TAC std_ss []
+    \\ SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword]
+    \\ MATCH_MP_TAC (METIS_PROVE [LESS_MOD] ``(n < k) /\ (n <> 0) ==> (n MOD k <> 0)``)
+    \\ Cases_on `u` \\ FULL_SIMP_TAC (std_ss++SIZES_ss) []
+    \\ DECIDE_TAC)
+  \\ ASM_SIMP_TAC std_ss [lisp_x_APPLY]
+  \\ NTAC 4 (STRIP_TAC THEN1
+    (Q.UNABBREV_TAC `xx`
+     \\ SIMP_TAC std_ss [APPLY_UPDATE_THM,WORD_EQ_SUB_RADD]
+     \\ SIMP_TAC std_ss [word_arith_lemma1,word_arith_lemma2]
+     \\ SIMP_TAC std_ss [word_arith_lemma3,word_arith_lemma4]
+     \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,WORD_EQ_SUB_LADD,n2w_11]))
+  \\ SIMP_TAC std_ss [APPLY_UPDATE_THM,GSYM WORD_EQ_SUB_RADD] 
+  \\ METIS_TAC []
 
 val lemma4 = prove(
   ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,rest) ==>
@@ -601,6 +583,12 @@ val lemma16 = prove(
 val lemma20 = prove(
   ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,rest) ==>
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,(a - 20w =+ x) f,s,rest)``,tac);
+
+val lisp_x_or = prove(
+  ``(!x. x IN bb \/ x - 4w IN bb ==> (f5 x = ft x)) ==>
+    !t a s. (lisp_x t (a,bb,ft) s = lisp_x t (a,bb,f5) s)``,
+  STRIP_TAC \\ Induct \\ SIMP_TAC std_ss [lisp_x_def] \\ REPEAT STRIP_TAC
+  \\ METIS_TAC [WORD_ADD_SUB,WORD_SUB_ADD]); 
 
 val tac2 =
      (SIMP_TAC std_ss [heap_half_def,GSPECIFICATION,word_sub_def,WORD_EQ_ADD_LCANCEL,WORD_EQ_ADD_CANCEL]
@@ -634,8 +622,8 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
   \\ Cases_on `r3 = r4` THEN1 
    (ASM_SIMP_TAC std_ss [LET_DEF] \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
     \\ SIMP_TAC std_ss []
-    \\ STRIP_TAC \\ IMP_RES_TAC lisp_tree_THM
-    \\ IMP_RES_TAC lisp_tree_11
+    \\ STRIP_TAC \\ IMP_RES_TAC word_tree2_THM
+    \\ IMP_RES_TAC word_tree2_11
     \\ FULL_SIMP_TAC std_ss [LISP_EQUAL_def,LISP_TEST_def]
     \\ METIS_TAC [lisp_inv_t])
   \\ ASM_SIMP_TAC std_ss [LET_DEF]
@@ -656,7 +644,7 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
   \\ STRIP_TAC \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ SIMP_TAC std_ss []
   \\ REPEAT (MATCH_MP_TAC (METIS_PROVE [] ``p ==> (b ==> p)``))
   \\ `ALIGNED a` by
-      FULL_SIMP_TAC std_ss [lisp_inv_def,ch_arm_def,ch_word_def,ref_cheney_def,ALIGNED_def]
+      FULL_SIMP_TAC std_ss [lisp_inv_def,LET_DEF,ALIGNED_INTRO]
   \\ ASM_SIMP_TAC std_ss [WORD_SUB_PLUS,ALIGNED_SUB_4]
   \\ SIMP_TAC std_ss [arm_eq_init_def,LET_DEF,arm_eq_assign_def]
   \\ `lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f5,s,rest)` by 
@@ -671,7 +659,7 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
   \\ FULL_SIMP_TAC std_ss [GSYM WORD_SUB_PLUS,word_add_n2w]
   \\ REWRITE_TAC [CONJ_ASSOC] \\ STRIP_TAC THEN1
      (`df = ref_set a (limit + limit + 1)` by
-        FULL_SIMP_TAC std_ss [lisp_inv_def,ch_arm_def,ch_word_def,ref_cheney_def,ch_inv_def]
+        FULL_SIMP_TAC std_ss [lisp_inv_def,LET_DEF]
       \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss [ref_set_def,IN_UNION] \\ DISJ2_TAC
       \\ SIMP_TAC std_ss [GSPECIFICATION]          
       \\ REPEAT (Q.EXISTS_TAC `1` \\ SIMP_TAC std_ss [] \\ DECIDE_TAC)
@@ -689,9 +677,9 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
        \\ METIS_TAC [lisp_inv_t,lisp_inv_nil])
   \\ Q.PAT_ASSUM `lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f5,s,rest)` (K ALL_TAC)
   \\ `w2n a + 16 * limit + 20 < 4294967296` by 
-      FULL_SIMP_TAC std_ss [lisp_inv_def,ch_arm_def,ch_word_def,ref_cheney_def,ch_inv_def]
+      FULL_SIMP_TAC std_ss [lisp_inv_def,LET_DEF]
   \\ `32 <= w2n a` by 
-      FULL_SIMP_TAC std_ss [lisp_inv_def,ch_arm_def,ch_word_def,ref_cheney_def,ch_inv_def]
+      FULL_SIMP_TAC std_ss [lisp_inv_def,LET_DEF]
   \\ `~(a - 20w IN heap_half (a, ~(f5 (a - 28w) = 0w),limit))` by tac2
   \\ `~(a - 16w IN heap_half (a, ~(f5 (a - 28w) = 0w),limit))` by tac2
   \\ `~(a - 12w IN heap_half (a, ~(f5 (a - 28w) = 0w),limit))` by tac2
@@ -706,61 +694,65 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
       \\ SIMP_TAC (std_ss++SIZES_ss) [APPLY_UPDATE_THM,word_sub_def,
            WORD_EQ_ADD_LCANCEL,n2w_11,word_2comp_n2w])
   \\ ASM_SIMP_TAC std_ss []
-  \\ FULL_SIMP_TAC std_ss [lisp_inv_def]
-  \\ Q.EXISTS_TAC `v1` \\ Q.EXISTS_TAC `v2` \\ Q.EXISTS_TAC `v3`
-  \\ Q.EXISTS_TAC `v4` \\ Q.EXISTS_TAC `v5` \\ Q.EXISTS_TAC `v6` \\ Q.EXISTS_TAC `h`
-  \\ Q.EXISTS_TAC `sa`
-  \\ FULL_SIMP_TAC std_ss [ch_arm_def]    
-  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `e` \\ Q.EXISTS_TAC `rs`
-  \\ Q.EXISTS_TAC `l'` \\ Q.EXISTS_TAC `u` \\ Q.EXISTS_TAC `m`
-  \\ FULL_SIMP_TAC std_ss [ch_word_def,CONS_11]
-  \\ REVERSE STRIP_TAC THEN1
-     (`~(a - 28w IN heap_half (a, ~(f5 (a - 28w) = 0w),limit))` by tac2
-      \\ `~(a - 32w IN heap_half (a, ~(f5 (a - 28w) = 0w),limit))` by tac2
-      \\ `~(a + 4w IN heap_half (a, ~(f5 (a - 28w) = 0w),limit))` by tac2
-      \\ `~(a IN heap_half (a, ~(f5 (a - 28w) = 0w),limit))` by tac2
-      \\ Q.PAT_ASSUM `f5 (a - 28w) = (if u then 0w else 1w)` ASSUME_TAC
-      \\ FULL_SIMP_TAC std_ss [] \\ RES_TAC \\ METIS_TAC [])
-  \\ FULL_SIMP_TAC std_ss [ref_cheney_def] \\ REPEAT STRIP_TAC
-  \\ `~((if u then 0w else 1w) = 0w:word32) = ~u` by 
-      (Cases_on `u` \\ REWRITE_TAC [] \\ EVAL_TAC)
+  \\ FULL_SIMP_TAC std_ss [lisp_inv_def,LET_DEF]
+  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u`
+  \\ FULL_SIMP_TAC std_ss [lisp_inv_def,LET_DEF]
+  \\ `~(a - 28w IN heap_half (a, ~(f5 (a - 28w) = 0w),limit))` by tac2
+  \\ `~(a - 32w IN heap_half (a, ~(f5 (a - 28w) = 0w),limit))` by tac2
+  \\ `~(a + 4w IN heap_half (a, ~(f5 (a - 28w) = 0w),limit))` by tac2
+  \\ `~(a IN heap_half (a, ~(f5 (a - 28w) = 0w),limit))` by tac2
+  \\ Q.PAT_ASSUM `f5 (a - 28w) = (if u then 0w else 1w)` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss []
-  \\ REVERSE (`!i. ~(m i = EMP) ==> 
-         ~(ref_addr a i + 4w IN heap_half (a,~u,limit)) /\
-         ~(ref_addr a i IN heap_half (a,~u,limit))` by ALL_TAC)
-  THEN1
-     (RES_TAC \\ Cases_on `m i'` \\ FULL_SIMP_TAC std_ss [ref_mem_def]
-      THENL [ALL_TAC,Cases_on `p` \\ Cases_on `r` \\ Cases_on `r'`]
-      \\ FULL_SIMP_TAC std_ss [ref_mem_def]
-      \\ METIS_TAC [heap_type_distinct])
-  \\ SIMP_TAC std_ss [ref_addr_def,heap_half_def,GSPECIFICATION,
-       GSYM WORD_ADD_ASSOC,word_add_n2w,WORD_EQ_ADD_LCANCEL]
-  \\ REPEAT (Q.PAT_ASSUM `rx = ref_field a xxx` (K ALL_TAC))
-  \\ REPEAT (Q.PAT_ASSUM `lisp_ref yy zz xx ttt` (K ALL_TAC))
-  \\ REPEAT (Q.PAT_ASSUM `~bbb` (K ALL_TAC))
-  \\ REPEAT (Q.PAT_ASSUM `ff (a - n2w nnn) = rx` (K ALL_TAC))
-  \\ REPEAT (Q.PAT_ASSUM `Abbrev rx` (K ALL_TAC))
-  \\ REPEAT (Q.PAT_ASSUM `bb ==> yy` (K ALL_TAC))
-  \\ REPEAT (Q.PAT_ASSUM `arm_eq_loop xxx = yyy` (K ALL_TAC))
-  \\ REPEAT (Q.PAT_ASSUM `arm_eq_loop_pre xxx` (K ALL_TAC))
-  \\ NTAC 2 STRIP_TAC \\ FULL_SIMP_TAC std_ss [ok_state_def,LET_DEF]
-  \\ `i'' IN RANGE ((if u then 1 + l' else 1),i)` by METIS_TAC [heap_type_distinct]
-  \\ REPEAT (Q.PAT_ASSUM `!bb. yy` (K ALL_TAC))
-  \\ `l' = limit` by METIS_TAC [ch_inv_def]
-  \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def]
-  \\ REPEAT STRIP_TAC 
-  \\ (Cases_on `k < 2 * limit` \\ ASM_SIMP_TAC std_ss []
-  \\ Cases_on `u` \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [n2w_11] THENL [
-      `8 + 4 * k < 4294967296` by DECIDE_TAC
-      \\ `8 * i'' + 4 < 4294967296` by DECIDE_TAC
-      \\ `8 * i'' < 4294967296` by DECIDE_TAC
-      \\ ASM_SIMP_TAC std_ss [LESS_MOD]
+  \\ NTAC 4 (STRIP_TAC THEN1 METIS_TAC [])
+  \\ Q.ABBREV_TAC `bb = ch_active_set (a,if u then 1 + limit else 1,i)` 
+  \\ `((if u then 0x0w else 0x1w) <> 0x0w:word32) = ~u` by (Cases_on `u` \\ EVAL_TAC)
+  \\ FULL_SIMP_TAC std_ss []  
+  \\ `bb SUBSET heap_half (a,u,limit)` by 
+   (Q.UNABBREV_TAC `bb`
+    \\ SIMP_TAC std_ss [SUBSET_DEF,ch_active_set_def,heap_half_def,GSPECIFICATION]
+    \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss [word_mul_n2w]
+    \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [] THENL [
+      Q.EXISTS_TAC `2 * (j - 1 - limit)`
+      \\ MATCH_MP_TAC (METIS_PROVE [] 
+           ``(m = n) /\ b ==> (a + n2w m = (a:word32) + n2w n) /\ b``)    
+      \\ FULL_SIMP_TAC std_ss [LEFT_SUB_DISTRIB,LEFT_ADD_DISTRIB,MULT_ASSOC] 
       \\ DECIDE_TAC,
-      `8 * limit + 8 + 4 * k < 4294967296` by DECIDE_TAC
-      \\ `8 * i'' + 4 < 4294967296` by DECIDE_TAC
-      \\ `8 * i'' < 4294967296` by DECIDE_TAC
-      \\ ASM_SIMP_TAC std_ss [LESS_MOD]
-      \\ DECIDE_TAC]));
+      Q.EXISTS_TAC `2 * (j - 1)`
+      \\ MATCH_MP_TAC (METIS_PROVE [] 
+           ``(m = n) /\ b ==> (a + n2w m = (a:word32) + n2w n) /\ b``)    
+      \\ FULL_SIMP_TAC std_ss [LEFT_SUB_DISTRIB,LEFT_ADD_DISTRIB,MULT_ASSOC] 
+      \\ DECIDE_TAC])
+  \\ `{ b + 4w | b IN bb} SUBSET heap_half (a,u,limit)` by 
+   (Q.UNABBREV_TAC `bb`
+    \\ SIMP_TAC std_ss [SUBSET_DEF,ch_active_set_def,heap_half_def,GSPECIFICATION]
+    \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss [word_mul_n2w]
+    \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w] THENL [
+      Q.EXISTS_TAC `2 * (j - 1 - limit) + 1`
+      \\ MATCH_MP_TAC (METIS_PROVE [] 
+           ``(m = n) /\ b ==> (a + n2w m = (a:word32) + n2w n) /\ b``)    
+      \\ FULL_SIMP_TAC std_ss [LEFT_SUB_DISTRIB,LEFT_ADD_DISTRIB,MULT_ASSOC] 
+      \\ DECIDE_TAC,
+      Q.EXISTS_TAC `2 * (j - 1) + 1`
+      \\ MATCH_MP_TAC (METIS_PROVE [] 
+           ``(m = n) /\ b ==> (a + n2w m = (a:word32) + n2w n) /\ b``)    
+      \\ FULL_SIMP_TAC std_ss [LEFT_SUB_DISTRIB,LEFT_ADD_DISTRIB,MULT_ASSOC] 
+      \\ DECIDE_TAC])
+  \\ `(!x. x IN bb \/ x - 4w IN bb ==> (f5 x = ft x))` by 
+   (REPEAT STRIP_TAC
+    THEN1 (Q.PAT_ASSUM `!x. bbb ==> (f5 x = ft x)` MATCH_MP_TAC
+    \\ `16 * limit < 2 ** 32` by (SIMP_TAC std_ss [] \\ DECIDE_TAC) 
+    \\ IMP_RES_TAC (RW [EXTENSION,NOT_IN_EMPTY,IN_INTER] heap_half_DISJOINT)  
+    \\ Cases_on `u` \\ REWRITE_TAC [] \\ METIS_TAC [SUBSET_DEF])
+    \\ REPEAT STRIP_TAC
+    \\ Q.PAT_ASSUM `!x. bbb ==> (f5 x = ft x)` MATCH_MP_TAC
+    \\ `16 * limit < 2 ** 32` by (SIMP_TAC std_ss [] \\ DECIDE_TAC) 
+    \\ IMP_RES_TAC (RW [EXTENSION,NOT_IN_EMPTY,IN_INTER] heap_half_DISJOINT)  
+    \\ REVERSE (`x IN {b + 0x4w | b IN bb}` by ALL_TAC)
+    THEN1 (Cases_on `u` \\ REWRITE_TAC [] \\ METIS_TAC [SUBSET_DEF])
+    \\ ASM_SIMP_TAC std_ss [GSPECIFICATION,GSYM WORD_EQ_SUB_RADD])
+  \\ IMP_RES_TAC lisp_x_or \\ ASM_SIMP_TAC std_ss [] 
+  \\ REPEAT STRIP_TAC \\ METIS_TAC [WORD_ADD_SUB]);
+  
 
 
 (* PowerPC implementation *)

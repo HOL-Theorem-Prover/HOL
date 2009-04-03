@@ -2,34 +2,46 @@ structure compilerLib :> compilerLib =
 struct
   
 open HolKernel boolLib bossLib Parse;
-open wordsTheory wordsLib addressTheory;
-open prog_armLib prog_ppcLib prog_x86Lib decompilerLib;
+open decompilerLib 
+open codegenLib codegen_x86Lib;
 
-open codegenLib helperLib codegen_x86Lib;
+open prog_armLib prog_ppcLib prog_x86Lib;
+open wordsTheory wordsLib addressTheory;
+open helperLib;
+
 
 val COMPILER_TAC = 
-    SIMP_TAC bool_ss [LET_DEF]
+    SIMP_TAC bool_ss [LET_DEF,word_div_def,word_mod_def]
+    THEN SIMP_TAC std_ss [WORD_OR_CLAUSES]
     THEN REWRITE_TAC [WORD_CMP_NORMALISE] 
     THEN REWRITE_TAC [WORD_HIGHER,WORD_GREATER,WORD_HIGHER_EQ,
            WORD_GREATER_EQ,GSYM WORD_NOT_LOWER,GSYM WORD_NOT_LESS] 
     THEN SIMP_TAC std_ss [WORD_MUL_LSL,word_mul_n2w,word_add_n2w,NOT_IF,
            WORD_OR_CLAUSES]
     THEN CONV_TAC (EVAL_ANY_MATCH_CONV word_patterns)
-    THEN SIMP_TAC bool_ss [WORD_SUB_RZERO, WORD_ADD_0, 
+    THEN SIMP_TAC std_ss [WORD_SUB_RZERO, WORD_ADD_0, IF_IF,
                       AC WORD_ADD_COMM WORD_ADD_ASSOC,
                       AC WORD_MULT_COMM WORD_MULT_ASSOC,
                       AC WORD_AND_COMM WORD_AND_ASSOC,
                       AC WORD_OR_COMM WORD_OR_ASSOC,
-                      AC WORD_XOR_COMM WORD_XOR_ASSOC];
+                      AC WORD_XOR_COMM WORD_XOR_ASSOC,
+                      AC CONJ_COMM CONJ_ASSOC,
+                      AC DISJ_COMM DISJ_ASSOC,
+                      IMP_DISJ_THM, WORD_MULT_CLAUSES]
+    THEN REPEAT STRIP_TAC THEN EQ_TAC
+    THEN ONCE_REWRITE_TAC [GSYM DUMMY_EQ_def]
+    THEN REWRITE_TAC [FLATTEN_IF]
+    THEN REPEAT STRIP_TAC
+    THEN ASM_SIMP_TAC std_ss [];
 
 val doing = ref T;
-val target = "arm"
+val target = "arm";
 
 fun compile target tm = let
   val _ = (doing := tm)
   val (tools,target,model_name,s) = 
     if mem target ["arm","ARM"] then (arm_tools,"arm","ARM_MODEL",[]) else 
-    if mem target ["x86","i32","386"] then (x86_tools,"x86","X86_MODEL",to_x86_regs) else 
+    if mem target ["x86","i32","386"] then (x86_tools,"x86","X86_MODEL",to_x86_regs ()) else 
     if mem target ["ppc","Power","PowerPC"] then (ppc_tools,"ppc","PPC_MODEL",[]) else hd []
   val (code,len) = generate_code target model_name true tm  
   fun append' [] = "" | append' (x::xs) = x ^ "\n" ^ append' xs
@@ -50,7 +62,11 @@ fun compile target tm = let
   val const = (repeat car o fst o dest_eq o concl o hd o CONJUNCTS) th2
   val tm = subst [ repeat car x |-> const ] tm
   val pre = if is_conj (concl th2) then (last o CONJUNCTS) th2 else TRUTH
-  val th3 = prove(tm,
+  val pre = RW [IF_IF,WORD_TIMES2] pre
+  val th3 = auto_prove "compile" (tm,
+(*
+  set_goal([],tm)
+*)
     REPEAT STRIP_TAC
     THEN CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [th2]))
     THEN COMPILER_TAC)    
@@ -61,17 +77,16 @@ fun compile target tm = let
 fun compile_all_aux tm = let
   val x = fst (dest_eq tm)
   val name = fst (dest_const (repeat car x)) handle e => fst (dest_var (repeat car x))
-  val targets = ["arm","x86","ppc"]
+  val targets = ["ppc","x86","arm"]
   fun compile_each tm [] = []
     | compile_each tm (target::ts) = let
-    val (th,_,_) = compile target tm
+    val (th,def,_) = compile target tm
     val base = fetch "-" (name ^ "_base_def")
     val step = fetch "-" (name ^ "_step_def")
     val guard = fetch "-" (name ^ "_guard_def")
     val side = fetch "-" (name ^ "_side_def")
     val main = fetch "-" (name ^ "")
     val main_pre = fetch "-" (name ^ "_pre")
-    val def = fetch "-" (name ^ "_def")
     val pre = fetch "-" (name ^ "_pre_def")
     val tm = concl def
     in (target,th,def,pre,[main,main_pre],[base,step,guard,side]) 
@@ -82,7 +97,7 @@ fun compile_all_aux tm = let
     val f = (repeat car o fst o dest_eq o concl o SPEC_ALL) 
     val goal = mk_conj(mk_eq(f (hd xtops), f (hd tops)),
                        mk_eq(f (last xtops), f (last tops)))
-    val lemma = prove(goal,
+    val lemma = auto_prove "compiler prove_eq" (goal,
       REWRITE_TAC (xtops @ tops)
       THEN MATCH_MP_TAC tailrecTheory.TAILREC_EQ_THM 
       THEN REPEAT STRIP_TAC
@@ -95,7 +110,7 @@ fun compile_all_aux tm = let
   val ys = map prove_eq xs
   val _ = echo 1 ".\n"
   val thms = map snd ys
-  val _ = add_compiled (map snd ys)
+  val _ = add_compiled thms
   in (ys,def,pre) end; 
 
 fun compile_all tm = let

@@ -36,7 +36,7 @@ fun get_abbreviate_code () = (!abbreviate_code);
 
 (* general set-up *)
 
-val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9"];
+val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10","r11","r12","r13","r14","r15"];
 val _ = set_echo 5;
 
 
@@ -575,6 +575,11 @@ fun strip_tag v = let
   val vs = (drop_until (fn x => x = #"@") o explode o fst o dest_var) v
   in if vs = [] then (fst o dest_var) v else implode (tl vs) end
 
+fun read_tag v = let
+  val xs = (explode o fst o dest_var) v
+  val vs = take_until (fn x => x = #"@") xs
+  in if length vs = length xs then "" else implode vs end
+
 fun ABBREV_NEW th = let
   val pc = get_pc th
   val tm = find_term (can (match_term (mk_comb(pc,genvar(``:word32``))))) (cdr (concl th))
@@ -664,7 +669,7 @@ val SORT_CODE_CONV = let
     val xs = sort (fn x => fn y => measure x < measure y) ys
     val ty = (hd o snd o dest_type o type_of o hd) xs
     val tm2 = foldr (pred_setSyntax.mk_union) (pred_setSyntax.mk_empty ty) xs
-    val lemma = prove(mk_eq(tm,tm2),
+    val lemma = auto_prove "SORT_CODE_CONV" (mk_eq(tm,tm2),
       SIMP_TAC std_ss [UNION_EMPTY,AC UNION_ASSOC UNION_COMM])
     in lemma end
   in (REWRITE_CONV [SING_SET_INTRO]
@@ -794,7 +799,7 @@ fun push_if_inwards th = let
   val tm = (fst o dest_imp o concl) th
   val goal = mk_imp(PUSH_IF_TERM tm,tm)
   val simp = SIMP_CONV pure_ss [AC CONJ_ASSOC CONJ_COMM]
-  val lemma = prove(goal,
+  val lemma = auto_prove "push_if_inwards" (goal,
     REWRITE_TAC [PUSH_IF_LEMMA]
     THEN CONV_TAC (RAND_CONV simp THENC (RATOR_CONV o RAND_CONV) simp)
     THEN REWRITE_TAC [])
@@ -835,7 +840,20 @@ val EXPAND_FORALL_CONV = let
       (QUANT_CONV o QUANT_CONV) BETA_CONV)) tm
     handle HOL_ERR _ => ALL_CONV tm;
   in (REPEATC (DEPTH_CONV EXPAND_FORALL_ONCE_CONV)) end
-  
+
+(* val tm = ``?z:num. y + x + 5 < 7`` *)
+ 
+fun PUSH_EXISTS_CONST_CONV tm = let
+  val PUSH_EXISTS_CONST_LEMMA = auto_prove "PUSH_EXISTS_CONST_CONV" 
+   (``!p. (?x:'a. p) = p:bool``,
+    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
+    THEN EXISTS_TAC (genvar(``:'a``)) THEN ASM_SIMP_TAC std_ss []);
+  val (v,n) = dest_exists tm
+  val _ = if mem v (free_vars n) then hd [] else 1
+  val th = SPEC n (INST_TYPE [``:'a``|->type_of v] PUSH_EXISTS_CONST_LEMMA)
+  val th = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV) (ALPHA_CONV v)) th
+  in th end handle Empty => NO_CONV tm;
+
 (* val tm = ``?x. let (y,z,q) = foo t in y + x + z + 5 = 8 - q`` *)
 
 fun PUSH_EXISTS_LET_CONV tm = let
@@ -843,16 +861,16 @@ fun PUSH_EXISTS_LET_CONV tm = let
   val (x,rest) = pairSyntax.dest_anylet n
   val tm2 = pairSyntax.mk_anylet(x,mk_exists(v,rest))
   val goal = mk_eq(tm,tm2)
-  val c = (RATOR_CONV o RATOR_CONV) (REWRITE_CONV [LET_DEF]) THENC
-          RATOR_CONV BETA_CONV THENC BETA_CONV THENC
-          REPEATC (REWRITE_CONV [UNCURRY_DEF] THENC 
-                   RATOR_CONV BETA_CONV) THENC BETA_CONV
-  val thi = prove(goal,
+  val c = (RATOR_CONV o RATOR_CONV) (REWRITE_CONV [LET_DEF]) 
+  val thi = auto_prove "PUSH_EXISTS_LET_CONV" (goal,
     SPEC_TAC (snd (hd x),genvar(type_of (snd (hd x))))
     THEN CONV_TAC EXPAND_FORALL_CONV THEN REPEAT STRIP_TAC
     THEN CONV_TAC ((RAND_CONV) c)
     THEN CONV_TAC ((RATOR_CONV o RAND_CONV o QUANT_CONV) c)
-    THEN REWRITE_TAC [])
+    THEN NTAC ((length o dest_tuple o fst o hd) x + 1) 
+      (CONV_TAC (ONCE_DEPTH_CONV BETA_CONV)
+       THEN CONV_TAC (ONCE_DEPTH_CONV BETA_CONV)
+       THEN REWRITE_TAC [UNCURRY_DEF]))
   in thi end handle e => NO_CONV tm;
 
 (* val tm = ``?x y z. if (q = 4) then (x + 1 = 6) else (y - 8 = z)`` *)
@@ -862,7 +880,8 @@ fun PUSH_EXISTS_COND_CONV tm = let
   val _ = if vs = [] then hd [] else ()
   val (b,x1,x2) = dest_cond n
   val tm2 = mk_cond(b,list_mk_exists(vs,x1),list_mk_exists(vs,x2))
-  val thi = prove(mk_eq(tm,tm2),Cases_on [ANTIQUOTE b] THEN ASM_REWRITE_TAC [])
+  val thi = auto_prove "PUSH_EXISTS_COND_CONV"
+            (mk_eq(tm,tm2),Cases_on [ANTIQUOTE b] THEN ASM_REWRITE_TAC [])
   in thi end handle e => NO_CONV tm;
 
 (* val tm = ``?x y z. (q = 4) /\ (x + 1 = 6)`` *)
@@ -916,11 +935,11 @@ fun LET_INTRO_CONV tm = let
     val goal = mk_eq(tm,list_mk_exists(ws,n))   
     fun AUTO_EXISTS_TAC (k,goal) = 
       EXISTS_TAC (fst (dest_exists goal)) (k,goal)
-    val lemma = prove(goal,
+    val lemma = auto_prove "FIX_EXISTS_CONV" (goal,
       EQ_TAC THEN STRIP_TAC THEN REPEAT AUTO_EXISTS_TAC
       THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [])
     in lemma end
-  val th = prove(goal,
+  val th = auto_prove "LET_INTRO_CONV" (goal,
     CONV_TAC ((RATOR_CONV o RAND_CONV) (FIX_EXISTS_CONV (new_vs @ rev ys)))
     THEN SPEC_TAC (rhs,genvar(type_of rhs))
     THEN CONV_TAC EXPAND_FORALL_CONV
@@ -943,13 +962,12 @@ fun DEPTH_EXISTS_CONV c tm =
 val problem = ref T;
 val attempt = ref T;
 
-val tm = !attempt
-
 fun introduce_lets th = let
   val th = init_clean th
   val th = push_if_inwards th
   val (lhs,rhs) = (dest_imp o concl) th  
   val vs = diff (free_vars lhs) (free_vars rhs)  
+  val vs = filter (fn v => not (read_tag v = "new")) vs
   val th = CONV_RULE ((RATOR_CONV o RAND_CONV) (ONCE_REWRITE_CONV [GSYM CONTAINER_def])) th
   val th = SIMP_RULE bool_ss [LEFT_FORALL_IMP_THM] (GENL vs th)
   val th = RW1 [CONTAINER_def] th
@@ -1020,7 +1038,7 @@ val REMOVE_TAGS_CONV = let
     val w = UNTIL is_ok add_prime (strip_tag v) 
     val thi = SIMP_CONV std_ss [FUN_EQ_THM] (mk_eq(tm,mk_abs(w,subst [v|->w] x)))
     in MATCH_MP alpha_lemma thi end handle Empty => NO_CONV tm
-  in (DEPTH_CONV REMOVE_TAG_CONV THENC REWRITE_CONV [GUARD_def]) end
+  in (DEPTH_CONV REMOVE_TAG_CONV THENC REWRITE_CONV [GUARD_def]) end;
 
 fun EXPAND_BASIC_LET_CONV tm = let
   val (xs,x) = pairSyntax.dest_anylet tm
@@ -1033,7 +1051,7 @@ fun EXPAND_BASIC_LET_CONV tm = let
   val _ = every (fn x => every is_var (list_dest dest_conj x)) zs
   in (((RATOR_CONV o RATOR_CONV) (REWRITE_CONV [LET_DEF]))
       THENC DEPTH_CONV PairRules.PBETA_CONV) tm end
-  handle Empty => NO_CONV tm
+  handle Empty => NO_CONV tm;
 
 fun STRIP_FORALL_TAC (hs,tm) =  
   if is_forall tm then STRIP_TAC (hs,tm) else NO_TAC (hs,tm)
@@ -1042,7 +1060,7 @@ fun SPEC_AND_REWRITE_TAC x =
   SPEC_TAC (x,genvar(type_of x)) 
   THEN SIMP_TAC pure_ss [FORALL_PROD] 
   THEN CONV_TAC (DEPTH_CONV EXPAND_BASIC_LET_CONV) 
-  THEN REPEAT STRIP_FORALL_TAC
+  THEN REPEAT STRIP_FORALL_TAC;
 
 fun SPEC_AND_CASES_TAC x = 
   SPEC_TAC (x,genvar(type_of x)) THEN Cases THEN REWRITE_TAC []
@@ -1063,9 +1081,11 @@ fun simplify_and_define name x_in rhs = let
   val ty = mk_type("fun",[type_of x_in, type_of rhs])
   val rw = REMOVE_TAGS_CONV rhs handle HOL_ERR _ => REFL rhs
   val tm = mk_eq(mk_comb(mk_var(name,ty),x_in),cdr (concl rw))
-  val def = SPEC_ALL (new_definition(name ^ "_def", tm))
-  in CONV_RULE (RAND_CONV (fn tm => GSYM rw)) def end
-
+  val def = SPEC_ALL (new_definition(name ^ "_def", tm)) handle e =>
+            (print ("\n\nERROR: Cannot define " ^ name ^ "_def as,\n\n");
+             print_term tm; print "\n\n"; raise e)
+  in CONV_RULE (RAND_CONV (fn tm => GSYM rw)) def end; 
+  
 fun pull_T (FUN_VAL tm) = FUN_VAL tm
   | pull_T (FUN_COND tm) = FUN_COND tm
   | pull_T (FUN_IF (tm,x,y)) = let
@@ -1083,7 +1103,7 @@ fun simplify_pre pre th = let
   val ft = pull_T (tm2ftree ((cdr o concl) pre))
   val goal = mk_comb((car o concl) pre, ftree2tm ft)
   in if not (ft = FUN_VAL ``T``) then (th,pre) else let
-    val new_pre = (prove(goal,
+    val new_pre = (auto_prove "simplify_pre" (goal,
       REWRITE_TAC []
       THEN ONCE_REWRITE_TAC [pre]
       THEN REPEAT (AUTO_DECONSTRUCT_TAC I)))
@@ -1105,7 +1125,8 @@ fun REMOVE_VARS_FROM_THM vs th = let
                                PUSH_EXISTS_COND_CONV ORELSEC
                                PUSH_EXISTS_LET_CONV ORELSEC
                                PUSH_EXISTS_CONJ_CONV ORELSEC 
-                               INST_EXISTS_CONV)
+                               INST_EXISTS_CONV ORELSEC
+                               PUSH_EXISTS_CONST_CONV)
     val th = CONV_RULE ((RATOR_CONV o RAND_CONV) c) th  
     in th end
   in foldr REMOVE_FROM_LHS th vs end
@@ -1145,7 +1166,7 @@ fun SORT_SEP_CONV tm = let
        if not (s1 = s2) then s1 < s2 else
          term_to_string (remove_tags tm1) < term_to_string (remove_tags tm2) end
   val tm2 = list_mk_star (sort compare xs) (type_of tm)
-  val thi = prove(mk_eq(tm,tm2),SIMP_TAC (bool_ss++star_ss) [])
+  val thi = auto_prove "SORT_SEP_CONV" (mk_eq(tm,tm2),SIMP_TAC (bool_ss++star_ss) [])
   in thi end;
 
 fun extract_function name th entry exit function_in_out = let
@@ -1246,8 +1267,8 @@ fun extract_function name th entry exit function_in_out = let
     THEN REWRITE_TAC [base_def,side_def,guard_def,step_def]
     THEN REPEAT (AUTO_DECONSTRUCT_TAC cdr)
     THEN SIMP_TAC std_ss [] THEN EQ_TAC THEN SIMP_TAC std_ss []
-  val main_thm = CONV_RULE REMOVE_TAGS_CONV (prove(main_tm,tac))  
-  val pre_thm = CONV_RULE REMOVE_TAGS_CONV (prove(pre_tm,tac))  
+  val main_thm = CONV_RULE REMOVE_TAGS_CONV (auto_prove "main_thm" (main_tm,tac))  
+  val pre_thm = CONV_RULE REMOVE_TAGS_CONV (auto_prove "pre_thm" (pre_tm,tac))  
   (* prove lemmas for final proof *)
   val _ = echo 1 " proving certificate,"
   val (th1,th2) = (th,th)
@@ -1271,10 +1292,11 @@ fun extract_function name th entry exit function_in_out = let
     val tm2 = list_mk_conj [get_lhs side_def,mk_neg(get_lhs guard_def),
                             mk_eq(new_output,get_lhs base_def)]
     val goal = mk_imp(tm2,tm)
-    val lemma = UNDISCH (prove(goal,tac2))
+    val lemma = UNDISCH (auto_prove "lemma1" (goal,tac2))
     val lemma1 = DISCH_ALL (MP th1 lemma)
     val lemma1 = HIDE_PRE_VARS ws lemma1
-    in lemma1 end
+    in lemma1 end 
+    handle e => (print "\n\nDecompiler failed to prove 'lemma 1'.\n\n"; raise e)
   val lemma2 = let
     val th2 = INST [mk_var("set@p",``:word32``) |-> entry_tm] th2
     val th2 = RW [WORD_ADD_0] th2
@@ -1290,13 +1312,28 @@ fun extract_function name th entry exit function_in_out = let
     val tm2 = list_mk_conj [get_lhs side_def,get_lhs guard_def,
                             mk_eq(new_input,get_lhs step_def)]
     val goal = mk_imp(tm2,tm)
-    val lemma = UNDISCH (prove(goal,tac2))
+    val lemma = UNDISCH (auto_prove "lemma2" (goal,tac2))
     val lemma2 = DISCH_ALL (MP th2 lemma)
     val lemma2 = HIDE_PRE_VARS vs lemma2
     in lemma2 end
+    handle e => (print "\n\nDecompiler failed to prove 'lemma 2'.\n\n"; raise e)
   val sort_conv = PRE_CONV SORT_SEP_CONV THENC POST_CONV SORT_SEP_CONV
   val lemma1 = CONV_RULE (RAND_CONV sort_conv) lemma1
   val lemma2 = CONV_RULE (RAND_CONV sort_conv) lemma2
+  (* check whether guard is false every where *)
+  val t = (raw_tm2ftree o cdr o concl o SPEC_ALL) guard_def
+  fun extract_leaves (FUN_VAL tm)      = [tm]
+    | extract_leaves (FUN_COND (c,t))  = extract_leaves t
+    | extract_leaves (FUN_IF (a,b,c))  = extract_leaves b @ extract_leaves c
+    | extract_leaves (FUN_LET (v,y,t)) = extract_leaves t
+  val xs = filter (fn x => not (x = ``F``)) (extract_leaves t)
+  val simplifier_lemma = if not (xs = []) then TRUTH else let
+    val goal = mk_eq((fst o dest_eq o concl o SPEC_ALL)guard_def, ``F``)
+    val simplifier_lemma = prove(goal,
+      REWRITE_TAC [guard_def]
+      THEN REPEAT (AUTO_DECONSTRUCT_TAC cdr) 
+      THEN SIMP_TAC std_ss []) 
+    in simplifier_lemma end
   (* certificate theorem *)
   fun remove_new_tags tm = let
     val vs = filter is_new_var (free_vars tm)
@@ -1315,13 +1352,14 @@ fun extract_function name th entry exit function_in_out = let
 (*
   set_goal([],goal)
 *)
-  val th = prove(goal,
+  val th = auto_prove "decompiler certificate" (goal,
     MATCH_MP_TAC thi THEN STRIP_TAC 
     THEN ONCE_REWRITE_TAC [EQ_SYM_EQ]
     THEN SIMP_TAC std_ss [FORALL_PROD]
     THEN ONCE_REWRITE_TAC [EQ_SYM_EQ]
     THENL [    
-      REPEAT STRIP_TAC
+      REWRITE_TAC [simplifier_lemma]
+      THEN REPEAT STRIP_TAC
       THEN MATCH_MP_TAC (GEN_ALL (RW [WORD_ADD_0] lemma2))
       THEN ASM_SIMP_TAC std_ss [] THEN Q.EXISTS_TAC `x`
       THEN ASM_REWRITE_TAC [],

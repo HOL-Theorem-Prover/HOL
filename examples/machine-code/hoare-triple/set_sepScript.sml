@@ -1,5 +1,5 @@
 
-open HolKernel boolLib bossLib Parse pred_setTheory; 
+open HolKernel boolLib bossLib Parse pred_setTheory pairTheory; 
 val _ = new_theory "set_sep";
 
 
@@ -31,6 +31,8 @@ val sidecond_def = Define `sidecond = cond`;
 val precond_def  = Define `precond = cond`;
 
 val SEP_IMP_def  = Define `SEP_IMP p q = !s. p s ==> q s`;
+
+val fun2set_def = Define `fun2set (f:'b->'a,d) =  { (a,f a) | a IN d }`;
 
 
 (* ---- theorems ---- *)
@@ -118,6 +120,61 @@ val SEP_IMP_STAR = store_thm("SEP_IMP_STAR",
 val SEP_IMP_EQ = store_thm("SEP_IMP_EQ",
   ``!p q. (p = q) = SEP_IMP p q /\ SEP_IMP q p``,
   FULL_SIMP_TAC bool_ss [SEP_IMP_def,FUN_EQ_THM] \\ METIS_TAC []);
+
+val SPLIT_EQ = store_thm("SPLIT_EQ",
+  ``!s u v. SPLIT s (u,v) = (u SUBSET s) /\ (v = s DIFF u)``,
+  SIMP_TAC std_ss [SPLIT_def,SUBSET_DEF,EXTENSION,IN_DIFF,IN_UNION,
+    DISJOINT_DEF,NOT_IN_EMPTY,IN_INTER] \\ METIS_TAC []);
+
+val fun2set_thm = store_thm("fun2set_thm",
+  ``!f d a x. fun2set (f:'b->'a,d) (a,x) = (f a = x) /\ a IN d``,
+  REWRITE_TAC [SIMP_RULE std_ss [IN_DEF] GSPECIFICATION,fun2set_def]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ SIMP_TAC std_ss [pairTheory.EXISTS_PROD]);
+
+val read_fun2set = store_thm("read_fun2set",
+  ``!a x p f. (one (a,x) * p) (fun2set (f,d)) ==> (f a = x) /\ a IN d``,
+  SIMP_TAC std_ss [one_STAR,IN_DEF,fun2set_thm]);
+
+val write_fun2set = store_thm("write_fun2set",
+  ``!y a x p f. (one (a,x) * p) (fun2set (f,d)) ==> (p * one (a,y)) (fun2set ((a =+ y) f,d))``,
+  SIMP_TAC std_ss [one_STAR,IN_DEF,fun2set_thm,combinTheory.APPLY_UPDATE_THM]
+  \\ ONCE_REWRITE_TAC [STAR_SYM]
+  \\ SIMP_TAC std_ss [one_STAR,IN_DEF,fun2set_thm,combinTheory.APPLY_UPDATE_THM]  
+  \\ NTAC 4 STRIP_TAC \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (t /\ p x ==> p y)``)  
+  \\ SIMP_TAC std_ss [EXTENSION] \\ Cases
+  \\ SIMP_TAC std_ss [fun2set_thm,IN_DELETE] 
+  \\ SIMP_TAC std_ss [fun2set_thm,IN_DELETE,IN_DEF] 
+  \\ Cases_on `q = a` \\ ASM_SIMP_TAC std_ss [combinTheory.APPLY_UPDATE_THM] 
+  \\ METIS_TAC []);
+
+val fun2set_NEQ = store_thm("fun2set_NEQ",
+  ``!a b x y f g p. (one (a,x) * one (b,y) * p) (fun2set (f,g)) ==> ~(a = b)``,
+  REWRITE_TAC [GSYM STAR_ASSOC,one_STAR,IN_DELETE,PAIR_EQ,fun2set_def]
+  \\ SIMP_TAC std_ss [GSPECIFICATION]);
+
+val fun2set_DIFF = store_thm("fun2set_DIFF",
+  ``!f x y. fun2set (f,x) DIFF fun2set (f,y) = fun2set (f,x DIFF y)``,
+  SIMP_TAC std_ss [fun2set_def,EXTENSION,IN_DIFF,GSPECIFICATION]
+  \\ SIMP_TAC std_ss [FORALL_PROD,PAIR_EQ] \\ METIS_TAC [])
+
+val SUBSET_fun2set = store_thm("SUBSET_fun2set",
+  ``!v df f:'a->'b. v SUBSET fun2set (f,df) ==> ?z. v = fun2set (f,z)``,
+  REPEAT STRIP_TAC \\ Q.EXISTS_TAC `{ x | (x,f x) IN v }`
+  \\ FULL_SIMP_TAC std_ss [fun2set_def,EXTENSION,GSPECIFICATION,SUBSET_DEF]
+  \\ FULL_SIMP_TAC std_ss [FORALL_PROD] \\ METIS_TAC []);
+
+val fun2set_EMPTY = store_thm("fun2set_EMPTY",
+  ``!f df. (fun2set (f,df) = {}) = (df = {})``,
+  SIMP_TAC std_ss [fun2set_def,EXTENSION,GSPECIFICATION,NOT_IN_EMPTY])  
+
+val IN_fun2set = store_thm("IN_fun2set",
+  ``!a y h dh. (a,y) IN fun2set (h,dh) = (h a = y) /\ a IN dh``,
+  SIMP_TAC std_ss [fun2set_def,GSPECIFICATION] \\ METIS_TAC []);  
+
+val fun2set_DELETE = store_thm("fun2set_DELETE",
+  ``!a h dh. fun2set (h,dh) DELETE (a, h a) = fun2set (h,dh DELETE a)``,
+  SIMP_TAC std_ss [fun2set_def,GSPECIFICATION,IN_DELETE,EXTENSION,
+                   FORALL_PROD] THEN METIS_TAC []);
 
 val _ = export_theory();
 

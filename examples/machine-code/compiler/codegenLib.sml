@@ -286,7 +286,8 @@ fun add_assignment (tm1,tm2,th,len) = let
   val tm3 = pairSyntax.mk_anylet([(vs,ws)],tm2)
   val lemma = prove(mk_eq(q,tm3),
     SPEC_TAC (ws,genvar(type_of ws))
-    THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD,LET_DEF])
+    THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD,LET_DEF]
+    THEN (fn x => hd [])) handle e => TRUTH
   val th = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [lemma])) th
   val _ = add_decompiled (name,th,len,SOME len)
   in () end;
@@ -324,7 +325,7 @@ fun extract_ops th = let
     val i = fst (match_term tm1 tm2)
     val ys = list_dest pairSyntax.dest_pair tm1
     in zip ys (map (subst i) ys) end
-  val ys = foldr (uncurry append) [] (map goo zs)
+  val ys = foldr (uncurry append) [] (map goo zs) handle e => []
   val ys = filter (fn (t1,t2) => not (t1 = t2)) ys
   val tm1 = pairSyntax.list_mk_pair(map fst ys) handle HOL_ERR e => ``()``
   val tm2 = pairSyntax.list_mk_pair(map snd ys) handle HOL_ERR e => ``()``
@@ -438,25 +439,32 @@ fun generate_code target model_name print_assembly tm = let
         if ((tm = x) orelse (mk_neg tm = x)) andalso (m = model_name) 
         then (x,y,l,n) else find_conditional tm xs
   fun find_compiled_conditional tm = find_conditional tm (!compiler_conditionals)
+  val to_x86 = subst (to_x86_regs())
   fun compile_inst1 (ASM_ASSIGN (t1,t2)) = let
-        val (s,i) = find_compiled_assignment (t1,t2) 
+        val (s,i) = find_compiled_assignment (t1,t2) handle Empty =>
+                    find_compiled_assignment (to_x86 t1,to_x86 t2)
         in [ASM_INSERT (s,i,NONE)] end
     | compile_inst1 (ASM_COMPARE tm) = let
-        val (t1,t2,i,s) = find_compiled_conditional tm
+        val (t1,t2,i,s) = find_compiled_conditional tm handle Empty =>
+                          find_compiled_conditional (to_x86 tm)
         val (t,f) = cond_code t2
         val (t,f) = if is_neg t1 then (f,t) else (t,f)
         in [ASM_INSERT (s,i,SOME (t,f))] end
     | compile_inst1 x = hd []
+  fun func_name_annotations t1 t2 = let
+    val vs = free_vars t1 @ free_vars t2
+    val v = hd (filter (fn v => (type_of v = ``:word32 -> word32``)
+                                orelse 
+                                (type_of v = ``:word32 -> word8``)) vs)
+    in "/" ^ fst (dest_var v) end handle Empty => ""
   fun compile_inst2 (ASM_ASSIGN (t1,t2)) = ((let
         val code = assign2assembly (term2assign t1 t2)
-        val vs = free_vars t1 @ free_vars t2
-        val s = let
-          val v = hd (filter (fn v => (type_of v = ``:word32 -> word32``)) vs)
-          in "/" ^ fst (dest_var v) end handle Empty => ""
+        val s = func_name_annotations t1 t2
         in map (fn x => ASM_INSTRUCTION (x,s,NONE)) code end) handle e => (let val _ = print_term t2 in hd [] end))
     | compile_inst2 (ASM_COMPARE tm) = ((let
         val (code,y) = guard2assembly (term2guard tm)
-        in map (fn x => ASM_INSTRUCTION (x,"",SOME y)) code end) handle e => (let val _ = print_term tm in hd [] end))
+        val s = func_name_annotations tm T
+        in map (fn x => ASM_INSTRUCTION (x,s,SOME y)) code end) handle e => (let val _ = print_term tm in hd [] end))
     | compile_inst2 x = [x]
   fun append_list [] = [] | append_list (x::xs) = x @ append_list xs
   val code2 = append_list (map (fn x => compile_inst1 x handle Empty => compile_inst2 x) code1)
@@ -498,7 +506,8 @@ fun generate_code target model_name print_assembly tm = let
   val code3 = map remove_extra_annotations code3
   val _ = if print_assembly then print_asm code3 else ()
   (* assembler should start here *)
-  val (code6,len,_) = basic_assembler target (map (fn x => (x,NONE)) code3)
+  val code3 = (map (fn x => (x,(NONE:string option))) code3)
+  val (code6,len,_) = basic_assembler target code3
   in (code6,len) end
 
 

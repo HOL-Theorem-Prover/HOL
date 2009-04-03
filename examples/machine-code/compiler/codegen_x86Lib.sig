@@ -13,7 +13,8 @@ sig
   val x86_encode_instruction   : string -> string * int
   val x86_encode_branch        : bool -> int -> string option -> string * int
 
-  val to_x86_regs              : {redex: Term.term, residue: Term.term} list
-  val from_x86_regs            : {redex: Term.term, residue: Term.term} list
+  val to_x86_regs              : unit -> {redex: Term.term, residue: Term.term} list
+  val set_x86_regs             : (int * string) list -> unit
+  val get_x86_regs             : unit -> (int * string) list
 
 end

@@ -113,6 +113,27 @@ fun introduce_xMEMORY th = let
   val th = replace_access_in_pre th
   in th end handle e => th;
 
+fun introduce_xBYTE_MEMORY th = let
+  val (_,p,c,q) = dest_spec(concl th)
+  val tm0 = find_term (can (match_term ``xM1 x y``)) p
+  val c = MOVE_OUT_CONV (car tm0) THENC STAR_REVERSE_CONV
+  val th = CONV_RULE (POST_CONV c THENC PRE_CONV c) th
+  val f = cdr o cdr
+  val h = REWRITE_RULE [GSYM STAR_ASSOC,x86_seq_monadTheory.word2bytes_thm,x86_seq_monadTheory.EL_thm] 
+  val th = MATCH_MP (h xBYTE_MEMORY_INTRO) (h th)
+  val th = RW [wordsTheory.WORD_ADD_0,GSYM progTheory.SPEC_MOVE_COND] th
+  fun replace_access_in_pre th = let
+    val (_,p,c,q) = dest_spec(concl th)
+    val tm = find_term (can (match_term ``(a:'a =+ w:'b) f``)) p
+    val (tm,y) = dest_comb tm
+    val (tm,x) = dest_comb tm  
+    val a = snd (dest_comb tm)
+    val th = REWRITE_RULE [APPLY_UPDATE_ID] (INST [x |-> mk_comb(y,a)] th)
+    in th end handle e => th
+  val th = replace_access_in_pre th
+  val th = RW [STAR_ASSOC] th
+  in th end handle e => th;
+
 fun calculate_length_and_jump th = let 
   val (_,_,c,q) = dest_spec (concl th)
   val l = (length o fst o listSyntax.dest_list o cdr o cdr o car) c
@@ -129,6 +150,7 @@ fun post_process_thm th = let
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w,SEP_CLAUSES] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
   val th = introduce_xMEMORY th
+  val th = introduce_xBYTE_MEMORY th
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [GSYM wordsTheory.WORD_ADD_ASSOC,
     word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
@@ -232,6 +254,10 @@ val x86_tools = (x86_spec, x86_jump, x86_status, x86_pc)
   val th = x86_spec "892A";            (* mov [edx],ebp *)
   val th = x86_spec "813337020000";    (* xor dword [ebx],567 *)
   val th = x86_spec "310B";            (* xor [ebx], ecx *)
+  val th = x86_spec "F720";            (* mul dword [eax] *)
+  val th = x86_spec "F7F6";            (* div esi *)
+  val th = x86_spec "883E";            (* mov_byte [esi],edi *)
+  val th = x86_spec "8A3E";            (* mov_byte edi,[esi] *)
 
 *)
 

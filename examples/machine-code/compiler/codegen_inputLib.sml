@@ -7,8 +7,12 @@ open helperLib wordsTheory;
 
 (* core code generator input syntax *)
 
+datatype access_type = 
+    ACCESS_WORD
+  | ACCESS_BYTE;
+
 datatype assign_address_type = 
-    ASSIGN_ADDRESS_REG of int
+    ASSIGN_ADDRESS_REG of int 
   | ASSIGN_ADDRESS_OFFSET_ADD of int * Arbnum.num
   | ASSIGN_ADDRESS_OFFSET_SUB of int * Arbnum.num;
 
@@ -19,7 +23,9 @@ datatype assign_monop_type =
 datatype assign_binop_type = 
     ASSIGN_BINOP_ADD
   | ASSIGN_BINOP_SUB
-  | ASSIGN_BINOP_TIMES
+  | ASSIGN_BINOP_MUL
+  | ASSIGN_BINOP_MOD
+  | ASSIGN_BINOP_DIV
   | ASSIGN_BINOP_AND
   | ASSIGN_BINOP_XOR
   | ASSIGN_BINOP_OR;
@@ -34,7 +40,7 @@ datatype assign_exp_type =
   | ASSIGN_EXP_STACK of int         (* stack[offset] *)
   | ASSIGN_EXP_BINOP of assign_x_type * assign_binop_type * assign_x_type
   | ASSIGN_EXP_MONOP of assign_monop_type * assign_x_type
-  | ASSIGN_EXP_MEMORY of assign_address_type
+  | ASSIGN_EXP_MEMORY of access_type * assign_address_type
   | ASSIGN_EXP_SHIFT_LEFT of assign_x_type * int
   | ASSIGN_EXP_SHIFT_RIGHT of assign_x_type * int
   | ASSIGN_EXP_SHIFT_ARITHMETIC_RIGHT of assign_x_type * int
@@ -42,7 +48,8 @@ datatype assign_exp_type =
 datatype assign_type = 
     ASSIGN_EXP of int * assign_exp_type        (* register := expression *)
   | ASSIGN_STACK of int * int                  (* stack[offset] := register *)
-  | ASSIGN_MEMORY of assign_address_type * int (* mem[address] := register *)
+  | ASSIGN_MEMORY of access_type * assign_address_type * int 
+                                               (* mem[address] := register *)
   | ASSIGN_OTHER of term * term                (* lhs := rhs *);
 
 datatype guard_compare_type =
@@ -53,7 +60,8 @@ datatype guard_compare_type =
 datatype guard_type =
     GUARD_NOT of guard_type
   | GUARD_COMPARE of int * guard_compare_type * assign_x_type  (* reg, cmp, reg/const *)
-  | GUARD_TEST of int * assign_x_type;
+  | GUARD_TEST of int * assign_x_type
+  | GUARD_OTHER of term;
 
 
 (* term2guard, term2assign *)
@@ -77,7 +85,8 @@ fun basic_term2guard tm = (* expects input to use "~", "<+", "<" and "=" only *)
        else if can dest_n2w x1 then 
          GUARD_NOT (GUARD_COMPARE (dest_reg x2, d2, dest_x x1))
        else 
-         GUARD_COMPARE (dest_reg x1, d1, dest_x x2)
+         GUARD_COMPARE (dest_reg x1, d1, dest_x x2) handle e =>
+         GUARD_OTHER tm
     end;
 
 fun term2guard tm = let
@@ -101,8 +110,9 @@ fun basic_term2assign t1 t2 = let
     if not ((fst o dest_const o car o car) tm = "word_sub") then hd [] else
       ASSIGN_ADDRESS_OFFSET_SUB ((dest_reg o cdr o car) tm, dest_n2w (cdr tm))
   val binops = [("word_add",ASSIGN_BINOP_ADD), ("word_sub",ASSIGN_BINOP_SUB),
-                ("word_mul",ASSIGN_BINOP_TIMES),("word_and",ASSIGN_BINOP_AND),
-                ("word_xor",ASSIGN_BINOP_XOR),("word_or",ASSIGN_BINOP_OR)]
+                ("word_mul",ASSIGN_BINOP_MUL), ("word_and",ASSIGN_BINOP_AND),
+                ("word_div",ASSIGN_BINOP_DIV), ("word_mod",ASSIGN_BINOP_MOD),
+                ("word_xor",ASSIGN_BINOP_XOR), ("word_or",ASSIGN_BINOP_OR)]
   val monops = [("word_1comp",ASSIGN_MONOP_NOT), ("word_2comp",ASSIGN_MONOP_NEG)]
   fun dest_binop tm = 
     ((dest_x o cdr o car) tm,
@@ -113,7 +123,10 @@ fun basic_term2assign t1 t2 = let
      (dest_x o cdr) tm)
   fun dest_memory tm = 
     if not (is_var (car tm) andalso type_of (car tm) = ``:word32->word32``) then hd [] else
-      (dest_address (cdr tm))
+      (ACCESS_WORD,dest_address (cdr tm))
+  fun dest_byte_memory tm = 
+    if not (is_const (car tm) andalso type_of (car tm) = ``:word8->word32``) then hd [] else
+      (ACCESS_BYTE,dest_address (cdr (cdr tm)))
   fun dest_lsl tm = 
     if not ((fst o dest_const o car o car) tm = "word_lsl") then hd [] else
       ((dest_x o cdr o car) tm, (Arbnum.toInt o numSyntax.dest_numeral o cdr) tm)
@@ -125,13 +138,15 @@ fun basic_term2assign t1 t2 = let
       ((dest_x o cdr o car) tm, (Arbnum.toInt o numSyntax.dest_numeral o cdr) tm)
   fun dest_memory_update tm = 
     if not (is_var (cdr tm) andalso (fst o dest_const o car o car o car) tm = "UPDATE") 
-    then hd [] else ((dest_address o cdr o car o car) tm, (dest_reg o cdr o car) tm)
+    then hd [] else (ACCESS_WORD, (dest_address o cdr o car o car) tm, (dest_reg o cdr o car) tm)
+    handle e => (ACCESS_BYTE, (dest_address o cdr o car o car) tm, (dest_reg o cdr o cdr o car) tm)
   in ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_REG (dest_reg t2)) handle e =>
      ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_CONST (dest_n2w t2)) handle e =>
      ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_STACK (dest_stack t2)) handle e =>
      ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_BINOP (dest_binop t2)) handle e =>
      ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_MONOP (dest_monop t2)) handle e =>
      ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_MEMORY (dest_memory t2)) handle e =>
+     ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_MEMORY (dest_byte_memory t2)) handle e =>
      ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_SHIFT_LEFT (dest_lsl t2)) handle e =>
      ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_SHIFT_RIGHT (dest_lsr t2)) handle e =>
      ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_SHIFT_ARITHMETIC_RIGHT (dest_asr t2)) handle e =>
@@ -151,6 +166,5 @@ fun term2assign t1 t2 = let
   (* fold constants *)
   val t = if not (can_eval t) then t else basic_term2assign t1 ((cdr o concl o EVAL) t2)
   in t end  
-
 
 end;

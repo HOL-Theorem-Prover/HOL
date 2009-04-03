@@ -332,11 +332,6 @@ val xMEMORY_SET_def = Define `
 
 val xMEMORY_def = Define `xMEMORY df f = SEP_EQ (xMEMORY_SET df f)`;
 
-val xBYTE_MEMORY_SET_def = Define `
-  xBYTE_MEMORY_SET df f = { xMem a (SOME (f a)) | a | a IN df }`;
-
-val xBYTE_MEMORY_def = Define `xBYTE_MEMORY df f = SEP_EQ (xBYTE_MEMORY_SET df f)`;
-
 val xMEMORY_SET_SING = prove(
   ``!a f. ALIGNED a ==> (xMEMORY_SET {a} f = xMEMORY_WORD a (f a))``,
   ASM_SIMP_TAC std_ss [GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,APPLY_UPDATE_THM,
@@ -419,5 +414,50 @@ val xMEMORY_INTRO = store_thm("xMEMORY_INTRO",
   \\ ONCE_REWRITE_TAC [STAR_COMM] \\ REWRITE_TAC [STAR_ASSOC]
   \\ MATCH_MP_TAC SPEC_FRAME
   \\ FULL_SIMP_TAC bool_ss [AC STAR_COMM STAR_ASSOC]);
+
+
+(* ----------------------------------------------------------------------------- *)
+(* Improved memory predicates (byte addressed memory)                            *)
+(* ----------------------------------------------------------------------------- *)
+
+val xBYTE_MEMORY_SET_def = Define `
+  xBYTE_MEMORY_SET df f = { xMem a (SOME (f a)) | a | a IN df }`;
+
+val xBYTE_MEMORY_def = Define `xBYTE_MEMORY df f = SEP_EQ (xBYTE_MEMORY_SET df f)`;
+
+val IN_xBYTE_MEMORY_SET = prove(
+  ``a IN df ==>
+    (xBYTE_MEMORY_SET df g = 
+     (xMem a (SOME (g a))) INSERT xBYTE_MEMORY_SET (df DELETE a) g)``,
+  SIMP_TAC std_ss [EXTENSION,IN_INSERT,xBYTE_MEMORY_SET_def,GSPECIFICATION]
+  \\ REWRITE_TAC [IN_DELETE] \\ METIS_TAC []);
+
+val DELETE_xBYTE_MEMORY_SET = prove(
+  ``xBYTE_MEMORY_SET (df DELETE a) ((a =+ w) g) = 
+    xBYTE_MEMORY_SET (df DELETE a) g``,
+  SIMP_TAC std_ss [EXTENSION,IN_INSERT,xBYTE_MEMORY_SET_def,GSPECIFICATION]
+  \\ REWRITE_TAC [IN_DELETE,APPLY_UPDATE_THM] \\ METIS_TAC []);
+
+val xBYTE_MEMORY_INSERT = prove(
+  ``a IN df ==>
+    (xBYTE_MEMORY df ((a =+ w) g) = 
+    xM1 a (SOME w) * xBYTE_MEMORY (df DELETE a) g)``,
+  SIMP_TAC std_ss [xBYTE_MEMORY_def,xM1_def,xMEMORY_def,FUN_EQ_THM,EQ_STAR]
+  \\ SIMP_TAC std_ss [SEP_EQ_def] \\ REPEAT STRIP_TAC
+  \\ IMP_RES_TAC (GEN_ALL IN_xBYTE_MEMORY_SET)
+  \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET,DIFF_INSERT,DIFF_EMPTY]
+  \\ REWRITE_TAC [DELETE_xBYTE_MEMORY_SET,APPLY_UPDATE_THM]
+  \\ REWRITE_TAC [EXTENSION,IN_INSERT,IN_DELETE]
+  \\ REVERSE (`~(xMem a (SOME w) IN xBYTE_MEMORY_SET (df DELETE a) g)` by ALL_TAC)  
+  THEN1 METIS_TAC []
+  \\ SIMP_TAC std_ss [xBYTE_MEMORY_SET_def,GSPECIFICATION,IN_DELETE,x86_el_11]);
+
+val xBYTE_MEMORY_INTRO = store_thm("xBYTE_MEMORY_INTRO",
+  ``SPEC m (xM1 a (SOME v) * P) c (xM1 a (SOME w) * Q) ==>
+    a IN df ==>
+    SPEC m (xBYTE_MEMORY df ((a =+ v) f) * P) c (xBYTE_MEMORY df ((a =+ w) f) * Q)``,
+  ONCE_REWRITE_TAC [STAR_COMM]
+  \\ SIMP_TAC std_ss [xBYTE_MEMORY_INSERT,STAR_ASSOC]
+  \\ METIS_TAC [SPEC_FRAME]);
 
 val _ = export_theory();

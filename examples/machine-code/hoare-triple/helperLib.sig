@@ -73,4 +73,12 @@ sig
     val INST_SPEC              : thm -> thm -> thm
     val EXISTS_PRE             : term frag list -> thm -> thm
 
+    val MATCH_INST             : thm -> term -> thm
+
+    val SEP_READ_TAC           : tactic
+    val SEP_WRITE_TAC          : tactic
+    val SEP_NEQ_TAC            : tactic
+
+    val auto_prove             : string -> term * tactic -> thm
+
 end

@@ -5,6 +5,76 @@ open HolKernel boolLib bossLib Parse;
 open codegen_inputLib helperLib;
 
 
+val arm_temp_reg = ref 0; 
+fun set_arm_temp_reg i = (arm_temp_reg := i);
+fun get_arm_temp_reg () = !arm_temp_reg;
+
+val arm_assign2assembly = let
+  fun r i = "r" ^ int_to_string i
+  fun s i = "[sp,#" ^ int_to_string (4 * i) ^ "]"
+  fun address (ASSIGN_ADDRESS_REG i) = "[" ^ r i ^ "]"
+    | address (ASSIGN_ADDRESS_OFFSET_ADD (d,i)) = "[" ^ r d ^ ", #" ^ Arbnum.toString i ^ "]"
+    | address (ASSIGN_ADDRESS_OFFSET_SUB (d,i)) = "[" ^ r d ^ ", #-" ^ Arbnum.toString i ^ "]"
+  fun assign_const_to_reg i d = 
+    if i = Arbnum.zero then ["mov? " ^ r d ^ ", #0"] else let
+    fun add_byte i n = let
+      val k = Arbnum.div(i,Arbnum.pow(Arbnum.fromInt 2,Arbnum.fromInt n))
+      val k = Arbnum.mod(k,Arbnum.fromInt 256)
+      in if Arbnum.<(k,Arbnum.fromInt 1) then [] else [(Arbnum.toInt k,n)] end
+    val res = add_byte i 0 @ add_byte i 8 @ add_byte i 16 @ add_byte i 24    
+    fun sub k [] = []
+      | sub k ((i,j)::xs) = (i,j-k) :: sub j xs
+    val res = sub 0 res
+    fun ins [] = []
+      | ins ((i,j)::xs) = let 
+         val k = (if xs = [] then "mov? " ^ r d else "add? " ^ r d ^ ", " ^ r d)
+         val l = k ^ ", #" ^ int_to_string i
+         in ins xs @ [l] @ (if j = 0 then [] else ["mov? " ^ r d ^ ", " ^ r d ^ ", LSL #" ^ int_to_string j]) end        
+    in ins res end
+  fun binop_to_name ASSIGN_BINOP_ADD _ = "add"
+    | binop_to_name ASSIGN_BINOP_SUB false = "sub"
+    | binop_to_name ASSIGN_BINOP_SUB true = "rsb"
+    | binop_to_name ASSIGN_BINOP_MUL _ = "mul"
+    | binop_to_name ASSIGN_BINOP_AND _ = "and"
+    | binop_to_name ASSIGN_BINOP_XOR _ = "xor"
+    | binop_to_name ASSIGN_BINOP_OR _ = "orr"
+    | binop_to_name ASSIGN_BINOP_DIV _ = hd []
+    | binop_to_name ASSIGN_BINOP_MOD _ = hd []
+  fun code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_REG j) reversed = 
+       if b = ASSIGN_BINOP_MUL then
+         if d = i andalso i = j then hd [] else
+           if d = i then code_for_binop d b (ASSIGN_X_REG j) (ASSIGN_X_REG i) (not reversed)
+           else [binop_to_name b reversed ^ "? " ^ r d ^ ", " ^ r i ^ ", " ^ r j]
+       else [binop_to_name b reversed ^ "? " ^ r d ^ ", " ^ r i ^ ", " ^ r j]
+    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_REG j) reversed =
+        code_for_binop d b (ASSIGN_X_REG j) (ASSIGN_X_CONST i) (not reversed)
+    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_CONST j) reversed = hd []
+    | code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_CONST j) reversed = let
+        val code = assign_const_to_reg j i 
+        in if length code = 1 andalso not (b = ASSIGN_BINOP_MUL) then 
+             [binop_to_name b reversed ^ "? " ^ r d ^ "," ^ 
+              ((implode o tl o tl o tl o tl o explode o hd) code)]
+           else if d = i then hd [] else           
+             assign_const_to_reg j d @ 
+             code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_REG d) reversed
+        end
+  fun f (ASSIGN_EXP (d, ASSIGN_EXP_REG s)) = ["mov? " ^ r d ^ ", " ^ r s]
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_CONST i)) = assign_const_to_reg i d      
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_STACK i)) = ["ldr? " ^ r d ^ ", " ^ s i]
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_BINOP (i,b,j))) = code_for_binop d b i j false
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_MONOP (ASSIGN_MONOP_NOT, ASSIGN_X_REG i))) = ["mvn? " ^ r d ^ ", " ^ r i]
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_MONOP (ASSIGN_MONOP_NEG, ASSIGN_X_REG i))) = ["rsb? " ^ r d ^ ", " ^ r i ^ ", #0"]
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_MEMORY (ACCESS_WORD,a))) = ["ldr? " ^ r d ^ ", " ^ address a]       
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_MEMORY (ACCESS_BYTE,a))) = ["ldr?b " ^ r d ^ ", " ^ address a]       
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_LEFT (ASSIGN_X_REG i,n))) = ["mov? " ^ r d ^ ", " ^ r i ^ ", LSL #" ^ int_to_string n ]
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_RIGHT (ASSIGN_X_REG i,n))) = ["mov? " ^ r d ^ ", " ^ r i ^ ", LSR #" ^ int_to_string n ]
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_ARITHMETIC_RIGHT (ASSIGN_X_REG i,n))) = ["mov? " ^ r d ^ ", " ^ r i ^ ", ASR #" ^ int_to_string n ]
+    | f (ASSIGN_STACK (i,d)) = ["str? " ^ r d ^ ", " ^ s i]
+    | f (ASSIGN_MEMORY (ACCESS_WORD,a,d)) = ["str? " ^ r d ^ ", " ^ address a]
+    | f (ASSIGN_MEMORY (ACCESS_BYTE,a,d)) = ["str?b " ^ r d ^ ", " ^ address a]
+    | f _ = hd []
+  in f end  
+
 fun arm_guard2assembly (GUARD_NOT t) = let 
       val (code,(x,y)) = arm_guard2assembly t in (code,(y,x)) end
   | arm_guard2assembly (GUARD_COMPARE (i,cmp,j)) = let
@@ -24,67 +94,14 @@ fun arm_guard2assembly (GUARD_NOT t) = let
         | f (ASSIGN_X_CONST c) = "#" ^ Arbnum.toString c
       val code = ["tst " ^ rd ^ ", " ^ f j]
       in (code, ("eq","ne")) end
-
-val arm_assign2assembly = let
-  fun r i = "r" ^ int_to_string i
-  fun s i = "[sp,#" ^ int_to_string (4 * i) ^ "]"
-  fun address (ASSIGN_ADDRESS_REG i) = "[" ^ r i ^ "]"
-    | address (ASSIGN_ADDRESS_OFFSET_ADD (d,i)) = "[" ^ r d ^ ", #" ^ Arbnum.toString i ^ "]"
-    | address (ASSIGN_ADDRESS_OFFSET_SUB (d,i)) = "[" ^ r d ^ ", #-" ^ Arbnum.toString i ^ "]"
-  fun assign_const_to_reg i d = let
-    fun add_byte i n = let
-      val k = Arbnum.div(i,Arbnum.pow(Arbnum.fromInt 2,Arbnum.fromInt n))
-      val k = Arbnum.mod(k,Arbnum.fromInt 256)
-      in if Arbnum.<(k,Arbnum.fromInt 1) then [] else [(Arbnum.toInt k,n)] end
-    val res = add_byte i 0 @ add_byte i 8 @ add_byte i 16 @ add_byte i 24    
-    fun sub k [] = []
-      | sub k ((i,j)::xs) = (i,j-k) :: sub j xs
-    val res = sub 0 res
-    fun ins [] = []
-      | ins ((i,j)::xs) = let 
-         val k = (if xs = [] then "mov? " ^ r d else "add? " ^ r d ^ ", " ^ r d)
-         val l = k ^ ", #" ^ int_to_string i
-         in ins xs @ [l] @ (if j = 0 then [] else ["mov? " ^ r d ^ ", " ^ r d ^ ", LSL #" ^ int_to_string j]) end        
-    in ins res end
-  fun binop_to_name ASSIGN_BINOP_ADD _ = "add"
-    | binop_to_name ASSIGN_BINOP_SUB false = "sub"
-    | binop_to_name ASSIGN_BINOP_SUB true = "rsb"
-    | binop_to_name ASSIGN_BINOP_TIMES _ = "mul"
-    | binop_to_name ASSIGN_BINOP_AND _ = "and"
-    | binop_to_name ASSIGN_BINOP_XOR _ = "xor"
-    | binop_to_name ASSIGN_BINOP_OR _ = "orr"
-  fun code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_REG j) reversed = 
-       if b = ASSIGN_BINOP_TIMES then
-         if d = i andalso i = j then hd [] else
-           if d = i then code_for_binop d b (ASSIGN_X_REG j) (ASSIGN_X_REG i) (not reversed)
-           else [binop_to_name b reversed ^ "? " ^ r d ^ ", " ^ r i ^ ", " ^ r j]
-       else [binop_to_name b reversed ^ "? " ^ r d ^ ", " ^ r i ^ ", " ^ r j]
-    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_REG j) reversed =
-        code_for_binop d b (ASSIGN_X_REG j) (ASSIGN_X_CONST i) (not reversed)
-    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_CONST j) reversed = hd []
-    | code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_CONST j) reversed = let
-        val code = assign_const_to_reg j i 
-        in if length code = 1 andalso not (b = ASSIGN_BINOP_TIMES) then 
-             [binop_to_name b reversed ^ "? " ^ r d ^ "," ^ 
-              ((implode o tl o tl o tl o tl o explode o hd) code)]
-           else if d = i then hd [] else           
-             assign_const_to_reg j d @ 
-             code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_REG d) reversed
-        end
-  fun f (ASSIGN_EXP (d, ASSIGN_EXP_REG s)) = ["mov? " ^ r d ^ ", " ^ r s]
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_CONST i)) = assign_const_to_reg i d      
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_STACK i)) = ["ldr? " ^ r d ^ ", " ^ s i]
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_BINOP (i,b,j))) = code_for_binop d b i j false
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_MONOP (ASSIGN_MONOP_NOT, ASSIGN_X_REG i))) = ["mvn? " ^ r d ^ ", " ^ r i]
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_MONOP (ASSIGN_MONOP_NEG, ASSIGN_X_REG i))) = ["rsb? " ^ r d ^ ", " ^ r i ^ ", #0"]
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_MEMORY a)) = ["ldr? " ^ r d ^ ", " ^ address a]       
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_LEFT (ASSIGN_X_REG i,n))) = ["mov? " ^ r d ^ ", " ^ r i ^ ", LSL #" ^ int_to_string n ]
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_RIGHT (ASSIGN_X_REG i,n))) = ["mov? " ^ r d ^ ", " ^ r i ^ ", LSR #" ^ int_to_string n ]
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_ARITHMETIC_RIGHT (ASSIGN_X_REG i,n))) = ["mov? " ^ r d ^ ", " ^ r i ^ ", ASR #" ^ int_to_string n ]
-    | f (ASSIGN_STACK (i,d)) = ["str? " ^ r d ^ ", " ^ s i]
-    | f (ASSIGN_MEMORY (a,d)) = ["str? " ^ r d ^ ", " ^ address a]
-    | f _ = hd []
-  in f end  
+  | arm_guard2assembly (GUARD_OTHER tm) = let
+      val (t1,t2) = dest_eq tm      
+      fun f (ASSIGN_EXP (i,exp)) = (i,exp) | f _ = hd []
+      val (i,exp) = f (term2assign t1 t2) 
+      val t = get_arm_temp_reg ()
+      val code = (arm_assign2assembly (ASSIGN_EXP (t, exp)))
+      val (code2,c) = arm_guard2assembly (GUARD_COMPARE (i,GUARD_COMPARE_EQUAL,ASSIGN_X_REG t))
+      in (code @ code2,c) end;
 
 fun arm_conditionalise c condition = let
   val c' = String.translate (fn x => if x = #"?" then condition else implode [x]) c

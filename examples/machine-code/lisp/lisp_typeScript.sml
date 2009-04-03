@@ -43,6 +43,7 @@ val LISP_ADD_def   = Define `LISP_ADD  (Val m) (Val n) = Val (m + n)`;
 val LISP_SUB_def   = Define `LISP_SUB  (Val m) (Val n) = Val (m - n)`;
 val LISP_MULT_def  = Define `LISP_MULT (Val m) (Val n) = Val (m * n)`;
 val LISP_DIV_def   = Define `LISP_DIV  (Val m) (Val n) = Val (m DIV n)`;
+val LISP_MOD_def   = Define `LISP_MOD  (Val m) (Val n) = Val (m MOD n)`;
 
 val LISP_TEST_def  = Define `LISP_TEST x = if x then Sym "t" else Sym "nil"`;
 
@@ -89,6 +90,13 @@ val isVal_thm = store_thm("isVal_thm",
 val isSym_thm = store_thm("isSym_thm",
   ``!z. isSym z = ?a. z = Sym a``,
   Cases \\ SIMP_TAC std_ss [SExp_11,SExp_distinct,isSym_def]);
+
+val isQuote_thm = store_thm("isQuote_thm",
+  ``!x. isQuote x = ?y. x = Dot (Sym "quote") (Dot y (Sym "nil"))``,
+  Cases \\ REWRITE_TAC [isQuote_def,isDot_def,CAR_def,CDR_def,SExp_11]
+  \\ SIMP_TAC std_ss [SExp_distinct] \\ Cases_on `S0`
+  \\ REWRITE_TAC [isQuote_def,isDot_def,CAR_def,CDR_def,SExp_11]
+  \\ METIS_TAC [SExp_distinct]);
 
 
 val _ = export_theory();

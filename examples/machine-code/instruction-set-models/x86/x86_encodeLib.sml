@@ -16,6 +16,113 @@ val instructions = let
   in (map (d o t) o map stringSyntax.fromHOLstring o fst o 
      listSyntax.dest_list o cdr o cdr o concl o SPEC_ALL) x86_decode_aux_def end;
 
+fun parse_address s = let
+  val xs = explode s
+  val _ = if hd xs = #"[" then () else hd []
+  val _ = if last xs = #"]" then () else hd []
+  fun f c = String.tokens (fn x => x = c)
+  val ts = f #"+" (implode (butlast (tl xs)))
+  fun append_lists [] = []
+    | append_lists (x::xs) = x @ append_lists xs
+  fun minus [x] = [("+",x)]
+    | minus ["",x] = [("-",x)]
+    | minus [x,y] = [("+",x),("-",y)]
+    | minus (x::xs) = minus [x] @ minus xs
+    | minus _ = hd []
+  val zs = append_lists (map (minus o f #"-") ts)
+  fun prod [x] = (1,x)
+    | prod [x,y] = if can string_to_int x then (string_to_int x, y)
+                                          else (string_to_int y, x)
+    | prod _ = hd []
+  val qs = map (fn (s,n) => (s,prod (f #"*" n))) zs
+  fun g (c,(3,x)) = [(c,(1,x)),(c,(2,x))]
+    | g (c,(5,x)) = [(c,(1,x)),(c,(4,x))]
+    | g (c,(9,x)) = [(c,(1,x)),(c,(8,x))]
+    | g y = [y]
+  val us = append_lists (map g qs)
+  fun extract_int ("-",(1,x)) = Arbint.-(Arbint.zero,Arbint.fromString x)
+    | extract_int ("+",(1,x)) = Arbint.fromString x
+    | extract_int _ = hd []
+  fun sum [] = Arbint.zero | sum (i::is) = Arbint.+(i,sum is)
+  val imm = sum (map extract_int (filter (can extract_int) us))
+  val vs = filter (not o can extract_int) us
+  val _ = if filter (fn (x,y) => not (x = "+")) vs = [] then () else hd []
+  val ks = map snd vs
+  val base = SOME ((snd o hd o filter (fn (x,y) => x = 1)) ks) handle e => NONE
+  fun delete_base NONE xs = xs 
+    | delete_base (SOME b) [] = []
+    | delete_base (SOME b) ((n,x)::xs) = if (1,b) = (n,x) then xs else (n,x) :: delete_base (SOME b) xs
+  val index = delete_base base ks 
+  val index = SOME (hd index) handle e => NONE
+  in (index,base,imm) end;
+
+fun fill n s = if size s < n then fill n ("0" ^ s) else s
+
+fun unsigned_hex n s = let
+  val i = fill n (Arbnum.toHexString (Arbnum.fromString s))
+  val i = (substring(i,6,2) ^ substring(i,4,2) ^ substring(i,2,2) ^ 
+           substring(i,0,2)) handle e => i
+  in if size i = n then i else hd [] end
+
+fun signed_hex n i = let
+  val m = Arbnum.pow(Arbnum.fromInt 2, Arbnum.fromInt (4 * n))
+  val m2 = Arbnum.pow(Arbnum.fromInt 2, Arbnum.fromInt (4 * n - 1))
+  val j = Arbint.+(i,Arbint.fromNat m)
+  val i = if not (Arbint.<(i,Arbint.fromNat m2)) then hd [] else
+          if not (Arbint.<=(Arbint.fromNat m2, j)) then hd [] else
+          if Arbint.<=(Arbint.zero,i) then fill n (Arbnum.toHexString(Arbint.toNat i))
+                                      else fill n (Arbnum.toHexString(Arbint.toNat j))
+  val i = (substring(i,6,2) ^ substring(i,4,2) ^ substring(i,2,2) ^ 
+           substring(i,0,2)) handle e => i
+  in i end
+
+fun x86_reg2int r = let
+  fun find x [] = hd []
+    | find x ((y,z)::ys) = if x = y then z else find x ys
+  val regs = ["EAX","ECX","EDX","EBX","ESP","EBP","ESI","EDI"] 
+  val indx = [0,1,2,3,4,5,6,7] 
+  val r = String.translate (fn x => implode [Char.toUpper x]) r
+  in find r (zip regs indx) end
+
+fun x86_address_encode s = let
+  val (index,base,imm) = parse_address s
+  val rr = int_to_string o x86_reg2int
+  fun the (SOME x) = x | the NONE = hd []
+  fun get_scale (SOME (1,i)) = [("Scale","0"),("Index",rr i)]
+    | get_scale (SOME (2,i)) = [("Scale","1"),("Index",rr i)]
+    | get_scale (SOME (4,i)) = [("Scale","2"),("Index",rr i)]
+    | get_scale (SOME (8,i)) = [("Scale","3"),("Index",rr i)]
+    | get_scale _ = hd []
+  fun f (index,base,disp) = 
+    if index = NONE then
+      if base = NONE then 
+        [("R/M","5"),("Mod","0"),("disp",signed_hex 8 disp)] 
+      else if base = SOME "ESP" then
+        [("R/M",rr "ESP"),("Base","4"),("Index","4"),("Scale","0")] @
+        (if disp = Arbint.fromInt 0 then [("Mod","0")]
+         else if can (signed_hex 2) disp
+         then [("Mod","1"),("disp",signed_hex 2 disp)]
+         else [("Mod","2"),("disp",signed_hex 8 disp)])
+      else if (disp = Arbint.fromInt 0) andalso not (base = SOME "EBP") then
+        [("R/M",rr (the base)),("Mod","0")]          
+      else if can (signed_hex 2) disp then
+        [("R/M",rr (the base)),("Mod","1"),("disp",signed_hex 2 disp)]
+      else 
+        [("R/M",rr (the base)),("Mod","2"),("disp",signed_hex 8 disp)]
+    else 
+      if base = NONE then 
+        [("R/M",rr "ESP"),("Mod","2"),("Base","5"),("disp",signed_hex 8 disp)]
+        @ get_scale index
+      else if (disp = Arbint.fromInt 0) andalso not (base = SOME "EBP") then
+        [("R/M",rr "ESP"),("Mod","0"),("Base",rr (the base))] @ get_scale index
+      else if can (signed_hex 2) disp then
+        [("R/M",rr "ESP"),("Mod","1"),("Base",rr (the base))] @ get_scale index
+        @ [("disp",signed_hex 2 disp)]
+      else 
+        [("R/M",rr "ESP"),("Mod","2"),("Base",rr (the base))] @ get_scale index
+        @ [("disp",signed_hex 8 disp)]
+  in f (index,base,imm) end
+
 fun x86_encode s = let
   fun rem [] b ys = rev ys
     | rem (x::xs) b ys = 
@@ -32,37 +139,10 @@ fun x86_encode s = let
   fun find x [] = hd []
     | find x ((y,z)::ys) = if x = y then z else find x ys
   val regs = ["EAX","ECX","EDX","EBX","ESP","EBP","ESI","EDI"] 
-  fun fill n s = if size s < n then fill n ("0" ^ s) else s
   fun try_all f [] = []
     | try_all f (x::xs) = f x :: try_all f xs handle e => try_all f xs
-  fun unsigned_hex n s = let
-    val i = fill n (Arbnum.toHexString (Arbnum.fromString s))
-    val i = (substring(i,6,2) ^ substring(i,4,2) ^ substring(i,2,2) ^ 
-             substring(i,0,2)) handle e => i
-    in if size i = n then i else hd [] end
-  fun signed_hex n i = let
-    val m = Arbnum.pow(Arbnum.fromInt 2, Arbnum.fromInt (4 * n))
-    val m2 = Arbnum.pow(Arbnum.fromInt 2, Arbnum.fromInt (4 * n - 1))
-    val j = Arbint.+(i,Arbint.fromNat m)
-    val i = if not (Arbint.<(i,Arbint.fromNat m2)) then hd [] else
-            if not (Arbint.<=(Arbint.fromNat m2, j)) then hd [] else
-            if Arbint.<=(Arbint.zero,i) then fill n (Arbnum.toHexString(Arbint.toNat i))
-                                        else fill n (Arbnum.toHexString(Arbint.toNat j))
-    val i = (substring(i,6,2) ^ substring(i,4,2) ^ substring(i,2,2) ^ 
-             substring(i,0,2)) handle e => i
-    in i end
-  fun parse_address s = let
-    val xs = explode s
-    val _ = if hd xs = #"[" then () else hd []
-    val _ = if last xs = #"]" then () else hd []
-    val ys = String.tokens (fn x => mem x [#" ",#"-",#"+"]) (implode (butlast (tl xs)))
-    val m = if can (pos #"-") xs then Arbint.fromInt (0 - 1) else Arbint.fromInt 1  
-    val i = Arbint.fromString (hd (filter (can Arbint.fromString) ys @ ["0"]))
-    val ys = filter (not o can Arbint.fromString) ys
-    val i = Arbint.*(i,m)
-    in (pos (hd ys) regs, i) end
 (*
-  val (zs,ys) = (hd o tl o tl) ys
+  val (zs,ys) = (hd) ys
 *)
   fun use_encoding (zs,ys) = let
     val l = filter (fn (x,y) => not (x = y)) (zip xs ys)
@@ -81,24 +161,8 @@ fun x86_encode s = let
         [("Reg/Opcode",int_to_string (pos y regs))] 
       else if (x = "r/m32") andalso (mem y regs) then 
         [("R/M",int_to_string (pos y regs)),("Mod","3")] 
-      else if (x = "r/m32") andalso can parse_address y then let
-        val (r,disp) = parse_address y
-        in if (disp = Arbint.fromInt 0) andalso not (r = 5) then 
-          if r = 4 then (* r is ESP, i.e. SIB byte needed *)
-            [("R/M",int_to_string r),("Mod","0"),("Base","4"),("Index","4"),
-             ("Scale","0")]
-          else
-            [("R/M",int_to_string r),("Mod","0")]          
-        else if not (r = 4) then
-          [("R/M",int_to_string r),("Mod","1"),
-           ("disp",signed_hex 2 disp)] handle e =>
-          [("R/M",int_to_string r),("Mod","2"),
-           ("disp",signed_hex 8 disp)] 
-        else (* r is ESP, i.e. SIB byte needed *)
-          [("R/M",int_to_string r),("Mod","1"),("Base","4"),("Index","4"),
-           ("disp",signed_hex 2 disp),("Scale","0")] handle e =>
-          [("R/M",int_to_string r),("Mod","2"),("Base","4"),("Index","4"),
-           ("disp",signed_hex 8 disp),("Scale","0")] end 
+      else if ((x = "r/m32") orelse (x = "m")) andalso can x86_address_encode y then
+        x86_address_encode y
       else hd []
     fun list_append [] = [] | list_append (x::xs) = x @ list_append xs
     val ts = list_append (map foo l)

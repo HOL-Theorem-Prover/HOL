@@ -13,4 +13,7 @@ sig
   val arm_encode_instruction   : string -> string * int
   val arm_encode_branch        : bool -> int -> string option -> string * int
 
+  val set_arm_temp_reg         : int -> unit
+  val get_arm_temp_reg         : unit -> int
+
 end

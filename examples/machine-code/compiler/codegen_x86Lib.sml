@@ -6,20 +6,103 @@ open codegen_inputLib;
 open helperLib x86_encodeLib;
 
 
-fun x86_reg 0 = "eax"
-  | x86_reg 1 = "ecx"
-  | x86_reg 2 = "edx"
-  | x86_reg 3 = "ebx"
-  | x86_reg 4 = "edi"
-  | x86_reg 5 = "esi"
-  | x86_reg 6 = "ebp"
-  | x86_reg _ = hd []
+val x86_regs = ref [(0,"eax"), (1,"ecx"), (2,"edx"), (3,"ebx"), 
+                    (4,"edi"), (5,"esi"), (6,"ebp")];
 
-val (to_x86_regs, from_x86_regs) = let
-  fun foo i = (mk_var("r" ^ int_to_string i,``:word32``),mk_var(x86_reg i, ``:word32``))
-  val xs = map foo [0,1,2,3,4,5,6] 
-  in (map (fn (x,y) => x |-> y) xs, map (fn (x,y) => y |-> x) xs) end
+fun set_x86_regs regs = (x86_regs := regs);
+fun get_x86_regs ()   = (!x86_regs);
 
+fun x86_reg n = (snd o hd o filter (fn (x,y) => x = n)) (get_x86_regs ())
+
+
+fun to_x86_regs () = let
+  fun foo (i,s) = mk_var("r" ^ int_to_string i,``:word32``) |-> mk_var(s, ``:word32``)
+  in map foo (get_x86_regs ()) end
+
+val x86_assign2assembly = let
+  fun r i = x86_reg i
+  fun s i = "[esp + " ^ int_to_string (4 * i) ^ "]"
+  fun address (ASSIGN_ADDRESS_REG i) = "[" ^ r i ^ "]"
+    | address (ASSIGN_ADDRESS_OFFSET_ADD (d,i)) = "[" ^ r d ^ " + " ^ Arbnum.toString i ^ "]"
+    | address (ASSIGN_ADDRESS_OFFSET_SUB (d,i)) = "[" ^ r d ^ " - " ^ Arbnum.toString i ^ "]"
+  fun binop_to_name ASSIGN_BINOP_ADD = "add"
+    | binop_to_name ASSIGN_BINOP_AND = "and"
+    | binop_to_name ASSIGN_BINOP_SUB = "sub"
+    | binop_to_name ASSIGN_BINOP_XOR = "xor"
+    | binop_to_name ASSIGN_BINOP_OR = "or"
+    | binop_to_name _ = hd []
+  fun exp (ASSIGN_X_REG j) = x86_reg j
+    | exp (ASSIGN_X_CONST i) = Arbnum.toString i
+  fun code_for_binop k ASSIGN_BINOP_MUL 
+                     (ASSIGN_X_REG i) (ASSIGN_X_REG j) reversed = let
+        val k_reg = x86_reg k  
+        val i_reg = x86_reg i  
+        val j_reg = x86_reg j  
+        val (i_reg,j_reg) = if i_reg = "eax" then (i_reg,j_reg) else (j_reg,i_reg)
+        in if (i_reg = "eax") andalso (k_reg = "eax") then ["mul " ^ x86_reg j]
+           else (print ("\n\nUnable to create x86 code for:   " ^ k_reg ^ " := " ^ i_reg ^ 
+                       " * " ^ j_reg ^ "\n\n"); hd []) end
+    | code_for_binop k ASSIGN_BINOP_DIV 
+                     (ASSIGN_X_REG i) (ASSIGN_X_REG j) reversed = let
+        val k_reg = x86_reg k  
+        val i_reg = x86_reg i  
+        val j_reg = x86_reg j  
+        val (i_reg,j_reg) = if i_reg = "eax" then (i_reg,j_reg) else (j_reg,i_reg)
+        in if (i_reg = "eax") andalso (k_reg = "eax") then ["xor edx, edx", "div " ^ x86_reg j]
+           else (print ("\n\nUnable to create x86 code for:   " ^ k_reg ^ " := " ^ i_reg ^ 
+                       " DIV " ^ j_reg ^ "\n\n"); hd []) end
+    | code_for_binop k ASSIGN_BINOP_MOD 
+                     (ASSIGN_X_REG i) (ASSIGN_X_REG j) reversed = let
+        val k_reg = x86_reg k  
+        val i_reg = x86_reg i  
+        val j_reg = x86_reg j  
+        val (i_reg,j_reg) = if i_reg = "eax" then (i_reg,j_reg) else (j_reg,i_reg)
+        in if (i_reg = "eax") andalso (k_reg = "edx") then ["xor edx, edx", "mod " ^ x86_reg j]
+           else (print ("\n\nUnable to create x86 code for:   " ^ k_reg ^ " := " ^ i_reg ^ 
+                       " MOD " ^ j_reg ^ "\n\n"); hd []) end
+    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_REG j) reversed =
+        code_for_binop d b (ASSIGN_X_REG j) (ASSIGN_X_CONST i) (not reversed)
+    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_CONST j) reversed = hd []
+    | code_for_binop d b (ASSIGN_X_REG i) j reversed = 
+       if (b = ASSIGN_BINOP_SUB) andalso reversed then
+         (if j = ASSIGN_X_REG d then [] else ["mov " ^ x86_reg d ^ ", " ^ exp j]) @
+         ["neg " ^ x86_reg d] @ ["add " ^ x86_reg d ^ ", " ^ x86_reg i]
+       else
+         if (j = ASSIGN_X_REG d) andalso not (i = d) then
+           code_for_binop d b (ASSIGN_X_REG d) (ASSIGN_X_REG i) (not reversed)     
+         else if (i = d) andalso (j = ASSIGN_X_CONST (Arbnum.fromInt 1)) andalso (b = ASSIGN_BINOP_ADD) then 
+           ["inc " ^ x86_reg d]
+         else if (i = d) andalso (j = ASSIGN_X_CONST (Arbnum.fromInt 1)) andalso (b = ASSIGN_BINOP_SUB) then 
+           ["dec " ^ x86_reg d]
+         else if (b = ASSIGN_BINOP_ADD) andalso not (i = d) then
+           ["lea " ^ x86_reg d ^ ", [" ^ x86_reg i ^ "+" ^ exp j ^ "]"]
+         else
+           (if d = i then [] else ["mov " ^ x86_reg d ^ ", " ^ x86_reg i]) @
+           [binop_to_name b ^ " " ^ x86_reg d ^ ", " ^ exp j]
+  fun monop_to_name ASSIGN_MONOP_NEG = "neg" 
+    | monop_to_name ASSIGN_MONOP_NOT = "not" 
+  fun code_for_monop d m j =
+    (if j = ASSIGN_X_REG d then [] else ["mov " ^ x86_reg d ^ ", " ^ exp j]) @
+    [monop_to_name m ^ " " ^ x86_reg d]
+  fun code_for_shift d j n name =
+    (if j = ASSIGN_X_REG d then [] else ["mov " ^ x86_reg d ^ ", " ^ exp j]) @
+    [name ^ " " ^ x86_reg d ^ ", " ^ int_to_string n]
+  fun mov_name ACCESS_WORD = "mov"
+    | mov_name ACCESS_BYTE = "mov_byte"
+  fun f (ASSIGN_EXP (d, ASSIGN_EXP_REG s)) = ["cmov? " ^ r d ^ ", " ^ r s]
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_CONST i)) = ["mov " ^ r d ^ ", " ^ Arbnum.toString i]      
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_STACK i)) = ["mov " ^ r d ^ ", " ^ s i]
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_BINOP (i,b,j))) = code_for_binop d b i j false
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_MONOP (m,j))) = code_for_monop d m j
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_MEMORY (b,a))) = [mov_name b ^ " " ^ r d ^ ", " ^ address a]       
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_LEFT (j,n))) = code_for_shift d j n "shl"
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_RIGHT (j,n))) = code_for_shift d j n "shr"
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_ARITHMETIC_RIGHT (j,n))) = code_for_shift d j n "sar"
+    | f (ASSIGN_STACK (i,d)) = ["mov " ^ s i ^ ", " ^ r d]
+    | f (ASSIGN_MEMORY (b,a,d)) = [mov_name b ^ " " ^ address a ^ ", " ^ r d]
+    | f (ASSIGN_OTHER (t1,t2)) = 
+           (print "\n\n"; print_term t1; print "\n\n"; print_term t2; hd [])
+  in f end  
 
 fun x86_guard2assembly (GUARD_NOT t) = let 
       val (code,(x,y)) = x86_guard2assembly t in (code,(y,x)) end
@@ -39,54 +122,12 @@ fun x86_guard2assembly (GUARD_NOT t) = let
       fun f (ASSIGN_X_REG r) = x86_reg r
         | f (ASSIGN_X_CONST c) = Arbnum.toString c
       val code = ["test " ^ rd ^ ", " ^ f j]
-      in (code, ("eq","ne")) end
-
-val x86_assign2assembly = let
-  fun r i = x86_reg i
-  fun s i = "[esp + " ^ int_to_string (4 * i) ^ "]"
-  fun address (ASSIGN_ADDRESS_REG i) = "[" ^ r i ^ "]"
-    | address (ASSIGN_ADDRESS_OFFSET_ADD (d,i)) = "[" ^ r d ^ " + " ^ Arbnum.toString i ^ "]"
-    | address (ASSIGN_ADDRESS_OFFSET_SUB (d,i)) = "[" ^ r d ^ " - " ^ Arbnum.toString i ^ "]"
-  fun binop_to_name ASSIGN_BINOP_ADD = "add"
-    | binop_to_name ASSIGN_BINOP_AND = "and"
-    | binop_to_name ASSIGN_BINOP_SUB = "sub"
-    | binop_to_name ASSIGN_BINOP_XOR = "xor"
-    | binop_to_name ASSIGN_BINOP_OR = "or"
-    | binop_to_name _ = hd []
-  fun exp (ASSIGN_X_REG j) = x86_reg j
-    | exp (ASSIGN_X_CONST i) = Arbnum.toString i
-  fun code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_REG j) reversed =
-        code_for_binop d b (ASSIGN_X_REG j) (ASSIGN_X_CONST i) (not reversed)
-    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_CONST j) reversed = hd []
-    | code_for_binop d b (ASSIGN_X_REG i) j reversed = 
-       if (b = ASSIGN_BINOP_SUB) andalso reversed then
-         (if j = ASSIGN_X_REG d then [] else ["mov " ^ x86_reg d ^ ", " ^ exp j]) @
-         ["neg " ^ x86_reg d] @
-         ["add " ^ x86_reg d ^ ", " ^ x86_reg i]
-       else
-         (if d = i then [] else ["mov " ^ x86_reg d ^ ", " ^ x86_reg i]) @
-         [binop_to_name b ^ " " ^ x86_reg d ^ ", " ^ exp j]
-  fun monop_to_name ASSIGN_MONOP_NEG = "neg" 
-    | monop_to_name ASSIGN_MONOP_NOT = "not" 
-  fun code_for_monop d m j =
-    (if j = ASSIGN_X_REG d then [] else ["mov " ^ x86_reg d ^ ", " ^ exp j]) @
-    [monop_to_name m ^ " " ^ x86_reg d]
-  fun code_for_shift d j n name =
-    (if j = ASSIGN_X_REG d then [] else ["mov " ^ x86_reg d ^ ", " ^ exp j]) @
-    [name ^ " " ^ x86_reg d ^ ", " ^ int_to_string n]
-  fun f (ASSIGN_EXP (d, ASSIGN_EXP_REG s)) = ["cmov? " ^ r d ^ ", " ^ r s]
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_CONST i)) = ["mov " ^ r d ^ ", " ^ Arbnum.toString i]      
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_STACK i)) = ["mov " ^ r d ^ ", " ^ s i]
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_BINOP (i,b,j))) = code_for_binop d b i j false
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_MONOP (m,j))) = code_for_monop d m j
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_MEMORY a)) = ["mov " ^ r d ^ ", " ^ address a]       
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_LEFT (j,n))) = code_for_shift d j n "shl"
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_RIGHT (j,n))) = code_for_shift d j n "shr"
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_ARITHMETIC_RIGHT (j,n))) = code_for_shift d j n "sar"
-    | f (ASSIGN_STACK (i,d)) = ["mov " ^ s i ^ ", " ^ r d]
-    | f (ASSIGN_MEMORY (a,d)) = ["mov " ^ address a ^ ", " ^ r d]
-    | f _ = hd []
-  in f end  
+      in (code, ("e","ne")) end
+  | x86_guard2assembly (GUARD_OTHER tm) = let
+      val (t1,t2) = dest_eq tm      
+      val code = hd (x86_assign2assembly (term2assign t1 t2))
+      val code = "cmp" ^ (implode o tl o tl o tl o explode) code 
+      in ([code], ("e","ne")) end;
 
 fun x86_conditionalise c condition = let
   val c' = String.translate (fn x => if x = #"?" then condition else implode [x]) c

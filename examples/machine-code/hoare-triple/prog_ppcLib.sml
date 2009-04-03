@@ -120,6 +120,27 @@ fun introduce_pMEMORY th = let
   val th = replace_access_in_pre th
   in th end handle e => th;
 
+fun introduce_pBYTE_MEMORY th = let
+  val (_,p,c,q) = dest_spec(concl th)
+  val tm0 = find_term (can (match_term ``pM1 x y``)) p
+  val c = MOVE_OUT_CONV (car tm0) THENC STAR_REVERSE_CONV
+  val th = CONV_RULE (POST_CONV c THENC PRE_CONV c) th
+  val f = cdr o cdr
+  val h = REWRITE_RULE [GSYM STAR_ASSOC,bit_listTheory.bytes2word_thm] 
+  val th = MATCH_MP (h pBYTE_MEMORY_INTRO) (h th)
+  val th = RW [wordsTheory.WORD_ADD_0,GSYM progTheory.SPEC_MOVE_COND] th
+  fun replace_access_in_pre th = let
+    val (_,p,c,q) = dest_spec(concl th)
+    val tm = find_term (can (match_term ``(a:'a =+ w:'b) f``)) p
+    val (tm,y) = dest_comb tm
+    val (tm,x) = dest_comb tm  
+    val a = snd (dest_comb tm)
+    val th = REWRITE_RULE [APPLY_UPDATE_ID] (INST [x |-> mk_comb(y,a)] th)
+    in th end handle e => th
+  val th = replace_access_in_pre th
+  val th = RW [STAR_ASSOC] th
+  in th end handle e => th;
+
 fun calculate_length_and_jump th = 
   let val (_,_,_,q) = dest_spec(concl th) in
     let val v = find_term (fn t => t = ``pPC (p + 4w)``) q in (th,4,SOME 4) end
@@ -137,6 +158,8 @@ fun post_process_thm th = let
              [wordsTheory.word_mul_n2w,wordsTheory.WORD_ADD_0] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
   val th = introduce_pMEMORY th
+  val th = introduce_pBYTE_MEMORY th
+  val th = RW [bit_listTheory.bytes2word_thm,extract_byte] th
   in calculate_length_and_jump th end;
 
 fun ppc_prove_one_spec th c = let
@@ -208,14 +231,17 @@ val ppc_tools  = (ppc_spec, ppc_jump, ppc_status, ppc_pc)
   val th = ppc_spec "4181FFF4";  (* bc 12,1,L1    *)
   val th = ppc_spec "4082FFF0";  (* bc 4,2,L1     *)
   val th = ppc_spec "4083FFEC";  (* bc 4,3,L1     *)
+  val th = ppc_spec "88830005";  (* lbz 4,5,3     *)
+  val th = ppc_spec "98830005";  (* stb 4,5,3     *)
+  val th = ppc_spec "7C858396";  (* divwu 4,5,16  *)
 
-  (* pMEMORY is not properly introduced for half-words or bytes,
+  (* pMEMORY is not properly introduced for half-words,
      also fails if more than one memory location is accessed. *)
 
   val th = ppc_spec "7E7A222E";  (* lhzx 19, 26, 4 *)
   val th = ppc_spec "7E7A22AE";  (* lhax 19, 26, 4 *)
 
-  val s = ppc_encodeLib.ppc_encode "andi. 4,5,3"
+  val s = ppc_encodeLib.ppc_encode "stb 4,5,3"
 
 *)
 

@@ -20,9 +20,13 @@ val ADDR30_def = Define `ADDR30 (x:word32) = ((31 >< 2) x):word30`;
 
 val CONTAINER_def = Define `CONTAINER x = x:bool`;
 val GUARD_def = Define `GUARD (n:num) x = x:bool`;
+val DUMMY_EQ_def = Define `DUMMY_EQ x y = (x = y:'a)`;
 
 val SING_SET_def = Define `SING_SET x = {x}`;
 
+val word_mod_def = Define `
+  word_mod (v:'a word) (w:'a word) = n2w (w2n v MOD w2n w):'a word`;
+  
 
 (* theorems *)
 
@@ -134,10 +138,10 @@ val ADDR32_ADD = store_thm ("ADDR32_ADD",
 val ADDR32_NEG = store_thm("ADDR32_NEG",
   ``!w. ADDR32 (- w) = - (ADDR32 w)``,
   wordsLib.Cases_word \\ REWRITE_TAC [ADDR32_n2w] 
-  \\ wordsLib.WORD_EVAL_TAC \\ REWRITE_TAC [ADDR32_n2w]
-  \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss)
-       [n2w_11,LEFT_SUB_DISTRIB,MOD_COMMON_FACTOR]);
-
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_2comp_n2w]
+  \\ `(4 * n) < 4294967296` by DECIDE_TAC
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_2comp_n2w,ADDR32_n2w,LEFT_SUB_DISTRIB]);
+    
 val ADDR32_SUB = store_thm ("ADDR32_SUB", 
   ``!v w. (ADDR32 (v - w)  = ADDR32 v - ADDR32 w)``,
   REWRITE_TAC [word_sub_def,ADDR32_ADD,ADDR32_NEG]);
@@ -567,6 +571,10 @@ val UNION_CANCEL = store_thm("UNION_CANCEL",
   ``!x s:'a set. x UNION (x UNION s) = x UNION s``,
   REWRITE_TAC [UNION_ASSOC,UNION_IDEMPOT]);
 
+val FLATTEN_IF = store_thm("FLATTEN_IF",
+  ``!b x y. (if b then x else y) = (b /\ x) \/ (~b /\ y)``,
+  Cases THEN REWRITE_TAC []);
+
 val PUSH_IF_LEMMA = store_thm("PUSH_IF_LEMMA",
   ``!b g x y. (b /\ (if g then x else y) = if g then b /\ x else b /\ y) /\
               ((if g then x else y) /\ b = if g then b /\ x else b /\ y)``,
@@ -576,4 +584,61 @@ val GUARD_EQ_ZERO = store_thm("GUARD_EQ_ZERO",
   ``!n b. GUARD n b = GUARD 0 b``,
   REWRITE_TAC [GUARD_def]);
 
+val extract_byte = store_thm("extract_byte",
+  ``!w. (7 >< 0) w = (w2w:word32->word8) w``,
+  Cases_word
+  \\ SIMP_TAC (std_ss++SIZES_ss) [wordsTheory.word_extract_n2w,
+       wordsTheory.w2w_def,bitTheory.BITS_THM,
+       wordsTheory.w2n_n2w,wordsTheory.n2w_11]
+  \\ REWRITE_TAC [GSYM (EVAL ``256 * 16777216``)] 
+  \\ SIMP_TAC bool_ss [arithmeticTheory.MOD_MULT_MOD,EVAL ``0 < 256``,
+       EVAL ``0 < 16777216``]);  
+
+val WORD_TIMES2 = store_thm("WORD_TIMES2",
+  ``!w:'a word. 2w * w = w + w``,
+  Cases_word
+  THEN REWRITE_TAC [word_add_n2w,word_mul_n2w,arithmeticTheory.TIMES2]);
+
+val WORD_SUB_INTRO = store_thm("WORD_SUB_INTRO",
+  ``!x y:'a word. 
+     ((- y) + x = x - y) /\ 
+     (x + (- y) = x - y) /\
+     ((-1w) * y + x = x - y) /\ 
+     (y * (-1w) + x = x - y) /\
+     (x + (-1w) * y = x - y) /\
+     (x + y * (-1w) = x - y)``,
+  SIMP_TAC (std_ss++wordsLib.WORD_ss) []);
+
+val WORD_DIVISION = store_thm("WORD_DIVISION",
+  ``!w. w <> 0w ==> !v. (v = (v // w) * w + word_mod v w) /\ word_mod v w <+ w``,
+  Cases_word \\ ASM_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword]
+  \\ STRIP_TAC \\ Cases_word
+  \\ ASM_SIMP_TAC std_ss [word_mod_def,word_div_def,w2n_n2w]  
+  \\ ASM_SIMP_TAC std_ss [word_add_n2w,word_mul_n2w,WORD_LO,w2n_n2w]
+  \\ FULL_SIMP_TAC bool_ss [NOT_ZERO_LT_ZERO]
+  \\ IMP_RES_TAC (GSYM DIVISION)
+  \\ REPEAT (Q.PAT_ASSUM `!k. bbb` (ASSUME_TAC o Q.SPEC `n'`))
+  \\ IMP_RES_TAC LESS_TRANS
+  \\ ASM_SIMP_TAC std_ss []);
+
+val WORD_ADD_LEMMA = prove(
+  ``!(x:'a word) n. x + n2w n * x = n2w (n + 1) * x``,
+  Cases_word
+  \\ REWRITE_TAC [word_mul_n2w,word_add_n2w,RIGHT_ADD_DISTRIB,MULT_CLAUSES]
+  \\ SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]);
+
+val WORD_ADD_FOLD = store_thm("WORD_ADD_FOLD",
+  ``!(x:'a word) n p. 
+      (x + n2w n * x = n2w (n + 1) * x) /\ 
+      (x + x * n2w n = n2w (n + 1) * x) /\ 
+      (n2w n * x + x = n2w (n + 1) * x) /\ 
+      (n2w n * x + x = n2w (n + 1) * x) /\
+      (p + x + n2w n * x = p + n2w (n + 1) * x) /\ 
+      (p + x + x * n2w n = p + n2w (n + 1) * x) /\ 
+      (p + n2w n * x + x = p + n2w (n + 1) * x) /\ 
+      (p + n2w n * x + x = p + n2w (n + 1) * x)``,
+  REWRITE_TAC [GSYM WORD_ADD_LEMMA]
+  \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,
+                      AC WORD_MULT_ASSOC WORD_MULT_COMM]);
+  
 val _ = export_theory();
