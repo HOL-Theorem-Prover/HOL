@@ -346,6 +346,8 @@ val stronger = Q.prove
 (* has an oless-minimal element. The proof is by induction on n.             *)
 (*---------------------------------------------------------------------------*)
 
+val _ = Parse.hide "S";   (* used as a variable in the following proof *)
+
 val lemma = Q.store_thm
 ("lemma",
  `!n. !P:osyntax->bool.
@@ -447,8 +449,8 @@ THEN
 (* everything in it has rank at most n.                                      *)
 (*---------------------------------------------------------------------------*)
 
-`?E. (?e. E e) /\ (!e. E e = ?si x. S' si /\ si x /\ (e = expt x))`
-      by (Q.EXISTS_TAC `\x. ?si y. S' si /\ si y /\ (x = expt y)`
+`?E. (?e. E e) /\ (!e. E e = ?si x. S si /\ si x /\ (e = expt x))`
+      by (Q.EXISTS_TAC `\x. ?si y. S si /\ si y /\ (x = expt y)`
           THEN METIS_TAC[]) THEN
 `!e. E e ==> is_ord(e) /\ rank e <= n` by
     (RW_TAC ord_ss [] THEN METIS_TAC [is_ord_expt_closed,rank_expt,LESS_OR_EQ])
@@ -472,7 +474,7 @@ THEN
 (* existence of alpha_1.                                                     *)
 (*---------------------------------------------------------------------------*)
 
-`?sj x. S' sj /\ sj x /\ (alpha_1 = expt x)` by METIS_TAC[]
+`?sj x. S sj /\ sj x /\ (alpha_1 = expt x)` by METIS_TAC[]
 
 THEN
 
@@ -632,12 +634,12 @@ THENL
 (* be, because of what S is.                                                 *)
 (*---------------------------------------------------------------------------*)
 
-`S' Tails` by (RW_TAC ord_ss [] THEN METIS_TAC[]) THEN
+`S Tails` by (RW_TAC ord_ss [] THEN METIS_TAC[]) THEN
 `!d. Tails d ==> oless (expt d) (expt x)`
        by METIS_TAC [decompose_plus,rank_positive,LESS_0] THEN
 `!d. Tails d ==> oless (expt x) (expt d)`
-       by METIS_TAC [decompose_plus, rank_positive_expt,DECIDE``(m=n)==>m<=n``] THEN
-METIS_TAC [oless_antisym],
+       by METIS_TAC [decompose_plus, rank_positive_expt,DECIDE``(m=n)==>m<=n``] 
+THEN METIS_TAC [oless_antisym],
 ALL_TAC
 ]
 
@@ -653,8 +655,8 @@ THEN
     (`?v. s_alpha_1_k_1 v /\ (t = tail v)` by METIS_TAC[] THEN
      `s_alpha_1 v /\ (coeff v = coeff x1)` by METIS_TAC [] THEN
      `sj(v) /\ (expt v = expt x)` by METIS_TAC [] THEN
-     `v = Plus (expt v) (coeff v) (tail v)` by METIS_TAC [rank_positive,LESS_0] THEN
-     METIS_TAC [])
+     `v = Plus (expt v) (coeff v) (tail v)` by METIS_TAC [rank_positive,LESS_0] 
+     THEN METIS_TAC [])
 
 THEN
 
