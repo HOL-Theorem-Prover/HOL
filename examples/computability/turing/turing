@@ -1,0 +1,357 @@
+app load ["emitLib"]; 
+quietdec := true;
+open pred_setLib pred_setTheory arithmeticTheory;
+quietdec := false;
+
+val tm_ss = list_ss ++ PRED_SET_ss;
+
+val _ = new_theory "turing";
+
+(*---------------------------------------------------------------------------*)
+(* Turing machines, tape infinite in one direction.                          *)
+(*---------------------------------------------------------------------------*)
+
+Hol_datatype `dir = L | R`;
+
+(*---------------------------------------------------------------------------*)
+(* Raw datatype of TMs. The only slightly odd thing may be that the blank is *)
+(* explicitly included. Also, it turns out to facilitate the definition of   *)
+(* executions if the initial value of the current cell is set to a value.    *)
+(* Because having a "left-edge" marker simplifies many TM algorithms, we set *)
+(* aside a particular "star" value for this purpose.                         *)
+(*---------------------------------------------------------------------------*)
+
+Hol_datatype 
+  `TM = <| states     : 'state -> bool ;
+           inputsymbs : 'alpha -> bool ;
+           tapesymbs  : 'alpha -> bool ;
+           init       : 'state ;
+           trans      : 'state -> 'alpha -> 'state # 'alpha # dir;
+           accept     : 'state ;
+           reject     : 'state ;
+           blank      : 'alpha ;
+           star       : 'alpha |>`;
+
+(*---------------------------------------------------------------------------*)
+(* Predicate singling out the real Turing machines. Is in principle an       *)
+(* executable thing, but we don't currently handle (bounded) quantifiers.    *)
+(*---------------------------------------------------------------------------*)
+
+val isTM_def = 
+ Define
+   `isTM (M : ('alpha,'state)TM) =
+      FINITE M.states            /\
+      FINITE M.inputsymbs        /\
+      FINITE M.tapesymbs         /\
+      M.blank IN M.tapesymbs     /\
+      ~(M.blank IN M.inputsymbs) /\
+      M.star IN M.inputsymbs     /\
+      M.inputsymbs SUBSET M.tapesymbs /\
+      M.accept IN M.states       /\
+      M.reject IN M.states       /\
+      ~(M.accept = M.reject)     /\
+      M.init IN M.states         /\
+      !a p q b d. 
+          a IN M.tapesymbs /\ p IN M.states /\ (M.trans p a = (q,b,d)) 
+          ==> q IN M.states /\ b IN M.tapesymbs`;
+
+(*---------------------------------------------------------------------------*)
+(* Is a string built from the input alphabet of the TM?                      *)
+(*---------------------------------------------------------------------------*)
+
+val isInputWord_def = 
+ Define
+   `isInputWord (M:('a,'state)TM) w = !a. MEM a w ==> a IN M.inputsymbs`;
+
+(*---------------------------------------------------------------------------*)
+(* A step of TM computation alters the current configuration. A config.      *)
+(* <|left;cell;state;right|> represents the complete state of the machine.   *)
+(* "left" is the portion of the tape left of the tape pointer, (in reverse   *)
+(* order, so that the head of the "left" is actually the last element of the *)
+(* left part of the tape). "cell" holds the contents of the current cell     *)
+(* operated on by the machine. "state" holds the current state of the        *)
+(* machine. "right" holds the portion of the tape to the right of the        *)
+(* current cell; it is not in reverse order.                                 *)
+(*---------------------------------------------------------------------------*)
+
+Hol_datatype 
+  `config = <| left  : 'a list;
+               cell  : 'a ;
+               state : 'state ;
+               right : 'a list |>`;
+
+(*---------------------------------------------------------------------------*)
+(* The configuration determines the tape contents.                           *)
+(*---------------------------------------------------------------------------*)
+
+val tape_of_def =
+ Define
+   `tape_of (cnfg:('a,'state)config) =
+      REVERSE cnfg.left ++ [cnfg.cell] ++ cnfg.right`;
+
+(*---------------------------------------------------------------------------*)
+(* A transition of the machine. The transition function M.trans              *)
+(*                                                                           *)
+(*    trans : 'state -> 'a -> 'state # 'a # dir                              *)
+(*                                                                           *)
+(* yields the new state, new cell contents, and the direction for the tape   *)
+(* head to move. Given that, we need to know whether or not we are hitting   *)
+(* the left edge of the tape, or, the right edge of the tape. The config. is *)
+(* then updated accordingly.                                                 *)
+(*---------------------------------------------------------------------------*)
+
+val Step_def =
+ Define 
+   `Step (M:('a,'state)TM) (cnfg: ('a,'state) config) =
+     let (q,b,d) = M.trans cnfg.state cnfg.cell in
+     if d = L 
+      then 
+        (case cnfg.left 
+          of [] -> cnfg with  <| cell := b; state := q |>
+          || h::t -> cnfg with <| left := t; cell := h; state := q; 
+                                  right := b::cnfg.right |>)
+      else (* d = R *)
+       (case cnfg.right 
+         of [] -> cnfg with 
+                    <|left := b::cnfg.left; cell := M.blank; state := q |>
+         || h::t -> cnfg with 
+                    <|left := b::cnfg.left; cell := h; 
+                      state:=q; right := t |>)`;
+
+(*---------------------------------------------------------------------------*)
+(* Accepting configuration                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val Accepting_def = 
+ Define
+   `Accepting (M:('a,'state)TM) 
+              (cnfg : ('a,'state) config) = (cnfg.state = M.accept) `;
+
+(*---------------------------------------------------------------------------*)
+(* Rejecting configuration                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val Rejecting_def = 
+ Define
+   `Rejecting (M:('a,'state)TM) 
+              (cnfg : ('a,'state) config) = (cnfg.state = M.reject) `;
+
+(*---------------------------------------------------------------------------*)
+(* Terminal configuration                                                    *)
+(*---------------------------------------------------------------------------*)
+
+val Terminal_def = 
+ Define
+   `Terminal (M:('a,'state)TM) 
+             (cnfg : ('a,'state) config) 
+    = Accepting M cnfg \/ Rejecting M cnfg`;
+
+(*---------------------------------------------------------------------------*)
+(* Initial configuration. Computation starts with M.star in the current cell *)
+(*---------------------------------------------------------------------------*)
+
+val Initial_def = 
+ Define
+   `Initial (M:('a,'state)TM) w =
+      <| left := []; cell := M.star; state := M.init; right := w |>`;
+
+(*---------------------------------------------------------------------------*)
+(* Execution via step index, stopping when a terminal state is hit, or when  *)
+(* the number of prescribed steps is exceeded.                               *)
+(*---------------------------------------------------------------------------*)
+
+(*
+val Run_def =
+ Define 
+  `(Run (M:('a,'state)TM) c 0 = c) /\
+   (Run M c (SUC n) = 
+        if Terminal M c then c 
+        else Run M (Step M c) n)`;
+*)
+
+val Run_def = 
+ Define
+   `Run M c n = 
+      if n = 0 then c 
+      else
+        let c' = Run M c (n-1)
+          in if Terminal M c' then c' 
+             else Step M c'`;
+
+(*---------------------------------------------------------------------------*)
+(* Generate ML code for TMs                                                  *)
+(*---------------------------------------------------------------------------*)
+
+open emitLib;
+
+val elems = 
+ [MLSIG "type num = numML.num",
+  MLSTRUCT "type num = numML.num",
+  OPEN ["num", "list", "combin"],
+  DATATYPE `dir = L | R`,
+  DATATYPE 
+     `TM = <| states     : 'state -> bool ;
+              inputsymbs : 'alpha -> bool ;
+              tapesymbs  : 'alpha -> bool ;
+              init       : 'state ;
+              trans      : 'state -> 'alpha -> 'state # 'alpha # dir;
+              accept     : 'state ;
+              reject     : 'state ;
+              blank      : 'alpha ;
+              star       : 'alpha |>`,
+  DATATYPE 
+     `config = <| left  : 'a list;
+                  cell  : 'a ;
+                  state : 'state ;
+                  right : 'a list |>`,
+  DEFN tape_of_def,
+  DEFN Step_def,
+  DEFN Accepting_def,
+  DEFN Rejecting_def,
+  DEFN Terminal_def,
+  DEFN Initial_def,
+  DEFN Run_def];
+
+val _ = emitML "" ("Turing", elems);
+
+(*---------------------------------------------------------------------------*)
+(* Basic development towards undecidability of HP.                           *)
+(*---------------------------------------------------------------------------*)
+
+val Accepting_lem = Q.prove
+(`!m k M c.
+   isTM M /\ Accepting M (Run M c k) ==> Accepting M (Run M c (m+k))`,
+ Induct THENL
+ [REPEAT STRIP_TAC THEN RW_TAC tm_ss [Once Run_def,Terminal_def] THENL
+  [METIS_TAC [Run_def],
+   RW_TAC tm_ss [] THENL
+   [Q.UNABBREV_TAC `c'` THEN POP_ASSUM MP_TAC THEN 
+     RULE_ASSUM_TAC (ONCE_REWRITE_RULE [Run_def]) THEN
+     BasicProvers.NORM_TAC tm_ss [] THEN 
+     POP_ASSUM MP_TAC THEN RW_TAC tm_ss [Terminal_def,LET_THM],
+    FULL_SIMP_TAC tm_ss [] THEN Q.UNABBREV_TAC `c'` THEN
+     NTAC 2 (POP_ASSUM MP_TAC) THEN
+     RULE_ASSUM_TAC (ONCE_REWRITE_RULE [Run_def]) THEN
+     BasicProvers.NORM_TAC tm_ss [] THEN 
+     POP_ASSUM MP_TAC THEN RW_TAC tm_ss [Terminal_def,LET_THM]]],
+   REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [Run_def] THEN RW_TAC tm_ss [] THEN
+    FULL_SIMP_TAC bool_ss [DECIDE ``k + SUC m - 1 = m + k``] THEN 
+    `Accepting M c'` by METIS_TAC [] THEN 
+    RW_TAC tm_ss [] THEN METIS_TAC [Terminal_def]]);
+
+val Rejecting_lem = Q.prove
+(`!m k M c.
+   isTM M /\ Rejecting M (Run M c k) ==> Rejecting M (Run M c (m+k))`,
+ Induct THENL
+ [REPEAT STRIP_TAC THEN RW_TAC tm_ss [Once Run_def,Terminal_def] THENL
+  [METIS_TAC [Run_def],
+   RW_TAC tm_ss [] THENL
+   [Q.UNABBREV_TAC `c'` THEN POP_ASSUM MP_TAC THEN 
+     RULE_ASSUM_TAC (ONCE_REWRITE_RULE [Run_def]) THEN
+     BasicProvers.NORM_TAC tm_ss [] THEN 
+     POP_ASSUM MP_TAC THEN RW_TAC tm_ss [Terminal_def,LET_THM],
+    FULL_SIMP_TAC tm_ss [] THEN Q.UNABBREV_TAC `c'` THEN
+     NTAC 2 (POP_ASSUM MP_TAC) THEN 
+     RULE_ASSUM_TAC (ONCE_REWRITE_RULE [Run_def]) THEN 
+     BasicProvers.NORM_TAC tm_ss [] THEN
+     POP_ASSUM MP_TAC THEN RW_TAC tm_ss [Terminal_def,LET_THM]]],
+  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [Run_def] THEN RW_TAC tm_ss [] THEN
+   FULL_SIMP_TAC bool_ss [DECIDE ``k + SUC m - 1 = m + k``] THEN 
+   `Rejecting M c'` by METIS_TAC [] THEN RW_TAC tm_ss [] THEN 
+   METIS_TAC [Terminal_def]]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Does a machine M accept or reject a word, or does it loop. It is at this  *)
+(* point that we require the input word be built from M's alphabet.          *)
+(*---------------------------------------------------------------------------*)
+
+val Accepts_def = 
+ Define
+   `Accepts (M:('a,'state)TM) w = 
+      isInputWord M w /\ ?n. Accepting M (Run M (Initial M w) n)`;
+
+val Rejects_def = 
+ Define
+   `Rejects (M:('a,'state)TM) w = 
+      isInputWord M w /\ ?n. Rejecting M (Run M (Initial M w) n)`;
+
+val Loops_def = 
+ Define
+   `Loops (M:('a,'state)TM) w = 
+     isInputWord M w /\ !n. ~Terminal M (Run M (Initial M w) n)`;
+
+val Halts_def =
+ Define
+   `Halts (M:('a,'state)TM,w) = Accepts M w \/ Rejects M w`;
+
+val RunCases = Q.prove
+(`!M w. isInputWord M w ==> Accepts M w \/ Rejects M w \/ Loops M w`,
+ METIS_TAC[Accepts_def, Rejects_def, Loops_def, 
+           Accepting_def, Rejecting_def, Terminal_def]);
+
+val LoopCases = Q.prove
+(`!M w. isInputWord M w ==> Halts (M,w) \/ Loops M w`,
+  METIS_TAC [RunCases,Halts_def]);
+
+val Halts_not_Loops = Q.prove
+(`!M w. isInputWord M w ==> (Halts (M,w) = ~Loops M w)`,
+  METIS_TAC [Loops_def,Halts_def,Terminal_def,Accepts_def, Rejects_def]);
+
+val Not_Accepts_and_Rejects = Q.prove
+(`!M w. isTM M ==> ~(Accepts M w /\ Rejects M w)`,
+ RW_TAC bool_ss [GSYM IMP_DISJ_THM,Accepts_def, Rejects_def] THEN 
+  STRIP_TAC THEN
+  STRIP_ASSUME_TAC (DECIDE ``n < n' \/ (n=n') \/ n' < n``) THENL
+  [`?p. p + n = n'` by METIS_TAC [LESS_ADD] THEN RW_TAC std_ss [] THEN
+   `Accepting M (Run M (Initial M w) (p + n))` by METIS_TAC [Accepting_lem] THEN
+   METIS_TAC [isTM_def, Accepting_def, Rejecting_def],
+   RW_TAC std_ss [] THEN METIS_TAC [isTM_def, Accepting_def, Rejecting_def],
+  `?p. p + n' = n` by METIS_TAC [LESS_ADD] THEN RW_TAC std_ss [] THEN 
+  `Rejecting M (Run M (Initial M w) (p + n'))` by METIS_TAC [Rejecting_lem] THEN
+  METIS_TAC [isTM_def, Accepting_def, Rejecting_def]]);
+
+
+(*---------------------------------------------------------------------------*)
+(* The language defined by a machine is the set of input words on which it   *)
+(* halts and accepts.                                                        *)
+(*---------------------------------------------------------------------------*)
+
+val Lang_of_def = 
+ Define 
+   `Lang_of (M:('a,'state)TM) = {w | Accepts M w}`;
+
+(*---------------------------------------------------------------------------*)
+(* A set s is recognizable, or recursively enumerable (r.e.), if there is a  *)
+(* single machine that accepts all elements in s. For elements not in s, the *)
+(* machine can either reject or loop.                                        *)
+(*---------------------------------------------------------------------------*)
+
+val Recognizable_def = 
+ Define
+   `Recognizable s = ?M:('a,num)TM. isTM M /\ (Lang_of M = s)`;
+
+(*---------------------------------------------------------------------------*)
+(* A set s is decidable if there exists a machine M that accepts elements in *)
+(* s and rejects elements not in s.                                          *)
+(*---------------------------------------------------------------------------*)
+
+val isDecider_def = 
+ Define 
+  `isDecider (M:('a,num)TM) s =
+       isTM M /\ 
+       !w. (w IN s ==> Accepts M w) /\
+           (~(w IN s) ==> Rejects M w)`;
+
+val Decidable_def = 
+ Define
+   `Decidable s = ?M:('a,num)TM. isDecider M s`;
+
+(*---------------------------------------------------------------------------*)
+(* Useful sanity test: if a set and its complement are recognizable then     *)
+(* the set is decidable. Proof interleaves the two recognizers.              *)
+(*---------------------------------------------------------------------------*)
+(*
+g `!s. Recognizable s /\ Recognizable (COMPL s) ==> Decidable s`;
+*)
+
