@@ -393,10 +393,6 @@ val fake_eta = store_thm(
   `LAM u M0 = LAM v ([VAR v/u] M0)` by SRW_TAC [][SIMPLE_ALPHA] THEN 
   SRW_TAC [][]);
 
-val is_abs_cfstsnd = Store_thm(
-  "is_abs_cfstsnd",
-  ``is_abs csnd ∧ is_abs cfst``,
-  SRW_TAC [][churchpairTheory.cfst_def, churchpairTheory.csnd_def]);
 
 val B_eta = store_thm(
   "B_eta",
@@ -435,19 +431,20 @@ val is_abs_cdAPP = Store_thm(
   SRW_TAC [][cdAPP_def]);
 
 val termrec_var_def = Define`
-  termrec_var = B @@ (S @@ (B @@ cpair @@ cdV)) @@ I
+  termrec_var = S @@ (B @@ cpair @@ cdV)
+                (* λv i. cpair (dV i) (v i) *)
 `;
 val termrec_var_eta = store_thm(
   "termrec_var_eta",
   ``LAM x (termrec_var @@ VAR x) == termrec_var``,
   SIMP_TAC (bsrw_ss()) [termrec_var_def] THEN 
-  CONV_TAC (RAND_CONV (SIMP_CONV bool_ss [Once chap2Theory.B_def])) THEN 
-  SIMP_TAC (bsrw_ss()) [] THEN 
-  CONV_TAC (RAND_CONV (SIMP_CONV bool_ss [Once chap2Theory.S_def])) THEN 
+  REWRITE_TAC [chap2Theory.S_def] THEN 
   SIMP_TAC (bsrw_ss()) [] THEN 
   `∀x y. (x = y) ⇒ x == y` by SRW_TAC [][] THEN 
   POP_ASSUM MATCH_MP_TAC THEN 
-  SRW_TAC [][LAM_eq_thm, tpm_fresh]);  
+  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, tpm_fresh] THEN 
+  Cases_on `x = "z"` THEN SRW_TAC [][lemma14b] THEN 
+  SRW_TAC [][GSYM fresh_tpm_subst, tpm_fresh]);
   
 
 val termrec_comb_def = Define`
@@ -539,6 +536,63 @@ val termrec_behaviour = store_thm(
                   |> Q.GEN `x`) THEN 
     ASM_SIMP_TAC (bsrw_ss()) [churchpairTheory.csnd_pair, fst_termrec_subs]
   ]);
+
+(* ---------------------------------------------------------------------- 
+    cis_abs - is a term an abstraction?
+   ---------------------------------------------------------------------- *)
+
+val cis_abs_def = Define`
+  cis_abs = 
+  LAM "t" (VAR "t" @@ (K @@ cB F) @@ (K @@ (K @@ cB F)) @@ (K @@ cB T))
+`;
+
+val FV_cis_abs = Store_thm(
+  "FV_cis_abs",
+  ``FV cis_abs = {}``,
+  SRW_TAC [][cis_abs_def])
+
+val FV_toTerm = Store_thm(
+  "FV_toTerm",
+  ``FV (toTerm d) = dFVs d``,
+  SIMP_TAC bool_ss [GSYM dFVs_fromTerm, fromtoTerm]);
+val is_abs_cis_abs = Store_thm(
+  "is_abs_cis_abs",
+  ``is_abs cis_abs``,
+  SRW_TAC [][cis_abs_def]);
+
+val cis_abs_behaviour = store_thm(
+  "cis_abs_behaviour",
+  ``cis_abs @@ cDB t -n->* cB (is_dABS t)``,
+  SIMP_TAC (bsrw_ss()) [cis_abs_def] THEN Cases_on `t` THEN 
+  SIMP_TAC (bsrw_ss()) [cDB_thm]); 
+
+(* ----------------------------------------------------------------------
+    cbnf - is a term in β-nf?
+   ---------------------------------------------------------------------- *)
+
+val cbnf_def = Define`
+  cbnf = 
+  termrec @@ (LAM "i" (cB T))
+          @@ (LAM "t1" (LAM "t2" (LAM "r1" (LAM "r2"
+                (cand @@ VAR "r1"
+                      @@ (cand @@ VAR "r2"
+                               @@ (cnot @@ (cis_abs @@ VAR "t1"))))))))
+          @@ (LAM "t" (LAM "r" (VAR "r")))
+`;
+
+val FV_cbnf = Store_thm(
+  "FV_cbnf",
+  ``FV cbnf = {}``,
+  SRW_TAC [][cbnf_def, EXTENSION]); 
+
+val cbnf_equiv = brackabs_equiv [] cbnf_def
+val cbnf_behaviour = store_thm(
+  "cbnf_behaviour",
+  ``cbnf @@ cDB t -n->* cB (dbnf t)``,
+  SIMP_TAC (bsrw_ss()) [cbnf_equiv] THEN 
+  Induct_on `t` THEN 
+  ASM_SIMP_TAC (bsrw_ss()) [termrec_behaviour, cand_behaviour, 
+                            cis_abs_behaviour, cnot_behaviour]);
   
 (* ---------------------------------------------------------------------- 
     cichurch 

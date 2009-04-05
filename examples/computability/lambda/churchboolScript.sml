@@ -66,6 +66,10 @@ val bnf_cand = Store_thm(
   "bnf_cand",
   ``bnf cand``,
   SRW_TAC [][cand_def]);
+val is_abs_cand = Store_thm(
+  "is_abs_cand",
+  ``is_abs cand``,
+  SRW_TAC [][cand_def]); 
 val cand_behaviour = store_thm(
   "cand_behaviour",
   ``cand @@ cB p @@ cB q -n->* cB (p /\ q)``,

@@ -101,6 +101,11 @@ val bnf_csnd = Store_thm(
   ``bnf csnd``,
   SRW_TAC [][csnd_def]);
 
+val is_abs_cfstsnd = Store_thm(
+  "is_abs_cfstsnd",
+  ``is_abs csnd ∧ is_abs cfst``,
+  SRW_TAC [][cfst_def, csnd_def]);
+
 val cfst_pair = store_thm(
   "cfst_pair",
   ``cfst @@ (cpair @@ M @@ N) -n->* M``,
