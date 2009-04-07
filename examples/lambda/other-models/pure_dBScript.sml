@@ -584,6 +584,15 @@ val sub_nsub = store_thm(
     SRW_TAC [ARITH_ss][]
   ]);
 
+val sub_nsub15a = store_thm(
+  "sub_nsub15a",
+  ``!d2 d1 i j. i + 1 NOTIN dFV d2 /\ j <= i ==> 
+                (sub d1 i (nsub (dV i) j d2) = nsub d1 j d2)``,
+  Induct THEN SRW_TAC [][] THENL [
+    FULL_SIMP_TAC (srw_ss()) [],
+    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [],
+    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []
+  ]);
 
 (* Nipkow's definition of beta reduction *)
 val (dbeta_rules, dbeta_ind, dbeta_cases) = Hol_reln`
