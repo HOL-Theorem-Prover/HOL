@@ -7,7 +7,8 @@ structure whileScript =
 struct
 
 open HolKernel boolLib Parse Prim_rec simpLib boolSimps metisLib 
-     combinTheory prim_recTheory arithmeticTheory BasicProvers;
+     combinTheory prim_recTheory arithmeticTheory BasicProvers
+     optionTheory
 
 val _ = new_theory "while";
 
@@ -206,6 +207,125 @@ val LEAST_EXISTS_IMP = store_thm
   ("LEAST_EXISTS_IMP",
    ``!p. (?n. p n) ==> (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)``,
    REWRITE_TAC [LEAST_EXISTS]);
+
+(* ----------------------------------------------------------------------
+    OWHILE ("option while") which returns SOME result if the loop 
+    terminates, NONE otherwise.  
+   ---------------------------------------------------------------------- *)
+
+
+val OWHILE_def = new_definition(
+  "OWHILE_def",
+  ``OWHILE G f s = if ?n. ~ G (FUNPOW f n s) then 
+                     SOME (FUNPOW f (LEAST n. ~ G (FUNPOW f n s)) s)
+                   else NONE``)
+
+fun LEAST_ELIM_TAC (asl, w) = let
+  val least_terms = find_terms (fn t => total rator t = SOME ``(LEAST)``) w
+  val tbc = TRY_CONV BETA_CONV
+  fun doit t =
+    if free_in t w then
+      CONV_TAC (UNBETA_CONV t) THEN
+      MATCH_MP_TAC LEAST_ELIM THEN
+      CONV_TAC
+        (FORK_CONV
+           (BINDER_CONV tbc, (* ?n. P n *)
+            BINDER_CONV      (* !n. (!m. m < n ==> ~P m) /\ P n ==> Q n *)
+              (FORK_CONV
+                 (FORK_CONV
+                    (BINDER_CONV (RAND_CONV (RAND_CONV tbc)), (* !m.... *)
+                     tbc), (* P n *)
+                    tbc))))
+    else NO_TAC
+in
+  FIRST (map doit least_terms)
+end (asl, w)
+
+
+val OWHILE_THM = store_thm(
+  "OWHILE_THM",
+  ``OWHILE G f (s:'a) = if G s then OWHILE G f (f s) else SOME s``,
+  SIMP_TAC (srw_ss()) [OWHILE_def] THEN
+  ASM_CASES_TAC ``(G:'a ->bool) s`` THENL [
+    ASM_REWRITE_TAC [] THEN 
+    ASM_CASES_TAC ``?n. ~ (G:'a->bool) (FUNPOW f n s)`` THENL [
+      ASM_REWRITE_TAC [] THEN 
+      FULL_SIMP_TAC (srw_ss()) [] THEN 
+      Q.SUBGOAL_THEN `~(n = 0)` ASSUME_TAC THEN1
+        (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN 
+      Q.SUBGOAL_THEN `?m. n = SUC m` STRIP_ASSUME_TAC THEN1
+        (Q.SPEC_THEN `n` FULL_STRUCT_CASES_TAC num_CASES THEN 
+         FULL_SIMP_TAC (srw_ss()) []) THEN 
+      Q.SUBGOAL_THEN `?n. ~G(FUNPOW f n (f s))` ASSUME_TAC THEN1
+        (Q.EXISTS_TAC `m` THEN FULL_SIMP_TAC (srw_ss()) [FUNPOW]) THEN 
+      POP_ASSUM (fn th => REWRITE_TAC [th]) THEN 
+      SRW_TAC [][] THEN 
+      LEAST_ELIM_TAC THEN FULL_SIMP_TAC (srw_ss()) [FUNPOW] THEN CONJ_TAC THEN1
+        METIS_TAC [] THEN 
+      Q.X_GEN_TAC `N` THEN STRIP_TAC THEN 
+      LEAST_ELIM_TAC THEN CONJ_TAC THEN1
+        (Q.EXISTS_TAC `SUC N` THEN SRW_TAC [][FUNPOW]) THEN 
+      REWRITE_TAC [] THEN 
+      Q.X_GEN_TAC `M` THEN STRIP_TAC THEN 
+      Q_TAC SUFF_TAC `M = SUC N` THEN1 SIMP_TAC (srw_ss()) [FUNPOW] THEN 
+      Q.SPECL_THEN [`M`, `SUC N`] STRIP_ASSUME_TAC LESS_LESS_CASES THENL [
+        (* M < SUC N *)
+        Q.SUBGOAL_THEN `(M = 0) \/ (?M0. M = SUC M0)` STRIP_ASSUME_TAC THEN1
+          METIS_TAC [num_CASES] THEN
+        FULL_SIMP_TAC (srw_ss()) [LESS_MONO_EQ, FUNPOW] THEN 
+        METIS_TAC [],
+        (* SUC N < M *)
+        RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [FUNPOW]
+      ],
+
+      FULL_SIMP_TAC (srw_ss()) [] THEN 
+      POP_ASSUM (Q.SPEC_THEN `SUC n` (ASSUME_TAC o Q.GEN `n`)) THEN 
+      FULL_SIMP_TAC (srw_ss()) [FUNPOW]
+    ],
+
+    ASM_REWRITE_TAC [] THEN 
+    Q.SUBGOAL_THEN `?n. ~G(FUNPOW f n s)` ASSUME_TAC THEN1
+      (Q.EXISTS_TAC `0` THEN SRW_TAC [][]) THEN 
+    ASM_REWRITE_TAC [optionTheory.SOME_11] THEN 
+    LEAST_ELIM_TAC THEN ASM_REWRITE_TAC [] THEN 
+    Q.X_GEN_TAC `N` THEN STRIP_TAC THEN 
+    Q_TAC SUFF_TAC `N = 0` THEN1 SRW_TAC [][] THEN 
+    FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN 
+    ASM_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [NOT_ZERO_LT_ZERO]
+  ]);
+
+val OWHILE_EQ_NONE = store_thm(
+  "OWHILE_EQ_NONE",
+  ``(OWHILE G f (s:'a) = NONE) <=> !n. G (FUNPOW f n s)``,
+  SRW_TAC [][OWHILE_def] THEN FULL_SIMP_TAC (srw_ss()) []);
+
+val OWHILE_ENDCOND = store_thm(
+  "OWHILE_ENDCOND",
+  ``(OWHILE G f (s:'a) = SOME s') ==> ~G s'``,
+  SRW_TAC [][OWHILE_def] THEN LEAST_ELIM_TAC THEN METIS_TAC []);
+
+val OWHILE_WHILE = store_thm(
+  "OWHILE_WHILE",
+  ``(OWHILE G f s = SOME s') ==> (WHILE G f s = s')``,
+  SIMP_TAC (srw_ss()) [OWHILE_def] THEN 
+  STRIP_TAC THEN 
+  Q.SUBGOAL_THEN `?n. ~G(FUNPOW f n s)` ASSUME_TAC THEN1  
+    (CCONTR_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN 
+  FULL_SIMP_TAC (srw_ss()) [] THEN 
+  SRW_TAC [][] THEN LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN 
+  REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC) THEN 
+  Q.X_GEN_TAC `n` THEN MAP_EVERY Q.ID_SPEC_TAC [`s`, `n`] THEN 
+  INDUCT_TAC THENL [
+    ONCE_REWRITE_TAC [WHILE] THEN SRW_TAC [][],
+    SRW_TAC [][FUNPOW] THEN 
+    ONCE_REWRITE_TAC [WHILE] THEN 
+    Q.SUBGOAL_THEN `G s` (fn th => REWRITE_TAC [th]) THEN1
+      (FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN 
+       SRW_TAC [][prim_recTheory.LESS_0]) THEN 
+    FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN 
+    FIRST_X_ASSUM (Q.SPEC_THEN `SUC m` MP_TAC) THEN 
+    SRW_TAC [][FUNPOW, LESS_MONO_EQ]
+  ]);
 
 val _ = 
  computeLib.add_persistent_funs
