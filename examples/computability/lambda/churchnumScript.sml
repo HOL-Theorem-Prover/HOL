@@ -205,6 +205,10 @@ val FV_cplus = Store_thm(
   "FV_cplus",
   ``FV cplus = {}``,
   SRW_TAC [][cplus_def, EXTENSION] THEN METIS_TAC []);
+val is_abs_cplus = Store_thm(
+  "is_abs_cplus",
+  ``is_abs cplus``,
+  SRW_TAC [][cplus_def]);
 
 val cplus_behaviour = store_thm(
   "cplus_behaviour",
@@ -247,6 +251,10 @@ val FV_cminus = Store_thm(
   "FV_cminus",
   ``FV cminus = {}``,
   SRW_TAC [][cminus_def, EXTENSION] THEN METIS_TAC []);
+val is_abs_cminus = Store_thm(
+  "is_abs_cminus",
+  ``is_abs cminus``,
+  SRW_TAC [][cminus_def]); 
 
 val cminus_behaviour = store_thm(
   "cminus_behaviour",
@@ -331,6 +339,10 @@ val FV_cless = Store_thm(
   "FV_cless",
   ``FV cless = {}``,
   SRW_TAC [][cless_def, EXTENSION] THEN METIS_TAC []);
+val is_abs_cless = Store_thm(
+  "is_abs_cless",
+  ``is_abs cless``,
+  SRW_TAC [][cless_def]);
 
 val cless_behaviour = store_thm(
   "cless_behaviour",

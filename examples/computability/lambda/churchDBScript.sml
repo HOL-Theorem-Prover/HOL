@@ -6,6 +6,7 @@ open HolKernel boolLib bossLib Parse binderLib
 
 open churchnumTheory churchboolTheory pure_dBTheory
 open reductionEval pred_setTheory termTheory chap3Theory
+open normal_orderTheory
 
 val _ = new_theory "churchDB"
 
@@ -182,6 +183,11 @@ val FV_cdAPP = Store_thm(
   ``FV cdAPP = {}``,
   SRW_TAC [][cdAPP_def, FV_EMPTY]);
 val bnf_cdAPP = Store_thm("bnf_cdAPP", ``bnf cdAPP``, SRW_TAC [][cdAPP_def])
+val is_abs_cdAPP = Store_thm(
+  "is_abs_cdAPP",
+  ``is_abs cdAPP``,
+  SRW_TAC [][cdAPP_def]);
+
 val cdAPP_behaviour = store_thm(
   "cdAPP_behaviour",
   ``cdAPP @@ cDB M @@ cDB N -n->* cDB (dAPP M N)``,
@@ -197,6 +203,10 @@ val FV_cdABS = Store_thm(
   ``FV cdABS = {}``,
   SRW_TAC [][cdABS_def, FV_EMPTY]);
 val bnf_cdABS = Store_thm("bnf_cdABS", ``bnf cdABS``, SRW_TAC [][cdABS_def])
+val is_abs_cdABS = Store_thm(
+  "is_abs_cdABS",
+  ``is_abs cdABS``,
+  SRW_TAC [][cdABS_def])
 val cdABS_behaviour = store_thm(
   "cdABS_behaviour",
   ``cdABS @@ cDB M -n->* cDB (dABS M)``,
@@ -228,6 +238,10 @@ val FV_clift = Store_thm(
   "FV_clift",
   ``FV clift = {}``,
   SRW_TAC [][clift_def, FV_EMPTY]);
+val is_abs_clift = Store_thm(
+  "is_abs_clift",
+  ``is_abs clift``,
+  SRW_TAC [][clift_def]);
 
 val clift_behaviour = store_thm(
   "clift_behaviour",  
@@ -302,10 +316,9 @@ val cdLAM_behaviour = store_thm(
     term recursion operator, termrec
    ---------------------------------------------------------------------- *)
 
-val B_I = store_thm(
-  "B_I",
-  ``v ∉ FV M ∧ v ∈ FV N ∧ N ≠ VAR v ⇒ 
-      (LAM v (M @@ N) == B @@ M @@ (LAM v N))``,
+val B_I_uncond = store_thm(
+  "B_I_uncond",
+  ``v ∉ FV M ∧ v ∈ FV N ⇒ (LAM v (M @@ N) == B @@ M @@ (LAM v N))``,
   STRIP_TAC THEN 
   ASM_SIMP_TAC (bsrw_ss()) [chap2Theory.B_def] THEN 
   REWRITE_TAC [chap2Theory.S_def] THEN 
@@ -323,6 +336,12 @@ val B_I = store_thm(
   `∀x y. (x = y) ⇒ (x == y)` by SRW_TAC [][] THEN POP_ASSUM MATCH_MP_TAC THEN 
   SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, tpm_fresh, NOT_IN_SUB] THEN 
   SRW_TAC [][GSYM fresh_tpm_subst, tpm_flip_args]);
+
+val B_I = store_thm(
+  "B_I",
+  ``v ∉ FV M ∧ v ∈ FV N ∧ N ≠ VAR v ⇒ 
+      (LAM v (M @@ N) == B @@ M @@ (LAM v N))``,
+  METIS_TAC [B_I_uncond]);
 
 val C_I = store_thm(
   "C_I",
@@ -411,14 +430,18 @@ val eqn_elim = prove(
   ``(∀Y. X:term == Y ⇔ Z == Y) ⇒ X == Z``,
   METIS_TAC [chap2Theory.lam_eq_rules]);
 fun brackabs_equiv ths def = let 
-  val (l,r) = dest_eq (concl def)
-  val gv = genvar ``:term``
-  val t = ``^l == ^gv``
-  val th = SIMP_CONV (bsrw_ss()) 
-                     ([S_I, K_I, B_I, C_I, fake_eta, B_eta, I_I, def] @ ths)
-                     t
+  val lameq_t = ``chap2$==``
+  val th = if is_eq (concl def) then let 
+               val (l,r) = dest_eq (concl def)
+             in
+               EQ_MP (AP_TERM (mk_comb(lameq_t, l)) def)
+                     (SPEC l (GEN_ALL chap2Theory.lameq_refl))
+             end
+           else def
 in
-  MATCH_MP eqn_elim (GEN gv th) 
+  SIMP_RULE (bsrw_ss()) 
+            ([S_I, K_I, B_I, C_I, fake_eta, B_eta, I_I] @ ths)
+            th
 end
   
 val is_abs_cdV = Store_thm(
@@ -585,6 +608,7 @@ val FV_cbnf = Store_thm(
   ``FV cbnf = {}``,
   SRW_TAC [][cbnf_def, EXTENSION]); 
 
+
 val cbnf_equiv = brackabs_equiv [] cbnf_def
 val cbnf_behaviour = store_thm(
   "cbnf_behaviour",
@@ -593,6 +617,192 @@ val cbnf_behaviour = store_thm(
   Induct_on `t` THEN 
   ASM_SIMP_TAC (bsrw_ss()) [termrec_behaviour, cand_behaviour, 
                             cis_abs_behaviour, cnot_behaviour]);
+
+(* ---------------------------------------------------------------------- 
+    cnsub - the computable version of nsub, which has defining equations 
+       (nsub s k (dV i) = if k < i then dV (i - 1)
+                          else if i = k then s else dV i) /\
+       (nsub s k (dAPP t u) = dAPP (nsub s k t) (nsub s k u)) /\
+       (nsub s k (dABS t) = dABS (nsub (lift s 0) (k + 1) t))
+   ---------------------------------------------------------------------- *)
+
+val cnsub_def = Define`
+  cnsub = 
+  LAM "s" (LAM "k" (LAM "t" 
+   (VAR "t" 
+        @@ (LAM "i" (LAM "s" (LAM "k"
+              (cless @@ VAR "k" @@ VAR "i"  (* if k < i *)
+                     @@ (cdV @@ (cminus @@ VAR "i" @@ church 1)) (* then *)
+                     @@ (ceqnat @@ VAR "i" @@ VAR "k" (* if i = k *)
+                                @@ VAR "s" 
+                                @@ (cdV @@ VAR "i"))))))
+        @@ (LAM "r1" (LAM "r2" (LAM "s" (LAM "k"
+              (cdAPP @@ (VAR "r1" @@ VAR "s" @@ VAR "k")
+                     @@ (VAR "r2" @@ VAR "s" @@ VAR "k"))))))
+        @@ (LAM "r" (LAM "s" (LAM "k"
+              (cdABS @@ (VAR "r" 
+                             @@ (clift @@ VAR "s" @@ church 0)
+                             @@ (cplus @@ VAR "k" @@ church 1))))))
+        @@ VAR "s" @@ VAR "k")))
+`;
+
+val FV_cnsub = Store_thm(
+  "FV_cnsub",
+  ``FV cnsub = {}``,
+  SRW_TAC [][cnsub_def, EXTENSION]);
+val is_abs_cnsub = Store_thm(
+  "is_abs_cnsub",
+  ``is_abs cnsub``,
+  SRW_TAC [][cnsub_def]);
+
+val Ccless_eta = prove(
+  ``LAM x (C @@ cless @@ VAR x) == C @@ cless``,
+  SIMP_TAC (bsrw_ss()) [chap2Theory.C_def] THEN 
+  SIMP_TAC (bsrw_ss()) [chap2Theory.B_def] THEN 
+  CONV_TAC (RAND_CONV (SIMP_CONV (bsrw_ss()) [Once chap2Theory.S_def])) THEN 
+  SIMP_TAC (bsrw_ss()) [] THEN 
+  `∀x y. (x = y) ⇒ (x == y)` by SRW_TAC [][] THEN 
+  POP_ASSUM MATCH_MP_TAC THEN 
+  SRW_TAC [][LAM_eq_thm, tpm_fresh]);
+
+val cnsub_equiv0 = brackabs_equiv [Ccless_eta] cnsub_def
+val cnsub_equiv = brackabs_equiv [B_I_uncond] cnsub_equiv0
+
+val cnsub_behaviour = store_thm(
+  "cnsub_behaviour",
+  ``∀u i t. cnsub @@ cDB t @@ church i @@ cDB u -n->* cDB (nsub t i u)``,
+  SIMP_TAC (bsrw_ss()) [cnsub_equiv] THEN 
+  Induct THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cDB_thm, cminus_behaviour, cdV_behaviour, 
+                            cless_behaviour, ceqnat_behaviour, 
+                            cdAPP_behaviour, clift_behaviour, 
+                            cplus_behaviour, cdABS_behaviour] THEN 
+  SRW_TAC [][] THEN ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour]);
+
+(* ---------------------------------------------------------------------- 
+    norm_reduct - get the normal order reduct, if there is one. 
+                  If there isn't, just return something unspecified.
+
+      (noreduct (LAM v M) = OPTION_MAP (LAM v) (noreduct M)) ∧
+      (noreduct (LAM v M @@ N) = SOME ([N/v]M)) ∧
+      (¬is_abs M ⇒ (noreduct (M @@ N) =
+                    if bnf M then OPTION_MAP ((@@) M) (noreduct N)
+                    else OPTION_MAP (λM'. M' @@ N) (noreduct M))) ∧
+      (noreduct (VAR s) = NONE)
+    
+    We can ignore all the option_map cruft.
+   ---------------------------------------------------------------------- *)
+
+val cnoreduct_def = Define`
+  cnoreduct = 
+  termrec 
+    @@ (LAM "i" (cdV @@ VAR "i"))
+    @@ (LAM "t0" (LAM "t1" (LAM "r0" (LAM "r1"
+          (cis_abs @@ VAR "t0"  (* if left term is abstraction *)
+                   @@ (cnsub @@ VAR "t1" 
+                             @@ church 0 
+                             @@ (termrec @@ I @@ I @@ K @@ VAR "t0"))
+                   @@ (cbnf @@ VAR "t0" (* if left term is in bnf *)
+                            @@ (cdAPP @@ VAR "t0" @@ VAR "r1")
+                            @@ (cdAPP @@ VAR "r0" @@ VAR "t1")))))))
+    @@ (LAM "t0" (LAM "r" (cdABS @@ VAR "r")))
+`;
+
+val FV_cnoreduct = Store_thm(
+  "FV_cnoreduct",
+  ``FV cnoreduct = {}``,
+  SRW_TAC [][cnoreduct_def, EXTENSION]);
+
+val cnoreduct_equiv0 = brackabs_equiv [] cnoreduct_def
+val cnoreduct_equiv = brackabs_equiv [B_I_uncond] cnoreduct_equiv0
+
+val cnoreduct_behaviour = store_thm(
+  "cnoreduct_behaviour",
+  ``∀t. ¬bnf t ⇒
+           cnoreduct @@ cDB (fromTerm t) -n->* 
+           cDB (fromTerm (THE (noreduct t)))``,
+  SIMP_TAC (bsrw_ss()) [cnoreduct_equiv] THEN 
+  Q.MATCH_ABBREV_TAC 
+    `∀t. ¬bnf t ⇒ termrec @@ cdV @@ COMB @@ ABS @@ cDB (fromTerm t) ==
+                   cDB (fromTerm (THE (noreduct t)))` THEN 
+  completeInduct_on `size t` THEN Q.X_GEN_TAC `t` THEN 
+  FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [] THEN 
+  Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THENL [
+    SRW_TAC [][],
+    Cases_on `is_abs t1` THENL [
+      ASM_SIMP_TAC (bsrw_ss()) [termrec_behaviour, Abbr`COMB`, 
+                                cis_abs_behaviour, cB_behaviour] THEN 
+      `∃v t0. t1 = LAM v t0`
+         by (Q.SPEC_THEN `t1` FULL_STRUCT_CASES_TAC term_CASES THEN
+             FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC[]) THEN 
+      ASM_SIMP_TAC (bsrw_ss()) [dLAM_def, termrec_behaviour, 
+                                cnsub_behaviour, GSYM sub_nsub, 
+                                noreduct_thm, 
+                                GSYM fromTerm_subst],
+
+      Cases_on `bnf t1` THEN
+      ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss) 
+                   [termrec_behaviour, Abbr`COMB`, 
+                    cis_abs_behaviour, cB_behaviour, 
+                    cbnf_behaviour, cdAPP_behaviour, 
+                    noreduct_thm] 
+      THENL [
+        Cases_on `noreduct t2` THEN 
+        FULL_SIMP_TAC (srw_ss()) [noreduct_bnf],
+        Cases_on `noreduct t1` THEN 
+        FULL_SIMP_TAC (srw_ss()) [noreduct_bnf]
+      ]
+    ],
+
+    ASM_SIMP_TAC (bsrw_ss()) [Abbr`ABS`, termrec_behaviour, dLAM_def] THEN 
+    Q.RM_ABBREV_TAC `COMB` THEN 
+    Q.MATCH_ABBREV_TAC `(v = size t0 + 1) ⇒ 
+                        ¬bnf t0 ⇒ 
+                        cdABS @@ (termrec @@ cdV @@ COMB @@ (K @@ cdABS) 
+                                          @@ cDB XX) ==
+                        cDB (fromTerm (THE (noreduct (LAM u t0))))` THEN 
+    Q.ABBREV_TAC 
+      `YY = [VAR (n2s 0)/n2s (s2n u + 1)] (toTerm (lift (fromTerm t0) 0))` THEN
+    `XX = fromTerm YY` by SRW_TAC [][fromTerm_subst, Abbr`XX`, Abbr`YY`] THEN 
+    REPEAT STRIP_TAC THEN 
+    Q.ABBREV_TAC `MX = if dFV (fromTerm t0) = {} then 0 
+                       else MAX_SET (dFV (fromTerm t0))` THEN 
+    `∀i. i ∈ dFV (fromTerm t0) ⇒ i ≤ MX`
+       by SRW_TAC [][Abbr`MX`, MAX_SET_DEF] THEN 
+    Q.ABBREV_TAC `π = lifting_pm 0 MX` THEN 
+    `lift (fromTerm t0) 0 = dpm π (fromTerm t0)`
+       by SRW_TAC [][lifts_are_specific_dpms, Abbr`π`] THEN 
+    `_ = fromTerm (tpm π t0)` by METIS_TAC [fromTerm_swap_invariant] THEN 
+    `YY = [VAR (n2s 0)/n2s (s2n u + 1)] (tpm π t0)`
+        by METIS_TAC [tofromTerm] THEN 
+    `size YY = size t0` by SRW_TAC [][] THEN 
+    `¬bnf YY` by SRW_TAC [][] THEN 
+    `size YY < v` by DECIDE_TAC THEN 
+    Q.PAT_ASSUM `YY = ZZZ` (ASSUME_TAC o SYM) THEN 
+    ASM_SIMP_TAC (bsrw_ss()) [cdABS_behaviour, 
+                              noreduct_thm] THEN 
+    `(noreduct t0 = NONE) ∨ (∃tt. noreduct t0 = SOME tt)`
+       by (Cases_on `noreduct t0` THEN SRW_TAC [][]) THEN1
+      FULL_SIMP_TAC (srw_ss()) [noreduct_bnf] THEN 
+    ASM_SIMP_TAC (srw_ss()) [dLAM_def] THEN 
+    SRW_TAC [][noreduct_vsubst, noreduct_tpm, fromTerm_subst] THEN 
+    REWRITE_TAC [GSYM fromTerm_swap_invariant] THEN 
+    `∀i. i ∈ dFV (fromTerm tt) ⇒ i ∈ dFV (fromTerm t0)`
+       by (`t0 -n-> tt` by METIS_TAC [noreduct_characterisation] THEN 
+           `t0 -β-> tt` by IMP_RES_TAC normorder_ccbeta THEN 
+           `FV tt ⊆ FV t0` by IMP_RES_TAC chap3Theory.cc_beta_FV_SUBSET THEN 
+           `∀v. v ∈ FV tt ⇒ v ∈ FV t0` by METIS_TAC [SUBSET_DEF] THEN 
+           `∀v. v ∈ dFVs (fromTerm tt) ⇒ v ∈ dFVs (fromTerm t0)`
+              by SRW_TAC [][dFVs_fromTerm] THEN 
+           SRW_TAC [][IN_dFV]) THEN 
+    `∀i. i ∈ dFV (fromTerm tt) ⇒ i ≤ MX` by METIS_TAC [] THEN 
+    `lift (fromTerm tt) 0 = dpm π (fromTerm tt)`
+      by SRW_TAC [][lifts_are_specific_dpms, Abbr`π`] THEN 
+    SRW_TAC [][fromTerm_swap_invariant]
+  ]);
+      
+val cnoreduct_behaviour' = 
+    SIMP_RULE (srw_ss()) [] (SPEC ``toTerm d`` cnoreduct_behaviour)
   
 (* ---------------------------------------------------------------------- 
     cichurch 
