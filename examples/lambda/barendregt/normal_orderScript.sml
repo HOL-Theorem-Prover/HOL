@@ -441,6 +441,52 @@ val noreduct_bnf = store_thm(
   ``(noreduct M = NONE) = bnf M``,
   SRW_TAC [][noreduct_def]);
 
+
+val noreduct_vsubst = store_thm(
+  "noreduct_vsubst",
+  ``∀t. noreduct ([VAR v/u] t) = OPTION_MAP (SUB (VAR v) u) (noreduct t)``,
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN 
+  SRW_TAC [][noreduct_thm, SUB_VAR] THENL [
+    Cases_on `is_abs t` THENL [
+      `∃z t0. (t = LAM z t0) ∧ z ≠ u ∧ z ≠ v`
+         by (Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN 
+             FULL_SIMP_TAC (srw_ss()) [] THEN 
+             SRW_TAC [boolSimps.DNF_ss][LAM_eq_thm, tpm_eqr] THEN 
+             DISJ2_TAC THEN 
+             Q_TAC (NEW_TAC "z") `{v';u;v} ∪ FV t0` THEN METIS_TAC []) THEN
+      SRW_TAC [][noreduct_thm] THEN 
+      SRW_TAC [][GSYM chap2Theory.substitution_lemma],
+
+      SRW_TAC [][noreduct_thm] THENL [
+        Cases_on `noreduct t'` THEN SRW_TAC [][],
+        Cases_on `noreduct t` THEN SRW_TAC [][]
+      ]
+    ],
+
+    Cases_on `noreduct t` THEN SRW_TAC [][]
+  ]);
+
+val noreduct_tpm = store_thm(
+  "noreduct_tpm",
+  ``∀t. noreduct (tpm π t) = OPTION_MAP (tpm π) (noreduct t)``,
+  HO_MATCH_MP_TAC simple_induction THEN 
+  SRW_TAC [][noreduct_thm] THENL [
+    Cases_on `is_abs t` THENL [
+      `∃z t0. t = LAM z t0`
+         by (Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN 
+             FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []) THEN 
+      SRW_TAC [][noreduct_thm, tpm_subst],
+
+      SRW_TAC [][noreduct_thm] THENL [
+        Cases_on `noreduct t'` THEN SRW_TAC [][],
+        Cases_on `noreduct t` THEN SRW_TAC [][]
+      ]
+    ],
+
+    Cases_on `noreduct t` THEN SRW_TAC [][]
+  ]);
+
+
 val noredAPP' = store_thm(
   "noredAPP'",
   ``~is_abs M ==> (noreduct (M @@ N) =
