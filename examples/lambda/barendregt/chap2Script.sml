@@ -91,7 +91,7 @@ val (lam_eq_rules, lam_eq_indn, lam_eq_cases) = (* p. 13 *)
            (!M N x. M == N ==> LAM x M == LAM x N)`;
 
 val lameq_refl = Store_thm(
-  "lameq_refl",  
+  "lameq_refl",
   ``M:term == M``,
   SRW_TAC [][lam_eq_rules]);
 
@@ -142,7 +142,7 @@ val substitution_lemma = save_thm("substitution_lemma", lemma2_11);
 
 val NOT_IN_FV_SUB = store_thm(
   "NOT_IN_FV_SUB",
-  ``!x t u v. x NOTIN FV u /\ (x <> v ==> x NOTIN FV t) ==> 
+  ``!x t u v. x NOTIN FV u /\ (x <> v ==> x NOTIN FV t) ==>
               x NOTIN FV ([t/v]u)``,
   SRW_TAC [][FV_SUB] THEN METIS_TAC []);
 
@@ -170,7 +170,7 @@ val lemma2_12 = store_thm( (* p. 19 *)
   ]);
 
 val lameq_sub_cong = save_thm(
-  "lameq_sub_cong", 
+  "lameq_sub_cong",
   REWRITE_RULE [GSYM AND_IMP_INTRO] (last (CONJUNCTS lemma2_12)));
 
 val lemma2_13 = store_thm( (* p.20 *)
@@ -246,14 +246,14 @@ val S_def =
                                      ((VAR "x" @@ VAR "z") @@
                                       (VAR "y" @@ VAR "z"))))`;
 val FV_S = Store_thm(
-  "FV_S", 
+  "FV_S",
   ``FV S = {}``,
   SRW_TAC [][S_def, EXTENSION] THEN METIS_TAC []);
 
 val K_def = Define`K = LAM "x" (LAM "y" (VAR "x"))`;
 val FV_K = Store_thm(
-  "FV_K", 
-  ``FV K = {}``, 
+  "FV_K",
+  ``FV K = {}``,
   SRW_TAC [][K_def, EXTENSION])
 
 val I_def = Define`I = LAM "x" (VAR "x")`;
@@ -275,7 +275,7 @@ val SUB_LAM_RWT = store_thm(
                  in
                    LAM n ([x/y]([VAR n/v] body))``,
   SIMP_TAC std_ss [] THEN REPEAT GEN_TAC THEN
-  NEW_ELIM_TAC THEN Q.X_GEN_TAC `z` THEN STRIP_TAC THEN 
+  NEW_ELIM_TAC THEN Q.X_GEN_TAC `z` THEN STRIP_TAC THEN
   `LAM v body = LAM z ([VAR z/v] body)` by SRW_TAC [][SIMPLE_ALPHA] THEN
   SRW_TAC [][]);
 
@@ -284,15 +284,15 @@ val lameq_asmlam = store_thm(
   ``!M N. M == N ==> asmlam eqns M N``,
   HO_MATCH_MP_TAC lam_eq_indn THEN METIS_TAC [asmlam_rules]);
 
-fun betafy ss = 
-    simpLib.add_relsimp {refl = GEN_ALL lameq_refl, 
-                         trans = List.nth(CONJUNCTS lam_eq_rules, 3), 
-                         weakenings = [lameq_weaken_cong], 
-                         subsets = [], 
-                         rewrs = [hd (CONJUNCTS lam_eq_rules)]} ss ++ 
-    simpLib.SSFRAG {rewrs = [], 
+fun betafy ss =
+    simpLib.add_relsimp {refl = GEN_ALL lameq_refl,
+                         trans = List.nth(CONJUNCTS lam_eq_rules, 3),
+                         weakenings = [lameq_weaken_cong],
+                         subsets = [],
+                         rewrs = [hd (CONJUNCTS lam_eq_rules)]} ss ++
+    simpLib.SSFRAG {rewrs = [],
                     ac = [],  convs = [],
-                    congs = [lameq_app_cong, 
+                    congs = [lameq_app_cong,
                              SPEC_ALL (last (CONJUNCTS lam_eq_rules)),
                              lameq_sub_cong],
                     dprocs = [], filter = NONE, name = NONE}
@@ -300,13 +300,13 @@ fun betafy ss =
 val lameq_S = store_thm(
   "lameq_S",
   ``S @@ A @@ B @@ C == (A @@ C) @@ (B @@ C)``,
-  SIMP_TAC (srw_ss()) [S_def] THEN FRESH_TAC THEN 
+  SIMP_TAC (srw_ss()) [S_def] THEN FRESH_TAC THEN
   ASM_SIMP_TAC (betafy (srw_ss())) [lemma14b]);
 
 val lameq_K = store_thm(
   "lameq_K",
   ``K @@ A @@ B == A``,
-  REWRITE_TAC [K_def] THEN FRESH_TAC THEN 
+  REWRITE_TAC [K_def] THEN FRESH_TAC THEN
   ASM_SIMP_TAC (betafy (srw_ss())) [lemma14b]);
 
 val lameq_I = store_thm(
@@ -331,7 +331,7 @@ val C_def = Define`
 val FV_C = Store_thm(
   "FV_C",
   ``FV C = {}``,
-  SRW_TAC [][C_def]); 
+  SRW_TAC [][C_def]);
 
 val lameq_C = store_thm(
   "lameq_C",
@@ -350,11 +350,12 @@ val Yf1 = prove(
 val lameq_Y = store_thm(
   "lameq_Y",
   ``Y @@ f == f @@ (Y @@ f)``,
-  ASSUME_TAC (Q.GEN `X` 
-                ((SIMP_CONV (betafy(srw_ss())) [lameq_S, Y_def, lameq_C] THENC 
-                  SIMP_CONV (betafy(srw_ss())) [lameq_B] THENC 
-                  SIMP_CONV (betafy(srw_ss())) [lameq_S, lameq_I, Yf1])
-                 ``Y @@ f == X``)) THEN 
+  ASSUME_TAC (``Y @@ f == X``
+                |> SIMP_CONV (betafy(srw_ss())) [Ntimes lameq_S 2,
+                                                 Y_def, lameq_I,
+                                                 lameq_C, Once lameq_B]
+                |> SIMP_RULE (betafy(srw_ss())) [Yf1]
+                |> Q.GEN `X`) THEN
   ASM_SIMP_TAC (srw_ss()) []);
 
 val SK_incompatible = store_thm( (* example 2.18, p23 *)
@@ -475,7 +476,7 @@ val I_beta_normal = Store_thm(
   SRW_TAC [][I_def]);
 val K_beta_normal = Store_thm("K_beta_normal", ``bnf K``, SRW_TAC [][K_def]);
 val S_beta_normal = Store_thm("S_beta_normal", ``bnf S``, SRW_TAC [][S_def]);
-(* because I have defined them in terms of applications of S and K, C and B 
+(* because I have defined them in terms of applications of S and K, C and B
    are not in bnf *)
 
 val bnf_vsubst_invariant = Store_thm(
