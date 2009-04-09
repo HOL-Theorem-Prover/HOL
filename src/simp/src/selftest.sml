@@ -69,10 +69,30 @@ val (test4_flag, _) =
       ([``Abbrev (y:'b = f (x : 'a))``, ``P (y:'b) : bool``],
        ``Q (y:'b) : bool``)
 
+(* test that bounded rewrites get applied to both branches, and also that
+   the bound on the rewrite allows it to apply at all (normally it wouldn't)
+*)
+val goal5 = ``(x:'a = y) <=> (y = x)``
+val test5P =
+    infloop_protect
+        "Bounded rewrites branch, and bypass permutative loop check"
+        (fn (sgs, vf) => null sgs andalso let
+                           val th = vf []
+                         in
+                           aconv (concl th) goal5 andalso null (hyp th)
+                         end)
+        (fn g => (EQ_TAC THEN STRIP_TAC THEN
+                  SIMP_TAC boolSimps.bool_ss [Once EQ_SYM_EQ] THEN
+                  POP_ASSUM ACCEPT_TAC) g)
+        ([], goal5)
+
+val test5_flag = #1 test5P
+
 (* ---------------------------------------------------------------------- *)
 
 val _ = Process.exit
-          (if List.all I [test1_flag, test2_flag, test3_flag, test4_flag] then
+          (if List.all I [test1_flag, test2_flag, test3_flag, test4_flag,
+                          test5_flag] then
              Process.success
            else
              Process.failure);
