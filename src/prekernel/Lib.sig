@@ -9,6 +9,7 @@ sig
   val pair          : 'a -> 'b -> 'a * 'b
   val cons          : 'a -> 'a list -> 'a list
   val ##            : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
+  val |>            : 'a * ('a -> 'b) -> 'b
   val C             : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
   val I             : 'a -> 'a
   val K             : 'a -> 'b -> 'a
@@ -54,7 +55,7 @@ sig
   val flatten       : 'a list list -> 'a list
   val pluck         : ('a -> bool) -> 'a list -> 'a * 'a list
   val trypluck      : ('a -> 'b) -> 'a list -> 'b * 'a list
-  val trypluck'     : ('a -> 'b option) -> 'a list -> ('b option * 'a list) 
+  val trypluck'     : ('a -> 'b option) -> 'a list -> ('b option * 'a list)
   val enumerate     : int -> 'a list -> (int * 'a) list
   val upto          : int -> int -> int list
   val repeat        : ('a -> 'a) -> 'a -> 'a
