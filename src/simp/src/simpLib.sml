@@ -303,8 +303,11 @@ in
             case total dest_binop (concl th) of
               SOME (R,from,to) => let
                 fun foldthis (t,th) = DISCH t th
-                fun insert (t,th) n =
-                    Net.insert (t, List.foldl foldthis th asms) n
+                fun insert (t,th0) n = let
+                  val (bound,th) = dest_tagged_rewrite th0
+                in
+                  Net.insert (t, (bound, List.foldl foldthis th asms)) n
+                end
               in
                 if aconv R base then
                   munge asms (ths :: rest, insert (from,th) n)
@@ -324,7 +327,7 @@ end
 fun po_rel (Travrules.PREORDER(r,_,_)) = r
 
 fun mk_reducer rel_t subsets initial_rewrites = let
-  exception redExn of thm Net.net
+  exception redExn of (control * thm) Net.net
   fun munge_subset_th th = let
     val (_, impn) = strip_forall (concl th)
     val (a, _) = dest_imp impn
@@ -342,7 +345,13 @@ fun mk_reducer rel_t subsets initial_rewrites = let
     redExn n'
   end
   val initial_ctxt = addcontext (redExn Net.empty, initial_rewrites)
-  fun applythm solver t th = let
+  fun applythm solver t (bound, th) = let
+    fun dec() = case bound of
+                  BOUNDED (r as ref n) =>
+                    if n > 0 then r := n - 1
+                    else raise ERR ("mk_reducer.applythm",
+                                    "Bound exceeded on rwt.")
+                | UNBOUNDED => ()
     val matched = PART_MATCH (lhand o #2 o strip_imp) th t
     open Trace
     fun do_sideconds th =
@@ -354,7 +363,7 @@ fun mk_reducer rel_t subsets initial_rewrites = let
         in
           do_sideconds (MP th scond)
         end
-      else (trace(2,REWRITING(t,th)); th)
+      else (dec(); trace(2,REWRITING(t,th)); th)
   in
     do_sideconds matched
   end
