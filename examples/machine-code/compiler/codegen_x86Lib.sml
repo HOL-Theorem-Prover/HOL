@@ -182,5 +182,7 @@ fun x86_encode_branch forward l cond =
   val (ys,j) = x86_encode_branch_aux forward l NONE
   in (xs ^ " " ^ ys, i + j) end
 
+fun x86_branch_to_string NONE = "jmp"
+  | x86_branch_to_string (SOME c) = "j" ^ c 
 
 end;

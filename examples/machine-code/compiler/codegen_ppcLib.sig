@@ -12,6 +12,7 @@ sig
 
   val ppc_encode_instruction   : string -> string * int
   val ppc_encode_branch        : bool -> int -> string option -> string * int
+  val ppc_branch_to_string     : string option -> string
 
   val set_ppc_temp_reg         : int -> unit
   val get_ppc_temp_reg         : unit -> int

@@ -2,7 +2,7 @@ structure helperLib :> helperLib =
 struct
  
 open HolKernel boolLib bossLib;
-open wordsLib stringLib addressTheory set_sepTheory progTheory;
+open wordsLib stringLib addressTheory set_sepTheory progTheory wordsTheory;
 
 type decompiler_tools =
   (* ( derive spec, generate branch, status thm, program counter term ) *)
@@ -296,6 +296,17 @@ fun A_MATCH_MP th1 th2 =
   (UNDISCH_ALL o PURE_REWRITE_RULE [GSYM AND_IMP_INTRO,AND_CLAUSES]) 
   (MATCH_MP (MATCH_MP INC_ASSUM (SPEC_ALL th1)) (DISCH_ALL_AS_SINGLE_IMP th2));
 
+val HIDE_POST1 = (SPEC_ALL SPEC_HIDE_POST);
+val HIDE_POST2 = (SPEC_ALL 
+  (RW [SEP_CLAUSES] (Q.SPECL [`x`,`p`,`c`,`emp`] SPEC_HIDE_POST)));
+
+fun HIDE_POST_RULE tm th = let
+  val th = CONV_RULE (POST_CONV (MOVE_OUT_CONV tm THENC REWRITE_CONV [STAR_ASSOC])) th  
+  val (_,_,_,q) = dest_spec (concl th)
+  val v = fst (dest_comb (snd (dest_star q) handle e => q))
+  val _ = if v = tm then v else hd []
+  in A_MATCH_MP HIDE_POST1 th handle e => A_MATCH_MP HIDE_POST2 th end;
+
 val HIDE_PRE1 = (MATCH_MP EQ_IMP_IMP (SPEC_ALL SPEC_HIDE_PRE));
 val HIDE_PRE2 = (MATCH_MP EQ_IMP_IMP 
   (SPEC_ALL (RW [SEP_CLAUSES] (Q.SPECL [`x`,`emp`] SPEC_HIDE_PRE))));
@@ -306,7 +317,17 @@ fun HIDE_PRE_RULE tm th = let
   val (_,p,_,_) = dest_spec (concl th)
   val v = snd (dest_comb (snd (dest_star p) handle e => p))
   val th = GEN v th 
-  in A_MATCH_MP HIDE_PRE1 th handle e => A_MATCH_MP HIDE_PRE2 th end;
+  in A_MATCH_MP HIDE_PRE1 th handle e => A_MATCH_MP HIDE_PRE2 th end
+  handle e => let 
+  val (_,p,_,q) = dest_spec (concl th)
+  val xs = list_dest dest_star p
+  val xs = map (dest_comb) (filter (can car) xs)
+  val v = (snd o hd o filter (fn x => fst x = tm)) xs
+  val ys = list_dest dest_star q
+  val ys = map (dest_comb) (filter (can car) ys)
+  val zs = map fst (filter (fn x => snd x = v) ys)
+  val th = foldr (uncurry HIDE_POST_RULE) th zs
+  in HIDE_PRE_RULE tm th end;
 
 val UNHIDE_PRE1 = (MATCH_MP EQ_IMP_IMP (SPEC_ALL (GSYM SPEC_HIDE_PRE)));
 val UNHIDE_PRE2 = (MATCH_MP EQ_IMP_IMP 
@@ -318,17 +339,6 @@ fun UNHIDE_PRE_RULE tm th = let
   val th = (A_MATCH_MP UNHIDE_PRE1 th handle e => A_MATCH_MP UNHIDE_PRE2 th)
   val th = SPEC (cdr tm) th
   in th end;
-
-val HIDE_POST1 = (SPEC_ALL SPEC_HIDE_POST);
-val HIDE_POST2 = (SPEC_ALL 
-  (RW [SEP_CLAUSES] (Q.SPECL [`x`,`p`,`c`,`emp`] SPEC_HIDE_POST)));
-
-fun HIDE_POST_RULE tm th = let
-  val th = CONV_RULE (POST_CONV (MOVE_OUT_CONV tm THENC REWRITE_CONV [STAR_ASSOC])) th  
-  val (_,_,_,q) = dest_spec (concl th)
-  val v = fst (dest_comb (snd (dest_star q) handle e => q))
-  val _ = if v = tm then v else hd []
-  in A_MATCH_MP HIDE_POST1 th handle e => A_MATCH_MP HIDE_POST2 th end;
 
 fun get_model_status_list th = 
   (map dest_sep_hide o list_dest dest_star o snd o dest_eq o concl) th handle e => []
@@ -365,6 +375,17 @@ fun HIDE_PRE_STATUS_RULE hide_th th = HIDE_STATUS_RULE false hide_th th
 
 
 (* tactics *)
+
+val ALIGNED_TAC = let 
+  val ALIGNED_CONV = 
+    ONCE_REWRITE_CONV [ALIGNED_MOD_4] THENC
+    SIMP_CONV std_ss [WORD_ADD_0,WORD_SUB_RZERO]
+  val ALIGNED_convdata = {name = "ALIGNED_CONV",
+    trace = 2, key = SOME ([],``ALIGNED a``),
+    conv = K (K ALIGNED_CONV)}:simpfrag.convdata
+  val ALIGNED_ss = simpLib.conv_ss ALIGNED_convdata
+  in FULL_SIMP_TAC std_ss [ALIGNED_ADD_EQ,ALIGNED_ADDR32,ALIGNED_n2w]
+     THEN FULL_SIMP_TAC (bool_ss++ALIGNED_ss) [ALIGNED_INTRO] end;
 
 val SEP_READ_TAC = let
   fun aux (hs,gs) = let

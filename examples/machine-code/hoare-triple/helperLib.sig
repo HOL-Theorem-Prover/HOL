@@ -75,6 +75,7 @@ sig
 
     val MATCH_INST             : thm -> term -> thm
 
+    val ALIGNED_TAC            : tactic
     val SEP_READ_TAC           : tactic
     val SEP_WRITE_TAC          : tactic
     val SEP_NEQ_TAC            : tactic

@@ -385,7 +385,7 @@ val symbol_tabel_11 = prove(
      \\ METIS_TAC [WORD_LOWER_EQ_ANTISYM])
   \\ METIS_TAC [IN_DELETE,PAIR_EQ]);
 
-val symbol_table_MEM = prove(
+val symbol_table_MEM = store_thm("symbol_table_MEM",
   ``!xs a sym. symbol_table xs sym (a,dm,m,dg,g) /\ (b,x) IN sym ==> 
                MEM x xs``,
   Induct THEN1 SIMP_TAC std_ss [symbol_table_def,NOT_IN_EMPTY,LET_DEF]

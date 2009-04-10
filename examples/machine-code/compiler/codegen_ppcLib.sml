@@ -120,4 +120,7 @@ fun ppc_encode_branch forward l cond = let
                         else asm cond ^ " -" ^ int_to_string l
   in ppc_encode_instruction code end 
 
+fun ppc_branch_to_string NONE = "b"
+  | ppc_branch_to_string (SOME c) = "b" ^ c 
+
 end;

@@ -127,5 +127,7 @@ fun arm_encode_branch forward l cond = let
                         else asm cond ^ " -" ^ int_to_string l
   in arm_encode_instruction code end 
 
+fun arm_branch_to_string NONE = "b"
+  | arm_branch_to_string (SOME c) = "b" ^ c 
 
 end;

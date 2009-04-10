@@ -9,9 +9,9 @@ open codegen_inputLib helperLib;
 open codegen_armLib codegen_x86Lib codegen_ppcLib;
 
 fun assembler_tools target = 
-  if target = "arm" then (arm_encode_instruction, arm_encode_branch) else 
-  if target = "x86" then (x86_encode_instruction, x86_encode_branch) else 
-  if target = "ppc" then (ppc_encode_instruction, ppc_encode_branch) else hd []
+  if target = "arm" then (arm_encode_instruction, arm_encode_branch, arm_branch_to_string) else 
+  if target = "x86" then (x86_encode_instruction, x86_encode_branch, x86_branch_to_string) else 
+  if target = "ppc" then (ppc_encode_instruction, ppc_encode_branch, ppc_branch_to_string) else hd []
 
 fun conditional_tools target = 
   if target = "arm" then (arm_cond_code, arm_conditionalise, arm_remove_annotations) else 
@@ -48,7 +48,7 @@ datatype asm_type =
 fun list_append [] = [] | list_append (x::xs) = x @ list_append xs
 
 fun basic_assembler target code3 = let
-  val (enc,branch) = assembler_tools target 
+  val (enc,branch,_) = assembler_tools target 
   (* translate into machine code *)
   fun extend (s,i) = if size s < 2 * i then extend ("0" ^ s, i) else s
   fun translate (ASM_INSTRUCTION (x,z,y),q) = 
@@ -334,7 +334,7 @@ fun extract_ops th = let
   (* store thm *)
   val _ = if length ys = 0 then () else add_assignment (tm1,tm2,th,l)
   (* possible tests *)
-  fun foo tm = optionLib.dest_some tm handle e => tm
+  fun foo tm = optionSyntax.dest_some tm handle e => tm
   val qs = filter (fn tm => mem (car tm) xs) qs
   val qs = map (fn tm => add_conditional(foo (cdr tm),car tm,th,l)) qs
   in () end;  
@@ -343,24 +343,40 @@ fun add_compiled thms = let val _ = map extract_ops thms in () end;
 
 (* code generator *)
 
-fun print_asm code = let
-  fun print_cond NONE = ""
-    | print_cond (SOME s) = ", if " ^ s
+fun print_asm code target = let
+  val (_,_,branch) = assembler_tools target
   fun print_cmp NONE = ""
-    | print_cmp (SOME (t,f)) = "  ["^t^"|"^f^"]"
+    | print_cmp (SOME (t,f)) = " ["^t^"|"^f^"]"
   fun print_inst (ASM_ASSIGN (t1,t2)) = 
-        "     " ^ term_to_string t1 ^ " := " ^ term_to_string t2
+        term_to_string t1 ^ " := " ^ term_to_string t2
     | print_inst (ASM_BRANCH (c,name)) = 
-        "     goto " ^ name ^ print_cond c
+        branch c ^ " " ^ name
     | print_inst (ASM_COMPARE tm) = 
-        "     compare " ^ term_to_string tm
+        "compare " ^ term_to_string tm
     | print_inst (ASM_INSERT (s,i,cmp)) = 
-        "     insert '" ^ s ^ "' " ^ int_to_string i ^ print_cmp cmp
+        "MACRO INSERT: " ^ s ^ " [length: " ^ int_to_string i ^ "]" ^ print_cmp cmp
     | print_inst (ASM_INSTRUCTION (s,_,cmp)) = 
-        "     " ^ s ^ print_cmp cmp
+        s ^ print_cmp cmp
     | print_inst (ASM_LABEL s) = 
         s ^ ":"
-  in print "\n\n" ; map (fn s => print (print_inst s ^ "\n")) code ; print "\n\n" end
+  fun is_LABEL (ASM_LABEL s) = true | is_LABEL _ = false
+  fun all_labels [] = []
+    | all_labels ((ASM_BRANCH (_,s))::xs) = s :: all_labels xs 
+    | all_labels (x::xs) = all_labels xs 
+  val ls = all_labels code
+  fun filter_labels [] = []
+    | filter_labels ((ASM_LABEL s)::xs) = if mem s ls then ASM_LABEL s :: filter_labels xs else filter_labels xs 
+    | filter_labels (x::xs) = x :: filter_labels xs 
+  val code = filter_labels code
+  fun expand s = if size s < 5 then expand (s ^ " ") else s
+  fun code2string [] prev_was_label = ""
+    | code2string (c::cs) prev_was_label = 
+        if is_LABEL c then 
+          (if prev_was_label then "\n" else "") ^ expand (print_inst c) ^ code2string cs true
+        else 
+          (if prev_was_label then "" else expand "") ^ print_inst c ^ "\n" ^ code2string cs false 
+  val str = code2string code false
+  in print ("\n" ^ str ^ "\n") end
 
 fun generate_code target model_name print_assembly tm = let
   val (assign2assembly, guard2assembly) = generator_tools target
@@ -504,7 +520,7 @@ fun generate_code target model_name print_assembly tm = let
   fun remove_extra_annotations (ASM_INSTRUCTION (x,z,y)) = ASM_INSTRUCTION (remove_annotations x,z,y)
     | remove_extra_annotations x = x
   val code3 = map remove_extra_annotations code3
-  val _ = if print_assembly then print_asm code3 else ()
+  val _ = if print_assembly then print_asm code3 target else ()
   (* assembler should start here *)
   val code3 = (map (fn x => (x,(NONE:string option))) code3)
   val (code6,len,_) = basic_assembler target code3

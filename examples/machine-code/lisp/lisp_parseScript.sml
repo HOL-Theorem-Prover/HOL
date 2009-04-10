@@ -889,17 +889,6 @@ val symbol_table_IMP_ALIGNED = prove(
   \\ MATCH_MP_TAC ALIGNED_ADD \\ ASM_SIMP_TAC std_ss [ALIGNED_n2w]
   \\ SIMP_TAC std_ss [MOD_EQ_0]);
 
-val ALIGNED_TAC = let 
-  val ALIGNED_CONV = 
-    ONCE_REWRITE_CONV [ALIGNED_MOD_4] THENC
-    SIMP_CONV std_ss [WORD_ADD_0,WORD_SUB_RZERO]
-  val ALIGNED_convdata = {name = "ALIGNED_CONV",
-    trace = 2, key = SOME ([],``ALIGNED a``),
-    conv = K (K ALIGNED_CONV)}:simpfrag.convdata
-  val ALIGNED_ss = simpLib.conv_ss ALIGNED_convdata
-  in FULL_SIMP_TAC std_ss [ALIGNED_ADD_EQ,ALIGNED_ADDR32,ALIGNED_n2w]
-     THEN FULL_SIMP_TAC (bool_ss++ALIGNED_ss) [ALIGNED_INTRO] end;
-
 val string_mem_IMP_IN = prove(
   ``!t x f df. string_mem (STRCAT t null_string) (x,f,df) ==> x IN df``,
   Cases \\ FULL_SIMP_TAC std_ss [APPEND,null_string_def,string_mem_def]);
@@ -2466,7 +2455,7 @@ val arm_setup_lemma = prove(
 
 (* SETTING UP lisp_inv *)
 
-val (arm_string2sexp_thm,arm_string2sexp_def,arm_string2sexp_pre_def) = compile "arm" ``
+val (arm_string2sexp_thms,arm_string2sexp_def,arm_string2sexp_pre_def) = compile_all ``
   arm_string2sexp' (r3,r4,r5,df,dg,dh,dm,f,g,h,m) =
     let r10 = r5 in
     let r8 = r4 << 3 in
@@ -2498,7 +2487,10 @@ val (arm_string2sexp_thm,arm_string2sexp_def,arm_string2sexp_pre_def) = compile 
     let r8 = 3w:word32 in
       (r3,r4,r5,r6,r7,r8,r10,df,dg,dh,dm,f,g,h,m)``;
 
-val _ = save_thm("arm_string2sexp_thm",arm_string2sexp_thm);
+fun save_all prefix postfix = 
+  map (fn (n,th) => save_thm(prefix ^ n ^ postfix,th));
+
+val _ = save_all "arm_string2sexp_" "_thm" arm_string2sexp_thms;
 
 val symbol_table_dom_APPEND = prove(
   ``!xs ys a dm dg. 
@@ -3122,8 +3114,5 @@ val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
     \\ `8 + (4 + 8 * (j - 1)) = 8 * j + 4`by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss [word_add_n2w,word_mul_n2w] 
     \\ DECIDE_TAC]);
-
-WORD_ADD_SUB
-WORD_SUB_ADD
 
 val _ = export_theory();

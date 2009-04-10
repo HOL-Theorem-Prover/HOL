@@ -10,6 +10,19 @@ open wordsTheory wordsLib addressTheory;
 open helperLib;
 
 
+fun AUTO_ALPHA_CONV () = let
+  val counter = ref (Arbnum.zero)
+  fun inc () = let val v = !counter in (counter := Arbnum.+(v,Arbnum.one); v) end
+  fun counter_genvar ty = mk_var("auto_"^ Arbnum.toString (inc()),ty)
+  fun doit tm = 
+    if is_abs tm then 
+      (ALPHA_CONV (counter_genvar (type_of (fst (dest_abs tm)))) THENC
+       ABS_CONV doit) tm
+    else if is_comb tm then
+      (RATOR_CONV doit THENC RAND_CONV doit) tm
+    else ALL_CONV tm      
+  in doit end       
+
 val COMPILER_TAC = 
     SIMP_TAC bool_ss [LET_DEF,word_div_def,word_mod_def]
     THEN SIMP_TAC std_ss [WORD_OR_CLAUSES]
@@ -20,15 +33,19 @@ val COMPILER_TAC =
            WORD_OR_CLAUSES]
     THEN CONV_TAC (EVAL_ANY_MATCH_CONV word_patterns)
     THEN SIMP_TAC std_ss [WORD_SUB_RZERO, WORD_ADD_0, IF_IF,
-                      AC WORD_ADD_COMM WORD_ADD_ASSOC,
-                      AC WORD_MULT_COMM WORD_MULT_ASSOC,
-                      AC WORD_AND_COMM WORD_AND_ASSOC,
-                      AC WORD_OR_COMM WORD_OR_ASSOC,
-                      AC WORD_XOR_COMM WORD_XOR_ASSOC,
-                      AC CONJ_COMM CONJ_ASSOC,
-                      AC DISJ_COMM DISJ_ASSOC,
-                      IMP_DISJ_THM, WORD_MULT_CLAUSES]
-    THEN REPEAT STRIP_TAC THEN EQ_TAC
+                          AC WORD_ADD_COMM WORD_ADD_ASSOC,
+                          AC WORD_MULT_COMM WORD_MULT_ASSOC,
+                          AC WORD_AND_COMM WORD_AND_ASSOC,
+                          AC WORD_OR_COMM WORD_OR_ASSOC,
+                          AC WORD_XOR_COMM WORD_XOR_ASSOC,
+                          AC CONJ_COMM CONJ_ASSOC,
+                          AC DISJ_COMM DISJ_ASSOC,
+                          IMP_DISJ_THM, WORD_MULT_CLAUSES]
+    THEN REPEAT STRIP_TAC 
+    THEN CONV_TAC (RAND_CONV (AUTO_ALPHA_CONV ()))
+    THEN CONV_TAC ((RATOR_CONV o RAND_CONV) (AUTO_ALPHA_CONV ()))
+    THEN SIMP_TAC std_ss [AC CONJ_ASSOC CONJ_COMM, AC DISJ_COMM DISJ_ASSOC]
+    THEN EQ_TAC
     THEN ONCE_REWRITE_TAC [GSYM DUMMY_EQ_def]
     THEN REWRITE_TAC [FLATTEN_IF]
     THEN REPEAT STRIP_TAC
@@ -43,10 +60,11 @@ fun compile target tm = let
     if mem target ["arm","ARM"] then (arm_tools,"arm","ARM_MODEL",[]) else 
     if mem target ["x86","i32","386"] then (x86_tools,"x86","X86_MODEL",to_x86_regs ()) else 
     if mem target ["ppc","Power","PowerPC"] then (ppc_tools,"ppc","PPC_MODEL",[]) else hd []
-  val (code,len) = generate_code target model_name true tm  
-  fun append' [] = "" | append' (x::xs) = x ^ "\n" ^ append' xs
   val x = fst (dest_eq tm)
   val name = fst (dest_const (repeat car x)) handle e => fst (dest_var (repeat car x))
+  val _ = echo 1 ("\nCompiling " ^ name ^ " into "^ target ^ "...\n")
+  val (code,len) = generate_code target model_name true tm  
+  fun append' [] = "" | append' (x::xs) = x ^ "\n" ^ append' xs
   val qcode = [QUOTE (append' code)] : term quotation
   val in_tm = cdr x
   fun ends (FUN_IF (_,c1,c2)) = ends c1 @ ends c2
