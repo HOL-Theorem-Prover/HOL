@@ -327,6 +327,25 @@ val OWHILE_WHILE = store_thm(
     SRW_TAC [][FUNPOW, LESS_MONO_EQ]
   ]);
 
+val OWHILE_INV_IND = store_thm(
+  "OWHILE_INV_IND",
+  ``!G f s. P s /\ (!x. P x /\ G x ==> P (f x)) ==> 
+            !s'. (OWHILE G f s = SOME s') ==> P s'``,
+  SIMP_TAC (srw_ss()) [OWHILE_def] THEN REPEAT STRIP_TAC THEN 
+  Q.SUBGOAL_THEN `?n. ~G(FUNPOW f n s)` ASSUME_TAC THEN1  
+    (CCONTR_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN 
+  FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN 
+  LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN 
+  REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC) THEN Q.X_GEN_TAC `n` THEN 
+  Q.UNDISCH_THEN `P s` MP_TAC THEN REWRITE_TAC [AND_IMP_INTRO] THEN 
+  MAP_EVERY Q.ID_SPEC_TAC [`s`, `n`] THEN INDUCT_TAC THENL [
+    SRW_TAC [][],
+    SRW_TAC [][FUNPOW] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN 
+    FIRST_X_ASSUM (fn th => Q.SPEC_THEN `0` MP_TAC th THEN 
+                            Q.SPEC_THEN `SUC m` (MP_TAC o Q.GEN `m`) th) THEN 
+    SRW_TAC [][LESS_MONO_EQ, FUNPOW, LESS_0]
+  ]);
+
 val _ = 
  computeLib.add_persistent_funs
    [("WHILE",WHILE),
