@@ -690,6 +690,14 @@ val lemma2 = prove(
                optionTheory.THE_DEF]
   ]);
       
+val bnf_of_SOME = store_thm(
+  "bnf_of_SOME",
+  ``(bnf_of M = SOME N) ⇒ M -n->* N ∧ bnf N``,
+  SRW_TAC [][bnf_of_def] THEN 
+  IMP_RES_TAC whileTheory.OWHILE_ENDCOND THEN 
+  FULL_SIMP_TAC (srw_ss()) [] THEN 
+  METIS_TAC [lemma2]);
+
 val has_bnf_of = store_thm(
   "has_bnf_of",
   ``has_bnf M ⇔ ∃N. bnf_of M = SOME N``,
@@ -697,11 +705,8 @@ val has_bnf_of = store_thm(
     SRW_TAC [][has_bnf_finite_nopath] THEN 
     ASSUME_TAC nopath_okpath THEN 
     METIS_TAC [lemma1, last_of_finite_nopath, first_nopath],
-
-    SRW_TAC [][bnf_of_def] THEN 
-    IMP_RES_TAC whileTheory.OWHILE_ENDCOND THEN 
-    FULL_SIMP_TAC (srw_ss()) [] THEN 
-    METIS_TAC [chap2Theory.has_bnf_def, lemma2, nstar_lameq]
+    
+    METIS_TAC [chap2Theory.has_bnf_def, bnf_of_SOME, nstar_lameq]
   ]);
 
 val bnf_of_NONE = store_thm(
@@ -709,5 +714,7 @@ val bnf_of_NONE = store_thm(
   ``(bnf_of M = NONE) ⇔ ¬has_bnf M``,
   REWRITE_TAC [has_bnf_of] THEN 
   Cases_on `bnf_of M` THEN SRW_TAC [][]);
+
+
       
 val _ = export_theory()
