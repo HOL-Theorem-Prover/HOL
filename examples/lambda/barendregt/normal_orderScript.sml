@@ -638,5 +638,76 @@ val Omega_has_no_bnf = Store_thm(
   "Omega_has_no_bnf",
   ``¬has_bnf Ω``,
   SRW_TAC [][has_bnf_finite_nopath, Omega_path_infinite]);
+
+val last_of_finite_nopath = store_thm(
+  "last_of_finite_nopath",
+  ``finite (nopath M) ⇒ bnf (last (nopath M))``,
+  Q_TAC SUFF_TAC 
+        `∀p. finite p ⇒ ∀M. (nopath M = p) ⇒ bnf (last (nopath M))`
+        THEN1 METIS_TAC [] THEN 
+  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THENL [
+    Q.SPEC_THEN `M` ASSUME_TAC nopath_def THEN 
+    Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [noreduct_bnf] THEN 
+    SRW_TAC [][],
+
+    Q.SPEC_THEN `M` ASSUME_TAC nopath_def THEN 
+    Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN 
+    SRW_TAC [][] THEN METIS_TAC []
+  ]); 
+    
+
+(* ----------------------------------------------------------------------
+    bnf_of : term -> term option
+
+    "Calculating" the β-normal form of a term (if it exists) with a while
+    loop. 
+   ---------------------------------------------------------------------- *)
+
+val bnf_of_def = Define`
+  bnf_of M = OWHILE ((~) o bnf) (THE o noreduct) M
+`;
+
+val lemma1 = prove(
+  ``∀p. okpath (λM u N. M -n-> N) p ∧ finite p ⇒
+        bnf (last p) ⇒ (bnf_of (first p) = SOME (last p))``,
+  HO_MATCH_MP_TAC finite_okpath_ind THEN SRW_TAC [][] THENL [
+    SRW_TAC [][Once whileTheory.OWHILE_THM, bnf_of_def],
+    FULL_SIMP_TAC (srw_ss()) [] THEN 
+    SRW_TAC [][Once whileTheory.OWHILE_THM, bnf_of_def] THENL [
+      SRW_TAC [][GSYM bnf_of_def] THEN 
+      METIS_TAC [noreduct_characterisation, optionTheory.THE_DEF],
+      METIS_TAC [normorder_bnf]
+    ]
+  ]);
+
+val lemma2 = prove(
+  ``∀N. (OWHILE ($~ o bnf) (THE o noreduct) M = SOME N) ⇒
+        M -n->* N``,
+  HO_MATCH_MP_TAC whileTheory.OWHILE_INV_IND THEN SRW_TAC [][] THEN 
+  Cases_on `noreduct N` THENL [
+    FULL_SIMP_TAC (srw_ss()) [noreduct_bnf],
+    METIS_TAC [noreduct_characterisation, relationTheory.RTC_RULES_RIGHT1, 
+               optionTheory.THE_DEF]
+  ]);
+      
+val has_bnf_of = store_thm(
+  "has_bnf_of",
+  ``has_bnf M ⇔ ∃N. bnf_of M = SOME N``,
+  EQ_TAC THENL [
+    SRW_TAC [][has_bnf_finite_nopath] THEN 
+    ASSUME_TAC nopath_okpath THEN 
+    METIS_TAC [lemma1, last_of_finite_nopath, first_nopath],
+
+    SRW_TAC [][bnf_of_def] THEN 
+    IMP_RES_TAC whileTheory.OWHILE_ENDCOND THEN 
+    FULL_SIMP_TAC (srw_ss()) [] THEN 
+    METIS_TAC [chap2Theory.has_bnf_def, lemma2, nstar_lameq]
+  ]);
+
+val bnf_of_NONE = store_thm(
+  "bnf_of_NONE",
+  ``(bnf_of M = NONE) ⇔ ¬has_bnf M``,
+  REWRITE_TAC [has_bnf_of] THEN 
+  Cases_on `bnf_of M` THEN SRW_TAC [][]);
       
 val _ = export_theory()
