@@ -35,7 +35,7 @@ td.red { font-weight: bold }
 
 a.tabs { font-size: small; }
 
-li { list-style-type: square; }
+ul li { list-style-type: square; }
 
 ul.blankitems li { list-style-type: none; overflow: auto; }
 
@@ -60,3 +60,5 @@ td { padding-left: 1em; padding-right: 1em; }
 .floatleft, .floatcentre, .floatright {text-align:center; }
 p.logos img { border-width: 0cm; }
 div.logos { padding-top: 2mm; }
+
+code, pre {color: #660066; font-weight: bold; /* font-size: smaller */}
