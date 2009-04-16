@@ -1,0 +1,9 @@
+if [ -d src -a -d examples ]
+then
+        :
+else
+        echo Run this from the root HOL directory >&2
+        exit 1
+fi
+
+rsync -avP --files-from=developers/web-pages -r -e ssh ${SF_USER:-$USER},hol@web.sf.net:htdocs doc/sf-webpage
