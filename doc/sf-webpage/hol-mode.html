@@ -1,0 +1,235 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Emacs HOL mode</title>
+</head>
+
+<body>
+<h1>Emacs HOL mode</h1>
+
+This page attempts to describe how to use the Emacs hol-mode that is
+distributed with HOL.  
+
+<h2>A note on key-combination notation</h2>
+
+<code>C-x</code> is notation for "control-x", which stands for hitting
+the <code>x</code> key at the same time as holding down the Control
+key.  Similarly, <code>M-h</code> stands for "meta-h", which means
+doing the same but with the meta key.  On PC keyboards, the ALT key
+often stands in for a meta key.  If this doesn't work, you can get a
+meta effect by first hitting ESC and then the next key (h in this
+case).  If you can get the proper, modifier-key meta working, it's
+definitely worthwhile, as having to hit ESC all the time is tedious in
+the extreme.<p>
+
+<h2>Installing the emacs mode</h2>
+
+Put 
+<pre>
+(autoload 'hol98 "&lt;holdir&gt;/tools/hol-mode"
+  "Runs a HOL98 session in a comint window.
+With a numeric prefix argument, runs it niced to that level
+or at level 10 with a bare prefix. " t) 
+</pre>
+
+into your <code>.emacs</code> file, where <code>&lt;holdir&gt;</code>
+    is where you installed HOL.  This approach has the disadvantage
+    that you have to start HOL using <kbd>M-x hol98</kbd>; you can't
+    use the key sequence <kbd>M-h h</kbd>.  If you want that, you can use 
+<pre>
+(load "&lt;holdir&gt;/tools/hol-mode")
+</pre>
+in the <code>.emacs</code> file.<p>
+
+Alternatively, if you just want to try it once, type
+<pre>
+M-x load-file
+</pre>
+
+and type <code>&lt;holdir&gt;/tools/hol-mode.el</code> in response
+    to the prompt.
+
+<h2>Using the emacs mode</h2>
+
+My usual way of starting is:
+
+<pre>
+C-x C-f fooScript.sml   (* find my file *)
+M-h h                   (* start my hol; it takes over the window *)
+C-x b fooScript.sml     (* go back to my script file *)
+C-x 5 b *HOL*           (* go to the HOL buffer in a separate window *)
+</pre>
+
+
+
+I also recommend that you enable <code>transient-mark-mode</code>.
+This makes it more obvious what you have selected.  You can enable
+this for all sessions by putting <code>(transient-mark-mode 1)</code>
+in your <code>.emacs</code> file, or as a once-off, by typing
+<code>M-x transient-mark-mode</code> (and typing the same again will
+turn it back off).<p>
+
+To select text, move the cursor in your source buffer to one end or
+other of the text to be sent and hit <code>C-SPC</code>.  This
+starts text selection.  Then move the cursor to the other end of the
+text to be sent.  With <code>transient-mark-mode</code> on, you should
+see the text highlight.  This is useful visual feedback that what
+you're doing makes sense.  Of course, you don't need to just move one
+character at a time to select text; use the up and down cursor keys to
+select lines at a time, <code>C-a</code> and <code>C-e</code> to
+move to the starts and ends of lines, and <code>M-b</code> and
+<code>M-f</code> to move backwards and forwards over words.<p>
+
+Once you're happy that you've highlighted the right bit of text, hit
+<dl>
+  <dt> <code>M-h M-r</code>
+  <dd> to send the region to be evaluated as is by the interpreter; or
+  <dt> <code>M-h e</code>
+  <dd> to send the region to be applied as a tactic, i.e., as if
+           wrapped in <code>e(...)</code>.
+</dl> Both of these will analyse the text being sent to pre-emptively
+load modules that the text depends on.  (This is an <strong>extremely
+useful</strong> feature, and saves you having to start every session
+by issuing <code>load</code> instructions to the interpreter.)<p>
+
+<em>Aside:</em> Two more things about text selection in emacs.  You
+can flip your cursor to be at the other end of the selected region by
+hitting <code>C-x C-x</code>.  The end of the text where you were then
+becomes the anchor point for further selection. Further, if you find
+yourself highlighting something and don't want to be in
+"highlight-mode", hit <code>C-g</code>.  This stops highlighting.<p>
+
+Finally, if you find you don't like the text-highlighting that you get
+with <code>transient-mark-mode</code> on, you can do all of the above
+without it, but you don't get the highlighting and you need to be
+aware that the region between the cursor and where you last hit
+<code>C-SPC</code> is always available to be sent.  (With
+<code>transient-mark-mode</code> on, but nothing highlighted, an
+attempt to do <code>M-h M-r</code> will just make Emacs beep and say
+"The mark is not active now".) I find the absence of high-lighting
+off-putting myself, but this is the way Emacs used to be and I guess
+some people may still like it.<p>
+
+<hr>
+
+Sending a goal is even easier, because goals just about always appear
+between two backquote symbols.  If you put your cursor in such a
+position (i.e. somewhere on a goal in your script file, but not on the
+backquote characters themselves), all you need to do is hit <code>M-h
+g</code>, and the text between the backquotes will be sent to be set
+up as a goal in the goalstack package.<p>
+
+These are the basic commands.  See the section below for even more,
+and learn how to control the HOL session entirely from your original
+text buffer.
+
+<h2>HOL mode commands</h2>
+
+To issue one of these commands, type <code>M-h</code> followed by the
+given key-combination, or type <code>M-x</code> followed by the long
+name of the command, given between quotes (<code>``...''</code>).
+
+<dl>
+<dt> <code>h ``hol98''</code>
+<dd> Starts the HOL session.<p>
+
+<dt> <code>C-a ``hol-toggle-show-assums''</code>
+<dd> Toggles the value of the <code>show_assums</code> variable, affecting
+     whether or not assumptions are printed as dots or full terms.
+<dt> <code>C-c ``hol-interrupt''</code>
+<dd> Interrupts the HOL session.  Useful for
+  those tactics that don't always return.
+
+<dt> <code>C-f ``hol-toggle-goalstack-fvs''</code>
+<dd> Toggles the display of the goal&rsquo;s free variables every time
+the goal is printed.  This can be useful when a goal picks up multiple
+variables of different types.</dd>
+
+<dt> <code>C-l ``hol-recentre''</code>
+<dd> Recentres the screen that HOL is running
+  in, so that the most text is visible with the bottom of the text
+  at the bottom of the screen.
+<dt> <code>C-v ``hol-scroll-up''</code>
+<dd> Scrolls the HOL window.
+<dt> <code>C-t ``hol-toggle-show-types''</code>
+<dd> Toggles the value of the <code>show_types</code> variable, affecting how terms are printed.
+<dt> <code>M-b  ``backward-hol-tactic''</code>
+<dd> Moves the cursor back over the
+  previous tactic in the source text in the current buffer.  With a
+  <em>prefix argument</em>, moves back that many tactics.
+<dt> <code>M-f   ``forward-hol-tactic''</code>
+<dd> Moves the cursor forward over the
+  next tactic in the source text in the current buffer.  With a <em>prefix
+  argument</em>, moves that many.
+<dt> <code>M-r   ``send-region''</code>
+<dd> Sends the <em>region</em> to the HOL
+  process, where it is evaluated at the top level.  Can be used both
+  to define new ML bindings, and to evaluate epxressions.
+<dt> <code>M-s  ``hol-subgoal-tactic''</code>
+<dd> Sends term at point (delimited by backquote characters) as a
+subgoal.  Will usually create at least two sub-goals; one will be the
+term just sent, and the others will be the term sent <code>STRIP_ASSUME</code>'d
+onto the assumption list of the old goal.  (Loads the <code>Q</code> module if not
+already loaded.)
+<dt> <code>M-v ``hol-scroll-down''</code>
+<dd> Scrolls the HOL window.
+<dt> <code>b   ``hol-backup''</code>
+<dd> Backs up one stage in the goalstack.
+<dt> <code>d ``hol-drop-goal''</code>
+<dd> Drops the current goal, removing it from
+  the goal-stack entirely.
+<dt> <code>D ``hol-drop-all-goals''</code>
+<dd> Drops all goals.
+<dt> <code>e ``expand-hol-tactic''</code>
+<dd> Sends the region to the HOL process as
+  a tactic, where it is applied to the current goal.
+<dt> <code>g ``hol-goal''</code>
+<dd> Sets the current goal.  Sends the term at point
+  (delimited on both sides by back-quotes) to the HOL process.  With a
+  <em>prefix argument</em>, or if in transient mark mode with an active
+  region, sends the selected region as the goal instead.
+<dt> <code>l ``hol-load-file''</code>
+<dd> Loads a HOL library.  If there is a region
+  marked, uses that string as the library to load.  Otherwise, if the
+  cursor (point) is over a likely name, it uses that for the library
+  to load.  As a last resort (or in all situations, if there is a
+  <em>prefix argument</em>), prompts for the name of the library.
+<dt> <code>m ``hol-db-match''</code>
+<dd> Prompts for a term (don't put it in quotes) that is then used as
+an argument to a call to <code>DB.match []</code>.  <em>Very</em> useful for
+finding pertinent theorems.
+<dt> <code>n ``hol-name-top-theorem''</code>
+<dd> Prompts for a name to give to the
+  ``top theorem'' (i.e., the theorem just proved in the goalstack).
+  With a <em>prefix argument</em> also drops the goal.
+<dt> <code>o ``hol-open-string''</code>
+<dd> Opens HOL modules, prompting for the name of the module to load.
+With prefix ARG, toggles quietdec variable before and after opening,
+potentially saving a great deal of time as tediously large modules are
+printed out.  (That's assuming that quietdec is false to start with.)
+<dt> <code>p ``hol-print''</code>
+<dd> Prints the top goal in the goalstack.
+<dt> <code>r ``hol-rotate''</code>
+<dd> Rotates goals in the goalstack.  With a
+  numeric <em>prefix argument</em> rotates that many out of the way,
+  instead of just one.
+<dt> <code>R ``hol-restart''</code>
+<dd> Restarts the current proof.
+<dt> <code>s ``send-string-to-hol''</code>
+<dd> Prompts for a string to be evaluated
+  by SML, like <code>``M-r''</code>.
+<dt> <code>t ``mark-hol-tactic''</code>
+<dd> Marks the tactic at point, putting mark
+  at the start of the tactic, and point at the end.  Useful as a
+  prelude to applying the tactic with <code>``expand-hol-tactic''</code>.
+<dt> <code>u ``hol-use-file''</code>
+<dd> Prompts for a file-name to be <em>use</em>-d
+  at the top level.
+    </dl>
+
+
+
+
+
+
+<hr>
+</body> </html>
