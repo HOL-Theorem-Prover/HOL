@@ -13,11 +13,12 @@
 <body>
 <h1>Rebuilding Moscow ML to Avoid the <code>Chr</code> Exception</h1>
 
-<p>With the standard Moscow&nbsp;ML (version 2.01), and large HOL theories
-it is possible to overload Moscow&nbsp;ML’s internal table of global
-constants.  Luckily, Peter Sestoft provided us with a patch to make
-this table much bigger.   Here are some instructions (slightly updated
-by Peter Homeier).  </p>
+<p>With the standard Moscow&nbsp;ML (version 2.01), and large HOL
+theories it is possible to overload Moscow&nbsp;ML’s internal table of
+global constants.  Luckily, Peter Sestoft provided us with
+a <a href="mosml-patch.tgz">patch</a> to make this table much bigger.
+Here are the instructions (slightly updated by Peter Homeier) on how
+to apply it.  </p>
 
 <ol>
 
@@ -30,7 +31,7 @@ by Peter Homeier).  </p>
         make clean world
 </pre>
 
-<li> Unpack the attached:
+<li> Unpack the <a href="mosml-patch.tgz">attached</a>:
 
 <p>     In <code>mosml/src/</code> do    </p>
 <pre>
@@ -128,7 +129,7 @@ a <code>bin/build&nbsp;cleanAll</code> to begin.)
 <div class="timestamp" style="clear:both; padding-top: 3mm;">
 <hr>
 <p>
-Time-stamp: "Wednesday, 11 March 2009; 03:02 UTC (Michael Norrish)"
+Time-stamp: "Thursday, 16 April 2009; 06:51 UTC (Michael Norrish)"
 </p></div>
 
 
