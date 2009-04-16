@@ -61,4 +61,4 @@ td { padding-left: 1em; padding-right: 1em; }
 p.logos img { border-width: 0cm; }
 div.logos { padding-top: 2mm; }
 
-code, pre {color: #660066; font-weight: bold; /* font-size: smaller */}
+code, pre, kbd {color: #660066; font-weight: bold; /* font-size: smaller */}
