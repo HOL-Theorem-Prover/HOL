@@ -219,16 +219,16 @@ abstraction should be treated as much like a single variable as possible.
 This means that paired and nonpaired abstractions can be considered
 $\alpha$-equivalent.
 For example:
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    #PALPHA "\(x,y). (f (x,y))" "\xy. (f xy)";;
    |- (\(x,y). f(x,y)) = (\xy. f xy)
-\end{verbatim}\end{boxed}\index{PALPHA@{\tt PALPHA}}
+\end{verbatim}\end{holboxed}\index{PALPHA@{\tt PALPHA}}
 The effect of this decision can be seen in evidence in $\beta$-conversion
 and other inference rules:
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    #PBETA_CONV "(\(x,y). (f x y (x,y))) ab";;
    |- (\(x,y). f x y(x,y))xy = f(FST ab)(SND ab)ab
-\end{verbatim}\end{boxed}\index{PBETA\_CONV@{\tt PBETA\_CONV}}
+\end{verbatim}\end{holboxed}\index{PBETA\_CONV@{\tt PBETA\_CONV}}
 
 \section{Bugs and Future Changes}
 

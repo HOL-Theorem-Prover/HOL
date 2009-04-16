@@ -23,10 +23,10 @@ conditionals, and all the variables in {\small\verb%t%} appear in
 {\small\verb%x1 ... xn%}, the conversion \ml{PTAUT\_CONV} proves the term to be
 either true or false, that is, one of the following theorems is returned:
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    |- (!x1 ... xn. t) = T
    |- (!x1 ... xn. t) = F
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent
 \ml{PTAUT\_CONV} also accepts propositional terms that are not fully
@@ -106,44 +106,44 @@ such a term, the conversion will fail unless it is valid. Consider the term
 {\small\verb%"!x2 ... xn. f[x1,...,xn]"%}. The conversion first proves one of
 the following theorems:
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    |- (!x1 ... xn. f[x1,...,xn]) = T
    |- (!x1 ... xn. f[x1,...,xn]) = F
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent
 To obtain the required result, the former can be manipulated as follows:
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    |- (!x1 ... xn. f[x1,...,xn]) = T
    |- !x1 ... xn. f[x1,...,xn]
    |- !x2 ... xn. f[x1,...,xn]
    |- (!x2 ... xn. f[x1,...,xn]) = T
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent
 However when the fully quantified term is false, we have:
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    |- (!x1 ... xn. f[x1,...,xn]) = F
    |- ~(!x1 ... xn. f[x1,...,xn])
    |- ?x1. ~(!x2 ... xn. f[x1,...,xn])
    |- ?x1. ((!x2 ... xn. f[x1,...,xn]) = F)
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent
 whereas we want:
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    |- !x1. ((!x2 ... xn. f[x1,...,xn]) = F)
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent
 because it is equivalent to:
 
-\begin{boxed}\begin{verbatim}
+\begin{holboxed}\begin{verbatim}
    |- (!x2 ... xn. f[x1,...,xn]) = F
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 \noindent
 The conversions in the \ml{taut} library are not capable of proving this

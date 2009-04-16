@@ -62,10 +62,10 @@ semantics for these restricted quantifiers as follows:
 User-defined binders can also have restricted forms, which are set up
 with the function:
 
-\begin{boxed}\index{associate_restriction@\ml{associate\_restriction}}
+\begin{holboxed}\index{associate_restriction@\ml{associate\_restriction}}
 \begin{verbatim}
    associate_restriction : (string # string) -> *
-\end{verbatim}\end{boxed}
+\end{verbatim}\end{holboxed}
 
 
 \noindent If \m{B} is the name
@@ -224,11 +224,11 @@ and conjunctions in the antecedents are converted to implication.
 \subsubsection{Conditional rewriting tactic}
 
 The basic conditional rewriting tactic is
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
    COND_REWRITE1_TAC : thm_tactic
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 Suppose {\tt th} is the theorem in~\ref{eq-cond-thm2},
 the effects of applying the tactic $\ml{COND\_REWRITE1\_TAC}\;th$ to the
 goal $(asm,gl)$ is that
@@ -254,11 +254,11 @@ takes only a single theorem as its argument.
 \subsubsection{Conditional rewriting conversion}
 
 The basic conditional rewriting conversion is
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
    COND_REWRITE1_CONV : (thm list -> thm -> conv)
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 which performs conversion in a way similar to the conditional
 rewriting tactics. The difference is that the instances of the
 antecedents are added to the list of assumptions of the resulting theorem. The
@@ -271,7 +271,7 @@ There are term constructors, term destructors and term testers for the
 four built-in restricted quantifiers. There are also iterative
 constructors and destructors for the restricted universal and
 existential quantifiers. Their names and types are:
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
 mk_resq_forall = - : ((term # term # term) -> term)
 mk_resq_exists = - : ((term # term # term) -> term)
@@ -292,7 +292,7 @@ is_resq_exists = - : (term -> bool)
 is_resq_select = - : (term -> bool)
 is_resq_abstract = - : (term -> bool)
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 \subsection{Derived rules}
 
@@ -317,7 +317,7 @@ representation, namely an implication.
 \]
 
 There are iterative versions of the introduction and elimination rules:
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
 RESQ_SPECL = - : (term list -> thm -> thm)
 RESQ_SPEC_ALL = - : (thm -> thm)
@@ -325,18 +325,18 @@ RESQ_SPEC_ALL = - : (thm -> thm)
 RESQ_GENL = - : (term list -> thm -> thm)
 RESQ_GEN_ALL = - : (thm -> thm)
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 Since instantiation of a theorem is a very common operation, for
 convenience, the following ML functions are provided to instantiate a
 theorem with a mixture of ordinary and restricted universal quantifiers:
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
 GQSPEC = - : tm -> thm -> thm
 GQSPECL : term list -> thm -> thm
 GQSPEC_ALL : thm -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 
 The rule for eliminating restricted existential quantification is
 \ml{RESQ\_HALF\_EXISTS} whose specification is:
@@ -422,14 +422,14 @@ to \ml{GEN\_TAC} and \ml{EXISTS\_TAC}.
 The resolution tactics and tactical listed below are in analogy to
 \ml{RES\_TAC}, \ml{IMP\_RES\_TAC}, \ml{RES\_THEN} and
 \ml{IMP\_RES\_THEN}. 
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
 RESQ_RES_THEN : (thm_tactic -> tactic)
 RESQ_IMP_RES_THEN : thm_tactical
 RESQ_RES_TAC : tactic
 RESQ_IMP_RES_TAC : thm_tactic
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 The theorem-tactic \ml{RESQ\_IMP\_RES\_TAC} uses a restricted universally
 quantified theorem as if it is an implication to perform resolution.
 Similarly, the tactic \ml{RESQ\_RES\_TAC} uses a restricted universally
@@ -462,13 +462,13 @@ can be restricted quantified variables. For example, one can defined a constant
 The constant \con{C} may be an ordinary constant, or it may have
 either `infix' or `binder' status. The ML functions for defining
 restricted quantified constants are:
-\begin{boxed}
+\begin{holboxed}
 \begin{verbatim}
 new_resq_definition        : (string # term) -> thm
 new_infix_resq_definition  : (string # term) -> thm
 new_binder_resq_definition : (string # term) -> thm
 \end{verbatim}
-\end{boxed}
+\end{holboxed}
 Suppose {\tt tm} is the term shown above, evaluating the ML expression
 \begin{verbatim}
    new_resq_definition(`C_DEF`,tm)
