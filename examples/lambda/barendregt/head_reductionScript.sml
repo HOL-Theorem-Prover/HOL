@@ -8,7 +8,7 @@ val _ = set_trace "Unicode" 1
 
 val (hreduce1_rules, hreduce1_ind, hreduce1_cases) = Hol_reln`
   (∀v M N. hreduce1 (LAM v M @@ N) ([N/v]M)) ∧
-  (∀v M1 M2. hreduce1 M1 M2 ⇒ hreduce1 (LAM v M1) (LAM v M2)) ∧ 
+  (∀v M1 M2. hreduce1 M1 M2 ⇒ hreduce1 (LAM v M1) (LAM v M2)) ∧
   (∀M1 M2 N. hreduce1 M1 M2 ∧ ¬is_abs M1 ⇒ hreduce1 (M1 @@ N) (M2 @@ N))
 `;
 
@@ -21,7 +21,7 @@ val _ = overload_on ("-h->*", ``hreduce1^*``)
 val hreduce_ccbeta = store_thm(
   "hreduce_ccbeta",
   ``∀M N. M -h-> N ⇒ compat_closure beta M N``,
-  HO_MATCH_MP_TAC hreduce1_ind THEN SRW_TAC [][cc_beta_thm] THEN 
+  HO_MATCH_MP_TAC hreduce1_ind THEN SRW_TAC [][cc_beta_thm] THEN
   METIS_TAC []);
 
 val hreduce1_FV = store_thm(
@@ -58,25 +58,25 @@ val hreduce1_rwts = store_thm(
     (LAM v M @@ N -h-> P ⇔ (P = [N/v]M))``,
   REPEAT STRIP_TAC THENL [
     SRW_TAC [][Once hreduce1_cases],
-    CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [hreduce1_cases])) THEN 
-    SRW_TAC [][] THEN 
-    Q_TAC SUFF_TAC `∀v N. M ≠ LAM v N` THEN1 METIS_TAC [] THEN 
-    SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN 
+    CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [hreduce1_cases])) THEN
+    SRW_TAC [][] THEN
+    Q_TAC SUFF_TAC `∀v N. M ≠ LAM v N` THEN1 METIS_TAC [] THEN
+    SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
     FULL_SIMP_TAC (srw_ss()) [],
-    CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [hreduce1_cases])) THEN 
-    SRW_TAC [DNF_ss][LAM_eq_thm, tpm_eqr] THEN EQ_TAC THEN 
+    CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [hreduce1_cases])) THEN
+    SRW_TAC [DNF_ss][LAM_eq_thm, tpm_eqr] THEN EQ_TAC THEN
     SRW_TAC [][] THEN1 SRW_TAC [][] THEN
-    Q.EXISTS_TAC `(v,v')·M2` THEN 
+    Q.EXISTS_TAC `(v,v')·M2` THEN
     SRW_TAC [][] THENL [
-      `v # (v,v')·M` by SRW_TAC [][] THEN 
-      `v # M2` by METIS_TAC [hreduce1_FV] THEN 
+      `v # (v,v')·M` by SRW_TAC [][] THEN
+      `v # M2` by METIS_TAC [hreduce1_FV] THEN
       SRW_TAC [][GSYM tpm_ALPHA],
 
       METIS_TAC [tpm_sing_inv, tpm_hreduce_I]
     ],
 
-    SRW_TAC [DNF_ss][Once hreduce1_cases, LAM_eq_thm] THEN 
-    SRW_TAC [][EQ_IMP_THM, tpm_eqr] THEN 
+    SRW_TAC [DNF_ss][Once hreduce1_cases, LAM_eq_thm] THEN
+    SRW_TAC [][EQ_IMP_THM, tpm_eqr] THEN
     METIS_TAC [lemma15a, tpm_flip_args, fresh_tpm_subst]
   ]);
 
@@ -86,9 +86,9 @@ val hnf_thm = store_thm(
   ``(hnf (VAR s) ⇔ T) ∧
     (hnf (M @@ N) ⇔ hnf M ∧ ¬is_abs M) ∧
     (hnf (LAM v M) ⇔ hnf M)``,
-  SRW_TAC [][hnf_def, hreduce1_rwts] THEN 
-  Cases_on `is_abs M` THEN SRW_TAC [][hreduce1_rwts] THEN 
-  Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN 
+  SRW_TAC [][hnf_def, hreduce1_rwts] THEN
+  Cases_on `is_abs M` THEN SRW_TAC [][hreduce1_rwts] THEN
+  Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN
   FULL_SIMP_TAC (srw_ss()) [hreduce1_rwts]);
 val _ = export_rewrites ["hnf_thm"]
 
@@ -102,8 +102,8 @@ val hreduce1_unique = store_thm(
   "hreduce1_unique",
   ``∀M N1 N2. M -h-> N1 ∧ M -h-> N2 ⇒ (N1 = N2)``,
   Q_TAC SUFF_TAC `∀M N. M -h-> N ⇒ ∀P. M -h-> P ⇒ (N = P)`
-        THEN1 METIS_TAC [] THEN 
-  HO_MATCH_MP_TAC hreduce1_ind THEN 
+        THEN1 METIS_TAC [] THEN
+  HO_MATCH_MP_TAC hreduce1_ind THEN
   SIMP_TAC (srw_ss() ++ DNF_ss) [hreduce1_rwts]);
 
 val strong_cc_ind = IndDefLib.derive_strong_induction (compat_closure_rules,
@@ -111,18 +111,41 @@ val strong_cc_ind = IndDefLib.derive_strong_induction (compat_closure_rules,
 
 val hnf_ccbeta_preserved = store_thm(
   "hnf_ccbeta_preserved",
-  ``∀M N. compat_closure beta M N ∧ hnf M ⇒ hnf N``,  
-  Q_TAC SUFF_TAC 
+  ``∀M N. compat_closure beta M N ∧ hnf M ⇒ hnf N``,
+  Q_TAC SUFF_TAC
         `∀M N. compat_closure beta M N ⇒ hnf M ⇒ hnf N`
-        THEN1 METIS_TAC [] THEN 
+        THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC strong_cc_ind THEN SRW_TAC [][] THENL [
-    FULL_SIMP_TAC (srw_ss()) [beta_def] THEN 
+    FULL_SIMP_TAC (srw_ss()) [beta_def] THEN
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [],
 
-    Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN 
-    FULL_SIMP_TAC (srw_ss()) [cc_beta_thm] THEN 
+    Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN
+    FULL_SIMP_TAC (srw_ss()) [cc_beta_thm] THEN
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
   ]);
+
+val (weak_head_rules, weak_head_ind, weak_head_cases) = Hol_reln`
+  (∀v M N. weak_head (LAM v M @@ N) ([N/v]M)) ∧
+  (∀M₁ M₂ N. weak_head M₁ M₂ ⇒ weak_head (M₁ @@ N) (M₂ @@ N))
+`;
+val _ = set_fixity "-w->" (Infix(NONASSOC, 450))
+val _ = overload_on ("-w->", ``weak_head``)
+
+val strong_weak_ind = IndDefLib.derive_strong_induction(weak_head_rules,
+                                                        weak_head_ind)
+
+val wh_is_abs = store_thm(
+  "wh_is_abs",
+  ``∀M N. M -w-> N ⇒ ¬is_abs M``,
+  HO_MATCH_MP_TAC weak_head_ind THEN SRW_TAC [][]);
+
+val wh_head = store_thm(
+  "wh_head",
+  ``∀M N. M -w-> N ⇒ M -h-> N``,
+  HO_MATCH_MP_TAC strong_weak_ind THEN METIS_TAC [wh_is_abs, hreduce1_rules]);
+
+val _ = set_fixity "-w->*" (Infix(NONASSOC, 450))
+val _ = overload_on ("-w->*", ``RTC (-w->)``)
 
 
 val _ = set_trace "Unicode" 0
