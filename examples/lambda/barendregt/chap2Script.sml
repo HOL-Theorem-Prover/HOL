@@ -339,24 +339,40 @@ val lameq_C = store_thm(
   SIMP_TAC (betafy (srw_ss())) [C_def, lameq_S, lameq_K, lameq_B]);
 
 val Y_def = Define`
-  Y = S @@ (C @@ B @@ (S @@ I @@ I)) @@ (C @@ B @@ (S @@ I @@ I))
+  Y = LAM "f" (LAM "x" (VAR "f" @@ (VAR "x" @@ VAR "x")) @@
+               LAM "x" (VAR "f" @@ (VAR "x" @@ VAR "x")))
 `;
-val FV_Y = Store_thm("FV_Y", ``FV Y = {}``, SRW_TAC [][Y_def]);
+val FV_Y = Store_thm(
+  "FV_Y",
+  ``FV Y = {}``,
+  SRW_TAC [][Y_def, EXTENSION] THEN METIS_TAC []);
 
-val Yf1 = prove(
-  ``B @@ f @@ (S @@ I @@ I) @@ (B @@ f @@ (S @@ I @@ I)) == Y @@ f``,
-  SIMP_TAC (betafy(srw_ss())) [lameq_S, Y_def, lameq_C]);
+val Yf_def = Define`
+  Yf f = let x = NEW (FV f)
+         in
+           LAM x (f @@ (VAR x @@ VAR x)) @@
+           LAM x (f @@ (VAR x @@ VAR x))
+`;
+
+val YYf = store_thm(
+  "YYf",
+  ``Y @@ f == Yf f``,
+  ONCE_REWRITE_TAC [lam_eq_cases] THEN DISJ1_TAC THEN
+  SRW_TAC [boolSimps.DNF_ss][Yf_def, Y_def, LAM_eq_thm] THEN
+  DISJ1_TAC THEN NEW_ELIM_TAC THEN SRW_TAC [][SUB_LAM_RWT] THEN
+  NEW_ELIM_TAC THEN SRW_TAC [][LAM_eq_thm, tpm_fresh]);
+
+val YffYf = store_thm(
+  "YffYf",
+  ``Yf f == f @@ Yf f``,
+  SRW_TAC [][Yf_def] THEN NEW_ELIM_TAC THEN SRW_TAC [][Once lam_eq_cases] THEN
+  DISJ1_TAC THEN MAP_EVERY Q.EXISTS_TAC [`v`, `f @@ (VAR v @@ VAR v)`] THEN
+  SRW_TAC [][lemma14b]);
 
 val lameq_Y = store_thm(
   "lameq_Y",
   ``Y @@ f == f @@ (Y @@ f)``,
-  ASSUME_TAC (``Y @@ f == X``
-                |> SIMP_CONV (betafy(srw_ss())) [Ntimes lameq_S 2,
-                                                 Y_def, lameq_I,
-                                                 lameq_C, Once lameq_B]
-                |> SIMP_RULE (betafy(srw_ss())) [Yf1]
-                |> Q.GEN `X`) THEN
-  ASM_SIMP_TAC (srw_ss()) []);
+  METIS_TAC [lam_eq_rules, YYf, YffYf]);
 
 val SK_incompatible = store_thm( (* example 2.18, p23 *)
   "SK_incompatible",
