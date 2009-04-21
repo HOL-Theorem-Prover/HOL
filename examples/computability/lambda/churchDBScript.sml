@@ -7,6 +7,7 @@ open HolKernel boolLib bossLib Parse binderLib
 open churchnumTheory churchboolTheory pure_dBTheory
 open reductionEval pred_setTheory termTheory chap3Theory
 open normal_orderTheory
+open head_reductionTheory
 
 val _ = new_theory "churchDB"
 
@@ -170,8 +171,8 @@ val FV_cdV = Store_thm(
 val bnf_cdV = Store_thm("bnf_cdV", ``bnf cdV``, SRW_TAC [][cdV_def])
 val cdV_behaviour = store_thm(
   "cdV_behaviour",
-  ``cdV @@ church n -n->* cDB (dV n)``,
-  SIMP_TAC (bsrw_ss()) [cdV_def, cDB_def, ciDB_def]);
+  ``cdV @@ church n -w->* cDB (dV n)``,
+  SIMP_TAC (whfy (srw_ss())) [cdV_def, cDB_def, ciDB_def]);
 
 val cdAPP_def = Define`
   cdAPP = LAM "M" (LAM "N" (LAM "v" (LAM "c" (LAM "a"
@@ -589,6 +590,17 @@ val cis_abs_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cis_abs_def] THEN Cases_on `t` THEN
   SIMP_TAC (bsrw_ss()) [cDB_thm]);
 
+val RTC1 = relationTheory.RTC_RULES |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL
+
+val wh_cis_abs = store_thm(
+  "wh_cis_abs",
+  ``cis_abs @@ cDB t -w->* cB (is_dABS t)``,
+  SIMP_TAC (whfy (srw_ss())) [cis_abs_def, bnf_whnf] THEN
+  Cases_on `t` THEN
+  SIMP_TAC (whfy (srw_ss())) [cDB_def, bnf_whnf, ciDB_def] THEN
+  SIMP_TAC (whfy (srw_ss())) [chap2Theory.K_def, bnf_whnf]);
+
+
 (* ----------------------------------------------------------------------
     cbnf - is a term in β-nf?
    ---------------------------------------------------------------------- *)
@@ -617,6 +629,82 @@ val cbnf_behaviour = store_thm(
   Induct_on `t` THEN
   ASM_SIMP_TAC (bsrw_ss()) [termrec_behaviour, cand_behaviour,
                             cis_abs_behaviour, cnot_behaviour]);
+
+val wh_S = store_thm(
+  "wh_S",
+  ``S @@ f @@ g @@ x -w->* f @@ x @@ (g @@ x)``,
+  unvarify_tac whstar_substitutive THEN REWRITE_TAC [chap2Theory.S_def] THEN
+  FRESH_TAC THEN ASM_SIMP_TAC (whfy (srw_ss())) []);
+
+val wh_K = store_thm(
+  "wh_K",
+  ``K @@ x @@ y -w->* x``,
+  unvarify_tac whstar_substitutive THEN REWRITE_TAC [chap2Theory.K_def] THEN
+  FRESH_TAC THEN ASM_SIMP_TAC (whfy (srw_ss())) []);
+
+val wh_B = store_thm(
+  "wh_B",
+  ``B @@ f @@ g @@ x -w->* f @@ (g @@ x)``,
+  unvarify_tac whstar_substitutive THEN
+  SIMP_TAC (whfy(srw_ss())) [chap2Theory.B_def, wh_S, wh_K]);
+
+val wh_cB = store_thm(
+  "wh_cB",
+  ``cB T @@ x @@ y -w->* x ∧
+    cB F @@ x @@ y -w->* y``,
+  CONJ_TAC THEN unvarify_tac whstar_substitutive THEN
+  REWRITE_TAC [churchboolTheory.cB_def] THEN FRESH_TAC THEN
+  ASM_SIMP_TAC (whfy (srw_ss())) []);
+
+open churchpairTheory
+val wh_cbnf = store_thm(
+  "wh_cbnf",
+  ``cbnf @@ cDB t -w->* cB (dbnf t)``,
+  SIMP_TAC (whfy (srw_ss())) [bnf_whnf, cbnf_def, termrec_def, cDB_def,
+                              csnd_def] THEN
+  Q.MATCH_ABBREV_TAC
+   `[AA/"a"] ([CC/"c"] ([VV/"v"] (ciDB t))) @@ cB F -w->* cB (dbnf t)` THEN
+  `(FV AA = {}) ∧ (FV CC = {}) ∧ (FV VV = {})`
+     by SRW_TAC [][Abbr`AA`, Abbr`VV`, Abbr`CC`, EXTENSION] THEN
+  Q_TAC SUFF_TAC
+    `∀t. [AA/"a"] ([CC/"c"] ([VV/"v"] (ciDB t))) @@ cB F -w->* cB (dbnf t) ∧
+         [AA/"a"] ([CC/"c"] ([VV/"v"] (ciDB t))) @@ cB T
+           @@ (K @@ cB F) @@ (K @@ (K @@ cB F)) @@ (K @@ cB T) -w->*
+         cB (is_dABS t)`
+    THEN1 METIS_TAC [] THEN
+  Induct_on `t` THENL [
+    ASM_SIMP_TAC (whfy (srw_ss())) [ciDB_def] THEN
+    Q.UNABBREV_TAC `VV` THEN
+    SIMP_TAC (whfy (srw_ss())) [termrec_var_def, wh_S, wh_B,
+                                wh_K, cpair_def, wh_cB, cdV_def],
+
+    ASM_SIMP_TAC (whfy (srw_ss())) [ciDB_def] THEN
+    Q.ABBREV_TAC `tcase = [AA/"a"]([CC/"c"] ([VV/"v"] (ciDB t)))` THEN
+    Q.ABBREV_TAC `t'case = [AA/"a"]([CC/"c"] ([VV/"v"] (ciDB t')))` THEN
+    `(FV tcase = {}) ∧ (FV t'case = {})`
+       by SRW_TAC [][Abbr`tcase`,Abbr`t'case`, EXTENSION, NOT_IN_SUB,
+                     NOT_IN_FV_ciDB] THEN
+    Q.PAT_ASSUM
+      `Abbrev (CC = X)`
+      (fn th =>
+          REWRITE_TAC [REWRITE_RULE [markerTheory.Abbrev_def] th]) THEN
+    ASM_SIMP_TAC (whfy (srw_ss())) [termrec_comb_def, cpair_def,
+                                    wh_K, wh_cB, cand_def, csnd_def, cfst_def,
+                                    cdAPP_def] THEN
+    Cases_on `dbnf t` THEN ASM_SIMP_TAC (whfy (srw_ss())) [wh_cB] THEN
+    Cases_on `dbnf t'` THEN ASM_SIMP_TAC (whfy (srw_ss())) [wh_cB] THEN
+    ASM_SIMP_TAC (whfy (srw_ss())) [cnot_def, cis_abs_def] THEN
+    Cases_on `is_dABS t` THEN ASM_SIMP_TAC (whfy (srw_ss())) [wh_cB],
+
+    ASM_SIMP_TAC (whfy (srw_ss())) [ciDB_def] THEN
+    Q.ABBREV_TAC `tcase = [AA/"a"] ([CC/"c"] ([VV/"v"] (ciDB t)))` THEN
+    `FV tcase = {}` by SRW_TAC [][Abbr`tcase`, EXTENSION, NOT_IN_SUB,
+                                  NOT_IN_FV_ciDB] THEN
+    Q.UNABBREV_TAC `AA` THEN
+    ASM_SIMP_TAC (whfy (srw_ss())) [termrec_abs_def, cpair_def, wh_cB,
+                                    csnd_def, cdABS_def, wh_K]
+  ]);
+
 
 (* ----------------------------------------------------------------------
     cnsub - the computable version of nsub, which has defining equations
@@ -1137,7 +1225,41 @@ val cbnf_of_works1 = store_thm(
   ASM_SIMP_TAC (bsrw_ss()) [cbnfof_body_equiv, cB_behaviour,
                             cbnf_behaviour]);
 
+val FV_Yf = Store_thm(
+  "FV_Yf",
+  ``FV (Yf t) = FV t``,
+  SRW_TAC [boolSimps.CONJ_ss][chap2Theory.Yf_def, EXTENSION, LET_THM] THEN
+  NEW_ELIM_TAC THEN METIS_TAC []);
+
 (* proving the other direction will be a pain *)
+(*
+val cbnf_of_lemma2 = prove(
+  ``¬bnf M ⇒
+    Yf cbnfof_body @@ cDB (fromTerm M) -n->*
+    Yf cbnfof_body @@ cDB (fromTerm (THE (noreduct M)))``,
+  STRIP_TAC THEN
+  ONCE_REWRITE_TAC [relationTheory.RTC_CASES_RTC_TWICE] THEN
+  Q.EXISTS_TAC `cbnfof_body @@ Yf cbnfof_body @@ cDB (fromTerm M)` THEN
+  CONJ_TAC THEN1
+    METIS_TAC [relationTheory.RTC_SINGLE, head_reductionTheory.whY2,
+               whead_norm_congL] THEN
+  REWRITE_TAC [Once cbnfof_body_def] THEN
+  MATCH_MP_TAC RTC1 THEN
+  Q.EXISTS_TAC `LAM "t" (cbnf @@ VAR "t" @@ VAR "t" @@
+                         (Yf cbnfof_body @@ (cnoreduct @@ VAR "t"))) @@
+                cDB (fromTerm M)` THEN
+  CONJ_TAC THEN1
+    SRW_TAC [][normorder_rwts, lemma14b] THEN
+  MATCH_MP_TAC RTC1 THEN
+  Q.EXISTS_TAC
+    `cbnf @@ cDB (fromTerm M)
+          @@ cDB (fromTerm M)
+          @@ (Yf cbnfof_body @@ (cnoreduct @@ cDB (fromTerm M)))` THEN
+  CONJ_TAC THEN1
+    SRW_TAC [][normorder_rwts, lemma14b] THEN
+
+*)
+
 
 
 val _ = export_theory()
