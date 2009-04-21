@@ -739,4 +739,5 @@ val whead_norm_congL = store_thm(
   IMP_RES_TAC head_reductionTheory.wh_is_abs THEN
   SRW_TAC [][normorder_rules]);
 
+
 val _ = export_theory()
