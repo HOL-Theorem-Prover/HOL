@@ -25,7 +25,7 @@ Doc2Txt.uo Doc2Txt.ui: Doc2Txt.sml MySubstring.uo ParseDoc.ui
 	$(MOSMLC) MySubstring.ui -c $<
 
 Doc2Html.uo Doc2Html.ui: Doc2Html.sml MySubstring.uo ParseDoc.ui Symbolic.ui Flash.ui
-	$(MOSMLC) -I $(SIGOBJ) MySubstring.ui -c $<
+	$(MOSMLC) -I $(protect $(SIGOBJ)) MySubstring.ui -c $<
 
 ParseDoc.ui: ParseDoc.sig MySubstring.uo
 	$(MOSMLC) MySubstring.ui -c $<
@@ -83,7 +83,7 @@ Lexer.lex.ui Lexer.lex.uo: Lexer.lex.sml Parser.grm-sig.ui MyCharVector.ui
 	$(MOSMLC) -toplevel -c Parser.grm-sig.ui MyCharVector.ui $<
 
 makebase.uo: makebase.sml MySubstring.ui MyTextIO.ui MyDatabase.ui Symbolic.ui Htmlsigs.ui Parsspec.uo Keepers.uo Printbase.uo HOLPage.uo
-	$(MOSMLC) -I $(SIGOBJ) -c MySubstring.ui MyTextIO.ui MyDatabase.ui $<
+	$(MOSMLC) -I $(protect $(SIGOBJ)) -c MySubstring.ui MyTextIO.ui MyDatabase.ui $<
 
 Printbase.ui: Printbase.sig MyDatabase.ui
 	$(MOSMLC) -c MyDatabase.ui $<
