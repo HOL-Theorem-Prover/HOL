@@ -257,7 +257,6 @@ val wh_substitutive = store_thm(
   ``∀M N. M -w-> N ⇒ [P/v]M -w-> [P/v]N``,
   HO_MATCH_MP_TAC whead_bvcX_ind THEN Q.EXISTS_TAC `FV P ∪ {v}` THEN
   SRW_TAC [][weak_head_rules] THEN
-  Q.MATCH_ABBREV_TAC `LAM z ([P/v]M) @@ [P/v]N -w-> [P/v] ([N/z]M)` THEN
   METIS_TAC [chap2Theory.substitution_lemma, weak_head_rules]);
 
 val whstar_substitutive = store_thm(
