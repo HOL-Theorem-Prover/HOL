@@ -240,9 +240,9 @@ example</p>
 <p> If you turn Unicode on, and see gibberish when you print terms and
 theorems, your fonts and system are not Unicode and UTF-8 compatible.
 Emacs versions past 22 can be made to work, as can normal shells on
-MacOS and Linux.  Currently, we don’t know how to create a pleasant
-Unicode experience on Window.  (This is not to say that it is not
-possible.)</p>
+MacOS and Linux.  The latest versions of Emacs on Windows support
+UTF-8, and so running HOL inside Emacs on Windows gives a pleasant
+Unicode experience there too. </p>
 
 <p>The <code>Unicode</code> trace controls the use of Unicode symbols
 that are set up as explicit alternatives for ASCII equivalents.  To
@@ -327,8 +327,8 @@ the <code>words</code> theory.)</p>
 <p>It is now possible to use the simplifier to rewrite terms with
 respect to arbitrary pre-orders.  The entry-point is the function</p>
 <pre>
-         simpLib.add_relsimp : 
-            {trans: thm, refl: thm, subsets: thm list, 
+         simpLib.add_relsimp :
+            {trans: thm, refl: thm, subsets: thm list,
              rewrs: thm list, weakenings: thm list} ->
             simpset -> simpset
 </pre>
