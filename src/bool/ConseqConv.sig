@@ -102,6 +102,8 @@ val CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq
 val CONJ_ASSUMPTIONS_REDEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
 val CONSEQ_REWRITE_TAC           : (thm list * thm list * thm list) -> tactic;
 val CONSEQ_HO_REWRITE_TAC        : (thm list * thm list * thm list) -> tactic;
+val ONCE_CONSEQ_REWRITE_TAC      : (thm list * thm list * thm list) -> tactic;
+val ONCE_CONSEQ_HO_REWRITE_TAC   : (thm list * thm list * thm list) -> tactic;
 
 
 end
