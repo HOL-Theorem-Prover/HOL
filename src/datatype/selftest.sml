@@ -113,7 +113,23 @@ val _ = Hol_datatype `
    | trWhile2 of (num # num) # bool # tr20090423
 `;
 
+(* both of these were fixed by r6750, which explicitly handles the product
+   type, and recursions underneath it. *)
 
+(* r6750 does not handle the following correctly though *)
+val _ = Hol_datatype`
+  fake_pair = FP of 'a => 'b
+`;
+
+val _ = new_infix_type {Arity = 2, Assoc = RIGHT, Name = "fake_pair",
+                        ParseName = SOME "**", Prec = 70}
+
+val _ = Hol_datatype`
+  trprime = trpSkip
+      | trpSeq of bool ** trprime ** trprime
+      | trpIf of bool ** num ** trprime ** trprime
+      | trpW of (num ** num) ** bool ** trprime
+`;
 
 fun tprint s = print (StringCvt.padRight #" " 70 s)
 
