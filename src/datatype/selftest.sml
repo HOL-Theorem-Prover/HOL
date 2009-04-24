@@ -95,6 +95,26 @@ val _ = Hol_datatype`
                   fld10 : num + bool ; fld11 : bool option ;
                   fld12 : bool ; fld13 : num |>`
 
+(* Tom Ridge's example from 2009/04/23 *)
+val _ = Hol_datatype `
+  command2 =
+     Skip2
+   | Seq2 of bool # command2 # command2
+   | IfThenElse2 of bool # num # command2 # command2
+   | While2 of (num # num) # bool # command2
+`;
+
+(* this version raises a different error *)
+val _ = Hol_datatype `
+  tr20090423 =
+     trSkip2
+   | trSeq2 of bool # tr20090423 # tr20090423
+   | trIfThenElse2 of bool # num # tr20090423 # tr20090423
+   | trWhile2 of (num # num) # bool # tr20090423
+`;
+
+
+
 fun tprint s = print (StringCvt.padRight #" " 70 s)
 
 val _ = tprint "Testing independence of case variables"
