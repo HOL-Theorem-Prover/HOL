@@ -121,7 +121,7 @@ val _ = Hol_datatype`
   fake_pair = FP of 'a => 'b
 `;
 
-val _ = new_infix_type {Arity = 2, Assoc = RIGHT, Name = "fake_pair",
+val _ = add_infix_type {Assoc = RIGHT, Name = "fake_pair",
                         ParseName = SOME "**", Prec = 70}
 
 val _ = Hol_datatype`
@@ -130,6 +130,31 @@ val _ = Hol_datatype`
       | trpIf of bool ** num ** trprime ** trprime
       | trpW of (num ** num) ** bool ** trprime
 `;
+
+(* can see it "more directly" with
+val spec =
+    [(``:'trp``,
+      [("trpSkip", []),
+       ("trpSeq", [``:bool ** 'trp ** 'trp``]),
+       ("trpIf", [``:bool ** num ** 'trp ** 'trp``]),
+       ("trpW", [``:(num ** num) ** bool ** 'trp``])])]
+val result = ind_types.define_type spec handle e => Raise e;
+
+- note also that switching the order of the trpSeq and trpIf entries in the
+  list above makes it work again.  I.e.,
+
+val spec' =
+    [(``:'trp``,
+      [("trpSkip", []),
+       ("trpIf", [``:bool ** num ** 'trp ** 'trp``]),
+       ("trpSeq", [``:bool ** 'trp ** 'trp``]),
+       ("trpW", [``:(num ** num) ** bool ** 'trp``])])]
+val result = ind_types.define_type spec' handle e => Raise e;
+
+- works.
+
+*)
+
 
 fun tprint s = print (StringCvt.padRight #" " 70 s)
 
