@@ -387,15 +387,6 @@ val ISO_FUN = store_thm(
   REWRITE_TAC [ISO] THEN SIMP_TAC bool_ss [ISO, FUN_EQ_THM]);
   (* bug in the simplifier requires first rewrite to be performed *)
 
-val ISO_PROD = store_thm(
-  "ISO_PROD",
-  Term`ISO (f:'a->'c) f' /\ ISO (g:'b->'d) g' ==>
-       ISO (f ## g) (f' ## g')`,
-  REWRITE_TAC [ISO] THEN STRIP_TAC THEN CONJ_TAC
-    THENL map PairRules.P_PGEN_TAC [Term`(q:'c,r:'d)`,Term`(q:'a,r:'b)`]
-    THEN ASM_SIMP_TAC (bool_ss ++ pairSimps.PAIR_ss) []);
-  (* bug in the simplifier requires first rewrite to be performed *)
-
 (* ------------------------------------------------------------------------- *)
 (* The use we make of isomorphism when finished.                             *)
 (* ------------------------------------------------------------------------- *)

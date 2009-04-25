@@ -992,9 +992,6 @@ fun lift_type_bijections iths cty =
           in if tycon = "fun"
              then MATCH_MP ISO_FUN
                     (end_itlist CONJ (map (lift_type_bijections iths) isotys))
-             else if tycon = "prod"
-             then MATCH_MP ISO_PROD
-                    (end_itlist CONJ (map (lift_type_bijections iths) isotys))
              else raise ERR "lift_type_bijections"
                       ("Unexpected type operator \""^tycon^"\"")
           end
@@ -1216,14 +1213,7 @@ val SIMPLE_BETA_RULE = GSYM o SIMP_RULE bool_ss [FUN_EQ_THM];
 val ISO_USAGE_RULE = MATCH_MP ISO_USAGE;
 val SIMPLE_ISO_EXPAND_RULE = CONV_RULE(REWR_CONV ISO);
 
-val PAIR_MAP     = pairTheory.PAIR_MAP
-val PAIR_MAP_THM = pairTheory.PAIR_MAP_THM
-val FST_PAIR_MAP = pairTheory.FST_PAIR_MAP
-val SND_PAIR_MAP = pairTheory.SND_PAIR_MAP
-
-val PAIR_RULE = PURE_REWRITE_RULE[PAIR_MAP] o PURE_REWRITE_RULE[PAIR_MAP_THM]
-
-fun REWRITE_FUN_EQ_RULE thl = SIMP_RULE bool_ss (FUN_EQ_THM::FST_PAIR_MAP::SND_PAIR_MAP::thl)
+fun REWRITE_FUN_EQ_RULE thl = SIMP_RULE bool_ss (FUN_EQ_THM::thl)
 
 fun get_nestedty_info tyname =
   let fun hol98_to_jrh_ind ind0 =
@@ -1474,7 +1464,7 @@ local
                                                 isotys)
                                   atylist)
         val cisoths =
-            map (BETA_RULE o PAIR_RULE o lift_type_bijections isoths') ctylist
+            map (BETA_RULE o lift_type_bijections isoths') ctylist
         val uisoths = map ISO_USAGE_RULE cisoths
         val visoths = map (ASSUME o concl) uisoths
         val irth4 =
