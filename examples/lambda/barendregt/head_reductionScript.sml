@@ -276,6 +276,11 @@ val whstar_lameq = store_thm(
   ``M -w->* N ⇒ M == N``,
   METIS_TAC [betastar_lameq, whstar_betastar]);
 
-val _ = set_trace "Unicode" 0
+val whstar_abs = Store_thm(
+  "whstar_abs",
+  ``LAM v M -w->* N ⇔ (N = LAM v M)``,
+  SRW_TAC [][EQ_IMP_THM] THEN
+  FULL_SIMP_TAC (srw_ss()) [Once relationTheory.RTC_CASES1,
+                            Once weak_head_cases]);
 
 val _ = export_theory()
