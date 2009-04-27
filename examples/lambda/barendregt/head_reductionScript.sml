@@ -145,8 +145,22 @@ val wh_head = store_thm(
   ``∀M N. M -w-> N ⇒ M -h-> N``,
   HO_MATCH_MP_TAC strong_weak_ind THEN METIS_TAC [wh_is_abs, hreduce1_rules]);
 
+
+
 val _ = set_fixity "-w->*" (Infix(NONASSOC, 450))
 val _ = overload_on ("-w->*", ``RTC (-w->)``)
+
+val whead_FV = store_thm(
+  "whead_FV",
+  ``∀M N. M -w-> N ⇒ v ∈ FV N ⇒ v ∈ FV M``,
+  HO_MATCH_MP_TAC weak_head_ind THEN SRW_TAC [][FV_SUB] THEN
+  METIS_TAC []);
+val whstar_FV = store_thm(
+  "whstar_FV",
+  ``∀M N. M -w->* N ⇒ v ∈ FV N ⇒ v ∈ FV M``,
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+  METIS_TAC [relationTheory.RTC_RULES, whead_FV]);
+
 
 val _ = reveal "Y"
 val whY1 = store_thm(

@@ -86,7 +86,7 @@ fun bsrw_ss() = betafy(srw_ss())
 
 fun whfy ss = let
   open relationTheory head_reductionTheory termTheory
-  val congs = [wh_app_congL]
+  val congs = [wh_app_congL, whstar_substitutive]
 in
   add_relsimp {refl = RTC_REFL
                         |> INST_TYPE [alpha |-> termSyntax.term_ty]
