@@ -633,14 +633,14 @@ val cbnf_behaviour = store_thm(
 val wh_S = store_thm(
   "wh_S",
   ``S @@ f @@ g @@ x -w->* f @@ x @@ (g @@ x)``,
-  unvarify_tac whstar_substitutive THEN REWRITE_TAC [chap2Theory.S_def] THEN
-  FRESH_TAC THEN ASM_SIMP_TAC (whfy (srw_ss())) []);
+  REWRITE_TAC [chap2Theory.S_def] THEN unvarify_tac whstar_substitutive THEN
+  ASM_SIMP_TAC (whfy (srw_ss())) []);
 
 val wh_K = store_thm(
   "wh_K",
   ``K @@ x @@ y -w->* x``,
-  unvarify_tac whstar_substitutive THEN REWRITE_TAC [chap2Theory.K_def] THEN
-  FRESH_TAC THEN ASM_SIMP_TAC (whfy (srw_ss())) []);
+  REWRITE_TAC [chap2Theory.K_def] THEN unvarify_tac whstar_substitutive THEN
+  ASM_SIMP_TAC (whfy (srw_ss())) []);
 
 val wh_B = store_thm(
   "wh_B",
@@ -648,61 +648,125 @@ val wh_B = store_thm(
   unvarify_tac whstar_substitutive THEN
   SIMP_TAC (whfy(srw_ss())) [chap2Theory.B_def, wh_S, wh_K]);
 
-val wh_cB = store_thm(
-  "wh_cB",
-  ``cB T @@ x @@ y -w->* x ∧
-    cB F @@ x @@ y -w->* y``,
-  CONJ_TAC THEN unvarify_tac whstar_substitutive THEN
-  REWRITE_TAC [churchboolTheory.cB_def] THEN FRESH_TAC THEN
-  ASM_SIMP_TAC (whfy (srw_ss())) []);
+val wh_cdV = store_thm(
+  "wh_cdV",
+  ``cdV @@ x @@ v @@ c @@ a -w->* v @@ x``,
+  unvarify_tac whstar_substitutive THEN REWRITE_TAC [cdV_def] THEN
+  FRESH_TAC THEN ASM_SIMP_TAC (whfy(srw_ss())) []);
+
+val wh_cdAPP = store_thm(
+  "wh_cdAPP",
+  ``cdAPP @@ t1 @@ t2 @@ v @@ c @@ a -w->*
+    c @@ (t1 @@ v @@ c @@ a) @@ (t2 @@ v @@ c @@ a)``,
+  REWRITE_TAC [cdAPP_def] THEN unvarify_tac whstar_substitutive THEN
+  ASM_SIMP_TAC (whfy(srw_ss())) []);
+
+val wh_cdABS = store_thm(
+  "wh_cdABS",
+  ``cdABS @@ t @@ v @@ c @@ a -w->* a @@ (t @@ v @@ c @@ a)``,
+  REWRITE_TAC [cdABS_def] THEN unvarify_tac whstar_substitutive THEN
+  ASM_SIMP_TAC (whfy(srw_ss())) []);
+
+
 
 open churchpairTheory
+
+val wh_termrec_comb = store_thm(
+  "wh_termrec_comb",
+  ``termrec_comb @@ t @@ r1 @@ r2 @@ f -w->*
+    f @@ (cdAPP @@ (cfst @@ r1) @@ (cfst @@ r2))
+      @@ (t @@ (cfst @@ r1) @@ (cfst @@ r2)
+            @@ (csnd @@ r1) @@ (csnd @@ r2))``,
+  unvarify_tac whstar_substitutive THEN
+  REWRITE_TAC [termrec_comb_def] THEN FRESH_TAC THEN
+  ASM_SIMP_TAC (whfy (srw_ss())) [tpm_fresh, wh_cpair]);
+
+val wh_termrec_abs = store_thm(
+  "wh_termrec_abs",
+  ``termrec_abs @@ t @@ r @@ f -w->*
+    f @@ (cdABS @@ (cfst @@ r)) @@ (t @@ (cfst @@ r) @@ (csnd @@ r))``,
+  REWRITE_TAC [termrec_abs_def] THEN unvarify_tac whstar_substitutive THEN
+  ASM_SIMP_TAC (whfy(srw_ss())) [wh_cpair]);
+
 val wh_cbnf = store_thm(
   "wh_cbnf",
-  ``cbnf @@ cDB t -w->* cB (dbnf t)``,
-  SIMP_TAC (whfy (srw_ss())) [bnf_whnf, cbnf_def, termrec_def, cDB_def,
-                              csnd_def] THEN
+  ``(FV M = {}) ∧ M -n->* cDB t ⇒ cbnf @@ M -w->* cB (dbnf t)``,
+  SIMP_TAC (whfy (srw_ss())) [cbnf_def, termrec_def, cDB_def, csnd_def] THEN
+  STRIP_TAC THEN
   Q.MATCH_ABBREV_TAC
-   `[AA/"a"] ([CC/"c"] ([VV/"v"] (ciDB t))) @@ cB F -w->* cB (dbnf t)` THEN
+     `M @@ VV @@ (termrec_comb @@ CC) @@ AA @@ cB F -w->* cB (dbnf t)` THEN
   `(FV AA = {}) ∧ (FV CC = {}) ∧ (FV VV = {})`
      by SRW_TAC [][Abbr`AA`, Abbr`VV`, Abbr`CC`, EXTENSION] THEN
+  `"v" ∉ FV M` by SRW_TAC [][] THEN
+  `∃vM. M -w->* LAM "v" vM ∧ vM -n->* LAM "c" (LAM "a" (ciDB t))`
+    by METIS_TAC [normstar_to_abs_wstar] THEN
+  ASM_SIMP_TAC (whfy (srw_ss())) [] THEN
+  `"c" ∉ FV vM`
+    by (STRIP_TAC THEN
+        `"c" ∈ FV (LAM "v" vM)` by SRW_TAC [][] THEN
+        `"c" ∈ FV M` by METIS_TAC [whstar_FV] THEN
+        POP_ASSUM MP_TAC THEN SRW_TAC [][]) THEN
+  `∃vcM. vM -w->* LAM "c" vcM ∧ vcM -n->* LAM "a" (ciDB t)`
+    by METIS_TAC [normstar_to_abs_wstar] THEN
+  ASM_SIMP_TAC (whfy (srw_ss())) [] THEN
+  `"a" ∉ FV vcM`
+    by (STRIP_TAC THEN
+        `"a" ∈ FV (LAM "c" vcM)` by SRW_TAC [][] THEN
+        `"a" ∈ FV vM` by METIS_TAC [whstar_FV] THEN
+        `"a" ∈ FV (LAM "v" vM)` by SRW_TAC [][] THEN
+        `"a" ∈ FV M` by METIS_TAC  [whstar_FV] THEN
+        POP_ASSUM MP_TAC THEN SRW_TAC [][]) THEN
+  `∃vcaM. vcM -w->* LAM "a" vcaM ∧ vcaM -n->* ciDB t`
+    by METIS_TAC [normstar_to_abs_wstar] THEN
+  ASM_SIMP_TAC (whfy (srw_ss())) [] THEN
+  POP_ASSUM MP_TAC THEN NTAC 8 (POP_ASSUM (K ALL_TAC)) THEN
+  REPEAT (FIRST_X_ASSUM (fn th => if mem ``M:term`` (free_vars (concl th)) then
+                                    ALL_TAC
+                                  else NO_TAC)) THEN
   Q_TAC SUFF_TAC
-    `∀t. [AA/"a"] ([CC/"c"] ([VV/"v"] (ciDB t))) @@ cB F -w->* cB (dbnf t) ∧
-         [AA/"a"] ([CC/"c"] ([VV/"v"] (ciDB t))) @@ cB T
+    `∀t M.
+       M -n->* ciDB t ⇒
+       [AA/"a"] ([termrec_comb @@ CC/"c"] ([VV/"v"] M)) @@ cB F -w->*
+         cB (dbnf t) ∧
+       [AA/"a"] ([termrec_comb @@ CC/"c"] ([VV/"v"] M)) @@ cB T
            @@ (K @@ cB F) @@ (K @@ (K @@ cB F)) @@ (K @@ cB T) -w->*
          cB (is_dABS t)`
     THEN1 METIS_TAC [] THEN
   Induct_on `t` THENL [
-    ASM_SIMP_TAC (whfy (srw_ss())) [ciDB_def] THEN
+    REPEAT GEN_TAC THEN SIMP_TAC (srw_ss()) [ciDB_def] THEN STRIP_TAC THEN
+    `∃M'. M -w->* VAR "v" @@ M' ∧ M' -n->* church n`
+      by METIS_TAC [normstar_to_vheadunary_wstar] THEN
+    ASM_SIMP_TAC (whfy (srw_ss())) [] THEN
     Q.UNABBREV_TAC `VV` THEN
-    SIMP_TAC (whfy (srw_ss())) [termrec_var_def, wh_S, wh_B,
-                                wh_K, cpair_def, wh_cB, cdV_def],
+    SIMP_TAC (whfy (srw_ss())) [termrec_var_def, wh_S, wh_B, wh_cpair,
+                                wh_cB, wh_cdV, wh_K],
 
-    ASM_SIMP_TAC (whfy (srw_ss())) [ciDB_def] THEN
-    Q.ABBREV_TAC `tcase = [AA/"a"]([CC/"c"] ([VV/"v"] (ciDB t)))` THEN
-    Q.ABBREV_TAC `t'case = [AA/"a"]([CC/"c"] ([VV/"v"] (ciDB t')))` THEN
-    `(FV tcase = {}) ∧ (FV t'case = {})`
-       by SRW_TAC [][Abbr`tcase`,Abbr`t'case`, EXTENSION, NOT_IN_SUB,
-                     NOT_IN_FV_ciDB] THEN
-    Q.PAT_ASSUM
-      `Abbrev (CC = X)`
-      (fn th =>
-          REWRITE_TAC [REWRITE_RULE [markerTheory.Abbrev_def] th]) THEN
-    ASM_SIMP_TAC (whfy (srw_ss())) [termrec_comb_def, cpair_def,
-                                    wh_K, wh_cB, cand_def, csnd_def, cfst_def,
-                                    cdAPP_def] THEN
-    Cases_on `dbnf t` THEN ASM_SIMP_TAC (whfy (srw_ss())) [wh_cB] THEN
+    ASM_SIMP_TAC (srw_ss()) [ciDB_def] THEN GEN_TAC THEN STRIP_TAC THEN
+    `∃M₁ M₂. M -w->* VAR "c" @@ M₁ @@ M₂ ∧ M₁ -n->* ciDB t ∧
+             M₂ -n->* ciDB t'` by METIS_TAC [normstar_to_vheadbinary_wstar] THEN
+    ASM_SIMP_TAC (whfy(srw_ss())) [] THEN
+    `∀t1 t2 r1 r2.
+       CC @@ t1 @@ t2 @@ r1 @@ r2 -w->*
+       r1 @@ (cand @@ r2 @@ (cnot @@ (cis_abs @@ t1))) @@ cB F`
+       by (Q.UNABBREV_TAC `CC` THEN REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+           REPEAT STRIP_TAC THEN unvarify_tac whstar_substitutive THEN
+           ASM_SIMP_TAC (whfy (srw_ss())) [wh_cand]) THEN
+    ASM_SIMP_TAC (whfy (srw_ss())) [wh_termrec_comb, wh_cB, csnd_def,
+                                    wh_cdAPP, wh_K] THEN
+    Cases_on `dbnf t` THEN ASM_SIMP_TAC (whfy (srw_ss())) [wh_cB, wh_cand] THEN
     Cases_on `dbnf t'` THEN ASM_SIMP_TAC (whfy (srw_ss())) [wh_cB] THEN
-    ASM_SIMP_TAC (whfy (srw_ss())) [cnot_def, cis_abs_def] THEN
+    ASM_SIMP_TAC (whfy (srw_ss())) [cnot_def, cis_abs_def, cfst_def] THEN
     Cases_on `is_dABS t` THEN ASM_SIMP_TAC (whfy (srw_ss())) [wh_cB],
 
-    ASM_SIMP_TAC (whfy (srw_ss())) [ciDB_def] THEN
-    Q.ABBREV_TAC `tcase = [AA/"a"] ([CC/"c"] ([VV/"v"] (ciDB t)))` THEN
-    `FV tcase = {}` by SRW_TAC [][Abbr`tcase`, EXTENSION, NOT_IN_SUB,
-                                  NOT_IN_FV_ciDB] THEN
-    Q.UNABBREV_TAC `AA` THEN
-    ASM_SIMP_TAC (whfy (srw_ss())) [termrec_abs_def, cpair_def, wh_cB,
-                                    csnd_def, cdABS_def, wh_K]
+    ASM_SIMP_TAC (srw_ss()) [ciDB_def] THEN GEN_TAC THEN STRIP_TAC THEN
+    `∃M0. M -w->* VAR "a" @@ M0 ∧ M0 -n->* ciDB t`
+      by METIS_TAC [normstar_to_vheadunary_wstar] THEN
+    ASM_SIMP_TAC (whfy(srw_ss())) [] THEN
+    `∀t f. AA @@ t @@ f -w->*
+           f @@ (cdABS @@ (cfst @@ t))
+             @@ ((LAM "t" (LAM "r" (VAR "r"))) @@ (cfst @@ t) @@ (csnd @@ t))`
+       by ASM_SIMP_TAC (whfy(srw_ss())) [Abbr`AA`, wh_termrec_abs] THEN
+    ASM_SIMP_TAC (whfy(srw_ss())) [wh_cB, csnd_def, wh_cdABS, wh_K]
   ]);
 
 
