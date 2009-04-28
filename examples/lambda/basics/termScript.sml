@@ -588,6 +588,12 @@ val term_CASES = store_thm(
   ``!t. (?s. t = VAR s) \/ (?t1 t2. t = t1 @@ t2) \/ (?v t0. t = LAM v t0)``,
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THEN METIS_TAC []);
 
+(* "acyclicity" *)
+val APP_acyclic = store_thm(
+  "APP_acyclic",
+  ``!t1 t2. t1 <> t1 @@ t2 /\ t1 <> t2 @@ t1``,
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
+
 (* ----------------------------------------------------------------------
     Establish substitution function
    ---------------------------------------------------------------------- *)
