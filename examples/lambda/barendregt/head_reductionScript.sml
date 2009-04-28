@@ -140,6 +140,11 @@ val wh_is_abs = store_thm(
   ``∀M N. M -w-> N ⇒ ¬is_abs M``,
   HO_MATCH_MP_TAC weak_head_ind THEN SRW_TAC [][]);
 
+val wh_lam = Store_thm(
+  "wh_lam",
+  ``∀v M N. ¬(LAM v M -w-> N)``,
+  ONCE_REWRITE_TAC [weak_head_cases] THEN SRW_TAC [][]);
+
 val wh_head = store_thm(
   "wh_head",
   ``∀M N. M -w-> N ⇒ M -h-> N``,
@@ -168,7 +173,7 @@ val whY1 = store_thm(
   ``Y @@ f -w-> Yf f``,
   SRW_TAC [][chap2Theory.Y_def, chap2Theory.Yf_def, LET_THM,
              Once weak_head_cases] THEN
-  NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN DISJ1_TAC THEN
+  NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
   SRW_TAC [DNF_ss][LAM_eq_thm] THEN DISJ1_TAC THEN
   SRW_TAC [][chap2Theory.SUB_LAM_RWT, LET_THM] THEN NEW_ELIM_TAC THEN
   SRW_TAC [][LAM_eq_thm, tpm_fresh]);
