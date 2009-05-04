@@ -78,6 +78,31 @@ val FV_church = store_thm(
   ]);
 val _ = export_rewrites ["FV_church"]
 
+val is_church_def = Define`
+  is_church t =
+    ∃f z n. f ≠ z ∧ (t = LAM z (LAM f (FUNPOW ((@@) (VAR f)) n (VAR z))))
+`;
+
+
+val church_is_church = Store_thm(
+  "church_is_church",
+  ``is_church (church n)``,
+  SRW_TAC [][is_church_def, church_def] THEN
+  `"z" ≠ "s"` by SRW_TAC [][] THEN METIS_TAC []);
+
+val force_num_def = Define`
+  force_num t = if is_church t then (@n. t = church n) else 0
+`;
+
+val force_num_church = Store_thm(
+  "force_num_church",
+  ``force_num (church n) = n``,
+  SRW_TAC [][force_num_def]);
+
+
+
+
+
 val tpm_funpow_app = store_thm(
   "tpm_funpow_app",
   ``tpm pi (FUNPOW ($@@ f) n x) = FUNPOW ($@@ (tpm pi f)) n (tpm pi x)``,
@@ -105,6 +130,27 @@ val fresh_funpow_app_I = store_thm(
   METIS_TAC [FV_funpow_app_E]);
 val _ = export_rewrites ["fresh_funpow_app_I"]
 
+val is_church_church = store_thm(
+  "is_church_church",
+  ``is_church t ⇒ ∃n. t = church n``,
+  SRW_TAC [][is_church_def, church_def] THEN
+  Q.EXISTS_TAC `n` THEN SRW_TAC [CONJ_ss][LAM_eq_thm] THEN
+  Cases_on `z = "z"` THEN SRW_TAC [CONJ_ss][] THEN
+  Cases_on `z = "s"` THEN SRW_TAC [CONJ_ss][]);
+
+val force_num_size = store_thm(
+  "force_num_size",
+  ``is_church t ⇒ (force_num t = size t DIV 2 - 1)``,
+  SRW_TAC [][force_num_def] THEN
+  `∃n. t = church n` by METIS_TAC [is_church_church] THEN
+  SRW_TAC [ARITH_ss][church_def, size_funpow] THEN
+  Q_TAC SUFF_TAC `(2 * n + 3) DIV 2 = n + 1` THEN1 DECIDE_TAC THEN
+  MATCH_MP_TAC arithmeticTheory.DIV_UNIQUE THEN Q.EXISTS_TAC `1` THEN
+  DECIDE_TAC);
+
+
+
+
 val SUB_funpow_app = store_thm(
   "SUB_funpow_app",
   ``[M/v] (FUNPOW ($@@ f) n x) = FUNPOW ($@@ ([M/v]f)) n ([M/v]x)``,
@@ -116,7 +162,7 @@ val church_thm = store_thm(
   ``church 0 @@ x @@ f == x ∧
     church (SUC n) @@ x @@ f == f @@ (church n @@ x @@ f)``,
   CONJ_TAC THENL [
-    SIMP_TAC (bsrw_ss()) [church_def] THEN FRESH_TAC THEN 
+    SIMP_TAC (bsrw_ss()) [church_def] THEN FRESH_TAC THEN
     ASM_SIMP_TAC (bsrw_ss()) [],
 
     SIMP_TAC (bsrw_ss()) [church_def] THEN FRESH_TAC THEN
@@ -130,11 +176,11 @@ val csuc_def = Define`
 val FV_csuc = Store_thm(
   "FV_csuc",
   ``FV csuc = {}``,
-  SRW_TAC [][csuc_def, EXTENSION] THEN METIS_TAC []); 
+  SRW_TAC [][csuc_def, EXTENSION] THEN METIS_TAC []);
 val bnf_csuc = Store_thm(
   "bnf_csuc",
   ``bnf csuc``,
-  SRW_TAC [][csuc_def]);   
+  SRW_TAC [][csuc_def]);
 
 val csuc_behaviour = store_thm(
   "csuc_behaviour",
@@ -149,11 +195,11 @@ val _ = export_rewrites ["church_eq"]
 
 val natrec_def = Define`
   natrec = LAM "z" (LAM "f" (LAM "n" (
-             csnd @@ (VAR "n" 
-                          @@ (cpair @@ church 0 @@ VAR "z") 
-                          @@ (LAM "r" (cpair 
+             csnd @@ (VAR "n"
+                          @@ (cpair @@ church 0 @@ VAR "z")
+                          @@ (LAM "r" (cpair
                                          @@ (csuc @@ (cfst @@ VAR "r"))
-                                         @@ (VAR "f" @@ (cfst @@ VAR "r") 
+                                         @@ (VAR "f" @@ (cfst @@ VAR "r")
                                                      @@ (csnd @@ VAR "r"))))))))
 `;
 
@@ -162,8 +208,8 @@ val FV_natrec = Store_thm(
   ``FV natrec = {}``,
   SRW_TAC [][natrec_def, EXTENSION] THEN METIS_TAC []);
 infix |> fun x |> f = f x
-val lameq_sub = chap2Theory.lemma2_12 |> CONJUNCTS 
-                                      |> hd 
+val lameq_sub = chap2Theory.lemma2_12 |> CONJUNCTS
+                                      |> hd
                                       |> UNDISCH
                                       |> GEN_ALL
                                       |> DISCH_ALL
@@ -172,28 +218,28 @@ val lameq_sub = chap2Theory.lemma2_12 |> CONJUNCTS
 val natrec_behaviour = store_thm(
   "natrec_behaviour",
   ``natrec @@ z @@ f @@ church 0 == z ∧
-    natrec @@ z @@ f @@ church (SUC n) == 
+    natrec @@ z @@ f @@ church (SUC n) ==
        f @@ church n @@ (natrec @@ z @@ f @@ church n)``,
   CONJ_TAC THENL [
-    SIMP_TAC (srw_ss()) [natrec_def] THEN FRESH_TAC THEN 
+    SIMP_TAC (srw_ss()) [natrec_def] THEN FRESH_TAC THEN
     SRW_TAC [][tpm_fresh, lemma14b] THEN
     ASM_SIMP_TAC (bsrw_ss()) [church_thm, csnd_pair],
 
-    SIMP_TAC (srw_ss()) [natrec_def] THEN unvarify_tac lameq_sub THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [] THEN 
-    Q.MATCH_ABBREV_TAC 
+    SIMP_TAC (srw_ss()) [natrec_def] THEN unvarify_tac lameq_sub THEN
+    ASM_SIMP_TAC (bsrw_ss()) [] THEN
+    Q.MATCH_ABBREV_TAC
       `csnd @@ (church (SUC n) @@ Z @@ FF) ==
-       VAR fs @@ church n @@ (csnd @@ (church n @@ Z @@ FF))` THEN 
+       VAR fs @@ church n @@ (csnd @@ (church n @@ Z @@ FF))` THEN
     `∀n. cfst @@ (church n @@ Z @@ FF) == church n`
        by (Induct THEN ASM_SIMP_TAC (bsrw_ss()) [church_thm] THENL [
              SIMP_TAC (bsrw_ss()) [cfst_pair, Abbr`Z`],
-             Q.MATCH_ABBREV_TAC `cfst @@ (FF @@ Arg) == church (SUC n)` THEN 
+             Q.MATCH_ABBREV_TAC `cfst @@ (FF @@ Arg) == church (SUC n)` THEN
              `∀v. v ∉ FV Arg ⇔ v ≠ zs ∧ v ≠ fs`
-                  by (SRW_TAC [][Abbr`Arg`, Abbr`FF`, Abbr`Z`, EQ_IMP_THM] THEN 
-                      METIS_TAC []) THEN 
+                  by (SRW_TAC [][Abbr`Arg`, Abbr`FF`, Abbr`Z`, EQ_IMP_THM] THEN
+                      METIS_TAC []) THEN
              ASM_SIMP_TAC (bsrw_ss()) [Abbr`FF`, csuc_behaviour, cfst_pair]
-           ]) THEN 
-    ASM_SIMP_TAC (bsrw_ss()) [church_thm] THEN 
+           ]) THEN
+    ASM_SIMP_TAC (bsrw_ss()) [church_thm] THEN
     ASM_SIMP_TAC (bsrw_ss()) [Abbr`FF`, csnd_pair]
   ]);
 
@@ -213,13 +259,13 @@ val is_abs_cplus = Store_thm(
 val cplus_behaviour = store_thm(
   "cplus_behaviour",
   ``cplus @@ church m @@ church n -n->* church (m + n)``,
-  SIMP_TAC (bsrw_ss()) [cplus_def] THEN Induct_on `m` THEN 
-  ASM_SIMP_TAC (bsrw_ss()) [church_thm, csuc_behaviour, 
+  SIMP_TAC (bsrw_ss()) [cplus_def] THEN Induct_on `m` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [church_thm, csuc_behaviour,
                             arithmeticTheory.ADD_CLAUSES]);
 
 val cpred_def = Define`
-  cpred = LAM "n" (natrec @@ church 0 
-                          @@ (LAM "n0" (LAM "r" (VAR "n0"))) 
+  cpred = LAM "n" (natrec @@ church 0
+                          @@ (LAM "n0" (LAM "r" (VAR "n0")))
                           @@ (VAR "n"))
 `;
 val FV_cpred = store_thm(
@@ -254,12 +300,12 @@ val FV_cminus = Store_thm(
 val is_abs_cminus = Store_thm(
   "is_abs_cminus",
   ``is_abs cminus``,
-  SRW_TAC [][cminus_def]); 
+  SRW_TAC [][cminus_def]);
 
 val cminus_behaviour = store_thm(
   "cminus_behaviour",
   ``cminus @@ church m @@ church n -n->* church (m - n)``,
-  SIMP_TAC (bsrw_ss()) [cminus_def] THEN 
+  SIMP_TAC (bsrw_ss()) [cminus_def] THEN
   Q.ID_SPEC_TAC `m` THEN Induct_on `n` THEN
   ASM_SIMP_TAC (bsrw_ss()) [cpred_behaviour, church_thm,
                             DECIDE ``m - SUC n = PRE (m - n)``]);
@@ -275,7 +321,7 @@ val FV_cmult = Store_thm(
 val cmult_behaviour = store_thm(
   "cmult_behaviour",
   ``cmult @@ church m @@ church n -n->* church (m * n)``,
-  SIMP_TAC (bsrw_ss()) [cmult_def] THEN Induct_on `m` THEN 
+  SIMP_TAC (bsrw_ss()) [cmult_def] THEN Induct_on `m` THEN
   ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss) [cplus_behaviour, church_thm,
                                         arithmeticTheory.MULT_CLAUSES]);
 
@@ -295,16 +341,16 @@ val bnf_cis_zero = Store_thm(
 val cis_zero_behaviour = store_thm(
   "cis_zero_behaviour",
   ``cis_zero @@ church n -n->* cB (n = 0)``,
-  Cases_on `n` THEN 
+  Cases_on `n` THEN
   ASM_SIMP_TAC (bsrw_ss()) [cis_zero_def, church_thm]);
 
 val ceqnat_def = Define`
-  ceqnat = 
+  ceqnat =
   LAM "n"
-    (VAR "n" 
-       @@ cis_zero 
-       @@ (LAM "r" (LAM "m" 
-            (cand @@ (cnot @@ (cis_zero @@ (VAR "m"))) 
+    (VAR "n"
+       @@ cis_zero
+       @@ (LAM "r" (LAM "m"
+            (cand @@ (cnot @@ (cis_zero @@ (VAR "m")))
                   @@ (VAR "r" @@ (cpred @@ (VAR "m")))))))
 `;
 val FV_ceqnat = Store_thm(
@@ -315,13 +361,13 @@ val FV_ceqnat = Store_thm(
 val ceqnat_behaviour = store_thm(
   "ceqnat_behaviour",
   ``ceqnat @@ church n @@ church m -n->* cB (n = m)``,
-  SIMP_TAC (bsrw_ss()) [ceqnat_def] THEN 
+  SIMP_TAC (bsrw_ss()) [ceqnat_def] THEN
   Q.ID_SPEC_TAC `m` THEN Induct_on `n` THEN1
-    SIMP_TAC (bsrw_ss()) [church_thm, cis_zero_behaviour, 
-                          EQ_SYM_EQ] THEN 
+    SIMP_TAC (bsrw_ss()) [church_thm, cis_zero_behaviour,
+                          EQ_SYM_EQ] THEN
   ASM_SIMP_TAC (bsrw_ss()) [cis_zero_behaviour, church_thm,
-                            cnot_behaviour, cand_behaviour, 
-                            cpred_behaviour] THEN 
+                            cnot_behaviour, cand_behaviour,
+                            cpred_behaviour] THEN
   Cases_on `m` THEN SRW_TAC [][])
 
 (* $< 0 = λn. not (is_zero n)
@@ -329,9 +375,9 @@ val ceqnat_behaviour = store_thm(
 *)
 val cless_def = Define`
   cless = LAM "m"
-            (VAR "m" @@ (LAM "n" (cnot @@ (cis_zero @@ VAR "n"))) 
-                     @@ (LAM "r" 
-                         (LAM "n" (cand 
+            (VAR "m" @@ (LAM "n" (cnot @@ (cis_zero @@ VAR "n")))
+                     @@ (LAM "r"
+                         (LAM "n" (cand
                                      @@ (cnot @@ (cis_zero @@ VAR "n"))
                                      @@ (VAR "r" @@ (cpred @@ VAR "n"))))))
 `;
@@ -347,35 +393,35 @@ val is_abs_cless = Store_thm(
 val cless_behaviour = store_thm(
   "cless_behaviour",
   ``cless @@ church m @@ church n -n->* cB (m < n)``,
-  SIMP_TAC (bsrw_ss()) [cless_def] THEN 
+  SIMP_TAC (bsrw_ss()) [cless_def] THEN
   Q.ID_SPEC_TAC `n` THEN Induct_on `m` THENL [
     SIMP_TAC (bsrw_ss()) [cnot_behaviour, cis_zero_behaviour, church_thm,
                           arithmeticTheory.NOT_ZERO_LT_ZERO],
     ASM_SIMP_TAC (bsrw_ss()) [cis_zero_behaviour, cnot_behaviour, church_thm,
-                              cpred_behaviour, cand_behaviour] THEN 
+                              cpred_behaviour, cand_behaviour] THEN
     Cases_on `n` THEN SRW_TAC [][]
   ]);
 
-(* ---------------------------------------------------------------------- 
-    divmod 
+(* ----------------------------------------------------------------------
+    divmod
 
     Functional presentation would be
 
-     divmod (a,p,q) = if q = 0 then (0,0) else 
+     divmod (a,p,q) = if q = 0 then (0,0) else
                       if p < q then (a,p)
                       else divmod (a+1,p-q,q)
 
-    But this is not primitive recursive.  We make it so by passing in 
+    But this is not primitive recursive.  We make it so by passing in
     an extra argument which is the "target" value for the next recursive
     step.  The primitive recursion does nothing until it hits a target
     value, which it then can set up appropriately for the next bit.
 
-    In this setting the "target" is parameter p, which is where the 
+    In this setting the "target" is parameter p, which is where the
     recursion is happening.
 
      divmod 0 (a,p,q) = if p < q then (a,p) else (0,0)
-     divmod (SUC n) (a,p,q) = 
-       if SUC n = p then 
+     divmod (SUC n) (a,p,q) =
+       if SUC n = p then
          if p < q then (a,p)
          else divmod n (a+1,p-q,q)
        else divmod n (a,p,q)
@@ -385,60 +431,60 @@ val cless_behaviour = store_thm(
    ---------------------------------------------------------------------- *)
 
 val cdivmodt_def = Define`
-  cdivmodt = LAM "q" 
-   (LAM "n" 
-    (natrec 
+  cdivmodt = LAM "q"
+   (LAM "n"
+    (natrec
       @@ cpair
-      @@ (LAM "n0" (LAM "r" (LAM "a" (LAM "p" 
-              (ceqnat @@ (csuc @@ VAR "n0") @@ VAR "p" 
-                      @@ (cless @@ VAR "p" @@ VAR "q" 
+      @@ (LAM "n0" (LAM "r" (LAM "a" (LAM "p"
+              (ceqnat @@ (csuc @@ VAR "n0") @@ VAR "p"
+                      @@ (cless @@ VAR "p" @@ VAR "q"
                            @@ (cpair @@ VAR "a" @@ VAR "p")
-                           @@ (VAR "r" @@ 
-                                 (csuc @@ VAR "a") @@ 
+                           @@ (VAR "r" @@
+                                 (csuc @@ VAR "a") @@
                                  (cminus @@ VAR "p" @@ VAR "q")))
                       @@ (VAR "r" @@ VAR "a" @@ VAR "p"))))))
       @@ VAR "n"))
 `;
 
 val FV_cdivmodt = Store_thm(
-  "FV_cdivmodt", 
-  ``FV cdivmodt = {}``,                    
+  "FV_cdivmodt",
+  ``FV cdivmodt = {}``,
   SRW_TAC [][cdivmodt_def, EXTENSION] THEN METIS_TAC []);
 
 val cdivmodt_behaviour = store_thm(
   "cdivmodt_behaviour",
-  ``∀p a. 
-       0 < q ∧ p ≤ n ⇒ 
-       cdivmodt @@ church q @@ church n @@ church a @@ church p -n->* 
+  ``∀p a.
+       0 < q ∧ p ≤ n ⇒
+       cdivmodt @@ church q @@ church n @@ church a @@ church p -n->*
        cvpr (church (a + p DIV q)) (church (p MOD q))``,
   SIMP_TAC (bsrw_ss()) [cdivmodt_def] THEN Induct_on `n` THENL [
-    SIMP_TAC (bsrw_ss()) [arithmeticTheory.ZERO_DIV, 
+    SIMP_TAC (bsrw_ss()) [arithmeticTheory.ZERO_DIV,
                           cpair_behaviour, natrec_behaviour,
                           csnd_cvpr],
 
-    ASM_SIMP_TAC (bsrw_ss()) [natrec_behaviour, csuc_behaviour, 
-                              ceqnat_behaviour, cless_behaviour, 
-                              cminus_behaviour] THEN 
+    ASM_SIMP_TAC (bsrw_ss()) [natrec_behaviour, csuc_behaviour,
+                              ceqnat_behaviour, cless_behaviour,
+                              cminus_behaviour] THEN
 
-    REPEAT STRIP_TAC THEN 
+    REPEAT STRIP_TAC THEN
     Cases_on `p = SUC n` THEN ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THENL [
       Cases_on `SUC n < q` THEN ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THENL [
-        ASM_SIMP_TAC (bsrw_ss()) [arithmeticTheory.LESS_DIV_EQ_ZERO, 
+        ASM_SIMP_TAC (bsrw_ss()) [arithmeticTheory.LESS_DIV_EQ_ZERO,
                                   cpair_behaviour],
-        ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss) [] THEN 
+        ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss) [] THEN
         `(SUC n - q) DIV q = SUC n DIV q - 1`
-           by (MP_TAC (Q.INST [`n` |-> `q`, `q` |-> `1`, 
-                                    `m` |-> `SUC n`] 
-                                   arithmeticTheory.DIV_SUB) THEN 
-               SRW_TAC [ARITH_ss][]) THEN 
+           by (MP_TAC (Q.INST [`n` |-> `q`, `q` |-> `1`,
+                                    `m` |-> `SUC n`]
+                                   arithmeticTheory.DIV_SUB) THEN
+               SRW_TAC [ARITH_ss][]) THEN
         `(SUC n - q) MOD q = SUC n MOD q`
            by (MP_TAC (Q.INST [`n` |-> `q`, `q` |-> `1`, `m` |-> `SUC n`]
-                              arithmeticTheory.MOD_SUB) THEN 
-               SRW_TAC [ARITH_ss][]) THEN 
-        SRW_TAC [ARITH_ss][] THEN 
-        `∀x y. (x = y) ⇒ x == y` by SRW_TAC [][] THEN 
-        POP_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN 
-        Q_TAC SUFF_TAC `0 < SUC n DIV q` THEN1 DECIDE_TAC THEN 
+                              arithmeticTheory.MOD_SUB) THEN
+               SRW_TAC [ARITH_ss][]) THEN
+        SRW_TAC [ARITH_ss][] THEN
+        `∀x y. (x = y) ⇒ x == y` by SRW_TAC [][] THEN
+        POP_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN
+        Q_TAC SUFF_TAC `0 < SUC n DIV q` THEN1 DECIDE_TAC THEN
         SRW_TAC [ARITH_ss][arithmeticTheory.X_LT_DIV]
       ],
       SRW_TAC [ARITH_ss][]
@@ -446,24 +492,24 @@ val cdivmodt_behaviour = store_thm(
   ]);
 
 val cdiv_def = Define`
-  cdiv = 
-  LAM "p" (LAM "q" 
+  cdiv =
+  LAM "p" (LAM "q"
     (cfst @@ (cdivmodt @@ VAR "q" @@ VAR "p" @@ church 0 @@ VAR "p")))
 `
 val FV_cdiv = Store_thm(
   "FV_cdiv",
   ``FV cdiv = {}``,
-  SIMP_TAC bool_ss [cdiv_def, EXTENSION, NOT_IN_EMPTY] THEN 
+  SIMP_TAC bool_ss [cdiv_def, EXTENSION, NOT_IN_EMPTY] THEN
   SRW_TAC [][FRESH_APP, FRESH_LAM]);
 
 val cdiv_behaviour = store_thm(
   "cdiv_behaviour",
-  ``0 < q ⇒ 
+  ``0 < q ⇒
       cdiv @@ church p @@ church q -n->* church (p DIV q)``,
   SIMP_TAC (bsrw_ss()) [cdivmodt_behaviour, cdiv_def, cfst_cvpr]);
 
 val cmod_def = Define`
-  cmod = LAM "p" (LAM "q" 
+  cmod = LAM "p" (LAM "q"
            (csnd @@ (cdivmodt @@ VAR "q" @@ VAR "p" @@ church 0 @@ VAR "p")))
 `;
 val FV_cmod = Store_thm(
@@ -473,12 +519,12 @@ val FV_cmod = Store_thm(
 
 val cmod_behaviour = store_thm(
   "cmod_behaviour",
-  ``0 < q ⇒ 
+  ``0 < q ⇒
      cmod @@ church p @@ church q -n->* church (p MOD q)``,
   SIMP_TAC (bsrw_ss()) [cdivmodt_behaviour, cmod_def, csnd_cvpr]);
 
-(* ---------------------------------------------------------------------- 
-    Pairs of numbers 
+(* ----------------------------------------------------------------------
+    Pairs of numbers
    ---------------------------------------------------------------------- *)
 
 val cnvpr_def = Define`
@@ -503,17 +549,17 @@ val csnd_cnvpr = store_thm(
   "csnd_cnvpr",
   ``csnd @@ cnvpr p -n->* church (SND p)``,
   Cases_on `p` THEN SIMP_TAC (bsrw_ss())[cnvpr_def, csnd_cvpr]);
-  
 
-(* ---------------------------------------------------------------------- 
-    Numeric pairing 
+
+(* ----------------------------------------------------------------------
+    Numeric pairing
    ---------------------------------------------------------------------- *)
 
 open numpairTheory
 
 (* triangular numbers and the tri⁻¹ function *)
 val ctri_def = Define`
-  ctri = LAM "n" (natrec @@ church 0 
+  ctri = LAM "n" (natrec @@ church 0
                          @@ (LAM "n0" (cplus @@ (csuc @@ VAR "n0")))
                          @@ VAR "n")
 `;
@@ -526,34 +572,34 @@ val FV_ctri = Store_thm(
 val ctri_behaviour = store_thm(
   "ctri_behaviour",
   ``ctri @@ church n -n->* church (tri n)``,
-  SIMP_TAC (bsrw_ss()) [ctri_def] THEN 
-  Induct_on `n` THEN 
-  ASM_SIMP_TAC (bsrw_ss()) [natrec_behaviour, tri_def, 
+  SIMP_TAC (bsrw_ss()) [ctri_def] THEN
+  Induct_on `n` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [natrec_behaviour, tri_def,
                             csuc_behaviour, cplus_behaviour]);
 
-(* invtri0 
+(* invtri0
     |- ∀n a.
          invtri0 n a =
          if n < a + 1 then (n,a) else invtri0 (n − (a + 1)) (a + 1) : thm
-   make it prim. rec. by using a target parameter, as with divmod 
+   make it prim. rec. by using a target parameter, as with divmod
 *)
 
 val cinvtri0_def = Define`
-  cinvtri0 = 
-  natrec 
+  cinvtri0 =
+  natrec
     @@ (LAM "n" (LAM "a" (cvpr (VAR "n") (VAR "a"))))
     @@ (LAM "t0" (LAM "r" (LAM "n" (LAM "a"
-          (ceqnat @@ (csuc @@ (VAR "t0")) @@ VAR "n" 
+          (ceqnat @@ (csuc @@ (VAR "t0")) @@ VAR "n"
                   @@ (cless @@ VAR "n" @@ (csuc @@ VAR "a")
                             @@ cvpr (VAR "n") (VAR "a")
-                            @@ (VAR "r" 
-                                    @@ (cminus @@ VAR "n" 
+                            @@ (VAR "r"
+                                    @@ (cminus @@ VAR "n"
                                                @@ (csuc @@ VAR "a"))
                                     @@ (csuc @@ VAR "a")))
                   @@ (VAR "r" @@ VAR "n" @@ VAR "a"))))))
 `;
-(* have messed my naming up here in order to keep the "n" and "a" of the 
-   original definition.  "t" is the parameter that is being recursed on, 
+(* have messed my naming up here in order to keep the "n" and "a" of the
+   original definition.  "t" is the parameter that is being recursed on,
    and "n" is the target parameter that causes things to happen when t reaches
    it. *)
 
@@ -564,39 +610,39 @@ val FV_cinvtri0 = Store_thm(
 
 val cinvtri0_behaviour = store_thm(
   "cinvtri0_behaviour",
-  ``n ≤ t ⇒ 
-    cinvtri0 @@ church t @@ church n @@ church a -n->* 
+  ``n ≤ t ⇒
+    cinvtri0 @@ church t @@ church n @@ church a -n->*
     cnvpr (invtri0 n a)``,
-  SIMP_TAC (bsrw_ss()) [cinvtri0_def] THEN 
-  Q.ID_SPEC_TAC `n` THEN Q.ID_SPEC_TAC `a` THEN 
+  SIMP_TAC (bsrw_ss()) [cinvtri0_def] THEN
+  Q.ID_SPEC_TAC `n` THEN Q.ID_SPEC_TAC `a` THEN
   Induct_on `t` THENL [
-    SIMP_TAC (bsrw_ss()) [natrec_behaviour] THEN 
-    ONCE_REWRITE_TAC [invtri0_def] THEN 
+    SIMP_TAC (bsrw_ss()) [natrec_behaviour] THEN
+    ONCE_REWRITE_TAC [invtri0_def] THEN
     SIMP_TAC (srw_ss() ++ ARITH_ss) [cnvpr_def],
 
-    SIMP_TAC (bsrw_ss()) [natrec_behaviour, csuc_behaviour, 
-                          ceqnat_behaviour, cless_behaviour] THEN 
+    SIMP_TAC (bsrw_ss()) [natrec_behaviour, csuc_behaviour,
+                          ceqnat_behaviour, cless_behaviour] THEN
     REPEAT STRIP_TAC THEN Cases_on `n = SUC t` THEN
     ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour, cminus_behaviour] THENL [
-      Cases_on `t < a` THENL [ 
-        ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN 
-        ONCE_REWRITE_TAC [invtri0_def] THEN 
+      Cases_on `t < a` THENL [
+        ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
+        ONCE_REWRITE_TAC [invtri0_def] THEN
         SRW_TAC [ARITH_ss][cnvpr_def],
 
-        ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN 
-        CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [invtri0_def])) THEN 
-        SRW_TAC [ARITH_ss][] THEN 
-        `SUC t - (a + 1) = t - a` by DECIDE_TAC THEN 
+        ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
+        CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [invtri0_def])) THEN
+        SRW_TAC [ARITH_ss][] THEN
+        `SUC t - (a + 1) = t - a` by DECIDE_TAC THEN
         SRW_TAC [][arithmeticTheory.ADD1]
       ],
 
-      `n ≤ t` by DECIDE_TAC THEN 
+      `n ≤ t` by DECIDE_TAC THEN
       ASM_SIMP_TAC (bsrw_ss()) []
     ]
   ]);
 
 val cinvtri_def = Define`
-  cinvtri = 
+  cinvtri =
   LAM "n" (csnd @@ (cinvtri0 @@ VAR "n" @@ VAR "n" @@ church 0))
 `;
 
@@ -607,15 +653,15 @@ val FV_cinvtri = Store_thm(
 
 val cinvtri_behaviour = store_thm(
   "cinvtri_behaviour",
-  ``cinvtri @@ church n -n->* church (tri⁻¹ n)``,  
-  SIMP_TAC (bsrw_ss()) [cinvtri_def, cinvtri0_behaviour, 
+  ``cinvtri @@ church n -n->* church (tri⁻¹ n)``,
+  SIMP_TAC (bsrw_ss()) [cinvtri_def, cinvtri0_behaviour,
                         invtri_def, csnd_cnvpr]);
 
 (* -- The pairing function and fst and snd *)
 
 val cnpair_def = Define`
-  cnpair = 
-  LAM "n" (LAM "m" 
+  cnpair =
+  LAM "n" (LAM "m"
     (cplus @@ (ctri @@ (cplus @@ VAR "n" @@ VAR "m")) @@ VAR "m"))
 `;
 
@@ -627,13 +673,13 @@ val FV_cnpair = Store_thm(
 val cnpair_behaviour = store_thm(
   "cnpair_behaviour",
   ``cnpair @@ church n @@ church m -n->* church (n ⊗ m)``,
-  SIMP_TAC (bsrw_ss()) [cnpair_def, cplus_behaviour, ctri_behaviour, 
+  SIMP_TAC (bsrw_ss()) [cnpair_def, cplus_behaviour, ctri_behaviour,
                         npair_def]);
 
 (* cnfst *)
 val cnfst_def = Define`
-  cnfst = LAM "n" (cminus 
-                     @@ (cplus @@ (ctri @@ (cinvtri @@ VAR "n")) 
+  cnfst = LAM "n" (cminus
+                     @@ (cplus @@ (ctri @@ (cinvtri @@ VAR "n"))
                                @@ (cinvtri @@ VAR "n"))
                      @@ VAR "n")
 `;
@@ -646,7 +692,7 @@ val FV_cnfst = Store_thm(
 val cnfst_behaviour = store_thm(
   "cnfst_behaviour",
   ``cnfst @@ church p -n->* church (nfst p)``,
-  SIMP_TAC (bsrw_ss()) [cnfst_def, cminus_behaviour, cplus_behaviour, 
+  SIMP_TAC (bsrw_ss()) [cnfst_def, cminus_behaviour, cplus_behaviour,
                         cinvtri_behaviour, ctri_behaviour, nfst_def]);
 
 (* cnsnd *)
@@ -663,7 +709,7 @@ val FV_cnsnd = Store_thm(
 val cnsnd_behaviour = store_thm(
   "cnsnd_behaviour",
   ``cnsnd @@ church p -n->* church (nsnd p)``,
-  SIMP_TAC (bsrw_ss()) [cnsnd_def, nsnd_def, cminus_behaviour, 
+  SIMP_TAC (bsrw_ss()) [cnsnd_def, nsnd_def, cminus_behaviour,
                         cinvtri_behaviour, ctri_behaviour]);
 
 val _ = export_theory()

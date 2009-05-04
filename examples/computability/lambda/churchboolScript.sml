@@ -33,6 +33,16 @@ val cB_11 = Store_thm(
   ``(cB p = cB q) ⇔ (p ⇔ q)``,
   SRW_TAC [][cB_def]);
 
+val cB_lameq11 = Store_thm(
+  "cB_lameq11",
+  ``(cB p == cB q) ⇔ (p ⇔ q)``,
+  EQ_TAC THEN SRW_TAC [][] THEN
+  `∃Z. cB p -β->* Z ∧ cB q -β->* Z`
+    by METIS_TAC [beta_CR, theorem3_13, prop3_18] THEN
+  `cB p = cB q`
+    by METIS_TAC [corollary3_2_1, beta_normal_form_bnf, bnf_cB] THEN
+  FULL_SIMP_TAC (srw_ss()) [])
+
 val cB_behaviour = store_thm(
   "cB_behaviour",
   ``cB T @@ x @@ y -n->* x ∧ cB F @@ x @@ y -n->* y``,

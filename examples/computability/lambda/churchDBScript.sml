@@ -1027,7 +1027,165 @@ val cchurch_behaviour = store_thm(
                         dLAM_def, lift_funpow_dAPP, sub_funpow_dAPP] THEN
   SIMP_TAC (srw_ss() ++ ARITH_ss) []);
 
-val _ = temp_overload_on ("LAMvca", ``λM. LAM "v" (LAM "c" (LAM "a" M))``)
+(* ----------------------------------------------------------------------
+    cdbsize
+
+    computes the size of a term
+   ---------------------------------------------------------------------- *)
+
+val cdbsize_def = Define`
+  cdbsize =
+  LAM "t"
+  (VAR "t"
+       @@ (K @@ church 1)
+       @@ (LAM "r1" (LAM "r2"
+              (cplus @@ (cplus @@ VAR "r1" @@ VAR "r2") @@ church 1)))
+       @@ (cplus @@ church 1))
+`;
+val FV_cdbsize = Store_thm(
+  "FV_cdbsize",
+  ``FV cdbsize = {}``,
+  SRW_TAC [][EXTENSION, cdbsize_def]);
+
+val cdbsize_equiv0 = brackabs_equiv [] cdbsize_def
+val cdbsize_equiv = brackabs_equiv [B_I_uncond] cdbsize_equiv0
+
+val cdbsize_behaviour = store_thm(
+  "cdbsize_behaviour",
+  ``cdbsize @@ cDB t -n->* church (dbsize t)``,
+  SIMP_TAC (bsrw_ss()) [cdbsize_equiv] THEN Induct_on `t` THEN
+  ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss) [cDB_thm, cplus_behaviour]);
+
+(* ----------------------------------------------------------------------
+    cis_church
+
+    determines if a term is a church numeral
+   ---------------------------------------------------------------------- *)
+
+(* cis_varn checks to see if a term is a variable of the given index *)
+val cis_varn_def = Define`
+  cis_varn = LAM "n" (LAM "t" (VAR "t"
+                                   @@ (ceqnat @@ VAR "n")
+                                   @@ (K @@ (K @@ cB F))
+                                   @@ (K @@ cB F)))
+`;
+
+val FV_cis_varn = Store_thm(
+  "FV_cis_varn",
+  ``FV cis_varn = {}``,
+  SRW_TAC [][cis_varn_def, EXTENSION]);
+
+val cis_varn_equiv0 = brackabs_equiv [] cis_varn_def
+val cis_varn_equiv = brackabs_equiv [B_I_uncond] cis_varn_def
+
+val cis_varn_behaviour = store_thm(
+  "cis_varn_behaviour",
+  ``cis_varn @@ church n @@ cDB t -n->* cB (t = dV n)``,
+  SIMP_TAC (bsrw_ss()) [cis_varn_equiv] THEN
+  Cases_on `t` THEN
+  SIMP_TAC (bsrw_ss()) [cDB_thm, ceqnat_behaviour, EQ_IMP_THM]);
+
+(* cis_ichurch determines if a term is the application of some number of
+   dV 0 terms to a dV 1 *)
+val cis_ichurch_def = Define`
+  cis_ichurch =
+  termrec @@ (ceqnat @@ church 1)
+          @@ (LAM "t1" (LAM "t2" (LAM "r1" (LAM "r2"
+                (cand @@ (cis_varn @@ church 0 @@ VAR "t1")
+                      @@ VAR "r2")))))
+          @@ (K @@ (K @@ cB F))
+`;
+
+val FV_cis_ichurch = Store_thm(
+  "FV_cis_ichurch",
+  ``FV cis_ichurch = {}``,
+  SRW_TAC [][EXTENSION, cis_ichurch_def]);
+
+val cis_ichurch_equiv0 = brackabs_equiv [] cis_ichurch_def
+val cis_ichurch_equiv = brackabs_equiv [B_I_uncond] cis_ichurch_equiv0
+
+val cis_ichurch_behaviour = store_thm(
+  "cis_ichurch_behaviour",
+  ``cis_ichurch @@ cDB t -n->* cB (∃n. t = FUNPOW (dAPP (dV 0)) n (dV 1))``,
+  SIMP_TAC (bsrw_ss()) [cis_ichurch_equiv] THEN Induct_on `t` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [termrec_behaviour, ceqnat_behaviour,
+                            cand_behaviour, cis_varn_behaviour]
+  THENL [
+    SRW_TAC [][EQ_IMP_THM] THENL [
+      Q.EXISTS_TAC `0` THEN SRW_TAC [][],
+      Cases_on `n'` THEN FULL_SIMP_TAC (srw_ss()) [FUNPOW_SUC]
+    ],
+
+    EQ_TAC THENL [
+      SRW_TAC [][] THEN Q.EXISTS_TAC `SUC n` THEN SRW_TAC [][FUNPOW_SUC],
+      STRIP_TAC THEN Cases_on `n` THEN
+      FULL_SIMP_TAC (srw_ss()) [FUNPOW_SUC] THEN
+      METIS_TAC []
+    ],
+
+    Cases_on `n` THEN SRW_TAC [][FUNPOW_SUC]
+  ]);
+
+val cis_church_def = Define`
+  cis_church =
+  termrec @@ (K @@ cB F)
+          @@ (K @@ (K @@ (K @@ (K @@ cB F))))
+          @@ (LAM "t" (LAM "r"
+                (termrec @@ (K @@ cB F)
+                         @@ (K @@ (K @@ (K @@ (K @@ cB F))))
+                         @@ (LAM "t" (LAM "r" (cis_ichurch @@ VAR "t")))
+                         @@ VAR "t")))
+`;
+
+val FV_cis_church = Store_thm(
+  "FV_cis_church",
+  ``FV cis_church = {}``,
+  SRW_TAC [][cis_church_def, EXTENSION]);
+
+val cis_church_equiv0 = brackabs_equiv [] cis_church_def
+val cis_church_equiv = brackabs_equiv [B_I_uncond] cis_church_equiv0
+
+val cis_church_behaviour = store_thm(
+  "cis_church_behaviour",
+  ``cis_church @@ cDB t -n->* cB (is_church (toTerm t))``,
+  SIMP_TAC (bsrw_ss()) [cis_church_equiv] THEN
+  Cases_on `t` THEN SIMP_TAC (bsrw_ss()) [termrec_behaviour] THENL [
+    SRW_TAC [][is_church_def],
+    SRW_TAC [][is_church_def],
+    ALL_TAC
+  ] THEN
+  Q.MATCH_ABBREV_TAC `termrec @@ VV @@ CC @@ AA @@ cDB tt ==
+                      cB (is_church (toTerm (dABS tt)))` THEN
+  Q.RM_ABBREV_TAC `tt` THEN markerLib.UNABBREV_ALL_TAC THEN
+  Cases_on `tt` THEN SIMP_TAC (bsrw_ss()) [termrec_behaviour] THENL [
+    Q.MATCH_ABBREV_TAC `¬is_church (toTerm (dABS (dV n)))` THEN
+    `s2n (n2s n) + 1 ∉ dFV (dV n)` by SRW_TAC [ARITH_ss][] THEN
+    IMP_RES_TAC toTerm_dABS THEN
+    SRW_TAC [][is_church_def, LAM_eq_thm],
+
+    Q.MATCH_ABBREV_TAC `¬is_church (toTerm (dABS (dAPP t1 t2)))` THEN
+    Q_TAC (NEW_TAC "z") `dFVs (dABS (dAPP t1 t2))` THEN
+    FULL_SIMP_TAC (srw_ss()) [GSYM IN_dFV] THEN
+    `s2n z + 1 ∉ dFV (dAPP t1 t2)` by SRW_TAC [][] THEN
+    POP_ASSUM (ASSUME_TAC o MATCH_MP (GEN_ALL toTerm_dABS)) THEN
+    SRW_TAC [][is_church_def, LAM_eq_thm],
+
+    SIMP_TAC (bsrw_ss()) [cis_ichurch_behaviour] THEN
+    Q.MATCH_ABBREV_TAC
+      `(∃n. t = FUNPOW (dAPP (dV 0)) n (dV 1)) ⇔
+       is_church (toTerm (dABS (dABS t)))` THEN
+    Q.RM_ABBREV_TAC `t` THEN
+    SRW_TAC [][is_church_def, toTerm_eqn, fromTerm_funpow_app] THEN
+    SRW_TAC [][dLAM_def] THEN EQ_TAC THENL [
+      SRW_TAC [][] THEN
+      MAP_EVERY Q.EXISTS_TAC [`n2s 2`, `n2s 3`, `n`] THEN SRW_TAC [][] THEN
+      SRW_TAC [][fromTerm_funpow_app] THEN
+      Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC],
+
+      SRW_TAC [][] THEN Q.EXISTS_TAC `n` THEN SRW_TAC [ARITH_ss][] THEN
+      Induct_on `n` THEN SRW_TAC [ARITH_ss][FUNPOW_SUC]
+    ]
+  ]);
 
 (* ----------------------------------------------------------------------
     cciDB : the encoded/computing version of ciDB
