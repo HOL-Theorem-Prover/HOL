@@ -60,9 +60,9 @@ src/option
 src/num/theories
 src/num/reduce/src
 src/num/arith/src
+src/num
 src/num/termination
 src/num/extra_theories
-src/num
 src/IndDef
 src/pred_set/src
 src/datatype/equiv
