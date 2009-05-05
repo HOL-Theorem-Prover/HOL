@@ -26,11 +26,8 @@ val DECIDE = numLib.ARITH_PROVE;
 fun DECIDE_TAC (g as (asl,_)) =
 ((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith_asm asl)
       THEN numLib.ARITH_TAC)
- ORELSE
- tautLib.TAUT_TAC
- ORELSE
- NO_TAC) g;
-
+ ORELSE 
+ tautLib.TAUT_TAC ORELSE NO_TAC) g;
 
 val MULT_LEFT_CANCEL = Q.prove
 (`!m n p. 0 < m ==> ((m*n = m*p) = (n=p))`,
@@ -38,13 +35,16 @@ val MULT_LEFT_CANCEL = Q.prove
 
 val PRIME_FACTORS_EXIST = Q.store_thm
 ("PRIME_FACTORS_EXIST",
- `!n. 1 < n ==>
+ `!n. 0 < n ==>
         ?b. FINITE_BAG b /\ 
             (!m. BAG_IN m b ==> prime m) /\
             (n = BAG_GEN_PROD b 1)`,
  completeInduct_on `n` THEN STRIP_TAC THEN Cases_on `prime n` THENL
  [Q.EXISTS_TAC `{|n|}` THEN 
     SRW_TAC [] [BAG_GEN_PROD_TAILREC,BAG_GEN_PROD_EMPTY],
+  Cases_on `n=1` THENL
+  [RW_TAC arith_ss [] THEN Q.EXISTS_TAC `{||}` THEN
+   METIS_TAC [FINITE_BAG_THM,BAG_GEN_PROD_EMPTY,NOT_IN_EMPTY_BAG],
   `?m. prime m /\ divides m n` by RW_TAC arith_ss [PRIME_FACTOR] THEN
   `?q. m * q = n` by METIS_TAC [divides_def,MULT_SYM] THEN 
   `q < n` by
@@ -57,10 +57,20 @@ val PRIME_FACTORS_EXIST = Q.store_thm
      (STRIP_ASSUME_TAC (DECIDE ``(q = 0) \/ (q=1) \/ 1 < q``) THEN 
       RW_TAC arith_ss [] THEN METIS_TAC [MULT_RIGHT_1]) THEN
   (* use IH *)
+  `0 < q` by DECIDE_TAC THEN
   `?b. FINITE_BAG b /\ (!k. BAG_IN k b ==> prime k) /\
        (q = BAG_GEN_PROD b 1)` by METIS_TAC [] THEN
   Q.EXISTS_TAC `BAG_INSERT m b` THEN SRW_TAC [][] THENL 
-  [METIS_TAC [], METIS_TAC [], METIS_TAC [BAG_GEN_PROD_REC]]]);
+  [METIS_TAC [], METIS_TAC [], METIS_TAC [BAG_GEN_PROD_REC]]]]);
+
+
+(*---------------------------------------------------------------------------*)
+(* PRIME_FACTORS_def =                                                       *)
+(*   |- !n. 0 < n ==>                                                        *)
+(*          FINITE_BAG (PRIME_FACTORS n) /\                                  *)
+(*          (!m. BAG_IN m (PRIME_FACTORS n) ==> prime m) /\                  *)
+(*          (n = BAG_GEN_PROD (PRIME_FACTORS n) 1)                           *)
+(*---------------------------------------------------------------------------*)
 
 val PRIME_FACTORS_def = new_specification
 ("PRIME_FACTORS_def",
@@ -126,10 +136,93 @@ METIS_TAC [BAG_INSERT_ONE_ONE]]);
 
 val PRIME_FACTORIZATION = store_thm
 ("PRIME_FACTORIZATION",
- ``!n. 1 < n ==> 
+ ``!n. 0 < n ==> 
       !b. FINITE_BAG b /\ (!x. BAG_IN x b ==> prime x) /\
           (BAG_GEN_PROD b 1 = n) ==> 
       (b = PRIME_FACTORS n)``,
  METIS_TAC [PRIME_FACTORS_def,UNIQUE_PRIME_FACTORS]);
+
+
+val PRIME_FACTORS_1 = Q.store_thm
+("PRIME_FACTORS_1",
+ `PRIME_FACTORS 1 = {||}`,
+ METIS_TAC [FINITE_BAG_THM,BAG_GEN_PROD_EMPTY,
+            NOT_IN_EMPTY_BAG,PRIME_FACTORIZATION,DECIDE``0 < 1``]);
+
+val PRIME_FACTOR_DIVIDES = Q.store_thm
+("PRIME_FACTOR_DIVIDES",
+ `!x n. 0 < n /\ BAG_IN x (PRIME_FACTORS n) ==> divides x n`,
+ METIS_TAC [BAG_IN_DIVIDES,PRIME_FACTORS_def]);
+
+val DIVISOR_IN_PRIME_FACTORS = Q.store_thm
+("DIVISOR_IN_PRIME_FACTORS",
+ `!p n. 0 < n /\ prime p /\ divides p n ==> BAG_IN p (PRIME_FACTORS n)`,
+ REPEAT STRIP_TAC THEN 
+ `FINITE_BAG (PRIME_FACTORS n) /\
+   (!m. BAG_IN m (PRIME_FACTORS n) ==> prime m) /\
+   (n = BAG_GEN_PROD (PRIME_FACTORS n) 1)` by METIS_TAC [PRIME_FACTORS_def] THEN
+ FULL_SIMP_TAC arith_ss [divides_def] THEN 
+ FULL_SIMP_TAC arith_ss [ZERO_LESS_MULT] THEN RW_TAC arith_ss [] THEN
+ `FINITE_BAG (PRIME_FACTORS q) /\
+    (!m. BAG_IN m (PRIME_FACTORS q) ==> prime m) /\
+    (q = BAG_GEN_PROD (PRIME_FACTORS q) 1)` by METIS_TAC [PRIME_FACTORS_def] THEN
+ `FINITE_BAG (BAG_INSERT p (PRIME_FACTORS q))` by METIS_TAC [FINITE_BAG_INSERT] THEN
+ Q.ABBREV_TAC `b = BAG_INSERT p (PRIME_FACTORS q)` THEN
+ `!m. BAG_IN m b ==> prime m` by METIS_TAC [BAG_IN_BAG_INSERT] THEN 
+ `BAG_GEN_PROD b 1 = p * q` 
+   by (Q.UNABBREV_TAC `b` THEN 
+       RW_TAC arith_ss [BAG_GEN_PROD_REC] THEN METIS_TAC[]) THEN
+ `b = PRIME_FACTORS (p * q)` by METIS_TAC [PRIME_FACTORIZATION,ZERO_LESS_MULT] THEN
+ METIS_TAC [BAG_IN_BAG_INSERT]);
+
+val PRIME_FACTORS_MULT = Q.store_thm
+("PRIME_FACTORS_MULT",
+  `!a b. 0 < a /\ 0 < b ==> 
+      (PRIME_FACTORS (a*b) = BAG_UNION (PRIME_FACTORS a) (PRIME_FACTORS b))`,
+ RW_TAC arith_ss [] THEN
+  `FINITE_BAG (PRIME_FACTORS a) /\
+    (!m. BAG_IN m (PRIME_FACTORS a) ==> prime m) /\
+    (a = BAG_GEN_PROD (PRIME_FACTORS a) 1) /\
+   FINITE_BAG (PRIME_FACTORS b) /\
+    (!m. BAG_IN m (PRIME_FACTORS b) ==> prime m) /\
+    (b = BAG_GEN_PROD (PRIME_FACTORS b) 1)` 
+  by METIS_TAC [PRIME_FACTORS_def] THEN
+ `FINITE_BAG (BAG_UNION (PRIME_FACTORS a) (PRIME_FACTORS b))`
+    by METIS_TAC [FINITE_BAG_UNION] THEN 
+ `BAG_GEN_PROD (PRIME_FACTORS a) 1 * 
+    BAG_GEN_PROD (PRIME_FACTORS b) 1 = 
+    BAG_GEN_PROD (BAG_UNION (PRIME_FACTORS a) (PRIME_FACTORS b)) 1`
+   by METIS_TAC [BAG_GEN_PROD_UNION] THEN 
+ `a * b = BAG_GEN_PROD (BAG_UNION (PRIME_FACTORS a) (PRIME_FACTORS b)) 1`
+   by METIS_TAC[] THEN 
+ `!x. BAG_IN x (BAG_UNION (PRIME_FACTORS a) (PRIME_FACTORS b)) 
+        ==> prime x` by METIS_TAC [BAG_IN_BAG_UNION] THEN
+ METIS_TAC [PRIME_FACTORIZATION,LESS_MULT2]);
+
+val FACTORS_prime = Q.store_thm
+("FACTORS_prime",
+ `!p. prime p ==> (PRIME_FACTORS p = {|p|})`,
+ REPEAT STRIP_TAC THEN
+ `0 < p` by METIS_TAC [ONE_LT_PRIME,DECIDE ``0<1``,LESS_TRANS] THEN
+ `FINITE_BAG {|p|}` by METIS_TAC [FINITE_EMPTY_BAG,FINITE_BAG_INSERT] THEN
+ `!x. BAG_IN x {|p|} ==> prime x` 
+     by METIS_TAC [BAG_IN_BAG_INSERT,NOT_IN_EMPTY_BAG] THEN
+ `BAG_GEN_PROD {|p|} 1 = p` 
+     by METIS_TAC [BAG_GEN_PROD_REC,BAG_GEN_PROD_EMPTY,
+                   DECIDE``x*1 = x``,FINITE_EMPTY_BAG] THEN
+ METIS_TAC [PRIME_FACTORIZATION]);
+
+val PRIME_FACTORS_EXP = Q.store_thm
+("PRIME_FACTORS_EXP",
+ `!p e. prime p ==> (PRIME_FACTORS (p ** e) p = e)`,
+ Induct_on `e` THEN RW_TAC arith_ss [EXP,PRIME_FACTORS_1,EMPTY_BAG_alt] THEN
+ `0 < p` by METIS_TAC [ONE_LT_PRIME,DECIDE ``0<1``,LESS_TRANS] THEN
+ `0 < p ** e` by METIS_TAC [ZERO_LT_EXP] THEN
+ RW_TAC arith_ss [PRIME_FACTORS_MULT] THEN
+ `PRIME_FACTORS p = {|p|}` by METIS_TAC [FACTORS_prime] THEN
+ POP_ASSUM SUBST_ALL_TAC THEN
+ RW_TAC arith_ss [BAG_UNION_INSERT,BAG_UNION_EMPTY] THEN
+ RW_TAC arith_ss [BAG_INSERT]);
+
 
 val _ = export_theory();

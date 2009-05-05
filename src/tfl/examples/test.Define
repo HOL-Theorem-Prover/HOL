@@ -965,3 +965,11 @@ val RevLookUpRName_def = Define`
   (RevLookUpRName (14w,0b11011w) = RName_LRund) /\
   (RevLookUpRName (14w,0b10110w) = RName_LRmon) /\
   (RevLookUpRName (15w,0b10000w) = RName_PC)`;
+
+Define `t1 (17w,a,b) = a /\ b`;
+Define `t2 (17w,18w,a,b) = a /\ b`;
+Define `t3 (17w,a,18w,b,19w,c) = a /\ b /\ c`;
+Define `t4 (a,17w,18w,b,19w,c) = a /\ b /\ c`;
+Define `t5 (a,17w,18w,b,c,19w) = a /\ b /\ c`;
+Define `t6 (a,17w,18w,19w,b,c) = a /\ b /\ c`;
+

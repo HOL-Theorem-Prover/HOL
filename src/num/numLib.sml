@@ -124,8 +124,6 @@ fun SUC_ELIM_CONV tm =
    end
 end;
 
-val SUC_TO_NUMERAL_DEFN_CONV = TotalDefn.SUC_TO_NUMERAL_DEFN_CONV;
-
 val num_CONV = Num_conv.num_CONV;
 
 (*---------------------------------------------------------------------------
@@ -257,11 +255,99 @@ end (asl, w)
     Simplification set for numbers (and booleans).
  ---------------------------------------------------------------------------*)
 
-local open simpLib sumTheory arithmeticTheory
-      infix ++
+local open simpLib infix ++
 in
-val num_ss = boolSimps.bool_ss ++ numSimps.ARITH_ss
+val std_ss =
+     (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
+      numSimps.REDUCE_ss ++ sumSimps.SUM_ss ++ combinSimps.COMBIN_ss ++
+      numSimps.ARITH_RWTS_ss)
+
+val arith_ss = std_ss ++ numSimps.ARITH_DP_ss
 end;
+
+(*---------------------------------------------------------------------------*)
+(* Arith. decision proc packaged up.                                         *)
+(*---------------------------------------------------------------------------*)
+
+fun DECIDE tm =
+ ARITH_PROVE tm handle HOL_ERR _ => tautLib.TAUT_PROVE tm
+                handle HOL_ERR _ => raise ERR "DECIDE" "";
+
+
+fun DECIDE_TAC (g as (asl,_)) =
+((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith_asm asl)
+      THEN ARITH_TAC)
+ ORELSE tautLib.TAUT_TAC ORELSE NO_TAC) g;
+
+(*---------------------------------------------------------------------------*)
+(* Moving SUC out of patterns on lhs                                         *)
+(*---------------------------------------------------------------------------*)
+
+val SUC_TO_NUMERAL_DEFN_CONV = let
+  fun UBLIST [] = ALL_CONV
+    | UBLIST (h::t) = UNBETA_CONV h THENC RATOR_CONV (UBLIST t)
+  fun basic_elim t = let
+    (* t of form !n. ..SUC n.. = .. n .. SUC n .. *)
+    val (v, body) = dest_forall t
+    val sv = numSyntax.mk_suc v
+  in
+    BINDER_CONV (LAND_CONV (UNBETA_CONV sv) THENC
+                 RAND_CONV (UBLIST [sv, v])) THENC
+    REWR_CONV arithmeticTheory.SUC_ELIM_NUMERALS THENC
+    BINOP_CONV (BINDER_CONV (BINOP_CONV LIST_BETA_CONV) THENC
+                RAND_CONV (ALPHA_CONV v))
+  end t
+
+  fun push_down t =
+      if is_forall (#2 (dest_forall t)) then
+        (SWAP_VARS_CONV THENC BINDER_CONV push_down) t
+      else ALL_CONV t
+  fun push_nth_down n t =
+      if n > 0 then BINDER_CONV (push_nth_down (n - 1)) t
+      else push_down t
+  fun pull_up t =
+      if is_forall (#2 (dest_forall t)) then
+        (BINDER_CONV pull_up THENC SWAP_VARS_CONV) t
+      else ALL_CONV t
+  fun pull_upto_nth n t =
+      if n > 0 then BINDER_CONV (pull_upto_nth (n - 1)) t
+      else pull_up t
+  fun push_over_conjs t =
+      if is_forall t then
+        (BINDER_CONV push_over_conjs THENC FORALL_AND_CONV) t
+      else ALL_CONV t
+
+  fun unsuc_conjn c = let
+    val (vs, body) = strip_forall c
+    val (l, r) = dest_eq body
+    val suc_terms = find_terms numSyntax.is_suc l
+    fun elim_one_suc st t = let
+      val v = numSyntax.dest_suc st
+    in
+      if is_var v then
+        case Lib.total (index (equal v)) vs of
+          NONE => ALL_CONV t
+        | SOME i => (push_nth_down i THENC
+                     LAST_FORALL_CONV basic_elim THENC
+                     push_over_conjs THENC
+                     BINOP_CONV (pull_upto_nth i)) t
+      else
+        ALL_CONV t
+    end
+  in
+    EVERY_CONV (map (EVERY_CONJ_CONV o elim_one_suc) suc_terms) c
+  end
+  fun reassociate_toplevel_conjns t =
+      if is_conj t then
+        ((REWR_CONV (GSYM CONJ_ASSOC) THENC
+          reassociate_toplevel_conjns) ORELSEC
+         RAND_CONV reassociate_toplevel_conjns) t
+      else ALL_CONV t
+in
+  EVERY_CONJ_CONV unsuc_conjn THENC reassociate_toplevel_conjns
+end
+
+val _ = Defn.SUC_TO_NUMERAL_DEFN_CONV_hook := SUC_TO_NUMERAL_DEFN_CONV;
 
 (* ----------------------------------------------------------------------
     Parsing adjustments

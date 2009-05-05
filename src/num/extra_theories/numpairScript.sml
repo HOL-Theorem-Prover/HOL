@@ -1,7 +1,7 @@
 open HolKernel boolLib Parse
 
 open arithmeticTheory BasicProvers TotalDefn SingleStep numSimps
-     simpLib metisLib
+     numLib simpLib metisLib
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 

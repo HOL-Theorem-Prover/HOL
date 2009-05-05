@@ -28,7 +28,11 @@ sig
  val BOUNDED_FORALL_CONV      : conv -> conv
  val BOUNDED_EXISTS_CONV      : conv -> conv
 
- val num_ss                   : simpLib.simpset
+ val std_ss                   : simpLib.simpset
+ val arith_ss                 : simpLib.simpset
+
+ val DECIDE                   : conv
+ val DECIDE_TAC               : tactic
 
  val prefer_num               : unit -> unit
  val deprecate_num            : unit -> unit

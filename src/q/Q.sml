@@ -314,7 +314,7 @@ in
   markerLib.HO_MATCH_ABBREV_TAC fv_set pattern
 end gl;
 
-fun UNABBREV_TAC q (gl as (asl,w))=
+fun UNABBREV_TAC q (gl as (asl,w)) =
  let val v = Parse.parse_in_context (free_varsl (w::asl)) q
  in
    markerLib.UNABBREV_TAC (fst(dest_var v))
