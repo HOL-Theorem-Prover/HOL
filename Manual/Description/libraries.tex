@@ -254,7 +254,7 @@ the \ml{Absyn} form
 
   The user can insert intermediate transformation functions of their
   own design into the parsing processing at this point.  This is done
-  with the function 
+  with the function
 \begin{verbatim}
    add_absyn_postprocessor
 \end{verbatim}
@@ -357,7 +357,7 @@ possible to write and read terms such as
 \begin{alltt}
    \(\forall\)x. P x \(\land\) Q x
 \end{alltt}
-rather than 
+rather than
 \begin{alltt}
    !x. P x /\bs{} Q x
 \end{alltt}
@@ -383,7 +383,7 @@ function \ml{Unicode.unicode\_version}.  Then, while the trace
 variable \ml{"Unicode"} is $0$, the ASCII syntax will be used for
 parsing and printing.  If the trace is set to $1$, then the Unicode
 syntax will also work in the parser, and the pretty-printer will
-prefer it when terms are printed. 
+prefer it when terms are printed.
 
 For example, in \ml{boolScript.sml}, the Unicode character for logical
 and (\texttt{$\land$}), is set up as a Unicode alternative for
@@ -393,7 +393,7 @@ and (\texttt{$\land$}), is set up as a Unicode alternative for
 \end{verbatim}
 (In this context, the \ml{Unicode} structure has been \ml{open}-ed,
 giving access also to the structure \ml{UChar} which contains bindings
-for the Greek alphabet, and some common mathematical symbols. ) 
+for the Greek alphabet, and some common mathematical symbols. )
 
 The argument to \ml{unicode\_version} is a record with fields \ml{u}
 and \ml{tmnm}.  Both are strings.  The \ml{tmnm} field can either be
@@ -403,11 +403,11 @@ name of a constant, then, with the trace variable enabled, the string
 \ml{u} will be overloaded to the same name.  If the \ml{tmnm} is the
 same as a concrete syntax rule's token, then the behaviour is to
 create a new rule mapping to the same name, but with the string \ml{u}
-used as the token. 
+used as the token.
 
 \paragraph{Lexing rules with Unicode characters}
 %
-\index{tokens!Unicode characters} 
+\index{tokens!Unicode characters}
 \index{identifiers, in HOL logic@identifiers, in \HOL{} logic!non-aggregating characters}
 %
 Roughly speaking, \HOL{} considers characters to be divided into three
@@ -445,7 +445,7 @@ Each term in the set of possibilities may have a different type, so
 type inference will choose from those that have types consistent with
 the rest of the given term.  If the resulting list contains more than
 one element, then the term appearing earlier in the list will be
-chosen. 
+chosen.
 
 The most common use-case for the overload map is have names map to
 constants.  In this way, for example, the various numeric theories can
@@ -469,7 +469,7 @@ infix.  When the user inputs \holquote{x~\lt\gt~y}, the resulting
 \end{verbatim}
 The \ml{"x"}  and \ml{"y"} identifiers will map to free variables, but
 the \ml{"<>"} identifier maps to a list containing
-\holquote{\bs{}x~y.~\td(x~=~y)}. This term has type 
+\holquote{\bs{}x~y.~\td(x~=~y)}. This term has type
 \begin{verbatim}
    :'a -> 'a -> bool
 \end{verbatim}
@@ -479,7 +479,7 @@ Assuming that this option is the only overloading for \ml{"<>"} left
 after type inference, then the resulting term will be
 \holtxt{\td(x~=~y)}.  Better, though this will be the underlying
 structure of the term in memory, it will actually print as
-\holquote{x~\lt\gt~y}.  
+\holquote{x~\lt\gt~y}.
 
 If the term mapped to in the overload map contains any free variables,
 these variables will not be instantiated in any way.  In particular,
@@ -507,7 +507,7 @@ most specific match (the one that requires least instantiation of the
 pattern's variables).  If this still results in multiple, equally
 specific, possibilities, the most recently added pattern takes
 precedence.  (Users can thus manipulate the printer's preferences by
-making otherwise redundant calls to the \ml{overload\_on} function.)  
+making otherwise redundant calls to the \ml{overload\_on} function.)
 
 In the example of the not-equal-to operator above, the pattern will be
 \holtxt{\~(?x = ?y)}, where the question-marks indicate instantiable
@@ -519,7 +519,7 @@ There is one further nicety in the use of this facility: ``bigger''
 matches, covering more of a term, take precedence.   The difficulty
 this can cause is illustrated in the \holtxt{IS\_PREFIX} pattern from
 \theoryimp{rich\_listTheory}.  For the sake of backwards compatibility
-this identifier maps to 
+this identifier maps to
 \begin{verbatim}
    \x y. isPREFIX y x
 \end{verbatim}
@@ -2888,6 +2888,59 @@ decision procedure it cannot guarantee that these functions will ever
 return (and they may also take arbitrarily long to work, often a worry
 with arithmetic decision procedures), but use of \ml{limit} is
 otherwise a good method for ensuring that simplification terminates.
+
+\subsubsection{Rewriting with arbitrary pre-orders}
+\label{sec:preorder-rewriting}
+
+In addition to simplifying with respect to equality, it is also
+possible to use the simplifier to ``rewrite'' with respect to a relation
+that is reflexive and transitive (a \emph{preorder}).  This can be a
+very powerful way of working with transition relations in operational
+semantics.
+
+{\newcommand{\bred}{\ensuremath{\rightarrow^*_\beta}} For example, in the
+  $\lambda$-calculus, one is likely to work with the reflexive and
+  transitive closure of $\beta$-reduction (\bred).  This relation has
+  congruence rules such as
+\[
+\begin{array}{c@{\qquad\qquad}c}
+\infer{M_1 \,N\;\bred\;M_2\,N}{M_1 \;\bred\;M_2} &
+\infer{M \,N_1\;\bred\;M\,N_2}{N_1 \;\bred\;N_2}\\[3mm]
+\multicolumn{2}{c}{\infer{(\lambda v.M_1)\;\bred\;(\lambda v.M_2)}{M_1\;\bred M_2}}
+\end{array}
+\] and one important rewrite
+\[
+\infer{(\lambda v. M)\,N \;\bred\; M[v := N]}{}
+\]
+Having to apply these rules manually in order to show that a
+given starting term can reduce to particular destination is usually
+very painful, involving many applications, not only of the theorems
+above, but also of the theorems describing reflexive and transitive
+closure (see Section~\ref{relation}).
+
+Though the $\lambda$-calculus is non-deterministic, it is also confluent, so
+the following theorem holds:
+\[
+\infer{
+  M_1 \;\bred\;N\;\;=\;\;M_2\;\bred\; N
+}{
+  \beta\textrm{-nf}\;N & M_1 \;\bred\;M_2
+}
+\]
+This is the critical theorem that justifies the switch from rewriting
+with equality to rewriting with \bred.  It says that if one has a term
+$M_1\bred N$, with $N$ a $\beta$-normal form, and if $M_1$ rewrites to
+$M_2$ under \bred, then the original term is equal to $M_2\bred N$.
+With luck, $M_2$ will actually be syntactically identical to $N$, and
+the reflexivity of \bred{} will prove the desired result.
+
+When adjusted appropriately, the simplifier can be modified to exploit
+the five theorems above, and automatically prove results such as
+\[
+u ((\lambda f\,x. f (f\,x)) v) \bred u (\lambda x. v(v\,x))
+\]
+(on the assumption that the terms $u$ and $v$ are $\lambda$-calculus
+variables, making the result a $\beta$-normal form).
 
 \index{simplification|)}
 
