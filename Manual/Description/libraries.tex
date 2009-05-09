@@ -2891,6 +2891,7 @@ otherwise a good method for ensuring that simplification terminates.
 
 \subsubsection{Rewriting with arbitrary pre-orders}
 \label{sec:preorder-rewriting}
+\index{simplification!with pre-orders}
 
 In addition to simplifying with respect to equality, it is also
 possible to use the simplifier to ``rewrite'' with respect to a relation
@@ -2898,8 +2899,13 @@ that is reflexive and transitive (a \emph{preorder}).  This can be a
 very powerful way of working with transition relations in operational
 semantics.
 
-{\newcommand{\bred}{\ensuremath{\rightarrow^*_\beta}} For example, in the
-  $\lambda$-calculus, one is likely to work with the reflexive and
+{\newcommand{\bred}{\ensuremath{\rightarrow^*_\beta}}
+
+  Imagine, for example, that one has set up a ``deep embedding'' of the
+  $\lambda$-calculus.  This will entail the definition of a new type
+  (\texttt{lamterm}, say) within the logic, as well as definitions of
+  appropriate functions (\eg, substitution) and relations over
+  \texttt{lamterm}.  One is likely to work with the reflexive and
   transitive closure of $\beta$-reduction (\bred).  This relation has
   congruence rules such as
 \[
@@ -2932,7 +2938,9 @@ with equality to rewriting with \bred.  It says that if one has a term
 $M_1\bred N$, with $N$ a $\beta$-normal form, and if $M_1$ rewrites to
 $M_2$ under \bred, then the original term is equal to $M_2\bred N$.
 With luck, $M_2$ will actually be syntactically identical to $N$, and
-the reflexivity of \bred{} will prove the desired result.
+the reflexivity of \bred{} will prove the desired result.  Theorems
+such as these, that justify the switch from one rewriting relation to
+another are known as \emph{weakening congruences}.
 
 When adjusted appropriately, the simplifier can be modified to exploit
 the five theorems above, and automatically prove results such as
@@ -2941,6 +2949,56 @@ u ((\lambda f\,x. f (f\,x)) v) \bred u (\lambda x. v(v\,x))
 \]
 (on the assumption that the terms $u$ and $v$ are $\lambda$-calculus
 variables, making the result a $\beta$-normal form).
+
+In addition, one will quite probably have various rewrite theorems
+that one will want to use in addition to those specified above.  For
+example, if one has earlier proved a theorem such as
+\[
+K\,x\,y \bred x
+\]
+then the simplifier can take this into account as well.
+
+The function achieving all this is
+\index{add_relsimp@\ml{add\_relsimp}}
+\begin{verbatim}
+   simpLib.add_relsimp  : {trans: thm, refl: thm, weakenings: thm list,
+                           subsets: thm list, rewrs : thm list} ->
+                          simpset -> simpset
+\end{verbatim}
+The fields of the record that is the first argument are:
+\begin{description}
+\item[\texttt{trans}] The theorem stating that the relation is
+  transitive, in the form $\forall x y z. R\,x\,y \land R\,y\,z \Rightarrow R x z$.
+\item[\texttt{refl}] The theorem stating that the relation is
+  reflexive, in the form $\forall x. R\,x\,x$.
+\item[\texttt{weakenings}] A list of weakening congruences, of the
+  general form $P_1 \Rightarrow P_2 \Rightarrow \cdots (t_1 = t_2)$, where at least one of the
+  $P_i$ will presumably mention the new relation $R$ applied to a
+  variable that appears in $t_1$.  Other
+  antecedents may be side-conditions such as the requirement in the
+  example above that the term $N$ be in $\beta$-normal form.
+\item[\texttt{subsets}] Theorems of the form $R'\,x\,y \Rightarrow R\,x\,y$.
+  These are used to augment the resulting \simpset's ``filter'' so that
+  theorems in the context mentioning $R'$ will derive useful rewrites
+  involving $R$.  In the example of $\beta$-reduction, one might also have
+  a relation $\rightarrow_{wh}^*$ for weak-head reduction.  Any weak-head
+  reduction is also a $\beta$-reduction, so it can be useful to have the
+  simplifier automatically ``promote'' facts about weak-head reduction
+  to facts about $\beta$-reduction, and to then use them as rewrites.
+\item[\texttt{rewrs}] Possibly conditional rewrites, presumably mostly
+  of the form $P \Rightarrow R\,t_1\,t_2$.  Rewrites over equality can also be
+  included here, allowing useful additional facts to be included.  For
+  example, when working with the $\lambda$-calculus, one might include both
+  the rewrite for $K$ above, as well as the definition of
+  substitution.
+\end{description}
+} % end of block defining \bred
+
+The application of this function to a \simpset{} \texttt{ss} will
+produce an augmented \texttt{ss} that has all of \texttt{ss}'s
+existing behaviours, as well as the ability to rewrite with the given
+relation.
+
 
 \index{simplification|)}
 
