@@ -2,16 +2,18 @@
 (* Stuff needed when running interactively
 quietdec := true; (* turn off printing *)
 app load ["newOpsemTheory","pairSyntax", "intLib","Omega","intSimps",
-          "computeLib", "finite_mapTheory",
+          "computeLib", "finite_mapTheory","pred_setTheory",
           "relationTheory", "stringLib"];
 open newOpsemTheory bossLib pairSyntax intLib Omega
-     computeLib finite_mapTheory relationTheory stringLib;
+     computeLib finite_mapTheory pred_setTheory relationTheory 
+     combinTheory stringLib;
 quietdec := false; (* turn printing back on *)
 *)
 
 open HolKernel Parse boolLib
      newOpsemTheory bossLib pairSyntax intLib Omega intSimps
-     computeLib finite_mapTheory relationTheory stringLib;
+     computeLib finite_mapTheory pred_setTheory relationTheory 
+     combinTheory stringLib;
 
 val _ =
  add_funs
@@ -362,20 +364,22 @@ fun bexp_vars bex =
                     fail())
               else ()
      val name = fst(dest_const opr)
-     val _ = if not(mem name ["Equal","Less","LessEq","And","Or","Not"])
+     val _ = if not(mem name ["Equal","Less","LessEq","Greater","GreaterEq","And","Or","Not"])
               then (print name; 
                     print " is not a bexp constructor\n"; 
                     fail())
               else ()
  in
   case name of
-    "Equal"    => union (nexp_vars(el 1 args)) (nexp_vars(el 2 args))
-  | "Less"     => union (nexp_vars(el 1 args)) (nexp_vars(el 2 args))
-  | "LessEq"   => union (nexp_vars(el 1 args)) (nexp_vars(el 2 args))
-  | "And"      => union (bexp_vars(el 1 args)) (bexp_vars(el 2 args))
-  | "Or"       => union (bexp_vars(el 1 args)) (bexp_vars(el 2 args))
-  | "Not"      => bexp_vars(el 1 args)
-  | _          => (print "BUG in bexp_vars! "; print name; fail())
+    "Equal"     => union (nexp_vars(el 1 args)) (nexp_vars(el 2 args))
+  | "Less"      => union (nexp_vars(el 1 args)) (nexp_vars(el 2 args))
+  | "LessEq"    => union (nexp_vars(el 1 args)) (nexp_vars(el 2 args))
+  | "Greater"   => union (nexp_vars(el 1 args)) (nexp_vars(el 2 args))
+  | "GreaterEq" => union (nexp_vars(el 1 args)) (nexp_vars(el 2 args))
+  | "And"       => union (bexp_vars(el 1 args)) (bexp_vars(el 2 args))
+  | "Or"        => union (bexp_vars(el 1 args)) (bexp_vars(el 2 args))
+  | "Not"       => bexp_vars(el 1 args)
+  | _           => (print "BUG in bexp_vars! "; print name; fail())
  end;
  
 
@@ -389,7 +393,7 @@ fun program_vars c =
               else ()
      val name = fst(dest_const opr)
      val _ = if not(mem name ["Skip","Assign","ArrayAssign","Dispose",
-                              "Seq", "Cond","While","Local","Assert"])
+                              "Seq", "Cond","AnWhile","Local","Proc"])
               then (print name; 
                     print " is not a program constructor\n"; 
                     fail())
@@ -414,9 +418,12 @@ fun program_vars c =
                       (union
                         (program_vars(el 2 args))
                         (program_vars(el 3 args)))
-  | "While"       => union (bexp_vars(el 1 args)) (program_vars(el 2 args))
-  | "Local"       => []
-  | "Assert"      => []
+  | "AnWhile"     => union (bexp_vars(el 1 args)) 
+                           (union
+     (* invariant hack *)   (bexp_vars(rand(el 2 args)) handle _ => [])
+                            (program_vars(el 3 args)))
+  | "Local"       => subtract (program_vars(el 2 args)) [``Var ^(el 1 args)``]
+  | "Proc"        => []
   | _             => (print "BUG in program_vars! "; print name; fail())
  end;
 
@@ -796,6 +803,58 @@ fun elim_state_CONV conv tm =
 
 fun holSolv conv = elim_state_CONV(simpSolv conv);
 
+(* Replace occurrences of ``ScalarOf((FEMPTY |++ l) ' "x")`` by ``x`` *)
+fun elim_state_list_apps l tm =
+ if is_comb tm
+     andalso is_const(rator tm)                                                                                                                   
+     andalso fst(dest_const(rator tm)) = "ScalarOf"
+     andalso is_comb (rand tm)                                                                                                                    
+     andalso is_comb(rator (rand tm))
+     andalso is_const(rator(rator (rand tm)))                                                                                                     
+     andalso fst(dest_const(rator(rator (rand tm)))) = "FAPPLY"
+     andalso rand(rator (rand tm)) = ``FEMPTY |++ ^l``
+     andalso is_string(rand (rand tm))
+  then mk_var(fromHOLstring(rand (rand tm)),``:int``) else
+ if is_var tm orelse is_const tm
+  then tm else
+ if is_comb tm
+  then mk_comb(elim_state_list_apps l (rator tm),elim_state_list_apps l (rand tm))
+  else (print_term (rand tm);
+        print "\nbad term (abstraction) to elim_state_list_apps\n"; fail()); 
+
+(*
+Replace occurrences of ``ScalarOf((FEMPTY |++ l) ' "x")`` by ``x``, then call a
+conversion, then replace occurrences of ``x`` by ``ScalarOf((FEMPTY |++ l) ' "x")``
+in the resulting theorem
+*)
+
+fun elim_state_list_apps_CONV conv tm =
+ let val vars = free_vars tm
+     val l = if (length vars = 1)                            andalso 
+                (type_of(hd vars) = ``:(string#value)list``) andalso 
+                is_var(hd vars)
+              then hd vars
+              else (print "Bad argument to elim_state_list_apps_CONV:\n";
+                    print_term tm; print "\n"; fail())
+     val elim_tm = elim_state_list_apps l tm
+     val new_vars = free_vars elim_tm
+     val elim_th = conv elim_tm (* handle UNCHANGED => REFL elim_tm *)
+ in
+  INST
+   (map 
+     (fn v => {redex = v, residue = ``ScalarOf((FEMPTY |++ ^l) ' ^(fromMLstring(fst(dest_var v))))``})
+     (subtract new_vars [l]))
+   elim_th
+ end;
+
+(* Apply elim_state_list_apps_CONV conv inside a forall, if necessary *)
+fun elim_state_list_CONV conv tm =
+ if is_forall tm
+  then (QUANT_CONV(elim_state_list_apps_CONV conv) THENC REWR_CONV FORALL_SIMP) tm
+  else elim_state_list_apps_CONV conv tm;
+
+
+
 (*
 Generalise a goal by replacing occurrences of ``ScalarOf(s ' "x")`` by
 ``x``.  The validation instantiates occurrences of ``x`` by
@@ -923,7 +982,7 @@ fun EVAL_IMP_INTRO th =
 
 (* 
 Use EVAL_IMP_INTRO to prove IMP P R c
-by calling SYM_EVAL on c with precondition P
+by calling PATH_EVAL on c with precondition P
 to prove [a1,...,an] |- EVAL c s1 s2
 *)
 fun IMP_EVAL_SOLV solv tm =
@@ -991,3 +1050,1405 @@ let val l = MAKE_STATE_LIST c
 in
  CONV_RULE (RAND_CONV(RAND_CONV(REWR_CONV STRAIGHT_RUN_th))) STRAIGHT_RUN_EVAL_th2
 end;
+
+(* Used case statement instead
+fun isCommand name c =
+ (is_const c andalso (fst(dest_const c) = name))
+ orelse
+ (is_comb c                   andalso
+  is_const(fst(strip_comb c)) andalso
+  (fst(dest_const(fst(strip_comb c))) = name));
+
+val isSkip      = isCommand "Skip"
+and isGenAssign = isCommand "GenAssign"
+and isSeq       = isCommand "Seq"
+and isCond      = isCommand "Cond";
+
+val PRE_T =
+ save_thm("PRE_T", METIS_PROVE [] ``!p b : bool. (p ==> b = T) ==> (p ==> (b = T))``);
+
+val PRE_F =
+ save_thm("PRE_F", METIS_PROVE [] ``!p b : bool. (p ==> b = F) ==> (p ==> (b = F))``);
+
+val NOT_PRE_T =
+ save_thm("NOT_PRE_T", METIS_PROVE [] ``!p b : bool. (p ==> ~b = T) ==> (p ==> (b = F))``);
+
+val NOT_PRE_F =
+ save_thm("NOT_PRE_F", METIS_PROVE [] ``!p b : bool. (p ==> ~b = F) ==> (p ==> (b = T))``);
+
+*)
+
+(*
+Try to solve a conditional branch: BRANCH_SOLV conv pre_th l test 
+evaluates b in l to get 
+
+  |- beval test l = tm
+
+If pre_th  is a theorem
+
+  asl |- pre
+
+then the conversion conv is first applied to pre ==> tm to prove
+
+  |- (pre ==> tm) = tv
+
+if tv = T then the following is derived
+
+  asl |- beval test l = T
+
+if tv = F then the following is derived
+
+  asl |- beval test l = F
+
+otherwise conv is applied to pre ==> ~tm to prove
+
+ |- (pre ==> ~tm) = tv
+
+if tv = T then the following is derived
+
+  asl |- beval test l = F
+
+if tv = F then the following is derived
+
+  asl |- beval test l = T
+
+otherwise beval test l = tm is returned
+*)
+
+fun BRANCH_SOLVE conv pre_th l test =
+ let val test_th = EVAL ``beval ^test (FEMPTY |++ ^l)``
+     val tm = rhs(concl test_th)
+     val pre = concl pre_th
+     val T_tm = mk_imp(pre,tm)
+     val T_th = (conv ORELSEC REFL) T_tm
+ in
+  if rhs(concl T_th) = ``T``
+   then CONV_RULE 
+         (RHS_CONV (REWR_CONV (MP (MP (SPECL[pre,tm]PRE_T) T_th) pre_th)))
+         test_th else
+  if rhs(concl T_th) = ``F``
+   then CONV_RULE 
+         (RHS_CONV (REWR_CONV (MP (MP (SPECL[pre,tm]PRE_F) T_th) pre_th)))
+         test_th else
+   let val F_tm = mk_imp(pre, mk_neg tm)
+       val F_th = (conv ORELSEC REFL) F_tm
+   in
+    if rhs(concl F_th) = ``T``
+     then CONV_RULE 
+           (RHS_CONV (REWR_CONV (MP (MP (SPECL[pre,tm]NOT_PRE_T) F_th) pre_th)))
+           test_th else
+    if rhs(concl F_th) = ``F``
+     then CONV_RULE 
+           (RHS_CONV (REWR_CONV (MP (MP (SPECL[pre,tm]NOT_PRE_F) F_th) pre_th)))
+           test_th else
+     test_th
+   end
+ end;
+
+(********************************************************************
+The "state" of symbolic simulation is a theorem
+
+ |- STRAIGHT_RUN_CONT c con l = tm
+
+and a single step is performed by proving |- tm = tm' and hence
+
+ |- STRAIGHT_RUN_CONT c con l = tm'
+********************************************************************)
+
+(* Single step of a symbolic simulation *)
+fun SYM_STEP_CONV conv pre_th tm =
+ if is_comb tm andalso is_abs(rator tm)
+  then BETA_CONV tm
+  else
+  let val (opr,args) = strip_comb tm
+      val _ = if is_const opr 
+                  andalso (fst(dest_const opr) = "STRAIGHT_RUN_CONT")
+                  andalso (length args = 3 )
+               then ()
+               else (print "SYM_STEP_CONV Error 1\n";
+                     print_term tm; print "\n";
+                     fail())
+      val c    = el 1 args
+      val cont = el 2 args
+      val l    = el 3 args
+      val (cmd,params) = strip_comb c
+  in
+   case fst(dest_const cmd) of
+     "Skip"        
+       =>  REWR_CONV (el 1 (CONJUNCTS STRAIGHT_RUN_CONT)) tm
+  |  "GenAssign"   
+       =>  (REWR_CONV (el 2 (CONJUNCTS STRAIGHT_RUN_CONT)) 
+             THENC RAND_CONV EVAL) tm
+   | "Assign"      
+       =>  (REWR_CONV (el 3 (CONJUNCTS STRAIGHT_RUN_CONT))
+             THENC RAND_CONV EVAL) tm
+   | "ArrayAssign" 
+       =>  (REWR_CONV (el 4 (CONJUNCTS STRAIGHT_RUN_CONT))
+            THENC RAND_CONV EVAL ) tm
+   | "Seq"         
+       =>  REWR_CONV (el 5 (CONJUNCTS STRAIGHT_RUN_CONT)) tm
+   | "Cond"         
+       =>  let val testtm = el 1 params
+               val thentm = el 2 params
+               val elsetm = el 3 params
+               val testth = BRANCH_SOLVE conv pre_th l testtm
+               val branchtm = rhs(concl testth)
+           in
+            if not((branchtm = ``T``) orelse (branchtm = ``F``))
+(*
+            then (REWR_CONV (el 6 (CONJUNCTS STRAIGHT_RUN_CONT)) 
+                   THENC RAND_CONV(RATOR_CONV(RATOR_CONV(RAND_CONV(REWR_CONV testth)))))
+                 tm	   
+*)
+             then REWRITE_CONV [testth,el 6 (CONJUNCTS STRAIGHT_RUN_CONT)] tm
+             else
+             let val STRAIGHT_th1 = EQT_ELIM(EVAL ``STRAIGHT ^thentm``)
+                 val STRAIGHT_th2 = EQT_ELIM(EVAL ``STRAIGHT ^elsetm``)
+                 val VARS_IN_th1 =  EQT_ELIM(VARS_IN_CONV ``VARS_IN ^thentm ^l``)
+                 val VARS_IN_th2 =  EQT_ELIM(VARS_IN_CONV ``VARS_IN ^elsetm ^l``)
+             in
+              if branchtm = ``T``
+               then LIST_MP 
+                     [testth,STRAIGHT_th1,STRAIGHT_th2,VARS_IN_th1,VARS_IN_th2]
+                     (ISPECL [cont,l,testtm,thentm,elsetm] (el 7 (CONJUNCTS STRAIGHT_RUN_CONT)))
+               else LIST_MP 
+                     [testth,STRAIGHT_th1,STRAIGHT_th2,VARS_IN_th1,VARS_IN_th2]
+                     (ISPECL [cont,l,testtm,thentm,elsetm] (el 8 (CONJUNCTS STRAIGHT_RUN_CONT)))
+             end
+           end
+   | _ => fail()
+   end;
+
+(* Iterate until continuation ``I`` is reached *)
+fun SYM_RUN_CONV conv pre_th tm =
+ if is_comb tm 
+     andalso is_const(rator tm) 
+     andalso (fst(dest_const(rator tm)) = "I")
+  then REWR_CONV I_THM tm
+  else (SYM_STEP_CONV conv pre_th THENC SYM_RUN_CONV conv pre_th) tm;
+
+(* 
+Some test data:
+use "PATH_EVAL_Examples.ml";
+val c = TritypeProg;
+val c = AbsMinusProg;
+val l = MAKE_STATE_LIST c;
+val STRAIGHT_th = EQT_ELIM(print "\nSTRAIGHT:     "; time EVAL ``STRAIGHT ^c``);
+val VARS_IN_th =  EQT_ELIM(print "VARS_IN:      "; time VARS_IN_CONV ``VARS_IN ^c ^l``);
+val DISTINCT_th = EQT_ELIM(print "DISTINCT:     "; time EVAL ``DISTINCT_VARS ^l``);
+val cont = ``I : (string # value) list -> (string # value) list``;
+val tm = ``STRAIGHT_RUN_CONT ^c ^cont ^l``;
+val conv = OMEGA_CONV;
+val conv = SIMP_CONV arith_ss [];
+val pre_th = ASSUME ``i:int < j``;
+val pre_th = TRUTH;
+
+val th0  = REFL tm;
+val th1  = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th0;
+val th2  = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th1;
+val th3  = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th2;
+val th4  = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th3;
+val th5  = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th4;
+val th6  = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th5;
+val th7  = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th6;
+val th8  = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th7;  (* BETA *)
+val th9  = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th8;
+val th10 = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th9;
+val th11 = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th10;
+val th12 = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th11; (* BETA *)
+val th13 = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th12;
+val th14 = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th13; (* BETA *)
+val th15 = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th14; 
+val th16 = CONV_RULE (RHS_CONV (SYM_STEP_CONV  conv pre_th)) th15; 
+
+val MultBody =
+    ``(Seq
+       (GenAssign "result" (INL(V"result" + V"n")))
+       (GenAssign "count"  (INL(V"count" + C 1))))``;
+
+
+val MultBody =
+    ``(Seq
+       (Assign "result" (V"result" + V"n"))
+       (Assign "count"  (V"count" + C 1)))``;
+
+val Mult =
+    ``AnWhile (V"count" < V"m") R
+       (Seq
+         (Assign "result" (V"result" + V"n"))
+         (Assign "count"  (V"count" + C 1)))``;
+  
+
+BETA_RULE
+ (ISPECL 
+   [MultBody,
+    ``V"count" < V"m"``,
+    ``\s. ScalarOf(s ' "n") * ScalarOf(s ' "count") = ScalarOf(s ' "result")``,
+    ``\s. (ScalarOf(s ' "result") = 0) /\ (ScalarOf(s ' "count") = 0)``] 
+   (el 6 (CONJUNCTS SVC_def)));
+
+*)
+
+
+(* Tool to prove SPEC P c Q by symbolic execution *)
+
+(* Test data
+
+val MultProg =                                                 (* [("n",n); ("m",m); ("count",count); ("Result",Result); ("result",result)] /\ (m > 0) /\ (n > 0) *)
+ ``"result" ::= C 0;;                                          (* [("n",n); ("m",m); ("count",count); ("Result",Result); ("result",0)]      /\ (m > 0) /\ (n > 0) *)
+   "count" ::= C 0;;                                           (* [("n",n); ("m",m); ("count",0);     ("Result",Result); ("result",0)]      /\ (m > 0) /\ (n > 0) *)
+   AnWhile (V"count" < V"m") 
+    (beval ((C n * V"count" = V"result") /\ V"count" <= C m))
+    ("result" ::= (V"result" + V"n");;
+     "count" ::= (V"count" + C 1));;                           (* [("n",n'); ("m",m'); ("count",count'); ("Result",Result'); ("result",result')] /\ (n*count'=result') /\ count' <= m /\ ~(count'<m) /\ (m > 0) /\ (n > 0) *)
+   "count" ::= C 0;;                                           (* [("n",n'); ("m",m'); ("count",0);      ("Result",Result'); ("result",result')] /\ (n*count'=result') /\ count' <= m /\ ~(count'<m) /\ (m > 0) /\ (n > 0) *) 
+   "Result" ::= V"result"``;                                   (* [("n",n'); ("m",m'); ("count",0);      ("Result",result'); ("result",result')] /\ (n*count'=result') /\ count' <= m /\ ~(count'<m) /\ (m > 0) /\ (n > 0) *) 
+
+val MultGoal =
+ ``SPEC
+    (beval ((V"m" = C m) /\ (V"n" = C n) /\ C m > C 0 /\ C n > C 0))
+    ^MultProg
+    (beval (V"Result" = C m * C n))``;
+
+val pre_vars  = bexp_vars ``((V"m" = C m) /\ (V"n" = C n) /\ C m > C 0 /\ C n > C 0)``;
+val prog_vars = program_vars MultProg;
+val post_vars = bexp_vars ``V"Result" = C m * C n``;
+val vars      = union pre_vars (union prog_vars post_vars);
+
+val tm =
+ ``XP ["m";"n";"count";"result";"Result"]
+    (\s. ?Result result count n' m'.
+          beval ((C n * V"count" = V"result") /\ V"count" <= C m) (FEMPTY |++ [("m",m');("n",n');("count",count);("result",result);("Result",Result)])
+          /\
+          (s = FEMPTY |++ I [("m",m');("n",n');("count",count);("result",result);("Result",Result)]))
+    ^MultProg``;
+
+val l = MAKE_STATE_LIST_FROM_VARS vars;
+val xl = rhs(concl(EVAL ``MAP FST ^l``));
+
+val simp_th = EVAL ``SIMPLE ^MultProg``;
+
+val th1 = SPECL [MultProg,l] XP_FVC_SPEC_COR;
+
+val th2 = EVAL_RULE th1;
+
+val spec_tm = MultGoal;
+
+val c = MultProg;
+val P = ``beval ((V"m" = C m) /\ (V"n" = C n) /\ C m > C 0 /\ C n > C 0)``;
+val l = MAKE_STATE_LIST_FROM_VARS (union (bexp_vars(rand P)) (program_vars c));
+
+val c3 =
+ ``AnWhile (V "count" < V "m")
+    (beval ((V "n" * V "count" = V "result") /\ V "count" <= V "n"))
+    ("result" ::= V "result" + V "n" ;; "count" ::= V "count" + C 1)`` :
+
+EVAL ``XP P (GenAssign v1 e1;; AnWhile b R c;; GenAssign v2 e2)``;
+SIMP_RULE std_ss [GSPEC SPEC_def] (EVAL ``FVC P (GenAssign v1 e1;; AnWhile b R c;; GenAssign v2 e2)``);
+
+*)
+
+(*
+MAP_FST_CONV ``(?l. (MAP FST l = ["x1";...;"xn"]) /\ P l)``
+-->
+|- (?l. (MAP FST l = ["x1";...;"xn"]) /\ P l)) = ?xn ... x1. P([("x1",x1);...;("xn",xn)])
+
+val tm = ``(?(l:(string#value)list). (MAP FST l = ["x1";"x2";"x3"]) /\ P l)``;
+val tm = ``?l:(string#value)list. (MAP FST l = ["x1";"x2";"x3";"x4";"x5";"x6";"x7";"x8";"x9";"x10";"x11";"x12"]) /\ P l``;
+*)
+
+
+(* Version below intended to be fast, but actually slower than the
+   naive version using SIMP_CONV!
+
+fun MAP_FST_CONV tm =
+ let val (l,bdy) = dest_exists tm
+     val (tm1,tm2) = dest_conj bdy
+     val (map_tm,xl) = dest_eq tm1
+ in
+  if aconv xl ``[]:string list``
+   then CONV_RULE EVAL (SPEC (mk_abs(l,tm2)) MAP_FST_EXPAND_NIL)
+   else 
+    let val v = mk_var(fromHOLstring(hd(fst(listSyntax.dest_list xl))),``:value``)
+    in
+     CONV_RULE 
+      (EVAL THENC RHS_CONV(QUANT_CONV(RAND_CONV(GEN_ALPHA_CONV v)) THENC MAP_FST_CONV))
+      (SPECL [mk_abs(l,tm2), ``HD ^xl``, ``TL ^xl``] MAP_FST_EXPAND)
+    end
+ end;
+*)
+
+(* Rename a multiple quantification *)
+fun GEN_ALPHAL_CONV [] = ALL_CONV
+ |  GEN_ALPHAL_CONV (v::vl) = GEN_ALPHA_CONV v THENC QUANT_CONV(GEN_ALPHAL_CONV vl); 
+
+fun MAP_FST_CONV tm =
+ let val xl = snd(dest_eq(fst(dest_conj(snd(dest_exists tm)))))
+     fun string2var x = mk_var(fromHOLstring x, ``:value``)
+     val vars = map string2var (fst(listSyntax.dest_list xl))
+     val ex_th = SIMP_CONV pure_ss [MAP_FST_EXPAND,MAP_FST_EXPAND_NIL] tm
+ in
+  CONV_RULE (RHS_CONV(GEN_ALPHAL_CONV(rev vars))) ex_th
+ end;
+
+(*
+MAP_FST_FORALL_CONV ``(!l. (MAP FST l = ["x1";...;"xn"]) ==> P l)``
+-->
+|- (!l. (MAP FST l = ["x1";...;"xn"]) ==> P l)) = !xn ... x1. P([("x1",x1);...;("xn",xn)])
+
+val tm = ``!(l:(string#value)list). (MAP FST l = ["x1";"x2";"x3"]) ==> P l``;
+val tm = ``!l:(string#value)list. (MAP FST l = ["x1";"x2";"x3";"x4";"x5";"x6";"x7";"x8";"x9";"x10";"x11";"x12"]) ==> P l``;
+*)
+
+fun MAP_FST_FORALL_CONV tm =
+ let val xl = snd(dest_eq(fst(dest_imp(snd(dest_forall tm)))))
+     fun string2var x = mk_var(fromHOLstring x, ``:value``)
+     val vars = map string2var (fst(listSyntax.dest_list xl))
+     val ex_th = SIMP_CONV pure_ss [MAP_FST_FORALL_EXPAND,MAP_FST_FORALL_EXPAND_NIL] tm
+ in
+  CONV_RULE (RHS_CONV(GEN_ALPHAL_CONV(rev vars))) ex_th
+ end;
+
+
+(*
+XP_ARG_CONV ``\s. ?l. (MAP FST l = ["x1";...;"xn"]) /\ P(FEMPTY |++ l) /\ (s = FEMPTY |++ (f l))``
+-->
+|- (\s. ?l. (MAP FST l = ["x1";...;"xn"]) /\ P(FEMPTY |++ l) /\ (s = FEMPTY |++ (f l))) = 
+   (\s. ?xn ... x1. P([("x1",x1);...;("xn",xn)]) /\ (s = FEMPTY (f[("x1",x1);...;("xn",xn)]))
+*)
+
+val XP_ARG_CONV = ABS_CONV MAP_FST_CONV;
+
+(* 
+ XP_CONV 
+  ``XP xl (\s. ?xn...x1. 
+                 P[("x1",x1);...;("xn",xn)] 
+                 /\ 
+                 (s = FEMPTY |++ (f[("x1",x1);...;("xn",xn)]))) c``
+ -->
+ |- XP xl (\s. ?xn...x1. 
+                 P[("x1",x1);...;("xn",xn)])
+                 /\ 
+                 (s = FEMPTY |++ (f[("x1",x1);...;("xn",xn)]))) c =
+          (\s. ?xn...x1. 
+                 P[("x1",x1);...;("xn",xn)] 
+                 /\ 
+                 (s = FEMPTY |++ (f'[("x1",x1);...;("xn",xn)]))
+
+|- (?l. (MAP FST l = ["x1";...;"xn"]) /\ P l)) = ?xn ... x1. P([("x1",x1);...;("xn",xn)])
+*)
+
+
+(* Apply MAP_FST_CONV to the existential quantifications 
+   in the LHS and RHS of a theorem of the form:
+
+ |- XP xl (\s. ?l. ...) c = \s. ?l. ...
+*)
+
+val EXPAND_EXISTS =
+ CONV_RULE                                                                                                                                                                                                                          
+  (LHS_CONV(RATOR_CONV(RAND_CONV(ABS_CONV MAP_FST_CONV))) THENC                                                                                                                                                                      
+   RHS_CONV(ABS_CONV MAP_FST_CONV));
+
+(*
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ (I [("x", x');("y", y)])))
+              ("y" ::= V"x" + C y)``;
+
+val tm = ``XP ["x";"y";"z"] 
+              (\s. ?z y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y);("z",z)]
+                          /\ 
+                          (s = FEMPTY |++ (I [("x", x');("y", y);("z",z)])))
+              ("y" ::= V"x" + C y)``;
+
+
+val tm = ``XP ["x";"y";"z"] 
+              (\s. ?z y x'. R[("x", x');("y", y);("z",z)]
+                          /\ 
+                          (s = FEMPTY |++ (I [("x", x');("y", y);("z",z)])))
+              ("y" ::= V"x" + C y)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. P[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ (I [("x", x');("y", y)])))
+              ("y" ::= V"x" + C y)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ (I [("x", x');("y", y)])))
+              (AnWhile b R c)``;
+
+val tm =
+    ``XP ["x"; "y"]
+        (\s.
+           ?y x'.
+             (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+             /\
+             (s =
+              FEMPTY |++ (ASSIGN_FUN "x" (C 0) o I) [("x",x'); ("y",y)]))
+        ("y" ::= V "x" + C y)``
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ (I [("x", x');("y", y)])))
+              ("x" ::= C 0;; "y" ::= V"x" + C y)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ ([("x", x');("y", y)])))
+              ("x" ::= C 0;; "y" ::= V"x" + C y;; "x" ::= V"y" + C 1;; "y" ::= (V"x" + V"y") + C 2)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ (I [("x", x');("y", y)])))
+              ("x" ::= C 0;; AnWhile b R c)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ ( [("x", x');("y", y)])))
+              (AnWhile b R c;; "x" ::= V"y" + C 1)``;
+
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ (I [("x", x');("y", y)])))
+              (AnWhile b R c)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ ( [("x", x');("y", y)])))
+              ("x" ::= C 0;; "y" ::= V"x" + C y;; "x" ::= V"y" + C 1;; AnWhile b R c;; "y" ::= (V"x" + V"y") + C 2;; "y" ::= V"x" + C y;; "x" ::= V"y" + C 1)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ (I [("x", x');("y", y)])))
+              (AnWhile b R c;; "y" ::= (V"x" + V"y") + C 2)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\
+                          (s = FEMPTY |++ ( [("x", x');("y", y)])))
+              (GenAssign v1 e1 ;; AnWhile b R c ;; GenAssign v2 e2)``;
+
+*)
+
+
+
+(*
+
+Goal:
+
+SPEC
+ (\s. beval ((C n * V "count" = V "result") /\ V "count" <= C m) s /\ beval (V "count" < C m) s /\ beval (V "n" = C n) s)
+ (GenAssign "result" (INL (V "result" + V "n")) ;; GenAssign "count" (INL (V "count" + C 1)))
+ (beval ((C n * V "count" = V "result") /\ V "count" <= C m)) 
+
+val xl = ``["m";"n";"count";"result";"Result"]``;
+
+val pre_tm = ``(\s. beval ((C n * V "count" = V "result") /\ V "count" <= C m) s /\ beval (V "count" < C m) s /\ beval (V "n" = C n) s) o ($|++ FEMPTY)``;
+
+val pre_th =
+ XP_ARG_CONV
+  ``\s. ?l. (MAP FST l = ^xl) /\ ^pre_tm  l /\ (s = FEMPTY |++ I l)``;
+
+val fvc_tm =
+``FVC ^xl
+   ^(rhs(concl pre_th))
+   (GenAssign "result" (INL (V "result" + V "n")) ;; GenAssign "count" (INL (V "count" + C 1)))``;
+
+val fvc_th = SIMP_CONV std_ss [FVC_def,Assign_def] fvc_tm;
+
+val lp_tm =
+``XP ^xl
+   ^(rhs(concl pre_th))
+   (GenAssign "result" (INL (V "result" + V "n")) ;; GenAssign "count" (INL (V "count" + C 1)))``;
+
+val lp_th = XP_CONV lp_tm;
+
+val lp_fvc_th1 =
+ SPECL 
+  [``["m";"n";"count";"result";"Result"]``, 
+   ``I : (string # value) list -> (string # value) list``,
+   pre_tm,
+   ``GenAssign "result" (INL (V "result" + V "n")) ;; GenAssign "count" (INL (V "count" + C 1))``]
+  XP_FVC_SPEC_COR;
+
+val lp_fvc_th2 = CONV_RULE (DEPTH_CONV MAP_FST_CONV) lp_fvc_th1;
+
+val lp_fvc_th3 = PURE_REWRITE_RULE [fvc_th,lp_th] lp_fvc_th2;
+
+val lp_fvc_th4 = SIMP_RULE std_ss [SIMPLE_def,VARS_def,UNION_SUBSET,listTheory.LIST_TO_SET_THM,SUBSET_DEF,IN_UNION,IN_SING,IN_INSERT] lp_fvc_th3;
+
+val lp_fvc_th5 = CONV_RULE (RATOR_CONV(RAND_CONV(EQT_INTRO o METIS_PROVE[])) THENC SIMP_CONV std_ss []) lp_fvc_th4;
+
+val goal =
+ prove
+  (``^(rand(concl lp_fvc_th5)) s ==>  beval ((C n * V "count" = V "result") /\ V "count" <= C m) s``,
+   CONV_TAC EVAL
+    THEN RW_TAC std_ss []
+    THEN CONV_TAC EVAL
+    THEN RW_TAC arith_ss [integerTheory.INT_LDISTRIB,integerTheory.INT_MUL_RID]
+    THEN Cooper.COOPER_TAC);
+
+       
+
+
+computeLib.del_consts[``SPEC``];
+
+val MultProg =
+ ``"result" ::= C 0;;
+   "count" ::= C 0;; 
+   AnWhile (V"count" < V"m") 
+    (beval ((C n * V"count" = V"result") /\ V"count" <= C m))
+    ("result" ::= (V"result" + V"n");;
+     "count" ::= (V"count" + C 1));;
+   "count" ::= C 0;;                
+   "Result" ::= V"result"``;        
+
+val MultProgPre =
+ ``(\s. ?Result result count n' m'.
+         beval ((C n * V"count" = V"result") /\ C 0 <= C m /\ V"count" <= C m) (FEMPTY |++ [("m",m');("n",n');("count",count);("result",result);("Result",Result)])
+         /\
+         (s = FEMPTY |++ [("m",m');("n",n');("count",count);("result",result);("Result",Result)]))``;
+
+
+val MultProgPre =
+ ``(\s. ?Result result count n' m'.
+         (beval ((C n * V"count" = V"result") /\ C 0 <= C m /\ V"count" <= C m) o ($|++ FEMPTY)) [("m",m');("n",n');("count",count);("result",result);("Result",Result)]
+         /\
+         (s = FEMPTY |++ [("m",m');("n",n');("count",count);("result",result);("Result",Result)]))``;
+
+val xl = ``["m";"n";"count";"result";"Result"]``;
+
+val ftm = ``FVC ^xl ^MultProgPre ^MultProg``;
+val tm  = ``XP  ^xl ^MultProgPre ^MultProg``;
+
+val MultProgFVC =
+ CONV_RULE 
+  (DEPTH_CONV XP_CONV THENC SIMP_CONV std_ss [] THENC RHS_CONV EVAL) 
+  (PURE_REWRITE_CONV [FVC_def,Assign_def] ftm);
+
+val MultWhileFVC_THM =
+ prove
+  (rhs(concl MultProgFVC),
+   RW_TAC std_ss []
+    THEN CONV_TAC EVAL
+    THEN RW_TAC arith_ss []
+
+val tm = 
+ ``XP ["m"; "n"; "count"; "result"; "Result"]
+             (\s.
+                ?Result result count n' m'.
+                  beval ((C n * V "count" = V "result") /\ V "count" <= C m)
+                    (FEMPTY |++
+                     [("m",m'); ("n",n'); ("count",count);
+                      ("result",result); ("Result",Result)]) /\
+                  (s =
+                   FEMPTY |++
+                   (GEN_ASSIGN_FUN "result" (INL (C 0)) o I)
+                     [("m",m'); ("n",n'); ("count",count);
+                      ("result",result); ("Result",Result)]))
+             (GenAssign "count" (INL (C 0)))``;
+
+
+val tm =
+    ``XP ["m"; "n"; "count"; "result"; "Result"]
+        (XP ["m"; "n"; "count"; "result"; "Result"]
+           (\s.
+              ?Result result count n' m'.
+                beval ((C n * V "count" = V "result") /\ V "count" <= C m)
+                  (FEMPTY |++
+                   I
+                     [("m",m'); ("n",n'); ("count",count);
+                      ("result",result); ("Result",Result)]) /\
+                (s =
+                 FEMPTY |++
+                 I
+                   [("m",m'); ("n",n'); ("count",count); ("result",result);
+                    ("Result",Result)])) ("result" ::= C 0))
+        ("count" ::= C 0)`` ;
+
+*)
+
+
+(*
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x. (beval (V"x" < V"y") o ($|++ FEMPTY)) [("x", x);("y", y)]
+                         /\ 
+                         (s = FEMPTY |++ ([("x", x);("y", y)])))
+              (Cond (V"x" <= V"y") ("x" ::= C 0) ("y" ::= C 0))``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x. (beval (V"x" > V"y") o ($|++ FEMPTY)) [("x", x);("y", y)]
+                         /\ 
+                         (s = FEMPTY |++ ( [("x", x);("y", y)])))
+              (Cond (V"x" <= V"y") ("x" ::= C 0) ("y" ::= C 0))``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x. (beval (V"x" = V"x") o ($|++ FEMPTY)) [("x", x);("y", y)]
+                         /\ 
+                         (s = FEMPTY |++ ([("x", x);("y", y)])))
+              (Cond (V"x" <= V"y") ("x" ::= C 0) ("y" ::= C 0))``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x. ((\s. T) o ($|++ FEMPTY)) [("x", x);("y", y)]
+                         /\ 
+                         (s = FEMPTY |++ ([("x", x);("y", y)])))
+              (Cond (V"x" <= V"y") ("x" ::= C 0) ("y" ::= C 0))``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x. ((\s. T) o ($|++ FEMPTY)) [("x", x);("y", y)]
+                         /\ 
+                         (s = FEMPTY |++ ([("x", x);("y", y)])))
+              ("x" ::= C x)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x. ((\s. T) o ($|++ FEMPTY)) [("x", x);("y", y)]
+                         /\ 
+                         (s = FEMPTY |++ ([("x", x);("y", y)])))
+              (Cond (V"x" <= V"y") ("x" ::= C 0) ("y" ::= C 0))``;
+
+val tm = ``XP ["x";"y"] 
+       (\s.
+          ?y x.
+            ((\s. T) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+            (s =
+             FEMPTY |++
+             (\l.
+                ZIP_LIST (beval (V "x" <= V "y") (FEMPTY |++ I l))
+                  ((ASSIGN_FUN "x" (C 0) o I) l)
+                  ((ASSIGN_FUN "y" (C 0) o I) l)) [("x",x); ("y",y)]))
+              (Cond (V"x" <= V"y") ("x" ::= C 0) ("y" ::= C 0))``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x. ((\s. T) o ($|++ FEMPTY)) [("x", x);("y", y)]
+                         /\ 
+                         (s = FEMPTY |++ ([("x", x);("y", y)])))
+              (("x" ::= C x);; Cond (V"x" <= V"y") ("x" ::= C 0) ("y" ::= C 0))``;
+
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x. ((\s. (x0 = 0)) o ($|++ FEMPTY)) [("x", x);("y", y)]
+                         /\ 
+                         (s = FEMPTY |++ ([("x", x);("y", y)])))
+              ("x" ::= C x0)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s.
+                 ?y x.
+                   ((\s. x0 = 0) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+                   (s = FEMPTY |++ [("x",Scalar x0); ("y",y)]))
+              (Cond (V"x" <= V"y") ("x" ::= C 0) ("y" ::= C 0))``;
+
+val tm = ``XP ["x";"y"] 
+              (\s.
+                 ?y x.
+                   ((\s. T) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+                   (s = FEMPTY |++ [("x",Scalar x0); ("y",y)]))
+              (Cond (V"x" <= V"y") ("x" ::= C 0) ("y" ::= C 0))``;
+
+val tm = ``XP ["x";"y"] 
+              (\s.
+                 ?y x.
+                   ((\s. x0 = 0) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+                   (s = FEMPTY |++ [("x",Scalar x0); ("y",y)]))
+              (Cond (V"x" <= V"y") ("x" ::= C 0) ("y" ::= C 0);; "x" ::= C 1)``;
+
+
+val tm = ``XP ["x";"y"] 
+              (\s.
+                 ?y x.
+                   ((\s. x0 = 0) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+                   (s = FEMPTY |++ [("x",Scalar x0); ("y",y)]))
+              ("x" ::= C x0;; "y" ::= C x0;; Cond (V"x" <= V"y") ("x" ::= C 1) ("y" ::= C 2);; "x" ::= C 3)``;
+
+
+val tm = ``XP ["x";"y"] 
+              (\s.
+                 ?y x.
+                   ((\s. x0 = 0) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+                   (s = FEMPTY |++ [("x",Scalar x0); ("y",y)]))
+              (Cond (V"x" <= V"y") ("x" ::= C 1) (AnWhile b R ("x" ::= V"y"));; "x" ::= C 3)``;
+
+
+val tm = ``XP ["x";"y"] 
+              (\s.
+                 ?y x.
+                   ((\s. x0 = 0) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+                   (s = FEMPTY |++ [("x",Scalar x0); ("y",y)]))
+              ("x" ::= C x0;; "y" ::= C x0;; (Cond (V"x" <= V"y") ("x" ::= C 1) (AnWhile b R Skip));; "x" ::= C 3)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s.
+                 ?y x : value.
+                   ((\s. T) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+                   (s = FEMPTY |++ [("x",Scalar x0); ("y",y)]))
+              ("x" ::= C x0;; "y" ::= C x0;; (Cond (V"x" < V"y") ("x" ::= C 1) (AnWhile b R Skip));; "x" ::= C 3)``;
+
+
+val tm = ``XP ["x";"y"] 
+              (\s.
+                 ?y x.
+                   ((\s. T) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+                   (s = FEMPTY |++ [("x",Scalar x0); ("y",y)]))
+              ((Cond (V"x" < V"y") ("x" ::= C 1) (AnWhile b R Skip));; "x" ::= C 3)``;
+
+val EXISTS_SIMPLE =
+ store_thm
+  ("EXISTS_SIMPLE",
+   ``?f. !n:num. SIMPLE(f n)``,
+   Q.EXISTS_TAC `\n. Skip`
+    THEN CONV_TAC EVAL
+    THEN METIS_TAC[]);
+
+val MK_SIMPLE_def =
+ new_specification("MK_SIMPLE_def", ["MK_SIMPLE"], EXISTS_SIMPLE);
+
+val MK_SIMPLE =
+ store_thm
+  ("MK_SIMPLE",
+   ``SIMPLE(MK_SIMPLE n) = T``,
+   METIS_TAC[MK_SIMPLE_def]);
+
+val _ = computeLib.add_funs[MK_SIMPLE];
+
+val c_simple_def = Define `c_simple = MK_SIMPLE 0`;
+
+val tm =
+    ``XP ["x"; "y"]
+        (\s.
+           ?y x:value.
+             (P o $|++ FEMPTY) [("x",x); ("y",y)] /\
+             (s = FEMPTY |++ [("x",x); ("y",y)]))
+        (AnWhile b R c_simple)``;
+
+
+val tm =
+    ``XP ["x"; "y"]
+        (\s.
+           ?y x:value.
+             ((\s. T) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+             (s = FEMPTY |++ [("x",Scalar x0); ("y",Scalar x0)]))
+        (if V "x" <= V "y" then "x" ::= C 1 else AnWhile b R c_simple)``;
+
+val tm =
+    ``XP ["x"; "y"]
+        (\s.
+           ?y x:value.
+             ((\s. x0 = 0) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+             (s = FEMPTY |++ [("x",Scalar x0); ("y",Scalar x0)]))
+        ((if V "x" <= V "y" then "x" ::= C 1 else AnWhile b R c_simple) ;;
+         "x" ::= C 3)``;
+
+val tm =
+    ``XP ["x"; "y"]
+        (\s.
+           ?y x:value.
+             ((\s. x0 <= y0) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+             (s = FEMPTY |++ [("x",Scalar x0); ("y",Scalar y0)]))
+        ((if V "x" <= V "y" then "x" ::= C 1 else AnWhile b R c_simple) ;;
+         "x" ::= C 3)``;
+
+
+val tm =
+    ``XP ["x"; "y"]
+        (\s.
+           ?y x:value.
+             ((\s. x0 > y0) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+             (s = FEMPTY |++ [("x",Scalar x0); ("y",Scalar y0)]))
+        ((if V "x" <= V "y" then "x" ::= C 1 else AnWhile b R c_simple) ;;
+         "x" ::= C 3)``;
+
+val tm =
+    ``XP ["x"; "y"]
+        (\s.
+           ?y x:value.
+             ((\s. T) o $|++ FEMPTY) [("x",x); ("y",y)] /\
+             (s = FEMPTY |++ [("x",Scalar x0); ("y",Scalar y0)]))
+        ((if V "x" <= V "y" then "x" ::= C 1 else AnWhile b R c_simple) ;;
+         "x" ::= C 3)``;
+
+
+*)
+
+(*
+makefun ``[("x1",x1);...;("xn",xn)]`` tm 
+-->
+``\l.(\x1 ... xn. tm) (LOOKUP "x1" l) ... (LOOKUP "xn" l)``
+
+If variables in e1,...,en are included in ``x1``,...,``xn``, 
+then should have:
+
+ |- (makefun [("x1",x1);...;("xn",xn)] [("x1",e1);...;("xn",en)])
+     [("x1",x1);...;("xn",xn)] 
+     = [("x1",e1);...;("xn",en)]
+*)
+
+fun makefun l tm =
+ let val l_list = map dest_pair (fst(listSyntax.dest_list l))
+     val l_vars = map snd l_list
+     val lvar = ``l:(string#value)list``
+ in
+  mk_abs(lvar,list_mk_comb(list_mk_abs(l_vars,tm), map (fn x => ``LOOKUP ^x ^lvar``)(map fst l_list)))
+ end;
+
+
+(*
+Simplify if 
+
+ fconv ``f [("x1",x1);...;("xn",xn)]`` = |- f [("x1",x1);...;("xn",xn)] = [("x1",x1');...;("xn",xn')] 
+
+then 
+
+ XP_RESULT_CONV
+  ``\s. ?xn...x1. P(...) /\ (s = FEMPTY (f [("x1",x1);...;("xn",xn)]))``
+ 
+  = |-  (\s. ?xn...x1. P(...) /\ (s = FEMPTY (f [("x1",x1);...;("xn",xn)]))) =
+         \s. ?xn...x1. P(...) /\ (s = [("x1",x1');...;("xn",xn')]))
+*)
+
+
+(* tm --> |- tm = I tm 
+fun I_INTRO_CONV tm = SYM(ISPEC tm I_THM);
+*)
+
+fun XP_RESULT_CONV fconv =
+ ABS_CONV(STRIP_QUANT_CONV(RAND_CONV(RHS_CONV(RAND_CONV(fconv (* THENC I_INTRO_CONV *) )))));
+
+(* Hit and equation for XP with XP_RESULT_CONV EVAL on LHS and RHS *)
+val XP_EVAL_RULE =
+ CONV_RULE 
+  (LHS_CONV(RATOR_CONV(RAND_CONV(XP_RESULT_CONV EVAL)))
+    THENC RHS_CONV(XP_RESULT_CONV EVAL));
+
+val conv = EVAL 
+            THENC SIMP_CONV arith_ss [] 
+            THENC (elim_state_CONV(Cooper.COOPER_CONV ORELSEC ALL_CONV)
+                   ORELSEC ALL_CONV);
+
+fun PROVE_T_CONV tm =
+ prove
+  (``^tm = T``,
+   RW_TAC arith_ss []
+    THEN Cooper.COOPER_TAC);
+
+fun PROVE_F_CONV tm =
+ prove
+  (``^tm = F``,
+   RW_TAC arith_ss []
+    THEN Cooper.COOPER_TAC);
+
+val conv = EVAL 
+            THENC SIMP_CONV arith_ss [] 
+            THENC (PROVE_T_CONV ORELSEC PROVE_F_CONV ORELSEC ALL_CONV);
+
+datatype cond_eval = TestTrue of thm | TestFalse of thm | Unresolved;
+
+(* 
+
+CondTest conv p b evaluates ``p ==> b`` and if this is unresolved then ``p ==> ~b``:
+
+ 1. if conv ``p ==> b`` = |- (p ==> b) = T then TestTrue(|- p ==> b) returned
+
+ 2. if conv ``p ==> b`` = |- (p ==> b) = F then TestFalse(|- p ==> ~b) returned
+
+ 3. if conv ``p ==> b`` = |- (p ==> b) = tm (tm not T or F) then
+
+    3.1 if conv ``p ==> ~b`` = |- (p ==> ~b) = T then TestFalse(|- p ==> ~b) returned
+    3.2 if conv ``p ==> ~b`` = |- (p ==> ~b) = F then TestTrue(|- p ==> ~b) returned
+
+ 4. if neither conv ``p ==> b`` nor conv ``p ==> ~b`` are resolved, Unresolved is returned
+
+*)
+
+(*
+fun CondTest conv xl f p b =
+ let val p_imp_b = ``!l. (MAP FST l = ^xl) ==> ^p l ==> beval ^b (FEMPTY |++ ^f l)``
+     val th1 = (MAP_FST_FORALL_CONV THENC conv) p_imp_b
+     val b_res = rhs(concl th1)
+ in
+  if b_res = T
+   then TestTrue(EQT_ELIM th1) else
+  if b_res = F
+   then TestFalse(MATCH_MP TEST_F th1)
+   else
+    let val p_imp_not_b = ``!l. (MAP FST l = ^xl) ==> ^p l ==> ~(beval ^b (FEMPTY |++ ^f l))``
+        val th2 = (MAP_FST_FORALL_CONV THENC conv) p_imp_not_b
+        val not_b_res = rhs(concl th2)
+    in
+     if not_b_res = T
+      then TestFalse(EQT_ELIM th2) else
+     if not_b_res = F
+      then TestTrue(MATCH_MP NOT_TEST_F th2)
+      else Unresolved
+    end
+ end;
+*)
+
+fun CondTest conv xl f p b =
+ let val p_imp_b = ``!l. (MAP FST l = ^xl) ==> ^p l ==> beval ^b (FEMPTY |++ ^f l)``
+     val th1 = (MAP_FST_FORALL_CONV THENC conv) p_imp_b
+     val b_res = rhs(concl th1)
+ in
+  if b_res = T
+   then TestTrue(EQT_ELIM th1) 
+   else
+    let val p_imp_not_b = ``!l. (MAP FST l = ^xl) ==> ^p l ==> ~(beval ^b (FEMPTY |++ ^f l))``
+        val th2 = (MAP_FST_FORALL_CONV THENC conv) p_imp_not_b
+        val not_b_res = rhs(concl th2)
+    in
+     if not_b_res = T
+      then TestFalse(EQT_ELIM th2)
+      else Unresolved
+    end
+ end;
+
+val trace_ref = ref(``T``,``F``);
+
+fun TRACE (conv:term->thm) tm =
+ let val th = conv tm 
+ in
+  if aconv tm (lhs(concl th))
+   then th
+   else (print "Argument:\n"; print_term tm; 
+         print "\nnot equal to lhs of theorem generated by XP_CONV\n";
+         print_term(lhs(concl th));print "\n\n";
+         trace_ref := (tm, lhs(concl th));
+         th)
+ end;
+
+
+
+(* 
+ XP_CONV 
+  ``XP xl (\s. ?xn...x1. 
+                 P[("x1",x1);...;("xn",xn)] 
+                 /\ 
+                 (s = FEMPTY |++ [("x1",e1);...;("xn",en)])) c``
+ -->
+ |- XP xl (\s. ?xn...x1. 
+                 P[("x1",x1);...;("xn",xn)])
+                 /\ 
+                 (s = FEMPTY |++ [("x1",e1);...;("xn",en)])) c =
+           \s. ?xn...x1. 
+                 P[("x1",x1);...;("xn",xn)] 
+                 /\ 
+                 (s = FEMPTY |++ [("x1",e1');...;("xn",en')])
+
+|- (?l. (MAP FST l = ["x1";...;"xn"]) /\ P l)) = ?xn ... x1. P([("x1",x1);...;("xn",xn)])
+*)
+
+
+(*
+
+val tm =
+ ``XP ["x"; "y"]
+        (\s.
+           ?y x'.
+             (beval (C x > C 0) o $|++ FEMPTY) [("x",x'); ("y",y)] /\
+             (s = FEMPTY |++ [("x",x'); ("y",y)])) ("y" ::= V "x" + C y)``;
+
+val tm =
+    ``XP ["x"; "y"]
+        (\s.
+           ?y' x'.
+             (beval (C x > C 0) o $|++ FEMPTY) [("x",x'); ("y",y')] /\
+             (s = FEMPTY |++ [("x",x'); ("y",Scalar (ScalarOf x' + y))]))
+        ("x" ::= V "y" + C x)``;
+
+val tm =
+ ``XP ["x"; "y"]
+        (\s.
+           ?y x'.
+             (beval (C x > C 0) o $|++ FEMPTY) [("x",x'); ("y",y)] /\
+             (s = FEMPTY |++ [("x",x'); ("y",y)])) 
+        (("x" ::= V "y" + C x) ;; ("y" ::= V "x" + C y))``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ [("x", x');("y", y)]))
+              ("x" ::= C 0;; "y" ::= V"x" + C y;; "x" ::= V"y" + C 1;; "y" ::= (V"x" + V"y") + C 2)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ [("x", x');("y", y)]))
+              (AnWhile b R c)``;
+
+val tm = ``XP ["x";"y"] 
+              (\s. ?y x'. (beval (C x > C 0) o ($|++ FEMPTY))[("x", x');("y", y)]
+                          /\ 
+                          (s = FEMPTY |++ [("x", x');("y", y)]))
+              ("x" ::= C 0;; "y" ::= V"x" + C y;; "x" ::= V"y" + C 1;; AnWhile b1 R1 c1;; "y" ::= (V"x" + V"y") + C 2 ;; AnWhile b2 R2 c2;; "y" ::= V"x" + C y;; "x" ::= V"y" + C 1)``;
+
+val MultProg =
+ ``"result" ::= C 0;;
+   "count" ::= C 0;; 
+   AnWhile (V"count" < V"m") 
+    (beval ((C n * V"count" = V"result") /\ V"count" <= C m))
+    ("result" ::= (V"result" + V"n");;
+     "count" ::= (V"count" + C 1));;
+   "count" ::= C 0;;                
+   "Result" ::= V"result"``; 
+
+val MultProgPre =
+ ``(\s. ?Result result count n' m'.
+         (beval ((C n * V"count" = V"result") /\ C 0 <= C m /\ V"count" <= C m) o ($|++ FEMPTY))[("m",m');("n",n');("count",count);("result",result);("Result",Result)]
+         /\
+         (s = FEMPTY |++ [("m",m');("n",n');("count",count);("result",result);("Result",Result)]))``;
+
+val xl = ``["m";"n";"count";"result";"Result"]``;
+
+val tm = ``XP ^xl ^MultProgPre ^MultProg``;
+
+val MultProgTh = XP_CONV conv tm;
+
+CONV_RULE (RHS_CONV(ABS_CONV(STRIP_QUANT_CONV(RATOR_CONV EVAL))
+                     THENC DEPTH_CONV MAP_FST_CONV 
+                     THENC DEPTH_CONV STATE_EQ_EVAL_CONV)) MultProgTh;
+
+val xl = ``["k"; "result"; "i"; "j"]``;
+
+val absMinus =
+    ``"result" ::= C 0 ;; "k" ::= C 0 ;;
+      (if V "i" <= V "j" then "k" ::= V "k" + C 1 else Skip) ;;
+      (if (V "k" = C 1) /\ ~(V "i" = V "j") then
+         "result" ::= V "j" - V "i"
+       else
+         "result" ::= V "i" - V "j")``;
+
+val absMinusPre1 =
+ ``\s. ?j i result k.
+         (beval (V"i" < V"j") o ($|++ FEMPTY))[("k", k); ("result", result); ("i", i); ("j",j)]
+         /\
+         (s = FEMPTY |++ [("k", k); ("result", result); ("i", i); ("j",j)])``;
+
+val tm1 = ``XP ^xl ^absMinusPre1 ^absMinus``;
+
+val absMinusTh1 = XP_CONV conv tm1;
+
+CONV_RULE (RHS_CONV EVAL) absMinusTh1;
+
+
+val absMinusPre2 =
+ ``\s. ?j i result k.
+         (beval (V"i" > V"j") o ($|++ FEMPTY))[("k", k); ("result", result); ("i", i); ("j",j)]
+         /\
+         (s = FEMPTY |++ [("k", k); ("result", result); ("i", i); ("j",j)])``;
+
+val tm2 = ``XP ^xl ^absMinusPre2 ^absMinus``;
+
+val absMinusTh2 = XP_CONV conv tm2;
+
+CONV_RULE (RHS_CONV EVAL) absMinusTh2;
+
+
+val absMinusPre3 =
+ ``\s. ?j i result k.
+         ((\s:state. T) o ($|++ FEMPTY))[("k", k); ("result", result); ("i", i); ("j",j)]
+         /\
+         (s = FEMPTY |++ [("k", k); ("result", result); ("i", i); ("j",j)])``;
+
+val tm3 = ``XP ^xl ^absMinusPre3 ^absMinus``;
+
+val absMinusTh3 = XP_CONV conv tm3;
+
+CONV_RULE (RHS_CONV EVAL) absMinusTh3;
+
+
+> val it =
+    ``XP ["k"; "result"; "i"; "j"]
+        (\s.
+           ?j i result k.
+             (beval (V "i" > V "j") o $|++ FEMPTY)
+               [("k",k); ("result",result); ("i",i); ("j",j)] /\
+             (s =
+              FEMPTY |++
+              [("k",Scalar 0); ("result",Scalar 0); ("i",i); ("j",j)]))
+        (if V "i" <= V "j" then "k" ::= V "k" + C 1 else Skip)`` : term
+- XP_CONV conv it;
+Argument:
+XP ["k"; "result"; "i"; "j"]
+  (\s.
+     ?j i result k.
+       (beval (V "i" > V "j") o $|++ FEMPTY)
+         [("k",k); ("result",result); ("i",i); ("j",j)] /\
+       (s =
+        FEMPTY |++
+        [("k",Scalar 0); ("result",Scalar 0); ("i",i); ("j",j)])) Skip
+not equal to lhs of theorem generated by XP_CONV
+XP ["k"; "result"; "i"; "j"]
+  (\s.
+     ?j i result k.
+       (beval (V "i" > V "j") o $|++ FEMPTY)
+         [("k",k); ("result",result); ("i",i); ("j",j)] /\
+       (s =
+        FEMPTY |++
+        (\l.
+           (\k result i j.
+              [("k",Scalar 0); ("result",Scalar 0); ("i",i); ("j",j)])
+             (LOOKUP "k" l) (LOOKUP "result" l) (LOOKUP "i" l)
+             (LOOKUP "j" l))
+          [("k",k); ("result",result); ("i",i); ("j",j)])) Skip
+
+! Uncaught exception:
+! HOL_ERR
+- 
+
+
+
+
+*)
+
+(* EVAL LOOKUP applications *)
+
+fun LOOKUP_EVAL_CONV tm =
+ let val (opr,args) = strip_comb tm
+ in
+  if is_const opr andalso (fst(dest_const opr) = "LOOKUP") 
+     andalso (length args = 2) andalso listSyntax.is_list (el 2 args)
+  then EVAL tm
+  else NO_CONV tm
+ end;
+
+(* Simplify ANWHILE_PRED xl P R b  *)
+
+fun ANWHILE_PRED_EVAL_CONV tm =
+ let val (opr,args) = strip_comb tm
+ in
+  if is_const opr andalso (fst(dest_const opr) = "ANWHILE_PRED") andalso 
+     (length args = 4) andalso listSyntax.is_list (el 1 args) 
+   then EVAL tm
+   else NO_CONV tm
+ end;
+
+
+(* EVAL ZIP_LIST applications *)
+
+fun ZIP_LIST_EVAL_CONV tm =
+ let val (opr,args) = strip_comb tm
+ in
+  if is_const opr andalso (fst(dest_const opr) = "ZIP_LIST") andalso 
+     (length args = 3) andalso listSyntax.is_list (el 2 args) 
+     andalso listSyntax.is_list (el 3 args)
+  then EVAL tm
+  else NO_CONV tm
+ end;
+
+(* EVAL tm in ``(s = FEMPTY |++ tm)`` *)
+fun STATE_EQ_EVAL_CONV tm =
+ if is_eq tm andalso is_comb(rhs tm) andalso
+     (aconv ``$|++ FEMPTY : (string#value)list -> state`` (rator(rhs tm))) andalso
+     not(listSyntax.is_list(rand(rhs tm)))
+ then RHS_CONV(RAND_CONV EVAL) tm
+ else NO_CONV tm;
+
+fun XP_CONV (conv:term->thm) tm =
+ let val (lp_op, lp_args) = strip_comb tm
+     val _ = if is_const lp_op andalso (fst(dest_const lp_op) = "XP")
+              then ()
+              else fail()
+     val _ = if length lp_args = 3 then () else (fail())
+     val (xl,lp_abs,c) = (el 1 lp_args, el 2 lp_args, el 3 lp_args)
+     val _ = if is_abs lp_abs
+              then ()
+              else (print "Bad abs:\n"; print_term lp_abs; print "\n"; fail())
+     val (svar,bdy) = dest_abs lp_abs
+     val _ = if is_exists bdy
+              then ()
+              else (print "Bad exists:\n"; print_term bdy; print "\n"; fail())
+     val (e_vars,e_body) = strip_exists bdy
+     val _ = if all (fn v => type_of v = ``:value``) e_vars
+              then ()
+              else (print "\nBad type of an existentially quantified variable in:\n";
+                    print_term bdy; print "\n")
+     val x_vars = map 
+                   (fn x => mk_var(fromHOLstring x,``:value``)) 
+                   (rev(fst(listSyntax.dest_list xl)))
+     val _ = if is_conj e_body
+              then ()
+              else (print "Bad conj:\n"; print_term e_body; print "\n"; fail())
+     val (p_tm,s_tm) = dest_conj e_body
+     val _ = if is_comb p_tm
+              then ()
+              else (print "Bad p-comb:\n"; print_term p_tm; print "\n"; fail())
+     val (p,p_arg) = dest_comb p_tm
+     val _ = if listSyntax.is_list p_arg
+              then ()
+              else (print "Bad p_arg -- not a list:\n"; print_term p_arg; print "\n"; fail())
+     val _ = if is_eq s_tm andalso is_comb (rhs s_tm)
+              then ()
+              else (print "Bad s-equation:\n"; print_term s_tm; print "\n"; fail())
+     val s_update_list = rand(rhs s_tm)
+     val f = makefun p_arg s_update_list 
+     val (cmd, cmd_args) = strip_comb c
+ in
+  case fst(dest_const cmd) of
+    "Skip"      => let val lp_skip_th1 = EXPAND_EXISTS(SPECL [xl,f,p] XP_EXEC_SKIP)
+                       val lp_skip_th2 = CONV_RULE (RHS_CONV(DEPTH_CONV STATE_EQ_EVAL_CONV)) lp_skip_th1
+                       val lp_skip_th3 = CONV_RULE (LHS_CONV(DEPTH_CONV STATE_EQ_EVAL_CONV)) lp_skip_th2
+                   in
+                    lp_skip_th3
+                   end 
+
+  | "GenAssign" => let val all_distinct_th = EVAL ``ALL_DISTINCT ^xl``
+                       val map_f_th = 
+                        prove
+                         (``!l. (MAP FST l = ^xl) ==> (MAP FST (^f l) = ^xl)``,
+                          SIMP_TAC list_ss [I_o_ID,MAP_ASSIGN_FUN,MAP_GEN_ASSIGN_FUN])
+                         handle e => (print "\nProof failed\n"; print "Term: \n";
+                                      print_term tm; print "\nGoal:\n";
+                                      print_term ``!l. (MAP FST l = ^xl) ==> (MAP FST (^f l) = ^xl)``;
+                                      Raise e)
+                       val lp_gen_assign_th1 = SPECL [xl,f,p,el 1 cmd_args,el 2 cmd_args]XP_EXEC_GEN_ASSIGN
+                       val lp_gen_assign_th2 = MP (MP lp_gen_assign_th1 (EQT_ELIM all_distinct_th)) map_f_th
+                       val lp_gen_assign_th3 = EXPAND_EXISTS lp_gen_assign_th2
+                   in 
+                    XP_EVAL_RULE lp_gen_assign_th3
+                   end
+
+  | "Assign"    => let val all_distinct_th = EVAL ``ALL_DISTINCT ^xl``
+                       val map_f_th = 
+                        prove
+                         (``!l. (MAP FST l = ^xl) ==> (MAP FST (^f l) = ^xl)``,
+                          SIMP_TAC list_ss [I_o_ID,MAP_ASSIGN_FUN,MAP_GEN_ASSIGN_FUN])
+                         handle e => (print "\nProof failed\n"; print "Term: \n";
+                                      print_term tm; print "\nGoal:\n";
+                                      print_term ``!l. (MAP FST l = ^xl) ==> (MAP FST (^f l) = ^xl)``;
+                                      Raise e)
+                       val lp_assign_th1 = SPECL [xl,f,p,el 1 cmd_args,el 2 cmd_args]XP_EXEC_ASSIGN
+                       val lp_assign_th2 = MP (MP lp_assign_th1 (EQT_ELIM all_distinct_th)) map_f_th
+                       val lp_assign_th3 = EXPAND_EXISTS lp_assign_th2
+                   in 
+                    XP_EVAL_RULE lp_assign_th3
+                   end
+
+  | "Seq"       => let val (c1,c2) = (el 1 cmd_args, el 2 cmd_args) 
+                       val lp_seq_th1 = SPECL [xl,f,p,c1,c2] XP_EXEC_SEQ
+                       val lp_seq_th2 = CONV_RULE (DEPTH_CONV MAP_FST_CONV) lp_seq_th1
+                       val lp_seq_th3 = CONV_RULE (LHS_CONV(RATOR_CONV(RAND_CONV(XP_RESULT_CONV EVAL)))) lp_seq_th2
+                       val lp_seq_th4 = CONV_RULE (RHS_CONV(RATOR_CONV(RAND_CONV(RATOR_CONV(RAND_CONV(XP_RESULT_CONV EVAL)))))) lp_seq_th3
+                       val c1_th = TRACE(XP_CONV conv) ``XP ^xl ^lp_abs ^c1``
+                       val lp_seq_th5 = CONV_RULE (RHS_CONV(RATOR_CONV(RAND_CONV(REWR_CONV c1_th)))) lp_seq_th4
+                       val c2_simple_th = EVAL ``SIMPLE ^c2``
+                       val lp_orf_th = REWRITE_RULE[c2_simple_th](SPECL [c2,xl] XP_ORF)
+                       val lp_seq_th6 = REWRITE_RULE [lp_orf_th] lp_seq_th5 
+                   in
+                    CONV_RULE (RHS_CONV(DEPTH_CONV(TRACE(XP_CONV conv)))) lp_seq_th6
+                   end
+
+  | "Cond"      => let val (b,c1,c2) = (el 1 cmd_args, el 2 cmd_args, el 3 cmd_args)
+                   in
+                    case CondTest conv xl f p b
+                    of TestTrue th  =>
+                        let
+                         val simple_c2_th = EQT_ELIM(EVAL ``SIMPLE ^c2``) 
+                                             handle e => (print "\nCan't prove SIMPLE(";print_term c2; print")\n"; Raise e)
+                         val c1_th1 = SPECL [xl,f,p,b,c1,c2] XP_EXEC_IF_T
+                         val c1_th2 = MP (MP c1_th1 simple_c2_th) th
+                         val c1_th3 = CONV_RULE (RHS_CONV(RATOR_CONV(RAND_CONV(ABS_CONV MAP_FST_CONV)))) c1_th2
+                         val c1_th4 = CONV_RULE (LHS_CONV(RATOR_CONV(RAND_CONV(ABS_CONV MAP_FST_CONV)))) c1_th3
+                         val c1_th5 = CONV_RULE (DEPTH_CONV LOOKUP_EVAL_CONV) (BETA_RULE c1_th4)
+                        in
+                         CONV_RULE (RHS_CONV(TRACE(XP_CONV conv))) c1_th5
+                        end
+                    |  TestFalse th  =>
+                        let
+                         val simple_c1_th = EQT_ELIM(EVAL ``SIMPLE ^c1``)
+                                             handle e => (print "\nCan't prove SIMPLE(";print_term c1; print")\n"; Raise e)
+                         val c2_th1 = SPECL [xl,f,p,b,c1,c2] XP_EXEC_IF_F
+                         val c2_th2 = MP (MP c2_th1 simple_c1_th) th
+                         val c2_th3 = CONV_RULE (RHS_CONV(RATOR_CONV(RAND_CONV(ABS_CONV MAP_FST_CONV)))) c2_th2
+                         val c2_th4 = CONV_RULE (LHS_CONV(RATOR_CONV(RAND_CONV(ABS_CONV MAP_FST_CONV)))) c2_th3
+                         val c2_th5 = CONV_RULE (DEPTH_CONV LOOKUP_EVAL_CONV) (BETA_RULE c2_th4)
+                        in
+                         CONV_RULE (RHS_CONV(TRACE(XP_CONV conv))) c2_th5
+                        end
+                    |  Unresolved   =>
+                        let
+                         val c1_tm1 = ``XP ^xl (\s. ?l. (MAP FST l = ^xl) /\ 
+                                               (\l. ^p l /\ beval ^b (FEMPTY |++ (^f l))) l /\ 
+                                               (s = FEMPTY |++ ^f l)) ^c1``
+                         val c1_th1 = CONV_RULE (DEPTH_CONV STATE_EQ_EVAL_CONV) (RATOR_CONV(RAND_CONV(ABS_CONV MAP_FST_CONV)) c1_tm1)
+                         val c1_th2 = XP_CONV conv (rhs(concl c1_th1))
+                         val c1_th3 = CONV_RULE (DEPTH_CONV LOOKUP_EVAL_CONV) (BETA_RULE c1_th2)
+                         val p1 = rator(rand(rator(snd(dest_abs(rator(rand(rator(snd(strip_exists(body(rhs(concl c1_th2))))))))))))
+                         val s_update_list1 = rand(rand(rand(snd(strip_exists(body(rhs(concl c1_th2)))))))
+                         val f1 =  makefun p_arg s_update_list1
+                         val map_f1_th = 
+                          prove
+                           (``!l. (MAP FST l = ^xl) ==> (MAP FST (^f1 l) = ^xl)``,
+                            SIMP_TAC list_ss [I_o_ID,MAP_ASSIGN_FUN,MAP_GEN_ASSIGN_FUN])
+                           handle e => (print "\nProof failed\n"; print "Term: \n";
+                                        print_term tm; print "\nGoal:\n";
+                                        print_term ``!l. (MAP FST l = ^xl) ==> (MAP FST (^f1 l) = ^xl)``;
+                                        Raise e)
+                         val c2_tm1 = ``XP ^xl (\s. ?l. (MAP FST l = ^xl) /\ 
+                                               (\l. ^p l /\ ~(beval ^b (FEMPTY |++ (^f l)))) l /\
+                                               (s = FEMPTY |++ ^f l)) ^c2``
+                         val c2_th1 = CONV_RULE (DEPTH_CONV STATE_EQ_EVAL_CONV) (RATOR_CONV(RAND_CONV(ABS_CONV MAP_FST_CONV)) c2_tm1)
+                         val c2_th2 = XP_CONV conv (rhs(concl c2_th1))
+                         val c2_th3 = CONV_RULE (DEPTH_CONV LOOKUP_EVAL_CONV) (BETA_RULE c2_th2)
+                         val p2 = rator(rand(rator(snd(dest_abs(rator(rand(rator(snd(strip_exists(body(rhs(concl c2_th2))))))))))))
+                         val s_update_list2 = rand(rand(rand(snd(strip_exists(body(rhs(concl c2_th2)))))))
+                         val f2 =  makefun p_arg s_update_list2
+                         val map_f2_th = 
+                          prove
+                           (``!l. (MAP FST l = ^xl) ==> (MAP FST (^f2 l) = ^xl)``,
+                            SIMP_TAC list_ss [I_o_ID,MAP_ASSIGN_FUN,MAP_GEN_ASSIGN_FUN])
+                           handle e => (print "\nProof failed\n"; print "Term: \n";
+                                        print_term tm; print "\nGoal:\n";
+                                        print_term ``!l. (MAP FST l = ^xl) ==> (MAP FST (^f2 l) = ^xl)``;
+                                        Raise e)
+
+                         val lp_if_th1 = SPECL [xl,f,f1,f2,p,p1,p2,b,c1,c2]XP_EXEC_IF_ZIP
+                         val lp_if_th2 = MP (MP lp_if_th1 map_f1_th) map_f2_th
+                         val lp_if_th3 = CONV_RULE (DEPTH_CONV MAP_FST_CONV) lp_if_th2
+                         val lp_if_th4 = CONV_RULE (DEPTH_CONV LOOKUP_EVAL_CONV) (BETA_RULE lp_if_th3)
+                         val lp_if_th5 = MP (MP lp_if_th4 c1_th3) c2_th3
+                        in
+                         CONV_RULE (RHS_CONV(DEPTH_CONV ZIP_LIST_EVAL_CONV)) lp_if_th5
+                        end
+(*
+                    |  Unresolved   =>
+                        let
+                         val lp_if_th1 = SPECL [xl,f,p,b,c1,c2]XP_EXEC_IF
+                         val lp_if_th2 = CONV_RULE (DEPTH_CONV MAP_FST_CONV) lp_if_th1
+                         val lp_if_th3 = CONV_RULE (DEPTH_CONV STATE_EQ_EVAL_CONV) lp_if_th2
+                         val lp_if_th4 = CONV_RULE (RHS_CONV(RATOR_CONV(RAND_CONV(XP_CONV conv)))) lp_if_th3
+                         val lp_if_th5 = CONV_RULE (RHS_CONV(RAND_CONV(XP_CONV conv))) lp_if_th4
+                        in
+                         lp_if_th5
+                        end
+*)
+                   end
+
+  | "AnWhile"   => let val (b,R,while_body) = (el 1 cmd_args, el 2 cmd_args, el 3 cmd_args)
+                       val all_distinct_th = EVAL ``ALL_DISTINCT ^xl``
+                       val lp_anwhile_th1 = SPECL [xl,f,p,while_body,R,b] XP_EXEC_ANWHILE
+                       val lp_anwhile_th2 = MP lp_anwhile_th1 (EQT_ELIM all_distinct_th)
+                       val lp_anwhile_th3 = EXPAND_EXISTS lp_anwhile_th2
+                       val lp_anwhile_th4 = XP_EVAL_RULE lp_anwhile_th3
+                   in
+                    CONV_RULE (ONCE_DEPTH_CONV ANWHILE_PRED_EVAL_CONV) lp_anwhile_th4
+                   end
+
+  | _           => (print "\nBad case: "; print(fst(dest_const cmd)); print"\n";fail())
+                        
+ end;
+
+val XP_CONV = TRACE o XP_CONV;
+

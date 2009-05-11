@@ -94,7 +94,7 @@ val absMinus =
               (Assign "result" (Sub (Var "i") (Var "j"))))))``; 
 
 
-val absMinus_run_th1 = 
+val absMinus_run_th = 
  SYM_RUN solv (EVAL_ASSUME ``(\s:state. T) s``) ``[^absMinus]``;
 val absMinus_run_th1 = 
  SYM_RUN solv (EVAL_ASSUME ``(\s. ScalarOf (s ' "i") <  ScalarOf (s ' "j")) s``) ``[^absMinus]``;
@@ -115,6 +115,16 @@ val AbsMinusHOL_th =
     THEN IMP_EVAL_TAC holSatSolv
     THEN CONV_TAC(EVAL THENC elim_state_CONV COOPER_CONV));
 
+val AbsMinusHOL_th2 =  
+ time prove
+  (rhs(concl(AbsMinusTheory.MAIN_def)),
+   SIMP_TAC std_ss [RSPEC_SP]
+    THEN CONV_TAC EVAL
+    THEN RW_TAC arith_ss[]
+    THEN CONV_TAC EVAL
+    THEN OMEGA_TAC
+    THEN RW_TAC arith_ss[]);
+
 (*
 val AbsMinusILOG_th =  
  time prove
@@ -132,6 +142,18 @@ val TritypeHOL_th =
     THEN REPEAT CONJ_TAC
     THEN IMP_EVAL_TAC holSatSolv
     THEN CONV_TAC(EVAL THENC elim_state_CONV COOPER_CONV));
+
+(*
+val TritypeHOL_th2 =  
+ time prove
+  (rhs(concl(TritypeTheory.MAIN_def)),
+   SIMP_TAC std_ss [RSPEC_SP]
+    THEN CONV_TAC EVAL
+    THEN RW_TAC arith_ss[]
+    THEN CONV_TAC EVAL
+    THEN OMEGA_TAC
+    THEN RW_TAC arith_ss[]);
+*)
 
 (*
 val TritypeILOG_th =  
@@ -296,15 +318,23 @@ SelectionSort2 (aLength,aux,i,indMin,j,a) =
 
 *)
 
-(* Code to multiply "m" and "n" and return result in "Result" *)
-val MultProg =
- ``Locals ["result"; "count"]
-    ("result" ::= C 0;;
-     "count"  ::= C 0;;
-     While (V"count" < V"m")
-      ("result" ::= V"result" + V"n" ;;
-       "count" ::= V"count" + C 1)   ;;
-     "Result" ::= V"result")``;
+(* 
+Code to multiply "m" and "n" and return result in "Result".
+Would like to prove:
+
+ |- EVAL_FUN MultProg s = 
+      s |+ ("Result", Scalar(ScalarOf(s ' "m") * ScalarOf(s ' "n")))))
+*)
+val MultProg_def =
+ Define
+  `MultProg =
+    Locals ["result"; "count"]
+     ("result" ::= C 0;;
+      "count"  ::= C 0;;
+      While (V"count" < V"m")
+       ("result" ::= V"result" + V"n" ;;
+        "count" ::= V"count" + C 1)   ;;
+      "Result" ::= V"result")`;
 
 (* Procedure using MultProc *)
 val MultProc_def = 
@@ -313,55 +343,131 @@ val MultProc_def =
     Locals ["m";"n"] 
      ("m" ::= V m;; 
       "n" ::= V n;; 
-      Proc (EVAL_FUN ^MultProg);;
+      Proc (THE o EVAL_FUN MultProg);;
       res ::= V"Result")`;;
 
-(* Proc defined directly *)
+(* 
+Proc defined directly. Would like to prove:
+ |- MultFunProc m n res = MultProc m n res
+*)
 val MultFunProc_def = 
  Define
  `MultFunProc m n res =
    Proc (\s. s |+ (res, Scalar(ScalarOf(s ' m) * ScalarOf(s ' n))))`;
 
 (* Factorial on n using primitive multiplication *)
-val FactProg1 =
- ``Locals ["result"; "count"]
-    ("result" ::= C 1;;
-     "count"  ::= C 1;;
-     While (V"count" <= V"n")
-      ("result" ::= V"result" * V"count" ;;
-       "count" ::= V"count" + C 1)   ;;
-     "Result" ::= V"result")``;
+val FactProg1_def =
+ Define
+  `FactProg1 =
+    Locals ["result"; "count"]
+     ("result" ::= C 1;;
+      "count"  ::= C 1;;
+      While (V"count" <= V"n")
+       ("result" ::= V"result" * V"count" ;;
+        "count" ::= V"count" + C 1)   ;;
+      "Result" ::= V"result")`;
 
 (* Factorial using MultProc for multiplication *)
-val FactProg2 =
- ``Locals ["result"; "count"]
-    ("result" ::= C 1;;
-     "count"  ::= C 1;;
-     While (V"count" <= V"n")
-      (MultProc "result" "count" "result" ;;
-       "count" ::= V"count" + C 1)   ;;
-     "Result" ::= V"result")``;
+val FactProg2_def =
+ Define
+  `FactProg2 =
+    Locals ["result"; "count"]
+     ("result" ::= C 1;;
+      "count"  ::= C 1;;
+      While (V"count" <= V"n")
+       (MultProc "result" "count" "result" ;;
+        "count" ::= V"count" + C 1)   ;;
+      "Result" ::= V"result")`;
 
 (* Factorial using MultFunProc for multiplication *)
-val FactProg3 =
- ``Locals ["result"; "count"]
-    ("result" ::= C 1;;
-     "count"  ::= C 1;;
-     While (V"count" <= V"n")
-      (MultFunProc "result" "count" "result" ;;
-       "count" ::= V"count" + C 1)   ;;
-     "Result" ::= V"result")``;
+val FactProg3_def =
+ Define
+  `FactProg3 =
+    Locals ["result"; "count"]
+     ("result" ::= C 1;;
+      "count"  ::= C 1;;
+      While (V"count" <= V"n")
+       (MultFunProc "result" "count" "result" ;;
+        "count" ::= V"count" + C 1)   ;;
+      "Result" ::= V"result")`;
 
 (* Test examples *)
 
-val EVAL_FactProg1_4 = time EVAL ``EVAL_FUN ^FactProg1 (FEMPTY |+ ("n",Scalar 4))``;
-val EVAL_FactProg1_6 = time EVAL ``EVAL_FUN ^FactProg1 (FEMPTY |+ ("n",Scalar 6))``;
+val EVAL_FactProg1_4 = time EVAL ``EVAL_FUN FactProg1 (FEMPTY |+ ("n",Scalar 4))``;
+val EVAL_FactProg1_6 = time EVAL ``EVAL_FUN FactProg1 (FEMPTY |+ ("n",Scalar 6))``;
 
-val EVAL_FactProg2_4 = time EVAL ``EVAL_FUN ^FactProg2 (FEMPTY |+ ("n",Scalar 4))``;
-val EVAL_FactProg2_6 = time EVAL ``EVAL_FUN ^FactProg2 (FEMPTY |+ ("n",Scalar 6))``;
+val EVAL_FactProg2_4 = time EVAL ``EVAL_FUN FactProg2 (FEMPTY |+ ("n",Scalar 4))``;
+val EVAL_FactProg2_6 = time EVAL ``EVAL_FUN FactProg2 (FEMPTY |+ ("n",Scalar 6))``;
 
-val EVAL_FactProg3_4 = time EVAL ``EVAL_FUN ^FactProg3 (FEMPTY |+ ("n",Scalar 4))``;
-val EVAL_FactProg3_6 = time EVAL ``EVAL_FUN ^FactProg3 (FEMPTY |+ ("n",Scalar 6))``;
+val EVAL_FactProg3_4 = time EVAL ``EVAL_FUN FactProg3 (FEMPTY |+ ("n",Scalar 4))``;
+val EVAL_FactProg3_6 = time EVAL ``EVAL_FUN FactProg3 (FEMPTY |+ ("n",Scalar 6))``;
+
+
+val EVAL_CONT_FactProg1_4 = time EVAL ``EVAL_CONT FactProg1 cont (FEMPTY |+ ("n",Scalar 4))``;
+val EVAL_CONT_FactProg1_6 = time EVAL ``EVAL_CONT FactProg1 cont (FEMPTY |+ ("n",Scalar 6))``;
+
+val EVAL_CONT_FactProg2_4 = time EVAL ``EVAL_CONT FactProg2 cont (FEMPTY |+ ("n",Scalar 4))``;
+val EVAL_CONT_FactProg2_6 = time EVAL ``EVAL_CONT FactProg2 cont (FEMPTY |+ ("n",Scalar 6))``;
+
+val EVAL_CONT_FactProg3_4 = time EVAL ``EVAL_CONT FactProg3 cont (FEMPTY |+ ("n",Scalar 4))``;
+val EVAL_CONT_FactProg3_6 = time EVAL ``EVAL_CONT FactProg3 cont (FEMPTY |+ ("n",Scalar 6))``;
+
+val th1 = EVAL ``SP (\s. ScalarOf (s ' "i") <  ScalarOf (s ' "j")) ^absMinus s ==> Q s``;
+
+val th1 = EVAL ``SP (\s. (ScalarOf (s ' "i") = 0)  /\ (ScalarOf (s ' "j") = 1)) ^absMinus s ==> Q s``;
+
+val th1a = EVAL ``SP (\s. (s = s0) /\ ScalarOf (s0 ' "i") <  ScalarOf (s0 ' "j")) ^absMinus``;
+
+val th1a = 
+ SIMP_CONV arith_ss
+  [ASSIGN_SP_EX,IF_SP_EX,SEQ_SP]
+  ``SP (\s. (s = s0) /\ ScalarOf (s0 ' "i") <  ScalarOf (s0 ' "j")) ^absMinus``;
+
+val th1b = EVAL ``SP (\s. (s = s0) /\ ScalarOf (s0 ' "i") <  ScalarOf (s0 ' "j")) ^absMinus s``;
+
+val th1c = EVAL ``SP (\s. (s = s0) /\ ScalarOf (s0 ' "i") <  ScalarOf (s0 ' "j")) ^absMinus s ==> Q s``;
+
+val th1d = EVAL ``SP (\s. (s =  FEMPTY |+ ("i",Scalar i) |+("j",Scalar j)) /\ i < j) ^absMinus s ==> Q(s ' "i", s ' "j", s ' "k")``;
+
+val th2 = EVAL ``SP (\s. ScalarOf (s ' "i") < ScalarOf (s ' "j")) ("j" ::= V"j"+C 1) s``;
+
+val th2a = EVAL ``SP (\s. ScalarOf (s ' "i") < ScalarOf (s ' "j")) (("j" ::= V"j"+C 1) ;; ("j" ::= V"j"+C 2)) s``;
+
+val th2b = EVAL ``SP (\s. (ScalarOf (s ' "i")  = i) /\ (ScalarOf (s ' "j") = j) /\ i < j) (("j" ::= V"j"+C 1) ;; ("j" ::= V"j"+C 2)) s``;
+
+val th2c = EVAL ``SP (\s. (ScalarOf (s ' "i")  = i) /\ (ScalarOf (s ' "j") = j) /\ (i=0) /\  (j=0)) (("j" ::= V"j"+C 1) ;; ("j" ::= V"j"+C 2))``;
+
+val th2d = EVAL ``SP (\s. (s = FEMPTY |+ ("i",Scalar i) |+("j",Scalar j)) /\ (i=0) /\  (j=0)) (("j" ::= V"j"+C 1) ;; ("j" ::= V"j"+C 2))``;
+
+val th2e = EVAL ``SP (\s. (s = FEMPTY |+ ("i",Scalar i) |+("j",Scalar j)) /\ i < j) (("j" ::= V"j"+C 1) ;; ("j" ::= V"j"+C 2))``;
+
+val th2f = REWRITE_CONV [ASSIGN_SP_EX,SEQ_SP]
+            ``SP (\s. (s = (\(i,j). FEMPTY |+ ("i",Scalar i) |+("j",Scalar j))(i,j)) /\ (\(i,j).i < j)(i,j)) (("j" ::= V"j"+C(1:int)) ;; ("j" ::= V"j"+C(2:int)))``;
+
+val th2g = EVAL ``SP (\s. (s = s0) /\ ScalarOf(s0 ' "i") < ScalarOf(s0 ' "j")) (("j" ::= V"j"+C 1) ;; ("j" ::= V"j"+C 2) ;; ("i" ::= V"i" + V"j"))``;
+
+(*
+REWRITE_RULE
+ [pairLib.GEN_BETA_RULE(ISPECL[``\(i,j). FEMPTY |+ ("i",Scalar i) |+ ("j",Scalar j)``,``((i:int),(j:int))``,``\((i:int),(j:int)). i<j``]ASSIGN_SP_EX)]
+ th2f;
+
+val th3 = EVAL ``ACC_PRED (\s. ScalarOf (s ' "i") < ScalarOf (s ' "j")) ("j" ::= V"j"+C 1) ^(MAKE_STATE absMinus)``;
+
+val th3 = EVAL ``ACC_PRED (\s. ScalarOf (s ' "i") < ScalarOf (s ' "j")) ("j" ::= V"j"+C 1) 
+                 (FEMPTY |++ [("k",Scalar k); ("result",Scalar result); ("i",Scalar i); ("j",Scalar j)])
+                 (FEMPTY |++ [("k",Scalar k'); ("result",Scalar result'); ("i",Scalar i'); ("j",Scalar j')])``;
+*)
+
+
+(* Scratch:
+
+val MKSPRED_def =
+ Define
+  `(MKSPRED [] s = T)
+   /\
+   (MKSPRED ((v,e) :: sl) s = (s ' v = e) /\ MKSPRED sl s)`;
+
+*)
 
 
 
@@ -370,4 +476,9 @@ Would like to prove:
 
  |- EVAL MultProg s1 s2 = 
      (s2 = (s1 |+ (res, Scalar(ScalarOf(s1 ' m) * ScalarOf(s1 ' n)))))
+
+ |- EVAL_FUN MultProg s = 
+     s |+ (res, Scalar(ScalarOf(s ' m) * ScalarOf(s ' n)))))
 *)
+
+

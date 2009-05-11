@@ -171,7 +171,7 @@ val SEP_SPEC_ASSIGN = store_thm("SEP_SPEC_ASSIGN",
        SEP_EXP (\x. VAR v (FST x) * p (SND x)) y e ==>
        SEP_SPEC (VAR v x * p z) (Assign v e) (VAR v (y (x,z)) * p z)``,
   SIMP_TAC std_ss [SEP_SPEC_def,SEP_EXP_def,GSYM STAR_ASSOC,VAR_def,GEN_VAR_STAR,SPEC_def]
-  THEN REWRITE_TAC [Assign_def,GEN_ASSIGN_THM,Update_def]
+  THEN REWRITE_TAC [Assign_def,GEN_ASSIGN_THM,Update_def,naeval_def ]
   THEN SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,FDOM_FUPDATE,IN_INSERT,DOMSUB_FUPDATE_THM] 
   THEN REPEAT STRIP_TAC
   THEN Q.PAT_ASSUM `!r.bb` (ASSUME_TAC o Q.SPECL [`r`,`s1`,`x,z`])
@@ -184,7 +184,7 @@ val SEP_SPEC_ARRAY_ASSIGN = store_thm("SEP_SPEC_ARRAY_ASSIGN",
        SEP_SPEC (ARRAY v x * p z) (ArrayAssign v e1 e2) 
                 (ARRAY v (x |+ (Num (y1 (x,z)), y2 (x,z))) * p z)``,
   SIMP_TAC std_ss [SEP_SPEC_def,SEP_EXP_def,GSYM STAR_ASSOC,ARRAY_def,GEN_VAR_STAR,SPEC_def]
-  THEN REWRITE_TAC [ArrayAssign_def,GEN_ASSIGN_THM,Update_def,aeval_def]
+  THEN REWRITE_TAC [ArrayAssign_def,GEN_ASSIGN_THM,Update_def,aeval_def,naeval_def]
   THEN SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,FDOM_FUPDATE,IN_INSERT,DOMSUB_FUPDATE_THM] 
   THEN REPEAT STRIP_TAC
   THEN REPEAT (Q.PAT_ASSUM `!r.bb` (ASSUME_TAC o Q.SPECL [`r`,`s1`,`(x,z)`]))
