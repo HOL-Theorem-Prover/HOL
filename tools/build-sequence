@@ -79,6 +79,7 @@ src/boss
 !examples/RSA
 src/sort
 src/string
+!examples/STE
 src/res_quan/src
 src/quotient/src
 !src/quotient/examples
