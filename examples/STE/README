@@ -1,0 +1,77 @@
+ README File for executing the STE simulator in HOL
+ --------------------------------------------------
+
+An implementation of STE simulator in HOL is presented. Because we
+have done a deep embedding of STE one is able to reason about the STE
+logic. While reasoning about the STE logic is one useful aspect about
+this implementation, one can use an STE simulator from the HOL-ML
+prompt to see STE model checking in action. This is particularly
+useful for anyone learning STE model checking. Some example circuit
+verification and relevant papers on STE (on which this work is built)
+are also provided.
+
+------------------------------------------------------------------------------
+An early version of this work appeared in the Emerging Trends
+Proceedings of TPHOLs 2003. The title of the paper is "Formalization
+and Execution of STE in HOL". The theory that is formalized here
+appeared in the paper titled Xs are for Trajectory Evaluation,
+Booleans are for Theorem Proving by Mark Aagaard, Tom Melham and John
+O' Leary.
+
+The execution part of STE relies on implementing several lemmas and
+results from the original paper on STE by Carl Seger and Randy Bryant
+titled "Formal verification by symbolic evaluation of
+partially-ordered trajectories"
+
+-----------------------------------------------------------------------------
+
+Software Requirements
+---------------------
+
+Make sure you have Moscow ML 2.01 and HOL4 installed on your
+machine. You can obtain Moscow ML at
+http://www.dina.dk/~sestoft/mosml.html and HOL4 from
+http://hol.sourceforge.net.
+
+
+How to install Moscow ML 2.0 and HOL 4 Kananaskis 2
+---------------------------------------------------
+Useful documentation is available on
+http://hol.sourceforge.net/InstallKananaskis.html
+
+
+STEScript.sml: Contains the definition of STE Theory, relation to the
+               Boolean world, and the implementation function STE_Impl.
+               It also contains all the lemmas and theorems presented
+               in the paper.
+
+Conversion.sml:
+              Contains the ML functions and conversions for running
+              the STE simulator and obtaining the equivalent theorem
+              in HOL.
+
+
+Examples/:    Contains some illustrative examples.
+
+
+The script file and the example have been tested under HOL 4
+Kananaskis Release 2, on an Intel x86  machine running Red Hat 7.2
+Linux.
+
+How to use it?
+-------------
+
+Make sure you compile the script file by running Holmake. If Holmake
+is successful you should be able to see STETheory.sig, STETheory.ui and
+STETheory.uo in your directory where you've compiled STEScript.sml. Once
+you've the theory files ready, in an interactive session of HOL 4,
+simply *use* the RunScript file.
+
+
+A sample sesssion in HOL 4
+
+- use "RunScript";
+
+For feedback/questions: ashish@comlab.ox.ac.uk
+
+-----------------------------------------------------------------------------
