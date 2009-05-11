@@ -23,11 +23,10 @@ val P_EUCLIDES =  gcdTheory.P_EUCLIDES;
 
 val GCODE_def = 
  Define
-  `(GCODE n [] = 1) /\
-   (GCODE n (h::t) = (PRIMES(n) ** (h+1)) * GCODE (n+1) t)`;
+  `(GCODE i [] = 1) /\
+   (GCODE i (h::t) = (PRIMES(i) ** (h+1)) * GCODE (i+1) t)`;
 
-val GOEDEL_CODE_def = Define `GOEDEL_CODE list = GCODE 0 list`;
-
+val ENCODE_def = Define `ENCODE list = GCODE 0 list`;
 
 val GCODE_EMPTY = Q.store_thm
 ("GCODE_EMPTY",
@@ -138,14 +137,124 @@ val GCODE_11 = Q.store_thm
      by METIS_TAC [BAG_UNION_EQ_LEFT] THEN 
    METIS_TAC [PRIME_FACTORS_def]]]);
 
-val GOEDEL_CODE_11 = Q.store_thm
-("GOEDEL_CODE_11",
-  `!l1 l2. (GOEDEL_CODE l1 = GOEDEL_CODE l2) ==> (l1=l2)`,
- METIS_TAC [GCODE_11,GOEDEL_CODE_def]);
+val ENCODE_11 = Q.store_thm
+("ENCODE_11",
+  `!l1 l2. (ENCODE l1 = ENCODE l2) ==> (l1=l2)`,
+ METIS_TAC [GCODE_11,ENCODE_def]);
 
 (*---------------------------------------------------------------------------*)
-(* TODO ... similar development as src/num/extra_theories/numpairScript.     *)
+(* Explicitly give decoder ... similar development as                        *)
+(*                                                                           *)
+(*       src/num/extra_theories/numpairScript.                               *)
 (*---------------------------------------------------------------------------*)
+
+val GDECODE_def = 
+ tDefine
+ "GDECODE"
+ `GDECODE i gn = 
+   if gn = 0 then NONE else
+   if gn = 1 then SOME [] else
+   case PRIME_FACTORS gn (PRIMES i)
+     of 0 -> NONE
+     || SUC n ->
+          case GDECODE (i+1) (gn DIV (PRIMES i ** (n+1)))
+           of NONE -> NONE
+           || SOME l -> SOME (n::l)`
+(WF_REL_TAC `measure SND` THEN
+ RW_TAC arith_ss [DECIDE ``x <> 0 = 0 < x``] THEN
+ MATCH_MP_TAC DIV_LESS THEN 
+ RW_TAC arith_ss [ONE_LT_EXP,ONE_LT_PRIMES,ZERO_LT_EXP]);
+
+val GDECODE_ind = fetch "-" "GDECODE_ind";
+
+val lem6 = Q.prove
+(`PRIME_FACTORS ((PRIMES i ** (h+1)) * GCODE (i+1) t) (PRIMES i) = h+1`,
+ `0 < GCODE (i+1) t` by METIS_TAC [ZERO_LT_GCODE] THEN
+ `0 < PRIMES i ** (h+1)` by RW_TAC arith_ss [ZERO_LT_EXP,ZERO_LT_PRIMES] THEN
+ RW_TAC arith_ss [PRIME_FACTORS_MULT,ZERO_LT_EXP, ZERO_LT_PRIMES,
+       ZERO_LT_GCODE,BAG_UNION,PRIME_FACTORS_EXP,primePRIMES,lem5]);
+
+val lem7 = Q.prove
+(`(PRIME_FACTORS (GCODE i (h::t)) (PRIMES i) = SUC n) ==> (h=n)`,
+ RW_TAC arith_ss [GCODE_def] THEN FULL_SIMP_TAC arith_ss [lem6]);
+
+val lem8 = Q.prove
+(`GCODE i (h::t) DIV (PRIMES i ** (h+1)) = GCODE (i+1) t`,
+ RW_TAC arith_ss [GCODE_def] THEN 
+ RW_TAC bool_ss [Once MULT_SYM] THEN 
+ `0 < PRIMES i ** (h+1)` by RW_TAC arith_ss [ZERO_LT_EXP,ZERO_LT_PRIMES] THEN
+ RW_TAC arith_ss [MULT_DIV]);
+
+val lem9 = Q.prove
+(`!i h t. GCODE (i+1) t < GCODE i (h::t)`,
+ RW_TAC arith_ss [GCODE_def,ZERO_LT_GCODE,ONE_LT_EXP,ONE_LT_PRIMES]);
+
+val lem10 = Q.prove
+(`!gn i nl. (gn = GCODE i nl) ==> (GDECODE i gn = SOME nl)`,
+ completeInduct_on `gn` THEN RW_TAC arith_ss [Once GDECODE_def] THENL
+ [METIS_TAC [ZERO_LT_GCODE,DECIDE ``0 < x = x <> 0``],
+  FULL_SIMP_TAC list_ss [GCODE_EQ_1],
+  `?h t. nl = h::t` by METIS_TAC [listTheory.list_CASES,GCODE_EQ_1] THEN
+  NTAC 2 (Q.PAT_ASSUM `a <> b` (K ALL_TAC)) THEN POP_ASSUM SUBST_ALL_TAC THEN
+  REPEAT CASE_TAC THENL
+  [POP_ASSUM MP_TAC THEN RW_TAC arith_ss [GCODE_def] THEN 
+    `0 < GCODE (i+1) t` by METIS_TAC [ZERO_LT_GCODE] THEN 
+     `0 < PRIMES i ** (h + 1)` by RW_TAC arith_ss [ZERO_LT_EXP,ZERO_LT_PRIMES] THEN
+     RW_TAC arith_ss 
+           [PRIME_FACTORS_MULT,BAG_UNION,PRIME_FACTORS_EXP,primePRIMES],
+   `h = n` by METIS_TAC [lem7] THEN RW_TAC arith_ss [] THEN 
+      FULL_SIMP_TAC arith_ss [lem8] THEN 
+      `GDECODE (i+1) (GCODE (i+1) t) = SOME t` by METIS_TAC [lem9] THEN
+      FULL_SIMP_TAC arith_ss [],
+   `h = n` by METIS_TAC [lem7] THEN RW_TAC arith_ss [] THEN 
+      FULL_SIMP_TAC arith_ss [lem8] THEN 
+      `GDECODE (i+1) (GCODE (i+1) t) = SOME t` by METIS_TAC [lem9] THEN
+      FULL_SIMP_TAC arith_ss []]]);
+
+val GDECODE_GCODE = Q.store_thm
+("GDECODE_GCODE",
+ `!nl i. GDECODE i (GCODE i nl) = SOME nl`,
+ METIS_TAC [lem10]);
+
+val DECODE_def = Define `DECODE gn = THE (GDECODE 0 gn)`;
+
+val DECODE_ENCODE = Q.store_thm
+("DECODE_ENCODE",
+ `!nl. DECODE (ENCODE nl) = nl`,
+ RW_TAC arith_ss [DECODE_def, ENCODE_def,GDECODE_GCODE,optionTheory.THE_DEF]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Standard list operators lifted to gnums                                   *)
+(*---------------------------------------------------------------------------*)
+
+val gNIL_def  = Define `gNIL = ENCODE []`;
+val gCONS_def = Define `gCONS n gn = ENCODE (n::DECODE gn)`;
+val gHD_def   = Define `gHD gn = HD (DECODE gn)`;
+val gTL_def   = Define `gTL gn = ENCODE (TL (DECODE gn))`;
+val gLEN_def  = Define `gLEN gn = LENGTH (DECODE gn)`;
+val gMAP_def  = Define `gMAP f gn = ENCODE (MAP f (DECODE gn))`;
+val gAPPEND_def = Define`gAPPEND gn1 gn2 = ENCODE (DECODE gn1 ++ DECODE gn2)`;
+
+val gCONS_ENCODE = Q.store_thm
+("gCONS_ENCODE",
+ `!nl. gCONS n (ENCODE nl) = ENCODE (n::nl)`,
+ RW_TAC arith_ss [gCONS_def, DECODE_ENCODE]);
+
+val gLEN_ENCODE = Q.store_thm
+("gLEN_ENCODE",
+ `!nl. gLEN (ENCODE nl) = LENGTH nl`,
+ RW_TAC arith_ss [gLEN_def, DECODE_ENCODE]);
+
+val gAPPEND_ENCODE = Q.store_thm
+("gAPPEND_ENCODE",
+ `!nl1 nl2. gAPPEND (ENCODE nl1) (ENCODE nl2) = ENCODE (APPEND nl1 nl2)`,
+ RW_TAC arith_ss [gAPPEND_def, DECODE_ENCODE]);
+
+val gMAP_ENCODE = Q.store_thm
+("gMAP_ENCODE",
+ `gMAP f (ENCODE nl) = ENCODE (MAP f nl)`,
+ RW_TAC arith_ss [gMAP_def, DECODE_ENCODE]);
 
 
 val _ = export_theory();

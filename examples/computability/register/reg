@@ -3,7 +3,7 @@
 (*---------------------------------------------------------------------------*)
 
 quietdec := true;
-app load ["finite_mapTheory", "primeFactorTheory"];
+app load ["finite_mapTheory"];
 open finite_mapTheory arithmeticTheory pred_setTheory;
 quietdec := false;
 
