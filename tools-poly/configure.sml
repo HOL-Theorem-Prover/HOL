@@ -16,7 +16,7 @@
 (* Uncomment these lines and fill in correct values if smart-configure doesn't
    get the correct values itself.  Then run
 
-      mosml < configure.sml
+      poly < tools/configure.sml
 
    If you are specifying directories under Windows, we recommend you
    use forward slashes (the "/" character) as a directory separator,
@@ -27,6 +27,16 @@
    valid for SML.  For example, write "c:/dir1/dir2/mosml", rather
    than "c:\\dir1\\dir2\\mosml", and certainly DON'T write
    "c:\dir1\dir2\mosml".
+*)
+
+(*
+val poly : string         =
+val polymllibdir : string =
+val holdir :string        =
+val OS :string            =
+                           (* Operating system; choices are:
+                                "linux", "solaris", "unix", "macosx",
+                                "winNT"   *)
 *)
 
 val _ = PolyML.print_depth 0;
