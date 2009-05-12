@@ -9,7 +9,7 @@ val _ = Hol_datatype `cl = S | K | # of cl => cl`;
 val _ = set_fixity "#"  (Infixl 1100);
 val _ = set_MLname "#"  "HASH";
 
-val _ = set_fixity "-->" (Infix(NONASSOC, 510));
+val _ = set_fixity "-->" (Infix(NONASSOC, 450));
 
 val (redn_rules, redn_ind, redn_cases) =
   IndDefLib.Hol_reln `
@@ -90,7 +90,7 @@ val diamond_RTC = store_thm(
   ``!R. diamond R ==> diamond (RTC R)``,
   PROVE_TAC [diamond_def,diamond_RTC_lemma]);
 
-val _ = set_fixity "-||->" (Infix(NONASSOC, 510));
+val _ = set_fixity "-||->" (Infix(NONASSOC, 450));
 
 val (predn_rules, predn_ind, predn_cases) =
     IndDefLib.Hol_reln
@@ -114,24 +114,15 @@ val RTC_monotone = store_thm(
   REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
   REPEAT STRIP_TAC THEN PROVE_TAC [RTC_rules]);
 
-val _ = set_fixity "-->*" (Infix(NONASSOC, 510));
+val _ = set_fixity "-->*" (Infix(NONASSOC, 450));
+val _ = overload_on ("-->*", ``RTC $-->``)
 
-val RTCredn_def = xDefine "RTCredn" `$-->* = RTC $-->`;
-
-val _ = set_fixity "-||->*" (Infix(NONASSOC, 510));
-
-val RTCpredn_def = xDefine "RTCpredn" `$-||->* = RTC $-||->`;
-
-val RTCredn_rules  = REWRITE_RULE[SYM RTCredn_def] (Q.ISPEC `$-->` RTC_rules)
-val RTCredn_ind    = REWRITE_RULE[SYM RTCredn_def] (Q.ISPEC `$-->` RTC_ind)
-val RTCpredn_rules = REWRITE_RULE[SYM RTCpredn_def](Q.ISPEC `$-||->` RTC_rules)
-val RTCpredn_ind   = REWRITE_RULE[SYM RTCpredn_def](Q.ISPEC `$-||->` RTC_ind)
-;
+val _ = set_fixity "-||->*" (Infix(NONASSOC, 450));
+val _ = overload_on ("-||->*", ``RTC $-||->``)
 
 val RTCredn_RTCpredn = store_thm(
   "RTCredn_RTCpredn",
   ``!x y. x -->* y   ==>   x -||->* y``,
-  SIMP_TAC std_ss [RTCredn_def, RTCpredn_def] THEN
   HO_MATCH_MP_TAC RTC_monotone THEN
   HO_MATCH_MP_TAC redn_ind THEN
   PROVE_TAC [predn_rules]);
@@ -139,30 +130,24 @@ val RTCredn_RTCpredn = store_thm(
 val RTCredn_ap_monotonic = store_thm(
   "RTCredn_ap_monotonic",
   ``!x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y``,
-  HO_MATCH_MP_TAC RTCredn_ind THEN PROVE_TAC [RTCredn_rules, redn_rules]);
-
-val RTCredn_RTCredn = save_thm(
-  "RTCredn_RTCredn",
-  SIMP_RULE std_ss [SYM RTCredn_def] (Q.ISPEC `$-->` RTC_RTC));
+  HO_MATCH_MP_TAC RTC_ind THEN PROVE_TAC [RTC_rules, redn_rules]);
 
 val predn_RTCredn = store_thm(
   "predn_RTCredn",
   ``!x y. x -||-> y  ==>  x -->* y``,
   HO_MATCH_MP_TAC predn_ind THEN
-  PROVE_TAC [RTCredn_rules,redn_rules,RTCredn_RTCredn,RTCredn_ap_monotonic]);
-
+  PROVE_TAC [RTC_rules,redn_rules,RTC_RTC,RTCredn_ap_monotonic]);
 
 val RTCpredn_RTCredn = store_thm(
   "RTCpredn_RTCredn",
   ``!x y. x -||->* y   ==>  x -->* y``,
-  HO_MATCH_MP_TAC RTCpredn_ind THEN
-  PROVE_TAC [predn_RTCredn, RTCredn_RTCredn, RTCredn_rules]);
+  HO_MATCH_MP_TAC RTC_ind THEN
+  PROVE_TAC [predn_RTCredn, RTC_RTC, RTC_rules]);
 
 val RTCpredn_EQ_RTCredn = store_thm(
   "RTCpredn_EQ_RTCredn",
   ``$-||->* = $-->*``,
-  CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
-  CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
+  SIMP_TAC std_ss [FUN_EQ_THM] THEN
   PROVE_TAC [RTCpredn_RTCredn, RTCredn_RTCpredn]);
 
 fun characterise t = SIMP_RULE (srw_ss()) [] (SPEC t predn_cases);
@@ -237,8 +222,7 @@ val predn_diamond = store_thm(
 val confluent_redn = store_thm(
   "confluent_redn",
   ``confluent $-->``,
-  PROVE_TAC [predn_diamond, RTCpredn_def,
-             RTCredn_def, confluent_diamond_RTC,
+  PROVE_TAC [predn_diamond, confluent_diamond_RTC,
              RTCpredn_EQ_RTCredn, diamond_RTC]);
 
 
