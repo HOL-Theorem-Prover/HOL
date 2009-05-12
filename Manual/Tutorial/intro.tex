@@ -62,9 +62,9 @@ the session is a new one (when the number will be {\small\sl 1}) or
 the continuation of a session started in an earlier box.
 Consecutively numbered boxes are assumed to be part of a single
 continuous session.  The Unix prompt for the sessions is
-\texttt{\small \$}, so lines beginning with this prompt were typed by
-the user.  After entering the \HOL{} system (see below), the user is
-prompted with {\small\verb|-|} for an expression or command of the
+\texttt{\small \dol}, so lines beginning with this prompt were typed
+by the user.  After entering the \HOL{} system (see below), the user
+is prompted with {\small\verb|-|} for an expression or command of the
 \HOL{} meta-language \ML; lines beginning with this are thus \ML\
 expressions or declarations.  Lines not beginning with \texttt{\small
   \$} or {\small\verb|-|} are system output.  Occasionally, system
@@ -87,15 +87,18 @@ Now you will need to rebuild \HOL{} from the sources.\footnote{It is
   possible that pre-built systems may soon be available from the
   web-page mentioned above.}
 
-Before beginning you must have a current version of Moscow~ML.  In
-particular, you must have version 2.01.  Moscow~ML is available on the
-web from \url{http://www.dina.kvl.dk/~sestoft/mosml.html}.
-When you have \texttt{mosml} installed, and are in the root directory
-of the distribution, the next step is to run \texttt{smart-configure}:
+Before beginning you must have a current version of Moscow~ML or
+Poly/ML\footnote{Poly/ML cannot be used with HOL on Windows.}.  In the
+case of Moscow~ML, you must have version 2.01.  Moscow~ML is available
+on the web from \url{http://www.dina.kvl.dk/~sestoft/mosml.html}.
+Poly/ML is available from \url{http://polyml.org}. When you have your
+ML system installed, and are in the root directory of the
+distribution, the next step is to run \texttt{smart-configure}.  With
+Moscow~ML, this looks like:
 
 \begin{session}
 \begin{alltt}
-\$ mosml < tools/smart-configure.sml
+\dol mosml < tools/smart-configure.sml
 Moscow ML version 2.01 (January 2004)
 Enter `quit();' to quit.
 - [opening file "tools/smart-configure-mosml.sml"]
@@ -113,6 +116,12 @@ press Control-C.
 \end{alltt}
 \end{session}
 
+If you are using Poly/ML, then write
+\begin{verbatim}
+   poly < tools/smart-configure.sml
+\end{verbatim}
+instead.
+
 Assuming you don't interrupt the configuration process, this will
 build the \texttt{Holmake} and \texttt{build} programs, and move them
 into the \texttt{hol/bin} directory.  If something goes wrong at this
@@ -127,15 +136,15 @@ and the theories built.  Eventually, a \HOL{} system\footnote{Four
 the \texttt{bin/} directory.
 
 \begin{session}
-\begin{verbatim}
-$ bin/build
+\begin{alltt}
+\dol bin/build
   ...
   ...
 Uploading files to /home/mn200/hol/sigobj
 
 Hol built successfully.
-$
-\end{verbatim}
+\dol
+\end{alltt}
 \end{session}
 
 
@@ -143,14 +152,15 @@ $
 \label{sec:editting-configure}
 
 If \texttt{smart-configure} is unable to guess correct values for the
-four parameters, \texttt{mosmldir}, \texttt{holdir}. \texttt{OS} and
-\texttt{dynlib\_available} then you can create a file called
-\texttt{config-override} in the root directory of the HOL
-distribution.  In this file, specify the correct value for the
-appropriate parameter by providing an ML binding for it.  Each of the
-first three variables must be given a string as a possible value,
-while \texttt{dynlib\_available} must be either \texttt{true} or
-\texttt{false}.  So, one might write
+various parameters (\texttt{holdir}, \texttt{OS} \etc) then you can
+create a file called to provide correct values.  With Moscow~ML, this
+should be \texttt{config-override} in the root directory of the HOL
+distribution.  With Poly/ML, this should be \texttt{poly-includes.ML}
+in the \texttt{tools-poly} directory. In this file, specify the
+correct value for the appropriate parameter by providing an ML binding
+for it.  All variables except \texttt{dynlib\_available} must be given
+a string as a possible value, while \texttt{dynlib\_available} must be
+either \texttt{true} or \texttt{false}.  So, one might write
 
 \begin{session}
 \begin{verbatim}
@@ -173,19 +183,27 @@ itself.  The value given for the \texttt{OS} variable must be one of
   Windows~2000, XP and Vista.}
 
 In extreme circumstances it is possible to edit the file
-\texttt{configure.sml} yourself to set configuration variables
-directly.  At the top of this file three SML declarations are present,
-but commented out.  You will need to uncomment this section (remove
-the \texttt{(*} and \texttt{*)} markers), and provide sensible values.
-The \texttt{mosmldir} value must be the name of the directory
-containing the Moscow~ML binaries (\texttt{mosmlc}, \texttt{mosml},
-\texttt{mosmllex} etc).  The \texttt{holdir} value must be the name of
-the top-level directory listed in the first session above.  The
-\texttt{OS} value should be one of the strings specified in the
-accompanying comment.  All three strings must be enclosed in double
-quotes.
+\texttt{tools/configure.sml} yourself to set configuration variables
+directly.  (If you are using Poly/ML, you must edit
+\texttt{tools-poly/configure.sml} instead.) At the top of this file
+various incomplete SML declarations are present, but commented out.
+You will need to uncomment this section (remove the \texttt{(*} and
+\texttt{*)} markers), and provide sensible values.  All strings must
+be enclosed in double quotes.
 
-The next two values (\texttt{CC} and \texttt{GNUMAKE}) are needed for
+The \texttt{holdir} value must be the name of the top-level directory
+listed in the first session above.  The \texttt{OS} value should be
+one of the strings specified in the accompanying comment.
+
+When working with Moscow~ML, the \texttt{mosmldir} value must be the
+name of the directory containing the Moscow~ML binaries
+(\texttt{mosmlc}, \texttt{mosml}, \texttt{mosmllex} etc).  When
+working with Poly/ML, the \texttt{poly} string must be the path to the
+\texttt{poly} executable that begins an interactive \ML{} session.
+The \texttt{polymllibdir} must be a path to a directory that contains
+the file \texttt{libpolymain.a}.
+
+Subsequent values (\texttt{CC} and \texttt{GNUMAKE}) are needed for
 ``optional'' components of the system.  The first gives a string
 suitable for invoking the system's C compiler, and the second
 specifies a \textsf{make} program.
@@ -194,8 +212,8 @@ After editing, \texttt{tools/configure.sml} the lines above will look
 something like:
 
 \begin{session}
-\begin{verbatim}
-$ more configure.sml
+\begin{alltt}
+\dol more configure.sml
   ...
 val mosmldir = "/home/mn200/mosml";
 val holdir   = "/home/mn200/hol";
@@ -205,17 +223,18 @@ val OS       = "linux"       (* Operating system; choices are:
 val CC       = "gcc";     (* C compiler (for building quote filter)        *)
 val GNUMAKE  = "gnumake"; (* for robdd library                             *)
   ...
-$
-\end{verbatim}
+\dol
+\end{alltt}
 \end{session}
 
-\noindent Now, at either this level (in the \texttt{tools} directory)
-or at the level above, the script \texttt{configure.sml} must be piped
-into the Moscow~ML interpreter (called \texttt{mosml}).
+\noindent Now, at either this level (in the \texttt{tools} or
+\texttt{tools-poly} directory) or at the level above, the script
+\texttt{configure.sml} must be piped into the \ML{} interpreter (\ie,
+\texttt{mosml} or \texttt{poly}).  For example,
 
 \begin{session}
-\begin{verbatim}
-$ mosml < tools/configure.sml
+\begin{alltt}
+\dol mosml < tools/configure.sml
 Moscow ML version 2.01 (January 2004)
 Enter `quit();' to quit.
 - > val mosmldir = "/home/mn200/mosml" : string
@@ -238,8 +257,8 @@ Making bin/build.
 -
 Finished configuration!
 -
-$
-\end{verbatim}
+\dol
+\end{alltt}
 \end{session}
 
 

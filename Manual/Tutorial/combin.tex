@@ -92,7 +92,7 @@ First we set our arrow symbol up as an infix to make everything that
 bit prettier:
 \begin{session}
 \begin{verbatim}
-- set_fixity "-->" (Infix(NONASSOC, 510));
+- set_fixity "-->" (Infix(NONASSOC, 450));
 > val it = () : unit
 \end{verbatim}
 \end{session}
@@ -420,7 +420,7 @@ val confluent_diamond_RTC = store_thm(
     the original relation has the diamond property, then maybe the
     reflexive and transitive closure will too.  The theorem we want is
     \[ \con{diamond}\;R \supset \con{diamond}\,(\con{RTC}\;R)\] Graphically,
-    this is hoping that from 
+    this is hoping that from
     \[\xymatrix @R=5mm @C=2.5mm {
 & x \ar[dl] \ar[dr] & \\
 y \ar@{.>}[dr] & & z \ar@{.>}[dl] \\
@@ -794,7 +794,7 @@ parallel.  We use the \texttt{-||->} symbol to indicate parallel
 reduction because of its own parallel lines:
 \begin{session}
 \begin{verbatim}
-- set_fixity "-||->"  (Infix(NONASSOC, 510));
+- set_fixity "-||->"  (Infix(NONASSOC, 450));
 > val it = () : unit
 \end{verbatim}
 \end{session}
@@ -870,79 +870,40 @@ choice of variable name, so we rename the bound variables.
 \subsection{Using \con{RTC}}
 \label{sec:Using-RTC}
 
-Now we can define the reflexive and transitive closures of our two
-relations.  We will use ASCII symbols for both that consist of the
-original symbol followed by an asterisk.  Note also how, in
-defining the two relations, we have to use the \texttt{\$} character
-to ``escape'' the symbols' usual fixities.  This is exactly analogous
-to the way in which ML's \texttt{op} keyword is used.  Finally,
-because we are defining a constant whose name is symbolic, we have to
-use \texttt{xDefine} rather than \texttt{Define}.  This is because the
-latter function likes to try and guess an appropriate name for the
-definitions that it stores to disk.  With symbolic names it doesn't
-know how to do this.  The first parameter to \texttt{xDefine} is an
-alpha-numeric ``stem'' which provides the name to use.
+Now we can set up nice syntax for the reflexive and transitive
+closures of our two relations.  We will use ASCII symbols for both
+that consist of the original symbol followed by an asterisk.  Note
+also how, in defining the two relations, we have to use the
+\texttt{\$} character to ``escape'' the symbols' usual fixities.  This
+is exactly analogous to the way in which ML's \texttt{op} keyword is
+used.  First, we create the desired symbol for the concrete syntax,
+and then we ``overload'' it so that the parser will expand it to the
+desired form.
 \begin{session}
 \begin{verbatim}
-- set_fixity "-->*" (Infix(NONASSOC, 510));
+- set_fixity "-->*" (Infix(NONASSOC, 450));
 > val it = () : unit
 
-- val RTCredn_def = xDefine "RTCredn" `$-->* = RTC $-->`;
-Definition has been stored under "RTCredn_def".
-> val RTCredn_def = |- $-->* = RTC $--> : thm
+- overload_on ("-->*", ``RTC $-->``);
+> val it = () : unit
 \end{verbatim}
 \end{session}
 We do exactly the same thing for the reflexive and transitive closure
 of our parallel reduction.
 \begin{session}
 \begin{verbatim}
-- set_fixity "-||->*" (Infix(NONASSOC, 510));
+- set_fixity "-||->*" (Infix(NONASSOC, 450));
 > val it = () : unit
 
-- val RTCpredn_def = xDefine "RTCpredn" `$-||->* = RTC $-||->`;
-Definition has been stored under "RTCpredn_def".
-> val RTCpredn_def = |- $-||->* = RTC $-||-> : thm
-\end{verbatim}
-\end{session}
-Finally, before doing some real proof, let's generate specialised
-versions of the \con{RTC} theorems for our new constants.  This is a
-straightforward process; we just specialise the $R$ in those theorems
-with \texttt{-->} and \texttt{-||->} and then rewrite with the two
-defining equations above in the RHS-LHS orientation.  This will
-replace instances of $\con{RTC}\;R$ with our new constants.
-\begin{session}
-\begin{verbatim}
-- val RTCredn_rules =
-    REWRITE_RULE [SYM RTCredn_def] (Q.ISPEC `$-->` RTC_rules)
-  val RTCredn_ind =
-    REWRITE_RULE [SYM RTCredn_def] (Q.ISPEC `$-->` RTC_ind)
-  val RTCpredn_rules =
-    REWRITE_RULE [SYM RTCpredn_def] (Q.ISPEC `$-||->` RTC_rules)
-  val RTCpredn_ind =
-    REWRITE_RULE [SYM RTCpredn_def] (Q.ISPEC `$-||->` RTC_ind);
-> val RTCredn_rules =
-    |- (!x. x -->* x) /\
-       !x y z. x --> y /\ y -->* z ==> x -->* z : thm
-  val RTCredn_ind =
-    |- !RTC'.
-         (!x. RTC' x x) /\
-         (!x y z. x --> y /\ RTC' y z ==> RTC' x z) ==>
-         !a0 a1. a0 -->* a1 ==> RTC' a0 a1 : thm
-  val RTCpredn_rules =
-    |- (!x. x -||->* x) /\
-       !x y z. x -||-> y /\ y -||->* z ==> x -||->* z : thm
-  val RTCpredn_ind =
-    |- !RTC'.
-         (!x. RTC' x x) /\
-         (!x y z. x -||-> y /\ RTC' y z ==> RTC' x z) ==>
-         !a0 a1. a0 -||->* a1 ==> RTC' a0 a1 : thm
+- overload_on ("-||->*", ``RTC $-||->``);
+> val it = () : unit
 \end{verbatim}
 \end{session}
 Incidentally, in conjunction with \texttt{PROVE} we can now
 automatically demonstrate relatively long chains of reductions:
 \begin{session}
 \begin{verbatim}
-- PROVE [RTCredn_rules, redn_rules] ``S # K # K # x -->* x``;
+- PROVE [RTC_rules, redn_rules] ``S # K # K # x -->* x``;
 Meson search level: ......
 > val it = |- S # K # K # x -->* x : thm
 
@@ -961,10 +922,9 @@ Meson search level: ...........................
 \label{sec:Proving-RTCs-same}
 
 We start with the easier direction, and show that everything in
-$\con{RTC}\;\rightarrow$ is in $\con{RTC}\;\mathpredn$.  Because
+$\rightarrow^*$ is in $\mathpredn^*$.  Because
 \con{RTC} is monotone (which fact is left to the reader to prove),
-we can reduce this to showing that $x\rightarrow y\supset
-x\mathpredn y$.
+we can reduce this to showing that $x\rightarrow y\supset x\mathpredn y$.
 
 Our goal:
 \begin{session}
@@ -975,17 +935,6 @@ Our goal:
     1. Incomplete:
          Initial goal:
          !x y. x -->* y ==> x -||->* y
-\end{verbatim}
-\end{session}
-Now we rewrite with the definitions of our two symbols to expose the
-fact that they are reflexive, transitive closures:
-\begin{session}
-\begin{verbatim}
-- e (SIMP_TAC std_ss [RTCredn_def, RTCpredn_def]);
-OK..
-1 subgoal:
-> val it =
-    !x y. RTC $--> x y ==> RTC $-||-> x y
 \end{verbatim}
 \end{session}
 We back-chain using our monotonicity result:
@@ -1032,7 +981,6 @@ Packaged into a tidy little sub-goal-package-free parcel, our proof is
 val RTCredn_RTCpredn = store_thm(
   "RTCredn_RTCpredn",
   ``!x y. x -->* y   ==>   x -||->* y``,
-  SIMP_TAC std_ss [RTCredn_def, RTCpredn_def] THEN
   HO_MATCH_MP_TAC RTC_monotone THEN
   HO_MATCH_MP_TAC redn_ind THEN
   PROVE_TAC [predn_rules]);
@@ -1083,7 +1031,7 @@ OK..
 \begin{session}
 \begin{verbatim}
 e (REPEAT CONJ_TAC THEN
-   TRY (PROVE_TAC [RTCredn_rules, redn_rules]);
+   TRY (PROVE_TAC [RTC_rules, redn_rules]);
 OK..
 Meson search level: ....
 Meson search level: ....
@@ -1119,51 +1067,14 @@ val RTCredn_ap_monotonic = store_thm(
     \end{array}\]
     All we need to do is ``stitch together'' the two transitions above
     and go from $x\;u$ to $y\;v$.  We can do this by appealing to our
-    earlier \texttt{RTC\_RTC} result and reminding \texttt{PROVE\_TAC}
-    that $\rightarrow^*$ is really just
-    $\con{RTC}\;\rightarrow$.
+    earlier \texttt{RTC\_RTC} result.
 \begin{session}
 \begin{verbatim}
-e (PROVE_TAC [RTCredn_def, RTC_RTC, RTCredn_ap_monotonic]);
+e (PROVE_TAC [RTC_RTC, RTCredn_ap_monotonic]);
 OK..
 Meson search level: .............................
 
 Goal proved. [...]
-> val it =
-    Initial goal proved.
-    |- !x y. x -||-> y ==> x -->* y : goalstack
-\end{verbatim}
-\end{session}
-Odds are that you found that this last step took noticably longer than
-previous invocations of \texttt{PROVE\_TAC}.  This is because of the
-equality in the theorem \texttt{RTCredn\_def}.  (Equality reasoning
-always slows \texttt{PROVE\_TAC} down.) Better performance is possible
-if you instead prove an appropriately specialised version of
-\texttt{RTC\_RTC} and use this in place of both \texttt{RTC\_RTC} and
-\texttt{RTCredn\_def}.  Let's go back and do this.
-\begin{session}
-\begin{verbatim}
-- b();
-> val it =
-    !x y u v. x -->* y /\ u -->* v ==> x # u -->* y # v
-\end{verbatim}
-\end{session}
-We need our specialised version of \texttt{RTC\_RTC}.
-\begin{session}\begin{alltt}
-- val RTCredn_RTCredn = save_thm(
-    "RTCredn_RTCredn",
-    SIMP_RULE std_ss [SYM RTCredn_def] (Q.ISPEC `\$-->` RTC_RTC));
-> val RTCredn_RTCredn =
-    |- !x y z. x -->* y /\bk{} y -->* z ==> x -->* z : thm
-\end{alltt}\end{session}
-Now we can finish with:
-\begin{session}
-\begin{verbatim}
-- e (PROVE_TAC [RTCredn_RTCredn, RTCredn_ap_monotonic])
-OK..
-Meson search level: .......
-
-Goal proved.[...]
 > val it =
     Initial goal proved.
     |- !x y. x -||-> y ==> x -->* y : goalstack
@@ -1181,8 +1092,7 @@ val predn_RTCredn = store_thm(
   "predn_RTCredn",
   ``!x y. x -||-> y  ==>  x -->* y``,
   HO_MATCH_MP_TAC predn_ind THEN
-  PROVE_TAC [RTCredn_rules, redn_rules, RTCredn_RTCredn,
-             RTCredn_ap_monotonic]);
+  PROVE_TAC [RTC_rules, redn_rules, RTC_RTC, RTCredn_ap_monotonic]);
 \end{verbatim}
 \end{session}
 \eos{}
@@ -1203,7 +1113,7 @@ steps using the original reduction relation.  Our goal:
 We use the appropriate induction principle to get to:
 \begin{session}
 \begin{verbatim}
-- e (HO_MATCH_MP_TAC RTCpredn_ind);
+- e (HO_MATCH_MP_TAC RTC_ind);
 OK..
 1 subgoal:
 > val it =
@@ -1216,8 +1126,7 @@ tell us that \verb!x -->* y!.  Then this can be chained together with
 the other assumption in the second conjunct and we're done.
 \begin{session}
 \begin{verbatim}
-- e (PROVE_TAC [RTCredn_rules, predn_RTCredn,
-                RTCredn_RTCredn]);
+- e (PROVE_TAC [RTC_rules, predn_RTCredn, RTCredn_RTCredn]);
 OK..
 Meson search level: .......
 
@@ -1233,8 +1142,8 @@ Packaged up, this proof is:
 val RTCpredn_RTCredn = store_thm(
   "RTCpredn_RTCredn",
   ``!x y. x -||->* y   ==>  x -->* y``,
-  HO_MATCH_MP_TAC RTCpredn_ind THEN
-  PROVE_TAC [predn_RTCredn, RTCredn_RTCredn, RTCredn_rules]);
+  HO_MATCH_MP_TAC RTC_ind THEN
+  PROVE_TAC [predn_RTCredn, RTC_RTC, RTC_rules]);
 \end{verbatim}
 \end{session}
 \eos{}
@@ -1251,32 +1160,24 @@ $\rightarrow^*$ and $\mathpredn^*$ are equal.  We state our goal:
          $-||->* = $-->*
 \end{verbatim}
 \end{session}
-We want to now appeal to extensionality.  This is best done by using the
-conversion \texttt{FUN\_EQ\_CONV}, thus:
+We want to now appeal to extensionality.  The simplest way to do this
+is to rewrite with the theorem \texttt{FUN\_EQ\_THM}:
 \begin{session}
 \begin{verbatim}
-- e (CONV_TAC FUN_EQ_CONV);
+- FUN_EQ_THM;
+> val it = |- !f g. (f = g) <=> !x. f x = g x : thm
+\end{verbatim}
+\end{session}
+So, we rewrite:
+\begin{session}
+\begin{verbatim}
+- e (SIMP_TAC std_ss [FUN_EQ_THM]);
 OK..
 1 subgoal:
 > val it =
-    !c. $-||->* c = $-->* c
+    !x x'. x -||->* x' = x -->* x'
 \end{verbatim}
 \end{session}
-This is progress but both ``arrows'' need another argument.  We repeat
-ourselves (getting rid of extra universal quantifiers along the way):
-\begin{session}
-\begin{verbatim}
-- e (GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC);
-OK..
-1 subgoal:
-> val it =
-    c -||->* c' = c -->* c'
-\end{verbatim}
-\end{session}
-(You might be wondering why it is our variables are suddenly
-\texttt{c} and \texttt{c'}.  This is because they are of type
-\texttt{:cl}, and the code that chooses the name thinks that it's
-reasonable to use variables named after the type.)
 
 This goal is an easy consequence of our two earlier implications.
 \begin{session}
@@ -1297,8 +1198,7 @@ Packaged, the proof is:
 val RTCpredn_EQ_RTCredn = store_thm(
   "RTCpredn_EQ_RTCredn",
   ``$-||->* = $-->*``,
-  CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
-  CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
+  SIMP_TAC std_ss [FUN_EQ_THM] THEN
   PROVE_TAC [RTCpredn_RTCredn, RTCredn_RTCpredn]);
 \end{verbatim}
 \end{session}
@@ -1448,7 +1348,7 @@ Thus:
 \begin{session}
 \begin{verbatim}
 val predn_strong_ind =
-  IndDefRules.derive_strong_induction (CONJUNCTS predn_rules, predn_ind);
+  IndDefRules.derive_strong_induction (predn_rules, predn_ind);
 > val predn_strong_ind =
     |- !P.
          (!x. P x x) /\
@@ -1745,8 +1645,7 @@ similar fashion:
 val confluent_redn = store_thm(
   "confluent_redn",
   ``confluent $-->``,
-  PROVE_TAC [predn_diamond, RTCpredn_def,
-             RTCredn_def, confluent_diamond_RTC,
+  PROVE_TAC [predn_diamond, confluent_diamond_RTC,
              RTCpredn_EQ_RTCredn, diamond_RTC]);
 \end{verbatim}
 \end{session}
