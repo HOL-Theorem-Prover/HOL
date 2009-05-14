@@ -15,7 +15,7 @@
 #include "Sort.h"
 #include <string>
 #include <sstream> 
-
+#include<algorithm>
 using namespace std;
 
 enum enum_ty { ROOT, CL, VAR, CONF, DONE };
