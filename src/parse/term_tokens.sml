@@ -135,13 +135,8 @@ in
                     val (pfx0, sfx0) = grab (categorise c) [c] rest
                   in
                     if size sfx0 <> 0 andalso String.sub(sfx0,0) = #"$" then
-                      if size sfx0 > 1 then let
-                          val sfx0_1 = String.extract(sfx0, 1, NONE)
-                          val ((c0, _), rest) = valOf (UTF8.getChar sfx0_1)
-                          val (qid2, sfx) = grab (categorise c0) [c0] rest
-                        in
-                          (QIdent(pfx0,qid2), sfx)
-                        end
+                      if size sfx0 > 1 then
+                        (QIdent(pfx0,String.extract(sfx0,1,NONE)), "")
                       else
                         raise LEX_ERR ("Malformed qualified ident", locn)
                     else (MkID (pfx0,locn), sfx0)
