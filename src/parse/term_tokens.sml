@@ -23,7 +23,12 @@ fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1 orelse
 fun term_symbolp s = UnicodeChars.isSymbolic s andalso
                      not (s_has_nonagg_char s) andalso
                      s <> "\"" andalso s <> "'" andalso s <> "_"
+fun const_symbolp s = Char.isPunct (String.sub(s,0)) andalso s <> ")" andalso
+                      s <> "_" andalso s <> "'" andalso s <> "\""
+
 fun term_identp s = UnicodeChars.isMLIdent s andalso s <> UnicodeChars.lambda
+fun const_identp s = Char.isAlpha (String.sub(s,0)) orelse s = "_" orelse
+                     s = "'"
 
 fun ishexdigit s = let
   val c = Char.toLower (String.sub(s,0))
@@ -40,6 +45,10 @@ fun categorise c =
     else if Char.isDigit (String.sub(c,0)) then numberp
     else term_symbolp
 
+fun constid_categorise c =
+    if const_identp c then const_identp
+    else if const_symbolp c then const_symbolp
+    else raise Fail (c ^ " is not a valid constant name constituent")
 
 
 fun mixed s = let
@@ -135,8 +144,16 @@ in
                     val (pfx0, sfx0) = grab (categorise c) [c] rest
                   in
                     if size sfx0 <> 0 andalso String.sub(sfx0,0) = #"$" then
-                      if size sfx0 > 1 then
-                        (QIdent(pfx0,String.extract(sfx0,1,NONE)), "")
+                      if size sfx0 > 1 then let
+                          val sfx0_1 = String.extract(sfx0, 1, NONE)
+	                  val c0 = String.sub(sfx0_1, 0)
+                          val rest = String.extract(sfx0_1, 1, NONE)
+	                  val (qid2, sfx) =
+                              grab (constid_categorise (str c0)) [str c0] rest
+                              handle Fail s => raise LEX_ERR (s, locn)
+	                in
+	                  (QIdent(pfx0,qid2), sfx)
+                        end
                       else
                         raise LEX_ERR ("Malformed qualified ident", locn)
                     else (MkID (pfx0,locn), sfx0)
