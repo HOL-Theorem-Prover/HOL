@@ -27,8 +27,10 @@ fun const_symbolp s = Char.isPunct (String.sub(s,0)) andalso s <> ")" andalso
                       s <> "_" andalso s <> "'" andalso s <> "\""
 
 fun term_identp s = UnicodeChars.isMLIdent s andalso s <> UnicodeChars.lambda
-fun const_identp s = Char.isAlpha (String.sub(s,0)) orelse s = "_" orelse
+fun const_identp s = Char.isAlphaNum (String.sub(s,0)) orelse s = "_" orelse
                      s = "'"
+fun const_identstartp s = const_identp s andalso
+                          not (Char.isDigit (String.sub(s,0)))
 
 fun ishexdigit s = let
   val c = Char.toLower (String.sub(s,0))
@@ -46,7 +48,7 @@ fun categorise c =
     else term_symbolp
 
 fun constid_categorise c =
-    if const_identp c then const_identp
+    if const_identstartp c then const_identp
     else if const_symbolp c then const_symbolp
     else raise Fail (c ^ " is not a valid constant name constituent")
 
