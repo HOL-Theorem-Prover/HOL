@@ -272,6 +272,7 @@ signature Parse = sig
   val hidden : string -> bool
   val known_constants     : unit -> string list
   val set_known_constants : string list -> unit
+  val is_constname : string -> bool
 
   val LEFT       : associativity
   val RIGHT      : associativity

@@ -2,12 +2,14 @@ structure dividesScript =
 struct
 
 open HolKernel Parse boolLib simpLib BasicProvers
-     prim_recTheory arithmeticTheory boolSimps SingleStep metisLib;
+     prim_recTheory arithmeticTheory boolSimps SingleStep 
+     metisLib numLib;
 
 val CALC = EQT_ELIM o reduceLib.REDUCE_CONV;
 val ARITH_TAC   = CONV_TAC Arith.ARITH_CONV;
+val DECIDE = EQT_ELIM o Arith.ARITH_CONV;
 
-val arith_ss = simpLib.++(bool_ss, numSimps.ARITH_ss);
+val arith_ss = numLib.arith_ss;
 
 val ARW = RW_TAC arith_ss;
 
@@ -122,6 +124,10 @@ val DIVIDES_MULT_LEFT = store_thm(
   ASM_SIMP_TAC bool_ss [] THEN
   METIS_TAC [MULT_EQ_1]);
 
+val DIVIDES_EXP = Q.prove
+(`!a b x. 0 < x /\ divides a b ==> divides a (b ** x)`,
+ Cases_on `x` THEN RW_TAC arith_ss [EXP] THEN METIS_TAC [DIVIDES_MULT]);
+
 val DIVIDES_FACT = store_thm
 ("DIVIDES_FACT",
  ``!b. 0<b ==> divides b (FACT b)``,
@@ -168,10 +174,36 @@ val PRIME_2 = store_thm
   before 
   export_rewrites ["PRIME_2"];
 
+val PRIME_3 = Q.store_thm
+("PRIME_3",
+ `prime 3`, 
+  RW_TAC arith_ss  [prime_def] THEN
+  `b <= 3` by RW_TAC arith_ss [DIVIDES_LE] THEN 
+  `(b=0) \/ (b=1) \/ (b=2) \/ (b=3)` by (POP_ASSUM MP_TAC THEN ARITH_TAC) THEN
+  RW_TAC arith_ss [] THENL 
+  [FULL_SIMP_TAC arith_ss [ZERO_DIVIDES],
+   FULL_SIMP_TAC arith_ss [divides_def]])
+  before 
+  export_rewrites ["PRIME_3"];
+
 val PRIME_POS = store_thm
  ("PRIME_POS",
   ``!p. prime p ==> 0<p``,
   Cases THEN RW_TAC arith_ss [NOT_PRIME_0]);
+
+val ONE_LT_PRIME = Q.store_thm
+("ONE_LT_PRIME",
+ `!p. prime p ==> 1 < p`,
+ METIS_TAC [NOT_PRIME_0, NOT_PRIME_1,
+            DECIDE ``(p=0) \/ (p=1) \/ 1 < p``]);
+
+val prime_divides_only_self = Q.store_thm
+("prime_divides_only_self",
+ `!m n. prime m /\ prime n /\ divides m n ==> (m=n)`,
+ RW_TAC arith_ss [divides_def] THEN 
+ `m<>1` by METIS_TAC [NOT_PRIME_0,NOT_PRIME_1] THEN 
+ Q.PAT_ASSUM `prime (m*q)` MP_TAC THEN RW_TAC arith_ss [prime_def] THEN 
+ METIS_TAC [divides_def,MULT_SYM]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -218,36 +250,93 @@ THEN
 );
 
 (*---------------------------------------------------------------------------*)
-(* A sequence of primes.                                                     *)
-(*                                                                           *)
-(*     PRIMES_def = |- !n. n < PRIMES n /\ prime (PRIMES n)                  *)
-(*                                                                           *)
-(* PRIMES is not computed, it just exists!  Also, it's not *the* sequence of *)
-(* primes, because                                                           *)
-(*                                                                           *)
-(*   prime n ==> ?i. n = PRIMES(i)                                           *)
-(*                                                                           *)
-(* isn't provable. For example, can't prove that 2 is in the sequence.       *)
-(*                                                                           *)
+(* The sequence of primes.                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val PRIMES_def = new_specification
-("PRIMES",
- ["PRIMES"],
-  SIMP_RULE bool_ss [SKOLEM_THM] EUCLID);
+val PRIMES_def = new_recursive_definition
+ {name = "PRIMES_def",
+  rec_axiom = prim_recTheory.num_Axiom,
+  def = ``(PRIMES 0 = 2) /\
+          (PRIMES (SUC n) = LEAST p. prime p /\ PRIMES n < p)``};
 
-(*---------------------------------------------------------------------------*)
-(* More basic theorems about primes                                          *)
-(*---------------------------------------------------------------------------*)
+val primePRIMES = Q.store_thm
+("primePRIMES",
+ `!n. prime (PRIMES n)`,
+ Cases THEN RW_TAC arith_ss [PRIMES_def,PRIME_2] THEN 
+ LEAST_ELIM_TAC THEN 
+ RW_TAC bool_ss [] THEN 
+ METIS_TAC [EUCLID]);
 
-val prime_divides_only_self = Q.store_thm
-("prime_divides_only_self",
- `!m n. prime m /\ prime n /\ divides m n ==> (m=n)`,
- RW_TAC arith_ss [divides_def] THEN 
- `m<>1` by METIS_TAC [NOT_PRIME_0,NOT_PRIME_1] THEN 
- Q.PAT_ASSUM `prime (m*q)` MP_TAC THEN RW_TAC arith_ss [prime_def] THEN 
- METIS_TAC [divides_def,MULT_SYM]);
+val INFINITE_PRIMES = Q.store_thm
+("INFINITE_PRIMES",
+ `!n. PRIMES n < PRIMES (SUC n)`,
+ RW_TAC arith_ss [PRIMES_def] THEN
+ LEAST_ELIM_TAC THEN 
+ RW_TAC bool_ss [] THEN 
+ METIS_TAC [EUCLID]);
 
+val LT_PRIMES = Q.store_thm
+("LT_PRIMES",
+ `!m n. m < n ==> PRIMES m < PRIMES n`,
+ Induct_on `n` THEN RW_TAC arith_ss [] THEN
+ METIS_TAC [INFINITE_PRIMES,LESS_TRANS,LESS_THM]);
+
+val PRIMES_11 = Q.store_thm
+("PRIMES_11",
+ `!m n. (PRIMES m = PRIMES n) ==> (m=n)`,
+ METIS_TAC [DECIDE ``a < b ==> a<>b``,LT_PRIMES,
+            DECIDE `` !m n. m < n \/ (m=n) \/ n < m``]);
+
+val INDEX_LESS_PRIMES = Q.store_thm
+("INDEX_LESS_PRIMES",
+ `!n. n < PRIMES n`,
+ Induct THEN RW_TAC arith_ss [PRIMES_def] THEN 
+ LEAST_ELIM_TAC THEN CONJ_TAC THENL 
+ [METIS_TAC [INFINITE_PRIMES,primePRIMES], RW_TAC arith_ss []]);
+
+val EUCLID_PRIMES = Q.store_thm
+("EUCLID_PRIMES",
+ `!n. ?i. n < PRIMES i`,
+ SPOSE_NOT_THEN (MP_TAC o REWRITE_RULE [NOT_LESS]) THEN STRIP_TAC THEN
+ METIS_TAC [INDEX_LESS_PRIMES,DECIDE ``a <= b /\ b < a ==> F``]);
+
+val NEXT_LARGER_PRIME = Q.store_thm
+("NEXT_LARGER_PRIME",
+ `!n. ?i. n < PRIMES i /\ !j. j < i ==> PRIMES j <= n`,
+ GEN_TAC THEN METIS_TAC [HO_MATCH_MP WOP (SPEC_ALL EUCLID_PRIMES),NOT_LESS]);
+
+val PRIMES_NO_GAP = Q.store_thm
+("PRIMES_NO_GAP",
+ `!n p. PRIMES n < p /\ p < PRIMES (SUC n) /\ prime p ==> F`,
+ RW_TAC bool_ss [PRIMES_def,GSYM IMP_DISJ_THM] THEN POP_ASSUM MP_TAC THEN 
+ LEAST_ELIM_TAC THEN METIS_TAC[INFINITE_PRIMES,primePRIMES]);
+
+val PRIMES_ONTO = Q.store_thm
+("PRIMES_ONTO",
+ `!p. prime p ==> ?i. PRIMES i = p`,
+ SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
+ STRIP_ASSUME_TAC (Q.SPEC `p` NEXT_LARGER_PRIME) THEN 
+ Cases_on `i` THENL
+ [METIS_TAC [DECIDE``p < 2 = (p=0) \/ (p=1)``,
+             NOT_PRIME_0,NOT_PRIME_1,PRIME_2,PRIMES_def],
+  `PRIMES n < p` by METIS_TAC [DECIDE ``n < SUC n``,LESS_OR_EQ] THEN
+  METIS_TAC [PRIMES_NO_GAP]]);
+
+val PRIME_INDEX = Q.store_thm
+("PRIME_INDEX",
+ `!p. prime p = ?i. p = PRIMES i`,
+ METIS_TAC [PRIMES_ONTO,primePRIMES]);
+
+val ONE_LT_PRIMES = Q.store_thm
+("ONE_LT_PRIMES",
+ `!n. 1 < PRIMES n`,
+  METIS_TAC [primePRIMES, NOT_PRIME_0, NOT_PRIME_1, 
+             DECIDE ``(x=0) \/ (x=1) \/ 1<x``]);
+
+val ZERO_LT_PRIMES = Q.store_thm
+("ZERO_LT_PRIMES",
+ `!n. 0 < PRIMES n`,
+  METIS_TAC [LESS_TRANS, ONE_LT_PRIMES, DECIDE ``0 < 1``]);
 
 (*---------------------------------------------------------------------------*)
 (* Directly computable version of divides                                    *)

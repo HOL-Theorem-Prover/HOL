@@ -384,7 +384,8 @@ val identity_nattransf = store_thm
 
 (* Vertical composition of two natural transformations *)
 
-val ooo_def = Define `$ooo (phi2: ('G,'H)nattransf) (phi1: ('F,'G)nattransf) = \:'a. phi2 o (phi1[:'a:])`;
+val ooo_def = Define `$ooo (phi2: ('G,'H)nattransf) (phi1: ('F,'G)nattransf) =
+                      \:'a. phi2 o (phi1[:'a:])`;
 val _ = add_infix("ooo", 800, HOLgrammars.RIGHT);
 val _ = overload_on ("o", Term`$ooo : ('G,'H)nattransf -> ('F,'G)nattransf -> ('F,'H)nattransf`);
 
@@ -402,7 +403,8 @@ val nattransf_comp = store_thm
 
 (* Composition of a functor (on the left) with a natural transformation *)
 
-val foo_def = Define `$foo (H: 'H functor) (phi: ('F,'G)nattransf) = \:'a. H [:'a 'F, 'a 'G:] phi`;
+val foo_def = Define `$foo (H: 'H functor) (phi: ('F,'G)nattransf) =
+                      \:'a. H (phi[:'a:])`;
 val _ = add_infix("foo", 750, HOLgrammars.LEFT);
 val _ = overload_on ("o", Term`$foo : 'H functor -> ('F,'G) nattransf -> ('F o 'H,'G o 'H) nattransf`);
 
@@ -422,7 +424,8 @@ val functor_nattransf_comp = store_thm
 
 (* Composition of a natural transformation with a functor (on the right) *)
 
-val oof_def = Define `$oof (phi: ('F,'G) nattransf) (H': 'H functor) = \:'a. phi [:'a 'H:]`;
+val oof_def = Define `$oof (phi: ('F,'G) nattransf) (H': 'H functor) =
+                      \:'a. phi [:'a 'H:]`;
 val _ = add_infix("oof", 750, HOLgrammars.LEFT);
 val _ = overload_on ("o", Term`$oof : ('F,'G) nattransf -> 'H functor -> ('H o 'F,'H o 'G) nattransf`);
 

@@ -60,9 +60,9 @@ src/option
 src/num/theories
 src/num/reduce/src
 src/num/arith/src
+src/num
 src/num/termination
 src/num/extra_theories
-src/num
 src/IndDef
 src/pred_set/src
 src/datatype/equiv
@@ -72,18 +72,19 @@ src/list/src
 src/unwind
 src/TeX
 src/boss
-# Up to this point is needed for hol.unquote (which loads bossLib).
+# Up to this point is needed for hol (which loads bossLib).
 # (Maybe unwind could be omitted).
 [poly]bin/hol
 
 !examples/RSA
 src/sort
 src/string
+!examples/STE
 src/res_quan/src
 src/quotient/src
 !src/quotient/examples
 src/finite_map
-!examples/ind_def
+# currently broken: !examples/ind_def
 src/bag
 src/n-bit
 !examples/ARM/arm6-verification
@@ -114,6 +115,7 @@ src/path
 !examples/lambda/barendregt
 !!examples/lambda/other-models
 !!examples/lambda/typing
+!!examples/computability/lambda
 src/Boolify/src
 src/float
 !!examples/miller/miller

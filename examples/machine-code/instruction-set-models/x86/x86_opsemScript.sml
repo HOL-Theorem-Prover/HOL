@@ -56,10 +56,21 @@ val read_ea_def = Define `
   (read_ea ii (Xea_m a) = read_m32 ii a)`; 
 
 val read_src_ea_def = Define `
-  read_src_ea ii ds = seqT (ea_Xsrc ii ds) (\ea. addT ea (read_ea ii ea))`;  (* TODO: why is there a seqT here? *)
+  read_src_ea ii ds = seqT (ea_Xsrc ii ds) (\ea. addT ea (read_ea ii ea))`;  
 
 val read_dest_ea_def = Define `
   read_dest_ea ii ds = seqT (ea_Xdest ii ds) (\ea. addT ea (read_ea ii ea))`;
+
+val read_ea_byte_def = Define `
+  (read_ea_byte ii (Xea_i i) = constT i) /\
+  (read_ea_byte ii (Xea_r r) = read_reg ii r) /\
+  (read_ea_byte ii (Xea_m a) = seqT (read_m8 ii a) (\w. constT (w2w w)))`; 
+
+val read_src_ea_byte_def = Define `
+  read_src_ea_byte ii ds = seqT (ea_Xsrc ii ds) (\ea. addT ea (read_ea_byte ii ea))`; 
+
+val read_dest_ea_byte_def = Define `
+  read_dest_ea_byte ii ds = seqT (ea_Xdest ii ds) (\ea. addT ea (read_ea_byte ii ea))`;
 
 (* write_ea write a value to the supplied effective address *)
 
@@ -67,6 +78,11 @@ val write_ea_def = Define `
   (write_ea ii (Xea_i i) x = failureT) /\  (* one cannot store into a constant *)
   (write_ea ii (Xea_r r) x = write_reg ii r x) /\
   (write_ea ii (Xea_m a) x = write_m32 ii a x)`; 
+
+val write_ea_byte_def = Define `
+  (write_ea_byte ii (Xea_i i) x = failureT) /\  (* one cannot store into a constant *)
+  (write_ea_byte ii (Xea_r r) x = write_reg ii r x) /\
+  (write_ea_byte ii (Xea_m a) x = write_m8 ii a (w2w x))`; 
 
 (* jump_to_ea updates eip according to procedure call *)
 
@@ -201,14 +217,14 @@ val read_cond_def = Define `
   (read_cond ii X_B      = read_eflag ii X_CF) /\
   (read_cond ii X_NE     = seqT (read_eflag ii X_ZF) (\b. constT (~b))) /\
   (read_cond ii X_NS     = seqT (read_eflag ii X_SF) (\b. constT (~b))) /\
-  (read_cond ii X_BS     = seqT (read_eflag ii X_CF) (\b. constT (~b))) /\
+  (read_cond ii X_NB     = seqT (read_eflag ii X_CF) (\b. constT (~b))) /\
   (read_cond ii X_A     = seqT 
      (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT (~c /\ ~z))) /\
   (read_cond ii X_NA    = seqT 
      (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT (c \/ z)))`;
 
 
-(* execute stack operations for non-EIP registers*)
+(* execute stack operations for non-EIP registers *)
 
 val x86_exec_pop_def = Define `
   x86_exec_pop ii rm =
@@ -223,7 +239,7 @@ val x86_exec_push_def = Define `
               (seqT (read_reg ii ESP) (\w. constT (w - 4w))))
         (\(w,esp). parT_unit (write_m32 ii esp w) (write_reg ii ESP esp)))`;
 
-(* execute stack operations for EIP register*)
+(* execute stack operations for EIP register *)
 
 val x86_exec_pop_eip_def = Define `
   x86_exec_pop_eip ii =
@@ -253,6 +269,23 @@ val x86_exec_def = Define `
         (seqT (ea_Xrm ii rm) (\ea. addT ea (read_ea ii ea)))
            (\ (ea_dest,val_dest).
               write_monop ii monop_name val_dest ea_dest))) /\
+  (x86_exec ii (Xmul rm) len = bump_eip ii len 
+     (seqT 
+        (parT (seqT (ea_Xrm ii rm) (\ea. addT ea (read_ea ii ea)))
+              (read_reg ii EAX)) 
+        (\ ((ea_src,val_src),eax).
+              parT_unit (write_reg ii EAX (eax * val_src))
+             (parT_unit (write_reg ii EDX (n2w ((w2n eax * w2n val_src) DIV 2**32)))
+                        (erase_eflags ii)) (* fix this *)))) /\
+  (x86_exec ii (Xdiv rm) len = bump_eip ii len 
+     (seqT 
+        (parT (seqT (ea_Xrm ii rm) (\ea. addT ea (read_ea ii ea)))
+              (seqT (parT (read_reg ii EAX) (read_reg ii EDX))
+                    (\ (eax,edx). constT (w2n edx * 2**32 + w2n eax)))) 
+        (\ ((ea_src,val_src),n).
+              parT_unit (write_reg ii EAX (n2w (n DIV (w2n val_src))))
+             (parT_unit (write_reg ii EDX (n2w (n MOD (w2n val_src))))
+                        (erase_eflags ii))))) /\
   (x86_exec ii (Xxadd rm r) len = bump_eip ii len 
      (seqT 
         (parT (seqT (ea_Xrm ii rm) (\ea. addT ea (read_ea ii ea)))
@@ -302,6 +335,16 @@ val x86_exec_def = Define `
                   (parT (read_cond ii c) (ea_Xdest ii ds))))
            (\ ((ea_src,val_src),(g,ea_dest)). 
                if g then write_ea ii ea_dest val_src else constT ()))) /\
+  (x86_exec ii (Xmov_byte ds) len = bump_eip ii len
+     (seqT 
+        (parT (read_src_ea_byte ii ds) (ea_Xdest ii ds))
+        (\ ((ea_src,val_src),ea_dest). 
+           write_ea_byte ii ea_dest val_src))) /\
+  (x86_exec ii (Xcmp_byte ds) len = bump_eip ii len
+     (seqT 
+        (parT (read_src_ea_byte ii ds) (read_dest_ea_byte ii ds))
+           (\ ((ea_src,val_src),(ea_dest,val_dest)).
+              write_binop ii Xcmp val_dest val_src ea_dest))) /\
   (x86_exec ii (Xjump c imm) len = (   
      seqT
        (parT (read_eip ii) (read_cond ii c))

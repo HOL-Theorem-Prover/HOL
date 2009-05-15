@@ -584,6 +584,15 @@ val sub_nsub = store_thm(
     SRW_TAC [ARITH_ss][]
   ]);
 
+val sub_nsub15a = store_thm(
+  "sub_nsub15a",
+  ``!d2 d1 i j. i + 1 NOTIN dFV d2 /\ j <= i ==> 
+                (sub d1 i (nsub (dV i) j d2) = nsub d1 j d2)``,
+  Induct THEN SRW_TAC [][] THENL [
+    FULL_SIMP_TAC (srw_ss()) [],
+    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [],
+    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []
+  ]);
 
 (* Nipkow's definition of beta reduction *)
 val (dbeta_rules, dbeta_ind, dbeta_cases) = Hol_reln`
@@ -955,6 +964,106 @@ val toTerm_thm = Store_thm(
     (toTerm (dAPP M N) = toTerm M @@ toTerm N) /\
     (toTerm (dLAM i M) = LAM (n2s i) (toTerm M))``,
   SRW_TAC [][toTerm_eqn]);
+
+val lemma = prove(
+  ``!i j. i + j + 1 NOTIN dFV M ==> 
+          (sub (dV j) (i + j + 1) (lift (nsub (dV (i + j)) j M) j) = M)``,
+  Induct_on `M` THEN SRW_TAC [][] THENL [
+    SRW_TAC [ARITH_ss][],
+    SRW_TAC [ARITH_ss][],
+    SRW_TAC [ARITH_ss][],
+    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss)[] THEN 
+    FIRST_X_ASSUM (Q.SPECL_THEN [`i`, `j + 1`] MP_TAC) THEN 
+    SRW_TAC [ARITH_ss][]
+  ]);
+
+val dABS_dLAM = store_thm(
+  "dABS_dLAM",
+  ``i + 1 NOTIN dFV M ==> (dABS M = dLAM i (nsub (dV i) 0 M))``,
+  SIMP_TAC (srw_ss()) [dLAM_def] THEN 
+  ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN 
+  Q.SPECL_THEN [`i`, `0`] ASSUME_TAC lemma THEN 
+  FULL_SIMP_TAC (srw_ss()) []);
+
+val dABS_dLAM_exists = store_thm(
+  "dABS_dLAM_exists",
+  ``!M. ?i N. dABS M = dLAM i N``,
+  Q.X_GEN_TAC `M` THEN Q.SPEC_THEN `dABS M` STRIP_ASSUME_TAC db_cases' THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []);
+
+val toTerm_dABS = store_thm(
+  "toTerm_dABS",
+  ``s2n v + 1 NOTIN dFV M ==> 
+      (toTerm (dABS M) = LAM v (toTerm (nsub (dV (s2n v)) 0 M)))``,
+  SRW_TAC [][toTerm_eqn, dABS_dLAM]);
+
+(* ----------------------------------------------------------------------
+    bnf
+   ---------------------------------------------------------------------- *)
+
+val _ = overload_on ("is_dABS", ``\d. is_abs (toTerm d)``)
+
+val is_dABS_thm = Store_thm(
+  "is_dABS_thm",
+  ``(is_dABS (dV v) = F) /\
+    (is_dABS (dAPP d1 d2) = F) /\
+    (is_dABS (dABS d) = T) /\
+    (is_dABS (dLAM v d) = T)``,
+  SRW_TAC [][] THEN 
+  `?i N. dABS d = dLAM i N` by METIS_TAC [dABS_dLAM_exists] THEN 
+  SRW_TAC [][]);
+
+val is_dABS_vnsub_invariant = Store_thm(
+  "is_dABS_vnsub_invariant",
+  ``!d i j. is_dABS (nsub (dV i) j d) <=> is_dABS d``,
+  Induct THEN SRW_TAC [][]);
+
+val is_dABS_vsub_invariant = Store_thm(
+  "is_dABS_vsub_invariant",
+  ``!d i j. is_dABS (sub (dV i) j d) <=> is_dABS d``,
+  Induct THEN SRW_TAC [][]);
+
+val is_dABS_lift_invariant = Store_thm(
+  "is_dABS_lift_invariant",
+  ``!d j. is_dABS (lift d j) = is_dABS d``,
+  Induct THEN SRW_TAC [][]);
+
+val dbnf_def = Define`
+  (dbnf (dV i) = T) /\
+  (dbnf (dAPP d1 d2) = dbnf d1 /\ dbnf d2 /\ ~is_dABS d1) /\
+  (dbnf (dABS d) = dbnf d)
+`;
+val _ = export_rewrites ["dbnf_def"]
+
+val dbnf_vnsub_invariant = Store_thm(
+  "dbnf_vnsub_invariant",
+  ``!d i j. dbnf (nsub (dV i) j d) <=> dbnf d``,
+  Induct THEN SRW_TAC [][]);
+
+val dbnf_vsub_invariant = Store_thm(
+  "dbnf_vsub_invariant",
+  ``!d i j. dbnf (sub (dV i) j d) <=> dbnf d``,
+  Induct THEN SRW_TAC [][]);
+
+val dbnf_lift_invariant = Store_thm(
+  "dbnf_lift_invariant",
+  ``!d j. dbnf (lift d j) = dbnf d``,
+  Induct THEN SRW_TAC [][]);
+  
+val dbnf_dLAM = Store_thm(
+  "dbnf_dLAM",
+  ``dbnf (dLAM i d) = dbnf d``,
+  SRW_TAC [][dLAM_def]);
+
+val dbnf_fromTerm = Store_thm(
+  "dbnf_fromTerm",
+  ``!t. dbnf (fromTerm t) = bnf t``,
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
+
+val bnf_toTerm = Store_thm(
+  "bnf_toTerm",
+  ``!d. bnf (toTerm d) = dbnf d``,
+  METIS_TAC [fromTerm_onto, fromtoTerm, dbnf_fromTerm]);
 
 (* ----------------------------------------------------------------------
     Eta reduction

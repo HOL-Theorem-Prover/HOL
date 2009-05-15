@@ -29,18 +29,18 @@ fun smallfoot_p_expression_printer (sys,strn,brk) gravs d pps t = let
     open Portable term_pp_types
     val (op_term,args) = strip_comb t;
   in
-    if (op_term = smallfoot_p_var_term)  then (
+    if (eq op_term smallfoot_p_var_term)  then (
        (sys (Top, Top, Top) (d - 1) (hd (args)))
     ) else 
-    if (op_term = smallfoot_p_const_term)  then (
-       if ((hd args) = ``0:num``) then strn "NULL" else
+    if (eq op_term smallfoot_p_const_term)  then (
+       if (eq (hd args) ``0:num``) then strn "NULL" else
                 sys (Top, Top, Top) (d - 1) (hd args)
-    ) else if (op_term = smallfoot_p_add_term)  then (       
+    ) else if (eq op_term smallfoot_p_add_term)  then (       
        (sys (Top, Top, Top) (d - 1) (el 1 (args));
        strn(" +");
        brk(1,1);
        sys (Top, Top, Top) (d - 1) (el 2 (args)))
-    ) else if (op_term = smallfoot_p_sub_term)  then (       
+    ) else if (eq op_term smallfoot_p_sub_term)  then (       
        (sys (Top, Top, Top) (d - 1) (el 1 (args));
        strn(" -");
        brk(1,1);
@@ -101,7 +101,7 @@ fun smallfoot_proccall_args_printer (sys,strn,brk) gravs d pps args_term =
    in
       strn ("(");
       pretty_print_arg_list refArgsL;
-      if (valArgsL = []) then () else (
+      if (null valArgsL) then () else (
           strn ";";brk (1,0);
 	  pretty_print_arg_list valArgsL
       );
@@ -114,7 +114,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
     open Portable term_pp_types
     val (op_term,args) = strip_comb t;
   in
-    if (op_term = smallfoot_prog_field_lookup_term)  then (
+    if (eq op_term smallfoot_prog_field_lookup_term)  then (
        let
           val v_term = el 1 args;
           val exp_term = el 2 args;
@@ -129,7 +129,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           sys (Top, Top, Top) (d - 1) tag_term;
 	  end_block pps
        end
-    ) else if (op_term = smallfoot_prog_field_assign_term)  then (
+    ) else if (eq op_term smallfoot_prog_field_assign_term)  then (
        let
           val exp_term = el 1 args;
           val tag_term = el 2 args;
@@ -144,7 +144,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           sys (Top, Top, Top) (d - 1) exp2_term;
 	  end_block pps
        end 
-    ) else if (op_term = smallfoot_prog_procedure_call_term)  then (
+    ) else if (eq op_term smallfoot_prog_procedure_call_term)  then (
        let
           val name_term = el 1 args;
           val args_term = el 2 args;
@@ -154,7 +154,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           smallfoot_proccall_args_printer (sys,strn,brk) gravs (d - 1) pps args_term;
           end_block pps
        end 
-    ) else if (op_term = smallfoot_prog_parallel_procedure_call_term)  then (
+    ) else if (eq op_term smallfoot_prog_parallel_procedure_call_term)  then (
        let
           val name1_term = el 1 args;
           val args1_term = el 2 args;
@@ -169,7 +169,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           smallfoot_proccall_args_printer (sys,strn,brk) gravs (d - 1) pps args2_term;
           end_block pps
        end 
-    ) else if (op_term = smallfoot_prog_assign_term)  then (
+    ) else if (eq op_term smallfoot_prog_assign_term)  then (
        let
           val v_term = el 1 args;
           val exp_term = el 2 args;
@@ -181,7 +181,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           sys (Top, Top, Top) (d - 1) exp_term;
           end_block pps
        end    
-    ) else if (op_term = smallfoot_prog_dispose_term)  then (
+    ) else if (eq op_term smallfoot_prog_dispose_term)  then (
        let
           val exp_term = el 1 args;
        in
@@ -190,7 +190,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           sys (Top, Top, Top) (d - 1) exp_term;
 	  end_block pps
        end
-    ) else if (op_term = smallfoot_prog_new_term)  then (
+    ) else if (eq op_term smallfoot_prog_new_term)  then (
        let
           val v_term = el 1 args;
        in
@@ -201,7 +201,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           strn "new()";
 	  end_block pps
        end
-    ) else if (op_term = smallfoot_prog_cond_term)  then (
+    ) else if (eq op_term smallfoot_prog_cond_term)  then (
        let
           val prop_term = el 1 args;
           val prog1_term = el 2 args;
@@ -225,7 +225,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           strn "}";
           end_block pps
        end
-    ) else if (op_term = smallfoot_prog_while_with_invariant_term)  then (
+    ) else if (eq op_term smallfoot_prog_while_with_invariant_term)  then (
        let
           val inv_term = el 1 args;
           val prop_term = el 2 args;
@@ -261,7 +261,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           strn "}";
           end_block pps
        end
-    ) else if (op_term = smallfoot_prog_while_term)  then (
+    ) else if (eq op_term smallfoot_prog_while_term)  then (
        let
           val prop_term = el 1 args;
           val prog_term = el 2 args;
@@ -278,7 +278,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           strn "}";
           end_block pps
        end
-    ) else if (op_term = smallfoot_prog_with_resource_term)  then (
+    ) else if (eq op_term smallfoot_prog_with_resource_term)  then (
        let
           val res_term = el 1 args;
           val cond_term = el 2 args;
@@ -298,7 +298,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           strn "}";
           end_block pps
        end
-    ) else if (op_term = smallfoot_prog_aquire_resource_term)  then (
+    ) else if (eq op_term smallfoot_prog_aquire_resource_term)  then (
        let	   
           val cond_term = el 1 args;
           val var_term = el 2 args;
@@ -316,7 +316,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           sys (Top, Top, Top) (d - 1) inv_term;
           end_block pps
        end
-    ) else if (op_term = smallfoot_prog_release_resource_term)  then (
+    ) else if (eq op_term smallfoot_prog_release_resource_term)  then (
        let
           val var_term = el 1 args;
           val inv_term = el 2 args;
@@ -329,11 +329,11 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           sys (Top, Top, Top) (d - 1) inv_term;
           end_block pps
        end
-    ) else if (op_term = smallfoot_prog_local_var_term) orelse 
-	      (op_term = smallfoot_prog_val_arg_term) then (
+    ) else if (eq op_term smallfoot_prog_local_var_term) orelse 
+	      (eq op_term smallfoot_prog_val_arg_term) then (
        let
           val (l, t') = dest_local_vars t;          
-	  val _ = if (l = []) then raise term_pp_types.UserPP_Failed else ();
+	  val _ = if (null l) then raise term_pp_types.UserPP_Failed else ();
        in
           begin_block pps INCONSISTENT 0;             
           strn "local";	  
@@ -358,7 +358,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           sys (Top, Top, Top) (d - 1) t';
           end_block pps
       end
-    ) else if (op_term = smallfoot_cond_choose_const_best_local_action_term)  then (
+    ) else if (eq op_term smallfoot_cond_choose_const_best_local_action_term)  then (
       let
          val (argL1_term,_) = listSyntax.dest_list (el 5 args);
          val (argL2_term,_) = listSyntax.dest_list (el 4 args);
@@ -387,11 +387,11 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
          sys (Top, Top, Top) (d - 1) post_term';
          end_block pps
       end
-    ) else if (op_term = smallfoot_prog_block_term)  then (
+    ) else if (eq op_term smallfoot_prog_block_term)  then (
        let
           val (argL_term, _) = listSyntax.dest_list (el 1 args);
        in
-	  if argL_term = [] then () else
+	  if null argL_term then () else
           if length argL_term = 1 then sys (Top, Top, Top) (d - 1) (hd argL_term) else
           (
              begin_block pps CONSISTENT 0;             
@@ -433,27 +433,27 @@ fun smallfoot_prop_printer (sys,strn,brk) gravs d pps t = let
     open Portable term_pp_types
     val (op_term,args) = strip_comb t;
   in
-    if (op_term = smallfoot_p_equal_term)  then (
-      if (el 1 args = el 2 args) then 
+    if (eq op_term smallfoot_p_equal_term)  then (
+      if eq (el 1 args) (el 2 args) then 
 	  strn "true"
       else
           pretty_print_infix_operator (sys,strn,brk) d pps args "=="
-    ) else if (op_term = smallfoot_p_unequal_term)  then (
-      if (el 1 args = el 2 args) then 
+    ) else if (eq op_term smallfoot_p_unequal_term)  then (
+      if eq (el 1 args) (el 2 args) then 
 	  strn "false"
       else
           pretty_print_infix_operator (sys,strn,brk) d pps args "!="
-    ) else if (op_term = smallfoot_p_greatereq_term)  then (
+    ) else if (eq op_term smallfoot_p_greatereq_term)  then (
       pretty_print_infix_operator (sys,strn,brk) d pps args ">="
-    ) else if (op_term = smallfoot_p_greater_term)  then (
+    ) else if (eq op_term smallfoot_p_greater_term)  then (
       pretty_print_infix_operator (sys,strn,brk) d pps args ">"
-    ) else if (op_term = smallfoot_p_lesseq_term)  then (
+    ) else if (eq op_term smallfoot_p_lesseq_term)  then (
       pretty_print_infix_operator (sys,strn,brk) d pps args "<="
-    ) else if (op_term = smallfoot_p_less_term)  then (
+    ) else if (eq op_term smallfoot_p_less_term)  then (
       pretty_print_infix_operator (sys,strn,brk) d pps args "<"
-    ) else if (op_term = smallfoot_p_and_term)  then (
+    ) else if (eq op_term smallfoot_p_and_term)  then (
       pretty_print_infix_operator (sys,strn,brk) d pps args "/\\"
-    ) else if (op_term = smallfoot_p_or_term) then (
+    ) else if (eq op_term smallfoot_p_or_term) then (
       pretty_print_infix_operator (sys,strn,brk) d pps args "\\/"
     ) else (
       raise term_pp_types.UserPP_Failed
@@ -467,11 +467,11 @@ fun smallfoot_ae_printer (sys,strn,brk) gravs d pps t =
     open Portable term_pp_types
     val (op_term,args) = strip_comb t;
   in
-    if (op_term = smallfoot_ae_var_term)  then (
+    if (eq op_term smallfoot_ae_var_term)  then (
       sys (Top, Top, Top) (d - 1) (hd args)
-    ) else if (op_term = smallfoot_ae_const_term)  then (
+    ) else if (eq op_term smallfoot_ae_const_term)  then (
       sys (Top, Top, Top) (d - 1) (hd args)
-    ) else if (op_term = smallfoot_ae_null_term)  then (
+    ) else if (eq op_term smallfoot_ae_null_term)  then (
       strn "NULL"
     ) else (
       raise term_pp_types.UserPP_Failed
@@ -503,38 +503,38 @@ fun smallfoot_a_prop_printer (sys,strn,brk) gravs d pps t = let
     open Portable term_pp_types
     val (op_term,args) = strip_comb t;
   in
-    if (op_term = smallfoot_ap_star_term)  then (
+    if (eq op_term smallfoot_ap_star_term)  then (
       sys (Top, Top, Top) (d - 1) (el 1 args);
       strn " *";
       brk (1,0);
       sys (Top, Top, Top) (d - 1) (el 2 args)
-    ) else if (op_term = smallfoot_ap_equal_term)  then (
+    ) else if (eq op_term smallfoot_ap_equal_term)  then (
       sys (Top, Top, Top) (d - 1) (el 1 args);
       strn " == ";
       sys (Top, Top, Top) (d - 1) (el 2 args)
-    ) else if (op_term = smallfoot_ap_unequal_term)  then (
+    ) else if (eq op_term smallfoot_ap_unequal_term)  then (
       sys (Top, Top, Top) (d - 1) (el 1 args);
       strn " != ";
       sys (Top, Top, Top) (d - 1) (el 2 args)
-    ) else if (op_term = smallfoot_ap_greater_term)  then (
+    ) else if (eq op_term smallfoot_ap_greater_term)  then (
       sys (Top, Top, Top) (d - 1) (el 1 args);
       strn " > ";
       sys (Top, Top, Top) (d - 1) (el 2 args)
-    ) else if (op_term = smallfoot_ap_greatereq_term)  then (
+    ) else if (eq op_term smallfoot_ap_greatereq_term)  then (
       sys (Top, Top, Top) (d - 1) (el 1 args);
       strn " >= ";
       sys (Top, Top, Top) (d - 1) (el 2 args)
-    ) else if (op_term = smallfoot_ap_less_term)  then (
+    ) else if (eq op_term smallfoot_ap_less_term)  then (
       sys (Top, Top, Top) (d - 1) (el 1 args);
       strn " < ";
       sys (Top, Top, Top) (d - 1) (el 2 args)
-    ) else if (op_term = smallfoot_ap_lesseq_term)  then (
+    ) else if (eq op_term smallfoot_ap_lesseq_term)  then (
       sys (Top, Top, Top) (d - 1) (el 1 args);
       strn " <= ";
       sys (Top, Top, Top) (d - 1) (el 2 args)
-    ) else if (op_term = smallfoot_ap_emp_term)  then (
+    ) else if (eq op_term smallfoot_ap_emp_term)  then (
       strn "emp"
-    ) else if (op_term = smallfoot_ap_data_list_term)  then (
+    ) else if (eq op_term smallfoot_ap_data_list_term)  then (
       strn (if (same_const (el 3 args) FEMPTY_tm) then
               "list(" else "data_list(");
       sys (Top, Top, Top) (d - 1) (el 1 args);
@@ -545,7 +545,7 @@ fun smallfoot_a_prop_printer (sys,strn,brk) gravs d pps t = let
             finite_map_printer (sys,strn,brk) (Top,Top,Top) (d-1) pps (el 3 args)
            ) else ();
       strn ")"
-    ) else if (op_term = smallfoot_ap_data_list_seg_term)  then (
+    ) else if (eq op_term smallfoot_ap_data_list_seg_term)  then (
       strn (if (same_const (el 3 args) FEMPTY_tm) then
               "lseg(" else "data_lseg(");
       sys (Top, Top, Top) (d - 1) (el 1 args);
@@ -558,17 +558,17 @@ fun smallfoot_a_prop_printer (sys,strn,brk) gravs d pps t = let
       strn ", ";
       sys (Top, Top, Top) (d - 1) (el 4 args);
       strn ")"
-    ) else if (op_term = smallfoot_ap_bintree_term)  then (
+    ) else if (eq op_term smallfoot_ap_bintree_term)  then (
       strn "tree(";
       sys (Top, Top, Top) (d - 1) (el 1 args);
       strn "; ";
       sys (Top, Top, Top) (d - 1) (el 2 args);
       strn ")"
-    ) else if (op_term = smallfoot_ap_points_to_term) then (
+    ) else if (eq op_term smallfoot_ap_points_to_term) then (
       sys (Top, Top, Top) (d - 1) (el 1 args);
       strn " |-> ";
       finite_map_printer (sys,strn,brk) (Top,Top,Top) (d-1) pps (el 2 args)
-    ) else if (op_term = smallfoot_ap_cond_term)  then (
+    ) else if (eq op_term smallfoot_ap_cond_term)  then (
       strn "if ";
       sys (Top, Top, Top) (d - 1) (el 1 args);
       strn " == ";
@@ -578,9 +578,9 @@ fun smallfoot_a_prop_printer (sys,strn,brk) gravs d pps t = let
       strn " else ";
       sys (Top, Top, Top) (d - 1) (el 4 args);
       strn " end"
-    ) else if (op_term = smallfoot_ap_unequal_cond_term)  then (
+    ) else if (eq op_term smallfoot_ap_unequal_cond_term)  then (
       strn "(";
-      if (el 1 args = el 2 args) then
+      if eq (el 1 args) (el 2 args) then
          strn "false"
       else
         (sys (Top, Top, Top) (d - 1) (el 1 args);
@@ -589,9 +589,9 @@ fun smallfoot_a_prop_printer (sys,strn,brk) gravs d pps t = let
       strn " : ";
       sys (Top, Top, Top) (d - 1) (el 3 args);
       strn ")"
-    ) else if (op_term = smallfoot_ap_equal_cond_term)  then (
+    ) else if (eq op_term smallfoot_ap_equal_cond_term)  then (
       strn "(";
-      if (el 1 args = el 2 args) then
+      if eq (el 1 args) (el 2 args) then
          strn "true"
       else
         (sys (Top, Top, Top) (d - 1) (el 1 args);

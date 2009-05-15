@@ -584,9 +584,6 @@ val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth = ref 250;
 val QUANT_INSTANTIATE_HEURISTIC___debug = ref 0;
 val _ = register_trace("QUANT_INSTANTIATE_HEURISTIC", QUANT_INSTANTIATE_HEURISTIC___debug, 3);
 
-
-
-
 fun correct_guess_collection v t (gc:guess_collection) =
   if (!QUANT_INSTANTIATE_HEURISTIC___debug > 0) then
   let
@@ -1180,12 +1177,18 @@ end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
 
 (*
-val t = ``P \/ ((x = a:'a) /\ Q)``
+val t = ``~(uf (x:'a) = uf y) \/ (P y /\ Q y)``
 val v = ``x:'a``
 val fv = [v]
 
-val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE ([],[],[],[],[]);
+QUANT_INSTANTIATE_HEURISTIC___debug := 
+
+val t = ``~(uf (x:'a) = uf (SND s)) \/ (IS_SOME (e (FST s)) /\
+   s IN var_res_prop___PROP f (wpb,rpb) sfb)``
+
+val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE ([],[],[],[],[]) NONE;
 val sys = heuristic;
+QUANT_INSTANTIATE_HEURISTIC___print_term_length := 2000
 *)
 
 fun QUANT_INSTANTIATE_HEURISTIC___DISJ sys fv v t =
@@ -1287,7 +1290,7 @@ val guess = make_set_guess_thm_opt___dummy v t2 (guess_true (i,fvL,NONE))
    (*if necessary weaken other guesses, guess true can be preserved on it's own,
      so just handle only_possible*)
    val org_only_possibleL = append (#only_possible gc1)   
-    (map (guess_weaken v t) (flatten (map (fn guess =>
+    (map (guess_weaken v t1) (flatten (map (fn guess =>
                      let val (i'',fvL'',_) = guess_extract guess in
 		     filter (fn guess' => let val (i',fvL',_) = guess_extract guess' in
 						 (eq i'' i') andalso (list_cmp eq fvL'' fvL') end) 
@@ -1303,7 +1306,7 @@ val guess = make_set_guess_thm_opt___dummy v t2 (guess_true (i,fvL,NONE))
 	                          (#others_not_possible gc2))) 
                           handle HOL_ERR _ => NONE				   
 
-                     val thm2_opt = if isSome guess2_opt then #3 (guess_extract (guess_weaken v t (valOf guess2_opt))) else NONE
+                     val thm2_opt = if isSome guess2_opt then #3 (guess_extract (guess_weaken v t2 (valOf guess2_opt))) else NONE
                   in
 		     if (not (isSome guess2_opt)) then
                         NONE
@@ -1434,14 +1437,13 @@ val thm2 = mk_thm ([], valOf (make_guess_thm_term v t2 (guess_only_possible (i,f
    (*if i is the only one not possibile for t1 and t2 
      and fvL = [], then it is the only one not possibile for
      t1 \/ t2*)
-
    val org_only_not_possibleL = append (#only_not_possible gc1)   
-    (map (guess_weaken v t) (flatten (map (fn guess =>
+    (map (guess_weaken v t1) (append (flatten (map (fn guess =>
                      let val (i'',fvL'',_) = guess_extract guess in
 		     filter (fn guess' => let val (i',fvL',_) = guess_extract guess' in
 						 (eq i'' i') andalso (list_cmp eq fvL'' fvL') end) 
 	                  (#others_satisfied gc1) end)
-                     (#only_not_possible gc2))))
+                     (#only_not_possible gc2))) (#false gc1)))
 
    val only_not_possibleL = mapPartial (fn guess =>
 		  let
@@ -1453,7 +1455,7 @@ val thm2 = mk_thm ([], valOf (make_guess_thm_term v t2 (guess_only_possible (i,f
                           handle HOL_ERR _ => NONE				   
 
                      val thm2_opt = if isSome guess2_opt then 
-                         #3 (guess_extract (guess_weaken v t (valOf guess2_opt))) else NONE
+                         #3 (guess_extract (guess_weaken v t2 (valOf guess2_opt))) else NONE
                   in
 		     if (not ((null fvL) andalso (isSome guess2_opt))) then
                         NONE
@@ -1498,7 +1500,6 @@ make_guess_thm_term v t (guess_only_not_possible (i,fvL,NONE))
 
    (*if i the the only not possible for t1 and v does not occur in t2 then
      i the the only not possibile for (t1 \/ t2)*)
-
 (*
    val t2 = ``XXXXX:bool``;
    val t = mk_disj (t1,t2)
@@ -1530,7 +1531,9 @@ make_guess_thm_term v t (guess_only_not_possible (i,fvL,NONE))
                      in
                         guess_only_not_possible (i,fvL,thm_opt)
                      end
-                  end) (#only_not_possible gc1)) only_not_possibleL;
+                  end) (append (#only_not_possible gc1)
+                               (map (guess_weaken v t1) (#false gc1))))
+               only_not_possibleL;
 
    (*if i the the only not possibile for t2 and v does not occur in t1 then
      i the the only not possible for (t1 \/ t2)*)
@@ -1553,7 +1556,9 @@ make_guess_thm_term v t (guess_only_not_possible (i,fvL,NONE))
                      in
                         guess_only_not_possible (i,fvL,thm_opt)
                      end
-                  end) (#only_not_possible gc2)) only_not_possibleL;
+                  end) (append (#only_not_possible gc2)
+                               (map (guess_weaken v t2) (#false gc2))))
+                  only_not_possibleL;
 
 
 
@@ -2151,9 +2156,13 @@ end;
 *)
 
 
+
+val QUANT_INSTANTIATE_HEURISTIC___print_term_length = ref 20;
+val _ = register_trace("QUANT_INSTANTIATE_HEURISTIC___print_term_length", QUANT_INSTANTIATE_HEURISTIC___print_term_length, 20);
+
 fun cut_term_to_string t =
     let
-       val n = 20;
+       val n = !QUANT_INSTANTIATE_HEURISTIC___print_term_length;
        val st = term_to_string t;
        val st' = if (String.size st > n) then
 		     (substring (st,0,n)^"...") else st
@@ -2698,7 +2707,6 @@ in
 end handle UNCHANGED => ALL_TAC (asm,t);
 
 fun DISCH_ASM_CONSEQ_CONV_TAC c = DISCH_ASM_CONV_TAC (c CONSEQ_CONV_STRENGTHEN_direction);
-
 
 val PURE_QUANT_INSTANTIATE_TAC =
     CONV_TAC PURE_QUANT_INSTANTIATE_CONV;

@@ -163,7 +163,10 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
                               YYBEGIN INITIAL; continue());
 <qcomment>"`" => (print yyarg "\"]"; comdepth := 0;
                   YYBEGIN INITIAL; continue());
-<comment,tmcomment,tycomment,kdcomment,qcomment>[^\n\015\\"\t^`*()]+ => (ECHO yyarg yytext; continue());
+<tmcomment,tycomment,kdcomment,qcomment>[\128-\255] => (ECHO yyarg (bslash_escape yytext);
+                                              continue());
+<comment,tmcomment,tycomment,kdcomment,qcomment>[^\n\015\\"\t^`*()\128-\255]+ => (ECHO yyarg yytext; continue());
+
 <comment,tmcomment,tycomment,kdcomment,qcomment>. => (ECHO yyarg yytext; continue());
 
 <quote,tmquote,tyquote,kdquote>"^"+{ws} => (ECHO yyarg yytext; continue());

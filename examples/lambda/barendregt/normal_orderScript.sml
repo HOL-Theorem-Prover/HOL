@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib
 
 open boolSimps pred_setTheory pathTheory binderLib
 open chap3Theory standardisationTheory term_posnsTheory termTheory
-     finite_developmentsTheory
+     finite_developmentsTheory appFOLDLTheory
 
 val _ = new_theory "normal_order"
 
@@ -335,6 +335,23 @@ val nstar_betastar_bnf = store_thm(
   ``bnf N ⇒ (M -n->* N ⇔ M -β->* N)``,
   METIS_TAC [normal_finds_bnf, nstar_betastar]);
 
+
+val nstar_bnf_triangle = store_thm(
+  "nstar_bnf_triangle",
+  ``∀M N. M -n->* N ⇒
+          bnf N ⇒ ∀M'. M -n->* M' ⇒ M' -n->* N``,
+  HO_MATCH_MP_TAC relationTheory.RTC_STRONG_INDUCT THEN SRW_TAC [][] THENL [
+    METIS_TAC [relationTheory.RTC_RULES, bnf_reduction_to_self,
+               nstar_betastar],
+    POP_ASSUM MP_TAC THEN REWRITE_TAC [Once relationTheory.RTC_CASES1] THEN
+    STRIP_TAC THENL [
+      METIS_TAC [relationTheory.RTC_RULES],
+      METIS_TAC [normorder_det]
+    ]
+  ]);
+
+
+
 val normstar_LAM = store_thm(
   "normstar_LAM",
   ``∀M N. LAM x M -n->* LAM x N ⇔ M -n->* N``,
@@ -441,6 +458,52 @@ val noreduct_bnf = store_thm(
   ``(noreduct M = NONE) = bnf M``,
   SRW_TAC [][noreduct_def]);
 
+
+val noreduct_vsubst = store_thm(
+  "noreduct_vsubst",
+  ``∀t. noreduct ([VAR v/u] t) = OPTION_MAP (SUB (VAR v) u) (noreduct t)``,
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
+  SRW_TAC [][noreduct_thm, SUB_VAR] THENL [
+    Cases_on `is_abs t` THENL [
+      `∃z t0. (t = LAM z t0) ∧ z ≠ u ∧ z ≠ v`
+         by (Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN
+             FULL_SIMP_TAC (srw_ss()) [] THEN
+             SRW_TAC [boolSimps.DNF_ss][LAM_eq_thm, tpm_eqr] THEN
+             DISJ2_TAC THEN
+             Q_TAC (NEW_TAC "z") `{v';u;v} ∪ FV t0` THEN METIS_TAC []) THEN
+      SRW_TAC [][noreduct_thm] THEN
+      SRW_TAC [][GSYM chap2Theory.substitution_lemma],
+
+      SRW_TAC [][noreduct_thm] THENL [
+        Cases_on `noreduct t'` THEN SRW_TAC [][],
+        Cases_on `noreduct t` THEN SRW_TAC [][]
+      ]
+    ],
+
+    Cases_on `noreduct t` THEN SRW_TAC [][]
+  ]);
+
+val noreduct_tpm = store_thm(
+  "noreduct_tpm",
+  ``∀t. noreduct (tpm π t) = OPTION_MAP (tpm π) (noreduct t)``,
+  HO_MATCH_MP_TAC simple_induction THEN
+  SRW_TAC [][noreduct_thm] THENL [
+    Cases_on `is_abs t` THENL [
+      `∃z t0. t = LAM z t0`
+         by (Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN
+             FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []) THEN
+      SRW_TAC [][noreduct_thm, tpm_subst],
+
+      SRW_TAC [][noreduct_thm] THENL [
+        Cases_on `noreduct t'` THEN SRW_TAC [][],
+        Cases_on `noreduct t` THEN SRW_TAC [][]
+      ]
+    ],
+
+    Cases_on `noreduct t` THEN SRW_TAC [][]
+  ]);
+
+
 val noredAPP' = store_thm(
   "noredAPP'",
   ``~is_abs M ==> (noreduct (M @@ N) =
@@ -466,10 +529,9 @@ val option_case_unit = prove(
 val nopath_def = new_specification(
   "nopath_def",
   ["nopath"],
-  pathTheory.path_Axiom |> ISPEC ``λM. (M, OPTION_MAP ((,) ()) (noreduct M))``
-                        |> SIMP_RULE (srw_ss()) [oneTheory.one,
-                                                 pair_case_unit,
-                                                 option_case_unit]);
+  path_Axiom |> ISPEC ``λM. (M, OPTION_MAP ((,) ()) (noreduct M))``
+             |> SIMP_RULE (srw_ss()) [oneTheory.one, pair_case_unit,
+                                      option_case_unit]);
 
 val first_nopath = Store_thm(
   "first_nopath",
@@ -524,18 +586,18 @@ val normstar_nopath = store_thm(
   ]);
 
 val bnf_posn_is_length = store_thm(
-  "bnf_posn_is_length",  
-  ``∀i M. i ∈ PL (nopath M) ∧ bnf (el i (nopath M)) ⇒ 
+  "bnf_posn_is_length",
+  ``∀i M. i ∈ PL (nopath M) ∧ bnf (el i (nopath M)) ⇒
           (length (nopath M) = SOME (i + 1))``,
   Induct THEN SRW_TAC [][] THENL [
-    ONCE_REWRITE_TAC [nopath_def] THEN 
-    `noreduct M = NONE` by METIS_TAC [noreduct_bnf] THEN 
+    ONCE_REWRITE_TAC [nopath_def] THEN
+    `noreduct M = NONE` by METIS_TAC [noreduct_bnf] THEN
     SRW_TAC [][length_thm],
 
-    Q.SPEC_THEN `M` SUBST_ALL_TAC nopath_def THEN 
-    Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN 
-    `length (nopath x) = SOME (i + 1)` by METIS_TAC [] THEN 
-    `finite (nopath x)` by METIS_TAC [finite_length] THEN 
+    Q.SPEC_THEN `M` SUBST_ALL_TAC nopath_def THEN
+    Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    `length (nopath x) = SOME (i + 1)` by METIS_TAC [] THEN
+    `finite (nopath x)` by METIS_TAC [finite_length] THEN
     SRW_TAC [][length_thm, arithmeticTheory.ADD1]
   ]);
 
@@ -543,30 +605,62 @@ val has_bnf_finite_nopath = store_thm(
   "has_bnf_finite_nopath",
   ``has_bnf M ⇔ finite (nopath M)``,
   SRW_TAC [][has_bnf_thm, EQ_IMP_THM] THENL [
-    `M -n->* N` by METIS_TAC [nstar_betastar_bnf] THEN 
-    `mem N (nopath M)` by METIS_TAC [normstar_nopath] THEN 
+    `M -n->* N` by METIS_TAC [nstar_betastar_bnf] THEN
+    `mem N (nopath M)` by METIS_TAC [normstar_nopath] THEN
     `∃i. i ∈ PL (nopath M) ∧ (el i (nopath M) = N)`
-       by METIS_TAC [pathTheory.mem_def] THEN 
+       by METIS_TAC [mem_def] THEN
     `length (nopath M) = SOME (i + 1)`
-       by METIS_TAC [bnf_posn_is_length] THEN 
-    METIS_TAC [pathTheory.finite_length],
+       by METIS_TAC [bnf_posn_is_length] THEN
+    METIS_TAC [finite_length],
 
-    POP_ASSUM MP_TAC THEN 
-    Q_TAC SUFF_TAC 
+    POP_ASSUM MP_TAC THEN
+    Q_TAC SUFF_TAC
        `∀p. finite p ⇒ ∀M. (p = nopath M) ⇒ ∃N. M -β->* N ∧ bnf N`
-       THEN1 METIS_TAC [] THEN 
-    HO_MATCH_MP_TAC pathTheory.finite_path_ind THEN SRW_TAC [][] THENL [
-      Q.SPEC_THEN `M` SUBST_ALL_TAC nopath_def THEN 
-      Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN 
+       THEN1 METIS_TAC [] THEN
+    HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THENL [
+      Q.SPEC_THEN `M` SUBST_ALL_TAC nopath_def THEN
+      Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
       METIS_TAC [noreduct_bnf, relationTheory.RTC_RULES],
 
-      Q.SPEC_THEN `M` SUBST_ALL_TAC nopath_def THEN 
-      Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN 
-      SRW_TAC [][] THEN 
+      Q.SPEC_THEN `M` SUBST_ALL_TAC nopath_def THEN
+      Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+      SRW_TAC [][] THEN
       METIS_TAC [normorder_ccbeta, noreduct_characterisation,
                  relationTheory.RTC_RULES]
     ]
   ]);
+
+val nopath_el = store_thm(
+  "nopath_el",
+  ``∀i M. i ∈ PL (nopath M) ⇒
+          (nopath (el i (nopath M)) = drop i (nopath M))``,
+  Induct THEN SRW_TAC [][] THEN
+  POP_ASSUM MP_TAC THEN
+  Q.SPEC_THEN `M` ASSUME_TAC nopath_def THEN
+  POP_ASSUM (fn th => REWRITE_TAC [th]) THEN
+  Cases_on `noreduct M` THEN SRW_TAC [][]);
+
+val nopath_smaller = store_thm(
+  "nopath_smaller",
+  ``∀M N. M -n->* N ⇒
+          M ≠ N ∧ finite (nopath M) ⇒
+          THE (length (nopath N)) < THE (length (nopath M))``,
+  REPEAT STRIP_TAC THEN
+  `mem N (nopath M)` by METIS_TAC [normstar_nopath] THEN
+  `∃i. i ∈ PL (nopath M) ∧ (N = el i (nopath M))`
+     by METIS_TAC [mem_def] THEN
+  `0 < i`
+     by (SPOSE_NOT_THEN ASSUME_TAC THEN
+         `i = 0` by DECIDE_TAC THEN
+         FULL_SIMP_TAC (srw_ss()) []) THEN
+  Q_TAC SUFF_TAC `nopath N = drop i (nopath M)` THEN1
+     (SRW_TAC [][] THEN
+      `∃m. (length (nopath M) = SOME m) ∧ m ≠ 0`
+         by METIS_TAC [finite_length,
+                       length_never_zero] THEN
+      SRW_TAC [ARITH_ss][length_drop]) THEN
+  SRW_TAC [][nopath_el]);
+
 
 val Omega_def = chap2Theory.Omega_def
 val noreduct_omega = Store_thm(
@@ -577,14 +671,14 @@ val noreduct_omega = Store_thm(
 val Omega_loops = store_thm(
   "Omega_loops",
   ``Ω -n-> Ω``,
-  SRW_TAC [][noreduct_characterisation] THEN 
+  SRW_TAC [][noreduct_characterisation] THEN
   SRW_TAC [][noreduct_thm, Omega_def]);
 
 val Omega_path_infinite = store_thm(
   "Omega_path_infinite",
   ``¬finite (nopath Ω)``,
-  Q_TAC SUFF_TAC `∀p. finite p ⇒ p ≠ nopath Ω` THEN1 METIS_TAC [] THEN 
-  HO_MATCH_MP_TAC pathTheory.finite_path_ind THEN SRW_TAC [][] THEN 
+  Q_TAC SUFF_TAC `∀p. finite p ⇒ p ≠ nopath Ω` THEN1 METIS_TAC [] THEN
+  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THEN
   ONCE_REWRITE_TAC [nopath_def] THEN SRW_TAC [][]);
 
 
@@ -592,5 +686,308 @@ val Omega_has_no_bnf = Store_thm(
   "Omega_has_no_bnf",
   ``¬has_bnf Ω``,
   SRW_TAC [][has_bnf_finite_nopath, Omega_path_infinite]);
-      
+
+val last_of_finite_nopath = store_thm(
+  "last_of_finite_nopath",
+  ``finite (nopath M) ⇒ bnf (last (nopath M))``,
+  Q_TAC SUFF_TAC
+        `∀p. finite p ⇒ ∀M. (nopath M = p) ⇒ bnf (last (nopath M))`
+        THEN1 METIS_TAC [] THEN
+  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THENL [
+    Q.SPEC_THEN `M` ASSUME_TAC nopath_def THEN
+    Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [noreduct_bnf] THEN
+    SRW_TAC [][],
+
+    Q.SPEC_THEN `M` ASSUME_TAC nopath_def THEN
+    Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    SRW_TAC [][] THEN METIS_TAC []
+  ]);
+
+
+(* ----------------------------------------------------------------------
+    bnf_of : term -> term option
+
+    "Calculating" the β-normal form of a term (if it exists) with a while
+    loop.
+   ---------------------------------------------------------------------- *)
+
+val bnf_of_def = Define`
+  bnf_of M = OWHILE ((~) o bnf) (THE o noreduct) M
+`;
+
+val lemma1 = prove(
+  ``∀p. okpath (λM u N. M -n-> N) p ∧ finite p ⇒
+        bnf (last p) ⇒ (bnf_of (first p) = SOME (last p))``,
+  HO_MATCH_MP_TAC finite_okpath_ind THEN SRW_TAC [][] THENL [
+    SRW_TAC [][Once whileTheory.OWHILE_THM, bnf_of_def],
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    SRW_TAC [][Once whileTheory.OWHILE_THM, bnf_of_def] THENL [
+      SRW_TAC [][GSYM bnf_of_def] THEN
+      METIS_TAC [noreduct_characterisation, optionTheory.THE_DEF],
+      METIS_TAC [normorder_bnf]
+    ]
+  ]);
+
+val lemma2 = prove(
+  ``∀N. (OWHILE ($~ o bnf) (THE o noreduct) M = SOME N) ⇒
+        M -n->* N``,
+  HO_MATCH_MP_TAC whileTheory.OWHILE_INV_IND THEN SRW_TAC [][] THEN
+  Cases_on `noreduct N` THENL [
+    FULL_SIMP_TAC (srw_ss()) [noreduct_bnf],
+    METIS_TAC [noreduct_characterisation, relationTheory.RTC_RULES_RIGHT1,
+               optionTheory.THE_DEF]
+  ]);
+
+val bnf_of_SOME = store_thm(
+  "bnf_of_SOME",
+  ``(bnf_of M = SOME N) ⇒ M -n->* N ∧ bnf N``,
+  SRW_TAC [][bnf_of_def] THEN
+  IMP_RES_TAC whileTheory.OWHILE_ENDCOND THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  METIS_TAC [lemma2]);
+
+val has_bnf_of = store_thm(
+  "has_bnf_of",
+  ``has_bnf M ⇔ ∃N. bnf_of M = SOME N``,
+  EQ_TAC THENL [
+    SRW_TAC [][has_bnf_finite_nopath] THEN
+    ASSUME_TAC nopath_okpath THEN
+    METIS_TAC [lemma1, last_of_finite_nopath, first_nopath],
+
+    METIS_TAC [chap2Theory.has_bnf_def, bnf_of_SOME, nstar_lameq]
+  ]);
+
+val bnf_of_NONE = store_thm(
+  "bnf_of_NONE",
+  ``(bnf_of M = NONE) ⇔ ¬has_bnf M``,
+  REWRITE_TAC [has_bnf_of] THEN
+  Cases_on `bnf_of M` THEN SRW_TAC [][]);
+
+(* ----------------------------------------------------------------------
+    weak head reduction gives a congruence rule for -n->* of sorts
+   ---------------------------------------------------------------------- *)
+
+open head_reductionTheory
+val head_normorder = store_thm(
+  "head_normorder",
+  ``∀M N. M -h-> N ⇒ M -n-> N``,
+  HO_MATCH_MP_TAC hreduce1_ind THEN
+  SRW_TAC [][normorder_rules]);
+
+val whstar_nstar = store_thm(
+  "whstar_nstar",
+  ``∀M N. M -w->* N ⇒ M -n->* N``,
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+  METIS_TAC [relationTheory.RTC_RULES, wh_head, head_normorder]);
+
+val whead_normorder = store_thm(
+  "whead_normorder",
+  ``∀M N. M -w-> N ⇒ M -n-> N``,
+  METIS_TAC [wh_head, head_normorder]);
+
+val whead_norm_congL = store_thm(
+  "whead_norm_congL",
+  ``∀M₁ M₂. M₁ -w->* M₂ ⇒ ∀N. M₁ @@ N -n->* M₂ @@ N``,
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT_RIGHT1 THEN SRW_TAC [][] THEN
+  MATCH_MP_TAC (CONJUNCT2 (SPEC_ALL relationTheory.RTC_RULES_RIGHT1)) THEN
+  Q.EXISTS_TAC `M₂ @@ N` THEN SRW_TAC [][] THEN
+  IMP_RES_TAC whead_normorder THEN
+  IMP_RES_TAC wh_is_abs THEN
+  SRW_TAC [][normorder_rules]);
+
+val normwhnf_is_abs_rpreserved = store_thm(
+  "normwhnf_is_abs_rpreserved",
+  ``∀M N. M -n-> N ⇒ whnf M ∧ is_abs N ⇒ is_abs M``,
+  HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][]);
+
+
+val whnf_is_abs_appstr = store_thm(
+  "whnf_is_abs_appstr",
+  ``∀t. whnf t ⇔ is_abs t ∨ ∃v args. t = VAR v ·· args``,
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THENL [
+    MAP_EVERY Q.EXISTS_TAC [`s`, `[]`] THEN SRW_TAC [][],
+    SRW_TAC [][EQ_IMP_THM] THENL [
+      MAP_EVERY Q.EXISTS_TAC [`v`, `args ++ [t']`] THEN
+      SRW_TAC [][rich_listTheory.FOLDL_APPEND],
+
+      FULL_SIMP_TAC (srw_ss()) [app_eq_varappstar] THEN
+      Q.SPEC_THEN `VAR v ·· FRONT args` MP_TAC term_CASES THEN
+      STRIP_TAC THEN SRW_TAC [][] THEN
+      FULL_SIMP_TAC (srw_ss()) [lam_eq_appstar],
+
+      FULL_SIMP_TAC (srw_ss()) [app_eq_varappstar] THEN METIS_TAC []
+    ]
+  ]);
+
+val normorder_strong_ind =
+    IndDefLib.derive_strong_induction (normorder_rules,normorder_ind)
+
+val bnf_appstar = Store_thm(
+  "bnf_appstar",
+  ``∀args f.
+      bnf (f ·· args) = bnf f ∧ EVERY bnf args ∧ (is_abs f ⇒ (args = []))``,
+  Induct THEN SRW_TAC [][] THEN METIS_TAC []);
+
+val norm_varhead0 = prove(
+  ``∀M N. M -n-> N ⇒
+          ∀v Ms. (M = VAR v ·· Ms) ⇒
+                 ∃p s M0 N0.
+                    (Ms = p ++ (M0 :: s)) ∧
+                    (N = VAR v ·· (p ++ (N0 :: s))) ∧
+                    EVERY bnf p ∧
+                    M0 -n-> N0``,
+  HO_MATCH_MP_TAC normorder_strong_ind THEN
+  SRW_TAC [][lam_eq_appstar, app_eq_varappstar] THENL [
+    FIRST_X_ASSUM (Q.SPECL_THEN [`v`, `FRONT Ms`] MP_TAC) THEN
+    SRW_TAC [][] THEN
+    MAP_EVERY Q.EXISTS_TAC [`p`, `s ++ [LAST Ms]`, `M0`, `N0`] THEN
+    SRW_TAC [][rich_listTheory.FRONT_APPEND, listTheory.FRONT_DEF,
+               rich_listTheory.LAST_APPEND, listTheory.LAST_DEF] THEN
+    IMP_RES_TAC listTheory.APPEND_FRONT_LAST THEN
+    POP_ASSUM (fn th => REWRITE_TAC [Once (GSYM th)]) THEN
+    SRW_TAC [][] THEN
+    REWRITE_TAC [GSYM listTheory.APPEND_ASSOC, listTheory.APPEND],
+
+    MAP_EVERY Q.EXISTS_TAC [`FRONT Ms`, `[]`, `LAST Ms`, `N`] THEN
+    SRW_TAC [][listTheory.APPEND_FRONT_LAST, rich_listTheory.FRONT_APPEND,
+               rich_listTheory.LAST_APPEND] THEN
+    FULL_SIMP_TAC (srw_ss()) []
+  ]);
+
+val norm_varhead = save_thm(
+  "norm_varhead",
+  SIMP_RULE (srw_ss() ++ DNF_ss) [] norm_varhead0);
+
+val normstar_varhead0 = prove(
+  ``∀M N. M -n->* N ⇒
+          ∀v Ms. (M = VAR v ·· Ms) ⇒
+                 ∃Ns. (N = VAR v ·· Ns) ∧ (LENGTH Ns = LENGTH Ms) ∧
+                      ∀i. i < LENGTH Ms ⇒ EL i Ms -n->* EL i Ns``,
+  HO_MATCH_MP_TAC relationTheory.RTC_STRONG_INDUCT THEN SRW_TAC [][] THEN
+  `∃p s M0 N0.  (Ms = p ++ (M0 :: s)) ∧
+                (M' = VAR v ·· (p ++ (N0 :: s))) ∧
+                M0 -n-> N0`
+      by METIS_TAC [norm_varhead] THEN
+  `∃Ns. (N = VAR v ·· Ns) ∧ (LENGTH Ns = LENGTH (p ++ N0::s)) ∧
+        ∀i. i < LENGTH (p ++ N0::s) ⇒ EL i (p ++ N0::s) -n->* EL i Ns`
+      by METIS_TAC [] THEN
+  Q.EXISTS_TAC `Ns` THEN SRW_TAC [][] THEN
+  Cases_on `i < LENGTH p` THENL [
+    SRW_TAC [][rich_listTheory.EL_APPEND1] THEN
+    `i < LENGTH (p ++ N0::s)` by SRW_TAC [][] THEN
+    METIS_TAC [rich_listTheory.EL_APPEND1],
+    ALL_TAC
+  ] THEN Cases_on `i = LENGTH p` THENL [
+    FIRST_X_ASSUM (Q.SPEC_THEN `LENGTH p` MP_TAC) THEN
+    SRW_TAC [][rich_listTheory.EL_APPEND2] THEN
+    METIS_TAC [relationTheory.RTC_RULES],
+    FIRST_X_ASSUM (Q.SPEC_THEN `i` MP_TAC) THEN
+    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [rich_listTheory.EL_APPEND2] THEN
+    `∃m. i - LENGTH p = SUC m`
+      by (Cases_on `i - LENGTH p` THEN SRW_TAC [ARITH_ss][]) THEN
+    SRW_TAC [][]
+  ]);
+
+val normstar_varhead = save_thm(
+  "normstar_varhead",
+  SIMP_RULE (srw_ss() ++ DNF_ss) [] normstar_varhead0);
+
+val normstar_to_abs_wstar0 = prove(
+  ``∀M N. M -n->* N ⇒
+          ∀v N0. (N = LAM v N0) ∧ v ∉ FV M ⇒
+                 ∃M0. M -w->* LAM v M0 ∧ M0 -n->* N0``,
+  HO_MATCH_MP_TAC relationTheory.RTC_STRONG_INDUCT THEN SRW_TAC [][] THEN
+  Cases_on `whnf M` THENL [
+    Cases_on `is_abs M` THENL [
+      `∃M0. M = LAM v M0`
+         by (Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN
+             FULL_SIMP_TAC (srw_ss()) [] THEN
+             SRW_TAC [DNF_ss][LAM_eq_thm, tpm_eqr] THEN METIS_TAC []) THEN
+      SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [normorder_rwts] THEN
+      SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+      METIS_TAC [relationTheory.RTC_RULES],
+
+      `∃var args. LAM v N0 = VAR var ·· args`
+         by METIS_TAC [whnf_is_abs_appstr, normstar_varhead,
+                       norm_varhead] THEN
+      FULL_SIMP_TAC (srw_ss()) [lam_eq_appstar]
+    ],
+
+    `∃M₂. M -w-> M₂` by METIS_TAC [whnf_def] THEN
+    `M₂ = M'` by METIS_TAC [wh_head, head_normorder, normorder_det] THEN
+    `v ∉ FV M'` by METIS_TAC [normorder_FV] THEN
+    `∃M'₀. M' -w->* LAM v M'₀ ∧ M'₀ -n->* N0` by METIS_TAC [] THEN
+    METIS_TAC [relationTheory.RTC_RULES]
+  ]);
+
+val normstar_to_abs_wstar = save_thm(
+  "normstar_to_abs_wstar",
+  SIMP_RULE (srw_ss() ++ DNF_ss) [AND_IMP_INTRO] normstar_to_abs_wstar0);
+
+val varappstar_not_is_abs = store_thm(
+  "varappstar_not_is_abs",
+  ``¬is_abs (VAR v ·· a)``,
+  Q.SPEC_THEN `VAR v ·· a` STRIP_ASSUME_TAC term_CASES THEN SRW_TAC [][] THEN
+  FULL_SIMP_TAC (srw_ss()) [lam_eq_appstar]);
+
+val normorder_preserves_is_abs = store_thm(
+  "normorder_preserves_is_abs",
+  ``∀M N. M -n-> N ⇒ is_abs M ⇒ is_abs N``,
+  HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][]);
+val nstar_preserves_is_abs = store_thm(
+  "nstar_preserves_is_abs",
+  ``∀M N. M -n->* N ⇒ is_abs M ⇒ is_abs N``,
+  HO_MATCH_MP_TAC relationTheory.RTC_STRONG_INDUCT THEN
+  METIS_TAC [relationTheory.RTC_RULES, normorder_preserves_is_abs]);
+
+
+val normstar_to_vhead_wstar0 = prove(
+  ``∀M N. M -n->* N ⇒
+          ∀f Ns. (N = VAR f ·· Ns) ⇒
+                 ∃Ms. M -w->* VAR f ·· Ms ∧
+                     (LENGTH Ms = LENGTH Ns) ∧
+                     ∀i. i < LENGTH Ms ⇒ EL i Ms -n->* EL i Ns``,
+  HO_MATCH_MP_TAC relationTheory.RTC_STRONG_INDUCT THEN SRW_TAC [][] THENL [
+    Q.EXISTS_TAC `Ns` THEN SRW_TAC [][],
+    FULL_SIMP_TAC (srw_ss()) [] THEN Cases_on `whnf M` THENL [
+      `is_abs M ∨ ∃v M0s. M = VAR v ·· M0s`
+        by METIS_TAC [whnf_is_abs_appstr]
+      THEN1
+        METIS_TAC [normorder_preserves_is_abs, nstar_preserves_is_abs,
+                   varappstar_not_is_abs] THEN
+      `∃Ns'. (VAR f ·· Ns = VAR v ·· Ns') ∧ (LENGTH M0s = LENGTH Ns') ∧
+             ∀i. i < LENGTH Ns' ⇒ EL i M0s -n->* EL i Ns'`
+          by METIS_TAC [normstar_varhead, relationTheory.RTC_RULES] THEN
+      FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [relationTheory.RTC_RULES],
+
+      `∃M''. M -w-> M''` by METIS_TAC [whnf_def] THEN
+      `M'' = M'` by  METIS_TAC [wh_head, head_normorder, normorder_det] THEN
+      METIS_TAC [relationTheory.RTC_RULES]
+    ]
+  ]);
+
+val normstar_to_vhead_wstar = save_thm(
+  "normstar_to_vhead_wstar",
+  SIMP_RULE (srw_ss() ++ DNF_ss) [] normstar_to_vhead_wstar0);
+
+val leneq1 = prove(
+  ``(LENGTH list = 1) ⇔ ∃e. list = [e]``,
+  Cases_on `list` THEN SRW_TAC [][listTheory.LENGTH_NIL]);
+val leneq2 = prove(
+  ``(LENGTH list = 2) ⇔ ∃e₁ e₂. list = [e₁; e₂]``,
+  Cases_on `list` THEN SRW_TAC [][leneq1]);
+
+val normstar_to_vheadunary_wstar = save_thm(
+  "normstar_to_vheadunary_wstar",
+  normstar_to_vhead_wstar
+    |> SPEC_ALL |> Q.INST [`Ns` |-> `[N]`]
+    |> SIMP_RULE (srw_ss() ++ DNF_ss) [leneq1, DECIDE ``x < 1 ⇔ (x = 0)``]);
+
+val normstar_to_vheadbinary_wstar = save_thm(
+  "normstar_to_vheadbinary_wstar",
+  normstar_to_vhead_wstar
+    |> SPEC_ALL |> Q.INST [`Ns` |-> `[N₁; N₂]`]
+    |> SIMP_RULE (srw_ss() ++ DNF_ss)
+                 [leneq2, DECIDE ``x < 2 ⇔ (x = 0) ∨ (x = 1)``]);
+
 val _ = export_theory()

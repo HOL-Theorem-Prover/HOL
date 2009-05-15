@@ -465,7 +465,7 @@ fun smallfoot_precondition_prove_internal___REWRITE_CONV t =
 let
    val thms = (Net.match t (!precond_derived_net_ref));
 
-   val thm_done_opt = SOME (tryfind (fn thm => if (lhs (concl thm) = t) then
+   val thm_done_opt = SOME (tryfind (fn thm => if eq (lhs (concl thm)) t then
 				       (thm, true) else raise not_found_HOL_ERR) thms) 
 		 handle HOL_ERR _ => 
                  SOME (tryfind (fn thm => (PART_MATCH lhs thm t, false)) thms) 
@@ -502,9 +502,9 @@ in
 
 
 fun smallfoot_precondition_prove_internal___imps [] t = 
-    if t = T then TRUTH else raise UNCHANGED
+    if eq t T then TRUTH else raise UNCHANGED
   | smallfoot_precondition_prove_internal___imps (pre_cond::L) t =
-    if t = T then TRUTH else
+    if eq t T then TRUTH else
     let
         val pre_cond_thm = smallfoot_precondition_prove_internal___REWRITE_CONV pre_cond handle UNCHANGED => REFL t;
 
@@ -563,7 +563,7 @@ fun smallfoot_precondition_prove_internal imps t =
       let
          val thm = smallfoot_precondition_prove_internal___USED_VARS___STRENGTEN_CONV t
 	 val (imp_term,_) = dest_imp (concl thm);
-         val _ = if (imp_term = t) then raise UNCHANGED else ()
+         val _ = if (eq imp_term t) then raise UNCHANGED else ()
 	 val imp_thm = smallfoot_precondition_prove_internal imps imp_term;
       in
 	 MP thm imp_thm
@@ -580,7 +580,7 @@ fun smallfoot_precondition_prove_internal imps t =
           val thm = smallfoot_precondition_prove_internal___REWRITE_CONV t handle UNCHANGED => REFL t;
 	  val r = rhs (concl thm);
       in
-	  if (r = T) then
+	  if eq r T then
              EQT_ELIM thm
           else 
 	     let
@@ -652,7 +652,7 @@ val (t',asm_opt) = !failed_ref;
 
 
 fun smallfoot_HYP_PROVE m asms thm = 
-    foldr (fn (t,thm) => if (mem t asms) then thm else
+    foldr (fn (t,thm) => if (op_mem eq t asms) then thm else
                          PROVE_HYP (smallfoot_precondition_prove (SOME ("smallfoot_HYP_PROVE "^m)) asms t) thm) thm (hyp thm);
 
 
@@ -719,13 +719,13 @@ fun SMALLFOOT_PROGRAM_ABSTRACTION_CONV___proc_call sys xenv penv asm p =
       val _ = if (is_smallfoot_prog_procedure_call p) then () else raise UNCHANGED;
 
       val (env,res_env) = pairLib.dest_pair xenv;
-      val _ = if (env = smallfoot_env_term) then () else raise UNCHANGED;
+      val _ = if (eq env smallfoot_env_term) then () else raise UNCHANGED;
 
       val (pname,ref_args,val_args) = dest_smallfoot_prog_procedure_call p;
       val spec_thm = first (fn thm => let
 				         val (res_env', penv', _, pname', _, _, _, _) = dest_SMALLFOOT_SING_PROCEDURE_SPEC (concl thm) 
 			 	      in
-                                         (penv = penv') andalso (penv = penv') andalso (pname = pname')
+                                         (eq penv penv') andalso (eq penv penv') andalso (eq pname pname')
                                       end handle HOL_ERR _ => false)
                            asm handle HOL_ERR _ => raise UNCHANGED;
 
@@ -748,20 +748,20 @@ fun SMALLFOOT_PROGRAM_ABSTRACTION_CONV___parallel_proc_call sys xenv penv asm p 
    let      
       val _ = if (is_smallfoot_prog_parallel_procedure_call p) then () else raise UNCHANGED;
       val (env,res_env) = pairLib.dest_pair xenv;
-      val _ = if (env = smallfoot_env_term) then () else raise UNCHANGED;
+      val _ = if (eq env smallfoot_env_term) then () else raise UNCHANGED;
       val (pname1,ref_args1,val_args1,
 	   pname2,ref_args2,val_args2) = dest_smallfoot_prog_parallel_procedure_call p;
 
       val spec1_thm = first (fn thm => let
 				         val (res_env', penv', _, pname', _, _, _, _) = dest_SMALLFOOT_SING_PROCEDURE_SPEC (concl thm) 
 			 	      in
-                                         (res_env = res_env') andalso (penv = penv') andalso (pname1 = pname')
+                                         (eq res_env res_env') andalso (eq penv penv') andalso (eq pname1 pname')
                                       end handle HOL_ERR _ => false)
                            asm handle HOL_ERR _ => raise UNCHANGED;
       val spec2_thm = first (fn thm => let
 				         val (res_env', penv', _, pname', _, _, _, _) = dest_SMALLFOOT_SING_PROCEDURE_SPEC (concl thm) 
 			 	      in
-                                         (res_env = res_env') andalso (penv = penv') andalso (pname2 = pname')
+                                         (eq res_env res_env') andalso (eq penv penv') andalso (eq pname2 pname')
                                       end handle HOL_ERR _ => false)
                            asm handle HOL_ERR _ => raise UNCHANGED;
 
@@ -927,7 +927,7 @@ fun SMALLFOOT_PROGRAM_ABSTRACTION_CONV___with_resource sys xenv penv asm p =
       val resL_pairs = map pairLib.strip_pair resL
 
 
-      val r_lookup = first (fn L => (hd L = r)) resL_pairs
+      val r_lookup = first (fn L => eq (hd L) r) resL_pairs
                            handle HOL_ERR _ => raise UNCHANGED;
 
       val (wpL,P) = (el 2 r_lookup, el 3 r_lookup);
@@ -952,7 +952,7 @@ fun SMALLFOOT_PROGRAM_ABSTRACTION_CONV___while sys xenv penv asm p =
       val _ = if (is_smallfoot_prog_while_with_invariant p) then () else raise UNCHANGED;
 
       val (env,res_env) = pairLib.dest_pair xenv;
-      val _ = if (env = smallfoot_env_term) then () else raise UNCHANGED;
+      val _ = if (eq env smallfoot_env_term) then () else raise UNCHANGED;
 
       val pm_thm = ISPECL [res_env, penv] 
                       FASL_PROGRAM_IS_ABSTRACTION___smallfoot_prog_while_with_invariant2
@@ -1029,7 +1029,7 @@ val t = rhs (concl (pre_cond_thm));
 
 
 fun SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE_prove t =
-   if (t = T) then TRUTH 
+   if (eq t T) then TRUTH 
    else if (is_conj t) then
       let val (t1,t2) = dest_conj t in
       CONJ (SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE_prove t1)
@@ -1047,7 +1047,7 @@ fun SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE_prove t =
    else
       let
           val (func, t') = dest_comb t;
-	  val _ = if func = SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE_term then () else raise UNCHANGED;
+	  val _ = if eq func SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE_term then () else raise UNCHANGED;
       in
 	  if (is_smallfoot_prog_block t') then
              let
@@ -1139,8 +1139,8 @@ fun SMALLFOOT_COND_HOARE_TRIPLE___CONSEQ_CONV L asm t =
      val thm_opt = FASL_PROGRAM_ABSTRACTION_CONV L COND_HOARE_TRIPLE___xenv_term penv_FEMPTY_term asm body;
      val thm = if (isSome thm_opt) then valOf thm_opt else raise UNCHANGED;
      val (_,_,p1,p2) = dest_FASL_PROGRAM_IS_ABSTRACTION (concl thm);
-     val _ = if (p1 = p2) then raise UNCHANGED else ();
-     val _ = if (p1 = body) then () else raise UNCHANGED;
+     val _ = if (eq p1 p2) then raise UNCHANGED else ();
+     val _ = if (eq p1 body) then () else raise UNCHANGED;
 
      val thm2 = ISPECL [pre, body, post, p2] SMALLFOOT_COND_HOARE_TRIPLE_ABSTRACTION___INTRO;
      val thm3 = MP thm2 thm;
@@ -1446,17 +1446,17 @@ fun REDEPTH_FASL_PROGRAM_HOARE_TRIPLE___CONSEQ_CONV L asm =
   let val hyps = flatten (map hyp asm) in
   CONJ_ASSUMPTIONS_CONSEQ_CONV 
       (K (REDEPTH_STRENGTHEN_CONSEQ_CONV (FASL_PROGRAM_HOARE_TRIPLE___CONSEQ_CONV L asm)))
-      (fn t => mem t hyps) CONSEQ_CONV_STRENGTHEN_direction end;
+      (fn t => op_mem eq t hyps) CONSEQ_CONV_STRENGTHEN_direction end;
 
 
 
 
 fun post_process_for_PROVE_HYP t NONE = NONE
   | post_process_for_PROVE_HYP t (SOME thm) = 
-    if (concl thm = t) then (SOME thm) else
+    if eq(concl thm) t then (SOME thm) else
     if (is_eq(concl thm) andalso
-	(lhs (concl thm) = t)) then
-       (if (rhs (concl thm) = T) then SOME (EQT_ELIM thm) else
+	eq (lhs (concl thm)) t) then
+       (if eq (rhs (concl thm)) T then SOME (EQT_ELIM thm) else
          SOME (UNDISCH (snd (EQ_IMP_RULE thm)))
        )
     else NONE;
@@ -1546,7 +1546,7 @@ fun smallfoot_prop_internal_CONV t =
 
         val thm4 = RHS_CONV_RULE conv3 thm2;
         val (_,_,_,_,_,_,_,p) = dest_smallfoot_prop_internal (rhs (concl thm4))              
-        val thm5 = if (p = smallfoot_ap_emp_term) then thm4 else
+        val thm5 = if (eq p smallfoot_ap_emp_term) then thm4 else
                    RHS_CONV_RULE conv4 thm4;
 
         val thm8 = RHS_CONV_RULE conv5 thm5;
@@ -1812,7 +1812,7 @@ fun SMALLFOOT_PROGRAM_ABSTRACTION_CONV___smallfoot_cond_choose_const___smallfoot
       val (v_pre,pre1,pre1_abs,pre2,pre2_abs) = dest_cond_star_abs pre;
       val (v_post,post1,post1_abs,post2,post2_abs) = dest_cond_star_abs post;
       val (env,res_env) = pairLib.dest_pair xenv;
-      val _ = if (env = smallfoot_env_term) then () else raise UNCHANGED;
+      val _ = if (eq env smallfoot_env_term) then () else raise UNCHANGED;
 
 
       (*move COND_PROP___STRONG_EXISTS inwards*)
@@ -1909,14 +1909,14 @@ fun smallfoot_ap_equal___CONV t =
     in
        if (is_smallfoot_ae_var r andalso not (is_smallfoot_ae_var l)) then
           ISPECL [l,r] smallfoot_ap_equal___COMM
-       else if (l = r) then
+       else if (eq l r) then
           REWRITE_RULE [smallfoot_ap_exp_is_defined___const] (ISPEC l smallfoot_ap_equal___EQ_REWRITE)
        else if (is_smallfoot_ae_const_null l) andalso (is_smallfoot_ae_const_null r) then       
           let
 	     val l' = dest_smallfoot_ae_const_null l;
 	     val r' = dest_smallfoot_ae_const_null r;
 	     val thm0 = ISPECL [l',r'] smallfoot_ap_equal___EQ_REWRITE___const;
-             val thm1 = if (lhs (concl thm0) = t) then thm0 else
+             val thm1 = if eq (lhs (concl thm0)) t then thm0 else
 	                TRANS (EQT_ELIM (REWRITE_CONV [smallfoot_ae_null_def] 
                                         (mk_eq (t, lhs (concl thm0))))) thm0
 
@@ -1947,7 +1947,7 @@ fun smallfoot_ap_unequal___CONV t =
     in
        if (is_smallfoot_ae_var r andalso not (is_smallfoot_ae_var l)) then
           ISPECL [l,r] smallfoot_ap_unequal___COMM
-       else if (l = r) then
+       else if (eq l r) then
           ISPEC l (CONJUNCT1 smallfoot_ap_unequal___EQ_REWRITES)
        else if (is_smallfoot_ae_const_null l) andalso (is_smallfoot_ae_const_null r) then       
           let
@@ -1956,12 +1956,12 @@ fun smallfoot_ap_unequal___CONV t =
 
              val const_eq = mk_eq (l',r');
              val eq_thm = reduceLib.REDUCE_CONV const_eq;
-	     val _ = if (rhs (concl eq_thm) = T) orelse
-                        (rhs (concl eq_thm) = F) then () else raise UNCHANGED;
+	     val _ = if eq (rhs (concl eq_thm)) T orelse
+                        eq (rhs (concl eq_thm)) F then () else raise UNCHANGED;
 
 
 	     val thm0 = ISPECL [l',r'] smallfoot_ap_unequal___EQ_REWRITE___const;
-             val thm1 = if (lhs (concl thm0) = t) then thm0 else
+             val thm1 = if eq (lhs (concl thm0)) t then thm0 else
 	                TRANS (EQT_ELIM (REWRITE_CONV [smallfoot_ae_null_def] 
                                         (mk_eq (t, lhs (concl thm0))))) thm0
 	     val thm2 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [
@@ -2000,16 +2000,16 @@ fun smallfoot_ap_unequal_cond___decide_non_eq_const___CONV t =
     let
        val (l,r,P) = dest_smallfoot_ap_unequal_cond t;
     in
-       if (not (l = r)) andalso (is_smallfoot_ae_const_null l) andalso (is_smallfoot_ae_const_null r) then       
+       if (not (eq l r)) andalso (is_smallfoot_ae_const_null l) andalso (is_smallfoot_ae_const_null r) then       
           let
 	     val l' = dest_smallfoot_ae_const_null l;
 	     val r' = dest_smallfoot_ae_const_null r;
-             val _ = if (l' = r') then raise UNCHANGED else ();
+             val _ = if (eq l' r') then raise UNCHANGED else ();
 
              val const_eq = mk_eq (l',r');
              val eq_thm = reduceLib.REDUCE_CONV const_eq;
 	     val thm0 = 
-		 if (rhs (concl eq_thm) = T) then
+		 if eq (rhs (concl eq_thm)) T then
 		     let
 		        val lc_term = mk_comb (smallfoot_ae_const_term, l');
 		        val rc_term = mk_comb (smallfoot_ae_const_term, r');
@@ -2017,7 +2017,7 @@ fun smallfoot_ap_unequal_cond___decide_non_eq_const___CONV t =
                      in
                         ONCE_REWRITE_CONV [EQT_ELIM eq_thm] l_cond_term
 	             end
-                 else if (rhs (concl eq_thm) = F) then
+                 else if eq (rhs (concl eq_thm)) F then
 		     let
 			val spec_thm = ISPECL [l',r',P] smallfoot_ap_unequal_cond___UNEQ_REWRITE___const;
 	             in
@@ -2026,7 +2026,7 @@ fun smallfoot_ap_unequal_cond___decide_non_eq_const___CONV t =
                  else raise UNCHANGED;
 
 
-             val thm1 = if (lhs (concl thm0) = t) then thm0 else
+             val thm1 = if eq (lhs (concl thm0)) t then thm0 else
 	                TRANS (EQT_ELIM (REWRITE_CONV [smallfoot_ae_null_def] 
                                         (mk_eq (t, lhs (concl thm0))))) thm0
           in
@@ -2052,16 +2052,16 @@ fun smallfoot_ap_equal_cond___decide_non_eq_const___CONV t =
     let
        val (l,r,P) = dest_smallfoot_ap_equal_cond t;
     in
-       if (not (l = r)) andalso (is_smallfoot_ae_const_null l) andalso (is_smallfoot_ae_const_null r) then       
+       if (not (eq l r)) andalso (is_smallfoot_ae_const_null l) andalso (is_smallfoot_ae_const_null r) then       
           let
 	     val l' = dest_smallfoot_ae_const_null l;
 	     val r' = dest_smallfoot_ae_const_null r;
-             val _ = if (l' = r') then raise UNCHANGED else ();
+             val _ = if (eq l' r') then raise UNCHANGED else ();
 
              val const_eq = mk_eq (l',r');
              val eq_thm = reduceLib.REDUCE_CONV const_eq;
 	     val thm0 = 
-		 if (rhs (concl eq_thm) = T) then
+		 if eq (rhs (concl eq_thm)) T then
 		     let
 		        val lc_term = mk_comb (smallfoot_ae_const_term, l');
 		        val rc_term = mk_comb (smallfoot_ae_const_term, r');
@@ -2069,7 +2069,7 @@ fun smallfoot_ap_equal_cond___decide_non_eq_const___CONV t =
                      in
 			ONCE_REWRITE_CONV [EQT_ELIM eq_thm] l_cond_term
 	             end
-                 else if (rhs (concl eq_thm) = F) then
+                 else if eq (rhs (concl eq_thm)) F then
 		     let
 			val spec_thm = ISPECL [l',r',P] smallfoot_ap_equal_cond___UNEQ_REWRITE___const;
 	             in
@@ -2078,7 +2078,7 @@ fun smallfoot_ap_equal_cond___decide_non_eq_const___CONV t =
                  else raise UNCHANGED;
 
 
-             val thm1 = if (lhs (concl thm0) = t) then thm0 else
+             val thm1 = if eq (lhs (concl thm0)) t then thm0 else
 	                TRANS (EQT_ELIM (REWRITE_CONV [smallfoot_ae_null_def] 
                                         (mk_eq (t, lhs (concl thm0))))) thm0
           in
@@ -2532,7 +2532,7 @@ fun smallfoot_ae_var___is_equals_const v t =
       val v' = dest_smallfoot_ae_var l;
       val c = dest_smallfoot_ae_const_null r;
    in
-      if (v' = v) then SOME c else NONE
+      if (eq v' v) then SOME c else NONE
    end handle HOL_ERR _ => NONE;
 
 
@@ -3439,9 +3439,9 @@ fun get_smallfoot_ap_unequal_list n [] = []
 fun find_in_smallfoot_ap_equal_list (e1:term) e2 sfs =
    let 
       val found_opt = 
-   find_first_num (K (fn (n:int, (e1',e2')) => if (e1 = e1') andalso (e2 = e2') then
+   find_first_num (K (fn (n:int, (e1',e2')) => if (eq e1 e1') andalso (eq e2 e2') then
 					   SOME (n, false)
-                                        else if (e1 = e2') andalso (e2 = e1') then
+                                        else if (eq e1 e2') andalso (eq e2 e1') then
 					   SOME (n, true)
 					else NONE)) [] 0 sfs
    in
@@ -3470,7 +3470,7 @@ let
              val eq_opt = find_in_smallfoot_ap_equal_list e1 e2 equalL;
              val uneq_opt = find_in_smallfoot_ap_unequal_list e1 e2 unequalL;
           in
-	     if (e1 = e2) then 
+	     if (eq e1 e2) then 
                 SOME (SMALLFOOT_COND_PROP___EQ___EQUAL_UNEQUAL_COND___IDEM_EQ, NONE)
              else if (isSome eq_opt) then
                 SOME (SMALLFOOT_COND_PROP___EQ___EQUAL_UNEQUAL_COND___EQ_EQ, eq_opt)
@@ -3484,7 +3484,7 @@ let
              val eq_opt = find_in_smallfoot_ap_equal_list e1 e2 equalL;
              val uneq_opt = find_in_smallfoot_ap_unequal_list e1 e2 unequalL;
           in
-	     if (e1 = e2) then 
+	     if (eq e1 e2) then 
                 SOME (SMALLFOOT_COND_PROP___EQ___EQUAL_UNEQUAL_COND___IDEM_UNEQ, NONE)
              else if (isSome eq_opt) then
                 SOME (SMALLFOOT_COND_PROP___EQ___EQUAL_UNEQUAL_COND___EQ_UNEQ, eq_opt)
@@ -3559,7 +3559,7 @@ fun smallfoot_ae_var___is_equals_const___excluded done t =
       val v = dest_smallfoot_ae_var l;
       val c = dest_smallfoot_ae_const_null r;
    in
-      (if mem v done  then NONE else SOME (v, c))
+      (if op_mem eq v done  then NONE else SOME (v, c))
    end handle HOL_ERR _ => NONE;
 
 
@@ -3580,8 +3580,8 @@ fun smallfoot_ae_var___is_equals_var___excluded done t =
       val vl = dest_smallfoot_ae_var l;
       val vr = dest_smallfoot_ae_var r;
    in
-      if (not (mem vl done)) then SOME vl else
-      if (not (mem vr done)) then SOME vr else NONE
+      if (not (op_mem eq vl done)) then SOME vl else
+      if (not (op_mem eq vr done)) then SOME vr else NONE
    end handle HOL_ERR _ => NONE;
 
 
@@ -3640,7 +3640,7 @@ val t = ``
 fun SMALLFOOT_AE_USED_VARS___SAVE_IN v t =
 if (is_smallfoot_ae_const_null t) then SOME false else
 if (is_smallfoot_ae_var t) then
-   SOME (dest_smallfoot_ae_var t = v)
+   SOME (eq (dest_smallfoot_ae_var t) v)
 else NONE;
 
 
@@ -3739,7 +3739,7 @@ fun flatten_opt acc f [] = SOME acc
     let
        val opt = f e
     in
-       if (opt = NONE) then NONE else
+       if not (isSome opt) then NONE else
        flatten_opt (append (valOf opt) acc) f L
     end;
 
@@ -3778,10 +3778,10 @@ if (is_smallfoot_ap_equal_or_unequal_cond t) then
    let
       val (e1,e2,t1) = dest_smallfoot_ap_equal_or_unequal_cond t
       val res1 = LIST_SMALLFOOT_AE_USED_VARS___SAVE_LIST [e1,e2]
-      val res2 = if (res1 = NONE) then NONE else
+      val res2 = if not (isSome res1) then NONE else
 		 SMALLFOOT_AP_USED_VARS___SAVE_LIST t1;
    in 
-      if (res2 = NONE) then NONE else SOME (append (valOf res2) (valOf res1))
+      if not (isSome res2) then NONE else SOME (append (valOf res2) (valOf res1))
    end else
 if (is_smallfoot_ap_exp_is_defined t) then 
    let
@@ -3878,7 +3878,7 @@ in
                          val _ = if all_vars_intro then () else raise UNCHANGED;
 			 val (wpbL, _) = bagLib.dest_bag wpb;
 			 val (rpbL, _) = bagLib.dest_bag rpb;
-                         val v_opt = List.find (fn x => not (mem x done)) (wpbL@rpbL)
+                         val v_opt = List.find (fn x => not (op_mem eq x done)) (wpbL@rpbL)
 			 val _ = if (isSome v_opt) then () else raise UNCHANGED;
 	             in
                          valOf v_opt
@@ -3894,7 +3894,7 @@ in
          val (_,p0) = dest_SMALLFOOT_COND_PROP___IMP (concl thm4);
          val (c,p) = dest_COND_PROP___EXISTS p0;
 
-         val done' = filter (fn v' => not (v = v')) done;
+         val done' = filter (fn v' => not (eq v v')) done;
          val thm_p = smallfoot_prop___EQ_PROPAGATE___INTERNAL new_vars_intro all_vars_intro done' p
                      handle UNCHANGED => SMALLFOOT_COND_PROP___IMP___REFL_CONV p
          val thm_p' = GEN c thm_p
@@ -4053,8 +4053,8 @@ fun get_smallfoot_ap_unequal_exp e1 [] = []
            let
               val (el,er) = dest_smallfoot_ap_unequal sf;
            in
-              if (el = e1) then SOME er else
-              if (er = e1) then SOME el else NONE
+              if (eq el e1) then SOME er else
+              if (eq er e1) then SOME el else NONE
            end    
        val L = get_smallfoot_ap_unequal_exp e1 sfs
     in
@@ -4115,7 +4115,7 @@ fun smallfoot_ap_bag_implies_in_heap_or_null___SEARCH_PROVE sfb expP =
                               val (_, exp1, _, exp2) = dest_smallfoot_ap_data_list_seg t;
                               val uneq_expL = get_smallfoot_ap_unequal_exp exp1 sfs;
                           in
-			      if (expP exp1 andalso (mem exp2 uneq_expL)) then SOME exp1 else NONE
+			      if (expP exp1 andalso (op_mem eq exp2 uneq_expL)) then SOME exp1 else NONE
 		          end))) [] 0 sfs);
 
       val _ = if isSome found_opt then () else raise UNCHANGED;
@@ -4134,8 +4134,8 @@ fun smallfoot_ap_bag_implies_in_heap_or_null___SEARCH_PROVE sfb expP =
 		       let 
 			  val (l,r) = dest_smallfoot_ap_unequal t;
                        in
-                          if (l = exp) andalso (r = e2) then SOME false else 
-                          if (l = e2) andalso (r = exp) then SOME true else NONE
+                          if (eq l exp) andalso (eq r e2) then SOME false else 
+                          if (eq l e2) andalso (eq r exp) then SOME true else NONE
 		       end)) [] 0 sfs;  
              val _ = if (isSome found_opt) then () else raise UNCHANGED;
              val (lseg_pos, _, turn) = valOf found_opt;
@@ -4165,7 +4165,7 @@ fun smallfoot_ap_bag_implies_in_heap_or_null___SEARCH_PROVE sfb expP =
 
 
 fun smallfoot_ap_bag_implies_in_heap_or_null___PROVE sfb exp =
-    smallfoot_ap_bag_implies_in_heap_or_null___SEARCH_PROVE sfb (fn e => (e = exp));
+    smallfoot_ap_bag_implies_in_heap_or_null___SEARCH_PROVE sfb (fn e => (eq e exp));
 
 
 
@@ -4295,7 +4295,7 @@ let
 in
    thm3
 end handle smallfoot_ap_bag_implies_unequal___SEARCH_PROVE_exn t1 =>
-           smallfoot_ap_bag_implies_unequal___SEARCH_PROVE (fn t2 => (not (t2 = t1)) andalso sfP t2) uneqP_opt sfb;
+           smallfoot_ap_bag_implies_unequal___SEARCH_PROVE (fn t2 => (not (eq t2 t1)) andalso sfP t2) uneqP_opt sfb;
 
 
 
@@ -4352,8 +4352,8 @@ let
 		       let 
 			  val (l,r) = dest_smallfoot_ap_unequal t;
                        in
-                          if (l = e1) andalso (r = e2) then SOME false else 
-                          if (l = e2) andalso (r = e1) then SOME true else NONE
+                          if (eq l e1) andalso (eq r e2) then SOME false else 
+                          if (eq l e2) andalso (eq r e1) then SOME true else NONE
 		       end)) [] 0 sfs;  
 in
    if (isSome found_opt) then
@@ -4375,8 +4375,8 @@ in
 
          val thm1 = SPECL [c1,c2,wpb,rpb,sfb] smallfoot_prop___UNEQUAL_INTRO
          val thm2 = MP thm1 thm
-         val thm3 = if (e1 = smallfoot_ae_null_term) orelse
-		       (e2 = smallfoot_ae_null_term) then
+         val thm3 = if (eq e1 smallfoot_ae_null_term) orelse
+		       (eq e2 smallfoot_ae_null_term) then
 	               CONV_RULE (RHS_CONV (smallfoot_prop___bag_el_conv (REWRITE_CONV [GSYM smallfoot_ae_null_def]) 0)) thm2
                     else thm2
       in 
@@ -4395,7 +4395,7 @@ let
 		       let 
 			  val (l,r) = dest_smallfoot_ap_equal t;
                        in
-                          if (l = e) then SOME r else NONE
+                          if (eq l e) then SOME r else NONE
 		       end)) [] 0 sfs;
    val e' = if (isSome e'_opt) then #3 (valOf e'_opt) else e 
 
@@ -4404,7 +4404,7 @@ let
 		       let 
 			  val (e1,_) = dest_smallfoot_ap_points_to t
                        in
-                          if (e1 = e') then SOME e1 else NONE
+                          if (eq e1 e') then SOME e1 else NONE
 		       end)) [] 0 sfs;
 in
   if (isSome point_to_opt) then
@@ -4420,7 +4420,7 @@ in
 		       let 
 			  val (e1,e2) = dest_smallfoot_ap_data_list_seg_or_list_or_bintree t
                        in
-                          if (e1 = e') then SOME (e1,e2) else NONE
+                          if (eq e1 e') then SOME (e1,e2) else NONE
 		       end)) [] 0 sfs;
         val _ = if (isSome split_opt) then () else raise UNCHANGED;
         val (split_pos, split_term, (e1,e2)) = valOf split_opt;
@@ -4453,7 +4453,7 @@ let
    val thm1 = (REPEATC smallfoot_prop___UNEQUAL_INTRO___CONV) t handle UNCHANGED => REFL t
    val (_,_,sfb') = dest_smallfoot_prop (rhs (concl thm1));
    val (sfs,_) = bagSyntax.dest_bag sfb';
-   val found_opt = find_first_num (K (fn t => if (t = points_to_term) then SOME () else NONE))
+   val found_opt = find_first_num (K (fn t => if (eq t points_to_term) then SOME () else NONE))
                    [] 0 sfs;
    val _ = if isSome found_opt then () else raise UNCHANGED;
    val (pos,_,_) = valOf found_opt;
@@ -4488,12 +4488,12 @@ let
    val (wpb,rpb,sfb) = dest_smallfoot_prop t;
    val (sfs,_) = bagSyntax.dest_bag sfb;
    val (e', _) = dest_smallfoot_ap_points_to (hd sfs);
-   val _ = if (e = e') then raise UNCHANGED else ();
+   val _ = if (eq e e') then raise UNCHANGED else ();
    val e_opt = find_first_num (K (fn t => 
 		       let 
 			  val (l,r) = dest_smallfoot_ap_equal t;
                        in
-                          if (l = e) andalso (r = e') then SOME () else NONE
+                          if (eq l e) andalso (eq r e') then SOME () else NONE
 		       end)) [] 0 sfs;
    val pos = if (isSome e_opt) then #1 (valOf e_opt) else raise UNCHANGED
    val thm1 = smallfoot_prop___COND_RESORT_CONV [0,pos] t;
@@ -4683,7 +4683,7 @@ let
    val (_, L_term) = dest_smallfoot_ap_points_to points_to_term;
    val (L_term_list, _) = dest_finite_map L_term;
    val tagL = map fst L_term_list;
-   val (lookup_thm,const_intro_flag) = if mem tag tagL then
+   val (lookup_thm,const_intro_flag) = if op_mem eq tag tagL then
                        (SMALLFOOT_COND_INFERENCE___prog_field_lookup, false)
                     else
                        (SMALLFOOT_COND_INFERENCE___prog_field_lookup___intro_const, true)
@@ -4814,7 +4814,7 @@ let
    val _ = if (is_smallfoot_ap_implies_ae_equal tt) then () else raise UNCHANGED;
    val (P, e1, e2) = dest_smallfoot_ap_implies_ae_equal tt; 
 in
-   if (e1 = e2) then
+   if (eq e1 e2) then
       EQT_INTRO (ISPECL [e1, P] smallfoot_ap_implies_ae_equal___EQ)
    else if (is_smallfoot_prop P) then
       let
@@ -4842,7 +4842,7 @@ let
    val (_,_,_,free_params_term,_) = dest_smallfoot_cond_choose_const_best_local_action command
 
    val (free_paramsL,_) = listSyntax.dest_list free_params_term;
-   val _ = if (free_paramsL = []) then raise UNCHANGED else [];
+   val _ = if null free_paramsL then raise UNCHANGED else [];
 
    val v_name = stringLib.fromHOLstring (snd (pairLib.dest_pair (hd (free_paramsL))))
 
@@ -5194,7 +5194,7 @@ end;
 fun SMALLFOOT_COND_INFERENCE_CONV___skip t =
 let
    val (prev,prog,post) = dest_SMALLFOOT_COND_HOARE_TRIPLE t;
-   val _ = if (prog = ``smallfoot_prog_block []``) then () else raise UNCHANGED;
+   val _ = if (eq prog ``smallfoot_prog_block []``) then () else raise UNCHANGED;
 
    val thm1 = MAKE___IMP___RULE (SMALLFOOT_COND_HOARE_TRIPLE___PRECOND_CONV (smallfoot_prop___EQ_PROPAGATE_CONV true true) t
 				 handle UNCHANGED => REFL t);
@@ -5563,7 +5563,7 @@ let
    val (sfs', _) = bagSyntax.dest_bag sfb';
 
    val found_opt = find_first_num 
-          (K (fn t => find_first_num (K (fn t' => (if (t' = t) then SOME () else NONE))) [] 0 sfs'))
+          (K (fn t => find_first_num (K (fn t' => (if (eq t' t) then SOME () else NONE))) [] 0 sfs'))
           [] 0 sfs;
    val _ = if (isSome found_opt) then () else raise UNCHANGED;
    val (pos,sf,(pos2, _, _)) = valOf found_opt;
@@ -5659,7 +5659,7 @@ let
                          let
 			    val (e1_term', L) = dest_smallfoot_ap_points_to t
                          in
-                            if (e1_term = e1_term') then SOME L else NONE
+                            if (eq e1_term e1_term') then SOME L else NONE
                          end)) ex_split 0 sfs_split
    val _ = if isSome split_opt then () else
 	      (raise SMALLFOOT_PROP_IMPLIES___ELIM_POINTS_TO___SEARCH_exn
@@ -5672,8 +5672,8 @@ let
 	   let
 			val (_,L') = dest_smallfoot_ap_points_to imp_term
                         val (L'_list, L'_rest) = dest_finite_map L'
-			val _ = if (L_rest = L'_rest) andalso
-                                   all (fn e => mem e L_list) L'_list then () else
+			val _ = if (option_cmp eq L_rest L'_rest) andalso
+                                   all (fn e => op_mem (pair_cmp eq eq) e L_list) L'_list then () else
 				raise SMALLFOOT_PROP_IMPLIES___ELIM_POINTS_TO___SEARCH_exn (SOME imp_pos, SOME split_pos)			
 	   in
                         (SMALLFOOT_PROP_IMPLIES___points_to___points_to___SUBMAP, NONE)
@@ -5681,7 +5681,7 @@ let
         else if is_smallfoot_ap_data_list_seg_or_list imp_term then
 	   let
               val (tl,_,_,e2_term) = dest_smallfoot_ap_data_list_seg_or_list imp_term
-              val e3_term = snd (first (fn (a,b) => (a = tl)) L_list)
+              val e3_term = snd (first (fn (a,b) => (eq a tl)) L_list)
                             handle HOL_ERR _ =>
             		    raise SMALLFOOT_PROP_IMPLIES___ELIM_POINTS_TO___SEARCH_exn (SOME imp_pos, SOME split_pos)
 
@@ -5696,8 +5696,8 @@ let
 	   let
               val (lt,rt,_) = dest_smallfoot_ap_bintree imp_term
               val (el_term,er_term) = 
-                            (snd (first (fn (a,b) => (a = lt)) L_list),
-                             snd (first (fn (a,b) => (a = rt)) L_list))
+                            (snd (first (fn (a,b) => (eq a lt)) L_list),
+                             snd (first (fn (a,b) => (eq a rt)) L_list))
                             handle HOL_ERR _ =>
             		    raise SMALLFOOT_PROP_IMPLIES___ELIM_POINTS_TO___SEARCH_exn (SOME imp_pos, SOME split_pos)
 
@@ -5716,8 +5716,8 @@ let
 		       let 
 			  val (l,r) = dest_smallfoot_ap_unequal t;
                        in
-                          if (l = left_e) andalso (r = right_e) then SOME false else 
-                          if (l = right_e) andalso (r = left_e) then SOME true else NONE
+                          if (eq l left_e) andalso (eq r right_e) then SOME false else 
+                          if (eq l right_e) andalso (eq r left_e) then SOME true else NONE
 		       end)) [] 0 sfs_context;  
           val _ = if isSome unequal_opt2 then () else
                   raise SMALLFOOT_PROP_IMPLIES___ELIM_POINTS_TO___SEARCH_exn (SOME imp_pos, NONE);         
@@ -5777,15 +5777,15 @@ local
    fun search_pred2 e_term tag_list (n:int) sf' = 
    let
        val (e'_term, L'_term) = dest_smallfoot_ap_points_to sf';
-       val _ = if (e'_term = e_term) then () else raise UNCHANGED;
+       val _ = if (eq e'_term e_term) then () else raise UNCHANGED;
 
        val (L'_list, L'_rest) = dest_finite_map L'_term;
-       val _ = if (L'_rest = NONE) andalso
+       val _ = if not (isSome L'_rest) andalso
                all (fn e => is_smallfoot_ae_const_null (snd e)) L'_list
 	       then () else
                raise UNCHANGED;
        val tag_list' = map fst L'_list;
-       val _ = if all (fn t => mem t tag_list') tag_list then () else raise UNCHANGED;
+       val _ = if all (fn t => op_mem eq t tag_list') tag_list then () else raise UNCHANGED;
    in
        SOME ()
    end handle UNCHANGED => NONE
@@ -5797,7 +5797,7 @@ local
        val (e_term, L_term) = dest_smallfoot_ap_points_to sf;
 
        val (L_list, L_rest) = dest_finite_map L_term;
-       val _ = if (L_rest = NONE) andalso
+       val _ = if not (isSome L_rest) andalso
                all (fn e => is_smallfoot_ae_const_null (snd e)) L_list then () else
                raise UNCHANGED;
 
@@ -5876,7 +5876,7 @@ let
                          let
 			    val (tl', e1_term', _, e2_term) = dest_smallfoot_ap_data_list_seg t
                          in
-                            if (e1_term = e1_term') andalso (tl = tl') then SOME e2_term else NONE
+                            if (eq e1_term e1_term') andalso (eq tl tl') then SOME e2_term else NONE
                          end)) ex_split 0 sfs_split
    val _ = if isSome split_opt then () else
 	      (raise SMALLFOOT_PROP_IMPLIES___LIST_REMOVE_START___SEARCH_exn
@@ -6075,7 +6075,7 @@ let
    val (sfs', _) = bagSyntax.dest_bag sfb';
 
    val found_opt = find_first_num 
-          (K (fn t => find_first_num (K (fn t' => (if (t' = t) then (SOME (is_STRONG_STACK_PROPOSITION___PROVE t)) else NONE))) [] 0 sfs'))
+          (K (fn t => find_first_num (K (fn t' => (if (eq t' t) then (SOME (is_STRONG_STACK_PROPOSITION___PROVE t)) else NONE))) [] 0 sfs'))
           [] 0 sfs;
 
 
@@ -6233,7 +6233,7 @@ let
              val eq_opt = find_in_smallfoot_ap_equal_list e1 e2 equalL;
              val uneq_opt = find_in_smallfoot_ap_unequal_list e1 e2 unequalL;
           in
-	     if (e1 = e2) then 
+	     if (eq e1 e2) then 
                 SOME (SMALLFOOT_PROP_IMPLIES___EQ___EQUAL_UNEQUAL_COND___IDEM_EQ, NONE)
              else if (isSome eq_opt) then
                 SOME (SMALLFOOT_PROP_IMPLIES___EQ___EQUAL_UNEQUAL_COND___EQ_EQ, eq_opt)
@@ -6247,7 +6247,7 @@ let
              val eq_opt = find_in_smallfoot_ap_equal_list e1 e2 equalL;
              val uneq_opt = find_in_smallfoot_ap_unequal_list e1 e2 unequalL;
           in
-	     if (e1 = e2) then 
+	     if (eq e1 e2) then 
                 SOME (SMALLFOOT_PROP_IMPLIES___EQ___EQUAL_UNEQUAL_COND___IDEM_UNEQ, NONE)
              else if (isSome eq_opt) then
                 SOME (SMALLFOOT_PROP_IMPLIES___EQ___EQUAL_UNEQUAL_COND___EQ_UNEQ, eq_opt)
@@ -6304,7 +6304,7 @@ let
              val eq_opt = find_in_smallfoot_ap_equal_list e1 e2 equalL;
              val uneq_opt = find_in_smallfoot_ap_unequal_list e1 e2 unequalL;
           in
-	     if (e1 = e2) then 
+	     if (eq e1 e2) then 
                 SOME (SMALLFOOT_PROP_IMPLIES___EQ___SPLIT_EQUAL_UNEQUAL_COND___IDEM_EQ, NONE)
              else if (isSome eq_opt) then
                 SOME (SMALLFOOT_PROP_IMPLIES___EQ___SPLIT_EQUAL_UNEQUAL_COND___EQ_EQ, eq_opt)
@@ -6318,7 +6318,7 @@ let
              val eq_opt = find_in_smallfoot_ap_equal_list e1 e2 equalL;
              val uneq_opt = find_in_smallfoot_ap_unequal_list e1 e2 unequalL;
           in
-	     if (e1 = e2) then 
+	     if (eq e1 e2) then 
                 SOME (SMALLFOOT_PROP_IMPLIES___EQ___SPLIT_EQUAL_UNEQUAL_COND___IDEM_UNEQ, NONE)
              else if (isSome eq_opt) then
                 SOME (SMALLFOOT_PROP_IMPLIES___EQ___SPLIT_EQUAL_UNEQUAL_COND___EQ_UNEQ, eq_opt)
@@ -6391,7 +6391,7 @@ let
           if (isSome known_opt orelse
 	      not (is_smallfoot_ae_const_null e1) orelse
 	      not (is_smallfoot_ae_const_null e2) orelse
-	      (e1 = e2))  then NONE else SOME (e1,e2)
+	      (eq e1 e2))  then NONE else SOME (e1,e2)
        end)) [] 0 sfs_imp;
 
 
@@ -6407,7 +6407,7 @@ let
           if (isSome known_opt orelse
 	      not (is_smallfoot_ae_const_null e1) orelse
 	      not (is_smallfoot_ae_const_null e2) orelse
-	      (e1 = e2))  then NONE else SOME (e1,e2)
+	      (eq e1 e2))  then NONE else SOME (e1,e2)
        end)) [] 0 sfs;
    
 
@@ -6420,7 +6420,7 @@ let
           if (isSome known_opt orelse
 	      not (is_smallfoot_ae_const_null e1) orelse
 	      not (is_smallfoot_ae_const_null e2) orelse
-	      (e1 = e2))  then NONE else SOME (e1,e2)
+	      (eq e1 e2))  then NONE else SOME (e1,e2)
        end)) [] 0 sfs;
 
 
@@ -6428,7 +6428,7 @@ let
    val (_,_,(e1,e2)) = valOf found_opt;
    val n1 = dest_smallfoot_ae_const_null e1;
    val n2 = dest_smallfoot_ae_const_null e2;
-   val (n1,n2) = if (n1 = ``0:num``) then (n2,n1) else (n1,n2);
+   val (n1,n2) = if (eq n1 ``0:num``) then (n2,n1) else (n1,n2);
 in
    SMALLFOOT_PROP_IMPLIES___MANUAL_EQ_CASE_SPLIT___CONV n1 n2 t
 end;
@@ -6522,7 +6522,7 @@ let
               handle UNCHANGED => REFL t
 
    (*just move something back, if the strong_flag indicates so*)
-   val thm1 = if not (strong_flag = T) then thm0 else
+   val thm1 = if not (eq strong_flag T) then thm0 else
               CONV_RULE (RHS_CONV (
                   REPEATC SMALLFOOT_PROP_IMPLIES___STRONG_STACK_PROPOSITION___FROM_CONTEXT___CONV
               )) thm0
@@ -6927,7 +6927,7 @@ end;
 
 local 
    fun to_assum_pred t = 
-      fst (strip_comb (snd (strip_forall t))) = ``SMALLFOOT_PROP_IS_EQUIV_FALSE``;
+      eq (fst (strip_comb (snd (strip_forall t)))) ``SMALLFOOT_PROP_IS_EQUIV_FALSE``;
    
 
 in

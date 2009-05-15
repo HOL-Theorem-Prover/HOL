@@ -200,6 +200,10 @@ val x86_syntax_def = Define `
     if HD ts = "CMOVNA"  then X_SOME (\g. Xmov X_NA (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
     if HD ts = "CMOVB"   then X_SOME (\g. Xmov X_B (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
     if HD ts = "CMOVNB"  then X_SOME (\g. Xmov X_NB (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
+    if HD ts = "MUL"     then X_SOME (\g. Xmul  (decode_Xrm32 g (EL 1 ts))) else
+    if HD ts = "DIV"     then X_SOME (\g. Xdiv  (decode_Xrm32 g (EL 1 ts))) else
+    if HD ts = "MOV_BYTE" then X_SOME (\g. Xmov_byte (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
+    if HD ts = "CMP_BYTE" then X_SOME (\g. Xcmp_byte (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
     if HD ts = "CALL" then X_SOME (\g. Xcall (decode_Ximm_rm ts g)) else
     if HD ts = "RET"  then X_SOME (\g. Xret (decode_Xconst_or_zero ts g)) else option_fail`;
   
@@ -307,7 +311,15 @@ val x86_syntax_list = `` [
     " E0 cb     | LOOPNE rel8       ";
 
     " 60        | PUSHAD            ";
-    " 61        | POPAD             "
+    " 61        | POPAD             ";
+
+    " F7 /6     | DIV r/m32         ";
+    " F7 /4     | MUL r/m32         ";
+
+    " 88 /r     | MOV_BYTE r/m32,r32 "; (* this is a hack: MOV_BYTE does not exist *)
+    " 8A /r     | MOV_BYTE r32,r/m32 "; (* this is a hack: MOV_BYTE does not exist *)
+    " 38 /r     | CMP_BYTE r/m32,r32 "; (* this is a hack: CMP_BYTE does not exist *)
+    " 3A /r     | CMP_BYTE r32,r/m32 "  (* this is a hack: CMP_BYTE does not exist *)
 
   ] ``;
 

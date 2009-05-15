@@ -119,7 +119,24 @@ structure Yices = struct
     (wordsSyntax.word_and_tm, "bv-and", ""),
     (wordsSyntax.word_or_tm, "bv-or", ""),
     (wordsSyntax.word_xor_tm, "bv-xor", ""),
-    (wordsSyntax.word_1comp_tm, "bv-not", "")
+    (wordsSyntax.word_1comp_tm, "bv-not", ""),
+    (wordsSyntax.word_lsl_tm, "bv-shift-left0", ""),
+    (wordsSyntax.word_lsr_tm, "bv-shift-right0", ""),
+    (* word_concat in HOL has a more general type than bv-concat in Yices *)
+    (wordsSyntax.word_concat_tm, "bv-concat", ""),
+    (wordsSyntax.word_extract_tm, "bv-extract", ""),
+    (wordsSyntax.word_add_tm, "bv-add", ""),
+    (wordsSyntax.word_sub_tm, "bv-sub", ""),
+    (wordsSyntax.word_mul_tm, "bv-mul", ""),
+    (wordsSyntax.word_2comp_tm, "bv-neg", ""),
+    (wordsSyntax.word_lt_tm, "bv-slt", ""),
+    (wordsSyntax.word_le_tm, "bv-sle", ""),
+    (wordsSyntax.word_gt_tm, "bv-sgt", ""),
+    (wordsSyntax.word_ge_tm, "bv-sge", ""),
+    (wordsSyntax.word_lo_tm, "bv-lt", ""),
+    (wordsSyntax.word_ls_tm, "bv-le", ""),
+    (wordsSyntax.word_hi_tm, "bv-gt", ""),
+    (wordsSyntax.word_hs_tm, "bv-ge", "")
   ]
 
   (* binders need to be treated differently from the operators in
@@ -231,6 +248,65 @@ structure Yices = struct
           val (acc, s1) = translate_term (acc, t1)
       in
         (acc, "(select " ^ s1 ^ " 2)")
+      end
+    (* word literals *)
+    else if wordsSyntax.is_word_literal tm then
+      let val (num, dim_ty) = wordsSyntax.dest_n2w tm
+          val dim = fcpLib.index_to_num dim_ty
+                      handle Feedback.HOL_ERR _ =>
+                        raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                               "word literal: bit-vector type of unknown size")
+          val n = numSyntax.dest_numeral num
+      in
+        (acc, "(mk-bv " ^ Arbnum.toString dim ^ " " ^ Arbnum.toString n ^ ")")
+      end
+    (* fcp_index *)
+    (* Hopefully used as index into a bit vector, but we don't check -- Yices
+       should. *)
+    else if wordsSyntax.is_index tm then
+      let val (t1, num) = wordsSyntax.dest_index tm
+          val (acc, s1) = translate_term (acc, t1)
+          val n = numSyntax.dest_numeral num
+                    handle Feedback.HOL_ERR _ =>
+                      raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                               "index into bit-vector is not a numeral")
+          val sn = Arbnum.toString n
+      in
+        (acc, "(= (bv-extract " ^ sn ^ " " ^ sn ^ " " ^ s1 ^ ") 0b1)")
+      end
+    (* w2w *)
+    else if wordsSyntax.is_w2w tm then
+      let val (t1, dim_ty) = wordsSyntax.dest_w2w tm
+          val dim = fcpLib.index_to_num dim_ty
+                      handle Feedback.HOL_ERR _ =>
+                        raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                               "w2w: result bit-vector type of unknown size")
+          val old_dim_ty = wordsSyntax.dim_of t1
+          val old_dim = fcpLib.index_to_num old_dim_ty
+                      handle Feedback.HOL_ERR _ =>
+                        raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                               "w2w: argument bit-vector type of unknown size")
+          val (acc, s1) = translate_term (acc, t1)
+      in
+        if Arbnum.<= (dim, old_dim) then
+          (acc, "(bv-extract " ^ Arbnum.toString (Arbnum.- (dim, Arbnum.one)) ^
+             " 0 " ^ s1 ^ ")")
+        else
+          (acc, "(bv-concat (mk-bv " ^ Arbnum.toString
+             (Arbnum.- (dim, old_dim)) ^ " 0) " ^ s1 ^ ")")
+      end
+    (* word_msb *)
+    else if wordsSyntax.is_word_msb tm then
+      let val t1 = wordsSyntax.dest_word_msb tm
+          val dim_ty = wordsSyntax.dim_of t1
+          val n = fcpLib.index_to_num dim_ty
+                    handle Feedback.HOL_ERR _ =>
+                      raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                        "word_msb: argument bit-vector type of unknown size")
+          val sn = Arbnum.toString (Arbnum.- (n, Arbnum.one))
+          val (acc, s1) = translate_term (acc, t1)
+      in
+        (acc, "(= (bv-extract " ^ sn ^ " " ^ sn ^ " " ^ s1 ^ ") 0b1)")
       end
     (* binders *)
     else

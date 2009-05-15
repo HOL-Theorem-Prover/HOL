@@ -34,7 +34,7 @@ val lameq_po = let
 in
   mk_preorder (lameq_trans, lameq_refl)
 end
-       
+
 fun dest_binop t = let
   val (fx,y) = dest_comb t
   val (f,x) = dest_comb fx
@@ -59,18 +59,18 @@ end
    ---------------------------------------------------------------------- *)
 
 
-val congs = [lameq_APPcong, SPEC_ALL lameq_LAM, 
+val congs = [lameq_APPcong, SPEC_ALL lameq_LAM,
              REWRITE_RULE [GSYM AND_IMP_INTRO]
                           (last (CONJUNCTS chap2Theory.lemma2_12))]
 
-fun betafy ss = let 
-  open chap2Theory
+fun betafy ss = let
+  open chap2Theory head_reductionTheory
 in
-  simpLib.add_relsimp {refl = GEN_ALL lameq_refl, trans = lameq_trans, 
+  simpLib.add_relsimp {refl = GEN_ALL lameq_refl, trans = lameq_trans,
                        weakenings = [lameq_weaken_cong],
-                       subsets = [ccbeta_lameq, betastar_lameq, 
+                       subsets = [ccbeta_lameq, betastar_lameq, whstar_lameq,
                                   normorder_lameq, nstar_lameq],
-                       rewrs = [lameq_S, lameq_K, lameq_I, lameq_C, 
+                       rewrs = [lameq_S, lameq_K, lameq_I, lameq_C,
                                 lameq_B, lameq_beta]} ss ++
   rewrites [termTheory.lemma14b, normal_orderTheory.nstar_betastar_bnf,
             betastar_lameq_bnf, lameq_refl] ++
@@ -79,6 +79,29 @@ in
 end
 
 fun bsrw_ss() = betafy(srw_ss())
+
+(* ----------------------------------------------------------------------
+    A reducer for weak head reduction.
+   ---------------------------------------------------------------------- *)
+
+fun whfy ss = let
+  open relationTheory head_reductionTheory termTheory
+  val congs = [wh_app_congL, whstar_substitutive]
+in
+  add_relsimp {refl = RTC_REFL
+                        |> INST_TYPE [alpha |-> termSyntax.term_ty]
+                        |> Q.INST [`R` |-> `(-w->)`]
+                        |> Q.GEN `x`,
+               trans = transitive_RTC
+                         |> REWRITE_RULE [transitive_def]
+                         |> Q.ISPEC `(-w->)`,
+               weakenings = [wh_weaken_cong],
+               subsets = [],
+               rewrs = [MATCH_MP RTC_SINGLE
+                                 (SPEC_ALL (CONJUNCT1 weak_head_rules))]} ss ++
+  SSFRAG {dprocs = [], ac = [], rewrs = [lemma14b, bnf_whnf], congs = congs,
+          filter = NONE, name = NONE, convs = []}
+end
 
 (* ----------------------------------------------------------------------
     normorder_step
@@ -259,25 +282,25 @@ fun unvarify_tac th (w as (asl,g)) = let
                                           (#1 (dest_var y) ^ "s")
           val sets = List.filter (fn t => not (eq (rand t) y)) sets
           val new_tac = let
-            open pred_setSyntax 
+            open pred_setSyntax
           in
-            if null sets then 
+            if null sets then
               if HOLset.isEmpty strs then ALL_TAC
-              else let 
+              else let
                   val avoid_t = mk_set (HOLset.listItems strs)
                 in
                   binderLib.NEW_TAC newname avoid_t
                 end
-            else if HOLset.isEmpty strs then let 
+            else if HOLset.isEmpty strs then let
                 val avoid_t = List.foldl mk_union (hd sets) (tl sets)
               in
                 binderLib.NEW_TAC newname avoid_t
               end
-            else let 
+            else let
                 val base = mk_set (HOLset.listItems strs)
                 val avoid_t = List.foldl mk_union base sets
               in
-                binderLib.NEW_TAC newname avoid_t 
+                binderLib.NEW_TAC newname avoid_t
               end
           end
           val newname_t = mk_var(newname, stringSyntax.string_ty)

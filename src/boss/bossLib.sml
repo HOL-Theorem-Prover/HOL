@@ -87,30 +87,16 @@ local open sumTheory
 in
 val pure_ss = pureSimps.pure_ss
 val bool_ss = boolSimps.bool_ss
-val std_ss =
-     (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
-      numSimps.REDUCE_ss ++ sumSimps.SUM_ss ++ combinSimps.COMBIN_ss ++
-      numSimps.ARITH_RWTS_ss)
-
-val arith_ss = std_ss ++ numSimps.ARITH_DP_ss
+val std_ss = numLib.std_ss
+val arith_ss = numLib.arith_ss
 val old_arith_ss = std_ss ++ numSimps.old_ARITH_ss
 val ARITH_ss = numSimps.ARITH_ss
 val old_ARITH_ss = numSimps.old_ARITH_ss
 val list_ss  = arith_ss ++ listSimps.LIST_ss
 end
 
-fun DECIDE tm =
- numLib.ARITH_PROVE tm handle HOL_ERR _ => tautLib.TAUT_PROVE tm
-                       handle HOL_ERR _ => raise ERR "DECIDE" "";
-
-
-fun DECIDE_TAC (g as (asl,_)) =
-((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith_asm asl)
-      THEN numLib.ARITH_TAC)
- ORELSE
- tautLib.TAUT_TAC
- ORELSE
- NO_TAC) g;
+val DECIDE = numLib.DECIDE;
+val DECIDE_TAC = numLib.DECIDE_TAC;
 
 fun ZAP_TAC ss thl =
    BasicProvers.STP_TAC ss

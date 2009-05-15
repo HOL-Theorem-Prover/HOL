@@ -78,14 +78,17 @@ new parsers can be quickly constructed to support user applications.
 
 The parser is parameterized by grammars for types and terms. The
 behaviour of the parser and prettyprinter is therefore usually altered
-by grammar manipulations. These can be of two kinds: \emph{temporary}
-or \emph{permanent}.  Temporary changes should be used in library
-implementations or in script files for those changes that the user
-does not wish to have persist in theories descended from the current
-one.  Permanent changes are appropriate for use in script-files, and
-will be in force in all descendant theories.  Functions making
-temporary changes are signified by a leading \ml{temp\_} in their
-names.
+by grammar manipulations.
+%
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!grammars for}
+%
+These can be of two kinds: \emph{temporary} or \emph{permanent}.
+Temporary changes should be used in library implementations, or in
+script files for those changes that the user does not wish to have
+persist in theories descended from the current one.  Permanent changes
+are appropriate for use in script-files, and will be in force in all
+descendant theories.  Functions making temporary changes are signified
+by a leading \ml{temp\_} in their names.
 
 \subsection{Parsing types}
 \index{types, in HOL logic@types, in \HOL{} logic!parsing of|(}
@@ -172,9 +175,11 @@ In the following, we explore some of the capabilities of the
 The parser turns strings into terms.  It does this in the following
 series of phases, all of which are influenced by the provided grammar.
 Usually this grammar is the default global grammar, but users can
-arrange to use different grammars if they desire.  Strictly, parsing
-occurs after lexing has split the input into a series of tokens.  For
-more on lexing, see Section~\ref{HOL-lex}.
+arrange to use different grammars if they desire.  %
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!grammars for}
+%
+Strictly, parsing occurs after lexing has split the input into a
+series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
 \begin{description}
 \item[Concrete Syntax:] Features such as infixes, binders and mix-fix
   forms are translated away, creating an intermediate, ``abstract
@@ -249,7 +254,7 @@ the \ml{Absyn} form
 
   The user can insert intermediate transformation functions of their
   own design into the parsing processing at this point.  This is done
-  with the function 
+  with the function
 \begin{verbatim}
    add_absyn_postprocessor
 \end{verbatim}
@@ -310,10 +315,12 @@ the \ml{Absyn} form
   picked when this situation arises.)
 
   When a term in the overload map is chosen as the best option, it is
-  substituted into the term at appropriate position.  If the term is
-  a lambda abstraction, then as many $\beta$-reductions are done as
+  substituted into the term at appropriate position.  If the term is a
+  lambda abstraction, then as many $\beta$-reductions are done as
   possible, using any arguments that the term has been applied to.  It
-  is in this way that a syntactic macro can process arguments.
+  is in this way that a syntactic pattern can process arguments.  (See
+  also Section~\ref{sec:parser:syntactic-patterns} for more on
+  syntactic patterns.)
 \item[Type Inference:] %
   \index{type inference!in HOL parser@in \HOL{} parser}%
   All terms in the \HOL{} logic are well-typed.  The kernel enforces
@@ -350,7 +357,7 @@ possible to write and read terms such as
 \begin{alltt}
    \(\forall\)x. P x \(\land\) Q x
 \end{alltt}
-rather than 
+rather than
 \begin{alltt}
    !x. P x /\bs{} Q x
 \end{alltt}
@@ -376,7 +383,7 @@ function \ml{Unicode.unicode\_version}.  Then, while the trace
 variable \ml{"Unicode"} is $0$, the ASCII syntax will be used for
 parsing and printing.  If the trace is set to $1$, then the Unicode
 syntax will also work in the parser, and the pretty-printer will
-prefer it when terms are printed. 
+prefer it when terms are printed.
 
 For example, in \ml{boolScript.sml}, the Unicode character for logical
 and (\texttt{$\land$}), is set up as a Unicode alternative for
@@ -386,7 +393,7 @@ and (\texttt{$\land$}), is set up as a Unicode alternative for
 \end{verbatim}
 (In this context, the \ml{Unicode} structure has been \ml{open}-ed,
 giving access also to the structure \ml{UChar} which contains bindings
-for the Greek alphabet, and some common mathematical symbols. ) 
+for the Greek alphabet, and some common mathematical symbols. )
 
 The argument to \ml{unicode\_version} is a record with fields \ml{u}
 and \ml{tmnm}.  Both are strings.  The \ml{tmnm} field can either be
@@ -396,11 +403,11 @@ name of a constant, then, with the trace variable enabled, the string
 \ml{u} will be overloaded to the same name.  If the \ml{tmnm} is the
 same as a concrete syntax rule's token, then the behaviour is to
 create a new rule mapping to the same name, but with the string \ml{u}
-used as the token. 
+used as the token.
 
 \paragraph{Lexing rules with Unicode characters}
 %
-\index{tokens!Unicode characters} 
+\index{tokens!Unicode characters}
 \index{identifiers, in HOL logic@identifiers, in \HOL{} logic!non-aggregating characters}
 %
 Roughly speaking, \HOL{} considers characters to be divided into three
@@ -421,6 +428,120 @@ everything else is symbolic.  (The exception for \holtxt{$\lambda$} is to
 allow strings like \holtxt{$\lambda$x.x} to lex into \emph{four} tokens.)
 
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|)}
+
+\subsubsection{Syntactic patterns (``macros'')}
+\label{sec:parser:syntactic-patterns}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!syntactic patterns|(}
+
+The ``overload map'' mentioned previously is actually a combination of
+maps, one for parsing, and one for printing.  The parsing map is from
+names to lists of terms, and determines how the names that appear in a
+\ml{Preterm} will translate into terms.  In essence, bound names turn
+into bound variables, unbound names not in the domain of the map turn
+into free variables, and unbound names in the domain of the map turn
+into one of the elements of the set associated with the given name.
+Each term in the set of possibilities may have a different type, so
+type inference will choose from those that have types consistent with
+the rest of the given term.  If the resulting list contains more than
+one element, then the term appearing earlier in the list will be
+chosen.
+
+The most common use-case for the overload map is have names map to
+constants.  In this way, for example, the various numeric theories can
+map the string \ml{"+"} to the relevant notions of addition, each of
+which is a different constant.  However, the system has extra
+flexibility because names can map to arbitrary terms.  For example, it
+is possible to map to specific type-instances of constants.  Thus, the
+string \ml{"<=>"} maps to equality, but where the arguments are forced
+to be of type \holquote{:bool}.
+
+Moreover, if the term mapped to is a lambda-abstraction (\ie, of the
+form $\lambda x.\;M$), then the parser will perform all possible
+$\beta$-reductions for that term and the arguments accompanying it.  For
+example, in \theoryimp{boolTheory} and its descendants, the string
+\ml{"<>"} is overloaded to the term \holquote{\bs{}x~y.~\td{}(x~=~y)}.
+Additionally, \ml{"<>"} is set up at the concrete syntax level as an
+infix.  When the user inputs \holquote{x~\lt\gt~y}, the resulting
+\ml{Absyn} value is
+\begin{verbatim}
+   APP(APP(IDENT "<>", IDENT "x"), IDENT "x")
+\end{verbatim}
+The \ml{"x"}  and \ml{"y"} identifiers will map to free variables, but
+the \ml{"<>"} identifier maps to a list containing
+\holquote{\bs{}x~y.~\td(x~=~y)}. This term has type
+\begin{verbatim}
+   :'a -> 'a -> bool
+\end{verbatim}
+and the polymorphic variables are generalisable, allowing type
+inference to give appropriate (identical) types to \ml{x} and \ml{y}.
+Assuming that this option is the only overloading for \ml{"<>"} left
+after type inference, then the resulting term will be
+\holtxt{\td(x~=~y)}.  Better, though this will be the underlying
+structure of the term in memory, it will actually print as
+\holquote{x~\lt\gt~y}.
+
+If the term mapped to in the overload map contains any free variables,
+these variables will not be instantiated in any way.  In particular,
+if these variables have polymorphic types, then the type variables in
+those types will be constant: not subject to instantiation by type
+inference.
+
+\paragraph{Pretty-printing and syntactic patterns} The second part of
+the ``overload map'' is a map from terms to strings, specifying how
+terms should be turned back into identifiers.  (Though it does not
+actually construct an \ml{Absyn} value, this process reverses the name
+resolution phase of parsing, producing something that is then printed
+according to the concrete syntax part of the given grammar.)
+
+Because parsing can map single names to complicated term structures,
+printing must be able to take a complicated term structure back to a
+single name.  It does this by performing
+term matching.%
+\index{matching!in pretty-printing terms}
+%
+\footnote{The matching done is first-order; contrast the higher-order
+  matching done in the simplifier.}
+If multiple patterns match the same term, then the printer picks the
+most specific match (the one that requires least instantiation of the
+pattern's variables).  If this still results in multiple, equally
+specific, possibilities, the most recently added pattern takes
+precedence.  (Users can thus manipulate the printer's preferences by
+making otherwise redundant calls to the \ml{overload\_on} function.)
+
+In the example of the not-equal-to operator above, the pattern will be
+\holtxt{\~(?x = ?y)}, where the question-marks indicate instantiable
+pattern variables.  If a pattern includes free variables (recall that
+the \ml{x} and \ml{y} in this example were bound by an abstraction),
+then these will not be instantiable.
+
+There is one further nicety in the use of this facility: ``bigger''
+matches, covering more of a term, take precedence.   The difficulty
+this can cause is illustrated in the \holtxt{IS\_PREFIX} pattern from
+\theoryimp{rich\_listTheory}.  For the sake of backwards compatibility
+this identifier maps to
+\begin{verbatim}
+   \x y. isPREFIX y x
+\end{verbatim}
+where \holtxt{isPREFIX} is a constant from \theoryimp{listTheory}.
+(The issue is that \holtxt{IS\_PREFIX} expects its arguments in
+reverse order to that expected by \holtxt{isPREFIX}.) Now, when this
+macro is set up the overload map already contains a mapping from the
+string \holtxt{"isPREFIX"} to the constant \holtxt{isPREFIX} (this
+happens with every constant definition).  But after the call
+establishing the new pattern for \holtxt{IS\_PREFIX}, the
+\holtxt{isPREFIX} form will no longer be printed.  Nor is it enough,
+to repeat the call
+\begin{verbatim}
+   overload_on("isPREFIX", ``isPREFIX``)
+\end{verbatim}
+Instead (assuming that \holtxt{isPREFIX} is indeed the preferred
+printing form), the call must be
+\begin{verbatim}
+   overload_on("isPREFIX", ``\x y. isPREFIX x y``)
+\end{verbatim}
+so that \ml{isPREFIX}'s pattern is as long as \ml{IS\_PREFIX}'s.
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!syntactic patterns|)}
 
 
 \subsubsection{Type constraints}
@@ -823,10 +944,12 @@ This is useful if one wants to use variables
 with the same names as previously declared (or built-in) constants
 (\eg\ \ml{o}, \ml{I}, \ml{S} \etc).  The name $x$ is still a constant
 for the constructors, theories, etc; \ml{hide} affects parsing and
-printing by removing the given name from the ``overload map''
-described above in Section~\ref{sec:parser:architecture}.  See the
-\REFERENCE{} entry for \ml{hide} for more details, including an
-explanation of the return type.
+printing by removing the given name from the ``overload map'' described
+above in Section~\ref{sec:parser:architecture}.  Note that the effect
+of \ml{hide} is \emph{temporary}; its effects do not persist in
+theories descended from the current one. See the \REFERENCE{} entry
+for \ml{hide} for more details, including an explanation of the return
+type.
 
 The function
 
@@ -2237,6 +2360,7 @@ tools such as \ml{PROVE\_TAC} instead.)
 
 \subsubsection{Generating rewrite rules from theorems}
 \label{sec:generating-rewrite-rules}
+\index{equational theorems, in HOL logic@equational theorems, in \HOL{} logic!use of in the simplifier}
 
 There are two routes by which a theorem for rewriting can be passed to
 the simplifier: either as an explicit argument to one of the \ML{}
@@ -2326,7 +2450,7 @@ $\textsf{SUC}(3)$ will succeed, and find the instantiation $n\mapsto
 3$. In contrast with unification, matching is not symmetrical: a
 pattern $\textsf{SUC}(3)$ will not match the term $\textsf{SUC}(n)$.
 
-\index{higher-order matching} \index{matching, higher-order} The
+\index{higher-order matching} \index{matching!higher-order} The
 simplifier uses a special form of higher-order matching.  If a pattern
 includes a variable of some function type ($f$ say), and that variable
 is applied to an argument $a$ that includes no variables except those
@@ -2764,6 +2888,117 @@ decision procedure it cannot guarantee that these functions will ever
 return (and they may also take arbitrarily long to work, often a worry
 with arithmetic decision procedures), but use of \ml{limit} is
 otherwise a good method for ensuring that simplification terminates.
+
+\subsubsection{Rewriting with arbitrary pre-orders}
+\label{sec:preorder-rewriting}
+\index{simplification!with pre-orders}
+
+In addition to simplifying with respect to equality, it is also
+possible to use the simplifier to ``rewrite'' with respect to a relation
+that is reflexive and transitive (a \emph{preorder}).  This can be a
+very powerful way of working with transition relations in operational
+semantics.
+
+{\newcommand{\bred}{\ensuremath{\rightarrow^*_\beta}}
+
+  Imagine, for example, that one has set up a ``deep embedding'' of the
+  $\lambda$-calculus.  This will entail the definition of a new type
+  (\texttt{lamterm}, say) within the logic, as well as definitions of
+  appropriate functions (\eg, substitution) and relations over
+  \texttt{lamterm}.  One is likely to work with the reflexive and
+  transitive closure of $\beta$-reduction (\bred).  This relation has
+  congruence rules such as
+\[
+\begin{array}{c@{\qquad\qquad}c}
+\infer{M_1 \,N\;\bred\;M_2\,N}{M_1 \;\bred\;M_2} &
+\infer{M \,N_1\;\bred\;M\,N_2}{N_1 \;\bred\;N_2}\\[3mm]
+\multicolumn{2}{c}{\infer{(\lambda v.M_1)\;\bred\;(\lambda v.M_2)}{M_1\;\bred M_2}}
+\end{array}
+\] and one important rewrite
+\[
+\infer{(\lambda v. M)\,N \;\bred\; M[v := N]}{}
+\]
+Having to apply these rules manually in order to show that a
+given starting term can reduce to particular destination is usually
+very painful, involving many applications, not only of the theorems
+above, but also of the theorems describing reflexive and transitive
+closure (see Section~\ref{relation}).
+
+Though the $\lambda$-calculus is non-deterministic, it is also confluent, so
+the following theorem holds:
+\[
+\infer{
+  M_1 \;\bred\;N\;\;=\;\;M_2\;\bred\; N
+}{
+  \beta\textrm{-nf}\;N & M_1 \;\bred\;M_2
+}
+\]
+This is the critical theorem that justifies the switch from rewriting
+with equality to rewriting with \bred.  It says that if one has a term
+$M_1\bred N$, with $N$ a $\beta$-normal form, and if $M_1$ rewrites to
+$M_2$ under \bred, then the original term is equal to $M_2\bred N$.
+With luck, $M_2$ will actually be syntactically identical to $N$, and
+the reflexivity of \bred{} will prove the desired result.  Theorems
+such as these, that justify the switch from one rewriting relation to
+another are known as \emph{weakening congruences}.
+
+When adjusted appropriately, the simplifier can be modified to exploit
+the five theorems above, and automatically prove results such as
+\[
+u ((\lambda f\,x. f (f\,x)) v) \bred u (\lambda x. v(v\,x))
+\]
+(on the assumption that the terms $u$ and $v$ are $\lambda$-calculus
+variables, making the result a $\beta$-normal form).
+
+In addition, one will quite probably have various rewrite theorems
+that one will want to use in addition to those specified above.  For
+example, if one has earlier proved a theorem such as
+\[
+K\,x\,y \bred x
+\]
+then the simplifier can take this into account as well.
+
+The function achieving all this is
+\index{add_relsimp@\ml{add\_relsimp}}
+\begin{verbatim}
+   simpLib.add_relsimp  : {trans: thm, refl: thm, weakenings: thm list,
+                           subsets: thm list, rewrs : thm list} ->
+                          simpset -> simpset
+\end{verbatim}
+The fields of the record that is the first argument are:
+\begin{description}
+\item[\texttt{trans}] The theorem stating that the relation is
+  transitive, in the form $\forall x y z. R\,x\,y \land R\,y\,z \Rightarrow R x z$.
+\item[\texttt{refl}] The theorem stating that the relation is
+  reflexive, in the form $\forall x. R\,x\,x$.
+\item[\texttt{weakenings}] A list of weakening congruences, of the
+  general form $P_1 \Rightarrow P_2 \Rightarrow \cdots (t_1 = t_2)$, where at least one of the
+  $P_i$ will presumably mention the new relation $R$ applied to a
+  variable that appears in $t_1$.  Other
+  antecedents may be side-conditions such as the requirement in the
+  example above that the term $N$ be in $\beta$-normal form.
+\item[\texttt{subsets}] Theorems of the form $R'\,x\,y \Rightarrow R\,x\,y$.
+  These are used to augment the resulting \simpset's ``filter'' so that
+  theorems in the context mentioning $R'$ will derive useful rewrites
+  involving $R$.  In the example of $\beta$-reduction, one might also have
+  a relation $\rightarrow_{wh}^*$ for weak-head reduction.  Any weak-head
+  reduction is also a $\beta$-reduction, so it can be useful to have the
+  simplifier automatically ``promote'' facts about weak-head reduction
+  to facts about $\beta$-reduction, and to then use them as rewrites.
+\item[\texttt{rewrs}] Possibly conditional rewrites, presumably mostly
+  of the form $P \Rightarrow R\,t_1\,t_2$.  Rewrites over equality can also be
+  included here, allowing useful additional facts to be included.  For
+  example, when working with the $\lambda$-calculus, one might include both
+  the rewrite for $K$ above, as well as the definition of
+  substitution.
+\end{description}
+} % end of block defining \bred
+
+The application of this function to a \simpset{} \texttt{ss} will
+produce an augmented \texttt{ss} that has all of \texttt{ss}'s
+existing behaviours, as well as the ability to rewrite with the given
+relation.
+
 
 \index{simplification|)}
 

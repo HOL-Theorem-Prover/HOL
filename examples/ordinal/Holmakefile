@@ -1,0 +1,3 @@
+INCLUDES = $(dprot $(HOLDIR)/src/emit/ML)
+
+EXTRA_CLEANS = ordinalML.sig ordinalML.sml

@@ -85,11 +85,14 @@ val bytes2word_lemma = prove(
   THEN ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [word_bits_def,bytes2word_lem]);
 
 val bytes2word_thm = store_thm("bytes2word_thm",
-  ``!w:word32. 
+  ``!w:word32 x. 
       (bytes2word [(7 >< 0) w; (7 >< 0) (w >> 8); (7 >< 0) (w >> 16); (7 >< 0) (w >> 24)] = w) /\ 
-      (bytes2word [(7 >< 0) w; (15 >< 8) w; (23 >< 16) w; (31 >< 24) w] = w)``,
-  REWRITE_TAC [bytes2word_lemma]
+      (bytes2word [(7 >< 0) w; (15 >< 8) w; (23 >< 16) w; (31 >< 24) w] = w) /\
+      (bytes2word [x] = (w2w x):'a word)``,
+  REWRITE_TAC [bytes2word_def,wordsTheory.ZERO_SHIFT,wordsTheory.WORD_OR_CLAUSES]
+  THEN REWRITE_TAC [bytes2word_lemma]
   THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss) 
          [WORD_OR_CLAUSES,bytes2word_lemma]);
+
 
 val _ = export_theory ();

@@ -40,10 +40,10 @@ type convdata = {name  : string,
 
 datatype control = UNBOUNDED | BOUNDED of int ref
 
-
-fun appconv (c,th,UNBOUNDED) tm     = c tm
-  | appconv (c,th,BOUNDED(ref 0)) _ = failwith "exceeded rewrite bound"
-  | appconv (c,th,BOUNDED r) tm     = c tm before Portable.dec r;
+(* boolean argument to c is whether or not the rewrite is bounded *)
+fun appconv (c,UNBOUNDED) tm     = c false tm
+  | appconv (c,BOUNDED(ref 0)) _ = failwith "exceeded rewrite bound"
+  | appconv (c,BOUNDED r) tm     = c true tm before Portable.dec r;
 
 fun dest_tagged_rewrite thm = let
   val (th, n) = DEST_BOUNDED thm
@@ -59,7 +59,7 @@ fun mk_rewr_convdata thm =
          key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
          trace = 100, (* no need to provide extra tracing here;
                          COND_REWR_CONV provides enough tracing itself *)
-         conv  = appconv (COND_REWR_CONV th, th, tag)} before
+         conv  = appconv (COND_REWR_CONV th, tag)} before
    trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
    handle HOL_ERR _ =>
           (trace (2, LZ_TEXT(fn () =>
@@ -241,8 +241,8 @@ with
  fun wk_mk_travrules (rels, congs) = let
    fun cong2proc th = let
      open Opening Travrules
-     fun mk_refl rel t = let 
-       val PREORDER(_,_,refl) = find_relation rel rels	 
+     fun mk_refl rel t = let
+       val PREORDER(_,_,refl) = find_relation rel rels
      in
        refl t
      end
@@ -268,13 +268,13 @@ end
 (* ----------------------------------------------------------------------
     add_relsimp : {trans,refl,weakenings,subsets} -> simpset -> simpset
 
-    trans and refl are the transitivity and reflexivity theorems for the 
-    relation.  weakenings are theorems for turning (at least) equality goals 
-    into goals over the new relation.  subsets are theorems that help the 
-    munger: they say that certain forms imply rules for the relation.  For 
-    example, if using RTC R as the relation, then RTC_R, which states 
+    trans and refl are the transitivity and reflexivity theorems for the
+    relation.  weakenings are theorems for turning (at least) equality goals
+    into goals over the new relation.  subsets are theorems that help the
+    munger: they say that certain forms imply rules for the relation.  For
+    example, if using RTC R as the relation, then RTC_R, which states
       !x y. R x y ==> RTC R x y
-    is a good subset theorem 
+    is a good subset theorem
    ---------------------------------------------------------------------- *)
 
 fun dest_binop t = let
@@ -285,7 +285,7 @@ in
 end
 datatype munge_action = TH of thm | POP
 fun munge base subsets asms (thlistlist, n) = let
-  val munge = munge base subsets 
+  val munge = munge base subsets
 in
   case thlistlist of
     [] => n
@@ -297,15 +297,18 @@ in
       | [th] => let
           open Net
         in
-          if is_imp (concl th) then 
-            munge (#1 (dest_imp (concl th)) :: asms) 
+          if is_imp (concl th) then
+            munge (#1 (dest_imp (concl th)) :: asms)
                   ((TH (UNDISCH th)::POP::ths)::rest, n)
           else
             case total dest_binop (concl th) of
               SOME (R,from,to) => let
                 fun foldthis (t,th) = DISCH t th
-                fun insert (t,th) n = 
-                    Net.insert (t, List.foldl foldthis th asms) n
+                fun insert (t,th0) n = let
+                  val (bound,th) = dest_tagged_rewrite th0
+                in
+                  Net.insert (t, (bound, List.foldl foldthis th asms)) n
+                end
               in
                 if aconv R base then
                   munge asms (ths :: rest, insert (from,th) n)
@@ -324,9 +327,9 @@ end
 
 fun po_rel (Travrules.PREORDER(r,_,_)) = r
 
-fun mk_reducer rel_t subsets initial_rewrites = let 
-  exception redExn of thm Net.net
-  fun munge_subset_th th = let 
+fun mk_reducer rel_t subsets initial_rewrites = let
+  exception redExn of (control * thm) Net.net
+  fun munge_subset_th th = let
     val (_, impn) = strip_forall (concl th)
     val (a, _) = dest_imp impn
     val (f, _, _) = dest_binop a
@@ -336,18 +339,24 @@ fun mk_reducer rel_t subsets initial_rewrites = let
   val subsets = map munge_subset_th subsets
   fun addcontext (ctxt, thms) = let
     val n = case ctxt of redExn n => n
-                       | _ => raise ERR ("mk_reducer.addcontext", 
+                       | _ => raise ERR ("mk_reducer.addcontext",
                                          "Wrong sort of ctxt")
     val n' = munge rel_t subsets [] ([map TH thms], n)
   in
     redExn n'
   end
   val initial_ctxt = addcontext (redExn Net.empty, initial_rewrites)
-  fun applythm solver t th = let 
+  fun applythm solver t (bound, th) = let
+    fun dec() = case bound of
+                  BOUNDED (r as ref n) =>
+                    if n > 0 then r := n - 1
+                    else raise ERR ("mk_reducer.applythm",
+                                    "Bound exceeded on rwt.")
+                | UNBOUNDED => ()
     val matched = PART_MATCH (lhand o #2 o strip_imp) th t
     open Trace
-    fun do_sideconds th = 
-        if is_imp (concl th) then let 
+    fun do_sideconds th =
+        if is_imp (concl th) then let
           val (h,c) = dest_imp (concl th)
           val _ = trace(3,SIDECOND_ATTEMPT h)
           val scond = solver h
@@ -355,7 +364,7 @@ fun mk_reducer rel_t subsets initial_rewrites = let
         in
           do_sideconds (MP th scond)
         end
-      else (trace(2,REWRITING(t,th)); th)
+      else (dec(); trace(2,REWRITING(t,th)); th)
   in
     do_sideconds matched
   end
@@ -383,7 +392,7 @@ in
   hd relations
 end
 
-fun add_relsimp {refl,trans,weakenings,subsets,rewrs} ss = let 
+fun add_relsimp {refl,trans,weakenings,subsets,rewrs} ss = let
   val rel_t = #1 (dest_binop (#2 (strip_forall (concl refl))))
   val rel_po = Travrules.mk_preorder (trans,refl)
   val reducer = mk_reducer rel_t subsets rewrs

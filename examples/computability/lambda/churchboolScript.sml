@@ -6,6 +6,7 @@ open termTheory
 open boolSimps
 open normal_orderTheory
 open reductionEval
+open head_reductionTheory
 
 val _ = new_theory "churchbool"
 
@@ -32,11 +33,27 @@ val cB_11 = Store_thm(
   ``(cB p = cB q) ⇔ (p ⇔ q)``,
   SRW_TAC [][cB_def]);
 
+val cB_lameq11 = Store_thm(
+  "cB_lameq11",
+  ``(cB p == cB q) ⇔ (p ⇔ q)``,
+  EQ_TAC THEN SRW_TAC [][] THEN
+  `∃Z. cB p -β->* Z ∧ cB q -β->* Z`
+    by METIS_TAC [beta_CR, theorem3_13, prop3_18] THEN
+  `cB p = cB q`
+    by METIS_TAC [corollary3_2_1, beta_normal_form_bnf, bnf_cB] THEN
+  FULL_SIMP_TAC (srw_ss()) [])
+
 val cB_behaviour = store_thm(
   "cB_behaviour",
   ``cB T @@ x @@ y -n->* x ∧ cB F @@ x @@ y -n->* y``,
   SRW_TAC [][cB_def] THEN FRESH_TAC THEN
   SRW_TAC [NORMSTAR_ss][]);
+
+val wh_cB = store_thm(
+  "wh_cB",
+  ``cB T @@ x @@ y -w->* x ∧ cB F @@ x @@ y -w->* y``,
+  REWRITE_TAC [cB_def] THEN CONJ_TAC THEN unvarify_tac whstar_substitutive THEN
+  ASM_SIMP_TAC (whfy (srw_ss())) []);
 
 val cnot_def = Define`
   cnot = LAM "b" (VAR "b" @@ cB F @@ cB T)
@@ -66,11 +83,22 @@ val bnf_cand = Store_thm(
   "bnf_cand",
   ``bnf cand``,
   SRW_TAC [][cand_def]);
+val is_abs_cand = Store_thm(
+  "is_abs_cand",
+  ``is_abs cand``,
+  SRW_TAC [][cand_def]);
 val cand_behaviour = store_thm(
   "cand_behaviour",
   ``cand @@ cB p @@ cB q -n->* cB (p /\ q)``,
   SIMP_TAC (bsrw_ss()) [cand_def] THEN
   Cases_on `p` THEN SIMP_TAC (bsrw_ss()) [cB_behaviour]);
+
+val wh_cand = store_thm(
+  "wh_cand",
+  ``cand @@ b1 @@ b2 -w->* b1 @@ b2 @@ cB F``,
+  REWRITE_TAC [cand_def] THEN unvarify_tac whstar_substitutive THEN
+  ASM_SIMP_TAC (whfy(srw_ss())) []);
+
 
 val cand_F1 = store_thm(
   "cand_F1",
@@ -97,7 +125,7 @@ val bnf_cor = Store_thm(
 val cor_behaviour = store_thm(
   "cor_behaviour",
   ``cor @@ cB p @@ cB q -n->* cB (p ∨ q)``,
-  SIMP_TAC (bsrw_ss()) [cor_def] THEN 
+  SIMP_TAC (bsrw_ss()) [cor_def] THEN
   Cases_on `p` THEN SIMP_TAC (bsrw_ss()) [cB_behaviour]);
 
 val _ = export_theory()

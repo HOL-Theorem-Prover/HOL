@@ -166,7 +166,7 @@ val X86_LISP_CONS = save_thm("X86_LISP_CONS",let
   val imp = lisp_inv_cons
   val def = xLISP_def
   val pre_tm = ``xLISP (x1,x2,x3,x4,x5,x6,limit) * xPC p * ~xS``
-  val post_tm = ``xLISP (Dot x1 x2,x2,x3,x4,x5,x6,limit) * xPC (p + 0x12Dw) * ~xS``
+  val post_tm = ``xLISP (Dot x1 x2,x2,x3,x4,x5,x6,limit) * xPC (p + 0x128w) * ~xS``
   val res = prove_spec th imp def pre_tm post_tm
   val (_,_,c,_) = dest_spec (concl res)
   val def = new_definition("x86_alloc_code",mk_eq(``(x86_alloc_code:word32->(word32 # string list) set) p``,c))
@@ -205,7 +205,7 @@ val X86_LISP_EQUAL = save_thm("X86_LISP_EQUAL",let
   val imp = lisp_inv_equal
   val def = xLISP_def
   val pre_tm = ``xLISP (x1,x2,x3,x4,x5,x6,limit) * xPC p * ~xS``
-  val post_tm = ``xLISP (LISP_EQUAL x1 x2,x2,x3,x4,x5,x6,limit) * xPC (p + 0x8Fw) * ~xS``
+  val post_tm = ``xLISP (LISP_EQUAL x1 x2,x2,x3,x4,x5,x6,limit) * xPC (p + 0x86w) * ~xS``
   val res = prove_spec th imp def pre_tm post_tm
   val (_,_,c,_) = dest_spec (concl res)
   val def = new_definition("x86_equal_code",mk_eq(``(x86_equal_code:word32->(word32 # string list) set) p``,c))
@@ -1204,11 +1204,12 @@ fun PPC_LISP_EQ_SYMBOL (i,name,rw) (j,str) = let
   val result = RW [GSYM rw] result
   in save_thm("PPC_LISP_SYMBOL" ^ name ^ "_" ^ (int_to_string j),result) end;
 
-val list = 
-  [(3,"nil"), (15,"t"), (27,"quote"), (43,"*"), (55,"+"), (67,"-"), 
-   (79,"<"), (91,"car"), (103,"cdr"), (115,"cons"), (127,"equal"), 
-   (143,"cond"), (155,"atomp"), (171,"consp"), (187,"numberp"), 
-   (203,"symbolp"), (219,"lambda")];
+val list = let
+  val th = SIMP_CONV std_ss [builtin_symbols_set_def,word_add_n2w] ``builtin_symbols_set 3w``
+  val xs = (helperLib.list_dest (pred_setSyntax.dest_insert) o snd o dest_eq o concl) th
+  val xs = map pairSyntax.dest_pair (tl (rev xs))
+  val xs = map (fn (x,y) => (numSyntax.int_of_term ((snd (dest_comb x))), stringSyntax.fromHOLstring y)) xs
+  in rev xs end
 
 val _ = map (ARM_LISP_EQ_SYMBOL (1,"_EXP",TRUTH)) [hd list];
 val _ = map (X86_LISP_EQ_SYMBOL (1,"_EXP",TRUTH)) [hd list];

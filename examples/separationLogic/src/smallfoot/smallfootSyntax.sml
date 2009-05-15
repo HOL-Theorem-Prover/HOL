@@ -132,7 +132,7 @@ val smallfoot_p_expression_eval_term = ``SMALLFOOT_P_EXPRESSION_EVAL``
 fun dest_smallfoot_tag t =
     let
 	val (op_term, arg) = dest_comb t;
-        val _ = if (op_term = smallfoot_tag_term) then () else
+        val _ = if (eq op_term smallfoot_tag_term) then () else
                 Feedback.fail ();
     in 
         arg
@@ -141,7 +141,7 @@ fun dest_smallfoot_tag t =
 fun dest_smallfoot_var t =
     let
 	val (op_term, arg) = dest_comb t;
-        val _ = if (op_term = smallfoot_var_term) then () else
+        val _ = if (eq op_term smallfoot_var_term) then () else
                 Feedback.fail ();
     in 
         arg
@@ -153,7 +153,7 @@ fun dest_local_vars t =
     let
        val (op_term, args) = strip_comb t;
     in
-       if (op_term = smallfoot_prog_val_arg_term) then (
+       if (eq op_term smallfoot_prog_val_arg_term) then (
          let
 	     val (arg1, arg2) = (el 1 args, el 2 args);
 	     val (v, t') = dest_abs arg1;
@@ -161,7 +161,7 @@ fun dest_local_vars t =
          in
 	     ((v,SOME arg2)::l, t'')
          end
-       ) else if (op_term = smallfoot_prog_local_var_term) then (
+       ) else if (eq op_term smallfoot_prog_local_var_term) then (
          let
 	     val arg1 = el 1 args;
 	     val (v, t') = dest_abs arg1;

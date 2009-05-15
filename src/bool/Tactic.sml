@@ -16,8 +16,6 @@ struct
 
 open HolKernel Drule Conv Tactical Thm_cont boolTheory boolSyntax Abbrev;
 
-infix THEN THENL ORELSE |->;
-
 val ERR = mk_HOL_ERR "Tactic";
 
 
@@ -259,7 +257,9 @@ fun X_GEN_TAC x1 : tactic = fn (asl,w) =>
 
 val GEN_TAC:tactic = fn (asl,w) =>
    let val (Bvar,_) = with_exn dest_forall w (ERR "GEN_TAC" "not a forall")
-   in X_GEN_TAC (prim_variant (free_varsl (w::asl)) Bvar) (asl,w)
+   in X_GEN_TAC
+          (gen_variant Parse.is_constname "" (free_varsl (w::asl)) Bvar)
+          (asl,w)
    end;
 
 (*---------------------------------------------------------------------------*
@@ -882,7 +882,7 @@ fun CONV_TAC (conv:conv) :tactic = fn (asl,w) =>
  in if eq rhs T
     then ([], fn [] => EQ_MP (SYM th) TRUTH)
     else ([(asl,rhs)], fn [th'] => EQ_MP (SYM th) th')
- end handle UNCHANGED => 
+ end handle UNCHANGED =>
    if eq w T (* special case, can happen! *)
      then ([],fn [] => TRUTH)
      else ALL_TAC (asl, w);

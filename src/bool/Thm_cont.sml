@@ -29,11 +29,8 @@ structure Thm_cont :> Thm_cont =
 struct
 
 open Feedback HolKernel Drule boolSyntax Abbrev;
-infix |->;
 
 val ERR = mk_HOL_ERR "Thm_cont";
-
-infix THEN_TCL ORELSE_TCL;
 
 fun (ttcl1:thm_tactical) THEN_TCL (ttcl2:thm_tactical) =  fn ttac =>
      ttcl1 (ttcl2 ttac);
@@ -243,7 +240,10 @@ val CHOOSE_THEN :thm_tactical = fn ttac => fn xth =>
    let val (hyp,conc) = dest_thm xth
        val (Bvar,_) = dest_exists conc
    in fn (asl,w) =>
-     let val y = variant (free_varsl ((conc::hyp)@(w::asl))) Bvar
+     let val y = gen_variant Parse.is_constname
+                             ""
+                             (free_varsl ((conc::hyp)@(w::asl)))
+                             Bvar
      in X_CHOOSE_THEN y ttac xth (asl,w)
      end
    end handle HOL_ERR _ => raise ERR "CHOOSE_THEN" "";

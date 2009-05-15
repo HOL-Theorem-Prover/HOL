@@ -1,0 +1,25 @@
+val _ = load "Conversion";
+val _ = load "STETheory";
+
+open Conversion;
+open STETheory;
+
+
+
+(* Inverter circuit with delay *)
+
+use "Examples/Not.sml";
+
+
+(* Nand circuit with a feedback *)
+
+use "Examples/Nand.sml";
+
+
+(* 2-bit comparator for equality testing *)
+
+use "Examples/Comparator.sml";
+
+(* 2-bit 2-to-1 MUX *)
+
+use "Examples/Mux.sml";

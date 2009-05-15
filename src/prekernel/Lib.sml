@@ -25,6 +25,8 @@ fun curry f x y = f(x,y)
 fun uncurry f (x,y) = f x y
 infix 3 ##
 fun (f ## g) (x,y) = (f x, g y)
+infix |>
+fun x |> f = f x
 fun C f x y = f y x
 fun I x = x
 fun K x y = x
@@ -231,18 +233,18 @@ fun pluck P =
 
 fun trypluck f =
  let fun try acc [] = raise ERR "trypluck" "no successful fn. application"
-       | try acc (h::t) = 
+       | try acc (h::t) =
           case total f h
-           of NONE => try (h::acc) t 
+           of NONE => try (h::acc) t
             | SOME v => (v,List.revAppend(acc,t))
  in try []
  end
 
-fun trypluck' f list = let 
-  fun recurse acc l = 
-      case l of 
+fun trypluck' f list = let
+  fun recurse acc l =
+      case l of
         [] => (NONE, list)
-      | h::t => (case f h of 
+      | h::t => (case f h of
                    NONE => recurse (h::acc) t
                  | SOME v => (SOME v, List.revAppend(acc,t)))
 in
@@ -484,6 +486,13 @@ fun list_cmp cmp =
   in lcmp
   end;
 
+fun option_cmp cmp =
+  let fun ocmp (SOME x) (SOME y) = cmp x y
+        | ocmp NONE NONE = true
+        | ocmp _ _ = false
+  in ocmp
+  end;
+
 fun op_mem eq_func i = List.exists (eq_func i)
 
 fun op_insert eq_func =
@@ -585,7 +594,7 @@ fun unprefix pfx s =
     else raise ERR "unprefix" "1st argument is not a prefix of 2nd argument"
 
 
-fun str_all P s = let 
+fun str_all P s = let
   fun recurse n = n < 0 orelse P (String.sub(s,n)) andalso recurse (n - 1)
 in
   recurse (size s - 1)

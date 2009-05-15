@@ -62,7 +62,7 @@ fun hol_parse contextOpt ex_vars default tyL s =
          val substL = map (fn X => (fst X |-> snd X)) (zip ex_fvL new_ex_fvL);
 
 	 val t = Term.subst substL s_term;
-         val new_ex_fvL' = filter (fn t => not (mem t ex_vars)) new_ex_fvL;
+         val new_ex_fvL' = filter (fn t => not (op_mem eq t ex_vars)) new_ex_fvL;
       in
          (t, empty_tmset, append new_ex_fvL' ex_vars)
       end) handle HOL_ERR _ =>
@@ -144,7 +144,7 @@ fun smallfoot_a_expression2term ex_vars (Aexp_ident x) =
 
          val term = mk_comb(smallfoot_ae_const_term, var_term) 
       in 
-         (term, empty_tmset, if (mem var_term ex_vars) then ex_vars else var_term::ex_vars)
+         (term, empty_tmset, if (op_mem eq var_term ex_vars) then ex_vars else var_term::ex_vars)
       end
    else
       let
@@ -473,7 +473,7 @@ fun funcall_subsume_args ([]:term option list) [] = true
   | funcall_subsume_args [] (arg2::argL2) = false
   | funcall_subsume_args (arg1::argL1) [] = false
   | funcall_subsume_args (arg1::argL1) (arg2::argL2) = 
-    ((arg2 = NONE) orelse (arg1 = arg2)) andalso 
+    (not (isSome arg2) orelse (option_cmp eq arg1 arg2)) andalso 
     (funcall_subsume_args argL1 argL2);
 
 
@@ -524,7 +524,7 @@ let
 
    fun funcalls_arg_update NONE = NONE
      | funcalls_arg_update (SOME arg) =
-       if (arg = ref_arg) then ref_argOpt else SOME arg;
+       if (eq arg ref_arg) then ref_argOpt else SOME arg;
 
    val funcalls2 = map (fn (n:string, L) => (n, map funcalls_arg_update L)) funcalls;
 in
@@ -575,7 +575,7 @@ fun fun_decl_parse_read_write___has_unresolved_funcalls
     (funname, 
          (ref_args, write_var_set, read_var_set, local_var_set,
 	 funcalls, done_funcalls), rest) =
-    not(funcalls = []);
+    not(null funcalls);
 
 
 

@@ -53,12 +53,16 @@ val _ = Hol_datatype `
                | Xcmpxchg   of Xrm => Xreg 
                | Xxadd      of Xrm => Xreg 
                | Xxchg      of Xrm => Xreg 
+               | Xmul       of Xrm
+               | Xdiv       of Xrm
                | Xlea       of Xdest_src
                | Xpop       of Xrm
                | Xpush      of Ximm_rm
                | Xcall      of Ximm_rm
                | Xret       of Ximm
                | Xmov       of Xcond => Xdest_src
+               | Xmov_byte  of Xdest_src
+               | Xcmp_byte  of Xdest_src
                | Xjump      of Xcond => Ximm
                | Xloop      of Xcond => Ximm      (* Here Xcond over approximates possibilities *)
                | Xpushad      

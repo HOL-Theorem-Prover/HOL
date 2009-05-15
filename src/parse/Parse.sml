@@ -1663,6 +1663,12 @@ fun reveal s =
 
 fun known_constants() = term_grammar.known_constants (term_grammar())
 
+fun is_constname s = let
+  val oinfo = term_grammar.overload_info (term_grammar())
+in
+  Overload.is_overloaded oinfo s
+end
+
 fun hidden s =
   let val declared = Term.all_consts()
       val names = map (fst o Term.dest_const) declared

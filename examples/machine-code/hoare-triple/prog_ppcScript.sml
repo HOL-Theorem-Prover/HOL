@@ -272,11 +272,6 @@ val pMEMORY_SET_def = Define `
 
 val pMEMORY_def = Define `pMEMORY df f = SEP_EQ (pMEMORY_SET df f)`;
 
-val pBYTE_MEMORY_SET_def = Define `
-  pBYTE_MEMORY_SET df f = { pMem a (SOME (f a)) | a | a IN df }`;
-
-val pBYTE_MEMORY_def = Define `pBYTE_MEMORY df f = SEP_EQ (pBYTE_MEMORY_SET df f)`;
-
 val pMEMORY_SET_SING = prove(
   ``!a f. ALIGNED a ==> (pMEMORY_SET {a} f = pMEMORY_WORD a (f a))``,
   ASM_SIMP_TAC std_ss [GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,APPLY_UPDATE_THM,
@@ -355,5 +350,50 @@ val pMEMORY_INTRO = store_thm("pMEMORY_INTRO",
   \\ ONCE_REWRITE_TAC [STAR_COMM] \\ REWRITE_TAC [STAR_ASSOC]
   \\ MATCH_MP_TAC SPEC_FRAME
   \\ FULL_SIMP_TAC bool_ss [AC STAR_COMM STAR_ASSOC]);
+
+(* ----------------------------------------------------------------------------- *)
+(* Improved memory predicates (byte addressed memory)                            *)
+(* ----------------------------------------------------------------------------- *)
+
+val pBYTE_MEMORY_SET_def = Define `
+  pBYTE_MEMORY_SET df f = { pMem a (SOME (f a)) | a | a IN df }`;
+
+val pBYTE_MEMORY_def = Define `pBYTE_MEMORY df f = SEP_EQ (pBYTE_MEMORY_SET df f)`;
+
+val IN_pBYTE_MEMORY_SET = prove(
+  ``a IN df ==>
+    (pBYTE_MEMORY_SET df g = 
+     (pMem a (SOME (g a))) INSERT pBYTE_MEMORY_SET (df DELETE a) g)``,
+  SIMP_TAC std_ss [EXTENSION,IN_INSERT,pBYTE_MEMORY_SET_def,GSPECIFICATION]
+  \\ REWRITE_TAC [IN_DELETE] \\ METIS_TAC []);
+
+val DELETE_pBYTE_MEMORY_SET = prove(
+  ``pBYTE_MEMORY_SET (df DELETE a) ((a =+ w) g) = 
+    pBYTE_MEMORY_SET (df DELETE a) g``,
+  SIMP_TAC std_ss [EXTENSION,IN_INSERT,pBYTE_MEMORY_SET_def,GSPECIFICATION]
+  \\ REWRITE_TAC [IN_DELETE,APPLY_UPDATE_THM] \\ METIS_TAC []);
+
+val pBYTE_MEMORY_INSERT = prove(
+  ``a IN df ==>
+    (pBYTE_MEMORY df ((a =+ w) g) = 
+    pM1 a (SOME w) * pBYTE_MEMORY (df DELETE a) g)``,
+  SIMP_TAC std_ss [pBYTE_MEMORY_def,pM1_def,pMEMORY_def,FUN_EQ_THM,EQ_STAR]
+  \\ SIMP_TAC std_ss [SEP_EQ_def] \\ REPEAT STRIP_TAC
+  \\ IMP_RES_TAC (GEN_ALL IN_pBYTE_MEMORY_SET)
+  \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET,DIFF_INSERT,DIFF_EMPTY]
+  \\ REWRITE_TAC [DELETE_pBYTE_MEMORY_SET,APPLY_UPDATE_THM]
+  \\ REWRITE_TAC [EXTENSION,IN_INSERT,IN_DELETE]
+  \\ REVERSE (`~(pMem a (SOME w) IN pBYTE_MEMORY_SET (df DELETE a) g)` by ALL_TAC)  
+  THEN1 METIS_TAC []
+  \\ SIMP_TAC std_ss [pBYTE_MEMORY_SET_def,GSPECIFICATION,IN_DELETE,ppc_el_11]);
+
+val pBYTE_MEMORY_INTRO = store_thm("pBYTE_MEMORY_INTRO",
+  ``SPEC m (pM1 a (SOME v) * P) c (pM1 a (SOME w) * Q) ==>
+    a IN df ==>
+    SPEC m (pBYTE_MEMORY df ((a =+ v) f) * P) c (pBYTE_MEMORY df ((a =+ w) f) * Q)``,
+  ONCE_REWRITE_TAC [STAR_COMM]
+  \\ SIMP_TAC std_ss [pBYTE_MEMORY_INSERT,STAR_ASSOC]
+  \\ METIS_TAC [SPEC_FRAME]);
+
 
 val _ = export_theory();

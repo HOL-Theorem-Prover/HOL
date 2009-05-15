@@ -2,7 +2,7 @@ structure helperLib :> helperLib =
 struct
  
 open HolKernel boolLib bossLib;
-open wordsLib stringLib addressTheory set_sepTheory progTheory;
+open wordsLib stringLib addressTheory set_sepTheory progTheory wordsTheory;
 
 type decompiler_tools =
   (* ( derive spec, generate branch, status thm, program counter term ) *)
@@ -101,6 +101,9 @@ fun dest_star tm = let
   val (x,z) = dest_comb tm
   val (x,y) = dest_comb x
   in if fst (dest_const x) = "STAR" then (y,z) else hd [] end
+
+fun mk_one x = (fst o dest_eq o concl o ISPEC x) one_def
+fun dest_one tm = if fst (dest_const (car tm)) = "one" then cdr tm else hd []
 
 fun dest_sep_hide tm = let
   val (x,z) = dest_comb tm
@@ -228,7 +231,8 @@ val word_patterns = [
   ``(n2w n + n2w m):('a word)``, ``(n2w n - n2w m):('a word)``, ``(n2w n * n2w m):('a word)``,
   ``n2w n < (n2w m):('a word)``, ``n2w n <= (n2w m):('a word)``, ``n2w n > (n2w m):('a word)``, ``n2w n >= (n2w m):('a word)``,
   ``n2w n <+ (n2w m):('a word)``, ``n2w n <=+ (n2w m):('a word)``, ``n2w n >+ (n2w m):('a word)``, ``n2w n >=+ (n2w m):('a word)``,
-  ``(n2w n):('a word) << m``, ``(n2w n):('a word) >> m``, ``(n2w n):('a word) >>> m``, ``~(n2w n):('a word)``];
+  ``(n2w n):('a word) << m``, ``(n2w n):('a word) >> m``, ``(n2w n):('a word) >>> m``, ``~(n2w n):('a word)``,
+  ``w2n ((n2w n):'a word)``];
 
 fun EVAL_ANY_MATCH_CONV patterns tm = let
   fun aux f [] = []
@@ -273,6 +277,18 @@ fun ftree2tm (FUN_VAL tm) = tm
       in pairSyntax.mk_anylet([(v,mk_conj(v,tm))],ftree2tm x) end
 
 
+(* instantiate theorem *)
+
+fun MATCH_INST th tm = let
+  val vs = butlast (list_dest dest_forall (concl th))
+  val thi = SPEC_ALL th
+  val tm1 = find_term (fn t => can (match_term t) tm) (concl thi)
+  val (i,s) = match_term tm1 tm
+  val thi = INST i (INST_TYPE s thi)
+  val ws = filter (fn t => eq t (subst i t)) vs
+  in GENL ws thi end;
+
+
 (* hiding variables in SPEC theorems *)
 
 val EQ_IMP_IMP = Q.SPECL [`p`,`q`] quotientTheory.EQ_IMPLIES;
@@ -289,6 +305,17 @@ fun A_MATCH_MP th1 th2 =
   (UNDISCH_ALL o PURE_REWRITE_RULE [GSYM AND_IMP_INTRO,AND_CLAUSES]) 
   (MATCH_MP (MATCH_MP INC_ASSUM (SPEC_ALL th1)) (DISCH_ALL_AS_SINGLE_IMP th2));
 
+val HIDE_POST1 = (SPEC_ALL SPEC_HIDE_POST);
+val HIDE_POST2 = (SPEC_ALL 
+  (RW [SEP_CLAUSES] (Q.SPECL [`x`,`p`,`c`,`emp`] SPEC_HIDE_POST)));
+
+fun HIDE_POST_RULE tm th = let
+  val th = CONV_RULE (POST_CONV (MOVE_OUT_CONV tm THENC REWRITE_CONV [STAR_ASSOC])) th  
+  val (_,_,_,q) = dest_spec (concl th)
+  val v = fst (dest_comb (snd (dest_star q) handle e => q))
+  val _ = if eq v tm then v else hd []
+  in A_MATCH_MP HIDE_POST1 th handle e => A_MATCH_MP HIDE_POST2 th end;
+
 val HIDE_PRE1 = (MATCH_MP EQ_IMP_IMP (SPEC_ALL SPEC_HIDE_PRE));
 val HIDE_PRE2 = (MATCH_MP EQ_IMP_IMP 
   (SPEC_ALL (RW [SEP_CLAUSES] (Q.SPECL [`x`,`emp`] SPEC_HIDE_PRE))));
@@ -299,7 +326,17 @@ fun HIDE_PRE_RULE tm th = let
   val (_,p,_,_) = dest_spec (concl th)
   val v = snd (dest_comb (snd (dest_star p) handle e => p))
   val th = GEN v th 
-  in A_MATCH_MP HIDE_PRE1 th handle e => A_MATCH_MP HIDE_PRE2 th end;
+  in A_MATCH_MP HIDE_PRE1 th handle e => A_MATCH_MP HIDE_PRE2 th end
+  handle e => let 
+  val (_,p,_,q) = dest_spec (concl th)
+  val xs = list_dest dest_star p
+  val xs = map (dest_comb) (filter (can car) xs)
+  val v = (snd o hd o filter (fn x => eq (fst x) tm)) xs
+  val ys = list_dest dest_star q
+  val ys = map (dest_comb) (filter (can car) ys)
+  val zs = map fst (filter (fn x => eq (snd x) v) ys)
+  val th = foldr (uncurry HIDE_POST_RULE) th zs
+  in HIDE_PRE_RULE tm th end;
 
 val UNHIDE_PRE1 = (MATCH_MP EQ_IMP_IMP (SPEC_ALL (GSYM SPEC_HIDE_PRE)));
 val UNHIDE_PRE2 = (MATCH_MP EQ_IMP_IMP 
@@ -311,17 +348,6 @@ fun UNHIDE_PRE_RULE tm th = let
   val th = (A_MATCH_MP UNHIDE_PRE1 th handle e => A_MATCH_MP UNHIDE_PRE2 th)
   val th = SPEC (cdr tm) th
   in th end;
-
-val HIDE_POST1 = (SPEC_ALL SPEC_HIDE_POST);
-val HIDE_POST2 = (SPEC_ALL 
-  (RW [SEP_CLAUSES] (Q.SPECL [`x`,`p`,`c`,`emp`] SPEC_HIDE_POST)));
-
-fun HIDE_POST_RULE tm th = let
-  val th = CONV_RULE (POST_CONV (MOVE_OUT_CONV tm THENC REWRITE_CONV [STAR_ASSOC])) th  
-  val (_,_,_,q) = dest_spec (concl th)
-  val v = fst (dest_comb (snd (dest_star q) handle e => q))
-  val _ = if eq v tm then v else hd []
-  in A_MATCH_MP HIDE_POST1 th handle e => A_MATCH_MP HIDE_POST2 th end;
 
 fun get_model_status_list th = 
   (map dest_sep_hide o list_dest dest_star o snd o dest_eq o concl) th handle e => []
@@ -357,4 +383,114 @@ fun HIDE_STATUS_RULE in_post hide_th th = let
 fun HIDE_PRE_STATUS_RULE hide_th th = HIDE_STATUS_RULE false hide_th th
 
 
-end
+(* tactics *)
+
+val ALIGNED_TAC = let 
+  val ALIGNED_CONV = 
+    ONCE_REWRITE_CONV [ALIGNED_MOD_4] THENC
+    SIMP_CONV std_ss [WORD_ADD_0,WORD_SUB_RZERO]
+  val ALIGNED_convdata = {name = "ALIGNED_CONV",
+    trace = 2, key = SOME ([],``ALIGNED a``),
+    conv = K (K ALIGNED_CONV)}:simpfrag.convdata
+  val ALIGNED_ss = simpLib.conv_ss ALIGNED_convdata
+  in FULL_SIMP_TAC std_ss [ALIGNED_ADD_EQ,ALIGNED_ADDR32,ALIGNED_n2w]
+     THEN FULL_SIMP_TAC (bool_ss++ALIGNED_ss) [ALIGNED_INTRO] end;
+
+val SEP_READ_TAC = let
+  fun aux (hs,gs) = let
+    val (v,n) = dest_exists gs
+    val rhs = cdr n
+    val lhs = (cdr o car o car) n
+    val xs = filter (fn x => eq (cdr x) rhs handle e => false) hs
+    val ys = map (list_dest dest_star) (map car xs)
+    val zs = map (filter (fn x => not (eq x lhs))) (filter (op_mem eq lhs) ys)
+    val p = list_mk_star (hd zs) (type_of lhs)
+    in (EXISTS_TAC p THEN FULL_SIMP_TAC (std_ss++star_ss) []) (hs,gs) end
+  fun dest_pair_one tm = let
+    val (x,y) = dest_comb tm
+    val _ = if (fst (dest_const x) = "one") then () else hd []
+    in pairSyntax.dest_pair y end
+  fun prepare_tac (*:tactic*) (hs,gs) = let
+    val (x,y) = pred_setSyntax.dest_in gs
+    fun extract tm = let
+      val (p,f) = dest_comb tm
+      val ps = filter (can dest_pair_one) (list_dest dest_star p)     
+      val z = (snd o hd) (filter (fn (a,b) => eq x a) (map dest_pair_one ps))
+      in mk_eq(mk_comb((fst o pairSyntax.dest_pair o cdr) f,x),z) end
+    val tm = extract (hd (filter (can extract) hs))
+    val thi = prove(mk_imp(mk_conj(tm,gs),gs),REPEAT STRIP_TAC)
+    in MATCH_MP_TAC thi (hs,gs) end handle e => let
+    val (x,y) = dest_comb (fst (dest_eq gs))
+    fun extract tm = let
+      val (p,f) = dest_comb tm
+      val ps = filter (can dest_pair_one) (list_dest dest_star p)     
+      val z = (snd o hd) (filter (fn (a,b) => eq y a) (map dest_pair_one ps))
+      in pred_setSyntax.mk_in(y,cdr (cdr f)) end
+    val tm = extract (hd (filter (can extract) hs))
+    val thi = prove(mk_imp(mk_conj(gs,tm),gs),REPEAT STRIP_TAC)
+    in MATCH_MP_TAC thi (hs,gs) end
+  in (REPEAT STRIP_TAC THEN prepare_tac THEN
+      MATCH_MP_TAC read_fun2set THEN aux) end;
+
+fun list_dest_right f tm = let val (x,y) = f tm in x :: list_dest_right f y end handle e => [tm];
+fun SEP_WRITE_TAC (hs,gs) = let 
+  val xs = list_dest_right dest_comb ((fst o pairSyntax.dest_pair o cdr o cdr) gs)
+  val updates = map (combinSyntax.dest_update) (butlast xs)
+  val ys = list_dest dest_star (car gs)
+  val zs = map (mk_one o pairSyntax.mk_pair) updates
+  val qs2 = filter (fn x => not (op_mem eq x zs)) ys
+  val tm2 = list_mk_star (qs2 @ rev zs) (type_of (car gs))
+  val lemma = prove(mk_eq(car gs,tm2),SIMP_TAC (bool_ss++star_ss) [])
+  val tac = ONCE_REWRITE_TAC [lemma]
+  val df = pairSyntax.mk_pair(last xs, ((snd o pairSyntax.dest_pair o cdr o cdr) gs))
+  val rhs = mk_comb((car o cdr) gs, df)
+  val xs = filter (fn x => eq (cdr x) rhs handle e => false) hs
+  val ys = (list_dest dest_star o hd o map car) xs
+  fun find_any_match [] name = hd []
+    | find_any_match (tm::ws) name = let
+        val (v,x) = pairSyntax.dest_pair (dest_one tm) 
+        in if eq v name then x else find_any_match ws name end handle e => find_any_match ws name   
+  val witnesses = map (find_any_match ys) (map fst updates)
+  fun foo (w,tac) = 
+    MATCH_MP_TAC write_fun2set THEN REWRITE_TAC [STAR_ASSOC] THEN EXISTS_TAC w
+    THEN tac
+  in (tac THEN foldr foo (FULL_SIMP_TAC (bool_ss++star_ss) []) witnesses) (hs,gs) end
+
+fun SEP_NEQ_TAC (*:tactic*) (hs,gs) = let
+  val (a1,a2) = dest_eq (dest_neg gs)
+  fun dest_one tm = let
+    val (x,y) = dest_comb tm
+    val _ = if fst (dest_const x) = "one" then () else hd []
+    in pairSyntax.dest_pair y end 
+  fun take_apart h = let
+    val xs = list_dest dest_star (car h)
+    val ys = map dest_one (filter (can dest_one) xs)
+    val z1 = (snd o hd o filter (fn (x,y) => eq x a1)) ys
+    val z2 = (snd o hd o filter (fn (x,y) => eq x a2)) ys
+    fun is_match tm = op_mem (pair_cmp eq eq) (dest_one tm) [(a1,z1),(a2,z2)] handle e => false       
+    in (z1,z2,list_mk_star (filter (not o is_match) xs) (type_of (car h)),cdr h) end
+  val (z1,z2,zs,f) = take_apart (hd (filter (can take_apart) hs))
+  val (f,df) = pairSyntax.dest_pair (cdr f)
+  val thi = ISPECL [a1,a2,z1,z2,f,df,zs] fun2set_NEQ
+  in (MATCH_MP_TAC thi THEN FULL_SIMP_TAC (std_ss++star_ss) []) (hs,gs) end 
+
+
+(* debug prover *)
+
+fun auto_prove proof_name (goal,tac) = 
+  prove(goal,tac THEN (fn (tms,tm) => let
+    val _ = print "\n\n\n  AUTO PROOF FAILED\n\n"
+    val _ = print "-----------------------------------------------\n"
+    val _ = print "  Unsolved subgoal:\n\n"
+    val _ = print_term (mk_imp(list_mk_conj tms,tm))
+    val _ = print "\n\n"
+    val _ = print "-----------------------------------------------\n"
+    val _ = print "  Initial goal:\n\n"
+    val _ = print_term (goal)
+    val _ = print "\n\n"
+    val _ = print "-----------------------------------------------\n"
+    val _ = print ("  The proof failed at " ^ proof_name)
+  in hd [] end))
+
+
+end;

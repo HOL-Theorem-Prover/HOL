@@ -161,6 +161,12 @@ val write_m32_seq_def = Define `(write_m32_seq ii a w):unit x86_M =
        parT_unit_seq (write_mem_seq ii (a+0w) (EL 0 bs)) (parT_unit_seq (write_mem_seq ii (a+1w) (EL 1 bs)) 
       (parT_unit_seq (write_mem_seq ii (a+2w) (EL 2 bs)) (write_mem_seq ii (a+3w) (EL 3 bs)))))`;
 
+val read_m8_seq_def = Define `(read_m8_seq ii a):word8 x86_M =
+  read_mem_seq ii a`;
+
+val write_m8_seq_def = Define `(write_m8_seq ii a w):unit x86_M =
+    write_mem_seq ii a (w:word8)`;
+
 
 (* export *)
 
@@ -179,6 +185,8 @@ val _ = Define `(write_eflag: iiid -> Xeflags -> bool option -> unit x86_M)  = w
 val _ = Define `(read_eflag: iiid -> Xeflags -> bool x86_M)                  = read_eflag_seq`;
 val _ = Define `(write_m32: iiid -> Ximm -> Ximm-> unit x86_M)               = write_m32_seq`;
 val _ = Define `(read_m32: iiid -> Ximm -> Ximm x86_M)                       = read_m32_seq`;
+val _ = Define `(write_m8: iiid -> Ximm -> word8 -> unit x86_M)              = write_m8_seq`;
+val _ = Define `(read_m8: iiid -> Ximm -> word8 x86_M)                       = read_m8_seq`;
 
 
 

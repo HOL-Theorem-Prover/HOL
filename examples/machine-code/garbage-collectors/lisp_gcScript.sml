@@ -9,6 +9,7 @@ open tailrecLib tailrecTheory;
 open cheney_gcTheory cheney_allocTheory; (* an abstract implementation is imported *)
 
 
+
 infix \\ << >>
 val op \\ = op THEN;
 val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10","r11","r12","r13"];
@@ -142,7 +143,7 @@ val valid_address_def = Define `
   valid_address a i = w2n a + 8 * i + 8 < 2**32`;
 
 val ref_set_def = Define `
-  ref_set a f = { a + n2w (4 * i) | i <= 2 * f + 2 } UNION { a - n2w (4 * i) | i <= 8 }`;
+  ref_set a f = { a + n2w (4 * i) | i < 2 * f + 4 } UNION { a - n2w (4 * i) | i <= 8 }`;
 
 val ref_cheney_def = Define `  
   ref_cheney (m,e) (a,d,xs,ys) = 
@@ -1127,179 +1128,1055 @@ val ch_arm_alloc = store_thm("ch_arm_alloc",
   \\ FULL_SIMP_TAC bool_ss [] \\ METIS_TAC []);
 
 
-(* ======= move nil into a reg ======== *)
-
-val ch_inv_length = prove(
-  ``ch_inv (r,h,l) (i,e,t,l',u',m) ==> (l' = l)``, SIMP_TAC bool_ss [ch_inv_def]);
-
-val ch_arm_nil = store_thm("ch_arm_nil",
-  ``ch_arm ([w1;w2;w3;w4;w5;w6],h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) ==>
-    ch_arm ([(0,w,b);w2;w3;w4;w5;w6],h,l) 
-           ((ADDR32 w + if b then 3w else 2w),v2,v3,v4,v5,v6,a,x,xs)``,
-  REPEAT STRIP_TAC \\ NTAC 2 (FULL_SIMP_TAC std_ss [ch_arm_def,ch_word_def,MAP])  
-  \\ IMP_RES_TAC ch_inv_length \\ FULL_SIMP_TAC bool_ss []
-  \\ IMP_RES_TAC
-  ((SIMP_RULE std_ss [MAP,ZIP,MEM,LIST_UPDATE_def,LIST_INSERT_def,LIST_DELETE_def,TAKE_def,DROP_def,APPEND] o
-    SPEC ``0`` o 
-    SPECL [``MAP FST [(w1:num#'b); w2; w3; w4; w5; w6]``,``[x1; x2; x3; x4; x5; x6:num]``])
-    cheney_0)
-  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `e`
-  \\ EXISTS_TAC ``[0; x2; x3; x4; x5:num; x6]``
-  \\ Q.EXISTS_TAC `l` \\ Q.EXISTS_TAC `u` \\ Q.EXISTS_TAC `m`
-  \\ FULL_SIMP_TAC bool_ss [CONS_11] \\ FULL_SIMP_TAC bool_ss [ok_state_def,LET_DEF,MEM]
-  \\ SIMP_TAC bool_ss [ref_field_def,FST,SND]
-  \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!k. bbb /\ ~(k = 0) ==> bbbb` MATCH_MP_TAC
-  \\ ASM_SIMP_TAC bool_ss []);
 
 
-(* =========== test for type of reg ============ *)
 
-val ch_arm_zero = store_thm("ch_arm_zero",
-  ``ch_arm ([w1;w2;w3;w4;w5;w6],h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) ==>
-    (~(FST w1 = 0) = ALIGNED v1)``,
-  SIMP_TAC std_ss [ch_arm_def,ch_inv_def,ch_word_def,LET_DEF,ok_abs_def,ok_state_def] 
-  \\ REPEAT STRIP_TAC \\ Cases_on `w1`
-  \\ REWRITE_TAC [FST] \\ Cases_on `q = 0` THENL [
-    FULL_SIMP_TAC std_ss [MAP,CONS_11,MEM,IN_DEF,RANGE_def]
-    \\ `x1 = 0` by METIS_TAC [bijection_def,ONE_ONE_DEF]
-    \\ ASM_SIMP_TAC std_ss [ref_field_def]
-    \\ METIS_TAC [NOT_ALIGNED,ALIGNED_ADDR32],
-    FULL_SIMP_TAC std_ss [MAP,CONS_11,MEM,IN_DEF,RANGE_def]
-    \\ `~(x1 = 0)` by METIS_TAC [bijection_def,ONE_ONE_DEF]
-    \\ IMP_RES_TAC ref_cheney_ALIGNED
-    \\ ASM_SIMP_TAC std_ss [ref_field_def,ALIGNED_def]]);
 
-val ch_arm_const = store_thm("ch_arm_const",
-  ``ch_arm ([w1;w2;w3;w4;w5;w6],h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) /\ (FST w1 = 0) ==>
-    (v1 = ADDR32 (FST (SND w1)) + if SND (SND w1) then 3w else 2w)``,
-  Cases_on `w1` \\ SIMP_TAC std_ss [ch_arm_def,MAP,FST,ch_word_def,CONS_11] \\ REPEAT STRIP_TAC
-  \\ FULL_SIMP_TAC std_ss [ch_inv_def,MAP,CONS_11,bijection_def,ONE_ONE_DEF,ref_field_def]
+
+
+(* prove tree like representation *)
+
+val _ = Hol_datatype `XExp = XDot of XExp => XExp | XVal of word30 | XSym of word30`;
+val XExp_11 = fetch "-" "XExp_11";
+val XExp_distinct = fetch "-" "XExp_distinct";
+
+val word_tree_def = Define `
+  (word_tree (XVal w) (a,m) d = (a = ADDR32 w + 2w)) /\ 
+  (word_tree (XSym w) (a,m) d = (a = ADDR32 w + 3w)) /\
+  (word_tree (XDot x y) (a,m) d = a IN d /\ ALIGNED a /\
+     word_tree x (m a,m) d /\ word_tree y (m (a + 4w),m) d)`;
+
+val ch_active_set_def = Define `
+  ch_active_set (a:word32,i,e) = { a + 8w * n2w j | i <= j /\ j < e }`;
+
+val ok_data_def = Define `
+  ok_data w d = if ALIGNED w then w IN d else ~(ALIGNED (w - 1w))`;
+
+val ch_tree_def = Define `
+  ch_tree (t1,t2,t3,t4,t5,t6,l) (w1,w2,w3,w4,w5,w6,a,dm,m,b,k) = 
+    ?i u. 
+      let v = (if u then 1 + l else 1) in 
+      let d = ch_active_set (a,v,i) in
+        (b = a + n2w (8 * v)) /\ (k = i - v) /\ 
+        32 <= w2n a /\ w2n a + 2 * 8 * l + 20 < 2 ** 32 /\ l <> 0 /\
+        (m a = a + n2w (8 * i)) /\ ALIGNED a /\ v <= i /\ i <= v + l /\
+        (m (a + 0x4w) = a + n2w (8 * (v + l))) /\
+        (m (a - 0x1Cw) = (if u then 0x0w else 0x1w)) /\
+        (m (a - 0x20w) = n2w (8 * l)) /\
+        (dm = ref_set a (l + l + 1)) /\
+        word_tree t1 (w1,m) d /\
+        word_tree t2 (w2,m) d /\
+        word_tree t3 (w3,m) d /\
+        word_tree t4 (w4,m) d /\
+        word_tree t5 (w5,m) d /\
+        word_tree t6 (w6,m) d /\
+        !w. w IN d ==> ok_data (m w) d /\ ok_data (m (w + 4w)) d`;
+
+val heap_el_def = Define `
+  heap_el a w = 
+    if ALIGNED w then (w2n (w - a) DIV 8, (0w, F)) else
+      (0, (ADDR30 w, ALIGNED (w - 3w)))`;
+
+val build_heap_def = Define `
+  (build_heap (0,i,a,m) = FEMPTY) /\
+  (build_heap (SUC n,i,a,m) =
+     let (x1,x2) = heap_el a (m i) in
+     let (y1,y2) = heap_el a (m (i + 4w)) in 
+       build_heap (n,i + 8w,a,m) |+ (w2n (i - a) DIV 8,x1,y1,x2,y2))`;
+
+val build_map_def = Define `
+  (build_map (0,i,a,m) = \x. EMP) /\
+  (build_map (SUC n,i,a,m) =
+     let (x1,x2) = heap_el a (m i) in
+     let (y1,y2) = heap_el a (m (i + 4w)) in 
+       ((w2n (i - a) DIV 8) =+ DATA (x1,y1,(x2,y2)))
+       (build_map (n,i + 8w,a,m)))`;
+
+val abstract_build_heap = prove(
+  ``!k a b m.
+      abstract (I,build_map (k,b,a,m)) =
+      ch_set (build_heap (k,b,a,m))``,
+  Induct THENL [
+     SIMP_TAC std_ss [abstract_def, ch_set_def, build_heap_def, 
+       build_map_def, heap_type_distinct, ch_set_def]
+     \\ SIMP_TAC std_ss [EXTENSION,GSPECIFICATION, EXISTS_PROD]
+     \\ SIMP_TAC std_ss [FORALL_PROD,IN_DEF,ch_set_def, FDOM_FEMPTY,
+          EMPTY_DEF],
+     FULL_SIMP_TAC std_ss [abstract_def, ch_set_def, build_heap_def, 
+       build_map_def, heap_type_distinct, ch_set_def]
+     \\ REPEAT STRIP_TAC
+     \\ Cases_on `heap_el a (m b)`
+     \\ Cases_on `heap_el a (m (b + 0x4w))`
+     \\ SIMP_TAC std_ss [LET_DEF]
+     \\ FULL_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION, EXISTS_PROD]
+     \\ FULL_SIMP_TAC std_ss [FORALL_PROD,IN_DEF,FDOM_FEMPTY,EMPTY_DEF]
+     \\ FULL_SIMP_TAC std_ss [ch_set_def,FDOM_FUPDATE,IN_INSERT,
+          FAPPLY_FUPDATE_THM,APPLY_UPDATE_THM]
+     \\ REPEAT STRIP_TAC
+     \\ Cases_on `p_1 = w2n (b - a) DIV 8`
+     \\ ASM_SIMP_TAC std_ss [heap_type_11]])
+
+val FDOM_build_heap = prove(
+  ``!k a v m. 8 * (v + k) < 2 ** 32 ==> 
+              (FDOM (build_heap (k,a + n2w (8 * v),a,m)) = RANGE (v,v + k))``,
+  Induct
+  \\ REWRITE_TAC [build_heap_def,FDOM_FEMPTY,NOT_IN_EMPTY,EXTENSION]
+  THEN1 (SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC)
+  \\ REPEAT STRIP_TAC
+  \\ Cases_on `heap_el a (m (a + n2w (8 * v)))`
+  \\ Cases_on `heap_el a (m ((a + n2w (8 * v)) + 0x4w))`
+  \\ SIMP_TAC std_ss [LET_DEF,FDOM_FUPDATE,IN_INSERT,WORD_ADD_SUB2]
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w]
+  \\ `8 * v < 4294967296` by DECIDE_TAC
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w]
+  \\ ONCE_REWRITE_TAC [MULT_COMM]
+  \\ SIMP_TAC std_ss [MULT_DIV]
+  \\ Cases_on `x = v` \\ ASM_SIMP_TAC std_ss [] 
+  THEN1 SIMP_TAC std_ss [IN_DEF,RANGE_def]
+  \\ REWRITE_TAC [GSYM WORD_ADD_ASSOC,word_add_n2w,GSYM MULT]
+  \\ `8 * (SUC v + k) < 4294967296` by DECIDE_TAC
+  \\ RES_TAC \\ FULL_SIMP_TAC std_ss [AC MULT_ASSOC MULT_COMM]
+  \\ SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC);
+ 
+val IN_ch_active_set = prove(
+  ``v1 IN ch_active_set (a,v,i) /\ 8 * i < 2 ** 32 ==>
+    w2n (v1 - a) DIV 8 IN RANGE (v,i)``,
+  SIMP_TAC std_ss [ch_active_set_def,GSPECIFICATION]  
+  \\ STRIP_TAC
+  \\ ASM_SIMP_TAC std_ss [WORD_ADD_SUB2,word_mul_n2w]  
+  \\ `8 * j < 4294967296` by DECIDE_TAC  
+  \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w]
+  \\ ONCE_REWRITE_TAC [MULT_COMM]
+  \\ SIMP_TAC std_ss [MULT_DIV,IN_DEF,RANGE_def]
+  \\ DECIDE_TAC);
+
+val FEVERY_FUPDATE_IMP = prove(
+  ``!f P x y. P (x,y) /\ FEVERY P f ==> FEVERY P (f |+ (x,y))``,
+  recInduct fmap_INDUCT
+  \\ SIMP_TAC std_ss [FEVERY_DEF,FDOM_FUPDATE,IN_INSERT,
+       FDOM_FEMPTY,NOT_IN_EMPTY, FAPPLY_FUPDATE_THM]
   \\ METIS_TAC []);
 
+val build_map_EMP = prove(
+  ``!k v j. 8 * (v + k) < 2 ** 32 /\ j NOTIN RANGE (v,v + k) ==>
+            (build_map (k,a + n2w (8 * v),a,m) j = EMP)``,
+  Induct \\ REWRITE_TAC [build_map_def]
+  \\ REPEAT STRIP_TAC
+  \\ Cases_on `heap_el a (m (a + n2w (8 * v)))`
+  \\ Cases_on `heap_el a (m ((a + n2w (8 * v)) + 0x4w))`
+  \\ SIMP_TAC std_ss [LET_DEF,FDOM_FUPDATE,IN_INSERT,WORD_ADD_SUB2]
+  \\ `8 * v < 2**32` by DECIDE_TAC
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w]  
+  \\ ONCE_REWRITE_TAC [MULT_COMM]
+  \\ SIMP_TAC std_ss [MULT_DIV,APPLY_UPDATE_THM]
+  \\ Cases_on `v = j`  
+  THEN1 (FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC)
+  \\ ASM_SIMP_TAC std_ss []
+  \\ SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w,GSYM MULT]
+  \\ ONCE_REWRITE_TAC [MULT_COMM]
+  \\ Q.PAT_ASSUM `!v. bbb` MATCH_MP_TAC
+  \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def,MULT_CLAUSES] 
+  \\ DECIDE_TAC);
 
-(* =========== perform car or cdr on a reg ============ *)
+val build_map_DATA = prove(
+  ``!k i a m j v. 
+      8 * (v + k) < 2 ** 32 /\ j IN RANGE (v,v + k) ==>
+      (build_map (k,a + n2w (8 * v),a,m) j = 
+        let (x1,x2) = heap_el a (m (a + n2w (8 * j))) in
+        let (y1,y2) = heap_el a (m (a + n2w (8 * j) + 0x4w)) in
+          DATA (x1,y1,x2,y2))``,
+  Induct \\ REWRITE_TAC [build_map_def]
+  \\ REPEAT STRIP_TAC
+  THEN1 (FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ `F` by DECIDE_TAC)
+  \\ Cases_on `heap_el a (m (a + n2w (8 * v)))`  
+  \\ Cases_on `heap_el a (m (a + n2w (8 * v) + 4w))`  
+  \\ FULL_SIMP_TAC std_ss [LET_DEF,heap_type_distinct]
+  \\ `8 * v < 4294967296` by DECIDE_TAC     
+  \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w,WORD_ADD_SUB2]
+  \\ Cases_on `v = j`
+  \\ FULL_SIMP_TAC std_ss [RW1 [MULT_COMM] MULT_DIV,APPLY_UPDATE_THM]
+  \\ REWRITE_TAC [GSYM WORD_ADD_ASSOC,word_add_n2w, RW1 [MULT_COMM] (GSYM MULT)]    
+  \\ REWRITE_TAC [WORD_ADD_ASSOC,GSYM word_add_n2w]
+  \\ Q.PAT_ASSUM `!bb. bbb` MATCH_MP_TAC
+  \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC);
 
-val arm_car_def = Define `arm_car w xs = if w && 3w = 0w then xs w else w`;
-val arm_cdr_def = Define `arm_cdr w xs = if w && 3w = 0w then xs (w + 4w) else w`;
+val build_heap_DATA = prove(
+  ``!k i a m j v. 
+      8 * (v + k) < 2 ** 32 /\ j IN RANGE (v,v + k) ==>
+      j IN FDOM (build_heap (k,a + n2w (8 * v),a,m)) /\
+      (build_heap (k,a + n2w (8 * v),a,m) ' j = 
+        let (x1,x2) = heap_el a (m (a + n2w (8 * j))) in
+        let (y1,y2) = heap_el a (m (a + n2w (8 * j) + 0x4w)) in
+          (x1,y1,x2,y2))``,
+  Induct \\ REWRITE_TAC [build_heap_def]
+  THEN1 (REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ `F` by DECIDE_TAC)
+  \\ NTAC 5 STRIP_TAC
+  \\ Cases_on `heap_el a (m (a + n2w (8 * v)))`  
+  \\ Cases_on `heap_el a (m (a + n2w (8 * v) + 4w))`  
+  \\ FULL_SIMP_TAC std_ss [LET_DEF,heap_type_distinct]
+  \\ `8 * v < 4294967296` by DECIDE_TAC     
+  \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w,WORD_ADD_SUB2]
+  \\ Cases_on `v = j`
+  \\ FULL_SIMP_TAC std_ss [RW1 [MULT_COMM] MULT_DIV,
+       FAPPLY_FUPDATE_THM,FDOM_FUPDATE,IN_INSERT]
+  \\ REWRITE_TAC [GSYM WORD_ADD_ASSOC,word_add_n2w, RW1 [MULT_COMM] (GSYM MULT)]    
+  \\ REWRITE_TAC [WORD_ADD_ASSOC,GSYM word_add_n2w]
+  \\ Q.PAT_ASSUM `!bb. bbb` MATCH_MP_TAC
+  \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC);
 
-val abs_car_def = Define `
-  abs_car w (h:num |-> num # num # (bool[30] # bool) # bool[30] # bool) = 
-    (FST (h ' (FST w)), FST (SND (SND (h ' (FST w)))))`;
+val NOT_ALIGNED_LEMMA = prove(
+  ``!c. ~ALIGNED (ADDR32 c + 0x1w) /\ ~ALIGNED (ADDR32 c + 0x2w) /\ 
+        ~ALIGNED (ADDR32 c + 0x3w) /\ ~ALIGNED (ADDR32 c - 0x1w) /\ 
+        ~ALIGNED (ADDR32 c - 0x2w) /\ ~ALIGNED (ADDR32 c - 0x3w)``, 
+  METIS_TAC [ALIGNED_ADDR32,NOT_ALIGNED,WORD_ADD_SUB,WORD_SUB_ADD]);
 
-val abs_cdr_def = Define `
-  abs_cdr w (h:num |-> num # num # (bool[30] # bool) # bool[30] # bool) = 
-    (FST (SND (h ' (FST w))), SND (SND (SND (h ' (FST w)))))`;
+val IN_ch_active_set2 = prove(
+  ``!v a. v IN ch_active_set (a,b,j) /\ 8 * j < 2 ** 32 /\ b <> 0 ==>
+          ?i. i <> 0 /\ 8 * i < 2 ** 32 /\ (8w * n2w i = v - a)``,
+  Cases_word \\ Cases_word  
+  \\ SIMP_TAC std_ss [ch_active_set_def,GSPECIFICATION,
+       WORD_EQ_SUB_LADD,word_mul_n2w,word_add_n2w]
+  \\ REPEAT STRIP_TAC
+  \\ ASM_SIMP_TAC std_ss [] \\ Q.EXISTS_TAC `j'`  
+  \\ SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC]    
+  \\ DECIDE_TAC);
 
-val ch_arm_car_cdr = store_thm("ch_arm_car_cdr",
-  ``ch_arm ([w1;w2;w3;w4;w5;w6],h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) /\ ~(FST w1 = 0) ==> 
-    ch_arm ([abs_car w1 h;w2;w3;w4;w5;w6],h,l) (xs v1,v2,v3,v4,v5,v6,a,x,xs) /\ 
-    ch_arm ([abs_cdr w1 h;w2;w3;w4;w5;w6],h,l) (xs (v1 + 4w),v2,v3,v4,v5,v6,a,x,xs)``,
-  STRIP_TAC \\ NTAC 2 (FULL_SIMP_TAC std_ss [ch_arm_def,ch_word_def,MAP])  
-  \\ IMP_RES_TAC ch_inv_length  \\ Cases_on `w1` \\ Cases_on `r`
-  \\ FULL_SIMP_TAC std_ss [CONS_11,abs_car_def,abs_cdr_def]
-  \\ `~(x1 = 0)` by 
-   (FULL_SIMP_TAC std_ss [ch_inv_def,bijection_def,ONE_ONE_DEF,MAP,CONS_11] \\ METIS_TAC [])
-  \\ STRIP_TAC \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `e`
-  THENL [EXISTS_TAC ``[FST (getDATA ((m:num->((bool[30] # bool) # bool[30] # bool) heap_type) x1)); x2; x3; x4; x5:num; x6]``,
-         EXISTS_TAC ``[FST (SND (getDATA ((m:num->((bool[30] # bool) # bool[30] # bool) heap_type) x1))); x2; x3; x4; x5:num; x6]``]
-  \\ Q.EXISTS_TAC `l` \\ Q.EXISTS_TAC `u` \\ Q.EXISTS_TAC `m`  
-  \\ IMP_RES_TAC      
-      ((SIMP_RULE std_ss [MAP,ZIP,MEM,LIST_UPDATE_def,LIST_INSERT_def,LIST_DELETE_def,TAKE_def,DROP_def,APPEND] o
-       SPECL [``q:num``,``x1:num``] o
-       SPECL [``MAP FST [((q,r):num#'b); w2; w3; w4; w5; w6]``,``[x1; x2; x3; x4; x5; x6:num]``] o
-       Q.SPEC `0` o Q.GEN `n`) cheney_car_cdr)
-  \\ REPEAT (Q.PAT_ASSUM `!xff. bbbb` (K ALL_TAC))
-  \\ ASM_SIMP_TAC bool_ss [CONS_11]
-  \\ `ALIGNED a` by FULL_SIMP_TAC bool_ss [ref_cheney_def,ALIGNED_def]      
-  \\ FULL_SIMP_TAC bool_ss [ref_cheney_def]
-  \\ `x1 <= l+l+1` by 
-      (Cases_on `u` \\ FULL_SIMP_TAC std_ss [ok_state_def,LET_DEF,MEM,RANGE_def,IN_DEF]
-       \\ `x1 < i` by METIS_TAC [] \\ DECIDE_TAC)
-  \\ `ref_mem x1 (m x1) (a,xs)` by METIS_TAC []
-  \\ `?x y d1 d2. m x1 = DATA (x,y,d1,d2)` by 
-       (FULL_SIMP_TAC std_ss [ok_state_def,LET_DEF,MEM,IN_DEF] \\ METIS_TAC [PAIR])
-  \\ FULL_SIMP_TAC std_ss [getDATA_def,ref_mem_def]
-  \\ FULL_SIMP_TAC bool_ss [ch_inv_def,MAP]
-  \\ `(b x1,b x', b y, d1, d2) IN abstract (b,m)` by 
-       (SIMP_TAC std_ss [abstract_def,GSPECIFICATION] 
-        \\ Q.EXISTS_TAC `(x1,x',y,d1,d2)` \\ ASM_SIMP_TAC std_ss [])
-  \\ `(b x1,b x',b y,d1,d2) IN ch_set h` by METIS_TAC [SUBSET_DEF]    
-  \\ FULL_SIMP_TAC bool_ss [IN_DEF,ch_set_def]
-  \\ `b x1 = q` by FULL_SIMP_TAC std_ss [CONS_11]
-  \\ FULL_SIMP_TAC bool_ss [FST,SND,ref_field_def]);
+val ok_data_IMP_ref_field_heap_el = prove(
+  ``!j b a. 8 * j < 2 ** 32 /\ b <> 0 /\ 
+            ok_data v (ch_active_set (a,b,j)) ==>
+            (ref_field a (heap_el a v) = v)``,      
+  Cases_on `ALIGNED v`
+  \\ ASM_SIMP_TAC std_ss [ok_data_def,ref_field_def,heap_el_def]
+  \\ REWRITE_TAC [GSYM (EVAL ``2**32``)]
+  \\ REPEAT STRIP_TAC
+  \\ IMP_RES_TAC (IN_ch_active_set2)
+  \\ REPEAT (Q.PAT_ASSUM `!v.bbb` (K ALL_TAC)) THENL [
+    Q.PAT_ASSUM `0x8w * n2w i = v - a` (ASSUME_TAC o GSYM)
+    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_mul_n2w,w2n_n2w]  
+    \\ ASM_SIMP_TAC std_ss [RW1 [MULT_COMM] MULT_DIV]
+    \\ FULL_SIMP_TAC std_ss [WORD_EQ_SUB_RADD]
+    \\ SIMP_TAC std_ss [AC WORD_ADD_COMM WORD_ADD_ASSOC,ref_addr_def],
+    STRIP_ASSUME_TAC (Q.SPEC `v` EXISTS_ADDR32)
+    \\ FULL_SIMP_TAC std_ss [WORD_ADD_0,ALIGNED_ADDR32,WORD_ADD_SUB,
+          ADDR30_ADDR32,word_arith_lemma4,NOT_ALIGNED_LEMMA]]);   
 
-val ch_arm_addresses = store_thm("ch_arm_addresses",
-  ``ch_arm ([w1;w2;w3;w4;w5;w6],h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) /\ ~(FST w1 = 0) ==> 
-    v1 IN x /\ v1 + 4w IN x``,
-  Cases_on `w1` \\ SIMP_TAC std_ss [ch_arm_def,MAP,ch_word_def] \\ STRIP_TAC
-  \\ FULL_SIMP_TAC std_ss [CONS_11]
-  \\ `~(x1 = 0)` by 
-     (FULL_SIMP_TAC std_ss [ch_inv_def,bijection_def,CONS_11,ONE_ONE_DEF,MAP] \\ METIS_TAC [])
-  \\ IMP_RES_TAC ch_inv_length \\ FULL_SIMP_TAC std_ss []
-  \\ ASM_SIMP_TAC std_ss [ref_field_def]
-  \\ REVERSE (`x1 <= l + l + 1` by ALL_TAC) THEN1 METIS_TAC [ref_cheney_d] 
-  \\ FULL_SIMP_TAC std_ss [ok_state_def,MEM,LET_DEF]
-  \\ `x1 IN RANGE ((if u then 1 + l else 1),i)` by METIS_TAC []
-  \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC);
+val ref_field_heap_el = prove(
+  ``!t j b a. 8 * j < 2 ** 32 /\ b <> 0 /\ 
+              word_tree t (v,m) (ch_active_set (a,b,j)) ==>
+              (ref_field a (heap_el a v) = v)``,      
+  REVERSE Cases
+  \\ ASM_SIMP_TAC std_ss [word_tree_def,heap_el_def,NOT_ALIGNED_LEMMA,
+       ref_field_def,ADDR30_ADDR32,word_arith_lemma4,WORD_ADD_0,
+       ALIGNED_ADDR32,ref_addr_def]
+  \\ REWRITE_TAC [GSYM (EVAL ``2**32``)]
+  \\ REPEAT STRIP_TAC
+  \\ IMP_RES_TAC (IN_ch_active_set2)
+  \\ REPEAT (Q.PAT_ASSUM `!v.bbb` (K ALL_TAC))
+  \\ Q.PAT_ASSUM `0x8w * n2w i = v - a` (ASSUME_TAC o GSYM)
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_mul_n2w,w2n_n2w]  
+  \\ ASM_SIMP_TAC std_ss [RW1 [MULT_COMM] MULT_DIV]
+  \\ FULL_SIMP_TAC std_ss [WORD_EQ_SUB_RADD]
+  \\ SIMP_TAC std_ss [AC WORD_ADD_COMM WORD_ADD_ASSOC]);
+
+val IN_RANGE_IMP = prove(
+  ``!i j v a. j IN RANGE (v,i) ==> a + 8w * n2w j IN ch_active_set (a,v,i)``,
+  SIMP_TAC std_ss [ch_active_set_def,GSPECIFICATION]
+  \\ SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ METIS_TAC []);
+
+val ZERO_OR_IN_RANGE = prove(      
+  ``!q r w a v i. 8 * i < 4294967296 /\ 
+    ok_data w (ch_active_set (a,v,i)) /\
+    (heap_el a w = (q,r)) ==>
+    (q = 0) \/ q IN RANGE (v,i)``,
+  STRIP_TAC 
+  \\ Cases_on `q = 0` \\ ASM_SIMP_TAC std_ss []
+  \\ REPEAT STRIP_TAC
+  \\ Cases_on `ALIGNED w`
+  \\ FULL_SIMP_TAC std_ss [word_tree_def, heap_el_def, word_mul_n2w, ok_data_def]
+  \\ Q.PAT_ASSUM `xxx = q` (ASSUME_TAC o GSYM)  
+  \\ FULL_SIMP_TAC std_ss []     
+  \\ MATCH_MP_TAC IN_ch_active_set
+  \\ FULL_SIMP_TAC std_ss []);
+
+val ch_tree_IMP_ch_arm = prove(
+  ``ch_tree (t1,t2,t3,t4,t5,t6,l) (v1,v2,v3,v4,v5,v6,a,dm,m,b,k) ==>
+    ch_arm ([heap_el a v1; heap_el a v2; heap_el a v3; 
+             heap_el a v4; heap_el a v5; heap_el a v6],
+            build_heap (k,b,a,m),l) 
+           (v1,v2,v3,v4,v5,v6,a,dm,m)``,
+  REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [ch_arm_def,ch_tree_def,LET_DEF]
+  \\ Q.ABBREV_TAC `v = if u then 1 + l else 1`
+  \\ Q.EXISTS_TAC `i`   
+  \\ Q.EXISTS_TAC `v + l`   
+  \\ Q.EXISTS_TAC `(MAP FST [heap_el a v1; heap_el a v2; heap_el a v3; 
+             heap_el a v4; heap_el a v5; heap_el a v6])`
+  \\ Q.EXISTS_TAC `l`
+  \\ Q.EXISTS_TAC `u`
+  \\ Q.EXISTS_TAC `build_map (k, b, a, m)`
+  \\ REWRITE_TAC [ch_inv_def]
+  \\ `ok_state (i,v + l,   
+       [FST (heap_el a v1); FST (heap_el a v2); FST (heap_el a v3);
+        FST (heap_el a v4); FST (heap_el a v5); FST (heap_el a v6)],l,u,
+          build_map (k,b,a,m))` by ALL_TAC THEN1
+   (SIMP_TAC std_ss [ok_state_def,LET_DEF]
+    \\ Q.UNABBREV_TAC `v`
+    \\ Q.ABBREV_TAC `v = if u then 1 + l else 1`
+    \\ ASM_SIMP_TAC std_ss [MAP,MEM]
+    \\ STRIP_TAC THEN1
+     (`!c. ~ALIGNED (ADDR32 c + 0x3w) /\ ~ALIGNED (ADDR32 c + 0x2w)` by 
+            METIS_TAC [ALIGNED_ADDR32,NOT_ALIGNED]
+      \\ `8 * i < 4294967296` by 
+        (Cases_on `u` \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def]
+         \\ Q.UNABBREV_TAC `v` \\ DECIDE_TAC)
+      \\ REPEAT STRIP_TAC \\ POP_ASSUM MP_TAC
+      \\ FULL_SIMP_TAC std_ss []
+      THENL [
+        Cases_on `t1`,
+        Cases_on `t2`,
+        Cases_on `t3`,
+        Cases_on `t4`,
+        Cases_on `t5`,
+        Cases_on `t6`]
+      \\ FULL_SIMP_TAC std_ss [word_tree_def,heap_el_def]
+      \\ REPEAT STRIP_TAC
+      \\ MATCH_MP_TAC IN_ch_active_set
+      \\ ASM_SIMP_TAC std_ss [])
+    \\ STRIP_TAC THEN1
+     (REPEAT STRIP_TAC
+      \\ MATCH_MP_TAC build_map_EMP
+      \\ `v + (i - v) = i` by DECIDE_TAC
+      \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def] 
+      \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def]
+      \\ Q.UNABBREV_TAC `v` \\ DECIDE_TAC)
+    \\ REPEAT STRIP_TAC
+    \\ IMP_RES_TAC IN_RANGE_IMP 
+    \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `a`)
+    \\ `8 * (v + (i - v)) < 2 ** 32 /\ k' IN RANGE (v,v + (i - v))` by 
+     (`v + (i - v) = i` by DECIDE_TAC
+      \\ Q.UNABBREV_TAC `v` \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss []
+      \\ DECIDE_TAC)
+    \\ IMP_RES_TAC build_map_DATA
+    \\ ASM_SIMP_TAC std_ss [EXISTS_PROD]
+    \\ POP_ASSUM (K ALL_TAC)
+    \\ Cases_on `heap_el a (m (a + n2w (8 * k')))`
+    \\ Cases_on `heap_el a (m (a + n2w (8 * k') + 4w))`
+    \\ ASM_SIMP_TAC std_ss [LET_DEF,heap_type_11]
+    \\ Q.EXISTS_TAC `FST r`
+    \\ Q.EXISTS_TAC `SND r`
+    \\ Q.EXISTS_TAC `FST r'`
+    \\ Q.EXISTS_TAC `SND r'`
+    \\ SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET,SUBSET0_DEF,IN_INSERT]
+    \\ RES_TAC
+    \\ `v + (i - v) = i` by DECIDE_TAC
+    \\ FULL_SIMP_TAC std_ss [word_tree_def,word_mul_n2w]
+    \\ STRIP_TAC \\ MATCH_MP_TAC ZERO_OR_IN_RANGE \\ METIS_TAC []) 
+  \\ REPEAT STRIP_TAC THEN1 (POP_ASSUM MP_TAC  \\ ASM_REWRITE_TAC [MAP])
+  THEN1
+   (SIMP_TAC std_ss [ok_abs_def]
+    \\ `v + (i - v) = i` by DECIDE_TAC
+    \\ `FDOM (build_heap (i - v,a + n2w (8 * v),a,m)) = RANGE (v,v + (i - v))` by 
+     (MATCH_MP_TAC FDOM_build_heap
+      \\ ASM_SIMP_TAC std_ss []
+      \\ Cases_on `u` \\ Q.UNABBREV_TAC `v`
+      \\ FULL_SIMP_TAC std_ss []
+      \\ DECIDE_TAC)
+    \\ ASM_SIMP_TAC std_ss []
+    \\ STRIP_TAC THEN1   
+     (Cases_on `u` \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def]
+      \\ Q.UNABBREV_TAC `v` \\ DECIDE_TAC)
+    \\ REVERSE STRIP_TAC THEN1
+     (SIMP_TAC std_ss [MAP,MEM]
+      \\ `!c. ~ALIGNED (ADDR32 c + 0x3w) /\ ~ALIGNED (ADDR32 c + 0x2w)` by 
+            METIS_TAC [ALIGNED_ADDR32,NOT_ALIGNED]
+      \\ `8 * i < 4294967296` by 
+        (Cases_on `u` \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def]
+         \\ Q.UNABBREV_TAC `v` \\ DECIDE_TAC)
+      \\ REPEAT STRIP_TAC \\ POP_ASSUM MP_TAC
+      \\ FULL_SIMP_TAC std_ss []
+      THENL [
+        Cases_on `t1`,
+        Cases_on `t2`,
+        Cases_on `t3`,
+        Cases_on `t4`,
+        Cases_on `t5`,
+        Cases_on `t6`]
+      \\ FULL_SIMP_TAC std_ss [word_tree_def,heap_el_def]
+      \\ REPEAT STRIP_TAC
+      \\ MATCH_MP_TAC IN_ch_active_set
+      \\ ASM_SIMP_TAC std_ss [])
+    \\ ASM_SIMP_TAC std_ss [FEVERY_DEF]
+    \\ REPEAT STRIP_TAC
+    \\ IMP_RES_TAC IN_RANGE_IMP
+    \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `a`)
+    \\ `8 * (v + (i - v)) < 2 ** 32 /\ x IN RANGE (v,v + (i - v))` by 
+     (Q.UNABBREV_TAC `v` \\ Cases_on `u` 
+      \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+    \\ IMP_RES_TAC build_heap_DATA    
+    \\ ASM_SIMP_TAC std_ss [] 
+    \\ POP_ASSUM (K ALL_TAC)
+    \\ Cases_on `heap_el a (m (a + n2w (8 * x)))`
+    \\ Cases_on `heap_el a (m (a + n2w (8 * x) + 4w))`
+    \\ ASM_SIMP_TAC std_ss [LET_DEF,heap_type_11]
+    \\ SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET,SUBSET0_DEF,IN_INSERT]
+    \\ FULL_SIMP_TAC std_ss [word_tree_def,word_mul_n2w]
+    \\ RES_TAC \\ STRIP_TAC \\ MATCH_MP_TAC ZERO_OR_IN_RANGE 
+    \\ Q.PAT_ASSUM `v + (i - v) = i` ASSUME_TAC
+    \\ FULL_SIMP_TAC std_ss []
+    \\ METIS_TAC [])
+  THEN1  
+   (Q.EXISTS_TAC `I`
+    \\ SIMP_TAC std_ss [MAP,bijection_def,ONE_ONE_DEF,ONTO_DEF]
+    \\ ASM_SIMP_TAC std_ss [abstract_build_heap,SUBSET_REFL]
+    \\ SIMP_TAC std_ss [SUBSET_DEF,IN_DEF,reachables_def,FORALL_PROD])
+  THEN
+   (ASM_SIMP_TAC std_ss [ch_word_def,MAP,CONS_11,ref_addr_def] 
+    \\ POP_ASSUM MP_TAC \\ ASM_SIMP_TAC std_ss [MAP]    
+    \\ STRIP_TAC \\ POP_ASSUM (K ALL_TAC)
+    \\ REVERSE STRIP_TAC THEN1   
+     (`8 * i < 2 ** 32 /\ v <> 0` by 
+        (Cases_on `u` \\ Q.UNABBREV_TAC `v`
+         \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+      \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ REPEAT STRIP_TAC 
+      \\ MATCH_MP_TAC ref_field_heap_el
+      THENL [Q.EXISTS_TAC `t1`,
+             Q.EXISTS_TAC `t2`,
+             Q.EXISTS_TAC `t3`,
+             Q.EXISTS_TAC `t4`,
+             Q.EXISTS_TAC `t5`,
+             Q.EXISTS_TAC `t6`]
+      \\ Q.EXISTS_TAC `i`      
+      \\ Q.EXISTS_TAC `v`      
+      \\ ASM_SIMP_TAC bool_ss [])
+    \\ ASM_SIMP_TAC std_ss [ref_cheney_def,ALIGNED_INTRO]
+    \\ STRIP_TAC THEN1
+       (REPEAT (POP_ASSUM MP_TAC)
+        \\ Q.SPEC_TAC (`a`,`a`)
+        \\ Cases_word
+        \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w,n2w_11]
+        \\ REPEAT STRIP_TAC
+        \\ DECIDE_TAC)
+    \\ REVERSE (REPEAT STRIP_TAC)
+    THEN1 (FULL_SIMP_TAC std_ss [valid_address_def] \\ DECIDE_TAC)
+    THEN1 (MATCH_MP_TAC build_map_EMP
+           \\ Cases_on `u` \\ Q.UNABBREV_TAC `v`
+           \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC)
+    \\ `~(v = 0) /\ 8 * (v + (i - v)) < 2 ** 32 /\ 8 * i < 2 ** 32` by 
+     (Cases_on `u` \\ Q.UNABBREV_TAC `v`
+      \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC)
+    \\ REVERSE (Cases_on `i' IN RANGE (v,v + (i - v))`)
+    THEN1 (IMP_RES_TAC build_map_EMP \\ ASM_SIMP_TAC std_ss [ref_mem_def])
+    \\ IMP_RES_TAC build_map_DATA
+    \\ POP_ASSUM (ASSUME_TAC o Q.SPECL [`m`,`a`])
+    \\ Cases_on `heap_el a (m (a + n2w (8 * i')))`
+    \\ Cases_on `heap_el a (m (a + n2w (8 * i') + 4w))`
+    \\ FULL_SIMP_TAC std_ss [LET_DEF,ref_mem_def]
+    \\ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
+    \\ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
+    \\ IMP_RES_TAC IN_RANGE_IMP
+    \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `a`)
+    \\ `v + (i - v) = i` by DECIDE_TAC
+    \\ FULL_SIMP_TAC std_ss [ref_addr_def,word_mul_n2w]
+    \\ RES_TAC \\ FULL_SIMP_TAC std_ss [word_tree_def]
+    \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ STRIP_TAC
+    \\ SIMP_TAC std_ss [ref_addr_def]
+    \\ MATCH_MP_TAC ok_data_IMP_ref_field_heap_el
+    \\ SIMP_TAC std_ss [] \\ METIS_TAC []));
+    
+val XSIZE_def = Define `
+  (XSIZE (XDot x y) = SUC (XSIZE x + XSIZE y)) /\
+  (XSIZE (XVal w) = 0) /\ 
+  (XSIZE (XSym s) = 0)`;
+
+val XDEPTH_def = Define `
+  (XDEPTH (XDot x y) = SUC (MAX (XDEPTH x) (XDEPTH y))) /\
+  (XDEPTH (XVal w) = 0) /\ 
+  (XDEPTH (XSym s) = 0)`;
+
+val CARD_LESS_EQ_XSIZE = prove(
+  ``!t1 v1 a m. ch_tree (t1,t2,t3,t4,t5,t6,l) (v1,v2,v3,v4,v5,v6,a,dm,m,b,k) ==>
+                CARD (reachables [FST (heap_el a v1)] (ch_set (build_heap (k,b,a,m)))) <= XSIZE t1``,
+  Induct THEN1
+   (SIMP_TAC std_ss [word_tree_def,XSIZE_def,ADD1]    
+    \\ REPEAT STRIP_TAC \\ RES_TAC
+    \\ Cases_on `heap_el a (m v1)`
+    \\ Cases_on `heap_el a (m (v1+4w))`
+    \\ `(build_heap (k,b,a,m)) ' (FST (heap_el a v1)) = (q,q',r,r')` by 
+     (REPEAT (Q.PAT_ASSUM `!xx.yy` (K ALL_TAC))
+      \\ FULL_SIMP_TAC std_ss [ch_tree_def,LET_DEF]
+      \\ Q.ABBREV_TAC `v = if u then 1 + l else 1`
+      \\ `8 * (v + (i - v)) < 2 ** 32 /\ v <> 0` by 
+       (Cases_on `u` \\ Q.UNABBREV_TAC `v` 
+        \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+      \\ `v + (i - v) = i` by DECIDE_TAC 
+      \\ FULL_SIMP_TAC bool_ss [word_tree_def]
+      \\ ASM_SIMP_TAC std_ss [heap_el_def]
+      \\ IMP_RES_TAC IN_ch_active_set
+      \\ `8 * (v + (i - v)) < 2 ** 32 /\ 
+          w2n (v1 - a) DIV 8 IN RANGE (v,v + (i - v))` by 
+            FULL_SIMP_TAC std_ss []
+      \\ IMP_RES_TAC build_heap_DATA      
+      \\ ASM_SIMP_TAC std_ss []
+      \\ POP_ASSUM (K ALL_TAC)
+      \\ IMP_RES_TAC (RW [WORD_EQ_SUB_LADD] IN_ch_active_set2)
+      \\ REPEAT (Q.PAT_ASSUM `!xx.yy` (K ALL_TAC))
+      \\ Q.PAT_ASSUM `0x8w * n2w i' + a = v1` (ASSUME_TAC o GSYM)
+      \\ FULL_SIMP_TAC std_ss [word_mul_n2w,WORD_ADD_SUB]
+      \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w]
+      \\ ASM_SIMP_TAC std_ss [RW1 [MULT_COMM] MULT_DIV]
+      \\ FULL_SIMP_TAC std_ss [LET_DEF,AC WORD_ADD_ASSOC WORD_ADD_COMM]) 
+    \\ `(FST (heap_el a v1)) IN FDOM (build_heap (k,b,a,m))` by 
+     (REPEAT (Q.PAT_ASSUM `!xx.yy` (K ALL_TAC))
+      \\ FULL_SIMP_TAC std_ss [ch_tree_def,LET_DEF]
+      \\ Q.ABBREV_TAC `v = if u then 1 + l else 1`
+      \\ `8 * (v + (i - v)) < 2 ** 32 /\ v <> 0` by 
+       (Cases_on `u` \\ Q.UNABBREV_TAC `v` 
+        \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+      \\ IMP_RES_TAC FDOM_build_heap
+      \\ FULL_SIMP_TAC std_ss [word_tree_def,heap_el_def]
+      \\ MATCH_MP_TAC IN_ch_active_set
+      \\ `v + (i - v) = i` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss []
+      \\ Cases_on `u` \\ Q.UNABBREV_TAC `v` 
+      \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+    \\ IMP_RES_TAC reachables_NEXT \\ RES_TAC
+    \\ ASM_SIMP_TAC std_ss []
+    \\ `ch_tree (t1,t2,t3,t4,t5,t6,l) (m v1,v2,v3,v4,v5,v6,a,dm,m,b,k) /\
+        ch_tree (t1',t2,t3,t4,t5,t6,l) (m (v1 + 4w),v2,v3,v4,v5,v6,a,dm,m,b,k)` by 
+     (REPEAT (Q.PAT_ASSUM `!xx.yy` (K ALL_TAC))
+      \\ FULL_SIMP_TAC std_ss [LET_DEF,ch_tree_def,word_tree_def]
+      \\ STRIP_TAC \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u`
+      \\ Q.ABBREV_TAC `v = if u then 1 + l else 1`
+      \\ ASM_SIMP_TAC std_ss [])
+    \\ RES_TAC     
+    \\ REPEAT (Q.PAT_ASSUM `!xx.yy` (K ALL_TAC))
+    \\ Q.PAT_ASSUM `ch_tree (t1,t2,t3,t4,t5,t6,l) (m v1,v2,v3,v4,v5,v6,a,dm,m,b,k)` (K ALL_TAC)
+    \\ Q.PAT_ASSUM `ch_tree (t1',t2,t3,t4,t5,t6,l) (m (v1 + 4w),v2,v3,v4,v5,v6,a,dm,m,b,k)` (K ALL_TAC)
+    \\ Q.PAT_ASSUM `heap_el a (m v1) = (q,r)` (fn th => FULL_SIMP_TAC std_ss [th])
+    \\ Q.PAT_ASSUM `heap_el a (m (v1+4w)) = bbb` (fn th => FULL_SIMP_TAC std_ss [th])
+    \\ MATCH_MP_TAC LESS_EQ_TRANS
+    \\ Q.EXISTS_TAC `CARD (reachables [q] (ch_set (build_heap (k,b,a,m)))) + 
+                     CARD (reachables [q'] (ch_set (build_heap (k,b,a,m)))) + 1`
+    \\ REVERSE STRIP_TAC THEN1 DECIDE_TAC
+    \\ MATCH_MP_TAC LESS_EQ_TRANS
+    \\ Q.EXISTS_TAC `CARD (reachables [q] (ch_set (build_heap (k,b,a,m))) UNION 
+                           reachables [q'] (ch_set (build_heap (k,b,a,m)))) + 1`
+    \\ ASM_SIMP_TAC std_ss [GSYM CARD_UNION,FINITE_reachables]
+    \\ `1 = CARD {(FST (heap_el a v1),q,q',r,r')}` by METIS_TAC [CARD_SING]
+    \\ ASM_SIMP_TAC std_ss [GSYM CARD_UNION,FINITE_reachables,FINITE_INSERT,FINITE_UNION,FINITE_EMPTY]
+    \\ SIMP_TAC std_ss [AC UNION_ASSOC UNION_COMM])  
+  \\ FULL_SIMP_TAC std_ss [ch_tree_def,LET_DEF]
+  \\ SIMP_TAC bool_ss [XSIZE_def,DECIDE ``n <= 0 = (n = 0)``,CARD_EQ_0,FINITE_reachables]
+  \\ SIMP_TAC std_ss [EXTENSION,IN_DEF,EMPTY_DEF]
+  \\ REPEAT STRIP_TAC \\ Cases_on `x` \\ Cases_on `r` \\ Cases_on `r'`
+  \\ FULL_SIMP_TAC std_ss [reachables_def,reachable_def,IN_DEF,ch_set_def,MEM]
+  \\ REPEAT (Cases_on `p`)
+  \\ POP_ASSUM MP_TAC
+  \\ FULL_SIMP_TAC std_ss [APPEND,PATH_def,ch_set_def,IN_DEF,word_tree_def,
+       heap_el_def,NOT_ALIGNED_LEMMA]
+  \\ `~(FDOM (build_heap (k,b,a,m)) 0)` by 
+   (ASM_SIMP_TAC std_ss []    
+    \\ Q.ABBREV_TAC `v = if u then 1 + l else 1`
+    \\ `8 * (v + (i - v)) < 2 ** 32 /\ v <> 0` by 
+     (Cases_on `u` \\ Q.UNABBREV_TAC `v` 
+      \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+    \\ IMP_RES_TAC FDOM_build_heap
+    \\ ASM_SIMP_TAC std_ss [RANGE_def])
+  \\ METIS_TAC []);
+
+val CARD_UNION_IMP = prove(
+  ``!s t m n. FINITE s /\ FINITE t /\ CARD s <= m /\ CARD t <= n ==> 
+              CARD (s UNION t) <= m + n``,
+  REPEAT STRIP_TAC \\ IMP_RES_TAC CARD_UNION \\ DECIDE_TAC);
+
+val ch_tree_swap = prove(
+  ``ch_tree (t1,t2,t3,t4,t5,t6,l) (v1,v2,v3,v4,v5,v6,a,dm,m,b,k) ==>
+    ch_tree (t2,t2,t3,t4,t5,t6,l) (v2,v2,v3,v4,v5,v6,a,dm,m,b,k) /\
+    ch_tree (t3,t2,t3,t4,t5,t6,l) (v3,v2,v3,v4,v5,v6,a,dm,m,b,k) /\
+    ch_tree (t4,t2,t3,t4,t5,t6,l) (v4,v2,v3,v4,v5,v6,a,dm,m,b,k) /\
+    ch_tree (t5,t2,t3,t4,t5,t6,l) (v5,v2,v3,v4,v5,v6,a,dm,m,b,k) /\
+    ch_tree (t6,t2,t3,t4,t5,t6,l) (v6,v2,v3,v4,v5,v6,a,dm,m,b,k)``,
+  REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [ch_tree_def,LET_DEF]
+  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u`
+  \\ FULL_SIMP_TAC std_ss [ch_tree_def,LET_DEF]);
+    
+val CARD_LESS_EQ_SUM_XSIZE = prove(
+  ``ch_tree (t1,t2,t3,t4,t5,t6,l) (v1,v2,v3,v4,v5,v6,a,dm,m,b,k) ==>
+        CARD (reachables [FST (heap_el a v1) ;FST (heap_el a v2); FST (heap_el a v3);
+                          FST (heap_el a v4) ;FST (heap_el a v5); FST (heap_el a v6)] 
+                (ch_set (build_heap (k,b,a,m)))) 
+        <= XSIZE t1 + XSIZE t2 + XSIZE t3 + XSIZE t4 + XSIZE t5 + XSIZE t6``,
+  NTAC 8 (ONCE_REWRITE_TAC [reachables_THM])
+  \\ REWRITE_TAC [(hd o CONJUNCTS o SPEC_ALL) reachables_THM,UNION_EMPTY]
+  \\ REPEAT STRIP_TAC
+  \\ REWRITE_TAC [GSYM ADD_ASSOC]
+  \\ STRIP_ASSUME_TAC (UNDISCH ch_tree_swap)
+  \\ IMP_RES_TAC CARD_LESS_EQ_XSIZE 
+  \\ MATCH_MP_TAC CARD_UNION_IMP
+  \\ ASM_REWRITE_TAC [FINITE_UNION,FINITE_reachables]
+  \\ MATCH_MP_TAC CARD_UNION_IMP
+  \\ ASM_REWRITE_TAC [FINITE_UNION,FINITE_reachables]
+  \\ MATCH_MP_TAC CARD_UNION_IMP
+  \\ ASM_REWRITE_TAC [FINITE_UNION,FINITE_reachables]
+  \\ MATCH_MP_TAC CARD_UNION_IMP
+  \\ ASM_REWRITE_TAC [FINITE_UNION,FINITE_reachables]
+  \\ MATCH_MP_TAC CARD_UNION_IMP
+  \\ ASM_REWRITE_TAC [FINITE_UNION,FINITE_reachables]);
+
+val LIMIT_LEMMA = prove(
+  ``(p ==> m <= n) ==> (p ==> q ==> m < l ==> r) ==>
+    (p ==> q ==> n < (l:num) ==> r)``,
+  REPEAT STRIP_TAC \\ RES_TAC \\ `m < l` by DECIDE_TAC \\ METIS_TAC []);
+ 
+val ch_arm_setup = let
+  val th = RW [GSYM AND_IMP_INTRO] (RW1 [CONJ_COMM] (RW [AND_IMP_INTRO] ch_arm_alloc))
+  val th = DISCH_ALL (MATCH_MP th (UNDISCH ch_tree_IMP_ch_arm))  
+  val imp = MATCH_MP LIMIT_LEMMA CARD_LESS_EQ_SUM_XSIZE
+  val th = MATCH_MP imp (RW [MAP] th)
+  in th end
+
+val ch_arm2_def = Define `
+  ch_arm2 (r,h,l,i,u) c = 
+    ?e rs m. ch_inv (MAP FST r,h,l) (i,e,rs,l,u,m) /\ ch_word (i,e,rs,MAP SND r,l,u,m) c`;
+
+val ch_arm_IMP_ch_arm2 = prove(
+  ``ch_arm (r,h,l) c ==> ?i u. ch_arm2 (r,h,l,i,u) c``,
+  SIMP_TAC std_ss [ch_arm_def,ch_arm2_def,ch_inv_def] \\ METIS_TAC []);
+
+(*
+set_trace "goalstack print goal at top" 0
+*)
 
 
-(* ========= copy reg ========== *)
+val ok_data_ref_field = prove(
+  ``{x} SUBSET0 RANGE (v,i) /\ 8 * i < 2 ** 32 /\ ALIGNED a ==>
+    ok_data (ref_field a (x,q)) (ch_active_set (a,v,i))``,
+  SIMP_TAC std_ss [SUBSET0_DEF,INSERT_SUBSET,IN_INSERT,EMPTY_SUBSET]
+  \\ Cases_on `x = 0` \\ ASM_SIMP_TAC std_ss []
+  \\ REPEAT STRIP_TAC THEN1
+   (FULL_SIMP_TAC std_ss [ref_field_def,ok_data_def]
+    \\ Cases_on `SND q` 
+    \\ ASM_SIMP_TAC std_ss [NOT_ALIGNED_LEMMA,word_arith_lemma4])
+  \\ ASM_SIMP_TAC std_ss [ref_field_def,ref_addr_def,ok_data_def]
+  \\ ASM_SIMP_TAC std_ss [ALIGNED_ADD_EQ,ALIGNED_n2w]
+  \\ REWRITE_TAC [GSYM (EVAL ``4*2``),GSYM MULT_ASSOC]
+  \\ REWRITE_TAC [RW1 [MULT_COMM] (MATCH_MP MOD_EQ_0 (DECIDE ``0<4``))]
+  \\ SIMP_TAC std_ss [MULT_ASSOC,ch_active_set_def,GSPECIFICATION]
+  \\ Q.EXISTS_TAC `x` \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def,word_mul_n2w]);
 
-val ch_arm_copy = store_thm("ch_arm_copy",
-  ``ch_arm ([w1;w2;w3;w4;w5;w6],h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) ==>
-    ch_arm ([w1;w1;w3;w4;w5;w6],h,l) (v1,v1,v3,v4,v5,v6,a,x,xs)``,
-  REPEAT STRIP_TAC \\ NTAC 2 (FULL_SIMP_TAC std_ss [ch_arm_def,ch_word_def,MAP])  
-  \\ IMP_RES_TAC ch_inv_length \\ FULL_SIMP_TAC bool_ss [] \\ IMP_RES_TAC
-  ((SIMP_RULE std_ss [MAP,ZIP,MEM,LIST_UPDATE_def,LIST_INSERT_def,LIST_DELETE_def,TAKE_def,DROP_def,APPEND] o
-    Q.SPECL [`FST (w1:num#'b)`,`x1`] o
-    Q.SPECL [`MAP FST [(w1:num#'b); w2; w3; w4; w5; w6]`,`[x1; x2; x3; x4; x5; x6]`] o
-    INST [``n:num``|->``SUC 0``]) cheney_move)
-  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `e`
-  \\ Q.EXISTS_TAC `[x1; x1; x3; x4; x5; x6]`
-  \\ Q.EXISTS_TAC `l` \\ Q.EXISTS_TAC `u` \\ Q.EXISTS_TAC `m`
-  \\ FULL_SIMP_TAC bool_ss [CONS_11] \\ FULL_SIMP_TAC bool_ss [ok_state_def,LET_DEF,MEM]
-  \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!k. bbb /\ ~(k = 0) ==> bbbb` MATCH_MP_TAC
-  \\ ASM_SIMP_TAC bool_ss []);
+val REV_STRIP_TAC = 
+  REWRITE_TAC [CONJ_ASSOC] \\ REVERSE STRIP_TAC \\ REWRITE_TAC [GSYM CONJ_ASSOC]
+  
+val ch_tree_CAR_CDR = prove( 
+  ``ch_tree (XDot t1 t7,t2,t3,t4,t5,t6,l) (v1,v2,v3,v4,v5,v6,a,dm,m,b,k) ==>
+    ch_tree (t1,t2,t3,t4,t5,t6,l) (m v1,v2,v3,v4,v5,v6,a,dm,m,b,k) /\ 
+    ch_tree (t7,t2,t3,t4,t5,t6,l) (m (v1 + 4w),v2,v3,v4,v5,v6,a,dm,m,b,k)``,
+  SIMP_TAC std_ss [ch_tree_def,LET_DEF] \\ REPEAT STRIP_TAC
+  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u`  
+  \\ FULL_SIMP_TAC std_ss [word_tree_def]);    
 
-(* ========= swap regs =========== *)
+val IN_ch_active_set3 = prove(
+  ``!v a.
+       v IN ch_active_set (a,b,j) /\ 8 * j < 2 ** 32 /\ b <> 0 /\ ALIGNED a ==>
+       ?i. i <> 0 /\ 8 * i < 2 ** 32 /\ (v = n2w (8 * i) + a) /\ 
+           (heap_el a v = (i,0w,F))``,
+  REPEAT STRIP_TAC
+  \\ IMP_RES_TAC IN_ch_active_set
+  \\ IMP_RES_TAC IN_ch_active_set2
+  \\ Q.EXISTS_TAC `i`
+  \\ Q.PAT_ASSUM `0x8w * n2w i = v - a` (ASSUME_TAC o GSYM o RW [WORD_EQ_SUB_LADD])
+  \\ ASM_SIMP_TAC std_ss [word_mul_n2w]
+  \\ ASM_SIMP_TAC std_ss [heap_el_def,ALIGNED_ADD_EQ,WORD_ADD_SUB]
+  \\ SIMP_TAC std_ss [ALIGNED_n2w]
+  \\ REWRITE_TAC [GSYM (EVAL ``4 * 2``), GSYM MULT_ASSOC,
+       RW1 [MULT_COMM] (MATCH_MP MOD_EQ_0 (DECIDE ``0<4``))] 
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [MULT_ASSOC,w2n_n2w]
+  \\ REWRITE_TAC [RW1 [MULT_COMM] (MATCH_MP MULT_DIV (DECIDE ``0<8``))]);
 
-fun ch_arm_swap_tac x y z q = 
-  REPEAT STRIP_TAC \\ NTAC 2 (FULL_SIMP_TAC std_ss [ch_arm_def,ch_word_def,MAP])  
-  \\ IMP_RES_TAC ch_inv_length \\ FULL_SIMP_TAC bool_ss [] \\ IMP_RES_TAC
-  ((SIMP_RULE std_ss [MAP,ZIP,MEM,LIST_UPDATE_def,LIST_INSERT_def,LIST_DELETE_def,TAKE_def,DROP_def,APPEND] o
-    Q.SPECL [x,y,`0`,`FST (w1:num#'b)`,`x1`,z] o 
-    Q.SPECL [`MAP FST [(w1:num#'b); w2; w3; w4; w5; w6]`,`[x1; x2; x3; x4; x5; x6]`])
-    cheney_move2)
-  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `e` \\ Q.EXISTS_TAC q
-  \\ Q.EXISTS_TAC `l` \\ Q.EXISTS_TAC `u` \\ Q.EXISTS_TAC `m`
-  \\ FULL_SIMP_TAC bool_ss [CONS_11] \\ FULL_SIMP_TAC bool_ss [ok_state_def,LET_DEF,MEM]
-  \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!k. bbb /\ ~(k = 0) ==> bbbb` MATCH_MP_TAC
-  \\ ASM_SIMP_TAC bool_ss [];
+val ch_arm2_CAR = prove(
+  ``(FST q1) IN FDOM h /\
+    (h ' (FST q1) = (z1,y1,z2,y2)) /\
+    ch_arm2 ([q1; q2; q3; q4; q5; q6],h,l,i,u) (w1,w2,w3,w4,w5,w6,a,dm,xs) ==>
+    ch_arm2 ([(z1,z2); q2; q3; q4; q5; q6],h,l,i,u) (xs w1,w2,w3,w4,w5,w6,a,dm,xs)``,
+  SIMP_TAC std_ss [ch_arm2_def,ch_inv_def] \\ REPEAT STRIP_TAC
+  \\ `(FST q1,z1,y1,z2,y2) IN reachables (MAP FST [q1; q2; q3; q4; q5; q6]) (ch_set h)` by 
+   (FULL_SIMP_TAC std_ss [IN_DEF,reachables_def,ch_set_def]
+    \\ Q.EXISTS_TAC `FST q1` \\ SIMP_TAC std_ss [MEM,MAP,reachable_def])
+  \\ `(FST q1,z1,y1,z2,y2) IN abstract (b,m)` by METIS_TAC [SUBSET_DEF]
+  \\ FULL_SIMP_TAC std_ss [abstract_def,GSPECIFICATION]
+  \\ `?a1 a2 a3 a4 a5. x = (a1,a2,a3,a4,a5)` by METIS_TAC [PAIR]
+  \\ FULL_SIMP_TAC std_ss [abstract_def,GSPECIFICATION]
+  \\ Q.EXISTS_TAC `e`
+  \\ Q.EXISTS_TAC `a2 :: TL rs` \\ Q.EXISTS_TAC `m` 
+  \\ `ok_state (i,e,a2::TL rs,l,u,m) /\ a1 IN RANGE (if u then 1 + l else 1,i)` by 
+   (FULL_SIMP_TAC std_ss [ok_state_def,LET_DEF,MEM]
+    \\ Cases_on `rs` 
+    \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,NOT_NIL_CONS,MEM,ok_abs_def,TL]
+    \\ `(h' = a1) /\ (b a1 <> 0)` by METIS_TAC [ONE_ONE_DEF,ONTO_DEF,bijection_def]
+    \\ `(a1 <> 0)` by METIS_TAC [ONE_ONE_DEF,ONTO_DEF,bijection_def]
+    \\ `a1 IN RANGE (if u then 1 + l else 1,i)` by METIS_TAC []
+    \\ RES_TAC 
+    \\ FULL_SIMP_TAC std_ss [SUBSET0_DEF,INSERT_SUBSET,IN_INSERT,heap_type_11]
+    \\ METIS_TAC [])
+  \\ FULL_SIMP_TAC std_ss [GSYM abstract_def]
+  \\ STRIP_TAC THEN1
+   (FULL_SIMP_TAC std_ss [ok_abs_def,MEM,MAP,FEVERY_DEF]
+    \\ RES_TAC \\ POP_ASSUM MP_TAC \\ ASM_REWRITE_TAC []
+    \\ SIMP_TAC std_ss [] \\ STRIP_TAC \\ STRIP_TAC THEN1 
+      (FULL_SIMP_TAC std_ss [SUBSET0_DEF,INSERT_SUBSET,IN_INSERT]
+      \\ METIS_TAC [])
+    \\ Q.EXISTS_TAC `b` \\ Cases_on `rs` 
+    \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,NOT_NIL_CONS,MEM,ok_abs_def,TL]
+    \\ MATCH_MP_TAC SUBSET_TRANS
+    \\ Q.EXISTS_TAC `reachables [b a1; FST q2; FST q3; FST q4; FST q5; FST q6] (ch_set h)`
+    \\ ASM_SIMP_TAC std_ss []
+    \\ ASM_SIMP_TAC std_ss [SUBSET_DEF,IN_DEF,reachables_def,FORALL_PROD,MEM]
+    \\ REPEAT STRIP_TAC THEN1
+     (Q.EXISTS_TAC `b a1` \\ FULL_SIMP_TAC std_ss [reachable_def] THENL [     
+        DISJ2_TAC \\ Q.EXISTS_TAC `[]` 
+        \\ ASM_SIMP_TAC std_ss [APPEND,PATH_def,IN_DEF,ch_set_def]
+        \\ METIS_TAC [],
+        DISJ2_TAC \\ Q.EXISTS_TAC `b a2::p` 
+        \\ ASM_SIMP_TAC std_ss [APPEND,PATH_def,IN_DEF,ch_set_def]
+        \\ METIS_TAC []])
+    \\ METIS_TAC [])
+  \\ FULL_SIMP_TAC std_ss [ch_word_def,MAP,CONS_11,TL]
+  \\ FULL_SIMP_TAC std_ss [ref_cheney_def]
+  \\ `a1 <= l+l+1` by (Cases_on `u`
+    \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def,ok_state_def,LET_DEF]
+    \\ DECIDE_TAC)
+  \\ RES_TAC \\ POP_ASSUM MP_TAC
+  \\ `a1 <> 0` by (CCONTR_TAC \\ FULL_SIMP_TAC std_ss [ok_abs_def])
+  \\ `x1 <> 0` by (CCONTR_TAC \\ FULL_SIMP_TAC std_ss [ok_abs_def,MAP,CONS_11])
+  \\ `ref_field a (x1,SND q1) = ref_addr a x1` by 
+       ASM_SIMP_TAC bool_ss [ref_mem_def,ref_field_def]
+  \\ ASM_REWRITE_TAC []  
+  \\ ASM_SIMP_TAC std_ss [ref_mem_def]  
+  \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,bijection_def,ONE_ONE_DEF]
+  \\ METIS_TAC []);
 
-val ch_arm_swap2 = store_thm("ch_arm_swap2",
-  ``ch_arm ([w1;w2;w3;w4;w5;w6],h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) ==>
-    ch_arm ([w2;w1;w3;w4;w5;w6],h,l) (v2,v1,v3,v4,v5,v6,a,x,xs)``,
-  ch_arm_swap_tac `FST (w2:num#'b)` `x2` `SUC 0` `[x2; x1; x3; x4; x5; x6]`);
+val ch_arm2_swap2 = prove(
+  ``ch_arm2 ([q1; q2; q3; q4; q5; q6],h,l,i,u) (w1,w2,w3,w4,w5,w6,a,dm,xs) ==>
+    ch_arm2 ([q2; q1; q3; q4; q5; q6],h,l,i,u) (w2,w1,w3,w4,w5,w6,a,dm,xs)``,
+  SIMP_TAC std_ss [ch_arm2_def,ch_word_def,ch_inv_def,ok_state_def,
+    ok_abs_def,LET_DEF] \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [MAP,MEM,CONS_11]
+  \\ Q.EXISTS_TAC `[x2; x1; x3; x4; x5; x6]` \\ Q.EXISTS_TAC `m`
+  \\ FULL_SIMP_TAC std_ss [MAP,MEM,CONS_11,SUBSET_DEF,IN_DEF,
+       reachables_def,FORALL_PROD]
+  \\ FULL_SIMP_TAC std_ss [AC DISJ_COMM DISJ_ASSOC]
+  \\ REPEAT STRIP_TAC \\ REPEAT (Q.EXISTS_TAC `b`) \\ METIS_TAC []);
 
-val ch_arm_swap3 = store_thm("ch_arm_swap3",
-  ``ch_arm ([w1;w2;w3;w4;w5;w6],h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) ==>
-    ch_arm ([w3;w2;w1;w4;w5;w6],h,l) (v3,v2,v1,v4,v5,v6,a,x,xs)``,
-  ch_arm_swap_tac `FST (w3:num#'b)` `x3` `SUC (SUC 0)` `[x3; x2; x1; x4; x5; x6]`);
+val ch_arm2_swap3 = prove(
+  ``ch_arm2 ([q1; q2; q3; q4; q5; q6],h,l,i,u) (w1,w2,w3,w4,w5,w6,a,dm,xs) ==>
+    ch_arm2 ([q3; q2; q1; q4; q5; q6],h,l,i,u) (w3,w2,w1,w4,w5,w6,a,dm,xs)``,
+  SIMP_TAC std_ss [ch_arm2_def,ch_word_def,ch_inv_def,ok_state_def,
+    ok_abs_def,LET_DEF] \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [MAP,MEM,CONS_11]
+  \\ Q.EXISTS_TAC `[x3; x2; x1; x4; x5; x6]` \\ Q.EXISTS_TAC `m`
+  \\ FULL_SIMP_TAC std_ss [MAP,MEM,CONS_11,SUBSET_DEF,IN_DEF,
+       reachables_def,FORALL_PROD]
+  \\ FULL_SIMP_TAC std_ss [AC DISJ_COMM DISJ_ASSOC]
+  \\ REPEAT STRIP_TAC \\ REPEAT (Q.EXISTS_TAC `b`) \\ METIS_TAC []);
 
-val ch_arm_swap4 = store_thm("ch_arm_swap4",
-  ``ch_arm ([w1;w2;w3;w4;w5;w6],h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) ==>
-    ch_arm ([w4;w2;w3;w1;w5;w6],h,l) (v4,v2,v3,v1,v5,v6,a,x,xs)``,
-  ch_arm_swap_tac `FST (w4:num#'b)` `x4` `SUC (SUC (SUC 0))` `[x4; x2; x3; x1; x5; x6]`);
+val ch_arm2_swap4 = prove(
+  ``ch_arm2 ([q1; q2; q3; q4; q5; q6],h,l,i,u) (w1,w2,w3,w4,w5,w6,a,dm,xs) ==>
+    ch_arm2 ([q4; q2; q3; q1; q5; q6],h,l,i,u) (w4,w2,w3,w1,w5,w6,a,dm,xs)``,
+  SIMP_TAC std_ss [ch_arm2_def,ch_word_def,ch_inv_def,ok_state_def,
+    ok_abs_def,LET_DEF] \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [MAP,MEM,CONS_11]
+  \\ Q.EXISTS_TAC `[x4; x2; x3; x1; x5; x6]` \\ Q.EXISTS_TAC `m`
+  \\ FULL_SIMP_TAC std_ss [MAP,MEM,CONS_11,SUBSET_DEF,IN_DEF,
+       reachables_def,FORALL_PROD]
+  \\ FULL_SIMP_TAC std_ss [AC DISJ_COMM DISJ_ASSOC]
+  \\ REPEAT STRIP_TAC \\ REPEAT (Q.EXISTS_TAC `b`) \\ METIS_TAC []);
 
-val ch_arm_swap5 = store_thm("ch_arm_swap5",
-  ``ch_arm ([w1;w2;w3;w4;w5;w6],h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) ==>
-    ch_arm ([w5;w2;w3;w4;w1;w6],h,l) (v5,v2,v3,v4,v1,v6,a,x,xs)``,
-  ch_arm_swap_tac `FST (w5:num#'b)` `x5` `SUC (SUC (SUC (SUC 0)))` `[x5; x2; x3; x4; x1; x6]`);
+val ch_arm2_swap5 = prove(
+  ``ch_arm2 ([q1; q2; q3; q4; q5; q6],h,l,i,u) (w1,w2,w3,w4,w5,w6,a,dm,xs) ==>
+    ch_arm2 ([q5; q2; q3; q4; q1; q6],h,l,i,u) (w5,w2,w3,w4,w1,w6,a,dm,xs)``,
+  SIMP_TAC std_ss [ch_arm2_def,ch_word_def,ch_inv_def,ok_state_def,
+    ok_abs_def,LET_DEF] \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [MAP,MEM,CONS_11]
+  \\ Q.EXISTS_TAC `[x5; x2; x3; x4; x1; x6]` \\ Q.EXISTS_TAC `m`
+  \\ FULL_SIMP_TAC std_ss [MAP,MEM,CONS_11,SUBSET_DEF,IN_DEF,
+       reachables_def,FORALL_PROD]
+  \\ FULL_SIMP_TAC std_ss [AC DISJ_COMM DISJ_ASSOC]
+  \\ REPEAT STRIP_TAC \\ REPEAT (Q.EXISTS_TAC `b`) \\ METIS_TAC []);
 
-val ch_arm_swap6 = store_thm("ch_arm_swap6",
-  ``ch_arm ([w1;w2;w3;w4;w5;w6],h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) ==>
-    ch_arm ([w6;w2;w3;w4;w5;w1],h,l) (v6,v2,v3,v4,v5,v1,a,x,xs)``,
-  ch_arm_swap_tac `FST (w6:num#'b)` `x6` `SUC (SUC (SUC (SUC (SUC 0))))` `[x6; x2; x3; x4; x5; x1]`);
+val ch_arm2_swap6 = prove(
+  ``ch_arm2 ([q1; q2; q3; q4; q5; q6],h,l,i,u) (w1,w2,w3,w4,w5,w6,a,dm,xs) ==>
+    ch_arm2 ([q6; q2; q3; q4; q5; q1],h,l,i,u) (w6,w2,w3,w4,w5,w1,a,dm,xs)``,
+  SIMP_TAC std_ss [ch_arm2_def,ch_word_def,ch_inv_def,ok_state_def,
+    ok_abs_def,LET_DEF] \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [MAP,MEM,CONS_11]
+  \\ Q.EXISTS_TAC `[x6; x2; x3; x4; x5; x1]` \\ Q.EXISTS_TAC `m`
+  \\ FULL_SIMP_TAC std_ss [MAP,MEM,CONS_11,SUBSET_DEF,IN_DEF,
+       reachables_def,FORALL_PROD]
+  \\ FULL_SIMP_TAC std_ss [AC DISJ_COMM DISJ_ASSOC]
+  \\ REPEAT STRIP_TAC \\ REPEAT (Q.EXISTS_TAC `b`) \\ METIS_TAC []);
+
+val ch_arm2_CDR = prove(
+  ``(FST q1) IN FDOM h /\
+    (h ' (FST q1) = (z1,y1,z2,y2)) /\
+    ch_arm2 ([q1; q2; q3; q4; q5; q6],h,l,i,u) (w1,w2,w3,w4,w5,w6,a,dm,xs) ==>
+    ch_arm2 ([(y1,y2); q2; q3; q4; q5; q6],h,l,i,u) (xs (w1+4w),w2,w3,w4,w5,w6,a,dm,xs) /\
+    w1 IN ch_active_set (a,if u then 1 + l else 1,i) /\ ALIGNED w1``,
+  SIMP_TAC std_ss [ch_arm2_def,ch_inv_def] \\ STRIP_TAC
+  \\ `(FST q1,z1,y1,z2,y2) IN reachables (MAP FST [q1; q2; q3; q4; q5; q6]) (ch_set h)` by 
+   (FULL_SIMP_TAC std_ss [IN_DEF,reachables_def,ch_set_def]
+    \\ Q.EXISTS_TAC `FST q1` \\ SIMP_TAC std_ss [MEM,MAP,reachable_def])
+  \\ `(FST q1,z1,y1,z2,y2) IN abstract (b,m)` by METIS_TAC [SUBSET_DEF]
+  \\ FULL_SIMP_TAC std_ss [abstract_def,GSPECIFICATION]
+  \\ `?a1 a2 a3 a4 a5. x = (a1,a3,a2,a5,a4)` by METIS_TAC [PAIR]
+  \\ FULL_SIMP_TAC std_ss [abstract_def,GSPECIFICATION]
+  \\ SIMP_TAC std_ss [METIS_PROVE [] ``(?x. P x) /\ Q = ?x. P x /\ Q``]
+  \\ Q.EXISTS_TAC `e`
+  \\ Q.EXISTS_TAC `a2 :: TL rs` \\ Q.EXISTS_TAC `m` 
+  \\ `ok_state (i,e,a2::TL rs,l,u,m) /\ a1 IN RANGE (if u then 1 + l else 1,i)` by 
+   (FULL_SIMP_TAC std_ss [ok_state_def,LET_DEF,MEM]
+    \\ Cases_on `rs` 
+    \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,NOT_NIL_CONS,MEM,ok_abs_def,TL]
+    \\ `(h' = a1) /\ (b a1 <> 0)` by METIS_TAC [ONE_ONE_DEF,ONTO_DEF,bijection_def]
+    \\ `(a1 <> 0)` by METIS_TAC [ONE_ONE_DEF,ONTO_DEF,bijection_def]
+    \\ `a1 IN RANGE (if u then 1 + l else 1,i)` by METIS_TAC []
+    \\ RES_TAC 
+    \\ FULL_SIMP_TAC std_ss [SUBSET0_DEF,INSERT_SUBSET,IN_INSERT,heap_type_11]
+    \\ METIS_TAC [])
+  \\ FULL_SIMP_TAC std_ss [GSYM abstract_def]
+  \\ REWRITE_TAC [GSYM CONJ_ASSOC]
+  \\ ONCE_REWRITE_TAC [CONJ_ASSOC]
+  \\ STRIP_TAC THEN1
+   (FULL_SIMP_TAC std_ss [ok_abs_def,MEM,MAP,FEVERY_DEF]
+    \\ RES_TAC \\ POP_ASSUM MP_TAC \\ ASM_REWRITE_TAC []
+    \\ SIMP_TAC std_ss [] \\ STRIP_TAC \\ STRIP_TAC THEN1 
+      (FULL_SIMP_TAC std_ss [SUBSET0_DEF,INSERT_SUBSET,IN_INSERT]
+      \\ METIS_TAC [])
+    \\ Q.EXISTS_TAC `b` \\ Cases_on `rs` 
+    \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,NOT_NIL_CONS,MEM,ok_abs_def,TL]
+    \\ MATCH_MP_TAC SUBSET_TRANS
+    \\ Q.EXISTS_TAC `reachables [b a1; FST q2; FST q3; FST q4; FST q5; FST q6] (ch_set h)`
+    \\ ASM_SIMP_TAC std_ss []
+    \\ ASM_SIMP_TAC std_ss [SUBSET_DEF,IN_DEF,reachables_def,FORALL_PROD,MEM]
+    \\ REPEAT STRIP_TAC THEN1
+     (Q.EXISTS_TAC `b a1` \\ FULL_SIMP_TAC std_ss [reachable_def] THENL [     
+        DISJ2_TAC \\ Q.EXISTS_TAC `[]` 
+        \\ ASM_SIMP_TAC std_ss [APPEND,PATH_def,IN_DEF,ch_set_def]
+        \\ METIS_TAC [],
+        DISJ2_TAC \\ Q.EXISTS_TAC `b a2::p` 
+        \\ ASM_SIMP_TAC std_ss [APPEND,PATH_def,IN_DEF,ch_set_def]
+        \\ METIS_TAC []])
+    \\ METIS_TAC [])
+  \\ FULL_SIMP_TAC std_ss [ch_word_def,MAP,CONS_11,TL]
+  \\ FULL_SIMP_TAC std_ss [ref_cheney_def]
+  \\ `a1 <= l+l+1` by (Cases_on `u`
+    \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def,ok_state_def,LET_DEF]
+    \\ DECIDE_TAC)
+  \\ RES_TAC \\ POP_ASSUM MP_TAC
+  \\ `a1 <> 0` by (CCONTR_TAC \\ FULL_SIMP_TAC std_ss [ok_abs_def])
+  \\ `x1 <> 0` by (CCONTR_TAC \\ FULL_SIMP_TAC std_ss [ok_abs_def,MAP,CONS_11])
+  \\ `ref_field a (x1,SND q1) = ref_addr a x1` by 
+       ASM_SIMP_TAC bool_ss [ref_mem_def,ref_field_def]
+  \\ ASM_REWRITE_TAC []  
+  \\ ASM_SIMP_TAC std_ss [ref_mem_def]  
+  \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,bijection_def,ONE_ONE_DEF]
+  \\ `a1 = x1` by METIS_TAC []
+  \\ FULL_SIMP_TAC std_ss []
+  \\ STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [ref_addr_def,ch_active_set_def,
+       GSPECIFICATION,word_mul_n2w,ALIGNED_ADD_EQ,ALIGNED_INTRO]
+  \\ SIMP_TAC bool_ss [ALIGNED_n2w,GSYM (EVAL ``4*2``),GSYM MULT_ASSOC]
+  \\ REWRITE_TAC [RW1 [MULT_COMM] (MATCH_MP MOD_EQ_0 (DECIDE ``0<4``))]
+  \\ Q.EXISTS_TAC `x1` \\ REWRITE_TAC []
+  \\ FULL_SIMP_TAC std_ss [LET_DEF,ok_state_def,MEM]
+  \\ `x1 IN RANGE (if u then 1 + l else 1,i)` by METIS_TAC []
+  \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def]
+  \\ DECIDE_TAC);  
+
+val ch_tree_XDot = prove(
+  ``ch_tree (XDot tx ty,t2,t3,t4,t5,t6,l) (v1,v2,v3,v4,v5,v6,a,dm,m,b,k) ==>
+    (FST (heap_el a v1)) IN FDOM (build_heap (k,b,a,m)) /\
+    (build_heap (k,b,a,m) ' (FST (heap_el a v1)) = 
+      (FST (heap_el a (m v1)),
+       FST (heap_el a (m (v1 + 4w))),
+       SND (heap_el a (m v1)),
+       SND (heap_el a (m (v1 + 4w)))))``,
+  SIMP_TAC std_ss [ch_tree_def,LET_DEF,word_tree_def] \\ STRIP_TAC
+  \\ Q.ABBREV_TAC `v = if u then 1 + l else 1`
+  \\ `v <> 0 /\ 8 * i < 2 ** 32` by 
+   (Cases_on `u` \\ Q.UNABBREV_TAC `v`
+    \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+  \\ `?j. j <> 0 /\ 8 * j < 2 ** 32 /\ (v1 = n2w (8 * j) + a) /\
+          (heap_el a v1 = (j,0x0w,F))` by 
+              METIS_TAC [IN_ch_active_set3] 
+  \\ `j IN RANGE (v,i)` by 
+   (IMP_RES_TAC IN_ch_active_set
+    \\ Q.PAT_ASSUM `w2n (v1 - a) DIV 8 IN RANGE (v,i)` MP_TAC
+    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_ADD_SUB,w2n_n2w]
+    \\ SIMP_TAC std_ss [RW1 [MULT_COMM] (MULT_DIV)])
+  \\ ASM_SIMP_TAC std_ss []
+  \\ `i = v + (i - v)` by DECIDE_TAC  
+  \\ `j IN FDOM (build_heap (i - v,a + n2w (8 * v),a,m)) /\ 
+      (build_heap (i - v,a + n2w (8 * v),a,m) ' j =
+      (let (x1,x2) = heap_el a (m (n2w (8 * j) + a)) in
+       let (y1,y2) = heap_el a (m (n2w (8 * j) + a + 0x4w)) in
+         (x1,y1,x2,y2)))` by METIS_TAC [build_heap_DATA,WORD_ADD_COMM]
+  \\ ASM_SIMP_TAC std_ss []
+  \\ Cases_on `(heap_el a (m (n2w (8 * j) + a)))`  
+  \\ Cases_on `(heap_el a (m (n2w (8 * j) + a + 4w)))`  
+  \\ SIMP_TAC std_ss [LET_DEF]);
+
+val IMP_word_tree = prove(
+  ``!t1 v1 w1.
+      ch_tree (t1,t2,t3,t4,t5,t6,l) (v1,v2,v3,v4,v5,v6,a,dm,m,b,k) /\
+      ch_arm2
+        ([heap_el a v1; q2; q3; q4; q5; q6],
+         build_heap (k,b,a,m) |+
+         (fresh (build_heap (k,b,a,m)),qqq),l,i,u) (w1,w2,w3,w4,w5,w6,a,dm,xs) ==>
+      word_tree t1 (w1,xs) (ch_active_set (a,if u then 1 + l else 1,i))``,
+  REVERSE Induct THEN1
+   (REPEAT STRIP_TAC
+    \\ FULL_SIMP_TAC std_ss [ch_tree_def,LET_DEF,word_tree_def]
+    \\ Q.PAT_ASSUM `v1 = ADDR32 c + 0x3w` (fn th => FULL_SIMP_TAC std_ss [th])
+    \\ FULL_SIMP_TAC std_ss [heap_el_def,NOT_ALIGNED_LEMMA,WORD_ADD_SUB,
+         ALIGNED_ADDR32,ADDR30_ADDR32,ch_arm2_def,ch_word_def,MAP,CONS_11]
+    \\ FULL_SIMP_TAC std_ss [ch_inv_def,MAP,CONS_11,bijection_def]
+    \\ `x1 = 0` by METIS_TAC [ONE_ONE_DEF]
+    \\ ASM_SIMP_TAC std_ss [ref_field_def])
+  THEN1
+   (REPEAT STRIP_TAC
+    \\ FULL_SIMP_TAC std_ss [ch_tree_def,LET_DEF,word_tree_def]
+    \\ Q.PAT_ASSUM `v1 = ADDR32 c + 0x2w` (fn th => FULL_SIMP_TAC std_ss [th])
+    \\ FULL_SIMP_TAC std_ss [heap_el_def,NOT_ALIGNED_LEMMA,WORD_ADD_SUB,
+         ALIGNED_ADDR32,ADDR30_ADDR32,ch_arm2_def,ch_word_def,MAP,CONS_11,
+         word_arith_lemma4]
+    \\ FULL_SIMP_TAC std_ss [ch_inv_def,MAP,CONS_11,bijection_def]
+    \\ `x1 = 0` by METIS_TAC [ONE_ONE_DEF]
+    \\ ASM_SIMP_TAC std_ss [ref_field_def])
+  \\ REPEAT STRIP_TAC
+  \\ IMP_RES_TAC ch_tree_XDot    
+  \\ Q.ABBREV_TAC `hhh = build_heap (k,b,a,m) |+ (fresh (build_heap (k,b,a,m)),qqq)`  
+  \\ `FST (heap_el a v1) IN FDOM hhh /\
+     (hhh ' (FST (heap_el a v1)) =
+      (FST (heap_el a (m v1)),FST (heap_el a (m (v1 + 0x4w))),
+       SND (heap_el a (m v1)),SND (heap_el a (m (v1 + 0x4w)))))` by 
+    (Q.UNABBREV_TAC `hhh`
+    \\ ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,FDOM_FUPDATE,IN_INSERT]
+    \\ METIS_TAC [fresh_NOT_IN_FDOM])
+  \\ IMP_RES_TAC ch_arm2_CAR     
+  \\ IMP_RES_TAC ch_arm2_CDR     
+  \\ REPEAT (Q.PAT_ASSUM `!xxx yyyy xzzz.bbb` (K ALL_TAC))  
+  \\ FULL_SIMP_TAC std_ss [word_tree_def]
+  \\ IMP_RES_TAC ch_tree_CAR_CDR
+  \\ RES_TAC \\ ASM_SIMP_TAC std_ss []
+  \\ REPEAT (Q.PAT_ASSUM `xxx ==> yy` (K ALL_TAC))  
+  \\ REPEAT (Q.PAT_ASSUM `!xxx.bbb` (K ALL_TAC))  
+  \\ Q.UNABBREV_TAC `hhh`
+  \\ NTAC 10 (POP_ASSUM (K ALL_TAC))     
+  \\ FULL_SIMP_TAC std_ss [ch_arm2_def]
+  \\ `?j. j <> 0 /\ 8 * j < 2 ** 32 /\ (heap_el a v1 = (j,0x0w,F))` by 
+     (FULL_SIMP_TAC std_ss [ch_tree_def,LET_DEF,word_tree_def]  
+      \\ Q.ABBREV_TAC `vv = if u' then 1 + l else 1`
+      \\ `8 * i' < 2**32 /\ vv <> 0` by 
+        (Cases_on `u'` \\ Q.UNABBREV_TAC `vv` 
+         \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC)
+      \\ FULL_SIMP_TAC std_ss []
+      \\ METIS_TAC [SIMP_RULE std_ss [] IN_ch_active_set3])
+  \\ FULL_SIMP_TAC std_ss [FST,MAP]);  
+
+val ch_tree_alloc_lemma = prove(
+  ``ch_tree (t1,t2,t3,t4,t5,t6,l) (v1,v2,v3,v4,v5,v6,a,dm,m,b,k) ==>
+    ch_arm2
+     ([(fresh (build_heap (k,b,a,m)),SND (heap_el a v1)); heap_el a v2;
+       heap_el a v3; heap_el a v4; heap_el a v5; heap_el a v6],
+      build_heap (k,b,a,m) |+
+      (fresh (build_heap (k,b,a,m)),FST (heap_el a v1),
+       FST (heap_el a v2),SND (heap_el a v1),SND (heap_el a v2)),l,i,u)
+     (w1,w2,w3,w4,w5,w6,a,dm,xs') ==>
+    ?b k. ch_tree (XDot t1 t2,t2,t3,t4,t5,t6,l) (w1,w2,w3,w4,w5,w6,a,dm,xs',b,k)``,
+  REPEAT STRIP_TAC
+  \\ SIMP_TAC std_ss [ch_tree_def,LET_DEF] 
+  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u`
+  \\ REV_STRIP_TAC THEN1
+   (FULL_SIMP_TAC std_ss [ch_arm2_def]
+    \\ Q.PAT_ASSUM `ch_inv xxx yyy` (K ALL_TAC)
+    \\ FULL_SIMP_TAC std_ss [ch_word_def]
+    \\ REPEAT (Q.PAT_ASSUM `ww = ref_field a (xx,yy)` (K ALL_TAC))
+    \\ POP_ASSUM MP_TAC
+    \\ NTAC 6 (POP_ASSUM (K ALL_TAC))
+    \\ NTAC 3 STRIP_TAC
+    \\ FULL_SIMP_TAC std_ss [ok_state_def,LET_DEF]
+    \\ Q.ABBREV_TAC `v = if u then 1 + l else 1`
+    \\ `8 * i < 2 ** 32 /\ v <> 0` by 
+      (Cases_on `u` \\ Q.UNABBREV_TAC `v` 
+       \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+    \\ IMP_RES_TAC IN_ch_active_set
+    \\ `?j. j <> 0 /\ 8 * j < 2 ** 32 /\ (w - a = 0x8w * n2w j)` by 
+         METIS_TAC [IN_ch_active_set2]
+    \\ FULL_SIMP_TAC std_ss [WORD_EQ_SUB_LADD,word_mul_n2w]
+    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w, RW1 [MULT_COMM] MULT_DIV]
+    \\ RES_TAC
+    \\ FULL_SIMP_TAC std_ss [ref_cheney_def,ALIGNED_INTRO] 
+    \\ `j <= l + l + 1` by 
+      (Cases_on `u` \\ Q.UNABBREV_TAC `v` 
+       \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC)
+    \\ RES_TAC
+    \\ Q.PAT_ASSUM `ref_mem j xxx (a,yyy)` MP_TAC
+    \\ Cases_on `d'`
+    \\ ASM_REWRITE_TAC [ref_mem_def] 
+    \\ FULL_SIMP_TAC std_ss [ref_addr_def,WORD_EQ_SUB_RADD]
+    \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM]
+    \\ REPEAT STRIP_TAC
+    \\ MATCH_MP_TAC ok_data_ref_field    
+    \\ FULL_SIMP_TAC std_ss [SUBSET0_DEF,INSERT_SUBSET,EMPTY_SUBSET])
+  \\ REV_STRIP_TAC THEN1 
+   (MATCH_MP_TAC (GEN_ALL IMP_word_tree) \\ IMP_RES_TAC ch_arm2_swap6
+    \\ IMP_RES_TAC ch_tree_swap \\ METIS_TAC [])
+  \\ REV_STRIP_TAC THEN1 
+   (MATCH_MP_TAC (GEN_ALL IMP_word_tree) \\ IMP_RES_TAC ch_arm2_swap5
+    \\ IMP_RES_TAC ch_tree_swap \\ METIS_TAC [])
+  \\ REV_STRIP_TAC THEN1 
+   (MATCH_MP_TAC (GEN_ALL IMP_word_tree) \\ IMP_RES_TAC ch_arm2_swap4
+    \\ IMP_RES_TAC ch_tree_swap \\ METIS_TAC [])
+  \\ REV_STRIP_TAC THEN1 
+   (MATCH_MP_TAC (GEN_ALL IMP_word_tree) \\ IMP_RES_TAC ch_arm2_swap3
+    \\ IMP_RES_TAC ch_tree_swap \\ METIS_TAC [])
+  \\ REV_STRIP_TAC THEN1 
+   (MATCH_MP_TAC (GEN_ALL IMP_word_tree) \\ IMP_RES_TAC ch_arm2_swap2
+    \\ IMP_RES_TAC ch_tree_swap \\ METIS_TAC [])
+  \\ REVERSE REV_STRIP_TAC THEN1
+   (FULL_SIMP_TAC std_ss [ch_arm2_def,ch_word_def,ref_addr_def,
+      ALIGNED_INTRO,ch_tree_def,LET_DEF,ok_state_def]
+    \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+  \\ SIMP_TAC std_ss [word_tree_def]
+  \\ Q.ABBREV_TAC `f = fresh (build_heap (k,b,a,m))`
+  \\ Q.ABBREV_TAC `xx = (FST (heap_el a v1),FST (heap_el a v2),SND (heap_el a v1),
+          SND (heap_el a v2))`
+  \\ Q.ABBREV_TAC `hh = build_heap (k,b,a,m) |+ (f,xx)`
+  \\ `(FST (f,SND (heap_el a v1))) IN FDOM hh /\ 
+      (hh ' (FST (f,SND (heap_el a v1))) = xx)` by 
+   (Q.UNABBREV_TAC `hh`
+    \\ ASM_SIMP_TAC std_ss [FDOM_FUPDATE,IN_INSERT,FAPPLY_FUPDATE_THM,FST])
+  \\ Q.UNABBREV_TAC `xx`
+  \\ IMP_RES_TAC ch_arm2_CDR
+  \\ IMP_RES_TAC ch_arm2_CAR
+  \\ FULL_SIMP_TAC std_ss []
+  \\ REV_STRIP_TAC THEN1 
+   (MATCH_MP_TAC (GEN_ALL IMP_word_tree) \\ IMP_RES_TAC ch_arm2_swap2
+    \\ IMP_RES_TAC ch_tree_swap \\ METIS_TAC [])
+  \\ MATCH_MP_TAC (GEN_ALL IMP_word_tree) \\ METIS_TAC []);
+
+val ch_tree_alloc = store_thm("ch_tree_alloc",
+  ``ch_tree (t1,t2,t3,t4,t5,t6,l) (v1,v2,v3,v4,v5,v6,a,dm,m,b,k) ==>
+    (arm_alloc (v1,v2,v3,v4,v5,v6,a,dm,m) = (w1,w2,w3,w4,w5,w6,a2,dm2,m2)) ==>
+    XSIZE t1 + XSIZE t2 + XSIZE t3 + XSIZE t4 + XSIZE t5 + XSIZE t6 < l ==>
+    (a2 = a) /\ (dm2 = dm) /\
+    arm_alloc_pre (v1,v2,v3,v4,v5,v6,a,dm,m) /\
+    ?b k. ch_tree (XDot t1 t2,t2,t3,t4,t5,t6,l) (w1,w2,w3,w4,w5,w6,a2,dm2,m2,b,k)``,
+  REPEAT STRIP_TAC \\ IMP_RES_TAC ch_arm_setup
+  \\ IMP_RES_TAC ch_arm_IMP_ch_arm2
+  \\ Q.PAT_ASSUM `a2 = a` (fn th => FULL_SIMP_TAC std_ss [th])
+  \\ Q.PAT_ASSUM `dm2 = dm` (fn th => FULL_SIMP_TAC std_ss [th])
+  \\ IMP_RES_TAC ch_tree_alloc_lemma \\ METIS_TAC []);
 
 
 (* --- PowerPC --- *)
@@ -1607,7 +2484,8 @@ fun prove_eq n1 n2 rw goal = prove(goal,
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = x') /\ (y = y') /\ (z = z') ==> ((f:'a->'b->'c->'d) x y z = f x' y' z')``)
   \\ SIMP_TAC (std_ss++tailrecLib.tailrec_part_ss()) [FUN_EQ_THM,FORALL_PROD,WORD_OR_CLAUSES]
   \\ SIMP_TAC std_ss ([LET_DEF,word_arith_lemma1] @ rw)
-  \\ SIMP_TAC std_ss [AC WORD_AND_ASSOC WORD_AND_COMM, AC WORD_ADD_ASSOC WORD_ADD_COMM]);
+  \\ SIMP_TAC std_ss [AC WORD_AND_ASSOC WORD_AND_COMM, AC WORD_ADD_ASSOC WORD_ADD_COMM]
+  \\ COMPILER_TAC);
  
 val l1 = prove_eq "x86_move" "arm_move" [] 
   ``(x86_move = arm_move) /\ (x86_move_pre = arm_move_pre)``;

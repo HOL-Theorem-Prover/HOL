@@ -38,7 +38,7 @@ fun expect_fail solver t =
   let val _ = HolSmtLib.GENERIC_SMT solver t
   in
     die ("Test of solver '" ^ SolverSpec.get_name solver ^
-      "'failed on term '" ^ Hol_pp.term_to_string t ^
+      "' failed on term '" ^ Hol_pp.term_to_string t ^
       "': exception expected")
   end handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
     if origin_structure = "HolSmtLib" andalso
@@ -559,11 +559,184 @@ in
 
     (* words (i.e., bit vectors) *)
 
+    (``!x. x:word2 = x``, [thm_YO]),
+    (``!x. x:word3 = x``, [thm_YO]),
+    (``!x. x:word4 = x``, [thm_YO]),
+    (``!x. x:word5 = x``, [thm_YO]),
+    (``!x. x:word6 = x``, [thm_YO]),
+    (``!x. x:word7 = x``, [thm_YO]),
+    (``!x. x:word8 = x``, [thm_YO]),
+    (``!x. x:word12 = x``, [thm_YO]),
+    (``!x. x:word16 = x``, [thm_YO]),
+    (``!x. x:word20 = x``, [thm_YO]),
+    (``!x. x:word24 = x``, [thm_YO]),
+    (``!x. x:word28 = x``, [thm_YO]),
+    (``!x. x:word30 = x``, [thm_YO]),
     (``!x. x:word32 = x``, [thm_YO]),
+    (``!x. x:word64 = x``, [thm_YO]),
+
     (``x:word32 && x = x``, [thm_YO]),
+    (``x:word32 && y = y && x``, [thm_YO]),
+    (``(x:word32 && y) && z = x && (y && z)``, [thm_YO]),
+    (``x:word32 && 0w = 0w``, [thm_YO]),
+    (``x:word32 && 0w = x``, [fail_YO, fail_YSO, fail_CVC]),
+
     (``x:word32 !! x = x``, [thm_YO]),
-    (``x:word32 ?? x ?? x = x``, [thm_YO]),
-    (``~ ~ x:word32 = x``, [thm_YO])
+    (``x:word32 !! y = y !! x``, [thm_YO]),
+    (``(x:word32 !! y) !! z = x !! (y !! z)``, [thm_YO]),
+    (``x:word32 !! 0w = 0w``, [fail_YO, fail_YSO, fail_CVC]),
+    (``x:word32 !! 0w = x``, [thm_YO]),
+
+    (``x:word32 ?? x = 0w``, [thm_YO]),
+    (``x:word32 ?? y = y ?? x``, [thm_YO]),
+    (``(x:word32 ?? y) ?? z = x ?? (y ?? z)``, [thm_YO]),
+    (``x:word32 ?? 0w = 0w``, [fail_YO, fail_YSO, fail_CVC]),
+    (``x:word32 ?? 0w = x``, [thm_YO]),
+
+    (``~ ~ x:word32 = x``, [thm_YO]),
+    (``~ 0w = 0w:word32``, [fail_YO, fail_YSO, fail_CVC]),
+
+    (``x:word32 << 0 = x``, [thm_YO]),
+    (``x:word32 << 31 = 0w``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32 << 31 = 0w) \/ (x << 31 = 1w << 31)``, [thm_YO]),
+
+    (* shift index greater than bit width: not allowed by Yices, and not
+       handled by the translation yet
+    ``x:word32 << 42 = x``
+    *)
+    (* shift index not a number: not allowed by Yices; we should test for this
+       when translating
+    ``x:word32 << n = x``
+    *)
+
+    (``x:word32 >>> 0 = x``, [thm_YO]),
+    (``x:word32 >>> 31 = 0w``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32 >>> 31 = 0w) \/ (x >>> 31 = 1w)``, [thm_YO]),
+
+    (``1w:word2 @@ 1w:word2 = 5w:word4``, [thm_YO]),
+    (``((x @@ y):word32 = y @@ x) = (x:word16 = y)``, [thm_YO]),
+
+    (``(31 >< 0) x:word32 = x``, [thm_YO]),
+    (``(1 >< 0) (0w:word32) = 0w:word2``, [thm_YO]),
+
+    (``(x:word2 = y) = (x ' 0 = y ' 0) /\ (x ' 1 = y ' 1)``, [thm_YO]),
+
+    (``0w:word32 = w2w (0w:word16)``, [thm_YO]),
+    (``0w:word32 = w2w (0w:word32)``, [thm_YO]),
+    (``0w:word32 = w2w (0w:word64)``, [thm_YO]),
+    (``x:word32 = w2w x``, [thm_YO]),
+
+    (``(x:word32) + x = x``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) + y = y + x``, [thm_YO]),
+    (``((x:word32) + y) + z = x + (y + z)``, [thm_YO]),
+    (``(x:word32) + 0w = 0w``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) + 0w = x``, [thm_YO]),
+
+    (``(x:word32) - x = x``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) - x = 0w``, [thm_YO]),
+    (``(x:word32) - y = y - x``, [fail_YO, fail_YSO, fail_CVC]),
+    (``((x:word32) - y) - z = x - (y - z)``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) - 0w = 0w``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) - 0w = x``, [thm_YO]),
+
+    (``(x:word32) * x = x``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) * y = y * x``, [thm_YO]),
+    (``((x:word32) * y) * z = x * (y * z)``, [thm_YO]),
+    (``(x:word32) * 0w = 0w``, [thm_YO]),
+    (``(x:word32) * 0w = x``, [fail_YO, fail_YSO, fail_CVC]),
+    (``(x:word32) * 1w = x``, [thm_YO]),
+
+    (``- (x:word32) = x``, [fail_YO, fail_YSO, fail_CVC]),
+    (``- 0w = 0w:word32``, [thm_YO]),
+    (``- - (x:word32) = x``, [thm_YO]),
+
+    (``0w < 1w:word32``, [thm_YO]),
+    (``~ 0w < 0w:word32``, [thm_YO]),
+
+    (``0w <= 1w:word32``, [thm_YO]),
+    (``x <= y:word32 = x < y \/ (x = y)``, [thm_YO]),
+    (``~ 0w <= 0w:word32``, [thm_YO]),
+
+    (``1w > 0w:word32``, [thm_YO]),
+    (``0w > ~ 0w:word32``, [thm_YO]),
+
+    (``1w >= 0w:word32``, [thm_YO]),
+    (``x >= y:word32 = x > y \/ (x = y)``, [thm_YO]),
+    (``0w >= ~ 0w:word32``, [thm_YO]),
+
+    (``0w <+ 1w:word32``, [thm_YO]),
+    (``0w <+ ~ 0w:word32``, [thm_YO]),
+
+    (``0w <=+ 1w:word32``, [thm_YO]),
+    (``x <=+ y:word32 = x <+ y \/ (x = y)``, [thm_YO]),
+    (``0w <=+ ~ 0w:word32``, [thm_YO]),
+
+    (``1w >+ 0w:word32``, [thm_YO]),
+    (``~ 0w >+ 0w:word32``, [thm_YO]),
+
+    (``1w >=+ 0w:word32``, [thm_YO]),
+    (``x >=+ y:word32 = x >+ y \/ (x = y)``, [thm_YO]),
+    (``~ 0w >=+ 0w:word32``, [thm_YO]),
+
+    (* from Magnus Myreen *)
+    (``!(a:word32) b.
+     (((word_msb (a - b) <=>
+        (word_msb a <=/=> word_msb b) /\
+        (word_msb a <=/=> word_msb (a - b))) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb b <=/=> word_msb a) /\
+        (word_msb a <=/=> word_msb (a - b))) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb a <=/=> word_msb b) /\
+        (word_msb (a - b) <=/=> word_msb a)) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb b <=/=> word_msb a) /\
+        (word_msb (a - b) <=/=> word_msb a)) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb a <=/=> word_msb (a - b)) /\
+        (word_msb a <=/=> word_msb b)) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb a <=/=> word_msb (a - b)) /\
+        (word_msb b <=/=> word_msb a)) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb (a - b) <=/=> word_msb a) /\
+        (word_msb a <=/=> word_msb b)) <=> b <= a) /\
+      ((word_msb (a - b) <=>
+        (word_msb (a - b) <=/=> word_msb a) /\
+        (word_msb b <=/=> word_msb a)) <=> b <= a) /\
+      (((word_msb a <=/=> word_msb b) /\
+        (word_msb a <=/=> word_msb (a - b)) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb b <=/=> word_msb a) /\
+        (word_msb a <=/=> word_msb (a - b)) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb a <=/=> word_msb b) /\
+        (word_msb (a - b) <=/=> word_msb a) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb b <=/=> word_msb a) /\
+        (word_msb (a - b) <=/=> word_msb a) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb a <=/=> word_msb (a - b)) /\
+        (word_msb a <=/=> word_msb b) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb a <=/=> word_msb (a - b)) /\
+        (word_msb b <=/=> word_msb a) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb (a - b) <=/=> word_msb a) /\
+        (word_msb a <=/=> word_msb b) <=> word_msb (a - b)) <=>
+       b <= a) /\
+      (((word_msb (a - b) <=/=> word_msb a) /\
+        (word_msb b <=/=> word_msb a) <=> word_msb (a - b)) <=>
+       b <= a)) /\ (a >= b <=> b <= a) /\ (a > b <=> b < a) /\
+     (~(a <=+ b) <=> b <+ a) /\ (~(a <+ b) <=> b <=+ a) /\
+     (a <+ b \/ (a = b) <=> a <=+ b) /\ (~(a < b) <=> b <= a) /\
+     (~(a <= b) <=> b < a) /\ (a < b \/ (a = b) <=> a <= b) /\
+     ((a = b) \/ a < b <=> a <= b) /\ (a <+ b \/ (a = b) <=> a <=+ b) /\
+     ((a = b) \/ a <+ b <=> a <=+ b) /\
+     (b <=+ a /\ a <> b <=> b <+ a) /\ (a <> b /\ b <=+ a <=> b <+ a) /\
+     (b <= a /\ a <> b <=> b < a) /\ (a <> b /\ b <= a <=> b < a) /\
+     (((v:word32) - w = 0w) <=> (v = w)) /\ (w - 0w = w)``, [thm_YO])
+
   ]  (* tests *)
 end
 

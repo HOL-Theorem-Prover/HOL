@@ -48,6 +48,4 @@ sig
    val xDefineSchema  : string -> term quotation -> thm
    val DefineSchema   : term quotation -> thm
 
-   val SUC_TO_NUMERAL_DEFN_CONV : conv
-
 end

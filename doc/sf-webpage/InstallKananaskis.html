@@ -1,0 +1,212 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<link rel="stylesheet" href="index.css" type="text/css">
+<title>Installing Moscow ML 2.01 and HOL-4 Kananaskis from Sources</title>
+<body>
+
+<h1>Installing Moscow ML&nbsp;2.01 and HOL&nbsp;4 (Kananaskis 4) from Sources</h1>
+
+<p> The HOL 4 source distribution is available as a <a
+href="http://prdownloads.sourceforge.net/hol/kananaskis-4.tar.gz?download">gzipped
+tar file</a> from a SourceForge mirror.
+
+</p>
+<hr>
+
+<p> The instructions that follow explain in detail how to download and
+then install Moscow ML and HOL 4 on your machine.</p>
+
+<h2>Installing Moscow ML</h2>
+
+<p> (If you already have a Moscow&nbsp;ML installation, you can skip this
+step.  <strong>However</strong>, if your installation is crashing unexpectedly with
+strange <code>Chr</code> exceptions, you will probably want to follow
+<a href="mosml-chr-instructions.html">the instructions on rebuilding
+Moscow&nbsp;ML</a> to avoid this.)</p>
+
+<dl>
+  <dt> <strong>On Unix:</strong> </dt>
+
+<dd> <p> Download and install one of the appropriate distribution
+  files from <a href="http://www.dina.dk/~sestoft/mosml.html">the
+  Moscow ML home-page</a>.  (Anything except the &ldquo;Linux (libc 6)
+  executables with documentation&rdquo; should be fine.)  As of early March
+  2004, there is only a source distribution of Moscow ML 2.01
+  available, but this may change. </p>
+
+<p> Check that you can run <code>mosml</code>.  In what follows, we&rsquo;ll
+assume that you have installed in <code>/mosml</code>, so that the
+interpreter is at <code>/mosml/bin/mosml</code>.  Wherever you see
+<code>/mosml</code> in what follows, please substitute whatever you
+have actually chosen. </p>
+
+<p> Note that the instructions for building from source in
+<code>"install-linux.txt"</code> suggest running a test in
+<code>/mosml/src/test</code>.  This test doesn&rsquo;t work, so
+don&rsquo;t worry if you try it and it fails!</p>
+
+<p> Make sure that you follow instructions about enabling dynamic linking.</p>
+</dd>
+
+<dt> <strong>On Windows:</strong> </dt>
+
+<dd>
+
+<p><strong>Either</strong>:</p>
+<blockquote>
+<p> Download the <a
+href="http://www.dina.kvl.dk/~sestoft/mosml/win32-mos201bin.zip">Windows
+binary distribution</a> and follow <a
+href="ftp://ftp.dina.kvl.dk/pub/mosml/install-windows.txt">these
+instructions</a>.  In particular, check that you can run
+<code>mosml</code>.  If you can&rsquo;t it&rsquo;ll probably be because you
+haven&rsquo;t set your environment variables (<code>PATH</code> and
+<code>MOSMLLIB</code>) correctly.</p>
+</blockquote>
+<p><strong>Or</strong>:</p>
+<blockquote>
+<p> Use <a
+href="http://www.dina.dk/~sestoft/mosml/mosml-2.01-1.exe">the
+automatic self-extracting archive</a>, and run this.  If you don't
+have adminstrator privileges on the machine where you run this, you will need to set the environment variables (as above) manually.</p>
+</blockquote>
+
+<p>The text to come assumes that you have built in a directory called
+<code>/mosml</code>.  This doesn&rsquo;t make total sense in the Windows
+environment, but please substitute whatever you have chosen to be
+<code>mosml</code>&rsquo;s home (<code>c:\program files\mosml</code> say)
+for <code>/mosml</code> whenever you see the latter. </p></dd>
+
+<dt> <strong>On Mac OS&nbsp;X</strong></dt>
+<dd><p>When editing <code>mosml/src/Makefile.inc</code>, in the section for
+compiling with dynamically loadable libraries, comment out the existing
+sections and add the following lines for Mac OS&nbsp;X:</p>
+<pre>
+   ADDPRIMS=dynlib.c
+   ADDOBJS=dynlib.o
+   ADDRUNLIBS=-L${MOSMLHOME}/lib -ldl
+   ADDRUNCFLAGS=-I${MOSMLHOME}/include
+   ADDDYNLIBCFLAGS=
+</pre>
+
+<p>Later in the file <code>mosml/src/Makefile.inc</code>, in the section
+for compiler and linker options, comment out the existing option sets and
+create the following new option set:</p>
+<pre>
+   # For Mac OS X 10.x.y (Intel or PowerPC), use:
+   # --------------------------------------------
+   CPP=/usr/bin/cpp -no-cpp-precomp -P -traditional -Dunix -Umsdos
+   STRIP=echo
+   LD=gcc
+   DYNLD=gcc -bundle -bundle_loader ${MOSMLHOME}/bin/camlrunm
+</pre>
+
+<p>Then run:</p>
+<pre>
+   make world
+   make install
+</pre>
+
+<p>To use the Moscow ML dynamic libraries, before you run <code>make world</code>,
+etc. make sure that you set the environment variable
+<!-- <code>LD_LIBRARY_PATH</code> and -->
+<code>DYLD_LIBRARY_PATH</code>
+to include the directory <em>MOSMLHOME</em><code>/lib</code>
+(as described in the installation instructions of Moscow ML).
+<!-- and also set the <code>DYLD_FALLBACK_LIBRARY_PATH</code> variable.</p> -->
+
+<p>As an example of how to set the appropriate environment variables,
+here is the relevant portion of a sample .bashrc file:</p>
+<pre>
+   # Libraries
+   DYLD_LIBRARY_PATH=/usr/lib:/usr/local/lib
+
+   # Add Moscow ML 2.01 to the path
+   MOSMLHOME=${HOME}/mosml
+   DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${MOSMLHOME}/lib
+   PATH=${PATH}:${MOSMLHOME}/bin
+
+   export DYLD_LIBRARY_PATH PATH
+   export MOSMLHOME
+</pre>
+
+<p> You&rsquo;ll have to build each of the dynamic libraries that you need
+yourself, by the following general procedure:
+<ol>
+<li><code>cd </code><em>MOSMLHOME</em><code>/src/dynlibs/</code><em>DYNLIB</em></li>
+<li><code>make all</code>
+<li><code>cp lib</code><em>DYNLIB</em><code> ../../../lib/</code></li>
+</ol>
+There are minor problems with two dynamic libraries on Mac OS&nbsp;X.
+In the <code>munix</code> library the file <code>munix.c</code>
+contains a switch statement for <code>errno</code> that includes
+a <code>case ELIBBAD</code> entry. This error code does not exist on
+Mac OS&nbsp;X, so comment out this case. In the <code>crypt</code>
+library the <code>Makefile</code> contains a reference
+to <code>-lcrypt</code>, and this needs to be changed
+to <code>-lcrypto</code>.</p>
+
+<p>
+Some of the dynamic libraries implement the <code>make install</code> command
+in their Makefiles, which can then be used in place of the
+<code>cp</code> command above. </p></dd> </dl>
+
+<h2>Installing HOL</h2>
+
+<p> To download HOL, use the link at the top or bottom of this page.  When
+you unpack this tarball, it will create a directory called
+<code>hol</code>.  We&nbsp;ll assume this is <code>/hol</code> in what
+comes below.</p>
+
+<p> In the <code>/hol</code> directory, execute </p>
+
+<pre>
+   /mosml/bin/mosml &lt; /hol/tools/smart-configure.sml
+</pre>
+
+<p> This should guess an approriate configuration for your setup.  If
+it fails to do so, please see Chapter&nbsp;1 of the Tutorial for a way
+of overriding <code>smart-configure</code>&rsquo;s guesses. </p>
+
+<p> Finally, build <code>hol</code> by executing</p>
+
+<pre>
+   /hol/bin/build
+</pre>
+<p> (again, reverse those slashes if on Windows.) </p>
+
+<p> On Unix systems, add the option <code>-symlink</code> for a slightly
+faster build and a system that is easier to update.</p>
+
+<p>
+After much output, the <code>/hol/bin/hol</code> executable,
+and many useful theories will have been built.</p>
+
+<hr>
+
+<p> <a href="http://prdownloads.sourceforge.net/hol/kananaskis-4.tar.gz?download">Download HOL sources</a>
+</p>
+
+<hr>
+<h2>Anonymous CVS Access</h2>
+
+<p>It is also possible to use CVS to download (and regularly update)
+the <em>current</em> version of the development repository on
+SourceForge.</p>
+
+<p>  <a href="http://sourceforge.net/docman/display_doc.php?docid=6289&group_id=31790">See these instructions on how to access the repository anonymously</a>.</p>
+
+<hr>
+<div class="timestamp">
+<p>
+Time-stamp: "Thursday, 16 April 2009; 06:28 UTC (Michael Norrish)"
+</p></div>
+</body></html>
+
+<!-- Local variables: -->
+<!-- time-stamp-line-limit: 0 -->
+<!-- time-stamp-time-zone: "UTC+0" -->
+<!-- time-stamp-format: "%:a, %:d %:b %:y; %02H:%02M UTC (%U)" -->
+<!-- End: -->

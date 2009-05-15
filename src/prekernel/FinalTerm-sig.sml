@@ -26,6 +26,7 @@ sig
   val genvars       : hol_type -> int -> term list
   val variant       : term list -> term -> term
   val prim_variant  : term list -> term -> term
+  val gen_variant   : (string -> bool) -> string -> term list -> term -> term
 
   val mk_var        : string * hol_type -> term
   val mk_primed_var : string * hol_type -> term

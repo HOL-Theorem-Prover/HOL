@@ -47,16 +47,12 @@ val dBnum_11 = Store_thm(
   SRW_TAC [ARITH_ss][dBnum_def, arithmeticTheory.EQ_MULT_LCANCEL, 
                      mult3_ineqs]);
 
-val numdB_defn = Defn.Hol_defn "numdB" `
-  numdB n = if n MOD 3 = 0 then dV (n DIV 3)
+val numdB_def = TotalDefn.tDefine "numdB" 
+  `numdB n = if n MOD 3 = 0 then dV (n DIV 3)
             else if n MOD 3 = 1 then 
               dAPP (numdB (nfst (n DIV 3))) (numdB (nsnd (n DIV 3)))
-            else dABS (numdB (n DIV 3))
-`;
-
-val (numdB_def, numdB_ind) = Defn.tprove(
-  numdB_defn,
-  WF_REL_TAC `$<` THEN REPEAT STRIP_TAC THENL [
+            else dABS (numdB (n DIV 3))`
+  (WF_REL_TAC `$<` THEN REPEAT STRIP_TAC THENL [
     MATCH_MP_TAC arithmeticTheory.DIV_LESS THEN SRW_TAC [][] THEN 
     Q_TAC SUFF_TAC `n ≠ 0` THEN1 DECIDE_TAC THEN STRIP_TAC THEN 
     FULL_SIMP_TAC (srw_ss())[],
@@ -75,8 +71,7 @@ val (numdB_def, numdB_ind) = Defn.tprove(
     Q_TAC SUFF_TAC `n ≠ 0` THEN1 DECIDE_TAC THEN STRIP_TAC THEN 
     FULL_SIMP_TAC (srw_ss())[]
   ]);
-val _ = save_thm("numdB_def", numdB_def)
-val _ = save_thm("numdB_ind", numdB_ind)
+val numdB_ind = theorem "numdB_ind"
 
 val numdBnum = Store_thm(
   "numdBnum",

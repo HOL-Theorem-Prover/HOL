@@ -158,12 +158,13 @@ fun ppc_step s = let
   val th = ppc_step "4181FFF4";  (* bc 12,1,L1 *)
   val th = ppc_step "4082FFF0";  (* bc 4,2,L1 *)
   val th = ppc_step "4083FFEC";  (* bc 4,3,L1 *)
+  val th = ppc_step 
+val s = "7C858396";  (* divwu 4,5,16 *)
 
   (* these are not modelled *)
 
   val th = ppc_step "545A188A";  (* rlwinm 26, 2, 3, 2, 5 *)
   val th = ppc_step "7C221BD6";  (* divw 1,2,3 *)
-  val th = ppc_step "7C858396";  (* divwu 4,5,16 *)
 
 *)
 

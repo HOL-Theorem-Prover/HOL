@@ -14,7 +14,7 @@ val ERRloc = mk_HOL_ERRloc "Defn";
 val monitoring = ref false;
 
 (* Interactively: 
-  val const_eq_ref = ref (!Defn.const_eq_ref)
+  val const_eq_ref = ref (!Defn.const_eq_ref);
 *)
 val const_eq_ref = ref Conv.NO_CONV;
 
@@ -406,7 +406,7 @@ fun add_persistent_funs l =
       fun f (s, th) =
         [(s, th)] @
         (if has_lhs_SUC th then
-           [("(Conv.CONV_RULE TotalDefn.SUC_TO_NUMERAL_DEFN_CONV " ^ s ^ ")",
+           [("(Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV " ^ s ^ ")",
              CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) th)]
          else [])
     in
@@ -545,6 +545,9 @@ fun elim_triv_literal_case th =
      val cnv = TRY_CONV (REWR_CONV literal_case_THM THENC BETA_CONV) THENC
                RAND_CONV const_eq_conv THENC 
                PURE_ONCE_REWRITE_CONV [bool_case_thm]
+(*     val cnv1 = REWRITE_CONV [pairTheory.pair_case_thm] THENC LIST_BETA_CONV
+     val rule = CONV_RULE (RAND_CONV (REPEATC cnv THENC cnv1))
+*)
      val rule = CONV_RULE (RAND_CONV (REPEATC cnv))
  in rule th
  end;

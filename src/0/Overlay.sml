@@ -26,7 +26,7 @@ open CoreKernel;
     between the two.
    ---------------------------------------------------------------------- *)
 
-infix ++ && |-> THEN THEN1 THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ?>;
+infix ++ && |-> THEN THEN1 THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ?> |>
 infixr ##;
 infixr 3 ==>;
 infixr 3 -->;

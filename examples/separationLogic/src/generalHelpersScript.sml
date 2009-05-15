@@ -2,8 +2,7 @@ open HolKernel Parse boolLib bossLib;
 
 (*
 quietdec := true;
-loadPath := 
-            (concat Globals.HOLDIR "/examples/decidable_separationLogic/src") :: 
+loadPath := (Globals.HOLDIR ^ "/examples/decidable_separationLogic/src") :: 
             !loadPath;
 
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
@@ -1216,9 +1215,9 @@ SIMP_TAC std_ss [IMAGE_ABS2, IN_ABS]);
 
 
 
-val LIST_ELEM_COUNT_def = Define `
-	LIST_ELEM_COUNT e l = LENGTH (FILTER (\x. x = e) l)`
-
+val LIST_ELEM_COUNT_def = 
+save_thm ("LIST_ELEM_COUNT_def",
+LIST_ELEM_COUNT_DEF);
 
 
 
@@ -1469,8 +1468,10 @@ SIMP_TAC std_ss [INTER_SUBSET, SUBSET_UNION]);
 
 
 
-val BAG_ALL_DISTINCT_def = Define
-   `BAG_ALL_DISTINCT b = (!e. b e <= 1:num)`
+val BAG_ALL_DISTINCT_def = 
+save_thm ("BAG_ALL_DISTINCT_def",
+bagTheory.BAG_ALL_DISTINCT);
+
 
 val BAG_ALL_DISTINCT_THM = store_thm ("BAG_ALL_DISTINCT_THM",
 ``BAG_ALL_DISTINCT EMPTY_BAG /\
@@ -1767,8 +1768,10 @@ SIMP_TAC std_ss [GSYM fmap_EQ_THM,
 		 FMAP_MAP_THM]);
 
 
-val FMAP_MAP2_def = Define 
-`FMAP_MAP2 f m = FUN_FMAP (\x. f (x,m ' x)) (FDOM m)`;
+val FMAP_MAP2_def = save_thm(
+"FMAP_MAP2_def",
+FMAP_MAP2_def);
+
 
 
 val FMAP_MAP2_THM = store_thm ("FMAP_MAP2_THM",
@@ -1871,8 +1874,9 @@ val SET_OF_BAG_EMPTY = store_thm ("SET_OF_BAG_EMPTY",
 REWRITE_TAC[bagTheory.SET_OF_BAG_EQ_EMPTY]);
 
 
-val BAG_EVERY_def = Define `
-BAG_EVERY P b = !e. BAG_IN e b ==> P e`
+val BAG_EVERY_def = save_thm("BAG_EVERY_def",
+BAG_EVERY);
+
 
 val BAG_EVERY_THM = store_thm ("BAG_EVERY_THM",
 ``(BAG_EVERY P EMPTY_BAG) /\
@@ -1941,10 +1945,9 @@ METIS_TAC[]);
 
 
 
-val BAG_OF_FMAP_def = Define `
-BAG_OF_FMAP f b =
-\x. CARD (\k. (k IN FDOM b) /\ 
-           (x = f k (b ' k)))`
+val BAG_OF_FMAP_def = 
+save_thm ("BAG_OF_FMAP_def",
+BAG_OF_FMAP_def);
 
 
 val BAG_OF_FMAP_THM = store_thm ("BAG_OF_FMAP_THM",

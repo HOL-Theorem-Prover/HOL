@@ -1,7 +1,10 @@
 open HolKernel boolLib Parse bossLib
 open binderLib metisLib termTheory contextlistsTheory
+open chap3Theory
 
 val _ = new_theory "stt";
+
+val _ = remove_ovl_mapping "B" {Name="B", Thy="chap2"}
 
 val _ = set_trace "Unicode" 1
 
@@ -45,7 +48,7 @@ val _ = set_fixity "·" (Infixl 600)
 val _ = overload_on ("·", ``tpm``)
 
 val _ = set_fixity "⁻¹" (Suffix 2100)
-val _ = overload_on ("⁻¹", 
+val _ = overload_on ("⁻¹",
   ``REVERSE : (string # string) list -> (string # string) list``)
 
 (* typing relation respects permutation *)
@@ -133,10 +136,11 @@ val hastype_lam_inv = store_thm(
          ∃τ₁ τ₂. ((v,τ₁) :: Γ) ⊢ M ◁ τ₂ ∧
                  (τ = τ₁ → τ₂))``,
   SRW_TAC [][LAM_eq_thm, Once hastype_cases] THEN SRW_TAC [][EQ_IMP_THM] THENL [
-    `ctxtswap [(v,x)] ((x,A) :: Γ) ⊢ tpm [(v,x)] m ◁ B`
+    Q.MATCH_ABBREV_TAC `(v,τ₁)::Γ ⊢ [(v,x)] · m ◁ τ₂` THEN markerLib.RM_ALL_ABBREVS_TAC THEN
+    `ctxtswap [(v,x)] ((x,τ₁) :: Γ) ⊢ tpm [(v,x)] m ◁ τ₂`
        by SRW_TAC [][hastype_swap] THEN
     POP_ASSUM MP_TAC THEN
-    `valid_ctxt ((x,A):: Γ)` by METIS_TAC [hastype_valid_ctxt] THEN
+    `valid_ctxt ((x,τ₁):: Γ)` by METIS_TAC [hastype_valid_ctxt] THEN
     `x ∉ ctxtFV Γ` by (FULL_SIMP_TAC (srw_ss()) [] THEN
                            METIS_TAC [ctxtFV_MEM]) THEN
     SRW_TAC [][ctxtswap_fresh],
@@ -234,7 +238,6 @@ val typing_sub0 = prove(
 
 val typing_sub = save_thm("typing_sub", SIMP_RULE (srw_ss()) [] typing_sub0);
 
-open chap3Theory
 val preservation = store_thm(
   "preservation",
   ``∀t t'. t -β-> t' ⇒ ∀Γ A. Γ ⊢ t ◁ A ⇒ Γ ⊢ t' ◁ A``,

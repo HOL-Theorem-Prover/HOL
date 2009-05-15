@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="index.css" type="text/css">
+<title>How to Rebuild Moscow ML to Banish the Chr Exception</title>
+
+</head>
+
+
+<!-- add class="dulled" within tags below for dull colours -->
+<!-- remove it to restore things to their former glory -->
+
+<body>
+<h1>Rebuilding Moscow ML to Avoid the <code>Chr</code> Exception</h1>
+
+<p>With the standard Moscow&nbsp;ML (version 2.01), and large HOL
+theories it is possible to overload Moscow&nbsp;ML’s internal table of
+global constants.  Luckily, Peter Sestoft provided us with
+a <a href="mosml-patch.tgz">patch</a> to make this table much bigger.
+Here are the instructions (slightly updated by Peter Homeier) on how
+to apply it.  </p>
+
+<ol>
+
+<li> Make a backup of your old <code>mosml</code> installation
+
+<li> Before unpacking the attached, make a build of <code>mosml</code> 2.01:
+
+<p>     In <code>mosml/src/</code> do    </p>
+<pre>
+        make clean world
+</pre>
+
+<li> Unpack the <a href="mosml-patch.tgz">attached</a>:
+
+<p>     In <code>mosml/src/</code> do    </p>
+<pre>
+        tar xvfz mosml-patch.tgz
+</pre>
+
+<li> Recompile the compiler to generate the new bytecode:
+
+<p>     In <code>mosml/src/compiler</code> do    </p>
+<pre>
+        touch Patch.sml Reloc.sml
+        make all
+</pre>
+
+<li> Promote the compiler:
+
+<p>     In <code>mosml/src/compiler</code> do
+<pre>
+        mv mosmllnk mosmlcmp ..
+</pre>
+<p>
+     (I believe <code>mosmllnk</code> is unchanged, but promote for
+     good measure)
+</p>
+
+<li>  Generate new bytecode for libraries, compiler and lexer by
+     recompiling:
+
+<p>     In <code>mosml/src/mosmllib</code> do</p>
+<pre>
+        make clean all
+</pre>
+<p> In <code>mosml/src/compiler</code> do    </p>
+<pre>
+        make clean all
+</pre>
+  <p> In <code>mosml/src/lex</code> do         </p>
+<pre>
+        make clean all
+</pre>
+
+<li> Recompile the runtime:
+
+  <p> In <code>mosml/src/runtime</code> do</p>
+<pre>
+        touch expand.c fix_code.c interp.c
+        make all
+</pre>
+
+<li> Promote the runtime, compiler and lexer:
+<p> In <code>mosml/src/runtime</code> do     </p>
+<pre>
+        mv camlrunm ..
+</pre>
+<p> In <code>mosml/src/compiler</code> do</p>
+<pre>
+        mv mosmllnk mosmlcmp ..
+</pre>
+  <p> In <code>mosml/src/lex</code> do</p>
+<pre>
+        mv mosmllex ..
+</pre>
+
+<li> Check that the top-level works:
+<p>
+In <code>mosml/src</code> do   </p>
+<pre>
+        ./camlrunm compiler/mosmltop -stdlib mosmllib
+</pre>
+<p>and evaluate some expressions.</p>
+
+<li> Rebuild everything to check that the system is stable:
+
+    <p> In <code>mosml/src</code> do
+<pre>
+        make clean world
+</pre>
+<p> Check that </p>
+<pre>
+        src/mosmlcmp = src/compiler/mosmlcmp
+        src/mosmllnk = src/compiler/mosmllnk
+        src/mosmllex = src/lex/mosmllex
+</pre>
+
+<li> Install
+
+<p>     In <code>mosml/src</code> do   </p>
+<pre>
+        make install
+</pre>
+
+<li> Check that HOL builds.  (You will need to do
+a <code>bin/build&nbsp;cleanAll</code> to begin.)
+</ol>
+<div class="timestamp" style="clear:both; padding-top: 3mm;">
+<hr>
+<p>
+Time-stamp: "Thursday, 16 April 2009; 06:51 UTC (Michael Norrish)"
+</p></div>
+
+
+</body>
+
+</html>
+
+<!-- Local variables: -->
+<!-- time-stamp-line-limit: 0 -->
+<!-- time-stamp-time-zone: "UTC+0" -->
+<!-- time-stamp-format: "%:a, %:d %:b %:y; %02H:%02M UTC (%U)" -->
+<!-- End: -->

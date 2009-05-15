@@ -50,7 +50,7 @@ tex: ids
 ids:
 	@echo "\chapter{Pre-defined ML Identifiers}" > entries.tex
 	@echo "\input{entries-intro}" >> entries.tex
-	$(Helpd)/src/Doc2Tex.exe ${Helpd}/Docfiles entries.tex
+	$(Helpd)/src-sml/Doc2Tex.exe ${Helpd}/Docfiles entries.tex
 
 theorems:
 	@echo "\chapter{Pre-proved Theorems}" > theorems.tex

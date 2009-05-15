@@ -12,7 +12,7 @@ LATEX=latex
 # ---------------------------------------------------------------------
 DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
-DOCTOTEXEXE=../../../help/src/Doc2Tex.exe
+DOCTOTEXEXE=../../../help/src-sml/Doc2Tex.exe
 
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
@@ -41,7 +41,7 @@ functions:
 theorems:
 	@echo "\chapter{Pre-proved Theorems}" > theorems.tex
 	@echo "\input{theorems-intro}" >> theorems.tex
-	@echo "\vskip 2mm">> theorems.tex
+	@echo "\vskip 2mm" >> theorems.tex
 	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/thms theorems.tex
 
 index:

@@ -1,0 +1,82 @@
+tl;
+
+/****
+ *  This implements a version of malloc and free. Malloc uses a semi DCAS instruction 
+ *  ccr to ensure it is correct, while free is only uses atomic ccrs.
+ * 							mjp
+ ****/
+
+init() { TOP = NULL; }
+
+resource freelist1 (TOP) [ list(TOP) ]
+
+cas(status,location;original,old,nw) 
+[location==original]
+{
+  if (location == old) {
+	location = nw;
+	status = 1;
+  } else {
+	status = 0;
+  }
+}
+[if original==old then location == nw *status==1 else status==0 * location == original ]
+
+malloc1(i;) 
+[emp]
+{
+  local n,status,top,next;
+  status=0;
+  while(status == 0) [(if status == 0 then emp else i |->)] {
+    with freelist1 when (true) {
+	i = TOP;
+    }
+
+    if(i!=NULL) {
+      with freelist1 when (true) {
+	if(TOP == i) {
+		 n = i->tl;
+	} else {
+             /*  n = i->tl;   Can't read as don't have permission need emp read rule */
+	}
+      }
+
+      with freelist1 when (true) {
+	/* Couldn't be bothered to write a DCAS instruction, so hacked a CAS one. */
+	top = TOP;
+	cas(status,top;top,i,n);
+	if(status==1) {
+ 	  next = i->tl;
+	  if(next == n)
+	    TOP = top;
+	  else 
+	    status = 0;
+	}
+      }
+    }
+  }
+}
+[i |->]
+
+
+free1(;b) 
+[b |-> ]
+{
+  local t,status,top;
+  status = 0;
+  while(status == 0) 
+  [(if status==0 then b |-> else emp)]
+  {	  
+    with freelist1 when (true) {
+	t = TOP;
+    }
+
+    b->tl = t;
+
+    with freelist1 when (true) {
+	cas(status, TOP;TOP, t, b);
+    }
+  }
+}
+[emp]
+

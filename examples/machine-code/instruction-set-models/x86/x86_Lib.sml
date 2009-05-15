@@ -1,4 +1,3 @@
-
 structure x86_Lib :> x86_Lib =
 struct
  
@@ -77,9 +76,11 @@ val ss = rewrites [x86_exec_def, XREAD_REG_def, XREAD_EFLAG_def,
   constT_def, addT_def, lockT_def, failureT_def, seqT_def, parT_def,
   parT_unit_def, write_reg_def, read_reg_def, write_eflag_def,
   read_eflag_def, write_eip_def, read_eip_def, write_m32_def,
-  read_m32_def, seq_monad_thm, write_monop_def, ea_Xr_def, ea_Xi_def,
-  ea_Xrm_base_def, ea_Xrm_index_def, ea_Xrm_def, ea_Xdest_def,
-  ea_Xsrc_def, ea_Ximm_rm_def, read_ea_def, read_src_ea_def,
+  read_m32_def, write_m8_def, read_m8_def, seq_monad_thm,
+  read_src_ea_byte_def, write_ea_byte_def, read_ea_byte_def,
+  write_monop_def, ea_Xr_def, ea_Xi_def, ea_Xrm_base_def,
+  ea_Xrm_index_def, ea_Xrm_def, ea_Xdest_def, ea_Xsrc_def,
+  read_dest_ea_byte_def, ea_Ximm_rm_def, read_ea_def, read_src_ea_def,
   read_dest_ea_def, write_ea_def, write_PF_def, write_ZF_def,
   write_SF_def, write_logical_eflags_def, x86_exec_pop_def,
   x86_exec_pop_eip_def, write_arith_eflags_except_CF_def,
@@ -88,14 +89,14 @@ val ss = rewrites [x86_exec_def, XREAD_REG_def, XREAD_EFLAG_def,
   write_arith_result_no_CF_def, write_arith_result_no_write_def,
   write_logical_result_def, write_logical_result_no_write_def,
   write_binop_def, write_monop_def, read_cond_def, read_reg_seq_def,
-  read_eip_seq_def, write_eip_seq_def, read_m32_seq_def,
-  write_m32_seq_def, APPLY_UPDATE_THM, WORD_EQ_ADD_LCANCEL,
-  x86_address_lemma, write_reg_seq_def, jump_to_ea_def,
-  x86_exec_push_def, x86_exec_push_eip_def, rm_is_memory_access_def,
-  write_eflag_seq_def, if_some_lemma, XREAD_CLAUSES,
-  call_dest_from_ea_def, get_ea_address_def, erase_eflags_def,
-  write_result_erase_eflags_def, word_signed_overflow_add_def,
-  word_signed_overflow_sub_def]
+  read_eip_seq_def, write_eip_seq_def, read_m8_seq_def,
+  write_m8_seq_def, read_m32_seq_def, write_m32_seq_def,
+  APPLY_UPDATE_THM, WORD_EQ_ADD_LCANCEL, x86_address_lemma,
+  write_reg_seq_def, jump_to_ea_def, x86_exec_push_def,
+  x86_exec_push_eip_def, rm_is_memory_access_def, write_eflag_seq_def,
+  if_some_lemma, XREAD_CLAUSES, call_dest_from_ea_def,
+  get_ea_address_def, erase_eflags_def, write_result_erase_eflags_def,
+  word_signed_overflow_add_def, word_signed_overflow_sub_def]
 
 fun x86_step s = let
   val th = x86_decode s
@@ -179,15 +180,17 @@ fun x86_step s = let
   val th = x86_step "93";              (* xchg eax, ebx *)
   val th = x86_step "8731";            (* xchg [ecx], esi *)
 
+  val th = x86_step "883E";            (* mov_byte [esi],edi *)
+  val th = x86_step "8A3E";            (* mov_byte edi,[esi] *)
+
+  val th = x86_step "F720";            (* mul dword [eax] *)
+  val th = x86_step "F7F6";            (* div esi *)
+
   (* no sure *)
 
   val th = x86_step "60";              (* pushad *)
   val th = x86_step "61";              (* popad *)
 
-  (* no semantics defined for the rest *)
-
-  val th = x86_step "F720";            (* mul dword [eax] *)
-  val th = x86_step "F7F6";            (* div esi *)
 
 *)
 

@@ -360,7 +360,7 @@ val FNIL = new_definition("FNIL", ``FNIL (n:num) = (ARB:'a)``);
 val FCONS_DEST = Q.store_thm
 ("FCONS_DEST",
  `FCONS a f n = if n = 0 then a else f (n-1)`,
- SingleStep.Cases_on `n` THEN ASM_SIMP_TAC numLib.num_ss [FCONS]);
+ SingleStep.Cases_on `n` THEN ASM_SIMP_TAC numLib.arith_ss [FCONS]);
 
 (* ------------------------------------------------------------------------- *)
 (* Convenient definitions for type isomorphism.                              *)

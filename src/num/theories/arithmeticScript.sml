@@ -3404,6 +3404,41 @@ val SUB_MOD = Q.store_thm
  `!m n. 0<n /\ n <= m ==> ((m-n) MOD n = m MOD n)`,
  METIS_TAC [ADD_MODULUS,ADD_SUB,LESS_EQ_EXISTS,ADD_SYM]);
 
+fun Cases (asl,g) = 
+ let val (v,_) = dest_forall g
+ in GEN_TAC THEN STRUCT_CASES_TAC (SPEC v num_CASES)
+ end (asl,g);
+
+fun Cases_on v (asl,g) = STRUCT_CASES_TAC (SPEC v num_CASES) (asl,g);
+
+val ONE_LT_MULT_IMP = Q.store_thm
+("ONE_LT_MULT_IMP",
+ `!p q. 1 < p /\ 0 < q ==> 1 < p * q`,
+ REPEAT Cases THEN 
+ RW_TAC bool_ss [MULT_CLAUSES,ADD_CLAUSES] THENL
+ [METIS_TAC [LESS_REFL],
+  POP_ASSUM (K ALL_TAC) THEN POP_ASSUM MP_TAC THEN 
+  RW_TAC bool_ss [ONE,LESS_MONO_EQ] THEN
+  METIS_TAC [LESS_IMP_LESS_ADD, ADD_ASSOC]]);
+ 
+val ONE_LT_MULT = Q.store_thm
+("ONE_LT_MULT",
+ `!x y. 1 < x * y = 0 < x /\ 1 < y \/ 0 < y /\ 1 < x`,
+ REWRITE_TAC [ONE] THEN INDUCT_TAC THEN
+ RW_TAC bool_ss [ADD_CLAUSES, MULT_CLAUSES,LESS_REFL,LESS_0] THENL
+  [METIS_TAC [NOT_SUC_LESS_EQ_0,LESS_OR_EQ],
+   Cases_on ``y:num`` THEN 
+   RW_TAC bool_ss [MULT_CLAUSES,ADD_CLAUSES,LESS_REFL,
+           LESS_MONO_EQ,ZERO_LESS_ADD,LESS_0] THEN
+   METIS_TAC [ZERO_LESS_MULT]]);
+
+val ONE_LT_EXP = Q.store_thm
+("ONE_LT_EXP",
+ `!x y. 1 < x ** y = 1 < x /\ 0 < y`,
+ GEN_TAC THEN INDUCT_TAC THEN 
+ RW_TAC bool_ss [EXP,ONE_LT_MULT,LESS_REFL,LESS_0,ZERO_LT_EXP] THEN
+ METIS_TAC [SUC_LESS, ONE]);
+
 
 (*---------------------------------------------------------------------------*)
 (* Calculating DIV and MOD by repeated subtraction. We define a              *)

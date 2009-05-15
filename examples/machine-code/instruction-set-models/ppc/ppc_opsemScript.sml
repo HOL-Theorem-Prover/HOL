@@ -203,7 +203,9 @@ val ppc_exec_instr_def = Define `
 
   (ppc_exec_instr ii (Pdivw rd r1 r2) = failureT) /\
 
-  (ppc_exec_instr ii (Pdivwu rd r1 r2) = failureT) /\
+  (ppc_exec_instr ii (Pdivwu rd r1 r2) = 
+      OK_nextinstr ii (reg_update ii rd (\x y. n2w (w2n x DIV w2n y)) 
+        (read_ireg ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Peqv rd r1 r2) =
       OK_nextinstr ii (reg_update ii rd (\x y. ~(x ?? y)) (read_ireg ii r1) (read_ireg ii r2))) /\

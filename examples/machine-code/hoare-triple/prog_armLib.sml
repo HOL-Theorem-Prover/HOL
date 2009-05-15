@@ -194,7 +194,8 @@ fun post_process_thm th = let
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
   val th = introduce_aBYTE_MEMORY th
   val th = introduce_aMEMORY th
-  val th = RW [WORD_EQ_XOR_ZERO,wordsTheory.WORD_EQ_SUB_ZERO,ALIGNED_def] th
+  val th = RW [WORD_EQ_XOR_ZERO,wordsTheory.WORD_EQ_SUB_ZERO,ALIGNED_def,
+               WORD_TIMES2,WORD_SUB_INTRO] th
   in calculate_length_and_jump th end;
 
 fun arm_prove_one_spec th = let

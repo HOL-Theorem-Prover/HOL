@@ -85,6 +85,7 @@ val _ = Hol_datatype`
 
 val _ = Hol_datatype`squish_record = <|fld1:bool|>`
 val _ = Hol_datatype`poly_squish_record = <|fld1:'a->'b|>`
+val _ = Hol_datatype`K = <| F : 'a -> bool; S : num |>`
 
 val _ = Datatype.big_record_size := 10;
 val _ = Hol_datatype`
@@ -93,6 +94,67 @@ val _ = Hol_datatype`
                   fld8 : num -> num ; fld9: bool # num ;
                   fld10 : num + bool ; fld11 : bool option ;
                   fld12 : bool ; fld13 : num |>`
+
+(* Tom Ridge's example from 2009/04/23 *)
+val _ = Hol_datatype `
+  command2 =
+     Skip2
+   | Seq2 of bool # command2 # command2
+   | IfThenElse2 of bool # num # command2 # command2
+   | While2 of (num # num) # bool # command2
+`;
+
+(* this version raises a different error *)
+val _ = Hol_datatype `
+  tr20090423 =
+     trSkip2
+   | trSeq2 of bool # tr20090423 # tr20090423
+   | trIfThenElse2 of bool # num # tr20090423 # tr20090423
+   | trWhile2 of (num # num) # bool # tr20090423
+`;
+
+(* both of these were fixed by r6750, which explicitly handles the product
+   type, and recursions underneath it. *)
+
+(* r6750 does not handle the following correctly though *)
+val _ = Hol_datatype`
+  fake_pair = FP of 'a => 'b
+`;
+
+val _ = add_infix_type {Assoc = RIGHT, Name = "fake_pair",
+                        ParseName = SOME "**", Prec = 70}
+
+val _ = Hol_datatype`
+  trprime = trpSkip
+      | trpSeq of bool ** trprime ** trprime
+      | trpIf of bool ** num ** trprime ** trprime
+      | trpW of (num ** num) ** bool ** trprime
+`;
+
+(* can see it "more directly" with
+val spec =
+    [(``:'trp``,
+      [("trpSkip", []),
+       ("trpSeq", [``:bool ** 'trp ** 'trp``]),
+       ("trpIf", [``:bool ** num ** 'trp ** 'trp``]),
+       ("trpW", [``:(num ** num) ** bool ** 'trp``])])]
+val result = ind_types.define_type spec handle e => Raise e;
+
+- note also that switching the order of the trpSeq and trpIf entries in the
+  list above makes it work again.  I.e.,
+
+val spec' =
+    [(``:'trp``,
+      [("trpSkip", []),
+       ("trpIf", [``:bool ** num ** 'trp ** 'trp``]),
+       ("trpSeq", [``:bool ** 'trp ** 'trp``]),
+       ("trpW", [``:(num ** num) ** bool ** 'trp``])])]
+val result = ind_types.define_type spec' handle e => Raise e;
+
+- works.
+
+*)
+
 
 fun tprint s = print (StringCvt.padRight #" " 70 s)
 

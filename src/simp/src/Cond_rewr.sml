@@ -177,7 +177,7 @@ fun ac_term_ord(tm1,tm2) =
    fun is_var_perm(tm1,tm2) =
        vperm(tm1,tm2) andalso tm_set_eq (free_vars tm1) (free_vars tm2)
 
-   fun COND_REWR_CONV th =
+   fun COND_REWR_CONV th bounded =
       let val eqn = snd (strip_imp (concl th))
           val isperm = is_var_perm (dest_eq eqn)
           val instth = HO_PART_MATCH (lhs o snd o strip_imp) th
@@ -200,9 +200,12 @@ fun ac_term_ord(tm1,tm2) =
                  failwith "looping rewrite")
               else ()
 
-            val _ = if isperm andalso ac_term_ord(l, r) <> GREATER then
-                     (trace(4, IGNORE("possibly looping",conditional_eqn)); 
-                      failwith "permutative rewr: not applied") else ()
+            val _ = if isperm andalso ac_term_ord(l, r) <> GREATER andalso
+                       not bounded
+                    then
+                      (trace(4, IGNORE("possibly looping",conditional_eqn));
+                       failwith "permutative rewr: not applied")
+                    else ()
             val _ = if null conditions then ()
                     else trace(if isperm then 2 else 1, REWRITING(tm,th))
 	    val new_stack = conditions@stack

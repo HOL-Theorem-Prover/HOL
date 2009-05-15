@@ -1,8 +1,14 @@
 signature codegen_inputLib =
 sig
 
+  include Abbrev
+
+  datatype access_type = 
+    ACCESS_WORD
+  | ACCESS_BYTE;
+
   datatype assign_address_type = 
-    ASSIGN_ADDRESS_REG of int
+    ASSIGN_ADDRESS_REG of int 
   | ASSIGN_ADDRESS_OFFSET_ADD of int * Arbnum.num
   | ASSIGN_ADDRESS_OFFSET_SUB of int * Arbnum.num;
 
@@ -13,7 +19,9 @@ sig
   datatype assign_binop_type = 
     ASSIGN_BINOP_ADD
   | ASSIGN_BINOP_SUB
-  | ASSIGN_BINOP_TIMES
+  | ASSIGN_BINOP_MUL
+  | ASSIGN_BINOP_MOD
+  | ASSIGN_BINOP_DIV
   | ASSIGN_BINOP_AND
   | ASSIGN_BINOP_XOR
   | ASSIGN_BINOP_OR;
@@ -28,7 +36,7 @@ sig
   | ASSIGN_EXP_STACK of int         (* stack[offset] *)
   | ASSIGN_EXP_BINOP of assign_x_type * assign_binop_type * assign_x_type
   | ASSIGN_EXP_MONOP of assign_monop_type * assign_x_type
-  | ASSIGN_EXP_MEMORY of assign_address_type
+  | ASSIGN_EXP_MEMORY of access_type * assign_address_type
   | ASSIGN_EXP_SHIFT_LEFT of assign_x_type * int
   | ASSIGN_EXP_SHIFT_RIGHT of assign_x_type * int
   | ASSIGN_EXP_SHIFT_ARITHMETIC_RIGHT of assign_x_type * int
@@ -36,8 +44,9 @@ sig
   datatype assign_type = 
     ASSIGN_EXP of int * assign_exp_type        (* register := expression *)
   | ASSIGN_STACK of int * int                  (* stack[offset] := register *)
-  | ASSIGN_MEMORY of assign_address_type * int (* mem[address] := register *)
-  | ASSIGN_OTHER of Abbrev.term * Abbrev.term  (* lhs := rhs *);
+  | ASSIGN_MEMORY of access_type * assign_address_type * int 
+                                               (* mem[address] := register *)
+  | ASSIGN_OTHER of term * term                (* lhs := rhs *);
 
   datatype guard_compare_type =
     GUARD_COMPARE_LESS of bool       (* true: signed, false: unsigned *)
@@ -47,9 +56,8 @@ sig
   datatype guard_type =
     GUARD_NOT of guard_type
   | GUARD_COMPARE of int * guard_compare_type * assign_x_type  (* reg, cmp, reg/const *)
-  | GUARD_TEST of int * assign_x_type;
-
-  include Abbrev
+  | GUARD_TEST of int * assign_x_type
+  | GUARD_OTHER of term;
 
   val term2guard      : Abbrev.term -> guard_type
   val term2assign     : Abbrev.term -> Abbrev.term -> assign_type
