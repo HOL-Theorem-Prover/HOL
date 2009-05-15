@@ -19,8 +19,8 @@ fun list_mk_star [] = ``emp:state->bool``
   | list_mk_star xs = mk_star(list_mk_star (butlast xs),last xs)
 
 fun is_emp tm = fst (dest_const tm) = "emp" handle HOL_ERR _ => false;
-fun is_VAR tm = repeat car tm = ``VAR``
-fun is_ARRAY tm = repeat car tm = ``ARRAY``
+fun is_VAR tm = eq (repeat car tm) ``VAR``
+fun is_ARRAY tm = eq (repeat car tm) ``ARRAY``
 fun is_VAR_or_ARRAY x = (is_VAR x orelse is_ARRAY x) 
 
 fun dest_star tm = let
@@ -33,6 +33,9 @@ fun list_dest_star tm = filter (not o is_emp) (list_dest dest_star tm);
 
 fun all_distinct [] = []
   | all_distinct (x::xs) = x :: all_distinct (filter (fn y => not (x = y)) xs) 
+
+fun all_distinct_tms [] = []
+  | all_distinct_tms (x::xs) = x :: all_distinct_tms (filter (fn y => not (eq x y)) xs) 
 
 val PRE_CONV = RATOR_CONV o RATOR_CONV o RAND_CONV
 val POST_CONV = RAND_CONV
@@ -53,9 +56,9 @@ fun EVAL_beval_neval_aeval exp = let
            handle HOL_ERR _ => subst [``e:bexp``|->exp] ``beval e s``
            handle HOL_ERR _ => subst [``e:aexp``|->exp] ``aeval e s``
   val e = (snd o dest_eq o concl o SIMP_CONV bool_ss [neval_def,aeval_def,beval_def]) tm
-  val vs = find_terms (can (match_term ``ScalarOf (s:state ' x)``)) e
+  val vs = find_terms (can (match_term ``ScalarOf ((s:state) ' x)``)) e
   val e = subst (map (fn v => v |-> mk_var(fromHOLstring (cdr (cdr v)),type_of v)) vs) e
-  val vs = find_terms (can (match_term ``ArrayOf (s:state ' x)``)) e
+  val vs = find_terms (can (match_term ``ArrayOf ((s:state) ' x)``)) e
   val e = subst (map (fn v => v |-> mk_var(fromHOLstring (cdr (cdr v)),type_of v)) vs) e
   in e end
 
@@ -64,8 +67,8 @@ fun SPEC_FILL_AND_SORT th1 th2 vs ws = let
   val ws = map mk_ARRAY (map (fn v => (fromMLstring v,mk_var(v,``:num|->int``))) ws)    
   val p1 = (list_dest_star o cdr o car o car o concl) th1
   val p2 = (list_dest_star o cdr o car o car o concl) th2
-  val add_to1 = filter (fn x => not (mem x p1)) (all_distinct (p2 @ vs @ ws))
-  val add_to2 = filter (fn x => not (mem x p2)) (all_distinct (p1 @ vs @ ws))
+  val add_to1 = filter (fn x => not (op_mem eq x p1)) (all_distinct_tms (p2 @ vs @ ws))
+  val add_to2 = filter (fn x => not (op_mem eq x p2)) (all_distinct_tms (p1 @ vs @ ws))
   fun apply_frame th = MATCH_MP SEP_SPEC_FRAME th handle HOL_ERR _ =>
                        MATCH_MP SEP_TOTAL_SPEC_FRAME th
   val th1 = SPEC (list_mk_star add_to1) (apply_frame th1)
@@ -150,7 +153,7 @@ fun FORCE_DISCH th = let
   val th = PURE_REWRITE_RULE [GSYM CONJ_ASSOC,AND_IMP_INTRO] (DISCH_ALL th)
   in if is_imp (concl th) then th else DISCH ``T:bool`` th end;
 
-fun is_total th = repeat car (concl th) = ``SEP_TOTAL_SPEC``;
+fun is_total th = eq (repeat car (concl th)) ``SEP_TOTAL_SPEC``;
 
 fun MK_SEP_SPEC_SEQ th1 th2 = let
   val (th1,th2) = SPEC_FILL_AND_SORT th1 th2 [] []
@@ -225,18 +228,18 @@ fun MK_SEP_SPEC_WHILE th1 h = let
 
 fun find_modified t0 t1 t2 = 
   if not (is_pair t0) then 
-    if (t0 = t1) andalso (t1 = t2) then [] else [t0] 
+    if (eq t0 t1) andalso (eq t1 t2) then [] else [t0] 
   else let
     val (x0,y0) = dest_pair t0
     val (x1,y1) = dest_pair t1
     val (x2,y2) = dest_pair t2
-    in if (x0 = x1) andalso (x1 = x2) 
+    in if (eq x0 x1) andalso (eq x1 x2) 
        then find_modified y0 y1 y2 else x0::find_modified y0 y1 y2 end;
 
 fun mk_lets [] p = p
   | mk_lets lets p = 
-  if fst (last lets) = p then list_mk_anylet(map (fn x => [x]) (butlast lets), snd (last lets))
-                         else list_mk_anylet(map (fn x => [x]) lets, p)
+  if eq (fst (last lets)) p then list_mk_anylet(map (fn x => [x]) (butlast lets), snd (last lets))
+                            else list_mk_anylet(map (fn x => [x]) lets, p)
 
 (*
 val total = true
@@ -254,21 +257,21 @@ val tm = ((cdr o car) instr_tm)
 
 fun SPEC_FOR_SEQ instr_tm index name total = let
   val func_name = if index = 0 then name else name ^ int_to_string index 
-  in if repeat car instr_tm = ``Skip`` then 
+  in if eq (repeat car instr_tm) ``Skip`` then 
     (if total then SEP_TOTAL_SPEC_SKIP else SEP_SPEC_SKIP,[],index,TRUTH,TRUTH) 
-  else if repeat car instr_tm = ``Assign`` then let
+  else if eq (repeat car instr_tm) ``Assign`` then let
     val (th,(lhs,rhs)) = MK_SEP_SPEC_ASSIGN instr_tm total
     in (th,[(lhs,rhs)],index,TRUTH,TRUTH) end
-  else if repeat car instr_tm = ``ArrayAssign`` then let
+  else if eq (repeat car instr_tm) ``ArrayAssign`` then let
     val (th,(lhs,rhs)) = MK_SEP_SPEC_ARRAY_ASSIGN instr_tm total
     in (th,[(lhs,rhs)],index,TRUTH,TRUTH) end
-  else if repeat car instr_tm = ``Seq`` then let
+  else if eq (repeat car instr_tm) ``Seq`` then let
     val (th1,lets1,i1,rw_th1,rw_pre1) = SPEC_FOR_SEQ ((cdr o car) instr_tm) index name total
     val (th2,lets2,i2,rw_th2,rw_pre2) = SPEC_FOR_SEQ (cdr instr_tm) i1 name total
     val th = MK_SEP_SPEC_SEQ th1 th2
     val f = fst o dest_imp o concl o FORCE_DISCH 
     val tm2 = f th2
-    val tm2 = if tm2 = T then T else mk_lets lets1 tm2
+    val tm2 = if eq tm2 T then T else mk_lets lets1 tm2
     val goal = mk_eq(f th, mk_conj(f th1,tm2))    
     val lemma = prove(goal,SIMP_TAC std_ss [LET_DEF]    
                THEN CONV_TAC (DEPTH_CONV FORCE_PBETA_CONV)
@@ -279,7 +282,7 @@ fun SPEC_FOR_SEQ instr_tm index name total = let
     val rw_th = CONJ rw_th1 rw_th2
     val rw_pre = CONJ rw_pre1 rw_pre2
     in (th,lets1@lets2,i2,rw_th,rw_pre) end
-  else if repeat car instr_tm = ``Cond`` then let
+  else if eq (repeat car instr_tm) ``Cond`` then let
     val (th1,lets1,i1,rw_th1,rw_pre1) = SPEC_FOR_SEQ ((cdr o car) instr_tm) (index+1) name total
     val (th2,lets2,i2,rw_th2,rw_pre2) = SPEC_FOR_SEQ (cdr instr_tm) i1 name total
     val th = MK_SEP_SPEC_COND th1 th2 ((cdr o car o car) instr_tm)
@@ -296,7 +299,7 @@ fun SPEC_FOR_SEQ instr_tm index name total = let
     fun find_result xs [] func = xs
       | find_result [] ys func = []
       | find_result (x::xs) (y::ys) func =
-         if not (x = y) then x :: find_result xs (y::ys) func else
+         if not (eq x y) then x :: find_result xs (y::ys) func else
          if length ys = 0 then func :: find_result xs [] func else 
            mk_fst func :: find_result xs ys (mk_snd func)
     val xs = list_dest dest_pair t0
@@ -321,7 +324,7 @@ fun SPEC_FOR_SEQ instr_tm index name total = let
     val rw_th = CONJ (SPEC_ALL def) (CONJ rw_th1 rw_th2)
     val rw_pre = CONJ (SPEC_ALL def_pre) (CONJ rw_pre1 rw_pre2)
     in (th,[(t4,func)],i2,rw_th,rw_pre) end
-  else if repeat car instr_tm = ``While`` then let
+  else if eq (repeat car instr_tm) ``While`` then let
     val (th1,lets1,i1,rw_th1,rw_pre1) = SPEC_FOR_SEQ (cdr instr_tm) (index+1) name total
     val th = MK_SEP_SPEC_WHILE th1 ((cdr o car) instr_tm)
     val (func,p) = (dest_comb o cdr o cdr o concl o UNDISCH_ALL) th
@@ -362,7 +365,7 @@ fun SPEC_FOR_SEQ instr_tm index name total = let
     ("Program construct not supported: " ^ term_to_string (repeat car instr_tm)) end
 
 fun RAW_SPEC_FOR_CODE instr_tm name total = 
-  if mem (repeat car instr_tm) [``While``,``Cond``] then let
+  if op_mem eq (repeat car instr_tm) [``While``,``Cond``] then let
     val (th,lets,_,rw,rw_pre) = SPEC_FOR_SEQ instr_tm 0 name total
     in (th,CONJ rw rw_pre) end 
   else let
@@ -374,7 +377,7 @@ fun RAW_SPEC_FOR_CODE instr_tm name total =
     val def = Define [ANTIQUOTE (mk_eq(mk_comb(f,p),l1))]
     val rw = CONJ (SPEC_ALL def) rw
     val f = fst o dest_imp o concl o FORCE_DISCH 
-    val (th,rw_pre) = if f th = T then (th,rw_pre) else let
+    val (th,rw_pre) = if eq (f th) T then (th,rw_pre) else let
       val f_pre = mk_var(name^"_pre",mk_type("fun",[type_of l1,``:bool``]))
       val def_pre = Define [ANTIQUOTE (mk_eq(mk_comb(f_pre,p),f th))]
       val rw_pre = CONJ (SPEC_ALL def_pre) rw_pre     
