@@ -204,7 +204,7 @@ val wh_cel_grnd = store_thm(
        cel @@ church n @@ cvcons h t -w->*
        t @@ (K @@ church 0) @@ celbody @@ (cpred @@ church n))``,
   SRW_TAC [][cel_def] THEN unvarify_tac whstar_substitutive THEN
-  ASM_SIMP_TAC (whfy(srw_ss())) [wh_ccons, wh_cvcons, wh_celbody]);
+  ASM_SIMP_TAC (whfy(bsrw_ss())) [wh_ccons, wh_cvcons, wh_celbody]);
 
 val wh_cel = store_thm(
   "wh_cel",
