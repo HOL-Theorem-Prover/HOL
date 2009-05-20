@@ -1,1 +1,0 @@
-INCLUDES = $(HOLDIR)/tools/mlyacc/mlyacclib $(HOLDIR)/examples/ARM/v4
