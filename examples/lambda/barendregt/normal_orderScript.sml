@@ -977,6 +977,12 @@ val leneq2 = prove(
   ``(LENGTH list = 2) ⇔ ∃e₁ e₂. list = [e₁; e₂]``,
   Cases_on `list` THEN SRW_TAC [][leneq1]);
 
+val normstar_to_vheadnullary_wstar = save_thm(
+  "normstar_to_vheadnullary_wstar",
+  normstar_to_vhead_wstar
+    |> SPEC_ALL |> Q.INST [`Ns` |-> `[]`]
+    |> SIMP_RULE (srw_ss()) [listTheory.LENGTH_NIL]);
+
 val normstar_to_vheadunary_wstar = save_thm(
   "normstar_to_vheadunary_wstar",
   normstar_to_vhead_wstar
