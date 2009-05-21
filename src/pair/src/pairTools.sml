@@ -133,7 +133,11 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun flat_vstruct tuple rhs =
-  let fun flat tuple (v,rhs) =
+  let 
+    (* behaviour of mk_fst and mk_snd should match PairedLambda.GEN_BETA_CONV in LET_INTRO *)
+    val mk_fst = fn tm => if is_pair tm then #1 (dest_pair tm) else mk_fst tm
+    val mk_snd = fn tm => if is_pair tm then #2 (dest_pair tm) else mk_snd tm
+    fun flat tuple (v,rhs) =
       if is_var tuple then [(tuple, rhs)]
       else let val (fst,snd) = dest_pair tuple
            in  flat fst (v, mk_fst rhs) @
