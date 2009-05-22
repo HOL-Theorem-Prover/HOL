@@ -7,7 +7,12 @@ body {background-color:white; color: #333333;
 
 sup { font-size: 60%; }
 
-div.timestamp { font-size: 50%; font-style: italic; }
+div.timestamp {
+  font-size: 50%;
+  font-style: italic;
+  clear:both;
+  padding-top: 3mm;
+}
 
 div.alert { border-width: 2px;
 	    border-color: red;
