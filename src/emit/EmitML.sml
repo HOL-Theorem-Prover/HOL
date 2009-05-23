@@ -1065,7 +1065,7 @@ end;
 (*---------------------------------------------------------------------------*)
 
 fun repair_type_decls (iDATATYPE decls) =
-     let val type_names = map fst decls
+    (let val type_names = map fst decls
          val candidate_tyis =
              TypeBasePure.get (TypeBase.theTypeBase()) (hd type_names)
          val tyax = TypeBasePure.axiom_of (hd candidate_tyis)
@@ -1076,8 +1076,9 @@ fun repair_type_decls (iDATATYPE decls) =
      in
         (tyvars, map (I##replaceForm alist_fn) decls)
      end
+     handle e => raise (wrap_exn "EmitML.repair_type_decls" "iDATATYPE" e))
   | repair_type_decls (iEQDATATYPE (tyvars,decls)) =
-     let open ParseDatatype
+    (let open ParseDatatype
          fun tyv2dVar (s,kd,rk) = (s,Prekind.fromKind kd,Prerank.fromRank rk)
          val tyvarsl = map (dVartype o tyv2dVar) tyvars
          val tynames = map fst decls
@@ -1087,11 +1088,25 @@ fun repair_type_decls (iDATATYPE decls) =
      in
        (tyvars, map (I##replaceForm alist_fn) decls)
      end
+     handle e => raise (wrap_exn "EmitML.repair_type_decls" "iEQDATATYPE" e))
   | repair_type_decls (iABSDATATYPE stuff) = repair_type_decls (iEQDATATYPE stuff)
   | repair_type_decls arg = raise ERR "repair_type_decls" "unexpected input";
 
 fun pp_datatype_as_ML ppstrm (tyvars,decls) =
  let open Portable ParseDatatype
+     fun defty_decl (name,Constructors clauselist) = name
+       | defty_decl (name,Record flist) = name
+     val deftys = map defty_decl decls
+(*
+     fun prlist1 [] = ""
+       | prlist1 (x::xs) = "," ^ x ^ prlist1 xs
+     fun prlist [] = "[]"
+       | prlist [x] = "[" ^ x ^ "]"
+       | prlist (x::xs) = "[" ^ x ^ prlist1 xs ^ "]"
+     val _ = print "pp_datatype_as_ML: deftys = "
+     val _ = print (prlist deftys ^ "\n")
+*)
+     val ptyvars = map (fn (s,kd,rk) => (s, Prekind.fromKind kd, Prerank.fromRank rk)) tyvars
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
      val fix_cons = if !emitOcaml then capitalize else I
@@ -1125,7 +1140,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
                    add_string (fix_cons con);
                    add_string " of ";
                  end_block();
-               pp_tyl (map ParseDatatype.toType args);
+               pp_tyl (map (ParseDatatype.def_toType deftys ptyvars) args);
                end_block()))
      fun pp_decl (tyvars,r) (name,Constructors clauselist) =
          (begin_block CONSISTENT 5;
@@ -1144,7 +1159,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
           end_block(); end_block())
        | pp_decl (tyvars,_) (name,Record flist) =
            let open ParseDatatype
-               val fields = map (I##toType) flist
+               val fields = map (I##(def_toType deftys ptyvars)) flist
            in begin_block CONSISTENT 0;
               add_string (if !emitOcaml then "type" else "datatype");
               add_break(1,0);
@@ -1359,7 +1374,9 @@ fun term_eqtyvars tm =
   of CONST _     => const_eqtyvars (generic_type tm) tm
    | VAR _       => []
    | COMB(t1,t2) => union (term_eqtyvars t1) (term_eqtyvars t2)
-   | LAMB(_,tm)  => term_eqtyvars tm;
+   | LAMB(_,tm)  => term_eqtyvars tm
+   | TYCOMB(tm,ty) => term_eqtyvars tm
+   | TYLAMB(_,tm)  => term_eqtyvars tm;
 
 (*---------------------------------------------------------------------------*)
 (* Translate the type of a defined constant to reflect any uses of equality  *)

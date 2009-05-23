@@ -356,7 +356,7 @@ let val pkinds = map #2 params
                           handle Feedback.HOL_ERR e =>
                             (print ("Applying " ^ HolKernel.type_to_string (clean ty1)
                                        ^ " to " ^ HolKernel.type_to_string (clean ty2) ^ "\n");
-                             raise Feedback.mk_HOL_ERR "Pretype" "clean" (#message e)))
+                             raise Feedback.mk_HOL_ERR "ParseDatatype" "clean" (#message e)))
   | dTyUniv (tyv,ty) => Type.mk_univ_type (clean tyv, clean ty)
   | dTyAbst (tyv,ty) => Type.mk_abs_type  (clean tyv, clean ty)
   | dTyKindConstr {Ty,Kind} => clean Ty

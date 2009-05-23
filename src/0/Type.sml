@@ -554,7 +554,8 @@ fun make_app_type Opr Arg (fnstr,name) =
                       handle HOL_ERR e =>
                         raise ERR fnstr (String.concat
          ["type not well-kinded: ", name,
-          " is not a type operator, but is applied as one"])
+          " is not a type operator, but is applied as one:\n",
+          #origin_structure e, ".", #origin_function e, ":\n", #message e])
       val kn = kind_of Arg
   in if dom = kn then TyApp(Opr,Arg) else
      raise ERR fnstr (String.concat

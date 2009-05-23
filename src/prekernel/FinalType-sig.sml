@@ -1,8 +1,8 @@
 signature FinalType =
 sig
 
- eqtype kind
  eqtype hol_type
+ type kind
  type tyvar = string * kind * int (* rank *)
 
  val mk_vartype    : string -> hol_type

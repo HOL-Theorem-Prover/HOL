@@ -21,6 +21,8 @@ sig
 
  val fromType : Type.hol_type -> pretype
  val toType   : pretype -> Type.hol_type
+ (* def_toType : (names of all being-defined types) -> (dest_vartype_opr of argument type variables) -> ... *)
+ val def_toType : string list -> (string * Prekind.prekind * Prerank.prerank) list -> pretype -> Type.hol_type
 
  type field       = string * pretype
  type constructor = string * pretype list

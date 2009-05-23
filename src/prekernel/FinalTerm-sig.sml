@@ -1,7 +1,7 @@
 signature FinalTerm =
 sig
 
-  type term
+  eqtype term
   type hol_type
   type kind
   type ('a,'b)subst = ('a,'b)Lib.subst
