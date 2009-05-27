@@ -108,8 +108,11 @@ struct
   fun revapp f = appAll getMax f
 
 
+  exception RedBlackMapError
+
   (* remove a la Stefan M. Kahrs *)
   fun redden (BLACK arg) = RED arg
+    | redden _ = raise RedBlackMapError
 
   fun balleft y yd (RED(x,xd,a,b)) c                = 
       RED(y, yd, BLACK(x, xd, a, b), c)
@@ -117,6 +120,7 @@ struct
       rbalance x xd bl (RED(y, yd, a, b))
     | balleft x xd bl (RED(z,zd,BLACK(y,yd,a,b),c)) = 
       RED(y, yd, BLACK(x, xd, bl, a), rbalance z zd b (redden c))
+    | balleft _ _ _ _ = raise RedBlackMapError
 
   fun balright x xd a             (RED(y, yd ,b,c)) = 
       RED(x, xd, a, BLACK(y, yd, b, c))
@@ -124,6 +128,7 @@ struct
       lbalance y yd (RED(x,xd,a,b)) br
     | balright z zd (RED(x,xd,a,BLACK(y,yd,b,c))) br = 
       RED(y, yd, lbalance x xd (redden a) b, BLACK(z, zd, c, br))
+    | balright _ _ _ _ = raise RedBlackMapError
 
 
   (* [append left right] constructs a new tree t.

@@ -324,8 +324,10 @@ struct
 	  fun h 0 _ xs = (LEAF, xs)
 	    | h n d xs =
 	      let val m = n div 2
-	          val (t1, y :: yr) = h m       (d-1) xs
-	          val (t2, zs)      = h (n-m-1) (d-1) yr
+	          val (t1, ys) = h m       (d-1) xs
+                  val y = hd ys
+                  and yr = tl ys
+	          val (t2, zs) = h (n-m-1) (d-1) yr
 	      in (if d=0 then RED(y, t1, t2) else BLACK(y, t1, t2), zs) end
       in  ( case #1 (h len (log2 (len + 1) - 1) ls) of
                 RED(x, left, right) => BLACK(x, left, right)
@@ -333,19 +335,24 @@ struct
           , len) end
 
 
+  exception RedBlackSetError
+
   (* delete a la Stefan M. Kahrs *)
 
   fun sub1 (BLACK arg) = RED arg
+    | sub1 _ = raise RedBlackSetError
 
   fun balleft y (RED(x,a,b)) c             = RED(y, BLACK(x, a, b), c)
     | balleft x bl (BLACK(y, a, b))        = rbalance x bl (RED(y, a, b))
     | balleft x bl (RED(z,BLACK(y,a,b),c)) =
       RED(y, BLACK(x, bl, a), rbalance z b (sub1 c))
+    | balleft _ _ _ = raise RedBlackSetError
 
   fun balright x a             (RED(y,b,c)) = RED(x, a, BLACK(y, b, c))
     | balright y (BLACK(x,a,b))          br = lbalance y (RED(x,a,b)) br
     | balright z (RED(x,a,BLACK(y,b,c))) br =
       RED(y, lbalance x (sub1 a) b, BLACK(z, c, br))
+    | balright _ _ _ = raise RedBlackSetError
 
 
   (* [append left right] constructs a new tree t.
