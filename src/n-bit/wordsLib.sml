@@ -112,7 +112,8 @@ val SIZES_ss = simpLib.merge_ss (rewrites [ONE_LT_dimword, DIMINDEX_GT_0]::
 fun NUM_RULE l n x =
   let val y = SPEC_ALL x
   in CONJ
-     ((GEN_ALL o simpLib.SIMP_RULE bossLib.arith_ss l o INST [n |-> `0n`]) y)
+     ((GEN_ALL o simpLib.SIMP_RULE (bossLib.arith_ss++boolSimps.LET_ss) l o
+       INST [n |-> `0n`]) y)
      ((GEN_ALL o INST [n |-> `^a`]) y)
   end;
 
@@ -170,9 +171,19 @@ val word_2comp_compute = prove(
           if x = 0 then 0w else n2w (dimword (:'a) - x)``,
   SRW_TAC [boolSimps.LET_ss] [word_2comp_n2w]);
 
+val word_lsr_compute =
+  (REWRITE_RULE [word_bits_n2w, arithmeticTheory.MIN_IDEM] o
+   SPECL [`^n2w ^n`,`^a`]) word_lsr_n2w;
+
+val word_asr_compute =
+  (REWRITE_RULE [word_bits_n2w, word_msb_n2w, word_or_n2w,
+     word_lsr_compute, arithmeticTheory.MIN_IDEM] o
+   SPECL [`^a`, `^n2w ^n`]) word_asr_n2w;
+
 val thms =
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
-   iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SIGN_EXTEND_def, SBIT_def,
+   iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SBIT_def,
+   NUM_RULE [BIT_ZERO] `n` SIGN_EXTEND_def,
    DIVMOD_2EXP, NUMERAL_DIV_2EXP, NUMERAL_TIMES_2EXP, NUMERAL_iDIV2,
    NUMERAL_SFUNPOW_iDIV2,NUMERAL_SFUNPOW_iDUB,NUMERAL_SFUNPOW_FDUB,
    FDUB_iDIV2,FDUB_iDUB,FDUB_FDUB,
@@ -186,16 +197,17 @@ val thms =
    numeral_log2,numeral_ilog2,LOG_compute,LOWEST_SET_BIT_compute,
    n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w ^n` sw2sw_def,
    word_len_def, word_L_def, word_H_def, word_T_def,
-   word_join_def, Q.SPECL [`^n2w ^n`,`n2w ^m:'b word`] word_concat_def,
+   word_join_def, SPECL [`^n2w ^n`,`n2w ^m:'b word`] word_concat_def,
    word_reverse_n2w, word_modify_n2w, word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
    word_2comp_compute, word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
    MOD_WL word_add_n2w, MOD_WL word_mul_n2w,
-   word_asr_n2w, word_lsr_n2w, word_lsl_n2w,
-   (List.last o CONJUNCTS) SHIFT_ZERO, SPEC `^a` word_ror_n2w,
-   word_rol_def, word_rrx_n2w,
-   word_lsb_n2w, word_msb_n2w, word_bit_n2w, word_index_n2w,
-   word_bits_n2w, word_slice_n2w, fcp_n2w, word_extract_n2w,
+   word_asr_compute, word_lsr_compute, SPEC `^a` word_lsl_n2w,
+   SHIFT_ZERO, SPEC `^a` word_ror_n2w,
+   SPECL [`^w`,`^a`] word_rol_def, word_rrx_n2w,
+   word_lsb_n2w, word_msb_n2w, word_bit_n2w, fcp_n2w,
+   NUM_RULE [DIMINDEX_GT_0] `i` word_index_n2w,
+   word_bits_n2w, word_signed_bits_n2w, word_slice_n2w, word_extract_n2w,
    word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
    word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
    l2n_def,n2l_def,s2n_def,n2s_def,l2w_def,w2l_def,s2w_def,w2s_def,
@@ -271,8 +283,8 @@ local
       "word_to_bin_string","word_to_oct_string","word_to_dec_string",
       "word_to_hex_string",
       "w2w","w2n","sw2sw","word_log2","word_reverse","word_msb",
-      "word_join","word_concat","word_bit","word_bits","word_slice",
-      "word_extract","word_asr","word_lsr","word_lsl","word_ror",
+      "word_join","word_concat","word_bit","word_bits","word_signed_bits",
+      "word_slice","word_extract","word_asr","word_lsr","word_lsl","word_ror",
       "word_rol","word_rrx","word_lo","word_ls","word_lt","word_le"]
 
   val l2 =
@@ -1062,7 +1074,8 @@ local
              word_join,word_concat_def,word_reverse_def,word_modify_def,
              word_lsl_def,word_lsr_def,word_asr_def,word_ror_def,
              word_rol_def,word_rrx_def,word_msb_def,word_lsb_def,
-             word_extract_def,word_bits_def,word_slice_def,word_bit_def]
+             word_extract_def,word_bits_def,word_slice_def,word_bit_def,
+             word_signed_bits_def]
   val thms = [WORD_ADD_LEFT_LO, WORD_ADD_LEFT_LS,
               WORD_ADD_RIGHT_LS, WORD_ADD_RIGHT_LO]
   val thms2 = map (GEN_ALL o SPEC `^n2w ^n`)

@@ -161,6 +161,10 @@ val word_bits_def = Define`
   word_bits h l = \w:'a word.
     (FCP i. i + l <= MIN h ^HB /\ w ' (i + l)):'a word`;
 
+val word_signed_bits_def = Define`
+  word_signed_bits h l = \w:'a word.
+    (FCP i. l <= MIN h ^HB /\ w ' (MIN (i + l) (MIN h ^HB))):'a word`;
+
 val word_extract_def = Define`
   word_extract h l = w2w o word_bits h l`;
 
@@ -193,9 +197,11 @@ val _ = ai := false;
 val _ = overload_on ("<>",Term`$word_slice`);
 val _ = overload_on ("--",Term`$word_bits`);
 val _ = overload_on ("><",Term`$word_extract`);
+val _ = overload_on ("---",Term`$word_signed_bits`);
 
 val _ = set_fixity "--" (Infixr 375)
-val _ = set_fixity "><" (Infixr 375);
+val _ = set_fixity "><" (Infixr 375)
+val _ = set_fixity "---" (Infixr 375);
 
 val _ = send_to_back_overload "<>" {Name = "word_slice", Thy = "words"};
 
@@ -991,6 +997,44 @@ val word_bit_n2w = store_thm("word_bit_n2w",
   FIELD_WORD_TAC \\ Cases_on `b <= ^HB`
     \\ ASM_SIMP_TAC fcp_ss [DIMINDEX_GT_0,
          DECIDE ``0 < b /\ a <= b - 1 ==> a < b:num``]);
+
+val bit_sign_extend =
+  REWRITE_RULE [Q.SPEC `l <= h:num` IMP_DISJ_THM] BIT_SIGN_EXTEND;
+
+val word_signed_bits_n2w = Q.store_thm("word_signed_bits_n2w",
+  `!h l n.
+     (h --- l) (n2w n) : 'a word =
+     n2w (SIGN_EXTEND (MIN (SUC h) (dimindex(:'a)) - l) (dimindex(:'a))
+            (BITS (MIN h ^HB) l n))`,
+  SRW_TAC [fcpLib.FCP_ss,ARITH_ss] [MIN_DEF, word_signed_bits_def,
+           w2n_n2w, n2w_def]
+     \\ FULL_SIMP_TAC (arith_ss++boolSimps.CONJ_ss) [NOT_LESS]
+     << [
+       Cases_on `l <= h`
+         << [
+           SRW_TAC [ARITH_ss] [bit_sign_extend, BIT_OF_BITS_THM,
+                  DECIDE ``l <= h ==> (SUC h - l = SUC (h - l))``,
+                  GSYM BITS_ZERO3, BITS_COMP_THM2]
+             \\ FULL_SIMP_TAC arith_ss [NOT_LESS]
+             \\ `i + l = h` by DECIDE_TAC
+             \\ METIS_TAC [],
+           `SUC h - l = 0` by DECIDE_TAC
+             \\ SRW_TAC [ARITH_ss, boolSimps.LET_ss]
+                  [SIGN_EXTEND_def, BIT_ZERO, BITS_ZERO]],
+       Cases_on `l <= dimindex (:'a) - 1`
+         << [
+           `0 < dimindex (:'a) - l` by DECIDE_TAC
+             \\ `?x. dimindex (:'a) - l = SUC x`
+             by METIS_TAC [LESS_ADD_1, ADD1, ADD]
+             \\ SRW_TAC [ARITH_ss] [bit_sign_extend, BIT_OF_BITS_THM,
+                  GSYM BITS_ZERO3, BITS_COMP_THM2]
+             \\ FULL_SIMP_TAC arith_ss [NOT_LESS]
+             << [
+               `i + l = dimindex (:'a) - 1` by DECIDE_TAC \\ METIS_TAC [],
+               `l + x = dimindex (:'a) - 1` by DECIDE_TAC \\ METIS_TAC []],
+           `(dimindex (:'a) - l = 0)` by DECIDE_TAC
+             \\ SRW_TAC [ARITH_ss, boolSimps.LET_ss]
+                  [SIGN_EXTEND_def, BIT_ZERO, BITS_ZERO]]]);
 
 val word_index_n2w = store_thm("word_index_n2w",
   `!n. ((n2w n):'a word) ' i =
@@ -1835,6 +1879,33 @@ val WORD_NEG_RMUL = save_thm("WORD_NEG_RMUL",
 val WORD_NEG_MUL = store_thm("WORD_NEG_MUL",
   `!w. - w = - 1w * w`,
   SRW_TAC [] [WORD_NEG_EQ, WORD_NEG_LMUL, WORD_NEG_NEG, WORD_MULT_CLAUSES]);
+
+(*---------------------------------------------------------------------------*)
+
+val WORD_ADD_BIT0 = Q.store_thm("WORD_ADD_BIT0",
+  `!a b. (a + b) ' 0 = (a ' 0 <=/=> b ' 0)`,
+  Cases \\ Cases \\ SRW_TAC [fcpLib.FCP_ss]
+    [n2w_def, word_add_n2w, DIMINDEX_GT_0, ADD_BIT0]);
+
+val WORD_ADD_BIT = Q.store_thm("WORD_ADD_BIT",
+  `!n a:'a word b.
+      n < dimindex(:'a) ==>
+      ((a + b) ' n =
+       (if n = 0 then
+          a ' 0 <=/=> b ' 0
+        else
+          if ((n - 1 -- 0) a + (n - 1 -- 0) b) ' n then
+            a ' n = b ' n
+          else
+            a ' n <=/=> b ' n))`,
+  Cases >> SRW_TAC [] [WORD_ADD_BIT0]
+    \\ Cases \\ Cases \\ STRIP_TAC
+    \\ SRW_TAC [] [word_add_n2w, word_bits_n2w]
+    \\ POP_ASSUM MP_TAC
+    \\ SRW_TAC [fcpLib.FCP_ss] [n2w_def, DIMINDEX_GT_0,
+         simpLib.SIMP_PROVE arith_ss [MIN_DEF]
+           ``0 < m /\ SUC n < m ==> (MIN n (m - 1) = n)``]
+    \\ ONCE_REWRITE_TAC [ADD_BIT_SUC] \\ SRW_TAC [] []);
 
 (*---------------------------------------------------------------------------*)
 (*  n2w_SUC |- !n. n2w (SUC n) = n2w n + 1w                                  *)
