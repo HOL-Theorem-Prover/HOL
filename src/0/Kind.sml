@@ -52,6 +52,9 @@ fun arity_of (Type) = 0
   | arity_of (Oper(Type,Y)) = arity_of Y + 1
   | arity_of _ = raise ERR "arity_of" "not an arity kind";
 
+fun list_mk_arrow_kind (X::XS,Y) = X ==> list_mk_arrow_kind(XS,Y)
+  | list_mk_arrow_kind ( []  ,Y) = Y;
+
 val dest_arrow_kind = kind_dom_rng;
 
 fun strip_arrow_kind (Oper(X,Y)) = let val (args,res) = strip_arrow_kind Y

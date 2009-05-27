@@ -11,11 +11,12 @@ sig
   val is_gen_kdvar  : kind -> bool
   val kappa         : kind
 
-  val ==>           : (kind * kind) -> kind   (* infixr 3 ==> *)
+  val ==>           : kind * kind -> kind   (* infixr 3 ==> *)
   val is_arrow_kind : kind -> bool
-  val kind_dom_rng  : kind -> (kind * kind)   (* inverts ==>  *)
-  val dest_arrow_kind : kind -> (kind * kind) (* inverts ==>  *)
-  val strip_arrow_kind : kind -> (kind list * kind)
+  val kind_dom_rng  : kind -> kind * kind   (* inverts ==>  *)
+  val dest_arrow_kind : kind -> kind * kind (* inverts ==>  *)
+  val list_mk_arrow_kind : kind list * kind -> kind
+  val strip_arrow_kind : kind -> kind list * kind (* inverts list_mk_arrow_kind *)
   val mk_arity      : int -> kind
   val is_arity      : kind -> bool
   val arity_of      : kind -> int

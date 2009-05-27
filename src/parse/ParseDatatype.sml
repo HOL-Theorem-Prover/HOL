@@ -554,7 +554,9 @@ fun tycon {Thy, Tyop, Kind, Rank} = dContype{Tyop=Tyop, Thy=Thy, Kind=Kind, Rank
 fun dTyop {Tyop, Thy, Args} =
   let fun mkprety acc [] = acc
         | mkprety acc (arg::args) = mkprety (dTyApp(acc,arg)) args
-  in mkprety (dContype{Tyop=Tyop, Thy=Thy, Kind=Prekind.typ, Rank=Prerank.Zerorank}) Args
+      open Prekind
+      val kind = list_mk_arrow_kind(map pkind_of Args, typ)
+  in mkprety (dContype{Tyop=Tyop, Thy=Thy, Kind=kind, Rank=Prerank.Zerorank}) Args
   end
 
 fun dest_dTyop (dContype {Thy,Tyop,Kind,Rank}) = {Tyop=Tyop, Thy=Thy, Args=[]}

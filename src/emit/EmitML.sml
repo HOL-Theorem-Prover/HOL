@@ -1064,6 +1064,12 @@ end;
 (* order in the first argument.                                              *)
 (*---------------------------------------------------------------------------*)
 
+local open Prekind
+in
+fun list_mk_arrow_kind (X::XS,Y) = X ==> list_mk_arrow_kind(XS,Y)
+  | list_mk_arrow_kind ( []  ,Y) = Y
+end;
+
 fun repair_type_decls (iDATATYPE decls) =
     (let val type_names = map fst decls
          val candidate_tyis =
@@ -1094,19 +1100,6 @@ fun repair_type_decls (iDATATYPE decls) =
 
 fun pp_datatype_as_ML ppstrm (tyvars,decls) =
  let open Portable ParseDatatype
-     fun defty_decl (name,Constructors clauselist) = name
-       | defty_decl (name,Record flist) = name
-     val deftys = map defty_decl decls
-(*
-     fun prlist1 [] = ""
-       | prlist1 (x::xs) = "," ^ x ^ prlist1 xs
-     fun prlist [] = "[]"
-       | prlist [x] = "[" ^ x ^ "]"
-       | prlist (x::xs) = "[" ^ x ^ prlist1 xs ^ "]"
-     val _ = print "pp_datatype_as_ML: deftys = "
-     val _ = print (prlist deftys ^ "\n")
-*)
-     val ptyvars = map (fn (s,kd,rk) => (s, Prekind.fromKind kd, Prerank.fromRank rk)) tyvars
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
      val fix_cons = if !emitOcaml then capitalize else I
@@ -1140,7 +1133,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
                    add_string (fix_cons con);
                    add_string " of ";
                  end_block();
-               pp_tyl (map (ParseDatatype.def_toType deftys ptyvars) args);
+               pp_tyl (map ParseDatatype.toType args);
                end_block()))
      fun pp_decl (tyvars,r) (name,Constructors clauselist) =
          (begin_block CONSISTENT 5;
@@ -1159,7 +1152,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
           end_block(); end_block())
        | pp_decl (tyvars,_) (name,Record flist) =
            let open ParseDatatype
-               val fields = map (I##(def_toType deftys ptyvars)) flist
+               val fields = map (I##toType) flist
            in begin_block CONSISTENT 0;
               add_string (if !emitOcaml then "type" else "datatype");
               add_break(1,0);

@@ -238,6 +238,9 @@ fun dest_con_type(PT(Contype v,loc)) = v
 fun mk_app_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyApp(ty1,ty2), locn.between loc1 loc2)
 
+fun list_mk_app_type(tyop, ty::tys) = list_mk_app_type(mk_app_type(tyop, ty), tys)
+  | list_mk_app_type(tyop,   []   ) = tyop
+
 fun dest_app_type(PT(UVar(ref(SOMEU ty))  ,loc)) = dest_app_type ty
   | dest_app_type(PT(TyKindConstr{Ty,Kind},loc)) = dest_app_type Ty
   | dest_app_type(PT(TyRankConstr{Ty,Rank},loc)) = dest_app_type Ty
