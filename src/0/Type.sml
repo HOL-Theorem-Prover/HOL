@@ -28,7 +28,7 @@ loadPath := "/Users/palantir" ^ "/hol/hol-omega/sigobj" :: !loadPath;
 quotation := true;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/sigobj" :: !loadPath;
 
-app load ["Feedback","Lib","KernelTypes","Kind","KernelSig","Lexis","Polyhash",
+app load ["Feedback","Lib","KernelTypes","Kind","KernelSig","Lexis","Redblackmap",
           "Binarymap"];
 *)
 
@@ -850,13 +850,13 @@ fun list_mk_univ_type_binder opt =
  in fn (vlist,ty)
  => if not (all is_vartype vlist) then raise ERR "list_mk_univ_type_binder" ""
     else
-  let open Polyhash
-     val varmap = mkPolyTable(length vlist, Fail "varmap")
+  let open Redblackmap
+     val varmap0 = mkDict tyvar_compare
      fun enum [] _ A = A
-       | enum (TyFv h::t) i A = (insert varmap (h,i); enum t (i-1) (h::A))
+       | enum (TyFv h::t) i (vmap,rvs) = enum t (i-1) (insert (vmap,h,i), h::rvs)
        | enum _ _ _ = raise ERR "enum" "non-variable given as bound variable"
-     val rvlist = enum vlist (length vlist - 1) []
-     fun lookup v vmap = case peek vmap v of NONE => TyFv v | SOME i => TyBv i
+     val (varmap, rvlist) = enum vlist (length vlist - 1) (varmap0,[])
+     fun lookup v vmap = case peek (vmap,v) of NONE => TyFv v | SOME i => TyBv i
      fun increment vmap = transform (fn x => x+1) vmap
      fun bind (TyFv v) vmap k = k (lookup v vmap)
        | bind (TyApp(opr,ty)) vmap k = bind opr vmap (fn opr' =>
@@ -917,13 +917,13 @@ fun list_mk_type_binder opt =
  in fn (vlist,ty)
  => if not (all is_vartype vlist) then raise ERR "list_mk_type_binder" ""
     else
-  let open Polyhash
-     val varmap = mkPolyTable(length vlist, Fail "varmap")
+  let open Redblackmap
+     val varmap0 = mkDict tyvar_compare
      fun enum [] _ A = A
-       | enum (TyFv h::t) i A = (insert varmap (h,i); enum t (i-1) (h::A))
+       | enum (TyFv h::t) i (vmap,rvs) = enum t (i-1) (insert (vmap,h,i), h::rvs)
        | enum _ _ _ = raise ERR "enum" "non-variable given as bound variable"
-     val rvlist = enum vlist (length vlist - 1) []
-     fun lookup v vmap = case peek vmap v of NONE => TyFv v | SOME i => TyBv i
+     val (varmap, rvlist) = enum vlist (length vlist - 1) (varmap0,[])
+     fun lookup v vmap = case peek (vmap,v) of NONE => TyFv v | SOME i => TyBv i
      fun increment vmap = transform (fn x => x+1) vmap
      fun bind (TyFv v) vmap k = k (lookup v vmap)
        | bind (TyApp(opr,ty)) vmap k = bind opr vmap (fn opr' =>
@@ -984,6 +984,13 @@ local fun peel f ty A =
       val vi_empty = HOLset.empty (fn ((v1,i1),(v2,i2)) => tyvar_compare(v1,v2))
       fun add_vi viset vi =
          if HOLset.member(viset,vi) then viset else HOLset.add(viset,vi)
+      val AV = ref (Redblackmap.mkDict String.compare) : ((string,occtype)Redblackmap.dict) ref
+      fun peekInsert (key,data) =
+        let open Redblackmap
+        in case peek (!AV,key)
+            of SOME data' => SOME data'
+             | NONE       => (AV := insert(!AV,key,data); NONE)
+        end
 in
 fun strip_univ_binder opt =
  let val f =
@@ -1001,19 +1008,19 @@ fun strip_univ_binder opt =
      val prefix = Array.fromList prefixl
      val vmap = curry Array.sub prefix
      val (insertAVbody,insertAVprefix,lookAV,dupls) =
-        let open Polyhash  (* AV is hashtable  of (var,occtype) elems *)
-            val AV = mkPolyTable(Array.length prefix, Fail"AV")
+        let open Redblackmap  (* AV is red-black map  of (tyvar,occtype) elems *)
+            val _ = AV := mkDict String.compare
             fun insertl [] _ dupls = dupls
               | insertl (x::rst) i dupls =
-                  let val n =  #1 x (* fst(dest_var x) *)
-                  in case peekInsert AV (n,PREFIX i)
+                  let val n =  #1 x
+                  in case peekInsert (n,PREFIX i)
                       of NONE => insertl rst (i+1) dupls
                        | SOME _ => insertl rst (i+1) ((x,i)::dupls)
                   end
             val dupls = insertl prefixl 0 []
-        in ((fn s => insert AV (s,BODY)),         (* insertAVbody *)
-            (fn (s,i) => insert AV (s,PREFIX i)), (* insertAVprefix *)
-            peek AV,                              (* lookAV *)
+        in ((fn s => (AV := insert (!AV,s,BODY))),         (* insertAVbody *)
+            (fn (s,i) => (AV := insert (!AV,s,PREFIX i))), (* insertAVprefix *)
+            (fn s => peek (!AV,s)),                        (* lookAV *)
             dupls)
         end
      fun variantAV n =
@@ -1096,6 +1103,13 @@ local fun peel f ty A =
       val vi_empty = HOLset.empty (fn ((v1,i1),(v2,i2)) => tyvar_compare(v1,v2))
       fun add_vi viset vi =
          if HOLset.member(viset,vi) then viset else HOLset.add(viset,vi)
+      val AV = ref (Redblackmap.mkDict String.compare) : ((string,occtype)Redblackmap.dict) ref
+      fun peekInsert (key,data) =
+        let open Redblackmap
+        in case peek (!AV,key)
+            of SOME data' => SOME data'
+             | NONE       => (AV := insert(!AV,key,data); NONE)
+        end
 in
 fun strip_abs_binder opt =
  let val f =
@@ -1113,19 +1127,19 @@ fun strip_abs_binder opt =
      val prefix = Array.fromList prefixl
      val vmap = curry Array.sub prefix
      val (insertAVbody,insertAVprefix,lookAV,dupls) =
-        let open Polyhash  (* AV is hashtable  of (var,occtype) elems *)
-            val AV = mkPolyTable(Array.length prefix, Fail"AV")
+        let open Redblackmap  (* AV is red-black map  of (tyvar,occtype) elems *)
+            val _ = AV := mkDict String.compare
             fun insertl [] _ dupls = dupls
               | insertl (x::rst) i dupls =
-                  let val n =  #1 x (* fst(dest_var x) *)
-                  in case peekInsert AV (n,PREFIX i)
+                  let val n =  #1 x
+                  in case peekInsert (n,PREFIX i)
                       of NONE => insertl rst (i+1) dupls
                        | SOME _ => insertl rst (i+1) ((x,i)::dupls)
                   end
             val dupls = insertl prefixl 0 []
-        in ((fn s => insert AV (s,BODY)),         (* insertAVbody *)
-            (fn (s,i) => insert AV (s,PREFIX i)), (* insertAVprefix *)
-            peek AV,                              (* lookAV *)
+        in ((fn s => (AV := insert (!AV,s,BODY))),         (* insertAVbody *)
+            (fn (s,i) => (AV := insert (!AV,s,PREFIX i))), (* insertAVprefix *)
+            (fn s => peek (!AV,s)),                        (* lookAV *)
             dupls)
         end
      fun variantAV n =

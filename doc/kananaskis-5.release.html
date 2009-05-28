@@ -17,6 +17,13 @@
 <body>
 <h1>Notes on HOL 4, Kananaskis-5 release</h1>
 
+<p> We are pleased to announce the release of the latest HOL4 system.  We
+believe there are a number of exciting new features (runs on Poly/ML,
+looks prettier thanks to Unicode support), as well as the usual bug
+fixes.</p>
+
+<!-- maybe announce HOL-ω here -->
+
 <h2 id="contents">Contents</h2>
 <ul>
   <li> <a href="#new-features">New features</a> </li>
@@ -79,7 +86,8 @@ on the change to the associativity of grammar level 450.)</p>
 
 <p>Finally, overloading can be type-specific.  In this way, the
 default system now overloads the ASCII <code>&lt;=&gt;</code> to
-equality over the booleans, and various operators over strings (see
+equality over the booleans.  Various operators over strings now use
+the same technology as well (see
 <a href="#strings-as-charlists">below</a>). </p>
 
 <p>The system has syntactic patterns built-in for not-equal (as

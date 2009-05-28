@@ -18,10 +18,10 @@ loadPath :=
             !loadPath;
 
 map load ["quantHeuristicsTheory"];
+load "ConseqConv"
 show_assums := true;
 quietdec := true;
 *)
-
 
 open HolKernel Parse boolLib Drule ConseqConv
 
@@ -2408,10 +2408,11 @@ val sys = heuristic;
 *)
 
 
-fun QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) heuristic dir t =
+fun QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) varfilter heuristic dir t =
 if (not (is_exists t)) andalso (not (is_forall t)) andalso (not (is_exists1 t)) then raise UNCHANGED else
 let
    val (v,b) = dest_abs (rand t);
+   val _ = if varfilter v then () else raise UNCHANGED;
 in
   (if not (op_mem eq v (free_vars b)) then
       HO_PART_MATCH lhs 
@@ -2510,7 +2511,7 @@ in
       val neg_t_thm = NOT_FORALL_LIST_CONV (mk_neg t)
       val neg_t = rhs (concl neg_t_thm)
 
-      val thm = QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) heuristic (CONSEQ_CONV_DIRECTION_NEGATE dir) (neg_t)
+      val thm = QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) varfilter heuristic (CONSEQ_CONV_DIRECTION_NEGATE dir) (neg_t)
       val new_conv = TRY_CONV NOT_EXISTS_LIST_CONV THENC BOOL_SIMP_CONV empty_guess_collection
 
       val thm2 = if is_eq (concl thm) then
@@ -2568,9 +2569,9 @@ end;
 
 
 
-fun HEURISTIC_QUANT_INSTANTIATE_CONV re heuristic expand_eq =
+fun HEURISTIC_QUANT_INSTANTIATE_CONV re filter heuristic expand_eq =
     (if re then REDEPTH_CONV else DEPTH_CONV)
-(CHANGED_CONV (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (true,true,expand_eq) heuristic CONSEQ_CONV_UNKNOWN_direction)) THENC
+(CHANGED_CONV (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (true,true,expand_eq) filter heuristic CONSEQ_CONV_UNKNOWN_direction)) THENC
 REWRITE_CONV[];
 
 
@@ -2585,12 +2586,14 @@ fun COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENTS L =
     foldl (fn (a1,a2) => COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT a1 a2) empty_quant_heuristic_combine_argument L;
           
 
-fun EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re expand_eq arg = 
-    HEURISTIC_QUANT_INSTANTIATE_CONV re (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt) expand_eq;
+fun EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq arg = 
+    HEURISTIC_QUANT_INSTANTIATE_CONV re filter (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt) expand_eq;
+
+fun RESTRICTED_PURE_QUANT_INSTANTIATE_CONV filter = 
+    EXT_PURE_QUANT_INSTANTIATE_CONV NONE true filter false empty_quant_heuristic_combine_argument;
 
 val PURE_QUANT_INSTANTIATE_CONV = 
-    EXT_PURE_QUANT_INSTANTIATE_CONV NONE true false empty_quant_heuristic_combine_argument;
-
+    RESTRICTED_PURE_QUANT_INSTANTIATE_CONV (K true)
 
 
 val quant_heuristic_combine_argument_ref =
@@ -2641,8 +2644,8 @@ in
 end;
 
 
-fun EXT_QUANT_INSTANTIATE_CONV cache_ref_opt re expand_eq arg = 
-    EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re expand_eq
+fun EXT_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq arg = 
+    EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq
        (COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT arg
        ([],[],[],[],[QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
 	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_distinct,
@@ -2650,7 +2653,7 @@ fun EXT_QUANT_INSTANTIATE_CONV cache_ref_opt re expand_eq arg =
                QUANT_INSTANTIATE_HEURISTIC___ref]))
 
 val QUANT_INSTANTIATE_CONV = 
-    EXT_QUANT_INSTANTIATE_CONV NONE true false empty_quant_heuristic_combine_argument;
+    EXT_QUANT_INSTANTIATE_CONV NONE true (K true) false empty_quant_heuristic_combine_argument;
 
 
 (*
@@ -2785,7 +2788,7 @@ fun QUANT_TAC L (asm,t) =
   in
     REDEPTH_CONSEQ_CONV_TAC
       (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,false,false)
-         (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt false L)) 
+         (K true) (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt false L)) 
     (asm,t)
   end;
 
@@ -2799,18 +2802,18 @@ fun TypeBase___quant_heuristic_argument typeL =
 
 
 
-fun HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re heuristic dir =
+fun HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter heuristic dir =
 THEN_CONSEQ_CONV
 ((if re then REDEPTH_CONSEQ_CONV else DEPTH_CONSEQ_CONV)
-   (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) heuristic) dir)
+   (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) filter heuristic) dir)
 (REWRITE_CONV[]);
 
 
-fun EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re arg = 
-    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt);
+fun EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter arg = 
+    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt);
 
-fun EXT_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re arg = 
-    EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re 
+fun EXT_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter arg = 
+    EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter
        (COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT arg
        ([],[],[],[],[QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
 	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_distinct,

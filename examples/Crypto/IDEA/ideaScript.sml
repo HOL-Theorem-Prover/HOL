@@ -96,7 +96,7 @@ val ZeroEvenKeys_def = Define
 (*---Use Both Additive and Multiplicative Inverses Now---*)
 val InverseKey_def =
  Define
-   `InverseKey (k1,k2,k3,k4) = (winv k1, $- k3, $- k2, winv k4) : OddKey`;
+   `InverseKey (k1,k2,k3,k4) = (winv k1, - k3, - k2, winv k4) : OddKey`;
 
 val InverseKeys_def =
  Define
@@ -128,7 +128,7 @@ val OddRound_def =
 
 val OddRound_Lemma1 = Q.store_thm
 ("OddRound_Lemma1",
- `!w1:word16 w2:word16. w1 + w2 + $- w2 = w1`,
+ `!w1:word16 w2:word16. w1 + w2 + - w2 = w1`,
  SRW_TAC [] []);
 
 val OddRound_Inversion = Q.store_thm

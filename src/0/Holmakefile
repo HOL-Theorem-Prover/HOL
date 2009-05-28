@@ -9,12 +9,13 @@ FTERM_UID = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
 TAG_UID = $(dprot $(SIGOBJ)/Tag.ui)
 LIB_UID = $(dprot $(SIGOBJ)/Lib.ui)
 PORTABLE_UID = $(dprot $(SIGOBJ)/Portable.ui)
+COUNT_UID = $(dprot $(SIGOBJ)/Count.ui)
 
 
 Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID)
 	HOLMOSMLC -c -toplevel Raw-sig.sml
 
-Thm.uo: Thm.sml Term.uo $(TAG_UID) Raw-sig.uo
+Thm.uo: Thm.sml Term.uo $(TAG_UID) Raw-sig.uo $(COUNT_UID)
 	HOLMOSMLC -c -toplevel Raw-sig.ui Term.ui Kind.ui Type.ui Thm.sml
 
 TheoryPP.uo: TheoryPP.sml Thm.uo

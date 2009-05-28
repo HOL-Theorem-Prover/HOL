@@ -375,10 +375,10 @@ end;
 
 
 local
-   val forall_eq_thm = prove (``(!s. (P s = Q s)) ==> ((!s. P s) = (!s. Q s))``,
+   val forall_eq_thm = prove (``(!s:'a. (P s = Q s)) ==> ((!s. P s) = (!s. Q s))``,
 		              STRIP_TAC THEN ASM_REWRITE_TAC[]);
 
-   val exists_eq_thm = prove (``(!s. (P s = Q s)) ==> ((?s. P s) = (?s. Q s))``,
+   val exists_eq_thm = prove (``(!s:'a. (P s = Q s)) ==> ((?s. P s) = (?s. Q s))``,
 		              STRIP_TAC THEN ASM_REWRITE_TAC[]);
 
 in   

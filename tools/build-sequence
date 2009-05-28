@@ -84,7 +84,7 @@ src/res_quan/src
 src/quotient/src
 !src/quotient/examples
 src/finite_map
-# currently broken: !examples/ind_def
+!examples/ind_def
 src/bag
 src/n-bit
 !examples/ARM/arm6-verification

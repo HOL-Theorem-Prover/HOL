@@ -750,6 +750,49 @@ val BITV_THM = store_thm("BITV_THM",
   RW_TAC arith_ss [BITV_def,BIT_def,SBIT_def]
     \\ FULL_SIMP_TAC bool_ss [NOT_BITS2]);
 
+val ADD_BIT0 = save_thm("ADD_BIT0",
+  REWRITE_RULE [LSB_def, GSYM LSB_ODD] ODD_ADD);
+
+val BITS_DIVISION =
+   DIVISION |> Q.SPEC `2 ** SUC n`
+            |> SIMP_RULE std_ss [ZERO_LT_TWOEXP, GSYM BITS_ZERO3]
+            |> GEN_ALL;
+
+val ADD_BITS_SUC = Q.store_thm("ADD_BITS_SUC",
+  `!n a b.
+     BITS (SUC n) (SUC n) (a + b) =
+     (BITS (SUC n) (SUC n) a + BITS (SUC n) (SUC n) b +
+      BITS (SUC n) (SUC n) (BITS n 0 a + BITS n 0 b)) MOD 2`,
+  REPEAT STRIP_TAC
+    \\ Q.SPECL_THEN [`n`,`a`] ASSUME_TAC BITS_DIVISION
+    \\ POP_ASSUM (fn th => CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [th])))
+    \\ Q.SPECL_THEN [`n`,`b`] ASSUME_TAC BITS_DIVISION
+    \\ POP_ASSUM (fn th => CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [th])))
+    \\ SRW_TAC [] [BITS_THM, SUC_SUB]
+    \\ Cases_on `(a DIV 2 ** SUC n) MOD 2 = 1`
+    \\ Cases_on `(b DIV 2 ** SUC n) MOD 2 = 1`
+    \\ FULL_SIMP_TAC arith_ss [NOT_MOD2_LEM2, ADD_MODULUS]
+    \\ REWRITE_TAC [DECIDE ``a * n + (b * n + c) = (a + b) * n + c:num``]
+    \\ SIMP_TAC std_ss [ADD_DIV_ADD_DIV, ZERO_LT_TWOEXP]
+    \\ CONV_TAC (LHS_CONV
+         (SIMP_CONV std_ss [Once (GSYM MOD_PLUS), ZERO_LT_TWOEXP]))
+    \\ CONV_TAC (LHS_CONV (RATOR_CONV
+         (SIMP_CONV std_ss [Once (GSYM MOD_PLUS), ZERO_LT_TWOEXP])))
+    \\ ASM_SIMP_TAC arith_ss []);
+
+val ADD_BIT_SUC = Q.store_thm("ADD_BIT_SUC",
+  `!n a b.
+     BIT (SUC n) (a + b) =
+     if BIT (SUC n) (BITS n 0 a + BITS n 0 b) then
+       BIT (SUC n) a = BIT (SUC n) b
+     else
+       BIT (SUC n) a <> BIT (SUC n) b`,
+  SRW_TAC [] [BIT_def]
+    \\ CONV_TAC (LHS_CONV (SIMP_CONV std_ss [Once ADD_BITS_SUC]))
+    \\ Cases_on `BITS (SUC n) (SUC n) a = 1`
+    \\ Cases_on `BITS (SUC n) (SUC n) b = 1`
+    \\ FULL_SIMP_TAC std_ss [NOT_BITS2]);
+
 (* ------------------------------------------------------------------------- *)
 
 val BITWISE_LT_2EXP = store_thm("BITWISE_LT_2EXP",

@@ -344,6 +344,16 @@ val cis_zero_behaviour = store_thm(
   Cases_on `n` THEN
   ASM_SIMP_TAC (bsrw_ss()) [cis_zero_def, church_thm]);
 
+val wh_cis_zero = store_thm(
+  "wh_cis_zero",
+  ``cis_zero @@ church n -w->* cB (n = 0)``,
+  SRW_TAC [][cis_zero_def, church_def] THEN
+  ASM_SIMP_TAC (whfy(srw_ss())) [] THEN
+  Cases_on `n` THEN SRW_TAC [][FUNPOW_SUC] THEN
+  ASM_SIMP_TAC (whfy(srw_ss())) []);
+
+
+
 val ceqnat_def = Define`
   ceqnat =
   LAM "n"

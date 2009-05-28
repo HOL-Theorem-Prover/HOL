@@ -12,7 +12,8 @@ loadPath :=
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
    "rich_listTheory", "generalHelpersTheory", "latticeTheory", "separationLogicTheory",
    "stringTheory",
-   "vars_as_resourceTheory", "stringLib", "listLib", "smallfootTheory"];
+   "vars_as_resourceTheory", "stringLib", "listLib", "smallfootTheory",
+   "smallfootSyntax", "smallfootParser", "smallfoot_pp_print", "BoolExtractShared"];
 show_assums := true;
 *)
 

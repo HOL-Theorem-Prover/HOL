@@ -23,7 +23,14 @@ fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1 orelse
 fun term_symbolp s = UnicodeChars.isSymbolic s andalso
                      not (s_has_nonagg_char s) andalso
                      s <> "\"" andalso s <> "'" andalso s <> "_"
+fun const_symbolp s = Char.isPunct (String.sub(s,0)) andalso s <> ")" andalso
+                      s <> "_" andalso s <> "'" andalso s <> "\""
+
 fun term_identp s = UnicodeChars.isMLIdent s andalso s <> UnicodeChars.lambda
+fun const_identp s = Char.isAlphaNum (String.sub(s,0)) orelse s = "_" orelse
+                     s = "'"
+fun const_identstartp s = const_identp s andalso
+                          not (Char.isDigit (String.sub(s,0)))
 
 fun ishexdigit s = let
   val c = Char.toLower (String.sub(s,0))
@@ -40,6 +47,10 @@ fun categorise c =
     else if Char.isDigit (String.sub(c,0)) then numberp
     else term_symbolp
 
+fun constid_categorise c =
+    if const_identstartp c then const_identp
+    else if const_symbolp c then const_symbolp
+    else raise Fail (c ^ " is not a valid constant name constituent")
 
 
 fun mixed s = let
@@ -128,64 +139,6 @@ in
               let val (locn',locn'') = locn.split_at 1 locn in
               (replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'');
                (ID (String.extract (s, 0, SOME 1)),locn')) end
-
-(* Old version:
-  (* As exceptions to non-aggregating symbolic characters, we recognize
-     "[:", and ":]" specially for HOL-Omega. *)
-  else if prefix2 #"[" #":" orelse prefix2 #":" #"]" then
-            if size s > 2 then
-              let val (locn',locn'') = locn.split_at 2 locn in
-              (replace_current (BT_Ident (String.extract(s, 2, NONE)),locn'') qb;
-               (String.extract (s, 0, SOME 2),locn')) end
-            else (advance qb; (s,locn))
-  (* As an exception, don't aggregate ":!" since this probably begins a universal type *)
-  else if prefix2 #":" #"!" orelse prefix4 #":" #"\u0080" then
-              let val (locn',locn'') = locn.split_at 1 locn in
-              (replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'') qb;
-               (String.extract (s, 0, SOME 1),locn')) end
-  else if s0 = #"'" then
-    if str_all (fn c => c = #"'") s then (advance qb; (s,locn))
-    else raise LEX_ERR ("Term idents can't begin with prime characters",locn)
-  else if s0 = #"$" then
-      let val (s',locn') = split_ident nonagg_specs (String.extract(s, 1, NONE))
-                                       (locn.move_start 1 locn) qb in
-      ("$" ^ s', locn.move_start ~1 locn') end
-  else (* have a symbolic identifier *)
-    let
-      val possible_nonaggs =
-          List.filter (fn spec => String.isPrefix spec s) nonagg_specs
-    in
-      if null possible_nonaggs then let
-          val (ss1, ss2) = Substring.splitl (not o nonagg_c) (Substring.all s)
-          val (s1, s2) = (Substring.string ss1, Substring.string ss2)
-        in
-          if size s1 = 0 then
-            (* first character is a non-aggregating character *)
-            if size s > 1 then
-              let val (locn',locn'') = locn.split_at 1 locn in
-              (replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'') qb;
-               (String.extract (s, 0, SOME 1),locn')) end
-            else (advance qb; (s,locn))
-          else if size s2 <> 0 then
-            let val (locn',locn'') = locn.split_at (size s1) locn in
-            (* s2 is non-empty and begins with a non-aggregating character *)
-            (replace_current (BT_Ident s2,locn'') qb; (s1,locn')) end
-          else
-            (advance qb; (s,locn))
-        end
-      else let
-          fun compare(s1, s2) = flip_cmpresult (Int.compare(size s1, size s2))
-          val best = hd (Listsort.sort compare possible_nonaggs)
-          val sz = size best
-        in
-          if sz = size s then (advance qb; (s,locn))
-          else let val (locn',locn'') = locn.split_at sz locn in
-               (replace_current (BT_Ident (String.extract(s, sz, NONE)),locn'') qb;
-                (best,locn')) end
-        end
-    end
-End of Old version. *)
-
   else if not (mixed s) andalso not (s_has_nonagg_char s) then
     (advance (); (MkID (s, locn), locn))
   else
@@ -212,10 +165,13 @@ End of Old version. *)
                     if size sfx0 <> 0 andalso String.sub(sfx0,0) = #"$" then
                       if size sfx0 > 1 then let
                           val sfx0_1 = String.extract(sfx0, 1, NONE)
-                          val ((c0, _), rest) = valOf (UTF8.getChar sfx0_1)
-                          val (qid2, sfx) = grab (categorise c0) [c0] rest
-                        in
-                          (QIdent(pfx0,qid2), sfx)
+	                  val c0 = String.sub(sfx0_1, 0)
+                          val rest = String.extract(sfx0_1, 1, NONE)
+	                  val (qid2, sfx) =
+                              grab (constid_categorise (str c0)) [str c0] rest
+                              handle Fail s => raise LEX_ERR (s, locn)
+	                in
+	                  (QIdent(pfx0,qid2), sfx)
                         end
                       else
                         raise LEX_ERR ("Malformed qualified ident", locn)
