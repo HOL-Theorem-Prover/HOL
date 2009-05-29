@@ -127,13 +127,15 @@ build the \texttt{Holmake} and \texttt{build} programs, and move them
 into the \texttt{hol/bin} directory.  If something goes wrong at this
 stage, consult Section~\ref{sec:editting-configure} below.
 
-The next step is to run the \texttt{build} program.  This should
-result in a great deal of output as all of the system code is compiled
-and the theories built.  Eventually, a \HOL{} system\footnote{Four
-  \HOL{} executables are produced: \textsf{hol}, \textsf{hol.noquote},
-  \textsf{hol.bare} and \textsf{hol.bare.noquote}.  The first of these
-  will be used for most examples in the \TUTORIAL{}.} is produced in
-the \texttt{bin/} directory.
+The next step is to run the \texttt{build} program.  When using
+Poly/ML, you must pass this program the \texttt{-expk} option. This
+should result in a great deal of output as all of the system code is
+compiled and the theories built.  Eventually, a \HOL{}
+system\footnote{Four \HOL{} executables are produced: \textsf{hol},
+  \textsf{hol.noquote}, \textsf{hol.bare} and
+  \textsf{hol.bare.noquote}.  The first of these will be used for most
+  examples in the \TUTORIAL{}.} is produced in the \texttt{bin/}
+directory.
 
 \begin{session}
 \begin{alltt}
