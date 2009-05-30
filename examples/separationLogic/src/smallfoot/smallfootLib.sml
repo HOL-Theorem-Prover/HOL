@@ -6736,17 +6736,16 @@ val quant_heuristic_arg =
 
 val save_quant_guess_TAC = 
     CONV_TAC 
-	(EXT_PURE_QUANT_INSTANTIATE_CONV (SOME quant_heuristic_cache_save_ref) true false quant_heuristic_arg);
+	(EXT_PURE_QUANT_INSTANTIATE_CONV (SOME quant_heuristic_cache_save_ref) true (K true) false [quant_heuristic_arg]);
 
 
 val quant_guess_TAC = 
 CONSEQ_CONV_TAC 
 (EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV (SOME quant_heuristic_cache_ref) false
-    (COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT quant_heuristic_arg
+    (K true) ([quant_heuristic_arg,
 ([],[],[],[],
 [QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___COND_IMP,
- QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___LIST_SAME_DATA])
-));
+ QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___LIST_SAME_DATA])]));
 
 
 fun all_quant_guess_TAC do_guess =
