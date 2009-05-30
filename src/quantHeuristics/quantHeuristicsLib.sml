@@ -2584,11 +2584,11 @@ fun COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENTS L =
     foldl (fn (a1,a2) => COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT a1 a2) empty_quant_heuristic_combine_argument L;
           
 
-fun EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq arg = 
-    HEURISTIC_QUANT_INSTANTIATE_CONV re filter (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt) expand_eq;
+fun EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq args = 
+    HEURISTIC_QUANT_INSTANTIATE_CONV re filter (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE (COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENTS args) cache_ref_opt) expand_eq;
 
 fun RESTRICTED_PURE_QUANT_INSTANTIATE_CONV filter = 
-    EXT_PURE_QUANT_INSTANTIATE_CONV NONE true filter false empty_quant_heuristic_combine_argument;
+    EXT_PURE_QUANT_INSTANTIATE_CONV NONE true filter false [];
 
 val PURE_QUANT_INSTANTIATE_CONV = 
     RESTRICTED_PURE_QUANT_INSTANTIATE_CONV (K true)
@@ -2642,16 +2642,15 @@ in
 end;
 
 
-fun EXT_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq arg = 
+fun EXT_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq args = 
     EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq
-       (COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT arg
-       ([],[],[],[],[QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
+       (([],[],[],[],[QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
 	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_distinct,
 	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_cases,
-               QUANT_INSTANTIATE_HEURISTIC___ref]))
+               QUANT_INSTANTIATE_HEURISTIC___ref])::args)
 
 val QUANT_INSTANTIATE_CONV = 
-    EXT_QUANT_INSTANTIATE_CONV NONE true (K true) false empty_quant_heuristic_combine_argument;
+    EXT_QUANT_INSTANTIATE_CONV NONE true (K true) false [];
 
 
 (*
@@ -2807,16 +2806,16 @@ THEN_CONSEQ_CONV
 (REWRITE_CONV[]);
 
 
-fun EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter arg = 
-    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt);
+fun EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter args = 
+    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE 
+       (COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENTS args) cache_ref_opt);
 
 fun EXT_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter arg = 
     EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter
-       (COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT arg
-       ([],[],[],[],[QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
+       (([],[],[],[],[QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
 	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_distinct,
 	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_cases,
-               QUANT_INSTANTIATE_HEURISTIC___ref]))
+               QUANT_INSTANTIATE_HEURISTIC___ref])::arg)
 
 
 end
