@@ -2722,7 +2722,14 @@ val ASM_QUANT_INSTANTIATE_TAC =
 
 
 
-
+fun REWRITE_PROVE t = 
+let
+   val thm = REWRITE_CONV [] t handle UNCHANGED => REFL t;
+   val t2 = rhs (concl thm) 
+   val thm2 = if t2 = T then TRUTH else METIS_PROVE [] t2;
+in
+   EQ_MP (GSYM thm) thm2
+end;
 
 
 
@@ -2753,7 +2760,7 @@ let
 
    val (i,fvL) = term_variant fv fvL' i';
 
-   fun add_thm guess = make_set_guess_thm_opt v t guess ASSUME
+   fun add_thm guess = make_set_guess_thm_opt v t guess REWRITE_PROVE
 
 
 in
@@ -2788,6 +2795,18 @@ fun QUANT_TAC L (asm,t) =
          (K true) (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt false L)) 
     (asm,t)
   end;
+
+
+fun QUANT_CONV L t = 
+  let
+     val ctxt = HOLset.listItems (FVL [t] empty_tmset);
+  in
+    DEPTH_CONV
+      (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (true,true,false)
+         (K true) (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt true L) CONSEQ_CONV_UNKNOWN_direction) 
+    t
+  end;
+
 
 
 fun TypeBase___quant_heuristic_argument typeL =

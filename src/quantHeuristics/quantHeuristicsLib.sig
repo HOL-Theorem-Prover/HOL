@@ -229,7 +229,9 @@ sig
 
 
 
-  val QUANT_TAC : (string * Parse.term Lib.frag list * Parse.term Parse.frag list list) list
+  val QUANT_CONV : (string * Parse.term Lib.frag list * Parse.term Parse.frag list list) list
+   -> conv;
+  val QUANT_TAC  : (string * Parse.term Lib.frag list * Parse.term Parse.frag list list) list
    -> tactic;
 
 
