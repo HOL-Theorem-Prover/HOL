@@ -20,7 +20,6 @@ val op|| = op ORELSE;
 (* ------------------------------------------------------------------------- *)
 
 type 'a thunk = unit -> 'a;
-type (''a, 'b) cache = (''a, 'b) Polyhash.hash_table;
 type 'a susp = 'a Susp.susp
 type ppstream = General.ppstream
 type ('a, 'b) maplet = {redex : 'a, residue : 'b}
@@ -168,28 +167,6 @@ end;
 val random_generator = Random.newgen ();
 fun random_integer n = Random.range (0, n) random_generator;
 fun random_real () = Random.random random_generator;
-
-(* Function cacheing *)
-
-fun new_cache () : (''a, 'b) cache =
-  Polyhash.mkPolyTable (10000, ERR "cache" "not found");
-
-fun cache_lookup c (a, b_thk) =
-  (case Polyhash.peek c a of SOME b => b
-   | NONE =>
-     let
-       val b = b_thk ()
-       val _ = Polyhash.insert c (a, b)
-     in
-       b
-    end);
-
-fun cachef f =
-  let
-    val c = new_cache ()
-  in
-    fn a => cache_lookup c (a, fn () => f a)
-  end;
 
 (* Lazy operations *)
 
