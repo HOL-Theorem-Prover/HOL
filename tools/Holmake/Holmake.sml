@@ -787,8 +787,8 @@ fun runholdep arg destination_file = let
   val buildable_extras = List.concat (map buildables extra_targets)
   val result =
     Success(Holdep.main buildable_extras debug
-                        (std_include_flags @ additional_includes @
-                         [fromFile arg]))
+                        (hmake_preincludes @ std_include_flags @
+                         additional_includes @ [fromFile arg]))
     handle _ => (print "Holdep failed.\n"; Failure "")
   fun myopen s =
     if FileSys.access(DEPDIR, []) then
