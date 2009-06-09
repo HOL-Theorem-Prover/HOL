@@ -470,7 +470,7 @@ fun (SEP_NEQ_TAC:tactic) (hs,gs) = let
 
 fun auto_prove proof_name (goal,tac) = 
   prove(goal,tac THEN (fn (tms,tm) => let
-    val _ = print "\n\n\n  AUTO PROOF FAILED\n\n"
+    val _ = print ("\n\n\n  AUTO PROOF FAILED: " ^ proof_name ^ "\n\n")
     val _ = print "-----------------------------------------------\n"
     val _ = print "  Unsolved subgoal:\n\n"
     val _ = print_term (mk_imp(list_mk_conj tms,tm))
@@ -480,8 +480,7 @@ fun auto_prove proof_name (goal,tac) =
     val _ = print_term (goal)
     val _ = print "\n\n"
     val _ = print "-----------------------------------------------\n"
-    val _ = print ("  The proof failed at " ^ proof_name)
+    val _ = print ("  The proof failed at " ^ proof_name ^ "\n\n\n")
   in hd [] end))
-
 
 end;

@@ -22,7 +22,7 @@ val instructions = let
 
 fun ppc_encode s = let
   fun token_size name = 
-    if mem name ["A","B","C","D","S","BI","crbA","crbB","crbD","SH","MB","ME"] then 5 
+    if mem name ["A","B","C","D","S","BO","BI","crbA","crbB","crbD","SH","MB","ME"] then 5 
     else if mem name ["BD"] then 14
     else if mem name ["SIMM","UIMM","d"] then 16
     else if mem name ["LI"] then 24
@@ -38,12 +38,12 @@ fun ppc_encode s = let
     end
   val xs = String.tokens (fn x => mem x [#",",#" ",#"(",#")",#"[",#"]"]) s  
   val (x,xs) = (hd xs, tl xs) 
-  val (x,xs) = if x = "bne" then ("bt",["2"] @ xs) else
-               if x = "beq" then ("bf",["2"] @ xs) else
-               if x = "blt" then ("bf",["0"] @ xs) else
-               if x = "bge" then ("bt",["0"] @ xs) else
-               if x = "bgt" then ("bt",["1"] @ xs) else
-               if x = "ble" then ("bf",["1"] @ xs) else (x,xs)
+  val (x,xs) = if x = "bne" then ("bc",["4","2"] @ xs) else
+               if x = "beq" then ("bc",["12","2"] @ xs) else
+               if x = "blt" then ("bc",["12","0"] @ xs) else
+               if x = "bge" then ("bc",["4","0"] @ xs) else
+               if x = "bgt" then ("bc",["4","1"] @ xs) else
+               if x = "ble" then ("bc",["12","1"] @ xs) else (x,xs)
   val (_,(y,z)) = hd (filter (fn y => (fst y = x)) instructions)
   val qs = zip y xs
   val ts = map (fn (t,q) => (t,to_binary (token_size t) (Arbint.fromString q))) qs

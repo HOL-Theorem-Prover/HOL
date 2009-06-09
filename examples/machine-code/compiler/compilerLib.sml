@@ -45,6 +45,15 @@ val COMPILER_TAC =
     THEN CONV_TAC (RAND_CONV (AUTO_ALPHA_CONV ()))
     THEN CONV_TAC ((RATOR_CONV o RAND_CONV) (AUTO_ALPHA_CONV ()))
     THEN SIMP_TAC std_ss [AC CONJ_ASSOC CONJ_COMM, AC DISJ_COMM DISJ_ASSOC]
+    THEN SIMP_TAC std_ss [WORD_SUB_RZERO, WORD_ADD_0, IF_IF,
+                          AC WORD_ADD_COMM WORD_ADD_ASSOC,
+                          AC WORD_MULT_COMM WORD_MULT_ASSOC,
+                          AC WORD_AND_COMM WORD_AND_ASSOC,
+                          AC WORD_OR_COMM WORD_OR_ASSOC,
+                          AC WORD_XOR_COMM WORD_XOR_ASSOC,
+                          AC CONJ_COMM CONJ_ASSOC,
+                          AC DISJ_COMM DISJ_ASSOC,
+                          IMP_DISJ_THM, WORD_MULT_CLAUSES]
     THEN EQ_TAC
     THEN ONCE_REWRITE_TAC [GSYM DUMMY_EQ_def]
     THEN REWRITE_TAC [FLATTEN_IF]

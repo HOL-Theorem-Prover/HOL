@@ -15,7 +15,7 @@ val RW1 = ONCE_REWRITE_RULE;
 
 (* setting up the compiler *)
 val _ = codegen_x86Lib.set_x86_regs 
-  [(3,"eax"),(4,"ecx"),(5,"edx"),(6,"ebx"),(7,"edi"),(8,"esi"),(10,"ebp")]
+  [(3,"eax"),(4,"ecx"),(5,"edx"),(6,"ebx"),(7,"edi"),(8,"esi"),(9,"ebp")]
 
 
 (* --- READ NUMBER --- *)
@@ -702,34 +702,34 @@ val arm_symbol_lemma = prove(
 (* --- LEX SYMBOL AND NUMBER --- *)
 
 val (th1,arm_number_symbol_def,arm_number_symbol_pre_def) = compile_all ``
-  arm_number_symbol (r10,r3,r4,r5,r7,r8,df,dg,dh:word32 set,dm,f,g,h:word32->word32,m) =
+  arm_number_symbol (r9,r3,r4,r5,r7,r8,df,dg,dh:word32 set,dm,f,g,h:word32->word32,m) =
     if ~(r4 <+ 0x30w) then
       if ~(r4 <+ 0x3Aw) then
         (let (r3,r4,r5,r6,r7,r8,df,dg,dm,f,g,m) =
                arm_symbol (r3,r4,r5,df,dg,dm,f,g,m)
          in
-         let r4 = h (r10 + 4w) in
+         let r4 = h (r9 + 4w) in
          let r3 = r3 - r4 in 
          let r4 = (w2w (f r5)):word32 in
-         let h = (r10 =+ r3) h in
-         let r10 = r10 + 0x8w in
-           (r10,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m))
+         let h = (r9 =+ r3) h in
+         let r9 = r9 + 0x8w in
+           (r9,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m))
       else
         (let (r3,r4,r5,r6,df,f) = arm_read_number (r4,r5,df,f) in
          let r4 = w2w (f r5) in
-         let h = (r10 =+ r3) h in
-         let r10 = r10 + 0x8w in
-           (r10,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m))
+         let h = (r9 =+ r3) h in
+         let r9 = r9 + 0x8w in
+           (r9,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m))
     else
       (let (r3,r4,r5,r6,r7,r8,df,dg,dm,f,g,m) =
              arm_symbol (r3,r4,r5,df,dg,dm,f,g,m)
        in
-       let r4 = h (r10 + 4w) in
+       let r4 = h (r9 + 4w) in
        let r3 = r3 - r4 in 
        let r4 = w2w (f r5) in
-       let h = (r10 =+ r3) h in
-       let r10 = r10 + 0x8w in
-         (r10,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m))``;
+       let h = (r9 =+ r3) h in
+       let r9 = r9 + 0x8w in
+         (r9,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m))``;
 
 
 (* --- LEXER AUX --- *)
@@ -746,32 +746,32 @@ val (th1,arm_lexer_aux_def,arm_lexer_aux_pre_def) = compile_all ``
 (* --- LEXER --- *)
 
 val (th1,arm_lexer_def,arm_lexer_pre_def) = compile_all ``
-  arm_lexer (r10,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) =
+  arm_lexer (r9,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) =
     if r4 = 0x0w then
-      (r10,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m)
+      (r9,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m)
     else
       if ~(r4 <+ 0x21w) then
         (let r6 = 0x0w in
          let (r4,r6) = arm_lexer_aux (r4,r6) in
            if r6 = 0x0w then
-             (let h = (r10 + 4w =+ r3) h in
-              let (r10,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) =
+             (let h = (r9 + 4w =+ r3) h in
+              let (r9,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) =
                     arm_number_symbol
-                      (r10,r3,r4,r5,r7,r8,df,dg,dh,dm,f,g,h,m)
+                      (r9,r3,r4,r5,r7,r8,df,dg,dh,dm,f,g,h,m)
               in
-              let r3 = h (r10 - 4w) in
-                arm_lexer (r10,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m))
+              let r3 = h (r9 - 4w) in
+                arm_lexer (r9,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m))
            else
-             (let h = (r10 =+ r6) h in
-              let r10 = r10 + 0x8w in
+             (let h = (r9 =+ r6) h in
+              let r9 = r9 + 0x8w in
               let r5 = r5 + 0x1w in
               let r4 = w2w (f r5) in
                 arm_lexer
-                  (r10,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m)))
+                  (r9,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m)))
       else
         (let r5 = r5 + 0x1w in
          let r4 = w2w (f r5) in
-           arm_lexer (r10,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m))``;
+           arm_lexer (r9,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m))``;
 
 val read_while_def = Define `
   (read_while P "" s = (s,"")) /\
@@ -1536,8 +1536,6 @@ val (th,arm_parse_next_def,arm_parse_next_pre_def) = compile_all ``
        let r7 = r4 in
          (r4,r5,r6,r7,r8,dh,h))``
 
-(* for some reason does not work for ppc *)
-
 val (th,arm_parse_loop_def,arm_parse_loop_pre_def) = compile_all ``
   arm_parse_loop1 (r4,r5,r6,r7,r8,dh:word32 set,h:word32->word32) =
     if r6 = 40w then 
@@ -2159,17 +2157,17 @@ val SUB_n2w_LO = prove(
   \\ ASM_SIMP_TAC std_ss [WORD_LO,w2n_n2w] \\ DECIDE_TAC);
 
 val (th,arm_parse8_def,arm_parse8_pre_def) = compilerLib.compile_all ``
-  arm_parse8 (r10,r3,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) =
+  arm_parse8 (r9,r3,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) =
     let r4 = w2w (f r5) in
-    let (r10,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) = 
-          arm_lexer (r10,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) in
-    let r4 = r10 - 8w in
+    let (r9,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) = 
+          arm_lexer (r9,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) in
+    let r4 = r9 - 8w in
     let r6 = h r4 in
     let r5 = r4 in
     let r7 = 3w:word32 in
     let r8 = 3w:word32 in
     let (r4,r5,r6,r7,r8,dh,h) = arm_parse_loop1 (r4,r5,r6,r7,r8,dh,h) in
-      (r10,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m)``;
+      (r9,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m)``;
   
 val all_symbols_exists = prove(
   ``!ys xs. ?zs. all_symbols ys xs = xs ++ zs``,
@@ -2209,10 +2207,10 @@ val token_slots_FILTER = prove(
   \\ SIMP_TAC (std_ss++star_ss) []);
 
 val token_slots_sexp_lex_space = prove(
-  ``token_slots r10 (sexp_lex_space s) =
-    arm_tokens3 (r10 + n2w (8 * LENGTH (sexp_lex s))) (REVERSE (sexp_lex s)) 
-                (r10 + n2w (8 * sexp_lex_space s)) *
-    token_slots r10 (LENGTH (sexp_lex s))``,
+  ``token_slots r9 (sexp_lex_space s) =
+    arm_tokens3 (r9 + n2w (8 * LENGTH (sexp_lex s))) (REVERSE (sexp_lex s)) 
+                (r9 + n2w (8 * sexp_lex_space s)) *
+    token_slots r9 (LENGTH (sexp_lex s))``,
   REWRITE_TAC [sexp_lex_space_def,LENGTH_APPEND]  
   \\ ONCE_REWRITE_TAC [ADD_COMM]    
   \\ REWRITE_TAC [RW [rich_listTheory.FILTER_REVERSE,rich_listTheory.LENGTH_REVERSE] 
@@ -2240,23 +2238,23 @@ val ALIGNED8_ADD = prove(
 val ALIGNED8_SUB = 
   (GSYM o RW [WORD_SUB_ADD] o Q.SPECL [`a - n2w (8 * n)`,`n`]) ALIGNED8_ADD;
   
-val arm_parse6_lemma = (GEN_ALL o SIMP_RULE std_ss [WORD_ADD_SUB,ALIGNED8_STEP] o Q.SPEC `r10+8w` o prove)(
-  ``!r10 r8 r7 r6 r5 r3 y x s p m h g f dm dh dg df d b. 
+val arm_parse6_lemma = (GEN_ALL o SIMP_RULE std_ss [WORD_ADD_SUB,ALIGNED8_STEP] o Q.SPEC `r9+8w` o prove)(
+  ``!r9 r8 r7 r6 r5 r3 y x s p m h g f dm dh dg df d b. 
       string_mem (STRCAT s null_string) (r5,f,df) /\
       EVERY (\c. ORD c <> 0) (EXPLODE s) /\ 
-      ALIGNED r10 /\ ALIGNED8 (r3 - r10) /\
+      ALIGNED r9 /\ ALIGNED8 (r3 - r9) /\
       symbol_table builtin_symbols x (r3,dm,m,dg,g) /\ 
-      (p * arm_tokens4 (r10 - 8w) [] b d y * 
-       token_slots r10 (sexp_lex_space s)) (fun2set (h,dh)) /\
+      (p * arm_tokens4 (r9 - 8w) [] b d y * 
+       token_slots r9 (sexp_lex_space s)) (fun2set (h,dh)) /\
       symbol_table_dom (all_symbols (sexp_lex s) builtin_symbols) (r3,dm,dg) ==>
-      ?r10i r4i r5i r6i r7i r8i gi hi mi xi. 
-        arm_parse8_pre (r10,r3,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) /\
-        (arm_parse8 (r10,r3,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) =
-           (r4i,r10 - 8w,r5i,r6i,r7i,r8i,df,dg,dh,dm,f,gi,hi,mi)) /\ 
-        (arm_tokens4 (r10 - 8w) [] r3 xi (r10 - 8w) * 
+      ?r9i r4i r5i r6i r7i r8i gi hi mi xi. 
+        arm_parse8_pre (r9,r3,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) /\
+        (arm_parse8 (r9,r3,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) =
+           (r4i,r9 - 8w,r5i,r6i,r7i,r8i,df,dg,dh,dm,f,gi,hi,mi)) /\ 
+        (arm_tokens4 (r9 - 8w) [] r3 xi (r9 - 8w) * 
          lisp_exp (string2sexp s) r7i (r3,xi) *
          SEP_FILL (r3,xi) * p) (fun2set (hi,dh)) /\
-        (r5i = (r10 - 8w) + n2w (8 * sexp_lex_space s)) /\
+        (r5i = (r9 - 8w) + n2w (8 * sexp_lex_space s)) /\
         symbol_table (all_symbols (sexp_lex s) builtin_symbols) xi
          (r3,dm,mi,dg,gi)``,
   REWRITE_TAC [token_slots_sexp_lex_space,STAR_ASSOC]
@@ -2267,7 +2265,7 @@ val arm_parse6_lemma = (GEN_ALL o SIMP_RULE std_ss [WORD_ADD_SUB,ALIGNED8_STEP] 
   \\ ASM_SIMP_TAC std_ss []
   \\ `ALIGNED r1i /\ ALIGNED r3 /\ ALIGNED8 (r3 - r1i)` by ALL_TAC 
   THEN1
-   (Q.PAT_ASSUM `r10 + bbb = r1i` (MP_TAC o GSYM)
+   (Q.PAT_ASSUM `r9 + bbb = r1i` (MP_TAC o GSYM)
     \\ SIMP_TAC std_ss [] \\ STRIP_TAC
     \\ REPEAT STRIP_TAC THENL [
       MATCH_MP_TAC ALIGNED_ADD  
@@ -2282,8 +2280,8 @@ val arm_parse6_lemma = (GEN_ALL o SIMP_RULE std_ss [WORD_ADD_SUB,ALIGNED8_STEP] 
       ASM_SIMP_TAC std_ss [WORD_SUB_PLUS,ALIGNED8_SUB]])
   \\ `ALIGNED (r1i - 8w)` by ALIGNED_TAC
   \\ FULL_SIMP_TAC std_ss []
-  \\ `(arm_tokens4 (r1i - 0x8w) (REVERSE (sexp_lex s)) r3 xi (r10 - 8w) * 
-       arm_tokens3 r1i (REVERSE (sexp_lex s)) (r10 + n2w (8 * sexp_lex_space s)) * SEP_FILL (r3,xi) * p) 
+  \\ `(arm_tokens4 (r1i - 0x8w) (REVERSE (sexp_lex s)) r3 xi (r9 - 8w) * 
+       arm_tokens3 r1i (REVERSE (sexp_lex s)) (r9 + n2w (8 * sexp_lex_space s)) * SEP_FILL (r3,xi) * p) 
          (fun2set (hi,dh))` by 
    (FULL_SIMP_TAC std_ss [SEP_FILL_def,SEP_CLAUSES]   
     \\ SIMP_TAC std_ss [SEP_EXISTS]
@@ -2293,7 +2291,7 @@ val arm_parse6_lemma = (GEN_ALL o SIMP_RULE std_ss [WORD_ADD_SUB,ALIGNED8_STEP] 
     \\ FULL_SIMP_TAC std_ss [arm_tokens2_def,SEP_EXISTS]    
     \\ Q.EXISTS_TAC `y''`    
     \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR]
-    \\ Q.PAT_ASSUM `r10 - 8w = y` (ASSUME_TAC o GSYM)
+    \\ Q.PAT_ASSUM `r9 - 8w = y` (ASSUME_TAC o GSYM)
     \\ FULL_SIMP_TAC (std_ss++star_ss) []) 
   \\ `(r3, "nil") IN xi /\ (r3 + 0x18w, "quote") IN xi` by 
    (STRIP_ASSUME_TAC (Q.SPECL [`sexp_lex s`,`builtin_symbols`] all_symbols_exists)
@@ -2356,10 +2354,10 @@ val symbol_table_tm = let
   val ys = sort (fn x => fn y => x <= y) (all_distinct (map mooch tms))
   val zs = map (fn x => (x, filter (fn tm => mooch tm = x) tms)) ys
   val tt = (car o car) ``(x:word32 =+ y:word8)``
-  val ww = mk_comb(``w2w:word32->word8``,mk_var("r8",``:word32``))
+  val ww = mk_comb(``w2w:word32->word8``,mk_var("r6",``:word32``))
   fun cuscus (x,ws) = let
     val v = mk_comb(``n2w:num->word32``,numSyntax.mk_numeral(Arbnum.fromInt x))
-    val v = (mk_var("r8",``:word32``),v)
+    val v = (mk_var("r6",``:word32``),v)
     fun hipochus tm = let
       val (x,y) = dest_eq tm
       in (car x, mk_comb(mk_comb(mk_comb(tt,cdr x),ww),car x)) end
@@ -2367,14 +2365,14 @@ val symbol_table_tm = let
   val ts = append_lists (map cuscus zs)
   val tms = find_terms (can (match_term ``(m:word32->word32) (r3) = w``)) (concl symbol_table_th)
   val tt = (car o car) ``(x:word32 =+ y:word32)``
-  val ww = mk_var("r8",``:word32``)
+  val ww = mk_var("r6",``:word32``)
   fun cuscus tm = let
     val (x,y) = dest_eq tm
     in [(ww, y),
         (car x, mk_comb(mk_comb(mk_comb(tt,cdr x),ww),car x))] end
   val ts2 = append_lists (map cuscus tms)
   val ll = pairSyntax.list_mk_pair[mk_var("r3",``:word32``),
-                                   mk_var("r8",``:word32``),
+                                   mk_var("r6",``:word32``),
                                    mk_var("dg",``:word32 set``),
                                    mk_var("g",``:word32->word8``)]
   fun take_drop n [] = ([],[])
@@ -2398,7 +2396,7 @@ val symbol_table_tm = let
   val gh = map (fn tm => (ll, cdr (car tm))) defs
   val ls = (defs @ [mk_func gh])
   val ll2 = pairSyntax.list_mk_pair[mk_var("r3",``:word32``),
-                                 mk_var("r8",``:word32``),
+                                 mk_var("r6",``:word32``),
                                  mk_var("dm",``:word32 set``),
                                  mk_var("m",``:word32->word32``)]
   val tts = split ts2
@@ -2413,7 +2411,7 @@ val symbol_table_tm = let
   val gh = map (fn tm => (ll2, cdr (car tm))) defs
   val ls2 = (defs @ [mk_func2 gh])
   val ll3 = pairSyntax.list_mk_pair[mk_var("r3",``:word32``),
-                                   mk_var("r8",``:word32``),
+                                   mk_var("r6",``:word32``),
                                    mk_var("dm",``:word32 set``),
                                    mk_var("dg",``:word32 set``),
                                    mk_var("m",``:word32->word32``),
@@ -2433,9 +2431,9 @@ val (_,arm_setup_def,arm_setup_pre_def) = compilerLib.compile_all symbol_table_t
 val arm_setup_lemma = prove(
   ``!r3 dg dm g m.
       symbol_table_dom builtin_symbols (r3,dm,dg) ==>
-      arm_setup_pre (r3,r8,dm,dg,m,g) /\
-      ?gi mi r8i. 
-        (arm_setup (r3,r8,dm,dg,m,g) = (r3,r8i,dm,dg,mi,gi)) /\
+      arm_setup_pre (r3,r6,dm,dg,m,g) /\
+      ?gi mi r6i. 
+        (arm_setup (r3,r6,dm,dg,m,g) = (r3,r6i,dm,dg,mi,gi)) /\
         symbol_table builtin_symbols (builtin_symbols_set r3) (r3,dm,mi,dg,gi)``,
   SIMP_TAC std_ss [arm_setup_def,LET_DEF]
   THEN CONV_TAC (EVAL_ANY_MATCH_CONV [``w2w (n2w n)``])
@@ -2457,40 +2455,36 @@ val arm_setup_lemma = prove(
 
 val (arm_string2sexp_thms,arm_string2sexp_def,arm_string2sexp_pre_def) = compile_all ``
   arm_string2sexp' (r3,r4,r5,df,dg,dh,dm,f,g,h,m) =
-    let r10 = r5 in
+    let r9 = r5 in
     let r8 = r4 << 3 in
     let r7 = r8 + r8 in
-    let h = (r10 - 0x20w =+ r8) h in     
+    let h = (r9 - 0x20w =+ r8) h in     
     let r5 = r3 in
-    let r3 = r10 + r7 in
-    let r10 = r10 + 8w in
-    let r6 = 40w in
+    let r3 = r9 + r7 in
+    let r9 = r9 + 8w in
     let r3 = r3 + 24w in     
-    let (r3,r8,dm,dg,m,g) = arm_setup (r3,r8,dm,dg,m,g) in
-    let h = (r10 - 8w =+ r6) h in
-    let (r10,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) =
-      arm_parse8 (r10,r3,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) in      
-    let r10 = r4 in
+    let r6 = 40w in
+    let (r3,r6,dm,dg,m,g) = arm_setup (r3,r6,dm,dg,m,g) in
+    let r6 = 40w in
+    let h = (r9 - 8w =+ r6) h in
+    let (r9,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) =
+      arm_parse8 (r9,r3,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m) in      
+    let r9 = r4 in
     let r8 = 1w in
-    let r6 = h (r10 - 0x20w) in
-    let h = (r10 - 0x1Cw =+ r8) h in     
-    let r8 = r10 + r6 in
+    let r6 = h (r9 - 0x20w) in
+    let h = (r9 - 0x1Cw =+ r8) h in     
+    let r8 = r9 + r6 in
     let r8 = r8 + 8w in
-    let h = (r10 + 4w =+ r8) h in     
+    let h = (r9 + 4w =+ r8) h in     
     let r5 = r5 + 8w in
     let r3 = r7 in    
-    let h = (r10 =+ r5) h in     
+    let h = (r9 =+ r5) h in     
     let r4 = 3w:word32 in
     let r5 = 3w:word32 in
     let r6 = 3w:word32 in
     let r7 = 3w:word32 in
     let r8 = 3w:word32 in
-      (r3,r4,r5,r6,r7,r8,r10,df,dg,dh,dm,f,g,h,m)``;
-
-fun save_all prefix postfix = 
-  map (fn (n,th) => save_thm(prefix ^ n ^ postfix,th));
-
-val _ = save_all "arm_string2sexp_" "_thm" arm_string2sexp_thms;
+      (r3,r4,r5,r6,r7,r8,r9,df,dg,dh,dm,f,g,h,m)``;
 
 val symbol_table_dom_APPEND = prove(
   ``!xs ys a dm dg. 
@@ -2793,10 +2787,10 @@ val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
     (token_slots (r5 - 32w) (l + l + 7)) (fun2set (h,dh)) /\
     symbol_table_dom (all_symbols (sexp2tokens s T) builtin_symbols) 
                      (r5 + n2w (l * 16) + 0x18w,dm,dg) ==>
-    ?r3i fi gi hi mi.
+    ?r3i gi hi mi.
       arm_string2sexp'_pre (r3,n2w l,r5,df,dg,dh,dm,f,g,h,m) /\
       (arm_string2sexp' (r3,n2w l,r5,df,dg,dh,dm,f,g,h,m) =
-        (r3i,3w,3w,3w,3w,3w,r5,df,dg,dh,dm,fi,gi,hi,mi)) /\ 
+        (r3i,3w,3w,3w,3w,3w,r5,df,dg,dh,dm,f,gi,hi,mi)) /\ 
       ?sym. lisp_inv (s,Sym "nil",Sym "nil",Sym "nil",Sym "nil",Sym "nil",l)
               (r3i,3w,3w,3w,3w,3w,r5,dh,hi,sym,dm,mi,dg,gi)``,
   REWRITE_TAC [GSYM AND_IMP_INTRO]
@@ -2808,7 +2802,7 @@ val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
   \\ `symbol_table_dom builtin_symbols (r5 + n2w (l * 16) + 0x18w,dm,dg)` by 
    (MATCH_MP_TAC symbol_table_dom_APPEND \\ METIS_TAC [all_symbols_exists])
   \\ (STRIP_ASSUME_TAC o UNDISCH o SPEC_ALL o
-       Q.SPECL [`n2w (l * 8)`,`r5 + n2w (l * 16) + 0x18w`] o GEN_ALL) arm_setup_lemma
+       Q.SPECL [`40w`,`r5 + n2w (l * 16) + 0x18w`] o GEN_ALL) arm_setup_lemma
   \\ ASM_SIMP_TAC std_ss [WORD_ADD_SUB,ALIGNED_INTRO]
   \\ `n2w (l * 16) + r5 + 0x18w = r5 + n2w (l * 16) + 0x18w` by 
        SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM]    
@@ -2858,7 +2852,7 @@ val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
                SEP_EXISTS w. one (r5 - 28w,w)`] o
    MATCH_INST arm_parse6_lemma)
      ``arm_parse8
-        (r5 + 0x8w,r5 + n2w (l * 16) + 0x18w,r3,0x28w,n2w (l * 16),r8i,
+        (r5 + 0x8w,r5 + n2w (l * 16) + 0x18w,r3,0x28w,n2w (l * 16),n2w (l * 8),
          df,dg,dh,dm,f,gi,h2,mi)`` 
   \\ ASM_SIMP_TAC std_ss [CONJ_ASSOC] \\ STRIP_TAC THEN1
    (ALIGNED_TAC
@@ -3114,5 +3108,110 @@ val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
     \\ `8 + (4 + 8 * (j - 1)) = 8 * j + 4`by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss [word_add_n2w,word_mul_n2w] 
     \\ DECIDE_TAC]);
+
+
+(* formulating the final theorem *)
+
+open lisp_opsTheory;
+
+val aSTRING_def = Define `
+  aSTRING a str = SEP_EXISTS df f. aBYTE_MEMORY df f *
+                    cond (string_mem (STRCAT str null_string) (a,f,df))`;
+
+val pSTRING_def = Define `
+  pSTRING a str = SEP_EXISTS df f. pBYTE_MEMORY df f *
+                    cond (string_mem (STRCAT str null_string) (a,f,df))`;
+
+val xSTRING_def = Define `
+  xSTRING a str = SEP_EXISTS df f. xBYTE_MEMORY df f *
+                    cond (string_mem (STRCAT str null_string) (a,f,df))`;
+
+fun AUTO_EXISTS_TAC (asm,tm) = let
+    fun ex tm = let
+      val (v,tm) = dest_exists tm
+      in v :: ex tm end handle e => []
+    val xs = ex tm
+    val x = hd (list_dest dest_conj (repeat (snd o dest_exists) tm))
+    val assum = [``lisp_inv (Dot x1 x2,x2,x3,x4,x5,x6,limit)
+      (w1,w2,w3,w4,w5,w6,a',x',xs',s,dm,m,dg,g)``,
+     ``lisp_inv (x1,x2,x3,x4,x5,x6,limit)
+      (r3,r4,r5,r6,r7,r8,a,df,f,s,dm,m,dg,g)``]
+     val tm2 = hd (filter (can (match_term x)) asm) 
+     val (s,_) = match_term x tm2
+     val ys = map (subst s) xs
+     fun exx [] = ALL_TAC | exx (x::xs) = EXISTS_TAC x THEN exx xs 
+     in exx ys (asm,tm) end
+
+fun store_string2sexp_thm target extra post = let
+  fun get_thm s [] = hd []
+    | get_thm s ((t,th)::xs) = if s = t then th else get_thm s xs
+  val th = get_thm target arm_string2sexp_thms
+  val p = find_term (can (match_term ``aPC p``)) (cdr (concl th)) handle e =>
+          find_term (can (match_term ``pPC p``)) (cdr (concl th)) handle e =>
+          find_term (can (match_term ``xPC p``)) (cdr (concl th))
+  val p = cdr p
+  val post = subst [mk_var("p",``:word32``) |-> p] post
+  val imp = arm_string2sexp_lemma
+  val tm = (cdr o car o concl) imp  
+  val s = INST (map (fn (x,y) => mk_var(y,``:word32``) |-> mk_var("r"^x,``:word32``)) 
+            [("3","eax"),("4","ecx"),("5","edx"),("6","ebx"),
+             ("7","edi"),("8","esi"),("9","ebp")])
+  val s = Q.INST [`r4`|->`n2w l`] o s
+  val s = MATCH_MP progTheory.SPEC_FRAME o s
+  val s = SPEC tm o Q.GEN `c` o Q.SPEC `cond c` o s
+  val s = MATCH_MP progTheory.SPEC_FRAME o s
+  val s = Q.SPEC extra o s
+  val s = MATCH_MP progTheory.SPEC_WEAKEN o s
+  val th = s th
+  val th = SPEC post th
+  val tm = (cdr o car o concl) th
+  val tac = 
+    SIMP_TAC std_ss [SEP_IMP_MOVE_COND]
+    THEN REPEAT STRIP_TAC
+    THEN (STRIP_ASSUME_TAC o UNDISCH_ALL o 
+          REWRITE_RULE [GSYM AND_IMP_INTRO] o 
+          SIMP_RULE std_ss []) imp
+    THEN ASM_SIMP_TAC std_ss [LET_DEF,aSTRING_def,pSTRING_def,xSTRING_def,SEP_CLAUSES]
+    THEN REWRITE_TAC [aLISP_def,pLISP_def,xLISP_def]
+    THEN SIMP_TAC std_ss [SEP_CLAUSES,SEP_IMP_def,STAR_ASSOC]
+    THEN SIMP_TAC (std_ss++sep_cond_ss) []
+    THEN SIMP_TAC (std_ss) [cond_STAR,SEP_EXISTS]
+    THEN REPEAT STRIP_TAC
+    THEN Q.EXISTS_TAC `df`
+    THEN Q.EXISTS_TAC `f`
+    THEN AUTO_EXISTS_TAC
+    THEN FULL_SIMP_TAC std_ss [AC STAR_COMM STAR_ASSOC]
+  val thi = prove(tm,tac)
+  val th = MP th thi
+  val th = DISCH_ALL th
+  val th = SIMP_RULE (std_ss++sep_cond_ss) [progTheory.SPEC_MOVE_COND,AND_IMP_INTRO,SEP_CLAUSES] th
+  val tm = (cdr o car o concl) th
+  val tm2 = (cdr o car o concl) imp
+  val tm3 = mk_imp(tm2,tm)
+  val tac = 
+    SIMP_TAC std_ss []
+    THEN REPEAT STRIP_TAC
+    THEN (STRIP_ASSUME_TAC o UNDISCH_ALL o 
+          REWRITE_RULE [GSYM AND_IMP_INTRO] o 
+          SIMP_RULE std_ss []) imp
+    THEN ASM_SIMP_TAC std_ss []
+  val thi = prove(tm3,tac)
+  val th = DISCH_ALL (MP th (UNDISCH thi))
+  val th = REWRITE_RULE [GSYM progTheory.SPEC_MOVE_COND] th
+  val _ = save_thm("arm_string2sexp_" ^ target ^ "_thm",th)
+  in th end; 
+
+val th = store_string2sexp_thm "arm" `emp`
+  ``aLISP (s,Sym "nil",Sym "nil",Sym "nil",Sym "nil",Sym "nil",l) * 
+    ~aR 0x0w * aSTRING r3 (sexp2string s) * aPC p * ~aS``
+
+val th = store_string2sexp_thm "ppc" `~pR 0x2w`
+  ``pLISP (s,Sym "nil",Sym "nil",Sym "nil",Sym "nil",Sym "nil",l) * 
+    pSTRING r3 (sexp2string s) * pPC p * ~pS``
+
+val th = store_string2sexp_thm "x86" `emp`
+  ``xLISP (s,Sym "nil",Sym "nil",Sym "nil",Sym "nil",Sym "nil",l) * 
+    xSTRING r3 (sexp2string s) * xPC p * ~xS``
+
 
 val _ = export_theory();

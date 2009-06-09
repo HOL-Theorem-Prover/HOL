@@ -19,7 +19,7 @@ val ppc_match_step_def = Define `
   ppc_match_step name = 
     if name = "0" then DF else
     if name = "1" then DT else
-    if MEM name ["A";"B";"C";"D";"S";"BI";"crbA";"crbB";"crbD";"SH";"MB";"ME"] then 
+    if MEM name ["A";"B";"C";"D";"S";"BO";"BI";"crbA";"crbB";"crbD";"SH";"MB";"ME"] then 
       assign_drop name 5 
     else if MEM name ["BD"] then 
       assign_drop name 14
@@ -53,10 +53,8 @@ val ppc_syntax = ``
      (\v. Pandis_ (b2w v "A") (b2w v "S") (b2w v "UIMM")));
    ("0 1 0 0 1 0 LI 0 0",
      (\v. Pb (b2w v "LI")));
-   ("0 1 0 0 0 0  0 0 1 z y  BI BD 0 0",
-     (\v. Pbf (b2w v "BI") (b2w v "BD")));
-   ("0 1 0 0 0 0  0 1 1 z y  BI BD 0 0",
-     (\v. Pbt (b2w v "BI") (b2w v "BD")));
+   ("0 1 0 0 0 0 BO BI BD 0 0",
+     (\v. Pbc (b2w v "BO") (b2w v "BI") (b2w v "BD")));
    ("0 1 0 0 1 0 LI 0 1",
      (\v. Pbl (b2w v "LI")));
    ("0 1 0 0 1 1  1 z 1 z z  BI 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0",

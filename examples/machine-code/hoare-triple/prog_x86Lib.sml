@@ -19,7 +19,7 @@ fun process v tm = let
     "m_" ^ (implode o filter is_normal_char o map replace_plus o explode o term_to_string) tm;
   val to_lower_drop_two = implode o tl o tl o explode o to_lower
   in if type_of tm = ``:Xreg`` then 
-       (mk_comb(``xR1``,tm),mk_var((to_lower o fst o dest_const) tm,``:word32``))
+       (mk_comb(``xR``,tm),mk_var((to_lower o fst o dest_const) tm,``:word32``))
      else if type_of tm = ``:Xeflags`` then 
        (mk_comb(``xS1``,tm),mk_var((to_lower_drop_two o fst o dest_const) tm,``:bool option``))
      else if type_of tm = ``:word32`` then
@@ -163,14 +163,16 @@ fun calc_code s = let
         if n = 0 then (implode zs) :: space 2 (x::xs) [] else space (n-1) xs (zs @ [x])
   fun get_rewrite c = GSYM (EVAL (subst [``c:string``|->fromMLstring c] ``hex2bits c``))
   val strs = space 2 (explode s) []
-  val c = listSyntax.mk_list (map fromMLstring strs,``:string``)
-  in (c, map get_rewrite strs) end;  
+  val tm = ``(b2w I (hex2bits s)):word8``  
+  val zs = map (fn x => subst [``s:string``|-> fromMLstring x] tm) strs
+  val rws = map EVAL zs
+  val c = listSyntax.mk_list (map (cdr o concl) rws, ``:word8``)
+  in (c, map get_rewrite strs @ rws) end;  
 
 fun x86_prove_one_spec th c = let
   val g = concl th
   val s = find_term (can (match_term ``X86_NEXT x = SOME y``)) g
   val s = (snd o dest_comb o snd o dest_comb) s    
-
   val (pre,post) = x86_pre_post g s
   val tm = ``SPEC X86_MODEL pre {(eip,c)} post``
   val tm = subst [mk_var("pre",type_of pre) |-> pre, 

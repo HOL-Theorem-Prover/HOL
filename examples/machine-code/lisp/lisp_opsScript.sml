@@ -17,21 +17,21 @@ val RW1 = ONCE_REWRITE_RULE;
 val aLISP_def = Define `
   aLISP (x1,x2,x3,x4,x5,x6,limit) = 
     SEP_EXISTS a r3 r4 r5 r6 r7 r8 df f dm m dg g s.
-     aR 3w r3 * aR 4w r4 * aR 5w r5 * aR 6w r6 * aR 7w r7 * aR 8w r8 * aR 10w a * 
+     ~(aR 2w) * aR 3w r3 * aR 4w r4 * aR 5w r5 * aR 6w r6 * aR 7w r7 * aR 8w r8 * aR 9w a * 
      aMEMORY df f * aMEMORY dm m * aBYTE_MEMORY dg g *
        cond (lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,dm,m,dg,g))`;
 
 val pLISP_def = Define `
   pLISP (x1,x2,x3,x4,x5,x6,limit) = 
     SEP_EXISTS a r3 r4 r5 r6 r7 r8 df f dm m dg g s.
-     ~(pR 0w) * ~(pR 2w) * pR 3w r3 * pR 4w r4 * pR 5w r5 * pR 6w r6 * pR 7w r7 * pR 8w r8 * pR 10w a * 
+     ~(pR 0w) * ~(pR 2w) * pR 3w r3 * pR 4w r4 * pR 5w r5 * pR 6w r6 * pR 7w r7 * pR 8w r8 * pR 9w a * 
      pMEMORY df f * pMEMORY dm m * pBYTE_MEMORY dg g *
        cond (lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,dm,m,dg,g))`;
 
 val xLISP_def = Define `
   xLISP (x1,x2,x3,x4,x5,x6,limit) = 
     SEP_EXISTS a r3 r4 r5 r6 r7 r8 df f dm m dg g s.
-     xR1 EAX r3 * xR1 ECX r4 * xR1 EDX r5 * xR1 EBX r6 * xR1 EDI r7 * xR1 ESI r8 * xR1 EBP a * 
+     xR EAX r3 * xR ECX r4 * xR EDX r5 * xR EBX r6 * xR EDI r7 * xR ESI r8 * xR EBP a * 
      xMEMORY df f * xMEMORY dm m * xBYTE_MEMORY dg g *
        cond (lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,dm,m,dg,g))`;
 
@@ -134,6 +134,11 @@ fun prove_spec th imp def pre_tm post_tm = let
   val th = RW [SEP_CLAUSES] th
   in th end;
 
+fun set_pc th = let
+  val (_,_,_,q) = (dest_spec o concl o UNDISCH_ALL) th
+  val tm = find_term (fn x => mem (car x) [``xPC``,``aPC``,``pPC``] handle e => false) q
+  in subst [``p:word32``|->cdr tm] end
+
 
 (* cons *)
 
@@ -142,7 +147,7 @@ val ARM_LISP_CONS = save_thm("ARM_LISP_CONS",let
   val imp = lisp_inv_cons
   val def = aLISP_def
   val pre_tm = ``aLISP (x1,x2,x3,x4,x5,x6,limit) * aPC p * ~aS``
-  val post_tm = ``aLISP (Dot x1 x2,x2,x3,x4,x5,x6,limit) * aPC (p + 0x144w) * ~aS``
+  val post_tm = set_pc th ``aLISP (Dot x1 x2,x2,x3,x4,x5,x6,limit) * aPC p * ~aS``
   val res = prove_spec th imp def pre_tm post_tm
   val (_,_,c,_) = dest_spec (concl res)
   val def = new_definition("arm_alloc_code",mk_eq(``(arm_alloc_code:word32->(word32 # word32) set) p``,c))
@@ -154,7 +159,7 @@ val PPC_LISP_CONS = save_thm("PPC_LISP_CONS",let
   val imp = lisp_inv_cons
   val def = pLISP_def
   val pre_tm = ``pLISP (x1,x2,x3,x4,x5,x6,limit) * pPC p * ~pS``
-  val post_tm = ``pLISP (Dot x1 x2,x2,x3,x4,x5,x6,limit) * pPC (p + 0x190w) * ~pS``
+  val post_tm = set_pc th ``pLISP (Dot x1 x2,x2,x3,x4,x5,x6,limit) * pPC p * ~pS``
   val res = prove_spec th imp def pre_tm post_tm
   val (_,_,c,_) = dest_spec (concl res)
   val def = new_definition("ppc_alloc_code",mk_eq(``(ppc_alloc_code:word32->(word32 # word32) set) p``,c))
@@ -166,10 +171,10 @@ val X86_LISP_CONS = save_thm("X86_LISP_CONS",let
   val imp = lisp_inv_cons
   val def = xLISP_def
   val pre_tm = ``xLISP (x1,x2,x3,x4,x5,x6,limit) * xPC p * ~xS``
-  val post_tm = ``xLISP (Dot x1 x2,x2,x3,x4,x5,x6,limit) * xPC (p + 0x128w) * ~xS``
+  val post_tm = set_pc th ``xLISP (Dot x1 x2,x2,x3,x4,x5,x6,limit) * xPC p * ~xS``
   val res = prove_spec th imp def pre_tm post_tm
   val (_,_,c,_) = dest_spec (concl res)
-  val def = new_definition("x86_alloc_code",mk_eq(``(x86_alloc_code:word32->(word32 # string list) set) p``,c))
+  val def = new_definition("x86_alloc_code",mk_eq(``(x86_alloc_code:word32->(word32 # word8 list) set) p``,c))
   val res = RW [GSYM def] res
   in res end);
 
@@ -181,7 +186,7 @@ val ARM_LISP_EQUAL = save_thm("ARM_LISP_EQUAL",let
   val imp = lisp_inv_equal
   val def = aLISP_def
   val pre_tm = ``aLISP (x1,x2,x3,x4,x5,x6,limit) * aPC p * ~aS``
-  val post_tm = ``aLISP (LISP_EQUAL x1 x2,x2,x3,x4,x5,x6,limit) * aPC (p + 0xA4w) * ~aS``
+  val post_tm = set_pc th ``aLISP (LISP_EQUAL x1 x2,x2,x3,x4,x5,x6,limit) * aPC p * ~aS``
   val res = prove_spec th imp def pre_tm post_tm
   val (_,_,c,_) = dest_spec (concl res)
   val def = new_definition("arm_equal_code",mk_eq(``(arm_equal_code:word32->(word32 # word32) set) p``,c))
@@ -189,11 +194,11 @@ val ARM_LISP_EQUAL = save_thm("ARM_LISP_EQUAL",let
   in res end);
 
 val PPC_LISP_EQUAL = save_thm("PPC_LISP_EQUAL",let  
-  val th = RW [ppc_eq_EQ] ppc_eq_thm  
+  val th = ppc_eq_thm  
   val imp = lisp_inv_equal
   val def = pLISP_def
   val pre_tm = ``pLISP (x1,x2,x3,x4,x5,x6,limit) * pPC p * ~pS``
-  val post_tm = ``pLISP (LISP_EQUAL x1 x2,x2,x3,x4,x5,x6,limit) * pPC (p + 0xB8w) * ~pS``
+  val post_tm = set_pc th ``pLISP (LISP_EQUAL x1 x2,x2,x3,x4,x5,x6,limit) * pPC p * ~pS``
   val res = prove_spec th imp def pre_tm post_tm
   val (_,_,c,_) = dest_spec (concl res)
   val def = new_definition("ppc_equal_code",mk_eq(``(ppc_equal_code:word32->(word32 # word32) set) p``,c))
@@ -201,14 +206,14 @@ val PPC_LISP_EQUAL = save_thm("PPC_LISP_EQUAL",let
   in res end);
 
 val X86_LISP_EQUAL = save_thm("X86_LISP_EQUAL",let  
-  val th = RW [x86_eq_EQ] x86_eq_thm  
+  val th = x86_eq_thm  
   val imp = lisp_inv_equal
   val def = xLISP_def
   val pre_tm = ``xLISP (x1,x2,x3,x4,x5,x6,limit) * xPC p * ~xS``
-  val post_tm = ``xLISP (LISP_EQUAL x1 x2,x2,x3,x4,x5,x6,limit) * xPC (p + 0x86w) * ~xS``
+  val post_tm = set_pc th ``xLISP (LISP_EQUAL x1 x2,x2,x3,x4,x5,x6,limit) * xPC p * ~xS``
   val res = prove_spec th imp def pre_tm post_tm
   val (_,_,c,_) = dest_spec (concl res)
-  val def = new_definition("x86_equal_code",mk_eq(``(x86_equal_code:word32->(word32 # string list) set) p``,c))
+  val def = new_definition("x86_equal_code",mk_eq(``(x86_equal_code:word32->(word32 # word8 list) set) p``,c))
   val res = RW [GSYM def] res
   in res end);
 
@@ -854,7 +859,6 @@ val PPC_LISP_SUB = let
   val result = prove_spec th imp def pre_tm post_tm
   in save_thm("PPC_LISP_SUB",result) end;  
 
-
 (* sub1 and add1 *)
 
 fun ARM_LISP_SUB1 i = let 
@@ -1051,6 +1055,128 @@ val PPC_LISP_LESS = let
     ~pS1 (PPC_CR0 0x1w) * ~pS1 (PPC_CR0 0x2w) * ~pS1 (PPC_CR0 0x3w)``
   val result = prove_spec th imp def pre_tm post_tm
   in save_thm("PPC_LISP_LESS",result) end;
+
+
+(* mult, div and mod *)
+
+open divideTheory;
+
+val ARM_LISP_MULT = let 
+  val th = SIMP_RULE std_ss [lisp_word_mul_def,LET_DEF,SEP_CLAUSES] lisp_word_mul_arm_thm
+  val th = RW [Q.SPEC `f y` SEP_HIDE_def] th
+  val th = SIMP_RULE std_ss [SEP_CLAUSES,GSYM SPEC_PRE_EXISTS] th
+  val th = SPEC (mk_var("r5",``:word32``)) th
+  val imp = lisp_inv_MULT
+  val imp = RW1 [GSYM AND_IMP_INTRO] (RW1 [CONJ_COMM] (RW [AND_IMP_INTRO] imp))
+  val def = aLISP_def
+  val pre_tm = ``aLISP (x1,x2,x3,x4,x5,x6,limit) * aPC p``
+  val post_tm = set_pc th ``aLISP (LISP_MULT x1 x2,Sym "nil",Sym "nil",x4,x5,x6,limit) * aPC p``
+  val result = prove_spec th imp def pre_tm post_tm
+  in save_thm("ARM_LISP_MULT",result) end;  
+
+val PPC_LISP_MULT = let 
+  val th = SIMP_RULE std_ss [lisp_word_mul_def,LET_DEF,SEP_CLAUSES] lisp_word_mul_ppc_thm
+  val th = CONV_RULE (RATOR_CONV (REWRITE_CONV [Q.ISPEC `pR 5w` SEP_HIDE_def])) th
+  val th = SIMP_RULE std_ss [SEP_CLAUSES,GSYM SPEC_PRE_EXISTS] th
+  val th = SPEC (mk_var("r5",``:word32``)) th
+  val imp = lisp_inv_MULT
+  val imp = RW1 [GSYM AND_IMP_INTRO] (RW1 [CONJ_COMM] (RW [AND_IMP_INTRO] imp))
+  val def = pLISP_def
+  val pre_tm = ``pLISP (x1,x2,x3,x4,x5,x6,limit) * pPC p * ~pS``
+  val post_tm = set_pc th ``pLISP (LISP_MULT x1 x2,Sym "nil",Sym "nil",x4,x5,x6,limit) * pPC p * ~pS``
+  val result = prove_spec th imp def pre_tm post_tm
+  in save_thm("PPC_LISP_MULT",result) end;  
+
+val X86_LISP_MULT = let 
+  val th = SIMP_RULE std_ss [lisp_word_mul_def,LET_DEF,SEP_CLAUSES] lisp_word_mul_x86_thm
+  val th = RW [Q.SPEC `f y` SEP_HIDE_def] th
+  val th = SIMP_RULE std_ss [SEP_CLAUSES,GSYM SPEC_PRE_EXISTS] th
+  val th = Q.SPEC `edx` th
+  val imp = lisp_inv_MULT
+  val imp = RW1 [GSYM AND_IMP_INTRO] (RW1 [CONJ_COMM] (RW [AND_IMP_INTRO] imp))
+  val def = xLISP_def
+  val pre_tm = ``xLISP (x1,x2,x3,x4,x5,x6,limit) * xPC p * ~xS``
+  val post_tm = set_pc th ``xLISP (LISP_MULT x1 x2,Sym "nil",Sym "nil",x4,x5,x6,limit) * xPC p * ~xS``
+  val result = prove_spec th imp def pre_tm post_tm
+  in save_thm("X86_LISP_MULT",result) end;  
+
+val ARM_LISP_DIV = let 
+  val th = SIMP_RULE std_ss [lisp_word_div_def,LET_DEF,SEP_CLAUSES] lisp_word_div_arm_thm
+  val th = CONV_RULE (RATOR_CONV (REWRITE_CONV [Q.ISPEC `aR 5w` SEP_HIDE_def])) th
+  val th = SIMP_RULE std_ss [SEP_CLAUSES,GSYM SPEC_PRE_EXISTS] th
+  val th = SPEC (mk_var("r5",``:word32``)) th
+  val imp = lisp_inv_DIV
+  val imp = RW1 [GSYM AND_IMP_INTRO] (RW1 [CONJ_COMM] (RW [AND_IMP_INTRO] imp))
+  val def = aLISP_def
+  val pre_tm = ``aLISP (x1,x2,x3,x4,x5,x6,limit) * aPC p * ~aS``
+  val post_tm = set_pc th ``aLISP (LISP_DIV x1 x2,Sym "nil",Sym "nil",x4,x5,x6,limit) * aPC p * ~aS``
+  val result = prove_spec th imp def pre_tm post_tm
+  in save_thm("ARM_LISP_DIV",result) end;  
+
+val PPC_LISP_DIV = let 
+  val th = SIMP_RULE std_ss [lisp_word_div_def,LET_DEF,SEP_CLAUSES] lisp_word_div_ppc_thm
+  val th = CONV_RULE (RATOR_CONV (REWRITE_CONV [Q.ISPEC `pR 5w` SEP_HIDE_def])) th
+  val th = SIMP_RULE std_ss [SEP_CLAUSES,GSYM SPEC_PRE_EXISTS] th
+  val th = SPEC (mk_var("r5",``:word32``)) th
+  val imp = lisp_inv_DIV
+  val imp = RW1 [GSYM AND_IMP_INTRO] (RW1 [CONJ_COMM] (RW [AND_IMP_INTRO] imp))
+  val def = pLISP_def
+  val pre_tm = ``pLISP (x1,x2,x3,x4,x5,x6,limit) * pPC p * ~pS``
+  val post_tm = set_pc th ``pLISP (LISP_DIV x1 x2,Sym "nil",Sym "nil",x4,x5,x6,limit) * pPC p * ~pS``
+  val result = prove_spec th imp def pre_tm post_tm
+  in save_thm("PPC_LISP_DIV",result) end;  
+
+val X86_LISP_DIV = let 
+  val th = SIMP_RULE std_ss [lisp_word_div_def,LET_DEF,SEP_CLAUSES] lisp_word_div_x86_thm
+  val th = RW [Q.SPEC `f y` SEP_HIDE_def] th
+  val th = SIMP_RULE std_ss [SEP_CLAUSES,GSYM SPEC_PRE_EXISTS] th
+  val th = Q.SPEC `edx` th
+  val imp = lisp_inv_DIV
+  val imp = RW1 [GSYM AND_IMP_INTRO] (RW1 [CONJ_COMM] (RW [AND_IMP_INTRO] imp))
+  val def = xLISP_def
+  val pre_tm = ``xLISP (x1,x2,x3,x4,x5,x6,limit) * xPC p * ~xS``
+  val post_tm = set_pc th ``xLISP (LISP_DIV x1 x2,Sym "nil",Sym "nil",x4,x5,x6,limit) * xPC p * ~xS``
+  val result = prove_spec th imp def pre_tm post_tm
+  in save_thm("X86_LISP_DIV",result) end;  
+
+val ARM_LISP_MOD = let 
+  val th = SIMP_RULE std_ss [lisp_word_mod_def,LET_DEF,SEP_CLAUSES] lisp_word_mod_arm_thm
+  val th = CONV_RULE (RATOR_CONV (REWRITE_CONV [Q.ISPEC `aR 5w` SEP_HIDE_def])) th
+  val th = SIMP_RULE std_ss [SEP_CLAUSES,GSYM SPEC_PRE_EXISTS] th
+  val th = SPEC (mk_var("r5",``:word32``)) th
+  val imp = lisp_inv_MOD
+  val imp = RW1 [GSYM AND_IMP_INTRO] (RW1 [CONJ_COMM] (RW [AND_IMP_INTRO] imp))
+  val def = aLISP_def
+  val pre_tm = ``aLISP (x1,x2,x3,x4,x5,x6,limit) * aPC p * ~aS``
+  val post_tm = set_pc th ``aLISP (LISP_MOD x1 x2,Sym "nil",Sym "nil",x4,x5,x6,limit) * aPC p * ~aS``
+  val result = prove_spec th imp def pre_tm post_tm
+  in save_thm("ARM_LISP_MOD",result) end;  
+
+val PPC_LISP_MOD = let 
+  val th = SIMP_RULE std_ss [lisp_word_mod_def,LET_DEF,SEP_CLAUSES] lisp_word_mod_ppc_thm
+  val th = CONV_RULE (RATOR_CONV (REWRITE_CONV [Q.ISPEC `pR 5w` SEP_HIDE_def])) th
+  val th = SIMP_RULE std_ss [SEP_CLAUSES,GSYM SPEC_PRE_EXISTS] th
+  val th = SPEC (mk_var("r5",``:word32``)) th
+  val imp = lisp_inv_MOD
+  val imp = RW1 [GSYM AND_IMP_INTRO] (RW1 [CONJ_COMM] (RW [AND_IMP_INTRO] imp))
+  val def = pLISP_def
+  val pre_tm = ``pLISP (x1,x2,x3,x4,x5,x6,limit) * pPC p * ~pS``
+  val post_tm = set_pc th ``pLISP (LISP_MOD x1 x2,Sym "nil",Sym "nil",x4,x5,x6,limit) * pPC p * ~pS``
+  val result = prove_spec th imp def pre_tm post_tm
+  in save_thm("PPC_LISP_MOD",result) end;  
+
+val X86_LISP_MOD = let 
+  val th = SIMP_RULE std_ss [lisp_word_mod_def,LET_DEF,SEP_CLAUSES] lisp_word_mod_x86_thm
+  val th = RW [Q.SPEC `f y` SEP_HIDE_def] th
+  val th = SIMP_RULE std_ss [SEP_CLAUSES,GSYM SPEC_PRE_EXISTS] th
+  val th = Q.SPEC `edx` th
+  val imp = lisp_inv_MOD
+  val imp = RW1 [GSYM AND_IMP_INTRO] (RW1 [CONJ_COMM] (RW [AND_IMP_INTRO] imp))
+  val def = xLISP_def
+  val pre_tm = ``xLISP (x1,x2,x3,x4,x5,x6,limit) * xPC p * ~xS``
+  val post_tm = set_pc th ``xLISP (LISP_MOD x1 x2,Sym "nil",Sym "nil",x4,x5,x6,limit) * xPC p * ~xS``
+  val result = prove_spec th imp def pre_tm post_tm
+  in save_thm("X86_LISP_MOD",result) end;  
 
 
 (* test eq *)

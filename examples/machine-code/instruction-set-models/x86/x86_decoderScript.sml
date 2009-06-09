@@ -317,7 +317,7 @@ val x86_syntax_list = `` [
     " F7 /4     | MUL r/m32         ";
 
     " 88 /r     | MOV_BYTE r/m32,r32 "; (* this is a hack: MOV_BYTE does not exist *)
-    " 8A /r     | MOV_BYTE r32,r/m32 "; (* this is a hack: MOV_BYTE does not exist *)
+    " 0F B6 /r  | MOV_BYTE r32,r/m32 "; (* this is a hack: MOV_BYTE does not exist, encodes MOVZX *)
     " 38 /r     | CMP_BYTE r/m32,r32 "; (* this is a hack: CMP_BYTE does not exist *)
     " 3A /r     | CMP_BYTE r32,r/m32 "  (* this is a hack: CMP_BYTE does not exist *)
 

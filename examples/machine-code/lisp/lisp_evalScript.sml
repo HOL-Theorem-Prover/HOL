@@ -24,7 +24,8 @@ val _ = let
 val _ = let
   val thms = DB.match [] ``SPEC X86_MODEL``
   val thms = filter (can (find_term (can (match_term ``xLISP``))) o concl) (map (fst o snd) thms)
-  val renamer = Q.INST [`x1`|->`exp`,`x2`|->`x`,`x3`|->`y`,`x4`|->`z`,`x5`|->`stack`,`x6`|->`alist`] o INST [``limit:num``|->``l:num``,mk_var("eip",``:word32``) |-> mk_var("p",``:word32``)]
+  val renamer = Q.INST [`x1`|->`exp`,`x2`|->`x`,`x3`|->`y`,`x4`|->`z`,`x5`|->`stack`,`x6`|->`alist`] o 
+                INST [``limit:num``|->``l:num``,mk_var("eip",``:word32``) |-> mk_var("p",``:word32``)]
   val thms = map renamer thms
   val _ = add_code_abbrev [x86_alloc_code,x86_equal_code]
   val _ = add_compiled thms
@@ -35,6 +36,7 @@ val _ = let
 *)
 
 val STATE = ``(exp:SExp,x:SExp,y:SExp,z:SExp,stack:SExp,alist:SExp,l:num)``
+
 
 val (thms,_,_) = compile_all ``
  (lookup_aux ^STATE = 
@@ -107,6 +109,24 @@ val (thms,_,_) = compile_all ``
     then let exp = Sym "nil" in ^STATE
     else let exp = Sym "t" in ^STATE)
   /\
+ (lisp_add ^STATE = 
+    if isDot y then
+      let x = CAR y in
+      let y = CDR y in
+      let exp = LISP_ADD exp x in
+        lisp_add ^STATE
+    else
+      ^STATE)
+  /\
+ (lisp_mult ^STATE = 
+    if isDot z then
+      let x = CAR z in
+      let z = CDR z in
+      let (exp,x,y) = (LISP_MULT exp x,Sym "nil",Sym "nil") in
+        lisp_mult ^STATE
+    else
+      ^STATE)
+  /\
  (lisp_func ^STATE = 
     if isDot x then
       let y = CDR x in
@@ -166,17 +186,34 @@ val (thms,_,_) = compile_all ``
           let x = CAR x in   
           let exp = Dot exp x in
             ^STATE
-        else if x = Sym "+" then 
-          let x = CDR exp in   
-          let exp = CAR exp in   
-          let x = CAR x in   
-          let exp = LISP_ADD exp x in
+        else if x = Sym "+" then
+          let y = exp in 
+          let exp = Val 0 in
+          let (exp,x,y,z,stack,alist,l) = lisp_add ^STATE in
             ^STATE
         else if (x = Sym "-") then 
           let x = CDR exp in   
           let exp = CAR exp in   
           let x = CAR x in   
           let exp = LISP_SUB exp x in
+            ^STATE
+        else if (x = Sym "*") then 
+          let z = exp in
+          let exp = Val 1 in
+          let (exp,x,y,z,stack,alist,l) = lisp_mult ^STATE in
+          let z = TASK_CONT in
+            ^STATE
+        else if (x = Sym "div") then 
+          let x = CDR exp in   
+          let exp = CAR exp in   
+          let x = CAR x in   
+          let (exp,x,y) = (LISP_DIV exp x,Sym "nil",Sym "nil") in
+            ^STATE
+        else if (x = Sym "mod") then 
+          let x = CDR exp in   
+          let exp = CAR exp in   
+          let x = CAR x in   
+          let (exp,x,y) = (LISP_MOD exp x,Sym "nil",Sym "nil") in
             ^STATE
         else if (x = Sym "<") then 
           let x = CDR exp in   

@@ -145,7 +145,7 @@ val EMPTY_x86_2set = prove(``
 (* Defining the X86_MODEL                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val xR1_def = Define `xR1 a x = SEP_EQ {xReg a x}`;
+val xR_def = Define `xR a x = SEP_EQ {xReg a x}`;
 val xM1_def = Define `xM1 a x = SEP_EQ {xMem a x}`;
 val xS1_def = Define `xS1 a x = SEP_EQ {xStatus a x}`;
 val xPC_def = Define `xPC x = SEP_EQ {xEIP x}`;
@@ -159,7 +159,7 @@ val X86_NEXT_REL_def = Define `X86_NEXT_REL s s' = (X86_NEXT s = SOME s')`;
 
 val X86_INSTR_def    = Define `
   (X86_INSTR (a,[]) = {}) /\
-  (X86_INSTR (a,c::cs) = xMem a (SOME ((b2w I (hex2bits c)):word8)) INSERT X86_INSTR (a+1w,cs))`;
+  (X86_INSTR (a,(c:word8)::cs) = xMem a (SOME c) INSERT X86_INSTR (a+1w,cs))`;
 
 val X86_MODEL_def = Define `X86_MODEL = (x86_2set, X86_NEXT_REL, X86_INSTR)`;
 
@@ -187,7 +187,7 @@ val X86_SPEC_SEMANTICS = store_thm("X86_SPEC_SEMANTICS",
 (* ----------------------------------------------------------------------------- *)
 
 val STAR_x86_2set = store_thm("STAR_x86_2set",
-  ``((xR1 a x * p) (x86_2set' (rs,st,ei,ms) (r,e,s,m)) =
+  ``((xR a x * p) (x86_2set' (rs,st,ei,ms) (r,e,s,m)) =
       (x = r a) /\ a IN rs /\ p (x86_2set' (rs DELETE a,st,ei,ms) (r,e,s,m))) /\ 
     ((xS1 c z * p) (x86_2set' (rs,st,ei,ms) (r,e,s,m)) =
       (z = s c) /\ c IN st /\ p (x86_2set' (rs,st DELETE c,ei,ms) (r,e,s,m))) /\ 
@@ -197,7 +197,7 @@ val STAR_x86_2set = store_thm("STAR_x86_2set",
       (y = m b) /\ b IN ms /\ p (x86_2set' (rs,st,ei,ms DELETE b) (r,e,s,m))) /\ 
     ((cond g * p) (x86_2set' (rs,st,ei,ms) (r,e,s,m)) =
       g /\ p (x86_2set' (rs,st,ei,ms) (r,e,s,m)))``,
-  SIMP_TAC std_ss [xR1_def,xS1_def,xM1_def,EQ_STAR,INSERT_SUBSET,cond_STAR,xPC_def,XREAD_EIP_def,
+  SIMP_TAC std_ss [xR_def,xS1_def,xM1_def,EQ_STAR,INSERT_SUBSET,cond_STAR,xPC_def,XREAD_EIP_def,
     EMPTY_SUBSET,IN_x86_2set,XREAD_REG_def,XREAD_EFLAG_def,XREAD_MEM_def,GSYM DELETE_DEF]
   \\ METIS_TAC [DELETE_x86_2set]);
 
@@ -211,8 +211,7 @@ val address_list_def = Define `
 
 val x86_pool_def = Define `
   (x86_pool m p [] = T) /\
-  (x86_pool m p (c::cs) = (SOME ((b2w I (hex2bits c)):word8) = m p) /\ 
-                           x86_pool m (p+1w) cs)`;
+  (x86_pool m p (c::cs) = (SOME (c:word8) = m p) /\ x86_pool m (p+1w) cs)`;
 
 val LEMMA1 = prove(
   ``!p q cs y. xMem p y IN X86_INSTR (q,cs) ==> ?k. k < LENGTH cs /\ (p = q + n2w k)``,
@@ -249,7 +248,7 @@ val CODE_POOL_x86_2set_LEMMA = prove(
   THEN1 METIS_TAC []
   \\ REPEAT STRIP_TAC
   \\ `LENGTH cs < 5000` by DECIDE_TAC 
-  \\ Cases_on `xMem p (SOME (b2w I (hex2bits h))) IN X86_INSTR (p + 1w,cs)`
+  \\ Cases_on `xMem p (SOME h) IN X86_INSTR (p + 1w,cs)`
   THEN1 (IMP_RES_TAC LEMMA1
       \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [
            REWRITE_RULE [WORD_ADD_0] (Q.SPECL [`v`,`0w`] WORD_EQ_ADD_LCANCEL),
@@ -264,7 +263,7 @@ val CODE_POOL_x86_2set_LEMMA = prove(
       \\ `1 + k < 4294967296` by DECIDE_TAC    
       \\ FULL_SIMP_TAC std_ss [LESS_MOD])
   \\ ASM_SIMP_TAC bool_ss [CODE_POOL_x86_2set_AUX_LEMMA,GSYM CONJ_ASSOC,IN_x86_2set,XREAD_MEM_def]  
-  \\ Cases_on `SOME ((b2w I (hex2bits h)):word8) = m p` \\ ASM_REWRITE_TAC []
+  \\ Cases_on `SOME h = m p` \\ ASM_REWRITE_TAC []
   \\ REWRITE_TAC [DIFF_INSERT,DELETE_x86_2set]
   \\ Cases_on `p IN ms` \\ ASM_REWRITE_TAC [GSYM CONJ_ASSOC]
   \\ FULL_SIMP_TAC bool_ss []);
@@ -289,7 +288,8 @@ val UPDATE_x86_2set'' = store_thm("UPDATE_x86_2set''",
       (x86_2set'' (rs,st,ei,ms) (r,e,s,(a =+ x) m) = x86_2set'' (rs,st,ei,ms) (r,e,s,m)))``,
   SIMP_TAC std_ss [x86_2set_def,x86_2set''_def,x86_2set'_def,EXTENSION,IN_UNION,IN_INSERT,NOT_IN_EMPTY,
     IN_IMAGE,IN_DIFF,IN_UNIV,XREAD_REG_def,XREAD_MEM_def,XREAD_EFLAG_def,APPLY_UPDATE_THM,XREAD_EIP_def]
-  \\ REPEAT STRIP_TAC \\ METIS_TAC [x86_el_distinct,x86_el_11]);
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
+  \\ ASM_SIMP_TAC std_ss [] \\ SRW_TAC [] [] \\ METIS_TAC []);
 
 val X86_SPEC_CODE = RW [GSYM X86_MODEL_def] 
   (SIMP_RULE std_ss [X86_MODEL_def] (Q.ISPEC `X86_MODEL` SPEC_CODE));

@@ -232,7 +232,8 @@ fun ABBREV_CALL prefix th = let
   val (x,y) = hd x
   val ys = map (fn v => mk_var(prefix^(fst (dest_var v)),type_of v)) (dest_tuple x)
   val thi = ASSUME (mk_eq(pairSyntax.list_mk_pair ys, y))
-  val th = CONV_RULE (RAND_CONV (RAND_CONV (fn tm => GSYM thi))) (RW [LET_DEF] th)
+  val thj = RW1 [LET_DEF] (GSYM thi)
+  val th = CONV_RULE (RAND_CONV (RAND_CONV (fn tm => thj))) (RW [LET_DEF] th)
   val th = RW [FST,SND] (PairRules.PBETA_RULE (RW [LET_DEF] th))
   in ABBREV_PRECOND prefix th end handle e => ABBREV_PRECOND prefix th;
 
@@ -323,6 +324,7 @@ fun stage_1 tools qcode = let
   val thms = derive_individual_specs tools code
   in thms end;
 
+(* val (n,instruction) = (0, last code) *)
 
 (* ------------------------------------------------------------------------------ *)
 (* Implementation of STAGE 2                                                      *)
@@ -594,6 +596,34 @@ fun ABBREV_NEW th = let
 fun remove_tags tm = 
   subst (map (fn v => v |-> mk_var(strip_tag v,type_of v)) (free_vars tm)) tm
 
+val SORT_CODE_CONV = let
+  fun RAW_SORT_CONV tm = let
+    val ys = list_dest pred_setSyntax.dest_union tm
+    fun word_to_int tm =
+      if can (match_term ``(p:'a word) + n2w n``) tm then
+        (numSyntax.int_of_term o cdr o cdr) tm
+      else if can (match_term ``(p:'a word) - n2w n``) tm then
+        0 - (numSyntax.int_of_term o cdr o cdr) tm
+      else 0
+    fun measure tm = 
+      if can (match_term ``SING_SET ((p:'a word),x:'b)``) tm then
+        word_to_int ((fst o dest_pair o cdr) tm)
+      else let
+        val x = find_terms (fn x => type_of x = ``:word32``) (cdr tm)
+        in hd (filter (fn x => not (x = 0)) (map word_to_int x) @ [0]) end
+      handle e => 0
+    val xs = sort (fn x => fn y => measure x < measure y) ys
+    val ty = (hd o snd o dest_type o type_of o hd) xs
+    val tm2 = foldr (pred_setSyntax.mk_union) (pred_setSyntax.mk_empty ty) xs
+    val lemma = auto_prove "SORT_CODE_CONV" (mk_eq(tm,tm2),
+      SIMP_TAC std_ss [UNION_EMPTY,AC UNION_ASSOC UNION_COMM])
+    in lemma end
+  in (REWRITE_CONV [SING_SET_INTRO]
+      THENC RAW_SORT_CONV
+      THENC REWRITE_CONV [UNION_CANCEL]
+      THENC REWRITE_CONV [SING_SET_def]
+      THENC REWRITE_CONV [INSERT_UNION_EQ,UNION_EMPTY]) end;
+
 fun MERGE guard th1 th2 = let
   (* fill in preconditions *)
   val p = get_pc th1
@@ -648,35 +678,8 @@ fun MERGE guard th1 th2 = let
   val th = MATCH_MP SPEC_COMBINE (g guard th1)
   val th = MATCH_MP th (g (mk_neg guard) th2)
   val th = UNDISCH (RW [UNION_IDEMPOT] th)
+  val th = CONV_RULE (RATOR_CONV (RAND_CONV SORT_CODE_CONV)) th 
   in th end;
-
-val SORT_CODE_CONV = let
-  fun RAW_SORT_CONV tm = let
-    val ys = list_dest pred_setSyntax.dest_union tm
-    fun word_to_int tm =
-      if can (match_term ``(p:'a word) + n2w n``) tm then
-        (numSyntax.int_of_term o cdr o cdr) tm
-      else if can (match_term ``(p:'a word) - n2w n``) tm then
-        0 - (numSyntax.int_of_term o cdr o cdr) tm
-      else 0
-    fun measure tm = 
-      if can (match_term ``SING_SET ((p:'a word),x:'b)``) tm then
-        word_to_int ((fst o dest_pair o cdr) tm)
-      else let
-        val x = find_terms (fn x => type_of x = ``:word32``) (cdr tm)
-        in hd (filter (fn x => not (x = 0)) (map word_to_int x) @ [0]) end
-      handle e => 0
-    val xs = sort (fn x => fn y => measure x < measure y) ys
-    val ty = (hd o snd o dest_type o type_of o hd) xs
-    val tm2 = foldr (pred_setSyntax.mk_union) (pred_setSyntax.mk_empty ty) xs
-    val lemma = auto_prove "SORT_CODE_CONV" (mk_eq(tm,tm2),
-      SIMP_TAC std_ss [UNION_EMPTY,AC UNION_ASSOC UNION_COMM])
-    in lemma end
-  in (REWRITE_CONV [SING_SET_INTRO]
-      THENC RAW_SORT_CONV
-      THENC REWRITE_CONV [UNION_CANCEL]
-      THENC REWRITE_CONV [SING_SET_def]
-      THENC REWRITE_CONV [INSERT_UNION_EQ,UNION_EMPTY]) end;
   
 fun merge_spectree_thm (LEAF (th,i)) = let
       val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
@@ -905,7 +908,7 @@ fun PUSH_EXISTS_CONJ_CONV tm = let
   val thi = GSYM (REPEATC (ONCE_DEPTH_CONV PULL_EXISTS_CONV) tm2) 
   in thi end handle Empty => NO_CONV tm; 
 
-(* val tm = ``?x y z. 5 = 6 + t`` *)
+(* val tm = ``?x y z. 5 = 6 + tg`` *)
 
 fun PUSH_EXISTS_EMPTY_CONV tm = let
   fun DELETE_EXISTS_CONV tm = let
@@ -918,40 +921,6 @@ fun PUSH_EXISTS_EMPTY_CONV tm = let
   val th = DEPTH_CONV DELETE_EXISTS_CONV tm
   in if (is_exists o cdr o concl) th then NO_CONV tm else th end 
 
-(* val tm = ``?x y z. ((x,z) = HD [(5,7)]) /\ (x + 1 = 6)`` *)
-
-fun LET_INTRO_CONV tm = let
-  val (vs,n) = list_dest_exists tm []
-  val xs = (list_dest dest_conj n)
-  val (lhs,rhs) = dest_eq (hd xs)
-  val ys = dest_tuple lhs
-  val _ = if filter (fn x => not (mem x vs)) ys = [] then () else hd []
-  val new_vs = filter (fn x => not (mem x ys)) vs
-  val g2 = list_mk_exists(new_vs,list_mk_conj (tl xs))
-  val goal = pairSyntax.mk_anylet([(lhs,rhs)],g2)
-  val goal = mk_eq(tm,goal)
-  fun FIX_EXISTS_CONV ws tm = let
-    val (vs,n) = list_dest_exists tm []
-    val goal = mk_eq(tm,list_mk_exists(ws,n))   
-    fun AUTO_EXISTS_TAC (k,goal) = 
-      EXISTS_TAC (fst (dest_exists goal)) (k,goal)
-    val lemma = auto_prove "FIX_EXISTS_CONV" (goal,
-      EQ_TAC THEN STRIP_TAC THEN REPEAT AUTO_EXISTS_TAC
-      THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [])
-    in lemma end
-  val th = auto_prove "LET_INTRO_CONV" (goal,
-    CONV_TAC ((RATOR_CONV o RAND_CONV) (FIX_EXISTS_CONV (new_vs @ rev ys)))
-    THEN SPEC_TAC (rhs,genvar(type_of rhs))
-    THEN CONV_TAC EXPAND_FORALL_CONV
-    THEN PURE_REWRITE_TAC [PAIR_EQ,LET_DEF,GSYM CONJ_ASSOC]    
-    THEN REPEAT STRIP_TAC
-    THEN NTAC (length ys + 3) (PURE_REWRITE_TAC [UNCURRY_DEF]
-                               THEN CONV_TAC (ONCE_DEPTH_CONV BETA_CONV))
-    THEN NTAC (length ys) 
-         (CONV_TAC (RATOR_CONV (ONCE_DEPTH_CONV INST_EXISTS_CONV)))
-    THEN REWRITE_TAC [])
-  in th end handle Empty => NO_CONV tm;
-
 fun DEPTH_EXISTS_CONV c tm = 
   if is_exists tm then (c THENC DEPTH_EXISTS_CONV c) tm else
   if can (match_term ``GUARD n x``) tm then ALL_CONV tm else
@@ -959,8 +928,133 @@ fun DEPTH_EXISTS_CONV c tm =
                       RAND_CONV (DEPTH_EXISTS_CONV c)) tm else
   if is_abs tm then ABS_CONV (DEPTH_EXISTS_CONV c) tm else ALL_CONV tm;
 
-val problem = ref T;
-val attempt = ref T;
+fun EXPAND_BASIC_LET_CONV tm = let
+  val (xs,x) = pairSyntax.dest_anylet tm
+  val (lhs,rhs) = hd xs 
+  val ys = dest_tuple lhs
+  val zs = dest_tuple rhs
+  val _ = if length zs = length ys then () else hd []
+  fun every p [] = true
+    | every p (x::xs) = if p x then every p xs else hd []
+  val _ = every (fn x => every is_var (list_dest dest_conj x)) zs
+  in (((RATOR_CONV o RATOR_CONV) (REWRITE_CONV [LET_DEF]))
+      THENC DEPTH_CONV PairRules.PBETA_CONV) tm end
+  handle Empty => NO_CONV tm;
+
+fun STRIP_FORALL_TAC (hs,tm) =  
+  if is_forall tm then STRIP_TAC (hs,tm) else NO_TAC (hs,tm)
+
+fun SPEC_AND_CASES_TAC x = 
+  SPEC_TAC (x,genvar(type_of x)) THEN Cases THEN REWRITE_TAC []
+  
+fun GENSPEC_TAC [] = SIMP_TAC pure_ss [FORALL_PROD]
+  | GENSPEC_TAC (x::xs) = SPEC_TAC (x,genvar(type_of x)) THEN GENSPEC_TAC xs;
+
+val EXPAND_BASIC_LET_TAC = 
+  CONV_TAC (DEPTH_CONV EXPAND_BASIC_LET_CONV) 
+  THEN REPEAT STRIP_FORALL_TAC
+
+fun AUTO_DECONSTRUCT_TAC finder (hs,goal) = let
+  val tm = finder goal
+  in if is_cond tm then let
+       val (b,_,_) = dest_cond tm
+       in SPEC_AND_CASES_TAC b (hs,goal) end
+     else if is_let tm then let
+       val (v,c) = (hd o fst o pairSyntax.dest_anylet) tm       
+       val c = if not (type_of c = ``:bool``) then c else
+         (find_term (can (match_term ``GUARD x b``)) c handle e => c)
+       val cs = dest_tuple c  
+       in (GENSPEC_TAC cs THEN EXPAND_BASIC_LET_TAC) (hs,goal) end 
+     else (REWRITE_TAC [] THEN NO_TAC) (hs,goal) end
+
+(* val v = ``v:num``
+   val c = ``c:num``
+   val tm = ``?x y v z. (x = 5) /\ (y = x + 6) /\ (v = c) /\ (z = v) /\ (n = v:num)`` *)
+
+fun FAST_EXISTS_INST_CONV v c tm = let
+  val (x,y) = dest_exists tm
+  in if not (x = v) then QUANT_CONV (FAST_EXISTS_INST_CONV v c) tm else let
+  val imp = SPEC (mk_abs(v,y)) (ISPEC c EXISTS_EQ_LEMMA)
+  val thi = MP (CONV_RULE ((RATOR_CONV o RAND_CONV) (SIMP_CONV bool_ss [])) imp) TRUTH
+  val thi = CONV_RULE (RAND_CONV BETA_CONV THENC
+                       (RATOR_CONV o RAND_CONV o RAND_CONV) (ALPHA_CONV v) THENC
+                       (RATOR_CONV o RAND_CONV o QUANT_CONV) BETA_CONV) thi
+  in thi end end;
+  
+fun SUBST_EXISTS_CONV_AUX [] cs = ALL_CONV
+  | SUBST_EXISTS_CONV_AUX vs [] = ALL_CONV
+  | SUBST_EXISTS_CONV_AUX (v::vs) (c::cs) = 
+      FAST_EXISTS_INST_CONV v c THENC SUBST_EXISTS_CONV_AUX vs cs;
+
+fun SUBST_EXISTS_CONV vs cs = 
+  PURE_REWRITE_CONV [PAIR_EQ,GSYM CONJ_ASSOC]
+  THENC SUBST_EXISTS_CONV_AUX vs cs 
+  THENC REWRITE_CONV [];
+
+fun ((AUTO_DECONSTRUCT_EXISTS_TAC finder1 (cc1,cc2)):tactic) (hs,goal) = let
+  val tm = finder1 goal
+  in if is_cond tm then let
+       val (b,_,_) = dest_cond tm
+       in SPEC_AND_CASES_TAC b (hs,goal) end
+     else if is_let tm then let
+       val cond_var = mk_var("cond",``:bool``)
+       val (v,c) = (hd o fst o pairSyntax.dest_anylet) tm       
+       val c = if not (v = cond_var) then c 
+               else (find_term (can (match_term ``GUARD x b``)) c 
+                     handle e => ``GUARD 1000 F`` (* unlikely term *))
+       val cs = dest_tuple c  
+       val vs = dest_tuple v  
+       val result = (GENSPEC_TAC cs) (hs,goal)
+       val tm1 = (snd o hd o fst) result
+       val tm = finder1 (last (list_dest dest_forall tm1))
+       val (v,c) = (hd o fst o pairSyntax.dest_anylet) tm       
+       val cs = dest_tuple c  
+       val vs = dest_tuple v  
+       in ((fn (hs,goal) => result)
+           THEN NTAC (length cs) STRIP_TAC    
+           THEN REWRITE_TAC []
+           THEN CONV_TAC (cc1 EXPAND_BASIC_LET_CONV)
+           THEN (if vs = [cond_var] then ALL_TAC
+                 else CONV_TAC (cc2 (SUBST_EXISTS_CONV vs cs)))
+           THEN REWRITE_TAC []) (hs,goal) end
+     else (REWRITE_TAC [] THEN NO_TAC) (hs,goal) end
+
+fun one_step_let_intro th = let
+  val tm = fst (dest_imp (concl th))
+  val g = last (list_dest boolSyntax.dest_exists tm)
+  fun is_new_var v = (implode o take 4 o explode o fst o dest_var) v = "new@" handle e => false 
+  fun let_term tm = let
+    val (g,x,y) = dest_cond tm 
+    in FUN_IF (g,let_term x,let_term y) end handle e => let
+    val (x,y) = dest_conj tm 
+    in if can (match_term ``GUARD n y``) x 
+       then FUN_COND (x,let_term y) 
+       else let 
+         val (x1,x2) = dest_eq x
+         val xs1 = dest_tuple x1
+         in if is_new_var x1 then FUN_VAL (mk_conj(tm,mk_var("cond",``:bool``))) else
+               FUN_LET (x1,x2,let_term y) end end
+  val let_tm = subst [mk_var("cond",``:bool``)|->``T:bool``] (ftree2tm (let_term g))
+  val goal = mk_eq(tm,let_tm)
+(*
+set_goal([],goal)
+*)
+  val thi = RW [GSYM CONJ_ASSOC] (auto_prove "one_step_let_intro" (goal,
+    REWRITE_TAC []
+    THEN REPEAT (AUTO_DECONSTRUCT_EXISTS_TAC cdr (RAND_CONV, RATOR_CONV o RAND_CONV))
+    THEN SIMP_TAC pure_ss [AC CONJ_ASSOC CONJ_COMM] THEN REWRITE_TAC []
+    THEN EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []))
+  val th = RW1 [thi] th
+  in th end
+
+(* 
+val tt = ref T
+(fn (hs,gg) => (tt := gg; ALL_TAC (hs,gg)))
+val goal = !tt
+val (finder1,(cc1,cc2)) = (cdr,(RAND_CONV, RATOR_CONV o RAND_CONV))
+val hs = tl [T]
+val tm = (cdr o car) goal
+*) 
 
 fun introduce_lets th = let
   val th = init_clean th
@@ -971,13 +1065,7 @@ fun introduce_lets th = let
   val th = CONV_RULE ((RATOR_CONV o RAND_CONV) (ONCE_REWRITE_CONV [GSYM CONTAINER_def])) th
   val th = SIMP_RULE bool_ss [LEFT_FORALL_IMP_THM] (GENL vs th)
   val th = RW1 [CONTAINER_def] th
-  val c = DEPTH_EXISTS_CONV ((fn tm => (attempt := tm; NO_CONV tm)) ORELSEC
-                             LET_INTRO_CONV ORELSEC
-                             PUSH_EXISTS_CONJ_CONV ORELSEC
-                             PUSH_EXISTS_COND_CONV ORELSEC
-                             PUSH_EXISTS_EMPTY_CONV ORELSEC 
-                             (fn tm => (print "\n\nERROR: Unable to turn into let expression:\n\n"; print_term tm; print "\n\n"; (problem := tm); NO_CONV tm)))
-  val th = CONV_RULE ((RATOR_CONV o RAND_CONV) c) th
+  val th = one_step_let_intro th  
   in th end;
 
 fun raw_tm2ftree tm = let
@@ -1040,43 +1128,6 @@ val REMOVE_TAGS_CONV = let
     in MATCH_MP alpha_lemma thi end handle Empty => NO_CONV tm
   in (DEPTH_CONV REMOVE_TAG_CONV THENC REWRITE_CONV [GUARD_def]) end;
 
-fun EXPAND_BASIC_LET_CONV tm = let
-  val (xs,x) = pairSyntax.dest_anylet tm
-  val (lhs,rhs) = hd xs 
-  val ys = dest_tuple lhs
-  val zs = dest_tuple rhs
-  val _ = if length zs = length ys then () else hd []
-  fun every p [] = true
-    | every p (x::xs) = if p x then every p xs else hd []
-  val _ = every (fn x => every is_var (list_dest dest_conj x)) zs
-  in (((RATOR_CONV o RATOR_CONV) (REWRITE_CONV [LET_DEF]))
-      THENC DEPTH_CONV PairRules.PBETA_CONV) tm end
-  handle Empty => NO_CONV tm;
-
-fun STRIP_FORALL_TAC (hs,tm) =  
-  if is_forall tm then STRIP_TAC (hs,tm) else NO_TAC (hs,tm)
-
-fun SPEC_AND_REWRITE_TAC x = 
-  SPEC_TAC (x,genvar(type_of x)) 
-  THEN SIMP_TAC pure_ss [FORALL_PROD] 
-  THEN CONV_TAC (DEPTH_CONV EXPAND_BASIC_LET_CONV) 
-  THEN REPEAT STRIP_FORALL_TAC;
-
-fun SPEC_AND_CASES_TAC x = 
-  SPEC_TAC (x,genvar(type_of x)) THEN Cases THEN REWRITE_TAC []
-  
-fun AUTO_DECONSTRUCT_TAC finder (hs,goal) = let
-  val tm = finder goal
-  in if is_cond tm then let
-       val (b,_,_) = dest_cond tm
-       in SPEC_AND_CASES_TAC b (hs,goal) end
-     else if is_let tm then let
-       val (v,c) = (hd o fst o pairSyntax.dest_anylet) tm       
-       val c = if not (type_of c = ``:bool``) then c else
-         (find_term (can (match_term ``GUARD x b``)) c handle e => c)  
-       in SPEC_AND_REWRITE_TAC c (hs,goal) end 
-     else (REWRITE_TAC [] THEN NO_TAC) (hs,goal) end
-
 fun simplify_and_define name x_in rhs = let
   val ty = mk_type("fun",[type_of x_in, type_of rhs])
   val rw = REMOVE_TAGS_CONV rhs handle HOL_ERR _ => REFL rhs
@@ -1121,8 +1172,7 @@ fun introduce_post_let th = let
 fun REMOVE_VARS_FROM_THM vs th = let
   fun REMOVE_FROM_LHS (v,th) = let
     val th = SIMP_RULE pure_ss [LEFT_FORALL_IMP_THM] (GEN v th)
-    val c = DEPTH_EXISTS_CONV ((fn tm => (attempt := tm; NO_CONV tm)) ORELSEC
-                               PUSH_EXISTS_COND_CONV ORELSEC
+    val c = DEPTH_EXISTS_CONV (PUSH_EXISTS_COND_CONV ORELSEC
                                PUSH_EXISTS_LET_CONV ORELSEC
                                PUSH_EXISTS_CONJ_CONV ORELSEC 
                                INST_EXISTS_CONV ORELSEC
@@ -1190,7 +1240,7 @@ fun extract_function name th entry exit function_in_out = let
   val th = introduce_lets th
   val th = INST [mk_var("new@p",``:word32``) |-> mk_var("set@p",``:word32``)] th
   val th = INST [mk_var("eip",``:word32``) |-> mk_var("p",``:word32``)] th
-  val t = raw_tm2ftree ((cdr o car o concl o RW [WORD_ADD_0]) th)  
+  val t = tm2ftree ((cdr o car o concl o RW [WORD_ADD_0]) th)  
   (* extract base, step, side, input, output *)
   fun gen_pc n = if n = 0 then ``p:word32`` else
     subst [mk_var("n",``:num``) |-> numSyntax.term_of_int n] ``(p:word32) + n2w n`` 
@@ -1222,6 +1272,7 @@ fun extract_function name th entry exit function_in_out = let
   val (input,output) = set_input_output function_in_out
   fun new_into_subst tm = let
     val vs = list_dest dest_conj tm
+    val vs = filter is_eq vs
     in subst (map (fn x => let val (x,y) = dest_eq x in (strip_tag x) |-> y end) vs) end
   val x_in = list_mk_pair input
   val x_out = list_mk_pair output
@@ -1349,9 +1400,6 @@ fun extract_function name th entry exit function_in_out = let
   val thi = ISPEC c thi
   val thi = ISPEC m thi
   val goal = (snd o dest_imp o concl) thi
-(*
-  set_goal([],goal)
-*)
   val th = auto_prove "decompiler certificate" (goal,
     MATCH_MP_TAC thi THEN STRIP_TAC 
     THEN ONCE_REWRITE_TAC [EQ_SYM_EQ]

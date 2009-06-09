@@ -102,6 +102,8 @@ val (th,def9) = decompile_arm "arm_alloc_aux" `
   14837004 (* strne r7,[r3],#4 *)
   14838004 (* strne r8,[r3],#4 *)
   14836004 (* strne r6,[r3],#4 *)
+  03A07000 (* moveq r7,#0 *) 
+  05097018 (* streq r7,[r9,#-24] *)
   E5893000 (* str r3,[r9] *)`;
 
 val (th,def10) = decompile_arm "arm_alloc_mem" `

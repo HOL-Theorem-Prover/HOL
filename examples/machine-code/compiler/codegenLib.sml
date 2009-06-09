@@ -285,9 +285,15 @@ fun add_assignment (tm1,tm2,th,len) = let
   val ws = pairSyntax.list_mk_pair (map snd ys)
   val tm3 = pairSyntax.mk_anylet([(vs,ws)],tm2)
   val lemma = prove(mk_eq(q,tm3),
-    SPEC_TAC (ws,genvar(type_of ws))
+    SIMP_TAC std_ss [LET_DEF]
+    THEN SPEC_TAC (ws,genvar(type_of ws))
     THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD,LET_DEF]
-    THEN (fn x => hd [])) handle e => TRUTH
+    THEN (fn t => hd [])) handle e => TRUTH 
+(* (SPEC_TAC (ws,genvar(type_of ws))
+    THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD,LET_DEF]
+    THEN NO_TAC) 
+   ORELSE SIMP_TAC std_ss [LET_DEF] 
+   ORELSE (fn t => hd [])) handle e => TRUTH *)
   val th = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [lemma])) th
   val _ = add_decompiled (name,th,len,SOME len)
   in () end;

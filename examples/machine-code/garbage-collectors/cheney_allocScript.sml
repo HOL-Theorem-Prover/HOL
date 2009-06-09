@@ -19,7 +19,7 @@ val cheney_alloc_gc_def = Define `
 
 val cheney_alloc_aux_def = Define `
   cheney_alloc_aux (i,e,root,l,u,m) d =
-    if i = e then (i,e,root,l,u,m) else
+    if i = e then (i,e,0::TL root,l,u,m) else
       let m = (i =+ DATA(HD root,HD (TL root),d)) m in
         (i+1,e,i::TL root,l,u,m)`;
 
@@ -317,7 +317,7 @@ val FINITE_set = prove(
          METIS_PROVE [PAIR] ``!f g. (f = g) = !x y z d. f (x,y,z,d) = g (x,y,z,d)``]
     \\ Cases_on `y` \\ Cases_on `r` \\ METIS_TAC [PAIR_EQ]]);
 
-val cheney_alloc_gc_spec = prove(
+val cheney_alloc_gc_spec = store_thm("cheney_alloc_gc_spec",
   ``(cheney_alloc_gc (i,e,c,l,u,m) = (i',e',c',l',u',m')) ==>
     ch_inv (r,h,l) (i,e,c,l,u,m) /\ CARD (reachables r (ch_set h)) < l ==>
     i' < e' /\ ch_inv (r,h,l) (i',e',c',l',u',m')``,
@@ -526,7 +526,15 @@ val cheney_alloc_ok = store_thm("cheney_alloc_ok",
   \\ `?i2 e2 root2 l2 u2 m2. cheney_collector (i,e,t::v::r,l,u,m) = (i2,e2,root2,l2,u2,m2)` by METIS_TAC [PAIR]
   \\ ASM_SIMP_TAC bool_ss [cheney_alloc_aux_def]
   \\ IMP_RES_TAC cheney_collector_spec 
-  \\ Cases_on `i2 = e2` \\ ASM_SIMP_TAC std_ss [LET_DEF] THEN1 METIS_TAC []
+  \\ Cases_on `i2 = e2` \\ ASM_SIMP_TAC std_ss [LET_DEF] THEN1 
+   (Q.PAT_ASSUM `ok_state (i2,e2,root2,l2,u2,m2)` MP_TAC
+    \\ Cases_on `root2`
+    \\ FULL_SIMP_TAC std_ss [MAP,NOT_CONS_NIL,TL]
+    \\ REPEAT (POP_ASSUM (K ALL_TAC))
+    \\ SIMP_TAC std_ss [ok_state_def,LET_DEF]
+    \\ REPEAT STRIP_TAC
+    \\ FULL_SIMP_TAC std_ss [MEM]
+    \\ METIS_TAC [])
   \\ `FST (SND (SND (cheney_collector (i,e,t::v::r,l,u,m)))) = root2` by METIS_TAC [PAIR_EQ,PAIR]
   \\ Q.PAT_ASSUM `FST (SND xx) = yy` (ASSUME_TAC o RW [FST,SND] o 
        CONV_RULE (DEPTH_CONV FORCE_PBETA_CONV) o 

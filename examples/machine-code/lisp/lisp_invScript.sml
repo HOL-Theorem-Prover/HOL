@@ -11,7 +11,6 @@ val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
-
 (* --- definitions --- *)
 
 
@@ -737,20 +736,42 @@ val lisp_inv_MULT = store_thm("lisp_inv_MULT",
   \\ ONCE_REWRITE_TAC [MULT_COMM]
   \\ ASM_SIMP_TAC std_ss [DIV_MULT,WORD_MUL_LSL,word_mul_n2w,word_add_n2w]);
 
+val LISP_DIV_MOD_LEMMA = prove(
+  ``!n. n < 1073741824 ==> (n2w (4 * n + 2) >>> 2 = (n2w n):word32)``,
+  REPEAT STRIP_TAC
+  \\ `4 * n + 2 < 4 * (n + 1)` by DECIDE_TAC
+  \\ `4 * (n + 1) <= 4 * 1073741824` by 
+        (SIMP_TAC bool_ss [LE_MULT_LCANCEL] \\ DECIDE_TAC)
+  \\ IMP_RES_TAC LESS_LESS_EQ_TRANS
+  \\ FULL_SIMP_TAC std_ss []
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_LSR_n2w]
+  \\ ONCE_REWRITE_TAC [MULT_COMM]
+  \\ SIMP_TAC std_ss [DIV_MULT]);
+
 val lisp_inv_DIV = store_thm("lisp_inv_DIV",
   ``isVal x1 /\ isVal x2 /\ getVal x2 <> 0 ==> 
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> 
     lisp_inv (LISP_DIV x1 x2, Sym "nil", Sym "nil",x4,x5,x6,limit) 
-             (((w1 >>> 2) // (w2 >>> 2)) << 2 + 2w,3w,3w,w4,w5,w6,a,x,xs,s,rest)``,
+             (((w1 >>> 2) // (w2 >>> 2)) << 2 + 2w,3w,3w,w4,w5,w6,a,x,xs,s,rest) /\
+    lisp_word_div_pre (w1,w2)``,
   SIMP_TAC std_ss [GSYM AND_IMP_INTRO,isVal_thm]
   \\ STRIP_TAC THEN STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [getVal_def,LISP_DIV_def]
-  \\ REPEAT STRIP_TAC
+  \\ STRIP_TAC \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_swap2
   \\ IMP_RES_TAC lisp_inv_read_Val     
   \\ FULL_SIMP_TAC std_ss []
-  \\ REVERSE (`(n2w (4 * a' + 2) >>> 2 // n2w (4 * a'' + 2) >>> 2) << 2 + 2w:word32 =
-       n2w ((a' DIV a'') * 4 + 2)` by ALL_TAC) THEN1 
+  \\ `(n2w (4 * a' + 2) >>> 2 // n2w (4 * a'' + 2) >>> 2) << 2 + 2w:word32 =
+       n2w ((a' DIV a'') * 4 + 2)` by ALL_TAC THEN1
+   (IMP_RES_TAC LEMMA_MULT_4
+    \\ IMP_RES_TAC (SIMP_RULE (std_ss++SIZES_ss) [] (INST_TYPE [``:'a``|->``:32``] word_lsr_n2w))
+    \\ ASM_SIMP_TAC std_ss [DIV_MULT]
+    \\ ONCE_REWRITE_TAC [MULT_COMM]
+    \\ ASM_SIMP_TAC std_ss [DIV_MULT,WORD_MUL_LSL,word_mul_n2w,word_add_n2w]
+    \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [word_div_def,w2n_n2w,word_mul_n2w,word_add_n2w]
+    \\ `a'' < 4294967296 /\ a' < 4294967296` by DECIDE_TAC
+    \\ ASM_SIMP_TAC std_ss [])
+  \\ STRIP_TAC THEN1 
    (ASM_SIMP_TAC std_ss []
     \\ MATCH_MP_TAC lisp_inv_Val_nil_nil
     \\ `0 < a''` by DECIDE_TAC
@@ -759,29 +780,36 @@ val lisp_inv_DIV = store_thm("lisp_inv_DIV",
     \\ `a' DIV a'' <= 1073741823` by METIS_TAC [LESS_EQ_TRANS]   
     \\ `a' DIV a'' < 1073741824` by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [])   
-  \\ IMP_RES_TAC LEMMA_MULT_4
-  \\ IMP_RES_TAC (SIMP_RULE (std_ss++SIZES_ss) [] (INST_TYPE [``:'a``|->``:32``] word_lsr_n2w))
-  \\ ASM_SIMP_TAC std_ss [DIV_MULT]
-  \\ ONCE_REWRITE_TAC [MULT_COMM]
-  \\ ASM_SIMP_TAC std_ss [DIV_MULT,WORD_MUL_LSL,word_mul_n2w,word_add_n2w]
-  \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [word_div_def,w2n_n2w,word_mul_n2w,word_add_n2w]
-  \\ `a'' < 4294967296 /\ a' < 4294967296` by DECIDE_TAC
-  \\ ASM_SIMP_TAC std_ss []);
+  \\ SIMP_TAC std_ss [lisp_word_div_pre_def,LET_DEF]
+  \\ IMP_RES_TAC LISP_DIV_MOD_LEMMA
+  \\ `a' < 4294967296 /\ a'' < 4294967296` by DECIDE_TAC
+  \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w,n2w_11]
+  \\ DECIDE_TAC);
 
 val lisp_inv_MOD = store_thm("lisp_inv_MOD",
   ``isVal x1 /\ isVal x2 /\ getVal x2 <> 0 ==> 
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> 
     lisp_inv (LISP_MOD x1 x2, Sym "nil", Sym "nil",x4,x5,x6,limit) 
-             ((word_mod (w1 >>> 2) (w2 >>> 2)) << 2 + 2w,3w,3w,w4,w5,w6,a,x,xs,s,rest)``,
+             ((word_mod (w1 >>> 2) (w2 >>> 2)) << 2 + 2w,3w,3w,w4,w5,w6,a,x,xs,s,rest) /\
+    lisp_word_mod_pre (w1,w2)``,
   SIMP_TAC std_ss [GSYM AND_IMP_INTRO,isVal_thm]
   \\ STRIP_TAC THEN STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [getVal_def,LISP_MOD_def]
-  \\ REPEAT STRIP_TAC
+  \\ STRIP_TAC \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_swap2
   \\ IMP_RES_TAC lisp_inv_read_Val     
   \\ FULL_SIMP_TAC std_ss []
-  \\ REVERSE (`(word_mod (n2w (4 * a' + 2) >>> 2) (n2w (4 * a'' + 2) >>> 2)) << 2 + 2w:word32 =
-       n2w ((a' MOD a'') * 4 + 2)` by ALL_TAC) THEN1 
+  \\ `(word_mod (n2w (4 * a' + 2) >>> 2) (n2w (4 * a'' + 2) >>> 2)) << 2 + 2w:word32 =
+       n2w ((a' MOD a'') * 4 + 2)` by ALL_TAC THEN1
+   (IMP_RES_TAC LEMMA_MULT_4
+    \\ IMP_RES_TAC (SIMP_RULE (std_ss++SIZES_ss) [] (INST_TYPE [``:'a``|->``:32``] word_lsr_n2w))
+    \\ ASM_SIMP_TAC std_ss [DIV_MULT]
+    \\ ONCE_REWRITE_TAC [MULT_COMM]
+    \\ ASM_SIMP_TAC std_ss [DIV_MULT,WORD_MUL_LSL,word_mul_n2w,word_add_n2w]
+    \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [word_mod_def,w2n_n2w,word_mul_n2w,word_add_n2w]
+    \\ `a'' < 4294967296 /\ a' < 4294967296` by DECIDE_TAC
+    \\ ASM_SIMP_TAC std_ss [])
+  \\ STRIP_TAC THEN1 
    (ASM_SIMP_TAC std_ss []
     \\ MATCH_MP_TAC lisp_inv_Val_nil_nil
     \\ `0 < a''` by DECIDE_TAC
@@ -789,14 +817,11 @@ val lisp_inv_MOD = store_thm("lisp_inv_MOD",
     \\ `a' MOD a'' < a''` by METIS_TAC []   
     \\ `a' MOD a'' < 1073741824` by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC []) 
-  \\ IMP_RES_TAC LEMMA_MULT_4
-  \\ IMP_RES_TAC (SIMP_RULE (std_ss++SIZES_ss) [] (INST_TYPE [``:'a``|->``:32``] word_lsr_n2w))
-  \\ ASM_SIMP_TAC std_ss [DIV_MULT]
-  \\ ONCE_REWRITE_TAC [MULT_COMM]
-  \\ ASM_SIMP_TAC std_ss [DIV_MULT,WORD_MUL_LSL,word_mul_n2w,word_add_n2w]
-  \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [word_mod_def,w2n_n2w,word_mul_n2w,word_add_n2w]
-  \\ `a'' < 4294967296 /\ a' < 4294967296` by DECIDE_TAC
-  \\ ASM_SIMP_TAC std_ss []);
+  \\ SIMP_TAC std_ss [lisp_word_mod_pre_def,LET_DEF]
+  \\ IMP_RES_TAC LISP_DIV_MOD_LEMMA
+  \\ `a' < 4294967296 /\ a'' < 4294967296` by DECIDE_TAC
+  \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w,n2w_11]
+  \\ DECIDE_TAC);
 
 val lisp_inv_LESS = store_thm("lisp_inv_LESS",
   ``isVal x1 /\ isVal x2 ==> 
