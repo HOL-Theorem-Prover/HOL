@@ -1,2 +1,0 @@
-INCLUDES=../tools ../deep_embeddings ../translations ${HOLDIR}/examples/PSL/path ${HOLDIR}/examples/PSL/1.1/official-semantics/
-
