@@ -101,8 +101,8 @@ fun ppc_guard2assembly (GUARD_NOT t) = let
       val (code2,c) = ppc_guard2assembly (GUARD_COMPARE (i,GUARD_COMPARE_EQUAL,ASSIGN_X_REG t))
       in (code @ code2,c) end;
 
-fun (ppc_conditionalise : string -> string -> string)  x = hd []
-fun (ppc_remove_annotations  : string -> string) x = x
+fun ppc_conditionalise (x:string) : string -> string = hd []
+fun ppc_remove_annotations (x : string) = x
 
 fun ppc_cond_code tm = 
   if tm = ``pS1 (PPC_CR0 0w)`` then ("lt","ge") else 
