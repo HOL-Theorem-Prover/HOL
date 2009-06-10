@@ -87,7 +87,6 @@ src/finite_map
 !examples/ind_def
 !!examples/decidable_separationLogic/src/
 src/bag
-!!examples/separationLogic/src/
 src/n-bit
 !examples/ARM/arm6-verification
 !!examples/ARM/arm6-verification/correctness
@@ -100,6 +99,7 @@ src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
 src/real
+!!examples/separationLogic/src/
 src/HolSmt
 !examples/misc
 src/prob
