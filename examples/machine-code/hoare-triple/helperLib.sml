@@ -401,7 +401,7 @@ val SEP_READ_TAC = let
     val (x,y) = dest_comb tm
     val _ = if (fst (dest_const x) = "one") then () else hd []
     in pairSyntax.dest_pair y end
-  fun (prepare_tac:tactic) (hs,gs) = let
+  fun prepare_tac (hs,gs) = let
     val (x,y) = pred_setSyntax.dest_in gs
     fun extract tm = let
       val (p,f) = dest_comb tm
@@ -447,7 +447,7 @@ fun SEP_WRITE_TAC (hs,gs) = let
     THEN tac
   in (tac THEN foldr foo (FULL_SIMP_TAC (bool_ss++star_ss) []) witnesses) (hs,gs) end
 
-fun (SEP_NEQ_TAC:tactic) (hs,gs) = let
+fun SEP_NEQ_TAC (hs,gs) = let
   val (a1,a2) = dest_eq (dest_neg gs)
   fun dest_one tm = let
     val (x,y) = dest_comb tm
