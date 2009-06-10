@@ -90,11 +90,11 @@ src/bag
 src/n-bit
 !examples/ARM/arm6-verification
 !!examples/ARM/arm6-verification/correctness
-!!examples/ARM/v4
 src/ring/src
 src/integer
 src/patricia
 src/emit
+!!examples/ARM/v4
 src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
