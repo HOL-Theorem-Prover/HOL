@@ -264,9 +264,11 @@ val field_pretty_print = ref true;
 
 val field_pretty_print_max_size = ref 1000;
 
-fun field_print sys gravs d pp =
+fun field_print grammars (sys,addstring,addbreak) gravs d pp =
     let
-      open Portable term_pp_types
+      open term_pp_types Portable
+      val add_string = addstring
+      val add_break = addbreak
 
       fun field_num tm =
           let
@@ -280,8 +282,8 @@ fun field_print sys gravs d pp =
             val (_,x) = dest tm
           in
             begin_block pp INCONSISTENT 0;
-            add_string pp s;
-            add_break pp (1,0);
+            add_string s;
+            add_break (1,0);
             sys (Prec (prec,s), Top, Top) (d - 1) x;
             end_block pp
           end
@@ -308,16 +310,16 @@ fun field_print sys gravs d pp =
           in
             if n > !field_pretty_print_max_size then
               (begin_block pp INCONSISTENT 0;
-               add_string pp ("<<" ^ int_to_string n ^ ">>");
+               add_string ("<<" ^ int_to_string n ^ ">>");
                end_block pp)
             else
               (begin_block pp INCONSISTENT (if b then 1 else 0);
-               if b then add_string pp "(" else ();
+               if b then add_string "(" else ();
                sys (p,l,p) (d - 1) x;
-               add_string pp (" " ^ s);
-               add_break pp (1,0);
+               add_string (" " ^ s);
+               add_break  (1,0);
                sys (p,p,r) (d - 1) y;
-               if b then add_string pp ")" else ();
+               if b then add_string  ")" else ();
                end_block pp)
           end
 
@@ -339,7 +341,7 @@ fun field_print sys gravs d pp =
           tm
     end;
 
-val () = temp_add_user_printer ({Tyop = "", Thy = ""}, field_print);
+val () = temp_add_user_printer ("field", mk_var("x",alpha), field_print);
 
 (* ------------------------------------------------------------------------- *)
 (* AC normalization.                                                         *)
@@ -368,7 +370,7 @@ val field_add_ac_conv =
             [field_add_lzero,
              field_add_lzero',
              field_add_rzero,
-             field_add_rzero'],             
+             field_add_rzero'],
           simplify_ths =
             [GSYM field_num_one,
              field_neg_zero,
@@ -818,7 +820,7 @@ local
             in
               (push_conv solver a_th a, b_th)
             end
-          | EQUAL => 
+          | EQUAL =>
             let
               val (ac,bc) = hcf_power_conv2 f (a1,b1)
               val (a_th,b_th) = hcf_conv2 f solver (a2,b2)
@@ -985,7 +987,7 @@ fun field_div_elim_ss context =
       val data =
           simpLib.SSFRAG
             {ac = [], congs = [], convs = convs, rewrs = rewrs,
-             dprocs = [], filter = NONE}
+             dprocs = [], filter = NONE, name = NONE}
 
       val {simplify = alg_ss, ...} = subtypeTools.simpset2 context
     in
@@ -1023,7 +1025,7 @@ in
         ORACLE_field_poly_conv term_normalize_ths solver tm
       else
 (***
-        trace_conv "field_poly_conv" 
+        trace_conv "field_poly_conv"
 ***)
         let
           val term_normalize_conv = PURE_REWRITE_CONV term_normalize_ths
@@ -1060,7 +1062,7 @@ in
                     mult_assoc_conv solver THENC TRY_CONV mult_conv,
                     LAND_CONV exp_conv THENC TRY_CONV mult_conv,
                     RAND_CONV mult_conv THENC TRY_CONV mult_conv]) tm
-              
+
           fun term_conv tm =
               (mult_conv ORELSEC
                CHANGED_CONV
@@ -1148,7 +1150,7 @@ fun field_poly_ss context term_normalize_ths =
       val data =
           simpLib.SSFRAG
             {ac = [], congs = congs, convs = convs, rewrs = [],
-             dprocs = [], filter = NONE}
+             dprocs = [], filter = NONE, name = NONE}
 
       val {simplify = alg_ss, ...} = subtypeTools.simpset2 context
     in
@@ -1189,7 +1191,7 @@ in
         th
       end;
 end;
- 
+
 fun field_poly_basis_ss context =
     let
       val patterns =
@@ -1209,7 +1211,7 @@ fun field_poly_basis_ss context =
 
       val data =
           simpLib.SSFRAG
-            {ac = [], congs = [], convs = convs, rewrs = [],
+            {ac = [], congs = [], convs = convs, rewrs = [], name = NONE,
              dprocs = [], filter = NONE}
 
       val {simplify = alg_ss, ...} = subtypeTools.simpset2 context

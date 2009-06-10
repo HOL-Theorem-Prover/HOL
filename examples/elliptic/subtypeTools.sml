@@ -424,7 +424,7 @@ local
 
   fun algebra_dproc reductions judgements dproc_cache =
       Traverse.REDUCER {initial = initial_state reductions judgements,
-                        addcontext = state_add,
+                        addcontext = state_add, name = SOME "algebra_dproc",
                         apply = state_apply_dproc dproc_cache};
 in
   fun simpset_frag context =
@@ -436,7 +436,7 @@ in
       in
         simpLib.SSFRAG
           {ac = [], congs = [], convs = convs, rewrs = rewrites,
-           dprocs = [dproc], filter = NONE}
+           dprocs = [dproc], filter = NONE, name = NONE}
       end;
 
   fun simpset context = simpLib.++ (std_ss, simpset_frag context);

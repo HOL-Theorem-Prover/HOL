@@ -17,12 +17,20 @@ val () = app load
   "primalityTools", "fieldTools"];
 val () = quietdec := true;
 *)
+structure ellipticScript =
+struct
 
 open HolKernel Parse boolLib bossLib metisLib res_quanTools;
 open optionTheory listTheory arithmeticTheory dividesTheory gcdTheory;
 open pred_setTheory;
 open primalityTools;
 open groupTheory groupTools fieldTheory fieldTools;
+
+structure Q = struct
+  open Q
+  val UNABBREV_ALL_TAC = markerLib.UNABBREV_ALL_TAC
+end;
+
 
 (*
 val () = quietdec := false;
@@ -1531,8 +1539,10 @@ val curve_add_example_def = Define
        (affine (GF 751) [mw2n x_1; mw2n y_1])
        (affine (GF 751) [mw2n x_2; mw2n y_2])`;
 
-val curve_add_example_compilable = 
+val curve_add_example_compilable =
     CONV_RULE (RAND_CONV execute_conv) curve_add_example_def;
 ***)
 
 val () = export_theory ();
+
+end (* struct *)
