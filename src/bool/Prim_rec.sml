@@ -30,6 +30,12 @@ open HolKernel Parse boolTheory boolSyntax
 
 val ERR = mk_HOL_ERR "Prim_rec";
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+end
+open Parse
+
 
 (*---------------------------------------------------------------------------
      stuff from various jrh HOL-Light code
