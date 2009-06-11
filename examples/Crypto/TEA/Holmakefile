@@ -1,9 +1,0 @@
-teaML : teaML.ui teaML.uo
-
-teaML.ui: \
-   teaTheory.ui teaTheory.uo
-	($(MOSMLC) -I $(HOLDIR)/src/theoryML teaML.sig)
-
-teaML.uo: \
-   teaTheory.ui teaTheory.uo teaML.ui
-	($(MOSMLC) -I $(HOLDIR)/src/theoryML teaML.sml)
