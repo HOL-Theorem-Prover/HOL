@@ -15,10 +15,14 @@ struct
 
 open HolKernel Parse boolLib simpLib;
 
-local  (* Fix the grammar used by this file *)
-  val ambient_grammars = Parse.current_grammars();
-  val _ = Parse.temp_set_grammars combinTheory.combin_grammars
-in
+(* Fix the grammar used by this file *)
+structure Parse =
+struct
+  open Parse
+  val (Type,Term) = parse_from_grammars combinTheory.combin_grammars
+end
+open Parse
+
 
 (* ------------------------------------------------------------------------- *)
 (* Tracing.                                                                  *)
@@ -1241,6 +1245,12 @@ fun min_cnf_prep defs acc [] = (defs, rev acc)
     min_cnf_prep defs (th :: acc) ths
   end;
 
+local
+  open Arbint (* hope that on Poly/ML we can eventually just make
+                 Arbint a reference to its built-in infinite int type *)
+
+in
+
 datatype formula = Formula of (int * int) * term list * term * skeleton
 and skeleton =
     Conj of formula * formula
@@ -1289,7 +1299,8 @@ fun count_cnf vs tm =
     in
       Formula (beq_count ac bc, vs, tm, Beq (af,bf))
     end
-  else Formula ((1,1),vs,tm,Lit);
+  else Formula ((Arbint.one,Arbint.one),vs,tm,Lit);
+
 
 local
   fun check best [] = best
@@ -1297,7 +1308,7 @@ local
     let
       val (n,_,_) = best
       val Formula ((pos,neg), vs, tm, skel) = form
-      val m = f (1,1) + pos + neg
+      val m = f (Arbint.one,Arbint.one) + pos + neg
       val best = if m < n then (m,vs,tm) else best
     in
       break best f skel rest
@@ -1350,7 +1361,8 @@ fun min_cnf_norm defs acc [] = (defs, rev acc)
       let
         val _ =
           chatting 1 andalso
-          chat ("min_cnf: "^Int.toString m^" -> "^Int.toString n^" clauses\n")
+          chat ("min_cnf: "^Arbint.toString m^" -> "^
+                Arbint.toString n^" clauses\n")
         val _ =
           chatting 2 andalso
           chat ("min_cnf: renaming\n" ^ term_to_string tm ^ "\n")
@@ -1362,6 +1374,7 @@ fun min_cnf_norm defs acc [] = (defs, rev acc)
     else
       min_cnf_norm defs (simple_cnf_rule th :: acc) ths
   end;
+end (* of local enclosing open Arbint *)
 
 fun MIN_CNF ths =
   let
@@ -1570,7 +1583,5 @@ time CNF_CONV (mk_neg large_problem);
 *)
 *)
 
-val _ = Parse.temp_set_grammars ambient_grammars
-end;
 
 end
