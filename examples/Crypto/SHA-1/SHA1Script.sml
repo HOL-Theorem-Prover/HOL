@@ -315,6 +315,7 @@ val _ = computeLib.add_persistent_funs
 val _ = type_pp.pp_num_types := false;
 val _ = type_pp.pp_array_types := false;
 
+(*
 val _ =
   let open emitLib
       val string_to_w8_list = REWRITE_RULE [METIS_PROVE [combinTheory.o_THM]
@@ -340,5 +341,6 @@ val _ =
        digestBlock_def, digest_def,
        computeMD_def, string_to_w8_list, stringMD_def ])
   end;
+*)
 
 val _ = export_theory();

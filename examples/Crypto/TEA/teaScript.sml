@@ -210,6 +210,7 @@ val tea_correct = Q.store_thm
 (* Generate code                                                             *)
 (*---------------------------------------------------------------------------*)
 
+(*
 val _ =
  let open emitLib wordsTheory
      val elems =
@@ -238,5 +239,6 @@ val _ =
    emitML (!Globals.emitMLDir) ("tea",elems)
  end
  handle _ => ();
+*)
 
 val _ = export_theory();
