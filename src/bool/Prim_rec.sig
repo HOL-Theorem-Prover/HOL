@@ -4,8 +4,8 @@ sig
    include Abbrev
 
    (*-----------------------------------------------------------------------
-       Returns the types defined by an axiom. Does not return type 
-       operators that are applied to other types that are defined in 
+       Returns the types defined by an axiom. Does not return type
+       operators that are applied to other types that are defined in
        the axiom.  This is a test for detecting nested recursion, where
        the operator must already have an axiom elsewhere.
     ------------------------------------------------------------------------*)
@@ -23,7 +23,7 @@ sig
 
    val new_recursive_definition : {name:string, rec_axiom:thm, def:term} -> thm
 
-   (*------------------------------------------------------------------------ 
+   (*------------------------------------------------------------------------
       Because a type axiom can be for multiple (mutually recursive) types at
       once, this function returns the definitions of the case constants for
       each type introduced by an axiom.
@@ -44,5 +44,8 @@ sig
    val case_cong_thm               : thm -> thm -> thm
    val prove_constructors_distinct : thm -> thm option list
    val prove_constructors_one_one  : thm -> thm option list
+
+   (* A utility function *)
+   val EXISTS_EQUATION             : term -> thm -> thm
 
 end;
