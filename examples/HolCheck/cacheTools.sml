@@ -18,6 +18,26 @@ open setLemmasTheory muSyntax muSyntaxTheory muTheory reachTheory
 
 val dpfx = "ct_"
 
+structure Polyhash =
+struct
+   fun peek (ref dict,cmp) k = Binarymap.peek(dict,k)
+   fun peekInsert (r as ref dict, cmp) (k,v) =
+       case Binarymap.peek(dict,k) of
+         NONE => (r := Binarymap.insert(dict,k,v); NONE)
+       | x => x
+   fun insert (r as ref dict, cmp) (k,v) =
+       r := Binarymap.insert(dict,k,v)
+   fun listItems (ref dict, cmp) = Binarymap.listItems dict
+   fun map f (ref dict, cmp) = let
+     fun foldthis (k,v,acc) = Binarymap.insert (acc, k, f (k,v))
+   in
+     (ref (Binarymap.foldl foldthis (Binarymap.mkDict cmp) dict), cmp)
+   end
+   fun find (ref dict, cmp) k = Binarymap.find(dict, k)
+
+   fun mkDict cmp = (ref (Binarymap.mkDict cmp), cmp)
+end
+
 in
 
 (* given f e and e', proves |- !Q. if ~(SUBFORMULA (~RV Q) (NNF f) then e Q = e' Q else e Q SUBSET e' Q where
@@ -558,7 +578,7 @@ fun PH_merge p1 p2 = (* merge two hashtables, p2 overwriting p1 in case of key c
 (* these are place holders for whatever data structure I use to handle the frv abbrev thms*)
 val frv_merge = PH_merge(*BST_merge*)
 fun frv_insert (s,k,v) = (Polyhash.insert s (k,v); s)(*Binarymap.insert(s,k,v)*)
-fun frv_empty ce = Polyhash.mkPolyTable (Polyhash.numItems ce, NotFound) (*Binarymap.mkDict Term.compare*)
+fun frv_empty ce = Polyhash.mkDict Term.compare
 fun frv_find s k = Polyhash.find s k
 
 (* ASSERT: mf = uniq mf (fv mf) [] *)
@@ -735,7 +755,7 @@ fun mk_cache ee env (nf,mf) mfo qd githms state (seth,sel) msp =
 	val rvnm2ix = fst(Array.foldl(fn ((k,tb),(l,n)) => ((k,n)::l,n+1)) ([],0) ee)
         val p_ty = get_prop_type mf
 	val res = fst (mk_cache_aux ee rvnm2ix env (nf^"frv",mf) mfo
-				    (Polyhash.mkPolyTable (term_size mf, NotFound))(*(Redblackmap.mkDict Term.compare)*)
+				    (Polyhash.mkDict Term.compare)
 				    (Vector.tabulate(qd+(List.length rvnm2ix),fn ix => 0))
 				    (List.length rvnm2ix)
 				    []  githms state seth msp (ref 0)

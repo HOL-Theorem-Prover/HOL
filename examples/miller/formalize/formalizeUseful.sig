@@ -5,7 +5,6 @@ sig
 
   type 'a thunk = unit -> 'a
   type 'a susp = 'a Susp.susp
-  type (''a, 'b) cache
   type ppstream = General.ppstream
   type ('a, 'b) maplet = {redex : 'a, residue : 'b}
   type ('a, 'b) subst = ('a, 'b) Lib.subst
@@ -85,9 +84,6 @@ sig
   val random_generator : Random.generator
   val random_integer : int -> int
   val random_real : unit -> real
-  val new_cache : unit -> (''a, 'b) cache
-  val cache_lookup : (''a, 'b) cache -> (''a * 'b thunk) -> 'b
-  val cachef : (''a -> 'b) -> ''a -> 'b
   val pair_susp : 'a susp -> 'b susp -> ('a * 'b) susp
   val susp_map : ('a -> 'b) -> 'a susp -> 'b susp
 
