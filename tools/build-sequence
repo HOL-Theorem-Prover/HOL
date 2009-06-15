@@ -27,7 +27,9 @@
 # name of the current ML implementation.  Thus the line [poly]foo
 # will cause foo to be built only if the current implementation is
 # Poly/ML.  (The other supported implementation at the time of writing
-# is [mosml].)
+# is [mosml].)  If combining this with exclamation marks, the [system]
+# annotation should come first. I.e., [mosml]!!foo, not !![mosml]foo.
+
 
 tools/mlyacc/mlyacclib
 # these three directories are required to even run hol.bare.unquote
@@ -117,5 +119,22 @@ src/path
 !!examples/computability/lambda
 src/Boolify/src
 src/float
+
+#
+# Examples only from here on
+#
 !!examples/miller/miller
 !examples/ordinal
+
+# Crypto examples
+!!examples/Crypto/AES
+!!examples/Crypto/IDEA
+!!examples/Crypto/MARS
+!!examples/Crypto/RC6
+# the Crypto/Serpent/Reference example causes Poly/ML to crash
+[mosml]!!examples/Crypto/Serpent/Reference
+!!examples/Crypto/Serpent/Bitslice
+!!examples/Crypto/SHA-1
+!!examples/Crypto/TEA
+!!examples/Crypto/TWOFISH
+
