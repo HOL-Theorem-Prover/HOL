@@ -11,16 +11,13 @@
 <!-- remove it to restore things to their former glory -->
 
 <body>
-
 <h1>Other Higher Order Logic Theorem-Proving Systems</h1>
 
-<p>There are two systems implementing the same logic as HOL4:</p>
-<dl>
-<dt><a href="http://www.cl.cam.ac.uk/users/jrh/hol-light/">HOL
-Light</a></dt>
-<dd><p>By John Harrison.  Written in OCaml.</p></dd>
-<dt><a href="http://www.lemma-one.com/ProofPower/index/">ProofPower</a></dt>
-<dd><p>By Rob Arthan.  Written in SML.</p></dd>
+<p>There are two systems implementing the same logic as HOL4:
+<a href="http://www.cl.cam.ac.uk/users/jrh/hol-light/">HOL
+Light</a>, by John Harrison and   written in OCaml; and 
+<a href="http://www.lemma-one.com/ProofPower/index/">ProofPower</a>,
+written by Rob Arthan and written in SML.</p>
 
 <p id="isabelle">The HOL provided by
 the <a href="http://www.cl.cam.ac.uk/research/hvg/Isabelle/">Isabelle
@@ -28,6 +25,16 @@ system</a> (often written “Isabelle/HOL”) is very similar to the
 higher order logic of HOL4, HOL&nbsp;Light and ProofPower, but has a
 type system with Haskell-like type-classes.</p>
 
+<p id="pvs">The <a href="http://pvs.csl.sri.com/">PVS system</a> has a
+  type system with predicate sub-typing.  Getting a term (formula,
+  definition) to typecheck can require arbitrary amounts of work, but
+  definitions are a deal more expressive.</p>
+
+<p id="holomega">The HOL-ω system <!-- Need URL!! --> implements a
+  sophisticated type system (like that of <i>System F<sub>ω</sub></i>)
+  that also remains a superset of HOL4’s.  In terms of implementation,
+  the system is also a drop-in replacement for HOL4: all existing HOL4
+  scripts should continue to work as before in HOL-ω. </p>
 
 <h1>HOLs That Are Nothing to do With Theorem-Proving</h1>
 
@@ -46,7 +53,7 @@ HOL Nylon Tool Holster</a>!</p>
 <div class="timestamp">
 <hr>
 <p>
-Time-stamp: "Monday, 25 May 2009; 07:04 UTC (Michael Norrish)"
+Time-stamp: "Monday, 15 June 2009; 05:52 UTC (Michael Norrish)"
 </p></div>
 
 
