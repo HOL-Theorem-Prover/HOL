@@ -78,6 +78,31 @@ in
   else print "OK\n"
 end
 
+(* Test for the experimental kernel's INST_TYPE bug (discovered by Peter
+   Homeier in June 2009). *)
+exception ExitOK
+val _ = let
+  val _ = tprint "Testing for expk INST_TYPE bug"
+  fun x ty = mk_var("x", ty)
+  fun y ty = mk_var("y", ty)
+  val a = alpha
+  val b = beta
+  val t1 = list_mk_abs ([x a,x b], x a)
+  val t1_applied = list_mk_comb(t1, [x a, y b])
+  val t1_th = RIGHT_LIST_BETA (REFL t1_applied)
+  val t2 = list_mk_abs([x a,x a], x a)
+  val t2_applied = list_mk_comb(t2, [x a, y a])
+  val t2_th = RIGHT_LIST_BETA (REFL t2_applied)
+  val t1_inst = INST_TYPE [beta |-> alpha] t1_th (* bug *)
+  val bad1 = TRANS (SYM t1_inst) t2_th
+             handle HOL_ERR _ => raise ExitOK
+  val bad2 = INST_TYPE [alpha |-> bool] bad1
+  val Falsity = EQ_MP (INST [x bool |-> T, y bool |-> F] bad2) TRUTH
+in
+  if aconv (concl Falsity) F then print "FAILED!\n" else print "Huh???\n";
+  Process.exit Process.failure
+end handle ExitOK => print "OK\n"
+
 val _ = Process.atExit (fn () => let
                              fun rm s = FileSys.remove s
                                         handle _ => ()
