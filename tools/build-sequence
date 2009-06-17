@@ -87,6 +87,7 @@ src/quotient/src
 !src/quotient/examples
 src/finite_map
 !examples/ind_def
+!!examples/decidable_separationLogic/src/
 src/bag
 src/n-bit
 !examples/ARM/arm6-verification
@@ -95,11 +96,12 @@ src/ring/src
 src/integer
 src/patricia
 src/emit
-# src/emit/theories
+!!examples/ARM/v4
 src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
 src/real
+!!examples/separationLogic/src/
 src/HolSmt
 !examples/misc
 src/prob
