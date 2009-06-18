@@ -5,6 +5,7 @@
 structure make_iss = struct
 
 structure FileSys = OS.FileSys
+structure Process = OS.Process
 
 val holdir = Globals.HOLDIR
 val systeml = Systeml.systeml
@@ -28,14 +29,14 @@ val _ = print "Removing unnecessary files: ";
 val _ = FileSys.remove (fullPath ["help", "HOL.Help"])
     handle Interrupt => raise Interrupt | _ => ()
 val _ = print "help/HOL.Help, "
-val _ = (FileSys.chDir "help", FileSys.chDir "src")
+val _ = (FileSys.chDir "help", FileSys.chDir "src-sml")
 val _ = systeml [fullPath [holdir, "bin", "Holmake"], "cleanAll"]
 val _ = print "cleanable stuff in help/src\n\n"
 
 val _ = print "Compiling win-config.exe"
 val _ = FileSys.chDir (fullPath [holdir, "tools"])
 val _ = if systeml ["mosmlc", "-I", "Holmake", "-o", "win-config.exe",
-                    "win-config.sml"] = Process.success then ()
+                    "win-config.sml"] = Process.success then print "\n"
         else (print "Compilation failed!\n"; Process.exit Process.failure)
 val _ = FileSys.chDir holdir
 
@@ -45,7 +46,7 @@ val header = "\
 \AppName            = HOL\n\
 \AppVerName         = HOL 4 - "^sysname^"\n\
 \AppVersion         = "^sysname^"\n\
-\AppUpdatesURL      = http://hol.sf.net\n\
+\AppUpdatesURL      = http://hol.sourceforge.net\n\
 \AppPublisher       = HOL Developers\n\
 \DefaultDirName     = {pf}\\Hol\n\
 \DefaultGroupName   = HOL\n\
@@ -128,8 +129,8 @@ val run_section = "\
 \Filename: \"{app}\\tools\\win-config.exe\"; Parameters: \"\"\"{app}\"\"\"\n";
 
 val _ = let
-  val (toplevelfiles, dirs) = alldirs [".HOLMK", "CVS"]
-  val outstream = TextIO.openOut "hol98.iss"
+  val (toplevelfiles, dirs) = alldirs [".HOLMK", ".svn", "Manual", "tools-poly"]
+  val outstream = TextIO.openOut "hol4.iss"
   fun print s = TextIO.output(outstream, s)
 in
   print header;
@@ -156,7 +157,8 @@ val _ = let
       | s => readlines (s::acc)
   val lines = readlines []
   val _ = TextIO.closeIn instrm
-  fun adjustline s = String.extract(s,size holdir + 1,NONE)
+  fun adjustline s = if String.isPrefix holdir s then String.extract(s,size holdir + 1,NONE)
+                     else s
   val outstrm = TextIO.openOut file
   val _ = app (fn s => TextIO.output(outstrm, adjustline s)) lines
   val _ = TextIO.closeOut outstrm
