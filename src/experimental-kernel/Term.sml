@@ -695,17 +695,16 @@ local
                                   SAME => raise Unchanged
                                 | DIFF ty => Const(r, ty))
       | (v as Var(name,ty0)) => let
+          val (changed, nv) = case ty_sub theta ty0 of
+                                  SAME => (false, v)
+                                | DIFF ty => (true, Var(name, ty))
         in
-          case ty_sub theta ty0 of
-            SAME => raise Unchanged
-          | DIFF ty => let
-              val nv = Var(name, ty)
-            in
-              case Map.peek (ctxt, nv) of
-                SOME oldtype => if oldtype = ty0 then nv
+          case Map.peek (ctxt, nv) of
+                SOME oldtype => if oldtype = ty0 then ()
                                 else raise NeedToRename nv
-              | NONE => nv
-            end
+              | NONE => ();
+          if changed then nv
+          else raise Unchanged
         end
       | App p => qcomb App (inst1 theta ctxt) p
       | Abs (v as Var(n, ty), body) => let
@@ -714,15 +713,16 @@ local
             val (changed, v') = case ty_sub theta ty of
                                   SAME => (false, v)
                                 | DIFF ty' => (true, Var(n, ty'))
-            val body' = SOME (inst1 theta (Map.insert(ctxt,v',ty)) body)
-                handle Unchanged => NONE
-          in
-            case (body', changed) of
-              (SOME t, _) => Abs(v', t)
-            | (NONE, true) => Abs(v', body)
-            | (NONE, false) => raise Unchanged
-          end handle e as NeedToRename v' =>
-                     if v' = v then let
+          in let
+               val body' = SOME (inst1 theta (Map.insert(ctxt,v',ty)) body)
+                           handle Unchanged => NONE
+             in
+               case (body', changed) of
+                 (SOME t, _) => Abs(v', t)
+               | (NONE, true) => Abs(v', body)
+               | (NONE, false) => raise Unchanged
+             end handle e as NeedToRename v'' =>
+                     if v' = v'' then let
                          val free_names = free_names t
                          val new_name = set_name_variant free_names n
                          val newv = Var(new_name, ty)
@@ -730,6 +730,7 @@ local
                          inst1 theta ctxt (Abs(newv, subst [v |-> newv] body))
                        end
                      else raise e
+          end
         end
       | Abs _ => raise Fail "inst1: catastrophic invariant failure!"
 in
