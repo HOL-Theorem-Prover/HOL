@@ -140,3 +140,4 @@ src/float
 !!examples/Crypto/TEA
 !!examples/Crypto/TWOFISH
 
+[poly]!!examples/machine-code/lisp
