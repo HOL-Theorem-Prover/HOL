@@ -45,7 +45,7 @@ fun toLower s =
      is loaded.
  ---------------------------------------------------------------------------*)
 
-structure Map = Redblackmap
+structure Map = struct open Redblackmap end
 (* the keys are lower-cased, but the data also stores the keys, and there
    the key infomration is kept in its original case *)
 
@@ -331,7 +331,7 @@ fun pp_theory_as_html ppstrm theory_name = let
        strong s;
        add_string"</A>")
   fun HR() = (add_newline();add_string"<HR>";add_newline());
-      
+
   fun pblock(ob_pr, obs) =
       ( begin_block CONSISTENT 4;
         STRONG "Parents";
@@ -342,7 +342,7 @@ fun pp_theory_as_html ppstrm theory_name = let
         end_block();
         add_newline();
         add_newline())
-      
+
   fun sig_block(ob_pr1, obs1, ob_pr2,obs2) =
       if null types andalso null consts then ()
       else
@@ -354,7 +354,7 @@ fun pp_theory_as_html ppstrm theory_name = let
           add_newline();
           end_block();
           add_newline();
-          if null types then () 
+          if null types then ()
           else
             (begin_block CONSISTENT 0;
              add_string "<tr>"; add_break (1,0);
@@ -366,7 +366,7 @@ fun pp_theory_as_html ppstrm theory_name = let
              pr_list (fn x => (add_string"<tr>"; ob_pr1 x))
                      (fn () => ()) add_newline obs1;
              add_newline())
-        ; if null consts then () 
+        ; if null consts then ()
           else
             (begin_block CONSISTENT 0;
              add_string "<tr>"; add_break (1,0);
@@ -384,7 +384,7 @@ fun pp_theory_as_html ppstrm theory_name = let
           add_string "</center>"; add_newline();
           end_block();
           add_newline())
-        
+
   fun dl_block(header, ob_pr, obs) =
       ( begin_block CONSISTENT 0;
         title header;
@@ -403,8 +403,8 @@ fun pp_theory_as_html ppstrm theory_name = let
         end_block();
         add_newline();
         add_newline())
-      
-  fun pr_thm (heading, ths) = 
+
+  fun pr_thm (heading, ths) =
       dl_block(heading,
                (fn th => (begin_block CONSISTENT 0;
                           add_string"<PRE>";
@@ -414,7 +414,7 @@ fun pp_theory_as_html ppstrm theory_name = let
                           add_string"</PRE>";
                           add_newline();
                           end_block())),    ths)
-in 
+in
    begin_block CONSISTENT 0;
    add_string "<HTML>"; add_newline();
    add_string("<HEAD><TITLE>Theory: "^theory_name^"</TITLE>");
@@ -428,7 +428,7 @@ in
    title ("Theory \""^theory_name^"\"");
    add_newline() ;
 
-   if null parents then () 
+   if null parents then ()
    else pblock ((fn n => link(n^"Theory.html",n)), parents) ;
    sig_block((fn (Name,Arity) =>
                  (begin_block CONSISTENT 0;
