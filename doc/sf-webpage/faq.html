@@ -264,14 +264,12 @@ variables, so that when you write</p>
 you get <code>x</code> and <code>y</code> parsing to have type <code>:num</code> instead of <code>:'a</code>.</p>
 
 <p> Most things that take quotations are tactics, but there are some
-other contexts where it makes sense to be parsing the terms in
-augmented contexts.  Also, some people just like not having to type
-too much, so there are <code>Q.store_thm</code>
-and <code>Q.prove</code>, which are almost entirely unnecessary.
-(Strictly, you might imagine a term being passed to one of these that
-had polymorphic type if parsed by the global parser;
-the <code>Q</code> versions of these can enforce that the term be a
-boolean.  But this is a pretty unimaginable circumstance.)</p>
+other situations where it makes sense to be parsing the terms in
+augmented contexts.  Also, some functions
+(<i>e.g.</i>, <code>proofManagerLib.g</code>, <code>Q.store_thm</code>
+and <code>Q.prove</code>) don’t exploit a context, but do enforce a
+type on what is parsed (goals must be of type <code>:bool</code>).
+They also reduce screen-clutter. </p>
 </dd>
 
 
@@ -669,7 +667,7 @@ could write:</p>
 <p>
 <div class="timestamp">
 <p>
-Time-stamp: "Thursday, 25 June 2009; 00:36 UTC (Michael Norrish)"
+Time-stamp: "Thursday, 25 June 2009; 23:37 UTC (Michael Norrish)"
 </p></div>
 
 
