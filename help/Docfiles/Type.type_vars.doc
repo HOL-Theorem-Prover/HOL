@@ -27,5 +27,5 @@ Code should not depend on how elements are arranged in the
 result of {type_vars}.
 
 \SEEALSO
-Type.type_varsl, Type.type_var_in, Type.exists_tyvars, Type.polymorphic, Term.free_vars.
+Type.type_varsl, Type.type_var_in, Type.exists_tyvar, Type.polymorphic, Term.free_vars.
 \ENDDOC
