@@ -551,6 +551,7 @@ val ref_cheney_move_roots = prove(
   \\ ONCE_REWRITE_TAC [def5] \\ SIMP_TAC (std_ss++tailrec_part_ss()) [LET_DEF]
   THEN1 (Cases_on `ys` \\ REWRITE_TAC [move_roots_def,PAIR_EQ,LENGTH,MAP,NOT_NIL_CONS]
          \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ SIMP_TAC std_ss [LENGTH,WORD_MULT_CLAUSES,WORD_ADD_0])
+  \\ POP_ASSUM (ASSUME_TAC o RW1 [GSYM CONTAINER_def])
   \\ SIMP_TAC std_ss [LENGTH,ADD1,DECIDE ``(k + 1 = m + 1 + n) = (k = m + n:num)``,ZIP,APPEND]
   \\ SIMP_TAC (std_ss++SIZES_ss) [n2w_11,LESS_MOD,LENGTH,DECIDE ``~(SUC n = 0)``]
   \\ SIMP_TAC std_ss [ADD1,GSYM word_add_n2w,WORD_ADD_SUB]
@@ -576,10 +577,11 @@ val ref_cheney_move_roots = prove(
   \\ `ref_cheney (m1,f) (a,x,(r12 =+ r51) xs1,(r12 =+ r51) xs1)` by METIS_TAC [lemma]
   \\ `roots_in_mem (rs++zs) (a,r12 + 4w,(r12 =+ r51) xs1)` by METIS_TAC [roots_lemma]
   \\ Q.PAT_ASSUM `r51 = ref_addr a y1` ASSUME_TAC \\ FULL_SIMP_TAC bool_ss []
-  \\ FULL_SIMP_TAC std_ss [root_address_ok_def,ALIGNED_def,GSYM ADD1,move_roots_def]
-  \\ Q.PAT_ASSUM `!j m xs r12. bbb`
+  \\ FULL_SIMP_TAC std_ss [root_address_ok_def,ALIGNED_def,GSYM ADD1,move_roots_def]  
+  \\ Q.PAT_ASSUM `CONTAINER (!j m xs r12. bbb)`
     (STRIP_ASSUME_TAC o UNDISCH_ALL o RW [GSYM AND_IMP_INTRO] o
-     Q.SPECL [`j1`,`m1`,`ref_addr a y1`,`r71`,`r81`,`(r12 =+ ref_addr a y1) xs1`,`r12+4w`,`ys'`,`j2`,`m2`])
+     Q.SPECL [`j1`,`m1`,`ref_addr a y1`,`r71`,`r81`,`(r12 =+ ref_addr a y1) xs1`,`r12+4w`,`ys'`,`j2`,`m2`] o
+     RW [CONTAINER_def])
   \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,word_add_n2w,word_mul_n2w,
        GSYM WORD_ADD_ASSOC,LEFT_ADD_DISTRIB,AC ADD_ASSOC ADD_COMM,FST]
   \\ METIS_TAC [APPLY_UPDATE_THM,WORD_LOWER_TRANS,WORD_LOWER_NOT_EQ,ref_cheney_def]);

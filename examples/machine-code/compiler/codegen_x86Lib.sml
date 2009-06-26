@@ -2,8 +2,7 @@ structure codegen_x86Lib :> codegen_x86Lib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open codegen_inputLib;
-open helperLib x86_encodeLib;
+open helperLib x86_encodeLib codegen_inputLib;
 
 
 val x86_regs = ref [(0,"eax"), (1,"ecx"), (2,"edx"), (3,"ebx"), 
@@ -13,7 +12,6 @@ fun set_x86_regs regs = (x86_regs := regs);
 fun get_x86_regs ()   = (!x86_regs);
 
 fun x86_reg n = (snd o hd o filter (fn (x,y) => x = n)) (get_x86_regs ())
-
 
 fun to_x86_regs () = let
   fun foo (i,s) = mk_var("r" ^ int_to_string i,``:word32``) |-> mk_var(s, ``:word32``)
@@ -88,7 +86,13 @@ val x86_assign2assembly = let
     (if j = ASSIGN_X_REG d then [] else ["mov " ^ x86_reg d ^ ", " ^ exp j]) @
     [name ^ " " ^ x86_reg d ^ ", " ^ int_to_string n]
   fun mov_name ACCESS_WORD = "mov"
-    | mov_name ACCESS_BYTE = "mov_byte"
+    | mov_name ACCESS_BYTE = "mov BYTE"
+  fun mem_rhs _ (ASSIGN_X_REG t) = r t
+    | mem_rhs ACCESS_WORD (ASSIGN_X_CONST i) = Arbnum.toString i
+    | mem_rhs ACCESS_BYTE (ASSIGN_X_CONST i) = let 
+        val imm8 = Arbnum.toInt i
+        val imm8 = if 128 <= imm8 then "-" ^ int_to_string (0 - (imm8 - 256)) else int_to_string imm8
+        in imm8 end
   fun f (ASSIGN_EXP (d, ASSIGN_EXP_REG s)) = ["cmov? " ^ r d ^ ", " ^ r s]
     | f (ASSIGN_EXP (d, ASSIGN_EXP_CONST i)) = ["mov " ^ r d ^ ", " ^ Arbnum.toString i]      
     | f (ASSIGN_EXP (d, ASSIGN_EXP_STACK i)) = ["mov " ^ r d ^ ", " ^ s i]
@@ -98,10 +102,9 @@ val x86_assign2assembly = let
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_LEFT (j,n))) = code_for_shift d j n "shl"
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_RIGHT (j,n))) = code_for_shift d j n "shr"
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_ARITHMETIC_RIGHT (j,n))) = code_for_shift d j n "sar"
-    | f (ASSIGN_STACK (i,d)) = ["mov " ^ s i ^ ", " ^ r d]
-    | f (ASSIGN_MEMORY (b,a,d)) = [mov_name b ^ " " ^ address a ^ ", " ^ r d]
-    | f (ASSIGN_OTHER (t1,t2)) = 
-           (print "\n\n"; print_term t1; print "\n\n"; print_term t2; hd [])
+    | f (ASSIGN_STACK (i,d)) = ["mov " ^ s i ^ ", " ^ mem_rhs ACCESS_WORD d]
+    | f (ASSIGN_MEMORY (b,a,d)) = [mov_name b ^ " " ^ address a ^ ", " ^ mem_rhs b d]
+    | f (ASSIGN_OTHER (t1,t2)) = hd []
   in f end  
 
 fun x86_guard2assembly (GUARD_NOT t) = let 
@@ -123,11 +126,19 @@ fun x86_guard2assembly (GUARD_NOT t) = let
         | f (ASSIGN_X_CONST c) = Arbnum.toString c
       val code = ["test " ^ rd ^ ", " ^ f j]
       in (code, ("e","ne")) end
+  | x86_guard2assembly (GUARD_EQUAL_BYTE (a,i)) = let 
+    fun r i = x86_reg i
+    fun address (ASSIGN_ADDRESS_REG i) = "[" ^ r i ^ "]"
+      | address (ASSIGN_ADDRESS_OFFSET_ADD (d,i)) = "[" ^ r d ^ " + " ^ Arbnum.toString i ^ "]"
+      | address (ASSIGN_ADDRESS_OFFSET_SUB (d,i)) = "[" ^ r d ^ " - " ^ Arbnum.toString i ^ "]"
+    in (["cmp BYTE " ^ address a ^ ", " ^ Arbnum.toString i], ("e","ne")) end
   | x86_guard2assembly (GUARD_OTHER tm) = let
       val (t1,t2) = dest_eq tm      
       val code = hd (x86_assign2assembly (term2assign t1 t2))
       val code = "cmp" ^ (implode o tl o tl o tl o explode) code 
       in ([code], ("e","ne")) end;
+
+
 
 fun x86_conditionalise c condition = let
   val c' = String.translate (fn x => if x = #"?" then condition else implode [x]) c

@@ -49,6 +49,7 @@ val ppc_assign2assembly = let
              assign_const_to_reg j d @ 
              code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_REG d) reversed
         end
+  val t = get_ppc_temp_reg ()
   fun f (ASSIGN_EXP (d, ASSIGN_EXP_REG s)) = ["or " ^ r d ^ ", " ^ r s ^ ", " ^ r s]
     | f (ASSIGN_EXP (d, ASSIGN_EXP_CONST i)) = assign_const_to_reg i d      
     | f (ASSIGN_EXP (d, ASSIGN_EXP_STACK i)) = ["lwz " ^ r d ^ ", " ^ s i]
@@ -60,9 +61,12 @@ val ppc_assign2assembly = let
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_LEFT (ASSIGN_X_REG i,n))) = assign_const_to_reg (Arbnum.fromInt n) (get_ppc_temp_reg ()) @ ["slw " ^ r d ^ ", " ^ r i ^ ", " ^ r (get_ppc_temp_reg ()) ]
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_RIGHT (ASSIGN_X_REG i,n))) = ["srawi " ^ r d ^ ", " ^ r i ^ ", " ^ int_to_string n ]
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_ARITHMETIC_RIGHT (ASSIGN_X_REG i,n))) = ["srw " ^ r d ^ ", " ^ r i ^ ", " ^ int_to_string n ]
-    | f (ASSIGN_STACK (i,d)) = ["stw " ^ r d ^ ", " ^ s i]
-    | f (ASSIGN_MEMORY (ACCESS_WORD,a,d)) = ["stw " ^ r d ^ ", " ^ address a]
-    | f (ASSIGN_MEMORY (ACCESS_BYTE,a,d)) = ["stb " ^ r d ^ ", " ^ address a]
+    | f (ASSIGN_STACK (i,ASSIGN_X_REG d)) = ["stw " ^ r d ^ ", " ^ s i]
+    | f (ASSIGN_STACK (i,ASSIGN_X_CONST j)) = assign_const_to_reg j t @ ["stw " ^ r t ^ ", " ^ s i]
+    | f (ASSIGN_MEMORY (ACCESS_WORD,a,ASSIGN_X_REG d)) = ["stw " ^ r d ^ ", " ^ address a]
+    | f (ASSIGN_MEMORY (ACCESS_BYTE,a,ASSIGN_X_REG d)) = ["stb " ^ r d ^ ", " ^ address a]
+    | f (ASSIGN_MEMORY (ACCESS_WORD,a,ASSIGN_X_CONST i)) = assign_const_to_reg i t @ ["stw " ^ r t ^ ", " ^ address a]
+    | f (ASSIGN_MEMORY (ACCESS_BYTE,a,ASSIGN_X_CONST i)) = assign_const_to_reg i t @ ["stb " ^ r t ^ ", " ^ address a]
     | f _ = hd []
   in f end  
 
@@ -92,6 +96,7 @@ fun ppc_guard2assembly (GUARD_NOT t) = let
       (["and. " ^ int_to_string (get_ppc_temp_reg()) ^ "," ^ int_to_string i ^ "," ^ int_to_string r], ("eq","ne"))
   | ppc_guard2assembly (GUARD_TEST (i,ASSIGN_X_CONST c)) = 
       (["andi. " ^ int_to_string (get_ppc_temp_reg()) ^ "," ^ int_to_string i ^ "," ^ Arbnum.toString c], ("eq","ne"))
+  | ppc_guard2assembly (GUARD_EQUAL_BYTE (a,i)) = hd []
   | ppc_guard2assembly (GUARD_OTHER tm) = let
       val (t1,t2) = dest_eq tm      
       fun f (ASSIGN_EXP (i,exp)) = (i,exp) | f _ = hd []
@@ -101,8 +106,8 @@ fun ppc_guard2assembly (GUARD_NOT t) = let
       val (code2,c) = ppc_guard2assembly (GUARD_COMPARE (i,GUARD_COMPARE_EQUAL,ASSIGN_X_REG t))
       in (code @ code2,c) end;
 
-fun ppc_conditionalise (x:string) : string -> string = hd []
-fun ppc_remove_annotations (x : string) = x
+fun ppc_conditionalise (x:string) = (hd []):string->string
+fun ppc_remove_annotations x = (x:string)
 
 fun ppc_cond_code tm = 
   if tm = ``pS1 (PPC_CR0 0w)`` then ("lt","ge") else 

@@ -547,10 +547,12 @@ val ref_cheney_move_roots = prove(
       roots_in_mem (ZIP (ys++zs,ds)) (a,r12,xsn) /\ 
       (LENGTH ys = LENGTH rs) /\ (r12n = r12 + n2w (4 * LENGTH rs)) /\
       (!i. i <+ r12 ==> (xs i = xsn i)) /\ (xn = x)``,  
-  STRIP_TAC \\ STRIP_TAC \\ Induct_on `rs` 
+  STRIP_TAC \\ STRIP_TAC \\ Induct_on `rs` THEN1 
+   (ONCE_REWRITE_TAC [def5] \\ SIMP_TAC (std_ss++tailrec_part_ss()) [LET_DEF]
+    \\ Cases_on `ys` \\ REWRITE_TAC [move_roots_def,PAIR_EQ,LENGTH,MAP,NOT_NIL_CONS]
+    \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ SIMP_TAC std_ss [LENGTH,WORD_MULT_CLAUSES,WORD_ADD_0])
+  \\ POP_ASSUM (ASSUME_TAC o RW1 [GSYM CONTAINER_def])
   \\ ONCE_REWRITE_TAC [def5] \\ SIMP_TAC (std_ss++tailrec_part_ss()) [LET_DEF]
-  THEN1 (Cases_on `ys` \\ REWRITE_TAC [move_roots_def,PAIR_EQ,LENGTH,MAP,NOT_NIL_CONS]
-         \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ SIMP_TAC std_ss [LENGTH,WORD_MULT_CLAUSES,WORD_ADD_0])
   \\ Cases_on `ds` 
   \\ SIMP_TAC std_ss [LENGTH,ADD1,DECIDE ``(k + 1 = m + 1 + n) = (k = m + n:num)``,ZIP,APPEND]
   \\ SIMP_TAC (std_ss++SIZES_ss) [n2w_11,LESS_MOD,LENGTH,DECIDE ``~(SUC n = 0)``]                
@@ -560,7 +562,6 @@ val ref_cheney_move_roots = prove(
   \\ ASM_REWRITE_TAC [LET_DEF,PAIR_EQ,move_roots_def,APPEND,MAP]
   \\ `?y1 j1 m1. move (h',j,m) = (y1,j1,m1)` by METIS_TAC [PAIR]
   \\ `?ys j2 m2. move_roots (rs,j1,m1) = (ys,j2,m2)` by METIS_TAC [PAIR]
-  \\ Q.PAT_ASSUM `!ds j m. bbb` (ASSUME_TAC o ONCE_REWRITE_RULE [GSYM CONTAINER_def])
   \\ FULL_SIMP_TAC std_ss [LET_DEF,PAIR_EQ,move_roots_def,GSYM AND_IMP_INTRO,MAP] \\ STRIP_TAC
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ SIMP_TAC bool_ss []
   \\ FULL_SIMP_TAC bool_ss [MAP,CONS_11,NOT_NIL_CONS,NOT_CONS_NIL,ZIP,APPEND,ADD1,EQ_ADD_RCANCEL,LENGTH]
@@ -581,7 +582,7 @@ val ref_cheney_move_roots = prove(
   \\ FULL_SIMP_TAC std_ss [root_address_ok_def,ALIGNED_def,GSYM ADD1,move_roots_def]
   \\ Q.PAT_ASSUM `CONTAINER (!j m xs r12. bbb)` 
     (STRIP_ASSUME_TAC o UNDISCH_ALL o RW [GSYM AND_IMP_INTRO] o 
-     Q.SPECL [`t`,`j1`,`m1`,`r41`,`ref_field a (y1,h)`,`r71`,`r81`,`(r12 =+ ref_field a (y1,h)) xs1`,`r12+4w`,`ys'`,`j2`,`m2`] o 
+     Q.SPECL [`t`,`j1`,`m1`,`ref_field a (y1,h)`,`r71`,`r81`,`(r12 =+ ref_field a (y1,h)) xs1`,`r12+4w`,`ys'`,`j2`,`m2`] o 
      RW [CONTAINER_def])
   \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,word_add_n2w,word_mul_n2w,
        GSYM WORD_ADD_ASSOC,LEFT_ADD_DISTRIB,AC ADD_ASSOC ADD_COMM,FST]

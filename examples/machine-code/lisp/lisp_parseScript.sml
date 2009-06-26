@@ -1252,7 +1252,7 @@ val sexp_parse_lemma = prove(
    (REPEAT STRIP_TAC \\ IMP_RES_TAC sexp_ok_Val \\ IMP_RES_TAC is_number_string_IMP
     \\ SIMP_TAC std_ss [sexp2tokens_def,rich_listTheory.REVERSE,rich_listTheory.SNOC_APPEND,APPEND]
     \\ Cases_on `b` \\ ASM_SIMP_TAC std_ss [sexp_parse_def,str2num_num2str,sexp_inject_def])
-  \\ Q.ABBREV_TAC `exp = S''` \\ Q.ABBREV_TAC `exp' = S0`
+  \\ Q.ABBREV_TAC `exp = S'` \\ Q.ABBREV_TAC `exp' = S0`
   \\ REPEAT (Q.PAT_ASSUM `Abbrev bbb` (K ALL_TAC))
   \\ NTAC 2 STRIP_TAC 
   \\ REWRITE_TAC [sexp2tokens_def]    
@@ -1363,7 +1363,7 @@ val sexp2tokens_lemma = prove(
     \\ IMP_RES_TAC read_while_step
     \\ ASM_SIMP_TAC std_ss [LET_DEF,STRCAT_EQNS,APPEND])
   \\ REWRITE_TAC [ADD1,LSIZE_def,sexp_ok_def] \\ REPEAT STRIP_TAC
-  \\ Q.ABBREV_TAC `exp = S''` \\ Q.ABBREV_TAC `exp' = S0`
+  \\ Q.ABBREV_TAC `exp = S'` \\ Q.ABBREV_TAC `exp' = S0`
   \\ REPEAT (Q.PAT_ASSUM `Abbrev bbb` (K ALL_TAC))
   \\ SIMP_TAC std_ss [sexp2string_aux_def,sexp2tokens_def]  
   \\ Cases_on `isQuote (Dot exp exp') /\ b` \\ ASM_REWRITE_TAC [] THEN1
@@ -2500,10 +2500,12 @@ val symbol_table_dom_APPEND = prove(
 val sexp2string_NOT_NULL = prove(
   ``!s. sexp_ok s ==> EVERY (\c. ORD c <> 0) (EXPLODE (sexp2string s))``,
   REWRITE_TAC [sexp2string_def] \\ Q.SPEC_TAC (`T`,`b`)
-  \\ completeInduct_on `LSIZE s` \\ REVERSE Cases
+  \\ completeInduct_on `LSIZE s`
+  \\ REVERSE (STRIP_TAC \\ STRIP_ASSUME_TAC (Q.SPEC `s` SExp_expand))
+  \\ ASM_SIMP_TAC std_ss []
   THEN1
-   (SIMP_TAC std_ss [sexp_ok_def,sexp2string_aux_def,identifier_string_def]
-    \\ SIMP_TAC std_ss [EVERY_MEM] \\ REPEAT STRIP_TAC \\ RES_TAC
+   (FULL_SIMP_TAC std_ss [sexp_ok_def,sexp2string_aux_def,identifier_string_def]
+    \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ REPEAT STRIP_TAC \\ RES_TAC
     \\ FULL_SIMP_TAC std_ss [identifier_char_def,space_char_def]
     \\ DECIDE_TAC)
   THEN1
@@ -2513,8 +2515,8 @@ val sexp2string_NOT_NULL = prove(
     \\ DECIDE_TAC) 
   \\ SIMP_TAC std_ss [sexp_ok_def,sexp2string_aux_def]
   \\ REPEAT STRIP_TAC
-  \\ Q.ABBREV_TAC `a1 = S''`
-  \\ Q.ABBREV_TAC `a2 = S0`
+  \\ Q.ABBREV_TAC `a1 = exp1`
+  \\ Q.ABBREV_TAC `a2 = exp2`
   \\ `ORD #"(" <> 0 /\ ORD #")" <> 0 /\ ORD #"." <> 0 /\ ORD #" " <> 0 /\ ORD #"'" <> 0` by EVAL_TAC
   \\ Cases_on `isQuote (Dot a1 a2) /\ b` \\ ASM_SIMP_TAC std_ss [] THEN1
    (FULL_SIMP_TAC std_ss [isQuote_thm,SExp_11,CAR_def,LSIZE_def,sexp_ok_def]      
@@ -2733,8 +2735,8 @@ val SEP_EXPS_ok_data = prove(
   THEN1 METIS_TAC [NOT_IN_EMPTY]
   \\ Cases_on `h`
   \\ SIMP_TAC std_ss [SEP_EXPS_def,LENGTH,MAP,SUM_LSIZE_def,MULT_CLAUSES]    
-  \\ REVERSE (Cases_on `r`)
-  \\ SIMP_TAC (std_ss++sep_cond_ss) [lisp_exp_def,cond_STAR,LSIZE_def]
+  \\ REVERSE (STRIP_ASSUME_TAC (Q.SPEC `r` SExp_expand))
+  \\ ASM_SIMP_TAC (std_ss++sep_cond_ss) [lisp_exp_def,cond_STAR,LSIZE_def]
   THEN1 (FULL_SIMP_TAC std_ss [ADD] \\ METIS_TAC [DECIDE ``m < SUC m``])
   THEN1 (FULL_SIMP_TAC std_ss [ADD] \\ METIS_TAC [DECIDE ``m < SUC m``])
   \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES]  
@@ -2760,7 +2762,7 @@ val SEP_EXPS_ok_data = prove(
   \\ SIMP_TAC std_ss [GSYM STAR_ASSOC,GSYM SEP_EXPS_def,IN_DELETE]
   \\ SIMP_TAC std_ss [WORD_EQ_ADD_CANCEL]
   \\ SIMP_TAC (std_ss++SIZES_ss) [n2w_11]
-  \\ Q.ABBREV_TAC `a1 = S''` \\ Q.ABBREV_TAC `a2 = S0`
+  \\ Q.ABBREV_TAC `a1 = exp1` \\ Q.ABBREV_TAC `a2 = exp2`
   \\ NTAC 2 (POP_ASSUM (K ALL_TAC))
   \\ REPEAT STRIP_TAC
   \\ `x IN (g DELETE q DELETE (q + 0x4w))` by ASM_SIMP_TAC std_ss [IN_DELETE]

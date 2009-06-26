@@ -79,6 +79,10 @@ val SUM_LSIZE_def = Define `
 
 (* theorems *)
 
+val SExp_expand = store_thm("SExp_expand",
+  ``!x. (?exp1 exp2. x = Dot exp1 exp2) \/ (?n. x = Val n) \/ (?s. x = Sym s)``,
+  Cases \\ SRW_TAC [] []);
+
 val isDot_thm = store_thm("isDot_thm",
   ``!z. isDot z = ?a b. z = Dot a b``,
   Cases \\ SIMP_TAC std_ss [SExp_11,SExp_distinct,isDot_def]);

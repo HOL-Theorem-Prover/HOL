@@ -110,14 +110,14 @@ val arm_string_rev_lemma = prove(
     \\ SIMP_TAC std_ss [REVERSE_DEF,one_list_def,cond_STAR,LENGTH]
     \\ ONCE_REWRITE_TAC [arm_str_rev_def,arm_str_rev_pre_def]    
     \\ SIMP_TAC std_ss [])
-  \\ NTAC 7 STRIP_TAC
+  \\ NTAC 8 STRIP_TAC
   \\ STRIP_ASSUME_TAC (Q.ISPEC `xs:word8 list` rich_listTheory.SNOC_CASES)
   \\ FULL_SIMP_TAC std_ss [LENGTH, DECIDE ``~(SUC n = 0)``] 
   \\ REWRITE_TAC [rich_listTheory.SNOC_APPEND,REVERSE_APPEND,REVERSE_DEF]
   \\ REWRITE_TAC [APPEND,one_list_def,STAR_ASSOC,LENGTH_APPEND,LENGTH]  
   \\ REWRITE_TAC [DECIDE ``(m + SUC 0 = SUC n) = (m = n)``]
   \\ SIMP_TAC std_ss [one_list_SNOC,WORD_ADD_SUB,STAR_ASSOC]
-  \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `l'`)
+  \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `l`)
   \\ REPEAT STRIP_TAC \\ `LENGTH ys < 4294967296` by DECIDE_TAC
   \\ FULL_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [arm_str_rev_def,arm_str_rev_pre_def]
@@ -127,7 +127,7 @@ val arm_string_rev_lemma = prove(
   \\ `(f r7 = h) /\ r7 IN df` by SEP_READ_TAC
   \\ ASM_SIMP_TAC std_ss []
   \\ Q.ABBREV_TAC `f2 = (r7 =+ x) ((r6 =+ h) f)`
-  \\ `(p * one (r6,h) * one (r7,x) * one_list r6i l' (r6 - 1w + 1w) *
+  \\ `(p * one (r6,h) * one (r7,x) * one_list r6i l (r6 - 1w + 1w) *
        one_list (r7 + 0x1w) ys r7i) (fun2set (f2,df))` by 
    (REWRITE_TAC [WORD_SUB_ADD] \\ Q.UNABBREV_TAC `f2` \\ SEP_WRITE_TAC)
   \\ RES_TAC \\ ASM_SIMP_TAC std_ss []
@@ -149,8 +149,9 @@ val one_list_LENGTH = prove(
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC] \\ METIS_TAC []);
 
 val SPLIT_LIST_MIDDLE = prove(
-  ``!xs:'a list. ?ys qs zs. (xs = ys ++ qs ++ zs) /\ ((LENGTH xs) DIV 2 = LENGTH ys) /\ 
-                    (LENGTH zs = LENGTH ys) /\ LENGTH qs < 2``,
+  ``!xs:'a list. 
+      ?ys qs zs. (xs = ys ++ qs ++ zs) /\ ((LENGTH xs) DIV 2 = LENGTH ys) /\ 
+                 (LENGTH zs = LENGTH ys) /\ LENGTH qs < 2``,
   STRIP_TAC
   \\ Q.EXISTS_TAC `TAKE ((LENGTH xs) DIV 2) xs`
   \\ Q.EXISTS_TAC `TAKE ((LENGTH xs) - (LENGTH xs) DIV 2 * 2) (DROP ((LENGTH xs) DIV 2) xs)`
@@ -159,6 +160,7 @@ val SPLIT_LIST_MIDDLE = prove(
   \\ (ASSUME_TAC o Q.SPEC `LENGTH (xs:'a list)` o MATCH_MP (GSYM DIVISION)) (DECIDE ``0 < 2``) 
   \\ `LENGTH xs DIV 2 <= LENGTH xs` by DECIDE_TAC
   \\ `LENGTH xs - LENGTH xs DIV 2 * 2 = LENGTH xs MOD 2` by DECIDE_TAC
+  \\ ASM_SIMP_TAC std_ss [TAKE_DROP, GSYM APPEND_ASSOC]
   \\ IMP_RES_TAC LENGTH_TAKE \\ ASM_SIMP_TAC std_ss [LENGTH_DROP]
   \\ STRIP_TAC THEN1 DECIDE_TAC
   \\ Cases_on `LENGTH xs MOD 2` THEN1 ASM_SIMP_TAC std_ss [rich_listTheory.FIRSTN,LENGTH]
@@ -774,6 +776,7 @@ val arm_print_loop_lemma = prove(
           (q * one (r8,w2) * one (r8 + 4w,w1) * stack_slots (r8 + 8w) (LDEPTH t)) 
              (fun2set (hi,dh DIFF d)) /\ fun_eq d h hi``,
   completeInduct_on `LSIZE t`  
+  \\ POP_ASSUM (ASSUME_TAC o RW1 [GSYM CONTAINER_def])
   \\ SIMP_TAC std_ss [LET_DEF]
   \\ REPEAT STRIP_TAC  
   \\ `~((if b then 6w else 5w) = 0w:word32)` by (Cases_on `b` \\ EVAL_TAC)
@@ -782,7 +785,7 @@ val arm_print_loop_lemma = prove(
   \\ ONCE_REWRITE_TAC [arm_print_loop_def]
   \\ ASM_SIMP_TAC std_ss [LET_DEF]     
   \\ Cases_on `isVal t` THEN1
-   (Q.PAT_ASSUM `!m. bbb` (K ALL_TAC)
+   (Q.PAT_ASSUM `CONTAINER (!m. bbb)` (K ALL_TAC)
     \\ FULL_SIMP_TAC std_ss [isVal_thm]  
     \\ FULL_SIMP_TAC std_ss [lisp_tree_def]  
     \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,ALIGNED_INTRO]
@@ -815,7 +818,7 @@ val arm_print_loop_lemma = prove(
     \\ ASM_SIMP_TAC std_ss [fun_eq_def]
     \\ ALIGNED_TAC)
   \\ Cases_on `isSym t` THEN1
-   (Q.PAT_ASSUM `!m. bbb` (K ALL_TAC)
+   (Q.PAT_ASSUM `CONTAINER (!m. bbb)` (K ALL_TAC)
     \\ FULL_SIMP_TAC std_ss [isSym_thm]  
     \\ FULL_SIMP_TAC std_ss [isSym_thm,lisp_tree_def,GSYM STAR_ASSOC]  
     \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,ALIGNED_INTRO]
@@ -854,11 +857,11 @@ val arm_print_loop_lemma = prove(
     \\ ASM_SIMP_TAC std_ss [fun_eq_def]
     \\ ALIGNED_TAC)        
   \\ `isDot t` by (Cases_on `t` \\ FULL_SIMP_TAC std_ss [isVal_def,isSym_def,isDot_def])
-  \\ `ALIGNED r3` by 
+  \\ `ALIGNED r3` by ALL_TAC THEN1
    (FULL_SIMP_TAC std_ss [isDot_thm,lisp_tree_def,GSYM STAR_ASSOC]  
     \\ FULL_SIMP_TAC std_ss [isDot_thm,lisp_tree_def,GSYM STAR_ASSOC]  
     \\ FULL_SIMP_TAC std_ss [isSym_thm,lisp_tree_def,GSYM STAR_ASSOC])  
-  \\ `r3 && 0x1w = 0x0w` by 
+  \\ `r3 && 0x1w = 0x0w` by ALL_TAC THEN1
    (POP_ASSUM MP_TAC \\ Q.SPEC_TAC (`r3`,`a`) \\ Cases
     \\ SIMP_TAC std_ss [ALIGNED_n2w,n2w_and_1] \\ STRIP_TAC
     \\ `n = n DIV 4 * 4` by METIS_TAC [DIVISION,ADD_0,DECIDE ``0<4``]
@@ -873,11 +876,11 @@ val arm_print_loop_lemma = prove(
         else arm_is_quote (r3,r,dh,h) = (r3,r,0x0w,dh,h))` by
       (IMP_RES_TAC lisp_tree_SUBSET 
        \\ IMP_RES_TAC arm_is_quote_lemma \\ METIS_TAC [])
-  \\ `~((r && 0x2w) = 0x0w) = b` by 
+  \\ `~((r && 0x2w) = 0x0w) = b` by ALL_TAC THEN1
        (Q.UNABBREV_TAC `r` \\ Cases_on `b` \\ EVAL_TAC)
   \\ FULL_SIMP_TAC std_ss []
   \\ Cases_on `isQuote t /\ b` THEN1
-   (FULL_SIMP_TAC std_ss []    
+   (FULL_SIMP_TAC std_ss [CONTAINER_def]    
     \\ REWRITE_TAC [EVAL ``3w = 0w:word32``]  
     \\ `sexp2string_aux (t,T) = (#"'")::sexp2string_aux (CAR (CDR t),T)` by 
      (FULL_SIMP_TAC std_ss [isQuote_thm,CAR_def,CDR_def,LET_DEF]        
@@ -931,15 +934,19 @@ val arm_print_loop_lemma = prove(
     \\ ASM_SIMP_TAC std_ss [arm_print_loop1_pre_def])
   \\ POP_ASSUM MP_TAC
   \\ REWRITE_TAC [METIS_PROVE [] ``~(b /\ c) = b ==> ~c``]
-  \\ STRIP_TAC 
+  \\ STRIP_TAC
   \\ ONCE_REWRITE_TAC [arm_print_loop_pre_def]
+  \\ ASM_SIMP_TAC std_ss [LET_DEF,ALIGNED_INTRO] 
+  \\ ONCE_REWRITE_TAC [WORD_AND_COMM]
   \\ ASM_SIMP_TAC std_ss [LET_DEF,ALIGNED_INTRO] 
   \\ `arm_is_quote (r3,r,dh,h) = (r3,r,0x0w,dh,h)` by METIS_TAC []
   \\ `((r && 0x2w) = 0x0w) <=> ~b` by METIS_TAC []
   \\ ASM_SIMP_TAC std_ss [NOT_IF,word_arith_lemma1]
+  \\ ONCE_REWRITE_TAC [WORD_AND_COMM]
+  \\ ASM_SIMP_TAC std_ss [LET_DEF,ALIGNED_INTRO] 
   \\ Q.ABBREV_TAC `h2 = (r8 + 0xCw =+ h (r3 + 0x4w)) ((r8 + 0x8w =+ r - 0x4w) h)`
   \\ `?a1 a2. t = Dot a1 a2` by FULL_SIMP_TAC std_ss [isDot_thm,SExp_11]
-  \\ `lisp_tree t (r3,d,h2) sym /\ (h2 r3 = h r3) /\ (h2 (r3 + 4w) = h (r3 + 4w))` by 
+  \\ `lisp_tree t (r3,d,h2) sym /\ (h2 r3 = h r3) /\ (h2 (r3 + 4w) = h (r3 + 4w))` by ALL_TAC THEN1
    (FULL_SIMP_TAC std_ss [LDEPTH_def,stack_slots_def,word_arith_lemma1]
     \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES]
     \\ FULL_SIMP_TAC std_ss [SEP_EXISTS,STAR_ASSOC]    
@@ -955,13 +962,15 @@ val arm_print_loop_lemma = prove(
   \\ Q.ABBREV_TAC `s3 = if a2 = Sym "nil" then "" else if isDot a2 then " " else " . "`
   \\ Q.ABBREV_TAC `p1 = if b then "(" else ""`
   \\ Q.ABBREV_TAC `p2 = if b then ")" else ""`
-  \\ `sexp2string_aux (t,b) = p1 ++ s1 ++ s3 ++ s2 ++ p2` by 
+  \\ `sexp2string_aux (t,b) = p1 ++ s1 ++ s3 ++ s2 ++ p2` by ALL_TAC THEN1
       (Q.UNABBREV_TAC `s1` \\ Q.UNABBREV_TAC `s2`
        \\ Q.UNABBREV_TAC `p1` \\ Q.UNABBREV_TAC `p2`
        \\ Q.UNABBREV_TAC `s3` \\ Cases_on `b`
        \\ Cases_on `a2 = Sym "nil"`
+       \\ Cases_on `isDot a2`
        \\ FULL_SIMP_TAC std_ss [sexp2string_aux_def,LET_DEF,IF_SIMPS,
-            APPEND,APPEND_NIL,LIST_STRCAT_def])
+            APPEND,APPEND_NIL,LIST_STRCAT_def,APPEND_ASSOC]
+       \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND])
   \\ ONCE_REWRITE_TAC [WORD_AND_COMM] \\ ASM_SIMP_TAC std_ss []
   \\ `ALIGNED (r3 + 4w) /\ ALIGNED (r8 + 12w)` by ALIGNED_TAC 
   \\ `r3 + 0x4w IN dh /\ r3 IN dh /\ r8 + 0x8w IN dh /\ r8 + 0xCw IN dh` by ALL_TAC THEN1
@@ -991,13 +1000,13 @@ val arm_print_loop_lemma = prove(
   \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND]
   \\ `STRLEN s1 < 4294967296 /\ STRLEN s2 < 4294967296` by DECIDE_TAC
   \\ `(p * one_string r7 p1 r72 * 
-       one_space r72 (LENGTH (s1++s3++s2++p2)) c) (fun2set (f2,df))` by 
+       one_space r72 (LENGTH (s1++s3++s2++p2)) c) (fun2set (f2,df))` by ALL_TAC THEN1
    (Q.UNABBREV_TAC `r72` \\ Q.UNABBREV_TAC `p1`
     \\ Q.UNABBREV_TAC `p2` \\ Q.UNABBREV_TAC `f2`
     \\ REVERSE (Cases_on `b`)
     \\ FULL_SIMP_TAC std_ss [one_string_def,MAP,one_list_def,
-         SEP_CLAUSES,LENGTH_APPEND,LENGTH,EVAL ``ORD #"("``]    
-    \\ FULL_SIMP_TAC std_ss [GSYM (RW1 [ADD_COMM] ADD1)]
+         SEP_CLAUSES,LENGTH_APPEND,LENGTH,EVAL ``ORD #"("``,GSYM ADD_ASSOC]    
+    \\ Q.PAT_ASSUM `pp (fun2set (f,df))` (ASSUME_TAC o RW [GSYM (RW1[ADD_COMM]ADD1)])
     \\ FULL_SIMP_TAC std_ss [one_space_def,SEP_CLAUSES]
     \\ FULL_SIMP_TAC std_ss [SEP_EXISTS,STAR_ASSOC]
     \\ SEP_WRITE_TAC)
@@ -1008,7 +1017,7 @@ val arm_print_loop_lemma = prove(
   \\ FULL_SIMP_TAC std_ss []    
   \\ `(q * fr * one (r8,w2) * one (r8 + 0x4w,w1) * one (r8 + 0x8w,r-4w) *
        one (r8 + 0xCw,h (r3+4w)) * stack_slots (r8 + 0x10w) (LDEPTH a1))
-        (fun2set (h2,dh DIFF d))` by 
+        (fun2set (h2,dh DIFF d))` by ALL_TAC THEN1
         (Q.UNABBREV_TAC `h2` \\ SEP_WRITE_TAC)
   \\ `lisp_tree a1 (h r3,d,h2) sym` by 
    (FULL_SIMP_TAC std_ss [lisp_tree_def]
@@ -1019,17 +1028,19 @@ val arm_print_loop_lemma = prove(
   \\ Q.ABBREV_TAC `r73 = r72 + n2w (STRLEN s1)`  
   \\ `(p * one_string r7 p1 r72 * 
        one_space r73 (STRLEN ((STRCAT s3 (STRCAT s2 p2)))) c *
-       one_space r72 (STRLEN s1) r73) (fun2set (f2,df))` by ALL_TAC
-  THEN1
+       one_space r72 (STRLEN s1) r73) (fun2set (f2,df))` by ALL_TAC THEN1
    (Q.UNABBREV_TAC `r73`
-    \\ FULL_SIMP_TAC (std_ss++star_ss) [one_space_ADD,LENGTH_APPEND])
+    \\ FULL_SIMP_TAC (std_ss++star_ss) [one_space_ADD,LENGTH_APPEND]
+    \\ FULL_SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w]
+    \\ FULL_SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC]
+    \\ FULL_SIMP_TAC (std_ss++star_ss) [])
   \\ FULL_SIMP_TAC std_ss [LSIZE_def]
-  \\ Q.PAT_ASSUM `!m. bbb` (fn th =>
+  \\ Q.PAT_ASSUM `CONTAINER (!m. bbb)` (fn th => let val th = RW [CONTAINER_def] th in
          (ASSUME_TAC o RW [] o Q.SPEC `F` o RW [] o Q.SPEC `a2` o
           RW [DECIDE ``n < SUC (m + n)``] o Q.SPEC `LSIZE a2`) th
          THEN
          (ASSUME_TAC o RW [] o Q.SPEC `T` o RW [] o Q.SPEC `a1` o
-          RW [DECIDE ``m < SUC (m + n)``] o Q.SPEC `LSIZE a1`) th)
+          RW [DECIDE ``m < SUC (m + n)``] o Q.SPEC `LSIZE a1`) th end)
   \\ POP_ASSUM (ASSUME_TAC o SIMP_RULE std_ss [LET_DEF])  
   \\ Q.UNABBREV_TAC `s1`
   \\ POP_ASSUM (ASSUME_TAC o RW [GSYM AND_IMP_INTRO] o
@@ -1046,6 +1057,8 @@ val arm_print_loop_lemma = prove(
   \\ `(r - 4w && 4w = 0w) /\ ~(r - 4w = 0w) /\ ~(r - 4w = 3w)` by 
         (Q.UNABBREV_TAC `r` \\ Cases_on `b` \\ EVAL_TAC)
   \\ ONCE_REWRITE_TAC [arm_print_loop_def,arm_print_loop_pre_def]
+  \\ ASM_SIMP_TAC std_ss []
+  \\ ONCE_REWRITE_TAC [WORD_AND_COMM]
   \\ ASM_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [WORD_AND_COMM]
   \\ ASM_SIMP_TAC std_ss []
@@ -1108,16 +1121,19 @@ val arm_print_loop_lemma = prove(
     \\ Q.UNABBREV_TAC `r72`
     \\ Q.UNABBREV_TAC `r73`
     \\ Q.UNABBREV_TAC `fi2`
+    \\ Q.UNABBREV_TAC `r74`
     \\ REVERSE (Cases_on `b`) THEN1
       (FULL_SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM]
        \\ FULL_SIMP_TAC std_ss [one_string_def,one_list_def,MAP,LENGTH]
-       \\ FULL_SIMP_TAC std_ss [WORD_ADD_0,SEP_CLAUSES,one_space_def])
+       \\ FULL_SIMP_TAC std_ss [WORD_ADD_0,SEP_CLAUSES,one_space_def,APPEND])
     \\ FULL_SIMP_TAC std_ss [LENGTH,SIMP_RULE std_ss [] 
         (REWRITE_CONV [one_space_def] ``one_space a (SUC 0) b``)]
     \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES]
-    \\ FULL_SIMP_TAC std_ss [SEP_EXISTS]
+    \\ FULL_SIMP_TAC std_ss [SEP_EXISTS,LENGTH_APPEND,LENGTH,GSYM word_add_n2w]
+    \\ FULL_SIMP_TAC std_ss [AC WORD_ADD_COMM WORD_ADD_ASSOC]
     \\ FULL_SIMP_TAC std_ss [one_string_def,one_list_def,MAP]
     \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,EVAL ``ORD #")"``]
+    \\ FULL_SIMP_TAC std_ss [AC WORD_ADD_COMM WORD_ADD_ASSOC,SEP_CLAUSES]
     \\ SEP_WRITE_TAC)
   \\ ASM_SIMP_TAC std_ss [arm_print_loop_aux_def,arm_print_loop_aux_pre_def,arm_print_exit_def]    
   \\ `~(h (r3 + 4w) = 3w)` by 
@@ -1147,13 +1163,13 @@ val arm_print_loop_lemma = prove(
     \\ IMP_RES_TAC NOT_ALIGNED
     \\ FULL_SIMP_TAC std_ss [WORD_SUB_ADD])
   \\ ASM_SIMP_TAC std_ss [WORD_ADD_SUB]
-  \\ `(r - 0x4w = 0x2w) = b` by  
+  \\ `(r - 0x4w = 0x2w) = b` by ALL_TAC THEN1 
         (Q.UNABBREV_TAC `r` \\ Cases_on `b` \\ EVAL_TAC)
   \\ ASM_SIMP_TAC std_ss [EVAL ``(w2w:word32->word8) 0x20w``]
   \\ ASM_SIMP_TAC std_ss [EVAL ``(w2w:word32->word8) 0x2Ew``]
   \\ ASM_SIMP_TAC std_ss [arm_set_return_pre_def,LET_DEF,ALIGNED_INTRO]
   \\ `(isDot a2 ==> r73 IN df) /\ 
-      (~(isDot a2) ==> r73 IN df /\ r73 + 1w IN df /\ r73 + 2w IN df)` by
+      (~(isDot a2) ==> r73 IN df /\ r73 + 1w IN df /\ r73 + 2w IN df)` by ALL_TAC THEN1
    (REPEAT STRIP_TAC \\ Q.UNABBREV_TAC `s3`
     \\ FULL_SIMP_TAC std_ss [APPEND,LENGTH,one_space_def,SEP_CLAUSES]
     \\ FULL_SIMP_TAC std_ss [SEP_EXISTS,word_arith_lemma1] \\ SEP_READ_TAC)
@@ -1178,7 +1194,7 @@ val arm_print_loop_lemma = prove(
         (h (r3 + 0x4w),5w,r73 + 0x3w,r8i,dh,hi2,df,
          (r73 + 0x1w =+ 0x2Ew)
            ((r73 + 0x2w =+ 0x20w) ((r73 =+ 0x20w) fi)))) =
-      (h (r3 + 0x4w),5w,r74,r8i,dh,hi2,df,fi2)` by 
+      (h (r3 + 0x4w),5w,r74,r8i,dh,hi2,df,fi2)` by ALL_TAC THEN1
     (Q.UNABBREV_TAC `r74` \\ Q.UNABBREV_TAC `fi2`
      \\ Cases_on `isDot a2` \\ ASM_SIMP_TAC std_ss [])
   \\ ASM_SIMP_TAC std_ss [] \\ POP_ASSUM (K ALL_TAC)
@@ -1226,11 +1242,10 @@ val arm_print_loop_lemma = prove(
     \\ FULL_SIMP_TAC std_ss [IN_DIFF]
     \\ FULL_SIMP_TAC std_ss [APPLY_UPDATE_THM,IN_DIFF]
     \\ METIS_TAC [])
-  \\ `lisp_tree a2 (h (r3 + 4w),d,h) sym` by 
+  \\ `lisp_tree a2 (h (r3 + 4w),d,h) sym` by ALL_TAC THEN1
    (Q.PAT_ASSUM `t = Dot a1 a2` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [lisp_tree_def])
-  \\ `lisp_tree a2 (h (r3 + 4w),d,hi2) sym` by 
-       METIS_TAC [fun_eq_lisp_tree]  
+  \\ `lisp_tree a2 (h (r3 + 4w),d,hi2) sym` by METIS_TAC [fun_eq_lisp_tree]  
   \\ `(q * one (r8,w2) * one (r8 + 0x4w,w1) *
         one (r8 + 0x8w,r - 0x4w) * one (r8 + 0xCw,h (r3 + 0x4w)) *
         stack_slots (r8 + 0x10w) (MAX (LDEPTH a1) (LDEPTH a2))) 
@@ -1242,7 +1257,7 @@ val arm_print_loop_lemma = prove(
      \\ Q.UNABBREV_TAC `r8i` \\ Q.UNABBREV_TAC `hi2`
      \\ `(q * one (r8,w2) * one (r8 + 0x4w,w1) *
           stack_slots (r8+8w) (SUC (MAX (LDEPTH a1) (LDEPTH a2)))) 
-           (fun2set (hi,dh DIFF d))` by  
+           (fun2set (hi,dh DIFF d))` by ALL_TAC THEN1
        (FULL_SIMP_TAC std_ss [stack_slots_def,SEP_CLAUSES]
         \\ SIMP_TAC std_ss [SEP_EXISTS,word_arith_lemma1]
         \\ Q.EXISTS_TAC `5w-4w`
@@ -1258,7 +1273,7 @@ val arm_print_loop_lemma = prove(
      \\ FULL_SIMP_TAC std_ss []
      \\ `((q * fr2) * one (r8,w2) * one (r8 + 0x4w,w1) *
           stack_slots (r8 + 0x8w) (LDEPTH a2))
-             (fun2set (hi,dh DIFF d))` by 
+             (fun2set (hi,dh DIFF d))` by ALL_TAC THEN1
                 FULL_SIMP_TAC (std_ss++star_ss) []
      \\ Q.PAT_ASSUM `!p w1. bbb` (ASSUME_TAC o
        Q.SPECL [`p * one_string r7 p1 r72 * one_string r72 s1 r73 *
@@ -1273,22 +1288,25 @@ val arm_print_loop_lemma = prove(
        \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [LENGTH,one_space_def,cond_STAR])
      \\ Q.EXISTS_TAC `hi'` \\ Q.EXISTS_TAC `fi'`
      \\ ASM_SIMP_TAC std_ss []
-     \\ STRIP_TAC THEN1
-      (Q.UNABBREV_TAC `p1` \\ Q.UNABBREV_TAC `p2`
-       \\ FULL_SIMP_TAC std_ss [APPEND,APPEND_NIL]
-       \\ FULL_SIMP_TAC std_ss [one_string_STRCAT]
-       \\ Q.UNABBREV_TAC `r75`
-       \\ Q.UNABBREV_TAC `r74`
-       \\ REVERSE (Cases_on `r7 = r72`)
-       \\ FULL_SIMP_TAC std_ss [one_string_def,MAP,one_list_def,SEP_CLAUSES,cond_STAR]
-       \\ FULL_SIMP_TAC (std_ss++star_ss) [SEP_F_def]
-       \\ REVERSE (`(if isDot a2 then 0x1w else 0x3w) = n2w (LENGTH s3):word32` by ALL_TAC)
-       \\ FULL_SIMP_TAC (std_ss++star_ss) [SEP_F_def,one_space_def,LENGTH,SEP_CLAUSES]
-       \\ Q.UNABBREV_TAC `s3`
-       \\ Cases_on `isDot a2` \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC)
-     \\ ASM_SIMP_TAC std_ss [LDEPTH_def]    
-     \\ FULL_SIMP_TAC (std_ss++star_ss) []
-     \\ FULL_SIMP_TAC std_ss [fun_eq_def] \\ METIS_TAC [])
+     \\ REVERSE STRIP_TAC THEN1
+          (ASM_SIMP_TAC std_ss [LDEPTH_def]    
+           \\ FULL_SIMP_TAC (std_ss++star_ss) []
+           \\ FULL_SIMP_TAC std_ss [fun_eq_def] \\ METIS_TAC [])
+     \\ Q.UNABBREV_TAC `p1` \\ Q.UNABBREV_TAC `p2`
+     \\ FULL_SIMP_TAC std_ss [APPEND,APPEND_NIL]
+     \\ FULL_SIMP_TAC std_ss [one_string_STRCAT]
+     \\ Q.UNABBREV_TAC `r75`
+     \\ Q.UNABBREV_TAC `r74`
+     \\ REVERSE (Cases_on `r7 = r72`)
+     \\ FULL_SIMP_TAC std_ss [one_string_def,MAP,one_list_def,SEP_CLAUSES,cond_STAR]
+     \\ FULL_SIMP_TAC (std_ss++star_ss) [SEP_F_def]
+     \\ `(if isDot a2 then 0x1w else 0x3w) = n2w (LENGTH s3):word32` by ALL_TAC THEN1
+       (Q.UNABBREV_TAC `s3` \\ Cases_on `isDot a2` \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC)
+     \\ FULL_SIMP_TAC std_ss []       
+     \\ Q.UNABBREV_TAC `r73`
+     \\ FULL_SIMP_TAC std_ss [word_arith_lemma1,LENGTH_APPEND]
+     \\ FULL_SIMP_TAC (std_ss++star_ss) [AC WORD_ADD_ASSOC WORD_ADD_COMM,
+          LENGTH,one_space_def,SEP_CLAUSES])
   \\ FULL_SIMP_TAC std_ss [] 
   \\ STRIP_ASSUME_TAC (Q.SPECL [`LDEPTH a2`,`LDEPTH a1`,`r8+16w`] (RW1 [MAX_COMM] stack_slots_MAX))
   \\ Q.UNABBREV_TAC `r8i`
@@ -1297,7 +1315,7 @@ val arm_print_loop_lemma = prove(
   \\ `(q * fr' * one (r8,w2) * one (r8 + 0x4w,w1) *
         one (r8 + 0x8w,3w) * one (r8 + 0xCw,h (r3 + 0x4w)) *
         stack_slots (r8 + 0x10w) (LDEPTH a2))
-         (fun2set (hi2,dh DIFF d))` by  
+         (fun2set (hi2,dh DIFF d))` by ALL_TAC THEN1 
      (Q.UNABBREV_TAC `hi2` \\ Q.UNABBREV_TAC `r`
       \\ FULL_SIMP_TAC std_ss [EVAL ``6w-4w:word32``]
       \\ SEP_WRITE_TAC)
@@ -1355,13 +1373,14 @@ val arm_print_loop_lemma = prove(
   \\ Q.UNABBREV_TAC `r74`
   \\ Q.UNABBREV_TAC `r73`
   \\ Q.UNABBREV_TAC `r72`
-  \\ REVERSE (`(if isDot a2 then 0x1w else 0x3w) = n2w (LENGTH s3):word32` by ALL_TAC)
+  \\ `(if isDot a2 then 0x1w else 0x3w) = n2w (LENGTH s3):word32` by ALL_TAC THEN1
+    (Q.UNABBREV_TAC `s3` \\ Cases_on `isDot a2` \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC)
+  \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC (std_ss++star_ss) [SEP_F_def,one_space_def,LENGTH,SEP_CLAUSES]
   \\ Q.UNABBREV_TAC `p1`
-  \\ FULL_SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,LENGTH,SEP_CLAUSES]
-  THEN1 SEP_WRITE_TAC
-  \\ Q.UNABBREV_TAC `s3`
-  \\ Cases_on `isDot a2` \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC);
+  \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,word_arith_lemma1]
+  \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM,LENGTH,SEP_CLAUSES]
+  \\ SEP_WRITE_TAC);
 
 val arm_print_loop_sexp =
   (Q.GEN `t` o SIMP_RULE bool_ss [GSYM sexp2string_def,LET_DEF] o

@@ -174,7 +174,7 @@ val X86_LISP_CONS = save_thm("X86_LISP_CONS",let
   val post_tm = set_pc th ``xLISP (Dot x1 x2,x2,x3,x4,x5,x6,limit) * xPC p * ~xS``
   val res = prove_spec th imp def pre_tm post_tm
   val (_,_,c,_) = dest_spec (concl res)
-  val def = new_definition("x86_alloc_code",mk_eq(``(x86_alloc_code:word32->(word32 # word8 list) set) p``,c))
+  val def = new_definition("x86_alloc_code",mk_eq(``(x86_alloc_code:word32->(word32 # word8 list # bool) set) p``,c))
   val res = RW [GSYM def] res
   in res end);
 
@@ -213,7 +213,7 @@ val X86_LISP_EQUAL = save_thm("X86_LISP_EQUAL",let
   val post_tm = set_pc th ``xLISP (LISP_EQUAL x1 x2,x2,x3,x4,x5,x6,limit) * xPC p * ~xS``
   val res = prove_spec th imp def pre_tm post_tm
   val (_,_,c,_) = dest_spec (concl res)
-  val def = new_definition("x86_equal_code",mk_eq(``(x86_equal_code:word32->(word32 # word8 list) set) p``,c))
+  val def = new_definition("x86_equal_code",mk_eq(``(x86_equal_code:word32->(word32 # word8 list # bool) set) p``,c))
   val res = RW [GSYM def] res
   in res end);
 

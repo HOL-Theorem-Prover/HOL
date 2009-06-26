@@ -520,19 +520,29 @@ val ALIGNED_SUB_CLAUSES = prove(
 
 val ALIGNED = store_thm("ALIGNED",
   ``!a x. 
+      (ALIGNED 0w = T) /\ 
+      (ALIGNED (n2w (NUMERAL (BIT2 (BIT1 x)))) = T) /\ 
+      (ALIGNED (n2w (NUMERAL (BIT1 (BIT2 x)))) = F) /\ 
+      (ALIGNED (n2w (NUMERAL (BIT2 (BIT2 x)))) = F) /\ 
+      (ALIGNED (n2w (NUMERAL (BIT1 (BIT1 (BIT1 x))))) = F) /\
+      (ALIGNED (n2w (NUMERAL (BIT1 (BIT1 (BIT2 x))))) = F) /\
       (ALIGNED (a + 0w) = ALIGNED a) /\ 
       (ALIGNED (a + n2w (NUMERAL (BIT2 (BIT1 x)))) = ALIGNED a) /\ 
       (ALIGNED (a + n2w (NUMERAL (BIT1 (BIT2 x)))) = ALIGNED (a + 1w)) /\ 
       (ALIGNED (a + n2w (NUMERAL (BIT2 (BIT2 x)))) = ALIGNED (a + 2w)) /\ 
-      (ALIGNED (a + n2w (NUMERAL (BIT1 (BIT1 x)))) = ALIGNED (a + 3w)) /\
+      (ALIGNED (a + n2w (NUMERAL (BIT1 (BIT1 (BIT1 x))))) = ALIGNED (a + 3w)) /\
+      (ALIGNED (a + n2w (NUMERAL (BIT1 (BIT1 (BIT2 x))))) = ALIGNED (a + 3w)) /\
       (ALIGNED (a - 0w) = ALIGNED a) /\ 
       (ALIGNED (a - n2w (NUMERAL (BIT2 (BIT1 x)))) = ALIGNED a) /\ 
       (ALIGNED (a - n2w (NUMERAL (BIT1 (BIT2 x)))) = ALIGNED (a - 1w)) /\ 
       (ALIGNED (a - n2w (NUMERAL (BIT2 (BIT2 x)))) = ALIGNED (a - 2w)) /\ 
-      (ALIGNED (a - n2w (NUMERAL (BIT1 (BIT1 x)))) = ALIGNED (a - 3w))``,
-  ONCE_REWRITE_TAC [BIT_LEMMA] \\ ONCE_REWRITE_TAC [ADD_COMM]
+      (ALIGNED (a - n2w (NUMERAL (BIT1 (BIT1 (BIT1 x))))) = ALIGNED (a - 3w)) /\ 
+      (ALIGNED (a - n2w (NUMERAL (BIT1 (BIT1 (BIT2 x))))) = ALIGNED (a - 3w))``,
+  PURE_ONCE_REWRITE_TAC [BIT_LEMMA] \\ ONCE_REWRITE_TAC [ADD_COMM]
   \\ SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_ASSOC,WORD_SUB_PLUS,
-        ALIGNED_CLAUSES,ALIGNED_SUB_CLAUSES,GSYM word_mul_n2w,ALIGNED_0]);
+        ALIGNED_CLAUSES,ALIGNED_SUB_CLAUSES,GSYM word_mul_n2w,ALIGNED_0]
+  \\ SIMP_TAC std_ss [ALIGNED_n2w,
+       RW [WORD_ADD_0] (Q.SPECL [`x`,`0w`] ALIGNED_CLAUSES)]);
 
 val WORD_CMP_NORMALISE = save_thm("WORD_CMP_NORMALISE",let
   val rw = METIS_PROVE [] ``!x:'a y z:'b q. ~(x = y) /\ ~(z = q) = ~(x = y) /\ ~(q = z)``
@@ -676,5 +686,14 @@ val WORD_ADD_FOLD = store_thm("WORD_ADD_FOLD",
 val EXISTS_EQ_LEMMA = store_thm("EXISTS_EQ_LEMMA",
   ``!v P. (!i. ~(i = v) ==> ~(P i)) ==> ((?i. P i) = P v)``,
   METIS_TAC []);
+
+val w2w_eq_n2w = store_thm("w2w_eq_n2w",
+  ``!w:word8. (!m. m < 256 ==> ((w2w w = (n2w m):word32) = (w = n2w m))) /\ 
+              (w2w ((w2w w):word32) = w)``,
+  Cases_word
+  THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2w_def,w2n_n2w,n2w_11]
+  THEN REPEAT STRIP_TAC
+  THEN IMP_RES_TAC (DECIDE ``k < 256 ==> k < 4294967296``)
+  THEN FULL_SIMP_TAC std_ss []);
 
 val _ = export_theory();

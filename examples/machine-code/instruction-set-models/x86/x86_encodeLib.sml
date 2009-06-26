@@ -134,6 +134,13 @@ fun x86_encode s = let
   val s = String.translate (fn x => implode [Char.toUpper x]) s
   val xs = String.tokens (fn x => mem x [#" ",#","]) s
   val ys = filter (fn (x,y) => ((hd y = hd xs) handle _ => false)) instructions
+  fun translate "r8" = "r32" 
+    | translate "r/m8" = "r/m32"
+    | translate s = s
+  val (xs,ys) = if not (mem "BYTE" xs) then (xs,ys) else
+                  (filter (fn x => not (x = "BYTE")) xs,
+                   map (fn (x,y) => (x, map translate y))
+                   (filter (fn (x,y) => mem "r/m8" y) ys))
   fun pos x [] = hd []
     | pos x (y::ys) = if x = y then 0 else 1 + pos x ys
   fun find x [] = hd []

@@ -419,15 +419,15 @@ val SExp2XExp_11 = prove(
        lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r1,r2,r3,r4,r5,r6,a,df,f,s,rest) ==>
        ((SExp2XExp x1 s = SExp2XExp x2 s) = (x1 = x2))``, 
   Induct THENL [
-    Cases_on `x2`
-    \\ SIMP_TAC std_ss [SExp2XExp_def,XExp_11,SExp_11,XExp_distinct,SExp_distinct]
-    \\ `isDot (Dot x1 x1') /\ isDot (Dot S'' S0)` by REWRITE_TAC [isDot_def]
+    STRIP_TAC \\ STRIP_ASSUME_TAC (Q.SPEC `x2` SExp_expand)
+    \\ FULL_SIMP_TAC std_ss [SExp2XExp_def,XExp_11,SExp_11,XExp_distinct,SExp_distinct]
+    \\ `isDot (Dot x1 x1') /\ isDot (Dot exp1 exp2)` by REWRITE_TAC [isDot_def]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC 
-    \\ `lisp_inv (CAR (Dot x1 x1'),Dot S'' S0,x3,x4,x5,x6,limit) (f r1,r2,r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_car]
-    \\ `lisp_inv (CAR (Dot x1 x1'),CAR (Dot S'' S0),x3,x4,x5,x6,limit) (f r1,f r2,r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_car]
+    \\ `lisp_inv (CAR (Dot x1 x1'),Dot exp1 exp2,x3,x4,x5,x6,limit) (f r1,r2,r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_car]
+    \\ `lisp_inv (CAR (Dot x1 x1'),CAR (Dot exp1 exp2),x3,x4,x5,x6,limit) (f r1,f r2,r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_car]
     \\ FULL_SIMP_TAC std_ss [CAR_def]
-    \\ `lisp_inv (CDR (Dot x1 x1'),Dot S'' S0,x3,x4,x5,x6,limit) (f (r1+4w),r2,r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_cdr]
-    \\ `lisp_inv (CDR (Dot x1 x1'),CDR (Dot S'' S0),x3,x4,x5,x6,limit) (f (r1+4w),f (r2+4w),r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_cdr]
+    \\ `lisp_inv (CDR (Dot x1 x1'),Dot exp1 exp2,x3,x4,x5,x6,limit) (f (r1+4w),r2,r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_cdr]
+    \\ `lisp_inv (CDR (Dot x1 x1'),CDR (Dot exp1 exp2),x3,x4,x5,x6,limit) (f (r1+4w),f (r2+4w),r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_cdr]
     \\ FULL_SIMP_TAC std_ss [CDR_def]
     \\ METIS_TAC [],
     Cases_on `x2`

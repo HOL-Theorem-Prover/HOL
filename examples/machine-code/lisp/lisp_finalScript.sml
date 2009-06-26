@@ -5,7 +5,7 @@ open lisp_invTheory;
 open pairSyntax helperLib;
 open listTheory pred_setTheory;
 open progTheory addressTheory set_sepTheory;
-open finite_mapTheory
+open finite_mapTheory;
 
 val aLISP_def = lisp_opsTheory.aLISP_def;
 val pLISP_def = lisp_opsTheory.pLISP_def;
@@ -329,7 +329,7 @@ val ppc_sexp2string_th = let
 
 val xSTACK_def = Define `
   (xSTACK a [] = cond (ALIGNED a)) /\ 
-  (xSTACK a (w::ws) = xMEMORY {a} (\x.w) * xSTACK (a + 4w) ws)`;
+  (xSTACK a (w::ws) = xM a w * xSTACK (a + 4w) ws)`;
 
 val xSTACK_PUSH_EDI = let
   val (th,t_def) = decompilerLib.decompile 
@@ -340,23 +340,15 @@ val xSTACK_PUSH_EDI = let
   val post = ``xSTACK (esp-4w) [edi] * xR EDI edi * xR ESP (esp - 0x4w) * xPC (p + 0x1w)``    
   val (th,goal) = SPEC_WEAKEN_RULE th post
   val tac = 
-    SIMP_TAC std_ss [xSTACK_def,WORD_SUB_ADD]
-    THEN `xMEMORY {esp - 4w} ((esp - 0x4w =+ edi) (\x. w)) = 
-          xMEMORY {esp - 4w} (\x. edi)` by ALL_TAC
-    THEN FULL_SIMP_TAC std_ss [AC STAR_COMM STAR_ASSOC,SEP_IMP_def]  
-    THEN SIMP_TAC std_ss [prog_x86Theory.xMEMORY_def,prog_x86Theory.xMEMORY_SET_def]
-    THEN MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (f (g x) = f (g y))``)
-    THEN SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,
-           combinTheory.APPLY_UPDATE_THM]
+    SIMP_TAC std_ss [SEP_IMP_MOVE_COND,xSTACK_def,prog_x86Theory.xM_THM,
+      ALIGNED,SEP_CLAUSES] THEN SIMP_TAC (std_ss++star_ss) [SEP_IMP_REFL]  
   val th = MP th (prove(goal,tac))
   val pre = ``xSTACK (esp-4w) [w] * xR EDI edi * xR ESP esp * xPC p``    
   val (th,goal) = SPEC_STRENGTHEN_RULE th pre
   val tac = 
-    SIMP_TAC std_ss [xSTACK_def,ALIGNED_INTRO]
-    THEN ONCE_REWRITE_TAC [ALIGNED]
-    THEN ONCE_REWRITE_TAC [ALIGNED]
-    THEN SIMP_TAC (std_ss++sep_cond_ss) [SEP_IMP_MOVE_COND,IN_INSERT,SEP_CLAUSES]     
-    THEN SIMP_TAC std_ss [SEP_IMP_def,AC STAR_ASSOC STAR_COMM]
+    SIMP_TAC (std_ss++sep_cond_ss) [SEP_IMP_MOVE_COND,xSTACK_def,prog_x86Theory.xM_THM,
+      ALIGNED,SEP_CLAUSES,SEP_IMP_REFL,IN_INSERT,NOT_IN_EMPTY] 
+    THEN SIMP_TAC (std_ss++star_ss) [ALIGNED_INTRO,ALIGNED,SEP_CLAUSES,SEP_IMP_REFL]  
   val th = MP th (prove(goal,tac))
   in th end;
  
@@ -369,19 +361,15 @@ val xSTACK_MOVE_EDI = let
   val post = ``xSTACK esp [w] * xR EDI w * xR ESP esp * xPC (p + 0x3w)``    
   val (th,goal) = SPEC_WEAKEN_RULE th post
   val tac = 
-    SIMP_TAC std_ss [xSTACK_def,WORD_SUB_ADD]
-    THEN ONCE_REWRITE_TAC [ALIGNED]
-    THEN SIMP_TAC (std_ss++sep_cond_ss) [SEP_IMP_MOVE_COND,IN_INSERT,SEP_CLAUSES]     
-    THEN SIMP_TAC std_ss [SEP_IMP_def,AC STAR_ASSOC STAR_COMM]
+    SIMP_TAC std_ss [SEP_IMP_MOVE_COND,xSTACK_def,prog_x86Theory.xM_THM,
+      ALIGNED,SEP_CLAUSES] THEN SIMP_TAC (std_ss++star_ss) [SEP_IMP_REFL]  
   val th = MP th (prove(goal,tac))
   val pre = ``xSTACK esp [w] * ~xR EDI * xR ESP esp * xPC p``    
   val (th,goal) = SPEC_STRENGTHEN_RULE th pre
   val tac = 
-    SIMP_TAC std_ss [xSTACK_def,ALIGNED_INTRO]
-    THEN ONCE_REWRITE_TAC [ALIGNED]
-    THEN ONCE_REWRITE_TAC [ALIGNED]
-    THEN SIMP_TAC (std_ss++sep_cond_ss) [SEP_IMP_MOVE_COND,IN_INSERT,SEP_CLAUSES]     
-    THEN SIMP_TAC std_ss [SEP_IMP_def,AC STAR_ASSOC STAR_COMM]
+    SIMP_TAC (std_ss++sep_cond_ss) [SEP_IMP_MOVE_COND,xSTACK_def,prog_x86Theory.xM_THM,
+      ALIGNED,SEP_CLAUSES,SEP_IMP_REFL,IN_INSERT,NOT_IN_EMPTY] 
+    THEN SIMP_TAC (std_ss++star_ss) [ALIGNED_INTRO,ALIGNED,SEP_CLAUSES,SEP_IMP_REFL]  
   val th = MP th (prove(goal,tac))
   in th end;
 
@@ -394,19 +382,15 @@ val xSTACK_POP_EDI = let
   val post = ``xSTACK esp [w] * xR EDI w * xR ESP (esp+4w) * xPC (p + 0x1w)``    
   val (th,goal) = SPEC_WEAKEN_RULE th post
   val tac = 
-    SIMP_TAC std_ss [xSTACK_def,WORD_SUB_ADD]
-    THEN ONCE_REWRITE_TAC [ALIGNED]
-    THEN SIMP_TAC (std_ss++sep_cond_ss) [SEP_IMP_MOVE_COND,IN_INSERT,SEP_CLAUSES]     
-    THEN SIMP_TAC std_ss [SEP_IMP_def,AC STAR_ASSOC STAR_COMM]
+    SIMP_TAC std_ss [SEP_IMP_MOVE_COND,xSTACK_def,prog_x86Theory.xM_THM,
+      ALIGNED,SEP_CLAUSES] THEN SIMP_TAC (std_ss++star_ss) [SEP_IMP_REFL]  
   val th = MP th (prove(goal,tac))
   val pre = ``xSTACK esp [w] * ~xR EDI * xR ESP esp * xPC p``    
   val (th,goal) = SPEC_STRENGTHEN_RULE th pre
   val tac = 
-    SIMP_TAC std_ss [xSTACK_def,ALIGNED_INTRO]
-    THEN ONCE_REWRITE_TAC [ALIGNED]
-    THEN ONCE_REWRITE_TAC [ALIGNED]
-    THEN SIMP_TAC (std_ss++sep_cond_ss) [SEP_IMP_MOVE_COND,IN_INSERT,SEP_CLAUSES]     
-    THEN SIMP_TAC std_ss [SEP_IMP_def,AC STAR_ASSOC STAR_COMM]
+    SIMP_TAC (std_ss++sep_cond_ss) [SEP_IMP_MOVE_COND,xSTACK_def,prog_x86Theory.xM_THM,
+      ALIGNED,SEP_CLAUSES,SEP_IMP_REFL,IN_INSERT,NOT_IN_EMPTY] 
+    THEN SIMP_TAC (std_ss++star_ss) [ALIGNED_INTRO,ALIGNED,SEP_CLAUSES,SEP_IMP_REFL]  
   val th = MP th (prove(goal,tac))
   in th end;
 
@@ -556,18 +540,6 @@ val ppc_th = auto_prove SPEC_lisp_eval_ppc_thm
 val x86_th = auto_prove SPEC_lisp_eval_x86_thm
   ``xLISP1 (sexpression2sexp s2,l) * xPC p * ~xS``
 
-val rw = 
-  [arm_print_sexp_arm_def,arm_init_stack_arm_def,arm_print_loop_arm_def,
-   arm_print_loop_aux_arm_def,arm_print_exit_arm_def,arm_set_return_arm_def,
-   arm_print_num_arm_def,arm_is_quote_arm_def,arm_str2num1_arm_def,
-   arm_string_reverse1_arm_def,arm_string_rev_arm_def,arm_copy_symbol_arm_def,
-   arm_string_copy_arm_def] @
-  [arm_print_sexp_ppc_def,arm_init_stack_ppc_def,arm_print_loop_ppc_def,
-   arm_print_loop_aux_ppc_def,arm_print_exit_ppc_def,arm_set_return_ppc_def,
-   arm_print_num_ppc_def,arm_is_quote_ppc_def,arm_str2num1_ppc_def,
-   arm_string_reverse1_ppc_def,arm_string_rev_ppc_def,arm_copy_symbol_ppc_def,
-   arm_string_copy_ppc_def]
-
 val _ = codegen_x86Lib.set_x86_regs 
   [(3,"eax"),(4,"ecx"),(5,"edx"),(6,"ebx"),(7,"edi"),(8,"esi")]
 
@@ -584,13 +556,13 @@ val arm_eval_th = LISP_SPEC_COMPOSE_RULE
   [find_thm "arm" setup_code,
    arm_string2sexp_arm_thm,
    arm_th,
-   RW rw arm_sexp2string_th]
+   arm_sexp2string_th]
 
 val ppc_eval_th = LISP_SPEC_COMPOSE_RULE 
   [find_thm "ppc" setup_code,
    arm_string2sexp_ppc_thm,
    ppc_th,
-   RW rw ppc_sexp2string_th]
+   ppc_sexp2string_th]
 
 val x86_eval_th = LISP_SPEC_COMPOSE_RULE 
   [find_thm "x86" setup_code,

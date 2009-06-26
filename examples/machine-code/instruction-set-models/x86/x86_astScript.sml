@@ -15,6 +15,9 @@ val _ = new_theory "x86_ast";
 
   from x86_coretypesTheory.
 
+  Nearly all instructions operate only over 32-bit data.
+  However, MOV, CMP and DEC are defined also for some 8-bit operations.
+
 <* ---------------------------------------------------------------------------------- *)
 
 
@@ -61,10 +64,12 @@ val _ = Hol_datatype `
                | Xcall      of Ximm_rm
                | Xret       of Ximm
                | Xmov       of Xcond => Xdest_src
-               | Xmov_byte  of Xdest_src
+               | Xmov_byte  of Xdest_src          
                | Xcmp_byte  of Xdest_src
-               | Xjump      of Xcond => Ximm
-               | Xloop      of Xcond => Ximm      (* Here Xcond over approximates possibilities *)
+               | Xdec_byte  of Xrm
+               | Xjcc       of Xcond => Ximm      (* jcc includes jmp rel, i.e. unconditional relative jumps. *)
+               | Xjmp       of Xrm                (* jmp excludes relative jumps, see jcc. *)
+               | Xloop      of Xcond => Ximm      (* Here Xcond over approximates possibilities. *)
                | Xpushad      
                | Xpopad     `;
 

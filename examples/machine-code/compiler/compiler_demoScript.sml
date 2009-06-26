@@ -57,18 +57,6 @@ val (th1,th2,th3) = compile_all ``
       let g = (r4 =+ w2w r3) g in
         copy_byte_loop (r3,r4,dg,g)``;
 
-val (thms,arm_str_rev_def,arm_str_rev_pre_def) = compile_all ``
-  arm_string_rev(r3:word32,r4,r6,df:word32 set,f:word32->word8) = 
-    if r3 = 0w then (r4,df,f) else
-      let r4 = (w2w (f r6)):word32 in
-      let r5 = (w2w (f r4)):word32 in
-      let f = (r6 =+ w2w r5) f in
-      let f = (r4 + 2w =+ w2w r4) f in
-      let r6 = r6 - 1w in
-      let r4 = r4 + 1w in
-      let r3 = r3 - 1w in
-        arm_string_rev(r3,r4,r6,df,f)``
-
 (* shared-tails *)
 
 val (th1,th2,th3) = compile_all `` 
@@ -112,6 +100,24 @@ val (th1,th2,th3) = compile_all ``
     let r4 = r2 + 45w in
     let r5 = r2 + r3 in
       (r1,r2,r3,r4,r5)``;
+
+(* string operations *)
+
+val _ = codegen_x86Lib.set_x86_regs 
+  [(3,"eax"),(4,"ecx"),(5,"edx"),(6,"ebx"),(7,"edi"),(8,"esi"),(9,"ebp")]
+
+val (thms,arm_str_rev_def,arm_str_rev_pre_def) = compile_all ``
+  arm_string_rev(r3:word32,r6,r7,df:word32 set,f:word32->word8) = 
+    if r3 = 0w then (r7,df,f) else
+      let r4 = (w2w (f r6)):word32 in
+      let r5 = (w2w (f r7)):word32 in
+      let f = (r6 =+ w2w r5) f in
+      let f = (r7 =+ w2w r4) f in
+      let r6 = r6 - 1w in
+      let r7 = r7 + 1w in
+      let r3 = r3 - 1w in
+        arm_string_rev(r3,r6,r7,df,f)``
+
 
 val _ = export_theory();
 
