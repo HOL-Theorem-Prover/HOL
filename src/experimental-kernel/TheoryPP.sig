@@ -9,9 +9,12 @@ signature TheoryPP =
 sig
  type thm = Thm.thm
  type hol_type = Type.hol_type
+ type kind = Kind.kind
  type ppstream = Portable.ppstream
+ type num = Arbnum.num
 
- val pp_type : string -> string -> ppstream -> hol_type -> unit
+ val pp_type : string -> string -> string -> string -> string -> string ->
+               string -> string -> ppstream -> hol_type -> unit
 
  val pp_sig_hook : (unit -> unit) ref  (* XXX minimal change to make HOL build *)
 
@@ -27,9 +30,9 @@ sig
      -> unit
 
  val pp_struct
-   : {theory      : string*Arbnum.num*Arbnum.num,
-      parents     : (string*Arbnum.num*Arbnum.num) list,
-      types       : (string*int) list,
+   : {theory      : string*num*num,
+      parents     : (string*num*num) list,
+      types       : (string*kind*int) list,
       constants   : (string*hol_type) list,
       axioms      : (string * thm) list,
       definitions : (string * thm) list,

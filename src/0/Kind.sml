@@ -159,7 +159,22 @@ fun kd_sub [] _ = SAME
        of NONE    => SAME
         | SOME kd => DIFF kd
 
-fun kind_subst theta = delta_apply (kd_sub theta)
+fun kd_sub1 theta kd =
+  case Lib.subst_assoc (equal kd) theta
+   of SOME kd' => if kd'=kd then SAME else DIFF kd'
+    | NONE     => (case kd
+                    of Oper(kd1,kd2) =>
+                         (case delta_map (kd_sub1 theta) [kd1,kd2]
+                           of SAME => SAME
+                            | DIFF [kd1',kd2'] => DIFF (Oper(kd1',kd2'))
+                            | DIFF _ => raise ERR "kd_sub1" "can't happen")
+                     | _ => SAME)
+
+fun kind_subst theta =
+    if null theta then I
+    else if List.all (is_var_kind o #redex) theta
+         then delta_apply (kd_sub theta)
+         else delta_apply (kd_sub1 theta)
 
          
 (*---------------------------------------------------------------------------

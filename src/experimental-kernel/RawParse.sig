@@ -1,7 +1,7 @@
 signature RawParse =
 sig
 
-  val readTerm : Term.term vector -> string -> Term.term
-  val pp_raw_term : (Term.term -> int) -> Term.term -> string
+  val readTerm : Type.hol_type vector -> Term.term vector -> string -> Term.term
+  val pp_raw_term : (Type.hol_type -> int) -> (Term.term -> int) -> Term.term -> string
 
 end;

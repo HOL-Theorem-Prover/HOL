@@ -8,13 +8,17 @@
 
 infix ++ && |-> THEN THEN1 THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ?> |>
 infixr ##
+infixr 3 ==>;
 infixr 3 -->;
 infix 8 via by;
 
 structure Tag = Tag :> FinalTag where type tag = Tag.tag
+structure Kind = Kind :> FinalKind where type kind = Kind.kind
 structure Type = Type :> FinalType where type hol_type = Type.hol_type
+                                     and type kind = Kind.kind
 structure Term = Term :> FinalTerm where type term = Term.term
-                                         and type hol_type = Type.hol_type
+                                     and type hol_type = Type.hol_type
+                                     and type kind = Kind.kind
 
 structure Process = OS.Process
 

@@ -24,6 +24,8 @@ struct
             case dest_term t of
               COMB(t1, t2) => leavesl(acc, t1::t2::ts)
             | LAMB(t1, t2) => leavesl(acc, t1::t2::ts)
+            | TYCOMB(tm, ty) => leavesl(acc, tm::ts)
+            | TYLAMB(a, tm) => leavesl(acc, tm::ts)
             | v => leavesl(HOLset.add(acc,t), ts)
           end
     fun leaves (t, acc) = leavesl(acc, [t])
@@ -31,8 +33,8 @@ struct
 
     open SharingTables
     fun doterms (t, tables) = #2 (make_shared_term t tables)
-    val (idtable,tytable,tmtable) =
-        HOLset.foldl doterms (empty_idtable, empty_tytable, empty_termtable)
+    val (idtable,kdtable,tytable,tmtable) =
+        HOLset.foldl doterms (empty_idtable, empty_kdtable, empty_tytable, empty_termtable)
                      allleaves
 
     val _ = PP.begin_block pps PP.CONSISTENT 0 (* whole file block *)
@@ -54,6 +56,35 @@ struct
     val _ = PP.end_block pps                   (* end IDs block *)
     val _ = PP.add_break pps (1,0)
 
+    val _ = PP.begin_block pps PP.CONSISTENT 2 (* kinds block *)
+    val _ = PP.begin_block pps PP.CONSISTENT 2 (* kind title block *)
+    val _ = out "KINDS"
+    val _ = PP.add_break pps (1,0)
+    val _ = out (Int.toString (#kdsize kdtable))
+    val _ = PP.end_block pps                   (* end kind title block *)
+    val _ = PP.add_break pps (1,0)
+    val _ = PP.begin_block pps PP.INCONSISTENT 0
+    fun pr_skd skd =
+        case skd of
+          KDTY  => PP.add_string pps "KDTY"
+        | KDV s => PP.add_string pps ("KDV" ^ qstr s)
+        | KDARR (k1i,k2i) => let
+          in
+            PP.add_string pps "KDARR(";
+            PP.begin_block pps PP.INCONSISTENT 0;
+            PP.add_string pps (Int.toString k1i ^ ",");
+            PP.add_break pps (1,0);
+            PP.add_string pps (Int.toString k2i);
+            PP.end_block pps;
+            PP.add_string pps ")"
+          end
+    val _ = Portable.pr_list pr_skd (fn () => ())
+                             (fn () => PP.add_break pps (1,0))
+                             (List.rev (#kdlist kdtable))
+    val _ = PP.end_block pps
+    val _ = PP.end_block pps (* end kinds block *)
+    val _ = PP.add_break pps (1,0)
+
     val _ = PP.begin_block pps PP.CONSISTENT 2 (* types block *)
     val _ = PP.begin_block pps PP.CONSISTENT 2 (* type title block *)
     val _ = out "TYPES"
@@ -61,20 +92,19 @@ struct
     val _ = out (Int.toString (#tysize tytable))
     val _ = PP.end_block pps                   (* end type title block *)
     val _ = PP.add_break pps (1,0)
+    fun ipair_string (x,y) = "("^Int.toString x^", "^Int.toString y^")"
     val _ = PP.begin_block pps PP.INCONSISTENT 0
     fun pr_sty sty =
         case sty of
-          TYV s => PP.add_string pps ("TYV" ^ qstr s)
-        | TYOP ilist => let
-          in
-            PP.add_string pps "TYOP[";
-            PP.begin_block pps PP.INCONSISTENT 0;
-            Portable.pr_list (fn i => PP.add_string pps (Int.toString i))
-                             (fn () => ()) (fn () => PP.add_break pps (1,0))
-                             ilist;
-            PP.end_block pps;
-            PP.add_string pps "]"
-          end
+          TYV (s,kdi,rk)  => PP.add_string pps ("TYV(" ^ qstr s ^ "," ^
+                                                Int.toString kdi ^ "," ^
+                                                Int.toString rk ^ ")")
+        | TYC (id,kdi,rk) => PP.add_string pps ("TYC(" ^ Int.toString id ^ "," ^
+                                                Int.toString kdi ^ "," ^
+                                                Int.toString rk ^ ")")
+        | TYAp (opri,argi)  => out ("TYAp"  ^ ipair_string(opri,argi))
+        | TYAbs (bvi,bodyi) => out ("TYAbs" ^ ipair_string(bvi,bodyi))
+        | TYUni (bvi,bodyi) => out ("TYUni" ^ ipair_string(bvi,bodyi))
     val _ = Portable.pr_list pr_sty (fn () => ())
                              (fn () => PP.add_break pps (1,0))
                              (List.rev (#tylist tytable))
@@ -122,6 +152,11 @@ struct
     val _ = PP.begin_block pps PP.CONSISTENT 2 (* theorems block *)
     val _ = out "THEOREMS"
     val _ = PP.add_break pps (1,0)
+    fun pr_type ty = let
+              val i = Map.find(#tymap tytable, ty)
+            in
+              PP.add_string pps (Int.toString i)
+            end
     fun pr_term t = let
       fun recurse newcomb t =
           case dest_term t of
@@ -140,6 +175,23 @@ struct
               PP.add_string pps ".";
               PP.add_break pps (1,0);
               recurse false t2;
+              PP.add_string pps ")"
+            end
+          | TYCOMB(tm, ty) => let
+            in
+              if newcomb then PP.add_string pps "(:" else ();
+              recurse false tm;
+              PP.add_break pps (1,0);
+              pr_type ty;
+              if newcomb then PP.add_string pps ")" else ()
+            end
+          | TYLAMB(a,tm) => let
+            in
+              PP.add_string pps "(/";
+              pr_type a;
+              PP.add_string pps ".";
+              PP.add_break pps (1,0);
+              recurse false tm;
               PP.add_string pps ")"
             end
           | _ => let

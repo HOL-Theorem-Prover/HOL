@@ -668,7 +668,6 @@ fun pp_struct info_record ppstrm =
       add_string"fun P a b     = mk_app_type(a,b)";        add_newline();
       add_string"fun B a b     = mk_abs_type(a,b)";        add_newline();
       add_string"fun N a b     = mk_univ_type(a,b)";       add_newline();
-   (*   add_string("val _ = print \"Loading theory: "^Thry name^"\\n\""); *)
       add_newline();
       pblock ("Parents", add_string o pparent,
               thid_sort parents1);

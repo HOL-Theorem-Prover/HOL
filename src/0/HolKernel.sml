@@ -146,7 +146,7 @@ fun mk_binder c f (p as (Bvar,_)) =
    handle HOL_ERR {message,...} => raise ERR f message;
 
 fun mk_tybinder c f (p as (Bvar,_)) =
-   mk_comb(c, mk_tyabs p)
+   mk_comb(Term.inst_kind[kappa |-> kind_of Bvar] c, mk_tyabs p)
    handle HOL_ERR {message,...} => raise ERR f message;
 
 fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys
@@ -486,17 +486,6 @@ local
       in
         term_pmatch lconsts ((vty |-> cty)::tyenv) env vbod cbod sofar'
       end
-(*
-    else if is_tycomb vtm then let
-        val (vtm0,vty) = dest_tycomb vtm
-        val (ctm0,cty) = dest_tycomb ctm
-        val vv = mk_dummy vty
-        val cv = mk_dummy cty
-        val sofar' = (safe_inserta(vv |-> cv) insts, homs)
-      in
-        term_pmatch lconsts env vtm0 ctm0 sofar'
-      end
-*)
     else if is_comb vtm then let
         val vhop = repeat tyrator (repeat rator vtm)
       in

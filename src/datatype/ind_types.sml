@@ -1417,6 +1417,7 @@ local
                                 Args=map (modify_type theta) Args}
                  end handle HOL_ERR _ =>
                  if is_vartype ty then ty
+                 else if is_con_type ty then ty
                  else if is_app_type ty then let
                      val (opr,arg) = dest_app_type ty
                    in

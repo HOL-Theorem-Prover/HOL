@@ -118,8 +118,11 @@ fun extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype m
      val extern_type = extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
+     fun is_fun_type ty = let val {Thy,Tyop,Args} = dest_thy_type ty
+                          in Tyop="fun" andalso Thy="min"
+                          end handle HOL_ERR _ => false
      fun extern_type_par ty = if mem ty [alpha,beta,gamma,delta] then extern_type ty
-                          else if can raw_dom_rng ty then extern_type ty
+                          else if is_fun_type ty then extern_type ty
                           else (add_string "("; extern_type ty; add_string ")")
  in
   if is_vartype ty

@@ -26,11 +26,13 @@ local
   fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
   fun locpp pps l = PP.add_string pps (locn.toShortString l)
 in
+  val _ = PolyML.install_pp (pp2polypp (with_pp Kind.pp_qkind))
   val _ = PolyML.install_pp (pp2polypp (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term)));
   val _ = PolyML.install_pp (pp2polypp (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type)));
   val _ = PolyML.install_pp (pp2polypp (with_pp Pretype.pp_pretype))
   val _ = PolyML.install_pp (pp2polypp (with_pp Hol_pp.pp_thm));
   val _ = PolyML.install_pp (pp2polypp (with_pp Hol_pp.pp_theory));
+  val _ = PolyML.install_pp (pp2polypp (with_pp kind_grammar.prettyprint_grammar));
   val _ = PolyML.install_pp (pp2polypp (with_pp type_grammar.prettyprint_grammar));
   val _ = PolyML.install_pp (pp2polypp (with_pp ppg))
 
@@ -118,7 +120,7 @@ val build_stamp =
 val _ =
 TextIO.output(TextIO.stdOut,
   "\n-----------------------------------------------------------------\n"
-  ^"       HOL-4 ["
+  ^"    HOL-Omega ["
   ^Globals.release^" "^Lib.int_to_string(Globals.version)^build_stamp
   ^"]\n\n       For introductory HOL help, type: help \"hol\";\n"
   ^"-----------------------------------------------------------------\n\n");

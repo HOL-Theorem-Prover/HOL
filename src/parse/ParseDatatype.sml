@@ -326,10 +326,9 @@ in
   | dAQ (Ty) => ok
 end env
 
+infixr 3 ==>
 val op ==> = Prekind.==>
-
-fun list_mk_arrow_kind([], kd0) = kd0
-  | list_mk_arrow_kind(kd::kds, kd0) = kd ==> list_mk_arrow_kind(kds, kd0)
+val list_mk_arrow_kind = Prekind.list_mk_arrow_kind
 
 fun clean deftys params pty =
 let val pkinds = map #2 params

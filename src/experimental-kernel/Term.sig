@@ -2,6 +2,8 @@ signature Term =
 sig
 
   include FinalTerm where type hol_type = Type.hol_type
+                      and type kind     = Kind.kind
+
   val uptodate_term     : term -> bool
 
   val thy_consts        : string -> term list

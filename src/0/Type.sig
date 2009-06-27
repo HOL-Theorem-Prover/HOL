@@ -63,12 +63,14 @@ sig
 
   val mk_univ_type  : hol_type * hol_type -> hol_type
   val list_mk_univ_type : hol_type list * hol_type -> hol_type
+  val list_mk_univ_type_binder : hol_type option -> string -> hol_type list * hol_type -> hol_type
   val dest_univ_type: hol_type -> hol_type * hol_type
   val strip_univ_type : hol_type -> hol_type list * hol_type
   val is_univ_type  : hol_type -> bool
 
   val mk_abs_type   : hol_type * hol_type -> hol_type
   val list_mk_abs_type : hol_type list * hol_type -> hol_type
+  val list_mk_abs_type_binder : hol_type option -> string -> hol_type list * hol_type -> hol_type
   val dest_abs_type : hol_type -> hol_type * hol_type
   val strip_abs_type: hol_type -> hol_type list * hol_type
   val is_abs_type   : hol_type -> bool
@@ -118,8 +120,10 @@ sig
   val ftyvar        : hol_type
 
   val match_type    : hol_type -> hol_type -> (hol_type,hol_type)Lib.subst
-  val kind_match_type : hol_type -> hol_type ->
-                        (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
+  val kind_match_type  : hol_type -> hol_type ->
+                         (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
+  val kind_match_types : (hol_type,hol_type) Lib.subst ->
+                         (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
 
   val raw_match_type : hol_type -> hol_type
                       -> (hol_type,hol_type) Lib.subst * hol_type list
@@ -171,6 +175,8 @@ sig
                        -> (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
   val ho_match_type  : kind list -> hol_type HOLset.set -> hol_type -> hol_type
                        -> (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
+  val align_types : (hol_type,hol_type) Lib.subst ->
+                    int * (kind,kind) Lib.subst * (hol_type,hol_type) Lib.subst
   val thy_types     : string -> (string * int) list
   val thy_type_oprs : string -> (string * kind * int) list
   val type_size     : hol_type -> int

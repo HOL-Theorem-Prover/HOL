@@ -1,7 +1,6 @@
 signature emitLib =
 sig
   include Abbrev
-  type tyvar = string * kind * int
 
   datatype side = LEFT | RIGHT
 

@@ -89,7 +89,8 @@ sig
   val ty_eta_conv   : term -> term
   val beta_conv_ty_in_term : term -> term
   val subst         : (term,term) Lib.subst -> term -> term
-  val inst          : (hol_type,hol_type)subst -> term -> term
+  val inst          : (hol_type,hol_type) subst -> term -> term (* general: aligns kinds & ranks *)
+  val raw_inst      : (hol_type,hol_type) subst -> term -> term (* expects kinds & ranks match *)
   val inst_kind     : (kind,kind)subst -> term -> term
   val inst_rank     : int -> term -> term
   val inst_rank_kind : int -> (kind,kind)subst -> term -> term

@@ -16,9 +16,13 @@ struct
 In *scratch*, type
 (hol-set-executable mosml-executable)
 or
+(hol-set-executable polyml-executable)
+or
 (hol-set-executable (concat hol-home "/bin/hol.bare"))
 
 and type Ctrl-j.
+
+For Moscow ML:
 
 quotation := true;
 loadPath := "/Users/palantir" ^ "/hol/hol-omega/sigobj" :: !loadPath;
@@ -26,12 +30,24 @@ loadPath := "/Users/palantir" ^ "/hol/hol-omega/sigobj" :: !loadPath;
 quotation := true;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/sigobj" :: !loadPath;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/bool" :: !loadPath;
+loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/HolSat" :: !loadPath;
 
 app load ["Kind","Type","Term","Thm","Theory","Globals","HolKernel","Parse","Unicode"];
-app load ["Drule","Thm","boolTheory","Tactical","Tactic","Rerite"];
+(*app load ["boolTheory","boolSyntax","Drule","Abbrev"];*)
+(*app load ["Globals","Drule","boolTheory","Tactical","Tactic","Rewrite"];*)
+
+quietdec := true;
+---------------------
+For PolyML:
+
+
 *)
 
 open HolKernel Parse Unicode;
+
+(*
+quietdec := false;
+*)
 
 val _ = new_theory "bool";
 
@@ -157,7 +173,7 @@ val TY_EXISTS_DEF =
    ("TY_EXISTS_DEF",     Term `?: = \P. ~(P = (\:'a:'k. F))`);
 
 val _ = (add_type_binder("?:", std_binder_precedence); add_const "?:");
-val _ = unicode_version { u = UChar.forall ^ ":", tmnm = "?:" };
+val _ = unicode_version { u = UChar.exists ^ ":", tmnm = "?:" };
 
 (* Test of HOL-Omega definitions; uncomment to test:
 

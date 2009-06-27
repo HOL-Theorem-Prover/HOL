@@ -52,4 +52,5 @@ fun expandq q =
   of [QUOTE s] => expands(drop_loc s)
    | otherwise => raise ERR "expandq" "unable to handle antiquotation";
 
-val eq = expandq;
+(* The following is renamed for HOL-Omega so as not to conflict with Term.eq. *)
+val exq = expandq;

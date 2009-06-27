@@ -42,12 +42,14 @@ sig
 
  val mk_univ_type  : hol_type * hol_type -> hol_type
  val list_mk_univ_type : hol_type list * hol_type -> hol_type
+ val list_mk_univ_type_binder : hol_type option -> string -> hol_type list * hol_type -> hol_type
  val dest_univ_type: hol_type -> hol_type * hol_type
  val strip_univ_type : hol_type -> hol_type list * hol_type
  val is_univ_type  : hol_type -> bool
 
  val mk_abs_type   : hol_type * hol_type -> hol_type
  val list_mk_abs_type : hol_type list * hol_type -> hol_type
+ val list_mk_abs_type_binder : hol_type option -> string -> hol_type list * hol_type -> hol_type
  val dest_abs_type : hol_type -> hol_type * hol_type
  val strip_abs_type : hol_type -> hol_type list * hol_type
  val is_abs_type   : hol_type -> bool
@@ -76,7 +78,6 @@ sig
 
  val type_vars     : hol_type -> hol_type list
  val type_varsl    : hol_type list -> hol_type list
- val type_vars_lr  : hol_type -> hol_type list
  val type_var_in   : hol_type -> hol_type -> bool
  val exists_tyvar  : (hol_type -> bool) -> hol_type -> bool
  val polymorphic   : hol_type -> bool
@@ -91,7 +92,6 @@ sig
 
  val -->           : hol_type * hol_type -> hol_type  (* infixr 3 --> *)
  val dom_rng       : hol_type -> hol_type * hol_type  (* inverts -->  *)
- val raw_dom_rng   : hol_type -> hol_type * hol_type  (* inverts -->  *)
  val bool          : hol_type
  val ind           : hol_type
  val alpha         : hol_type
@@ -102,10 +102,14 @@ sig
  val ftyvar        : hol_type
 
  val type_subst    : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
-
+ val raw_type_subst: (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
+ val match_rank    : int -> int -> int
+ val raw_match_rank: int -> int -> int -> int
  val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
- val kind_match_type : hol_type -> hol_type ->
-                       (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
+ val kind_match_type  : hol_type -> hol_type ->
+                        (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
+ val kind_match_types : (hol_type,hol_type)Lib.subst ->
+                        (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
 
  val match_type_restr : hol_type list -> hol_type -> hol_type 
                         -> (hol_type,hol_type) Lib.subst
@@ -116,19 +120,20 @@ sig
  val raw_match_type: hol_type -> hol_type 
                       -> (hol_type,hol_type) Lib.subst * hol_type list
                       -> (hol_type,hol_type) Lib.subst * hol_type list
- val raw_kind_match_type: hol_type -> hol_type
+ val raw_kind_match_type : hol_type -> hol_type
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
                          ( (kind,kind) Lib.subst * kind list ) * int
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
                          ( (kind,kind) Lib.subst * kind list ) * int
-  val prim_kind_match_type : hol_type -> hol_type
+ val prim_kind_match_type : hol_type -> hol_type
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
                          ( (kind,kind) Lib.subst * kind list ) * int
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
                          ( (kind,kind) Lib.subst * kind list ) * int
+ val align_types : (hol_type,hol_type) Lib.subst ->
+                   int * (kind,kind) Lib.subst * (hol_type,hol_type) Lib.subst
 
- val pp_raw_type    : ppstream -> hol_type -> unit
- val type_to_string : hol_type -> string
+ val type_to_string : hol_type -> string (* for low-level error messages only; superceeded *)
 
  val type_size : hol_type -> int
 

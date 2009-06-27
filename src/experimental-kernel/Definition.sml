@@ -19,9 +19,9 @@
 structure Definition :> Definition =
 struct
 
-open Feedback Lib Type Term Thm
+open Feedback Lib Kind Type Term Thm
 
-infixr --> |->;
+infixr ==> --> |->;
 
 val ERR       = mk_HOL_ERR "Definition";
 val TYDEF_ERR = ERR "new_type_definition"

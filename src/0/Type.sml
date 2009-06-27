@@ -222,7 +222,7 @@ fun inst_rank i ty =
         | inc_rk (TyAll((s,kd,rk),Body)) = TyAll((s,kd,rk+i), inc_rk Body)
         | inc_rk (TyAbs((s,kd,rk),Body)) = TyAbs((s,kd,rk+i), inc_rk Body)
   in if i = 0 then ty
-     else if i < 0 then raise ERR "inst_rank" "new rank is negative"
+     else if i < 0 then raise ERR "inst_rank" "cannot decrement the rank of a type"
      else inc_rk ty
   end;
 
@@ -240,7 +240,7 @@ fun inst_rank_kind rank theta =
         | inst (TyApp(opr, ty))        = TyApp(inst opr, inst ty)
         | inst (TyAll((s,kd,rk),Body)) = TyAll((s,subst kd,rk+rank), inst Body)
         | inst (TyAbs((s,kd,rk),Body)) = TyAbs((s,subst kd,rk+rank), inst Body)
-  in if rank < 0 then raise ERR "inst_rank_kind" "new rank is negative"
+  in if rank < 0 then raise ERR "inst_rank_kind" "cannot decrement the rank of a type"
      else if rank = 0 then inst_kind theta
      else if null theta then inst_rank rank
      else inst
@@ -337,10 +337,10 @@ val empty_tyvarset = HOLset.empty tyvar_compare
 fun tyvar_eq t1 t2 = tyvar_compare(t1,t2) = EQUAL;
 
 fun type_var_compare (TyFv u, TyFv v) = tyvar_compare (u,v)
-  | type_var_compare _ =raise ERR "type_var_compare" "variables required";
+  | type_var_compare _ = raise ERR "type_var_compare" "variables required";
 
 fun type_var_subtype (TyFv u, TyFv v) = tyvar_subtype (u,v)
-  | type_var_subtype _ =raise ERR "type_var_subtype" "variables required";
+  | type_var_subtype _ = raise ERR "type_var_subtype" "variables required";
 
 fun type_con_compare (TyCon(c1,k1,rk1), TyCon(c2,k2,rk2)) =
        (case KernelSig.id_compare (c1,c2)
@@ -419,12 +419,12 @@ fun type_var_in ty =
  *         Type variables                                                    *
  *---------------------------------------------------------------------------*)
 
-val alpha  = TyFv ("'a",mk_arity 0,0)
-val beta   = TyFv ("'b",mk_arity 0,0)
-val gamma  = TyFv ("'c",mk_arity 0,0)
-val delta  = TyFv ("'d",mk_arity 0,0)
-val etyvar = TyFv ("'e",mk_arity 0,0)
-val ftyvar = TyFv ("'f",mk_arity 0,0)
+val alpha  = TyFv ("'a", Type, 0)
+val beta   = TyFv ("'b", Type, 0)
+val gamma  = TyFv ("'c", Type, 0)
+val delta  = TyFv ("'d", Type, 0)
+val etyvar = TyFv ("'e", Type, 0)
+val ftyvar = TyFv ("'f", Type, 0)
 
 val varcomplain = ref true
 val _ = register_btrace ("Vartype Format Complaint", varcomplain)
@@ -513,10 +513,8 @@ val prim_variant_type  = gen_variant (K false) "prim_variant_type";
 
 
 
-fun dest_vartype_opr (TyFv (s,kind,rank)) =
-           (s,kind,rank)
-  | dest_vartype_opr _ =
-           raise ERR "dest_vartype_opr" "not a type variable";
+fun dest_vartype_opr (TyFv (s,kind,rank)) = (s,kind,rank)
+  | dest_vartype_opr _ = raise ERR "dest_vartype_opr" "not a type variable";
 
 fun dest_vartype (TyFv (s,Type,0)) = s
   | dest_vartype (TyFv (s,Type,rank)) =
@@ -832,23 +830,25 @@ end;
   ---------------------------------------------------------------------------*)
 
 local val FORMAT = ERR "list_mk_univ_type_binder"
-   "expected first arg to be a type constant of type :(<ty>_1 -> <ty>_2) -> <ty>_3"
+   "expected first arg to be a type constant of kind ::(<kd>_1 => <kd>_2) => <kd>_3"
    fun check_opt NONE = Lib.I
-     | check_opt (SOME c) = (fn abs => mk_app_type (c, abs))
-       (* or,
+     | check_opt (SOME c) = (* (fn abs => mk_app_type (c, abs)) *)
+       (* or, *)
         if not(is_con_type c) then raise FORMAT
         else case total (fst o kind_dom_rng o fst o kind_dom_rng o kind_of) c
               of NONE => raise FORMAT
                | SOME kn => (fn abs =>
                    let val dom = fst(kind_dom_rng(kind_of abs))
-                   in mk_app_type ( (* inst[kn |-> dom] *) c, abs)
+                   in mk_app_type ( inst_kind[kn |-> dom] c, abs)
                    end)
-       *)
+       (**)
 in
-fun list_mk_univ_type_binder opt =
+fun list_mk_univ_type_binder opt caller =
  let val f = check_opt opt
  in fn (vlist,ty)
- => if not (all is_vartype vlist) then raise ERR "list_mk_univ_type_binder" ""
+ => if not (all is_vartype vlist) then raise ERR caller "bound variable arg not a type variable"
+    else if not (kind_of ty = typ) then raise ERR caller
+                                                  "kind of body is not the base kind"
     else
   let open Redblackmap
      val varmap0 = mkDict tyvar_compare
@@ -874,7 +874,7 @@ fun list_mk_univ_type_binder opt =
  end
 end;
 
-val list_mk_univ_type = list_mk_univ_type_binder NONE;
+val list_mk_univ_type = list_mk_univ_type_binder NONE "list_mk_univ_type";
 
 fun mk_univ_type (Bvar as TyFv tyvar, Body) =
     let fun bind (TyFv v) i            = if v=tyvar then TyBv i else TyFv v
@@ -883,13 +883,14 @@ fun mk_univ_type (Bvar as TyFv tyvar, Body) =
           | bind (TyAbs(Bvar,Body)) i  = TyAbs(Bvar, bind Body (i+1))
           | bind t _ = t
     in
-      TyAll(tyvar, bind Body 0)
+      if kind_of Body = typ then TyAll(tyvar, bind Body 0)
+      else raise ERR "mk_univ_type" "kind of body is not the base kind"
     end
   | mk_univ_type _ = raise ERR "mk_univ_type" "bound variable arg not a variable";
 
 
 (*---------------------------------------------------------------------------*
- * Type abstractionss                                                        *
+ * Type abstractions                                                         *
  *---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------
@@ -898,24 +899,24 @@ fun mk_univ_type (Bvar as TyFv tyvar, Body) =
        type abstractions.
   ---------------------------------------------------------------------------*)
 
-local val FORMAT = ERR "list_mk_type_binder"
-   "expected first arg to be a type constant of type :(<ty>_1 -> <ty>_2) -> <ty>_3"
+local val FORMAT = ERR "list_mk_abs_type_binder"
+   "expected first arg to be a type constant of kind ::(<kd>_1 => <kd>_2) => <kd>_3"
    fun check_opt NONE = Lib.I
-     | check_opt (SOME c) = (fn abs => mk_app_type (c, abs))
-       (* or,
+     | check_opt (SOME c) = (* (fn abs => mk_app_type (c, abs)) *)
+       (* or, *)
         if not(is_con_type c) then raise FORMAT
         else case total (fst o kind_dom_rng o fst o kind_dom_rng o kind_of) c
               of NONE => raise FORMAT
                | SOME kn => (fn abs =>
                    let val dom = fst(kind_dom_rng(kind_of abs))
-                   in mk_app_type ( (* inst[kn |-> dom] *) c, abs)
+                   in mk_app_type ( inst_kind[kn |-> dom] c, abs)
                    end)
-       *)
+       (**)
 in
-fun list_mk_type_binder opt =
+fun list_mk_abs_type_binder opt caller =
  let val f = check_opt opt
  in fn (vlist,ty)
- => if not (all is_vartype vlist) then raise ERR "list_mk_type_binder" ""
+ => if not (all is_vartype vlist) then raise ERR caller "bound variable arg not a type variable"
     else
   let open Redblackmap
      val varmap0 = mkDict tyvar_compare
@@ -937,11 +938,11 @@ fun list_mk_type_binder opt =
   in
      rev_itlist (fn v => fn B => f(TyAbs(v,B))) rvlist (bind ty varmap I)
   end
-  handle e => raise wrap_exn "Type" "list_mk_type_binder" e
+  handle e => raise wrap_exn "Type" "list_mk_abs_type_binder" e
  end
 end;
 
-val list_mk_abs_type = list_mk_type_binder NONE;
+val list_mk_abs_type = list_mk_abs_type_binder NONE "list_mk_abs_type";
 
 fun mk_abs_type (Bvar as TyFv tyvar, Body) =
     let fun bind (TyFv v) i            = if v=tyvar then TyBv i else TyFv v
@@ -1246,21 +1247,15 @@ fun match_rank pat_rk ob_rk = raw_match_rank pat_rk ob_rk 0
 
 fun subst_rank [] = 0
   | subst_rank ({redex,residue} :: s) =
-      let val rk_dex = rank_of redex
-          val rk_due = rank_of residue
-      in
-         Int.max( if rk_dex >= rk_due then 0
-                                      else rk_due - rk_dex,
-                  subst_rank s )
-      end
+      raw_match_rank (rank_of redex) (rank_of residue) (subst_rank s)
 
 fun inst_rank_subst r [] = []
   | inst_rank_subst r ({redex,residue} :: s) =
       ({redex=inst_rank r redex, residue=residue} :: inst_rank_subst r s)
 
-val emptysubst:(hol_type,hol_type)Binarymap.dict = Binarymap.mkDict compare
 local
   open Binarymap
+  val emptysubst:(hol_type,hol_type)Binarymap.dict = Binarymap.mkDict compare
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
         if (kind_of redex <> kind_of residue) handle HOL_ERR _ => false
@@ -1304,20 +1299,7 @@ fun raw_type_subst [] = I
       (if b then vsubs else subs) 0
     end
 
-fun type_subst s =
-   let val r = subst_rank s
-   in if r = 0 then raw_type_subst s
-      else let val s' = inst_rank_subst r s
-           in raw_type_subst s' o inst_rank r
-           end
-   end
-
 end;
-
-fun ty_sub theta ty = let val ty' = type_subst theta ty
-                      in if type_eq ty ty' then SAME
-                                           else DIFF ty'
-                      end;
 
 local
   open Binarymap
@@ -1692,6 +1674,39 @@ fun abconv_ty t1 t2 = aconv_ty (deep_beta_conv_ty t1) (deep_beta_conv_ty t2)
 
 fun subtype t1 t2 = asubtype (deep_beta_conv_ty t1) (deep_beta_conv_ty t2)
 
+local
+fun align_types0 [] = (0,([],[]))
+  | align_types0 ({redex,residue} :: s) = let
+        val (rkS,kdS) = align_types0 s
+      in
+        (     raw_match_rank (rank_of redex) (rank_of residue) rkS,
+         Kind.raw_match_kind (kind_of redex) (kind_of residue) kdS)
+      end
+in
+fun align_types theta = let
+        val (rkS,(kdS,_)) = align_types0 theta
+        fun inst_redex [] = []
+          | inst_redex ({redex,residue} :: s) = let
+                val redex' = inst_rank_kind rkS kdS redex
+              in
+                if abconv_ty redex' residue then inst_redex s
+                else (redex' |-> residue) :: inst_redex s
+              end
+      in
+        (rkS, kdS, if rkS = 0 andalso null kdS then theta else inst_redex theta)
+      end
+end
+
+fun type_subst theta =
+  let val (rktheta,kdtheta,tytheta) = align_types theta
+  in raw_type_subst tytheta o inst_rank_kind rktheta kdtheta
+  end
+
+fun ty_sub theta ty = let val ty' = type_subst theta ty
+                      in if type_eq ty ty' then SAME
+                                           else DIFF ty'
+                      end;
+
 
 (*---------------------------------------------------------------------------
        Higher order matching (from jrh via Michael Norrish - June 2001)
@@ -2045,6 +2060,11 @@ fun clean_subst ((tyS,_),(kdS,_),rkS) =
 fun kind_match_type pat ob =
       clean_subst (raw_kind_match_type pat ob (([],[]), ([],[]), 0))
 
+fun kind_match_types theta =
+ let fun match ({redex,residue},matches) = raw_kind_match_type redex residue matches
+ in clean_subst (List.foldr match (([],[]), ([],[]), 0) theta)
+ end
+
 fun raw_match_type pat ob (tyS,tyId) =
     let val ((tyS',tyId'),(kdS',kdId'),rkS') =
               raw_kind_match_type pat ob ((tyS,tyId),([],[]),0)
@@ -2067,11 +2087,12 @@ fun match_type pat ob = fst (raw_match_type pat ob ([],[]))
 val raw_dom_rng = dom_rng
 val dom_rng = fn ty => raw_dom_rng ty handle HOL_ERR _ => raw_dom_rng (deep_beta_conv_ty ty)
 
-(*
+val raw_compare = compare
 val compare = fn (t1,t2) => compare(deep_beta_conv_ty t1, deep_beta_conv_ty t2)
+val raw_empty_tyset = empty_tyset
 val empty_tyset = HOLset.empty compare
+val raw_type_eq = type_eq
 fun type_eq t1 t2 = compare(t1,t2) = EQUAL;
-*)
 
 fun mapsub f = map (fn {redex,residue} => {redex=f redex, residue=residue})
 val type_subst = fn s => type_subst (mapsub deep_beta_conv_ty s);

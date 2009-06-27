@@ -21,8 +21,10 @@ type 'a set = 'a HOLset.set;
 type tag = Tag.tag
 
 val --> = Type.-->;
-infixr 3 -->;
+val ==> = Kind.==>;
+infixr 3 --> ==>;
 infix 5 |-> ;
+val typ = Kind.typ;
 
 (*---------------------------------------------------------------------------
        Exception handling
@@ -63,6 +65,12 @@ val mk_forall = Susp.delay (fn () =>
       mk_comb(inst[alpha |-> type_of v] forallc, mk_abs(v,tm))
  end);
 
+val mk_tyforall = Susp.delay (fn () =>
+ let val tyforallc = prim_mk_const{Name="!:", Thy="bool"}
+ in fn a => fn tm =>
+      mk_comb(inst_kind[Kind.kappa |-> Type.kind_of a] tyforallc, mk_tyabs(a,tm))
+ end);
+
 val mk_conj = Susp.delay (fn () =>
  let val conjc = prim_mk_const{Name="/\\", Thy="bool"}
  in fn (M,N) => list_mk_comb(conjc,[M,N])
@@ -98,6 +106,16 @@ fun dest_exists tm =
  end
 end;
 
+local val err = thm_err "dest_tyexists" ""
+in
+fun dest_tyexists tm =
+ let val (Rator,Rand) = with_exn dest_comb tm err
+ in case with_exn dest_thy_const Rator err
+     of {Name="?:", Thy="bool",...} => with_exn dest_tyabs Rand err
+      | otherwise => raise err
+ end
+end;
+
 
 (*---------------------------------------------------------------------------*
  * The type of theorems and some basic operations on it.                     *
@@ -129,10 +147,19 @@ fun tag_hyp_union thm_list =
    itlist (union_hyp o hypset) thm_list empty_hyp);
 
 fun var_occursl v l = isSome (HOLset.find (var_occurs v) l);
+fun tyvar_occursl a l = isSome (HOLset.find (tyvar_occurs a) l);
 
 fun hypset_all P s = not (isSome (HOLset.find (not o P) s))
 fun hypset_exists P s = isSome (HOLset.find P s)
 fun hypset_map f s = HOLset.foldl(fn(i,s0) => HOLset.add(s0,f i)) empty_hyp s
+
+fun hyp_kdvars th =
+   HOLset.foldl (fn (h,kds) =>
+                        List.foldl (fn (kdv,kds) => HOLset.add(kds,kdv))
+                                   kds
+                                   (Term.kind_vars_in_term h))
+                    (HOLset.empty Kind.kind_compare)
+                    (hypset th)
 
 fun hyp_tyvars th =
    HOLset.foldl (fn (h,tys) =>
@@ -191,6 +218,18 @@ fun BETA_CONV tm =
    handle HOL_ERR _ => ERR "BETA_CONV" "not a beta-redex"
 
 
+(*---------------------------------------------------------------------------*
+ *                                                                           *
+ *     --------------------------------  TY_BETA_CONV "(!:'a.M) [:TY:]"      *
+ *     |- (!:'a.M) [:TY:] = M ['a|->TY]                                      *
+ *---------------------------------------------------------------------------*)
+
+fun TY_BETA_CONV tm =
+   make_thm Count.TyBeta
+      (empty_tag, empty_hyp, mk_eq_nocheck (type_of tm) tm (ty_beta_conv tm))
+   handle HOL_ERR _ => ERR "TY_BETA_CONV" "not a type-beta-redex"
+
+
 (*---------------------------------------------------------------------------
  * ltheta is a substitution mapping from the template to the concl of
  * the given theorem. It checks that the template is an OK abstraction of
@@ -237,6 +276,25 @@ fun ABS v (THM(ocl,asl,c)) =
  end;
 
 (*---------------------------------------------------------------------------*
+ *         A |- t1 = t2                                                      *
+ *   --------------------------  TY_ABS x      [Where 'a is not free in A]   *
+ *    A |- (!'a.t1) = (!'a.t2)                                               *
+ *---------------------------------------------------------------------------*)
+
+fun TY_ABS a (THM(ocl,asl,c)) =
+ let val (lhs,rhs,ty) = Term.dest_eq_ty c handle HOL_ERR _
+                      => ERR "TY_ABS" "not an equality"
+     val (nm,kd,rk) = Type.dest_vartype_opr a handle HOL_ERR _
+                      => ERR "TY_ABS" "first argument is not a type variable"
+ in if tyvar_occursl a asl
+     then ERR "TY_ABS" "The type variable is free in the assumptions"
+     else make_thm Count.TyAbs
+            (ocl, asl, mk_eq_nocheck (Type.mk_univ_type(a, ty))
+                                     (mk_tyabs(a,lhs))
+                                     (mk_tyabs(a,rhs)))
+ end;
+
+(*---------------------------------------------------------------------------*
  *   A |- t1 = t2                                                            *
  *  ------------------------------------  GEN_ABS f [v1,...,vn]              *
  *   A |- (Q v1...vn.t1) = (Q v1...vn.t2)    (where no vi is free in A)      *
@@ -257,6 +315,49 @@ fun GEN_ABS opt vlist (th as THM(ocl,asl,c)) =
     else ERR "GEN_ABS" "variable(s) free in the assumptions"
  end
 
+(*---------------------------------------------------------------------------*
+ *   A |- t1 = t2                                                            *
+ *  --------------------------------------  GEN_TY_ABS f [a1,...,an]         *
+ *   A |- (Q a1...an.t1) = (Q a1...an.t2)      (where no ai is free in A)    *
+ *---------------------------------------------------------------------------*)
+
+fun GEN_TY_ABS opt vlist (th as THM(ocl,asl,c)) =
+ let open HOLset
+     val vset = addList(Type.empty_tyset,vlist)
+     val hset = hyp_tyvars th
+ in if isEmpty (intersection(vset,hset))
+    then let val (lhs,rhs,ty) = with_exn Term.dest_eq_ty c
+                                  (thm_err "GEN_TY_ABS" "not an equality")
+             val lhs' = list_mk_tybinder opt (vlist,lhs)
+             val rhs' = list_mk_tybinder opt (vlist,rhs)
+         in make_thm Count.GenTyAbs
+               (ocl,asl,mk_eq_nocheck (Term.type_of lhs') lhs' rhs')
+         end
+    else ERR "GEN_TY_ABS" "variable(s) free in the assumptions"
+ end
+
+(*---------------------------------------------------------------------------
+ *         A |- M
+ *  --------------------  INST_RANK n
+ *  A[rank + n/rank] |- M[rank + n/rank]
+ *
+ *---------------------------------------------------------------------------*)
+
+fun INST_RANK n (THM(ocl,asl,c)) =
+    if n < 0 then raise ERR "INST_RANK" "rank instantiation cannot lower the rank"
+    else make_thm Count.InstRank(ocl, hypset_map (Term.inst_rank n) asl, Term.inst_rank n c)
+
+(*---------------------------------------------------------------------------
+ *         A |- M
+ *  --------------------  INST_KIND theta
+ *  theta(A) |- theta(M)
+ *
+ *---------------------------------------------------------------------------*)
+
+fun INST_KIND [] th = th
+  | INST_KIND theta (THM(ocl,asl,c)) =
+    make_thm Count.InstKind(ocl, hypset_map (inst_kind theta) asl, inst_kind theta c)
+
 (*---------------------------------------------------------------------------
  *         A |- M
  *  --------------------  INST_TYPE theta
@@ -266,7 +367,18 @@ fun GEN_ABS opt vlist (th as THM(ocl,asl,c)) =
 
 fun INST_TYPE [] th = th
   | INST_TYPE theta (THM(ocl,asl,c)) =
-     make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c)
+    let val r = Type.subst_rank theta
+    in if r = 0 then
+         make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c)
+       else let
+         val theta' = Type.inst_rank_subst r theta
+         val asl'   = hypset_map (Term.inst_rank r) asl
+         val c'     = Term.inst_rank r c
+         val instfn = inst theta'
+       in
+         make_thm Count.InstType(ocl, hypset_map instfn asl', instfn c')
+       end
+    end
 
 (*---------------------------------------------------------------------------
  *          A |- M
@@ -307,7 +419,7 @@ fun MP (THM(o1,asl1,c1)) (THM(o2,asl2,c2)) =
  * any axioms of boolTheory:                                                 *
  *                                                                           *
  *   ALPHA, SYM, TRANS, MK_COMB, AP_TERM, AP_THM, EQ_MP, EQ_IMP_RULE,        *
- *   Beta, Mk_comb, Mk_abs                                                   *
+ *   Beta, Mk_comb, Mk_abs, Mk_tycomb, Mk_tyabs                              *
  *                                                                           *
  *---------------------------------------------------------------------------*)
 
@@ -374,6 +486,29 @@ fun ETA_CONV tm =
    make_thm Count.EtaConv
       (empty_tag, empty_hyp, mk_eq_nocheck (type_of tm) tm (eta_conv tm))
    handle HOL_ERR _ => ERR"ETA_CONV" "";
+
+(*---------------------------------------------------------------------------
+ * Type eta-conversion
+ *
+ * 	"(\:a.t [:a:])"   --->    |- (\:a.t [:a:]) = t  (if a not free in t)
+ *
+ * fun TY_ETA_CONV (tm as TAbs((_,tkd,trk), tcmb as TComb(t,_))) =
+ *      (let val body_ty = type_of tcmb
+ *           val th = SPEC t (INST_TYPE [beta |-> body_ty]
+ *                              (INST_KIND [kappa |-> tkd] TY_ETA_AX))
+ *           (* th = |- (\:a. t [:a:]) = t *)
+ *       in
+ *       TRANS (SIMPLE_ALPHA(tm,lhs(concl th))) th
+ *       end
+ *       handle _ => ERR{function = "TY_ETA_CONV",message = ""})
+ *  | TY_ETA_CONV _ = ERR{function = "TY_ETA_CONV",message = ""};
+ *
+ *---------------------------------------------------------------------------*)
+
+fun TY_ETA_CONV tm =
+   make_thm Count.TyEtaConv
+      (empty_tag, empty_hyp, mk_eq_nocheck (type_of tm) tm (ty_eta_conv tm))
+   handle HOL_ERR _ => ERR"TY_ETA_CONV" "";
 
 
 (*---------------------------------------------------------------------------*
@@ -452,6 +587,39 @@ fun MK_COMB (funth,argth) =
           mk_eq_nocheck (rng ty) (mk_comb(f,x)) (mk_comb(g,y)))
    end
    handle HOL_ERR _ => ERR "MK_COMB" "";
+
+(*---------------------------------------------------------------------------
+ *         A |- t1 = t2
+ *   --------------------------------  TY_COMB ty
+ *    A |- (t1 [:ty:]) = (t2 [:ty:])
+ *
+ * fun TY_COMB ty th =
+ *  let val (lhs,rhs,ty1) = Term.dest_eq_ty (concl th)
+ *      val (bv,ty2) = Type.dest_univ_type ty1
+ *      val gv = genvar ty1
+ *      val lcmb = mk_tycomb(lhs,ty)
+ *      val gcmb = mk_tycomb( gv,ty)
+ *      val tm3 = mk_eq_nocheck (type_of lcmb) lcmb gcmb
+ *  in (* SUBS_OCCS [([2], th)] (REFL (TyComb(lhs,ty))) *)
+ *     SUBST [gv |-> th] tm3 (REFL lcmb)
+ *  end
+ *---------------------------------------------------------------------------*)
+
+fun TY_COMB th ty =
+ let val (lhs,rhs,ty1) = Term.dest_eq_ty (concl th) handle HOL_ERR _
+                       => ERR "TY_COMB" "not an equality"
+     val (bv,ty2) = Type.dest_univ_type ty1 handle HOL_ERR _
+                       => ERR "TY_COMB" "not an equality of a universal type"
+     val lcmb = mk_tycomb(lhs,ty) handle HOL_ERR {message, ...}
+                       => ERR "TY_COMB" message
+     val rcmb = mk_tycomb(rhs,ty) handle HOL_ERR {message, ...}
+                       => ERR "TY_COMB" message
+ in make_thm Count.TyComb
+        (tag th,
+         hypset th,
+         mk_eq_nocheck (type_of lcmb) lcmb rcmb)
+      handle HOL_ERR _ => ERR "TY_COMB" ""
+ end;
 
 (*---------------------------------------------------------------------------
  * Application of a term to a theorem
@@ -613,6 +781,64 @@ fun SPEC t th =
                     "Term argument's type not equal to bound variable's"
  end;
 
+(*---------------------------------------------------------------------------
+ * Type Specialization
+ *
+ *    A |- !(\:a.u)
+ *  --------------------   (where ty is free for a in u)
+ *    A |- u[ty/a]
+ *
+ * fun TY_SPEC ty th =
+ *   let val (F,body) = dest_comb(concl th)
+ *   in
+ *   if (not(fst(dest_const F)="!:"))
+ *   then raise ERR "TY_SPEC" "not a type forall"
+ *   else let val (a,u) = dest_tyabs body
+ *        and v1 = genvar(type_of F)
+ *        and v2 = genvar(type_of body)
+ *        val th1 = SUBST[v1 |-> TY_FORALL_DEF] (mk_comb(v1,body)) th
+ *        (* th1 = |- (\P. P = (\:a. T))(\:a. t1 [:a:]) *)
+ *        val th2 = BETA_CONV(concl th1)
+ *        (* th2 = |- (\P. P = (\:a. T))(\:a. t1 [:a:]) = ((\:a. t1 [:a:]) = (\:a. T)) *)
+ *        val th3 = EQ_MP th2 th1
+ *        (* th3 = |- (\:a. t1 [:a:]) = (\:a. T) *)
+ *        val s1 = mk_tycomb(body,ty)
+ *        val s2 = mk_tycomb(v2,ty)
+ *        val th4 = SUBST [v2 |-> th3] (mk_eq(s1,s2)) (* --`^body [:^ty:] = ^v2 [:^ty:]`-- *)
+ *                        (REFL s1)
+ *        (* th4 = |- (\:a. t1 [:a:]) [:ty:] = (\:a. T) [:ty:] *)
+ *        val (ls,rs) = dest_eq(concl th4)
+ *        val th5 = TRANS(TRANS(SYM(TY_BETA_CONV ls))th4)(TY_BETA_CONV rs)
+ *        (* th5 = |- t1 [:ty:] = T *)
+ *        in
+ *        EQT_ELIM th5
+ *        end
+ *   end
+ *   handle _ => raise ERR "TY_SPEC" "";
+ *
+ *
+ * pre-dB manner:
+ * fun TY_SPEC ty th =
+ *   let val {Bvar,Body} = dest_ty_forall(concl th)
+ *   in
+ *   make_thm Count.(hypset th, inst[{redex = Bvar, residue = ty}] Body)
+ *   end
+ *   handle _ => raise ERR "TY_SPEC" "";
+ *---------------------------------------------------------------------------*)
+
+fun TY_SPEC ty th =
+ let val (Rator,Rand) = dest_comb(concl th)
+     val {Thy,Name,...} = dest_thy_const Rator
+ in
+   Assert (Name="!:" andalso Thy="bool")
+          "TY_SPEC" "Theorem not universally type quantified";
+   make_thm Count.TySpec
+       (tag th, hypset th, ty_beta_conv(mk_tycomb(Rand, ty)))
+       handle HOL_ERR _ =>
+              raise thm_err "TY_SPEC"
+                    "Type argument not equal to bound variable"
+ end;
+
 
 (*---------------------------------------------------------------------------
  * Generalization
@@ -649,6 +875,42 @@ fun GEN x th =
   end;
 
 val GENL = itlist GEN
+
+
+(*---------------------------------------------------------------------------
+ * Type Generalization
+ *
+ *         A |- t
+ *   -------------------   (where a not free in A)
+ *       A |- !(\:a.t)
+ *
+ * fun TY_GEN a th =
+ *   let val th1 = TY_ABS a (EQT_INTRO th)
+ *     (* th1 = |- (\:a. t1 [:a:]) = (\:a. T)  --TY_ABS does not behave this way --KLS*)
+ *      val ty1 = mk_univ_type(a,bool) --> bool
+ *      val abs = mk_tyabs(a,concl th)
+ *      and v1 = genvar ty1
+ *      and v2 = genvar bool
+ *      val s1 = mk_comb(mk_thy_const{Thy="bool", Name="!:", Ty=ty1}, abs)
+ *      val s2 = mk_eq(s1, mk_comb(v1, abs))
+ *      val th2 = SUBST [v1 |-> TY_FORALL_DEF] s2 (REFL s1)
+ *      (* th2 = |- (!:a. t1 [:a:]) = (\P. P = (\:a. T))(\:a. t1 [:a:]) *)
+ *      val th3 = TRANS th2 (BETA_CONV(snd(dest_eq(concl th2))))
+ *      (* th3 = |- (!:a. t1 [:a:]) = ((\:a. t1 [:a:]) = (\:a. T)) *)
+ *      in
+ *      SUBST [v2 |-> SYM th3] v2 th1
+ *      end
+ *      handle _ => ERR "TY_GEN" "";
+ *---------------------------------------------------------------------------*)
+
+
+fun TY_GEN a th =
+  let val (asl,c) = sdest_thm th
+  in if tyvar_occursl a asl
+     then ERR  "TY_GEN" "type variable occurs free in hypotheses"
+     else make_thm Count.TyGen(tag th, asl, Susp.force mk_tyforall a c)
+          handle HOL_ERR _ => ERR "TY_GEN" ""
+  end;
 
 
 (*---------------------------------------------------------------------------
@@ -693,6 +955,62 @@ fun EXISTS (w,t) th =
    in make_thm Count.Exists (tag th, hypset th, w)
    end
 end;
+
+
+(*---------------------------------------------------------------------------
+ * Type existential introduction
+ *
+ *    A |- t[ty]
+ *  --------------  TY_EXISTS ("?:a.t[a]", "ty")  ( |- t[ty] )
+ *   A |- ?:a.t[a]
+ *
+ *
+ *
+ * fun TY_EXISTS (fm,ty) th =
+ *   let val (a,t) = dest_tyexists fm
+ *       val tm1 = mk_tyabs(a,t)
+ *       val tm2 = mk_tycomb(tm1,ty)
+ *       val tm3 = mk_tyabs(a,mk_const("F",bool))
+ *       val tm4 = mk_eq(tm1,tm3)
+ *       val th1 = TY_BETA_CONV tm2
+ *       (* th1 = |- (\:a. t [:a:]) [:ty:] = t [:ty:] *)
+ *       val th2 = EQ_MP (SYM th1) th
+ *       (* th2 = |- (\:a. t [:a:]) [:ty:] *)
+ *       val th3 = 
+ *       (* th3 = |- (\x. t x)(@x. t x) *)
+ *       val th4 = AP_THM TY_EXISTS_DEF tm1
+ *       (* th4 = |- (?x. t x) = (\P. P($@ P))(\x. t x) *)
+ *       val th5 = TRANS th4 (BETA_CONV(snd(dest_eq(concl th4))))
+ *       (* th5 = |- (?x. t x) = (\x. t x)(@x. t x) *)
+ *       val th6 = TRANS th5 (AP_THM NOT_DEF tm4)
+ *       val th7 = TRANS th6 (BETA_CONV(snd(dest_eq(concl th6))))
+ *       val th8 = TY_COMB (ASSUME tm4) ty
+ *       val th9 = TRANS th8 (TY_BETA_CONV(rhs(concl th8)))
+ *       val th10 = TRANS (SYM (TY_BETA_CONV(lhs(concl th8)))) th9
+ *       val th11 = EQ_MP th10 th
+ *       val th12 = DISCH tm4 th11
+ *   in
+ *   EQ_MP (SYM th7) th12
+ *   end
+ *   handle _ => ERR "EXISTS" "";
+ *
+ *---------------------------------------------------------------------------*)
+
+local
+  val mesg1 = "First argument not of form `?:a. P`"
+  val mesg2 = "(2nd argument)/(bound type var) in body of 1st argument is not theorem's conclusion"
+  val err = thm_err "TY_EXISTS" mesg1
+in
+fun TY_EXISTS (w,ty) th =
+ let val (ex,Rand) = with_exn dest_comb w err
+     val {Name,Thy,...}  = with_exn dest_thy_const ex err
+     val _ = Assert ("?:"=Name andalso Thy="bool") "TY_EXISTS" mesg1
+     val _ = Assert (aconv (ty_beta_conv(mk_tycomb(Rand,ty))) (concl th))
+                    "TY_EXISTS" mesg2
+   in make_thm Count.TyExists (tag th, hypset th, w)
+   end
+end;
+
 
 (*---------------------------------------------------------------------------
  * Existential elimination
@@ -745,6 +1063,68 @@ fun CHOOSE (v,xth) bth =
        (Tag.merge (tag xth) (tag bth), newhyps,  b_c)
   end
   handle HOL_ERR _ => ERR "CHOOSE" "";
+
+
+(*---------------------------------------------------------------------------
+ * Type existential elimination
+ *
+ *   A1 |- ?:a.t[a]   ,   A2, "t[b]" |- t'
+ *   ------------------------------------     (type variable b occurs nowhere)
+ *            A1 u A2 |- t'
+ *
+ * fun TY_CHOOSE (v,th1) th2 =
+ *   let val (a,body) = dest_tyexists(concl th1)
+ *       and t'     = concl th2
+ *       and v1     = genvar bool
+ *       val tm1 = mk_tyabs(a,body)
+ *       val th3 = AP_THM TY_EXISTS_DEF tm1
+ *       (* th3 = |- (?:a. t [:a:]) = (\P. ~(P = (\:a. F))) (\:a. t [:a:]) *)
+ *       val th4 = EQ_MP th3 th1
+ *       (* th4 = |- (\P. ~(P = (\:a. F))) (\:a. t [:a:]) *)
+ *       val th5 = EQ_MP (BETA_CONV(concl th4)) th4
+ *       (* th5 = |- ~((\:a. t [:a:]) = (\:a. F)) *)
+ *       val th6 = TY_BETA_CONV (mk_tycomb(tm1,v))
+ *       (* th6 = |- (\a. t [:a:]) [:v:] = t [:v:] *)
+ *       val Pa = snd(dest_eq(concl th6))
+ *       val th7 = UNDISCH(SUBST [v1 |-> SYM th6] (mk_imp(v1,t'))  (DISCH Pa th2))
+ *       (* th7 = |- t' *)
+ *       val tm2 = mk_eq(tm1, mk_tyabs(a,F))
+ *       val th8 = AP_THM NOT_DEF tm2
+ *       val th9 = TRANS th8 (BETA_CONV(snd(dest_eq(concl th8))))
+ *       val th10 = TY_COMB (ASSUME tm2) v
+ *       val th11 = TRANS th10 (TY_BETA_CONV(rhs(concl th10)))
+ *       val th12 = TRANS (SYM (TY_BETA_CONV(lhs(concl th10)))) th11
+ *       val th13 = DISCH tm2 (EQ_MP th12 (ASSUME (lhs(concl th12))))
+ *       val th14 = EQ_MP th10 th)
+ *       val th12 = DISCH tm4 th11
+ * 
+ *   in
+ *   SELECT_ELIM th5 (v,th7)  ??? not right
+ *   end
+ *   handle _ => ERR "TY_CHOOSE" ""};
+ *---------------------------------------------------------------------------*)
+
+fun TY_CHOOSE (v,xth) bth =
+  let val (x_asl, x_c) = sdest_thm xth
+      val (b_asl, b_c) = sdest_thm bth
+      val (Bvar,Body)  = dest_tyexists x_c
+      val A2_hyps = disch (inst [Bvar |-> v] Body, b_asl)
+      val newhyps = union_hyp x_asl A2_hyps
+      val occursv = tyvar_occurs v
+      val _ = Assert (not(occursv x_c) andalso
+                      not(occursv b_c) andalso
+                      not(hypset_exists occursv A2_hyps)) "" ""
+    (* Need not check for occurrence of v in A1: one can imagine
+       implementing a derived rule on top of a more restrictive one that
+       instantiated the occurrence of v in A1 to something else, applied
+       the restrictive rule, and then instantiated it back again.
+
+       Credit for pointing out this optimisation to Jim Grundy and
+       Tom Melham. *)
+  in make_thm Count.TyChoose
+       (Tag.merge (tag xth) (tag bth), newhyps,  b_c)
+  end
+  handle HOL_ERR _ => ERR "TY_CHOOSE" "incorrect arguments";
 
 
 (*---------------------------------------------------------------------------
@@ -1101,6 +1481,78 @@ fun Mk_abs thm =
    end
    handle HOL_ERR _ => ERR "Mk_abs" "";
 
+
+(*---------------------------------------------------------------------------*
+ * This rule behaves like a tactic: given a goal (reducing the rhs of thm),  *
+ * it returns a subgoal (reducing the rhs of th1), together with a           *
+ * validation (mkthm), that builds the normal form of t from the normal form *
+ * of u.                                                                     *
+ * NB: we do not have to typecheck the rator u, and we replaced the alpha    *
+ * conversion test with pointer equality.                                    *
+ *                                                                           *
+ *                          |- u = u    (th1)                                *
+ *       (thm)                  ...                                          *
+ *    A |- t = u [:ty:]    A' |- u = u' (th1')                               *
+ *  ----------------------------------------------------------------         *
+ *                A u A' |- t = u' [:ty:]                                    *
+ *                                                                           *
+ * Could be implemented outside Thm as:                                      *
+ *   fun Mk_tycomb th =                                                      *
+ *     let val {Rator,Rand} = dest_tycomb(rhs (concl th))                    *
+ *         fun mka th1 th2 = TRANS th (MK_COMB(th1,th2)) in                  *
+ *     (REFL Rator, REFL Rand, mka)                                          *
+ *     end                                                                   *
+ *---------------------------------------------------------------------------*)
+
+fun Mk_tycomb thm =
+   let val (lhs, rhs, ty) = Term.dest_eq_ty (concl thm)
+       val (Rator,Rand) = dest_tycomb rhs
+       fun mkthm th1' =
+         let val (lhs1, rhs1, ty1) = Term.dest_eq_ty (concl th1')
+             val _ = Assert (EQ(lhs1,Rator)) "" ""
+             val (ocls,hyps) = tag_hyp_union [thm, th1']
+         in make_thm Count.TyComb
+	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_tycomb(rhs1,Rand)))
+         end
+	 handle HOL_ERR _ => ERR "Mk_tycomb" "";
+       val th1 = refl_nocheck (type_of Rator) Rator
+   in (th1,Rand,mkthm)
+   end
+   handle HOL_ERR _ => ERR "Mk_tycomb" "";
+
+(*---------------------------------------------------------------------------*
+ *                        |- u = u    (th1)                                  *
+ *         (thm)              ...                                            *
+ *    A |- t = \:'a.u    A' |- u = u' (th1')                                 *
+ *  ------------------------------------------ 'a not in FTV(A')             *
+ *            A u A' |- t = \:'a.u'                                          *
+ *                                                                           *
+ * Could be implemented outside Thm as:                                      *
+ *   fun Mk_tyabs th =                                                       *
+ *     let val {Bvar,Body} = dest_tyabs(rhs (concl th)) in                   *
+ *     (Bvar, REFL Body, (fn th1 => TRANS th (TY_ABS Bvar th1)))             *
+ *     end                                                                   *
+ *---------------------------------------------------------------------------*)
+
+fun Mk_tyabs thm =
+   let val (lhs, rhs, ty) = Term.dest_eq_ty (concl thm)
+       val (Bvar,Body) = dest_tyabs rhs
+       fun mkthm th1' =
+         let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
+             val _ = Assert (EQ(lhs1,Body)) "" ""
+             val _ = Assert (not (tyvar_occursl Bvar (hypset th1'))) "" ""
+             val (ocls,hyps) = tag_hyp_union [thm, th1']
+         in make_thm Count.TyAbs
+	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_tyabs(Bvar, rhs1)))
+         end
+	 handle HOL_ERR _ => ERR "Mk_tyabs" ""
+       val (_,bty) = Type.dest_univ_type ty
+       val th1 = refl_nocheck bty Body
+   in (Bvar,th1,mkthm)
+   end
+   handle HOL_ERR _ => ERR "Mk_tyabs" "";
+
+
 (*---------------------------------------------------------------------------*
  * Same as SPEC, but without propagating the substitution.  Spec = SPEC.     *
  *---------------------------------------------------------------------------*)
@@ -1141,6 +1593,75 @@ fun mk_axiom_thm (r,c) =
 fun mk_defn_thm (witness_tag, c) =
    (Assert (type_of c = bool) "mk_defn_thm"  "Not a proposition!";
     make_thm Count.Definition (witness_tag,empty_hyp,c))
+
+
+local open Type in
+fun debug_type ty =
+    if is_vartype ty then let
+        val (s,kd,rk) = dest_vartype_opr ty
+      in print s
+      end 
+    else if (can dom_rng ty) then let
+        val (dty,rty) = dom_rng ty
+      in print "("; debug_type dty; print " -> "; debug_type rty; print ")"
+      end
+    else if is_con_type ty then let
+        val {Tyop,Thy,Kind,Rank} = dest_thy_con_type ty
+      in print Tyop
+      end
+    else if is_app_type ty then let
+        val (f,a) = dest_app_type ty
+      in print "("; debug_type a; print " ";
+         debug_type f; print ")"
+      end
+    else if is_abs_type ty then let
+        val (v,b) = dest_abs_type ty
+      in print "(\\"; debug_type v; print ". ";
+         debug_type b; print ")"
+      end
+    else if is_univ_type ty then let
+        val (v,b) = dest_univ_type ty
+      in print "(!"; debug_type v; print ". ";
+         debug_type b; print ")"
+      end
+    else print "debug_type: unrecognized type"
+end
+
+local open Term in
+fun debug_term tm =
+    if is_var tm then let
+        val (s,ty) = dest_var tm
+      in print s
+      end
+    else if is_const tm then let
+        val (s,ty) = dest_const tm
+      in print s
+      end
+    else if is_comb tm then let
+        val (f,a) = dest_comb tm
+      in print "("; debug_term f; print " ";
+         debug_term a; print ")"
+      end
+    else if is_abs tm then let
+        val (v,b) = dest_abs tm
+      in print "(\\"; debug_term v; print ". ";
+         debug_term b; print ")"
+      end
+    else if is_tycomb tm then let
+        val (f,a) = dest_tycomb tm
+      in print "("; debug_term f; print " ";
+         print "[:"; debug_type a;
+         print ":]"; print ")"
+      end
+    else if is_tyabs tm then let
+        val (v,b) = dest_tyabs tm
+      in print "(\\:";
+         debug_type v; print ". ";
+         debug_term b; print ")"
+      end
+    else print "debug_term: unrecognized term"
+end
+
 
 (* ----------------------------------------------------------------------
     Making definitional theorems
@@ -1214,7 +1735,9 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
                  (TYDEF_ERR "subset predicate must be a closed term")
   val checked   = assert_exn (op=) (rng,bool)
                              (TYDEF_ERR "subset predicate has the wrong type")
-  val   _       = Type.prim_new_type name (List.length tyvars)
+  val newkd     = List.foldr (op ==>) typ (map Type.kind_of tyvars)
+  val newrk     = List.foldr Int.max   0  (map Type.rank_of tyvars)
+  val   _       = Type.prim_new_type name newkd newrk
   val newty     = Type.mk_thy_type{Tyop=Tyop,Thy=Thy,Args=tyvars}
   val repty     = newty --> dom
   val rep       = mk_primed_var("rep", repty)

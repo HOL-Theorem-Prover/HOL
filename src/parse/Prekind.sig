@@ -13,6 +13,8 @@ val eq : prekind -> prekind -> bool
 val typ : prekind
 val is_var_kind : prekind -> bool
 val ==> : prekind * prekind -> prekind
+val mk_arrow_kind : prekind * prekind -> prekind
+val list_mk_arrow_kind : prekind list * prekind -> prekind
 val mk_arity : int -> prekind
 val prekind_compare : prekind * prekind -> order
 val prekind_to_string : prekind -> string

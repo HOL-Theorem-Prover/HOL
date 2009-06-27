@@ -45,7 +45,7 @@ fun toLower s =
      is loaded.
  ---------------------------------------------------------------------------*)
 
-structure Map = Redblackmap
+structure Map = struct open Redblackmap end
 (* the keys are lower-cased, but the data also stores the keys, and there
    the key infomration is kept in its original case *)
 

@@ -3,6 +3,7 @@ struct
 
 open HolKernel optmonad;
 infix >> >-;
+infixr 3 ==>;
 
 
 val TCERR = mk_HOL_ERR "Prekind";
@@ -31,6 +32,11 @@ fun is_var_kind (PK (Varkind _, _)) = true
 fun ((kd1 as PK(_,loc1)) ==> (kd2 as PK(_,loc2))) =
     PK(Arrowkind(kd1,kd2),
        locn.between loc1 loc2)
+
+fun mk_arrow_kind(kd1, kd2) = kd1 ==> kd2
+
+fun list_mk_arrow_kind([], kd0) = kd0
+  | list_mk_arrow_kind(kd::kds, kd0) = kd ==> list_mk_arrow_kind(kds, kd0)
 
 fun mk_arity 0 = typ
   | mk_arity n = if n > 0 then typ ==> mk_arity (n - 1)

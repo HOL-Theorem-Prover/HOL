@@ -4,6 +4,7 @@ sig
   type tag = Tag.tag
   type term = Term.term
   type hol_type = Type.hol_type
+  type kind = Kind.kind
   type 'a set   = 'a HOLset.set
 
 
@@ -16,6 +17,7 @@ sig
   val dest_thm      : thm -> term list * term
   val thm_frees     : thm -> term list
   val hyp_frees     : thm -> term set
+  val hyp_kdvars    : thm -> kind set                            (* new for HOL-Omega *)
   val hyp_tyvars    : thm -> hol_type set
 
 
@@ -28,7 +30,12 @@ sig
   val DISCH         : term -> thm -> thm
   val MP            : thm -> thm -> thm
   val SUBST         : (term,thm)Lib.subst -> term -> thm -> thm
+  val INST_RANK     : int -> thm -> thm                          (* new for HOL-Omega *)
+  val INST_KIND     : (kind,kind)Lib.subst -> thm -> thm         (* new for HOL-Omega *)
   val INST_TYPE     : (hol_type,hol_type)Lib.subst -> thm -> thm
+  val TY_ABS        : hol_type -> thm -> thm                     (* new for HOL-Omega *)
+  val TY_BETA_CONV  : term -> thm                                (* new for HOL-Omega *)
+  val TY_ETA_CONV   : term -> thm                                (* new for HOL-Omega *)
 
 
   (* Now some derivable-but-primitive rules of inference *)
@@ -38,6 +45,7 @@ sig
 
   val ALPHA         : term -> term -> thm
   val MK_COMB       : thm * thm -> thm
+  val TY_COMB       : thm -> hol_type -> thm                     (* new for HOL-Omega *)
   val AP_TERM       : term -> thm -> thm
   val AP_THM        : thm -> term -> thm
   val ETA_CONV      : term -> thm
@@ -61,12 +69,16 @@ sig
   val SPEC          : term -> thm -> thm
   val GEN           : term -> thm -> thm
   val GENL          : term list -> thm -> thm
+  val TY_SPEC       : hol_type -> thm -> thm                     (* new for HOL-Omega *)
+  val TY_GEN        : hol_type -> thm -> thm                     (* new for HOL-Omega *)
 
 
   (* Existential quantification *)
 
   val EXISTS        : term * term -> thm -> thm
   val CHOOSE        : term * thm -> thm -> thm
+  val TY_EXISTS     : term * hol_type -> thm -> thm              (* new for HOL-Omega *)
+  val TY_CHOOSE     : hol_type * thm -> thm -> thm               (* new for HOL-Omega *)
 
 
   (* Conjunction *)
@@ -96,11 +108,14 @@ sig
   val Eta           : thm -> thm
   val Mk_comb       : thm -> thm * thm * (thm -> thm -> thm)
   val Mk_abs        : thm -> term * thm * (thm -> thm)
+  val Mk_tycomb     : thm -> thm * hol_type * (thm -> thm)       (* new for HOL-Omega *)
+  val Mk_tyabs      : thm -> hol_type * thm * (thm -> thm)       (* new for HOL-Omega *)
   val Specialize    : term -> thm -> thm
 
   (* Multiple binders *)
 
   val GEN_ABS       : term option -> term list -> thm -> thm
+  val GEN_TY_ABS    : term option -> hol_type list -> thm -> thm (* new for HOL-Omega *)
 
   (* Oracle invocation *)
 
@@ -117,4 +132,9 @@ sig
   (* Fetching theorems from disk *)
 
   val disk_thm      : string list * term list -> thm
+
+  (* Debugging output *)
+
+  val debug_type    : hol_type -> unit
+  val debug_term    : term -> unit
 end;

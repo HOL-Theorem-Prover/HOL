@@ -63,7 +63,6 @@ sig
   val strip_tyabs   : term -> hol_type list * term
 
   val is_var        : term -> bool
-  val is_bvar       : term -> bool
   val is_genvar     : term -> bool
   val is_const      : term -> bool
   val is_comb       : term -> bool
@@ -90,7 +89,8 @@ sig
   val ty_eta_conv   : term -> term
   val beta_conv_ty_in_term : term -> term
   val subst         : (term,term) subst -> term -> term
-  val inst          : (hol_type,hol_type) subst -> term -> term
+  val inst          : (hol_type,hol_type) subst -> term -> term (* general: aligns kinds & ranks *)
+  val raw_inst      : (hol_type,hol_type) subst -> term -> term (* expects kinds & ranks match *)
   val inst_kind     : (kind,kind) subst -> term -> term
   val inst_rank     : int -> term -> term
   val inst_rank_kind : int -> (kind,kind)subst -> term -> term

@@ -3,6 +3,7 @@ struct
 
 open HolKernel optmonad;
 infix >> >-;
+infixr ==>;
 
   type prekind = Prekind.prekind
   type prerank = Prerank.prerank
@@ -389,17 +390,21 @@ fun type_vars_subst (theta : (pretype,pretype)Lib.subst) = type_varsl (map #resi
  *---------------------------------------------------------------------------*)
 
 val op ==> = Prekind.==>
+
+local
+  open Prekind
+in
 fun pkind_of0 (Vartype(s,kd,rk)) = kd
   | pkind_of0 (Contype{Kind, ...}) = Kind
-  | pkind_of0 (TyApp(opr,arg)) = Prekind.chase (pkind_of opr)
-  | pkind_of0 (TyUniv _) = Prekind.typ
+  | pkind_of0 (TyApp(opr,arg)) = chase (pkind_of opr)
+  | pkind_of0 (TyUniv _) = typ
   | pkind_of0 (TyAbst(Bvar,Body)) = pkind_of Bvar ==> pkind_of Body
   | pkind_of0 (TyKindConstr{Ty,Kind}) = Kind
   | pkind_of0 (TyRankConstr{Ty,Rank}) = pkind_of Ty
   | pkind_of0 (UVar (ref (NONEU(kd,rk)))) = kd
   | pkind_of0 (UVar (ref (SOMEU ty))) = pkind_of ty
 and pkind_of (pty as PT(ty,locn)) = pkind_of0 ty
-
+end;
 
 local
 val zero = Prerank.Zerorank

@@ -1,7 +1,6 @@
 signature EmitML = 
 sig
   include Abbrev
-  type tyvar = Type.tyvar
 
   val reshape_thm_hook : (thm -> thm) ref
   val pseudo_constr_rws : unit -> term list

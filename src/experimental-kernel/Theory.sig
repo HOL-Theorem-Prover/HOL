@@ -1,6 +1,7 @@
 signature Theory =
 sig
 
+  type kind = Kind.kind
   type hol_type = Type.hol_type
   type term = Term.term
   type thm = Thm.thm
@@ -16,6 +17,7 @@ sig
 (* Add to the current theory segment *)
 
   val new_type           : string * int -> unit
+  val new_type_opr       : string * kind * int -> unit
   val new_constant       : string * hol_type -> unit
   val new_axiom          : string * term -> thm
   val save_thm           : string * thm -> thm
@@ -33,7 +35,7 @@ sig
   val stamp              : string -> Time.time
   val parents            : string -> string list
   val ancestry           : string -> string list
-  val types              : string -> (string * int) list
+  val types              : string -> (string * kind * int) list
   val constants          : string -> term list
   val current_axioms     : unit -> (string * thm) list
   val current_theorems   : unit -> (string * thm) list
@@ -62,7 +64,7 @@ sig
 
   val pp_thm             : (ppstream -> thm -> unit) ref
   val link_parents       : string*num*num -> (string*num*num)list -> unit
-  val incorporate_types  : string -> (string*int) list -> unit
+  val incorporate_types  : string -> (string*kind*int) list -> unit
   val incorporate_consts : string -> hol_type Vector.vector ->
                            (string*int) list -> unit
 

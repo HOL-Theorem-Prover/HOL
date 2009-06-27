@@ -24,6 +24,8 @@ loadPath := "/Users/palantir/hol/hol-omega/sigobj" :: !loadPath;
 
 loadPath := "/Users/pvhomei/hol/hol-omega/sigobj" :: !loadPath;
 
+loadPath := "/Users/pvhomei/hol/hol/sigobj" :: !loadPath;
+
 app load ["Feedback","Lib","Subst","KernelTypes","Type","KernelSig","Lexis",
           "Redblackmap","Binarymap"];
 *)
@@ -311,17 +313,20 @@ end;
  * The kind variables of a lambda term. Tail recursive (from Ken Larsen).      *
  *-----------------------------------------------------------------------------*)
 
-local fun kdV (Fv(_,Ty)) k         = k (Type.kind_vars Ty)
+local val ty_kdV = Type.kind_vars
+      val tyvar_kdV = Kind.kind_vars o #2
+      fun kdV (Fv(_,Ty)) k         = k (ty_kdV Ty)
         | kdV (Bv _) k             = k []
         | kdV (Const(_,GRND _)) k  = k []
-        | kdV (Const(_,POLY Ty)) k = k (Type.kind_vars Ty)
+        | kdV (Const(_,POLY Ty)) k = k (ty_kdV Ty)
         | kdV (Comb(Rator,Rand)) k = kdV Rand (fn q1 =>
                                      kdV Rator(fn q2 => k (union q2 q1)))
         | kdV (TComb(Rator,Ty)) k  = kdV Rator (fn q  =>
-                                         k (union q (Type.kind_vars Ty)))
+                                         k (union q (ty_kdV Ty)))
         | kdV (Abs(Bvar,Body)) k   = kdV Body (fn q1 =>
                                      kdV Bvar (fn q2 => k (union q2 q1)))
-        | kdV (TAbs(_,Body)) k     = kdV Body k
+        | kdV (TAbs(Btvar,Body)) k = kdV Body (fn q =>
+                                         k (union q (tyvar_kdV Btvar)))
         | kdV (t as Clos _) k      = kdV (push_clos t) k
       fun kdVs (t::ts) k           = kdV t (fn q1 =>
                                      kdVs ts (fn q2 => k (union q2 q1)))
@@ -335,17 +340,19 @@ end;
  * The free type variables of a lambda term. Tail recursive (from Ken Larsen). *
  *-----------------------------------------------------------------------------*)
 
-local fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
+local val ty_tyV = Type.type_vars
+      fun tyV (Fv(_,Ty)) k         = k (ty_tyV Ty)
         | tyV (Bv _) k             = k []
         | tyV (Const(_,GRND _)) k  = k []
-        | tyV (Const(_,POLY Ty)) k = k (Type.type_vars Ty)
+        | tyV (Const(_,POLY Ty)) k = k (ty_tyV Ty)
         | tyV (Comb(Rator,Rand)) k = tyV Rand (fn q1 =>
                                      tyV Rator(fn q2 => k (union q2 q1)))
         | tyV (TComb(Rator,Ty)) k  = tyV Rator (fn q  =>
-                                         k (union q (Type.type_vars Ty)))
+                                         k (union q (ty_tyV Ty)))
         | tyV (Abs(Bvar,Body)) k   = tyV Body (fn q1 =>
                                      tyV Bvar (fn q2 => k (union q2 q1)))
-        | tyV (TAbs(_,Body)) k     = tyV Body k
+        | tyV (TAbs(Btvar,Body)) k = tyV Body (fn bq =>
+                                         k (set_diff bq [mk_vartype_opr Btvar]))
         | tyV (t as Clos _) k      = tyV (push_clos t) k
       fun tyVs (t::ts) k           = tyV t (fn q1 =>
                                      tyVs ts (fn q2 => k (union q2 q1)))
@@ -392,15 +399,25 @@ fun free_vars_lr tm =
  * The set of all variables in a term, represented as a list.                *
  *---------------------------------------------------------------------------*)
 
-local fun vars (v as Fv _) A        = Lib.op_insert eq v A
-        | vars (Comb(Rator,Rand)) A = vars Rand (vars Rator A)
-        | vars (TComb(Rator,Ty)) A  = vars Rator A
-        | vars (Abs(Bvar,Body)) A   = vars Body (vars Bvar A)
-        | vars (TAbs(_,Body)) A     = vars Body A
-	| vars (t as Clos _) A      = vars (push_clos t) A
-        | vars _ A = A
+local fun lookup 0 (ty::_)  = ty
+        | lookup n (_::rst) = lookup (n-1) rst
+        | lookup _ []       = raise ERR "all_vars" "lookup"
+      fun lift i E (v as TyBv j)    = if j < i then v else lookup (j-i) E
+        | lift i E (v as TyFv _)    = v
+        | lift i E (c as TyCon _)   = c
+        | lift i E (TyApp(opr,arg)) = TyApp(lift i E opr, lift i E arg)
+        | lift i E (TyAbs(bv,body)) = TyAbs(bv, lift (i+1) E body)
+        | lift i E (TyAll(bv,body)) = TyAll(bv, lift (i+1) E body)
+      fun vars E (v as Fv(n,ty)) A    = Lib.op_insert eq (Fv(n, if null E then ty
+                                                                else lift 0 E ty)) A
+        | vars E (Comb(Rator,Rand)) A = vars E Rand (vars E Rator A)
+        | vars E (TComb(Rator,Ty)) A  = vars E Rator A
+        | vars E (Abs(Bvar,Body)) A   = vars E Body (vars E Bvar A)
+        | vars E (TAbs(Btyv,Body)) A  = vars (TyFv Btyv::E) Body A
+	| vars E (t as Clos _) A      = vars E (push_clos t) A
+        | vars _ _ A = A
 in
-fun all_vars tm = vars tm []
+fun all_vars tm = vars [] tm []
 end;
 
 fun free_varsl tm_list = itlist (op_union eq o free_vars) tm_list []
@@ -432,7 +449,7 @@ fun free_in tm =
          | f1 (TAbs(_,Body)) = f2 Body
 	 | f1 (t as Clos _) = f2 (push_clos t)
          | f1 _ = false
-       and f2 t = term_eq t tm orelse f1 t
+       and f2 t = aconv t tm orelse f1 t
    in f2
    end;
 
@@ -632,18 +649,20 @@ fun dest_comb (Comb r) = r
  *        Making type applications                                           *
  *---------------------------------------------------------------------------*)
 
-local val err  = Lib.C ERR "operator on type does not have universal type"
-      fun check_rank caller (TyFv (_,_,rank)) ty =
-          if Type.rank_of ty > rank
-          then raise ERR caller "universal type variable has insufficient rank"
+local val err  = Lib.C ERR "term applied to type does not have universal type"
+      fun check_kind_rank caller (TyFv (_,kind,rank)) ty =
+          if Type.kind_of ty <> kind
+          then raise ERR caller "universal type bound variable has different kind"
+          else if Type.rank_of ty > rank
+          then raise ERR caller "universal type bound variable has insufficient rank"
           else ()
-        | check_rank caller _ _ = raise ERR caller "not a type variable"
+        | check_kind_rank caller _ _ = raise ERR caller "not a type variable"
       fun lmk_tycomb caller =
         let val err = err caller
             fun loop (A,_) [] = A
               | loop (A,typ) (ty::rst) =
                  let val (bty,ty2) = with_exn Type.dest_univ_type typ err
-                     val _ = check_rank caller bty ty
+                     val _ = check_kind_rank caller bty ty
                      val ty2' = Type.raw_type_subst[bty |-> ty] ty2
                  in loop(TComb(A,ty), ty2') rst
                  end
@@ -653,9 +672,9 @@ local val err  = Lib.C ERR "operator on type does not have universal type"
 in
 
 fun mk_tycomb(r as (TAbs(btyvar,_), Ty)) =
-     (check_rank "mk_tycomb" (TyFv btyvar) Ty; TComb r)
+     (check_kind_rank "mk_tycomb" (TyFv btyvar) Ty; TComb r)
   | mk_tycomb(r as (Clos(_,TAbs(btyvar,_)), Ty)) =
-     (check_rank "mk_tycomb" (TyFv btyvar) Ty; TComb r)
+     (check_kind_rank "mk_tycomb" (TyFv btyvar) Ty; TComb r)
   | mk_tycomb(Rator,Ty) = mk_tycomb0 (Rator,[Ty])
 
 val list_mk_tycomb = lmk_tycomb "list_mk_tycomb"
@@ -871,15 +890,15 @@ fun check_subst [] = ()
         if (kind_of redex <> kind_of residue) handle HOL_ERR _ => false
            (* if "kind_of" fails because of open bound variables,
               assume the kind check was done earlier and proceed. *)
-        then raise ERR "inst" "redex has different kind than residue"
+        then raise ERR "raw_inst" "redex has different kind than residue"
         else if (rank_of redex < rank_of residue) handle HOL_ERR _ => false
            (* if "rank_of" fails because of open bound variables,
               assume the rank check was done earlier and proceed. *)
-        then raise ERR "inst" "redex has lower rank than residue"
+        then raise ERR "raw_inst" "redex has lower rank than residue"
         else check_subst s
 fun mapsb f = map (fn {redex,residue} => {redex=f redex, residue=residue})
-fun inst1 [] tm = tm
-  | inst1 theta tm =
+fun inst1 [] = I
+  | inst1 theta =
     let fun inst0 (bv as Bv i) = bv
           | inst0 (c as Const(_, GRND _)) = c
           | inst0 (c as Const(r, POLY Ty)) =
@@ -895,21 +914,11 @@ fun inst1 [] tm = tm
           | inst0 (t as Clos _)      = inst0(push_clos t)
     in
       check_subst theta;
-      inst0 tm
+      inst0
     end
 in
-fun inst theta = inst1 (mapsb deep_beta_conv_ty theta)
+fun raw_inst theta = inst1 (mapsb deep_beta_conv_ty theta)
 end;
-
-fun inst_with_rank theta =
-  let val r = subst_rank theta
-  in if r = 0 then inst theta
-     else let val theta' = inst_rank_subst r theta
-          in inst theta' o inst_rank r
-          end
-  end;
-
-val inst = inst_with_rank;
 
 fun inst_kind [] tm = tm
   | inst_kind theta tm =
@@ -964,8 +973,8 @@ in
 fun inst_rk_kd_ty 0  []       []    tm = tm
   | inst_rk_kd_ty rk []       []    tm = inst_rank rk tm
   | inst_rk_kd_ty 0  kd_theta []    tm = inst_kind kd_theta tm
-  | inst_rk_kd_ty rk kd_theta []    tm = inst_kind kd_theta (inst_rank rk tm)
-  | inst_rk_kd_ty 0  []       theta tm = inst theta tm
+  | inst_rk_kd_ty rk kd_theta []    tm = inst_rank_kind rk kd_theta tm
+  | inst_rk_kd_ty 0  []       theta tm = raw_inst theta tm
   | inst_rk_kd_ty rk kd_theta theta tm =
     let val subst_kd = Kind.kind_subst kd_theta
         val inst_rk_kd = Type.inst_rank_kind rk kd_theta
@@ -987,6 +996,11 @@ fun inst_rk_kd_ty 0  []       []    tm = tm
       inst0 tm
     end
 end;
+
+fun inst theta =
+  let val (rktheta,kdtheta,tytheta) = align_types theta
+  in inst_rk_kd_ty rktheta kdtheta tytheta
+  end
 
 fun inst_all (tmS,tyS,kdS,rkS) tm = subst tmS (inst_rk_kd_ty rkS kdS tyS tm);
 
@@ -1071,7 +1085,7 @@ in
 fun list_mk_binder opt =
  let val f = check_opt opt
  in fn (vlist,tm)
- => if not (all is_var vlist) then raise ERR "list_mk_binder" ""
+ => if not (all is_var vlist) then raise ERR "list_mk_binder" "bound variable arg not a variable"
     else
   let open Redblackmap
      val varmap0 = mkDict compare
@@ -1464,7 +1478,7 @@ local exception CLASH
 val variant_tyvar = Type.variant_tyvar
 val type_vars = Type.type_vars
 in
-fun dest_tyabs(TAbs(Bvar as (Name,Arity,Rank), Body)) =
+fun dest_tyabs(TAbs(Bvar as (Name,Kind,Rank), Body)) =
     let fun dest (Fv(Name,Ty)) i        = Fv(Name, destty Ty i)
           | dest (Const(Name,Ty)) i     = Const(Name, destpty Ty i)
           | dest (Comb(Rator,Rand)) i   = Comb(dest Rator i, dest Rand i)

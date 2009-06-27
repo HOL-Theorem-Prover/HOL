@@ -1,5 +1,6 @@
 signature Psyntax =
 sig
+  type kind = Kind.kind
   type hol_type = Type.hol_type
   type term = Term.term
 

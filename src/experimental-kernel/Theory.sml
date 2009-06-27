@@ -49,7 +49,7 @@
 structure Theory :> Theory =
 struct
 
-open Feedback Lib Type Term Thm ;
+open Feedback Lib Kind Type Term Thm ;
 
 type ppstream = Portable.ppstream
 type pp_type  = ppstream -> hol_type -> unit
@@ -200,7 +200,7 @@ val current_theory = CTname;
  *                  READING FROM THE SEGMENT                                 *
  *---------------------------------------------------------------------------*)
 
-fun thy_types thyname               = Type.thy_types thyname
+fun thy_types thyname               = Type.thy_type_oprs thyname
 fun thy_constants thyname           = Term.thy_consts thyname
 fun thy_parents thyname             = snd (Graph.first
                                            (equal thyname o thyid_name o fst))
@@ -251,8 +251,11 @@ fun empty_segment ({thid,facts, ...}:segment) =
  *              ADDING TO THE SEGMENT                                        *
  *---------------------------------------------------------------------------*)
 
-fun add_type {name,theory,arity} thy =
-    (Type.prim_new_type {Thy = theory, Tyop = name} arity; thy)
+fun add_type_opr {name,theory,kind,rank} thy =
+    (Type.prim_new_type {Thy = theory, Tyop = name} kind rank; thy)
+
+fun add_type {name,theory,arity} thy = 
+    add_type_opr {name=name,theory=theory,kind=Kind.mk_arity arity,rank=0} thy
 
 fun add_term {name,theory,htype} thy =
     (Term.prim_new_const {Thy = theory, Name = name} htype; thy)
@@ -324,6 +327,7 @@ fun zap_segment s (thy : segment) =
 local fun inCT f arg = makeCT(f arg (theCT()))
 in
   val add_typeCT        = inCT add_type
+  val add_type_oprCT    = inCT add_type_opr
   val add_termCT        = inCT add_term
   fun add_axiomCT(r,ax) = inCT add_fact (!r, Axiom(r,ax))
   fun add_defnCT(s,def) = inCT add_fact (s,  Defn def)
@@ -344,12 +348,14 @@ end;
  *            INSTALLING CONSTANTS IN THE CURRENT SEGMENT                    *
  *---------------------------------------------------------------------------*)
 
-fun new_type (Name,Arity) =
+fun new_type_opr (Name,Kind,Rank) =
  (if Lexis.allowed_type_constant Name orelse
      not (!Globals.checking_type_names)
   then ()
   else WARN "new_type" (Lib.quote Name^" is not a standard type name")
-  ; add_typeCT {name=Name, arity=Arity, theory = CTname()};());
+  ; add_type_oprCT {name=Name, kind=Kind, rank=Rank, theory = CTname()};());
+
+fun new_type (Name,Arity) = new_type_opr (Name, Kind.mk_arity Arity, 0)
 
 fun new_constant (Name,Ty) =
   (if Lexis.allowed_term_constant Name orelse
@@ -363,7 +369,7 @@ fun new_constant (Name,Ty) =
      previously built theory from disk.
  ---------------------------------------------------------------------------*)
 
-fun install_type(s,a,thy)   = add_typeCT {name=s, arity=a, theory=thy};
+fun install_type(s,kd,rk,thy) = add_type_oprCT {name=s, kind=kd, rank=rk, theory=thy};
 fun install_const(s,ty,thy) = add_termCT {name=s, htype=ty, theory=thy}
 
 
@@ -508,7 +514,7 @@ fun link_parents thy plist =
  end;
 
 fun incorporate_types thy tys =
-  let fun itype (s,a) = (install_type(s,a,thy);())
+  let fun itype (s,kd,rk) = (install_type(s,kd,rk,thy);())
   in List.app itype tys
   end;
 
@@ -698,10 +704,10 @@ fun new_theory str =
 fun try_theory_extension f x =
   let infix ?>
       open Term
-      val tnames1 = map fst (types"-")
+      val tnames1 = map #1 (types"-")
       val cnames1 = map (fst o dest_const) (constants"-")
       fun revert _ =
-        let val tnames2 = map fst (types"-")
+        let val tnames2 = map #1 (types"-")
             val cnames2 = map (fst o dest_const) (constants"-")
             val new_tnames = Lib.set_diff tnames2 tnames1
             val new_cnames = Lib.set_diff cnames2 cnames1

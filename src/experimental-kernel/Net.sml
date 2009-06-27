@@ -29,6 +29,8 @@ datatype label
     = V
     | Cmb
     | Lam
+    | TCmb
+    | TLam
     | Cnst of string * string ;  (* name * segment *)
 
 (*---------------------------------------------------------------------------*
@@ -54,7 +56,9 @@ in
 fun label_of tm =
    if is_abs tm then Lam else
    if is_var tm then V else
-   if is_comb tm then Cmb
+   if is_comb tm then Cmb else
+   if is_tyabs tm then TLam else
+   if is_tycomb tm then TCmb
    else let val {Name,Thy,...} = dest_thy_const tm
         in Cnst (Name,Thy)
         end
@@ -80,10 +84,14 @@ local
              of V => []
               | Cnst _ => [net_assoc label net]
               | Lam    => mtch (Term.body tm) (net_assoc Lam net)
+              | TLam   => mtch (Term.tybody tm) (net_assoc TLam net)
               | Cmb    => let val (Rator,Rand) = Term.dest_comb tm
                           in itlist(append o mtch Rand)
                                    (mtch Rator (net_assoc Cmb net)) []
                            end
+              | TCmb   => let val (Rator,Rand) = Term.dest_tycomb tm
+                          in mtch Rator (net_assoc TCmb net)
+                          end
        in itlist (fn NODE [] => I | net => cons net) nets [Vnet]
        end
 in
@@ -107,8 +115,11 @@ fun index x net = let
            | SOME (_,net) =>
               case label
                of Lam => appl defd (Term.body tm) net
+                | TLam => appl defd (Term.tybody tm) net
                 | Cmb => let val (Rator,Rand) = Term.dest_comb tm
                          in appl (Rand::defd) Rator net end
+                | TCmb => let val (Rator,Rand) = Term.dest_tycomb tm
+                          in appl defd Rator net end
                 |  _  => let fun exec_defd [] (NODE _) = raise ERR "appl"
                                   "NODE: should be at a LEAF instead"
                                | exec_defd [] (LEAF L) = SOME L
@@ -144,7 +155,10 @@ let fun enter _ _  (LEAF _) = raise ERR "insert" "LEAF: cannot insert"
             case label
              of Cmb => let val (Rator,Rand) = Term.dest_comb tm
                        in enter (Rand::defd) Rator child end
+              | TCmb => let val (Rator,Rand) = Term.dest_tycomb tm
+                        in enter defd Rator child end
               | Lam => enter defd (Term.body tm) child
+              | TLam => enter defd (Term.tybody tm) child
               | _   => let fun exec [] (LEAF L)  = LEAF(p::L)
                              | exec [] (NODE _)  = LEAF[p]
                              | exec (h::rst) net = enter rst h net
@@ -184,8 +198,11 @@ let fun del [] = []
          val childnet' =
            case label
             of Lam => remv defd (Term.body tm) childnet
+             | TLam => remv defd (Term.tybody tm) childnet
              | Cmb => let val (Rator,Rand) = Term.dest_comb tm
                       in remv (Rand::defd) Rator childnet end
+             | TCmb => let val (Rator,Rand) = Term.dest_tycomb tm
+                       in remv defd Rator childnet end
              |  _  => let fun exec_defd [] (NODE _) = raise ERR "remv"
                                 "NODE: should be at a LEAF instead"
                             | exec_defd [] (LEAF L) = LEAF(del L)
@@ -258,7 +275,11 @@ let fun update _ _ (LEAF _) = raise ERR "net_update" "cannot update a tip"
                    of Cmb => let val (Rator,Rand) = Term.dest_comb tm
                              in update (Rator::defd) Rand child
                              end
+                    | TCmb => let val (Rator,Rand) = Term.dest_tycomb tm
+                              in update defd Rator child
+                              end
                     | Lam => update defd (Term.body tm) child
+                    | TLam => update defd (Term.tybody tm) child
                     | _   => exec_defd defd child
            in NODE (overwrite (label,new_child) edges)
            end
@@ -273,10 +294,14 @@ fun follow tm net =
        of (label as Cnst _) => [get_edge label net]
         | V   => []
         | Lam => follow (Term.body tm) (get_edge Lam net)
+        | TLam => follow (Term.tybody tm) (get_edge TLam net)
         | Cmb => let val (Rator,Rand) = Term.dest_comb tm
                  in Lib.itlist(fn i => fn A => (follow Rator i @ A))
                               (follow Rand (get_edge Cmb net)) []
                  end
+        | TCmb => let val (Rator,Rand) = Term.dest_tycomb tm
+                  in follow Rator (get_edge TCmb net)
+                  end
  in Lib.gather (not o is_empty) (get_edge V net::nets)
  end;
 
