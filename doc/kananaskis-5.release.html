@@ -23,6 +23,13 @@ looks prettier thanks to Unicode support), as well as the usual bug
 fixes.</p>
 
 <!-- maybe announce HOL-ω here -->
+<p> A new version of the HOL4 theorem prover is also now available,
+called HOL-Omega (or HOL<sub>ω</sub>).  While backwards compatible,
+the HOL-Omega theorem prover implements a more powerful
+logic, capable of modelling concepts not expressible in normal 
+higher order logic, such as monads and concepts from category theory.
+See the "New versions" section below for more.
+</p>
 
 <h2 id="contents">Contents</h2>
 <ul>
@@ -30,6 +37,7 @@ fixes.</p>
   <li> <a href="#bugs-fixed">Bugs fixed</a> </li>
   <li> <a href="#new-theories">New theories</a> </li>
   <li> <a href="#new-tools">New tools</a> </li>
+  <li> <a href="#new-versions">New versions</a> </li>
   <li> <a href="#new-examples">New examples</a> </li>
   <li> <a href="#incompatibilities">Incompatibilities</a> </li>
 </ul>
@@ -434,6 +442,93 @@ Simplifies <code>--</code>, <code>w2w</code>, <code>sw2sw</code>, <code>#>></cod
 
 
 
+</li>
+</ul>
+
+<h2 id="new-versions">New versions:</h2>
+
+<ul>
+<li>
+<p>
+The HOL-Omega or HOL<sub>ω</sub> system presents a more powerful version 
+of the widely used HOL theorem prover.  This system implements a new logic, 
+which is an extension of the existing higher order logic of HOL4. The logic 
+is extended to three levels, adding kinds to the existing levels of types 
+and terms.  New types include type operator variables and universal types 
+as in System F.  Impredicativity is avoided through the stratification of 
+types by ranks according to the depth of universal types.  The HOL-Omega 
+system is a merging of HOL4, HOL2P by V&ouml;lker, and major aspects of 
+System F<sub>ω</sub> from chapter 30 of 
+<i>Types and Programming Languages</i> by Pierce.
+As in HOL4, HOL-Omega was constructed according to the design principles
+of the LCF approach, for the highest degree of soundness.
+</p>
+
+<p>
+The HOL-Omega system is described in the paper
+<a href="http://www.trustworthytools.com/holw/holw-lncs5674.pdf"><i>The HOL-Omega Logic</i></a>,
+by Homeier, P.V., in Proceedings of TPHOLs 2009, LNCS vol. 5674, pp. 244-259.
+The paper presents the abstract syntax and semantics for the ranks, kinds,
+types, and terms of the logic, as well as the new fundamental axioms
+and rules of inference.  It also presents examples of using the HOL-Omega
+system to model monads and concepts from category theory such as functors
+and natural transformations.  As an example, 
+here is the definition of functors, as a type abbreviation and a term predicate:
+</p>
+
+<pre>
+(*---------------------------------------------------------------------------
+            Functor type abbreviation
+ ---------------------------------------------------------------------------*)
+         
+val _ = type_abbrev ("functor", Type `: \'F. !'a 'b. ('a -> 'b) -> 'a 'F -> 'b 'F`);       
+           
+(*---------------------------------------------------------------------------
+            Functor predicate
+ ---------------------------------------------------------------------------*)
+
+val functor_def = new_definition("functor_def", Term
+   `functor (F': 'F functor) =
+      (* Identity *)
+          (!:'a. F' (I:'a->'a) = I) /\
+      (* Composition *)
+          (!:'a 'b 'c. !(f:'a -> 'b) (g:'b -> 'c).
+                 F' (g o f) = F' g o F' f) 
+   `);
+</pre>
+
+<p>
+The HOL-Omega implementation may be downloaded by the command
+<blockquote>
+<code>svn checkout https://hol.svn.sf.net/svnroot/hol/branches/HOL-Omega</code>
+</blockquote>
+Installation instructions are in the top directory.
+HOL-Omega may be built using either the standard or the experimental kernel,
+and either Moscow ML or Poly/ML, by the same process as for HOL4.
+This implementation is still in development but is currently useful.
+This provides a practical workbench for developments in the HOL-Omega
+logic, integrated in a natural and consistent manner with the existing HOL4
+tools and libraries that have been refined and extended over many years.
+Examples using the new features of HOL-Omega may be found in the directory
+<code>examples/HolOmega</code>.
+</p>
+
+<p>
+This implementation was designed with particular concern for backward
+compatibility with HOL4.  This was almost entirely achieved, which was 
+possible only because the fundamental data types representing types and 
+terms were originally encapsulated.  This meant that the underlying 
+representation could be changed without affecting the abstract view of 
+types and terms by the rest of the system.  Virtually all existing HOL4 
+code will build correctly, including the extensive libraries. 
+The simplifiers have been upgraded, including higher-order matching of
+the new types and terms and automatic type beta-reduction.  Algebraic 
+types with higher kinds and ranks may be constructed using the familiar 
+<code>Hol_datatype</code> tool.  Not all of the tools will work as 
+expected on the new terms and types, as the revision process is ongoing, 
+but they will function identically on the classic terms and types. 
+So nothing of HOL4’s existing power has been lost.
+</p>
 </li>
 </ul>
 
