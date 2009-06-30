@@ -181,7 +181,7 @@ local
          val (a', tysub') =
            if not (is_gen_tyvar a) then (a, tysub) else
              let val avoid = type_vars_in_terml (tm :: avoid)
-                 val a' = variant_type avoid (mk_vartype_opr ("'a", kind_of a, rank_of a))
+                 val a' = variant_type avoid (mk_var_type ("'a", kind_of a, rank_of a))
              in (a', (a |-> a') :: tysub)
              end
        in

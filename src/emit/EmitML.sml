@@ -1028,7 +1028,7 @@ fun replaceForm f (Constructors alist) =
   | replaceForm f other = other
 
 fun pretype_of ty =
-     let val (name,kind,rank) = dest_vartype_opr ty
+     let val (name,kind,rank) = dest_var_type ty
      in dVartype(name, Prekind.fromKind kind, Prerank.fromRank rank)
      end
 (* handle _ =>
@@ -1076,7 +1076,7 @@ fun repair_type_decls (iDATATYPE decls) =
              TypeBasePure.get (TypeBase.theTypeBase()) (hd type_names)
          val tyax = TypeBasePure.axiom_of (hd candidate_tyis)
          val newtypes = Prim_rec.doms_of_tyaxiom tyax
-         val tyvars = map dest_vartype_opr (snd (dest_type (hd newtypes)))
+         val tyvars = map dest_var_type (snd (dest_type (hd newtypes)))
          val alist = map (fn x => (fst(dest_type x),pretype_of x)) newtypes
          fun alist_fn name = snd (valOf (assoc1 name alist))
      in

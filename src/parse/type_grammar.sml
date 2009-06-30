@@ -50,13 +50,13 @@ fun structure_to_type st =
     | TYAPP (opr,arg) => Type.mk_app_type(structure_to_type opr, structure_to_type arg)
     | TYUNIV (bvar,body) => Type.mk_univ_type(structure_to_type bvar, structure_to_type body)
     | TYABST (bvar,body) => Type.mk_abs_type(structure_to_type bvar, structure_to_type body)
-    | TYVAR (str,kd,rk) => Type.mk_vartype_opr(str,kd,rk)
+    | TYVAR (str,kd,rk) => Type.mk_var_type(str,kd,rk)
 (*
       TYOP {Thy,Tyop,Args} =>
       Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
                         Args = map structure_to_type Args}
 *)
-    | PARAM (n,kd,rk) => Type.mk_vartype_opr ("'"^str (chr (n + ord #"a")), kd, rk)
+    | PARAM (n,kd,rk) => Type.mk_var_type ("'"^str (chr (n + ord #"a")), kd, rk)
 
 fun params0 acc (PARAM (i,kd,rk)) = HOLset.add(acc, i)
   | params0 acc (TYCON {Thy,Tyop,Kind,Rank}) = acc

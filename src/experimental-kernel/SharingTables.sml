@@ -176,7 +176,7 @@ fun make_shared_type ty (tables as (idtable, kdtable, table)) =
     | NONE => let
       in
         if is_vartype ty then let
-            val (name, kind, rank) = dest_vartype_opr ty
+            val (name, kind, rank) = dest_var_type ty
             val (kdi, kdtable') = make_shared_kind kind kdtable
             val {tysize, tymap, tylist} = table
           in
@@ -244,7 +244,7 @@ fun build_type_vector idv kdv shtylist = let
         TYV (s,kdi,rk) => let
           val kd = Vector.sub(kdv, kdi)
         in
-          (n + 1, Map.insert(tymap, n, Type.mk_vartype_opr(s,kd,rk)))
+          (n + 1, Map.insert(tymap, n, Type.mk_var_type(s,kd,rk)))
         end
       | TYC (id,kdi,rk) => let
           val kd = Vector.sub(kdv, kdi)

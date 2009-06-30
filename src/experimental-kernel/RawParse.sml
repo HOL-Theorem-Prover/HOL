@@ -110,9 +110,9 @@ fun pp_raw_term tymap map t = let
       | Ty (t,g) :: rest => let
         in
           doit (Int.toString (tymap t)::acc) rest
-          handle e => (print "\npp_raw_term failed to find type id # for type ";
+          handle e => ((*print "\npp_raw_term failed to find type id # for type ";
                        print (Type.type_to_string t);
-                       print "\n";
+                       print "\n";*)
                        raise e)
         end
       | Tm (t,g) :: rest => let

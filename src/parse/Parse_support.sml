@@ -115,7 +115,7 @@ local
        in (PT(TyApp(pty1,pty2),l), E2)
        end
     | TYUNIV(bvar,body) =>
-       let val (s,kd,rk) = dest_vartype_opr bvar
+       let val (s,kd,rk) = Type.dest_var_type bvar
            val pkd = Prekind.fromKind kd
            val prk = Prerank.fromRank rk
            val v' = (s,pkd,prk)
@@ -124,7 +124,7 @@ local
        in (PT(TyUniv(PT(Vartype v',l),body'),l), (lscope, scope, free, scope_ty, free_ty'))
        end
     | TYABS(bvar,body) =>
-       let val (s,kd,rk) = dest_vartype_opr bvar
+       let val (s,kd,rk) = Type.dest_var_type bvar
            val pkd = Prekind.fromKind kd
            val prk = Prerank.fromRank rk
            val v' = (s,pkd,prk)
@@ -182,7 +182,7 @@ local
         (Abs{Bvar=Var v', Body=Body', Locn=l}, (lscope, scope, free', scope_ty', free_ty'))
       end
     | TYLAMB(Bvar,Body) => let
-        val (s,kd,rk) = dest_vartype_opr Bvar
+        val (s,kd,rk) = Type.dest_var_type Bvar
         val pkd = Prekind.fromKind kd
         val prk = Prerank.fromRank rk
         val v' = (s,pkd,prk)
@@ -417,7 +417,7 @@ fun gen_overloaded_const oinfo l s =
         in
           Preterm.Pattern{Ptm = Preterm.term_to_preterm 
                                   (map dest_var_kind kdfvs)
-                                  (map (#1 o dest_vartype_opr) tyfvs) t,
+                                  (map (#1 o dest_var_type) tyfvs) t,
                           Locn = l}
         end
     end

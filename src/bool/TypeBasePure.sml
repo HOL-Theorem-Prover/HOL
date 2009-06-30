@@ -513,8 +513,8 @@ fun normalise_ty ty = let
         end
   val (inst0, _) = recurse (Binarymap.mkDict Type.compare, Type.alpha) [ty]
   fun set_kd_rk src trg =
-    let val (s,kd,rk) = dest_vartype_opr trg
-    in mk_vartype_opr(s, kind_of src, rank_of src)
+    let val (s,kd,rk) = dest_var_type trg
+    in mk_var_type(s, kind_of src, rank_of src)
     end
   val inst = Binarymap.foldl (fn (tyk,tyv,acc) => (tyk |-> set_kd_rk tyk tyv)::acc)
                              []
@@ -528,8 +528,8 @@ fun prim_get (db:typeBase) (thy,tyop) =
       NONE => NONE
     | SOME kd => let
         val (kd_args,kd_res) = Kind.strip_arrow_kind kd
-        fun set_kind ty kind = let val (s,kd,rk) = dest_vartype_opr ty
-                               in mk_vartype_opr(s,kind,rk)
+        fun set_kind ty kind = let val (s,kd,rk) = dest_var_type ty
+                               in mk_var_type(s,kind,rk)
                                end
         fun genargs nextty (kd::kds) = set_kind nextty kd :: genargs (next_ty nextty) kds
           | genargs nextty    []     = []

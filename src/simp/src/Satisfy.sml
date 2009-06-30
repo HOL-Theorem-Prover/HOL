@@ -86,8 +86,8 @@ fun SATISFY_TAC (asms,gl) =
 
 fun GSPEC thm = SPEC(genvar(type_of(bvar(rand(concl thm))))) thm;
 fun TY_GSPEC thm = let val a = btyvar(rand(concl thm))
-                       val (_,kd,rk) = dest_vartype_opr a
-                   in TY_SPEC(gen_tyopvar(kd,rk)) thm
+                       val (_,kd,rk) = dest_var_type a
+                   in TY_SPEC(gen_var_type(kd,rk)) thm
                    end;
 fun FACT_CANON thm =
   if (is_conj (concl thm)) then flatten (map FACT_CANON (CONJUNCTS thm))

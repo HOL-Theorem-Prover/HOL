@@ -6,17 +6,18 @@ sig
  type tyvar = string * kind * int (* rank *)
 
  val mk_vartype    : string -> hol_type
- val mk_vartype_opr : tyvar -> hol_type
+ val mk_var_type   : tyvar -> hol_type
  val mk_primed_vartype : string -> hol_type
- val mk_primed_vartype_opr : tyvar -> hol_type
+ val mk_primed_var_type : tyvar -> hol_type
  val gen_tyvar     : unit -> hol_type
- val gen_tyopvar   : kind * int -> hol_type
+ val gen_var_type  : kind * int -> hol_type
  val variant_type  : hol_type list -> hol_type -> hol_type
  val variant_tyvar : hol_type list -> tyvar -> tyvar
  val prim_variant_type : hol_type list -> hol_type -> hol_type
  val dest_vartype  : hol_type -> string
- val dest_vartype_opr : hol_type -> tyvar
+ val dest_var_type : hol_type -> tyvar
  val is_vartype    : hol_type -> bool
+ val is_var_type   : hol_type -> bool
  val is_gen_tyvar  : hol_type -> bool
 
  val mk_type       : string * hol_type list -> hol_type
@@ -64,10 +65,10 @@ sig
  val aconv_ty      : hol_type -> hol_type -> bool
  val beta_conv_ty  : hol_type -> hol_type
  val head_beta_ty  : hol_type -> hol_type
- val deep_beta_conv_ty : hol_type -> hol_type
+ val deep_beta_ty  : hol_type -> hol_type
  val eta_conv_ty   : hol_type -> hol_type
- val deep_eta_conv_ty : hol_type -> hol_type
- val deep_beta_eta_conv_ty : hol_type -> hol_type
+ val deep_eta_ty   : hol_type -> hol_type
+ val deep_beta_eta_ty : hol_type -> hol_type
  val abconv_ty     : hol_type -> hol_type -> bool
  val subtype       : hol_type -> hol_type -> bool
 
@@ -102,7 +103,7 @@ sig
  val ftyvar        : hol_type
 
  val type_subst    : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
- val raw_type_subst: (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
+ val pure_type_subst : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type (* expects kinds, ranks match *)
  val match_rank    : int -> int -> int
  val raw_match_rank: int -> int -> int -> int
  val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
@@ -133,7 +134,7 @@ sig
  val align_types : (hol_type,hol_type) Lib.subst ->
                    int * (kind,kind) Lib.subst * (hol_type,hol_type) Lib.subst
 
- val type_to_string : hol_type -> string (* for low-level error messages only; superceeded *)
+(* val type_to_string : hol_type -> string *) (* for low-level error messages only; superceeded *)
 
  val type_size : hol_type -> int
 

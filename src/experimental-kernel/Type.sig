@@ -15,6 +15,7 @@ sig
   val raw_empty_tyset : hol_type  HOLset.set
 
   val ty_sub        : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type Lib.delta
+  val pure_ty_sub   : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type Lib.delta (* expects kinds, ranks match *)
   val vsubst        : (hol_type, (string HOLset.set)Susp.susp * hol_type)Binarymap.dict
                       -> hol_type -> hol_type
   val ssubst        : (hol_type, hol_type)Binarymap.dict -> hol_type -> hol_type

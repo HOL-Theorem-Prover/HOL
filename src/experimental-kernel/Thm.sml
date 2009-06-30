@@ -147,7 +147,7 @@ fun tag_hyp_union thm_list =
    itlist (union_hyp o hypset) thm_list empty_hyp);
 
 fun var_occursl v l = isSome (HOLset.find (var_occurs v) l);
-fun tyvar_occursl a l = isSome (HOLset.find (tyvar_occurs a) l);
+fun type_var_occursl a l = isSome (HOLset.find (type_var_occurs a) l);
 
 fun hypset_all P s = not (isSome (HOLset.find (not o P) s))
 fun hypset_exists P s = isSome (HOLset.find P s)
@@ -284,9 +284,9 @@ fun ABS v (THM(ocl,asl,c)) =
 fun TY_ABS a (THM(ocl,asl,c)) =
  let val (lhs,rhs,ty) = Term.dest_eq_ty c handle HOL_ERR _
                       => ERR "TY_ABS" "not an equality"
-     val (nm,kd,rk) = Type.dest_vartype_opr a handle HOL_ERR _
+     val (nm,kd,rk) = Type.dest_var_type a handle HOL_ERR _
                       => ERR "TY_ABS" "first argument is not a type variable"
- in if tyvar_occursl a asl
+ in if type_var_occursl a asl
      then ERR "TY_ABS" "The type variable is free in the assumptions"
      else make_thm Count.TyAbs
             (ocl, asl, mk_eq_nocheck (Type.mk_univ_type(a, ty))
@@ -906,7 +906,7 @@ val GENL = itlist GEN
 
 fun TY_GEN a th =
   let val (asl,c) = sdest_thm th
-  in if tyvar_occursl a asl
+  in if type_var_occursl a asl
      then ERR  "TY_GEN" "type variable occurs free in hypotheses"
      else make_thm Count.TyGen(tag th, asl, Susp.force mk_tyforall a c)
           handle HOL_ERR _ => ERR "TY_GEN" ""
@@ -1110,7 +1110,7 @@ fun TY_CHOOSE (v,xth) bth =
       val (Bvar,Body)  = dest_tyexists x_c
       val A2_hyps = disch (inst [Bvar |-> v] Body, b_asl)
       val newhyps = union_hyp x_asl A2_hyps
-      val occursv = tyvar_occurs v
+      val occursv = type_var_occurs v
       val _ = Assert (not(occursv x_c) andalso
                       not(occursv b_c) andalso
                       not(hypset_exists occursv A2_hyps)) "" ""
@@ -1540,7 +1540,7 @@ fun Mk_tyabs thm =
        fun mkthm th1' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
              val _ = Assert (EQ(lhs1,Body)) "" ""
-             val _ = Assert (not (tyvar_occursl Bvar (hypset th1'))) "" ""
+             val _ = Assert (not (type_var_occursl Bvar (hypset th1'))) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1']
          in make_thm Count.TyAbs
 	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_tyabs(Bvar, rhs1)))
@@ -1598,7 +1598,7 @@ fun mk_defn_thm (witness_tag, c) =
 local open Type in
 fun debug_type ty =
     if is_vartype ty then let
-        val (s,kd,rk) = dest_vartype_opr ty
+        val (s,kd,rk) = dest_var_type ty
       in print s
       end 
     else if (can dom_rng ty) then let

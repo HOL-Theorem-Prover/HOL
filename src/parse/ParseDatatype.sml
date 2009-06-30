@@ -65,7 +65,7 @@ type AST = string * datatypeForm
 (*
 fun pretypeToType pty =
   case pty of
-    dVartype (s,kd,rk) => Type.mk_vartype_opr (s, Prekind.toKind kd, Prerank.toRank rk)
+    dVartype (s,kd,rk) => Type.mk_var_type (s, Prekind.toKind kd, Prerank.toRank rk)
   | dContype {Thy=SOME Thy,Tyop,Kind,Rank} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop, Kind=Kind, Rank=Rank}
   | dContype {Thy=NONE,    Tyop,Kind,Rank} => Type.mk_con_type Tyop
   | dTyApp  (opr,arg)   => Type.mk_app_type(pretypeToType opr, pretypeToType arg)
@@ -120,7 +120,7 @@ fun tyvars ty =
   | dTyAbst (tyv, ty) => Lib.subtract (tyvars ty) (tyvars tyv)
   | dTyKindConstr {Ty,...} => tyvars Ty
   | dTyRankConstr {Ty,...} => tyvars Ty
-  | dAQ (Ty) => map ((app_tri Prekind.fromKind Prerank.fromRank) o Type.dest_vartype_opr)
+  | dAQ (Ty) => map ((app_tri Prekind.fromKind Prerank.fromRank) o Type.dest_var_type)
                     (Type.type_vars Ty)
 end
 
@@ -257,7 +257,7 @@ local open Type
 in
 fun fromType t =
   if is_vartype t then let
-      val (str, kd, rk) = dest_vartype_opr t
+      val (str, kd, rk) = dest_var_type t
     in
       dVartype (str, Prekind.fromKind kd, Prerank.fromRank rk)
     end
@@ -332,10 +332,10 @@ val list_mk_arrow_kind = Prekind.list_mk_arrow_kind
 
 fun clean deftys params pty =
 let val pkinds = map #2 params
-    val par_types = map (fn (s,kd,rk) => Type.mk_vartype_opr(s, Prekind.toKind kd, Prerank.toRank rk)) params
+    val par_types = map (fn (s,kd,rk) => Type.mk_var_type(s, Prekind.toKind kd, Prerank.toRank rk)) params
     fun clean pty =
 (case pty of
-    dVartype (s,kd,rk) => Type.mk_vartype_opr (s, Prekind.toKind kd, Prerank.toRank rk)
+    dVartype (s,kd,rk) => Type.mk_var_type (s, Prekind.toKind kd, Prerank.toRank rk)
   | dContype {Thy,Tyop,Kind,Rank} =>
       let val is_defty = Lib.mem Tyop deftys
           val Kind' = if is_defty then list_mk_arrow_kind(pkinds, Kind)
@@ -347,14 +347,14 @@ let val pkinds = map #2 params
                                            Kind=Prekind.toKind Kind', Rank=Prerank.toRank Rank})
                      handle HOL_ERR _ => (* This can happen during error messages from kind inference *)
                       Feedback.trace ("Vartype Format Complaint",0)
-                         Type.mk_vartype_opr(Tyop, Prekind.toKind Kind', Prerank.toRank Rank)
+                         Type.mk_var_type(Tyop, Prekind.toKind Kind', Prerank.toRank Rank)
       in if is_defty then Type.list_mk_app_type(cty, par_types)
                      else cty
       end
   | dTyApp(ty1,ty2)  => (Type.mk_app_type  (clean ty1, clean ty2)
                           handle Feedback.HOL_ERR e =>
-                            (print ("Applying " ^ HolKernel.type_to_string (clean ty1)
-                                       ^ " to " ^ HolKernel.type_to_string (clean ty2) ^ "\n");
+                            ((*print ("Applying " ^ HolKernel.type_to_string (clean ty1)
+                                       ^ " to " ^ HolKernel.type_to_string (clean ty2) ^ "\n");*)
                              raise Feedback.mk_HOL_ERR "ParseDatatype" "clean" (#message e)))
   | dTyUniv (tyv,ty) => Type.mk_univ_type (clean tyv, clean ty)
   | dTyAbst (tyv,ty) => Type.mk_abs_type  (clean tyv, clean ty)

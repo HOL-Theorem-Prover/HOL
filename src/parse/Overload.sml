@@ -90,7 +90,7 @@ local
        it won't be in sofar, and tyvar_vary ensures it won't be equal to
        next_var *)
   in
-    ((env, (new_next, new_sofar)), mk_vartype_opr(next_var,kd,rk))
+    ((env, (new_next, new_sofar)), mk_var_type(next_var,kd,rk))
   end
 
 (* ---------------------------------------------------------------------- *)
@@ -115,8 +115,8 @@ local
                                                             return new_ty)
                | NONE =>
                    let
-                     val (s1, kd1, rk1) = dest_vartype_opr ty1
-                     val (s2, kd2, rk2) = dest_vartype_opr ty2
+                     val (s1, kd1, rk1) = dest_var_type ty1
+                     val (s2, kd2, rk2) = dest_var_type ty2
                    in
                      if s1 = s2 andalso kd1 = kd2 andalso rk1 = rk2 then
                        return ty1
@@ -164,8 +164,8 @@ local
                  mmap (au0 cntx) (ListPair.zip ([ty1f,ty1a], [ty2f,ty2a])) >-
                    (fn [tyf,tya] =>
                      return (mk_app_type(tyf, tya)
-                             handle e => (print ("au failed at mk_app_type on " ^ type_to_string tya
-                                                 ^ " " ^ type_to_string tyf ^ "\n");
+                             handle e => ((*print ("au failed at mk_app_type on " ^ type_to_string tya
+                                                 ^ " " ^ type_to_string tyf ^ "\n");*)
                                           Raise e)
                             ))
                else
@@ -216,7 +216,7 @@ local
   val au = au0 []
 
   fun initial_state (ty1, ty2) = let
-    val avoids = map (#1 o dest_vartype_opr) (type_varsl [ty1, ty2])
+    val avoids = map (#1 o dest_var_type) (type_varsl [ty1, ty2])
     val first_var = gen_variant tyvar_vary avoids "'a"
   in
     ([], (first_var, avoids))
@@ -228,8 +228,8 @@ local
   fun canonicalise ty = let
     val tyvars = type_vars ty
     val replacements =
-      map2 (fn tyv => fn s => let val (_,kd,rk) = dest_vartype_opr tyv
-                              in mk_vartype_opr(s,kd,rk) end)
+      map2 (fn tyv => fn s => let val (_,kd,rk) = dest_var_type tyv
+                              in mk_var_type(s,kd,rk) end)
            tyvars (generate_iterates (length tyvars) tyvar_vary "'a")
     val subst =
       ListPair.map (fn (ty1, ty2) => Lib.|->(ty1, ty2)) (tyvars, replacements)

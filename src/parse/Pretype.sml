@@ -1770,8 +1770,8 @@ fun rename_typevars kdavds avds ty = valOf (#2 (rename_tv kdavds avds ty ([],[],
 end
 
 fun fromType t =
-  if Type.is_vartype t then let
-      val (str, kd, rk) = dest_vartype_opr t
+  if Type.is_var_type t then let
+      val (str, kd, rk) = Type.dest_var_type t
     in
       PT(Vartype (str, Prekind.fromKind kd, Prerank.fromRank rk), locn.Loc_None)
     end
@@ -1853,13 +1853,13 @@ end env
 fun clean (pty as PT(ty, locn)) =
 (
   case ty of
-    Vartype (s,kd,rk) => Type.mk_vartype_opr (s, Prekind.toKind kd, Prerank.toRank rk)
+    Vartype (s,kd,rk) => Type.mk_var_type (s, Prekind.toKind kd, Prerank.toRank rk)
   | Contype {Thy,Tyop,Kind,Rank} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop,
                                          Kind=Prekind.toKind Kind, Rank=Prerank.toRank Rank}
   | TyApp(ty1,ty2)  => (Type.mk_app_type  (clean ty1, clean ty2)
                           handle Feedback.HOL_ERR e =>
-                            (print ("Applying " ^ type_to_string (clean ty1)
-                                    ^ " to " ^ type_to_string (clean ty2) ^ "\n");
+                            ((*print ("Applying " ^ type_to_string (clean ty1)
+                                    ^ " to " ^ type_to_string (clean ty2) ^ "\n");*)
                              raise Feedback.mk_HOL_ERR "Pretype" "clean" (#message e)))
   | TyUniv (tyv,ty) => Type.mk_univ_type (clean tyv, clean ty)
   | TyAbst (tyv,ty) => Type.mk_abs_type  (clean tyv, clean ty)

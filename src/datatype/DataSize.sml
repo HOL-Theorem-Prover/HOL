@@ -29,14 +29,14 @@ local open Portable
         end
       fun next_nm avoids s = Lexis.gen_variant Lexis.tyvar_vary avoids s
       fun gen_tyvs avoids nextty (kd::kds) =
-            let val (name,_,rk) = dest_vartype_opr nextty
+            let val (name,_,rk) = dest_var_type nextty
                 val new_name = next_nm avoids name
-                val newtyv = mk_vartype_opr(new_name, kd, rk)
+                val newtyv = mk_var_type(new_name, kd, rk)
             in newtyv :: gen_tyvs (new_name::avoids) newtyv kds
             end
         | gen_tyvs avoids nextty [] = []
       fun size_ty avoids ty =
-        let val (s,kd,rk) = dest_vartype_opr ty
+        let val (s,kd,rk) = dest_var_type ty
                             handle HOL_ERR e => ("", kind_of ty, rank_of ty)
         in if kd = typ then ty --> num
            else if is_arrow_kind kd then

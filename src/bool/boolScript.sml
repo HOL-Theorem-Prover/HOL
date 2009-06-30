@@ -1495,8 +1495,8 @@ val _ = save_thm("FUN_EQ_THM",FUN_EQ_THM);
  ---------------------------------------------------------------------------*)
 
 val TY_FUN_EQ_THM =
-  let val a = mk_vartype_opr("'a", kappa, 0)
-      val b = mk_vartype_opr("'b", kappa ==> typ, 1)
+  let val a = mk_var_type("'a", kappa, 0)
+      val b = mk_var_type("'b", kappa ==> typ, 1)
       val ty = Type.mk_univ_type(a, Type.mk_app_type(b,a))
       val f = mk_var("f", ty)
       val g = mk_var("g", ty)

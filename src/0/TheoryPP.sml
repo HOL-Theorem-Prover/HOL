@@ -69,7 +69,7 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
                           else (add_string "("; pp_type ty; add_string ")")
  in
   if is_vartype ty
-  then let val (s,kd,rk) = dest_vartype_opr ty
+  then let val (s,kd,rk) = dest_var_type ty
        in if kd = Kind.typ andalso rk = 0 then
             case s
              of "'a" => add_string "alpha"
@@ -294,7 +294,7 @@ fun hash_kind kd n =
 local open Type in
 fun debug_type ty =
     if is_vartype ty then let
-        val (s,kd,rk) = dest_vartype_opr ty
+        val (s,kd,rk) = dest_var_type ty
       in print s
       end 
     else if is_bvartype ty then let
@@ -323,7 +323,7 @@ fun debug_type ty =
 end
 
 fun hash_type ty n =
-  hash(#1 (Type.dest_vartype_opr ty)) (0,n)
+  hash(#1 (Type.dest_var_type ty)) (0,n)
   handle HOL_ERR _ =>
      let val {Tyop,Thy,Args} = Type.dest_thy_type ty
      in itlist hash_type Args (hash Thy (0, hash Tyop (0,n)))
@@ -663,7 +663,7 @@ fun pp_struct info_record ppstrm =
       add_string"fun V s q     = mk_var(s,q)";             add_newline();
       add_string"val K         = mk_varkind";              add_newline();
       add_string"val U         = mk_vartype";              add_newline();
-      add_string"fun R s k r   = mk_vartype_opr(s,k,r)";   add_newline();
+      add_string"fun R s k r   = mk_var_type(s,k,r)";      add_newline();
       add_string"fun O s t k r = mk_thy_con_type{Tyop=s,Thy=t,Kind=k,Rank=r}";  add_newline();
       add_string"fun P a b     = mk_app_type(a,b)";        add_newline();
       add_string"fun B a b     = mk_abs_type(a,b)";        add_newline();

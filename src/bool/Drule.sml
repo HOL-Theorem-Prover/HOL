@@ -433,7 +433,7 @@ fun MK_TY_ABS qth =
    let val (Bvar,Body) = dest_tyforall (concl qth)
        val ufun = mk_tyabs(Bvar, lhs Body)
        and vfun = mk_tyabs(Bvar, rhs Body)
-       val gv = gen_tyopvar (kind_of Bvar, rank_of Bvar)
+       val gv = gen_var_type (kind_of Bvar, rank_of Bvar)
    in
     TY_EXT (TY_GEN gv
      (TRANS (TRANS (TY_BETA_CONV (mk_tycomb(ufun,gv))) (TY_SPEC gv qth))
@@ -1420,7 +1420,7 @@ fun TY_ALPHA_CONV x t = let
   val (dty, _) = dest_univ_type (type_of t)
                  handle HOL_ERR _ =>
                         raise ERR "TY_ALPHA_CONV" "Term is not a type abstraction"
-  val (xstr, xkd, xrk) = with_exn dest_vartype_opr x
+  val (xstr, xkd, xrk) = with_exn dest_var_type x
                       (ERR "TY_ALPHA_CONV" "Type is not a type variable")
   val _ = Kind.kind_compare(kind_of dty, xkd) = EQUAL
           orelse raise ERR "TY_ALPHA_CONV"
@@ -1578,8 +1578,8 @@ fun TY_GSPEC th =
   let val (_,w) = dest_thm th
   in if is_tyforall w
      then let val v = fst (dest_tyforall w)
-              val (_,kd,rk) = dest_vartype_opr v
-          in TY_GSPEC (TY_SPEC (gen_tyopvar (kd,rk)) th)
+              val (_,kd,rk) = dest_var_type v
+          in TY_GSPEC (TY_SPEC (gen_var_type (kd,rk)) th)
           end
      else th
   end;
@@ -1710,7 +1710,7 @@ fun tryalpha v tm =
 fun trytyalpha a tm =
  let val (Bvar,Body) = dest_tyabs tm
  in if a = Bvar then tm else
-    if tyvar_occurs a Body then trytyalpha (variant_type (type_vars_in_term tm) a) tm
+    if type_var_occurs a Body then trytyalpha (variant_type (type_vars_in_term tm) a) tm
     else mk_tyabs(a, inst[Bvar |-> a] Body)
  end
 
@@ -1738,8 +1738,8 @@ fun match_bvs t1 t2 acc =
 fun match_btvs t1 t2 acc =
  case (dest_term t1, dest_term t2)
   of (TYLAMB(a1,b1), TYLAMB(a2,b2))
-      => let val n1 = #1(dest_vartype_opr a1)
-             val n2 = #1(dest_vartype_opr a2)
+      => let val n1 = #1(dest_var_type a1)
+             val n2 = #1(dest_var_type a2)
              val newacc = if n1 = n2 then acc else insert(n1, n2) acc
          in
            match_btvs b1 b2 newacc
@@ -1784,13 +1784,13 @@ fun look_for_tyavoids bindings thmc acc = let
 in
   case dest_term thmc of
     TYLAMB (a, b) => let
-      val (thm_n, _, _) = dest_vartype_opr a
+      val (thm_n, _, _) = dest_var_type a
     in
       case Lib.total (rev_assoc thm_n) bindings of
         SOME n => let
           val ftvs = HOLset.addList(empty_tyset, type_vars_in_term b)
           fun f (a, acc) =
-              if #1 (dest_vartype_opr a) = n then HOLset.add(acc, a)
+              if #1 (dest_var_type a) = n then HOLset.add(acc, a)
               else acc
         in
           lfa b (HOLset.foldl f acc ftvs)
@@ -1828,9 +1828,9 @@ fun deep_tyalpha [] tm = tm
   | deep_tyalpha env tm =
      case dest_term tm
       of TYLAMB(Bvar,Body) =>
-          (let val (Name,Kind,Rank) = dest_vartype_opr Bvar
+          (let val (Name,Kind,Rank) = dest_var_type Bvar
                val ((vn',_),newenv) = Lib.pluck (fn (_,x) => x = Name) env
-               val tm' = trytyalpha (mk_vartype_opr(vn', Kind, Rank)) tm
+               val tm' = trytyalpha (mk_var_type(vn', Kind, Rank)) tm
                val (iv,ib) = dest_tyabs tm'
            in mk_tyabs(iv, deep_tyalpha newenv ib)
            end
@@ -2251,7 +2251,7 @@ fun HO_PART_MATCH partfn th =
               [] => (sth1, tmin')
             | bvms => let
                 val avoids = look_for_tyavoids bvms sth1c empty_tyset
-                fun f (a, acc) = (a |-> gen_tyopvar (kind_of a, rank_of a)) :: acc
+                fun f (a, acc) = (a |-> gen_var_type (kind_of a, rank_of a)) :: acc
                 val newinst = HOLset.foldl f [] avoids
                 val newthm = INST_TYPE newinst sth1
                 val tmin'' = map (fn {residue, redex} =>
@@ -2284,7 +2284,7 @@ fun HO_MATCH_MP ith =
            val (atvs,tbod) = strip_tyforall tm
            val (avs,bod) = strip_forall tbod
            val (ant,_) = dest_imp_only bod
-           val (ant_tvs,nant_tvs) = partition (C tyvar_occurs ant) atvs
+           val (ant_tvs,nant_tvs) = partition (C type_var_occurs ant) atvs
        in case partition (C free_in ant) avs
            of (_,[]) => if null nant_tvs then ith else
               let val th1 = SPECL avs (TY_SPECL atvs (ASSUME tm))

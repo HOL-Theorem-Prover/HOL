@@ -198,7 +198,7 @@ fun TY_ABS_CONV conv tm =
         TY_ABS Bvar newbody
         handle HOL_ERR _ =>
                let
-                 val v = gen_tyopvar (kind_of Bvar, rank_of Bvar)
+                 val v = gen_var_type (kind_of Bvar, rank_of Bvar)
                  val th1 = TY_ALPHA_CONV v tm
                  val r = rhs (concl th1)
                  val {Body = Body',...} = dest_tyabs r
@@ -449,8 +449,8 @@ fun STRIP_TY_BINDER_CONV opt conv tm = let
 in
   GEN_TY_ABS opt vlist (conv M)
   handle HOL_ERR _ => let
-           fun kind_rank ty = let val (_,kd,rk) = dest_vartype_opr ty in (kd,rk) end
-           val gvs = map (gen_tyopvar o kind_rank) vlist
+           fun kind_rank ty = let val (_,kd,rk) = dest_var_type ty in (kd,rk) end
+           val gvs = map (gen_var_type o kind_rank) vlist
            fun rename vs t =
                case vs of
                  [] => ALL_CONV t
@@ -600,7 +600,7 @@ in
       (* find all instances of arg_t in t, and convert t
          to (\:v. t[v/arg_t]) [:arg_t:]
          v can be a genvar because we expect to get rid of it later. *)
-      val gv = gen_tyopvar (kind_of arg_t, rank_of arg_t)
+      val gv = gen_var_type (kind_of arg_t, rank_of arg_t)
       val newbody = Term.inst [arg_t |-> gv] t
         (* probably wrong; inst cannot handle type expressions as redexes *)
         (* need to build a new Term.subst_type function for this *)
@@ -1554,7 +1554,7 @@ fun FUN_EQ_CONV tm =
                        in if is_con_type opr then
                               Char.toString (Lib.trye hd (String.explode (#1 (Type.dest_con_type opr))))
                           else if Type.is_vartype opr then
-                              Char.toString (Lib.trye hd (Lib.trye tl (String.explode (#1 (Type.dest_vartype_opr opr)))))
+                              Char.toString (Lib.trye hd (Lib.trye tl (String.explode (#1 (Type.dest_var_type opr)))))
                           else if is_univ_type opr then "u"
                           else if is_abs_type opr then "a"
                           else "x"

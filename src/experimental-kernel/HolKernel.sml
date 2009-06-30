@@ -218,7 +218,7 @@ fun destruct_type Ty =
   TYAPP   (dest_app_type     Ty) handle HOL_ERR _ =>
   TYUNIV  (dest_univ_type    Ty) handle HOL_ERR _ =>
   TYABS   (dest_abs_type     Ty) handle HOL_ERR _ =>
-  TYVAR   (dest_vartype_opr  Ty) handle HOL_ERR _ =>
+  TYVAR   (dest_var_type     Ty) handle HOL_ERR _ =>
   TYCONST (dest_thy_con_type Ty);
 
 
@@ -453,7 +453,7 @@ local
   end
   val mk_dummy_ty = let
     val name = dest_vartype(gen_tyvar())
-  in fn (kd,rk) => trace ("Vartype Format Complaint",0) mk_vartype_opr(name, kd, rk)
+  in fn (kd,rk) => trace ("Vartype Format Complaint",0) mk_var_type(name, kd, rk)
   end
 
 
@@ -488,8 +488,8 @@ local
     else if is_tyabs vtm then let
         val (vty,vbod) = dest_tyabs vtm
         val (cty,cbod) = dest_tyabs ctm
-        val (_, vkd, vrk) = dest_vartype_opr vty
-        val (_, ckd, crk) = dest_vartype_opr cty
+        val (_, vkd, vrk) = dest_var_type vty
+        val (_, ckd, crk) = dest_var_type cty
         val vdty = mk_dummy_ty (vkd,vrk)
         val cdty = mk_dummy_ty (ckd,crk)
         val sofar' = (safe_inserta(mk_dummy vdty |-> mk_dummy cdty) insts, homs)
@@ -692,7 +692,7 @@ in
                else let
                    val gtyinsts = map (fn p => (p |->
                                                   (if is_vartype p then p
-                                                   else gen_tyopvar(kind_of p,rank_of p))))
+                                                   else gen_var_type(kind_of p,rank_of p))))
                                       typats
                    val ginsts   = map (fn p => (p |->
                                                   (if is_var p then p
@@ -759,7 +759,7 @@ in
                else let
                    val gtyinsts = map (fn p => (p |->
                                                   (if is_vartype p then p
-                                                   else gen_tyopvar(kind_of p,rank_of p))))
+                                                   else gen_var_type(kind_of p,rank_of p))))
                                       typats
                    val ctm' = Term.inst gtyinsts ctm
                    val gtyvs = map #residue gtyinsts

@@ -20,7 +20,7 @@ sig
   val type_vars_in_term : term -> hol_type list
   val type_vars_in_terml : term list -> hol_type list
   val var_occurs    : term -> term -> bool
-  val tyvar_occurs  : hol_type -> term -> bool
+  val type_var_occurs : hol_type -> term -> bool
 
   val genvar        : hol_type -> term
   val genvars       : hol_type -> int -> term list
@@ -90,12 +90,13 @@ sig
   val beta_conv_ty_in_term : term -> term
   val subst         : (term,term) subst -> term -> term
   val inst          : (hol_type,hol_type) subst -> term -> term (* general: aligns kinds & ranks *)
-  val raw_inst      : (hol_type,hol_type) subst -> term -> term (* expects kinds & ranks match *)
+  val pure_inst     : (hol_type,hol_type) subst -> term -> term (* expects kinds & ranks match *)
   val inst_kind     : (kind,kind) subst -> term -> term
   val inst_rank     : int -> term -> term
   val inst_rank_kind : int -> (kind,kind)subst -> term -> term
-  val inst_rk_kd_ty : int -> (kind,kind)subst -> (hol_type,hol_type)subst -> term -> term
-  val subst_type    : (hol_type,hol_type) subst -> term -> term (* arbitrary types to types *)
+  val inst_rk_kd_ty  : int -> (kind,kind)subst -> (hol_type,hol_type)subst -> term -> term
+  val subst_type      : (hol_type,hol_type) subst -> term -> term (* arbitrary types to types *)
+  val pure_subst_type : (hol_type,hol_type) subst -> term -> term (* expects kinds & ranks match *)
 
   val get_type_kind_rank_insts : kind list -> hol_type list ->
                       {redex : term, residue : term} list ->
@@ -121,7 +122,7 @@ sig
   val kind_match_term : term -> term
                         -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int
   val match_term    : term -> term -> (term,term)subst * (hol_type,hol_type)subst
-  val norm_kind_subst : ((term,term)subst * term set) *
+  val kind_norm_subst : ((term,term)subst * term set) *
                       ((hol_type,hol_type)subst * hol_type list) *
                       ((kind,kind)subst * kind list) * int
                       -> ((term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int)

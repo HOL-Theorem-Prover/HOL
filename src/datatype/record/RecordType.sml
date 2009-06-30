@@ -64,7 +64,7 @@ end
 
 (* app_letter = "appropriate letter" *)
 fun app_letter ty =
-    if is_vartype ty then String.substring(#1(dest_vartype_opr ty), 1, 1)
+    if is_vartype ty then String.substring(#1(dest_var_type ty), 1, 1)
     else if is_con_type ty  then String.substring(#Tyop (dest_thy_con_type ty), 0, 1)
     else if is_app_type ty  then app_letter (fst (dest_app_type ty))
     else if is_abs_type ty  then app_letter (snd (dest_abs_type ty))
@@ -266,7 +266,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     val (l, r) = dest_eq (concl th)
     val l_ty = type_of l
     val (dom, rng) = dom_rng l_ty
-    val tyvs = map (#1 o dest_vartype_opr) (type_vars_in_term l)
+    val tyvs = map (#1 o dest_var_type) (type_vars_in_term l)
     val newtyv = mk_vartype(Lexis.gen_variant Lexis.tyvar_vary tyvs "'a")
     val h = mk_var("h", newtyv --> dom)
     val new_o = mk_thy_const{Name = "o", Thy = "combin",

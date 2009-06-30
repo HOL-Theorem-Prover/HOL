@@ -253,6 +253,7 @@ fun inst_rank_kind rank theta =
 
 fun is_bvartype  (TyBv  _) = true | is_bvartype  _ = false;
 fun is_vartype   (TyFv  _) = true | is_vartype   _ = false;
+fun is_var_type  (TyFv  _) = true | is_var_type  _ = false;
 fun is_con_type  (TyCon _) = true | is_con_type  _ = false;
 fun is_type      (TyApp (opr,_)) = is_type opr
   | is_type      (TyCon _) = true
@@ -429,23 +430,23 @@ val ftyvar = TyFv ("'f", Type, 0)
 val varcomplain = ref true
 val _ = register_btrace ("Vartype Format Complaint", varcomplain)
 
-fun mk_vartype_opr ("'a", Type, 0) = alpha
-  | mk_vartype_opr ("'b", Type, 0) = beta
-  | mk_vartype_opr ("'c", Type, 0) = gamma
-  | mk_vartype_opr ("'d", Type, 0) = delta
-  | mk_vartype_opr ("'e", Type, 0) = etyvar
-  | mk_vartype_opr ("'f", Type, 0) = ftyvar
-  | mk_vartype_opr (s, kind, rank) =
+fun mk_var_type ("'a", Type, 0) = alpha
+  | mk_var_type ("'b", Type, 0) = beta
+  | mk_var_type ("'c", Type, 0) = gamma
+  | mk_var_type ("'d", Type, 0) = delta
+  | mk_var_type ("'e", Type, 0) = etyvar
+  | mk_var_type ("'f", Type, 0) = ftyvar
+  | mk_var_type (s, kind, rank) =
                 if rank < 0 then
-                        raise ERR "mk_vartype_opr" "negative rank"
+                        raise ERR "mk_var_type" "negative rank"
                 else
                 if Lexis.allowed_user_type_var s
                 then TyFv (s, kind, rank)
                 else (if !varcomplain then
-                        WARN "mk_vartype_opr" ("non-standard syntax: " ^ s)
+                        WARN "mk_var_type" ("non-standard syntax: " ^ s)
                       else (); TyFv (s, kind, rank))
 
-fun mk_vartype s = mk_vartype_opr (s, Type, 0);
+fun mk_vartype s = mk_var_type (s, Type, 0);
 
 fun inST s = let
   fun foldthis({Thy,Name},_,acc) = (acc orelse (Name = s))
@@ -453,13 +454,13 @@ in
   KernelSig.foldl foldthis false typesig
 end
 
-fun mk_primed_vartype_opr (Name, Kind, Rank) =
+fun mk_primed_var_type (Name, Kind, Rank) =
   let val next = Lexis.tyvar_vary
       fun spin s = if inST s then spin (next s) else s
-  in mk_vartype_opr(spin Name, Kind, Rank)
+  in mk_var_type(spin Name, Kind, Rank)
   end;
 
-fun mk_primed_vartype s = mk_primed_vartype_opr (s, Type, 0);
+fun mk_primed_vartype s = mk_primed_var_type (s, Type, 0);
 
 (*---------------------------------------------------------------------------*
  *   "gen_tyvars" are a Lisp-style "gensym" for HOL variables.               *
@@ -469,12 +470,12 @@ local val gen_tyvar_prefix = "%%gen_tyvar%%"
       fun num2name i = gen_tyvar_prefix^Lib.int_to_string i
       val nameStrm = Lib.mk_istream (fn x => x+1) 0 num2name
 in
-fun gen_tyopvar (Kind,Rank) =
+fun gen_var_type (Kind,Rank) =
        if Rank < 0 then
-               raise ERR "gen_tyopvar" "negative rank"
+               raise ERR "gen_var_type" "negative rank"
        else
        TyFv(state(next nameStrm), Kind, Rank)
-fun gen_tyvar () = gen_tyopvar (Type, 0)
+fun gen_tyvar () = gen_var_type (Type, 0)
 
 fun is_gen_tyvar (TyFv(Name,_,_)) =
         String.isPrefix gen_tyvar_prefix Name
@@ -502,7 +503,7 @@ fun gen_variant P caller =
                  let val s = next name
                  in if P s then loop s else s
                  end
-          in mk_vartype_opr(loop Name, Kind, Rank)
+          in mk_var_type(loop Name, Kind, Rank)
           end
         | vary _ _ = raise ERR caller "2nd argument should be a variable"
   in vary
@@ -513,14 +514,14 @@ val prim_variant_type  = gen_variant (K false) "prim_variant_type";
 
 
 
-fun dest_vartype_opr (TyFv (s,kind,rank)) = (s,kind,rank)
-  | dest_vartype_opr _ = raise ERR "dest_vartype_opr" "not a type variable";
+fun dest_var_type (TyFv (s,kind,rank)) = (s,kind,rank)
+  | dest_var_type _ = raise ERR "dest_var_type" "not a type variable";
 
 fun dest_vartype (TyFv (s,Type,0)) = s
   | dest_vartype (TyFv (s,Type,rank)) =
-           raise ERR "dest_vartype" "non-zero rank - use dest_vartype_opr"
+           raise ERR "dest_vartype" "non-zero rank - use dest_var_type"
   | dest_vartype (TyFv (s,_,_)) =
-           raise ERR "dest_vartype" "type operator kind - use dest_vartype_opr"
+           raise ERR "dest_vartype" "type operator kind - use dest_var_type"
   | dest_vartype _ = raise ERR "dest_vartype" "not a type variable";
 
 (*
@@ -532,7 +533,7 @@ dest_vartype ty11;
 fun variant_tyvar tys tyv =
        let val ty0 = TyFv tyv
            val ty = variant_type tys ty0
-        in dest_vartype_opr ty
+        in dest_var_type ty
        end;
 
 (*---------------------------------------------------------------------------*
@@ -546,7 +547,7 @@ in
 fun make_app_type Opr Arg (fnstr,name) =
   let val name = if name <> "" then name
                  else if is_con_type Opr then #1(dest_con_type Opr)
-                 else if is_vartype Opr then #1(dest_vartype_opr Opr)
+                 else if is_vartype Opr then #1(dest_var_type Opr)
                  else "<not a type constant or variable>"
       val (dom,rng) = kind_dom_rng (kind_of Opr)
                       handle HOL_ERR e =>
@@ -1269,9 +1270,9 @@ local
         else addb t (insert(A,redex,residue),
                      is_vartype redex andalso b)
 in
-(* NOTE: raw_type_subst must only be called with beta-reduced redexes. *)
-fun raw_type_subst [] = I
-  | raw_type_subst theta =
+(* NOTE: pure_type_subst must only be called with beta-reduced redexes. *)
+fun pure_type_subst [] = I
+  | pure_type_subst theta =
     let val (fmap,b) = addb theta (emptysubst, true)
         fun lift i j (TyBv k) = if k >= j then TyBv (i+k) else TyBv k
           | lift i j (v as TyFv _) = v
@@ -1418,7 +1419,7 @@ fun match_type pat ob = fst (raw_match_type pat ob ([],[]))
 
 fun beta_conv_ty (TyApp(M as TyAbs _, N))
        = let val (btyv,body) = dest_abs_type M
-         in raw_type_subst [btyv |-> N] body
+         in pure_type_subst [btyv |-> N] body
          end
   | beta_conv_ty _ = raise ERR "beta_conv_ty" "not a type beta redex"
 
@@ -1654,13 +1655,13 @@ fun once_depth_conv_ty conv ty =
 fun top_sweep_conv_ty conv ty =
     (repeat_ty conv then_ty sub_conv_ty (top_sweep_conv_ty conv)) ty
 
-val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
+val deep_beta_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
 
-val deep_eta_conv_ty = qconv_ty (top_depth_conv_ty eta_conv_ty)
+val deep_eta_ty = qconv_ty (top_depth_conv_ty eta_conv_ty)
 
-val deep_beta_eta_conv_ty = qconv_ty (top_depth_conv_ty (beta_conv_ty orelse_ty eta_conv_ty))
+val deep_beta_eta_ty = qconv_ty (top_depth_conv_ty (beta_conv_ty orelse_ty eta_conv_ty))
 
-fun strip_app_beta_eta_type ty = strip_app_type (deep_beta_eta_conv_ty ty)
+fun strip_app_beta_eta_type ty = strip_app_type (deep_beta_eta_ty ty)
 
 (*  head_beta1_ty reduces the head beta redex; fails if one does not exist. *)
 fun head_beta1_ty ty = (rator_conv_ty head_beta1_ty orelse_ty beta_conv_ty) ty
@@ -1670,9 +1671,9 @@ fun head_beta1_ty ty = (rator_conv_ty head_beta1_ty orelse_ty beta_conv_ty) ty
 val head_beta_ty = qconv_ty (repeat_ty head_beta1_ty)
 
 
-fun abconv_ty t1 t2 = aconv_ty (deep_beta_conv_ty t1) (deep_beta_conv_ty t2)
+fun abconv_ty t1 t2 = aconv_ty (deep_beta_ty t1) (deep_beta_ty t2)
 
-fun subtype t1 t2 = asubtype (deep_beta_conv_ty t1) (deep_beta_conv_ty t2)
+fun subtype t1 t2 = asubtype (deep_beta_ty t1) (deep_beta_ty t2)
 
 local
 fun align_types0 [] = (0,([],[]))
@@ -1699,7 +1700,7 @@ end
 
 fun type_subst theta =
   let val (rktheta,kdtheta,tytheta) = align_types theta
-  in raw_type_subst tytheta o inst_rank_kind rktheta kdtheta
+  in pure_type_subst tytheta o inst_rank_kind rktheta kdtheta
   end
 
 fun ty_sub theta ty = let val ty' = type_subst theta ty
@@ -1739,7 +1740,7 @@ local
   end handle NOT_FOUND => n::l
 (*
   fun safe_insert_tya (n as {redex,residue}) l = let
-    val residue' = deep_beta_eta_conv_ty residue
+    val residue' = deep_beta_eta_ty residue
     val n' = redex |-> residue'
   in let
     val z = find_residue_ty redex l
@@ -1751,7 +1752,7 @@ local
 *)
   val mk_dummy_ty = let
     val name = dest_vartype(gen_tyvar())
-  in fn (kd,rk) => with_flag (varcomplain,false) mk_vartype_opr(name, kd, rk)
+  in fn (kd,rk) => with_flag (varcomplain,false) mk_var_type(name, kd, rk)
   end
   fun rator_type ty = fst (dest_app_type ty)
 
@@ -1791,8 +1792,8 @@ local
         val (vv,vbod) = dest_abs_type vty
         val (cv,cbod) = dest_abs_type cty
                 handle HOL_ERR _ => MERR "abstraction type mismatched with non-abstraction type"
-        val (_, vkd, vrk) = dest_vartype_opr vv
-        val (_, ckd, crk) = dest_vartype_opr cv
+        val (_, vkd, vrk) = dest_var_type vv
+        val (_, ckd, crk) = dest_var_type cv
         val sofar' = (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
       in
         type_pmatch lconsts ((vv |-> cv)::env) vbod cbod sofar'
@@ -1801,8 +1802,8 @@ local
         val (vv,vbod) = dest_univ_type vty
         val (cv,cbod) = dest_univ_type cty
                 handle HOL_ERR _ => MERR "universal type mismatched with non-universal type"
-        val (_, vkd, vrk) = dest_vartype_opr vv
-        val (_, ckd, crk) = dest_vartype_opr cv
+        val (_, vkd, vrk) = dest_var_type vv
+        val (_, ckd, crk) = dest_var_type cv
         val sofar' = (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
       in
         type_pmatch lconsts ((vv |-> cv)::env) vbod cbod sofar'
@@ -1861,9 +1862,9 @@ fun separate_insts_ty lift rk kdavoids kdS env
 in
   (betacounts,
    mapfilter (fn {redex = x, residue = t} => let
-                   val x' = let val (xs,xkd,xrk) = dest_vartype_opr x
+                   val x' = let val (xs,xkd,xrk) = dest_var_type x
                             in with_flag (varcomplain,false)
-                              mk_vartype_opr(xs, kind_subst (#1 kdins) xkd, xrk + rkin)
+                              mk_var_type(xs, kind_subst (#1 kdins) xkd, xrk + rkin)
                             end
                  in
                    if t = x' then raise ERR "separate_insts_ty" ""
@@ -1948,8 +1949,8 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                else let
                    val ginsts = map (fn p => (p |->
                                                 (if is_vartype p then p
-                                                 else gen_tyopvar(kd_of p (map (kind_of o #redex) env),
-                                                                  rk_of p (map (rank_of o #redex) env)))))
+                                                 else gen_var_type(kd_of p (map (kind_of o #redex) env),
+                                                                   rk_of p (map (rank_of o #redex) env)))))
                                     pats
                    val cty' = type_subst ginsts cty
                    val gvs = map #residue ginsts
@@ -1968,7 +1969,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                          val chop = find_residue_ty vhop insts (* may raise NOT_FOUND *)
                          val _ = if eq_ty vhop' chop then raise NOT_FOUND else () (* avoid infinite recurse *)
                          val vhop_inst = [vhop' |-> chop]
-                         val vty1 = deep_beta_conv_ty (type_subst vhop_inst (inst_fn vty))
+                         val vty1 = deep_beta_ty (type_subst vhop_inst (inst_fn vty))
                          val pinsts_homs' =
                              type_pmatch lconsts env vty1 cty (insts, tl homs)
                          val (rkin',kdins') =
@@ -2025,8 +2026,8 @@ fun check_achieves_target (tyins, kdins, rkin) vty cty =
 (**)
 
 fun ho_match_type kdavoids lconsts vty cty = let
-  val vty' = deep_beta_conv_ty vty
-  val cty' = deep_beta_conv_ty cty
+  val vty' = deep_beta_ty vty
+  val cty' = deep_beta_ty cty
   val (tyins, kdins, rkin) = ho_match_type0 true kdavoids lconsts vty' cty'
   val _ = check_achieves_target (tyins, kdins, rkin) vty' cty'
 in (tyins, kdins, rkin)
@@ -2085,19 +2086,19 @@ fun match_type pat ob = fst (raw_match_type pat ob ([],[]))
  ---------------------------------------------------------------------------*)
 
 val raw_dom_rng = dom_rng
-val dom_rng = fn ty => raw_dom_rng ty handle HOL_ERR _ => raw_dom_rng (deep_beta_conv_ty ty)
+val dom_rng = fn ty => raw_dom_rng ty handle HOL_ERR _ => raw_dom_rng (deep_beta_ty ty)
 
 val raw_compare = compare
-val compare = fn (t1,t2) => compare(deep_beta_conv_ty t1, deep_beta_conv_ty t2)
+val compare = fn (t1,t2) => compare(deep_beta_ty t1, deep_beta_ty t2)
 val raw_empty_tyset = empty_tyset
 val empty_tyset = HOLset.empty compare
 val raw_type_eq = type_eq
 fun type_eq t1 t2 = compare(t1,t2) = EQUAL;
 
 fun mapsub f = map (fn {redex,residue} => {redex=f redex, residue=residue})
-val type_subst = fn s => type_subst (mapsub deep_beta_conv_ty s);
+val type_subst = fn s => type_subst (mapsub deep_beta_ty s);
 
-val raw_ty_sub = ty_sub
+val pure_ty_sub = ty_sub
 fun ty_sub theta ty = let val ty' = type_subst theta ty
                       in if type_eq ty ty' then SAME
                                            else DIFF ty'

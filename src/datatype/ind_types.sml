@@ -119,7 +119,7 @@ fun tysubst theta ty = Type.type_subst theta ty;
             end;
 *)
 
-fun name_vartype_opr ty = #1 (dest_vartype_opr ty)
+fun name_vartype_opr ty = #1 (dest_var_type ty)
 
 fun SUBS_CONV [] tm = REFL tm
   | SUBS_CONV ths tm =
@@ -494,7 +494,7 @@ end;
 fun create_recursive_functions tybijpairs consindex conthms rth = let
   val domtys = map (hd o snd o strip_app_type o type_of o snd o snd) consindex
   val recty = (hd o snd o strip_app_type o type_of o fst o snd o hd) consindex
-  val ranty = mk_vartype_opr("'Z", typ, rank_of recty)
+  val ranty = mk_var_type("'Z", typ, rank_of recty)
   val fnn = mk_var("fn", recty --> ranty)
   and fns = make_args "fn" [] (map (C (curry op -->) ranty) domtys)
   val args = make_args "a" [] domtys
@@ -580,7 +580,7 @@ in
   fun create_recursion_iso_constructor consindex = let
     val recty = hd(snd(strip_app_type(type_of(fst(hd consindex)))))
     val domty = hd(snd(strip_app_type recty))
-    val zty = mk_vartype_opr("'Z", typ, rank_of domty)
+    val zty = mk_var_type("'Z", typ, rank_of domty)
     val s = mk_var("s",numty --> zty)
     val i = mk_var("i",domty)
     and r = mk_var("r", numty --> recty)
@@ -838,7 +838,7 @@ in
     if n = 1 then th
     else let
       val tys =
-        map (fn i => mk_vartype_opr ("'Z"^Int.toString i, typ, maxrank)) (upto (n - 1))
+        map (fn i => mk_var_type ("'Z"^Int.toString i, typ, maxrank)) (upto (n - 1))
       val sty = mk_sum tys
       val inls = mk_inls sty
       and outls = mk_outls sty
@@ -956,14 +956,14 @@ fun occurs_in ty bigty =
     end
   else if is_univ_type bigty then let
       val (bvar,body) = dest_univ_type bigty
-      val (_,kd,rk) = dest_vartype_opr bvar
-      val gvar = Type.gen_tyopvar(kd,rk)
+      val (_,kd,rk) = dest_var_type bvar
+      val gvar = Type.gen_var_type(kd,rk)
     in occurs_in ty (type_subst [bvar |-> gvar] body)
     end
   else if is_abs_type bigty then let
       val (bvar,body) = dest_abs_type bigty
-      val (_,kd,rk) = dest_vartype_opr bvar
-      val gvar = Type.gen_tyopvar(kd,rk)
+      val (_,kd,rk) = dest_var_type bvar
+      val gvar = Type.gen_var_type(kd,rk)
     in occurs_in ty (type_subst [bvar |-> gvar] body)
     end
   else false
@@ -1396,7 +1396,7 @@ fun canonicalise_tyvars def thm = let
     | (tyv::tyvs) => let
         val newtyname = Lexis.gen_variant Lexis.tyvar_vary avoids "'a"
       in
-        (tyv |-> mk_vartype_opr(newtyname, kind_of tyv, rank_of tyv)) ::
+        (tyv |-> mk_var_type(newtyname, kind_of tyv, rank_of tyv)) ::
         gen_canonicals tyvs (newtyname :: avoids)
       end
   val names_to_avoid = map name_vartype_opr def_tyvars
@@ -1460,7 +1460,7 @@ local
            if Lib.mem (name_of tyv1) avoids_names
            then let val newtyv = Lexis.gen_variant Lexis.tyvar_vary
                                        (check_these_names@avoids_names) "'a"
-                    val newty = mk_vartype_opr(newtyv, kind_of tyv1, rank_of tyv1)
+                    val newty = mk_var_type(newtyv, kind_of tyv1, rank_of tyv1)
                 in (tyv1 |-> newty) :: recurse tyvs (newty::avoids)
                 end
            else recurse tyvs avoids
@@ -1490,7 +1490,7 @@ local
     val mtys = itlist (insert o type_of) cjs' []
     val pcons = map (fn ty => filter (fn t => type_of t = ty) cjs') mtys
     val cls' = zip mtys (map (map (recover_clause id)) pcons)
-    val tyal = map (fn ty => ty |-> mk_vartype_opr("'"^fst(dest_type ty)^id, kind_of ty, rank_of ty)) mtys
+    val tyal = map (fn ty => ty |-> mk_var_type("'"^fst(dest_type ty)^id, kind_of ty, rank_of ty)) mtys
     val cls'' = map (modify_type tyal ## map (modify_item tyal)) cls'
   in
     (k,tyal,cls'',Thm.INST_TYPE tyins ith, Thm.INST_TYPE tyins rth)

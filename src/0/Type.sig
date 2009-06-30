@@ -21,17 +21,18 @@ sig
   val subst_rank    : (hol_type,hol_type)Lib.subst -> int
   val inst_rank_subst : int -> (hol_type,hol_type)Lib.subst -> (hol_type,hol_type)Lib.subst
   val mk_vartype    : string -> hol_type
-  val mk_vartype_opr : tyvar -> hol_type
+  val mk_var_type   : tyvar -> hol_type
   val mk_primed_vartype : string -> hol_type
-  val mk_primed_vartype_opr : tyvar -> hol_type
+  val mk_primed_var_type : tyvar -> hol_type
   val gen_tyvar     : unit -> hol_type
-  val gen_tyopvar   : kind * int -> hol_type
+  val gen_var_type  : kind * int -> hol_type
   val variant_type  : hol_type list -> hol_type -> hol_type
   val variant_tyvar : hol_type list -> tyvar -> tyvar
   val prim_variant_type : hol_type list -> hol_type -> hol_type
   val dest_vartype  : hol_type -> string
-  val dest_vartype_opr : hol_type -> tyvar
+  val dest_var_type : hol_type -> tyvar
   val is_vartype    : hol_type -> bool
+  val is_var_type   : hol_type -> bool
   val is_bvartype   : hol_type -> bool
   val is_gen_tyvar  : hol_type -> bool
 
@@ -78,10 +79,10 @@ sig
   val aconv_ty      : hol_type -> hol_type -> bool
   val beta_conv_ty  : hol_type -> hol_type
   val head_beta_ty  : hol_type -> hol_type
-  val deep_beta_conv_ty : hol_type -> hol_type
+  val deep_beta_ty  : hol_type -> hol_type
   val eta_conv_ty   : hol_type -> hol_type
-  val deep_eta_conv_ty : hol_type -> hol_type
-  val deep_beta_eta_conv_ty : hol_type -> hol_type
+  val deep_eta_ty   : hol_type -> hol_type
+  val deep_beta_eta_ty : hol_type -> hol_type
   val abconv_ty     : hol_type -> hol_type -> bool
   val subtype       : hol_type -> hol_type -> bool
   val polymorphic   : hol_type -> bool
@@ -96,10 +97,10 @@ sig
 
   val ty_sub        : (hol_type,hol_type)Lib.subst
                         -> hol_type -> hol_type Lib.delta
-  val raw_ty_sub    : (hol_type,hol_type)Lib.subst
+  val pure_ty_sub   : (hol_type,hol_type)Lib.subst
                         -> hol_type -> hol_type Lib.delta
   val type_subst    : (hol_type,hol_type)Lib.subst -> hol_type -> hol_type
-  val raw_type_subst: (hol_type,hol_type)Lib.subst -> hol_type -> hol_type
+  val pure_type_subst : (hol_type,hol_type)Lib.subst -> hol_type -> hol_type
   val type_map      : (hol_type,hol_type)Binarymap.dict -> hol_type -> hol_type
   val type_vars     : hol_type -> hol_type list
   val type_varsl    : hol_type list -> hol_type list

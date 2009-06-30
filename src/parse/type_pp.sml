@@ -21,10 +21,10 @@ val ERR = mk_HOL_ERR "type_pp" "pp_type";
        Kind antiquotations (required in type parser)
  ---------------------------------------------------------------------------*)
 
-fun kd_antiq kd = mk_vartype_opr("'kd_antiq",kd,0)
+fun kd_antiq kd = mk_var_type("'kd_antiq",kd,0)
 
 fun dest_kd_antiq ty =
-  case Lib.with_exn dest_vartype_opr ty (PP_ERR "dest_kd_antiq" "not a kind antiquotation")
+  case Lib.with_exn dest_var_type ty (PP_ERR "dest_kd_antiq" "not a kind antiquotation")
    of ("'kd_antiq",Kd,0) => Kd
     |  _ => raise PP_ERR "dest_kd_antiq" "not a kind antiquotation";
 
@@ -173,7 +173,7 @@ fun pp_type0 (G:grammar) = let
   in
     if depth = 0 then add_string "..."
     else
-      if is_vartype ty then print_var grav (dest_vartype_opr ty)
+      if is_vartype ty then print_var grav (dest_var_type ty)
       else let
           val s = dest_numtype ty
         in

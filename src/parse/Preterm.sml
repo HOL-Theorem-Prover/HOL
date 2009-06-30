@@ -101,7 +101,7 @@ fun term_to_preterm kdavds avds t = let
       | LAMB(v,bod) => recurse avds v >- (fn v' =>
                        recurse avds bod >- (fn bod' =>
                        return (Abs{Body = bod', Bvar = v', Locn = bogus})))
-      | TYLAMB(a,bod) => let val (s,_,_) = dest_vartype_opr a
+      | TYLAMB(a,bod) => let val (s,_,_) = dest_var_type a
                              val avds' = s::avds
                          in gen avds' a >- (fn a' =>
                             recurse avds' bod >- (fn bod' =>
@@ -257,7 +257,7 @@ fun tyVars ptm =  (* the pretype variable names in a preterm *)
   | TyComb{Rator,Rand,...}  => Lib.union (tyVars Rator) (Pretype.tyvars Rand)
   | Abs{Bvar,Body,...}      => Lib.union (tyVars Bvar) (tyVars Body)
   | TyAbs{Bvar,Body,...}    => Lib.union (Pretype.tyvars Bvar) (tyVars Body)
-  | Antiq{Tm,...}           => map (#1 o Type.dest_vartype_opr) (Term.type_vars_in_term Tm)
+  | Antiq{Tm,...}           => map (#1 o Type.dest_var_type) (Term.type_vars_in_term Tm)
   | Constrained{Ptm,Ty,...} => Lib.union (tyVars Ptm) (Pretype.tyvars Ty)
   | Pattern{Ptm,...}        => tyVars Ptm
   | Overloaded _            => raise Fail "Preterm.tyVars: applied to Overloaded";
@@ -696,7 +696,7 @@ fun remove_overloading_phase1 ptm =
         val possty = type_of t
         val fvs = free_vars t
         val kdavds = map Kind.dest_var_kind (tmlist_kdvs fvs)
-        val avds = map (#1 o Type.dest_vartype_opr) (tmlist_tyvs fvs)
+        val avds = map (#1 o Type.dest_var_type) (tmlist_tyvs fvs)
         val pty0 = Pretype.fromType possty
         val _ = over_print ("Testing possible type\n"^pretype_to_string pty0^"\n")
         val pty = Pretype.rename_typevars kdavds avds pty0
@@ -733,7 +733,7 @@ fun remove_overloading_phase1 ptm =
           else let
               val fvs = free_vars t
               val kdavds = map Kind.dest_var_kind (tmlist_kdvs fvs)
-              val avds = map (#1 o Type.dest_vartype_opr) (tmlist_tyvs fvs)
+              val avds = map (#1 o Type.dest_var_type) (tmlist_tyvs fvs)
               val ptm = term_to_preterm kdavds avds t
               val _ = Pretype.unify Ty (ptype_of ptm)
             in
@@ -801,7 +801,7 @@ fun remove_overloading ptm = let
             else let
                 val fvs = free_vars t
                 val kdavds = map Kind.dest_var_kind (tmlist_kdvs fvs)
-                val avds = map (#1 o Type.dest_vartype_opr) (tmlist_tyvs fvs)
+                val avds = map (#1 o Type.dest_var_type) (tmlist_tyvs fvs)
                 val ptm = term_to_preterm kdavds avds t
                 val pty = ptype_of ptm
                 val Ty1 = Pretype.reconcile_univ_types Ty pty
@@ -1187,7 +1187,7 @@ fun TC printers = let
               val _   = Feedback.set_trace "kinds" 2
               val Rator_tm = to_term (overloading_resolution0 Rator')
                              handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1; raise e)
-              val Rator_ty = Type.deep_beta_conv_ty (Term.type_of Rator_tm)
+              val Rator_ty = Type.deep_beta_ty (Term.type_of Rator_tm)
               val Pretype.PT(_,rand_locn) = Rand
               val Rand_ty = Pretype.toType Rand
                             handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1; raise e)
