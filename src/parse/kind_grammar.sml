@@ -61,7 +61,7 @@ fun structure_to_kind st =
             (* Kind.mk_thy_kind {Thy = Thy, Kindop = Kindop,
                                  Args = map structure_to_kind Args} *)
         end
-    | KDVAR str => Kind.mk_varkind str
+    | KDVAR str => Kind.mk_var_kind str
 
 val std_prefix_precedence = 100
 

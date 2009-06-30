@@ -72,11 +72,11 @@ val kappa = KdVar "'k"
 val varkindcomplain = ref true
 val _ = register_btrace ("Varkind Format Complaint", varkindcomplain)
 
-fun mk_varkind "'k" = kappa
-  | mk_varkind s = if Lexis.allowed_user_type_var s then KdVar s
-                   else (if !varkindcomplain then
-                           WARN "mk_varkind" "non-standard syntax"
-                         else (); KdVar s)
+fun mk_var_kind "'k" = kappa
+  | mk_var_kind s = if Lexis.allowed_user_type_var s then KdVar s
+                    else (if !varkindcomplain then
+                            WARN "mk_var_kind" "non-standard syntax"
+                          else (); KdVar s)
 
 fun dest_var_kind (KdVar s) = s
   | dest_var_kind _ = raise ERR "dest_var_kind" "not a kind variable"
@@ -92,7 +92,7 @@ local val gen_kdvar_prefix = "%%gen_kdvar%%"
       fun num2name i = gen_kdvar_prefix^Lib.int_to_string i
       val nameStrm   = Lib.mk_istream (fn x => x+1) 0 num2name
 in
-fun gen_kdvar () = KdVar(state(next nameStrm))
+fun gen_var_kind () = KdVar(state(next nameStrm))
 
 fun is_gen_kdvar (KdVar name) = String.isPrefix gen_kdvar_prefix name
   | is_gen_kdvar _ = false;

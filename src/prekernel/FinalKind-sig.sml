@@ -4,8 +4,8 @@ sig
 
   val typ           : kind
 
-  val mk_varkind    : string -> kind
-  val gen_kdvar     : unit -> kind
+  val mk_var_kind   : string -> kind
+  val gen_var_kind  : unit -> kind
   val dest_var_kind : kind -> string
   val is_var_kind   : kind -> bool
   val is_gen_kdvar  : kind -> bool

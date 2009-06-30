@@ -120,7 +120,7 @@ fun build_kind_vector shkdlist = let
   fun build1 (shkd, (n, kdmap)) =
       case shkd of
         KDTY  => (n + 1, Map.insert(kdmap, n, Kind.typ))
-      | KDV s => (n + 1, Map.insert(kdmap, n, Kind.mk_varkind s))
+      | KDV s => (n + 1, Map.insert(kdmap, n, Kind.mk_var_kind s))
       | KDARR (i1,i2) => let
           val kd1 = Map.find(kdmap, i1)
           val kd2 = Map.find(kdmap, i2)
