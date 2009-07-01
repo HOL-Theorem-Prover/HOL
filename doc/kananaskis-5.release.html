@@ -8,7 +8,7 @@
 <!--
   body {color: #333333; background: #FFFFFF;
         margin-left: 1em; margin-right: 1em }
-  code, pre {color: #660066; font-weight: bold; font-size: smaller}
+  code, pre {color: #660066; font-weight: bold; /* font-size: smaller */}
 -->
 </style>
 
@@ -25,10 +25,10 @@ fixes.</p>
 <!-- maybe announce HOL-ω here -->
 <p> A new version of the HOL4 theorem prover is also now available,
 called HOL-Omega (or HOL<sub>ω</sub>).  While backwards compatible,
-the HOL-Omega theorem prover implements a more powerful
-logic, capable of modelling concepts not expressible in normal 
-higher order logic, such as monads and concepts from category theory.
-See the "New versions" section below for more.
+the HOL-Omega theorem prover implements a more powerful logic, capable
+of modelling concepts not expressible in normal higher order logic,
+such as monads and concepts from category theory.  See
+the <a href="#new-versions">New versions</a> section below for more.
 </p>
 
 <h2 id="contents">Contents</h2>
@@ -450,15 +450,15 @@ Simplifies <code>--</code>, <code>w2w</code>, <code>sw2sw</code>, <code>#>></cod
 <ul>
 <li>
 <p>
-The HOL-Omega or HOL<sub>ω</sub> system presents a more powerful version 
-of the widely used HOL theorem prover.  This system implements a new logic, 
-which is an extension of the existing higher order logic of HOL4. The logic 
-is extended to three levels, adding kinds to the existing levels of types 
-and terms.  New types include type operator variables and universal types 
-as in System F.  Impredicativity is avoided through the stratification of 
-types by ranks according to the depth of universal types.  The HOL-Omega 
-system is a merging of HOL4, HOL2P by V&ouml;lker, and major aspects of 
-System F<sub>ω</sub> from chapter 30 of 
+The HOL-Omega or HOL<sub>ω</sub> system presents a more powerful version
+of the widely used HOL theorem prover.  This system implements a new logic,
+which is an extension of the existing higher order logic of HOL4. The logic
+is extended to three levels, adding kinds to the existing levels of types
+and terms.  New types include type operator variables and universal types
+as in System F.  Impredicativity is avoided through the stratification of
+types by ranks according to the depth of universal types.  The HOL-Omega
+system is a merging of HOL4, HOL2P by V&ouml;lker, and major aspects of
+System F<sub>ω</sub> from chapter 30 of
 <i>Types and Programming Languages</i> by Pierce.
 As in HOL4, HOL-Omega was constructed according to the design principles
 of the LCF approach, for the highest degree of soundness.
@@ -472,37 +472,37 @@ The paper presents the abstract syntax and semantics for the ranks, kinds,
 types, and terms of the logic, as well as the new fundamental axioms
 and rules of inference.  It also presents examples of using the HOL-Omega
 system to model monads and concepts from category theory such as functors
-and natural transformations.  As an example, 
+and natural transformations.  As an example,
 here is the definition of functors, as a type abbreviation and a term predicate:
 </p>
 
 <pre>
-(*---------------------------------------------------------------------------
-            Functor type abbreviation
- ---------------------------------------------------------------------------*)
-         
-val _ = type_abbrev ("functor", Type `: \'F. !'a 'b. ('a -> 'b) -> 'a 'F -> 'b 'F`);       
-           
-(*---------------------------------------------------------------------------
-            Functor predicate
- ---------------------------------------------------------------------------*)
+   (*---------------------------------------------------------------------------
+               Functor type abbreviation
+    ---------------------------------------------------------------------------*)
 
-val functor_def = new_definition("functor_def", Term
-   `functor (F': 'F functor) =
-      (* Identity *)
-          (!:'a. F' (I:'a->'a) = I) /\
-      (* Composition *)
-          (!:'a 'b 'c. !(f:'a -> 'b) (g:'b -> 'c).
-                 F' (g o f) = F' g o F' f) 
-   `);
+   val _ = type_abbrev ("functor", Type `: \'F. !'a 'b. ('a -> 'b) -> 'a 'F -> 'b 'F`);
+
+   (*---------------------------------------------------------------------------
+               Functor predicate
+    ---------------------------------------------------------------------------*)
+
+   val functor_def = new_definition("functor_def", Term
+      `functor (F': 'F functor) =
+         (* Identity *)
+             (!:'a. F' (I:'a->'a) = I) /\
+         (* Composition *)
+             (!:'a 'b 'c. !(f:'a -> 'b) (g:'b -> 'c).
+                    F' (g o f) = F' g o F' f)
+      `);
 </pre>
 
 <p>
-The HOL-Omega implementation may be downloaded by the command
-<blockquote>
-<code>svn checkout https://hol.svn.sf.net/svnroot/hol/branches/HOL-Omega</code>
-</blockquote>
-Installation instructions are in the top directory.
+The HOL-Omega implementation may be downloaded by the command</p>
+<pre>
+   svn checkout https://hol.svn.sf.net/svnroot/hol/branches/HOL-Omega
+</pre>
+<p>Installation instructions are in the top directory.
 HOL-Omega may be built using either the standard or the experimental kernel,
 and either Moscow ML or Poly/ML, by the same process as for HOL4.
 This implementation is still in development but is currently useful.
@@ -515,18 +515,18 @@ Examples using the new features of HOL-Omega may be found in the directory
 
 <p>
 This implementation was designed with particular concern for backward
-compatibility with HOL4.  This was almost entirely achieved, which was 
-possible only because the fundamental data types representing types and 
-terms were originally encapsulated.  This meant that the underlying 
-representation could be changed without affecting the abstract view of 
-types and terms by the rest of the system.  Virtually all existing HOL4 
-code will build correctly, including the extensive libraries. 
+compatibility with HOL4.  This was almost entirely achieved, which was
+possible only because the fundamental data types representing types and
+terms were originally encapsulated.  This meant that the underlying
+representation could be changed without affecting the abstract view of
+types and terms by the rest of the system.  Virtually all existing HOL4
+code will build correctly, including the extensive libraries.
 The simplifiers have been upgraded, including higher-order matching of
-the new types and terms and automatic type beta-reduction.  Algebraic 
-types with higher kinds and ranks may be constructed using the familiar 
-<code>Hol_datatype</code> tool.  Not all of the tools will work as 
-expected on the new terms and types, as the revision process is ongoing, 
-but they will function identically on the classic terms and types. 
+the new types and terms and automatic type beta-reduction.  Algebraic
+types with higher kinds and ranks may be constructed using the familiar
+<code>Hol_datatype</code> tool.  Not all of the tools will work as
+expected on the new terms and types, as the revision process is ongoing,
+but they will function identically on the classic terms and types.
 So nothing of HOL4’s existing power has been lost.
 </p>
 </li>
@@ -535,6 +535,12 @@ So nothing of HOL4’s existing power has been lost.
 <h2 id="new-examples">New examples:</h2>
 
 <ul>
+<li><p><code>examples/machine-code</code> contains a development of
+verified Lisp implementations on top of formal models of hardware
+instruction sets for the ARM, PowerPC and x86 chips.  This is work
+done by Magnus Myreen.</p></li>
+
+
 <li> <p> <code>examples/hol_dpllScript.sml</code> contains a very
 simplistic HOL implementation of DPLL with unit propagation, with
 proofs of termination, completeness and soundness. </p> </li>
