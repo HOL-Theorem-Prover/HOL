@@ -19,8 +19,7 @@ DOCTOTEXEXE=../../../help/src-sml/Doc2Tex.exe
 # ---------------------------------------------------------------------
 MAKEINDEX=makeindex
 
-default:
-	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
+default: all
 
 # ---------------------------------------------------------------------
 # Remove all trace of previous LaTeX jobs
@@ -33,15 +32,17 @@ tex: theorems functions
 	@echo "TeX files made"
 
 functions:
-	@echo "\chapter{ML Functions in the {\tt res\_quan} Library}">entries.tex
-	@echo "\label{entries}">>entries.tex
-	@echo "\input{entries-intro}" >> entries.tex
+	@echo "% This is a generated file - do not edit" > entries.tex
+	@echo "\\\\chapter{ML Functions in the {\\\\tt res\_quan} Library}">>entries.tex
+	@echo "\\\\label{entries}">>entries.tex
+	@echo "\\\\input{entries-intro}" >> entries.tex
 	${DOCTOTEXEXE} ${Help}/entries entries.tex
 
 theorems:
-	@echo "\chapter{Pre-proved Theorems}" > theorems.tex
-	@echo "\input{theorems-intro}" >> theorems.tex
-	@echo "\vskip 2mm" >> theorems.tex
+	echo "% This is a generated file - do not edit" > theorems.tex
+	echo "\\\\chapter{Pre-proved Theorems}" >> theorems.tex
+	echo "\\\\input{theorems-intro}" >> theorems.tex
+	echo "\\\\vskip 2mm" >> theorems.tex
 	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/thms theorems.tex
 
 index:
