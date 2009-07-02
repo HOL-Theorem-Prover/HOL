@@ -327,6 +327,7 @@ fun HIDE_PRE_RULE tm th = let
   val ys = map (dest_comb) (filter (can car) ys)
   val zs = map fst (filter (fn x => snd x = v) ys)
   val th = foldr (uncurry HIDE_POST_RULE) th zs
+  val _ = if (mem v o free_vars o cdr o concl) th then raise e else ()
   in HIDE_PRE_RULE tm th end;
 
 val UNHIDE_PRE1 = (MATCH_MP EQ_IMP_IMP (SPEC_ALL (GSYM SPEC_HIDE_PRE)));
@@ -374,7 +375,115 @@ fun HIDE_STATUS_RULE in_post hide_th th = let
 fun HIDE_PRE_STATUS_RULE hide_th th = HIDE_STATUS_RULE false hide_th th
 
 
+(* rules for modifying pre and post *)
+
+fun SPEC_STRENGTHEN_RULE th pre = let
+  val th = SPEC pre (MATCH_MP progTheory.SPEC_STRENGTHEN th)
+  val goal = (fst o dest_imp o concl) th
+  in (th,goal) end;
+  
+fun SPEC_WEAKEN_RULE th post = let
+  val th = SPEC post (MATCH_MP progTheory.SPEC_WEAKEN th)
+  val goal = (fst o dest_imp o concl) th
+  in (th,goal) end;
+
+fun SPEC_FRAME_RULE th frame = 
+  SPEC frame (MATCH_MP progTheory.SPEC_FRAME th)
+
+fun SPEC_BOOL_FRAME_RULE th frame = let
+  val th = MATCH_MP progTheory.SPEC_FRAME th
+  val th = Q.SPEC `cond boolean_variable_name` th
+  val th = INST [mk_var("boolean_variable_name",``:bool``) |-> frame] th
+  in th end
+
+
+(* a rule for composing a list of SPEC theorems *)
+
+fun remove_primes th = let
+  fun last s = substring(s,size s-1,1)
+  fun delete_last_prime s = if last s = "'" then substring(s,0,size(s)-1) else hd []
+  fun foo [] ys i = i
+    | foo (x::xs) ys i = let 
+      val name = (fst o dest_var) x 
+      val new_name = repeat delete_last_prime name
+      in if name = new_name then foo xs (x::ys) i else let 
+        val new_var = mk_var(new_name,type_of x)
+        in foo xs (new_var::ys) ((x |-> new_var) :: i) end end
+  val i = foo (free_varsl (concl th :: hyp th)) [] []
+  in INST i th end
+
+fun spec_post_and_pre th1 th2 = let
+  val (_,_,_,q) = dest_spec (concl th1)
+  val (_,p,_,_) = dest_spec (concl th2)
+  in (list_dest dest_star q, list_dest dest_star p, type_of q) end;
+
+fun replace_abbrev_vars tm = let
+  fun f v = v |-> mk_var((Substring.string o hd o tl o Substring.tokens (fn x => x = #"@") o 
+                    Substring.all o fst o dest_var) v, type_of v) handle e => v |-> v
+  in subst (map f (free_vars tm)) tm end
+
+fun find_composition1 th1 th2 = let
+  val (q,p,ty) = spec_post_and_pre th1 th2
+  fun get_match_term tm = replace_abbrev_vars (get_sep_domain tm)
+  fun mm x y = get_match_term x = get_match_term y
+  fun fetch_match x [] zs = hd []
+    | fetch_match x (y::ys) zs = 
+        if mm x y then (y, rev zs @ ys) else fetch_match x ys (y::zs)
+  fun partition [] ys (xs1,xs2,ys1) = (rev xs1, rev xs2, rev ys1, ys)
+    | partition (x::xs) ys (xs1,xs2,ys1) =
+        let val (y,zs) = fetch_match x ys [] in
+          partition xs zs (x::xs1, xs2, y::ys1)
+        end handle e =>
+          partition xs ys (xs1, x::xs2, ys1)
+  val (xs1,xs2,ys1,ys2) = partition q p ([],[],[])
+  val tm1 = mk_star (list_mk_star xs1 ty, list_mk_star xs2 ty)
+  val tm2 = mk_star (list_mk_star ys1 ty, list_mk_star ys2 ty)
+  val th1 = CONV_RULE (POST_CONV (MOVE_STAR_CONV tm1)) th1    
+  val th2 = CONV_RULE (PRE_CONV (MOVE_STAR_CONV tm2)) th2 
+  val th = MATCH_MP SPEC_FRAME_COMPOSE (DISCH_ALL_AS_SINGLE_IMP th2)   
+  val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)   
+  val th = UNDISCH_ALL (PURE_REWRITE_RULE [GSYM AND_IMP_INTRO,AND_CLAUSES] th)
+  val th = SIMP_RULE std_ss [pred_setTheory.INSERT_UNION_EQ,pred_setTheory.UNION_EMPTY,
+             word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4,
+             SEP_CLAUSES,pred_setTheory.UNION_IDEMPOT] th
+  in remove_primes th end;
+
+fun find_composition2 th1 th2 = let
+  val (q,p,ty) = spec_post_and_pre th1 th2
+  val post_not_hidden = map get_sep_domain (filter (not o can dest_sep_hide) q)
+  val pre_not_hidden  = map get_sep_domain (filter (not o can dest_sep_hide) p)
+  fun f (d:term,(zs,to_be_hidden)) = 
+    if not (can dest_sep_hide d) then (zs,to_be_hidden) else
+      (zs,filter (fn x => get_sep_domain d = x) zs @ to_be_hidden)
+  val hide_from_post = snd (foldr f (post_not_hidden,[]) p) 
+  val hide_from_pre  = snd (foldr f (pre_not_hidden,[]) q) 
+  val th1 = foldr (uncurry HIDE_POST_RULE) th1 hide_from_post
+  val th2 = foldr (uncurry HIDE_PRE_RULE) th2 hide_from_pre
+  in find_composition1 th1 th2 end;
+
+fun SPEC_COMPOSE_RULE [] = hd []
+  | SPEC_COMPOSE_RULE [th] = th
+  | SPEC_COMPOSE_RULE (th1::th2::thms) = 
+      SPEC_COMPOSE_RULE ((find_composition2 th1 th2)::thms)
+
+
 (* tactics *)
+
+fun SPEC_PROVE_TAC thms (hs,goal) = let
+  val (m,p,_,q) = dest_spec goal 
+  val th1 = Q.SPEC `{}` (ISPECL [m,p] SPEC_REFL)
+  val th2 = Q.SPEC `{}` (ISPECL [m,q] SPEC_REFL)
+  val ts = [th1] @ thms @ [th2]
+  fun move_cond th = 
+    UNDISCH_ALL (SIMP_RULE (bool_ss++sep_cond_ss) [SPEC_MOVE_COND] th)
+  val th = SPEC_COMPOSE_RULE (map move_cond ts)
+  val th = REWRITE_RULE [AND_IMP_INTRO] (DISCH_ALL th)
+  val th = REWRITE_RULE [GSYM SPEC_MOVE_COND] th
+  val th = MATCH_MP SPEC_STRENGTHEN_WEAKEN th  
+  in (MATCH_MP_TAC th  
+      THEN SIMP_TAC (std_ss++sep_cond_ss) [SEP_IMP_MOVE_COND,SEP_CLAUSES]
+      THEN SIMP_TAC (std_ss++star_ss) [SEP_IMP_REFL]
+      THEN ASM_SIMP_TAC (std_ss++star_ss) [SEP_IMP_REFL,SEP_CLAUSES]) (hs,goal) end;
 
 val ALIGNED_TAC = let 
   val ALIGNED_CONV = 
@@ -421,7 +530,7 @@ val SEP_READ_TAC = let
     val thi = prove(mk_imp(mk_conj(gs,tm),gs),REPEAT STRIP_TAC)
     in MATCH_MP_TAC thi (hs,gs) end
   in (REPEAT STRIP_TAC THEN prepare_tac THEN
-      MATCH_MP_TAC read_fun2set THEN aux) end;
+      MATCH_MP_TAC read_fun2set THEN aux) end handle e => NO_TAC;
 
 fun list_dest_right f tm = let val (x,y) = f tm in x :: list_dest_right f y end handle e => [tm];
 fun SEP_WRITE_TAC (hs,gs) = let 
@@ -470,7 +579,7 @@ fun SEP_NEQ_TAC (hs,gs) = let
 
 fun auto_prove proof_name (goal,tac) = 
   prove(goal,tac THEN (fn (tms,tm) => let
-    val _ = print "\n\n\n  AUTO PROOF FAILED\n\n"
+    val _ = print ("\n\n\n  AUTO PROOF FAILED: " ^ proof_name ^ "\n\n")
     val _ = print "-----------------------------------------------\n"
     val _ = print "  Unsolved subgoal:\n\n"
     val _ = print_term (mk_imp(list_mk_conj tms,tm))
@@ -480,8 +589,7 @@ fun auto_prove proof_name (goal,tac) =
     val _ = print_term (goal)
     val _ = print "\n\n"
     val _ = print "-----------------------------------------------\n"
-    val _ = print ("  The proof failed at " ^ proof_name)
+    val _ = print ("  The proof failed at " ^ proof_name ^ "\n\n\n")
   in hd [] end))
-
 
 end;

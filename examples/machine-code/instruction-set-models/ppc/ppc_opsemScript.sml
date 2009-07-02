@@ -132,6 +132,12 @@ val reg_load_def = Define `
          (\addr. seqT (load_word ii size addr)
                       (write_reg ii (PPC_IR rd)))`;
 
+val ppc_branch_condition_def = Define `
+  ppc_branch_condition (b0:word5) b = 
+    if b0 && 16w = 16w then T else 
+    if b0 && 8w = 8w then (b = T) else
+    (* b0 && 4w = 4w then *) (b = F)`;
+
 val ppc_exec_instr_def = Define `
   (ppc_exec_instr ii (Padd rd r1 r2) = 
        OK_nextinstr ii (reg_update ii rd $+ (read_ireg ii r1) (read_ireg ii r2))) /\
@@ -160,6 +166,10 @@ val ppc_exec_instr_def = Define `
   (ppc_exec_instr ii (Pb lbl) =
        goto_label ii lbl) /\
 
+  (ppc_exec_instr ii (Pbc b0 bi lb1) =
+       seqT (read_status ii (PPC_CR0 bi)) 
+            (\b. if ppc_branch_condition b0 b then goto_label ii lb1 else OK_nextinstr ii (constT ()))) /\
+
   (ppc_exec_instr ii (Pbctr) =
        seqT (read_reg ii PPC_CTR) (write_reg ii PPC_PC)) /\
 
@@ -167,23 +177,12 @@ val ppc_exec_instr_def = Define `
        seqT (parT (read_reg ii PPC_PC) (read_reg ii PPC_CTR))
             (\(pc,ctr). parT_unit (write_reg ii PPC_PC ctr) (write_reg ii PPC_LR (pc + 4w)))) /\
 
-  (ppc_exec_instr ii (Pbf bit lb1) =
-       seqT (read_status ii (PPC_CR0 bit)) 
-            (\b. if b then goto_label ii lb1 else OK_nextinstr ii (constT ()))) /\
-
   (ppc_exec_instr ii (Pbl ident) =
        seqT (read_reg ii PPC_PC) 
             (\x. parT_unit (write_reg ii PPC_PC (x + sw2sw ident * 4w)) (write_reg ii PPC_LR (x + 4w)))) /\
 
-  (ppc_exec_instr ii (Pbs ident) =
-       goto_label ii ident) /\
-
   (ppc_exec_instr ii (Pblr) =
        seqT (read_reg ii PPC_LR) (write_reg ii PPC_PC)) /\
-
-  (ppc_exec_instr ii (Pbt bit lb1) =
-       seqT (read_status ii (PPC_CR0 bit)) 
-            (\b. if ~b then goto_label ii lb1 else OK_nextinstr ii (constT ()))) /\
 
   (ppc_exec_instr ii (Pcmplw r1 r2) =
       OK_nextinstr ii (uint_compare ii (read_ireg ii r1) (read_ireg ii r2))) /\
@@ -247,10 +246,10 @@ val ppc_exec_instr_def = Define `
   (ppc_exec_instr ii (Piuctf rd r1) = failureT) /\
 
   (ppc_exec_instr ii (Plbz rd cst r1) =
-      OK_nextinstr ii (reg_load ii 1 rd (read_ireg ii r1) (const_low_s cst))) /\
+      OK_nextinstr ii (reg_load ii 1 rd (gpr_or_zero ii r1) (const_low_s cst))) /\
 
   (ppc_exec_instr ii (Plbzx rd r1 r2) =
-      OK_nextinstr ii (reg_load ii 1 rd (read_ireg ii r1) (read_ireg ii r2))) /\
+      OK_nextinstr ii (reg_load ii 1 rd (gpr_or_zero ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Plfd rd cst r1) = failureT) /\
 
@@ -261,22 +260,22 @@ val ppc_exec_instr_def = Define `
   (ppc_exec_instr ii (Plfsx rd r1 r2) = failureT) /\
 
   (ppc_exec_instr ii (Plha rd cst r1) =
-      OK_nextinstr ii (reg_load ii 2 rd (read_ireg ii r1) (const_low_s cst))) /\
+      OK_nextinstr ii (reg_load ii 2 rd (gpr_or_zero ii r1) (const_low_s cst))) /\
 
   (ppc_exec_instr ii (Plhax rd r1 r2) =
-      OK_nextinstr ii (reg_load ii 2 rd (read_ireg ii r1) (read_ireg ii r2))) /\
+      OK_nextinstr ii (reg_load ii 2 rd (gpr_or_zero ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Plhz rd cst r1) =
-      OK_nextinstr ii (reg_load ii 2 rd (read_ireg ii r1) (const_low_s cst))) /\
+      OK_nextinstr ii (reg_load ii 2 rd (gpr_or_zero ii r1) (const_low_s cst))) /\
 
   (ppc_exec_instr ii (Plhzx rd r1 r2) =
-      OK_nextinstr ii (reg_load ii 2 rd (read_ireg ii r1) (read_ireg ii r2))) /\
+      OK_nextinstr ii (reg_load ii 2 rd (gpr_or_zero ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Plwz rd cst r1) =
-      OK_nextinstr ii (reg_load ii 4 rd (read_ireg ii r1) (const_low_s cst))) /\
+      OK_nextinstr ii (reg_load ii 4 rd (gpr_or_zero ii r1) (const_low_s cst))) /\
 
   (ppc_exec_instr ii (Plwzx rd r1 r2) =
-      OK_nextinstr ii (reg_load ii 4 rd (read_ireg ii r1) (read_ireg ii r2))) /\
+      OK_nextinstr ii (reg_load ii 4 rd (gpr_or_zero ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Pmfcrbit v162 v163) = failureT) /\
 
@@ -333,10 +332,10 @@ val ppc_exec_instr_def = Define `
       OK_nextinstr ii (reg_update ii rd (\x y. x >> w2n ((w2w y):word6)) (read_ireg ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Pstb rd cst r1) =
-      OK_nextinstr ii (reg_store ii 1 rd (read_ireg ii r1) (const_low_s cst))) /\
+      OK_nextinstr ii (reg_store ii 1 rd (gpr_or_zero ii r1) (const_low_s cst))) /\
 
   (ppc_exec_instr ii (Pstbx rd r1 r2) =
-      OK_nextinstr ii (reg_store ii 1 rd (read_ireg ii r1) (read_ireg ii r2))) /\
+      OK_nextinstr ii (reg_store ii 1 rd (gpr_or_zero ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Pstfd rd cst r1) = failureT) /\
 
@@ -347,16 +346,16 @@ val ppc_exec_instr_def = Define `
   (ppc_exec_instr ii (Pstfsx rd r1 r2) = failureT) /\
 
   (ppc_exec_instr ii (Psth rd cst r1) =
-      OK_nextinstr ii (reg_store ii 2 rd (read_ireg ii r1) (const_low_s cst))) /\
+      OK_nextinstr ii (reg_store ii 2 rd (gpr_or_zero ii r1) (const_low_s cst))) /\
 
   (ppc_exec_instr ii (Psthx rd r1 r2) =
-      OK_nextinstr ii (reg_store ii 2 rd (read_ireg ii r1) (read_ireg ii r2))) /\
+      OK_nextinstr ii (reg_store ii 2 rd (gpr_or_zero ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Pstw rd cst r1) =
-      OK_nextinstr ii (reg_store ii 4 rd (read_ireg ii r1) (const_low_s cst))) /\
+      OK_nextinstr ii (reg_store ii 4 rd (gpr_or_zero ii r1) (const_low_s cst))) /\
 
   (ppc_exec_instr ii (Pstwx rd r1 r2) =
-      OK_nextinstr ii (reg_store ii 4 rd (read_ireg ii r1) (read_ireg ii r2))) /\
+      OK_nextinstr ii (reg_store ii 4 rd (gpr_or_zero ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Psubfc rd r1 r2) =
       OK_nextinstr ii (parT_unit (reg_update ii rd $- (read_ireg ii r2) (read_ireg ii r1)) 

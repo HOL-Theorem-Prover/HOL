@@ -105,11 +105,23 @@ val Symbolp_def =
 
 val Add_def =
  Define
-  `Add ((A(Number m)),(A(Number n))) = A(Number(m+n))`;
+  `Add (A(Number m)) (A(Number n)) = A(Number(m+n))`;
 
 val Sub_def =
  Define
   `Sub ((A(Number m)),(A(Number n))) = A(Number(m-n))`;
+
+val Mult_def =
+ Define
+  `Mult (A(Number m)) (A(Number n)) = A(Number(m*n))`;
+
+val Div_def =
+ Define
+  `Div ((A(Number m)),(A(Number n))) = A(Number(m DIV n))`;
+
+val Sub_def =
+ Define
+  `Mod ((A(Number m)),(A(Number n))) = A(Number(m MOD n))`;
 
 val Less_def =
  Define
@@ -118,17 +130,20 @@ val Less_def =
 val FunConSem_def =
  Define
   `FunConSem s sl =
-    if s = "car"     then Car(EL 0 sl)            else
-    if s = "cdr"     then Cdr(EL 0 sl)            else 
-    if s = "cons"    then Cons(EL 0 sl) (EL 1 sl) else 
-    if s = "+"       then Add(EL 0 sl,EL 1 sl)    else 
-    if s = "-"       then Sub(EL 0 sl,EL 1 sl)    else 
-    if s = "<"       then Less(EL 0 sl,EL 1 sl)   else 
-    if s = "equal"   then Equal(EL 0 sl,EL 1 sl)  else 
-    if s = "atomp"   then Atomp(EL 0 sl)          else 
-    if s = "consp"   then Consp(EL 0 sl)          else 
-    if s = "numberp" then Numberp(EL 0 sl)        else 
-    if s = "symbolp" then Symbolp(EL 0 sl)        else 
+    if s = "car"     then Car(EL 0 sl)                else
+    if s = "cdr"     then Cdr(EL 0 sl)                else 
+    if s = "cons"    then Cons(EL 0 sl) (EL 1 sl)     else 
+    if s = "+"       then FOLDL Add (A(Number 0)) sl  else 
+    if s = "*"       then FOLDL Mult (A(Number 1)) sl else 
+    if s = "-"       then Sub(EL 0 sl,EL 1 sl)        else 
+    if s = "div"     then Div(EL 0 sl,EL 1 sl)        else 
+    if s = "mod"     then Mod(EL 0 sl,EL 1 sl)        else 
+    if s = "<"       then Less(EL 0 sl,EL 1 sl)       else 
+    if s = "equal"   then Equal(EL 0 sl,EL 1 sl)      else 
+    if s = "atomp"   then Atomp(EL 0 sl)              else 
+    if s = "consp"   then Consp(EL 0 sl)              else 
+    if s = "numberp" then Numberp(EL 0 sl)            else 
+    if s = "symbolp" then Symbolp(EL 0 sl)            else 
     ARB`;
 
 val FunConSemOK_def =
@@ -137,8 +152,11 @@ val FunConSemOK_def =
     if s = "car"     then ?u v. sl = [Cons u v]   else
     if s = "cdr"     then ?u v. sl = [Cons u v]   else 
     if s = "cons"    then ?u v. sl = [u; v]       else 
-    if s = "+"       then ?m n. sl = [A (Number m); A (Number n)] else 
+    if s = "+"       then (!x. MEM x sl ==> ?n. x = A (Number n)) else
     if s = "-"       then ?m n. sl = [A (Number m); A (Number n)] else 
+    if s = "*"       then (!x. MEM x sl ==> ?n. x = A (Number n)) else
+    if s = "div"     then ?m n. sl = [A (Number m); A (Number n)] else 
+    if s = "mod"     then ?m n. sl = [A (Number m); A (Number n)] else 
     if s = "<"       then ?m n. sl = [A (Number m); A (Number n)] else 
     if s = "equal"   then ?u v. sl = [u; v]       else 
     if s = "atomp"   then ?u.   sl = [u]          else 
@@ -228,7 +246,7 @@ val (R_ap_rules,R_ap_ind,R_ap_cases) =
     R_ap (fn,args,FunBind a x fn) s ==> R_ap(Label x fn,args,a) s)
   /\
   (!fv args s a.
-    fv NOTIN {"quote";"cond";"car";"cdr";"cons";"+";"-";"<";
+    fv NOTIN {"quote";"cond";"car";"cdr";"cons";"+";"-";"*";"div";"mod";"<";
               "equal";"atomp";"consp";"symbolp";"numberp"} /\
     fv IN FDOM a /\ ISR (a ' fv) /\ 
     R_ap (OUTR(a ' fv),args,a) s ==> R_ap (FunVar fv,args,a) s)

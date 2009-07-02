@@ -1,34 +1,64 @@
 
 open HolKernel boolLib bossLib Parse;
-open wordsTheory bit_listTheory listTheory opmonTheory;
+open wordsTheory bit_listTheory listTheory opmonTheory combinTheory;
 
 open x86_coretypesTheory;
 
 val _ = new_theory "x86_seq_monad";
 
 
+val _ = Hol_datatype `x86_permission = Xread | Xwrite | Xexecute`;
+
+val _ = type_abbrev("x86_memory",``: word32 -> ((word8 # x86_permission set) option)``);
 
 val _ = type_abbrev("x86_state",   (*  state = tuple consisting of:       *) 
   ``: (Xreg -> word32) #           (*  - general-purpose 32-bit registers *)
       (word32) #                   (*  - eip                              *)
       (Xeflags -> bool option) #   (*  - eflags                           *)
-      (word32 -> word8 option)     (*  - unsegmented memory               *) ``); 
+      x86_memory #                 (*  - unsegmented memory               *)
+      x86_memory                   (*  - instruction cache                *) ``); 
 
 (* functions for reading/writing state *)
 
-val XREAD_REG_def   = Define `XREAD_REG     i ((r,eip,f,m):x86_state) = r i `;
-val XREAD_EIP_def   = Define `XREAD_EIP       ((r,eip,f,m):x86_state) = eip `;
-val XREAD_EFLAG_def = Define `XREAD_EFLAG   i ((r,eip,f,m):x86_state) = f i `;
-val XREAD_MEM_def   = Define `XREAD_MEM     i ((r,eip,f,m):x86_state) = m i `;
+val XREAD_REG_def   = Define `XREAD_REG     x ((r,p,s,m,i):x86_state) = r x `;
+val XREAD_EIP_def   = Define `XREAD_EIP       ((r,p,s,m,i):x86_state) = p `;
+val XREAD_EFLAG_def = Define `XREAD_EFLAG   x ((r,p,s,m,i):x86_state) = s x `;
 
-val XWRITE_REG_def   = Define `XWRITE_REG   i x ((r,eip,f,m):x86_state) = ((i =+ x) r,eip,f,m):x86_state `;
-val XWRITE_EIP_def   = Define `XWRITE_EIP     x ((r,eip,f,m):x86_state) = (r,x,f,m):x86_state `;
-val XWRITE_EFLAG_def = Define `XWRITE_EFLAG i x ((r,eip,f,m):x86_state) = (r,eip,(i =+ x) f,m):x86_state `;
-val XWRITE_MEM_def   = Define `XWRITE_MEM   i x ((r,eip,f,m):x86_state) = (r,eip,f,(i =+ x) m):x86_state `;
+val XREAD_MEM_def = Define `
+  XREAD_MEM x ((r,p,s,m,i):x86_state) = 
+    case m x of
+       NONE -> NONE
+    || SOME (w,perms) -> if Xread IN perms then SOME w else NONE`;
+
+val XREAD_INSTR_def = Define `
+  XREAD_INSTR x ((r,p,s,m,i):x86_state) = 
+    case (i x, m x) of
+       (NONE, NONE) -> NONE
+    || (NONE, SOME (w,perms)) -> if {Xread;Xexecute} SUBSET perms then SOME w else NONE
+    || (SOME (w,perms), _) -> if {Xread;Xexecute} SUBSET perms then SOME w else NONE`;
+
+val X86_ICACHE_EMPTY_def = Define `X86_ICACHE_EMPTY = (\addr. NONE):x86_memory`;
+ 
+val XCLEAR_ICACHE_def = Define `
+  XCLEAR_ICACHE ((r,p,s,m,i):x86_state) = (r,p,s,m,X86_ICACHE_EMPTY):x86_state`;
+
+val XWRITE_REG_def   = Define `XWRITE_REG   x y ((r,p,s,m,i):x86_state) = ((x =+ y) r,p,s,m,i):x86_state `;
+val XWRITE_EIP_def   = Define `XWRITE_EIP     y ((r,p,s,m,i):x86_state) = (r,y,s,m,i):x86_state `;
+val XWRITE_EFLAG_def = Define `XWRITE_EFLAG x y ((r,p,s,m,i):x86_state) = (r,p,(x =+ y) s,m,i):x86_state `;
+
+val XWRITE_MEM_def   = Define `
+  XWRITE_MEM x y ((r,p,s,m,i):x86_state) = 
+    case m x of
+       NONE -> NONE
+    || SOME (w,perms) -> if Xwrite IN perms then SOME ((r,p,s,(x =+ SOME (y,perms)) m,i):x86_state) else NONE`;
 
 val XREAD_MEM_BYTES_def = Define `
   XREAD_MEM_BYTES n a s = 
     if n = 0 then [] else XREAD_MEM a s :: XREAD_MEM_BYTES (n-1) (a+1w) s`;
+
+val XREAD_INSTR_BYTES_def = Define `
+  XREAD_INSTR_BYTES n a s = 
+    if n = 0 then [] else XREAD_INSTR a s :: XREAD_INSTR_BYTES (n-1) (a+1w) s`;
 
 val w2bits_EL = store_thm("w2bits_EL",
   ``(w2bits (w:word8) ++ ys = x1::x2::x3::x4::x5::x6::x7::x8::xs) =
@@ -85,12 +115,6 @@ val _ = type_abbrev("x86_M",``:x86_state -> ('a # x86_state) option``);
 val constT_seq_def = Define `
   (constT_seq: 'a -> 'a x86_M) x = \y. SOME (x,y)`;
 
-(*
-val discardT_seq_def = Define `
-  (discardT_seq: 'a x86_M -> unit x86_M) s = 
-    \y. case s y of NONE -> NONE || SOME (z,t) -> SOME ((),t)`;
-*)
-
 val addT_seq_def = Define `
   (addT_seq: 'a -> 'b x86_M -> ('a # 'b) x86_M) x s = 
     \y. case s y of NONE -> NONE || SOME (z,t) -> SOME ((x,z),t)`;
@@ -142,7 +166,7 @@ val read_eip_seq_def = Define `(read_eip_seq ii):Ximm x86_M =
 (* memory writes are only allowed to modelled memory, i.e. locations containing SOME ... *)
 
 val write_mem_seq_def   = Define `(write_mem_seq ii a x):unit x86_M = 
-  (\s. case XREAD_MEM a s of NONE -> NONE || SOME y -> SOME ((),XWRITE_MEM a (SOME x) s))`;
+  (\s. case XWRITE_MEM a x s of NONE -> NONE || SOME s2 -> SOME ((),s2))`;
 
 (* a memory read to an unmodelled memory location causes a failure *)
 
@@ -167,6 +191,11 @@ val read_m8_seq_def = Define `(read_m8_seq ii a):word8 x86_M =
 val write_m8_seq_def = Define `(write_m8_seq ii a w):unit x86_M =
     write_mem_seq ii a (w:word8)`;
 
+(* clear the icache *)
+
+val clear_icache_seq_def = Define `(clear_icache_seq ii):unit x86_M = 
+  \s. SOME ((),XCLEAR_ICACHE s)`;
+
 
 (* export *)
 
@@ -187,6 +216,7 @@ val _ = Define `(write_m32: iiid -> Ximm -> Ximm-> unit x86_M)               = w
 val _ = Define `(read_m32: iiid -> Ximm -> Ximm x86_M)                       = read_m32_seq`;
 val _ = Define `(write_m8: iiid -> Ximm -> word8 -> unit x86_M)              = write_m8_seq`;
 val _ = Define `(read_m8: iiid -> Ximm -> word8 x86_M)                       = read_m8_seq`;
+val _ = Define `(clear_icache: iiid -> unit x86_M)                           = clear_icache_seq`;
 
 
 
@@ -198,11 +228,36 @@ val option_apply_def = Define `
 val option_apply_SOME = prove(
   ``!x f. option_apply (SOME x) f = f x``,SRW_TAC [] [option_apply_def]);
 
+val XWRITE_MEM2_def = Define `
+  XWRITE_MEM2 a w ((r,e,t,m,i):x86_state) = (r,e,t,(a =+ SOME (w, SND (THE (m a)))) m,i)`;
+
+val XREAD_MEM2_def = Define `
+  XREAD_MEM2 a ((r,e,t,m,i):x86_state) = FST (THE (m a))`;
+
+val XREAD_MEM2_WORD_def = Define `
+  XREAD_MEM2_WORD a (s:x86_state) = (bytes2word
+    [XREAD_MEM2 (a + 0x0w) s; XREAD_MEM2 (a + 0x1w) s; 
+     XREAD_MEM2 (a + 0x2w) s; XREAD_MEM2 (a + 0x3w) s]) :word32`;  
+
+val XWRITE_MEM2_WORD_def = Define `
+  XWRITE_MEM2_WORD a (w:word32) (s:x86_state) =
+    XWRITE_MEM2 (a + 3w) (EL 3 (word2bytes 4 w)) 
+   (XWRITE_MEM2 (a + 2w) (EL 2 (word2bytes 4 w))
+   (XWRITE_MEM2 (a + 1w) (EL 1 (word2bytes 4 w)) 
+   (XWRITE_MEM2 (a + 0w) (EL 0 (word2bytes 4 w)) s)))`;
+
+val CAN_XWRITE_MEM_def = Define `
+  CAN_XWRITE_MEM a s = !w. ~(XWRITE_MEM a w s = NONE)`;
+
+val CAN_XREAD_MEM_def = Define `
+  CAN_XREAD_MEM a s = ~(XREAD_MEM a s = NONE)`;
+
 val mem_seq_lemma = prove(
   ``(read_mem_seq ii a s = option_apply (XREAD_MEM a s) (\x. SOME (x,s))) /\ 
-    (write_mem_seq ii a y s = option_apply (XREAD_MEM a s) (\x. SOME ((),XWRITE_MEM a (SOME y) s)))``,
+    (write_mem_seq ii a y s = option_apply (XWRITE_MEM a y s) (\s. SOME ((),s)))``,
   SRW_TAC [] [option_apply_def,read_mem_seq_def,write_mem_seq_def] 
-  THEN Cases_on `XREAD_MEM a s` THEN FULL_SIMP_TAC std_ss []);
+  THEN Cases_on `XREAD_MEM a s` THEN FULL_SIMP_TAC std_ss [] 
+  THEN Cases_on `XWRITE_MEM a y s` THEN FULL_SIMP_TAC std_ss []);
 
 val read_eflag_seq_lemma = prove(
   ``read_eflag_seq ii f s = option_apply (XREAD_EFLAG f s) (\x. SOME (x,s))``,
@@ -211,7 +266,7 @@ val read_eflag_seq_lemma = prove(
   
 val parT_unit_seq_lemma = prove(
   ``(parT_unit_seq s t = \y. option_apply (s y) (\z.
-                         option_apply (t (SND z)) (\x. SOME ((),SND x))))``,
+                             option_apply (t (SND z)) (\x. SOME ((),SND x))))``,
   SRW_TAC [] [parT_unit_seq_def,FUN_EQ_THM,option_apply_def] THEN Cases_on `s y`
   THEN SRW_TAC [] [parT_unit_seq_def,FUN_EQ_THM,option_apply_def] THEN Cases_on `x`
   THEN SRW_TAC [] [parT_unit_seq_def,FUN_EQ_THM,option_apply_def]
@@ -237,31 +292,57 @@ val seq_monad_thm = save_thm("seq_monad_thm",let
            parT_unit_seq_lemma :: (CONJUNCTS monad_simp_lemma)
   in LIST_CONJ (map GEN_ALL xs) end);
 
-val XREAD_CLAUSES = store_thm("XREAD_CLAUSES",
-  ``!s. (XREAD_REG r (XWRITE_MEM a x s) = XREAD_REG r s) /\
-        (XREAD_REG r (XWRITE_EFLAG f b s) = XREAD_REG r s) /\
-        (XREAD_REG r (XWRITE_EIP e s) = XREAD_REG r s) /\
-        (XREAD_MEM a (XWRITE_REG r w s) = XREAD_MEM a s) /\
-        (XREAD_MEM a (XWRITE_EFLAG f b s) = XREAD_MEM a s) /\
-        (XREAD_MEM a (XWRITE_EIP e s) = XREAD_MEM a s) /\
-        (XREAD_EFLAG f (XWRITE_REG r w s) = XREAD_EFLAG f s) /\
-        (XREAD_EFLAG f (XWRITE_MEM a x s) = XREAD_EFLAG f s) /\
-        (XREAD_EFLAG f (XWRITE_EIP e s) = XREAD_EFLAG f s) /\
-        (XREAD_EIP (XWRITE_REG r w s) = XREAD_EIP s) /\
-        (XREAD_EIP (XWRITE_MEM a x s) = XREAD_EIP s) /\
-        (XREAD_EIP (XWRITE_EFLAG f b s) = XREAD_EIP s) /\
-        (XREAD_REG r (XWRITE_REG r2 w s) = if r = r2 then w else XREAD_REG r s) /\
-        (XREAD_MEM a (XWRITE_MEM a2 x s) = if a = a2 then x else XREAD_MEM a s) /\
-        (XREAD_EFLAG f (XWRITE_EFLAG f2 b s) = if f = f2 then b else XREAD_EFLAG f s) /\
-        (XREAD_EIP (XWRITE_EIP e s) = e)``,
-  Cases THEN Cases_on `r'` THEN Cases_on `r''` 
-  THEN SRW_TAC [] [XREAD_REG_def,XREAD_MEM_def,XREAD_EFLAG_def, XREAD_EIP_def, 
-    XWRITE_MEM_def,XWRITE_REG_def,XWRITE_EFLAG_def, XWRITE_EIP_def, combinTheory.APPLY_UPDATE_THM]);
+val CAN_XWRITE_MEM = store_thm("CAN_XWRITE_MEM",
+  ``CAN_XWRITE_MEM a (r,e,s,m,i) = 
+    ~(m a = NONE) /\ Xwrite IN SND (THE (m a))``,
+  SIMP_TAC std_ss [XWRITE_MEM_def,CAN_XWRITE_MEM_def]
+  THEN Cases_on `m a` THEN ASM_SIMP_TAC std_ss [] THEN SRW_TAC [] []
+  THEN Cases_on `x` THEN Cases_on `Xwrite IN r'` THEN SRW_TAC [] []);
 
-val x86_else_none_mem_lemma = store_thm("x86_else_none_mem_lemma",
-  ``!m a f. ~(m a = NONE) ==> 
-            (option_apply ((m:x86_state->word8 option) a) (f:word8->'a option) = f (THE (m a)))``,
-  SIMP_TAC std_ss [option_apply_def]);
+val CAN_XREAD_MEM = store_thm("CAN_XREAD_MEM",
+  ``CAN_XREAD_MEM a (r,e,s,m,i) = 
+    ~(m a = NONE) /\ Xread IN SND (THE (m a))``,
+  SIMP_TAC std_ss [XREAD_MEM_def,CAN_XREAD_MEM_def]
+  THEN Cases_on `m a` THEN ASM_SIMP_TAC std_ss [] THEN SRW_TAC [] []
+  THEN Cases_on `x` THEN SRW_TAC [] []);
+
+val CAN_XREAD_XWRITE_THM = store_thm("CAN_XREAD_XWRITE_THM",
+  ``!s. (CAN_XWRITE_MEM a s ==> CAN_XWRITE_MEM a (XWRITE_REG r2 w s)) /\
+        (CAN_XWRITE_MEM a s ==> CAN_XWRITE_MEM a (XWRITE_EIP e s)) /\
+        (CAN_XWRITE_MEM a s ==> CAN_XWRITE_MEM a (XWRITE_EFLAG f b s)) /\
+        (CAN_XWRITE_MEM a s ==> CAN_XWRITE_MEM a (XCLEAR_ICACHE s)) /\
+        (CAN_XWRITE_MEM a s ==> CAN_XWRITE_MEM a (XWRITE_MEM2 c x s)) /\ 
+        (CAN_XREAD_MEM a s ==> CAN_XREAD_MEM a (XWRITE_REG r2 w s)) /\
+        (CAN_XREAD_MEM a s ==> CAN_XREAD_MEM a (XWRITE_EIP e s)) /\
+        (CAN_XREAD_MEM a s ==> CAN_XREAD_MEM a (XWRITE_EFLAG f b s)) /\
+        (CAN_XREAD_MEM a s ==> CAN_XREAD_MEM a (XCLEAR_ICACHE s)) /\
+        (CAN_XREAD_MEM a s /\ CAN_XWRITE_MEM c s ==> CAN_XREAD_MEM a (XWRITE_MEM2 c x s))``,
+  STRIP_TAC THEN `?r2 e2 s2 m2 i2. s = (r2,e2,s2,m2,i2)` by METIS_TAC [pairTheory.PAIR]
+  THEN ASM_SIMP_TAC std_ss [XREAD_REG_def,XREAD_EIP_def,
+         XREAD_EFLAG_def, XWRITE_REG_def, XWRITE_MEM2_def, XREAD_MEM2_def, 
+         combinTheory.APPLY_UPDATE_THM, XWRITE_EIP_def,CAN_XREAD_MEM,
+         XWRITE_EFLAG_def,XCLEAR_ICACHE_def,CAN_XWRITE_MEM]
+  THEN Cases_on `c = a` THEN ASM_SIMP_TAC std_ss []);
+
+val x86_else_none_write_mem_lemma = store_thm("x86_else_none_write_mem_lemma",
+  ``!a x t f. CAN_XWRITE_MEM a t ==> 
+              (option_apply (XWRITE_MEM a x t) f = f (XWRITE_MEM2 a x t))``,
+  REPEAT STRIP_TAC
+  THEN `?r e s m i. t = (r,e,s,m,i)` by METIS_TAC [pairTheory.PAIR]
+  THEN FULL_SIMP_TAC std_ss [CAN_XWRITE_MEM,XWRITE_MEM_def,XWRITE_MEM2_def]
+  THEN Cases_on `m a` THEN FULL_SIMP_TAC std_ss []
+  THEN Cases_on `x'` THEN FULL_SIMP_TAC (srw_ss()) []
+  THEN SRW_TAC [] [option_apply_def]);
+
+val x86_else_none_read_mem_lemma = store_thm("x86_else_none_read_mem_lemma",
+  ``!a x t f. CAN_XREAD_MEM a t ==> 
+              (option_apply (XREAD_MEM a t) f = f (XREAD_MEM2 a t))``,
+  REPEAT STRIP_TAC
+  THEN `?r e s m i. t = (r,e,s,m,i)` by METIS_TAC [pairTheory.PAIR]
+  THEN FULL_SIMP_TAC std_ss [CAN_XREAD_MEM,XREAD_MEM2_def,XREAD_MEM_def]
+  THEN Cases_on `m a` THEN FULL_SIMP_TAC std_ss []
+  THEN Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) []
+  THEN SRW_TAC [] [option_apply_def]);
 
 val x86_else_none_eflag_lemma = store_thm("x86_else_none_eflag_lemma",
   ``!m a f. ~(m a = NONE) ==> 

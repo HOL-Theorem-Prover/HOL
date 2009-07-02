@@ -73,26 +73,35 @@ val arm_alloc_aux_lemma = prove(
     arm_coll_inv (a,x,xs') (i',e',rs',l',u',m') /\ (l = l') /\ (x = x') /\ (a = r10') /\
     arm_alloc_aux_pre (ref_addr a i,ref_addr a e,a,x,xs)``,
   STRIP_TAC \\ REWRITE_TAC [arm_alloc_aux_def,arm_alloc_aux_pre_def,cheney_alloc_aux_def] 
-  \\ STRIP_TAC \\ Cases_on `i = e` \\ ASM_SIMP_TAC std_ss [] THEN1
-   (ONCE_REWRITE_TAC [EQ_SYM_EQ] 
-    \\ SIMP_TAC std_ss [LET_DEF,WORD_ADD_0,GSYM AND_IMP_INTRO]  
-    \\ REPEAT (MATCH_MP_TAC (METIS_PROVE [] ``P ==> (Q ==> P)``))
+  \\ STRIP_TAC \\ Cases_on `i = e` \\ ASM_SIMP_TAC std_ss [] THEN1 
+   (SIMP_TAC std_ss [LET_DEF]  
+    \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
+    \\ SIMP_TAC std_ss [LET_DEF]  
+    \\ NTAC 2 STRIP_TAC
     \\ IMP_RES_TAC arm_coll_inv_pre_lemma 
-    \\ REVERSE STRIP_TAC THEN1 METIS_TAC [IN_INSERT,ALIGNED_def,INSERT_SUBSET]
-    \\ FULL_SIMP_TAC bool_ss [CONS_11,arm_coll_inv_def,APPLY_UPDATE_THM,APPEND]    
-    \\ FULL_SIMP_TAC bool_ss [CONS_11,arm_coll_inv_def,APPLY_UPDATE_THM,APPEND]    
-    \\ Q.ABBREV_TAC `xxx = [x1; x2; x3; x4; x5; x6;e;e]`
-    \\ `roots_in_mem xxx (a,a - 24w,(a =+ ref_addr a e) xs) /\ a <+ ref_addr a 1` by 
-     (Q.UNABBREV_TAC `xxx`
-      \\ FULL_SIMP_TAC std_ss [roots_in_mem_def,APPLY_UPDATE_THM,word_arith_lemma1,word_arith_lemma2,APPEND,ZIP]
-      \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,word_arith_lemma4,WORD_ADD_0]
-      \\ SIMP_TAC (std_ss++WORD_ss) [RW [WORD_ADD_0] (Q.SPECL [`v`,`0w`] WORD_EQ_ADD_LCANCEL),n2w_11]
-      \\ `~(e = 0)` by 
-         (Cases_on `u` \\ FULL_SIMP_TAC bool_ss [ok_state_def,LET_DEF] \\ DECIDE_TAC)
-      \\ ASM_SIMP_TAC std_ss [ref_addr_def])       
-    \\ ASM_SIMP_TAC std_ss [GSYM CONJ_ASSOC]
+    \\ FULL_SIMP_TAC std_ss [arm_coll_inv_def,TL,CONS_11,APPEND]
+    \\ FULL_SIMP_TAC std_ss [APPEND,GSYM CONJ_ASSOC]
+    \\ STRIP_TAC THEN1
+     (FULL_SIMP_TAC std_ss [roots_in_mem_def,APPLY_UPDATE_THM,word_arith_lemma1]
+      \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,WORD_EQ_SUB_RADD]
+      \\ FULL_SIMP_TAC std_ss [roots_in_mem_def,APPLY_UPDATE_THM,word_arith_lemma1]
+      \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,n2w_11]
+      \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,WORD_EQ_SUB_LADD]
+      \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,n2w_11,ref_addr_def])
+    \\ `a <+ ref_addr a 1 /\ a - 24w <+ ref_addr a 1` by ALL_TAC
+    THEN1 (FULL_SIMP_TAC std_ss [roots_in_mem_def,APPEND,word_arith_lemma1,word_arith_lemma2,ZIP]
+      \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,word_arith_lemma4,WORD_ADD_0])
     \\ STRIP_TAC THEN1 METIS_TAC [lemma]
-    \\ SIMP_TAC (std_ss++WORD_ss) [RW [WORD_ADD_0] (Q.SPECL [`v`,`0w`] WORD_EQ_ADD_LCANCEL),n2w_11])
+    \\ FULL_SIMP_TAC std_ss [roots_in_mem_def,APPLY_UPDATE_THM,word_arith_lemma1]
+    \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,WORD_EQ_SUB_RADD]
+    \\ FULL_SIMP_TAC std_ss [roots_in_mem_def,APPLY_UPDATE_THM,word_arith_lemma1]
+    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,n2w_11]
+    \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,WORD_EQ_SUB_LADD]
+    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,n2w_11,ref_addr_def]
+    \\ FULL_SIMP_TAC std_ss [ALIGNED_INTRO] 
+    \\ ONCE_REWRITE_TAC [ALIGNED_MOD_4]
+    \\ SIMP_TAC std_ss [WORD_ADD_0,WORD_SUB_RZERO]
+    \\ FULL_SIMP_TAC std_ss [INSERT_SUBSET,IN_INSERT] \\ METIS_TAC [])
   \\ IMP_RES_TAC arm_coll_inv_pre_lemma 
   \\ `valid_address a i /\ valid_address a e /\ ~(i = 0) /\ ~(e = 0)` by
       (Cases_on `u` \\ FULL_SIMP_TAC std_ss [valid_address_def,
@@ -197,6 +206,7 @@ val arm_alloc_lemma = prove(
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [INSERT_SUBSET,NOT_IN_EMPTY,IN_INSERT,EMPTY_SUBSET]
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ STRIP_TAC \\ FULL_SIMP_TAC bool_ss []
+  \\ REPEAT (Q.PAT_ASSUM `~(i = 0)` ((K ALL_TAC)))
   \\ IMP_RES_TAC arm_alloc_aux_lemma \\ ASM_SIMP_TAC std_ss []
   \\ REVERSE (REPEAT STRIP_TAC) \\ METIS_TAC []);
 
@@ -295,7 +305,7 @@ val ch_mem_cheney_alloc_lemma = prove(
     (arm_alloc_mem (r5,r6,r7,r8,a,x,xs) = (r3',r4',r5',r6',r7',r8',a',x',xs')) ==>
     ch_mem (i',e',rs',l',u',m') (a',x,xs') /\ (a = a') /\ (l = l') /\ (x = x') /\
     arm_alloc_mem_pre (r5,r6,r7,r8,a,x,xs) /\ arm_coll_inv (a,x,xs) (i,e,rs,l,u,m)``,
-  NTAC 3 STRIP_TAC \\ IMP_RES_TAC ch_mem_IMP_arm_coll_inv
+  NTAC 4 STRIP_TAC \\ IMP_RES_TAC ch_mem_IMP_arm_coll_inv
   \\ IMP_RES_TAC arm_alloc_lemma 
   \\ FULL_SIMP_TAC bool_ss [ch_mem_def,APPEND,ZIP]
   \\ `ok_state (i',e',rs',l',u',m')` by METIS_TAC [cheney_alloc_ok]
@@ -397,7 +407,7 @@ val SPEC_ARM_ALLOC = save_thm("SPEC_ARM_ALLOC",let
   val th = Q.SPEC `cond (ch_rel ([v1;v2;v3;v4;v5;v6],h,l) (r3,r4,r5,r6,r7,r8,r9,df,f) /\ 
                            CARD (reachables [v1;v2;v3;v4;v5;v6] (ch_set h)) < l)` th
   val th = MATCH_MP SPEC_WEAKEN th
-  val th = Q.SPEC `aHEAP (r9,l) (fresh h,v2,v3,v4,v5,v6,h |+ (fresh h,v1,v2,0w)) * ~aS * aPC (p + 348w)` th
+  val th = Q.SPEC `aHEAP (r9,l) (fresh h,v2,v3,v4,v5,v6,h |+ (fresh h,v1,v2,0w)) * ~aS * aPC (p + 356w)` th
   val goal = (fst o dest_imp o concl) th
   val lemma = prove(goal,
     REWRITE_TAC [SEP_IMP_MOVE_COND] \\ REPEAT STRIP_TAC

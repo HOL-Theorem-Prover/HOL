@@ -156,7 +156,8 @@ val ARM_NEXT_REL_def = Define `ARM_NEXT_REL s s' = (NEXT_ARM_MMU NO_CP (s:unit a
 
 val ARM_INSTR_def = Define `ARM_INSTR (a:word32,c:word32) = { aMem (ADDR30 a) c }`;
 
-val ARM_MODEL_def = Define `ARM_MODEL = (arm2set, ARM_NEXT_REL, ARM_INSTR)`;
+val ARM_MODEL_def = Define `
+  ARM_MODEL = (arm2set, ARM_NEXT_REL, ARM_INSTR, (\x y. (x = (y:unit arm_sys_state))))`;
 
 val aLR_def = Define `aLR x = aR 14w x * cond (ALIGNED x)`;
 
@@ -170,7 +171,7 @@ val ARM_SPEC_SEMANTICS = store_thm("ARM_SPEC_SEMANTICS",
   ``SPEC ARM_MODEL p {} q =
     !y s seq. p (arm2set' y s) /\ rel_sequence ARM_NEXT_REL seq s ==>
               ?k. q (arm2set' y (seq k)) /\ (arm2set'' y s = arm2set'' y (seq k))``,
-  SIMP_TAC bool_ss [GSYM RUN_EQ_SPEC,RUN_def,ARM_MODEL_def,STAR_def]
+  SIMP_TAC bool_ss [GSYM RUN_EQ_SPEC,RUN_def,ARM_MODEL_def,STAR_def,SEP_REFINE_def]
   \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC
   THEN1 (FULL_SIMP_TAC bool_ss [SPLIT_arm2set_EXISTS] \\ METIS_TAC [])    
   \\ Q.PAT_ASSUM `!s r. b` (STRIP_ASSUME_TAC o UNDISCH o SPEC_ALL o 
@@ -233,7 +234,8 @@ val FORMAT_ALIGNED = store_thm("FORMAT_ALIGNED",
   THEN ASM_SIMP_TAC bool_ss [ADDR32_eq_0] THEN SRW_TAC [] [armTheory.FORMAT_def]);
 
 val ARM_SPEC_CODE = (RW [GSYM ARM_MODEL_def] o SIMP_RULE std_ss [ARM_MODEL_def] o prove)
-  (``SPEC ARM_MODEL (CODE_POOL (SND (SND ARM_MODEL)) c * p) {} (CODE_POOL (SND (SND ARM_MODEL)) c * q) =
+  (``SPEC ARM_MODEL (CODE_POOL (FST (SND (SND ARM_MODEL))) c * p) {} 
+                    (CODE_POOL (FST (SND (SND ARM_MODEL))) c * q) =
     SPEC ARM_MODEL p c q``,
   REWRITE_TAC [SPEC_CODE]);
 

@@ -14,60 +14,79 @@ val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10",
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
+val _ = codegen_x86Lib.set_x86_regs 
+  [(3,"eax"),(4,"ecx"),(5,"edx"),(6,"ebx"),(7,"edi"),(8,"esi"),(9,"ebp")]
 
-val (th,arm_eq_loop_def) = basic_decompile_arm "arm_eq_loop" NONE `
-  E1530004 (* LOOP:cmp r3,r4 *)
-  0A00000A (* beq NEXT *)
-  E1835004 (* orr r5,r3,r4 *)
-  E3150003 (* tst r5,#3 *)
-  1A00000D (* bne EXIT *)
-  E5935004 (* ldr r5,[r3,#4] *)
-  E5933000 (* ldr r3,[r3] *)
-  E5946004 (* ldr r6,[r4,#4] *)
-  E5944000 (* ldr r4,[r4] *)
-  E4875004 (* str r5,[r7],#4 *)
-  E4876004 (* str r6,[r7],#4 *)
-  E2888001 (* add r8,r8,#1 *)
-  EAFFFFF2 (* b LOOP *)
-  E3580000 (* NEXT:cmp r8,#0 *)
-  0A000003 (* beq EXIT *)
-  E5374004 (* ldr r4,[r7,#-4]! *)
-  E5373004 (* ldr r3,[r7,#-4]! *)
-  E2488001 (* sub r8,r8,#1 *)
-  EAFFFFEC (* b LOOP *)`;
+val (th1,arm_eq_loop_def,arm_eq_loop_pre_def) = compile_all `` 
+  arm_eq_loop (r3:word32,r4:word32,r5:word32,r6:word32,r7:word32,r8:word32,df:word32 set,f:word32->word32) =
+    if r3 = r4 then
+      if r8 = 0x0w then
+        (r3,r4,r5,r6,r7,r8,df,f)
+      else
+        let r4 = f (r7 - 0x4w) in
+        let r7 = r7 - 0x4w in
+        let r3 = f (r7 - 0x4w) in
+        let r7 = r7 - 0x4w in
+        let r8 = r8 - 0x1w in
+          arm_eq_loop (r3,r4,r5,r6,r7,r8,df,f)
+   else
+     let r5 = r3 !! r4 in
+       if r5 && 3w = 0x0w then
+         let r5 = f (r3 + 0x4w) in
+         let r3 = f r3 in
+         let r6 = f (r4 + 0x4w) in
+         let r4 = f r4 in
+         let f = (r7 =+ r5) f in
+         let r7 = r7 + 0x4w in
+         let f = (r7 =+ r6) f in
+         let r7 = r7 + 0x4w in
+         let r8 = r8 + 0x1w in
+           arm_eq_loop (r3,r4,r5,r6,r7,r8,df,f)
+       else
+         (r3,r4,r5,r6,r7,r8,df,f)``;
 
-val (th,arm_eq_init_def) = basic_decompile_arm "arm_eq_init" NONE `
-  E28A7008 (* add r7,r10,#8 *)
-  E3550000 (* cmp r5,#0 *)
-  10877006 (* addne r7,r7,r6 *)`;
+val (th1,arm_eq_init_def,arm_eq_init_pre_def) = compile_all `` 
+  arm_eq_init (r5:word32,r6:word32,r9:word32) =
+    let r7 = r9 + 0x8w in
+      if r5 = 0x0w then
+        (r5,r6,r7,r9)
+      else
+        let r7 = r7 + r6 in (r5,r6,r7,r9)``;
 
-val (th,arm_eq_assign_def) = basic_decompile_arm "arm_eq_assign" NONE `
-  E1530004 (* EXIT:cmp r3,r4 *)
-  03A0300F (* moveq r3,#15 *)
-  13A03003 (* movne r3,#3 *)`;
+val (th1,arm_eq_assign_def,arm_eq_assign_pre_def) = compile_all `` 
+  arm_eq_assign (r3:word32,r4:word32) =
+    if r3 = r4 then
+      let r3 = 0xFw in (r3:word32,r4)
+    else
+      let r3 = 0x3w in (r3:word32,r4)``
 
-val (arm_eq_thm,arm_eq_def) = basic_decompile_arm "arm_eq" NONE `
-  E1530004 (* cmp r3,r4 *)
-  03A0300F (* moveq r3,#15 *)
-  0A000025 (* beq EXIT2 *)
-  E50A4014 (* str r4,[r10,#-20] *)
-  E50A5010 (* str r5,[r10,#-16] *)
-  E50A600C (* str r6,[r10,#-12] *)
-  E50A7008 (* str r7,[r10,#-8] *)
-  E50A8004 (* str r8,[r10,#-4] *)
-  E51A501C (* ldr r5,[r10,#-28] *)
-  E51A6020 (* ldr r6,[r10,#-32] *)
-  insert: arm_eq_init
-  E3A08000 (* mov r8,#0 *)
-  insert: arm_eq_loop
-  insert: arm_eq_assign
-  E51A4014 (* ldr r4,[r10,#-20] *)
-  E51A5010 (* ldr r5,[r10,#-16] *)
-  E51A600C (* ldr r6,[r10,#-12] *)
-  E51A7008 (* ldr r7,[r10,#-8] *)
-  E51A8004 (* ldr r8,[r10,#-4] *)`;
+val (arm_eq_thms,arm_eq_def,arm_eq_pre_def) = compile_all `` 
+  arm_eq (r3,r4,r5,r6,r7,r8,r9,df,f) =
+    if r3 = r4 then
+      let r3 = 0xFw in (r3,r4,r5,r6,r7,r8,r9,df,f)
+    else
+     let f = (r9 - 0x14w =+ r4) f in
+      let f = (r9 - 0x10w =+ r5) f in
+      let f = (r9 - 0xCw =+ r6) f in
+      let f = (r9 - 0x8w =+ r7) f in
+      let f = (r9 - 0x4w =+ r8) f in
+      let r5 = f (r9 - 0x1Cw) in
+      let r6 = f (r9 - 0x20w) in
+      let (r5,r6,r7,r9) = arm_eq_init (r5,r6,r9) in
+      let r8 = 0x0w in
+      let (r3,r4,r5,r6,r7,r8,df,f) = arm_eq_loop (r3,r4,r5,r6,r7,r8,df,f) in
+      let (r3,r4) = arm_eq_assign (r3,r4) in
+      let r4 = f (r9 - 0x14w) in
+      let r5 = f (r9 - 0x10w) in
+      let r6 = f (r9 - 0xCw) in
+      let r7 = f (r9 - 0x8w) in
+      let r8 = f (r9 - 0x4w) in
+        (r3,r4,r5,r6,r7,r8,r9,df,f)``;
 
-val _ = save_thm("arm_eq_thm",arm_eq_thm);
+fun save_all prefix postfix = 
+  map (fn (n,th) => save_thm(prefix ^ n ^ postfix,th));
+
+val _ = save_all "" "_eq_thm" arm_eq_thms
 
 val word_tree2_def = Define `
   (word_tree2 (XVal w) (a,m) d = (a = ADDR32 w + 0x2w)) /\
@@ -164,7 +183,7 @@ val lisp_stack_IGNORE_WRITE = prove(
   \\ ASM_SIMP_TAC std_ss [word_sub_def]
   \\ MATCH_MP_TAC ALIGNED_ADD \\ ASM_SIMP_TAC std_ss [ALIGNED_NEG] \\ EVAL_TAC);
 
-val arm_eq_loop_spec_lemma = prove(  (* VERY SLOW PROOF *)
+val arm_eq_loop_spec_lemma = prove(  
   ``!ys:(XExp # XExp) list x y d e m r3 r4 r5 r6 r7 r8. (d INTER e = {}) /\
       (arm_eq_loop (r3,r4,r5,r6,r7,r8,df,m) = (u3,u4,u5,u6,u7,u8,udf,uf)) /\
       (r8 = n2w (LENGTH ys)) /\ (MAX_XDEPTH (x::MAP FST ys) < 2**32) /\
@@ -174,7 +193,10 @@ val arm_eq_loop_spec_lemma = prove(  (* VERY SLOW PROOF *)
       ((u3 = u4) = (MAP FST ys = MAP SND ys) /\ (x = y)) /\
       (!x. ~(x IN e) ==> (m x = uf x)) /\ (df = udf)``,
   STRIP_TAC \\ STRIP_TAC \\ completeInduct_on `2 * (SUM_XSIZE (MAP FST ys) + XSIZE x) + LENGTH ys`
-  \\ ONCE_REWRITE_TAC [arm_eq_loop_def] \\ NTAC 14 STRIP_TAC \\ Cases_on `r3 = r4` 
+  \\ Q.PAT_ASSUM `!xxx. bbb` (ASSUME_TAC o RW1 [GSYM CONTAINER_def])
+  \\ ONCE_REWRITE_TAC [arm_eq_loop_def]
+  \\ ONCE_REWRITE_TAC [arm_eq_loop_pre_def]
+  \\ NTAC 14 STRIP_TAC \\ Cases_on `r3 = r4` 
   THENL [  
     FULL_SIMP_TAC std_ss [] \\ IMP_RES_TAC word_tree2_11
     \\ FULL_SIMP_TAC std_ss [] 
@@ -195,9 +217,10 @@ val arm_eq_loop_spec_lemma = prove(  (* VERY SLOW PROOF *)
     \\ FULL_SIMP_TAC std_ss [lisp_stack_def,MAP,CONS_11,SUM_XSIZE_def]
     \\ `2 * (SUM_XSIZE (MAP FST t) + XSIZE q) + LENGTH t <
         2 * (XSIZE q + SUM_XSIZE (MAP FST t) + XSIZE y) + (LENGTH t + 1)` by DECIDE_TAC       
-    \\ Q.PAT_ASSUM `!x. bbb` 
-        (STRIP_ASSUME_TAC o RW [] o Q.SPEC `q` o Q.SPEC `t` o UNDISCH o 
-         Q.SPEC `2 * (SUM_XSIZE (MAP FST t) + XSIZE q) + LENGTH (t:(XExp # XExp) list)`)
+    \\ Q.PAT_ASSUM `CONTAINER (!m. bbb)` 
+        (STRIP_ASSUME_TAC o RW [] o Q.SPEC `q` o Q.SPEC `t` o UNDISCH o
+         Q.SPEC `2 * (SUM_XSIZE (MAP FST t) + XSIZE q) + LENGTH (t:(XExp # XExp) list)` o
+         RW [CONTAINER_def])
     \\ Q.PAT_ASSUM `!x. bbb` 
         (MP_TAC o Q.SPECL [`r`,`d`,`e`,`m`,`m (r7 - 8w:word32)`,`m (r7 - 4w:word32)`,`r5`,`r6`,`r7 - 8w`])
     \\ FULL_SIMP_TAC std_ss [GSYM WORD_SUB_PLUS,word_add_n2w,MAX_XDEPTH_def]       
@@ -216,8 +239,9 @@ val arm_eq_loop_spec_lemma = prove(  (* VERY SLOW PROOF *)
       \\ REVERSE (`MAX_XDEPTH (q::MAP FST t) <= MAX_XDEPTH (y::q::MAP FST t)` by ALL_TAC)
       THEN1 DECIDE_TAC
       \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [MAX_XDEPTH_def]))    
-      \\ SIMP_TAC std_ss [MAX_DEF]],
-    FULL_SIMP_TAC std_ss [LET_DEF,RW1 [WORD_AND_COMM] (GSYM ALIGNED_def)]
+      \\ SIMP_TAC std_ss [MAX_DEF]]
+,
+    FULL_SIMP_TAC std_ss [ALIGNED_INTRO,LET_DEF]
     \\ SIMP_TAC std_ss [GSYM ALIGNED_def,RW1 [WORD_AND_COMM] (GSYM ALIGNED_def)]
     \\ SIMP_TAC std_ss [ALIGNED_CLAUSES,ALIGNED_SUB_4]
     \\ REVERSE (Cases_on `ALIGNED (r3 !! r4)`) \\ FULL_SIMP_TAC std_ss []
@@ -235,9 +259,10 @@ val arm_eq_loop_spec_lemma = prove(  (* VERY SLOW PROOF *)
         LENGTH ((x2,y2)::ys) <
         2 * (SUM_XSIZE (MAP FST ys) + XSIZE (XDot x1 x2)) + LENGTH ys` by     
      (SIMP_TAC std_ss [SUM_XSIZE_def,XSIZE_def,LENGTH,MAP,ADD1] \\ DECIDE_TAC)
-    \\ Q.PAT_ASSUM `!x. bbb` 
+    \\ Q.PAT_ASSUM `CONTAINER (!x. bbb)` 
         (STRIP_ASSUME_TAC o RW [MAP,CONS_11] o Q.SPECL [`(x2,y2)::ys`,`x1`] o UNDISCH o 
-         Q.SPEC `2 * (SUM_XSIZE (MAP FST ((x2,y2)::ys)) + XSIZE x1) + LENGTH (((x2,y2)::ys):(XExp # XExp) list)`)
+         Q.SPEC `2 * (SUM_XSIZE (MAP FST ((x2,y2)::ys)) + XSIZE x1) + LENGTH (((x2,y2)::ys):(XExp # XExp) list)` o 
+         RW [CONTAINER_def])
     \\ Q.PAT_ASSUM `!x. bbb` 
         (MP_TAC o Q.SPECL [`y1`,`d`,`e`,`(r7 + 4w =+ m (r4 + 4w:word32)) ((r7 =+ m (r3 + 4w:word32)) m)`,
           `m (r3:word32)`,`m (r4:word32)`,`m (r3 + 4w:word32)`,`m (r4 + 4w:word32)`,`r7 + 8w`])
@@ -394,15 +419,15 @@ val SExp2XExp_11 = prove(
        lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r1,r2,r3,r4,r5,r6,a,df,f,s,rest) ==>
        ((SExp2XExp x1 s = SExp2XExp x2 s) = (x1 = x2))``, 
   Induct THENL [
-    Cases_on `x2`
-    \\ SIMP_TAC std_ss [SExp2XExp_def,XExp_11,SExp_11,XExp_distinct,SExp_distinct]
-    \\ `isDot (Dot x1 x1') /\ isDot (Dot S'' S0)` by REWRITE_TAC [isDot_def]
+    STRIP_TAC \\ STRIP_ASSUME_TAC (Q.SPEC `x2` SExp_expand)
+    \\ FULL_SIMP_TAC std_ss [SExp2XExp_def,XExp_11,SExp_11,XExp_distinct,SExp_distinct]
+    \\ `isDot (Dot x1 x1') /\ isDot (Dot exp1 exp2)` by REWRITE_TAC [isDot_def]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC 
-    \\ `lisp_inv (CAR (Dot x1 x1'),Dot S'' S0,x3,x4,x5,x6,limit) (f r1,r2,r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_car]
-    \\ `lisp_inv (CAR (Dot x1 x1'),CAR (Dot S'' S0),x3,x4,x5,x6,limit) (f r1,f r2,r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_car]
+    \\ `lisp_inv (CAR (Dot x1 x1'),Dot exp1 exp2,x3,x4,x5,x6,limit) (f r1,r2,r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_car]
+    \\ `lisp_inv (CAR (Dot x1 x1'),CAR (Dot exp1 exp2),x3,x4,x5,x6,limit) (f r1,f r2,r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_car]
     \\ FULL_SIMP_TAC std_ss [CAR_def]
-    \\ `lisp_inv (CDR (Dot x1 x1'),Dot S'' S0,x3,x4,x5,x6,limit) (f (r1+4w),r2,r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_cdr]
-    \\ `lisp_inv (CDR (Dot x1 x1'),CDR (Dot S'' S0),x3,x4,x5,x6,limit) (f (r1+4w),f (r2+4w),r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_cdr]
+    \\ `lisp_inv (CDR (Dot x1 x1'),Dot exp1 exp2,x3,x4,x5,x6,limit) (f (r1+4w),r2,r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_cdr]
+    \\ `lisp_inv (CDR (Dot x1 x1'),CDR (Dot exp1 exp2),x3,x4,x5,x6,limit) (f (r1+4w),f (r2+4w),r3,r4,r5,r6,a,df,f,s,rest)` by METIS_TAC [lisp_inv_cdr]
     \\ FULL_SIMP_TAC std_ss [CDR_def]
     \\ METIS_TAC [],
     Cases_on `x2`
@@ -616,7 +641,7 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
   \\ REWRITE_TAC [AND_IMP_INTRO]
   \\ ONCE_REWRITE_TAC [CONJ_COMM]
   \\ REWRITE_TAC [GSYM AND_IMP_INTRO]
-  \\ REWRITE_TAC [arm_eq_def,GSYM ALIGNED_def]
+  \\ REWRITE_TAC [arm_eq_def,arm_eq_pre_def,GSYM ALIGNED_def]
   \\ ONCE_REWRITE_TAC [ALIGNED_MOD_4]
   \\ SIMP_TAC std_ss [WORD_SUB_RZERO]
   \\ Cases_on `r3 = r4` THEN1 
@@ -753,175 +778,5 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
   \\ IMP_RES_TAC lisp_x_or \\ ASM_SIMP_TAC std_ss [] 
   \\ REPEAT STRIP_TAC \\ METIS_TAC [WORD_ADD_SUB]);
   
-
-
-(* PowerPC implementation *)
-
-val (th,ppc_eq_loop_def) = basic_decompile_ppc "ppc_eq_loop" (SOME (``(r3:word32,r4:word32,r5:word32,r6:word32,r7:word32,r8:word32,df:word32 set,f:word32->word32)``,
-         ``(r3:word32,r4:word32,r5:word32,r6:word32,r7:word32,r8:word32,df:word32 set,f:word32->word32)``)) `
-  7C032000 (* LOOP:cmpw 3,4 *)
-  40820034 (* bc 4,2,NEXT *)
-  7C652378 (* or 5,3,4 *)
-  70A20003 (* andi. 2,5,3 *)
-  41820044 (* bc 12,2,EXIT *)
-  80A30004 (* lwz 5,4(3) *)
-  80630000 (* lwz 3,0(3) *)
-  80C40004 (* lwz 6,4(4) *)
-  80840000 (* lwz 4,0(4) *)
-  90A70000 (* stw 5,0(7) *)
-  90C70004 (* stw 6,4(7) *)
-  38E70008 (* addi 7,7,8 *)
-  39080001 (* addi 8,8,1 *)
-  4BFFFFCC (* b LOOP *)
-  2C080000 (* NEXT:cmpwi 8,0 *)
-  40820018 (* bc 4,2,EXIT *)
-  8087FFFC (* lwz 4,-4(7) *)
-  8067FFF8 (* lwz 3,-8(7) *)
-  38E7FFF8 (* addi 7,7,-8 *)
-  3908FFFF (* addi 8,8,-1 *)
-  4BFFFFB0 (* b LOOP *)`;
-
-val ppc_eq_loop_EQ = prove( 
-  ``(ppc_eq_loop = arm_eq_loop) /\ (ppc_eq_loop_pre = arm_eq_loop_pre)``,
-  STRIP_TAC \\ REWRITE_TAC [fetch "-" "arm_eq_loop",fetch "-" "ppc_eq_loop"]
-  \\ REWRITE_TAC [fetch "-" "arm_eq_loop_pre",fetch "-" "ppc_eq_loop_pre"]
-  \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = x') /\ (y = y') /\ (z = z') ==> (f x y z = f x' y' z')``)
-  \\ SIMP_TAC (std_ss++tailrecLib.tailrec_part_ss()) [FUN_EQ_THM,FORALL_PROD]
-  \\ SIMP_TAC std_ss [LET_DEF,word_arith_lemma1]
-  \\ SIMP_TAC std_ss [AC WORD_AND_ASSOC WORD_AND_COMM]);
-
-val (th,ppc_eq_init_def) = basic_decompile_ppc "ppc_eq_init" NONE `
-  38EA0008 (* addi 7,10,8 *)
-  2C050000 (* cmpwi 5,0 *)
-  40820008 (* bc 4,2,EQ2 *)
-  7CE73214 (* add 7,7,6 *)`;
-
-val (th,ppc_eq_assign_def) = basic_decompile_ppc "ppc_eq_assign" NONE `
-  7C032000 (* EXIT:cmpw 3,4 *)
-  38600003 (* addi 3,0,3 *)
-  41820008 (* bc 12,2,EQ3 *)
-  3863000C (* addi 3,3,12 *)`;
-
-val (ppc_eq_thm,ppc_eq_def) = basic_decompile_ppc "ppc_eq" NONE `   
-  7C032000 (* cmpw 3,4 *)
-  4182000C (* bc 12,2,EQ1 *)
-  3860000F (* addi 3,0,15 *)
-  480000AC (* b EXIT2 *)
-  908AFFEC (* EQ1:stw 4,-20(10) *)
-  90AAFFF0 (* stw 5,-16(10) *)
-  90CAFFF4 (* stw 6,-12(10) *)
-  90EAFFF8 (* stw 7,-8(10) *)
-  910AFFFC (* stw 8,-4(10) *)
-  80AAFFE4 (* lwz 5,-28(10) *)
-  80CAFFE0 (* lwz 6,-32(10) *)
-  insert: ppc_eq_init
-  7CA82A78 (* EQ2:xor 8,5,5 *)
-  insert: ppc_eq_loop
-  insert: ppc_eq_assign
-  808AFFEC (* EQ3:lwz 4,-20(10) *)
-  80AAFFF0 (* lwz 5,-16(10) *)
-  80CAFFF4 (* lwz 6,-12(10) *)
-  80EAFFF8 (* lwz 7,-8(10) *)
-  810AFFFC (* lwz 8,-4(10) *)`;
-
-val ppc_eq_EQ = store_thm("ppc_eq_EQ", 
-  ``(ppc_eq = arm_eq) /\ (ppc_eq_pre = arm_eq_pre)``,
-  SIMP_TAC (std_ss) [FUN_EQ_THM,FORALL_PROD]
-  \\ `!r5 r6 r10. ppc_eq_init (r5,r6,r10) = arm_eq_init (r5,r6,r10)` by 
-    REWRITE_TAC [ppc_eq_init_def,arm_eq_init_def]
-  \\ `!r5 r6 r10. ppc_eq_assign (r5,r6) = arm_eq_assign (r5,r6)` by 
-   SIMP_TAC std_ss [ppc_eq_assign_def,arm_eq_assign_def,LET_DEF,word_add_n2w]
-  \\ ASM_SIMP_TAC std_ss [arm_eq_def,ppc_eq_def,LET_DEF,ppc_eq_loop_EQ]);
-
-val _ = save_thm("ppc_eq_thm",ppc_eq_thm);
-
-
-(* x86 implementation *)
-
-val (th,def,pre) = compile "x86" ``
-  x86_eq_loop (r0:word32,r1:word32,r2:word32,r3:word32,r4:word32,r5:word32,df:word32 set,f:word32->word32) =
-    (if r0 = r1 then
-       (if r5 = 0x0w then
-          (r0,r1,r2,r3,r4,r5,df,f)
-        else
-          (let r1 = f (r4 - 0x4w) in
-           let r0 = f (r4 - 0x8w) in
-           let r4 = r4 - 0x8w in
-           let r5 = r5 - 0x1w in
-             x86_eq_loop (r0,r1,r2,r3,r4,r5,df,f)))
-     else
-       (let r2 = r0 !! r1 in
-          (if r2 && 3w = 0x0w then
-             (let r2 = f (r0 + 0x4w) in
-              let r0 = f r0 in
-              let r3 = f (r1 + 0x4w) in
-              let r1 = f r1 in
-              let f = (r4 =+ r2) f in
-              let f = (r4 + 4w =+ r3) f in
-              let r4 = r4 + 0x8w in
-              let r5 = r5 + 0x1w in
-                x86_eq_loop (r0,r1,r2,r3,r4,r5,df,f))
-           else
-             (r0,r1,r2,r3,r4,r5,df,f))))``;
-
-val x86_eq_loop_EQ = prove( 
-  ``(x86_eq_loop = arm_eq_loop) /\ (x86_eq_loop_pre = arm_eq_loop_pre)``,
-  STRIP_TAC \\ REWRITE_TAC [fetch "-" "arm_eq_loop",fetch "-" "x86_eq_loop"]
-  \\ REWRITE_TAC [fetch "-" "arm_eq_loop_pre",fetch "-" "x86_eq_loop_pre"]
-  \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = x') /\ (y = y') /\ (z = z') ==> (f x y z = f x' y' z')``)
-  \\ SIMP_TAC (std_ss++tailrecLib.tailrec_part_ss()) [FUN_EQ_THM,FORALL_PROD]
-  \\ SIMP_TAC std_ss [LET_DEF,word_arith_lemma1]
-  \\ SIMP_TAC std_ss [AC WORD_AND_ASSOC WORD_AND_COMM]);
-
-val (th,def,pre) = compile "x86" ``
-  x86_eq_init (r2:word32,r3:word32,r6:word32) =
-    let r4 = r6 + 0x8w in
-      (if r2 = 0x0w then
-         (r2,r3,r4,r6)
-       else
-         (let r4 = r4 + r3 in (r2,r3,r4,r6)))``;
-
-val (th,def,pre) = compile "x86" ``
-  x86_eq_assign (r0:word32,r1:word32) =
-    if r0 = r1 then
-      (let r0 = 0xFw in (r0,r1))
-    else
-      (let r0 = 0x3w in (r0:word32,r1))``;
-
-val (x86_eq_thm,def,pre) = compile "x86" ``
-  x86_eq (r0,r1,r2,r3,r4,r5,r6,df,f) =
-    if r0 = r1 then
-      (let r0 = 0xFw in (r0,r1,r2,r3,r4,r5,r6,df,f))
-    else
-      (let f = (r6 - 0x14w =+ r1) f in
-       let f = (r6 - 0x10w =+ r2) f in
-       let f = (r6 - 0xCw =+ r3) f in
-       let f = (r6 - 0x8w =+ r4) f in
-       let f = (r6 - 0x4w =+ r5) f in
-       let r2 = f (r6 - 0x1Cw) in
-       let r3 = f (r6 - 0x20w) in
-       let (r2,r3,r4,r6) = x86_eq_init (r2,r3,r6) in
-       let r5 = 0x0w in
-       let (r0,r1,r2,r3,r4,r5,df,f) = x86_eq_loop (r0,r1,r2,r3,r4,r5,df,f) in
-       let (r0,r1) = x86_eq_assign (r0,r1) in
-       let r1 = f (r6 - 0x14w) in
-       let r2 = f (r6 - 0x10w) in
-       let r3 = f (r6 - 0xCw) in
-       let r4 = f (r6 - 0x8w) in
-       let r5 = f (r6 - 0x4w) in
-         (r0,r1,r2,r3,r4,r5,r6,df,f))``;
-
-val _ = save_thm("x86_eq_thm",x86_eq_thm);
-
-val x86_eq_EQ = store_thm("x86_eq_EQ", 
-  ``(x86_eq = arm_eq) /\ (x86_eq_pre = arm_eq_pre)``,
-  SIMP_TAC (std_ss) [FUN_EQ_THM,FORALL_PROD]
-  \\ `!r5 r6 r10. x86_eq_init (r5,r6,r10) = arm_eq_init (r5,r6,r10)` by 
-    SIMP_TAC std_ss [LET_DEF,fetch "-" "x86_eq_init_def",arm_eq_init_def]
-  \\ `!r5 r6 r10. x86_eq_assign (r5,r6) = arm_eq_assign (r5,r6)` by 
-   SIMP_TAC std_ss [fetch "-" "x86_eq_assign_def",arm_eq_assign_def,LET_DEF,word_add_n2w]
-  \\ ASM_SIMP_TAC std_ss [arm_eq_def,fetch "-" "x86_eq_def",fetch "-" "x86_eq_pre_def",LET_DEF,x86_eq_loop_EQ]);
-
-
 
 val _ = export_theory();

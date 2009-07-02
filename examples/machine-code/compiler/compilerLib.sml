@@ -45,6 +45,15 @@ val COMPILER_TAC =
     THEN CONV_TAC (RAND_CONV (AUTO_ALPHA_CONV ()))
     THEN CONV_TAC ((RATOR_CONV o RAND_CONV) (AUTO_ALPHA_CONV ()))
     THEN SIMP_TAC std_ss [AC CONJ_ASSOC CONJ_COMM, AC DISJ_COMM DISJ_ASSOC]
+    THEN SIMP_TAC std_ss [WORD_SUB_RZERO, WORD_ADD_0, IF_IF,
+                          AC WORD_ADD_COMM WORD_ADD_ASSOC,
+                          AC WORD_MULT_COMM WORD_MULT_ASSOC,
+                          AC WORD_AND_COMM WORD_AND_ASSOC,
+                          AC WORD_OR_COMM WORD_OR_ASSOC,
+                          AC WORD_XOR_COMM WORD_XOR_ASSOC,
+                          AC CONJ_COMM CONJ_ASSOC,
+                          AC DISJ_COMM DISJ_ASSOC,
+                          IMP_DISJ_THM, WORD_MULT_CLAUSES]
     THEN EQ_TAC
     THEN ONCE_REWRITE_TAC [GSYM DUMMY_EQ_def]
     THEN REWRITE_TAC [FLATTEN_IF]
@@ -54,7 +63,7 @@ val COMPILER_TAC =
 val doing = ref T;
 val target = "arm";
 
-fun compile target tm = let
+fun basic_compile target tm = let
   val _ = (doing := tm)
   val (tools,target,model_name,s) = 
     if mem target ["arm","ARM"] then (arm_tools,"arm","ARM_MODEL",[]) else 
@@ -90,7 +99,24 @@ fun compile target tm = let
     THEN COMPILER_TAC)    
   val _ = add_compiler_assignment out_tm2 (fst (dest_eq tm)) name len model_name
   val _ = print "done.\n"
-  in (th1,th3,pre) end
+  in (th1,th3,pre) end;
+
+fun compile target tm = let
+  val _ = set_abbreviate_code true
+  fun compile_each [] = []
+    | compile_each (tm::tms) = let
+    val (th,def,pre) = basic_compile target tm
+    in (th,def,pre) :: compile_each tms end
+  val tms = list_dest dest_conj tm
+  val xs = compile_each tms
+  val defs = map (fn (x,y,z) => y) xs
+  val pres = map (fn (x,y,z) => z) xs
+  val def = RW [] (foldr (uncurry CONJ) TRUTH defs)
+  val pre = RW [] (foldr (uncurry CONJ) TRUTH pres)
+  val (th,_,_) = last xs 
+  val _ = set_abbreviate_code false
+  val th = UNABBREV_CODE_RULE th  
+  in (th,def,pre) end;
 
 fun compile_all_aux tm = let
   val x = fst (dest_eq tm)
@@ -98,7 +124,7 @@ fun compile_all_aux tm = let
   val targets = ["ppc","x86","arm"]
   fun compile_each tm [] = []
     | compile_each tm (target::ts) = let
-    val (th,def,_) = compile target tm
+    val (th,def,_) = basic_compile target tm
     val base = fetch "-" (name ^ "_base_def")
     val step = fetch "-" (name ^ "_step_def")
     val guard = fetch "-" (name ^ "_guard_def")

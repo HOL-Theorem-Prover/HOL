@@ -10,55 +10,78 @@ val op \\ = op THEN;
 
 (* ---- definitions ----- *)
 
-val _ = type_abbrev("processor",``: ('a->'b set) # ('a->'a->bool) # ('c->'b set) ``);
+val _ = type_abbrev("processor",
+  ``: ('a->'b set) # ('a->'a->bool) # ('c->'b set) # ('a->'a->bool) ``);
 
 val rel_sequence_def = Define `
   rel_sequence R seq state =
     (seq 0 = state) /\ 
     !n. if (?x. R (seq n) x) then R (seq n) (seq (SUC n)) else (seq (SUC n) = seq n)`;
 
+val SEP_REFINE_def = Define `
+  SEP_REFINE p less to_set state = ?s. less s state /\ p (to_set s)`;
+
 val RUN_def = Define `
-  RUN ((to_set,next,instr):('a,'b,'c)processor) p q = 
-    !state r. (p * r) (to_set state) ==> 
-              !seq. rel_sequence next seq state ==> ?i. (q * r) (to_set (seq i))`;
+  RUN ((to_set,next,instr,less):('a,'b,'c)processor) p q = 
+    !state r. SEP_REFINE (p * r) less to_set state ==> 
+              !seq. rel_sequence next seq state ==> 
+                    ?i. SEP_REFINE (q * r) less to_set (seq i)`;
 
 val CODE_POOL_def = Define `
   CODE_POOL instr c = \s. s = BIGUNION (IMAGE instr c)`;
 
 val SPEC_def = Define `
-  SPEC ((to_set,next,instr):('a,'b,'c)processor) p c q =
-    RUN (to_set,next,instr) (CODE_POOL instr c * p) (CODE_POOL instr c * q)`;
+  SPEC ((to_set,next,instr,less):('a,'b,'c)processor) p c q =
+    RUN (to_set,next,instr,less) (CODE_POOL instr c * p) (CODE_POOL instr c * q)`;
 
 
 (* ---- theorems ---- *)
 
-val INIT_TAC = Cases \\ Cases_on `r` ;
+val INIT_LEMMA = prove(
+  ``(!to_set next instr less. P (to_set,next,instr,less)) ==> 
+    (!x:('a,'b,'c)processor. P x)``,
+  SIMP_TAC std_ss [pairTheory.FORALL_PROD]);
+
+val INIT_TAC = HO_MATCH_MP_TAC INIT_LEMMA THEN NTAC 4 STRIP_TAC;
 val RW = REWRITE_RULE;
 
 val RUN_EQ_SPEC = store_thm("RUN_EQ_SPEC",
   ``!x. RUN x p q = SPEC x p {} q``,
-  INIT_TAC \\ `CODE_POOL r' {} = emp` by ALL_TAC \\ ASM_REWRITE_TAC [SEP_CLAUSES,SPEC_def] 
+  INIT_TAC \\ `CODE_POOL instr {} = emp` by ALL_TAC 
+  \\ ASM_REWRITE_TAC [SEP_CLAUSES,SPEC_def] 
   \\ REWRITE_TAC [FUN_EQ_THM,CODE_POOL_def,IMAGE_EMPTY,BIGUNION_EMPTY,emp_def]);
 
 val SPEC_FRAME = store_thm("SPEC_FRAME",
   ``!x p c q. SPEC x p c q ==> !r. SPEC x (p * r) c (q * r)``,
   INIT_TAC \\ SIMP_TAC bool_ss [RUN_def,GSYM STAR_ASSOC,SPEC_def]
-  \\ REPEAT STRIP_TAC \\ METIS_TAC []);
+  \\ REPEAT STRIP_TAC
+  \\ Q.PAT_ASSUM `!state r. bbb` (ASSUME_TAC o Q.SPECL [`state`,`r * r'`])
+  \\ FULL_SIMP_TAC std_ss [STAR_ASSOC] \\ METIS_TAC []);
 
 val SPEC_FALSE_PRE = store_thm("SPEC_FALSE_PRE",
   ``!x c q. SPEC x SEP_F c q``,
-  INIT_TAC \\ REWRITE_TAC [RUN_def,SPEC_def,SEP_CLAUSES] \\ SIMP_TAC std_ss [SEP_F_def]);
+  INIT_TAC \\ REWRITE_TAC [RUN_def,SPEC_def,SEP_CLAUSES,SEP_REFINE_def] 
+  \\ SIMP_TAC std_ss [SEP_F_def]);
 
 val SPEC_STRENGTHEN = store_thm("SPEC_STRENGTHEN",
   ``!x p c q. SPEC x p c q ==> !r. SEP_IMP r p ==> SPEC x r c q``,
-  INIT_TAC \\ SIMP_TAC bool_ss [RUN_def,SPEC_def,GSYM STAR_ASSOC]
-  \\ METIS_TAC [SEP_IMP_def,SEP_IMP_REFL,SEP_IMP_STAR]);
+  INIT_TAC \\ SIMP_TAC bool_ss [RUN_def,SPEC_def,GSYM STAR_ASSOC,SEP_REFINE_def]
+  \\ REPEAT STRIP_TAC
+  \\ `(CODE_POOL instr c * (p * r')) (to_set s)` by 
+       METIS_TAC [SEP_IMP_def,SEP_IMP_REFL,SEP_IMP_STAR]
+  \\ METIS_TAC []);
 
 val SPEC_WEAKEN = store_thm("SPEC_WEAKEN",
   ``!x p c q. SPEC x p c q ==> !r. SEP_IMP q r ==> SPEC x p c r``,
   INIT_TAC \\ SIMP_TAC bool_ss [RUN_def,SPEC_def,GSYM STAR_ASSOC]
-  \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ METIS_TAC [SEP_IMP_def,SEP_IMP_REFL,SEP_IMP_STAR]);
+  \\ REPEAT STRIP_TAC \\ RES_TAC \\ Q.EXISTS_TAC `i` \\ POP_ASSUM MP_TAC
+  \\ SIMP_TAC std_ss [SEP_REFINE_def] \\ REPEAT STRIP_TAC 
+  \\ Q.EXISTS_TAC `s` \\ ASM_SIMP_TAC std_ss []  
+  \\ METIS_TAC [SEP_IMP_def,SEP_IMP_REFL,SEP_IMP_STAR,SEP_REFINE_def]);
+
+val SPEC_STRENGTHEN_WEAKEN = store_thm("SPEC_STRENGTHEN_WEAKEN",
+  ``!x p c q. SPEC x p c q ==> !r1 r2. SEP_IMP r1 p /\ SEP_IMP q r2 ==> SPEC x r1 c r2``,
+  METIS_TAC [SPEC_STRENGTHEN,SPEC_WEAKEN]);
 
 val CODE_POOL_LEMMA = prove(
   ``!c c' i. ?r. CODE_POOL i (c UNION c') = CODE_POOL i c * r``,
@@ -70,18 +93,19 @@ val CODE_POOL_LEMMA = prove(
        IN_UNION,DISJOINT_DEF,IN_INTER,NOT_IN_EMPTY] \\ METIS_TAC []); 
 
 val SPEC_CODE = store_thm("SPEC_CODE",
-  ``!x p c q. SPEC x (CODE_POOL (SND (SND x)) c * p) {} (CODE_POOL (SND (SND x)) c * q) = 
+  ``!x p c q. SPEC x (CODE_POOL (FST (SND (SND x))) c * p) {} 
+                     (CODE_POOL (FST (SND (SND x))) c * q) = 
               SPEC x p c q``,
-  INIT_TAC \\ REWRITE_TAC [pairTheory.SND]
-  \\ REWRITE_TAC [SPEC_def,CODE_POOL_def,IMAGE_EMPTY,BIGUNION_EMPTY,GSYM emp_def,SEP_CLAUSES]);
+  INIT_TAC \\ REWRITE_TAC [pairTheory.SND] \\ REWRITE_TAC [SPEC_def,
+    CODE_POOL_def,IMAGE_EMPTY,BIGUNION_EMPTY,GSYM emp_def,SEP_CLAUSES]);
   
 val SPEC_ADD_CODE = store_thm("SPEC_ADD_CODE",
   ``!x p c q. SPEC x p c q ==> !c'. SPEC x p (c UNION c') q``,
   INIT_TAC \\ REWRITE_TAC [ONCE_REWRITE_RULE [STAR_COMM] SPEC_def,RUN_def]
   \\ REWRITE_TAC [GSYM STAR_ASSOC] \\ REPEAT STRIP_TAC
-  \\ `?t. CODE_POOL r' (c UNION c') = CODE_POOL r' c * t` by 
+  \\ `?t. CODE_POOL instr (c UNION c') = CODE_POOL instr c * t` by 
         METIS_TAC [CODE_POOL_LEMMA] \\ FULL_SIMP_TAC bool_ss [GSYM STAR_ASSOC]
-  \\ METIS_TAC []);
+  \\ RES_TAC \\ FULL_SIMP_TAC bool_ss [GSYM STAR_ASSOC] \\ METIS_TAC []);
 
 val SPEC_COMBINE = store_thm("SPEC_COMBINE",
   ``!x i j p c1 c2 q b. 
@@ -105,17 +129,21 @@ val rel_sequence_shift = prove(
   \\ Cases_on `?s. n (seq (i + n')) s` \\ ASM_REWRITE_TAC []
   \\ FULL_SIMP_TAC std_ss [ADD1,ADD_ASSOC] \\ METIS_TAC []);
 
+val SEP_REFINE_DISJ = prove(
+  ``SEP_REFINE (p \/ q) less to_set state = 
+    SEP_REFINE p less to_set state \/ SEP_REFINE q less to_set state``,
+  SIMP_TAC std_ss [SEP_REFINE_def,SEP_DISJ_def] \\ METIS_TAC []);
+
 val SPEC_COMPOSE_LEMMA = prove(
   ``!x c p1 p2 m q1 q2. 
-      SPEC x p1 c (q1 \/ m) /\ SPEC x (m \/ p2) c q2 ==> SPEC x (p1 \/ p2) c (q1 \/ q2)``,
+      SPEC x p1 c (q1 \/ m) /\ SPEC x (m \/ p2) c q2 ==> 
+      SPEC x (p1 \/ p2) c (q1 \/ q2)``,
   INIT_TAC \\ FULL_SIMP_TAC std_ss [SPEC_def,RUN_def] \\ REPEAT STRIP_TAC
-  \\ FULL_SIMP_TAC bool_ss [SEP_CLAUSES]  
-  \\ REVERSE (FULL_SIMP_TAC bool_ss [SEP_DISJ_def]) THEN1 METIS_TAC []
-  \\ `?i. (CODE_POOL r' c * q1 * r) (q (seq i)) \/ 
-          (CODE_POOL r' c * m * r) (q (seq i))` by METIS_TAC [] THEN1 METIS_TAC []
-  \\ `rel_sequence q' (\j. seq (i + j)) (seq i)` by METIS_TAC [rel_sequence_shift]
+  \\ REVERSE (FULL_SIMP_TAC bool_ss [SEP_CLAUSES,SEP_REFINE_DISJ]) THEN1 METIS_TAC []
+  \\ RES_TAC THEN1 METIS_TAC []
+  \\ `rel_sequence next (\j. seq (i + j)) (seq i)` by METIS_TAC [rel_sequence_shift]
   \\ Q.ABBREV_TAC `nn = \j. seq (i + j)`
-  \\ `?j. (CODE_POOL r' c * q2 * r) (q (nn j))` by METIS_TAC []
+  \\ `?j. SEP_REFINE (CODE_POOL instr c * q2 * r) less to_set (nn j)` by METIS_TAC []
   \\ Q.UNABBREV_TAC `nn` \\ FULL_SIMP_TAC std_ss []
   \\ Q.EXISTS_TAC `i + j` \\ METIS_TAC []);
 
@@ -149,18 +177,22 @@ val SPEC_FRAME_COMPOSE = store_thm("SPEC_FRAME_COMPOSE",
   THEN1 (MATCH_MP_TAC SPEC_FRAME \\ ASM_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC SPEC_FRAME \\ METIS_TAC [STAR_ASSOC,STAR_COMM]);
 
+val SEP_REFINE_HIDE = prove(
+  ``SEP_REFINE (~p * q) less to_set state =
+    ?x. SEP_REFINE (p x * q) less to_set state``,
+  SIMP_TAC std_ss [SEP_REFINE_def,SEP_HIDE_def,SEP_CLAUSES]
+  \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC []);
+
 val SPEC_HIDE_PRE = store_thm("SPEC_HIDE_PRE",
   ``!x p p' c q. (!y:'var. SPEC x (p * p' y) c q) = SPEC x (p * ~ p') c q``,
   INIT_TAC \\ REPEAT STRIP_TAC \\ ONCE_REWRITE_TAC [STAR_COMM]
   \\ REWRITE_TAC [ONCE_REWRITE_RULE [STAR_COMM] SPEC_def,RUN_def,GSYM STAR_ASSOC]
-  \\ REWRITE_TAC [SEP_CLAUSES,SEP_HIDE_def]
-  \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC []);
+  \\ SIMP_TAC std_ss [SEP_REFINE_HIDE] \\ METIS_TAC []);
 
 val SPEC_PRE_EXISTS = store_thm("SPEC_PRE_EXISTS",
   ``!x p c q. (!y:'var. SPEC x (p y) c q) = SPEC x (SEP_EXISTS y. p y) c q``,
   INIT_TAC \\ REPEAT STRIP_TAC \\ ONCE_REWRITE_TAC [STAR_COMM]
-  \\ SIMP_TAC std_ss [SEP_CLAUSES,SEP_HIDE_def,SPEC_def,RUN_def,SEP_CLAUSES]
-  \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC []);
+  \\ SIMP_TAC std_ss [GSYM (RW [SEP_CLAUSES,SEP_HIDE_def] (Q.SPECL [`x`,`emp`] SPEC_HIDE_PRE))]);
 
 val SEP_HIDE_INTRO = prove(
   ``!p q x s. SEP_IMP (p * q x) (p * ~ q)``,
@@ -173,7 +205,8 @@ val SPEC_HIDE_POST = store_thm("SPEC_HIDE_POST",
 val SPEC_MOVE_COND = store_thm("SPEC_MOVE_COND",
   ``!x p c q g. SPEC x (p * cond g) c q = g ==> SPEC x p c q``,
   INIT_TAC \\ Cases_on `g` 
-  \\ REWRITE_TAC [SPEC_def,RUN_def,SEP_CLAUSES] \\ REWRITE_TAC [SEP_F_def]);
+  \\ REWRITE_TAC [SPEC_def,RUN_def,SEP_CLAUSES,SEP_REFINE_def]
+  \\ REWRITE_TAC [SEP_F_def]);
 
 val SPEC_DUPLICATE_COND = store_thm("SPEC_DUPLICATE_COND",
   ``!x p c q g. SPEC x (p * cond g) c q ==> SPEC x (p * cond g) c (q * cond g)``,

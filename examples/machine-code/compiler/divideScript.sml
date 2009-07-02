@@ -244,6 +244,18 @@ val x86_div_mod_thm = let
   val th = REWRITE_RULE [lemma] th 
   val imp = Q.SPECL [`ecx`,`eax`] arm_div_thm
   val th = DISCH ((cdr o car o concl) imp) th  
+  val lemma = prove(
+    ``ecx <> 0x0w ==> x86_div_mod_pre (eax,ecx)``,
+    ASSUME_TAC (Q.SPEC `eax` (INST_TYPE [``:'a``|->``:32``] w2n_lt))
+    THEN Q.SPEC_TAC (`ecx`,`ecx`) THEN Cases_word
+    THEN FULL_SIMP_TAC (std_ss++SIZES_ss) [LET_DEF,x86_div_mod_def,w2n_n2w,n2w_11]
+    THEN STRIP_TAC THEN `0 < n` by DECIDE_TAC
+    THEN IMP_RES_TAC DIV_LT_X
+    THEN ASM_SIMP_TAC std_ss []
+    THEN Cases_on `n`
+    THEN FULL_SIMP_TAC std_ss [MULT_CLAUSES]
+    THEN DECIDE_TAC)
+  val th = SIMP_RULE std_ss [lemma,SEP_CLAUSES] th
   val th = REWRITE_RULE [GSYM progTheory.SPEC_MOVE_COND] th   
   in th end;
 

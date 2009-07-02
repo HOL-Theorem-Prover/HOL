@@ -43,8 +43,8 @@ sig
 
   datatype assign_type = 
     ASSIGN_EXP of int * assign_exp_type        (* register := expression *)
-  | ASSIGN_STACK of int * int                  (* stack[offset] := register *)
-  | ASSIGN_MEMORY of access_type * assign_address_type * int 
+  | ASSIGN_STACK of int * assign_x_type        (* stack[offset] := x *)
+  | ASSIGN_MEMORY of access_type * assign_address_type * assign_x_type
                                                (* mem[address] := register *)
   | ASSIGN_OTHER of term * term                (* lhs := rhs *);
 
@@ -56,6 +56,7 @@ sig
   datatype guard_type =
     GUARD_NOT of guard_type
   | GUARD_COMPARE of int * guard_compare_type * assign_x_type  (* reg, cmp, reg/const *)
+  | GUARD_EQUAL_BYTE of assign_address_type * Arbnum.num 
   | GUARD_TEST of int * assign_x_type
   | GUARD_OTHER of term;
 

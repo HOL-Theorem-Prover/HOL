@@ -3,9 +3,10 @@ struct
  
 open HolKernel boolLib bossLib;
 open wordsLib stringLib listSyntax simpLib listTheory wordsTheory;
-open opmonTheory bit_listTheory combinTheory;
+open opmonTheory bit_listTheory combinTheory ConseqConv;
 
-open x86_Theory x86_seq_monadTheory x86_opsemTheory x86_astTheory x86_coretypesTheory;
+open x86_Theory x86_seq_monadTheory x86_opsemTheory x86_astTheory; 
+open x86_coretypesTheory x86_icacheTheory;
 
 
 (* decoder *)
@@ -25,27 +26,35 @@ fun raw_x86_decode s = let
   val tm = (snd o dest_eq o concl o EVAL) tm
   val th = EVAL (mk_comb(``x86_decode``,tm))
   val _  = computeLib.add_funs [th]
+  val (th,l) = let
+    val x = find_term (can (match_term ``bits2num xs``)) (concl th) 
+    val thi = Q.INST [`w`|->`imm32`] w2bits_word32
+    val i = fst (match_term (snd (dest_comb x)) ((snd o dest_eq o concl o SPEC_ALL) thi))
+    val th = REWRITE_RULE [GSYM thi] (INST i th)
+    val th = REWRITE_RULE [bits2num_w2bits,n2w_w2n] th
+    in (th,l+4) end handle e => (th,l)
+  val tm = (snd o dest_comb o fst o dest_eq o concl) th
   in (th,tm,l) end;
 
 fun x86_decode s = let
   val (th,tm,l) = raw_x86_decode s
   val th = MATCH_MP X86_NEXT_THM th
   val th = SIMP_RULE std_ss [LENGTH] th  
-  val th = nTimes l (SIMP_RULE std_ss [EVERY_DEF] o ONCE_REWRITE_RULE [XREAD_MEM_BYTES_def]) th
+  val th = nTimes l (SIMP_RULE std_ss [EVERY_DEF] o ONCE_REWRITE_RULE [XREAD_INSTR_BYTES_def]) th
   fun assums i n = 
     if i = 0 then [] else 
       subst [``n:num``|->numSyntax.term_of_int n]
-       ``XREAD_MEM (XREAD_EIP s + n2w n) s = SOME (b2w I (TAKE 8 (DROP (8 * n) t)))`` :: assums (i-1) (n+1)
+       ``XREAD_INSTR (XREAD_EIP s + n2w n) s = SOME (b2w I (TAKE 8 (DROP (8 * n) t)))`` :: assums (i-1) (n+1)
   val th = foldr (uncurry DISCH) th (assums l 0)
   val th = SIMP_RULE std_ss [WORD_ADD_0,GSYM WORD_ADD_ASSOC,word_add_n2w] th
   val th = INST [``t:bool list``|->tm] th
   val b2w_ss = eval_term_ss "b2w" ``(TAKE n t):bool list``
   val w2bits_ss = eval_term_ss "w2bits" ``w2bits ((b2w I x):word8):bool list``
   val th = SIMP_RULE (std_ss++b2w_ss) [FOLDR,MAP] th
-  val th = SIMP_RULE (std_ss++w2bits_ss) [FOLDR,MAP,APPEND,CONS_11] th
+  val th = REWRITE_RULE [w2bits_b2w_word32,APPEND,CONS_11,COLLECT_BYTES_n2w_bits2num] th
   val th = nTimes l UNDISCH th
   val th = nTimes 20 (SIMP_RULE std_ss [EVERY_DEF,GSYM WORD_ADD_ASSOC,word_add_n2w] o 
-                      ONCE_REWRITE_RULE [XREAD_MEM_BYTES_def]) th
+                      ONCE_REWRITE_RULE [XREAD_INSTR_BYTES_def]) th
   val th = SIMP_RULE std_ss [MAP,FOLDR,GSYM WORD_ADD_ASSOC,word_add_n2w,EVERY_DEF] th
   val th = REWRITE_RULE [GSYM AND_IMP_INTRO,w2bits_EL] th
   fun inst_one th = let
@@ -56,18 +65,26 @@ fun x86_decode s = let
   val th = REWRITE_RULE [AND_IMP_INTRO,CONJ_ASSOC] th
   val th = ONCE_REWRITE_RULE [CONJ_COMM] th
   val th = REWRITE_RULE [GSYM CONJ_ASSOC,GSYM AND_IMP_INTRO] th
+  val any_b2w_ss = eval_term_ss "any_b2w" ``(b2w I xs):'a word``
+  val th = SIMP_RULE (std_ss++any_b2w_ss) [] th    
   in th end handle e => (print "  Decoding failed.\n" ; raise e);
 
 
 (* one step symbolic simulation *)
 
-val else_none_mem_lemma = (UNDISCH o SPEC_ALL) x86_else_none_mem_lemma
+val else_none_read_mem_lemma = (UNDISCH o SPEC_ALL) x86_else_none_read_mem_lemma
+val else_none_write_mem_lemma = (UNDISCH o SPEC_ALL) x86_else_none_write_mem_lemma
 val else_none_eflag_lemma = (UNDISCH o SPEC_ALL) x86_else_none_eflag_lemma
-val else_none_conv1 = (fst o dest_eq o concl) else_none_mem_lemma 
-val else_none_conv2 = (fst o dest_eq o concl) else_none_eflag_lemma
+val else_none_assert_lemma = (UNDISCH o SPEC_ALL) option_apply_assertT
+val else_none_conv1 = (fst o dest_eq o concl) else_none_read_mem_lemma 
+val else_none_conv2 = (fst o dest_eq o concl) else_none_write_mem_lemma 
+val else_none_conv3 = (fst o dest_eq o concl) else_none_eflag_lemma
+val else_none_conv4 = (fst o dest_eq o concl) else_none_assert_lemma
 fun else_none_conv tm = let
-  val ((i,t),th) = (match_term else_none_conv1 tm, else_none_mem_lemma) handle HOL_ERR _ =>
-                   (match_term else_none_conv2 tm, else_none_eflag_lemma) 
+  val ((i,t),th) = (match_term else_none_conv1 tm, else_none_read_mem_lemma) handle HOL_ERR _ =>
+                   (match_term else_none_conv2 tm, else_none_write_mem_lemma) handle HOL_ERR _ =>
+                   (match_term else_none_conv3 tm, else_none_eflag_lemma) handle HOL_ERR _ =>
+                   (match_term else_none_conv4 tm, else_none_assert_lemma) 
   in INST i (INST_TYPE t th) end;
 
 val ss = rewrites [x86_exec_def, XREAD_REG_def, XREAD_EFLAG_def,
@@ -85,7 +102,8 @@ val ss = rewrites [x86_exec_def, XREAD_REG_def, XREAD_EFLAG_def,
   write_SF_def, write_logical_eflags_def, x86_exec_pop_def,
   x86_exec_pop_eip_def, write_arith_eflags_except_CF_def,
   write_arith_eflags_def, add_with_carry_out_def,
-  sub_with_borrow_out_def, write_arith_result_def,
+  clear_icache_seq_def, sub_with_borrow_out_def,
+  write_arith_result_def, clear_icache_def,
   write_arith_result_no_CF_def, write_arith_result_no_write_def,
   write_logical_result_def, write_logical_result_no_write_def,
   write_binop_def, write_monop_def, read_cond_def, read_reg_seq_def,
@@ -97,11 +115,12 @@ val ss = rewrites [x86_exec_def, XREAD_REG_def, XREAD_EFLAG_def,
   if_some_lemma, XREAD_CLAUSES, call_dest_from_ea_def,
   get_ea_address_def, erase_eflags_def, write_result_erase_eflags_def,
   word_signed_overflow_add_def, word_signed_overflow_sub_def]
-
+  
 fun x86_step s = let
   val th = x86_decode s
   val tm = (fst o dest_eq o fst o dest_imp o concl) th
-  val th1 = SIMP_CONV (std_ss++ss++wordsLib.SIZES_ss) [x86_execute_def] tm
+  val th1 = SIMP_CONV (std_ss++ss++wordsLib.SIZES_ss) 
+              [x86_execute_def,Xrm_distinct,Xrm_11,Xreg_distinct] tm
   fun cc th = CONV_RULE (ONCE_DEPTH_CONV else_none_conv) th
   fun f th = (DISCH_ALL o CONV_RULE (RAND_CONV (SIMP_CONV std_ss [pull_if_lemma])) o 
               UNDISCH_ALL o SIMP_RULE (std_ss++ss) [LET_DEF,Xreg_distinct,Xeflags_distinct] o 
@@ -111,14 +130,32 @@ fun x86_step s = let
   val th1 = SIMP_RULE (std_ss++ss) [Xreg_distinct, Xeflags_distinct] th1
   val th1 = DISCH_ALL (MATCH_MP th (UNDISCH_ALL th1))
   val th1 = REWRITE_RULE [AND_IMP_INTRO,GSYM CONJ_ASSOC] (DISCH_ALL th1)
+  val th1 = REWRITE_RULE [GSYM XREAD_MEM2_WORD_def,GSYM XWRITE_MEM2_WORD_def] th1
+  val th1 = STRENGTHEN_CONSEQ_CONV_RULE 
+    (CONSEQ_REWRITE_CONV ([],[CAN_XREAD_XWRITE_THM],[])) th1
+    handle UNCHANGED => th1
+  val th1 = SIMP_RULE bool_ss [GSYM AND_IMP_INTRO,pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY] th1
+  val th1 = SIMP_RULE bool_ss [AND_IMP_INTRO,GSYM CONJ_ASSOC] th1
   in th1 end;
 
 
 (*
 
+  open x86_encodeLib;
+
   (* works *)
 
+  val th = x86_step (x86_encode "dec eax")
+  val th = x86_step "E9" (* example of partial decoder evaluation *)
+  val th = x86_step (x86_encode "mov [esi],45")
+  val th = x86_step (x86_encode "mov BYTE [eax],-100")
+  val th = x86_step (x86_encode "div esi")
+  val th = x86_step (x86_encode "jmp esi")
+  val th = x86_step (x86_encode "xchg [ebx],eax")
+  val th = x86_step (x86_encode "mov BYTE [esi],edx");
+  val th = x86_step "0FB63E";          (* mov_byte edi,[esi] *)
   val th = x86_step "0538000000";      (* add eax,56 *)
+  val th = x86_step "8B3E";            (* mov edi,[esi] *)
   val th = x86_step "810037020000";    (* add dword [eax],567 *)
   val th = x86_step "010B";            (* add [ebx], ecx *)
   val th = x86_step "0119";            (* add [ecx], ebx *)
@@ -179,18 +216,13 @@ fun x86_step s = let
   val th = x86_step "0FC11E";          (* xadd [esi],ebx *)
   val th = x86_step "93";              (* xchg eax, ebx *)
   val th = x86_step "8731";            (* xchg [ecx], esi *)
-
-  val th = x86_step "883E";            (* mov_byte [esi],edi *)
-  val th = x86_step "8A3E";            (* mov_byte edi,[esi] *)
-
   val th = x86_step "F720";            (* mul dword [eax] *)
   val th = x86_step "F7F6";            (* div esi *)
 
-  (* no sure *)
+  (* not sure *)
 
   val th = x86_step "60";              (* pushad *)
   val th = x86_step "61";              (* popad *)
-
 
 *)
 

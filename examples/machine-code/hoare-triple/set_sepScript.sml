@@ -13,6 +13,7 @@ val one_def    = Define `one x = \s. (s = {x})`;
 val emp_def    = Define `emp = \s. (s = {})`;
 val cond_def   = Define `cond c = \s. (s = {}) /\ c`;
 val SEP_F_def  = Define `SEP_F s = F`;
+val SEP_T_def  = Define `SEP_T s = T`;
 val SPLIT_def  = Define `SPLIT (s:'a set) (u,v) = (u UNION v = s) /\ DISJOINT u v`;
 val STAR_def   = Define `STAR p q = (\s. ?u v. SPLIT s (u,v) /\ p u /\ q v)`;
 val SEP_EQ_def = Define `SEP_EQ x = \s. s = x`;
