@@ -38,8 +38,8 @@ then
     exit 1
 fi
 
-repos=$homesvn/$name
-
+repos=$homesvn/$origname
+shortname=$(basename $origname)
 name=${origname////-}
 
 localholdir="`dirname $0`/.."
@@ -164,7 +164,7 @@ do
     then :
     else echo Build failed - see $texlogs/$man_name.log ; exit 1
     fi
-    mv $lcname.pdf /tmp/$name-$lcname.pdf
+    mv $lcname.pdf /tmp/$shortname-$lcname.pdf
 done
 
 echo Removing Buddy documentation from distribution
@@ -201,5 +201,5 @@ mv svn-export-result hol
 echo "Creating tar file"
 tar czf $name.tar.gz hol
 
-mv hol/doc/`basename $origname`.release.html .
+mv hol/doc/$shortname.release.html .
 
