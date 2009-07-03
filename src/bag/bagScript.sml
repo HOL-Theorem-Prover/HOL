@@ -2027,8 +2027,8 @@ val BAG_GEN_PROD_UNION = Q.store_thm
     Taken from Isabelle development of same.
    ---------------------------------------------------------------------- *)
 
-val _ = temp_overload_on ("+", ``BAG_UNION``)
-val _ = temp_overload_on ("-", ``BAG_DIFF``)
+val _ = overload_on ("+", ``BAG_UNION``)
+val _ = overload_on ("-", ``BAG_DIFF``)
 
 (* The 1 is from the fact that is one step of the relation, other uses
    might want to take the transitive closure of this. *)
@@ -2157,9 +2157,38 @@ val mlt1_all_accessible = store_thm(
     SRW_TAC [][mlt1_def]
   ]);
 
-val WF_mult1 = store_thm(
-  "WF_mult1",
+val WF_mlt1 = store_thm(
+  "WF_mlt1",
   ``WF R ==> WF (mlt1 R)``,
   METIS_TAC [relationTheory.WF_EQ_WFP, mlt1_all_accessible]);
+
+val TC_mlt1_FINITE_BAG = store_thm(
+  "TC_mlt1_FINITE_BAG",
+  ``!b1 b2. TC (mlt1 R) b1 b2 ==> FINITE_BAG b1 /\ FINITE_BAG b2``,
+  HO_MATCH_MP_TAC relationTheory.TC_INDUCT THEN SRW_TAC [][] THEN
+  FULL_SIMP_TAC (srw_ss()) [mlt1_def]);
+
+
+val TC_mlt1_UNION2_I = store_thm(
+  "TC_mlt1_UNION2_I",
+  ``!b2 b1. FINITE_BAG b2 /\ FINITE_BAG b1 /\ b2 <> {||} ==>
+         (mlt1 R)^+ b1 (b1 + b2)``,
+  Q_TAC SUFF_TAC
+        `!b2. FINITE_BAG b2 ==> !b1. FINITE_BAG b1 /\ b2 <> {||} ==>
+              (mlt1 R)^+ b1 (b1 + b2)` THEN1 METIS_TAC [] THEN
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][] THEN
+  Cases_on `b2 = {||}` THENL [
+    SRW_TAC [][] THEN
+    MATCH_MP_TAC relationTheory.TC_SUBSET THEN
+    SRW_TAC [][mlt1_def] THEN METIS_TAC [BAG_UNION_EMPTY, NOT_IN_EMPTY_BAG],
+
+    `(mlt1 R)^+ b1 (b1 + b2)` by METIS_TAC [] THEN
+    MATCH_MP_TAC (CONJUNCT2 (SPEC_ALL relationTheory.TC_RULES)) THEN
+    Q.EXISTS_TAC `b1 + b2` THEN SRW_TAC [][] THEN
+    MATCH_MP_TAC relationTheory.TC_SUBSET THEN
+    SRW_TAC [][mlt1_def] THEN
+    MAP_EVERY Q.EXISTS_TAC [`e`, `{||}`, `b1 + b2`] THEN SRW_TAC [][] THEN
+    METIS_TAC [EL_BAG, BAG_INSERT_UNION, COMM_BAG_UNION, ASSOC_BAG_UNION]
+  ]);
 
 val _ = export_theory();
