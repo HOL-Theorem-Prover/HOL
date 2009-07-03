@@ -331,6 +331,7 @@ local
     | #"-" :: #"-" :: #">" :: l         => h2t l (s ^ token_string "Longmap")
     | #"=" :: #"=" :: #"=" :: #">" :: l => h2t l (s ^ token_string "Longimp")
     | #"-" :: #">" :: l                 => h2t l (s ^ token_string "Map")
+    | #"<" :: #"-" :: l                 => h2t l (s ^ token_string "Leftmap")
     | #"=" :: #"=" :: #">" :: l         => h2t l (s ^ token_string "Imp")
     | #"=" :: #">" :: l                 => h2t l (s ^ token_string "Imp")
     | #"|" :: #"-" :: l                 => h2t l (s ^ token_string "Turnstile")
