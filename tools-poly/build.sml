@@ -260,7 +260,7 @@ fun build_dir (dir, regulardir) = let
   val _ = if do_selftests >= regulardir then ()
           else raise BuildExit
   val _ = OS.FileSys.chDir dir
-  val _ = print ("Working in directory "^dir^"\n")
+  val _ = print ("Building directory "^dir^"\n")
 in
   case #file(OS.Path.splitDirFile dir) of
     "muddyC" => let
@@ -346,8 +346,9 @@ fun compile (systeml : string list -> OS.Process.status) exe obj : unit =
             "-lpolymain", "-lpolyml"];
    OS.FileSys.remove obj);
 
-fun make_exe (name:string) (POLY : string) (target:string) : unit =
- let val dir = OS.FileSys.getDir()
+fun make_exe (name:string) (POLY : string) (target:string) : unit = let
+  val _ = print ("Building "^target^"\n")
+  val dir = OS.FileSys.getDir()
  in
    OS.FileSys.chDir (fullPath [HOLDIR, "tools-poly"]);
    Systeml.system_ps (POLY ^ " < " ^ name);
@@ -355,16 +356,13 @@ fun make_exe (name:string) (POLY : string) (target:string) : unit =
    OS.FileSys.chDir dir
  end
 
-fun buildDir symlink s = let
-  val _ = print ("Building "^ #1 s^"\n")
-in
+fun buildDir symlink s =
   if #1 s = fullPath [HOLDIR, "bin/hol.bare"] then
     (make_exe "builder0.ML" (#1 (which_hol ())) "hol.builder0"; phase := Bare)
-  else if #1 s = fullPath [HOLDIR, "bin/hol"] then 
+  else if #1 s = fullPath [HOLDIR, "bin/hol"] then
     (make_exe "builder.ML" (#1 (which_hol ())) "hol.builder"; phase := Full)
-  else 
+  else
     (build_dir s; upload(s,SIGOBJ,symlink))
-end
 
 fun do_sharing_table_transfer () = let
   fun expk s = fullPath [HOLDIR, "src/experimental-kernel", s]
