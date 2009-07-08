@@ -1965,7 +1965,7 @@ val WORD_SUB = store_thm("WORD_SUB",
     RW_TAC int_ss [sw2i_sub,word_encode_def]);
 
 val WORD_NEG = store_thm("WORD_NEG",
-    ``!a. word_encode (:'a) ($- a) = 
+    ``!a. word_encode (:'a) (- a) = 
     	  int (extend (~ (sw2i a)) (dimindex (:'a)))``,
     RW_TAC int_ss [word_encode_def,sw2i_twocomp]);
 
