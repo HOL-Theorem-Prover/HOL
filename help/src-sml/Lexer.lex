@@ -2,13 +2,13 @@ type pos = (int * int);
 type arg = int;
 open Tokens;
 type lexresult  = (svalue,pos) token
-exception Impossible of string;   
-fun fatalError s = raise(Impossible s);    
+exception Impossible of string;
+fun fatalError s = raise(Impossible s);
 
 fun mkTok f text pos line =
   (f text, (pos - String.size text, line), (pos, line));
 
-fun mkMtTok text pos line = 
+fun mkMtTok text pos line =
   ((pos - String.size text, line), (pos, line));
 
 
@@ -73,6 +73,7 @@ List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
   ("type",         TYPE),
   ("val",          VAL),
   ("while",        WHILE),
+  ("where",        WHERE),
   ("with",         WITH),
   ("withtype",     WITHTYPE),
   ("#",            HASH),
@@ -84,14 +85,14 @@ List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
   ("*",            STAR)
 ];
 (*
-local (* Make sure that strings are shared (interned); this saves space 
+local (* Make sure that strings are shared (interned); this saves space
          when writing to disk: *)
     val intern_table = (Hasht.new 123 : (string, string) Hasht.t);
-in 
+in
     fun share s =
        case Hasht.peek intern_table s of
            NONE    => (Hasht.insert intern_table s s; s)
-         | SOME s' => s'  
+         | SOME s' => s'
 end
 *)
 fun share s = s;
@@ -128,7 +129,7 @@ exception LexicalError of string * string * int (* (message, loc1, loc2) *)
 fun lexError msg text pos line =
   raise (LexicalError (msg, text, line))
 
-fun eof commentDepth = 
+fun eof commentDepth =
   if not (commentDepth = 0) then
     lexError "Unclosed comment" "" ~1 (!savedLexemeStart)
   else
@@ -184,14 +185,13 @@ id=[A-Za-z][A-Za-z0-9_']* | [-!%&$#+/:<=>?@~^|*\\]+;
 stringchar=(\\["abtnvfr\\])|(\\[ \t\n\r]+\\)|(\\\^[@-_])|(\\[0-9][0-9][0-9])|[^\\\n\r\127\255\001-\026];
 
 %%
-
-<INITIAL>[\ \n\013\t]+ => 
+<INITIAL>[\ \t\n]+ =>
   ( continue () );
 <INITIAL>"(*" =>
   ( (savedLexemeStart:=(!yylineno); YYBEGIN Comment; lex 1 ()) );
 <INITIAL>"*)" =>
   ( lexError "unmatched comment bracket" yytext yypos (!yylineno) );
-<INITIAL>'[A-Za-z0-9_']+ => 
+<INITIAL>'[A-Za-z0-9_']+ =>
   ( TYVAR (mkTok (fn x => x) yytext yypos (!yylineno)) );
 <INITIAL>0 =>
   ( ZDIGIT (mkTok (fn x => 0) yytext yypos (!yylineno)) );
@@ -251,12 +251,12 @@ stringchar=(\\["abtnvfr\\])|(\\[ \t\n\r]+\\)|(\\\^[@-_])|(\\[0-9][0-9][0-9])|[^\
 <INITIAL>. =>
   ( lexError "ill-formed token" yytext yypos (!yylineno) );
 
-<Comment>"(*" => 
+<Comment>"(*" =>
   ( (lex (commentDepth + 1) ()) );
 <Comment>"*)" =>
   ( (if commentDepth = 1 then YYBEGIN INITIAL else ()); lex (commentDepth - 1) ());
 <Comment>[^*()]+ =>
   ( continue () );
-<Comment>. => 
+<Comment>. =>
   ( continue () );
 

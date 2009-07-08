@@ -40,7 +40,7 @@ fun mkIdInfo (loc, qualid) withOp =
 
 type TyVar = IdInfo;
 
-type 'a Row = (Lab * 'a) list; 
+type 'a Row = (Lab * 'a) list;
 
 datatype Ty' =
     TYVARty of TyVar
@@ -52,7 +52,7 @@ withtype Ty = Location * Ty';
 fun tupleTy [t] = t
   | tupleTy ts =
       let open List
-	  val loc = xxLR (hd ts) (last ts) 
+	  val loc = xxLR (hd ts) (last ts)
       in
         (loc, RECty (mkTupleRow ts))
       end
@@ -86,16 +86,17 @@ datatype Spec' =
   | EXCEPTIONspec of ExDesc list
   | LOCALspec of Spec * Spec
   | OPENspec of string list
-  | INCLUDEspec of string list
+  | INCLUDEspecs of string list
+  | INCLUDEspec of SigExp
   | EMPTYspec
   | SEQspec of Spec * Spec
-  | STRUCTUREspec of ModDesc list
+  | STRUCTUREspec of ModDesc
 and ModDesc = MODDESCmoddesc of ModId * SigExp
 and SigExp' = SIGIDsigexp of SigId
 withtype Spec = Location * Spec'
-and SigExp = Location * SigExp';
+and SigExp = Location * SigExp' * TypBind list;
 
-datatype Sig = 
+datatype Sig =
     NamedSig of {locsigid : LocString, specs : Spec list}
   | AnonSig of Spec list;
 

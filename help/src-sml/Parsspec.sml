@@ -4,21 +4,24 @@
 
 structure Parsspec = struct
 
-open List 
+open List
 
 structure SMLLrVals =
   SMLLrValsFun(structure Token = LrParser.Token);
-structure SMLLex = 
+structure SMLLex =
   SMLLexFun(structure Tokens = SMLLrVals.Tokens);
 structure SMLParser =
   JoinWithArg(structure ParserData = SMLLrVals.ParserData
               structure Lex=SMLLex
               structure LrParser=LrParser);
-  
-fun parseSpec is =
-  let val lexer = SMLParser.makeLexer (fn n => TextIO.inputN (is, n)) 0 in
-    #1 (SMLParser.parse(15, lexer, (fn _ => ()), ()))
-  end;
+
+fun parseSpec is = let
+  val lexer = SMLParser.makeLexer (fn n => TextIO.inputN (is, n)) 0
+  fun print_error (s,(_, i:int),_) =
+      TextIO.output(TextIO.stdErr, Int.toString (i+1) ^ ": " ^ s ^ "\n")
+in
+  #1 (SMLParser.parse(15, lexer, print_error, ()))
+end
 
 fun processSpec is str (((pos1, pos2), spec), res) =
     let open Asynt Database
@@ -52,7 +55,8 @@ fun processSpec is str (((pos1, pos2), spec), res) =
 	  | EXCEPTIONspec eds           => foldl exdesc res eds
 	  | LOCALspec (spec1, spec2)    => processSpec is str (spec2, res)
 	  | OPENspec strs               => res
-	  | INCLUDEspec strs            => res
+	  | INCLUDEspecs strs           => res
+	  | INCLUDEspec sigexp          => res
 	  | EMPTYspec                   => res
 	  | SEQspec (spec1, spec2)      =>
 		processSpec is str (spec2, processSpec is str (spec1, res))
@@ -62,7 +66,7 @@ fun processSpec is str (((pos1, pos2), spec), res) =
 fun parseAndProcess dir str res =
     let val basefile = OS.Path.joinBaseExt {base = str, ext = SOME "sig"}
         val filename = OS.Path.joinDirFile {dir=dir, file = basefile}
-	(* val _ = print("Parsing " ^ basefile ^ " ... "); *)
+	(* val _ = print("Parsing " ^ basefile ^ " ... ") *)
 	val resLength = length res
 	val is        = TextIO.openIn filename
 	val specs     = case parseSpec is
