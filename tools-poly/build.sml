@@ -30,11 +30,14 @@ val DYNLIB = Systeml.DYNLIB
    ---------------------------------------------------------------------- *)
 
 
-(* use the experimental kernel? *)
+(* use the experimental kernel? - Yes!  Poly bug prevents use of standard
+   kernel *)
 val (use_expk, cmdline) =   let
-  val (expks, rest) = List.partition (fn e => e = "-expk") cmdline
+  val _ = print "** Using the experimental kernel (standard kernel \
+                \doesn't work with Poly/ML) **\n"
+  val (_, rest) = List.partition (fn e => e = "-expk") cmdline
 in
-  (not (null expks), rest)
+  (true, rest)
 end
 
 (* do self-tests? and to what level *)
