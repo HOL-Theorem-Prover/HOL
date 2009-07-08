@@ -15,7 +15,6 @@ fun useB f =
 val _ = useB "Flash";
 val _ = useB "Symbolic";
 val _ = useB "ParseDoc";
-val _ = useB "../../sigobj/Systeml";
 val _ = use "Doc2Tex.sml";
 
 val _ = PolyML.shareCommonData Doc2Tex.main;
