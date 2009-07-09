@@ -57,7 +57,7 @@ Start with </p>
 </pre>
 <p> Continue with </p>
 <pre>
-         bin/build -expk
+         bin/build
 </pre>
 <p>Most of the features of the Moscow ML implementation should work in
 the Poly/ML version, but as it is still rather young, users may
@@ -584,7 +584,18 @@ type <code>make</code> in <code>examples/muddy/muddyC</code>.</li>
 <li> Do <code>Holmake</code> in <code>examples/muddy</code>.</li>
 <li> Do <code>Holmake</code> in <code>examples/HolBdd</code>.</li>
 <li> Do <code>Holmake</code> in <code>examples/HolCheck</code>.</li>
-</ol></li>
+</ol>
+
+<p> On 64-bit Unices, users report having to add
+the <code>-fPIC</code> option to the <code>CFLAGS</code> variable
+at</p>
+<ul>
+<li> <code>src/muddy/muddyC/Makefile</code>
+     <li> <code>src/muddy/muddyC/buddy/config</code>
+</ul>
+
+
+</li>
 
 <li> <p>The <code>FIRSTN</code> and <code>BUTFIRSTN</code> constants from
 the theory <code>rich_list</code> are now defined in the
