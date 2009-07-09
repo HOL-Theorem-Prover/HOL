@@ -9,8 +9,6 @@ val _ = new_theory "bag_emit";
 (* to re-create the functional aspect, via BAG_VAL.                          *)
 (*---------------------------------------------------------------------------*)
 
-val hol_ss = mnUtils.mn_ss;
-
 fun ARITH q = EQT_ELIM (numLib.ARITH_CONV (Parse.Term q));
 
 val BAG_VAL_DEF = Q.new_definition
@@ -21,8 +19,8 @@ val BAG_VAL_THM = Q.prove
   (!x b e. BAG_VAL (BAG_INSERT e b) x =
      if (e=x) then 1 + BAG_VAL b x else BAG_VAL b x)`,
  CONJ_TAC THENL
- [RW_TAC mnUtils.mn_ss [EMPTY_BAG,BAG_VAL_DEF],
-  RW_TAC mnUtils.mn_ss [BAG_VAL_DEF] THEN METIS_TAC [BAG_VAL_DEF,BAG_INSERT]]);
+ [RW_TAC arith_ss [EMPTY_BAG,BAG_VAL_DEF],
+  RW_TAC arith_ss [BAG_VAL_DEF] THEN METIS_TAC [BAG_VAL_DEF,BAG_INSERT]]);
 
 val BAG_IN_EQNS = Q.prove
 (`(!x. BAG_IN x {||} = F) /\
@@ -31,7 +29,7 @@ METIS_TAC [NOT_IN_EMPTY_BAG,BAG_IN_BAG_INSERT]);
 
 val BAG_INN_EQN = Q.prove
 (`BAG_INN e n b = BAG_VAL b e >= n`,
- RW_TAC mnUtils.mn_ss [BAG_VAL_DEF, BAG_INN]);
+ RW_TAC arith_ss [BAG_VAL_DEF, BAG_INN]);
 
 val BAG_DIFF_EQNS = Q.store_thm
 ("BAG_DIFF_EQNS",
@@ -41,8 +39,8 @@ val BAG_DIFF_EQNS = Q.store_thm
             if x = y then b else BAG_INSERT x (BAG_DIFF b {|y|})) /\
   (!(b1:'a bag) y (b2:'a bag).
       BAG_DIFF b1 (BAG_INSERT y b2) = BAG_DIFF (BAG_DIFF b1 {|y|}) b2)`,
- RW_TAC hol_ss [BAG_DIFF,FUN_EQ_THM,BAG_INSERT,EMPTY_BAG] THEN
- RW_TAC hol_ss[]);
+ RW_TAC arith_ss [BAG_DIFF,FUN_EQ_THM,BAG_INSERT,EMPTY_BAG] THEN
+ RW_TAC arith_ss []);
 
 val BAG_INTER_EQNS = Q.store_thm
 ("BAG_INTER_EQNS",
@@ -53,13 +51,13 @@ val BAG_INTER_EQNS = Q.store_thm
         if BAG_IN x b2
            then BAG_INSERT x (BAG_INTER b1 (BAG_DIFF b2 {|x|}))
            else BAG_INTER b1 b2)`,
- RW_TAC hol_ss [BAG_INTER, EMPTY_BAG,FUN_EQ_THM,BAG_INSERT,BAG_DIFF]
- THEN RW_TAC hol_ss []
- THEN FULL_SIMP_TAC hol_ss []
- THEN RW_TAC hol_ss []
- THEN FULL_SIMP_TAC hol_ss [BAG_IN, BAG_INN]
+ RW_TAC arith_ss [BAG_INTER, EMPTY_BAG,FUN_EQ_THM,BAG_INSERT,BAG_DIFF]
+ THEN RW_TAC arith_ss []
+ THEN FULL_SIMP_TAC arith_ss []
+ THEN RW_TAC arith_ss []
+ THEN FULL_SIMP_TAC arith_ss [BAG_IN, BAG_INN]
  THEN REPEAT (POP_ASSUM MP_TAC)
- THEN RW_TAC hol_ss []);
+ THEN RW_TAC arith_ss []);
 
 val BAG_MERGE_EQNS = Q.store_thm
 ("BAG_MERGE_EQNS",
@@ -68,9 +66,9 @@ val BAG_MERGE_EQNS = Q.store_thm
   (!x:'a. !b1 b2:'a bag.
          BAG_MERGE (BAG_INSERT x b1) b2 =
              BAG_INSERT x (BAG_MERGE b1 (BAG_DIFF b2 {|x|})))`,
- RW_TAC hol_ss [BAG_MERGE, EMPTY_BAG,FUN_EQ_THM,BAG_INSERT,BAG_DIFF]
- THEN RW_TAC hol_ss []
- THEN FULL_SIMP_TAC hol_ss []);
+ RW_TAC arith_ss [BAG_MERGE, EMPTY_BAG,FUN_EQ_THM,BAG_INSERT,BAG_DIFF]
+ THEN RW_TAC arith_ss []
+ THEN FULL_SIMP_TAC arith_ss []);
 
 val SUB_BAG_EQNS = Q.store_thm
 ("SUB_BAG_EQNS",
@@ -78,13 +76,13 @@ val SUB_BAG_EQNS = Q.store_thm
   (!x:'a. !b1 b2:'a bag.
       SUB_BAG (BAG_INSERT x b1) b2 =
              BAG_IN x b2 /\ SUB_BAG b1 (BAG_DIFF b2 {|x|}))`,
- RW_TAC hol_ss [SUB_BAG_EMPTY,SUB_BAG, BAG_INSERT, BAG_INN,
+ RW_TAC arith_ss [SUB_BAG_EMPTY,SUB_BAG, BAG_INSERT, BAG_INN,
           BAG_IN, BAG_DIFF,EMPTY_BAG, ARITH`!m. 0 >= m = (m=0n)`]
-  THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RW_TAC hol_ss []
-  THEN RW_TAC hol_ss []
-  THEN POP_ASSUM MP_TAC THEN RW_TAC hol_ss [] THENL
+  THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RW_TAC arith_ss []
+  THEN RW_TAC arith_ss []
+  THEN POP_ASSUM MP_TAC THEN RW_TAC arith_ss [] THENL
   [FULL_SIMP_TAC bool_ss [ARITH `a+1n >= n = a >=n \/ (n=a+1)`]
-   THENL [RES_TAC THEN FULL_SIMP_TAC hol_ss [],
+   THENL [RES_TAC THEN FULL_SIMP_TAC arith_ss [],
          `b1(x) >= n-1` by DECIDE_TAC THEN
          RES_THEN MP_TAC THEN REWRITE_TAC [] THEN DECIDE_TAC],
   RES_THEN MP_TAC THEN ASM_REWRITE_TAC [] THEN DECIDE_TAC]);
@@ -97,7 +95,7 @@ val SET_OF_BAG_EQNS = Q.prove
 (`(SET_OF_BAG ({||}:'a bag) = ({}:'a set)) /\
   (!(x:'a) b. SET_OF_BAG (BAG_INSERT x b) = x INSERT (SET_OF_BAG b))`,
  REWRITE_TAC [SET_OF_BAG_INSERT] THEN
- RW_TAC mnUtils.mn_ss [SET_OF_BAG,EMPTY_BAG,FUN_EQ_THM,NOT_IN_EMPTY_BAG,
+ RW_TAC arith_ss [SET_OF_BAG,EMPTY_BAG,FUN_EQ_THM,NOT_IN_EMPTY_BAG,
                 pred_setTheory.EMPTY_DEF]);
 
 val BAG_OF_SET_EQNS = Q.prove
@@ -106,7 +104,7 @@ val BAG_OF_SET_EQNS = Q.prove
       BAG_OF_SET (x INSERT s) = if x IN s then BAG_OF_SET s
                                  else BAG_INSERT x (BAG_OF_SET s))`,
  RW_TAC bool_ss [SET_OF_EMPTY] THEN
- RW_TAC hol_ss [BAG_OF_SET,FUN_EQ_THM,BAG_INSERT] THEN
+ RW_TAC arith_ss [BAG_OF_SET,FUN_EQ_THM,BAG_INSERT] THEN
  METIS_TAC [pred_setTheory.IN_INSERT]);
 
 val defs =
