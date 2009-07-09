@@ -1,31 +1,34 @@
 %%
 %name SML
 %eop EOF
-%term ABSTYPE | AND | ANDALSO | AS | CASE | DATATYPE | DO | ELSE | END 
-    | EQTYPE | EXCEPTION | FN | FUN | HANDLE | IF | IN | INFIX | INFIXR 
-    | LET | LOCAL | NONFIX | OF | OP | ORELSE | RAISE | REC | SIG | SIGNATURE 
-    | STRUCT | STRUCTURE | THEN | TYPE | VAL | WHILE | WITH | WITHTYPE 
-    | EQUALS | COMMA | ARROW | DARROW | BAR | STAR | HASH | LBRACE | RBRACE 
-    | HASHLBRACKET | LBRACKET | RBRACKET | LPAREN | RPAREN | COLON | SEMICOLON 
-    | UNDERBAR | DOTDOTDOT | OPEN | INCLUDE | PRIM_VAL | PRIM_TYPE 
+%term ABSTYPE | AND | ANDALSO | AS | CASE | DATATYPE | DO | ELSE | END
+    | EQTYPE | EXCEPTION | FN | FUN | HANDLE | IF | IN | INFIX | INFIXR
+    | LET | LOCAL | NONFIX | OF | OP | ORELSE | RAISE | REC | SIG | SIGNATURE
+    | STRUCT | STRUCTURE | THEN | TYPE | VAL | WHILE | WITH | WITHTYPE | WHERE
+    | EQUALS | COMMA | ARROW | DARROW | BAR | STAR | HASH | LBRACE | RBRACE
+    | HASHLBRACKET | LBRACKET | RBRACKET | LPAREN | RPAREN | COLON | SEMICOLON
+    | UNDERBAR | DOTDOTDOT | OPEN | INCLUDE | PRIM_VAL | PRIM_TYPE
     | PRIM_EQTYPE | PRIM_REFTYPE | EOF
-    | ID of string 
-    | QUAL_ID of Asynt.QualifiedIdent 
-    | QUAL_STAR of Asynt.QualifiedIdent 
-    | ZDIGIT of int 
+    | ID of string
+    | QUAL_ID of Asynt.QualifiedIdent
+    | QUAL_STAR of Asynt.QualifiedIdent
+    | ZDIGIT of int
     | NZDIGIT of int
-    | ZPOSINT2 of int 
-    | NZPOSINT2 of int 
-    | NEGINT of int 
+    | ZPOSINT2 of int
+    | NZPOSINT2 of int
+    | NEGINT of int
     | WORD of word
-    | CHAR of char 
-    | REAL of real 
-    | STRING of string 
-    | QUOTEL 
-    | QUOTER of string 
+    | CHAR of char
+    | REAL of real
+    | STRING of string
+    | QUOTEL
+    | QUOTER of string
     | QUOTEM of string
     | TYVAR of string
 
+%keyword AND INCLUDE VAL EXCEPTION WITH WHERE
+
+%verbose
 %right    AND
 %nonassoc DARROW
 %nonassoc BAR
@@ -46,24 +49,24 @@
 %nonterm SigFile of Asynt.Sig
        | Ident of string
        | EqIdent of string
-       | UnitName of string 
        | IdentWithLoc of Asynt.Location * string
        | LocUnitName of Asynt.Location * string
        | ModId of Asynt.Location * string
-       | SigId of Asynt.Location * string
+       | ModId_seq1 of (Asynt.Location * string) list
+       | ModId_seq2 of (Asynt.Location * string) list
        | OpIdent of Asynt.IdInfo
        | OpEqIdent of Asynt.IdInfo
        | TypeIdent of Asynt.IdInfo
        | LongTypeIdent of Asynt.IdInfo
        | TyVar of Asynt.TyVar
-       | UnitName_seq1 of string list
-       | NumLabel of int 
+       | NumLabel of int
        | Arity of int
        | SemiEof of unit
        | Label of Asynt.Lab
        | PrimValBind of Asynt.PrimValBind list
        | AndPrimValBind_opt of Asynt.PrimValBind list
        | TypBind of Asynt.TypBind list
+       | SigModTypBind of Asynt.TypBind list
        | AndTypBind_opt of Asynt.TypBind list
        | TypDesc of Asynt.TypDesc list
        | AndTypDesc_opt of Asynt.TypDesc list
@@ -93,10 +96,10 @@
        | KWSpec_seq of Asynt.Spec list
        | ValDesc of Asynt.ValDesc list
        | AndValDesc_opt of Asynt.ValDesc list
-       | ModDesc_seq1 of Asynt.ModDesc list
-       | AndModDesc_opt of Asynt.ModDesc list
+       | ModDesc of Asynt.ModDesc
        | SigExp of Asynt.SigExp
 %pos (int * int)
+%pure
 %%
 
 Ident :
@@ -121,10 +124,6 @@ EqIdent :
 LocUnitName :
     IdentWithLoc ( IdentWithLoc )
 
-UnitName :
-    Ident       ( Ident )
-  | EQUALS      ( "=" )
-
 TypeIdent :
     ID          ( Asynt.mkIdInfo ((IDleft, IDright), { qual="", id=ID }) false )
 
@@ -134,10 +133,6 @@ LongTypeIdent :
 
 TyVar :
     TYVAR    ( Asynt.mkIdInfo ((TYVARleft, TYVARright), { qual="", id=TYVAR }) false )
-
-UnitName_seq1 :
-    UnitName UnitName_seq1      ( UnitName :: UnitName_seq1 )
-  | UnitName                    ( [UnitName] )
 
 NumLabel :
     NZPOSINT2   ( NZPOSINT2 )
@@ -280,16 +275,19 @@ KWSpec :
   | EQTYPE TypDesc              ( ((EQTYPEleft, TypDescright), Asynt.TYPEDESCspec(Asynt.TRUEequ, TypDesc)) )
   | PRIM_REFTYPE TypDesc        ( ((PRIM_REFTYPEleft, TypDescright), Asynt.TYPEDESCspec(Asynt.REFequ, TypDesc)) )
   | DATATYPE DatBind_0 WithType_opt
-                                ( ((DATATYPEleft, WithType_optright), Asynt.DATATYPEspec(DatBind_0,WithType_opt)) ) 
+                                ( ((DATATYPEleft, WithType_optright), Asynt.DATATYPEspec(DatBind_0,WithType_opt)) )
   | DATATYPE DatBind_n WithType_opt
-                                ( ((DATATYPEleft, WithType_optright), Asynt.DATATYPEspec(DatBind_n,WithType_opt)) ) 
+                                ( ((DATATYPEleft, WithType_optright), Asynt.DATATYPEspec(DatBind_n,WithType_opt)) )
   | DATATYPE TypeIdent EQUALS DATATYPE LongTypeIdent
                                 ( ((DATATYPEleft, LongTypeIdentright), Asynt.DATATYPErepspec(TypeIdent,LongTypeIdent)))
   | EXCEPTION ExDesc            ( ((EXCEPTIONleft, ExDescright), Asynt.EXCEPTIONspec ExDesc) )
   | LOCAL Spec IN Spec END      ( ((LOCALleft, ENDright), Asynt.LOCALspec(Spec1,Spec2)) )
-  | OPEN UnitName_seq1          ( ((OPENleft, UnitName_seq1right), Asynt.OPENspec UnitName_seq1) )
-  | INCLUDE UnitName_seq1       ( ((INCLUDEleft, UnitName_seq1right), Asynt.INCLUDEspec UnitName_seq1) )
-  | STRUCTURE ModDesc_seq1      ( ((STRUCTUREleft, ModDesc_seq1right), Asynt.STRUCTUREspec ModDesc_seq1))
+  | OPEN ModId_seq1          ( ((OPENleft, ModId_seq1right),
+                                Asynt.OPENspec (map #2 ModId_seq1)) )
+  | INCLUDE ModId_seq2       ( ((INCLUDEleft, ModId_seq2right),
+                                Asynt.INCLUDEspecs (map #2 ModId_seq2)) )
+  | INCLUDE SigExp              ( ((INCLUDEleft, SigExpright), Asynt.INCLUDEspec SigExp) )
+  | STRUCTURE ModDesc      ( ((STRUCTUREleft, ModDescright), Asynt.STRUCTUREspec ModDesc))
 
 ValDesc :
     OpEqIdent COLON Ty AndValDesc_opt
@@ -307,20 +305,30 @@ AndTypDesc_opt :
     AND TypDesc         ( TypDesc )
   | (* *)               ( [] )
 
-ModDesc_seq1 :
-    ModId COLON SigExp AndModDesc_opt
-                        ( (Asynt.MODDESCmoddesc(ModId, SigExp )) :: AndModDesc_opt )
+ModDesc :
+    ModId COLON SigExp
+                        ( Asynt.MODDESCmoddesc(ModId, SigExp) )
 
-AndModDesc_opt :
-    AND ModDesc_seq1     ( ModDesc_seq1 )
-  | (* *)                ( [] )
+SigExp :
+     ModId          ((ModIdleft, ModIdright), Asynt.SIGIDsigexp ModId, [])
+   | ModId WHERE SigModTypBind
+                    ((ModIdleft, ModIdright),
+                     Asynt.SIGIDsigexp ModId,
+                     SigModTypBind)
 
-SigExp : 
-     SigId          (((SigIdleft, SigIdright), Asynt.SIGIDsigexp SigId))
+SigModTypBind :
+    TYPE TyVarSeq TypeIdent EQUALS Ty
+                        ( [(TyVarSeq, TypeIdent, Ty)] )
+|   TYPE TyVarSeq TypeIdent EQUALS Ty AND SigModTypBind
+                        ( (TyVarSeq, TypeIdent, Ty) :: SigModTypBind )
 
 ModId :
     IdentWithLoc       ( IdentWithLoc )
 
-SigId :
-    IdentWithLoc       ( IdentWithLoc )
+ModId_seq1 :
+    ModId ([ModId])
+|   ModId ModId_seq1 (ModId :: ModId_seq1)
 
+ModId_seq2 :
+    ModId ModId ([ModId1, ModId2])
+|   ModId ModId_seq2 (ModId :: ModId_seq2)

@@ -48,6 +48,8 @@ svn revert -R .
 ----------------------------
 Merge Log:
 
+6934:  Ported revisions 6917:6933 from HOL to HOL-Omega.
+
 6921:  Ported revisions 6817:6917 from HOL to HOL-Omega.
 
 6817:  Ported revisions 6777:6816 from HOL to HOL-Omega.

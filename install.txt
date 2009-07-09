@@ -117,7 +117,7 @@ C. In the HOL directory (<hol-dir>), type
 D. Now perform the following shell command:
 
        [Moscow ML:] <hol-dir>/bin/build
-       [Poly/ML:]   <hol-dir>/bin/build -expk
+       [Poly/ML:]   <hol-dir>/bin/build
 
    This builds the system. In case of difficulty, the configuration
    can be gone through by hand, by starting the ML interpreter and
