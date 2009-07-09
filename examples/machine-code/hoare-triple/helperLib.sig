@@ -67,6 +67,8 @@ sig
     val tm2ftree               : term -> ftree_type
     val ftree2tm               : ftree_type -> term
 
+    val MATCH_INST             : thm -> term -> thm
+
     val UNHIDE_PRE_RULE        : term -> thm -> thm
     val HIDE_PRE_RULE          : term -> thm -> thm
     val HIDE_POST_RULE         : term -> thm -> thm
@@ -75,7 +77,13 @@ sig
     val INST_SPEC              : thm -> thm -> thm
     val EXISTS_PRE             : term frag list -> thm -> thm
 
-    val MATCH_INST             : thm -> term -> thm
+    val SPEC_STRENGTHEN_RULE   : thm -> term -> thm * term
+    val SPEC_WEAKEN_RULE       : thm -> term -> thm * term
+    val SPEC_BOOL_FRAME_RULE   : thm -> term -> thm
+    val SPEC_FRAME_RULE        : thm -> term -> thm
+    val SPEC_COMPOSE_RULE      : thm list -> thm
+
+    val SPEC_PROVE_TAC         : thm list -> tactic
 
     val ALIGNED_TAC            : tactic
     val SEP_READ_TAC           : tactic

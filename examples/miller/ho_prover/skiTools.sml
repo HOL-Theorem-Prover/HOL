@@ -58,8 +58,6 @@ fun SKI_CONV tm =
      CONST _ => ALL_CONV
    | VAR _ => ALL_CONV
    | COMB _ => RAND_CONV SKI_CONV THENC RATOR_CONV SKI_CONV
-   | TYCOMB _ => TY_COMB_CONV SKI_CONV
-   | TYLAMB _ => TY_ABS_CONV SKI_CONV
    | LAMB _
      => ABS_CONV SKI_CONV THENC
         (ho_REWR_CONV MK_K ORELSEC
@@ -91,10 +89,10 @@ local
     solve' vars sub (Df (pinst sub) current) next
   and solve' vars sub (tm1, tm2) rest =
     if is_tmvar vars tm1 then
-      if eq tm1 tm2 then solve vars sub rest
+      if tm1 = tm2 then solve vars sub rest
       else if occurs tm1 tm2 then raise ERR "ski_unify" "occurs check"
       else
-        (case total (op_find_redex eq tm1) (fst sub) of SOME {residue, ...}
+        (case total (find_redex tm1) (fst sub) of SOME {residue, ...}
            => solve' vars sub (tm2, residue) rest
          | NONE =>
            let
@@ -149,12 +147,6 @@ datatype ski_pattern
 datatype 'a ski_discrim =
   SKI_DISCRIM of int * (ski_pattern, vars * 'a) tree list;
 
-fun ski_pattern_eq (SKI_COMB_BEGIN) (SKI_COMB_BEGIN) = true
-  | ski_pattern_eq (SKI_COMB_END)   (SKI_COMB_END)   = true
-  | ski_pattern_eq (SKI_CONST tm1)  (SKI_CONST tm2)  = eq tm1 tm2
-  | ski_pattern_eq (SKI_VAR tm1)    (SKI_VAR tm2)    = eq tm1 tm2
-  | ski_pattern_eq _ _ = false;
-
 val empty_ski_discrim = SKI_DISCRIM (0, []);
 fun ski_discrim_size (SKI_DISCRIM (i, _)) = i;
 
@@ -186,7 +178,7 @@ fun ski_pattern_term_break ((tm_vars, _) : vars) (RIGHT tm :: rest) =
      LEFT SKI_COMB_BEGIN :: RIGHT Rator :: RIGHT Rand ::
      LEFT SKI_COMB_END :: rest
    | LAMB _ => raise BUG "ski_pattern_term_break" "can't break a lambda"
-   | _ => LEFT (if op_mem eq tm tm_vars then SKI_VAR tm else SKI_CONST tm) :: rest)
+   | _ => LEFT (if mem tm tm_vars then SKI_VAR tm else SKI_CONST tm) :: rest)
   | ski_pattern_term_break _ [] =
   raise BUG "ski_pattern_term_break" "nothing to break"
   | ski_pattern_term_break _ (LEFT _ :: _) =
@@ -209,7 +201,7 @@ local
   fun add a [] leaves = LEAF a :: leaves
     | add a (pat :: next) [] = [BRANCH (pat, add a next [])]
     | add a (pats as pat :: next) ((b as BRANCH (pat', trees)) :: branches) =
-    if ski_pattern_eq pat pat' then BRANCH (pat', add a next trees) :: branches
+    if pat = pat' then BRANCH (pat', add a next trees) :: branches
     else b :: add a pats branches
     | add _ (_::_) (LEAF _::_) =
     raise BUG "discrim_add" "expected a branch, got a leaf"
@@ -265,7 +257,7 @@ local
     | advance _ (SKI_CONST c) (NONE, LEFT (SKI_CONST c') :: rest, work) =
     (NONE, rest, (c, c') :: work)
     | advance _ pat (NONE, LEFT pat' :: rest, work) =
-    if ski_pattern_eq pat pat' then (NONE, rest, work)
+    if pat = pat' then (NONE, rest, work)
     else raise ERR "ski_discrim_unify" "terms fundamentally different"
     | advance _ _ (NONE, [], _) =
     raise BUG "ski_discrim_match" "no patterns left in list";
@@ -279,7 +271,7 @@ in
   fun ski_discrim_unify (sd as SKI_DISCRIM (_, d)) (vars, tm) =
     let
       val shortlist = (flatten o map (tree_search vars tm)) d
-      fun select ((vars', work), a) = (ski_unifyl (op_union2 eq vars vars') work, a)
+      fun select ((vars', work), a) = (ski_unifyl (union2 vars vars') work, a)
       val res = partial_map (total select) shortlist
       val _ = trace
         "ski_discrim_unify: ((vars, tm), map fst res)"

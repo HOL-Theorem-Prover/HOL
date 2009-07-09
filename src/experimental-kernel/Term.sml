@@ -1387,6 +1387,7 @@ local
                        end
                      else raise e
               end
+          | inst _ = raise ERR "inst_rank_kind1" "catastrophic failure"
     in
       inst
     end

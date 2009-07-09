@@ -502,6 +502,48 @@ val ALIGNED_INTRO = store_thm("ALIGNED_INTRO",
   Cases_word \\ ASM_SIMP_TAC std_ss [w2n_n2w,GSYM ALIGNED_n2w]
   \\ REWRITE_TAC [ALIGNED_def] \\ METIS_TAC [WORD_AND_COMM]);
 
+val BIT_LEMMA = prove(
+  ``!x. (NUMERAL (BIT2 (BIT1 x)) = 4 * (x + 1)) /\ 
+        (NUMERAL (BIT2 (BIT2 x)) = 4 * (x + 1) + 2) /\ 
+        (NUMERAL (BIT1 (BIT2 x)) = 4 * (x + 1) + 1) /\ 
+        (NUMERAL (BIT1 (BIT1 x)) = 4 * x + 3)``,
+  REPEAT STRIP_TAC
+  \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
+  \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [NUMERAL_DEF]))
+  \\ NTAC 2 (CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [BIT1,BIT2])))
+  \\ DECIDE_TAC);
+
+val ALIGNED_SUB_CLAUSES = prove(
+  ``ALIGNED (a - 4w * x) = ALIGNED a``,
+  ONCE_REWRITE_TAC [GSYM ALIGNED_NEG]
+  \\ SIMP_TAC std_ss [WORD_NEG_SUB, word_sub_def, ALIGNED_CLAUSES]);
+
+val ALIGNED = store_thm("ALIGNED",
+  ``!a x. 
+      (ALIGNED 0w = T) /\ 
+      (ALIGNED (n2w (NUMERAL (BIT2 (BIT1 x)))) = T) /\ 
+      (ALIGNED (n2w (NUMERAL (BIT1 (BIT2 x)))) = F) /\ 
+      (ALIGNED (n2w (NUMERAL (BIT2 (BIT2 x)))) = F) /\ 
+      (ALIGNED (n2w (NUMERAL (BIT1 (BIT1 (BIT1 x))))) = F) /\
+      (ALIGNED (n2w (NUMERAL (BIT1 (BIT1 (BIT2 x))))) = F) /\
+      (ALIGNED (a + 0w) = ALIGNED a) /\ 
+      (ALIGNED (a + n2w (NUMERAL (BIT2 (BIT1 x)))) = ALIGNED a) /\ 
+      (ALIGNED (a + n2w (NUMERAL (BIT1 (BIT2 x)))) = ALIGNED (a + 1w)) /\ 
+      (ALIGNED (a + n2w (NUMERAL (BIT2 (BIT2 x)))) = ALIGNED (a + 2w)) /\ 
+      (ALIGNED (a + n2w (NUMERAL (BIT1 (BIT1 (BIT1 x))))) = ALIGNED (a + 3w)) /\
+      (ALIGNED (a + n2w (NUMERAL (BIT1 (BIT1 (BIT2 x))))) = ALIGNED (a + 3w)) /\
+      (ALIGNED (a - 0w) = ALIGNED a) /\ 
+      (ALIGNED (a - n2w (NUMERAL (BIT2 (BIT1 x)))) = ALIGNED a) /\ 
+      (ALIGNED (a - n2w (NUMERAL (BIT1 (BIT2 x)))) = ALIGNED (a - 1w)) /\ 
+      (ALIGNED (a - n2w (NUMERAL (BIT2 (BIT2 x)))) = ALIGNED (a - 2w)) /\ 
+      (ALIGNED (a - n2w (NUMERAL (BIT1 (BIT1 (BIT1 x))))) = ALIGNED (a - 3w)) /\ 
+      (ALIGNED (a - n2w (NUMERAL (BIT1 (BIT1 (BIT2 x))))) = ALIGNED (a - 3w))``,
+  PURE_ONCE_REWRITE_TAC [BIT_LEMMA] \\ ONCE_REWRITE_TAC [ADD_COMM]
+  \\ SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_ASSOC,WORD_SUB_PLUS,
+        ALIGNED_CLAUSES,ALIGNED_SUB_CLAUSES,GSYM word_mul_n2w,ALIGNED_0]
+  \\ SIMP_TAC std_ss [ALIGNED_n2w,
+       RW [WORD_ADD_0] (Q.SPECL [`x`,`0w`] ALIGNED_CLAUSES)]);
+
 val WORD_CMP_NORMALISE = save_thm("WORD_CMP_NORMALISE",let
   val rw = METIS_PROVE [] ``!x:'a y z:'b q. ~(x = y) /\ ~(z = q) = ~(x = y) /\ ~(q = z)``
   val nzcv_thm = RW1 [rw] nzcv_def
@@ -640,5 +682,18 @@ val WORD_ADD_FOLD = store_thm("WORD_ADD_FOLD",
   REWRITE_TAC [GSYM WORD_ADD_LEMMA]
   \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,
                       AC WORD_MULT_ASSOC WORD_MULT_COMM]);
-  
+
+val EXISTS_EQ_LEMMA = store_thm("EXISTS_EQ_LEMMA",
+  ``!v P. (!i. ~(i = v) ==> ~(P i)) ==> ((?i. P i) = P v)``,
+  METIS_TAC []);
+
+val w2w_eq_n2w = store_thm("w2w_eq_n2w",
+  ``!w:word8. (!m. m < 256 ==> ((w2w w = (n2w m):word32) = (w = n2w m))) /\ 
+              (w2w ((w2w w):word32) = w)``,
+  Cases_word
+  THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2w_def,w2n_n2w,n2w_11]
+  THEN REPEAT STRIP_TAC
+  THEN IMP_RES_TAC (DECIDE ``k < 256 ==> k < 4294967296``)
+  THEN FULL_SIMP_TAC std_ss []);
+
 val _ = export_theory();

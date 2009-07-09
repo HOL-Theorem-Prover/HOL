@@ -54,6 +54,9 @@ sig
     val output_words_as_dec : unit -> unit
     val remove_word_printer : unit -> unit
 
+    val add_word_cast_printer    : unit -> unit
+    val remove_word_cast_printer : unit -> unit
+
     val guessing_word_lengths       : bool ref
     val notify_on_word_length_guess : bool ref
     val inst_word_lengths           : term -> term

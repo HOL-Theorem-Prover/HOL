@@ -221,6 +221,59 @@ a <code>Holmakefile</code>.</p></dd>
 <h2 id = "Parsing">Parsing and Printing</h2>
 
 <dl>
+<dt> <strong>
+    What’s the difference between <code>`...`</code>
+    and <code>``...``</code> — it seems like some
+functions want one and others the other, but there’s no obvious
+difference between the uses to me ...</strong></dt>
+
+<dd>
+<p>The <code>``...``</code> form is really the application of the
+function <code>Parse.Term</code> to the quotation <code>`...`</code>.
+A quotation is really just a string (except it also supports
+anti-quotations, see <a href="#Quotes">above</a>).  The reason it
+isn’t just a string is that SML strings require you to backslash quote
+backslashes, and to backslash quote newlines.  Both of these would
+interfere with HOL syntax (and, or and lambda in our ASCII notation
+all involve backslashes; we often want to input goals over multiple
+lines).</p>
+
+<p>The <code>Term</code> function turns a quotation into a term.  It’s
+the system's parser.</p>
+
+<p>If you write something like</p>
+<pre>
+         tactic_taking_argument ``my term``  THEN some_other_tactic
+</pre>
+<p>
+the <code>`my term`</code> quotation is parsed entirely independently
+of the goal.  This can be a pain.  Say, you’re proving something about
+numbers, and your goal includes variables <code>x</code>
+and <code>y</code>.  If your quotation is <code>`x ≠ y`</code>,
+you’d like those variables to have the type <code>:num</code>.  But they won’t
+because the parser’s default behaviour is to assign variables
+polymorphic types.</p>
+
+<p>But, the tactics that take quotations can arrange to call the
+parser in a special way, passing in information about the goal’s free
+variables, so that when you write</p>
+<pre>
+         Q.tactic_taking_argument `x ≠ y` THEN some_other_tactic
+</pre>
+<p>
+you get <code>x</code> and <code>y</code> parsing to have type <code>:num</code> instead of <code>:'a</code>.</p>
+
+<p> Most things that take quotations are tactics, but there are some
+other situations where it makes sense to be parsing the terms in
+augmented contexts.  Also, some functions
+(<i>e.g.</i>, <code>proofManagerLib.g</code>, <code>Q.store_thm</code>
+and <code>Q.prove</code>) don’t exploit a context, but do enforce a
+type on what is parsed (goals must be of type <code>:bool</code>).
+They also reduce screen-clutter. </p>
+</dd>
+
+
+
 <dt>
   <strong>
     I defined an infix “and”. This works OK, but it seems to
@@ -609,13 +662,21 @@ could write:</p>
 </pre>
 
 </dl>
+
 <hr>
 <p>
-<small>
-Page last updated on $Date$ by $Author$
-<br>
-Maintained by Konrad Slind
- (<a href="mailto:slind@cs.utah.edu">slind@cs.utah.edu</a>)</small></p>
+<div class="timestamp">
+<p>
+Time-stamp: "Thursday, 25 June 2009; 23:37 UTC (Michael Norrish)"
+</p></div>
+
 
 </body>
+
 </html>
+
+<!-- Local variables: -->
+<!-- time-stamp-line-limit: 0 -->
+<!-- time-stamp-time-zone: "UTC+0" -->
+<!-- time-stamp-format: "%:a, %:d %:b %:y; %02H:%02M UTC (%U)" -->
+<!-- End: -->

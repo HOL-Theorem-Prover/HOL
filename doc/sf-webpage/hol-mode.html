@@ -27,8 +27,8 @@ the extreme.</p>
 
 <p> Put
 <pre>
-(autoload 'hol98 "&lt;holdir&gt;/tools/hol-mode"
-  "Runs a HOL98 session in a comint window.
+(autoload 'hol "&lt;holdir&gt;/tools/hol-mode"
+  "Runs a HOL session in a comint window.
 With a numeric prefix argument, runs it niced to that level
 or at level 10 with a bare prefix. " t)
 </pre>
@@ -36,7 +36,7 @@ or at level 10 with a bare prefix. " t)
 <p> into your <code>.emacs</code> file,
 where <code>&lt;holdir&gt;</code> is where you installed HOL.  This
 approach has the disadvantage that you have to start HOL
-using <kbd>M-x hol98</kbd>; you can't use the key sequence <kbd>M-h
+using <kbd>M-x hol</kbd>; you can't use the key sequence <kbd>M-h
 h</kbd>.  If you want that, you can use
 <pre>
 (load "&lt;holdir&gt;/tools/hol-mode")
@@ -137,7 +137,7 @@ hitting <kbd>C-u</kbd>, typing in a number, and then continuing with
 the rest of the commend.
 
 <dl>
-<dt> <kbd>h ``hol98''</kbd>
+<dt> <kbd>h ``hol''</kbd>
 <dd> Starts the HOL session.<p>
 
 <dt> <kbd>C-a ``hol-toggle-show-assums''</kbd>
@@ -258,4 +258,14 @@ printed out.  (That's assuming that quietdec is false to start with.)
 
 
 <hr>
+<div class="timestamp">
+<p>
+Time-stamp: "Wednesday, 17 June 2009; 00:13 UTC (Michael Norrish)"
+</p></div>
+
 </body> </html>
+<!-- Local variables: -->
+<!-- time-stamp-line-limit: 0 -->
+<!-- time-stamp-time-zone: "UTC+0" -->
+<!-- time-stamp-format: "%:a, %:d %:b %:y; %02H:%02M UTC (%U)" -->
+<!-- End: -->

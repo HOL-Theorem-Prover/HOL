@@ -7,7 +7,7 @@ loadPath :=
 
 
 open HolKernel Parse boolLib Drule ConseqConv computeLib
-      quantHeuristicsLib;
+open      quantHeuristicsLib;
 
 (*
 quietdec := false;
@@ -39,6 +39,7 @@ val thm = PURE_QUANT_INSTANTIATE_CONV t
 
 
 
+
 (*However, the new library can handle more difficult nestings than
   the existing UNWIND conversions*)
 
@@ -62,7 +63,7 @@ set_trace "QUANT_INSTANTIATE_HEURISTIC" 0
 set_trace "QUANT_INSTANTIATE_HEURISTIC" 1
 
 (*show theorems in guesses*)
-set_trace "QUANT_INSTANTIATE_HEURISTIC" 2
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 2;
 
 
 val thm = PURE_QUANT_INSTANTIATE_CONV t
@@ -156,9 +157,50 @@ val thm = QUANT_INSTANTIATE_CONV t
   here. It is defined as
 
 PURE_QUANT_INSTANTIATE_CONV is defined as
-EXT_PURE_QUANT_INSTANTIATE_CONV true false empty_quant_heuristic_combine_argument
+EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false []
 
-The last argument (quant_heuristic_combine_argument) is a quintuple
+Let's have a closer look at the parameters of 
+EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq argL
+
+
+cache_ref_opt
+#############
+
+is a possible way to add caching of found instantiations.
+The default value NONE means that no caching is used.
+SOME (c_ref) means that the cache at the reference is used.
+An empty cache can be created using mk_quant_heuristic_cache.
+
+
+re
+#############
+Determins whether
+for the elementary conversion is wrapped with 
+DEPTH_CONV or REDEPTH_CONV is used. Defaults to true.
+
+
+filter
+#############
+This argument allows to just try and find instantiations
+for variables v such that filter v = true.
+
+expand_eq
+#############
+All the guesses the standard heuristics find, come with a justification.
+So, for these guesses (?x. P x) = P i is guarenteed by the justification theorem.
+However, it is sometimes conviniend not to prove a justification theorem.
+In these cases just an implication: (P i ==> ?x. P x) holds.
+This is fine when working with consequence conversions. However for conversions,
+one needs equality. If expand_eq is set to true in these cases a case split
+is performed: (?x. P x) = ((!x. (~(x = i) ==> ~(P x))) ==> P i). If it is false,
+no instantiation is applied. Similar expansions happen for allquantification.
+The default value of expand_eq is false.
+
+
+args
+#############
+The last argument is the main way to is a costumise the conversion.
+It is a list of quintuples
 (distinct_thmL, cases_thmL, rewrite_thmL,convL,heuristicL).
 
 distinct_thmL
@@ -188,17 +230,42 @@ heuristicL
   A list of full grown, own heuristics.
 
 
+In the following some examples are given, how these parameters 
+filter and args can be used. The others simple and ignored for now.
+*)
 
+
+
+val t = ``?x y z. (x = 1) /\ (y = 2) /\ (z = 3)``
+
+(*Standard calls eliminate all 3 variables
+ |- ?x y z. (x = 1) /\ (y = 2) /\ (z = 3) = T
+*)
+val thm = PURE_QUANT_INSTANTIATE_CONV t
+
+(*Let's just get rid of y
+ |- ?x y z. (x = 1) /\ (y = 2) /\ (z = 3) = 
+    ?x   z. (x = 1) /\            (z = 3)*)
+val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true 
+             (fn v => (v = ``y:num``)) false [] t
+
+val thm = RESTRICTED_PURE_QUANT_INSTANTIATE_CONV
+             (fn v => (v = ``y:num``)) t
+
+
+(*
 Lets for example teach the heuristic to
 find counterexamples for natural numbers.
 
-Thanks to the dictinct-theorem form TypeBase, it is already possible,
+Thanks to the dictinct-theorem from TypeBase, it is already possible,
 to find counterexamples for theorems of the form ``0`` and ``SUC n`` 
 *)
 
 val t = ``!x. x = 0``
 val t = ``?x. ~(x = SUC n)``
 val t = ``?x. ((x = SUC n) /\ Q x n) ==> P x``
+
+val thm = QUANT_INSTANTIATE_CONV t 
 
 
 (*However, for arbitrary numbers that is not possible yet
@@ -209,10 +276,11 @@ val t = ``?x. ((x = SUC n) /\ Q x n) ==> P x``
 val t = ``?x:num. ((x = n) /\ Q x n) ==> P x``
 
 (*the normal one raises UNCHANGED*)
+val thm = QUANT_INSTANTIATE_CONV t 
 val thm = PURE_QUANT_INSTANTIATE_CONV t 
 
 (*The extended one is able to reduce it to true, by knowing that ~(SUC n = n) holds*)
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([prim_recTheory.SUC_ID],[],[],[],[]) t 
+val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([prim_recTheory.SUC_ID],[],[],[],[])] t 
 
 
 
@@ -231,7 +299,7 @@ val t = ``!s. ~(s = {}) ==> (CARD s > 0)``;
 val thm = PURE_QUANT_INSTANTIATE_CONV t;
 
 (*The extended one is able to reduce it*)
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],[SIMPLE_SET_CASES],[],[],[]) t 
+val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],[SIMPLE_SET_CASES],[],[],[])] t 
 
 
 (*
@@ -250,14 +318,14 @@ val thm = PURE_QUANT_INSTANTIATE_CONV t;
 val IS_SOME_EXPAND = prove (``IS_SOME x = ?x'. x = SOME x'``,
 			      Cases_on `x` THEN SIMP_TAC std_ss []);
 
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],
-          [], [IS_SOME_EXPAND], [],[]) t;
+val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],
+          [], [IS_SOME_EXPAND], [],[])] t;
 
 
 (*The same works if we use a conversion instead*)
 
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],
-          [], [], [REWR_CONV IS_SOME_EXPAND],[]) t;
+val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],
+          [], [], [REWR_CONV IS_SOME_EXPAND],[])] t;
 
 
 (*notice that here REWR_CONV is used, so the rewrite takes just place at
@@ -269,62 +337,32 @@ val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],
   to compare*)
 
 set_trace "QUANT_INSTANTIATE_HEURISTIC" 1;
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],
-          [],[],[REWR_CONV IS_SOME_EXPAND], []) t;
+val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],
+          [],[],[REWR_CONV IS_SOME_EXPAND], [])] t;
 
     
   
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],
-          [],[],[REWRITE_CONV [IS_SOME_EXPAND]], []) t;
+val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],
+          [],[],[REWRITE_CONV [IS_SOME_EXPAND]], [])] t;
 
 (*TOP_ONCE_REWRITE_CONV is suitable as well,
   it behaves like REWR_CONV for a list of theorems*)
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],[],[],
-          [TOP_ONCE_REWRITE_CONV [IS_SOME_EXPAND]], []) t;
-
-
-(*It's a little bit ugly, that IS_SOME (SOME x'') remains,
-  lets try a rewrite without free variables instead.
-
-  IS_SOME x = ~(x = NONE). The distinct and case theorems of
-  type-base do the rest. It avoids matching, handling the free variable x', etc. 
-  It's able to find some instantiations directly. It's faster,
-  more powerful and in general neater. Thus, try to avoid introducing
-  new quantifiers during rewrites. 
-*)
-
-val IS_SOME_EXPAND2 = prove (``IS_SOME x = ~(x = NONE)``,
-			      Cases_on `x` THEN SIMP_TAC std_ss [])
-
-val thm = EXT_QUANT_INSTANTIATE_CONV true false ([],[],[],
-          [TOP_ONCE_REWRITE_CONV [IS_SOME_EXPAND2]], []) t;
-
-(*or pure*)
-val thm = EXT_QUANT_INSTANTIATE_CONV true false ([],[TypeBase.distinct_of ``:'a option``],[IS_SOME_EXPAND2],
-          [], []) t;
-
-
-val t = ``?x. (IS_SOME x)``
-
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],[],[],
-          [REWR_CONV IS_SOME_EXPAND], []) t;
-
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true false ([],[],[],
-          [REWR_CONV IS_SOME_EXPAND2], []) t;
-
+val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],[],[],
+          [TOP_ONCE_REWRITE_CONV [IS_SOME_EXPAND]], [])] t;
 
 
 
 
 (*The argument heuristicL is a full grown heuristcal one. It's a list of
   heuristics with the signature
-  (term list -> term list -> term -> term -> guess list) -> 
-   term list -> term list -> term -> term -> guess list)
 
-  heuristic sys bv fv v t
+  ((term list -> term -> term -> guess_collection) -> 
+    term list -> term -> term -> guess_collection)
+
+  heuristic sys fv v t
 
   tries to find a guess for instantiating the variable v in term t.
-  In the context the variables in bv are bound and the variable names
+  In the context the variables 
   in fv are already in use, so when introducing new free variables in a guess they
   should be different from the ones in fv. Finally sys is a heurstic itself - the 
   one provided by the system. It can be used to get guesses for subterms.
@@ -514,13 +552,13 @@ fun dummy_heuristic sys fv v t =
 let
    val i = mk_var ("choose_me", type_of v);
 in
-   [guess_general (i,[])]
+   guess_list2collection ([], [guess_general (i,[])])
 end;
 
 val t = ``?x. P x``
 
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV false true ([],
-          [], [],[],[dummy_heuristic]) t;
+val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE false (K true) true [([],
+          [], [],[],[dummy_heuristic])] t;
 
 (*result 
  val thm = |- (?x. P x) <=> (!x. ~(x = choose_me) ==> ~P x) ==> P choose_me :
@@ -541,8 +579,8 @@ So it was turned of.
 
 
 (*!!!Infinite loop!!!*)
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV true true ([],[],[],
-          [], [dummy_heuristic]) t;
+val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) true [([],[],[],
+          [], [dummy_heuristic])] t;
 *)
 
 

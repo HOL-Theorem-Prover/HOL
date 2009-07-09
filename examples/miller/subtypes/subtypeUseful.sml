@@ -20,7 +20,6 @@ val op|| = op ORELSE;
 (* ------------------------------------------------------------------------- *)
 
 type 'a thunk = unit -> 'a;
-type (''a, 'b) cache = (''a, 'b) Polyhash.hash_table;
 type 'a susp = 'a Susp.susp
 type ppstream = General.ppstream
 type ('a, 'b) maplet = {redex : 'a, residue : 'b}
@@ -169,28 +168,6 @@ val random_generator = Random.newgen ();
 fun random_integer n = Random.range (0, n) random_generator;
 fun random_real () = Random.random random_generator;
 
-(* Function cacheing *)
-
-fun new_cache cmp : ('a, 'b) cache =
-  Polyhash.mkTable (Polyhash.hash, uncurry cmp) (10000, ERR "cache" "not found");
-
-fun cache_lookup c (a, b_thk) =
-  (case Polyhash.peek c a of SOME b => b
-   | NONE =>
-     let
-       val b = b_thk ()
-       val _ = Polyhash.insert c (a, b)
-     in
-       b
-    end);
-
-fun cachef cmp f =
-  let
-    val c = new_cache cmp
-  in
-    fn a => cache_lookup c (a, fn () => f a)
-  end;
-
 (* Lazy operations *)
 
 fun pair_susp a b = delay (fn () => (force a, force b));
@@ -272,17 +249,10 @@ fun list_to_string _ [] = "[]"
 
 fun subset s t = forall (C mem t) s;
 
-fun op_subset cmp s t = forall (C (op_mem cmp) t) s;
-
 fun distinct [] = true
   | distinct (x :: rest) = not (mem x rest) andalso distinct rest;
 
-fun op_distinct cmp [] = true
-  | op_distinct cmp (x :: rest) = not (op_mem cmp x rest) andalso op_distinct cmp rest;
-
 fun union2 (a, b) (c, d) = (union a c, union b d);
-
-fun op_union2 cmp (a, b) (c, d) = (op_union cmp a c, union b d);
 
 (* --------------------------------------------------------------------- *)
 (* Rotations, permutations and sorting.                                  *)
@@ -480,26 +450,24 @@ fun pp_list pp ppstrm =
 fun redex {redex, residue = _} = redex;
 fun residue {redex = _, residue} = residue;
 fun find_redex r = first (fn rr as {redex, residue} => r = redex);
-fun op_find_redex cmp r = first (fn rr as {redex, residue} => cmp r redex);
 fun clean_subst s = filter (fn {redex, residue} => not (redex = residue)) s;
-fun op_clean_subst cmp s = filter (fn {redex, residue} => not (cmp redex residue)) s;
 fun subst_vars sub = map redex sub;
 fun maplet_map (redf, resf) {redex, residue} = (redf redex |-> resf residue);
 fun subst_map fg = map (maplet_map fg);
 fun redex_map f = subst_map (f, I);
 fun residue_map f = subst_map (I, f);
 
-fun is_renaming_subst cmp vars sub =
+fun is_renaming_subst vars sub =
   let
     val residues = map residue sub
   in
-    forall (C (op_mem cmp) vars) residues andalso op_distinct cmp residues
+    forall (C mem vars) residues andalso distinct residues
   end;
 
-fun invert_renaming_subst cmp vars sub =
+fun invert_renaming_subst vars sub =
   let
     val _ =
-      assert (is_renaming_subst cmp vars sub)
+      assert (is_renaming_subst vars sub)
       (ERR "invert_renaming_subst" "not a renaming subst, so not invertible")
     fun inv {redex, residue} = residue |-> redex
   in
@@ -573,14 +541,14 @@ fun type_subst_vars_in_set (sub : type_subst) vars =
 
 fun subst_vars_in_set ((tm_sub, ty_sub) : substitution) (tm_vars, ty_vars) =
   type_subst_vars_in_set ty_sub ty_vars andalso
-  op_subset eq (subst_vars tm_sub) (map (inst_ty ty_sub) tm_vars);
+  subset (subst_vars tm_sub) (map (inst_ty ty_sub) tm_vars);
 
 (* Note: cyclic substitutions are right out! *)
 fun type_refine_subst ty1 ty2 : (hol_type, hol_type) subst =
   ty2 @ (clean_subst o residue_map (type_inst ty2)) ty1;
 
 fun refine_subst (tm1, ty1) (tm2, ty2) =
-  (tm2 @ (op_clean_subst eq o subst_map (inst_ty ty2, pinst (tm2, ty2))) tm1,
+  (tm2 @ (clean_subst o subst_map (inst_ty ty2, pinst (tm2, ty2))) tm1,
    type_refine_subst ty1 ty2);
 
 (*
@@ -601,16 +569,16 @@ fun type_vars_after_subst vars (sub : (hol_type, hol_type) subst) =
   subtract vars (subst_vars sub);
 
 fun vars_after_subst (tm_vars, ty_vars) (tm_sub, ty_sub) =
-  (op_subtract eq (map (inst_ty ty_sub) tm_vars) (subst_vars tm_sub),
+  (subtract (map (inst_ty ty_sub) tm_vars) (subst_vars tm_sub),
    type_vars_after_subst ty_vars ty_sub);
 
 fun type_invert_subst vars (sub : (hol_type, hol_type) subst) =
-  invert_renaming_subst abconv_ty vars sub;
+  invert_renaming_subst vars sub;
 
 fun invert_subst (tm_vars, ty_vars) (tm_sub, ty_sub) =
   let
     val _ =
-      assert (is_renaming_subst eq tm_vars tm_sub)
+      assert (is_renaming_subst tm_vars tm_sub)
       (ERR "invert_subst" "not a renaming term subst")
     val ty_sub' = type_invert_subst ty_vars ty_sub
     fun inv {redex, residue} =
@@ -625,7 +593,7 @@ fun invert_subst (tm_vars, ty_vars) (tm_sub, ty_sub) =
 
 val empty_vars = ([], []) : vars;
 fun is_tyvar ((_, tyvars) : vars) ty = is_vartype ty andalso mem ty tyvars;
-fun is_tmvar ((tmvars, _) : vars) tm = is_var tm andalso op_mem eq tm tmvars;
+fun is_tmvar ((tmvars, _) : vars) tm = is_var tm andalso mem tm tmvars;
 
 fun type_new_vars (vars : hol_type list) =
   let
@@ -663,7 +631,7 @@ fun dest_bv bvs tm =
   let
     val _ = assert (is_var tm) (ERR "dest_bv" "not a var")
   in
-    index (eq tm) bvs
+    index (equal tm) bvs
   end;
 fun is_bv bvs = can (dest_bv bvs);
 fun mk_bv bvs n : term = nth n bvs;
@@ -752,7 +720,7 @@ val FUN_EQ = prove (``!f g. (f = g) = (!x. f x = g x)``, PROVE_TAC [EQ_EXT]);
 val SET_EQ = prove (``!s t. (s = t) = (!x. x IN s = x IN t)``,
                     PROVE_TAC [SPECIFICATION, FUN_EQ]);
 
-val hyps = foldl (fn (h,t) => op_union eq (hyp h) t) [];
+val hyps = foldl (fn (h,t) => union (hyp h) t) [];
 
 val LHS = lhs o concl;
 val RHS = rhs o concl;
@@ -779,7 +747,7 @@ fun CHANGED_CONV c tm =
     let
       val th = QCONV c tm
     in
-      if eq (rhs (concl th)) tm then raise ERR "CHANGED_CONV" "" else th
+      if rhs (concl th) = tm then raise ERR "CHANGED_CONV" "" else th
     end;
 
 fun FIRSTC [] tm = raise ERR "FIRSTC" "ran out of convs"
@@ -810,7 +778,7 @@ fun CONJUNCT_CONV c tm =
 
 (* Conversions *)
 
-fun EXACT_CONV exact tm = QCONV (if eq tm exact then ALL_CONV else NO_CONV) tm;
+fun EXACT_CONV exact tm = QCONV (if tm = exact then ALL_CONV else NO_CONV) tm;
 
 val NEGNEG_CONV = REWR_CONV (CONJUNCT1 NOT_CLAUSES);
 
@@ -953,7 +921,7 @@ fun clean_vthm ((tm_vars, ty_vars), th) =
   let
     val tms = concl th :: hyp th
     val ty_vars' = intersect (type_vars_in_terms tms) ty_vars
-    val tm_vars' = op_intersect eq (free_varsl tms) tm_vars
+    val tm_vars' = intersect (free_varsl tms) tm_vars
   in
     ((tm_vars', ty_vars'), ZAP_CONSTS_RULE th)
   end;
@@ -1270,7 +1238,7 @@ local
     let
       val tm = concl th
     in
-      if op_mem eq tm concls then (concls, ths) else (tm :: concls, th :: ths)
+      if mem tm concls then (concls, ths) else (tm :: concls, th :: ths)
     end
 
   fun clean_add_thms ths = snd o trans add_thm (map concl ths, ths)

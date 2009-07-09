@@ -1,6 +1,6 @@
 \DOC LIST_MP
 
-\TYPE {LIST_MP : (thm list -> thm -> thm)}
+\TYPE {LIST_MP : thm list -> thm -> thm}
 
 \SYNOPSIS
 Performs a chain of Modus Ponens inferences.

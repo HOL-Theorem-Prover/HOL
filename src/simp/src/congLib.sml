@@ -109,7 +109,7 @@ local
     else
       (let
         val thm_relation = rator(rator(concl thm));
-        val _ = if eq thm_relation (extract_preorder_const preorder) then T 
+        val _ = if (samerel thm_relation (extract_preorder_const preorder)) then T 
                 else failwith ("not applicable");
         val thmLHS = rand (rator (concl thm));
         val match = kind_match_terml [] [] boundvars thmLHS term;

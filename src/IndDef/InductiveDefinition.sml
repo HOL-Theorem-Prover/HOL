@@ -162,22 +162,7 @@ fun AND_IMPS_CONV tm =
 (*        A |- ?x. P[x]                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val EXISTS_EQUATION =
-    let val pth = prove
-     (--`!P t. (!x:'a. (x = t) ==> P x) ==> $? P`--,
-      REPEAT GEN_TAC THEN DISCH_TAC THEN
-      SUBST1_TAC(SYM (ETA_CONV (--`\x. (P:'a->bool) x`--))) THEN
-      EXISTS_TAC (--`t:'a`--) THEN FIRST_ASSUM HO_MATCH_MP_TAC THEN REFL_TAC)
-    in fn tm => fn th =>
-        let val (l,r) = dest_eq tm
-            val P = mk_abs(l,concl th)
-            val th1 = BETA_CONV(mk_comb(P,l))
-            val th2 = ISPECL [P, r] pth
-            val th3 = EQ_MP (SYM th1) th
-            val th4 = GEN l (DISCH tm th3)
-        in MP th2 th4
-        end
-    end;;
+val EXISTS_EQUATION = Prim_rec.EXISTS_EQUATION
 
 (* ========================================================================= *)
 (* Part 1: The main part of the inductive definitions package.               *)

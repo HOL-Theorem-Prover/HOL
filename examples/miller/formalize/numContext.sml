@@ -181,7 +181,7 @@ in
              val th = prover goal
            in
              fn g =>
-             if eq g goal then th
+             if g = goal then th
              else raise ERR "mod_plus_rewr" "modulus changed"
            end
        in
@@ -218,7 +218,7 @@ in
              val th = prover goal
            in
              fn g =>
-             if eq g goal then th
+             if g = goal then th
              else raise ERR "mod_mult_rewr" "modulus changed"
            end
        in

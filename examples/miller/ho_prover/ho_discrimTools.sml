@@ -69,15 +69,6 @@ datatype pattern
 
 datatype 'a discrim = DISCRIM of int * (pattern, 'a) tree list;
 
-fun pattern_eq (COMB_BEGIN)     (COMB_BEGIN)     = true
-  | pattern_eq (COMB_END)       (COMB_END)       = true
-  | pattern_eq (ABS_BEGIN ty1)  (ABS_BEGIN ty2)  = abconv_ty ty1 ty2
-  | pattern_eq (ABS_END)        (ABS_END)        = true
-  | pattern_eq (CONSTANT tm1)   (CONSTANT tm2)   = eq tm1 tm2
-  | pattern_eq (BVAR n1)        (BVAR n2)        = (n1 = n2)
-  | pattern_eq (FVAR (tm1,ns1)) (FVAR (tm2,ns2)) = eq tm1 tm2 andalso (ns1 = ns2)
-  | pattern_eq _ _ = false;
-
 val empty_discrim = DISCRIM (0, []);
 fun discrim_size (DISCRIM (i, _)) = i;
 
@@ -152,7 +143,7 @@ local
   fun add a ts [] = LEAF a :: ts
     | add a [] (pat :: next) = [BRANCH (pat, add a [] next)]
     | add a ((b as BRANCH (pat', ts')) :: rest) (ps as pat :: next) =
-    if pattern_eq pat pat' then BRANCH (pat', add a ts' next) :: rest
+    if pat = pat' then BRANCH (pat', add a ts' next) :: rest
     else b :: add a rest ps
     | add _ (LEAF _::_) (_::_) =
     raise BUG "discrim_add" "expected a branch, got a leaf"

@@ -1,21 +1,51 @@
-# this -*- shell-script -*- can be used to create a hol98 tar ball.
+# this -*- shell-script -*- can be used to create a HOL tar ball.
 
-if [ $# -ne 3 ]
-then
-        echo "Usage: releasing-hol <releasename> <S/F user-id> <mosmldir>"
-        echo "  <releasename> can be \"today\" for testing purposes"
+homesvn=https://hol.svn.sourceforge.net/svnroot/hol
+
+usage () {
+        echo "Usage: releasing-hol [-f] <release-path> <ML>" >&2
+        echo "  <release-path> is a path wrt $homesvn" >&2
+        echo "  <ML> is a path to mosml or poly" >&2
+        echo "  Use the -f option to force fresh svn call (ignoring cache)" >&2
         exit 1
+}
+
+if [ $# -eq 0 ]
+then
+    usage
 fi
-name=$1
-userid=$2
-mosmldir=$3
-mosmldir=$(cd $mosmldir; pwd)
-repos=hol.cvs.sourceforge.net:/cvsroot/hol
+
+if [ $1 = "-f" ]
+then
+    force=true
+    echo "Forcing a fresh svn export call" >&2
+    shift
+else
+    force=false
+fi
+
+if [ $# -ne 2 ]
+then
+    usage
+fi
+origname=$1
+ML=$2
+
+MLbase=$(basename $ML)
+if [ $MLbase != mosml -a $MLbase != poly ]
+then
+    echo "MLs supported are Poly/ML and Moscow ML" >&2
+    exit 1
+fi
+
+repos=$homesvn/$origname
+shortname=$(basename $origname)
+name=${origname////-}
 
 localholdir="`dirname $0`/.."
 localholdir=$(cd $localholdir ; pwd)
+echo "Local HOL directory: $localholdir"
 
-submandir=/tmp/$name-submanuals
 texlogs=/tmp/$name-latex-logs
 
 createdir () {
@@ -27,17 +57,16 @@ createdir () {
     then
         mkdir $1
     else
-        echo "Couldn't create directory $1"
+        echo "Couldn't create directory $1" >&2
         exit 1
     fi
   fi
 }
 
 # initial setup
-createdir $submandir
 createdir $texlogs
-createdir "/tmp/hol98"        # where cvs co will go
-/bin/rm -rf "/tmp/hol"         # final directory to be tarred
+createdir "/tmp/svn-export-result"        # where output from svn export will go
+/bin/rm -rf "/tmp/hol"                    # final directory to be tarred
 
 if /bin/ls -1 $localholdir | grep std.prelude > /dev/null 2>&1
 then
@@ -47,55 +76,52 @@ else
     exit 1
 fi
 
-if [ ! -x $mosmldir/bin/mosml ]
-then
-    echo "No mosml in $mosmldir/bin" >&2
-    exit 1
-fi
-
 cd /tmp
+/bin/rm -f svn-export.log
 
 
-# use -r release-name for known release
-echo "Getting copy of CVS repository from SourceForge"
+echo "Getting copy of $repos from SourceForge"
 echo -n "Progress: "
 linecount=0
-(if [ "$name" = "today" ]
-then
-  if [ -d $name-cvs-cache ]
-  then
-      cat /tmp/$name-cvs-export
-      /bin/rm -r hol98
-      cp -R $name-cvs-cache hol98
-  else
-      cvs -d:ext:${userid}@${repos} export -D tomorrow hol98 |
-        tee /tmp/$name-cvs-export
-      cp -R hol98 $name-cvs-cache
-  fi
-else
-  cvs -d:ext:${userid}@${repos} export -r $name hol98
-fi) 2>&1 | tee /tmp/cvs-export.log |
+(if [ -d $name-svn-cache -a $force = false ]
+ then
+      echo "Using cache"
+      cat /tmp/$name-svn-export-output
+      /bin/rm -r svn-export-result
+      cp -R $name-svn-cache svn-export-result
+ else
+      echo "Calling svn export $repos svn-export-result"
+      /bin/rm -rf svn-export-result $name-svn-cache
+      svn export $repos svn-export-result | tee /tmp/$name-svn-export-output
+      cp -R svn-export-result $name-svn-cache
+ fi) 2>&1 | tee /tmp/svn-export.log |
   while read foo
   do  linecount=$[ $linecount + 1 ]
       if [ $[ $linecount % 20 ] -eq 0 ] ; then echo -n . ; fi
   done
 
 if [ $? -ne 0 ] ; then
-  echo ; echo "CVS export failed, consult /tmp/cvs-export.log" ; exit 1
+  echo ; echo "svn export failed, consult /tmp/svn-export.log" ; exit 1
 else
   echo
 fi
 
+if [ ! -r svn-export-result/std.prelude -o ! -d svn-export-result/src ]
+then
+    echo "svn export doesn't seem to have worked" >&2
+    exit 1
+fi
+
 echo -n "Copying various theorems from local installation: "
-for i in word pair res_quan string
+for i in pair res_quan string
 do
   echo -n "$i "
-  if /bin/cp -R $localholdir/src/$i/help/thms /tmp/hol98/src/$i/help 2> /dev/null
+  if /bin/cp -R $localholdir/src/$i/help/thms /tmp/svn-export-result/src/$i/help 2> /dev/null
   then
       :
   else
       echo
-      echo "Couldn't find theorems for $i"
+      echo "Couldn't find theorems for $i" >&2
       exit 1
   fi
 done
@@ -104,93 +130,76 @@ echo
 echo "Copying theory graph from local installation"
 # see the file help/src/DOT for instructions on how to generate the
 # theorygraph files
-/bin/cp $localholdir/help/theorygraph/*.html $localholdir/help/theorygraph/theories.* /tmp/hol98/help/theorygraph
+/bin/cp $localholdir/help/theorygraph/*.html $localholdir/help/theorygraph/theories.* /tmp/svn-export-result/help/theorygraph
 
-echo Removing all .cvsignore files
-find hol98 -name .cvsignore -exec /bin/rm \{} \;
-
-echo "Running configure script"
-cd /tmp/hol98
-$mosmldir/bin/mosml < tools/smart-configure.sml > /tmp/$name-config-log 2>&1
-if [ $? -ne 0 ] ; then
-  echo "HOL configuration failed, consult /tmp/$name-config.log" ; exit 1
+if [ $ML = "mosml" ]
+then
+    echo "Running configure script"
+    cd /tmp/svn-export-result
+    $ML < tools/smart-configure.sml > /tmp/$name-config-log 2>&1
+    if [ $? -ne 0 ] ; then
+        echo "HOL configuration failed, consult /tmp/$name-config.log" ; exit 1
+    fi
 fi
 
 
 echo Now building Doc2Tex
-cd help/src
+cd /tmp/svn-export-result/help/src-sml
 # ../../bin/Holmake Doc2Tex
-../../bin/Holmake Doc2Tex.exe
+if [ $ML = "mosml" ]
+then
+    ../../bin/Holmake Doc2Tex.exe
+else
+    $ML < poly-Doc2Tex.ML
+    gcc -o Doc2Tex.exe Doc2Tex.o -L/usr/lib -lpolymain -lpolyml
+fi
 
 echo Now building documentation
 for man_name in Reference Description Tutorial Quick Logic
 do
     lcname=$(echo $man_name | tr A-Z a-z)
     echo Making $man_name
-    cd /tmp/hol98/Manual/$man_name
-    if make all > $texlogs/$man_name.log 2>&1
+    cd /tmp/svn-export-result/Manual/$man_name
+    if make $lcname.pdf > $texlogs/$man_name.log 2>&1 < /dev/null
     then :
-    else echo Build failed ; exit 1
+    else echo Build failed - see $texlogs/$man_name.log ; exit 1
     fi
-    mv $lcname.pdf /tmp/$name-$lcname.pdf
+    mv $lcname.pdf /tmp/$shortname-$lcname.pdf
 done
 
-echo Also removing Buddy documentation from distribution
+echo Removing Buddy documentation from distribution
 cd /tmp/
-mv hol98/src/muddy/muddyC/buddy/doc/*.ps .
-
-while read helpname dir
-do
-  echo "Building $helpname sub-manual in $dir"
-  cd /tmp/hol98/$dir
-  if make all > $texlogs/$helpname.log 2>&1
-  then
-      :
-  else
-      echo "Build failed, see $texlogs/$helpname.log" ; exit 1
-  fi
-  if [ $(ls -1 *.pdf | wc -l) -ne 1 ]
-  then
-      echo "Too many or too few documentation files in directory $dir"
-      exit 1
-  else
-      mv *.pdf $submandir/$helpname.pdf
-  fi
-  cd /tmp
-  /bin/rm -r /tmp/hol98/$dir
-done < $localholdir/developers/submanuals
+mv svn-export-result/examples/muddy/muddyC/buddy/doc/*.ps .
 
 echo Now starting to clean up and make tar ball
-cd /tmp/hol98
+cd /tmp/svn-export-result
 /bin/rm -rf developers
 /bin/rm -rf Manual
-/bin/rm -rf examples/miller
-/bin/rm -rf src/HolBdd/Manual
-/bin/rm -rf src/HolSat/doc
+/bin/rm -rf examples/HolBdd/Manual
 
 mv bin/README ../bin-README
-/bin/rm tools/Holmake/*.{uo,ui} tools/hol98-mode.el
-/bin/rm tools/Holmake/{Parser,Lexer}.sml tools/Holmake/Parser.sig
-/bin/rm tools/Holmake/Holmake_tokens.sml
-(cd tools/quote-filter ; ../../bin/Holmake cleanAll)
-(cd tools/mlyacc/mlyacclib ; ../../../bin/Holmake cleanAll)
-(cd tools/mlyacc/src ; ../../../bin/Holmake cleanAll)
-(cd sigobj ; /bin/rm Systeml.{uo,ui})
-(cd tools/mllex ; ../../bin/Holmake cleanAll)
-(cd help/src ; ../../bin/Holmake cleanAll)
-/bin/rm bin/*
+if [ $ML = "mosml" ]
+then
+    /bin/rm tools/Holmake/*.{uo,ui} tools/hol-mode.el
+    /bin/rm tools/Holmake/{Parser,Lexer}.sml tools/Holmake/Parser.sig
+    /bin/rm tools/Holmake/Holmake_tokens.sml
+    (cd tools/quote-filter ; ../../bin/Holmake cleanAll)
+    (cd tools/mlyacc/mlyacclib ; ../../../bin/Holmake cleanAll)
+    (cd tools/mlyacc/src ; ../../../bin/Holmake cleanAll)
+    (cd sigobj ; /bin/rm Systeml.{uo,ui})
+    (cd tools/mllex ; ../../bin/Holmake cleanAll)
+    (cd help/src-sml ; ../../bin/Holmake cleanAll)
+fi
+
+/bin/rm -f bin/*
 
 mv ../bin-README bin/README
 
-
 cd /tmp
-mv hol98 hol
+mv svn-export-result hol
 
 echo "Creating tar file"
 tar czf $name.tar.gz hol
 
-if [ "$name" != "today" ]
-then
-  mv hol/doc/$name.release.html .
-fi
+mv hol/doc/$shortname.release.html .
 

@@ -576,6 +576,10 @@ val SLICE_COMP_THM2 = store_thm("SLICE_COMP_THM2",
          BITS_COMP_THM2,MIN_DEF]
     \\ ASM_SIMP_TAC arith_ss [GSYM EXP_ADD]);
 
+val BITS_SUM3 = Q.store_thm("BITS_SUM3",
+  `!h a b. BITS h 0 (BITS h 0 a + BITS h 0 b) = BITS h 0 (a + b)`,
+  SRW_TAC [] [BITS_ZERO3, ZERO_LT_TWOEXP, MOD_PLUS]);
+
 (* ------------------------------------------------------------------------- *)
 
 val lem  = prove(`!c a b. (a = b) ==> (a DIV c = b DIV c)`, RW_TAC arith_ss []);

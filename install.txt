@@ -1,18 +1,21 @@
 Getting and Building the HOL system
 -----------------------------------
 
-Get the HOL sources by WWW from SourceForge at http://hol.sourceforge.net
+Get the HOL sources from SourceForge at http://hol.sourceforge.net
 
-You will also need the Moscow ML compiler (version 2.01) from
+You will also need either:
+
+the Moscow ML compiler (version 2.01) from
 
      http://www.itu.dk/~sestoft/mosml.html
 
-(If you want to build the HOL system on top of Poly/ML, please 
- check the points labelled Poly/ML below. Also check the README
- file in directory tools-poly.)
+Or Poly/ML, from
+
+     http://www.polyml.org
 
 Windows users can also build the system by running a self-installing
-executable (available from the above places).  To do this,
+executable (available from the above http://hol.sourceforge.net).  To
+do this,
 
    1.  Ensure that Moscow ML is installed first
    2.  Run the executable and follow the on-screen instructions.
@@ -24,8 +27,9 @@ the supported operating systems
 Building the HOL system.
 --------------------------
 
-A. First, install Moscow ML. This is usually straightforward. The
-   directory where it lives will be called <mosml-dir> in the following.
+A. [Moscow ML:] First, install Moscow ML. This is usually
+   straightforward. The directory where it lives will be called
+   <mosml-dir> in the following.
 
    * If you intend to use ML embeddings of C libraries, like the
      HolBdd library, you are so far restricted to running on Linux,
@@ -48,7 +52,8 @@ A. First, install Moscow ML. This is usually straightforward. The
      set for you by the latest self-installing executable available
      from the Moscow ML home-page.
 
-Poly/ML: obtain and install the latest Poly/ML from the website
+   [Poly/ML:] Install the latest Poly/ML.  Note that you will not be
+   able to use the HolBddLib example with this implementation.
 
        http://www.polyml.org/
 
@@ -57,7 +62,7 @@ B. Unpack HOL with the commands
 
        gunzip release.tar.gz; tar xf release.tar
 
-   in Unix, or the appropriate clicking activity in Windows NT (use a
+   in Unix, or the appropriate clicking activity in Windows (use a
    program like Winzip). The resulting directory will be called
    <hol-dir> in the following.  When fully built, <hol-dir> takes
    approximately 35M of disk space, so be sure you have enough before
@@ -66,7 +71,8 @@ B. Unpack HOL with the commands
 
 C. In the HOL directory (<hol-dir>), type
 
-       mosml < tools/smart-configure.sml
+       [Moscow ML:] mosml < tools/smart-configure.sml
+       [Poly/ML:]   poly < tools/smart-configure.sml
 
    This should guess some configuration options, and then build some
    of HOL's support tools.  If this appears to work correctly, proceed
@@ -75,25 +81,27 @@ C. In the HOL directory (<hol-dir>), type
    If smart-configure guesses the options incorrectly, then you will
    need to provide them yourself. Do this by creating a file called
 
-     config-override
+     [Moscow ML:] config-override in <hol-dir>
+     [Poly/ML:]   poly-include.ML in <hol-dir>/tools-poly
 
-   in <hol-dir>.  In this file provide ML bindings for as  many of the
-   values that were incorrectly guessed by smart-configure.sml.  For
-   example, if the holdir guess was incorrect, then put
+   In this file provide ML bindings for as many of the values that
+   were incorrectly guessed by smart-configure.sml.  For example, if
+   the holdir guess was incorrect, then put
 
      val holdir = "a full pathname to my holdir"
 
-   for example. The OS, holdir and mosmldir parameters must be given
-   as ML strings, while dynlib_available must be an ML boolean (either
-   true or false).  The value for mosmldir must be the directory
-   containing the Moscow ML executables (mosml, mosmlc, etc).
+   for example. Most parameters must be given as ML strings, while
+   dynlib_available must be an ML boolean (either true or false).  The
+   value for mosmldir must be the directory containing the Moscow ML
+   executables (mosml, mosmlc, etc).  The value for poly must be the
+   path to the poly executable.
 
    The valid values for OS are "linux", "unix", "solaris", "macosx"
    and "winNT".  If you are on a unix operating system that is not
    Linux or Solaris, it is OK to just put "unix"; however, this will
    imply that the robdd library will not be usable (it currently only
    builds on linux and solaris).  "winNT" stands in for all versions
-   of "Windows NT", "Windows 2000", and "Windows XP".
+   of "Windows NT", "Windows 2000", "Windows XP" and "Windows Vista".
 
    It's possible that in order to get the muddy library to build, you
    will need to change the binding for GNUMAKE, which is made in the
@@ -106,30 +114,22 @@ C. In the HOL directory (<hol-dir>), type
    the muddy library is not currently accessible. In such a case, the
    value of GNUMAKE does not matter.
 
-Poly/ML: run "poly < tools/smart-configure.sml" from the top-level 
-   HOL directory <hol-dir>
-
-
 D. Now perform the following shell command:
 
-       <hol-dir>/bin/build
+       [Moscow ML:] <hol-dir>/bin/build
+       [Poly/ML:]   <hol-dir>/bin/build -expk
 
    This builds the system. In case of difficulty, the configuration
-   can be gone through by hand, by starting <mosmldir>/bin/mosml and
-   stepping through tools/configure.sml.  Similarly, the execution of
-   build.sml can also be stepped through in MoscowML. This can be
-   somewhat time-consuming, but will help pinpoint any problems.
+   can be gone through by hand, by starting the ML interpreter and
+   stepping through [Moscow ML:] tools/configure.sml, [Poly/ML:]
+   tools-poly/configure.sml by hand.  Similarly, the execution of
+   build.sml can also be stepped through in the interpreter. This can
+   be somewhat time-consuming, but will help pinpoint any problems.
 
-   The build program ends up creating two copies of every ML object
-   file.  To save space on Unix, use the -symlink option.  This option
-   is not available on Windows, unfortunately.  To save space there,
-   you can use the -small option, but this has the disadvantage of
-   forcing any subsequent builds to rebuild everything, regardless of
-   where changes might have occurred.
-
-Poly/ML: run "bin/build -expk [-symlink]" (only the experimental kernel is
-   supported)
-
+   On Windows, the system ends up creating two copies of every object
+   file.  To save space there, you can use the -small option, but this
+   has the disadvantage of forcing any subsequent builds to rebuild
+   everything, regardless of where changes might have occurred.
 
 E. If bin/build completes (it takes a while!), successfully, you are
    done. From <hol-dir> you can now access
@@ -146,7 +146,6 @@ E. If bin/build completes (it takes a while!), successfully, you are
 
    On Windows the hol scripts additionally include a .bat extension,
    and Holmake has a .exe extension.
-
 
 External tools.
 ----------------

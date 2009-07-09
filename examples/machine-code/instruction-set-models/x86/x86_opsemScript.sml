@@ -13,6 +13,16 @@ val _ = new_theory "x86_opsem";
 
 <* ---------------------------------------------------------------------------------- *)
 
+
+(* assertion *)
+
+val assertT_def = Define `
+  assertT b = if b then constT () else failureT`;
+
+val option_apply_assertT = store_thm("option_apply_assertT",
+  ``!b s f. b ==> (option_apply (assertT b s) f = f ((),s))``,
+  SIMP_TAC std_ss [assertT_def,constT_def,constT_seq_def,option_apply_def]);
+
 (* calculate effective address *)
 
 val ea_Xr_def = Define `ea_Xr (r:Xreg) = constT (Xea_r r)`;
@@ -63,7 +73,7 @@ val read_dest_ea_def = Define `
 
 val read_ea_byte_def = Define `
   (read_ea_byte ii (Xea_i i) = constT i) /\
-  (read_ea_byte ii (Xea_r r) = read_reg ii r) /\
+  (read_ea_byte ii (Xea_r r) = seqT (assertT (r IN {EAX;EBX;ECX;EDX})) (\x. read_reg ii r)) /\
   (read_ea_byte ii (Xea_m a) = seqT (read_m8 ii a) (\w. constT (w2w w)))`; 
 
 val read_src_ea_byte_def = Define `
@@ -223,7 +233,6 @@ val read_cond_def = Define `
   (read_cond ii X_NA    = seqT 
      (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT (c \/ z)))`;
 
-
 (* execute stack operations for non-EIP registers *)
 
 val x86_exec_pop_def = Define `
@@ -276,16 +285,17 @@ val x86_exec_def = Define `
         (\ ((ea_src,val_src),eax).
               parT_unit (write_reg ii EAX (eax * val_src))
              (parT_unit (write_reg ii EDX (n2w ((w2n eax * w2n val_src) DIV 2**32)))
-                        (erase_eflags ii)) (* fix this *)))) /\
+                        (erase_eflags ii)) (* erase_flag is here an over approximation *)))) /\
   (x86_exec ii (Xdiv rm) len = bump_eip ii len 
      (seqT 
         (parT (seqT (ea_Xrm ii rm) (\ea. addT ea (read_ea ii ea)))
               (seqT (parT (read_reg ii EAX) (read_reg ii EDX))
                     (\ (eax,edx). constT (w2n edx * 2**32 + w2n eax)))) 
         (\ ((ea_src,val_src),n).
-              parT_unit (write_reg ii EAX (n2w (n DIV (w2n val_src))))
+              parT_unit (assertT (~(val_src = 0w) /\ n DIV (w2n val_src) < 2**32))
+             (parT_unit (write_reg ii EAX (n2w (n DIV (w2n val_src))))
              (parT_unit (write_reg ii EDX (n2w (n MOD (w2n val_src))))
-                        (erase_eflags ii))))) /\
+                        (erase_eflags ii)))))) /\
   (x86_exec ii (Xxadd rm r) len = bump_eip ii len 
      (seqT 
         (parT (seqT (ea_Xrm ii rm) (\ea. addT ea (read_ea ii ea)))
@@ -335,6 +345,12 @@ val x86_exec_def = Define `
                   (parT (read_cond ii c) (ea_Xdest ii ds))))
            (\ ((ea_src,val_src),(g,ea_dest)). 
                if g then write_ea ii ea_dest val_src else constT ()))) /\
+  (x86_exec ii (Xdec_byte rm) len = bump_eip ii len
+     (seqT 
+        (seqT (ea_Xrm ii rm) (\ea. addT ea (read_ea_byte ii ea)))
+        (\ (ea_src,val_src). 
+           parT_unit (write_ea_byte ii ea_src (w2w ((w2w val_src) - 1w:word8)))
+                     (erase_eflags ii)))) /\
   (x86_exec ii (Xmov_byte ds) len = bump_eip ii len
      (seqT 
         (parT (read_src_ea_byte ii ds) (ea_Xdest ii ds))
@@ -345,10 +361,16 @@ val x86_exec_def = Define `
         (parT (read_src_ea_byte ii ds) (read_dest_ea_byte ii ds))
            (\ ((ea_src,val_src),(ea_dest,val_dest)).
               write_binop ii Xcmp val_dest val_src ea_dest))) /\
-  (x86_exec ii (Xjump c imm) len = (   
+  (x86_exec ii (Xjcc c imm) len = (   
      seqT
        (parT (read_eip ii) (read_cond ii c))
           (\ (eip,g). write_eip ii (if g then eip + len + imm else eip + len)))) /\
+  (x86_exec ii (Xjmp rm) len = (   
+     seqT 
+       (seqT (ea_Xrm ii rm) (\ea. read_ea ii ea))
+       (\new_eip. 
+          parT_unit (write_eip ii new_eip) 
+                    (clear_icache ii)))) /\
   (x86_exec ii (Xloop c imm) len = 
      seqT (parT (read_eip ii) (
            parT (read_cond ii c) 
@@ -380,7 +402,7 @@ val x86_exec_def = Define `
 
 val x86_execute_def = Define `
   (x86_execute ii (Xprefix Xg1_none g2 i) len = x86_exec ii i len) /\
-  (x86_execute ii (Xprefix Xlock g2 i) len    =  lockT (x86_exec ii i len))`;
+  (x86_execute ii (Xprefix Xlock g2 i) len    = lockT (x86_exec ii i len))`;
 
 
 val _ = export_theory ();

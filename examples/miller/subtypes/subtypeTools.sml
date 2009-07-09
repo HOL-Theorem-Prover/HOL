@@ -99,7 +99,7 @@ local
   fun imp_conv tm = (if is_imp tm then ALL_CONV else REWR_CONV EQ_T_IMP) tm
 
   fun conj_conv tm =
-    (if eq tm T then ALL_CONV else FORALLS_CONV imp_conv) tm
+    (if tm = T then ALL_CONV else FORALLS_CONV imp_conv) tm
 
   val canon_conv =
     FORALLS_CONV
@@ -123,6 +123,29 @@ fun find_matching_cong congs tm =
     (vars'', th')
   end;
 
+(* Function cacheing *)
+type 'a ccache = (term * int, 'a) Binarymap.dict ref
+
+fun new_cache () : 'a ccache =
+    ref (Binarymap.mkDict (pair_compare(Term.compare, Int.compare)))
+
+fun cache_lookup c (a, b_thk) =
+    case Binarymap.peek(!c, a) of
+      SOME b => b
+    | NONE => let
+        val b = b_thk ()
+        val _ = c := Binarymap.insert(!c,a,b)
+      in
+        b
+      end
+
+fun cachef f =
+  let
+    val c = new_cache ()
+  in
+    fn a => cache_lookup c (a, fn () => f a)
+  end;
+
 (* ========================================================================= *)
 (* Predicate subtype-checking.                                               *)
 (* ========================================================================= *)
@@ -134,7 +157,7 @@ datatype psubtype_context = PSUBTYPE_CONTEXT of
 
 datatype subtype_context = SUBTYPE_CONTEXT of
   {pure : psubtype_context susp,
-   ccache : (term * int, vthm list) cache};
+   ccache : vthm list ccache};
 
 datatype subtype_context_element =
   SC_SUBTYPE of thm
@@ -180,7 +203,7 @@ fun psubtype_context_update_subtypes f (PSUBTYPE_CONTEXT {facts, subtypes}) =
 fun new_subtype_context () =
   SUBTYPE_CONTEXT
   {pure = delay (K empty_psubtype_context),
-   ccache = new_cache (pair_cmp eq equal)};
+   ccache = new_cache ()};
 
 fun dest_subtype_context (SUBTYPE_CONTEXT sc) = sc;
 val subtype_context_pure = force o #pure o dest_subtype_context;
@@ -202,7 +225,7 @@ fun subtype_context_initialize sc = (subtype_context_pure sc; sc);
 
 fun pp_psubtype_context ppstrm =
   let
-    val {add_string,add_break,begin_block,end_block,add_newline,...} 
+    val {add_string,add_break,begin_block,end_block,add_newline,...}
       = Portable.with_ppstream ppstrm
   in
     fn (PSUBTYPE_CONTEXT c) =>
@@ -214,16 +237,16 @@ fun pp_psubtype_context ppstrm =
      pp_int ppstrm (factdb_size (#facts c));
      add_string ",";
      end_block ();
-     
+
      add_break (1, 0);
-     
+
      begin_block Portable.CONSISTENT 2;
      add_string "#subtypes =";
      add_break (1, 0);
      pp_int ppstrm (ovdiscrim_size (#subtypes c));
      add_string "}";
      end_block ();
-     
+
      end_block())
   end;
 
@@ -324,7 +347,7 @@ fun subtype_check ccache congs stricttypechecking depth =
         partial_map (total process_result) cond_results
       end
     and cond_prover facts cond =
-      if eq cond T then k_prover TRUTH
+      if cond = T then k_prover TRUTH
       else if not stricttypechecking andalso is_trivial cond then
         k_prover (prove_trivial cond)
       else
@@ -448,7 +471,7 @@ val simplify_forwards = ref 10;
 
 fun pp_context ppstrm =
   let
-    val {add_string,add_break,begin_block,end_block,add_newline,...} 
+    val {add_string,add_break,begin_block,end_block,add_newline,...}
       = Portable.with_ppstream ppstrm
   in
     fn (CONTEXT c) =>
@@ -460,43 +483,43 @@ fun pp_context ppstrm =
      pp_subtype_context ppstrm (#subtypes c);
      add_string ",";
      end_block ();
-     
+
      add_break (1, 0);
-     
+
      begin_block Portable.CONSISTENT 2;
      add_string "#forwards =";
      add_break (1, 0);
      pp_int ppstrm (length (#forwards c));
      add_string ",";
      end_block ();
-     
+
      add_break (1, 0);
-     
+
      begin_block Portable.CONSISTENT 2;
      add_string "#congs =";
      add_break (1, 0);
      pp_int ppstrm (ovdiscrim_size (#congs c));
      add_string ",";
      end_block ();
-     
+
      add_break (1, 0);
-     
+
      begin_block Portable.CONSISTENT 2;
      add_string "#rules =";
      add_break (1, 0);
      pp_int ppstrm (ovdiscrim_size (#rules c));
      add_string ",";
      end_block ();
-     
+
      add_break (1, 0);
-     
+
      begin_block Portable.CONSISTENT 2;
      add_string "#rewrs =";
      add_break (1, 0);
      pp_int ppstrm (ovdiscrim_size (#rewrs c));
      add_string "}";
      end_block ();
-     
+
      end_block())
   end;
 
@@ -544,7 +567,7 @@ fun context_update_rewrs f
 fun rewr_vthm_to_rewr (vars : vars, th) : vterm * c_rewr =
   let
     val (cond, (pat, _)) = ((I ## dest_eq) o dest_imp o concl) th
-    val f = ho_subst_COND_REWR th o (if eq cond T then K (K TRUTH) else I)
+    val f = ho_subst_COND_REWR th o (if cond = T then K (K TRUTH) else I)
     fun rewr ho_sub _ prover (_ : term) = f prover ho_sub
   in
     ((vars, pat), rewr)
@@ -568,7 +591,7 @@ local
       val (asm, (l, r)) = ((I ## dest_eq) o dest_imp o concl) th
       val res =
         not (is_subterm l asm) andalso not (is_subterm l r) andalso
-        (op_subset eq (op_intersect eq vars (free_varsl [asm, r])) (free_vars l))
+        (subset (intersect vars (free_varsl [asm, r])) (free_vars l))
       val _ = trace 2
         ("vthm_to_rewr_vthms: " ^ (if res then "accepted" else "rejected"))
     in
@@ -694,7 +717,7 @@ local
       val tm' = fold (C (curry mk_comb)) tm_pretty_abs bvars
       val tm_th = QCONV (N n (fn c => RATOR_CONV c THENC BETA_CONV) ALL_CONV) tm'
       val (r_var, r_bvs) = list_dest_comb r
-      val _ = assert (list_cmp eq bvars (rev r_bvs)) (BUG "match_align" "bvar panic")
+      val _ = assert (bvars = rev r_bvs) (BUG "match_align" "bvar panic")
       val res = (([r_var |-> tm_pretty_abs], []), SYM tm_th)
     in
       res
@@ -706,7 +729,7 @@ local
       val (bvars, body) = genvar_dest_foralls cond
       val (asm, (l, r)) = ((I ## dest_eq) o dest_imp) body
       val ctext' =
-        if eq asm T then ctext
+        if asm = T then ctext
         else context_add_fact (empty_vars, ASSUME asm) ctext
       val raw_eq = QCONV (N_BETA_CONV (length bvars) THENC rewr ctext') l
       val (sub, match_eq) = match_align bvars l r (RHS raw_eq)
@@ -746,7 +769,7 @@ end;
 
 fun SIMPLIFY_REWR_CONV simper prover rewrs tm =
   let
-    val _ = trace_x 4 "SIMPLIFY_REWR_CONV: input" term_to_string tm     
+    val _ = trace_x 4 "SIMPLIFY_REWR_CONV: input" term_to_string tm
     val matches = ovdiscrim_ho_match rewrs tm
     val _ =
       trace_x 4 "SIMPLIFY_REWR_CONV: #matches" (int_to_string o length) matches
@@ -770,8 +793,8 @@ fun GEN_SIMPLIFY_CONV s p ctext tm =
     trace_CONV 2 "GEN_SIMPLIFY_CONV result")) tm;
 
 val no_prover_conv : context -> conv = K NO_CONV;
-  
-fun subtype_prover_conv ctext = 
+
+fun subtype_prover_conv ctext =
   QCONV (SUBTYPE_CONV_DEPTH (!simplify_subtype_depth) (context_subtypes ctext));
 
 (* Warning: do not eta-reduce this function! *)

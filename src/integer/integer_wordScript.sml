@@ -1,6 +1,6 @@
 open HolKernel boolLib Parse bossLib BasicProvers
 
-open wordsTheory integerTheory intLib arithmeticTheory
+open wordsTheory wordsLib integerTheory intLib arithmeticTheory
 
 (* theory of 2's complement representation of integers *)
 
@@ -187,6 +187,52 @@ val WORD_GEi = store_thm("WORD_GEi",
   ``!a b. a >= b = w2i a >= w2i b``,
   REWRITE_TAC [WORD_GREATER_EQ, int_ge, WORD_LEi]);
 
+val sum_num = intLib.COOPER_PROVE
+  ``(Num (&a + &b) = a + b) /\
+    (-&a + -&b = -&(a + b)) /\
+    ~(&a + &b < 0i) /\
+    (-&a + &b < 0i = b < a:num) /\
+    (&a + -&b < 0i = a < b:num) /\
+    (&a - &b < 0i = a < b:num) /\
+    (~(&a + -&b < 0i) = b <= a:num) /\
+    (~(-&a + &b < 0i) = a <= b:num) /\
+    (~(&a - &b < 0i) = b <= a:num) /\
+    (~(-&a - &b < 0i) = (a = 0) /\ (b = 0))``;
+
+val word_literal_sub =
+  METIS_PROVE [arithmeticTheory.NOT_LESS_EQUAL, WORD_LITERAL_ADD]
+    ``(m < n ==> (-n2w (n - m) = n2w m + -n2w n)) /\
+      (n <= m ==> (n2w (m - n) = n2w m + -n2w n))``;
+
+val word_add_i2w_w2n = Q.store_thm("word_add_i2w_w2n",
+  `!a b. i2w (&w2n a + &w2n b) = a + b`,
+  SRW_TAC [] [i2w_def, word_add_def, sum_num]);
+
+val word_add_i2w = Q.store_thm("word_add_i2w",
+  `!a b. i2w (w2i a + w2i b) = a + b`,
+  SRW_TAC [] [i2w_def, w2i_def]
+  THEN FULL_SIMP_TAC (srw_ss()++ARITH_ss)
+         [WORD_LEFT_ADD_DISTRIB, GSYM word_add_def, sum_num, word_literal_sub,
+          intLib.COOPER_PROVE
+              ``(&y < &x ==> (Num (-(-&x + &y)) = x - y)) /\
+                (&x < &y ==> (Num (-(&x + -&y)) = y - x)) /\
+                (~(&y < &x) ==> (Num (-&x + &y) = y - x)) /\
+                (~(&x < &y) ==> (Num (&x + -&y) = x - y))``]);
+
+val word_sub_i2w_w2n = Q.store_thm("word_sub_i2w_w2n",
+  `!a b. i2w (&w2n a - &w2n b) = a - b`,
+  SRW_TAC [] [i2w_def, intLib.COOPER_PROVE
+          ``(&x - &y < 0i ==> (Num ((&y - &x)) = y - x)) /\
+            (~(&x - &y < 0i) ==> (Num ((&x - &y)) = x - y))``]
+  THEN FULL_SIMP_TAC (srw_ss()) [sum_num, word_literal_sub]);
+
+val word_sub_i2w = Q.store_thm("word_sub_i2w",
+  `!a b. i2w (w2i a - w2i b) = a - b`,
+  SRW_TAC [] [i2w_def, w2i_def]
+  THEN FULL_SIMP_TAC (srw_ss()++ARITH_ss)
+         [WORD_LEFT_ADD_DISTRIB, GSYM word_add_def, sum_num, word_literal_sub,
+          intLib.COOPER_PROVE
+              ``(&x < &y ==> (Num (&y - &x) = y - x)) /\
+                (~(&x < &y) ==> (Num (&x - &y) = x - y))``]);
 
 val _ = export_theory()
-

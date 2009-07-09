@@ -78,12 +78,16 @@ val ss = rewrites [OK_nextinstr_def, PREAD_M_LIST_curried_def,
   parT_def, parT_unit_def, failureT_def, PREAD_CLAUSES,
   ppc_reg_distinct, ppc_bit_distinct, w2w_def, w2n_n2w, WORD_ADD_0,
   n2w_w2n, w2bytes1, w2bytes2, w2bytes4, n2w_11, address_aligned_def,
-  rich_listTheory.REVERSE, WORD_EQ_ADD_LCANCEL,
+  rich_listTheory.REVERSE, WORD_EQ_ADD_LCANCEL,ppc_branch_condition_def,
   rich_listTheory.SNOC_APPEND, APPEND, lemma1, lemma2, address_lemma]
 
 fun EVAL_sw2sw th = let
   val tm = find_term (can (match_term ``(sw2sw:'a word -> 'b word) (n2w n)``)) (concl th)
   in EVAL_sw2sw (REWRITE_RULE [EVAL tm] th) end handle e => th;
+
+fun EVAL_word_and_eq th = let
+  val tm = find_term (can (match_term ``(n2w n) && (n2w m) = (n2w k):'a word``)) (concl th)
+  in EVAL_word_and_eq (REWRITE_RULE [EVAL tm] th) end handle e => th;
 
 fun ppc_step s = let
   val th = ppc_decode_next s
@@ -95,6 +99,7 @@ fun ppc_step s = let
               DISCH_ALL o cc) th
   fun change f x = let val y = f x in if eq (concl y) (concl x) then x else change f y end 
   val th1 = change f th1
+  val th1 = EVAL_word_and_eq th1
   val th1 = DISCH_ALL (MATCH_MP th (UNDISCH_ALL (REWRITE_RULE [if_SOME] th1)))
   val th1 = (REWRITE_RULE [pull_if_lemma] o UNDISCH_ALL) th1
   val th1 = REWRITE_RULE [AND_IMP_INTRO,GSYM CONJ_ASSOC,conditional_def] (DISCH_ALL th1)
@@ -158,8 +163,7 @@ fun ppc_step s = let
   val th = ppc_step "4181FFF4";  (* bc 12,1,L1 *)
   val th = ppc_step "4082FFF0";  (* bc 4,2,L1 *)
   val th = ppc_step "4083FFEC";  (* bc 4,3,L1 *)
-  val th = ppc_step 
-val s = "7C858396";  (* divwu 4,5,16 *)
+  val th = ppc_step "7C858396";  (* divwu 4,5,16 *)
 
   (* these are not modelled *)
 

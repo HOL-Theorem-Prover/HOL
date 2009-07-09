@@ -5,9 +5,11 @@ open HolKernel boolLib bossLib Parse;
 open codegen_inputLib helperLib;
 
 
-val arm_temp_reg = ref 0; 
-fun set_arm_temp_reg i = (arm_temp_reg := i);
-fun get_arm_temp_reg () = !arm_temp_reg;
+val arm_temp_regs = ref [0,2]; 
+fun set_arm_temp_reg i = (arm_temp_regs := (i :: tl (!arm_temp_regs)));
+fun get_arm_temp_reg () = hd (!arm_temp_regs);
+fun set_arm_temp_regs ix = (arm_temp_regs := ix);
+fun get_arm_temp_regs () = (!arm_temp_regs);
 
 val arm_assign2assembly = let
   fun r i = "r" ^ int_to_string i
@@ -58,6 +60,13 @@ val arm_assign2assembly = let
              assign_const_to_reg j d @ 
              code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_REG d) reversed
         end
+  val temp = get_arm_temp_reg ()
+  val temp2 = el 2 (get_arm_temp_regs ())
+  fun swpb (ASSIGN_ADDRESS_REG i,j) = ["swp?b " ^ r temp2 ^ ", " ^ r j ^ ", [" ^ r i ^ "]"]
+    | swpb (ASSIGN_ADDRESS_OFFSET_ADD (d,i),j) = 
+        ["add? " ^ r temp ^ ", " ^ r d ^ ", #" ^ Arbnum.toString i ] @ swpb (ASSIGN_ADDRESS_REG temp,j)
+    | swpb (ASSIGN_ADDRESS_OFFSET_SUB (d,i),j) = 
+        ["sub? " ^ r temp ^ ", " ^ r d ^ ", #" ^ Arbnum.toString i ] @ swpb (ASSIGN_ADDRESS_REG temp,j)
   fun f (ASSIGN_EXP (d, ASSIGN_EXP_REG s)) = ["mov? " ^ r d ^ ", " ^ r s]
     | f (ASSIGN_EXP (d, ASSIGN_EXP_CONST i)) = assign_const_to_reg i d      
     | f (ASSIGN_EXP (d, ASSIGN_EXP_STACK i)) = ["ldr? " ^ r d ^ ", " ^ s i]
@@ -69,9 +78,12 @@ val arm_assign2assembly = let
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_LEFT (ASSIGN_X_REG i,n))) = ["mov? " ^ r d ^ ", " ^ r i ^ ", LSL #" ^ int_to_string n ]
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_RIGHT (ASSIGN_X_REG i,n))) = ["mov? " ^ r d ^ ", " ^ r i ^ ", LSR #" ^ int_to_string n ]
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_ARITHMETIC_RIGHT (ASSIGN_X_REG i,n))) = ["mov? " ^ r d ^ ", " ^ r i ^ ", ASR #" ^ int_to_string n ]
-    | f (ASSIGN_STACK (i,d)) = ["str? " ^ r d ^ ", " ^ s i]
-    | f (ASSIGN_MEMORY (ACCESS_WORD,a,d)) = ["str? " ^ r d ^ ", " ^ address a]
-    | f (ASSIGN_MEMORY (ACCESS_BYTE,a,d)) = ["str?b " ^ r d ^ ", " ^ address a]
+    | f (ASSIGN_STACK (i,ASSIGN_X_REG d)) = ["str? " ^ r d ^ ", " ^ s i]
+    | f (ASSIGN_STACK (i,ASSIGN_X_CONST j)) = assign_const_to_reg j temp @ ["str? " ^ r temp ^ ", " ^ s i]
+    | f (ASSIGN_MEMORY (ACCESS_WORD,a,ASSIGN_X_REG d)) = ["str? " ^ r d ^ ", " ^ address a]
+    | f (ASSIGN_MEMORY (ACCESS_WORD,a,ASSIGN_X_CONST i)) = assign_const_to_reg i temp @ ["str? " ^ r temp ^ ", " ^ address a]
+    | f (ASSIGN_MEMORY (ACCESS_BYTE,a,ASSIGN_X_REG d)) = swpb (a,d)
+    | f (ASSIGN_MEMORY (ACCESS_BYTE,a,ASSIGN_X_CONST i)) = assign_const_to_reg i temp2 @ swpb (a,temp2)
     | f _ = hd []
   in f end  
 
@@ -94,6 +106,7 @@ fun arm_guard2assembly (GUARD_NOT t) = let
         | f (ASSIGN_X_CONST c) = "#" ^ Arbnum.toString c
       val code = ["tst " ^ rd ^ ", " ^ f j]
       in (code, ("eq","ne")) end
+  | arm_guard2assembly (GUARD_EQUAL_BYTE (a,i)) = hd []
   | arm_guard2assembly (GUARD_OTHER tm) = let
       val (t1,t2) = dest_eq tm      
       fun f (ASSIGN_EXP (i,exp)) = (i,exp) | f _ = hd []

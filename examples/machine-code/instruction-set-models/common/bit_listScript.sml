@@ -1,6 +1,7 @@
 
 open HolKernel boolLib bossLib Parse;
-open wordsTheory stringTheory stringLib listTheory stringSimps listLib fcpTheory;
+open wordsTheory stringTheory stringLib listTheory stringSimps listLib fcpTheory arithmeticTheory;
+open rich_listTheory;
 
 val _ = new_theory "bit_list";
 
@@ -93,6 +94,108 @@ val bytes2word_thm = store_thm("bytes2word_thm",
   THEN REWRITE_TAC [bytes2word_lemma]
   THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss) 
          [WORD_OR_CLAUSES,bytes2word_lemma]);
+
+val bits2num_n2bits = store_thm("bits2num_n2bits",
+  ``!i n. bits2num (n2bits i n) = n MOD 2**i``,
+  Induct THEN ONCE_REWRITE_TAC [n2bits_def] THEN REPEAT STRIP_TAC 
+  THEN SIMP_TAC std_ss [bits2num_def,DECIDE ``~(SUC i = 0)``]
+  THEN `0<2` by DECIDE_TAC
+  THEN `n MOD 2 < 2 /\ (n DIV 2 * 2 + n MOD 2 = n)` by METIS_TAC [DIVISION]
+  THEN Cases_on `n MOD 2 = 0` THENL [
+    ASM_SIMP_TAC std_ss [MOD_COMMON_FACTOR,ZERO_LT_EXP,bits2num_def]  
+    THEN FULL_SIMP_TAC std_ss [EXP,AC MULT_COMM MULT_ASSOC],
+    `n MOD 2 = 1` by DECIDE_TAC
+    THEN ASM_SIMP_TAC std_ss [bits2num_def]
+    THEN ONCE_REWRITE_TAC [ADD_COMM]
+    THEN SIMP_TAC std_ss [DIV_MOD_MOD_DIV,GSYM EXP]
+    THEN `1 = n MOD 2 ** SUC i MOD 2` by ASM_SIMP_TAC std_ss [EXP,MOD_MULT_MOD]
+    THEN ONCE_ASM_REWRITE_TAC []
+    THEN ONCE_REWRITE_TAC [MULT_COMM]
+    THEN SIMP_TAC std_ss [MATCH_MP (GSYM DIVISION) (DECIDE ``0<2``)]]);
+
+val bits2num_w2bits = store_thm("bits2num_w2bits",
+  ``!w:'a word. bits2num (w2bits w) = w2n w``,   
+  Cases THEN FULL_SIMP_TAC std_ss [w2bits_def,bits2num_n2bits,w2n_n2w,dimword_def]);
+
+val w2bits_word32 = save_thm("w2bits_word32",
+  SIMP_RULE std_ss [DIV_DIV_DIV_MULT] (EVAL ``w2bits (w:word32)``));
+
+val bits2num_LESS = store_thm("bits2num_LESS",
+  ``!xs. bits2num xs < 2 ** (LENGTH xs)``,
+  Induct THEN SIMP_TAC std_ss [bits2num_def]
+  THEN Cases THEN SIMP_TAC std_ss [bits2num_def,LENGTH,EXP] THEN DECIDE_TAC);
+
+val n2bits_bits2num = store_thm("n2bits_bits2num",
+  ``!xs. n2bits (LENGTH xs) (bits2num xs) = xs``,
+  Induct THEN ONCE_REWRITE_TAC [n2bits_def]
+  THEN SIMP_TAC std_ss [LENGTH,DECIDE ``~(SUC n = 0)``]
+  THEN Cases  
+  THEN ASM_SIMP_TAC std_ss [bits2num_def,
+         ONCE_REWRITE_RULE [ADD_COMM] (ONCE_REWRITE_RULE [MULT_COMM] 
+           (CONJ DIV_MULT (CONJ MOD_EQ_0 (CONJ MULT_DIV MOD_MULT))))]);
+
+val w2bits_b2w_word32 = store_thm("w2bits_b2w_word32",
+  ``w2bits ((b2w I [x1;x2;x3;x4;x5;x6;x7;x8]):word8) = [x1;x2;x3;x4;x5;x6;x7;x8]``,
+  SIMP_TAC std_ss [w2bits_def,b2w_def,w2n_n2w]
+  THEN ASSUME_TAC (Q.SPEC `[x1;x2;x3;x4;x5;x6;x7;x8]` bits2num_LESS)
+  THEN ASSUME_TAC (Q.SPEC `[x1;x2;x3;x4;x5;x6;x7;x8]` n2bits_bits2num)
+  THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [LENGTH]);
+
+val bits2num_MOD = store_thm("bits2num_MOD",  
+  ``!i xs. bits2num xs MOD 2 ** i = bits2num (TAKE i xs)``,
+  Induct THEN Cases THEN ONCE_REWRITE_TAC [TAKE_def]
+  THEN SIMP_TAC std_ss [bits2num_def,DECIDE ``~(SUC n = 0)``]  
+  THEN Tactical.REVERSE (Cases_on `h`) THEN SIMP_TAC std_ss [bits2num_def]
+  THEN ASM_SIMP_TAC std_ss [GSYM MOD_COMMON_FACTOR,EXP]
+  THEN POP_ASSUM (fn th => SIMP_TAC std_ss [GSYM th])
+  THEN ONCE_REWRITE_TAC [ADD_COMM]
+  THEN ASM_SIMP_TAC std_ss [MOD_COMMON_FACTOR,GSYM EXP]
+  THEN `0 < 2 ** SUC i` by SIMP_TAC std_ss [bitTheory.MOD_ADD_1,ZERO_LT_EXP]
+  THEN IMP_RES_TAC bitTheory.MOD_ADD_1
+  THEN POP_ASSUM MATCH_MP_TAC
+  THEN IMP_RES_TAC bitTheory.MOD_PLUS_1
+  THEN ASM_SIMP_TAC std_ss []
+  THEN SIMP_TAC std_ss [EXP,GSYM MOD_COMMON_FACTOR]
+  THEN `0 < 2 ** i` by SIMP_TAC std_ss [bitTheory.MOD_ADD_1,ZERO_LT_EXP]
+  THEN IMP_RES_TAC DIVISION
+  THEN `bits2num t MOD 2 ** i < 2 ** i` by METIS_TAC []
+  THEN DECIDE_TAC);
+
+val COLLECT_BYTES_n2w_bits2num = store_thm("COLLECT_BYTES_n2w_bits2num",
+  ``!imm32:word32. 
+      ((b2w I
+            [w2n imm32 MOD 2 = 1; (w2n imm32 DIV 2) MOD 2 = 1;
+             (w2n imm32 DIV 4) MOD 2 = 1; (w2n imm32 DIV 8) MOD 2 = 1;
+             (w2n imm32 DIV 16) MOD 2 = 1; (w2n imm32 DIV 32) MOD 2 = 1;
+             (w2n imm32 DIV 64) MOD 2 = 1; (w2n imm32 DIV 128) MOD 2 = 1]) = 
+       (w2w imm32):word8) /\
+      ((b2w I
+            [(w2n imm32 DIV 256) MOD 2 = 1;
+             (w2n imm32 DIV 512) MOD 2 = 1; (w2n imm32 DIV 1024) MOD 2 = 1;
+             (w2n imm32 DIV 2048) MOD 2 = 1; (w2n imm32 DIV 4096) MOD 2 = 1;
+             (w2n imm32 DIV 8192) MOD 2 = 1; (w2n imm32 DIV 16384) MOD 2 = 1;
+             (w2n imm32 DIV 32768) MOD 2 = 1]) = 
+       (w2w (imm32 >>> 8)):word8) /\
+      ((b2w I
+            [(w2n imm32 DIV 65536) MOD 2 = 1;
+             (w2n imm32 DIV 131072) MOD 2 = 1; (w2n imm32 DIV 262144) MOD 2 = 1;
+             (w2n imm32 DIV 524288) MOD 2 = 1; (w2n imm32 DIV 1048576) MOD 2 = 1;
+             (w2n imm32 DIV 2097152) MOD 2 = 1; (w2n imm32 DIV 4194304) MOD 2 = 1;
+             (w2n imm32 DIV 8388608) MOD 2 = 1]) =
+       (w2w (imm32 >>> 16)):word8) /\
+      ((b2w I
+            [(w2n imm32 DIV 16777216) MOD 2 = 1;
+             (w2n imm32 DIV 33554432) MOD 2 = 1; (w2n imm32 DIV 67108864) MOD 2 = 1;
+             (w2n imm32 DIV 134217728) MOD 2 = 1; (w2n imm32 DIV 268435456) MOD 2 = 1;
+             (w2n imm32 DIV 536870912) MOD 2 = 1; (w2n imm32 DIV 1073741824) MOD 2 = 1;
+             (w2n imm32 DIV 2147483648) MOD 2 = 1]) =
+       (w2w (imm32 >>> 24)):word8)``,
+  REPEAT STRIP_TAC THEN SIMP_TAC std_ss [w2w_def,b2w_def]  
+  THEN CONV_TAC (RAND_CONV (REWRITE_CONV [GSYM bits2num_w2bits]))
+  THEN SIMP_TAC std_ss [w2bits_word32,n2w_11,dimword_def]
+  THEN SIMP_TAC (bool_ss++wordsLib.SIZES_ss) []
+  THEN SIMP_TAC bool_ss [bits2num_MOD]
+  THEN SIMP_TAC std_ss [TAKE_def,w2n_lsr,DIV_DIV_DIV_MULT]);
 
 
 val _ = export_theory ();

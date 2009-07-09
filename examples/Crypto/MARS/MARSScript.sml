@@ -6,7 +6,7 @@
  which is a candidate algorithm in the Advanced Encryption Standard
  For detailed information about MARS, please refer to
         http://www.research.ibm.com/security/mars.html
- in which algorithm specification, Security and performance evaluation, 
+ in which algorithm specification, Security and performance evaluation,
  etc. could be found.
 *)
 
@@ -41,7 +41,7 @@ val _ = new_theory "MARS";
 (*---------------------------------------------------------------------------*)
 
 val E_function_def = Define
-   `E_function(A, key1, key2) = 
+   `E_function(A, key1, key2) =
      let R = ((A #<< 13) * key2) #<< 10  in
      let M = (A + key1) #<< w2n ((R #>> 5) ?? 0x1fw)  in
      let L = (Sbox(l9b(A+key1)) ?? (R #>> 5) ?? R) #<< w2n (R ?? 0x1fw)
@@ -53,7 +53,7 @@ val  en_f_rnd_def = Define
         let C = C + Sbox0(l8b(A #>> 16)) in
         let D = D ?? Sbox1(l8b(A #>> 24)) in
         let  A = (A #>> 24) +
-        ((if (i=5) \/ (i=1) then B else 0w) + 
+        ((if (i=5) \/ (i=1) then B else 0w) +
          (if (i=4) \/ (i=0) then D else 0w))
         in (B,C,D,A) : block`;
 
@@ -67,7 +67,7 @@ val  (f_mix_def, f_mix_ind)  = Defn.tprove (
 
 val  en_f_mix_def = Define `
     en_f_mix((A,B,C,D),k) = f_mix 8 (
-        A+FST(GETKEYS(k)), B+SND(GETKEYS(k)), C+FST(GETKEYS(ROTKEYS(k))), 
+        A+FST(GETKEYS(k)), B+SND(GETKEYS(k)), C+FST(GETKEYS(ROTKEYS(k))),
         D+SND(GETKEYS(ROTKEYS(k))))`;
 
 val  en_core_rnd_def = Define `
@@ -80,8 +80,8 @@ val  en_core_rnd_def = Define `
         in (B, C, D, A):block`;
 
 val  (core_def, core_ind) = Defn.tprove (
-     Hol_defn "core" 
-     `core i (b:block) (k:keysched) = 
+     Hol_defn "core"
+     `core i (b:block) (k:keysched) =
      if i = 0 then b
      else core (i-1) (en_core_rnd(b,k,i)) (ROTKEYS(k))`,
    WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC);
@@ -102,7 +102,7 @@ val  en_b_rnd_def = Define `
 (*Do eight rounds of backwards mixing*)
 val  (b_mix_def, b_mix_ind) = Defn.tprove (
    Hol_defn "b_mix"
-     `b_mix i (b:block) (k:keysched) = 
+     `b_mix i (b:block) (k:keysched) =
      if i = 0 then b
      else b_mix (i-1) (en_b_rnd(b,i)) k`,
    WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC);
@@ -149,14 +149,14 @@ val  PreWhitening_def = Define `
 
 val  de_f_mix_def = Define `
     de_f_mix(b,k) = inv_f_mix 8 (PreWhitening(b,k))`;
-                                                                                
+
 val  de_core_rnd_def = Define `
      de_core_rnd ((A,B,C,D):block, k:keysched, i) =
         let (A,B,C,D) = (D #>> 13,A,B,C) in
         let (out1,out2,out3) = E_function(A,FST(GETKEYS(k)),SND(GETKEYS(k))) in
         let C = C - out2 in
         let B = if i<8 then B-out1 else B ?? out3 in
-        let D = if i<8 then D ?? out3 else D - out1 
+        let D = if i<8 then D ?? out3 else D - out1
         in (A, B, C, D)`;
 
 val  (inv_core_def, inv_core_ind) = Defn.tprove (
@@ -165,21 +165,21 @@ val  (inv_core_def, inv_core_ind) = Defn.tprove (
      if i = 0 then b
      else de_core_rnd(inv_core (i-1) b (ROTKEYS(k)),k,i)`,
    WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC);
-                                                                                
+
 val  de_core_def = Define `
     de_core (b:block,k:keysched) = inv_core 16 b k`;
 
 val  de_b_rnd_def = Define `
   de_b_rnd ((A,B,C,D),i) =
     let (A,B,C,D) = (D,A,B,C) in
-    let A = A - ((if (i=5) \/ (i=1) then B else 0w) + 
+    let A = A - ((if (i=5) \/ (i=1) then B else 0w) +
         (if (i=4) \/ (i=0) then D else 0w)) in
     let A = A #<< 24 in
     let D = D ?? Sbox1(l8b(A #>> 24)) in
     let C = C - Sbox0(l8b(A #>> 16)) in
     let B = (B - Sbox1(l8b(A #>> 8))) ?? Sbox0(l8b(A))
     in (A,B,C,D):block`;
-                                                                                
+
 (*Do eight rounds of backwards mixing*)
 val  (inv_b_mix_def, inv_b_mix_ind) = Defn.tprove (
    Hol_defn "inv_b_mix"
@@ -189,12 +189,12 @@ val  (inv_b_mix_def, inv_b_mix_ind) = Defn.tprove (
    WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC);
 
 val  de_b_mix_def = Define `
-   de_b_mix (b:block,k:keysched) = 
+   de_b_mix (b:block,k:keysched) =
    let (A,B,C,D) = inv_b_mix 8 b k in
     (A-FST(GETKEYS(k)), B-SND(GETKEYS(k)),
      C-FST(GETKEYS(ROTKEYS(k))), D-SND(GETKEYS(ROTKEYS(k))))
   `;
-                                                                                
+
 val _ = save_thm ("inv_f_mix_def", inv_f_mix_def);
 val _ = save_thm ("inv_f_mix_ind", inv_f_mix_ind);
 val _ = save_thm ("inv_core_def", inv_core_def);
@@ -232,11 +232,11 @@ val Core_Inversion = Q.store_thm
   ("Core_Inversion",
   `!b k i. de_core_rnd(en_core_rnd(b,k,i),k,i) = b`,
   SIMP_TAC std_ss [FORALL_BLOCK]
-    THEN SRW_TAC [PBETA_ss,boolSimps.LET_ss] [en_core_rnd_def,de_core_rnd_def]);
+    THEN SRW_TAC [] [en_core_rnd_def,de_core_rnd_def, LET_THM, UNCURRY]);
 
 val [en_core_rnd] = decls "en_core_rnd";
 val [de_core_rnd] = decls "de_core_rnd";
-                                                                   
+
 val Keyed_Trans_LEMMA = Q.store_thm
 ("Keyed_Trans_LEMMA",
  `!b:block k:keysched. de_core(en_core(b,k),k) = b`,
@@ -248,8 +248,8 @@ val Keyed_Trans_LEMMA = Q.store_thm
 val Bwd_Mix_Inversion = Q.store_thm
   ("Bwd_Mix_Inversion",
   `!b i. de_f_rnd(en_b_rnd(b,i),i) = b`,
-  SIMP_TAC std_ss [FORALL_BLOCK, en_b_rnd_def, de_f_rnd_def, LET_THM]
-    THEN SRW_TAC [] []);
+  SIMP_TAC std_ss [FORALL_BLOCK, en_b_rnd_def, de_f_rnd_def, LET_THM] THEN
+  SRW_TAC [][wordsTheory.word_rol_def]);
 
 val Whitening_Inversion = Q.store_thm
   ("Whitening_Inversion",
@@ -259,7 +259,7 @@ val Whitening_Inversion = Q.store_thm
 
 val [en_b_rnd] = decls "en_b_rnd";
 val [de_f_rnd] = decls "de_f_rnd";
-                                         
+
 val Bwd_Mix_LEMMA = Q.store_thm
 ("Bwd_Mix_LEMMA",
  `!b:block k:keysched. de_f_mix(en_b_mix(b,k),k) = b`,
@@ -301,9 +301,9 @@ val keysched_length = Q.prove
 (*---------------------------------------------------------------------------*)
 val MARS_def = Define
  `MARS (key) =
-   let keys = LIST_TO_KEYS (key_expansion(key)) DUMMY_KEYS 
+   let keys = LIST_TO_KEYS (key_expansion(key)) DUMMY_KEYS
    in (MARSEncrypt keys,  MARSDecrypt keys)`;
-                                          
+
 val MARS_CORRECT = Q.store_thm
   ("MARS_CORRECT",
    `!key plaintext.
@@ -311,5 +311,5 @@ val MARS_CORRECT = Q.store_thm
        ==>
        (decrypt (encrypt plaintext) = plaintext)`,
          RW_TAC std_ss [MARS_def,LET_THM,MARS_LEMMA]);
-                               
+
 val _ = export_theory();

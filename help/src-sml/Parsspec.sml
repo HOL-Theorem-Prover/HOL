@@ -16,8 +16,16 @@ structure SMLParser =
               structure LrParser=LrParser);
   
 fun parseSpec is =
-  let val lexer = SMLParser.makeLexer (fn n => TextIO.inputN (is, n)) 0 in
-    #1 (SMLParser.parse(15, lexer, (fn _ => ()), ()))
+  let val lexer = SMLParser.makeLexer (fn n => TextIO.inputN (is, n)) 0
+      fun print_error (s,(bc:int,bl:int),(ec:int,el:int)) =
+        if bc = ~1 andalso bl = ~1 then () else
+            TextIO.output(TextIO.stdOut,
+               "\nError, " ^ "between line " ^ (Int.toString (bl + 1)) ^
+                                " and line " ^ (Int.toString (el + 1)) ^ ":\n   "
+                           ^ s)
+  in
+    #1 (SMLParser.parse(15, lexer, print_error, ()))
+    (* #1 (SMLParser.parse(15, lexer, (fn _ => ()), ())) *)
   end;
 
 fun processSpec is str (((pos1, pos2), spec), res) =
@@ -65,13 +73,15 @@ fun parseAndProcess dir str res =
 	(* val _ = print("Parsing " ^ basefile ^ " ... "); *)
 	val resLength = length res
 	val is        = TextIO.openIn filename
+	(**) val _ = print("Parsing " ^ basefile ^ " ... "); (**)
 	val specs     = case parseSpec is
                          of Asynt.NamedSig {specs, ...} => specs
 			  | Asynt.AnonSig specs         => specs;
+	(**) val _ = print("completed parse ... "); (**)
 	val initialbase = {comp = Database.Str, file = str, line = 0} :: res
 	val res = foldl (processSpec is str) initialbase specs
-	(* val _ = print ("processed " ^ Int.toString (length res - resLength)
-		       ^ " entries.\n") *)
+	(**) val _ = print ("processed " ^ Int.toString (length res - resLength)
+		       ^ " entries.\n") (**)
     in
 	TextIO.closeIn is; res
     end

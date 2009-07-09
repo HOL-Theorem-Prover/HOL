@@ -25,10 +25,16 @@
 structure Prim_rec :> Prim_rec =
 struct
 
-open HolKernel Parse boolTheory boolSyntax 
+open HolKernel Parse boolTheory boolSyntax
      Drule Tactical Tactic Conv Thm_cont Rewrite Abbrev;
 
 val ERR = mk_HOL_ERR "Prim_rec";
+
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+end
+open Parse
 
 
 (*---------------------------------------------------------------------------
@@ -1131,7 +1137,7 @@ fun DISJS_CHAIN rule th =
       in DISJ_CASES th (DISJ1 i1 (concl i2)) (DISJ2 (concl i1) i2)
       end
       handle HOL_ERR _ => MP (DISCH concl_th (rule concl_th)) th
-   end;
+   end
 
 
 (* --------------------------------------------------------------------- *)
@@ -1151,104 +1157,110 @@ fun DISJS_CHAIN rule th =
 (* 									 *)
 (* --------------------------------------------------------------------- *)
 
-local val make_args =
-          let fun margs n s avoid [] = []
-                | margs n s avoid (h::t) =
-                    let val v = variant avoid
-                                 (mk_var(s^(Int.toString n),h))
-                    in v::margs (n + 1) s (v::avoid) t
-                    end
-          in fn s => fn avoid => fn tys =>
-              if length tys = 1
-              then [variant avoid (mk_var(s, hd tys))]
-              else margs 0 s avoid tys
-          end handle _ => raise ERR "make_args" ""
-
-  val EXISTS_EQUATION =
-    let val pth = prove
-     (--`!P t. (!x:'a. (x = t) ==> P x) ==> $? P`--,
-      REPEAT GEN_TAC THEN DISCH_TAC THEN
-      SUBST1_TAC(SYM (ETA_CONV (--`\x. (P:'a->bool) x`--))) THEN
-      EXISTS_TAC (--`t:'a`--) THEN FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC)
-    in fn tm => fn th =>
-        let val (l,r) = boolSyntax.dest_eq tm
-            val P = mk_abs(l, concl th)
-            val th1 = BETA_CONV(mk_comb(P,l))
-            val th2 = ISPECL [P, r] pth
-            val th3 = EQ_MP (SYM th1) th
-            val th4 = GEN l (DISCH tm th3)
-        in MP th2 th4
-        end
-    end;
-
- val prove_cases_thm0 =
- let fun mk_exclauses x rpats = let
-       (* order of existentially quantified variables is same order
-          as they appear as arguments to the constructor *)
-       val xts = map (fn t => 
-                  list_mk_exists(#2 (strip_comb t), mk_eq(x,t))) rpats
-     in
-       mk_abs(x,list_mk_disj xts)
-     end
-     fun prove_triv tm =
-       let val (evs,bod) = strip_exists tm
-           val (l,r) = dest_eq bod
-           val (lf,largs) = strip_comb l
-           and (rf,rargs) = strip_comb r
-           val _ = (eq lf rf) orelse raise ERR "prove_triv" ""
-           val ths = map (ASSUME o mk_eq) (zip rargs largs)
-           val th1 = rev_itlist (C (curry MK_COMB)) ths (REFL lf)
-       in
-         itlist EXISTS_EQUATION (map concl ths) (SYM th1)
-       end
-     fun prove_disj tm =
-        if is_disj tm
-         then let val (l,r) = dest_disj tm
-              in DISJ1 (prove_triv l) r handle HOL_ERR _ =>
-                 DISJ2 l (prove_disj r)
-              end
-         else prove_triv tm
-     fun prove_eclause tm =
-       let val (avs,bod) = strip_forall tm
-           val ctm = if is_imp bod then rand bod else bod
-           val cth = prove_disj ctm
-           val dth = if is_imp bod then DISCH (lhand bod) cth else cth
-       in
-         GENL avs dth
-       end
- in
-  fn th =>
-   let val (avs,bod) = strip_forall(concl th)
-       val cls = map (snd o strip_forall) (conjuncts(lhand bod))
-       val pats = map (fn t => if is_imp t then rand t else t) cls
-       val spats = map dest_comb pats
-       val preds = itlist (op_insert eq o fst) spats []
-       val rpatlist = map
-            (fn pr => map snd (filter (fn (p,x) => eq p pr) spats)) preds
-       val xs = make_args "x" (free_varsl pats) (map (type_of o hd) rpatlist)
-       val xpreds = map2 mk_exclauses xs rpatlist
-       val ith = BETA_RULE
-                 (Thm.INST (ListPair.map (fn (x,p) => p |-> x) (xpreds, preds))
-                          (SPEC_ALL th))
-       val eclauses = conjuncts(fst(dest_imp(concl ith)))
-   in
-     MP ith (end_itlist CONJ (map prove_eclause eclauses))
-   end
- end (* prove_cases_thm0 *)
+fun EXISTS_EQUATION tm th = let
+  val (l,r) = boolSyntax.dest_eq tm
+  val P = mk_abs(l, concl th)
+  val th1 = BETA_CONV(mk_comb(P,l))
+  val th2 = ISPECL [P, r] JRH_INDUCT_UTIL
+  val th3 = EQ_MP (SYM th1) th
+  val th4 = GEN l (DISCH tm th3)
 in
-fun prove_cases_thm ind0 =
- let fun CONJUNCTS_CONV c tm =
-        if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm else c tm
-      val ind = CONV_RULE
-         (STRIP_QUANT_CONV (RATOR_CONV (RAND_CONV
-            (CONJUNCTS_CONV (REDEPTH_CONV RIGHT_IMP_FORALL_CONV))))) ind0
-      val basic_thm = prove_cases_thm0 ind
-      val oktypes = doms_of_ind_thm ind
- in
-    List.filter
-      (fn th => Lib.mem (type_of (fst(dest_forall (concl th)))) oktypes)
-      (CONJUNCTS basic_thm)
- end
+  MP th2 th4
+end
+
+
+local
+  fun margs n s avoid [] = []
+    | margs n s avoid (h::t) =
+      let val v = variant avoid
+                          (mk_var(s^(Int.toString n),h))
+      in
+        v::margs (n + 1) s (v::avoid) t
+      end
+  fun make_args s avoid tys =
+      if length tys = 1 then
+        [variant avoid (mk_var(s, hd tys))]
+        handle _ => raise ERR "make_args" ""
+      else margs 0 s avoid tys
+
+
+  fun mk_exclauses x rpats = let
+    (* order of existentially quantified variables is same order
+       as they appear as arguments to the constructor *)
+    val xts = map (fn t =>
+                      list_mk_exists(#2 (strip_comb t), mk_eq(x,t))) rpats
+  in
+    mk_abs(x,list_mk_disj xts)
+  end
+  fun prove_triv tm = let
+    val (evs,bod) = strip_exists tm
+    val (l,r) = dest_eq bod
+    val (lf,largs) = strip_comb l
+    val (rf,rargs) = strip_comb r
+    val _ = (eq lf rf) orelse raise ERR "prove_triv" ""
+    val ths = map (ASSUME o mk_eq) (zip rargs largs)
+    val th1 = rev_itlist (C (curry MK_COMB)) ths (REFL lf)
+  in
+    itlist EXISTS_EQUATION (map concl ths) (SYM th1)
+  end
+  fun prove_disj tm =
+      if is_disj tm then let
+          val (l,r) = dest_disj tm
+        in
+          DISJ1 (prove_triv l) r
+          handle HOL_ERR _ => DISJ2 l (prove_disj r)
+        end
+      else prove_triv tm
+  fun prove_eclause tm = let
+    val (avs,bod) = strip_forall tm
+    val ctm = if is_imp bod then rand bod else bod
+    val cth = prove_disj ctm
+    val dth = if is_imp bod then DISCH (lhand bod) cth else cth
+  in
+    GENL avs dth
+  end
+  fun CONJUNCTS_CONV c tm =
+      if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm else c tm
+  fun prove_cases_thm0 th = let
+    val (_,bod) = strip_forall(concl th)
+    val cls = map (snd o strip_forall) (conjuncts(lhand bod))
+    val pats = map (fn t => if is_imp t then rand t else t) cls
+    val spats = map dest_comb pats
+    val preds = itlist (op_insert eq o fst) spats []
+    val rpatlist = map
+                     (fn pr => map snd (filter (fn (p,x) => eq p pr) spats))
+                     preds
+    val xs = make_args "x" (free_varsl pats) (map (type_of o hd) rpatlist)
+    val xpreds = map2 mk_exclauses xs rpatlist
+    fun double_name th = let
+      fun rename t = let
+        val (v, _) = dest_forall t
+        val (vnm,ty) = dest_var v
+      in
+        RAND_CONV (ALPHA_CONV (mk_var(vnm^vnm, ty))) t
+      end
+    in
+      DISCH_ALL (CONV_RULE (CONJUNCTS_CONV rename) (UNDISCH th))
+    end
+    val ith = BETA_RULE
+                (Thm.INST (ListPair.map (fn (x,p) => p |-> x) (xpreds, preds))
+                          (double_name (SPEC_ALL th)))
+    val eclauses = conjuncts(fst(dest_imp(concl ith)))
+  in
+    MP ith (end_itlist CONJ (map prove_eclause eclauses))
+  end
+in
+fun prove_cases_thm ind0 = let
+  val ind = CONV_RULE
+              (STRIP_QUANT_CONV (RATOR_CONV (RAND_CONV
+                (CONJUNCTS_CONV (REDEPTH_CONV RIGHT_IMP_FORALL_CONV))))) ind0
+  val basic_thm = prove_cases_thm0 ind
+  val oktypes = doms_of_ind_thm ind
+in
+  List.filter
+    (fn th => Lib.mem (type_of (fst(dest_forall (concl th)))) oktypes)
+    (CONJUNCTS basic_thm)
+end
 
 end; (* prove_cases_thm *)
 

@@ -8,4 +8,7 @@ sig
 
     val x86_tools        : decompiler_tools
 
+    val set_x86_exec_flag             : bool -> unit
+    val set_x86_code_write_perm_flag  : bool -> unit
+
 end

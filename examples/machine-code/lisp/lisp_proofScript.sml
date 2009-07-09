@@ -174,7 +174,7 @@ val (iR_ev_rules,iR_ev_ind,iR_ev_cases) =
     iR_ap (fn,args,iFunBind a x fn) s ==> iR_ap(Label x fn,args,a) s)
   /\
   (!fv args s a.
-    fv NOTIN {"quote";"cond";"car";"cdr";"cons";"+";"-";"<";
+    fv NOTIN {"quote";"cond";"car";"cdr";"cons";"+";"-";"*";"div";"mod";"<";
               "equal";"atomp";"consp";"symbolp";"numberp"} /\
     MEM fv (MAP FST a) /\ ISR (LIST_LOOKUP fv a) /\ 
     iR_ap (OUTR(LIST_LOOKUP fv a),args,a) s ==> iR_ap (FunVar fv,args,a) s)
@@ -350,6 +350,48 @@ val sexpression_IF = prove(
   ``!b. sexpression2sexp (if b then True else False) = LISP_TEST b``,
   Cases THEN EVAL_TAC);
 
+val lisp_add_lemma = prove(
+  ``!args x m. 
+      (!x. MEM x args ==> ?n. x = A (Number n)) ==>      
+      ?q1 q2.
+      lisp_add (Val m,x,list2sexp (MAP sexpression2sexp args),
+        TASK_CONT,stack,alist2sexp a,l) = 
+      (sexpression2sexp (FOLDL Add (A (Number m)) args),q1,q2,TASK_CONT,
+       stack,alist2sexp a,l)``,
+  Induct
+  THEN SIMP_TAC std_ss [MAP,list2sexp_def,FOLDL]
+  THEN ONCE_REWRITE_TAC [lisp_add_def]
+  THEN SIMP_TAC std_ss [LET_DEF,isDot_def,sexpression2sexp_def,atom2sexp_def]
+  THEN SIMP_TAC std_ss [CAR_def,CDR_def,MEM]
+  THEN REPEAT STRIP_TAC
+  THEN `?n. h = A (Number n)` by METIS_TAC []
+  THEN ASM_SIMP_TAC std_ss [LISP_ADD_def,FOLDL]
+  THEN SIMP_TAC std_ss [LET_DEF,isDot_def,sexpression2sexp_def,atom2sexp_def]
+  THEN ASM_SIMP_TAC std_ss [LISP_ADD_def,FOLDL,Add_def]
+  THEN `!x. MEM x args ==> ?n. x = A (Number n)` by METIS_TAC []
+  THEN RES_TAC THEN METIS_TAC []); 
+
+val lisp_mult_lemma = prove(
+  ``!args x y m. 
+      (!x. MEM x args ==> ?n. x = A (Number n)) ==>      
+      ?q1 q2 q3.
+      lisp_mult (Val m,x,y,list2sexp (MAP sexpression2sexp args),
+        stack,alist2sexp a,l) = 
+      (sexpression2sexp (FOLDL Mult (A (Number m)) args),q1,q2,q3,
+       stack,alist2sexp a,l)``,
+  Induct
+  THEN SIMP_TAC std_ss [MAP,list2sexp_def,FOLDL]
+  THEN ONCE_REWRITE_TAC [lisp_mult_def]
+  THEN SIMP_TAC std_ss [LET_DEF,isDot_def,sexpression2sexp_def,atom2sexp_def]
+  THEN SIMP_TAC std_ss [CAR_def,CDR_def,MEM]
+  THEN REPEAT STRIP_TAC
+  THEN `?n. h = A (Number n)` by METIS_TAC []
+  THEN ASM_SIMP_TAC std_ss [LISP_MULT_def,FOLDL]
+  THEN SIMP_TAC std_ss [LET_DEF,isDot_def,sexpression2sexp_def,atom2sexp_def]
+  THEN ASM_SIMP_TAC std_ss [LISP_MULT_def,FOLDL,Mult_def]
+  THEN `!x. MEM x args ==> ?n. x = A (Number n)` by METIS_TAC []
+  THEN RES_TAC THEN METIS_TAC []); 
+
 val iR_ev_LEMMA = let
   val th = (IndDefRules.derive_mono_strong_induction [] (iR_ev_rules,iR_ev_ind))
   val th = Q.SPECL [`lisp_eval_ok`,`lisp_func_ok`,  
@@ -388,10 +430,15 @@ set_goal([],goal)
     THEN ONCE_REWRITE_TAC [lisp_func_def]
     THEN SIMP_TAC std_ss [isDot_def,CDR_def,CAR_def,LET_DEF,SExp_11,lisp_ops_thm]
     THEN CONV_TAC (DEPTH_CONV stringLib.string_EQ_CONV)
-    THEN SIMP_TAC std_ss [LISP_EQUAL_THM,Add_def,Sub_def,
-           sexpression2sexp_def,atom2sexp_def,LISP_ADD_def,LISP_SUB_def,
+    THEN SIMP_TAC std_ss [LISP_EQUAL_THM,Add_def,Sub_def,Mult_def,Div_def,Mod_def,
+           sexpression2sexp_def,atom2sexp_def,LISP_ADD_def,LISP_SUB_def,LISP_MULT_def,LISP_DIV_def,LISP_MOD_def,
            lisp_ops_thm,Less_def,LISP_LESS_def,getVal_def,sexpression_IF]   
-    THEN (REWRITE_TAC [lisp_eval_hide_def] THEN METIS_TAC []))
+    THEN IMP_RES_TAC ((Q.SPECL [`args`,`Sym "+"`,`0`] lisp_add_lemma))
+    THEN POP_ASSUM (STRIP_ASSUME_TAC o SPEC_ALL)
+    THEN IMP_RES_TAC ((Q.SPECL [`args`,`Sym "*"`,`y`,`1`] lisp_mult_lemma))
+    THEN POP_ASSUM (STRIP_ASSUME_TAC o SPEC_ALL)
+    THEN ASM_SIMP_TAC std_ss []
+    THEN ASM_REWRITE_TAC [lisp_eval_hide_def] THEN METIS_TAC [])
   THEN STRIP_TAC THEN1
    (INIT_TAC 
     THEN SIMP_TAC std_ss [LET_DEF,isSym_def,isDot_def,CDR_def,CAR_def]    
@@ -722,6 +769,23 @@ val LISP_EVAL_CORRECT = store_thm("LISP_EVAL_CORRECT",
       R_ev (exp,alist) result ==>
       (LISP_EVAL (term2sexp exp, alist2sexp (fmap2list alist),l) =
        sexpression2sexp result)``,
+  REPEAT STRIP_TAC  
+  THEN IMP_RES_TAC R_lisp_eval_ok
+  THEN FULL_SIMP_TAC std_ss [lisp_eval_ok_def,LISP_EVAL_def]
+  THEN REWRITE_TAC [GSYM TASK_EVAL_def]
+  THEN POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [`TASK_EVAL`,`TASK_EVAL`,`TASK_EVAL`,`l`])
+  THEN ASM_SIMP_TAC std_ss [] 
+  THEN ONCE_REWRITE_TAC [lisp_eval_def]
+  THEN REWRITE_TAC [EVAL ``TASK_CONT = TASK_FUNC``]
+  THEN REWRITE_TAC [EVAL ``TASK_CONT = TASK_EVAL``]
+  THEN REWRITE_TAC [TASK_EVAL_def,isDot_def]);
+
+val LISP_EVAL_LIMIT_CORRECT = store_thm("LISP_EVAL_LIMIT_CORRECT",
+  ``!exp alist result l.
+      R_ev (exp,alist) result ==>
+      ((SND o SND o SND o SND o SND o SND) 
+         (lisp_eval (term2sexp exp, Sym "nil", Sym "nil", Sym "nil",
+                     Sym "nil", alist2sexp (fmap2list alist),l)) = l)``,
   REPEAT STRIP_TAC  
   THEN IMP_RES_TAC R_lisp_eval_ok
   THEN FULL_SIMP_TAC std_ss [lisp_eval_ok_def,LISP_EVAL_def]

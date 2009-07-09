@@ -36,7 +36,7 @@
 #
 # Modified 91.06.17 to take a pathname to the sed script as an argument.
 
-(cd $2;ls -A1 | grep '\.doc$' | sort -f -t . +1 | sed "s/.doc$/.doc'/g" | sed "s/^/'/g") > .files
+(cd $2;ls -A1 | grep '\.doc$' | sort -f -t . -k 2 | sed "s/.doc$/.doc'/g" | sed "s/^/'/g") > .files
 
 for file in `cat .files | sed "s/^'//g" | sed "s/.doc'/.doc/g"`
      do

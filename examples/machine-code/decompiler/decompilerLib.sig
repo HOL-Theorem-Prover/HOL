@@ -27,4 +27,7 @@ sig
     val get_abbreviate_code : unit -> bool
     val UNABBREV_CODE_RULE  : thm -> thm
 
+    val add_executable_data_name     : string -> unit
+    val remove_executable_data_name  : string -> unit
+
 end

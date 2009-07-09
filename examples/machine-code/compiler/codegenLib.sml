@@ -6,7 +6,8 @@ open codegen_inputLib helperLib;
 
 (* -- target-specific part begins -- *)
 
-open codegen_armLib codegen_x86Lib codegen_ppcLib;
+open codegen_armLib codegen_x86Lib;
+open codegen_ppcLib;
 
 fun assembler_tools target = 
   if target = "arm" then (arm_encode_instruction, arm_encode_branch, arm_branch_to_string) else 
@@ -293,9 +294,15 @@ fun add_assignment (tm1,tm2,th,len) = let
   val ws = pairSyntax.list_mk_pair (map snd ys)
   val tm3 = pairSyntax.mk_anylet([(vs,ws)],tm2)
   val lemma = prove(mk_eq(q,tm3),
-    SPEC_TAC (ws,genvar(type_of ws))
+    SIMP_TAC std_ss [LET_DEF]
+    THEN SPEC_TAC (ws,genvar(type_of ws))
     THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD,LET_DEF]
-    THEN (fn x => hd [])) handle e => TRUTH
+    THEN (fn t => hd [])) handle e => TRUTH 
+(* (SPEC_TAC (ws,genvar(type_of ws))
+    THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD,LET_DEF]
+    THEN NO_TAC) 
+   ORELSE SIMP_TAC std_ss [LET_DEF] 
+   ORELSE (fn t => hd [])) handle e => TRUTH *)
   val th = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [lemma])) th
   val _ = add_decompiled (name,th,len,SOME len)
   in () end;
@@ -481,14 +488,17 @@ fun generate_code target model_name print_assembly tm = let
                                 orelse 
                                 (type_of v = ``:word32 -> word8``)) vs)
     in "/" ^ fst (dest_var v) end handle Empty => ""
+  fun unable_to_compile s = (print ("\n\n\n  ERROR! Unable to generate " ^ target ^ " for:\n\n    " ^ s ^ "\n\n\n") ; hd [])
   fun compile_inst2 (ASM_ASSIGN (t1,t2)) = ((let
         val code = assign2assembly (term2assign t1 t2)
         val s = func_name_annotations t1 t2
-        in map (fn x => ASM_INSTRUCTION (x,s,NONE)) code end) handle e => (let val _ = print_term t2 in hd [] end))
+        in map (fn x => ASM_INSTRUCTION (x,s,NONE)) code end)
+        handle e => unable_to_compile ("let " ^ term_to_string (mk_eq(t1,t2)) ^ " in ..."))
     | compile_inst2 (ASM_COMPARE tm) = ((let
         val (code,y) = guard2assembly (term2guard tm)
         val s = func_name_annotations tm T
-        in map (fn x => ASM_INSTRUCTION (x,s,SOME y)) code end) handle e => (let val _ = print_term tm in hd [] end))
+        in map (fn x => ASM_INSTRUCTION (x,s,SOME y)) code end) 
+        handle e => unable_to_compile ("if " ^ term_to_string tm ^ " then ... else ..."))
     | compile_inst2 x = [x]
   fun append_list [] = [] | append_list (x::xs) = x @ append_list xs
   val code2 = append_list (map (fn x => compile_inst1 x handle Empty => compile_inst2 x) code1)

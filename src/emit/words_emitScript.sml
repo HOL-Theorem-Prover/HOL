@@ -80,9 +80,10 @@ val defs =
            TIMES_2EXP1, FUN_EQ_THM] o ALPHA_BETA_RULE)
       [dimword_def, INT_MIN_def, UINT_MAX_def, INT_MAX_def,
        w2n_n2w, word_eq_n2w, w2w_n2w, word_or_n2w, word_lsl_n2w,
-       word_bits_n2w, Q.SPEC `c` word_bit_n2w, word_join_n2w, sw2sw_n2w,
-       word_extract_n2w, word_slice_n2w, word_concat_def, word_log2_n2w,
-       word_reverse_n2w, word_modify_n2w, word_lsb_n2w, word_msb_n2w,
+       word_bits_n2w, word_signed_bits_n2w, Q.SPEC `c` word_bit_n2w,
+       word_join_n2w, sw2sw_n2w, word_extract_n2w, word_slice_n2w,
+       word_concat_def, word_log2_n2w, word_reverse_n2w, word_modify_n2w,
+       word_lsb_n2w, word_msb_n2w,
        word_1comp_n2w, word_and_n2w, word_xor_n2w,
        word_2comp_n2w, word_div_n2w, word_sdiv_def,
        MOD_WL word_add_n2w, word_sub_def, MOD_WL word_mul_n2w,

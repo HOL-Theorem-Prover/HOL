@@ -5193,11 +5193,11 @@ val literal_case_id = save_thm
     val t = mk_var("t",beta)
     val u = mk_var("u",beta)
     val eq = mk_eq(x,a)
-    val bcase = inst [alpha |-> beta] 
+    val bcase = inst [alpha |-> beta]
                      (prim_mk_const{Name = "bool_case",Thy="bool"})
     val g = mk_abs(x,list_mk_comb(bcase,[t, u, eq]))
     val lit_thm = RIGHT_BETA(SPEC a (SPEC g literal_case_THM))
-    val bool_case_th = SPECL [mk_eq(a,a),t,u]  
+    val bool_case_th = SPECL [mk_eq(a,a),t,u]
                          (INST_TYPE [alpha |-> beta] bool_case_EQ_COND)
     val Teq = SYM (EQT_INTRO(REFL a))
     val ifT = CONJUNCT1(SPECL[t,u] (INST_TYPE[alpha |-> beta] COND_CLAUSES))
@@ -5393,9 +5393,29 @@ val PEIRCE = save_thm
      val th9 = DISCH ``~P`` th8
      val th10 = MP (SPEC ``~P`` IMP_F) th9
      val th11 = SUBS [SPEC ``P:bool`` (CONJUNCT1 NOT_CLAUSES)] th10
- in 
+ in
    DISCH ``(P ==> Q) ==> P`` th11
  end);
+
+(* ----------------------------------------------------------------------
+    JRH_INDUCT_UTIL : !P t. (!x. (x = t) ==> P x) ==> $? P
+
+    Used multiple times in places relevant to inductive definitions and/or
+    algebraic types.
+   ---------------------------------------------------------------------- *)
+
+val JRH_INDUCT_UTIL = let
+  val asm_t = ``!x:'a. (x = t) ==> P x``
+  val asm = ASSUME asm_t
+  val t = ``t:'a``
+  val P = ``P : 'a -> bool``
+  val Pt = MP (SPEC t asm) (REFL t)
+  val ExPx = EXISTS (``?x:'a. P x``, t) Pt
+  val P_eta = SPEC P (INST_TYPE [beta |-> bool] ETA_AX)
+  val ExP_eta = AP_TERM ``(?) : ('a -> bool) -> bool`` P_eta
+in
+  save_thm("JRH_INDUCT_UTIL", GENL [P, t] (DISCH asm_t (EQ_MP ExP_eta ExPx)))
+end
 
 val _ = export_theory();
 

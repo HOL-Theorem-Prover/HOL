@@ -140,10 +140,14 @@ val decode_Xconst_def = Define `
 
 val decode_Xdest_src_def = Define `
   decode_Xdest_src g dest src =
-    if src = "r32"   then Xrm_r (decode_Xrm32 g dest) (decode_Xr32 g src)  else
-    if src = "r/m32" then Xr_rm (decode_Xr32 g dest)  (decode_Xrm32 g src) else
-    if src = "m"     then Xr_rm (decode_Xr32 g dest)  (decode_Xrm32 g src) else
-                          Xrm_i (decode_Xrm32 g dest) (decode_Xconst src g)`;
+    if MEM src ["r32";"r8"] then 
+      Xrm_r (decode_Xrm32 g dest) (decode_Xr32 g src)  
+    else if MEM src ["r/m32";"r/m8"] then 
+      Xr_rm (decode_Xr32 g dest)  (decode_Xrm32 g src) 
+    else if src = "m" then 
+      Xr_rm (decode_Xr32 g dest)  (decode_Xrm32 g src) 
+    else
+      Xrm_i (decode_Xrm32 g dest) (decode_Xconst src g)`;
 
 val decode_Xconst_or_zero_def = Define `  
   decode_Xconst_or_zero ts g =
@@ -151,7 +155,7 @@ val decode_Xconst_or_zero_def = Define `
 
 val decode_Ximm_rm_def = Define `  
   decode_Ximm_rm ts g =
-    if MEM (EL 1 ts) ["r/m32";"r32"] 
+    if MEM (EL 1 ts) ["r/m32";"r32";"r/m8";"r8"] 
     then Xi_rm (decode_Xrm32 g (EL 1 ts)) 
     else Xi (decode_Xconst (EL 1 ts) g)`;
 
@@ -169,6 +173,9 @@ val X_SOME_def = Define `X_SOME f = SOME o (\(g,w). (f g,w))`;
 val x86_syntax_def = Define `
   x86_syntax ts = 
     if LENGTH ts = 0 then option_fail else
+    if (HD ts = "CMP") /\ MEM "r/m8" ts then X_SOME (\g. Xcmp_byte (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
+    if (HD ts = "MOV") /\ MEM "r/m8" ts then X_SOME (\g. Xmov_byte (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
+    if (HD ts = "DEC") /\ MEM "r/m8" ts then X_SOME (\g. Xdec_byte (decode_Xrm32 g (EL 1 ts))) else
     if MEM (HD ts) (MAP FST x86_binop) then X_SOME (\g. ^x86_syntax_binop) else
     if MEM (HD ts) (MAP FST x86_monop) then X_SOME (\g. ^x86_syntax_monop) else
     if HD ts = "POP"  then X_SOME (\g. Xpop  (decode_Xrm32 g (EL 1 ts))) else
@@ -178,15 +185,16 @@ val x86_syntax_def = Define `
     if HD ts = "CMPXCHG" then X_SOME (\g. Xcmpxchg (decode_Xrm32 g (EL 1 ts)) (decode_Xr32 g (EL 2 ts))) else
     if HD ts = "XCHG"    then X_SOME (\g. Xxchg (decode_Xrm32 g (EL 1 ts)) (decode_Xr32 g (EL 2 ts))) else
     if HD ts = "XADD"    then X_SOME (\g. Xxadd (decode_Xrm32 g (EL 1 ts)) (decode_Xr32 g (EL 2 ts))) else
-    if HD ts = "JMP"     then X_SOME (\g. Xjump X_ALWAYS (decode_Xconst_or_zero ts g)) else
-    if HD ts = "JE"      then X_SOME (\g. Xjump X_E (decode_Xconst_or_zero ts g)) else
-    if HD ts = "JNE"     then X_SOME (\g. Xjump X_NE (decode_Xconst_or_zero ts g)) else
-    if HD ts = "JS"      then X_SOME (\g. Xjump X_S (decode_Xconst_or_zero ts g)) else
-    if HD ts = "JNS"     then X_SOME (\g. Xjump X_NS (decode_Xconst_or_zero ts g)) else
-    if HD ts = "JA"      then X_SOME (\g. Xjump X_A (decode_Xconst_or_zero ts g)) else
-    if HD ts = "JNA"     then X_SOME (\g. Xjump X_NA (decode_Xconst_or_zero ts g)) else
-    if HD ts = "JB"      then X_SOME (\g. Xjump X_B (decode_Xconst_or_zero ts g)) else
-    if HD ts = "JNB"     then X_SOME (\g. Xjump X_NB (decode_Xconst_or_zero ts g)) else
+    if (HD ts = "JMP") /\ (TL ts = ["r/m32"]) then X_SOME (\g. Xjmp (decode_Xrm32 g (EL 1 ts))) else
+    if HD ts = "JMP"     then X_SOME (\g. Xjcc X_ALWAYS (decode_Xconst_or_zero ts g)) else
+    if HD ts = "JE"      then X_SOME (\g. Xjcc X_E (decode_Xconst_or_zero ts g)) else
+    if HD ts = "JNE"     then X_SOME (\g. Xjcc X_NE (decode_Xconst_or_zero ts g)) else
+    if HD ts = "JS"      then X_SOME (\g. Xjcc X_S (decode_Xconst_or_zero ts g)) else
+    if HD ts = "JNS"     then X_SOME (\g. Xjcc X_NS (decode_Xconst_or_zero ts g)) else
+    if HD ts = "JA"      then X_SOME (\g. Xjcc X_A (decode_Xconst_or_zero ts g)) else
+    if HD ts = "JNA"     then X_SOME (\g. Xjcc X_NA (decode_Xconst_or_zero ts g)) else
+    if HD ts = "JB"      then X_SOME (\g. Xjcc X_B (decode_Xconst_or_zero ts g)) else
+    if HD ts = "JNB"     then X_SOME (\g. Xjcc X_NB (decode_Xconst_or_zero ts g)) else
     if HD ts = "LEA"     then X_SOME (\g. Xlea (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
     if HD ts = "LOOP"    then X_SOME (\g. Xloop X_ALWAYS (decode_Xconst_or_zero ts g)) else
     if HD ts = "LOOPE"   then X_SOME (\g. Xloop X_E (decode_Xconst_or_zero ts g)) else
@@ -202,10 +210,8 @@ val x86_syntax_def = Define `
     if HD ts = "CMOVNB"  then X_SOME (\g. Xmov X_NB (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
     if HD ts = "MUL"     then X_SOME (\g. Xmul  (decode_Xrm32 g (EL 1 ts))) else
     if HD ts = "DIV"     then X_SOME (\g. Xdiv  (decode_Xrm32 g (EL 1 ts))) else
-    if HD ts = "MOV_BYTE" then X_SOME (\g. Xmov_byte (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
-    if HD ts = "CMP_BYTE" then X_SOME (\g. Xcmp_byte (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
-    if HD ts = "CALL" then X_SOME (\g. Xcall (decode_Ximm_rm ts g)) else
-    if HD ts = "RET"  then X_SOME (\g. Xret (decode_Xconst_or_zero ts g)) else option_fail`;
+    if HD ts = "CALL"    then X_SOME (\g. Xcall (decode_Ximm_rm ts g)) else
+    if HD ts = "RET"     then X_SOME (\g. Xret (decode_Xconst_or_zero ts g)) else option_fail`;
   
 
 (* a list of x86 instructions, ordered by the combination of addressing modes they support *)
@@ -230,6 +236,7 @@ val x86_syntax_list = `` [
     " 89 /r     | MOV r/m32,r32     ";
     " 8B /r     | MOV r32,r/m32     ";
     " B8+rd id  | MOV r32, imm32    ";
+    " C7 /0 id  | MOV r/m32, imm32  ";
     " 0D id     | OR EAX, imm32     ";
     " 81 /1 id  | OR r/m32, imm32   ";
     " 83 /1 ib  | OR r/m32, imm8    ";
@@ -276,24 +283,25 @@ val x86_syntax_list = `` [
     " D1 /7     | SAR r/m32, 1      ";
     " C1 /7 ib  | SAR r/m32, imm8   ";
 
+    " FF /4     | JMP r/m32         ";
     " EB cb     | JMP rel8          ";
     " E9 cd     | JMP rel32         ";
     " 74 cb     | JE rel8           ";
     " 75 cb     | JNE rel8          ";
-    " OF 84 cd  | JE rel32          ";
-    " OF 85 cd  | JNE rel32         ";
+    " 0F 84 cd  | JE rel32          ";
+    " 0F 85 cd  | JNE rel32         ";
     " 78 cb     | JS rel8           ";
     " 79 cb     | JNS rel8          ";
-    " OF 78 cd  | JS rel32          ";
-    " OF 79 cd  | JNS rel32         ";
+    " 0F 78 cd  | JS rel32          ";
+    " 0F 79 cd  | JNS rel32         ";
     " 77 cb     | JA rel8           ";
     " 76 cb     | JNA rel8          ";
-    " OF 77 cd  | JA rel32          ";
-    " OF 76 cd  | JNA rel32         ";
+    " 0F 77 cd  | JA rel32          ";
+    " 0F 76 cd  | JNA rel32         ";
     " 72 cb     | JB rel8           ";
     " 73 cb     | JNB rel8          ";
-    " OF 72 cd  | JB rel32          ";
-    " OF 73 cd  | JNB rel32         ";
+    " 0F 72 cd  | JB rel32          ";
+    " 0F 73 cd  | JNB rel32         ";
  
     " 0F 44 /r  | CMOVE r32, r/m32  ";
     " 0F 45 /r  | CMOVNE r32, r/m32 ";
@@ -316,10 +324,13 @@ val x86_syntax_list = `` [
     " F7 /6     | DIV r/m32         ";
     " F7 /4     | MUL r/m32         ";
 
-    " 88 /r     | MOV_BYTE r/m32,r32 "; (* this is a hack: MOV_BYTE does not exist *)
-    " 8A /r     | MOV_BYTE r32,r/m32 "; (* this is a hack: MOV_BYTE does not exist *)
-    " 38 /r     | CMP_BYTE r/m32,r32 "; (* this is a hack: CMP_BYTE does not exist *)
-    " 3A /r     | CMP_BYTE r32,r/m32 "  (* this is a hack: CMP_BYTE does not exist *)
+    " C6 /0 ib  | MOV r/m8, imm8    "; 
+    " 88 /r     | MOV r/m8, r8      "; 
+    " 0F B6 /r  | MOV r32, r/m8     "; (* encodes MOVZX *)
+    " 38 /r     | CMP r/m8, r8      "; 
+    " 3A /r     | CMP r8, r/m8      "; 
+    " 80 /7 ib  | CMP r/m8, imm8    ";
+    " FE /1     | DEC r/m8          "
 
   ] ``;
 
@@ -363,7 +374,8 @@ val x86_lock_ok_def = Define `
   (x86_lock_ok (Xcall imm_rm) = F) /\
   (x86_lock_ok (Xret imm) = F) /\ 
   (x86_lock_ok (Xmov c ds) = F) /\
-  (x86_lock_ok (Xjump c imm) = F) /\   
+  (x86_lock_ok (Xjcc c imm) = F) /\   
+  (x86_lock_ok (Xjmp rm) = F) /\   
   (x86_lock_ok (Xloop c imm) = F) /\
   (x86_lock_ok (Xpushad) = F) /\
   (x86_lock_ok (Xpopad) = F)`;
@@ -406,7 +418,8 @@ val x86_args_ok_def = Define `
   (x86_args_ok (Xcall imm_rm) = imm_rm_args_ok imm_rm) /\
   (x86_args_ok (Xret imm) = w2n imm < 2**16) /\ 
   (x86_args_ok (Xmov c ds) = dest_src_args_ok ds /\ MEM c [X_NE;X_E;X_ALWAYS]) /\ (* partial list *)
-  (x86_args_ok (Xjump c imm) = F) /\   
+  (x86_args_ok (Xjcc c imm) = T) /\   
+  (x86_args_ok (Xjmp rm) = T) /\   
   (x86_args_ok (Xloop c imm) = MEM c [X_NE;X_E;X_ALWAYS]) /\
   (x86_args_ok (Xpushad) = T) /\
   (x86_args_ok (Xpopad) = T)`;

@@ -1,7 +1,7 @@
 
 open HolKernel boolLib bossLib Parse;
 open decompilerLib;
-open tailrecTheory tailrecLib 
+open tailrecTheory tailrecLib;
 open listTheory pred_setTheory arithmeticTheory wordsTheory;
 
 val _ = new_theory "decompiler_demo";
@@ -50,7 +50,7 @@ val th = save_thm("ARM_LIST_SPEC",
 val (ppc_th,ppc_defs) = decompile_ppc "ppc_length" `
   38A00000  (*     addi 5,0,0   *)
   2C140000  (* L1: cmpwi 20,0   *)
-  40820010  (*     bc 4,2,L2    *)
+  41820010  (*     beq L2       *)
   82940000  (*     lwz 20,0(20) *)
   38A50001  (*     addi 5,5,1   *)
   4BFFFFF0  (*     b L1         *)
