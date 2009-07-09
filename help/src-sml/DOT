@@ -152,7 +152,7 @@ in
       out "<BODY bgcolor=linen text=crimson>";
       out "<H1>HOL Theory Hierarchy (clickable)</H1>";
       out (String.concat
-               ["<IMG src = \"",jpegfile,"\"",
+               ["<IMG src = \"",OS.Path.file jpegfile,"\"",
                 " usemap=\"#G\"",
                 " alt=\"HOL Theory Map\">"]);
       cat imapfile ostrm;
