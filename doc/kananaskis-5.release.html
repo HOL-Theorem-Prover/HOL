@@ -207,7 +207,7 @@ right-shifting. </p></li>
 
 <li> <p> Post processing for word parsing is supported with the function:</p>
 <pre>
-         wordsLib.guess_word_lengths : term -> term
+         wordsLib.inst_word_lengths : term -> term
 </pre>
 <p>
 When possible, word lengths are guessed for the extract and
@@ -217,7 +217,7 @@ given type <code>``:(a&nbsp;+&nbsp;b)&nbsp;word``</code>.</p>
 
 <p>For example:</p>
 <pre>
-         - val _ = Parse.post_process_term := wordsLib.guess_word_lengths;
+         - val _ = Parse.post_process_term := wordsLib.inst_word_lengths;
          - ``(3 &gt;&lt; 0) a @@ (7 &gt;&lt; 4) a @@ (16 &gt;&lt; 8) a``;
          &lt;&lt;HOL message: inventing new type variable names: 'a, 'b, 'c, 'd, 'e, 'f&gt;&gt;
          &lt;&lt;HOL message: assigning word length(s): 'a &lt;- 4, 'b &lt;- 13, 'c &lt;- 17, 'e &lt;- 4 and 'f &lt;- 9&gt;&gt;
