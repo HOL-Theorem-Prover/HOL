@@ -272,7 +272,7 @@ fun AC_CONV p = Conv.AC_CONV p o ptm;
 (* Could be smarter *)
 
 fun INST subst th = let
-  val ctxt = free_vars (concl th)
+  val ctxt = thm_frees th
 in
   Thm.INST (mk_term_rsubst ctxt subst) th
 end
