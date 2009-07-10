@@ -8,20 +8,20 @@ type int = bool * num
 
 (* representation has first component true if the integer is >= 0 *)
 
-val ++ = Arbnum.+
-val -- = Arbnum.-
-val ** = Arbnum.*
-val << = Arbnum.<
-val ddiv = Arbnum.div
-val mmod = Arbnum.mod
+infix ++ -- ** <<
+infix 7 ddiv mmod
+
+val op ++ = Arbnum.+
+val op -- = Arbnum.-
+val op ** = Arbnum.*
+val op << = Arbnum.<
+val op ddiv = Arbnum.div
+val op mmod = Arbnum.mod
 val AZ = Arbnum.zero
 
 val zero = (true, Arbnum.zero)
 val one = (true, Arbnum.one)
 val two = (true, Arbnum.two)
-
-infix ++ -- ** <<
-infix 7 ddiv mmod
 
 fun norm_zeros (i as (b,n)) = if not b andalso n = AZ then (true, AZ) else i
 
