@@ -584,7 +584,7 @@ fun create_const errstr (const as (r,GRND pat)) Ty =
         of (([],_),([],[]),0) => Const const
          | ((S,[]),([],[]),0) => Const(r, if ground S then GRND Ty else POLY Ty)
          | ((S, _),( _, _),_) => Const(r, POLY Ty))
-        handle HOL_ERR _ => Raise (ERR errstr
+        handle HOL_ERR _ => raise (ERR errstr
              (String.concat["Not a type instance: ", KernelSig.id_toString r,
                               " cannot have type\n", type_to_string Ty])))
 
