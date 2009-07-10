@@ -23,11 +23,8 @@
 (defvar hol-executable HOL-EXECUTABLE
   "*Path-name for the HOL executable.")
 
-(defvar mosml-executable MOSML-EXECUTABLE
-  "*Path-name for the Moscow ML executable.")
-
-(defvar polyml-executable "/usr/local/bin/poly"
-  "*Path-name for the Poly ML executable.")
+(defvar sml-executable SML-EXECUTABLE
+  "*Path-name for the Standard ML executable.")
 
 (defun hol-set-executable (filename)
   "*Set hol executable variable to be NAME."

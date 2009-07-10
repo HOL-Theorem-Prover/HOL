@@ -11,7 +11,7 @@ struct
 
 (*
 In *scratch*, type
-(hol-set-executable mosml-executable)
+(hol-set-executable sml-executable)
 and type Ctrl-j.
 
 loadPath := Globals.HOLDIR ^ "/sigobj" :: !loadPath;

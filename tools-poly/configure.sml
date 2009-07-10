@@ -376,7 +376,11 @@ val _ =
       ["(defvar hol-executable HOL-EXECUTABLE\n"
         -->
        ("(defvar hol-executable \n  "^
-        quote (fullPath [holdir, "bin", "hol"])^"\n")]
+        quote (fullPath [holdir, "bin", "hol"])^"\n"),
+       "(defvar sml-executable SML-EXECUTABLE\n"
+        -->
+       ("(defvar sml-executable \n  "^
+        quote (fullPath [poly])^"\n")]
  end;
 
 

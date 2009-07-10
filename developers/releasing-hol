@@ -38,9 +38,15 @@ then
     exit 1
 fi
 
+toLower() {
+  echo $1 | tr "[:upper:]" "[:lower:]" 
+}
+
 repos=$homesvn/$origname
 shortname=$(basename $origname)
-name=${origname////-}
+# name=${origname////-}
+name=${shortname////-}
+tmpholdir=$(toLower $name)
 
 localholdir="`dirname $0`/.."
 localholdir=$(cd $localholdir ; pwd)
@@ -66,7 +72,7 @@ createdir () {
 # initial setup
 createdir $texlogs
 createdir "/tmp/svn-export-result"        # where output from svn export will go
-/bin/rm -rf "/tmp/hol"                    # final directory to be tarred
+/bin/rm -rf "/tmp/$tmpholdir"             # final directory to be tarred
 
 if /bin/ls -1 $localholdir | grep std.prelude > /dev/null 2>&1
 then
@@ -196,10 +202,11 @@ fi
 mv ../bin-README bin/README
 
 cd /tmp
-mv svn-export-result hol
+mv svn-export-result $tmpholdir
 
 echo "Creating tar file"
-tar czf $name.tar.gz hol
+tar czf $name.tar.gz $tmpholdir
+echo "Created tar file $name.tar.gz in /tmp"
 
-mv hol/doc/$shortname.release.html .
+# mv $localholdir/doc/$shortname.release.html .
 

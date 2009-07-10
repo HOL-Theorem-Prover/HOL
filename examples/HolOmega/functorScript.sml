@@ -227,6 +227,14 @@ val map_map_functor0 = store_thm
             Functor theorems
  ---------------------------------------------------------------------------*)
 
+val functor_exists = store_thm
+  ("functor_exists",
+   ``?:'F. ?F:'F functor. functor F``,
+   TY_EXISTS_TAC ``:I``
+   THEN EXISTS_TAC ``\:'a 'b. I:('a -> 'b) -> ('a -> 'b)``
+   THEN SIMP_TAC combin_ss [functor_def]
+  );
+
 val oo_def = Define `$oo (G: 'G functor) (F': 'F functor) = \:'a 'b. G o F' [:'a,'b:]`;
 val _ = add_infix("oo", 800, HOLgrammars.RIGHT);
 val _ = overload_on ("o", Term`$oo : 'G functor -> 'F functor -> ('F o 'G) functor`);

@@ -11,7 +11,7 @@ struct
 
 (*
 In *scratch*, type
-(hol-set-executable mosml-executable)
+(hol-set-executable sml-executable)
 and type Ctrl-j.
 
 loadPath := "/usr/local/hol/hol98/kananaskis-5-2p/hol98/sigobj" :: !loadPath;

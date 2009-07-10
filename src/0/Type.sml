@@ -16,7 +16,7 @@ struct
 
 (*
 In *scratch*, type
-(hol-set-executable mosml-executable)
+(hol-set-executable sml-executable)
 or
 (hol-set-executable (concat hol-home "/bin/hol.bare"))
 

@@ -369,9 +369,9 @@ val _ =
         -->
        ("(defvar hol-executable \n  "^
         quote (fullPath [holdir, "bin/hol"])^"\n"),
-       "(defvar mosml-executable MOSML-EXECUTABLE\n"
+       "(defvar sml-executable SML-EXECUTABLE\n"
         -->
-       ("(defvar mosml-executable \n  "^
+       ("(defvar sml-executable \n  "^
         quote (fullPath [mosmldir, "mosml"])^"\n")]
  end;
 
