@@ -205,6 +205,21 @@ cd /tmp
 mv svn-export-result $tmpholdir
 
 echo "Creating tar file"
+
+# Remove unnecessary or old examples and other junk
+rm -rf $tmpholdir/examples/ARM/v4T
+rm -rf $tmpholdir/examples/PSL
+rm -rf $tmpholdir/examples/opsemTools
+rm -rf $tmpholdir/examples/temporal_deep
+rm -rf $tmpholdir/examples/elliptic
+rm -rf $tmpholdir/examples/dev/sw
+rm -rf $tmpholdir/examples/dev/sw2
+rm -rf $tmpholdir/examples/ring.sml
+rm -rf $tmpholdir/examples/fsub
+rm -rf $tmpholdir/examples/pgcl
+rm -rf $tmpholdir/scheme
+rm -rf $tmpholdir/tools/mlton
+
 tar czf $name.tar.gz $tmpholdir
 echo "Created tar file $name.tar.gz in /tmp"
 
