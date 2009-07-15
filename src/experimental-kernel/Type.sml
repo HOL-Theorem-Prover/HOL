@@ -1190,7 +1190,7 @@ local
       case t of
         (c as TyCon(r, kd, rk)) => (case kd_sub theta kd of
                                       SAME => raise Unchanged
-                                    | DIFF kd => TyCon(r, kd, rk + rank))
+                                    | DIFF kd => TyCon(r, kd, rk))
       | Tyv (v as (name, kd, rk)) => let
           val (changed, nv) = case kd_sub theta kd of
                                       SAME => if rank = 0 then (false, v)
