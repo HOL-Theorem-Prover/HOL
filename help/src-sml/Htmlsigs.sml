@@ -3,12 +3,13 @@
 *)
 structure Htmlsigs :> Htmlsigs = struct
 fun indexbar out srcpath = out (String.concat
-   ["<HR><TABLE WIDTH=100%>",
-    "<TR ALIGN = CENTER>\n",
-    "<TH><A HREF=\"file://", srcpath, "\">Source File</A>\n",
-    "<TH><A HREF=\"idIndex.html\">Identifier index</A>\n",
-    "<TH><A HREF=\"TheoryIndex.html\">Theory binding index</A>\n",
-    "</TABLE><HR>\n"]);
+   ["<hr><table width=100%>",
+    "<tr align = center>\n",
+    "<th><a href=\"file://", srcpath,
+    "\" type=\"text/plain\">Source File</a>\n",
+    "<th><a href=\"idIndex.html\">Identifier index</A>\n",
+    "<th><a href=\"TheoryIndex.html\">Theory binding index</A>\n",
+    "</table><hr>\n"]);
 
 val smlIdCharSym = Char.contains "'_!%&$#+-/:<=>?@\\~`^|*"
 fun smlIdChar c = Char.isAlphaNum c orelse smlIdCharSym c
@@ -161,12 +162,12 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 	val seenDefinition = ref false
 
 	fun name anchor target =
-	    (out "<A NAME=\""; out target; out "\">"; out anchor; out "</A>")
+	    (out "<a name=\""; out target; out "\">"; out anchor; out "</a>")
 
 	fun idhref link id =
-	    (out "<A HREF=\"#"; out link; out "\">"; out id; out"</A>")
+	    (out "<a href=\"#"; out link; out "\">"; out id; out"</a>")
 	fun idhref_full link id =
-	    (out "<A HREF=\"file://"; out link; out "\">"; out id; out"</A>")
+	    (out "<a href=\"file://"; out link; out "\">"; out id; out"</a>")
 
         fun locate_docfile id =
            let open OS.FileSys OS.Path Database
@@ -210,8 +211,8 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 	fun outisdef susline id after comp =
 	    let open Substring
 		fun namebold id s =
-		    (out "<A NAME=\""; out id; out "-"; out s;
-		     out "\"><B>"; out id; out "</B></A>")
+		    (out "<a name=\""; out id; out "-"; out s;
+		     out "\"><b>"; out id; out "</b></a>")
 		val preflen = size susline - size after - String.size id
 		val pref = slice(susline, 0, SOME preflen)
 	    in
@@ -263,17 +264,17 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 	print sigfile; print "\n"
        ; *)
         traverse pass1;
-        out "<HTML><HEAD><TITLE>Structure ";
-        out strName; out "</TITLE></HEAD>\n";
-        out "<BODY BGCOLOR=\""; out bgcolor; out "\">\n";
-        out "<H1>Structure "; out strName; out "</H1>\n";
+        out "<html><head><title>Structure ";
+        out strName; out "</title></head>\n";
+        out "<body bgcolor=\""; out bgcolor; out "\">\n";
+        out "<h1>Structure "; out strName; out "</h1>\n";
         indexbar out srcfile;
-        out "<PRE>\n";
+        out "<pre>\n";
         traverse (pass2 (isTheorysig sigfile));
-        out "</PRE>";
+        out "</pre>";
         indexbar out srcfile;
-        out "<BR><EM>"; out version; out "</EM>";
-        out "</BODY></HTML>\n";
+        out "<br><em>"; out version; out "</em>";
+        out "</body></html>\n";
         TextIO.closeOut os
     end
 
@@ -325,7 +326,7 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
 	val os = TextIO.openOut outfile
 	fun out s = TextIO.output(os, s)
 	fun href anchor target =
-	    app out ["<A HREF=\"", target, "\">", anchor, "</A>"]
+	    app out ["<a href=\"", target, "\">", anchor, "</a>"]
 	fun idhref file line anchor =
 	    href anchor (concat [file, ".html#line", Int.toString line])
 	fun strhref file anchor =
@@ -336,10 +337,10 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
 		else (href (str c) ("#" ^ str c); out "&nbsp;&nbsp;";
 		      letterlink (Char.succ c))
 	    in
-		out "<HR>\n<CENTER><B>"; letterlink #"A";
-		out "</B></CENTER><HR>\n"
+		out "<hr>\n<center><b>"; letterlink #"A";
+		out "</b></center><hr>\n"
 	    end
-	fun subheader txt = app out ["\n<H2>", txt, "</H2>\n"]
+	fun subheader txt = app out ["\n<h2>", txt, "</h2>\n"]
 
 	(* Insert a subheader when meeting a new initial letter *)
 	val lastc1 = ref #" "
@@ -349,12 +350,12 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
 	    in
 		if Char.isAlpha c1 andalso c1 <> !lastc1 then
 		    (lastc1 := c1;
-		     app out ["\n</UL>\n\n<A NAME=\"", str c1, "\">"];
+		     app out ["\n</ul>\n\n<a name=\"", str c1, "\">"];
 		     subheader (str c1);
-		     out "</A>\n<UL>")
+		     out "</a>\n<ul>")
 		else if !firstsymb andalso not (Char.isAlpha c1)
                       then (subheader "Symbolic Identifiers";
-                            out "<UL>";
+                            out "<ul>";
                             firstsymb := false)
                       else ()
 	    end
@@ -370,7 +371,7 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
 	and newitem (e1 as {comp, file, line}) erest =
 	    let val key = Database.getname e1
 	    in separator (String.sub(key, 0))
-             ; out "<LI><B>"; out key; out "</B> ("
+             ; out "<li><b>"; out key; out "</b> ("
              ; (case comp
                  of Str    => strhref key "structure"
                   | Val id => (out "value; "; mkref line file)
@@ -390,15 +391,15 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
 	     prentries (List.filter pred entries);
 	     prtree t2)
     in
-	out "<HTML><HEAD><TITLE>"; out header; out "</TITLE></HEAD>\n";
-	out "<BODY BGCOLOR=\""; out bgcolor; out "\">\n";
-	out "<H1>"; out header; out "</H1>\n";
+	out "<html><head><title>"; out header; out "</title></head>\n";
+	out "<body bgcolor=\""; out bgcolor; out "\">\n";
+	out "<h1>"; out header; out "</h1>\n";
 	mkalphaindex();
 	prtree db;
-	out "</UL>\n";
+	out "</ul>\n";
 	mkalphaindex();
-	out "<BR><EM>"; out version; out "</EM>";
-	out "</BODY></HTML>\n";
+	out "<br><em>"; out version; out "</em>";
+	out "</body></html>\n";
 	TextIO.closeOut os
     end
 end
