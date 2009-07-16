@@ -3,10 +3,10 @@
 \TYPE {EXT : thm -> thm}
 
 \SYNOPSIS
-Derives equality of functions from extentional equivalence.
+Derives equality of functions from extensional equivalence.
 
 \KEYWORDS
-rule, extentionality.
+rule, extensionality.
 
 \DESCRIBE
 When applied to a theorem {A |- !x. t1 x = t2 x}, the inference rule

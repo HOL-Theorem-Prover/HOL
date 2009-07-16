@@ -6,7 +6,7 @@
 Equates normal and extensional equality for two functions.
 
 \KEYWORDS
-conversion, extentionality.
+conversion, extensionality.
 
 \DESCRIBE
 The conversion {FUN_EQ_CONV} embodies the fact that two functions are equal

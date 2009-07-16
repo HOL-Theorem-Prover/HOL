@@ -6,7 +6,7 @@
 Performs a toplevel eta-conversion.
 
 \KEYWORDS
-conversion, extentionality.
+conversion, extensionality.
 
 \DESCRIBE
 {ETA_CONV} maps an eta-redex {\x. (t x)}, where {x} does not occur free
