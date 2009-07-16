@@ -32,7 +32,7 @@ fun profile nm f x =
         open Time
       in
         ptable := insert (!ptable, nm, {usr = usr0 + usr1, gc = gc0 + gc1,
-                                     sys = sys0 + sys1, n = Int.+(n0,1)});
+                                     sys = sys0 + sys1, n = Int.+ (n0, 1)});
         return result
       end
 
@@ -41,17 +41,17 @@ fun reset1 nm =
 
 fun reset_all () = ptable := Binarymap.mkDict String.compare
 
-fun results () = Listsort.sort (fn (i1, i2) => String.compare(#1 i1, #1 i2))
-                               (listItems (!ptable))
+fun results () = Listsort.sort (fn (i1, i2) => String.compare (#1 i1, #1 i2))
+                               (list Items (!ptable))
 
 
 fun output_profile_result outstr (nm, {usr, sys, gc, n}) = let
   val pl = StringCvt.padLeft #" " 8
-  fun print s = TextIO.output(outstr, s)
+  fun print s = TextIO.output (outstr, s)
   val _ = print (StringCvt.padRight #" " 25 nm)
   val _ = print (StringCvt.padLeft #" " 7 (Int.toString n))
-  val _ = print (pl (Time.toString usr)^" "^pl (Time.toString sys)^" "^
-                 pl (Time.toString gc)^"\n")
+  val _ = print (pl (Time.toString usr) ^ " " ^ pl (Time.toString sys) ^ " " ^
+                 pl (Time.toString gc) ^ "\n")
 in
   ()
 end
