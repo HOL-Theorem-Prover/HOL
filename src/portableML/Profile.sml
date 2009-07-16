@@ -42,7 +42,7 @@ fun reset1 nm =
 fun reset_all () = ptable := Binarymap.mkDict String.compare
 
 fun results () = Listsort.sort (fn (i1, i2) => String.compare (#1 i1, #1 i2))
-                               (list Items (!ptable))
+                               (listItems (!ptable))
 
 
 fun output_profile_result outstr (nm, {usr, sys, gc, n}) = let
