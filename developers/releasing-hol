@@ -2,9 +2,12 @@
 
 homesvn=https://hol.svn.sourceforge.net/svnroot/hol
 
+# typical usage: ./releasing-hol -f branches/HOL-Omega Kananaskis-5 `which poly`
+
 usage () {
-        echo "Usage: releasing-hol [-f] <release-path> <ML>" >&2
+        echo "Usage: releasing-hol [-f] <release-path> <verson> <ML>" >&2
         echo "  <release-path> is a path wrt $homesvn" >&2
+        echo "  <version> is a version name, e.g. kananaskis-5" >&2
         echo "  <ML> is a path to mosml or poly" >&2
         echo "  Use the -f option to force fresh svn call (ignoring cache)" >&2
         exit 1
@@ -24,12 +27,13 @@ else
     force=false
 fi
 
-if [ $# -ne 2 ]
+if [ $# -ne 3 ]
 then
     usage
 fi
 origname=$1
-ML=$2
+version=$2
+ML=$3
 
 MLbase=$(basename $ML)
 if [ $MLbase != mosml -a $MLbase != poly ]
@@ -46,7 +50,10 @@ repos=$homesvn/$origname
 shortname=$(basename $origname)
 # name=${origname////-}
 name=${shortname////-}
-tmpholdir=$(toLower $name)
+version=$(toLower $version)
+name=$(toLower $name)
+tmpholdir=$name
+echo "Building $name-$version:"
 
 localholdir="`dirname $0`/.."
 localholdir=$(cd $localholdir ; pwd)
@@ -170,7 +177,7 @@ do
     then :
     else echo Build failed - see $texlogs/$man_name.log ; exit 1
     fi
-    mv $lcname.pdf /tmp/$shortname-$lcname.pdf
+    mv $lcname.pdf /tmp/$name-$version-$lcname.pdf
 done
 
 echo Removing Buddy documentation from distribution
@@ -207,21 +214,21 @@ mv svn-export-result $tmpholdir
 echo "Creating tar file"
 
 # Remove unnecessary or old examples and other junk
-rm -rf $tmpholdir/examples/ARM/v4T
-rm -rf $tmpholdir/examples/PSL
-rm -rf $tmpholdir/examples/opsemTools
-rm -rf $tmpholdir/examples/temporal_deep
-rm -rf $tmpholdir/examples/elliptic
-rm -rf $tmpholdir/examples/dev/sw
-rm -rf $tmpholdir/examples/dev/sw2
-rm -rf $tmpholdir/examples/ring.sml
-rm -rf $tmpholdir/examples/fsub
-rm -rf $tmpholdir/examples/pgcl
-rm -rf $tmpholdir/scheme
-rm -rf $tmpholdir/tools/mlton
+/bin/rm -rf $tmpholdir/examples/ARM/v4T
+/bin/rm -rf $tmpholdir/examples/PSL
+/bin/rm -rf $tmpholdir/examples/opsemTools
+/bin/rm -rf $tmpholdir/examples/temporal_deep
+/bin/rm -rf $tmpholdir/examples/elliptic
+/bin/rm -rf $tmpholdir/examples/dev/sw
+/bin/rm -rf $tmpholdir/examples/dev/sw2
+/bin/rm -rf $tmpholdir/examples/ring.sml
+/bin/rm -rf $tmpholdir/examples/fsub
+/bin/rm -rf $tmpholdir/examples/pgcl
+/bin/rm -rf $tmpholdir/scheme
+/bin/rm -rf $tmpholdir/tools/mlton
 
-tar czf $name.tar.gz $tmpholdir
-echo "Created tar file $name.tar.gz in /tmp"
+tar czf $name-$version.tar.gz $tmpholdir
+echo "Created tar file $name-$version.tar.gz in /tmp"
 
-# mv $localholdir/doc/$shortname.release.html .
+cp -p $tmpholdir/doc/$version.release.html .
 
