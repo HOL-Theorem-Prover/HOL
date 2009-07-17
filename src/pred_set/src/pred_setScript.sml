@@ -355,6 +355,7 @@ val IN_UNION = store_thm
       PURE_ONCE_REWRITE_TAC [UNION_DEF] THEN
       CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
       REPEAT GEN_TAC THEN REFL_TAC);
+val _ = export_rewrites ["IN_UNION"]
 
 val UNION_ASSOC = store_thm
     ("UNION_ASSOC",
@@ -640,6 +641,10 @@ val DIFF_SUBSET = Q.store_thm
   `!s t. (s DIFF t) SUBSET s`,
   REWRITE_TAC [SUBSET_DEF, IN_DIFF] THEN PROVE_TAC []);
 
+val UNION_DIFF = store_thm(
+  "UNION_DIFF",
+  ``s SUBSET t ==> (s UNION (t DIFF s) = t) /\ ((t DIFF s) UNION s = t)``,
+  SRW_TAC [][EXTENSION, SUBSET_DEF] THEN PROVE_TAC []);
 
 (* ===================================================================== *)
 (* The insertion function.					         *)
@@ -1718,6 +1723,7 @@ val FINITE_DIFF =
       [FIRST_ASSUM MATCH_ACCEPT_TAC,
        FIRST_ASSUM (fn th => fn g => ASSUME_TAC (SPEC (--`t:'a set`--)th) g)
        THEN IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT]]);
+val _ = export_rewrites ["FINITE_DIFF"]
 
 val FINITE_DIFF_down = Q.store_thm
 ("FINITE_DIFF_down",
@@ -4166,7 +4172,7 @@ val chooser_def = TotalDefn.Define `
 
 val chooser_lem1 = Q.prove (
 `!n s t. INFINITE s /\ s SUBSET t ==> chooser s n IN t`,
-Induct THEN 
+Induct THEN
 RWTAC [chooser_def, SUBSET_DEF] THENL
 [`s <> {}`
           by (RWTAC [EXTENSION] THEN
@@ -4179,7 +4185,7 @@ val chooser_lem2 = Q.prove (
 `!n s. INFINITE s ==> chooser (REST s) n <> CHOICE s`,
 RWTAC [] THEN
 IMP_RES_TAC infinite_rest THEN
-`chooser (REST s) n IN (REST s)` 
+`chooser (REST s) n IN (REST s)`
         by METIS_TAC [chooser_lem1, SUBSET_REFL] THEN
 FSTAC [REST_DEF, IN_DELETE]);
 
@@ -4187,7 +4193,7 @@ val chooser_lem3 = Q.prove (
 `!x y s. INFINITE s /\ (chooser s x = chooser s y) ==> (x = y)`,
 Induct_on `x` THEN
 RWTAC [chooser_def] THEN
-Cases_on `y` THEN 
+Cases_on `y` THEN
 FSTAC [chooser_def] THEN
 RWTAC [] THEN
 METIS_TAC [chooser_lem2, infinite_rest]);
@@ -4228,7 +4234,7 @@ RWTAC [] THENL
 [Q.EXISTS_TAC `chooser s` THEN
      RWTAC [INJ_DEF] THEN
      METIS_TAC [chooser_lem1, chooser_lem3, SUBSET_REFL],
- METIS_TAC [infinite_num_inj_lem, INFINITE_DEF]]); 
+ METIS_TAC [infinite_num_inj_lem, INFINITE_DEF]]);
 
 val countable_def = TotalDefn.Define `
   countable s = ?f. INJ f s (UNIV:num set)`;
@@ -4275,18 +4281,18 @@ RWTAC [countable_def] THEN
 FSTAC [INJ_DEF, IN_UNIV] THEN
 Q.EXISTS_TAC `\x. if x IN s then f x else SUC (MAX_SET (IMAGE f s))` THEN
 RWTAC [] THEN
-`IMAGE f s <> {}`  
+`IMAGE f s <> {}`
            by (CCONTR_TAC THEN
                FSTAC [IMAGE_DEF]) THENL
-[`MAX_SET (IMAGE f s) IN IMAGE f s /\ 
+[`MAX_SET (IMAGE f s) IN IMAGE f s /\
   (f x <= MAX_SET (IMAGE f s))`
           by METIS_TAC [MAX_SET_DEF, IMAGE_FINITE, IN_IMAGE] THEN
-     METIS_TAC [Q.prove (`!x. ~(SUC x <= x)`, 
+     METIS_TAC [Q.prove (`!x. ~(SUC x <= x)`,
                          FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [])],
- `MAX_SET (IMAGE f s) IN IMAGE f s /\ 
+ `MAX_SET (IMAGE f s) IN IMAGE f s /\
   (f y <= MAX_SET (IMAGE f s))`
           by METIS_TAC [MAX_SET_DEF, IMAGE_FINITE, IN_IMAGE] THEN
-     METIS_TAC [Q.prove (`!x. ~(SUC x <= x)`, 
+     METIS_TAC [Q.prove (`!x. ~(SUC x <= x)`,
                          FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [])]]);
 
 val num_to_pair_def = TotalDefn.Define `
@@ -4347,7 +4353,7 @@ POP_ASSUM (MP_TAC o SIMP_RULE bool_ss [countable_surj]) THEN
 POP_ASSUM (MP_TAC o SIMP_RULE bool_ss [countable_surj]) THEN
 RWTAC [SURJ_DEF] THEN
 RWTAC [CROSS_EMPTY, FINITE_EMPTY, finite_countable] THEN
-`s CROSS t = IMAGE (\(x, y). (f x, f' y)) (UNIV:num set CROSS UNIV:num set)` 
+`s CROSS t = IMAGE (\(x, y). (f x, f' y)) (UNIV:num set CROSS UNIV:num set)`
         by  (RWTAC [CROSS_DEF, IMAGE_DEF, EXTENSION] THEN
              EQ_TAC THEN
              RWTAC [] THENL
@@ -4385,7 +4391,7 @@ FSTAC [SKOLEM_THM] THEN
 `?g. INJ g s (UNIV:num set)`
            by (FSTAC [countable_def] THEN
                METIS_TAC []) THEN
-`INJ (\a. (g (f' a),  f (f' a) a)) (BIGUNION s) 
+`INJ (\a. (g (f' a),  f (f' a) a)) (BIGUNION s)
      (UNIV:num set CROSS UNIV:num set)`
          by (FSTAC [INJ_DEF] THEN
              RWTAC [] THEN
@@ -4399,7 +4405,7 @@ val union_countable = Q.store_thm ("union_countable",
 RWTAC [] THEN
 `!x. x IN {s; t} ==> countable x` by RWTAC [] THEN
 `FINITE {s; t}` by RWTAC [] THEN
-`s UNION t = BIGUNION {s; t}` 
+`s UNION t = BIGUNION {s; t}`
           by (RWTAC [EXTENSION, IN_UNION, IN_BIGUNION] THEN
               METIS_TAC []) THEN
 METIS_TAC [bigunion_countable, finite_countable]);
@@ -4426,7 +4432,7 @@ end;
 (* Misc theorems added by Thomas Tuerk on 2009-03-24 *)
 
 val IMAGE_BIGUNION = store_thm ("IMAGE_BIGUNION",
-  ``!f M. IMAGE f (BIGUNION M) = 
+  ``!f M. IMAGE f (BIGUNION M) =
 	  BIGUNION (IMAGE (IMAGE f) M)``,
 
 ONCE_REWRITE_TAC [EXTENSION] THEN
@@ -4553,7 +4559,7 @@ val _ = export_rewrites
      (* "SUBSET" *)
      "SUBSET_INSERT", "SUBSET_REFL",
      (* "UNION" *)
-     "IN_UNION", "UNION_IDEMPOT", "UNION_SUBSET",
+     "UNION_IDEMPOT", "UNION_SUBSET",
      "SUBSET_UNION",
      (* UNIV *)
      "IN_UNIV", "EMPTY_NOT_UNIV"
