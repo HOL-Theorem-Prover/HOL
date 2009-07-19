@@ -49,7 +49,22 @@ local open Portable
              in list_mk_univ_type (arg_tyvs, foldr (op -->) res_sz_ty arg_sz_tys)
              end
            else (* kd is a kind variable *)
-             raise ERR "mk_tyvar_size" "kind of type variable contains a kind variable"
+             let val k = dest_var_kind kd
+                 val k' = next_nm (s::avoids) k
+                 val ty' = mk_var_type (k', kd ==> typ, rk)
+             in
+               mk_app_type (ty', ty) --> num
+             end
+(* alternatively,
+             let val k = dest_var_kind kd
+                 val k0 = String.extract(k, 1, NONE)
+                 val s' = s ^ "_" ^ k0
+                 val ty' = mk_var_type (s', typ, rk)
+             in (* raise ERR "mk_tyvar_size"
+                  ("kind of type variable "^s^" contains a kind variable "^k) *)
+               ty' --> num
+             end
+*)
         end
 in
 fun mk_tyvar_size vty (V,away) =

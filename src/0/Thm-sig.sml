@@ -125,7 +125,7 @@ sig
 
   (* Fetching theorems from disk *)
 
-  val disk_thm      : term vector
+  val disk_thm      : hol_type vector -> term vector
                        -> string list * 'a Portable.frag list list
                                       * 'a Portable.frag list -> thm
 

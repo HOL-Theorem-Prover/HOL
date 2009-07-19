@@ -494,24 +494,29 @@ fun next_ty ty = mk_vartype(Lexis.tyvar_vary (dest_vartype ty))
 (*---------------------------------------------------------------------------*)
 
 fun normalise_ty ty = let
-  fun recurse (acc as (dict,usethis)) tylist =
+  fun recurse (acc as (dict,env,usethis)) tylist =
       case tylist of
         [] => acc
       | ty :: rest => let
         in
-          if is_vartype ty then
-            case Binarymap.peek(dict,ty) of
-                NONE => recurse (Binarymap.insert(dict,ty,usethis),
-                                 next_ty usethis)
-                                rest
-              | SOME _ => recurse acc rest
-          else let
-              val (_, Args) = strip_app_type ty
-            in
-              recurse acc (Args @ rest)
-            end
+          case destruct_type ty of
+            TYVAR _ =>
+              if mem ty env then recurse acc rest (* ty is bound type var *)
+              else
+                (case Binarymap.peek(dict,ty) of
+                    NONE => recurse (Binarymap.insert(dict,ty,usethis),
+                                     env,
+                                     next_ty usethis)
+                                    rest
+                  | SOME _ => recurse acc rest)
+          | TYCONST _ => recurse acc rest
+          | TYAPP (opr,arg) => recurse acc (opr :: arg :: rest)
+          | TYABS (bvar,body) =>
+              recurse (recurse (dict, bvar::env, usethis) [body]) rest
+          | TYUNIV (bvar,body) =>
+              recurse (recurse (dict, bvar::env, usethis) [body]) rest
         end
-  val (inst0, _) = recurse (Binarymap.mkDict Type.compare, Type.alpha) [ty]
+  val (inst0, _, _) = recurse (Binarymap.mkDict Type.compare, [], Type.alpha) [ty]
   fun set_kd_rk src trg =
     let val (s,kd,rk) = dest_var_type trg
     in mk_var_type(s, kind_of src, rank_of src)
@@ -557,12 +562,29 @@ end
 (*---------------------------------------------------------------------------*)
 
 fun tysize ty =
-    if Type.is_vartype ty then 1
-    else let
+    if Type.is_var_type ty then 1
+    else if Type.is_con_type ty then 1
+    else if Type.is_app_type ty then let
+        val (Opr,Arg) = Type.dest_app_type ty
+      in
+        tysize Opr + tysize Arg
+      end
+    else if Type.is_abs_type ty then let
+        val (a,body) = Type.dest_abs_type ty
+      in
+        tysize a + tysize body
+      end
+    else if Type.is_univ_type ty then let
+        val (a,body) = Type.dest_univ_type ty
+      in
+        tysize a + tysize body
+      end
+    else raise ERR "tysize" "impossible type"
+(*  else let
         val (_,Args) = Type.strip_app_type ty
       in
         1 + List.foldl (fn (ty,acc) => tysize ty + acc) 0 Args
-      end
+      end *)
 
 fun mymatch pat ty = let
   val ((i, sames), (k, kdsames), r) = Type.raw_kind_match_type pat ty (([], []), ([], []), 0)
@@ -616,7 +638,7 @@ fun typeValue (theta,gamma,undef) =
               of SOME f =>
                   let val vty = drop Args (type_of f)
                       val (sigma,ksigma,rk) = kind_match_type vty ty
-                      val inst_it = inst sigma o inst_kind ksigma o inst_rank rk
+                      val inst_it = inst sigma o inst_rank_kind rk ksigma
                   in list_mk_comb(inst_it f, map tyValue Args)
                   end
                | NONE => undef ty
@@ -638,7 +660,7 @@ fun typeValue (theta,gamma,undef) =
                       val vty = last tys
                       val (sigma,ksigma,rk) = kind_match_type vty ty
                                                 handle HOL_ERR _ => ([],[],0)
-                      val inst_it = inst sigma o inst_kind ksigma o inst_rank rk
+                      val inst_it = inst sigma o inst_rank_kind rk ksigma
                       val args = snd(strip_app_type ty)
                   in list_mk_comb(inst_it f, map tyValue args)
                   end
@@ -658,7 +680,7 @@ local fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
                           Option.composePartial (size_of,fetch db)
 in
 fun type_size db ty =
-   let fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
+   let fun theta ty = if is_var_type ty then SOME (K0 ty) else NONE
    in typeValue (theta,tysize_env db,K0) ty
    end
 end

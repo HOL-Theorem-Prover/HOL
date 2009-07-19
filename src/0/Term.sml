@@ -490,7 +490,8 @@ fun type_var_occurs aty =
  * Making variables                                                          *
  *---------------------------------------------------------------------------*)
 
-val mk_var = Fv
+fun mk_var (n,ty) = if kind_of ty = Kind.typ then Fv(n,ty)
+                    else raise ERR "mk_var" "type does not have base kind"
 
 fun inST s = not(null(KernelSig.listName termsig s))
 
@@ -1828,9 +1829,15 @@ val percent = "%"
 val slash   = "/"
 val colon   = ":";
 
-fun ty2tm ty = mk_var("carrier",ty);
+fun ty2tmE ty E = let val kd = Type.kd_of ty E
+                      val a = mk_var_type("'carrier", kd ==> Kind.typ, 0)
+                      val ty' = mk_app_type(a, ty)
+                  in mk_var("carrier",ty')
+                  end;
+fun ty2tm ty = ty2tmE ty []
+fun tm2ty tm = snd (dest_app_type (snd (dest_var tm)))
 
-fun pp_raw_term index pps tm =
+fun pp_raw_term tyindex index pps tm =
  let open Portable
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
      fun ppty (TyApp(Opr,Arg)) =
@@ -1845,7 +1852,7 @@ fun pp_raw_term index pps tm =
             ppty (TyFv Bvar); add_string dot; add_break(1,0);
             ppty Body; add_string ")" )
        | ppty (TyBv i) = add_string (dollar^Lib.int_to_string i)
-       | ppty a        = add_string (percent^Lib.int_to_string (index (ty2tm a)))
+       | ppty a        = add_string (percent^Lib.int_to_string (tyindex a))
 
      fun ppunb (Fv(n,Ty)) =
           ( add_string "(@";
@@ -1879,7 +1886,7 @@ fun pp_raw_term index pps tm =
                              ppty Ty; add_string ")" )
        | pp (Bv i) = add_string (dollar^Lib.int_to_string i)
        | pp a      = if unbound_ty(type_of a) (* free variable or constant *)
-                     then ppunb a                               
+                     then ppunb a                            
                      else add_string (percent^Lib.int_to_string (index a))
  in
    begin_block INCONSISTENT 0;
@@ -1895,7 +1902,7 @@ fun pp_raw_term index pps tm =
 
 fun sprint pp x = PP.pp_to_string 72 pp x
 
-val term_to_string = sprint (pp_raw_term (fn t => ~1));
+val term_to_string = sprint (pp_raw_term (fn t => ~1) (fn t => ~1));
 
 (*
 val _ = installPP Kind.pp_kind;

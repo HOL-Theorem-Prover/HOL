@@ -6,6 +6,7 @@ sig
   val typesig       : (kind * int) KernelSig.symboltable
 
   val kind_of       : hol_type -> kind
+  val kd_of         : hol_type -> kind list -> kind
   val rank_of       : hol_type -> int
   val rk_of         : hol_type -> int list -> int
   val rank_of_univ_dom : hol_type -> int

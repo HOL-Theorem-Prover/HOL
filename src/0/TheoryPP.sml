@@ -278,11 +278,14 @@ end;
 val table_size = 311
 val hash = Lib.hash table_size;
 
-val share_table = Array.array(table_size, [] :(Term.term * int)list);
-val taken = ref 0;
+val type_share_table = Array.array(table_size, [] :(Type.hol_type * int)list);
+val      share_table = Array.array(table_size, [] :(Term.term     * int)list);
+val tytaken = ref 0;
+val   taken = ref 0;
 
-fun reset_share_table () =
-  (taken := 0;
+fun reset_share_tables () =
+  (tytaken := 0; taken := 0;
+   Lib.for_se 0 (table_size-1) (fn i => Array.update(type_share_table,i,[]));
    Lib.for_se 0 (table_size-1) (fn i => Array.update(share_table,i,[])));
 
 fun hash_kind kd n =
@@ -397,23 +400,41 @@ fun hash_atom tm n =
  * first.
  *---------------------------------------------------------------------------*)
 
+fun addty ty =
+  let val i = hash_type ty 0
+      val els = Array.sub(type_share_table, i)
+      fun loop [] =
+               (Array.update(type_share_table, i, (ty,!tytaken)::els);
+                tytaken := !tytaken + 1)
+        | loop ((x,index)::rst) = if x = ty then () else loop rst
+  in
+    loop els
+  end;
+
 fun add tm =
   let val i = hash_atom tm 0
       val els = Array.sub(share_table, i)
       fun loop [] =
                (Array.update(share_table, i, (tm,!taken)::els);
                 taken := !taken + 1)
-        | loop ((x,index)::rst) = if (*Term.prim_eq*) x = tm then () else loop rst
+        | loop ((x,index)::rst) = if x = tm then () else loop rst
   in
     loop els
   end;
-
-fun addty ty = add (Term.ty2tm ty);
 
 
 (*---------------------------------------------------------------------------*)
 (* Get the vector index of an atom.                                          *)
 (*---------------------------------------------------------------------------*)
+
+fun tyindex ty =
+  let val i = hash_type ty 0
+      val els = Array.sub(type_share_table, i)
+      fun loop [] = raise ERR "tyindex" "not found in type table"
+        | loop ((x,index)::rst) = if x = ty then index else loop rst
+  in
+    loop els
+  end;
 
 fun index tm =
   let val i = hash_atom tm 0
@@ -424,11 +445,11 @@ fun index tm =
     loop els
   end;
 
-val pp_raw = Term.pp_raw_term index;
+val pp_raw = Term.pp_raw_term tyindex index;
 
 local open Portable Feedback
 in
-fun check V thml =
+fun check (TV,V) thml =
   let val _ = HOL_MESG "Checking consistency of sharing scheme"
       fun chk tm =
          if Type.unbound_ty(Term.type_of tm) then ()
@@ -436,7 +457,11 @@ fun check V thml =
           then ()
            else (HOL_MESG "FAILURE in sharing scheme!";
                  raise ERR "check" "failure in sharing scheme")
-      fun chkty ty = chk (Term.ty2tm ty)
+      fun chkty ty =
+         if (Vector.sub(TV, tyindex ty) = ty)
+          then ()
+           else (HOL_MESG "FAILURE in type sharing scheme!";
+                 raise ERR "check" "failure in type sharing scheme")
   in List.app (app (Term.trav chkty chk) o thm_terms o snd) thml;
      HOL_MESG "Completed successfully"
   end
@@ -444,14 +469,19 @@ end;
 
 
 fun share_thy check_share thms =
-  let val _ = reset_share_table()
+  let val _ = reset_share_tables()
       val _ = List.app (app (Term.trav addty add) o thm_terms o snd) thms
+      val TL0 = Array.foldr (op @) [] type_share_table
+      val TL1 = Lib.sort (fn (_,i0) => fn (_,i1) => i0<=i1) TL0
+      val tyslist = map fst TL1
+      val TV = Vector.fromList tyslist
       val L0 = Array.foldr (op @) [] share_table
       val L1 = Lib.sort (fn (_,i0) => fn (_,i1) => i0<=i1) L0
       val slist = map fst L1
-      val _ = if check_share then check (Vector.fromList slist) thms else ()
+      val V = Vector.fromList slist
+      val _ = if check_share then check (TV,V) thms else ()
   in
-    slist
+    (tyslist,slist)
   end handle e => Raise e;
 
 (*---------------------------------------------------------------------------
@@ -601,16 +631,21 @@ fun pp_struct info_record ppstrm =
          end_block()
       end
      val thml = axioms@definitions@theorems
-     val slist = share_thy false thml
+     val (tyslist,slist) = share_thy false thml
 
      fun bind_theorems () = if null thml then ()
       else (
         begin_block CONSISTENT 0;
         add_string "local"; add_break(1,0);
         begin_block CONSISTENT 0;
+        (* type sharing table *)
+        add_string "val type_share_table = Vector.fromList"; add_break(1,0);
+        pp_sml_list pp_ty tyslist;
+        add_newline();
+        (* term sharing table *)
         add_string "val share_table = Vector.fromList"; add_break(1,0);
         pp_sml_list pr_atom slist; add_newline();
-        add_string"val DT = Thm.disk_thm share_table";
+        add_string"val DT = Thm.disk_thm type_share_table share_table";
         end_block();
         add_newline();
         add_string"in"; add_newline();

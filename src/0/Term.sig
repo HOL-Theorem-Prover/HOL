@@ -146,7 +146,8 @@ sig
   val break_tyabs    : term -> term
   val trav           : (hol_type -> unit) -> (term -> unit) -> term -> unit
   val ty2tm          : hol_type -> term
-  val pp_raw_term    : (term -> int) -> Portable.ppstream -> term -> unit
+  val ty2tmE         : hol_type -> kind list -> term
+  val pp_raw_term    : (hol_type -> int) -> (term -> int) -> Portable.ppstream -> term -> unit
 
   val term_size      : term -> int
 end;

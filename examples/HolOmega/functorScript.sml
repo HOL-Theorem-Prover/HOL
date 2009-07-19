@@ -145,7 +145,7 @@ val functor_def = new_definition("functor_def", Term
 val identity_functor = store_thm
   ("identity_functor",
    ``functor ((\:'a 'b. I) : I functor)``,
-   SIMP_TAC combin_ss [functor_def]
+   SIMP_TAC combin_ss [functor_def] (* uses TY_FORALL_SIMP as standard rewrite rule *)
   );
 
 val constant_functor = store_thm

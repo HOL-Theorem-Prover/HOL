@@ -76,7 +76,7 @@ sig
   val mk_thm        : term list * term -> thm
   val mk_axiom_thm  : string ref * term -> thm
   val mk_defn_thm   : tag * term -> thm
-  val disk_thm      : term vector
+  val disk_thm      : hol_type vector -> term vector
                        -> string list * 'a Portable.frag list list
                                       * 'a Portable.frag list -> thm
   val debug_type    : hol_type -> unit

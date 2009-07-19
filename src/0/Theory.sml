@@ -403,6 +403,8 @@ fun new_constant (Name,Ty) =
   (if not (Lexis.allowed_term_constant Name) andalso
      !Globals.checking_const_names
    then WARN "new_constant" (Lib.quote Name^" is not a standard constant name")
+   else if Type.kind_of Ty <> Kind.typ
+   then raise ERR "new_constant" "type does not have base kind"
    else ()
    ; add_termCT {name=Name, theory=CTname(), htype=Ty}; ())
 

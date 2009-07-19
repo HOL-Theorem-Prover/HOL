@@ -437,14 +437,49 @@ local
     if abconv_ty residue z then l
     else raise ERR "safe_insert_ty" "match"
   end handle NOT_FOUND => n::l
-  val mk_dummy = let
+  local
     val name = fst(dest_var(genvar Type.alpha))
-  in fn ty => mk_var(name, ty)
+    val tyname = #1(dest_var_type(gen_var_type(typ,0)))
+  in
+    fun mk_new_dummy ty =
+       let val a = trace ("Vartype Format Complaint",0)
+                             mk_var_type(tyname, kind_of ty, rank_of ty)
+           val ty' = mk_app_type(mk_abs_type(a, bool), ty)
+       in mk_var(name, ty')
+       end
+    fun mk_dummy2 {redex,residue} =
+       if kind_of redex = typ
+          (* keep as similar as possible to HOL4 dummies *)
+       then (mk_var(name, redex) |-> mk_var(name, residue))
+       else (mk_new_dummy redex  |-> mk_new_dummy residue )
+    fun dest_dummy tm =
+       let val (n,ty) = dest_var tm
+           val _ = if name = n then () else raise ERR "dest_dummy" ""
+       in let val (opr,arg) = dest_app_type ty
+              val (a,body) = dest_abs_type opr
+              val (s,kd,rk) = dest_var_type a
+              val _ = if tyname = s then () else raise ERR "dest_dummy" ""
+          in arg
+          end (* but if not the new kind of dummy, it's the old sort *)
+          handle HOL_ERR _ => ty
+       end handle HOL_ERR _ => raise ERR "dest_dummy" "not a dummy"
   end
   val mk_dummy_ty = let
     val name = dest_vartype(gen_tyvar())
   in fn (kd,rk) => trace ("Vartype Format Complaint",0) mk_var_type(name, kd, rk)
   end
+
+  fun find_residue_dum red [] = raise NOT_FOUND
+    | find_residue_dum red ({redex,residue}::rest) =
+        (if abconv_ty red (dest_dummy redex) then dest_dummy residue
+         else find_residue_dum red rest)
+        handle HOL_ERR _ => find_residue_dum red rest
+  (* safe_insert_dummy is like safe_insert but specially for dummy terms *)
+  fun safe_insert_dummy (n as {redex,residue}) l =
+    let val z = find_residue_dum redex l
+    in if abconv_ty residue z then l
+       else raise ERR "safe_insert_dummy" "match"
+    end handle NOT_FOUND => mk_dummy2 n :: l
 
 
   fun term_pmatch lconsts tyenv env vtm ctm (sofar as (insts,homs)) =
@@ -463,7 +498,7 @@ local
       in
         if vname = cname andalso vthy = cthy then
           if abconv_ty cty vty then sofar
-          else (safe_inserta (mk_dummy vty |-> mk_dummy cty) insts, homs)
+          else (safe_insert_dummy (vty |-> cty) insts, homs)
         else raise ERR "term_pmatch" "constant mismatch"
       end
     else if is_abs vtm then let
@@ -471,7 +506,7 @@ local
         val (cv,cbod) = dest_abs ctm
         val (_, vty) = dest_var vv
         val (_, cty) = dest_var cv
-        val sofar' = (safe_inserta(mk_dummy vty |-> mk_dummy cty) insts, homs)
+        val sofar' = (safe_insert_dummy (vty |-> cty) insts, homs)
       in
         term_pmatch lconsts tyenv ((vv |-> cv)::env) vbod cbod sofar'
       end
@@ -482,7 +517,7 @@ local
         val (_, ckd, crk) = dest_var_type cty
         val vdty = mk_dummy_ty (vkd,vrk)
         val cdty = mk_dummy_ty (ckd,crk)
-        val sofar' = (safe_inserta(mk_dummy vdty |-> mk_dummy cdty) insts, homs)
+        val sofar' = (safe_insert_dummy (vdty |-> cdty) insts, homs)
       in
         term_pmatch lconsts ((vty |-> cty)::tyenv) env vbod cbod sofar'
       end
@@ -495,7 +530,7 @@ local
             val vty = type_of vtm
             val cty = type_of ctm
             val insts' = if abconv_ty vty cty then insts
-                         else safe_inserta (mk_dummy vty |-> mk_dummy cty) insts
+                         else safe_insert_dummy (vty |-> cty) insts
           in
             (insts', (tyenv,env,ctm,vtm)::homs)
           end
@@ -516,16 +551,14 @@ local
             val vty = type_of vtm
             val cty = type_of ctm
             val insts' = if abconv_ty vty cty then insts
-                         else safe_inserta (mk_dummy vty |-> mk_dummy cty) insts
+                         else safe_insert_dummy (vty |-> cty) insts
           in
             (insts', (tyenv,env,ctm,vtm)::homs)
           end
         else let
             val (lv,rvty) = dest_tycomb vtm
             val (lc,rcty) = dest_tycomb ctm
-            val vv = mk_dummy rvty
-            val cv = mk_dummy rcty
-            val sofar' = (safe_inserta(vv |-> cv) insts, homs)
+            val sofar' = (safe_insert_dummy (rvty |-> rcty) insts, homs)
           in
             term_pmatch lconsts tyenv env lv lc sofar'
           end
@@ -607,9 +640,19 @@ fun determ {redex,residue} =
       else let val (nm1,ty1) = dest_var redex
                val (nm2,ty2) = dest_var residue
            in if nm1 <> nm2 then NONE
-              else if is_vartype ty1
-                   then SOME (ty1 |-> ty2)
-                   else NONE
+              else if is_var_type ty1 then SOME (ty1 |-> ty2) (* old style *)
+              else let val (opr1,arg1) = dest_app_type ty1
+                       val (opr2,arg2) = dest_app_type ty2
+                       val (a1,_) = dest_abs_type opr1
+                       val (a2,_) = dest_abs_type opr2
+                       val (s1,_,_) = dest_var_type a1
+                       val (s2,_,_) = dest_var_type a2
+                   in if s1 <> s2 then NONE
+                      else if is_var_type arg1
+                           then SOME (arg1 |-> arg2) (* new style *)
+                           else NONE
+                   end
+                   handle HOL_ERR _ => NONE
            end
 
 
@@ -765,9 +808,7 @@ in
            end) handle _ => let
                          val (lc,rcty) = dest_tycomb ctm
                          val (lv,rvty) = dest_tycomb vtm
-                         val vv = mk_dummy rvty
-                         val cv = mk_dummy rcty
-                         val insts' = safe_inserta (vv |-> cv) insts
+                         val insts' = safe_insert_dummy (rvty |-> rcty) insts
                          val pinsts_homs' =
                              term_pmatch lconsts tyenv env lv lc (insts', tl homs)
                          val (tyins',kdins',rkin') =

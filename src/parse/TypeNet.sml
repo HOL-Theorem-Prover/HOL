@@ -11,19 +11,28 @@ fun print_types [] = print "[]"
 and print_types0 (ty::tys) = (print ","; print_type ty; print_types0 tys)
   | print_types0 [] = ()
 
-datatype label = TV of kind | TOP of {Thy : string, Tyop : string} | TAB | TUN
+(*
+fun to_skind kd = if is_arrow_kind kd then let
+                      val (kd1,kd2) = dest_arrow_kind kd
+                    in mk_arrow_kind(to_skind kd1, to_skind kd2)
+                    end
+                  else typ (* for both the base kind and kind variables *)
+*)
 
-fun label_to_string (TV kd) = "<tyvar>" ^ (if kd=Kind.typ then "" else ":"^kind_to_string kd)
+datatype label = TV of int | TOP of {Thy : string, Tyop : string} | TAB | TUN
+
+(* fun label_to_string (TV kd) = "<tyvar>" ^ (if kd=Kind.typ then "" else ":"^kind_to_string kd) *)
+fun label_to_string (TV n) = "<tyvar>" ^ (if n=0 then "" else ":"^Int.toString n)
   | label_to_string (TOP{Thy,Tyop}) = Thy^"$"^Tyop
   | label_to_string TAB = "<tyabs>"
   | label_to_string TUN = "<tyuniv>"
 
 fun labcmp p =
     case p of
-      (TV kd1, TV kd2) => Kind.kind_compare(kd1,kd2)
+      (TV n1, TV n2) => Int.compare(n1,n2)
     | (TV _, _) => LESS
     | (TOP{Thy = thy1, Tyop = op1}, TOP{Thy = thy2, Tyop = op2}) =>
-      pair_compare (String.compare, String.compare) ((op1,thy1), (op2,thy2))
+        pair_compare (String.compare, String.compare) ((op1,thy1), (op2,thy2))
     | (TOP _, TV _) => GREATER
     | (TOP _, _) => LESS
     | (TAB, TUN) => LESS
@@ -45,7 +54,7 @@ val empty = (EMPTY, 0)
 fun mkempty () = ND (Binarymap.mkDict labcmp, Binarymap.mkDict Type.compare)
 
 fun ndest_type ty =
-    if is_vartype ty then (TV (kind_of ty), [])
+    if is_vartype ty then (TV (length (snd (strip_app_type ty))), [])
     else if is_con_type ty then let
         val {Thy,Tyop,Kind,Rank} = dest_thy_con_type ty
       in
@@ -151,7 +160,8 @@ fun find (n, ty) =
 
 fun match ((net,sz), ty) = let
   val ty' = deep_beta_ty ty
-  val _ = if current_trace "debug_parse_type" = 0 then () else (print "TypeNet.match("; print_type ty'; print ")\n")
+  val _ = if current_trace "debug_parse_type" = 0 then () else
+            (print "TypeNet.match("; print_type ty'; print ")\n")
   fun trav acc (net, tyl) =
       case (net, tyl) of
         (EMPTY, _) => []
@@ -162,32 +172,30 @@ fun match ((net,sz), ty) = let
           val _ = if current_trace "debug_parse_type" = 0 then ()
                   else (print "ND d on\n  "; print_types (ty::tys); print "\n")
           val acc' = Binarymap.listItems d0 @ acc
-          val varresult = case Binarymap.peek(d, TV (kind_of ty)) of
+          val (Opr,Args) = strip_app_type ty
+          val n = length Args
+          val varresult = case Binarymap.peek(d, TV 0) of
                             NONE => acc'
                           | SOME n => trav acc' (n, tys)
           val (lab, rest) = ndest_type ty
-          val _ = if current_trace "debug_parse_type" = 0 then ()
-                  else (print "lab = "; print (label_to_string lab); print "\n  "; print_types rest; print "\n")
+          val _ = if current_trace "debug_parse_type" = 0 then () else
+                    (print "lab = "; print (label_to_string lab); print "\n  "; print_types rest; print "\n")
+          val varhead_result =
+            if n = 0 then varresult 
+            else
+              case Binarymap.peek (d, TV n) of 
+                NONE => varresult
+              | SOME n => trav varresult (n, rest @ tys)
         in
           (case lab of
-            TV kd => if kd=kind_of ty then varresult else acc
-          | TOP _ => let
+            TV n => (if current_trace "debug_parse_type" = 0 then () else
+                       (print "  n = "; print (Int.toString n); print "\n");
+                     varhead_result)
+          | _ => let
             in
               case Binarymap.peek (d, lab) of
-                NONE => varresult
-              | SOME n => trav varresult (n, rest @ tys)
-            end
-          | TAB => let
-            in
-              case Binarymap.peek (d, lab) of
-                NONE => varresult
-              | SOME n => trav varresult (n, rest @ tys)
-            end
-          | TUN => let
-            in
-              case Binarymap.peek (d, lab) of
-                NONE => varresult
-              | SOME n => trav varresult (n, rest @ tys)
+                NONE => varhead_result
+              | SOME n => trav varhead_result (n, rest @ tys)
             end) handle Fail s => raise (wrap_exn "TypeNet.match" (label_to_string lab) (Fail s))
         end
    (* | _ => raise Fail "TypeNet.match: catastrophic invariant failure" *)

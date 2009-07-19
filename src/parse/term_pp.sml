@@ -87,11 +87,20 @@ fun apply_absargs f abs =
        Type antiquotations (required in term parser)
  ---------------------------------------------------------------------------*)
 
-fun ty_antiq ty = mk_var("ty_antiq",ty)
+fun ty_antiq ty = let val kd = kind_of ty
+                      val a = mk_var_type("'ty_antiq", kd ==> typ, 0)
+                      val ty' = mk_app_type(a, ty)
+                  in mk_var("ty_antiq",ty')
+                  end
 
 fun dest_ty_antiq tm =
   case with_exn dest_var tm (ERR "dest_ty_antiq" "not a type antiquotation")
-   of ("ty_antiq",Ty) => Ty
+   of ("ty_antiq",ty) =>
+        let val (a,ty') = dest_app_type ty
+        in case with_exn dest_var_type a (ERR "dest_ty_antiq" "not a type antiquotation")
+            of ("'ty_antiq",_,0) => ty'
+             | _ => raise ERR "dest_ty_antiq" "not a type antiquotation"
+        end
     |  _ => raise ERR "dest_ty_antiq" "not a type antiquotation";
 
 val is_ty_antiq = Lib.can dest_ty_antiq

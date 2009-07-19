@@ -1755,15 +1755,20 @@ fun eat_dot ss =
    of SOME (dot, ss') => ss'
     |   _ => ERR "eat_dot" "expected a \".\"";
 
-fun parse_raw table =
- let fun index i = Vector.sub(table,i)
-     val ty2tm = Term.ty2tm
-     val tyof  = Term.type_of
-     val tvof  = Type.dest_var_type o tyof
+datatype stackitem = Tm of term | Ty of hol_type
+
+fun parse_raw tytable table =
+ let fun tyindex i = Vector.sub(tytable,i)
+     fun index i = Vector.sub(table,i)
+     fun tmof (Tm tm) = tm
+       | tmof (Ty _ ) = raise ERR "tmof" "not a term"
+     fun tyof (Ty ty) = ty
+       | tyof (Tm _ ) = raise ERR "tyof" "not a type"
+     val tvof = Type.dest_var_type
      fun parsety (stk,ss) =
       case lexer ss
-       of SOME (bvar n,  rst) => (ty2tm(TyBv n)::stk,rst)
-        | SOME (ident n, rst) => (index n::stk,rst)
+       of SOME (bvar n,  rst) => (Ty(TyBv n)::stk,rst)
+        | SOME (ident n, rst) => (Ty(tyindex n)::stk,rst)
         | SOME (lparen,  rst) =>
            (case lexer rst
              of SOME (lamb,   rst') => glambty (stk,rst')
@@ -1773,14 +1778,14 @@ fun parse_raw table =
      and
      parsetyl (stk,ss) =
         case parsety (stk,ss)
-         of (h1::h2::t, ss') => (ty2tm(TyApp(tyof h1,tyof h2))::t, eat_rparen ss')
+         of (h1::h2::t, ss') => (Ty(TyApp(tyof h1,tyof h2))::t, eat_rparen ss')
           |   _              => ERR "raw.parsetyl" "impossible"
      and
      glambty (stk,ss) =
       case lexer ss
        of SOME (ident n, rst) =>
             (case parsety (stk, eat_dot rst)
-              of (h::t,rst1) => (ty2tm(TyAbs(tvof(index n),tyof h))::t, eat_rparen rst1)
+              of (h::t,rst1) => (Ty(TyAbs(tvof(tyindex n),tyof h))::t, eat_rparen rst1)
                |   _         => ERR "glambty" "impossible")
         | _ => ERR "glambty" "expected an identifier"
      and
@@ -1788,13 +1793,13 @@ fun parse_raw table =
       case lexer ss
        of SOME (ident n, rst) =>
             (case parsety (stk, eat_dot rst)
-              of (h::t,rst1) => (ty2tm(TyAll(tvof(index n),tyof h))::t, eat_rparen rst1)
+              of (h::t,rst1) => (Ty(TyAll(tvof(tyindex n),tyof h))::t, eat_rparen rst1)
                |   _         => ERR "gallty" "impossible")
         | _ => ERR "gallty" "expected an identifier"
      fun parse (stk,ss) =
       case lexer ss
-       of SOME (bvar n,  rst) => (Bv n::stk,rst)
-        | SOME (ident n, rst) => (index n::stk,rst)
+       of SOME (bvar n,  rst) => (Tm(Bv n)::stk,rst)
+        | SOME (ident n, rst) => (Tm(index n)::stk,rst)
         | SOME (lparen,  rst) =>
            (case lexer rst
              of SOME (lamb,   rst') => glamb (stk,rst')
@@ -1808,14 +1813,14 @@ fun parse_raw table =
      and
      parsel (stk,ss) =
         case parse (stk,ss)
-         of (h1::h2::t, ss') => (Comb(h2,h1)::t, eat_rparen ss')
+         of (h1::h2::t, ss') => (Tm(Comb(tmof h2,tmof h1))::t, eat_rparen ss')
           |   _              => ERR "raw.parsel" "impossible"
      and
      gvar (stk,ss) =
         case lexer ss
          of SOME (name n, rst) =>
               (case parsety (stk, rst)
-                of (h::t,rst1) => (Fv(n,tyof h)::t, eat_rparen rst1)
+                of (h::t,rst1) => (Tm(Fv(n,tyof h))::t, eat_rparen rst1)
                  |   _         => ERR "gvar" "impossible")
           | _ => ERR "gvar" "expected a name"
      and
@@ -1830,7 +1835,7 @@ fun parse_raw table =
                                              val id = case prim_mk_const{Name=n,Thy=thy}
                                                        of Const(id,_) => id
                                                         | _ => ERR "gconst" "impossible const"
-                                         in (Const(id,ty')::t, eat_rparen rst2)
+                                         in (Tm(Const(id,ty'))::t, eat_rparen rst2)
                                          end
                         |   _         => ERR "gconst" "impossible")
                  |   _         => ERR "gconst" "expected a theory name")
@@ -1838,35 +1843,35 @@ fun parse_raw table =
      and
      gtyapp (stk,ss) =
         case parsety (stk,ss)
-         of (h1::h2::t, ss') => (TComb(h2,tyof h1)::t, eat_rparen ss')
+         of (h1::h2::t, ss') => (Tm(TComb(tmof h2,tyof h1))::t, eat_rparen ss')
           |   _              => ERR "raw.gtyapp" "impossible"
      and
      glamb (stk,ss) =
       case parse (stk, ss) (* parse the bound variable, push on stack *)
        of (stk1,rst) =>
             (case parse (stk1, eat_dot rst) (* parse the body *)
-              of (h::v::t,rst1) => (Abs(v,h)::t, eat_rparen rst1)
+              of (h::v::t,rst1) => (Tm(Abs(tmof v,tmof h))::t, eat_rparen rst1)
                |   _            => ERR "glamb" "impossible")
      and
      gtylamb (stk,ss) =
       case lexer ss
        of SOME (ident n, rst) =>
             (case parse (stk, eat_dot rst)
-              of (h::t,rst1) => (TAbs(tvof(index n),h)::t, eat_rparen rst1)
+              of (h::t,rst1) => (Tm(TAbs(tvof(tyindex n),tmof h))::t, eat_rparen rst1)
                |   _         => ERR "gtylamb" "impossible")
         | _ => ERR "gtylamb" "expected an identifier"
  in
   fn (QUOTE s::qs) =>
        (case parse ([], (Substring.all s,qs))
-         of ([v], _)  => v
+         of ([Tm v], _)  => v
           | otherwise => ERR "raw term parser" "parse failed")
    | otherwise => ERR "raw term parser" "expected a quotation"
  end;
 
 local val mk_disk_thm = make_thm Count.Disk
 in
-fun disk_thm vect =
-  let val rtp = parse_raw vect
+fun disk_thm tyvect vect =
+  let val rtp = parse_raw tyvect vect
   in fn (s,asl,w) =>
         mk_disk_thm(Tag.read_disk_tag s,list_hyp (map rtp asl),rtp w)
   end

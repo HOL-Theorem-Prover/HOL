@@ -72,6 +72,7 @@ datatype term = Var of string * hol_type
               | TAbs of hol_type * term
 
 fun prim_new_const (k as {Thy,Name}) ty = let
+  val _ = if kind_of ty = typ then () else raise ERR "prim_new_const" "type does not have base kind"
   val id = KernelSig.insert(const_table, k, ty)
 in
   Const(id, ty)
@@ -294,7 +295,8 @@ fun same_const t1 t2 =
     | _ => false
 
 (* constructors - variables *)
-val mk_var = Var
+fun mk_var (n,ty) = if kind_of ty = typ then Var(n,ty)
+                    else raise ERR "mk_var" "type does not have base kind"
 fun mk_primed_var (Name,Ty) =
   let val next = Lexis.nameStrm Name
       fun spin s = if inST s then spin (next()) else s
@@ -305,7 +307,8 @@ local val genvar_prefix = "%%genvar%%"
       fun num2name i = genvar_prefix^Lib.int_to_string i
       val nameStrm = Lib.mk_istream (fn x => x+1) 0 num2name
 in
-fun genvar ty = Var(state(next nameStrm), ty)
+fun genvar ty = if kind_of ty = typ then Var(state(next nameStrm), ty)
+                else raise ERR "genvar" "type does not have base kind"
 
 fun genvars ty =
  let fun gen acc n = if n <= 0 then rev acc else gen (genvar ty::acc) (n-1)
