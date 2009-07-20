@@ -28,6 +28,7 @@ sig
   val inst_rank_kind1 : int -> (kind, kind)Lib.subst -> (tyvar, kind * int)Binarymap.dict
                         -> hol_type -> hol_type
   val inst_rank_subst : int -> (hol_type, hol_type)Lib.subst -> (hol_type, hol_type)Lib.subst
+
   val type_pmatch : hol_type HOLset.set -> {redex : hol_type, residue : hol_type} list ->
                     hol_type -> hol_type ->
                     (hol_type,hol_type)Lib.subst *
@@ -46,7 +47,10 @@ sig
                           (hol_type, int)Lib.subst *
                           (hol_type,hol_type)Lib.subst *
                           ((kind,kind)Lib.subst * kind list) * int
-
+  val get_rank_kind_insts : kind list -> {redex : hol_type, residue : hol_type} list ->
+                            {redex : hol_type, residue : hol_type} list ->
+                            int * ({redex : kind, residue : kind} list * kind list) ->
+                            int * ({redex : kind, residue : kind} list * kind list)
 
   (* accessing and manipulating theory information for types *)
   val prim_new_type : {Thy:string, Tyop:string} -> kind -> int -> unit

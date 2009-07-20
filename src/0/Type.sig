@@ -151,10 +151,6 @@ sig
                     ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list ->
                     (hol_type,hol_type)Lib.subst *
                     ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list
-  val get_rank_kind_insts : kind list -> {redex : hol_type, residue : hol_type} list ->
-                            {redex : hol_type, residue : hol_type} list ->
-                            int * ({redex : kind, residue : kind} list * kind list) ->
-                            int * ({redex : kind, residue : kind} list * kind list)
   val type_homatch : kind list -> hol_type HOLset.set ->
                      int -> (kind,kind)Lib.subst * kind list ->
                      (hol_type,hol_type)Lib.subst *
@@ -167,12 +163,11 @@ sig
                           (hol_type, int)Lib.subst *
                           (hol_type,hol_type)Lib.subst *
                           ((kind,kind)Lib.subst * kind list) * int
-  val ho_match_type1 : bool -> kind list -> hol_type HOLset.set -> hol_type -> hol_type
-                       -> (hol_type,hol_type)Lib.subst *
-                          ((hol_type,hol_type)Lib.subst * hol_type * hol_type) list
-                       -> int * ((kind,kind)Lib.subst * kind list)
-                       -> (hol_type,int)Lib.subst * (hol_type,hol_type)Lib.subst *
-                          ((kind,kind)Lib.subst * kind list) * int
+  val get_rank_kind_insts : kind list -> {redex : hol_type, residue : hol_type} list ->
+                            {redex : hol_type, residue : hol_type} list ->
+                            int * ({redex : kind, residue : kind} list * kind list) ->
+                            int * ({redex : kind, residue : kind} list * kind list)
+
   val ho_match_type0 : bool -> kind list -> hol_type HOLset.set -> hol_type -> hol_type
                        -> (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
   val ho_match_type  : kind list -> hol_type HOLset.set -> hol_type -> hol_type

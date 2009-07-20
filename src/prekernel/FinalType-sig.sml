@@ -119,19 +119,10 @@ sig
                              -> (hol_type,hol_type) Lib.subst
                              -> (hol_type,hol_type) Lib.subst
 
- val get_rank_kind_insts : kind list -> {redex : hol_type, residue : hol_type} list ->
-                            {redex : hol_type, residue : hol_type} list ->
-                            int * ({redex : kind, residue : kind} list * kind list) ->
-                            int * ({redex : kind, residue : kind} list * kind list)
  val raw_match_type: hol_type -> hol_type 
                       -> (hol_type,hol_type) Lib.subst * hol_type list
                       -> (hol_type,hol_type) Lib.subst * hol_type list
  val raw_kind_match_type : hol_type -> hol_type
-                      -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
-                         ( (kind,kind) Lib.subst * kind list ) * int
-                      -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
-                         ( (kind,kind) Lib.subst * kind list ) * int
- val prim_kind_match_type : hol_type -> hol_type
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
                          ( (kind,kind) Lib.subst * kind list ) * int
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
