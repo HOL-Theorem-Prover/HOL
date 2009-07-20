@@ -483,7 +483,8 @@ type typeBase = tyinfo TypeNet.typenet
 
 val empty : typeBase = TypeNet.empty
 
-fun next_ty ty = mk_vartype(Lexis.tyvar_vary (dest_vartype ty))
+fun apply1st f (x,y,z) = (f x,y,z)
+fun next_ty ty = mk_var_type(apply1st Lexis.tyvar_vary (dest_var_type ty))
 
 (*---------------------------------------------------------------------------*)
 (* Rename type variables in a type so that they occur in alphabetical order, *)
@@ -614,6 +615,41 @@ fun insert dbs (x as DFACTS _) = add dbs x
   | insert db (x as NFACTS _) = TypeNet.insert(db,normalise_ty (ty_of x),x)
 
 
+local
+  fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
+  fun next_nm avoids s = Lexis.gen_variant Lexis.tyvar_vary avoids s
+  fun gen_tyvs avoids nextty (kd::kds) =
+        let val (name,_,rk) = dest_var_type nextty
+            val new_name = next_nm avoids name
+            val newtyv = mk_var_type(new_name, kd, rk)
+        in newtyv :: gen_tyvs (new_name::avoids) newtyv kds
+        end
+    | gen_tyvs avoids nextty [] = []
+in
+  fun size_ty avoids ty =
+    let val (s,kd,rk) = dest_var_type ty
+                        handle HOL_ERR e => ("", kind_of ty, rank_of ty)
+    in if kd = typ then ty --> num()
+       else if is_arrow_kind kd then
+         let val (args,res) = strip_arrow_kind kd
+             val arg_tyvs = gen_tyvs (s::avoids) alpha args
+             val arg_sz_tys = map (size_ty (s::avoids)) arg_tyvs
+             val resty = list_mk_app_type(ty, arg_tyvs)
+             val _ = assert (equal res) (kind_of resty)
+             val res_sz_ty = (* resty --> num *) size_ty (s::avoids) resty
+         in list_mk_univ_type (arg_tyvs, foldr (op -->) res_sz_ty arg_sz_tys)
+         end
+       else (* kd is a kind variable *)
+         let val k = dest_var_kind kd
+             val k' = next_nm (s::avoids) k
+             val ty' = mk_var_type (k', kd ==> typ, rk)
+         in
+           mk_app_type (ty', ty) --> num()
+         end
+    end
+end
+
+
 (*---------------------------------------------------------------------------
       General facility for interpreting types as terms. It takes a
       couple of environments (theta,gamma); theta maps type variables
@@ -649,35 +685,107 @@ end
 *)
 
 (* Not sure this will work ... *)
+
+local fun drop [] ty = fst(dom_rng ty)
+        | drop (_::t) ty = drop t (snd(dom_rng ty));
+      fun lose 0 ty = ty
+        | lose n ty = lose (n-1) (fst (dest_app_type ty))
+      fun match_mk_comb (opr,arg) =
+         let val (dom,rng) = dom_rng (type_of opr)
+             val (uvs,dom') = strip_univ_type dom
+             val aty = type_of arg
+         in if abconv_ty dom aty then mk_comb(opr,arg)
+            else let val (tyS,kdS,rkS) = Type.kind_match_type aty dom'
+                     val arg' = inst tyS (inst_rank_kind rkS kdS arg)
+                     val arg'' = list_mk_tyabs(uvs, arg')
+                 in mk_comb(opr,arg'')
+                 end
+         end
+      fun list_match_mk_comb (opr,[]) = opr
+        | list_match_mk_comb (opr, arg::args) = list_match_mk_comb(match_mk_comb(opr,arg),args)
+in
 fun typeValue (theta,gamma,undef) =
  let fun tyValue ty =
       case theta ty
        of SOME fvar => fvar
         | NONE =>
-           case gamma ty
+           let in
+             case gamma ty
               of SOME f =>
                   let val (tys,rng) = strip_fun (type_of f)
                       val vty = last tys
                       val (sigma,ksigma,rk) = kind_match_type vty ty
                                                 handle HOL_ERR _ => ([],[],0)
                       val inst_it = inst sigma o inst_rank_kind rk ksigma
+                      val f' = inst_it f
+                      val tys' = fst (strip_fun (type_of f'))
                       val args = snd(strip_app_type ty)
-                  in list_mk_comb(inst_it f, map tyValue args)
+                      val args' = map tyValue args
+                      (* Do a second match to handle type variables generated from kind variables *)
+                      val tycomps = map2 (curry op |->) (butlast tys') (map type_of args')
+                      val (sigma,ksigma,rk) = kind_match_types tycomps
+                      val inst_it = inst sigma o inst_rank_kind rk ksigma
+                  in list_mk_comb(inst_it f', args')
                   end
                | NONE => undef ty
+           end
+           handle HOL_ERR _ =>
+           if is_app_type ty then
+                    let val (opr,args) = strip_app_type ty
+                        val Kind = kind_of opr
+                        val kind_args = fst(strip_arrow_kind Kind)
+                        val opr_tm = tyValue opr
+                        val (ubtys,oprty1) = strip_univ_type (type_of opr_tm)
+                        val oprty0 = drop kind_args oprty1
+                        val oprty = lose (length kind_args - length args) oprty0
+                        val (tyS,kdS,rkS) = Type.kind_match_type oprty ty
+                        val ubtys' = map (type_subst tyS o Type.inst_rank_kind rkS kdS) ubtys
+                        val opr_tm' = inst tyS (inst_rank_kind rkS kdS opr_tm)
+                        val opr_tm'' = list_mk_tycomb (opr_tm', ubtys')
+                        val arg_tms = map tyValue args
+                    in list_match_mk_comb(opr_tm'', arg_tms)
+                    end
+           else if is_abs_type ty then
+                    let val (bvar,body) = dest_abs_type ty
+                        val bvar_tm = genvar (size_ty [] bvar) (* not (bvar --> num()) *)
+                        val theta' = (fn ty => if abconv_ty ty bvar then SOME bvar_tm else theta ty)
+                        val body_tm = typeValue (theta',gamma,undef) body
+                    in mk_abs(bvar_tm, body_tm)
+                    end
+           else if is_univ_type ty then undef ty
+           else raise ERR "tysize" "impossible type"
  in tyValue
- end
+ end (* fun typeValue *)
+end (* local *)
 
 (*---------------------------------------------------------------------------
     Map a HOL type (ty) into a term having type :ty -> num.
  ---------------------------------------------------------------------------*)
 
-local fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
-      fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
-        handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
-      fun K0 ty = mk_abs(mk_var("v",ty),Zero())
-      fun tysize_env db = Option.map fst o
-                          Option.composePartial (size_of,fetch db)
+local
+  fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
+  fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
+    handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
+  fun strip_fun_type ty = let val (dom,rng) = dom_rng ty
+                              val (args,trg) = strip_fun_type rng
+                          in (dom::args,trg)
+                          end
+                          handle HOL_ERR _ => ([],ty)
+  fun ty2K0 ty = if is_univ_type ty then
+                   let val (bvs,body) = strip_univ_type ty
+                       val (dtys,rty) = strip_fun_type body
+                       fun mk_ptm(dty,ptms) = variant ptms (mk_var("x", dty)) :: ptms
+                       val ptms = List.rev (List.foldl mk_ptm [] (butlast dtys))
+                       val rtm = ty2K0 (last dtys --> rty)
+                   in list_mk_tyabs(bvs, list_mk_abs(ptms, rtm))
+                   end
+                 else
+                   let val (dty,_) = dom_rng ty
+                   in mk_abs(mk_var("v", dty), Zero())
+                   end
+  fun K0 ty = ty2K0 (size_ty [] ty)
+  fun tysize_env db = Option.map fst o
+                      Option.composePartial (size_of,fetch db)
 in
 fun type_size db ty =
    let fun theta ty = if is_var_type ty then SOME (K0 ty) else NONE

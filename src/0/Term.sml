@@ -1183,9 +1183,10 @@ fun list_mk_tybinder opt =
                                      bind N vmap (fn n => k (Comb(m,n))))
        | bind (TComb(M,Ty)) vmap k = bind M vmap (fn m =>
                                      bindty Ty vmap (fn ty => k (TComb(m,ty))))
-       | bind (Abs(v,M)) vmap k    = bind M vmap (fn q => k (Abs(v,q)))
+       | bind (Abs(v,M)) vmap k    = bind v vmap (fn v' =>
+                                     bind M vmap (fn m => k (Abs(v',m))))
        | bind (TAbs(v,M)) vmap k   = bind M (increment vmap)
-                                            (fn q => k (TAbs(v,q)))
+                                            (fn m => k (TAbs(v,m)))
        | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
        | bind tm vmap k = k tm (* constant *)
      and bindpty (GRND Ty) vmap k  = bindty Ty vmap (fn ty => k (GRND ty))
