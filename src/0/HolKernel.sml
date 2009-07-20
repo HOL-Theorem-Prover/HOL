@@ -429,7 +429,7 @@ fun separate_insts tyavoids insts = let
                         val (hop,args) = strip_comb p
                       in
                         safe_insert (hop |-> length args) sof
-                      end handle _ =>
+                      end handle HOL_ERR _ =>
                                  (HOL_WARNING "" ""
                                   "Inconsistent patterning in h.o. match";
                                   sof))
@@ -491,9 +491,9 @@ in
                  map (fn a =>
                          (inst_fn a |->
                                   (find_residue a env
-                                   handle _ =>
+                                   handle HOL_ERR _ =>
                                           find_residue a insts
-                                   handle _ =>
+                                   handle HOL_ERR _ =>
                                           if HOLset.member(lconsts, a)
                                           then a
                                           else failwith ""))) afvs
@@ -523,7 +523,7 @@ in
              end
            in
              term_homatch tyins (ni,tl homs)
-           end) handle _ => let
+           end) handle HOL_ERR _ => let
                          val (lc,rc) = dest_comb ctm
                          val (lv,rv) = dest_comb vtm
                          val pinsts_homs' =
