@@ -164,6 +164,10 @@ val BOOL_CASES_AX =
  new_axiom
    ("BOOL_CASES_AX", Term `!t. (t=T) \/ (t=F)`);
 
+(* A primitive inference rule Thm.ETA_CONV (which allows to prove ETA_AX as a
+   theorem, cf. ETA_THM below) is provided for performance reasons.  Cursory
+   profiling indicates that Thm.ETA_CONV is about 20 times faster than a
+   derived rule that is based on instantiating ETA_AX. *)
 val ETA_AX =
  new_axiom
    ("ETA_AX",        Term `!t:'a->'b. (\x. t x) = t`);
