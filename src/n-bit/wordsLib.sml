@@ -1375,12 +1375,12 @@ fun get_word_ops t =
                ("fun", [x,y]) =>
                  (case dest_type y of
                     ("fun", [v,w]) =>
-                       (let val fv = hd (type_vars w)
+                       (let val fv = trye hd (type_vars w)
                             val xn = wordsSyntax.dest_word_type x
                             val vn = wordsSyntax.dest_word_type v
                         in
                           [word_concat (xn, vn, fv)]
-                        end handle _ => [])
+                        end handle HOL_ERR _ => [])
                   | _ => [])
              | _ => [])
            else
@@ -1390,13 +1390,13 @@ fun get_word_ops t =
   | SOME ([a,b],_) =>
       (case dest_type (type_of t) of
          ("fun", [x, y]) =>
-            (let val fv = hd (type_vars y)
+            (let val fv = trye hd (type_vars y)
                  val na = numSyntax.dest_numeral (#residue a)
                  val nb = numSyntax.dest_numeral (#residue b)
                  val n = Arbnum.-(Arbnum.plus1 na, nb)
              in
                if n = Arbnum.zero then [] else [word_extract (n, fv)]
-             end handle _ => [])
+             end handle HOL_ERR _ => [])
       | _ => [])
   | _ => [];
 
@@ -1428,11 +1428,11 @@ local
                                         else insert(vmap,ty,n)) tl)
     | mk_word_op_var_map vmap (word_concat (a, b, ty)::tl) =
        (let val na = if Type.is_vartype a then
-                       find(vmap, a)
+                       trye find (vmap, a)
                      else
                        fcpLib.index_to_num a
             val nb = if Type.is_vartype b then
-                       find(vmap, b)
+                       trye find (vmap, b)
                      else
                        fcpLib.index_to_num b
             val n = Arbnum.+(na, nb)
@@ -1441,7 +1441,7 @@ local
             NONE   => mk_word_op_var_map (insert(vmap,ty,n)) tl
           | SOME m => mk_word_op_var_map (if Arbnum.<(n, m) then vmap
                                           else insert(vmap,ty,n)) tl
-        end handle _ => mk_word_op_var_map vmap tl)
+        end handle HOL_ERR _ => mk_word_op_var_map vmap tl)
 in
   fun mk_vmap t = mk_word_op_var_map (mkDict Type.compare)
                     (Listsort.sort word_op_compare (get_word_ops t))
