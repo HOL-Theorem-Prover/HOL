@@ -192,17 +192,23 @@ let
   val dir_0 = FileSys.getDir()
   val sigfile = fullPath [holmakedir, "Systeml.sig"]
   val uifile = fullPath [holmakedir, "Systeml.ui"]
-  val sigfile_newer = not (FileSys.access(uifile, [FileSys.A_READ])) orelse
-                      Time.>(modTime sigfile, modTime uifile)
+  val rebuild_sigfile =
+      not (FileSys.access(uifile, [FileSys.A_READ])) orelse
+      Time.>(modTime sigfile, modTime uifile) orelse
+      (* if the ui in sigobj is too small to be a compiled mosml thing, it
+         is probably a Poly/ML thing from a previous installation. If it's
+         not there at all, we need to recompile and copy across too. *)
+      (FileSys.fileSize (fullPath [holdir, "sigobj", "Systeml.ui"]) < 100
+       handle SysErr _ => true)
   fun die () = (print ")\nFailed to compile system-specific code\n";
                 Process.exit Process.failure)
   val systeml = fn l => if systeml l <> Process.success then die() else ()
   fun to_sigobj s = bincopy s (fullPath [holdir, "sigobj", s])
 in
   FileSys.chDir holmakedir;
-  if sigfile_newer then (systeml [compiler, "-c", "Systeml.sig"];
-                         app to_sigobj ["Systeml.sig", "Systeml.ui"];
-                         print "sig ") else ();
+  if rebuild_sigfile then (systeml [compiler, "-c", "Systeml.sig"];
+                           app to_sigobj ["Systeml.sig", "Systeml.ui"];
+                           print "sig ") else ();
   systeml [compiler, "-c", "PreProcess.sml"];
   systeml [compiler, "-c", "Systeml.sml"];
   app to_sigobj ["Systeml.uo", "PreProcess.ui", "PreProcess.uo"];
@@ -314,8 +320,10 @@ val _ = let
 in
   FileSys.chDir destdir;
   FileSys.chDir "mlyacclib";
+  systeml [holmake, "cleanAll"];
   systeml [holmake, "all"];
   FileSys.chDir "../src";
+  systeml [holmake, "cleanAll"];
   systeml [holmake, "mlyacc.exe"];
   FileSys.chDir cdir
 end
@@ -324,18 +332,18 @@ end
     Compile build.sml, and put it in bin/build.
  ---------------------------------------------------------------------------*)
 
-val _ = let 
+val _ = let
   open TextIO
   val _ = echo "Making bin/build."
   val cwd = FileSys.getDir()
   val _ = FileSys.chDir (fullPath[holdir, "tools"])
   (* utils first *)
-  val _ = let 
+  val _ = let
     val utilsig = "buildutils.sig"
     val utilsml = "buildutils.sml"
   in
     if systeml [compiler, "-c", utilsig] = Process.success andalso
-       systeml [compiler, "-I", holmakedir, "-c", utilsml] = Process.success 
+       systeml [compiler, "-I", holmakedir, "-c", utilsml] = Process.success
     then ()
     else die "Failed to build buildutils module"
   end
