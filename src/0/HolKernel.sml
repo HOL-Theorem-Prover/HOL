@@ -491,9 +491,9 @@ in
                  map (fn a =>
                          (inst_fn a |->
                                   (find_residue a env
-                                   handle NOT_FOUND_ =>
+                                   handle NOT_FOUND =>
                                           find_residue a insts
-                                   handle NOT_FOUND_ =>
+                                   handle NOT_FOUND =>
                                           if HOLset.member(lconsts, a)
                                           then a
                                           else failwith ""))) afvs
