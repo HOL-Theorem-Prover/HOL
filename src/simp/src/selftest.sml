@@ -88,11 +88,31 @@ val test5P =
 
 val test5_flag = #1 test5P
 
+(* test that being a bounded rewrite overrides detection of loops in
+   mk_rewrites code *)
+val (test6_flag, _) = let
+  open boolSimps
+  val rwt_th = ASSUME ``!x:'a. (f:'a -> 'b) x = if P x then z
+                                     else let x = g x in f x``
+  val Pa_th = ASSUME ``P (a:'a) : bool``
+  fun doit t = (QCONV (SIMP_CONV bool_ss [Pa_th, Once rwt_th]) t,
+                QCONV (SIMP_CONV bool_ss [Pa_th, rwt_th]) t)
+  fun check (th1, th2) =
+      aconv (rhs (concl th1)) ``z:'b`` andalso length (hyp th1) = 2 andalso
+      aconv (rhs (concl th2)) ``f (a:'a):'b``
+in
+  infloop_protect
+      "Bounded rewrites override mk_rewrites loop check"
+      check
+      doit
+      ``f (a:'a) : 'b``
+end
+
 (* ---------------------------------------------------------------------- *)
 
 val _ = Process.exit
           (if List.all I [test1_flag, test2_flag, test3_flag, test4_flag,
-                          test5_flag] then
+                          test5_flag, test6_flag] then
              Process.success
            else
              Process.failure);
