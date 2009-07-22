@@ -358,10 +358,12 @@ fun new_type_opr (Name,Kind,Rank) =
 fun new_type (Name,Arity) = new_type_opr (Name, Kind.mk_arity Arity, 0)
 
 fun new_constant (Name,Ty) =
-  (if Lexis.allowed_term_constant Name orelse
-      not (!Globals.checking_const_names)
-   then ()
-   else WARN "new_constant" (Lib.quote Name^" is not a standard constant name")
+  (if not (Lexis.allowed_term_constant Name) andalso
+      !Globals.checking_const_names
+   then WARN "new_constant" (Lib.quote Name^" is not a standard constant name")
+   else if Type.kind_of Ty <> Kind.typ
+   then raise ERR "new_constant" "type does not have base kind"
+   else ()
    ; add_termCT {name=Name, theory=CTname(), htype=Ty}; ())
 
 (*---------------------------------------------------------------------------
