@@ -114,7 +114,7 @@ val (test7_flag, _) = let
   val rwt_th = ASSUME ``!x:'a. x:'a = f x``
   val t = ``x:'a = z``
   fun doit t = QCONV (SIMP_CONV pure_ss [Once rwt_th]) t
-  fun check th = aconv (rhs (concl th)) ``z:'a``
+  fun check th = aconv (rhs (concl th)) ``f (x:'a):'a``
 in
   infloop_protect
       "Bounded rewrites on variables don't get decremented prematurely"
