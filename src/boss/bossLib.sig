@@ -59,6 +59,12 @@ sig
   val export_rewrites: string list -> unit
   val limit          : int -> simpset -> simpset
 
+  (* use these in simplifier's argument list *)
+  val SimpLHS        : thm
+  val SimpRHS        : thm
+  val SimpL          : term -> thm
+  val SimpR          : term -> thm
+
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm
 
