@@ -164,10 +164,6 @@ val BOOL_CASES_AX =
  new_axiom
    ("BOOL_CASES_AX", Term `!t. (t=T) \/ (t=F)`);
 
-(* A primitive inference rule Thm.ETA_CONV (which allows to prove ETA_AX as a
-   theorem, cf. ETA_THM below) is provided for performance reasons.  Cursory
-   profiling indicates that Thm.ETA_CONV is about 20 times faster than a
-   derived rule that is based on instantiating ETA_AX. *)
 val ETA_AX =
  new_axiom
    ("ETA_AX",        Term `!t:'a->'b. (\x. t x) = t`);
@@ -319,7 +315,14 @@ fun mk_exists1(Bvar,Body) = Term `?!^Bvar. ^Body`
 val list_mk_forall = itlist (curry mk_forall)
 val list_mk_exists = itlist (curry mk_exists)
 
-(* ETA_CONV could be built here. *)
+(* also implemented in Drule *)
+fun ETA_CONV t =
+  let val (var, cmb) = dest_abs t
+      val tysubst = [alpha |-> type_of var, beta |-> type_of cmb]
+      val th = SPEC (rator cmb) (INST_TYPE tysubst ETA_AX)
+  in
+    TRANS (ALPHA t (lhs (concl th))) th
+  end;
 
 fun EXT th =
    let val (Bvar,_) = dest_forall(concl th)

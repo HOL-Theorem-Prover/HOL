@@ -16,5 +16,6 @@ in {t}, to the theorem {|- (\x. (t x)) = t}.
 Fails if the input term is not an eta-redex.
 
 \SEEALSO
-Thm.BETA_CONV, Thm.ALPHA, Term.eta_conv.
+Drule.RIGHT_ETA, Term.eta_conv.
+
 \ENDDOC

@@ -11,7 +11,7 @@ signature Count =
 sig
 
   datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstType
-                | MkComb | ApTerm | ApThm | Alpha | EtaConv 
+                | MkComb | ApTerm | ApThm | Alpha
                 | Sym | Trans | EqMp | EqImpRule | Inst
                 | Spec | Gen 
                 | Exists | Choose 
@@ -31,7 +31,6 @@ sig
     MP : int, INST_TYPE : int, 
     MK_COMB : int, AP_TERM : int, 
     AP_THM : int, ALPHA : int, 
-    ETA_CONV : int,
     SYM : int, TRANS : int, 
     EQ_MP : int, EQ_IMP_RULE : int, 
     INST : int, SPEC : int, GEN : int, 

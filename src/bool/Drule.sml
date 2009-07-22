@@ -17,6 +17,37 @@ open Feedback HolKernel Parse boolTheory boolSyntax Abbrev;
 
 val ERR = mk_HOL_ERR "Drule";
 
+(*---------------------------------------------------------------------------*
+ * Eta-conversion                                                            *
+ *                                                                           *
+ * 	"(\x.t x)"   --->    |- (\x.t x) = t  (if x not free in t)           *
+ *---------------------------------------------------------------------------*)
+
+(* Cursory profiling indicates that an implementation of ETA_CONV as a
+   primitive inference rule in Thm is about 20 times faster than this
+   implementation, which instantiates ETA_AX.  The difference in overall
+   HOL build time, however, is negligible. *)
+
+fun ETA_CONV t =
+  let val (var, cmb) = dest_abs t
+      val tysubst = [alpha |-> type_of var, beta |-> type_of cmb]
+      val th = SPEC (rator cmb) (INST_TYPE tysubst ETA_AX)
+  in
+    TRANS (ALPHA t (lhs (concl th))) th
+  end
+  handle HOL_ERR _ => raise ERR "ETA_CONV" "";
+
+
+(*---------------------------------------------------------------------------*
+ *    A |- t = (\x.f x)                                                      *
+ *  --------------------- x not free in f                                    *
+ *     A |- t = f                                                            *
+ *---------------------------------------------------------------------------*)
+
+fun RIGHT_ETA thm =
+  TRANS thm (ETA_CONV (rhs (concl thm)))
+  handle HOL_ERR _ => raise ERR "RIGHT_ETA" "";
+
 
 (*---------------------------------------------------------------------------*
  *  Add an assumption                                                        *

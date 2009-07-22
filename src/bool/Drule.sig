@@ -2,6 +2,8 @@ signature Drule =
 sig
   include Abbrev
 
+  val ETA_CONV         : term -> thm
+  val RIGHT_ETA        : thm -> thm
   val EXT              : thm -> thm
   val MK_ABS           : thm -> thm
   val MK_EXISTS        : thm -> thm

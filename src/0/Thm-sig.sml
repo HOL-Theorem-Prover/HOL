@@ -40,7 +40,6 @@ sig
   val MK_COMB       : thm * thm -> thm
   val AP_TERM       : term -> thm -> thm
   val AP_THM        : thm -> term -> thm
-  val ETA_CONV      : term -> thm
 
 
   (* Equality *)
@@ -93,7 +92,6 @@ sig
   (* Computing with explicit substitutions *)
 
   val Beta          : thm -> thm
-  val Eta           : thm -> thm
   val Mk_comb       : thm -> thm * thm * (thm -> thm -> thm)
   val Mk_abs        : thm -> term * thm * (thm -> thm)
   val Specialize    : term -> thm -> thm
