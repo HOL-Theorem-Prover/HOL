@@ -41,9 +41,10 @@ type convdata = {name  : string,
 datatype control = UNBOUNDED | BOUNDED of int ref
 
 (* boolean argument to c is whether or not the rewrite is bounded *)
-fun appconv (c,UNBOUNDED) tm     = c false tm
-  | appconv (c,BOUNDED(ref 0)) _ = failwith "exceeded rewrite bound"
-  | appconv (c,BOUNDED r) tm     = c true tm before Portable.dec r;
+fun appconv (c,UNBOUNDED) solver stk tm = c false solver stk tm
+  | appconv (c,BOUNDED(ref 0)) _ _ _    = failwith "exceeded rewrite bound"
+  | appconv (c,BOUNDED r) solver stk tm = c true solver stk tm before
+                                          Portable.dec r
 
 fun dest_tagged_rewrite thm = let
   val (th, n) = DEST_BOUNDED thm
