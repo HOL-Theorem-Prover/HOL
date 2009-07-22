@@ -108,6 +108,21 @@ in
       ``f (a:'a) : 'b``
 end
 
+(* test that a bounded rewrite on a variable gets a chance to fire at all *)
+val (test7_flag, _) = let
+  open pureSimps
+  val rwt_th = ASSUME ``!x:'a. x:'a = f x``
+  val t = ``x:'a = z``
+  fun doit t = QCONV (SIMP_CONV pure_ss [Once rwt_th]) t
+  fun check th = aconv (rhs (concl th)) ``z:'a``
+in
+  infloop_protect
+      "Bounded rewrites on variables don't get decremented prematurely"
+      check
+      doit
+      t
+end
+
 (* ---------------------------------------------------------------------- *)
 
 val _ = Process.exit
