@@ -448,18 +448,34 @@ type monoset = (string * thm) list;
  * MONO_NOT = |- (B ==> A) ==> (~A ==> ~B)
  * MONO_ALL = |- (!x. P x ==> Q x) ==> ((!x. P x) ==> (!x. Q x))
  * MONO_EXISTS = |- (!x. P x ==> Q x) ==> ((?x. P x) ==> (?x. Q x))
+ * MONO_TY_FORALL = |- (!:'a:'k. P [:'a:] ==> Q [:'a:]) ==> ((!:'a:'k. P [:'a:])
+                       ==> (!:'a:'k. Q [:'a:]))
+ * MONO_TY_EXISTS = |- (!:'a:'k. P [:'a:] ==> Q [:'a:]) ==> ((?:'a:'k. P [:'a:])
+                       ==> (?:'a:'k. Q [:'a:]))
  *---------------------------------------------------------------------------*)
 
+
+val MONO_FORALL = prove (
+  ``(!x:'a. P x ==> Q x) ==> ($! P ==> $! Q)``,
+  DISCH_THEN(MP_TAC o HO_MATCH_MP MONO_ALL) THEN
+  CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[])
 
 val MONO_EXISTS = prove (
   ``(!x:'a. P x ==> Q x) ==> ($? P ==> $? Q)``,
   DISCH_THEN(MP_TAC o HO_MATCH_MP MONO_EXISTS) THEN
   CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[])
 
-val MONO_FORALL = prove (
-  ``(!x:'a. P x ==> Q x) ==> ($! P ==> $! Q)``,
-  DISCH_THEN(MP_TAC o HO_MATCH_MP MONO_ALL) THEN
-  CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[])
+val MONO_TY_FORALL = prove (
+  ``(!:'a:'k. (P: !'b. bool) [:'a:'k:] ==> (Q: !'b. bool) [:'a:'k:])
+              ==> ($!: P ==> $!: Q)``,
+  DISCH_THEN(MP_TAC o HO_MATCH_MP MONO_TY_FORALL) THEN
+  CONV_TAC(ONCE_DEPTH_CONV TY_ETA_CONV) THEN REWRITE_TAC[])
+
+val MONO_TY_EXISTS = prove (
+  ``(!:'a:'k. (P: !'b. bool) [:'a:'k:] ==> (Q: !'b. bool) [:'a:'k:])
+              ==> ($?: P ==> $?: Q)``,
+  DISCH_THEN(MP_TAC o HO_MATCH_MP MONO_TY_EXISTS) THEN
+  CONV_TAC(ONCE_DEPTH_CONV TY_ETA_CONV) THEN REWRITE_TAC[])
 
 val MONO_RESFORALL = prove(
   ``(!x:'a. P' x ==> P x) /\ (!x. Q x ==> Q' x) ==>
@@ -497,16 +513,18 @@ val MONO_SC = prove(
 val bool_monoset =
  [("/\\", MONO_AND),
   ("\\/", MONO_OR),
-  ("?",   MONO_EXISTS),
   ("!",   MONO_FORALL),
+  ("?",   MONO_EXISTS),
+  ("!:",  MONO_TY_FORALL),
+  ("?:",  MONO_TY_EXISTS),
   ("==>", MONO_IMP),
   ("~",   MONO_NOT),
   ("RES_FORALL", MONO_RESFORALL),
   ("RES_EXISTS", MONO_RESEXISTS),
   ("RTC", MONO_RTC),
-  ("TC", MONO_TC),
+  ("TC",  MONO_TC),
   ("EQC", MONO_EQC),
-  ("SC", MONO_SC),
+  ("SC",  MONO_SC),
   ("OPTREL", optionTheory.OPTREL_MONO)]
 
 

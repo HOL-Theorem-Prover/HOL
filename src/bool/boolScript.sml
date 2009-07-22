@@ -858,12 +858,12 @@ val _ = save_thm("EXISTS_SIMP", EXISTS_SIMP);
 
 
 (*---------------------------------------------------------------------------*
- *  |- !t:'a. (\:'c. t) [:'b:] = t                                           *
+ *  |- !t:'a. (\:'c:'k. t) [:'b:] = t                                           *
  *---------------------------------------------------------------------------*)
 
 val TY_ABS_SIMP =
    GEN (Term `t:'a`)
-        (TY_BETA_CONV (Term`(\:'c. t:'a) [:'b:]`));
+        (TY_BETA_CONV (Term`(\:'c:'k. t:'a) [:'b:]`));
 
 val _ = save_thm("TY_ABS_SIMP", TY_ABS_SIMP);
 
@@ -2034,7 +2034,7 @@ val _ = save_thm("RIGHT_AND_FORALL_THM",RIGHT_AND_FORALL_THM);
 
 (* ------------------------------------------------------------------------- *)
 (* RIGHT_AND_TY_FORALL_THM =                                                 *)
-(*              |- !P Q. P /\ (!:a:k. Q [:a:]) = (!:a:k. P /\ Q [:a:])           *)
+(*              |- !P Q. P /\ (!:a:k. Q [:a:]) = (!:a:k. P /\ Q [:a:])       *)
 (* ------------------------------------------------------------------------- *)
 
 val RIGHT_AND_TY_FORALL_THM =
@@ -3364,22 +3364,23 @@ let val f = --`f: 'a -> 'b`--
 val _ = save_thm("COND_RAND", COND_RAND);
 
 (* ---------------------------------------------------------------------*)
-(* COND_TY_COMB |- !b (f: !'a.'b) g.				        *)
-(*                  (b => f | g) [:'a:] = (b => f[:'a:] | g[:'a:])      *)
+(* COND_TY_COMB                                                         *)
+(*  |- !b (f: !'a:'k. 'a 'b) g.	                                        *)
+(*       (b => f | g) [:'a:'k:] = (b => f[:'a:'k:] | g[:'a:'k:])        *)
 (*								        *)
 (*				       	                 PVH 2008.07.29 *)
 (* ---------------------------------------------------------------------*)
 
 val COND_TY_COMB =
-let val f = --`f: !'a. 'b`--
-    val g = --`g: !'a. 'b`--
-    val a = Type.alpha
+let val f = --`f: !'a:'k. 'a 'b`--
+    val g = --`g: !'a:'k. 'a 'b`--
+    val a = mk_var_type("'a", kappa, 0)
     val b = --`b:bool`--
-    val fa = --`^f [:'a:]`-- and ga = --`^g [:'a:]`--
+    val fa = --`^f [:'a:'k:]`-- and ga = --`^g [:'a:'k:]`--
     val t1 = --`t1:'a`--
     val t2 = --`t2:'a`--
-    val theta1 = [Type`:'a` |-> Type`: !'a. 'b`]
-    val theta2 = [Type`:'a` |-> Type`:'b`]
+    val theta1 = [Type`:'a` |-> Type`: !'a:'k. 'a 'b`]
+    val theta2 = [Type`:'a` |-> Type`:'a 'b:'k=>ty`]
     val (COND_T,COND_F) = (GENL[t1,t2]##GENL[t1,t2])
                           (CONJ_PAIR(SPEC_ALL COND_CLAUSES))
     val thTl = TY_COMB (SPECL [f,g] (INST_TYPE theta1 COND_T)) a
@@ -3388,7 +3389,7 @@ let val f = --`f: !'a. 'b`--
     and thFr = SPECL [fa,ga] (INST_TYPE theta2 COND_F)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
-    val tm = (--`(if b then (f: !'a.'b ) else g) [:'a:] = (if b then f [:'a:] else g [:'a:])`--)
+    val tm = (--`(if b then (f: !'a:'k.'a 'b ) else g) [:'a:] = (if b then f [:'a:] else g [:'a:])`--)
     val thT2 = SUBST_CONV [b |-> ASSUME (--`b = T`--)] tm tm
     and thF2 = SUBST_CONV [b |-> ASSUME (--`b = F`--)] tm tm
     val thT3 = EQ_MP (SYM thT2) thT1
@@ -3423,16 +3424,16 @@ val _ = save_thm("COND_ABS", COND_ABS);
 (* ---------------------------------------------------------------------*)
 (* COND_TY_ABS							        *)
 (*								        *)
-(* |- !b (f:'a->'b) g. (\:a. (b => f[:a:]) | g[:a:])) = (b => f | g)	*)
+(* |- !b (f:'a->'b) g. (\:a:k. (b => f[:a:]) | g[:a:])) = (b => f | g)	*)
 (*								        *)
 (*				       	                 PVH 2008.07.29 *)
 (* ---------------------------------------------------------------------*)
 
 val COND_TY_ABS =
 let val b = --`b:bool`--
-    val f = --`f: !'a.'b`--
-    val g = --`g: !'a.'b`--
-    val a = ==`:'a`==
+    val f = --`f: !'a:'k.'a 'b`--
+    val g = --`g: !'a:'k.'a 'b`--
+    val a = ==`:'a:'k`==
  in
    GENL [b,f,g]
       (TRANS (TY_ABS a (SYM (SPECL [b,f,g] COND_TY_COMB)))
@@ -3761,25 +3762,25 @@ val _ = save_thm("SWAP_EXISTS_THM", SWAP_EXISTS_THM);
 
 
 (*---------------------------------------------------------------------------
-           !P. (?a y. P a y) = (?y a. P a y)
+       !P. (?:'a:'k 'b:'l. P [:'a,'b:]) = (?:'b:'l 'a:'k. P [:'a,'b:])
  ---------------------------------------------------------------------------*)
 
 val SWAP_TY_EXISTS_THM =
-  let val P = mk_var("P", Type `: !'a 'b. bool`)
-      val a = Type.alpha
-      val b = Type.beta
+  let val P = mk_var("P", Type `: !'a:'k 'b:'l. bool`)
+      val a = mk_var_type("'a", Kind `::'k`, 0)
+      val b = mk_var_type("'b", Kind `::'l`, 0)
       val Pab = list_mk_tycomb (P,[a,b])
-      val tm1 = list_mk_tyexists[a] Pab
-      val tm2 = list_mk_tyexists[b] tm1
-      val tm3 = list_mk_tyexists[b] Pab
-      val tm4 = list_mk_tyexists[a] tm3
+      val tm1 = mk_tyexists(a, Pab)
+      val tm2 = mk_tyexists(b, tm1)
+      val tm3 = mk_tyexists(b, Pab)
+      val tm4 = mk_tyexists(a, tm3)
       val th1 = ASSUME Pab
       val th2 = TY_EXISTS(tm2,b) (TY_EXISTS (tm1,a) th1)
-      val th3 = ASSUME (list_mk_tyexists [b] Pab)
+      val th3 = ASSUME (mk_tyexists (b, Pab))
       val th4 = TY_CHOOSE(b,th3) th2
       val th5 = TY_CHOOSE(a,ASSUME (list_mk_tyexists [a,b] Pab)) th4
       val th6 = TY_EXISTS(tm4,a) (TY_EXISTS (tm3,b) th1)
-      val th7 = ASSUME (list_mk_tyexists[a] Pab)
+      val th7 = ASSUME (mk_tyexists(a, Pab))
       val th8 = TY_CHOOSE(a,th7) th6
       val th9 = TY_CHOOSE(b,ASSUME (list_mk_tyexists [b,a] Pab)) th8
   in
@@ -4338,43 +4339,46 @@ val MONO_EXISTS = save_thm("MONO_EXISTS",
 
 (* ------------------------------------------------------------------------- *)
 (* MONO_TY_FORALL                                                            *)
-(*     |- (!:a. P [:a:] ==> Q [:a:]) ==> (!a. P [:a:]) ==> !a. Q [:a:]       *)
+(* |- (!:a:'k. P [:a:] ==> Q [:a:]) ==> (!:a:'k. P[:a:]) ==> !:a:'k. Q[:a:]  *)
 (* ------------------------------------------------------------------------- *)
 
 val MONO_TY_FORALL = save_thm("MONO_TY_FORALL",
- let val tm1 = Term `!:'a. P [:'a:] ==> Q [:'a:]`
-     val tm2 = Term `!:'a. P [:'a:]`
-     val a = Type `:'a`
-     val th1 = ASSUME tm1
-     val th2 = ASSUME tm2
+ let val tm1 = Term `P [:'a:'k:] ==> Q [:'a:'k:]`
+     val tm2 = fst (dest_imp tm1)
+     val a = Type `:'a:'k`
+     val tm3 = mk_tyforall(a,tm1)
+     val tm4 = mk_tyforall(a,tm2)
+     val th1 = ASSUME tm3
+     val th2 = ASSUME tm4
      val th3 = TY_SPEC a th1
      val th4 = TY_SPEC a th2
      val th5 = TY_GEN a (MP th3 th4)
  in
-    DISCH tm1 (DISCH tm2 th5)
+    DISCH tm3 (DISCH tm4 th5)
  end);
 
 
 (* ------------------------------------------------------------------------- *)
 (* MONO_TY_EXISTS =                                                          *)
-(*      |- (!:a. P [:a:] ==> Q [:a:]) ==> (?:a. P [:a:]) ==> ?:a. Q [:a:]    *)
+(* |- (!:a:'k. P [:a:] ==> Q [:a:]) ==> (?:a:'k. P[:a:]) ==> ?:a:'k. Q[:a:]  *)
 (* ------------------------------------------------------------------------- *)
 
 val MONO_TY_EXISTS = save_thm("MONO_TY_EXISTS",
- let val tm1 = Term `!:'a. P [:'a:] ==> Q [:'a:]`
-     val tm2 = Term `?:'a. P [:'a:]`
-     val tm3 = Term `?:'a. Q [:'a:]`
-     val tm4 = Term `P [:'a:]:bool`
-     val a = Type `:'a`
-     val th1 = ASSUME tm1
-     val th2 = ASSUME tm2
+ let val tm1 = Term `P [:'a:'k:] ==> Q [:'a:'k:]`
+     val (tm2,tm3) = dest_imp tm1
+     val a = Type `:'a:'k`
+     val tm4 = mk_tyforall(a,tm1)
+     val tm5 = mk_tyexists(a,tm2)
+     val tm6 = mk_tyexists(a,tm3)
+     val th1 = ASSUME tm4
+     val th2 = ASSUME tm5
      val th3 = TY_SPEC a th1
-     val th4 = ASSUME tm4
+     val th4 = ASSUME tm2
      val th5 = MP th3 th4
-     val th6 = TY_EXISTS (tm3,a) th5
+     val th6 = TY_EXISTS (tm6,a) th5
      val th7 = TY_CHOOSE (a,th2) th6
  in
-     DISCH tm1 (DISCH tm2 th7)
+     DISCH tm4 (DISCH tm5 th7)
  end);
 
 
