@@ -1,27 +1,46 @@
+
+
+
+structure Process = OS.Process
+
 val args0 = CommandLine.arguments()
 
 fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              Process.exit Process.failure)
 
-val (bequiet, args) =
-    case args0 of
-      [] => die "Must specify at least one file to \"analyse\""
-    | ["-q"] => die "Must specify at least one file to \"analyse\""
-    | "-q" :: rest => (true, rest)
-    | _ => (false, args0)
+fun mkquiet {bequiet, diffsort, files} =
+    {bequiet = true, diffsort = diffsort, files = files}
+fun mkdiff {bequiet, diffsort, files} =
+    {bequiet = bequiet, diffsort = true, files = files}
+
+fun getargs args =
+    case args of
+      [] => {bequiet = false, diffsort = false, files = []}
+    | "-q" :: rest => mkquiet (getargs rest)
+    | "-d" :: rest => mkdiff (getargs rest)
+    | _ => {bequiet = false, diffsort = false, files = args}
+
+val {bequiet,diffsort,files = args} = getargs args0
+
+val _ = if null args then die "Must specify at least one file to \"analyse\""
+        else ()
+
+val _ = if length args <> 2 andalso diffsort then
+          die "-d option not appropriate when #files <> 2"
+        else ()
 
 val base = hd args
 
 fun print_dashes () =
-    (print (StringCvt.padLeft #"-" (25 * length args + 20) "");
+    (print (StringCvt.padLeft #"-" (15 * length args + 25) "");
      print "\n")
 
 fun read_file (fname,m) = let
   val instr = TextIO.openIn fname
   fun recurse m =
     case TextIO.inputLine instr of
-      "" => m
-    | s => let
+      NONE => m
+    | SOME s => let
         val [thyname, number_s] = String.tokens Char.isSpace s
         val number = valOf (Real.fromString number_s)
         val basemap =
@@ -46,22 +65,41 @@ fun lookup m fname thy =
 val base_theories =
     map #1 (Binarymap.listItems (Binarymap.find(final_map, base)))
 
+val base_theories =
+    if diffsort then let
+        val [file1, file2] = args
+        fun nzero NONE = 0.0
+          | nzero (SOME r) = r
+        fun get f thy = nzero (lookup final_map f thy)
+        fun compare (thy1, thy2) = let
+          val t11 = get file1 thy1
+          val t12 = get file1 thy2
+          val t21 = get file2 thy1
+          val t22 = get file2 thy2
+        in
+          Real.compare (t21 - t11, t22 - t12)
+        end
+      in
+        Listsort.sort compare base_theories
+      end
+    else base_theories
+
 fun fmt_fname s = let
-  val s' = if size s > 24 then String.extract(s, size s - 24, NONE) else s
+  val s' = if size s > 14 then String.extract(s, size s - 14, NONE) else s
 in
-  StringCvt.padLeft #" " 25 s'
+  StringCvt.padLeft #" " 15 s'
 end
 
 fun centered25 s = let
   open StringCvt
 in
-  padRight #" " 25 (padLeft #" " 20 s)
+  padLeft #" " 15 s
 end
 
 fun fmt_real r = centered25 (Real.fmt (StringCvt.FIX (SOME 3)) r)
 
 val _ = if not bequiet then
-          (print (StringCvt.padLeft #" " 20 "");
+          (print (StringCvt.padLeft #" " 25 "");
            app (print o fmt_fname) args;
            print "\n";
            print_dashes())
@@ -74,7 +112,7 @@ fun print_line m thyname = let
         NONE => print (centered25 "--")
       | SOME r => print (fmt_real r)
 in
-  print (StringCvt.padRight #" " 20 thyname);
+  print (StringCvt.padRight #" " 25 thyname);
   app print_entry args;
   print "\n"
 end
@@ -105,7 +143,7 @@ end
 
 val _ = if not bequiet then
           (print_dashes();
-           print (StringCvt.padRight #" " 20 "Total");
+           print (StringCvt.padRight #" " 25 "Total");
            app print_entry args;
            print "\n")
         else ()
