@@ -12,8 +12,8 @@ val ERRloc = mk_HOL_ERRloc "IndDefLib";
 
 local open Absyn
       fun head clause =
-         let val appl = last (strip_imp (snd(strip_forall clause)))
-         in fst(strip_app appl)
+         let val appl = last (strip_imp (snd(strip_forall(snd(strip_tyforall clause)))))
+         in fst(strip_tyapp(fst(strip_app appl)))
          end
       fun determ M =
           fst(Term.dest_var M handle HOL_ERR _ => Term.dest_const M)
@@ -28,7 +28,7 @@ fun term_of_absyn absyn = let
   fun checkcl a = let
     val nm = dest (head a)
   in
-    if mem nm ["/\\", "\\/", "!"] then
+    if mem nm ["/\\", "\\/", "!", "!:"] then
       raise ERRloc "term_of_absyn" (locn_of_absyn a)
                    ("Abstract syntax looks to be trying to redefine "^nm^". "^
                      "This is probably an error.\nIf you must, define with \
