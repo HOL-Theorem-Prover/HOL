@@ -222,18 +222,24 @@ val strip_disj = gen_strip dest_disj
 val strip_imp  = gen_strip dest_imp;
 val strip_pair = gen_strip dest_pair;
 
-fun mk_binder s (v,M) = mk_app(mk_ident s,mk_lam(v,M));
-val mk_forall  = mk_binder "!"
-val mk_exists  = mk_binder "?"
-val mk_exists1 = mk_binder "?!"
-val mk_select  = mk_binder "@";
+fun mk_binder   s (v,M) = mk_app(mk_ident s,mk_lam(v,M));
+fun mk_tybinder s (v,M) = mk_app(mk_ident s,mk_tylam(v,M));
+val mk_forall   = mk_binder "!"
+val mk_exists   = mk_binder "?"
+val mk_exists1  = mk_binder "?!"
+val mk_select   = mk_binder "@"
+val mk_tyforall = mk_tybinder "!:"
+val mk_tyexists = mk_tybinder "?:";
 fun list_mk_binder mk_binder (L,M) = itlist (curry mk_binder) L M;
-val list_mk_lam     = list_mk_binder mk_lam
-val list_mk_tylam   = list_mk_binder mk_tylam
-val list_mk_forall  = list_mk_binder mk_forall
-val list_mk_exists  = list_mk_binder mk_exists
-val list_mk_exists1 = list_mk_binder mk_exists1
-val list_mk_select  = list_mk_binder mk_select;
+fun list_mk_tybinder mk_tybinder (L,M) = itlist (curry mk_tybinder) L M;
+val list_mk_lam      = list_mk_binder mk_lam
+val list_mk_tylam    = list_mk_binder mk_tylam
+val list_mk_forall   = list_mk_binder mk_forall
+val list_mk_exists   = list_mk_binder mk_exists
+val list_mk_exists1  = list_mk_binder mk_exists1
+val list_mk_select   = list_mk_binder mk_select
+val list_mk_tyforall = list_mk_tybinder mk_tyforall
+val list_mk_tyexists = list_mk_tybinder mk_tyexists;
 
 local fun err0 str locn = ERRloc "dest_binder" locn ("Expected a "^Lib.quote str)
       fun dest_term_binder s tm ex =
@@ -242,6 +248,12 @@ local fun err0 str locn = ERRloc "dest_binder" locn ("Expected a "^Lib.quote str
             then raise ex
             else dest_lam (AQ (nolocn,lam))
        end handle HOL_ERR _ => raise ex
+      fun dest_type_binder s tm ex =
+       let val (c,tylam) = dest_comb tm
+       in if fst(Term.dest_const c) <> s
+            then raise ex
+            else dest_tylam (AQ (nolocn,tylam))
+       end handle HOL_ERR _ => raise ex
 in
 fun dest_binder str =
  let fun err locn = err0 str locn
@@ -249,12 +261,20 @@ fun dest_binder str =
        | dest (AQ (locn,x)) = dest_term_binder str x (err locn)
        | dest  t = raise err (locn_of_absyn t)
  in dest end
+fun dest_tybinder str =
+ let fun err locn = err0 str locn
+     fun dest (APP(_,IDENT (locn,s),M)) = if s=str then dest_tylam M else raise err locn
+       | dest (AQ (locn,x)) = dest_type_binder str x (err locn)
+       | dest  t = raise err (locn_of_absyn t)
+ in dest end
 end;
 
-val dest_forall  = dest_binder "!"
-val dest_exists  = dest_binder "?"
-val dest_exists1 = dest_binder "?!"
-val dest_select  = dest_binder "@";
+val dest_forall   = dest_binder "!"
+val dest_exists   = dest_binder "?"
+val dest_exists1  = dest_binder "?!"
+val dest_select   = dest_binder "@"
+val dest_tyforall = dest_tybinder "!:"
+val dest_tyexists = dest_tybinder "?:";
 
 fun strip_front dest =
     let fun brk ht =
@@ -264,28 +284,32 @@ fun strip_front dest =
          end handle HOL_ERR _ => ([],ht)
     in brk end;
 
-val strip_lam     = strip_front dest_lam
-val strip_tylam   = strip_front dest_tylam
-val strip_forall  = strip_front dest_forall
-val strip_exists  = strip_front dest_exists
-val strip_exists1 = strip_front dest_exists1
-val strip_select  = strip_front dest_select;
+val strip_lam      = strip_front dest_lam
+val strip_tylam    = strip_front dest_tylam
+val strip_forall   = strip_front dest_forall
+val strip_exists   = strip_front dest_exists
+val strip_exists1  = strip_front dest_exists1
+val strip_select   = strip_front dest_select
+val strip_tyforall = strip_front dest_tyforall
+val strip_tyexists = strip_front dest_tyexists;
 
-val is_ident   = Lib.can dest_forall
-val is_app     = Lib.can dest_app
-val is_tyapp   = Lib.can dest_tyapp
-val is_lam     = Lib.can dest_lam
-val is_tylam   = Lib.can dest_tylam
-val is_AQ      = Lib.can dest_AQ
-val is_typed   = Lib.can dest_typed
-val is_eq      = Lib.can dest_eq
-val is_conj    = Lib.can dest_conj
-val is_disj    = Lib.can dest_disj
-val is_imp     = Lib.can dest_imp
-val is_pair    = Lib.can dest_pair
-val is_forall  = Lib.can dest_forall
-val is_exists  = Lib.can dest_exists
-val is_exists1 = Lib.can dest_exists1
-val is_select  = Lib.can dest_select;
+val is_ident    = Lib.can dest_forall
+val is_app      = Lib.can dest_app
+val is_tyapp    = Lib.can dest_tyapp
+val is_lam      = Lib.can dest_lam
+val is_tylam    = Lib.can dest_tylam
+val is_AQ       = Lib.can dest_AQ
+val is_typed    = Lib.can dest_typed
+val is_eq       = Lib.can dest_eq
+val is_conj     = Lib.can dest_conj
+val is_disj     = Lib.can dest_disj
+val is_imp      = Lib.can dest_imp
+val is_pair     = Lib.can dest_pair
+val is_forall   = Lib.can dest_forall
+val is_exists   = Lib.can dest_exists
+val is_exists1  = Lib.can dest_exists1
+val is_select   = Lib.can dest_select
+val is_tyforall = Lib.can dest_tyforall
+val is_tyexists = Lib.can dest_tyexists;
 
 end;
