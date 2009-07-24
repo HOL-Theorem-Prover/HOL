@@ -586,7 +586,9 @@ in
     DEPTH_CONV RED_CONV THENC REWRITE_CONV []
 end
 
+(*
 val phase1_CONV = Profile.profile "phase1" phase1_CONV
+*)
 
 (* Phase 2 *)
 (* phase 2 massages the terms so that all of the < terms have one side or
@@ -760,7 +762,7 @@ in
 end
 
 val phase2_CONV =
-    fn t => Profile.profile "phase2" (QCONV (phase2_CONV t))
+    fn t => (*Profile.profile "phase2"*) (QCONV (phase2_CONV t))
 
 (* Phase 3 *)
 (* phase three takes all of the coefficients of the variable we're
@@ -941,7 +943,9 @@ end
     term
   end
 
+(*
 val phase3_CONV = Profile.profile "phase3" phase3_CONV
+*)
 
 (* "sophisticated" simplification routines *)
 fun simplify_constrained_disjunct tm = let
@@ -1036,7 +1040,7 @@ fun simplify_constrained_disjunct tm = let
 
   val mainwork =
     if List.exists (simple_divides var) body_conjuncts then
-      Profile.profile "simpcst.mainwork.simpelim" (
+      (*Profile.profile "simpcst.mainwork.simpelim"*) (
 
       BINDER_CONV (find_sdivides var elim_sdivides) THENC
       pull_eliminate THENC
@@ -1052,7 +1056,7 @@ fun simplify_constrained_disjunct tm = let
          bound variable doesn't appear elsewhere, which can happen if
          the F term is something like (\x. F), which tends to happen in
          the construction of the neginf term. *)
-      Profile.profile "simpcst.mainwork.vacuous" (
+      (*Profile.profile "simpcst.mainwork.vacuous"*) (
       push_in_exists_and_follow
           (BINDER_CONV (UNCONSTRAIN THENC resquan_onestep) THENC
            EXISTS_OR_CONV THENC
@@ -1063,10 +1067,10 @@ fun simplify_constrained_disjunct tm = let
     else
       ALL_CONV
 in
-  (BINDER_CONV (Profile.profile "simpcst.quick" (find_cst var quick_cst_elim)) THENC
-   (Profile.profile "simpcst.unwind" Unwind.UNWIND_EXISTS_CONV ORELSEC REWRITE_CONV []) THENC
-   Profile.profile "simpcst.r_i_g" reduce_if_ground) ORELSEC
-  Profile.profile "simpcst.mainwork" mainwork
+  (BINDER_CONV ((*Profile.profile "simpcst.quick"*) (find_cst var quick_cst_elim)) THENC
+   ((*Profile.profile "simpcst.unwind"*) Unwind.UNWIND_EXISTS_CONV ORELSEC REWRITE_CONV []) THENC
+   (*Profile.profile "simpcst.r_i_g"*) reduce_if_ground) ORELSEC
+  (*Profile.profile "simpcst.mainwork"*) mainwork
 end tm
 
 
