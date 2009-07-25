@@ -998,7 +998,7 @@ in
 end tm
 
 val eliminate_equality =
-    fn x => Profile.profile "eliminate_eq" (eliminate_equality x)
+    fn x => (*Profile.profile "eliminate_eq"*) (eliminate_equality x)
 
 
 
@@ -1022,7 +1022,7 @@ val EX_REFL = EQT_INTRO (SPEC_ALL EXISTS_REFL)
 fun OmegaEq t = let
   val (exvars, body) = strip_exists t
   val exv_set = HOLset.addList(empty_tmset, exvars)
-  val gcd_check = Profile.profile "gcd_check" gcd_check
+  val gcd_check = (*Profile.profile "gcd_check"*) gcd_check
   val _ = length exvars > 0 orelse
           raise ERR "OmegaEq" "Term not existentially quantified"
   val conjns = strip_conj body
