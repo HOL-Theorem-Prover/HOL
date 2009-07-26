@@ -606,6 +606,18 @@ val SUBMAP_FUPDATE = store_thm(
   ``k NOTIN FDOM f ==> f SUBMAP f |+ (k,v)``,
   SRW_TAC [][SUBMAP_DEF] THEN METIS_TAC [FAPPLY_FUPDATE_THM]);
 
+val EQ_FDOM_SUBMAP = Q.store_thm(
+"EQ_FDOM_SUBMAP",
+`(f = g) <=> f SUBMAP g /\ (FDOM f = FDOM g)`,
+SIMP_TAC (srw_ss()) [fmap_EXT, SUBMAP_DEF] THEN METIS_TAC []);
+
+val SUBMAP_FUPDATE_EQN = Q.store_thm(
+"SUBMAP_FUPDATE_EQN",
+`f SUBMAP f |+ (x,y) <=> x NOTIN FDOM f \/ (f ' x = y)`,
+SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss ++ boolSimps.COND_elim_ss)
+         [FAPPLY_FUPDATE_THM,SUBMAP_DEF,EQ_IMP_THM] THEN
+METIS_TAC []);
+val _ = export_rewrites ["SUBMAP_FUPDATE_EQN"]
 
 (*---------------------------------------------------------------------------
     Restriction
