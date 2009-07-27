@@ -186,6 +186,18 @@ fun dest_list M =
 val is_list = can dest_list;
 
 (*---------------------------------------------------------------------------*)
+(* Strips leading occurences of cons                                         *)
+(* Added 17 July 2009 by Thomas Tuerk                                          *)
+(*---------------------------------------------------------------------------*)
+val strip_cons =
+  let fun strip A M =
+        case total dest_cons M
+         of NONE => (List.rev A, M)
+          | SOME(h,tl) => strip (h::A) tl
+  in strip []
+  end;
+
+(*---------------------------------------------------------------------------*)
 (* Lift ML lists to HOL lists                                                *)
 (*---------------------------------------------------------------------------*)
 

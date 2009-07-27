@@ -63,6 +63,7 @@ sig
 
   val dest_nil       : term -> hol_type
   val dest_cons      : term -> term * term
+  val strip_cons     : term -> term list * term
   val dest_null      : term -> term
   val dest_hd        : term -> term
   val dest_tl        : term -> term
