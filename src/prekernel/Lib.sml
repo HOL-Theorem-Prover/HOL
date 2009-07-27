@@ -48,7 +48,6 @@ fun fst (x,_) = x   and   snd (_,y) = y;
 (*---------------------------------------------------------------------------*
  * Success and failure. Interrupt has a special status in MoscowML.          *
  *---------------------------------------------------------------------------*)
-
 fun can f x =
   (f x; true) handle Interrupt => raise Interrupt | _  => false;
 
@@ -137,6 +136,13 @@ fun first P =
          | oneth [] = raise ERR "first" "unsatisfied predicate"
    in oneth
    end;
+
+fun first_opt f =
+   let fun fo n [] = NONE
+         | fo n (a::rst) =
+              let val vo = f n a handle Interrupt => raise Interrupt | _  => NONE in
+              if (isSome vo) then vo else fo (n+1) rst end;
+   in fo 0 end;
 
 fun split_after n alist =
    if n >= 0
