@@ -2935,6 +2935,11 @@ val FINITE_BIGUNION_EQ = Q.store_thm
   ]);
 val _ = export_rewrites ["FINITE_BIGUNION_EQ"]
 
+val SUBSET_BIGUNION_I = store_thm(
+  "SUBSET_BIGUNION_I",
+  ``x IN P ==> x SUBSET BIGUNION P``,
+  SRW_TAC [][BIGUNION, SUBSET_DEF] THEN METIS_TAC []);
+
 
 (* ----------------------------------------------------------------------
     BIGINTER (intersection of a set of sets)
