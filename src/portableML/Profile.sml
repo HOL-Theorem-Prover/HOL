@@ -46,6 +46,12 @@ fun results () = Listsort.sort (fn (i1, i2) => String.compare (#1 i1, #1 i2))
                                (listItems (!ptable))
 
 
+fun foldl_map _ (acc, []) = (acc, [])
+  | foldl_map f (acc, x :: xs) =
+    let val (acc', y) = f (acc, x)
+        val (acc'', ys) = foldl_map f (acc', xs)
+    in (acc'', y :: ys) end
+
 fun output_profile_results outstr results =
 let
   fun foldl_map_this ((nm_width, usr_width, sys_width, gc_width, n_width),
@@ -61,7 +67,7 @@ let
        (nm, usr, sys, gc, n))
     end
   val ((nm_width, usr_width, sys_width, gc_width, n_width), strings) =
-    Lib.foldl_map foldl_map_this ((25, 8, 8, 8, 7), results)
+    foldl_map foldl_map_this ((25, 8, 8, 8, 7), results)
   fun print s = TextIO.output (outstr, s)
   fun app_this (nm, usr, sys, gc, n) = (
     print (StringCvt.padRight #" " nm_width nm); print " ";
