@@ -21,7 +21,7 @@ show_assums := true;
 open HolKernel Parse boolLib bossLib
 
 open generalHelpersTheory 
-open quantHeuristicsLib
+open quantHeuristicsLib quantHeuristicsArgsLib
 open    finite_mapTheory relationTheory pred_setTheory congLib sortingTheory
   listTheory rich_listTheory arithmeticTheory operatorTheory
 optionTheory latticeTheory separationLogicTheory separationLogicLib
@@ -6731,21 +6731,17 @@ val step_ss = list_ss++rewrites STEP_REWRITE_SIMP_THMS
 val quant_heuristic_cache_save_ref:(quantHeuristicsLib.quant_heuristic_cache ref) = ref (mk_quant_heuristic_cache ());
 val quant_heuristic_cache_ref:(quantHeuristicsLib.quant_heuristic_cache ref) = ref (mk_quant_heuristic_cache ());
 
-val quant_heuristic_arg =
-       TypeBase___quant_heuristic_argument [``:num list``]
-
 val save_quant_guess_TAC = 
     CONV_TAC 
-	(EXT_PURE_QUANT_INSTANTIATE_CONV (SOME quant_heuristic_cache_save_ref) true (K true) false [quant_heuristic_arg]);
+	(EXTENSIBLE_QUANT_INSTANTIATE_CONV (SOME quant_heuristic_cache_save_ref) true (K true) false [std_qhca]);
 
 
 val quant_guess_TAC = 
 CONSEQ_CONV_TAC 
-(EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV (SOME quant_heuristic_cache_ref) false
-    (K true) ([quant_heuristic_arg,
-([],[],[],[],
-[QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___COND_IMP,
- QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___LIST_SAME_DATA])]));
+(EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV (SOME quant_heuristic_cache_ref) false
+    (K true) ([std_qhca, heuristics_qhca
+                [QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___COND_IMP,
+                 QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___LIST_SAME_DATA]]));
 
 
 fun all_quant_guess_TAC do_guess =
