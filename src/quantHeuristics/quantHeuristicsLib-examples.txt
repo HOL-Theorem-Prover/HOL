@@ -7,7 +7,7 @@ loadPath :=
 
 
 open HolKernel Parse boolLib Drule ConseqConv computeLib
-open      quantHeuristicsLib;
+open quantHeuristicsLib quantHeuristicsArgsLib;
 
 (*
 quietdec := false;
@@ -17,13 +17,12 @@ quietdec := false;
 (*Simple find an equation and instatiate it,
   same as UNWIND_CONV*)
 
-
 val t = ``?x. (x=7) /\ P x /\ Q``;
 val t = ``!x. ((x=7) /\ Q) ==> P x``;
 
 (* Result:  P 7 /\ Q *)
 val thm = SIMP_CONV std_ss [] t
-val thm = PURE_QUANT_INSTANTIATE_CONV t;
+val thm = QUANT_INSTANTIATE_CONV [] t;
 
 
 
@@ -34,7 +33,7 @@ val t = ``?y x z. (x=y+z) /\ X x y z``;
 val t = ``!y x z. ~(x=y+z) \/ X x y z``;
 
 val thm = SIMP_CONV std_ss [] t
-val thm = PURE_QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [] t
 
 
 
@@ -49,7 +48,7 @@ val t = ``?x. (!z. (x=7) /\ Q z) /\ P x /\ Q t``
 val t = ``!x z. ?g. (((x=7) /\ Q g)) ==> P x``
 (* Result:  (?g. Q g) ==> P 7 *)
 
-val thm = PURE_QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [] t
 
 
 (*
@@ -66,7 +65,7 @@ set_trace "QUANT_INSTANTIATE_HEURISTIC" 1
 set_trace "QUANT_INSTANTIATE_HEURISTIC" 2;
 
 
-val thm = PURE_QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [] t
 
 
 
@@ -80,18 +79,18 @@ val thm = PURE_QUANT_INSTANTIATE_CONV t
 
 (*figures out to instantiate x with 8*)
 val t = ``!x. P /\ ~(8 = x) /\ Z``;
-val thm = PURE_QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [] t
 
 
 (*figures out to instantiate x with 8*)
 val t = ``?x. P \/ (8 = x) \/ Z``;
-val thm = PURE_QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [] t
 
 
 
 (*The new library also uses matching to figure out instantions*)
 val t = ``?x. P \/ (f(8 + 2) = f(x + 2)) \/ Z``;
-val thm = PURE_QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [] t
 
 
 
@@ -100,7 +99,7 @@ val thm = PURE_QUANT_INSTANTIATE_CONV t
   guesses will follow later when datatype specific code is used.*)
 
 val t = ``?x. P /\ (!y. x = y + 2) /\ Z x``;
-val thm = PURE_QUANT_INSTANTIATE_CONV t;
+val thm = QUANT_INSTANTIATE_CONV [] t;
 (*result ?y'. P /\ (!y. y' + 2 = y + 2) /\ Z (y' + 2)*)
 
 
@@ -109,7 +108,7 @@ val t = ``?x. P /\ (?y. x = y + 2) /\ Z x``;
 (*matching + bound variables
   result ?y'. P /\ Z (y' + 2)*)
 
-val thm = PURE_QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [] t
 
 
 
@@ -117,22 +116,20 @@ val thm = PURE_QUANT_INSTANTIATE_CONV t
   however, neither bound variables nor matching can be used for it*)
 val t = ``?!x. !z. ((7=x) /\ Q z x)``;
 
-val thm = PURE_QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [] t
 
 
 
 
-(* The PURE-form (PURE_QUANT_INSTANTIATE_CONV) just knows about
-   boolean operators and equations. However, the standard version
-   (QUANT_INSTANTIATE_CONV)
-   is extensible. It uses information from TypeBase by default
-   and can be extended manually by the user.
+(* By default QUANT_INSTANTIATE_CONV just knows about
+   boolean operators and equations. On easy way to
+   extend this is using TypeBase.
    In the following examples, TypeBase is used to come up with guesses*)
 
 val t = ``!x. ~(x = 0) ==> P x``
 (*Result !x_n. P (SUC x_n) *)
 
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [TypeBase_qhca] t
 
 
 (*To come up with this result, the case-theorem form TypeBase has been
@@ -141,69 +138,23 @@ val thm = QUANT_INSTANTIATE_CONV t
 
 val t = ``!x. (x = 0)``
 (*Result F, distinct theorem of TypeBase used*)
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV  [TypeBase_qhca] t
 
 
 val t = ``?x. ((x,y) = (0,z)) /\ (P x)``
 (*Result ((0,y) = (0,z)) /\ P 0, one_one theorem of TypeBase used*)
 
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [TypeBase_qhca] t
 
 
 
 (*The main advantage of the new library is however, it is user extensible.
-  QUANT_INSTANTIATE_CONV gets some theorem from TypeBase and by
-  explicit user interaction. Thus, lets have a look at PURE_QUANT_INSTANTIATE_CONV
-  here. It is defined as
+  TypeBase_qhca uses some theorem from TypeBase. Please
+  have a look at quantHeuristicsArgsLib for details how
+  to write your own qhcas. A qhca (quant heuristics combine argument)
+  constists of 
 
-PURE_QUANT_INSTANTIATE_CONV is defined as
-EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false []
-
-Let's have a closer look at the parameters of 
-EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq argL
-
-
-cache_ref_opt
-#############
-
-is a possible way to add caching of found instantiations.
-The default value NONE means that no caching is used.
-SOME (c_ref) means that the cache at the reference is used.
-An empty cache can be created using mk_quant_heuristic_cache.
-
-
-re
-#############
-Determins whether
-for the elementary conversion is wrapped with 
-DEPTH_CONV or REDEPTH_CONV is used. Defaults to true.
-
-
-filter
-#############
-This argument allows to just try and find instantiations
-for variables v such that filter v = true.
-
-expand_eq
-#############
-All the guesses the standard heuristics find, come with a justification.
-So, for these guesses (?x. P x) = P i is guarenteed by the justification theorem.
-However, it is sometimes conviniend not to prove a justification theorem.
-In these cases just an implication: (P i ==> ?x. P x) holds.
-This is fine when working with consequence conversions. However for conversions,
-one needs equality. If expand_eq is set to true in these cases a case split
-is performed: (?x. P x) = ((!x. (~(x = i) ==> ~(P x))) ==> P i). If it is false,
-no instantiation is applied. Similar expansions happen for allquantification.
-The default value of expand_eq is false.
-
-
-args
-#############
-The last argument is the main way to is a costumise the conversion.
-It is a list of quintuples
-(distinct_thmL, cases_thmL, rewrite_thmL,convL,heuristicL).
-
-distinct_thmL
+distinct_thms
   This one is a list of theorems used for finding counterexamples.
   These theorems have to be of the form 
      |- (!x1...xn. ~(f1 x1 ... xn = g1 x1 ... xn)) /\
@@ -237,20 +188,17 @@ filter and args can be used. The others simple and ignored for now.
 
 
 val t = ``?x y z. (x = 1) /\ (y = 2) /\ (z = 3)``
-
 (*Standard calls eliminate all 3 variables
  |- ?x y z. (x = 1) /\ (y = 2) /\ (z = 3) = T
 *)
-val thm = PURE_QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [] t
+
 
 (*Let's just get rid of y
  |- ?x y z. (x = 1) /\ (y = 2) /\ (z = 3) = 
     ?x   z. (x = 1) /\            (z = 3)*)
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true 
+val thm = EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true 
              (fn v => (v = ``y:num``)) false [] t
-
-val thm = RESTRICTED_PURE_QUANT_INSTANTIATE_CONV
-             (fn v => (v = ``y:num``)) t
 
 
 (*
@@ -265,7 +213,7 @@ val t = ``!x. x = 0``
 val t = ``?x. ~(x = SUC n)``
 val t = ``?x. ((x = SUC n) /\ Q x n) ==> P x``
 
-val thm = QUANT_INSTANTIATE_CONV t 
+val thm = QUANT_INSTANTIATE_CONV [TypeBase_qhca] t 
 
 
 (*However, for arbitrary numbers that is not possible yet
@@ -276,17 +224,19 @@ val thm = QUANT_INSTANTIATE_CONV t
 val t = ``?x:num. ((x = n) /\ Q x n) ==> P x``
 
 (*the normal one raises UNCHANGED*)
-val thm = QUANT_INSTANTIATE_CONV t 
-val thm = PURE_QUANT_INSTANTIATE_CONV t 
+val thm = QUANT_INSTANTIATE_CONV [TypeBase_qhca] t 
+val thm = QUANT_INSTANTIATE_CONV [] t 
 
 (*The extended one is able to reduce it to true, by knowing that ~(SUC n = n) holds*)
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([prim_recTheory.SUC_ID],[],[],[],[])] t 
+val thm = QUANT_INSTANTIATE_CONV [distinct_qhca [prim_recTheory.SUC_ID]] t 
+
+(*One can also use a ready qhca*)
+val thm = QUANT_INSTANTIATE_CONV [num_qhca] t 
 
 
 
 (* There is no info about predicate sets in TypeBase. However
-   a case distinction might by usefull
-*)
+   a case distinction might by usefull*)
 
 val SIMPLE_SET_CASES = prove (
 ``!s. (s = {}) \/ ?x t. (s = x INSERT t)``,
@@ -296,10 +246,13 @@ PROVE_TAC[pred_setTheory.SET_CASES]);
 val t = ``!s. ~(s = {}) ==> (CARD s > 0)``;
 
 (*raises unchanged*)
-val thm = PURE_QUANT_INSTANTIATE_CONV t;
+val thm = QUANT_INSTANTIATE_CONV [] t;
 
 (*The extended one is able to reduce it*)
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],[SIMPLE_SET_CASES],[],[],[])] t 
+val thm = QUANT_INSTANTIATE_CONV 
+   [cases_qhca [SIMPLE_SET_CASES]] t 
+
+
 
 
 (*
@@ -312,20 +265,18 @@ val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],[SIMPLE_
 val t = ``!x. IS_SOME x ==> P x``;
 
 (*raises unchanged*)
-val thm = PURE_QUANT_INSTANTIATE_CONV t;
+val thm = QUANT_INSTANTIATE_CONV [] t;
 
 	  
 val IS_SOME_EXPAND = prove (``IS_SOME x = ?x'. x = SOME x'``,
 			      Cases_on `x` THEN SIMP_TAC std_ss []);
 
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],
-          [], [IS_SOME_EXPAND], [],[])] t;
+val thm = QUANT_INSTANTIATE_CONV [rewrite_qhca [IS_SOME_EXPAND]] t;
 
 
 (*The same works if we use a conversion instead*)
-
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],
-          [], [], [REWR_CONV IS_SOME_EXPAND],[])] t;
+val thm = QUANT_INSTANTIATE_CONV 
+            [convs_qhca [REWR_CONV IS_SOME_EXPAND]] t;
 
 
 (*notice that here REWR_CONV is used, so the rewrite takes just place at
@@ -337,36 +288,23 @@ val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],
   to compare*)
 
 set_trace "QUANT_INSTANTIATE_HEURISTIC" 1;
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],
-          [],[],[REWR_CONV IS_SOME_EXPAND], [])] t;
-
-    
+val thm = QUANT_INSTANTIATE_CONV 
+          [convs_qhca [REWR_CONV IS_SOME_EXPAND]] t;
   
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],
-          [],[],[REWRITE_CONV [IS_SOME_EXPAND]], [])] t;
+val thm = QUANT_INSTANTIATE_CONV 
+          [convs_qhca [REWRITE_CONV [IS_SOME_EXPAND]]] t;
 
 (*TOP_ONCE_REWRITE_CONV is suitable as well,
   it behaves like REWR_CONV for a list of theorems*)
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) false [([],[],[],
-          [TOP_ONCE_REWRITE_CONV [IS_SOME_EXPAND]], [])] t;
+  
+val thm = QUANT_INSTANTIATE_CONV 
+          [convs_qhca [TOP_ONCE_REWRITE_CONV [IS_SOME_EXPAND]]] t;
 
 
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 0;
 
-
-(*The argument heuristicL is a full grown heuristcal one. It's a list of
-  heuristics with the signature
-
-  ((term list -> term -> term -> guess_collection) -> 
-    term list -> term -> term -> guess_collection)
-
-  heuristic sys fv v t
-
-  tries to find a guess for instantiating the variable v in term t.
-  In the context the variables 
-  in fv are already in use, so when introducing new free variables in a guess they
-  should be different from the ones in fv. Finally sys is a heurstic itself - the 
-  one provided by the system. It can be used to get guesses for subterms.
-
+(*The argument heuristicL is a full grown heuristcal one. 
+  Please have a look at quantHeuristicsArgsLib for more details.
   A guess consists of an instantiation i with a list of
   free variables in it fvL. There may or may not be an argument (given as 
   a thm) why it is a sensible guess. There are the following types of guesses 
@@ -479,7 +417,7 @@ To get a feeling lets try to simplify and look at part of the trace
 
 val t = ``?x. (x=7) /\ (!z. P z x /\ Q)``;
 set_trace "QUANT_INSTANTIATE_HEURISTIC" 1
-val _ = PURE_QUANT_INSTANTIATE_CONV t
+val _ = QUANT_INSTANTIATE_CONV [] t
 
 The conversion calls the outmost heuristic with
 v = ``x``
@@ -557,8 +495,12 @@ end;
 
 val t = ``?x. P x``
 
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE false (K true) true [([],
-          [], [],[],[dummy_heuristic])] t;
+val thm = EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE false (K true) true
+             [heuristics_qhca [dummy_heuristic]] t
+
+val thm = QUANT_INSTANTIATE_CONV 
+             [heuristics_qhca [dummy_heuristic]] t
+
 
 (*result 
  val thm = |- (?x. P x) <=> (!x. ~(x = choose_me) ==> ~P x) ==> P choose_me :
@@ -579,8 +521,8 @@ So it was turned of.
 
 
 (*!!!Infinite loop!!!*)
-val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) true [([],[],[],
-          [], [dummy_heuristic])] t;
+val thm = EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true (K true) true
+             [heuristics_qhca [dummy_heuristic]] t
 *)
 
 
@@ -592,192 +534,110 @@ val thm = EXT_PURE_QUANT_INSTANTIATE_CONV NONE true (K true) true [([],[],[],
 
 
 
-(*Add some stuff to QUANT_INSTANTIATE_CONV directly*)
+(*There is a stateful argument stateful_qhca,
+  let's add something to it*)
 
-
-val _ = quant_heuristic___add_distinct_thms [prim_recTheory.SUC_ID];
-val _ = quant_heuristic___add_rewrite_thms [arithmeticTheory.EQ_ADD_RCANCEL, 
-                                      arithmeticTheory.EQ_ADD_LCANCEL,
-				      arithmeticTheory.ADD_CLAUSES];
+val _ = clear_stateful_qhca ();
+val _ = stateful_qhca___add_combine_arguments 
+            [distinct_qhca [prim_recTheory.SUC_ID],
+             rewrite_qhca [arithmeticTheory.EQ_ADD_RCANCEL, 
+                           arithmeticTheory.EQ_ADD_LCANCEL,
+                           arithmeticTheory.ADD_CLAUSES]];
 
    
 
 
 
 (* Some examples on how QUANT_INSTANTIATE_CONV behaves
-   on standard datatypes.*)
+   on standard datatypes. Here both the statefull as well
+   as specific arguments for each datatype are used.*)
 
 
 (* There is basic support for numbers. Just very simple stuff. *)
 
 val t = ``!y:num. x = y`` 
-val thm = QUANT_INSTANTIATE_CONV t;
+val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t;
+val thm = QUANT_INSTANTIATE_CONV [num_qhca] t;
 
 val t = ``!x. (SUC x = SUC 3) ==> P x`` 
-val thm = QUANT_INSTANTIATE_CONV t;
+val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t;
+val thm = QUANT_INSTANTIATE_CONV [num_qhca] t;
 
 
 val t = ``!x. (x + z = 3 + z) ==> P x`` 
-val thm = QUANT_INSTANTIATE_CONV t;
+val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t;
+val thm = QUANT_INSTANTIATE_CONV [num_qhca] t;
 
 
 val t = ``!x. P x /\ ~(x = 0) ==> Q x z`` 
-val thm = QUANT_INSTANTIATE_CONV t;
+val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t;
+val thm = QUANT_INSTANTIATE_CONV [num_qhca] t;
 
 
 
-(* for pairs, lets add a full heuristic *)
 
-
-(*
-val v = ``p:('a # 'b)``;
-val bv = [``p1:('a # 'b)``,``x:'a``];
-val fv = []
-val t = ``FST (p:('a # 'b)) = g (FST (p1:('a # 'b))) (x:'a)``
-val t = ``g (FST (p1:('a # 'b))) (x:'a) = FST (p:('a # 'b))``
-
-val t = ``FST (p:('a # 'b)) = X``
-val t = ``X = FST (p:('a # 'b))``
-
-*)
-
-
-
-val PAIR_NEG_CASES = store_thm ("PAIR_NEG_CASES",
-``!p. ~(!p1 p2. ~(p = (p1,p2)))``,
-
-Cases_on `p` THEN
-PROVE_TAC[]);
-
-
-val PAIR_EQ_EXPAND = store_thm ("PAIR_EQ_EXPAND",
-``(((x,y) = X) = ((x = FST X) /\ (y = SND X))) /\
-  ((X = (x,y)) = ((FST X = x) /\ (SND X = y)))``, 
-Cases_on `X` THEN 
-REWRITE_TAC[pairTheory.PAIR_EQ]);
-
-(* if left or right side is FST, SND of v, then do a case split on v and
-   let the details be sorted during the next iteration *)
-fun QUANT_INSTANTIATE_HEURISTIC___EQUATION_pair_fst_snd sys fv v t =
-let
-   val (ty1,ty2) = pairSyntax.dest_prod (type_of v) handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
-   val _ = if is_eq t then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
-   val (l,r) = dest_eq t;
-
-   val do_split = ((pairSyntax.is_fst l) andalso (rand l = v)) orelse
-                  ((pairSyntax.is_fst r) andalso (rand r = v)) orelse
-                  ((pairSyntax.is_snd l) andalso (rand l = v)) orelse
-                  ((pairSyntax.is_snd r) andalso (rand r = v));
-
-   val _ = if do_split then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
-
-   val (v_name,v_ty) = dest_var v
-   val (v1_ty, v2_ty) = pairSyntax.dest_prod v_ty;
-
-   val v1 = variant fv (mk_var (v_name^"1", ty1));
-   val v2 = variant fv (mk_var (v_name^"2", ty2));
-
-   val i = pairSyntax.mk_pair(v1,v2);
-   val fvL = [v1,v2];
-
-   val neg_precond_thm = CONV_RULE (RAND_CONV (RENAME_VARS_CONV 
-			 [fst (dest_var v1), fst (dest_var v2)])) 
-                         (ISPEC v PAIR_NEG_CASES)
-   val precond = rand (concl neg_precond_thm);
-   val thm0 = UNDISCH neg_precond_thm
-
-   val thm1 = GEN v (DISCH precond (CCONTR t thm0))
-   val thm2 = GEN v (DISCH precond (CCONTR (mk_neg t) thm0))
-   
-   val g1 = guess_others_satisfied (i,fvL, SOME thm1);
-   val g2 = guess_others_not_possible (i,fvL, SOME thm2);
-in
-   [g1,g2]
-end handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => [];
-
-
-
-val _ = quant_heuristic___add_rewrite_thms [PAIR_EQ_EXPAND,
-				       pairTheory.FST,
-				       pairTheory.SND];
-
-val _ = quant_heuristic___add_heuristic QUANT_INSTANTIATE_HEURISTIC___EQUATION_pair_fst_snd;
-
-
+(* Pairs *)
 
 val t = ``!p. (x = FST p) ==> Q p`` 
-val thm = QUANT_INSTANTIATE_CONV t;
+val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t;
 
 val t = ``!p. ?t. ((f t = FST p) /\ Z x) ==> Q p`` 
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t
 
 
 val t = ``?p. ((SND p) = 7) /\ Q p`` 
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t
 
 val t = ``?v. (v,X) = Z`` 
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t
 
 val t = ``?v. (v,X) = (a,9)`` 
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t
+
+val t = ``?v. (\ (pa, pb, pc). P pa pb pc) v`` 
+val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t
 
 
 
 (*Some things about option types*)
-val IS_SOME_EQ_NOT_NONE = store_thm ("IS_SOME_EQ_NOT_NONE",
-``!x. IS_SOME x = ~(x = NONE)``,
-
-REWRITE_TAC[GSYM optionTheory.NOT_IS_SOME_EQ_NONE]);
-
-
-val _ = quant_heuristic___add_rewrite_thms [IS_SOME_EQ_NOT_NONE,
-					    optionTheory.IS_NONE_EQ_NONE, 
-                                            optionTheory.THE_DEF];
-
-
 val t = ``!x. IS_SOME x ==> P x``;
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [option_qhca] t
 
 val t = ``!x. IS_NONE x \/ P x``
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [option_qhca] t
 
 val t = ``!x. IS_SOME x \/ P x``
-val thm = EXTENDED_QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [std_qhca] t
 
 val t = ``!x. (x = SOME y) /\ P x``
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [std_qhca] t
 
 
 
 (*Some things about lists,
   Typebase contains enough for these simple examples*)
 val t = ``!l. (~(l = []) ==> (LENGTH l > 0))``;
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
 
 val t = ``!l. (l = h::h2) \/ X``
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
 
 val t = ``!l. (l = h::h2)``
-val thm = QUANT_INSTANTIATE_CONV t
+val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
 
 
+val t = ``!l. (NULL l)``
+val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
 
 
-(*One can have a look at the added stuff*)
-val ref_stuff = quant_heuristic___get_combine_argument ()
+val t = ``!l. NULL l ==> P l``
+val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
 
-(*clear everything*)
-val _ = quant_heuristic___clear_combine_argument ();
-val empty_stuff = quant_heuristic___get_combine_argument ()
-
-
-(*and restore it*)
-val _ = quant_heuristic___add_combine_argument ref_stuff;
-val ref_stuff_again = quant_heuristic___get_combine_argument ()
-
-
-
-
+val t = ``!l. ~(NULL l) ==> P l``
+val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
 
 
 (*A combination of quantHeuristics with consequence Conversions
