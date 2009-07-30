@@ -495,7 +495,7 @@ fun build_help () =
 
 fun make_buildstamp () =
  let open OS.Path TextIO
-     val stamp_filename = concat(HOLDIR, concat("tools-poly","build-stamp"))
+     val stamp_filename = concat(HOLDIR, concat("tools","build-stamp"))
      val stamp_stream = openOut stamp_filename
      val date_string = Date.toString (Date.fromTimeLocal (Time.now()))
  in
