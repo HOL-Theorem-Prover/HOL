@@ -52,7 +52,6 @@ src/simp/src
 src/metis
 src/meson/src
 src/basicProof
-src/quantHeuristics
 src/relation
 src/one
 src/pair/src
@@ -71,6 +70,7 @@ src/datatype/equiv
 src/datatype/record
 src/datatype
 src/list/src
+src/quantHeuristics
 src/unwind
 src/TeX
 src/boss
