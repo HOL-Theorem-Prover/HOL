@@ -1184,7 +1184,8 @@ end handle CircularDependency => cache_insert (target, false)
          | General.Io{function,name,...} =>
                raise Fail ("Got I/O exception for function "^function^
                          " with name "^name)
-         | x => raise Fail "Got an unknown exception in make_up_to_date"
+         | x => raise Fail ("Got an "^exnName x^" exception, with message <"^
+                            exnMessage x^"> in make_up_to_date")
 
 exception DirNotFound
 
