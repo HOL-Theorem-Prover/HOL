@@ -7,7 +7,8 @@ loadPath :=
 
 
 open HolKernel Parse boolLib Drule ConseqConv computeLib
-open quantHeuristicsLib quantHeuristicsArgsLib;
+open quantHeuristicsLib
+open quantHeuristicsArgsLib;
 
 (*
 quietdec := false;
@@ -90,6 +91,12 @@ val thm = QUANT_INSTANTIATE_CONV [] t
 
 (*The new library also uses matching to figure out instantions*)
 val t = ``?x. P \/ (f(8 + 2) = f(x + 2)) \/ Z``;
+val t = ``?x. P /\ (f(8 + 2) = f(x + 2)) /\ 
+              g (f (x+2)) /\ Z``;
+
+val t = ``?x. P /\ (f 2 = f x) /\ Q /\ Q2(f x) /\ Z /\
+              (f x = f 2)``;
+
 val thm = QUANT_INSTANTIATE_CONV [] t
 
 
@@ -115,7 +122,6 @@ val thm = QUANT_INSTANTIATE_CONV [] t
 (*There is a little bit of support for unique existential quantification,
   however, neither bound variables nor matching can be used for it*)
 val t = ``?!x. !z. ((7=x) /\ Q z x)``;
-
 val thm = QUANT_INSTANTIATE_CONV [] t
 
 
@@ -583,7 +589,6 @@ val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t;
 
 val t = ``!p. ?t. ((f t = FST p) /\ Z x) ==> Q p`` 
 val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t
-
 
 val t = ``?p. ((SND p) = 7) /\ Q p`` 
 val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t

@@ -24,6 +24,7 @@ quietdec := true;
 *)
 
 open HolKernel Parse boolLib Drule ConseqConv quantHeuristicsLib
+     rich_listTheory quantHeuristicsTheory
 
 (*
 quietdec := false;
@@ -46,12 +47,6 @@ quietdec := false;
 (*******************************************************************
  * Pairs
  *******************************************************************)
-
-val PAIR_EQ_EXPAND = store_thm ("PAIR_EQ_EXPAND",
-``(((x:'a,y:'b) = X) = ((x = FST X) /\ (y = SND X))) /\
-  ((X = (x,y)) = ((FST X = x) /\ (SND X = y)))``, 
-Cases_on `X` THEN 
-REWRITE_TAC[pairTheory.PAIR_EQ]);
 
 
 (* val v = ``x:('a # 'b)``;
@@ -158,7 +153,9 @@ val pair_qhca =
    cases_thms =    [], 
    rewrite_thms =  [PAIR_EQ_EXPAND, pairTheory.FST, pairTheory.SND],
    convs =         [], 
-   heuristics =    [QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR]
+   heuristics =    [QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR],
+   final_rewrite_thms = [pairTheory.FST,  pairTheory.SND,
+                         PAIR_EQ_SIMPLE_EXPAND]
   }:quant_heuristic_combine_argument
 
 
@@ -197,20 +194,15 @@ val TypeBase_qhca = quantHeuristicsLib.TypeBase_qhca;
  * Option types
  *******************************************************************)
 
-val IS_SOME_EQ_NOT_NONE = prove (
-``!x. IS_SOME x = ~(x = NONE)``,
-REWRITE_TAC[GSYM optionTheory.NOT_IS_SOME_EQ_NONE]);
-
-
-
 val option_qhca =
-  {distinct_thms = [optionTheory.NOT_NONE_SOME], 
-   cases_thms =    [optionTheory.option_nchotomy], 
-   rewrite_thms =  [optionTheory.SOME_11, optionTheory.IS_NONE_EQ_NONE,
-                    optionTheory.IS_NONE_EQ_NONE,
-                    IS_SOME_EQ_NOT_NONE],
-   convs =         [], 
-   heuristics =    []
+  {distinct_thms      = [optionTheory.NOT_NONE_SOME], 
+   cases_thms         = [optionTheory.option_nchotomy], 
+   rewrite_thms       = [optionTheory.SOME_11, optionTheory.IS_NONE_EQ_NONE,
+                         optionTheory.IS_NONE_EQ_NONE,
+                         IS_SOME_EQ_NOT_NONE],
+   convs              = [], 
+   heuristics         = [],
+   final_rewrite_thms = [optionTheory.option_CLAUSES]
   }:quant_heuristic_combine_argument
 
 
@@ -226,7 +218,8 @@ val num_qhca =
       arithmeticTheory.EQ_ADD_RCANCEL,arithmeticTheory.EQ_ADD_LCANCEL,
       arithmeticTheory.ADD_CLAUSES],
    convs =         [], 
-   heuristics =    []
+   heuristics =    [],
+   final_rewrite_thms = []
   }:quant_heuristic_combine_argument
 
 
@@ -243,7 +236,10 @@ val list_qhca =
                     listTheory.APPEND_11,
                     listTheory.APPEND_eq_NIL],
    convs =         [], 
-   heuristics =    []
+   heuristics =    [],
+   final_rewrite_thms = [listTheory.NULL_DEF,
+                         rich_listTheory.NOT_CONS_NIL,
+                         GSYM rich_listTheory.NOT_CONS_NIL]
   }:quant_heuristic_combine_argument
 
 

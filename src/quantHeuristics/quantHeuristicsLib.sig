@@ -180,11 +180,12 @@ sig
 (*Some types*)
   type quant_heuristic = term list -> term -> term -> guess_collection;
   type quant_heuristic_combine_argument = 
-    {distinct_thms : thm list,
-     cases_thms    : thm list,
-     rewrite_thms  : thm list,
-     convs         : conv list,
-     heuristics    : (quant_heuristic -> quant_heuristic) list};
+    {distinct_thms      : thm list,
+     cases_thms         : thm list,
+     rewrite_thms       : thm list,
+     convs              : conv list,
+     heuristics         : (quant_heuristic -> quant_heuristic) list,
+     final_rewrite_thms : thm list};
   type quant_heuristic_cache;
 
 
@@ -207,10 +208,6 @@ sig
 
 
   val COMBINE_HEURISTIC_FUNS : (unit -> guess_collection) list -> guess_collection;
-
-
-  val HEURISTIC_QUANT_INSTANTIATE_CONV : bool -> (term -> bool) -> quant_heuristic -> bool -> (term -> thm);
-
 
 
 (*The most important functions *)
@@ -258,12 +255,13 @@ sig
   val combine_qhcas :
      quant_heuristic_combine_argument list -> quant_heuristic_combine_argument;
 
-  val distinct_qhca   : thm list -> quant_heuristic_combine_argument
-  val rewrite_qhca    : thm list -> quant_heuristic_combine_argument
-  val cases_qhca      : thm list -> quant_heuristic_combine_argument
-  val convs_qhca      : conv list -> quant_heuristic_combine_argument
-  val heuristics_qhca : (quant_heuristic -> quant_heuristic) list ->
-                        quant_heuristic_combine_argument
+  val distinct_qhca      : thm list -> quant_heuristic_combine_argument
+  val rewrite_qhca       : thm list -> quant_heuristic_combine_argument
+  val final_rewrite_qhca : thm list -> quant_heuristic_combine_argument
+  val cases_qhca         : thm list -> quant_heuristic_combine_argument
+  val convs_qhca         : conv list -> quant_heuristic_combine_argument
+  val heuristics_qhca    : (quant_heuristic -> quant_heuristic) list ->
+                           quant_heuristic_combine_argument
 
 (* Traces *)
 (* "QUANT_INSTANTIATE_HEURISTIC" can be used to get debug information on
