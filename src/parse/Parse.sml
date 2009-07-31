@@ -332,7 +332,7 @@ fun respect_width_ref iref pprinter pps x = let
   fun flush () = output_slist()
   fun consume_string s = let
     open Substring
-    val (pfx, sfx) = splitl (fn c => c <> #"\n") (all s)
+    val (pfx, sfx) = splitl (fn c => c <> #"\n") (full s)
   in
     if size sfx = 0 then slist := s :: !slist
     else

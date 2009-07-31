@@ -633,9 +633,11 @@ in
         "HOLMOSMLC" => [VREF "MOSMLCOMP", LIT (" -q "^stdincludes)] @
                        basis_string
       | "HOLMOSMLC-C" => let
-          val overlaystring = case actual_overlay of NONE => "" | SOME s => s
+          val overlaystring = case actual_overlay of NONE => []
+                                                   | SOME s => [LIT s]
         in
-          [VREF "MOSMLCOMP", LIT (" -q "^stdincludes^" -c "^overlaystring)]
+          [VREF "MOSMLCOMP", LIT (" -q "^stdincludes^" -c ")] @
+          basis_string @ overlaystring
         end
       | "MOSMLC" => [VREF "MOSMLCOMP", LIT (" "^addincludes)]
       | _ => hmakefile_env0 s)
@@ -855,6 +857,9 @@ fun get_implicit_dependencies (f: File) : File list = let
                     toFile (fullPath [SIGOBJ, s]) :: file_dependencies0
                   else
                     file_dependencies0
+  val file_dependencies = if nob97 then file_dependencies
+                          else toFile (fullPath [SIGOBJ, "basis97"]) ::
+                               file_dependencies
   fun is_thy_file (SML (Theory _)) = true
     | is_thy_file (SIG (Theory _)) = true
     | is_thy_file _                = false
@@ -930,7 +935,7 @@ fun build_command c arg = let
  (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
   val overlay_stringl = case actual_overlay of
                           NONE => if not nob97 then ["basis97.ui"] else []
-                        | SOME s => [s]
+                        | SOME s => ["basis97.ui", s]
   exception CompileFailed
   exception FileNotFound
 in

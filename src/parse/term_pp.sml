@@ -24,7 +24,7 @@ in
 end;
 
 fun isSuffix s1 s2 = (* s1 is a suffix of s2 *) let
-  val ss = Substring.all s2
+  val ss = Substring.full s2
   val (pref, suff) = Substring.position s1 ss
 in
   Substring.size suff = String.size s1
@@ -852,7 +852,7 @@ fun pp_term (G : grammar) TyG = let
                 val _ = is_substring (brss ^ "sf") fname orelse
                         raise NotReallyARecord
                 open Substring
-                val (_, brsssguff) = position brss (all s)
+                val (_, brsssguff) = position brss (full s)
                 val dropguff = slice(brsssguff, String.size brss, NONE)
                 val dropdigits = dropl Char.isDigit dropguff
                 val fldname = string(slice(dropdigits, 1, NONE))
@@ -965,7 +965,7 @@ fun pp_term (G : grammar) TyG = let
               end handle HOL_ERR _ =>
                          (String.extract(s,0,SOME (sz - 5)), value, false)
 
-              val ss = Substring.all s
+              val ss = Substring.full s
               val (_, ss) = (* drop initial typename *)
                   Substring.position bigrec_subdivider_string ss
               val ss = (* drop bigrec_subdivider_string *)

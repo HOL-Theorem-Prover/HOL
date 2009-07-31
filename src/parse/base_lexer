@@ -33,7 +33,7 @@
      them to determine the absolute position of fragments in the input
      stream. *)
   fun dolocpragma (st as {r,i,rcopt,...} : extrastate) pos yytext
-    = let val s = Substring.all yytext
+    = let val s = Substring.full yytext
           val sr = Substring.dropl (not o Char.isDigit) s
           val sc = Substring.dropl (Char.isDigit) sr
       in

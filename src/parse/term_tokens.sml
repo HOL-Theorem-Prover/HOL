@@ -90,7 +90,7 @@ fun str_all P s = let
         NONE => true
       | SOME (c, ss') => P c andalso recurse ss'
 in
-  recurse (Substring.all s)
+  recurse (Substring.full s)
 end
 
 fun MkID (s, loc) = let

@@ -144,8 +144,7 @@ end (* local *)
      Misc. support
  ---------------------------------------------------------------------------*)
 
-fun occurs s1 s2 =
-    not(Substring.isEmpty (#2(Substring.position s1 (Substring.all s2))));
+val occurs = String.isSubstring
 
 fun norm_thyname "-" = current_theory()
   | norm_thyname s = s;

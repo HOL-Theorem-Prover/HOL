@@ -34,7 +34,7 @@ struct
   fun addList (cs, clist) = List.foldl (fn (c, cs) => add(cs, c)) cs clist
 
   fun addString (cs, s) =
-    Substring.foldl (fn (c, cs) => add(cs, c)) cs (Substring.all s)
+    Substring.foldl (fn (c, cs) => add(cs, c)) cs (Substring.full s)
 
   fun member(cs, c) = let
     val (d, m) = coords c
