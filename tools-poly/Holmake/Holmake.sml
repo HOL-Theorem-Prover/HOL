@@ -7,18 +7,8 @@
 (* Copyright University of Cambridge, Michael Norrish, 1999-2001 *)
 (* Author: Michael Norrish *)
 
-(*---------------------------------------------------------------------------*)
-(* Magic to ensure that interruptions (SIGINTs) are actually seen by the     *)
-(* linked executable as Interrupt exceptions                                 *)
-(*---------------------------------------------------------------------------*)
-
 structure Holmake =
 struct
-
-  (*
-prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
-val _ = catch_interrupt true;
-*)
 
 open Systeml;
 
@@ -1163,15 +1153,15 @@ in
                                print ("Unquoting "^file^
                                       " raised exception\n");
                                raise CompileFailed)
-               then let val res = poly_compile arg include_flags deps
-                    in
-                      revert();
-                      res
-                    end
-               else (revert(); raise CompileFailed))
+               then
+                 poly_compile arg include_flags deps before revert()
+               else (print ("Unquoting "^file^" ran and failed\n");
+                     revert();
+                     raise CompileFailed))
               handle CompileFailed => raise CompileFailed
                    | e => (revert();
-                           print("Unable to compile: "^file^"\n");
+                           print("Unable to compile: "^file^
+                                 " - raised exception "^exnName e^"\n");
                            raise CompileFailed)
             end
           else poly_compile arg include_flags deps
