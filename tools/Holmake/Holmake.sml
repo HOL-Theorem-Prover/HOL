@@ -963,18 +963,17 @@ in
                                print ("Unquoting "^file^
                                       " raised exception\n");
                                raise CompileFailed)
-               then let
-                   val res =
-                       compile debug ("-q"::(include_flags @ ["-c"] @
-                                             overlay_stringl @ [file]))
-                 in
-                   revert();
-                   res
-                 end
-               else (revert(); raise CompileFailed))
+               then
+                 compile debug ("-q"::(include_flags @ ["-c"] @
+                                       overlay_stringl @ [file])) before
+                 revert()
+               else (print ("Unquoting "^file^" ran and failed\n");
+                     revert();
+                     raise CompileFailed))
               handle CompileFailed => raise CompileFailed
                    | e => (revert();
-                           print("Unable to compile: "^file^"\n");
+                           print("Unable to compile: "^file^
+                                 " - raised exception "^exnName e^"\n");
                            raise CompileFailed)
             end
           else compile debug ("-q"::(include_flags@ ("-c"::(overlay_stringl @
