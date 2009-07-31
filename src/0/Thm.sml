@@ -1119,7 +1119,7 @@ fun lexer (ss1,qs1) =
   case Substring.getc (Lib.deinitcommentss ss1)
                       (* was: (Substring.dropl Char.isSpace ss1) *)
    of NONE => (case qs1
-                of (QUOTE s::qs2) => lexer (Substring.all s,qs2)
+                of (QUOTE s::qs2) => lexer (Substring.full s,qs2)
                  | []             => NONE
                  | _              => ERR "raw lexer" "expected a quotation")
     | SOME (c,ss2) =>
@@ -1168,7 +1168,7 @@ fun parse_raw table =
         | _ => ERR "glamb" "expected an identifier"
  in
   fn (QUOTE s::qs) =>
-       (case parse ([], (Substring.all s,qs))
+       (case parse ([], (Substring.full s,qs))
          of ([v], _)  => v
           | otherwise => ERR "raw term parser" "parse failed")
    | otherwise => ERR "raw term parser" "expected a quotation"
