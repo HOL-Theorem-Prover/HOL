@@ -69,7 +69,7 @@ fun outputc strm s = output(strm,s)
 val close_in       = TextIO.closeIn
 val close_out      = TextIO.closeOut
 val flush_out      = TextIO.flushOut
-val input_line     = TextIO.inputLine
+fun input_line is  = case TextIO.inputLine is of NONE => "" | SOME s => s
 val end_of_stream  = TextIO.endOfStream
 
 (*---------------------------------------------------------------------------

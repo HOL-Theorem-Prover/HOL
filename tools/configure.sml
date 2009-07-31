@@ -52,11 +52,16 @@ val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 val version_number = 6
 val release_string = "Kananaskis"
 
+
 val _ = Meta.quietdec := true;
 app load ["OS", "Substring", "BinIO", "Lexing", "Nonstdio"];
 structure FileSys = OS.FileSys
 structure Process = OS.Process
 structure Path = OS.Path
+
+fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+             Process.exit Process.failure)
+
 
 fun check_is_dir role dir =
     (FileSys.isDir dir handle e => false) orelse
@@ -186,6 +191,10 @@ open Systeml;
      Now compile Systeml.sml in tools/Holmake/
  ---------------------------------------------------------------------------*)
 
+val sigobj = fullPath [holdir, "sigobj"]
+fun canread s = FileSys.access(s, [FileSys.A_READ])
+fun to_sigobj s = bincopy s (fullPath [sigobj, s]);
+
 let
   val _ = print "Compiling system specific functions ("
   val modTime = FileSys.modTime
@@ -193,17 +202,16 @@ let
   val sigfile = fullPath [holmakedir, "Systeml.sig"]
   val uifile = fullPath [holmakedir, "Systeml.ui"]
   val rebuild_sigfile =
-      not (FileSys.access(uifile, [FileSys.A_READ])) orelse
+      not (canread uifile) orelse
       Time.>(modTime sigfile, modTime uifile) orelse
       (* if the ui in sigobj is too small to be a compiled mosml thing, it
          is probably a Poly/ML thing from a previous installation. If it's
          not there at all, we need to recompile and copy across too. *)
-      (FileSys.fileSize (fullPath [holdir, "sigobj", "Systeml.ui"]) < 100
+      (FileSys.fileSize (fullPath [sigobj, "Systeml.ui"]) < 100
        handle SysErr _ => true)
   fun die () = (print ")\nFailed to compile system-specific code\n";
                 Process.exit Process.failure)
   val systeml = fn l => if systeml l <> Process.success then die() else ()
-  fun to_sigobj s = bincopy s (fullPath [holdir, "sigobj", s])
 in
   FileSys.chDir holmakedir;
   if rebuild_sigfile then (systeml [compiler, "-c", "Systeml.sig"];
@@ -216,7 +224,31 @@ in
   FileSys.chDir dir_0
 end;
 
-
+(* ----------------------------------------------------------------------
+    Compiling Basis97 "fix"
+   ---------------------------------------------------------------------- *)
+let
+  val _ = print "Compiling Basis 1997 update for Moscow ML\n"
+  val modTime = FileSys.modTime
+  val dir_0 = FileSys.getDir()
+  val _ = FileSys.chDir holmakedir
+  val smlfile = fullPath [holmakedir, "basis97.sml"]
+  val uifile = fullPath [holmakedir, "basis97.ui"]
+  val rebuild_basis = not (canread uifile) orelse
+                      Time.>(modTime smlfile, modTime uifile)
+  val copy_basis = not (canread (fullPath [sigobj, "basis97.ui"])) orelse
+                   not (canread (fullPath [sigobj, "basis97.uo"])) orelse
+                   rebuild_basis
+in
+  if rebuild_basis then
+    if systeml [compiler, "-c", "-toplevel", "basis97.sml"] =
+       OS.Process.success
+    then ()
+    else die "Couldn't compile basis97.sml"
+  else ();
+  if copy_basis then app to_sigobj ["basis97.ui", "basis97.uo"] else ();
+  FileSys.chDir dir_0
+end;
 
 (*---------------------------------------------------------------------------
           String and path operations.
@@ -282,23 +314,24 @@ val _ =
      val systeml   = fn clist => if systeml clist <> Process.success then
                                    raise Fail ""
                                  else ()
+     val b97 = "basis97.ui"
   in
     systeml [yaccer, "Parser.grm"];
     systeml [lexer, "Lexer.lex"];
-    systeml [compiler, "-c", "Parser.sig"];
-    systeml [compiler, "-c", "Parser.sml"];
-    systeml [compiler, "-c", "Lexer.sml" ];
-    systeml [compiler, "-c", "Holdep.sml"];
-    systeml [compiler, "-c", "internal_functions.sig"];
-    systeml [compiler, "-c", "internal_functions.sml"];
-    systeml [compiler, "-c", "Holmake_types.sig"];
-    systeml [compiler, "-c", "Holmake_types.sml"];
-    systeml [compiler, "-c", "ReadHMF.sig"];
-    systeml [compiler, "-c", "ReadHMF.sml"];
+    systeml [compiler, "-c", b97, "Parser.sig"];
+    systeml [compiler, "-c", b97, "Parser.sml"];
+    systeml [compiler, "-c", b97, "Lexer.sml" ];
+    systeml [compiler, "-c", b97, "Holdep.sml"];
+    systeml [compiler, "-c", b97, "internal_functions.sig"];
+    systeml [compiler, "-c", b97, "internal_functions.sml"];
+    systeml [compiler, "-c", b97, "Holmake_types.sig"];
+    systeml [compiler, "-c", b97, "Holmake_types.sml"];
+    systeml [compiler, "-c", b97, "ReadHMF.sig"];
+    systeml [compiler, "-c", b97, "ReadHMF.sml"];
     if OS <> "winNT" then
-      systeml [compiler, "-standalone", "-o", bin, "Holmake.sml"]
+      systeml [compiler, "-standalone", "-o", bin, b97, "Holmake.sml"]
     else
-      systeml [compiler, "-o", bin, "Holmake.sml"];
+      systeml [compiler, "-o", bin, b97, "Holmake.sml"];
     mk_xable bin;
     FileSys.chDir cdir
   end

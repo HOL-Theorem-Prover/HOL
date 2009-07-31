@@ -522,12 +522,7 @@ fun say s = if !saying then TextIO.print s else ();
 fun mlquote s = String.concat ["\"",String.toString s,"\""]
 fun quote s = String.concat ["\"",s,"\""]
 
-fun is_substring s1 s2 = let
-  val ss = Substring.all s2
-  val (pref, suff) = Substring.position s1 ss
-in
-  Substring.size suff >= String.size s1
-end
+val is_substring = String.isSubstring
 
 fun prime s = s^"'";
 
@@ -699,7 +694,7 @@ fun deinitcomment0 ss n =
             deinitcomment0 ss' n
 
 fun deinitcommentss ss =                   deinitcomment0               ss  0
-fun deinitcomment   s  = Substring.string (deinitcomment0 (Substring.all s) 0)
+fun deinitcomment   s  = Substring.string (deinitcomment0 (Substring.full s) 0)
 
 (*---------------------------------------------------------------------------*)
 (* Yet another variant of the sum type, used for the failure monad           *)

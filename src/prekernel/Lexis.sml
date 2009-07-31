@@ -263,7 +263,7 @@ end;
 
 fun tyvar_vary s =
  let open Substring
-     val ss = all s
+     val ss = full s
      val (nonletters, letters) = splitr Char.isAlpha ss
      val szletters = size letters
  in
@@ -271,34 +271,34 @@ fun tyvar_vary s =
   then case sub(letters, szletters - 1)
         of #"z" => concat [nonletters,
                            slice(letters, 0, SOME (szletters - 1)),
-                           all "a0"]
+                           full "a0"]
          | #"Z" => concat [nonletters,
                            slice(letters, 0, SOME (szletters - 1)),
-                           all "a0"]
+                           full "a0"]
          | c => concat [nonletters,
                         slice(letters, 0, SOME (szletters - 1)),
-                        all (str (chr (ord c + 1)))]
+                        full (str (chr (ord c + 1)))]
   else let val (nondigits, digits) = splitr Char.isDigit ss
            val szdigits = size digits
        in
         if szdigits > 0
         then let val n = valOf (Int.fromString (string digits))
-             in concat [nondigits, all (Int.toString (n + 1))]
+             in concat [nondigits, full (Int.toString (n + 1))]
              end
-        else concat [nondigits, all "0"]
+        else concat [nondigits, full "0"]
        end
  end
 
 fun tmvar_vary s =
  let open Substring
-     val ss = all s
+     val ss = full s
      val (nondigits, digits) = splitr Char.isDigit ss
  in
    if size digits > 0
    then let val n = valOf (Int.fromString (string digits))
-        in concat [nondigits, all (Int.toString (n + 1))]
+        in concat [nondigits, full (Int.toString (n + 1))]
         end
-  else concat [nondigits, all "0"]
+  else concat [nondigits, full "0"]
 end
 
 fun gen_variant vfn avoids s =

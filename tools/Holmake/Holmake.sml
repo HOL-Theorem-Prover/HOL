@@ -46,11 +46,7 @@ fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
 
-val spacify =
-   let fun enspace (x::(rst as _::_)) = x::" "::enspace rst
-         | enspace l = l
-   in String.concat o enspace
-   end;
+val spacify = String.concatWith " "
 
 fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
 
@@ -90,7 +86,7 @@ fun realspace_delimited_fields s = let
           | _ => inword [] words ss
         end
 in
-  outword [] (all s)
+  outword [] (full s)
 end
 
 
@@ -169,20 +165,10 @@ fun isProperSuffix s1 s2 = let
 in
   if sz1 >= sz2 then NONE
   else let
-    val (prefix, suffix) = splitAt(all s2, sz2 - sz1)
+    val (prefix, suffix) = splitAt(full s2, sz2 - sz1)
   in
     if string suffix = s1 then SOME (string prefix) else NONE
   end
-end
-
-fun split_file s = let
-  open Substring
-  val (base, ext) = splitr (fn c => c <> #".") (all s)
-in
-  if (size base <> 0) then
-    (string (slice(base, 0, SOME (size base - 1))), string ext)
-  else
-    (s, "")
 end
 
 fun toCodeType s = let
@@ -197,13 +183,16 @@ in
   end
 end
 
-fun toFile s0 =
-  case split_file s0 of
-    (s, "sml") => SML (toCodeType s)
-  | (s, "sig") => SIG (toCodeType s)
-  | (s, "uo")  => UO (toCodeType s)
-  | (s, "ui")  => UI (toCodeType s)
+fun toFile s0 = let
+  val {base = s, ext} = OS.Path.splitBaseExt s0
+in
+  case ext of
+    SOME "sml" => SML (toCodeType s)
+  | SOME "sig" => SIG (toCodeType s)
+  | SOME "uo"  => UO (toCodeType s)
+  | SOME "ui"  => UI (toCodeType s)
   |    _       => Unhandled s0
+end
 
 fun codeToString c =
   case c of
@@ -257,7 +246,7 @@ fun get_dependencies_from_file depfile = let
     val lines = String.fields (fn c => c = #"\n") (collapse_bslash_lines s)
     fun process_line line = let
       val (lhs0, rhs0) = Substring.splitl (fn c => c <> #":")
-                                          (Substring.all line)
+                                          (Substring.full line)
       val lhs = Substring.string lhs0
       val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
         handle Subscript => ""
@@ -396,6 +385,7 @@ fun parse_command_line list = let
   val (rem, user_hmakefile) =
     find_one_pairtag "--holmakefile" NONE SOME rem
   val (rem, no_overlay) = find_toggle "--no_overlay" rem
+  val (rem, nob97)= find_toggle "--no_basis97" rem
   val (rem, user_overlay) = find_one_pairtag "--overlay" NONE SOME rem
   val (rem, cmdl_MOSMLDIRs) = find_pairs "--mosmldir" rem
   val (rem, interactive_flag) = find_alternative_tags ["--interactive", "-i"]
@@ -412,7 +402,7 @@ in
    no_hmakefile = no_hmakefile,
    allfast = allfast, fastfiles = fastfiles,
    user_hmakefile = user_hmakefile,
-   no_overlay = no_overlay,
+   no_overlay = no_overlay, nob97 = nob97,
    user_overlay = user_overlay,
    interactive_flag = interactive_flag,
    cmdl_HOLDIR =
@@ -443,7 +433,7 @@ end
 val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      always_rebuild_deps, interactive_flag,
      additional_includes = cline_additional_includes,
-     cmdl_HOLDIR, cmdl_MOSMLDIR,
+     cmdl_HOLDIR, cmdl_MOSMLDIR, nob97,
      no_sigobj = cline_no_sigobj, no_prereqs,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
      user_overlay, keep_going_flag, quiet_flag, do_logging_flag} =
@@ -541,7 +531,7 @@ end
 
 fun process_hypat_options s = let
   open Substring
-  val ss = all s
+  val ss = full s
   fun recurse (noecho, ignore_error, ss) =
       if noecho andalso ignore_error then
         (true, true, string (dropl (fn c => c = #"@" orelse c = #"-") ss))
@@ -604,10 +594,13 @@ val additional_includes =
 
 val hmake_preincludes = includify (envlist "PRE_INCLUDES")
 val hmake_no_overlay = member "NO_OVERLAY" hmake_options
+val hmake_no_basis97 = member "NO_BASIS97" hmake_options
 val hmake_no_sigobj = member "NO_SIGOBJ" hmake_options
 val hmake_qof = member "QUIT_ON_FAILURE" hmake_options
 val hmake_noprereqs = member "NO_PREREQS" hmake_options
 val extra_cleans = envlist "EXTRA_CLEANS"
+
+val nob97 = nob97 orelse hmake_no_basis97
 
 val quit_on_failure = quit_on_failure orelse hmake_qof
 val no_prereqs = no_prereqs orelse hmake_noprereqs
@@ -633,10 +626,12 @@ val hmakefile_env = let
   val stdincludes =
       spacify (map Systeml.protect (hmake_preincludes @ std_include_flags)) ^
       " " ^ addincludes
+  val basis_string = if nob97 then [] else [LIT "basis97.ui"]
 in
   (fn s =>
       case s of
-        "HOLMOSMLC" => [VREF "MOSMLCOMP", LIT (" -q "^stdincludes)]
+        "HOLMOSMLC" => [VREF "MOSMLCOMP", LIT (" -q "^stdincludes)] @
+                       basis_string
       | "HOLMOSMLC-C" => let
           val overlaystring = case actual_overlay of NONE => "" | SOME s => s
         in
@@ -933,7 +928,9 @@ fun build_command c arg = let
   val include_flags = hmake_preincludes @ std_include_flags @
                       additional_includes
  (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
-  val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
+  val overlay_stringl = case actual_overlay of
+                          NONE => if not nob97 then ["basis97.ui"] else []
+                        | SOME s => [s]
   exception CompileFailed
   exception FileNotFound
 in

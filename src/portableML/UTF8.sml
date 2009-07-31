@@ -70,12 +70,12 @@ fun getChar s = let
             end
         end
 in
-  recurse (all s)
+  recurse (full s)
 end
 
 fun size s = let
   open Substring
-  val ss = all s
+  val ss = full s
   val sz = size ss
   fun recurse acc pos =
       if pos = sz then acc
@@ -105,7 +105,7 @@ end
 
 fun lastChar s = let
   open Substring
-  val ss = all s
+  val ss = full s
   val lastpos = size ss - 1
   fun goback pos =
       if pos < 0 then raise BadUTF8 (str (sub(ss,0)))

@@ -2,6 +2,7 @@ OPTIONS = NO_OVERLAY
 FTAG_UI = $(protect $(SIGOBJ)/FinalTag-sig.ui)
 FTYPE_UI = $(protect $(SIGOBJ)/FinalType-sig.ui)
 FTERM_UI = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
+BASIS_UI = $(protect $(SIGOBJ)/basis97.ui)
 
 FTAG_UID = $(dprot $(SIGOBJ)/FinalTag-sig.ui)
 FTERM_UID = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
@@ -9,6 +10,7 @@ TAG_UID = $(dprot $(SIGOBJ)/Tag.ui)
 LIB_UID = $(dprot $(SIGOBJ)/Lib.ui)
 PORTABLE_UID = $(dprot $(SIGOBJ)/Portable.ui)
 COUNT_UID = $(dprot $(SIGOBJ)/Count.ui)
+BASIS_UID = $(dprot $(SIGOBJ)/basis97.ui)
 
 
 Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID)
@@ -52,10 +54,10 @@ Net-sig.uo: Net-sig.sml
 	HOLMOSMLC -c -toplevel Net-sig.sml
 
 Overlay.uo: Overlay.sml CoreKernel-sig.uo Type.uo Term.uo $(FTAG_UID) Thm.uo \
-            TheoryPP.uo Theory.uo Definition.uo Net.uo
-	HOLMOSMLC -c -toplevel CoreKernel-sig.ui Type.ui Term.ui Thm.ui \
-                               TheoryPP.ui Definition.ui $(FTAG_UI) Theory.ui \
-                               Net.ui  Overlay.sml
+            TheoryPP.uo Theory.uo Definition.uo Net.uo $(BASIS_UID)
+	HOLMOSMLC -c -toplevel $(BASIS_UI) CoreKernel-sig.ui Type.ui Term.ui \
+	                       Thm.ui TheoryPP.ui Definition.ui $(FTAG_UI) \
+                               Theory.ui Net.ui  Overlay.sml
 
 HolKernel.uo: Overlay.uo HolKernel.sml
 	HOLMOSMLC -c -structure Overlay.ui HolKernel.sml

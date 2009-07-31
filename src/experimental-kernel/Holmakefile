@@ -11,10 +11,9 @@ FTERM = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
 
 LIBD = $(dprot $(SIGOBJ)/Lib.ui)
 
-
 HOLSETD = $(dprot $(SIGOBJ)/HOLset.ui)
 
-Overlay.uo: Overlay.sml Definition.ui Net.ui $(FTAGD) $(FTYPED) $(FTERMD)
+Overlay.uo: Overlay.sml Definition.ui Net.ui $(FTAGD) $(FTYPED) $(FTERMD) $(BASISD)
 	$(HOLMOSMLC) -c -toplevel $(FTAG) $(FTYPE) $(FTERM) Definition.ui \
                                   Net.ui Overlay.sml
 

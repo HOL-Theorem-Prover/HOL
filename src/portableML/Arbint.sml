@@ -100,7 +100,7 @@ fun pp_int ppstrm bi = PP.add_string ppstrm (toString bi);
 
 fun fromString s = let
   open Substring
-  val (pfx, rest) = splitl (fn c => c = #"-" orelse c = #"~") (all s)
+  val (pfx, rest) = splitl (fn c => c = #"-" orelse c = #"~") (full s)
   val is_positive = Int.mod(size pfx, 2) = 0
 in
   (is_positive, Arbnum.fromString (string rest))

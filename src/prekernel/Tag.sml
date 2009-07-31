@@ -40,7 +40,7 @@ val isDisk = equal disk_only_tag;
 
 fun read s =
  let open Substring
- in if isEmpty(dropl Char.isPrint (all s))
+ in if isEmpty(dropl Char.isPrint (full s))
      then TAG ([s],[])
      else raise ERR "read"
            (Lib.quote s^" has unprintable characters")
@@ -76,7 +76,7 @@ fun pp_to_disk ppstrm (TAG (olist,_)) =
  let open Portable
    val {add_string,add_break,begin_block,end_block,...} = with_ppstream ppstrm
    val olist' = map Lib.mlquote olist
- in 
+ in
     begin_block CONSISTENT 0;
     add_string "[";
       begin_block INCONSISTENT 1;

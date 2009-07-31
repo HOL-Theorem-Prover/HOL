@@ -74,7 +74,7 @@ fun getQual s =
       val len' = size s - 1
       fun parse n =
         if sub(s, n) = #"." then
-	    extract(s, 0, SOME n)
+	    String.extract(s, 0, SOME n)
         else
 	    parse (n+1)
   in parse 0 end;

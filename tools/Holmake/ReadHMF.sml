@@ -6,19 +6,20 @@ open Holmake_types
 fun readline lnum strm = let
   fun recurse (lnum, acc) latest =
       case latest of
-        "" => if null acc then NONE
+        NONE => if null acc then NONE
               else SOME (lnum + 1, String.concat (List.rev acc))
-      | "\n" => SOME (lnum + 1, String.concat (List.rev acc))
-      | s => if String.sub(s, size s - 2) = #"\\" then
-               recurse (lnum + 1,
-                        " " :: String.extract(s, 0, SOME (size s - 2)) :: acc)
-                       (TextIO.inputLine strm)
-             else
-               SOME
-                 (lnum + 1,
-                  String.concat
-                    (List.rev (String.extract(s, 0, SOME (size s - 1)) ::
-                               acc)))
+      | SOME "\n" => SOME (lnum + 1, String.concat (List.rev acc))
+      | SOME s =>
+        if String.sub(s, size s - 2) = #"\\" then
+          recurse (lnum + 1,
+                   " " :: String.extract(s, 0, SOME (size s - 2)) :: acc)
+                  (TextIO.inputLine strm)
+        else
+          SOME
+            (lnum + 1,
+             String.concat
+               (List.rev (String.extract(s, 0, SOME (size s - 1)) ::
+                          acc)))
 in
   recurse (lnum, []) (TextIO.inputLine strm)
 end
@@ -49,7 +50,7 @@ fun error (B r) s =
 
 fun strip_leading_wspace s = let
   open Substring
-  val ss = all s
+  val ss = full s
 in
   string (dropl (fn c => c = #" " orelse c = #"\r") ss)
 end
