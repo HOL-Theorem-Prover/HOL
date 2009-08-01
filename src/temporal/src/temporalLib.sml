@@ -1385,7 +1385,7 @@ fun SMV_RUN_FILE smv_file =
   val file_in = TextIO.openIn((!smv_tmp_dir)^"smv_out")
   val s = ref (TextIO.inputLine file_in)
   val sl = ref ([]:string list)
-  val _ = while ((!s)<>"") do (sl:=(!s)::(!sl); s:=TextIO.inputLine file_in)
+  val _ = while ((!s)<>NONE) do (sl:=(valOf (!s))::(!sl); s:=TextIO.inputLine file_in)
   val _ = TextIO.closeIn file_in
   val p = interpret_smv_output(rev(!sl))
   val _ = Process.system("rm "^(!smv_tmp_dir)^"smv_file.smv")
