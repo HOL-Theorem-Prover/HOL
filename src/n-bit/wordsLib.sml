@@ -198,7 +198,7 @@ val thms =
    n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w ^n` sw2sw_def,
    word_len_def, word_L_def, word_H_def, word_T_def,
    word_join_def, SPECL [`^n2w ^n`,`n2w ^m:'b word`] word_concat_def,
-   word_reverse_n2w, word_modify_n2w, word_log2_n2w,
+   word_reverse_n2w, word_modify_n2w, SPEC `^a` word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
    word_2comp_compute, word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
    MOD_WL word_add_n2w, MOD_WL word_mul_n2w,
