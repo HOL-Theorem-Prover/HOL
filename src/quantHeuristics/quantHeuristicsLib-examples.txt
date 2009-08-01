@@ -633,7 +633,6 @@ val t = ``!l. (l = h::h2)``
 val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t
 val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
 
-
 val t = ``!l. (NULL l)``
 val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
 
@@ -652,11 +651,13 @@ val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
   negation level and universal ones under odd. Moreover, it is possible
   to keep free variables in the instantiations.*)
 
-set_goal ([], ``!x:num. (!z:num. P x z) ==> ?a:num b:num. Q a b z``)
+val t = ``!x:num. (!z:num. P x z) ==> ?a:num b:num. Q a b z``;
+set_goal ([], t)
 (*Result      ``!x    . (        P x 0) ==> ?      b a'. Q (SUC a') b z``*)
   
 
-e (QUANT_TAC [("z", `0`, []),
+e (QUANT_INST_TAC [("z", `0`, []),
 	   ("a", `SUC a'`, [`a'`])]);
 
 
+``(?x:num. P x) /\ (?x. x \/ y)``

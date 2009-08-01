@@ -294,6 +294,100 @@ end;
 
 
 
+(*Renames the bound variables in a term to make them distinct*)
+
+
+local
+fun vc vL t =
+   case dest_term t of
+       VAR  _        => (vL, NONE)
+     | CONST _       => (vL, NONE)
+     | COMB (t1, t2) => 
+       let
+          val (vL' , thm1_opt) = vc vL t1;
+          val (vL'', thm2_opt) = vc vL' t2;
+          val thm_opt = if not (isSome thm1_opt orelse isSome thm2_opt) then NONE else
+              let
+                 val thm1 = if (isSome thm1_opt) then valOf thm1_opt else REFL t1;
+                 val thm2 = if (isSome thm2_opt) then valOf thm2_opt else REFL t2;
+              in
+                 SOME (MK_COMB (thm1, thm2))
+              end;                    
+       in
+          (vL'', thm_opt)
+       end
+     | LAMB (v, _) => 
+       let
+          val v' = variant vL v;
+          val (thm_v_opt,b) = 
+              if aconv v v' then (NONE,body t) else 
+              let
+                 val thm_v = ALPHA_CONV v' t;
+                 val b = body (rhs (concl thm_v))
+              in 
+                 (SOME thm_v, b)
+              end;
+          val (vL' , thm_b_opt) = vc (v'::vL) b;
+          val thm_opt = if not (isSome thm_v_opt orelse isSome thm_b_opt) then NONE else
+              let
+                 val thm_v = if (isSome thm_v_opt) then valOf thm_v_opt else REFL t;
+                 val thm_b = if (isSome thm_b_opt) then valOf thm_b_opt else REFL b;
+              in
+                 SOME (TRANS thm_v (ABS v' thm_b))
+              end;                    
+       in
+         (v'::vL', thm_opt)
+       end;
+in
+   fun VARIANT_CONV fvL t =
+   let
+       val (_, thm_opt) = vc (append fvL (free_vars t)) t;
+   in
+      if isSome thm_opt then valOf thm_opt else raise UNCHANGED
+   end;
+
+
+
+   fun VARIANT_TAC fvL (asm, t) =
+   let
+       val fvL0 = append fvL (flatten (map free_vars (t::asm)));
+
+       fun vc_asms fvL [] = ([],[])
+         | vc_asms fvL (asm::L) =
+             let
+                val (fvL', thm_opt) = (vc fvL asm);
+                val thm = if isSome thm_opt then valOf thm_opt else REFL asm;
+                val t' = rhs (concl thm);
+                val (tL, thmL) = vc_asms fvL' L;
+             in
+                ((t'::tL),(thm::thmL))
+             end
+       val (t'::asm', t_thm::asm_thms) = vc_asms fvL0 (t::(rev asm))
+
+       val new_goal = (rev asm', t');
+       (*val goal_thm = mk_thm new_goal*)
+
+       fun valid goal_thm =
+           let
+              val thm0 = EQ_MP (GSYM t_thm) goal_thm
+              fun asm_mp (a_thm,thm0) = 
+                let
+                  val a_imp_thm = (fst (EQ_IMP_RULE a_thm))
+                  val thm1 = DISCH (snd (dest_imp (concl a_imp_thm))) thm0
+                  val thm2 = MP thm1 (UNDISCH a_imp_thm)
+                in
+                  thm2
+                end;
+           in
+              foldl asm_mp thm0 asm_thms
+           end;
+   in
+      ([new_goal], fn thmL => (valid (hd thmL)))
+   end;
+end
+
+
+
 (*******************************************************
  * Contextual rewriting
  * Before trying to find guesses for a variable, it
@@ -2769,8 +2863,11 @@ in
                 else
                    make_exists_imp_thm (mk_exists (v,b)) i fvL
 
-      val thm2 = CONV_RULE (LHS_CONV 
-                   (QUANT_CONV (REWR_CONV (GSYM b_thm)))) thm
+      val b_thm_conv = QUANT_CONV (REWR_CONV (GSYM b_thm))
+      val thm2 = if is_eq (concl thm) then 
+                   CONV_RULE (LHS_CONV b_thm_conv) thm
+                 else
+                   CONV_RULE (RAND_CONV b_thm_conv) thm
 
       val thm3 = if (qvL = []) then thm2 else
 		 let
@@ -3194,6 +3291,8 @@ fun QUANT_INST_TAC L (asm,t) =
          (K true) (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt false L) [])
     (asm,t)
   end;
+
+
 
 
 fun QUANT_INST_CONV L t =
