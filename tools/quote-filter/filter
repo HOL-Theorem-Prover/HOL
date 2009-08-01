@@ -17,7 +17,7 @@ fun print (QFS {output_stream, ...}) s = TextIO.output(output_stream, s)
 fun drop_upto c s = let
   (* returns the substring of s that begins at the first occurrence of c *)
   open Substring
-  val ss = all s
+  val ss = full s
   val remainder = dropl (fn c' => c <> c') ss
 in
   string remainder
@@ -50,7 +50,7 @@ fun qnewline arg (yypos,yytext) =
      flushOut arg)
 
 fun dolocpragma (arg as QFS {output_stream, row, rowstart, ...}) (s,pos)
-  = let val ss = Substring.all s
+  = let val ss = Substring.full s
         val sr = Substring.dropl (not o Char.isDigit) ss
         val sc = Substring.dropl (Char.isDigit) sr
     in

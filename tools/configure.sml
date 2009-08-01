@@ -452,20 +452,20 @@ val _ = let
   val tgt = fullPath [holdir, "bin/unquote"]
   val cwd = FileSys.getDir()
   val _ = FileSys.chDir (fullPath [holdir, "tools/quote-filter"])
+  val _ = systeml [fullPath [holdir, "bin/Holmake"], "cleanAll"]
 in
-  if systeml [fullPath [holdir, "bin/Holmake"]] = Process.success
-  then let val instrm = BinIO.openIn tgt0
-           val ostrm = BinIO.openOut tgt
-           val v = BinIO.inputAll instrm
-       in
-         BinIO.output(ostrm, v);
-         BinIO.closeIn instrm;
-         BinIO.closeOut ostrm;
-         mk_xable tgt;
-         print "Quote-filter built\n"
-       end
-       handle e => print "0.Quote-filter build failed (continuing anyway)\n"
-  else             print "1.Quote-filter build failed (continuing anyway)\n"
+  if systeml [fullPath [holdir, "bin/Holmake"]] = Process.success then let
+      val instrm = BinIO.openIn tgt0
+      val ostrm = BinIO.openOut tgt
+      val v = BinIO.inputAll instrm
+    in
+      BinIO.output(ostrm, v);
+      BinIO.closeIn instrm;
+      BinIO.closeOut ostrm;
+      mk_xable tgt;
+      print "Quote-filter built\n"
+    end handle e => print "0.Quote-filter build failed (continuing anyway)\n"
+  else              print "1.Quote-filter build failed (continuing anyway)\n"
   ;
   FileSys.chDir cwd
 end

@@ -5,7 +5,7 @@ DEPS = $(if $(MOSMLC),quote-filter.uo filter.uo,poly-unquote.ML filter.sml)
 all: quote-filter selftest
 
 quote-filter: $(DEPS)
-	$(if $(MOSMLC), $(MOSMLC) -o quote-filter quote-filter.uo,\
+	$(if $(MOSMLC), $(HOLMOSMLC) -o quote-filter quote-filter.uo,\
            poly < poly-unquote.ML && \
            gcc -o quote-filter unquote.o $(POLYLIBS) -lpolymain -lpolyml)
 
