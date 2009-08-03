@@ -7,31 +7,16 @@ MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 all: makebase.exe Doc2Html.exe Doc2Tex.exe Doc2Txt.exe
 
 makebase.exe : runmakebase.uo MyDatabase.uo Htmlsigs.uo Parser.grm.uo Parsspec.uo Printbase.uo makebase.uo Symbolic.uo
-	HOLMOSMLC -o makebase.exe MyDatabase.uo runmakebase.uo
+	$(HOLMOSMLC) -I $(MLYACCLIB) $(MLYACCLIB_UIS) -o makebase.exe MyDatabase.uo runmakebase.uo
 
 Doc2Html.exe : runDoc2Html.uo Doc2Html.uo ParseDoc.uo Symbolic.uo Flash.uo
-	HOLMOSMLC -o Doc2Html.exe runDoc2Html.uo
+	$(HOLMOSMLC) -o Doc2Html.exe runDoc2Html.uo
 
 Doc2Tex.exe : runDoc2Tex.uo Doc2Tex.uo ParseDoc.uo Symbolic.uo Flash.uo
-	MOSMLC -o Doc2Tex.exe runDoc2Tex.uo
+	$(HOLMOSMLC) -o Doc2Tex.exe runDoc2Tex.uo
 
 Doc2Txt.exe: runDoc2Txt.uo Doc2Txt.uo ParseDoc.uo Symbolic.uo Flash.uo
-	MOSMLC -o Doc2Txt.exe runDoc2Txt.uo
-
-Doc2Tex.uo Doc2Tex.ui: Doc2Tex.sml MySubstring.uo ParseDoc.ui
-	$(MOSMLC) MySubstring.ui -c $<
-
-Doc2Txt.uo Doc2Txt.ui: Doc2Txt.sml MySubstring.uo ParseDoc.ui
-	$(MOSMLC) MySubstring.ui -c $<
-
-Doc2Html.uo Doc2Html.ui: Doc2Html.sml MySubstring.uo ParseDoc.ui Symbolic.ui Flash.ui
-	$(MOSMLC) -I $(protect $(SIGOBJ)) MySubstring.ui -c $<
-
-ParseDoc.ui: ParseDoc.sig MySubstring.uo
-	$(MOSMLC) MySubstring.ui -c $<
-
-ParseDoc.uo: ParseDoc.sml MySubstring.uo Symbolic.ui
-	$(MOSMLC) MySubstring.ui -c $<
+	$(HOLMOSMLC) -o Doc2Txt.exe runDoc2Txt.uo
 
 Lexer.lex.sml: Lexer.lex
 	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
@@ -40,19 +25,10 @@ Parser.grm-sig.sml Parser.grm.sml: Parser.grm
 	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<
 	$(MV) Parser.grm.sig Parser.grm-sig.sml
 
-MySubstring.uo MySubstring.ui: MySubstring.sml
-	$(MOSMLC) -c -toplevel $<
-
 MyWord32.uo MyWord32.ui: MyWord32.sml
 	$(MOSMLC) -c -toplevel $<
 
-MyCharVector.uo MyCharVector.ui: MyCharVector.sml
-	$(MOSMLC) -c -toplevel $<
-
 MySML90.uo MySML90.ui: MySML90.sml
-	$(MOSMLC) -c -toplevel $<
-
-MyTextIO.uo MyTextIO.ui: MyTextIO.sml
 	$(MOSMLC) -c -toplevel $<
 
 MyDatabase.uo MyDatabase.ui: MyDatabase.sml MyDatabase-sig.ui
@@ -61,11 +37,11 @@ MyDatabase.uo MyDatabase.ui: MyDatabase.sml MyDatabase-sig.ui
 MyDatabase-sig.uo MyDatabase-sig.ui: MyDatabase-sig.sml
 	$(MOSMLC) -c -toplevel $<
 
-HOLPage.uo: HOLPage.sml MySubstring.ui MyDatabase.ui
-	$(MOSMLC) -c MySubstring.ui MyDatabase.ui $<
+HOLPage.uo: HOLPage.sml MyDatabase.ui
+	$(HOLMOSMLC) -c MyDatabase.ui $<
 
-Htmlsigs.uo: Htmlsigs.sml MySubstring.ui Htmlsigs.ui MyDatabase.ui
-	$(MOSMLC) -c MySubstring.ui MyDatabase.ui $<
+Htmlsigs.uo: Htmlsigs.sml Htmlsigs.ui MyDatabase.ui
+	$(HOLMOSMLC) -c MyDatabase.ui $<
 
 Htmlsigs.ui: Htmlsigs.sig MyDatabase.ui
 	$(MOSMLC) -c MyDatabase.ui $<
@@ -79,11 +55,11 @@ Parser.grm-sig.ui Parser.grm-sig.uo: Parser.grm-sig.sml Asynt.uo
 Parser.grm.uo: Parser.grm.sml Parser.grm-sig.ui
 	$(MOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) Parser.grm-sig.ui $<
 
-Lexer.lex.ui Lexer.lex.uo: Lexer.lex.sml Parser.grm-sig.ui MyCharVector.ui
-	$(MOSMLC) -toplevel -c Parser.grm-sig.ui MyCharVector.ui $<
+Lexer.lex.ui Lexer.lex.uo: Lexer.lex.sml Parser.grm-sig.ui
+	$(HOLMOSMLC) -toplevel -c Parser.grm-sig.ui $<
 
-makebase.uo: makebase.sml MySubstring.ui MyTextIO.ui MyDatabase.ui Symbolic.ui Htmlsigs.ui Parsspec.uo Keepers.uo Printbase.uo HOLPage.uo
-	$(MOSMLC) -I $(protect $(SIGOBJ)) -c MySubstring.ui MyTextIO.ui MyDatabase.ui $<
+makebase.uo: makebase.sml MyDatabase.ui Symbolic.ui Htmlsigs.ui Parsspec.uo Keepers.uo Printbase.uo HOLPage.uo
+	$(HOLMOSMLC) -I $(protect $(SIGOBJ)) -c MyDatabase.ui $<
 
 Printbase.ui: Printbase.sig MyDatabase.ui
 	$(MOSMLC) -c MyDatabase.ui $<

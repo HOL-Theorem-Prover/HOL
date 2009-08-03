@@ -1,8 +1,7 @@
 signature Profile =
 sig
 
-type call_info = {usr : Time.time, sys : Time.time,
-                  gc : Time.time, n : int}
+type call_info = {usr : Time.time, sys : Time.time, gc : Time.time, n : int}
 
 val profile : string -> ('a -> 'b) -> 'a -> 'b
 
@@ -19,4 +18,3 @@ val output_profile_results : TextIO.outstream -> (string * call_info) list ->
                              unit
 
 end
-

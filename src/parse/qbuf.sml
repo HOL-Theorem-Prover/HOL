@@ -32,7 +32,7 @@ struct
        if s should include a symbol character followed by the left-comment
        delimiter  that is '(' '*', then return the same string but with
        a space between the leading symbol and the comment delimiter. *)
-    val ss = Substring.all s
+    val ss = Substring.full s
     fun recurse A ss = let
       val (ss1, ss2) = Substring.position "(*" ss
       val sz1 = Substring.size ss1
@@ -43,7 +43,7 @@ struct
         in
           if sz1 > 0 then
             if Char.isPunct (Substring.sub(ss1, sz1 - 1)) then
-              recurse (cchars ::Substring.all " " :: ss1 :: A) ss2'
+              recurse (cchars ::Substring.full " " :: ss1 :: A) ss2'
             else recurse (cchars :: ss1 :: A) ss2'
           else recurse (cchars :: A) ss2'
         end
@@ -55,11 +55,11 @@ struct
   end
 
   fun read_from_string s = let
-    val state = ref (Substring.all s)
+    val state = ref (Substring.full s)
     fun reader n = let
       open Substring
     in
-      if n >= size (!state) then string (!state) before state := all ""
+      if n >= size (!state) then string (!state) before state := full ""
       else let
           val (left, right) = splitAt (!state, n)
         in

@@ -138,7 +138,7 @@ E. If bin/build completes (it takes a while!), successfully, you are
       bin/hol.noquote      * The interactive system with quote
                              preprocessing turned off;
       bin/hol.bare         * A "stripped down" version of hol;
-      bin/hol.bare.noquote * A "stripped down" version of hol.unquote,
+      bin/hol.bare.noquote * A "stripped down" version of hol.noquote,
                              with quote preprocessing turned off;
       bin/Holmake          * A batch compiler for HOL directories;
       src/                 * System sources;
@@ -168,7 +168,7 @@ Dealing with failure.
      following details:
 
            . hardware/OS the build failed on
-           . version of MoscowML being used
+           . version of Moscow ML or Poly/ML being used
            . version of HOL being built
 
    * Alternatively, use the Support tracker web-page at

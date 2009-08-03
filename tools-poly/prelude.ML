@@ -111,7 +111,7 @@ val _ = Globals.interactive := true;
 
 val build_stamp =
  let open TextIO Path;
-     val stampstr = openIn (concat(HOLDIR, concat("tools-poly", "build-stamp")));
+     val stampstr = openIn (concat(HOLDIR, concat("tools", "build-stamp")));
      val stamp = inputAll stampstr before closeIn stampstr;
  in
      stamp

@@ -70,7 +70,7 @@ val literal_I_thm = prove(
   REWRITE_TAC [combinTheory.I_THM, literal_case_THM]);
 
 val literal_case_ss =
-    simpLib.SSFRAG 
+    simpLib.SSFRAG
     {name = SOME"literal_case",
      ac = [], congs = [literal_cong], convs = [], filter = NONE,
      dprocs = [], rewrs = [literal_I_thm]}
@@ -103,10 +103,10 @@ val BOOL_ss = SSFRAG
           TY_FORALL_SIMP, TY_EXISTS_SIMP,
           COND_BOOL_CLAUSES,
           literal_I_thm,
-          EXCLUDED_MIDDLE, 
+          EXCLUDED_MIDDLE,
           ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE,
           bool_case_thm,
-          NOT_AND, 
+          NOT_AND,
           SELECT_REFL, SELECT_REFL_2, RES_FORALL_TRUE, RES_EXISTS_FALSE],
    congs = [literal_cong], filter = NONE, ac = [], dprocs = []};
 
@@ -307,7 +307,7 @@ val COND_elim_ss =
                   rewrs = [boolTheory.COND_RATOR, boolTheory.COND_TY_COMB, boolTheory.COND_EXPAND,
                            NESTED_COND]}
 
-val LIFT_COND_ss = simpLib.SSFRAG 
+val LIFT_COND_ss = simpLib.SSFRAG
   {name=SOME"LIFT_COND",
    ac = [], congs = [],
    convs = [{conv = K (K celim_rand_CONV),
@@ -358,6 +358,29 @@ val DNF_ss = rewrites [FORALL_AND_THM, EXISTS_OR_THM,
 
 
 val EQUIV_EXTRACT_ss = simpLib.conv_ss BoolExtractShared.BOOL_EQ_IMP_convdata;
+
+(* ----------------------------------------------------------------------
+    Congruence rules for rewriting on one side or the other of a goal's
+    central binary operator
+   ---------------------------------------------------------------------- *)
+
+open Type
+val x = mk_var("x", alpha)
+val x' = mk_var("x'", alpha)
+val y = mk_var("y", beta)
+val y' = mk_var("y'", beta)
+val f = mk_var("f", alpha --> beta --> bool)
+val patternL = DISCH_ALL (AP_THM (AP_TERM f (ASSUME (mk_eq(x,x')))) y)
+val patternR = DISCH_ALL (AP_TERM (mk_comb(f,x)) (ASSUME (mk_eq(y,y'))))
+
+val findf = #1 o strip_comb o lhs o #2 o dest_imp
+
+fun SimpL t = Cong (PART_MATCH findf patternL t)
+fun SimpR t = Cong (PART_MATCH findf patternR t)
+val SimpLHS = SimpL boolSyntax.equality
+val SimpRHS = SimpR boolSyntax.equality
+
+
 
 val _ = Parse.temp_set_grammars ambient_grammars;
 

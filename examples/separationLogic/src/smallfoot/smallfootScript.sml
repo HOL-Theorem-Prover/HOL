@@ -573,7 +573,7 @@ val smallfoot_ap_tree_seg_num_def = Define `
 val smallfoot_ap_tree_seg_num_REWRITE = save_thm ("smallfoot_ap_tree_seg_num_REWRITE",
    let 
       val thm0 = smallfoot_ap_tree_seg_num_def;
-      val gsym = GSYM (Eta (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm0))));
+      val gsym = GSYM (Drule.RIGHT_ETA (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm0))));
       val thm1 = SIMP_RULE std_ss [asl_rec_pred_num_REWRITE_BOTH,
 				   gsym] thm0
       val thm2 = SIMP_RULE list_ss [asl_choose_pred_args_def,
@@ -592,7 +592,7 @@ val smallfoot_ap_tree_seg_num_REWRITE = save_thm ("smallfoot_ap_tree_seg_num_REW
 val smallfoot_ap_tree_seg_num_REWRITE = save_thm ("smallfoot_ap_tree_seg_num_REWRITE",
    let 
       val thm0 = smallfoot_ap_tree_seg_num_def;
-      val gsym = GSYM (Eta (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm0))));
+      val gsym = GSYM (Drule.RIGHT_ETA (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm0))));
       val thm1 = SIMP_RULE std_ss [asl_rec_pred_num_REWRITE_BOTH,
 				   gsym] thm0
       val thm2 = SIMP_RULE list_ss [asl_choose_pred_args_def,
@@ -644,7 +644,7 @@ val smallfoot_ap_bintree_num_REWRITE = save_thm ("smallfoot_ap_bintree_num_REWRI
       val thm0 = smallfoot_ap_bintree_num_def;
       val thm1 = SIMP_RULE list_ss [
          smallfoot_ap_tree_seg_num_def, GSYM asl_rec_pred_def] thm0;
-      val gsym = Eta (GSYM (Eta (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm1)))));
+      val gsym = Drule.RIGHT_ETA (GSYM (Drule.RIGHT_ETA (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm1)))));
       val thm2 = SIMP_RULE std_ss [gsym,
          asl_rec_pred_num_REWRITE] thm1;
       val thm3 = SIMP_RULE list_ss [asl_choose_pred_args___2EL,
@@ -670,7 +670,7 @@ val smallfoot_ap_bintree_REWRITE = save_thm ("smallfoot_ap_bintree_REWRITE",
       val thm1 = SIMP_RULE list_ss [smallfoot_ap_tree_seg_num_def,
          smallfoot_ap_bintree_num_def] thm0;
       val thm2 = SIMP_RULE list_ss [GSYM asl_rec_pred_def] thm1;
-      val gsym = GSYM (Eta (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm2))));
+      val gsym = GSYM (Drule.RIGHT_ETA (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm2))));
 
       val thm2a = SIMP_RULE std_ss [asl_rec_pred_unbalanced___REWRITE,
       IS_SEPARATION_COMBINATOR___smallfoot_separation_combinator, gsym] thm2;
@@ -801,7 +801,7 @@ val smallfoot_ap_list_seg_num_REWRITE = save_thm ("smallfoot_ap_list_seg_num_REW
    let 
       val thm0 = smallfoot_ap_list_seg_num_def;
       val thm1 = SIMP_RULE list_ss [smallfoot_ap_tree_seg_num_def] thm0;
-      val gsym = GSYM (Eta (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm1))));
+      val gsym = GSYM (Drule.RIGHT_ETA (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm1))));
       val thm2 = SIMP_RULE std_ss [asl_rec_pred_num_REWRITE, gsym] thm1;
       val thm3 = SIMP_RULE list_ss [asl_choose_pred_args___SING,
          IS_SEPARATION_COMBINATOR___smallfoot_separation_combinator,
@@ -849,7 +849,7 @@ val smallfoot_ap_list_seg_REWRITE = save_thm ("smallfoot_ap_list_seg_REWRITE",
          GSYM asl_rec_sing_pred_num_def, GSYM asl_rec_sing_pred_def] thm1;
       val thm3 = SIMP_RULE list_ss [asl_rec_sing_pred_def,
           asl_rec_sing_pred_num_def, GSYM asl_rec_pred_def] thm2;
-      val gsym = GSYM (Eta (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm3))));
+      val gsym = GSYM (Drule.RIGHT_ETA (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm3))));
 
       val thm4 = SIMP_RULE std_ss [asl_rec_pred_unbalanced___REWRITE,
       IS_SEPARATION_COMBINATOR___smallfoot_separation_combinator, gsym] thm3;

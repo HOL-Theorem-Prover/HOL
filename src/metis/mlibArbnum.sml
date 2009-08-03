@@ -350,7 +350,7 @@ in
   end
 end handle Option => raise Fail "String not numeric"
 
-fun fromString s = fromSubstring (Substring.all s)
+fun fromString s = fromSubstring (Substring.full s)
 
 fun toString n =
   if n = zero then "0"

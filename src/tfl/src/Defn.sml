@@ -13,7 +13,7 @@ val ERRloc = mk_HOL_ERRloc "Defn";
 
 val monitoring = ref false;
 
-(* Interactively: 
+(* Interactively:
   val const_eq_ref = ref (!Defn.const_eq_ref);
 *)
 val const_eq_ref = ref Conv.NO_CONV;
@@ -55,7 +55,7 @@ fun dest_hd_eqnl (hd_eqn::_) =
 fun extract_info constset db =
     let open TypeBasePure
         fun foldthis (tyinfo, (R, C)) =
-            if List.exists 
+            if List.exists
                 (fn x => same_const (case_const_of tyinfo) x
                          handle HOL_ERR _ => false) constset then
               (case_def_of tyinfo::R, case_cong_of tyinfo::C)
@@ -150,7 +150,7 @@ fun ModusPonens th1 th2 =
 (* Version of PROVE_HYP that works modulo permuting outer universal quants.  *)
 (*---------------------------------------------------------------------------*)
 
-fun ALPHA_PROVE_HYP th1 th2 = 
+fun ALPHA_PROVE_HYP th1 th2 =
  let val c1 = concl th1
      val asl = hyp th2
      val tm = snd(strip_forall c1)
@@ -500,7 +500,7 @@ fun extract FV congs f (proto_def,WFR) =
  in fn (p,th) =>
     let val nested_ref = ref false
         open RW
-        val th' = CONV_RULE 
+        val th' = CONV_RULE
                    (Rewrite Fully
                       (Pure [CUT_LEM],
                        Context ([],DONT_ADD),
@@ -543,7 +543,7 @@ val unprotect_thm  = PURE_REWRITE_RULE [combinTheory.I_THM];
 fun elim_triv_literal_case th =
  let val const_eq_conv = !const_eq_ref
      val cnv = TRY_CONV (REWR_CONV literal_case_THM THENC BETA_CONV) THENC
-               RAND_CONV const_eq_conv THENC 
+               RAND_CONV const_eq_conv THENC
                PURE_ONCE_REWRITE_CONV [bool_case_thm]
 (*     val cnv1 = REWRITE_CONV [pairTheory.pair_case_thm] THENC LIST_BETA_CONV
      val rule = CONV_RULE (RAND_CONV (REPEATC cnv THENC cnv1))
@@ -576,7 +576,7 @@ fun wfrec_eqns thy eqns =
      val corollaries = map (C SPEC corollary') given_pats
      val eqns_consts = op_mk_set eq (find_terms is_const functional)
      val (case_rewrites,congs) = extraction_thms eqns_consts thy
-     val RWcnv = REWRITES_CONV (add_rewrites empty_rewrites 
+     val RWcnv = REWRITES_CONV (add_rewrites empty_rewrites
                                 (literal_case_THM::case_rewrites))
      val rule = unprotect_thm o
                 RIGHT_CONV_RULE
@@ -730,12 +730,12 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
         where "aux R N" occurs in "c1/\.../\ck" or "a". In the latter case,
         we have a nested recursion; in the former, there's just a call
         to aux in the context. In both cases, we want to eliminate "R a pat"
-        by assuming "c1/\.../\ck ==> R a pat" and doing some work. Really, 
+        by assuming "c1/\.../\ck ==> R a pat" and doing some work. Really,
         what we prove is something of the form
 
-          !(c1/\.../\ck ==> R a pat) |- 
+          !(c1/\.../\ck ==> R a pat) |-
              (!(c1/\.../\ck ==> R a pat ==> P a))
-               = 
+               =
              (!(c1/\.../\ck ==> P a))
 
         where the c1/\.../\ck might not be there (when there is no
@@ -756,7 +756,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
           val th2a = if has_context then UNDISCH th2 else th2
           val Rab = fst(dest_imp(concl th2a))
           val th3 = MP th2a th1a
-          val th4 = if has_context 
+          val th4 = if has_context
                     then DISCH (fst(dest_imp(snd(strip_forall ng)))) th3
                     else th3
           val th5 = GENL lvs th4
@@ -764,14 +764,14 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
           val tha = SPEC_ALL(ASSUME (concl th5))
           val thb = if has_context then UNDISCH tha else tha
           val thc = DISCH Rab thb
-          val thd = if has_context 
+          val thd = if has_context
                      then DISCH (fst(dest_imp(snd(strip_forall ng)))) thc
                      else thc
           val the = GENL lvs thd
           val thf = DISCH_ALL the
-      in 
+      in
         MATCH_MP (MATCH_MP IMP_ANTISYM_AX th6) thf
-      end handle e => raise wrap_exn "nestrec.simp_nested_ih" 
+      end handle e => raise wrap_exn "nestrec.simp_nested_ih"
                        "failed while trying to generated nested ind. hyp." e
      val nested_ih_simps = map simp_nested_ih nested_ihs
      val ind0 = simplify nested_ih_simps aux_ind
@@ -1110,8 +1110,8 @@ fun mutrec_defn (facts,stem,eqns) =
                             ind = iaux,
                             R = R,
                             SV=SV,stem=auxStem stem}}
- in MUTREC{eqs = rules, 
-           ind = ind, 
+ in MUTREC{eqs = rules,
+           ind = ind,
            R = R, SV=SV, stem=stem, union=union'}
  end
  handle e => raise wrap_exn "Defn" "mutrec_defn" e;
@@ -1120,10 +1120,10 @@ fun nestrec_defn (thy,(stem,stem'),wfrec_res,untuple) =
   let val {rules,ind,SV,R,aux_rules,aux_ind,...}
          = nestrec thy stem' wfrec_res
       val (rules', ind') = untuple (rules, ind)
-  in NESTREC {eqs = rules', 
-              ind = ind', 
+  in NESTREC {eqs = rules',
+              ind = ind',
               R = R, SV=SV, stem=stem,
-              aux=STDREC{eqs = aux_rules, 
+              aux=STDREC{eqs = aux_rules,
                          ind = aux_ind,
                          R = R, SV=SV, stem=auxStem stem'}}
   end;
@@ -1144,13 +1144,13 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
             val r2        = MATCH_MP (DISCH_ALL (LIST_CONJ r1)) Empty_thm
             val i2        = MATCH_MP (DISCH_ALL i1) Empty_thm
         in
-           NONREC {eqs = r2, 
+           NONREC {eqs = r2,
                    ind = i2, SV=SV, stem=stem}
         end handle HOL_ERR _ => raise ERR "stdrec_defn" "")
   | otherwise =>
         let val (rules', ind') = untuple (rules, ind)
         in STDREC {eqs = rules',
-                   ind = ind', 
+                   ind = ind',
                    R = R, SV=SV, stem=stem}
         end
  end
@@ -1173,15 +1173,15 @@ fun prim_mk_defn stem eqns =
      val facts = TypeBase.theTypeBase()
  in
   non_wfrec_defn (facts, defSuffix stem, eqns)
-  handle HOL_ERR _ => 
+  handle HOL_ERR _ =>
   case all_fns eqns
    of [] => raise ERR "prim_mk_defn" "no eqns"
     | [_] => (* one defn being made *)
     let val ((f,args),rhs) = dest_hd_eqn eqns
-        val _ = length args > 0 
+        val _ = length args > 0
          orelse
            (free_in f rhs andalso
-            raise ERR "prim_mk_defn" "Simple nullary definition recurses") 
+            raise ERR "prim_mk_defn" "Simple nullary definition recurses")
          orelse
            (let val fvs = free_vars rhs
             in not (null fvs) andalso
@@ -1189,8 +1189,8 @@ fun prim_mk_defn stem eqns =
                     ("Free variables (" ^
                      String.concat (Lib.commafy (map (#1 o dest_var) fvs)) ^
                      ") on RHS of nullary definition")
-            end) 
-         orelse raise ERR "prim_mk_defn" 
+            end)
+         orelse raise ERR "prim_mk_defn"
                           "Nullary definition failed - giving up"
         val (tup_eqs,stem',untuple) = pairf(stem,eqns)
             handle HOL_ERR _ => raise ERR "prim_mk_defn"
@@ -1210,7 +1210,7 @@ fun prim_mk_defn stem eqns =
 (* fails.                                                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_defn stem eqns = 
+fun mk_defn stem eqns =
   Parse.try_grammar_extension
     (Theory.try_theory_extension (uncurry prim_mk_defn)) (stem,eqns);
 
@@ -1236,17 +1236,17 @@ fun mk_Rdefn stem R eqs =
 
 fun TC rels_0 =
  let fun step a = Lib.op_assoc eq a rels_0 handle HOL_ERR _ => []
-     fun relstep rels (x,(Y,fringe)) = 
+     fun relstep rels (x,(Y,fringe)) =
        let val fringe' = op_U eq (map step fringe)
            val Y' = op_union eq Y fringe'
            val fringe'' = op_set_diff eq fringe' Y
        in (x,(Y',fringe''))
        end
-     fun steps rels = 
+     fun steps rels =
        case Lib.partition (null o (snd o snd)) rels
         of (_,[]) => map (fn (x,(Y,_)) => (x,Y)) rels
          | (nullrels,nnullrels) => steps (map (relstep rels) nnullrels @ nullrels)
- in 
+ in
    steps (map (fn (x,Y) => (x,(Y,Y))) rels_0)
  end;
 
@@ -1254,14 +1254,14 @@ fun TC rels_0 =
 (* Transitive closure of a list of pairs.                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun trancl rel = 
+fun trancl rel =
  let val field = op_U eq (map (fn (x,y) => [x,y]) rel)
-     fun init x = 
-       let val Y = rev_itlist (fn (a,b) => fn acc => 
+     fun init x =
+       let val Y = rev_itlist (fn (a,b) => fn acc =>
                       if eq a x then Lib.op_insert eq b acc else acc) rel []
        in (x,Y)
        end
- in 
+ in
    TC (map init field)
  end;
 
@@ -1276,9 +1276,9 @@ fun depends_on (a,adeps) (b,bdeps) = op_mem eq b adeps andalso not (op_mem eq a 
 (* then build the mutually dependent chunks (cliques).                       *)
 (*---------------------------------------------------------------------------*)
 
-fun cliques_of tcrel = 
+fun cliques_of tcrel =
  let fun chunk [] acc = acc
-       | chunk ((a,adeps)::t) acc = 
+       | chunk ((a,adeps)::t) acc =
          let val (bideps,rst) = Lib.partition (fn (b,bdeps) => op_mem eq a bdeps) t
          in chunk rst (((a,adeps)::bideps)::acc)
          end
@@ -1288,10 +1288,10 @@ fun cliques_of tcrel =
 
 (*---------------------------------------------------------------------------
  Examples.
-val ex1 = 
+val ex1 =
  [("a","b"), ("b","c"), ("b","d"),("d","c"),
-  ("a","e"), ("e","f"), ("f","e"), ("d","a"), 
-  ("f","g"), ("g","g"), ("g","i"), ("g","h"), 
+  ("a","e"), ("e","f"), ("f","e"), ("d","a"),
+  ("f","g"), ("g","g"), ("g","i"), ("g","h"),
   ("i","h"), ("i","k"), ("h","j")];
 
 val ex2 =  ("a","z")::ex1;
@@ -1314,7 +1314,7 @@ cliques_of (trancl ex6);
 (* so that the dependencies can be calculated.                               *)
 (*---------------------------------------------------------------------------*)
 
-fun free_calls tm = 
+fun free_calls tm =
  let val (l,r) = dest_eq tm
      val (f,pats) = strip_comb l
      val lhs_vars = free_varsl pats
@@ -1328,7 +1328,7 @@ fun free_calls tm =
 (* dependent equations end up in the same clique.                            *)
 (*---------------------------------------------------------------------------*)
 
-fun dependencies eqns = 
+fun dependencies eqns =
   let val basic = map free_calls (strip_conj eqns)
       fun agglom ((f,l1)::(g,l2)::t) =
              if eq f g then agglom ((f,op_union eq l1 l2)::t) 
@@ -1372,27 +1372,27 @@ fun sort_eqns eqns =
  let val eql = strip_conj eqns
      val cliques = dependencies eqns
      val cliques' = map (map fst) cliques
-     fun clique_eqns clique = 
+     fun clique_eqns clique =
           filter (fn eqn => op_mem eq (eqn_head eqn) clique) eql
- in 
+ in
    map (list_mk_conj o clique_eqns) cliques'
  end;
 
 (*---------------------------------------------------------------------------
  Example (adapted from ex1 above).
 
-val eqns = 
- ``(f1 x = f2 (x-1) + f5 (x-1)) /\ 
-   (f2 x = f3 (x-1) + f4 (x-1)) /\ 
+val eqns =
+ ``(f1 x = f2 (x-1) + f5 (x-1)) /\
+   (f2 x = f3 (x-1) + f4 (x-1)) /\
    (f3 x = x + 2) /\
    (f4 x = f3 (x-1) + f1(x-2)) /\
-   (f5 x = f6 (x-1)) /\ 
-   (f6 x = f5(x-1) + f7(x-2)) /\  
-   (f7 0 = f8 3 + f9 4) /\ 
-   (f7 (SUC n) = SUC n * f7 n + f9 n) /\ 
+   (f5 x = f6 (x-1)) /\
+   (f6 x = f5(x-1) + f7(x-2)) /\
+   (f7 0 = f8 3 + f9 4) /\
+   (f7 (SUC n) = SUC n * f7 n + f9 n) /\
    (f8 x = f10 (x + x)) /\
-   (f9 x = f8 x + f11 (x-4)) /\ 
-   (f10 x = x MOD 2) /\ 
+   (f9 x = f8 x + f11 (x-4)) /\
+   (f10 x = x MOD 2) /\
    (f11 x = x DIV 2)``;
 
 sort_eqns eqns;
@@ -1401,11 +1401,11 @@ sort_eqns (list_mk_conj (rev(strip_conj eqns)));
 
 fun mk_defns stems eqnsl =
  let fun lhs_atoms eqns = op_mk_set eq (map (head o lhs) (strip_conj eqns))
-     fun mk_defn_theta stem eqns = 
+     fun mk_defn_theta stem eqns =
        let val Vs = lhs_atoms eqns
            val def = mk_defn stem eqns
            val Cs = op_mk_set eq (map (head o lhs o snd o strip_forall)
-                                (flatten 
+                                (flatten
                                    (map (strip_conj o concl) (eqns_of def))))
            val theta = map2 (curry (op |->)) Vs Cs
        in (def, theta)
@@ -1416,7 +1416,7 @@ fun mk_defns stems eqnsl =
     (* be defined.                                                          *)
     (*----------------------------------------------------------------------*)
     fun mapdefn [] = []
-      | mapdefn ((s,e)::t) = 
+      | mapdefn ((s,e)::t) =
          let val (defn,theta) = mk_defn_theta s e
              val t' = map (fn (s,e) => (s,subst theta e)) t
          in defn :: mapdefn t'
@@ -1448,7 +1448,7 @@ fun vary s S =
 local fun underscore #"_" = true  | underscore   _  = false
 in
 fun wildcard s =
-  let val ss = Substring.all s
+  let val ss = Substring.full s
   in if Substring.isEmpty ss then false
      else Substring.isEmpty (Substring.dropl underscore ss)
   end
@@ -1472,12 +1472,12 @@ fun names_of (AQ(_,tm)) S = union (map (fst o Term.dest_var) (all_vars tm)) S
   | names_of (QIDENT(_,_,_)) S = S
 end;
 
-local 
+local
   val v_vary = vary "v"
   fun tm_exp tm S =
     case dest_term tm
-    of VAR(s,Ty) => 
-         if wildcard s then 
+    of VAR(s,Ty) =>
+         if wildcard s then
            let val (s',S') = v_vary S in (Term.mk_var(s',Ty),S') end
          else (tm,S)
      | CONST _  => (tm,S)
@@ -1494,14 +1494,14 @@ local
      | TYLAMB _ => raise ERR "tm_exp" "type abstraction in pattern"
   open Absyn
 in
-fun exp (AQ(locn,tm)) S = 
+fun exp (AQ(locn,tm)) S =
       let val (tm',S') = tm_exp tm S in (AQ(locn,tm'),S') end
   | exp (IDENT (p as (locn,s))) S =
       if wildcard s
         then let val (s',S') = v_vary S in (IDENT(locn,s'), S') end
         else (IDENT p, S)
   | exp (QIDENT (p as (locn,s,_))) S =
-      if wildcard s 
+      if wildcard s
        then raise ERRloc "exp" locn "wildcard in long id. in pattern"
        else (QIDENT p, S)
   | exp (APP(locn,M,N)) S =
@@ -1513,7 +1513,7 @@ fun exp (AQ(locn,tm)) S =
       let val (M',S')   = exp M S
       in (TYAPP (locn,M',pty), S')
       end
-  | exp (TYPED(locn,M,pty)) S = 
+  | exp (TYPED(locn,M,pty)) S =
       let val (M',S') = exp M S in (TYPED(locn,M',pty),S') end
   | exp (LAM(locn,_,_)) _ = raise ERRloc "exp" locn "abstraction in pattern"
   | exp (TYLAM(locn,_,_)) _ = raise ERRloc "exp" locn "type abstraction in pattern"
@@ -1523,21 +1523,21 @@ fun expand_wildcards asy (asyl,S) =
 end;
 
 
-local 
+local
   fun dest_pvar (Absyn.VIDENT(_,s)) = s
-    | dest_pvar other = raise ERRloc "munge" (Absyn.locn_of_vstruct other) 
+    | dest_pvar other = raise ERRloc "munge" (Absyn.locn_of_vstruct other)
                                      "dest_pvar"
   fun dest_atom tm = (dest_const tm handle HOL_ERR _ => dest_var tm);
   fun dest_head (Absyn.AQ(_,tm)) = fst(dest_atom tm)
     | dest_head (Absyn.IDENT(_,s)) = s
     | dest_head (Absyn.TYPED(_,a,_)) = dest_head a
-    | dest_head (Absyn.QIDENT(locn,_,_)) = 
+    | dest_head (Absyn.QIDENT(locn,_,_)) =
             raise ERRloc "dest_head" locn "qual. ident."
-    | dest_head (Absyn.APP(locn,_,_)) = 
+    | dest_head (Absyn.APP(locn,_,_)) =
             raise ERRloc "dest_head" locn "app. node"
     | dest_head (Absyn.TYAPP(locn,_,_)) = 
             raise ERRloc "dest_head" locn "tyapp. node"
-    | dest_head (Absyn.LAM(locn,_,_)) = 
+    | dest_head (Absyn.LAM(locn,_,_)) =
             raise ERRloc "dest_head" locn "lam. node"
     | dest_head (Absyn.TYLAM(locn,_,_)) = 
             raise ERRloc "dest_head" locn "tylam. node"
@@ -1552,8 +1552,8 @@ in
 fun munge eq (eqs,fset,V) =
  let val (vlist,body) = Absyn.strip_forall eq
      val (lhs0,rhs)   = Absyn.dest_eq body
-     val   _          = if exists wildcard (names_of rhs []) then 
-                         raise ERRloc "munge" (Absyn.locn_of_absyn rhs) 
+     val   _          = if exists wildcard (names_of rhs []) then
+                         raise ERRloc "munge" (Absyn.locn_of_absyn rhs)
                                       "wildcards on rhs" else ()
      val (tys, lhs)   = strip_tyannote lhs0
      val (f,pats)     = Absyn.strip_app lhs
@@ -1611,15 +1611,15 @@ fun Hol_defn stem q =
    of [] => raise ERR "Hol_defn" "no definitions"
     | [eqns] => mk_defn stem eqns
     | otherwise => raise ERR "Hol_defn" "multiple definitions")
-  handle e => 
-  raise wrap_exn_loc "Defn" "Hol_defn" 
+  handle e =>
+  raise wrap_exn_loc "Defn" "Hol_defn"
            (Absyn.locn_of_absyn (Parse.Absyn q)) e;
 
 fun Hol_defns stems q =
  (case parse_quote q
    of [] => raise ERR "Hol_defns" "no definition"
     | eqnl => mk_defns stems eqnl)
-  handle e => raise wrap_exn_loc "Defn" "Hol_defns" 
+  handle e => raise wrap_exn_loc "Defn" "Hol_defns"
                  (Absyn.locn_of_absyn (Parse.Absyn q)) e;
 
 fun Hol_Rdefn stem Rquote eqs_quote =
@@ -1649,7 +1649,7 @@ fun mangle th [] = th
 
 val WF_tm = prim_mk_const{Name="WF",Thy="relation"};
 
-fun get_WF tmlist = 
+fun get_WF tmlist =
  pluck (same_const WF_tm o rator) tmlist
  handle HOL_ERR _ => raise ERR "get_WF" "unexpected termination condition";
 

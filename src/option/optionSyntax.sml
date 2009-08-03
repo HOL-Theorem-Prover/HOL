@@ -68,7 +68,7 @@ fun mk_option_case (n,s,p) =
  case total dest_thy_type (type_of p)
   of SOME{Tyop="option", Thy="option", Args=[ty]}
       => list_mk_comb
-            (inst[alpha |-> type_of n, beta |-> ty]option_case_tm, [n,s,p])
+            (inst[beta |-> type_of n, alpha |-> ty]option_case_tm, [n,s,p])
    | otherwise => raise ERR "mk_option_case" "";
 
 

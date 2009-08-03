@@ -1,5 +1,5 @@
 (* interactive use:
-  val _ = loadPath := !loadPath @ 
+  val _ = loadPath := !loadPath @
        ["/local/scratch/acjf3/hol98/tools/mlyacc/mlyacclib",
         "/local/scratch/acjf3/hol98/tools/mlton/pre",
         "/local/scratch/acjf3/hol98/src/portableML"];
@@ -440,7 +440,7 @@ fun string_to_arm s =
   (validate_instruction o assembler_to_instruction o string_to_code) s;
 
 fun read_stream strm = let
-  val lexer = armParser.makeLexer (fn _ => TextIO.inputLine strm)
+  val lexer = armParser.makeLexer (fn _ => Portable.input_line strm)
   val _ = armLex.UserDeclarations.pos := 1
 in
   invoke lexer before TextIO.closeIn strm
@@ -458,7 +458,7 @@ end;
 
 fun ibits h l n =
   let val x = ipow2 l
-      val y = ipow2 (h + 1 - l) 
+      val y = ipow2 (h + 1 - l)
   in
     Arbnum.fromInt ((n div x) mod y)
   end;

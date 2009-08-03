@@ -147,14 +147,14 @@ fun convert_newlines ss0 = let
     else recurse (ss1::acc) (Substring.slice(ss2, 1, NONE))
   end
 in
-  Substring.all (recurse [] ss0)
+  Substring.full (recurse [] ss0)
 end
 
 fun to_token pt =
     case pt of
       DEFN s => let
         open Substring
-        val ss = convert_newlines (all s)
+        val ss = convert_newlines (full s)
         fun endp c = c <> #"=" andalso not (Char.isSpace c)
         val (varname, rest) = splitl endp ss
         val rest = dropl Char.isSpace rest
@@ -165,7 +165,7 @@ fun to_token pt =
       end
     | RULE s => let
         open Substring
-        val ss = convert_newlines (all s)
+        val ss = convert_newlines (full s)
         val idx = valOf (find_unescaped [#":"] ss)
         val (tgts, rest) = splitAt(ss, idx)
         val tgts = strip_trailing_ws tgts
@@ -221,7 +221,7 @@ fun perform_substitution env q = let
         [] => []
       | (LIT s :: rest) => LIT s :: recurse visited rest
       | VREF s :: rest => let
-          val ss = all s
+          val ss = full s
           val (fnpart, spc_rest) = position " " ss
           val result =
               if size spc_rest > 0 then let
@@ -260,7 +260,7 @@ fun empty_env s = []
 
 fun dequote s = let
   open Substring
-  val ss = all s
+  val ss = full s
   fun recurse acc ss = let
     val (normal, rest) = splitl (fn c => c <> #"\\") ss
     val acc = string normal :: acc

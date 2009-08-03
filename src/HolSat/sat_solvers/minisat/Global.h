@@ -32,7 +32,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 //=================================================================================================
 // Basic Types & Minor Things:
 
-
 #ifdef _MSC_VER
 typedef INT64              int64;
 typedef UINT64             uint64;
@@ -40,6 +39,7 @@ typedef INT_PTR            intp;
 typedef UINT_PTR           uintp;
 #define I64_fmt "I64d"
 #else
+#include <sys/types.h>
 typedef long long          int64;
 typedef unsigned long long uint64;
 typedef __PTRDIFF_TYPE__   intp;

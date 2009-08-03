@@ -577,6 +577,11 @@ val RTC_CASES1 = store_thm(
     MESON_TAC [RTC_RULES]
   ]);
 
+val RTC_CASES_TC = store_thm(
+  "RTC_CASES_TC",
+  ``!R x y. R^* x y = (x = y) \/ R^+ x y``,
+  METIS_TAC [EXTEND_RTC_TC_EQN, RTC_CASES1]);
+
 val RTC_CASES2 = store_thm(
   "RTC_CASES2",
   ``!R (x:'a) y.  RTC R x y = (x = y) \/ ?u. RTC R x u /\ R u y``,

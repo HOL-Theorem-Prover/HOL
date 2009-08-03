@@ -38,6 +38,9 @@ app load ["HolKernel","Parse","boolLib","BasicProvers"];
 
 open HolKernel Parse boolLib BasicProvers;
 
+(* done to keep Holmake happy - satTheory is an ancestor of BasicProvers *)
+local open satTheory in end
+
 val _ = new_theory "sum";
 
 val o_DEF = combinTheory.o_DEF

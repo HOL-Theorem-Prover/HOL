@@ -35,7 +35,6 @@ sig
   val INST_TYPE     : (hol_type,hol_type)Lib.subst -> thm -> thm
   val TY_ABS        : hol_type -> thm -> thm                     (* new for HOL-Omega *)
   val TY_BETA_CONV  : term -> thm                                (* new for HOL-Omega *)
-  val TY_ETA_CONV   : term -> thm                                (* new for HOL-Omega *)
 
 
   (* Now some derivable-but-primitive rules of inference *)
@@ -48,7 +47,6 @@ sig
   val TY_COMB       : thm -> hol_type -> thm                     (* new for HOL-Omega *)
   val AP_TERM       : term -> thm -> thm
   val AP_THM        : thm -> term -> thm
-  val ETA_CONV      : term -> thm
 
 
   (* Equality *)
@@ -105,7 +103,6 @@ sig
   (* Computing with explicit substitutions *)
 
   val Beta          : thm -> thm
-  val Eta           : thm -> thm
   val Mk_comb       : thm -> thm * thm * (thm -> thm -> thm)
   val Mk_abs        : thm -> term * thm * (thm -> thm)
   val Mk_tycomb     : thm -> thm * hol_type * (thm -> thm)       (* new for HOL-Omega *)

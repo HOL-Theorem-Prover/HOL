@@ -53,7 +53,7 @@ val sigCamlSuffix = ref "ML.mli";
 val structCamlSuffix = ref "ML.ml";
 
 val is_int_literal_hook = ref (fn _:term => false);
-val int_of_term_hook = ref 
+val int_of_term_hook = ref
     (fn _:term => raise ERR "EmitML" "integers not loaded")
 
 (*---------------------------------------------------------------------------*)
@@ -79,7 +79,7 @@ fun strip_cons M =
 fun is_fn_app tm = is_comb tm andalso not(pairSyntax.is_pair tm)
 fun is_infix_app tm = is_conj tm orelse is_disj tm orelse is_eq tm ;
 
-local 
+local
   val a = mk_var("a",bool)
   val b = mk_var("b",bool)
 in
@@ -99,10 +99,10 @@ end
 
 fun mk_record_vconstr (name,ty) = mk_var(name^"--Record Constr Var",ty)
 
-fun dest_record_vconstr v = 
+fun dest_record_vconstr v =
  let open Substring
      val (name,ty) = dest_var v
-     val (ss1,ss2) = position "--Record Constr Var" (all name)
+     val (ss1,ss2) = position "--Record Constr Var" (full name)
  in if string ss2 = "--Record Constr Var"
      then (string ss1,ty)
      else raise ERR "dest_record_vconstr" ""
@@ -182,7 +182,7 @@ datatype side = LEFT | RIGHT;
 
 fun pick_name slist n (s1,s2) = if mem n slist then s1 else s2;
 
-fun vars_of_types alist = 
+fun vars_of_types alist =
   map (fn (i,ty) => mk_var("v"^Int.toString i,ty)) (Lib.enumerate 0 alist);
 
 (*---------------------------------------------------------------------------*)
@@ -202,7 +202,7 @@ local val emit_tag = "EmitML"
   val pseudo_constr_defs = ref [] : thm list ref;
 in
 fun pseudo_constr_rws() = map concl (!pseudo_constr_defs)
-val reshape_thm_hook = ref (fn th => 
+val reshape_thm_hook = ref (fn th =>
      pairLib.GEN_BETA_RULE (Rewrite.PURE_REWRITE_RULE (!pseudo_constr_defs) th))
 
 fun new_pseudo_constr (c,a) =
@@ -569,8 +569,8 @@ fun term_to_ML openthys side ppstrm =
        in begin_block CONSISTENT 0
         ; lparen i maxprec
         ; if TypeBase.is_constructor f orelse is_fake_constructor f
-            then                                 
-              (let val fname = fst(dest_const f) handle HOL_ERR _ => 
+            then
+              (let val fname = fst(dest_const f) handle HOL_ERR _ =>
                                fst(dest_record_vconstr f)
                in add_string fname
                end;   (* pp maxprec f; *)
@@ -856,24 +856,24 @@ datatype elem_internal
 (* record declarations are handled by the following code.                    *)
 (*---------------------------------------------------------------------------*)
 
-fun diag vlist flist = tl 
-  (itlist2 (fn v => fn f => fn A => 
+fun diag vlist flist = tl
+  (itlist2 (fn v => fn f => fn A =>
            case A of [] => [[v],[f v]]
                    | h::t => (v::h) :: (f v::h) :: map (cons v) t)
          vlist flist []);
 
-fun gen_updates ty fields = 
+fun gen_updates ty fields =
  let open pairSyntax
      val {Tyop,Thy,Args} = dest_thy_type ty
-     fun mk_upd_const (fname,fty) = 
+     fun mk_upd_const (fname,fty) =
         mk_thy_const{Name=Tyop^"_"^fname^"_fupd",Thy=Thy,
                      Ty = (fty --> fty) --> ty --> ty}
      val upds = map mk_upd_const fields
      val fns = map (fn (_,ty) => mk_var ("f", ty--> ty)) fields
      val fake_tyc = mk_record_vconstr(Tyop,list_mk_fun(map snd fields, ty))
-     val vars = itlist 
-          (fn (n,(_,ty)) => fn acc => 
-              mk_var("v"^int_to_string n,ty) :: acc) 
+     val vars = itlist
+          (fn (n,(_,ty)) => fn acc =>
+              mk_var("v"^int_to_string n,ty) :: acc)
           (enumerate 1 fields) []
      val pat = list_mk_comb(fake_tyc,vars)
      val lefts = map2 (fn upd => fn f => list_mk_comb(upd,[f,pat])) upds fns
@@ -881,21 +881,21 @@ fun gen_updates ty fields =
      val rights = map (curry list_mk_comb fake_tyc) diags
      val eqns = rev(map2 (curry mk_eq) lefts rights)
      val mk_thm = mk_oracle_thm "EmitML fake thm"
- in 
+ in
    map (curry mk_thm []) eqns
  end
  handle e => raise wrap_exn "EmitML" "gen_updates" e;
 
-fun gen_accesses ty fields = 
+fun gen_accesses ty fields =
  let open pairSyntax
      val {Tyop,Thy,Args} = dest_thy_type ty
-     fun mk_proj_const (fname,fty) = 
+     fun mk_proj_const (fname,fty) =
          mk_thy_const{Name=Tyop^"_"^fname,Thy=Thy, Ty = ty --> fty}
      val projs = map mk_proj_const fields
      val fake_tyc = mk_record_vconstr(Tyop,list_mk_fun(map snd fields, ty))
-     val vars = itlist 
-          (fn (n,(_,ty)) => fn acc => 
-             mk_var("v"^int_to_string n,ty) :: acc) 
+     val vars = itlist
+          (fn (n,(_,ty)) => fn acc =>
+             mk_var("v"^int_to_string n,ty) :: acc)
           (enumerate 1 fields) []
      val pat = list_mk_comb(fake_tyc,vars)
      val lefts = map (fn proj => mk_comb(proj,pat)) projs
@@ -914,7 +914,7 @@ fun datatype_silent_defs tyAST =
   case TypeBase.read tyrecd
    of NONE => (WARN "datatype_silent_defs"
                 ("No info in the TypeBase for "^Lib.quote tyop); [])
-   | SOME tyinfo => 
+   | SOME tyinfo =>
      let open TypeBasePure
           val size_def = [] (* [snd (valOf(size_of tyinfo))] handle _ => [] *)
           val (updates_defs, access_defs) =

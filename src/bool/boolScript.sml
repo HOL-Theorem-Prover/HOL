@@ -294,7 +294,7 @@ val BOOL_CASES_AX =
 
 val TY_ETA_AX = (* New for HOL-Omega *)
  new_axiom
-   ("TY_ETA_AX",     Term `!t:(!'a:'k.'b:<=1). (\:'a. t [:'a:]) = t`);
+   ("TY_ETA_AX",     Term `!t:(!'a:'k.'a ('b:<=1)). (\:'a. t [:'a:]) = t`);
 
 val ETA_AX =
  new_axiom
@@ -462,7 +462,31 @@ val list_mk_exists   = itlist (curry mk_exists)
 val list_mk_tyforall = itlist (curry mk_tyforall)
 val list_mk_tyexists = itlist (curry mk_tyexists)
 
-(* ETA_CONV could be built here. *)
+(* also implemented in Drule *)
+fun ETA_CONV t =
+  let val (var, cmb) = dest_abs t
+      val tysubst = [alpha |-> type_of var, beta |-> type_of cmb]
+      val th = SPEC (rator cmb) (INST_TYPE tysubst ETA_AX)
+  in
+    TRANS (ALPHA t (lhs (concl th))) th
+  end;
+
+fun TY_ETA_CONV t =
+  let val (tyvar, tycmb) = dest_tyabs t
+      val ty      = type_of tycmb
+      val rk      = Int.max(rank_of ty - 1, 0)
+      val kd      = kind_of tyvar
+      val kdsubst = if kd = kappa then [] else [kappa |-> kd]
+      val tysubst = [mk_var_type("'b", kd ==> typ, rk+1) |-> mk_abs_type(tyvar, ty)]
+(*
+      val pat = lhs (snd (dest_forall (concl TY_ETA_AX)))
+      val (tmsubst, tysubst, kdsubst, rk) = kind_match_term pat t
+*)
+      val th = SPEC (tyrator tycmb)
+                 (INST_TYPE tysubst (INST_KIND kdsubst (INST_RANK rk TY_ETA_AX)))
+  in
+    TRANS (ALPHA t (lhs (concl th))) th
+  end;
 
 fun TY_EXT th =
    let val (Bvar,_) = dest_tyforall(concl th)

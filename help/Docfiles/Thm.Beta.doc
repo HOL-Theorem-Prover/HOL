@@ -40,5 +40,6 @@ val th = REFL (Term `(K:'a ->'b->'a) x`);
 {Beta} is equivalent to {RIGHT_BETA} but faster.
 
 \SEEALSO
-Drule.RIGHT_BETA, Thm.Eta.
+Drule.RIGHT_BETA, Drule.ETA_CONV.
+
 \ENDDOC

@@ -1563,16 +1563,10 @@ local
 
   fun remove_intermediate_junk () = let
     val cs = Theory.constants (current_theory())
-    fun is_substring s1 s2 = let
-      val s2' = Substring.all s2
-      val (_,s) = Substring.position s1 s2'
-    in
-      not (Substring.isEmpty s)
-    end
     fun c_appthis c = let
       val {Name, Thy, ...} = dest_thy_const c
     in
-      if is_substring safepfx Name then
+      if String.isSubstring safepfx Name then
         (Parse.temp_remove_ovl_mapping Name {Name = Name, Thy = Thy};
          Theory.delete_const Name)
       else ()
@@ -1580,7 +1574,7 @@ local
 
     val tys = Theory.types (current_theory())
     fun ty_appthis (tyn,kind,rank) =
-        if is_substring safepfx tyn then Theory.delete_type tyn
+        if String.isSubstring safepfx tyn then Theory.delete_type tyn
         else ()
   in
     List.app c_appthis cs;

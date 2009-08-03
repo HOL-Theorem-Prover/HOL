@@ -37,7 +37,7 @@ fun expands s =
 
 fun drop_loc s = 
  let open Substring
-     val subs = all s
+     val subs = full s
      val (_,subs1) = position "(*#loc" subs
      val (_,subs2) = position "*)" subs1
      val (_,subs3) = splitAt(subs2,2)

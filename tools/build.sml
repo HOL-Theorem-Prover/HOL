@@ -98,8 +98,8 @@ end
      Source directories.
  ---------------------------------------------------------------------------*)
 
-fun readline strm = 
-    case TextIO.inputLine strm of 
+fun readline strm =
+    case TextIO.inputLine strm of
       "" => NONE
     | s => SOME s
 
@@ -395,7 +395,7 @@ fun clean_sigobj() =
       let val f = Path.file s
           val n = lowcase (hd (String.fields (equal #".") f))
       in
-         if mem n ["systeml", "cvs", "", "readme", "preprocess"]
+         if mem n ["systeml", "cvs", "", "readme", "preprocess", "basis2002"]
           then ()
           else rem_file s
       end

@@ -23,12 +23,16 @@ show_assums := true;
 quietdec := true;
 *)
 
-open HolKernel Parse boolLib Drule ConseqConv
+open HolKernel Parse boolLib Drule ConseqConv 
 
 (*
 quietdec := false;
 *)
 
+
+(*******************************************************
+ * Some general auxiliary functions
+ *******************************************************)
 
 fun mapPartial f = ((map valOf) o (filter isSome) o (map f));
 
@@ -36,24 +40,48 @@ fun say_HOL_WARNING funname warning =
     Feedback.HOL_WARNING "quantHeuristicsBasicLib" funname warning
 
 
-(*Introduce quantification with v on both sides of an equation*)
+(*---------------------------------------------------------
+ *      A |-  t1 = t2
+ * ---------------------------- (v not free in A)
+ *  A |- (?v. t1)  =  (?v. t2)
+ *---------------------------------------------------------*)
+
 fun EQ_EXISTS_INTRO (v,thm) =
   AP_TERM (inst [alpha |-> (type_of v)] (boolSyntax.existential)) (ABS v thm);
 
+(*---------------------------------------------------------
+ *      A |-  t1 = t2
+ * ---------------------------- (v not free in A)
+ *  A |- (!v. t1) = (!v. t2)
+ *---------------------------------------------------------*)
 fun EQ_FORALL_INTRO (v,thm) =
   AP_TERM (inst [alpha |-> (type_of v)] (boolSyntax.universal)) (ABS v thm);
 
 
-(*Introduce quantification with v on both sides of an implication*)
+(*---------------------------------------------------------
+ *      A |-  t1 ==> t2
+ * ---------------------------- (v not free in A)
+ *  A |- (?v. t1) ==> (?v. t2)
+ *---------------------------------------------------------*)
+
 fun IMP_EXISTS_INTRO (v,thm) =
    HO_MATCH_MP boolTheory.MONO_EXISTS (GEN v thm)
 
 
+(*---------------------------------------------------------
+ *      A |-  t1 ==> t2
+ * ---------------------------- (v not free in A)
+ *  A |- (!v. t1) ==> (!v. t2)
+ *---------------------------------------------------------*)
 fun IMP_FORALL_INTRO (v,thm) =
    HO_MATCH_MP boolTheory.MONO_ALL (GEN v thm)
 
 
-
+(*---------------------------------------------------------
+ *   t1 ==> t2 ==> t3
+ * ------------------------
+ *    t1 /\ t2 ==> t3
+ *---------------------------------------------------------*)
 fun AND_IMP_INTRO_CONV t =
 let
    val (t1, t23) = dest_imp t
@@ -63,6 +91,11 @@ in
 end;
 
 
+(*---------------------------------------------------------
+ *      A |-  t1 ==> t2
+ * ------------------------------
+ *  A |- (x /\ t1) ==> (x /\ t2)
+ *---------------------------------------------------------*)
 fun LEFT_IMP_AND_INTRO_RULE x thm =
 let
    val (t1, t2) = dest_imp (concl thm)
@@ -72,6 +105,11 @@ in
 end;
 
 
+(*---------------------------------------------------------
+ *      A |-  t1 ==> t2
+ * ------------------------------
+ *  A |- (t1 /\ x) ==> (t2 /\ x)
+ *---------------------------------------------------------*)
 fun RIGHT_IMP_AND_INTRO_RULE x thm =
 let
    val (t1, t2) = dest_imp (concl thm)
@@ -81,6 +119,11 @@ in
 end;
 
 
+(*---------------------------------------------------------
+ *      A |-  t1 ==> t2
+ * ------------------------------
+ *  A |- (x \/ t1) ==> (x \/ t2)
+ *---------------------------------------------------------*)
 fun LEFT_IMP_OR_INTRO_RULE x thm =
 let
    val (t1, t2) = dest_imp (concl thm)
@@ -90,6 +133,11 @@ in
 end;
 
 
+(*---------------------------------------------------------
+ *      A |-  t1 ==> t2
+ * ------------------------------
+ *  A |- (t1 \/ x) ==> (t2 \/ x)
+ *---------------------------------------------------------*)
 fun RIGHT_IMP_OR_INTRO_RULE x thm =
 let
    val (t1, t2) = dest_imp (concl thm)
@@ -100,62 +148,113 @@ end;
 
 
 
+(*---------------------------------------------------------
+ *   t
+ * -----
+ *  ~~t
+ *---------------------------------------------------------*)
 fun NEG_NEG_INTRO_CONV t = ISPEC t (GSYM satTheory.NOT_NOT);
 
+(*---------------------------------------------------------
+ *  ~~t
+ * -----
+ *   t
+ *---------------------------------------------------------*)
 fun NEG_NEG_ELIM_CONV t =
     (ISPEC (dest_neg (dest_neg t)) satTheory.NOT_NOT) handle HOL_ERR _ => raise UNCHANGED;
 
 
+(*---------------------------------------------------------
+ *  ~(!x1 ... xn. P)
+ * ------------------
+ *   ?x1 ... xn. ~P
+ *---------------------------------------------------------*)
 fun NOT_FORALL_LIST_CONV tm =
   (NOT_FORALL_CONV THENC TRY_CONV (QUANT_CONV NOT_FORALL_LIST_CONV)) tm
 
+(*---------------------------------------------------------
+ *  ~(?x1 ... xn. P)
+ * ------------------
+ *   !x1 ... xn. ~P
+ *---------------------------------------------------------*)
 fun NOT_EXISTS_LIST_CONV tm =
   (NOT_EXISTS_CONV THENC TRY_CONV (QUANT_CONV NOT_EXISTS_LIST_CONV)) tm;
 
 
+(*---------------------------------------------------------
+ * Strips n leading quantifiers and applies conv underneath
+ *---------------------------------------------------------*)
 fun STRIP_NUM_QUANT_CONV 0 conv = conv
   | STRIP_NUM_QUANT_CONV n conv =
     QUANT_CONV (STRIP_NUM_QUANT_CONV (n-1) conv)
 
 
+(*---------------------------------------------------------
+ *  ~(?x1 ... xn xn+1... xm. P)
+ * -----------------------------
+ *   !x1 ... xn ~?xn+1 ...xm. P
+ *---------------------------------------------------------*)
 fun BOUNDED_NOT_EXISTS_LIST_CONV 0 tm = ALL_CONV tm
   | BOUNDED_NOT_EXISTS_LIST_CONV n tm =
   (NOT_EXISTS_CONV THENC (QUANT_CONV
                          (BOUNDED_NOT_EXISTS_LIST_CONV (n-1)))) tm;
 
+
+(*repeats a conversion up to a given number of times*)
 fun BOUNDED_REPEATC 0 conv tm = ALL_CONV tm
   | BOUNDED_REPEATC n conv tm =
     ((QCHANGED_CONV conv THENC (BOUNDED_REPEATC (n-1) conv)) ORELSEC ALL_CONV) tm;
 
 
+(*---------------------------------------------------------
+ *  ?x1 ... xn. ~P
+ * ----------------
+ *  ~!x1 ... xn. P
+ *---------------------------------------------------------*)
 fun EXISTS_NOT_LIST_CONV tm =
   (TRY_CONV (QUANT_CONV EXISTS_NOT_LIST_CONV) THENC
    EXISTS_NOT_CONV) tm;
 
+(*---------------------------------------------------------
+ *  !x1 ... xn. ~P
+ * ----------------
+ *  ~?x1 ... xn. P
+ *---------------------------------------------------------*)
 fun FORALL_NOT_LIST_CONV tm =
   (TRY_CONV (QUANT_CONV FORALL_NOT_LIST_CONV) THENC
    FORALL_NOT_CONV) tm;
 
 
+
+(*---------------------------------------------------------
+ *  !x. P x   ?x. P x
+ * --------- ---------  for x not free in P 
+ *     P         P
+ *---------------------------------------------------------*)
 fun QUANT_SIMP_CONV t =
     if (is_exists t) then
        let
           val (v,b) = dest_exists t;
           val _ = if op_mem eq v (free_vars b) then raise UNCHANGED else ();
        in
-          HO_PART_MATCH lhs EXISTS_SIMP t
+          HO_PART_MATCH lhs boolTheory.EXISTS_SIMP t
        end
     else if (is_forall t) then
        let
           val (v,b) = dest_forall t;
           val _ = if op_mem eq v (free_vars b) then raise UNCHANGED else ();
        in
-          HO_PART_MATCH lhs FORALL_SIMP t
+          HO_PART_MATCH lhs boolTheory.FORALL_SIMP t
        end
     else raise UNCHANGED;
 
 
 
+(*---------------------------------------------------------
+ *  ~(A \/ B)    ~(A /\ B)    ~A /\ ~B     ~A \/ ~B 
+ * -----------  -----------  -----------  -----------
+ *  ~A /\ ~B     ~A \/ ~B     ~(A \/ B)    ~(A /\ B)  
+ *---------------------------------------------------------*)
 local
    val thmL = CONJUNCTS (SPEC_ALL DE_MORGAN_THM)
    val thm_and = GEN_ALL (el 1 thmL)
@@ -195,7 +294,248 @@ end;
 
 
 
+(*Renames the bound variables in a term to make them distinct*)
 
+
+local
+fun vc vL t =
+   case dest_term t of
+       VAR  _        => (vL, NONE)
+     | CONST _       => (vL, NONE)
+     | COMB (t1, t2) => 
+       let
+          val (vL' , thm1_opt) = vc vL t1;
+          val (vL'', thm2_opt) = vc vL' t2;
+          val thm_opt = if not (isSome thm1_opt orelse isSome thm2_opt) then NONE else
+              let
+                 val thm1 = if (isSome thm1_opt) then valOf thm1_opt else REFL t1;
+                 val thm2 = if (isSome thm2_opt) then valOf thm2_opt else REFL t2;
+              in
+                 SOME (MK_COMB (thm1, thm2))
+              end;                    
+       in
+          (vL'', thm_opt)
+       end
+     | LAMB (v, _) => 
+       let
+          val v' = variant vL v;
+          val (thm_v_opt,b) = 
+              if aconv v v' then (NONE,body t) else 
+              let
+                 val thm_v = ALPHA_CONV v' t;
+                 val b = body (rhs (concl thm_v))
+              in 
+                 (SOME thm_v, b)
+              end;
+          val (vL' , thm_b_opt) = vc (v'::vL) b;
+          val thm_opt = if not (isSome thm_v_opt orelse isSome thm_b_opt) then NONE else
+              let
+                 val thm_v = if (isSome thm_v_opt) then valOf thm_v_opt else REFL t;
+                 val thm_b = if (isSome thm_b_opt) then valOf thm_b_opt else REFL b;
+              in
+                 SOME (TRANS thm_v (ABS v' thm_b))
+              end;                    
+       in
+         (v'::vL', thm_opt)
+       end;
+in
+   fun VARIANT_CONV fvL t =
+   let
+       val (_, thm_opt) = vc (append fvL (free_vars t)) t;
+   in
+      if isSome thm_opt then valOf thm_opt else raise UNCHANGED
+   end;
+
+
+
+   fun VARIANT_TAC fvL (asm, t) =
+   let
+       val fvL0 = append fvL (flatten (map free_vars (t::asm)));
+
+       fun vc_asms fvL [] = ([],[])
+         | vc_asms fvL (asm::L) =
+             let
+                val (fvL', thm_opt) = (vc fvL asm);
+                val thm = if isSome thm_opt then valOf thm_opt else REFL asm;
+                val t' = rhs (concl thm);
+                val (tL, thmL) = vc_asms fvL' L;
+             in
+                ((t'::tL),(thm::thmL))
+             end
+       val (t'::asm', t_thm::asm_thms) = vc_asms fvL0 (t::(rev asm))
+
+       val new_goal = (rev asm', t');
+       (*val goal_thm = mk_thm new_goal*)
+
+       fun valid goal_thm =
+           let
+              val thm0 = EQ_MP (GSYM t_thm) goal_thm
+              fun asm_mp (a_thm,thm0) = 
+                let
+                  val a_imp_thm = (fst (EQ_IMP_RULE a_thm))
+                  val thm1 = DISCH (snd (dest_imp (concl a_imp_thm))) thm0
+                  val thm2 = MP thm1 (UNDISCH a_imp_thm)
+                in
+                  thm2
+                end;
+           in
+              foldl asm_mp thm0 asm_thms
+           end;
+   in
+      ([new_goal], fn thmL => (valid (hd thmL)))
+   end;
+end
+
+
+
+(*******************************************************
+ * Contextual rewriting
+ * Before trying to find guesses for a variable, it
+ * is useful to minimize occurences of this variable.
+ * Consider for example
+ *
+ * ?x. P /\ (f x = f 2) /\ Q (f x) /\ Z
+ *
+ * This is equivalent to 
+ *
+ * ?x. P /\ (f x = f 2) /\ Q (f 2) /\ Z
+ * and therefore x can savely be instantiated by 2
+ *     P /\ (f 2 = f 2) /\ Q (f 2) /\ Z
+ *
+ * however that's difficult to see, before the
+ * contextual rewriting took place.
+ *******************************************************)
+
+datatype context_rw_type =
+ crw_conj | crw_disj | crw_unknown;
+
+fun crw_negate crw_conj = crw_disj
+  | crw_negate crw_disj = crw_conj
+  | crw_negate crw_unknown = crw_unknown;
+
+
+fun dest_disj_imp t =
+   dest_disj t handle HOL_ERR _ =>
+   let val (a,b) = dest_imp_only t in
+       (mk_neg a, b) end 
+
+val is_disj_imp = can dest_disj_imp;
+
+
+fun crw_strip rwt t =
+  if (is_conj t andalso not (rwt = crw_disj)) then
+     let 
+        val (t1,t2) = dest_conj t;
+        val (l1,_) = crw_strip crw_conj t1;
+        val (l2,_) = crw_strip crw_conj t2;
+     in
+        (append l1 l2, crw_conj)
+     end
+  else if (is_disj_imp t andalso not (rwt = crw_conj)) then
+     let 
+        val (t1,t2) = dest_disj_imp t;
+        val (l1,_) = crw_strip crw_disj t1;
+        val (l2,_) = crw_strip crw_disj t2;
+     in
+        (append l1 l2, crw_disj)
+     end
+  else if (is_neg t) then
+     let 
+        val t1 = dest_neg t;
+        val rwt1 = crw_negate rwt;
+        val (l1,rwt2) = crw_strip rwt1 t1;
+        val rwt3 = crw_negate rwt2;
+     in
+        (l1, rwt3)
+     end
+  else (if is_eq t andalso (rwt = crw_conj) then [t] else 
+        if type_of t = bool then [mk_eq(t,
+             if rwt = crw_conj then T else F)] else [], rwt)
+
+
+(*
+   val t = ``~~((a \/ P) /\ (f x = f 2) /\ Q (f x) /\ Z)``
+   val t = ``~~((a \/ P) /\ (f 2 = f x) /\ Q (f x) /\ Z)``
+   val t = ``(P /\ (f x = f 2)) ==> Q (f x)``
+   val t = ``~(P x) /\ (f x = f 2) /\ ((P x) \/ A)``
+   val t = ``(P \/ ~(f x = f 2)) \/ ~(x = 5)``
+
+val v = ``x:num``
+min_var_occur_CONV v t
+*)
+
+fun crw_SINGLE_STEP_CONV (rw, turned) t =
+let
+   val (l,r) = dest_eq rw;
+    
+   val dummy_var = genvar bool;
+   val org_rw_term = if same_const r T orelse same_const r F then l else 
+       if turned then mk_eq (r,l) else rw;
+
+   val t1 = subst_occs [[1]] [org_rw_term |-> dummy_var] t
+   val t2 = subst [l |-> r] t1
+   val t3 = subst [dummy_var |-> org_rw_term] t2;
+
+   val eq_t = mk_eq (t, t3);
+
+   val thm_t = EQT_ELIM (REWRITE_CONV [ASSUME org_rw_term] eq_t)
+   val thm_f = EQT_ELIM (REWRITE_CONV (
+        let val athm = ASSUME (mk_neg org_rw_term) in 
+        [athm, GSYM athm] end) eq_t);
+
+   val thm = DISJ_CASES (ISPEC org_rw_term boolTheory.EXCLUDED_MIDDLE) thm_t thm_f
+in
+   thm
+end handle HOL_ERR _ => raise UNCHANGED;
+
+fun crw_TOP_CONV P t =
+let
+   val (eql, rwt) = crw_strip crw_unknown t;
+   val _ = if (rwt = crw_unknown) then raise UNCHANGED else ();
+
+   fun turn_eq rw = 
+      let val (l,r) = dest_eq rw in mk_eq (r,l) end;
+
+   fun check_rw P rw = 
+      case P rw of
+         NONE => NONE
+       | SOME false => SOME (rw,false)
+       | SOME true  => SOME (turn_eq rw, true)
+
+   val eql' = map valOf (filter isSome (map (check_rw P) eql));
+   val convL = map crw_SINGLE_STEP_CONV eql';
+   val _ = if null convL then raise UNCHANGED else ();
+in
+   EVERY_CONV convL t
+end;
+
+
+fun crw_CONV P = TOP_SWEEP_CONV (CHANGED_CONV (crw_TOP_CONV P));
+
+val min_var_occur_CONV =
+let
+   fun P v rw =
+   let
+      val (l,r) = dest_eq rw;
+      val lf = free_in v l;
+      val rf = free_in v r;
+   in
+      if (is_conj l) orelse (is_disj_imp l) then NONE else
+      if lf andalso (not rf) then SOME false else
+      if (not lf) andalso rf then SOME true else
+      NONE
+   end;
+in
+   fn v => (crw_CONV (P v))
+end;
+
+
+
+
+(*******************************************************
+ * Datatype for guesses and some general functions on
+ * these guesses
+ *******************************************************)
 
 
 (*Heuristics can come up with guessed instantiations
@@ -221,7 +561,6 @@ datatype guess =
   | guess_only_possible of term * term list * (unit -> thm) option
   | guess_others_not_possible of term * term list * (unit -> thm) option
   | guess_others_satisfied of term * term list * (unit -> thm) option;
-
 
 
 
@@ -302,8 +641,10 @@ fun guess_collection_append (c1:guess_collection) (c2:guess_collection) =
     others_satisfied    = append (#others_satisfied c1) (#others_satisfied c2)}:guess_collection
 
 
-val guess_collection_flatten =
-   foldl (uncurry guess_collection_append) empty_guess_collection
+fun guess_collection_flatten [] = empty_guess_collection
+  | guess_collection_flatten (NONE::L) = guess_collection_flatten L
+  | guess_collection_flatten ((SOME gc)::L) = 
+    guess_collection_append gc (guess_collection_flatten L);
 
 
 local
@@ -842,14 +1183,25 @@ fun guess_collection___get_only_not_possible_weaken (c:guess_collection) =
 
 
 
+
+
+
+
+(*******************************************************
+ *
+ * Heuristics for the common boolean operations
+ *
+ *******************************************************)
 (*
    val t = ``!l. ~(l = []) /\ P l /\ (l_hd = 5)``
-
    val fvL = [``l_hd:'a``, ``l_tl:'a list``]
    val i = ``l_hd::l_tl``
 *)
 
-
+(*renames the variables in fvL in such a way
+  that they are distinct to the ones in vL. Moreover,
+  the resulting substitution is applied to the
+  term i *)
 fun term_variant vL fvL i =
 let
    val (_,sub,fvL') =
@@ -869,7 +1221,15 @@ in
 end;
 
 
+(*
+   val t = ``?x:num. (P x):bool``
+   val i = ``(f (x:'a) (y:'a) (z:'a)):num``
+   val fvL = [``x:'a``, ``y:'a``, ``z:'a``]
 
+Expected result:
+|- (?x y z. P (f x y z)) ==> ?x. P x 
+
+*)
 fun make_exists_imp_thm t i fvL =
 let
    val vL = free_vars t
@@ -887,7 +1247,6 @@ let
 in
    thm2
 end;
-
 
 
 
@@ -926,8 +1285,13 @@ val neg_heuL = []
 
 
 type quant_heuristic = term list -> term -> term -> guess_collection;
-type quant_heuristic_combine_argument =
-     (thm list * thm list * thm list * conv list * (quant_heuristic -> quant_heuristic) list);
+type quant_heuristic_combine_argument = 
+{distinct_thms      : thm list,
+ cases_thms         : thm list,
+ rewrite_thms       : thm list,
+ convs              : conv list,
+ heuristics         : (quant_heuristic -> quant_heuristic) list,
+ final_rewrite_thms : thm list};
 
 
 fun QUANT_INSTANTIATE_HEURISTIC___EQUATION sys (fv:term list) v t =
@@ -1090,7 +1454,8 @@ in
    only_possible       = [],
    others_satisfied    = [guess],
    others_not_possible = []}:guess_collection
-end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
+end handle UNCHANGED => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
+         | HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
 
 
@@ -1102,10 +1467,11 @@ in
    QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases thm sys fv v t
 end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp);
 
-
 fun QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases_list thmL (sys:quant_heuristic) fv v t =
 if is_eq t then
-   guess_collection_flatten (map (fn thm => QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases thm sys fv v t) thmL)
+   guess_collection_flatten 
+      (map (fn thm => 
+total (QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases thm sys fv v) t) thmL)
 else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
 
@@ -1743,7 +2109,7 @@ val t = ``?x. (y = SOME x)``
 val v = ``y:'a option``
 val fv = [v, ``x:'a``]
 
-val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE ([],[],[],[],[]);
+val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE empty_qhca NONE;
 val sys = heuristic;
 correct_guess_list v t (sys fv v t)
 
@@ -2173,7 +2539,7 @@ fun cut_term_to_string t =
 
 fun COMBINE_HEURISTIC_FUNS L =
 let
-   val gcL = mapPartial (fn h =>
+   val gcL = map (fn h =>
 	    ((SOME (h ())
               handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE
 	      handle HOL_ERR _ => raise UNCHANGED)
@@ -2322,10 +2688,13 @@ end;
 val QUANT_INSTANTIATE_HEURISTIC___COMBINE =
     BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE 0;
 
-
-
-
-fun QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE (distinct_thmL, cases_thmL, rewrite_thmL,convL,heuristicL) =
+fun QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE 
+    ({distinct_thms = distinct_thmL, 
+     cases_thms = cases_thmL, 
+     rewrite_thms = rewrite_thmL,
+     convs = convL,
+     heuristics = heuristicL,
+     final_rewrite_thms = final_rewrite_thmL}:quant_heuristic_combine_argument) =
     QUANT_INSTANTIATE_HEURISTIC___COMBINE
     (append [QUANT_INSTANTIATE_HEURISTIC___EQUATION,
      	     QUANT_INSTANTIATE_HEURISTIC___NEG,
@@ -2377,8 +2746,6 @@ end handle HOL_ERR _ => REFL t;
 
 
 
-
-
 (*
 val BOOL_SIMP_CONV_cs = (computeLib.bool_compset());
 val _ = computeLib.add_conv (boolSyntax.universal,1,QCONV QUANT_SIMP_CONV) BOOL_SIMP_CONV_cs;
@@ -2386,9 +2753,9 @@ val _ = computeLib.add_conv (boolSyntax.existential,1,QCONV QUANT_SIMP_CONV) BOO
 val BOOL_SIMP_CONV = WEAK_CBV_CONV BOOL_SIMP_CONV_cs;
 *)
 
-fun BOOL_SIMP_CONV (gc:guess_collection) =
+fun BOOL_SIMP_CONV rwL (gc:guess_collection) =
 let
-   val conv = REWRITE_CONV (#rewrites gc);
+   val conv = REWRITE_CONV (append rwL (#rewrites gc));
 in
    fn t => conv t handle UNCHANGED => REFL t
 end;
@@ -2400,15 +2767,19 @@ val t = ``?!x. (7 + z = x) /\ P x``;
 val t = ``?x. !z. ~(~(7 = x) \/ P x z)``;
 val t = ``?l. ~(l = [])``
 
-val only_eq = true;
-val expand_eq = false;
-val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE ([],[],[],[],[]);
-val sys = heuristic;
+val t = ``?x a b. P /\ (f x = f 2) /\ Q (f x)``
 
+val only_eq = true;
+val try_eq = true;
+val expand_eq = false;
+fun varfilter x = true
+val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE empty_qhca NONE
+val sys = heuristic;
+val dir = CONSEQ_CONV_UNKNOWN_direction
 *)
 
 
-fun QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) varfilter heuristic dir t =
+fun QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) varfilter heuristic rwL dir t =
 if (not (is_exists t)) andalso (not (is_forall t)) andalso (not (is_exists1 t)) then raise UNCHANGED else
 let
    val (v,b) = dest_abs (rand t);
@@ -2422,10 +2793,13 @@ in
    if is_exists t then
    let
       val (v,qb) = dest_exists t;
-      val (qvL, b) = strip_exists qb
+      val (qvL, b0) = strip_exists qb;
+
+      val b_thm = min_var_occur_CONV v b0 handle UNCHANGED => REFL b0;
+      val b = rhs (concl b_thm);
 
       val guessC = correct_guess_collection v b
-		       (heuristic (all_vars t) v b)
+		       (heuristic (free_vars t) v b)
                    handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => raise UNCHANGED;
 
       val trueL = #true guessC;
@@ -2442,7 +2816,6 @@ in
       val (i,fvL,proof_opt) = guess_extract guess
       val need_eq = (only_eq orelse (dir = CONSEQ_CONV_WEAKEN_direction));
       val try_proof_eq = isSome proof_opt andalso try_eq andalso need_eq;
-
 
       val thm_opt = if not try_proof_eq then NONE else
           if (is_guess_true true guess) then
@@ -2492,27 +2865,34 @@ in
                 else
                    make_exists_imp_thm (mk_exists (v,b)) i fvL
 
-      val thm2 = if (null qvL) then thm else
+      val b_thm_conv = QUANT_CONV (REWR_CONV (GSYM b_thm))
+      val thm2 = if is_eq (concl thm) then 
+                   CONV_RULE (LHS_CONV b_thm_conv) thm
+                 else
+                   CONV_RULE (RAND_CONV b_thm_conv) thm
+
+      val thm3 = if (null qvL) then thm2 else
 		 let
 		    val EXISTS_INTRO_FUN =
-                       if is_eq (concl thm) then
+                       if is_eq (concl thm2) then
                           EQ_EXISTS_INTRO else IMP_EXISTS_INTRO;
-		    val thm3 = foldr EXISTS_INTRO_FUN thm qvL;
+		    val thm3 = foldr EXISTS_INTRO_FUN thm2 qvL;
 	            val ex_move_thm = move_exists_to_end t;
 		 in
 		    THEN_CONSEQ_CONV___combine ex_move_thm thm3 t
 		 end;
 
-      val thm3 = CONSEQ_CONV___APPLY_CONV_RULE thm2 t (BOOL_SIMP_CONV guessC)
+      val thm4 = CONSEQ_CONV___APPLY_CONV_RULE thm3 t (BOOL_SIMP_CONV rwL guessC)
+
    in
-      thm3
+      thm4
    end else if is_forall t then
    let
       val neg_t_thm = NOT_FORALL_LIST_CONV (mk_neg t)
       val neg_t = rhs (concl neg_t_thm)
 
-      val thm = QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) varfilter heuristic (CONSEQ_CONV_DIRECTION_NEGATE dir) (neg_t)
-      val new_conv = TRY_CONV NOT_EXISTS_LIST_CONV THENC BOOL_SIMP_CONV empty_guess_collection
+      val thm = QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) varfilter heuristic rwL (CONSEQ_CONV_DIRECTION_NEGATE dir) (neg_t)
+      val new_conv = TRY_CONV NOT_EXISTS_LIST_CONV THENC (BOOL_SIMP_CONV rwL empty_guess_collection)
 
       val thm2 = if is_eq (concl thm) then
                     let
@@ -2558,7 +2938,7 @@ in
       val _ = if (null fvL) then () else raise UNCHANGED;
 
       val thm = HO_MATCH_MP quantHeuristicsTheory.EXISTS_UNIQUE_INSTANTIATE_THM ((valOf proof_opt) ())
-      val thm2 = CONV_RULE (RHS_CONV (BOOL_SIMP_CONV guessC)) thm
+      val thm2 = CONV_RULE (RHS_CONV (BOOL_SIMP_CONV rwL guessC)) thm
    in
       thm2
    end else raise UNCHANGED)
@@ -2568,91 +2948,198 @@ end;
 
 
 
-
-fun HEURISTIC_QUANT_INSTANTIATE_CONV re filter heuristic expand_eq =
+fun HEURISTIC_QUANT_INSTANTIATE_CONV re filter heuristic expand_eq rwL =
     (if re then REDEPTH_CONV else DEPTH_CONV)
-(CHANGED_CONV (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (true,true,expand_eq) filter heuristic CONSEQ_CONV_UNKNOWN_direction)) THENC
-REWRITE_CONV[];
+(CHANGED_CONV (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (true,true,expand_eq) filter heuristic rwL CONSEQ_CONV_UNKNOWN_direction)) THENC
+REWRITE_CONV rwL;
 
 
 
-fun COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT
-   ((l11,l12,l13,l14,l15):quant_heuristic_combine_argument) (l21,l22,l23,l24,l25) =
-   (append l11 l21, append l12 l22, append l13 l23, append l14 l24, append l15 l25)
+(*******************************************************
+ * Combine this basic operations to high level ones
+ *******************************************************)
 
-val empty_quant_heuristic_combine_argument = ([],[],[],[],[]):quant_heuristic_combine_argument;
+fun combine_qhca 
+   ({distinct_thms      = l11,
+     rewrite_thms       = l12,
+     cases_thms         = l13,
+     convs              = l14,
+     heuristics         = l15,
+     final_rewrite_thms = l16}:quant_heuristic_combine_argument) 
+   ({distinct_thms      = l21,
+     rewrite_thms       = l22,
+     cases_thms         = l23,
+     convs              = l24,
+     heuristics         = l25,
+     final_rewrite_thms = l26}:quant_heuristic_combine_argument) =
 
-fun COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENTS L =
-    foldl (fn (a1,a2) => COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT a1 a2) empty_quant_heuristic_combine_argument L;
+   ({distinct_thms      = (append l11 l21),
+     rewrite_thms       = (append l12 l22),
+     cases_thms         = (append l13 l23),
+     convs              = (append l14 l24),
+     heuristics         = (append l15 l25),
+     final_rewrite_thms = (append l16 l26)}:quant_heuristic_combine_argument) 
 
 
-fun EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq args =
-    HEURISTIC_QUANT_INSTANTIATE_CONV re filter (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE (COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENTS args) cache_ref_opt) expand_eq;
+val empty_qhca = 
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    convs=[],heuristics=[],final_rewrite_thms=[]}:quant_heuristic_combine_argument;
 
-fun RESTRICTED_PURE_QUANT_INSTANTIATE_CONV filter =
-    EXT_PURE_QUANT_INSTANTIATE_CONV NONE true filter false [];
+fun combine_qhcas L =
+    foldl (fn (a1,a2) => combine_qhca a1 a2) empty_qhca L;
 
-val PURE_QUANT_INSTANTIATE_CONV =
-    RESTRICTED_PURE_QUANT_INSTANTIATE_CONV (K true)
 
+fun distinct_qhca thmL = 
+   {distinct_thms=thmL,
+    rewrite_thms=[],
+    cases_thms=[],
+    convs=[],heuristics=[],
+    final_rewrite_thms=[]}:quant_heuristic_combine_argument;
+
+
+fun rewrite_qhca thmL = 
+   {distinct_thms=[],
+    rewrite_thms=thmL,
+    cases_thms=[],
+    convs=[],heuristics=[],
+    final_rewrite_thms=[]}:quant_heuristic_combine_argument;
+
+fun final_rewrite_qhca thmL = 
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    convs=[],heuristics=[],
+    final_rewrite_thms=thmL}:quant_heuristic_combine_argument;
+
+
+fun cases_qhca thmL = 
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=thmL,
+    convs=[],heuristics=[],
+    final_rewrite_thms=[]}:quant_heuristic_combine_argument;
+
+fun convs_qhca cL = 
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    convs=cL,heuristics=[],
+    final_rewrite_thms=[]}:quant_heuristic_combine_argument;
+
+fun heuristics_qhca hL = 
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    convs=[],heuristics=hL,
+    final_rewrite_thms=[]}:quant_heuristic_combine_argument;
+
+
+(*****************************************************
+ * One of the most basic conversions.
+ * 
+ * It get's the following arguments:
+ *
+ * - cache_ref_opt
+ *     a possible reference to a cache which stores
+ *     previously found guesses. A new cache can be
+ *     created using mk_quant_heuristic_cache
+ *
+ * - re : bool
+ *     redescent into a term some intantiation has been found?
+ *     similar to DEPTH_CONV and REDEPTH_CONV
+ *
+ * - filter : term -> bool
+ *     the conversion just tries to instantiate variables,
+ *     for which this function returns true
+ *
+ * - expand_eq : bool
+ *     all build in heuristics provide proofs with all guesses
+ *     if no proof is provided by user defined heuristics this
+ *     argument can be set to true to do a case split instead
+ *
+ * - args
+ *     a list of quant_heuristic_combine_arguments
+ *****************************************************)
+
+fun EXTENSIBLE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq args =
+    let val arg = (combine_qhcas args) in
+    HEURISTIC_QUANT_INSTANTIATE_CONV re filter (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt) expand_eq (#final_rewrite_thms arg)
+    end
+
+(*A simpler interface, here just the 
+  quant_heuristic_combine_arguments list is needed*)
+val QUANT_INSTANTIATE_CONV =
+    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true (K true) false
+
+
+(*a stateful heuristic and 
+    quant_heuristic_combine_argument*)
 
 val quant_heuristic_combine_argument_ref =
-   ref (([],[],[],[],[]):quant_heuristic_combine_argument);
+   ref empty_qhca;
+
+fun clear_stateful_qhca () =
+    (quant_heuristic_combine_argument_ref := empty_qhca);
 
 
-fun quant_heuristic___get_combine_argument () =
-    !quant_heuristic_combine_argument_ref;
-
-fun quant_heuristic___clear_combine_argument () =
-    (quant_heuristic_combine_argument_ref := ([],[],[],[],[]));
-
-
-fun quant_heuristic___add_combine_argument arg =
-   quant_heuristic_combine_argument_ref :=
-   COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENT (!quant_heuristic_combine_argument_ref) arg
-
-fun quant_heuristic___add_distinct_thms thmL =
-    quant_heuristic___add_combine_argument (thmL,[],[],[],[]);
-
-fun quant_heuristic___add_cases_thms thmL =
-    quant_heuristic___add_combine_argument ([],thmL,[],[],[]);
-
-fun quant_heuristic___add_rewrite_thms thmL =
-    quant_heuristic___add_combine_argument ([],[],thmL,[],[]);
-
-fun quant_heuristic___add_rewrite_convs convL =
-    quant_heuristic___add_combine_argument ([],[],[],convL,[]);
-
-fun quant_heuristic___add_heuristic h =
-    quant_heuristic___add_combine_argument ([],[],[],[],[h]);
+fun stateful_qhca___add_combine_arguments args =
+   (quant_heuristic_combine_argument_ref := 
+     combine_qhcas ((!quant_heuristic_combine_argument_ref)::args));
 
 
 
-fun QUANT_INSTANTIATE_HEURISTIC___ref sys (fv:term list) v t =
-let
-    val (distinct_thmL, cases_thmL, rewrite_thmL,convL,heuristicL)  =
-        !quant_heuristic_combine_argument_ref;
+fun QUANT_INSTANTIATE_HEURISTIC___STATEFUL sys fv v t =
+  let 
+    val {distinct_thms = distinct_thmL, 
+         cases_thms = cases_thmL, 
+         rewrite_thms = rewrite_thmL,
+         convs = convL,
+         heuristics = heuristicL,
+         final_rewrite_thms = final_rewrite_thmL} = !quant_heuristic_combine_argument_ref;
 
     val hL = (QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases_list cases_thmL)::
        	     (QUANT_INSTANTIATE_HEURISTIC___EQUATION_distinct distinct_thmL)::
              (append (map QUANT_INSTANTIATE_HEURISTIC___CONV ((TOP_ONCE_REWRITE_CONV rewrite_thmL)::convL))
 	      heuristicL);
-
-   val gc = guess_collection_flatten (mapPartial (fn h => SOME (h sys fv v t) handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE) hL)
+    val gc = guess_collection_flatten (map (fn h => SOME (h sys fv v t) handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE) hL)
 in
    gc
 end;
 
 
-fun EXT_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq args =
-    EXT_PURE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq
-       (([],[],[],[],[QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
-	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_distinct,
-	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_cases,
-               QUANT_INSTANTIATE_HEURISTIC___ref])::args)
 
-val QUANT_INSTANTIATE_CONV =
-    EXT_QUANT_INSTANTIATE_CONV NONE true (K true) false [];
+val TypeBase_qhca = 
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    final_rewrite_thms = [],
+    convs=[],heuristics=[
+       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
+       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_distinct,
+       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_cases]}:quant_heuristic_combine_argument;
+
+
+val pure_stateful_qhca =
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    final_rewrite_thms = [],
+    convs=[],heuristics=[
+       QUANT_INSTANTIATE_HEURISTIC___STATEFUL]}:quant_heuristic_combine_argument;
+
+val stateful_qhca = combine_qhca TypeBase_qhca pure_stateful_qhca;
+
+
+
+fun get_qhca___for_types typeL =
+       {distinct_thms = map TypeBase.distinct_of typeL,
+        cases_thms = map TypeBase.nchotomy_of typeL,
+        rewrite_thms = map TypeBase.one_one_of typeL,
+        final_rewrite_thms = [],
+        convs=[],heuristics=[]}:quant_heuristic_combine_argument;
+
 
 
 (*
@@ -2660,8 +3147,8 @@ val QUANT_INSTANTIATE_CONV =
 set_goal ([``l = [0:num]``], ``?x. l = 0::x``)
 
 
-fun conv t = snd (EQ_IMP_RULE (QUANT_INSTANTIATE_CONV t));
-val conv = QUANT_INSTANTIATE_CONV;
+fun conv t = snd (EQ_IMP_RULE (QUANT_INSTANTIATE_CONV [] t));
+val conv = QUANT_INSTANTIATE_CONV [];
 
 val (asm,t) = top_goal();
 
@@ -2669,6 +3156,8 @@ DISCH_ASM_CONV_TAC conv
 *)
 
 
+(*dishes all the assumptions, then applies the conversions
+  and undisches the results*)
 
 val DISCH_ASM_CONV_TAC:(conv -> tactic) = fn conv => fn (asm,t) =>
 let
@@ -2710,19 +3199,25 @@ end handle UNCHANGED => ALL_TAC (asm,t);
 
 fun DISCH_ASM_CONSEQ_CONV_TAC c = DISCH_ASM_CONV_TAC (c CONSEQ_CONV_STRENGTHEN_direction);
 
-val PURE_QUANT_INSTANTIATE_TAC =
-    CONV_TAC PURE_QUANT_INSTANTIATE_CONV;
 
-val QUANT_INSTANTIATE_TAC =
-    CONV_TAC QUANT_INSTANTIATE_CONV;
+fun QUANT_INSTANTIATE_TAC L =
+    CONV_TAC (QUANT_INSTANTIATE_CONV L);
 
-val ASM_PURE_QUANT_INSTANTIATE_TAC =
-    DISCH_ASM_CONV_TAC PURE_QUANT_INSTANTIATE_CONV;
-
-val ASM_QUANT_INSTANTIATE_TAC =
-    DISCH_ASM_CONV_TAC QUANT_INSTANTIATE_CONV;
+fun ASM_QUANT_INSTANTIATE_TAC L =
+    DISCH_ASM_CONV_TAC (QUANT_INSTANTIATE_CONV L);
 
 
+
+
+
+
+
+
+
+(***********************************************
+ * Instantiate quantifiers by explicitly given 
+ * guesses
+ ***********************************************)
 
 fun REWRITE_PROVE t =
 let
@@ -2789,55 +3284,49 @@ end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
 
 
-fun QUANT_TAC L (asm,t) =
+fun QUANT_INST_TAC L (asm,t) =
   let
      val ctxt = HOLset.listItems (FVL (t::asm) empty_tmset);
   in
     REDEPTH_CONSEQ_CONV_TAC
       (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,false,false)
-         (K true) (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt false L))
+         (K true) (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt false L) [])
     (asm,t)
   end;
 
 
-fun QUANT_CONV L t =
+
+
+fun QUANT_INST_CONV L t =
   let
      val ctxt = HOLset.listItems (FVL [t] empty_tmset);
   in
     DEPTH_CONV
       (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (true,true,false)
-         (K true) (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt true L) CONSEQ_CONV_UNKNOWN_direction)
+         (K true) (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt true L) [] CONSEQ_CONV_UNKNOWN_direction)
     t
   end;
 
 
 
-fun TypeBase___quant_heuristic_argument typeL =
-       (map TypeBase.distinct_of typeL,
-        map TypeBase.nchotomy_of typeL,
-        map TypeBase.one_one_of typeL,
-        [],[]):quant_heuristic_combine_argument;
 
 
 
 
-fun HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter heuristic dir =
+fun HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter heuristic rwL dir =
 THEN_CONSEQ_CONV
 ((if re then REDEPTH_CONSEQ_CONV else DEPTH_CONSEQ_CONV)
-   (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) filter heuristic) dir)
-(REWRITE_CONV[]);
+   (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) filter heuristic rwL) dir)
+(REWRITE_CONV rwL);
 
 
-fun EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter args =
+fun EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter args =
+    let val arg = (combine_qhcas args) in
     HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE
-       (COMBINE___QUANT_HEURISTIC_COMBINE_ARGUMENTS args) cache_ref_opt);
+       arg cache_ref_opt) (#final_rewrite_thms arg) end;
 
-fun EXT_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter arg =
-    EXT_PURE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter
-       (([],[],[],[],[QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
-	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_distinct,
-	       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_cases,
-               QUANT_INSTANTIATE_HEURISTIC___ref])::arg)
+val QUANT_INSTANTIATE_CONSEQ_CONV =
+    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE true (K true) 
 
 
 end

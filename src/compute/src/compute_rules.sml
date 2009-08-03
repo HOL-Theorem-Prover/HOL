@@ -85,7 +85,7 @@ fun try_eta' (t as (thm,_)) = ((Eta thm),true) handle HOL_ERR _ => t;
 (* End of alt. thm impl. *)
 
 
-fun try_eta thm = (Eta thm) handle HOL_ERR _ => thm;
+fun try_eta thm = (RIGHT_ETA thm) handle HOL_ERR _ => thm;
 
 (*---------------------------------------------------------------------------
  * Precondition: f(arg) is a closure corresponding to b.

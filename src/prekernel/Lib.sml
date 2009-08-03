@@ -48,7 +48,6 @@ fun fst (x,_) = x   and   snd (_,y) = y;
 (*---------------------------------------------------------------------------*
  * Success and failure. Interrupt has a special status in MoscowML.          *
  *---------------------------------------------------------------------------*)
-
 fun can f x =
   (f x; true) handle Interrupt => raise Interrupt | _  => false;
 
@@ -137,6 +136,13 @@ fun first P =
          | oneth [] = raise ERR "first" "unsatisfied predicate"
    in oneth
    end;
+
+fun first_opt f =
+   let fun fo n [] = NONE
+         | fo n (a::rst) =
+              let val vo = f n a handle Interrupt => raise Interrupt | _  => NONE in
+              if (isSome vo) then vo else fo (n+1) rst end;
+   in fo 0 end;
 
 fun split_after n alist =
    if n >= 0
@@ -561,12 +567,7 @@ fun say s = if !saying then TextIO.print s else ();
 fun mlquote s = String.concat ["\"",String.toString s,"\""]
 fun quote s = String.concat ["\"",s,"\""]
 
-fun is_substring s1 s2 = let
-  val ss = Substring.all s2
-  val (pref, suff) = Substring.position s1 ss
-in
-  Substring.size suff >= String.size s1
-end
+val is_substring = String.isSubstring
 
 fun prime s = s^"'";
 
@@ -738,7 +739,7 @@ fun deinitcomment0 ss n =
             deinitcomment0 ss' n
 
 fun deinitcommentss ss =                   deinitcomment0               ss  0
-fun deinitcomment   s  = Substring.string (deinitcomment0 (Substring.all s) 0)
+fun deinitcomment   s  = Substring.string (deinitcomment0 (Substring.full s) 0)
 
 (*---------------------------------------------------------------------------*)
 (* Yet another variant of the sum type, used for the failure monad           *)

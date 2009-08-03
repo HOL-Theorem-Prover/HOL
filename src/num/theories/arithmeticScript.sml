@@ -431,17 +431,17 @@ val LESS_EQ_ADD = store_thm ("LESS_EQ_ADD",
 val LESS_EQ_ADD_EXISTS = store_thm ("LESS_EQ_ADD_EXISTS",
      --`!m n. n<=m ==> ?p. p+n = m`--,
      SIMP_TAC bool_ss [LESS_OR_EQ, DISJ_IMP_THM, FORALL_AND_THM,
-		       LESS_ADD] 
-      THEN GEN_TAC 
-      THEN EXISTS_TAC (--`0`--) 
+		       LESS_ADD]
+      THEN GEN_TAC
+      THEN EXISTS_TAC (--`0`--)
       THEN REWRITE_TAC[ADD]);
 
 val LESS_STRONG_ADD = store_thm ("LESS_STRONG_ADD",
      --`!m n. n < m ==> ?p. (SUC p)+n = m`--,
-     REPEAT STRIP_TAC 
-      THEN IMP_RES_TAC LESS_OR 
+     REPEAT STRIP_TAC
+      THEN IMP_RES_TAC LESS_OR
       THEN IMP_RES_TAC LESS_EQ_ADD_EXISTS
-      THEN EXISTS_TAC (--`p:num`--) 
+      THEN EXISTS_TAC (--`p:num`--)
       THEN FULL_SIMP_TAC bool_ss [ADD_CLAUSES]);
 
 val LESS_EQ_SUC_REFL = store_thm ("LESS_EQ_SUC_REFL",
@@ -1388,8 +1388,8 @@ val MULT_EQ_1 = store_thm("MULT_EQ_1",
 val MULT_EQ_ID = store_thm
 ("MULT_EQ_ID",
  ``!m n. (m * n = n) = (m=1) \/ (n=0)``,
- REPEAT GEN_TAC THEN 
- STRUCT_CASES_TAC (SPEC ``m:num`` num_CASES) THEN 
+ REPEAT GEN_TAC THEN
+ STRUCT_CASES_TAC (SPEC ``m:num`` num_CASES) THEN
  REWRITE_TAC [MULT_CLAUSES,ONE,GSYM NOT_SUC,INV_SUC_EQ] THENL
  [METIS_TAC[], METIS_TAC [ADD_INV_0_EQ,MULT_EQ_0,ADD_SYM]]);
 
@@ -2244,12 +2244,12 @@ val ADD_DIV_RWT = store_thm(
   MATCH_MP_TAC DIV_UNIQUE THENL [
     Q.EXISTS_TAC `p MOD n` THEN
     ASM_REWRITE_TAC [RIGHT_ADD_DISTRIB, GSYM ADD_ASSOC, EQ_ADD_RCANCEL] THEN
-    CONV_TAC (RAND_CONV (REWR_CONV (GSYM ADD_0))) THEN
+    SIMP_TAC bool_ss [Once (GSYM ADD_0), SimpRHS] THEN
     FIRST_X_ASSUM (SUBST1_TAC o SYM) THEN ASM_REWRITE_TAC [],
     Q.EXISTS_TAC `m MOD n` THEN
     ASM_REWRITE_TAC [RIGHT_ADD_DISTRIB] THEN
     Q.SUBGOAL_THEN `p DIV n * n = p` SUBST1_TAC THENL [
-       CONV_TAC (LAND_CONV (REWR_CONV (GSYM ADD_0))) THEN
+       SIMP_TAC bool_ss [Once (GSYM ADD_0), SimpLHS] THEN
        FIRST_X_ASSUM (SUBST1_TAC o SYM) THEN ASM_REWRITE_TAC [],
        ALL_TAC
     ] THEN
@@ -2838,14 +2838,13 @@ val EXP_EQ_1 = store_thm(
   ]);
 
 (* theorems about exponentiation where the base is held constant *)
-
 val expbase_le_mono = prove(
   ``1 < b /\ m <= n ==> b ** m <= b ** n``,
   STRIP_TAC THEN
   Q.SUBGOAL_THEN `?q. n = m + q` STRIP_ASSUME_TAC THEN1
     METIS_TAC [LESS_EQUAL_ADD] THEN
   SRW_TAC [][EXP_ADD] THEN
-  CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_RIGHT_1))) THEN
+  SRW_TAC [][Once (GSYM MULT_RIGHT_1), SimpLHS] THEN
   ASM_REWRITE_TAC [LE_MULT_LCANCEL, EXP_EQ_0, ONE, GSYM LESS_EQ,
                    ZERO_LT_EXP] THEN
   METIS_TAC [ONE, LESS_TRANS, LESS_0])
@@ -2856,7 +2855,7 @@ val expbase_lt_mono = prove(
   Q.SUBGOAL_THEN `?q. n = m + q` STRIP_ASSUME_TAC THEN1
     METIS_TAC [LESS_ADD, ADD_COMM] THEN
   SRW_TAC [][EXP_ADD] THEN
-  CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_RIGHT_1))) THEN
+  SRW_TAC [][Once (GSYM MULT_RIGHT_1), SimpLHS] THEN
   ASM_REWRITE_TAC [LT_MULT_LCANCEL, ZERO_LT_EXP] THEN
   Q.SUBGOAL_THEN `0 < b` ASSUME_TAC
     THEN1 METIS_TAC [ONE, LESS_TRANS, LESS_0] THEN
@@ -2889,7 +2888,7 @@ val EXP_BASE_LEQ_MONO_IMP = store_thm(
   ``!n m b. 0 < b /\ m <= n ==> b ** m <= b ** n``,
   REPEAT STRIP_TAC THEN
   IMP_RES_TAC LESS_EQUAL_ADD THEN ASM_REWRITE_TAC [EXP_ADD] THEN
-  CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_RIGHT_1))) THEN
+  SRW_TAC [][Once (GSYM MULT_RIGHT_1), SimpLHS] THEN
   ASM_REWRITE_TAC [LE_MULT_LCANCEL, EXP_EQ_0, ONE, GSYM LESS_EQ] THEN
   FULL_SIMP_TAC bool_ss [GSYM NOT_ZERO_LT_ZERO, EXP_EQ_0]);
 
@@ -3332,7 +3331,7 @@ val SUC_MOD = store_thm
           THEN PROVE_TAC [LESS_OR]]);
 
 
-val ADD_MOD = Q.store_thm 
+val ADD_MOD = Q.store_thm
 ("ADD_MOD",
  `!n a b p.  (0 < n:num) ==> (
 	     ((a + p) MOD n = (b + p) MOD n) =
@@ -3404,7 +3403,7 @@ val SUB_MOD = Q.store_thm
  `!m n. 0<n /\ n <= m ==> ((m-n) MOD n = m MOD n)`,
  METIS_TAC [ADD_MODULUS,ADD_SUB,LESS_EQ_EXISTS,ADD_SYM]);
 
-fun Cases (asl,g) = 
+fun Cases (asl,g) =
  let val (v,_) = dest_forall g
  in GEN_TAC THEN STRUCT_CASES_TAC (SPEC v num_CASES)
  end (asl,g);
@@ -3414,20 +3413,20 @@ fun Cases_on v (asl,g) = STRUCT_CASES_TAC (SPEC v num_CASES) (asl,g);
 val ONE_LT_MULT_IMP = Q.store_thm
 ("ONE_LT_MULT_IMP",
  `!p q. 1 < p /\ 0 < q ==> 1 < p * q`,
- REPEAT Cases THEN 
+ REPEAT Cases THEN
  RW_TAC bool_ss [MULT_CLAUSES,ADD_CLAUSES] THENL
  [METIS_TAC [LESS_REFL],
-  POP_ASSUM (K ALL_TAC) THEN POP_ASSUM MP_TAC THEN 
+  POP_ASSUM (K ALL_TAC) THEN POP_ASSUM MP_TAC THEN
   RW_TAC bool_ss [ONE,LESS_MONO_EQ] THEN
   METIS_TAC [LESS_IMP_LESS_ADD, ADD_ASSOC]]);
- 
+
 val ONE_LT_MULT = Q.store_thm
 ("ONE_LT_MULT",
  `!x y. 1 < x * y = 0 < x /\ 1 < y \/ 0 < y /\ 1 < x`,
  REWRITE_TAC [ONE] THEN INDUCT_TAC THEN
  RW_TAC bool_ss [ADD_CLAUSES, MULT_CLAUSES,LESS_REFL,LESS_0] THENL
   [METIS_TAC [NOT_SUC_LESS_EQ_0,LESS_OR_EQ],
-   Cases_on ``y:num`` THEN 
+   Cases_on ``y:num`` THEN
    RW_TAC bool_ss [MULT_CLAUSES,ADD_CLAUSES,LESS_REFL,
            LESS_MONO_EQ,ZERO_LESS_ADD,LESS_0] THEN
    METIS_TAC [ZERO_LESS_MULT]]);
@@ -3435,7 +3434,7 @@ val ONE_LT_MULT = Q.store_thm
 val ONE_LT_EXP = Q.store_thm
 ("ONE_LT_EXP",
  `!x y. 1 < x ** y = 1 < x /\ 0 < y`,
- GEN_TAC THEN INDUCT_TAC THEN 
+ GEN_TAC THEN INDUCT_TAC THEN
  RW_TAC bool_ss [EXP,ONE_LT_MULT,LESS_REFL,LESS_0,ZERO_LT_EXP] THEN
  METIS_TAC [SUC_LESS, ONE]);
 
@@ -3456,7 +3455,7 @@ val findq_lemma = prove(
   THENL [
     MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN Q.EXISTS_TAC `n` THEN
     ASM_REWRITE_TAC [] THEN
-    CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_LEFT_1))) THEN
+    SIMP_TAC bool_ss [Once (GSYM MULT_LEFT_1), SimpLHS] THEN
     REWRITE_TAC [LT_MULT_RCANCEL] THEN
     REWRITE_TAC [TWO,ONE,LESS_MONO_EQ,prim_recTheory.LESS_0] THEN
     PROVE_TAC [NOT_ZERO_LT_ZERO],
@@ -3629,7 +3628,7 @@ val DIVMOD_CORRECT = Q.store_thm (
     FIRST_X_ASSUM (Q.SPECL_THEN [`m - n * q`, `n`, `a + q`] MP_TAC) THEN
     ASM_SIMP_TAC (srw_ss()) [SUB_RIGHT_LESS] THEN
     Q.SUBGOAL_THEN `m < n * q + m` ASSUME_TAC THENL [
-      CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [ADD_COMM])) THEN
+      SIMP_TAC bool_ss [SimpRHS, Once ADD_COMM] THEN
       MATCH_MP_TAC LESS_ADD_NONZERO THEN
       SRW_TAC [][MULT_EQ_0, Abbr`q`, findq_eq_0, ONE, NOT_SUC],
       ALL_TAC

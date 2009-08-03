@@ -461,9 +461,9 @@ structure Yices = struct
         val line     = TextIO.inputLine instream
     in
       TextIO.closeIn instream;
-      if line = "sat\n" then
+      if line = SOME "sat\n" then
         true
-      else if line = "unsat\n" then
+      else if line = SOME "unsat\n" then
         false
       else
         raise (Feedback.mk_HOL_ERR "Yices" "is_sat"

@@ -15,7 +15,7 @@ val _ = use "poly/PP.sml";
 
 local
 
-  val redirected_files = 
+  val redirected_files =
     ["Portable.sig", "Portable.sml", "mlibPortable.sml", "mlibOmegaint.sml",
      "OmegaMLShadow.sml"];
 
@@ -57,7 +57,7 @@ fun quse s =
 
 fun myuse f =
   let val op ^ = OS.Path.concat
-      val file = OS.Path.file f 
+      val file = OS.Path.file f
       val pd = !PolyML.Compiler.printDepth
   in
     PolyML.print_depth 0;
@@ -72,27 +72,27 @@ fun myuse f =
 val loadPath : string list ref = ref [];
 
 val loadedMods = ref (Binaryset.empty String.compare);
-val _ = loadedMods := Binaryset.addList (!loadedMods, 
+val _ = loadedMods := Binaryset.addList (!loadedMods,
                                          ["Real", "Int", "List"])
 
 fun findUo modPath [] = NONE
   | findUo modPath (search::rest) =
-      let val path = 
-         OS.Path.mkAbsolute 
-           {path = modPath, relativeTo = OS.Path.mkAbsolute 
+      let val path =
+         OS.Path.mkAbsolute
+           {path = modPath, relativeTo = OS.Path.mkAbsolute
                                            {path=search,
                                             relativeTo = OS.FileSys.getDir ()}};
       in
         if OS.FileSys.access (path, []) then
           SOME path
-        else 
+        else
           findUo modPath rest
       end;
 
 fun loadUo uo modName =
 let val i = TextIO.openIn uo;
-    val files = 
-      String.tokens (fn c => List.exists (fn c' => c = c') 
+    val files =
+      String.tokens (fn c => List.exists (fn c' => c = c')
                                          (String.explode " \n"))
                     (TextIO.inputAll i);
     fun loadOne f =
@@ -104,7 +104,7 @@ let val i = TextIO.openIn uo;
 in
   List.app loadOne files
 end
-and load modPath = 
+and load modPath =
 let val modName = OS.Path.file modPath;
     fun l ext =
       case findUo (modPath ^ ext) ("."::(!loadPath)) of
@@ -116,7 +116,7 @@ in
   else
     (loadedMods := Binaryset.add (!loadedMods, modName);
      (l ".ui"; l ".uo")
-     handle e => 
+     handle e =>
        (loadedMods := Binaryset.delete (!loadedMods, modName);
         raise e))
 end;
@@ -176,7 +176,7 @@ structure Vector = struct
     | foldli a b (c, d, e) = VectorSlice.foldli a b (VectorSlice.slice (c, d, e));
   fun appi a (c, 0, NONE) = PolyVector.appi a c
     | appi a (c, d, e) = VectorSlice.appi a (VectorSlice.slice (c, d, e));
-  fun extract (c, d, e) = 
+  fun extract (c, d, e) =
     VectorSlice.vector (VectorSlice.slice (c, d, e))
 end;
 
@@ -186,14 +186,9 @@ structure Word8Vector = struct
     open Word8VectorSlice;
   in
     fun mapi f (v,i,jopt) = PolyWord8Vector.mapi f (vector(slice(v,i,jopt)));
-    fun foldri f b (v,i,jopt) = 
+    fun foldri f b (v,i,jopt) =
       PolyWord8Vector.foldri f b (vector(slice(v,i,jopt)));
   end;
-end;
-
-structure Substring = struct
-  open PolySubstring;
-  val all = PolySubstring.full;
 end;
 
 structure Word8 = struct
@@ -208,14 +203,6 @@ structure OS = struct
     open PolyOS.Path;
     fun mkAbsolute (a,b) = PolyOS.Path.mkAbsolute {path=a, relativeTo=b};
   end;
-end;
-
-structure TextIO = struct
-  open PolyTextIO;
-  fun inputLine i =
-    case PolyTextIO.inputLine i of
-      NONE => ""
-    | SOME x => x;
 end;
 
 structure Timer = struct

@@ -1,14 +1,13 @@
 OPTIONS = NO_SIGOBJ
-EXES = comparelogs swings average
-EXTRA_CLEANS = $(EXES)
+EXTRA_CLEANS = mosml-comparelogs comparelogs
+MLTON_SRCS = mlton-srcs/Binarymap.sml mlton-srcs/Listsort.sml comparelogs.mlb
 
-all: $(EXES)
+mosml-comparelogs : mosmlTextIO.ui comparelogs.sml
+	$(MOSMLC) -o $@ -toplevel mosmlTextIO.ui comparelogs.sml
 
-comparelogs : comparelogs.uo
-	$(MOSMLC) -o $@ $<
+mosmlTextIO.ui mosmlTextIO.uo: mosmlTextIO.sml
+	$(MOSMLC) -toplevel $<
 
-swings : swings.uo
-	$(MOSMLC) -o $@ $<
+comparelogs: comparelogs.sml $(MLTON_SRCS)
+	mlton comparelogs.mlb
 
-average : average.uo
-	$(MOSMLC) -o $@ $<

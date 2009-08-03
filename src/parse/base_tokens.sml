@@ -33,7 +33,7 @@ fun check p exnstring (s,loc) = let
       | SOME (c,ss) => if p c then check ss
                        else raise LEX_ERR (exnstring, loc)
 in
-  check (all s)
+  check (full s)
 end
 
 val check_binary = check (fn c => c = #"0" orelse c = #"1")

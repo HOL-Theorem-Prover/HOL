@@ -244,7 +244,8 @@ fun process (libdir, helpfile, txtIndex,
  ; HOLPage.printHOLPage version bgcolor HOLpath
                         htmlIndex htmlTheoryIndex (helpfile, HOLpage)
  )
- in
+
+in
     case CommandLine.arguments () of
 	[]       =>
 	    process (libdirDef, helpfileDef,
@@ -257,5 +258,6 @@ fun process (libdir, helpfile, txtIndex,
                      htmlDirDef, htmlIndexDef,
                      htmlTheoryIndexDef, HOLpageDef)
       | _ => print "Usage: makebase\n"
-end
+end  (* main *)
+
 end;

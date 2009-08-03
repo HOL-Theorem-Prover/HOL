@@ -235,10 +235,15 @@ fun ac_term_ord(tm1,tm2) =
       handle e  => WRAP_ERR("COND_REWR_CONV (construction) ",e);
 
 
-fun loops th =
-   let val (l,r) = dest_eq (concl th)
-   in can (find_term (eq l)) r
-   end handle HOL_ERR _ => failwith "loops"
+val BOUNDED_t = mk_thy_const {Thy = "bool", Name = "BOUNDED",
+                              Ty = bool --> bool}
+fun loops th = let
+  val (l,r) = dest_eq (concl th)
+  fun is_bounded t = same_const BOUNDED_t (rator t) handle HOL_ERR _ => false
+in
+  can (find_term (eq l)) r andalso
+  not (isSome (HOLset.find is_bounded (hypset th)))
+end handle HOL_ERR _ => failwith "loops"
 
 
 (*-------------------------------------------------------------------------
@@ -316,36 +321,34 @@ fun IMP_EQ_CANON thm =
        val undisch_thm = UNDISCH_ALL thm
        val conc = concl undisch_thm
        val undisch_rewrites =
-        if (is_eq conc)
-        then if (loops undisch_thm) then
-               (trace(1,IGNORE("looping rewrite",thm)); [])
-             else let
-                 val base = if null (op_set_diff aconv
-                                              (free_vars (rhs conc))
-			                      (free_varsl (hyp thm)@
-			                   (* (free_varsl (hyp undisch_thm)@ *)
-                                               free_vars(lhs conc)))
-		            then undisch_thm
-		            else EQT_INTRO undisch_thm
-                 val flip_eqp = let val (l,r) = dest_eq (concl base)
-                                in
-                                  is_eq l andalso not (is_eq r)
-                                end
-               in
-                 if flip_eqp then
-                   [base, CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ)) base]
-                 else [base]
-               end
-        else if (is_conj conc)
-        then (op @ o (IMP_EQ_CANON##IMP_EQ_CANON) o CONJ_PAIR) undisch_thm
-        else if (is_forall conc)
-        then IMP_EQ_CANON (snd (SPEC_VAR undisch_thm))
-        else if (is_tyforall conc)
-        then IMP_EQ_CANON (snd (SPEC_TYVAR undisch_thm))
-        else if (is_neg conc)
-             then if (is_eq (dest_neg conc))
-                  then [EQF_INTRO undisch_thm, EQF_INTRO (GSYM undisch_thm)]
-                  else [EQF_INTRO undisch_thm]
+        if (is_eq conc) then
+          if loops undisch_thm then
+            (trace(1,IGNORE("looping rewrite (but adding EQT versions)",thm));
+             [EQT_INTRO undisch_thm, EQT_INTRO (SYM undisch_thm)])
+          else let
+              val base = if null (op_subtract aconv
+                                           (free_vars (rhs conc))
+			                   (free_varsl (hyp thm)@
+                                            free_vars(lhs conc)))
+		         then undisch_thm
+		         else EQT_INTRO undisch_thm
+              val flip_eqp = let val (l,r) = dest_eq (concl base)
+                             in
+                               is_eq l andalso not (is_eq r)
+                             end
+            in
+              if flip_eqp then
+                [base, CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ)) base]
+              else [base]
+            end
+        else if (is_conj conc) then
+          (op @ o (IMP_EQ_CANON##IMP_EQ_CANON) o CONJ_PAIR) undisch_thm
+        else if (is_forall conc) then IMP_EQ_CANON (snd (SPEC_VAR undisch_thm))
+        else if (is_tyforall conc) then IMP_EQ_CANON (snd (SPEC_TYVAR undisch_thm))
+        else if (is_neg conc) then
+          if (is_eq (dest_neg conc)) then
+            [EQF_INTRO undisch_thm, EQF_INTRO (GSYM undisch_thm)]
+          else [EQF_INTRO undisch_thm]
         else if eq conc truth_tm then
           (trace(2,IGNORE ("pointless rewrite",thm)); [])
         else if (eq conc false_tm) then [MP x_eq_false undisch_thm]

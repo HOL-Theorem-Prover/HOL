@@ -1,10 +1,9 @@
 EXTRA_CLEANS = evalML.uo evalML.ui assemblerML.ui assemblerML.uo\
 	Data.ui Data.uo armParser.lex.sig armParser.lex.sml\
-       	armParser.grm.sig armParser.grm.sml armParser.grm.desc\
+        armParser.grm.sig armParser.grm.sml armParser.grm.desc\
 	armParser.grm-sig.sml
 
-CALL_YACC = $(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $< ; \
-	$(MV) armParser.grm.sig armParser.grm-sig.sml
+MLYACC = $(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe)
 
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
@@ -12,11 +11,9 @@ MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 Data.uo : Data.sml
 	HOLMOSMLC -c Data.sml
 
-armParser.grm.sml: armParser.grm
-	$(CALL_YACC)
-
-armParser.grm-sig.sml: armParser.grm
-	$(CALL_YACC)
+armParser.grm.sml armParser.grm-sig.sml: armParser.grm
+	$(MLYACC) $<
+	$(MV) armParser.grm.sig armParser.grm-sig.sml
 
 armParser.grm-sig.uo: armParser.grm-sig.sml
 	HOLMOSMLC -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<

@@ -136,7 +136,7 @@ val dest_sum     = dest_monop sum_tm    (ERR "dest_sum"    "not SUM")
 val dest_reverse = dest_monop reverse_tm (ERR "dest_reverse" "not REVERSE")
 val dest_last    = dest_monop last_tm   (ERR "dest_last" "not LAST")
 val dest_front   = dest_monop front_tm  (ERR "dest_front" "not FRONT")
-val dest_all_distinct = dest_monop reverse_tm 
+val dest_all_distinct = dest_monop all_distinct_tm
                           (ERR "dest_all_distinct" "not ALL_DISTINCT")
 
 val dest_list_case = dest_triop list_case_tm (ERR "dest_list_case" "not list_case");
@@ -184,6 +184,18 @@ fun dest_list M =
  end;
 
 val is_list = can dest_list;
+
+(*---------------------------------------------------------------------------*)
+(* Strips leading occurences of cons                                         *)
+(* Added 17 July 2009 by Thomas Tuerk                                          *)
+(*---------------------------------------------------------------------------*)
+val strip_cons =
+  let fun strip A M =
+        case total dest_cons M
+         of NONE => (List.rev A, M)
+          | SOME(h,tl) => strip (h::A) tl
+  in strip []
+  end;
 
 (*---------------------------------------------------------------------------*)
 (* Lift ML lists to HOL lists                                                *)

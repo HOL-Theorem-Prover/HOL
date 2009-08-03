@@ -6,7 +6,7 @@
 Performs generalized eta conversion for tupled eta-redexes.
 
 \KEYWORDS
-conversion, extentionality.
+conversion, extensionality.
 
 \DESCRIBE
 The conversion {PAIRED_ETA_CONV} generalizes {ETA_CONV} to eta-redexes with

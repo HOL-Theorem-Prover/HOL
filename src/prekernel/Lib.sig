@@ -35,6 +35,8 @@ sig
   val all2          : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
   val exists        : ('a -> bool) -> 'a list -> bool
   val first         : ('a -> bool) -> 'a list -> 'a
+  val first_opt     : (int -> 'a -> 'b option) -> 'a list -> 'b option
+  val get_first     : ('a -> 'b option) -> 'a list -> 'b option
   val split_after   : int -> 'a list -> 'a list * 'a list
   val partition     : ('a -> bool) -> 'a list -> 'a list * 'a list
   val gather        : ('a -> bool) -> 'a list -> 'a list
@@ -45,7 +47,6 @@ sig
   val rev_itlist2   : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
   val end_itlist    : ('a -> 'a -> 'a) -> 'a list -> 'a
   val foldl_map     : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
-  val get_first     : ('a -> 'b option) -> 'a list -> 'b option
   val separate      : 'a -> 'a list -> 'a list
   val zip           : 'a list -> 'b list -> ('a * 'b) list
   val combine       : 'a list * 'b list -> ('a * 'b) list

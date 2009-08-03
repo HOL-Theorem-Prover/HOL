@@ -28,7 +28,7 @@ end
 fun tokenize s = let
   (* could be a call to tokens, but for escaped spaces getting in the way *)
   open Substring
-  val ss = dropl Char.isSpace (all s)
+  val ss = dropl Char.isSpace (full s)
   fun recurse acc ss =
       (* assumes first character of ss is not isSpace, or size ss = 0  *)
       if size ss = 0 then List.rev acc
@@ -46,7 +46,7 @@ end
 
 fun subst(from,to,on) = let
   open Substring
-  val (from,to,on) = (all from, all to, all on)
+  val (from,to,on) = (full from, full to, full on)
   val _ = size from > 0 orelse
           raise Fail "empty from argument to `subst' function"
   fun recurse acc ss = let
@@ -65,21 +65,21 @@ fun find_percent ss = let
   open Substring
   fun recurse acc ss =
       case getc ss of
-        NONE => (all (String.implode (List.rev acc)), all "")
+        NONE => (full (String.implode (List.rev acc)), full "")
       | SOME(c, ss') => let
         in
           case c of
             #"\\" => let
             in
               case getc ss' of
-                NONE => (all (String.implode (List.rev (c::acc))), all "")
+                NONE => (full (String.implode (List.rev (c::acc))), full "")
               | SOME(c',ss'') =>
                 if c' = #"%" orelse c' = #"\\" then
                   recurse (c'::acc) ss''
                 else
                   recurse (c'::c::acc) ss''
             end
-          | _ => if c = #"%" then (all (String.implode(List.rev acc)), ss)
+          | _ => if c = #"%" then (full (String.implode(List.rev acc)), ss)
                  else recurse (c::acc) ss'
         end
 in
@@ -113,8 +113,8 @@ fun pattern_match pattern object = let
           else NONE
         end
 
-  val (patpfx, patsfx) = translate_pattern (all pattern)
-  val objss = all object
+  val (patpfx, patsfx) = translate_pattern (full pattern)
+  val objss = full object
 in
   if isPrefix (string patpfx) objss then let
       val objrest = slice(objss, size patpfx, NONE)
@@ -130,8 +130,8 @@ end
 
 fun pcsubst (residue, pattern) = let
   open Substring
-  val patss = all pattern
-  val resss = all residue
+  val patss = full pattern
+  val resss = full residue
   fun recurse acc ss =
       case find_unescaped [#"%"] ss of
         NONE => concat (List.rev (ss::acc))
@@ -141,7 +141,7 @@ fun pcsubst (residue, pattern) = let
           recurse (resss::pfx::acc) (slice(sfx, 1, NONE))
         end
 in
-  recurse [] (all pattern)
+  recurse [] (full pattern)
 end
 
 fun patsubst (from,to,arglist) = let

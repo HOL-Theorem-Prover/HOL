@@ -32,5 +32,6 @@ Eta-reduction embodies the principle of extensionality, which is
 basic to the HOL logic.
 
 \SEEALSO
-Thm.ETA_CONV.
+Drule.ETA_CONV, Drule.RIGHT_ETA.
+
 \ENDDOC

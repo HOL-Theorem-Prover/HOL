@@ -435,78 +435,6 @@ fun ALPHA t1 t2 =
                            mk_eq_nocheck (type_of t1) t1 t2)
    else ERR "ALPHA" "Terms not alpha-convertible";
 
-
-(*---------------------------------------------------------------------------
- * Simple version of alpha-conversion (needed for deriving ETA_CONV)
- *
- *       "\x1. t x1"   "\x2. t x2"   --->   |- "(\x1.t x1)=(\x2.t x2)"
- *
- * fun SIMPLE_ALPHA(t1,t2) =
- *   let val (x1,body1) = dest_abs t1
- *       and (x2,body2) = dest_abs t2
- *       val th1 = BETA_CONV `^t1 (x:^(type_of x1))`
- *       (* th1 = |- (\x1. t x1)x = t x *)
- *       and th2 = BETA_CONV `^t2 (x:^(type_of x2))`
- *       (* th2 = |- (\x2. t x2)x = t x *)
- *       and th3 = SPEC t1 (INST_TYPE [(type_of x1, `:'a`),
- *                                     (type_of body1, `:'b`)] ETA_AX)
- *       (* th3 = |- (\x. (\x1. t x1)x) = (\x1. t x1) *)
- *       and th4 = SPEC t2 (INST_TYPE [(type_of x2, `:'a`),
- *                                     (type_of body2, `:'b`)] ETA_AX)
- *       (* th4 = |- (\x. (\x2. t x2)x) = (\x2. t x2) *)
- *   in
- *   TRANS (TRANS (SYM th3)
- *                (ABS `x:^(type_of x1)` (TRANS th1 (SYM th2))))
- *         th4
- *   end
- *   handle _ => ERR{function = "SIMPLE_ALPHA",message = ""};
- *
- *
- * Eta-conversion
- *
- * 	"(\x.t x)"   --->    |- (\x.t x) = t  (if x not free in t)
- *
- * fun ETA_CONV (tm as Abs(Var(vnm,_), cmb as Comb(t,_))) =
- *      (let val body_ty = type_of cmb
- *           val th = SPEC t (INST_TYPE [(vnm,`:'a`), (body_ty, `:'b`)] ETA_AX)
- *           (* th = |- (\x. t x) = t *)
- *       in
- *       TRANS (SIMPLE_ALPHA(tm,lhs(concl th))) th
- *       end
- *       handle _ => ERR{function = "ETA_CONV",message = ""})
- *  | ETA_CONV _ = ERR{function = "ETA_CONV",message = ""};
- *
- *---------------------------------------------------------------------------*)
-
-fun ETA_CONV tm =
-   make_thm Count.EtaConv
-      (empty_tag, empty_hyp, mk_eq_nocheck (type_of tm) tm (eta_conv tm))
-   handle HOL_ERR _ => ERR"ETA_CONV" "";
-
-(*---------------------------------------------------------------------------
- * Type eta-conversion
- *
- * 	"(\:a.t [:a:])"   --->    |- (\:a.t [:a:]) = t  (if a not free in t)
- *
- * fun TY_ETA_CONV (tm as TAbs((_,tkd,trk), tcmb as TComb(t,_))) =
- *      (let val body_ty = type_of tcmb
- *           val th = SPEC t (INST_TYPE [beta |-> body_ty]
- *                              (INST_KIND [kappa |-> tkd] TY_ETA_AX))
- *           (* th = |- (\:a. t [:a:]) = t *)
- *       in
- *       TRANS (SIMPLE_ALPHA(tm,lhs(concl th))) th
- *       end
- *       handle _ => ERR{function = "TY_ETA_CONV",message = ""})
- *  | TY_ETA_CONV _ = ERR{function = "TY_ETA_CONV",message = ""};
- *
- *---------------------------------------------------------------------------*)
-
-fun TY_ETA_CONV tm =
-   make_thm Count.TyEtaConv
-      (empty_tag, empty_hyp, mk_eq_nocheck (type_of tm) tm (ty_eta_conv tm))
-   handle HOL_ERR _ => ERR"TY_ETA_CONV" "";
-
-
 (*---------------------------------------------------------------------------*
  *  Symmetry of =
  *
@@ -1400,22 +1328,6 @@ fun Beta th =
    end
    handle HOL_ERR _ => ERR "Beta" "";
 
-(*---------------------------------------------------------------------------*
- *    A |- t = (\x.f x)                                                      *
- *  --------------------- x not free in f                                    *
- *     A |- t = f                                                            *
- *                                                                           *
- * Other implementation                                                      *
- *   fun Eta thm = TRANS thm (ETA_CONV (rhs (concl thm)))                    *
- *---------------------------------------------------------------------------*)
-
-fun Eta th =
-  let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
-  in make_thm Count.EtaConv
-       (tag th, hypset th, mk_eq_nocheck ty lhs (eta_conv rhs))
-  end
-  handle HOL_ERR _ => ERR "Eta" "";
-
 
 (*---------------------------------------------------------------------------*
  * This rule behaves like a tactic: given a goal (reducing the rhs of thm),  *
@@ -1725,7 +1637,7 @@ fun lexer (ss1,qs1) =
   case Substring.getc (Lib.deinitcommentss ss1)
                       (* was: (Substring.dropl Char.isSpace ss1) *)
    of NONE => (case qs1
-                of (QUOTE s::qs2) => lexer (Substring.all s,qs2)
+                of (QUOTE s::qs2) => lexer (Substring.full s,qs2)
                  | []             => NONE
                  | _              => ERR "raw lexer" "expected a quotation")
     | SOME (c,ss2) =>
@@ -1862,7 +1774,7 @@ fun parse_raw tytable table =
         | _ => ERR "gtylamb" "expected an identifier"
  in
   fn (QUOTE s::qs) =>
-       (case parse ([], (Substring.all s,qs))
+       (case parse ([], (Substring.full s,qs))
          of ([Tm v], _)  => v
           | otherwise => ERR "raw term parser" "parse failed")
    | otherwise => ERR "raw term parser" "expected a quotation"

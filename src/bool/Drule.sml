@@ -17,6 +17,51 @@ open Feedback HolKernel Parse boolTheory boolSyntax Abbrev;
 
 val ERR = mk_HOL_ERR "Drule";
 
+(*---------------------------------------------------------------------------*
+ * Eta-conversion                                                            *
+ *                                                                           *
+ * 	"(\x.t x)"   --->    |- (\x.t x) = t  (if x not free in t)           *
+ *---------------------------------------------------------------------------*)
+
+(* Cursory profiling indicates that an implementation of ETA_CONV as a
+   primitive inference rule in Thm is about 20 times faster than this
+   implementation, which instantiates ETA_AX.  The difference in overall
+   HOL build time, however, is negligible. *)
+
+fun ETA_CONV t =
+  let val (var, cmb) = dest_abs t
+      val tysubst = [alpha |-> type_of var, beta |-> type_of cmb]
+      val th = SPEC (rator cmb) (INST_TYPE tysubst ETA_AX)
+  in
+    TRANS (ALPHA t (lhs (concl th))) th
+  end
+  handle HOL_ERR _ => raise ERR "ETA_CONV" "";
+
+
+(*---------------------------------------------------------------------------*
+ * Type-eta-conversion                                                       *
+ *                                                                           *
+ * 	"(\:a.t [:a:])"   --->    |- (\:a.t [:a:]) = t  (if a not free in t) *
+ *---------------------------------------------------------------------------*)
+
+fun TY_ETA_CONV t =
+  let val (tyvar, tycmb) = dest_tyabs t
+      val ty      = type_of tycmb
+      val rk      = Int.max(rank_of ty - 1, 0)
+      val kd      = kind_of tyvar
+      val kdsubst = if kd = kappa then [] else [kappa |-> kd]
+      val tysubst = [mk_var_type("'b", kd ==> typ, rk+1) |-> mk_abs_type(tyvar, ty)]
+(*
+      val pat = lhs (snd (dest_forall (concl TY_ETA_AX)))
+      val (tmsubst, tysubst, kdsubst, rk) = kind_match_term pat t
+*)
+      val th = SPEC (tyrator tycmb)
+                 (INST_TYPE tysubst (INST_KIND kdsubst (INST_RANK rk TY_ETA_AX)))
+  in
+    TRANS (ALPHA t (lhs (concl th))) th
+  end
+  handle HOL_ERR _ => raise ERR "TY_ETA_CONV" "";
+
 
 (*---------------------------------------------------------------------------*
  *  Beta-reduce all types within the goal                                    *
@@ -30,6 +75,17 @@ fun BETA_TY_RULE th = let val t = concl th
                           val t' = beta_conv_ty_in_term t
                       in EQ_MP (ALPHA t t') th
                       end
+
+
+(*---------------------------------------------------------------------------*
+ *    A |- t = (\x.f x)                                                      *
+ *  --------------------- x not free in f                                    *
+ *     A |- t = f                                                            *
+ *---------------------------------------------------------------------------*)
+
+fun RIGHT_ETA thm =
+  TRANS thm (ETA_CONV (rhs (concl thm)))
+  handle HOL_ERR _ => raise ERR "RIGHT_ETA" "";
 
 
 (*---------------------------------------------------------------------------*

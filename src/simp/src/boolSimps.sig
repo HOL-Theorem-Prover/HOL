@@ -1,5 +1,7 @@
 signature boolSimps =
 sig
+     include Abbrev
+
      val bool_ss : simpLib.simpset
      val BOOL_ss : simpLib.ssfrag       (* boolean rewrites and
                                            beta conversion *)
@@ -58,13 +60,18 @@ sig
            This simpset fragment will give UNWIND_ss maximum opportunity to
            eliminate equalities. *)
 
-     val EQUIV_EXTRACT_ss : simpLib.ssfrag 
+     val EQUIV_EXTRACT_ss : simpLib.ssfrag
         (* Extracts common terms from both sides of an equivalence. Example:
 
            ``A /\ B /\ C <=> C /\ B /\ D`` is transformed to
 
-           |- (A /\ B /\ C <=> C /\ B /\ D) <=> C /\ B ==> (A <=> D)				
+           |- (A /\ B /\ C <=> C /\ B /\ D) <=> C /\ B ==> (A <=> D)
          *)
+
+     val SimpLHS : thm
+     val SimpRHS : thm
+     val SimpL   : term -> thm
+     val SimpR   : term -> thm
 
 
 end

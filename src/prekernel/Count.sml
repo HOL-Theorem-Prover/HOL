@@ -13,7 +13,7 @@ val inc = Portable.inc
 
 
 datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstRank | InstKind | InstType
-              | MkComb | ApTerm | ApThm | Alpha | EtaConv | TyEtaConv
+              | MkComb | ApTerm | ApThm | Alpha
               | Sym | Trans | EqMp | EqImpRule | Inst
               | Spec | Gen | Exists | Choose
               | TySpec | TyGen | TyExists | TyChoose (* these are for HOL-Omega *)
@@ -30,7 +30,6 @@ val count = {ASSUME     = ref 0, REFL = ref 0,
              INST_KIND  = ref 0, INST_TYPE  = ref 0,
              MK_COMB    = ref 0, AP_TERM = ref 0,
              AP_THM     = ref 0, ALPHA = ref 0,
-             ETA_CONV   = ref 0, TY_ETA_CONV = ref 0,
              SYM        = ref 0,
              TRANS      = ref 0, EQ_MP = ref 0,
              EQ_IMP_RULE = ref 0, INST = ref 0,
@@ -68,8 +67,6 @@ fun inc_count R =
        | ApTerm     => inc (#AP_TERM count)
        | ApThm      => inc (#AP_THM count)
        | Alpha      => inc (#ALPHA count)
-       | EtaConv    => inc (#ETA_CONV count)
-       | TyEtaConv  => inc (#TY_ETA_CONV count)
        | Sym        => inc (#SYM count)
        | Trans      => inc (#TRANS count)
        | EqMp       => inc (#EQ_MP count)
@@ -121,8 +118,6 @@ fun reset_thm_count() =
      zero (#AP_TERM count);
      zero (#AP_THM count);
      zero (#ALPHA count);
-     zero (#ETA_CONV count);
-     zero (#TY_ETA_CONV count);
      zero (#SYM count);
      zero (#TRANS count);
      zero (#EQ_MP count);
@@ -162,7 +157,6 @@ fun prims() =
    !(#SUBST count) + !(#ABS count) + !(#DISCH count) +
    !(#MP count) + !(#INST_RANK count) + !(#INST_KIND count) + !(#INST_TYPE count) + !(#MK_COMB count) +
    !(#AP_TERM count) + !(#AP_THM count) + !(#ALPHA count) +
-   !(#ETA_CONV count) + !(#TY_ETA_CONV count) + (* TY_ETA_CONV for HOL-Omega *)
    !(#SYM count) + !(#TRANS count) +
    !(#EQ_MP count) + !(#EQ_IMP_RULE count) +
    !(#INST count) +
@@ -190,10 +184,9 @@ fun thm_count() =
   BETA_CONV  = !(#BETA_CONV count), SUBST       = !(#SUBST count),
   ABS        = !(#ABS count),       DISCH       = !(#DISCH count),
   MP         = !(#MP count),        INST_RANK   = !(#INST_RANK count),
-  INST_KIND   = !(#INST_KIND count),INST_TYPE   = !(#INST_TYPE count),
+  INST_KIND  = !(#INST_KIND count), INST_TYPE   = !(#INST_TYPE count),
   MK_COMB = !(#MK_COMB count),      AP_TERM     = !(#AP_TERM count),
   AP_THM = !(#AP_THM count),        ALPHA       = !(#ALPHA count),
-  ETA_CONV = !(#ETA_CONV count),    TY_ETA_CONV = !(#TY_ETA_CONV count),
   SYM = !(#SYM count),              TRANS       = !(#TRANS count),
   EQ_MP = !(#EQ_MP count),          EQ_IMP_RULE = !(#EQ_IMP_RULE count),
   INST = !(#INST count),

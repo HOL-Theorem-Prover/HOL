@@ -2,7 +2,8 @@ structure quantHeuristicsScript =
 struct
 
 
-open HolKernel Parse boolLib Drule BasicProvers;
+open HolKernel Parse boolLib Drule BasicProvers 
+     pairTheory listTheory optionTheory;
 
 val _ = new_theory "quantHeuristics";
 
@@ -58,31 +59,31 @@ val RIGHT_IMP_OR_INTRO = store_thm ("RIGHT_IMP_OR_INTRO",
 
 
 
-(*
+
 (* Theorems for the specialised logics *)
 
-val PAIR_NEG_CASES = store_thm ("PAIR_NEG_CASES",
-``!p. ~(!p1 p2. ~(p = (p1,p2)))``,
+val PAIR_EQ_EXPAND = store_thm ("PAIR_EQ_EXPAND",
+``(((x:'a,y:'b) = X) = ((x = FST X) /\ (y = SND X))) /\
+  ((X = (x,y)) = ((FST X = x) /\ (SND X = y)))``, 
+SingleStep.Cases_on `X` THEN
+REWRITE_TAC[pairTheory.PAIR_EQ]);
 
-Cases_on `p` THEN
-PROVE_TAC[]);
 
+val PAIR_EQ_SIMPLE_EXPAND = store_thm ("PAIR_EQ_SIMPLE_EXPAND",
+``(((x:'a,y:'b) = (x, y')) = (y = y')) /\
+  (((y:'b,x:'a) = (y', x)) = (y = y')) /\
+  (((FST X, y) = X) = (y = SND X)) /\
+  (((x, SND X) = X) = (x = FST X)) /\
+  ((X = (FST X, y)) = (SND X = y)) /\
+  ((X = (x, SND X)) = (FST X = x))``, 
+SingleStep.Cases_on `X` THEN
+ASM_REWRITE_TAC[pairTheory.PAIR_EQ]);
 
 
 val IS_SOME_EQ_NOT_NONE = store_thm ("IS_SOME_EQ_NOT_NONE",
 ``!x. IS_SOME x = ~(x = NONE)``,
-
 REWRITE_TAC[GSYM optionTheory.NOT_IS_SOME_EQ_NONE]);
 
-
-
-val PAIR_EQ_EXPAND = store_thm ("PAIR_EQ_EXPAND",
-``(((x,y) = X) = ((x = FST X) /\ (y = SND X))) /\
-  ((X = (x,y)) = ((FST X = x) /\ (SND X = y)))``, 
-Cases_on `X` THEN 
-REWRITE_TAC[pairTheory.PAIR_EQ]);
-
-*)
 
 val _ = export_theory();
 
