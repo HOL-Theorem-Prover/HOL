@@ -225,28 +225,28 @@ in
 end;
 
 (* ----------------------------------------------------------------------
-    Compiling Basis97 "fix"
+    Compiling Basis 2002 "fix"
    ---------------------------------------------------------------------- *)
 let
-  val _ = print "Compiling Basis 1997 update for Moscow ML\n"
+  val _ = print "Compiling Basis 2002 update for Moscow ML\n"
   val modTime = FileSys.modTime
   val dir_0 = FileSys.getDir()
   val _ = FileSys.chDir holmakedir
-  val smlfile = fullPath [holmakedir, "basis97.sml"]
-  val uifile = fullPath [holmakedir, "basis97.ui"]
+  val smlfile = fullPath [holmakedir, "basis2002.sml"]
+  val uifile = fullPath [holmakedir, "basis2002.ui"]
   val rebuild_basis = not (canread uifile) orelse
                       Time.>(modTime smlfile, modTime uifile)
-  val copy_basis = not (canread (fullPath [sigobj, "basis97.ui"])) orelse
-                   not (canread (fullPath [sigobj, "basis97.uo"])) orelse
+  val copy_basis = not (canread (fullPath [sigobj, "basis2002.ui"])) orelse
+                   not (canread (fullPath [sigobj, "basis2002.uo"])) orelse
                    rebuild_basis
 in
   if rebuild_basis then
-    if systeml [compiler, "-c", "-toplevel", "basis97.sml"] =
+    if systeml [compiler, "-c", "-toplevel", "basis2002.sml"] =
        OS.Process.success
     then ()
-    else die "Couldn't compile basis97.sml"
+    else die "Couldn't compile basis2002.sml"
   else ();
-  if copy_basis then app to_sigobj ["basis97.ui", "basis97.uo"] else ();
+  if copy_basis then app to_sigobj ["basis2002.ui", "basis2002.uo"] else ();
   FileSys.chDir dir_0
 end;
 
@@ -314,24 +314,24 @@ val _ =
      val systeml   = fn clist => if systeml clist <> Process.success then
                                    raise Fail ""
                                  else ()
-     val b97 = "basis97.ui"
+     val b2002 = "basis2002.ui"
   in
     systeml [yaccer, "Parser.grm"];
     systeml [lexer, "Lexer.lex"];
-    systeml [compiler, "-c", b97, "Parser.sig"];
-    systeml [compiler, "-c", b97, "Parser.sml"];
-    systeml [compiler, "-c", b97, "Lexer.sml" ];
-    systeml [compiler, "-c", b97, "Holdep.sml"];
-    systeml [compiler, "-c", b97, "internal_functions.sig"];
-    systeml [compiler, "-c", b97, "internal_functions.sml"];
-    systeml [compiler, "-c", b97, "Holmake_types.sig"];
-    systeml [compiler, "-c", b97, "Holmake_types.sml"];
-    systeml [compiler, "-c", b97, "ReadHMF.sig"];
-    systeml [compiler, "-c", b97, "ReadHMF.sml"];
+    systeml [compiler, "-c", b2002, "Parser.sig"];
+    systeml [compiler, "-c", b2002, "Parser.sml"];
+    systeml [compiler, "-c", b2002, "Lexer.sml" ];
+    systeml [compiler, "-c", b2002, "Holdep.sml"];
+    systeml [compiler, "-c", b2002, "internal_functions.sig"];
+    systeml [compiler, "-c", b2002, "internal_functions.sml"];
+    systeml [compiler, "-c", b2002, "Holmake_types.sig"];
+    systeml [compiler, "-c", b2002, "Holmake_types.sml"];
+    systeml [compiler, "-c", b2002, "ReadHMF.sig"];
+    systeml [compiler, "-c", b2002, "ReadHMF.sml"];
     if OS <> "winNT" then
-      systeml [compiler, "-standalone", "-o", bin, b97, "Holmake.sml"]
+      systeml [compiler, "-standalone", "-o", bin, b2002, "Holmake.sml"]
     else
-      systeml [compiler, "-o", bin, b97, "Holmake.sml"];
+      systeml [compiler, "-o", bin, b2002, "Holmake.sml"];
     mk_xable bin;
     FileSys.chDir cdir
   end

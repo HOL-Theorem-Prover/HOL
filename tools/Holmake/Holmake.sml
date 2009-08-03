@@ -385,7 +385,7 @@ fun parse_command_line list = let
   val (rem, user_hmakefile) =
     find_one_pairtag "--holmakefile" NONE SOME rem
   val (rem, no_overlay) = find_toggle "--no_overlay" rem
-  val (rem, nob97)= find_toggle "--no_basis97" rem
+  val (rem, nob2002)= find_toggle "--no_basis2002" rem
   val (rem, user_overlay) = find_one_pairtag "--overlay" NONE SOME rem
   val (rem, cmdl_MOSMLDIRs) = find_pairs "--mosmldir" rem
   val (rem, interactive_flag) = find_alternative_tags ["--interactive", "-i"]
@@ -402,7 +402,7 @@ in
    no_hmakefile = no_hmakefile,
    allfast = allfast, fastfiles = fastfiles,
    user_hmakefile = user_hmakefile,
-   no_overlay = no_overlay, nob97 = nob97,
+   no_overlay = no_overlay, nob2002 = nob2002,
    user_overlay = user_overlay,
    interactive_flag = interactive_flag,
    cmdl_HOLDIR =
@@ -433,7 +433,7 @@ end
 val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      always_rebuild_deps, interactive_flag,
      additional_includes = cline_additional_includes,
-     cmdl_HOLDIR, cmdl_MOSMLDIR, nob97,
+     cmdl_HOLDIR, cmdl_MOSMLDIR, nob2002,
      no_sigobj = cline_no_sigobj, no_prereqs,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
      user_overlay, keep_going_flag, quiet_flag, do_logging_flag} =
@@ -594,13 +594,13 @@ val additional_includes =
 
 val hmake_preincludes = includify (envlist "PRE_INCLUDES")
 val hmake_no_overlay = member "NO_OVERLAY" hmake_options
-val hmake_no_basis97 = member "NO_BASIS97" hmake_options
+val hmake_no_basis2002 = member "NO_BASIS2002" hmake_options
 val hmake_no_sigobj = member "NO_SIGOBJ" hmake_options
 val hmake_qof = member "QUIT_ON_FAILURE" hmake_options
 val hmake_noprereqs = member "NO_PREREQS" hmake_options
 val extra_cleans = envlist "EXTRA_CLEANS"
 
-val nob97 = nob97 orelse hmake_no_basis97
+val nob2002 = nob2002 orelse hmake_no_basis2002
 
 val quit_on_failure = quit_on_failure orelse hmake_qof
 val no_prereqs = no_prereqs orelse hmake_noprereqs
@@ -626,7 +626,7 @@ val hmakefile_env = let
   val stdincludes =
       spacify (map Systeml.protect (hmake_preincludes @ std_include_flags)) ^
       " " ^ addincludes
-  val basis_string = if nob97 then [] else [LIT "basis97.ui"]
+  val basis_string = if nob2002 then [] else [LIT "basis2002.ui"]
 in
   (fn s =>
       case s of
@@ -857,8 +857,8 @@ fun get_implicit_dependencies (f: File) : File list = let
                     toFile (fullPath [SIGOBJ, s]) :: file_dependencies0
                   else
                     file_dependencies0
-  val file_dependencies = if nob97 then file_dependencies
-                          else toFile (fullPath [SIGOBJ, "basis97"]) ::
+  val file_dependencies = if nob2002 then file_dependencies
+                          else toFile (fullPath [SIGOBJ, "basis2002"]) ::
                                file_dependencies
   fun is_thy_file (SML (Theory _)) = true
     | is_thy_file (SIG (Theory _)) = true
@@ -934,8 +934,8 @@ fun build_command c arg = let
                       additional_includes
  (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
   val overlay_stringl = case actual_overlay of
-                          NONE => if not nob97 then ["basis97.ui"] else []
-                        | SOME s => ["basis97.ui", s]
+                          NONE => if not nob2002 then ["basis2002.ui"] else []
+                        | SOME s => ["basis2002.ui", s]
   exception CompileFailed
   exception FileNotFound
 in
