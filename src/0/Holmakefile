@@ -2,7 +2,7 @@ OPTIONS = NO_OVERLAY
 FTAG_UI = $(protect $(SIGOBJ)/FinalTag-sig.ui)
 FTYPE_UI = $(protect $(SIGOBJ)/FinalType-sig.ui)
 FTERM_UI = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
-BASIS_UI = $(protect $(SIGOBJ)/basis97.ui)
+BASIS_UI = $(protect $(SIGOBJ)/basis2002.ui)
 
 FTAG_UID = $(dprot $(SIGOBJ)/FinalTag-sig.ui)
 FTERM_UID = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
@@ -10,7 +10,7 @@ TAG_UID = $(dprot $(SIGOBJ)/Tag.ui)
 LIB_UID = $(dprot $(SIGOBJ)/Lib.ui)
 PORTABLE_UID = $(dprot $(SIGOBJ)/Portable.ui)
 COUNT_UID = $(dprot $(SIGOBJ)/Count.ui)
-BASIS_UID = $(dprot $(SIGOBJ)/basis97.ui)
+BASIS_UID = $(dprot $(SIGOBJ)/basis2002.ui)
 
 
 Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID)
