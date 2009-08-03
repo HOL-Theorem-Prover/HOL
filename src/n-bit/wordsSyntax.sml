@@ -145,9 +145,17 @@ fun mk_word_join(w1,w2) =
   list_mk_comb(inst[alpha|->dim_of w1, beta|->dim_of w2]word_join_tm,[w1,w2])
   handle HOL_ERR _ => raise ERR "mk_word_join" "";
 
-fun mk_word_concat(w1,w2) = 
-  list_mk_comb(inst[alpha|->dim_of w1, beta|->dim_of w2]word_concat_tm,[w1,w2])
-  handle HOL_ERR _ => raise ERR "mk_word_concat" "";
+fun mk_word_concat (w1,w2) = 
+let val wlen = fcpLib.index_to_num o dest_word_type o type_of
+    val ty = fcpLib.index_type (Arbnum.+(wlen w1, wlen w2))
+               handle HOL_ERR _ => gamma
+in
+  list_mk_comb
+    (inst [ alpha |-> dim_of w1,
+            beta  |-> dim_of w2,
+            gamma |-> ty ] word_concat_tm,[w1,w2])
+  handle HOL_ERR _ => raise ERR "mk_word_concat" ""
+end;
 
 fun mk_word_log2 w = 
   mk_comb(inst[alpha|->dim_of w]word_log2_tm,w)
