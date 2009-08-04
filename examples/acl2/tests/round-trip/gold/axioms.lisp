@@ -1560,10 +1560,15 @@
                             (CHARACTER-LISTP Y)
                             'NIL))))
 
+(DEFTHM APPEND-TO-NIL
+        (IMPLIES (TRUE-LISTP X)
+                 (EQUAL (BINARY-APPEND X 'NIL) X)))
+
 (DEFUN STRING-APPEND (STR1 STR2)
-       (COERCE (BINARY-APPEND (COERCE STR1 'LIST)
-                              (COERCE STR2 'LIST))
-               'STRING))
+       (MUST-BE-EQUAL (COERCE (BINARY-APPEND (COERCE STR1 'LIST)
+                                             (COERCE STR2 'LIST))
+                              'STRING)
+                      (STRING-APPEND STR1 STR2)))
 
 (DEFUN STRING-LISTP (X)
        (IF (ATOM X)
@@ -1906,6 +1911,13 @@
                'T
                (INTERSECTP-EQ (CDR X) Y))))
 
+(DEFUN INTERSECTP (X Y)
+       (IF (ENDP X)
+           'NIL
+           (IF (MEMBER (CAR X) Y)
+               'T
+               (INTERSECTP (CDR X) Y))))
+
 (DEFUN INTERSECTP-EQUAL (X Y)
        (IF (ENDP X)
            'NIL
@@ -1941,11 +1953,14 @@
      (CONS
       (CAR LST)
       (CONS
+       '(DECLARE (IGNORABLE ER-PROGN-NOT-TO-BE-USED-ELSEWHERE-VAL))
        (CONS
-        'IF
         (CONS
-         'ER-PROGN-NOT-TO-BE-USED-ELSEWHERE-ERP
-         (CONS '(MV ER-PROGN-NOT-TO-BE-USED-ELSEWHERE-ERP
+         'IF
+         (CONS
+          'ER-PROGN-NOT-TO-BE-USED-ELSEWHERE-ERP
+          (CONS
+               '(MV ER-PROGN-NOT-TO-BE-USED-ELSEWHERE-ERP
                     ER-PROGN-NOT-TO-BE-USED-ELSEWHERE-VAL
                     STATE)
                (CONS (CONS 'CHECK-VARS-NOT-FREE
@@ -1953,7 +1968,7 @@
                                        ER-PROGN-NOT-TO-BE-USED-ELSEWHERE-VAL)
                                  (CONS (ER-PROGN-FN (CDR LST)) 'NIL)))
                      'NIL))))
-       'NIL)))))))
+        'NIL))))))))
 
 (DEFUN LEGAL-CASE-CLAUSESP (TL)
        (IF (ATOM TL)
@@ -2070,6 +2085,17 @@
                      (NONNEGATIVE-INTEGER-QUOTIENT (BINARY-+ I (UNARY-- J))
                                                    J))))
 
+(DEFUN TRUE-LIST-LISTP (X)
+       (IF (ATOM X)
+           (EQ X 'NIL)
+           (IF (TRUE-LISTP (CAR X))
+               (TRUE-LIST-LISTP (CDR X))
+               'NIL)))
+
+(DEFTHM TRUE-LIST-LISTP-FORWARD-TO-TRUE-LISTP
+        (IMPLIES (TRUE-LIST-LISTP X)
+                 (TRUE-LISTP X)))
+
 (DEFUN
  LEGAL-LET*-P
  (BINDINGS IGNORE-VARS IGNORED-SEEN TOP-FORM)
@@ -2106,9 +2132,36 @@
        (LEGAL-LET*-P (CDR BINDINGS)
                      IGNORE-VARS IGNORED-SEEN TOP-FORM)))))
 
+(DEFUN WELL-FORMED-TYPE-DECLS-P (DECLS VARS)
+       (IF (ENDP DECLS)
+           'T
+           (IF (SUBSETP-EQ (CDR (CDR (CAR DECLS)))
+                           VARS)
+               (WELL-FORMED-TYPE-DECLS-P (CDR DECLS)
+                                         VARS)
+               'NIL)))
+
+(DEFUN SYMBOL-LIST-LISTP (X)
+       (IF (ATOM X)
+           (EQ X 'NIL)
+           (IF (SYMBOL-LISTP (CAR X))
+               (SYMBOL-LIST-LISTP (CDR X))
+               'NIL)))
+
+(DEFUN GET-TYPE-DECLS (VAR TYPE-DECLS)
+       (IF (ENDP TYPE-DECLS)
+           'NIL
+           (IF (MEMBER-EQ VAR (CDR (CAR TYPE-DECLS)))
+               (CONS (CONS 'TYPE
+                           (CONS (CAR (CAR TYPE-DECLS))
+                                 (CONS VAR 'NIL)))
+                     (GET-TYPE-DECLS VAR (CDR TYPE-DECLS)))
+               (GET-TYPE-DECLS VAR (CDR TYPE-DECLS)))))
+
 (DEFUN
  LET*-MACRO
- (BINDINGS IGNORE-VARS IGNORABLE-VARS BODY)
+ (BINDINGS IGNORE-VARS
+           IGNORABLE-VARS TYPE-DECLS BODY)
  (IF
   (ENDP BINDINGS)
   (PROG2$
@@ -2136,44 +2189,42 @@
    (CONS
     (CONS (CAR BINDINGS) 'NIL)
     ((LAMBDA
-      (REST IGNORABLE-VARS IGNORE-VARS BINDINGS)
+      (REST TYPE-DECLS
+            IGNORABLE-VARS IGNORE-VARS BINDINGS)
       (BINARY-APPEND
-           (IF (MEMBER-EQ (CAR (CAR BINDINGS))
-                          IGNORE-VARS)
-               (CONS (CONS 'DECLARE
-                           (CONS (CONS 'IGNORE
-                                       (CONS (CAR (CAR BINDINGS)) 'NIL))
-                                 'NIL))
-                     'NIL)
-               'NIL)
-           (BINARY-APPEND
-                (IF (MEMBER-EQ (CAR (CAR BINDINGS))
-                               IGNORABLE-VARS)
-                    (CONS (CONS 'DECLARE
-                                (CONS (CONS 'IGNORABLE
-                                            (CONS (CAR (CAR BINDINGS)) 'NIL))
-                                      'NIL))
-                          'NIL)
-                    'NIL)
-                (CONS REST 'NIL))))
+        (IF (MEMBER-EQ (CAR (CAR BINDINGS))
+                       IGNORE-VARS)
+            (CONS (CONS 'DECLARE
+                        (CONS (CONS 'IGNORE
+                                    (CONS (CAR (CAR BINDINGS)) 'NIL))
+                              'NIL))
+                  'NIL)
+            'NIL)
+        (BINARY-APPEND
+             (IF (MEMBER-EQ (CAR (CAR BINDINGS))
+                            IGNORABLE-VARS)
+                 (CONS (CONS 'DECLARE
+                             (CONS (CONS 'IGNORABLE
+                                         (CONS (CAR (CAR BINDINGS)) 'NIL))
+                                   'NIL))
+                       'NIL)
+                 'NIL)
+             (BINARY-APPEND ((LAMBDA (VAR-TYPE-DECLS)
+                                     (IF VAR-TYPE-DECLS
+                                         (CONS (CONS 'DECLARE VAR-TYPE-DECLS)
+                                               'NIL)
+                                         'NIL))
+                             (GET-TYPE-DECLS (CAR (CAR BINDINGS))
+                                             TYPE-DECLS))
+                            (CONS REST 'NIL)))))
      (LET*-MACRO (CDR BINDINGS)
                  (REMOVE (CAR (CAR BINDINGS))
                          IGNORE-VARS)
                  (REMOVE (CAR (CAR BINDINGS))
                          IGNORABLE-VARS)
-                 BODY)
+                 TYPE-DECLS BODY)
+     TYPE-DECLS
      IGNORABLE-VARS IGNORE-VARS BINDINGS)))))
-
-(DEFUN TRUE-LIST-LISTP (X)
-       (IF (ATOM X)
-           (EQ X 'NIL)
-           (IF (TRUE-LISTP (CAR X))
-               (TRUE-LIST-LISTP (CDR X))
-               'NIL)))
-
-(DEFTHM TRUE-LIST-LISTP-FORWARD-TO-TRUE-LISTP
-        (IMPLIES (TRUE-LIST-LISTP X)
-                 (TRUE-LISTP X)))
 
 (DEFUN COLLECT-CDRS-WHEN-CAR-EQ (X ALIST)
        (IF (ENDP ALIST)
@@ -2189,12 +2240,13 @@
            (BINARY-APPEND (CAR LST)
                           (APPEND-LST (CDR LST)))))
 
-(DEFUN SYMBOL-LIST-LISTP (X)
-       (IF (ATOM X)
-           (EQ X 'NIL)
-           (IF (SYMBOL-LISTP (CAR X))
-               (SYMBOL-LIST-LISTP (CDR X))
-               'NIL)))
+(DEFUN RESTRICT-ALIST (KEYS ALIST)
+       (IF (ENDP ALIST)
+           'NIL
+           (IF (MEMBER-EQ (CAR (CAR ALIST)) KEYS)
+               (CONS (CAR ALIST)
+                     (RESTRICT-ALIST KEYS (CDR ALIST)))
+               (RESTRICT-ALIST KEYS (CDR ALIST)))))
 
 (DEFUN
  FLOOR (I J)
@@ -2678,6 +2730,17 @@
        (NOT (EQ (FGETPROP SYM 'FORMALS 'T WRLD)
                 'T)))
 
+(DEFUN WEAK-SATISFIES-TYPE-SPEC-P (X)
+       (IF (CONSP X)
+           (IF (EQ (CAR X) 'SATISFIES)
+               (IF (TRUE-LISTP X)
+                   (IF (EQUAL (LENGTH X) '2)
+                       (SYMBOLP (CAR (CDR X)))
+                       'NIL)
+                   'NIL)
+               'NIL)
+           'NIL))
+
 (DEFUN THE-ERROR (X Y) (CDR (CONS X Y)))
 
 (DEFUN SET-DIFFERENCE-EQUAL (L1 L2)
@@ -3099,7 +3162,10 @@
 
 (DEFUN ARRAY-ORDER (HEADER)
        ((LAMBDA (ORDERP)
-                (IF (IF ORDERP (EQ (CAR (CDR ORDERP)) 'NIL)
+                (IF (IF ORDERP
+                        (IF (EQ (CAR (CDR ORDERP)) 'NIL)
+                            (EQ (CAR (CDR ORDERP)) 'NIL)
+                            (EQ (CAR (CDR ORDERP)) ':NONE))
                         'NIL)
                     'NIL
                     (IF (IF ORDERP (EQ (CAR (CDR ORDERP)) '>)
@@ -3108,21 +3174,39 @@
                         '<)))
         (ASSOC-KEYWORD ':ORDER (CDR HEADER))))
 
-(DEFUN COMPRESS1 (NAME L)
-       ((LAMBDA (CASE-DO-NOT-USE-ELSEWHERE L NAME)
-                (IF (EQL CASE-DO-NOT-USE-ELSEWHERE '<)
-                    (CONS (HEADER NAME L)
-                          (COMPRESS11 NAME L '0
-                                      (CAR (DIMENSIONS NAME L))
-                                      (DEFAULT NAME L)))
-                    (IF (EQL CASE-DO-NOT-USE-ELSEWHERE '>)
-                        (CONS (HEADER NAME L)
-                              (REVERSE (COMPRESS11 NAME L '0
-                                                   (CAR (DIMENSIONS NAME L))
-                                                   (DEFAULT NAME L))))
-                        L)))
-        (ARRAY-ORDER (HEADER NAME L))
-        L NAME))
+(DEFUN
+ COMPRESS1 (NAME L)
+ ((LAMBDA
+   (CASE-DO-NOT-USE-ELSEWHERE L NAME)
+   (IF
+    (EQL CASE-DO-NOT-USE-ELSEWHERE '<)
+    (CONS (HEADER NAME L)
+          (COMPRESS11 NAME L '0
+                      (CAR (DIMENSIONS NAME L))
+                      (DEFAULT NAME L)))
+    (IF
+     (EQL CASE-DO-NOT-USE-ELSEWHERE '>)
+     (CONS (HEADER NAME L)
+           (REVERSE (COMPRESS11 NAME L '0
+                                (CAR (DIMENSIONS NAME L))
+                                (DEFAULT NAME L))))
+     (PROG2$
+      (IF
+       (< (MAXIMUM-LENGTH NAME L) (LENGTH L))
+       (HARD-ERROR
+        'COMPRESS1
+        '"Attempted to compress a one-dimensional array named ~
+                        ~x0 whose header specifies :ORDER ~x1 and whose ~
+                        length, ~x2, exceeds its maximum-length, ~x3."
+        (CONS (CONS '#\0 NAME)
+              (CONS (CONS '#\1 'NIL)
+                    (CONS (CONS '#\2 (LENGTH L))
+                          (CONS (CONS '#\3 (MAXIMUM-LENGTH NAME L))
+                                'NIL)))))
+       'NIL)
+      L))))
+  (ARRAY-ORDER (HEADER NAME L))
+  L NAME))
 
 (DEFTHM
    ARRAY1P-CONS
@@ -3236,15 +3320,15 @@
        (UPDATE-NTH J (UPDATE-NTH KEY VAL (NTH J L))
                    L))
 
-(DEFUN |32-BIT-INTEGERP| (X)
+(DEFUN 32-BIT-INTEGERP (X)
        (IF (INTEGERP X)
            (IF (NOT (< '2147483647 X))
                (NOT (< X '-2147483648))
                'NIL)
            'NIL))
 
-(DEFTHM |32-BIT-INTEGERP-FORWARD-TO-INTEGERP|
-        (IMPLIES (|32-BIT-INTEGERP| X)
+(DEFTHM 32-BIT-INTEGERP-FORWARD-TO-INTEGERP
+        (IMPLIES (32-BIT-INTEGERP X)
                  (INTEGERP X)))
 
 (DEFUN RATIONAL-LISTP (L)
@@ -3269,15 +3353,15 @@
         (IMPLIES (INTEGER-LISTP X)
                  (RATIONAL-LISTP X)))
 
-(DEFUN |32-BIT-INTEGER-LISTP| (L)
+(DEFUN 32-BIT-INTEGER-LISTP (L)
        (IF (ATOM L)
            (EQUAL L 'NIL)
-           (IF (|32-BIT-INTEGERP| (CAR L))
-               (|32-BIT-INTEGER-LISTP| (CDR L))
+           (IF (32-BIT-INTEGERP (CAR L))
+               (32-BIT-INTEGER-LISTP (CDR L))
                'NIL)))
 
-(DEFTHM |32-BIT-INTEGER-LISTP-FORWARD-TO-INTEGER-LISTP|
-        (IMPLIES (|32-BIT-INTEGER-LISTP| X)
+(DEFTHM 32-BIT-INTEGER-LISTP-FORWARD-TO-INTEGER-LISTP
+        (IMPLIES (32-BIT-INTEGER-LISTP X)
                  (INTEGER-LISTP X)))
 
 (DEFUN OPEN-INPUT-CHANNELS (ST) (NTH '0 ST))
@@ -3296,7 +3380,7 @@
 
 (DEFUN UPDATE-T-STACK (X ST) (UPDATE-NTH '3 X ST))
 
-(DEFUN |32-BIT-INTEGER-STACK| (ST) (NTH '4 ST))
+(DEFUN 32-BIT-INTEGER-STACK (ST) (NTH '4 ST))
 
 (DEFUN UPDATE-32-BIT-INTEGER-STACK (X ST) (UPDATE-NTH '4 X ST))
 
@@ -3335,6 +3419,31 @@
 (DEFUN USER-STOBJ-ALIST1 (ST) (NTH '14 ST))
 
 (DEFUN UPDATE-USER-STOBJ-ALIST1 (X ST) (UPDATE-NTH '14 X ST))
+
+(DEFUN
+ INIT-IPRINT-AR (HARD-BOUND ENABLEDP)
+ ((LAMBDA
+   (DIM ENABLEDP)
+   (CONS
+    (CONS
+     ':HEADER
+     (CONS
+      ':DIMENSIONS
+      (CONS
+       (CONS DIM 'NIL)
+       (CONS ':MAXIMUM-LENGTH
+             (CONS (BINARY-* '4 DIM)
+                   (CONS ':DEFAULT
+                         (CONS 'NIL
+                               (CONS ':NAME
+                                     (CONS 'IPRINT-AR
+                                           (CONS ':ORDER
+                                                 (CONS ':NONE 'NIL)))))))))))
+    (CONS (CONS '0
+                (IF ENABLEDP '0 (CONS '0 'NIL)))
+          'NIL)))
+  (BINARY-+ '1 HARD-BOUND)
+  ENABLEDP))
 
 (DEFUN ALL-BOUNDP (ALIST1 ALIST2)
        (IF (ENDP ALIST1)
@@ -3627,10 +3736,11 @@
       (ORDERED-SYMBOL-ALISTP (GLOBAL-TABLE X))
       (IF
        (ALL-BOUNDP
-          '((ACCUMULATED-TTREE)
+          '((ABBREV-EVISC-TUPLE . :DEFAULT)
+            (ACCUMULATED-TTREE)
             (ACCUMULATED-WARNINGS)
             (ACL2-RAW-MODE-P)
-            (ACL2-VERSION . "ACL2 Version 3.4")
+            (ACL2-VERSION . "ACL2 Version 3.5")
             (AXIOMSP)
             (BDDNOTES)
             (CERTIFY-BOOK-DISABLEDP)
@@ -3648,6 +3758,7 @@
             (DEFAXIOMS-OKP-CERT . T)
             (DISTRIBUTED-BOOKS-DIR)
             (DMRP)
+            (EVISC-HITP-WITHOUT-IPRINT)
             (EVISCERATE-HIDE-TERMS)
             (FMT-HARD-RIGHT-MARGIN . 77)
             (FMT-SOFT-RIGHT-MARGIN . 65)
@@ -3657,13 +3768,22 @@
             (GLOBAL-ENABLED-STRUCTURE)
             (GSTACKP)
             (GUARD-CHECKING-ON . T)
+            (HONS-ENABLED)
+            (HONS-READ-P . T)
             (IN-LOCAL-FLG)
             (IN-PROVE-FLG)
             (IN-VERIFY-FLG)
-            (INCLUDE-BOOK-ALIST-STATE)
             (INFIXP)
             (INHIBIT-OUTPUT-LST SUMMARY)
             (INHIBIT-OUTPUT-LST-STACK)
+            (IPRINT-AR (:HEADER :DIMENSIONS (10001)
+                                :MAXIMUM-LENGTH 40004
+                                :DEFAULT NIL
+                                :NAME IPRINT-AR
+                                :ORDER :NONE)
+                       (0 0))
+            (IPRINT-HARD-BOUND . 10000)
+            (IPRINT-SOFT-BOUND . 1000)
             (KEEP-TMP-FILES)
             (LAST-MAKE-EVENT-EXPANSION)
             (LD-LEVEL . 0)
@@ -3676,11 +3796,11 @@
                                      FMT-TO-COMMENT-WINDOW
                                      LEN MFC-CLAUSE CPU-CORE-COUNT
                                      NONNEGATIVE-INTEGER-QUOTIENT
-                                     CHECK-HEX-UPPERCASE
-                                     RETRACT-WORLD ASET1 ARRAY1P BOOLE$
-                                     ARRAY2P STRIP-CDRS COMPRESS2 STRIP-CARS
-                                     WORLDP WORMHOLE-P MFC-TYPE-ALIST
-                                     MAY-NEED-SLASHES FMT-TO-COMMENT-WINDOW!
+                                     CHECK-PRINT-BASE RETRACT-WORLD
+                                     ASET1 ARRAY1P BOOLE$ ARRAY2P STRIP-CDRS
+                                     COMPRESS2 STRIP-CARS WORLDP WORMHOLE-P
+                                     MFC-TYPE-ALIST MAY-NEED-SLASHES-FN
+                                     FMT-TO-COMMENT-WINDOW!
                                      HAS-PROPSP HARD-ERROR
                                      ABORT! MFC-RDEPTH FLUSH-COMPRESS
                                      ALPHORDER EXTEND-WORLD USER-STOBJ-ALIST
@@ -3690,10 +3810,9 @@
                                      MAKUNBOUND-GLOBAL OPEN-INPUT-CHANNEL-P1
                                      BOUNDP-GLOBAL1 GLOBAL-TABLE-CARS1
                                      EXTEND-T-STACK LIST-ALL-PACKAGE-NAMES
-                                     CLOSE-OUTPUT-CHANNEL
-                                     WRITE-BYTE$ SHRINK-T-STACK
-                                     ASET-32-BIT-INTEGER-STACK GET-GLOBAL
-                                     |32-BIT-INTEGER-STACK-LENGTH1|
+                                     CLOSE-OUTPUT-CHANNEL WRITE-BYTE$
+                                     SHRINK-T-STACK ASET-32-BIT-INTEGER-STACK
+                                     GET-GLOBAL 32-BIT-INTEGER-STACK-LENGTH1
                                      EXTEND-32-BIT-INTEGER-STACK ASET-T-STACK
                                      WITH-PROVER-TIME-LIMIT AREF-T-STACK
                                      READ-CHAR$ AREF-32-BIT-INTEGER-STACK
@@ -3714,16 +3833,17 @@
                                      LOGORC1 LOGORC2 LOGTEST POSITION ABS
                                      STRING-EQUAL STRING< STRING> STRING<=
                                      STRING>= STRING-UPCASE STRING-DOWNCASE
-                                     KEYWORDP EQ EQL CHAR SUBST
-                                     SUBLIS ACONS ASSOC RASSOC NTH SUBSEQ
-                                     LENGTH REVERSE ZIP STANDARD-CHAR-P
-                                     ALPHA-CHAR-P UPPER-CASE-P
-                                     LOWER-CASE-P CHAR< CHAR> CHAR<= CHAR>=
-                                     CHAR-EQUAL CHAR-UPCASE CHAR-DOWNCASE
-                                     HONS-READ-OBJECT AND-LIST OR-LIST)
+                                     KEYWORDP EQ EQL CHAR SUBST SUBLIS
+                                     ACONS ASSOC RASSOC NTH SUBSEQ LENGTH
+                                     REVERSE ZIP STANDARD-CHAR-P ALPHA-CHAR-P
+                                     UPPER-CASE-P LOWER-CASE-P CHAR< CHAR>
+                                     CHAR<= CHAR>= CHAR-EQUAL CHAR-UPCASE
+                                     CHAR-DOWNCASE HONS-READ-OBJECT
+                                     AND-LIST OR-LIST RANDOM$)
             (MACROS-WITH-RAW-CODE MBE
                                   THEORY-INVARIANT SET-LET*-ABSTRACTIONP
                                   DEFAXIOM SET-BOGUS-MUTUAL-RECURSION-OK
+                                  SET-RULER-EXTENDERS
                                   DELETE-INCLUDE-BOOK-DIR CERTIFY-BOOK
                                   PROGN! F-PUT-GLOBAL PUSH-UNTOUCHABLE
                                   SET-BACKCHAIN-LIMIT SET-DEFAULT-HINTS!
@@ -3739,7 +3859,8 @@
                                   CATCH-TIME-LIMIT4 DEFUNS
                                   ADD-DEFAULT-HINTS! LOCAL ENCAPSULATE
                                   REMOVE-DEFAULT-HINTS! INCLUDE-BOOK
-                                  PPROGN SET-ENFORCE-REDUNDANCY LOGIC
+                                  PPROGN SET-ENFORCE-REDUNDANCY
+                                  SET-IGNORE-DOC-STRING-ERROR LOGIC
                                   ER DEFLABEL MV-LET PROGRAM VALUE-TRIPLE
                                   SET-BODY COMP SET-BOGUS-DEFUN-HINTS-OK
                                   DMR-STOP DEFPKG SET-MEASURE-FUNCTION
@@ -3757,7 +3878,7 @@
                                   DMR-START REWRITE-ENTRY
                                   SKIP-PROOFS F-BOUNDP-GLOBAL
                                   MAKE-EVENT SET-VERIFY-GUARDS-EAGERNESS
-                                  WORMHOLE VERIFY-TERMINATION
+                                  WORMHOLE VERIFY-TERMINATION-BOOT-STRAP
                                   START-PROOF-TREE F-DECREMENT-BIG-CLOCK
                                   DEFSTOBJ DEFUND DEFTTAG
                                   DEFDOC PUSH-GFRAME DEFTHMD F-GET-GLOBAL
@@ -3773,9 +3894,10 @@
                                   LIST* APPEND DEFCONST IN-PACKAGE INTERN
                                   FIRST SECOND THIRD FOURTH FIFTH SIXTH
                                   SEVENTH EIGHTH NINTH TENTH DIGIT-CHAR-P
-                                  UNMEMOIZE HONS-LET MEMOIZE-LET
-                                  MEMOIZE DEFUNS-STD DEFTHM-STD
-                                  DEFUN-STD POR PAND PLET PARGS)
+                                  UNMEMOIZE HONS-LET MEMOIZE-LET MEMOIZE
+                                  DEFUNS-STD DEFTHM-STD DEFUN-STD POR
+                                  PAND PLET PARGS TRACE! WITH-LIVE-STATE
+                                  WITH-OUTPUT-OBJECT-CHANNEL-SHARING)
             (MAIN-TIMER . 0)
             (MAKE-EVENT-DEBUG)
             (MAKE-EVENT-DEBUG-DEPTH . 0)
@@ -3783,26 +3905,34 @@
             (MORE-DOC-MAX-LINES . 45)
             (MORE-DOC-MIN-LINES . 35)
             (MORE-DOC-STATE)
+            (MSWINDOWS-DRIVE)
             (PACKAGES-CREATED-BY-DEFPKG)
             (PARALLEL-EVALUATION-ENABLED)
             (PC-OUTPUT)
             (PPR-FLAT-RIGHT-MARGIN . 40)
             (PRINT-BASE . 10)
             (PRINT-CASE . :UPCASE)
+            (PRINT-CIRCLE)
             (PRINT-CLAUSE-IDS)
             (PRINT-DOC-START-COLUMN . 15)
+            (PRINT-ESCAPE . T)
+            (PRINT-LENGTH)
+            (PRINT-LEVEL)
+            (PRINT-LINES)
+            (PRINT-PRETTY)
+            (PRINT-RADIX)
+            (PRINT-READABLY)
+            (PRINT-RIGHT-MARGIN)
             (PROGRAM-FNS-WITH-RAW-CODE
                  RELIEVE-HYP-SYNP
                  APPLY-ABBREVS-TO-LAMBDA-STACK1
                  GOOD-BYE-FN NTH-UPDATE-REWRITER
                  EV-W-LST SIMPLIFY-CLAUSE1
                  EV-REC-ACL2-UNWIND-PROTECT
-                 USER-TERM-EVISC-TUPLE
                  ALLOCATE-FIXNUM-RANGE TRACE$-FN-GENERAL
                  EV-FNCALL! OPEN-TRACE-FILE-FN
                  SET-TRACE-EVISC-TUPLE EV-FNCALL-W
-                 EV-REC USER-DEFAULT-EVISC-TUPLE
-                 SETUP-SIMPLIFY-CLAUSE-POT-LST1
+                 EV-REC SETUP-SIMPLIFY-CLAUSE-POT-LST1
                  SAVE-EXEC CW-GSTACK-FN
                  RECOMPRESS-GLOBAL-ENABLED-STRUCTURE EV-W
                  VERBOSE-PSTACK USER-STOBJ-ALIST-SAFE
@@ -3822,19 +3952,24 @@
                  ADD-POLYS DMR-STOP-FN LD-PRINT-RESULTS
                  APPLY-ABBREVS-TO-LAMBDA-STACK
                  BREAK$ FLPR CLOSE-TRACE-FILE-FN
-                 EV-FNCALL-REC SYS-CALL EV-FNCALL
+                 EV-FNCALL-REC SYS-CALL EV-FNCALL LD-FN0
                  LD-FN WRITE-EXPANSION-FILE LATCH-STOBJS1
                  CHK-PACKAGE-REINCARNATION-IMPORT-RESTRICTIONS
                  UNTRACE$-FN1 BDD-TOP
-                 GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS)
+                 GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS
+                 EXPANSION-ALIST-PKG-NAMES
+                 TIMES-MOD-M31 PRINT-CALL-HISTORY
+                 IPRINT-AR-AREF1 PROVE MAKE-EVENT-FN)
             (PROMPT-FUNCTION . DEFAULT-PRINT-PROMPT)
             (PROMPT-MEMO)
             (PROOF-TREE)
             (PROOF-TREE-BUFFER-WIDTH . 65)
             (PROOF-TREE-CTX)
             (PROOF-TREE-INDENT . "|  ")
+            (PROOF-TREE-START-PRINTED)
             (PROOFS-CO .
                        ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
+            (RAW-ARITY-ALIST)
             (RAW-PROOF-FORMAT)
             (REDO-FLAT-FAIL)
             (REDO-FLAT-SUCC)
@@ -3845,17 +3980,20 @@
             (SAVED-OUTPUT-TOKEN-LST)
             (SHOW-CUSTOM-KEYWORD-HINT-EXPANSION)
             (SKIP-NOTIFY-ON-DEFTTAG)
+            (SKIP-PROOFS-BY-SYSTEM)
             (SKIP-PROOFS-OKP-CERT . T)
-            (SKIPPED-PROOFSP)
+            (SLOW-ARRAY-ACTION . :BREAK)
             (STANDARD-CO .
                          ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
             (STANDARD-OI .
                          ACL2-OUTPUT-CHANNEL::STANDARD-OBJECT-INPUT-0)
-            (SUPPRESS-COMPILE . T)
+            (SUPPRESS-COMPILE)
             (TAINTED-OKP)
             (TEMP-TOUCHABLE-FNS)
             (TEMP-TOUCHABLE-VARS)
+            (TERM-EVISC-TUPLE . :DEFAULT)
             (TIMER-ALIST)
+            (TMP-DIR)
             (TRACE-CO .
                       ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
             (TRACE-LEVEL . 0)
@@ -3896,7 +4034,7 @@
            (IF
             (TRUE-LISTP (T-STACK X))
             (IF
-             (|32-BIT-INTEGER-LISTP| (|32-BIT-INTEGER-STACK| X))
+             (32-BIT-INTEGER-LISTP (32-BIT-INTEGER-STACK X))
              (IF
               (INTEGERP (BIG-CLOCK-ENTRY X))
               (IF
@@ -3952,10 +4090,11 @@
        (ORDERED-SYMBOL-ALISTP (NTH '2 X))
        (IF
         (ALL-BOUNDP
-          '((ACCUMULATED-TTREE)
+          '((ABBREV-EVISC-TUPLE . :DEFAULT)
+            (ACCUMULATED-TTREE)
             (ACCUMULATED-WARNINGS)
             (ACL2-RAW-MODE-P)
-            (ACL2-VERSION . "ACL2 Version 3.4")
+            (ACL2-VERSION . "ACL2 Version 3.5")
             (AXIOMSP)
             (BDDNOTES)
             (CERTIFY-BOOK-DISABLEDP)
@@ -3973,6 +4112,7 @@
             (DEFAXIOMS-OKP-CERT . T)
             (DISTRIBUTED-BOOKS-DIR)
             (DMRP)
+            (EVISC-HITP-WITHOUT-IPRINT)
             (EVISCERATE-HIDE-TERMS)
             (FMT-HARD-RIGHT-MARGIN . 77)
             (FMT-SOFT-RIGHT-MARGIN . 65)
@@ -3982,13 +4122,22 @@
             (GLOBAL-ENABLED-STRUCTURE)
             (GSTACKP)
             (GUARD-CHECKING-ON . T)
+            (HONS-ENABLED)
+            (HONS-READ-P . T)
             (IN-LOCAL-FLG)
             (IN-PROVE-FLG)
             (IN-VERIFY-FLG)
-            (INCLUDE-BOOK-ALIST-STATE)
             (INFIXP)
             (INHIBIT-OUTPUT-LST SUMMARY)
             (INHIBIT-OUTPUT-LST-STACK)
+            (IPRINT-AR (:HEADER :DIMENSIONS (10001)
+                                :MAXIMUM-LENGTH 40004
+                                :DEFAULT NIL
+                                :NAME IPRINT-AR
+                                :ORDER :NONE)
+                       (0 0))
+            (IPRINT-HARD-BOUND . 10000)
+            (IPRINT-SOFT-BOUND . 1000)
             (KEEP-TMP-FILES)
             (LAST-MAKE-EVENT-EXPANSION)
             (LD-LEVEL . 0)
@@ -4001,11 +4150,11 @@
                                      FMT-TO-COMMENT-WINDOW
                                      LEN MFC-CLAUSE CPU-CORE-COUNT
                                      NONNEGATIVE-INTEGER-QUOTIENT
-                                     CHECK-HEX-UPPERCASE
-                                     RETRACT-WORLD ASET1 ARRAY1P BOOLE$
-                                     ARRAY2P STRIP-CDRS COMPRESS2 STRIP-CARS
-                                     WORLDP WORMHOLE-P MFC-TYPE-ALIST
-                                     MAY-NEED-SLASHES FMT-TO-COMMENT-WINDOW!
+                                     CHECK-PRINT-BASE RETRACT-WORLD
+                                     ASET1 ARRAY1P BOOLE$ ARRAY2P STRIP-CDRS
+                                     COMPRESS2 STRIP-CARS WORLDP WORMHOLE-P
+                                     MFC-TYPE-ALIST MAY-NEED-SLASHES-FN
+                                     FMT-TO-COMMENT-WINDOW!
                                      HAS-PROPSP HARD-ERROR
                                      ABORT! MFC-RDEPTH FLUSH-COMPRESS
                                      ALPHORDER EXTEND-WORLD USER-STOBJ-ALIST
@@ -4015,10 +4164,9 @@
                                      MAKUNBOUND-GLOBAL OPEN-INPUT-CHANNEL-P1
                                      BOUNDP-GLOBAL1 GLOBAL-TABLE-CARS1
                                      EXTEND-T-STACK LIST-ALL-PACKAGE-NAMES
-                                     CLOSE-OUTPUT-CHANNEL
-                                     WRITE-BYTE$ SHRINK-T-STACK
-                                     ASET-32-BIT-INTEGER-STACK GET-GLOBAL
-                                     |32-BIT-INTEGER-STACK-LENGTH1|
+                                     CLOSE-OUTPUT-CHANNEL WRITE-BYTE$
+                                     SHRINK-T-STACK ASET-32-BIT-INTEGER-STACK
+                                     GET-GLOBAL 32-BIT-INTEGER-STACK-LENGTH1
                                      EXTEND-32-BIT-INTEGER-STACK ASET-T-STACK
                                      WITH-PROVER-TIME-LIMIT AREF-T-STACK
                                      READ-CHAR$ AREF-32-BIT-INTEGER-STACK
@@ -4039,16 +4187,17 @@
                                      LOGORC1 LOGORC2 LOGTEST POSITION ABS
                                      STRING-EQUAL STRING< STRING> STRING<=
                                      STRING>= STRING-UPCASE STRING-DOWNCASE
-                                     KEYWORDP EQ EQL CHAR SUBST
-                                     SUBLIS ACONS ASSOC RASSOC NTH SUBSEQ
-                                     LENGTH REVERSE ZIP STANDARD-CHAR-P
-                                     ALPHA-CHAR-P UPPER-CASE-P
-                                     LOWER-CASE-P CHAR< CHAR> CHAR<= CHAR>=
-                                     CHAR-EQUAL CHAR-UPCASE CHAR-DOWNCASE
-                                     HONS-READ-OBJECT AND-LIST OR-LIST)
+                                     KEYWORDP EQ EQL CHAR SUBST SUBLIS
+                                     ACONS ASSOC RASSOC NTH SUBSEQ LENGTH
+                                     REVERSE ZIP STANDARD-CHAR-P ALPHA-CHAR-P
+                                     UPPER-CASE-P LOWER-CASE-P CHAR< CHAR>
+                                     CHAR<= CHAR>= CHAR-EQUAL CHAR-UPCASE
+                                     CHAR-DOWNCASE HONS-READ-OBJECT
+                                     AND-LIST OR-LIST RANDOM$)
             (MACROS-WITH-RAW-CODE MBE
                                   THEORY-INVARIANT SET-LET*-ABSTRACTIONP
                                   DEFAXIOM SET-BOGUS-MUTUAL-RECURSION-OK
+                                  SET-RULER-EXTENDERS
                                   DELETE-INCLUDE-BOOK-DIR CERTIFY-BOOK
                                   PROGN! F-PUT-GLOBAL PUSH-UNTOUCHABLE
                                   SET-BACKCHAIN-LIMIT SET-DEFAULT-HINTS!
@@ -4064,7 +4213,8 @@
                                   CATCH-TIME-LIMIT4 DEFUNS
                                   ADD-DEFAULT-HINTS! LOCAL ENCAPSULATE
                                   REMOVE-DEFAULT-HINTS! INCLUDE-BOOK
-                                  PPROGN SET-ENFORCE-REDUNDANCY LOGIC
+                                  PPROGN SET-ENFORCE-REDUNDANCY
+                                  SET-IGNORE-DOC-STRING-ERROR LOGIC
                                   ER DEFLABEL MV-LET PROGRAM VALUE-TRIPLE
                                   SET-BODY COMP SET-BOGUS-DEFUN-HINTS-OK
                                   DMR-STOP DEFPKG SET-MEASURE-FUNCTION
@@ -4082,7 +4232,7 @@
                                   DMR-START REWRITE-ENTRY
                                   SKIP-PROOFS F-BOUNDP-GLOBAL
                                   MAKE-EVENT SET-VERIFY-GUARDS-EAGERNESS
-                                  WORMHOLE VERIFY-TERMINATION
+                                  WORMHOLE VERIFY-TERMINATION-BOOT-STRAP
                                   START-PROOF-TREE F-DECREMENT-BIG-CLOCK
                                   DEFSTOBJ DEFUND DEFTTAG
                                   DEFDOC PUSH-GFRAME DEFTHMD F-GET-GLOBAL
@@ -4098,9 +4248,10 @@
                                   LIST* APPEND DEFCONST IN-PACKAGE INTERN
                                   FIRST SECOND THIRD FOURTH FIFTH SIXTH
                                   SEVENTH EIGHTH NINTH TENTH DIGIT-CHAR-P
-                                  UNMEMOIZE HONS-LET MEMOIZE-LET
-                                  MEMOIZE DEFUNS-STD DEFTHM-STD
-                                  DEFUN-STD POR PAND PLET PARGS)
+                                  UNMEMOIZE HONS-LET MEMOIZE-LET MEMOIZE
+                                  DEFUNS-STD DEFTHM-STD DEFUN-STD POR
+                                  PAND PLET PARGS TRACE! WITH-LIVE-STATE
+                                  WITH-OUTPUT-OBJECT-CHANNEL-SHARING)
             (MAIN-TIMER . 0)
             (MAKE-EVENT-DEBUG)
             (MAKE-EVENT-DEBUG-DEPTH . 0)
@@ -4108,26 +4259,34 @@
             (MORE-DOC-MAX-LINES . 45)
             (MORE-DOC-MIN-LINES . 35)
             (MORE-DOC-STATE)
+            (MSWINDOWS-DRIVE)
             (PACKAGES-CREATED-BY-DEFPKG)
             (PARALLEL-EVALUATION-ENABLED)
             (PC-OUTPUT)
             (PPR-FLAT-RIGHT-MARGIN . 40)
             (PRINT-BASE . 10)
             (PRINT-CASE . :UPCASE)
+            (PRINT-CIRCLE)
             (PRINT-CLAUSE-IDS)
             (PRINT-DOC-START-COLUMN . 15)
+            (PRINT-ESCAPE . T)
+            (PRINT-LENGTH)
+            (PRINT-LEVEL)
+            (PRINT-LINES)
+            (PRINT-PRETTY)
+            (PRINT-RADIX)
+            (PRINT-READABLY)
+            (PRINT-RIGHT-MARGIN)
             (PROGRAM-FNS-WITH-RAW-CODE
                  RELIEVE-HYP-SYNP
                  APPLY-ABBREVS-TO-LAMBDA-STACK1
                  GOOD-BYE-FN NTH-UPDATE-REWRITER
                  EV-W-LST SIMPLIFY-CLAUSE1
                  EV-REC-ACL2-UNWIND-PROTECT
-                 USER-TERM-EVISC-TUPLE
                  ALLOCATE-FIXNUM-RANGE TRACE$-FN-GENERAL
                  EV-FNCALL! OPEN-TRACE-FILE-FN
                  SET-TRACE-EVISC-TUPLE EV-FNCALL-W
-                 EV-REC USER-DEFAULT-EVISC-TUPLE
-                 SETUP-SIMPLIFY-CLAUSE-POT-LST1
+                 EV-REC SETUP-SIMPLIFY-CLAUSE-POT-LST1
                  SAVE-EXEC CW-GSTACK-FN
                  RECOMPRESS-GLOBAL-ENABLED-STRUCTURE EV-W
                  VERBOSE-PSTACK USER-STOBJ-ALIST-SAFE
@@ -4147,19 +4306,24 @@
                  ADD-POLYS DMR-STOP-FN LD-PRINT-RESULTS
                  APPLY-ABBREVS-TO-LAMBDA-STACK
                  BREAK$ FLPR CLOSE-TRACE-FILE-FN
-                 EV-FNCALL-REC SYS-CALL EV-FNCALL
+                 EV-FNCALL-REC SYS-CALL EV-FNCALL LD-FN0
                  LD-FN WRITE-EXPANSION-FILE LATCH-STOBJS1
                  CHK-PACKAGE-REINCARNATION-IMPORT-RESTRICTIONS
                  UNTRACE$-FN1 BDD-TOP
-                 GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS)
+                 GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS
+                 EXPANSION-ALIST-PKG-NAMES
+                 TIMES-MOD-M31 PRINT-CALL-HISTORY
+                 IPRINT-AR-AREF1 PROVE MAKE-EVENT-FN)
             (PROMPT-FUNCTION . DEFAULT-PRINT-PROMPT)
             (PROMPT-MEMO)
             (PROOF-TREE)
             (PROOF-TREE-BUFFER-WIDTH . 65)
             (PROOF-TREE-CTX)
             (PROOF-TREE-INDENT . "|  ")
+            (PROOF-TREE-START-PRINTED)
             (PROOFS-CO .
                        ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
+            (RAW-ARITY-ALIST)
             (RAW-PROOF-FORMAT)
             (REDO-FLAT-FAIL)
             (REDO-FLAT-SUCC)
@@ -4170,17 +4334,20 @@
             (SAVED-OUTPUT-TOKEN-LST)
             (SHOW-CUSTOM-KEYWORD-HINT-EXPANSION)
             (SKIP-NOTIFY-ON-DEFTTAG)
+            (SKIP-PROOFS-BY-SYSTEM)
             (SKIP-PROOFS-OKP-CERT . T)
-            (SKIPPED-PROOFSP)
+            (SLOW-ARRAY-ACTION . :BREAK)
             (STANDARD-CO .
                          ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
             (STANDARD-OI .
                          ACL2-OUTPUT-CHANNEL::STANDARD-OBJECT-INPUT-0)
-            (SUPPRESS-COMPILE . T)
+            (SUPPRESS-COMPILE)
             (TAINTED-OKP)
             (TEMP-TOUCHABLE-FNS)
             (TEMP-TOUCHABLE-VARS)
+            (TERM-EVISC-TUPLE . :DEFAULT)
             (TIMER-ALIST)
+            (TMP-DIR)
             (TRACE-CO .
                       ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
             (TRACE-LEVEL . 0)
@@ -4220,7 +4387,7 @@
             (IF
              (TRUE-LISTP (NTH '3 X))
              (IF
-              (|32-BIT-INTEGER-LISTP| (NTH '4 X))
+              (32-BIT-INTEGER-LISTP (NTH '4 X))
               (IF
                 (INTEGERP (NTH '5 X))
                 (IF (INTEGER-LISTP (NTH '6 X))
@@ -4264,7 +4431,7 @@
  BUILD-STATE1
  (OPEN-INPUT-CHANNELS OPEN-OUTPUT-CHANNELS
                       GLOBAL-TABLE T-STACK
-                      |32-BIT-INTEGER-STACK| BIG-CLOCK IDATES
+                      32-BIT-INTEGER-STACK BIG-CLOCK IDATES
                       ACL2-ORACLE FILE-CLOCK READABLE-FILES
                       WRITTEN-FILES READ-FILES WRITEABLE-FILES
                       LIST-ALL-PACKAGE-NAMES-LST
@@ -4275,10 +4442,11 @@
      (STATE-P1 S)
      S
      '(NIL NIL
-           ((ACCUMULATED-TTREE)
+           ((ABBREV-EVISC-TUPLE . :DEFAULT)
+            (ACCUMULATED-TTREE)
             (ACCUMULATED-WARNINGS)
             (ACL2-RAW-MODE-P)
-            (ACL2-VERSION . "ACL2 Version 3.4")
+            (ACL2-VERSION . "ACL2 Version 3.5")
             (AXIOMSP)
             (BDDNOTES)
             (CERTIFY-BOOK-DISABLEDP)
@@ -4296,6 +4464,7 @@
             (DEFAXIOMS-OKP-CERT . T)
             (DISTRIBUTED-BOOKS-DIR)
             (DMRP)
+            (EVISC-HITP-WITHOUT-IPRINT)
             (EVISCERATE-HIDE-TERMS)
             (FMT-HARD-RIGHT-MARGIN . 77)
             (FMT-SOFT-RIGHT-MARGIN . 65)
@@ -4305,13 +4474,22 @@
             (GLOBAL-ENABLED-STRUCTURE)
             (GSTACKP)
             (GUARD-CHECKING-ON . T)
+            (HONS-ENABLED)
+            (HONS-READ-P . T)
             (IN-LOCAL-FLG)
             (IN-PROVE-FLG)
             (IN-VERIFY-FLG)
-            (INCLUDE-BOOK-ALIST-STATE)
             (INFIXP)
             (INHIBIT-OUTPUT-LST SUMMARY)
             (INHIBIT-OUTPUT-LST-STACK)
+            (IPRINT-AR (:HEADER :DIMENSIONS (10001)
+                                :MAXIMUM-LENGTH 40004
+                                :DEFAULT NIL
+                                :NAME IPRINT-AR
+                                :ORDER :NONE)
+                       (0 0))
+            (IPRINT-HARD-BOUND . 10000)
+            (IPRINT-SOFT-BOUND . 1000)
             (KEEP-TMP-FILES)
             (LAST-MAKE-EVENT-EXPANSION)
             (LD-LEVEL . 0)
@@ -4324,11 +4502,11 @@
                                      FMT-TO-COMMENT-WINDOW
                                      LEN MFC-CLAUSE CPU-CORE-COUNT
                                      NONNEGATIVE-INTEGER-QUOTIENT
-                                     CHECK-HEX-UPPERCASE
-                                     RETRACT-WORLD ASET1 ARRAY1P BOOLE$
-                                     ARRAY2P STRIP-CDRS COMPRESS2 STRIP-CARS
-                                     WORLDP WORMHOLE-P MFC-TYPE-ALIST
-                                     MAY-NEED-SLASHES FMT-TO-COMMENT-WINDOW!
+                                     CHECK-PRINT-BASE RETRACT-WORLD
+                                     ASET1 ARRAY1P BOOLE$ ARRAY2P STRIP-CDRS
+                                     COMPRESS2 STRIP-CARS WORLDP WORMHOLE-P
+                                     MFC-TYPE-ALIST MAY-NEED-SLASHES-FN
+                                     FMT-TO-COMMENT-WINDOW!
                                      HAS-PROPSP HARD-ERROR
                                      ABORT! MFC-RDEPTH FLUSH-COMPRESS
                                      ALPHORDER EXTEND-WORLD USER-STOBJ-ALIST
@@ -4338,10 +4516,9 @@
                                      MAKUNBOUND-GLOBAL OPEN-INPUT-CHANNEL-P1
                                      BOUNDP-GLOBAL1 GLOBAL-TABLE-CARS1
                                      EXTEND-T-STACK LIST-ALL-PACKAGE-NAMES
-                                     CLOSE-OUTPUT-CHANNEL
-                                     WRITE-BYTE$ SHRINK-T-STACK
-                                     ASET-32-BIT-INTEGER-STACK GET-GLOBAL
-                                     |32-BIT-INTEGER-STACK-LENGTH1|
+                                     CLOSE-OUTPUT-CHANNEL WRITE-BYTE$
+                                     SHRINK-T-STACK ASET-32-BIT-INTEGER-STACK
+                                     GET-GLOBAL 32-BIT-INTEGER-STACK-LENGTH1
                                      EXTEND-32-BIT-INTEGER-STACK ASET-T-STACK
                                      WITH-PROVER-TIME-LIMIT AREF-T-STACK
                                      READ-CHAR$ AREF-32-BIT-INTEGER-STACK
@@ -4362,16 +4539,17 @@
                                      LOGORC1 LOGORC2 LOGTEST POSITION ABS
                                      STRING-EQUAL STRING< STRING> STRING<=
                                      STRING>= STRING-UPCASE STRING-DOWNCASE
-                                     KEYWORDP EQ EQL CHAR SUBST
-                                     SUBLIS ACONS ASSOC RASSOC NTH SUBSEQ
-                                     LENGTH REVERSE ZIP STANDARD-CHAR-P
-                                     ALPHA-CHAR-P UPPER-CASE-P
-                                     LOWER-CASE-P CHAR< CHAR> CHAR<= CHAR>=
-                                     CHAR-EQUAL CHAR-UPCASE CHAR-DOWNCASE
-                                     HONS-READ-OBJECT AND-LIST OR-LIST)
+                                     KEYWORDP EQ EQL CHAR SUBST SUBLIS
+                                     ACONS ASSOC RASSOC NTH SUBSEQ LENGTH
+                                     REVERSE ZIP STANDARD-CHAR-P ALPHA-CHAR-P
+                                     UPPER-CASE-P LOWER-CASE-P CHAR< CHAR>
+                                     CHAR<= CHAR>= CHAR-EQUAL CHAR-UPCASE
+                                     CHAR-DOWNCASE HONS-READ-OBJECT
+                                     AND-LIST OR-LIST RANDOM$)
             (MACROS-WITH-RAW-CODE MBE
                                   THEORY-INVARIANT SET-LET*-ABSTRACTIONP
                                   DEFAXIOM SET-BOGUS-MUTUAL-RECURSION-OK
+                                  SET-RULER-EXTENDERS
                                   DELETE-INCLUDE-BOOK-DIR CERTIFY-BOOK
                                   PROGN! F-PUT-GLOBAL PUSH-UNTOUCHABLE
                                   SET-BACKCHAIN-LIMIT SET-DEFAULT-HINTS!
@@ -4387,7 +4565,8 @@
                                   CATCH-TIME-LIMIT4 DEFUNS
                                   ADD-DEFAULT-HINTS! LOCAL ENCAPSULATE
                                   REMOVE-DEFAULT-HINTS! INCLUDE-BOOK
-                                  PPROGN SET-ENFORCE-REDUNDANCY LOGIC
+                                  PPROGN SET-ENFORCE-REDUNDANCY
+                                  SET-IGNORE-DOC-STRING-ERROR LOGIC
                                   ER DEFLABEL MV-LET PROGRAM VALUE-TRIPLE
                                   SET-BODY COMP SET-BOGUS-DEFUN-HINTS-OK
                                   DMR-STOP DEFPKG SET-MEASURE-FUNCTION
@@ -4405,7 +4584,7 @@
                                   DMR-START REWRITE-ENTRY
                                   SKIP-PROOFS F-BOUNDP-GLOBAL
                                   MAKE-EVENT SET-VERIFY-GUARDS-EAGERNESS
-                                  WORMHOLE VERIFY-TERMINATION
+                                  WORMHOLE VERIFY-TERMINATION-BOOT-STRAP
                                   START-PROOF-TREE F-DECREMENT-BIG-CLOCK
                                   DEFSTOBJ DEFUND DEFTTAG
                                   DEFDOC PUSH-GFRAME DEFTHMD F-GET-GLOBAL
@@ -4421,9 +4600,10 @@
                                   LIST* APPEND DEFCONST IN-PACKAGE INTERN
                                   FIRST SECOND THIRD FOURTH FIFTH SIXTH
                                   SEVENTH EIGHTH NINTH TENTH DIGIT-CHAR-P
-                                  UNMEMOIZE HONS-LET MEMOIZE-LET
-                                  MEMOIZE DEFUNS-STD DEFTHM-STD
-                                  DEFUN-STD POR PAND PLET PARGS)
+                                  UNMEMOIZE HONS-LET MEMOIZE-LET MEMOIZE
+                                  DEFUNS-STD DEFTHM-STD DEFUN-STD POR
+                                  PAND PLET PARGS TRACE! WITH-LIVE-STATE
+                                  WITH-OUTPUT-OBJECT-CHANNEL-SHARING)
             (MAIN-TIMER . 0)
             (MAKE-EVENT-DEBUG)
             (MAKE-EVENT-DEBUG-DEPTH . 0)
@@ -4431,26 +4611,34 @@
             (MORE-DOC-MAX-LINES . 45)
             (MORE-DOC-MIN-LINES . 35)
             (MORE-DOC-STATE)
+            (MSWINDOWS-DRIVE)
             (PACKAGES-CREATED-BY-DEFPKG)
             (PARALLEL-EVALUATION-ENABLED)
             (PC-OUTPUT)
             (PPR-FLAT-RIGHT-MARGIN . 40)
             (PRINT-BASE . 10)
             (PRINT-CASE . :UPCASE)
+            (PRINT-CIRCLE)
             (PRINT-CLAUSE-IDS)
             (PRINT-DOC-START-COLUMN . 15)
+            (PRINT-ESCAPE . T)
+            (PRINT-LENGTH)
+            (PRINT-LEVEL)
+            (PRINT-LINES)
+            (PRINT-PRETTY)
+            (PRINT-RADIX)
+            (PRINT-READABLY)
+            (PRINT-RIGHT-MARGIN)
             (PROGRAM-FNS-WITH-RAW-CODE
                  RELIEVE-HYP-SYNP
                  APPLY-ABBREVS-TO-LAMBDA-STACK1
                  GOOD-BYE-FN NTH-UPDATE-REWRITER
                  EV-W-LST SIMPLIFY-CLAUSE1
                  EV-REC-ACL2-UNWIND-PROTECT
-                 USER-TERM-EVISC-TUPLE
                  ALLOCATE-FIXNUM-RANGE TRACE$-FN-GENERAL
                  EV-FNCALL! OPEN-TRACE-FILE-FN
                  SET-TRACE-EVISC-TUPLE EV-FNCALL-W
-                 EV-REC USER-DEFAULT-EVISC-TUPLE
-                 SETUP-SIMPLIFY-CLAUSE-POT-LST1
+                 EV-REC SETUP-SIMPLIFY-CLAUSE-POT-LST1
                  SAVE-EXEC CW-GSTACK-FN
                  RECOMPRESS-GLOBAL-ENABLED-STRUCTURE EV-W
                  VERBOSE-PSTACK USER-STOBJ-ALIST-SAFE
@@ -4470,19 +4658,24 @@
                  ADD-POLYS DMR-STOP-FN LD-PRINT-RESULTS
                  APPLY-ABBREVS-TO-LAMBDA-STACK
                  BREAK$ FLPR CLOSE-TRACE-FILE-FN
-                 EV-FNCALL-REC SYS-CALL EV-FNCALL
+                 EV-FNCALL-REC SYS-CALL EV-FNCALL LD-FN0
                  LD-FN WRITE-EXPANSION-FILE LATCH-STOBJS1
                  CHK-PACKAGE-REINCARNATION-IMPORT-RESTRICTIONS
                  UNTRACE$-FN1 BDD-TOP
-                 GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS)
+                 GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS
+                 EXPANSION-ALIST-PKG-NAMES
+                 TIMES-MOD-M31 PRINT-CALL-HISTORY
+                 IPRINT-AR-AREF1 PROVE MAKE-EVENT-FN)
             (PROMPT-FUNCTION . DEFAULT-PRINT-PROMPT)
             (PROMPT-MEMO)
             (PROOF-TREE)
             (PROOF-TREE-BUFFER-WIDTH . 65)
             (PROOF-TREE-CTX)
             (PROOF-TREE-INDENT . "|  ")
+            (PROOF-TREE-START-PRINTED)
             (PROOFS-CO .
                        ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
+            (RAW-ARITY-ALIST)
             (RAW-PROOF-FORMAT)
             (REDO-FLAT-FAIL)
             (REDO-FLAT-SUCC)
@@ -4493,17 +4686,20 @@
             (SAVED-OUTPUT-TOKEN-LST)
             (SHOW-CUSTOM-KEYWORD-HINT-EXPANSION)
             (SKIP-NOTIFY-ON-DEFTTAG)
+            (SKIP-PROOFS-BY-SYSTEM)
             (SKIP-PROOFS-OKP-CERT . T)
-            (SKIPPED-PROOFSP)
+            (SLOW-ARRAY-ACTION . :BREAK)
             (STANDARD-CO .
                          ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
             (STANDARD-OI .
                          ACL2-OUTPUT-CHANNEL::STANDARD-OBJECT-INPUT-0)
-            (SUPPRESS-COMPILE . T)
+            (SUPPRESS-COMPILE)
             (TAINTED-OKP)
             (TEMP-TOUCHABLE-FNS)
             (TEMP-TOUCHABLE-VARS)
+            (TERM-EVISC-TUPLE . :DEFAULT)
             (TIMER-ALIST)
+            (TMP-DIR)
             (TRACE-CO .
                       ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
             (TRACE-LEVEL . 0)
@@ -4534,7 +4730,7 @@
      (CONS
       T-STACK
       (CONS
-       |32-BIT-INTEGER-STACK|
+       32-BIT-INTEGER-STACK
        (CONS
         BIG-CLOCK
         (CONS
@@ -4587,8 +4783,6 @@
        (UPDATE-GLOBAL-TABLE (ADD-PAIR KEY VALUE (GLOBAL-TABLE STATE-STATE))
                             STATE-STATE))
 
-(DEFUN SET-SKIPPED-PROOFSP (STATE) (PUT-GLOBAL 'SKIPPED-PROOFSP 'T STATE))
-
 (DEFUN SYMBOL-DOUBLET-LISTP (LST)
        (IF (ATOM LST)
            (EQ LST 'NIL)
@@ -4607,10 +4801,11 @@
  (IF
   (ASSOC-EQ
    X
-   '((ACCUMULATED-TTREE)
+   '((ABBREV-EVISC-TUPLE . :DEFAULT)
+     (ACCUMULATED-TTREE)
      (ACCUMULATED-WARNINGS)
      (ACL2-RAW-MODE-P)
-     (ACL2-VERSION . "ACL2 Version 3.4")
+     (ACL2-VERSION . "ACL2 Version 3.5")
      (AXIOMSP)
      (BDDNOTES)
      (CERTIFY-BOOK-DISABLEDP)
@@ -4628,6 +4823,7 @@
      (DEFAXIOMS-OKP-CERT . T)
      (DISTRIBUTED-BOOKS-DIR)
      (DMRP)
+     (EVISC-HITP-WITHOUT-IPRINT)
      (EVISCERATE-HIDE-TERMS)
      (FMT-HARD-RIGHT-MARGIN . 77)
      (FMT-SOFT-RIGHT-MARGIN . 65)
@@ -4637,13 +4833,22 @@
      (GLOBAL-ENABLED-STRUCTURE)
      (GSTACKP)
      (GUARD-CHECKING-ON . T)
+     (HONS-ENABLED)
+     (HONS-READ-P . T)
      (IN-LOCAL-FLG)
      (IN-PROVE-FLG)
      (IN-VERIFY-FLG)
-     (INCLUDE-BOOK-ALIST-STATE)
      (INFIXP)
      (INHIBIT-OUTPUT-LST SUMMARY)
      (INHIBIT-OUTPUT-LST-STACK)
+     (IPRINT-AR (:HEADER :DIMENSIONS (10001)
+                         :MAXIMUM-LENGTH 40004
+                         :DEFAULT NIL
+                         :NAME IPRINT-AR
+                         :ORDER :NONE)
+                (0 0))
+     (IPRINT-HARD-BOUND . 10000)
+     (IPRINT-SOFT-BOUND . 1000)
      (KEEP-TMP-FILES)
      (LAST-MAKE-EVENT-EXPANSION)
      (LD-LEVEL . 0)
@@ -4656,11 +4861,11 @@
                               FMT-TO-COMMENT-WINDOW
                               LEN MFC-CLAUSE CPU-CORE-COUNT
                               NONNEGATIVE-INTEGER-QUOTIENT
-                              CHECK-HEX-UPPERCASE
-                              RETRACT-WORLD ASET1 ARRAY1P BOOLE$
-                              ARRAY2P STRIP-CDRS COMPRESS2 STRIP-CARS
-                              WORLDP WORMHOLE-P MFC-TYPE-ALIST
-                              MAY-NEED-SLASHES FMT-TO-COMMENT-WINDOW!
+                              CHECK-PRINT-BASE RETRACT-WORLD
+                              ASET1 ARRAY1P BOOLE$ ARRAY2P STRIP-CDRS
+                              COMPRESS2 STRIP-CARS WORLDP WORMHOLE-P
+                              MFC-TYPE-ALIST MAY-NEED-SLASHES-FN
+                              FMT-TO-COMMENT-WINDOW!
                               HAS-PROPSP HARD-ERROR
                               ABORT! MFC-RDEPTH FLUSH-COMPRESS
                               ALPHORDER EXTEND-WORLD USER-STOBJ-ALIST
@@ -4670,10 +4875,9 @@
                               MAKUNBOUND-GLOBAL OPEN-INPUT-CHANNEL-P1
                               BOUNDP-GLOBAL1 GLOBAL-TABLE-CARS1
                               EXTEND-T-STACK LIST-ALL-PACKAGE-NAMES
-                              CLOSE-OUTPUT-CHANNEL
-                              WRITE-BYTE$ SHRINK-T-STACK
-                              ASET-32-BIT-INTEGER-STACK GET-GLOBAL
-                              |32-BIT-INTEGER-STACK-LENGTH1|
+                              CLOSE-OUTPUT-CHANNEL WRITE-BYTE$
+                              SHRINK-T-STACK ASET-32-BIT-INTEGER-STACK
+                              GET-GLOBAL 32-BIT-INTEGER-STACK-LENGTH1
                               EXTEND-32-BIT-INTEGER-STACK ASET-T-STACK
                               WITH-PROVER-TIME-LIMIT AREF-T-STACK
                               READ-CHAR$ AREF-32-BIT-INTEGER-STACK
@@ -4694,16 +4898,17 @@
                               LOGORC1 LOGORC2 LOGTEST POSITION ABS
                               STRING-EQUAL STRING< STRING> STRING<=
                               STRING>= STRING-UPCASE STRING-DOWNCASE
-                              KEYWORDP EQ EQL CHAR SUBST
-                              SUBLIS ACONS ASSOC RASSOC NTH SUBSEQ
-                              LENGTH REVERSE ZIP STANDARD-CHAR-P
-                              ALPHA-CHAR-P UPPER-CASE-P
-                              LOWER-CASE-P CHAR< CHAR> CHAR<= CHAR>=
-                              CHAR-EQUAL CHAR-UPCASE CHAR-DOWNCASE
-                              HONS-READ-OBJECT AND-LIST OR-LIST)
+                              KEYWORDP EQ EQL CHAR SUBST SUBLIS
+                              ACONS ASSOC RASSOC NTH SUBSEQ LENGTH
+                              REVERSE ZIP STANDARD-CHAR-P ALPHA-CHAR-P
+                              UPPER-CASE-P LOWER-CASE-P CHAR< CHAR>
+                              CHAR<= CHAR>= CHAR-EQUAL CHAR-UPCASE
+                              CHAR-DOWNCASE HONS-READ-OBJECT
+                              AND-LIST OR-LIST RANDOM$)
      (MACROS-WITH-RAW-CODE MBE
                            THEORY-INVARIANT SET-LET*-ABSTRACTIONP
                            DEFAXIOM SET-BOGUS-MUTUAL-RECURSION-OK
+                           SET-RULER-EXTENDERS
                            DELETE-INCLUDE-BOOK-DIR CERTIFY-BOOK
                            PROGN! F-PUT-GLOBAL PUSH-UNTOUCHABLE
                            SET-BACKCHAIN-LIMIT SET-DEFAULT-HINTS!
@@ -4719,7 +4924,8 @@
                            CATCH-TIME-LIMIT4 DEFUNS
                            ADD-DEFAULT-HINTS! LOCAL ENCAPSULATE
                            REMOVE-DEFAULT-HINTS! INCLUDE-BOOK
-                           PPROGN SET-ENFORCE-REDUNDANCY LOGIC
+                           PPROGN SET-ENFORCE-REDUNDANCY
+                           SET-IGNORE-DOC-STRING-ERROR LOGIC
                            ER DEFLABEL MV-LET PROGRAM VALUE-TRIPLE
                            SET-BODY COMP SET-BOGUS-DEFUN-HINTS-OK
                            DMR-STOP DEFPKG SET-MEASURE-FUNCTION
@@ -4737,7 +4943,7 @@
                            DMR-START REWRITE-ENTRY
                            SKIP-PROOFS F-BOUNDP-GLOBAL
                            MAKE-EVENT SET-VERIFY-GUARDS-EAGERNESS
-                           WORMHOLE VERIFY-TERMINATION
+                           WORMHOLE VERIFY-TERMINATION-BOOT-STRAP
                            START-PROOF-TREE F-DECREMENT-BIG-CLOCK
                            DEFSTOBJ DEFUND DEFTTAG
                            DEFDOC PUSH-GFRAME DEFTHMD F-GET-GLOBAL
@@ -4753,9 +4959,10 @@
                            LIST* APPEND DEFCONST IN-PACKAGE INTERN
                            FIRST SECOND THIRD FOURTH FIFTH SIXTH
                            SEVENTH EIGHTH NINTH TENTH DIGIT-CHAR-P
-                           UNMEMOIZE HONS-LET MEMOIZE-LET
-                           MEMOIZE DEFUNS-STD DEFTHM-STD
-                           DEFUN-STD POR PAND PLET PARGS)
+                           UNMEMOIZE HONS-LET MEMOIZE-LET MEMOIZE
+                           DEFUNS-STD DEFTHM-STD DEFUN-STD POR
+                           PAND PLET PARGS TRACE! WITH-LIVE-STATE
+                           WITH-OUTPUT-OBJECT-CHANNEL-SHARING)
      (MAIN-TIMER . 0)
      (MAKE-EVENT-DEBUG)
      (MAKE-EVENT-DEBUG-DEPTH . 0)
@@ -4763,25 +4970,33 @@
      (MORE-DOC-MAX-LINES . 45)
      (MORE-DOC-MIN-LINES . 35)
      (MORE-DOC-STATE)
+     (MSWINDOWS-DRIVE)
      (PACKAGES-CREATED-BY-DEFPKG)
      (PARALLEL-EVALUATION-ENABLED)
      (PC-OUTPUT)
      (PPR-FLAT-RIGHT-MARGIN . 40)
      (PRINT-BASE . 10)
      (PRINT-CASE . :UPCASE)
+     (PRINT-CIRCLE)
      (PRINT-CLAUSE-IDS)
      (PRINT-DOC-START-COLUMN . 15)
+     (PRINT-ESCAPE . T)
+     (PRINT-LENGTH)
+     (PRINT-LEVEL)
+     (PRINT-LINES)
+     (PRINT-PRETTY)
+     (PRINT-RADIX)
+     (PRINT-READABLY)
+     (PRINT-RIGHT-MARGIN)
      (PROGRAM-FNS-WITH-RAW-CODE RELIEVE-HYP-SYNP
                                 APPLY-ABBREVS-TO-LAMBDA-STACK1
                                 GOOD-BYE-FN NTH-UPDATE-REWRITER
                                 EV-W-LST SIMPLIFY-CLAUSE1
                                 EV-REC-ACL2-UNWIND-PROTECT
-                                USER-TERM-EVISC-TUPLE
                                 ALLOCATE-FIXNUM-RANGE TRACE$-FN-GENERAL
                                 EV-FNCALL! OPEN-TRACE-FILE-FN
                                 SET-TRACE-EVISC-TUPLE EV-FNCALL-W
-                                EV-REC USER-DEFAULT-EVISC-TUPLE
-                                SETUP-SIMPLIFY-CLAUSE-POT-LST1
+                                EV-REC SETUP-SIMPLIFY-CLAUSE-POT-LST1
                                 SAVE-EXEC CW-GSTACK-FN
                                 RECOMPRESS-GLOBAL-ENABLED-STRUCTURE EV-W
                                 VERBOSE-PSTACK USER-STOBJ-ALIST-SAFE
@@ -4801,19 +5016,24 @@
                                 ADD-POLYS DMR-STOP-FN LD-PRINT-RESULTS
                                 APPLY-ABBREVS-TO-LAMBDA-STACK
                                 BREAK$ FLPR CLOSE-TRACE-FILE-FN
-                                EV-FNCALL-REC SYS-CALL EV-FNCALL
+                                EV-FNCALL-REC SYS-CALL EV-FNCALL LD-FN0
                                 LD-FN WRITE-EXPANSION-FILE LATCH-STOBJS1
                                 CHK-PACKAGE-REINCARNATION-IMPORT-RESTRICTIONS
                                 UNTRACE$-FN1 BDD-TOP
-                                GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS)
+                                GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS
+                                EXPANSION-ALIST-PKG-NAMES
+                                TIMES-MOD-M31 PRINT-CALL-HISTORY
+                                IPRINT-AR-AREF1 PROVE MAKE-EVENT-FN)
      (PROMPT-FUNCTION . DEFAULT-PRINT-PROMPT)
      (PROMPT-MEMO)
      (PROOF-TREE)
      (PROOF-TREE-BUFFER-WIDTH . 65)
      (PROOF-TREE-CTX)
      (PROOF-TREE-INDENT . "|  ")
+     (PROOF-TREE-START-PRINTED)
      (PROOFS-CO .
                 ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
+     (RAW-ARITY-ALIST)
      (RAW-PROOF-FORMAT)
      (REDO-FLAT-FAIL)
      (REDO-FLAT-SUCC)
@@ -4824,17 +5044,20 @@
      (SAVED-OUTPUT-TOKEN-LST)
      (SHOW-CUSTOM-KEYWORD-HINT-EXPANSION)
      (SKIP-NOTIFY-ON-DEFTTAG)
+     (SKIP-PROOFS-BY-SYSTEM)
      (SKIP-PROOFS-OKP-CERT . T)
-     (SKIPPED-PROOFSP)
+     (SLOW-ARRAY-ACTION . :BREAK)
      (STANDARD-CO .
                   ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
      (STANDARD-OI .
                   ACL2-OUTPUT-CHANNEL::STANDARD-OBJECT-INPUT-0)
-     (SUPPRESS-COMPILE . T)
+     (SUPPRESS-COMPILE)
      (TAINTED-OKP)
      (TEMP-TOUCHABLE-FNS)
      (TEMP-TOUCHABLE-VARS)
+     (TERM-EVISC-TUPLE . :DEFAULT)
      (TIMER-ALIST)
+     (TMP-DIR)
      (TRACE-CO .
                ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
      (TRACE-LEVEL . 0)
@@ -4856,10 +5079,11 @@
      (WRITES-OKP . T)))
   (ASSOC-EQ
    X
-   '((ACCUMULATED-TTREE)
+   '((ABBREV-EVISC-TUPLE . :DEFAULT)
+     (ACCUMULATED-TTREE)
      (ACCUMULATED-WARNINGS)
      (ACL2-RAW-MODE-P)
-     (ACL2-VERSION . "ACL2 Version 3.4")
+     (ACL2-VERSION . "ACL2 Version 3.5")
      (AXIOMSP)
      (BDDNOTES)
      (CERTIFY-BOOK-DISABLEDP)
@@ -4877,6 +5101,7 @@
      (DEFAXIOMS-OKP-CERT . T)
      (DISTRIBUTED-BOOKS-DIR)
      (DMRP)
+     (EVISC-HITP-WITHOUT-IPRINT)
      (EVISCERATE-HIDE-TERMS)
      (FMT-HARD-RIGHT-MARGIN . 77)
      (FMT-SOFT-RIGHT-MARGIN . 65)
@@ -4886,13 +5111,22 @@
      (GLOBAL-ENABLED-STRUCTURE)
      (GSTACKP)
      (GUARD-CHECKING-ON . T)
+     (HONS-ENABLED)
+     (HONS-READ-P . T)
      (IN-LOCAL-FLG)
      (IN-PROVE-FLG)
      (IN-VERIFY-FLG)
-     (INCLUDE-BOOK-ALIST-STATE)
      (INFIXP)
      (INHIBIT-OUTPUT-LST SUMMARY)
      (INHIBIT-OUTPUT-LST-STACK)
+     (IPRINT-AR (:HEADER :DIMENSIONS (10001)
+                         :MAXIMUM-LENGTH 40004
+                         :DEFAULT NIL
+                         :NAME IPRINT-AR
+                         :ORDER :NONE)
+                (0 0))
+     (IPRINT-HARD-BOUND . 10000)
+     (IPRINT-SOFT-BOUND . 1000)
      (KEEP-TMP-FILES)
      (LAST-MAKE-EVENT-EXPANSION)
      (LD-LEVEL . 0)
@@ -4905,11 +5139,11 @@
                               FMT-TO-COMMENT-WINDOW
                               LEN MFC-CLAUSE CPU-CORE-COUNT
                               NONNEGATIVE-INTEGER-QUOTIENT
-                              CHECK-HEX-UPPERCASE
-                              RETRACT-WORLD ASET1 ARRAY1P BOOLE$
-                              ARRAY2P STRIP-CDRS COMPRESS2 STRIP-CARS
-                              WORLDP WORMHOLE-P MFC-TYPE-ALIST
-                              MAY-NEED-SLASHES FMT-TO-COMMENT-WINDOW!
+                              CHECK-PRINT-BASE RETRACT-WORLD
+                              ASET1 ARRAY1P BOOLE$ ARRAY2P STRIP-CDRS
+                              COMPRESS2 STRIP-CARS WORLDP WORMHOLE-P
+                              MFC-TYPE-ALIST MAY-NEED-SLASHES-FN
+                              FMT-TO-COMMENT-WINDOW!
                               HAS-PROPSP HARD-ERROR
                               ABORT! MFC-RDEPTH FLUSH-COMPRESS
                               ALPHORDER EXTEND-WORLD USER-STOBJ-ALIST
@@ -4919,10 +5153,9 @@
                               MAKUNBOUND-GLOBAL OPEN-INPUT-CHANNEL-P1
                               BOUNDP-GLOBAL1 GLOBAL-TABLE-CARS1
                               EXTEND-T-STACK LIST-ALL-PACKAGE-NAMES
-                              CLOSE-OUTPUT-CHANNEL
-                              WRITE-BYTE$ SHRINK-T-STACK
-                              ASET-32-BIT-INTEGER-STACK GET-GLOBAL
-                              |32-BIT-INTEGER-STACK-LENGTH1|
+                              CLOSE-OUTPUT-CHANNEL WRITE-BYTE$
+                              SHRINK-T-STACK ASET-32-BIT-INTEGER-STACK
+                              GET-GLOBAL 32-BIT-INTEGER-STACK-LENGTH1
                               EXTEND-32-BIT-INTEGER-STACK ASET-T-STACK
                               WITH-PROVER-TIME-LIMIT AREF-T-STACK
                               READ-CHAR$ AREF-32-BIT-INTEGER-STACK
@@ -4943,16 +5176,17 @@
                               LOGORC1 LOGORC2 LOGTEST POSITION ABS
                               STRING-EQUAL STRING< STRING> STRING<=
                               STRING>= STRING-UPCASE STRING-DOWNCASE
-                              KEYWORDP EQ EQL CHAR SUBST
-                              SUBLIS ACONS ASSOC RASSOC NTH SUBSEQ
-                              LENGTH REVERSE ZIP STANDARD-CHAR-P
-                              ALPHA-CHAR-P UPPER-CASE-P
-                              LOWER-CASE-P CHAR< CHAR> CHAR<= CHAR>=
-                              CHAR-EQUAL CHAR-UPCASE CHAR-DOWNCASE
-                              HONS-READ-OBJECT AND-LIST OR-LIST)
+                              KEYWORDP EQ EQL CHAR SUBST SUBLIS
+                              ACONS ASSOC RASSOC NTH SUBSEQ LENGTH
+                              REVERSE ZIP STANDARD-CHAR-P ALPHA-CHAR-P
+                              UPPER-CASE-P LOWER-CASE-P CHAR< CHAR>
+                              CHAR<= CHAR>= CHAR-EQUAL CHAR-UPCASE
+                              CHAR-DOWNCASE HONS-READ-OBJECT
+                              AND-LIST OR-LIST RANDOM$)
      (MACROS-WITH-RAW-CODE MBE
                            THEORY-INVARIANT SET-LET*-ABSTRACTIONP
                            DEFAXIOM SET-BOGUS-MUTUAL-RECURSION-OK
+                           SET-RULER-EXTENDERS
                            DELETE-INCLUDE-BOOK-DIR CERTIFY-BOOK
                            PROGN! F-PUT-GLOBAL PUSH-UNTOUCHABLE
                            SET-BACKCHAIN-LIMIT SET-DEFAULT-HINTS!
@@ -4968,7 +5202,8 @@
                            CATCH-TIME-LIMIT4 DEFUNS
                            ADD-DEFAULT-HINTS! LOCAL ENCAPSULATE
                            REMOVE-DEFAULT-HINTS! INCLUDE-BOOK
-                           PPROGN SET-ENFORCE-REDUNDANCY LOGIC
+                           PPROGN SET-ENFORCE-REDUNDANCY
+                           SET-IGNORE-DOC-STRING-ERROR LOGIC
                            ER DEFLABEL MV-LET PROGRAM VALUE-TRIPLE
                            SET-BODY COMP SET-BOGUS-DEFUN-HINTS-OK
                            DMR-STOP DEFPKG SET-MEASURE-FUNCTION
@@ -4986,7 +5221,7 @@
                            DMR-START REWRITE-ENTRY
                            SKIP-PROOFS F-BOUNDP-GLOBAL
                            MAKE-EVENT SET-VERIFY-GUARDS-EAGERNESS
-                           WORMHOLE VERIFY-TERMINATION
+                           WORMHOLE VERIFY-TERMINATION-BOOT-STRAP
                            START-PROOF-TREE F-DECREMENT-BIG-CLOCK
                            DEFSTOBJ DEFUND DEFTTAG
                            DEFDOC PUSH-GFRAME DEFTHMD F-GET-GLOBAL
@@ -5002,9 +5237,10 @@
                            LIST* APPEND DEFCONST IN-PACKAGE INTERN
                            FIRST SECOND THIRD FOURTH FIFTH SIXTH
                            SEVENTH EIGHTH NINTH TENTH DIGIT-CHAR-P
-                           UNMEMOIZE HONS-LET MEMOIZE-LET
-                           MEMOIZE DEFUNS-STD DEFTHM-STD
-                           DEFUN-STD POR PAND PLET PARGS)
+                           UNMEMOIZE HONS-LET MEMOIZE-LET MEMOIZE
+                           DEFUNS-STD DEFTHM-STD DEFUN-STD POR
+                           PAND PLET PARGS TRACE! WITH-LIVE-STATE
+                           WITH-OUTPUT-OBJECT-CHANNEL-SHARING)
      (MAIN-TIMER . 0)
      (MAKE-EVENT-DEBUG)
      (MAKE-EVENT-DEBUG-DEPTH . 0)
@@ -5012,25 +5248,33 @@
      (MORE-DOC-MAX-LINES . 45)
      (MORE-DOC-MIN-LINES . 35)
      (MORE-DOC-STATE)
+     (MSWINDOWS-DRIVE)
      (PACKAGES-CREATED-BY-DEFPKG)
      (PARALLEL-EVALUATION-ENABLED)
      (PC-OUTPUT)
      (PPR-FLAT-RIGHT-MARGIN . 40)
      (PRINT-BASE . 10)
      (PRINT-CASE . :UPCASE)
+     (PRINT-CIRCLE)
      (PRINT-CLAUSE-IDS)
      (PRINT-DOC-START-COLUMN . 15)
+     (PRINT-ESCAPE . T)
+     (PRINT-LENGTH)
+     (PRINT-LEVEL)
+     (PRINT-LINES)
+     (PRINT-PRETTY)
+     (PRINT-RADIX)
+     (PRINT-READABLY)
+     (PRINT-RIGHT-MARGIN)
      (PROGRAM-FNS-WITH-RAW-CODE RELIEVE-HYP-SYNP
                                 APPLY-ABBREVS-TO-LAMBDA-STACK1
                                 GOOD-BYE-FN NTH-UPDATE-REWRITER
                                 EV-W-LST SIMPLIFY-CLAUSE1
                                 EV-REC-ACL2-UNWIND-PROTECT
-                                USER-TERM-EVISC-TUPLE
                                 ALLOCATE-FIXNUM-RANGE TRACE$-FN-GENERAL
                                 EV-FNCALL! OPEN-TRACE-FILE-FN
                                 SET-TRACE-EVISC-TUPLE EV-FNCALL-W
-                                EV-REC USER-DEFAULT-EVISC-TUPLE
-                                SETUP-SIMPLIFY-CLAUSE-POT-LST1
+                                EV-REC SETUP-SIMPLIFY-CLAUSE-POT-LST1
                                 SAVE-EXEC CW-GSTACK-FN
                                 RECOMPRESS-GLOBAL-ENABLED-STRUCTURE EV-W
                                 VERBOSE-PSTACK USER-STOBJ-ALIST-SAFE
@@ -5050,19 +5294,24 @@
                                 ADD-POLYS DMR-STOP-FN LD-PRINT-RESULTS
                                 APPLY-ABBREVS-TO-LAMBDA-STACK
                                 BREAK$ FLPR CLOSE-TRACE-FILE-FN
-                                EV-FNCALL-REC SYS-CALL EV-FNCALL
+                                EV-FNCALL-REC SYS-CALL EV-FNCALL LD-FN0
                                 LD-FN WRITE-EXPANSION-FILE LATCH-STOBJS1
                                 CHK-PACKAGE-REINCARNATION-IMPORT-RESTRICTIONS
                                 UNTRACE$-FN1 BDD-TOP
-                                GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS)
+                                GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS
+                                EXPANSION-ALIST-PKG-NAMES
+                                TIMES-MOD-M31 PRINT-CALL-HISTORY
+                                IPRINT-AR-AREF1 PROVE MAKE-EVENT-FN)
      (PROMPT-FUNCTION . DEFAULT-PRINT-PROMPT)
      (PROMPT-MEMO)
      (PROOF-TREE)
      (PROOF-TREE-BUFFER-WIDTH . 65)
      (PROOF-TREE-CTX)
      (PROOF-TREE-INDENT . "|  ")
+     (PROOF-TREE-START-PRINTED)
      (PROOFS-CO .
                 ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
+     (RAW-ARITY-ALIST)
      (RAW-PROOF-FORMAT)
      (REDO-FLAT-FAIL)
      (REDO-FLAT-SUCC)
@@ -5073,17 +5322,20 @@
      (SAVED-OUTPUT-TOKEN-LST)
      (SHOW-CUSTOM-KEYWORD-HINT-EXPANSION)
      (SKIP-NOTIFY-ON-DEFTTAG)
+     (SKIP-PROOFS-BY-SYSTEM)
      (SKIP-PROOFS-OKP-CERT . T)
-     (SKIPPED-PROOFSP)
+     (SLOW-ARRAY-ACTION . :BREAK)
      (STANDARD-CO .
                   ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
      (STANDARD-OI .
                   ACL2-OUTPUT-CHANNEL::STANDARD-OBJECT-INPUT-0)
-     (SUPPRESS-COMPILE . T)
+     (SUPPRESS-COMPILE)
      (TAINTED-OKP)
      (TEMP-TOUCHABLE-FNS)
      (TEMP-TOUCHABLE-VARS)
+     (TERM-EVISC-TUPLE . :DEFAULT)
      (TIMER-ALIST)
+     (TMP-DIR)
      (TRACE-CO .
                ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
      (TRACE-LEVEL . 0)
@@ -5497,6 +5749,28 @@
                                                         '0)))))))))))))))))
 
 (DEFUN
+     SET-FORMS-FROM-BINDINGS (BINDINGS)
+     (IF (ENDP BINDINGS)
+         'NIL
+         (CONS (CONS (INTERN-IN-PACKAGE-OF-SYMBOL
+                          (STRING-APPEND '"SET-"
+                                         (SYMBOL-NAME (CAR (CAR BINDINGS))))
+                          (PKG-WITNESS '"ACL2"))
+                     (CONS (CAR (CDR (CAR BINDINGS)))
+                           (CONS 'STATE 'NIL)))
+               (SET-FORMS-FROM-BINDINGS (CDR BINDINGS)))))
+
+(DEFUN ALIST-DIFFERENCE-EQ (ALIST1 ALIST2)
+       (IF (ENDP ALIST1)
+           'NIL
+           (IF (ASSOC-EQ (CAR (CAR ALIST1)) ALIST2)
+               (ALIST-DIFFERENCE-EQ (CDR ALIST1)
+                                    ALIST2)
+               (CONS (CAR ALIST1)
+                     (ALIST-DIFFERENCE-EQ (CDR ALIST1)
+                                          ALIST2)))))
+
+(DEFUN
  DIGIT-TO-CHAR (N)
  (IF
   (EQL N '1)
@@ -5667,7 +5941,79 @@
        (CHANNEL STATE-STATE)
        (OPEN-INPUT-CHANNEL-ANY-P1 CHANNEL STATE-STATE))
 
-(DEFUN CHECK-HEX-UPPERCASE (PRINT-BASE) 'NIL)
+(DEFUN
+ SET-PRINT-CASE (CASE STATE)
+ (PROG2$
+  (IF
+   (EQ CASE ':UPCASE)
+   (EQ CASE ':UPCASE)
+   (IF
+    (EQ CASE ':DOWNCASE)
+    (EQ CASE ':DOWNCASE)
+    (ILLEGAL
+     'SET-PRINT-CASE
+     '"The value ~x0 is illegal as an ACL2 print-base, which ~
+                        must be :UPCASE or :DOWNCASE."
+     (CONS (CONS '#\0 CASE) 'NIL))))
+  (PUT-GLOBAL 'PRINT-CASE CASE STATE)))
+
+(DEFUN
+ CHECK-PRINT-BASE (PRINT-BASE CTX)
+ (IF
+  (PRINT-BASE-P PRINT-BASE)
+  'NIL
+  (HARD-ERROR
+   CTX
+   '"The value ~x0 is illegal as a print-base, which must be 2, ~
+                 8, 10, or 16"
+   (CONS (CONS '#\0 PRINT-BASE) 'NIL))))
+
+(DEFUN SET-PRINT-BASE (BASE STATE)
+       (PROG2$ (CHECK-PRINT-BASE BASE 'SET-PRINT-BASE)
+               (PUT-GLOBAL 'PRINT-BASE BASE STATE)))
+
+(DEFUN SET-PRINT-CIRCLE (X STATE) (PUT-GLOBAL 'PRINT-CIRCLE X STATE))
+
+(DEFUN SET-PRINT-ESCAPE (X STATE) (PUT-GLOBAL 'PRINT-ESCAPE X STATE))
+
+(DEFUN SET-PRINT-PRETTY (X STATE) (PUT-GLOBAL 'PRINT-PRETTY X STATE))
+
+(DEFUN SET-PRINT-RADIX (X STATE) (PUT-GLOBAL 'PRINT-RADIX X STATE))
+
+(DEFUN SET-PRINT-READABLY (X STATE) (PUT-GLOBAL 'PRINT-READABLY X STATE))
+
+(DEFUN
+ CHECK-NULL-OR-NATP (N FN)
+ (IF
+  (NULL N)
+  (NULL N)
+  (IF
+   (NATP N)
+   (NATP N)
+   (HARD-ERROR
+    FN
+    '"The argument of ~x0 must be ~x1 or a positive integer, but ~
+                   ~x2 is neither."
+    (CONS (CONS '#\0 FN)
+          (CONS (CONS '#\1 'NIL)
+                (CONS (CONS '#\2 N) 'NIL)))))))
+
+(DEFUN SET-PRINT-LENGTH (N STATE)
+       (PROG2$ (CHECK-NULL-OR-NATP N 'SET-PRINT-LENGTH)
+               (PUT-GLOBAL 'PRINT-LENGTH N STATE)))
+
+(DEFUN SET-PRINT-LEVEL (N STATE)
+       (PROG2$ (CHECK-NULL-OR-NATP N 'SET-PRINT-LEVEL)
+               (PUT-GLOBAL 'PRINT-LEVEL N STATE)))
+
+(DEFUN SET-PRINT-LINES (N STATE)
+       (PROG2$ (CHECK-NULL-OR-NATP N 'SET-PRINT-LINES)
+               (PUT-GLOBAL 'PRINT-LINES N STATE)))
+
+(DEFUN SET-PRINT-RIGHT-MARGIN (N STATE)
+       (PROG2$ (CHECK-NULL-OR-NATP N 'SET-PRINT-RIGHT-MARGIN)
+               (PUT-GLOBAL 'PRINT-RIGHT-MARGIN
+                           N STATE)))
 
 (DEFUN
  PRINC$ (X CHANNEL STATE-STATE)
@@ -6023,23 +6369,97 @@
        (PRIN1-WITH-SLASHES1 (COERCE S 'LIST)
                             SLASH-CHAR CHANNEL STATE))
 
+(DEFUN MAY-NEED-SLASHES1 (LST FLG POTNUM-CHARS)
+       (IF (ENDP LST)
+           'T
+           (IF (MEMBER (CAR LST) POTNUM-CHARS)
+               (MAY-NEED-SLASHES1 (CDR LST)
+                                  'NIL
+                                  POTNUM-CHARS)
+               (IF (MEMBER (CAR LST)
+                           '(#\A #\B #\C
+                                 #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M
+                                 #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W
+                                 #\X #\Y #\Z #\a #\b #\c #\d #\e #\f #\g
+                                 #\h #\i #\j #\k #\l #\m #\n #\o #\p #\q
+                                 #\r #\s #\t #\u #\v #\w #\x #\y #\z))
+                   (IF FLG 'NIL
+                       (MAY-NEED-SLASHES1 (CDR LST)
+                                          'T
+                                          POTNUM-CHARS))
+                   'NIL))))
+
 (DEFUN
-     MAY-NEED-SLASHES (X)
-     ((LAMBDA (L)
-              (IF (NULL L)
-                  (NULL L)
-                  (IF (IF (MEMBER (CAR L)
-                                  '(#\0 #\1 #\2 #\3 #\4 #\5
-                                        #\6 #\7 #\8 #\9 #\+ #\- #\. #\^ #\_))
-                          (NOT (MEMBER (CAR (LAST L)) '(#\+ #\-)))
-                          'NIL)
-                      (IF (MEMBER (CAR L)
-                                  '(#\0 #\1 #\2 #\3 #\4 #\5
-                                        #\6 #\7 #\8 #\9 #\+ #\- #\. #\^ #\_))
-                          (NOT (MEMBER (CAR (LAST L)) '(#\+ #\-)))
-                          'NIL)
-                      (SOME-SLASHABLE L))))
-      (COERCE X 'LIST)))
+ MAY-NEED-SLASHES-FN (X PRINT-BASE)
+ ((LAMBDA
+   (L PRINT-BASE)
+   ((LAMBDA
+     (PRINT-BASE L)
+     ((LAMBDA
+       (NUMERIC-CHARS L PRINT-BASE)
+       ((LAMBDA
+         (SUSPICIOUSLY-FIRST-NUMERIC-CHARS NUMERIC-CHARS L)
+         (IF
+          (NULL L)
+          (NULL L)
+          (IF
+           (IF
+              (IF (MEMBER (CAR L) NUMERIC-CHARS)
+                  (MEMBER (CAR L) NUMERIC-CHARS)
+                  (IF (MEMBER (CAR L)
+                              SUSPICIOUSLY-FIRST-NUMERIC-CHARS)
+                      (INTERSECTP (CDR L) NUMERIC-CHARS)
+                      'NIL))
+              (IF (NOT (MEMBER (CAR (LAST L)) '(#\+ #\-)))
+                  (MAY-NEED-SLASHES1 (CDR L)
+                                     'NIL
+                                     (CONS '#\/
+                                           SUSPICIOUSLY-FIRST-NUMERIC-CHARS))
+                  'NIL)
+              'NIL)
+           (IF
+              (IF (MEMBER (CAR L) NUMERIC-CHARS)
+                  (MEMBER (CAR L) NUMERIC-CHARS)
+                  (IF (MEMBER (CAR L)
+                              SUSPICIOUSLY-FIRST-NUMERIC-CHARS)
+                      (INTERSECTP (CDR L) NUMERIC-CHARS)
+                      'NIL))
+              (IF (NOT (MEMBER (CAR (LAST L)) '(#\+ #\-)))
+                  (MAY-NEED-SLASHES1 (CDR L)
+                                     'NIL
+                                     (CONS '#\/
+                                           SUSPICIOUSLY-FIRST-NUMERIC-CHARS))
+                  'NIL)
+              'NIL)
+           (SOME-SLASHABLE L))))
+        (IF (EQL PRINT-BASE '16)
+            '(#\0 #\1 #\2 #\3 #\4 #\5 #\6
+                  #\7 #\8 #\9 #\A #\B #\C #\D #\E #\F #\a
+                  #\b #\c #\d #\e #\f #\+ #\- #\. #\^ #\_)
+            '(#\0 #\1 #\2 #\3 #\4 #\5
+                  #\6 #\7 #\8 #\9 #\+ #\- #\. #\^ #\_))
+        NUMERIC-CHARS L))
+      (IF (EQL PRINT-BASE '16)
+          '(#\0 #\1
+                #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9 #\A #\B
+                #\C #\D #\E #\F #\a #\b #\c #\d #\e #\f)
+          '(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
+      L PRINT-BASE))
+    (IF (IF (EQL PRINT-BASE '16)
+            (MEMBER '#\. L)
+            'NIL)
+        '10
+        PRINT-BASE)
+    L))
+  (COERCE X 'LIST)
+  PRINT-BASE))
+
+(DEFUN NEEDS-SLASHES (X STATE)
+       (IF (IF (GET-GLOBAL 'PRINT-ESCAPE STATE)
+               (GET-GLOBAL 'PRINT-ESCAPE STATE)
+               (GET-GLOBAL 'PRINT-READABLY STATE))
+           (MAY-NEED-SLASHES-FN X (GET-GLOBAL 'PRINT-BASE STATE))
+           'NIL))
 
 (DEFUN T-STACK-LENGTH1 (STATE-STATE) (LENGTH (T-STACK STATE-STATE)))
 
@@ -6082,41 +6502,41 @@
        (UPDATE-T-STACK (UPDATE-NTH I VAL (T-STACK STATE-STATE))
                        STATE-STATE))
 
-(DEFUN |32-BIT-INTEGER-STACK-LENGTH1|
+(DEFUN 32-BIT-INTEGER-STACK-LENGTH1
        (STATE-STATE)
-       (LENGTH (|32-BIT-INTEGER-STACK| STATE-STATE)))
+       (LENGTH (32-BIT-INTEGER-STACK STATE-STATE)))
 
-(DEFUN |32-BIT-INTEGER-STACK-LENGTH|
+(DEFUN 32-BIT-INTEGER-STACK-LENGTH
        (STATE-STATE)
-       (|32-BIT-INTEGER-STACK-LENGTH1| STATE-STATE))
+       (32-BIT-INTEGER-STACK-LENGTH1 STATE-STATE))
 
 (DEFUN EXTEND-32-BIT-INTEGER-STACK
        (N VAL STATE-STATE)
        (UPDATE-32-BIT-INTEGER-STACK
-            (BINARY-APPEND (|32-BIT-INTEGER-STACK| STATE-STATE)
+            (BINARY-APPEND (32-BIT-INTEGER-STACK STATE-STATE)
                            (MAKE-LIST-AC N VAL 'NIL))
             STATE-STATE))
 
 (DEFUN
- SHRINK-32-BIT-INTEGER-STACK
- (N STATE-STATE)
- (UPDATE-32-BIT-INTEGER-STACK
-     (FIRST-N-AC (MAX '0
-                      (BINARY-+ (LENGTH (|32-BIT-INTEGER-STACK| STATE-STATE))
-                                (UNARY-- N)))
-                 (|32-BIT-INTEGER-STACK| STATE-STATE)
-                 'NIL)
-     STATE-STATE))
+  SHRINK-32-BIT-INTEGER-STACK
+  (N STATE-STATE)
+  (UPDATE-32-BIT-INTEGER-STACK
+       (FIRST-N-AC (MAX '0
+                        (BINARY-+ (LENGTH (32-BIT-INTEGER-STACK STATE-STATE))
+                                  (UNARY-- N)))
+                   (32-BIT-INTEGER-STACK STATE-STATE)
+                   'NIL)
+       STATE-STATE))
 
 (DEFUN AREF-32-BIT-INTEGER-STACK
        (I STATE-STATE)
-       (NTH I (|32-BIT-INTEGER-STACK| STATE-STATE)))
+       (NTH I (32-BIT-INTEGER-STACK STATE-STATE)))
 
 (DEFUN ASET-32-BIT-INTEGER-STACK
        (I VAL STATE-STATE)
        (UPDATE-32-BIT-INTEGER-STACK
-            (UPDATE-NTH I VAL
-                        (|32-BIT-INTEGER-STACK| STATE-STATE))
+            (UPDATE-NTH I
+                        VAL (32-BIT-INTEGER-STACK STATE-STATE))
             STATE-STATE))
 
 (DEFUN BIG-CLOCK-NEGATIVE-P (STATE-STATE)
@@ -6173,6 +6593,29 @@
 (DEFUN GETENV$ (STR STATE) (READ-ACL2-ORACLE STATE))
 
 (DEFUN SETENV$ (STR VAL) 'NIL)
+
+(DEFUN RANDOM$ (LIMIT STATE)
+       ((LAMBDA (MV LIMIT)
+                ((LAMBDA (ERP VAL STATE LIMIT)
+                         (CONS (IF (IF (NULL ERP)
+                                       (IF (NATP VAL) (< VAL LIMIT) 'NIL)
+                                       'NIL)
+                                   VAL '0)
+                               (CONS STATE 'NIL)))
+                 (MV-NTH '0 MV)
+                 (MV-NTH '1 MV)
+                 (MV-NTH '2 MV)
+                 LIMIT))
+        (READ-ACL2-ORACLE STATE)
+        LIMIT))
+
+(DEFTHM NATP-RANDOM$ (NATP (CAR (RANDOM$ N STATE))))
+
+(DEFTHM RANDOM$-LINEAR
+        (IF (NOT (< (CAR (RANDOM$ N STATE)) '0))
+            (IMPLIES (POSP N)
+                     (< (CAR (RANDOM$ N STATE)) N))
+            'NIL))
 
 (DEFTHM LEN-UPDATE-NTH
         (EQUAL (LEN (UPDATE-NTH N VAL X))
@@ -6428,7 +6871,7 @@
      (COERCE X 'LIST)
      X STATE CHANNEL)
     ((LAMBDA (STATE CHANNEL X)
-             (IF (MAY-NEED-SLASHES (SYMBOL-NAME X))
+             (IF (NEEDS-SLASHES (SYMBOL-NAME X) STATE)
                  ((LAMBDA (STATE CHANNEL X)
                           ((LAMBDA (STATE CHANNEL)
                                    (PRINC$ '#\| CHANNEL STATE))
@@ -6455,10 +6898,10 @@
                                               (GET-GLOBAL 'CURRENT-ACL2-WORLD
                                                           STATE)))))))
        STATE
-       ((LAMBDA (P STATE CHANNEL)
+       ((LAMBDA (P CHANNEL STATE)
                 ((LAMBDA (STATE CHANNEL)
                          (PRINC$ '"::" CHANNEL STATE))
-                 (IF (MAY-NEED-SLASHES P)
+                 (IF (NEEDS-SLASHES P STATE)
                      ((LAMBDA (STATE CHANNEL P)
                               ((LAMBDA (STATE CHANNEL)
                                        (PRINC$ '#\| CHANNEL STATE))
@@ -6474,7 +6917,7 @@
                          (PRINC$ P CHANNEL STATE)))
                  CHANNEL))
         (SYMBOL-PACKAGE-NAME X)
-        STATE CHANNEL)))
+        CHANNEL STATE)))
      CHANNEL X)))))
 
 (DEFTHM ALL-BOUNDP-PRESERVES-ASSOC
@@ -6645,6 +7088,17 @@
                        'NIL)
                    'NIL)
                'NIL)))
+
+(DEFUN LEGAL-RULER-EXTENDERS-P (X)
+       (IF (ATOM X)
+           (NULL X)
+           (IF (KEYWORDP (CAR X))
+               (IF (EQ (CAR X) ':LAMBDAS)
+                   (LEGAL-RULER-EXTENDERS-P (CDR X))
+                   'NIL)
+               (IF (SYMBOLP (CAR X))
+                   (LEGAL-RULER-EXTENDERS-P (CDR X))
+                   'NIL))))
 
 (DEFUN TABLE-ALIST (NAME WRLD) (FGETPROP NAME 'TABLE-ALIST 'NIL WRLD))
 
