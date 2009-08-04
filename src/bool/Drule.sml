@@ -398,7 +398,7 @@ fun LIST_BETA_CONV tm =
 fun RIGHT_LIST_BETA th = TRANS th (LIST_BETA_CONV(rhs(concl th)))
 
 (*---------------------------------------------------------------------------*
- * "A |- t1 /\ ... /\ tn"   --->  [ "A|-t1", ..., "A|-tn"],  where n>0       *
+ * "A |- t1 /\ ... /\ tn"   --->   ["A|-t1", ..., "A|-tn"],  where n>0       *
  *                                                                           *
  * Flattens out all conjuncts, regardless of grouping                        *
  *---------------------------------------------------------------------------*)
@@ -418,19 +418,28 @@ end
  *                associativity of /\.                                       *
  *---------------------------------------------------------------------------*)
 
-fun CONJUNCTS_CONV (t1,t2) =
-   let fun CONJUNCTS th = (CONJUNCTS (CONJUNCT1 th) @ CONJUNCTS (CONJUNCT2 th))
-             handle HOL_ERR _ => [th]
-       fun build_conj thl t =
-          let val (conj1,conj2) = dest_conj t
-           in  CONJ (build_conj thl conj1) (build_conj thl conj2)
-          end
-          handle HOL_ERR _ => first (fn th => (concl th) = t) thl
-   in
-   IMP_ANTISYM_RULE (DISCH t1 (build_conj (CONJUNCTS (ASSUME t1)) t2))
-                    (DISCH t2 (build_conj (CONJUNCTS (ASSUME t2)) t1))
-   end
-   handle HOL_ERR _ => raise ERR "CONJUNCTS_CONV" ""
+fun CONJUNCTS_CONV (t1, t2) =
+let
+  fun conjuncts dict th =
+    conjuncts (conjuncts dict (CONJUNCT1 th)) (CONJUNCT2 th)
+      handle HOL_ERR _ =>
+        Redblackmap.insert (dict, concl th, th)
+  fun prove_conj dict t =
+    let
+      val (l, r) = dest_conj t
+    in
+      CONJ (prove_conj dict l) (prove_conj dict r)
+    end
+    handle HOL_ERR _ =>
+      Redblackmap.find (dict, t)
+  val empty = Redblackmap.mkDict compare
+  val t1_imp_t2 = prove_conj (conjuncts empty (ASSUME t1)) t2
+  val t2_imp_t1 = prove_conj (conjuncts empty (ASSUME t2)) t1
+in
+  IMP_ANTISYM_RULE (DISCH t1 t1_imp_t2) (DISCH t2 t2_imp_t1)
+end
+handle HOL_ERR _ => raise ERR "CONJUNCTS_CONV" ""
+     | Redblackmap.NotFound => raise ERR "CONJUNCTS_CONV" ""
 
 (*---------------------------------------------------------------------------*
  * |- (t1 /\ ... /\ tn) = (t1' /\ ... /\ tn') where {t1,...,tn}={t1',...,tn'}*
