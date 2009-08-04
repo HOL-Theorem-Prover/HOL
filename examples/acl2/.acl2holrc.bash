@@ -9,7 +9,7 @@ else \
     echo "ERROR: Unexpected uname." ; \
     exit 1 ; \
 fi
-export ACL2_HOL=/home/mk606/hol/HOL/examples/acl2/
+export ACL2_HOL=/home/mk606/hol/HOL/examples/acl2
 
 # end of editable variables
 
