@@ -398,6 +398,22 @@ fun LIST_BETA_CONV tm =
 fun RIGHT_LIST_BETA th = TRANS th (LIST_BETA_CONV(rhs(concl th)))
 
 (*---------------------------------------------------------------------------*
+ * "A |- t1 /\ ... /\ tn"   --->  [ "A|-t1", ..., "A|-tn"],  where n>0       *
+ *                                                                           *
+ * Flattens out all conjuncts, regardless of grouping                        *
+ *---------------------------------------------------------------------------*)
+
+fun CONJUNCTS th =
+let
+  fun aux th acc =
+    aux (CONJUNCT1 th) (aux (CONJUNCT2 th) acc)
+      handle HOL_ERR _ =>
+        th :: acc
+in
+  aux th []
+end
+
+(*---------------------------------------------------------------------------*
  * |- t1 = t2  if t1 and t2 are equivalent using idempotence, symmetry and   *
  *                associativity of /\.                                       *
  *---------------------------------------------------------------------------*)
@@ -690,15 +706,6 @@ val LIST_CONJ = end_itlist CONJ
 fun CONJ_LIST 1 th = [th]
   | CONJ_LIST n th =  CONJUNCT1 th :: CONJ_LIST (n-1) (CONJUNCT2 th)
       handle HOL_ERR _ => raise ERR "CONJ_LIST" ""
-
-(*---------------------------------------------------------------------------
- * "A |- t1 /\ ... /\ tn"   --->  [ "A|-t1", ..., "A|-tn"],  where n>0
- *
- * Flattens out all conjuncts, regardless of grouping
- *---------------------------------------------------------------------------*)
-
-fun CONJUNCTS th = (CONJUNCTS (CONJUNCT1 th) @
-                    CONJUNCTS(CONJUNCT2 th)) handle HOL_ERR _ => [th]
 
 (*---------------------------------------------------------------------------
  * "|- !x. (t1 /\ ...) /\ ... (!y. ... /\ tn)"
