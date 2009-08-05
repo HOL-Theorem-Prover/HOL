@@ -11,7 +11,10 @@ struct
 open HolKernel Parse boolLib QLib tautLib mesonLib metisLib
      simpLib boolSimps BasicProvers;
 
-local open combinTheory in end;
+(* mention satTheory to work around dependency-analysis flaw in Holmake;
+   satTheory is a dependency of BasicProvers, but without explicit mention
+   here, Holmake will not rebuild relationTheory when satTheory changes. *)
+local open combinTheory satTheory in end;
 
 val _ = new_theory "relation";
 
