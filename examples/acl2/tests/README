@@ -1,5 +1,8 @@
 INSTRUCTIONS:
 
+WARNING! Before running ./doit, edit the editable variables in file
+../.acl2holrc.bash.
+
 In this directory (or most likely, in any directory), run testbench
 script doit.  This will certify any uncertified books in inputs/
 (first certifying any uncertified tool books in ../lisp/), then

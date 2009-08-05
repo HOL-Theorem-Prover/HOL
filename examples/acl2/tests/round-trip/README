@@ -1,4 +1,30 @@
 Our round-trip testing can be done here.
 
-For now, we just translate ACL2 source file axioms.lisp, to create
-defaxioms.lisp.trans.
+For now, we only go from ACL2 source file axioms.lisp to an ML
+version.
+
+We currently create two files in results/: an "essential" version of
+ACL2 source file axioms.lisp, and the result of translating
+gold/axioms.lisp to axioms.ml.  We tend to trust the translation to an
+"essential" axioms.lisp.
+
+Instructions for updating when ACL2 version changes:
+
+When ACL2 is updated to a new version, first run doit.  Then check
+quickly that results/axioms.lisp and gold/axioms.lisp are similar and
+that gold/axioms.ml and results/axioms.ml (the latter generated from
+gold/axioms.lisp) are identical.
+
+diff gold/axioms.ml results/axioms.ml
+# The above should produce no output, because results/axioms.ml was
+# generated from gold/axioms.lisp.
+cp -p results/axioms.lisp gold/
+./doit
+diff gold/axioms.lisp results/axioms.lisp
+# The above should produce no output.
+# Since axioms.ml was OK before, we figure that it's OK now as well:
+cp -p results/axioms.ml gold/
+# Now do final check, which should succeed:
+./doit
+# Then commit to svn (preferably stating the ACL2 version):
+svn commit -m 'Updated for new ACL2 version'

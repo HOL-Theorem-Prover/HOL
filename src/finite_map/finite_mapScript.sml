@@ -730,6 +730,12 @@ val DRESTRICT_UNIV = Q.store_thm
  `!^fmap. DRESTRICT f UNIV = f`,
  SRW_TAC [][DRESTRICT_DEF, GSYM fmap_EQ_THM]);
 
+val SUBMAP_DRESTRICT = Q.store_thm(
+  "SUBMAP_DRESTRICT",
+  `DRESTRICT f P SUBMAP f`,
+  SRW_TAC [][DRESTRICT_DEF, SUBMAP_DEF]);
+val _ = export_rewrites ["SUBMAP_DRESTRICT"]
+
 (*---------------------------------------------------------------------------
      Union of finite maps
  ---------------------------------------------------------------------------*)
