@@ -291,9 +291,11 @@ val _ = let
                             else ()
 in
   FileSys.chDir destdir;
-  systeml [compiler, "-c", "-toplevel", "mllex.sml"];
+  systeml [compiler, "-I", "../../sigobj", "-c", "-toplevel", "basis2002.ui",
+           "mllex.sml"];
   systeml [compiler, "-c", "mllex.ui", "mosmlmain.sml"];
-  systeml [compiler, "-o", "mllex.exe", "mllex.uo", "mosmlmain.uo"];
+  systeml [compiler, "-I", "../../sigobj", "-o", "mllex.exe", "mllex.uo",
+           "mosmlmain.uo"];
   FileSys.chDir cdir
 end handle _ => die "Failed to build mllex."
 
