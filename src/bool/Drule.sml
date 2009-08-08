@@ -418,7 +418,7 @@ end
  *                associativity of /\.                                       *
  *---------------------------------------------------------------------------*)
 
-fun CONJUNCTS_CONV (t1, t2) =
+fun CONJUNCTS_AC (t1, t2) =
 let
   fun conjuncts dict th =
     conjuncts (conjuncts dict (CONJUNCT1 th)) (CONJUNCT2 th)
@@ -438,25 +438,8 @@ let
 in
   IMP_ANTISYM_RULE (DISCH t1 t1_imp_t2) (DISCH t2 t2_imp_t1)
 end
-handle HOL_ERR _ => raise ERR "CONJUNCTS_CONV" ""
-     | Redblackmap.NotFound => raise ERR "CONJUNCTS_CONV" ""
-
-(*---------------------------------------------------------------------------*
- * |- (t1 /\ ... /\ tn) = (t1' /\ ... /\ tn') where {t1,...,tn}={t1',...,tn'}*
- *---------------------------------------------------------------------------*)
-
-fun CONJ_SET_CONV l1 l2 =
-   CONJUNCTS_CONV (list_mk_conj l1, list_mk_conj l2)
-   handle HOL_ERR _ => raise ERR "CONJ_SET_CONV" ""
-
-(*---------------------------------------------------------------------------*
- *   |- (t1 /\ ... /\ t /\ ... /\ tn) = (t /\ t1 /\ ... /\ tn)               *
- *---------------------------------------------------------------------------*)
-
-fun FRONT_CONJ_CONV tml t =
-   let fun remove x l = if (hd l = x) then tl l else (hd l::remove x (tl l))
-   in CONJ_SET_CONV tml (t::remove t tml)
-   end handle HOL_ERR _ => raise ERR "FRONT_CONJ_CONV" ""
+handle HOL_ERR _ => raise ERR "CONJUNCTS_AC" ""
+     | Redblackmap.NotFound => raise ERR "CONJUNCTS_AC" ""
 
 (*---------------------------------------------------------------------------
  *           A,t |- t1 = t2

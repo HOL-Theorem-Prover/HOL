@@ -1662,7 +1662,7 @@ fun do_one_conj2 rule tm =
 		val thm3 = PURE_ONCE_REWRITE_RULE [and_thm] 
 		    (IMP_CONJ thm2 conjs_imp_reltn)
 		val thm4 = PURE_ONCE_REWRITE_RULE 
-		    [CONJUNCTS_CONV (new_mod_hyps, mod_hyps)] thm3
+		    [CONJUNCTS_AC (new_mod_hyps, mod_hyps)] thm3
 	    in
 		DISCH_ALL (GENL vars thm4)
 	    end
