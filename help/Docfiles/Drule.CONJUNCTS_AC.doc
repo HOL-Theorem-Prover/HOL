@@ -9,7 +9,7 @@ Prove equivalence under idempotence, symmetry and associativity of conjunction.
 conjunction, associative, commutative.
 
 \DESCRIBE
-{CONJUNCTS_AC} takes a pair of terms {(t1,t2)} and proves
+{CONJUNCTS_AC} takes a pair of terms {(t1, t2)} and proves
 {|- t1 = t2} if {t1} and {t2} are equivalent up to idempotence, symmetry and
 associativity of conjunction.  That is, if {t1} and {t2} are two (different)
 arbitrarily-nested conjunctions of the same set of terms, then
@@ -29,5 +29,8 @@ Used to reorder a conjunction.  First sort the conjuncts in a term
 {t1} into the desired order (e.g., lexicographic order, for
 normalization) to get a new term {t2}, then call
 {CONJUNCTS_AC(t1,t2)}.
+
+\SEEALSO
+Drule.DISJUNCTS_AC.
 
 \ENDDOC

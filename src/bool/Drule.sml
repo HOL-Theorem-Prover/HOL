@@ -441,6 +441,62 @@ end
 handle HOL_ERR _ => raise ERR "CONJUNCTS_AC" ""
      | Redblackmap.NotFound => raise ERR "CONJUNCTS_AC" ""
 
+(*---------------------------------------------------------------------------*
+ * |- t1 = t2  if t1 and t2 are equivalent using idempotence, symmetry and   *
+ *                associativity of \/.                                       *
+ *---------------------------------------------------------------------------*)
+
+(*
+The implementation is dual to that of CONJUNCTS_AC. We first show that t2
+follows from each of its disjuncts. These intermediate theorems are stored in
+a dictionary with logarithmic time access. Combining them, we then show that
+if each disjunct of t1 implies t2, then t1 implies t2.
+
+Note that deriving t2 from each of its disjuncts is not completely
+straightforward. An implementation that, for each disjunct, assumes the
+disjunct and derives t2 by disjunction introduction would have quadratic
+complexity. The given implementation achieves linearithmic complexity by
+assuming t2, and then deriving "l |- t2" and "r |- t2" from "l \/ r |- t2".
+
+We found the implementation of this inference step that is used in "disjuncts"
+(below) to be roughly twice as fast as one that instantiates a proforma
+theorem "(l \/ r ==> t2) ==> l ==> t2" (and a similar proforma theorem for r).
+Still, it is relatively expensive. If the number of disjuncts is small, an
+implementation with quadratic complexity (as outlined above) is faster. Of
+course, these figures very much depend on the choice and performance of
+primitive inferences that are available.
+*)
+
+fun DISJUNCTS_AC (t1, t2) =
+let
+  fun disjuncts dict (t, th) =
+    let
+      val (l, r) = dest_disj t
+      val th = DISCH t th
+      val l_th = MP th (DISJ1 (ASSUME l) r)
+      val r_th = MP th (DISJ2 l (ASSUME r))
+    in
+      disjuncts (disjuncts dict (l, l_th)) (r, r_th)
+    end
+    handle HOL_ERR _ =>
+      Redblackmap.insert (dict, t, th)
+  fun prove_from_disj dict t =
+    let
+      val (l, r) = dest_disj t
+    in
+      DISJ_CASES (ASSUME t) (prove_from_disj dict l) (prove_from_disj dict r)
+    end
+    handle HOL_ERR _ =>
+      Redblackmap.find (dict, t)
+  val empty = Redblackmap.mkDict compare
+  val t1_imp_t2 = prove_from_disj (disjuncts empty (t2, ASSUME t2)) t1
+  val t2_imp_t1 = prove_from_disj (disjuncts empty (t1, ASSUME t1)) t2
+in
+  IMP_ANTISYM_RULE (DISCH t1 t1_imp_t2) (DISCH t2 t2_imp_t1)
+end
+handle HOL_ERR _ => raise ERR "DISJUNCTS_AC" ""
+     | Redblackmap.NotFound => raise ERR "DISJUNCTS_AC" ""
+
 (*---------------------------------------------------------------------------
  *           A,t |- t1 = t2
  *    -----------------------------
