@@ -1,6 +1,6 @@
 \DOC DISCH_ALL
 
-\TYPE {DISCH_ALL : (thm -> thm)}
+\TYPE {DISCH_ALL : thm -> thm}
 
 \SYNOPSIS
 Discharges all hypotheses of a theorem.
@@ -17,7 +17,7 @@ rule, discharge, assumption, implication.
 
 
 \FAILURE
-{DISCH_ALL} will not fail if there are no hypotheses to discharge, it will
+{DISCH_ALL} never fails. If there are no hypotheses to discharge, it will
 simply return the theorem unchanged.
 
 \COMMENTS

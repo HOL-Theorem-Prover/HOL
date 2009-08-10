@@ -1,6 +1,6 @@
 \DOC UNDISCH
 
-\TYPE {UNDISCH : (thm -> thm)}
+\TYPE {UNDISCH : thm -> thm}
 
 \SYNOPSIS
 Undischarges the antecedent of an implicative theorem.
@@ -20,11 +20,10 @@ Note that {UNDISCH} treats {"~u"} as {"u ==> F"}.
 {UNDISCH} will fail on theorems which are not implications or negations.
 
 \COMMENTS
-If the antecedent already appears in the hypotheses, it will not be duplicated.
-However, unlike {DISCH},
-if the antecedent is alpha-equivalent to one of the hypotheses,
-it will still be added to the hypotheses.
+If the antecedent already appears in (or is alpha-equivalent to one of) the
+hypotheses, it will not be duplicated.
 
 \SEEALSO
 Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Drule.NEG_DISCH, Tactic.STRIP_TAC, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
+
 \ENDDOC

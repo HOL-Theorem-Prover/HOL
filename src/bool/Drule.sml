@@ -665,24 +665,21 @@ fun GEN_ALL th =
        th
       (HOLset.difference (FVL [concl th] empty_tmset, hyp_frees th))
 
-(*---------------------------------------------------------------------------
- *  Discharge all hypotheses
- *
- *       t1, ... , tn |- t
- *  -------------------------------
- *    |- t1 ==> ... ==> tn ==> t
- *
- * You can write a simpler version using "itlist DISCH (hyp th) th", but this
- * may discharge two equivalent (alpha-convertible) assumptions.
+(*---------------------------------------------------------------------------*
+ *  Discharge all hypotheses                                                 *
+ *                                                                           *
+ *       t1, ... , tn |- t                                                   *
+ *  ------------------------------                                           *
+ *    |- t1 ==> ... ==> tn ==> t                                             *
  *---------------------------------------------------------------------------*)
 
 fun DISCH_ALL th =
     HOLset.foldl (fn (h, th) => DISCH h th) th (hypset th)
 
-(*----------------------------------------------------------------------------
- *    A |- t1 ==> ... ==> tn ==> t
- *  -------------------------------
- *       A, t1, ..., tn |- t
+(*---------------------------------------------------------------------------*
+ *    A |- t1 ==> ... ==> tn ==> t                                           *
+ *  -------------------------------                                          *
+ *        A, t1, ..., tn |- t                                                *
  *---------------------------------------------------------------------------*)
 
 fun UNDISCH_ALL th = if is_imp(concl th) then UNDISCH_ALL (UNDISCH th) else th
